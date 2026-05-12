@@ -16,6 +16,7 @@
 #include "mip/HighsImplications.h"
 #include "mip/HighsLpAggregator.h"
 #include "mip/HighsLpRelaxation.h"
+#include "parallel/HighsParallel.h"
 #include "mip/HighsMipSolverData.h"
 #include "mip/HighsModkSeparator.h"
 #include "mip/HighsPathSeparator.h"
@@ -104,15 +105,54 @@ HighsInt HighsSeparation::separationRound(HighsDomain& propdomain,
   if (&propdomain != &mipdata.domain)
     lp->computeBasicDegenerateDuals(mipdata.feastol, &propdomain);
 
-  HighsTransformedLp transLp(*lp, mipdata.implications);
-  if (mipdata.domain.infeasible()) {
-    status = HighsLpRelaxation::Status::kInfeasible;
-    return 0;
-  }
-  HighsLpAggregator lpAggregator(*lp);
+  // Always use parallel separator execution with per-separator data
+  {
+    const HighsMipSolver& mipsolver = lp->getMipSolver();
+    std::vector<HighsCutPool> tempPools;
+    tempPools.reserve(separators.size());
+    for (size_t k = 0; k < separators.size(); ++k)
+      tempPools.emplace_back(mipsolver.numCol(),
+                             mipsolver.options_mip_->mip_pool_age_limit,
+                             mipsolver.options_mip_->mip_pool_soft_limit);
 
-  for (const std::unique_ptr<HighsSeparator>& separator : separators) {
-    separator->run(*lp, lpAggregator, transLp, mipdata.cutpool);
+    std::vector<HighsTransformedLp> transLps;
+    std::vector<HighsLpAggregator> lpAggregators;
+    transLps.reserve(separators.size());
+    lpAggregators.reserve(separators.size());
+    for (size_t k = 0; k < separators.size(); ++k) {
+      transLps.emplace_back(*lp, mipdata.implications);
+      lpAggregators.emplace_back(*lp);
+    }
+
+    if (mipdata.domain.infeasible()) {
+      status = HighsLpRelaxation::Status::kInfeasible;
+      return 0;
+    }
+
+    highs::parallel::TaskGroup tg;
+    for (size_t k = 0; k < separators.size(); ++k) {
+      tg.spawn([&, k]() {
+        separators[k]->run(*lp, lpAggregators[k], transLps[k], tempPools[k]);
+      });
+    }
+    tg.taskWait();
+
+    for (HighsCutPool& tempPool : tempPools) {
+      HighsInt numCuts = tempPool.getNumCuts();
+      for (HighsInt i = 0; i < numCuts; ++i) {
+        HighsInt cutlen;
+        const HighsInt* cutinds;
+        const double* cutvals;
+        tempPool.getCut(i, cutlen, cutinds, cutvals);
+        double rhs = tempPool.getRhs()[i];
+        bool integral = tempPool.cutIsIntegral(i);
+        std::vector<HighsInt> inds(cutinds, cutinds + cutlen);
+        std::vector<double> vals(cutvals, cutvals + cutlen);
+        mipdata.cutpool.addCut(mipsolver, inds.data(), vals.data(), cutlen,
+                               rhs, integral, true, true, false);
+      }
+    }
+
     if (mipdata.domain.infeasible()) {
       status = HighsLpRelaxation::Status::kInfeasible;
       return 0;

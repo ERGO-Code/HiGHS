@@ -18,7 +18,7 @@ results_dir = "/home/yunus/Masaüstü/Projects/HiGHS/benchmark_results"
 
 solvers = {
     "original": os.path.join(build_dir, "bin/highs_original"),
-    "lagromory": os.path.join(build_dir, "bin/highs_lagromory")
+    "optimized": os.path.join(build_dir, "bin/highs")
 }
 
 def parse_highs_output(stdout):
@@ -95,8 +95,8 @@ for inst in instances:
 # Generate beautiful markdown report
 report_path = os.path.join(results_dir, "comparison_report.md")
 with open(report_path, "w") as f:
-    f.write("# HiGHS Original vs Lagromory Solver Benchmark Comparison\n\n")
-    f.write("This report presents a head-to-head comparison between the original HiGHS MIP solver and the new native Lagromory (Relax-and-Cut) enhanced solver on lightweight MIPLIB instances (solved with a 60-second time limit).\n\n")
+    f.write("# HiGHS Original vs Cache-Optimized Solver Benchmark Comparison\n\n")
+    f.write("This report presents a head-to-head comparison between the original HiGHS MIP solver and the L1/L2 cache-optimized version (prefetch + loop unrolling) on lightweight MIPLIB instances (solved with a 60-second time limit).\n\n")
     
     f.write("## Comparison Table\n\n")
     f.write("| Instance | Solver Version | Status | Primal Bound (Obj) | Dual Bound | Nodes | LP Iters | Time (s) |\n")
@@ -105,10 +105,15 @@ with open(report_path, "w") as f:
     for inst in instances:
         inst_name = inst.split(".")[0]
         orig = results[inst]["original"]
-        lag = results[inst]["lagromory"]
+        opt = results[inst]["optimized"]
+        
+        orig_time = float(orig['timing'])
+        opt_time = float(opt['timing'])
+        speedup = orig_time / opt_time if opt_time > 0 else 0
         
         f.write(f"| **{inst_name}** | Original | {orig['status']} | {orig['primal']} | {orig['dual']} | {orig['nodes']} | {orig['iters']} | {orig['timing']} |\n")
-        f.write(f"| | Lagromory | {lag['status']} | {lag['primal']} | {lag['dual']} | {lag['nodes']} | {lag['iters']} | {lag['timing']} |\n")
+        f.write(f"| | Optimized | {opt['status']} | {opt['primal']} | {opt['dual']} | {opt['nodes']} | {opt['iters']} | {opt['timing']} |\n")
+        f.write(f"| | **Speedup** | | | | | | **{speedup:.2f}x** |\n")
         f.write("| --- | --- | --- | --- | --- | --- | --- | --- |\n")
         
     f.write("\n## Saved Artifacts\n")

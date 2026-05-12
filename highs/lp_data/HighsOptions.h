@@ -1270,7 +1270,7 @@ class HighsOptions : public HighsOptionsStruct {
         new OptionRecordString(kMipLpSolverString,
                                "MIP LP solver: \"choose\", \"simplex\", "
                                "\"ipm\", \"ipx\" or \"hipo\"",
-                               advanced, &mip_lp_solver, kHighsChooseString);
+                                advanced, &mip_lp_solver, kHighsChooseString);
     records.push_back(record_string);
 
     record_string = new OptionRecordString(

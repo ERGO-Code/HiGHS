@@ -171,6 +171,7 @@ HighsLpRelaxation::HighsLpRelaxation(const HighsMipSolver& mipsolver)
     : mipsolver(mipsolver) {
   lpsolver.setOptionValue("output_flag", false);
   lpsolver.setOptionValue("random_seed", mipsolver.options_mip_->random_seed);
+  lpsolver.setOptionValue("parallel", mipsolver.options_mip_->parallel);
   // Set primal feasibility tolerance for LP solves according to
   // mip_feasibility_tolerance, and smaller tolerance for dual
   // feasibility
