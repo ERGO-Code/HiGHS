@@ -14,6 +14,11 @@ namespace {
 
 const bool kExperimentalOutputFlag = false;
 const double kExperimentalKktTolerance = 1e-4;
+const HighsInt kExperimentalPdlpRestartStrategy = 3;
+const HighsInt kExperimentalPdlpScalingMode = 5;
+const HighsInt kExperimentalPdlpStepSizeStrategy = 3;
+const HighsInt kExperimentalPdlpIterationLimit = 859400;
+const HighsInt kExperimentalLogDevLevel = 1;
 
 template <typename T>
 const T* dataOrNull(const std::vector<T>& values) {
@@ -90,6 +95,35 @@ HighsStatus setCommonHiPdlpOptions(Highs& highs, const bool use_presolve,
   status = highs.setOptionValue("kkt_tolerance", kExperimentalKktTolerance);
   if (status != HighsStatus::kOk) {
     error_message = "Failed to set kkt_tolerance";
+    return HighsStatus::kError;
+  }
+  status = highs.setOptionValue("pdlp_restart_strategy",
+                                kExperimentalPdlpRestartStrategy);
+  if (status != HighsStatus::kOk) {
+    error_message = "Failed to set pdlp_restart_strategy";
+    return HighsStatus::kError;
+  }
+  status = highs.setOptionValue("pdlp_scaling_mode",
+                                kExperimentalPdlpScalingMode);
+  if (status != HighsStatus::kOk) {
+    error_message = "Failed to set pdlp_scaling_mode";
+    return HighsStatus::kError;
+  }
+  status = highs.setOptionValue("pdlp_step_size_strategy",
+                                kExperimentalPdlpStepSizeStrategy);
+  if (status != HighsStatus::kOk) {
+    error_message = "Failed to set pdlp_step_size_strategy";
+    return HighsStatus::kError;
+  }
+  status = highs.setOptionValue("pdlp_iteration_limit",
+                                kExperimentalPdlpIterationLimit);
+  if (status != HighsStatus::kOk) {
+    error_message = "Failed to set pdlp_iteration_limit";
+    return HighsStatus::kError;
+  }
+  status = highs.setOptionValue("log_dev_level", kExperimentalLogDevLevel);
+  if (status != HighsStatus::kOk) {
+    error_message = "Failed to set log_dev_level";
     return HighsStatus::kError;
   }
   return HighsStatus::kOk;
