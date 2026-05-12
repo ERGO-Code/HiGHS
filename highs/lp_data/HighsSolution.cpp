@@ -620,8 +620,11 @@ void getVariableKktFailures(const double primal_feasibility_tolerance,
   // Account for semi-variables
   const bool semi_variable = integrality == HighsVarType::kSemiContinuous ||
                              integrality == HighsVarType::kSemiInteger;
-  if (semi_variable && std::fabs(value) < mip_feasibility_tolerance)
-    primal_infeasibility = 0;
+  if (semi_variable && value < lower - primal_feasibility_tolerance) {
+    primal_infeasibility = std::fabs(value);
+    if (primal_infeasibility < mip_feasibility_tolerance) 
+      primal_infeasibility = 0;
+  }
 }
 
 void getPrimalDualGlpsolErrors(const HighsOptions& options, const HighsLp& lp,

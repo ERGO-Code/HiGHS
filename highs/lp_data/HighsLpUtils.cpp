@@ -3234,7 +3234,6 @@ HighsLp withoutSemiVariables(const HighsLp& lp_, HighsSolution& solution,
   assert(new_el == 0);
   // Insert the new coefficients for semi-variables
   HighsInt row_num = num_row;
-  const HighsInt check_col = 688;
   for (HighsInt iCol = 0; iCol < num_col; iCol++) {
     if (lp.integrality_[iCol] == HighsVarType::kSemiContinuous ||
         lp.integrality_[iCol] == HighsVarType::kSemiInteger) {
@@ -3244,9 +3243,6 @@ HighsLp withoutSemiVariables(const HighsLp& lp_, HighsSolution& solution,
       iEl++;
       index[iEl] = row_num++;
       value[iEl] = 1;
-      if (iCol == check_col)
-	printf("Col %d has coefficient 1 in rows %d and %d\n",
-	       int(iCol), int(row_num-2), int(row_num-1));
     }
   }
   num_nz = start[num_col];
@@ -3270,53 +3266,32 @@ HighsLp withoutSemiVariables(const HighsLp& lp_, HighsSolution& solution,
     assert((HighsInt)solution.row_value.size() ==
            lp_.num_row_ + 2 * num_semi_variables);
   }
-  // Switch for RHS perturbation
-  const double perturb_rhs = 0.0;
   for (HighsInt iCol = 0; iCol < num_col; iCol++) {
     if (lp.integrality_[iCol] == HighsVarType::kSemiContinuous ||
         lp.integrality_[iCol] == HighsVarType::kSemiInteger) {
-      const bool debug_report = iCol == check_col;
-      // Possibly use -l*eps <= x - l*y so that if y = eps, bound is 0
-      // <= x, rather than l*eps <= x, which can allow infeasible x
-      // for l > 0
-      const double rhs_l = perturb_rhs * (-lp.col_lower_[iCol]) * mip_feasibility_tolerance;
-      // Possibly use x - u*y <= (1-u)*eps so that if y = eps, bound
-      // is x <= eps, rather than x <= u*eps, which can allow
-      // infeasible x for u > 1
-      const double rhs_u = perturb_rhs * (1.0-lp.col_upper_[iCol]) * mip_feasibility_tolerance;
-      // Note
-      //
-      // * If y = -eps, then ????
-      //
       const double semi_lower_bound = lp.col_lower_[iCol];
       const double semi_upper_bound = lp.col_upper_[iCol];
       // Add a binary variable with zero cost
       lp.col_cost_.push_back(0);
       lp.col_lower_.push_back(0);
       lp.col_upper_.push_back(1);
-      // Complete x - l*y >= rhs_l
-      lp.row_lower_.push_back(rhs_l);
+      // Complete x - l*y >= 0
+      lp.row_lower_.push_back(0);
       lp.row_upper_.push_back(kHighsInf);
       if (have_col_names) {
         // Create a column name
         ss.str(std::string());
         ss << "semi_binary_" << semi_col_num++;
         lp.col_names_.push_back(ss.str());
-	if (debug_report) printf("Col %d is binary for semi-variable %d\n",
-	       int(num_col+semi_col_num), int(iCol));
       }
       if (have_row_names) {
         // Create a row name
         ss.str(std::string());
         ss << "semi_lb_" << semi_row_num;
         lp.row_names_.push_back(ss.str());
-	if (debug_report) printf("Col %d has LB row name %s\n",
-				 int(iCol), ss.str().c_str());
       }
       index.push_back(row_num++);
       value.push_back(-semi_lower_bound);
-      if (debug_report) printf("Col %d has LB coefficient %g in row %d\n",
-			       int(num_col+semi_col_num), -lp.col_lower_[iCol], int(row_num));
       // Accommodate any primal solution
       if (have_solution) {
         // Record the previous solution value so any change can be
@@ -3330,7 +3305,7 @@ HighsLp withoutSemiVariables(const HighsLp& lp_, HighsSolution& solution,
           // Otherwise, solution is at least lower bound, and binary
           // is 1
           solution.col_value[iCol] =
-              std::max(lp.col_lower_[iCol], solution.col_value[iCol]);
+              std::max(semi_lower_bound, solution.col_value[iCol]);
           solution.col_value.push_back(1);
         }
         const double dl_primal = solution.col_value[iCol] - prev_primal;
@@ -3345,25 +3320,21 @@ HighsLp withoutSemiVariables(const HighsLp& lp_, HighsSolution& solution,
         const HighsInt new_col = lp.col_cost_.size() - 1;
         const double binary_value = solution.col_value[new_col];
         solution.row_value[row_num - 1] =
-            solution.col_value[iCol] - lp.col_lower_[iCol] * binary_value;
+            solution.col_value[iCol] - semi_lower_bound * binary_value;
         solution.row_value[row_num] =
-            solution.col_value[iCol] - lp.col_upper_[iCol] * binary_value;
+            solution.col_value[iCol] - semi_upper_bound * binary_value;
       }
-      // Complete x - u*y <= rhs_u
+      // Complete x - u*y <= 0
       lp.row_lower_.push_back(-kHighsInf);
-      lp.row_upper_.push_back(rhs_u);
+      lp.row_upper_.push_back(0);
       if (have_row_names) {
         // Create a row name
         ss.str(std::string());
         ss << "semi_ub_" << semi_row_num++;
         lp.row_names_.push_back(ss.str());
-	if (debug_report) printf("Col %d has UB row name %s\n",
-				 int(iCol), ss.str().c_str());
       }
       index.push_back(row_num++);
       value.push_back(-semi_upper_bound);
-      if (debug_report) printf("Col %d has LB coefficient %g in row %d\n",
-			       int(num_col+semi_col_num), -lp.col_upper_[iCol], int(row_num));
       // Add the next start
       start.push_back(index.size());
       lp.integrality_.push_back(HighsVarType::kInteger);
@@ -3374,22 +3345,8 @@ HighsLp withoutSemiVariables(const HighsLp& lp_, HighsSolution& solution,
       }
       // Change the lower bound on the semi-variable to zero. Cannot
       // do this earlier, as its original value is used in constraint
-      // rhs_l <= x-l*y
+      // 0 <= x-l*y
       lp.col_lower_[iCol] = 0;
-      // Lower constraint is rhs_l <= x - l*y <= inf
-      //
-      // Upper constraint is -inf <= x - u*y <= rhs_u
-      //
-      // When y=0, make sure that the bounds are consistent
-      double lower0 = rhs_l;
-      double upper0 = rhs_u;
-      printf("For y = 0 the bounds are [%g, %g]\n", rhs_l, rhs_u);
-      assert(rhs_l <= rhs_u);
-      
-      double lower1 = rhs_l;
-      double upper1 = rhs_u;
-      assert(lower1 < upper1);
-      
     }
   }
   num_col += num_semi_variables;
