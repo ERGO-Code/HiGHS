@@ -45,6 +45,7 @@ void HighsPostsolveStack::compressIndexMaps(
         rowsAppended.find(origRowIndex[i]) != rowsAppended.end();
     if (newRowIndex[i] == -1) {
       --numRow;
+      //if (rowIsAppended) rowsAppended.erase(origRowIndex[i]);
       if (rowIsAppended) rowsAppended[origRowIndex[i]] = -1;
     } else {
       origRowIndex[newRowIndex[i]] = origRowIndex[i];
