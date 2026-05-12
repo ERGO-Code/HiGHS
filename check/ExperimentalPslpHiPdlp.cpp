@@ -177,6 +177,44 @@ HighsStatus solveWithHiPdlp(const HighsLp& lp, HighsModelStatus& model_status,
   return HighsStatus::kOk;
 }
 
+HighsStatus solveIntegratedOriginalHiPdlp(
+    const HighsLp& lp, const bool use_presolve, HighsModelStatus& model_status,
+    HighsInfo& info, HighsSolution& solution, double& presolve_time,
+    double& solve_time, double& total_time, std::string& error_message) {
+  Highs highs;
+  HighsStatus status = setCommonHiPdlpOptions(highs, use_presolve, error_message);
+  if (status != HighsStatus::kOk) return status;
+
+  status = highs.passModel(lp);
+  if (status != HighsStatus::kOk) {
+    error_message = "Failed to pass LP model to HiGHS";
+    return HighsStatus::kError;
+  }
+
+  status = highs.run();
+  if (status == HighsStatus::kError) {
+    error_message = "Integrated HiPDLP run returned HighsStatus::kError";
+    return HighsStatus::kError;
+  }
+
+  model_status = highs.getModelStatus();
+  info = highs.getInfo();
+  solution = highs.getSolution();
+  total_time = highs.getRunTime();
+  solve_time = total_time;
+  presolve_time = 0.0;
+
+  const HighsSubSolverCallTime& sub_solver_call_time = highs.getSubSolverCallTime();
+  if (sub_solver_call_time.run_time.size() > static_cast<size_t>(kSubSolverPdlp)) {
+    solve_time = sub_solver_call_time.run_time[kSubSolverPdlp];
+    if (std::isfinite(total_time) && std::isfinite(solve_time) &&
+        total_time >= solve_time) {
+      presolve_time = total_time - solve_time;
+    }
+  }
+  return HighsStatus::kOk;
+}
+
 HighsStatus solvePresolvedWithHiPdlp(
     Highs& original_highs, HighsModelStatus& model_status, HighsInfo& info,
     HighsSolution& original_solution, double& presolve_time, double& solve_time,
@@ -433,8 +471,10 @@ HighsStatus runExperimentalHiPdlpPslpBenchmark(
   if (result.mode == "none") {
     HighsInfo info;
     HighsSolution solution;
-    status = solveWithHiPdlp(original_lp, result.model_status, info, solution,
-                             result.solve_time, error_message);
+    status = solveIntegratedOriginalHiPdlp(
+        original_lp, false, result.model_status, info, solution,
+        result.presolve_time, result.solve_time, result.total_time,
+        error_message);
     result.iterations = info.pdlp_iteration_count;
     if (status != HighsStatus::kOk) return status;
     if (modelStatusHasReliableObjective(result.model_status) &&
@@ -443,11 +483,8 @@ HighsStatus runExperimentalHiPdlpPslpBenchmark(
       return HighsStatus::kError;
     }
     if (modelStatusHasReliableObjective(result.model_status)) {
-      result.objective = original_lp.objectiveValue(solution.col_value);
+      result.objective = info.objective_function_value;
     }
-    result.total_time =
-        std::chrono::duration<double>(std::chrono::steady_clock::now() - total_start)
-            .count();
     return HighsStatus::kOk;
   }
 
