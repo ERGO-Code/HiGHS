@@ -56,4 +56,4 @@ print(highspy_extras.get_library_version())
 
 ## License
 
-Apache - see the [HiGHS repository](https://github.com/ERGO-Code/HiGHS) for details.
+Apache 2.0 - see the license and `THIRD_PARTY_NOTICES` in the [HiGHS repository](https://github.com/ERGO-Code/HiGHS) for details.
