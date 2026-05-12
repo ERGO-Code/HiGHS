@@ -757,31 +757,33 @@ void HighsPostsolveStack::DuplicateColumn::undo(const HighsOptions& options,
     // otherwise min(0, upper), and if there is a basis, then
     // col_status[col] is kBasic.
     if (basis.valid) {
-      // Now set the basis status of col and duplicateCol. 
+      // Now set the basis status of col and duplicateCol.
       //
       // Set col_status[col] to be nonbasic corresponding to its
       // value. This is fine if it's at its lower or upper bound, or
       // at zero and free, but what if it's at zero with a finite
       // upper bound?
-      // 
+      //
       // The basis is maintained by setting duplicateCol to be basic
       assert(basis.col_status[col] == HighsBasisStatus::kBasic);
       basis.col_status[duplicateCol] = basis.col_status[col];
       if (colLower != -kHighsInf) {
-	assert(solution.col_value[col] == colLower);
-	basis.col_status[col] = HighsBasisStatus::kLower;
+        assert(solution.col_value[col] == colLower);
+        basis.col_status[col] = HighsBasisStatus::kLower;
       } else if (colUpper <= 0.0) {
-	assert(solution.col_value[col] == colUpper);
-	basis.col_status[col] = HighsBasisStatus::kUpper;
+        assert(solution.col_value[col] == colUpper);
+        basis.col_status[col] = HighsBasisStatus::kUpper;
       } else {
-	assert(solution.col_value[col] == 0.0);
-	basis.col_status[col] = HighsBasisStatus::kZero;
-	if (colUpper < kHighsInf) {
-	  // Nonbasic at zero with bounds (-inf, colUpper)
-	  printf("HighsPostsolveStack::DuplicateColumn::undo Col is nonbasic at zero with upper bound of %g\n",
-		 colUpper);
-	  assert(111==679);
-	}
+        assert(solution.col_value[col] == 0.0);
+        basis.col_status[col] = HighsBasisStatus::kZero;
+        if (colUpper < kHighsInf) {
+          // Nonbasic at zero with bounds (-inf, colUpper)
+          printf(
+              "HighsPostsolveStack::DuplicateColumn::undo Col is nonbasic at "
+              "zero with upper bound of %g\n",
+              colUpper);
+          assert(111 == 679);
+        }
       }
       assert(basis.col_status[duplicateCol] == HighsBasisStatus::kBasic);
     }

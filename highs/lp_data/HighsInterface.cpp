@@ -2901,11 +2901,36 @@ HighsStatus Highs::checkOptimality(const std::string& solver_type) {
   assert(model_status_ == HighsModelStatus::kOptimal);
   // Cannot expect to have no dual_infeasibilities since the QP solver
   // (and, of course, the MIP solver) give no dual information
-  if (info_.num_primal_infeasibilities == 0 &&
-      info_.num_dual_infeasibilities <= 0)
-    return HighsStatus::kOk;
-  model_status_ = HighsModelStatus::kSolveError;
   std::stringstream ss;
+  ss.str(std::string());
+  if (info_.num_primal_infeasibilities == 0 &&
+      info_.num_dual_infeasibilities <= 0) {
+    // Consider semi-continuous infeasibilities
+    if (info_.num_semi_infeasibilities > 0) {
+      ss << highsFormatToString(
+          "%s solver claims optimality, but with num/max/sum %d/%g/%g "
+          "semi-variable infeasibilities",
+          solver_type.c_str(), int(info_.num_semi_infeasibilities),
+          info_.max_semi_infeasibility, info_.sum_semi_infeasibilities);
+      double ratio = this->options_.mip_feasibility_tolerance /
+                     info_.max_semi_infeasibility;
+      double choose_mip_feasibility_tolerance =
+          this->options_.mip_feasibility_tolerance * ratio;
+      if (choose_mip_feasibility_tolerance >= kMinimumMipTolerance)
+        ss << highsFormatToString(
+            ": consider solving with mip_feasibility_tolerance = %.1g\n",
+            choose_mip_feasibility_tolerance);
+      highsLogUser(options_.log_options, HighsLogType::kError, "%s",
+                   ss.str().c_str());
+      model_status_ = HighsModelStatus::kSolveError;
+      highsLogUser(options_.log_options, HighsLogType::kError,
+                   "Setting model status to %s\n",
+                   modelStatusToString(model_status_).c_str());
+      return HighsStatus::kError;
+    }
+    return HighsStatus::kOk;
+  }
+  model_status_ = HighsModelStatus::kSolveError;
   ss.str(std::string());
   ss << highsFormatToString(
       "%s solver claims optimality, but with num/max/sum "

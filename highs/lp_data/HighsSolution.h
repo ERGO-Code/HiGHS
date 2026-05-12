@@ -89,7 +89,8 @@ void getVariableKktFailures(const double primal_feasibility_tolerance,
                             const double value, const double dual,
                             const HighsVarType integrality,
                             double& primal_infeasibility,
-                            double& dual_infeasibility, uint8_t& at_status,
+                            double& dual_infeasibility,
+                            double& semi_infeasibility, uint8_t& at_status,
                             uint8_t& mid_status, const HighsInt index = 0);
 
 void lpNoBasisKktCheck(HighsModelStatus& model_status, HighsInfo& info,

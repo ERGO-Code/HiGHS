@@ -97,6 +97,10 @@ void getKktFailures(const HighsOptions& options, const bool is_qp,
   double& max_dual_infeasibility = highs_info.max_dual_infeasibility;
   double& sum_dual_infeasibility = highs_info.sum_dual_infeasibilities;
 
+  HighsInt& num_semi_infeasibility = highs_info.num_semi_infeasibilities;
+  double& max_semi_infeasibility = highs_info.max_semi_infeasibility;
+  double& sum_semi_infeasibility = highs_info.sum_semi_infeasibilities;
+
   HighsInt& num_relative_primal_infeasibility =
       highs_info.num_relative_primal_infeasibilities;
   double& max_relative_primal_infeasibility =
@@ -154,6 +158,9 @@ void getKktFailures(const HighsOptions& options, const bool is_qp,
     num_primal_infeasibility = 0;
     max_primal_infeasibility = 0;
     sum_primal_infeasibility = 0;
+    num_semi_infeasibility = 0;
+    max_semi_infeasibility = 0;
+    sum_semi_infeasibility = 0;
     num_relative_primal_infeasibility = 0;
     max_relative_primal_infeasibility = 0;
     if (get_residuals) {
@@ -200,6 +207,7 @@ void getKktFailures(const HighsOptions& options, const bool is_qp,
   double primal_infeasibility;
   double relative_primal_infeasibility;
   double dual_infeasibility;
+  double semi_infeasibility;
   double cost = 0.0;
   double lower;
   double upper;
@@ -285,12 +293,11 @@ void getKktFailures(const HighsOptions& options, const bool is_qp,
       // one-sided variables. For free variables, fixed variables, or
       // variables with small positive bound interval lengths,
       // mid_status is returned as kHighsSolutionNo.
-      getVariableKktFailures(primal_feasibility_tolerance,
-                             dual_feasibility_tolerance,
-			     mip_feasibility_tolerance,
-			     lower, upper, value,
-                             dual, integrality, primal_infeasibility,
-                             dual_infeasibility, at_status, mid_status);
+      getVariableKktFailures(
+          primal_feasibility_tolerance, dual_feasibility_tolerance,
+          mip_feasibility_tolerance, lower, upper, value, dual, integrality,
+          primal_infeasibility, dual_infeasibility, semi_infeasibility,
+          at_status, mid_status);
       if (pass == 0) {
         // If the primal value is close to a bound then include the bound
         // in the active bound norm
@@ -337,6 +344,13 @@ void getKktFailures(const HighsOptions& options, const bool is_qp,
             num_relative_primal_infeasibility++;
           if (max_relative_primal_infeasibility < relative_primal_infeasibility)
             max_relative_primal_infeasibility = relative_primal_infeasibility;
+        }
+        if (semi_infeasibility > 0) {
+          // Accumulate semi infeasibilities
+          num_semi_infeasibility++;
+          if (max_semi_infeasibility < semi_infeasibility)
+            max_semi_infeasibility = semi_infeasibility;
+          sum_semi_infeasibility += semi_infeasibility;
         }
         if (have_dual_solution) {
           if (dual_infeasibility > 0) {
@@ -531,7 +545,7 @@ void getKktFailures(const HighsOptions& options, const bool is_qp,
   // Highs::callLpKktCheck, when the existence of a basis determines
   // whether absolute or relative measures are used.
 
-  if (num_primal_infeasibility) {
+  if (num_primal_infeasibility + num_semi_infeasibility) {
     highs_info.primal_solution_status = kSolutionStatusInfeasible;
   } else {
     highs_info.primal_solution_status = kSolutionStatusFeasible;
@@ -557,7 +571,8 @@ void getVariableKktFailures(const double primal_feasibility_tolerance,
                             const double value, const double dual,
                             const HighsVarType integrality,
                             double& primal_infeasibility,
-                            double& dual_infeasibility, uint8_t& at_status,
+                            double& dual_infeasibility,
+                            double& semi_infeasibility, uint8_t& at_status,
                             uint8_t& mid_status, const HighsInt index) {
   // Return the primal residual (ie infeasibility with zero tolerance)
   // as the primal infeasibility, ensuring (cf #2653) that it doesn't
@@ -566,6 +581,7 @@ void getVariableKktFailures(const double primal_feasibility_tolerance,
   auto infeasibility_residual =
       infeasibility(lower, value, upper, primal_feasibility_tolerance);
   primal_infeasibility = infeasibility_residual.second;
+  semi_infeasibility = 0;
   // Determine whether this value is close to a bound
   at_status = kHighsSolutionNo;
   double bound_residual = std::fabs(lower - value);
@@ -620,10 +636,27 @@ void getVariableKktFailures(const double primal_feasibility_tolerance,
   // Account for semi-variables
   const bool semi_variable = integrality == HighsVarType::kSemiContinuous ||
                              integrality == HighsVarType::kSemiInteger;
-  if (semi_variable && value < lower - primal_feasibility_tolerance) {
-    primal_infeasibility = std::fabs(value);
-    if (primal_infeasibility < mip_feasibility_tolerance) 
-      primal_infeasibility = 0;
+  double mid = std::max(primal_feasibility_tolerance, lower * 0.5);
+
+  if (semi_variable) {
+    primal_infeasibility = 0;
+    semi_infeasibility = 0;
+    if (value < mid) {
+      // Value is less than half way between 0 and lower, so treat its
+      // feasibility relative to 0
+      semi_infeasibility = std::fabs(value);
+      if (semi_infeasibility < mip_feasibility_tolerance)
+        semi_infeasibility = 0;
+    } else {
+      if (value < lower) {
+        semi_infeasibility = lower - value;
+      } else if (value > upper) {
+        semi_infeasibility = value - upper;
+      }
+      assert(semi_infeasibility >= 0);
+      if (semi_infeasibility < primal_feasibility_tolerance)
+        semi_infeasibility = 0;
+    }
   }
 }
 
@@ -736,6 +769,7 @@ void getPrimalDualGlpsolErrors(const HighsOptions& options, const HighsLp& lp,
   double primal_infeasibility;
   double relative_primal_infeasibility;
   double dual_infeasibility;
+  double semi_infeasibility;
   double lower;
   double upper;
   double value;
@@ -762,13 +796,12 @@ void getPrimalDualGlpsolErrors(const HighsOptions& options, const HighsLp& lp,
     // Flip dual according to lp.sense_
     dual *= (HighsInt)lp.sense_;
 
-    getVariableKktFailures(primal_feasibility_tolerance,
-                           dual_feasibility_tolerance,
-                           mip_feasibility_tolerance,
-			   lower, upper, value,
-                           dual, integrality, primal_infeasibility,
-                           dual_infeasibility, at_status, mid_status);
-
+    getVariableKktFailures(
+        primal_feasibility_tolerance, dual_feasibility_tolerance,
+        mip_feasibility_tolerance, lower, upper, value, dual, integrality,
+        primal_infeasibility, dual_infeasibility, semi_infeasibility, at_status,
+        mid_status);
+    primal_infeasibility = std::max(primal_infeasibility, semi_infeasibility);
     relative_primal_infeasibility = 0;
     if (mid_status == kHighsSolutionLo) {
       relative_primal_infeasibility =

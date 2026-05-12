@@ -4201,18 +4201,6 @@ HighsStatus Highs::callSolveMip() {
     // solution_.col_value.resize(model_.lp_.num_col_);
     solution_.col_value = solver.solution_;
     this->saved_objective_and_solution_ = solver.saved_objective_and_solution_;
-    use_lp.a_matrix_.productQuad(solution_.row_value, solution_.col_value);
-    solution_.value_valid = true;
-
-  HighsStatus call_status;
-  FILE* file;
-  HighsFileType file_type;
-  call_status = openWriteFile("Raw3015.sol", "writeSolution", file, file_type);
-  HighsModel model;
-  model.lp_ = use_lp;
-  writeSolutionFile(file, options_, model, basis_, solution_, info_,
-                    model_status_, kSolutionStylePretty);
-
     model_.lp_.a_matrix_.productQuad(solution_.row_value, solution_.col_value);
     solution_.value_valid = true;
   } else {
