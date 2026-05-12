@@ -18,6 +18,7 @@
 #include <memory>
 #include <sstream>
 
+#include "HighsExternalDeps.h"
 #include "io/Filereader.h"
 #include "io/LoadOptions.h"
 #include "ipm/IpxWrapper.h"
@@ -837,6 +838,12 @@ HighsStatus Highs::presolve() {
     highsLogUser(log_options, HighsLogType::kError,
                  "Model contains infinite costs or semi-variables, so cannot "
                  "be presolved independently\n");
+    return HighsStatus::kError;
+  }
+  if (model_.isQp()) {
+    highsLogUser(
+        log_options, HighsLogType::kError,
+        "Model is a QP, for which no presolve techniques are implemented\n");
     return HighsStatus::kError;
   }
   HighsStatus return_status = HighsStatus::kOk;
@@ -3943,33 +3950,16 @@ HighsStatus Highs::callSolveQp() {
   HighsStatus return_status;
 
   // Choose solver
-  bool use_hipo = false;
-  if (options_.solver == kHipoString || options_.solver == kIpmString) {
-#ifdef HIPO
-    use_hipo = true;
-#else
-    highsLogUser(options_.log_options, HighsLogType::kError,
-                 "HiPO is not available in this build.\n");
-    model_status_ = HighsModelStatus::kModelError;
-    solution_.value_valid = false;
-    solution_.dual_valid = false;
-    return HighsStatus::kError;
-#endif
-  } else
-    use_hipo = false;
+  bool use_hipo =
+      (options_.solver == kHipoString || options_.solver == kIpmString) &&
+      HighsExternalDeps::isAvailable();
 
   if (use_hipo) {
-#ifdef HIPO
     this->global_sub_solver_call_time_->start(kSubSolverHipo);
     return_status = solveHipo(options_, timer_, lp, hessian, basis_, solution_,
                               model_status_, info_, callback_);
     this->global_sub_solver_call_time_->stop(kSubSolverHipo);
     if (return_status == HighsStatus::kError) return return_status;
-#else
-    // shouldn't be possible to reach here
-    assert(1 == 0);
-#endif
-
   } else {
     //
     // Run the QP solver

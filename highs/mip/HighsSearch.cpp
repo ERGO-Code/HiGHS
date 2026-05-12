@@ -1360,7 +1360,7 @@ HighsSearch::NodeResult HighsSearch::branch() {
         fracval = std::floor(0.5 * (localdom.col_lower_[i] +
                                     localdom.col_upper_[i] + 0.5)) +
                   0.5;
-      if (localdom.col_lower_[i] != -kHighsInf)
+      else if (localdom.col_lower_[i] != -kHighsInf)
         fracval = localdom.col_lower_[i] + 0.5;
       else if (localdom.col_upper_[i] != kHighsInf)
         fracval = localdom.col_upper_[i] - 0.5;

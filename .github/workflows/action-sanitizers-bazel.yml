@@ -11,7 +11,7 @@ jobs:
   #       os: [ubuntu-latest]
 
   #   steps:
-  #     - uses: actions/checkout@v4
+  #     - uses: actions/checkout@v6
 
   #     - uses: bazelbuild/setup-bazelisk@v3
 
@@ -25,7 +25,7 @@ jobs:
   #       run: bazel test -c dbg --config=asan --runs_per_test 3 //...
 
   #     # - name: Upload bazel-testlogs
-  #     #   uses: actions/upload-artifact@v4
+  #     #   uses: actions/upload-artifact@v7
   #     #   with:
   #     #     name: bazel-testlogs-asan
   #     #     path: bazel-testlogs/
@@ -37,7 +37,7 @@ jobs:
         os: [ubuntu-latest]
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - uses: bazelbuild/setup-bazelisk@v3
 
@@ -54,7 +54,7 @@ jobs:
         run: bazel test -c dbg --config=tsan --runs_per_test 3 //:TestHighsParallel
 
       # - name: Upload bazel-testlogs
-      #   uses: actions/upload-artifact@v4
+      #   uses: actions/upload-artifact@v7
       #   with:
       #     name: bazel-testlogs-tsan
       #     path: bazel-testlogs/
@@ -66,7 +66,7 @@ jobs:
   #       os: [ubuntu-latest]
 
   #   steps:
-  #     - uses: actions/checkout@v4
+  #     - uses: actions/checkout@v6
 
   #     - uses: bazelbuild/setup-bazelisk@v3
 
@@ -80,7 +80,7 @@ jobs:
   #       run: bazel test -c dbg --config=lsan --runs_per_test 3 //...
 
   #     # - name: Upload bazel-testlogs
-  #     #   uses: actions/upload-artifact@v4
+  #     #   uses: actions/upload-artifact@v7
   #     #   with:
   #     #     name: bazel-testlogs-lsan
   #     #     path: bazel-testlogs/
@@ -92,7 +92,7 @@ jobs:
   #       os: [ubuntu-latest]
 
   #   steps:
-  #     - uses: actions/checkout@v4
+  #     - uses: actions/checkout@v6
 
   #     - uses: bazelbuild/setup-bazelisk@v3
 
@@ -106,7 +106,7 @@ jobs:
   #       run: bazel test -c dbg --config=ubsan --runs_per_test 3000 //...
 
   #     # - name: Upload bazel-testlogs
-  #     #   uses: actions/upload-artifact@v4
+  #     #   uses: actions/upload-artifact@v7
   #     #   with:
   #     #     name: bazel-testlogs-ubsan
   #     #     path: bazel-testlogs/
