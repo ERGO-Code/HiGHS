@@ -176,10 +176,9 @@ restart:
     }
     // End of pre-root-node heuristics
     if (analysis_.analyse_mip_time && !submip)
-      if (analysis_.analyse_mip_time & !submip)
-        highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
-                     "MIP-Timing: %11.2g - starting evaluate root node\n",
-                     timer_.read());
+      highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
+                   "MIP-Timing: %11.2g - starting evaluate root node\n",
+                   timer_.read());
     analysis_.mipTimerStart(kMipClockEvaluateRootNode);
     mipdata_->evaluateRootNode();
     analysis_.mipTimerStop(kMipClockEvaluateRootNode);
@@ -315,7 +314,7 @@ restart:
         const HighsSearch::NodeResult search_dive_result = search.dive();
         analysis_.mipTimerStop(kMipClockTheDive);
         if (analysis_.analyse_mip_time) {
-          this_dive_time += analysis_.mipTimerRead(kMipClockNodeSearch);
+          this_dive_time += analysis_.mipTimerRead(kMipClockTheDive);
           analysis_.dive_time.push_back(this_dive_time);
         }
         if (search_dive_result == HighsSearch::NodeResult::kSubOptimal) break;
@@ -620,7 +619,6 @@ restart:
         mipdata_->nodequeue.clear();
         mipdata_->pruned_treeweight = 1.0;
 
-        analysis_.mipTimerStart(kMipClockStoreBasis);
         mipdata_->updateLowerBound(std::min(kHighsInf, mipdata_->upper_bound));
         break;
       }
