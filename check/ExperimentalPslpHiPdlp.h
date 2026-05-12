@@ -22,7 +22,7 @@ struct ExperimentalHiPdlpPslpRun {
   HighsInt reduced_rows = 0;
   HighsInt reduced_cols = 0;
   HighsInt reduced_nnz = 0;
-  double pslp_time = 0.0;
+  double presolve_time = 0.0;
   HighsInt iterations = -1;
   double solve_time = 0.0;
   double total_time = 0.0;

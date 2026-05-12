@@ -45,11 +45,18 @@ TEST_CASE("hi-pdlp-with-pslp-presolve", "[pdlp][pslp]") {
   const std::string model_file =
       std::string(HIGHS_DIR) + "/check/instances/afiro.mps";
 
-  ExperimentalHiPdlpPslpRun plain_result;
+  ExperimentalHiPdlpPslpRun none_result;
+  ExperimentalHiPdlpPslpRun highs_result;
   ExperimentalHiPdlpPslpRun pslp_result;
   std::string error_message;
 
-  REQUIRE(runExperimentalHiPdlpPslpBenchmark(model_file, "plain", plain_result,
+  REQUIRE(runExperimentalHiPdlpPslpBenchmark(model_file, "none", none_result,
+                                             error_message) ==
+          HighsStatus::kOk);
+  REQUIRE(error_message.empty());
+
+  error_message.clear();
+  REQUIRE(runExperimentalHiPdlpPslpBenchmark(model_file, "highs", highs_result,
                                              error_message) ==
           HighsStatus::kOk);
   REQUIRE(error_message.empty());
@@ -60,23 +67,34 @@ TEST_CASE("hi-pdlp-with-pslp-presolve", "[pdlp][pslp]") {
           HighsStatus::kOk);
   REQUIRE(error_message.empty());
 
-  std::cout << experimentalHiPdlpPslpCsvLine(plain_result) << std::endl;
+  std::cout << experimentalHiPdlpPslpCsvLine(none_result) << std::endl;
+  std::cout << experimentalHiPdlpPslpCsvLine(highs_result) << std::endl;
   std::cout << experimentalHiPdlpPslpCsvLine(pslp_result) << std::endl;
-  std::cout << "diagnostics,plain_iterations=" << plain_result.iterations
+  std::cout << "diagnostics,none_iterations=" << none_result.iterations
+            << ",highs_iterations=" << highs_result.iterations
             << ",pslp_iterations=" << pslp_result.iterations
-            << ",plain_total_time=" << plain_result.total_time
+            << ",none_total_time=" << none_result.total_time
+            << ",highs_total_time=" << highs_result.total_time
             << ",pslp_total_time=" << pslp_result.total_time
-            << ",objective_delta="
-            << (pslp_result.objective - plain_result.objective)
+            << ",highs_presolve_time=" << highs_result.presolve_time
+            << ",pslp_presolve_time=" << pslp_result.presolve_time
+            << ",objective_delta_pslp_vs_none="
+            << (pslp_result.objective - none_result.objective)
             << ",nnz_reduction="
-            << (plain_result.orig_nnz - pslp_result.reduced_nnz) << std::endl;
+            << (none_result.orig_nnz - pslp_result.reduced_nnz) << std::endl;
 
-  REQUIRE(plain_result.model_status == HighsModelStatus::kOptimal);
+  REQUIRE(none_result.model_status == HighsModelStatus::kOptimal);
+  REQUIRE(highs_result.model_status == HighsModelStatus::kOptimal);
   REQUIRE(pslp_result.model_status == HighsModelStatus::kOptimal);
-  REQUIRE(std::isfinite(plain_result.objective));
+  REQUIRE(std::isfinite(none_result.objective));
+  REQUIRE(std::isfinite(highs_result.objective));
   REQUIRE(std::isfinite(pslp_result.objective));
-  REQUIRE(plain_result.iterations >= 0);
+  REQUIRE(none_result.iterations >= 0);
+  REQUIRE(highs_result.iterations >= 0);
   REQUIRE(pslp_result.iterations >= 0);
+  REQUIRE(highs_result.reduced_rows >= 0);
+  REQUIRE(highs_result.reduced_cols >= 0);
+  REQUIRE(highs_result.reduced_nnz >= 0);
   REQUIRE(pslp_result.reduced_rows >= 0);
   REQUIRE(pslp_result.reduced_cols >= 0);
   REQUIRE(pslp_result.reduced_nnz >= 0);

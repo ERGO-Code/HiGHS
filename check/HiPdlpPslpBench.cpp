@@ -7,7 +7,7 @@ namespace {
 
 void printUsage(const char* executable) {
   std::cerr << "Usage: " << executable
-            << " <model_file> --mode=plain|pslp\n";
+            << " <model_file> --mode=none|highs|pslp\n";
 }
 
 }  // namespace

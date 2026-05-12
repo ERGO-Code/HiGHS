@@ -55,7 +55,12 @@ std::string basenameOf(const std::string& path) {
 }
 
 bool isModeValid(const std::string& mode) {
-  return mode == "plain" || mode == "pslp";
+  return mode == "none" || mode == "plain" || mode == "highs" ||
+         mode == "pslp";
+}
+
+std::string canonicalMode(const std::string& mode) {
+  return mode == "plain" ? "none" : mode;
 }
 
 bool modelStatusHasReliableObjective(const HighsModelStatus model_status) {
@@ -63,7 +68,8 @@ bool modelStatusHasReliableObjective(const HighsModelStatus model_status) {
          model_status == HighsModelStatus::kModelEmpty;
 }
 
-HighsStatus setCommonHiPdlpOptions(Highs& highs, std::string& error_message) {
+HighsStatus setCommonHiPdlpOptions(Highs& highs, const bool use_presolve,
+                                   std::string& error_message) {
   HighsStatus status = highs.setOptionValue("output_flag", kExperimentalOutputFlag);
   if (status != HighsStatus::kOk) {
     error_message = "Failed to set output_flag";
@@ -74,9 +80,11 @@ HighsStatus setCommonHiPdlpOptions(Highs& highs, std::string& error_message) {
     error_message = "Failed to set solver=hipdlp";
     return HighsStatus::kError;
   }
-  status = highs.setOptionValue("presolve", kHighsOffString);
+  status = highs.setOptionValue("presolve",
+                                use_presolve ? kHighsOnString : kHighsOffString);
   if (status != HighsStatus::kOk) {
-    error_message = "Failed to set presolve=off";
+    error_message =
+        use_presolve ? "Failed to set presolve=on" : "Failed to set presolve=off";
     return HighsStatus::kError;
   }
   status = highs.setOptionValue("kkt_tolerance", kExperimentalKktTolerance);
@@ -107,9 +115,10 @@ HighsStatus loadModelAsLp(const std::string& model_file, HighsLp& lp,
 
 HighsStatus solveWithHiPdlp(const HighsLp& lp, HighsModelStatus& model_status,
                             HighsInfo& info, HighsSolution& solution,
-                            double& solve_time, std::string& error_message) {
+                            double& solve_time, std::string& error_message,
+                            const bool use_presolve = false) {
   Highs highs;
-  HighsStatus status = setCommonHiPdlpOptions(highs, error_message);
+  HighsStatus status = setCommonHiPdlpOptions(highs, use_presolve, error_message);
   if (status != HighsStatus::kOk) return status;
 
   status = highs.passModel(lp);
@@ -131,6 +140,81 @@ HighsStatus solveWithHiPdlp(const HighsLp& lp, HighsModelStatus& model_status,
   model_status = highs.getModelStatus();
   info = highs.getInfo();
   solution = highs.getSolution();
+  return HighsStatus::kOk;
+}
+
+HighsStatus solvePresolvedWithHiPdlp(
+    Highs& original_highs, HighsModelStatus& model_status, HighsInfo& info,
+    HighsSolution& original_solution, double& presolve_time, double& solve_time,
+    HighsInt& reduced_rows, HighsInt& reduced_cols, HighsInt& reduced_nnz,
+    std::string& error_message) {
+  const auto presolve_start = std::chrono::steady_clock::now();
+  HighsStatus status = original_highs.presolve();
+  presolve_time =
+      std::chrono::duration<double>(std::chrono::steady_clock::now() - presolve_start)
+          .count();
+  if (status != HighsStatus::kOk) {
+    error_message = "HiGHS presolve returned an error";
+    return HighsStatus::kError;
+  }
+
+  const HighsPresolveStatus presolve_status =
+      original_highs.getModelPresolveStatus();
+  if (presolve_status == HighsPresolveStatus::kInfeasible) {
+    model_status = HighsModelStatus::kInfeasible;
+    return HighsStatus::kOk;
+  }
+  if (presolve_status == HighsPresolveStatus::kUnboundedOrInfeasible) {
+    model_status = HighsModelStatus::kUnboundedOrInfeasible;
+    return HighsStatus::kOk;
+  }
+  if (presolve_status == HighsPresolveStatus::kTimeout) {
+    model_status = original_highs.getModelStatus();
+    error_message = "HiGHS presolve timed out";
+    return HighsStatus::kError;
+  }
+
+  const HighsLp& presolved_lp = original_highs.getPresolvedLp();
+  reduced_rows = presolved_lp.num_row_;
+  reduced_cols = presolved_lp.num_col_;
+  reduced_nnz = presolved_lp.a_matrix_.numNz();
+
+  if (presolve_status == HighsPresolveStatus::kReducedToEmpty) {
+    HighsSolution reduced_solution;
+    reduced_solution.value_valid = true;
+    reduced_solution.dual_valid = true;
+    status = original_highs.postsolve(reduced_solution);
+    if (status != HighsStatus::kOk) {
+      error_message = "HiGHS postsolve failed for empty presolved LP";
+      return HighsStatus::kError;
+    }
+    model_status = original_highs.getModelStatus();
+    info = original_highs.getInfo();
+    info.pdlp_iteration_count = 0;
+    original_solution = original_highs.getSolution();
+    solve_time = 0.0;
+    return HighsStatus::kOk;
+  }
+
+  HighsSolution reduced_solution;
+  status = solveWithHiPdlp(presolved_lp, model_status, info, reduced_solution,
+                           solve_time, error_message, false);
+  if (status != HighsStatus::kOk) return status;
+
+  if (modelStatusHasReliableObjective(model_status)) {
+    const HighsInt reduced_iteration_count = info.pdlp_iteration_count;
+    status = original_highs.postsolve(reduced_solution);
+    if (status != HighsStatus::kOk) {
+      error_message = "HiGHS postsolve failed for presolved HiPDLP solution";
+      return HighsStatus::kError;
+    }
+    model_status = original_highs.getModelStatus();
+    original_solution = original_highs.getSolution();
+    info.pdlp_iteration_count = reduced_iteration_count;
+  } else {
+    original_solution = reduced_solution;
+  }
+
   return HighsStatus::kOk;
 }
 
@@ -292,10 +376,10 @@ HighsStatus runExperimentalHiPdlpPslpBenchmark(
     ExperimentalHiPdlpPslpRun& result, std::string& error_message) {
   result = ExperimentalHiPdlpPslpRun();
   result.instance = basenameOf(model_file);
-  result.mode = mode;
+  result.mode = canonicalMode(mode);
 
   if (!isModeValid(mode)) {
-    error_message = "Mode must be plain or pslp";
+    error_message = "Mode must be none, highs, or pslp";
     return HighsStatus::kError;
   }
 
@@ -312,7 +396,7 @@ HighsStatus runExperimentalHiPdlpPslpBenchmark(
   result.reduced_cols = result.orig_cols;
   result.reduced_nnz = result.orig_nnz;
 
-  if (mode == "plain") {
+  if (result.mode == "none") {
     HighsInfo info;
     HighsSolution solution;
     status = solveWithHiPdlp(original_lp, result.model_status, info, solution,
@@ -325,6 +409,38 @@ HighsStatus runExperimentalHiPdlpPslpBenchmark(
       return HighsStatus::kError;
     }
     if (modelStatusHasReliableObjective(result.model_status)) {
+      result.objective = original_lp.objectiveValue(solution.col_value);
+    }
+    result.total_time =
+        std::chrono::duration<double>(std::chrono::steady_clock::now() - total_start)
+            .count();
+    return HighsStatus::kOk;
+  }
+
+  if (result.mode == "highs") {
+    Highs highs;
+    status = setCommonHiPdlpOptions(highs, false, error_message);
+    if (status != HighsStatus::kOk) return status;
+    status = highs.passModel(original_lp);
+    if (status != HighsStatus::kOk) {
+      error_message = "Failed to pass LP model to HiGHS internal presolver";
+      return HighsStatus::kError;
+    }
+
+    HighsInfo info;
+    HighsSolution solution;
+    status = solvePresolvedWithHiPdlp(
+        highs, result.model_status, info, solution, result.presolve_time,
+        result.solve_time, result.reduced_rows, result.reduced_cols,
+        result.reduced_nnz, error_message);
+    result.iterations = info.pdlp_iteration_count;
+    if (status != HighsStatus::kOk) return status;
+    if (modelStatusHasReliableObjective(result.model_status)) {
+      if (solution.col_value.size() != static_cast<size_t>(original_lp.num_col_)) {
+        error_message =
+            "HiGHS postsolve solution has invalid column dimension";
+        return HighsStatus::kError;
+      }
       result.objective = original_lp.objectiveValue(solution.col_value);
     }
     result.total_time =
@@ -365,7 +481,7 @@ HighsStatus runExperimentalHiPdlpPslpBenchmark(
   }
 
   const PresolveStatus presolve_status = run_presolver(presolver);
-  result.pslp_time =
+  result.presolve_time =
       std::chrono::duration<double>(std::chrono::steady_clock::now() - pslp_start)
           .count();
 
@@ -384,11 +500,11 @@ HighsStatus runExperimentalHiPdlpPslpBenchmark(
     result.model_status = HighsModelStatus::kInfeasible;
     result.total_time =
         std::chrono::duration<double>(std::chrono::steady_clock::now() - total_start)
-            .count();
-    free_presolver(presolver);
-    free_settings(settings);
-    return HighsStatus::kOk;
-  }
+         .count();
+  free_presolver(presolver);
+  free_settings(settings);
+  return HighsStatus::kOk;
+}
   if (presolve_status & UNBNDORINFEAS) {
     result.model_status = HighsModelStatus::kUnboundedOrInfeasible;
     result.total_time =
@@ -480,7 +596,7 @@ std::string experimentalHiPdlpPslpCsvLine(
   stream << result.instance << "," << result.mode << "," << result.orig_rows
          << "," << result.orig_cols << "," << result.orig_nnz << ","
          << result.reduced_rows << "," << result.reduced_cols << ","
-         << result.reduced_nnz << "," << result.pslp_time << ","
+         << result.reduced_nnz << "," << result.presolve_time << ","
          << result.iterations << "," << result.solve_time << ","
          << result.total_time << "," << result.objective << ","
          << modelStatusToString(result.model_status);
