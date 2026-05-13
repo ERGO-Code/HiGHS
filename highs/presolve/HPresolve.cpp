@@ -5943,23 +5943,27 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
 
     // Start of main presolve loop
     //
+    bool tryAppendRows =
+        mipsolver != nullptr || !options->lp_presolve_requires_basis_postsolve;
     while (true) {
       // FOR DEBUGGING NEW METHOD!
-      std::vector<double> row_lower, row_upper;
-      std::vector<std::vector<row_entry>> rows;
-      for (HighsInt i = 0; i < static_cast<HighsInt>(0.1 * model->num_row_);
-           i++) {
-        if (rowDeleted[i]) continue;
-        std::vector<row_entry> row;
-        for (const auto& rowNz : getRowVector(i)) {
-          row.push_back(row_entry{rowNz.index(), rowNz.value()});
+      if (tryAppendRows) {
+        std::vector<double> row_lower, row_upper;
+        std::vector<std::vector<row_entry>> rows;
+        for (HighsInt i = 0; i < static_cast<HighsInt>(0.1 * model->num_row_);
+             i++) {
+          if (rowDeleted[i]) continue;
+          std::vector<row_entry> row;
+          for (const auto& rowNz : getRowVector(i)) {
+            row.push_back(row_entry{rowNz.index(), rowNz.value()});
+          }
+          row_lower.push_back(model->row_lower_[i]);
+          row_upper.push_back(model->row_upper_[i]);
+          rows.push_back(row);
         }
-        row_lower.push_back(model->row_lower_[i]);
-        row_upper.push_back(model->row_upper_[i]);
-        rows.push_back(row);
+        if (!addToMatrix(postsolve_stack, row_lower, row_upper, rows))
+          return Result::kOk;
       }
-      if (!addToMatrix(postsolve_stack, row_lower, row_upper, rows))
-        return Result::kOk;
 
       HighsInt currSize =
           model->num_col_ - numDeletedCols + model->num_row_ - numDeletedRows;

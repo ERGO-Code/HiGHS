@@ -839,18 +839,10 @@ class HighsPostsolveStack {
     if (perform_dual_postsolve) solution.row_dual.resize(origNumRow);
 
     if (perform_basis_postsolve) {
+      assert(numRowsAppended == 0);
+      basis.row_status.resize(origNumRow);
       HighsInt numColBasics = 0;
       HighsInt numRowBasics = 0;
-      for (auto e : basis.col_status)
-        if (e == HighsBasisStatus::kBasic) numColBasics++;
-      for (auto e : basis.row_status)
-        if (e == HighsBasisStatus::kBasic) numRowBasics++;
-      assert(numColBasics + numRowBasics == origNumRow + numRowsAppended);
-
-      // Add code to shrink basis (without appended rows)
-
-      numColBasics = 0;
-      numRowBasics = 0;
       for (auto e : basis.col_status)
         if (e == HighsBasisStatus::kBasic) numColBasics++;
       for (auto e : basis.row_status)
