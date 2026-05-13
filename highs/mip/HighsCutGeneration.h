@@ -73,9 +73,12 @@ class HighsCutGeneration {
 
   bool preprocessSNFRelaxation();
 
+  void setGenFlowCover(std::vector<HighsInt>& inds, std::vector<double>& vals,
+                       bool& genFlowCover) const;
+
   bool tryGenerateFlowCoverCut(HighsTransformedLp& transLp,
-                               std::vector<HighsInt>& inds_,
-                               std::vector<double>& vals_, double& rhs_,
+                               std::vector<HighsInt>& inds,
+                               std::vector<double>& vals, double& rhs,
                                double& efficacy);
 
   double scale(double val);
@@ -91,6 +94,11 @@ class HighsCutGeneration {
 
   void updateViolationAndNorm(HighsInt index, double aj, double& violation,
                               double& norm) const;
+
+  bool tryGenerateCmirCut(HighsTransformedLp& transLp,
+                          std::vector<HighsInt>& inds_,
+                          std::vector<double>& vals_, double& rhs_,
+                          bool onlyInitialCMIRScale);
 
   bool tryGenerateCut(std::vector<HighsInt>& inds, std::vector<double>& vals,
                       bool hasUnboundedInts, bool hasGeneralInts,
@@ -116,7 +124,7 @@ class HighsCutGeneration {
   /// applies postprocessing to an externally generated cut and adds it to the
   /// cutpool if it is violated enough
   bool finalizeAndAddCut(std::vector<HighsInt>& inds, std::vector<double>& vals,
-                         double& rhs);
+                         double& rhs, bool skipChecks = false);
 
   /// Single Node Flow Relaxation for flow cover cuts
   struct SNFRelaxation {
