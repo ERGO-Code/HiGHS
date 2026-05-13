@@ -20,7 +20,6 @@
 #include "ipm/ipx/lp_solver.h"
 #include "lp_data/HighsSolution.h"
 
-
 HighsStatus solveLpIpx(HighsLpSolverObject& solver_object);
 
 HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
