@@ -127,9 +127,6 @@ class HPresolve {
   HighsInt numDeletedRows;
   HighsInt numDeletedCols;
 
-  // counter for number of appended rows
-  HighsInt numAppendedRows;
-
   // store old problem sizes to compute percentage reductions in
   // presolve loop
   HighsInt oldNumCol;

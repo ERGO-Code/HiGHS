@@ -248,9 +248,8 @@ enum class HighsBasisStatus : uint8_t {
   kBasic,  // (slack) variable is basic
   kUpper,  // (slack) variable is at its upper bound
   kZero,   // free variable is nonbasic and set to zero
-  kNonbasic,  // nonbasic with no specific bound information - useful for users
+  kNonbasic  // nonbasic with no specific bound information - useful for users
              // and postsolve
-  kUninit 
 };
 
 // Types of LP presolve rules

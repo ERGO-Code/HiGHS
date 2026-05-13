@@ -41,7 +41,8 @@ HighsPseudocost::HighsPseudocost(const HighsMipSolver& mipsolver)
         mipsolver.pscostinit->conflict_avg_score * mipsolver.numCol();
 
     for (HighsInt i = 0; i != mipsolver.numCol(); ++i) {
-      HighsInt origCol = mipsolver.mipdata_->postSolveStack.getOrigColIndex(i);
+      HighsInt origCol =
+          mipsolver.mipdata_->postSolveStack.getOrigColIndex()[i];
 
       pseudocostup[i] = mipsolver.pscostinit->pseudocostup[origCol];
       nsamplesup[i] = mipsolver.pscostinit->nsamplesup[origCol];
@@ -109,21 +110,21 @@ HighsPseudocostInitialization::HighsPseudocostInitialization(
   conflict_avg_score /= ncols * pscost.conflict_weight;
 
   for (HighsInt i = 0; i != ncols; ++i) {
-    pseudocostup[postsolveStack.getOrigColIndex(i)] = pscost.pseudocostup[i];
-    pseudocostdown[postsolveStack.getOrigColIndex(i)] =
+    pseudocostup[postsolveStack.getOrigColIndex()[i]] = pscost.pseudocostup[i];
+    pseudocostdown[postsolveStack.getOrigColIndex()[i]] =
         pscost.pseudocostdown[i];
-    nsamplesup[postsolveStack.getOrigColIndex(i)] =
+    nsamplesup[postsolveStack.getOrigColIndex()[i]] =
         std::min(maxCount, pscost.nsamplesup[i]);
-    nsamplesdown[postsolveStack.getOrigColIndex(i)] =
+    nsamplesdown[postsolveStack.getOrigColIndex()[i]] =
         std::min(maxCount, pscost.nsamplesdown[i]);
-    inferencesup[postsolveStack.getOrigColIndex(i)] = pscost.inferencesup[i];
-    inferencesdown[postsolveStack.getOrigColIndex(i)] =
+    inferencesup[postsolveStack.getOrigColIndex()[i]] = pscost.inferencesup[i];
+    inferencesdown[postsolveStack.getOrigColIndex()[i]] =
         pscost.inferencesdown[i];
-    ninferencesup[postsolveStack.getOrigColIndex(i)] = 1;
-    ninferencesdown[postsolveStack.getOrigColIndex(i)] = 1;
-    conflictscoreup[postsolveStack.getOrigColIndex(i)] =
+    ninferencesup[postsolveStack.getOrigColIndex()[i]] = 1;
+    ninferencesdown[postsolveStack.getOrigColIndex()[i]] = 1;
+    conflictscoreup[postsolveStack.getOrigColIndex()[i]] =
         pscost.conflictscoreup[i] / pscost.conflict_weight;
-    conflictscoredown[postsolveStack.getOrigColIndex(i)] =
+    conflictscoredown[postsolveStack.getOrigColIndex()[i]] =
         pscost.conflictscoredown[i] / pscost.conflict_weight;
   }
 }

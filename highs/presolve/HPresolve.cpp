@@ -48,7 +48,7 @@ namespace presolve {
 void HPresolve::debugPrintRow(HighsPostsolveStack& postsolve_stack,
                               HighsInt row) {
   printf("(row %" HIGHSINT_FORMAT ") %.15g (impl: %.15g) <= ",
-         postsolve_stack.getOrigRowIndex(row), model->row_lower_[row],
+         postsolve_stack.getOrigRowIndex()[row], model->row_lower_[row],
          impliedRowBounds.getSumLower(row));
 
   for (const HighsSliceNonzero& nonzero : getSortedRowVector(row)) {
@@ -59,7 +59,7 @@ void HPresolve::debugPrintRow(HighsPostsolveStack& postsolve_stack,
                                                                        : 'x';
     char signchar = nonzero.value() < 0 ? '-' : '+';
     printf("%c%g %c%" HIGHSINT_FORMAT " ", signchar, std::abs(nonzero.value()),
-           colchar, postsolve_stack.getOrigColIndex(nonzero.index()));
+           colchar, postsolve_stack.getOrigColIndex()[nonzero.index()]);
   }
 
   printf("<= %.15g (impl: %.15g)\n", model->row_upper_[row],
@@ -125,7 +125,6 @@ bool HPresolve::okSetInput(HighsLp& model_, const HighsOptions& options_,
   if (!okReserve(liftingOpportunities, model->num_row_)) return false;
   numDeletedCols = 0;
   numDeletedRows = 0;
-  numAppendedRows = 0;
   // initialize substitution opportunities
   for (HighsInt row = 0; row != model->num_row_; ++row) {
     if (!isDualImpliedFree(row)) continue;
@@ -689,11 +688,11 @@ HPresolve::Result HPresolve::updateColImpliedBounds(HighsInt row, HighsInt col,
     // column as implied free
     bool useImplBound =
         mipsolver == nullptr ||
-        mipsolver->mipdata_->postSolveStack.getOrigRowIndex(row) <
+        mipsolver->mipdata_->postSolveStack.getOrigRowIndex()[row] <
             mipsolver->orig_model_->num_row_ ||
-        mipsolver->mipdata_->postSolveStack.getOrigRowIndex(row) >=
+        mipsolver->mipdata_->postSolveStack.getOrigRowIndex()[row] >=
             mipsolver->mipdata_->postSolveStack.getOrigNumRow() -
-                numAppendedRows;
+                mipsolver->mipdata_->postSolveStack.getNumAppendedRows();
 
     if (direction * val > 0) {
       // upper bound
@@ -2132,13 +2131,12 @@ bool HPresolve::addToMatrix(
   HighsInt num_rows = static_cast<HighsInt>(row_entries.size());
   if (num_rows == 0) return true;
   HighsInt oldNumRows = model->num_row_;
-  HighsInt oldNumRowsAppended = numAppendedRows;
-  numAppendedRows += num_rows;
+  HighsInt oldNumRowsAppended = postsolve_stack.getNumAppendedRows();
   model->num_row_ += num_rows;
   model->a_matrix_.num_row_ += num_rows;
 
   // resize postsolve vectors
-  postsolve_stack.appendRowsToModel2(num_rows);
+  postsolve_stack.appendRowsToModel(num_rows);
 
   // add row bounds
   model->row_lower_.insert(model->row_lower_.end(), row_lower.begin(),
@@ -6444,10 +6442,6 @@ HighsModelStatus HPresolve::run(HighsPostsolveStack& postsolve_stack) {
 
   shrinkProblem(postsolve_stack);
 
-  //postsolve_stack.removeCutsFromModel(numAppendedRows - postsolve_stack.getAppendedRows().size());
-
-  postsolve_stack.getAppendedRows(model->rows_appended_by_presolve_);
-
   if (mipsolver != nullptr) {
     mipsolver->mipdata_->cliquetable.setPresolveFlag(false);
     mipsolver->mipdata_->cliquetable.setMaxEntries(numNonzeros());
@@ -6461,10 +6455,10 @@ HighsModelStatus HPresolve::run(HighsPostsolveStack& postsolve_stack) {
       cutinds.reserve(model->num_col_);
       cutvals.reserve(model->num_col_);
       HighsInt numcuts = 0;
-      for (HighsInt i = postsolve_stack.getOrigRowIndexSize() - 1; i >= 0;
+      for (HighsInt i = postsolve_stack.getOrigRowIndex().size() - 1; i >= 0;
            --i) {
         // check if we already reached the original rows
-        if (postsolve_stack.getOrigRowIndex(i) <
+        if (postsolve_stack.getOrigRowIndex()[i] <
             mipsolver->orig_model_->num_row_)
           break;
 
@@ -6540,8 +6534,7 @@ void HPresolve::computeIntermediateMatrix(std::vector<HighsInt>& flagRow,
                                           size_t& numreductions) {
   shrinkProblemEnabled = false;
   HighsPostsolveStack stack;
-  stack.initializeIndexMaps(flagRow.size(), flagCol.size(),
-                            model->rows_appended_by_presolve_);
+  stack.initializeIndexMaps(flagRow.size(), flagCol.size());
   setReductionLimit(numreductions);
   presolve(stack);
   numreductions = stack.numReductions();
@@ -8230,8 +8223,7 @@ void HPresolve::debug(const HighsLp& lp, const HighsOptions& options) {
   model.integrality_.assign(lp.num_col_, HighsVarType::kContinuous);
 
   HighsPostsolveStack postsolve_stack;
-  postsolve_stack.initializeIndexMaps(lp.num_row_, lp.num_col_,
-                                      lp.rows_appended_by_presolve_);
+  postsolve_stack.initializeIndexMaps(lp.num_row_, lp.num_col_);
   {
     HPresolve presolve;
     presolve.okSetInput(model, options, options.presolve_reduction_limit);
@@ -8307,8 +8299,7 @@ void HPresolve::debug(const HighsLp& lp, const HighsOptions& options) {
     HPresolve presolve;
     presolve.okSetInput(model, options, options.presolve_reduction_limit);
     HighsPostsolveStack tmp;
-    tmp.initializeIndexMaps(model.num_row_, model.num_col_,
-                            model.rows_appended_by_presolve_);
+    tmp.initializeIndexMaps(model.num_row_, model.num_col_);
     presolve.setReductionLimit(reductionLim);
     presolve.run(tmp);
 
@@ -8322,16 +8313,16 @@ void HPresolve::debug(const HighsLp& lp, const HighsOptions& options) {
     temp_sol.col_dual.resize(model.num_col_);
     temp_sol.col_value.resize(model.num_col_);
     for (HighsInt i = 0; i != model.num_col_; ++i) {
-      temp_sol.col_dual[i] = sol.col_dual[tmp.getOrigColIndex(i)];
-      temp_sol.col_value[i] = sol.col_value[tmp.getOrigColIndex(i)];
-      temp_basis.col_status[i] = basis.col_status[tmp.getOrigColIndex(i)];
+      temp_sol.col_dual[i] = sol.col_dual[tmp.getOrigColIndex()[i]];
+      temp_sol.col_value[i] = sol.col_value[tmp.getOrigColIndex()[i]];
+      temp_basis.col_status[i] = basis.col_status[tmp.getOrigColIndex()[i]];
     }
 
     temp_basis.row_status.resize(model.num_row_);
     temp_sol.row_dual.resize(model.num_row_);
     for (HighsInt i = 0; i != model.num_row_; ++i) {
-      temp_sol.row_dual[i] = sol.row_dual[tmp.getOrigRowIndex(i)];
-      temp_basis.row_status[i] = basis.row_status[tmp.getOrigRowIndex(i)];
+      temp_sol.row_dual[i] = sol.row_dual[tmp.getOrigRowIndex()[i]];
+      temp_basis.row_status[i] = basis.row_status[tmp.getOrigRowIndex()[i]];
     }
     temp_sol.row_value.resize(model.num_row_);
     calculateRowValuesQuad(model, sol);

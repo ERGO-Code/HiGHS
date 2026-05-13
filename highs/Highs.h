@@ -466,7 +466,7 @@ class Highs {
    * the presolved model
    */
   const HighsInt* getPresolveOrigColsIndex() const {
-    return presolve_.data_.postSolveStack.getOrigColsIndex();
+    return presolve_.data_.postSolveStack.getOrigColIndex().data();
   }
 
   /**
@@ -474,7 +474,7 @@ class Highs {
    * presolved model
    */
   const HighsInt* getPresolveOrigRowsIndex() const {
-    return presolve_.data_.postSolveStack.getOrigRowsIndex();
+    return presolve_.data_.postSolveStack.getOrigRowIndex().data();
   }
 
   /**

@@ -689,8 +689,7 @@ void HighsMipSolverData::removeFixedIndices() {
 
 void HighsMipSolverData::init() {
   postSolveStack.initializeIndexMaps(
-      mipsolver.numRow(), mipsolver.numCol(),
-      mipsolver.model_->rows_appended_by_presolve_);
+      mipsolver.numRow(), mipsolver.numCol());
   mipsolver.orig_model_ = mipsolver.model_;
   feastol = mipsolver.options_mip_->mip_feasibility_tolerance;
   epsilon = mipsolver.options_mip_->small_matrix_value;
@@ -1298,12 +1297,12 @@ void HighsMipSolverData::performRestart() {
     root_basis.useful = true;
 
     for (HighsInt i = 0; i < mipsolver.numCol(); ++i)
-      root_basis.col_status[postSolveStack.getOrigColIndex(i)] =
+      root_basis.col_status[postSolveStack.getOrigColIndex()[i]] =
           basis.col_status[i];
 
     HighsInt numRow = basis.row_status.size();
     for (HighsInt i = 0; i < numRow; ++i)
-      root_basis.row_status[postSolveStack.getOrigRowIndex(i)] =
+      root_basis.row_status[postSolveStack.getOrigRowIndex()[i]] =
           basis.row_status[i];
 
     mipsolver.rootbasis = &root_basis;
@@ -1412,8 +1411,9 @@ void HighsMipSolverData::basisTransfer() {
     firstrootbasis.useful = true;
 
     for (HighsInt i = 0;
-         i < static_cast<HighsInt>(postSolveStack.getOrigRowIndexSize()); ++i) {
-      HighsInt origIndex = postSolveStack.getOrigRowIndex(i);
+         i < static_cast<HighsInt>(postSolveStack.getOrigRowIndex().size());
+         ++i) {
+      HighsInt origIndex = postSolveStack.getOrigRowIndex()[i];
       if (origIndex >= numRow) break;
       HighsBasisStatus status = mipsolver.rootbasis->row_status[origIndex];
       firstrootbasis.row_status[i] = status;
@@ -1421,7 +1421,7 @@ void HighsMipSolverData::basisTransfer() {
 
     for (HighsInt i = 0; i < numCol; ++i) {
       HighsBasisStatus status =
-          mipsolver.rootbasis->col_status[postSolveStack.getOrigColIndex(i)];
+          mipsolver.rootbasis->col_status[postSolveStack.getOrigColIndex()[i]];
       firstrootbasis.col_status[i] = status;
     }
   }

@@ -267,8 +267,7 @@ class HighsPostsolveStack {
   std::vector<Nonzero> colValues;
   HighsInt origNumCol = -1;
   HighsInt origNumRow = -1;
-  std::unordered_map<HighsInt, HighsInt> rowsAppended;
-  HighsInt numRowsAppended = 0;
+  HighsInt numAppendedRows = 0;
 
   void reductionAdded(ReductionType type) {
     size_t position = reductionValues.getCurrentDataSize();
@@ -276,25 +275,13 @@ class HighsPostsolveStack {
   }
 
   bool isOrigRow(HighsInt row) const {
-    return row < origNumRow + numRowsAppended;
+    return row < origNumRow + numAppendedRows;
   }
 
  public:
-  const HighsInt* getOrigRowsIndex() const { return origRowIndex.data(); }
+  const std::vector<HighsInt>& getOrigColIndex() const { return origColIndex; }
 
-  const HighsInt* getOrigColsIndex() const { return origColIndex.data(); }
-
-  size_t getOrigRowIndexSize() const { return origRowIndex.size(); }
-
-  HighsInt getOrigRowIndex(HighsInt row) const {
-    assert(static_cast<size_t>(row) < origRowIndex.size());
-    return origRowIndex[row];
-  }
-
-  HighsInt getOrigColIndex(HighsInt col) const {
-    assert(static_cast<size_t>(col) < origColIndex.size());
-    return origColIndex[col];
-  }
+  const std::vector<HighsInt>& getOrigRowIndex() const { return origRowIndex; }
 
   void appendCutsToModel(HighsInt numCuts) {
     if (numCuts <= 0) return;
@@ -305,13 +292,13 @@ class HighsPostsolveStack {
       origRowIndex[i] = origNumRow++;
   }
 
-  void appendCutsToModel2(HighsInt numCuts) {
-    if (numCuts <= 0) return;
+  void appendRowsToModel(HighsInt numRows) {
+    if (numRows <= 0) return;
     size_t currNumRow = origRowIndex.size();
-    size_t newNumRow = currNumRow + numCuts;
+    size_t newNumRow = currNumRow + numRows;
     origRowIndex.resize(newNumRow);
     for (size_t i = currNumRow; i != newNumRow; ++i)
-      origRowIndex[i] = origNumRow + (numRowsAppended++);
+      origRowIndex[i] = origNumRow + (numAppendedRows++);
   }
 
   void removeCutsFromModel(HighsInt numCuts) {
@@ -319,22 +306,6 @@ class HighsPostsolveStack {
     HighsInt numOrigRows = computeNumOrigRows(numCuts);
     origNumRow -= numCuts;
     origRowIndex.resize(numOrigRows);
-  }
-
-  void appendRowsToModel(HighsInt numRows) {
-    if (numRows <= 0) return;
-    size_t currNumRow = origRowIndex.size();
-    appendCutsToModel(numRows);
-    for (size_t i = currNumRow; i != origRowIndex.size(); ++i)
-      rowsAppended[origRowIndex[i]] = static_cast<HighsInt>(i);
-  }
-
-  void appendRowsToModel2(HighsInt numRows) {
-    if (numRows <= 0) return;
-    size_t currNumRow = origRowIndex.size();
-    appendCutsToModel2(numRows);
-    for (size_t i = currNumRow; i != origRowIndex.size(); ++i)
-      rowsAppended[origRowIndex[i]] = static_cast<HighsInt>(i);
   }
 
   HighsInt computeNumOrigRows(HighsInt numRowsAppended) {
@@ -347,20 +318,13 @@ class HighsPostsolveStack {
     return numOrig;
   }
 
-  void getAppendedRows(std::vector<HighsInt>& rows) const {
-    rows.clear();
-    for (const auto& elm : rowsAppended)
-      if (elm.second != -1) rows.push_back(elm.second);
-  }
-
   HighsInt getOrigNumRow() const { return origNumRow; }
 
   HighsInt getOrigNumCol() const { return origNumCol; }
 
-  HighsInt getNumRowsAppended() const { return numRowsAppended; }
+  HighsInt getNumAppendedRows() const { return numAppendedRows; }
 
-  void initializeIndexMaps(HighsInt numRow, HighsInt numCol,
-                           const std::vector<HighsInt>& rowsAppendedByPresolve);
+  void initializeIndexMaps(HighsInt numRow, HighsInt numCol);
 
   void compressIndexMaps(const std::vector<HighsInt>& newRowIndex,
                          const std::vector<HighsInt>& newColIndex);
@@ -660,22 +624,6 @@ class HighsPostsolveStack {
 #endif
   }
 
-  template <typename T>
-  void undoIterateBackwards2(std::vector<T>& values,
-                             const std::vector<HighsInt>& index,
-                             HighsInt origSize, HighsInt numAppended = 0) {
-    values.resize(origSize + numAppended);
-
-    // Fill vector with NaN for debugging purposes
-    std::vector<T> valuesNew;
-    valuesNew.resize(origSize + numAppended, HighsBasisStatus::kUninit);
-    for (size_t i = index.size(); i > 0; --i) {
-      assert(static_cast<size_t>(index[i - 1]) >= i - 1);
-      valuesNew[index[i - 1]] = values[i - 1];
-    }
-    std::copy(valuesNew.cbegin(), valuesNew.cend(), values.begin());
-  }
-
   /// check if vector contains NaN or Inf
   bool containsNanOrInf(const std::vector<double>& v) const {
     return std::find_if(v.cbegin(), v.cend(), [](const double& d) {
@@ -699,28 +647,23 @@ class HighsPostsolveStack {
 
     assert(origNumRow >= 0);
     undoIterateBackwards(solution.row_value, origRowIndex, origNumRow,
-                         numRowsAppended);
+                         numAppendedRows);
 
     if (perform_dual_postsolve) {
       // if dual solution is given, expand dual solution and basis to original
       // index space
       undoIterateBackwards(solution.col_dual, origColIndex, origNumCol);
 
-      /*for (const auto& elm : rowsAppended)
-        if (elm.second != -1) solution.row_dual[elm.second] = 0;*/
       undoIterateBackwards(solution.row_dual, origRowIndex, origNumRow,
-                           numRowsAppended);
+                           numAppendedRows);
     }
 
     if (perform_basis_postsolve) {
       // if basis is given, expand basis status values to original index space
       undoIterateBackwards(basis.col_status, origColIndex, origNumCol);
 
-      /*for (const auto& elm : rowsAppended)
-        if (elm.second != -1)
-          basis.row_status[elm.second] = HighsBasisStatus::kLower;*/
-      undoIterateBackwards2(basis.row_status, origRowIndex, origNumRow,
-                            numRowsAppended);
+      undoIterateBackwards(basis.row_status, origRowIndex, origNumRow,
+                           numAppendedRows);
     }
 
     // now undo the changes
@@ -839,15 +782,8 @@ class HighsPostsolveStack {
     if (perform_dual_postsolve) solution.row_dual.resize(origNumRow);
 
     if (perform_basis_postsolve) {
-      assert(numRowsAppended == 0);
+      assert(numAppendedRows == 0);
       basis.row_status.resize(origNumRow);
-      HighsInt numColBasics = 0;
-      HighsInt numRowBasics = 0;
-      for (auto e : basis.col_status)
-        if (e == HighsBasisStatus::kBasic) numColBasics++;
-      for (auto e : basis.row_status)
-        if (e == HighsBasisStatus::kBasic) numRowBasics++;
-      assert(numColBasics + numRowBasics == origNumRow);
     }
 
 #ifdef DEBUG_EXTRA
