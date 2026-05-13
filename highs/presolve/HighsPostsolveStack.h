@@ -285,6 +285,8 @@ class HighsPostsolveStack {
 
   const std::vector<HighsInt>& getOrigRowIndex() const { return origRowIndex; }
 
+  const std::vector<OrigRowType>& getOrigRowType() const { return origRowType; }
+
   void appendCutsToModel(HighsInt numCuts) {
     if (numCuts <= 0) return;
     size_t currNumRow = origRowIndex.size();
@@ -310,31 +312,25 @@ class HighsPostsolveStack {
   void removeCutsFromModel(HighsInt numCuts) {
     if (numCuts <= 0) return;
     origNumRow -= numCuts;
-    size_t write = 0;
-    for (size_t read = 0; read < origRowIndex.size(); ++read) {
-      if (origRowType[read] != OrigRowType::kCut) {
-        if (read != write) {
-          origRowIndex[write] = origRowIndex[read];
-          origRowType[write] = origRowType[read];
+    size_t newSize = 0;
+    for (size_t i = 0; i < origRowIndex.size(); ++i) {
+      if (origRowType[i] != OrigRowType::kCut) {
+        if (i != newSize) {
+          origRowIndex[newSize] = origRowIndex[i];
+          origRowType[newSize] = origRowType[i];
         }
-        ++write;
+        ++newSize;
       }
     }
-    origRowIndex.resize(write);
-    origRowType.resize(write);
+    origRowIndex.resize(newSize);
+    origRowType.resize(newSize);
   }
 
   HighsInt getOrigNumRow() const { return origNumRow; }
 
   HighsInt getOrigNumCol() const { return origNumCol; }
 
-  HighsInt getNumAppendedRows() const { return numAppendedRows; }
-
   HighsInt getNextRowIndex() const { return nextRowIndex; }
-
-  const std::vector<OrigRowType>& getOrigRowType() const {
-    return origRowType;
-  }
 
   void initializeIndexMaps(HighsInt numRow, HighsInt numCol);
 
