@@ -847,17 +847,7 @@ class HighsPostsolveStack {
         if (e == HighsBasisStatus::kBasic) numRowBasics++;
       assert(numColBasics + numRowBasics == origNumRow + numRowsAppended);
 
-      /*for (HighsInt i = 0; i < static_cast<HighsInt>(origRowIndex.size());
-           ++i) {
-        HighsInt origIndex = origRowIndex[i];
-        if (origIndex >= origNumRow) break;
-        row_status[i] = basis.row_status[origIndex];
-      }*/
-
-      for (const auto& elm : rowsAppended)
-        if (elm.first < origNumRow)
-          basis.row_status[elm.first] = HighsBasisStatus::kLower;
-      basis.row_status.resize(origNumRow);
+      // Add code to shrink basis (without appended rows)
 
       numColBasics = 0;
       numRowBasics = 0;
