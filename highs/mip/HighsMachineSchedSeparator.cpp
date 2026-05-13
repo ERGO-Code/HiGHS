@@ -21,7 +21,7 @@
 bool HighsMachineSchedSeparator::findSingleMachineScheduleClique(
     std::vector<std::vector<double>>& vals,
     std::vector<std::vector<HighsInt>>& inds, std::vector<double>& rhss,
-    double& releasedate, const HighsMipSolver& mipsolver) {
+    const HighsMipSolver& mipsolver) {
   struct pair_hash {
     size_t operator()(const std::pair<HighsInt, HighsInt>& p) const {
       return HighsHashHelpers::hash(p);
@@ -174,7 +174,7 @@ bool HighsMachineSchedSeparator::findSingleMachineScheduleClique(
   std::vector<HighsInt> neighbours;
   neighbours.reserve(largestDegree + 1);
   neighbours.emplace_back(largestDegreeCol);
-  releasedate = mipsolver.mipdata_->domain.col_lower_[largestDegreeCol];
+  double releasedate = mipsolver.mipdata_->domain.col_lower_[largestDegreeCol];
   std::vector<double> processingTimes;
   processingTimes.resize(largestDegree + 1, kHighsInf);
   // Iterate over potential neighbours and check validity
@@ -245,9 +245,8 @@ void HighsMachineSchedSeparator::separateLpSolution(
   std::vector<std::vector<double>> vals;
   std::vector<std::vector<HighsInt>> inds;
   std::vector<double> rhss;
-  double releasedate;
   has_single_machine_schedule =
-      findSingleMachineScheduleClique(vals, inds, rhss, releasedate, mip);
+      findSingleMachineScheduleClique(vals, inds, rhss, mip);
   if (!has_single_machine_schedule) {
     separated = true;
     return;

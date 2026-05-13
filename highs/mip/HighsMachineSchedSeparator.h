@@ -46,7 +46,6 @@ class HighsMachineSchedSeparator : public HighsSeparator {
   bool findSingleMachineScheduleClique(std::vector<std::vector<double>>& vals,
                                        std::vector<std::vector<HighsInt>>& inds,
                                        std::vector<double>& rhss,
-                                       double& releasedate,
                                        const HighsMipSolver& mipsolver);
 
   HighsMachineSchedSeparator(const HighsMipSolver& mipsolver)
