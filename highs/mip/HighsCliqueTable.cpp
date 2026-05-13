@@ -1282,8 +1282,8 @@ void HighsCliqueTable::extractCliques(HighsMipSolver& mipsolver,
     HighsInt start = mipsolver.mipdata_->ARstart_[i];
     HighsInt end = mipsolver.mipdata_->ARstart_[i + 1];
 
-    if (mipsolver.mipdata_->postSolveStack.getOrigRowIndex()[i] >=
-        mipsolver.orig_model_->num_row_)
+    if (mipsolver.mipdata_->postSolveStack.getOrigRowType()[i] !=
+        presolve::HighsPostsolveStack::OrigRowType::kOriginal)
       break;
 
     // catch set packing and partitioning constraints that already have the form

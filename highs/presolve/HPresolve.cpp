@@ -6453,10 +6453,12 @@ HighsModelStatus HPresolve::run(HighsPostsolveStack& postsolve_stack) {
       HighsInt numcuts = 0;
       for (HighsInt i = postsolve_stack.getOrigRowIndex().size() - 1; i >= 0;
            --i) {
-        // check if we already reached the original rows
-        if (postsolve_stack.getOrigRowIndex()[i] <
-            mipsolver->orig_model_->num_row_)
+        if (postsolve_stack.getOrigRowType()[i] ==
+            HighsPostsolveStack::OrigRowType::kOriginal)
           break;
+        if (postsolve_stack.getOrigRowType()[i] !=
+            HighsPostsolveStack::OrigRowType::kCut)
+          continue;
 
         // row is a cut, remove it from matrix but add to cutpool
         ++numcuts;
