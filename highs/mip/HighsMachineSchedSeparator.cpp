@@ -27,6 +27,7 @@ bool HighsMachineSchedSeparator::findSingleMachineScheduleClique(
       return HighsHashHelpers::hash(p);
     }
   };
+  std::vector<HighsCliqueTable::CliqueVar> clique(2);
   enum class ArcType {
     kIfBinOne,   // 0
     kIfBinZero,  // 1
@@ -46,6 +47,14 @@ bool HighsMachineSchedSeparator::findSingleMachineScheduleClique(
     if (p < 0) return;
     auto it = adjacency.find({negCol, posCol});
     if (it != adjacency.end()) {
+      // If there's two overlapping arcs y_ji and y'_ji then we can conclude
+      // if y_ji -> y'_ji, i.e., y_ji + ~y'_ji <= 1
+      clique[0] = HighsCliqueTable::CliqueVar(
+          std::get<1>(it->second),
+          std::get<2>(it->second) == ArcType::kIfBinOne);
+      clique[1] =
+          HighsCliqueTable::CliqueVar(binCol, t == ArcType::kIfBinOne ? 0 : 1);
+      mipsolver.mipdata_->cliquetable.addClique(mipsolver, clique.data(), 2);
       if (std::get<0>(it->second) < p) {
         std::get<0>(it->second) = p;
         std::get<1>(it->second) = binCol;
@@ -64,7 +73,7 @@ bool HighsMachineSchedSeparator::findSingleMachineScheduleClique(
   };
 
   HighsInt numRows = 0;
-  const HighsInt maxRows = std::min(HighsInt{1000}, 2 * mipsolver.numRow());
+  const HighsInt maxRows = std::min(HighsInt{5000}, 2 * mipsolver.numRow());
   adjacency.reserve(maxRows + 2);
   for (HighsInt row = 0; row != mipsolver.numRow(); row++) {
     double rowLower = mipsolver.model_->row_lower_[row];
