@@ -688,11 +688,8 @@ HPresolve::Result HPresolve::updateColImpliedBounds(HighsInt row, HighsInt col,
     // column as implied free
     bool useImplBound =
         mipsolver == nullptr ||
-        mipsolver->mipdata_->postSolveStack.getOrigRowIndex()[row] <
-            mipsolver->orig_model_->num_row_ ||
-        mipsolver->mipdata_->postSolveStack.getOrigRowIndex()[row] >=
-            mipsolver->mipdata_->postSolveStack.getOrigNumRow() -
-                mipsolver->mipdata_->postSolveStack.getNumAppendedRows();
+        mipsolver->mipdata_->postSolveStack.getOrigRowType()[row] !=
+            HighsPostsolveStack::OrigRowType::kCut;
 
     if (direction * val > 0) {
       // upper bound
@@ -2131,7 +2128,6 @@ bool HPresolve::addToMatrix(
   HighsInt num_rows = static_cast<HighsInt>(row_entries.size());
   if (num_rows == 0) return true;
   HighsInt oldNumRows = model->num_row_;
-  HighsInt oldNumRowsAppended = postsolve_stack.getNumAppendedRows();
   model->num_row_ += num_rows;
   model->a_matrix_.num_row_ += num_rows;
 

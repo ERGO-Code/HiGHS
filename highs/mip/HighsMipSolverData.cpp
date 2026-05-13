@@ -1291,7 +1291,7 @@ void HighsMipSolverData::performRestart() {
     // original space so that it can be used for constructing a starting basis
     // for the presolved model after the restart
     root_basis.col_status.resize(postSolveStack.getOrigNumCol());
-    root_basis.row_status.resize(postSolveStack.getOrigNumRow(),
+    root_basis.row_status.resize(postSolveStack.getNextRowIndex(),
                                  HighsBasisStatus::kBasic);
     root_basis.valid = true;
     root_basis.useful = true;

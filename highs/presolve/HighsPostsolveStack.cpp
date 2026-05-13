@@ -21,9 +21,12 @@ void HighsPostsolveStack::initializeIndexMaps(HighsInt numRow,
                                               HighsInt numCol) {
   origNumRow = numRow;
   origNumCol = numCol;
+  nextRowIndex = numRow;
 
   origRowIndex.resize(numRow);
   std::iota(origRowIndex.begin(), origRowIndex.end(), 0);
+
+  origRowType.resize(numRow, OrigRowType::kOriginal);
 
   origColIndex.resize(numCol);
   std::iota(origColIndex.begin(), origColIndex.end(), 0);
@@ -40,11 +43,14 @@ void HighsPostsolveStack::compressIndexMaps(
   for (size_t i = 0; i != newRowIndex.size(); ++i) {
     if (newRowIndex[i] == -1)
       --numRow;
-    else
+    else {
       origRowIndex[newRowIndex[i]] = origRowIndex[i];
+      origRowType[newRowIndex[i]] = origRowType[i];
+    }
   }
   // resize original index array to new size
   origRowIndex.resize(numRow);
+  origRowType.resize(numRow);
 
   // now compress the column array
   HighsInt numCol = origColIndex.size();
