@@ -688,8 +688,7 @@ void HighsMipSolverData::removeFixedIndices() {
 }
 
 void HighsMipSolverData::init() {
-  postSolveStack.initializeIndexMaps(
-      mipsolver.numRow(), mipsolver.numCol());
+  postSolveStack.initializeIndexMaps(mipsolver.numRow(), mipsolver.numCol());
   mipsolver.orig_model_ = mipsolver.model_;
   feastol = mipsolver.options_mip_->mip_feasibility_tolerance;
   epsilon = mipsolver.options_mip_->small_matrix_value;
@@ -1413,9 +1412,7 @@ void HighsMipSolverData::basisTransfer() {
     for (HighsInt i = 0;
          i < static_cast<HighsInt>(postSolveStack.getOrigRowIndex().size());
          ++i) {
-      if (postSolveStack.getOrigRowType()[i] !=
-          presolve::HighsPostsolveStack::OrigRowType::kOriginal)
-        break;
+      if (!postSolveStack.isRowOrig(i)) break;
       HighsInt origIndex = postSolveStack.getOrigRowIndex()[i];
       HighsBasisStatus status = mipsolver.rootbasis->row_status[origIndex];
       firstrootbasis.row_status[i] = status;

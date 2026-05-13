@@ -686,10 +686,8 @@ HPresolve::Result HPresolve::updateColImpliedBounds(HighsInt row, HighsInt col,
     // do not use the implied bound if this a not a model row, since the
     // row can be removed and should not be used, e.g., to identify a
     // column as implied free
-    bool useImplBound =
-        mipsolver == nullptr ||
-        mipsolver->mipdata_->postSolveStack.getOrigRowType()[row] !=
-            HighsPostsolveStack::OrigRowType::kCut;
+    bool useImplBound = mipsolver == nullptr ||
+                        !mipsolver->mipdata_->postSolveStack.isRowCut(row);
 
     if (direction * val > 0) {
       // upper bound
@@ -6451,14 +6449,9 @@ HighsModelStatus HPresolve::run(HighsPostsolveStack& postsolve_stack) {
       cutinds.reserve(model->num_col_);
       cutvals.reserve(model->num_col_);
       HighsInt numcuts = 0;
-      for (HighsInt i = postsolve_stack.getOrigRowIndex().size() - 1; i >= 0;
-           --i) {
-        if (postsolve_stack.getOrigRowType()[i] ==
-            HighsPostsolveStack::OrigRowType::kOriginal)
-          break;
-        if (postsolve_stack.getOrigRowType()[i] !=
-            HighsPostsolveStack::OrigRowType::kCut)
-          continue;
+      for (HighsInt i = model->num_row_ - 1; i >= 0; --i) {
+        if (postsolve_stack.isRowOrig(i)) break;
+        if (!postsolve_stack.isRowCut(i)) continue;
 
         // row is a cut, remove it from matrix but add to cutpool
         ++numcuts;

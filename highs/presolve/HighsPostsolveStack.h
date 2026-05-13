@@ -285,7 +285,15 @@ class HighsPostsolveStack {
 
   const std::vector<HighsInt>& getOrigRowIndex() const { return origRowIndex; }
 
-  const std::vector<OrigRowType>& getOrigRowType() const { return origRowType; }
+  bool isRowOrig(HighsInt row) const {
+    return origRowType[row] == OrigRowType::kOriginal;
+  }
+  bool isRowAppended(HighsInt row) const {
+    return origRowType[row] == OrigRowType::kAppended;
+  }
+  bool isRowCut(HighsInt row) const {
+    return origRowType[row] == OrigRowType::kCut;
+  }
 
   void appendCutsToModel(HighsInt numCuts) {
     if (numCuts <= 0) return;
