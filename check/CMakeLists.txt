@@ -107,6 +107,22 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
   add_executable(unit_tests ${TEST_SOURCES})
   add_executable(hipdlp_pslp_bench HiPdlpPslpBench.cpp
                                    ExperimentalPslpHiPdlp.cpp)
+  set(HIGHS_CUPDLPX_DIR "${PROJECT_SOURCE_DIR}/../cuPDLPx" CACHE PATH
+      "Path to the cuPDLPx source tree used by highs_cupdlpx_bench")
+  if (CUPDLP_GPU AND EXISTS "${HIGHS_CUPDLPX_DIR}/include/cupdlpx.h")
+    set(HIGHS_CUPDLPX_CORE_SOURCES
+        ${HIGHS_CUPDLPX_DIR}/src/cupdlpx.c
+        ${HIGHS_CUPDLPX_DIR}/src/presolve.c
+        ${HIGHS_CUPDLPX_DIR}/src/solver.cu
+        ${HIGHS_CUPDLPX_DIR}/src/preconditioner.cu
+        ${HIGHS_CUPDLPX_DIR}/src/feasibility_polish.cu
+        ${HIGHS_CUPDLPX_DIR}/src/spmv_backend.cu
+        ${HIGHS_CUPDLPX_DIR}/src/utils.cu)
+    add_executable(highs_cupdlpx_bench
+                   HighsCupdlpxBench.cpp
+                   ExperimentalHighsCupdlpx.cpp
+                   ${HIGHS_CUPDLPX_CORE_SOURCES})
+  endif()
 
   target_include_directories(unit_tests PRIVATE
     ${PROJECT_SOURCE_DIR}/third_party/PSLP/include
@@ -114,6 +130,24 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
   target_include_directories(hipdlp_pslp_bench PRIVATE
     ${PROJECT_SOURCE_DIR}/third_party/PSLP/include
     )
+  if (TARGET highs_cupdlpx_bench)
+    target_include_directories(highs_cupdlpx_bench PRIVATE
+      ${PROJECT_SOURCE_DIR}/third_party/PSLP/include
+      ${PROJECT_SOURCE_DIR}/third_party/PSLP/include/PSLP
+      ${HIGHS_CUPDLPX_DIR}/include
+      ${HIGHS_CUPDLPX_DIR}/internal
+      )
+    target_compile_definitions(highs_cupdlpx_bench PRIVATE
+      CUSPARSE_ENABLE_EXPERIMENTAL_API)
+    set_target_properties(highs_cupdlpx_bench PROPERTIES
+      UNITY_BUILD OFF
+      CXX_STANDARD 17
+      CXX_STANDARD_REQUIRED ON
+      CUDA_STANDARD 17
+      CUDA_STANDARD_REQUIRED ON
+      CUDA_SEPARABLE_COMPILATION ON
+      CUDA_RESOLVE_DEVICE_SYMBOLS ON)
+  endif()
 
   set_target_properties(unit_tests PROPERTIES UNITY_BUILD OFF)
   set_target_properties(hipdlp_pslp_bench PROPERTIES UNITY_BUILD OFF)
@@ -123,11 +157,18 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
       target_compile_options(unit_tests PRIVATE "-Wno-unused-const-variable")
       target_compile_options(hipdlp_pslp_bench PRIVATE "-Wno-unused-variable")
       target_compile_options(hipdlp_pslp_bench PRIVATE "-Wno-unused-const-variable")
+      if (TARGET highs_cupdlpx_bench)
+        target_compile_options(highs_cupdlpx_bench PRIVATE "-Wno-unused-variable")
+        target_compile_options(highs_cupdlpx_bench PRIVATE "-Wno-unused-const-variable")
+      endif()
   endif()
 
   if (FAST_BUILD)
     target_link_libraries(unit_tests highs Catch PSLP)
     target_link_libraries(hipdlp_pslp_bench highs PSLP)
+    if (TARGET highs_cupdlpx_bench)
+      target_link_libraries(highs_cupdlpx_bench highs PSLP)
+    endif()
 
     if (CUPDLP_GPU)
         # Link unit tests to cuda too!
@@ -138,20 +179,39 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
         if (WIN32)
             target_link_libraries(unit_tests ${CUDA_LIBRARY})
             target_link_libraries(hipdlp_pslp_bench ${CUDA_LIBRARY})
+            if (TARGET highs_cupdlpx_bench)
+              target_link_libraries(highs_cupdlpx_bench ${CUDA_LIBRARY})
+            endif()
         else()
             target_link_libraries(unit_tests ${CUDA_LIBRARY} m)
             target_link_libraries(hipdlp_pslp_bench ${CUDA_LIBRARY} m)
+            if (TARGET highs_cupdlpx_bench)
+              target_link_libraries(highs_cupdlpx_bench ${CUDA_LIBRARY} m)
+            endif()
         endif()
 
         # If cudalin is used, link to cudalin too.
         if (NOT HIGHS_GPU_LIB)
             target_link_libraries(unit_tests cudalin)
             target_link_libraries(hipdlp_pslp_bench cudalin)
+            if (TARGET highs_cupdlpx_bench)
+              target_link_libraries(highs_cupdlpx_bench cudalin)
+            endif()
         endif()
     endif()
   else()
     target_link_libraries(unit_tests libhighs Catch PSLP)
     target_link_libraries(hipdlp_pslp_bench libhighs PSLP)
+    if (TARGET highs_cupdlpx_bench)
+      target_link_libraries(highs_cupdlpx_bench libhighs PSLP)
+      if (CUPDLP_GPU)
+        if (WIN32)
+          target_link_libraries(highs_cupdlpx_bench ${CUDA_LIBRARY})
+        else()
+          target_link_libraries(highs_cupdlpx_bench ${CUDA_LIBRARY} m)
+        endif()
+      endif()
+    endif()
   endif()
 
   include(GNUInstallDirs)
@@ -160,6 +220,10 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
       "@loader_path/../${CMAKE_INSTALL_LIBDIR};@loader_path")
       set_target_properties(hipdlp_pslp_bench PROPERTIES INSTALL_RPATH
       "@loader_path/../${CMAKE_INSTALL_LIBDIR};@loader_path")
+      if (TARGET highs_cupdlpx_bench)
+        set_target_properties(highs_cupdlpx_bench PROPERTIES INSTALL_RPATH
+        "@loader_path/../${CMAKE_INSTALL_LIBDIR};@loader_path")
+      endif()
   elseif(UNIX)
       cmake_path(RELATIVE_PATH CMAKE_INSTALL_FULL_LIBDIR
           BASE_DIRECTORY ${CMAKE_INSTALL_FULL_BINDIR}
@@ -168,6 +232,10 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
       INSTALL_RPATH "$ORIGIN/${libdir_relative_path}")
       set_target_properties(hipdlp_pslp_bench PROPERTIES 
       INSTALL_RPATH "$ORIGIN/${libdir_relative_path}")
+      if (TARGET highs_cupdlpx_bench)
+        set_target_properties(highs_cupdlpx_bench PROPERTIES
+        INSTALL_RPATH "$ORIGIN/${libdir_relative_path}")
+      endif()
   endif()
 
 
