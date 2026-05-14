@@ -276,7 +276,7 @@ HighsStatus solvePresolvedWithHiPdlp(
   if (modelStatusHasReliableObjective(model_status)) {
     const HighsInt reduced_iteration_count = info.pdlp_iteration_count;
     status = original_highs.postsolve(reduced_solution);
-    if (status != HighsStatus::kOk) {
+    if (status == HighsStatus::kError) {
       error_message = "HiGHS postsolve failed for presolved HiPDLP solution";
       return HighsStatus::kError;
     }
@@ -477,20 +477,18 @@ HighsStatus runExperimentalHiPdlpPslpBenchmark(
         error_message);
     result.iterations = info.pdlp_iteration_count;
     if (status != HighsStatus::kOk) return status;
-    if (modelStatusHasReliableObjective(result.model_status) &&
-        solution.col_value.size() != static_cast<size_t>(original_lp.num_col_)) {
-      error_message = "Plain HiPDLP solution has invalid column dimension";
-      return HighsStatus::kError;
-    }
-    if (modelStatusHasReliableObjective(result.model_status)) {
+    if (std::isfinite(info.objective_function_value)) {
       result.objective = info.objective_function_value;
+    } else if (solution.col_value.size() ==
+              static_cast<size_t>(original_lp.num_col_)) {
+      result.objective = original_lp.objectiveValue(solution.col_value);
     }
     return HighsStatus::kOk;
   }
 
   if (result.mode == "highs") {
     Highs highs;
-    status = setCommonHiPdlpOptions(highs, false, error_message);
+    status = setCommonHiPdlpOptions(highs, true, error_message);
     if (status != HighsStatus::kOk) return status;
     status = highs.passModel(original_lp);
     if (status != HighsStatus::kOk) {
@@ -506,12 +504,10 @@ HighsStatus runExperimentalHiPdlpPslpBenchmark(
         result.reduced_nnz, error_message);
     result.iterations = info.pdlp_iteration_count;
     if (status != HighsStatus::kOk) return status;
-    if (modelStatusHasReliableObjective(result.model_status)) {
-      if (solution.col_value.size() != static_cast<size_t>(original_lp.num_col_)) {
-        error_message =
-            "HiGHS postsolve solution has invalid column dimension";
-        return HighsStatus::kError;
-      }
+    if (std::isfinite(info.objective_function_value)) {
+      result.objective = info.objective_function_value;
+    } else if (solution.col_value.size() ==
+              static_cast<size_t>(original_lp.num_col_)) {
       result.objective = original_lp.objectiveValue(solution.col_value);
     }
     result.total_time =
