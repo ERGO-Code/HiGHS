@@ -48,6 +48,79 @@ HighsInt highsVersionPatch() { return HIGHS_VERSION_PATCH; }
 const char* highsGithash() { return HIGHS_GITHASH; }
 const char* highsCompilationDate() { return "deprecated"; }
 
+namespace {
+
+constexpr HighsInt kPdlpPresolveProfileDefault = 0;
+constexpr HighsInt kPdlpPresolveProfileLight = 1;
+constexpr HighsInt kPdlpPresolveProfileAllOptionalOff = 2;
+constexpr HighsInt kPdlpPresolveLightRuleOffMask = 130048;
+constexpr HighsInt kPdlpPresolveAllOptionalRuleOffMask = 131008;
+
+bool usePdlpPresolveOverrides(const HighsOptions& options) {
+  const bool pdlp_solver =
+      options.solver == kPdlpString || options.solver == kHiPdlpString;
+  if (!pdlp_solver) return false;
+  return options.pdlp_presolve_profile != kPdlpPresolveProfileDefault ||
+         options.pdlp_presolve_rule_off >= 0 ||
+         options.pdlp_presolve_substitution_maxfillin >= 0;
+}
+
+HighsInt pdlpPresolveProfileRuleOffMask(const HighsInt profile) {
+  switch (profile) {
+    case kPdlpPresolveProfileDefault:
+      return 0;
+    case kPdlpPresolveProfileLight:
+      return kPdlpPresolveLightRuleOffMask;
+    case kPdlpPresolveProfileAllOptionalOff:
+      return kPdlpPresolveAllOptionalRuleOffMask;
+    default:
+      return 0;
+  }
+}
+
+class ScopedPdlpPresolveOptions {
+ public:
+  explicit ScopedPdlpPresolveOptions(HighsOptions& options) : options_(options) {
+    if (!usePdlpPresolveOverrides(options_)) return;
+
+    saved_presolve_rule_off_ = options_.presolve_rule_off;
+    saved_presolve_substitution_maxfillin_ =
+        options_.presolve_substitution_maxfillin;
+    active_ = true;
+
+    options_.presolve_rule_off |=
+        pdlpPresolveProfileRuleOffMask(options_.pdlp_presolve_profile);
+    if (options_.pdlp_presolve_rule_off >= 0)
+      options_.presolve_rule_off |= options_.pdlp_presolve_rule_off;
+    if (options_.pdlp_presolve_substitution_maxfillin >= 0) {
+      options_.presolve_substitution_maxfillin =
+          options_.pdlp_presolve_substitution_maxfillin;
+    }
+
+    highsLogDev(options_.log_options, HighsLogType::kInfo,
+                "Applying HiPDLP/PDLP presolve overrides: profile=%" HIGHSINT_FORMAT
+                "; presolve_rule_off=%" HIGHSINT_FORMAT
+                "; presolve_substitution_maxfillin=%" HIGHSINT_FORMAT "\n",
+                options_.pdlp_presolve_profile, options_.presolve_rule_off,
+                options_.presolve_substitution_maxfillin);
+  }
+
+  ~ScopedPdlpPresolveOptions() {
+    if (!active_) return;
+    options_.presolve_rule_off = saved_presolve_rule_off_;
+    options_.presolve_substitution_maxfillin =
+        saved_presolve_substitution_maxfillin_;
+  }
+
+ private:
+  HighsOptions& options_;
+  HighsInt saved_presolve_rule_off_ = 0;
+  HighsInt saved_presolve_substitution_maxfillin_ = 0;
+  bool active_ = false;
+};
+
+}  // namespace
+
 Highs::Highs() : callback_(this) {}
 
 HighsStatus Highs::clear() {
@@ -3592,6 +3665,8 @@ HighsPresolveStatus Highs::runPresolve(const bool force_lp_presolve,
   // Ensure that the timer is running
   if (!timer_.running()) timer_.start();
   double start_presolve = timer_.read();
+
+  ScopedPdlpPresolveOptions scoped_pdlp_presolve_options(options_);
 
   // Set time limit.
   if (options_.time_limit > 0 && options_.time_limit < kHighsInf) {

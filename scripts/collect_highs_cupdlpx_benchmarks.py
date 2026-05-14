@@ -336,13 +336,32 @@ def main() -> int:
         default=None,
         help="Per-run timeout in seconds.",
     )
+    parser.add_argument(
+        "--instance",
+        action="append",
+        dest="instances",
+        help="Run only the named instance. Repeat to run multiple instances.",
+    )
+    parser.add_argument(
+        "--solver",
+        choices=("both", "hipdlp", "cupdlpx"),
+        default="both",
+        help="Run both solvers or just one of them.",
+    )
+    parser.add_argument(
+        "--fail-fast",
+        action="store_true",
+        help="Stop immediately when one benchmark command fails.",
+    )
     args = parser.parse_args()
 
-    missing = [
-        str(path)
-        for path in (HIPDLP_BENCH_BIN, CUPDLPX_BENCH_BIN)
-        if not path.exists()
-    ]
+    required_bins = []
+    if args.solver in ("both", "hipdlp"):
+        required_bins.append(HIPDLP_BENCH_BIN)
+    if args.solver in ("both", "cupdlpx"):
+        required_bins.append(CUPDLPX_BENCH_BIN)
+
+    missing = [str(path) for path in required_bins if not path.exists()]
     if missing:
         print("Missing benchmark binaries:", file=sys.stderr)
         for path in missing:
@@ -350,6 +369,7 @@ def main() -> int:
         return 1
 
     LOG_DIR.mkdir(parents=True, exist_ok=True)
+    instances = args.instances if args.instances else INSTANCES
 
     with RAW_CSV.open("w", newline="") as raw_file, COMPARISON_CSV.open(
         "w", newline=""
@@ -359,7 +379,7 @@ def main() -> int:
         raw_writer.writeheader()
         comparison_writer.writeheader()
 
-        for instance in INSTANCES:
+        for instance in instances:
             input_file = find_instance(instance)
             if input_file is None:
                 comparison_writer.writerow(
@@ -370,34 +390,71 @@ def main() -> int:
             hipdlp_cmd = [str(HIPDLP_BENCH_BIN), str(input_file), "--mode=highs"]
             cupdlpx_cmd = [str(CUPDLPX_BENCH_BIN), str(input_file)]
 
-            print(f"Running {instance} with HiPDLP ...", file=sys.stderr)
-            hipdlp_run, hipdlp_output = run_benchmark(
-                hipdlp_cmd,
-                HIPDLP_FIELDS,
-                instance,
-                "hipdlp_highs_presolve",
-                args.timeout,
-            )
-            write_log(LOG_DIR / f"{instance}_hipdlp.log", hipdlp_output)
-            hipdlp_row = normalize_hipdlp_run(hipdlp_run)
-            hipdlp_row["input_file"] = str(input_file)
-            raw_writer.writerow(hipdlp_row)
+            hipdlp_run = None
+            cupdlpx_run = None
 
-            print(f"Running {instance} with cuPDLPx ...", file=sys.stderr)
-            cupdlpx_run, cupdlpx_output = run_benchmark(
-                cupdlpx_cmd,
-                CUPDLPX_FIELDS,
-                instance,
-                "cupdlpx_highs_presolve",
-                args.timeout,
-            )
-            write_log(LOG_DIR / f"{instance}_cupdlpx.log", cupdlpx_output)
-            cupdlpx_row = normalize_cupdlpx_run(cupdlpx_run)
-            cupdlpx_row["input_file"] = str(input_file)
-            raw_writer.writerow(cupdlpx_row)
+            if args.solver in ("both", "hipdlp"):
+                print(f"Running {instance} with HiPDLP ...", file=sys.stderr)
+                hipdlp_run, hipdlp_output = run_benchmark(
+                    hipdlp_cmd,
+                    HIPDLP_FIELDS,
+                    instance,
+                    "hipdlp_highs_presolve",
+                    args.timeout,
+                )
+                hipdlp_log_path = LOG_DIR / f"{instance}_hipdlp.log"
+                write_log(hipdlp_log_path, hipdlp_output)
+                hipdlp_row = normalize_hipdlp_run(hipdlp_run)
+                hipdlp_row["input_file"] = str(input_file)
+                raw_writer.writerow(hipdlp_row)
+                if "mode" not in hipdlp_run:
+                    print(
+                        f"HiPDLP failed on {instance}; see {hipdlp_log_path}",
+                        file=sys.stderr,
+                    )
+                    if args.fail_fast:
+                        comparison_writer.writerow(
+                            build_comparison_row(
+                                instance, input_file, None, None, "hipdlp_failed"
+                            )
+                        )
+                        raw_file.flush()
+                        comparison_file.flush()
+                        return 1
 
-            hipdlp_complete = "mode" in hipdlp_run
-            cupdlpx_complete = "termination_reason" in cupdlpx_run
+            if args.solver in ("both", "cupdlpx"):
+                print(f"Running {instance} with cuPDLPx ...", file=sys.stderr)
+                cupdlpx_run, cupdlpx_output = run_benchmark(
+                    cupdlpx_cmd,
+                    CUPDLPX_FIELDS,
+                    instance,
+                    "cupdlpx_highs_presolve",
+                    args.timeout,
+                )
+                cupdlpx_log_path = LOG_DIR / f"{instance}_cupdlpx.log"
+                write_log(cupdlpx_log_path, cupdlpx_output)
+                cupdlpx_row = normalize_cupdlpx_run(cupdlpx_run)
+                cupdlpx_row["input_file"] = str(input_file)
+                raw_writer.writerow(cupdlpx_row)
+                if "termination_reason" not in cupdlpx_run:
+                    print(
+                        f"cuPDLPx failed on {instance}; see {cupdlpx_log_path}",
+                        file=sys.stderr,
+                    )
+                    if args.fail_fast:
+                        comparison_writer.writerow(
+                            build_comparison_row(
+                                instance, input_file, hipdlp_run, None, "cupdlpx_failed"
+                            )
+                        )
+                        raw_file.flush()
+                        comparison_file.flush()
+                        return 1
+
+            hipdlp_complete = hipdlp_run is not None and "mode" in hipdlp_run
+            cupdlpx_complete = (
+                cupdlpx_run is not None and "termination_reason" in cupdlpx_run
+            )
             if hipdlp_complete and cupdlpx_complete:
                 availability = "ok"
             elif hipdlp_complete:

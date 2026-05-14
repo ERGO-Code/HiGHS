@@ -399,6 +399,9 @@ struct HighsOptionsStruct {
   HighsInt pdlp_cupdlpc_restart_method;
   HighsInt pdlp_step_size_strategy;
   double pdlp_optimality_tolerance;
+  HighsInt pdlp_presolve_profile;
+  HighsInt pdlp_presolve_rule_off;
+  HighsInt pdlp_presolve_substitution_maxfillin;
 
   // Options for QP solver
   HighsInt qp_iteration_limit;
@@ -574,6 +577,9 @@ struct HighsOptionsStruct {
         pdlp_cupdlpc_restart_method(0),
         pdlp_step_size_strategy(0),
         pdlp_optimality_tolerance(0.0),
+        pdlp_presolve_profile(0),
+        pdlp_presolve_rule_off(-1),
+        pdlp_presolve_substitution_maxfillin(-1),
         qp_iteration_limit(0),
         qp_nullspace_limit(0),
         qp_regularization_value(0),
@@ -1361,6 +1367,30 @@ class HighsOptions : public HighsOptionsStruct {
         &pdlp_optimality_tolerance, kMinimumKktTolerance, kDefaultKktTolerance,
         kHighsInf);
     records.push_back(record_double);
+
+    record_int = new OptionRecordInt(
+        "pdlp_presolve_profile",
+        "HiPDLP/PDLP-specific LP presolve profile: 0 => default; 1 => light "
+        "(disable dependent equations/free columns, aggregator, parallel "
+        "rows/columns, sparsify, probing, enumeration); 2 => disable all "
+        "switchable LP presolve rules",
+        advanced, &pdlp_presolve_profile, 0, 0, 2);
+    records.push_back(record_int);
+
+    record_int = new OptionRecordInt(
+        "pdlp_presolve_rule_off",
+        "Additional bit mask of LP presolve rules to disable when solver is "
+        "\"pdlp\" or \"hipdlp\"; -1 => inherit the generic presolve_rule_off "
+        "without extra PDLP-specific changes",
+        advanced, &pdlp_presolve_rule_off, -1, -1, kHighsIInf);
+    records.push_back(record_int);
+
+    record_int = new OptionRecordInt(
+        "pdlp_presolve_substitution_maxfillin",
+        "Override presolve_substitution_maxfillin when solver is \"pdlp\" or "
+        "\"hipdlp\"; -1 => inherit the generic substitution fill-in limit",
+        advanced, &pdlp_presolve_substitution_maxfillin, -1, -1, kHighsIInf);
+    records.push_back(record_int);
 
     record_int = new OptionRecordInt(
         "qp_iteration_limit", "Iteration limit for the active set QP solver",
