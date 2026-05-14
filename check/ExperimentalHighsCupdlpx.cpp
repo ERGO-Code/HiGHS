@@ -1,6 +1,7 @@
 #include "ExperimentalHighsCupdlpx.h"
 
 #include <chrono>
+#include <cmath>
 #include <limits>
 #include <sstream>
 #include <vector>
@@ -13,6 +14,7 @@ namespace {
 const bool kExperimentalOutputFlag = false;
 const double kExperimentalKktTolerance = 1e-4;
 const HighsInt kExperimentalPdlpIterationLimit = 859400;
+const double kCupdlpxInfiniteBoundThreshold = 1e20;
 
 template <typename T>
 const T* dataOrNull(const std::vector<T>& values) {
@@ -47,6 +49,20 @@ bool zeroColumnReducedProblemFeasible(const HighsLp& reduced_lp) {
     if (reduced_lp.row_upper_[row] < 0.0) return false;
   }
   return true;
+}
+
+std::vector<double> normaliseBoundsForCupdlpx(const std::vector<double>& bounds,
+                                              const bool is_lower) {
+  std::vector<double> normalised = bounds;
+  const double infinite_value = is_lower ? -INFINITY : INFINITY;
+  for (double& value : normalised) {
+    if (is_lower) {
+      if (value < -kCupdlpxInfiniteBoundThreshold) value = infinite_value;
+    } else {
+      if (value > kCupdlpxInfiniteBoundThreshold) value = infinite_value;
+    }
+  }
+  return normalised;
 }
 
 void initialiseZeroColumnReducedSolution(const HighsLp& reduced_lp,
@@ -284,6 +300,15 @@ HighsStatus runExperimentalHighsCupdlpxBenchmark(
   status = convertHighsLpToCsr(presolved_lp, csr, error_message);
   if (status != HighsStatus::kOk) return status;
 
+  const std::vector<double> row_lower =
+      normaliseBoundsForCupdlpx(presolved_lp.row_lower_, true);
+  const std::vector<double> row_upper =
+      normaliseBoundsForCupdlpx(presolved_lp.row_upper_, false);
+  const std::vector<double> col_lower =
+      normaliseBoundsForCupdlpx(presolved_lp.col_lower_, true);
+  const std::vector<double> col_upper =
+      normaliseBoundsForCupdlpx(presolved_lp.col_upper_, false);
+
   std::vector<double> objective = presolved_lp.col_cost_;
   double objective_constant = presolved_lp.offset_;
   if (presolved_lp.sense_ == ObjSense::kMaximize) {
@@ -301,9 +326,9 @@ HighsStatus runExperimentalHighsCupdlpxBenchmark(
   matrix_desc.data.csr.vals = dataOrNull(csr.value);
 
   lp_problem_t* problem = create_lp_problem(
-      dataOrNull(objective), &matrix_desc, dataOrNull(presolved_lp.row_lower_),
-      dataOrNull(presolved_lp.row_upper_), dataOrNull(presolved_lp.col_lower_),
-      dataOrNull(presolved_lp.col_upper_), &objective_constant);
+      dataOrNull(objective), &matrix_desc, dataOrNull(row_lower),
+      dataOrNull(row_upper), dataOrNull(col_lower), dataOrNull(col_upper),
+      &objective_constant);
   if (!problem) {
     error_message = "cuPDLPx create_lp_problem returned nullptr";
     return HighsStatus::kError;
