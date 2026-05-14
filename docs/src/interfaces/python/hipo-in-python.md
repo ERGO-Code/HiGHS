@@ -2,6 +2,8 @@
 
 The HiPO Interior Point Method (IPM) solver currently uses external dependencies to provide enhanced performance for linear and quadratic programming problems. The required dependencies are packaged in the `highspy-extras`. The packaged dependencies have licensing terms different from HiGHS, such as Apache 2.0. Other algorithms may also rely on `highspy_extras` in the future.
 
+HiPO can enhance performance on many large problem instances. It is not very well suited for smaller or easier LPs.
+
 ## Installation
 
 Install directly:
