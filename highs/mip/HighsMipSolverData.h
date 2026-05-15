@@ -110,6 +110,7 @@ struct HighsMipSolverData {
   double epsilon;
   double heuristic_effort;
   int64_t dispfreq;
+  HighsSubSolverCallTime analyticCenterSubSolverCallTime;
   std::vector<double> analyticCenter;
   std::vector<double> firstlpsol;
   std::vector<double> rootlpsol;

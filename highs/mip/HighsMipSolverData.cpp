@@ -409,16 +409,9 @@ void HighsMipSolverData::startAnalyticCenterComputation(
       ipm.optimizeLp();
     }
     if (!mipsolver.submip) {
-      const HighsSubSolverCallTime& sub_solver_call_time =
-          ipm.getSubSolverCallTime();
-      const bool analytic_centre = true;
-      mipsolver.analysis_.addSubSolverCallTime(sub_solver_call_time,
-                                               analytic_centre);
-      // Go through sub_solver_call_time to update any MIP clocks
-      const bool valid_basis = false;
-      const bool use_presolve = false;
-      mipsolver.analysis_.mipTimerUpdate(sub_solver_call_time, valid_basis,
-                                         use_presolve, analytic_centre);
+      // Defer to finishAnalyticCenterComputation (post-sync, main thread) to
+      // avoid a data race on sub_solver_call_time_ with the main thread.
+      analyticCenterSubSolverCallTime = ipm.getSubSolverCallTime();
     }
     if (HighsInt(sol.size()) != mipsolver.numCol()) return;
     analyticCenterStatus = ipm.getModelStatus();
@@ -435,6 +428,16 @@ void HighsMipSolverData::finishAnalyticCenterComputation(
     fflush(stdout);
   }
   taskGroup.sync();
+  if (!mipsolver.submip && analyticCenterSubSolverCallTime.num_call.size() > 0) {
+    const bool analytic_centre = true;
+    mipsolver.analysis_.addSubSolverCallTime(analyticCenterSubSolverCallTime,
+                                             analytic_centre);
+    const bool valid_basis = false;
+    const bool use_presolve = false;
+    mipsolver.analysis_.mipTimerUpdate(analyticCenterSubSolverCallTime,
+                                       valid_basis, use_presolve,
+                                       analytic_centre);
+  }
   if (mipsolver.analysis_.analyse_mip_time) {
     highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
                  "MIP-Timing: %11.2g - completed analytic centre synch\n",
