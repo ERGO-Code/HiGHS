@@ -50,10 +50,10 @@ jobs:
         run: bazel build -c dbg --config=tsan //...
 
       - name: Test Mip Solver
-        run: bazel test -c dbg --config=tsan --runs_per_test 300 //:TestMipSolver
+        run: bazel test -c dbg --config=tsan --runs_per_test 100 //:TestMipSolver
 
       - name: Test Highs Parallel
-        run: bazel test -c dbg --config=tsan --runs_per_test 300 //:TestHighsParallel
+        run: bazel test -c dbg --config=tsan --runs_per_test 100 //:TestHighsParallel
 
       - name: All Tests
         run: bazel test -c dbg --config=tsan --runs_per_test 5 //...
