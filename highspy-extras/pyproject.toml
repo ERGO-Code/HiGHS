@@ -12,11 +12,14 @@ version = "1.14.0.dev1"
 description = "HiGHS external dependencies extension for highspy"
 authors = [{ name = "HiGHS developers", email = "highsopt@gmail.com" }]
 readme = "README.md"
+license = "Apache-2.0 AND BSD-3-Clause"
+license-files = [
+  "THIRD_PARTY_NOTICES.md",
+]
 
 requires-python = ">=3.8"
 
 classifiers = [
-  "License :: OSI Approved :: Apache Software License",
   "Programming Language :: Python :: 3 :: Only",
   "Programming Language :: Python :: 3.8",
   "Programming Language :: Python :: 3.9",
@@ -40,9 +43,6 @@ wheel.exclude = ["include", "lib*/", "bin", "LICENSE.txt", "README.md"]
 # Files to include in the SDist even if they are skipped by default. Supports
 # gitignore syntax.
 sdist.include = [
-  "LICENSE.txt",
-  "README.md",
-  "THIRD_PARTY_NOTICES.md",
   "extern",
   "cmake",
   "Version.txt",
