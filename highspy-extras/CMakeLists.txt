@@ -23,6 +23,6 @@ project(highs_extras LANGUAGES C CXX)
 add_subdirectory("${_PARENT_DIR}/extern" "${CMAKE_CURRENT_BINARY_DIR}/extern")
 
 install(TARGETS highs_extras
-    RUNTIME DESTINATION highspy-extras
-    LIBRARY DESTINATION highspy-extras
+    RUNTIME DESTINATION highspy_extras
+    LIBRARY DESTINATION highspy_extras
 )

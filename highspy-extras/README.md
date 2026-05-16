@@ -22,7 +22,7 @@ At present, the optional dependency installs support needed for HiPO.
 
 ## Usage
 
-When `highspy-extras` is installed, HiGHS can use algorithms that depend on these external libraries. At present this primarily means the HiPO solver. You can explicitly select HiPO:
+When `highspy-extras` is installed, HiGHS can use algorithms that depend on these external libraries. Note that `highspy-extras` is automatically consumed by `highspy` and does not need to be imported manually. At present this primarily means the HiPO solver. You can explicitly select HiPO:
 
 ```python
 import highspy
@@ -43,10 +43,10 @@ h.run()
 For debugging library packaging issues, you can also query the ABI version reported directly by the shared library:
 
 ```python
-import highspy-extras
+import highspy_extras
 
-print(highspy-extras.__version__)
-print(highspy-extras.get_library_version())
+print(highspy_extras.__version__)
+print(highspy_extras.get_library_version())
 ```
 
 ## Requirements

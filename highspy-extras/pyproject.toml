@@ -34,7 +34,7 @@ classifiers = [
 [tool.scikit-build]
 build.verbose = true
 wheel.expand-macos-universal-tags = true
-wheel.packages = ["highspy-extras"]
+wheel.packages = ["highspy_extras"]
 wheel.exclude = ["include", "lib*/", "bin", "LICENSE.txt", "README.md"]
 
 # Files to include in the SDist even if they are skipped by default. Supports
