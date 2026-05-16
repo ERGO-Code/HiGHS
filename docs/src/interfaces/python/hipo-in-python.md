@@ -1,6 +1,6 @@
 # [HiPO in Python](@id hipo-in-python)
 
-The HiPO Interior Point Method (IPM) solver currently uses external dependencies to provide enhanced performance for linear and quadratic programming problems. The required dependencies are packaged in the `highspy-extras`. The packaged dependencies have licensing terms different from HiGHS, such as Apache 2.0. Other algorithms may also rely on `highspy_extras` in the future.
+The HiPO Interior Point Method (IPM) solver currently uses external dependencies to provide enhanced performance for linear and quadratic programming problems. The required dependencies are packaged in the `highspy-extras`. The packaged dependencies have licensing terms different from HiGHS, such as Apache 2.0. Other algorithms may also rely on `highspy-extras` in the future.
 
 HiPO can enhance performance on many large problem instances. It is not very well suited for smaller or easier LPs.
 
@@ -22,7 +22,7 @@ At present, the optional dependency installs support needed for HiPO. Both `high
 
 ## Usage
 
-When `highspy_extras` is installed, HiGHS can use algorithms that depend on these external libraries. At present this primarily means the HiPO solver. You can explicitly select HiPO:
+When `highspy-extras` is installed, HiGHS can use algorithms that depend on these external libraries. At present this primarily means the HiPO solver. You can explicitly select HiPO:
 
 ```python
 import highspy
@@ -43,10 +43,10 @@ h.run()
 For debugging library packaging issues, you can also query the ABI version reported directly by the shared library:
 
 ```python
-import highspy_extras
+import highspy-extras
 
-print(highspy_extras.__version__)
-print(highspy_extras.get_library_version())
+print(highspy-extras.__version__)
+print(highspy-extras.get_library_version())
 ```
 
 ## Local installation requirements

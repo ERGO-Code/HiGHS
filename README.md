@@ -237,7 +237,7 @@ The [Google Colab Example Notebook](https://colab.research.google.com/drive/1JmH
 To use HiPO in Python, the additional `highspy-extras` is required. It contains the HiPO dependencies and is Apache 2.0 licensed. It can be installed with
 
 ```shell
-$ pip install highspy[hipo]
+$ pip install highspy[extras]
 ```
 
 For more details, see https://ergo-code.github.io/HiGHS/ at Interfaces -> Python -> HiPO in Python.
