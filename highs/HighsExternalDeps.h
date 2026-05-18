@@ -17,6 +17,7 @@ namespace HighsExtras {
 struct highs_family {};
 extern const HighsExtrasFeatureInfo highs_family_info_[];
 
+template <>
 inline const HighsExtrasFeatureInfo* wrapper_storage<highs_family>::getInfo() {
   return highs_family_info_;
 }

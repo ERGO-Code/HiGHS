@@ -34,9 +34,15 @@ namespace HighsExtras {
 template <class... Features>
 struct require {};
 
+template <class Methods>
+struct feature_api;
+
 // convenience wrapper to access the HighsExtrasApi storage
 template <class Family>
 struct wrapper_storage {
+  template <class Methods>
+  static feature_api<Methods>& getApi();
+
   static const HighsExtrasFeatureInfo* getInfo() { return nullptr; };
 };
 
@@ -70,9 +76,6 @@ struct method_storage {
 };
 
 // builds a struct of function pointers, given tuple<method_desc<...>, ...>
-template <class Methods>
-struct feature_api;
-
 template <class... Desc>
 struct feature_api<std::tuple<Desc...>> : method_storage<Desc>... {
   using methods_type = std::tuple<Desc...>;
@@ -90,7 +93,8 @@ template <class Family, class Methods>
 struct feature_wrapper {
   template <std::size_t Index>
   static typename std::tuple_element<Index, Methods>::type::fnptr_t& fn() {
-    return wrapper_storage<Family>::getApi<Methods>().template method<Index>();
+    return wrapper_storage<Family>::template getApi<Methods>()
+        .template method<Index>();
   }
 };
 

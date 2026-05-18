@@ -120,7 +120,7 @@ namespace HighsExtras {
 // allows static access to feature APIs via
 // HighsExtras::<feature>::<method>(...)
 template <class Methods>
-static feature_api<Methods>& wrapper_storage<extras_family>::getApi() {
+feature_api<Methods>& wrapper_storage<extras_family>::getApi() {
   return HighsExternalApi::instance().api_.template as<Methods>();
 }
 

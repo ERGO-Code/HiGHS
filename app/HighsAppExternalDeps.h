@@ -17,6 +17,7 @@
 namespace HighsExtras {
 struct app_family {};
 
+template <>
 inline const HighsExtrasFeatureInfo* wrapper_storage<app_family>::getInfo() {
   static const HighsExtrasFeatureInfo info = {"CLI11", "2.5.0", "BSD-3-Clause",
                                               true};
