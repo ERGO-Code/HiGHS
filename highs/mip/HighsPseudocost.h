@@ -107,16 +107,9 @@ class HighsPseudocost {
     return deltas[changedpos[col]];
   }
 
-  static void addDeltaAverage(double& avg, HighsInt& count, double delta_sum,
-                              HighsInt delta_count) {
-    if (delta_count <= 0) return;
-    avg = (avg * static_cast<double>(count) + delta_sum) /
-          static_cast<double>(count + delta_count);
-    count += delta_count;
-  }
-
-  static void addDeltaAverage(double& avg, int64_t& count, double delta_sum,
-                              int64_t delta_count) {
+  template <typename CountType>
+  static void addDeltaAverage(double& avg, CountType& count, double delta_sum,
+                              CountType delta_count) {
     if (delta_count <= 0) return;
     avg = (avg * static_cast<double>(count) + delta_sum) /
           static_cast<double>(count + delta_count);

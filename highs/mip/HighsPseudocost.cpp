@@ -36,7 +36,7 @@ HighsPseudocost::HighsPseudocost(const HighsMipSolver& mipsolver)
       delta_ninferencestotal(0),
       minreliable(mipsolver.options_mip_->mip_pscost_minreliable),
       degeneracyFactor(1.0) {
-  deltas.reserve(std::min(256, mipsolver.numCol()));
+  deltas.reserve(std::min(HighsInt{256}, mipsolver.numCol()));
   if (mipsolver.pscostinit != nullptr) {
     cost_total = mipsolver.pscostinit->cost_total;
     inferences_total = mipsolver.pscostinit->inferences_total;
