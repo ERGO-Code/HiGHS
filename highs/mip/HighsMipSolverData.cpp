@@ -22,9 +22,6 @@
 HighsMipSolverData::HighsMipSolverData(HighsMipSolver& mipsolver)
     : mipsolver(mipsolver),
       lps(1, HighsLpRelaxation(mipsolver)),
-      conflictpools(
-          1, HighsConflictPool(5 * mipsolver.options_mip_->mip_pool_age_limit,
-                               mipsolver.options_mip_->mip_pool_soft_limit)),
       domains(1, HighsDomain(mipsolver)),
       pseudocosts(1),
       parallel_lock(false),
@@ -77,6 +74,8 @@ HighsMipSolverData::HighsMipSolverData(HighsMipSolver& mipsolver)
       upper_limit(kHighsInf),
       optimality_limit(kHighsInf),
       debugSolution(mipsolver) {
+  conflictpools.emplace_back(5 * mipsolver.options_mip_->mip_pool_age_limit,
+                             mipsolver.options_mip_->mip_pool_soft_limit);
   cutpools.emplace_back(mipsolver.numCol(),
                         mipsolver.options_mip_->mip_pool_age_limit,
                         mipsolver.options_mip_->mip_pool_soft_limit, 0);
