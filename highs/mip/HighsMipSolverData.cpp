@@ -597,8 +597,10 @@ void HighsMipSolverData::finishSymmetryDetection(
   for (HighsOrbitopeMatrix& orbitope : symmetries.orbitopes)
     orbitope.determineOrbitopeType(cliquetable);
 
-  if (symmetries.numPerms != 0)
-    globalOrbits = symmetries.computeStabilizerOrbits(getDomain());
+  if (symmetries.numPerms != 0) {
+    StabilizerOrbitWorkspace workspace;
+    globalOrbits = symmetries.computeStabilizerOrbits(getDomain(), workspace);
+  }
 }
 
 double HighsMipSolverData::limitsToGap(const double use_lower_bound,

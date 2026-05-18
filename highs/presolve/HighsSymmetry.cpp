@@ -109,13 +109,19 @@ void HighsSymmetries::clear() {
   numGenerators = 0;
 }
 
-void HighsSymmetries::mergeOrbits(HighsInt v1, HighsInt v2) {
+void HighsSymmetries::mergeOrbits(HighsInt v1, HighsInt v2,
+                                  StabilizerOrbitWorkspace* workspace) {
   if (v1 == v2) return;
 
-  HighsInt orbit1 = getOrbit(v1);
-  HighsInt orbit2 = getOrbit(v2);
+  const HighsInt orbit1 = getOrbit(v1, workspace);
+  const HighsInt orbit2 = getOrbit(v2, workspace);
 
   if (orbit1 == orbit2) return;
+
+  std::vector<HighsInt>& orbitPartition =
+      workspace == nullptr ? this->orbitPartition : workspace->orbitPartition;
+  std::vector<HighsInt>& orbitSize =
+      workspace == nullptr ? this->orbitSize : workspace->orbitSize;
 
   if (orbitSize[orbit2] < orbitSize[orbit1]) {
     orbitPartition[orbit2] = orbit1;
@@ -124,13 +130,19 @@ void HighsSymmetries::mergeOrbits(HighsInt v1, HighsInt v2) {
     orbitPartition[orbit1] = orbit2;
     orbitSize[orbit2] += orbitSize[orbit1];
   }
-
-  return;
 }
 
-HighsInt HighsSymmetries::getOrbit(HighsInt col) {
+HighsInt HighsSymmetries::getOrbit(HighsInt col,
+                                   StabilizerOrbitWorkspace* workspace) {
   HighsInt i = columnPosition[col];
   if (i == -1) return -1;
+
+  std::vector<HighsInt>& orbitPartition =
+      workspace == nullptr ? this->orbitPartition : workspace->orbitPartition;
+  std::vector<HighsInt>& linkCompressionStack =
+      workspace == nullptr ? this->linkCompressionStack
+                           : workspace->linkCompressionStack;
+
   HighsInt orbit = orbitPartition[i];
   if (orbit != orbitPartition[orbit]) {
     do {
@@ -172,7 +184,8 @@ HighsInt HighsSymmetries::propagateOrbitopes(HighsDomain& domain) const {
 }
 
 std::shared_ptr<const StabilizerOrbits>
-HighsSymmetries::computeStabilizerOrbits(const HighsDomain& localdom) {
+HighsSymmetries::computeStabilizerOrbits(const HighsDomain& localdom,
+                                         StabilizerOrbitWorkspace& workspace) {
   const auto& domchgStack = localdom.getDomainChangeStack();
   const auto& branchingPos = localdom.getBranchingPositions();
 
@@ -195,9 +208,11 @@ HighsSymmetries::computeStabilizerOrbits(const HighsDomain& localdom) {
   }
 
   HighsInt permLength = permutationColumns.size();
-  orbitPartition.resize(permLength);
-  std::iota(orbitPartition.begin(), orbitPartition.end(), 0);
-  orbitSize.assign(permLength, 1);
+  workspace.orbitPartition.resize(permLength);
+  std::iota(workspace.orbitPartition.begin(), workspace.orbitPartition.end(),
+            0);
+  workspace.orbitSize.assign(permLength, 1);
+  workspace.linkCompressionStack.clear();
 
   for (HighsInt i = 0; i < numPerms; ++i) {
     const HighsInt* perm = permutations.data() + i * permutationColumns.size();
@@ -213,7 +228,7 @@ HighsSymmetries::computeStabilizerOrbits(const HighsDomain& localdom) {
     if (!permRespectsBranchings) continue;
 
     for (HighsInt j = 0; j < permLength; ++j) {
-      mergeOrbits(permutationColumns[j], perm[j]);
+      mergeOrbits(permutationColumns[j], perm[j], &workspace);
     }
   }
 
@@ -224,8 +239,8 @@ HighsSymmetries::computeStabilizerOrbits(const HighsDomain& localdom) {
     if (localdom.variableType(permutationColumns[i]) ==
         HighsVarType::kContinuous)
       continue;
-    HighsInt orbit = getOrbit(permutationColumns[i]);
-    if (orbitSize[orbit] == 1)
+    HighsInt orbit = getOrbit(permutationColumns[i], &workspace);
+    if (workspace.orbitSize[orbit] == 1)
       stabilizerOrbits.stabilizedCols.push_back(permutationColumns[i]);
     else if (localdom.isGlobalBinary(permutationColumns[i]))
       stabilizerOrbits.orbitCols.push_back(permutationColumns[i]);
@@ -237,15 +252,15 @@ HighsSymmetries::computeStabilizerOrbits(const HighsDomain& localdom) {
     pdqsort(stabilizerOrbits.orbitCols.begin(),
             stabilizerOrbits.orbitCols.end(),
             [&](HighsInt col1, HighsInt col2) {
-              return getOrbit(col1) < getOrbit(col2);
+              return getOrbit(col1, &workspace) < getOrbit(col2, &workspace);
             });
     HighsInt numOrbitCols = stabilizerOrbits.orbitCols.size();
     stabilizerOrbits.orbitStarts.reserve(numOrbitCols + 1);
     stabilizerOrbits.orbitStarts.push_back(0);
 
     for (HighsInt i = 1; i < numOrbitCols; ++i) {
-      if (getOrbit(stabilizerOrbits.orbitCols[i]) !=
-          getOrbit(stabilizerOrbits.orbitCols[i - 1]))
+      if (getOrbit(stabilizerOrbits.orbitCols[i], &workspace) !=
+          getOrbit(stabilizerOrbits.orbitCols[i - 1], &workspace))
         stabilizerOrbits.orbitStarts.push_back(i);
     }
     stabilizerOrbits.orbitStarts.push_back(numOrbitCols);

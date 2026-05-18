@@ -886,10 +886,9 @@ HighsSearch::NodeResult HighsSearch::evaluateNode() {
   if (!inheuristic && !localdom.infeasible()) {
     if (getSymmetries().numPerms > 0 && !currnode.stabilizerOrbits &&
         (parent == nullptr || !parent->stabilizerOrbits ||
-         !parent->stabilizerOrbits->orbitCols.empty()) &&
-        !mipsolver.mipdata_->parallelLockActive()) {
-      currnode.stabilizerOrbits =
-          getSymmetries().computeStabilizerOrbits(localdom);
+         !parent->stabilizerOrbits->orbitCols.empty())) {
+      currnode.stabilizerOrbits = getSymmetries().computeStabilizerOrbits(
+          localdom, stabilizerOrbitWorkspace);
     }
 
     if (currnode.stabilizerOrbits)
