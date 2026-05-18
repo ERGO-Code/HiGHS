@@ -1446,7 +1446,7 @@ void HighsMipSolverData::performRestart() {
   // std::swap(nodequeue, oldNodeQueue);
 
   // Ensure master worker is pointing to the correct cut and conflict pools
-  if (mipsolver.options_mip_->mip_search_concurrency > 1) {
+  if (mipsolver.options_mip_->mip_search_concurrency >= 1) {
     workers[0].setCutPool(&getCutPool());
     workers[0].setConflictPool(&getConflictPool());
     workers[0].setGlobalDomain(&getDomain());
