@@ -15,16 +15,30 @@
 
 // provide metadata info for each feature
 struct HighsExtrasFeatureInfo {
-  const char* provider = nullptr;
-  const char* version = nullptr;
-  const char* license = nullptr;
-  const bool enabled = false;
+  HighsExtrasFeatureInfo(const char* provider_ = nullptr,
+                         const char* version_ = nullptr,
+                         const char* license_ = nullptr, bool enabled_ = false)
+      : provider(provider_),
+        version(version_),
+        license(license_),
+        enabled(enabled_) {}
+
+  const char* provider;
+  const char* version;
+  const char* license;
+  const bool enabled;
 };
 
 namespace HighsExtras {
 
 template <class... Features>
 struct require {};
+
+// convenience wrapper to access the HighsExtrasApi storage
+template <class Family>
+struct wrapper_storage {
+  static const HighsExtrasFeatureInfo* getInfo() { return nullptr; };
+};
 
 template <class FeatureFamily, int FeatureIndex>
 struct feature_base {
@@ -69,12 +83,6 @@ struct feature_api<std::tuple<Desc...>> : method_storage<Desc>... {
     using desc_type = typename std::tuple_element<Index, methods_type>::type;
     return static_cast<method_storage<desc_type>&>(*this).value;
   }
-};
-
-// convenience wrapper to access the HighsExtrasApi storage
-template <class Family>
-struct wrapper_storage {
-  static const HighsExtrasFeatureInfo* getInfo() { return nullptr; };
 };
 
 // access function pointer by index, e.g., api::fn<0>()(...)
