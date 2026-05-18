@@ -442,22 +442,8 @@ restart:
 
   auto syncGlobalPseudoCost = [&]() -> void {
     if (!mipdata_->hasMultipleWorkers()) return;
-    std::vector<HighsInt> nsamplesup =
-        mipdata_->getPseudoCost().getNSamplesUp();
-    std::vector<HighsInt> nsamplesdown =
-        mipdata_->getPseudoCost().getNSamplesDown();
-    std::vector<HighsInt> ninferencesup =
-        mipdata_->getPseudoCost().getNInferencesUp();
-    std::vector<HighsInt> ninferencesdown =
-        mipdata_->getPseudoCost().getNInferencesDown();
-    std::vector<HighsInt> ncutoffsup =
-        mipdata_->getPseudoCost().getNCutoffsUp();
-    std::vector<HighsInt> ncutoffsdown =
-        mipdata_->getPseudoCost().getNCutoffsDown();
     for (HighsMipWorker& worker : mipdata_->workers) {
-      mipdata_->getPseudoCost().flushPseudoCost(
-          worker.getPseudocost(), nsamplesup, nsamplesdown, ninferencesup,
-          ninferencesdown, ncutoffsup, ncutoffsdown);
+      mipdata_->getPseudoCost().flushPseudoCost(worker.getPseudocost());
     }
   };
 
