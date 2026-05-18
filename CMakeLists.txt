@@ -569,13 +569,7 @@ if(ZLIB AND NOT TARGET ZLIB::ZLIB)
   find_package(ZLIB 1.2.3)
 endif()
 
-if (CMAKE_INSTALL_DOCDIR STREQUAL "" OR NOT BUILD_CXX)
-  install(FILES
-      README.md
-      LICENSE.txt
-      THIRD_PARTY_NOTICES.md
-      DESTINATION .)
-else()
+if (NOT CMAKE_INSTALL_DOCDIR STREQUAL "" AND BUILD_CXX)
   install(FILES
       README.md
       LICENSE.txt
