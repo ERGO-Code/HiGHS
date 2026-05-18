@@ -896,12 +896,10 @@ else(FAST_BUILD)
 
 endif()
 
-add_subdirectory(extern)
-
-if (HIPO)
-  if (HIPO_PYTHON)
-    add_subdirectory(highspy)
-  endif()
+if (HIPO_PYTHON)
+  add_subdirectory(highspy)
+else()
+  add_subdirectory(extern)
 endif()
 
 # Prevent nested directory structure in the archive

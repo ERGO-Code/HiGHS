@@ -48,7 +48,6 @@ if(NOT FAST_BUILD)
   if(ZLIB AND ZLIB_FOUND)
     target_link_libraries(libhighs ZLIB::ZLIB)
     set(CONF_DEPENDENCIES "include(CMakeFindDependencyMacro)\nfind_dependency(ZLIB)")
-    target_compile_definitions(libhighs PRIVATE ZLIB_VERSION="${ZLIB_VERSION}")
   endif()
 
   # set the install rpath to the installed destination
@@ -300,7 +299,6 @@ else()
       $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/extern/zstr>
     )
     target_link_libraries(highs PRIVATE ZLIB::ZLIB)
-    target_compile_definitions(highs PRIVATE ZLIB_VERSION="${ZLIB_VERSION}")
   endif()
 
   # allow consumers of highs to be aware of potential external dependencies

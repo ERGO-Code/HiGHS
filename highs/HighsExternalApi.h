@@ -154,7 +154,8 @@ struct HighsExternalApi {
         HighsExtras::trait_pack_ops<HighsExtras::feature_traits<Feature>,
                                     HighsExtras::feature_traits<Features>...>;
     tryLoad();
-    HighsTextTable<4> table({{"key", "name", "version", "license"}});
+    HighsTextTable<4>::Row headers{{"key", "name", "version", "license"}};
+    HighsTextTable<4> table(headers);
     traits::append_notice_rows(table);
 
     table.sortRows<0>();  // sort by key for consistent ordering

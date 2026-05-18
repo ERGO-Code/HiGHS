@@ -15,7 +15,6 @@
 #include <string>
 #include <type_traits>
 
-
 class HighsDynamicLibrary {
  public:
   HighsDynamicLibrary() = default;
