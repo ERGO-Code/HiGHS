@@ -183,7 +183,7 @@ cc_library(
         "check/Avgas.h",
         "check/SpecialLps.h",
         "check/matrix_multiplication.hpp",
-        "extern/catch.hpp",
+        "extern/catch/catch.hpp",
     ],
     copts = ["-Iextern"],
     data = glob(["check/instances/*"]),

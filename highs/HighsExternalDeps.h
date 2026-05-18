@@ -14,12 +14,13 @@
 #include "HighsExtrasApi.h"
 
 namespace HighsExtras {
-struct highs_family {};
-extern const HighsExtrasFeatureInfo highs_family_info_[];
+struct highs_family {
+  static const HighsExtrasFeatureInfo* getInfo();
+};
 
 template <>
 inline const HighsExtrasFeatureInfo* wrapper_storage<highs_family>::getInfo() {
-  return highs_family_info_;
+  return highs_family::getInfo();
 }
 
 template <int Index>

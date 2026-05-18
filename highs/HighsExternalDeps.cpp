@@ -34,4 +34,9 @@ const HighsExtrasFeatureInfo highs_family_info_[] = {
     {"NVIDIA Driver API", "runtime", "N/A (not redistributed)",
      __cuda_enabled}};
 
+// defined in cpp to avoid link issues with BUILD_SHARED_LIBS
+const HighsExtrasFeatureInfo* highs_family::getInfo() {
+  return highs_family_info_;
+}
+
 }  // namespace HighsExtras
