@@ -288,12 +288,15 @@ class HighsPostsolveStack {
   bool isModelRow(HighsInt row) const {
     return origRowType[row] == OrigRowType::kOriginal;
   }
+
   bool isAppendedRow(HighsInt row) const {
     return origRowType[row] == OrigRowType::kAppended;
   }
+
   bool isCutRow(HighsInt row) const {
     return origRowType[row] == OrigRowType::kCut;
   }
+
   bool hasAppendedRows() const { return numAppendedRows > 0; }
 
   void appendCutsToModel(HighsInt numCuts) {

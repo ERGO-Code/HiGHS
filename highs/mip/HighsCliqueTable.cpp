@@ -1283,8 +1283,7 @@ void HighsCliqueTable::extractCliques(HighsMipSolver& mipsolver,
     HighsInt end = mipsolver.mipdata_->ARstart_[i + 1];
 
     if (mipsolver.mipdata_->postSolveStack.isCutRow(i)) {
-      if (!mipsolver.mipdata_->postSolveStack.hasAppendedRows())
-        break;
+      if (!mipsolver.mipdata_->postSolveStack.hasAppendedRows()) break;
       continue;
     }
 
