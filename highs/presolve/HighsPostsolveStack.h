@@ -653,7 +653,8 @@ class HighsPostsolveStack {
 
   /// undo presolve steps for primal dual solution and basis
   void undo(const HighsOptions& options, HighsSolution& solution,
-            HighsBasis& basis, const HighsInt report_col = -1) {
+            HighsBasis& basis, size_t numReductions = 0,
+            const HighsInt report_col = -1) {
     reductionValues.resetPosition();
 
     // Verify that undo can be performed
@@ -684,7 +685,7 @@ class HighsPostsolveStack {
     }
 
     // now undo the changes
-    for (size_t i = reductions.size(); i > 0; --i) {
+    for (size_t i = reductions.size(); i > numReductions; --i) {
       if (report_col >= 0)
         printf("Before  reduction %2d (type %2d): col_value[%2d] = %g\n",
                int(i - 1), int(reductions[i - 1].first), int(report_col),
@@ -822,7 +823,7 @@ class HighsPostsolveStack {
     HighsBasis basis;
     basis.valid = false;
     solution.dual_valid = false;
-    undo(options, solution, basis, report_col);
+    undo(options, solution, basis, 0, report_col);
   }
 
   /*
@@ -837,156 +838,6 @@ class HighsPostsolveStack {
     undo(options, solution, basis);
   }
   */
-
-  // Only used for debugging
-  void undoUntil(const HighsOptions& options, HighsSolution& solution,
-                 HighsBasis& basis, size_t numReductions) {
-    reductionValues.resetPosition();
-
-    // Do these returns ever happen? How is it known that undo has not
-    // been performed?
-    assert(solution.col_value.size() == origColIndex.size());
-    assert(solution.row_value.size() == origRowIndex.size());
-    // This should be a better measure of whether undo can be
-    // performed
-    assert(solution.value_valid);
-    if (solution.col_value.size() != origColIndex.size()) return;
-    if (solution.row_value.size() != origRowIndex.size()) return;
-
-    bool perform_dual_postsolve = solution.dual_valid;
-    assert((solution.col_dual.size() == solution.col_value.size()) ==
-           perform_dual_postsolve);
-    bool perform_basis_postsolve = basis.valid;
-
-    // expand solution to original index space
-    undoIterateBackwards(solution.col_value, origColIndex, origNumCol);
-
-    undoIterateBackwards(solution.row_value, origRowIndex, nextRowIndex);
-
-    if (perform_dual_postsolve) {
-      // if dual solution is given, expand dual solution and basis to original
-      // index space
-      undoIterateBackwards(solution.col_dual, origColIndex, origNumCol);
-
-      undoIterateBackwards(solution.row_dual, origRowIndex, nextRowIndex);
-    }
-
-    if (perform_basis_postsolve) {
-      // if basis is given, expand basis status values to original index space
-      undoIterateBackwards(basis.col_status, origColIndex, origNumCol);
-
-      undoIterateBackwards(basis.row_status, origRowIndex, nextRowIndex);
-    }
-
-    // now undo the changes
-    for (size_t i = reductions.size(); i > numReductions; --i) {
-      switch (reductions[i - 1].first) {
-        case ReductionType::kLinearTransform: {
-          LinearTransform reduction;
-          reductionValues.pop(reduction);
-          reduction.undo(options, solution);
-          break;
-        }
-        case ReductionType::kFreeColSubstitution: {
-          FreeColSubstitution reduction;
-          reductionValues.pop(colValues);
-          reductionValues.pop(rowValues);
-          reductionValues.pop(reduction);
-          reduction.undo(*this, options, rowValues, colValues, solution, basis);
-          break;
-        }
-        case ReductionType::kDoubletonEquation: {
-          DoubletonEquation reduction;
-          reductionValues.pop(colValues);
-          reductionValues.pop(reduction);
-          reduction.undo(*this, options, colValues, solution, basis);
-          break;
-        }
-        case ReductionType::kEqualityRowAddition: {
-          EqualityRowAddition reduction;
-          reductionValues.pop(rowValues);
-          reductionValues.pop(reduction);
-          reduction.undo(*this, options, rowValues, solution, basis);
-          break;
-        }
-        case ReductionType::kEqualityRowAdditions: {
-          EqualityRowAdditions reduction;
-          reductionValues.pop(colValues);
-          reductionValues.pop(rowValues);
-          reductionValues.pop(reduction);
-          reduction.undo(*this, options, rowValues, colValues, solution, basis);
-          break;
-        }
-        case ReductionType::kSingletonRow: {
-          SingletonRow reduction;
-          reductionValues.pop(reduction);
-          reduction.undo(*this, options, solution, basis);
-          break;
-        }
-        case ReductionType::kFixedCol: {
-          FixedCol reduction;
-          reductionValues.pop(colValues);
-          reductionValues.pop(reduction);
-          reduction.undo(*this, options, colValues, solution, basis);
-          break;
-        }
-        case ReductionType::kRedundantRow: {
-          RedundantRow reduction;
-          reductionValues.pop(reduction);
-          reduction.undo(*this, options, solution, basis);
-          break;
-        }
-        case ReductionType::kForcingRow: {
-          ForcingRow reduction;
-          reductionValues.pop(rowValues);
-          reductionValues.pop(reduction);
-          reduction.undo(*this, options, rowValues, solution, basis);
-          break;
-        }
-        case ReductionType::kForcingColumn: {
-          ForcingColumn reduction;
-          reductionValues.pop(colValues);
-          reductionValues.pop(reduction);
-          reduction.undo(*this, options, colValues, solution, basis);
-          break;
-        }
-        case ReductionType::kForcingColumnRemovedRow: {
-          ForcingColumnRemovedRow reduction;
-          reductionValues.pop(rowValues);
-          reductionValues.pop(reduction);
-          reduction.undo(*this, options, rowValues, solution, basis);
-          break;
-        }
-        case ReductionType::kDuplicateRow: {
-          DuplicateRow reduction;
-          reductionValues.pop(reduction);
-          reduction.undo(*this, options, solution, basis);
-          break;
-        }
-        case ReductionType::kDuplicateColumn: {
-          DuplicateColumn reduction;
-          reductionValues.pop(reduction);
-          reduction.undo(options, solution, basis);
-          break;
-        }
-        case ReductionType::kSlackColSubstitution: {
-          SlackColSubstitution reduction;
-          reductionValues.pop(rowValues);
-          reductionValues.pop(reduction);
-          reduction.undo(*this, options, rowValues, solution, basis);
-          break;
-        }
-      }
-    }
-#ifdef DEBUG_EXTRA
-    // solution should not contain NaN or Inf
-    assert(!containsNanOrInf(solution.col_value));
-    // row values are not determined by postsolve
-    // assert(!containsNanOrInf(solution.row_value));
-    assert(!containsNanOrInf(solution.col_dual));
-    assert(!containsNanOrInf(solution.row_dual));
-#endif
-  }
 
   size_t numReductions() const { return reductions.size(); }
 };

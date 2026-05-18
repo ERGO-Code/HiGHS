@@ -8296,7 +8296,7 @@ void HPresolve::debug(const HighsLp& lp, const HighsOptions& options) {
 
     sol = reducedsol;
     basis = reducedbasis;
-    postsolve_stack.undoUntil(options, sol, basis, tmp.numReductions());
+    postsolve_stack.undo(options, sol, basis, tmp.numReductions());
 
     HighsBasis temp_basis;
     HighsSolution temp_sol;
@@ -8342,7 +8342,7 @@ void HPresolve::debug(const HighsLp& lp, const HighsOptions& options) {
                          ARstart, ARindex, ARvalue);
     sol = reducedsol;
     basis = reducedbasis;
-    postsolve_stack.undoUntil(options, sol, basis, reductionLim);
+    postsolve_stack.undo(options, sol, basis, reductionLim);
 
     calculateRowValuesQuad(model, sol);
     kktinfo = dev_kkt_check::initInfo();
