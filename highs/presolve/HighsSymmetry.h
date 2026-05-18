@@ -127,9 +127,17 @@ struct HighsSymmetries {
 
   void clear();
   void mergeOrbits(HighsInt col1, HighsInt col2,
-                   StabilizerOrbitWorkspace* workspace = nullptr);
-  HighsInt getOrbit(HighsInt col,
-                    StabilizerOrbitWorkspace* workspace = nullptr);
+                   std::vector<HighsInt>& orbitPartition,
+                   std::vector<HighsInt>& orbitSize,
+                   std::vector<HighsInt>& linkCompressionStack);
+  void mergeOrbits(HighsInt col1, HighsInt col2) {
+    mergeOrbits(col1, col2, orbitPartition, orbitSize, linkCompressionStack);
+  }
+  HighsInt getOrbit(HighsInt col, std::vector<HighsInt>& orbitPartition,
+                    std::vector<HighsInt>& linkCompressionStack);
+  HighsInt getOrbit(HighsInt col) {
+    return getOrbit(col, orbitPartition, linkCompressionStack);
+  }
 
   HighsInt propagateOrbitopes(HighsDomain& domain) const;
 
