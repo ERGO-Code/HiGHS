@@ -62,6 +62,8 @@ struct HighsPseudocostDelta {
   double pseudocostdown_sum = 0.0;
   double inferencesup_sum = 0.0;
   double inferencesdown_sum = 0.0;
+  double conflictscoreup_sum = 0.0;
+  double conflictscoredown_sum = 0.0;
 };
 
 class HighsPseudocost {
@@ -137,6 +139,10 @@ class HighsPseudocost {
         conflictscoreup[i] *= scale;
         conflictscoredown[i] *= scale;
       }
+      for (HighsPseudocostDelta& delta : deltas) {
+        delta.conflictscoreup_sum *= scale;
+        delta.conflictscoredown_sum *= scale;
+      }
     }
   }
 
@@ -146,15 +152,17 @@ class HighsPseudocost {
   }
 
   void increaseConflictScoreUp(HighsInt col) {
+    HighsPseudocostDelta& delta = markChanged(col);
     conflictscoreup[col] += conflict_weight;
     conflict_avg_score += conflict_weight;
-    markChanged(col);
+    delta.conflictscoreup_sum += conflict_weight;
   }
 
   void increaseConflictScoreDown(HighsInt col) {
+    HighsPseudocostDelta& delta = markChanged(col);
     conflictscoredown[col] += conflict_weight;
     conflict_avg_score += conflict_weight;
-    markChanged(col);
+    delta.conflictscoredown_sum += conflict_weight;
   }
 
   void setMinReliable(HighsInt minreliable) { this->minreliable = minreliable; }
@@ -421,18 +429,6 @@ class HighsPseudocost {
     return inferencesdown[col];
   }
 
-  void flushConflictObservations(double& curr_observation,
-                                 double new_observation,
-                                 double conflict_weight) {
-    const double s = this->conflict_weight *
-                     std::max(curr_observation / this->conflict_weight,
-                              new_observation / conflict_weight);
-    if (s > curr_observation + minThreshold) {
-      this->conflict_avg_score += s - curr_observation;
-    }
-    curr_observation = s;
-  }
-
   void flushPseudoCost(HighsPseudocost& pseudocost) {
     assert(pseudocost.ncutoffsup.size() == this->ncutoffsup.size());
     for (const HighsPseudocostDelta& delta : pseudocost.deltas) {
@@ -447,13 +443,15 @@ class HighsPseudocost {
                       delta.inferencesup_sum, delta.ninferencesup);
       addDeltaAverage(this->inferencesdown[col], this->ninferencesdown[col],
                       delta.inferencesdown_sum, delta.ninferencesdown);
-      // Take the max conflict score (no way to guess num observations)
-      flushConflictObservations(this->conflictscoreup[col],
-                                pseudocost.conflictscoreup[col],
-                                pseudocost.conflict_weight);
-      flushConflictObservations(this->conflictscoredown[col],
-                                pseudocost.conflictscoredown[col],
-                                pseudocost.conflict_weight);
+      const double conflict_scale =
+          this->conflict_weight / pseudocost.conflict_weight;
+      const double conflict_delta_up =
+          conflict_scale * delta.conflictscoreup_sum;
+      const double conflict_delta_down =
+          conflict_scale * delta.conflictscoredown_sum;
+      this->conflictscoreup[col] += conflict_delta_up;
+      this->conflictscoredown[col] += conflict_delta_down;
+      this->conflict_avg_score += conflict_delta_up + conflict_delta_down;
       this->ncutoffsup[col] += delta.ncutoffsup;
       this->ncutoffsdown[col] += delta.ncutoffsdown;
       this->ncutoffstotal += delta.ncutoffsup + delta.ncutoffsdown;
