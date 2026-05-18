@@ -2163,7 +2163,7 @@ bool HPresolve::addToMatrix(
     return false;
 
   // initialise flags
-  if (!okResize(changedRowFlag, model->num_row_, uint8_t{1})) return false;
+  if (!okResize(changedRowFlag, model->num_row_, uint8_t{0})) return false;
   if (!okResize(rowDeleted, model->num_row_, uint8_t{0})) return false;
 
   // initialise row names
