@@ -1,44 +1,77 @@
 #include "Highs.h"
-#include "HighsExternalDeps.h"
+#include "HighsExternalApi.h"
 #include "catch.hpp"
 
-// simple test for now
-// extended tests require workflow changes to include/exclude dependencies
+// Verifies whether all features are available. If so, checks provider metadata
+// for BLAS, otherwise checks for a non-empty missing-features summary
 TEST_CASE("HighsExternalDeps", "[highs_external_deps]") {
-  // tryLoad without a path — returns true only if extras are available
-  bool loaded = HighsExternalDeps::tryLoad();
-
-  std::string status = HighsExternalDeps::getLoadStatus();
+  const bool all_available = HighsExternalApi::isAvailable<HighsExtras::all>();
+  const std::string status = HighsExternalApi::getLoadStatus();
   REQUIRE(!status.empty());
 
-  if (loaded) {
-    REQUIRE(HighsExternalDeps::isAvailable());
+  if (all_available) {
+    REQUIRE(!std::string(HighsExtras::blas::getInfo()->provider).empty());
   } else {
-    REQUIRE(!HighsExternalDeps::isAvailable());
+    REQUIRE(!HighsExternalApi::getMissingFeatures<HighsExtras::all>().empty());
   }
 }
 
-TEST_CASE("HighsExternalDeps-compile-time", "[highs_external_deps]") {
-  // isAvailableAtCompile should be consistent with build config
-  bool compile = HighsExternalDeps::isAvailableAtCompile();
-
-// If compile-time aware and statically linked, it must be available
-// If compile-time aware and dynamically linked, it may or may not be available
-// at runtime
-#if !defined(HIGHS_SHARED_EXTRAS_LIBRARY)
-  if (compile) {
-    REQUIRE(HighsExternalDeps::isAvailable());
-  }
-#endif
+// Verifies that the notice header points to the full notice document
+TEST_CASE("HighsExternalDeps-thirdPartyNoticeHeader", "[highs_external_deps]") {
+  const std::string header = HighsExternalApi::thirdPartyNoticeHeader();
+  REQUIRE(header.find("THIRD_PARTY_NOTICES.md") != std::string::npos);
 }
 
-TEST_CASE("HighsExternalDeps-getCopyrightInfo", "[highs_external_deps]") {
-  HighsExternalDeps::tryLoad();
-  std::string info = HighsExternalDeps::getCopyrightInfo();
+// Verifies table-style summary for all compiled features
+TEST_CASE("HighsExternalDeps-getThirdPartyNoticeAll", "[highs_external_deps]") {
+  const std::string notice =
+      HighsExternalApi::getThirdPartyNotice<HighsExtras::all>();
 
-  if (HighsExternalDeps::isAvailable()) {
-    REQUIRE(!info.empty());
+  REQUIRE(notice.find("Third-party components") != std::string::npos);
+  REQUIRE(notice.find("key") != std::string::npos);
+  REQUIRE(notice.find("license") != std::string::npos);
+
+  if (HighsExternalApi::isAvailable<HighsExtras::pdqsort>()) {
+    REQUIRE(notice.find("pdqsort") != std::string::npos);
   } else {
-    REQUIRE(info.empty());
+    REQUIRE(notice.find("pdqsort") == std::string::npos);
+  }
+}
+
+// Verifies table-style summary for the HiPO feature set
+TEST_CASE("HighsExternalDeps-getThirdPartyNoticeHipo",
+          "[highs_external_deps]") {
+  const std::string notice =
+      HighsExternalApi::getThirdPartyNotice<HighsExtras::hipo>();
+
+  REQUIRE(notice.find("Third-party components") != std::string::npos);
+  REQUIRE(notice.find("key") != std::string::npos);
+
+  if (HighsExternalApi::isAvailable<HighsExtras::hipo>()) {
+    REQUIRE(notice.find("amd") != std::string::npos);
+    REQUIRE(notice.find("blas") != std::string::npos);
+    REQUIRE(notice.find("metis") != std::string::npos);
+    REQUIRE(notice.find("rcm") != std::string::npos);
+  } else {
+    REQUIRE(notice.find("amd") == std::string::npos);
+    REQUIRE(notice.find("blas") == std::string::npos);
+    REQUIRE(notice.find("metis") == std::string::npos);
+    REQUIRE(notice.find("rcm") == std::string::npos);
+  }
+}
+
+// Verifies missing-feature empty for HiPO (if available)
+TEST_CASE("HighsExternalDeps-getMissingFeatures", "[highs_external_deps]") {
+  const std::string missing =
+      HighsExternalApi::getMissingFeatures<HighsExtras::hipo>();
+
+  if (HighsExternalApi::isAvailable<HighsExtras::hipo>()) {
+    REQUIRE(missing.empty());
+  } else {
+    REQUIRE(!missing.empty());
+    REQUIRE((missing.find("amd") != std::string::npos ||
+             missing.find("blas") != std::string::npos ||
+             missing.find("metis") != std::string::npos ||
+             missing.find("rcm") != std::string::npos));
   }
 }

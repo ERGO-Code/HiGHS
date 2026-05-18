@@ -10,8 +10,11 @@
 
 #include <ctype.h>
 
+#include <algorithm>
+#include <array>
 #include <cstring>
 #include <string>
+#include <vector>
 
 /*
 void strRemoveWhitespace(char* str);
@@ -32,6 +35,106 @@ std::string& rtrim(std::string& str,
                    const std::string& chars = default_non_chars);
 std::string& trim(std::string& str,
                   const std::string& chars = default_non_chars);
+
+template <class Iterator>
+std::string joinString(Iterator begin, Iterator end,
+                       const std::string& separator) {
+  std::string joined;
+  for (Iterator it = begin; it != end; ++it) {
+    if (!joined.empty()) joined += separator;
+    joined += *it;
+  }
+  return joined;
+}
+
+// simple class for rendering aligned text table
+template <size_t NumCols>
+class HighsTextTable {
+ public:
+  typedef std::array<std::string, NumCols> Row;
+
+  explicit HighsTextTable(const Row& headers) : headers_(headers) {
+    resetWidths();
+  }
+
+  void addRow(const Row& row) {
+    rows_.push_back(row);
+    for (size_t i = 0; i < NumCols; ++i) {
+      widths_[i] = std::max(widths_[i], row[i].size());
+    }
+  }
+
+  void clear() {
+    rows_.clear();
+    resetWidths();
+  }
+
+  std::string render(const std::string& separator = "  ") const {
+    std::string rendered_table;
+    const size_t row_capacity = getRowCapacity(separator);
+    rendered_table.reserve((rows_.size() + 2) * (row_capacity + 1));
+
+    renderRow(rendered_table, headers_, separator);
+    rendered_table += '\n';
+
+    // render separator row
+    rendered_table.append(widths_[0], '-');
+
+    for (size_t i = 1; i < NumCols; ++i) {
+      rendered_table += separator;
+      rendered_table.append(widths_[i], '-');
+    }
+
+    // render rows
+    for (size_t row_index = 0; row_index < rows_.size(); ++row_index) {
+      rendered_table += '\n';
+      renderRow(rendered_table, rows_[row_index], separator);
+    }
+
+    return rendered_table;
+  }
+
+  size_t numColumns() const { return NumCols; }
+  size_t numRows() const { return rows_.size(); }
+
+  template <size_t Column>
+  void sortRows() {
+    static_assert(Column < NumCols, "Column out of range");
+    std::sort(rows_.begin(), rows_.end(), [](const Row& lhs, const Row& rhs) {
+      return lhs[Column] < rhs[Column];
+    });
+  }
+
+ private:
+  void resetWidths() {
+    for (size_t i = 0; i < NumCols; ++i) {
+      widths_[i] = headers_[i].size();
+    }
+  }
+
+  size_t getRowCapacity(const std::string& separator) const {
+    size_t row_capacity = 0;
+    for (size_t i = 0; i < NumCols; ++i) {
+      row_capacity += widths_[i];
+    }
+    if (NumCols > 1) row_capacity += (NumCols - 1) * separator.size();
+
+    return row_capacity;
+  }
+
+  void renderRow(std::string& out, const Row& row,
+                 const std::string& separator) const {
+    for (size_t i = 0; i < NumCols; ++i) {
+      if (i) out += separator;
+      out += row[i];
+      out.append(widths_[i] - row[i].size(), ' ');
+    }
+  }
+
+  Row headers_;
+  std::array<size_t, NumCols> widths_;
+  std::vector<Row> rows_;
+};
 
 bool is_empty(std::string& str, const std::string& chars = default_non_chars);
 bool is_empty(char c, const std::string& chars = default_non_chars);

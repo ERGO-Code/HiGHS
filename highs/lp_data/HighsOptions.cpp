@@ -14,7 +14,7 @@
 #include <cassert>
 #include <cctype>
 
-#include "HighsExternalDeps.h"
+#include "HighsExternalApi.h"
 #include "util/stringutil.h"
 
 void highsOpenLogFile(HighsLogOptions& log_options,
@@ -83,12 +83,14 @@ bool optionSolverOk(const HighsLogOptions& report_log_options,
                     const string& value) {
   if (value == kHighsChooseString || value == kSimplexString ||
       value == kIpmString ||
-      (value == kHipoString && HighsExternalDeps::isAvailable()) ||
+      (value == kHipoString &&
+       HighsExternalApi::isAvailable<HighsExtras::hipo>()) ||
       value == kIpxString || value == kPdlpString || value == kQpAsmString ||
       value == kHiPdlpString)
     return true;
-  else if (value == kHipoString && !HighsExternalDeps::isAvailable()) {
-    HighsExternalDeps::logUnavailable(
+  else if (value == kHipoString &&
+           !HighsExternalApi::isAvailable<HighsExtras::hipo>()) {
+    HighsExternalApi::logUnavailable<HighsExtras::hipo>(
         report_log_options, HighsLogType::kError,
         "The HiPO solver was requested via the \"%s\" option.",
         kSolverString.c_str());
@@ -98,7 +100,7 @@ bool optionSolverOk(const HighsLogOptions& report_log_options,
                  "Value \"%s\" for LP solver option (\"%s\") is not one of "
                  "%s\"%s\", \"%s\", \"%s\", \"%s\" or \"%s\"\n",
                  value.c_str(), kSolverString.c_str(),
-                 HighsExternalDeps::isAvailable()
+                 HighsExternalApi::isAvailable<HighsExtras::hipo>()
                      ? (kHipoString + "\", \"").c_str()
                      : "",
                  kHighsChooseString.c_str(), kSimplexString.c_str(),
@@ -112,11 +114,13 @@ bool optionMipLpSolverOk(const HighsLogOptions& report_log_options,
                          const string& value) {
   if (value == kHighsChooseString || value == kSimplexString ||
       value == kIpmString ||
-      (value == kHipoString && HighsExternalDeps::isAvailable()) ||
+      (value == kHipoString &&
+       HighsExternalApi::isAvailable<HighsExtras::hipo>()) ||
       value == kIpxString)
     return true;
-  else if (value == kHipoString && !HighsExternalDeps::isAvailable()) {
-    HighsExternalDeps::logUnavailable(
+  else if (value == kHipoString &&
+           !HighsExternalApi::isAvailable<HighsExtras::hipo>()) {
+    HighsExternalApi::logUnavailable<HighsExtras::hipo>(
         report_log_options, HighsLogType::kError,
         "The HiPO solver was requested via the \"%s\" option.",
         kMipLpSolverString.c_str());
@@ -126,7 +130,7 @@ bool optionMipLpSolverOk(const HighsLogOptions& report_log_options,
                  "Value \"%s\" for MIP LP solver option (\"%s\") is not one of "
                  "%s\"%s\", \"%s\", \"%s\" or \"%s\"\n",
                  value.c_str(), kMipLpSolverString.c_str(),
-                 HighsExternalDeps::isAvailable()
+                 HighsExternalApi::isAvailable<HighsExtras::hipo>()
                      ? (kHipoString + "\", \"").c_str()
                      : "",
                  kHighsChooseString.c_str(), kSimplexString.c_str(),
@@ -138,11 +142,13 @@ bool optionMipLpSolverOk(const HighsLogOptions& report_log_options,
 bool optionMipIpmSolverOk(const HighsLogOptions& report_log_options,
                           const string& value) {
   if (value == kHighsChooseString || value == kIpmString ||
-      (value == kHipoString && HighsExternalDeps::isAvailable()) ||
+      (value == kHipoString &&
+       HighsExternalApi::isAvailable<HighsExtras::hipo>()) ||
       value == kIpxString)
     return true;
-  else if (value == kHipoString && !HighsExternalDeps::isAvailable()) {
-    HighsExternalDeps::logUnavailable(
+  else if (value == kHipoString &&
+           !HighsExternalApi::isAvailable<HighsExtras::hipo>()) {
+    HighsExternalApi::logUnavailable<HighsExtras::hipo>(
         report_log_options, HighsLogType::kError,
         "The HiPO solver was requested via the \"%s\" option.",
         kMipIpmSolverString.c_str());
@@ -153,8 +159,9 @@ bool optionMipIpmSolverOk(const HighsLogOptions& report_log_options,
         "Value \"%s\" for MIP IPM solver (\"%s\") option is not one of "
         "%s\"%s\", \"%s\" or \"%s\"\n",
         value.c_str(), kMipIpmSolverString.c_str(),
-        HighsExternalDeps::isAvailable() ? (kHipoString + "\", \"").c_str()
-                                         : "",
+        HighsExternalApi::isAvailable<HighsExtras::hipo>()
+            ? (kHipoString + "\", \"").c_str()
+            : "",
         kHighsChooseString.c_str(), kIpmString.c_str(), kIpxString.c_str());
     return false;
   }

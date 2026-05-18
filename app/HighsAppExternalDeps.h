@@ -5,37 +5,34 @@
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-/**@file lp_data/HighsExternalDeps.h
+/**@file HighsAppExternalDeps.h
  * @brief Defines the set of external features available
  */
-#ifndef HIGHS_EXTERNAL_DEPS_H_
-#define HIGHS_EXTERNAL_DEPS_H_
 
-#include "HighsExtrasApi.h"
+#ifndef HIGHS_APP_EXTERNAL_DEPS_H_
+#define HIGHS_APP_EXTERNAL_DEPS_H_
+
+#include "HighsExternalApi.h"
 
 namespace HighsExtras {
-struct highs_family {};
-extern const HighsExtrasFeatureInfo highs_family_info_[];
+struct app_family {};
 
-inline const HighsExtrasFeatureInfo* wrapper_storage<highs_family>::getInfo() {
-  return highs_family_info_;
+inline const HighsExtrasFeatureInfo* wrapper_storage<app_family>::getInfo() {
+  static const HighsExtrasFeatureInfo info = {"CLI11", "2.5.0", "BSD-3-Clause",
+                                              true};
+  return &info;
 }
 
 template <int Index>
-struct highs_feature : feature_base<highs_family, Index> {
+struct app_feature : feature_base<app_family, Index> {
   static const char* name() {
-    return std::get<Index>(std::make_tuple("pdqsort", "zstr", "zlib", "cuda"));
+    return std::get<Index>(std::make_tuple("cli11"));
   }
 };
 
-using pdqsort = highs_feature<0>;
-using zstr = highs_feature<1>;
-using zlib = highs_feature<2>;
-using cuda = highs_feature<3>;
-
-// define feature sets
-using all = require<extrasAll, pdqsort, zstr, zlib, cuda>;
+using cli11 = app_feature<0>;
+using appAll = require<all, cli11>;
 
 }  // namespace HighsExtras
 
-#endif  // HIGHS_EXTERNAL_DEPS_H_
+#endif  // HIGHS_APP_EXTERNAL_DEPS_H_

@@ -16,7 +16,7 @@ endif()
 
 if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
   # prepare Catch library
-  set(CATCH_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/extern)
+  set(CATCH_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/extern/catch)
   add_library(Catch INTERFACE)
   target_include_directories(Catch INTERFACE ${CATCH_INCLUDE_DIR})
 

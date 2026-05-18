@@ -2,7 +2,7 @@
 
 #include <limits>
 
-#include "HighsExternalDeps.h"
+#include "HighsExternalApi.h"
 #include "Status.h"
 #include "ipm/hipo/auxiliary/Auxiliary.h"
 #include "ipm/hipo/auxiliary/Logger.h"
@@ -398,7 +398,7 @@ Int FactorHiGHSSolver::chooseOrdering(const std::vector<Int>& rows,
 
     if (orderings_to_try[i] == kHipoMetisString) {
       idx_t options[METIS_NOPTIONS];
-      HighsExternalDeps::metis::set_default_options(options);
+      HighsExtras::metis::set_default_options(options);
       options[METIS_OPTION_SEED] = kMetisSeed;
 
       options[METIS_OPTION_DBGLVL] = 0;
@@ -407,26 +407,25 @@ Int FactorHiGHSSolver::chooseOrdering(const std::vector<Int>& rows,
       options[METIS_OPTION_NO2HOP] = 1;
 
       std::vector<Int> iperm(n);
-      Int status =
-          HighsExternalDeps::metis::nodeND(
-              &n, full_ptr.data(), full_rows.data(), NULL, options,
-              permutations[i].data(), iperm.data());
+      Int status = HighsExtras::metis::nodeND(
+          &n, full_ptr.data(), full_rows.data(), nullptr, options,
+          permutations[i].data(), iperm.data());
       if (status != METIS_OK) failure[i] = true;
 
     } else if (orderings_to_try[i] == kHipoAmdString) {
       double control[AMD_CONTROL];
-      HighsExternalDeps::amd::set_defaults(control);
+      HighsExtras::amd::set_defaults(control);
       double info[AMD_INFO];
 
       Int status =
-          HighsExternalDeps::amd::order(n, full_ptr.data(), full_rows.data(),
-                                        permutations[i].data(), control, info);
+          HighsExtras::amd::order(n, full_ptr.data(), full_rows.data(),
+                                  permutations[i].data(), control, info);
       if (status != AMD_OK) failure[i] = true;
 
     } else if (orderings_to_try[i] == kHipoRcmString) {
-      Int status = HighsExternalDeps::rcm::genrcm(
-          n, full_ptr.back(), full_ptr.data(),
-          full_rows.data(), permutations[i].data());
+      Int status =
+          HighsExtras::rcm::genrcm(n, full_ptr.back(), full_ptr.data(),
+                                   full_rows.data(), permutations[i].data());
       if (status != 0) failure[i] = true;
 
     } else {

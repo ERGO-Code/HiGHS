@@ -48,6 +48,7 @@ if(NOT FAST_BUILD)
   if(ZLIB AND ZLIB_FOUND)
     target_link_libraries(libhighs ZLIB::ZLIB)
     set(CONF_DEPENDENCIES "include(CMakeFindDependencyMacro)\nfind_dependency(ZLIB)")
+    target_compile_definitions(libhighs PRIVATE ZLIB_VERSION="${ZLIB_VERSION}")
   endif()
 
   # set the install rpath to the installed destination
@@ -151,26 +152,24 @@ else()
       set_target_properties(highs PROPERTIES INSTALL_RPATH "$ORIGIN")
   endif()
 
-  if (HIPO)
-    if (BUILD_SHARED_EXTRAS_LIB)
-      if (NOT HIPO_PYTHON)
-        if(APPLE)
-          set_target_properties(highs PROPERTIES
-            INSTALL_RPATH "@loader_path;@loader_path/../${CMAKE_INSTALL_LIBDIR}"
-            BUILD_RPATH   "$<TARGET_FILE_DIR:highs_extras>"
-          )
-        elseif(UNIX)
-          set_target_properties(highs PROPERTIES
-            INSTALL_RPATH "$ORIGIN"
-            BUILD_RPATH   "$<TARGET_FILE_DIR:highs_extras>"
-          )
-        endif()
+  if (BUILD_SHARED_EXTRAS_LIB)
+    if (NOT HIPO_PYTHON)
+      if(APPLE)
+        set_target_properties(highs PROPERTIES
+          INSTALL_RPATH "@loader_path;@loader_path/../${CMAKE_INSTALL_LIBDIR}"
+          BUILD_RPATH   "$<TARGET_FILE_DIR:highs_extras>"
+        )
+      elseif(UNIX)
+        set_target_properties(highs PROPERTIES
+          INSTALL_RPATH "$ORIGIN"
+          BUILD_RPATH   "$<TARGET_FILE_DIR:highs_extras>"
+        )
       endif()
-    else()
-      # PUBLIC: propagate link dependency in the highs library, so that 
-      # consumers don't need to explicitly link against highs_extras
-      target_link_libraries(highs PUBLIC highs_extras)
     endif()
+  else()
+    # PUBLIC: propagate link dependency in the highs library, so that 
+    # consumers don't need to explicitly link against highs_extras
+    target_link_libraries(highs PUBLIC highs_extras)
   endif()
 
   target_sources(highs PRIVATE ${sources} ${headers} ${win_version_file})
@@ -301,6 +300,7 @@ else()
       $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/extern/zstr>
     )
     target_link_libraries(highs PRIVATE ZLIB::ZLIB)
+    target_compile_definitions(highs PRIVATE ZLIB_VERSION="${ZLIB_VERSION}")
   endif()
 
   # allow consumers of highs to be aware of potential external dependencies
