@@ -23,6 +23,92 @@
 #include "util/HighsInt.h"
 #include "util/stringutil.h"
 
+//
+// Support nested multiple features, e.g.
+// - isAvailable<Feature, ...>
+// - isAvailable<require<Feature1, Feature2>, Feature3, ...>
+// - isAvailable<require<Feature1, require<Feature2, Feature3>>, Feature4, ...>
+//
+// Defines support for isAvailable, notice rows, and missing feature names
+//
+
+namespace HighsExtras {
+
+// provides the actual feature trait implementation
+template <class Feature>
+struct feature_ops {
+  static bool is_available() {
+    const auto* info = Feature::getInfo();
+    return info && info->enabled;
+  }
+
+  static void append_notice_rows(HighsTextTable<4>& table) {
+    if (is_available()) {
+      const auto* info = Feature::getInfo();
+
+      HighsTextTable<4>::Row row = {
+          {Feature::name(), info->provider, info->version, info->license}};
+      table.addRow(row);
+    }
+  }
+
+  static void append_missing_names(std::set<std::string>& names) {
+    if (!is_available()) names.insert(Feature::name());
+  }
+};
+
+// forward declarations
+template <class... Traits>
+struct trait_pack_ops;
+
+template <>
+struct trait_pack_ops<> {
+  static bool all_available() { return true; }
+  static void append_notice_rows(HighsTextTable<4>&) {}
+  static void append_missing_names(std::set<std::string>&) {}
+};
+
+template <class T>
+struct feature_traits : feature_ops<T> {};
+
+// handles features or nested feature sets wrapped in require<...>
+// and flattens to a list of traits for trait_pack_ops to handle
+template <class... Features>
+struct feature_traits<require<Features...>> {
+  using pack = trait_pack_ops<feature_traits<Features>...>;
+
+  static bool is_available() { return pack::all_available(); }
+
+  static void append_notice_rows(HighsTextTable<4>& table) {
+    pack::append_notice_rows(table);
+  }
+
+  static void append_missing_names(std::set<std::string>& names) {
+    pack::append_missing_names(names);
+  }
+};
+
+// handles a list of features (not wrapped in require<...>)
+// and recursively calls the actual trait implementation for each feature
+template <class Trait, class... Rest>
+struct trait_pack_ops<Trait, Rest...> {
+  static bool all_available() {
+    return Trait::is_available() && trait_pack_ops<Rest...>::all_available();
+  }
+
+  static void append_notice_rows(HighsTextTable<4>& table) {
+    Trait::append_notice_rows(table);
+    trait_pack_ops<Rest...>::append_notice_rows(table);
+  }
+
+  static void append_missing_names(std::set<std::string>& names) {
+    Trait::append_missing_names(names);
+    trait_pack_ops<Rest...>::append_missing_names(names);
+  }
+};
+
+}  // namespace HighsExtras
+
 /**
  * External dependencies for HiGHS that can either be dynamically loaded
  * or linked at compile time, depending on the build configuration.
@@ -127,77 +213,6 @@ feature_api<Methods>& wrapper_storage<extras_family>::getApi() {
 inline const HighsExtrasFeatureInfo* wrapper_storage<extras_family>::getInfo() {
   return HighsExternalApi::instance().extras_feature_info_;
 }
-
-template <class Feature>
-struct feature_ops {
-  static bool is_available() {
-    const auto* info = Feature::getInfo();
-    return info && info->enabled;
-  }
-
-  static void append_notice_rows(HighsTextTable<4>& table) {
-    if (is_available()) {
-      const auto* info = Feature::getInfo();
-
-      HighsTextTable<4>::Row row = {
-          {Feature::name(), info->provider, info->version, info->license}};
-      table.addRow(row);
-    }
-  }
-
-  static void append_missing_names(std::set<std::string>& names) {
-    if (!is_available()) names.insert(Feature::name());
-  }
-};
-
-//
-// Supports combining multiple features, e.g. isAvailable<Feature, ...>
-//
-
-template <class... Traits>
-struct trait_pack_ops;
-
-template <class T>
-struct feature_traits : feature_ops<T> {};
-
-template <class... Features>
-struct feature_traits<require<Features...>> {
-  using pack = trait_pack_ops<feature_traits<Features>...>;
-
-  static bool is_available() { return pack::all_available(); }
-
-  static void append_notice_rows(HighsTextTable<4>& table) {
-    pack::append_notice_rows(table);
-  }
-
-  static void append_missing_names(std::set<std::string>& names) {
-    pack::append_missing_names(names);
-  }
-};
-
-template <>
-struct trait_pack_ops<> {
-  static bool all_available() { return true; }
-  static void append_notice_rows(HighsTextTable<4>&) {}
-  static void append_missing_names(std::set<std::string>&) {}
-};
-
-template <class Trait, class... Rest>
-struct trait_pack_ops<Trait, Rest...> {
-  static bool all_available() {
-    return Trait::is_available() && trait_pack_ops<Rest...>::all_available();
-  }
-
-  static void append_notice_rows(HighsTextTable<4>& table) {
-    Trait::append_notice_rows(table);
-    trait_pack_ops<Rest...>::append_notice_rows(table);
-  }
-
-  static void append_missing_names(std::set<std::string>& names) {
-    Trait::append_missing_names(names);
-    trait_pack_ops<Rest...>::append_missing_names(names);
-  }
-};
 
 }  // namespace HighsExtras
 

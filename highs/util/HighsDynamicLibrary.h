@@ -11,8 +11,10 @@
 #ifndef HIGHS_UTIL_HIGHSDYNAMICLIBRARY_H_
 #define HIGHS_UTIL_HIGHSDYNAMICLIBRARY_H_
 
+#include <stdexcept>
 #include <string>
 #include <type_traits>
+
 
 class HighsDynamicLibrary {
  public:

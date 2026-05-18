@@ -22,11 +22,6 @@
 
 HighsDynamicLibrary::~HighsDynamicLibrary() { unload(); }
 
-#include <windows.h>
-
-#include <stdexcept>
-#include <string>
-
 bool HighsDynamicLibrary::load(const std::string& filename,
                                const std::string& path) {
   unload();
