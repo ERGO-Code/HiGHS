@@ -299,26 +299,24 @@ class HighsPostsolveStack {
 
   bool hasAppendedRows() const { return numAppendedRows > 0; }
 
-  void appendCutsToModel(HighsInt numCuts) {
-    if (numCuts <= 0) return;
+  void appendToModel(HighsInt& numRows, HighsInt numRowsToAppend,
+                     OrigRowType rowType) {
+    if (numRowsToAppend <= 0) return;
     size_t currNumRow = origRowIndex.size();
-    size_t newNumRow = currNumRow + numCuts;
+    size_t newNumRow = currNumRow + numRowsToAppend;
     origRowIndex.resize(newNumRow);
-    origRowType.resize(newNumRow, OrigRowType::kCut);
+    origRowType.resize(newNumRow, rowType);
     for (size_t i = currNumRow; i != newNumRow; ++i)
       origRowIndex[i] = nextRowIndex++;
-    origNumRow += numCuts;
+    numRows += numRowsToAppend;
+  }
+
+  void appendCutsToModel(HighsInt numCuts) {
+    appendToModel(origNumRow, numCuts, OrigRowType::kCut);
   }
 
   void appendRowsToModel(HighsInt numRows) {
-    if (numRows <= 0) return;
-    size_t currNumRow = origRowIndex.size();
-    size_t newNumRow = currNumRow + numRows;
-    origRowIndex.resize(newNumRow);
-    origRowType.resize(newNumRow, OrigRowType::kAppended);
-    for (size_t i = currNumRow; i != newNumRow; ++i)
-      origRowIndex[i] = nextRowIndex++;
-    numAppendedRows += numRows;
+    appendToModel(numAppendedRows, numRows, OrigRowType::kAppended);
   }
 
   void removeCutsFromModel(HighsInt numCuts) {
