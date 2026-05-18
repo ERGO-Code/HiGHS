@@ -1413,8 +1413,8 @@ void HighsMipSolverData::basisTransfer() {
          i < static_cast<HighsInt>(postSolveStack.getOrigRowIndex().size());
          ++i) {
       if (!postSolveStack.isOrigRow(i)) break;
-      HighsInt origIndex = postSolveStack.getOrigRowIndex()[i];
-      HighsBasisStatus status = mipsolver.rootbasis->row_status[origIndex];
+      HighsBasisStatus status =
+          mipsolver.rootbasis->row_status[postSolveStack.getOrigRowIndex()[i]];
       firstrootbasis.row_status[i] = status;
     }
 
