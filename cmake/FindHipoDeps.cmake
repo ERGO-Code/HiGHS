@@ -211,6 +211,7 @@ function(highs_configure_blas)
             set(OpenBLAS_VERSION "${_highs_openblas_version}")
         endif()
 
+        set(OpenBLAS_FOUND TRUE)
         set(HIGHS_BLAS_TARGET ${_openblas_target})
         set(HIGHS_BLAS_INCLUDE_DIRS "${CMAKE_BINARY_DIR}/_deps/openblas-src/include")
         set(HIGHS_BLAS_COMPILE_DEFINITION HIPO_USES_OPENBLAS)

@@ -81,7 +81,7 @@ struct wrapper_storage {
 template <class Family, class Methods>
 struct feature_wrapper {
   template <std::size_t Index>
-  static auto& fn() {
+  static typename std::tuple_element<Index, Methods>::type::fnptr_t& fn() {
     return wrapper_storage<Family>::getApi<Methods>().template method<Index>();
   }
 };
