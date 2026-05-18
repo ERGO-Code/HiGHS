@@ -278,14 +278,14 @@ class HighsPostsolveStack {
     reductions.emplace_back(type, position);
   }
 
-  bool isOrigRow(HighsInt row) const { return row < nextRowIndex; }
+  bool isModelRow(HighsInt row) const { return row < nextRowIndex; }
 
  public:
   const std::vector<HighsInt>& getOrigColIndex() const { return origColIndex; }
 
   const std::vector<HighsInt>& getOrigRowIndex() const { return origRowIndex; }
 
-  bool isModelRow(HighsInt row) const {
+  bool isOrigRow(HighsInt row) const {
     return origRowType[row] == OrigRowType::kOriginal;
   }
 
