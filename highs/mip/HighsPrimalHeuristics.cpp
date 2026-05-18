@@ -1834,4 +1834,5 @@ void HighsPrimalHeuristics::flushStatistics(HighsMipSolver& mipsolver,
   this->numSuccessObservations += numSuccessObservations;
   this->infeasObservations += infeasObservations;
   this->numInfeasObservations += numInfeasObservations;
+  worker.resetHeurStats();
 }

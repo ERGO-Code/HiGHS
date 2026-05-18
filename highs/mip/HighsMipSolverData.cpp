@@ -1447,13 +1447,15 @@ void HighsMipSolverData::performRestart() {
 
   // Ensure master worker is pointing to the correct cut and conflict pools
   if (mipsolver.options_mip_->mip_search_concurrency > 1) {
-    mipsolver.mipdata_->workers[0].setCutPool(&getCutPool());
-    mipsolver.mipdata_->workers[0].setConflictPool(&getConflictPool());
-    mipsolver.mipdata_->workers[0].setGlobalDomain(&getDomain());
-    mipsolver.mipdata_->workers[0].setPseudocost(&getPseudoCost());
-    mipsolver.mipdata_->workers[0].upper_bound = upper_bound;
-    mipsolver.mipdata_->workers[0].upper_limit = upper_limit;
-    mipsolver.mipdata_->workers[0].optimality_limit = optimality_limit;
+    workers[0].setCutPool(&getCutPool());
+    workers[0].setConflictPool(&getConflictPool());
+    workers[0].setGlobalDomain(&getDomain());
+    workers[0].setPseudocost(&getPseudoCost());
+  }
+  if (!workers.empty()) {
+    workers[0].upper_bound = upper_bound;
+    workers[0].upper_limit = upper_limit;
+    workers[0].optimality_limit = optimality_limit;
   }
 
   // remove the pointer into the stack-space of this function
