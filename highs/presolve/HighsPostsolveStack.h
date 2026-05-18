@@ -294,6 +294,7 @@ class HighsPostsolveStack {
   bool isCutRow(HighsInt row) const {
     return origRowType[row] == OrigRowType::kCut;
   }
+  bool hasAppendedRows() const { return numAppendedRows > 0; }
 
   void appendCutsToModel(HighsInt numCuts) {
     if (numCuts <= 0) return;
