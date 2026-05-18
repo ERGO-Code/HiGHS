@@ -193,7 +193,6 @@ _ipx_srcs = [
 ]
 
 _hipo_srcs = [
-    '../extern/rcm/rcm.cpp',
     'ipm/hipo/ipm/IpmData.cpp',
     'ipm/hipo/ipm/FactorHiGHSSolver.cpp',
     'ipm/hipo/ipm/Control.cpp',
@@ -228,6 +227,7 @@ _hipo_srcs = [
 
 
 _srcs = [
+    'HighsExternalApi.cpp',
     'HighsExternalDeps.cpp',
     'io/filereaderlp/reader.cpp',
     'interfaces/highs_c_api.cpp',
