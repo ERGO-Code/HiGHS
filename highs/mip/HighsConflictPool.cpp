@@ -193,7 +193,9 @@ void HighsConflictPool::performAging(const bool thread_safe) {
 
   for (HighsInt i = 0; i != conflictMaxIndex; ++i) {
     if (ages_[i] < 0) continue;
-    if (thread_safe && ageResetWhileLocked_[i].load(std::memory_order_relaxed) == 1) resetAge(i);
+    if (thread_safe &&
+        ageResetWhileLocked_[i].load(std::memory_order_relaxed) == 1)
+      resetAge(i);
 
     ageDistribution_[ages_[i]] -= 1;
     ages_[i] += 1;
