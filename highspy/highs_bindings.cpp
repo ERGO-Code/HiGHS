@@ -1376,6 +1376,7 @@ PYBIND11_MODULE(_core, m, py::mod_gil_not_used()) {
       .def("versionMinor", &Highs::versionMinor)
       .def("versionPatch", &Highs::versionPatch)
       .def("githash", &Highs::githash)
+      .def("getThirdPartyNotice", &Highs::getThirdPartyNotice)
       .def("clear", &Highs::clear)
       .def("clearModel", &Highs::clearModel)
       .def("clearSolver", &Highs::clearSolver)

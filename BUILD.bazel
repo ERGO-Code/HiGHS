@@ -98,6 +98,7 @@ cc_library(
     }),
     includes = [
         "extern",
+        "extern/catch",
         # "extern/filereaderlp",
         # "extern/zstr",
         "highs",
