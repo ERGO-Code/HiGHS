@@ -101,7 +101,7 @@ class HighsPseudocost {
     assert(col >= 0 && col < static_cast<HighsInt>(changedpos.size()));
     if (changedpos[col] == -1) {
       changedpos[col] = static_cast<HighsInt>(deltas.size());
-      deltas.push_back(HighsPseudocostDelta{});
+      deltas.emplace_back();
       deltas.back().col = col;
     }
     return deltas[changedpos[col]];
