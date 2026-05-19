@@ -15,6 +15,28 @@
 
 using namespace HighsExtras;
 
+// template recursion to set function pointer to internal method
+template <class Methods, std::size_t Index, std::size_t Count>
+struct bind_methods {
+  static void apply(feature_api<Methods>& api) {
+    using desc_type = typename std::tuple_element<Index, Methods>::type;
+    api.template method<Index>() = desc_type::direct();
+    bind_methods<Methods, Index + 1, Count>::apply(api);
+  }
+};
+
+// specialization to terminate recursion
+template <class Methods, std::size_t Count>
+struct bind_methods<Methods, Count, Count> {
+  static void apply(feature_api<Methods>&) {}
+};
+
+// recursively set function pointers to the direct methods
+template <class Methods>
+void bind_api(feature_api<Methods>& api) {
+  bind_methods<Methods, 0, std::tuple_size<Methods>::value>::apply(api);
+}
+
 extern "C" {
 
 HIGHS_EXTRAS_API const char* HighsExtras_getVersion(void) {

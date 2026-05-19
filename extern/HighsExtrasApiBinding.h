@@ -70,7 +70,9 @@ struct bound_method_desc : method_desc<T> {
 
 // clang wants to link the function, even though it's not used
 // so only provide bound method when building highs_extras
-#if defined(HIGHS_EXTRAS_LIBRARY_BUILD)
+//
+// Need to use bound_method_desc when building shared library or static link
+#if !defined(HIGHS_SHARED_EXTRAS_LIBRARY) || defined(HIGHS_EXTRAS_LIBRARY_BUILD)
 #define HIGHS_API_DESC(fn) bound_method_desc<decltype(&fn), &fn>
 #else
 #define HIGHS_API_DESC(fn) method_desc<decltype(&fn)>
@@ -105,28 +107,6 @@ struct feature_wrapper {
         .template method<Index>();
   }
 };
-
-// template recursion to set function pointer to internal method
-template <class Methods, std::size_t Index, std::size_t Count>
-struct bind_methods {
-  static void apply(feature_api<Methods>& api) {
-    using desc_type = typename std::tuple_element<Index, Methods>::type;
-    api.template method<Index>() = desc_type::direct();
-    bind_methods<Methods, Index + 1, Count>::apply(api);
-  }
-};
-
-// specialization to terminate recursion
-template <class Methods, std::size_t Count>
-struct bind_methods<Methods, Count, Count> {
-  static void apply(feature_api<Methods>&) {}
-};
-
-// recursively set function pointers to the direct methods
-template <class Methods>
-void bind_api(feature_api<Methods>& api) {
-  bind_methods<Methods, 0, std::tuple_size<Methods>::value>::apply(api);
-}
 
 }  // namespace HighsExtras
 
