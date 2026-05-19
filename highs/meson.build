@@ -335,6 +335,7 @@ _srcs = [
     'util/HFactorUtils.cpp',
     'util/HSet.cpp',
     'util/HVectorBase.cpp',
+    'util/HighsDynamicLibrary.cpp',
     'util/HighsHash.cpp',
     'util/HighsLinearSumBounds.cpp',
     'util/HighsMatrixPic.cpp',

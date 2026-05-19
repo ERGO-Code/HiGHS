@@ -58,15 +58,23 @@ struct feature_base {
 
 // captures the function to bind and its function pointer type
 // does not store anything itself
-template <typename T, T value>
+template <typename T>
 struct method_desc {
   using fnptr_t = T;
-  static fnptr_t direct() { return value; }
 };
 
-// c++11 doesn't support auto return type deduction, so
-// need MACRO to avoid repeating the decltype boilerplate
-#define HIGHS_API_DESC(fn) method_desc<decltype(&fn), &fn>
+template <typename T, T value>
+struct bound_method_desc : method_desc<T> {
+  static typename method_desc<T>::fnptr_t direct() { return value; }
+};
+
+// clang wants to link the function, even though it's not used
+// so only provide bound method when building highs_extras
+#if defined(HIGHS_EXTRAS_LIBRARY_BUILD)
+#define HIGHS_API_DESC(fn) bound_method_desc<decltype(&fn), &fn>
+#else
+#define HIGHS_API_DESC(fn) method_desc<decltype(&fn)>
+#endif
 
 // storage for the function pointer, given a method_desc<...>
 template <class Desc>
@@ -102,8 +110,8 @@ struct feature_wrapper {
 template <class Methods, std::size_t Index, std::size_t Count>
 struct bind_methods {
   static void apply(feature_api<Methods>& api) {
-    api.template method<Index>() =
-        std::tuple_element<Index, Methods>::type::direct();
+    using desc_type = typename std::tuple_element<Index, Methods>::type;
+    api.template method<Index>() = desc_type::direct();
     bind_methods<Methods, Index + 1, Count>::apply(api);
   }
 };
