@@ -58,22 +58,20 @@ struct extras_feature : feature_base<extras_family, Index> {
 // 1. Methods
 //
 
-using amd_methods = std::tuple<HIGHS_API_DESC(Highs_amd_defaults),
-                               HIGHS_API_DESC(Highs_amd_order)>;
+using amd_methods =
+    std::tuple<decltype(&Highs_amd_defaults), decltype(&Highs_amd_order)>;
 
-using blas_methods =
-    std::tuple<HIGHS_API_DESC(cblas_daxpy), HIGHS_API_DESC(cblas_dcopy),
-               HIGHS_API_DESC(cblas_dscal), HIGHS_API_DESC(cblas_dswap),
-               HIGHS_API_DESC(cblas_dgemv), HIGHS_API_DESC(cblas_dtpsv),
-               HIGHS_API_DESC(cblas_dtrsv), HIGHS_API_DESC(cblas_dger),
-               HIGHS_API_DESC(cblas_dgemm), HIGHS_API_DESC(cblas_dsyrk),
-               HIGHS_API_DESC(cblas_dtrsm),
-               HIGHS_API_DESC(highs_openblas_set_num_threads)>;
+using blas_methods = std::tuple<
+    decltype(&cblas_daxpy), decltype(&cblas_dcopy), decltype(&cblas_dscal),
+    decltype(&cblas_dswap), decltype(&cblas_dgemv), decltype(&cblas_dtpsv),
+    decltype(&cblas_dtrsv), decltype(&cblas_dger), decltype(&cblas_dgemm),
+    decltype(&cblas_dsyrk), decltype(&cblas_dtrsm),
+    decltype(&highs_openblas_set_num_threads)>;
 
-using metis_methods = std::tuple<HIGHS_API_DESC(Highs_METIS_SetDefaultOptions),
-                                 HIGHS_API_DESC(Highs_METIS_NodeND)>;
+using metis_methods = std::tuple<decltype(&Highs_METIS_SetDefaultOptions),
+                                 decltype(&Highs_METIS_NodeND)>;
 
-using rcm_methods = std::tuple<HIGHS_API_DESC(Highs_genrcm)>;
+using rcm_methods = std::tuple<decltype(&Highs_genrcm)>;
 
 //
 // 2. API import/export structure

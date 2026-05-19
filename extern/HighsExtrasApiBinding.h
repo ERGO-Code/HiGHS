@@ -56,43 +56,21 @@ struct feature_base {
   }
 };
 
-// captures the function to bind and its function pointer type
-// does not store anything itself
-template <typename T>
-struct method_desc {
-  using fnptr_t = T;
-};
-
-template <typename T, T value>
-struct bound_method_desc : method_desc<T> {
-  static typename method_desc<T>::fnptr_t direct() { return value; }
-};
-
-// clang wants to link the function, even though it's not used
-// so only provide bound method when building highs_extras
-//
-// Need to use bound_method_desc when building shared library or static link
-#if !defined(HIGHS_SHARED_EXTRAS_LIBRARY) || defined(HIGHS_EXTRAS_LIBRARY_BUILD)
-#define HIGHS_API_DESC(fn) bound_method_desc<decltype(&fn), &fn>
-#else
-#define HIGHS_API_DESC(fn) method_desc<decltype(&fn)>
-#endif
-
-// storage for the function pointer, given a method_desc<...>
+// storage for the function pointer, given a decltype(&...)
 template <class Desc>
 struct method_storage {
-  typename Desc::fnptr_t value;
+  Desc value;
   method_storage() : value(nullptr) {}
 };
 
-// builds a struct of function pointers, given tuple<method_desc<...>, ...>
+// builds a struct of function pointers, given tuple<decltype(&...), ...>
 template <class... Desc>
 struct feature_api<std::tuple<Desc...>> : method_storage<Desc>... {
   using methods_type = std::tuple<Desc...>;
 
   // access method by index at compile-time, e.g., api->method<0>(...)
   template <std::size_t Index>
-  typename std::tuple_element<Index, methods_type>::type::fnptr_t& method() {
+  typename std::tuple_element<Index, methods_type>::type& method() {
     using desc_type = typename std::tuple_element<Index, methods_type>::type;
     return static_cast<method_storage<desc_type>&>(*this).value;
   }
@@ -102,11 +80,37 @@ struct feature_api<std::tuple<Desc...>> : method_storage<Desc>... {
 template <class Family, class Methods>
 struct feature_wrapper {
   template <std::size_t Index>
-  static typename std::tuple_element<Index, Methods>::type::fnptr_t& fn() {
+  static typename std::tuple_element<Index, Methods>::type& fn() {
     return wrapper_storage<Family>::template getApi<Methods>()
         .template method<Index>();
   }
 };
+
+template <class Methods, class Tuple, std::size_t Index,
+          std::size_t Count = std::tuple_size<Methods>::value>
+struct bind_from_tuple_impl {
+  static void apply(feature_api<Methods>& api, const Tuple& funcs) {
+    api.template method<Index>() = std::get<Index>(funcs);
+    bind_from_tuple_impl<Methods, Tuple, Index + 1, Count>::apply(api, funcs);
+  }
+};
+
+template <class Methods, class Tuple, std::size_t Count>
+struct bind_from_tuple_impl<Methods, Tuple, Count, Count> {
+  static void apply(feature_api<Methods>&, const Tuple&) {}
+};
+
+template <class Methods, class... Fn>
+void bind_from_tuple(feature_api<Methods>& api,
+                     const std::tuple<Fn...>& funcs) {
+  static_assert(std::tuple_size<Methods>::value == sizeof...(Fn),
+                "bind_from_tuple requires one function per API entry");
+  bind_from_tuple_impl<Methods, std::tuple<Fn...>, 0>::apply(api, funcs);
+}
+
+// recursively set function pointers to the direct methods
+template <class Methods>
+static void bind_api(feature_api<Methods>& api) {}
 
 }  // namespace HighsExtras
 
