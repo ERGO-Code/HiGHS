@@ -54,6 +54,14 @@ else()
       ${highs_extras_headers})
 endif()
 
+# use C++11 standard
+target_compile_features(highs_extras PUBLIC cxx_std_11)
+
+set_target_properties(highs_extras PROPERTIES
+    CXX_EXTENSIONS OFF
+    OUTPUT_NAME "highs_extras"
+    POSITION_INDEPENDENT_CODE ON)
+
 target_include_directories(highs_extras PUBLIC
     $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}>
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}>)
@@ -72,10 +80,6 @@ if(HIPO)
   highs_link_blas(highs_extras)
 endif()
 # end optional dependencies (linker)
-
-set_target_properties(highs_extras PROPERTIES
-    OUTPUT_NAME "highs_extras"
-    POSITION_INDEPENDENT_CODE ON)
 
 if(BUILD_SHARED_EXTRAS_LIB)
   set_target_properties(highs_extras PROPERTIES
