@@ -1113,19 +1113,19 @@ public class HighsLpSolver : IDisposable
         return (HighsStatus)Highs_getColsByMask(this.highs, mask, ref num_col, costs, lower, upper, ref num_nz, matrix_start, matrix_index, matrix_value);
     }
 
-    public HighsStatus getRowsByRange(int from_row, int to_row, ref int num_row, double[] costs, double[] lower, double[] upper, ref int num_nz, int[] matrix_start, int[] matrix_index, double[] matrix_value)
+    public HighsStatus getRowsByRange(int from_row, int to_row, ref int num_row, double[] lower, double[] upper, ref int num_nz, int[] matrix_start, int[] matrix_index, double[] matrix_value)
     {
-        return (HighsStatus)Highs_getRowsByRange(this.highs, from_row, to_row, ref num_row, costs, lower, upper, ref num_nz, matrix_start, matrix_index, matrix_value);
+        return (HighsStatus)Highs_getRowsByRange(this.highs, from_row, to_row, ref num_row, lower, upper, ref num_nz, matrix_start, matrix_index, matrix_value);
     }
 
-    public HighsStatus getRowsBySet(int num_set_entries, int[] set, ref int num_row, double[] costs, double[] lower, double[] upper, ref int num_nz, int[] matrix_start, int[] matrix_index, double[] matrix_value)
+    public HighsStatus getRowsBySet(int num_set_entries, int[] set, ref int num_row, double[] lower, double[] upper, ref int num_nz, int[] matrix_start, int[] matrix_index, double[] matrix_value)
     {
-        return (HighsStatus)Highs_getRowsBySet(this.highs, num_set_entries, set, ref num_row, costs, lower, upper, ref num_nz, matrix_start, matrix_index, matrix_value);
+        return (HighsStatus)Highs_getRowsBySet(this.highs, num_set_entries, set, ref num_row, lower, upper, ref num_nz, matrix_start, matrix_index, matrix_value);
     }
 
-    public HighsStatus getRowsByMask(int[] mask, ref int num_row, double[] costs, double[] lower, double[] upper, ref int num_nz, int[] matrix_start, int[] matrix_index, double[] matrix_value)
+    public HighsStatus getRowsByMask(int[] mask, ref int num_row, double[] lower, double[] upper, ref int num_nz, int[] matrix_start, int[] matrix_index, double[] matrix_value)
     {
-        return (HighsStatus)Highs_getRowsByMask(this.highs, mask, ref num_row, costs, lower, upper, ref num_nz, matrix_start, matrix_index, matrix_value);
+        return (HighsStatus)Highs_getRowsByMask(this.highs, mask, ref num_row, lower, upper, ref num_nz, matrix_start, matrix_index, matrix_value);
     }    
 }
 
