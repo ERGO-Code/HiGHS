@@ -133,10 +133,7 @@ inline HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
       }
     }
     assert(profiling_clock >= 0);
-    if (solver_object.profiling_->isSubMip()) {
-      printf("solveLpSimplex: sub-MIP on thread %d\n",
-             int(solver_object.profiling_->myThread()));
-    }
+    //    if (solver_object.profiling_->isSubMip()) {      printf("solveLpSimplex: sub-MIP on thread %d\n",             int(solver_object.profiling_->myThread()));    }
     solver_object.profiling_->start(profiling_clock);
   }
   // Copy the simplex iteration count from highs_info_ to ekk_instance, just for

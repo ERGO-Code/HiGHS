@@ -4353,11 +4353,18 @@ HighsProfilingRecord* HighsProfiling::getHighsProfilingRecord(
 void HighsProfiling::start(const HighsInt profiling_clock, const bool restart) {
   assert(profiling_clock >= 0);
   if (profiling_clock >= this->num_profiling_clock_) return;
+  // For a sub-MIP, don't start the clock for anything but a
+  // sub-solver
+  if (this->isSubMip() && profiling_clock >= kToSubSolver) return;
   // Start timing sub-solver profiling_clock
   HighsInt thread = this->myThread();
+  HighsProfilingRecord* thread_record = this->getHighsProfilingRecord();
   double time_start = timer->read();
 
-  HighsProfilingRecord* thread_record = this->getHighsProfilingRecord();
+  if (profiling_clock == kMipClockSubMipSolve) {
+    printf("HighsProfiling::start SubMipSolve on thread %2d with submip = %s\n", int(thread),
+	   this->submip[thread] ? "T" : "F");
+  }
   const bool clock_running =
       std::signbit(thread_record->start_time[profiling_clock]);
   if (clock_running && profiling_clock != kSubSolverHipoAc &&
@@ -4367,8 +4374,9 @@ void HighsProfiling::start(const HighsInt profiling_clock, const bool restart) {
     // terminating the task
     printf(
         "HighsProfiling: clock running for thread %d when starting clock %d "
-        "(%s) \n",
-        int(thread), int(profiling_clock), this->name[profiling_clock].c_str());
+        "(%s) and subMip = %s\n",
+        int(thread), int(profiling_clock), this->name[profiling_clock].c_str(),
+	this->submip[thread] ? "T" : "F");
     assert(!clock_running);
   }
   thread_record->start_time[profiling_clock] = -time_start;
@@ -4378,6 +4386,9 @@ void HighsProfiling::start(const HighsInt profiling_clock, const bool restart) {
 void HighsProfiling::stop(const HighsInt profiling_clock) {
   assert(profiling_clock >= 0);
   if (profiling_clock >= this->num_profiling_clock_) return;
+  // For a sub-MIP, don't start the clock for anything but a
+  // sub-solver
+  if (this->isSubMip() && profiling_clock >= kToSubSolver) return;
   HighsInt thread = this->myThread();
   HighsProfilingRecord* thread_record = this->getHighsProfilingRecord();
   double time_stop = timer->read();

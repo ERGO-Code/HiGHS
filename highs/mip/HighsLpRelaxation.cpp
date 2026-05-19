@@ -614,7 +614,7 @@ void HighsLpRelaxation::removeCuts(HighsInt ndelcuts,
     assert(lpsolver.getLp().num_row_ == (HighsInt)lprows.size());
     basis.debug_origin_name = "HighsLpRelaxation::removeCuts";
     lpsolver.setBasis(basis);
-    mipsolver.profiling_->solveCall("LP", mipsolver.submip);
+    mipsolver.profiling_->solveCall("LP0", mipsolver.submip);
     lpsolver.optimizeLp();
   }
 }
@@ -1211,7 +1211,7 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
       fflush(stdout);
       exit(1);
     }
-    mipsolver.profiling_->solveCall("LP", mipsolver.submip);
+    mipsolver.profiling_->solveCall("LP1", mipsolver.submip);
     callstatus = lpsolver.optimizeLp();
     if (ipm_logging) lpsolver.setOptionValue("output_flag", false);
     if (callstatus == HighsStatus::kError) {
@@ -1224,7 +1224,14 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
     }
   }
   if (use_simplex) {
-    mipsolver.profiling_->solveCall("LP", mipsolver.submip);
+    const bool profiling_submip = mipsolver.profiling_->isSubMip();
+    mipsolver.profiling_->setSubMip(mipsolver.submip);
+    if (mipsolver.profiling_->running(kSubSolverSubMip))
+      printf("HighsLpRelaxation::run Sub-MIP sub-solver clock running on thread %2d and this is %sMIP\n",
+	     int(mipsolver.profiling_->myThread()),
+	     mipsolver.submip ? "sub-" : "");
+    mipsolver.profiling_->setSubMip(profiling_submip);
+    mipsolver.profiling_->solveCall("LP2", mipsolver.submip);
     callstatus = lpsolver.optimizeLp();
   }
   // Revert the value of lpsolver.options_.solver
@@ -1423,7 +1430,7 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
           (void)output_flag;
           ipm.setOptionValue("output_flag", !mipsolver.submip);
         }
-        mipsolver.profiling_->solveCall("LP", mipsolver.submip);
+        mipsolver.profiling_->solveCall("LP3", mipsolver.submip);
         ipm.optimizeLp();
         if (ipm_logging) ipm.setOptionValue("output_flag", false);
         if (use_hipo && !ipm.getBasis().valid) {
@@ -1433,7 +1440,7 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
                       "basis: status = %s Try IPX\n",
                       ipm.modelStatusToString(ipm.getModelStatus()).c_str());
           ipm.setOptionValue("solver", kIpxString);
-          mipsolver.profiling_->solveCall("LP", mipsolver.submip);
+          mipsolver.profiling_->solveCall("LP4", mipsolver.submip);
           ipm.optimizeLp();
         }
         lpsolver.setBasis(ipm.getBasis(), "HighsLpRelaxation::run IPM basis");

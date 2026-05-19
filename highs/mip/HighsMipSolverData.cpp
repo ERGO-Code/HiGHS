@@ -1965,6 +1965,7 @@ HighsLpRelaxation::Status HighsMipSolverData::evaluateRootLp(
 
 static void clockOff(HighsProfiling* profiling) {
   if (!profiling->mip_) return;
+  if (profiling->isSubMip()) return;
   // Make sure that exactly one of the following clocks is running
   const int clock0_running =
       profiling->running(kMipClockEvaluateRootNode0) ? 1 : 0;
