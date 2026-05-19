@@ -396,18 +396,11 @@ HighsDomain::CutpoolPropagation::CutpoolPropagation(
     cutpool->addPropagationDomain(this);
 }
 
-// TODO MT: ERORRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
-// When a domain is created (based on another existing domain)
-// , e.g., in randomizedRounding (as an object
-// that we can propagate and play around with) or in RINS (where one
-// is created as part of the HighsSearch object), it is going to notify
-// all cutpools / conflictpools that the original was propagating.
-// This "notify" is going to append the domain to the vector of
-// pools, which is going to be non-deterministic and error-prone.
-// We therefore shouldn't notify the global cut pool.
-// This is fine as the copied domain is likely temporary,
-// and will not be majorly affected by not being notified of new cuts.
-// Does this safety rail need to be added to the copy-assign code below???
+// Warning: When a domain is copy-assigned, e.g., in `resetLocalDomain`,
+// with the line `localdom = getDomain()`, then it is going to notify
+// all cut / conflict pools that the original was propagating.
+// This would be non-deterministic in the order in which the global
+// pool gets notified. Currently, such code is only run in serial.
 
 HighsDomain::CutpoolPropagation& HighsDomain::CutpoolPropagation::operator=(
     const CutpoolPropagation& other) {
@@ -3837,8 +3830,6 @@ void HighsDomain::ConflictSet::conflictAnalysis(HighsConflictPool& conflictPool,
 
   if (!explainInfeasibility()) return;
 
-  // TODO: Only updating global pseudo cost so solution path is identical to
-  // original code. This should always actually use the given pseudocost?
   if (!localdom.mipsolver->mipdata_->parallelLockActive()) {
     localdom.mipsolver->mipdata_->getPseudoCost().increaseConflictWeight();
   } else {

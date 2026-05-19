@@ -1,0 +1,12 @@
+{
+  "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/docs/vcpkg.schema.json",
+  "name": "extras",
+  "description": "Dependencies for the highs_extras library",
+  "dependencies": [
+    {
+      "name": "openblas",
+      "platform": "!osx",
+      "features": ["threads"]
+    }
+  ]
+}

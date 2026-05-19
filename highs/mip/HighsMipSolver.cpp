@@ -306,7 +306,7 @@ restart:
           &mipdata_->cutpools.back(), &mipdata_->conflictpools.back(),
           &mipdata_->pseudocosts.back());
       mipdata_->lps.back().setMipWorker(mipdata_->workers.back());
-      mipdata_->getLp().notifyCutPoolsLpCopied(1);
+      mipdata_->lps.back().notifyCutPoolsLpCopied(1);
       mipdata_->workers.back().randgen.initialise(options_mip_->random_seed +
                                                   mipdata_->workers.size() - 1);
       mipdata_->workers.back().nodequeue.setNumCol(numCol());
@@ -322,18 +322,18 @@ restart:
     assert(&worker == &mipdata_->workers[0]);
     mipdata_->cutpools.emplace_back(numCol(), options_mip_->mip_pool_age_limit,
                                     options_mip_->mip_pool_soft_limit, 1);
-    worker.cutpool_ = &mipdata_->cutpools.back();
+    worker.setCutPool(&mipdata_->cutpools.back());
     mipdata_->conflictpools.emplace_back(5 * options_mip_->mip_pool_age_limit,
                                          options_mip_->mip_pool_soft_limit);
-    worker.conflictpool_ = &mipdata_->conflictpools.back();
+    worker.setConflictPool(&mipdata_->conflictpools.back());
     mipdata_->domains.emplace_back(mipdata_->getDomain());
-    worker.globaldom_ = &mipdata_->domains.back();
-    worker.globaldom_->addCutpool(*worker.cutpool_);
-    assert(worker.globaldom_->getDomainChangeStack().empty());
-    worker.globaldom_->addConflictPool(*worker.conflictpool_);
+    worker.setGlobalDomain(&mipdata_->domains.back());
+    worker.getGlobalDomain().addCutpool(worker.getCutPool());
+    assert(worker.getGlobalDomain().getDomainChangeStack().empty());
+    worker.getGlobalDomain().addConflictPool(worker.getConflictPool());
     mipdata_->pseudocosts.emplace_back(*this);
-    worker.pseudocost_ = &mipdata_->pseudocosts.back();
-    worker.lp_->setMipWorker(worker);
+    worker.setPseudocost(&mipdata_->pseudocosts.back());
+    worker.getLpRelaxation().setMipWorker(worker);
     worker.resetSearch();
     worker.resetSepa();
     worker.nodequeue.clear();
@@ -355,9 +355,10 @@ restart:
     if (!mipdata_->hasMultipleWorkers() || mipdata_->parallelLockActive())
       return;
     for (const HighsInt i : indices) {
-      mipdata_->workers[i].conflictpool_->syncConflictPool(
+      mipdata_->workers[i].getConflictPool().syncConflictPool(
           mipdata_->getConflictPool());
-      mipdata_->workers[i].cutpool_->syncCutPool(*this, mipdata_->getCutPool());
+      mipdata_->workers[i].getCutPool().syncCutPool(*this,
+                                                    mipdata_->getCutPool());
     }
     mipdata_->getCutPool().performAging();
     mipdata_->getConflictPool().performAging();
@@ -392,9 +393,9 @@ restart:
 #ifndef NDEBUG
     for (HighsInt col = 0; col < numCol(); ++col) {
       assert(mipdata_->getDomain().col_lower_[col] ==
-             worker.globaldom_->col_lower_[col]);
+             worker.getGlobalDomain().col_lower_[col]);
       assert(mipdata_->getDomain().col_upper_[col] ==
-             worker.globaldom_->col_upper_[col]);
+             worker.getGlobalDomain().col_upper_[col]);
     }
 #endif
     worker.getGlobalDomain().setDomainChangeStack(
@@ -434,22 +435,8 @@ restart:
 
   auto syncGlobalPseudoCost = [&]() -> void {
     if (!mipdata_->hasMultipleWorkers()) return;
-    std::vector<HighsInt> nsamplesup =
-        mipdata_->getPseudoCost().getNSamplesUp();
-    std::vector<HighsInt> nsamplesdown =
-        mipdata_->getPseudoCost().getNSamplesDown();
-    std::vector<HighsInt> ninferencesup =
-        mipdata_->getPseudoCost().getNInferencesUp();
-    std::vector<HighsInt> ninferencesdown =
-        mipdata_->getPseudoCost().getNInferencesDown();
-    std::vector<HighsInt> ncutoffsup =
-        mipdata_->getPseudoCost().getNCutoffsUp();
-    std::vector<HighsInt> ncutoffsdown =
-        mipdata_->getPseudoCost().getNCutoffsDown();
     for (HighsMipWorker& worker : mipdata_->workers) {
-      mipdata_->getPseudoCost().flushPseudoCost(
-          worker.getPseudocost(), nsamplesup, nsamplesdown, ninferencesup,
-          ninferencesdown, ncutoffsup, ncutoffsdown);
+      mipdata_->getPseudoCost().flushPseudoCost(worker.getPseudocost());
     }
   };
 
@@ -582,7 +569,7 @@ restart:
       if (!mipdata_->parallelLockActive())
         profiling_->stop(kMipClockNodeSearchSeparation);
     } else {
-      worker.cutpool_->performAging();
+      worker.getCutPool().performAging();
     }
 
     if (worker.getGlobalDomain().infeasible()) {
@@ -594,16 +581,21 @@ restart:
       return true;
     }
 
-    if (worker.lp_->getStatus() != HighsLpRelaxation::Status::kError &&
-        worker.lp_->getStatus() != HighsLpRelaxation::Status::kNotSet)
-      worker.lp_->storeBasis();
+    if (worker.getLpRelaxation().getStatus() !=
+            HighsLpRelaxation::Status::kError &&
+        worker.getLpRelaxation().getStatus() !=
+            HighsLpRelaxation::Status::kNotSet)
+      worker.getLpRelaxation().storeBasis();
 
-    std::shared_ptr<const HighsBasis> basis = worker.lp_->getStoredBasis();
-    if (!basis || !isBasisConsistent(worker.lp_->getLp(), *basis)) {
+    std::shared_ptr<const HighsBasis> basis =
+        worker.getLpRelaxation().getStoredBasis();
+    if (!basis ||
+        !isBasisConsistent(worker.getLpRelaxation().getLp(), *basis)) {
       HighsBasis b = mipdata_->firstrootbasis;
-      b.row_status.resize(worker.lp_->numRows(), HighsBasisStatus::kBasic);
+      b.row_status.resize(worker.getLpRelaxation().numRows(),
+                          HighsBasisStatus::kBasic);
       basis = std::make_shared<const HighsBasis>(std::move(b));
-      worker.lp_->setStoredBasis(basis);
+      worker.getLpRelaxation().setStoredBasis(basis);
     }
 
     return false;
@@ -623,9 +615,9 @@ restart:
 
     assert(mipdata_->workers[i].search_ptr_->hasNode());
 
-    if (mipdata_->workers[i].conflictpool_->getNumConflicts() >
+    if (mipdata_->workers[i].getConflictPool().getNumConflicts() >
         options_mip_->mip_pool_soft_limit) {
-      mipdata_->workers[i].conflictpool_->performAging();
+      mipdata_->workers[i].getConflictPool().performAging();
     }
     return false;
   };
@@ -654,7 +646,8 @@ restart:
       if (!mipdata_->parallelLockActive())
         profiling_->start(kMipClockDiveRandomizedRounding);
       mipdata_->heuristics.randomizedRounding(
-          worker, worker.lp_->getLpSolver().getSolution().col_value);
+          worker,
+          worker.getLpRelaxation().getLpSolver().getSolution().col_value);
       if (!mipdata_->parallelLockActive())
         profiling_->stop(kMipClockDiveRandomizedRounding);
     }
@@ -663,7 +656,8 @@ restart:
         if (!mipdata_->parallelLockActive())
           profiling_->start(kMipClockDiveRens);
         mipdata_->heuristics.RENS(
-            worker, worker.lp_->getLpSolver().getSolution().col_value);
+            worker,
+            worker.getLpRelaxation().getLpSolver().getSolution().col_value);
         if (!mipdata_->parallelLockActive())
           profiling_->stop(kMipClockDiveRens);
       }
@@ -672,7 +666,8 @@ restart:
         if (!mipdata_->parallelLockActive())
           profiling_->start(kMipClockDiveRins);
         mipdata_->heuristics.RINS(
-            worker, worker.lp_->getLpSolver().getSolution().col_value);
+            worker,
+            worker.getLpRelaxation().getLpSolver().getSolution().col_value);
         if (!mipdata_->parallelLockActive())
           profiling_->stop(kMipClockDiveRins);
       }
@@ -714,7 +709,7 @@ restart:
         }
         if (separateAndStoreBasis(i)) return;
       }
-      worker.conflictpool_->performAging();
+      worker.getConflictPool().performAging();
       HighsInt iterlimit = 10 * std::max(avgiter, mipdata_->avgrootlpiters);
       iterlimit = std::max({HighsInt{10000}, iterlimit,
                             HighsInt((3 * mipdata_->firstrootlpiters) / 2)});
@@ -751,11 +746,10 @@ restart:
 
   auto syncSepaStats = [&](HighsMipWorker& worker) {
     mipdata_->cliquetable.getNumNeighbourhoodQueries() +=
-        worker.sepa_stats.numNeighbourhoodQueries;
-    worker.sepa_stats.numNeighbourhoodQueries = 0;
-    mipdata_->sepa_lp_iterations += worker.sepa_stats.sepa_lp_iterations;
-    mipdata_->total_lp_iterations += worker.sepa_stats.sepa_lp_iterations;
-    worker.sepa_stats.sepa_lp_iterations = 0;
+        worker.getNumNeighbourhoodQueries();
+    mipdata_->sepa_lp_iterations += worker.getSepaLpIterations();
+    mipdata_->total_lp_iterations += worker.getSepaLpIterations();
+    worker.resetSepaStats();
   };
 
   auto checkRestart = [&]() -> bool {

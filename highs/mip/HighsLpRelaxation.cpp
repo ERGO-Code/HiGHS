@@ -91,8 +91,6 @@ void HighsLpRelaxation::LpRow::get(const HighsMipSolver& mipsolver,
                                    const double*& vals) const {
   switch (origin) {
     case kCutPool:
-      assert(cutpoolindex <
-             static_cast<HighsInt>(mipsolver.mipdata_->cutpools.size()));
       mipsolver.mipdata_->cutpools[cutpoolindex].getCut(index, len, inds, vals);
       break;
     case kModel:
@@ -104,8 +102,6 @@ HighsInt HighsLpRelaxation::LpRow::getRowLen(
     const HighsMipSolver& mipsolver) const {
   switch (origin) {
     case kCutPool:
-      assert(cutpoolindex <
-             static_cast<HighsInt>(mipsolver.mipdata_->cutpools.size()));
       return mipsolver.mipdata_->cutpools[cutpoolindex].getRowLength(index);
     case kModel:
       return mipsolver.mipdata_->ARstart_[index + 1] -
@@ -120,8 +116,6 @@ bool HighsLpRelaxation::LpRow::isIntegral(
     const HighsMipSolver& mipsolver) const {
   switch (origin) {
     case kCutPool:
-      assert(cutpoolindex <
-             static_cast<HighsInt>(mipsolver.mipdata_->cutpools.size()));
       return mipsolver.mipdata_->cutpools[cutpoolindex].cutIsIntegral(index);
     case kModel:
       return (mipsolver.mipdata_->rowintegral[index] != 0);
@@ -135,8 +129,6 @@ double HighsLpRelaxation::LpRow::getMaxAbsVal(
     const HighsMipSolver& mipsolver) const {
   switch (origin) {
     case kCutPool:
-      assert(cutpoolindex <
-             static_cast<HighsInt>(mipsolver.mipdata_->cutpools.size()));
       return mipsolver.mipdata_->cutpools[cutpoolindex].getMaxAbsCutCoef(index);
     case kModel:
       return mipsolver.mipdata_->maxAbsRowCoef[index];
@@ -150,8 +142,6 @@ double HighsLpRelaxation::slackLower(HighsInt row,
                                      const HighsDomain& globaldom) const {
   switch (lprows[row].origin) {
     case LpRow::kCutPool:
-      assert(lprows[row].cutpoolindex <
-             static_cast<HighsInt>(mipsolver.mipdata_->cutpools.size()));
       return globaldom.getMinCutActivity(
           mipsolver.mipdata_->cutpools[lprows[row].cutpoolindex],
           lprows[row].index);
@@ -247,9 +237,9 @@ HighsLpRelaxation::HighsLpRelaxation(const HighsLpRelaxation& other)
 
 void HighsLpRelaxation::loadModel() {
   HighsLp lpmodel = *mipsolver.model_;
-  lpmodel.col_lower_ = worker_ ? worker_->globaldom_->col_lower_
+  lpmodel.col_lower_ = worker_ ? worker_->getGlobalDomain().col_lower_
                                : mipsolver.mipdata_->getDomain().col_lower_;
-  lpmodel.col_upper_ = worker_ ? worker_->globaldom_->col_upper_
+  lpmodel.col_upper_ = worker_ ? worker_->getGlobalDomain().col_upper_
                                : mipsolver.mipdata_->getDomain().col_upper_;
   lpmodel.offset_ = 0;
   lprows.clear();
@@ -555,8 +545,6 @@ void HighsLpRelaxation::removeObsoleteRows(bool notifyPool) {
       ++ndelcuts;
       deletemask[i] = 1;
       if (notifyPool) {
-        assert(lprows[i].cutpoolindex <
-               static_cast<HighsInt>(mipsolver.mipdata_->cutpools.size()));
         mipsolver.mipdata_->cutpools[lprows[i].cutpoolindex].lpCutRemoved(
             lprows[i].index, mipsolver.mipdata_->parallelLockActive());
       }
@@ -628,8 +616,6 @@ void HighsLpRelaxation::removeCuts() {
   lpsolver.deleteRows(modelrows, nlprows - 1);
   for (HighsInt i = modelrows; i != nlprows; ++i) {
     if (lprows[i].origin == LpRow::Origin::kCutPool) {
-      assert(lprows[i].cutpoolindex <
-             static_cast<HighsInt>(mipsolver.mipdata_->cutpools.size()));
       mipsolver.mipdata_->cutpools[lprows[i].cutpoolindex].lpCutRemoved(
           lprows[i].index, mipsolver.mipdata_->parallelLockActive());
     }
@@ -677,8 +663,6 @@ void HighsLpRelaxation::performAging(bool deleteRows) {
         if (ndelcuts == 0) deletemask.resize(nlprows);
         ++ndelcuts;
         deletemask[i] = 1;
-        assert(lprows[i].cutpoolindex <
-               static_cast<HighsInt>(mipsolver.mipdata_->cutpools.size()));
         mipsolver.mipdata_->cutpools[lprows[i].cutpoolindex].lpCutRemoved(
             lprows[i].index, mipsolver.mipdata_->parallelLockActive());
       }
@@ -717,8 +701,6 @@ void HighsLpRelaxation::notifyCutPoolsLpCopied(HighsInt n) {
   HighsInt modelrows = mipsolver.numRow();
   for (HighsInt i = modelrows; i != nlprows; ++i) {
     if (lprows[i].origin == LpRow::Origin::kCutPool) {
-      assert(lprows[i].cutpoolindex <
-             static_cast<HighsInt>(mipsolver.mipdata_->cutpools.size()));
       mipsolver.mipdata_->cutpools[lprows[i].cutpoolindex].increaseNumLps(
           lprows[i].index, n);
     }
@@ -1171,11 +1153,6 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
       bool use_hipo = mip_lp_solver == kHipoString;
       // Later still, pass mip_lp_solver and take action on failure in
       // solveLp
-#ifndef HIPO
-      // Shouldn't be possible to choose HiPO if it's not in the build
-      assert(!use_hipo);
-      use_hipo = false;
-#endif
       use_solver = use_hipo ? kHipoString : kIpxString;
     } else {
       use_solver = kSimplexString;
@@ -1403,11 +1380,6 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
             mip_ipm_solver == kHipoString;
         // Later still, pass mip_ipm_solver and take action on failure in
         // solveLp
-#ifndef HIPO
-        // Shouldn't be possible to choose HiPO if it's not in the build
-        assert(!use_hipo);
-        use_hipo = false;
-#endif
         const std::string ipm_solver = use_hipo ? kHipoString : kIpxString;
         ipm.setOptionValue("solver", ipm_solver);
         ipm.setOptionValue("ipm_iteration_limit", 200);

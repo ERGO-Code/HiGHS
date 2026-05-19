@@ -1,11 +1,18 @@
 # Fetch OpenBLAS
+message(STATUS "Running FindHipoDeps, BUILD_OPENBLAS=${BUILD_OPENBLAS}")
+
+if(APPLE)
+  set(BUILD_OPENBLAS OFF CACHE BOOL "OpenBLAS not required on macOS" FORCE)
+  set(BUILD_OPENBLAS OFF)  # also override the normal variable in current scope
+endif()
+
 if (BUILD_OPENBLAS)
     include(FetchContent)
     set(FETCHCONTENT_QUIET OFF)
     set(FETCHCONTENT_UPDATES_DISCONNECTED ON)
     # set(BUILD_SHARED_LIBS ON)
     set(CMAKE_POSITION_INDEPENDENT_CODE ON)
-    set(BUILD_TESTING OFF)
+    set(BUILD_TESTING OFF CACHE BOOL "" FORCE)
     set(CMAKE_Fortran_COMPILER OFF)
 
     # Define the size-minimizing flags as a list
@@ -137,9 +144,8 @@ if (BUILD_OPENBLAS)
 
     set(OPENBLAS_BUILD_TYPE "Release" CACHE STRING "Build type for OpenBLAS" FORCE)
 
-    # Override CMAKE_BUILD_TYPE for OpenBLAS subdirectory
-    set(CMAKE_BUILD_TYPE_BACKUP ${CMAKE_BUILD_TYPE})
-    set(CMAKE_BUILD_TYPE Release)
+    set(CMAKE_IPO_BACKUP ${CMAKE_INTERPROCEDURAL_OPTIMIZATION})
+    set(CMAKE_INTERPROCEDURAL_OPTIMIZATION OFF CACHE BOOL "" FORCE)
 
     message(CHECK_START "Fetching OpenBLAS")
     list(APPEND CMAKE_MESSAGE_INDENT "  ")
@@ -160,13 +166,27 @@ if (BUILD_OPENBLAS)
             # -DCMAKE_C_FLAGS_DEBUG="-O2 -fomit-frame-pointer"
             # -DCORE_OPTIMIZATION="-O3"
     )
+    set(NO_LAPACKE ON CACHE BOOL "" FORCE)
     FetchContent_MakeAvailable(openblas)
+    get_property(all_targets DIRECTORY ${openblas_SOURCE_DIR} PROPERTY BUILDSYSTEM_TARGETS)
+    message(STATUS "OpenBLAS targets: ${all_targets}")
+
+    foreach(_lapacke_target LAPACKE genlapacke)
+        if(TARGET ${_lapacke_target})
+            set_target_properties(${_lapacke_target} PROPERTIES EXCLUDE_FROM_ALL TRUE)
+        endif()
+    endforeach()
+
+    set_property(DIRECTORY ${openblas_SOURCE_DIR}
+        PROPERTY CTEST_EXCLUDE_FROM_MAIN TRUE)
 
     if (ALL_TESTS)
-        set(BUILD_TESTING ON)
+        set(BUILD_TESTING ON CACHE BOOL "" FORCE)
     endif()
 
-    set(CMAKE_BUILD_TYPE ${CMAKE_BUILD_TYPE_BACKUP})
+    if (CMAKE_IPO_BACKUP)
+        set(${CMAKE_INTERPROCEDURAL_OPTIMIZATION} ON CACHE BOOL "" FORCE)
+    endif()
 
     list(POP_BACK CMAKE_MESSAGE_INDENT)
     message(CHECK_PASS "fetched")
@@ -294,10 +314,16 @@ if (NOT USE_CMAKE_FIND_BLAS)
     endif()
 else()
 
-    if (WIN32 AND NOT BLAS_LIBRARIES AND NOT BLA_VENDOR)
+    if (NOT BLAS_LIBRARIES AND NOT BLA_VENDOR)
         find_package(OpenBLAS CONFIG)
         if(OpenBLAS_FOUND)
             message(STATUS "OpenBLAS CMake config path: ${OpenBLAS_DIR}")
+
+            # Ubuntu's OpenBLASConfig.cmake sets OpenBLAS_LIBRARIES, not OPENBLAS_LIB
+            if(NOT OPENBLAS_LIB AND OpenBLAS_LIBRARIES)
+                set(OPENBLAS_LIB ${OpenBLAS_LIBRARIES})
+                set(OPENBLAS_INCLUDE_DIR ${OpenBLAS_INCLUDE_DIRS})
+            endif()
         endif()
     endif()
 

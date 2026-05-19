@@ -909,7 +909,7 @@ void HighsCliqueTable::extractCliques(
 
   // check if this is a set packing constraint (or easily transformable
   // into one)
-  if (std::abs(vals[0] - vals[perm[nbin - 1]]) <= feastol &&
+  if (std::abs(vals[perm[0]] - vals[perm[nbin - 1]]) <= feastol &&
       rhs < 2 * vals[perm[nbin - 1]] - feastol) {
     // the coefficients on the binary variables are all equal and the
     // right hand side is strictly below two times the coefficient value.
@@ -2207,7 +2207,7 @@ void HighsCliqueTable::buildFrom(const HighsLp* origModel,
   HighsInt ncols = init.colsubstituted.size();
   HighsCliqueTable newCliqueTable(ncols);
   newCliqueTable.setPresolveFlag(inPresolve);
-  newCliqueTable.setPresolveFlag(minEntriesForParallelism);
+  newCliqueTable.setMinEntriesForParallelism(minEntriesForParallelism);
   HighsInt ncliques = init.cliques.size();
   std::vector<CliqueVar> clqBuffer;
   clqBuffer.reserve(2 * static_cast<size_t>(origModel->num_col_));

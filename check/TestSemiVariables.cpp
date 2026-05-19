@@ -328,3 +328,27 @@ void semiModel0(HighsLp& lp) {
   lp.sense_ = ObjSense::kMaximize;
   lp.integrality_ = {continuous, continuous, semi_continuous, continuous};
 }
+
+TEST_CASE("3015", "[highs_test_semi_variables]") {
+  std::string filename;
+  filename = std::string(HIGHS_DIR) + "/check/instances/3015.mps";
+  double optimal_objective_value = -1407973.679417;
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  highs.readModel(filename);
+  HighsStatus status = highs.run();
+  REQUIRE(status == HighsStatus::kError);
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kSolveError);
+
+  REQUIRE(highs.setOptionValue("mip_feasibility_tolerance", 7e-08) ==
+          HighsStatus::kOk);
+  status = highs.run();
+  double objective_value = highs.getObjectiveValue();
+  double abs_gap = std::fabs(objective_value - optimal_objective_value);
+  double rel_gap = abs_gap / std::fabs(optimal_objective_value);
+  REQUIRE(rel_gap < 1e-4);
+  REQUIRE(status == HighsStatus::kOk);
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
+
+  highs.resetGlobalScheduler(true);
+}

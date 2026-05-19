@@ -442,8 +442,8 @@ void HighsImplications::addVUB(HighsInt col, HighsInt vubcol, double vubcoef,
     VarBound& currentvub = *insertresult.first;
     double currentMinBound = currentvub.minValue();
     if (minBound < currentMinBound - mipsolver.mipdata_->feastol) {
-      currentvub.coef = vubcoef;
-      currentvub.constant = vubconstant;
+      currentvub.coef = vub.coef;
+      currentvub.constant = vub.constant;
     }
   } else
     numVarBounds++;
@@ -484,8 +484,8 @@ void HighsImplications::addVLB(HighsInt col, HighsInt vlbcol, double vlbcoef,
 
     double currentMaxBound = currentvlb.maxValue();
     if (maxBound > currentMaxBound + mipsolver.mipdata_->feastol) {
-      currentvlb.coef = vlbcoef;
-      currentvlb.constant = vlbconstant;
+      currentvlb.coef = vlb.coef;
+      currentvlb.constant = vlb.constant;
     }
   } else
     numVarBounds++;

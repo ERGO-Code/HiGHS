@@ -22,9 +22,6 @@
 HighsMipSolverData::HighsMipSolverData(HighsMipSolver& mipsolver)
     : mipsolver(mipsolver),
       lps(1, HighsLpRelaxation(mipsolver)),
-      conflictpools(
-          1, HighsConflictPool(5 * mipsolver.options_mip_->mip_pool_age_limit,
-                               mipsolver.options_mip_->mip_pool_soft_limit)),
       domains(1, HighsDomain(mipsolver)),
       pseudocosts(1),
       parallel_lock(false),
@@ -77,6 +74,8 @@ HighsMipSolverData::HighsMipSolverData(HighsMipSolver& mipsolver)
       upper_limit(kHighsInf),
       optimality_limit(kHighsInf),
       debugSolution(mipsolver) {
+  conflictpools.emplace_back(5 * mipsolver.options_mip_->mip_pool_age_limit,
+                             mipsolver.options_mip_->mip_pool_soft_limit);
   cutpools.emplace_back(mipsolver.numCol(),
                         mipsolver.options_mip_->mip_pool_age_limit,
                         mipsolver.options_mip_->mip_pool_soft_limit, 0);
@@ -435,11 +434,6 @@ void HighsMipSolverData::startAnalyticCenterComputation(
         mip_ipm_solver == kHipoString;
     // Later still, pass mip_ipm_solver and take action on failure in
     // solveLp
-#ifndef HIPO
-    // Shouldn't be possible to choose HiPO if it's not in the build
-    assert(!use_hipo);
-    use_hipo = false;
-#endif
     const std::string ipm_solver = use_hipo ? kHipoString : kIpxString;
     ipm.setOptionValue("solver", ipm_solver);
     ipm.setOptionValue("ipm_iteration_limit", 200);
@@ -603,8 +597,10 @@ void HighsMipSolverData::finishSymmetryDetection(
   for (HighsOrbitopeMatrix& orbitope : symmetries.orbitopes)
     orbitope.determineOrbitopeType(cliquetable);
 
-  if (symmetries.numPerms != 0)
-    globalOrbits = symmetries.computeStabilizerOrbits(getDomain());
+  if (symmetries.numPerms != 0) {
+    StabilizerOrbitWorkspace workspace;
+    globalOrbits = symmetries.computeStabilizerOrbits(getDomain(), workspace);
+  }
 }
 
 double HighsMipSolverData::limitsToGap(const double use_lower_bound,
@@ -1138,7 +1134,7 @@ void HighsMipSolverData::runSetup() {
       debugsolobj +=
           mipsolver.colCost(i) * HighsCDouble(debugSolution.debugSolution[i]);
     debugSolution.debugSolObjective = static_cast<double>(debugsolobj);
-    debugSolution.registerDomain(domain);
+    debugSolution.registerDomain(getDomain());
     assert(checkSolution(debugSolution.debugSolution));
   }
 #endif
@@ -1450,14 +1446,16 @@ void HighsMipSolverData::performRestart() {
   // std::swap(nodequeue, oldNodeQueue);
 
   // Ensure master worker is pointing to the correct cut and conflict pools
-  if (mipsolver.options_mip_->mip_search_concurrency > 1) {
-    mipsolver.mipdata_->workers[0].cutpool_ = &getCutPool();
-    mipsolver.mipdata_->workers[0].conflictpool_ = &getConflictPool();
-    mipsolver.mipdata_->workers[0].globaldom_ = &getDomain();
-    mipsolver.mipdata_->workers[0].pseudocost_ = &getPseudoCost();
-    mipsolver.mipdata_->workers[0].upper_bound = upper_bound;
-    mipsolver.mipdata_->workers[0].upper_limit = upper_limit;
-    mipsolver.mipdata_->workers[0].optimality_limit = optimality_limit;
+  if (mipsolver.options_mip_->mip_search_concurrency >= 1) {
+    workers[0].setCutPool(&getCutPool());
+    workers[0].setConflictPool(&getConflictPool());
+    workers[0].setGlobalDomain(&getDomain());
+    workers[0].setPseudocost(&getPseudoCost());
+  }
+  if (!workers.empty()) {
+    workers[0].upper_bound = upper_bound;
+    workers[0].upper_limit = upper_limit;
+    workers[0].optimality_limit = optimality_limit;
   }
 
   // remove the pointer into the stack-space of this function
@@ -2538,7 +2536,8 @@ bool HighsMipSolverData::checkLimits(int64_t nodeOffset) const {
     if (this->terminatorTerminated()) return true;
 
   // Possible user interrupt
-  if (!mipsolver.submip && mipsolver.callback_->user_callback) {
+  if (!mipsolver.submip && !parallelLockActive() &&
+      mipsolver.callback_->user_callback) {
     mipsolver.callback_->clearHighsCallbackOutput();
     if (interruptFromCallbackWithData(kCallbackMipInterrupt,
                                       mipsolver.solution_objective_,
@@ -2831,11 +2830,6 @@ bool HighsMipSolverData::terminatorTerminated() const {
   if (this->terminatorActive())
     mipsolver.termination_status_ = mipsolver.terminator_.terminationStatus();
   return mipsolver.termination_status_ != HighsModelStatus::kNotset;
-}
-
-bool HighsMipSolverData::terminatorTerminatedWorker(
-    const HighsMipWorker& worker) const {
-  return worker.heur_stats.termination_status_ != HighsModelStatus::kNotset;
 }
 
 void HighsMipSolverData::terminatorReport() const {

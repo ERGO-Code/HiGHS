@@ -119,6 +119,7 @@ class HighsSearch {
 
   std::vector<double> subrootsol;
   std::vector<NodeData> nodestack;
+  StabilizerOrbitWorkspace stabilizerOrbitWorkspace;
   HighsHashTable<HighsInt, int> reliableatnode;
 
   int branchingVarReliableAtNodeFlags(HighsInt col) const {

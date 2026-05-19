@@ -21,7 +21,7 @@
 class HighsSearch;
 
 class HighsMipWorker {
- public:
+ private:
   struct SepaStatistics {
     SepaStatistics() : numNeighbourhoodQueries(0), sepa_lp_iterations(0) {}
 
@@ -63,12 +63,14 @@ class HighsMipWorker {
   HighsConflictPool* conflictpool_;
   HighsPseudocost* pseudocost_;
 
+  bool heuristics_allowed;
+  HeurStatistics heur_stats;
+  SepaStatistics sepa_stats;
+
+ public:
   std::unique_ptr<HighsSearch> search_ptr_;
   std::unique_ptr<HighsSeparation> sepa_ptr_;
-
   HighsNodeQueue nodequeue;
-
-  const HighsMipSolver& getMipSolver() const;
 
   double upper_bound;
   double upper_limit;
@@ -76,12 +78,9 @@ class HighsMipWorker {
 
   std::vector<std::tuple<std::vector<double>, double, int>> solutions_;
 
-  bool heuristics_allowed;
-
-  HeurStatistics heur_stats;
-  SepaStatistics sepa_stats;
-
   HighsRandom randgen;
+
+  const HighsMipSolver& getMipSolver() const;
 
   HighsMipWorker(const HighsMipSolver& mipsolver, HighsLpRelaxation* lp,
                  HighsDomain* domain, HighsCutPool* cutpool,
@@ -92,21 +91,31 @@ class HighsMipWorker {
     sepa_ptr_.reset();
   }
 
-  const bool checkLimits(int64_t nodeOffset = 0) const;
-
   void resetSearch();
 
   void resetSepa();
 
-  HighsDomain& getGlobalDomain() const { return *globaldom_; };
+  HighsDomain& getGlobalDomain() const { return *globaldom_; }
 
-  HighsPseudocost& getPseudocost() const { return *pseudocost_; };
+  void setGlobalDomain(HighsDomain* globaldom) { globaldom_ = globaldom; }
 
-  HighsConflictPool& getConflictPool() const { return *conflictpool_; };
+  HighsPseudocost& getPseudocost() const { return *pseudocost_; }
 
-  HighsCutPool& getCutPool() const { return *cutpool_; };
+  void setPseudocost(HighsPseudocost* pseudocost) { pseudocost_ = pseudocost; }
 
-  HighsLpRelaxation& getLpRelaxation() const { return *lp_; };
+  HighsConflictPool& getConflictPool() const { return *conflictpool_; }
+
+  void setConflictPool(HighsConflictPool* conflictpool) {
+    conflictpool_ = conflictpool;
+  }
+
+  HighsCutPool& getCutPool() const { return *cutpool_; }
+
+  void setCutPool(HighsCutPool* cutpool) { cutpool_ = cutpool; }
+
+  HighsLpRelaxation& getLpRelaxation() const { return *lp_; }
+
+  void setLpRelaxation(HighsLpRelaxation* lp) { lp_ = lp; }
 
   bool addIncumbent(const std::vector<double>& sol, double solobj,
                     int solution_source);
@@ -114,12 +123,69 @@ class HighsMipWorker {
   std::pair<bool, double> transformNewIntegerFeasibleSolution(
       const std::vector<double>& sol) const;
 
-  bool trySolution(const std::vector<double>& solution,
-                   const int solution_source);
+  bool trySolution(const std::vector<double>& solution, int solution_source);
 
   void setAllowHeuristics(const bool allowed) { heuristics_allowed = allowed; }
 
   bool getAllowHeuristics() const { return heuristics_allowed; }
+
+  int64_t& getNumNeighbourhoodQueries() {
+    return sepa_stats.numNeighbourhoodQueries;
+  }
+
+  int64_t& getSepaLpIterations() { return sepa_stats.sepa_lp_iterations; }
+
+  void resetSepaStats();
+
+  void updateHeurStatsLpIters(int64_t lp_iters, int64_t total_repair_lp,
+                              int64_t total_repair_lp_feasible,
+                              int64_t total_repair_lp_iters);
+
+  void updateHeurStatsInfeasObservations(double fixingRate);
+
+  void updateHeurStatsSuccessObservations(double fixingRate);
+
+  int64_t& getHeurLpIterations() { return heur_stats.lp_iterations; }
+
+  HighsInt& getHeurNumSuccessObservations() {
+    return heur_stats.numSuccessObservations;
+  }
+
+  HighsInt& getHeurNumInfeasObservations() {
+    return heur_stats.numInfeasObservations;
+  }
+
+  double& getHeurSuccessObservations() {
+    return heur_stats.successObservations;
+  }
+
+  double& getHeurInfeasObservations() { return heur_stats.infeasObservations; }
+
+  void setHeurTerminationStatus(HighsModelStatus status) {
+    heur_stats.termination_status_ = status;
+  }
+
+  HighsModelStatus getHeurTerminationStatus() const {
+    return heur_stats.termination_status_;
+  }
+
+  bool terminatorTerminated() const {
+    return heur_stats.termination_status_ != HighsModelStatus::kNotset;
+  }
+
+  void updateHeurStatsMaxSubMipLevel(HighsInt new_level) {
+    heur_stats.max_submip_level =
+        std::max(new_level, heur_stats.max_submip_level);
+  }
+
+  void getHeurStatsValues(
+      int64_t& total_repair_lp, int64_t& total_repair_lp_feasible,
+      int64_t& total_repair_lp_iterations, int64_t& lp_iterations,
+      double& successObservations, HighsInt& numSuccessObservations,
+      double& infeasObservations, HighsInt& numInfeasObservations,
+      HighsInt& max_submip_level, HighsModelStatus& termination_status) const;
+
+  void resetHeurStats();
 };
 
 #endif

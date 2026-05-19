@@ -16,6 +16,7 @@
 
 #include "../extern/CLI11.hpp"
 #include "HConfig.h"
+#include "HighsExternalDeps.h"
 #include "io/HighsIO.h"
 #include "io/LoadOptions.h"
 #include "util/stringutil.h"
@@ -103,9 +104,7 @@ void setupCommandLineOptions(CLI::App& app,
                  "Set solver option to:\n"
                  "\"choose\" * default\n"
                  "\"simplex\"\n"
-#ifdef HIPO
                  "\"hipo\"\n"
-#endif
                  "\"ipm\"");
 
   app.add_option("--" + kParallelString, cmd_options.cmd_parallel,
@@ -151,6 +150,11 @@ bool loadOptions(const CLI::App& app, const HighsLogOptions& report_log_options,
               << HIGHS_VERSION_MINOR << "." << HIGHS_VERSION_PATCH;
     std::cout << " Githash " << HIGHS_GITHASH << ". ";
     std::cout << kHighsCopyrightStatement << std::endl;
+
+    if (HighsExternalDeps::isAvailable()) {
+      std::cout << HighsExternalDeps::getCopyrightInfo() << std::endl;
+    }
+
     exit(0);
   }
 

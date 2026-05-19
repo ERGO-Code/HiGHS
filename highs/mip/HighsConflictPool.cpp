@@ -53,7 +53,7 @@ void HighsConflictPool::addConflictCut(
     conflictRanges_[conflictIndex].second = end;
   }
 
-  ageResetWhileLocked_[conflictIndex] = 0;
+  ageResetWhileLocked_[conflictIndex].store(0, std::memory_order_relaxed);
   modification_[conflictIndex] += 1;
   ages_[conflictIndex] = 0;
   ageDistribution_[ages_[conflictIndex]] += 1;
@@ -127,7 +127,7 @@ void HighsConflictPool::addReconvergenceCut(
     conflictRanges_[conflictIndex].second = end;
   }
 
-  ageResetWhileLocked_[conflictIndex] = 0;
+  ageResetWhileLocked_[conflictIndex].store(0, std::memory_order_relaxed);
   modification_[conflictIndex] += 1;
   ages_[conflictIndex] = 0;
   ageDistribution_[ages_[conflictIndex]] += 1;
@@ -193,11 +193,13 @@ void HighsConflictPool::performAging(const bool thread_safe) {
 
   for (HighsInt i = 0; i != conflictMaxIndex; ++i) {
     if (ages_[i] < 0) continue;
-    if (thread_safe && ageResetWhileLocked_[i] == 1) resetAge(i);
+    if (thread_safe &&
+        ageResetWhileLocked_[i].load(std::memory_order_relaxed) == 1)
+      resetAge(i);
 
     ageDistribution_[ages_[i]] -= 1;
     ages_[i] += 1;
-    ageResetWhileLocked_[i] = 0;
+    ageResetWhileLocked_[i].store(0, std::memory_order_relaxed);
 
     if (ages_[i] > agelim) {
       ages_[i] = -1;
@@ -248,7 +250,7 @@ void HighsConflictPool::addConflictFromOtherPool(
     conflictRanges_[conflictIndex].second = end;
   }
 
-  ageResetWhileLocked_[conflictIndex] = 0;
+  ageResetWhileLocked_[conflictIndex].store(0, std::memory_order_relaxed);
   modification_[conflictIndex] += 1;
   ages_[conflictIndex] = 0;
   ageDistribution_[ages_[conflictIndex]] += 1;

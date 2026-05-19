@@ -256,7 +256,6 @@ struct HighsMipSolverData {
   HighsInt terminatorMyInstance() const;
   void terminatorTerminate();
   bool terminatorTerminated() const;
-  bool terminatorTerminatedWorker(const HighsMipWorker& worker) const;
   void terminatorReport() const;
 
   bool parallelLockActive() const {

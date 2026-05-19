@@ -16,7 +16,7 @@
 
 HighsSearch::HighsSearch(HighsMipWorker& mipworker, HighsPseudocost& pseudocost)
     : mipworker(mipworker),
-      mipsolver(mipworker.mipsolver_),
+      mipsolver(mipworker.getMipSolver()),
       lp(nullptr),
       localdom(mipworker.getGlobalDomain()),
       pseudocost(pseudocost) {
@@ -886,10 +886,9 @@ HighsSearch::NodeResult HighsSearch::evaluateNode() {
   if (!inheuristic && !localdom.infeasible()) {
     if (getSymmetries().numPerms > 0 && !currnode.stabilizerOrbits &&
         (parent == nullptr || !parent->stabilizerOrbits ||
-         !parent->stabilizerOrbits->orbitCols.empty()) &&
-        !mipsolver.mipdata_->parallelLockActive()) {
-      currnode.stabilizerOrbits =
-          getSymmetries().computeStabilizerOrbits(localdom);
+         !parent->stabilizerOrbits->orbitCols.empty())) {
+      currnode.stabilizerOrbits = getSymmetries().computeStabilizerOrbits(
+          localdom, stabilizerOrbitWorkspace);
     }
 
     if (currnode.stabilizerOrbits)
@@ -1360,7 +1359,7 @@ HighsSearch::NodeResult HighsSearch::branch() {
         fracval = std::floor(0.5 * (localdom.col_lower_[i] +
                                     localdom.col_upper_[i] + 0.5)) +
                   0.5;
-      if (localdom.col_lower_[i] != -kHighsInf)
+      else if (localdom.col_lower_[i] != -kHighsInf)
         fracval = localdom.col_lower_[i] + 0.5;
       else if (localdom.col_upper_[i] != kHighsInf)
         fracval = localdom.col_upper_[i] - 0.5;
@@ -1926,10 +1925,10 @@ HighsDomain& HighsSearch::getDomain() const {
 }
 
 HighsConflictPool& HighsSearch::getConflictPool() const {
-  return *mipworker.conflictpool_;
+  return mipworker.getConflictPool();
 }
 
-HighsCutPool& HighsSearch::getCutPool() const { return *mipworker.cutpool_; }
+HighsCutPool& HighsSearch::getCutPool() const { return mipworker.getCutPool(); }
 
 const HighsNodeQueue& HighsSearch::getNodeQueue() const {
   return mipsolver.mipdata_->nodequeue;
