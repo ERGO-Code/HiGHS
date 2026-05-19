@@ -23,6 +23,17 @@ if(NOT FAST_BUILD)
   add_library(libhighs ${sources} ${headers} ${win_version_file})
   target_include_directories(libhighs PRIVATE ${include_dirs})
 
+  if(APPLE)
+    # linker was taking ~1 hour, unity build reduces it to ~1 minute
+    set_target_properties(libhighs PROPERTIES
+      UNITY_BUILD ON
+      UNITY_BUILD_BATCH_SIZE 8)
+
+    if(NOT CMAKE_VERSION VERSION_LESS 3.20)
+      set_target_properties(libhighs PROPERTIES UNITY_BUILD_UNIQUE_ID "HIGHS_UNITY_ID")
+    endif()
+  endif()
+
   if(${BUILD_SHARED_LIBS})
     # put version information into shared library file
     set_target_properties(libhighs PROPERTIES
