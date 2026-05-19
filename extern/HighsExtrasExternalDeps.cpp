@@ -29,33 +29,4 @@ const HighsExtrasFeatureInfo extras_feature_info[] = {
     {"METIS-GKlib", "5.2.1+", "Apache-2.0", __hipo_enabled},
     {"SPARSEPAK", "unversioned+", "MIT", __hipo_enabled}};
 
-#ifdef HIPO
-
-template <>
-void bind_api(feature_api<amd_methods>& api) {
-  bind_from_tuple(api, std::make_tuple(&Highs_amd_defaults, &Highs_amd_order));
-}
-
-template <>
-void bind_api(feature_api<blas_methods>& api) {
-  bind_from_tuple(api, std::make_tuple(&cblas_daxpy, &cblas_dcopy, &cblas_dscal,
-                                       &cblas_dswap, &cblas_dgemv, &cblas_dtpsv,
-                                       &cblas_dtrsv, &cblas_dger, &cblas_dgemm,
-                                       &cblas_dsyrk, &cblas_dtrsm,
-                                       &highs_openblas_set_num_threads));
-}
-
-template <>
-void bind_api(feature_api<metis_methods>& api) {
-  bind_from_tuple(api, std::make_tuple(&Highs_METIS_SetDefaultOptions,
-                                       &Highs_METIS_NodeND));
-}
-
-template <>
-void bind_api(feature_api<rcm_methods>& api) {
-  bind_from_tuple(api, std::make_tuple(&Highs_genrcm));
-}
-
-#endif
-
 }  // namespace HighsExtras

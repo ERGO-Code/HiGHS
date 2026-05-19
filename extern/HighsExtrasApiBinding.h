@@ -100,18 +100,6 @@ struct bind_from_tuple_impl<Methods, Tuple, Count, Count> {
   static void apply(feature_api<Methods>&, const Tuple&) {}
 };
 
-template <class Methods, class... Fn>
-void bind_from_tuple(feature_api<Methods>& api,
-                     const std::tuple<Fn...>& funcs) {
-  static_assert(std::tuple_size<Methods>::value == sizeof...(Fn),
-                "bind_from_tuple requires one function per API entry");
-  bind_from_tuple_impl<Methods, std::tuple<Fn...>, 0>::apply(api, funcs);
-}
-
-// recursively set function pointers to the direct methods
-template <class Methods>
-static void bind_api(feature_api<Methods>& api) {}
-
 }  // namespace HighsExtras
 
 #endif  // HIGHS_EXTRAS_API_BINDING_H_
