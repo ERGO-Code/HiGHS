@@ -1,7 +1,7 @@
 # CMakeLists.txt for highspy-extras wheel
 # The wheel only wraps the standalone highs_extras shared library.
 # Use the dedicated extras-library mode so the top-level build adds the
-# highs_extras target and installs it into the highspy_extras package.
+# highs_extras target and installs it into the highspy-extras package.
 
 cmake_minimum_required(VERSION 3.15...3.27)
 

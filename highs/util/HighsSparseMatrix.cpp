@@ -101,7 +101,7 @@ HighsInt HighsSparseMatrix::numNz() const {
 
 void HighsSparseMatrix::range(double& min_value, double& max_value) const {
   assert(this->formatOk());
-  for (HighsInt iEl = 0; iEl < this->start_[this->num_col_]; iEl++) {
+  for (HighsInt iEl = 0; iEl < this->numNz(); iEl++) {
     double value = fabs(this->value_[iEl]);
     min_value = min(min_value, value);
     max_value = max(max_value, value);
@@ -780,8 +780,7 @@ HighsStatus HighsSparseMatrix::assessIndexBounds(
     vec_dim = this->num_col_;
     //    num_vec = this->num_row_;
   }
-  HighsInt num_nz = this->numNz();
-  for (HighsInt iEl = 1; iEl < num_nz; iEl++) {
+  for (HighsInt iEl = 0; iEl < this->numNz(); iEl++) {
     if (this->index_[iEl] < 0 || this->index_[iEl] >= vec_dim) {
       highsLogUser(log_options, HighsLogType::kError,
                    "Matrix index[%d] = %d is not in legal range of [0, %d)\n",
@@ -816,7 +815,7 @@ HighsStatus HighsSparseMatrix::assess(const HighsLogOptions& log_options,
 void HighsSparseMatrix::assessSmallValues(const HighsLogOptions& log_options,
                                           const double small_matrix_value) {
   double min_value = kHighsInf;
-  const HighsInt num_values = this->value_.size();
+  const HighsInt num_values = static_cast<HighsInt>(this->value_.size());
   for (HighsInt iX = 0; iX < num_values; iX++)
     min_value = std::min(std::abs(this->value_[iX]), min_value);
   if (min_value > small_matrix_value) return;
@@ -1309,7 +1308,7 @@ void HighsSparseMatrix::productTransposeQuad(
 
     sum.cleanup([](HighsInt, double x) { return std::abs(x) <= kHighsTiny; });
     result_index = std::move(sum.nonzeroinds);
-    HighsInt result_num_nz = result_index.size();
+    HighsInt result_num_nz = static_cast<HighsInt>(result_index.size());
     result_value.reserve(result_num_nz);
     for (HighsInt i = 0; i < result_num_nz; ++i)
       result_value.push_back(sum.getValue(result_index[i]));
@@ -1554,7 +1553,7 @@ void HighsSparseMatrix::priceByRowWithSwitch(
       // by virtue of result.setup. However, it will generally lose
       // this property by virtue of the following move
       result.index = std::move(sum.nonzeroinds);
-      HighsInt result_num_nz = result.index.size();
+      HighsInt result_num_nz = static_cast<HighsInt>(result.index.size());
       // Restore the size of result.index
       result.index.resize(this->num_col_);
       result.count = result_num_nz;

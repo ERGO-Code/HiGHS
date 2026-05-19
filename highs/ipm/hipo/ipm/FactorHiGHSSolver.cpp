@@ -180,9 +180,11 @@ Int FactorHiGHSSolver::setup() {
   if (Int status = setNla()) return status;
   setParallel();
 
-  std::stringstream log_stream;
-  log_stream << textline("Analyse time:") << fix(clock.stop(), 0, 2) << '\n';
-  logger_.print(log_stream.str().c_str());
+  if (!options_.timeless_log) {
+    std::stringstream log_stream;
+    log_stream << textline("Analyse time:") << fix(clock.stop(), 0, 2) << '\n';
+    logger_.print(log_stream.str().c_str());
+  }
 
   S_.print(logger_, logger_.debug(1));
 
@@ -313,7 +315,7 @@ Int FactorHiGHSSolver::chooseNla() {
     // Total number of operations, given by dense flops and sparse indexing
     // operations, weighted with an empirical factor
     double ops_NE = symb_NE.flops() + symb_NE.spops() * kSpopsWeight;
-    double ops_AS = symb_AS.flops() + symb_AS.spops() + kSpopsWeight;
+    double ops_AS = symb_AS.flops() + symb_AS.spops() * kSpopsWeight;
 
     // Average size of supernodes
     double sn_size_NE = (double)symb_NE.size() / symb_NE.sn();

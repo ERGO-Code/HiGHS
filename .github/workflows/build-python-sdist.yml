@@ -146,7 +146,7 @@ jobs:
       - name: check metadata
         run: pipx run twine check dist/*
 
-      - name: install highspy and highspy_extras
+      - name: install highspy and highspy-extras
         run: |
           python3 -m venv .venv
           source .venv/bin/activate
@@ -179,7 +179,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      - name: Build highspy_extras sdist
+      - name: Build highspy-extras sdist
         run: pipx run build --sdist highspy-extras --outdir dist
 
       - name: Build highspy sdist
@@ -191,7 +191,7 @@ jobs:
       # - name: Pre-install vcpkg dependencies
       #   run: vcpkg install openblas[threads]:x64-windows-static --host-triplet=x64-windows-static
 
-      - name: install highspy and highspy_extras
+      - name: install highspy and highspy-extras
         run: python -m pip install (Get-ChildItem dist\*.tar.gz)
 
       - name: Debug extras loading
