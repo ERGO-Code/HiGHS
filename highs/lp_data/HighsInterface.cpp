@@ -4285,6 +4285,7 @@ void HighsLinearObjective::clear() {
 }
 
 void HighsProfiling::initialize(HighsTimer& timer_, const bool mip_profiling) {
+  this->clear();
   this->timer = &timer_;
   this->num_profiling_clock_ = kToPresolveSolvePostsolve;
   this->name.assign(this->num_profiling_clock_, "");
@@ -4378,8 +4379,8 @@ void HighsProfiling::start(const HighsInt profiling_clock, const bool restart) {
   double time_start = timer->read();
 
   if (profiling_clock == kMipClockSubMipSolve) {
-    printf("HighsProfiling::start SubMipSolve on thread %2d with submip = %s\n", int(thread),
-	   this->submip[thread] ? "T" : "F");
+    printf("HighsProfiling::start SubMipSolve on thread %2d with submip = %s\n",
+           int(thread), this->submip[thread] ? "T" : "F");
   }
   const bool clock_running =
       std::signbit(thread_record->start_time[profiling_clock]);
@@ -4392,7 +4393,7 @@ void HighsProfiling::start(const HighsInt profiling_clock, const bool restart) {
         "HighsProfiling: clock running for thread %d when starting clock %d "
         "(%s) and subMip = %s\n",
         int(thread), int(profiling_clock), this->name[profiling_clock].c_str(),
-	this->submip[thread] ? "T" : "F");
+        this->submip[thread] ? "T" : "F");
     assert(!clock_running);
   }
   thread_record->start_time[profiling_clock] = -time_start;

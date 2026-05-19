@@ -1292,6 +1292,11 @@ class Highs {
   void initializeSingleThreadedProfiling(HighsProfiling* profiling);
 
   /**
+   * @brief Clears and then initializes profiling
+   */
+  void resetProfiling();
+
+  /**
    * @brief If Highs::profiling_ is not nullptr, clears profiling and
    * sets Highs::profiling_ to nullptr
    */

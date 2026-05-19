@@ -1204,9 +1204,11 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
     const bool profiling_submip = mipsolver.profiling_->isSubMip();
     mipsolver.profiling_->setSubMip(mipsolver.submip);
     if (mipsolver.profiling_->running(kSubSolverSubMip))
-      printf("HighsLpRelaxation::run Sub-MIP sub-solver clock running on thread %2d and this is %sMIP\n",
-	     int(mipsolver.profiling_->myThread()),
-	     mipsolver.submip ? "sub-" : "");
+      printf(
+          "HighsLpRelaxation::run Sub-MIP sub-solver clock running on thread "
+          "%2d and this is %sMIP\n",
+          int(mipsolver.profiling_->myThread()),
+          mipsolver.submip ? "sub-" : "");
     mipsolver.profiling_->setSubMip(profiling_submip);
     mipsolver.profiling_->solveCall("LP2", mipsolver.submip);
     callstatus = lpsolver.optimizeLp();

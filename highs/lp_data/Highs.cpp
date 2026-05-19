@@ -3920,18 +3920,13 @@ HighsStatus Highs::completeSolutionFromDiscreteAssignment() {
     // Solve the model
     basis_.clear();
     if (this->profiling_) {
-      // Account for this thread solve as being a sub-MIP
-      //
       // Should not already be a sub-MIP, as handling a user-supplied
       // solution
       assert(!this->profiling_->isSubMip());
-      this->profiling_->setSubMip(true);
     }
     return_status = this->optimizeModel();
-    if (this->profiling_) {
-      // Revert to this thread solve being a MIP
-      this->profiling_->setSubMip(false);
-    }
+    // Reset any profiling data
+    if (this->profiling_) this->resetProfiling();
     // ... remembering to recover the original value of mip_max_nodes
     options_.mip_max_nodes = mip_max_nodes;
   }
@@ -4981,6 +4976,13 @@ void Highs::initializeProfiling(HighsProfiling* profiling) {
   profiling->initialize(this->timer_, mip_profiling);
   profiling->model_name_ = this->model_.lp_.model_name_;
   this->setProfiling(profiling);
+}
+
+void Highs::resetProfiling() {
+  if (!this->profiling_) return;
+  HighsProfiling* profiling = this->profiling_;
+  this->clearProfiling();
+  this->initializeProfiling(profiling);
 }
 
 void Highs::clearProfiling() {
