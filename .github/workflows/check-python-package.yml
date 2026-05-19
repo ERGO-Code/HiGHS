@@ -14,7 +14,7 @@ jobs:
 
       - name: Build sdist
         run: |
-          python3 -m pip install build setuptools twine
+          python3 -m pip install build setuptools twine 'packaging>=24.2'
           python3 -m build --sdist
           python3 -m build --wheel
           twine check dist/*
@@ -26,7 +26,7 @@ jobs:
 
       - name: Build sdist
         run: |
-          python3 -m pip install build setuptools twine --break-system-packages
+          python3 -m pip install build setuptools twine 'packaging>=24.2' --break-system-packages
           python3 -m build --sdist
           python3 -m build --wheel
           twine check dist/*
@@ -43,7 +43,7 @@ jobs:
 
       - name: Build sdist
         run: |
-          py -m pip install build setuptools twine
+          py -m pip install build setuptools twine 'packaging>=24.2'
           py -m build --sdist
           py -m build --wheel
           py -m twine check dist/*

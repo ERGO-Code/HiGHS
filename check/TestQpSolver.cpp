@@ -411,6 +411,8 @@ TEST_CASE("test-qjh", "[qpsolver]") {
     return_status = highs.passModel(local_model);
     REQUIRE(return_status == HighsStatus::kOk);
     if (dev_run) highs.writeModel("");
+    // Test the logging and error return from highs.presolve()
+    REQUIRE(highs.presolve() == HighsStatus::kError);
     // Zero the QP regularization so "true" solution is obtained
     REQUIRE(highs.setOptionValue("qp_regularization_value", 0) ==
             HighsStatus::kOk);
