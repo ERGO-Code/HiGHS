@@ -211,13 +211,13 @@ bool HighsPrimalHeuristics::solveSubMip(
   if (submipsolver.node_count_ <= 1 &&
       submipsolver.modelstatus_ == HighsModelStatus::kInfeasible)
     return false;
-  HighsInt oldNumImprovingSols = mipsolver.mipdata_->numImprovingSols;
+  double oldUpperLimit = worker.upper_limit;
   if (submipsolver.modelstatus_ != HighsModelStatus::kInfeasible &&
       !submipsolver.solution_.empty()) {
     trySolution(submipsolver.solution_, kSolutionSourceSubMip, worker);
   }
 
-  if (mipsolver.mipdata_->numImprovingSols != oldNumImprovingSols) {
+  if (worker.upper_limit < oldUpperLimit) {
     // remember fixing rate as good
     worker.updateHeurStatsSuccessObservations(fixingRate);
   }
