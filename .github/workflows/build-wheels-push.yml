@@ -3,8 +3,6 @@ name: build-wheels-push
 on:
   pull_request:
   push:
-    tags:
-      - 'v*'
   workflow_dispatch:
 
 concurrency:
