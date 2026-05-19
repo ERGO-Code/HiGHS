@@ -5956,6 +5956,9 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
             applyConflictGraphSubstitutions(postsolve_stack, numDelCol));
       }
 
+      if (analysis_.allow_rule_[kPresolveRuleFourierMotzkin])
+        HPRESOLVE_CHECKED_CALL(fourierMotzkin(postsolve_stack));
+
       if (analysis_.allow_rule_[kPresolveRuleAggregator])
         HPRESOLVE_CHECKED_CALL(aggregator(postsolve_stack));
 
@@ -6848,6 +6851,357 @@ HPresolve::Result HPresolve::aggregator(HighsPostsolveStack& postsolve_stack) {
   analysis_.logging_on_ = logging_on;
   if (logging_on) analysis_.stopPresolveRuleLog(kPresolveRuleAggregator);
   return Result::kOk;
+}
+
+HPresolve::Result HPresolve::fourierMotzkin(
+    HighsPostsolveStack& postsolve_stack) {
+  assert(analysis_.allow_rule_[kPresolveRuleFourierMotzkin]);
+  const bool logging_on = analysis_.logging_on_;
+  if (logging_on) analysis_.startPresolveRuleLog(kPresolveRuleFourierMotzkin);
+
+  // max. absolute coefficient
+  const double maxCoef = 1e3;
+
+  // structs
+  struct candidate {
+    HighsInt col;
+    int64_t neRed;
+    int64_t mrRed;
+  };
+
+  struct newRowEntry {
+    HighsInt col;
+    HighsCDouble val;
+  };
+
+  struct newRow {
+    std::vector<newRowEntry> entries;
+    double lower;
+    double upper;
+  };
+
+  auto finalise = [&]() {
+    analysis_.logging_on_ = logging_on;
+    if (logging_on) analysis_.stopPresolveRuleLog(kPresolveRuleFourierMotzkin);
+    return Result::kOk;
+  };
+
+  auto computeCandidates = [&](std::vector<HighsInt>& candidates) {
+    for (HighsInt col = 0; col < model->num_col_; col++) {
+      if (colDeleted[col]) continue;
+      if (colsize[col] == 0) continue;
+      if (model->integrality_[col] != HighsVarType::kContinuous) continue;
+
+      bool isCandidate = true;
+      for (const auto& nz : getColumnVector(col)) {
+        isCandidate = !isEquation(nz.index());
+        if (!isCandidate) break;
+        double absval = std::abs(nz.value());
+        isCandidate = absval >= 1.0 / maxCoef && absval <= maxCoef;
+        if (!isCandidate) break;
+      }
+      if (isCandidate) candidates.push_back(col);
+    }
+  };
+
+  auto checkRows = [&](HighsInt col, std::vector<HighsInt>& iPlus,
+                       std::vector<HighsInt>& iMinus, int64_t& nePlus,
+                       int64_t& neMinus) {
+    nePlus = 0;
+    neMinus = 0;
+    iPlus.clear();
+    iMinus.clear();
+    for (const auto& nz : getColumnVector(col)) {
+      HighsInt row = nz.index();
+      if (rowDeleted[row]) continue;
+
+      if (isRanged(row)) {
+        iPlus.push_back(row);
+        nePlus += rowsize[row];
+        iMinus.push_back(row);
+        neMinus += rowsize[row];
+      } else {
+        HighsInt direction;
+        if (model->row_lower_[row] == -kHighsInf &&
+            model->row_upper_[row] != kHighsInf)
+          direction = 1;
+        else
+          direction = -1;
+
+        if (direction * nz.value() > 0) {
+          iPlus.push_back(row);
+          nePlus += rowsize[row];
+        } else {
+          iMinus.push_back(row);
+          neMinus += rowsize[row];
+        }
+      }
+    }
+  };
+
+  auto checkNonZeros = [&](HighsInt col, std::vector<HighsInt>& iPlus,
+                           std::vector<HighsInt>& iMinus,
+                           std::vector<HighsInt>& pPlus,
+                           std::vector<HighsInt>& pMinus,
+                           std::vector<HighsInt>& otherCols, int64_t& neRed,
+                           int64_t& mrRed) {
+    int64_t nePlus;
+    int64_t neMinus;
+    checkRows(col, iPlus, iMinus, nePlus, neMinus);
+
+    if (iPlus.size() == 0 || iMinus.size() == 0) {
+      iPlus.clear();
+      iMinus.clear();
+      return false;
+    }
+
+    // take into account other variables present in the rows
+    for (HighsInt row : iPlus) {
+      for (const auto& nz : getRowVector(row)) {
+        HighsInt k = nz.index();
+        if (k == col) continue;
+        if (pPlus[k] == 0 && pMinus[k] == 0) otherCols.push_back(k);
+        pPlus[k]++;
+      }
+    }
+    for (HighsInt row : iMinus) {
+      for (const auto& nz : getRowVector(row)) {
+        HighsInt k = nz.index();
+        if (k == col) continue;
+        if (pPlus[k] == 0 && pMinus[k] == 0) otherCols.push_back(k);
+        pMinus[k]++;
+      }
+    }
+
+    // compute correction term
+    int64_t correction = 0;
+    for (HighsInt k : otherCols) {
+      correction += static_cast<int64_t>(pPlus[k]) * pMinus[k];
+      pPlus[k] = 0;
+      pMinus[k] = 0;
+    }
+    otherCols.clear();
+
+    int64_t neOld = nePlus + neMinus;
+    int64_t neNew = static_cast<int64_t>(iPlus.size()) * neMinus +
+                    static_cast<int64_t>(iMinus.size()) * nePlus - correction;
+    neRed = neOld - neNew;
+    mrRed = iPlus.size() + iMinus.size() -
+            static_cast<HighsInt>(iPlus.size()) * iMinus.size();
+    return true;
+  };
+
+  auto checkNewRow = [&](const newRow& nr, bool& isRedundant) {
+    HighsCDouble impliedLower = 0;
+    HighsCDouble impliedUpper = 0;
+    bool lowerFinite = true;
+    bool upperFinite = true;
+    isRedundant = false;
+    for (const auto& e : nr.entries) {
+      double lb = model->col_lower_[e.col];
+      double ub = model->col_upper_[e.col];
+      if (e.val > 0) {
+        lowerFinite = lowerFinite && lb != -kHighsInf;
+        if (lowerFinite) impliedLower += e.val * lb;
+        upperFinite = upperFinite && ub != kHighsInf;
+        if (upperFinite) impliedUpper += e.val * ub;
+      } else {
+        lowerFinite = lowerFinite && ub != kHighsInf;
+        if (lowerFinite) impliedLower += e.val * ub;
+        upperFinite = upperFinite && lb != -kHighsInf;
+        if (upperFinite) impliedUpper += e.val * lb;
+      }
+      if (!lowerFinite && !upperFinite) return Result::kOk;
+    }
+
+    double lower = lowerFinite ? static_cast<double>(impliedLower) : -kHighsInf;
+    double upper = upperFinite ? static_cast<double>(impliedUpper) : kHighsInf;
+
+    // check for infeasibility
+    if (lower > nr.upper + primal_feastol || upper < nr.lower - primal_feastol)
+      return Result::kPrimalInfeasible;
+
+    // check for redundancy
+    isRedundant = lower >= nr.lower - primal_feastol &&
+                  upper <= nr.upper + primal_feastol;
+
+    return Result::kOk;
+  };
+
+  // collect candidate variables
+  std::vector<HighsInt> candidates;
+  computeCandidates(candidates);
+  if (candidates.empty()) return finalise();
+
+  // candidate vector
+  std::vector<candidate> scored;
+  scored.reserve(candidates.size());
+
+  // workspace vectors
+  std::vector<HighsInt> iPlus;
+  std::vector<HighsInt> iMinus;
+  iPlus.reserve(model->num_row_);
+  iMinus.reserve(model->num_row_);
+  std::vector<HighsInt> pPlus(model->num_col_, 0);
+  std::vector<HighsInt> pMinus(model->num_col_, 0);
+  std::vector<HighsInt> otherCols;
+  otherCols.reserve(model->num_col_);
+
+  for (HighsInt col : candidates) {
+    int64_t neRed;
+    int64_t mrRed;
+    if (!checkNonZeros(col, iPlus, iMinus, pPlus, pMinus, otherCols, neRed,
+                       mrRed))
+      continue;
+
+    if (neRed > 0 || (neRed == 0 && mrRed > 0))
+      scored.push_back({col, neRed, mrRed});
+  }
+
+  if (scored.empty()) return finalise();
+
+  // sort candidates
+  pdqsort(scored.begin(), scored.end(),
+          [](const candidate& a, const candidate& b) {
+            if (a.neRed != b.neRed) return a.neRed > b.neRed;
+            return a.mrRed > b.mrRed;
+          });
+
+  // vectors for computing new row entries
+  std::vector<newRowEntry> newRowEntries;
+  std::vector<HighsInt> newRowMark(model->num_col_, -1);
+
+  // vector for storing new rows
+  std::vector<newRow> newRows;
+  newRows.reserve(iPlus.size() * iMinus.size());
+
+  // main loop: eliminate variables
+  for (const candidate& c : scored) {
+    HighsInt col = c.col;
+    if (colDeleted[col]) continue;
+
+    // recompute reduction numbers
+    int64_t neRed;
+    int64_t mrRed;
+    if (!checkNonZeros(col, iPlus, iMinus, pPlus, pMinus, otherCols, neRed,
+                       mrRed))
+      continue;
+
+    if (neRed < 0) continue;
+    if (neRed == 0 && mrRed <= 0) continue;
+
+    for (HighsInt pRow : iPlus) {
+      HighsInt pPos = findNonzero(pRow, col);
+      assert(pPos != -1);
+      HighsInt pDirection = Avalue[pPos] > 0 ? HighsInt{1} : HighsInt{-1};
+      double pCoefAbs = std::abs(Avalue[pPos]);
+      double pBound =
+          pDirection > 0 ? model->row_upper_[pRow] : -model->row_lower_[pRow];
+
+      for (HighsInt mRow : iMinus) {
+        HighsInt mPos = findNonzero(mRow, col);
+        assert(mPos != -1);
+        HighsInt mDirection = Avalue[mPos] < 0 ? HighsInt{1} : HighsInt{-1};
+        double mCoefAbs = std::abs(Avalue[mPos]);
+        double mBound =
+            mDirection > 0 ? model->row_upper_[mRow] : -model->row_lower_[mRow];
+
+        // scale factor to preserve violation tolerances (see section 4.3):
+        double s = (pCoefAbs * mCoefAbs) / (pCoefAbs + mCoefAbs);
+        double pScale = s / pCoefAbs;
+        double mScale = s / mCoefAbs;
+
+        storeRow(pRow);
+        for (HighsInt rowiter : rowpositions) {
+          if (Acol[rowiter] == col) continue;
+          double val = pDirection * pScale * Avalue[rowiter];
+          newRowMark[Acol[rowiter]] =
+              static_cast<HighsInt>(newRowEntries.size());
+          newRowEntries.push_back({Acol[rowiter], val});
+        }
+
+        storeRow(mRow);
+        for (HighsInt rowiter : rowpositions) {
+          if (Acol[rowiter] == col) continue;
+          double val = mDirection * mScale * Avalue[rowiter];
+          if (newRowMark[Acol[rowiter]] == -1) {
+            newRowMark[Acol[rowiter]] =
+                static_cast<HighsInt>(newRowEntries.size());
+            newRowEntries.push_back({Acol[rowiter], val});
+          } else
+            newRowEntries[newRowMark[Acol[rowiter]]].val += val;
+        }
+
+        // reset marker before removing near-zeros
+        for (const auto& e : newRowEntries) newRowMark[e.col] = -1;
+
+        // remove near-zero entries
+        newRowEntries.erase(
+            std::remove_if(newRowEntries.begin(), newRowEntries.end(),
+                           [&](const auto& e) {
+                             return abs(e.val) <= options->small_matrix_value;
+                           }),
+            newRowEntries.end());
+
+        // store new row
+        double new_upper =
+            static_cast<double>(static_cast<HighsCDouble>(pScale) * pBound +
+                                static_cast<HighsCDouble>(mScale) * mBound);
+        newRows.push_back({newRowEntries, -kHighsInf, new_upper});
+
+        // clear vector
+        newRowEntries.clear();
+      }
+    }
+
+    // add new rows, filtering out redundant ones
+    std::vector<double> rowLower;
+    std::vector<double> rowUpper;
+    std::vector<std::vector<row_entry>> rowEntries;
+
+    for (const auto& nr : newRows) {
+      // check whether new row is infeasible or redundant
+      bool redundant;
+      HPRESOLVE_CHECKED_CALL(checkNewRow(nr, redundant));
+
+      // skip redundant rows
+      if (redundant) continue;
+
+      // add the row
+      std::vector<row_entry> entries;
+      entries.reserve(nr.entries.size());
+      for (const auto& e : nr.entries)
+        entries.push_back({e.col, static_cast<double>(e.val)});
+      rowLower.push_back(nr.lower);
+      rowUpper.push_back(nr.upper);
+      rowEntries.push_back(std::move(entries));
+    }
+
+    // clear vector
+    newRows.clear();
+
+    // add new rows to matrix
+    if (!addToMatrix(postsolve_stack, rowLower, rowUpper, rowEntries))
+      return finalise();
+
+    // remove old rows containing col
+    for (HighsInt rp : iPlus) {
+      postsolve_stack.redundantRow(rp);
+      removeRow(rp);
+    }
+    for (HighsInt rm : iMinus) {
+      if (rowDeleted[rm]) continue;
+      postsolve_stack.redundantRow(rm);
+      removeRow(rm);
+    }
+
+    // mark column as deleted
+    markColDeleted(col);
+
+    HPRESOLVE_CHECKED_CALL(checkLimits(postsolve_stack));
+  }
+
+  return finalise();
 }
 
 void HPresolve::substitute(HighsInt substcol, HighsInt staycol, double offset,

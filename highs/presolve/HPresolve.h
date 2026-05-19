@@ -468,6 +468,8 @@ class HPresolve {
 
   Result aggregator(HighsPostsolveStack& postsolve_stack);
 
+  Result fourierMotzkin(HighsPostsolveStack& postsolve_stack);
+
   Result removeRowSingletons(HighsPostsolveStack& postsolve_stack);
 
   Result presolveColSingletons(HighsPostsolveStack& postsolve_stack);
