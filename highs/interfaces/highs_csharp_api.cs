@@ -1097,6 +1097,7 @@ public class HighsLpSolver : IDisposable
     {
         return (HighsStatus)Highs_writeOptionsDeviations(this.highs, filename);
     }
+
     public HighsStatus getColsByRange(int from_col, int to_col, ref int num_col, double[] costs, double[] lower, double[] upper, ref int num_nz, int[] matrix_start, int[] matrix_index, double[] matrix_value)
     {
         return (HighsStatus)Highs_getColsByRange(this.highs, from_col, to_col, ref num_col, costs, lower, upper, ref num_nz, matrix_start, matrix_index, matrix_value);
@@ -1125,7 +1126,11 @@ public class HighsLpSolver : IDisposable
     public HighsStatus getRowsByMask(int[] mask, ref int num_row, double[] costs, double[] lower, double[] upper, ref int num_nz, int[] matrix_start, int[] matrix_index, double[] matrix_value)
     {
         return (HighsStatus)Highs_getRowsByMask(this.highs, mask, ref num_row, costs, lower, upper, ref num_nz, matrix_start, matrix_index, matrix_value);
+<<<<<<< HEAD
     }
+=======
+    }    
+>>>>>>> pr-3029
 }
 
 /// <summary>
