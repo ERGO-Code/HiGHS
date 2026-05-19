@@ -13,14 +13,15 @@
 #define HIGHS_APP_EXTERNAL_DEPS_H_
 
 #include "HighsExternalApi.h"
+#include "cli11/CLI11.hpp"
 
 namespace HighsExtras {
 struct app_family {};
 
 template <>
 inline const HighsExtrasFeatureInfo* wrapper_storage<app_family>::getInfo() {
-  static const HighsExtrasFeatureInfo info = {"CLI11", "2.5.0", "BSD-3-Clause",
-                                              true};
+  static const HighsExtrasFeatureInfo info = {"CLI11", CLI11_VERSION,
+                                              "BSD-3-Clause", true};
   return &info;
 }
 
