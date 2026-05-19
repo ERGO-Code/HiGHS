@@ -623,7 +623,8 @@ retry:
     }
 
     targetdepth = heur.getCurrentDepth() / 2;
-    if (targetdepth <= 1 || mipsolver.mipdata_->checkLimits()) {
+    if (targetdepth <= 1 || (!mipsolver.mipdata_->parallelLockActive() &&
+                             mipsolver.mipdata_->checkLimits())) {
       worker.getHeurLpIterations() = new_lp_iterations;
       return;
     }
@@ -933,7 +934,8 @@ retry:
     }
 
     targetdepth = heur.getCurrentDepth() / 2;
-    if (targetdepth <= 1 || mipsolver.mipdata_->checkLimits()) {
+    if (targetdepth <= 1 || (!mipsolver.mipdata_->parallelLockActive() &&
+                             mipsolver.mipdata_->checkLimits())) {
       worker.getHeurLpIterations() = new_lp_iterations;
       return;
     }
