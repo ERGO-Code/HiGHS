@@ -3655,10 +3655,8 @@ HighsPresolveStatus Highs::runPresolve(const bool force_lp_presolve,
                   time_init, left);
     }
 
-    this->timer_.logRunTime("Highs::runPresolve 3");
     presolve_return_status = presolve_.run();
   }
-  this->timer_.logRunTime("Highs::runPresolve 4");
 
   highsLogDev(options_.log_options, HighsLogType::kVerbose,
               "presolve_.run() returns status: %s\n",

@@ -37,6 +37,7 @@ HighsPresolveStatus PresolveComponent::run() {
   }
 
   presolve.run(data_.postSolveStack);
+
   data_.presolve_log_ = presolve.getPresolveLog();
   presolve_status_ = presolve.getPresolveStatus();
   return presolve_status_;
