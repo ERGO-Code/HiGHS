@@ -117,7 +117,8 @@ class HPresolve {
   std::vector<uint8_t> rowDeleted;
   std::vector<uint8_t> colDeleted;
 
-  // flag to skip repeated single-equation handling on unchanged rows
+  // flags to skip repeated single-equation handling (dual fixing) on unchanged
+  // rows
   std::vector<uint8_t> singleEquationChecked;
 
   std::vector<uint16_t> numProbes;

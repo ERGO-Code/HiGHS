@@ -118,12 +118,12 @@ bool HPresolve::okSetInput(HighsLp& model_, const HighsOptions& options_,
   // from then on they are added to the vector whenever there are changes
   if (!okResize(changedRowFlag, model->num_row_, uint8_t{1})) return false;
   if (!okResize(rowDeleted, model->num_row_)) return false;
-  if (!okResize(singleEquationChecked, model->num_row_)) return false;
   if (!okReserve(changedRowIndices, model->num_row_)) return false;
   if (!okResize(changedColFlag, model->num_col_, uint8_t{1})) return false;
   if (!okResize(colDeleted, model->num_col_)) return false;
   if (!okReserve(changedColIndices, model->num_col_)) return false;
   if (!okReserve(liftingOpportunities, model->num_row_)) return false;
+  if (!okResize(singleEquationChecked, model->num_row_)) return false;
   numDeletedCols = 0;
   numDeletedRows = 0;
   // initialize substitution opportunities
@@ -531,11 +531,11 @@ void HPresolve::unlink(HighsInt pos) {
 }
 
 void HPresolve::markChangedRow(HighsInt row) {
-  singleEquationChecked[row] = false;
   if (!changedRowFlag[row]) {
     changedRowIndices.push_back(row);
     changedRowFlag[row] = true;
   }
+  singleEquationChecked[row] = false;
 }
 
 void HPresolve::markChangedCol(HighsInt col) {
@@ -4932,8 +4932,8 @@ HPresolve::Result HPresolve::dualFixing(HighsPostsolveStack& postsolve_stack,
         // see section 6.1 "Extension of dual fixing for single equations",
         // Achterberg et al., Presolve Reductions in Mixed Integer
         // Programming, INFORMS Journal on Computing 32(2):473-506.
-        singleEquationChecked[equationRow] = true;
         HPRESOLVE_CHECKED_CALL(handleSingleEquation(equationRow));
+        singleEquationChecked[equationRow] = true;
         if (colDeleted[col]) return Result::kOk;
       } else if (mipsolver != nullptr && model->col_lower_[col] != -kHighsInf &&
                  model->col_upper_[col] != kHighsInf) {
