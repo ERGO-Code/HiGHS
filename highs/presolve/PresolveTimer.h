@@ -21,6 +21,20 @@ enum iClockPresolve {
   kPresolveClockInitial,
   kPresolveClockInitialRow,
   kPresolveClockInitialCol,
+  kPresolveClockInitialColIsFixed,
+  kPresolveClockInitialColIsEmpty,
+  kPresolveClockInitialColIsSingleton,
+  kPresolveClockInitialColDominated,
+  kPresolveClockInitialColImpliedInteger,
+  kPresolveClockInitialColDualFixing,
+  kPresolveClockInitialColSingletonStuffing,
+    kPresolveClockSingletonColSingletonRow,
+    kPresolveClockSingletonColDominated,
+    kPresolveClockSingletonColDualFixing,
+    kPresolveClockSingletonColStuffing,
+    kPresolveClockSingletonColImpliedBounds,
+    kPresolveClockSingletonColRowDualImpliedBounds,
+    kPresolveClockSingletonColDualImpliedFree,
   kPresolveClockFastLoop,
   kPresolveClockFastLoopRowSingletons,
   kPresolveClockFastLoopColSingletons,
@@ -56,6 +70,20 @@ class PresolveTimer {
     clock[kPresolveClockInitial] = timer_pointer->clock_def("Initial");
     clock[kPresolveClockInitialRow] = timer_pointer->clock_def("Initial row");
     clock[kPresolveClockInitialCol] = timer_pointer->clock_def("Initial col");
+    clock[kPresolveClockInitialColIsFixed] = timer_pointer->clock_def("InitialCol: is fixed");
+    clock[kPresolveClockInitialColIsEmpty] = timer_pointer->clock_def("InitialCol: is empty");
+    clock[kPresolveClockInitialColIsSingleton] = timer_pointer->clock_def("InitialCol: is singleton");
+    clock[kPresolveClockInitialColDominated] = timer_pointer->clock_def("InitialCol: dominated");
+    clock[kPresolveClockInitialColImpliedInteger] = timer_pointer->clock_def("InitialCol: implied integer");
+    clock[kPresolveClockInitialColDualFixing] = timer_pointer->clock_def("InitialCol: dual fixing");
+    clock[kPresolveClockInitialColSingletonStuffing] = timer_pointer->clock_def("InitialCol: singleton stuffing");
+    clock[kPresolveClockSingletonColSingletonRow] = timer_pointer->clock_def("S.Col: singleton row");
+    clock[kPresolveClockSingletonColDominated] = timer_pointer->clock_def("S.Col: dominated");
+    clock[kPresolveClockSingletonColDualFixing] = timer_pointer->clock_def("S.Col: dual fixing");
+    clock[kPresolveClockSingletonColStuffing] = timer_pointer->clock_def("S.Col: singleton stuffing");
+    clock[kPresolveClockSingletonColImpliedBounds] = timer_pointer->clock_def("S.Col: impl bounds");
+    clock[kPresolveClockSingletonColRowDualImpliedBounds] = timer_pointer->clock_def("S.Col: row du impl bounds");
+    clock[kPresolveClockSingletonColDualImpliedFree] = timer_pointer->clock_def("S.Col: du impl free");
     clock[kPresolveClockFastLoop] = timer_pointer->clock_def("Fast loop");
     clock[kPresolveClockFastLoopRowSingletons] =
         timer_pointer->clock_def("Fast loop: row singletons");
@@ -156,7 +184,7 @@ class PresolveTimer {
         //	kPresolveClock@
     };
     reportPresolveClockList("PresolveCore_", presolve_clock_list,
-                            presolve_timer_clock, kPresolveClockPresolve, 0);
+                            presolve_timer_clock, kPresolveClockPresolve, 0.1);
     const bool csv_output = false;
     if (csv_output) {
       csvPresolveClockList("GrepPresolveCore_", model_name, presolve_clock_list,
@@ -166,6 +194,36 @@ class PresolveTimer {
                            presolve_timer_clock, kPresolveClockPresolve, false,
                            true);
     }
+  };
+
+  void reportPresolveInitialColPresolveClock(const std::string& model_name,
+					     const HighsTimerClock& presolve_timer_clock) {
+    const std::vector<HighsInt> presolve_clock_list{
+      kPresolveClockInitialColIsFixed,
+      kPresolveClockInitialColIsEmpty,
+      kPresolveClockInitialColIsSingleton,
+      kPresolveClockInitialColDominated,
+      kPresolveClockInitialColImpliedInteger,
+      kPresolveClockInitialColDualFixing,
+      kPresolveClockInitialColSingletonStuffing
+    };
+    reportPresolveClockList("PresolveInitialCol_", presolve_clock_list,
+                            presolve_timer_clock, kPresolveClockInitialCol, 0.1);
+  };
+
+  void reportPresolveSingletonColPresolveClock(const std::string& model_name,
+					     const HighsTimerClock& presolve_timer_clock) {
+    const std::vector<HighsInt> presolve_clock_list{
+      kPresolveClockSingletonColSingletonRow,
+      kPresolveClockSingletonColDominated,
+      kPresolveClockSingletonColDualFixing,
+      kPresolveClockSingletonColStuffing,
+      kPresolveClockSingletonColImpliedBounds,
+      kPresolveClockSingletonColRowDualImpliedBounds,
+      kPresolveClockSingletonColDualImpliedFree
+    };
+    reportPresolveClockList("PresolveSingletonCol_", presolve_clock_list,
+                            presolve_timer_clock, kPresolveClockInitialColIsSingleton, 0.1);
   };
 };
 

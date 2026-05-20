@@ -396,14 +396,16 @@ class HPresolve {
 
   Result emptyCol(HighsPostsolveStack& postsolve_stack, HighsInt col);
 
-  Result singletonCol(HighsPostsolveStack& postsolve_stack, HighsInt col);
+  Result singletonCol(HighsPostsolveStack& postsolve_stack, HighsInt col,
+		      const bool timing = false);
 
   void substituteFreeCol(HighsPostsolveStack& postsolve_stack, HighsInt row,
                          HighsInt col, bool relaxRowDualBounds = false);
 
   Result rowPresolve(HighsPostsolveStack& postsolve_stack, HighsInt row);
 
-  Result colPresolve(HighsPostsolveStack& postsolve_stack, HighsInt col);
+  Result colPresolve(HighsPostsolveStack& postsolve_stack, HighsInt col,
+		     const bool timing = false);
 
   Result detectDominatedCol(HighsPostsolveStack& postsolve_stack, HighsInt col,
                             bool handleSingletonRows = true);

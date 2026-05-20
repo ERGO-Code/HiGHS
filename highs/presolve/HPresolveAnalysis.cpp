@@ -276,4 +276,6 @@ void HPresolveAnalysis::reportPresolveTimer() {
   if (!analyse_presolve_time_) return;
   PresolveTimer presolve_timer;
   presolve_timer.reportPresolveCoreClock(model->model_name_, presolve_clocks_);
+  presolve_timer.reportPresolveInitialColPresolveClock(model->model_name_, presolve_clocks_);
+  presolve_timer.reportPresolveSingletonColPresolveClock(model->model_name_, presolve_clocks_);
 }
