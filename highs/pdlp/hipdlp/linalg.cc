@@ -14,13 +14,13 @@
 
 namespace linalg {
 
-double project_box(double x, double l, double u) {
+double projectBox(double x, double l, double u) {
   return std::max(l, std::min(x, u));
 }
 
-double project_non_negative(double x) { return std::max(0.0, x); }
+double projectNonNegative(double x) { return std::max(0.0, x); }
 
-void project_bounds(const HighsLp& lp, std::vector<double>& x) {
+void projectBounds(const HighsLp& lp, std::vector<double>& x) {
   for (HighsInt i = 0; i < lp.num_col_; ++i) {
     // Project to upper bound
     if (x[i] > lp.col_upper_[i]) {
@@ -33,7 +33,7 @@ void project_bounds(const HighsLp& lp, std::vector<double>& x) {
   }
 }
 
-void Ax(const HighsLp& lp, const std::vector<double>& x,
+void ax(const HighsLp& lp, const std::vector<double>& x,
         std::vector<double>& result) {
   std::fill(result.begin(), result.end(), 0.0);
   // Assumes column-wise matrix format
@@ -46,11 +46,11 @@ void Ax(const HighsLp& lp, const std::vector<double>& x,
   }
 }
 
-void ATy(const HighsLp& lp, const std::vector<double>& y,
+void aTy(const HighsLp& lp, const std::vector<double>& y,
          std::vector<double>& result) {
   std::fill(result.begin(), result.end(), 0.0);
   // Assumes column-wise matrix format. For each column `col` of A,
-  // this loop calculates dot(column_col, y) and adds it to result[col].
+  // this loop calculates Dot(column_col, y) and adds it to result[col].
   for (HighsInt col = 0; col < lp.num_col_; ++col) {
     for (HighsInt i = lp.a_matrix_.start_[col];
          i < lp.a_matrix_.start_[col + 1]; ++i) {
@@ -63,7 +63,7 @@ void ATy(const HighsLp& lp, const std::vector<double>& y,
 double dot(const std::vector<double>& a, const std::vector<double>& b) {
   if (a.size() != b.size()) {
     throw std::invalid_argument(
-        "Vectors must be of the same size for dot product.");
+        "Vectors must be of the same size for Dot product.");
   }
   double result = 0.0;
   for (size_t i = 0; i < a.size(); ++i) {
@@ -76,13 +76,15 @@ double dot(const std::vector<double>& a, const std::vector<double>& b) {
 // Norm Functions
 // =================================================================
 
-double nrm2(const std::vector<double>& vec) { return std::sqrt(dot(vec, vec)); }
+double norm2(const std::vector<double>& vec) {
+  return std::sqrt(dot(vec, vec));
+}
 
-double vector_norm_squared(const std::vector<double>& vec) {
+double vectorNormSquared(const std::vector<double>& vec) {
   return dot(vec, vec);
 }
 
-double vector_norm(const double* values, size_t size, double p) {
+double vectorNorm(const double* values, size_t size, double p) {
   if (std::isinf(p)) {  // Infinity norm
     double max_val = 0.0;
     for (size_t i = 0; i < size; ++i) {
@@ -105,12 +107,12 @@ double vector_norm(const double* values, size_t size, double p) {
   return std::pow(sum, 1.0 / p);
 }
 
-double vector_norm(const std::vector<double>& vec, double p) {
-  // For L2 norm, call the optimized nrm2 to avoid pow()
+double vectorNorm(const std::vector<double>& vec, double p) {
+  // For L2 norm, call the optimized Norm2 to avoid pow()
   if (p == 2.0) {
-    return nrm2(vec);
+    return norm2(vec);
   }
-  return vector_norm(vec.data(), vec.size(), p);
+  return vectorNorm(vec.data(), vec.size(), p);
 }
 
 // =================================================================
@@ -124,7 +126,7 @@ void scale(std::vector<double>& vec, double factor) {
 }
 
 void normalize(std::vector<double>& vec) {
-  double norm = nrm2(vec);
+  double norm = norm2(vec);
   if (norm > 1e-9) {  // Use a small tolerance
     scale(vec, 1.0 / norm);
   }
@@ -147,11 +149,11 @@ double diffTwoNorm(const std::vector<double>& v1,
 // LP-related Norm Computations
 // =================================================================
 
-double compute_cost_norm(const HighsLp& lp, double p) {
-  return vector_norm(lp.col_cost_, p);
+double computeCostNorm(const HighsLp& lp, double p) {
+  return vectorNorm(lp.col_cost_, p);
 }
 
-double compute_rhs_norm(const HighsLp& lp, double p) {
+double computeRhsNorm(const HighsLp& lp, double p) {
   if (std::isinf(p)) {
     double max_val = 0.0;
     for (double val : lp.row_lower_) {
@@ -175,19 +177,19 @@ double compute_rhs_norm(const HighsLp& lp, double p) {
   return std::pow(sum, 1.0 / p);
 }
 
-std::vector<double> compute_column_norms(const HighsLp& lp, double p) {
+std::vector<double> computeColumnNorms(const HighsLp& lp, double p) {
   std::vector<double> col_norms(lp.num_col_, 0.0);
   for (HighsInt col = 0; col < lp.num_col_; ++col) {
     HighsInt start = lp.a_matrix_.start_[col];
     HighsInt end = lp.a_matrix_.start_[col + 1];
     if (start < end) {
-      col_norms[col] = vector_norm(&lp.a_matrix_.value_[start], end - start, p);
+      col_norms[col] = vectorNorm(&lp.a_matrix_.value_[start], end - start, p);
     }
   }
   return col_norms;
 }
 
-std::vector<double> compute_row_norms(const HighsLp& lp, double p) {
+std::vector<double> computeRowNorms(const HighsLp& lp, double p) {
   std::vector<double> row_norms(lp.num_row_, 0.0);
   for (HighsInt col = 0; col < lp.num_col_; ++col) {
     for (HighsInt i = lp.a_matrix_.start_[col];
@@ -213,7 +215,7 @@ std::vector<double> compute_row_norms(const HighsLp& lp, double p) {
   return row_norms;
 }
 
-std::vector<double> vector_subtrac(const std::vector<double>& a,
+std::vector<double> vectorSubtract(const std::vector<double>& a,
                                    const std::vector<double>& b) {
   if (a.size() != b.size()) {
     throw std::invalid_argument(

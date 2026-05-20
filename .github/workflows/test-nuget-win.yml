@@ -10,44 +10,44 @@ jobs:
   build_windows:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Build HiGHS Windows native
         run: |
-         cmake -E make_directory ${{runner.workspace}}/build
-         cmake -E make_directory ${{runner.workspace}}/nugets
-         cmake -E make_directory ${{runner.workspace}}/test_nuget
+         cmake -E make_directory ${{github.workspace}}/build
+         cmake -E make_directory ${{github.workspace}}/nugets
+         cmake -E make_directory ${{github.workspace}}/test_nuget
 
       - name: Configure CMake
         shell: bash
-        working-directory: ${{runner.workspace}}/build
+        working-directory: ${{github.workspace}}/build
         run: cmake $GITHUB_WORKSPACE -DCSHARP=ON -DBUILD_DOTNET=ON
 
       - name: Build
         shell: bash
-        working-directory: ${{runner.workspace}}/build
+        working-directory: ${{github.workspace}}/build
         run: cmake --build . --config Release --parallel
 
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/setup-dotnet@v5
         with:
           dotnet-version: '6.0.x'
 
       - name: Dotnet pack
-        working-directory: ${{runner.workspace}}/build/dotnet/Highs.Native
-        run: dotnet pack -c Release /p:Version=1.13.1
+        working-directory: ${{github.workspace}}/build/dotnet/Highs.Native
+        run: dotnet pack -c Release /p:Version=1.14.0
 
       - name: Add local feed
-        run: dotnet nuget add source -n name ${{runner.workspace}}\nugets 
+        run: dotnet nuget add source -n name ${{github.workspace}}\nugets 
 
       - name: Dotnet push to local feed
-        working-directory: ${{runner.workspace}}/build/dotnet/Highs.Native
+        working-directory: ${{github.workspace}}/build/dotnet/Highs.Native
         shell: bash
         run: dotnet nuget push ./bin/Release/*.nupkg -s name
 
       - name: Create new project and test
-        working-directory: ${{runner.workspace}}/test_nuget
+        working-directory: ${{github.workspace}}/test_nuget
         run: |
           dotnet new console
           rm Program.cs
-          cp ${{runner.workspace}}\HiGHS\examples\call_highs_from_csharp.cs . 
-          dotnet add package Highs.Native -v 1.13.1 -s ${{runner.workspace}}\nugets 
+          cp ${{github.workspace}}\examples\call_highs_from_csharp.cs . 
+          dotnet add package Highs.Native -v 1.14.0 -s ${{github.workspace}}\nugets 
           dotnet run

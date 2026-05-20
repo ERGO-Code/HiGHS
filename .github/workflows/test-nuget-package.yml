@@ -13,61 +13,61 @@ jobs:
       # matrix:
       #   python: [3.11]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Build HiGHS
         run: |
-         cmake -E make_directory ${{runner.workspace}}/build
-         cmake -E make_directory ${{runner.workspace}}/nugets
-         cmake -E make_directory ${{runner.workspace}}/test_nuget
+         cmake -E make_directory ${{github.workspace}}/build
+         cmake -E make_directory ${{github.workspace}}/nugets
+         cmake -E make_directory ${{github.workspace}}/test_nuget
 
       - name: Configure CMake
-        working-directory: ${{runner.workspace}}/build
+        working-directory: ${{github.workspace}}/build
         run: |
          cmake $GITHUB_WORKSPACE -DCSHARP=ON -DBUILD_DOTNET=ON \
             -DCMAKE_C_COMPILER=/usr/bin/clang \
             -DCMAKE_CXX_COMPILER=/usr/bin/clang++
 
       - name: Build
-        working-directory: ${{runner.workspace}}/build
+        working-directory: ${{github.workspace}}/build
         run: cmake --build . --config Release --parallel
 
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/setup-dotnet@v5
         with:
           dotnet-version: '6.0.x'
 
       - name: Dotnet pack
-        working-directory: ${{runner.workspace}}/build/dotnet/Highs.Native
-        run: dotnet pack -c Release /p:Version=1.13.1
+        working-directory: ${{github.workspace}}/build/dotnet/Highs.Native
+        run: dotnet pack -c Release /p:Version=1.14.0
 
       - name: Add local feed
-        run: dotnet nuget add source ${{runner.workspace}}/nugets
+        run: dotnet nuget add source ${{github.workspace}}/nugets
 
       - name: Dotnet push to local feed
-        working-directory: ${{runner.workspace}}/build/dotnet/Highs.Native
-        run: dotnet nuget push ./bin/Release/*.nupkg -s ${{runner.workspace}}/nugets
+        working-directory: ${{github.workspace}}/build/dotnet/Highs.Native
+        run: dotnet nuget push ./bin/Release/*.nupkg -s ${{github.workspace}}/nugets
 
       - name: Create new project and test
         shell: bash
-        working-directory: ${{runner.workspace}}/test_nuget
+        working-directory: ${{github.workspace}}/test_nuget
         run: |
           dotnet new console
           rm Program.cs
           cp $GITHUB_WORKSPACE/examples/call_highs_from_csharp.cs .
-          dotnet add package Highs.Native -s ${{runner.workspace}}/nugets
+          dotnet add package Highs.Native -s ${{github.workspace}}/nugets
           dotnet run
 
   build_macos_arm:
     runs-on: macos-14  # macos-14 is arm64
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Build HiGHS
         run: |
-         cmake -E make_directory ${{runner.workspace}}/build
-         cmake -E make_directory ${{runner.workspace}}/nugets
-         cmake -E make_directory ${{runner.workspace}}/test_nuget
+         cmake -E make_directory ${{github.workspace}}/build
+         cmake -E make_directory ${{github.workspace}}/nugets
+         cmake -E make_directory ${{github.workspace}}/test_nuget
 
       - name: Configure CMake
-        working-directory: ${{runner.workspace}}/build
+        working-directory: ${{github.workspace}}/build
         run: |
           cmake $GITHUB_WORKSPACE -DCSHARP=ON -DBUILD_DOTNET=ON \
             -DCMAKE_C_COMPILER=/usr/bin/clang \
@@ -75,39 +75,39 @@ jobs:
 
 
       - name: Build
-        working-directory: ${{runner.workspace}}/build
+        working-directory: ${{github.workspace}}/build
         run: cmake --build . --config Release --parallel
 
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/setup-dotnet@v5
         with:
           dotnet-version: '6.0.x'
 
       - name: Dotnet pack
-        working-directory: ${{runner.workspace}}/build/dotnet/Highs.Native
-        run: dotnet pack -c Release /p:Version=1.13.1
+        working-directory: ${{github.workspace}}/build/dotnet/Highs.Native
+        run: dotnet pack -c Release /p:Version=1.14.0
 
       - name: Add local feed
-        run: dotnet nuget add source ${{runner.workspace}}/nugets
+        run: dotnet nuget add source ${{github.workspace}}/nugets
 
       - name: Dotnet push to local feed
-        working-directory: ${{runner.workspace}}/build/dotnet/Highs.Native
-        run: dotnet nuget push ./bin/Release/*.nupkg -s ${{runner.workspace}}/nugets
+        working-directory: ${{github.workspace}}/build/dotnet/Highs.Native
+        run: dotnet nuget push ./bin/Release/*.nupkg -s ${{github.workspace}}/nugets
 
       - name: Create new project and test
         shell: bash
-        working-directory: ${{runner.workspace}}/test_nuget
+        working-directory: ${{github.workspace}}/test_nuget
         run: |
           dotnet new console
           rm Program.cs
           cp $GITHUB_WORKSPACE/examples/call_highs_from_csharp.cs .
-          dotnet add package Highs.Native -s ${{runner.workspace}}/nugets
+          dotnet add package Highs.Native -s ${{github.workspace}}/nugets
           dotnet run
 
   build_linux:
     runs-on: ubuntu-latest
     container: stabletec/build-core:debian-11
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Build HiGHS
         run: |
          cmake -E make_directory /__w/HiGHS/HiGHS/build
@@ -122,13 +122,13 @@ jobs:
         working-directory: /__w/HiGHS/HiGHS/build
         run: cmake --build . --config Release --parallel
 
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/setup-dotnet@v5
         with:
           dotnet-version: '6.0.x'
 
       - name: Dotnet pack
         working-directory: /__w/HiGHS/HiGHS/build/dotnet/Highs.Native
-        run: dotnet pack -c Release /p:Version=1.13.1
+        run: dotnet pack -c Release /p:Version=1.14.0
 
       - name: Add local feed
         run: dotnet nuget add source /__w/HiGHS/HiGHS/nugets
@@ -151,7 +151,7 @@ jobs:
     runs-on: ubuntu-latest
     container: stabletec/build-core:debian-11
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Build HiGHS
         run: |
          cmake -E make_directory /__w/HiGHS/HiGHS/build
@@ -166,13 +166,13 @@ jobs:
         working-directory: /__w/HiGHS/HiGHS/build
         run: cmake --build . --config Release --parallel
 
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/setup-dotnet@v5
         with:
           dotnet-version: '8.0.x'
 
       - name: Dotnet pack
         working-directory: /__w/HiGHS/HiGHS/build/dotnet/Highs.Native
-        run: dotnet pack -c Release /p:Version=1.13.1
+        run: dotnet pack -c Release /p:Version=1.14.0
 
       - name: Add local feed
         run: dotnet nuget add source /__w/HiGHS/HiGHS/nugets
@@ -194,44 +194,44 @@ jobs:
   build_windows:
     runs-on: windows-2022
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Build HiGHS Windows native
         run: |
-         cmake -E make_directory ${{runner.workspace}}/build
-         cmake -E make_directory ${{runner.workspace}}/nugets
-         cmake -E make_directory ${{runner.workspace}}/test_nuget
+         cmake -E make_directory ${{github.workspace}}/build
+         cmake -E make_directory ${{github.workspace}}/nugets
+         cmake -E make_directory ${{github.workspace}}/test_nuget
 
       - name: Configure CMake
         shell: bash
-        working-directory: ${{runner.workspace}}/build
+        working-directory: ${{github.workspace}}/build
         run: cmake $GITHUB_WORKSPACE -DCSHARP=ON -DBUILD_DOTNET=ON
 
       - name: Build
         shell: bash
-        working-directory: ${{runner.workspace}}/build
+        working-directory: ${{github.workspace}}/build
         run: cmake --build . --config Release --parallel
 
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/setup-dotnet@v5
         with:
           dotnet-version: '6.0.x'
 
       - name: Dotnet pack
-        working-directory: ${{runner.workspace}}/build/dotnet/Highs.Native
-        run: dotnet pack -c Release /p:Version=1.13.1
+        working-directory: ${{github.workspace}}/build/dotnet/Highs.Native
+        run: dotnet pack -c Release /p:Version=1.14.0
 
       - name: Add local feed
-        run: dotnet nuget add source -n name ${{runner.workspace}}\nugets
+        run: dotnet nuget add source -n name ${{github.workspace}}\nugets
 
       - name: Dotnet push to local feed
-        working-directory: ${{runner.workspace}}/build/dotnet/Highs.Native
+        working-directory: ${{github.workspace}}/build/dotnet/Highs.Native
         shell: bash
         run: dotnet nuget push ./bin/Release/*.nupkg -s name
 
       - name: Create new project and test
-        working-directory: ${{runner.workspace}}/test_nuget
+        working-directory: ${{github.workspace}}/test_nuget
         run: |
           dotnet new console
           rm Program.cs
-          cp ${{runner.workspace}}\HiGHS\examples\call_highs_from_csharp.cs .
-          dotnet add package Highs.Native -v 1.13.1 -s ${{runner.workspace}}\nugets
+          cp ${{github.workspace}}\examples\call_highs_from_csharp.cs .
+          dotnet add package Highs.Native -v 1.14.0 -s ${{github.workspace}}\nugets
           dotnet run

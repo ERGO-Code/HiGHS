@@ -2,256 +2,31 @@
 
 #include <limits>
 
+#include "HighsExternalDeps.h"
 #include "Status.h"
-#include "amd/amd.h"
 #include "ipm/hipo/auxiliary/Auxiliary.h"
-#include "ipm/hipo/auxiliary/Log.h"
-#include "metis/metis.h"
+#include "ipm/hipo/auxiliary/Logger.h"
 #include "parallel/HighsParallel.h"
-#include "rcm/rcm.h"
 
 namespace hipo {
 
-FactorHiGHSSolver::FactorHiGHSSolver(Options& options, const Model& model,
+FactorHiGHSSolver::FactorHiGHSSolver(KktMatrix& kkt, Options& options,
+                                     const Model& model,
                                      const Regularisation& regul, Info& info,
-                                     IpmData& record, const LogHighs& log)
-    : FH_(&log, options.block_size),
+                                     IpmData& record, const Logger& logger)
+    : FH_(&logger, options.block_size),
       S_{},
+      kkt_{kkt},
       regul_{regul},
       info_{info},
       data_{record},
-      log_{log},
+      logger_{logger},
       model_{model},
-      A_{model.A()},
-      Q_{model.Q()},
-      mA_{A_.num_row_},
-      nA_{A_.num_col_},
-      nzA_{A_.numNz()},
-      nzQ_{Q_.numNz()},
       options_{options} {}
 
 void FactorHiGHSSolver::clear() {
   valid_ = false;
   FH_.newIter();
-}
-
-// =========================================================================
-// Build structure and values of matrices
-// =========================================================================
-
-Int FactorHiGHSSolver::buildASstructure() {
-  // Build lower triangular structure of the augmented system.
-  // Build values of AS that will not change during the iterations.
-
-  Clock clock;
-  log_.printDevInfo("Building AS structure\n");
-
-  const Int nzBlock11 = model_.qp() ? nzQ_ : nA_;
-
-  // AS matrix must fit into HighsInt
-  if ((Int64)nzBlock11 + mA_ + nzA_ >= kHighsIInf) return kStatusOverflow;
-
-  ptrAS_.resize(nA_ + mA_ + 1);
-  rowsAS_.resize(nzBlock11 + nzA_ + mA_);
-  valAS_.resize(nzBlock11 + nzA_ + mA_);
-
-  Int next = 0;
-
-  for (Int i = 0; i < nA_; ++i) {
-    // diagonal element
-    rowsAS_[next] = i;
-    next++;
-
-    // column of Q
-    if (model_.qp()) {
-      assert(Q_.index_[Q_.start_[i]] == i);
-      for (Int el = Q_.start_[i] + 1; el < Q_.start_[i + 1]; ++el) {
-        rowsAS_[next] = Q_.index_[el];
-        valAS_[next] = -Q_.value_[el];  // values of AS that will not change
-        ++next;
-      }
-    }
-
-    // column of A
-    for (Int el = A_.start_[i]; el < A_.start_[i + 1]; ++el) {
-      rowsAS_[next] = nA_ + A_.index_[el];
-      valAS_[next] = A_.value_[el];  // values of AS that will not change
-      ++next;
-    }
-
-    ptrAS_[i + 1] = next;
-  }
-
-  // 2,2 block
-  for (Int i = 0; i < mA_; ++i) {
-    rowsAS_[next] = nA_ + i;
-    ++next;
-    ptrAS_[nA_ + i + 1] = ptrAS_[nA_ + i] + 1;
-  }
-
-  info_.AS_structure_time = clock.stop();
-
-  return kStatusOk;
-}
-
-Int FactorHiGHSSolver::buildASvalues(const std::vector<double>& scaling) {
-  // build AS values that change during iterations.
-
-  assert(!ptrAS_.empty() && !rowsAS_.empty());
-
-  for (Int i = 0; i < nA_; ++i) {
-    valAS_[ptrAS_[i]] = scaling.empty() ? -1.0 : -scaling[i];
-    if (model_.qp()) valAS_[ptrAS_[i]] -= model_.sense() * model_.Q().diag(i);
-  }
-
-  return kStatusOk;
-}
-
-Int FactorHiGHSSolver::buildNEstructure() {
-  // Build lower triangular structure of AAt.
-  // This approach uses a column-wise copy of A, a partial row-wise copy and a
-  // vector of corresponding indices.
-
-  // NB: A must have sorted columns for this to work
-
-  Clock clock;
-  log_.printDevInfo("Building NE structure\n");
-
-  // create partial row-wise representation without values, and array or
-  // corresponding indices between cw and rw representation
-  {
-    ptrA_rw_.assign(mA_ + 1, 0);
-    idxA_rw_.assign(nzA_, 0);
-
-    // pointers of row-start
-    for (Int el = 0; el < nzA_; ++el) ptrA_rw_[A_.index_[el] + 1]++;
-    for (Int i = 0; i < mA_; ++i) ptrA_rw_[i + 1] += ptrA_rw_[i];
-
-    std::vector<Int> temp = ptrA_rw_;
-    corr_A_.assign(nzA_, 0);
-
-    // rw-indices and corresponding indices created together
-    for (Int col = 0; col < nA_; ++col) {
-      for (Int el = A_.start_[col]; el < A_.start_[col + 1]; ++el) {
-        Int row = A_.index_[el];
-
-        corr_A_[temp[row]] = el;
-        idxA_rw_[temp[row]] = col;
-        temp[row]++;
-      }
-    }
-  }
-
-  ptrNE_.clear();
-  rowsNE_.clear();
-
-  // ptr is allocated its exact size
-  ptrNE_.resize(mA_ + 1, 0);
-
-  // keep track if given entry is nonzero, in column considered
-  std::vector<bool> is_nz(mA_, false);
-
-  // temporary storage of indices
-  std::vector<Int> temp_index(mA_);
-
-  for (Int row = 0; row < mA_; ++row) {
-    // go along the entries of the row, and then down each column.
-    // this builds the lower triangular part of the row-th column of AAt.
-
-    Int nz_in_col = 0;
-
-    for (Int el = ptrA_rw_[row]; el < ptrA_rw_[row + 1]; ++el) {
-      Int col = idxA_rw_[el];
-      Int corr = corr_A_[el];
-
-      // for each nonzero in the row, go down corresponding column, starting
-      // from current position
-      for (Int colEl = corr; colEl < A_.start_[col + 1]; ++colEl) {
-        Int row2 = A_.index_[colEl];
-
-        // row2 is guaranteed to be larger or equal than row
-        // (provided that the columns of A are sorted)
-
-        // save information that there is nonzero in position (row2,row).
-        if (!is_nz[row2]) {
-          is_nz[row2] = true;
-          temp_index[nz_in_col] = row2;
-          ++nz_in_col;
-        }
-      }
-    }
-    // intersection of row with rows below finished.
-
-    // if the total number of nonzeros exceeds the maximum, return error.
-    if ((Int64)ptrNE_[row] + nz_in_col >=
-        NE_nz_limit_.load(std::memory_order_relaxed))
-      return kStatusOverflow;
-
-    // update pointers
-    ptrNE_[row + 1] = ptrNE_[row] + nz_in_col;
-
-    // now assign indices
-    for (Int i = 0; i < nz_in_col; ++i) {
-      Int index = temp_index[i];
-      // push_back is better then reserve, because the final length is not known
-      rowsNE_.push_back(index);
-      is_nz[index] = false;
-    }
-  }
-
-  info_.NE_structure_time = clock.stop();
-
-  return kStatusOk;
-}
-
-Int FactorHiGHSSolver::buildNEvalues(const std::vector<double>& scaling) {
-  // given the NE structure already computed, fill in the NE values
-
-  assert(!ptrNE_.empty() && !rowsNE_.empty());
-
-  valNE_.resize(rowsNE_.size());
-
-  std::vector<double> work(mA_, 0.0);
-
-  for (Int row = 0; row < mA_; ++row) {
-    // go along the entries of the row, and then down each column.
-    // this builds the lower triangular part of the row-th column of AAt.
-
-    for (Int el = ptrA_rw_[row]; el < ptrA_rw_[row + 1]; ++el) {
-      Int col = idxA_rw_[el];
-      Int corr = corr_A_[el];
-
-      double denom = scaling.empty() ? 1.0 : scaling[col];
-      denom += regul_.primal;
-      if (model_.qp()) denom += model_.sense() * model_.Q().diag(col);
-
-      const double mult = 1.0 / denom;
-      const double row_value = mult * A_.value_[corr];
-
-      // for each nonzero in the row, go down corresponding column, starting
-      // from current position
-      for (Int colEl = corr; colEl < A_.start_[col + 1]; ++colEl) {
-        Int row2 = A_.index_[colEl];
-
-        // row2 is guaranteed to be larger or equal than row
-        // (provided that the columns of A are sorted)
-
-        // compute and accumulate value
-        double value = row_value * A_.value_[colEl];
-        work[row2] += value;
-      }
-    }
-    // intersection of row with rows below finished.
-
-    // read from work, using indices of column "row" of AAt
-    for (Int el = ptrNE_[row]; el < ptrNE_[row + 1]; ++el) {
-      Int index = rowsNE_[el];
-      valNE_[el] = work[index];
-      work[index] = 0.0;
-    }
-  }
-
-  return kStatusOk;
 }
 
 // =========================================================================
@@ -262,17 +37,20 @@ Int FactorHiGHSSolver::analyseAS(Symbolic& S) {
   // Perform analyse phase of augmented system and return symbolic factorisation
   // in object S and the status.
 
-  if (rowsAS_.empty() || ptrAS_.empty()) return kStatusErrorAnalyse;
+  if (kkt_.rowsAS.empty() || kkt_.ptrAS.empty()) return kStatusErrorAnalyse;
+
+  const Int m = model_.A().num_row_;
+  const Int n = model_.A().num_col_;
 
   // create vector of signs of pivots
-  std::vector<Int> pivot_signs(nA_ + mA_, -1);
-  for (Int i = 0; i < mA_; ++i) pivot_signs[nA_ + i] = 1;
+  std::vector<Int> pivot_signs(n + m, -1);
+  for (Int i = 0; i < m; ++i) pivot_signs[n + i] = 1;
 
-  log_.printDevInfo("Performing AS analyse phase\n");
+  logger_.printInfo("Performing AS analyse phase\n");
 
   Clock clock;
-  Int status =
-      chooseOrdering(rowsAS_, ptrAS_, pivot_signs, S, ordering_AS_, "AS");
+  Int status = chooseOrdering(kkt_.rowsAS, kkt_.ptrAS, pivot_signs, S,
+                              ordering_AS_, "AS");
   info_.analyse_AS_time += clock.stop();
 
   return status;
@@ -283,16 +61,16 @@ Int FactorHiGHSSolver::analyseNE(Symbolic& S) {
   // in object S and the status. Structure of the matrix must be already
   // computed.
 
-  if (rowsNE_.empty() || ptrNE_.empty()) return kStatusErrorAnalyse;
+  if (kkt_.rowsNE.empty() || kkt_.ptrNE.empty()) return kStatusErrorAnalyse;
 
   // create vector of signs of pivots
-  std::vector<Int> pivot_signs(mA_, 1);
+  std::vector<Int> pivot_signs(model_.A().num_row_, 1);
 
-  log_.printDevInfo("Performing NE analyse phase\n");
+  logger_.printInfo("Performing NE analyse phase\n");
 
   Clock clock;
-  Int status =
-      chooseOrdering(rowsNE_, ptrNE_, pivot_signs, S, ordering_NE_, "NE");
+  Int status = chooseOrdering(kkt_.rowsNE, kkt_.ptrNE, pivot_signs, S,
+                              ordering_NE_, "NE");
   info_.analyse_NE_time += clock.stop();
 
   return status;
@@ -306,18 +84,14 @@ Int FactorHiGHSSolver::factorAS(const std::vector<double>& scaling) {
   // only execute factorisation if it has not been done yet
   assert(!this->valid_);
 
-  Clock clock;
-
-  // build matrix
-  buildASvalues(scaling);
-  info_.matrix_time += clock.stop();
+  kkt_.buildASvalues(scaling);
 
   // set static regularisation, since it may have changed
   FH_.setRegularisation(regul_.primal, regul_.dual);
 
-  // factorise matrix
-  clock.start();
-  if (FH_.factorise(S_, rowsAS_, ptrAS_, valAS_)) return kStatusErrorFactorise;
+  Clock clock;
+  if (FH_.factorise(S_, kkt_.rowsAS, kkt_.ptrAS, kkt_.valAS))
+    return kStatusErrorFactorise;
   info_.factor_time += clock.stop();
   info_.factor_number++;
 
@@ -329,19 +103,14 @@ Int FactorHiGHSSolver::factorNE(const std::vector<double>& scaling) {
   // only execute factorisation if it has not been done yet
   assert(!this->valid_);
 
-  Clock clock;
-
-  // build matrix
-  buildNEvalues(scaling);
-  info_.matrix_time += clock.stop();
+  kkt_.buildNEvalues(scaling);
 
   // set static regularisation, since it may have changed
   FH_.setRegularisation(regul_.primal, regul_.dual);
 
-  // factorise
-  clock.start();
-  if (FH_.factorise(S_, rowsNE_, ptrNE_, valNE_)) return kStatusErrorFactorise;
-
+  Clock clock;
+  if (FH_.factorise(S_, kkt_.rowsNE, kkt_.ptrNE, kkt_.valNE))
+    return kStatusErrorFactorise;
   info_.factor_time += clock.stop();
   info_.factor_number++;
 
@@ -406,17 +175,25 @@ Int FactorHiGHSSolver::solveNE(const std::vector<double>& rhs,
 // =========================================================================
 
 Int FactorHiGHSSolver::setup() {
+  Clock clock;
+
   if (Int status = setNla()) return status;
   setParallel();
 
-  S_.print(log_, log_.debug(1));
+  if (!options_.timeless_log) {
+    std::stringstream log_stream;
+    log_stream << textline("Analyse time:") << fix(clock.stop(), 0, 2) << '\n';
+    logger_.print(log_stream.str().c_str());
+  }
+
+  S_.print(logger_, logger_.debug(1));
 
   // Warn about large memory consumption
   if (S_.storage() > kLargeStorageGB * 1024 * 1024 * 1024) {
-    log_.printw("Large amount of memory required\n");
+    logger_.printw("Large amount of memory required\n");
   }
 
-  log_.print("\n");
+  logger_.print("\n");
 
   return kStatusOk;
 }
@@ -431,17 +208,30 @@ Int FactorHiGHSSolver::chooseNla() {
   bool overflow_NE = false;
   bool overflow_AS = false;
 
+  const bool AS_possible = true;
+  const bool NE_possible = !(model_.nonSeparableQp() || model_.m() == 0);
+
+  const bool expect_AS_much_cheaper =
+      model_.nzNElb() > model_.nzAS() * kNzBoundsRatio;
+  const bool expect_NE_much_cheaper =
+      model_.nzAS() > model_.nzNEub() * kNzBoundsRatio;
+
+  const bool skip_AS = NE_possible && expect_NE_much_cheaper;
+  const bool skip_NE = AS_possible && expect_AS_much_cheaper;
+
+  bool allow_skip_AS = true;
+  bool allow_skip_NE = true;
+
   auto run_structure_NE = [&]() {
-    if ((model_.m() > kMinRowsForDensity &&
-         model_.maxColDensity() > kDenseColThresh) ||
-        model_.nonSeparableQp() || model_.m() == 0) {
+    if (!NE_possible || (skip_NE && allow_skip_NE)) {
       failure_NE = true;
+      logger_.printInfo("NE skipped\n");
     } else {
-      Int status = buildNEstructure();
+      Int status = kkt_.buildNEstructure();
       if (status) {
         failure_NE = true;
         if (status == kStatusOverflow) {
-          log_.printDevInfo("Integer overflow forming NE matrix\n");
+          logger_.printInfo("Integer overflow forming NE matrix\n");
           overflow_NE = true;
         }
         return;
@@ -456,19 +246,24 @@ Int FactorHiGHSSolver::chooseNla() {
   };
 
   auto run_analyse_AS = [&]() {
-    Int AS_status = buildASstructure();
-    if (!AS_status) AS_status = analyseAS(symb_AS);
-    if (AS_status) failure_AS = true;
-    if (AS_status == kStatusOverflow) {
-      log_.printDevInfo("Integer overflow forming AS matrix\n");
-      overflow_AS = true;
-    }
+    if (!AS_possible || (skip_AS && allow_skip_AS)) {
+      failure_AS = true;
+      logger_.printInfo("AS skipped\n");
+    } else {
+      Int AS_status = kkt_.buildASstructure();
+      if (!AS_status) AS_status = analyseAS(symb_AS);
+      if (AS_status) failure_AS = true;
+      if (AS_status == kStatusOverflow) {
+        logger_.printInfo("Integer overflow forming AS matrix\n");
+        overflow_AS = true;
+      }
 
-    // If NE has more nonzeros than the factor of AS, then it's likely that AS
-    // will be preferred, so stop computation of NE.
-    Int64 NE_nz_limit = symb_AS.nz() * kSymbNzMult;
-    if (failure_AS || NE_nz_limit > kHighsIInf) NE_nz_limit = kHighsIInf;
-    NE_nz_limit_.store(NE_nz_limit, std::memory_order_relaxed);
+      // If NE has more nonzeros than the factor of AS, then it's likely that AS
+      // will be preferred, so stop computation of NE.
+      Int64 NE_nz_limit = symb_AS.nz() * kSymbNzMult;
+      if (failure_AS || NE_nz_limit > kHighsIInf) NE_nz_limit = kHighsIInf;
+      kkt_.NE_nz_limit.store(NE_nz_limit, std::memory_order_relaxed);
+    }
   };
 
   // In parallel, run AS analyse and build NE structure. NE analyse runs only
@@ -483,7 +278,20 @@ Int FactorHiGHSSolver::chooseNla() {
     tg.spawn([&]() { run_structure_NE(); });
     tg.taskWait();
   }
+
+  // if NE was skipped but AS failed, use NE
+  if (skip_NE && failure_AS) {
+    allow_skip_NE = false;
+    run_structure_NE();
+  }
+
   run_analyse_NE();
+
+  // if AS was skipped but NE failed, use AS
+  if (skip_AS && failure_NE) {
+    allow_skip_AS = false;
+    run_analyse_AS();
+  }
 
   Int status = kStatusOk;
 
@@ -502,12 +310,12 @@ Int FactorHiGHSSolver::chooseNla() {
     else
       status = kStatusErrorAnalyse;
 
-    log_.printe("Both NE and AS failed analyse phase\n");
+    logger_.printe("Both NE and AS failed analyse phase\n");
   } else {
     // Total number of operations, given by dense flops and sparse indexing
     // operations, weighted with an empirical factor
     double ops_NE = symb_NE.flops() + symb_NE.spops() * kSpopsWeight;
-    double ops_AS = symb_AS.flops() + symb_AS.spops() + kSpopsWeight;
+    double ops_AS = symb_AS.flops() + symb_AS.spops() * kSpopsWeight;
 
     // Average size of supernodes
     double sn_size_NE = (double)symb_NE.size() / symb_NE.sn();
@@ -530,15 +338,15 @@ Int FactorHiGHSSolver::chooseNla() {
     }
   }
 
-  log_.print(log_stream);
+  logger_.print(log_stream.str().c_str());
 
   if (status == kStatusOk) {
     if (options_.nla == kHipoAugmentedString) {
       S_ = std::move(symb_AS);
-      freeNEmemory();
+      kkt_.freeNEmemory();
     } else {
       S_ = std::move(symb_NE);
-      freeASmemory();
+      kkt_.freeASmemory();
     }
   }
 
@@ -554,15 +362,14 @@ Int FactorHiGHSSolver::chooseOrdering(const std::vector<Int>& rows,
   // - If ordering is "amd", "metis", "rcm" run only the ordering requested.
   // - If ordering is "choose", run "amd", "metis", and choose the best.
 
-  Clock clock;
-
   // select which fill-reducing orderings should be tried
   std::vector<std::string> orderings_to_try;
   if (options_.ordering != kHighsChooseString)
     orderings_to_try.push_back(options_.ordering);
   else {
-    orderings_to_try.push_back("amd");
-    orderings_to_try.push_back("metis");
+    orderings_to_try.push_back(kHipoAmdString);
+    orderings_to_try.push_back(kHipoMetisString);
+
     // rcm is much worse in general, so no point in trying for now
   }
 
@@ -570,8 +377,8 @@ Int FactorHiGHSSolver::chooseOrdering(const std::vector<Int>& rows,
   std::vector<char> failure(orderings_to_try.size(), 0);
 
   if (nla == "NE") {
-    if (ptr.back() >= NE_nz_limit_.load(std::memory_order_relaxed)) {
-      log_.printDevInfo("NE interrupted\n");
+    if (ptr.back() >= kkt_.NE_nz_limit.load(std::memory_order_relaxed)) {
+      logger_.printInfo("NE interrupted\n");
       return kStatusErrorAnalyse;
     }
   }
@@ -588,67 +395,60 @@ Int FactorHiGHSSolver::chooseOrdering(const std::vector<Int>& rows,
   std::vector<Symbolic> symbolics(orderings_to_try.size(), S);
 
   auto run_ordering_and_analyse = [&](Int i) {
-    // compute ordering
+    logger_.printInfo("Running %s for %s\n", orderings_to_try[i].c_str(),
+                      nla.c_str());
+
     if (orderings_to_try[i] == kHipoMetisString) {
       idx_t options[METIS_NOPTIONS];
-      Highs_METIS_SetDefaultOptions(options);
+      HighsExternalDeps::metis::set_default_options(options);
       options[METIS_OPTION_SEED] = kMetisSeed;
 
-      // set logging of Metis depending on debug level
       options[METIS_OPTION_DBGLVL] = 0;
-      if (log_.debug(2))
-        options[METIS_OPTION_DBGLVL] = METIS_DBG_INFO | METIS_DBG_COARSEN;
 
       // no2hop improves the quality of ordering in general
       options[METIS_OPTION_NO2HOP] = 1;
 
-      log_.printDevInfo("Running Metis\n");
       std::vector<Int> iperm(n);
-
       Int status =
-          Highs_METIS_NodeND(&n, full_ptr.data(), full_rows.data(), NULL,
-                             options, permutations[i].data(), iperm.data());
+          HighsExternalDeps::metis::nodeND(
+              &n, full_ptr.data(), full_rows.data(), NULL, options,
+              permutations[i].data(), iperm.data());
+      if (status != METIS_OK) failure[i] = true;
 
-      log_.printDevInfo("Metis done\n");
-      if (status != METIS_OK) {
-        log_.printDevInfo("Error with Metis\n");
-        failure[i] = true;
-      }
     } else if (orderings_to_try[i] == kHipoAmdString) {
       double control[AMD_CONTROL];
-      Highs_amd_defaults(control);
+      HighsExternalDeps::amd::set_defaults(control);
       double info[AMD_INFO];
 
-      log_.printDevInfo("Running AMD\n");
-      Int status = Highs_amd_order(n, full_ptr.data(), full_rows.data(),
-                                   permutations[i].data(), control, info);
-      log_.printDevInfo("AMD done\n");
+      Int status =
+          HighsExternalDeps::amd::order(n, full_ptr.data(), full_rows.data(),
+                                        permutations[i].data(), control, info);
+      if (status != AMD_OK) failure[i] = true;
 
-      if (status != AMD_OK) {
-        log_.printDevInfo("Error with AMD\n");
-        failure[i] = true;
-      }
     } else if (orderings_to_try[i] == kHipoRcmString) {
-      log_.printDevInfo("Running RCM\n");
-      Int status = Highs_genrcm(n, full_ptr.back(), full_ptr.data(),
-                                full_rows.data(), permutations[i].data());
-      log_.printDevInfo("RCM done\n");
+      Int status = HighsExternalDeps::rcm::genrcm(
+          n, full_ptr.back(), full_ptr.data(),
+          full_rows.data(), permutations[i].data());
+      if (status != 0) failure[i] = true;
 
-      if (status != 0) {
-        log_.printDevInfo("Error with RCM\n");
-        failure[i] = true;
-      }
     } else {
       assert(1 == 0);
     }
 
-    if (failure[i]) return;
+    logger_.printInfo("Finished %s for %s\n", orderings_to_try[i].c_str(),
+                      nla.c_str());
+
+    if (failure[i]) {
+      logger_.printInfo("Error with %s for %s\n", orderings_to_try[i].c_str(),
+                        nla.c_str());
+      return;
+    }
 
     failure[i] = FH_.analyse(symbolics[i], rows, ptr, signs, permutations[i]);
 
-    if (failure[i] && log_.debug(2)) {
-      log_.print("Failed symbolic:");
-      symbolics[i].print(log_, true);
+    if (failure[i] && logger_.debug(2)) {
+      logger_.print("Failed symbolic:");
+      symbolics[i].print(logger_, true);
     }
   };
 
@@ -665,63 +465,59 @@ Int FactorHiGHSSolver::chooseOrdering(const std::vector<Int>& rows,
     if (!b) ++num_success;
   }
 
-  if (orderings_to_try.size() < 2) {
-    S = std::move(symbolics[0]);
-    ordering = orderings_to_try[0];
-
-  } else if (orderings_to_try.size() == 2) {
-    // if there's only one success, obvious choice
-    if (failure[0] && !failure[1]) {
-      S = std::move(symbolics[1]);
-      ordering = orderings_to_try[1];
-    } else if (!failure[0] && failure[1]) {
-      S = std::move(symbolics[0]);
-      ordering = orderings_to_try[0];
+  if (num_success > 0) {
+    for (Int i = 0; i < static_cast<Int>(orderings_to_try.size()); ++i) {
+      if (!failure[i])
+        logger_.printInfo(
+            "%20s for %s: %.2e %.2f\n", orderings_to_try[i].c_str(),
+            nla.c_str(), symbolics[i].flops(),
+            static_cast<double>(symbolics[i].size()) / symbolics[i].sn());
     }
 
-    else if (num_success > 1) {
-      // need to choose the better ordering
-
-      const double flops_0 = symbolics[0].flops();
-      const double flops_1 = symbolics[1].flops();
-      const double sn_avg_0 = symbolics[0].size() / symbolics[0].sn();
-      const double sn_avg_1 = symbolics[1].size() / symbolics[1].sn();
-      const double bytes_0 = symbolics[0].storage();
-      const double bytes_1 = symbolics[1].storage();
-
-      Int chosen = -1;
-
-      // selection rule:
-      // - if flops have a clear winner (+/- 20%), then choose it.
-      // - otherwise, choose the one with larger supernodes.
-
-      if (flops_0 > kFlopsOrderingThresh * flops_1)
-        chosen = 1;
-      else if (flops_1 > kFlopsOrderingThresh * flops_0)
-        chosen = 0;
-      else if (sn_avg_0 > sn_avg_1)
-        chosen = 0;
-      else
-        chosen = 1;
-
-      // fix selection if one or more require too much memory
-      const double bytes_thresh = kLargeStorageGB * 1024 * 1024 * 1024;
-      if (bytes_0 > bytes_thresh || bytes_1 > bytes_thresh) {
-        if (bytes_0 > bytes_1)
-          chosen = 1;
-        else
-          chosen = 0;
+    // find the ordering with best flops
+    double best_flops = kHighsInf;
+    for (Int i = 0; i < static_cast<Int>(orderings_to_try.size()); ++i) {
+      if (!failure[i] && symbolics[i].flops() < best_flops) {
+        best_flops = symbolics[i].flops();
       }
-
-      assert(chosen == 0 || chosen == 1);
-
-      S = std::move(symbolics[chosen]);
-      ordering = orderings_to_try[chosen];
     }
 
-  } else {
-    // only two orderings tried for now
-    assert(0 == 1);
+    // find orderings with flops within kFlopsOrderingThresh of the best
+    std::vector<Int> consider;
+    for (Int i = 0; i < static_cast<Int>(orderings_to_try.size()); ++i) {
+      if (!failure[i] &&
+          symbolics[i].flops() <= kFlopsOrderingThresh * best_flops) {
+        consider.push_back(i);
+      }
+    }
+
+    // among them, find the one with largest supernodes
+    double best_sn_size = 0.0;
+    Int chosen = -1;
+    for (Int i : consider) {
+      double sn_avg_size =
+          static_cast<double>(symbolics[i].size()) / symbolics[i].sn();
+      if (sn_avg_size > best_sn_size) {
+        best_sn_size = sn_avg_size;
+        chosen = i;
+      }
+    }
+
+    // fix selection if one or more require too much memory
+    const double bytes_thresh = kLargeStorageGB * 1024 * 1024 * 1024;
+    double best_memory = kHighsInf;
+    Int ind_best_memory = -1;
+    for (Int i = 0; i < static_cast<Int>(orderings_to_try.size()); ++i) {
+      if (symbolics[i].storage() < best_memory) {
+        best_memory = symbolics[i].storage();
+        ind_best_memory = i;
+      }
+    }
+
+    assert(chosen >= 0 && chosen < static_cast<Int>(orderings_to_try.size()));
+
+    S = std::move(symbolics[chosen]);
+    ordering = orderings_to_try[chosen];
   }
 
   return num_success > 0 ? kStatusOk : kStatusErrorAnalyse;
@@ -731,30 +527,30 @@ Int FactorHiGHSSolver::setNla() {
   std::stringstream log_stream;
 
   if (options_.nla == kHipoNormalEqString && model_.nonSeparableQp()) {
-    log_.printw("Normal equations not available for non-separable QP\n");
+    logger_.printw("Normal equations not available for non-separable QP\n");
     options_.nla = kHighsChooseString;
   }
 
   if (options_.nla == kHipoAugmentedString) {
-    Int status = buildASstructure();
+    Int status = kkt_.buildASstructure();
     if (!status) status = analyseAS(S_);
     if (status == kStatusOverflow) {
-      log_.printe("AS requested, integer overflow\n");
+      logger_.printe("AS requested, integer overflow\n");
       return kStatusOverflow;
     } else if (status) {
-      log_.printe("AS requested, failed analyse phase\n");
+      logger_.printe("AS requested, failed analyse phase\n");
       return kStatusErrorAnalyse;
     }
     log_stream << textline("Newton system:") << "AS requested\n";
 
   } else if (options_.nla == kHipoNormalEqString) {
-    Int status = buildNEstructure();
+    Int status = kkt_.buildNEstructure();
     if (!status) status = analyseNE(S_);
     if (status == kStatusOverflow) {
-      log_.printe("NE requested, integer overflow\n");
+      logger_.printe("NE requested, integer overflow\n");
       return kStatusOverflow;
     } else if (status) {
-      log_.printe("NE requested, failed analyse phase\n");
+      logger_.printe("NE requested, failed analyse phase\n");
       return kStatusErrorAnalyse;
     }
     log_stream << textline("Newton system:") << "NE requested\n";
@@ -765,12 +561,14 @@ Int FactorHiGHSSolver::setNla() {
   } else
     assert(1 == 0);
 
-  if (log_.debug(1))
+  if (logger_.debug(1))
     log_stream << textline("Ordering:")
                << (options_.nla == kHipoAugmentedString ? ordering_AS_
                                                         : ordering_NE_)
                << '\n';
-  log_.print(log_stream);
+  logger_.print(log_stream.str().c_str());
+
+  kkt_.iperm = S_.iperm();
 
   return kStatusOk;
 }
@@ -852,7 +650,7 @@ void FactorHiGHSSolver::setParallel() {
   } else
     assert(1 == 0);
 
-  log_.print(log_stream);
+  logger_.print(log_stream.str().c_str());
   S_.setParallel(parallel_tree, parallel_node);
 }
 
@@ -865,23 +663,6 @@ double FactorHiGHSSolver::spops() const { return S_.spops(); }
 double FactorHiGHSSolver::nz() const { return (double)S_.nz(); }
 void FactorHiGHSSolver::getReg(std::vector<double>& reg) {
   FH_.getRegularisation(reg);
-}
-
-void FactorHiGHSSolver::freeASmemory() {
-  // Give up memory used for AS.
-  freeVector(ptrAS_);
-  freeVector(rowsAS_);
-  freeVector(valAS_);
-}
-
-void FactorHiGHSSolver::freeNEmemory() {
-  // Give up memory used for NE.
-  freeVector(ptrNE_);
-  freeVector(rowsNE_);
-  freeVector(valNE_);
-  freeVector(ptrA_rw_);
-  freeVector(idxA_rw_);
-  freeVector(corr_A_);
 }
 
 }  // namespace hipo

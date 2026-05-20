@@ -19,6 +19,8 @@ void transpose(const std::vector<Int>& ptr, const std::vector<Int>& rows,
 void transpose(const std::vector<Int>& ptr, const std::vector<Int>& rows,
                const std::vector<double>& val, std::vector<Int>& ptrT,
                std::vector<Int>& rowsT, std::vector<double>& valT);
+void permuteSym(const std::vector<Int>& iperm, std::vector<Int>& ptr,
+                std::vector<Int>& rows, std::vector<double>& val, bool lower);
 void childrenLinkedList(const std::vector<Int>& parent, std::vector<Int>& head,
                         std::vector<Int>& next);
 void reverseLinkedList(std::vector<Int>& head, std::vector<Int>& next);

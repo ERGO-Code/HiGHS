@@ -187,7 +187,8 @@ bool HighsMipSolverData::solutionRowFeasible(
     HighsInt end = ARstart_[i + 1];
 
     for (HighsInt j = start; j != end; ++j)
-      c_double_rowactivity += HighsCDouble(solution[ARindex_[j]] * ARvalue_[j]);
+      c_double_rowactivity +=
+          static_cast<HighsCDouble>(solution[ARindex_[j]]) * ARvalue_[j];
 
     double rowactivity = double(c_double_rowactivity);
     if (rowactivity > mipsolver.rowUpper(i) + feastol) return false;
@@ -367,11 +368,6 @@ void HighsMipSolverData::startAnalyticCenterComputation(
         mip_ipm_solver == kHipoString;
     // Later still, pass mip_ipm_solver and take action on failure in
     // solveLp
-#ifndef HIPO
-    // Shouldn't be possible to choose HiPO if it's not in the build
-    assert(!use_hipo);
-    use_hipo = false;
-#endif
     const std::string ipm_solver = use_hipo ? kHipoString : kIpxString;
     ipm.setOptionValue("solver", ipm_solver);
     ipm.setOptionValue("ipm_iteration_limit", 200);
@@ -1176,7 +1172,7 @@ try_again:
       mipsolver.analysis_.mipTimerUpdate(sub_solver_call_time, valid_basis,
                                          use_presolve, analytic_centre);
     }
-    this->total_repair_lp_iterations =
+    this->total_repair_lp_iterations +=
         tmpSolver.getInfo().simplex_iteration_count;
     if (tmpSolver.getInfo().primal_solution_status == kSolutionStatusFeasible) {
       this->total_repair_lp_feasible++;
@@ -1269,7 +1265,6 @@ void HighsMipSolverData::performRestart() {
   mipsolver.pscostinit = &pscostinit;
   ++numRestarts;
   num_leaves_before_run = num_leaves;
-  num_nodes_before_run = num_nodes;
   num_nodes_before_run = num_nodes;
   total_lp_iterations_before_run = total_lp_iterations;
   heuristic_lp_iterations_before_run = heuristic_lp_iterations;

@@ -39,6 +39,7 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
       TestFactor.cpp
       TestFilereader.cpp
       TestHighsCDouble.cpp
+      TestHighsExternalDeps.cpp
       TestHighsGFkSolve.cpp
       TestHighsHash.cpp
       TestHighsHessian.cpp
@@ -106,6 +107,7 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
   add_executable(unit_tests ${TEST_SOURCES})
 
   set_target_properties(unit_tests PROPERTIES UNITY_BUILD OFF)
+
 
   if (UNIX)
       target_compile_options(unit_tests PRIVATE "-Wno-unused-variable")

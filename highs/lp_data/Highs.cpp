@@ -18,6 +18,7 @@
 #include <memory>
 #include <sstream>
 
+#include "HighsExternalDeps.h"
 #include "io/Filereader.h"
 #include "io/LoadOptions.h"
 #include "ipm/IpxWrapper.h"
@@ -375,7 +376,7 @@ HighsStatus Highs::passModel(HighsModel model) {
   // Ensure that any non-zero Hessian of dimension less than the
   // number of columns in the model is completed
   if (hessian.dim_) completeHessian(this->model_.lp_.num_col_, hessian);
-  //  if (model_.lp_.num_row_>0 && model_.lp_.num_col_>0)
+  // if (model_.lp_.num_row_>0 && model_.lp_.num_col_>0)
   //    writeLpMatrixPicToFile(options_, "LpMatrix", model_.lp_);
 
   // Clear solver status, solution, basis and info associated with any
@@ -491,7 +492,7 @@ HighsStatus Highs::passModel(
     assert(q_value != NULL);
     HighsHessian& hessian = model.hessian_;
     hessian.dim_ = num_col;
-    hessian.format_ = HessianFormat::kTriangular;
+    hessian.format_ = static_cast<HessianFormat>(q_format);
     hessian.start_.assign(q_start, q_start + num_col);
     hessian.start_.resize(num_col + 1);
     hessian.start_[num_col] = q_num_nz;
@@ -556,7 +557,7 @@ HighsStatus Highs::passHessian(const HighsInt dim, const HighsInt num_nz,
   HighsInt num_col = model_.lp_.num_col_;
   if (dim != num_col) return HighsStatus::kError;
   hessian.dim_ = num_col;
-  hessian.format_ = HessianFormat::kTriangular;
+  hessian.format_ = static_cast<HessianFormat>(format);
   if (dim > 0) {
     assert(start != NULL);
     hessian.start_.assign(start, start + num_col);
@@ -634,7 +635,7 @@ HighsStatus Highs::passRowName(const HighsInt row, const std::string& name) {
   }
   if (int(name.length()) <= 0) {
     highsLogUser(options_.log_options, HighsLogType::kError,
-                 "Cannot define empty column names\n");
+                 "Cannot define empty row names\n");
     return HighsStatus::kError;
   }
   this->model_.lp_.row_names_.resize(num_row);
@@ -837,6 +838,12 @@ HighsStatus Highs::presolve() {
     highsLogUser(log_options, HighsLogType::kError,
                  "Model contains infinite costs or semi-variables, so cannot "
                  "be presolved independently\n");
+    return HighsStatus::kError;
+  }
+  if (model_.isQp()) {
+    highsLogUser(
+        log_options, HighsLogType::kError,
+        "Model is a QP, for which no presolve techniques are implemented\n");
     return HighsStatus::kError;
   }
   HighsStatus return_status = HighsStatus::kOk;
@@ -1679,7 +1686,7 @@ HighsStatus Highs::calledOptimizeModel() {
       timer_.start(timer_.postsolve_clock);
       HighsPostsolveStatus postsolve_status = runPostsolve();
       timer_.stop(timer_.postsolve_clock);
-      this_postsolve_time += -timer_.read(timer_.postsolve_clock);
+      this_postsolve_time += timer_.read(timer_.postsolve_clock);
       presolve_.info_.postsolve_time = this_postsolve_time;
 
       if (postsolve_status == HighsPostsolveStatus::kSolutionRecovered) {
@@ -1912,6 +1919,7 @@ HighsStatus Highs::getStandardFormLp(HighsInt& num_col, HighsInt& num_row,
   if (!this->standard_form_valid_) {
     HighsStatus status = formStandardFormLp();
     assert(status == HighsStatus::kOk);
+    if (status != HighsStatus::kOk) return status;
   }
   num_col = this->standard_form_cost_.size();
   num_row = this->standard_form_rhs_.size();
@@ -2318,7 +2326,7 @@ HighsStatus Highs::getReducedColumn(const HighsInt col, double* col_vector,
 HighsStatus Highs::getKappa(double& kappa, const bool exact,
                             const bool report) const {
   if (!ekk_instance_.status_.has_invert)
-    return invertRequirementError("getBasisInverseRow");
+    return invertRequirementError("getKappa");
   kappa = ekk_instance_.computeBasisCondition(this->model_.lp_, exact, report);
   return HighsStatus::kOk;
 }
@@ -2699,7 +2707,7 @@ HighsStatus Highs::addVars(const HighsInt num_new_var, const double* lower,
   this->logHeader();
   HighsStatus return_status = HighsStatus::kOk;
   // Avoid touching entry [0] of a vector of size 0
-  if (num_new_var <= 0) returnFromHighs(return_status);
+  if (num_new_var <= 0) return returnFromHighs(return_status);
   std::vector<double> cost;
   cost.assign(num_new_var, 0);
   return addCols(num_new_var, cost.data(), lower, upper, 0, nullptr, nullptr,
@@ -3940,7 +3948,7 @@ HighsStatus Highs::completeSolutionFromDiscreteAssignment() {
 }
 
 // The method below runs calls solveLp for the given LP
-HighsStatus Highs::callSolveLp(HighsLp& lp, const string message) {
+HighsStatus Highs::callSolveLp(HighsLp& lp, const std::string& message) {
   HighsStatus return_status = HighsStatus::kOk;
 
   HighsLpSolverObject solver_object(lp, basis_, solution_, info_, ekk_instance_,
@@ -3960,8 +3968,9 @@ HighsStatus Highs::callSolveLp(HighsLp& lp, const string message) {
 HighsStatus Highs::callSolveQp() {
   // Check that the model is column-wise
   HighsLp& lp = model_.lp_;
-  HighsHessian& hessian = model_.hessian_;
   assert(model_.lp_.a_matrix_.isColwise());
+  HighsHessian& hessian = model_.hessian_;
+  assert(hessian.format_ == HessianFormat::kTriangular);
   if (hessian.dim_ > lp.num_col_) {
     highsLogDev(
         options_.log_options, HighsLogType::kError,
@@ -3976,34 +3985,17 @@ HighsStatus Highs::callSolveQp() {
   HighsStatus return_status;
 
   // Choose solver
-  bool use_hipo = false;
-  if (options_.solver == kHipoString || options_.solver == kIpmString) {
-#ifdef HIPO
-    use_hipo = true;
-#else
-    highsLogUser(options_.log_options, HighsLogType::kError,
-                 "HiPO is not available in this build.\n");
-    model_status_ = HighsModelStatus::kModelError;
-    solution_.value_valid = false;
-    solution_.dual_valid = false;
-    return HighsStatus::kError;
-#endif
-  } else
-    use_hipo = false;
+  bool use_hipo =
+      (options_.solver == kHipoString || options_.solver == kIpmString) &&
+      HighsExternalDeps::isAvailable();
 
   if (use_hipo) {
-#ifdef HIPO
     sub_solver_call_time_.num_call[kSubSolverHipo]++;
     sub_solver_call_time_.run_time[kSubSolverHipo] = -timer_.read();
     return_status = solveHipo(options_, timer_, lp, hessian, basis_, solution_,
                               model_status_, info_, callback_);
     sub_solver_call_time_.run_time[kSubSolverHipo] += timer_.read();
     if (return_status == HighsStatus::kError) return return_status;
-#else
-    // shouldn't be possible to reach here
-    assert(1 == 0);
-#endif
-
   } else {
     //
     // Run the QP solver
@@ -4582,8 +4574,8 @@ void Highs::setHighsModelStatusAndClearSolutionAndBasis(
   info_.valid = true;
 }
 
-HighsStatus Highs::openWriteFile(const string filename,
-                                 const string method_name, FILE*& file,
+HighsStatus Highs::openWriteFile(const std::string& filename,
+                                 const std::string& method_name, FILE*& file,
                                  HighsFileType& file_type) const {
   file_type = HighsFileType::kFull;
   if (filename == "") {

@@ -1,8 +1,6 @@
 #ifndef FACTORHIGHS_MY_CBLAS_H
 #define FACTORHIGHS_MY_CBLAS_H
 
-#include "IntConfig.h"
-
 // Provide definition for cblas functions
 // Based on Netlib implementation
 
@@ -77,6 +75,10 @@ void cblas_dtrsm(const enum CBLAS_ORDER order, const enum CBLAS_SIDE side,
                  const enum CBLAS_DIAG diag, const blasint m, const blasint n,
                  const double alpha, const double* a, const blasint lda,
                  double* b, const blasint ldb);
+
+#if defined(HIPO_USES_OPENBLAS)
+void openblas_set_num_threads(int num_threads);
+#endif
 
 #ifdef __cplusplus
 }

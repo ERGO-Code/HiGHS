@@ -10,21 +10,17 @@
 #include "DataCollector.h"
 #include "FactorHiGHSSettings.h"
 #include "ReturnValues.h"
-#include "amd/amd.h"
 #include "ipm/hipo/auxiliary/Auxiliary.h"
-#include "ipm/hipo/auxiliary/Log.h"
-#include "metis/metis.h"
-#include "rcm/rcm.h"
-
+#include "ipm/hipo/auxiliary/Logger.h"
 namespace hipo {
 
 const Int64 int32_limit = std::numeric_limits<int32_t>::max();
 const Int64 int64_limit = std::numeric_limits<int64_t>::max();
 
 Analyse::Analyse(const std::vector<Int>& rows, const std::vector<Int>& ptr,
-                 const std::vector<Int>& signs, Int nb, const Log* log,
+                 const std::vector<Int>& signs, Int nb, const Logger* logger,
                  DataCollector& data, const std::vector<Int>& perm)
-    : log_{log}, data_{data} {
+    : logger_{logger}, data_{data} {
   // Input the symmetric matrix to be analysed in CSC format.
   // rows contains the row indices.
   // ptr contains the starting points of each column.
@@ -67,67 +63,8 @@ Analyse::Analyse(const std::vector<Int>& rows, const std::vector<Int>& ptr,
 }
 
 void Analyse::permute(const std::vector<Int>& iperm) {
-  // Symmetric permutation of the upper triangular matrix based on inverse
-  // permutation iperm.
-  // The resulting matrix is upper triangular, regardless of the input matrix.
-
-  std::vector<Int> work(n_, 0);
-
-  // go through the columns to count the nonzeros
-  for (Int j = 0; j < n_; ++j) {
-    // get new index of column
-    const Int col = iperm[j];
-
-    // go through elements of column
-    for (Int el = ptr_upper_[j]; el < ptr_upper_[j + 1]; ++el) {
-      const Int i = rows_upper_[el];
-
-      // ignore potential entries in lower triangular part
-      if (i > j) continue;
-
-      // get new index of row
-      const Int row = iperm[i];
-
-      // since only upper triangular part is used, col is larger than row
-      Int actual_col = std::max(row, col);
-      ++work[actual_col];
-    }
-  }
-
-  std::vector<Int> new_ptr(n_ + 1);
-
-  // get column pointers by summing the count of nonzeros in each column.
-  // copy column pointers into work
-  counts2Ptr(new_ptr, work);
-
-  std::vector<Int> new_rows(new_ptr.back());
-
-  // go through the columns to assign row indices
-  for (Int j = 0; j < n_; ++j) {
-    // get new index of column
-    const Int col = iperm[j];
-
-    // go through elements of column
-    for (Int el = ptr_upper_[j]; el < ptr_upper_[j + 1]; ++el) {
-      const Int i = rows_upper_[el];
-
-      // ignore potential entries in lower triangular part
-      if (i > j) continue;
-
-      // get new index of row
-      const Int row = iperm[i];
-
-      // since only upper triangular part is used, column is larger than row
-      const Int actual_col = std::max(row, col);
-      const Int actual_row = std::min(row, col);
-
-      Int pos = work[actual_col]++;
-      new_rows[pos] = actual_row;
-    }
-  }
-
-  ptr_upper_ = std::move(new_ptr);
-  rows_upper_ = std::move(new_rows);
+  std::vector<double> empty_vals;
+  permuteSym(iperm, ptr_upper_, rows_upper_, empty_vals, false);
 }
 
 void Analyse::eTree() {
@@ -941,7 +878,7 @@ void Analyse::relativeIndClique() {
       } else if (consecutive_sums_[sn][i] == 1) {
         consecutive_sums_[sn][i] = consecutive_sums_[sn][i + 1] + 1;
       } else {
-        if (log_) log_->printDevInfo("Error in consecutiveSums\n");
+        if (logger_) logger_->printInfo("Error in consecutiveSums\n");
       }
     }
   }
@@ -1341,7 +1278,7 @@ Int Analyse::run(Symbolic& S) {
   }
 
   if (checkOverflow()) {
-    if (log_) log_->printe("Integer overflow in analyse phase\n");
+    if (logger_) logger_->printe("Integer overflow in analyse phase\n");
     return kRetIntOverflow;
   }
 
