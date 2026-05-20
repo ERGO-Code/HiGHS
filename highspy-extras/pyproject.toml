@@ -77,6 +77,7 @@ sdist.exclude = [
 
 [tool.scikit-build.cmake.define]
 BUILD_OPENBLAS = "ON"
+HIPO = "ON"
 
 [tool.cibuildwheel]
 build = "*"

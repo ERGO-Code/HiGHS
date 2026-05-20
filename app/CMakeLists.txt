@@ -11,7 +11,7 @@ if(FAST_BUILD)
     endif()
 
     add_executable(highs-bin)
-    target_sources(highs-bin PRIVATE RunHighs.cpp HighsRuntimeOptions.h ${win_version_file})
+    target_sources(highs-bin PRIVATE RunHighs.cpp HighsRuntimeOptions.h HighsAppExternalDeps.h ${win_version_file})
 
     target_include_directories(highs-bin PRIVATE
       $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/app>

@@ -3,6 +3,7 @@
 
 // Provide definition for cblas functions
 // Based on Netlib implementation
+#include <stdint.h>
 
 enum CBLAS_ORDER { CblasRowMajor = 101, CblasColMajor = 102 };
 enum CBLAS_TRANSPOSE {
@@ -79,6 +80,8 @@ void cblas_dtrsm(const enum CBLAS_ORDER order, const enum CBLAS_SIDE side,
 #if defined(HIPO_USES_OPENBLAS)
 void openblas_set_num_threads(int num_threads);
 #endif
+
+void highs_openblas_set_num_threads(int num_threads);
 
 #ifdef __cplusplus
 }

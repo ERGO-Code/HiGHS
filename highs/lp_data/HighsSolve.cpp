@@ -9,7 +9,7 @@
  * @brief Class-independent utilities for HiGHS
  */
 
-#include "HighsExternalDeps.h"
+#include "HighsExternalApi.h"
 #include "ipm/IpxWrapper.h"
 #include "lp_data/HighsSolutionDebug.h"
 #include "pdlp/CupdlpWrapper.h"
@@ -724,7 +724,7 @@ bool useHipo(const HighsOptions& options,
     use_hipo = false;
   } else if (specific_solver_option_value == kIpmString ||
              specific_solver_option_value == kHipoString || force_ipm) {
-    use_hipo = HighsExternalDeps::isAvailable();
+    use_hipo = HighsExternalApi::isAvailable<HighsExtras::hipo>();
   }
   if (options.run_centring) use_hipo = false;
   // Later decide between HiPO and IPX based on LP properties
