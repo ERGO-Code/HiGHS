@@ -26,7 +26,7 @@ class _HighsExtrasFeatureInfoRaw(ctypes.Structure):
     ]
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True)
 class HighsExtrasFeatureInfo:
     """Feature metadata for an external dependency."""
 
