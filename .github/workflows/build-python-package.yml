@@ -26,7 +26,7 @@ jobs:
       - name: Test highspy
         run: |
           python3 -m pip install pytest
-          python3 -m pytest $GITHUB_WORKSPACE
+          python3 -m pytest ./highspy
 
   build_sdist_mac:
     runs-on: macos-latest
