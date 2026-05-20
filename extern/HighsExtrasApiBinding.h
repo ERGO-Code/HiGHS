@@ -11,7 +11,10 @@
 #ifndef HIGHS_EXTRAS_API_BINDING_H_
 #define HIGHS_EXTRAS_API_BINDING_H_
 
+#include <stddef.h>
+
 #include <tuple>
+
 
 // provide metadata info for each feature
 struct HighsExtrasFeatureInfo {
