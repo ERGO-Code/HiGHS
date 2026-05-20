@@ -81,6 +81,7 @@ HighsMipSolverData::HighsMipSolverData(HighsMipSolver& mipsolver)
                         mipsolver.options_mip_->mip_pool_soft_limit, 0);
   getDomain().addCutpool(getCutPool());
   getDomain().addConflictPool(getConflictPool());
+  cliquetable.setAllowParallel(!mipsolver.submip);
 }
 
 std::string HighsMipSolverData::solutionSourceToString(

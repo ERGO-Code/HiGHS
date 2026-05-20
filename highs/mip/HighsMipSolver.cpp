@@ -1322,6 +1322,7 @@ void HighsMipSolver::setParallelLock(bool lock) const {
   for (HighsConflictPool& conflictpool : mipdata_->conflictpools) {
     conflictpool.setAgeLock(lock);
   }
+  mipdata_->cliquetable.setAllowParallel(!lock && !submip);
 }
 
 void HighsMipSolver::setGlobalSubSolverCallTime(

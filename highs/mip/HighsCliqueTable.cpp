@@ -484,7 +484,8 @@ void HighsCliqueTable::queryNeighbourhood(
 
   if (numCliques(v) == 0) return;
 
-  if (numEntries - sizeTwoCliques.size() * 2 < minEntriesForParallelism) {
+  if (!allowParallel ||
+      numEntries - sizeTwoCliques.size() * 2 < minEntriesForParallelism) {
     for (HighsInt i = 0; i < N; ++i) {
       if (haveCommonClique(numQueries, v, q[i])) neighbourhoodInds.push_back(i);
     }
@@ -2198,6 +2199,7 @@ void HighsCliqueTable::rebuild(
         numvars != oldnumvars ? false : cliques[i].equality, origin);
   }
 
+  newCliqueTable.setAllowParallel(allowParallel);
   *this = std::move(newCliqueTable);
 }
 
@@ -2234,5 +2236,7 @@ void HighsCliqueTable::buildFrom(const HighsLp* origModel,
 
   newCliqueTable.colsubstituted = init.colsubstituted;
   newCliqueTable.substitutions = init.substitutions;
+  // Currently assume buildFrom is always used for sub-mips
+  newCliqueTable.setAllowParallel(false);
   *this = std::move(newCliqueTable);
 }
