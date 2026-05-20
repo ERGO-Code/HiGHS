@@ -15,6 +15,8 @@
 
 using namespace HighsExtras;
 
+namespace {
+
 template <class Methods, class... Fn>
 void bind_api(HighsExtrasApi* api, const std::tuple<Fn...>& funcs) {
   static_assert(std::tuple_size<Methods>::value == sizeof...(Fn),
@@ -23,14 +25,38 @@ void bind_api(HighsExtrasApi* api, const std::tuple<Fn...>& funcs) {
       api->template as<Methods>(), funcs);
 }
 
+// Get feature name by index at runtime via template recursion
+template <size_t N>
+struct feature_name {
+  static const char* get(size_t index) {
+    return (index == N - 1) ? extras_feature<N - 1>::name()
+                            : feature_name<N - 1>::get(index);
+  }
+};
+
+template <>
+struct feature_name<0> {
+  static const char* get(size_t) { return nullptr; }
+};
+}  // namespace
+
 extern "C" {
 
 HIGHS_EXTRAS_API const char* HighsExtras_getVersion(void) {
   return HIGHS_EXTRAS_VERSION;
 }
 
+HIGHS_EXTRAS_API size_t HighsExtras_getFeatureCount(void) {
+  return feature_count<extrasAll>::value;
+}
+
+HIGHS_EXTRAS_API const char* HighsExtras_getFeatureName(size_t index) {
+  if (index >= feature_count<extrasAll>::value) return nullptr;
+  return feature_name<feature_count<extrasAll>::value>::get(index);
+}
+
 HIGHS_EXTRAS_API const HighsExtrasFeatureInfo* HighsExtras_getFeatureInfo() {
-  return extras_feature_info;
+  return extras_family::getInfo();
 }
 
 HIGHS_EXTRAS_API bool HighsExtras_getApi(HighsExtrasApi* api) {
