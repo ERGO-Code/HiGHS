@@ -160,7 +160,7 @@ bool HighsPrimalHeuristics::solveSubMip(
   printf(
       "\nHighsPrimalHeuristics::solveSubMip Before run() for %sMIP at depth "
       "%2d on thread %2d\n",
-      mipsolver.submip ? "sub-" : "", int(mipsolver.submip_level),
+      mipsolver.submip ? "sub-" : "    ", int(mipsolver.submip_level),
       int(mipsolver.profiling_->myThread()));
   if (!mipsolver.submip) mipsolver.profiling_->start(kSubSolverSubMip);
   // Ensure that sub-solver call time data accumulate in the sub-MIP record
@@ -169,7 +169,7 @@ bool HighsPrimalHeuristics::solveSubMip(
   printf(
       "HighsPrimalHeuristics::solveSubMip After  run() for %sMIP at depth %2d "
       "on thread %2d\n\n",
-      mipsolver.submip ? "sub-" : "", int(mipsolver.submip_level),
+      mipsolver.submip ? "sub-" : "    ", int(mipsolver.submip_level),
       int(mipsolver.profiling_->myThread()));
   // Ensure that further sub-solver call time data accumulate in the
   // MIP or sub-MIP record, according to whether the calling MIP is a
