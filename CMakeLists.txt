@@ -384,8 +384,14 @@ if (BUILD_CXX)
             "IPO / LTO: disabled by default when building a static library; "
             "set CMAKE_INTERPROCEDURAL_OPTIMIZATION=ON to enable")
   else()
-    set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
-    message(STATUS "IPO / LTO: enabled")
+    if(EXISTS "/etc/alpine-release")
+      # LTO is known to cause issues with fortified functions on Alpine (musl)
+      set(CMAKE_INTERPROCEDURAL_OPTIMIZATION FALSE)
+      message(STATUS "IPO / LTO: disabled on Alpine to avoid conflicts with fortified functions")
+    else()
+      set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
+      message(STATUS "IPO / LTO: enabled")
+    endif()
   endif()
   if (CUPDLP_GPU AND CMAKE_INTERPROCEDURAL_OPTIMIZATION)
       set(CMAKE_INTERPROCEDURAL_OPTIMIZATION FALSE)
@@ -569,13 +575,7 @@ if(ZLIB AND NOT TARGET ZLIB::ZLIB)
   find_package(ZLIB 1.2.3)
 endif()
 
-if (CMAKE_INSTALL_DOCDIR STREQUAL "" OR NOT BUILD_CXX)
-  install(FILES
-      README.md
-      LICENSE.txt
-      THIRD_PARTY_NOTICES.md
-      DESTINATION .)
-else()
+if (NOT CMAKE_INSTALL_DOCDIR STREQUAL "" AND BUILD_CXX)
   install(FILES
       README.md
       LICENSE.txt

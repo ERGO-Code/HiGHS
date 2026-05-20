@@ -931,6 +931,7 @@ class HighsPostsolveStack {
           DuplicateColumn reduction;
           reductionValues.pop(reduction);
           reduction.undo(options, solution, basis);
+          break;
         }
         case ReductionType::kSlackColSubstitution: {
           SlackColSubstitution reduction;

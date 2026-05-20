@@ -12,13 +12,17 @@ version = "1.14.0.dev1"
 description = "A thin set of pybind11 wrappers to HiGHS"
 authors = [{ name = "HiGHS developers", email = "highsopt@gmail.com" }]
 readme = "README.md"
+license = "MIT"
+license-files = [
+  "LICENSE.txt",
+  "THIRD_PARTY_NOTICES.md",
+]
 
 requires-python = ">=3.8"
 dependencies = ["numpy", "typing_extensions; python_version < '3.10'"]
 
 classifiers = [
   # "Development Status :: 4 - Beta",
-  "License :: OSI Approved :: MIT License",
   "Programming Language :: Python :: 3 :: Only",
   "Programming Language :: Python :: 3.8",
   "Programming Language :: Python :: 3.9",
@@ -53,8 +57,6 @@ sdist.include = [
   "highspy/_core/*.pyi",
   "tests/test_highspy.py",
   "Version.txt",
-  "LICENSE",
-  "README.md",
   "highs/HConfig.h.in",
   "highs",
   "external",

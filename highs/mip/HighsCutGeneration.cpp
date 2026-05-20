@@ -129,8 +129,6 @@ bool HighsCutGeneration::determineCover(bool lpSol) {
 }
 
 void HighsCutGeneration::separateLiftedKnapsackCover() {
-  const double feastol = lpRelaxation.getMipSolver().mipdata_->feastol;
-
   const HighsInt coversize = cover.size();
 
   std::vector<double> S;
@@ -435,7 +433,7 @@ bool HighsCutGeneration::separateLiftedMixedIntegerCover() {
   auto gamma_l = [&](double z) {
     assert(z > 0);
     for (HighsInt i = 0; i < cplussize; ++i) {
-      HighsInt upperi = upper[cover[i]];
+      HighsInt upperi = static_cast<HighsInt>(upper[cover[i]]);
 
       for (HighsInt h = 0; h <= upperi; ++h) {
         HighsCDouble mih = m[i] + h * a[i];
@@ -958,15 +956,6 @@ bool HighsCutGeneration::preprocessBaseInequality(bool& hasUnboundedInts,
       }
 
       hasContinuous = true;
-      // if (lpRelaxation.isColIntegral(inds[i]))
-      //   printf("vals[i] = %g  upper[i] = %g\n", vals[i], upper[i]);
-
-      if (vals[i] > 0) {
-        if (upper[i] == kHighsInf)
-          maxact = kHighsInf;
-        else
-          maxact += vals[i] * upper[i];
-      }
     } else {
       if (upper[i] == kHighsInf) {
         hasUnboundedInts = true;
@@ -1399,10 +1388,10 @@ bool HighsCutGeneration::tryGenerateCut(std::vector<HighsInt>& inds_,
     return cmirCutGenerationHeuristic(minEfficacy, onlyInitialCMIRScale);
 
   // 0. Save data before determining cover and applying lifting functions
-  std::vector<double> tmpVals(vals, vals + rowlen);
-  std::vector<HighsInt> tmpInds(inds, inds + rowlen);
-  std::vector<uint8_t> tmpComplementation(complementation);
-  std::vector<double> tmpSolval(solval);
+  tmpVals.assign(vals, vals + rowlen);
+  tmpInds.assign(inds, inds + rowlen);
+  tmpComplementation = complementation;
+  tmpSolval = solval;
   HighsCDouble tmpRhs = rhs;
 
   // 1. Determine a cover, cover does not need to be minimal as neither of

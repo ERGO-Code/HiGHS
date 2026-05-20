@@ -209,14 +209,11 @@ restart:
     }
     // End of pre-root-node heuristics
     if (analysis_.analyse_mip_time && !submip)
-      if (analysis_.analyse_mip_time & !submip)
-        highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
-                     "MIP-Timing: %11.2g - starting evaluate root node\n",
-                     timer_.read());
+      highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
+                   "MIP-Timing: %11.2g - starting evaluate root node\n",
+                   timer_.read());
     analysis_.mipTimerStart(kMipClockEvaluateRootNode);
-
     mipdata_->evaluateRootNode(master_worker);
-
     analysis_.mipTimerStop(kMipClockEvaluateRootNode);
     if (this->terminate()) {
       modelstatus_ = this->terminationStatus();

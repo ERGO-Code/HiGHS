@@ -54,6 +54,11 @@ class HighsCutGeneration {
   std::vector<HighsInt> integerinds;
   std::vector<double> deltas;
 
+  std::vector<double> tmpVals;
+  std::vector<HighsInt> tmpInds;
+  std::vector<uint8_t> tmpComplementation;
+  std::vector<double> tmpSolval;
+
   bool determineCover(bool lpSol = true);
 
   void separateLiftedKnapsackCover();
