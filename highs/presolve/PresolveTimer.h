@@ -146,13 +146,16 @@ class PresolveTimer {
         //	kPresolveClock@
     };
     reportPresolveClockList("PresolveCore_", presolve_clock_list,
-                            presolve_timer_clock, kPresolveClockPresolve, 0.1);
-    csvPresolveClockList("GrepPresolveCore_", model_name, presolve_clock_list,
-                         presolve_timer_clock, kPresolveClockPresolve, true,
-                         true);
-    csvPresolveClockList("GrepPresolveCore_", model_name, presolve_clock_list,
-                         presolve_timer_clock, kPresolveClockPresolve, false,
-                         true);
+                            presolve_timer_clock, kPresolveClockPresolve, 0);
+    const bool csv_output = false;
+    if (csv_output) {
+      csvPresolveClockList("GrepPresolveCore_", model_name, presolve_clock_list,
+			   presolve_timer_clock, kPresolveClockPresolve, true,
+			   true);
+      csvPresolveClockList("GrepPresolveCore_", model_name, presolve_clock_list,
+			   presolve_timer_clock, kPresolveClockPresolve, false,
+			   true);
+    }
   };
 };
 

@@ -71,6 +71,7 @@ void HPresolve::debugPrintRow(HighsPostsolveStack& postsolve_stack,
 bool HPresolve::okSetInput(HighsLp& model_, const HighsOptions& options_,
                            const HighsInt presolve_reduction_limit,
                            HighsTimer* timer) {
+  timer->logRunTime("HPresolve::okSetInput 0");
   model = &model_;
   options = &options_;
   this->timer = timer;
@@ -101,6 +102,7 @@ bool HPresolve::okSetInput(HighsLp& model_, const HighsOptions& options_,
   } else
     primal_feastol = options->mip_feasibility_tolerance;
 
+  timer->logRunTime("HPresolve::okSetInput 1");
   if (model_.a_matrix_.isRowwise()) {
     // Does this even happen?
     assert(model_.a_matrix_.isColwise());
@@ -113,6 +115,7 @@ bool HPresolve::okSetInput(HighsLp& model_, const HighsOptions& options_,
       return false;
   }
 
+  timer->logRunTime("HPresolve::okSetInput 2");
   // initialize everything as changed, but do not add all indices
   // since the first thing presolve will do is a scan for easy reductions
   // of each row and column and set the flag of processed columns to false
@@ -127,6 +130,7 @@ bool HPresolve::okSetInput(HighsLp& model_, const HighsOptions& options_,
   numDeletedCols = 0;
   numDeletedRows = 0;
   // initialize substitution opportunities
+  timer->logRunTime("HPresolve::okSetInput 3");
   for (HighsInt row = 0; row != model->num_row_; ++row) {
     if (!isDualImpliedFree(row)) continue;
     for (const HighsSliceNonzero& nonzero : getRowVector(row)) {
@@ -134,6 +138,7 @@ bool HPresolve::okSetInput(HighsLp& model_, const HighsOptions& options_,
         substitutionOpportunities.emplace_back(row, nonzero.index());
     }
   }
+  timer->logRunTime("HPresolve::okSetInput 4");
   // Take value passed in as reduction limit, allowing different
   // values to be used for initial presolve, and after restart
   reductionLimit =
@@ -144,6 +149,7 @@ bool HPresolve::okSetInput(HighsLp& model_, const HighsOptions& options_,
                 "HPresolve::okSetInput reductionLimit = %d\n",
                 static_cast<int>(reductionLimit));
   }
+  timer->logRunTime("HPresolve::okSetInput 1");
   return true;
 }
 
@@ -5810,14 +5816,16 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
 
   const bool silent = silentLog();
   if (options->presolve != kHighsOffString) {
-    if (!silent)
+    if (!silent) {
       highsLogUser(options->log_options, HighsLogType::kInfo,
                    "Presolving model\n");
+    }
   }
   // Set up the logic to allow presolve rules, and logging for their
   // effectiveness
   analysis_.setup(this->model, this->options, this->numDeletedRows,
                   this->numDeletedCols, silent, this->timer);
+  this->timer->logRunTime("HPresolve::presolve Start");
   analysis_.presolveTimerStart(kPresolveClockPresolve);
   if (options->presolve != kHighsOffString) {
     if (mipsolver) mipsolver->mipdata_->cliquetable.setPresolveFlag(true);
@@ -6047,6 +6055,7 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
   if (mipsolver != nullptr) HPRESOLVE_CHECKED_CALL(scaleMIP(postsolve_stack));
 
   analysis_.presolveTimerStop(kPresolveClockPresolve);
+  this->timer->logRunTime("HPresolve::presolve Stop");
   analysis_.reportPresolveTimer();
   // analysePresolveRuleLog() should return true - no errors
   assert(analysis_.analysePresolveRuleLog());
@@ -6625,7 +6634,7 @@ HPresolve::Result HPresolve::removeDependentEquations(
         options->log_options, HighsLogType::kInfo,
         "Search of %d equation%s with %d / %d variable%s and %d nonzero%s "
         "removed %d dependent equation%s and %d nonzero%s "
-        "in %.2fs with bounds in (%.2fs, %.2fs) and limit = %.2fs)",
+        "in %.2fs with bounds in (%.2fs, %.2fs) and limit = %.2fs",
         // clang-format off
         static_cast<int>(num_equations), highsIntToPlural(num_equations).c_str(),
         static_cast<int>(num_variables),
