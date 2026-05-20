@@ -6371,7 +6371,7 @@ HighsModelStatus HPresolve::run(HighsPostsolveStack& postsolve_stack) {
     this->analysis_.presolveTimerStop(kPresolveClockPresolve);
     this->analysis_.reportPresolveTimer();
   };
-    
+
   switch (presolve(postsolve_stack)) {
     case Result::kStopped:
     case Result::kOk:
@@ -6388,7 +6388,6 @@ HighsModelStatus HPresolve::run(HighsPostsolveStack& postsolve_stack) {
       return HighsModelStatus::kUnboundedOrInfeasible;
   }
   reportReductions();
-  printf("HPresolve::run\n");
   shrinkProblem(postsolve_stack);
 
   if (mipsolver != nullptr) {
@@ -6441,7 +6440,6 @@ HighsModelStatus HPresolve::run(HighsPostsolveStack& postsolve_stack) {
   toCSC(model->a_matrix_.value_, model->a_matrix_.index_,
         model->a_matrix_.start_);
 
-  printf("HPresolve::run reportProfiling()\n");
   reportProfiling();
 
   if (model->num_col_ == 0) {

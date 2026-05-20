@@ -232,19 +232,20 @@ class HighsTimer {
     clock_time[i_clock] += time;
   }
 
+  /*
   void logRunTime(const char* message) const {
     if (!printf_flag) return;
     double time = this->read();
-    std::string time_string = std::to_string(time);
-      /*
+    std::string time_string =
+    // std::to_string(time);
 #ifndef NDEBUG
       std::to_string(time);
 #else
       std::to_string(static_cast<int>(time));
 #endif
-      */
     printf("%-30s: %s\n", message, time_string.c_str());
   }
+      */
 
   /**
    * @brief Report timing information for the clock indices in the list

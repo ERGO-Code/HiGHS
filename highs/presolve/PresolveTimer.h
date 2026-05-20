@@ -48,9 +48,11 @@ class PresolveTimer {
     clock.resize(kNumPresolveClock);
     clock[kPresolveClockTotal] = 0;
     clock[kPresolveClockPresolve] = timer_pointer->clock_def("Presolve");
-    clock[kPresolveClockSetupResize] = timer_pointer->clock_def("Setup: resize");
+    clock[kPresolveClockSetupResize] =
+        timer_pointer->clock_def("Setup: resize");
     clock[kPresolveClockSetupToCsc] = timer_pointer->clock_def("Setup: to CSC");
-    clock[kPresolveClockSetupInitialSubstitution] = timer_pointer->clock_def("Setup: initial substitution");
+    clock[kPresolveClockSetupInitialSubstitution] =
+        timer_pointer->clock_def("Setup: initial substitution");
     clock[kPresolveClockInitial] = timer_pointer->clock_def("Initial");
     clock[kPresolveClockInitialRow] = timer_pointer->clock_def("Initial row");
     clock[kPresolveClockInitialCol] = timer_pointer->clock_def("Initial col");
@@ -139,9 +141,8 @@ class PresolveTimer {
   void reportPresolveCoreClock(const std::string& model_name,
                                const HighsTimerClock& presolve_timer_clock) {
     const std::vector<HighsInt> presolve_clock_list{
-      kPresolveClockSetupResize,
-      kPresolveClockSetupToCsc,
-      kPresolveClockSetupInitialSubstitution,
+        kPresolveClockSetupResize, kPresolveClockSetupToCsc,
+        kPresolveClockSetupInitialSubstitution,
         //      kPresolveClockInitial,
         kPresolveClockInitialRow, kPresolveClockInitialCol,
         //	kPresolveClockFastLoop,
@@ -159,11 +160,11 @@ class PresolveTimer {
     const bool csv_output = false;
     if (csv_output) {
       csvPresolveClockList("GrepPresolveCore_", model_name, presolve_clock_list,
-			   presolve_timer_clock, kPresolveClockPresolve, true,
-			   true);
+                           presolve_timer_clock, kPresolveClockPresolve, true,
+                           true);
       csvPresolveClockList("GrepPresolveCore_", model_name, presolve_clock_list,
-			   presolve_timer_clock, kPresolveClockPresolve, false,
-			   true);
+                           presolve_timer_clock, kPresolveClockPresolve, false,
+                           true);
     }
   };
 };
