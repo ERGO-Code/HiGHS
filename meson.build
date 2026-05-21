@@ -162,6 +162,7 @@ endif
 # Include Sources
 _incdirs += include_directories([
   'extern/',
+  'extern/catch',
   'extern/pdqsort/',
 ])
 

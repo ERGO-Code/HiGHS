@@ -18,7 +18,7 @@
 #include <memory>
 #include <sstream>
 
-#include "HighsExternalDeps.h"
+#include "HighsExternalApi.h"
 #include "io/Filereader.h"
 #include "io/LoadOptions.h"
 #include "ipm/IpxWrapper.h"
@@ -50,6 +50,10 @@ const char* highsGithash() { return HIGHS_GITHASH; }
 const char* highsCompilationDate() { return "deprecated"; }
 
 Highs::Highs() : callback_(this) {}
+
+std::string Highs::getThirdPartyNotice() const {
+  return HighsExternalApi::getThirdPartyNotice<HighsExtras::all>();
+}
 
 HighsStatus Highs::clear() {
   resetOptions();
@@ -635,7 +639,7 @@ HighsStatus Highs::passRowName(const HighsInt row, const std::string& name) {
   }
   if (int(name.length()) <= 0) {
     highsLogUser(options_.log_options, HighsLogType::kError,
-                 "Cannot define empty column names\n");
+                 "Cannot define empty row names\n");
     return HighsStatus::kError;
   }
   this->model_.lp_.row_names_.resize(num_row);
@@ -1666,7 +1670,7 @@ HighsStatus Highs::calledOptimizeModel() {
       timer_.start(timer_.postsolve_clock);
       HighsPostsolveStatus postsolve_status = runPostsolve();
       timer_.stop(timer_.postsolve_clock);
-      this_postsolve_time += -timer_.read(timer_.postsolve_clock);
+      this_postsolve_time += timer_.read(timer_.postsolve_clock);
       presolve_.info_.postsolve_time = this_postsolve_time;
 
       if (postsolve_status == HighsPostsolveStatus::kSolutionRecovered) {
@@ -1899,6 +1903,7 @@ HighsStatus Highs::getStandardFormLp(HighsInt& num_col, HighsInt& num_row,
   if (!this->standard_form_valid_) {
     HighsStatus status = formStandardFormLp();
     assert(status == HighsStatus::kOk);
+    if (status != HighsStatus::kOk) return status;
   }
   num_col = this->standard_form_cost_.size();
   num_row = this->standard_form_rhs_.size();
@@ -2314,7 +2319,7 @@ HighsStatus Highs::getReducedColumn(const HighsInt col, double* col_vector,
 HighsStatus Highs::getKappa(double& kappa, const bool exact,
                             const bool report) const {
   if (!ekk_instance_.status_.has_invert)
-    return invertRequirementError("getBasisInverseRow");
+    return invertRequirementError("getKappa");
   kappa = ekk_instance_.computeBasisCondition(this->model_.lp_, exact, report);
   return HighsStatus::kOk;
 }
@@ -2704,7 +2709,7 @@ HighsStatus Highs::addVars(const HighsInt num_new_var, const double* lower,
   this->logHeader();
   HighsStatus return_status = HighsStatus::kOk;
   // Avoid touching entry [0] of a vector of size 0
-  if (num_new_var <= 0) returnFromHighs(return_status);
+  if (num_new_var <= 0) return returnFromHighs(return_status);
   std::vector<double> cost;
   cost.assign(num_new_var, 0);
   return addCols(num_new_var, cost.data(), lower, upper, 0, nullptr, nullptr,
@@ -3945,7 +3950,7 @@ HighsStatus Highs::completeSolutionFromDiscreteAssignment() {
 }
 
 // The method below runs calls solveLp for the given LP
-HighsStatus Highs::callSolveLp(HighsLp& lp, const string message) {
+HighsStatus Highs::callSolveLp(HighsLp& lp, const std::string& message) {
   HighsStatus return_status = HighsStatus::kOk;
 
   HighsLpSolverObject solver_object(lp, basis_, solution_, info_, ekk_instance_,
@@ -3984,7 +3989,7 @@ HighsStatus Highs::callSolveQp() {
   // Choose solver
   bool use_hipo =
       (options_.solver == kHipoString || options_.solver == kIpmString) &&
-      HighsExternalDeps::isAvailable();
+      HighsExternalApi::isAvailable<HighsExtras::hipo>();
 
   if (use_hipo) {
     if (this->profiling_) this->profiling_->start(kSubSolverHipo);
@@ -4568,8 +4573,8 @@ void Highs::setHighsModelStatusAndClearSolutionAndBasis(
   info_.valid = true;
 }
 
-HighsStatus Highs::openWriteFile(const string filename,
-                                 const string method_name, FILE*& file,
+HighsStatus Highs::openWriteFile(const std::string& filename,
+                                 const std::string& method_name, FILE*& file,
                                  HighsFileType& file_type) const {
   file_type = HighsFileType::kFull;
   if (filename == "") {

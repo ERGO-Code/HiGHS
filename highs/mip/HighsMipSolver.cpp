@@ -214,9 +214,7 @@ restart:
                    "MIP-Timing: %11.2g - starting evaluate root node\n",
                    timer_.read());
     profiling_->start(kMipClockEvaluateRootNode);
-
     mipdata_->evaluateRootNode(master_worker);
-
     profiling_->stop(kMipClockEvaluateRootNode);
     if (this->terminate()) {
       modelstatus_ = this->terminationStatus();
@@ -1332,6 +1330,7 @@ void HighsMipSolver::setParallelLock(bool lock) const {
   for (HighsConflictPool& conflictpool : mipdata_->conflictpools) {
     conflictpool.setAgeLock(lock);
   }
+  mipdata_->cliquetable.setAllowParallel(!lock && !submip);
 }
 
 void HighsMipSolver::setProfiling(HighsProfiling* profiling) {

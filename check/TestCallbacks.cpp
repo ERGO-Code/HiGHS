@@ -4,7 +4,7 @@
 
 #include "HCheckConfig.h"
 #include "Highs.h"
-#include "HighsExternalDeps.h"
+#include "HighsExternalApi.h"
 #include "catch.hpp"
 #include "lp_data/HConst.h"
 #include "lp_data/HighsCallback.h"
@@ -408,7 +408,7 @@ TEST_CASE("highs-callback-ipm-interrupt", "[highs_callback]") {
 
   highs.readModel(filename);
 
-  if (HighsExternalDeps::isAvailable()) {
+  if (HighsExternalApi::isAvailable<HighsExtras::hipo>()) {
     REQUIRE(highs.setOptionValue("solver", kHipoString) == HighsStatus::kOk);
     ;
     REQUIRE(highs.run() == HighsStatus::kWarning);

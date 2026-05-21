@@ -19,10 +19,7 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
 option(HIGHS_VCPKG "Vcpkg integration: " OFF)
 message(STATUS "HIGHS_VCPKG: ${HIGHS_VCPKG}")
-if (HIGHS_VCPKG)
-  include(vcpkg) # vcpkg must be configured BEFORE project()
-endif()
-
+include(vcpkg)
 include(set-version)
 set_version(VERSION ${CMAKE_CURRENT_SOURCE_DIR})
 
@@ -384,8 +381,14 @@ if (BUILD_CXX)
             "IPO / LTO: disabled by default when building a static library; "
             "set CMAKE_INTERPROCEDURAL_OPTIMIZATION=ON to enable")
   else()
-    set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
-    message(STATUS "IPO / LTO: enabled")
+    if(EXISTS "/etc/alpine-release")
+      # LTO is known to cause issues with fortified functions on Alpine (musl)
+      set(CMAKE_INTERPROCEDURAL_OPTIMIZATION FALSE)
+      message(STATUS "IPO / LTO: disabled on Alpine to avoid conflicts with fortified functions")
+    else()
+      set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
+      message(STATUS "IPO / LTO: enabled")
+    endif()
   endif()
   if (CUPDLP_GPU AND CMAKE_INTERPROCEDURAL_OPTIMIZATION)
       set(CMAKE_INTERPROCEDURAL_OPTIMIZATION FALSE)
@@ -569,13 +572,7 @@ if(ZLIB AND NOT TARGET ZLIB::ZLIB)
   find_package(ZLIB 1.2.3)
 endif()
 
-if (CMAKE_INSTALL_DOCDIR STREQUAL "" OR NOT BUILD_CXX)
-  install(FILES
-      README.md
-      LICENSE.txt
-      THIRD_PARTY_NOTICES.md
-      DESTINATION .)
-else()
+if (NOT CMAKE_INSTALL_DOCDIR STREQUAL "" AND BUILD_CXX)
   install(FILES
       README.md
       LICENSE.txt
@@ -899,12 +896,10 @@ else(FAST_BUILD)
 
 endif()
 
-if (HIPO)
-  if (HIPO_PYTHON)
-    add_subdirectory(highspy)
-  else()
-    add_subdirectory(extern)
-  endif()
+if (HIPO_PYTHON)
+  add_subdirectory(highspy)
+else()
+  add_subdirectory(extern)
 endif()
 
 # Prevent nested directory structure in the archive
