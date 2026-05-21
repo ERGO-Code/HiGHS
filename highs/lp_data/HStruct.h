@@ -178,7 +178,7 @@ struct HighsSubSolverCallTime {
   HighsInt mip_clock_running;
   std::vector<double> submip_start_time;
   std::vector<HighsInt> submip_clock_running;
-  std::vector<bool> submip;
+  std::vector<uint8_t> submip;
   std::vector<double> start_time;
   std::vector<HighsInt> clock_running;
   std::vector<std::string> name;
