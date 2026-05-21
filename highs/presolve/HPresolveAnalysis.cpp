@@ -44,7 +44,7 @@ void HPresolveAnalysis::setup(const HighsLp* model_,
          rule_type < kPresolveRuleCount; rule_type++) {
       // This is a rule that can be switched off
       highsLogUser(options->log_options, HighsLogType::kInfo,
-                   "   Rule %2d (set bit %2d = %5d): %s\n", int(rule_type),
+                   "   Rule %2d (set bit %2d = %6d): %s\n", int(rule_type),
                    int(rule_type), int(bit),
                    utilPresolveRuleTypeToString(rule_type).c_str());
       bit *= 2;
@@ -69,7 +69,7 @@ void HPresolveAnalysis::setup(const HighsLp* model_,
         allow_rule_[rule_type] = allow;
         if (!allow && !silent)
           highsLogUser(options->log_options, HighsLogType::kInfo,
-                       "   Rule %2d (set bit %2d = %5d): %s\n", int(rule_type),
+                       "   Rule %2d (set bit %2d = %6d): %s\n", int(rule_type),
                        int(rule_type), int(bit),
                        utilPresolveRuleTypeToString(rule_type).c_str());
       } else if (!allow && !silent) {
