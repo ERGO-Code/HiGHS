@@ -421,6 +421,7 @@ struct HighsOptionsStruct {
   bool lp_presolve_requires_basis_postsolve;
   bool mps_parser_type_free;
   bool use_warm_start;
+  bool presolve_light;
   HighsInt keep_n_rows;
   HighsInt cost_scale_factor;
   HighsInt allowed_matrix_scale_factor;
@@ -588,6 +589,7 @@ struct HighsOptionsStruct {
         lp_presolve_requires_basis_postsolve(false),
         mps_parser_type_free(false),
         use_warm_start(true),
+        presolve_light(false),
         keep_n_rows(0),
         cost_scale_factor(0),
         allowed_matrix_scale_factor(0),
@@ -1450,6 +1452,11 @@ class HighsOptions : public HighsOptionsStruct {
     record_bool = new OptionRecordBool("use_warm_start",
                                        "Use any warm start that is available",
                                        advanced, &use_warm_start, true);
+    records.push_back(record_bool);
+
+    record_bool = new OptionRecordBool("presolve_light",
+                                       "Use only low-cost presolve rules",
+                                       advanced, &presolve_light, false);
     records.push_back(record_bool);
 
     record_int =

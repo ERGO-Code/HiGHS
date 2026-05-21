@@ -3400,7 +3400,8 @@ HPresolve::Result HPresolve::singletonCol(HighsPostsolveStack& postsolve_stack,
     if (timing)
       analysis_.presolveTimerStart(kPresolveClockSingletonColDualFixing);
     HPRESOLVE_CHECKED_CALL(dualFixing(postsolve_stack, col));
-    if (timing) analysis_.presolveTimerStop(kPresolveClockSingletonColDualFixing);
+    if (timing)
+      analysis_.presolveTimerStop(kPresolveClockSingletonColDualFixing);
     analysis_.logging_on_ = logging_on;
     if (logging_on) analysis_.stopPresolveRuleLog(kPresolveRuleDualFixing);
     if (colDeleted[col]) return Result::kOk;
@@ -3410,7 +3411,8 @@ HPresolve::Result HPresolve::singletonCol(HighsPostsolveStack& postsolve_stack,
   if (analysis_.allow_rule_[kPresolveRuleColStuffing]) {
     const bool logging_on = analysis_.logging_on_;
     if (logging_on) analysis_.startPresolveRuleLog(kPresolveRuleColStuffing);
-    if (timing) analysis_.presolveTimerStart(kPresolveClockSingletonColStuffing);
+    if (timing)
+      analysis_.presolveTimerStart(kPresolveClockSingletonColStuffing);
     HPRESOLVE_CHECKED_CALL(singletonColStuffing(postsolve_stack, col));
     if (timing) analysis_.presolveTimerStop(kPresolveClockSingletonColStuffing);
     analysis_.logging_on_ = logging_on;
@@ -4578,12 +4580,13 @@ HPresolve::Result HPresolve::colPresolve(HighsPostsolveStack& postsolve_stack,
     if (timing)
       analysis_.presolveTimerStart(kPresolveClockSingletonColDualFixing);
     HPRESOLVE_CHECKED_CALL(dualFixing(postsolve_stack, col));
-    if (timing) analysis_.presolveTimerStop(kPresolveClockSingletonColDualFixing);
+    if (timing)
+      analysis_.presolveTimerStop(kPresolveClockSingletonColDualFixing);
     analysis_.logging_on_ = logging_on;
     if (logging_on) analysis_.stopPresolveRuleLog(kPresolveRuleDualFixing);
     if (colDeleted[col]) return Result::kOk;
   }
-  
+
   // singleton column stuffing
   if (analysis_.allow_rule_[kPresolveRuleColStuffing]) {
     const bool logging_on = analysis_.logging_on_;
@@ -6112,10 +6115,11 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
           analysis_.presolveTimerStop(kPresolveClockDependentEquations);
           dependentEquationsCalled = true;
         }
-        if (analysis_.allow_rule_[kPresolveRuleDependentFreeCols])
+        if (analysis_.allow_rule_[kPresolveRuleDependentFreeCols]) {
           analysis_.presolveTimerStart(kPresolveClockDependentFreeCol);
-        HPRESOLVE_CHECKED_CALL(removeDependentFreeCols(postsolve_stack));
-        analysis_.presolveTimerStop(kPresolveClockDependentFreeCol);
+          HPRESOLVE_CHECKED_CALL(removeDependentFreeCols(postsolve_stack));
+          analysis_.presolveTimerStop(kPresolveClockDependentFreeCol);
+        }
         if (problemSizeReduction() > 0.05) continue;
       }
 
@@ -6446,7 +6450,7 @@ HighsModelStatus HPresolve::run(HighsPostsolveStack& postsolve_stack) {
   postsolve_stack.debug_prev_row_upper = 0;
   // Presolve should only be called with a model that has a non-empty
   // constraint matrix unless it has no rows
-  assert(model->a_matrix_.numNz() || model->num_row_ == 0);
+  assert(model->numNz() || model->num_row_ == 0);
   auto reportReductions = [&]() {
     if (options->presolve != kHighsOffString &&
         reductionLimit < kHighsSize_tInf) {

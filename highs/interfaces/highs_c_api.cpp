@@ -1184,7 +1184,7 @@ HighsInt Highs_getPresolvedNumRow(const void* highs) {
 }
 
 HighsInt Highs_getPresolvedNumNz(const void* highs) {
-  return ((Highs*)highs)->getPresolvedLp().a_matrix_.numNz();
+  return ((Highs*)highs)->getPresolvedLp().numNz();
 }
 
 // Gets pointers to all the public data members of HighsLp: avoids
@@ -1231,7 +1231,7 @@ static HighsInt Highs_getHighsLpData(const HighsLp& lp, const HighsInt a_format,
         (desired_a_format == MatrixFormat::kRowwise &&
          lp.a_matrix_.isRowwise())) {
       // Incumbent format is OK
-      *num_nz = lp.a_matrix_.numNz();
+      *num_nz = lp.numNz();
       if (a_start)
         memcpy(a_start, lp.a_matrix_.start_.data(),
                num_start_entries * sizeof(HighsInt));

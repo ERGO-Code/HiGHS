@@ -59,7 +59,7 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
     }
     return return_status;
   };
-  if (!solver_object.lp_.num_row_ || solver_object.lp_.a_matrix_.numNz() == 0) {
+  if (!solver_object.lp_.num_row_ || solver_object.lp_.numNz() == 0) {
     // LP is unconstrained due to having no rows or a zero constraint
     // matrix, so solve directly
     call_status = solveUnconstrainedLp(solver_object);
@@ -208,11 +208,11 @@ HighsStatus solveUnconstrainedLp(const HighsOptions& options, const HighsLp& lp,
   resetModelStatusAndHighsInfo(model_status, highs_info);
 
   // Check that the LP really is unconstrained!
-  assert(lp.num_row_ == 0 || lp.a_matrix_.numNz() == 0);
+  assert(lp.num_row_ == 0 || lp.numNz() == 0);
   if (lp.num_row_ > 0) {
     // LP has rows, but should only be here if the constraint matrix
     // is zero
-    if (lp.a_matrix_.numNz() > 0) return HighsStatus::kError;
+    if (lp.numNz() > 0) return HighsStatus::kError;
   }
 
   highsLogUser(options.log_options, HighsLogType::kInfo,
@@ -465,7 +465,7 @@ void assessExcessiveObjectiveBoundScaling(const HighsLogOptions log_options,
 
   double min_matrix_value = kHighsInf;
   double max_matrix_value = -kHighsInf;
-  const HighsInt num_matrix_nz = lp.a_matrix_.numNz();
+  const HighsInt num_matrix_nz = lp.numNz();
   for (HighsInt iEl = 0; iEl < num_matrix_nz; iEl++)
     assessFiniteNonzero(lp.a_matrix_.value_[iEl], min_matrix_value,
                         max_matrix_value);

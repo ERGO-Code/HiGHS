@@ -32,6 +32,19 @@ void HPresolveAnalysis::setup(const HighsLp* model_,
   }
 
   this->allow_rule_.assign(kPresolveRuleCount, true);
+  std::vector<bool> presolve_light_rule_off(kPresolveRuleCount, false);
+  if (options->presolve_light) {
+    // Define the rules not used in presolve_light mode
+    presolve_light_rule_off[kPresolveRuleDependentEquations] = true;
+    presolve_light_rule_off[kPresolveRuleDependentFreeCols] = true;
+    presolve_light_rule_off[kPresolveRuleAggregator] = true;
+    presolve_light_rule_off[kPresolveRuleParallelRowsAndCols] = true;
+    presolve_light_rule_off[kPresolveRuleSparsify] = true;
+    presolve_light_rule_off[kPresolveRuleProbing] = true;
+    presolve_light_rule_off[kPresolveRuleEnumeration] = true;
+    presolve_light_rule_off[kPresolveRuleDualFixing] = true;
+    presolve_light_rule_off[kPresolveRuleColStuffing] = true;
+  }
 
   if (!silent && options_->log_dev_level) {
     // State which rules can be off, and what bit to set
@@ -50,8 +63,8 @@ void HPresolveAnalysis::setup(const HighsLp* model_,
       bit *= 2;
     }
   }
-  if (options->presolve_rule_off) {
-    // Some presolve rules are off
+  if (options->presolve_rule_off || options->presolve_light) {
+    // Some presolve rules are off or presolve_light mode is being used
     //
     // Transform options->presolve_rule_off into logical settings in
     // allow_rule_[*], commenting on the rules switched off
@@ -62,24 +75,29 @@ void HPresolveAnalysis::setup(const HighsLp* model_,
     for (HighsInt rule_type = kPresolveRuleMin; rule_type < kPresolveRuleCount;
          rule_type++) {
       // Identify whether this rule is allowed
-      const bool allow = !(options->presolve_rule_off & bit);
+      const bool rule_off = (options->presolve_rule_off & bit) ||
+                            presolve_light_rule_off[rule_type];
       if (rule_type >= kPresolveRuleFirstAllowOff) {
         // This is a rule that can be switched off, so comment
         // positively if it is off
-        allow_rule_[rule_type] = allow;
-        if (!allow && !silent)
+        allow_rule_[rule_type] = !rule_off;
+        if (rule_off && !silent)
           highsLogUser(options->log_options, HighsLogType::kInfo,
                        "   Rule %2d (set bit %2d = %6d): %s\n", int(rule_type),
                        int(rule_type), int(bit),
                        utilPresolveRuleTypeToString(rule_type).c_str());
-      } else if (!allow && !silent) {
+      } else if (rule_off) {
         // This is a rule that cannot be switched off so, if an
-        // attempt is made, don't allow it to be off and comment
-        // negatively
-        highsLogUser(options->log_options, HighsLogType::kWarning,
-                     "Cannot disallow rule %2d (bit %2d = %5d): %s\n",
-                     int(rule_type), int(rule_type), int(bit),
-                     utilPresolveRuleTypeToString(rule_type).c_str());
+        // attempt is made, don't allow it to be off and possibly
+        // comment negatively
+        if (!silent)
+          highsLogUser(options->log_options, HighsLogType::kWarning,
+                       "Cannot disallow rule %2d (bit %2d = %5d): %s\n",
+                       int(rule_type), int(rule_type), int(bit),
+                       utilPresolveRuleTypeToString(rule_type).c_str());
+        // Check that we're not here because presolve_light mode is
+        // being used
+        assert(!presolve_light_rule_off[rule_type]);
       }
       bit *= 2;
     }
