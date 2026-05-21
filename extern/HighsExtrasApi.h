@@ -62,6 +62,8 @@ extern "C" {
 HIGHS_EXTRAS_API const char* HighsExtras_getVersion(void);
 
 // Get metadata for all features
+HIGHS_EXTRAS_API size_t HighsExtras_getFeatureCount(void);
+HIGHS_EXTRAS_API const char* HighsExtras_getFeatureName(size_t index);
 HIGHS_EXTRAS_API const HighsExtrasFeatureInfo* HighsExtras_getFeatureInfo();
 
 // Get the HighsExtrasApi, with appropriate function pointers
