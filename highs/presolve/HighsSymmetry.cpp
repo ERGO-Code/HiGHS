@@ -316,7 +316,7 @@ void HighsOrbitopeMatrix::determineOrbitopeType(HighsCliqueTable& cliquetable) {
     }
   }
 
-  rowIsSetPacking.assign(numRows, -1);
+  rowIsSetPacking.assign(numRows, kRowUndetermined);
   numSetPackingRows = 0;
 
   for (HighsInt j = 1; j < rowLength; ++j) {
@@ -326,7 +326,7 @@ void HighsOrbitopeMatrix::determineOrbitopeType(HighsCliqueTable& cliquetable) {
       HighsInt* colj0 = &entry(0, j0);
 
       for (HighsInt i = 0; i < numRows; ++i) {
-        if (rowIsSetPacking[i] != -1) continue;
+        if (rowIsSetPacking[i] != kRowUndetermined) continue;
 
         HighsInt xj0 = colj0[i];
         HighsInt xj1 = colj1[i];
@@ -334,7 +334,7 @@ void HighsOrbitopeMatrix::determineOrbitopeType(HighsCliqueTable& cliquetable) {
         auto commonClique = cliquetable.findCommonClique({xj0, 1}, {xj1, 1});
 
         if (commonClique.first == nullptr) {
-          rowIsSetPacking[i] = false;
+          rowIsSetPacking[i] = kRowNotPacking;
           continue;
         }
 
@@ -348,7 +348,7 @@ void HighsOrbitopeMatrix::determineOrbitopeType(HighsCliqueTable& cliquetable) {
         }
 
         if (overlap == rowLength) {
-          rowIsSetPacking[i] = true;
+          rowIsSetPacking[i] = kRowPacking;
           ++numSetPackingRows;
           if (numSetPackingRows == numRows) break;
         }
@@ -364,7 +364,8 @@ void HighsOrbitopeMatrix::determineOrbitopeType(HighsCliqueTable& cliquetable) {
   // if we have such structure when all columns in the row are negated
 
   for (HighsInt i = 0; i < numRows; ++i) {
-    if (!rowIsSetPacking[i]) rowIsSetPacking[i] = -1;
+    if (rowIsSetPacking[i] == kRowNotPacking)
+      rowIsSetPacking[i] = kRowUndetermined;
   }
 
   for (HighsInt j = 1; j < rowLength; ++j) {
@@ -374,7 +375,7 @@ void HighsOrbitopeMatrix::determineOrbitopeType(HighsCliqueTable& cliquetable) {
       HighsInt* colj0 = &entry(0, j0);
 
       for (HighsInt i = 0; i < numRows; ++i) {
-        if (rowIsSetPacking[i] != -1) continue;
+        if (rowIsSetPacking[i] != kRowUndetermined) continue;
 
         HighsInt xj0 = colj0[i];
         HighsInt xj1 = colj1[i];
@@ -383,7 +384,7 @@ void HighsOrbitopeMatrix::determineOrbitopeType(HighsCliqueTable& cliquetable) {
         auto commonClique = cliquetable.findCommonClique({xj0, 0}, {xj1, 0});
 
         if (commonClique.first == nullptr) {
-          rowIsSetPacking[i] = false;
+          rowIsSetPacking[i] = kRowNotPacking;
           continue;
         }
 
@@ -400,7 +401,7 @@ void HighsOrbitopeMatrix::determineOrbitopeType(HighsCliqueTable& cliquetable) {
         if (overlap == rowLength) {
           // mark with value 2, for negated set packing row with at most one
           // zero
-          rowIsSetPacking[i] = 2;
+          rowIsSetPacking[i] = kRowPackingNegated;
           ++numSetPackingRows;
           if (numSetPackingRows == numRows) break;
         }
@@ -417,7 +418,7 @@ HighsInt HighsOrbitopeMatrix::getBranchingColumn(
     const std::vector<double>& colLower, const std::vector<double>& colUpper,
     HighsInt col) const {
   const HighsInt* i = columnToRow.find(col);
-  if (i && rowIsSetPacking[*i]) {
+  if (i && rowIsSetPacking[*i] > kRowNotPacking) {
     for (HighsInt j = 0; j < rowLength; ++j) {
       HighsInt branchCol = entry(*i, j);
       if (branchCol == col) break;
@@ -441,10 +442,10 @@ HighsInt HighsOrbitopeMatrix::orbitalFixingForPackingOrbitope(
       if (firstOneInRow[i] != -1) continue;
       HighsInt r = rows[i];
       HighsInt colrj = entry(r, j);
-      if (rowIsSetPacking[r] == 1) {
+      if (rowIsSetPacking[r] == kRowPacking) {
         if (domain.col_lower_[colrj] > 0.5) firstOneInRow[i] = j;
       } else {
-        assert(rowIsSetPacking[r] == 2);
+        assert(rowIsSetPacking[r] == kRowPackingNegated);
         if (domain.col_upper_[colrj] < 0.5) firstOneInRow[i] = j;
       }
     }
@@ -467,7 +468,7 @@ HighsInt HighsOrbitopeMatrix::orbitalFixingForPackingOrbitope(
     }
     HighsInt col_ij = entry(rows[i], j);
 
-    bool negate_i = rowIsSetPacking[rows[i]] == 2;
+    bool negate_i = rowIsSetPacking[rows[i]] == kRowPackingNegated;
 
     bool notZeroFixed = negate_i ? domain.col_lower_[col_ij] < 0.5
                                  : domain.col_upper_[col_ij] > 0.5;
@@ -500,7 +501,7 @@ HighsInt HighsOrbitopeMatrix::orbitalFixingForPackingOrbitope(
           break;
         }
 
-        bool negate_k = rowIsSetPacking[rows[k]] == 2;
+        bool negate_k = rowIsSetPacking[rows[k]] == kRowPackingNegated;
         bool notZeroFixed = negate_k
                                 ? domain.col_lower_[entry(rows[k], j0)] < 0.5
                                 : domain.col_upper_[entry(rows[k], j0)] > 0.5;
@@ -519,7 +520,7 @@ HighsInt HighsOrbitopeMatrix::orbitalFixingForPackingOrbitope(
         assert(firstOneInRow[k] < j);
 
         HighsInt col_kj = entry(rows[k], j);
-        bool negate_k = rowIsSetPacking[rows[k]] == 2;
+        bool negate_k = rowIsSetPacking[rows[k]] == kRowPackingNegated;
 
         if (negate_k) {
           if (domain.col_lower_[col_kj] > 0.5) continue;
@@ -552,7 +553,7 @@ HighsInt HighsOrbitopeMatrix::orbitalFixingForPackingOrbitope(
       assert(firstOneInRow[k] < j);
 
       HighsInt col_kj = entry(rows[k], j);
-      bool negate_k = rowIsSetPacking[rows[k]] == 2;
+      bool negate_k = rowIsSetPacking[rows[k]] == kRowPackingNegated;
 
       if (negate_k) {
         if (domain.col_lower_[col_kj] > 0.5) continue;
@@ -726,7 +727,7 @@ HighsInt HighsOrbitopeMatrix::orbitalFixing(HighsDomain& domain) const {
     const HighsInt* i = columnToRow.find(domchgstack[pos].column);
     if (i && !rowUsed[*i]) {
       rowUsed[*i] = true;
-      isPacking = isPacking && rowIsSetPacking[*i] != 0;
+      isPacking = isPacking && rowIsSetPacking[*i] > kRowNotPacking;
       rows.push_back(*i);
     }
   }

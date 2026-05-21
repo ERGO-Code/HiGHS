@@ -13,11 +13,7 @@ else()
 endif()
 
 list(APPEND CMAKE_MODULE_PATH "${_PARENT_DIR}/cmake")
-
-if (HIGHS_VCPKG)
-    include(vcpkg)
-endif()
-
+include(vcpkg)
 project(highs_extras LANGUAGES C CXX)
 
 add_subdirectory("${_PARENT_DIR}/extern" "${CMAKE_CURRENT_BINARY_DIR}/extern")

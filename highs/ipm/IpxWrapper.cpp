@@ -13,7 +13,7 @@
 
 #include <cassert>
 
-#include "HighsExternalDeps.h"
+#include "HighsExternalApi.h"
 #include "lp_data/HighsOptions.h"
 #include "lp_data/HighsSolution.h"
 
@@ -451,7 +451,7 @@ HighsStatus solveHipo(const HighsOptions& options, HighsTimer& timer,
 
   // force openblas to run in serial, for determinism and better performance
   // no-op if openblas is not used
-  HighsExternalDeps::blas::openblas_set_num_threads(1);
+  HighsExtras::blas::openblas_set_num_threads(1);
 
   // Create solver instance
   hipo::Solver hipo{};

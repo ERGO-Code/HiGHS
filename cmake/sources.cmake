@@ -21,6 +21,89 @@ set(include_dirs
   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/util>
   $<BUILD_INTERFACE:${HIGHS_BINARY_DIR}>)
 
+set(amd_sources
+  amd/amd_1.c
+  amd/amd_2.c
+  amd/amd_aat.c
+  amd/amd_control.c
+  amd/amd_defaults.c
+  amd/amd_info.c
+  amd/amd_order.c
+  amd/amd_post_tree.c
+  amd/amd_postorder.c
+  amd/amd_preprocess.c
+  amd/amd_valid.c
+  amd/SuiteSparse_config.c)
+
+set(amd_headers 
+  amd/amd.h
+  amd/amd_internal.h
+  amd/SuiteSparse_config.h)
+
+set(blas_sources
+  blas/myblas.cpp)
+
+set(blas_headers 
+  blas/mycblas.h)
+
+set(metis_sources
+  metis/GKlib/error.c
+  metis/GKlib/mcore.c
+  metis/GKlib/memory.c
+  metis/GKlib/random.c
+  metis/libmetis/auxapi.c
+  metis/libmetis/balance.c
+  metis/libmetis/bucketsort.c
+  metis/libmetis/coarsen.c
+  metis/libmetis/compress.c
+  metis/libmetis/contig.c
+  metis/libmetis/fm.c
+  metis/libmetis/gklib.c
+  metis/libmetis/graph.c
+  metis/libmetis/initpart.c
+  metis/libmetis/mcutil.c
+  metis/libmetis/mmd.c
+  metis/libmetis/ometis.c
+  metis/libmetis/options.c
+  metis/libmetis/refine.c
+  metis/libmetis/separator.c
+  metis/libmetis/sfm.c
+  metis/libmetis/srefine.c
+  metis/libmetis/util.c
+  metis/libmetis/wspace.c)
+
+set(metis_headers 
+  metis/GKlib/gk_arch.h
+  metis/GKlib/gk_defs.h
+  metis/GKlib/gk_macros.h
+  metis/GKlib/gk_mkblas.h
+  metis/GKlib/gk_mkmemory.h
+  metis/GKlib/gk_mkpqueue.h
+  metis/GKlib/gk_mkrandom.h
+  metis/GKlib/gk_mksort.h
+  metis/GKlib/gk_ms_inttypes.h
+  metis/GKlib/gk_ms_stat.h
+  metis/GKlib/gk_ms_stdint.h
+  metis/GKlib/gk_proto.h
+  metis/GKlib/gk_struct.h
+  metis/GKlib/gk_types.h
+  metis/GKlib/GKlib.h
+  metis/libmetis/defs.h
+  metis/libmetis/gklib_defs.h
+  metis/libmetis/macros.h
+  metis/libmetis/metislib.h
+  metis/libmetis/proto.h
+  metis/libmetis/stdheaders.h
+  metis/libmetis/struct.h
+  metis/metis.h)
+
+set(rcm_sources
+  rcm/rcm.cpp)
+
+set(rcm_headers 
+  rcm/rcm.h
+)
+
 set(cupdlp_sources
   pdlp/cupdlp/cupdlp_cs.c
   pdlp/cupdlp/cupdlp_linalg.c
@@ -258,7 +341,6 @@ set(hipo_util_headers
 set_source_files_properties (io/filereaderlp/reader.cpp PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)
 
 set(highs_sources
-    ../extern/rcm/rcm.cpp
     interfaces/highs_c_api.cpp
     io/Filereader.cpp
     io/FilereaderLp.cpp
@@ -363,6 +445,7 @@ set(highs_sources
     util/HFactorExtend.cpp
     util/HFactorRefactor.cpp
     util/HFactorUtils.cpp
+    util/HighsDynamicLibrary.cpp
     util/HighsHash.cpp
     util/HighsLinearSumBounds.cpp
     util/HighsMatrixPic.cpp
@@ -373,6 +456,7 @@ set(highs_sources
     util/HSet.cpp
     util/HVectorBase.cpp
     util/stringutil.cpp
+    HighsExternalApi.cpp
     HighsExternalDeps.cpp)
 
 # add catch header?
@@ -380,7 +464,6 @@ set(highs_headers
     ../extern/pdqsort/pdqsort.h
     ../extern/zstr/strict_fstream.hpp
     ../extern/zstr/zstr.hpp
-    ../extern/rcm/rcm.h
     interfaces/highs_c_api.h
     io/Filereader.h
     io/FilereaderLp.h
@@ -525,6 +608,7 @@ set(highs_headers
     util/HighsComponent.h
     util/HighsDataStack.h
     util/HighsDisjointSets.h
+    util/HighsDynamicLibrary.h
     util/HighsHash.h
     util/HighsHashTree.h
     util/HighsInt.h
@@ -546,6 +630,7 @@ set(highs_headers
     util/HVector.h
     util/HVectorBase.h
     util/stringutil.h
+    HighsExternalApi.h
     HighsExternalDeps.h
     Highs.h
   )

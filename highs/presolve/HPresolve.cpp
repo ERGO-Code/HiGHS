@@ -135,6 +135,7 @@ bool HPresolve::okSetInput(HighsLp& model_, const HighsOptions& options_,
   if (!okResize(colDeleted, model->num_col_)) return false;
   if (!okReserve(changedColIndices, model->num_col_)) return false;
   if (!okReserve(liftingOpportunities, model->num_row_)) return false;
+  if (!okResize(singleEquationChecked, model->num_row_)) return false;
   numDeletedCols = 0;
   numDeletedRows = 0;
   analysis_.presolveTimerStop(kPresolveClockSetupResize);
@@ -549,6 +550,7 @@ void HPresolve::markChangedRow(HighsInt row) {
     changedRowIndices.push_back(row);
     changedRowFlag[row] = true;
   }
+  singleEquationChecked[row] = false;
 }
 
 void HPresolve::markChangedCol(HighsInt col) {
@@ -801,7 +803,8 @@ void HPresolve::resetColImpliedBoundsDerivedFromRow(HighsInt row) {
   // reset implied column bounds affected by a modification in a row
   // (removed / added non-zeros, etc.)
   if (colImplSourceByRow[row].empty()) return;
-  std::set<HighsInt> affectedCols(colImplSourceByRow[row]);
+  std::set<HighsInt> affectedCols;
+  affectedCols.swap(colImplSourceByRow[row]);
   for (const HighsInt& col : affectedCols) {
     // set implied bounds to infinite values if they were deduced from the
     // given row
@@ -813,7 +816,8 @@ void HPresolve::resetRowDualImpliedBoundsDerivedFromCol(HighsInt col) {
   // reset implied row dual bounds affected by a modification in a column
   // (removed / added non-zeros, etc.)
   if (implRowDualSourceByCol[col].empty()) return;
-  std::set<HighsInt> affectedRows(implRowDualSourceByCol[col]);
+  std::set<HighsInt> affectedRows;
+  affectedRows.swap(implRowDualSourceByCol[col]);
   for (const HighsInt& row : affectedRows) {
     // set implied bounds to infinite values if they were deduced from the
     // given column
@@ -912,6 +916,7 @@ void HPresolve::shrinkProblem(HighsPostsolveStack& postsolve_stack) {
         if (have_row_names)
           model->row_names_[newRowIndex[i]] = std::move(model->row_names_[i]);
         changedRowFlag[newRowIndex[i]] = changedRowFlag[i];
+        singleEquationChecked[newRowIndex[i]] = singleEquationChecked[i];
       }
     }
   }
@@ -964,6 +969,7 @@ void HPresolve::shrinkProblem(HighsPostsolveStack& postsolve_stack) {
   rowsizeImplInt.resize(model->num_row_);
   if (have_row_names) model->row_names_.resize(model->num_row_);
   changedRowFlag.resize(model->num_row_);
+  singleEquationChecked.resize(model->num_row_);
 
   numDeletedRows = 0;
   postsolve_stack.compressIndexMaps(newRowIndex, newColIndex);
@@ -4995,11 +5001,12 @@ HPresolve::Result HPresolve::dualFixing(HighsPostsolveStack& postsolve_stack,
           hasSingleDownLock && isEquation(downLockRow)
               ? downLockRow
               : (hasSingleUpLock && isEquation(upLockRow) ? upLockRow : -1);
-      if (equationRow != -1) {
+      if (equationRow != -1 && !singleEquationChecked[equationRow]) {
         // see section 6.1 "Extension of dual fixing for single equations",
         // Achterberg et al., Presolve Reductions in Mixed Integer
         // Programming, INFORMS Journal on Computing 32(2):473-506.
         HPRESOLVE_CHECKED_CALL(handleSingleEquation(equationRow));
+        singleEquationChecked[equationRow] = true;
         if (colDeleted[col]) return Result::kOk;
       } else if (mipsolver != nullptr && model->col_lower_[col] != -kHighsInf &&
                  model->col_upper_[col] != kHighsInf) {
