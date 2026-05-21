@@ -29,4 +29,8 @@ const HighsExtrasFeatureInfo extras_feature_info[] = {
     {"METIS-GKlib", "5.2.1+", "Apache-2.0", __hipo_enabled},
     {"SPARSEPAK", "unversioned+", "MIT", __hipo_enabled}};
 
+const HighsExtrasFeatureInfo* extras_family::getInfo() {
+  return extras_feature_info;
+}
+
 }  // namespace HighsExtras

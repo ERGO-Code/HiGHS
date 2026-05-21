@@ -35,8 +35,9 @@
 // 0. Define Features
 //
 namespace HighsExtras {
-struct extras_family {};
-extern const HighsExtrasFeatureInfo extras_feature_info[];
+struct extras_family {
+  static const HighsExtrasFeatureInfo* getInfo();
+};
 
 template <>
 struct wrapper_storage<extras_family> {
