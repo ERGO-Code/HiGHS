@@ -71,33 +71,33 @@ class PresolveTimer {
     clock[kPresolveClockInitialRow] = timer_pointer->clock_def("Initial row");
     clock[kPresolveClockInitialCol] = timer_pointer->clock_def("Initial col");
     clock[kPresolveClockInitialColIsFixed] =
-        timer_pointer->clock_def("InitialCol: is fixed");
+        timer_pointer->clock_def("I-col: is fixed");
     clock[kPresolveClockInitialColIsEmpty] =
-        timer_pointer->clock_def("InitialCol: is empty");
+        timer_pointer->clock_def("I-col: is empty");
     clock[kPresolveClockInitialColIsSingleton] =
-        timer_pointer->clock_def("InitialCol: is singleton");
+        timer_pointer->clock_def("I-col: is singleton");
     clock[kPresolveClockInitialColDominated] =
-        timer_pointer->clock_def("InitialCol: dominated");
+        timer_pointer->clock_def("I-col: dominated");
     clock[kPresolveClockInitialColImpliedInteger] =
-        timer_pointer->clock_def("InitialCol: implied integer");
+        timer_pointer->clock_def("I-col: implied integer");
     clock[kPresolveClockInitialColDualFixing] =
-        timer_pointer->clock_def("InitialCol: dual fixing");
+        timer_pointer->clock_def("I-col: dual fixing");
     clock[kPresolveClockInitialColSingletonStuffing] =
-        timer_pointer->clock_def("InitialCol: singleton stuffing");
+        timer_pointer->clock_def("I-col: singleton stuffing");
     clock[kPresolveClockSingletonColSingletonRow] =
-        timer_pointer->clock_def("S.Col: singleton row");
+        timer_pointer->clock_def("S-col: singleton row");
     clock[kPresolveClockSingletonColDominated] =
-        timer_pointer->clock_def("S.Col: dominated");
+        timer_pointer->clock_def("S-col: dominated");
     clock[kPresolveClockSingletonColDualFixing] =
-        timer_pointer->clock_def("S.Col: dual fixing");
+        timer_pointer->clock_def("S-col: dual fixing");
     clock[kPresolveClockSingletonColStuffing] =
-        timer_pointer->clock_def("S.Col: singleton stuffing");
+        timer_pointer->clock_def("S-col: singleton stuffing");
     clock[kPresolveClockSingletonColImpliedBounds] =
-        timer_pointer->clock_def("S.Col: impl bounds");
+        timer_pointer->clock_def("S-col: impl bounds");
     clock[kPresolveClockSingletonColRowDualImpliedBounds] =
-        timer_pointer->clock_def("S.Col: row du impl bounds");
+        timer_pointer->clock_def("S-col: row dual impl bounds");
     clock[kPresolveClockSingletonColDualImpliedFree] =
-        timer_pointer->clock_def("S.Col: du impl free");
+        timer_pointer->clock_def("S-col: dual impl free");
     clock[kPresolveClockFastLoop] = timer_pointer->clock_def("Fast loop");
     clock[kPresolveClockFastLoopRowSingletons] =
         timer_pointer->clock_def("Fast loop: row singletons");

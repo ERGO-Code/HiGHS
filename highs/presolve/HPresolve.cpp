@@ -3394,17 +3394,29 @@ HPresolve::Result HPresolve::singletonCol(HighsPostsolveStack& postsolve_stack,
         static_cast<Result>(convertImpliedInteger(col, row)));
 
   // dual fixing
-  if (timing)
-    analysis_.presolveTimerStart(kPresolveClockSingletonColDualFixing);
-  HPRESOLVE_CHECKED_CALL(dualFixing(postsolve_stack, col));
-  if (timing) analysis_.presolveTimerStop(kPresolveClockSingletonColDualFixing);
-  if (colDeleted[col]) return Result::kOk;
+  if (analysis_.allow_rule_[kPresolveRuleDualFixing]) {
+    const bool logging_on = analysis_.logging_on_;
+    if (logging_on) analysis_.startPresolveRuleLog(kPresolveRuleDualFixing);
+    if (timing)
+      analysis_.presolveTimerStart(kPresolveClockSingletonColDualFixing);
+    HPRESOLVE_CHECKED_CALL(dualFixing(postsolve_stack, col));
+    if (timing) analysis_.presolveTimerStop(kPresolveClockSingletonColDualFixing);
+    analysis_.logging_on_ = logging_on;
+    if (logging_on) analysis_.stopPresolveRuleLog(kPresolveRuleDualFixing);
+    if (colDeleted[col]) return Result::kOk;
+  }
 
   // singleton column stuffing
-  if (timing) analysis_.presolveTimerStart(kPresolveClockSingletonColStuffing);
-  HPRESOLVE_CHECKED_CALL(singletonColStuffing(postsolve_stack, col));
-  if (timing) analysis_.presolveTimerStop(kPresolveClockSingletonColStuffing);
-  if (colDeleted[col]) return Result::kOk;
+  if (analysis_.allow_rule_[kPresolveRuleColStuffing]) {
+    const bool logging_on = analysis_.logging_on_;
+    if (logging_on) analysis_.startPresolveRuleLog(kPresolveRuleColStuffing);
+    if (timing) analysis_.presolveTimerStart(kPresolveClockSingletonColStuffing);
+    HPRESOLVE_CHECKED_CALL(singletonColStuffing(postsolve_stack, col));
+    if (timing) analysis_.presolveTimerStop(kPresolveClockSingletonColStuffing);
+    analysis_.logging_on_ = logging_on;
+    if (logging_on) analysis_.stopPresolveRuleLog(kPresolveRuleColStuffing);
+    if (colDeleted[col]) return Result::kOk;
+  };
 
   // update column implied bounds
   if (timing)
