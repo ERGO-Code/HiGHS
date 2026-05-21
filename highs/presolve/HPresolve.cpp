@@ -4572,18 +4572,31 @@ HPresolve::Result HPresolve::colPresolve(HighsPostsolveStack& postsolve_stack,
   }
 
   // dual fixing
-  if (timing) analysis_.presolveTimerStart(kPresolveClockInitialColDualFixing);
-  HPRESOLVE_CHECKED_CALL(dualFixing(postsolve_stack, col));
-  if (timing) analysis_.presolveTimerStop(kPresolveClockInitialColDualFixing);
-  if (colDeleted[col]) return Result::kOk;
-
+  if (analysis_.allow_rule_[kPresolveRuleDualFixing]) {
+    const bool logging_on = analysis_.logging_on_;
+    if (logging_on) analysis_.startPresolveRuleLog(kPresolveRuleDualFixing);
+    if (timing)
+      analysis_.presolveTimerStart(kPresolveClockSingletonColDualFixing);
+    HPRESOLVE_CHECKED_CALL(dualFixing(postsolve_stack, col));
+    if (timing) analysis_.presolveTimerStop(kPresolveClockSingletonColDualFixing);
+    analysis_.logging_on_ = logging_on;
+    if (logging_on) analysis_.stopPresolveRuleLog(kPresolveRuleDualFixing);
+    if (colDeleted[col]) return Result::kOk;
+  }
+  
   // singleton column stuffing
-  if (timing)
-    analysis_.presolveTimerStart(kPresolveClockInitialColSingletonStuffing);
-  HPRESOLVE_CHECKED_CALL(singletonColStuffing(postsolve_stack, col));
-  if (timing)
-    analysis_.presolveTimerStop(kPresolveClockInitialColSingletonStuffing);
-  if (colDeleted[col]) return Result::kOk;
+  if (analysis_.allow_rule_[kPresolveRuleColStuffing]) {
+    const bool logging_on = analysis_.logging_on_;
+    if (logging_on) analysis_.startPresolveRuleLog(kPresolveRuleColStuffing);
+    if (timing)
+      analysis_.presolveTimerStart(kPresolveClockInitialColSingletonStuffing);
+    HPRESOLVE_CHECKED_CALL(singletonColStuffing(postsolve_stack, col));
+    if (timing)
+      analysis_.presolveTimerStop(kPresolveClockInitialColSingletonStuffing);
+    analysis_.logging_on_ = logging_on;
+    if (logging_on) analysis_.stopPresolveRuleLog(kPresolveRuleColStuffing);
+    if (colDeleted[col]) return Result::kOk;
+  }
 
   // update dual implied bounds of all rows in given column
   if (model->integrality_[col] != HighsVarType::kInteger)
