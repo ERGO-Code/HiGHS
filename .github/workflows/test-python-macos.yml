@@ -57,6 +57,7 @@ jobs:
           python3 -m pip install -v ./highspy-extras
           python3 -m pip install .
           pytest -v ./highspy
+          pytest -v ./highspy-extras
           pytest check/test_highspy_hipo.py
 
       - name: Test Python Examples

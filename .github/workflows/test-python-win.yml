@@ -96,7 +96,7 @@ jobs:
 
       - name: Test python install
         run: |
-          pytest highspy/tests check/test_highspy_hipo.py
+          pytest highspy/tests highspy-extras/tests check/test_highspy_hipo.py
 
       - name: Test Python Examples
         run: |

@@ -36,7 +36,7 @@ classifiers = [
 
 [project.optional-dependencies]
 test = ["pytest", "numpy"]
-extras = ["highspy-extras==1.14.0.dev2"]
+extras = ["highspy-extras==1.14.0.dev3"]
 
 [tool.scikit-build]
 wheel.expand-macos-universal-tags = true
