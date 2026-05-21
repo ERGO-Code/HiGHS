@@ -6,207 +6,37 @@
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file lp_data/HighsExternalDeps.cpp
- * @brief Manages access (dynamic or static) to optional external dependencies
+ * @brief Defines the set of external features available
  */
 
 #include "HighsExternalDeps.h"
 
-// c++11 does not support inline static definition
-HighsExternalDeps::amd HighsExternalDeps::amd_;
-HighsExternalDeps::blas HighsExternalDeps::blas_;
-HighsExternalDeps::metis HighsExternalDeps::metis_;
-HighsExternalDeps::rcm HighsExternalDeps::rcm_;
+namespace HighsExtras {
 
-HighsExternalDeps& HighsExternalDeps::instance() {
-  static HighsExternalDeps _instance;
-  return _instance;
-}
-
-bool HighsExternalDeps::tryLoad() {
-  static const std::string empty_path = "";
-  return tryLoad(empty_path);
-}
-
-void HighsExternalDeps::logUnavailable(const HighsLogOptions& log_options,
-                                       const HighsLogType type,
-                                       const char* format, ...) {
-  if (!isAvailable()) {
-    va_list argptr;
-    va_start(argptr, format);
-    std::array<char, kIoBufferSize> msgbuffer = {};
-    int len = vsnprintf(msgbuffer.data(), msgbuffer.size(), format, argptr);
-    va_end(argptr);
-
-    if (!isAvailableAtCompile()) {
-      highsLogUser(log_options, type, "%s%s%s", msgbuffer.data(),
-                   (len > 0) ? " " : "",
-                   "This build was compiled without external dependencies. "
-                   "Reconfigure with -DHIPO=ON to enable.\n");
-    } else {
-      highsLogUser(
-          log_options, type, "%s%s%s", msgbuffer.data(), (len > 0) ? " " : "",
-          "The external dependencies are missing. Please install "
-          "highs_extras library. For example, in Python use `pip install "
-          "highspy[extras]`. Note, this changes the HiGHS license from MIT "
-          "to Apache, due to the dependencies' licensing.\n");
-    }
-  }
-}
-
-#if defined(HIPO) && defined(HIGHS_SHARED_EXTRAS_LIBRARY)
-// Platform-specific includes for dynamic loading
-#if defined(_WIN32) || defined(_WIN64)
-#define WIN32_LEAN_AND_MEAN
-#include <windows.h>
+#ifdef ZLIB_FOUND
+constexpr bool __zlib_enabled = true;
+#include "zlib.h"  // defines ZLIB_VERSION
 #else
-#include <dlfcn.h>
+constexpr bool __zlib_enabled = false;
+#define ZLIB_VERSION "unknown"
 #endif
 
-#include <mutex>
-
-// anonymous namespace to limit the scope of helper functions to this file
-namespace {
-std::string getLibraryFilename(const std::string& path) {
-#if defined(_WIN32) || defined(_WIN64)
-  return path + (path.empty() ? "" : "\\") + "highs_extras.dll";
-#elif defined(__APPLE__)
-  return path + (path.empty() ? "@loader_path/" : "/") +
-         "libhighs_extras.dylib";
+#ifdef CUPDLP_GPU
+constexpr bool __cuda_enabled = true;
 #else
-  return path + (path.empty() ? "" : "/") + "libhighs_extras.so";
-#endif
-}
-
-template <typename FuncType>
-bool resolveSymbol(void* handle, FuncType& target, const char* name) {
-#if defined(_WIN32) || defined(_WIN64)
-  target = reinterpret_cast<FuncType>(
-      GetProcAddress(static_cast<HMODULE>(handle), name));
-#else
-  target = reinterpret_cast<FuncType>(dlsym(handle, name));
+constexpr bool __cuda_enabled = false;
 #endif
 
-  return target != nullptr;
-}
-}  // namespace
+const HighsExtrasFeatureInfo highs_family_info_[] = {
+    {"pdqsort", "git:b1ef26a", "Zlib", true},
+    {"zstr", "1.0.6", "MIT", __zlib_enabled},
+    {"ZLIB", ZLIB_VERSION, "Zlib", __zlib_enabled},
+    {"NVIDIA Driver API", "runtime", "N/A (not redistributed)",
+     __cuda_enabled}};
 
-void HighsExternalDeps::clear() {
-  amd_ = amd{};
-  blas_ = blas{};
-  metis_ = metis{};
-  rcm_ = rcm{};
-}
-
-void HighsExternalDeps::unload() {
-  HighsExternalDeps& inst = instance();
-
-  if (inst.lib_handle_) {
-#if defined(_WIN32) || defined(_WIN64)
-    FreeLibrary(static_cast<HMODULE>(inst.lib_handle_));
-#else
-    dlclose(inst.lib_handle_);
-#endif
-    inst.lib_handle_ = nullptr;
-  }
-  inst.clear();
-  inst.available_ = false;
+// defined in cpp to avoid link issues with BUILD_SHARED_LIBS
+const HighsExtrasFeatureInfo* highs_family::getInfo() {
+  return highs_family_info_;
 }
 
-#define STRINGFY(s) STRINGFY0(s)
-#define STRINGFY0(s) #s
-
-bool HighsExternalDeps::tryLoad(const std::string& path) {
-  HighsExternalDeps& inst = instance();
-  static std::once_flag flag;
-
-  // prevents multiple attempts to load the library
-  // ensure thread safety (multiple threads may call tryLoad simultaneously)
-  std::call_once(flag, [&]() {
-    inst.available_ = false;
-
-    // Load library
-    const std::string full_path = getLibraryFilename(path);
-    bool ok = true;
-
-#if defined(_WIN32) || defined(_WIN64)
-    inst.lib_handle_ = static_cast<void*>(LoadLibraryA(full_path.c_str()));
-    if (!inst.lib_handle_) {
-      DWORD error = GetLastError();
-      char* msg = nullptr;
-      FormatMessageA(
-          FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM, nullptr,
-          error, 0, reinterpret_cast<LPSTR>(&msg), 0, nullptr);
-      inst.status_ = "Extras: Failed to load " + full_path + ": " +
-                     (msg ? msg : "Unknown error");
-      if (msg) LocalFree(msg);
-      ok = false;
-    }
-#else
-    inst.lib_handle_ = dlopen(full_path.c_str(), RTLD_NOW | RTLD_LOCAL);
-    if (!inst.lib_handle_) {
-      const char* err = dlerror();
-      inst.status_ =
-          "Extras: Failed to load " + full_path + ": " + (err ? err : "Unknown error");
-      ok = false;
-    }
-#endif
-    else {
-      // Resolve all function pointers
-      void* h = inst.lib_handle_;
-
-      // AMD
-      ok &= resolveSymbol(h, amd_.defaults_, "highs_extras_amd_defaults");
-      ok &= resolveSymbol(h, amd_.order_, "highs_extras_amd_order");
-
-      // BLAS
-      ok &= resolveSymbol(h, blas_.daxpy_, "highs_extras_daxpy");
-      ok &= resolveSymbol(h, blas_.dcopy_, "highs_extras_dcopy");
-      ok &= resolveSymbol(h, blas_.dscal_, "highs_extras_dscal");
-      ok &= resolveSymbol(h, blas_.dswap_, "highs_extras_dswap");
-      ok &= resolveSymbol(h, blas_.dgemv_, "highs_extras_dgemv");
-      ok &= resolveSymbol(h, blas_.dtpsv_, "highs_extras_dtpsv");
-      ok &= resolveSymbol(h, blas_.dtrsv_, "highs_extras_dtrsv");
-      ok &= resolveSymbol(h, blas_.dger_, "highs_extras_dger");
-      ok &= resolveSymbol(h, blas_.dgemm_, "highs_extras_dgemm");
-      ok &= resolveSymbol(h, blas_.dsyrk_, "highs_extras_dsyrk");
-      ok &= resolveSymbol(h, blas_.dtrsm_, "highs_extras_dtrsm");
-      ok &= resolveSymbol(h, blas_.set_num_threads_,
-                          "highs_extras_openblas_set_num_threads");
-      ok &= resolveSymbol(h, blas_.library_, "highs_extras_blas_library");
-
-      // METIS
-      ok &= resolveSymbol(h, metis_.set_default_options_,
-                          "highs_extras_metis_set_default_options");
-      ok &= resolveSymbol(h, metis_.nodend_, "highs_extras_metis_nodend");
-
-      // Check ABI compatibility
-      highs_extras_api::core::get_version_t get_version = nullptr;
-      ok &= resolveSymbol(h, get_version, "highs_extras_get_version");
-
-      ok &= resolveSymbol(h, instance().get_copyright_,
-                          "highs_extras_get_copyright");
-
-      if (!ok) {
-        inst.status_ = "Extras: Failed to resolve required external functions";
-        inst.unload();
-      } else {
-        std::string highs_version = STRINGFY(HIGHS_VERSION_MAJOR) "." STRINGFY(
-            HIGHS_VERSION_MINOR) "." STRINGFY(HIGHS_VERSION_PATCH);
-        std::string extras_version = get_version();
-        if (extras_version != highs_version) {
-          inst.status_ = "Extras: ABI version mismatch: expected " +
-                         highs_version + ", got " + extras_version + ".";
-          inst.unload();
-          ok = false;
-        } else {
-          inst.status_ = "Extras: Successfully loaded";
-        }
-      }
-    }
-
-    inst.available_ = ok;
-  });
-
-  return inst.available_;
-}
-#endif
+}  // namespace HighsExtras

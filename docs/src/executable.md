@@ -63,6 +63,8 @@ options:
                                  solution ranging:
                                    "on" 
                                    "off" * default 
+      --notice                   Print third-party information 
+                                 information.
   -v, --version                  Print version.
   -h, --help                     Print help.
 ```

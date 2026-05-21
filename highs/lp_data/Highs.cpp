@@ -18,7 +18,7 @@
 #include <memory>
 #include <sstream>
 
-#include "HighsExternalDeps.h"
+#include "HighsExternalApi.h"
 #include "io/Filereader.h"
 #include "io/LoadOptions.h"
 #include "ipm/IpxWrapper.h"
@@ -50,6 +50,10 @@ const char* highsGithash() { return HIGHS_GITHASH; }
 const char* highsCompilationDate() { return "deprecated"; }
 
 Highs::Highs() : callback_(this) {}
+
+std::string Highs::getThirdPartyNotice() const {
+  return HighsExternalApi::getThirdPartyNotice<HighsExtras::all>();
+}
 
 HighsStatus Highs::clear() {
   resetOptions();
@@ -3953,7 +3957,7 @@ HighsStatus Highs::callSolveQp() {
   // Choose solver
   bool use_hipo =
       (options_.solver == kHipoString || options_.solver == kIpmString) &&
-      HighsExternalDeps::isAvailable();
+      HighsExternalApi::isAvailable<HighsExtras::hipo>();
 
   if (use_hipo) {
     this->global_sub_solver_call_time_->start(kSubSolverHipo);
