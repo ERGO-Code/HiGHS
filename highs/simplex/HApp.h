@@ -43,7 +43,7 @@ inline HighsStatus returnFromSolveLpSimplex(HighsLpSolverObject& solver_object,
   solver_object.highs_info_.simplex_iteration_count =
       ekk_instance.iteration_count_;
   // Stop whichever clock was running
-  if (solver_object.profiling_) {
+  if (solver_object.profiling_->sub_solver_) {
     HighsInt profiling_clock = -1;
     HighsProfilingRecord* thread_record =
         solver_object.profiling_->getHighsProfilingRecord();

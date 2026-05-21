@@ -95,10 +95,11 @@ bool HighsPrimalHeuristics::solveSubMip(
   const bool allow_submip_log = true;
   if (allow_submip_log && lp.num_col_ == -54 && lp.num_row_ == -172) {
     submipoptions.output_flag = true;
-    printf(
-        "HighsPrimalHeuristics::solveSubMip (%d, %d) with output_flag = %s\n",
-        int(lp.num_col_), int(lp.num_row_),
-        highsBoolToString(submipoptions.output_flag).c_str());
+    if (mipsolver.profiling_->sub_solver_)
+      printf(
+          "HighsPrimalHeuristics::solveSubMip (%d, %d) with output_flag = %s\n",
+          int(lp.num_col_), int(lp.num_row_),
+          highsBoolToString(submipoptions.output_flag).c_str());
   }
 
   submipoptions.mip_max_nodes = maxnodes;
@@ -157,20 +158,23 @@ bool HighsPrimalHeuristics::solveSubMip(
   const bool was_running_solve = mipsolver.profiling_->running(kSolveTime);
   if (was_running_solve) mipsolver.profiling_->stop(kSolveTime);
   // Only start timing the submip if the calling MIP isn't a sub-MIP
-  printf(
-      "\nHighsPrimalHeuristics::solveSubMip Before run() for %sMIP at depth "
-      "%2d on thread %2d\n",
-      mipsolver.submip ? "sub-" : "    ", int(mipsolver.submip_level),
-      int(mipsolver.profiling_->myThread()));
+  if (mipsolver.profiling_->sub_solver_)
+    printf(
+        "\nHighsPrimalHeuristics::solveSubMip Before run() for %sMIP at depth "
+        "%2d on thread %2d\n",
+        mipsolver.submip ? "sub-" : "    ", int(mipsolver.submip_level),
+        int(mipsolver.profiling_->myThread()));
   if (!mipsolver.submip) mipsolver.profiling_->start(kSubSolverSubMip);
   // Ensure that sub-solver call time data accumulate in the sub-MIP record
   mipsolver.profiling_->setSubMip(true);
   submipsolver.run();
-  printf(
-      "HighsPrimalHeuristics::solveSubMip After  run() for %sMIP at depth %2d "
-      "on thread %2d\n\n",
-      mipsolver.submip ? "sub-" : "    ", int(mipsolver.submip_level),
-      int(mipsolver.profiling_->myThread()));
+  if (mipsolver.profiling_->sub_solver_)
+    printf(
+        "HighsPrimalHeuristics::solveSubMip After  run() for %sMIP at depth "
+        "%2d "
+        "on thread %2d\n\n",
+        mipsolver.submip ? "sub-" : "    ", int(mipsolver.submip_level),
+        int(mipsolver.profiling_->myThread()));
   // Ensure that further sub-solver call time data accumulate in the
   // MIP or sub-MIP record, according to whether the calling MIP is a
   // sub-MIP

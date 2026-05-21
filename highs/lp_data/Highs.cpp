@@ -4976,9 +4976,11 @@ void Highs::initializeProfiling(HighsProfiling* profiling) {
   assert(!this->profiling_);
   if (this->profiling_) return;
   // Only initialize profiling if this->profiling_ is nullptr
-  const bool mip_profiling =
-      kHighsAnalysisLevelMipTime & this->options_.highs_analysis_level;
-  profiling->initialize(this->timer_, mip_profiling);
+  const bool sub_solver = this->options_.log_dev_level > 0;  // true; //
+  // Cannot perform MIP profiling without sub-solver profiling
+  const bool mip = sub_solver && kHighsAnalysisLevelMipTime &
+                                     this->options_.highs_analysis_level;
+  profiling->initialize(this->timer_, sub_solver, mip);
   profiling->model_name_ = this->model_.lp_.model_name_;
   this->setProfiling(profiling);
 }

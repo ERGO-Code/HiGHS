@@ -4284,8 +4284,15 @@ void HighsLinearObjective::clear() {
   this->priority = 0;
 }
 
-void HighsProfiling::initialize(HighsTimer& timer_, const bool mip_profiling) {
-  this->clear();
+void HighsProfiling::initialize(HighsTimer& timer_, const bool sub_solver,
+                                const bool mip) {
+  // NB this->multi_threaded is set externally:
+  //
+  // * true in HighsProfiling::clear()
+  //
+  // * false in initializeSingleThreadedProfiling
+  //
+  // Hence don't call this->clear() here!
   this->timer = &timer_;
   this->num_profiling_clock_ = kToPresolveSolvePostsolve;
   this->name.assign(this->num_profiling_clock_, "");
@@ -4293,8 +4300,8 @@ void HighsProfiling::initialize(HighsTimer& timer_, const bool mip_profiling) {
   this->name[kSolveTime] = "Solve";
   this->name[kPostsolveTime] = "Postsolve";
   // Now add clocks if performing subsolver profiling
-  const bool sub_solver = true;  // this->options_.log_dev_level > 0;
-  if (sub_solver) {
+  this->sub_solver_ = sub_solver;
+  if (this->sub_solver_) {
     this->num_profiling_clock_ = kToSubSolver;
     this->name.resize(this->num_profiling_clock_);
     this->name[kSubSolverDuSimplexBasis] = "Du simplex (basis)";
@@ -4310,8 +4317,10 @@ void HighsProfiling::initialize(HighsTimer& timer_, const bool mip_profiling) {
     this->name[kSubSolverMip] = "MIP";
     this->name[kSubSolverSubMip] = "Sub-MIP";
   }
-  // Now add clocks if performing subsolver profiling
-  this->mip_ = mip_profiling;
+  // Now add clocks if also performing MIP profiling
+  // Cannot perform MIP profiling without subsolver profiling
+  if (mip) assert(sub_solver);
+  this->mip_ = sub_solver && mip;
   if (this->mip_) {
     this->num_profiling_clock_ = kToMipClock;
     this->name.resize(this->num_profiling_clock_);
@@ -4333,6 +4342,7 @@ void HighsProfiling::clear() {
   this->timer = nullptr;
   this->multi_threaded = true;
   this->model_name_ = "";
+  this->sub_solver_ = false;
   this->mip_ = false;
   this->num_profiling_clock_ = -1;
   this->name.clear();
@@ -4489,7 +4499,7 @@ void HighsProfiling::solveCall(const std::string& model, const bool submip) {
 // assert(1==4);  return 0;}
 
 void Highs::reportProfiling() const {
-  //  if (this->options_.log_dev_level == 0) return;
+  if (!this->profiling_->sub_solver_) return;
   HighsInt num_thread = this->profiling_->numThread();
   double mip_time = 0;
   double max_sumip_time = 0;
