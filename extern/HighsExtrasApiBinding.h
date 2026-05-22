@@ -11,7 +11,10 @@
 #ifndef HIGHS_EXTRAS_API_BINDING_H_
 #define HIGHS_EXTRAS_API_BINDING_H_
 
+#include <stddef.h>
+
 #include <tuple>
+
 
 // provide metadata info for each feature
 struct HighsExtrasFeatureInfo {
@@ -33,6 +36,25 @@ namespace HighsExtras {
 
 template <class... Features>
 struct require {};
+
+// compile-time count of nested features in a list,
+// e.g., feature_count<require<amd, blas>, rcm>::value == 3
+template <class T>
+struct feature_count : std::integral_constant<size_t, 1> {};
+
+template <class... Fs>
+struct sum_feature_counts;
+
+template <>
+struct sum_feature_counts<> : std::integral_constant<size_t, 0> {};
+
+template <class F, class... Rest>
+struct sum_feature_counts<F, Rest...>
+    : std::integral_constant<size_t, feature_count<F>::value +
+                                         sum_feature_counts<Rest...>::value> {};
+
+template <class... Features>
+struct feature_count<require<Features...>> : sum_feature_counts<Features...> {};
 
 template <class Methods>
 struct feature_api;

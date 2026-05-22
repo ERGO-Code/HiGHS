@@ -344,7 +344,13 @@ public class HighsLpSolver : IDisposable
     private static extern int Highs_getHessianNumNz(IntPtr highs);
 
     [DllImport(highslibname)]
-    private static extern int Highs_getBasis(IntPtr highs, int[] colstatus, int[] rowstatus);
+    private static extern int Highs_getBasis(IntPtr highs, int[] colstatus, int[] rowstatus);    
+
+    [DllImport(highslibname)]
+    private static extern int Highs_setBasis(IntPtr highs, int[] col_status, int[] row_status);
+
+    [DllImport(highslibname)]
+    private static extern int Highs_setLogicalBasis(IntPtr highs);
 
     [DllImport(highslibname)]
     private static extern double Highs_getObjectiveValue(IntPtr highs);
@@ -1020,6 +1026,18 @@ public class HighsLpSolver : IDisposable
     public HighsStatus setSolution(HighsSolution solution)
     {
         return (HighsStatus)HighsLpSolver.Highs_setSolution(this.highs, solution.colvalue, solution.rowvalue, solution.coldual, solution.rowdual);
+    }
+
+    public HighsStatus setBasis(HighsBasis basis)
+    {
+        int[] col_status = basis.colbasisstatus.Select(x => (int)x).ToArray();
+        int[] row_status = basis.rowbasisstatus.Select(x => (int)x).ToArray();
+        return (HighsStatus)HighsLpSolver.Highs_setBasis(this.highs, col_status, row_status);
+    }
+
+    public HighsStatus setLogicalBasis()
+    {
+        return (HighsStatus)HighsLpSolver.Highs_setLogicalBasis(this.highs);
     }
 
     /// <summary>Set a partial primal solution by passing values for a set of variables</summary>
