@@ -13,7 +13,7 @@ void HPresolveAnalysis::setup(const HighsLp* model_,
                               const HighsOptions* options_,
                               const HighsInt& numDeletedRows_,
                               const HighsInt& numDeletedCols_,
-                              const bool silent, HighsTimer* timer) {
+                              HighsTimer* timer) {
   model = model_;
   options = options_;
   numDeletedRows = &numDeletedRows_;
@@ -31,78 +31,6 @@ void HPresolveAnalysis::setup(const HighsLp* model_,
     presolve_clocks_ = clock;
   }
 
-  this->allow_rule_.assign(kPresolveRuleCount, true);
-  std::vector<bool> presolve_light_rule_off(kPresolveRuleCount, false);
-  const bool presolve_light = options->presolve_light == kHighsOnString;
-  if (presolve_light) {
-    // Define the rules not used in presolve_light mode
-    presolve_light_rule_off[kPresolveRuleDependentEquations] = true;
-    presolve_light_rule_off[kPresolveRuleDependentFreeCols] = true;
-    presolve_light_rule_off[kPresolveRuleAggregator] = true;
-    presolve_light_rule_off[kPresolveRuleParallelRowsAndCols] = true;
-    presolve_light_rule_off[kPresolveRuleSparsify] = true;
-    presolve_light_rule_off[kPresolveRuleProbing] = true;
-    presolve_light_rule_off[kPresolveRuleEnumeration] = true;
-    presolve_light_rule_off[kPresolveRuleDualFixing] = true;
-    presolve_light_rule_off[kPresolveRuleColStuffing] = true;
-  }
-
-  if (!silent && options_->log_dev_level) {
-    // State which rules can be off, and what bit to set
-    highsLogUser(options->log_options, HighsLogType::kInfo,
-                 "Permitted suppression of presolve rules via "
-                 "presolve_rule_off option:\n");
-    HighsInt bit =
-        std::pow(int(2), static_cast<int>(kPresolveRuleFirstAllowOff));
-    for (HighsInt rule_type = kPresolveRuleFirstAllowOff;
-         rule_type < kPresolveRuleCount; rule_type++) {
-      // This is a rule that can be switched off
-      highsLogUser(options->log_options, HighsLogType::kInfo,
-                   "   Rule %2d (set bit %2d = %6d): %s\n", int(rule_type),
-                   int(rule_type), int(bit),
-                   utilPresolveRuleTypeToString(rule_type).c_str());
-      bit *= 2;
-    }
-  }
-  if (options->presolve_rule_off || presolve_light) {
-    // Some presolve rules are off or presolve_light mode is being used
-    //
-    // Transform options->presolve_rule_off into logical settings in
-    // allow_rule_[*], commenting on the rules switched off
-    if (!silent)
-      highsLogUser(options->log_options, HighsLogType::kInfo,
-                   "Presolve rules not allowed:\n");
-    HighsInt bit = 1;
-    for (HighsInt rule_type = kPresolveRuleMin; rule_type < kPresolveRuleCount;
-         rule_type++) {
-      // Identify whether this rule is allowed
-      const bool rule_off = (options->presolve_rule_off & bit) ||
-                            presolve_light_rule_off[rule_type];
-      if (rule_type >= kPresolveRuleFirstAllowOff) {
-        // This is a rule that can be switched off, so comment
-        // positively if it is off
-        allow_rule_[rule_type] = !rule_off;
-        if (rule_off && !silent)
-          highsLogUser(options->log_options, HighsLogType::kInfo,
-                       "   Rule %2d (set bit %2d = %6d): %s\n", int(rule_type),
-                       int(rule_type), int(bit),
-                       utilPresolveRuleTypeToString(rule_type).c_str());
-      } else if (rule_off) {
-        // This is a rule that cannot be switched off so, if an
-        // attempt is made, don't allow it to be off and possibly
-        // comment negatively
-        if (!silent)
-          highsLogUser(options->log_options, HighsLogType::kWarning,
-                       "Cannot disallow rule %2d (bit %2d = %5d): %s\n",
-                       int(rule_type), int(rule_type), int(bit),
-                       utilPresolveRuleTypeToString(rule_type).c_str());
-        // Check that we're not here because presolve_light mode is
-        // being used
-        assert(!presolve_light_rule_off[rule_type]);
-      }
-      bit *= 2;
-    }
-  }
   // Allow logging if option is set and model is not a MIP
   allow_logging_ = options_->presolve_rule_logging && !model_->isMip();
   logging_on_ = allow_logging_;
@@ -131,7 +59,6 @@ void HPresolveAnalysis::startPresolveRuleLog(const HighsInt rule_type) {
   const bool debug_print = false;
   assert(logging_on_);
   assert(rule_type >= kPresolveRuleMin && rule_type <= kPresolveRuleMax);
-  assert(allow_rule_[rule_type]);
   // Prevent any future calls to "start" until logging is on again
   logging_on_ = false;
   const HighsInt check_rule = kPresolveRuleIllegal;

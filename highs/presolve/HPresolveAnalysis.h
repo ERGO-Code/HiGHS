@@ -20,7 +20,6 @@ class HPresolveAnalysis {
   HighsTimer* timer_;
   const HighsLp* model;
   const HighsOptions* options;
-  const bool* allow_rule;
   const HighsInt* numDeletedRows;
   const HighsInt* numDeletedCols;
 
@@ -29,8 +28,6 @@ class HPresolveAnalysis {
   HighsInt original_num_row_;
 
  public:
-  std::vector<bool> allow_rule_;
-
   bool allow_logging_;
   bool logging_on_;
 
@@ -42,13 +39,9 @@ class HPresolveAnalysis {
   HighsTimerClock presolve_clocks_;
   bool analyse_presolve_time_;
 
-  // for LP presolve
-  //
-  // Transform options->presolve_rule_off into logical settings in
-  // allow_rule_[*], commenting on the rules switched off
   void setup(const HighsLp* model_, const HighsOptions* options_,
              const HighsInt& numDeletedRows_, const HighsInt& numDeletedCols_,
-             const bool silent, HighsTimer* timer);
+             HighsTimer* timer);
   void setupPresolveTime(const HighsOptions& options);
   void resetNumDeleted();
 

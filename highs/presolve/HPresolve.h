@@ -41,7 +41,8 @@ class HPresolve {
   HighsTimer* timer;
   HighsMipSolver* mipsolver = nullptr;
   double primal_feastol;
-
+  std::vector<bool> allow_rule_;
+  
   // triplet storage
   std::vector<double> Avalue;
   std::vector<HighsInt> Arow;
@@ -165,6 +166,8 @@ class HPresolve {
 
   // private functions for different shared functionality and matrix
   // modification
+
+  void chooseRules();
 
   void link(HighsInt pos);
 

@@ -18,6 +18,7 @@
 #include "lp_data/HConst.h"
 #include "lp_data/HStruct.h"
 #include "lp_data/HighsLpUtils.h"
+#include "lp_data/HighsModelUtils.h"
 #include "lp_data/HighsSolution.h"
 #include "mip/HighsCliqueTable.h"
 #include "mip/HighsImplications.h"
@@ -74,10 +75,11 @@ bool HPresolve::okSetInput(HighsLp& model_, const HighsOptions& options_,
   this->model = &model_;
   this->options = &options_;
   this->timer = timer;
-  // Set up the logic to allow presolve rules, and logging for their
-  // effectiveness
+  // Set up the logic to allow presolve rules
+  this->chooseRules();
+  // Set up profiling for presolve rules and logging for their effectiveness
   analysis_.setup(this->model, this->options, this->numDeletedRows,
-                  this->numDeletedCols, silentLog(), this->timer);
+                  this->numDeletedCols, this->timer);
   analysis_.presolveTimerStart(kPresolveClockPresolve);
 
   analysis_.presolveTimerStart(kPresolveClockSetupResize);
@@ -462,6 +464,83 @@ HPresolve::StatusResult HPresolve::convertImpliedInteger(HighsInt col,
   // round and update bounds
   return StatusResult(
       changeColBounds(col, model->col_lower_[col], model->col_upper_[col]));
+}
+
+void HPresolve::chooseRules() {
+  const bool silent = silentLog();
+  this->allow_rule_.assign(kPresolveRuleCount, true);
+  std::vector<bool> presolve_light_rule_off(kPresolveRuleCount, false);
+  const bool presolve_light = options->presolve_light == kHighsOnString;
+  if (presolve_light) {
+    // Define the rules not used in presolve_light mode
+    presolve_light_rule_off[kPresolveRuleDependentEquations] = true;
+    presolve_light_rule_off[kPresolveRuleDependentFreeCols] = true;
+    presolve_light_rule_off[kPresolveRuleAggregator] = true;
+    presolve_light_rule_off[kPresolveRuleParallelRowsAndCols] = true;
+    presolve_light_rule_off[kPresolveRuleSparsify] = true;
+    presolve_light_rule_off[kPresolveRuleProbing] = true;
+    presolve_light_rule_off[kPresolveRuleEnumeration] = true;
+    presolve_light_rule_off[kPresolveRuleDualFixing] = true;
+    presolve_light_rule_off[kPresolveRuleColStuffing] = true;
+  }
+
+  if (!silent && options->log_dev_level) {
+    // State which rules can be off, and what bit to set
+    highsLogUser(options->log_options, HighsLogType::kInfo,
+                 "Permitted suppression of presolve rules via "
+                 "presolve_rule_off option:\n");
+    HighsInt bit =
+        std::pow(int(2), static_cast<int>(kPresolveRuleFirstAllowOff));
+    for (HighsInt rule_type = kPresolveRuleFirstAllowOff;
+         rule_type < kPresolveRuleCount; rule_type++) {
+      // This is a rule that can be switched off
+      highsLogUser(options->log_options, HighsLogType::kInfo,
+                   "   Rule %2d (set bit %2d = %6d): %s\n", int(rule_type),
+                   int(rule_type), int(bit),
+                   utilPresolveRuleTypeToString(rule_type).c_str());
+      bit *= 2;
+    }
+  }
+  if (options->presolve_rule_off || presolve_light) {
+    // Some presolve rules are off or presolve_light mode is being used
+    //
+    // Transform options->presolve_rule_off into logical settings in
+    // allow_rule_[*], commenting on the rules switched off
+    if (!silent)
+      highsLogUser(options->log_options, HighsLogType::kInfo,
+                   "Presolve rules not allowed:\n");
+    HighsInt bit = 1;
+    for (HighsInt rule_type = kPresolveRuleMin; rule_type < kPresolveRuleCount;
+         rule_type++) {
+      // Identify whether this rule is allowed
+      const bool rule_off = (options->presolve_rule_off & bit) ||
+                            presolve_light_rule_off[rule_type];
+      if (rule_type >= kPresolveRuleFirstAllowOff) {
+        // This is a rule that can be switched off, so comment
+        // positively if it is off
+        allow_rule_[rule_type] = !rule_off;
+        if (rule_off && !silent)
+          highsLogUser(options->log_options, HighsLogType::kInfo,
+                       "   Rule %2d (set bit %2d = %6d): %s\n", int(rule_type),
+                       int(rule_type), int(bit),
+                       utilPresolveRuleTypeToString(rule_type).c_str());
+      } else if (rule_off) {
+        // This is a rule that cannot be switched off so, if an
+        // attempt is made, don't allow it to be off and possibly
+        // comment negatively
+        if (!silent)
+          highsLogUser(options->log_options, HighsLogType::kWarning,
+                       "Cannot disallow rule %2d (bit %2d = %5d): %s\n",
+                       int(rule_type), int(rule_type), int(bit),
+                       utilPresolveRuleTypeToString(rule_type).c_str());
+        // Check that we're not here because presolve_light mode is
+        // being used
+        assert(!presolve_light_rule_off[rule_type]);
+      }
+      bit *= 2;
+    }
+  }
+
 }
 
 void HPresolve::link(HighsInt pos) {
@@ -3048,7 +3127,7 @@ void HPresolve::toCSR(std::vector<double>& ARval,
 HPresolve::Result HPresolve::doubletonEq(HighsPostsolveStack& postsolve_stack,
                                          HighsInt row,
                                          HighsPostsolveStack::RowType rowType) {
-  assert(analysis_.allow_rule_[kPresolveRuleDoubletonEquation]);
+  assert(this->allow_rule_[kPresolveRuleDoubletonEquation]);
   const bool logging_on = analysis_.logging_on_;
   if (logging_on)
     analysis_.startPresolveRuleLog(kPresolveRuleDoubletonEquation);
@@ -3394,7 +3473,7 @@ HPresolve::Result HPresolve::singletonCol(HighsPostsolveStack& postsolve_stack,
         static_cast<Result>(convertImpliedInteger(col, row)));
 
   // dual fixing
-  if (analysis_.allow_rule_[kPresolveRuleDualFixing]) {
+  if (this->allow_rule_[kPresolveRuleDualFixing]) {
     const bool logging_on = analysis_.logging_on_;
     if (logging_on) analysis_.startPresolveRuleLog(kPresolveRuleDualFixing);
     if (timing)
@@ -3408,7 +3487,7 @@ HPresolve::Result HPresolve::singletonCol(HighsPostsolveStack& postsolve_stack,
   }
 
   // singleton column stuffing
-  if (analysis_.allow_rule_[kPresolveRuleColStuffing]) {
+  if (this->allow_rule_[kPresolveRuleColStuffing]) {
     const bool logging_on = analysis_.logging_on_;
     if (logging_on) analysis_.startPresolveRuleLog(kPresolveRuleColStuffing);
     if (timing)
@@ -3442,7 +3521,7 @@ HPresolve::Result HPresolve::singletonCol(HighsPostsolveStack& postsolve_stack,
   if (timing)
     analysis_.presolveTimerStart(kPresolveClockSingletonColDualImpliedFree);
   if (isDualImpliedFree(row) && isImpliedFree(col) &&
-      analysis_.allow_rule_[kPresolveRuleFreeColSubstitution]) {
+      this->allow_rule_[kPresolveRuleFreeColSubstitution]) {
     if (model->integrality_[col] == HighsVarType::kInteger) {
       StatusResult impliedIntegral = isImpliedIntegral(col);
       HPRESOLVE_CHECKED_CALL(static_cast<Result>(impliedIntegral));
@@ -3655,7 +3734,7 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
 
   // Handle doubleton equations
   if (rowsize[row] == 2 && rowLower == rowUpper &&
-      analysis_.allow_rule_[kPresolveRuleDoubletonEquation]) {
+      this->allow_rule_[kPresolveRuleDoubletonEquation]) {
     HighsPostsolveStack::RowType rowType;
     if (origRowLower == origRowUpper) {
       rowType = HighsPostsolveStack::RowType::kEq;
@@ -4407,7 +4486,7 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
     return checkLimits(postsolve_stack);
   };
 
-  if (analysis_.allow_rule_[kPresolveRuleForcingRow]) {
+  if (this->allow_rule_[kPresolveRuleForcingRow]) {
     // Allow rule to consider forcing rows
 
     // store row and compute dynamism
@@ -4574,7 +4653,7 @@ HPresolve::Result HPresolve::colPresolve(HighsPostsolveStack& postsolve_stack,
   }
 
   // dual fixing
-  if (analysis_.allow_rule_[kPresolveRuleDualFixing]) {
+  if (this->allow_rule_[kPresolveRuleDualFixing]) {
     const bool logging_on = analysis_.logging_on_;
     if (logging_on) analysis_.startPresolveRuleLog(kPresolveRuleDualFixing);
     if (timing)
@@ -4588,7 +4667,7 @@ HPresolve::Result HPresolve::colPresolve(HighsPostsolveStack& postsolve_stack,
   }
 
   // singleton column stuffing
-  if (analysis_.allow_rule_[kPresolveRuleColStuffing]) {
+  if (this->allow_rule_[kPresolveRuleColStuffing]) {
     const bool logging_on = analysis_.logging_on_;
     if (logging_on) analysis_.startPresolveRuleLog(kPresolveRuleColStuffing);
     if (timing)
@@ -4668,7 +4747,7 @@ HPresolve::Result HPresolve::detectDominatedCol(
       if (handleSingletonRows)
         HPRESOLVE_CHECKED_CALL(removeRowSingletons(postsolve_stack));
       return checkLimits(postsolve_stack);
-    } else if (analysis_.allow_rule_[kPresolveRuleForcingCol]) {
+    } else if (this->allow_rule_[kPresolveRuleForcingCol]) {
       // check for forcing column (see Andersen and Andersen, Presolving in
       // linear programming. Math. Program. 71, 221-245, 1995).
       // the column's lower bound is infinite (direction = 1) or its upper
@@ -5999,7 +6078,7 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
             applyConflictGraphSubstitutions(postsolve_stack, numDelCol));
       }
 
-      if (analysis_.allow_rule_[kPresolveRuleAggregator]) {
+      if (this->allow_rule_[kPresolveRuleAggregator]) {
         analysis_.presolveTimerStart(kPresolveClockAggregator);
         HPRESOLVE_CHECKED_CALL(aggregator(postsolve_stack));
         analysis_.presolveTimerStop(kPresolveClockAggregator);
@@ -6007,7 +6086,7 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
 
       if (problemSizeReduction() > 0.05) continue;
 
-      if (trySparsify && analysis_.allow_rule_[kPresolveRuleSparsify]) {
+      if (trySparsify && this->allow_rule_[kPresolveRuleSparsify]) {
         HighsInt numNz = numNonzeros();
         analysis_.presolveTimerStart(kPresolveClockSparsify);
         HPRESOLVE_CHECKED_CALL(sparsify(postsolve_stack));
@@ -6026,7 +6105,7 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
         trySparsify = false;
       }
 
-      if (analysis_.allow_rule_[kPresolveRuleParallelRowsAndCols] &&
+      if (this->allow_rule_[kPresolveRuleParallelRowsAndCols] &&
           numParallelRowColCalls < 5) {
         if (shrinkProblemEnabled && (numDeletedCols >= model->num_col_ / 2 ||
                                      numDeletedRows >= model->num_row_ / 2)) {
@@ -6079,13 +6158,13 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
 
       // enumerate solutions
       if (mipsolver != nullptr &&
-          analysis_.allow_rule_[kPresolveRuleEnumeration]) {
+          this->allow_rule_[kPresolveRuleEnumeration]) {
         storeCurrentProblemSize();
         HPRESOLVE_CHECKED_CALL(enumerateSolutions(postsolve_stack));
         if (problemSizeReduction() > 0.05) continue;
       }
 
-      if (tryProbing && analysis_.allow_rule_[kPresolveRuleProbing]) {
+      if (tryProbing && this->allow_rule_[kPresolveRuleProbing]) {
         HPRESOLVE_CHECKED_CALL(detectImpliedIntegers());
         storeCurrentProblemSize();
         HPRESOLVE_CHECKED_CALL(runProbing(postsolve_stack));
@@ -6109,13 +6188,13 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
                     model->a_matrix_.start_);
         }
         storeCurrentProblemSize();
-        if (analysis_.allow_rule_[kPresolveRuleDependentEquations]) {
+        if (this->allow_rule_[kPresolveRuleDependentEquations]) {
           analysis_.presolveTimerStart(kPresolveClockDependentEquations);
           HPRESOLVE_CHECKED_CALL(removeDependentEquations(postsolve_stack));
           analysis_.presolveTimerStop(kPresolveClockDependentEquations);
           dependentEquationsCalled = true;
         }
-        if (analysis_.allow_rule_[kPresolveRuleDependentFreeCols]) {
+        if (this->allow_rule_[kPresolveRuleDependentFreeCols]) {
           analysis_.presolveTimerStart(kPresolveClockDependentFreeCol);
           HPRESOLVE_CHECKED_CALL(removeDependentFreeCols(postsolve_stack));
           analysis_.presolveTimerStop(kPresolveClockDependentFreeCol);
@@ -6596,7 +6675,7 @@ void HPresolve::computeIntermediateMatrix(std::vector<HighsInt>& flagRow,
 
 HPresolve::Result HPresolve::removeDependentEquations(
     HighsPostsolveStack& postsolve_stack) {
-  assert(analysis_.allow_rule_[kPresolveRuleDependentEquations]);
+  assert(this->allow_rule_[kPresolveRuleDependentEquations]);
   const bool logging_on = analysis_.logging_on_;
   if (equations.empty()) return Result::kOk;
 
@@ -6761,7 +6840,7 @@ HPresolve::Result HPresolve::removeDependentFreeCols(
   return Result::kOk;
 
   // Commented out unreachable code
-  //  assert(analysis_.allow_rule_[kPresolveRuleDependentFreeCols]);
+  //  assert(this->allow_rule_[kPresolveRuleDependentFreeCols]);
   //  const bool logging_on = analysis_.logging_on_;
   //  if (logging_on)
   //    analysis_.startPresolveRuleLog(kPresolveRuleDependentFreeCols);
@@ -6848,7 +6927,7 @@ HPresolve::Result HPresolve::removeDependentFreeCols(
 }
 
 HPresolve::Result HPresolve::aggregator(HighsPostsolveStack& postsolve_stack) {
-  assert(analysis_.allow_rule_[kPresolveRuleAggregator]);
+  assert(this->allow_rule_[kPresolveRuleAggregator]);
   const bool logging_on = analysis_.logging_on_;
   if (logging_on) analysis_.startPresolveRuleLog(kPresolveRuleAggregator);
   substitutionOpportunities.erase(
@@ -7428,7 +7507,7 @@ HPresolve::Result HPresolve::detectImpliedIntegers() {
 
 HPresolve::Result HPresolve::detectParallelRowsAndCols(
     HighsPostsolveStack& postsolve_stack) {
-  assert(analysis_.allow_rule_[kPresolveRuleParallelRowsAndCols]);
+  assert(this->allow_rule_[kPresolveRuleParallelRowsAndCols]);
   const bool logging_on = analysis_.logging_on_;
   if (logging_on)
     analysis_.startPresolveRuleLog(kPresolveRuleParallelRowsAndCols);
@@ -8461,7 +8540,7 @@ void HPresolve::debug(const HighsLp& lp, const HighsOptions& options) {
 }
 
 HPresolve::Result HPresolve::sparsify(HighsPostsolveStack& postsolve_stack) {
-  assert(analysis_.allow_rule_[kPresolveRuleSparsify]);
+  assert(this->allow_rule_[kPresolveRuleSparsify]);
   std::vector<HighsPostsolveStack::Nonzero> sparsifyRows;
   const bool logging_on = analysis_.logging_on_;
   if (logging_on) analysis_.startPresolveRuleLog(kPresolveRuleSparsify);
