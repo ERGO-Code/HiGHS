@@ -917,13 +917,25 @@ TEST_CASE("presolve-light", "[highs_test_presolve]") {
   Highs highs;
   highs.setOptionValue("output_flag", dev_run);
   highs.readModel(model_file);
+  HighsInt presolved_num_col;
+  HighsInt presolved_num_row;
+  HighsInt presolved_num_nz;
   for (HighsInt k = 0; k < 2; k++) {
     REQUIRE(highs.presolve() == HighsStatus::kOk);
     REQUIRE(highs.getModelPresolveStatus() == HighsPresolveStatus::kReduced);
     const HighsLp& presolved_lp = highs.getPresolvedLp();
+    if (k == 1) {
+      REQUIRE(presolved_lp.num_col_ > presolved_num_col);
+      REQUIRE(presolved_lp.num_row_ > presolved_num_row);
+      REQUIRE(presolved_lp.numNz() > presolved_num_nz);
+    }
+    presolved_num_col = presolved_lp.num_col_;
+    presolved_num_row = presolved_lp.num_row_;
+    presolved_num_nz = presolved_lp.numNz();
+    
     if (dev_run) printf("%s presolved LP has %d columns; %d rows and %d nonzeros\n",
-			k == 0 ? "Fully" : "Lightly", int(presolved_lp.num_col_),
-			int(presolved_lp.num_row_), int(presolved_lp.numNz()));
-    highs.setOptionValue("presolve_light", true);
+			k == 0 ? "Fully" : "Lightly", int(presolved_num_col),
+			int(presolved_num_row), int(presolved_num_nz));
+    highs.setOptionValue("presolve_light", kHighsOnString);
   }
 }

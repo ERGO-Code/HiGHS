@@ -494,6 +494,9 @@ OptionStatus checkOptionValue(const HighsLogOptions& report_log_options,
   } else if (option.name == kHipoOrderingString) {
     if (!optionHipoOrderingOk(report_log_options, value))
       return OptionStatus::kIllegalValue;
+  } else if (option.name == kPresolveLightString) {
+    if (!optionOffChooseOnOk(report_log_options, option.name, value))
+      return OptionStatus::kIllegalValue;
   }
   return OptionStatus::kOk;
 }

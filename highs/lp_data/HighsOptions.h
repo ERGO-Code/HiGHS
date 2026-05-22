@@ -286,6 +286,7 @@ const string kModelFileString = "model_file";
 const string kReadBasisFileString = "read_basis_file";
 const string kWriteBasisFileString = "write_basis_file";
 const string kPresolveString = "presolve";
+const string kPresolveLightString = "presolve_light";
 const string kSolverString = "solver";
 const string kParallelString = "parallel";
 const string kRunCrossoverString = "run_crossover";
@@ -1455,7 +1456,7 @@ class HighsOptions : public HighsOptionsStruct {
     records.push_back(record_bool);
 
     record_string =
-        new OptionRecordString("presolve_light",
+        new OptionRecordString(kPresolveLightString,
                                "Use only low-cost presolve rules: \"off\", \"choose\" or \"on\"",
                                advanced, &presolve_light, kHighsChooseString);
     records.push_back(record_string);
