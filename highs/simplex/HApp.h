@@ -22,6 +22,7 @@
 #include "lp_data/HighsLpUtils.h"
 #include "lp_data/HighsSolution.h"
 #include "lp_data/HighsSolve.h"
+#include "parallel/HighsParallel.h"
 #include "simplex/HEkk.h"
 #include "simplex/HSimplex.h"
 
@@ -42,7 +43,20 @@ inline HighsStatus returnFromSolveLpSimplex(HighsLpSolverObject& solver_object,
   solver_object.highs_info_.simplex_iteration_count =
       ekk_instance.iteration_count_;
   // Stop whichever clock was running
-  solver_object.sub_solver_call_time_->stop();
+  if (solver_object.profiling_->sub_solver_) {
+    HighsInt profiling_clock = -1;
+    HighsProfilingRecord* thread_record =
+        solver_object.profiling_->getHighsProfilingRecord();
+    if (std::signbit(thread_record->start_time[kSubSolverDuSimplexBasis]))
+      profiling_clock = kSubSolverDuSimplexBasis;
+    if (std::signbit(thread_record->start_time[kSubSolverDuSimplexNoBasis]))
+      profiling_clock = kSubSolverDuSimplexNoBasis;
+    if (std::signbit(thread_record->start_time[kSubSolverPrSimplexBasis]))
+      profiling_clock = kSubSolverPrSimplexBasis;
+    if (std::signbit(thread_record->start_time[kSubSolverPrSimplexNoBasis]))
+      profiling_clock = kSubSolverPrSimplexNoBasis;
+    solver_object.profiling_->stop(profiling_clock);
+  }
   // Ensure that the incumbent LP is neither moved, nor scaled
   assert(!incumbent_lp.is_moved_);
   assert(!incumbent_lp.is_scaled_);
@@ -103,22 +117,26 @@ inline HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
     assert(retained_ekk_data_ok);
     return_status = HighsStatus::kError;
   }
-  HighsInt sub_solver_ix = -1;
-  if (options.simplex_strategy == kSimplexStrategyPrimal) {
-    if (basis.valid) {
-      sub_solver_ix = kSubSolverPrSimplexBasis;
+  if (solver_object.profiling_) {
+    HighsInt profiling_clock = -1;
+    if (options.simplex_strategy == kSimplexStrategyPrimal) {
+      if (basis.valid) {
+        profiling_clock = kSubSolverPrSimplexBasis;
+      } else {
+        profiling_clock = kSubSolverPrSimplexNoBasis;
+      }
     } else {
-      sub_solver_ix = kSubSolverPrSimplexNoBasis;
+      if (basis.valid) {
+        profiling_clock = kSubSolverDuSimplexBasis;
+      } else {
+        profiling_clock = kSubSolverDuSimplexNoBasis;
+      }
     }
-  } else {
-    if (basis.valid) {
-      sub_solver_ix = kSubSolverDuSimplexBasis;
-    } else {
-      sub_solver_ix = kSubSolverDuSimplexNoBasis;
-    }
+    assert(profiling_clock >= 0);
+    //    if (solver_object.profiling_->isSubMip()) { printf("solveLpSimplex:
+    //    sub-MIP on thread %d\n", int(solver_object.profiling_->myThread())); }
+    solver_object.profiling_->start(profiling_clock);
   }
-  assert(sub_solver_ix >= 0);
-  solver_object.sub_solver_call_time_->start(sub_solver_ix);
   // Copy the simplex iteration count from highs_info_ to ekk_instance, just for
   // convenience
   ekk_instance.iteration_count_ = highs_info.simplex_iteration_count;

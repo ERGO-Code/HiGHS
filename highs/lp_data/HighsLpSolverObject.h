@@ -38,10 +38,11 @@ class HighsLpSolverObject {
   HighsCallback& callback_;
   HighsOptions& options_;
   HighsTimer& timer_;
-  HighsSubSolverCallTime* sub_solver_call_time_;
+  HighsProfiling* profiling_ = nullptr;
   HighsModelStatus model_status_ = HighsModelStatus::kNotset;
-  void setSubSolverCallTime(HighsSubSolverCallTime* sub_solver_call_time) {
-    sub_solver_call_time_ = sub_solver_call_time;
+  void setProfiling(HighsProfiling* profiling) {
+    assert(profiling);
+    profiling_ = profiling;
   }
 };
 

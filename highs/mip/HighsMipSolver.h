@@ -11,7 +11,6 @@
 #include "Highs.h"
 #include "lp_data/HighsCallback.h"
 #include "lp_data/HighsOptions.h"
-#include "mip/HighsMipAnalysis.h"
 #include "parallel/HighsParallel.h"
 
 struct HighsMipSolverData;
@@ -67,8 +66,6 @@ class HighsMipSolver {
   const HighsImplications* implicinit;
 
   std::unique_ptr<HighsMipSolverData> mipdata_;
-
-  HighsMipAnalysis analysis_;
 
   HighsModelStatus termination_status_;
   HighsTerminator terminator_;
@@ -131,10 +128,10 @@ class HighsMipSolver {
   }
 
   mutable HighsTimer timer_;
-  mutable HighsSubSolverCallTime sub_solver_call_time_;
-  HighsSubSolverCallTime* global_sub_solver_call_time_;
+  HighsProfiling* profiling_ = nullptr;
 
   void cleanupSolve();
+  void solvingReport(const std::string& solutionstatus) const;
 
   void runMipPresolve(const HighsInt presolve_reduction_limit);
   const HighsLp& getPresolvedModel() const;
@@ -160,9 +157,7 @@ class HighsMipSolver {
     return this->termination_status_;
   }
   void setParallelLock(bool lock) const;
-  void setGlobalSubSolverCallTime(
-      HighsSubSolverCallTime* global_sub_solver_call_time);
-  void initialiseAnalysis(const HighsMipAnalysis* from_analysis = nullptr);
+  void setProfiling(HighsProfiling* profiling);
 };
 
 std::array<char, 128> getGapString(const double gap_,

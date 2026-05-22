@@ -303,8 +303,22 @@ enum IisStatus : int {
   kIisStatusMax = kIisStatusInConflict
 };
 
+enum MipChooseSubMipRecord : int {
+  kMipRecord = -1,
+  kChooseRecord,
+  kSubMipRecord
+};
+
+enum PresolveSolvePostsolveIndex : int {
+  kPresolveTime = 0,
+  kSolveTime,
+  kPostsolveTime,
+  kToPresolveSolvePostsolve
+};
+
 enum SubSolverIndex : int {
-  kSubSolverMip = 0,
+  kFromSubSolver = kToPresolveSolvePostsolve,
+  kSubSolverMip = kFromSubSolver,
   kSubSolverDuSimplexBasis,
   kSubSolverDuSimplexNoBasis,
   kSubSolverPrSimplexBasis,
@@ -316,7 +330,8 @@ enum SubSolverIndex : int {
   kSubSolverPdlp,
   kSubSolverQpAsm,
   kSubSolverSubMip,
-  kSubSolverCount
+  kLastSubSolver = kSubSolverSubMip,
+  kToSubSolver = kLastSubSolver + 1
 };
 
 // Minimum and default KKT tolerance

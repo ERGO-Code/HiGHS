@@ -20,10 +20,9 @@
 #include "util/HighsCDouble.h"
 #include "util/HighsHash.h"
 
-void HighsLpRelaxation::setGlobalSubSolverCallTime(
-    HighsSubSolverCallTime* global_sub_solver_call_time) {
-  assert(global_sub_solver_call_time->timer);
-  lpsolver.setGlobalSubSolverCallTime(global_sub_solver_call_time);
+void HighsLpRelaxation::setProfiling(HighsProfiling* profiling) {
+  assert(profiling);
+  lpsolver.setProfiling(profiling);
 }
 
 void HighsLpRelaxation::getCutPool(HighsInt& num_col, HighsInt& num_cut,
@@ -603,6 +602,7 @@ void HighsLpRelaxation::removeCuts(HighsInt ndelcuts,
     assert(lpsolver.getLp().num_row_ == (HighsInt)lprows.size());
     basis.debug_origin_name = "HighsLpRelaxation::removeCuts";
     lpsolver.setBasis(basis);
+    mipsolver.profiling_->solveCall("LP0", mipsolver.submip);
     lpsolver.optimizeLp();
   }
 }
@@ -1131,7 +1131,7 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
   // lpsolver.setOptionValue("output_flag", true);
   const bool valid_basis = lpsolver.getBasis().valid;
 
-  if (mipsolver.analysis_.analyse_mip_time && !mipsolver.submip &&
+  if (mipsolver.profiling_->mip_ && !mipsolver.submip &&
       !this->solved_first_lp) {
     highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
                  "MIP-Timing: %11.2g - start first LP solve (with%s basis)\n",
@@ -1188,6 +1188,7 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
       fflush(stdout);
       exit(1);
     }
+    mipsolver.profiling_->solveCall("LP1", mipsolver.submip);
     callstatus = lpsolver.optimizeLp();
     if (ipm_logging) lpsolver.setOptionValue("output_flag", false);
     if (callstatus == HighsStatus::kError) {
@@ -1200,11 +1201,21 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
     }
   }
   if (use_simplex) {
+    const bool profiling_submip = mipsolver.profiling_->isSubMip();
+    mipsolver.profiling_->setSubMip(mipsolver.submip);
+    if (mipsolver.profiling_->running(kSubSolverSubMip))
+      printf(
+          "HighsLpRelaxation::run Sub-MIP sub-solver clock running on thread "
+          "%2d and this is %sMIP\n",
+          int(mipsolver.profiling_->myThread()),
+          mipsolver.submip ? "sub-" : "");
+    mipsolver.profiling_->setSubMip(profiling_submip);
+    mipsolver.profiling_->solveCall("LP2", mipsolver.submip);
     callstatus = lpsolver.optimizeLp();
   }
   // Revert the value of lpsolver.options_.solver
   lpsolver.setOptionValue("solver", solver);
-  if (mipsolver.analysis_.analyse_mip_time && !mipsolver.submip &&
+  if (mipsolver.profiling_->mip_ && !mipsolver.submip &&
       !this->solved_first_lp) {
     highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
                  "MIP-Timing: %11.2g - finish first LP solve\n",
@@ -1347,7 +1358,7 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
       if (!mipsolver.submip && resolve_on_error) {
         // Highs instantiation
         Highs ipm;
-        ipm.setGlobalSubSolverCallTime(mipsolver.global_sub_solver_call_time_);
+        ipm.setProfiling(mipsolver.profiling_);
         ipm.setOptionValue("output_flag", false);
         // check if only root presolve is allowed
         const bool use_presolve =
@@ -1393,6 +1404,7 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
           (void)output_flag;
           ipm.setOptionValue("output_flag", !mipsolver.submip);
         }
+        mipsolver.profiling_->solveCall("LP3", mipsolver.submip);
         ipm.optimizeLp();
         if (ipm_logging) ipm.setOptionValue("output_flag", false);
         if (use_hipo && !ipm.getBasis().valid) {
@@ -1402,6 +1414,7 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
                       "basis: status = %s Try IPX\n",
                       ipm.modelStatusToString(ipm.getModelStatus()).c_str());
           ipm.setOptionValue("solver", kIpxString);
+          mipsolver.profiling_->solveCall("LP4", mipsolver.submip);
           ipm.optimizeLp();
         }
         lpsolver.setBasis(ipm.getBasis(), "HighsLpRelaxation::run IPM basis");

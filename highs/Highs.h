@@ -1235,17 +1235,9 @@ class Highs {
   HighsStatus setBasis();
 
   /**
-   * @brief Return a const reference to the internal sub-solver call and time
-   * instance
+   * @brief Report profiling
    */
-  const HighsSubSolverCallTime& getSubSolverCallTime() const {
-    return sub_solver_call_time_;
-  }
-
-  /**
-   * @brief Report internal sub-solver call and time instance
-   */
-  void reportSubSolverCallTime() const;
+  void reportProfiling() const;
 
   /**
    * @brief Run IPX crossover from a given HighsSolution instance and,
@@ -1277,11 +1269,11 @@ class Highs {
 
   /**
    * @brief Ensures that the global scheduler is initialized,
-   * returning HighsStatus::kError if it has already been initialised,
+   * returning HighsStatus::kError if it has already been initialized,
    * but the threads option is nonzero and not equal to
-   * this->max_threads_
+   * this->max_threads_.
    */
-  HighsStatus initializeGlobalScheduler();
+  HighsStatus initializeMultiThreading();
 
   /**
    * @brief Releases all resources held by the global scheduler instance. It is
@@ -1298,8 +1290,28 @@ class Highs {
    */
   static void resetGlobalScheduler(bool blocking = false);
 
-  void setGlobalSubSolverCallTime(
-      HighsSubSolverCallTime* global_sub_solver_call_time = nullptr);
+  /**
+   * @brief If profiling is not nullptr, sets up profiling and copies
+   * its pointer to Highs
+   */
+  void initializeProfiling(HighsProfiling* profiling);
+  void initializeSingleThreadedProfiling(HighsProfiling* profiling);
+
+  /**
+   * @brief Clears and then initializes profiling
+   */
+  void resetProfiling();
+
+  /**
+   * @brief If Highs::profiling_ is not nullptr, clears profiling and
+   * sets Highs::profiling_ to nullptr
+   */
+  void clearProfiling();
+
+  /**
+   * @brief Checks that pointer is not nullptr, and copies it to Highs
+   */
+  void setProfiling(HighsProfiling* profiling);
 
   // Start of advanced methods: only for internal use!
 
@@ -1567,12 +1579,7 @@ class Highs {
 
   HighsPresolveLog presolve_log_;
 
-  // This local HighsSubSolverCallTime instance is used to define the
-  // pointers in subsequent Highs instances (such as
-  // global_sub_solver_call_time_ below) and analysis classes
-  HighsSubSolverCallTime sub_solver_call_time_;
-
-  HighsSubSolverCallTime* global_sub_solver_call_time_;
+  HighsProfiling* profiling_ = nullptr;
 
   HighsInt max_threads_ = 0;
   // This is strictly for debugging. It's used to check whether

@@ -100,8 +100,7 @@ class HighsLpRelaxation {
 
   HighsLpRelaxation(const HighsLpRelaxation& other);
 
-  void setGlobalSubSolverCallTime(
-      HighsSubSolverCallTime* global_sub_solver_call_time);
+  void setProfiling(HighsProfiling* profiling);
 
   void getCutPool(HighsInt& num_col, HighsInt& num_cut,
                   std::vector<double>& cut_lower,

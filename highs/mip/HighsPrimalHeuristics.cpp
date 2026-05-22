@@ -95,10 +95,11 @@ bool HighsPrimalHeuristics::solveSubMip(
   const bool allow_submip_log = true;
   if (allow_submip_log && lp.num_col_ == -54 && lp.num_row_ == -172) {
     submipoptions.output_flag = true;
-    printf(
-        "HighsPrimalHeuristics::solveSubMip (%d, %d) with output_flag = %s\n",
-        int(lp.num_col_), int(lp.num_row_),
-        highsBoolToString(submipoptions.output_flag).c_str());
+    if (mipsolver.profiling_->sub_solver_)
+      printf(
+          "HighsPrimalHeuristics::solveSubMip (%d, %d) with output_flag = %s\n",
+          int(lp.num_col_), int(lp.num_row_),
+          highsBoolToString(submipoptions.output_flag).c_str());
   }
 
   submipoptions.mip_max_nodes = maxnodes;
@@ -133,15 +134,15 @@ bool HighsPrimalHeuristics::solveSubMip(
   solution.value_valid = false;
   solution.dual_valid = false;
   if (!mipsolver.submip && !mipsolver.mipdata_->parallelLockActive()) {
-    mipsolver.analysis_.mipTimerStart(kMipClockSubMipSolve);
+    mipsolver.profiling_->start(kMipClockSubMipSolve);
   }
+  mipsolver.profiling_->solveCall("MIP", mipsolver.submip);
   // Create HighsMipSolver instance for sub-MIP
   HighsMipSolver submipsolver(*mipsolver.callback_, submipoptions, submip,
                               solution, true, mipsolver.submip_level + 1);
   // Initialise termination_status_ and propagate any terminator to
   // the sub-MIP
   submipsolver.initialiseTerminator(mipsolver);
-  submipsolver.initialiseAnalysis(&mipsolver.analysis_);
   submipsolver.rootbasis = &basis;
   HighsPseudocostInitialization pscostinit(worker.getPseudocost(), 1);
   submipsolver.pscostinit = &pscostinit;
@@ -151,24 +152,44 @@ bool HighsPrimalHeuristics::solveSubMip(
   //
   // Copy the pointer to global sub-solver data into the sub-MIP
   // solver
-  submipsolver.setGlobalSubSolverCallTime(
-      mipsolver.global_sub_solver_call_time_);
+  submipsolver.setProfiling(mipsolver.profiling_);
+  // Stop the solve timer so that presolve/solve/postsolve for the
+  // sub-MIP are timed independently
+  const bool was_running_solve = mipsolver.profiling_->running(kSolveTime);
+  if (was_running_solve) mipsolver.profiling_->stop(kSolveTime);
   // Only start timing the submip if the calling MIP isn't a sub-MIP
-  if (!mipsolver.submip)
-    mipsolver.global_sub_solver_call_time_->start(kSubSolverSubMip);
-  // Ensure that sub-solver call time data accumulated in the sub-MIP record
-  mipsolver.global_sub_solver_call_time_->setSubMip(true);
+  if (mipsolver.profiling_->sub_solver_)
+    printf(
+        "\nHighsPrimalHeuristics::solveSubMip Before run() for %sMIP at depth "
+        "%2d on thread %2d\n",
+        mipsolver.submip ? "sub-" : "    ", int(mipsolver.submip_level),
+        int(mipsolver.profiling_->myThread()));
+  if (!mipsolver.submip) mipsolver.profiling_->start(kSubSolverSubMip);
+  // Ensure that sub-solver call time data accumulate in the sub-MIP record
+  mipsolver.profiling_->setSubMip(true);
   submipsolver.run();
-  // Ensure that further sub-solver call time data are accumulated in
-  // the MIP or sub-MIP record, according to whether the calling MIP
-  // is a sub-MIP
-  mipsolver.global_sub_solver_call_time_->setSubMip(mipsolver.submip);
-  if (!mipsolver.submip)
-    mipsolver.global_sub_solver_call_time_->stop(kSubSolverSubMip);
+  if (mipsolver.profiling_->sub_solver_)
+    printf(
+        "HighsPrimalHeuristics::solveSubMip After  run() for %sMIP at depth "
+        "%2d "
+        "on thread %2d\n\n",
+        mipsolver.submip ? "sub-" : "    ", int(mipsolver.submip_level),
+        int(mipsolver.profiling_->myThread()));
+  // Ensure that further sub-solver call time data accumulate in the
+  // MIP or sub-MIP record, according to whether the calling MIP is a
+  // sub-MIP
+  mipsolver.profiling_->setSubMip(mipsolver.submip);
+  if (!mipsolver.submip) mipsolver.profiling_->stop(kSubSolverSubMip);
   worker.updateHeurStatsMaxSubMipLevel(submipsolver.max_submip_level + 1);
   if (!mipsolver.submip && !mipsolver.mipdata_->parallelLockActive()) {
     // Only stop timing the submip if the calling MIP isn't a sub-MIP
-    mipsolver.analysis_.mipTimerStop(kMipClockSubMipSolve);
+    mipsolver.profiling_->stop(kMipClockSubMipSolve);
+  }
+  if (was_running_solve) {
+    // Re-start the solve timer now that presolve/solve/postsolve for the
+    // sub-MIP have been timed independently
+    const bool restart = true;
+    mipsolver.profiling_->start(kSolveTime, restart);
   }
   // 22/07/25: Seems impossible for submipsolver.mipdata_ to be a null
   // pointer after calling HighsMipSolver::run(), and assert isn't
@@ -396,7 +417,7 @@ void HighsPrimalHeuristics::RENS(HighsMipWorker& worker,
   // LP relaxation instantiation
   HighsLpRelaxation heurlp(worker.getLpRelaxation());
   heurlp.setMipWorker(worker);
-  heurlp.setGlobalSubSolverCallTime(mipsolver.global_sub_solver_call_time_);
+  heurlp.setProfiling(mipsolver.profiling_);
   // only use the global upper limit as LP limit so that dual proofs are valid
   heurlp.setObjectiveLimit(worker.upper_limit);
   heurlp.setAdjustSymmetricBranchingCol(false);
@@ -665,7 +686,7 @@ void HighsPrimalHeuristics::RINS(HighsMipWorker& worker,
   // LP relaxation instantiation
   HighsLpRelaxation heurlp(worker.getLpRelaxation());
   heurlp.setMipWorker(worker);
-  heurlp.setGlobalSubSolverCallTime(mipsolver.global_sub_solver_call_time_);
+  heurlp.setProfiling(mipsolver.profiling_);
   // only use the global upper limit as LP limit so that dual proofs are valid
   heurlp.setObjectiveLimit(worker.upper_limit);
   heurlp.setAdjustSymmetricBranchingCol(false);
@@ -989,7 +1010,7 @@ bool HighsPrimalHeuristics::tryRoundedPoint(HighsMipWorker& worker,
     // LP relaxation instantiation
     HighsLpRelaxation lprelax(mipsolver);
     lprelax.setMipWorker(worker);
-    lprelax.setGlobalSubSolverCallTime(mipsolver.global_sub_solver_call_time_);
+    lprelax.setProfiling(mipsolver.profiling_);
     lprelax.loadModel();
     lprelax.setIterationLimit(
         std::max(int64_t{10000}, 2 * mipsolver.mipdata_->firstrootlpiters));
@@ -1134,7 +1155,7 @@ void HighsPrimalHeuristics::randomizedRounding(
     // LP relaxation instantiation
     HighsLpRelaxation lprelax(mipsolver);
     lprelax.setMipWorker(worker);
-    lprelax.setGlobalSubSolverCallTime(mipsolver.global_sub_solver_call_time_);
+    lprelax.setProfiling(mipsolver.profiling_);
     lprelax.loadModel();
     lprelax.setIterationLimit(
         std::max(int64_t{10000}, 2 * mipsolver.mipdata_->firstrootlpiters));
@@ -1190,7 +1211,7 @@ void HighsPrimalHeuristics::shifting(HighsMipWorker& worker,
   // LP relaxation instantiation
   HighsLpRelaxation lprelax(worker.getLpRelaxation());
   lprelax.setMipWorker(worker);
-  lprelax.setGlobalSubSolverCallTime(mipsolver.global_sub_solver_call_time_);
+  lprelax.setProfiling(mipsolver.profiling_);
   HighsRandom& randgen =
       mipsolver.mipdata_->parallelLockActive() ? worker.randgen : this->randgen;
   std::vector<std::pair<HighsInt, double>> current_fractional_integers =
@@ -1558,7 +1579,7 @@ void HighsPrimalHeuristics::feasibilityPump(HighsMipWorker& worker) {
   // LP relaxation instantiation
   HighsLpRelaxation lprelax(worker.getLpRelaxation());
   lprelax.setMipWorker(worker);
-  lprelax.setGlobalSubSolverCallTime(mipsolver.global_sub_solver_call_time_);
+  lprelax.setProfiling(mipsolver.profiling_);
   std::unordered_set<std::vector<HighsInt>, HighsVectorHasher, HighsVectorEqual>
       referencepoints;
   std::vector<double> roundedsol;
