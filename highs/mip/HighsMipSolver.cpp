@@ -555,6 +555,8 @@ restart:
       ++mipdata_->workers[i].search_ptr_->getLocalNodes();
       ++mipdata_->workers[i].search_ptr_->getLocalLeaves();
     }
+    if (!mipdata_->parallelLockActive())
+      profiling_->stop(kMipClockNodePrunedLoop);
     return mipdata_->workers[i].getGlobalDomain().infeasible() || pruned;
   };
 
@@ -1049,10 +1051,6 @@ void HighsMipSolver::cleanupSolve() {
         havesolution ? (feasible ? "feasible" : "infeasible") : "-";
     solvingReport(solutionstatus);
   }
-
-  //  if (!timeless_log) analysis_.reportMipTimer();
-
-  //  analysis_.checkProfiling(profiling_);
 
   assert(modelstatus_ != HighsModelStatus::kNotset);
 
