@@ -263,6 +263,8 @@ class HighsSearch {
 
   bool checkLimits(int64_t nodeOffset = 0) const;
 
+  bool checkLocalLimits() const;
+
   HighsSymmetries& getSymmetries() const;
 
   bool addIncumbent(const std::vector<double>& sol, double solobj,

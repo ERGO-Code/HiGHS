@@ -706,6 +706,8 @@ restart:
         if (!mipdata_->parallelLockActive()) {
           if (mipdata_->checkLimits()) return;
           mipdata_->printDisplayLine();
+        } else {
+          if (worker.search_ptr_->checkLocalLimits()) return;
         }
         if (separateAndStoreBasis(i)) return;
       }
@@ -723,8 +725,7 @@ restart:
         considerHeuristics = false;
         if (worker.getGlobalDomain().infeasible()) break;
         if (dive(i, ramp_up)) break;
-        if (!mipdata_->parallelLockActive() &&
-            worker.search_ptr_->checkLimits(
+        if (worker.search_ptr_->checkLimits(
                 worker.search_ptr_->getLocalNodes())) {
           break;
         }
@@ -899,6 +900,8 @@ restart:
     mipdata_->updateLowerBound(std::min(
         mipdata_->upper_bound, mipdata_->nodequeue.getBestLowerBound()));
 
+    syncSolutions();
+
     limit_reached = mipdata_->checkLimits();
     if (limit_reached) {
       mipdata_->printDisplayLine();
@@ -909,7 +912,6 @@ restart:
 
     // Sync global information
     profiling_->start(kMipClockDomainPropgate);
-    syncSolutions();
     syncPools(search_indices);
     syncGlobalDomain(search_indices);
     mipdata_->getDomain().propagate();

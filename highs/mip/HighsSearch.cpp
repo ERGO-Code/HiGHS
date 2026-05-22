@@ -1935,8 +1935,42 @@ const HighsNodeQueue& HighsSearch::getNodeQueue() const {
 }
 
 bool HighsSearch::checkLimits(int64_t nodeOffset) const {
-  if (mipsolver.mipdata_->parallelLockActive()) return false;
+  if (mipsolver.mipdata_->parallelLockActive()) {
+    return checkLocalLimits();
+  };
   return mipsolver.mipdata_->checkLimits(nodeOffset);
+}
+
+bool HighsSearch::checkLocalLimits() const {
+  if (!mipsolver.submip && mipworker.upper_bound < kHighsInf &&
+      mipsolver.options_mip_->objective_target > -kHighsInf) {
+    const double internal_target =
+        static_cast<HighsInt>(mipsolver.orig_model_->sense_) *
+            mipsolver.options_mip_->objective_target -
+        mipsolver.model_->offset_;
+    if (mipworker.upper_bound < internal_target) {
+      return true;
+    }
+  }
+
+  if (mipsolver.options_mip_->mip_max_nodes != kHighsIInf &&
+      mipsolver.mipdata_->num_nodes + nnodes >=
+          mipsolver.options_mip_->mip_max_nodes) {
+    return true;
+  }
+
+  if (mipsolver.options_mip_->mip_max_leaves != kHighsIInf &&
+      mipsolver.mipdata_->num_leaves + nleaves >=
+          mipsolver.options_mip_->mip_max_leaves) {
+    return true;
+  }
+
+  if (mipsolver.options_mip_->time_limit < kHighsInf &&
+      mipsolver.timer_.read() >= mipsolver.options_mip_->time_limit) {
+    return true;
+  }
+
+  return false;
 }
 
 HighsSymmetries& HighsSearch::getSymmetries() const {
