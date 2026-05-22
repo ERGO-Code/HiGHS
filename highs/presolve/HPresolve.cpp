@@ -71,7 +71,7 @@ void HPresolve::debugPrintRow(HighsPostsolveStack& postsolve_stack,
 }
 #endif
 
-bool HPresolve::okSetInput(HighsLp& model_, const HighsOptions& options_,
+void HPresolve::setInput(HighsLp& model_, const HighsOptions& options_,
                            const HighsInt presolve_reduction_limit,
                            HighsTimer* timer) {
   this->model = &model_;
@@ -100,17 +100,14 @@ bool HPresolve::okSetInput(HighsLp& model_, const HighsOptions& options_,
   if (options->presolve != kHighsOffString &&
       reductionLimit < kHighsSize_tInf) {
     highsLogDev(options->log_options, HighsLogType::kInfo,
-                "HPresolve::okSetInput reductionLimit = %d\n",
+                "HPresolve::setInput reductionLimit = %d\n",
                 static_cast<int>(reductionLimit));
   }
-  
-  return okSetupPresolveDataStructures();
-  
 }
 
 // for MIP presolve
-bool HPresolve::okSetInput(HighsMipSolver& mipsolver,
-                           const HighsInt presolve_reduction_limit) {
+void HPresolve::setInput(HighsMipSolver& mipsolver,
+			 const HighsInt presolve_reduction_limit) {
   this->mipsolver = &mipsolver;
 
   probingContingent = 1000;
@@ -128,8 +125,8 @@ bool HPresolve::okSetInput(HighsMipSolver& mipsolver,
         mipsolver.mipdata_->domain.col_upper_;
   }
 
-  return okSetInput(mipsolver.mipdata_->presolvedModel, *mipsolver.options_mip_,
-                    presolve_reduction_limit, &mipsolver.timer_);
+  setInput(mipsolver.mipdata_->presolvedModel, *mipsolver.options_mip_,
+	   presolve_reduction_limit, &mipsolver.timer_);
 }
 
 bool HPresolve::okSetupPresolveDataStructures() {
@@ -6025,6 +6022,13 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
     model->sense_ = ObjSense::kMinimize;
   }
 
+  if (!okSetupPresolveDataStructures()) {
+    highsLogUser(options->log_options, HighsLogType::kError,
+		 "Insufficient memory for presolve data structures\n");
+    // Memory allocation error
+    return Result::kOutOfMemory;
+  }
+  
   // initialize substitution opportunities
   analysis_.presolveTimerStart(kPresolveClockSetupSubstitutionOpportunities);
   setupSubstitutionOpportunities();
@@ -6588,7 +6592,15 @@ HighsModelStatus HPresolve::run(HighsPostsolveStack& postsolve_stack) {
     this->analysis_.reportPresolveTimer();
   };
 
-  switch (presolve(postsolve_stack)) {
+  Result result;
+  try {
+    result = presolve(postsolve_stack);
+  } catch (const std::exception& exception) {
+    highsLogDev(options->log_options, HighsLogType::kError,
+		"Exception %s in Presolve::presolve\n", exception.what());
+    result = Result::kOutOfMemory;
+  }
+  switch (result) {
     case Result::kStopped:
     case Result::kOk:
       break;
@@ -6602,6 +6614,9 @@ HighsModelStatus HPresolve::run(HighsPostsolveStack& postsolve_stack) {
       reportReductions();
       reportProfiling();
       return HighsModelStatus::kUnboundedOrInfeasible;
+    case Result::kOutOfMemory:
+      presolve_status_ = HighsPresolveStatus::kOutOfMemory;
+      return HighsModelStatus::kMemoryLimit;
   }
   reportReductions();
   shrinkProblem(postsolve_stack);
@@ -8435,7 +8450,7 @@ void HPresolve::debug(const HighsLp& lp, const HighsOptions& options) {
   postsolve_stack.initializeIndexMaps(lp.num_row_, lp.num_col_);
   {
     HPresolve presolve;
-    presolve.okSetInput(model, options, options.presolve_reduction_limit);
+    presolve.setInput(model, options, options.presolve_reduction_limit);
     // presolve.setReductionLimit(1622017);
     if (presolve.run(postsolve_stack) != HighsModelStatus::kNotset) return;
     Highs highs;
@@ -8499,14 +8514,14 @@ void HPresolve::debug(const HighsLp& lp, const HighsOptions& options) {
 
     {
       HPresolve presolve;
-      presolve.okSetInput(model, options, options.presolve_reduction_limit);
+      presolve.setInput(model, options, options.presolve_reduction_limit);
       presolve.computeIntermediateMatrix(flagRow, flagCol, reductionLim);
     }
 #if 1
     model = lp;
     model.integrality_.assign(lp.num_col_, HighsVarType::kContinuous);
     HPresolve presolve;
-    presolve.okSetInput(model, options, options.presolve_reduction_limit);
+    presolve.setInput(model, options, options.presolve_reduction_limit);
     HighsPostsolveStack tmp;
     tmp.initializeIndexMaps(model.num_row_, model.num_col_);
     presolve.setReductionLimit(reductionLim);

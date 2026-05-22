@@ -143,6 +143,7 @@ class HPresolve {
     kPrimalInfeasible,
     kDualInfeasible,
     kStopped,
+    kOutOfMemory
   };
 
   struct StatusResult {
@@ -363,13 +364,13 @@ class HPresolve {
 
  public:
   // for LP presolve
-  bool okSetInput(HighsLp& model_, const HighsOptions& options_,
-                  const HighsInt presolve_reduction_limit,
-                  HighsTimer* timer = nullptr);
+  void setInput(HighsLp& model_, const HighsOptions& options_,
+		const HighsInt presolve_reduction_limit,
+		HighsTimer* timer = nullptr);
 
   // for MIP presolve
-  bool okSetInput(HighsMipSolver& mipsolver,
-                  const HighsInt presolve_reduction_limit);
+  void setInput(HighsMipSolver& mipsolver,
+		const HighsInt presolve_reduction_limit);
 
   void setReductionLimit(size_t reductionLimit) {
     this->reductionLimit = reductionLimit;

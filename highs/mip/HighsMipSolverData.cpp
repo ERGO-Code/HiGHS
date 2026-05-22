@@ -750,15 +750,12 @@ void HighsMipSolverData::runMipPresolve(
     const HighsInt presolve_reduction_limit) {
   mipsolver.timer_.start(mipsolver.timer_.presolve_clock);
   presolve::HPresolve presolve;
-  if (!presolve.okSetInput(mipsolver, presolve_reduction_limit)) {
-    mipsolver.modelstatus_ = HighsModelStatus::kMemoryLimit;
-    presolve_status = HighsPresolveStatus::kOutOfMemory;
-  } else {
-    mipsolver.modelstatus_ = presolve.run(postSolveStack);
-    presolve_status = presolve.getPresolveStatus();
-  }
+  presolve.setInput(mipsolver, presolve_reduction_limit);
+  mipsolver.modelstatus_ = presolve.run(postSolveStack);
+  presolve_status = presolve.getPresolveStatus();
   mipsolver.timer_.stop(mipsolver.timer_.presolve_clock);
 
+  if (presolve_status == HighsPresolveStatus::kOutOfMemory) return;
   // Report the final presolve reductions unless this is a restart
   if (mipsolver.options_mip_->presolve != kHighsOffString && numRestarts == 0)
     reportPresolveReductions(mipsolver.options_mip_->log_options,
