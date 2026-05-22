@@ -375,6 +375,8 @@ class HPresolve {
     this->reductionLimit = reductionLimit;
   }
 
+  void setupSubstitutionOpportunities();
+
   HighsInt numNonzeros() const { return int(Avalue.size() - freeslots.size()); }
 
   void shrinkProblem(HighsPostsolveStack& postsolve_stack);

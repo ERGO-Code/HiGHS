@@ -157,16 +157,6 @@ bool HPresolve::okSetInput(HighsLp& model_, const HighsOptions& options_,
   if (!okResize(singleEquationChecked, model->num_row_)) return false;
 
   analysis_.presolveTimerStop(kPresolveClockSetupResize);
-  analysis_.presolveTimerStart(kPresolveClockSetupInitialSubstitution);
-  // initialize substitution opportunities
-  for (HighsInt row = 0; row != model->num_row_; ++row) {
-    if (!isDualImpliedFree(row)) continue;
-    for (const HighsSliceNonzero& nonzero : getRowVector(row)) {
-      if (isImpliedFree(nonzero.index()))
-        substitutionOpportunities.emplace_back(row, nonzero.index());
-    }
-  }
-  analysis_.presolveTimerStop(kPresolveClockSetupInitialSubstitution);
   return true;
 }
 
@@ -192,6 +182,16 @@ bool HPresolve::okSetInput(HighsMipSolver& mipsolver,
 
   return okSetInput(mipsolver.mipdata_->presolvedModel, *mipsolver.options_mip_,
                     presolve_reduction_limit, &mipsolver.timer_);
+}
+
+void HPresolve::setupSubstitutionOpportunities() {
+  for (HighsInt row = 0; row != model->num_row_; ++row) {
+    if (!isDualImpliedFree(row)) continue;
+    for (const HighsSliceNonzero& nonzero : getRowVector(row)) {
+      if (isImpliedFree(nonzero.index()))
+        substitutionOpportunities.emplace_back(row, nonzero.index());
+    }
+  }
 }
 
 bool HPresolve::rowCoefficientsIntegral(HighsInt row, double scale) const {
@@ -6019,6 +6019,11 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
     assert(std::isfinite(model->offset_));
     model->sense_ = ObjSense::kMinimize;
   }
+
+  // initialize substitution opportunities
+  analysis_.presolveTimerStart(kPresolveClockSetupSubstitutionOpportunities);
+  setupSubstitutionOpportunities();
+  analysis_.presolveTimerStop(kPresolveClockSetupSubstitutionOpportunities);
 
   if (initial_sweep) {
     // Perform initial sweep to remove fixed columns before forming the
