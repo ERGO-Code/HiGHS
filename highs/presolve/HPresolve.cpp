@@ -38,6 +38,8 @@
 
 #define ENABLE_SPARSIFY_FOR_LP 0
 
+const bool initial_sweep = false;
+
 #define HPRESOLVE_CHECKED_CALL(presolveCall)                           \
   do {                                                                 \
     HPresolve::Result __result = presolveCall;                         \
@@ -5898,10 +5900,9 @@ double HPresolve::computeWorstCaseUpperBound(HighsInt col, HighsInt boundCol,
 
 HPresolve::Result HPresolve::initialSweep(
     HighsPostsolveStack& postsolve_stack) {
+  assert(initial_sweep);
   HighsInt num_fixed_col = 0;
   for (HighsInt iCol = 0; iCol < model->num_col_; iCol++) {
-    printf("HPresolve::initialSweep: iCol = %d / %d\n", int(iCol),
-           int(model->num_col_));
     bool isFixed;
     HPRESOLVE_CHECKED_CALL(checkColBounds(iCol, &isFixed));
     if (isFixed) {
@@ -5911,7 +5912,6 @@ HPresolve::Result HPresolve::initialSweep(
                                       model->col_cost_[iCol],
                                       getColumnVector(iCol));
       removeFixedCol(iCol);
-      return checkLimits(postsolve_stack);
     }
   }
   printf("HPresolve::initialSweep: Model has %d / %d fixed columns\n",
@@ -6016,11 +6016,13 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
     model->sense_ = ObjSense::kMinimize;
   }
 
-  // Perform initial sweep to remove fixed columns before forming the
-  // dynamic constraint matrix data structure
-  analysis_.presolveTimerStart(kPresolveClockInitialSweep);
-  //  HPRESOLVE_CHECKED_CALL(initialSweep(postsolve_stack));
-  analysis_.presolveTimerStop(kPresolveClockInitialSweep);
+  if (initial_sweep) {
+    // Perform initial sweep to remove fixed columns before forming the
+    // dynamic constraint matrix data structure
+    analysis_.presolveTimerStart(kPresolveClockInitialSweep);
+    HPRESOLVE_CHECKED_CALL(initialSweep(postsolve_stack));
+    analysis_.presolveTimerStop(kPresolveClockInitialSweep);
+  }
 
   const bool silent = silentLog();
   if (options->presolve != kHighsOffString) {
