@@ -316,6 +316,8 @@ class HPresolve {
 
   Result checkColBounds(HighsInt col, bool* isFixed = nullptr);
 
+  Result checkModelColBounds(HighsInt col, bool& isFixed);
+
   void changeRowDualUpper(HighsInt row, double newUpper);
 
   void changeRowDualLower(HighsInt row, double newLower);

@@ -38,7 +38,7 @@
 
 #define ENABLE_SPARSIFY_FOR_LP 0
 
-const bool initial_sweep = false;
+const bool initial_sweep = true;
 
 #define HPRESOLVE_CHECKED_CALL(presolveCall)                           \
   do {                                                                 \
@@ -2338,6 +2338,26 @@ HPresolve::Result HPresolve::checkColBounds(HighsInt col, bool* isFixed) {
   return Result::kOk;
 }
 
+HPresolve::Result HPresolve::checkModelColBounds(HighsInt col, bool& isFixed) {
+  double boundDiff = model->col_upper_[col] - model->col_lower_[col];
+  double max_abs_col_value = 0;
+  for (HighsInt iEl = model->a_matrix_.start_[col]; iEl < model->a_matrix_.start_[col+1]; iEl++)
+    max_abs_col_value = std::max(std::fabs(model->a_matrix_.value_[iEl]), max_abs_col_value);
+  isFixed = false;
+  if (boundDiff <= primal_feastol &&
+      (boundDiff <= options->small_matrix_value ||
+       max_abs_col_value * boundDiff <= primal_feastol)) {
+    // check for primal infeasibility
+    if (boundDiff < -primal_feastol) return Result::kPrimalInfeasible;
+    // check for unboundedness
+    if (std::abs(model->col_lower_[col]) == kHighsInf)
+      return Result::kDualInfeasible;
+    // column is fixed
+    isFixed = true;
+  }
+  return Result::kOk;
+}
+
 void HPresolve::changeRowDualUpper(HighsInt row, double newUpper) {
   double oldUpper = rowDualUpper[row];
   rowDualUpper[row] = newUpper;
@@ -2682,6 +2702,8 @@ bool HPresolve::okFromCSC(const std::vector<double>& Aval,
   impliedDualRowBounds.setNumSums(model->num_col_);
 
   HighsInt ncol = static_cast<HighsInt>(Astart.size()) - 1;
+  printf("HPresolve::okFromCSC = ncol %d; colhead.size() = %d\n",
+	 int(ncol), int(colhead.size()));
   assert(static_cast<size_t>(ncol) == colhead.size());
   HighsInt nnz = static_cast<HighsInt>(Aval.size());
 
@@ -5908,20 +5930,49 @@ HPresolve::Result HPresolve::initialSweep(
     HighsPostsolveStack& postsolve_stack) {
   assert(initial_sweep);
   HighsInt num_fixed_col = 0;
+  HighsInt model_num_col = model->num_col_;
+  HighsInt num_col = 0;
+  HighsInt nnz = 0;
+  bool isFixed;
+  const bool have_col_names = model->col_names_.size() > 0;
   for (HighsInt iCol = 0; iCol < model->num_col_; iCol++) {
-    bool isFixed;
-    HPRESOLVE_CHECKED_CALL(checkColBounds(iCol, &isFixed));
+    HighsInt col_nnz =
+      model->a_matrix_.start_[iCol+1] -
+      model->a_matrix_.start_[iCol];
+    HPRESOLVE_CHECKED_CALL(checkModelColBounds(iCol, isFixed));
     if (isFixed) {
       num_fixed_col++;
       // remove fixed column
-      postsolve_stack.removedFixedCol(iCol, model->col_lower_[iCol],
-                                      model->col_cost_[iCol],
-                                      getColumnVector(iCol));
-      removeFixedCol(iCol);
+      HighsInt iEl = model->a_matrix_.start_[iCol];
+      postsolve_stack.removedModelFixedCol(iCol, model->col_lower_[iCol],
+					   model->col_cost_[iCol],
+					   col_nnz,
+					   &model->a_matrix_.index_[iEl],
+					   &model->a_matrix_.value_[iEl]);
+    } else {
+      model->col_cost_[num_col] = model->col_cost_[iCol];
+      model->col_lower_[num_col] = model->col_lower_[iCol];
+      model->col_upper_[num_col] = model->col_upper_[iCol];
+      model->integrality_[num_col] = model->integrality_[iCol];
+      if (have_col_names)
+	model->col_names_[num_col] = std::move(model->col_names_[iCol]);
+      HighsInt from_os = model->a_matrix_.start_[iCol];
+      HighsInt to_os = nnz;
+      for (HighsInt iEl = 0; iEl < col_nnz; iEl++) {
+	model->a_matrix_.index_[to_os+iEl] = model->a_matrix_.index_[from_os+iEl];
+	model->a_matrix_.value_[to_os+iEl] = model->a_matrix_.value_[from_os+iEl];
+      }
+      nnz += col_nnz;
+      num_col++;      
     }
   }
+  model->num_col_ = num_col;
+  model->a_matrix_.num_col_ = num_col;
+  model->a_matrix_.start_.resize(num_col+1);
+  model->a_matrix_.index_.resize(nnz);
+  model->a_matrix_.value_.resize(nnz);
   printf("HPresolve::initialSweep: Model has %d / %d fixed columns\n",
-         int(num_fixed_col), int(model->num_col_));
+         int(num_fixed_col), int(model_num_col));
   return checkLimits(postsolve_stack);
 }
 
@@ -6022,6 +6073,14 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
     model->sense_ = ObjSense::kMinimize;
   }
 
+  if (initial_sweep) {
+    // Perform initial sweep to remove fixed columns before forming the
+    // dynamic constraint matrix data structure
+    analysis_.presolveTimerStart(kPresolveClockInitialSweep);
+    HPRESOLVE_CHECKED_CALL(initialSweep(postsolve_stack));
+    analysis_.presolveTimerStop(kPresolveClockInitialSweep);
+  }
+
   if (!okSetupPresolveDataStructures()) {
     highsLogUser(options->log_options, HighsLogType::kError,
 		 "Insufficient memory for presolve data structures\n");
@@ -6033,14 +6092,6 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
   analysis_.presolveTimerStart(kPresolveClockSetupSubstitutionOpportunities);
   setupSubstitutionOpportunities();
   analysis_.presolveTimerStop(kPresolveClockSetupSubstitutionOpportunities);
-
-  if (initial_sweep) {
-    // Perform initial sweep to remove fixed columns before forming the
-    // dynamic constraint matrix data structure
-    analysis_.presolveTimerStart(kPresolveClockInitialSweep);
-    HPRESOLVE_CHECKED_CALL(initialSweep(postsolve_stack));
-    analysis_.presolveTimerStop(kPresolveClockInitialSweep);
-  }
 
   const bool silent = silentLog();
   if (options->presolve != kHighsOffString) {
