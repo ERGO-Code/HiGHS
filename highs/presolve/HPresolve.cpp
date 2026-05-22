@@ -84,6 +84,27 @@ bool HPresolve::okSetInput(HighsLp& model_, const HighsOptions& options_,
                   this->numDeletedCols, this->timer);
   analysis_.presolveTimerStart(kPresolveClockPresolve);
 
+  if (mipsolver == nullptr) {
+    primal_feastol = options->primal_feasibility_tolerance;
+    model->integrality_.assign(model->num_col_, HighsVarType::kContinuous);
+  } else
+    primal_feastol = options->mip_feasibility_tolerance;
+
+  numDeletedCols = 0;
+  numDeletedRows = 0;
+
+  // Take value passed in as reduction limit, allowing different
+  // values to be used for initial presolve, and after restart
+  reductionLimit =
+      presolve_reduction_limit < 0 ? kHighsSize_tInf : presolve_reduction_limit;
+  if (options->presolve != kHighsOffString &&
+      reductionLimit < kHighsSize_tInf) {
+    highsLogDev(options->log_options, HighsLogType::kInfo,
+                "HPresolve::okSetInput reductionLimit = %d\n",
+                static_cast<int>(reductionLimit));
+  }
+
+  // Methods that will move
   analysis_.presolveTimerStart(kPresolveClockSetupResize);
   if (!okResize(colLowerSource, model->num_col_, HighsInt{-1})) return false;
   if (!okResize(colUpperSource, model->num_col_, HighsInt{-1})) return false;
@@ -104,12 +125,6 @@ bool HPresolve::okSetInput(HighsLp& model_, const HighsOptions& options_,
     if (model->row_lower_[i] == -kHighsInf) rowDualUpper[i] = 0;
     if (model->row_upper_[i] == kHighsInf) rowDualLower[i] = 0;
   }
-
-  if (mipsolver == nullptr) {
-    primal_feastol = options->primal_feasibility_tolerance;
-    model->integrality_.assign(model->num_col_, HighsVarType::kContinuous);
-  } else
-    primal_feastol = options->mip_feasibility_tolerance;
 
   analysis_.presolveTimerStop(kPresolveClockSetupResize);
 
@@ -140,8 +155,7 @@ bool HPresolve::okSetInput(HighsLp& model_, const HighsOptions& options_,
   if (!okReserve(changedColIndices, model->num_col_)) return false;
   if (!okReserve(liftingOpportunities, model->num_row_)) return false;
   if (!okResize(singleEquationChecked, model->num_row_)) return false;
-  numDeletedCols = 0;
-  numDeletedRows = 0;
+
   analysis_.presolveTimerStop(kPresolveClockSetupResize);
   analysis_.presolveTimerStart(kPresolveClockSetupInitialSubstitution);
   // initialize substitution opportunities
@@ -153,16 +167,6 @@ bool HPresolve::okSetInput(HighsLp& model_, const HighsOptions& options_,
     }
   }
   analysis_.presolveTimerStop(kPresolveClockSetupInitialSubstitution);
-  // Take value passed in as reduction limit, allowing different
-  // values to be used for initial presolve, and after restart
-  reductionLimit =
-      presolve_reduction_limit < 0 ? kHighsSize_tInf : presolve_reduction_limit;
-  if (options->presolve != kHighsOffString &&
-      reductionLimit < kHighsSize_tInf) {
-    highsLogDev(options->log_options, HighsLogType::kInfo,
-                "HPresolve::okSetInput reductionLimit = %d\n",
-                static_cast<int>(reductionLimit));
-  }
   return true;
 }
 
