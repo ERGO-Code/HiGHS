@@ -375,6 +375,7 @@ class HPresolve {
     this->reductionLimit = reductionLimit;
   }
 
+  bool okSetupPresolveDataStructures();
   void setupSubstitutionOpportunities();
 
   HighsInt numNonzeros() const { return int(Avalue.size() - freeslots.size()); }

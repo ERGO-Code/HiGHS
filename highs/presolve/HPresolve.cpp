@@ -103,8 +103,36 @@ bool HPresolve::okSetInput(HighsLp& model_, const HighsOptions& options_,
                 "HPresolve::okSetInput reductionLimit = %d\n",
                 static_cast<int>(reductionLimit));
   }
+  
+  return okSetupPresolveDataStructures();
+  
+}
 
-  // Methods that will move
+// for MIP presolve
+bool HPresolve::okSetInput(HighsMipSolver& mipsolver,
+                           const HighsInt presolve_reduction_limit) {
+  this->mipsolver = &mipsolver;
+
+  probingContingent = 1000;
+  probingNumDelCol = 0;
+  numProbed = 0;
+  numProbes.assign(mipsolver.numCol(), 0);
+
+  if (mipsolver.model_ != &mipsolver.mipdata_->presolvedModel) {
+    mipsolver.mipdata_->presolvedModel = *mipsolver.model_;
+    mipsolver.model_ = &mipsolver.mipdata_->presolvedModel;
+  } else {
+    mipsolver.mipdata_->presolvedModel.col_lower_ =
+        mipsolver.mipdata_->domain.col_lower_;
+    mipsolver.mipdata_->presolvedModel.col_upper_ =
+        mipsolver.mipdata_->domain.col_upper_;
+  }
+
+  return okSetInput(mipsolver.mipdata_->presolvedModel, *mipsolver.options_mip_,
+                    presolve_reduction_limit, &mipsolver.timer_);
+}
+
+bool HPresolve::okSetupPresolveDataStructures() {
   analysis_.presolveTimerStart(kPresolveClockSetupResize);
   if (!okResize(colLowerSource, model->num_col_, HighsInt{-1})) return false;
   if (!okResize(colUpperSource, model->num_col_, HighsInt{-1})) return false;
@@ -129,9 +157,9 @@ bool HPresolve::okSetInput(HighsLp& model_, const HighsOptions& options_,
   analysis_.presolveTimerStop(kPresolveClockSetupResize);
 
   analysis_.presolveTimerStart(kPresolveClockSetupToCsc);
-  if (model_.a_matrix_.isRowwise()) {
+  if (model->a_matrix_.isRowwise()) {
     // Does this even happen?
-    assert(model_.a_matrix_.isColwise());
+    assert(model->a_matrix_.isColwise());
     if (!okFromCSR(model->a_matrix_.value_, model->a_matrix_.index_,
                    model->a_matrix_.start_))
       return false;
@@ -158,30 +186,7 @@ bool HPresolve::okSetInput(HighsLp& model_, const HighsOptions& options_,
 
   analysis_.presolveTimerStop(kPresolveClockSetupResize);
   return true;
-}
 
-// for MIP presolve
-bool HPresolve::okSetInput(HighsMipSolver& mipsolver,
-                           const HighsInt presolve_reduction_limit) {
-  this->mipsolver = &mipsolver;
-
-  probingContingent = 1000;
-  probingNumDelCol = 0;
-  numProbed = 0;
-  numProbes.assign(mipsolver.numCol(), 0);
-
-  if (mipsolver.model_ != &mipsolver.mipdata_->presolvedModel) {
-    mipsolver.mipdata_->presolvedModel = *mipsolver.model_;
-    mipsolver.model_ = &mipsolver.mipdata_->presolvedModel;
-  } else {
-    mipsolver.mipdata_->presolvedModel.col_lower_ =
-        mipsolver.mipdata_->domain.col_lower_;
-    mipsolver.mipdata_->presolvedModel.col_upper_ =
-        mipsolver.mipdata_->domain.col_upper_;
-  }
-
-  return okSetInput(mipsolver.mipdata_->presolvedModel, *mipsolver.options_mip_,
-                    presolve_reduction_limit, &mipsolver.timer_);
 }
 
 void HPresolve::setupSubstitutionOpportunities() {
