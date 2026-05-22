@@ -1455,10 +1455,10 @@ class HighsOptions : public HighsOptionsStruct {
                                        advanced, &use_warm_start, true);
     records.push_back(record_bool);
 
-    record_string =
-        new OptionRecordString(kPresolveLightString,
-                               "Use only low-cost presolve rules: \"off\", \"choose\" or \"on\"",
-                               advanced, &presolve_light, kHighsChooseString);
+    record_string = new OptionRecordString(
+        kPresolveLightString,
+        "Use only low-cost presolve rules: \"off\", \"choose\" or \"on\"",
+        advanced, &presolve_light, kHighsChooseString);
     records.push_back(record_string);
 
     record_int =

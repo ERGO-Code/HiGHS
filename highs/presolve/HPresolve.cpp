@@ -506,7 +506,7 @@ void HPresolve::chooseRules() {
     //
     // Transform options->presolve_rule_off into logical settings in
     // allow_rule_[*], commenting on the rules switched off
-    if (!silent)
+    if (!presolve_light && !silent)
       highsLogUser(options->log_options, HighsLogType::kInfo,
                    "Presolve rules not allowed:\n");
     HighsInt bit = 1;
@@ -516,10 +516,10 @@ void HPresolve::chooseRules() {
       const bool rule_off = (options->presolve_rule_off & bit) ||
                             presolve_light_rule_off[rule_type];
       if (rule_type >= kPresolveRuleFirstAllowOff) {
-        // This is a rule that can be switched off, so comment
-        // positively if it is off
+        // This is a rule that can be switched off
         allow_rule_[rule_type] = !rule_off;
-        if (rule_off && !silent)
+        // Possibly comment positively if it is off
+        if (rule_off && !presolve_light && !silent)
           highsLogUser(options->log_options, HighsLogType::kInfo,
                        "   Rule %2d (set bit %2d = %6d): %s\n", int(rule_type),
                        int(rule_type), int(bit),
@@ -540,7 +540,6 @@ void HPresolve::chooseRules() {
       bit *= 2;
     }
   }
-
 }
 
 void HPresolve::link(HighsInt pos) {
@@ -5897,6 +5896,29 @@ double HPresolve::computeWorstCaseUpperBound(HighsInt col, HighsInt boundCol,
   return upperBound;
 }
 
+HPresolve::Result HPresolve::initialSweep(
+    HighsPostsolveStack& postsolve_stack) {
+  HighsInt num_fixed_col = 0;
+  for (HighsInt iCol = 0; iCol < model->num_col_; iCol++) {
+    printf("HPresolve::initialSweep: iCol = %d / %d\n", int(iCol),
+           int(model->num_col_));
+    bool isFixed;
+    HPRESOLVE_CHECKED_CALL(checkColBounds(iCol, &isFixed));
+    if (isFixed) {
+      num_fixed_col++;
+      // remove fixed column
+      postsolve_stack.removedFixedCol(iCol, model->col_lower_[iCol],
+                                      model->col_cost_[iCol],
+                                      getColumnVector(iCol));
+      removeFixedCol(iCol);
+      return checkLimits(postsolve_stack);
+    }
+  }
+  printf("HPresolve::initialSweep: Model has %d / %d fixed columns\n",
+         int(num_fixed_col), int(model->num_col_));
+  return checkLimits(postsolve_stack);
+}
+
 HPresolve::Result HPresolve::initialRowAndColPresolve(
     HighsPostsolveStack& postsolve_stack) {
   // do a full scan over the rows as the singleton arrays and the changed row
@@ -5959,9 +5981,9 @@ HPresolve::Result HPresolve::fastPresolveLoop(
 }
 
 HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
-  // for the inner most loop we take the order roughly from the old presolve
-  // but we nest the rounds with a new outer loop which layers the newer
-  // presolvers
+  // For the innermost loop the rounds are nested with an outer loop
+  // that layers the newer presolvers
+  //
   //    fast presolve loop
   //        - empty, forcing and dominated rows and row singletons immediately
   //        after each forcing row
@@ -5993,6 +6015,12 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
     assert(std::isfinite(model->offset_));
     model->sense_ = ObjSense::kMinimize;
   }
+
+  // Perform initial sweep to remove fixed columns before forming the
+  // dynamic constraint matrix data structure
+  analysis_.presolveTimerStart(kPresolveClockInitialSweep);
+  //  HPRESOLVE_CHECKED_CALL(initialSweep(postsolve_stack));
+  analysis_.presolveTimerStop(kPresolveClockInitialSweep);
 
   const bool silent = silentLog();
   if (options->presolve != kHighsOffString) {
@@ -6157,8 +6185,7 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
       }
 
       // enumerate solutions
-      if (mipsolver != nullptr &&
-          this->allow_rule_[kPresolveRuleEnumeration]) {
+      if (mipsolver != nullptr && this->allow_rule_[kPresolveRuleEnumeration]) {
         storeCurrentProblemSize();
         HPRESOLVE_CHECKED_CALL(enumerateSolutions(postsolve_stack));
         if (problemSizeReduction() > 0.05) continue;

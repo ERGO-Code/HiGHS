@@ -932,10 +932,11 @@ TEST_CASE("presolve-light", "[highs_test_presolve]") {
     presolved_num_col = presolved_lp.num_col_;
     presolved_num_row = presolved_lp.num_row_;
     presolved_num_nz = presolved_lp.numNz();
-    
-    if (dev_run) printf("%s presolved LP has %d columns; %d rows and %d nonzeros\n",
-			k == 0 ? "Fully" : "Lightly", int(presolved_num_col),
-			int(presolved_num_row), int(presolved_num_nz));
+
+    if (dev_run)
+      printf("%s presolved LP has %d columns; %d rows and %d nonzeros\n",
+             k == 0 ? "Fully" : "Lightly", int(presolved_num_col),
+             int(presolved_num_row), int(presolved_num_nz));
     highs.setOptionValue("presolve_light", kHighsOnString);
   }
 }

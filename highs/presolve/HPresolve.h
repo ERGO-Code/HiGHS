@@ -42,7 +42,7 @@ class HPresolve {
   HighsMipSolver* mipsolver = nullptr;
   double primal_feastol;
   std::vector<bool> allow_rule_;
-  
+
   // triplet storage
   std::vector<double> Avalue;
   std::vector<HighsInt> Arow;
@@ -443,6 +443,8 @@ class HPresolve {
   double computeWorstCaseUpperBound(HighsInt col, HighsInt boundCol = -1,
                                     double boundColValue = kHighsInf,
                                     HighsInt boundColCoeffPattern = 0);
+
+  Result initialSweep(HighsPostsolveStack& postsolve_stack);
 
   Result initialRowAndColPresolve(HighsPostsolveStack& postsolve_stack);
 

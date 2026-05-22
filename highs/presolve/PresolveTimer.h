@@ -18,6 +18,7 @@ enum iClockPresolve {
   kPresolveClockSetupResize,
   kPresolveClockSetupToCsc,
   kPresolveClockSetupInitialSubstitution,
+  kPresolveClockInitialSweep,
   kPresolveClockInitial,
   kPresolveClockInitialRow,
   kPresolveClockInitialCol,
@@ -65,8 +66,11 @@ class PresolveTimer {
     clock[kPresolveClockSetupResize] =
         timer_pointer->clock_def("Setup: resize");
     clock[kPresolveClockSetupToCsc] = timer_pointer->clock_def("Setup: to CSC");
+
     clock[kPresolveClockSetupInitialSubstitution] =
         timer_pointer->clock_def("Setup: initial substitution");
+    clock[kPresolveClockInitialSweep] =
+        timer_pointer->clock_def("Initial sweep");
     clock[kPresolveClockInitial] = timer_pointer->clock_def("Initial");
     clock[kPresolveClockInitialRow] = timer_pointer->clock_def("Initial row");
     clock[kPresolveClockInitialCol] = timer_pointer->clock_def("Initial col");
@@ -184,7 +188,7 @@ class PresolveTimer {
                                const HighsTimerClock& presolve_timer_clock) {
     const std::vector<HighsInt> presolve_clock_list{
         kPresolveClockSetupResize, kPresolveClockSetupToCsc,
-        kPresolveClockSetupInitialSubstitution,
+        kPresolveClockSetupInitialSubstitution, kPresolveClockInitialSweep,
         //      kPresolveClockInitial,
         kPresolveClockInitialRow, kPresolveClockInitialCol,
         //	kPresolveClockFastLoop,
