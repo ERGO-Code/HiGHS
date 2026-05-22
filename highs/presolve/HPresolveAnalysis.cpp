@@ -33,7 +33,8 @@ void HPresolveAnalysis::setup(const HighsLp* model_,
 
   this->allow_rule_.assign(kPresolveRuleCount, true);
   std::vector<bool> presolve_light_rule_off(kPresolveRuleCount, false);
-  if (options->presolve_light) {
+  const bool presolve_light = options->presolve_light == kHighsOnString;
+  if (presolve_light) {
     // Define the rules not used in presolve_light mode
     presolve_light_rule_off[kPresolveRuleDependentEquations] = true;
     presolve_light_rule_off[kPresolveRuleDependentFreeCols] = true;
@@ -63,7 +64,7 @@ void HPresolveAnalysis::setup(const HighsLp* model_,
       bit *= 2;
     }
   }
-  if (options->presolve_rule_off || options->presolve_light) {
+  if (options->presolve_rule_off || presolve_light) {
     // Some presolve rules are off or presolve_light mode is being used
     //
     // Transform options->presolve_rule_off into logical settings in

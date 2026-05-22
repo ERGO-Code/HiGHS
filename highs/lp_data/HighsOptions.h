@@ -421,7 +421,7 @@ struct HighsOptionsStruct {
   bool lp_presolve_requires_basis_postsolve;
   bool mps_parser_type_free;
   bool use_warm_start;
-  bool presolve_light;
+  std::string presolve_light;
   HighsInt keep_n_rows;
   HighsInt cost_scale_factor;
   HighsInt allowed_matrix_scale_factor;
@@ -589,7 +589,7 @@ struct HighsOptionsStruct {
         lp_presolve_requires_basis_postsolve(false),
         mps_parser_type_free(false),
         use_warm_start(true),
-        presolve_light(false),
+        presolve_light(""),
         keep_n_rows(0),
         cost_scale_factor(0),
         allowed_matrix_scale_factor(0),
@@ -1454,10 +1454,11 @@ class HighsOptions : public HighsOptionsStruct {
                                        advanced, &use_warm_start, true);
     records.push_back(record_bool);
 
-    record_bool = new OptionRecordBool("presolve_light",
-                                       "Use only low-cost presolve rules",
-                                       advanced, &presolve_light, false);
-    records.push_back(record_bool);
+    record_string =
+        new OptionRecordString("presolve_light",
+                               "Use only low-cost presolve rules: \"off\", \"choose\" or \"on\"",
+                               advanced, &presolve_light, kHighsChooseString);
+    records.push_back(record_string);
 
     record_int =
         new OptionRecordInt("keep_n_rows",
