@@ -188,7 +188,8 @@ class PresolveTimer {
                                const HighsTimerClock& presolve_timer_clock) {
     const std::vector<HighsInt> presolve_clock_list{
         kPresolveClockSetupResize, kPresolveClockSetupToCsc,
-        kPresolveClockSetupSubstitutionOpportunities, kPresolveClockInitialSweep,
+        kPresolveClockSetupSubstitutionOpportunities,
+        kPresolveClockInitialSweep,
         //      kPresolveClockInitial,
         kPresolveClockInitialRow, kPresolveClockInitialCol,
         //	kPresolveClockFastLoop,

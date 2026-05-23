@@ -38,7 +38,7 @@
 
 #define ENABLE_SPARSIFY_FOR_LP 0
 
-const bool initial_sweep = true;
+const bool initial_sweep = false;  // true;//
 
 #define HPRESOLVE_CHECKED_CALL(presolveCall)                           \
   do {                                                                 \
@@ -72,8 +72,8 @@ void HPresolve::debugPrintRow(HighsPostsolveStack& postsolve_stack,
 #endif
 
 void HPresolve::setInput(HighsLp& model_, const HighsOptions& options_,
-                           const HighsInt presolve_reduction_limit,
-                           HighsTimer* timer) {
+                         const HighsInt presolve_reduction_limit,
+                         HighsTimer* timer) {
   this->model = &model_;
   this->options = &options_;
   this->timer = timer;
@@ -107,7 +107,7 @@ void HPresolve::setInput(HighsLp& model_, const HighsOptions& options_,
 
 // for MIP presolve
 void HPresolve::setInput(HighsMipSolver& mipsolver,
-			 const HighsInt presolve_reduction_limit) {
+                         const HighsInt presolve_reduction_limit) {
   this->mipsolver = &mipsolver;
 
   probingContingent = 1000;
@@ -126,7 +126,7 @@ void HPresolve::setInput(HighsMipSolver& mipsolver,
   }
 
   setInput(mipsolver.mipdata_->presolvedModel, *mipsolver.options_mip_,
-	   presolve_reduction_limit, &mipsolver.timer_);
+           presolve_reduction_limit, &mipsolver.timer_);
 }
 
 bool HPresolve::okSetupPresolveDataStructures() {
@@ -183,7 +183,6 @@ bool HPresolve::okSetupPresolveDataStructures() {
 
   analysis_.presolveTimerStop(kPresolveClockSetupResize);
   return true;
-
 }
 
 void HPresolve::setupSubstitutionOpportunities() {
@@ -2341,8 +2340,10 @@ HPresolve::Result HPresolve::checkColBounds(HighsInt col, bool* isFixed) {
 HPresolve::Result HPresolve::checkModelColBounds(HighsInt col, bool& isFixed) {
   double boundDiff = model->col_upper_[col] - model->col_lower_[col];
   double max_abs_col_value = 0;
-  for (HighsInt iEl = model->a_matrix_.start_[col]; iEl < model->a_matrix_.start_[col+1]; iEl++)
-    max_abs_col_value = std::max(std::fabs(model->a_matrix_.value_[iEl]), max_abs_col_value);
+  for (HighsInt iEl = model->a_matrix_.start_[col];
+       iEl < model->a_matrix_.start_[col + 1]; iEl++)
+    max_abs_col_value =
+        std::max(std::fabs(model->a_matrix_.value_[iEl]), max_abs_col_value);
   isFixed = false;
   if (boundDiff <= primal_feastol &&
       (boundDiff <= options->small_matrix_value ||
@@ -2702,8 +2703,8 @@ bool HPresolve::okFromCSC(const std::vector<double>& Aval,
   impliedDualRowBounds.setNumSums(model->num_col_);
 
   HighsInt ncol = static_cast<HighsInt>(Astart.size()) - 1;
-  printf("HPresolve::okFromCSC = ncol %d; colhead.size() = %d\n",
-	 int(ncol), int(colhead.size()));
+  printf("HPresolve::okFromCSC = ncol %d; colhead.size() = %d\n", int(ncol),
+         int(colhead.size()));
   assert(static_cast<size_t>(ncol) == colhead.size());
   HighsInt nnz = static_cast<HighsInt>(Aval.size());
 
@@ -5937,38 +5938,45 @@ HPresolve::Result HPresolve::initialSweep(
   const bool have_col_names = model->col_names_.size() > 0;
   for (HighsInt iCol = 0; iCol < model->num_col_; iCol++) {
     HighsInt col_nnz =
-      model->a_matrix_.start_[iCol+1] -
-      model->a_matrix_.start_[iCol];
+        model->a_matrix_.start_[iCol + 1] - model->a_matrix_.start_[iCol];
     HPRESOLVE_CHECKED_CALL(checkModelColBounds(iCol, isFixed));
     if (isFixed) {
       num_fixed_col++;
       // remove fixed column
       HighsInt iEl = model->a_matrix_.start_[iCol];
-      postsolve_stack.removedModelFixedCol(iCol, model->col_lower_[iCol],
-					   model->col_cost_[iCol],
-					   col_nnz,
-					   &model->a_matrix_.index_[iEl],
-					   &model->a_matrix_.value_[iEl]);
+      postsolve_stack.removedModelFixedCol(
+          iCol, model->col_lower_[iCol], model->col_cost_[iCol], col_nnz,
+          &model->a_matrix_.index_[iEl], &model->a_matrix_.value_[iEl]);
+      removeModelFixedCol(iCol);
     } else {
       model->col_cost_[num_col] = model->col_cost_[iCol];
       model->col_lower_[num_col] = model->col_lower_[iCol];
       model->col_upper_[num_col] = model->col_upper_[iCol];
       model->integrality_[num_col] = model->integrality_[iCol];
       if (have_col_names)
-	model->col_names_[num_col] = std::move(model->col_names_[iCol]);
+        model->col_names_[num_col] = std::move(model->col_names_[iCol]);
       HighsInt from_os = model->a_matrix_.start_[iCol];
       HighsInt to_os = nnz;
       for (HighsInt iEl = 0; iEl < col_nnz; iEl++) {
-	model->a_matrix_.index_[to_os+iEl] = model->a_matrix_.index_[from_os+iEl];
-	model->a_matrix_.value_[to_os+iEl] = model->a_matrix_.value_[from_os+iEl];
+        model->a_matrix_.index_[to_os + iEl] =
+            model->a_matrix_.index_[from_os + iEl];
+        model->a_matrix_.value_[to_os + iEl] =
+            model->a_matrix_.value_[from_os + iEl];
       }
+      model->a_matrix_.start_[num_col] = nnz;
       nnz += col_nnz;
-      num_col++;      
+      num_col++;
     }
   }
+  model->col_cost_.resize(num_col);
+  model->col_lower_.resize(num_col);
+  model->col_upper_.resize(num_col);
+  model->integrality_.resize(num_col);
+  if (have_col_names) model->col_names_.resize(num_col);
+  model->a_matrix_.start_[num_col] = nnz;
   model->num_col_ = num_col;
   model->a_matrix_.num_col_ = num_col;
-  model->a_matrix_.start_.resize(num_col+1);
+  model->a_matrix_.start_.resize(num_col + 1);
   model->a_matrix_.index_.resize(nnz);
   model->a_matrix_.value_.resize(nnz);
   printf("HPresolve::initialSweep: Model has %d / %d fixed columns\n",
@@ -6083,11 +6091,11 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
 
   if (!okSetupPresolveDataStructures()) {
     highsLogUser(options->log_options, HighsLogType::kError,
-		 "Insufficient memory for presolve data structures\n");
+                 "Insufficient memory for presolve data structures\n");
     // Memory allocation error
     return Result::kOutOfMemory;
   }
-  
+
   // initialize substitution opportunities
   analysis_.presolveTimerStart(kPresolveClockSetupSubstitutionOpportunities);
   setupSubstitutionOpportunities();
@@ -6648,7 +6656,7 @@ HighsModelStatus HPresolve::run(HighsPostsolveStack& postsolve_stack) {
     result = presolve(postsolve_stack);
   } catch (const std::exception& exception) {
     highsLogDev(options->log_options, HighsLogType::kError,
-		"Exception %s in Presolve::presolve\n", exception.what());
+                "Exception %s in Presolve::presolve\n", exception.what());
     result = Result::kOutOfMemory;
   }
   switch (result) {
@@ -7287,6 +7295,23 @@ void HPresolve::removeFixedCol(HighsInt col, double fixval) {
     reinsertEquation(colrow);
   }
 
+  model->offset_ += model->col_cost_[col] * fixval;
+  assert(std::isfinite(model->offset_));
+  model->col_cost_[col] = 0;
+}
+
+void HPresolve::removeModelFixedCol(HighsInt col) {
+  numDeletedCols++;
+  double fixval = model->col_lower_[col];
+  for (HighsInt iEl = model->a_matrix_.start_[col];
+       iEl < model->a_matrix_.start_[col + 1]; iEl++) {
+    HighsInt colrow = model->a_matrix_.index_[iEl];
+    double colval = model->a_matrix_.value_[iEl];
+    if (model->row_lower_[colrow] != -kHighsInf)
+      model->row_lower_[colrow] -= colval * fixval;
+    if (model->row_upper_[colrow] != kHighsInf)
+      model->row_upper_[colrow] -= colval * fixval;
+  }
   model->offset_ += model->col_cost_[col] * fixval;
   assert(std::isfinite(model->offset_));
   model->col_cost_[col] = 0;

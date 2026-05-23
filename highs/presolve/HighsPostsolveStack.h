@@ -455,9 +455,9 @@ class HighsPostsolveStack {
   }
 
   void removedModelFixedCol(HighsInt col, double fixValue, double colCost,
-			    HighsInt col_nnz, HighsInt* index, double* value) {
+                            HighsInt col_nnz, HighsInt* index, double* value) {
     assert(std::isfinite(fixValue));
-    for (HighsInt iEl = 0; iEl < col_nnz; iEl++) 
+    for (HighsInt iEl = 0; iEl < col_nnz; iEl++)
       colValues.emplace_back(origRowIndex[index[iEl]], value[iEl]);
 
     reductionValues.push(FixedCol{fixValue, colCost, origColIndex[col],
