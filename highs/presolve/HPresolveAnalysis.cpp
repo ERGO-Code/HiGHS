@@ -90,13 +90,6 @@ void HPresolveAnalysis::startPresolveRuleLog(const HighsInt rule_type) {
   assert(num_deleted_cols0_ == *numDeletedCols);
   num_deleted_rows0_ = *numDeletedRows;
   num_deleted_cols0_ = *numDeletedCols;
-  const int check_num_deleted_rows0_ = -255;
-  const int check_num_deleted_cols0_ = -688;
-  if (num_deleted_rows0_ == check_num_deleted_rows0_ &&
-      num_deleted_cols0_ == check_num_deleted_cols0_) {
-    printf("num_deleted (%d, %d)\n", int(num_deleted_rows0_),
-           int(num_deleted_cols0_));
-  }
 }
 
 void HPresolveAnalysis::stopPresolveRuleLog(const HighsInt rule_type) {
@@ -160,8 +153,12 @@ bool HPresolveAnalysis::analysePresolveRuleLog(const bool report) {
                  "%-25s      Rows      Cols     Calls\n",
                  "Presolve rule removed");
     highsLogUser(log_options, HighsLogType::kInfo, "%s\n", rule.c_str());
-    for (HighsInt rule_type = kPresolveRuleMin; rule_type < kPresolveRuleCount;
-         rule_type++)
+    for (HighsInt k = kPresolveRuleMin; k < kPresolveRuleCount; k++) {
+      HighsInt rule_type = k;
+      // Hack so that initial logging is of initial sweep
+      if (kPresolveRuleInitialSweep > 0) {
+	rule_type = k == 0 ? kPresolveRuleInitialSweep : k-1;
+      }
       if (presolve_log_.rule[rule_type].call ||
           presolve_log_.rule[rule_type].row_removed ||
           presolve_log_.rule[rule_type].col_removed)
@@ -170,6 +167,7 @@ bool HPresolveAnalysis::analysePresolveRuleLog(const bool report) {
                      (int)presolve_log_.rule[rule_type].row_removed,
                      (int)presolve_log_.rule[rule_type].col_removed,
                      (int)presolve_log_.rule[rule_type].call);
+    }
     highsLogUser(log_options, HighsLogType::kInfo, "%s\n", rule.c_str());
     highsLogUser(log_options, HighsLogType::kInfo, "%-25s %9d %9d\n",
                  "Total reductions", (int)sum_removed_row,

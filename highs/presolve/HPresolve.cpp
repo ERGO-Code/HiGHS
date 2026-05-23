@@ -38,7 +38,7 @@
 
 #define ENABLE_SPARSIFY_FOR_LP 0
 
-const bool initial_sweep = false;  // true;//
+const bool initial_sweep = true;//false;  // 
 
 #define HPRESOLVE_CHECKED_CALL(presolveCall)                           \
   do {                                                                 \
@@ -89,9 +89,6 @@ void HPresolve::setInput(HighsLp& model_, const HighsOptions& options_,
     model->integrality_.assign(model->num_col_, HighsVarType::kContinuous);
   } else
     primal_feastol = options->mip_feasibility_tolerance;
-
-  numDeletedCols = 0;
-  numDeletedRows = 0;
 
   // Take value passed in as reduction limit, allowing different
   // values to be used for initial presolve, and after restart
@@ -167,6 +164,15 @@ bool HPresolve::okSetupPresolveDataStructures() {
   }
   analysis_.presolveTimerStop(kPresolveClockSetupToCsc);
 
+  // numDeletedCols and numDeletedRows are not cumulative through the
+  // whole of presolve, but "since the last time the model had no
+  // deleted columns or rows" - ie from initialisation here, or from a
+  // call to shrinkProblem
+  numDeletedCols = 0;
+  numDeletedRows = 0;
+  // Need to reset current number of deleted rows and columns in logging
+  analysis_.resetNumDeleted();
+
   analysis_.presolveTimerStart(kPresolveClockSetupResize);
   // initialize everything as changed, but do not add all indices
   // since the first thing presolve will do is a scan for easy reductions
@@ -180,7 +186,6 @@ bool HPresolve::okSetupPresolveDataStructures() {
   if (!okReserve(changedColIndices, model->num_col_)) return false;
   if (!okReserve(liftingOpportunities, model->num_row_)) return false;
   if (!okResize(singleEquationChecked, model->num_row_)) return false;
-
   analysis_.presolveTimerStop(kPresolveClockSetupResize);
   return true;
 }
@@ -2703,8 +2708,6 @@ bool HPresolve::okFromCSC(const std::vector<double>& Aval,
   impliedDualRowBounds.setNumSums(model->num_col_);
 
   HighsInt ncol = static_cast<HighsInt>(Astart.size()) - 1;
-  printf("HPresolve::okFromCSC = ncol %d; colhead.size() = %d\n", int(ncol),
-         int(colhead.size()));
   assert(static_cast<size_t>(ncol) == colhead.size());
   HighsInt nnz = static_cast<HighsInt>(Aval.size());
 
@@ -5930,6 +5933,8 @@ double HPresolve::computeWorstCaseUpperBound(HighsInt col, HighsInt boundCol,
 HPresolve::Result HPresolve::initialSweep(
     HighsPostsolveStack& postsolve_stack) {
   assert(initial_sweep);
+  const bool logging_on = analysis_.logging_on_;
+  if (logging_on) analysis_.startPresolveRuleLog(kPresolveRuleInitialSweep);
   HighsInt num_fixed_col = 0;
   HighsInt model_num_col = model->num_col_;
   HighsInt num_col = 0;
@@ -5981,6 +5986,8 @@ HPresolve::Result HPresolve::initialSweep(
   model->a_matrix_.value_.resize(nnz);
   printf("HPresolve::initialSweep: Model has %d / %d fixed columns\n",
          int(num_fixed_col), int(model_num_col));
+  analysis_.logging_on_ = logging_on;
+  if (logging_on) analysis_.stopPresolveRuleLog(kPresolveRuleInitialSweep);
   return checkLimits(postsolve_stack);
 }
 
@@ -6081,7 +6088,35 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
     model->sense_ = ObjSense::kMinimize;
   }
 
-  if (initial_sweep) {
+  // Need to check for time-out in checkLimits, so make sure that
+  // the timer is well defined, and that its total time clock is
+  // running
+  assert(this->timer);
+  assert(this->timer->running());
+
+  const bool silent = silentLog();
+  double report_frequency = 10;
+  double current_time = this->timer->read();
+  HighsInt last_report_size = model->num_col_ + model->num_row_;
+  double last_report_time = current_time;
+  if (options->presolve != kHighsOffString && !silent) {
+    highsLogUser(options->log_options, HighsLogType::kInfo,
+		 "Presolving model\n");
+    std::string time_str = highsTimeSecondToString(current_time);
+    if (options->timeless_log) time_str = "";
+    highsLogUser(options->log_options, HighsLogType::kInfo,
+		 "%" HIGHSINT_FORMAT " rows, %" HIGHSINT_FORMAT
+		 " cols, %" HIGHSINT_FORMAT " nonzeros %s\n",
+		 model->num_row_,
+		 model->num_col_,
+		 model->numNz(), time_str.c_str());
+  }
+
+  if (options->presolve != kHighsOffString && initial_sweep) {
+    // Zero numDeletedCols and numDeletedRows since they are used to
+    // identify reductions due to this presovle rule
+    numDeletedCols = 0;
+    numDeletedRows = 0;
     // Perform initial sweep to remove fixed columns before forming the
     // dynamic constraint matrix data structure
     analysis_.presolveTimerStart(kPresolveClockInitialSweep);
@@ -6101,13 +6136,6 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
   setupSubstitutionOpportunities();
   analysis_.presolveTimerStop(kPresolveClockSetupSubstitutionOpportunities);
 
-  const bool silent = silentLog();
-  if (options->presolve != kHighsOffString) {
-    if (!silent) {
-      highsLogUser(options->log_options, HighsLogType::kInfo,
-                   "Presolving model\n");
-    }
-  }
   if (options->presolve != kHighsOffString) {
     if (mipsolver) mipsolver->mipdata_->cliquetable.setPresolveFlag(true);
 
@@ -6117,9 +6145,7 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
         HighsInt numRow = model->num_row_ - numDeletedRows;
         HighsInt numNonz =
             static_cast<HighsInt>(Avalue.size() - freeslots.size());
-        // Only read the run time if it's to be printed
-        const double run_time = options->output_flag ? this->timer->read() : 0;
-        std::string time_str = highsTimeSecondToString(run_time);
+        std::string time_str = highsTimeSecondToString(current_time);
         if (options->timeless_log) time_str = "";
         highsLogUser(options->log_options, HighsLogType::kInfo,
                      "%" HIGHSINT_FORMAT " rows, %" HIGHSINT_FORMAT
@@ -6127,13 +6153,6 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
                      numRow, numCol, numNonz, time_str.c_str());
       }
     };
-
-    // Need to check for time-out in checkLimits, so make sure that
-    // the timer is well defined, and that its total time clock is
-    // running
-    assert(this->timer);
-    assert(this->timer->running());
-
     analysis_.presolveTimerStart(kPresolveClockInitial);
     HPRESOLVE_CHECKED_CALL(initialRowAndColPresolve(postsolve_stack));
     analysis_.presolveTimerStop(kPresolveClockInitial);
@@ -6158,16 +6177,22 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
     HighsInt numCliquesBeforeProbing = -1;
     bool domcolAfterProbingCalled = false;
     bool dependentEquationsCalled = mipsolver != nullptr;
-    HighsInt lastPrintSize = kHighsIInf;
 
     // Start of main presolve loop
     //
     while (true) {
-      HighsInt currSize =
+      assert(model->num_col_ >= numDeletedCols);
+      assert(model->num_row_ >= numDeletedRows);
+      HighsInt current_size =
           model->num_col_ - numDeletedCols + model->num_row_ - numDeletedRows;
-      if (currSize < 0.85 * lastPrintSize) {
-        lastPrintSize = currSize;
-        report();
+      if (options->output_flag) {
+	current_time = this->timer->read();
+	if (current_size < 0.85 * last_report_size ||
+	    current_time > last_report_time + report_frequency) {
+	  last_report_size = current_size;
+	  last_report_time = current_time;
+	  report();
+	}
       }
 
       analysis_.presolveTimerStart(kPresolveClockFastLoop);
@@ -6184,6 +6209,12 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
         HPRESOLVE_CHECKED_CALL(
             applyConflictGraphSubstitutions(postsolve_stack, numDelCol));
       }
+
+      const bool reduced_to_empty =
+	numDeletedCols == model->num_col_ &&
+	numDeletedRows == model->num_row_;
+
+      if (reducedToEmpty()) break;
 
       if (this->allow_rule_[kPresolveRuleAggregator]) {
         analysis_.presolveTimerStart(kPresolveClockAggregator);
@@ -6323,11 +6354,13 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
       break;
     }
 
-    // Now consider removing slacks
-    if (options->presolve_remove_slacks)
-      HPRESOLVE_CHECKED_CALL(removeSlacks(postsolve_stack));
+    if (!reducedToEmpty()) {
+      // Now consider removing slacks
+      if (options->presolve_remove_slacks)
+	HPRESOLVE_CHECKED_CALL(removeSlacks(postsolve_stack));
 
-    report();
+      report();
+    }
   } else {
     highsLogUser(options->log_options, HighsLogType::kInfo,
                  "\nPresolve is switched off\n");
