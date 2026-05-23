@@ -68,11 +68,9 @@ void Highs::reportModelStats() const {
     highsLogDev(log_options, HighsLogType::kInfo, "%-4s      : %s\n",
                 problem_type.c_str(), lp.model_name_.c_str());
     highsLogDev(log_options, HighsLogType::kInfo,
-                "Rows      : %" HIGHSINT_FORMAT "\n",
-                lp.num_row_);
+                "Rows      : %" HIGHSINT_FORMAT "\n", lp.num_row_);
     highsLogDev(log_options, HighsLogType::kInfo,
-                "Cols      : %" HIGHSINT_FORMAT "\n",
-		lp.num_col_);
+                "Cols      : %" HIGHSINT_FORMAT "\n", lp.num_col_);
     if (q_num_nz) {
       highsLogDev(log_options, HighsLogType::kInfo,
                   "Matrix Nz : %" HIGHSINT_FORMAT "\n", a_num_nz);
@@ -80,8 +78,7 @@ void Highs::reportModelStats() const {
                   "Hessian Nz: %" HIGHSINT_FORMAT "\n", q_num_nz);
     } else {
       highsLogDev(log_options, HighsLogType::kInfo,
-                  "Nonzeros  : %" HIGHSINT_FORMAT "\n",
-                  a_num_nz);
+                  "Nonzeros  : %" HIGHSINT_FORMAT "\n", a_num_nz);
     }
     if (num_integer)
       highsLogDev(log_options, HighsLogType::kInfo,
@@ -115,9 +112,11 @@ void Highs::reportModelStats() const {
                  << highsIntToPlural(num_integer) << " (" << num_binary
                  << " binary)";
     if (num_semi_continuous)
-      stats_line << "; " << num_semi_continuous << " semi-continuous variable" << highsIntToPlural(num_semi_continuous);
+      stats_line << "; " << num_semi_continuous << " semi-continuous variable"
+                 << highsIntToPlural(num_semi_continuous);
     if (num_semi_integer)
-      stats_line << "; " << num_semi_integer << " semi-integer variable" << highsIntToPlural(num_semi_integer);
+      stats_line << "; " << num_semi_integer << " semi-integer variable"
+                 << highsIntToPlural(num_semi_integer);
     highsLogUser(log_options, HighsLogType::kInfo, "%s\n",
                  stats_line.str().c_str());
   }

@@ -168,8 +168,11 @@ class HPresolve {
   // private functions for different shared functionality and matrix
   // modification
 
-  bool reducedToEmpty() const { return numDeletedCols == model->num_col_ && numDeletedRows == model->num_row_; }
-  
+  bool reducedToEmpty() const {
+    return numDeletedCols == model->num_col_ &&
+           numDeletedRows == model->num_row_;
+  }
+
   void chooseRules();
 
   void link(HighsInt pos);

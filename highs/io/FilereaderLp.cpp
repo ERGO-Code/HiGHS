@@ -251,8 +251,8 @@ FilereaderRetcode FilereaderLp::readModelFromFile(const HighsOptions& options,
                            "coefficient%s in row %d (name \"%s\")\n",
                            int(iCol), lp.col_names_[iCol].c_str(),
                            int(zero_count[iRow]),
-                           highsIntToPlural(zero_count[iRow]).c_str(), int(iRow),
-                           lp.row_names_[iRow].c_str());
+                           highsIntToPlural(zero_count[iRow]).c_str(),
+                           int(iRow), lp.row_names_[iRow].c_str());
             num_report++;
           }
           sum_num_duplicate += (num_ocurrence - 1);

@@ -305,6 +305,11 @@ class HighsPostsolveStack {
   void compressIndexMaps(const std::vector<HighsInt>& newRowIndex,
                          const std::vector<HighsInt>& newColIndex);
 
+  void compressRowIndexMap(const std::vector<HighsInt>& newRowIndex);
+  void compressColIndexMap(const std::vector<HighsInt>& newColIndex);
+  void compressIndexMap(const std::vector<HighsInt>& newIndex,
+                        std::vector<HighsInt>& origIndex);
+
   /// transform a column x by a linear mapping with a new column x'.
   /// I.e. substitute x = scale * x' + constant
   void linearTransform(HighsInt col, double scale, double constant) {

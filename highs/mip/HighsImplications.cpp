@@ -521,6 +521,11 @@ void HighsImplications::rebuild(HighsInt ncols,
   nextCleanupCall = mipsolver.numNonzero();
 
   for (HighsInt i = 0; i != oldncols; ++i) {
+    if (int(i) >= int(orig2reducedcol.size())) {
+      printf("HighsImplications::rebuild i = %d orig2reducedcol.size = %d\n",
+             int(i), int(orig2reducedcol.size()));
+      assert(111 == 345);
+    }
     HighsInt newi = orig2reducedcol[i];
 
     if (newi == -1 ||

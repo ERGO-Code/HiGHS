@@ -38,7 +38,7 @@
 
 #define ENABLE_SPARSIFY_FOR_LP 0
 
-const bool initial_sweep = true;//false;  // 
+const bool initial_sweep = false;  // true;//
 
 #define HPRESOLVE_CHECKED_CALL(presolveCall)                           \
   do {                                                                 \
@@ -5941,11 +5941,13 @@ HPresolve::Result HPresolve::initialSweep(
   HighsInt nnz = 0;
   bool isFixed;
   const bool have_col_names = model->col_names_.size() > 0;
+  std::vector<HighsInt> newColIndex(model->num_col_);
   for (HighsInt iCol = 0; iCol < model->num_col_; iCol++) {
     HighsInt col_nnz =
         model->a_matrix_.start_[iCol + 1] - model->a_matrix_.start_[iCol];
     HPRESOLVE_CHECKED_CALL(checkModelColBounds(iCol, isFixed));
     if (isFixed) {
+      newColIndex[iCol] = -1;
       num_fixed_col++;
       // remove fixed column
       HighsInt iEl = model->a_matrix_.start_[iCol];
@@ -5954,6 +5956,8 @@ HPresolve::Result HPresolve::initialSweep(
           &model->a_matrix_.index_[iEl], &model->a_matrix_.value_[iEl]);
       removeModelFixedCol(iCol);
     } else {
+      newColIndex[iCol] = num_col;
+      //      if (num_col < iCol) {
       model->col_cost_[num_col] = model->col_cost_[iCol];
       model->col_lower_[num_col] = model->col_lower_[iCol];
       model->col_upper_[num_col] = model->col_upper_[iCol];
@@ -5969,6 +5973,7 @@ HPresolve::Result HPresolve::initialSweep(
             model->a_matrix_.value_[from_os + iEl];
       }
       model->a_matrix_.start_[num_col] = nnz;
+      //      }
       nnz += col_nnz;
       num_col++;
     }
@@ -5984,8 +5989,11 @@ HPresolve::Result HPresolve::initialSweep(
   model->a_matrix_.start_.resize(num_col + 1);
   model->a_matrix_.index_.resize(nnz);
   model->a_matrix_.value_.resize(nnz);
-  printf("HPresolve::initialSweep: Model has %d / %d fixed columns\n",
-         int(num_fixed_col), int(model_num_col));
+  postsolve_stack.compressColIndexMap(newColIndex);
+  if (num_fixed_col)
+    highsLogUser(options->log_options, HighsLogType::kInfo,
+                 "HPresolve::initialSweep: Model has %d / %d fixed columns\n",
+                 int(num_fixed_col), int(model_num_col));
   analysis_.logging_on_ = logging_on;
   if (logging_on) analysis_.stopPresolveRuleLog(kPresolveRuleInitialSweep);
   return checkLimits(postsolve_stack);
@@ -6101,18 +6109,18 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
   double last_report_time = current_time;
   if (options->presolve != kHighsOffString && !silent) {
     highsLogUser(options->log_options, HighsLogType::kInfo,
-		 "Presolving model\n");
+                 "Presolving model\n");
     std::string time_str = highsTimeSecondToString(current_time);
     if (options->timeless_log) time_str = "";
     highsLogUser(options->log_options, HighsLogType::kInfo,
-		 "%" HIGHSINT_FORMAT " rows, %" HIGHSINT_FORMAT
-		 " cols, %" HIGHSINT_FORMAT " nonzeros %s\n",
-		 model->num_row_,
-		 model->num_col_,
-		 model->numNz(), time_str.c_str());
+                 "%" HIGHSINT_FORMAT " rows, %" HIGHSINT_FORMAT
+                 " cols, %" HIGHSINT_FORMAT " nonzeros %s\n",
+                 model->num_row_, model->num_col_, model->numNz(),
+                 time_str.c_str());
   }
 
-  if (options->presolve != kHighsOffString && initial_sweep) {
+  if (options->presolve != kHighsOffString && mipsolver == nullptr &&
+      initial_sweep) {
     // Zero numDeletedCols and numDeletedRows since they are used to
     // identify reductions due to this presovle rule
     numDeletedCols = 0;
@@ -6186,13 +6194,13 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
       HighsInt current_size =
           model->num_col_ - numDeletedCols + model->num_row_ - numDeletedRows;
       if (options->output_flag) {
-	current_time = this->timer->read();
-	if (current_size < 0.85 * last_report_size ||
-	    current_time > last_report_time + report_frequency) {
-	  last_report_size = current_size;
-	  last_report_time = current_time;
-	  report();
-	}
+        current_time = this->timer->read();
+        if (current_size < 0.85 * last_report_size ||
+            current_time > last_report_time + report_frequency) {
+          last_report_size = current_size;
+          last_report_time = current_time;
+          report();
+        }
       }
 
       analysis_.presolveTimerStart(kPresolveClockFastLoop);
@@ -6210,9 +6218,8 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
             applyConflictGraphSubstitutions(postsolve_stack, numDelCol));
       }
 
-      const bool reduced_to_empty =
-	numDeletedCols == model->num_col_ &&
-	numDeletedRows == model->num_row_;
+      const bool reduced_to_empty = numDeletedCols == model->num_col_ &&
+                                    numDeletedRows == model->num_row_;
 
       if (reducedToEmpty()) break;
 
@@ -6357,7 +6364,7 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
     if (!reducedToEmpty()) {
       // Now consider removing slacks
       if (options->presolve_remove_slacks)
-	HPRESOLVE_CHECKED_CALL(removeSlacks(postsolve_stack));
+        HPRESOLVE_CHECKED_CALL(removeSlacks(postsolve_stack));
 
       report();
     }

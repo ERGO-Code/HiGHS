@@ -947,9 +947,11 @@ TEST_CASE("presolve-light", "[highs_test_presolve]") {
 
 TEST_CASE("presolve-initial-sweep", "[highs_test_presolve]") {
   Highs highs;
-  //  highs.setOptionValue("output_flag", dev_run);
-  highs.setOptionValue("log_dev_level", 1);
-  highs.setOptionValue("presolve_rule_logging", true);
+  highs.setOptionValue("output_flag", dev_run);
+  if (dev_run) {
+    highs.setOptionValue("log_dev_level", 1);
+    highs.setOptionValue("presolve_rule_logging", true);
+  }
   HighsLp lp;
   lp.num_col_ = 3;
   lp.num_row_ = 1;
@@ -962,8 +964,10 @@ TEST_CASE("presolve-initial-sweep", "[highs_test_presolve]") {
   lp.a_matrix_.index_ = {0, 0, 0};
   lp.a_matrix_.value_ = {3, 2, -1};
   highs.passModel(lp);
+  // Presolved to empty, so no simplex iterations if postsolve is correct
   highs.run();
-  highs.writeSolution("", 1);
+  REQUIRE(highs.getInfo().simplex_iteration_count == 0);
+  if (dev_run) highs.writeSolution("", 1);
 
   highs.resetGlobalScheduler(true);
 }
