@@ -954,15 +954,16 @@ TEST_CASE("presolve-initial-sweep", "[highs_test_presolve]") {
   lp.num_col_ = 3;
   lp.num_row_ = 1;
   lp.col_cost_ = {0, 1, 2};
-  lp.col_lower_ = {1, 2, 3};
-  lp.col_upper_ = {1, 2, 3};
+  lp.col_lower_ = {1, 2, 0};
+  lp.col_upper_ = {1, kHighsInf, kHighsInf};
   lp.row_lower_ = {-kHighsInf};
-  lp.row_upper_ = {10};
+  lp.row_upper_ = {5};
   lp.a_matrix_.start_ = {0, 1, 2, 3};
   lp.a_matrix_.index_ = {0, 0, 0};
   lp.a_matrix_.value_ = {3, 2, -1};
   highs.passModel(lp);
   highs.run();
+  highs.writeSolution("", 1);
 
   highs.resetGlobalScheduler(true);
 }
