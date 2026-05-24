@@ -3,7 +3,7 @@
 #include "SpecialLps.h"
 #include "catch.hpp"
 
-const bool dev_run = false;
+const bool dev_run = true;  // false;
 
 bool doubleEqual(const double v0, const double v1) {
   return std::fabs(v0 - v1) < 1e-8;
@@ -945,7 +945,7 @@ TEST_CASE("presolve-light", "[highs_test_presolve]") {
   highs.resetGlobalScheduler(true);
 }
 
-TEST_CASE("presolve-initial-sweep", "[highs_test_presolve]") {
+TEST_CASE("presolve-initial-sweep-postsolve", "[highs_test_presolve]") {
   Highs highs;
   highs.setOptionValue("output_flag", dev_run);
   if (dev_run) {
@@ -969,5 +969,48 @@ TEST_CASE("presolve-initial-sweep", "[highs_test_presolve]") {
   REQUIRE(highs.getInfo().simplex_iteration_count == 0);
   if (dev_run) highs.writeSolution("", 1);
 
+  highs.resetGlobalScheduler(true);
+}
+
+TEST_CASE("presolve-initial-sweep", "[highs_test_presolve]") {
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  if (dev_run) {
+    highs.setOptionValue("log_dev_level", 1);
+    highs.setOptionValue("presolve_rule_logging", true);
+  }
+  HighsLp lp;
+  lp.num_col_ = 1;
+  lp.num_row_ = 1;
+  lp.col_cost_ = {-1};
+  lp.col_lower_ = {1};
+  lp.col_upper_ = {1};
+  lp.row_lower_ = {-kHighsInf};
+  lp.row_upper_ = {5};
+  lp.a_matrix_.start_ = {0, 1};
+  lp.a_matrix_.index_ = {0};
+  lp.a_matrix_.value_ = {3};
+  HighsStatus pass_model_status = HighsStatus::kOk;
+  for (HighsInt k = 0; k < 3; k++) {
+    if (dev_run) printf("\nPass k = %d\n==========\n", int(k));
+    REQUIRE(highs.passModel(lp) == pass_model_status);
+    highs.run();
+    if (k == 0) {
+      REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
+      lp.col_upper_ = {0};
+      pass_model_status = HighsStatus::kWarning;
+      // Can infeasible column bounds even reach presolve?
+    } else if (k == 1) {
+      REQUIRE(highs.getModelStatus() == HighsModelStatus::kInfeasible);
+      lp.col_lower_ = {1e+20};
+      lp.col_upper_ = {kHighsInf};
+      lp.row_upper_ = {kHighsInf};
+      pass_model_status = HighsStatus::kError;
+      // Why is this model accepted when error returns?
+    } else {
+      REQUIRE(highs.getModelStatus() == HighsModelStatus::kUnbounded);
+    }
+    if (dev_run) highs.writeSolution("", 1);
+  }
   highs.resetGlobalScheduler(true);
 }

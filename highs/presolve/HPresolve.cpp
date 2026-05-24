@@ -38,12 +38,14 @@
 
 #define ENABLE_SPARSIFY_FOR_LP 0
 
-const bool initial_sweep = false;  // true;//
+const bool initial_sweep = false;
 
-#define HPRESOLVE_CHECKED_CALL(presolveCall)                           \
-  do {                                                                 \
-    HPresolve::Result __result = presolveCall;                         \
-    if (__result != presolve::HPresolve::Result::kOk) return __result; \
+#define HPRESOLVE_CHECKED_CALL(presolveCall)            \
+  do {                                                  \
+    HPresolve::Result __result = presolveCall;          \
+    if (__result != presolve::HPresolve::Result::kOk) { \
+      return __result;                                  \
+    }                                                   \
   } while (0)
 
 namespace presolve {
@@ -930,12 +932,26 @@ HighsInt HPresolve::findNonzero(HighsInt row, HighsInt col) {
 }
 
 void HPresolve::shrinkProblem(HighsPostsolveStack& postsolve_stack) {
+  //  printf("HPresolve::shrinkProblem: numDeletedCols = %d; numDeletedRows =
+  //  %d\n",
+  //         int(numDeletedCols), int(numDeletedRows));
+  // The final call to shrinkProblem, or if it's called on return from
+  //  if (numDeletedCols == 0 && numDeletedRows == 0) return;
   HighsInt oldNumCol = model->num_col_;
+  HighsInt oldNumRow = model->num_row_;
+  assert(colDeleted.size() == static_cast<size_t>(oldNumCol));
+  assert(rowDeleted.size() == static_cast<size_t>(oldNumRow));
   model->num_col_ = 0;
+  model->num_row_ = 0;
   std::vector<HighsInt> newColIndex(oldNumCol);
+  std::vector<HighsInt> newRowIndex(oldNumRow);
   const bool have_col_names = model->col_names_.size() > 0;
+  const bool have_row_names = model->row_names_.size() > 0;
   assert(!have_col_names ||
          model->col_names_.size() == static_cast<size_t>(oldNumCol));
+  assert(!have_row_names ||
+         model->row_names_.size() == static_cast<size_t>(oldNumRow));
+  // Shrink the col data
   for (HighsInt i = 0; i != oldNumCol; ++i) {
     if (colDeleted[i])
       newColIndex[i] = -1;
@@ -976,12 +992,7 @@ void HPresolve::shrinkProblem(HighsPostsolveStack& postsolve_stack) {
   if (have_col_names) model->col_names_.resize(model->num_col_);
   changedColFlag.resize(model->num_col_);
   numDeletedCols = 0;
-  HighsInt oldNumRow = model->num_row_;
-  const bool have_row_names = model->row_names_.size() > 0;
-  assert(!have_row_names ||
-         model->row_names_.size() == static_cast<size_t>(oldNumRow));
-  model->num_row_ = 0;
-  std::vector<HighsInt> newRowIndex(oldNumRow);
+  // Shrink the row data
   for (HighsInt i = 0; i != oldNumRow; ++i) {
     if (rowDeleted[i])
       newRowIndex[i] = -1;

@@ -533,7 +533,7 @@ TEST_CASE("lp-get-iis-time-limit-infeasible", "[iis]") {
       std::string(HIGHS_DIR) + "/check/instances/forest6.mps";
 
   Highs highs;
-  highs.setOptionValue("output_flag", dev_run);
+  //  highs.setOptionValue("output_flag", dev_run);
 
   REQUIRE(highs.readModel(model_file) == HighsStatus::kOk);
 
