@@ -4590,6 +4590,41 @@ HPresolve::Result HPresolve::emptyCol(HighsPostsolveStack& postsolve_stack,
   return checkLimits(postsolve_stack);
 }
 
+HPresolve::Result HPresolve::modelEmptyCol(HighsPostsolveStack& postsolve_stack,
+					   HighsInt col) {
+  const HighsInt col_nnz =  model->a_matrix_.start_[col + 1] - model->a_matrix_.start_[col];
+  assert(col_nnz == 0);
+  double cost = model->col_cost_[col];
+  const double lower = model->col_lower_[col];
+  const double upper = model->col_upper_[col];
+
+  if ((cost > 0 && lower == -kHighsInf) ||
+      (cost < 0 && upper == kHighsInf)) {
+    if (std::abs(cost) <= options->dual_feasibility_tolerance)
+      cost = 0;
+    else
+      return Result::kDualInfeasible;
+  }
+  double fixval = kHighsInf;
+  if (cost > 0) {
+    fixval = lower;
+    if (fixval == -kHighsInf) return Result::kDualInfeasible;
+  } else if (cost < 0 || std::abs(upper) < std::abs(lower)) {
+    fixval = upper;
+    if (fixval == kHighsInf) return Result::kDualInfeasible;
+  } else if (lower != -kHighsInf) {
+    fixval = lower;
+    if (fixval == -kHighsInf) return Result::kDualInfeasible;
+  } else {
+    fixval = 0.0;
+  }
+  assert(fixval != kHighsInf);
+  postsolve_stack.removedModelFixedCol(col, fixval, cost, col_nnz, nullptr, nullptr);
+  numDeletedCols++;
+
+  return checkLimits(postsolve_stack);
+}
+
 HPresolve::Result HPresolve::colPresolve(HighsPostsolveStack& postsolve_stack,
                                          HighsInt col, const bool timing) {
   assert(!colDeleted[col]);
@@ -5947,20 +5982,28 @@ HPresolve::Result HPresolve::initialSweep(
   const bool logging_on = analysis_.logging_on_;
   if (logging_on) analysis_.startPresolveRuleLog(kPresolveRuleInitialSweep);
   HighsInt num_fixed_col = 0;
-  HighsInt model_num_col = model->num_col_;
+  HighsInt num_empty_col = 0;
+  HighsInt num_empty_row = 0;
+  HighsInt num_singleton_row = 0;
   HighsInt num_col = 0;
   HighsInt nnz = 0;
   bool isFixed;
   const bool have_col_names = model->col_names_.size() > 0;
   std::vector<HighsInt> newColIndex(model->num_col_);
+  std::vector<HighsInt> row_count(model->num_row_, 0);
   for (HighsInt iCol = 0; iCol < model->num_col_; iCol++) {
     HighsInt col_nnz =
         model->a_matrix_.start_[iCol + 1] - model->a_matrix_.start_[iCol];
     HPRESOLVE_CHECKED_CALL(checkModelColBounds(iCol, isFixed));
-    if (isFixed) {
+    if (col_nnz == 0) {
+      newColIndex[iCol] = -1;
+      num_empty_col++;
+      // Remove empty column
+      HPRESOLVE_CHECKED_CALL(modelEmptyCol(postsolve_stack, iCol));
+    } else if (isFixed) {
       newColIndex[iCol] = -1;
       num_fixed_col++;
-      // remove fixed column
+      // Remove fixed column
       HighsInt iEl = model->a_matrix_.start_[iCol];
       postsolve_stack.removedModelFixedCol(
           iCol, model->col_lower_[iCol], model->col_cost_[iCol], col_nnz,
@@ -5978,8 +6021,9 @@ HPresolve::Result HPresolve::initialSweep(
       HighsInt from_os = model->a_matrix_.start_[iCol];
       HighsInt to_os = nnz;
       for (HighsInt iEl = 0; iEl < col_nnz; iEl++) {
-        model->a_matrix_.index_[to_os + iEl] =
-            model->a_matrix_.index_[from_os + iEl];
+	HighsInt iRow = model->a_matrix_.index_[from_os + iEl];
+	row_count[iRow]++;
+        model->a_matrix_.index_[to_os + iEl] = iRow;
         model->a_matrix_.value_[to_os + iEl] =
             model->a_matrix_.value_[from_os + iEl];
       }
@@ -5989,6 +6033,15 @@ HPresolve::Result HPresolve::initialSweep(
       num_col++;
     }
   }
+  for (HighsInt iRow = 0; iRow < model->num_row_; iRow++) {
+    if (row_count[iRow] == 0) 
+      num_empty_row++;
+    else if (row_count[iRow] == 1)
+      num_singleton_row++;
+  }
+  printf("Initial sweep identifies (%d, %d) / %d (empty; singleton) rows\n",
+	 int(num_empty_row), int(num_singleton_row), int(model->num_row_));
+
   model->col_cost_.resize(num_col);
   model->col_lower_.resize(num_col);
   model->col_upper_.resize(num_col);
@@ -6001,10 +6054,10 @@ HPresolve::Result HPresolve::initialSweep(
   model->a_matrix_.index_.resize(nnz);
   model->a_matrix_.value_.resize(nnz);
   postsolve_stack.compressColIndexMap(newColIndex);
-  if (num_fixed_col)
+  if (num_fixed_col || num_empty_col)
     highsLogUser(options->log_options, HighsLogType::kInfo,
-                 "HPresolve::initialSweep: Model has %d / %d fixed columns\n",
-                 int(num_fixed_col), int(model_num_col));
+                 "Initial sweep removes (%d; %d) / %d (empty; fixed) columns\n",
+                 int(num_empty_col), int(num_fixed_col), int(model->num_col_));
   analysis_.logging_on_ = logging_on;
   if (logging_on) analysis_.stopPresolveRuleLog(kPresolveRuleInitialSweep);
   return checkLimits(postsolve_stack);

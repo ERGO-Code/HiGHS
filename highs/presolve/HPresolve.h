@@ -414,6 +414,8 @@ class HPresolve {
 
   Result emptyCol(HighsPostsolveStack& postsolve_stack, HighsInt col);
 
+  Result modelEmptyCol(HighsPostsolveStack& postsolve_stack, HighsInt col);
+
   Result singletonCol(HighsPostsolveStack& postsolve_stack, HighsInt col,
                       const bool timing = false);
 
