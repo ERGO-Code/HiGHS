@@ -4473,13 +4473,13 @@ bool HighsProfiling::running(const HighsInt profiling_clock,
 
 void HighsProfiling::solveCall(const std::string& model, const bool submip) {
   const bool printing = false;
+  if (this->num_profiling_clock_ <= kToPresolveSolvePostsolve) return;
   const bool local_submip_ok = this->isSubMip() == submip;
   HighsInt thread = this->myThread();
   if (!local_submip_ok) {
     printf("Solving %3s for %4sMIP on thread %d with isSubMip() = %4sMIP\n",
            model.c_str(), submip ? "sub-" : "", int(thread),
            isSubMip() ? "sub-" : "");
-    exit(1);
   }
   assert(local_submip_ok);
   if (thread != 0 || submip) {
