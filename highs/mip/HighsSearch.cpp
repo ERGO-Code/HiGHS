@@ -1433,7 +1433,10 @@ HighsSearch::NodeResult HighsSearch::branch() {
     // create a fresh LP only with model rows since all integer columns are
     // fixed, the cutting planes are not required and the LP could not be solved
     // so we want to make it as easy as possible
+    //
+    // LP relaxation instantiation
     HighsLpRelaxation lpCopy(mipsolver);
+    lpCopy.setProfiling(mipsolver.profiling_);
     lpCopy.loadModel();
     lpCopy.getLpSolver().changeColsBounds(0, mipsolver.numCol() - 1,
                                           localdom.col_lower_.data(),
