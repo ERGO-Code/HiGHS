@@ -38,7 +38,7 @@
 
 #define ENABLE_SPARSIFY_FOR_LP 0
 
-const bool initial_sweep = false;
+const bool initial_sweep = true;//false;//
 
 #define HPRESOLVE_CHECKED_CALL(presolveCall)            \
   do {                                                  \
