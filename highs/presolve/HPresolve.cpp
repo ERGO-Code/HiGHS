@@ -6481,7 +6481,37 @@ HighsModelStatus HPresolve::run(HighsPostsolveStack& postsolve_stack) {
         for (HighsInt j : rowpositions) unlink(j);
       }
 
-      shrinkProblem(postsolve_stack);
+      // Compact deleted cut rows. shrinkProblem must not be used here
+      // because it replaces the cutpool with a new empty one, destroying
+      // the cuts that were just added above.
+      auto compactDeletedRows = [&]() {
+        HighsInt oldNumRow = model->num_row_;
+        std::vector<HighsInt> newRowIndex(oldNumRow);
+        HighsInt newNumRow = 0;
+        for (HighsInt i = 0; i < oldNumRow; ++i) {
+          if (rowDeleted[i])
+            newRowIndex[i] = -1;
+          else
+            newRowIndex[i] = newNumRow++;
+        }
+        model->num_row_ = newNumRow;
+
+        for (HighsInt i = 0; i < oldNumRow; ++i) {
+          if (newRowIndex[i] == -1 || newRowIndex[i] == i) continue;
+          model->row_lower_[newRowIndex[i]] = model->row_lower_[i];
+          model->row_upper_[newRowIndex[i]] = model->row_upper_[i];
+        }
+        model->row_lower_.resize(model->num_row_);
+        model->row_upper_.resize(model->num_row_);
+        model->row_names_.resize(model->num_row_);
+
+        for (size_t i = 0; i < Avalue.size(); ++i) {
+          if (Avalue[i] == 0) continue;
+          assert(newRowIndex[Arow[i]] != -1);
+          Arow[i] = newRowIndex[Arow[i]];
+        }
+      };
+      compactDeletedRows();
     }
   }
 
