@@ -70,11 +70,17 @@ struct HighsOrbitopeMatrix {
     kFull,
     kPacking,
   };
+  enum RowPackingStatus : int8_t {
+    kRowUndetermined = -1,
+    kRowNotPacking = 0,
+    kRowPacking = 1,
+    kRowPackingNegated = 2,
+  };
   HighsInt rowLength;
   HighsInt numRows;
   HighsInt numSetPackingRows;
   HighsHashTable<HighsInt, HighsInt> columnToRow;
-  std::vector<int8_t> rowIsSetPacking;
+  std::vector<RowPackingStatus> rowIsSetPacking;
   std::vector<HighsInt> matrix;
 
   HighsInt& entry(HighsInt i, HighsInt j) {

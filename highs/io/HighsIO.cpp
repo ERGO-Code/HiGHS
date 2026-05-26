@@ -14,7 +14,7 @@
 #include <cstdarg>
 #include <cstdio>
 
-#include "HighsExternalDeps.h"
+#include "HighsExternalApi.h"
 #include "lp_data/HighsLp.h"
 #include "lp_data/HighsOptions.h"
 
@@ -28,11 +28,12 @@ void highsLogHeader(const HighsLogOptions& log_options,
                (int)HIGHS_VERSION_MINOR, (int)HIGHS_VERSION_PATCH,
                githash_text.c_str(), kHighsCopyrightStatement.c_str());
 
-  if (HighsExternalDeps::isAvailable()) {
-    highsLogUser(log_options, HighsLogType::kInfo, "%s\n",
-                 HighsExternalDeps::getCopyrightInfo().c_str());
+  highsLogUser(log_options, HighsLogType::kInfo, "%s\n",
+               HighsExternalApi::thirdPartyNoticeHeader().c_str());
+
+  if (HighsExternalApi::isAvailable<HighsExtras::blas>()) {
     highsLogUser(log_options, HighsLogType::kInfo, "Using BLAS: %s \n",
-                 HighsExternalDeps::blas::blas_library().c_str());
+                 HighsExtras::blas::getInfo()->provider);
   }
 }
 
