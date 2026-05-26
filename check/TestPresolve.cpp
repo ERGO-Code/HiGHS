@@ -1021,3 +1021,29 @@ TEST_CASE("presolve-initial-sweep", "[highs_test_presolve]") {
   }
   highs.resetGlobalScheduler(true);
 }
+
+TEST_CASE("presolve-initial-sweep-all", "[highs_test_presolve]") {
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  if (dev_run) {
+    highs.setOptionValue("log_dev_level", 1);
+    highs.setOptionValue("presolve_rule_logging", true);
+  }
+  HighsLp lp;
+  lp.num_col_ = 7;
+  lp.num_row_ = 4;
+  lp.col_cost_ = {1, 1, 1, 1, 1, 1, 1};
+  lp.col_lower_ = {0, 1, 0, 1, 1, -kHighsInf, 0};
+  lp.col_upper_ = {1, 1, kHighsInf, 3, 1, 1, 1};
+  lp.row_lower_ = {2, 8, 10, 13};
+  lp.row_upper_ = {4, 9, 16, 26};
+  lp.a_matrix_.start_ = {0, 1, 5, 6, 6, 10, 12, 13};
+  lp.a_matrix_.index_ = {2, 0, 1, 2, 3, 0, 0, 1, 2, 3, 2, 3, 3};
+  lp.a_matrix_.value_ = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13};
+  REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
+  highs.run();
+  REQUIRE(highs.getModelStatus() ==
+          HighsModelStatus::kInfeasible);  // HighsModelStatus::kOptimal);
+  if (dev_run) highs.writeSolution("", 1);
+  highs.resetGlobalScheduler(true);
+}
