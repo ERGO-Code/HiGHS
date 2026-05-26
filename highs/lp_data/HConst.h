@@ -33,6 +33,7 @@ const std::string kHighsChooseString = "choose";
 const std::string kHighsOnString = "on";
 const HighsInt kHighsMaxStringLength = 512;
 const HighsInt kSimplexConcurrencyLimit = 8;
+const HighsInt kMipSearchConcurrencyLimit = 8;
 const double kRunningAverageMultiplier = 0.05;
 
 const double kExcessivelySmallObjectiveCoefficient = 1e-4;
@@ -302,8 +303,22 @@ enum IisStatus : int {
   kIisStatusMax = kIisStatusInConflict
 };
 
+enum MipChooseSubMipRecord : int {
+  kMipRecord = -1,
+  kChooseRecord,
+  kSubMipRecord
+};
+
+enum PresolveSolvePostsolveIndex : int {
+  kPresolveTime = 0,
+  kSolveTime,
+  kPostsolveTime,
+  kToPresolveSolvePostsolve
+};
+
 enum SubSolverIndex : int {
-  kSubSolverMip = 0,
+  kFromSubSolver = kToPresolveSolvePostsolve,
+  kSubSolverMip = kFromSubSolver,
   kSubSolverDuSimplexBasis,
   kSubSolverDuSimplexNoBasis,
   kSubSolverPrSimplexBasis,
@@ -315,7 +330,8 @@ enum SubSolverIndex : int {
   kSubSolverPdlp,
   kSubSolverQpAsm,
   kSubSolverSubMip,
-  kSubSolverCount
+  kLastSubSolver = kSubSolverSubMip,
+  kToSubSolver = kLastSubSolver + 1
 };
 
 // Minimum and default KKT tolerance

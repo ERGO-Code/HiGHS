@@ -15,6 +15,7 @@
 #include <vector>
 
 #include "lp_data/HConst.h"
+#include "util/HighsTimer.h"
 
 struct HighsSolution {
   bool value_valid = false;
@@ -165,13 +166,45 @@ struct HighsLinearObjective {
   void clear();
 };
 
-struct HighsSubSolverCallTime {
-  std::vector<std::string> name;
+struct HighsProfilingRecord {
   std::vector<HighsInt> num_call;
   std::vector<double> run_time;
-  void initialise();
-  void add(const HighsSubSolverCallTime& sub_solver_call_time,
-           const bool analytic_centre = false);
+  std::vector<double> start_time;
+};
+
+struct HighsProfiling {
+  HighsTimer* timer = nullptr;
+  bool multi_threaded = true;
+  std::string model_name_ = "";
+  bool sub_solver_ = false;
+  bool mip_ = false;
+  HighsInt num_profiling_clock_ = -1;
+  std::vector<std::string> name;
+  // These vectors are over threads
+  std::vector<bool> submip;
+  std::vector<HighsProfilingRecord> record;
+  std::vector<HighsProfilingRecord> submip_record;
+  bool initialized = false;
+
+  void initialize(HighsTimer& timer_, const bool subsolver_profiling,
+                  const bool mip_profiling = false);
+  void clear();
+  HighsInt numThread();
+  HighsInt myThread();
+  void setSubMip(const bool submip);
+  bool isSubMip();
+  HighsProfilingRecord* getHighsProfilingRecord(
+      const HighsInt record_type = kChooseRecord);
+  void start(const HighsInt profiling_clock, const bool restart = false);
+  void stop(const HighsInt profiling_clock);
+  double read(const HighsInt profiling_clock,
+              const HighsInt record_type = kChooseRecord);
+  bool running(const HighsInt profiling_clock,
+               const HighsInt record_type = kChooseRecord);
+  HighsInt numCall(const HighsInt profiling_clock,
+                   const HighsInt record_type = kChooseRecord);
+  void solveCall(const std::string& model, const bool submip);
+  //  HighsInt getSepaClockIndex(const std::string& name);
 };
 
 struct HighsSimplexStats {

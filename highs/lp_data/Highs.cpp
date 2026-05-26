@@ -851,7 +851,6 @@ HighsStatus Highs::presolve() {
     return HighsStatus::kError;
   }
   HighsStatus return_status = HighsStatus::kOk;
-
   this->reportModelStats();
   clearPresolve();
   if (model_.isEmpty()) {
@@ -860,17 +859,12 @@ HighsStatus Highs::presolve() {
     const bool force_presolve = true;
     // make sure global scheduler is initialized before calling presolve, since
     // MIP presolve may use parallelism
-    highs::parallel::initialize_scheduler(options_.threads);
-    max_threads = highs::parallel::num_threads();
-    if (options_.threads != 0 && max_threads != options_.threads) {
-      highsLogUser(
-          log_options, HighsLogType::kError,
-          "Option 'threads' is set to %d but global scheduler has already been "
-          "initialized to use %d threads. The previous scheduler instance can "
-          "be destroyed by calling Highs::resetGlobalScheduler().\n",
-          (int)options_.threads, max_threads);
-      return HighsStatus::kError;
-    }
+    //
+    return_status = this->initializeMultiThreading();
+    if (return_status != HighsStatus::kOk) return return_status;
+    HighsProfiling profiling;
+    const bool already_profiling = this->profiling_;
+    if (!already_profiling) this->initializeProfiling(&profiling);
     // If problem is a MIP and solve_relaxation is true, it's natural
     // to force LP presolve. It means that someone wanting the
     // presolved relaxation of a MIP just has to set solve_relaxation
@@ -878,6 +872,7 @@ HighsStatus Highs::presolve() {
     // #2234)
     const bool force_lp_presolve = options_.solve_relaxation;
     model_presolve_status_ = runPresolve(force_lp_presolve, force_presolve);
+    if (!already_profiling) this->clearProfiling();
   }
 
   bool using_reduced_lp = false;
@@ -999,19 +994,26 @@ HighsStatus Highs::optimizeHighs() {
 
 HighsStatus Highs::optimizeLp() {
   // Solve what's in the HighsLp instance Highs::model_.lp_
-  assert(!model_.isQp());
-  assert(!model_.lp_.hasSemiVariables());
+  assert(!this->model_.isQp());
+  assert(!this->model_.lp_.hasSemiVariables());
   assert(!this->multi_linear_objective_.size());
-  return optimizeModel();
+  return this->calledOptimizeModel();
 }
 
 HighsStatus Highs::optimizeModel() {
   // Level 2a of Highs::run()
   //
-  if (!options_.use_warm_start) this->clearSolver();
-  this->sub_solver_call_time_.initialise();
-  HighsStatus status = this->calledOptimizeModel();
-  if (this->options_.log_dev_level > 0) this->reportSubSolverCallTime();
+  HighsStatus status = this->initializeMultiThreading();
+  if (status != HighsStatus::kOk) return status;
+
+  const bool already_profiling = this->profiling_;
+  HighsProfiling profiling;
+  if (!already_profiling) this->initializeProfiling(&profiling);
+  status = this->calledOptimizeModel();
+  if (!already_profiling) {
+    this->reportProfiling();
+    this->clearProfiling();
+  }
   return status;
 }
 
@@ -1051,28 +1053,9 @@ HighsStatus Highs::calledOptimizeModel() {
     }
   }
 
+  if (!options_.use_warm_start) this->clearSolver();
   if (ekk_instance_.status_.has_nla)
     assert(ekk_instance_.lpFactorRowCompatible(model_.lp_.num_row_));
-
-  highs::parallel::initialize_scheduler(options_.threads);
-
-  max_threads = highs::parallel::num_threads();
-  if (options_.threads != 0 && max_threads != options_.threads) {
-    highsLogUser(
-        options_.log_options, HighsLogType::kError,
-        "Option 'threads' is set to %d but global scheduler has already been "
-        "initialized to use %d threads. The previous scheduler instance can "
-        "be destroyed by calling Highs::resetGlobalScheduler().\n",
-        (int)options_.threads, max_threads);
-    return HighsStatus::kError;
-  }
-  assert(max_threads > 0);
-  if (max_threads <= 0)
-    highsLogDev(options_.log_options, HighsLogType::kWarning,
-                "WARNING: max_threads() returns %" HIGHSINT_FORMAT "\n",
-                max_threads);
-  highsLogDev(options_.log_options, HighsLogType::kDetailed,
-              "Running with %" HIGHSINT_FORMAT " thread(s)\n", max_threads);
 
   // returnFromOptimizeModel() is a common exit method to ensure
   // consistency of values set by optimizeModel() and many other
@@ -1249,10 +1232,7 @@ HighsStatus Highs::calledOptimizeModel() {
       // Solve model as a MIP
       if (!solverValidForMip(options_.solver))
         warnSolverInvalid(options_, "MIP");
-      sub_solver_call_time_.num_call[kSubSolverMip]++;
-      sub_solver_call_time_.run_time[kSubSolverMip] = -timer_.read();
       call_status = callSolveMip();
-      sub_solver_call_time_.run_time[kSubSolverMip] += timer_.read();
       return_status = interpretCallStatus(options_.log_options, call_status,
                                           return_status, "callSolveMip");
       return returnFromOptimizeModel(return_status, undo_mods);
@@ -2044,7 +2024,11 @@ HighsStatus Highs::getPrimalRay(bool& has_primal_ray,
 }
 
 HighsStatus Highs::getRanging(HighsRanging& ranging) {
+  HighsProfiling profiling;
+  const bool already_profiling = this->profiling_;
+  if (!already_profiling) this->initializeSingleThreadedProfiling(&profiling);
   HighsStatus return_status = getRangingInterface();
+  if (!already_profiling) this->clearProfiling();
   ranging = this->ranging_;
   return return_status;
 }
@@ -2112,7 +2096,12 @@ HighsStatus Highs::getBasicVariables(HighsInt* basic_variables) {
                  "getBasicVariables: basic_variables is NULL\n");
     return HighsStatus::kError;
   }
-  return getBasicVariablesInterface(basic_variables);
+  HighsProfiling profiling;
+  const bool already_profiling = this->profiling_;
+  if (!already_profiling) this->initializeSingleThreadedProfiling(&profiling);
+  HighsStatus status = getBasicVariablesInterface(basic_variables);
+  if (!already_profiling) this->clearProfiling();
+  return status;
 }
 
 HighsStatus Highs::getBasisInverseRowSparse(const HighsInt row,
@@ -2603,10 +2592,19 @@ HighsStatus Highs::setBasis(const HighsBasis& basis,
       }
       HighsBasis modifiable_basis = basis;
       modifiable_basis.was_alien = true;
-      HighsLpSolverObject solver_object(
-          model_.lp_, modifiable_basis, solution_, info_, ekk_instance_,
-          callback_, options_, timer_, sub_solver_call_time_);
+      // May not have profiling set up - if Highs::setBasis is called
+      // before Highs::run, so have to do it here, and has to be
+      // single-threaded
+      HighsProfiling profiling;
+      const bool already_profiling = this->profiling_;
+      if (!already_profiling)
+        this->initializeSingleThreadedProfiling(&profiling);
+      HighsLpSolverObject solver_object(model_.lp_, modifiable_basis, solution_,
+                                        info_, ekk_instance_, callback_,
+                                        options_, timer_);
+      solver_object.setProfiling(this->profiling_);
       HighsStatus return_status = formSimplexLpBasisAndFactor(solver_object);
+      if (!already_profiling) this->clearProfiling();
       if (return_status != HighsStatus::kOk) return HighsStatus::kError;
       // Update the HiGHS basis
       basis_ = std::move(modifiable_basis);
@@ -3455,7 +3453,11 @@ HighsStatus Highs::postsolve(const HighsSolution& solution,
                  presolveStatusToString(model_presolve_status_).c_str());
     return HighsStatus::kWarning;
   }
+  HighsProfiling profiling;
+  const bool already_profiling = this->profiling_;
+  if (!already_profiling) this->initializeSingleThreadedProfiling(&profiling);
   HighsStatus return_status = callRunPostsolve(solution, basis);
+  if (!already_profiling) this->clearProfiling();
   return returnFromHighs(return_status);
 }
 
@@ -3629,6 +3631,7 @@ HighsPresolveStatus Highs::runPresolve(const bool force_lp_presolve,
     // Presolved model is extracted now since it's part of solver,
     // which is lost on return
     HighsMipSolver solver(callback_, options_, original_lp, solution_);
+    solver.setProfiling(this->profiling_);
     // Start the MIP solver's timer so that timeout in presolve can be
     // identified
     solver.timer_.start();
@@ -3921,19 +3924,14 @@ HighsStatus Highs::completeSolutionFromDiscreteAssignment() {
     options_.mip_max_nodes = options_.mip_max_start_nodes;
     // Solve the model
     basis_.clear();
-    HighsSubSolverCallTime sub_solver_call_time = this->sub_solver_call_time_;
-    double mip_solve_time = -sub_solver_call_time_.run_time[kSubSolverMip];
-    return_status = this->optimizeModel();
-    if (model_.lp_.isMip()) {
-      // If a MIP was solved, it counts as a sub-MIP, but the MIP and
-      // LP call-time data will be recorded as if it were a MIP so,
-      // extract the MIP solve time, revert
-      // this->sub_solver_call_time_ and update the sub-MIP record
-      mip_solve_time += sub_solver_call_time_.run_time[kSubSolverMip];
-      this->sub_solver_call_time_ = sub_solver_call_time;
-      this->sub_solver_call_time_.num_call[kSubSolverSubMip]++;
-      this->sub_solver_call_time_.run_time[kSubSolverSubMip] += mip_solve_time;
+    if (this->profiling_) {
+      // Should not already be a sub-MIP, as handling a user-supplied
+      // solution
+      assert(!this->profiling_->isSubMip());
     }
+    return_status = this->optimizeModel();
+    // Reset any profiling data
+    if (this->profiling_) this->resetProfiling();
     // ... remembering to recover the original value of mip_max_nodes
     options_.mip_max_nodes = mip_max_nodes;
   }
@@ -3956,8 +3954,8 @@ HighsStatus Highs::callSolveLp(HighsLp& lp, const std::string& message) {
   HighsStatus return_status = HighsStatus::kOk;
 
   HighsLpSolverObject solver_object(lp, basis_, solution_, info_, ekk_instance_,
-                                    callback_, options_, timer_,
-                                    sub_solver_call_time_);
+                                    callback_, options_, timer_);
+  solver_object.setProfiling(this->profiling_);
 
   // Check that the model is column-wise
   assert(model_.lp_.a_matrix_.isColwise());
@@ -3994,17 +3992,15 @@ HighsStatus Highs::callSolveQp() {
       HighsExternalApi::isAvailable<HighsExtras::hipo>();
 
   if (use_hipo) {
-    sub_solver_call_time_.num_call[kSubSolverHipo]++;
-    sub_solver_call_time_.run_time[kSubSolverHipo] = -timer_.read();
+    if (this->profiling_) this->profiling_->start(kSubSolverHipo);
     return_status = solveHipo(options_, timer_, lp, hessian, basis_, solution_,
                               model_status_, info_, callback_);
-    sub_solver_call_time_.run_time[kSubSolverHipo] += timer_.read();
+    if (this->profiling_) this->profiling_->stop(kSubSolverHipo);
     if (return_status == HighsStatus::kError) return return_status;
   } else {
     //
     // Run the QP solver
-    sub_solver_call_time_.num_call[kSubSolverQpAsm]++;
-    sub_solver_call_time_.run_time[kSubSolverQpAsm] = -timer_.read();
+    if (this->profiling_) this->profiling_->start(kSubSolverQpAsm);
 
     Instance instance(lp.num_col_, lp.num_row_);
 
@@ -4134,7 +4130,7 @@ HighsStatus Highs::callSolveQp() {
 
     QpAsmStatus status = solveqp(instance, settings, stats, model_status_,
                                  basis_, solution_, timer_);
-    sub_solver_call_time_.run_time[kSubSolverQpAsm] += timer_.read();
+    if (this->profiling_) this->profiling_->stop(kSubSolverQpAsm);
 
     // QP solver can fail, so should return something other than
     // QpAsmStatus::kOk
@@ -4191,14 +4187,16 @@ HighsStatus Highs::callSolveMip() {
   }
   HighsLp& lp = has_semi_variables ? use_lp : model_.lp_;
   HighsMipSolver solver(callback_, options_, lp, solution_);
+  solver.setProfiling(this->profiling_);
+  profiling_->start(kSubSolverMip);
   solver.run();
+  profiling_->stop(kSubSolverMip);
   options_.log_dev_level = log_dev_level;
   // Set the return_status, model status and, for completeness, scaled
   // model status
   HighsStatus return_status =
       highsStatusFromHighsModelStatus(solver.modelstatus_);
   model_status_ = solver.modelstatus_;
-  this->sub_solver_call_time_.add(solver.sub_solver_call_time_);
   // Extract the solution
   if (solver.solution_objective_ != kHighsInf) {
     // There is a primal solution
@@ -4436,9 +4434,6 @@ HighsStatus Highs::callRunPostsolve(const HighsSolution& solution,
         // Scrap the EKK data from solving the presolved LP
         ekk_instance_.invalidate();
         ekk_instance_.lp_name_ = "Postsolve LP";
-        // Set up the timing record so that adding the corresponding
-        // values after callSolveLp gives difference
-        this->sub_solver_call_time_.initialise();
         timer_.start(timer_.solve_clock);
         call_status = callSolveLp(
             incumbent_lp,
@@ -4940,6 +4935,70 @@ HighsStatus Highs::closeLogFile() {
   return HighsStatus::kOk;
 }
 
+HighsStatus Highs::initializeMultiThreading() {
+  highs::parallel::initialize_scheduler(this->options_.threads);
+  this->max_threads_ = highs::parallel::num_threads();
+  HighsLogOptions& log_options = this->options_.log_options;
+  if (this->options_.threads != 0 &&
+      this->max_threads_ != this->options_.threads) {
+    highsLogUser(
+        log_options, HighsLogType::kError,
+        "Option 'threads' is set to %d but global scheduler has already been "
+        "initialized to use %d threads. The previous scheduler instance can "
+        "be destroyed by calling Highs::resetGlobalScheduler().\n",
+        int(options_.threads), int(this->max_threads_));
+    return HighsStatus::kError;
+  }
+  if (this->max_threads_ <= 0) {
+    highsLogDev(log_options, HighsLogType::kError, "max_threads() returns %d\n",
+                int(this->max_threads_));
+    assert(this->max_threads_ > 0);
+    return HighsStatus::kError;
+  }
+  highsLogDev(log_options, HighsLogType::kDetailed,
+              "Running with %d thread(s)\n", int(max_threads_));
+
+  return HighsStatus::kOk;
+}
+
 void Highs::resetGlobalScheduler(bool blocking) {
   HighsTaskExecutor::shutdown(blocking);
+}
+
+void Highs::initializeSingleThreadedProfiling(HighsProfiling* profiling) {
+  if (!profiling) return;
+  profiling->multi_threaded = false;
+  this->initializeProfiling(profiling);
+}
+
+void Highs::initializeProfiling(HighsProfiling* profiling) {
+  if (!profiling) return;
+  assert(!this->profiling_);
+  if (this->profiling_) return;
+  // Only initialize profiling if this->profiling_ is nullptr
+  const bool sub_solver = this->options_.log_dev_level > 0;  // true; //
+  // Cannot perform MIP profiling without sub-solver profiling
+  const bool mip = sub_solver && kHighsAnalysisLevelMipTime &
+                                     this->options_.highs_analysis_level;
+  profiling->initialize(this->timer_, sub_solver, mip);
+  profiling->model_name_ = this->model_.lp_.model_name_;
+  this->setProfiling(profiling);
+}
+
+void Highs::resetProfiling() {
+  if (!this->profiling_) return;
+  HighsProfiling* profiling = this->profiling_;
+  this->clearProfiling();
+  this->initializeProfiling(profiling);
+}
+
+void Highs::clearProfiling() {
+  if (!this->profiling_) return;
+  this->profiling_->clear();
+  this->profiling_ = nullptr;
+}
+
+void Highs::setProfiling(HighsProfiling* profiling) {
+  assert(profiling);
+  this->profiling_ = profiling;
 }
