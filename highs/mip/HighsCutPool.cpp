@@ -246,9 +246,9 @@ void HighsCutPool::separate(const std::vector<double>& sol,
 
   for (HighsInt i = 0; i < nrows; ++i) {
     // cuts with an age of -1 are already in the LP and are therefore skipped
-    // TODO MT: Parallel case tries to add cuts already in current LP.
-    // TODO MT: Inefficient. Not sure what happens if added twice.
-    // TODO MT: The cut shouldn't have enough violation to be added though.
+    // Warning: Parallel case tries to add cuts already in current LP.
+    // Inefficient. Not sure what happens if added twice.
+    // The cut shouldn't have enough violation to be added though.
     if (ages_[i] < 0) continue;
 
     HighsInt start = matrix_.getRowStart(i);
@@ -405,9 +405,9 @@ void HighsCutPool::separate(const std::vector<double>& sol,
           break;
         }
       } else {
-        // TODO MT: This assumes the cuts in the pool are not changing during,
-        // TODO MT: this query, i.e., the worker's pool and the global pool.
-        // TODO MT: Currently safe, but doesn't generalise to all designs.
+        // Warning: This assumes the cuts in the pool are not changing during,
+        // this query, i.e., the worker's pool and the global pool.
+        // Currently safe, but doesn't generalise to all designs.
         if (getParallelism(p.second, cutset.cutindices[i],
                            cutpools[cutset.cutpools[i]]) > maxpar) {
           discard = true;
@@ -528,7 +528,7 @@ HighsInt HighsCutPool::addCut(const HighsMipSolver& mipsolver, HighsInt* Rindex,
   uint64_t h = compute_cut_hash(Rindex, Rvalue, maxabscoef, Rlen);
   double normalization = 1.0 / double(sqrt(norm));
 
-  // TODO MT: This global duplicate check assumes the global pool doesn't
+  // Warning: This global duplicate check assumes the global pool doesn't
   // have cuts added or deleted during time when local pools can add a cut.
   if (this != &mipsolver.mipdata_->getCutPool()) {
     if (mipsolver.mipdata_->getCutPool().isDuplicate(h, normalization, Rindex,

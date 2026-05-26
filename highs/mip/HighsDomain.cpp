@@ -537,8 +537,6 @@ void HighsDomain::CutpoolPropagation::updateActivityLbChange(
           if (activitycutsinf_[row] == 0 &&
               activitycuts_[row] - cutpool->getRhs()[row] >
                   domain->mipsolver->mipdata_->feastol) {
-            // todo, now that multiple cutpools are possible the index needs to
-            // be encoded differently
             domain->mipsolver->mipdata_->debugSolution.nodePruned(*domain);
             domain->infeasible_ = true;
             domain->infeasible_pos = domain->domchgstack_.size();
@@ -593,8 +591,6 @@ void HighsDomain::CutpoolPropagation::updateActivityUbChange(
           assert(val < 0);
           HighsCDouble deltamin = computeDelta(
               val, oldbound, newbound, kHighsInf, activitycutsinf_[row]);
-
-          //  std::cout << activitycuts_.size() << std::endl;
 
           activitycuts_[row] += deltamin;
 
