@@ -3343,6 +3343,10 @@ HPresolve::Result HPresolve::singletonRow(HighsPostsolveStack& postsolve_stack,
 					  const double val_,
 					  const bool initial_sweep) {
   // Default values are col_ = -1; val_ = 0; initial_sweep = false
+  //
+  // When initial_sweep is true, the column and value of the singleton
+  // are passed as col_ and val_. Since the presolve data structures
+  // are not set up, there is vastly less housekeeping to do
   const bool logging_on = analysis_.logging_on_;
   HighsInt nzPos = -1;
   if (!initial_sweep) {
@@ -6006,6 +6010,7 @@ double HPresolve::computeWorstCaseUpperBound(HighsInt col, HighsInt boundCol,
 HPresolve::Result HPresolve::initialSweep(
     HighsPostsolveStack& postsolve_stack) {
   assert(initial_sweep);
+  const bool initial_sweep = true;
   const bool logging_on = analysis_.logging_on_;
   if (logging_on) analysis_.startPresolveRuleLog(kPresolveRuleInitialSweep);
   HighsInt num_fixed_col = 0;
@@ -6015,13 +6020,16 @@ HPresolve::Result HPresolve::initialSweep(
   HighsInt num_col = 0;
   HighsInt nnz = 0;
   bool isFixed;
+  const HighsInt original_num_col = model->num_col_;
+  const HighsInt original_num_row = model->num_row_;
   const bool have_col_names = model->col_names_.size() > 0;
+  const bool have_row_names = model->row_names_.size() > 0;
   std::vector<HighsInt> newColIndex(model->num_col_);
   std::vector<HighsInt> row_count(model->num_row_, 0);
   // Col of row is used to identify the column containing each
-  // singleton row, and value_of_row the matrix entry of the singleton
+  // singleton row, and val_of_row the matrix entry of the singleton
   std::vector<HighsInt> col_of_row(model->num_row_, -1);
-  std::vector<double> value_of_row(model->num_row_, 0);
+  std::vector<double> val_of_row(model->num_row_, 0);
   for (HighsInt iCol = 0; iCol < model->num_col_; iCol++) {
     HighsInt col_nnz =
         model->a_matrix_.start_[iCol + 1] - model->a_matrix_.start_[iCol];
@@ -6055,7 +6063,7 @@ HPresolve::Result HPresolve::initialSweep(
 	double value = model->a_matrix_.value_[from_os + iEl];
         row_count[iRow]++;
         col_of_row[iRow] = num_col;
-	value_of_row[iRow] = value;
+	val_of_row[iRow] = value;
         model->a_matrix_.index_[nnz] = iRow;
         model->a_matrix_.value_[nnz] = value;
         nnz++;
@@ -6064,6 +6072,19 @@ HPresolve::Result HPresolve::initialSweep(
       num_col++;
     }
   }
+  model->a_matrix_.start_[num_col] = nnz;
+  model->col_cost_.resize(num_col);
+  model->col_lower_.resize(num_col);
+  model->col_upper_.resize(num_col);
+  model->integrality_.resize(num_col);
+  if (have_col_names) model->col_names_.resize(num_col);
+  model->num_col_ = num_col;
+  model->a_matrix_.num_col_ = num_col;
+  model->a_matrix_.start_.resize(num_col + 1);
+  model->a_matrix_.index_.resize(nnz);
+  model->a_matrix_.value_.resize(nnz);
+  postsolve_stack.compressColIndexMap(newColIndex);
+
   for (HighsInt iRow = 0; iRow < model->num_row_; iRow++) {
     if (row_count[iRow] == 0)
       num_empty_row++;
@@ -6071,20 +6092,7 @@ HPresolve::Result HPresolve::initialSweep(
       num_singleton_row++;
   }
 
-  model->col_cost_.resize(num_col);
-  model->col_lower_.resize(num_col);
-  model->col_upper_.resize(num_col);
-  model->integrality_.resize(num_col);
-  if (have_col_names) model->col_names_.resize(num_col);
-  model->a_matrix_.start_[num_col] = nnz;
-  model->num_col_ = num_col;
-  model->a_matrix_.num_col_ = num_col;
-  model->a_matrix_.start_.resize(num_col + 1);
-  model->a_matrix_.index_.resize(nnz);
-  model->a_matrix_.value_.resize(nnz);
-
-  const bool initial_sweep = true;
-  const bool allow_row_sweep = false;
+  const bool allow_row_sweep = true;
   if (allow_row_sweep && (num_empty_row || num_singleton_row)) {
     HighsInt num_row = 0;
     std::vector<bool> has_singleton_row(model->num_col_, false);
@@ -6098,7 +6106,11 @@ HPresolve::Result HPresolve::initialSweep(
         } else {
           // Singleton row
           has_singleton_row[col_of_row[iRow]] = true;
-	  HPRESOLVE_CHECKED_CALL(singletonRow(postsolve_stack, iRow, initial_sweep));
+	  assert(val_of_row[iRow]);
+	  HPRESOLVE_CHECKED_CALL(singletonRow(postsolve_stack, iRow,
+					      col_of_row[iRow],
+					      val_of_row[iRow],
+					      initial_sweep));
 	  
         }
       } else {
@@ -6145,6 +6157,8 @@ HPresolve::Result HPresolve::initialSweep(
           nnz++;
         } else {
           assert(row_count[iRow] == 1);
+	  assert(col_of_row[iRow] == iCol0);
+	  assert(val_of_row[iRow] == model->a_matrix_.value_[from_os + iEl]);
           found_row_singleton = true;
         }
       }
@@ -6155,18 +6169,25 @@ HPresolve::Result HPresolve::initialSweep(
     // Update the matrix entries for the columns since the last with a
     // row singleton
     shiftCols();
-    assert(111 == 666);
+    model->a_matrix_.start_[num_col] = nnz;
+    model->row_lower_.resize(num_row);
+    model->row_upper_.resize(num_row);
+    if (have_row_names) model->row_names_.resize(num_row);
+    model->num_row_ = num_row;
+    model->a_matrix_.num_row_ = num_row;
+    model->a_matrix_.index_.resize(nnz);
+    model->a_matrix_.value_.resize(nnz);
+    postsolve_stack.compressRowIndexMap(newRowIndex);
   }
-  postsolve_stack.compressColIndexMap(newColIndex);
   if (num_fixed_col || num_empty_col)
     highsLogUser(options->log_options, HighsLogType::kInfo,
                  "Initial sweep removes (%d; %d) / %d (empty; fixed) columns\n",
-                 int(num_empty_col), int(num_fixed_col), int(model->num_col_));
+                 int(num_empty_col), int(num_fixed_col), int(original_num_col));
   if (num_empty_row || num_singleton_row)
     highsLogUser(
         options->log_options, HighsLogType::kInfo,
         "Initial sweep identifies (%d, %d) / %d (empty; singleton) rows\n",
-        int(num_empty_row), int(num_singleton_row), int(model->num_row_));
+        int(num_empty_row), int(num_singleton_row), int(original_num_row));
   analysis_.logging_on_ = logging_on;
   if (logging_on) analysis_.stopPresolveRuleLog(kPresolveRuleInitialSweep);
   return checkLimits(postsolve_stack);
