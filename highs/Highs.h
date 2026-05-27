@@ -717,7 +717,7 @@ class Highs {
    * @brief Get the number of (constraint matrix) nonzeros in the incumbent
    * model
    */
-  HighsInt getNumNz() const { return model_.lp_.a_matrix_.numNz(); }
+  HighsInt getNumNz() const { return model_.lp_.numNz(); }
 
   /**
    * @brief Get the number of Hessian matrix nonzeros in the incumbent model

@@ -76,7 +76,7 @@ HighsStatus assessLp(HighsLp& lp, const HighsOptions& options) {
   // If the LP has no columns the matrix must be empty and there is
   // nothing left to test
   if (lp.num_col_ == 0) {
-    assert(!lp.a_matrix_.numNz());
+    assert(!lp.numNz());
     return HighsStatus::kOk;
   }
   // From here, any LP has lp.num_col_ > 0 and lp.a_matrix_.start_[lp.num_col_]
@@ -92,7 +92,7 @@ HighsStatus assessLp(HighsLp& lp, const HighsOptions& options) {
   if (return_status == HighsStatus::kError) return return_status;
   // If entries have been removed from the matrix, resize the index
   // and value vectors to prevent bug in presolve
-  HighsInt lp_num_nz = lp.a_matrix_.numNz();
+  HighsInt lp_num_nz = lp.numNz();
   if ((HighsInt)lp.a_matrix_.index_.size() > lp_num_nz)
     lp.a_matrix_.index_.resize(lp_num_nz);
   if ((HighsInt)lp.a_matrix_.value_.size() > lp_num_nz)
@@ -3102,7 +3102,7 @@ void reportPresolveReductions(const HighsLogOptions& log_options,
                               const HighsLp& lp, const HighsLp& presolved_lp) {
   const HighsInt num_col_from = lp.num_col_;
   const HighsInt num_row_from = lp.num_row_;
-  const HighsInt num_nz_from = lp.a_matrix_.numNz();
+  const HighsInt num_nz_from = lp.numNz();
   HighsInt num_col_to = 0;
   HighsInt num_row_to = 0;
   HighsInt num_nz_to = 0;
@@ -3124,7 +3124,7 @@ void reportPresolveReductions(const HighsLogOptions& log_options,
     case HighsPresolveStatus::kTimeout: {
       num_col_to = presolved_lp.num_col_;
       num_row_to = presolved_lp.num_row_;
-      num_nz_to = presolved_lp.a_matrix_.numNz();
+      num_nz_to = presolved_lp.numNz();
       message =
           presolve_status == HighsPresolveStatus::kTimeout ? "- Timeout" : "";
       break;

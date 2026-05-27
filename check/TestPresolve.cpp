@@ -910,3 +910,20 @@ TEST_CASE("presolve-issue-2874", "[highs_test_presolve]") {
   REQUIRE(highs.presolve() == HighsStatus::kOk);
   REQUIRE(highs.getModelPresolveStatus() == HighsPresolveStatus::kInfeasible);
 }
+
+TEST_CASE("presolve-light", "[highs_test_presolve]") {
+  std::string model_file =
+      std::string(HIGHS_DIR) + "/check/instances/afiro.mps";
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  highs.readModel(model_file);
+  for (HighsInt k = 0; k < 2; k++) {
+    REQUIRE(highs.presolve() == HighsStatus::kOk);
+    REQUIRE(highs.getModelPresolveStatus() == HighsPresolveStatus::kReduced);
+    const HighsLp& presolved_lp = highs.getPresolvedLp();
+    if (dev_run) printf("%s presolved LP has %d columns; %d rows and %d nonzeros\n",
+			k == 0 ? "Fully" : "Lightly", int(presolved_lp.num_col_),
+			int(presolved_lp.num_row_), int(presolved_lp.numNz()));
+    highs.setOptionValue("presolve_light", true);
+  }
+}

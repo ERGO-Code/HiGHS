@@ -7,58 +7,97 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 #include "lp_data/HighsModelUtils.h"
 #include "presolve/HPresolve.h"
+#include "presolve/PresolveTimer.h"
 
 void HPresolveAnalysis::setup(const HighsLp* model_,
                               const HighsOptions* options_,
                               const HighsInt& numDeletedRows_,
                               const HighsInt& numDeletedCols_,
-                              const bool silent) {
+                              const bool silent, HighsTimer* timer) {
   model = model_;
   options = options_;
   numDeletedRows = &numDeletedRows_;
   numDeletedCols = &numDeletedCols_;
 
-  this->allow_rule_.assign(kPresolveRuleCount, true);
+  timer_ = timer;
+  analyse_presolve_time_ =
+      kHighsAnalysisLevelPresolveTime & options->highs_analysis_level &&
+      !model_->isMip();
+  if (analyse_presolve_time_) {
+    HighsTimerClock clock;
+    clock.timer_pointer_ = timer_;
+    PresolveTimer presolve_timer;
+    presolve_timer.initialisePresolveClocks(clock);
+    presolve_clocks_ = clock;
+  }
 
-  if (options->presolve_rule_off || options_->log_dev_level) {
-    // Some presolve rules are off
+  this->allow_rule_.assign(kPresolveRuleCount, true);
+  std::vector<bool> presolve_light_rule_off(kPresolveRuleCount, false);
+  if (options->presolve_light) {
+    // Define the rules not used in presolve_light mode
+    presolve_light_rule_off[kPresolveRuleDependentEquations] = true;
+    presolve_light_rule_off[kPresolveRuleDependentFreeCols] = true;
+    presolve_light_rule_off[kPresolveRuleAggregator] = true;
+    presolve_light_rule_off[kPresolveRuleParallelRowsAndCols] = true;
+    presolve_light_rule_off[kPresolveRuleSparsify] = true;
+    presolve_light_rule_off[kPresolveRuleProbing] = true;
+    presolve_light_rule_off[kPresolveRuleEnumeration] = true;
+    presolve_light_rule_off[kPresolveRuleDualFixing] = true;
+    presolve_light_rule_off[kPresolveRuleColStuffing] = true;
+  }
+
+  if (!silent && options_->log_dev_level) {
+    // State which rules can be off, and what bit to set
+    highsLogUser(options->log_options, HighsLogType::kInfo,
+                 "Permitted suppression of presolve rules via "
+                 "presolve_rule_off option:\n");
+    HighsInt bit =
+        std::pow(int(2), static_cast<int>(kPresolveRuleFirstAllowOff));
+    for (HighsInt rule_type = kPresolveRuleFirstAllowOff;
+         rule_type < kPresolveRuleCount; rule_type++) {
+      // This is a rule that can be switched off
+      highsLogUser(options->log_options, HighsLogType::kInfo,
+                   "   Rule %2d (set bit %2d = %6d): %s\n", int(rule_type),
+                   int(rule_type), int(bit),
+                   utilPresolveRuleTypeToString(rule_type).c_str());
+      bit *= 2;
+    }
+  }
+  if (options->presolve_rule_off || options->presolve_light) {
+    // Some presolve rules are off or presolve_light mode is being used
     //
     // Transform options->presolve_rule_off into logical settings in
     // allow_rule_[*], commenting on the rules switched off
-    if (!silent) {
-      if (options->presolve_rule_off) {
-        highsLogUser(options->log_options, HighsLogType::kInfo,
-                     "Presolve rules not allowed:\n");
-      } else {
-        highsLogUser(options->log_options, HighsLogType::kInfo,
-                     "Permitted suppression of presolve rules via "
-                     "presolve_rule_off option:\n");
-      }
-    }
+    if (!silent)
+      highsLogUser(options->log_options, HighsLogType::kInfo,
+                   "Presolve rules not allowed:\n");
     HighsInt bit = 1;
     for (HighsInt rule_type = kPresolveRuleMin; rule_type < kPresolveRuleCount;
          rule_type++) {
       // Identify whether this rule is allowed
-      const bool allow = !(options->presolve_rule_off & bit);
+      const bool rule_off = (options->presolve_rule_off & bit) ||
+                            presolve_light_rule_off[rule_type];
       if (rule_type >= kPresolveRuleFirstAllowOff) {
         // This is a rule that can be switched off, so comment
         // positively if it is off
-        allow_rule_[rule_type] = allow;
-        if (!silent)
-          if (!allow ||
-              (!options->presolve_rule_off && options_->log_dev_level))
-            highsLogUser(options->log_options, HighsLogType::kInfo,
-                         "   Rule %2d (set bit %2d = %5d): %s\n",
-                         int(rule_type), int(rule_type), int(bit),
-                         utilPresolveRuleTypeToString(rule_type).c_str());
-      } else if (!allow && !silent) {
+        allow_rule_[rule_type] = !rule_off;
+        if (rule_off && !silent)
+          highsLogUser(options->log_options, HighsLogType::kInfo,
+                       "   Rule %2d (set bit %2d = %6d): %s\n", int(rule_type),
+                       int(rule_type), int(bit),
+                       utilPresolveRuleTypeToString(rule_type).c_str());
+      } else if (rule_off) {
         // This is a rule that cannot be switched off so, if an
-        // attempt is made, don't allow it to be off and comment
-        // negatively
-        highsLogUser(options->log_options, HighsLogType::kWarning,
-                     "Cannot disallow rule %2d (bit %2d = %5d): %s\n",
-                     int(rule_type), int(rule_type), int(bit),
-                     utilPresolveRuleTypeToString(rule_type).c_str());
+        // attempt is made, don't allow it to be off and possibly
+        // comment negatively
+        if (!silent)
+          highsLogUser(options->log_options, HighsLogType::kWarning,
+                       "Cannot disallow rule %2d (bit %2d = %5d): %s\n",
+                       int(rule_type), int(rule_type), int(bit),
+                       utilPresolveRuleTypeToString(rule_type).c_str());
+        // Check that we're not here because presolve_light mode is
+        // being used
+        assert(!presolve_light_rule_off[rule_type]);
       }
       bit *= 2;
     }
@@ -236,4 +275,27 @@ bool HPresolveAnalysis::analysePresolveRuleLog(const bool report) {
     }
   }
   return true;
+}
+
+void HPresolveAnalysis::presolveTimerStart(
+    const HighsInt presolve_clock) const {
+  if (!analyse_presolve_time_) return;
+  HighsInt highs_timer_clock = presolve_clocks_.clock_[presolve_clock];
+  presolve_clocks_.timer_pointer_->start(highs_timer_clock);
+}
+
+void HPresolveAnalysis::presolveTimerStop(const HighsInt presolve_clock) const {
+  if (!analyse_presolve_time_) return;
+  HighsInt highs_timer_clock = presolve_clocks_.clock_[presolve_clock];
+  presolve_clocks_.timer_pointer_->stop(highs_timer_clock);
+}
+
+void HPresolveAnalysis::reportPresolveTimer() {
+  if (!analyse_presolve_time_) return;
+  PresolveTimer presolve_timer;
+  presolve_timer.reportPresolveCoreClock(model->model_name_, presolve_clocks_);
+  presolve_timer.reportPresolveInitialColPresolveClock(model->model_name_,
+                                                       presolve_clocks_);
+  presolve_timer.reportPresolveSingletonColPresolveClock(model->model_name_,
+                                                         presolve_clocks_);
 }
