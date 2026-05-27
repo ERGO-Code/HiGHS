@@ -259,7 +259,7 @@ restart:
       mipdata_->domains.pop_back();
     }
     while (mipdata_->lps.size() > 1) {
-      mipdata_->lps.back().removeCuts();
+      mipdata_->lps.back().notifyCutPoolsLpCopied(-1, true);
       mipdata_->lps.pop_back();
     }
     while (mipdata_->pseudocosts.size() > 1) {

@@ -696,13 +696,13 @@ void HighsLpRelaxation::resetAges() {
   }
 }
 
-void HighsLpRelaxation::notifyCutPoolsLpCopied(HighsInt n) {
+void HighsLpRelaxation::notifyCutPoolsLpCopied(HighsInt n, bool destroying) {
   HighsInt nlprows = numRows();
   HighsInt modelrows = mipsolver.numRow();
   for (HighsInt i = modelrows; i != nlprows; ++i) {
     if (lprows[i].origin == LpRow::Origin::kCutPool) {
       mipsolver.mipdata_->cutpools[lprows[i].cutpoolindex].increaseNumLps(
-          lprows[i].index, n);
+          lprows[i].index, n, destroying);
     }
   }
 }

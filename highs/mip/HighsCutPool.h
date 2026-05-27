@@ -147,8 +147,8 @@ class HighsCutPool {
     ageDistribution.resize(agelim_ + 1);
   }
 
-  void increaseNumLps(HighsInt cut, HighsInt n) {
-    assert(numLps_[cut] >= 1);
+  void increaseNumLps(HighsInt cut, HighsInt n, bool destroying = false) {
+    assert(destroying || numLps_[cut] >= 1);
     numLps_[cut].fetch_add(n, std::memory_order_relaxed);
   };
 
