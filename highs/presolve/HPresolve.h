@@ -410,7 +410,8 @@ class HPresolve {
   Result doubletonEq(HighsPostsolveStack& postsolve_stack, HighsInt row,
                      HighsPostsolveStack::RowType rowType);
 
-  Result singletonRow(HighsPostsolveStack& postsolve_stack, HighsInt row);
+  Result singletonRow(HighsPostsolveStack& postsolve_stack, HighsInt row,
+		      const bool initial_sweep = false);
 
   Result emptyCol(HighsPostsolveStack& postsolve_stack, HighsInt col);
 

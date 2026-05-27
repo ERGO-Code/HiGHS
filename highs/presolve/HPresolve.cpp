@@ -38,7 +38,7 @@
 
 #define ENABLE_SPARSIFY_FOR_LP 0
 
-const bool initial_sweep = false;  // true;//
+const bool initial_sweep = true;//false;  // 
 
 #define HPRESOLVE_CHECKED_CALL(presolveCall)            \
   do {                                                  \
@@ -5992,8 +5992,10 @@ HPresolve::Result HPresolve::initialSweep(
   const bool have_col_names = model->col_names_.size() > 0;
   std::vector<HighsInt> newColIndex(model->num_col_);
   std::vector<HighsInt> row_count(model->num_row_, 0);
-  // Col of row is used to identify the column containing each singleton row
+  // Col of row is used to identify the column containing each
+  // singleton row, and value_of_row the matrix entry of the singleton
   std::vector<HighsInt> col_of_row(model->num_row_, -1);
+  std::vector<double> value_of_row(model->num_row_, 0);
   for (HighsInt iCol = 0; iCol < model->num_col_; iCol++) {
     HighsInt col_nnz =
         model->a_matrix_.start_[iCol + 1] - model->a_matrix_.start_[iCol];
@@ -6024,10 +6026,12 @@ HPresolve::Result HPresolve::initialSweep(
       HighsInt new_col_start = nnz;
       for (HighsInt iEl = 0; iEl < col_nnz; iEl++) {
         HighsInt iRow = model->a_matrix_.index_[from_os + iEl];
+	double value = model->a_matrix_.value_[from_os + iEl];
         row_count[iRow]++;
         col_of_row[iRow] = num_col;
+	value_of_row[iRow] = value;
         model->a_matrix_.index_[nnz] = iRow;
-        model->a_matrix_.value_[nnz] = model->a_matrix_.value_[from_os + iEl];
+        model->a_matrix_.value_[nnz] = value;
         nnz++;
       }
       model->a_matrix_.start_[num_col] = new_col_start;
@@ -6080,7 +6084,8 @@ HPresolve::Result HPresolve::initialSweep(
       for (HighsInt iCol = from_col; iCol < iCol0; iCol++) {
         HighsInt from_os = model->a_matrix_.start_[iCol];
         HighsInt col_nnz = model->a_matrix_.start_[iCol + 1] - from_os;
-        for (HighsInt iEl = 0; iEl < col_nnz; iEl++) {
+	HighsInt new_col_start = nnz;
+	for (HighsInt iEl = 0; iEl < col_nnz; iEl++) {
           HighsInt iRow = model->a_matrix_.index_[from_os + iEl];
           HighsInt newRow = newRowIndex[iRow];
           assert(newRow >= 0);
@@ -6088,7 +6093,7 @@ HPresolve::Result HPresolve::initialSweep(
           model->a_matrix_.value_[nnz] = model->a_matrix_.value_[from_os + iEl];
           nnz++;
         }
-        model->a_matrix_.start_[iCol] = col_nnz;
+        model->a_matrix_.start_[iCol] = new_col_start;
       }
     };
     for (iCol0 = 0; iCol0 < model->num_col_; iCol0++) {
@@ -6114,6 +6119,7 @@ HPresolve::Result HPresolve::initialSweep(
       }
       assert(found_row_singleton);
       model->a_matrix_.start_[iCol0] = new_col_start;
+      from_col = iCol0+1;
     }
     // Update the matrix entries for the columns since the last with a
     // row singleton
