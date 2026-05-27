@@ -79,8 +79,7 @@ void HighsRedcostFixing::propagateRedCost(const HighsMipSolver& mipsolver,
                                           double upper_limit) {
   const std::vector<double>& lpredcost = lp.getSolution().col_dual;
   double lpobjective = lp.getObjective();
-  HighsCDouble gap =
-      static_cast<HighsCDouble>(upper_limit) - lpobjective;
+  HighsCDouble gap = static_cast<HighsCDouble>(upper_limit) - lpobjective;
 
   double tolerance = std::max(10 * mipsolver.mipdata_->feastol,
                               mipsolver.mipdata_->epsilon * double(gap));
@@ -147,8 +146,7 @@ void HighsRedcostFixing::propagateRedCost(const HighsMipSolver& mipsolver,
     double rhs;
 
     if (boundChanges.size() <= 100 &&
-        lp.computeDualProof(globaldom, mipsolver.mipdata_->upper_limit, inds,
-                            vals, rhs, false)) {
+        lp.computeDualProof(globaldom, upper_limit, inds, vals, rhs, false)) {
       bool addedConstraints = false;
 
       HighsInt oldNumConflicts = conflictpool.getNumConflicts();
