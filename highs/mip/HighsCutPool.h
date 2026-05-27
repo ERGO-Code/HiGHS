@@ -25,7 +25,7 @@ struct HighsCutSet {
   std::vector<HighsInt> ARstart_;
   std::vector<HighsInt> ARindex_;
   std::vector<double> ARvalue_;
-  std::vector<double> lower_;
+  std::vector<double> lower_;  // Currently only ever contains -kHighsInf
   std::vector<double> upper_;
 
   HighsInt numCuts() const { return cutindices.size(); }

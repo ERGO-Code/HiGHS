@@ -191,6 +191,7 @@ void HighsCutPool::performAging() {
       --numLpCuts;
       ++ageDistribution[1];
       ageResetWhileLocked_[i].store(0, std::memory_order_relaxed);
+      continue;
     } else if (ageResetWhileLocked_[i].load(std::memory_order_relaxed) == 1) {
       resetAge(i);
     }
@@ -366,7 +367,7 @@ void HighsCutPool::separate(const std::vector<double>& sol,
   bestObservedScore_ = std::max(efficacious_cuts[0].first, bestObservedScore);
   double minScoreFactorCopy = minScoreFactor;
   double& minScoreFactor_ = thread_safe ? minScoreFactorCopy : minScoreFactor;
-  double minScore = minScoreFactor_ * bestObservedScore;
+  double minScore = minScoreFactor_ * bestObservedScore_;
 
   HighsInt numefficacious =
       std::upper_bound(efficacious_cuts.begin(), efficacious_cuts.end(),
@@ -382,10 +383,10 @@ void HighsCutPool::separate(const std::vector<double>& sol,
   if (numefficacious <= lowerThreshold) {
     numefficacious = std::max(efficacious_cuts.size() / 2, size_t{1});
     minScoreFactor_ =
-        efficacious_cuts[numefficacious - 1].first / bestObservedScore;
+        efficacious_cuts[numefficacious - 1].first / bestObservedScore_;
   } else if (numefficacious > upperThreshold) {
     minScoreFactor_ =
-        efficacious_cuts[upperThreshold].first / bestObservedScore;
+        efficacious_cuts[upperThreshold].first / bestObservedScore_;
   }
 
   efficacious_cuts.resize(numefficacious);
@@ -639,6 +640,8 @@ HighsInt HighsCutPool::addCut(const HighsMipSolver& mipsolver, HighsInt* Rindex,
 void HighsCutPool::syncCutPool(const HighsMipSolver& mipsolver,
                                HighsCutPool& syncpool) {
   HighsInt cutIndexEnd = matrix_.getNumRows();
+  std::vector<HighsInt> idxs;
+  std::vector<double> vals;
 
   for (HighsInt i = 0; i != cutIndexEnd; ++i) {
     // Only sync cuts in the LP that are not already synced
@@ -650,8 +653,8 @@ void HighsCutPool::syncCutPool(const HighsMipSolver& mipsolver,
       const double* Rvalue;
       getCut(i, Rlen, Rindex, Rvalue);
       // copy cut into something mutable (addCut reorders so can't take const)
-      std::vector<HighsInt> idxs(Rindex, Rindex + Rlen);
-      std::vector<double> vals(Rvalue, Rvalue + Rlen);
+      idxs.assign(Rindex, Rindex + Rlen);
+      vals.assign(Rvalue, Rvalue + Rlen);
       syncpool.addCut(mipsolver, idxs.data(), vals.data(), Rlen, rhs_[i],
                       rowintegral[i]);
       hasSynced_[i] = true;
