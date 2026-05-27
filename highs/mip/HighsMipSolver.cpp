@@ -246,10 +246,11 @@ restart:
   // Calculate maximum number of workers
   const HighsInt mip_search_concurrency = options_mip_->mip_search_concurrency;
   const HighsInt max_num_workers =
-      highs::parallel::num_threads() == 1 || mip_search_concurrency <= 0 ||
-              submip
+      highs::parallel::num_threads() == 1 ||
+              options_mip_->parallel != kHighsOnString || submip
           ? 1
-          : mip_search_concurrency * highs::parallel::num_threads();
+          : (mip_search_concurrency == 0 ? 2 : mip_search_concurrency) *
+                highs::parallel::num_threads();
   HighsInt num_workers = 1;
   highs::parallel::TaskGroup tg;
 

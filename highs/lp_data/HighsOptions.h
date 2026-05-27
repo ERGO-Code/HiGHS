@@ -1288,10 +1288,11 @@ class HighsOptions : public HighsOptionsStruct {
         kHighsInf);
     records.push_back(record_double);
 
-    record_int = new OptionRecordInt(
-        "mip_search_concurrency",
-        "Number of workers to create per thread for concurrent MIP search",
-        advanced, &mip_search_concurrency, 0, 0, kMipSearchConcurrencyLimit);
+    record_int = new OptionRecordInt("mip_search_concurrency",
+                                     "Number of workers to create per thread "
+                                     "for concurrent MIP search (0: automatic)",
+                                     advanced, &mip_search_concurrency, 0, 0,
+                                     kMipSearchConcurrencyLimit);
     records.push_back(record_int);
 
     record_bool = new OptionRecordBool(
