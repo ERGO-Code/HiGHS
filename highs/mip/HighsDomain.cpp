@@ -161,6 +161,7 @@ HighsDomain::ConflictPoolPropagation::operator=(
   conflictFlag_ = other.conflictFlag_;
   propagateConflictInds_ = other.propagateConflictInds_;
   watchedLiterals_ = other.watchedLiterals_;
+  assert(!domain->mipsolver->mipdata_->parallelLockActive());
   if (conflictpool_) conflictpool_->addPropagationDomain(this);
   return *this;
 }
@@ -414,6 +415,7 @@ HighsDomain::CutpoolPropagation& HighsDomain::CutpoolPropagation::operator=(
   propagatecutflags_ = other.propagatecutflags_;
   propagatecutinds_ = other.propagatecutinds_;
   capacityThreshold_ = other.capacityThreshold_;
+  assert(!domain->mipsolver->mipdata_->parallelLockActive());
   if (cutpool) cutpool->addPropagationDomain(this);
   return *this;
 }

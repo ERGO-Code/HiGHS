@@ -1046,7 +1046,7 @@ bool HighsPrimalHeuristics::tryRoundedPoint(HighsMipWorker& worker,
       if (!integerFeasible) {
         // there may be fractional integer variables -> try ziRound heuristic
         ziRound(worker, lpsol);
-        trySolution(lpsol, solution_source, worker);
+        return trySolution(lpsol, solution_source, worker);
       } else {
         // all integer variables are fixed -> add incumbent
         addIncumbent(lpsol, lprelax.getObjective(), solution_source, worker);
