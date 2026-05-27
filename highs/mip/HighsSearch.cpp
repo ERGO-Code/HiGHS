@@ -1006,7 +1006,8 @@ HighsSearch::NodeResult HighsSearch::evaluateNode() {
             }
             HighsRedcostFixing::propagateRedCost(mipsolver, localdom,
                                                  mipworker.getGlobalDomain(),
-                                                 *lp, getConflictPool());
+                                                 *lp, getConflictPool(),
+                                                 getUpperLimit());
             localdom.propagate();
             if (localdom.infeasible()) {
               result = NodeResult::kDomainInfeasible;
@@ -1945,6 +1946,9 @@ bool HighsSearch::checkLimits(int64_t nodeOffset) const {
 }
 
 bool HighsSearch::checkLocalLimits() const {
+  if (mipsolver.mipdata_->terminatorActive())
+    if (mipsolver.mipdata_->terminatorTerminated()) return true;
+
   if (!mipsolver.submip && mipworker.upper_bound < kHighsInf &&
       mipsolver.options_mip_->objective_target > -kHighsInf) {
     const double internal_target =

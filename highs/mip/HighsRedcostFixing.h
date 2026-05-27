@@ -35,7 +35,8 @@ class HighsRedcostFixing {
   static void propagateRedCost(const HighsMipSolver& mipsolver,
                                HighsDomain& localdomain, HighsDomain& globaldom,
                                const HighsLpRelaxation& lp,
-                               HighsConflictPool& conflictpool);
+                               HighsConflictPool& conflictpool,
+                               double upper_limit);
 
   void addRootRedcost(const HighsMipSolver& mipsolver,
                       const std::vector<double>& lpredcost, double lpobjective);

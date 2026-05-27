@@ -73,7 +73,7 @@ HighsInt HighsSeparation::separationRound(HighsDomain& propdomain,
     int numBoundChgs = (int)propdomain.getChangedCols().size();
 
     while (!propdomain.getChangedCols().empty()) {
-      lp->setObjectiveLimit(mipdata.upper_limit);
+      lp->setObjectiveLimit(mipworker_.upper_limit);
       status = lp->resolveLp(&propdomain);
       if (!lp->scaledOptimal(status)) return -1;
 
@@ -81,7 +81,7 @@ HighsInt HighsSeparation::separationRound(HighsDomain& propdomain,
           lp->unscaledDualFeasible(status)) {
         mipdata.redcostfixing.addRootRedcost(
             mipdata.mipsolver, lp->getSolution().col_dual, lp->getObjective());
-        if (mipdata.upper_limit != kHighsInf)
+        if (mipworker_.upper_limit != kHighsInf)
           mipdata.redcostfixing.propagateRootRedcost(mipdata.mipsolver);
       }
     }
@@ -186,7 +186,7 @@ void HighsSeparation::separate(HighsDomain& propdomain) {
     // double firstobj = lp->getObjective();
     double firstobj = mipsolver.mipdata_->rootlpsolobj;
 
-    while (lp->getObjective() < mipsolver.mipdata_->optimality_limit) {
+    while (lp->getObjective() < mipworker_.optimality_limit) {
       double lastobj = lp->getObjective();
 
       int64_t nlpiters = -lp->getNumLpIterations();
