@@ -320,7 +320,7 @@ class HighsLpRelaxation {
 
   void resetAges();
 
-  void notifyCutPoolsLpCopied(HighsInt n, bool destroying = false);
+  void notifyCutPoolsLpCopied(HighsInt n);
 
   void removeObsoleteRows(bool notifyPool = true);
 

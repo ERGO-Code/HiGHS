@@ -696,7 +696,7 @@ void HighsLpRelaxation::resetAges() {
   }
 }
 
-void HighsLpRelaxation::notifyCutPoolsLpCopied(HighsInt n, bool destroying) {
+void HighsLpRelaxation::notifyCutPoolsLpCopied(HighsInt n) {
   HighsInt nlprows = numRows();
   HighsInt modelrows = mipsolver.numRow();
   for (HighsInt i = modelrows; i != nlprows; ++i) {
