@@ -702,7 +702,7 @@ void HighsLpRelaxation::notifyCutPoolsLpCopied(HighsInt n) {
   for (HighsInt i = modelrows; i != nlprows; ++i) {
     if (lprows[i].origin == LpRow::Origin::kCutPool) {
       mipsolver.mipdata_->cutpools[lprows[i].cutpoolindex].increaseNumLps(
-          lprows[i].index, n, destroying);
+          lprows[i].index, n);
     }
   }
 }
