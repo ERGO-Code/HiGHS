@@ -1043,8 +1043,7 @@ TEST_CASE("presolve-initial-sweep-all", "[highs_test_presolve]") {
   REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
   if (dev_run) highs.writeModel("");
   highs.run();
-  REQUIRE(highs.getModelStatus() ==
-          HighsModelStatus::kInfeasible);  // HighsModelStatus::kOptimal);
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
   if (dev_run) highs.writeSolution("", 1);
   highs.resetGlobalScheduler(true);
 }

@@ -411,6 +411,8 @@ class HPresolve {
                      HighsPostsolveStack::RowType rowType);
 
   Result singletonRow(HighsPostsolveStack& postsolve_stack, HighsInt row,
+		      const HighsInt col_ = -1,
+		      const double val_ = 0,
 		      const bool initial_sweep = false);
 
   Result emptyCol(HighsPostsolveStack& postsolve_stack, HighsInt col);
@@ -422,6 +424,8 @@ class HPresolve {
 
   void substituteFreeCol(HighsPostsolveStack& postsolve_stack, HighsInt row,
                          HighsInt col, bool relaxRowDualBounds = false);
+
+  Result emptyRow(HighsPostsolveStack& postsolve_stack, HighsInt row);
 
   Result rowPresolve(HighsPostsolveStack& postsolve_stack, HighsInt row);
 

@@ -38,7 +38,7 @@
 
 #define ENABLE_SPARSIFY_FOR_LP 0
 
-const bool initial_sweep = true;//false;  // 
+const bool initial_sweep = false;  // true;//
 
 #define HPRESOLVE_CHECKED_CALL(presolveCall)            \
   do {                                                  \
@@ -3338,31 +3338,39 @@ HPresolve::Result HPresolve::doubletonEq(HighsPostsolveStack& postsolve_stack,
 }
 
 HPresolve::Result HPresolve::singletonRow(HighsPostsolveStack& postsolve_stack,
-                                          HighsInt row) {
+                                          HighsInt row,
+					  const HighsInt col_,
+					  const double val_,
+					  const bool initial_sweep) {
+  // Default values are col_ = -1; val_ = 0; initial_sweep = false
   const bool logging_on = analysis_.logging_on_;
-  if (logging_on) analysis_.startPresolveRuleLog(kPresolveRuleSingletonRow);
-  assert(!rowDeleted[row]);
-  assert(rowsize[row] == 1);
+  HighsInt nzPos = -1;
+  if (!initial_sweep) {
+    if (logging_on) analysis_.startPresolveRuleLog(kPresolveRuleSingletonRow);
+    assert(!rowDeleted[row]);
+    assert(rowsize[row] == 1);
 
-  // the tree of nonzeros of this row should just contain the single nonzero
-  HighsInt nzPos = rowroot[row];
-  assert(nzPos != -1);
-  // nonzero should have the row in the row array
-  assert(Arow[nzPos] == row);
-  // tree with one element should not have children
-  assert(ARleft[nzPos] == -1);
-  assert(ARright[nzPos] == -1);
+    // the tree of nonzeros of this row should just contain the single nonzero
+    nzPos = rowroot[row];
+    assert(nzPos != -1);
+    // nonzero should have the row in the row array
+    assert(Arow[nzPos] == row);
+    // tree with one element should not have children
+    assert(ARleft[nzPos] == -1);
+    assert(ARright[nzPos] == -1);
+  }
+  HighsInt col = initial_sweep ? col_ : Acol[nzPos];
+  double val = initial_sweep ? val_ : Avalue[nzPos];
 
-  HighsInt col = Acol[nzPos];
-  double val = Avalue[nzPos];
-
-  // printf("singleton row\n");
-  // debugPrintRow(row);
-  // delete row singleton nonzero directly, we have all information that we need
-  // in local variables
-  markRowDeleted(row);
-  unlink(nzPos);
-
+  if (!initial_sweep) {
+    // printf("singleton row\n");
+    // debugPrintRow(row);
+    // delete row singleton nonzero directly, we have all information that we need
+    // in local variables
+    markRowDeleted(row);
+    unlink(nzPos);
+  }
+  
   // check for simple
   if (val > 0) {
     if (model->col_upper_[col] * val <=
@@ -3370,8 +3378,10 @@ HPresolve::Result HPresolve::singletonRow(HighsPostsolveStack& postsolve_stack,
         model->col_lower_[col] * val >=
             model->row_lower_[row] - primal_feastol) {
       postsolve_stack.redundantRow(row);
-      analysis_.logging_on_ = logging_on;
-      if (logging_on) analysis_.stopPresolveRuleLog(kPresolveRuleSingletonRow);
+      if (!initial_sweep) {
+	analysis_.logging_on_ = logging_on;
+	if (logging_on) analysis_.stopPresolveRuleLog(kPresolveRuleSingletonRow);
+      }
       return checkLimits(postsolve_stack);
     }
   } else {
@@ -3380,8 +3390,10 @@ HPresolve::Result HPresolve::singletonRow(HighsPostsolveStack& postsolve_stack,
         model->col_upper_[col] * val >=
             model->row_lower_[row] - primal_feastol) {
       postsolve_stack.redundantRow(row);
-      analysis_.logging_on_ = logging_on;
-      if (logging_on) analysis_.stopPresolveRuleLog(kPresolveRuleSingletonRow);
+      if (!initial_sweep) {
+	analysis_.logging_on_ = logging_on;
+	if (logging_on) analysis_.stopPresolveRuleLog(kPresolveRuleSingletonRow);
+      }
       return checkLimits(postsolve_stack);
     }
   }
@@ -3458,6 +3470,8 @@ HPresolve::Result HPresolve::singletonRow(HighsPostsolveStack& postsolve_stack,
   // printf("final bounds: [%.15g,%.15g]\n", lb, ub);
 
   postsolve_stack.singletonRow(row, col, val, lowerTightened, upperTightened);
+
+  if (initial_sweep) return checkLimits(postsolve_stack);
 
   // just update bounds (and row activities)
   if (lowerTightened) HPRESOLVE_CHECKED_CALL(changeColLower(col, lb));
@@ -3619,6 +3633,18 @@ void HPresolve::substituteFreeCol(HighsPostsolveStack& postsolve_stack,
 
   // todo, check integrality of coefficients and allow this
   substitute(row, col, rhs);
+}
+
+HPresolve::Result HPresolve::emptyRow(HighsPostsolveStack& postsolve_stack,
+				      HighsInt row) {
+  // Special case of rowPresolve for rows known to be empty
+  //
+  // Check that the row is feasible
+  if (model->row_upper_[row] < -primal_feastol ||
+      model->row_lower_[row] > primal_feastol) 
+    return Result::kPrimalInfeasible;
+  postsolve_stack.redundantRow(row);
+  return checkLimits(postsolve_stack);
 }
 
 HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
@@ -6057,7 +6083,9 @@ HPresolve::Result HPresolve::initialSweep(
   model->a_matrix_.index_.resize(nnz);
   model->a_matrix_.value_.resize(nnz);
 
-  if (num_empty_row || num_singleton_row) {
+  const bool initial_sweep = true;
+  const bool allow_row_sweep = false;
+  if (allow_row_sweep && (num_empty_row || num_singleton_row)) {
     HighsInt num_row = 0;
     std::vector<bool> has_singleton_row(model->num_col_, false);
     std::vector<HighsInt> newRowIndex(model->num_row_);
@@ -6066,9 +6094,12 @@ HPresolve::Result HPresolve::initialSweep(
         newRowIndex[iRow] = -1;
         if (row_count[iRow] == 0) {
           // Empty row
+	  HPRESOLVE_CHECKED_CALL(emptyRow(postsolve_stack, iRow));
         } else {
           // Singleton row
           has_singleton_row[col_of_row[iRow]] = true;
+	  HPRESOLVE_CHECKED_CALL(singletonRow(postsolve_stack, iRow, initial_sweep));
+	  
         }
       } else {
         newRowIndex[iRow] = num_row;
