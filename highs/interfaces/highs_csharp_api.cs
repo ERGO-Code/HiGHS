@@ -467,6 +467,15 @@ public class HighsLpSolver : IDisposable
     private static extern int Highs_getInt64InfoValue(IntPtr highs, string info, out long value);
 
     [DllImport(highslibname)]
+    private static extern int Highs_changeObjectiveOffset(IntPtr highs, double offset);
+
+    [DllImport(highslibname)]
+    private static extern int Highs_addLinearObjective(IntPtr highs, double weight, double offset, double[] coefficients, double abs_tolerance, double rel_tolerance, int priority);
+
+    [DllImport(highslibname)]
+    private static extern int Highs_clearLinearObjectives(IntPtr highs);
+
+    [DllImport(highslibname)]
     private static extern int Highs_setSolution(IntPtr highs, double[] col_value, double[] row_value, double[] col_dual, double[] row_dual);
 
     [DllImport(highslibname)]
@@ -1021,6 +1030,21 @@ public class HighsLpSolver : IDisposable
             PdlpIterationCount = this.GetValueOrFallback(HighsLpSolver.Highs_getIntInfoValue, "pdlp_iteration_count", 0),
         };
         return info;
+    }
+
+    public HighsStatus changeObjectiveOffset(double offset)
+    {
+        return (HighsStatus)HighsLpSolver.Highs_changeObjectiveOffset(this.highs, offset);
+    }
+
+    public HighsStatus addLinearObjective(double weight, double offset, double[] coefficients, double abs_tolerance, double rel_tolerance, int priority)
+    {
+        return (HighsStatus)HighsLpSolver.Highs_addLinearObjective(this.highs, weight, offset, coefficients, abs_tolerance, rel_tolerance, priority);
+    }
+
+    public HighsStatus clearLinearObjectives()
+    {
+        return (HighsStatus)HighsLpSolver.Highs_clearLinearObjectives(this.highs);
     }
 
     public HighsStatus setSolution(HighsSolution solution)
