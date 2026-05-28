@@ -6928,6 +6928,10 @@ HPresolve::Result HPresolve::fourierMotzkin(
     return Result::kOk;
   };
 
+  // sentinel row indices for variable bounds
+  const HighsInt kUpperBoundRow = -2;
+  const HighsInt kLowerBoundRow = -3;
+
   auto computeCandidates = [&](std::vector<HighsInt>& candidates) {
     for (HighsInt col = 0; col < model->num_col_; col++) {
       if (colDeleted[col]) continue;
@@ -6979,6 +6983,31 @@ HPresolve::Result HPresolve::fourierMotzkin(
         }
       }
     }
+
+    // include finite variable bounds as virtual singleton rows
+    if (model->col_upper_[col] != kHighsInf) {
+      iPlus.push_back(kUpperBoundRow);
+      nePlus += 1;
+    }
+    if (model->col_lower_[col] != -kHighsInf) {
+      iMinus.push_back(kLowerBoundRow);
+      neMinus += 1;
+    }
+  };
+
+  auto collectAffectedCols = [&](HighsInt col, const std::vector<HighsInt>& set,
+                                 std::vector<HighsInt>& mark,
+                                 std::vector<HighsInt>& otherMark,
+                                 std::vector<HighsInt>& affectedCols) {
+    for (HighsInt row : set) {
+      if (row < 0) continue;
+      for (const auto& nz : getRowVector(row)) {
+        HighsInt k = nz.index();
+        if (k == col) continue;
+        if (mark[k] == 0 && otherMark[k] == 0) affectedCols.push_back(k);
+        mark[k]++;
+      }
+    }
   };
 
   auto checkNonZeros = [&](HighsInt col, std::vector<HighsInt>& iPlus,
@@ -7000,22 +7029,8 @@ HPresolve::Result HPresolve::fourierMotzkin(
     }
 
     // take into account other variables present in the rows
-    for (HighsInt row : iPlus) {
-      for (const auto& nz : getRowVector(row)) {
-        HighsInt k = nz.index();
-        if (k == col) continue;
-        if (pPlus[k] == 0 && pMinus[k] == 0) affectedCols.push_back(k);
-        pPlus[k]++;
-      }
-    }
-    for (HighsInt row : iMinus) {
-      for (const auto& nz : getRowVector(row)) {
-        HighsInt k = nz.index();
-        if (k == col) continue;
-        if (pPlus[k] == 0 && pMinus[k] == 0) affectedCols.push_back(k);
-        pMinus[k]++;
-      }
-    }
+    collectAffectedCols(col, iPlus, pPlus, pMinus, affectedCols);
+    collectAffectedCols(col, iMinus, pMinus, pPlus, affectedCols);
 
     // compute correction term
     int64_t correction = 0;
@@ -7138,6 +7153,38 @@ HPresolve::Result HPresolve::fourierMotzkin(
     heapBubbleDown(heap, heapPos, pos);
   };
 
+  auto getRowData = [&](HighsInt row, HighsInt col, HighsInt multiplier,
+                        double& absCoef, HighsInt& direction, double& bound) {
+    if (row < 0) {
+      // artificial lower / upper bound row
+      direction = 1;
+      absCoef = 1.0;
+      bound = multiplier > 0 ? model->col_upper_[col] : -model->col_lower_[col];
+    } else {
+      HighsInt pPos = findNonzero(row, col);
+      assert(pPos != -1);
+      direction = multiplier * Avalue[pPos] > 0 ? HighsInt{1} : HighsInt{-1};
+      absCoef = std::abs(Avalue[pPos]);
+      bound = direction > 0 ? model->row_upper_[row] : -model->row_lower_[row];
+    }
+  };
+
+  auto collectRowEntries = [&](HighsInt row, HighsInt col, double scale,
+                               std::vector<newRowEntry>& newRowEntries,
+                               std::vector<HighsInt>& newRowMark) {
+    if (row < 0) return;
+    for (const auto& nz : getRowVector(row)) {
+      if (nz.index() == col) continue;
+      double val = scale * nz.value();
+      if (newRowMark[nz.index()] == -1) {
+        newRowMark[nz.index()] = static_cast<HighsInt>(newRowEntries.size());
+        newRowEntries.push_back({nz.index(), val});
+      } else {
+        newRowEntries[newRowMark[nz.index()]].val += val;
+      }
+    }
+  };
+
   // collect candidate variables
   std::vector<HighsInt> candidates;
   computeCandidates(candidates);
@@ -7212,46 +7259,27 @@ HPresolve::Result HPresolve::fourierMotzkin(
     // perform elimination: generate new rows
     newRows.clear();
     for (HighsInt pRow : iPlus) {
-      HighsInt pPos = findNonzero(pRow, col);
-      assert(pPos != -1);
-      HighsInt pDirection = Avalue[pPos] > 0 ? HighsInt{1} : HighsInt{-1};
-      double pCoefAbs = std::abs(Avalue[pPos]);
-      double pBound =
-          pDirection > 0 ? model->row_upper_[pRow] : -model->row_lower_[pRow];
+      double pCoefAbs;
+      double pBound;
+      HighsInt pDirection;
+      getRowData(pRow, col, HighsInt{1}, pCoefAbs, pDirection, pBound);
 
       for (HighsInt mRow : iMinus) {
-        HighsInt mPos = findNonzero(mRow, col);
-        assert(mPos != -1);
-        HighsInt mDirection = Avalue[mPos] < 0 ? HighsInt{1} : HighsInt{-1};
-        double mCoefAbs = std::abs(Avalue[mPos]);
-        double mBound =
-            mDirection > 0 ? model->row_upper_[mRow] : -model->row_lower_[mRow];
+        double mCoefAbs;
+        double mBound;
+        HighsInt mDirection;
+        getRowData(mRow, col, HighsInt{-1}, mCoefAbs, mDirection, mBound);
 
         // scale factor to preserve violation tolerances (see section 4.3):
         double s = (pCoefAbs * mCoefAbs) / (pCoefAbs + mCoefAbs);
         double pScale = s / pCoefAbs;
         double mScale = s / mCoefAbs;
 
-        storeRow(pRow);
-        for (HighsInt rowiter : rowpositions) {
-          if (Acol[rowiter] == col) continue;
-          double val = pDirection * pScale * Avalue[rowiter];
-          newRowMark[Acol[rowiter]] =
-              static_cast<HighsInt>(newRowEntries.size());
-          newRowEntries.push_back({Acol[rowiter], val});
-        }
-
-        storeRow(mRow);
-        for (HighsInt rowiter : rowpositions) {
-          if (Acol[rowiter] == col) continue;
-          double val = mDirection * mScale * Avalue[rowiter];
-          if (newRowMark[Acol[rowiter]] == -1) {
-            newRowMark[Acol[rowiter]] =
-                static_cast<HighsInt>(newRowEntries.size());
-            newRowEntries.push_back({Acol[rowiter], val});
-          } else
-            newRowEntries[newRowMark[Acol[rowiter]]].val += val;
-        }
+        // collect row entries
+        collectRowEntries(pRow, col, pDirection * pScale, newRowEntries,
+                          newRowMark);
+        collectRowEntries(mRow, col, mDirection * mScale, newRowEntries,
+                          newRowMark);
 
         // reset marker before removing near-zeros
         for (const auto& e : newRowEntries) newRowMark[e.col] = -1;
@@ -7303,13 +7331,15 @@ HPresolve::Result HPresolve::fourierMotzkin(
       return finalise();
     numRowsAdded += static_cast<HighsInt>(rowEntries.size());
 
-    // remove old rows containing col
+    // remove old rows containing col (skip virtual bound rows)
     for (HighsInt rp : iPlus) {
+      if (rp < 0) continue;
       postsolve_stack.redundantRow(rp);
       removeRow(rp);
       ++numRowsEliminated;
     }
     for (HighsInt rm : iMinus) {
+      if (rm < 0) continue;
       if (rowDeleted[rm]) continue;
       postsolve_stack.redundantRow(rm);
       removeRow(rm);
