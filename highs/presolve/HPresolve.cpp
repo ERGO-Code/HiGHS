@@ -7164,12 +7164,9 @@ HPresolve::Result HPresolve::fourierMotzkin(
     bool elimCandidate = checkNonZeros(col, iPlus, iMinus, pPlus, pMinus,
                                        otherCols, neRed, mrRed);
     otherCols.clear();
-    if (!elimCandidate) continue;
-
-    if (isReduction(neRed, mrRed)) {
-      heapPos[col] = static_cast<HighsInt>(heap.size());
-      heap.push_back({col, neRed, mrRed});
-    }
+    if (!elimCandidate || !isReduction(neRed, mrRed)) continue;
+    heapPos[col] = static_cast<HighsInt>(heap.size());
+    heap.push_back({col, neRed, mrRed});
   }
 
   if (heap.empty()) return finalise();
