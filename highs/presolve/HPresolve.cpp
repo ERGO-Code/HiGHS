@@ -7188,6 +7188,10 @@ HPresolve::Result HPresolve::fourierMotzkin(
   // vector for saving affected candidates
   std::vector<HighsInt> saveAffectedCols;
 
+  HighsInt numColsEliminated = 0;
+  HighsInt numRowsEliminated = 0;
+  HighsInt numRowsAdded = 0;
+
   // main loop: eliminate variables from heap
   while (!heap.empty()) {
     HighsInt col = heap[0].col;
@@ -7297,21 +7301,25 @@ HPresolve::Result HPresolve::fourierMotzkin(
     // add new rows to matrix
     if (!addToMatrix(postsolve_stack, rowLower, rowUpper, rowEntries))
       return finalise();
+    numRowsAdded += static_cast<HighsInt>(rowEntries.size());
 
     // remove old rows containing col
     for (HighsInt rp : iPlus) {
       postsolve_stack.redundantRow(rp);
       removeRow(rp);
+      ++numRowsEliminated;
     }
     for (HighsInt rm : iMinus) {
       if (rowDeleted[rm]) continue;
       postsolve_stack.redundantRow(rm);
       removeRow(rm);
+      ++numRowsEliminated;
     }
 
     // mark column as deleted
     isCandidate[col] = false;
     markColDeleted(col);
+    ++numColsEliminated;
 
     // update affected candidates in the heap
     saveAffectedCols.swap(affectedCols);
@@ -7334,6 +7342,13 @@ HPresolve::Result HPresolve::fourierMotzkin(
 
     HPRESOLVE_CHECKED_CALL(checkLimits(postsolve_stack));
   }
+
+  if (numColsEliminated > 0)
+    highsLogDev(options->log_options, HighsLogType::kInfo,
+                "Fourier-Motzkin eliminated %" HIGHSINT_FORMAT
+                " cols and %" HIGHSINT_FORMAT
+                " rows, and added %" HIGHSINT_FORMAT " rows\n",
+                numColsEliminated, numRowsEliminated, numRowsAdded);
 
   return finalise();
 }
