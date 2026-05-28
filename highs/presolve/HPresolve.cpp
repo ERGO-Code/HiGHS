@@ -7076,6 +7076,7 @@ HPresolve::Result HPresolve::fourierMotzkin(
 
   auto heapSwap = [&](std::vector<candidate>& heap,
                       std::vector<HighsInt>& heapPos, HighsInt i, HighsInt j) {
+    if (i == j) return;
     std::swap(heap[i], heap[j]);
     heapPos[heap[i].col] = i;
     heapPos[heap[j].col] = j;
@@ -7110,16 +7111,14 @@ HPresolve::Result HPresolve::fourierMotzkin(
                         std::vector<HighsInt>& heapPos, HighsInt col) {
     HighsInt pos = heapPos[col];
     if (pos == -1) return;
-    heapPos[col] = -1;
     HighsInt last = static_cast<HighsInt>(heap.size()) - 1;
-    if (pos == last) {
-      heap.pop_back();
-      return;
-    }
     heapSwap(heap, heapPos, pos, last);
+    heapPos[col] = -1;
     heap.pop_back();
-    heapBubbleUp(heap, heapPos, pos);
-    heapBubbleDown(heap, heapPos, pos);
+    if (pos < static_cast<HighsInt>(heap.size())) {
+      heapBubbleUp(heap, heapPos, pos);
+      heapBubbleDown(heap, heapPos, pos);
+    }
   };
 
   auto heapUpdate = [&](std::vector<candidate>& heap,
