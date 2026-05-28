@@ -70,6 +70,11 @@ class Highs {
   std::string githash() const { return highsGithash(); }
 
   /**
+   * @brief Return third-party notice and attribution details
+   */
+  std::string getThirdPartyNotice() const;
+
+  /**
    * @brief Reset the options and then call clearModel()
    */
   HighsStatus clear();

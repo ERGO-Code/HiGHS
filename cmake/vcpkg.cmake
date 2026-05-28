@@ -9,6 +9,7 @@
 #   project(my_project LANGUAGES C CXX)
 #
 # Behavior:
+#   * Enabled only when HIGHS_VCPKG is ON (default OFF)
 #   * If $ENV{VCPKG_ROOT} is set and CMAKE_TOOLCHAIN_FILE is not, point
 #     CMAKE_TOOLCHAIN_FILE at vcpkg's toolchain so manifest mode kicks in.
 #   * Auto-pick a sensible VCPKG_TARGET_TRIPLET unless the caller (or env
@@ -36,7 +37,9 @@
 #     * CMAKE_TOOLCHAIN_FILE is already set (any toolchain in effect)
 #     * Z_VCPKG_ROOT_DIR exported by vcpkg's portfile
 
-if(DEFINED CMAKE_TOOLCHAIN_FILE
+include_guard(GLOBAL)
+
+if((NOT HIGHS_VCPKG) OR DEFINED CMAKE_TOOLCHAIN_FILE
    OR DEFINED ENV{Z_VCPKG_ROOT_DIR})
   return()
 endif()

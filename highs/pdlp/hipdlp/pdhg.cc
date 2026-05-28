@@ -1836,7 +1836,7 @@ void PDLPSolver::initializeStepSizes() {
 
   // Match initial primal weight calculation from cuPDLPx
   params_.omega = (unscaled_c_norm_ + 1.0) / (unscaled_rhs_norm_ + 1.0);
-  primal_weight_ = params_.omega;
+  primal_weight_ = 1.0;
 
   if (params_.step_size_strategy != StepSizeStrategy::FIXED &&
       params_.step_size_strategy != StepSizeStrategy::PID) {

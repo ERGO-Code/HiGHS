@@ -52,6 +52,7 @@ cc_library(
     name = "highs",
     srcs = [
         "highs/interfaces/highs_c_api.cpp",
+        "highs/HighsExternalApi.cpp",
         "highs/HighsExternalDeps.cpp",
     ] + glob([
         "highs/io/*.cpp",
@@ -62,7 +63,6 @@ cc_library(
         "highs/ipm/hipo/ipm/*.cpp",
         "highs/ipm/hipo/factorhighs/*.cpp",
         "highs/ipm/hipo/auxiliary/*.cpp",
-        "extern/rcm/rcm.cpp",
         "highs/lp_data/*.cpp",
         "highs/mip/*.cpp",
         "highs/model/*.cpp",
@@ -98,6 +98,7 @@ cc_library(
     }),
     includes = [
         "extern",
+        "extern/catch",
         # "extern/filereaderlp",
         # "extern/zstr",
         "highs",
@@ -131,7 +132,7 @@ cc_library(
 cc_library(
     name = "highs-runtime-opts",
     hdrs = [
-        "extern/CLI11.hpp",
+        "extern/cli11/CLI11.hpp",
         "app/HighsRuntimeOptions.h",
     ],
     visibility = ["//visibility:public"],
@@ -183,7 +184,7 @@ cc_library(
         "check/Avgas.h",
         "check/SpecialLps.h",
         "check/matrix_multiplication.hpp",
-        "extern/catch.hpp",
+        "extern/catch/catch.hpp",
     ],
     copts = ["-Iextern"],
     data = glob(["check/instances/*"]),

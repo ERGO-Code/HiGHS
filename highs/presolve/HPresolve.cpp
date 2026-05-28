@@ -123,6 +123,7 @@ bool HPresolve::okSetInput(HighsLp& model_, const HighsOptions& options_,
   if (!okResize(colDeleted, model->num_col_)) return false;
   if (!okReserve(changedColIndices, model->num_col_)) return false;
   if (!okReserve(liftingOpportunities, model->num_row_)) return false;
+  if (!okResize(singleEquationChecked, model->num_row_)) return false;
   numDeletedCols = 0;
   numDeletedRows = 0;
   // initialize substitution opportunities
@@ -534,6 +535,7 @@ void HPresolve::markChangedRow(HighsInt row) {
     changedRowIndices.push_back(row);
     changedRowFlag[row] = true;
   }
+  singleEquationChecked[row] = false;
 }
 
 void HPresolve::markChangedCol(HighsInt col) {
@@ -785,7 +787,8 @@ void HPresolve::resetColImpliedBoundsDerivedFromRow(HighsInt row) {
   // reset implied column bounds affected by a modification in a row
   // (removed / added non-zeros, etc.)
   if (colImplSourceByRow[row].empty()) return;
-  std::set<HighsInt> affectedCols(colImplSourceByRow[row]);
+  std::set<HighsInt> affectedCols;
+  affectedCols.swap(colImplSourceByRow[row]);
   for (const HighsInt& col : affectedCols) {
     // set implied bounds to infinite values if they were deduced from the
     // given row
@@ -797,7 +800,8 @@ void HPresolve::resetRowDualImpliedBoundsDerivedFromCol(HighsInt col) {
   // reset implied row dual bounds affected by a modification in a column
   // (removed / added non-zeros, etc.)
   if (implRowDualSourceByCol[col].empty()) return;
-  std::set<HighsInt> affectedRows(implRowDualSourceByCol[col]);
+  std::set<HighsInt> affectedRows;
+  affectedRows.swap(implRowDualSourceByCol[col]);
   for (const HighsInt& row : affectedRows) {
     // set implied bounds to infinite values if they were deduced from the
     // given column
@@ -896,6 +900,7 @@ void HPresolve::shrinkProblem(HighsPostsolveStack& postsolve_stack) {
         if (have_row_names)
           model->row_names_[newRowIndex[i]] = std::move(model->row_names_[i]);
         changedRowFlag[newRowIndex[i]] = changedRowFlag[i];
+        singleEquationChecked[newRowIndex[i]] = singleEquationChecked[i];
       }
     }
   }
@@ -948,6 +953,7 @@ void HPresolve::shrinkProblem(HighsPostsolveStack& postsolve_stack) {
   rowsizeImplInt.resize(model->num_row_);
   if (have_row_names) model->row_names_.resize(model->num_row_);
   changedRowFlag.resize(model->num_row_);
+  singleEquationChecked.resize(model->num_row_);
 
   numDeletedRows = 0;
   postsolve_stack.compressIndexMaps(newRowIndex, newColIndex);
@@ -5002,11 +5008,12 @@ HPresolve::Result HPresolve::dualFixing(HighsPostsolveStack& postsolve_stack,
           hasSingleDownLock && isEquation(downLockRow)
               ? downLockRow
               : (hasSingleUpLock && isEquation(upLockRow) ? upLockRow : -1);
-      if (equationRow != -1) {
+      if (equationRow != -1 && !singleEquationChecked[equationRow]) {
         // see section 6.1 "Extension of dual fixing for single equations",
         // Achterberg et al., Presolve Reductions in Mixed Integer
         // Programming, INFORMS Journal on Computing 32(2):473-506.
         HPRESOLVE_CHECKED_CALL(handleSingleEquation(equationRow));
+        singleEquationChecked[equationRow] = true;
         if (colDeleted[col]) return Result::kOk;
       } else if (mipsolver != nullptr && model->col_lower_[col] != -kHighsInf &&
                  model->col_upper_[col] != kHighsInf) {
@@ -6456,7 +6463,37 @@ HighsModelStatus HPresolve::run(HighsPostsolveStack& postsolve_stack) {
         for (HighsInt j : rowpositions) unlink(j);
       }
 
-      shrinkProblem(postsolve_stack);
+      // Compact deleted cut rows. shrinkProblem must not be used here
+      // because it replaces the cutpool with a new empty one, destroying
+      // the cuts that were just added above.
+      auto compactDeletedRows = [&]() {
+        HighsInt oldNumRow = model->num_row_;
+        std::vector<HighsInt> newRowIndex(oldNumRow);
+        HighsInt newNumRow = 0;
+        for (HighsInt i = 0; i < oldNumRow; ++i) {
+          if (rowDeleted[i])
+            newRowIndex[i] = -1;
+          else
+            newRowIndex[i] = newNumRow++;
+        }
+        model->num_row_ = newNumRow;
+
+        for (HighsInt i = 0; i < oldNumRow; ++i) {
+          if (newRowIndex[i] == -1 || newRowIndex[i] == i) continue;
+          model->row_lower_[newRowIndex[i]] = model->row_lower_[i];
+          model->row_upper_[newRowIndex[i]] = model->row_upper_[i];
+        }
+        model->row_lower_.resize(model->num_row_);
+        model->row_upper_.resize(model->num_row_);
+        model->row_names_.resize(model->num_row_);
+
+        for (size_t i = 0; i < Avalue.size(); ++i) {
+          if (Avalue[i] == 0) continue;
+          assert(newRowIndex[Arow[i]] != -1);
+          Arow[i] = newRowIndex[Arow[i]];
+        }
+      };
+      compactDeletedRows();
     }
   }
 

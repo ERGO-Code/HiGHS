@@ -30,6 +30,9 @@ classifiers = [
   "Programming Language :: Python :: 3.14",
 ]
 
+[project.optional-dependencies]
+test = ["pytest"]
+
 [project.urls]
 "Source Code" = "https://github.com/ERGO-Code/HiGHS"
 "Bug Tracker" = "https://github.com/ERGO-Code/HiGHS/issues"
@@ -46,7 +49,8 @@ sdist.include = [
   "extern",
   "cmake",
   "Version.txt",
-  "highs/HConfig.h.in"
+  "highs/HConfig.h.in",
+  "tests/test_highspy_extras.py"
 ]
 
 sdist.exclude = [
@@ -76,9 +80,22 @@ sdist.exclude = [
 ]
 
 [tool.scikit-build.cmake.define]
+#HIGHS_VCPKG="ON"
 BUILD_OPENBLAS = "ON"
+HIPO = "ON"
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+addopts = ["-ra", "--showlocals", "--strict-markers", "--strict-config"]
+xfail_strict = true
+log_cli_level = "INFO"
+filterwarnings = ["error"]
+testpaths = ["tests"]
+norecursedirs = ["check", ".git", "build", "dist", "*.egg-info"]
 
 [tool.cibuildwheel]
 build = "*"
 archs = ["auto64", "auto32"]
 build-verbosity = 1
+test-command = "pytest {project}/highspy-extras/tests"
+test-extras = ["test"]
