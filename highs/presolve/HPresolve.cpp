@@ -7065,14 +7065,78 @@ HPresolve::Result HPresolve::fourierMotzkin(
     return Result::kOk;
   };
 
+  auto isReduction = [](int64_t neRed, int64_t mrRed) {
+    return neRed > 0 || (neRed == 0 && mrRed > 0);
+  };
+
+  auto heapBetter = [](const candidate& a, const candidate& b) {
+    if (a.neRed != b.neRed) return a.neRed > b.neRed;
+    return a.mrRed > b.mrRed;
+  };
+
+  auto heapSwap = [&](std::vector<candidate>& heap,
+                      std::vector<HighsInt>& heapPos, HighsInt i, HighsInt j) {
+    std::swap(heap[i], heap[j]);
+    heapPos[heap[i].col] = i;
+    heapPos[heap[j].col] = j;
+  };
+
+  auto heapBubbleUp = [&](std::vector<candidate>& heap,
+                          std::vector<HighsInt>& heapPos, HighsInt i) {
+    while (i > 0) {
+      HighsInt parent = (i - 1) / 2;
+      if (!heapBetter(heap[i], heap[parent])) break;
+      heapSwap(heap, heapPos, i, parent);
+      i = parent;
+    }
+  };
+
+  auto heapBubbleDown = [&](std::vector<candidate>& heap,
+                            std::vector<HighsInt>& heapPos, HighsInt i) {
+    HighsInt heapSize = static_cast<HighsInt>(heap.size());
+    while (true) {
+      HighsInt best = i;
+      HighsInt left = 2 * i + 1;
+      HighsInt right = 2 * i + 2;
+      if (left < heapSize && heapBetter(heap[left], heap[best])) best = left;
+      if (right < heapSize && heapBetter(heap[right], heap[best])) best = right;
+      if (best == i) break;
+      heapSwap(heap, heapPos, i, best);
+      i = best;
+    }
+  };
+
+  auto heapRemove = [&](std::vector<candidate>& heap,
+                        std::vector<HighsInt>& heapPos, HighsInt col) {
+    HighsInt pos = heapPos[col];
+    if (pos == -1) return;
+    heapPos[col] = -1;
+    HighsInt last = static_cast<HighsInt>(heap.size()) - 1;
+    if (pos == last) {
+      heap.pop_back();
+      return;
+    }
+    heapSwap(heap, heapPos, pos, last);
+    heap.pop_back();
+    heapBubbleUp(heap, heapPos, pos);
+    heapBubbleDown(heap, heapPos, pos);
+  };
+
+  auto heapUpdate = [&](std::vector<candidate>& heap,
+                        std::vector<HighsInt>& heapPos, HighsInt col,
+                        int64_t neRed, int64_t mrRed) {
+    HighsInt pos = heapPos[col];
+    if (pos == -1) return;
+    heap[pos].neRed = neRed;
+    heap[pos].mrRed = mrRed;
+    heapBubbleUp(heap, heapPos, pos);
+    heapBubbleDown(heap, heapPos, pos);
+  };
+
   // collect candidate variables
   std::vector<HighsInt> candidates;
   computeCandidates(candidates);
   if (candidates.empty()) return finalise();
-
-  // candidate vector
-  std::vector<candidate> scored;
-  scored.reserve(candidates.size());
 
   // workspace vectors
   std::vector<HighsInt> iPlus;
@@ -7084,25 +7148,32 @@ HPresolve::Result HPresolve::fourierMotzkin(
   std::vector<HighsInt> otherCols;
   otherCols.reserve(model->num_col_);
 
+  // indexed max-heap
+  std::vector<candidate> heap;
+  heap.reserve(candidates.size());
+  std::vector<HighsInt> heapPos(model->num_col_, -1);
+  std::vector<bool> isCandidate(model->num_col_, false);
+
+  // build initial heap
   for (HighsInt col : candidates) {
+    isCandidate[col] = true;
     int64_t neRed;
     int64_t mrRed;
     if (!checkNonZeros(col, iPlus, iMinus, pPlus, pMinus, otherCols, neRed,
                        mrRed))
       continue;
 
-    if (neRed > 0 || (neRed == 0 && mrRed > 0))
-      scored.push_back({col, neRed, mrRed});
+    if (isReduction(neRed, mrRed)) {
+      heapPos[col] = static_cast<HighsInt>(heap.size());
+      heap.push_back({col, neRed, mrRed});
+    }
   }
 
-  if (scored.empty()) return finalise();
+  if (heap.empty()) return finalise();
 
-  // sort candidates
-  pdqsort(scored.begin(), scored.end(),
-          [](const candidate& a, const candidate& b) {
-            if (a.neRed != b.neRed) return a.neRed > b.neRed;
-            return a.mrRed > b.mrRed;
-          });
+  // heapify
+  for (HighsInt i = static_cast<HighsInt>(heap.size()) / 2 - 1; i >= 0; --i)
+    heapBubbleDown(heap, heapPos, i);
 
   // vectors for computing new row entries
   std::vector<newRowEntry> newRowEntries;
@@ -7110,11 +7181,16 @@ HPresolve::Result HPresolve::fourierMotzkin(
 
   // vector for storing new rows
   std::vector<newRow> newRows;
-  newRows.reserve(iPlus.size() * iMinus.size());
 
-  // main loop: eliminate variables
-  for (const candidate& c : scored) {
-    HighsInt col = c.col;
+  // workspace for collecting affected candidates
+  std::vector<HighsInt> affectedCols;
+  std::vector<bool> affectedMark(model->num_col_, false);
+
+  // main loop: eliminate variables from heap
+  while (!heap.empty()) {
+    HighsInt col = heap[0].col;
+    heapRemove(heap, heapPos, col);
+
     if (colDeleted[col]) continue;
 
     // recompute reduction numbers
@@ -7124,9 +7200,33 @@ HPresolve::Result HPresolve::fourierMotzkin(
                        mrRed))
       continue;
 
-    if (neRed < 0) continue;
-    if (neRed == 0 && mrRed <= 0) continue;
+    if (!isReduction(neRed, mrRed)) continue;
 
+    // collect affected candidate columns before modifying the matrix
+    affectedCols.clear();
+    for (HighsInt row : iPlus) {
+      for (const auto& nz : getRowVector(row)) {
+        HighsInt k = nz.index();
+        if (k == col) continue;
+        if (!isCandidate[k]) continue;
+        if (affectedMark[k]) continue;
+        affectedMark[k] = true;
+        affectedCols.push_back(k);
+      }
+    }
+    for (HighsInt row : iMinus) {
+      for (const auto& nz : getRowVector(row)) {
+        HighsInt k = nz.index();
+        if (k == col) continue;
+        if (!isCandidate[k]) continue;
+        if (affectedMark[k]) continue;
+        affectedMark[k] = true;
+        affectedCols.push_back(k);
+      }
+    }
+
+    // perform elimination: generate new rows
+    newRows.clear();
     for (HighsInt pRow : iPlus) {
       HighsInt pPos = findNonzero(pRow, col);
       assert(pPos != -1);
@@ -7214,9 +7314,6 @@ HPresolve::Result HPresolve::fourierMotzkin(
       rowEntries.push_back(std::move(entries));
     }
 
-    // clear vector
-    newRows.clear();
-
     // add new rows to matrix
     if (!addToMatrix(postsolve_stack, rowLower, rowUpper, rowEntries))
       return finalise();
@@ -7233,7 +7330,24 @@ HPresolve::Result HPresolve::fourierMotzkin(
     }
 
     // mark column as deleted
+    isCandidate[col] = false;
     markColDeleted(col);
+
+    // update affected candidates in the heap
+    for (HighsInt k : affectedCols) {
+      affectedMark[k] = false;
+      int64_t ne, mr;
+      if (!checkNonZeros(k, iPlus, iMinus, pPlus, pMinus, otherCols, ne, mr) ||
+          !isReduction(ne, mr)) {
+        heapRemove(heap, heapPos, k);
+      } else if (heapPos[k] == -1) {
+        heapPos[k] = static_cast<HighsInt>(heap.size());
+        heap.push_back({k, ne, mr});
+        heapBubbleUp(heap, heapPos, heapPos[k]);
+      } else {
+        heapUpdate(heap, heapPos, k, ne, mr);
+      }
+    }
 
     HPRESOLVE_CHECKED_CALL(checkLimits(postsolve_stack));
   }
