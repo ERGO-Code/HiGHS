@@ -6985,7 +6985,7 @@ HPresolve::Result HPresolve::fourierMotzkin(
                            std::vector<HighsInt>& iMinus,
                            std::vector<HighsInt>& pPlus,
                            std::vector<HighsInt>& pMinus,
-                           std::vector<HighsInt>& otherCols, int64_t& neRed,
+                           std::vector<HighsInt>& affectedCols, int64_t& neRed,
                            int64_t& mrRed) {
     int64_t nePlus;
     int64_t neMinus;
@@ -7004,7 +7004,7 @@ HPresolve::Result HPresolve::fourierMotzkin(
       for (const auto& nz : getRowVector(row)) {
         HighsInt k = nz.index();
         if (k == col) continue;
-        if (pPlus[k] == 0 && pMinus[k] == 0) otherCols.push_back(k);
+        if (pPlus[k] == 0 && pMinus[k] == 0) affectedCols.push_back(k);
         pPlus[k]++;
       }
     }
@@ -7012,14 +7012,14 @@ HPresolve::Result HPresolve::fourierMotzkin(
       for (const auto& nz : getRowVector(row)) {
         HighsInt k = nz.index();
         if (k == col) continue;
-        if (pPlus[k] == 0 && pMinus[k] == 0) otherCols.push_back(k);
+        if (pPlus[k] == 0 && pMinus[k] == 0) affectedCols.push_back(k);
         pMinus[k]++;
       }
     }
 
     // compute correction term
     int64_t correction = 0;
-    for (HighsInt k : otherCols) {
+    for (HighsInt k : affectedCols) {
       correction += static_cast<int64_t>(pPlus[k]) * pMinus[k];
       pPlus[k] = 0;
       pMinus[k] = 0;
@@ -7150,8 +7150,8 @@ HPresolve::Result HPresolve::fourierMotzkin(
   iMinus.reserve(model->num_row_);
   std::vector<HighsInt> pPlus(model->num_col_, 0);
   std::vector<HighsInt> pMinus(model->num_col_, 0);
-  std::vector<HighsInt> otherCols;
-  otherCols.reserve(model->num_col_);
+  std::vector<HighsInt> affectedCols;
+  affectedCols.reserve(model->num_col_);
 
   // indexed max-heap
   std::vector<candidate> heap;
@@ -7165,8 +7165,8 @@ HPresolve::Result HPresolve::fourierMotzkin(
     int64_t neRed;
     int64_t mrRed;
     bool elimCandidate = checkNonZeros(col, iPlus, iMinus, pPlus, pMinus,
-                                       otherCols, neRed, mrRed);
-    otherCols.clear();
+                                       affectedCols, neRed, mrRed);
+    affectedCols.clear();
     if (!elimCandidate || !isReduction(neRed, mrRed)) continue;
     heapPos[col] = static_cast<HighsInt>(heap.size());
     heap.push_back({col, neRed, mrRed});
@@ -7185,8 +7185,8 @@ HPresolve::Result HPresolve::fourierMotzkin(
   // vector for storing new rows
   std::vector<newRow> newRows;
 
-  // workspace for affected candidates
-  std::vector<HighsInt> affectedCols;
+  // vector for saving affected candidates
+  std::vector<HighsInt> saveAffectedCols;
 
   // main loop: eliminate variables from heap
   while (!heap.empty()) {
@@ -7199,9 +7199,9 @@ HPresolve::Result HPresolve::fourierMotzkin(
     int64_t neRed;
     int64_t mrRed;
     bool elimCandidate = checkNonZeros(col, iPlus, iMinus, pPlus, pMinus,
-                                       otherCols, neRed, mrRed);
+                                       affectedCols, neRed, mrRed);
     if (!elimCandidate || !isReduction(neRed, mrRed)) {
-      otherCols.clear();
+      affectedCols.clear();
       continue;
     }
 
@@ -7314,12 +7314,12 @@ HPresolve::Result HPresolve::fourierMotzkin(
     markColDeleted(col);
 
     // update affected candidates in the heap
-    affectedCols.swap(otherCols);
-    for (HighsInt k : affectedCols) {
+    saveAffectedCols.swap(affectedCols);
+    for (HighsInt k : saveAffectedCols) {
       int64_t ne, mr;
       bool elimCandidate =
-          checkNonZeros(k, iPlus, iMinus, pPlus, pMinus, otherCols, ne, mr);
-      otherCols.clear();
+          checkNonZeros(k, iPlus, iMinus, pPlus, pMinus, affectedCols, ne, mr);
+      affectedCols.clear();
       if (!elimCandidate || !isReduction(ne, mr)) {
         heapRemove(heap, heapPos, k);
       } else if (heapPos[k] == -1) {
@@ -7330,7 +7330,7 @@ HPresolve::Result HPresolve::fourierMotzkin(
         heapUpdate(heap, heapPos, k, ne, mr);
       }
     }
-    affectedCols.clear();
+    saveAffectedCols.clear();
 
     HPRESOLVE_CHECKED_CALL(checkLimits(postsolve_stack));
   }
