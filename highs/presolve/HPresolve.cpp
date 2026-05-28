@@ -7084,6 +7084,7 @@ HPresolve::Result HPresolve::fourierMotzkin(
 
   auto heapBubbleUp = [&](std::vector<candidate>& heap,
                           std::vector<HighsInt>& heapPos, HighsInt i) {
+    if (i >= static_cast<HighsInt>(heap.size())) return;
     while (i > 0) {
       HighsInt parent = (i - 1) / 2;
       if (!heapBetter(heap[i], heap[parent])) break;
@@ -7095,6 +7096,7 @@ HPresolve::Result HPresolve::fourierMotzkin(
   auto heapBubbleDown = [&](std::vector<candidate>& heap,
                             std::vector<HighsInt>& heapPos, HighsInt i) {
     HighsInt heapSize = static_cast<HighsInt>(heap.size());
+    if (i >= heapSize) return;
     while (true) {
       HighsInt best = i;
       HighsInt left = 2 * i + 1;
@@ -7115,10 +7117,8 @@ HPresolve::Result HPresolve::fourierMotzkin(
     heapSwap(heap, heapPos, pos, last);
     heapPos[col] = -1;
     heap.pop_back();
-    if (pos < static_cast<HighsInt>(heap.size())) {
-      heapBubbleUp(heap, heapPos, pos);
-      heapBubbleDown(heap, heapPos, pos);
-    }
+    heapBubbleUp(heap, heapPos, pos);
+    heapBubbleDown(heap, heapPos, pos);
   };
 
   auto heapUpdate = [&](std::vector<candidate>& heap,
