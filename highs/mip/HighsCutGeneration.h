@@ -95,10 +95,11 @@ class HighsCutGeneration {
   void updateViolationAndNorm(HighsInt index, double aj, double& violation,
                               double& norm) const;
 
-  bool tryGenerateCmirCut(HighsTransformedLp& transLp,
-                          std::vector<HighsInt>& inds_,
-                          std::vector<double>& vals_, double& rhs_,
-                          bool onlyInitialCMIRScale);
+  double getCutScore(const std::vector<double>& col_lower,
+                     const std::vector<double>& col_upper,
+                     const std::vector<double>& sol,
+                     const std::vector<HighsInt>& cutInds,
+                     const std::vector<double>& cutVals, double cutRhs);
 
   bool tryGenerateCut(std::vector<HighsInt>& inds, std::vector<double>& vals,
                       bool hasUnboundedInts, bool hasGeneralInts,

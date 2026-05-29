@@ -1278,6 +1278,28 @@ bool HighsCutGeneration::preprocessBaseInequality(bool& hasUnboundedInts,
   return maxact > rhs;
 }
 
+double HighsCutGeneration::getCutScore(const std::vector<double>& col_lower,
+                                       const std::vector<double>& col_upper,
+                                       const std::vector<double>& sol,
+                                       const std::vector<HighsInt>& cutInds,
+                                       const std::vector<double>& cutVals,
+                                       const double cutRhs) {
+  double viol = -cutRhs;
+  double sqrnorm = 0;
+  HighsInt numActiveNzs = 0;
+  for (HighsInt i = 0; i != static_cast<HighsInt>(cutInds.size()); ++i) {
+    const HighsInt col = cutInds[i];
+    viol += cutVals[i] * sol[col];
+    if (cutVals[i] >= 0 && sol[col] <= col_lower[col] + feastol) continue;
+    if (cutVals[i] < 0 && sol[col] >= col_upper[col] - feastol) continue;
+    sqrnorm += cutVals[i] * cutVals[i];
+    ++numActiveNzs;
+  }
+
+  if (sqrnorm == 0 || numActiveNzs == 0) return 0.0;
+  return viol / (numActiveNzs * sqrt(sqrnorm));
+}
+
 #if 0
 static void checkNumerics(const double* vals, HighsInt len, double rhs) {
   double maxAbsCoef = 0.0;
@@ -1357,44 +1379,84 @@ bool HighsCutGeneration::generateCut(HighsTransformedLp& transLp,
     flowCoverInds = inds_;
   }
 
-  bool cmirSuccess =
-      tryGenerateCmirCut(transLp, inds_, vals_, rhs_, onlyInitialCMIRScale);
-  bool flowCoverSuccess =
-      genFlowCover
-          ? tryGenerateFlowCoverCut(transLp, flowCoverInds, flowCoverVals,
-                                    flowCoverRhs, flowCoverEfficacy)
-          : false;
+  bool cmirSuccess = true;
+  bool intsPositive = true;
+  bool hasUnboundedInts = false;
+  bool hasGeneralInts = false;
+  bool hasContinuous = false;
+  cmirSuccess =
+      transLp.transform(vals_, upper, solval, inds_, rhs_, intsPositive);
+
+  if (cmirSuccess) {
+    rowlen = static_cast<HighsInt>(inds_.size());
+    this->inds = inds_.data();
+    this->vals = vals_.data();
+    this->rhs = rhs_;
+    complementation.clear();
+    cmirSuccess = preprocessBaseInequality(hasUnboundedInts, hasGeneralInts,
+                                           hasContinuous);
+  }
+
+  if (cmirSuccess) {
+    // it can happen that there is an unbounded integer variable during the
+    // transform call so that the integers are not transformed to positive
+    // values. Now the call to preprocessBaseInequality may have removed the
+    // unbounded integer, e.g. due to a small coefficient value, so that we can
+    // still use the lifted inequalities instead of cmir. We need to make sure,
+    // however, that the cut values are transformed to positive coefficients
+    // first, which we do below.
+    if (!hasUnboundedInts && !intsPositive) {
+      complementation.resize(rowlen);
+
+      for (HighsInt i = 0; i != rowlen; ++i) {
+        if (vals[i] > 0 || !isintegral[i]) continue;
+
+        flipComplementation(i);
+      }
+    }
+
+    // try to generate a cut
+    cmirSuccess =
+        tryGenerateCut(inds_, vals_, hasUnboundedInts, hasGeneralInts,
+                       hasContinuous, 10 * feastol, onlyInitialCMIRScale);
+  }
+
+  if (cmirSuccess) {
+    // remove the complementation if exists
+    removeComplementation();
+
+    // remove zeros in place
+    for (HighsInt i = rowlen - 1; i >= 0; --i) {
+      if (vals[i] == 0.0) {
+        --rowlen;
+        inds[i] = inds[rowlen];
+        vals[i] = vals[rowlen];
+      }
+    }
+
+    // transform the cut back into the original space, i.e. remove the bound
+    // substitution and replace implicit slack variables
+    rhs_ = static_cast<double>(rhs);
+    vals_.resize(rowlen);
+    inds_.resize(rowlen);
+    cmirSuccess = transLp.untransform(vals_, inds_, rhs_);
+  }
+
+  bool flowCoverSuccess = false;
+  if (genFlowCover) {
+    flowCoverSuccess = tryGenerateFlowCoverCut(
+        transLp, flowCoverInds, flowCoverVals, flowCoverRhs, flowCoverEfficacy);
+  }
 
   const auto& sol = lpRelaxation.getSolution().col_value;
 
   if (flowCoverSuccess && cmirSuccess) {
-    auto getCutScore = [&](const std::vector<HighsInt>& cutInds,
-                           const std::vector<double>& cutVals,
-                           const double cutRhs) {
-      double viol = -cutRhs;
-      double sqrnorm = 0;
-      HighsInt numActiveNzs = 0;
-      for (HighsInt i = 0; i != static_cast<HighsInt>(cutInds.size()); ++i) {
-        HighsInt col = cutInds[i];
-        viol += cutVals[i] * sol[col];
-        if (cutVals[i] >= 0 &&
-            sol[col] <=
-                mip.mipdata_->domain.col_lower_[col] + mip.mipdata_->feastol)
-          continue;
-        if (cutVals[i] < 0 && sol[col] >= mip.mipdata_->domain.col_upper_[col] -
-                                              mip.mipdata_->feastol)
-          continue;
-        sqrnorm += cutVals[i] * cutVals[i];
-        ++numActiveNzs;
-      }
-
-      if (sqrnorm == 0 || numActiveNzs == 0) return 0.0;
-      return viol / (numActiveNzs * sqrt(sqrnorm));
-    };
-
-    double cmirScore = getCutScore(inds_, vals_, rhs_);
-    double flowCoverScore =
-        getCutScore(flowCoverInds, flowCoverVals, flowCoverRhs);
+    double cmirScore =
+        getCutScore(mip.mipdata_->domain.col_lower_,
+                    mip.mipdata_->domain.col_upper_, sol, inds_, vals_, rhs_);
+    double flowCoverScore = getCutScore(
+        mip.mipdata_->domain.col_lower_, mip.mipdata_->domain.col_upper_, sol,
+        flowCoverInds, flowCoverVals, flowCoverRhs);
     if (flowCoverScore < cmirScore + 10 * feastol) {
       flowCoverSuccess = false;
     }
@@ -1901,70 +1963,6 @@ void HighsCutGeneration::updateViolationAndNorm(HighsInt index, double aj,
   if (aj > 0 && solval[index] <= feastol) return;
   if (aj < 0 && solval[index] >= upper[index] - feastol) return;
   norm += aj * aj;
-}
-
-bool HighsCutGeneration::tryGenerateCmirCut(HighsTransformedLp& transLp,
-                                            std::vector<HighsInt>& inds_,
-                                            std::vector<double>& vals_,
-                                            double& rhs_,
-                                            bool onlyInitialCMIRScale) {
-  bool intsPositive = true;
-  if (!transLp.transform(vals_, upper, solval, inds_, rhs_, intsPositive))
-    return false;
-
-  rowlen = static_cast<HighsInt>(inds_.size());
-  this->inds = inds_.data();
-  this->vals = vals_.data();
-  this->rhs = rhs_;
-  complementation.clear();
-  bool hasUnboundedInts = false;
-  bool hasGeneralInts = false;
-  bool hasContinuous = false;
-  if (!preprocessBaseInequality(hasUnboundedInts, hasGeneralInts,
-                                hasContinuous))
-    return false;
-
-  // it can happen that there is an unbounded integer variable during the
-  // transform call so that the integers are not transformed to positive
-  // values. Now the call to preprocessBaseInequality may have removed the
-  // unbounded integer, e.g. due to a small coefficient value, so that we can
-  // still use the lifted inequalities instead of cmir. We need to make sure,
-  // however, that the cut values are transformed to positive coefficients
-  // first, which we do below.
-  if (!hasUnboundedInts && !intsPositive) {
-    complementation.resize(rowlen);
-
-    for (HighsInt i = 0; i != rowlen; ++i) {
-      if (vals[i] > 0 || !isintegral[i]) continue;
-
-      flipComplementation(i);
-    }
-  }
-
-  // try to generate a cut
-  if (!tryGenerateCut(inds_, vals_, hasUnboundedInts, hasGeneralInts,
-                      hasContinuous, 10 * feastol, onlyInitialCMIRScale))
-    return false;
-
-  // remove the complementation if exists
-  removeComplementation();
-
-  // remove zeros in place
-  for (HighsInt i = rowlen - 1; i >= 0; --i) {
-    if (vals[i] == 0.0) {
-      --rowlen;
-      inds[i] = inds[rowlen];
-      vals[i] = vals[rowlen];
-    }
-  }
-
-  // transform the cut back into the original space, i.e. remove the bound
-  // substitution and replace implicit slack variables
-  rhs_ = static_cast<double>(rhs);
-  vals_.resize(rowlen);
-  inds_.resize(rowlen);
-  if (!transLp.untransform(vals_, inds_, rhs_)) return false;
-  return true;
 }
 
 bool HighsCutGeneration::tryGenerateCut(std::vector<HighsInt>& inds_,
