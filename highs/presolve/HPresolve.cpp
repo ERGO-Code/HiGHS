@@ -7247,8 +7247,6 @@ HPresolve::Result HPresolve::fourierMotzkin(
     HighsInt col = heap[0].col;
     heapRemove(heap, heapPos, col);
 
-    if (colDeleted[col]) continue;
-
     // recompute reduction numbers
     int64_t neRed;
     int64_t mrRed;
