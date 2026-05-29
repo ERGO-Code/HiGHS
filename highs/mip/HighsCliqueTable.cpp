@@ -2246,7 +2246,7 @@ void HighsCliqueTable::strongConnect(
     std::vector<HighsInt>& cliqueFirstEntry,
     std::vector<HighsInt>& cliqueCurrExit,
     std::vector<HighsInt>& stronglyConnectedComponents,
-    const std::vector<uint8_t>& colDeletedPresolve, bool& infeasible) const {
+    bool& infeasible) const {
   // Do a DFS dive to find strongly connected components or infeasible
   // assignments
   HighsInt label = startPos;
@@ -2351,9 +2351,7 @@ void HighsCliqueTable::strongConnect(
       }
       for (HighsInt i = stackNextCliqueVar[currStackPos]; i < cliqueLen; ++i) {
         const CliqueVar var = cliqueentries[i + cliques[cliqueId].start];
-        if (2 * var.col + var.val == currNode || colDeleted[var.col] ||
-            colDeletedPresolve[var.col])
-          continue;
+        if (2 * var.col + var.val == currNode || colDeleted[var.col]) continue;
         newNode = 2 * var.col + (1 - var.val);
         if (index[newNode] == -1) {
           // Break when first unvisited node is reached
@@ -2437,8 +2435,7 @@ void HighsCliqueTable::strongConnect(
 
 void HighsCliqueTable::tarjan(
     std::vector<HighsInt>& stronglyConnectedComponents,
-    std::vector<bool>& infeasibleNodes,
-    const std::vector<uint8_t>& colDeletedPresolve, bool& infeasible) const {
+    std::vector<bool>& infeasibleNodes, bool& infeasible) const {
   // Run an iterative version of tarjan's algorithm to detect strongly connected
   // components (directed cycles) in the clique table and infeasible
   // literal assignments.
@@ -2516,12 +2513,11 @@ void HighsCliqueTable::tarjan(
 
   for (HighsInt i = 0; i != n; ++i) {
     if (index[i] == -1) {
-      if (colDeleted[i / 2] || colDeletedPresolve[i / 2]) continue;
+      if (colDeleted[i / 2]) continue;
       strongConnect(i, startPos, onStack, index, lowLink, infeasibleNodes,
                     stack, predStack, stackNextClique, stackNextCliqueVar,
                     cliqueStart, cliqueIndex, n, cliqueFirstEntry,
-                    cliqueCurrExit, stronglyConnectedComponents,
-                    colDeletedPresolve, infeasible);
+                    cliqueCurrExit, stronglyConnectedComponents, infeasible);
     }
     if (infeasible) break;
   }

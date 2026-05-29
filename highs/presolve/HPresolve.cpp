@@ -1443,10 +1443,11 @@ HPresolve::Result HPresolve::dominatedColumns(
   return Result::kOk;
 }
 
-HPresolve::Result HPresolve::stronglyConnectedComponents(
-    HighsPostsolveStack& postsolve_stack) {
+HPresolve::Result HPresolve::stronglyConnectedComponents() {
+  HighsDomain& domain = mipsolver->mipdata_->domain;
   HighsCliqueTable& cliquetable = mipsolver->mipdata_->cliquetable;
-
+  // Warning: If all binaries removed by this technique, then
+  // fixings are never applied because finaliseProbing is skipped
   // TODO: Skip call if clique table isn't changed much?
   if (!mipsolver->mipdata_->cliquesExtracted || cliquetable.numCliques() <= 1)
     return Result::kOk;
@@ -1455,70 +1456,72 @@ HPresolve::Result HPresolve::stronglyConnectedComponents(
   std::vector<HighsInt> stronglyConnectedComponents(numNodes);
   std::vector<bool> infeasibleNodes(numNodes);
   bool infeasible = false;
-  cliquetable.tarjan(stronglyConnectedComponents, infeasibleNodes, colDeleted,
-                     infeasible);
+  cliquetable.tarjan(stronglyConnectedComponents, infeasibleNodes, infeasible);
 
   if (infeasible) return Result::kPrimalInfeasible;
-
-  std::vector<bool> fixValsAtLower(model->num_col_);
-  std::vector<bool> fixValsAtUpper(model->num_col_);
 
   for (HighsInt i = 0; i != numNodes; ++i) {
     if (infeasibleNodes[i]) {
       const HighsInt col = i / 2;
-      if (colDeleted[col]) continue;
+      if (colDeleted[col] || domain.isFixed(col)) continue;
       if (i % 2 == 0) {
         // Node is ~x, i.e., x = 0 is infeasible -> x = 1
         printf("Fixing node %d = 1\n", col);
-        HPRESOLVE_CHECKED_CALL(fixColToUpper(postsolve_stack, col));
-        fixValsAtUpper[col] = true;
+        domain.changeBound(HighsBoundType::kLower, col, 1.0,
+                           HighsDomain::Reason::cliqueTable(col, 1));
       } else {
         // Node is x, i.e., x = 1 is infeasible -> x = 0
         printf("Fixing node %d = 0\n", col);
-        HPRESOLVE_CHECKED_CALL(fixColToLower(postsolve_stack, col));
-        fixValsAtLower[col] = true;
+        domain.changeBound(HighsBoundType::kUpper, col, 0.0,
+                           HighsDomain::Reason::cliqueTable(col, 0));
       }
+      if (domain.infeasible()) return Result::kPrimalInfeasible;
     }
   }
 
   // Apply substitutions for all strongly connected components
+  std::vector<HighsCliqueTable::CliqueVar> clique(2);
   for (HighsInt substNode = 0; substNode != numNodes; ++substNode) {
     const HighsInt substCol = substNode / 2;
-    if (colDeleted[substCol]) continue;
+    if (colDeleted[substCol] || domain.isFixed(substCol)) continue;
     const HighsInt stayNode = stronglyConnectedComponents[substNode];
     const HighsInt stayCol = stayNode / 2;
     if (stayCol == -1 || stayCol == substCol) continue;
 
-    const bool substLower = substNode % 2 == 0;
-    const bool stayLower = stayNode % 2 == 0;
     // Decides whether the nodes have the same value in the clique table.
     // This decides whether to substitute x = y, or x = 1 - y
-    const bool sameVals = substLower == stayLower;
+    const bool sameVals = (substNode % 2 == 0) == (stayNode % 2 == 0);
 
     // If stayCol is deleted, then it might have been fixed in code above via
     // infeasible assignment detection. Fix all values to the same.
-    if (colDeleted[stayCol]) {
-      if ((fixValsAtLower[stayCol] && sameVals) ||
-          (fixValsAtUpper[stayCol] && !sameVals)) {
+    if (colDeleted[stayCol] || domain.isFixed(stayCol)) {
+      if ((domain.col_upper_[stayCol] == 0 && sameVals) ||
+          (domain.col_lower_[stayCol] == 1 && !sameVals)) {
         printf("Fixing node %d = 0\n", substCol);
-        HPRESOLVE_CHECKED_CALL(fixColToLower(postsolve_stack, substCol));
-      } else if ((fixValsAtUpper[stayCol] && sameVals) ||
-                 (fixValsAtLower[stayCol] && !sameVals)) {
+        domain.changeBound(HighsBoundType::kUpper, substCol, 0.0,
+                           HighsDomain::Reason::cliqueTable(substCol, 0));
+      } else if ((domain.col_lower_[stayCol] == 1 && sameVals) ||
+                 (domain.col_upper_[stayCol] == 0 && !sameVals)) {
         printf("Fixing node %d = 1\n", substCol);
-        HPRESOLVE_CHECKED_CALL(fixColToUpper(postsolve_stack, substCol));
+        domain.changeBound(HighsBoundType::kLower, substCol, 1.0,
+                           HighsDomain::Reason::cliqueTable(substCol, 1));
       }
+      if (domain.infeasible()) return Result::kPrimalInfeasible;
       continue;
     }
 
-    printf("Fixing node %d = %d\n", substCol, stayCol);
-    postsolve_stack.doubletonEquation(
-        -1, substCol, stayCol, 1.0, sameVals ? -1 : 1, sameVals ? 0 : 1,
-        model->col_lower_[substCol], model->col_upper_[substCol], 0.0, false,
-        false, HighsPostsolveStack::RowType::kEq, HighsEmptySlice());
-    markColDeleted(substCol);
-    substitute(substCol, stayCol, sameVals ? 0.0 : 1.0, sameVals ? 1.0 : -1.0);
+    // Add both cliques instead of single equality so substitutions are created
+    HighsCliqueTable::CliqueVar stay(stayCol, sameVals ? 1 : 0);
+    clique[0] = HighsCliqueTable::CliqueVar(substCol, 0);
+    clique[1] = stay;
+    cliquetable.addClique(*mipsolver, clique.data(), 2);
+    if (domain.infeasible()) return Result::kPrimalInfeasible;
 
-    HPRESOLVE_CHECKED_CALL(checkLimits(postsolve_stack));
+    clique[0] = HighsCliqueTable::CliqueVar(substCol, 1);
+    clique[1] = stay.complement();
+    cliquetable.addClique(*mipsolver, clique.data(), 2);
+    if (domain.infeasible()) return Result::kPrimalInfeasible;
+    printf("Fixing node %d = %d\n", substCol, stayCol);
   }
   return Result::kOk;
 }
@@ -1680,6 +1683,20 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postsolve_stack) {
   if (prepareResult != Result::kOk) {
     mipsolver->analysis_.mipTimerStop(kMipClockProbingPresolve);
     return prepareResult;
+  }
+
+  // Extract strongly connected components from the clique table
+  if (analysis_.allow_rule_[kPresolveRuleStronglyConnectedComponents]) {
+    Result tarjanResult = stronglyConnectedComponents();
+    if (tarjanResult != Result::kOk) {
+      mipsolver->analysis_.mipTimerStop(kMipClockProbingPresolve);
+      return tarjanResult;
+    }
+    mipsolver->mipdata_->domain.propagate();
+    if (mipsolver->mipdata_->domain.infeasible()) {
+      mipsolver->analysis_.mipTimerStop(kMipClockProbingPresolve);
+      return Result::kPrimalInfeasible;
+    }
   }
 
   HighsDomain& domain = mipsolver->mipdata_->domain;
@@ -5986,11 +6003,6 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
                      (problemSizeReduction() > 1.0 || probingEarlyAbort);
         trySparsify = true;
         if (problemSizeReduction() > 0.05 || tryProbing) continue;
-        // Extract strongly connected components from the clique table
-        if (analysis_.allow_rule_[kPresolveRuleStronglyConnectedComponents]) {
-          HPRESOLVE_CHECKED_CALL(stronglyConnectedComponents(postsolve_stack));
-          if (problemSizeReduction() > 0.05) continue;
-        }
         HPRESOLVE_CHECKED_CALL(fastPresolveLoop(postsolve_stack));
       }
 
