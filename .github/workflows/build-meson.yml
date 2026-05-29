@@ -11,9 +11,9 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        # macos-latest issue with micromamba action 
-        # windows-latest takes to long
-        os: [ubuntu-latest] 
+        # macos-latest issue with micromamba action
+        # windows-2025-vs2026 takes to long
+        os: [ubuntu-latest]
     steps:
       - uses: actions/checkout@v6
         with:
@@ -41,7 +41,7 @@ jobs:
         run: |
           meson setup bbdir -Duse_zlib=enabled -Dwith_tests=True
           meson test -C bbdir
-      
+
       # highspy no longer compiled with meson
       # see if it can be done separately if it is needed for meson projects
       # - name: Test compiled highspy

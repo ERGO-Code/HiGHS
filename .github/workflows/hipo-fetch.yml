@@ -293,7 +293,7 @@ jobs:
           ctest --parallel --timeout 300 --output-on-failure
 
   windows:
-    runs-on: [windows-latest]
+    runs-on: [windows-2025-vs2026]
     strategy:
       fail-fast: false
       matrix:
@@ -380,7 +380,7 @@ jobs:
   # linux shared is default, static build tested in the release artifacts
   # windows static is default so test shared
   windows_shared:
-    runs-on: [windows-latest]
+    runs-on: [windows-2025-vs2026]
     strategy:
       matrix:
         config: [Release]

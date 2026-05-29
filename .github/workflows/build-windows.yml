@@ -117,7 +117,7 @@ jobs:
         run: ctest --timeout 10000 --output-on-failure -C Release
 
   fast_build_debug:
-    runs-on: windows-latest
+    runs-on: windows-2025-vs2026
 
     steps:
       - uses: actions/checkout@v6
@@ -148,10 +148,10 @@ jobs:
         shell: bash
         # Execute tests defined by the CMake configuration.
         # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
-        run: ctest  --output-on-failure -C Debug 
-  
+        run: ctest  --output-on-failure -C Debug
+
   fast_build_debug_all_tests:
-    runs-on: windows-latest
+    runs-on: windows-2025-vs2026
 
     steps:
       - uses: actions/checkout@v6
@@ -185,7 +185,7 @@ jobs:
         run: ctest  --output-on-failure -C Debug
 
   # windows_debug_fb_off:
-  #   runs-on: windows-latest
+  #   runs-on: windows-2025-vs2026
 
   #   steps:
   #     - uses: actions/checkout@v6
@@ -246,8 +246,8 @@ jobs:
         shell: bash
         # Execute tests defined by the CMake configuration.
         # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
-        run: ctest --timeout 300 --output-on-failure -C Release 
-  
+        run: ctest --timeout 300 --output-on-failure -C Release
+
   windows_release64_all_tests:
     runs-on: windows-2022
 
@@ -280,9 +280,9 @@ jobs:
         shell: bash
         # Execute tests defined by the CMake configuration.
         # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
-        run: ctest --timeout 300 --output-on-failure -C Release 
-        
-        
+        run: ctest --timeout 300 --output-on-failure -C Release
+
+
   windows_release64_fb_off:
     runs-on: windows-2022
 
@@ -318,7 +318,7 @@ jobs:
         run: ctest --timeout 300 --output-on-failure -C Release
 
   windows_debug64:
-    runs-on: windows-latest
+    runs-on: windows-2025-vs2026
 
     steps:
       - uses: actions/checkout@v6
@@ -352,7 +352,7 @@ jobs:
         run: ctest  --output-on-failure -C Debug
 
   windows_debug64_all_tests:
-    runs-on: windows-latest
+    runs-on: windows-2025-vs2026
 
     steps:
       - uses: actions/checkout@v6
@@ -385,10 +385,10 @@ jobs:
         # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
         run: ctest  --output-on-failure -C Debug
 
-  # Switch off, fortran compiler lookup taking hours on new windows runner. 
+  # Switch off, fortran compiler lookup taking hours on new windows runner.
   # For fortran is best to use FAST_BUILD ON anyway.
   # windows_debug64_fb_off:
-  #   runs-on: windows-latest
+  #   runs-on: windows-2025-vs2026
 
   #   steps:
   #     - uses: actions/checkout@v6

@@ -8,7 +8,7 @@ concurrency:
 
 jobs:
   win-vcpkg:
-    runs-on: windows-latest
+    runs-on: windows-2025-vs2026
 
     steps:
       - uses: actions/checkout@v6
@@ -226,7 +226,7 @@ jobs:
           ctest --parallel --timeout 300 --output-on-failure
 
   windows_debug:
-    runs-on: [windows-latest]
+    runs-on: [windows-2025-vs2026]
     strategy:
       fail-fast: false
       matrix:

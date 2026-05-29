@@ -67,7 +67,7 @@ jobs:
          python3 ./examples/minimal.py
 
   build_sdist_win:
-    runs-on: windows-latest
+    runs-on: windows-2025-vs2026
 
     steps:
       - uses: actions/checkout@v6
@@ -167,7 +167,7 @@ jobs:
          python3 ./examples/minimal.py
 
   build_sdist_win_hipo:
-    runs-on: windows-latest
+    runs-on: windows-2025-vs2026
 
     steps:
       - uses: actions/checkout@v6

@@ -69,7 +69,7 @@ jobs:
             build/*.tar.gz
 
   build-windows:
-    runs-on: windows-latest
+    runs-on: windows-2025-vs2026
     strategy:
       matrix:
         arch: [x64]
@@ -98,7 +98,7 @@ jobs:
             build/*.zip
 
   build-windows-32:
-    runs-on: windows-latest
+    runs-on: windows-2025-vs2026
     strategy:
       fail-fast: false
       matrix:
@@ -229,7 +229,7 @@ jobs:
             build/*.tar.gz
 
   build-windows-mit:
-    runs-on: windows-latest
+    runs-on: windows-2025-vs2026
     strategy:
       matrix:
         arch: [x64]
@@ -258,7 +258,7 @@ jobs:
             build/*.zip
 
   build-windows-mit-shared:
-    runs-on: windows-latest
+    runs-on: windows-2025-vs2026
     strategy:
       matrix:
         arch: [x64]
@@ -287,7 +287,7 @@ jobs:
             build/*.zip
 
   build-windows-32-mit:
-    runs-on: windows-latest
+    runs-on: windows-2025-vs2026
     strategy:
       fail-fast: false
       matrix:

@@ -8,7 +8,7 @@ concurrency:
 
 jobs:
   release:
-    runs-on: windows-latest
+    runs-on: windows-2025-vs2026
 
     steps:
       - uses: actions/checkout@v6
@@ -19,7 +19,7 @@ jobs:
       - name: Configure CMake
         shell: bash
         working-directory: ${{github.workspace}}/build
-        run: cmake $GITHUB_WORKSPACE 
+        run: cmake $GITHUB_WORKSPACE
 
       - name: Build
         working-directory: ${{github.workspace}}/build
@@ -56,7 +56,7 @@ jobs:
         run: ctest --parallel --timeout 300 --output-on-failure -C Release
 
   debug:
-    runs-on: windows-latest
+    runs-on: windows-2025-vs2026
 
     steps:
       - uses: actions/checkout@v6
@@ -67,7 +67,7 @@ jobs:
       - name: Configure CMake
         shell: bash
         working-directory: ${{github.workspace}}/build
-        run: cmake $GITHUB_WORKSPACE 
+        run: cmake $GITHUB_WORKSPACE
 
       - name: Build
         working-directory: ${{github.workspace}}/build
@@ -77,10 +77,10 @@ jobs:
       - name: Test
         working-directory: ${{github.workspace}}/build
         shell: bash
-        run: ctest  --output-on-failure -C Debug 
-  
+        run: ctest  --output-on-failure -C Debug
+
   debug_all_tests:
-    runs-on: windows-latest
+    runs-on: windows-2025-vs2026
 
     steps:
       - uses: actions/checkout@v6

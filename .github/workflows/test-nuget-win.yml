@@ -8,7 +8,7 @@ concurrency:
 
 jobs:
   build_windows:
-    runs-on: windows-latest
+    runs-on: windows-2025-vs2026
     steps:
       - uses: actions/checkout@v6
       - name: Build HiGHS Windows native
@@ -36,7 +36,7 @@ jobs:
         run: dotnet pack -c Release /p:Version=1.14.0
 
       - name: Add local feed
-        run: dotnet nuget add source -n name ${{github.workspace}}\nugets 
+        run: dotnet nuget add source -n name ${{github.workspace}}\nugets
 
       - name: Dotnet push to local feed
         working-directory: ${{github.workspace}}/build/dotnet/Highs.Native
@@ -48,6 +48,6 @@ jobs:
         run: |
           dotnet new console
           rm Program.cs
-          cp ${{github.workspace}}\examples\call_highs_from_csharp.cs . 
-          dotnet add package Highs.Native -v 1.14.0 -s ${{github.workspace}}\nugets 
+          cp ${{github.workspace}}\examples\call_highs_from_csharp.cs .
+          dotnet add package Highs.Native -v 1.14.0 -s ${{github.workspace}}\nugets
           dotnet run

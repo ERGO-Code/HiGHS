@@ -61,7 +61,7 @@ jobs:
             os: 'macos-14'
             arch: aarch64
           - triplet: 'x86_64-w64-mingw32-cxx11'
-            os: 'windows-latest'
+            os: 'windows-2025-vs2026'
             arch: x64
     steps:
       - uses: actions/checkout@v6

@@ -65,7 +65,7 @@ jobs:
 
   # Build windows 32 and linux
   build_windows_32:
-    runs-on: windows-latest
+    runs-on: windows-2025-vs2026
     steps:
       - uses: actions/checkout@v6
       - name: Build HiGHS
@@ -134,7 +134,7 @@ jobs:
           path: /__w/HiGHS/HiGHS/build_linux_arm64/dotnet/Highs.Native/runtimes
 
   build_windows:
-    runs-on: windows-latest
+    runs-on: windows-2025-vs2026
     needs: [build_macos_intel, build_macos_arm, build_windows_32, build_linux, build_linux_arm64]
     steps:
       - uses: actions/checkout@v6
@@ -204,7 +204,7 @@ jobs:
           path: ${{github.workspace}}/build/dotnet/Highs.Native/bin/Release/*.nupkg
 
   dotnet_push:
-    runs-on: windows-latest
+    runs-on: windows-2025-vs2026
     needs: [build_windows]
     environment:
       name: nuget

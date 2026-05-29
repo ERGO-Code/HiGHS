@@ -19,7 +19,7 @@ jobs:
       - name: Configure CMake
         shell: bash
         working-directory: ${{github.workspace}}/build
-        run: cmake $GITHUB_WORKSPACE -DCSHARP=ON 
+        run: cmake $GITHUB_WORKSPACE -DCSHARP=ON
 
       - name: Build
         shell: bash
@@ -30,11 +30,11 @@ jobs:
         shell: bash
         working-directory: ${{github.workspace}}/build
         run: |
-          ls 
+          ls
           ./Release/bin/csharpexample.exe
 
   fast_build_debug:
-    runs-on: windows-latest
+    runs-on: windows-2025-vs2026
 
     steps:
       - uses: actions/checkout@v6
@@ -45,7 +45,7 @@ jobs:
       - name: Configure CMake
         shell: bash
         working-directory: ${{github.workspace}}/build
-        run: cmake $GITHUB_WORKSPACE -DCSHARP=ON 
+        run: cmake $GITHUB_WORKSPACE -DCSHARP=ON
 
       - name: Build
         shell: bash
@@ -56,5 +56,5 @@ jobs:
         shell: bash
         working-directory: ${{github.workspace}}/build
         run: |
-          ls 
+          ls
           ./Debug/bin/csharpexample.exe
