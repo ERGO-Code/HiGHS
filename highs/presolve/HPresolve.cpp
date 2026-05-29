@@ -6920,6 +6920,8 @@ HPresolve::Result HPresolve::fourierMotzkin(
     std::vector<newRowEntry> entries;
     double lower;
     double upper;
+    HighsInt plusIndex;
+    HighsInt minusIndex;
   };
 
   auto finalise = [&]() {
@@ -7297,7 +7299,7 @@ HPresolve::Result HPresolve::fourierMotzkin(
         double new_upper =
             static_cast<double>(static_cast<HighsCDouble>(pScale) * pBound +
                                 static_cast<HighsCDouble>(mScale) * mBound);
-        newRows.push_back({newRowEntries, -kHighsInf, new_upper});
+        newRows.push_back({newRowEntries, -kHighsInf, new_upper, pRow, mRow});
 
         // clear vector
         newRowEntries.clear();
@@ -7308,105 +7310,49 @@ HPresolve::Result HPresolve::fourierMotzkin(
     std::vector<double> rowLower;
     std::vector<double> rowUpper;
     std::vector<std::vector<row_entry>> rowEntries;
+    std::vector<std::pair<HighsInt, HighsInt>> newRowPairs;
 
-    // track which (plusLocalIdx, minusLocalIdx) pair generates each new row
-    struct NewRowPair {
-      HighsInt plusLocalIdx;
-      HighsInt minusLocalIdx;
-    };
-    std::vector<NewRowPair> newRowPairs;
+    for (const auto& nr : newRows) {
+      bool redundant;
+      HPRESOLVE_CHECKED_CALL(checkNewRow(nr, redundant));
+      if (redundant) continue;
 
-    HighsInt newRowIdx = 0;
-    HighsInt plusLocalIdx = -1;
-    for (HighsInt pRow : iPlus) {
-      if (pRow >= 0) ++plusLocalIdx;
-      HighsInt minusLocalIdx = -1;
-      for (HighsInt mRow : iMinus) {
-        if (mRow >= 0) ++minusLocalIdx;
-
-        // check whether new row is infeasible or redundant
-        bool redundant;
-        HPRESOLVE_CHECKED_CALL(checkNewRow(newRows[newRowIdx], redundant));
-
-        if (!redundant) {
-          std::vector<row_entry> entries;
-          entries.reserve(newRows[newRowIdx].entries.size());
-          for (const auto& e : newRows[newRowIdx].entries)
-            entries.push_back({e.col, static_cast<double>(e.val)});
-          rowLower.push_back(newRows[newRowIdx].lower);
-          rowUpper.push_back(newRows[newRowIdx].upper);
-          rowEntries.push_back(std::move(entries));
-          newRowPairs.push_back(
-              {pRow >= 0 ? plusLocalIdx : HighsInt{-1},
-               mRow >= 0 ? minusLocalIdx : HighsInt{-1}});
-        }
-        ++newRowIdx;
-      }
+      std::vector<row_entry> entries;
+      entries.reserve(nr.entries.size());
+      for (const auto& e : nr.entries)
+        entries.push_back({e.col, static_cast<double>(e.val)});
+      rowLower.push_back(nr.lower);
+      rowUpper.push_back(nr.upper);
+      rowEntries.push_back(std::move(entries));
+      newRowPairs.push_back({nr.plusIndex, nr.minusIndex});
     }
 
-    // add new rows to matrix
-    HighsInt oldNumRows = model->num_row_;
-    if (!addToMatrix(postsolve_stack, rowLower, rowUpper, rowEntries))
-      return finalise();
-    numRowsAdded += static_cast<HighsInt>(rowEntries.size());
-
-    // build postsolve data: encode original rows
-    using Nonzero = HighsPostsolveStack::Nonzero;
-    using NewRowOrigin = HighsPostsolveStack::NewRowOrigin;
-    std::vector<Nonzero> fmeRowData;
-    HighsInt numRealPlusRows = 0;
-    HighsInt numRealMinusRows = 0;
+    // record postsolve entry before addToMatrix (which may invalidate
+    // row slices via reallocation)
+    using FmeRow =
+        HighsPostsolveStack::FmeRowData<HighsTripletTreeSlicePreOrder>;
+    std::vector<FmeRow> plusRows;
+    std::vector<FmeRow> minusRows;
 
     for (HighsInt pRow : iPlus) {
       if (pRow < 0) continue;
-      HighsInt pPos = findNonzero(pRow, col);
-      double coefOfCol = Avalue[pPos];
-      HighsInt numOther = rowsize[pRow] - 1;
-      fmeRowData.push_back(Nonzero{numOther, coefOfCol});
-      fmeRowData.push_back(
-          Nonzero{postsolve_stack.getOrigRowIndex()[pRow],
-                  model->row_lower_[pRow]});
-      fmeRowData.push_back(Nonzero{0, model->row_upper_[pRow]});
-      for (const auto& nz : getRowVector(pRow)) {
-        if (nz.index() == col) continue;
-        fmeRowData.push_back(
-            Nonzero{postsolve_stack.getOrigColIndex()[nz.index()], nz.value()});
-      }
-      ++numRealPlusRows;
+      plusRows.push_back({pRow, model->row_lower_[pRow],
+                          model->row_upper_[pRow], getRowVector(pRow)});
     }
     for (HighsInt mRow : iMinus) {
       if (mRow < 0) continue;
-      HighsInt mPos = findNonzero(mRow, col);
-      double coefOfCol = Avalue[mPos];
-      HighsInt numOther = rowsize[mRow] - 1;
-      fmeRowData.push_back(Nonzero{numOther, coefOfCol});
-      fmeRowData.push_back(
-          Nonzero{postsolve_stack.getOrigRowIndex()[mRow],
-                  model->row_lower_[mRow]});
-      fmeRowData.push_back(Nonzero{0, model->row_upper_[mRow]});
-      for (const auto& nz : getRowVector(mRow)) {
-        if (nz.index() == col) continue;
-        fmeRowData.push_back(
-            Nonzero{postsolve_stack.getOrigColIndex()[nz.index()], nz.value()});
-      }
-      ++numRealMinusRows;
+      minusRows.push_back({mRow, model->row_lower_[mRow],
+                           model->row_upper_[mRow], getRowVector(mRow)});
     }
 
-    // build new row origin mapping
-    std::vector<NewRowOrigin> fmeNewRowOrigins;
-    HighsInt numNewRowsAdded = static_cast<HighsInt>(rowEntries.size());
-    fmeNewRowOrigins.reserve(numNewRowsAdded);
-    for (HighsInt k = 0; k < numNewRowsAdded; ++k) {
-      fmeNewRowOrigins.push_back(
-          {postsolve_stack.getOrigRowIndex()[oldNumRows + k],
-           newRowPairs[k].plusLocalIdx, newRowPairs[k].minusLocalIdx});
-    }
-
-    // record postsolve entry
     postsolve_stack.fourierMotzkinElimination(
         col, model->col_lower_[col], model->col_upper_[col],
-        model->col_cost_[col], numRealPlusRows, numRealMinusRows,
-        numNewRowsAdded, fmeRowData, fmeNewRowOrigins);
+        model->col_cost_[col], plusRows, minusRows, newRowPairs);
+
+    // add new rows to matrix
+    if (!addToMatrix(postsolve_stack, rowLower, rowUpper, rowEntries))
+      return finalise();
+    numRowsAdded += static_cast<HighsInt>(rowEntries.size());
 
     // remove old rows containing col (skip virtual bound rows)
     for (HighsInt rp : iPlus) {

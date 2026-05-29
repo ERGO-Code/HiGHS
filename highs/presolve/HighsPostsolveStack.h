@@ -66,6 +66,14 @@ class HighsPostsolveStack {
     HighsInt minusRow;
   };
 
+  template <typename RowStorageFormat>
+  struct FmeRowData {
+    HighsInt row;
+    double rowLower;
+    double rowUpper;
+    HighsMatrixSlice<RowStorageFormat> rowVec;
+  };
+
   size_t debug_prev_numreductions = 0;
   double debug_prev_col_lower = 0;
   double debug_prev_col_upper = 0;
@@ -247,18 +255,27 @@ class HighsPostsolveStack {
               HighsBasis& basis);
   };
 
+  struct FmeRowHeader {
+    HighsInt row;
+    double rowLower;
+    double rowUpper;
+  };
+
   struct FourierMotzkinElimination {
     double colLower;
     double colUpper;
     double colCost;
     HighsInt col;
-    HighsInt numPlusRows;
-    HighsInt numMinusRows;
     HighsInt numNewRows;
 
     void undo(const HighsPostsolveStack& postsolveStack,
               const HighsOptions& options,
-              const std::vector<Nonzero>& rowData,
+              const std::vector<FmeRowHeader>& plusHeaders,
+              const std::vector<double>& plusCoefOfCol,
+              const std::vector<std::vector<Nonzero>>& plusEntries,
+              const std::vector<FmeRowHeader>& minusHeaders,
+              const std::vector<double>& minusCoefOfCol,
+              const std::vector<std::vector<Nonzero>>& minusEntries,
               const std::vector<NewRowOrigin>& newRowOrigins,
               HighsSolution& solution, HighsBasis& basis) const;
   };
@@ -566,16 +583,58 @@ class HighsPostsolveStack {
     reductionAdded(ReductionType::kForcingColumnRemovedRow);
   }
 
+  template <typename RowStorageFormat>
   void fourierMotzkinElimination(
       HighsInt col, double colLower, double colUpper, double colCost,
-      HighsInt numPlusRows, HighsInt numMinusRows, HighsInt numNewRows,
-      const std::vector<Nonzero>& fmeRowData,
-      const std::vector<NewRowOrigin>& fmeNewRowOrigins) {
+      const std::vector<FmeRowData<RowStorageFormat>>& plusRows,
+      const std::vector<FmeRowData<RowStorageFormat>>& minusRows,
+      const std::vector<std::pair<HighsInt, HighsInt>>& newRowPairs) {
+    HighsInt origCol = origColIndex[col];
+
+    auto translateAndPush =
+        [&](const std::vector<FmeRowData<RowStorageFormat>>& rows) {
+          std::vector<FmeRowHeader> headers;
+          std::vector<double> coefs;
+          headers.reserve(rows.size());
+          coefs.reserve(rows.size());
+          for (const auto& rd : rows) {
+            headers.push_back(
+                {origRowIndex[rd.row], rd.rowLower, rd.rowUpper});
+            double coef = 0.0;
+            std::vector<Nonzero> translated;
+            for (const HighsSliceNonzero& nz : rd.rowVec) {
+              if (nz.index() == col) {
+                coef = nz.value();
+              } else {
+                translated.push_back(
+                    {origColIndex[nz.index()], nz.value()});
+              }
+            }
+            coefs.push_back(coef);
+            reductionValues.push(translated);
+          }
+          reductionValues.push(coefs);
+          reductionValues.push(headers);
+        };
+
+    // build new row origins: new rows will get indices nextRowIndex, nextRowIndex+1, ...
+    HighsInt numNewRows = static_cast<HighsInt>(newRowPairs.size());
+    std::vector<NewRowOrigin> translatedOrigins;
+    translatedOrigins.reserve(numNewRows);
+    for (HighsInt k = 0; k < numNewRows; ++k) {
+      HighsInt plusRow = newRowPairs[k].first;
+      HighsInt minusRow = newRowPairs[k].second;
+      translatedOrigins.push_back(
+          {nextRowIndex + k,
+           plusRow >= 0 ? origRowIndex[plusRow] : HighsInt{-1},
+           minusRow >= 0 ? origRowIndex[minusRow] : HighsInt{-1}});
+    }
+
     reductionValues.push(FourierMotzkinElimination{
-        colLower, colUpper, colCost, origColIndex[col], numPlusRows,
-        numMinusRows, numNewRows});
-    reductionValues.push(fmeRowData);
-    reductionValues.push(fmeNewRowOrigins);
+        colLower, colUpper, colCost, origCol, numNewRows});
+    translateAndPush(plusRows);
+    translateAndPush(minusRows);
+    reductionValues.push(translatedOrigins);
     reductionAdded(ReductionType::kFourierMotzkinElimination);
   }
 
@@ -824,10 +883,27 @@ class HighsPostsolveStack {
           FourierMotzkinElimination reduction;
           std::vector<NewRowOrigin> fmeNewRowOrigins;
           reductionValues.pop(fmeNewRowOrigins);
-          reductionValues.pop(rowValues);
+
+          auto popRowData = [&](std::vector<FmeRowHeader>& headers,
+                                std::vector<double>& coefs,
+                                std::vector<std::vector<Nonzero>>& entries) {
+            reductionValues.pop(headers);
+            reductionValues.pop(coefs);
+            HighsInt numRows = static_cast<HighsInt>(coefs.size());
+            entries.resize(numRows);
+            for (HighsInt r = numRows - 1; r >= 0; --r)
+              reductionValues.pop(entries[r]);
+          };
+
+          std::vector<FmeRowHeader> minusHeaders, plusHeaders;
+          std::vector<double> minusCoefs, plusCoefs;
+          std::vector<std::vector<Nonzero>> minusEntries, plusEntries;
+          popRowData(minusHeaders, minusCoefs, minusEntries);
+          popRowData(plusHeaders, plusCoefs, plusEntries);
           reductionValues.pop(reduction);
-          reduction.undo(*this, options, rowValues, fmeNewRowOrigins, solution,
-                         basis);
+          reduction.undo(*this, options, plusHeaders, plusCoefs, plusEntries,
+                         minusHeaders, minusCoefs, minusEntries,
+                         fmeNewRowOrigins, solution, basis);
           break;
         }
         default:

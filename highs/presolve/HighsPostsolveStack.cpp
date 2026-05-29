@@ -1409,63 +1409,49 @@ void HighsPostsolveStack::SlackColSubstitution::undo(
 
 void HighsPostsolveStack::FourierMotzkinElimination::undo(
     const HighsPostsolveStack& postsolveStack, const HighsOptions& options,
-    const std::vector<Nonzero>& rowData,
+    const std::vector<FmeRowHeader>& plusHeaders,
+    const std::vector<double>& plusCoefOfCol,
+    const std::vector<std::vector<Nonzero>>& plusEntries,
+    const std::vector<FmeRowHeader>& minusHeaders,
+    const std::vector<double>& minusCoefOfCol,
+    const std::vector<std::vector<Nonzero>>& minusEntries,
     const std::vector<NewRowOrigin>& newRowOrigins, HighsSolution& solution,
     HighsBasis& basis) const {
-  // rowData encoding per row (first numPlusRows are I+, then numMinusRows
-  // are I-):
-  //   [pos+0] Nonzero{numOtherEntries, coefOfCol}
-  //   [pos+1] Nonzero{origRowIndex, rowLower}
-  //   [pos+2] Nonzero{0, rowUpper}
-  //   [pos+3 .. pos+3+numOtherEntries-1] Nonzero{origColIdx, value}
-
-  HighsInt totalRows = numPlusRows + numMinusRows;
+  HighsInt numPlus = static_cast<HighsInt>(plusHeaders.size());
+  HighsInt numMinus = static_cast<HighsInt>(minusHeaders.size());
 
   // === PRIMAL POSTSOLVE ===
   double impliedLower = colLower;
   double impliedUpper = colUpper;
 
-  HighsInt pos = 0;
-  for (HighsInt r = 0; r < totalRows; ++r) {
-    HighsInt numEntries = rowData[pos].index;
-    double coefOfCol = rowData[pos].value;
-    double rowLow = rowData[pos + 1].value;
-    double rowUp = rowData[pos + 2].value;
-    HighsInt entryStart = pos + 3;
+  auto tightenBounds = [&](const std::vector<FmeRowHeader>& headers,
+                           const std::vector<double>& coefs,
+                           const std::vector<std::vector<Nonzero>>& entries) {
+    for (size_t r = 0; r < headers.size(); ++r) {
+      const FmeRowHeader& hdr = headers[r];
+      double aij = coefs[r];
 
-    HighsCDouble otherSum = 0.0;
-    for (HighsInt e = 0; e < numEntries; ++e)
-      otherSum += static_cast<HighsCDouble>(rowData[entryStart + e].value) *
-                  solution.col_value[rowData[entryStart + e].index];
+      HighsCDouble otherSum = 0.0;
+      for (const auto& nz : entries[r])
+        otherSum += static_cast<HighsCDouble>(nz.value) *
+                    solution.col_value[nz.index];
 
-    if (r < numPlusRows) {
-      // Plus row: coefOfCol > 0 gives x_j <= (rowUp - otherSum) / coefOfCol
-      //           coefOfCol < 0 gives x_j >= (rowLow - otherSum) / coefOfCol
-      if (coefOfCol > 0) {
-        double bound =
-            static_cast<double>((rowUp - otherSum) / coefOfCol);
-        impliedUpper = std::min(impliedUpper, bound);
+      if (aij > 0) {
+        double ub = static_cast<double>((hdr.rowUpper - otherSum) / aij);
+        double lb = static_cast<double>((hdr.rowLower - otherSum) / aij);
+        impliedUpper = std::min(impliedUpper, ub);
+        impliedLower = std::max(impliedLower, lb);
       } else {
-        double bound =
-            static_cast<double>((rowLow - otherSum) / coefOfCol);
-        impliedLower = std::max(impliedLower, bound);
-      }
-    } else {
-      // Minus row: coefOfCol < 0 gives x_j <= (rowUp - otherSum) / coefOfCol
-      //            coefOfCol > 0 gives x_j >= (rowLow - otherSum) / coefOfCol
-      if (coefOfCol < 0) {
-        double bound =
-            static_cast<double>((rowUp - otherSum) / coefOfCol);
-        impliedUpper = std::min(impliedUpper, bound);
-      } else {
-        double bound =
-            static_cast<double>((rowLow - otherSum) / coefOfCol);
-        impliedLower = std::max(impliedLower, bound);
+        double ub = static_cast<double>((hdr.rowLower - otherSum) / aij);
+        double lb = static_cast<double>((hdr.rowUpper - otherSum) / aij);
+        impliedUpper = std::min(impliedUpper, ub);
+        impliedLower = std::max(impliedLower, lb);
       }
     }
+  };
 
-    pos = entryStart + numEntries;
-  }
+  tightenBounds(plusHeaders, plusCoefOfCol, plusEntries);
+  tightenBounds(minusHeaders, minusCoefOfCol, minusEntries);
 
   if (impliedLower <= 0.0 && impliedUpper >= 0.0)
     solution.col_value[col] = 0.0;
@@ -1477,32 +1463,29 @@ void HighsPostsolveStack::FourierMotzkinElimination::undo(
   if (!solution.dual_valid) return;
 
   // === DUAL POSTSOLVE ===
-  std::vector<double> origRowDuals(totalRows, 0.0);
-
+  // Distribute new row duals back to original rows
   for (HighsInt k = 0; k < numNewRows; ++k) {
     HighsInt newRow = newRowOrigins[k].newRow;
     if (!postsolveStack.isModelRow(newRow)) continue;
     double lambda = solution.row_dual[newRow];
     if (newRowOrigins[k].plusRow >= 0)
-      origRowDuals[newRowOrigins[k].plusRow] += lambda;
+      solution.row_dual[newRowOrigins[k].plusRow] += lambda;
     if (newRowOrigins[k].minusRow >= 0)
-      origRowDuals[numPlusRows + newRowOrigins[k].minusRow] += lambda;
+      solution.row_dual[newRowOrigins[k].minusRow] += lambda;
     solution.row_dual[newRow] = 0.0;
   }
 
+  // Compute col dual from original row duals
   solution.col_dual[col] = colCost;
-  pos = 0;
-  for (HighsInt r = 0; r < totalRows; ++r) {
-    HighsInt numEntries = rowData[pos].index;
-    double coefOfCol = rowData[pos].value;
-    HighsInt origRow = rowData[pos + 1].index;
-    pos += 3 + numEntries;
-
-    if (postsolveStack.isModelRow(origRow)) {
-      solution.row_dual[origRow] = origRowDuals[r];
-      solution.col_dual[col] -= coefOfCol * origRowDuals[r];
+  auto applyColDual = [&](const std::vector<FmeRowHeader>& headers,
+                          const std::vector<double>& coefs) {
+    for (size_t r = 0; r < headers.size(); ++r) {
+      if (postsolveStack.isModelRow(headers[r].row))
+        solution.col_dual[col] -= coefs[r] * solution.row_dual[headers[r].row];
     }
-  }
+  };
+  applyColDual(plusHeaders, plusCoefOfCol);
+  applyColDual(minusHeaders, minusCoefOfCol);
 
   // === BASIS POSTSOLVE ===
   if (!basis.valid) return;
@@ -1516,20 +1499,21 @@ void HighsPostsolveStack::FourierMotzkinElimination::undo(
   else
     basis.col_status[col] = HighsBasisStatus::kBasic;
 
-  pos = 0;
-  for (HighsInt r = 0; r < totalRows; ++r) {
-    HighsInt numEntries = rowData[pos].index;
-    HighsInt origRow = rowData[pos + 1].index;
-    pos += 3 + numEntries;
+  auto applyBasis = [&](const std::vector<FmeRowHeader>& headers) {
+    for (size_t r = 0; r < headers.size(); ++r) {
+      if (!postsolveStack.isModelRow(headers[r].row)) continue;
+      double dual = solution.row_dual[headers[r].row];
+      if (std::abs(dual) > options.dual_feasibility_tolerance)
+        basis.row_status[headers[r].row] = dual > 0
+                                               ? HighsBasisStatus::kLower
+                                               : HighsBasisStatus::kUpper;
+      else
+        basis.row_status[headers[r].row] = HighsBasisStatus::kBasic;
+    }
+  };
 
-    if (!postsolveStack.isModelRow(origRow)) continue;
-    if (std::abs(origRowDuals[r]) > options.dual_feasibility_tolerance)
-      basis.row_status[origRow] = origRowDuals[r] > 0
-                                      ? HighsBasisStatus::kLower
-                                      : HighsBasisStatus::kUpper;
-    else
-      basis.row_status[origRow] = HighsBasisStatus::kBasic;
-  }
+  applyBasis(plusHeaders);
+  applyBasis(minusHeaders);
 
   for (HighsInt k = 0; k < numNewRows; ++k) {
     HighsInt newRow = newRowOrigins[k].newRow;
