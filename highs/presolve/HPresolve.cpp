@@ -7009,20 +7009,19 @@ HPresolve::Result HPresolve::fourierMotzkin(
     }
   };
 
-  auto checkNonZeros = [&](HighsInt col, std::vector<HighsInt>& iPlus,
-                           std::vector<HighsInt>& iMinus,
-                           std::vector<HighsInt>& pPlus,
-                           std::vector<HighsInt>& pMinus,
-                           std::vector<HighsInt>& affectedCols, int64_t& neRed,
-                           int64_t& mrRed) {
-    // initialise
-    neRed = 0;
-    mrRed = 0;
+  auto checkNonZeros =
+      [&](HighsInt col, std::vector<HighsInt>& iPlus,
+          std::vector<HighsInt>& iMinus, std::vector<HighsInt>& pPlus,
+          std::vector<HighsInt>& pMinus, std::vector<HighsInt>& affectedCols,
+          int64_t& neRed, int64_t& mrRed) {
+        // initialise
+        neRed = 0;
+        mrRed = 0;
 
-    // check rows
-    int64_t nePlus;
-    int64_t neMinus;
-    checkRows(col, iPlus, iMinus, nePlus, neMinus);
+        // check rows
+        int64_t nePlus;
+        int64_t neMinus;
+        checkRows(col, iPlus, iMinus, nePlus, neMinus);
 
         if (iPlus.size() == 0 || iMinus.size() == 0) {
           // other presolve reductions may handle this case (e.g., implied free
