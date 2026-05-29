@@ -7238,6 +7238,7 @@ HPresolve::Result HPresolve::fourierMotzkin(
   // vector for saving affected candidates
   std::vector<HighsInt> saveAffectedCols;
 
+  // counters for numbers of eliminations
   HighsInt numColsEliminated = 0;
   HighsInt numRowsEliminated = 0;
   HighsInt numRowsAdded = 0;
@@ -7247,15 +7248,14 @@ HPresolve::Result HPresolve::fourierMotzkin(
     HighsInt col = heap[0].col;
     heapRemove(heap, heapPos, col);
 
-    // recompute reduction numbers
+    // compute affected columns
     int64_t neRed;
     int64_t mrRed;
     bool elimCandidate = checkNonZeros(col, iPlus, iMinus, pPlus, pMinus,
                                        affectedCols, neRed, mrRed);
-    if (!elimCandidate || !isReduction(neRed, mrRed)) {
-      affectedCols.clear();
-      continue;
-    }
+
+    // heap data should be up-to-date
+    assert(elimCandidate && isReduction(neRed, mrRed));
 
     // perform elimination: generate new rows
     newRows.clear();
