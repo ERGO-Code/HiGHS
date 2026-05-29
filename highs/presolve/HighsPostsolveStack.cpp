@@ -1424,6 +1424,14 @@ void HighsPostsolveStack::FourierMotzkinElimination::undo(
   double impliedLower = colLower;
   double impliedUpper = colUpper;
 
+  auto computeBounds = [&](HighsInt direction, double val, double rhs,
+                           const HighsCDouble& sum, double& impliedBound) {
+    if (std::abs(rhs) == kHighsInf) return;
+    double bound = static_cast<double>(rhs - sum) / val;
+    impliedBound =
+        direction * std::min(direction * bound, direction * impliedBound);
+  };
+
   auto tightenBounds = [&](const std::vector<FmeRowHeader>& headers,
                            const std::vector<double>& coefs,
                            const std::vector<std::vector<Nonzero>>& entries) {
@@ -1431,22 +1439,15 @@ void HighsPostsolveStack::FourierMotzkinElimination::undo(
       const FmeRowHeader& hdr = headers[r];
       double aij = coefs[r];
 
-      HighsCDouble otherSum = 0.0;
+      HighsCDouble sum = 0.0;
       for (const auto& nz : entries[r])
-        otherSum += static_cast<HighsCDouble>(nz.value) *
-                    solution.col_value[nz.index];
+        sum +=
+            static_cast<HighsCDouble>(nz.value) * solution.col_value[nz.index];
 
-      if (aij > 0) {
-        double ub = static_cast<double>((hdr.rowUpper - otherSum) / aij);
-        double lb = static_cast<double>((hdr.rowLower - otherSum) / aij);
-        impliedUpper = std::min(impliedUpper, ub);
-        impliedLower = std::max(impliedLower, lb);
-      } else {
-        double ub = static_cast<double>((hdr.rowLower - otherSum) / aij);
-        double lb = static_cast<double>((hdr.rowUpper - otherSum) / aij);
-        impliedUpper = std::min(impliedUpper, ub);
-        impliedLower = std::max(impliedLower, lb);
-      }
+      computeBounds(HighsInt{1}, aij, aij > 0 ? hdr.rowUpper : hdr.rowLower,
+                    sum, impliedUpper);
+      computeBounds(HighsInt{-1}, aij, aij > 0 ? hdr.rowLower : hdr.rowUpper,
+                    sum, impliedLower);
     }
   };
 
@@ -1504,9 +1505,8 @@ void HighsPostsolveStack::FourierMotzkinElimination::undo(
       if (!postsolveStack.isModelRow(headers[r].row)) continue;
       double dual = solution.row_dual[headers[r].row];
       if (std::abs(dual) > options.dual_feasibility_tolerance)
-        basis.row_status[headers[r].row] = dual > 0
-                                               ? HighsBasisStatus::kLower
-                                               : HighsBasisStatus::kUpper;
+        basis.row_status[headers[r].row] =
+            dual > 0 ? HighsBasisStatus::kLower : HighsBasisStatus::kUpper;
       else
         basis.row_status[headers[r].row] = HighsBasisStatus::kBasic;
     }
