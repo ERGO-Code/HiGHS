@@ -1407,4 +1407,135 @@ void HighsPostsolveStack::SlackColSubstitution::undo(
   }
 }
 
+void HighsPostsolveStack::FourierMotzkinElimination::undo(
+    const HighsPostsolveStack& postsolveStack, const HighsOptions& options,
+    const std::vector<Nonzero>& rowData,
+    const std::vector<NewRowOrigin>& newRowOrigins, HighsSolution& solution,
+    HighsBasis& basis) const {
+  // rowData encoding per row (first numPlusRows are I+, then numMinusRows
+  // are I-):
+  //   [pos+0] Nonzero{numOtherEntries, coefOfCol}
+  //   [pos+1] Nonzero{origRowIndex, rowLower}
+  //   [pos+2] Nonzero{0, rowUpper}
+  //   [pos+3 .. pos+3+numOtherEntries-1] Nonzero{origColIdx, value}
+
+  HighsInt totalRows = numPlusRows + numMinusRows;
+
+  // === PRIMAL POSTSOLVE ===
+  double impliedLower = colLower;
+  double impliedUpper = colUpper;
+
+  HighsInt pos = 0;
+  for (HighsInt r = 0; r < totalRows; ++r) {
+    HighsInt numEntries = rowData[pos].index;
+    double coefOfCol = rowData[pos].value;
+    double rowLow = rowData[pos + 1].value;
+    double rowUp = rowData[pos + 2].value;
+    HighsInt entryStart = pos + 3;
+
+    HighsCDouble otherSum = 0.0;
+    for (HighsInt e = 0; e < numEntries; ++e)
+      otherSum += static_cast<HighsCDouble>(rowData[entryStart + e].value) *
+                  solution.col_value[rowData[entryStart + e].index];
+
+    if (r < numPlusRows) {
+      // Plus row: coefOfCol > 0 gives x_j <= (rowUp - otherSum) / coefOfCol
+      //           coefOfCol < 0 gives x_j >= (rowLow - otherSum) / coefOfCol
+      if (coefOfCol > 0) {
+        double bound =
+            static_cast<double>((rowUp - otherSum) / coefOfCol);
+        impliedUpper = std::min(impliedUpper, bound);
+      } else {
+        double bound =
+            static_cast<double>((rowLow - otherSum) / coefOfCol);
+        impliedLower = std::max(impliedLower, bound);
+      }
+    } else {
+      // Minus row: coefOfCol < 0 gives x_j <= (rowUp - otherSum) / coefOfCol
+      //            coefOfCol > 0 gives x_j >= (rowLow - otherSum) / coefOfCol
+      if (coefOfCol < 0) {
+        double bound =
+            static_cast<double>((rowUp - otherSum) / coefOfCol);
+        impliedUpper = std::min(impliedUpper, bound);
+      } else {
+        double bound =
+            static_cast<double>((rowLow - otherSum) / coefOfCol);
+        impliedLower = std::max(impliedLower, bound);
+      }
+    }
+
+    pos = entryStart + numEntries;
+  }
+
+  if (impliedLower <= 0.0 && impliedUpper >= 0.0)
+    solution.col_value[col] = 0.0;
+  else if (impliedLower > 0.0)
+    solution.col_value[col] = impliedLower;
+  else
+    solution.col_value[col] = impliedUpper;
+
+  if (!solution.dual_valid) return;
+
+  // === DUAL POSTSOLVE ===
+  std::vector<double> origRowDuals(totalRows, 0.0);
+
+  for (HighsInt k = 0; k < numNewRows; ++k) {
+    HighsInt newRow = newRowOrigins[k].newRow;
+    if (!postsolveStack.isModelRow(newRow)) continue;
+    double lambda = solution.row_dual[newRow];
+    if (newRowOrigins[k].plusRow >= 0)
+      origRowDuals[newRowOrigins[k].plusRow] += lambda;
+    if (newRowOrigins[k].minusRow >= 0)
+      origRowDuals[numPlusRows + newRowOrigins[k].minusRow] += lambda;
+    solution.row_dual[newRow] = 0.0;
+  }
+
+  solution.col_dual[col] = colCost;
+  pos = 0;
+  for (HighsInt r = 0; r < totalRows; ++r) {
+    HighsInt numEntries = rowData[pos].index;
+    double coefOfCol = rowData[pos].value;
+    HighsInt origRow = rowData[pos + 1].index;
+    pos += 3 + numEntries;
+
+    if (postsolveStack.isModelRow(origRow)) {
+      solution.row_dual[origRow] = origRowDuals[r];
+      solution.col_dual[col] -= coefOfCol * origRowDuals[r];
+    }
+  }
+
+  // === BASIS POSTSOLVE ===
+  if (!basis.valid) return;
+
+  if (solution.col_value[col] <=
+      colLower + options.primal_feasibility_tolerance)
+    basis.col_status[col] = HighsBasisStatus::kLower;
+  else if (solution.col_value[col] >=
+           colUpper - options.primal_feasibility_tolerance)
+    basis.col_status[col] = HighsBasisStatus::kUpper;
+  else
+    basis.col_status[col] = HighsBasisStatus::kBasic;
+
+  pos = 0;
+  for (HighsInt r = 0; r < totalRows; ++r) {
+    HighsInt numEntries = rowData[pos].index;
+    HighsInt origRow = rowData[pos + 1].index;
+    pos += 3 + numEntries;
+
+    if (!postsolveStack.isModelRow(origRow)) continue;
+    if (std::abs(origRowDuals[r]) > options.dual_feasibility_tolerance)
+      basis.row_status[origRow] = origRowDuals[r] > 0
+                                      ? HighsBasisStatus::kLower
+                                      : HighsBasisStatus::kUpper;
+    else
+      basis.row_status[origRow] = HighsBasisStatus::kBasic;
+  }
+
+  for (HighsInt k = 0; k < numNewRows; ++k) {
+    HighsInt newRow = newRowOrigins[k].newRow;
+    if (postsolveStack.isModelRow(newRow))
+      basis.row_status[newRow] = HighsBasisStatus::kBasic;
+  }
+}
+
 }  // namespace presolve

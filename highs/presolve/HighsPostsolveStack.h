@@ -60,6 +60,12 @@ class HighsPostsolveStack {
     Nonzero() = default;
   };
 
+  struct NewRowOrigin {
+    HighsInt newRow;
+    HighsInt plusRow;
+    HighsInt minusRow;
+  };
+
   size_t debug_prev_numreductions = 0;
   double debug_prev_col_lower = 0;
   double debug_prev_col_upper = 0;
@@ -241,6 +247,22 @@ class HighsPostsolveStack {
               HighsBasis& basis);
   };
 
+  struct FourierMotzkinElimination {
+    double colLower;
+    double colUpper;
+    double colCost;
+    HighsInt col;
+    HighsInt numPlusRows;
+    HighsInt numMinusRows;
+    HighsInt numNewRows;
+
+    void undo(const HighsPostsolveStack& postsolveStack,
+              const HighsOptions& options,
+              const std::vector<Nonzero>& rowData,
+              const std::vector<NewRowOrigin>& newRowOrigins,
+              HighsSolution& solution, HighsBasis& basis) const;
+  };
+
   /// tags for reduction
   enum class ReductionType : uint8_t {
     kLinearTransform,
@@ -257,6 +279,7 @@ class HighsPostsolveStack {
     kDuplicateRow,
     kDuplicateColumn,
     kSlackColSubstitution,
+    kFourierMotzkinElimination,
   };
 
   HighsDataStack reductionValues;
@@ -543,6 +566,19 @@ class HighsPostsolveStack {
     reductionAdded(ReductionType::kForcingColumnRemovedRow);
   }
 
+  void fourierMotzkinElimination(
+      HighsInt col, double colLower, double colUpper, double colCost,
+      HighsInt numPlusRows, HighsInt numMinusRows, HighsInt numNewRows,
+      const std::vector<Nonzero>& fmeRowData,
+      const std::vector<NewRowOrigin>& fmeNewRowOrigins) {
+    reductionValues.push(FourierMotzkinElimination{
+        colLower, colUpper, colCost, origColIndex[col], numPlusRows,
+        numMinusRows, numNewRows});
+    reductionValues.push(fmeRowData);
+    reductionValues.push(fmeNewRowOrigins);
+    reductionAdded(ReductionType::kFourierMotzkinElimination);
+  }
+
   void duplicateRow(HighsInt row, bool rowUpperTightened,
                     bool rowLowerTightened, HighsInt duplicateRow,
                     double duplicateRowScale) {
@@ -782,6 +818,16 @@ class HighsPostsolveStack {
           reductionValues.pop(rowValues);
           reductionValues.pop(reduction);
           reduction.undo(*this, options, rowValues, solution, basis);
+          break;
+        }
+        case ReductionType::kFourierMotzkinElimination: {
+          FourierMotzkinElimination reduction;
+          std::vector<NewRowOrigin> fmeNewRowOrigins;
+          reductionValues.pop(fmeNewRowOrigins);
+          reductionValues.pop(rowValues);
+          reductionValues.pop(reduction);
+          reduction.undo(*this, options, rowValues, fmeNewRowOrigins, solution,
+                         basis);
           break;
         }
         default:
