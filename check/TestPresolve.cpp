@@ -1025,6 +1025,7 @@ TEST_CASE("presolve-initial-sweep", "[highs_test_presolve]") {
 TEST_CASE("presolve-initial-sweep-all", "[highs_test_presolve]") {
   Highs highs;
   highs.setOptionValue("output_flag", dev_run);
+  highs.setOptionValue("presolve_light", kHighsOnString);
   if (dev_run) {
     highs.setOptionValue("log_dev_level", 1);
     highs.setOptionValue("presolve_rule_logging", true);
@@ -1038,12 +1039,15 @@ TEST_CASE("presolve-initial-sweep-all", "[highs_test_presolve]") {
   lp.row_lower_ = {2, 8, 10, 13};
   lp.row_upper_ = {4, 9, 16, 26};
   lp.a_matrix_.start_ = {0, 1, 5, 6, 6, 10, 12, 13};
-  lp.a_matrix_.index_ = {2,  0, 1, 2,  3,  0,  0, 1, 2,  3,  2,  3,  3};
+  lp.a_matrix_.index_ = {2,  0, 1, 2,  3,  0,  0, 1, 2,  3,  2,  3,  2};
   lp.a_matrix_.value_ = {6,  1, 4, 7, 11,  2,  3, 5, 8, 12,  9, 13, 10};
+  // Cols 1 and 4 fixed at 1; col 3 empty (fixed at LB = 1) then
+  //
+  // Rows 0 and 3 singletons; row 1 empty
   REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
-  if (dev_run) highs.writeModel("");
   highs.run();
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
   if (dev_run) highs.writeSolution("", 1);
+
   highs.resetGlobalScheduler(true);
 }

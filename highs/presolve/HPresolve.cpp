@@ -38,7 +38,7 @@
 
 #define ENABLE_SPARSIFY_FOR_LP 0
 
-const bool initial_sweep = false;  // true;//
+const bool initial_sweep = true;//false;  // 
 
 #define HPRESOLVE_CHECKED_CALL(presolveCall)            \
   do {                                                  \
@@ -3366,7 +3366,9 @@ HPresolve::Result HPresolve::singletonRow(HighsPostsolveStack& postsolve_stack,
   HighsInt col = initial_sweep ? col_ : Acol[nzPos];
   double val = initial_sweep ? val_ : Avalue[nzPos];
 
-  if (!initial_sweep) {
+  if (initial_sweep) {
+    numDeletedRows++;
+  } else {
     // printf("singleton row\n");
     // debugPrintRow(row);
     // delete row singleton nonzero directly, we have all information that we need
@@ -3475,7 +3477,11 @@ HPresolve::Result HPresolve::singletonRow(HighsPostsolveStack& postsolve_stack,
 
   postsolve_stack.singletonRow(row, col, val, lowerTightened, upperTightened);
 
-  if (initial_sweep) return checkLimits(postsolve_stack);
+  if (initial_sweep) {
+    model->col_lower_[col] = lb;
+    model->col_upper_[col] = ub;
+    return checkLimits(postsolve_stack);
+  }
 
   // just update bounds (and row activities)
   if (lowerTightened) HPRESOLVE_CHECKED_CALL(changeColLower(col, lb));
@@ -6084,14 +6090,12 @@ HPresolve::Result HPresolve::initialSweep(
   model->a_matrix_.index_.resize(nnz);
   model->a_matrix_.value_.resize(nnz);
   postsolve_stack.compressColIndexMap(newColIndex);
-
   for (HighsInt iRow = 0; iRow < model->num_row_; iRow++) {
     if (row_count[iRow] == 0)
       num_empty_row++;
     else if (row_count[iRow] == 1)
       num_singleton_row++;
   }
-
   const bool allow_row_sweep = true;
   if (allow_row_sweep && (num_empty_row || num_singleton_row)) {
     HighsInt num_row = 0;
@@ -6111,10 +6115,13 @@ HPresolve::Result HPresolve::initialSweep(
 					      col_of_row[iRow],
 					      val_of_row[iRow],
 					      initial_sweep));
-	  
         }
       } else {
         newRowIndex[iRow] = num_row;
+	model->row_lower_[num_row] = model->row_lower_[iRow];
+	model->row_upper_[num_row] = model->row_upper_[iRow];
+	if (have_row_names)
+	  model->row_names_[num_row] = std::move(model->row_names_[iRow]);
         num_row++;
       }
     }

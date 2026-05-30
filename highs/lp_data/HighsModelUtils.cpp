@@ -1520,7 +1520,7 @@ std::string utilPresolveRuleTypeToString(const HighsInt rule_type) {
   } else if (rule_type == kPresolveRuleColStuffing) {
     return "Col stuffing";
   } else if (rule_type == kPresolveRuleInitialSweep) {
-    return "Initial column sweep";
+    return "Initial sweep";
   }
   assert(1 == 0);
   return "????";
