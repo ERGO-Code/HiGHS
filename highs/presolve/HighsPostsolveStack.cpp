@@ -1454,7 +1454,12 @@ void HighsPostsolveStack::FourierMotzkinElimination::undo(
   tightenBounds(plusHeaders, plusCoefOfCol, plusEntries);
   tightenBounds(minusHeaders, minusCoefOfCol, minusEntries);
 
-  if (impliedLower <= 0.0 && impliedUpper >= 0.0)
+  // Cost-aware primal assignment: push toward the bound favored by the cost
+  if (colCost < 0 && impliedUpper != kHighsInf)
+    solution.col_value[col] = impliedUpper;
+  else if (colCost > 0 && impliedLower != -kHighsInf)
+    solution.col_value[col] = impliedLower;
+  else if (impliedLower <= 0.0 && impliedUpper >= 0.0)
     solution.col_value[col] = 0.0;
   else if (impliedLower > 0.0)
     solution.col_value[col] = impliedLower;
@@ -1464,15 +1469,41 @@ void HighsPostsolveStack::FourierMotzkinElimination::undo(
   if (!solution.dual_valid) return;
 
   // === DUAL POSTSOLVE ===
-  // Distribute new row duals back to original rows
+  // Distribute new row duals back to original rows.
+  // The new row was formed as: (s/pCoefAbs) * row_plus + (s/mCoefAbs) * row_minus
+  // By LP duality: y_plus += (s/pCoefAbs) * lambda, y_minus += (s/mCoefAbs) * lambda
   for (HighsInt k = 0; k < numNewRows; ++k) {
     HighsInt newRow = newRowOrigins[k].newRow;
     if (!postsolveStack.isModelRow(newRow)) continue;
     double lambda = solution.row_dual[newRow];
-    if (newRowOrigins[k].plusRow >= 0)
-      solution.row_dual[newRowOrigins[k].plusRow] += lambda;
-    if (newRowOrigins[k].minusRow >= 0)
-      solution.row_dual[newRowOrigins[k].minusRow] += lambda;
+
+    HighsInt pOrigRow = newRowOrigins[k].plusRow;
+    HighsInt mOrigRow = newRowOrigins[k].minusRow;
+
+    double pCoefAbs = 0.0;
+    double mCoefAbs = 0.0;
+    if (pOrigRow >= 0) {
+      for (HighsInt r = 0; r < numPlus; ++r)
+        if (plusHeaders[r].row == pOrigRow) {
+          pCoefAbs = std::abs(plusCoefOfCol[r]);
+          break;
+        }
+    }
+    if (mOrigRow >= 0) {
+      for (HighsInt r = 0; r < numMinus; ++r)
+        if (minusHeaders[r].row == mOrigRow) {
+          mCoefAbs = std::abs(minusCoefOfCol[r]);
+          break;
+        }
+    }
+
+    if (pCoefAbs == 0.0) pCoefAbs = 1.0;
+    if (mCoefAbs == 0.0) mCoefAbs = 1.0;
+    double s = (pCoefAbs * mCoefAbs) / (pCoefAbs + mCoefAbs);
+    if (pOrigRow >= 0)
+      solution.row_dual[pOrigRow] += lambda * (s / pCoefAbs);
+    if (mOrigRow >= 0)
+      solution.row_dual[mOrigRow] += lambda * (s / mCoefAbs);
     solution.row_dual[newRow] = 0.0;
   }
 
@@ -1488,37 +1519,229 @@ void HighsPostsolveStack::FourierMotzkinElimination::undo(
   applyColDual(plusHeaders, plusCoefOfCol);
   applyColDual(minusHeaders, minusCoefOfCol);
 
+  // If col is at an interior point (not at a bound), it should be basic
+  // with col_dual = 0. Absorb the residual into a tight row's dual.
+  bool atLower = solution.col_value[col] <=
+                 colLower + options.primal_feasibility_tolerance;
+  bool atUpper = solution.col_value[col] >=
+                 colUpper - options.primal_feasibility_tolerance;
+  if (!atLower && !atUpper && solution.col_dual[col] != 0.0) {
+    // Find a tight row to absorb the residual
+    double residual = solution.col_dual[col];
+    bool absorbed = false;
+
+    auto tryAbsorb = [&](const std::vector<FmeRowHeader>& headers,
+                         const std::vector<double>& coefs,
+                         const std::vector<std::vector<Nonzero>>& entries) {
+      if (absorbed) return;
+      for (size_t r = 0; r < headers.size(); ++r) {
+        if (!postsolveStack.isModelRow(headers[r].row)) continue;
+        double aij = coefs[r];
+        // Check if this row is tight (activity == bound)
+        HighsCDouble activity =
+            static_cast<HighsCDouble>(aij) * solution.col_value[col];
+        for (const auto& nz : entries[r])
+          activity += static_cast<HighsCDouble>(nz.value) *
+                      solution.col_value[nz.index];
+        double act = static_cast<double>(activity);
+        bool tight = false;
+        if (headers[r].rowUpper != kHighsInf &&
+            std::abs(act - headers[r].rowUpper) <=
+                options.primal_feasibility_tolerance)
+          tight = true;
+        if (headers[r].rowLower != -kHighsInf &&
+            std::abs(act - headers[r].rowLower) <=
+                options.primal_feasibility_tolerance)
+          tight = true;
+        if (!tight) continue;
+        // Absorb: adjust row dual so that col_dual becomes 0
+        // col_dual -= aij * delta => need delta = residual / aij
+        double delta = residual / aij;
+        solution.row_dual[headers[r].row] += delta;
+        solution.col_dual[col] = 0.0;
+        absorbed = true;
+        return;
+      }
+    };
+
+    tryAbsorb(plusHeaders, plusCoefOfCol, plusEntries);
+    tryAbsorb(minusHeaders, minusCoefOfCol, minusEntries);
+  }
+
   // === BASIS POSTSOLVE ===
   if (!basis.valid) return;
 
+  // Compute row activities (slack = rhs - activity) for original rows
+  auto computeRowActivity = [&](const std::vector<FmeRowHeader>& headers,
+                                const std::vector<double>& coefs,
+                                const std::vector<std::vector<Nonzero>>& entries,
+                                std::vector<double>& slacks) {
+    slacks.resize(headers.size());
+    for (size_t r = 0; r < headers.size(); ++r) {
+      HighsCDouble activity =
+          static_cast<HighsCDouble>(coefs[r]) * solution.col_value[col];
+      for (const auto& nz : entries[r])
+        activity +=
+            static_cast<HighsCDouble>(nz.value) * solution.col_value[nz.index];
+      double act = static_cast<double>(activity);
+      if (headers[r].rowUpper != kHighsInf)
+        slacks[r] = headers[r].rowUpper - act;
+      else
+        slacks[r] = act - headers[r].rowLower;
+    }
+  };
+
+  std::vector<double> plusSlacks, minusSlacks;
+  computeRowActivity(plusHeaders, plusCoefOfCol, plusEntries, plusSlacks);
+  computeRowActivity(minusHeaders, minusCoefOfCol, minusEntries, minusSlacks);
+
+  // Initially set col status from primal value
+  bool colIsBasic = false;
   if (solution.col_value[col] <=
       colLower + options.primal_feasibility_tolerance)
     basis.col_status[col] = HighsBasisStatus::kLower;
   else if (solution.col_value[col] >=
            colUpper - options.primal_feasibility_tolerance)
     basis.col_status[col] = HighsBasisStatus::kUpper;
-  else
+  else {
     basis.col_status[col] = HighsBasisStatus::kBasic;
+    colIsBasic = true;
+  }
 
-  auto applyBasis = [&](const std::vector<FmeRowHeader>& headers) {
-    for (size_t r = 0; r < headers.size(); ++r) {
-      if (!postsolveStack.isModelRow(headers[r].row)) continue;
-      double dual = solution.row_dual[headers[r].row];
-      if (std::abs(dual) > options.dual_feasibility_tolerance)
-        basis.row_status[headers[r].row] =
-            dual > 0 ? HighsBasisStatus::kLower : HighsBasisStatus::kUpper;
-      else
-        basis.row_status[headers[r].row] = HighsBasisStatus::kBasic;
-    }
+  // Apply paper's propagation rules from new row status to original rows
+  // plusRow indices refer to origRowIndex space (headers[r].row)
+  // We need to find which header index corresponds to a given origRow
+  auto findPlusIndex = [&](HighsInt origRow) -> HighsInt {
+    for (HighsInt r = 0; r < numPlus; ++r)
+      if (plusHeaders[r].row == origRow) return r;
+    return -1;
+  };
+  auto findMinusIndex = [&](HighsInt origRow) -> HighsInt {
+    for (HighsInt r = 0; r < numMinus; ++r)
+      if (minusHeaders[r].row == origRow) return r;
+    return -1;
   };
 
-  applyBasis(plusHeaders);
-  applyBasis(minusHeaders);
+  // Track which original rows have been assigned a status
+  std::vector<int8_t> plusAssigned(numPlus, 0);
+  std::vector<int8_t> minusAssigned(numMinus, 0);
 
   for (HighsInt k = 0; k < numNewRows; ++k) {
     HighsInt newRow = newRowOrigins[k].newRow;
-    if (postsolveStack.isModelRow(newRow))
-      basis.row_status[newRow] = HighsBasisStatus::kBasic;
+    if (!postsolveStack.isModelRow(newRow)) continue;
+
+    HighsBasisStatus newRowStatus = basis.row_status[newRow];
+    HighsInt pOrigRow = newRowOrigins[k].plusRow;
+    HighsInt mOrigRow = newRowOrigins[k].minusRow;
+    HighsInt pIdx = pOrigRow >= 0 ? findPlusIndex(pOrigRow) : -1;
+    HighsInt mIdx = mOrigRow >= 0 ? findMinusIndex(mOrigRow) : -1;
+
+    if (newRowStatus != HighsBasisStatus::kBasic) {
+      // Nonbasic propagation: both parent rows are nonbasic
+      if (pIdx >= 0 && !plusAssigned[pIdx]) {
+        double dual = solution.row_dual[plusHeaders[pIdx].row];
+        basis.row_status[plusHeaders[pIdx].row] =
+            dual > 0 ? HighsBasisStatus::kLower : HighsBasisStatus::kUpper;
+        plusAssigned[pIdx] = 1;
+      }
+      if (mIdx >= 0 && !minusAssigned[mIdx]) {
+        double dual = solution.row_dual[minusHeaders[mIdx].row];
+        basis.row_status[minusHeaders[mIdx].row] =
+            dual > 0 ? HighsBasisStatus::kLower : HighsBasisStatus::kUpper;
+        minusAssigned[mIdx] = 1;
+      }
+    } else {
+      // Basic propagation: one parent row gets the basic status
+      bool pHasSlack =
+          pIdx >= 0 &&
+          plusSlacks[pIdx] > options.primal_feasibility_tolerance;
+      bool mHasSlack =
+          mIdx >= 0 &&
+          minusSlacks[mIdx] > options.primal_feasibility_tolerance;
+
+      if (pHasSlack && !plusAssigned[pIdx]) {
+        basis.row_status[plusHeaders[pIdx].row] = HighsBasisStatus::kBasic;
+        plusAssigned[pIdx] = 1;
+        if (mIdx >= 0 && !minusAssigned[mIdx]) {
+          double dual = solution.row_dual[minusHeaders[mIdx].row];
+          basis.row_status[minusHeaders[mIdx].row] =
+              dual > 0 ? HighsBasisStatus::kLower : HighsBasisStatus::kUpper;
+          minusAssigned[mIdx] = 1;
+        }
+      } else if (mHasSlack && !minusAssigned[mIdx]) {
+        basis.row_status[minusHeaders[mIdx].row] = HighsBasisStatus::kBasic;
+        minusAssigned[mIdx] = 1;
+        if (pIdx >= 0 && !plusAssigned[pIdx]) {
+          double dual = solution.row_dual[plusHeaders[pIdx].row];
+          basis.row_status[plusHeaders[pIdx].row] =
+              dual > 0 ? HighsBasisStatus::kLower : HighsBasisStatus::kUpper;
+          plusAssigned[pIdx] = 1;
+        }
+      } else if (!colIsBasic) {
+        // Both slacks zero: x_j becomes basic (degeneracy)
+        basis.col_status[col] = HighsBasisStatus::kBasic;
+        colIsBasic = true;
+        if (pIdx >= 0 && !plusAssigned[pIdx]) {
+          double dual = solution.row_dual[plusHeaders[pIdx].row];
+          basis.row_status[plusHeaders[pIdx].row] =
+              dual > 0 ? HighsBasisStatus::kLower : HighsBasisStatus::kUpper;
+          plusAssigned[pIdx] = 1;
+        }
+        if (mIdx >= 0 && !minusAssigned[mIdx]) {
+          double dual = solution.row_dual[minusHeaders[mIdx].row];
+          basis.row_status[minusHeaders[mIdx].row] =
+              dual > 0 ? HighsBasisStatus::kLower : HighsBasisStatus::kUpper;
+          minusAssigned[mIdx] = 1;
+        }
+      } else {
+        // col already basic, pick one parent as basic
+        if (pHasSlack || (pIdx >= 0 && !plusAssigned[pIdx])) {
+          if (pIdx >= 0 && !plusAssigned[pIdx]) {
+            basis.row_status[plusHeaders[pIdx].row] =
+                HighsBasisStatus::kBasic;
+            plusAssigned[pIdx] = 1;
+          }
+          if (mIdx >= 0 && !minusAssigned[mIdx]) {
+            double dual = solution.row_dual[minusHeaders[mIdx].row];
+            basis.row_status[minusHeaders[mIdx].row] =
+                dual > 0 ? HighsBasisStatus::kLower
+                         : HighsBasisStatus::kUpper;
+            minusAssigned[mIdx] = 1;
+          }
+        } else if (mIdx >= 0 && !minusAssigned[mIdx]) {
+          basis.row_status[minusHeaders[mIdx].row] =
+              HighsBasisStatus::kBasic;
+          minusAssigned[mIdx] = 1;
+        }
+      }
+    }
+
+    // New row becomes basic (it's removed from the model)
+    basis.row_status[newRow] = HighsBasisStatus::kBasic;
+  }
+
+  // Handle original rows not involved in any new row (vanished constraints)
+  for (HighsInt r = 0; r < numPlus; ++r) {
+    if (plusAssigned[r]) continue;
+    if (!postsolveStack.isModelRow(plusHeaders[r].row)) continue;
+    if (plusSlacks[r] > options.primal_feasibility_tolerance)
+      basis.row_status[plusHeaders[r].row] = HighsBasisStatus::kBasic;
+    else {
+      double dual = solution.row_dual[plusHeaders[r].row];
+      basis.row_status[plusHeaders[r].row] =
+          dual > 0 ? HighsBasisStatus::kLower : HighsBasisStatus::kUpper;
+    }
+  }
+  for (HighsInt r = 0; r < numMinus; ++r) {
+    if (minusAssigned[r]) continue;
+    if (!postsolveStack.isModelRow(minusHeaders[r].row)) continue;
+    if (minusSlacks[r] > options.primal_feasibility_tolerance)
+      basis.row_status[minusHeaders[r].row] = HighsBasisStatus::kBasic;
+    else {
+      double dual = solution.row_dual[minusHeaders[r].row];
+      basis.row_status[minusHeaders[r].row] =
+          dual > 0 ? HighsBasisStatus::kLower : HighsBasisStatus::kUpper;
+    }
   }
 }
 
