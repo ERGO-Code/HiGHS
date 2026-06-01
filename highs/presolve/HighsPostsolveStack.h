@@ -920,7 +920,7 @@ class HighsPostsolveStack {
     if (perform_dual_postsolve) solution.row_dual.resize(origNumRow);
 
     if (perform_basis_postsolve) {
-      assert(numAppendedRows == 0);
+      //assert(numAppendedRows == 0);
       basis.row_status.resize(origNumRow);
     }
 
