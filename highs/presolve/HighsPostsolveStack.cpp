@@ -1551,6 +1551,13 @@ void HighsPostsolveStack::FourierMotzkinElimination::undo(
   computeRowActivity(plusHeaders, plusCoefOfCol, plusEntries, plusSlacks);
   computeRowActivity(minusHeaders, minusCoefOfCol, minusEntries, minusSlacks);
 
+  // Debug: print slacks
+  printf("FME basis postsolve col=%d x_j=%g\n", (int)col, solution.col_value[col]);
+  for (HighsInt r = 0; r < numPlus; ++r)
+    printf("  plus[%d] row=%d slack=%g\n", (int)r, (int)plusHeaders[r].row, plusSlacks[r]);
+  for (HighsInt r = 0; r < numMinus; ++r)
+    printf("  minus[%d] row=%d slack=%g\n", (int)r, (int)minusHeaders[r].row, minusSlacks[r]);
+
   // Initially set col status from primal value
   bool colIsBasic = false;
   if (solution.col_value[col] <=
@@ -1583,16 +1590,19 @@ void HighsPostsolveStack::FourierMotzkinElimination::undo(
   std::vector<int8_t> minusAssigned(numMinus, 0);
 
   for (HighsInt k = 0; k < numNewRows; ++k) {
-    HighsInt newRow = newRowOrigins[k].newRow;
-    if (!postsolveStack.isModelRow(newRow)) continue;
-
-    HighsBasisStatus newRowStatus = basis.row_status[newRow];
     HighsInt pOrigRow = newRowOrigins[k].plusRow;
     HighsInt mOrigRow = newRowOrigins[k].minusRow;
     HighsInt pIdx = pOrigRow >= 0 ? findPlusIndex(pOrigRow) : -1;
     HighsInt mIdx = mOrigRow >= 0 ? findMinusIndex(mOrigRow) : -1;
 
-    if (newRowStatus != HighsBasisStatus::kBasic) {
+    // Compute new row slack per paper: s_{i,i'} = s_i/|a_ij| + s_{i'}/|a_{i'j}|
+    double newRowSlack = 0.0;
+    if (pIdx >= 0) newRowSlack += plusSlacks[pIdx];
+    if (mIdx >= 0) newRowSlack += minusSlacks[mIdx];
+
+    HighsInt newRow = newRowOrigins[k].newRow;
+
+    if (newRowSlack <= options.primal_feasibility_tolerance) {
       // Nonbasic propagation: both parent rows are nonbasic
       if (pIdx >= 0 && !plusAssigned[pIdx]) {
         double dual = solution.row_dual[plusHeaders[pIdx].row];
@@ -1710,6 +1720,10 @@ void HighsPostsolveStack::FourierMotzkinElimination::undo(
     if (nBasic != nRows)
       printf("FME postsolve RANK: col=%d nBasic=%d nRows=%d (diff=%d)\n",
              (int)col, (int)nBasic, (int)nRows, (int)(nBasic - nRows));
+    // Print non-basic original rows
+    for (HighsInt i = 0; i < std::min((HighsInt)basis.row_status.size(), HighsInt{27}); ++i)
+      if (basis.row_status[i] != HighsBasisStatus::kBasic)
+        printf("  row %d nonbasic (status=%d)\n", (int)i, (int)basis.row_status[i]);
   }
 }
 
