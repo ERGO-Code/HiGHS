@@ -1454,12 +1454,8 @@ void HighsPostsolveStack::FourierMotzkinElimination::undo(
   tightenBounds(plusHeaders, plusCoefOfCol, plusEntries);
   tightenBounds(minusHeaders, minusCoefOfCol, minusEntries);
 
-  // Cost-aware primal assignment: push toward the bound favored by the cost
-  if (colCost < 0 && impliedUpper != kHighsInf)
-    solution.col_value[col] = impliedUpper;
-  else if (colCost > 0 && impliedLower != -kHighsInf)
-    solution.col_value[col] = impliedLower;
-  else if (impliedLower <= 0.0 && impliedUpper >= 0.0)
+  // Algorithm 3: assign x_j to 0 if feasible, else closest bound to zero
+  if (impliedLower <= 0.0 && impliedUpper >= 0.0)
     solution.col_value[col] = 0.0;
   else if (impliedLower > 0.0)
     solution.col_value[col] = impliedLower;
@@ -1469,6 +1465,12 @@ void HighsPostsolveStack::FourierMotzkinElimination::undo(
   if (!solution.dual_valid) return;
 
   // === DUAL POSTSOLVE ===
+  // Zero parent row duals before assignment (Algorithm 4 uses assignment, not accumulation)
+  for (HighsInt r = 0; r < numPlus; ++r)
+    solution.row_dual[plusHeaders[r].row] = 0.0;
+  for (HighsInt r = 0; r < numMinus; ++r)
+    solution.row_dual[minusHeaders[r].row] = 0.0;
+
   // Distribute new row duals back to original rows.
   // The new row was formed as: (s/pCoefAbs) * row_plus + (s/mCoefAbs) * row_minus
   // By LP duality: y_plus += (s/pCoefAbs) * lambda, y_minus += (s/mCoefAbs) * lambda
@@ -1507,71 +1509,23 @@ void HighsPostsolveStack::FourierMotzkinElimination::undo(
     solution.row_dual[newRow] = 0.0;
   }
 
-  // Compute col dual from original row duals
+  // Compute col dual: c_j - sum(a_ij * y_i)
   solution.col_dual[col] = colCost;
-  auto applyColDual = [&](const std::vector<FmeRowHeader>& headers,
-                          const std::vector<double>& coefs) {
-    for (size_t r = 0; r < headers.size(); ++r) {
-      if (postsolveStack.isModelRow(headers[r].row))
-        solution.col_dual[col] -= coefs[r] * solution.row_dual[headers[r].row];
-    }
-  };
-  applyColDual(plusHeaders, plusCoefOfCol);
-  applyColDual(minusHeaders, minusCoefOfCol);
-
-  // If col is at an interior point (not at a bound), it should be basic
-  // with col_dual = 0. Absorb the residual into a tight row's dual.
-  bool atLower = solution.col_value[col] <=
-                 colLower + options.primal_feasibility_tolerance;
-  bool atUpper = solution.col_value[col] >=
-                 colUpper - options.primal_feasibility_tolerance;
-  if (!atLower && !atUpper && solution.col_dual[col] != 0.0) {
-    // Find a tight row to absorb the residual
-    double residual = solution.col_dual[col];
-    bool absorbed = false;
-
-    auto tryAbsorb = [&](const std::vector<FmeRowHeader>& headers,
-                         const std::vector<double>& coefs,
-                         const std::vector<std::vector<Nonzero>>& entries) {
-      if (absorbed) return;
-      for (size_t r = 0; r < headers.size(); ++r) {
-        if (!postsolveStack.isModelRow(headers[r].row)) continue;
-        double aij = coefs[r];
-        // Check if this row is tight (activity == bound)
-        HighsCDouble activity =
-            static_cast<HighsCDouble>(aij) * solution.col_value[col];
-        for (const auto& nz : entries[r])
-          activity += static_cast<HighsCDouble>(nz.value) *
-                      solution.col_value[nz.index];
-        double act = static_cast<double>(activity);
-        bool tight = false;
-        if (headers[r].rowUpper != kHighsInf &&
-            std::abs(act - headers[r].rowUpper) <=
-                options.primal_feasibility_tolerance)
-          tight = true;
-        if (headers[r].rowLower != -kHighsInf &&
-            std::abs(act - headers[r].rowLower) <=
-                options.primal_feasibility_tolerance)
-          tight = true;
-        if (!tight) continue;
-        // Absorb: adjust row dual so that col_dual becomes 0
-        // col_dual -= aij * delta => need delta = residual / aij
-        double delta = residual / aij;
-        solution.row_dual[headers[r].row] += delta;
-        solution.col_dual[col] = 0.0;
-        absorbed = true;
-        return;
-      }
-    };
-
-    tryAbsorb(plusHeaders, plusCoefOfCol, plusEntries);
-    tryAbsorb(minusHeaders, minusCoefOfCol, minusEntries);
+  for (HighsInt r = 0; r < numPlus; ++r) {
+    if (postsolveStack.isModelRow(plusHeaders[r].row))
+      solution.col_dual[col] -=
+          plusCoefOfCol[r] * solution.row_dual[plusHeaders[r].row];
+  }
+  for (HighsInt r = 0; r < numMinus; ++r) {
+    if (postsolveStack.isModelRow(minusHeaders[r].row))
+      solution.col_dual[col] -=
+          minusCoefOfCol[r] * solution.row_dual[minusHeaders[r].row];
   }
 
   // === BASIS POSTSOLVE ===
   if (!basis.valid) return;
 
-  // Compute row activities (slack = rhs - activity) for original rows
+  // Compute normalized row slacks as per paper: s_i / |a_{ij}|
   auto computeRowActivity = [&](const std::vector<FmeRowHeader>& headers,
                                 const std::vector<double>& coefs,
                                 const std::vector<std::vector<Nonzero>>& entries,
@@ -1584,10 +1538,12 @@ void HighsPostsolveStack::FourierMotzkinElimination::undo(
         activity +=
             static_cast<HighsCDouble>(nz.value) * solution.col_value[nz.index];
       double act = static_cast<double>(activity);
+      double rawSlack;
       if (headers[r].rowUpper != kHighsInf)
-        slacks[r] = headers[r].rowUpper - act;
+        rawSlack = headers[r].rowUpper - act;
       else
-        slacks[r] = act - headers[r].rowLower;
+        rawSlack = act - headers[r].rowLower;
+      slacks[r] = rawSlack / std::abs(coefs[r]);
     }
   };
 
@@ -1716,11 +1672,10 @@ void HighsPostsolveStack::FourierMotzkinElimination::undo(
       }
     }
 
-    // New row becomes basic (it's removed from the model)
-    basis.row_status[newRow] = HighsBasisStatus::kBasic;
   }
 
-  // Handle original rows not involved in any new row (vanished constraints)
+  // Vanished constraint rule (paper Section 3.5.3): rows not involved in any
+  // new row have "vanished". Nonzero slack → basic; zero slack → nonbasic.
   for (HighsInt r = 0; r < numPlus; ++r) {
     if (plusAssigned[r]) continue;
     if (!postsolveStack.isModelRow(plusHeaders[r].row)) continue;
@@ -1742,6 +1697,19 @@ void HighsPostsolveStack::FourierMotzkinElimination::undo(
       basis.row_status[minusHeaders[r].row] =
           dual > 0 ? HighsBasisStatus::kLower : HighsBasisStatus::kUpper;
     }
+  }
+
+  // Debug: count basics after FME postsolve
+  {
+    HighsInt nBasic = 0;
+    for (HighsInt i = 0; i < (HighsInt)basis.col_status.size(); ++i)
+      if (basis.col_status[i] == HighsBasisStatus::kBasic) ++nBasic;
+    for (HighsInt i = 0; i < (HighsInt)basis.row_status.size(); ++i)
+      if (basis.row_status[i] == HighsBasisStatus::kBasic) ++nBasic;
+    HighsInt nRows = (HighsInt)basis.row_status.size();
+    if (nBasic != nRows)
+      printf("FME postsolve RANK: col=%d nBasic=%d nRows=%d (diff=%d)\n",
+             (int)col, (int)nBasic, (int)nRows, (int)(nBasic - nRows));
   }
 }
 

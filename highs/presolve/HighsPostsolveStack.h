@@ -922,6 +922,14 @@ class HighsPostsolveStack {
     if (perform_basis_postsolve) {
       //assert(numAppendedRows == 0);
       basis.row_status.resize(origNumRow);
+      HighsInt nBasic = 0;
+      for (HighsInt i = 0; i < (HighsInt)basis.col_status.size(); ++i)
+        if (basis.col_status[i] == HighsBasisStatus::kBasic) ++nBasic;
+      for (HighsInt i = 0; i < (HighsInt)basis.row_status.size(); ++i)
+        if (basis.row_status[i] == HighsBasisStatus::kBasic) ++nBasic;
+      if (nBasic != origNumRow)
+        printf("POSTSOLVE BASIS ERROR: nBasic=%d origNumRow=%d (diff=%d)\n",
+               (int)nBasic, (int)origNumRow, (int)(nBasic - origNumRow));
     }
 
 #ifdef DEBUG_EXTRA

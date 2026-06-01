@@ -7402,12 +7402,15 @@ HPresolve::Result HPresolve::fourierMotzkin(
     HPRESOLVE_CHECKED_CALL(checkLimits(postsolve_stack));
   }
 
-  if (numColsEliminated > 0)
+  if (numColsEliminated > 0) {
+    printf("FME-PRESOLVE: eliminated %d cols %d rows, added %d rows\n",
+           (int)numColsEliminated, (int)numRowsEliminated, (int)numRowsAdded);
     highsLogDev(options->log_options, HighsLogType::kInfo,
                 "Fourier-Motzkin eliminated %" HIGHSINT_FORMAT
                 " cols and %" HIGHSINT_FORMAT
                 " rows, and added %" HIGHSINT_FORMAT " rows\n",
                 numColsEliminated, numRowsEliminated, numRowsAdded);
+  }
 
   return finalise();
 }
