@@ -5937,7 +5937,7 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
         mipsolver != nullptr || !options->lp_presolve_requires_basis_postsolve;
 #endif
     bool tryFourierMotzkin = true;
-        //mipsolver != nullptr || !options->lp_presolve_requires_basis_postsolve;
+    // mipsolver != nullptr || !options->lp_presolve_requires_basis_postsolve;
     bool tryProbing = mipsolver != nullptr;
     HighsInt numCliquesBeforeProbing = -1;
     bool domcolAfterProbingCalled = false;

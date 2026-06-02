@@ -266,7 +266,6 @@ class HighsPostsolveStack {
     double colUpper;
     double colCost;
     HighsInt col;
-    HighsInt numNewRows;
 
     void undo(const HighsPostsolveStack& postsolveStack,
               const HighsOptions& options,
@@ -598,16 +597,14 @@ class HighsPostsolveStack {
           headers.reserve(rows.size());
           coefs.reserve(rows.size());
           for (const auto& rd : rows) {
-            headers.push_back(
-                {origRowIndex[rd.row], rd.rowLower, rd.rowUpper});
+            headers.push_back({origRowIndex[rd.row], rd.rowLower, rd.rowUpper});
             double coef = 0.0;
             std::vector<Nonzero> translated;
             for (const HighsSliceNonzero& nz : rd.rowVec) {
               if (nz.index() == col) {
                 coef = nz.value();
               } else {
-                translated.push_back(
-                    {origColIndex[nz.index()], nz.value()});
+                translated.push_back({origColIndex[nz.index()], nz.value()});
               }
             }
             coefs.push_back(coef);
@@ -617,7 +614,8 @@ class HighsPostsolveStack {
           reductionValues.push(headers);
         };
 
-    // build new row origins: new rows will get indices nextRowIndex, nextRowIndex+1, ...
+    // build new row origins: new rows will get indices nextRowIndex,
+    // nextRowIndex+1, ...
     HighsInt numNewRows = static_cast<HighsInt>(newRowPairs.size());
     std::vector<NewRowOrigin> translatedOrigins;
     translatedOrigins.reserve(numNewRows);
@@ -630,8 +628,8 @@ class HighsPostsolveStack {
            minusRow >= 0 ? origRowIndex[minusRow] : HighsInt{-1}});
     }
 
-    reductionValues.push(FourierMotzkinElimination{
-        colLower, colUpper, colCost, origCol, numNewRows});
+    reductionValues.push(
+        FourierMotzkinElimination{colLower, colUpper, colCost, origCol});
     translateAndPush(plusRows);
     translateAndPush(minusRows);
     reductionValues.push(translatedOrigins);
@@ -911,6 +909,27 @@ class HighsPostsolveStack {
                  int(reductions[i - 1].first));
           if (kAllowDeveloperAssert) assert(1 == 0);
       }
+      if (perform_basis_postsolve) {
+        HighsInt nBasic = 0;
+        HighsInt nRows = (HighsInt)basis.row_status.size();
+        for (HighsInt j = 0; j < (HighsInt)basis.col_status.size(); ++j)
+          if (basis.col_status[j] == HighsBasisStatus::kBasic) ++nBasic;
+        for (HighsInt j = 0; j < nRows; ++j)
+          if (basis.row_status[j] == HighsBasisStatus::kBasic) ++nBasic;
+        if (nBasic != nRows)
+          printf("After reduction %d (type %d): nBasic=%d nRows=%d (diff=%d)\n",
+                 (int)(i - 1), (int)reductions[i - 1].first, (int)nBasic,
+                 (int)nRows, (int)(nBasic - nRows));
+        // After last reduction, print which rows are basic
+        if (i - 1 == numReductions) {
+          printf("Final basis state (nRows=%d, origNumRow=%d):\n", (int)nRows,
+                 (int)origNumRow);
+          for (HighsInt j = 0; j < nRows; ++j)
+            if (basis.row_status[j] == HighsBasisStatus::kBasic)
+              printf("  row %d basic (orig=%s)\n", (int)j,
+                     j >= origNumRow ? "intermediate" : "original");
+        }
+      }
     }
     if (report_col >= 0)
       printf("After last reduction: col_value[%2d] = %g\n", int(report_col),
@@ -920,7 +939,7 @@ class HighsPostsolveStack {
     if (perform_dual_postsolve) solution.row_dual.resize(origNumRow);
 
     if (perform_basis_postsolve) {
-      //assert(numAppendedRows == 0);
+      // assert(numAppendedRows == 0);
       basis.row_status.resize(origNumRow);
       HighsInt nBasic = 0;
       for (HighsInt i = 0; i < (HighsInt)basis.col_status.size(); ++i)
