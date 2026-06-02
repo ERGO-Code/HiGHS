@@ -3412,8 +3412,8 @@ HPresolve::Result HPresolve::singletonCol(HighsPostsolveStack& postsolve_stack,
     if (logging_on)
       analysis_.startPresolveRuleLog(kPresolveRuleFreeColSubstitution);
 
-    // todo, store which side of an implied free dual variable needs to be
-    // used for substitution
+    // todo, store which side of an implied free dual variable needs to be used
+    // for substitution
     storeRow(row);
 
     substituteFreeCol(postsolve_stack, row, col);
@@ -3576,8 +3576,8 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
 
   if (!isEquation(row)) {
     if (isImpliedEquationAtLower(row)) {
-      // Convert to equality constraint (note that currently postsolve will
-      // not know about this conversion)
+      // Convert to equality constraint (note that currently postsolve will not
+      // know about this conversion)
       model->row_upper_[row] = model->row_lower_[row];
       // Since row upper bound is now finite, lower bound on row dual is
       // -kHighsInf
@@ -3586,8 +3586,8 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
         HPRESOLVE_CHECKED_CALL(
             checkRedundantBounds(rowDualLowerSource[row], row));
     } else if (isImpliedEquationAtUpper(row)) {
-      // Convert to equality constraint (note that currently postsolve will
-      // not know about this conversion)
+      // Convert to equality constraint (note that currently postsolve will not
+      // know about this conversion)
       model->row_lower_[row] = model->row_upper_[row];
       // Since row lower bound is now finite, upper bound on row dual is
       // kHighsInf
@@ -3618,16 +3618,16 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
   }
 
   // todo: do additional single row presolve for mip here. It may assume a
-  // non-redundant and non-infeasible row when considering variable and
-  // implied bounds
+  // non-redundant and non-infeasible row when considering variable and implied
+  // bounds
   if (rowsizeInteger[row] != 0 || rowsizeImplInt[row] != 0) {
     if (rowLower == rowUpper) {
       // equation
       double impliedRowLower = impliedRowBounds.getSumLower(row);
       double impliedRowUpper = impliedRowBounds.getSumUpper(row);
       // see section 3.6 "Simple probing on a single equation", Achterberg et
-      // al., Presolve Reductions in Mixed Integer Programming, INFORMS
-      // Journal on Computing 32(2):473-506.
+      // al., Presolve Reductions in Mixed Integer Programming, INFORMS Journal
+      // on Computing 32(2):473-506.
       if (impliedRowLower != -kHighsInf && impliedRowUpper != kHighsInf &&
           std::abs(impliedRowLower + impliedRowUpper - 2 * rowUpper) <=
               options->small_matrix_value) {
@@ -3659,10 +3659,10 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
           // "\n", rowsize[row]);
 
           // iterate over non-zero positions instead of iterating over the
-          // HighsMatrixSlice (provided by HPresolve::getStoredRow) because
-          // the latter contains pointers to Acol and Avalue that may be
-          // invalidated if these vectors are reallocated (see
-          // std::vector::push_back performed in HPresolve::addToMatrix).
+          // HighsMatrixSlice (provided by HPresolve::getStoredRow) because the
+          // latter contains pointers to Acol and Avalue that may be invalidated
+          // if these vectors are reallocated (see std::vector::push_back
+          // performed in HPresolve::addToMatrix).
           for (HighsInt rowiter : rowpositions) {
             HighsInt col = Acol[rowiter];
             assert(Arow[rowiter] == row);
@@ -3760,8 +3760,7 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
             double scale = 1.0 / std::abs(continuousCoef * intScale);
             if (scale != 1.0) {
               // printf(
-              //     "transform continuous column x to implicit integer z with
-              //     x
+              //     "transform continuous column x to implicit integer z with x
               //     "
               //     "= %g * z\n",
               //     scale);
@@ -3801,8 +3800,8 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
               if (newgcd == 1) {
                 // adding this variable would set the gcd to 1, therefore it
                 // must be our candidate x1 for substitution. If another
-                // candidate already exists no reduction is possible except
-                // for scaling the equation
+                // candidate already exists no reduction is possible except for
+                // scaling the equation
                 if (x1Cand != -1) {
                   x1Cand = -1;
                   break;
@@ -3822,13 +3821,12 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
                 // x1 = d * z
 
                 // printf(
-                //    "substitute integral column x with integral column z
-                //    with " "x = %ld * z\n", d);
+                //    "substitute integral column x with integral column z with
+                //    " "x = %ld * z\n", d);
                 HPRESOLVE_CHECKED_CALL(
                     transformColumn(postsolve_stack, x1, d, 0.0));
               } else {
-                // we can substitute x1 = d * z + b, with b = a1^-1 rhs (mod
-                // d)
+                // we can substitute x1 = d * z + b, with b = a1^-1 rhs (mod d)
 
                 // first compute the modular multiplicative inverse of a1^-1
                 // (mod d) of a1
@@ -3841,13 +3839,13 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
                     HighsIntegers::mod(a1Inverse * rhs, static_cast<double>(d));
 
                 // printf(
-                //     "substitute integral column x with integral column z
-                //     with " "x = %ld * z + %g\n", d, b);
+                //     "substitute integral column x with integral column z with
+                //     " "x = %ld * z + %g\n", d, b);
 
-                // before we substitute, we check whether the resulting
-                // variable z is fixed after rounding its new bounds. If that
-                // is the case we directly fix x1 instead of first
-                // substituting with d * z + b.
+                // before we substitute, we check whether the resulting variable
+                // z is fixed after rounding its new bounds. If that is the case
+                // we directly fix x1 instead of first substituting with d * z +
+                // b.
                 double zLower = std::ceil((model->col_lower_[x1] - b) /
                                               static_cast<double>(d) -
                                           primal_feastol);
@@ -3954,9 +3952,9 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
                 // get column upper bound
                 double ub = model->col_upper_[rowIndex[i]];
                 if (coefDelta < -options->small_matrix_value) {
-                  // for the >= side of the constraint a smaller coefficient
-                  // is stronger: Therefore we relax the left hand side using
-                  // the bound constraint, if the bound is infinite, abort
+                  // for the >= side of the constraint a smaller coefficient is
+                  // stronger: Therefore we relax the left hand side using the
+                  // bound constraint, if the bound is infinite, abort
                   if (lhsFinite) {
                     if (ub == kHighsInf) return false;
                     lhs += ub * coefDelta;
@@ -3968,11 +3966,10 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
                     if (ub == kHighsInf) return false;
                     rhs += ub * coefDelta;
                   }
-                  // the coefficient was relaxed regarding the rows lower
-                  // bound. Therefore the lower bound should be tightened by
-                  // at least this amount for the scaled constraint to
-                  // dominate the unscaled constraint be rounded by at least
-                  // this value
+                  // the coefficient was relaxed regarding the rows lower bound.
+                  // Therefore the lower bound should be tightened by at least
+                  // this amount for the scaled constraint to dominate the
+                  // unscaled constraint be rounded by at least this value
                   minLhsTightening = std::max(static_cast<double>(coefDelta),
                                               minLhsTightening);
                 }
@@ -4088,8 +4085,7 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
               HighsInt col = rowIndex[i];
               double val = direction * rowCoefs[i];
               double absval = std::abs(val);
-              // compute minimum and maximum absolute coefficients along the
-              // way
+              // compute minimum and maximum absolute coefficients along the way
               minAbsCoef = std::min(minAbsCoef, absval);
               maxAbsCoef = std::max(maxAbsCoef, absval);
               if (val < 0.0 && model->col_upper_[col] != kHighsInf) {
@@ -4147,8 +4143,8 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
               // round coefficient
               roundedRowCoefs[i] =
                   static_cast<double>(ceil(absCoef * scalar - kHighsTiny));
-              // compare "normalised" coefficients, i.e. coefficients divided
-              // by corresponding rhs.
+              // compare "normalised" coefficients, i.e. coefficients divided by
+              // corresponding rhs.
               double threshold =
                   static_cast<double>(roundedRowCoefs[i] * rhsRatio);
               // return if coefficient is weaker
@@ -4301,11 +4297,9 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
                              double impliedRowBound,
                              const HighsCDouble& dynamism,
                              HighsPostsolveStack::RowType rowType) {
-    // 1. direction =  1 (>=): forcing row if upper bound on constraint
-    // activity
+    // 1. direction =  1 (>=): forcing row if upper bound on constraint activity
     //                         is equal to row's lower bound
-    // 2. direction = -1 (<=): forcing row if lower bound on constraint
-    // activity
+    // 2. direction = -1 (<=): forcing row if lower bound on constraint activity
     //                         is equal to row's upper bound
     // scale tolerance using dynamism (ratio between absolute largest and
     // smallest coefficients)
@@ -4545,8 +4539,7 @@ HPresolve::Result HPresolve::detectDominatedCol(
 
   auto dominatedCol = [&](HighsInt col, double dualBound, double bound,
                           HighsInt direction) {
-    // column is (strongly) dominated if the bounds on the column dual
-    // satisfy:
+    // column is (strongly) dominated if the bounds on the column dual satisfy:
     // 1. lower bound >  dual feasibility tolerance (direction =  1) or
     // 2. upper bound < -dual feasibility tolerance (direction = -1).
     if (direction * dualBound <= options->dual_feasibility_tolerance)
@@ -4570,8 +4563,7 @@ HPresolve::Result HPresolve::detectDominatedCol(
   auto weaklyDominatedCol = [&](HighsInt col, double dualBound, double bound,
                                 double otherBound, const HighsCDouble& dynamism,
                                 HighsInt direction) {
-    // column is weakly dominated if the bounds on the column dual
-    // satisfy:
+    // column is weakly dominated if the bounds on the column dual satisfy:
     // 1. lower bound >= -dual feasibility tolerance (direction =  1) or
     // 2. upper bound <=  dual feasibility tolerance (direction = -1).
     if (direction * dualBound < -options->dual_feasibility_tolerance)
@@ -4590,12 +4582,12 @@ HPresolve::Result HPresolve::detectDominatedCol(
         HPRESOLVE_CHECKED_CALL(removeRowSingletons(postsolve_stack));
       return checkLimits(postsolve_stack);
     } else if (analysis_.allow_rule_[kPresolveRuleForcingCol]) {
-      // check for forcing column (see Andersen and Andersen, Presolving
-      // in linear programming. Math. Program. 71, 221-245, 1995). the
-      // column's lower bound is infinite (direction = 1) or its upper
+      // check for forcing column (see Andersen and Andersen, Presolving in
+      // linear programming. Math. Program. 71, 221-245, 1995).
+      // the column's lower bound is infinite (direction = 1) or its upper
       // bound is infinite (direction = -1).
-      // now get lower bound (direction = 1) or upper bound (direction =
-      // -1) on column dual using the original bounds on the row duals.
+      // now get lower bound (direction = 1) or upper bound (direction = -1) on
+      // column dual using the original bounds on the row duals.
       double boundOnColDual = direction > 0
                                   ? -impliedDualRowBounds.getSumUpperOrig(
                                         col, -model->col_cost_[col])
@@ -4603,13 +4595,14 @@ HPresolve::Result HPresolve::detectDominatedCol(
                                         col, -model->col_cost_[col]);
       if (std::abs(boundOnColDual) <=
           options->dual_feasibility_tolerance / dynamism) {
-        // 1. column dual's upper bound is zero (since the column's lower
-        // bound is infinite) and column dual's lower bound is zero as
-        // well (direction = 1) or
-        // 2. column dual's lower bound is zero (since the column's upper
-        // bound is infinite) and column dual's upper bound is zero as
-        // well (direction = -1). thus, the column dual is zero, and we
-        // can remove the column and all its rows
+        // 1. column dual's upper bound is zero (since the column's lower bound
+        // is infinite) and column dual's lower bound is zero as well
+        // (direction = 1) or
+        // 2. column dual's lower bound is zero (since the column's upper bound
+        // is infinite) and column dual's upper bound is zero as well
+        // (direction = -1).
+        // thus, the column dual is zero, and we can remove the column
+        // and all its rows
         if (logging_on) analysis_.startPresolveRuleLog(kPresolveRuleForcingCol);
         postsolve_stack.forcingColumn(
             col, getColumnVector(col), model->col_cost_[col], otherBound,
@@ -4709,8 +4702,8 @@ HPresolve::Result HPresolve::dualFixing(HighsPostsolveStack& postsolve_stack,
     bool lhsFinite = model->row_lower_[row] != -kHighsInf;
     bool rhsFinite = model->row_upper_[row] != kHighsInf;
 
-    // use storeRow and getStoredRow since getRowVector's rowroot[row] would
-    // be overwritten by subsequent findNonZero calls, which would produce
+    // use storeRow and getStoredRow since getRowVector's rowroot[row] would be
+    // overwritten by subsequent findNonZero calls, which would produce
     // undefined behavior
     storeRow(row);
     for (const auto& rowNz : getStoredRow()) {
@@ -4723,8 +4716,8 @@ HPresolve::Result HPresolve::dualFixing(HighsPostsolveStack& postsolve_stack,
           model->col_upper_[rowNz.index()] != 1.0)
         continue;
 
-      // skip binary variable if setting it to its lower bound does not make
-      // the row redundant
+      // skip binary variable if setting it to its lower bound does not make the
+      // row redundant
       if ((rhsFinite && impliedRowBounds.getResidualSumUpperOrig(
                             row, rowNz.index(), rowNz.value()) >
                             model->row_upper_[row] + primal_feastol) ||
@@ -4734,8 +4727,8 @@ HPresolve::Result HPresolve::dualFixing(HighsPostsolveStack& postsolve_stack,
         continue;
 
       // now compute the implied lower bound (direction = 1) or implied upper
-      // bound (direction = -1) provided that the binary variable is set to
-      // its upper bound.
+      // bound (direction = -1) provided that the binary variable is set to its
+      // upper bound.
       double bestBound =
           direction > 0
               ? computeImpliedLowerBound(col, rowNz.index(),
@@ -5234,8 +5227,8 @@ HPresolve::Result HPresolve::singletonColStuffing(
 
 HPresolve::Result HPresolve::enumerateSolutions(
     HighsPostsolveStack& postsolve_stack) {
-  // enumerate all solutions for pure binary constraints with a small number
-  // of variables
+  // enumerate all solutions for pure binary constraints with a small number of
+  // variables
   mipsolver->analysis_.mipTimerStart(kMipClockEnumerationPresolve);
 
   // prepare probing
@@ -5746,8 +5739,8 @@ double HPresolve::computeWorstCaseUpperBound(HighsInt col, HighsInt boundCol,
 HPresolve::Result HPresolve::initialRowAndColPresolve(
     HighsPostsolveStack& postsolve_stack) {
   // do a full scan over the rows as the singleton arrays and the changed row
-  // arrays are not initialized, also unset changedRowFlag so that the row
-  // will be added to the changed row vector when it is changed after it was
+  // arrays are not initialized, also unset changedRowFlag so that the row will
+  // be added to the changed row vector when it is changed after it was
   // processed
   for (HighsInt row = 0; row != model->num_row_; ++row) {
     if (rowDeleted[row]) continue;
@@ -5807,8 +5800,8 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
   //    - fast presolve loop
   //    - parallel rows and columns
   //    - if (changes found) fast presolve loop
-  //    - aggregator // add limit that catches many substitutions but stops
-  //    when many failures, do not run exhaustively as now
+  //    - aggregator // add limit that catches many substitutions but stops when
+  //    many failures, do not run exhaustively as now
   //    - if (changes found) start main loop from beginning
   //    - primal and dual matrix sparsification
   //    - if (changes found) fast presolve loop
@@ -6079,8 +6072,7 @@ HPresolve::Result HPresolve::removeSlacks(
     model->row_upper_[iRow] =
         coeff > 0 ? rhs - coeff * lower : rhs - coeff * upper;
     if (cost) {
-      // Cost is (cost * rhs / coeff) + (col_cost - (cost/coeff)
-      // row_values)^Tx
+      // Cost is (cost * rhs / coeff) + (col_cost - (cost/coeff) row_values)^Tx
       double multiplier = cost / coeff;
       for (const HighsSliceNonzero& nonzero : getRowVector(iRow)) {
         HighsInt local_iCol = nonzero.index();
@@ -6624,9 +6616,8 @@ HPresolve::Result HPresolve::removeDependentFreeCols(
   //  HighsSparseMatrix matrix;
   //  matrix.num_col_ = freeCols.size();
   //  highsLogDev(options->log_options, HighsLogType::kInfo,
-  //              "HPresolve::removeDependentFreeCols Got %d free cols,
-  //              checking " "for dependent free cols\n",
-  //              (int)matrix.num_col_);
+  //              "HPresolve::removeDependentFreeCols Got %d free cols, checking
+  //              " "for dependent free cols\n", (int)matrix.num_col_);
   //  matrix.num_row_ = model->num_row_ + 1;
   //  matrix.start_.resize(matrix.num_col_ + 1);
   //  matrix.start_[0] = 0;
@@ -6658,9 +6649,8 @@ HPresolve::Result HPresolve::removeDependentFreeCols(
   //  // Must not have timed out
   //  assert(rank_deficiency >= 0);
   //  highsLogDev(options->log_options, HighsLogType::kInfo,
-  //              "HPresolve::removeDependentFreeCols Got %d free cols,
-  //              checking " "for dependent free cols\n",
-  //              (int)matrix.num_col_);
+  //              "HPresolve::removeDependentFreeCols Got %d free cols, checking
+  //              " "for dependent free cols\n", (int)matrix.num_col_);
   //  // Analyse what's been removed
   //  HighsInt num_removed_row = 0;
   //  HighsInt num_removed_nz = 0;
@@ -6676,8 +6666,8 @@ HPresolve::Result HPresolve::removeDependentFreeCols(
   //  }
   //  highsLogDev(
   //      options->log_options, HighsLogType::kInfo,
-  //      "HPresolve::removeDependentFreeCols Removed %d rows and %d
-  //      nonzeros", (int)num_removed_row, (int)num_removed_nz);
+  //      "HPresolve::removeDependentFreeCols Removed %d rows and %d nonzeros",
+  //      (int)num_removed_row, (int)num_removed_nz);
   //  if (num_fictitious_cols_skipped)
   //    highsLogDev(options->log_options, HighsLogType::kInfo,
   //                ", avoiding %d fictitious rows",
@@ -6920,8 +6910,8 @@ void HPresolve::removeFixedCol(HighsInt col) {
 }
 
 void HPresolve::removeFixedCol(HighsInt col, double fixval) {
-  // mark the column as deleted first so that it is not registered as
-  // singleton column upon removing its non-zeros
+  // mark the column as deleted first so that it is not registered as singleton
+  // column upon removing its non-zeros
   markColDeleted(col);
 
   for (HighsInt coliter = colhead[col]; coliter != -1;) {
@@ -7288,9 +7278,8 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
   rowHashes.assign(rowsize.begin(), rowsize.end());
   colHashes.assign(colsize.begin(), colsize.end());
 
-  // Step 1: Determine scales for rows and columns and remove column
-  // singletons from the initial row hashes which are initialized with the row
-  // sizes
+  // Step 1: Determine scales for rows and columns and remove column singletons
+  // from the initial row hashes which are initialized with the row sizes
   for (HighsInt i = 0; i != nnz; ++i) {
     if (Avalue[i] == 0.0) continue;
     assert(!colDeleted[Acol[i]]);
@@ -7304,9 +7293,9 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
     double absRowMax = std::abs(rowMax[Arow[i]].first);
 
     // among the largest values which are equal in tolerance
-    // we use the nonzero with the smallest row/column index for the
-    // column/row scale so that we ensure that duplicate rows/columns are
-    // scaled to have the same sign
+    // we use the nonzero with the smallest row/column index for the column/row
+    // scale so that we ensure that duplicate rows/columns are scaled to have
+    // the same sign
     if (absVal >= absRowMax - options->small_matrix_value) {
       // we are greater or equal with tolerances, check if we are either
       // strictly larger or equal with a smaller index and remember the signed
@@ -7345,9 +7334,9 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
     }
   }
 
-  // Step 3: Loop over the rows and columns and put them into buckets using
-  // the computed hash values. Whenever a bucket already contains a
-  // row/column, check if we can apply a (nearly) parallel row reduction or a
+  // Step 3: Loop over the rows and columns and put them into buckets using the
+  // computed hash values. Whenever a bucket already contains a row/column,
+  // check if we can apply a (nearly) parallel row reduction or a
   // parallel/dominated column reduction.
   std::unordered_multimap<std::uint64_t, HighsInt> buckets;
 
@@ -7371,12 +7360,12 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
       // we want to check if the columns are parallel, first rule out
       // hash collisions with different size columns
       if (colsize[i] != colsize[parallelColCandidate]) continue;
-      // The columns have the same length. Next we determine whether
-      // domination is possible in one of the directions, and if it is we
-      // designate the dominating column as column 2. The first thing we check
-      // is whether the the objective value of one of the (scaled) columns is
-      // strictly better then the objective value of the other column which
-      // rules out domination in one direction.
+      // The columns have the same length. Next we determine whether domination
+      // is possible in one of the directions, and if it is we designate the
+      // dominating column as column 2. The first thing we check is whether the
+      // the objective value of one of the (scaled) columns is strictly better
+      // then the objective value of the other column which rules out domination
+      // in one direction.
 
       HighsInt col = -1;
       HighsInt duplicateCol = -1;
@@ -7385,35 +7374,34 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
       // helpers for checking dominance between parallel columns which is
       // possible for different cases of the variable types: if col can be
       // increased infinitely in which case duplicateCol can be fixed to its
-      // lower bound. duplicateCol can be decreased infinitely in which case
-      // col can be fixed to its upper bound. for both cases we exploit that
-      // the column that remains unfixed can always compensate for the fixed
-      // column. This only holds if the compensating column can compensate
-      // exactly for feasible value of the fixed column. In the continuous
-      // case this trivially holds. In the case where both variables are
-      // integer and the scale is +- 1 this also holds trivially. If the scale
-      // is > 1 and both variables are integer, this only holds in one
-      // direction. We can apply the reduction due to the following reasoning:
-      // Applying the scale to col, means we change its meaning and it is not
-      // an integer variable anymore, but a variable that moves on multiples
-      // of 1/scale. As we have taken care that the scale is >=1 and integral
-      // for two integer variables, the scaled column can always exactly
-      // compensate for the other column as it can move by 1/k with k being
-      // integer. Hence every kth allowed value is integral and no integral
-      // value is skipped. If the compensating column is integral
+      // lower bound. duplicateCol can be decreased infinitely in which case col
+      // can be fixed to its upper bound. for both cases we exploit that the
+      // column that remains unfixed can always compensate for the fixed column.
+      // This only holds if the compensating column can compensate exactly for
+      // feasible value of the fixed column. In the continuous case this
+      // trivially holds. In the case where both variables are integer and the
+      // scale is +- 1 this also holds trivially. If the scale is > 1 and both
+      // variables are integer, this only holds in one direction. We can apply
+      // the reduction due to the following reasoning: Applying the scale to
+      // col, means we change its meaning and it is not an integer variable
+      // anymore, but a variable that moves on multiples of 1/scale. As we have
+      // taken care that the scale is >=1 and integral for two integer
+      // variables, the scaled column can always exactly compensate for the
+      // other column as it can move by 1/k with k being integer. Hence every
+      // kth allowed value is integral and no integral value is skipped. If the
+      // compensating column is integral
       bool checkColImplBounds = true;
       bool checkDuplicateColImplBounds = true;
       auto colUpperInf = [&]() {
         if (!checkColImplBounds) return false;
         if (mipsolver == nullptr) {
           // for LP we check strict redundancy of the bounds as otherwise dual
-          // postsolve might fail when the bound is used in the optimal
-          // solution
+          // postsolve might fail when the bound is used in the optimal solution
           return colScale > 0 ? isUpperStrictlyImplied(col)
                               : isLowerStrictlyImplied(col);
         } else {
-          // for MIP we do not need dual postsolve so the reduction is valid
-          // if the bound is weakly redundant
+          // for MIP we do not need dual postsolve so the reduction is valid if
+          // the bound is weakly redundant
           return colScale > 0 ? isUpperImplied(col) : isLowerImplied(col);
         }
       };
@@ -7452,8 +7440,8 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
       if (model->integrality_[i] == HighsVarType::kInteger &&
           model->integrality_[parallelColCandidate] == HighsVarType::kInteger) {
         // both variables are integral, hence the scale must be integral
-        // therefore first choose the smaller colMax value for col2, then
-        // check integrality of colMax[col1] / colMax[col2].
+        // therefore first choose the smaller colMax value for col2, then check
+        // integrality of colMax[col1] / colMax[col2].
         if (std::abs(colMax[i].first) <
             std::abs(colMax[parallelColCandidate].first)) {
           col = i;
@@ -7468,9 +7456,9 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
           continue;
         assert(std::abs(colScale) >= 1.0);
 
-        // if the scale is larger than 1, duplicate column cannot compensate
-        // for all values of scaled col due to integrality as the scaled
-        // column moves on a grid of 1/scale.
+        // if the scale is larger than 1, duplicate column cannot compensate for
+        // all values of scaled col due to integrality as the scaled column
+        // moves on a grid of 1/scale.
         //
         // ToDo: Check whether this is too restrictive
         if (colScale != 1.0) checkDuplicateColImplBounds = false;
@@ -7479,8 +7467,8 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
         duplicateCol = parallelColCandidate;
         colScale = colMax[duplicateCol].first / colMax[col].first;
 
-        // as col is integral and duplicateCol is not col cannot compensate
-        // for duplicate col
+        // as col is integral and duplicateCol is not col cannot compensate for
+        // duplicate col
         checkColImplBounds = false;
       } else {
         col = parallelColCandidate;
@@ -7720,8 +7708,8 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
           // anymore
           resetColImpliedBounds(col);
 
-          // if an implicit integer and an integer column were merged, check
-          // if merged continuous column is implicit integer after merge
+          // if an implicit integer and an integer column were merged, check if
+          // merged continuous column is implicit integer after merge
           if (rowsizeIntReduction && model->integrality_[duplicateCol] ==
                                          HighsVarType::kImplicitInteger) {
             StatusResult impliedInteger = isImpliedInteger(col);
@@ -7791,8 +7779,8 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
         // we only handle the case where the rows have at most one extra
         // singleton except when one row has no extra singleton and is an
         // equation. In that case we sparsify the other row by adding the
-        // equation and can subsequently solve it as an individual component
-        // as it is a row which only contains singletons
+        // equation and can subsequently solve it as an individual component as
+        // it is a row which only contains singletons
         if ((numSingleton != 0 || !isEquation(i)) &&
             (numSingletonCandidate != 0 || !isEquation(parallelRowCand)))
           continue;
@@ -7800,8 +7788,8 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
         // if only one of the two constraints has an extra singleton,
         // we require at least one of the constraints to be an equation
         // if that is the case we can add that equation to the other row
-        // and will make it into either a row singleton or a doubleton
-        // equation which is removed afterwards
+        // and will make it into either a row singleton or a doubleton equation
+        // which is removed afterwards
         if (!isEquation(i) && !isEquation(parallelRowCand)) continue;
       }
 
@@ -7938,13 +7926,13 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
           rowLower = model->row_upper_[i] * rowScale;
           rowUpper = model->row_lower_[i] * rowScale;
         }
-        // todo: two inequalities with one singleton. check whether the rows
-        // can be converted to equations by introducing a shared slack
-        // variable which is the case if the singletons have similar
-        // properties (objective sign, bounds, scaled coefficient) and the
-        // scaled right hand sides match. Then the case reduces to adding one
-        // equation to the other and substituting one of the singletons due to
-        // the resulting doubleton equation.
+        // todo: two inequalities with one singleton. check whether the rows can
+        // be converted to equations by introducing a shared slack variable
+        // which is the case if the singletons have similar properties
+        // (objective sign, bounds, scaled coefficient) and the scaled right
+        // hand sides match. Then the case reduces to adding one equation to the
+        // other and substituting one of the singletons due to the resulting
+        // doubleton equation.
         //        printf("todo, two inequalities with one additional
         //        singleton\n");
         (void)rowLower;
@@ -8357,9 +8345,9 @@ HPresolve::Result HPresolve::sparsify(HighsPostsolveStack& postsolve_stack) {
       possibleScales.clear();
 
       HighsInt misses = 0;
-      // allow no fillin if a completely continuous row is used to cancel a
-      // row that has integers as there are instances where this leads to a
-      // huge deterioration of cut performance
+      // allow no fillin if a completely continuous row is used to cancel a row
+      // that has integers as there are instances where this leads to a huge
+      // deterioration of cut performance
       HighsInt maxMisses = 1;
       if (rowsizeInteger[eqrow] == 0 && rowsizeInteger[candRow] != 0)
         --maxMisses;
@@ -8479,12 +8467,11 @@ HPresolve::Result HPresolve::sparsify(HighsPostsolveStack& postsolve_stack) {
               std::abs(it->first - scale) <= scaleTolerance) {
             // there already is a scale that is very close and could produce
             // a matrix value for this nonzero that is below the allowed
-            // threshold. Therefore we check if the matrix value is small
-            // enough for this nonzero to be deleted, in which case the number
-            // of deleted nonzeros for the other scale is increased. If it is
-            // not small enough we do not use this scale or the other one
-            // because such small matrix values may lead to numerical
-            // troubles.
+            // threshold. Therefore we check if the matrix value is small enough
+            // for this nonzero to be deleted, in which case the number of
+            // deleted nonzeros for the other scale is increased. If it is not
+            // small enough we do not use this scale or the other one because
+            // such small matrix values may lead to numerical troubles.
 
             // scale is already marked to be numerically bad
             if (it->second == -1) continue;
@@ -8517,8 +8504,8 @@ HPresolve::Result HPresolve::sparsify(HighsPostsolveStack& postsolve_stack) {
 
         assert(scale != 0.0 || numCancel == 0);
 
-        // cancels at least one nonzero if the scale cancels more than there
-        // is fillin
+        // cancels at least one nonzero if the scale cancels more than there is
+        // fillin
         if (numCancel > 1) sparsifyRows.emplace_back(candRow, scale);
       }
     }
