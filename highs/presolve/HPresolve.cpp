@@ -3364,7 +3364,7 @@ HPresolve::Result HPresolve::singletonCol(HighsPostsolveStack& postsolve_stack,
     if (model->col_lower_[col] != -kHighsInf)
       HPRESOLVE_CHECKED_CALL(fixColToLower(postsolve_stack, col));
     else if (model->col_upper_[col] != kHighsInf)
-      HPRESOLVE_CHECKED_CALL(fixColToLower(postsolve_stack, col));
+      HPRESOLVE_CHECKED_CALL(fixColToUpper(postsolve_stack, col));
     else
       fixColToZero(postsolve_stack, col);
     return Result::kOk;
