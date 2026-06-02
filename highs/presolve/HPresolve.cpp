@@ -3374,6 +3374,7 @@ HPresolve::Result HPresolve::singletonCol(HighsPostsolveStack& postsolve_stack,
   HPRESOLVE_CHECKED_CALL(zeroCostSingleton(
       col, row, colCoef,
       model->row_upper_[row] != kHighsInf ? HighsInt{1} : HighsInt{-1}));
+  if (colDeleted[col]) return Result::kOk;
 
   // detect strong / weak domination
   HPRESOLVE_CHECKED_CALL(detectDominatedCol(postsolve_stack, col, false));
