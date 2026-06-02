@@ -5968,8 +5968,10 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
       }
 
       if (tryFourierMotzkin &&
-          analysis_.allow_rule_[kPresolveRuleFourierMotzkin])
+          analysis_.allow_rule_[kPresolveRuleFourierMotzkin]) {
         HPRESOLVE_CHECKED_CALL(fourierMotzkin(postsolve_stack));
+        tryFourierMotzkin = false;
+      }
 
       if (analysis_.allow_rule_[kPresolveRuleAggregator])
         HPRESOLVE_CHECKED_CALL(aggregator(postsolve_stack));
@@ -7084,8 +7086,11 @@ HPresolve::Result HPresolve::fourierMotzkin(
     double upper = upperFinite ? static_cast<double>(impliedUpper) : kHighsInf;
 
     // check for infeasibility
-    if (lower > nr.upper + primal_feastol || upper < nr.lower - primal_feastol)
+    if (lower > nr.upper + primal_feastol || upper < nr.lower - primal_feastol) {
+      printf("FME infeasibility: implied [%g, %g] vs row [%g, %g]\n",
+             lower, upper, nr.lower, nr.upper);
       return Result::kPrimalInfeasible;
+    }
 
     // check for redundancy
     isRedundant = lower >= nr.lower - primal_feastol &&
@@ -7245,8 +7250,10 @@ HPresolve::Result HPresolve::fourierMotzkin(
   HighsInt numRowsEliminated = 0;
   HighsInt numRowsAdded = 0;
 
+  const HighsInt maxFmeEliminations = 1;
+
   // main loop: eliminate variables from heap
-  while (!heap.empty()) {
+  while (!heap.empty() && numColsEliminated < maxFmeEliminations) {
     HighsInt col = heap[0].col;
     heapRemove(heap, heapPos, col);
 
@@ -7313,9 +7320,9 @@ HPresolve::Result HPresolve::fourierMotzkin(
     std::vector<std::pair<HighsInt, HighsInt>> newRowPairs;
 
     for (const auto& nr : newRows) {
-      bool redundant;
-      HPRESOLVE_CHECKED_CALL(checkNewRow(nr, redundant));
-      if (redundant) continue;
+      bool redundant = false;
+      // HPRESOLVE_CHECKED_CALL(checkNewRow(nr, redundant));
+      // if (redundant) continue;
 
       std::vector<row_entry> entries;
       entries.reserve(nr.entries.size());
@@ -7370,6 +7377,9 @@ HPresolve::Result HPresolve::fourierMotzkin(
     // mark column as deleted
     markColDeleted(col);
     ++numColsEliminated;
+    printf("FME: eliminated col=%d, removed %d plus rows, %d minus rows, added %d new rows\n",
+           (int)col, (int)iPlus.size(), (int)iMinus.size(),
+           (int)rowEntries.size());
 
     // update affected candidates in the heap
     saveAffectedCols.swap(affectedCols);
