@@ -3359,7 +3359,8 @@ HPresolve::Result HPresolve::singletonCol(HighsPostsolveStack& postsolve_stack,
     return Result::kOk;
   }
 
-  auto zeroCostSingleton = [&](HighsInt col, double val, HighsInt direction) {
+  auto zeroCostSingleton = [&](HighsInt col, HighsInt row, double val,
+                               HighsInt direction) {
     // fix zero-cost singleton to a value that relaxes the constraint
     if (model->col_cost_[col] != 0.0 || isRanged(row)) return Result::kOk;
     if (direction * val > 0 && model->col_lower_[col] != -kHighsInf)
@@ -3371,7 +3372,7 @@ HPresolve::Result HPresolve::singletonCol(HighsPostsolveStack& postsolve_stack,
 
   // handle zero-cost singleton
   HPRESOLVE_CHECKED_CALL(zeroCostSingleton(
-      col, colCoef,
+      col, row, colCoef,
       model->row_upper_[row] != kHighsInf ? HighsInt{1} : HighsInt{-1}));
 
   // detect strong / weak domination
