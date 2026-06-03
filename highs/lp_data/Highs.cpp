@@ -4073,6 +4073,7 @@ HighsStatus Highs::callSolveQp() {
         [this](QpModelStatus& qp_model_status) {
           if (qp_model_status == QpModelStatus::kUndetermined ||
               qp_model_status == QpModelStatus::kLargeNullspace ||
+              qp_model_status == QpModelStatus::kNonConvex ||
               qp_model_status == QpModelStatus::kError ||
               qp_model_status == QpModelStatus::kNotset)
             highsLogUser(options_.log_options, HighsLogType::kInfo,

@@ -1389,3 +1389,36 @@ TEST_CASE("issue-2894", "[qpsolver]") {
   h.resetGlobalScheduler(true);
 }
 */
+
+TEST_CASE("issue-3045", "[qpsolver]") {
+  // Nonconvex QP
+  //
+  // min f = x^2 + 4xy + y^2; x + y = 1
+  //
+  // Elimination gives f = -2x^2 + 2x + 1
+  //
+  // Hence x = 1/2 (=> y= 1/2) is a maximizer, with objective
+  // unbounded below for large |x|
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  // Zero the QP regularization so "true" solution is obtained
+  REQUIRE(h.setOptionValue("qp_regularization_value", 0) == HighsStatus::kOk);
+  HighsModel model;
+  model.lp_.num_col_ = 2;
+  model.lp_.num_row_ = 1;
+  model.lp_.col_cost_ = {0, 0};
+  model.lp_.col_lower_ = {-kHighsInf, -kHighsInf};
+  model.lp_.col_upper_ = {kHighsInf, kHighsInf};
+  model.lp_.row_lower_ = {1};
+  model.lp_.row_upper_ = {1};
+  model.lp_.a_matrix_.start_ = {0, 1, 2};
+  model.lp_.a_matrix_.index_ = {0, 0};
+  model.lp_.a_matrix_.value_ = {1, 1};
+  model.hessian_.dim_ = 2;
+  model.hessian_.start_ = {0, 2, 3};
+  model.hessian_.index_ = {0, 1, 1};
+  model.hessian_.value_ = {1, 2, 1};
+  REQUIRE(h.passModel(model) == HighsStatus::kOk);
+  REQUIRE(h.run() == HighsStatus::kError);
+  h.resetGlobalScheduler(true);
+}
