@@ -1417,8 +1417,14 @@ TEST_CASE("issue-3045", "[qpsolver]") {
   model.hessian_.dim_ = 2;
   model.hessian_.start_ = {0, 2, 3};
   model.hessian_.index_ = {0, 1, 1};
-  model.hessian_.value_ = {1, 2, 1};
+  model.hessian_.value_ = {2, 4, 2};
   REQUIRE(h.passModel(model) == HighsStatus::kOk);
-  REQUIRE(h.run() == HighsStatus::kError);
+  for (auto& solver : solvers) {
+    h.setOptionValue("solver", solver);
+    h.run();
+    h.writeSolution("", 1);
+    REQUIRE(h.run() ==
+            (solver == "hipo" ? HighsStatus::kOk : HighsStatus::kError));
+  }
   h.resetGlobalScheduler(true);
 }
