@@ -3361,7 +3361,7 @@ HPresolve::Result HPresolve::singletonCol(HighsPostsolveStack& postsolve_stack,
 
   auto zeroCostSingleton = [&](HighsInt col, HighsInt row, double val,
                                HighsInt direction) {
-    // fix zero-cost singleton to a value that relaxes the constraint
+    // try to relax constraint by fixing zero-cost singleton to a bound
     if (model->col_cost_[col] != 0.0 || isRanged(row)) return Result::kOk;
     if (direction * val > 0 && model->col_lower_[col] != -kHighsInf)
       HPRESOLVE_CHECKED_CALL(fixColToLower(postsolve_stack, col));
