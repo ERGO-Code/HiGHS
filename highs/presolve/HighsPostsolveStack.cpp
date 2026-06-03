@@ -1624,7 +1624,7 @@ void HighsPostsolveStack::FourierMotzkinElimination::undo(
          (int)newRowOrigins.size());
 
   // Algorithm 5: iterate over new rows (constraints K) in reverse
-  HighsInt basicsAssigned = colIsBasic ? 1 : 0;
+  HighsInt basicsAssigned = 0;
   for (HighsInt k = (HighsInt)newRowOrigins.size() - 1; k >= 0; --k) {
     HighsInt pOrigRow = newRowOrigins[k].plusRow;
     HighsInt mOrigRow = newRowOrigins[k].minusRow;
@@ -1693,21 +1693,21 @@ void HighsPostsolveStack::FourierMotzkinElimination::undo(
             basicsAssigned++;
             printf("    -> col %d BASIC (virtual upper slack=%g)\n", (int)col,
                    pSlack);
-          } else if (mIdx >= 0 && basis.row_status[minusHeaders[mIdx].row] !=
-                                      HighsBasisStatus::kBasic) {
-            basis.row_status[minusHeaders[mIdx].row] = HighsBasisStatus::kBasic;
-            basicsAssigned++;
-            printf("    -> row %d BASIC (degenerate minus, virtual upper)\n",
-                   (int)minusHeaders[mIdx].row);
           } else {
+            // col already basic = virtual bound already "basic"
             basicsAssigned++;
-            printf("    -> col already basic, other parent already basic\n");
+            printf("    -> col already basic (virtual upper satisfied)\n");
           }
         } else {
-          basis.row_status[plusHeaders[pIdx].row] = HighsBasisStatus::kBasic;
+          if (basis.row_status[plusHeaders[pIdx].row] == HighsBasisStatus::kBasic) {
+            printf("    -> row %d already basic (plus slack=%g)\n",
+                   (int)plusHeaders[pIdx].row, plusSlacks[pIdx]);
+          } else {
+            basis.row_status[plusHeaders[pIdx].row] = HighsBasisStatus::kBasic;
+            printf("    -> row %d BASIC (plus slack=%g)\n",
+                   (int)plusHeaders[pIdx].row, plusSlacks[pIdx]);
+          }
           basicsAssigned++;
-          printf("    -> row %d BASIC (plus slack=%g)\n",
-                 (int)plusHeaders[pIdx].row, plusSlacks[pIdx]);
         }
       } else if (mHasSlack && !pHasSlack) {
         if (mIsVirtual) {
@@ -1717,57 +1717,72 @@ void HighsPostsolveStack::FourierMotzkinElimination::undo(
             basicsAssigned++;
             printf("    -> col %d BASIC (virtual lower slack=%g)\n", (int)col,
                    mSlack);
-          } else if (pIdx >= 0 && basis.row_status[plusHeaders[pIdx].row] !=
-                                      HighsBasisStatus::kBasic) {
-            basis.row_status[plusHeaders[pIdx].row] = HighsBasisStatus::kBasic;
-            basicsAssigned++;
-            printf("    -> row %d BASIC (degenerate plus, virtual lower)\n",
-                   (int)plusHeaders[pIdx].row);
           } else {
+            // col already basic = virtual bound already "basic"
             basicsAssigned++;
-            printf("    -> col already basic, other parent already basic\n");
+            printf("    -> col already basic (virtual lower satisfied)\n");
           }
         } else {
-          basis.row_status[minusHeaders[mIdx].row] = HighsBasisStatus::kBasic;
+          if (basis.row_status[minusHeaders[mIdx].row] == HighsBasisStatus::kBasic) {
+            printf("    -> row %d already basic (minus slack=%g)\n",
+                   (int)minusHeaders[mIdx].row, minusSlacks[mIdx]);
+          } else {
+            basis.row_status[minusHeaders[mIdx].row] = HighsBasisStatus::kBasic;
+            printf("    -> row %d BASIC (minus slack=%g)\n",
+                   (int)minusHeaders[mIdx].row, minusSlacks[mIdx]);
+          }
           basicsAssigned++;
-          printf("    -> row %d BASIC (minus slack=%g)\n",
-                 (int)minusHeaders[mIdx].row, minusSlacks[mIdx]);
         }
       } else if (pHasSlack && mHasSlack) {
         // Both have nonzero slack — one becomes basic
         // If one is virtual bound, the other (real row) gets priority
         if (pIsVirtual && !mIsVirtual) {
-          basis.row_status[minusHeaders[mIdx].row] = HighsBasisStatus::kBasic;
+          if (basis.row_status[minusHeaders[mIdx].row] == HighsBasisStatus::kBasic) {
+            printf("    -> row %d already basic (minus slack=%g, plus is virtual)\n",
+                   (int)minusHeaders[mIdx].row, minusSlacks[mIdx]);
+          } else {
+            basis.row_status[minusHeaders[mIdx].row] = HighsBasisStatus::kBasic;
+            printf("    -> row %d BASIC (minus slack=%g, plus is virtual)\n",
+                   (int)minusHeaders[mIdx].row, minusSlacks[mIdx]);
+          }
           basicsAssigned++;
-          printf("    -> row %d BASIC (minus slack=%g, plus is virtual)\n",
-                 (int)minusHeaders[mIdx].row, minusSlacks[mIdx]);
         } else if (mIsVirtual && !pIsVirtual) {
-          basis.row_status[plusHeaders[pIdx].row] = HighsBasisStatus::kBasic;
-          basicsAssigned++;
-          printf("    -> row %d BASIC (plus slack=%g, minus is virtual)\n",
-                 (int)plusHeaders[pIdx].row, plusSlacks[pIdx]);
+          if (basis.row_status[plusHeaders[pIdx].row] == HighsBasisStatus::kBasic) {
+            printf("    -> row %d already basic (plus slack=%g, minus is virtual)\n",
+                   (int)plusHeaders[pIdx].row, plusSlacks[pIdx]);
+          } else {
+            basis.row_status[plusHeaders[pIdx].row] = HighsBasisStatus::kBasic;
+            printf("    -> row %d BASIC (plus slack=%g, minus is virtual)\n",
+                   (int)plusHeaders[pIdx].row, plusSlacks[pIdx]);
+          }
         } else if (pIsVirtual && mIsVirtual) {
           // Both virtual bounds have slack → x_j is between bounds → basic
           if (!colIsBasic) {
             basis.col_status[col] = HighsBasisStatus::kBasic;
             colIsBasic = true;
-            basicsAssigned++;
             printf("    -> col %d BASIC (both virtual bounds have slack)\n",
                    (int)col);
+          } else {
+            printf("    -> col already basic (both virtual satisfied)\n");
           }
+          basicsAssigned++;
         } else {
-          // Both real rows have slack — pick larger
-          if (plusSlacks[pIdx] >= minusSlacks[mIdx]) {
+          // Both real rows have slack — pick the one not already basic
+          bool pAlready =
+              basis.row_status[plusHeaders[pIdx].row] == HighsBasisStatus::kBasic;
+          bool mAlready = basis.row_status[minusHeaders[mIdx].row] ==
+                          HighsBasisStatus::kBasic;
+          if (pAlready || mAlready) {
+            // One parent already basic — transfer satisfied
+            printf("    -> parent already basic (plus=%d minus=%d)\n",
+                   (int)pAlready, (int)mAlready);
+          } else if (plusSlacks[pIdx] >= minusSlacks[mIdx]) {
             basis.row_status[plusHeaders[pIdx].row] = HighsBasisStatus::kBasic;
-            basis.row_status[minusHeaders[mIdx].row] = nonbasicRowStatus(
-                minusHeaders[mIdx], minusEntries[mIdx], minusCoefOfCol[mIdx]);
             printf("    -> row %d BASIC (plus slack=%g), row %d NONBASIC\n",
                    (int)plusHeaders[pIdx].row, plusSlacks[pIdx],
                    (int)minusHeaders[mIdx].row);
           } else {
             basis.row_status[minusHeaders[mIdx].row] = HighsBasisStatus::kBasic;
-            basis.row_status[plusHeaders[pIdx].row] = nonbasicRowStatus(
-                plusHeaders[pIdx], plusEntries[pIdx], plusCoefOfCol[pIdx]);
             printf("    -> row %d BASIC (minus slack=%g), row %d NONBASIC\n",
                    (int)minusHeaders[mIdx].row, minusSlacks[mIdx],
                    (int)plusHeaders[pIdx].row);
