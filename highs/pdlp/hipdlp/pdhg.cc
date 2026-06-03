@@ -1947,10 +1947,10 @@ void AdaptiveLinesearchParams::initialise() {
 // =============================================================================
 
 void PDLPSolver::initializeStepSizes() {
-  primal_weight_ = 1.0;
+  params_.omega = (unscaled_c_norm_ + 1.0) / (unscaled_rhs_norm_ + 1.0);
+  primal_weight_ = params_.omega;
   best_primal_weight_ = primal_weight_;
   stepsize_.beta = primal_weight_ * primal_weight_;
-  params_.omega = primal_weight_;
 
   if (params_.step_size_strategy != StepSizeStrategy::FIXED &&
       params_.step_size_strategy != StepSizeStrategy::PID) {
