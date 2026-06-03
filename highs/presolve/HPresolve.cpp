@@ -3451,8 +3451,8 @@ HPresolve::Result HPresolve::singletonCol(HighsPostsolveStack& postsolve_stack,
         static_cast<Result>(convertImpliedInteger(col, row)));
 
   // dual fixing
-  HPRESOLVE_CHECKED_CALL(dualFixing(postsolve_stack, col));
-  if (colDeleted[col]) return Result::kOk;
+  // HPRESOLVE_CHECKED_CALL(dualFixing(postsolve_stack, col));
+  // if (colDeleted[col]) return Result::kOk;
 
   // singleton column stuffing
   HPRESOLVE_CHECKED_CALL(singletonColStuffing(postsolve_stack, col));
@@ -4575,8 +4575,8 @@ HPresolve::Result HPresolve::colPresolve(HighsPostsolveStack& postsolve_stack,
   }
 
   // dual fixing
-  HPRESOLVE_CHECKED_CALL(dualFixing(postsolve_stack, col));
-  if (colDeleted[col]) return Result::kOk;
+  // HPRESOLVE_CHECKED_CALL(dualFixing(postsolve_stack, col));
+  // if (colDeleted[col]) return Result::kOk;
 
   // singleton column stuffing
   HPRESOLVE_CHECKED_CALL(singletonColStuffing(postsolve_stack, col));
@@ -7250,7 +7250,7 @@ HPresolve::Result HPresolve::fourierMotzkin(
   HighsInt numRowsEliminated = 0;
   HighsInt numRowsAdded = 0;
 
-  const HighsInt maxFmeEliminations = 1;
+  const HighsInt maxFmeEliminations = 2;
 
   // main loop: eliminate variables from heap
   while (!heap.empty() && numColsEliminated < maxFmeEliminations) {

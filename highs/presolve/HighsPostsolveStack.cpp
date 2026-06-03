@@ -1527,6 +1527,8 @@ void HighsPostsolveStack::FourierMotzkinElimination::undo(
   // === BASIS POSTSOLVE (Algorithm 5) ===
   if (!basis.valid) return;
 
+  const double tol = options.mip_feasibility_tolerance;
+
   // Compute normalized row slacks: s_i / |a_{ij}|
   auto computeSlacks = [&](const std::vector<FmeRowHeader>& headers,
                            const std::vector<double>& coefs,
@@ -1549,6 +1551,21 @@ void HighsPostsolveStack::FourierMotzkinElimination::undo(
     }
   };
 
+  // Determine nonbasic row status from activity vs bounds
+  auto nonbasicRowStatus = [&](const FmeRowHeader& hdr,
+                               const std::vector<Nonzero>& entries,
+                               double coefOfCol) -> HighsBasisStatus {
+    HighsCDouble activity =
+        static_cast<HighsCDouble>(coefOfCol) * solution.col_value[col];
+    for (const auto& nz : entries)
+      activity +=
+          static_cast<HighsCDouble>(nz.value) * solution.col_value[nz.index];
+    double act = static_cast<double>(activity);
+    if (hdr.rowLower != -kHighsInf && act - hdr.rowLower <= tol)
+      return HighsBasisStatus::kLower;
+    return HighsBasisStatus::kUpper;
+  };
+
   std::vector<double> plusSlacks, minusSlacks;
   computeSlacks(plusHeaders, plusCoefOfCol, plusEntries, plusSlacks);
   computeSlacks(minusHeaders, minusCoefOfCol, minusEntries, minusSlacks);
@@ -1567,22 +1584,23 @@ void HighsPostsolveStack::FourierMotzkinElimination::undo(
     printf(" %d(s=%g)", (int)minusHeaders[r].row, minusSlacks[r]);
   printf("\n");
 
-  // Column status
+  // Free variable case: x_j is basic
   bool colIsBasic = false;
   if (newRowOrigins.empty()) {
-    // Free variable case: x_j is basic
     basis.col_status[col] = HighsBasisStatus::kBasic;
     colIsBasic = true;
-  } else if (solution.col_value[col] <=
-             colLower + options.mip_feasibility_tolerance)
+    printf("  free variable -> col %d BASIC\n", (int)col);
+  } else if (solution.col_value[col] <= colLower + tol) {
     basis.col_status[col] = HighsBasisStatus::kLower;
-  else if (solution.col_value[col] >=
-           colUpper - options.mip_feasibility_tolerance)
+  } else if (solution.col_value[col] >= colUpper - tol) {
     basis.col_status[col] = HighsBasisStatus::kUpper;
-  else {
+  } else {
     basis.col_status[col] = HighsBasisStatus::kBasic;
     colIsBasic = true;
   }
+  printf("  col_status=%d colIsBasic=%d newRowOrigins=%d\n",
+         (int)basis.col_status[col], (int)colIsBasic,
+         (int)newRowOrigins.size());
 
   // Helper to find parent index in plus/minus headers
   auto findPlusIndex = [&](HighsInt origRow) -> HighsInt {
@@ -1596,11 +1614,17 @@ void HighsPostsolveStack::FourierMotzkinElimination::undo(
     return -1;
   };
 
+  // Count how many basics we need to distribute: number of new rows that were
+  // basic in the presolved basis
+  HighsInt basicsNeeded = 0;
+  for (HighsInt k = 0; k < (HighsInt)newRowOrigins.size(); ++k)
+    if (basis.row_status[newRowOrigins[k].newRow] == HighsBasisStatus::kBasic)
+      basicsNeeded++;
+  printf("  basicsNeeded=%d (from %d new rows)\n", (int)basicsNeeded,
+         (int)newRowOrigins.size());
+
   // Algorithm 5: iterate over new rows (constraints K) in reverse
-  // For each new row k with parents (i, i'):
-  //   - β_k basic: parent with nonzero slack becomes basic;
-  //                 both slacks zero -> x_j becomes basic
-  //   - β_k nonbasic: no action (parents already have correct status)
+  HighsInt basicsAssigned = colIsBasic ? 1 : 0;
   for (HighsInt k = (HighsInt)newRowOrigins.size() - 1; k >= 0; --k) {
     HighsInt pOrigRow = newRowOrigins[k].plusRow;
     HighsInt mOrigRow = newRowOrigins[k].minusRow;
@@ -1608,83 +1632,155 @@ void HighsPostsolveStack::FourierMotzkinElimination::undo(
     HighsInt mIdx = mOrigRow >= 0 ? findMinusIndex(mOrigRow) : -1;
     HighsInt newRow = newRowOrigins[k].newRow;
 
-    // Determine β_k status: use combined slack when positive, else trust basis
-    // status
-    double pSlack = pIdx >= 0 ? plusSlacks[pIdx] : 0.0;
-    double mSlack = mIdx >= 0 ? minusSlacks[mIdx] : 0.0;
+    // β_k status determined solely from combined slack (paper: s_{i,i'})
+    // Virtual bound parents: pOrigRow == -1 means upper bound (slack = u - x_j)
+    //                        mOrigRow == -1 means lower bound (slack = x_j - l)
+    double pSlack =
+        pIdx >= 0
+            ? plusSlacks[pIdx]
+            : (pOrigRow < 0
+                   ? std::max(colUpper - solution.col_value[col], 0.0)
+                   : 0.0);
+    double mSlack =
+        mIdx >= 0
+            ? minusSlacks[mIdx]
+            : (mOrigRow < 0
+                   ? std::max(solution.col_value[col] - colLower, 0.0)
+                   : 0.0);
     double combinedSlack = pSlack + mSlack;
-    bool newRowIsBasic = combinedSlack > options.mip_feasibility_tolerance ||
-                         basis.row_status[newRow] == HighsBasisStatus::kBasic;
+    bool betaIsBasic = combinedSlack > tol;
 
-    printf("  k=%d: newRow=%d beta=%d pOrigRow=%d mOrigRow=%d cSlack=%g\n",
-           (int)k, (int)newRow, (int)newRowIsBasic, (int)pOrigRow,
-           (int)mOrigRow, combinedSlack);
+    printf(
+        "  k=%d: newRow=%d beta=%d pOrigRow=%d mOrigRow=%d pSlack=%g "
+        "mSlack=%g cSlack=%g\n",
+        (int)k, (int)newRow, (int)betaIsBasic, (int)pOrigRow, (int)mOrigRow,
+        pSlack, mSlack, combinedSlack);
 
-    if (!newRowIsBasic) continue;
-
-    // Basic propagation: β_k's basic is transferred to a parent
-    // After transfer, β_k becomes nonbasic
-    bool pHasSlack =
-        pIdx >= 0 && plusSlacks[pIdx] > options.mip_feasibility_tolerance;
-    bool mHasSlack =
-        mIdx >= 0 && minusSlacks[mIdx] > options.mip_feasibility_tolerance;
-
-    bool transferred = false;
-    if (pHasSlack && !mHasSlack) {
-      bool wasBasic =
-          basis.row_status[plusHeaders[pIdx].row] == HighsBasisStatus::kBasic;
-      basis.row_status[plusHeaders[pIdx].row] = HighsBasisStatus::kBasic;
-      transferred = !wasBasic;
-      printf("    -> row %d BASIC (plus slack=%g, wasBasic=%d)\n",
-             (int)plusHeaders[pIdx].row, plusSlacks[pIdx], (int)wasBasic);
-    } else if (mHasSlack && !pHasSlack) {
-      bool wasBasic =
-          basis.row_status[minusHeaders[mIdx].row] == HighsBasisStatus::kBasic;
-      basis.row_status[minusHeaders[mIdx].row] = HighsBasisStatus::kBasic;
-      transferred = !wasBasic;
-      printf("    -> row %d BASIC (minus slack=%g, wasBasic=%d)\n",
-             (int)minusHeaders[mIdx].row, minusSlacks[mIdx], (int)wasBasic);
-    } else if (pHasSlack && mHasSlack) {
-      // Both have slack — pick the one not already basic, prefer larger slack
-      bool pWasBasic =
-          basis.row_status[plusHeaders[pIdx].row] == HighsBasisStatus::kBasic;
-      bool mWasBasic =
-          basis.row_status[minusHeaders[mIdx].row] == HighsBasisStatus::kBasic;
-      if (!pWasBasic) {
-        basis.row_status[plusHeaders[pIdx].row] = HighsBasisStatus::kBasic;
-        transferred = true;
-        printf("    -> row %d BASIC (plus slack=%g)\n",
-               (int)plusHeaders[pIdx].row, plusSlacks[pIdx]);
-      } else if (!mWasBasic) {
-        basis.row_status[minusHeaders[mIdx].row] = HighsBasisStatus::kBasic;
-        transferred = true;
-        printf("    -> row %d BASIC (minus slack=%g)\n",
-               (int)minusHeaders[mIdx].row, minusSlacks[mIdx]);
-      } else {
-        // Both already basic — no actual transfer needed
-        printf("    -> both parents already basic\n");
+    if (!betaIsBasic) {
+      // Nonbasic propagation: both parents are nonbasic
+      if (pIdx >= 0) {
+        basis.row_status[plusHeaders[pIdx].row] =
+            nonbasicRowStatus(plusHeaders[pIdx], plusEntries[pIdx],
+                              plusCoefOfCol[pIdx]);
+        printf("    -> row %d NONBASIC (status=%d)\n",
+               (int)plusHeaders[pIdx].row,
+               (int)basis.row_status[plusHeaders[pIdx].row]);
+      } else if (pOrigRow < 0) {
+        // Virtual upper bound is nonbasic: x_j at upper bound
+        printf("    -> virtual upper bound NONBASIC\n");
       }
-    }
+      if (mIdx >= 0) {
+        basis.row_status[minusHeaders[mIdx].row] =
+            nonbasicRowStatus(minusHeaders[mIdx], minusEntries[mIdx],
+                              minusCoefOfCol[mIdx]);
+        printf("    -> row %d NONBASIC (status=%d)\n",
+               (int)minusHeaders[mIdx].row,
+               (int)basis.row_status[minusHeaders[mIdx].row]);
+      } else if (mOrigRow < 0) {
+        // Virtual lower bound is nonbasic: x_j at lower bound
+        printf("    -> virtual lower bound NONBASIC\n");
+      }
+      // β_k stays nonbasic
+      basis.row_status[newRow] = HighsBasisStatus::kLower;
+    } else {
+      // Basic propagation: transfer β_k's basic to parent with nonzero slack
+      bool pHasSlack = pSlack > tol;
+      bool mHasSlack = mSlack > tol;
+      bool pIsVirtual = pOrigRow < 0;
+      bool mIsVirtual = mOrigRow < 0;
 
-    if (!transferred && !colIsBasic) {
-      // Both slacks zero or no new basic gained: x_j becomes basic
-      basis.col_status[col] = HighsBasisStatus::kBasic;
-      colIsBasic = true;
-      printf("    -> col %d BASIC (degenerate)\n", (int)col);
-    } else if (!transferred) {
-      // No transfer happened (target was already basic or col already basic)
-      // Leave β_k basic — don't consume it
-      printf("    -> no transfer needed, β_k stays\n");
-      continue;
+      if (pHasSlack && !mHasSlack) {
+        if (pIsVirtual) {
+          // Virtual upper bound basic → x_j is basic
+          if (!colIsBasic) {
+            basis.col_status[col] = HighsBasisStatus::kBasic;
+            colIsBasic = true;
+            basicsAssigned++;
+            printf("    -> col %d BASIC (virtual upper slack=%g)\n", (int)col,
+                   pSlack);
+          }
+        } else {
+          basis.row_status[plusHeaders[pIdx].row] = HighsBasisStatus::kBasic;
+          basicsAssigned++;
+          printf("    -> row %d BASIC (plus slack=%g)\n",
+                 (int)plusHeaders[pIdx].row, plusSlacks[pIdx]);
+        }
+      } else if (mHasSlack && !pHasSlack) {
+        if (mIsVirtual) {
+          // Virtual lower bound basic → x_j is basic
+          if (!colIsBasic) {
+            basis.col_status[col] = HighsBasisStatus::kBasic;
+            colIsBasic = true;
+            basicsAssigned++;
+            printf("    -> col %d BASIC (virtual lower slack=%g)\n", (int)col,
+                   mSlack);
+          }
+        } else {
+          basis.row_status[minusHeaders[mIdx].row] = HighsBasisStatus::kBasic;
+          basicsAssigned++;
+          printf("    -> row %d BASIC (minus slack=%g)\n",
+                 (int)minusHeaders[mIdx].row, minusSlacks[mIdx]);
+        }
+      } else if (pHasSlack && mHasSlack) {
+        // Both have nonzero slack — one becomes basic
+        // If one is virtual bound, the other (real row) gets priority
+        if (pIsVirtual && !mIsVirtual) {
+          basis.row_status[minusHeaders[mIdx].row] = HighsBasisStatus::kBasic;
+          basicsAssigned++;
+          printf("    -> row %d BASIC (minus slack=%g, plus is virtual)\n",
+                 (int)minusHeaders[mIdx].row, minusSlacks[mIdx]);
+        } else if (mIsVirtual && !pIsVirtual) {
+          basis.row_status[plusHeaders[pIdx].row] = HighsBasisStatus::kBasic;
+          basicsAssigned++;
+          printf("    -> row %d BASIC (plus slack=%g, minus is virtual)\n",
+                 (int)plusHeaders[pIdx].row, plusSlacks[pIdx]);
+        } else if (pIsVirtual && mIsVirtual) {
+          // Both virtual bounds have slack → x_j is between bounds → basic
+          if (!colIsBasic) {
+            basis.col_status[col] = HighsBasisStatus::kBasic;
+            colIsBasic = true;
+            basicsAssigned++;
+            printf("    -> col %d BASIC (both virtual bounds have slack)\n",
+                   (int)col);
+          }
+        } else {
+          // Both real rows have slack — pick larger
+          if (plusSlacks[pIdx] >= minusSlacks[mIdx]) {
+            basis.row_status[plusHeaders[pIdx].row] = HighsBasisStatus::kBasic;
+            basis.row_status[minusHeaders[mIdx].row] =
+                nonbasicRowStatus(minusHeaders[mIdx], minusEntries[mIdx],
+                                  minusCoefOfCol[mIdx]);
+            printf("    -> row %d BASIC (plus slack=%g), row %d NONBASIC\n",
+                   (int)plusHeaders[pIdx].row, plusSlacks[pIdx],
+                   (int)minusHeaders[mIdx].row);
+          } else {
+            basis.row_status[minusHeaders[mIdx].row] = HighsBasisStatus::kBasic;
+            basis.row_status[plusHeaders[pIdx].row] =
+                nonbasicRowStatus(plusHeaders[pIdx], plusEntries[pIdx],
+                                  plusCoefOfCol[pIdx]);
+            printf("    -> row %d BASIC (minus slack=%g), row %d NONBASIC\n",
+                   (int)minusHeaders[mIdx].row, minusSlacks[mIdx],
+                   (int)plusHeaders[pIdx].row);
+          }
+          basicsAssigned++;
+        }
+      } else {
+        // Degenerate: both slacks zero but combined > tol → x_j basic
+        if (!colIsBasic) {
+          basis.col_status[col] = HighsBasisStatus::kBasic;
+          colIsBasic = true;
+          basicsAssigned++;
+          printf("    -> col %d BASIC (degenerate)\n", (int)col);
+        }
+      }
+      // β_k becomes nonbasic
+      basis.row_status[newRow] = HighsBasisStatus::kLower;
+      printf("    -> newRow %d NONBASIC\n", (int)newRow);
     }
-
-    // β_k's basic was transferred; mark it nonbasic
-    basis.row_status[newRow] = HighsBasisStatus::kLower;
-    printf("    -> newRow %d now NONBASIC\n", (int)newRow);
   }
 
-  // Vanished constraint check: rows not involved in any new row
-  // Nonzero slack -> basic; zero slack -> leave unchanged
+  // Vanished constraint check: rows not involved as parent of any new row
+  // Nonzero slack -> basic; zero slack -> nonbasic
   auto isInvolved = [&](HighsInt row) {
     for (HighsInt k = 0; k < (HighsInt)newRowOrigins.size(); ++k)
       if (newRowOrigins[k].plusRow == row || newRowOrigins[k].minusRow == row)
@@ -1694,19 +1790,45 @@ void HighsPostsolveStack::FourierMotzkinElimination::undo(
 
   for (HighsInt r = 0; r < numPlus; ++r) {
     if (isInvolved(plusHeaders[r].row)) continue;
-    if (plusSlacks[r] > options.mip_feasibility_tolerance) {
+    if (plusSlacks[r] > tol) {
       basis.row_status[plusHeaders[r].row] = HighsBasisStatus::kBasic;
+      basicsAssigned++;
       printf("  vanished row %d BASIC (slack=%g)\n", (int)plusHeaders[r].row,
+             plusSlacks[r]);
+    } else {
+      basis.row_status[plusHeaders[r].row] =
+          nonbasicRowStatus(plusHeaders[r], plusEntries[r], plusCoefOfCol[r]);
+      printf("  vanished row %d NONBASIC (slack=%g)\n", (int)plusHeaders[r].row,
              plusSlacks[r]);
     }
   }
   for (HighsInt r = 0; r < numMinus; ++r) {
     if (isInvolved(minusHeaders[r].row)) continue;
-    if (minusSlacks[r] > options.mip_feasibility_tolerance) {
+    if (minusSlacks[r] > tol) {
       basis.row_status[minusHeaders[r].row] = HighsBasisStatus::kBasic;
+      basicsAssigned++;
       printf("  vanished row %d BASIC (slack=%g)\n", (int)minusHeaders[r].row,
              minusSlacks[r]);
+    } else {
+      basis.row_status[minusHeaders[r].row] = nonbasicRowStatus(
+          minusHeaders[r], minusEntries[r], minusCoefOfCol[r]);
+      printf("  vanished row %d NONBASIC (slack=%g)\n",
+             (int)minusHeaders[r].row, minusSlacks[r]);
     }
+  }
+
+  // Repair: if we assigned fewer basics than needed, promote the nonbasic
+  // parent rows with the largest slack (sub-tolerance but numerically closest
+  // to basic)
+  printf("  basicsAssigned=%d basicsNeeded=%d\n", (int)basicsAssigned,
+         (int)basicsNeeded);
+  if (basicsAssigned < basicsNeeded) {
+    printf("  repair needed: basicsAssigned=%d basicsNeeded=%d\n",
+           (int)basicsAssigned, (int)basicsNeeded);
+    // Degenerate case: presolved basis had basic new rows but all slacks
+    // are below tolerance. Leave the deficit for the simplex factorization
+    // to handle via rank repair — it makes better numerical choices than
+    // we can with near-zero slacks.
   }
 }
 
