@@ -909,27 +909,6 @@ class HighsPostsolveStack {
                  int(reductions[i - 1].first));
           if (kAllowDeveloperAssert) assert(1 == 0);
       }
-      if (perform_basis_postsolve) {
-        HighsInt nBasic = 0;
-        HighsInt nRows = (HighsInt)basis.row_status.size();
-        for (HighsInt j = 0; j < (HighsInt)basis.col_status.size(); ++j)
-          if (basis.col_status[j] == HighsBasisStatus::kBasic) ++nBasic;
-        for (HighsInt j = 0; j < nRows; ++j)
-          if (basis.row_status[j] == HighsBasisStatus::kBasic) ++nBasic;
-        if (nBasic != nRows)
-          printf("After reduction %d (type %d): nBasic=%d nRows=%d (diff=%d)\n",
-                 (int)(i - 1), (int)reductions[i - 1].first, (int)nBasic,
-                 (int)nRows, (int)(nBasic - nRows));
-        // After last reduction, print which rows are basic
-        if (i - 1 == numReductions) {
-          printf("Final basis state (nRows=%d, origNumRow=%d):\n", (int)nRows,
-                 (int)origNumRow);
-          for (HighsInt j = 0; j < nRows; ++j)
-            if (basis.row_status[j] == HighsBasisStatus::kBasic)
-              printf("  row %d basic (orig=%s)\n", (int)j,
-                     j >= origNumRow ? "intermediate" : "original");
-        }
-      }
     }
     if (report_col >= 0)
       printf("After last reduction: col_value[%2d] = %g\n", int(report_col),
@@ -937,19 +916,7 @@ class HighsPostsolveStack {
 
     solution.row_value.resize(origNumRow);
     if (perform_dual_postsolve) solution.row_dual.resize(origNumRow);
-
-    if (perform_basis_postsolve) {
-      // assert(numAppendedRows == 0);
-      basis.row_status.resize(origNumRow);
-      HighsInt nBasic = 0;
-      for (HighsInt i = 0; i < (HighsInt)basis.col_status.size(); ++i)
-        if (basis.col_status[i] == HighsBasisStatus::kBasic) ++nBasic;
-      for (HighsInt i = 0; i < (HighsInt)basis.row_status.size(); ++i)
-        if (basis.row_status[i] == HighsBasisStatus::kBasic) ++nBasic;
-      if (nBasic != origNumRow)
-        printf("POSTSOLVE BASIS ERROR: nBasic=%d origNumRow=%d (diff=%d)\n",
-               (int)nBasic, (int)origNumRow, (int)(nBasic - origNumRow));
-    }
+    if (perform_basis_postsolve) basis.row_status.resize(origNumRow);
 
 #ifdef DEBUG_EXTRA
     // solution should not contain NaN or Inf
