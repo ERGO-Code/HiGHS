@@ -5970,7 +5970,6 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
       if (tryFourierMotzkin &&
           analysis_.allow_rule_[kPresolveRuleFourierMotzkin]) {
         HPRESOLVE_CHECKED_CALL(fourierMotzkin(postsolve_stack));
-        tryFourierMotzkin = false;
       }
 
       if (analysis_.allow_rule_[kPresolveRuleAggregator])
@@ -7250,7 +7249,7 @@ HPresolve::Result HPresolve::fourierMotzkin(
   HighsInt numRowsEliminated = 0;
   HighsInt numRowsAdded = 0;
 
-  const HighsInt maxFmeEliminations = 2;
+  const HighsInt maxFmeEliminations = kHighsIInf;
 
   // main loop: eliminate variables from heap
   while (!heap.empty() && numColsEliminated < maxFmeEliminations) {
