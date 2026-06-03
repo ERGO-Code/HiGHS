@@ -5936,8 +5936,8 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
     bool trySparsify =
         mipsolver != nullptr || !options->lp_presolve_requires_basis_postsolve;
 #endif
-    bool tryFourierMotzkin = true;
-    // mipsolver != nullptr || !options->lp_presolve_requires_basis_postsolve;
+    bool tryFourierMotzkin =
+        mipsolver != nullptr || !options->lp_presolve_requires_basis_postsolve;
     bool tryProbing = mipsolver != nullptr;
     HighsInt numCliquesBeforeProbing = -1;
     bool domcolAfterProbingCalled = false;
@@ -5970,7 +5970,7 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
       if (tryFourierMotzkin &&
           analysis_.allow_rule_[kPresolveRuleFourierMotzkin]) {
         HPRESOLVE_CHECKED_CALL(fourierMotzkin(postsolve_stack));
-        // tryFourierMotzkin = false;
+        tryFourierMotzkin = false;
       }
 
       if (analysis_.allow_rule_[kPresolveRuleAggregator])
@@ -7086,9 +7086,10 @@ HPresolve::Result HPresolve::fourierMotzkin(
     double upper = upperFinite ? static_cast<double>(impliedUpper) : kHighsInf;
 
     // check for infeasibility
-    if (lower > nr.upper + primal_feastol || upper < nr.lower - primal_feastol) {
-      printf("FME infeasibility: implied [%g, %g] vs row [%g, %g]\n",
-             lower, upper, nr.lower, nr.upper);
+    if (lower > nr.upper + primal_feastol ||
+        upper < nr.lower - primal_feastol) {
+      printf("FME infeasibility: implied [%g, %g] vs row [%g, %g]\n", lower,
+             upper, nr.lower, nr.upper);
       return Result::kPrimalInfeasible;
     }
 
@@ -7250,10 +7251,8 @@ HPresolve::Result HPresolve::fourierMotzkin(
   HighsInt numRowsEliminated = 0;
   HighsInt numRowsAdded = 0;
 
-  const HighsInt maxFmeEliminations = kHighsIInf;
-
   // main loop: eliminate variables from heap
-  while (!heap.empty() && numColsEliminated < maxFmeEliminations) {
+  while (!heap.empty()) {
     HighsInt col = heap[0].col;
     heapRemove(heap, heapPos, col);
 
@@ -7321,8 +7320,8 @@ HPresolve::Result HPresolve::fourierMotzkin(
 
     for (const auto& nr : newRows) {
       bool redundant = false;
-      // HPRESOLVE_CHECKED_CALL(checkNewRow(nr, redundant));
-      // if (redundant) continue;
+      HPRESOLVE_CHECKED_CALL(checkNewRow(nr, redundant));
+      if (redundant) continue;
 
       std::vector<row_entry> entries;
       entries.reserve(nr.entries.size());
@@ -7377,9 +7376,6 @@ HPresolve::Result HPresolve::fourierMotzkin(
     // mark column as deleted
     markColDeleted(col);
     ++numColsEliminated;
-    printf("FME: eliminated col=%d, removed %d plus rows, %d minus rows, added %d new rows\n",
-           (int)col, (int)iPlus.size(), (int)iMinus.size(),
-           (int)rowEntries.size());
 
     // update affected candidates in the heap
     saveAffectedCols.swap(affectedCols);
@@ -7412,15 +7408,12 @@ HPresolve::Result HPresolve::fourierMotzkin(
     HPRESOLVE_CHECKED_CALL(checkLimits(postsolve_stack));
   }
 
-  if (numColsEliminated > 0) {
-    printf("FME-PRESOLVE: eliminated %d cols %d rows, added %d rows\n",
-           (int)numColsEliminated, (int)numRowsEliminated, (int)numRowsAdded);
+  if (numColsEliminated > 0)
     highsLogDev(options->log_options, HighsLogType::kInfo,
                 "Fourier-Motzkin eliminated %" HIGHSINT_FORMAT
                 " cols and %" HIGHSINT_FORMAT
                 " rows, and added %" HIGHSINT_FORMAT " rows\n",
                 numColsEliminated, numRowsEliminated, numRowsAdded);
-  }
 
   return finalise();
 }
