@@ -43,11 +43,9 @@ struct Instance {
   }
 
   bool isEquality(const HighsInt iVar) {
-    return iVar < this->num_con ?
-	this->con_lo[iVar] ==
-	this->con_up[iVar] :
-	this->var_lo[iVar-this->num_con] ==
-	this->var_up[iVar-this->num_con];
+    return iVar < this->num_con ? this->con_lo[iVar] == this->con_up[iVar]
+                                : this->var_lo[iVar - this->num_con] ==
+                                      this->var_up[iVar - this->num_con];
   }
   SumNum sumnumprimalinfeasibilities(const QpVector& x,
                                      const QpVector& rowactivity) {

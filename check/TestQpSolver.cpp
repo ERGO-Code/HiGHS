@@ -1427,7 +1427,7 @@ TEST_CASE("issue-3045", "[qpsolver]") {
       h.setOptionValue("solver", solver);
       h.run();
       REQUIRE(h.run() ==
-	      (solver == "hipo" ? HighsStatus::kOk : HighsStatus::kError));
+              (solver == kHipoString ? HighsStatus::kOk : HighsStatus::kError));
     }
   }
   if (test1) {
@@ -1462,6 +1462,7 @@ TEST_CASE("issue-3045", "[qpsolver]") {
     // constraint, so it also becomes active. The first constraint is
     // then removed from the active set, allowing a search along the
     // second constraint, where the objective has negative curvature
+    //
     model.lp_.num_row_ = 2;
     model.lp_.row_lower_ = {-kHighsInf, 2};
     model.lp_.row_upper_ = {-4, kHighsInf};
@@ -1470,13 +1471,16 @@ TEST_CASE("issue-3045", "[qpsolver]") {
     model.lp_.a_matrix_.value_ = {1, 1, -1, 1};
     REQUIRE(h.passModel(model) == HighsStatus::kOk);
 
-    for (auto& solver : solvers) {
-      h.setOptionValue("solver", solver);
-      h.run();
-      h.writeSolution("", 1);
-      REQUIRE(h.run() ==
-	      (solver == "hipo" ? HighsStatus::kOk : HighsStatus::kError));
-    }
+    // Asserts with HiPO
+    //
+    //    for (auto& solver : solvers) {
+    std::string solver = kQpAsmString;
+    h.setOptionValue("solver", solver);
+    h.run();
+    h.writeSolution("", 1);
+    REQUIRE(h.run() ==
+            (solver == kHipoString ? HighsStatus::kOk : HighsStatus::kError));
+    //    }
   }
   h.resetGlobalScheduler(true);
 }

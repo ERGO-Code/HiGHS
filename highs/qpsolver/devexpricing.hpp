@@ -60,7 +60,7 @@ class DevexPricing : public Pricing {
 
  public:
   DevexPricing(Runtime& rt, Basis& bas, ReducedCosts& rc)
-    :   runtime(rt),
+      : runtime(rt),
         basis(bas),
         redcosts(rc),
         // clang-format off
