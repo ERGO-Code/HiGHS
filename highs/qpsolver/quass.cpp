@@ -439,10 +439,7 @@ void Quass::solve(const QpVector& x0, const QpVector& ra, Basis& b0,
                                            zero_curvature_direction);
       if (!zero_curvature_direction) {
         status = factor.expand(buffer_yp, buffer_gyp, buffer_l, buffer_m);
-        if (status != QpSolverStatus::OK) {
-          runtime.status = QpModelStatus::kUndetermined;
-          return;
-        }
+        if (status != QpSolverStatus::OK) return notOkReturn();
       }
       redgrad.expand(buffer_yp);
     } else {

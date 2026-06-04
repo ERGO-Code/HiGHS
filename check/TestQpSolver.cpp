@@ -1409,8 +1409,8 @@ TEST_CASE("issue-3045", "[qpsolver]") {
   model.lp_.col_cost_ = {0, 0};
   model.lp_.col_lower_ = {-kHighsInf, -kHighsInf};
   model.lp_.col_upper_ = {kHighsInf, kHighsInf};
-  model.lp_.row_lower_ = {1};
-  model.lp_.row_upper_ = {1};
+  model.lp_.row_lower_ = {4};
+  model.lp_.row_upper_ = {4};
   model.lp_.a_matrix_.start_ = {0, 1, 2};
   model.lp_.a_matrix_.index_ = {0, 0};
   model.lp_.a_matrix_.value_ = {1, 1};
@@ -1418,13 +1418,69 @@ TEST_CASE("issue-3045", "[qpsolver]") {
   model.hessian_.start_ = {0, 2, 3};
   model.hessian_.index_ = {0, 1, 1};
   model.hessian_.value_ = {2, 4, 2};
+  if (1 == 0) {
+    REQUIRE(h.passModel(model) == HighsStatus::kOk);
+    for (auto& solver : solvers) {
+      h.setOptionValue("solver", solver);
+      h.run();
+      REQUIRE(h.run() ==
+              (solver == "hipo" ? HighsStatus::kOk : HighsStatus::kError));
+    }
+  }
+  // Change the constraint so that curvature is positive along
+  // it. Hence, although the Hessian is indefinite, the problem is
+  // convex. Substituting y=x-4 gives f=6x^2-24x+16 so x^*=2, y^2=-2
+  // and f^*=-8
+  model.lp_.a_matrix_.value_ = {1, -1};
+  //  h.setOptionValue("output_flag", true);
+
   REQUIRE(h.passModel(model) == HighsStatus::kOk);
-  for (auto& solver : solvers) {
+
+  //  for (auto& solver : solvers) {
+  //
+  // Horrible inefficiency in active set QP solver when equation is
+  // relaxed when its dual is negative - because it's "active at
+  // lower". Presumably the zero step in the subsequent search
+  // direction leads to it being "active at upper". However, for this
+  // QP, there is negative curvature when the equation is relaxed, so
+  // non-convexity is claimed.
+  //
+  // chooseconstrainttodrop(const QpVector& lambda) must consider
+  // whether a constraint "active at lower" is actually an equation
+  //
+  //  std::string solver = kQpAsmString;
+  std::string solver = kHipoString;
+  h.setOptionValue("solver", solver);
+  h.run();
+  h.writeSolution("", 1);
+  REQUIRE(h.run() ==
+          (solver == "hipo" ? HighsStatus::kOk : HighsStatus::kError));
+  REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
+  //  }
+
+  if (1 == 0) {
+    // Change the constraints so that curvature is positive along the
+    // first constraint - which is active at the initial feasible
+    // point. The minimizer can't be reached due to the second
+    // constraint, so it also becomes active. The first constraint is
+    // then removed from the active set, allowing a search along the
+    // second constraint, where the objective has negative curvature
+    model.lp_.num_row_ = 2;
+    model.lp_.row_lower_ = {-kHighsInf, 2};
+    model.lp_.row_upper_ = {-4, kHighsInf};
+    model.lp_.a_matrix_.start_ = {0, 2, 4};
+    model.lp_.a_matrix_.index_ = {0, 1, 0, 1};
+    model.lp_.a_matrix_.value_ = {1, 1, -1, 1};
+    REQUIRE(h.passModel(model) == HighsStatus::kOk);
+
+    //  for (auto& solver : solvers) {
+    std::string solver = kQpAsmString;
     h.setOptionValue("solver", solver);
     h.run();
     h.writeSolution("", 1);
     REQUIRE(h.run() ==
             (solver == "hipo" ? HighsStatus::kOk : HighsStatus::kError));
+    //  }
   }
   h.resetGlobalScheduler(true);
 }
