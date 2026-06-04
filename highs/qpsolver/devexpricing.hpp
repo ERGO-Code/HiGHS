@@ -36,7 +36,13 @@ class DevexPricing : public Pricing {
         printf("error\n");
       }
       assert(indexinbasis != -1);
-
+      HighsInt iVar = active_constraint_index[i];
+      const bool equality = iVar < runtime.instance.num_con ?
+	runtime.instance.con_lo[iVar] ==
+	runtime.instance.con_up[iVar] :
+	runtime.instance.var_lo[iVar-runtime.instance.num_con] ==
+	runtime.instance.var_up[iVar-runtime.instance.num_con];
+      if (equality) printf("Equality %d in chooseconstrainttodrop for Devex\n", int(iVar));
       double val = lambda.value[indexinbasis] * lambda.value[indexinbasis] /
                    weights[indexinbasis];
       if (val > maxabslambda && fabs(lambda.value[indexinbasis]) >
@@ -62,7 +68,7 @@ class DevexPricing : public Pricing {
 
  public:
   DevexPricing(Runtime& rt, Basis& bas, ReducedCosts& rc)
-      : runtime(rt),
+    :   runtime(rt),
         basis(bas),
         redcosts(rc),
         // clang-format off
