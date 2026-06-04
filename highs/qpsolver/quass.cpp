@@ -17,7 +17,6 @@
 #include "qpsolver/basis.hpp"
 #include "qpsolver/crashsolution.hpp"
 #include "qpsolver/dantzigpricing.hpp"
-#include "qpsolver/devexharrispricing.hpp"
 #include "qpsolver/devexpricing.hpp"
 #include "qpsolver/factor.hpp"
 #include "qpsolver/gradient.hpp"
