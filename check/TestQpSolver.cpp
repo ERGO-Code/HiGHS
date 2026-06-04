@@ -1403,6 +1403,9 @@ TEST_CASE("issue-3045", "[qpsolver]") {
   h.setOptionValue("output_flag", dev_run);
   // Zero the QP regularization so "true" solution is obtained
   REQUIRE(h.setOptionValue("qp_regularization_value", 0) == HighsStatus::kOk);
+  const bool test0 = true;
+  const bool test1 = true;
+  const bool test2 = true;
   HighsModel model;
   model.lp_.num_col_ = 2;
   model.lp_.num_row_ = 1;
@@ -1418,47 +1421,41 @@ TEST_CASE("issue-3045", "[qpsolver]") {
   model.hessian_.start_ = {0, 2, 3};
   model.hessian_.index_ = {0, 1, 1};
   model.hessian_.value_ = {2, 4, 2};
-  if (1 == 0) {
+  if (test0) {
     REQUIRE(h.passModel(model) == HighsStatus::kOk);
     for (auto& solver : solvers) {
       h.setOptionValue("solver", solver);
       h.run();
       REQUIRE(h.run() ==
-              (solver == "hipo" ? HighsStatus::kOk : HighsStatus::kError));
+	      (solver == "hipo" ? HighsStatus::kOk : HighsStatus::kError));
     }
   }
-  // Change the constraint so that curvature is positive along
-  // it. Hence, although the Hessian is indefinite, the problem is
-  // convex. Substituting y=x-4 gives f=6x^2-24x+16 so x^*=2, y^2=-2
-  // and f^*=-8
-  model.lp_.a_matrix_.value_ = {1, -1};
-  //  h.setOptionValue("output_flag", true);
+  if (test1) {
+    // Change the constraint so that curvature is positive along
+    // it. Hence, although the Hessian is indefinite, the problem is
+    // convex. Substituting y=x-4 gives f=6x^2-24x+16 so x^*=2, y^2=-2
+    // and f^*=-8
+    model.lp_.a_matrix_.value_ = {1, -1};
 
-  REQUIRE(h.passModel(model) == HighsStatus::kOk);
+    REQUIRE(h.passModel(model) == HighsStatus::kOk);
 
-  //  for (auto& solver : solvers) {
-  //
-  // Horrible inefficiency in active set QP solver when equation is
-  // relaxed when its dual is negative - because it's "active at
-  // lower". Presumably the zero step in the subsequent search
-  // direction leads to it being "active at upper". However, for this
-  // QP, there is negative curvature when the equation is relaxed, so
-  // non-convexity is claimed.
-  //
-  // chooseconstrainttodrop(const QpVector& lambda) must consider
-  // whether a constraint "active at lower" is actually an equation
-  //
-  //  std::string solver = kQpAsmString;
-  std::string solver = kHipoString;
-  h.setOptionValue("solver", solver);
-  h.run();
-  h.writeSolution("", 1);
-  REQUIRE(h.run() ==
-          (solver == "hipo" ? HighsStatus::kOk : HighsStatus::kError));
-  REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
-  //  }
+    for (auto& solver : solvers) {
+      // Exposed horrible inefficiency in active set QP solver when
+      // equation is relaxed when its dual is negative - because it's
+      // "active at lower". Presumably the zero step in the subsequent
+      // search direction leads to it being "active at upper". However,
+      // for this QP, there is negative curvature when the equation is
+      // relaxed, so non-convexity is claimed.
+      //
+      h.setOptionValue("solver", solver);
+      h.run();
+      h.writeSolution("", 1);
+      REQUIRE(h.run() == HighsStatus::kOk);
+      REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
+    }
+  }
 
-  if (1 == 0) {
+  if (test2) {
     // Change the constraints so that curvature is positive along the
     // first constraint - which is active at the initial feasible
     // point. The minimizer can't be reached due to the second
@@ -1473,14 +1470,13 @@ TEST_CASE("issue-3045", "[qpsolver]") {
     model.lp_.a_matrix_.value_ = {1, 1, -1, 1};
     REQUIRE(h.passModel(model) == HighsStatus::kOk);
 
-    //  for (auto& solver : solvers) {
-    std::string solver = kQpAsmString;
-    h.setOptionValue("solver", solver);
-    h.run();
-    h.writeSolution("", 1);
-    REQUIRE(h.run() ==
-            (solver == "hipo" ? HighsStatus::kOk : HighsStatus::kError));
-    //  }
+    for (auto& solver : solvers) {
+      h.setOptionValue("solver", solver);
+      h.run();
+      h.writeSolution("", 1);
+      REQUIRE(h.run() ==
+	      (solver == "hipo" ? HighsStatus::kOk : HighsStatus::kError));
+    }
   }
   h.resetGlobalScheduler(true);
 }

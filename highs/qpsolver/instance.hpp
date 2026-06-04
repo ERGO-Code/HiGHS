@@ -42,6 +42,13 @@ struct Instance {
     return c * x + 0.5 * (Q.vec_mat(x) * x) + offset;
   }
 
+  bool isEquality(const HighsInt iVar) {
+    return iVar < this->num_con ?
+	this->con_lo[iVar] ==
+	this->con_up[iVar] :
+	this->var_lo[iVar-this->num_con] ==
+	this->var_up[iVar-this->num_con];
+  }
   SumNum sumnumprimalinfeasibilities(const QpVector& x,
                                      const QpVector& rowactivity) {
     SumNum res;

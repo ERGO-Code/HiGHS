@@ -30,32 +30,24 @@ class DevexPricing : public Pricing {
     HighsInt minidx = -1;
     double maxabslambda = 0.0;
     for (size_t i = 0; i < active_constraint_index.size(); i++) {
-      HighsInt indexinbasis =
-          constraintindexinbasisfactor[active_constraint_index[i]];
+      HighsInt iVar = active_constraint_index[i];
+      HighsInt indexinbasis = constraintindexinbasisfactor[iVar];
       if (indexinbasis == -1) {
         printf("error\n");
       }
       assert(indexinbasis != -1);
-      HighsInt iVar = active_constraint_index[i];
-      const bool equality = iVar < runtime.instance.num_con ?
-	runtime.instance.con_lo[iVar] ==
-	runtime.instance.con_up[iVar] :
-	runtime.instance.var_lo[iVar-runtime.instance.num_con] ==
-	runtime.instance.var_up[iVar-runtime.instance.num_con];
-      if (equality) printf("Equality %d in chooseconstrainttodrop for Devex\n", int(iVar));
+      if (runtime.instance.isEquality(iVar)) continue;
       double val = lambda.value[indexinbasis] * lambda.value[indexinbasis] /
                    weights[indexinbasis];
       if (val > maxabslambda && fabs(lambda.value[indexinbasis]) >
                                     runtime.settings.lambda_zero_threshold) {
-        if (basis.getstatus(active_constraint_index[i]) ==
-                BasisStatus::kActiveAtLower &&
+        if (basis.getstatus(iVar) == BasisStatus::kActiveAtLower &&
             -lambda.value[indexinbasis] > 0) {
-          minidx = active_constraint_index[i];
+          minidx = iVar;
           maxabslambda = val;
-        } else if (basis.getstatus(active_constraint_index[i]) ==
-                       BasisStatus::kActiveAtUpper &&
+        } else if (basis.getstatus(iVar) == BasisStatus::kActiveAtUpper &&
                    lambda.value[indexinbasis] > 0) {
-          minidx = active_constraint_index[i];
+          minidx = iVar;
           maxabslambda = val;
         } else {
           // TODO
