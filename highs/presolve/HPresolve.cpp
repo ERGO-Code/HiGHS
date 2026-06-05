@@ -7066,8 +7066,8 @@ HPresolve::Result HPresolve::fourierMotzkin(
     bool upperFinite = true;
     isRedundant = false;
     for (const auto& e : nr.entries) {
-      double lb = model->col_lower_[e.col];
-      double ub = model->col_upper_[e.col];
+      double lb = implColLower[e.col];
+      double ub = implColUpper[e.col];
       if (e.val > 0) {
         lowerFinite = lowerFinite && lb != -kHighsInf;
         if (lowerFinite) impliedLower += e.val * lb;
@@ -7086,12 +7086,8 @@ HPresolve::Result HPresolve::fourierMotzkin(
     double upper = upperFinite ? static_cast<double>(impliedUpper) : kHighsInf;
 
     // check for infeasibility
-    if (lower > nr.upper + primal_feastol ||
-        upper < nr.lower - primal_feastol) {
-      printf("FME infeasibility: implied [%g, %g] vs row [%g, %g]\n", lower,
-             upper, nr.lower, nr.upper);
+    if (lower > nr.upper + primal_feastol || upper < nr.lower - primal_feastol)
       return Result::kPrimalInfeasible;
-    }
 
     // check for redundancy
     isRedundant = lower >= nr.lower - primal_feastol &&
