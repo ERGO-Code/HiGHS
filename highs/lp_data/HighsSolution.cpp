@@ -2067,7 +2067,8 @@ bool reportKktFailures(const HighsLp& lp, const HighsOptions& options,
   const bool complementarity_error =
       !solved_as_mip && info.primal_dual_objective_error > optimality_tolerance;
   const bool integrality_error =
-      solved_as_mip && info.max_integrality_violation >= mip_feasibility_tolerance;
+      solved_as_mip &&
+      info.max_integrality_violation >= mip_feasibility_tolerance;
   const bool has_kkt_failures =
       integrality_error || info.num_primal_infeasibilities > 0 ||
       info.num_dual_infeasibilities > 0 ||

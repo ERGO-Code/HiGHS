@@ -926,4 +926,3 @@ TEST_CASE("issue-2962", "[highs_test_presolve]") {
 
   h.resetGlobalScheduler(true);
 }
-

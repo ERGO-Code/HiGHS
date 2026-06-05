@@ -1421,68 +1421,35 @@ void HighsPostsolveStack::ZeroObjSingletonContinuousCol::undo(
 
   bool error = false;
   auto errorCheck = [&](bool ok) {
-    if (!ok) 
-      printf("Column %d [%g, %g] coef %g: Domain [%g, %g]\n",
-	     int(col), lb, ub, coef, col_lb, col_ub);
+    if (!ok)
+      printf("Column %d [%g, %g] coef %g: Domain [%g, %g]\n", int(col), lb, ub,
+             coef, col_lb, col_ub);
     assert(ok);
     error = error || !ok;
   };
 
   // Domain must allow the column to be set to its original lower or
   // upper bound
-  const bool ok_at_lb = lb >= col_lb - options.primal_feasibility_tolerance;
-  const bool ok_at_ub = ub <= col_ub + options.primal_feasibility_tolerance;
+  const bool ok_at_lb =
+      lb >= col_lb - options.primal_feasibility_tolerance && lb > -kHighsInf;
+  const bool ok_at_ub =
+      ub <= col_ub + options.primal_feasibility_tolerance && ub < kHighsInf;
   errorCheck(ok_at_lb || ok_at_ub);
 
-  // Find a suitable value within the allowed interval
+  // Find a suitable bound within the domain
   double col_value = kHighsInf;
   bool at_lb = false;
   bool at_ub = false;
-  if (basis.valid && isModelRow) {
-    if (basis.row_status[row] == HighsBasisStatus::kLower) {
-      //      col_value = coef > 0 ? lb : ub;
-      if (coef > 0) {
-	at_lb = true;
-      } else {
-	at_ub = true;
-      }
-    } else if (basis.row_status[row] == HighsBasisStatus::kUpper) {
-      //      col_value = coef > 0 ? ub : lb;
-      if (coef > 0) {
-	at_ub = true;
-      } else {
-	at_lb = true;
-      }
-    } else if (col_lb <= lb) {
-      // col_value = lb;
-      at_lb = true;
-    } else {
-      // col_value = ub;
-      at_ub = true;
-    }
-  } else {
-    if (col_lb <= lb) {
-      // col_value = lb;
-      at_lb = true;;
-    } else {
-      // col_value = ub;
-      at_ub = true;
-    }
-  }
-  // Ensure that the column has been set to exactly one of its lower
-  // and upper bound
-  if (at_lb) {
-    errorCheck(!at_ub);
-    errorCheck(ok_at_lb);
+  if (ok_at_lb) {
+    at_lb = true;
     col_value = lb;
   } else {
-    errorCheck(at_ub);
-    errorCheck(ok_at_ub);
+    at_ub = true;
     col_value = ub;
   }
   errorCheck(std::fabs(col_value) < kHighsInf);
 
-  solution.col_value[col]  = col_value;
+  solution.col_value[col] = col_value;
   if (isModelRow) {
     solution.row_value[row] =
         static_cast<double>(act + (solution.col_value[col] * coef));
@@ -1491,7 +1458,7 @@ void HighsPostsolveStack::ZeroObjSingletonContinuousCol::undo(
   if (!solution.dual_valid) {
     if (error)
       printf("Column %d [%g, %g] coef %g: Domain [%g, %g] Value = %g\n",
-	     int(col), lb, ub, coef, col_lb, col_ub, solution.col_value[col]);
+             int(col), lb, ub, coef, col_lb, col_ub, solution.col_value[col]);
     return;
   }
 
@@ -1499,9 +1466,10 @@ void HighsPostsolveStack::ZeroObjSingletonContinuousCol::undo(
 
   if (!basis.valid) {
     if (error)
-      printf("Column %d [%g, %g] coef %g: Domain [%g, %g] Value = %g, Dual = %g\n",
-	     int(col), lb, ub, coef, col_lb, col_ub, solution.col_value[col],
-	     solution.col_dual[col]);
+      printf(
+          "Column %d [%g, %g] coef %g: Domain [%g, %g] Value = %g, Dual = %g\n",
+          int(col), lb, ub, coef, col_lb, col_ub, solution.col_value[col],
+          solution.col_dual[col]);
     return;
   }
 
@@ -1513,9 +1481,12 @@ void HighsPostsolveStack::ZeroObjSingletonContinuousCol::undo(
   }
 
   if (error)
-    printf("Column %d [%g, %g] coef %g: Domain [%g, %g] Value = %g, Dual = %g; Status = %s\n",
-	   int(col), lb, ub, coef, col_lb, col_ub, solution.col_value[col],
-	   solution.col_dual[col], utilBasisStatusToString(basis.col_status[col]).c_str());
+    printf(
+        "Column %d [%g, %g] coef %g: Domain [%g, %g] Value = %g, Dual = %g; "
+        "Status = %s\n",
+        int(col), lb, ub, coef, col_lb, col_ub, solution.col_value[col],
+        solution.col_dual[col],
+        utilBasisStatusToString(basis.col_status[col]).c_str());
 }
 
 }  // namespace presolve
