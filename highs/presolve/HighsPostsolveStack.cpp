@@ -22,6 +22,7 @@ void HighsPostsolveStack::initializeIndexMaps(HighsInt numRow,
   origNumRow = numRow;
   origNumCol = numCol;
   nextRowIndex = numRow;
+  nextColIndex = numCol;
 
   origRowIndex.resize(numRow);
   std::iota(origRowIndex.begin(), origRowIndex.end(), 0);

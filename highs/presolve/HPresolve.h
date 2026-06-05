@@ -106,6 +106,8 @@ class HPresolve {
   std::set<std::pair<HighsInt, HighsInt>> equations;
   std::vector<std::set<std::pair<HighsInt, HighsInt>>::iterator> eqiters;
 
+  HighsInt fourierMotzkinObjCol = -1;
+
   bool shrinkProblemEnabled;
   size_t reductionLimit;
 

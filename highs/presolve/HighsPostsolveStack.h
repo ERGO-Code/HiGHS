@@ -311,6 +311,7 @@ class HighsPostsolveStack {
   HighsInt origNumRow = -1;
   HighsInt numAppendedRows = 0;
   HighsInt nextRowIndex = -1;
+  HighsInt nextColIndex = -1;
 
   void reductionAdded(ReductionType type) {
     size_t position = reductionValues.getCurrentDataSize();
@@ -380,6 +381,13 @@ class HighsPostsolveStack {
   HighsInt getOrigNumCol() const { return origNumCol; }
 
   HighsInt getNextRowIndex() const { return nextRowIndex; }
+
+  HighsInt getNextColIndex() const { return nextColIndex; }
+
+  void appendColToModel() {
+    origColIndex.push_back(nextColIndex++);
+    linearlyTransformable.push_back(false);
+  }
 
   void initializeIndexMaps(HighsInt numRow, HighsInt numCol);
 
@@ -754,8 +762,8 @@ class HighsPostsolveStack {
     bool perform_basis_postsolve = basis.valid;
 
     // expand solution to original index space
-    assert(origNumCol > 0);
-    undoIterateBackwards(solution.col_value, origColIndex, origNumCol);
+    assert(nextColIndex > 0);
+    undoIterateBackwards(solution.col_value, origColIndex, nextColIndex);
 
     assert(nextRowIndex >= 0);
     undoIterateBackwards(solution.row_value, origRowIndex, nextRowIndex);
@@ -763,14 +771,14 @@ class HighsPostsolveStack {
     if (perform_dual_postsolve) {
       // if dual solution is given, expand dual solution and basis to original
       // index space
-      undoIterateBackwards(solution.col_dual, origColIndex, origNumCol);
+      undoIterateBackwards(solution.col_dual, origColIndex, nextColIndex);
 
       undoIterateBackwards(solution.row_dual, origRowIndex, nextRowIndex);
     }
 
     if (perform_basis_postsolve) {
       // if basis is given, expand basis status values to original index space
-      undoIterateBackwards(basis.col_status, origColIndex, origNumCol);
+      undoIterateBackwards(basis.col_status, origColIndex, nextColIndex);
 
       undoIterateBackwards(basis.row_status, origRowIndex, nextRowIndex);
     }
@@ -913,6 +921,10 @@ class HighsPostsolveStack {
     if (report_col >= 0)
       printf("After last reduction: col_value[%2d] = %g\n", int(report_col),
              solution.col_value[report_col]);
+
+    solution.col_value.resize(origNumCol);
+    if (perform_dual_postsolve) solution.col_dual.resize(origNumCol);
+    if (perform_basis_postsolve) basis.col_status.resize(origNumCol);
 
     solution.row_value.resize(origNumRow);
     if (perform_dual_postsolve) solution.row_dual.resize(origNumRow);
