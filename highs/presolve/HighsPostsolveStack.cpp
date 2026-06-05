@@ -1419,25 +1419,31 @@ void HighsPostsolveStack::ZeroObjSingletonContinuousCol::undo(
     col_ub = std::min(col_ub, static_cast<double>((origRowLower - act) / coef));
   }
 
+  const bool col_can_be_at_bound =
+    col_lb <= lb || col_ub >= ub;
+  assert(col_can_be_at_bound);
+
   // Find a suitable value within the allowed interval
   if (basis.valid && isModelRow) {
     if (basis.row_status[row] == HighsBasisStatus::kLower) {
       solution.col_value[col] = coef > 0 ? col_lb : col_ub;
     } else if (basis.row_status[row] == HighsBasisStatus::kUpper) {
       solution.col_value[col] = coef > 0 ? col_ub : col_lb;
-    } else if (0 >= col_lb && 0 <= col_ub) {
-      solution.col_value[col] = 0;
+    } else if (col_lb <= lb) {
+      solution.col_value[col] = lb;
     } else {
-      solution.col_value[col] = 0.5 * (col_lb + col_ub);
+      solution.col_value[col] = ub;
     }
   } else {
-    if (0 >= col_lb && 0 <= col_ub) {
-      solution.col_value[col] = 0;
+    if (col_lb <= lb) {
+      solution.col_value[col] = lb;
     } else {
-      solution.col_value[col] = 0.5 * (col_lb + col_ub);
+      solution.col_value[col] = ub;
     }
   }
-
+  assert(solution.col_value[col] > -kHighsInf &&
+	 solution.col_value[col] < kHighsInf);
+  
   if (isModelRow) {
     solution.row_value[row] =
         static_cast<double>(act + (solution.col_value[col] * coef));
@@ -1455,8 +1461,12 @@ void HighsPostsolveStack::ZeroObjSingletonContinuousCol::undo(
              ub) {
     basis.col_status[col] = HighsBasisStatus::kUpper;
   } else {
-    basis.col_status[col] = HighsBasisStatus::kBasic;
+    assert(111==567);
   }
+
+  printf("Column %d [%g, %g] coef %g: Domain [%g, %g] Value = %g, Dual = %g; Status = %s\n",
+	 int(col), lb, ub, coef, col_lb, col_ub, solution.col_value[col],
+	 solution.col_dual[col], utilBasisStatusToString(basis.col_status[col]).c_str());
 }
 
 }  // namespace presolve
