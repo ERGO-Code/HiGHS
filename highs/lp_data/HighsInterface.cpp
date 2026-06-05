@@ -2897,6 +2897,7 @@ void Highs::clearZeroHessian() {
 }
 
 HighsStatus Highs::checkOptimality(const std::string& solver_type) {
+  printf("Highs::checkOptimality(%s)\n", solver_type.c_str());
   // Check for infeasibility measures incompatible with optimality
   assert(model_status_ == HighsModelStatus::kOptimal);
   // Cannot expect to have no dual_infeasibilities since the QP solver
