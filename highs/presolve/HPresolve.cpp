@@ -7292,7 +7292,7 @@ HPresolve::Result HPresolve::fourierMotzkin(
         // remove near-zero entries
         newRowEntries.erase(
             std::remove_if(newRowEntries.begin(), newRowEntries.end(),
-                           [&](const auto& e) {
+                           [&](const newRowEntry& e) {
                              return abs(e.val) <= options->small_matrix_value;
                            }),
             newRowEntries.end());
