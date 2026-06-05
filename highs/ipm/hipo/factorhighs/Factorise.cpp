@@ -9,7 +9,7 @@
 #include "HybridHybridFormatHandler.h"
 #include "ReturnValues.h"
 #include "ipm/hipo/auxiliary/Auxiliary.h"
-#include "ipm/hipo/auxiliary/Log.h"
+#include "ipm/hipo/auxiliary/Logger.h"
 #include "parallel/HighsParallel.h"
 
 namespace hipo {
@@ -17,13 +17,13 @@ namespace hipo {
 Factorise::Factorise(const Symbolic& S, const std::vector<Int>& rowsM,
                      const std::vector<Int>& ptrM,
                      const std::vector<double>& valM, const Regul& regul,
-                     const Log* log, DataCollector& data,
+                     const Logger* logger, DataCollector& data,
                      std::vector<std::vector<double>>& sn_columns,
                      CliqueStack* stack)
     : S_{S},
       sn_columns_{sn_columns},
       regul_{regul},
-      log_{log},
+      logger_{logger},
       data_{data},
       stack_{stack} {
   // Input the symmetric matrix to be factorised in CSC format and the symbolic
@@ -33,8 +33,8 @@ Factorise::Factorise(const Symbolic& S, const std::vector<Int>& rowsM,
   n_ = ptrM.size() - 1;
 
   if (n_ != S_.size()) {
-    if (log_)
-      log_->printDevInfo(
+    if (logger_)
+      logger_->printInfo(
           "Matrix provided to Factorise has size incompatible with symbolic "
           "object.\n");
     return;
@@ -91,70 +91,7 @@ Factorise::Factorise(const Symbolic& S, const std::vector<Int>& rowsM,
 }
 
 void Factorise::permute(const std::vector<Int>& iperm) {
-  // Symmetric permutation of the lower triangular matrix M based on inverse
-  // permutation iperm.
-  // The resulting matrix is lower triangular, regardless of the input matrix.
-
-  std::vector<Int> work(n_, 0);
-
-  // go through the columns to count the nonzeros
-  for (Int j = 0; j < n_; ++j) {
-    // get new index of column
-    const Int col = iperm[j];
-
-    // go through elements of column
-    for (Int el = ptrM_[j]; el < ptrM_[j + 1]; ++el) {
-      const Int i = rowsM_[el];
-
-      // ignore potential entries in upper triangular part
-      if (i < j) continue;
-
-      // get new index of row
-      const Int row = iperm[i];
-
-      // since only lower triangular part is used, col is smaller than row
-      Int actual_col = std::min(row, col);
-      ++work[actual_col];
-    }
-  }
-
-  std::vector<Int> new_ptr(n_ + 1);
-
-  // get column pointers by summing the count of nonzeros in each column.
-  // copy column pointers into work
-  counts2Ptr(new_ptr, work);
-
-  std::vector<Int> new_rows(new_ptr.back());
-  std::vector<double> new_val(new_ptr.back());
-
-  // go through the columns to assign row indices
-  for (Int j = 0; j < n_; ++j) {
-    // get new index of column
-    const Int col = iperm[j];
-
-    // go through elements of column
-    for (Int el = ptrM_[j]; el < ptrM_[j + 1]; ++el) {
-      const Int i = rowsM_[el];
-
-      // ignore potential entries in upper triangular part
-      if (i < j) continue;
-
-      // get new index of row
-      const Int row = iperm[i];
-
-      // since only lower triangular part is used, col is smaller than row
-      const Int actual_col = std::min(row, col);
-      const Int actual_row = std::max(row, col);
-
-      Int pos = work[actual_col]++;
-      new_rows[pos] = actual_row;
-      new_val[pos] = valM_[el];
-    }
-  }
-
-  ptrM_ = std::move(new_ptr);
-  rowsM_ = std::move(new_rows);
-  valM_ = std::move(new_val);
+  permuteSym(iperm, ptrM_, rowsM_, valM_, true);
 }
 
 void Factorise::processSupernode(Int sn) {
@@ -197,8 +134,8 @@ void Factorise::processSupernode(Int sn) {
   if (serial) {
     bool reallocation = false;
     clique_ptr = stack_->setup(S_.cliqueSize(sn), reallocation);
-    if (reallocation && log_)
-      log_->printDevInfo("Reallocation of CliqueStack\n");
+    if (reallocation && logger_)
+      logger_->printInfo("Reallocation of CliqueStack\n");
   }
 
   // initialise the format handler
@@ -248,7 +185,7 @@ void Factorise::processSupernode(Int sn) {
       child_clique = schur_contribution_[child_sn].data();
 
       if (!child_clique) {
-        if (log_) log_->printDevInfo("Missing child supernode contribution\n");
+        if (logger_) logger_->printInfo("Missing child supernode contribution\n");
         flag_stop_.store(true, std::memory_order_relaxed);
         return;
       }
@@ -326,10 +263,10 @@ void Factorise::processSupernode(Int sn) {
   if (Int flag = FH->denseFactorise(reg_thresh)) {
     flag_stop_.store(true, std::memory_order_relaxed);
 
-    if (log_ && flag == kRetInvalidInput)
-      log_->printDevInfo("DenseFact: invalid input\n");
-    else if (log_ && flag == kRetInvalidPivot)
-      log_->printDevInfo("DenseFact: invalid pivot\n");
+    if (logger_ && flag == kRetInvalidInput)
+      logger_->printInfo("DenseFact: invalid input\n");
+    else if (logger_ && flag == kRetInvalidPivot)
+      logger_->printInfo("DenseFact: invalid pivot\n");
 
     return;
   }

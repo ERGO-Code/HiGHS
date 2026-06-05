@@ -1,0 +1,101 @@
+# scikit_build_core can't access files in parent directory
+# https://github.com/scikit-build/scikit-build-core/issues/615
+# so we use our own build_backend.py
+[build-system]
+requires = ["scikit-build-core>=0.3.3"]
+build-backend = "build_backend"
+backend-path = ["."]
+
+[project]
+name = "highspy-extras"
+version = "1.14.0.dev1"
+description = "HiGHS external dependencies extension for highspy"
+authors = [{ name = "HiGHS developers", email = "highsopt@gmail.com" }]
+readme = "README.md"
+license = "Apache-2.0 AND BSD-3-Clause"
+license-files = [
+  "THIRD_PARTY_NOTICES.md",
+]
+
+requires-python = ">=3.8"
+
+classifiers = [
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.8",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
+]
+
+[project.optional-dependencies]
+test = ["pytest"]
+
+[project.urls]
+"Source Code" = "https://github.com/ERGO-Code/HiGHS"
+"Bug Tracker" = "https://github.com/ERGO-Code/HiGHS/issues"
+
+[tool.scikit-build]
+build.verbose = true
+wheel.expand-macos-universal-tags = true
+wheel.packages = ["highspy_extras"]
+wheel.exclude = ["include", "lib*/", "bin", "LICENSE.txt", "README.md"]
+
+# Files to include in the SDist even if they are skipped by default. Supports
+# gitignore syntax.
+sdist.include = [
+  "extern",
+  "cmake",
+  "Version.txt",
+  "highs/HConfig.h.in",
+  "tests/test_highspy_extras.py"
+]
+
+sdist.exclude = [
+  ".github",
+  ".gitattributes",
+  ".gitignore",
+  ".github",
+  "app",
+  "build",
+  "check",
+  "docs",
+  "subprojects",
+  ".coin-or",
+  "build_webdemo.sh",
+  ".clang-format",
+  "__setup.py",
+  "BUILD.bazel",
+  "**meson**",
+  "MODS.md",
+  "WORKSPACE",
+  "nuget/",
+  "nuget/README.md",
+  "interfaces/*csharp*",
+  "interfaces/*fortran*",
+  "flake.*",
+  "highs.pc.in",
+]
+
+[tool.scikit-build.cmake.define]
+#HIGHS_VCPKG="ON"
+BUILD_OPENBLAS = "ON"
+HIPO = "ON"
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+addopts = ["-ra", "--showlocals", "--strict-markers", "--strict-config"]
+xfail_strict = true
+log_cli_level = "INFO"
+filterwarnings = ["error"]
+testpaths = ["tests"]
+norecursedirs = ["check", ".git", "build", "dist", "*.egg-info"]
+
+[tool.cibuildwheel]
+build = "*"
+archs = ["auto64", "auto32"]
+build-verbosity = 1
+test-command = "pytest {project}/highspy-extras/tests"
+test-extras = ["test"]

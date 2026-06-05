@@ -330,7 +330,7 @@ class RbTree {
     return y;
   }
 
-  std::pair<LinkType, bool> find(const KeyType& key, LinkType treeRoot) {
+  std::pair<LinkType, bool> find(const KeyType& key, LinkType treeRoot) const {
     LinkType y = kNoLink;
     LinkType x = treeRoot;
     while (x != kNoLink) {
@@ -351,7 +351,7 @@ class RbTree {
     return std::make_pair(y, false);
   }
 
-  std::pair<LinkType, bool> find(const KeyType& key) {
+  std::pair<LinkType, bool> find(const KeyType& key) const {
     return find(key, rootNode);
   }
 

@@ -3,7 +3,7 @@
 #include "Parameters.h"
 #include "Status.h"
 #include "ipm/IpxWrapper.h"
-#include "ipm/hipo/auxiliary/Log.h"
+#include "ipm/hipo/auxiliary/Logger.h"
 #include "model/HighsHessianUtils.h"
 
 namespace hipo {
@@ -27,7 +27,7 @@ Int Model::init(const HighsLp& lp, const HighsHessian& Q) {
 
   preprocess();
 
-  denseColumns();
+  nzBounds();
   computeNorms();
 
   // double transpose to sort indices of each column
@@ -39,6 +39,33 @@ Int Model::init(const HighsLp& lp, const HighsHessian& Q) {
   ready_ = true;
 
   return 0;
+}
+
+void Model::nzBounds() {
+  // compute lower and upper bounds for the number of nonzeros in normal
+  // equations.
+  std::vector<bool> mark(m_, false);
+  NE_nz_lb_ = A_.num_row_;
+  NE_nz_ub_ = A_.num_row_;
+  for (Int col = 0; col < A_.num_col_; ++col) {
+    Int64 used = 0;
+    Int64 unused = 0;
+    for (Int el = A_.start_[col]; el < A_.start_[col + 1]; ++el) {
+      const Int row = A_.index_[el];
+      if (mark[row])
+        ++used;
+      else {
+        mark[row] = true;
+        ++unused;
+      }
+    }
+
+    NE_nz_ub_ += (used + unused) * (used + unused - 1) / 2;
+    NE_nz_lb_ += unused * (unused - 1) / 2 + used * unused;
+  }
+  NE_nz_ub_ = std::min(NE_nz_ub_, (Int64)A_.num_row_ * (A_.num_row_ + 1) / 2);
+
+  AS_nz_ = A_.numNz() + A_.num_row_ + (qp() ? Q_.numNz() : A_.num_col_);
 }
 
 Int Model::checkData() const {
@@ -150,15 +177,13 @@ void Model::computeNorms() {
   }
 }
 
-void Model::print(const LogHighs& log) const {
+void Model::print(const Logger& logger) const {
   std::stringstream log_stream;
 
   log_stream << textline("Rows:") << sci(m_, 0, 1) << '\n';
   log_stream << textline("Cols:") << sci(n_, 0, 1) << '\n';
   log_stream << textline("Nnz A:") << sci(A_.numNz(), 0, 1) << '\n';
-  if (num_dense_cols_ > 0)
-    log_stream << textline("Dense cols:") << integer(num_dense_cols_, 0)
-               << '\n';
+
   if (qp()) {
     log_stream << textline("Nnz Q:") << sci(Q_.numNz(), 0, 1);
     if (nonSeparableQp())
@@ -280,7 +305,7 @@ void Model::print(const LogHighs& log) const {
   log_stream << textline("Range of A:") << "[" << sci(Amin, 5, 1) << ", "
              << sci(Amax, 5, 1) << "]\n";
 
-  if (log.debug(1)) {
+  if (logger.debug(1)) {
     log_stream << textline("Inf-norm rows:") << "["
                << sci(norm_inf_row_min, 5, 1) << ", "
                << sci(norm_inf_row_max, 5, 1) << "]\n";
@@ -315,24 +340,16 @@ void Model::print(const LogHighs& log) const {
   log_stream << textline("Scaling coefficients:") << "[" << sci(scalemin, 5, 1)
              << ", " << sci(scalemax, 5, 1) << "]\n";
 
-  if (log.debug(1)) preprocessor_.print(log_stream);
+  if (logger.debug(1)) {
+    preprocessor_.print(log_stream);
 
-  log.print(log_stream);
-}
-
-void Model::denseColumns() {
-  // Compute the maximum density of any column of A and count the number of
-  // dense columns.
-
-  max_col_density_ = 0.0;
-  num_dense_cols_ = 0;
-  for (Int col = 0; col < n_; ++col) {
-    Int col_nz = A_.start_[col + 1] - A_.start_[col];
-    double col_density = (double)col_nz / m_;
-    max_col_density_ = std::max(max_col_density_, col_density);
-    if (A_.num_row_ > kMinRowsForDensity && col_density > kDenseColThresh)
-      ++num_dense_cols_;
+    log_stream << "Expected nnz: ";
+    log_stream << "AS " << sci(AS_nz_, 0, 1) << "; ";
+    log_stream << "NE [" << sci(NE_nz_lb_, 0, 1) << ", " << sci(NE_nz_ub_, 0, 1)
+               << "]\n";
   }
+
+  logger.print(log_stream.str().c_str());
 }
 
 Int Model::loadIntoIpx(ipx::LpSolver& lps) const {
@@ -398,6 +415,30 @@ void Model::printDense() const {
     printf("\n");
   }
   printf("offset %6.2f\n", offset_);
+}
+
+void Model::adjustFreeVars(std::vector<double>& x, std::vector<double>& xl,
+                           std::vector<double>& xu, const Logger& logger) {
+  for (Int i : free_variables_) {
+    if (x[i] < lower_[i] * kFreeVarsCloseRatio) {
+      // getting close to lower bound
+      const double new_lower = x[i] / kFreeVarsCloseRatio;
+      logger.printDetailed(
+          "Free var %5d is at %8.1e with lb %8.1e, lb changed to %8.1e\n", i, x[i],
+          lower_[i], new_lower);
+      lower_[i] = new_lower;
+      xl[i] = x[i] - lower_[i];
+    }
+    if (x[i] > upper_[i] * kFreeVarsCloseRatio) {
+      // getting close to upper bound
+      const double new_upper = x[i] / kFreeVarsCloseRatio;
+      logger.printDetailed(
+          "Free var %5d is at %8.1e with ub %8.1e, ub changed to %8.1e\n", i, x[i],
+          upper_[i], new_upper);
+      upper_[i] = new_upper;
+      xu[i] = upper_[i] - x[i];
+    }
+  }
 }
 
 }  // namespace hipo
