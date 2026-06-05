@@ -6940,6 +6940,7 @@ HPresolve::Result HPresolve::fourierMotzkin(
     if (colDeleted[col]) return false;
     if (colsize[col] == 0) return false;
     if (model->integrality_[col] != HighsVarType::kContinuous) return false;
+    if (model->col_cost_[col] != 0.0) return false;
     for (const auto& nz : getColumnVector(col)) {
       if (isEquation(nz.index())) return false;
       double absval = std::abs(nz.value());
