@@ -5216,10 +5216,13 @@ HPresolve::Result HPresolve::redundantSingletonColDoubleSidedSlack(
   // relax s out as its value can be determined in postsolve.
   // The row may now admit additional reductions afterwards.
   // Dual fixing already handles single-sided row case with fixings.
+  const bool illegal_col_bounds =
+    model->col_lower_[col] == -kHighsInf ||
+    model->col_upper_[col] == kHighsInf;
   if (model->integrality_[col] != HighsVarType::kContinuous ||
-      model->col_cost_[col] != 0.0 || colsize[col] != 1 ||
-      model->col_lower_[col] == -kHighsInf ||
-      model->col_upper_[col] == kHighsInf) {
+      model->col_cost_[col] != 0.0 || colsize[col] != 1
+            || illegal_col_bounds
+      ) {
     return Result::kOk;
   }
   assert(!colDeleted[col]);
@@ -5227,7 +5230,10 @@ HPresolve::Result HPresolve::redundantSingletonColDoubleSidedSlack(
   HighsInt nzPos = colhead[col];
   HighsInt row = Arow[nzPos];
   assert(!rowDeleted[row]);
-  if (!isRanged(row) || isEquation(row)) return Result::kOk;
+  // Row must be ranged, but why can't it be an equation?
+  const bool was_equation = isEquation(row);
+  const bool illegal_row_bounds = !isRanged(row);// || was_equation;
+  if (illegal_row_bounds) return Result::kOk;
   double coef = Avalue[nzPos];
 
   if (std::abs(coef) == kHighsInf) return Result::kOk;
@@ -5244,12 +5250,24 @@ HPresolve::Result HPresolve::redundantSingletonColDoubleSidedSlack(
   double newRowUpper =
       model->row_upper_[row] - std::min(change_from_col_lb, change_from_col_ub);
 
+  if (illegal_col_bounds || isEquation(row))
+  printf("Column %5d [%11.4g, %11.4g] coef %11.4g: Row bounds [%11.4g, %11.4g] become [%11.4g, %11.4g]\n",
+	 int(col), lb, ub, coef,
+	 model->row_lower_[row], model->row_upper_[row],
+	 newRowLower, newRowUpper);
+  assert(!illegal_col_bounds || isEquation(row));
+
   postsolve_stack.zeroObjSingletonContinuousCol(
       row, col, model->row_lower_[row], model->row_upper_[row], lb, ub, coef,
       getStoredRow());
 
   model->row_lower_[row] = newRowLower;
   model->row_upper_[row] = newRowUpper;
+  if (was_equation && newRowLower != newRowUpper &&
+      eqiters[row] != equations.end()) {
+    equations.erase(eqiters[row]);
+    eqiters[row] = equations.end();
+  }
 
   // Delete the singleton column
   markColDeleted(col);

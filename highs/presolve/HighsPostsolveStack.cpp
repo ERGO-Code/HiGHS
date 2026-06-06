@@ -1422,16 +1422,16 @@ void HighsPostsolveStack::ZeroObjSingletonContinuousCol::undo(
   bool error = false;
   auto errorCheck = [&](bool ok) {
     if (!ok)
-      printf("Column %d [%g, %g] coef %g: Domain [%g, %g]\n", int(col), lb, ub,
-             coef, col_lb, col_ub);
+      printf("Column %5d [%11.4g, %11.4g] coef %11.4g: Act = %11.4g, Domain [%11.4g, %11.4g]\n", int(col), lb, ub,
+             coef, double(act), col_lb, col_ub);
     assert(ok);
     error = error || !ok;
   };
   auto errorLog = [&]() {
     if (!error) return;
-    printf("Column %d [%g, %g] coef %g: Domain [%g, %g] Value = %g",
-	   int(col), lb, ub, coef, col_lb, col_ub, solution.col_value[col]);
-    if (solution.dual_valid) printf(", Dual = %g", solution.col_dual[col]);
+    printf("Column %d [%11.4g, %11.4g] coef %11.4g: Act = %11.4g, Domain [%11.4g, %11.4g] Value = %11.4g",
+	   int(col), lb, ub, coef, double(act), col_lb, col_ub, solution.col_value[col]);
+    if (solution.dual_valid) printf(", Dual = %11.4g", solution.col_dual[col]);
     if (basis.valid) printf("; Status = %s", utilBasisStatusToString(basis.col_status[col]).c_str());
     printf("\n");
   };
