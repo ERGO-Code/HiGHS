@@ -5082,7 +5082,18 @@ HPresolve::Result HPresolve::singletonColStuffing(
     if (allInteger && minWeight != maxWeight) return Result::kOk;
 
     // remove integer columns if there are also continuous ones
-    if (!allInteger)
+    if (!allInteger) {
+      // The activity bounds (sumLower / sumUpper) accumulated above treat every
+      // singleton *candidate* as collapsed onto a single bound (the bound it would
+      // be stuffed to) rather than ranging over [lower, upper]. That collapse is
+      // only sound for candidates that are actually stuffed. Dropping the integer
+      // candidates here (because the row mixes integer and continuous singletons)
+      // leaves the activity bounds artificially tight, so a subsequent fix of a
+      // surviving continuous candidate can cut off the true optimum. Skip stuffing
+      // on such mixed rows rather than fix on stale activity bounds.
+      for (const auto& p : candidates)
+        if (model->integrality_[std::get<0>(p)] == HighsVarType::kInteger)
+          return Result::kOk;
       candidates.erase(
           std::remove_if(candidates.begin(), candidates.end(),
                          [&](const candidate& p) {
@@ -5090,6 +5101,7 @@ HPresolve::Result HPresolve::singletonColStuffing(
                                   HighsVarType::kInteger;
                          }),
           candidates.end());
+    }
 
     // sort candidates
     sortCols(candidates);

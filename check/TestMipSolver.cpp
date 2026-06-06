@@ -1404,3 +1404,51 @@ TEST_CASE("issue-2173", "[highs_test_mip_solver]") {
   const double optimal_objective = -26770.8075489;
   solve(highs, kHighsOnString, require_model_status, optimal_objective);
 }
+
+TEST_CASE("MIP-singleton-col-stuffing-mixed-integer",
+          "[highs_test_mip_solver]") {
+  // Regression test for a singleton-column-stuffing presolve bug that returns a
+  // suboptimal MIP solution (reported as cvxpy #3368).
+  //
+  // Minimal model:
+  //   min  -100 x + 0.01 t
+  //   s.t.        x - t <= 0          (i.e. t >= x)
+  //        1 <= x <= 3,  x integer
+  //        1 <= t <= 3,  t continuous
+  //
+  // x and t are both singleton columns of the single row. The optimum is
+  // x = 3, t = 3 with objective -299.97. Singleton column stuffing collapsed
+  // the integer singleton x onto its lower bound while computing the row
+  // activity, then dropped x from the candidate set (mixed integer/continuous
+  // row) and, on the stale activity, fixed t to its lower bound 1. That forced
+  // x <= 1, giving the suboptimal x = 1, t = 1, objective -99.99.
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  highs.setOptionValue("mip_rel_gap", 0);
+  highs.setOptionValue("mip_abs_gap", 0);
+
+  HighsLp lp;
+  lp.num_col_ = 2;
+  lp.num_row_ = 1;
+  lp.col_cost_ = {-100, 0.01};
+  lp.col_lower_ = {1, 1};
+  lp.col_upper_ = {3, 3};
+  lp.integrality_ = {HighsVarType::kInteger, HighsVarType::kContinuous};
+  lp.row_lower_ = {-kHighsInf};
+  lp.row_upper_ = {0};
+  lp.a_matrix_.format_ = MatrixFormat::kColwise;
+  lp.a_matrix_.num_col_ = 2;
+  lp.a_matrix_.num_row_ = 1;
+  lp.a_matrix_.start_ = {0, 1, 2};
+  lp.a_matrix_.index_ = {0, 0};
+  lp.a_matrix_.value_ = {1, -1};
+
+  const HighsModelStatus require_model_status = HighsModelStatus::kOptimal;
+  const double optimal_objective = -299.97;
+  // Solve with presolve on (the default) and off: both must reach the optimum.
+  REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
+  solve(highs, kHighsOnString, require_model_status, optimal_objective);
+  solve(highs, kHighsOffString, require_model_status, optimal_objective);
+
+  highs.resetGlobalScheduler(true);
+}
