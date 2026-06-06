@@ -915,9 +915,8 @@ TEST_CASE("issue-2962", "[highs_test_presolve]") {
   std::string model_file =
       std::string(HIGHS_DIR) + "/check/instances/p0548.mps";
   Highs h;
-  //  h.setOptionValue("output_flag", dev_run);
+  h.setOptionValue("output_flag", dev_run);
   h.setOptionValue("solve_relaxation", true);
-  h.setOptionValue("presolve_reduction_limit", 63);
   //  h.setOptionValue("log_dev_level", 1);
   //  h.setOptionValue("presolve_rule_logging", true);
 
