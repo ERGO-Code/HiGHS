@@ -6956,10 +6956,8 @@ HPresolve::Result HPresolve::fourierMotzkin(
     if (colsize[col] == 0) return false;
     if (model->integrality_[col] != HighsVarType::kContinuous) return false;
     if (!acceptCoef(model->col_cost_[col])) return false;
-    for (const auto& nz : getColumnVector(col)) {
-      if (isEquation(nz.index())) return false;
-      if (!acceptCoef(nz.value())) return false;
-    }
+    for (const auto& nz : getColumnVector(col))
+      if (isEquation(nz.index()) || !acceptCoef(nz.value())) return false;
     return true;
   };
 
