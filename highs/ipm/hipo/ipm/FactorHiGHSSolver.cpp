@@ -90,8 +90,8 @@ Int FactorHiGHSSolver::factorAS(const std::vector<double>& scaling) {
   FH_.setRegularisation(regul_.primal, regul_.dual);
 
   Clock clock;
-  if (FH_.factorise(S_, kkt_.ptrAS.size() - 1, kkt_.rowsAS.size(),
-                    kkt_.rowsAS.data(), kkt_.ptrAS.data(), kkt_.valAS.data()))
+  if (FH_.factorise(S_, kkt_.n(), kkt_.nz(), kkt_.rowsAS.data(),
+                    kkt_.ptrAS.data(), kkt_.valAS.data()))
     return kStatusErrorFactorise;
   info_.factor_time += clock.stop();
   info_.factor_number++;
@@ -110,8 +110,8 @@ Int FactorHiGHSSolver::factorNE(const std::vector<double>& scaling) {
   FH_.setRegularisation(regul_.primal, regul_.dual);
 
   Clock clock;
-  if (FH_.factorise(S_, kkt_.ptrNE.size() - 1, kkt_.rowsNE.size(),
-                    kkt_.rowsNE.data(), kkt_.ptrNE.data(), kkt_.valNE.data()))
+  if (FH_.factorise(S_, kkt_.n(), kkt_.nz(), kkt_.rowsNE.data(),
+                    kkt_.ptrNE.data(), kkt_.valNE.data()))
     return kStatusErrorFactorise;
   info_.factor_time += clock.stop();
   info_.factor_number++;

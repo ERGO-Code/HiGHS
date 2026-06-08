@@ -39,6 +39,10 @@ struct KktMatrix {
   Int buildNEstructure();
   Int buildNEvalues(const std::vector<double>& scaling);
   void freeNEmemory();
+
+  Int n() const;
+  Int nz() const;
+  std::string nla() const;
 };
 
 }  // namespace hipo
