@@ -334,9 +334,7 @@ class HighsPostsolveStack {
 
   const std::vector<HighsInt>& getOrigRowIndex() const { return origRowIndex; }
 
-  bool isOrigCol(HighsInt col) const {
-    return origColIndex[col] < origNumCol;
-  }
+  bool isOrigCol(HighsInt col) const { return origColIndex[col] < origNumCol; }
 
   bool isOrigRow(HighsInt row) const {
     return origRowType[row] == OrigRowType::kOriginal;
@@ -730,10 +728,10 @@ class HighsPostsolveStack {
         }
         case ReductionType::kFourierMotzkinObjCol: {
           reductionValues.setPosition(primalColTransformation.second);
-          FourierMotzkinObjCol fmObjCol;
-          reductionValues.pop(fmObjCol);
           std::vector<Nonzero> costEntries;
           reductionValues.pop(costEntries);
+          FourierMotzkinObjCol fmObjCol;
+          reductionValues.pop(fmObjCol);
           fmObjCol.transformToPresolvedSpace(costEntries, reducedSolution);
           break;
         }
