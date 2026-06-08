@@ -2209,6 +2209,16 @@ bool HPresolve::addToMatrix(
   return true;
 }
 
+bool HPresolve::addToMatrix(HighsPostsolveStack& postsolve_stack,
+                            double row_lower, double row_upper,
+                            std::vector<row_entry> row_entries) {
+  std::vector<double> rl = {row_lower};
+  std::vector<double> ru = {row_upper};
+  std::vector<std::vector<row_entry>> re;
+  re.push_back(std::move(row_entries));
+  return addToMatrix(postsolve_stack, rl, ru, re);
+}
+
 HighsTripletListSlice HPresolve::getColumnVector(HighsInt col) const {
   return HighsTripletListSlice(Arow.data(), Avalue.data(), Anext.data(),
                                colhead[col]);
@@ -6986,21 +6996,26 @@ HPresolve::Result HPresolve::fourierMotzkin(
 
       // build the objective constraint row: c^T x - z <= -offset
       // (z >= c^T x + offset, with min z minimizing original objective)
-      std::vector<double> objRowLower = {-kHighsInf};
-      std::vector<double> objRowUpper = {-model->offset_};
-      std::vector<std::vector<row_entry>> objRowEntries(1);
+      double offset = model->offset_;
+      std::vector<row_entry> objRow;
       for (HighsInt j = 0; j < zCol; ++j) {
         if (!colDeleted[j] && model->col_cost_[j] != 0.0)
-          objRowEntries[0].push_back({j, model->col_cost_[j]});
+          objRow.push_back({j, model->col_cost_[j]});
       }
-      objRowEntries[0].push_back({zCol, -1.0});
+      objRow.push_back({zCol, -1.0});
 
       // zero out original costs and offset
       for (HighsInt j = 0; j < zCol; ++j) model->col_cost_[j] = 0.0;
       model->offset_ = 0.0;
 
       // add the constraint row to the matrix
-      addToMatrix(postsolve_stack, objRowLower, objRowUpper, objRowEntries);
+      addToMatrix(postsolve_stack, -kHighsInf, -offset, objRow);
+
+      // register reduction so getReducedPrimalSolution can compute z
+      std::vector<HighsPostsolveStack::Nonzero> costEntries;
+      for (const auto& entry : objRow)
+        costEntries.emplace_back(entry.col, entry.val);
+      postsolve_stack.fourierMotzkinObjCol(zCol, offset, costEntries);
 
       fourierMotzkinObjCol = zCol;
 

@@ -78,6 +78,15 @@ void HighsPostsolveStack::LinearTransform::transformToPresolvedSpace(
   primalSol[col] /= scale;
 }
 
+void HighsPostsolveStack::FourierMotzkinObjCol::transformToPresolvedSpace(
+    const std::vector<Nonzero>& costEntries,
+    std::vector<double>& primalSol) const {
+  double val = offset;
+  for (const Nonzero& entry : costEntries)
+    val += entry.value * primalSol[entry.index];
+  primalSol[col] = val;
+}
+
 static HighsBasisStatus computeRowStatus(double dual,
                                          HighsPostsolveStack::RowType rowType) {
   if (rowType == HighsPostsolveStack::RowType::kEq)

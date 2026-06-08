@@ -93,6 +93,14 @@ class HighsPostsolveStack {
     void transformToPresolvedSpace(std::vector<double>& primalSol) const;
   };
 
+  struct FourierMotzkinObjCol {
+    double offset;
+    HighsInt col;
+
+    void transformToPresolvedSpace(const std::vector<Nonzero>& costEntries,
+                                   std::vector<double>& primalSol) const;
+  };
+
   struct FreeColSubstitution {
     double rhs;
     double colCost;
@@ -296,6 +304,7 @@ class HighsPostsolveStack {
     kDuplicateColumn,
     kSlackColSubstitution,
     kFourierMotzkinElimination,
+    kFourierMotzkinObjCol,
   };
 
   HighsDataStack reductionValues;
@@ -648,6 +657,18 @@ class HighsPostsolveStack {
     reductionAdded(ReductionType::kFourierMotzkinElimination);
   }
 
+  void fourierMotzkinObjCol(HighsInt col, double offset,
+                            const std::vector<Nonzero>& costEntries) {
+    reductionValues.push(FourierMotzkinObjCol{offset, origColIndex[col]});
+    std::vector<Nonzero> translatedEntries;
+    translatedEntries.reserve(costEntries.size());
+    for (const Nonzero& entry : costEntries)
+      if (entry.index != col)
+        translatedEntries.emplace_back(origColIndex[entry.index], entry.value);
+    reductionValues.push(translatedEntries);
+    reductionAdded(ReductionType::kFourierMotzkinObjCol);
+  }
+
   void duplicateRow(HighsInt row, bool rowUpperTightened,
                     bool rowLowerTightened, HighsInt duplicateRow,
                     double duplicateRowScale) {
@@ -688,6 +709,7 @@ class HighsPostsolveStack {
   std::vector<double> getReducedPrimalSolution(
       const std::vector<double>& origPrimalSolution) {
     std::vector<double> reducedSolution = origPrimalSolution;
+    reducedSolution.resize(nextColIndex, 0.0);
 
     for (const std::pair<ReductionType, size_t>& primalColTransformation :
          reductions) {
@@ -704,6 +726,15 @@ class HighsPostsolveStack {
           LinearTransform linearTransform;
           reductionValues.pop(linearTransform);
           linearTransform.transformToPresolvedSpace(reducedSolution);
+          break;
+        }
+        case ReductionType::kFourierMotzkinObjCol: {
+          reductionValues.setPosition(primalColTransformation.second);
+          FourierMotzkinObjCol fmObjCol;
+          reductionValues.pop(fmObjCol);
+          std::vector<Nonzero> costEntries;
+          reductionValues.pop(costEntries);
+          fmObjCol.transformToPresolvedSpace(costEntries, reducedSolution);
           break;
         }
         default:
@@ -914,6 +945,13 @@ class HighsPostsolveStack {
           reduction.undo(*this, options, plusHeaders, plusCoefs, plusEntries,
                          minusHeaders, minusCoefs, minusEntries,
                          fmeNewRowOrigins, solution, basis);
+          break;
+        }
+        case ReductionType::kFourierMotzkinObjCol: {
+          std::vector<Nonzero> costEntries;
+          reductionValues.pop(costEntries);
+          FourierMotzkinObjCol reduction;
+          reductionValues.pop(reduction);
           break;
         }
         default:

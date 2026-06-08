@@ -390,6 +390,9 @@ class HPresolve {
                    const std::vector<double>& row_upper,
                    const std::vector<std::vector<row_entry>>& row_entries);
 
+  bool addToMatrix(HighsPostsolveStack& postsolve_stack, double row_lower,
+                   double row_upper, std::vector<row_entry> row_entries);
+
   Result prepareProbing(HighsPostsolveStack& postsolve_stack, bool& firstCall);
 
   Result finaliseProbing(HighsPostsolveStack& postsolve_stack, bool firstCall,
