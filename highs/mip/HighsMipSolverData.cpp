@@ -1289,13 +1289,14 @@ void HighsMipSolverData::performRestart() {
     // if we have a basis after solving the root LP, we expand it to the
     // original space so that it can be used for constructing a starting basis
     // for the presolved model after the restart
-    root_basis.col_status.resize(postSolveStack.getOrigNumCol());
+    root_basis.col_status.resize(postSolveStack.getNextColIndex());
     root_basis.row_status.resize(postSolveStack.getNextRowIndex(),
                                  HighsBasisStatus::kBasic);
     root_basis.valid = true;
     root_basis.useful = true;
 
-    for (HighsInt i = 0; i < mipsolver.numCol(); ++i)
+    HighsInt numCol = basis.col_status.size();
+    for (HighsInt i = 0; i < numCol; ++i)
       root_basis.col_status[postSolveStack.getOrigColIndex()[i]] =
           basis.col_status[i];
 
