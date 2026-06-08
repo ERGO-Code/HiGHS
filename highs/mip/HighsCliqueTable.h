@@ -163,17 +163,21 @@ class HighsCliqueTable {
   int64_t numNeighbourhoodQueries;
 
   HighsCliqueTable(HighsInt ncols) {
-    invertedHashList.resize(2 * static_cast<size_t>(ncols));
-    invertedHashListSizeTwo.resize(2 * static_cast<size_t>(ncols));
-    numcliquesvar.resize(2 * static_cast<size_t>(ncols), 0);
-    colsubstituted.resize(ncols);
-    colDeleted.resize(ncols, false);
+    resize(static_cast<size_t>(ncols));
     nfixings = 0;
     numNeighbourhoodQueries = 0;
     numEntries = 0;
     maxEntries = kHighsIInf;
     minEntriesForParallelism = kHighsIInf;
     inPresolve = false;
+  }
+
+  void resize(size_t ncols) {
+    invertedHashList.resize(2 * ncols);
+    invertedHashListSizeTwo.resize(2 * ncols);
+    numcliquesvar.resize(2 * ncols, 0);
+    colsubstituted.resize(ncols);
+    colDeleted.resize(ncols, false);
   }
 
   void setPresolveFlag(bool inPresolve) { this->inPresolve = inPresolve; }

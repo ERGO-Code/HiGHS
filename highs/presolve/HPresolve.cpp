@@ -7003,6 +7003,8 @@ HPresolve::Result HPresolve::fourierMotzkin(
       addToMatrix(postsolve_stack, objRowLower, objRowUpper, objRowEntries);
 
       fourierMotzkinObjCol = zCol;
+
+      shrinkProblem(postsolve_stack);
     }
   }
 

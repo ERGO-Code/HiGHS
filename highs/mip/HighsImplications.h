@@ -58,15 +58,10 @@ class HighsImplications {
   std::vector<HighsSubstitution> substitutions;
   std::vector<uint8_t> colsubstituted;
   HighsImplications(const HighsMipSolver& mipsolver) : mipsolver(mipsolver) {
-    HighsInt numcol = mipsolver.numCol();
-    implications.resize(2 * static_cast<size_t>(numcol));
-    colsubstituted.resize(numcol);
-    vubs.resize(numcol);
-    vlbs.resize(numcol);
     nextCleanupCall = mipsolver.numNonzero();
     numImplications = 0;
     numVarBounds = 0;
-    maxVarBounds = calcMaxVarBounds(numcol);
+    resize(mipsolver.numCol());
   }
 
   std::function<void(HighsInt, HighsInt, HighsInt, double)>
@@ -78,20 +73,22 @@ class HighsImplications {
     implications.clear();
     implications.shrink_to_fit();
 
-    HighsInt numcol = mipsolver.numCol();
-    implications.resize(2 * static_cast<size_t>(numcol));
-    colsubstituted.resize(numcol);
     numImplications = 0;
     vubs.clear();
     vubs.shrink_to_fit();
-    vubs.resize(numcol);
     vlbs.clear();
     vlbs.shrink_to_fit();
-    vlbs.resize(numcol);
+    resize(mipsolver.numCol());
     numVarBounds = 0;
-    maxVarBounds = calcMaxVarBounds(numcol);
-
     nextCleanupCall = mipsolver.numNonzero();
+  }
+
+  void resize(HighsInt ncols) {
+    implications.resize(2 * static_cast<size_t>(ncols));
+    colsubstituted.resize(ncols);
+    vubs.resize(ncols);
+    vlbs.resize(ncols);
+    maxVarBounds = calcMaxVarBounds(ncols);
   }
 
   constexpr static int64_t calcMaxVarBounds(HighsInt numcol) {
