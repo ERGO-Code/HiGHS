@@ -14,7 +14,7 @@ Direct solver for IPM matrices.
 Consider a sparse symmetric matrix M in CSC format.
 Only its lower triangular part is used; entries in the upper triangle are
 ignored.
-The matrix has n rows/cols and nz nonzero entries in the lower triangle.
+The matrix has n rows/cols and nz nonzero entries.
 It is stored using three arrays:
 - ptr, column pointers, of length n+1;
 - rows, row indices, of length nz;
@@ -99,8 +99,9 @@ class FHsolver {
 
   // Set values for static regularisation to be added when a pivot is selected.
   // If regularisation is already added to the matrix, ignore.
-  void setRegularisation(double reg_p, double reg_d);
+  void setRegularisation(double reg_p = 0.0, double reg_d = 0.0);
 
+  // Extract the regularisation values used, including static and dynamic.
   void getRegularisation(double* reg);
 };
 

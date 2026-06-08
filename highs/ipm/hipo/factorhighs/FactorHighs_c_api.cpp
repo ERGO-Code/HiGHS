@@ -3,8 +3,10 @@
 #include "FactorHighs.h"
 
 void* FactorHighs_create(void) { return new hipo::FHsolver(); }
-
 void FactorHighs_destroy(void* FH) { delete (hipo::FHsolver*)FH; }
+
+void* FactorHighs_symbolic_create(void) { return new hipo::Symbolic(); }
+void FactorHighs_symbolic_destroy(void* S) { delete (hipo::Symbolic*)S; }
 
 HighsInt FactorHighs_analyse(void* FH, void* S, HighsInt n, HighsInt nz,
                              const HighsInt* rows, const HighsInt* ptr,
