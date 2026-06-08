@@ -6953,7 +6953,7 @@ HPresolve::Result HPresolve::fourierMotzkin(
       model->a_matrix_.num_col_++;
 
       // extend model vectors
-      model->col_cost_.push_back(-1.0);
+      model->col_cost_.push_back(1.0);
       model->col_lower_.push_back(-kHighsInf);
       model->col_upper_.push_back(kHighsInf);
       model->integrality_.push_back(HighsVarType::kContinuous);
@@ -6984,16 +6984,16 @@ HPresolve::Result HPresolve::fourierMotzkin(
       // register in postsolve stack
       postsolve_stack.appendColToModel();
 
-      // build the objective constraint row: z - c^T x <= offset
-      // (z <= c^T x + offset, with min -z maximizing z)
+      // build the objective constraint row: c^T x - z <= -offset
+      // (z >= c^T x + offset, with min z minimizing original objective)
       std::vector<double> objRowLower = {-kHighsInf};
-      std::vector<double> objRowUpper = {model->offset_};
+      std::vector<double> objRowUpper = {-model->offset_};
       std::vector<std::vector<row_entry>> objRowEntries(1);
       for (HighsInt j = 0; j < zCol; ++j) {
         if (!colDeleted[j] && model->col_cost_[j] != 0.0)
-          objRowEntries[0].push_back({j, -model->col_cost_[j]});
+          objRowEntries[0].push_back({j, model->col_cost_[j]});
       }
-      objRowEntries[0].push_back({zCol, 1.0});
+      objRowEntries[0].push_back({zCol, -1.0});
 
       // zero out original costs and offset
       for (HighsInt j = 0; j < zCol; ++j) model->col_cost_[j] = 0.0;
