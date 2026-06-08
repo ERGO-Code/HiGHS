@@ -1,4 +1,4 @@
-#include "FactorHiGHS.h"
+#include "FactorHighs.h"
 
 #include "Analyse.h"
 #include "DataCollector.h"

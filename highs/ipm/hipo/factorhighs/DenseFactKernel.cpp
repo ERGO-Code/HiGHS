@@ -1,7 +1,7 @@
 #include "CallAndTimeBlas.h"
 #include "DataCollector.h"
 #include "DenseFact.h"
-#include "FactorHiGHSSettings.h"
+#include "FactorHighsSettings.h"
 #include "ReturnValues.h"
 #include "Swaps.h"
 #include "ipm/hipo/auxiliary/Auxiliary.h"

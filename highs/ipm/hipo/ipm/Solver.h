@@ -4,7 +4,7 @@
 #include <string>
 
 #include "Control.h"
-#include "FactorHiGHSSolver.h"
+#include "FactorHighsSolver.h"
 #include "Info.h"
 #include "Iterate.h"
 #include "LinearSolver.h"
@@ -16,7 +16,7 @@
 #include "ipm/hipo/auxiliary/Auxiliary.h"
 #include "ipm/hipo/auxiliary/IntConfig.h"
 #include "ipm/hipo/auxiliary/VectorOperations.h"
-#include "ipm/hipo/factorhighs/FactorHiGHS.h"
+#include "ipm/hipo/factorhighs/FactorHighs.h"
 #include "ipm/ipx/lp_solver.h"
 #include "lp_data/HighsCallback.h"
 #include "lp_data/HighsInfo.h"

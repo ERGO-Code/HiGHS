@@ -2,7 +2,7 @@
 
 #include <iostream>
 
-#include "FactorHiGHSSettings.h"
+#include "FactorHighsSettings.h"
 
 namespace hipo {
 

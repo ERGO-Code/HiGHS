@@ -2,7 +2,7 @@
 
 #include "Parameters.h"
 #include "ipm/IpxWrapper.h"
-#include "ipm/hipo/factorhighs/FactorHiGHSSettings.h"
+#include "ipm/hipo/factorhighs/FactorHighsSettings.h"
 #include "model/HighsHessianUtils.h"
 
 namespace hipo {

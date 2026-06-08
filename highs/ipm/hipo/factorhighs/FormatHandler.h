@@ -3,7 +3,7 @@
 
 #include <vector>
 
-#include "FactorHiGHSSettings.h"
+#include "FactorHighsSettings.h"
 #include "Symbolic.h"
 #include "ipm/hipo/auxiliary/IntConfig.h"
 

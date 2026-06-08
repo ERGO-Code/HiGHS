@@ -8,7 +8,7 @@
 #include <stack>
 
 #include "DataCollector.h"
-#include "FactorHiGHSSettings.h"
+#include "FactorHighsSettings.h"
 #include "ReturnValues.h"
 #include "ipm/hipo/auxiliary/Auxiliary.h"
 #include "ipm/hipo/auxiliary/Logger.h"

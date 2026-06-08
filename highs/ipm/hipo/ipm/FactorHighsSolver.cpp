@@ -1,4 +1,4 @@
-#include "FactorHiGHSSolver.h"
+#include "FactorHighsSolver.h"
 
 #include <limits>
 
@@ -10,7 +10,7 @@
 
 namespace hipo {
 
-FactorHiGHSSolver::FactorHiGHSSolver(KktMatrix& kkt, Options& options,
+FactorHighsSolver::FactorHighsSolver(KktMatrix& kkt, Options& options,
                                      const Model& model,
                                      const Regularisation& regul, Info& info,
                                      IpmData& record, const Logger& logger)
@@ -24,7 +24,7 @@ FactorHiGHSSolver::FactorHiGHSSolver(KktMatrix& kkt, Options& options,
       model_{model},
       options_{options} {}
 
-void FactorHiGHSSolver::clear() {
+void FactorHighsSolver::clear() {
   valid_ = false;
   FH_.newIter();
 }
@@ -33,7 +33,7 @@ void FactorHiGHSSolver::clear() {
 // Analyse phase
 // =========================================================================
 
-Int FactorHiGHSSolver::analyseAS(Symbolic& S) {
+Int FactorHighsSolver::analyseAS(Symbolic& S) {
   // Perform analyse phase of augmented system and return symbolic factorisation
   // in object S and the status.
 
@@ -56,7 +56,7 @@ Int FactorHiGHSSolver::analyseAS(Symbolic& S) {
   return status;
 }
 
-Int FactorHiGHSSolver::analyseNE(Symbolic& S) {
+Int FactorHighsSolver::analyseNE(Symbolic& S) {
   // Perform analyse phase of normal equations and return symbolic factorisation
   // in object S and the status. Structure of the matrix must be already
   // computed.
@@ -80,7 +80,7 @@ Int FactorHiGHSSolver::analyseNE(Symbolic& S) {
 // Factorise phase
 // =========================================================================
 
-Int FactorHiGHSSolver::factorAS(const std::vector<double>& scaling) {
+Int FactorHighsSolver::factorAS(const std::vector<double>& scaling) {
   // only execute factorisation if it has not been done yet
   assert(!this->valid_);
 
@@ -100,7 +100,7 @@ Int FactorHiGHSSolver::factorAS(const std::vector<double>& scaling) {
   return kStatusOk;
 }
 
-Int FactorHiGHSSolver::factorNE(const std::vector<double>& scaling) {
+Int FactorHighsSolver::factorNE(const std::vector<double>& scaling) {
   // only execute factorisation if it has not been done yet
   assert(!this->valid_);
 
@@ -124,7 +124,7 @@ Int FactorHiGHSSolver::factorNE(const std::vector<double>& scaling) {
 // Solve phase
 // =========================================================================
 
-Int FactorHiGHSSolver::solveAS(const std::vector<double>& rhs_x,
+Int FactorHighsSolver::solveAS(const std::vector<double>& rhs_x,
                                const std::vector<double>& rhs_y,
                                std::vector<double>& lhs_x,
                                std::vector<double>& lhs_y) {
@@ -153,7 +153,7 @@ Int FactorHiGHSSolver::solveAS(const std::vector<double>& rhs_x,
   return kStatusOk;
 }
 
-Int FactorHiGHSSolver::solveNE(const std::vector<double>& rhs,
+Int FactorHighsSolver::solveNE(const std::vector<double>& rhs,
                                std::vector<double>& lhs) {
   // only execute the solve if factorisation is valid
   assert(this->valid_);
@@ -176,7 +176,7 @@ Int FactorHiGHSSolver::solveNE(const std::vector<double>& rhs,
 // Automatic selections
 // =========================================================================
 
-Int FactorHiGHSSolver::setup() {
+Int FactorHighsSolver::setup() {
   Clock clock;
 
   if (Int status = setNla()) return status;
@@ -200,7 +200,7 @@ Int FactorHiGHSSolver::setup() {
   return kStatusOk;
 }
 
-Int FactorHiGHSSolver::chooseNla() {
+Int FactorHighsSolver::chooseNla() {
   // Choose whether to use augmented system or normal equations.
 
   Symbolic symb_NE{};
@@ -355,7 +355,7 @@ Int FactorHiGHSSolver::chooseNla() {
   return status;
 }
 
-Int FactorHiGHSSolver::chooseOrdering(const std::vector<Int>& rows,
+Int FactorHighsSolver::chooseOrdering(const std::vector<Int>& rows,
                                       const std::vector<Int>& ptr,
                                       const std::vector<Int>& signs,
                                       Symbolic& S, std::string& ordering,
@@ -526,7 +526,7 @@ Int FactorHiGHSSolver::chooseOrdering(const std::vector<Int>& rows,
   return num_success > 0 ? kStatusOk : kStatusErrorAnalyse;
 }
 
-Int FactorHiGHSSolver::setNla() {
+Int FactorHighsSolver::setNla() {
   std::stringstream log_stream;
 
   if (options_.nla == kHipoNormalEqString && model_.nonSeparableQp()) {
@@ -576,7 +576,7 @@ Int FactorHiGHSSolver::setNla() {
   return kStatusOk;
 }
 
-void FactorHiGHSSolver::setParallel() {
+void FactorHighsSolver::setParallel() {
   // Set parallel options
   bool parallel_tree = false;
   bool parallel_node = false;
@@ -661,10 +661,10 @@ void FactorHiGHSSolver::setParallel() {
 // Other stuff
 // =========================================================================
 
-double FactorHiGHSSolver::flops() const { return S_.flops(); }
-double FactorHiGHSSolver::spops() const { return S_.spops(); }
-double FactorHiGHSSolver::nz() const { return (double)S_.nz(); }
-void FactorHiGHSSolver::getReg(std::vector<double>& reg) {
+double FactorHighsSolver::flops() const { return S_.flops(); }
+double FactorHighsSolver::spops() const { return S_.spops(); }
+double FactorHighsSolver::nz() const { return (double)S_.nz(); }
+void FactorHighsSolver::getReg(std::vector<double>& reg) {
   FH_.getRegularisation(reg.data());
 }
 

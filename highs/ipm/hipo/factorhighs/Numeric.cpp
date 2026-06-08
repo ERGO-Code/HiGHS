@@ -1,7 +1,7 @@
 #include "Numeric.h"
 
 #include "DataCollector.h"
-#include "FactorHiGHSSettings.h"
+#include "FactorHighsSettings.h"
 #include "HybridSolveHandler.h"
 #include "ReturnValues.h"
 #include "Timing.h"

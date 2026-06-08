@@ -4,7 +4,7 @@
 #include <fstream>
 
 #include "DataCollector.h"
-#include "FactorHiGHSSettings.h"
+#include "FactorHighsSettings.h"
 #include "FormatHandler.h"
 #include "HybridHybridFormatHandler.h"
 #include "ReturnValues.h"

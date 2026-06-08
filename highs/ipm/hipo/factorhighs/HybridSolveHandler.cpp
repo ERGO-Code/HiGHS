@@ -2,7 +2,7 @@
 
 #include "CallAndTimeBlas.h"
 #include "DataCollector.h"
-#include "FactorHiGHSSettings.h"
+#include "FactorHighsSettings.h"
 #include "FormatHandler.h"
 #include "Swaps.h"
 #include "ipm/hipo/auxiliary/Auxiliary.h"

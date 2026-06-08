@@ -2,7 +2,7 @@
 #define FACTORHIGHS_DENSE_FACT_H
 
 #include "DataCollector.h"
-#include "FactorHiGHSSettings.h"
+#include "FactorHighsSettings.h"
 #include "ipm/hipo/auxiliary/IntConfig.h"
 
 namespace hipo {
