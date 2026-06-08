@@ -40,12 +40,10 @@ HighsPseudocost::HighsPseudocost(const HighsMipSolver& mipsolver)
     conflict_avg_score =
         mipsolver.pscostinit->conflict_avg_score * mipsolver.numCol();
 
-    HighsInt numOrigCol =
-        static_cast<HighsInt>(mipsolver.pscostinit->pseudocostup.size());
     for (HighsInt i = 0; i != mipsolver.numCol(); ++i) {
+      if (!mipsolver.mipdata_->postSolveStack.isOrigCol(i)) continue;
       HighsInt origCol =
           mipsolver.mipdata_->postSolveStack.getOrigColIndex()[i];
-      if (origCol >= numOrigCol) continue;
 
       pseudocostup[i] = mipsolver.pscostinit->pseudocostup[origCol];
       nsamplesup[i] = mipsolver.pscostinit->nsamplesup[origCol];
@@ -113,6 +111,7 @@ HighsPseudocostInitialization::HighsPseudocostInitialization(
   conflict_avg_score /= ncols * pscost.conflict_weight;
 
   for (HighsInt i = 0; i != ncols; ++i) {
+    if (!postsolveStack.isOrigCol(i)) continue;
     pseudocostup[postsolveStack.getOrigColIndex()[i]] = pscost.pseudocostup[i];
     pseudocostdown[postsolveStack.getOrigColIndex()[i]] =
         pscost.pseudocostdown[i];
