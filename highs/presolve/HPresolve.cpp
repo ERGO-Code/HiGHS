@@ -6957,6 +6957,7 @@ HPresolve::Result HPresolve::fourierMotzkin(
       model->col_lower_.push_back(-kHighsInf);
       model->col_upper_.push_back(kHighsInf);
       model->integrality_.push_back(HighsVarType::kContinuous);
+      model->a_matrix_.start_.push_back(model->a_matrix_.start_.back());
       if (model->col_names_.size() > 0)
         model->col_names_.push_back("fme_obj_z");
 
@@ -6970,6 +6971,7 @@ HPresolve::Result HPresolve::fourierMotzkin(
       colUpperSource.push_back(-1);
       implRowDualSourceByCol.push_back({});
       changedColFlag.push_back(1);
+      numProbes.push_back(0);
 
       // update implied bound structures (pointers may be invalidated by
       // reallocation of column vectors above)
@@ -6978,10 +6980,6 @@ HPresolve::Result HPresolve::fourierMotzkin(
           implColLower.data(), implColUpper.data(), colLowerSource.data(),
           colUpperSource.data());
       impliedDualRowBounds.setNumSums(model->num_col_);
-      impliedDualRowBounds.setBoundArrays(
-          rowDualLower.data(), rowDualUpper.data(), implRowDualLower.data(),
-          implRowDualUpper.data(), rowDualLowerSource.data(),
-          rowDualUpperSource.data());
 
       // register in postsolve stack
       postsolve_stack.appendColToModel();
