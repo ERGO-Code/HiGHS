@@ -7152,13 +7152,6 @@ HPresolve::Result HPresolve::fourierMotzkin(
   auto reformulateObjective = [&]() {
     if (fourierMotzkinObjCol != -1) return;
 
-    bool needsReformulation = false;
-    for (HighsInt j = 0; j < model->num_col_; ++j) {
-      needsReformulation = model->col_cost_[j] != 0.0 && isCandidate(j);
-      if (needsReformulation) break;
-    }
-    if (!needsReformulation) return;
-
     HighsInt zCol = model->num_col_;
     model->num_col_++;
     model->a_matrix_.num_col_++;
