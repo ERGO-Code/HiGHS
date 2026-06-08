@@ -504,7 +504,6 @@ struct HighsOptionsStruct {
   std::string mip_improving_solution_file;
   bool mip_root_presolve_only;
   HighsInt mip_lifting_for_probing;
-  HighsInt mip_search_concurrency;
   bool mip_search_simulate_concurrency;
   bool mip_allow_cut_separation_at_nodes;
 
@@ -669,7 +668,6 @@ struct HighsOptionsStruct {
         mip_improving_solution_file(""),
         mip_root_presolve_only(false),
         mip_lifting_for_probing(-1),
-        mip_search_concurrency(0),
         mip_search_simulate_concurrency(false),
         // clang-format off
         mip_allow_cut_separation_at_nodes(true) {};
@@ -1287,13 +1285,6 @@ class HighsOptions : public HighsOptionsStruct {
         &ipm_optimality_tolerance, kMinimumIpmTolerance, kDefaultIpmTolerance,
         kHighsInf);
     records.push_back(record_double);
-
-    record_int = new OptionRecordInt("mip_search_concurrency",
-                                     "Number of workers to create per thread "
-                                     "for concurrent MIP search (0: automatic)",
-                                     advanced, &mip_search_concurrency, 0, 0,
-                                     kMipSearchConcurrencyLimit);
-    records.push_back(record_int);
 
     record_bool = new OptionRecordBool(
         "mip_search_simulate_concurrency",

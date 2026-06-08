@@ -235,7 +235,7 @@ class HighsSearch {
 
   void printDisplayLine(char first, bool header = false);
 
-  NodeResult dive(const bool ramp = false);
+  NodeResult dive(HighsInt nodeLim = kHighsIInf);
 
   HighsDomain& getLocalDomain() { return localdom; }
 

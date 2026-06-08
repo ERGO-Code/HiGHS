@@ -243,14 +243,7 @@ restart:
   mipdata_->updateLowerBound(mipdata_->nodequeue.getBestLowerBound());
   mipdata_->printDisplayLine();
 
-  // Calculate maximum number of workers
-  const HighsInt mip_search_concurrency = options_mip_->mip_search_concurrency;
-  const HighsInt max_num_workers =
-      highs::parallel::num_threads() == 1 ||
-              options_mip_->parallel != kHighsOnString || submip
-          ? 1
-          : (mip_search_concurrency == 0 ? 2 : mip_search_concurrency) *
-                highs::parallel::num_threads();
+  const HighsInt max_num_workers = getMaxNumWorkers();
   HighsInt num_workers = 1;
   highs::parallel::TaskGroup tg;
 
@@ -496,7 +489,8 @@ restart:
   auto installNodes = [&](std::vector<HighsInt>& indices,
                           bool& limit_reached) -> void {
     for (const HighsInt i : indices) {
-      if (numQueueLeaves - lastLbLeave >= 10) {
+      if ((indices.size() == 1 && numQueueLeaves - lastLbLeave >= 10) ||
+          (indices.size() > 1 && i == 0)) {
         mipdata_->workers[i].search_ptr_->installNode(
             mipdata_->nodequeue.popBestBoundNode());
         lastLbLeave = numQueueLeaves;
@@ -680,23 +674,23 @@ restart:
     return worker.getGlobalDomain().infeasible();
   };
 
-  auto dive = [&](HighsInt i, bool ramp_up) -> bool {
+  auto dive = [&](HighsInt i, HighsInt nodeLim) -> bool {
     HighsMipWorker& worker = mipdata_->workers[i];
     if (!worker.search_ptr_->currentNodePruned()) {
       if (!mipdata_->parallelLockActive()) profiling_->start(kMipClockTheDive);
       const HighsSearch::NodeResult search_dive_result =
-          worker.search_ptr_->dive(ramp_up);
+          worker.search_ptr_->dive(nodeLim);
       if (!mipdata_->parallelLockActive()) profiling_->stop(kMipClockTheDive);
       if (search_dive_result == HighsSearch::NodeResult::kSubOptimal) {
         return true;
       }
       worker.search_ptr_->getLocalLeaves()++;
     }
-    return ramp_up;
+    return nodeLim == 1;
   };
 
   auto processNodes = [&](std::vector<HighsInt>& indices,
-                          const bool skip_separation, const bool ramp_up,
+                          const bool skip_separation, const HighsInt nodeLim,
                           const HighsInt plungeLimit, double avgiter) {
     auto processNode = [&](HighsInt i) {
       HighsMipWorker& worker = mipdata_->workers[i];
@@ -719,13 +713,13 @@ restart:
       worker.getLpRelaxation().setIterationLimit(iterlimit);
       bool considerHeuristics = true;
       while (true) {
-        if (considerHeuristics && !ramp_up && worker.getAllowHeuristics() &&
+        if (considerHeuristics && nodeLim > 1 && worker.getAllowHeuristics() &&
             mipdata_->moreHeuristicsAllowed()) {
           if (runHeuristics(i)) break;
         }
         considerHeuristics = false;
         if (worker.getGlobalDomain().infeasible()) break;
-        if (dive(i, ramp_up)) break;
+        if (dive(i, nodeLim)) break;
         if (worker.search_ptr_->checkLimits(
                 worker.search_ptr_->getLocalNodes())) {
           break;
@@ -838,6 +832,7 @@ restart:
   // Main solve loop
   std::vector<HighsInt> search_indices(1, 0);
   bool root_node = true;  // Don't separate the root node again
+  HighsInt nodeLim = max_num_workers > 1 ? 1 : kHighsIInf;  // for ramp up
   while (!mipdata_->nodequeue.empty()) {
     // Possibly query existence of an external solution
     if (!submip)
@@ -863,8 +858,17 @@ restart:
     }
     if (limit_reached) break;
 
+    if (nodeLim != kHighsIInf) {
+      if (num_workers >= max_num_workers) {
+        nodeLim = std::max(HighsInt{20}, 2 * nodeLim);
+      }
+      if (nodeLim > 100) {
+        nodeLim = kHighsIInf;
+      }
+    }
+
     // Process nodes (separation / heuristics / dives)
-    processNodes(search_indices, root_node, num_workers < max_num_workers, 100,
+    processNodes(search_indices, root_node, nodeLim, 100,
                  mipdata_->getLp().getAvgSolveIters());
 
     root_node = false;

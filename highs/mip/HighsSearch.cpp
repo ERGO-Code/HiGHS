@@ -1865,7 +1865,7 @@ bool HighsSearch::backtrackUntilDepth(HighsInt targetDepth) {
   return true;
 }
 
-HighsSearch::NodeResult HighsSearch::dive(bool ramp) {
+HighsSearch::NodeResult HighsSearch::dive(HighsInt nodeLim) {
   reliableatnode.clear();
 
   do {
@@ -1878,7 +1878,7 @@ HighsSearch::NodeResult HighsSearch::dive(bool ramp) {
 
     result = branch();
     if (result != NodeResult::kBranched) return result;
-    if (ramp) return result;
+    if (nnodes >= nodeLim) return result;
   } while (true);
 }
 
