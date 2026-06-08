@@ -6964,6 +6964,7 @@ HPresolve::Result HPresolve::fourierMotzkin(
   auto computeCandidates = [&](std::vector<HighsInt>& candidates) {
     for (HighsInt col = 0; col < model->num_col_; col++)
       if (isCandidate(col)) candidates.push_back(col);
+    return !candidates.empty();
   };
 
   auto checkRows = [&](HighsInt col, std::vector<HighsInt>& iPlus,
@@ -7145,10 +7146,9 @@ HPresolve::Result HPresolve::fourierMotzkin(
     return neRed > 0 || (neRed == 0 && mrRed > 0);
   };
 
-  // Reformulate objective as a constraint: min c^T x + offset becomes
-  // min z with c^T x - z <= -offset. This allows FME to eliminate
-  // continuous columns with nonzero cost. Only applied if at least one
-  // continuous column with nonzero cost would be an FME candidate.
+  // reformulate objective as a constraint: min c^T x + offset becomes
+  // min z with c^T x - z <= -offset. this allows FME to eliminate
+  // continuous columns with nonzero cost.
   auto reformulateObjective = [&]() {
     if (fourierMotzkinObjCol != -1) return;
 
@@ -7283,41 +7283,68 @@ HPresolve::Result HPresolve::fourierMotzkin(
     heapBubbleDown(heap, heapPos, pos);
   };
 
-  // reformulate objective if beneficial
-  reformulateObjective();
+  auto buildHeap =
+      [&](const std::vector<HighsInt>& candidates, std::vector<candidate>& heap,
+          std::vector<HighsInt>& heapPos, std::vector<HighsInt>& iPlus,
+          std::vector<HighsInt>& iMinus, std::vector<HighsInt>& pPlus,
+          std::vector<HighsInt>& pMinus, std::vector<HighsInt>& affectedCols) {
+        heap.clear();
+        heap.reserve(candidates.size());
+        heapPos.assign(model->num_col_, -1);
+        pPlus.assign(model->num_col_, 0);
+        pMinus.assign(model->num_col_, 0);
+        iPlus.reserve(model->num_row_);
+        iMinus.reserve(model->num_row_);
+        affectedCols.reserve(model->num_col_);
+        for (HighsInt col : candidates) {
+          int64_t neRed;
+          int64_t mrRed;
+          bool elimCandidate = checkNonZeros(col, iPlus, iMinus, pPlus, pMinus,
+                                             affectedCols, neRed, mrRed);
+          affectedCols.clear();
+          if (!elimCandidate || !isReduction(neRed, mrRed)) continue;
+          heapPos[col] = static_cast<HighsInt>(heap.size());
+          heap.push_back({col, neRed, mrRed});
+        }
+        return !heap.empty();
+      };
 
   // collect candidate variables
   std::vector<HighsInt> candidates;
-  computeCandidates(candidates);
-  if (candidates.empty()) return finalise();
+  if (!computeCandidates(candidates)) return finalise();
 
   // workspace vectors
   std::vector<HighsInt> iPlus;
   std::vector<HighsInt> iMinus;
-  iPlus.reserve(model->num_row_);
-  iMinus.reserve(model->num_row_);
-  std::vector<HighsInt> pPlus(model->num_col_, 0);
-  std::vector<HighsInt> pMinus(model->num_col_, 0);
+  std::vector<HighsInt> pPlus;
+  std::vector<HighsInt> pMinus;
   std::vector<HighsInt> affectedCols;
-  affectedCols.reserve(model->num_col_);
 
   // indexed max-heap
   std::vector<candidate> heap;
-  heap.reserve(candidates.size());
-  std::vector<HighsInt> heapPos(model->num_col_, -1);
-  // build initial heap
-  for (HighsInt col : candidates) {
-    int64_t neRed;
-    int64_t mrRed;
-    bool elimCandidate = checkNonZeros(col, iPlus, iMinus, pPlus, pMinus,
-                                       affectedCols, neRed, mrRed);
-    affectedCols.clear();
-    if (!elimCandidate || !isReduction(neRed, mrRed)) continue;
-    heapPos[col] = static_cast<HighsInt>(heap.size());
-    heap.push_back({col, neRed, mrRed});
-  }
+  std::vector<HighsInt> heapPos;
 
-  if (heap.empty()) return finalise();
+  // build initial heap
+  if (!buildHeap(candidates, heap, heapPos, iPlus, iMinus, pPlus, pMinus,
+                 affectedCols))
+    return finalise();
+
+  // reformulate objective only if at least one heap candidate has nonzero
+  // cost
+  for (const auto& c : heap) {
+    if (model->col_cost_[c.col] != 0.0) {
+      // reformulate
+      reformulateObjective();
+      // re-compute candidates (shrinkProblem invalidates indices)
+      candidates.clear();
+      if (!computeCandidates(candidates)) return finalise();
+      // re-build heap
+      if (!buildHeap(candidates, heap, heapPos, iPlus, iMinus, pPlus, pMinus,
+                     affectedCols))
+        return finalise();
+      break;
+    }
+  }
 
   // heapify
   for (HighsInt i = static_cast<HighsInt>(heap.size()) / 2 - 1; i >= 0; --i)
