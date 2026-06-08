@@ -325,6 +325,10 @@ class HighsPostsolveStack {
 
   const std::vector<HighsInt>& getOrigRowIndex() const { return origRowIndex; }
 
+  bool isOrigCol(HighsInt col) const {
+    return origColIndex[col] < origNumCol;
+  }
+
   bool isOrigRow(HighsInt row) const {
     return origRowType[row] == OrigRowType::kOriginal;
   }
