@@ -6946,92 +6946,19 @@ HPresolve::Result HPresolve::fourierMotzkin(
   const HighsInt kUpperBoundRow = -2;
   const HighsInt kLowerBoundRow = -3;
 
-  // Add z column to reformulate objective as a constraint:
-  //   min c^T x  becomes  min -z  with  c^T x - z <= 0
-  // This allows FME to eliminate columns with nonzero cost.
-  if (fourierMotzkinObjCol == -1) {
-    bool hasNonzeroCost = false;
-    for (HighsInt j = 0; j < model->num_col_; ++j) {
-      if (!colDeleted[j] && model->col_cost_[j] != 0.0) {
-        hasNonzeroCost = true;
-        break;
-      }
-    }
-    if (hasNonzeroCost) {
-      HighsInt zCol = model->num_col_;
-      model->num_col_++;
-      model->a_matrix_.num_col_++;
-
-      // extend model vectors
-      model->col_cost_.push_back(1.0);
-      model->col_lower_.push_back(-kHighsInf);
-      model->col_upper_.push_back(kHighsInf);
-      model->integrality_.push_back(HighsVarType::kContinuous);
-      model->a_matrix_.start_.push_back(model->a_matrix_.start_.back());
-      if (model->col_names_.size() > 0)
-        model->col_names_.push_back("fme_obj_z");
-
-      // extend presolve vectors
-      colhead.push_back(-1);
-      colsize.push_back(0);
-      colDeleted.push_back(0);
-      implColLower.push_back(-kHighsInf);
-      implColUpper.push_back(kHighsInf);
-      colLowerSource.push_back(-1);
-      colUpperSource.push_back(-1);
-      implRowDualSourceByCol.push_back({});
-      changedColFlag.push_back(1);
-      numProbes.push_back(0);
-
-      // update implied bound structures (pointers may be invalidated by
-      // reallocation of column vectors above)
-      impliedRowBounds.setBoundArrays(
-          model->col_lower_.data(), model->col_upper_.data(),
-          implColLower.data(), implColUpper.data(), colLowerSource.data(),
-          colUpperSource.data());
-      impliedDualRowBounds.setNumSums(model->num_col_);
-
-      // register in postsolve stack
-      postsolve_stack.appendColToModel();
-
-      // build the objective constraint row: c^T x - z <= -offset
-      // (z >= c^T x + offset, with min z minimizing original objective)
-      double offset = model->offset_;
-      std::vector<row_entry> objRow;
-      for (HighsInt j = 0; j < zCol; ++j) {
-        if (!colDeleted[j] && model->col_cost_[j] != 0.0)
-          objRow.push_back({j, model->col_cost_[j]});
-      }
-      objRow.push_back({zCol, -1.0});
-
-      // zero out original costs and offset
-      for (HighsInt j = 0; j < zCol; ++j) model->col_cost_[j] = 0.0;
-      model->offset_ = 0.0;
-
-      // add the constraint row to the matrix
-      addToMatrix(postsolve_stack, -kHighsInf, -offset, objRow);
-
-      // register reduction so getReducedPrimalSolution can compute z
-      std::vector<HighsPostsolveStack::Nonzero> costEntries;
-      for (const auto& entry : objRow)
-        costEntries.emplace_back(entry.col, entry.val);
-      postsolve_stack.fourierMotzkinObjCol(zCol, offset, costEntries);
-
-      fourierMotzkinObjCol = zCol;
-
-      shrinkProblem(postsolve_stack);
-    }
-  }
+  auto acceptCoef = [&](double val) {
+    double absval = std::abs(val);
+    return absval == 0.0 || (absval >= 1.0 / maxCoef && absval <= maxCoef);
+  };
 
   auto isCandidate = [&](HighsInt col) {
     if (colDeleted[col]) return false;
     if (colsize[col] == 0) return false;
     if (model->integrality_[col] != HighsVarType::kContinuous) return false;
-    if (model->col_cost_[col] != 0.0) return false;
+    if (!acceptCoef(model->col_cost_[col])) return false;
     for (const auto& nz : getColumnVector(col)) {
       if (isEquation(nz.index())) return false;
-      double absval = std::abs(nz.value());
-      if (absval < 1.0 / maxCoef || absval > maxCoef) return false;
+      if (!acceptCoef(nz.value())) return false;
     }
     return true;
   };
@@ -7220,6 +7147,81 @@ HPresolve::Result HPresolve::fourierMotzkin(
     return neRed > 0 || (neRed == 0 && mrRed > 0);
   };
 
+  // Reformulate objective as a constraint: min c^T x + offset becomes
+  // min z with c^T x - z <= -offset. This allows FME to eliminate
+  // continuous columns with nonzero cost. Only applied if at least one
+  // continuous column with nonzero cost would be an FME candidate.
+  auto reformulateObjective = [&]() {
+    if (fourierMotzkinObjCol != -1) return;
+
+    bool needsReformulation = false;
+    for (HighsInt j = 0; j < model->num_col_; ++j) {
+      needsReformulation = model->col_cost_[j] != 0.0 && isCandidate(j);
+      if (needsReformulation) break;
+    }
+    if (!needsReformulation) return;
+
+    HighsInt zCol = model->num_col_;
+    model->num_col_++;
+    model->a_matrix_.num_col_++;
+
+    // extend model vectors
+    model->col_cost_.push_back(1.0);
+    model->col_lower_.push_back(-kHighsInf);
+    model->col_upper_.push_back(kHighsInf);
+    model->integrality_.push_back(HighsVarType::kContinuous);
+    model->a_matrix_.start_.push_back(model->a_matrix_.start_.back());
+    if (model->col_names_.size() > 0) model->col_names_.push_back("fme_obj_z");
+
+    // extend presolve vectors
+    colhead.push_back(-1);
+    colsize.push_back(0);
+    colDeleted.push_back(0);
+    implColLower.push_back(-kHighsInf);
+    implColUpper.push_back(kHighsInf);
+    colLowerSource.push_back(-1);
+    colUpperSource.push_back(-1);
+    implRowDualSourceByCol.push_back({});
+    changedColFlag.push_back(1);
+    numProbes.push_back(0);
+
+    // update implied bound structures (pointers may be invalidated by
+    // reallocation of column vectors above)
+    impliedRowBounds.setBoundArrays(
+        model->col_lower_.data(), model->col_upper_.data(), implColLower.data(),
+        implColUpper.data(), colLowerSource.data(), colUpperSource.data());
+    impliedDualRowBounds.setNumSums(model->num_col_);
+
+    // register in postsolve stack
+    postsolve_stack.appendColToModel();
+
+    // build the objective constraint row: c^T x - z <= -offset
+    double offset = model->offset_;
+    std::vector<row_entry> objRow;
+    for (HighsInt j = 0; j < zCol; ++j) {
+      if (!colDeleted[j] && model->col_cost_[j] != 0.0)
+        objRow.push_back({j, model->col_cost_[j]});
+    }
+    objRow.push_back({zCol, -1.0});
+
+    // zero out original costs and offset
+    for (HighsInt j = 0; j < zCol; ++j) model->col_cost_[j] = 0.0;
+    model->offset_ = 0.0;
+
+    // add the constraint row to the matrix
+    addToMatrix(postsolve_stack, -kHighsInf, -offset, objRow);
+
+    // register reduction so getReducedPrimalSolution can compute z
+    std::vector<HighsPostsolveStack::Nonzero> costEntries;
+    for (const auto& entry : objRow)
+      costEntries.emplace_back(entry.col, entry.val);
+    postsolve_stack.fourierMotzkinObjCol(zCol, offset, costEntries);
+
+    fourierMotzkinObjCol = zCol;
+
+    shrinkProblem(postsolve_stack);
+  };
+
   auto heapBetter = [](const candidate& a, const candidate& b) {
     if (a.neRed != b.neRed) return a.neRed > b.neRed;
     return a.mrRed > b.mrRed;
@@ -7282,6 +7284,9 @@ HPresolve::Result HPresolve::fourierMotzkin(
     heapBubbleUp(heap, heapPos, pos);
     heapBubbleDown(heap, heapPos, pos);
   };
+
+  // reformulate objective if beneficial
+  reformulateObjective();
 
   // collect candidate variables
   std::vector<HighsInt> candidates;
