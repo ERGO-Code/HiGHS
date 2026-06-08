@@ -16,7 +16,8 @@ FHsolver::FHsolver(const Logger* logger, Int block_size)
 #endif
 #if HIPO_TIMING_LEVEL > 0
   if (logger_)
-    logger_->printw("Running in debug mode: COLLECTING EXPENSIVE TIMING DATA\n");
+    logger_->printw(
+        "Running in debug mode: COLLECTING EXPENSIVE TIMING DATA\n");
 #endif
 }
 
@@ -34,24 +35,21 @@ void FHsolver::setRegularisation(double reg_p, double reg_d) {
   regul_.dual = reg_d;
 }
 
-Int FHsolver::analyse(Symbolic& S, const std::vector<Int>& rows,
-                      const std::vector<Int>& ptr,
-                      const std::vector<Int>& signs,
-                      const std::vector<Int>& perm) {
-  Analyse an_obj(rows, ptr, signs, nb_, logger_, data_, perm);
+Int FHsolver::analyse(Symbolic& S, Int n, Int nz, const Int* rows,
+                      const Int* ptr, const Int* signs, const Int* perm) {
+  Analyse an_obj(n, nz, rows, ptr, signs, nb_, logger_, data_, perm);
   return an_obj.run(S);
 }
 
-Int FHsolver::factorise(const Symbolic& S, const std::vector<Int>& rows,
-                        const std::vector<Int>& ptr,
-                        const std::vector<double>& vals) {
-  Factorise fact_obj(S, rows, ptr, vals, regul_, logger_, data_, sn_columns_,
-                     &serial_stack_);
+Int FHsolver::factorise(const Symbolic& S, Int n, Int nz, const Int* rows,
+                        const Int* ptr, const double* vals) {
+  Factorise fact_obj(S, n, nz, rows, ptr, vals, regul_, logger_, data_,
+                     sn_columns_, &serial_stack_);
   return fact_obj.run(N_);
 }
 
-Int FHsolver::solve(std::vector<double>& x) { return N_.solve(x); }
+Int FHsolver::solve(double* x) { return N_.solve(x); }
 
-void FHsolver::getRegularisation(std::vector<double>& reg) { N_.getReg(reg); }
+void FHsolver::getRegularisation(double* reg) { N_.getReg(reg); }
 
 }  // namespace hipo

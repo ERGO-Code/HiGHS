@@ -37,8 +37,8 @@ class Numeric {
 
  public:
   // Full solve
-  Int solve(std::vector<double>& x) const;
-  void getReg(std::vector<double>& reg);
+  Int solve(double* x) const;
+  void getReg(double* reg);
 };
 
 }  // namespace hipo

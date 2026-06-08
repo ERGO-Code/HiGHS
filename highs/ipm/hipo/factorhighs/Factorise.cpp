@@ -14,9 +14,8 @@
 
 namespace hipo {
 
-Factorise::Factorise(const Symbolic& S, const std::vector<Int>& rowsM,
-                     const std::vector<Int>& ptrM,
-                     const std::vector<double>& valM, const Regul& regul,
+Factorise::Factorise(const Symbolic& S, Int n, Int nz, const Int* rowsM,
+                     const Int* ptrM, const double* valM, const Regul& regul,
                      const Logger* logger, DataCollector& data,
                      std::vector<std::vector<double>>& sn_columns,
                      CliqueStack* stack)
@@ -30,7 +29,7 @@ Factorise::Factorise(const Symbolic& S, const std::vector<Int>& rowsM,
   // factorisation coming from Analyse.
   // Only the lower triangular part of the matrix is used.
 
-  n_ = ptrM.size() - 1;
+  n_ = n;
 
   if (n_ != S_.size()) {
     if (logger_)
@@ -41,9 +40,9 @@ Factorise::Factorise(const Symbolic& S, const std::vector<Int>& rowsM,
   }
 
   // Make a copy of the matrix to be factorised
-  rowsM_ = rowsM;
-  valM_ = valM;
-  ptrM_ = ptrM;
+  rowsM_ = std::vector<Int>(rowsM, rowsM + nz);
+  valM_ = std::vector<double>(valM, valM + nz);
+  ptrM_ = std::vector<Int>(ptrM, ptrM + n + 1);
 
   // Permute the matrix.
   // This also removes any entry not in the lower triangle.
@@ -185,7 +184,8 @@ void Factorise::processSupernode(Int sn) {
       child_clique = schur_contribution_[child_sn].data();
 
       if (!child_clique) {
-        if (logger_) logger_->printInfo("Missing child supernode contribution\n");
+        if (logger_)
+          logger_->printInfo("Missing child supernode contribution\n");
         flag_stop_.store(true, std::memory_order_relaxed);
         return;
       }
@@ -325,6 +325,8 @@ bool Factorise::run(Numeric& num) {
   }
 
   if (flag_stop_.load(std::memory_order_relaxed)) return true;
+
+  permuteVector(total_reg_, S_.iperm());
 
   // move factorisation to numerical object
   num.S_ = &S_;

@@ -12,7 +12,7 @@
 
 namespace hipo {
 
-Int Numeric::solve(std::vector<double>& x) const {
+Int Numeric::solve(double* x) const {
   // Return the number of solves performed
 
   if (!sn_columns_ || !S_) return kRetInvalidPointer;
@@ -43,11 +43,8 @@ Int Numeric::solve(std::vector<double>& x) const {
   return kRetOk;
 }
 
-void Numeric::getReg(std::vector<double>& reg) {
-  // unpermute regularisation
-  permuteVector(total_reg_, S_->iperm());
-
-  reg = std::move(total_reg_);
+void Numeric::getReg(double* reg) {
+  std::memcpy(reg, total_reg_.data(), total_reg_.size() * sizeof(double));
 }
 
 }  // namespace hipo

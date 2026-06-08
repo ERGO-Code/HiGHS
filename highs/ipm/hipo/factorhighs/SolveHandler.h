@@ -38,9 +38,9 @@ class SolveHandler {
   // Pure virtual functions.
   // These need to be defined by any derived class.
   // =================================================================
-  virtual void forwardSolve(std::vector<double>& x) const = 0;
-  virtual void backwardSolve(std::vector<double>& x) const = 0;
-  virtual void diagSolve(std::vector<double>& x) const = 0;
+  virtual void forwardSolve(double* x) const = 0;
+  virtual void backwardSolve(double* x) const = 0;
+  virtual void diagSolve(double* x) const = 0;
 };
 
 }  // namespace hipo

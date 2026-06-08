@@ -15,7 +15,7 @@ HybridSolveHandler::HybridSolveHandler(
     const std::vector<std::vector<double>>& pivot_2x2, DataCollector& data)
     : SolveHandler(S, sn_columns, data), swaps_{swaps}, pivot_2x2_{pivot_2x2} {}
 
-void HybridSolveHandler::forwardSolve(std::vector<double>& x) const {
+void HybridSolveHandler::forwardSolve(double* x) const {
   // Forward solve.
   // Blas calls: dtrsv, dgemv
 
@@ -138,7 +138,7 @@ void HybridSolveHandler::forwardSolve(std::vector<double>& x) const {
   }
 }
 
-void HybridSolveHandler::backwardSolve(std::vector<double>& x) const {
+void HybridSolveHandler::backwardSolve(double* x) const {
   // Backward solve.
   // Blas calls: dtrsv, dgemv
 
@@ -263,7 +263,7 @@ void HybridSolveHandler::backwardSolve(std::vector<double>& x) const {
   }
 }
 
-void HybridSolveHandler::diagSolve(std::vector<double>& x) const {
+void HybridSolveHandler::diagSolve(double* x) const {
   // Diagonal solve
 
   // supernode columns in format FH

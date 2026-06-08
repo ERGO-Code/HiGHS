@@ -90,7 +90,8 @@ Int FactorHiGHSSolver::factorAS(const std::vector<double>& scaling) {
   FH_.setRegularisation(regul_.primal, regul_.dual);
 
   Clock clock;
-  if (FH_.factorise(S_, kkt_.rowsAS, kkt_.ptrAS, kkt_.valAS))
+  if (FH_.factorise(S_, kkt_.ptrAS.size() - 1, kkt_.rowsAS.size(),
+                    kkt_.rowsAS.data(), kkt_.ptrAS.data(), kkt_.valAS.data()))
     return kStatusErrorFactorise;
   info_.factor_time += clock.stop();
   info_.factor_number++;
@@ -109,7 +110,8 @@ Int FactorHiGHSSolver::factorNE(const std::vector<double>& scaling) {
   FH_.setRegularisation(regul_.primal, regul_.dual);
 
   Clock clock;
-  if (FH_.factorise(S_, kkt_.rowsNE, kkt_.ptrNE, kkt_.valNE))
+  if (FH_.factorise(S_, kkt_.ptrNE.size() - 1, kkt_.rowsNE.size(),
+                    kkt_.rowsNE.data(), kkt_.ptrNE.data(), kkt_.valNE.data()))
     return kStatusErrorFactorise;
   info_.factor_time += clock.stop();
   info_.factor_number++;
@@ -137,7 +139,7 @@ Int FactorHiGHSSolver::solveAS(const std::vector<double>& rhs_x,
   rhs.insert(rhs.end(), rhs_y.begin(), rhs_y.end());
 
   Clock clock;
-  if (FH_.solve(rhs)) return kStatusErrorSolve;
+  if (FH_.solve(rhs.data())) return kStatusErrorSolve;
 
   info_.solve_time += clock.stop();
   info_.solve_number++;
@@ -160,7 +162,7 @@ Int FactorHiGHSSolver::solveNE(const std::vector<double>& rhs,
   lhs = rhs;
 
   Clock clock;
-  if (FH_.solve(lhs)) return kStatusErrorSolve;
+  if (FH_.solve(lhs.data())) return kStatusErrorSolve;
 
   info_.solve_time += clock.stop();
   info_.solve_number++;
@@ -443,7 +445,9 @@ Int FactorHiGHSSolver::chooseOrdering(const std::vector<Int>& rows,
       return;
     }
 
-    failure[i] = FH_.analyse(symbolics[i], rows, ptr, signs, permutations[i]);
+    failure[i] =
+        FH_.analyse(symbolics[i], ptr.size() - 1, rows.size(), rows.data(),
+                    ptr.data(), signs.data(), permutations[i].data());
 
     if (failure[i] && logger_.debug(2)) {
       logger_.print("Failed symbolic:");
@@ -661,7 +665,7 @@ double FactorHiGHSSolver::flops() const { return S_.flops(); }
 double FactorHiGHSSolver::spops() const { return S_.spops(); }
 double FactorHiGHSSolver::nz() const { return (double)S_.nz(); }
 void FactorHiGHSSolver::getReg(std::vector<double>& reg) {
-  FH_.getRegularisation(reg);
+  FH_.getRegularisation(reg.data());
 }
 
 }  // namespace hipo

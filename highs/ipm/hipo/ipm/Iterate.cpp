@@ -486,6 +486,11 @@ Int Iterate::finalResiduals(Info& info) const {
 }
 
 void Iterate::getReg(LinearSolver& LS, const std::string& nla) {
+  if (nla == kHipoNormalEqString)
+    total_reg.resize(model.m());
+  else
+    total_reg.resize(model.m() + model.n());
+
   // extract regularisation
   LS.getReg(total_reg);
 

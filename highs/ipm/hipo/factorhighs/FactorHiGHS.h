@@ -80,18 +80,17 @@ class FHsolver {
   // Perform analyse phase of matrix with sparsity pattern given by rows and
   // ptr, and store symbolic factorisation in object S.
   // See ReturnValues.h for errors.
-  Int analyse(Symbolic& S, const std::vector<Int>& rows,
-              const std::vector<Int>& ptr, const std::vector<Int>& signs,
-              const std::vector<Int>& perm);
+  Int analyse(Symbolic& S, Int n, Int nz, const Int* rows, const Int* ptr,
+              const Int* signs, const Int* perm);
 
   // Perform factorise phase of matrix given by rows, ptr, vals, and store
   // numerical factorisation in object N. See ReturnValues.h for errors.
-  Int factorise(const Symbolic& S, const std::vector<Int>& rows,
-                const std::vector<Int>& ptr, const std::vector<double>& vals);
+  Int factorise(const Symbolic& S, Int n, Int nz, const Int* rows,
+                const Int* ptr, const double* vals);
 
   // Perform solve phase with rhs given by x, which is overwritten with the
   // solution.
-  Int solve(std::vector<double>& x);
+  Int solve(double* x);
 
   // If multiple factorisation are performed, call newIter() before each
   // factorisation. This is used only to collect data for debugging, if
@@ -102,7 +101,7 @@ class FHsolver {
   // If regularisation is already added to the matrix, ignore.
   void setRegularisation(double reg_p, double reg_d);
 
-  void getRegularisation(std::vector<double>& reg);
+  void getRegularisation(double* reg);
 };
 
 }  // namespace hipo
