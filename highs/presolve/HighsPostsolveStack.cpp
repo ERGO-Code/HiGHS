@@ -1581,8 +1581,7 @@ void HighsPostsolveStack::FourierMotzkinElimination::undo(
   else
     basis.col_status[col] = HighsBasisStatus::kUpper;
 
-  // Algorithm 5: build set K of all rows (new + parent, deduplicated) and
-  // iterate backward by decreasing row index.
+  // build set K of all rows
   struct KEntry {
     HighsInt rowIdx;
     HighsInt type;  // 0 = new row, 1 = parent row
@@ -1594,7 +1593,7 @@ void HighsPostsolveStack::FourierMotzkinElimination::undo(
   for (HighsInt k = 0; k < static_cast<HighsInt>(newRowOrigins.size()); ++k)
     allK.push_back({newRowOrigins[k].newRow, 0, k});
 
-  // Add parent rows, deduplicating by row index (ranged rows appear in both)
+  // add parent rows, deduplicating by row index (ranged rows appear in both)
   std::vector<bool> parentAdded(basis.row_status.size(), false);
   for (HighsInt r = 0; r < numPlus; ++r) {
     HighsInt row = plusHeaders[r].row;
@@ -1611,12 +1610,12 @@ void HighsPostsolveStack::FourierMotzkinElimination::undo(
     }
   }
 
-  // Sort by decreasing row index
+  // sort by decreasing row index
   std::sort(allK.begin(), allK.end(), [](const KEntry& a, const KEntry& b) {
     return a.rowIdx > b.rowIdx;
   });
 
-  // Determine which parent rows are involved in at least one new row
+  // determine which parent rows are involved in at least one new row
   auto isInvolved = [&](HighsInt row) {
     for (HighsInt k = 0; k < static_cast<HighsInt>(newRowOrigins.size()); ++k)
       if (newRowOrigins[k].plusRow == row || newRowOrigins[k].minusRow == row)
@@ -1626,7 +1625,7 @@ void HighsPostsolveStack::FourierMotzkinElimination::undo(
 
   for (const auto& entry : allK) {
     if (entry.type == 0) {
-      // New row: apply propagation rules
+      // new row: apply propagation rules
       HighsInt k = entry.idx;
       HighsInt pOrigRow = newRowOrigins[k].plusRow;
       HighsInt mOrigRow = newRowOrigins[k].minusRow;
@@ -1679,12 +1678,12 @@ void HighsPostsolveStack::FourierMotzkinElimination::undo(
         }
       }
     } else {
-      // Parent row: Pk = empty check (vanished constraint / free variable)
+      // parent row: Pk = empty check (vanished constraint / free variable)
       if (isInvolved(entry.rowIdx)) continue;
-      // Free variable rule: if no new rows exist, x_j is basic
+      // free variable rule: if no new rows exist, x_j is basic
       if (newRowOrigins.empty())
         basis.col_status[col] = HighsBasisStatus::kBasic;
-      // Vanished constraint rule: nonzero slack → basic, else nonbasic
+      // vanished constraint rule: nonzero slack → basic, else nonbasic
       HighsInt pIdx = findPlusIndex(entry.rowIdx);
       HighsInt mIdx = findMinusIndex(entry.rowIdx);
       double slack = 0.0;
