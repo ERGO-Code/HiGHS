@@ -5981,7 +5981,8 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
       if (tryFourierMotzkin &&
           analysis_.allow_rule_[kPresolveRuleFourierMotzkin]) {
         HPRESOLVE_CHECKED_CALL(fourierMotzkin(postsolve_stack));
-        tryFourierMotzkin = false;
+        // tryFourierMotzkin = false;
+        if (problemSizeReduction() > 0.05) continue;
       }
 
       if (analysis_.allow_rule_[kPresolveRuleAggregator])
