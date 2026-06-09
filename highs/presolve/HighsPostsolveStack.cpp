@@ -1485,7 +1485,7 @@ void HighsPostsolveStack::FourierMotzkinElimination::undo(
     solution.row_dual[minusHeaders[r].row] = 0.0;
 
   // distribute new row duals back to original rows
-  for (HighsInt k = 0; k < (HighsInt)newRowOrigins.size(); ++k) {
+  for (HighsInt k = 0; k < static_cast<HighsInt>(newRowOrigins.size()); ++k) {
     HighsInt newRow = newRowOrigins[k].newRow;
     if (!postsolveStack.isModelRow(newRow)) continue;
     double lambda = solution.row_dual[newRow];
@@ -1591,7 +1591,7 @@ void HighsPostsolveStack::FourierMotzkinElimination::undo(
 
   std::vector<KEntry> allK;
   allK.reserve(newRowOrigins.size() + numPlus + numMinus);
-  for (HighsInt k = 0; k < (HighsInt)newRowOrigins.size(); ++k)
+  for (HighsInt k = 0; k < static_cast<HighsInt>(newRowOrigins.size()); ++k)
     allK.push_back({newRowOrigins[k].newRow, 0, k});
 
   // Add parent rows, deduplicating by row index (ranged rows appear in both)
@@ -1618,7 +1618,7 @@ void HighsPostsolveStack::FourierMotzkinElimination::undo(
 
   // Determine which parent rows are involved in at least one new row
   auto isInvolved = [&](HighsInt row) {
-    for (HighsInt k = 0; k < (HighsInt)newRowOrigins.size(); ++k)
+    for (HighsInt k = 0; k < static_cast<HighsInt>(newRowOrigins.size()); ++k)
       if (newRowOrigins[k].plusRow == row || newRowOrigins[k].minusRow == row)
         return true;
     return false;
