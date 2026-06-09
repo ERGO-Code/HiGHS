@@ -30,6 +30,8 @@ class Numeric {
 
   DataCollector* data_ = nullptr;
 
+  bool pivoting_ = true;
+
   friend class Factorise;
 
   // dynamic regularisation applied to the matrix

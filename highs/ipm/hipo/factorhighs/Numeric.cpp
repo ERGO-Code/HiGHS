@@ -20,7 +20,8 @@ Int Numeric::solve(double* x) const {
   HIPO_CLOCK_CREATE;
 
   // initialise solve handler
-  HybridSolveHandler SH(*S_, *sn_columns_, swaps_, pivot_2x2_, *data_);
+  HybridSolveHandler SH(*S_, *sn_columns_, swaps_, pivot_2x2_, *data_,
+                        pivoting_);
 
   // permute rhs
   HIPO_CLOCK_START(2);

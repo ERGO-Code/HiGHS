@@ -22,10 +22,12 @@ class SolveHandler {
   const std::vector<std::vector<double>>& sn_columns_;
   DataCollector& data_;
 
+  const bool pivoting_;
+
  public:
   SolveHandler(const Symbolic& S,
                const std::vector<std::vector<double>>& sn_columns,
-               DataCollector& data);
+               DataCollector& data, bool pivoting);
 
   // avoid copies
   SolveHandler(const SolveHandler&) = delete;

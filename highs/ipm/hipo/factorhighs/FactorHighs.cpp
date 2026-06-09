@@ -43,7 +43,7 @@ Int FHsolver::analyse(Symbolic& S, Int n, Int nz, const Int* rows,
 Int FHsolver::factorise(const Symbolic& S, Int n, Int nz, const Int* rows,
                         const Int* ptr, const double* vals) {
   Factorise fact_obj(S, n, nz, rows, ptr, vals, regul_, logger_, data_,
-                     sn_columns_, &serial_stack_);
+                     sn_columns_, &serial_stack_, pivoting_);
   return fact_obj.run(N_);
 }
 
@@ -54,5 +54,7 @@ void FHsolver::getRegularisation(double* reg) { N_.getReg(reg); }
 void FHsolver::setBlockSize(Int nb) {
   if (nb > 0) nb_ = nb;
 }
+
+void FHsolver::setPivoting(bool pivoting) { pivoting_ = pivoting; }
 
 }  // namespace hipo

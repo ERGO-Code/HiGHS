@@ -23,7 +23,7 @@ class HybridHybridFormatHandler : public FormatHandler {
  public:
   HybridHybridFormatHandler(const Symbolic& S, Int sn, const Regul& regul,
                             DataCollector& data, std::vector<double>& frontal,
-                            double* clique_ptr);
+                            double* clique_ptr, bool pivoting);
 };
 
 }  // namespace hipo

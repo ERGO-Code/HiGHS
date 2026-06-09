@@ -67,6 +67,8 @@ class Factorise {
 
   CliqueStack* stack_;
 
+  const bool pivoting_;
+
  public:
   void permute(const std::vector<Int>& iperm);
   void processSupernode(Int sn);
@@ -75,7 +77,7 @@ class Factorise {
   Factorise(const Symbolic& S, Int n, Int nz, const Int* rowsM, const Int* ptrM,
             const double* valM, const Regul& regul, const Logger* logger,
             DataCollector& data, std::vector<std::vector<double>>& sn_columns,
-            CliqueStack* stack);
+            CliqueStack* stack, bool pivoting);
 
   bool run(Numeric& num);
 };

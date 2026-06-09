@@ -62,6 +62,8 @@ class FHsolver {
   Numeric N_;
   CliqueStack serial_stack_;
 
+  bool pivoting_ = true;
+
   Int nb_;  // block size
 
   // Columns of factorisation, stored by supernode.
@@ -105,6 +107,12 @@ class FHsolver {
 
   // Set block size for dense linear algebra
   void setBlockSize(Int nb);
+
+  // Set pivoting optins, on by default.
+  // It uses a static variation of Bunch-Kaufman pivoting, with potential
+  // dynamic regularisation. If pivoting is switched off, only static
+  // regularisation is applied.
+  void setPivoting(bool pivoting);
 };
 
 }  // namespace hipo

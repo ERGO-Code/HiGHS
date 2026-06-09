@@ -47,6 +47,8 @@ class FormatHandler {
   // size of the clique
   const Int ldc_{};
 
+  const bool pivoting_;
+
   // local copies to be moved at the end
   std::vector<double>& frontal_;
   std::vector<double> clique_{};
@@ -57,7 +59,8 @@ class FormatHandler {
 
  public:
   FormatHandler(const Symbolic& S, Int sn, const Regul& regul,
-                std::vector<double>& frontal, double* clique_ptr);
+                std::vector<double>& frontal, double* clique_ptr,
+                bool pivoting);
   void terminate(std::vector<double>& clique, std::vector<double>& total_reg,
                  std::vector<Int>& swaps, std::vector<double>& pivot_2x2);
 
