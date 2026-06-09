@@ -380,7 +380,7 @@ HighsStatus Highs::passModel(HighsModel model) {
   // Ensure that any non-zero Hessian of dimension less than the
   // number of columns in the model is completed
   if (hessian.dim_) completeHessian(this->model_.lp_.num_col_, hessian);
-  // Possibly write
+  // Possibly create image files of the constraint matrix and Hessian
   if (options_.write_matrix_image)
     writeLpMatrixPicToFile(options_, "LpMatrix", model_.lp_);
   if (options_.write_hessian_image)
@@ -701,11 +701,16 @@ HighsStatus Highs::readModel(const std::string& filename) {
 HighsStatus Highs::matrixImage(
     const std::string& matrix_image_filename,
     const std::string& hessian_image_filename) const {
-  if (matrix_image_filename != "")
-    writeLpMatrixPicToFile(options_, matrix_image_filename, model_.lp_);
+  HighsStatus status = HighsStatus::kOk;
+  if (matrix_image_filename != "") {
+    status =
+        writeLpMatrixPicToFile(options_, matrix_image_filename, model_.lp_);
+    if (status != HighsStatus::kOk) return status;
+  }
   if (hessian_image_filename != "")
-    writeHessianPicToFile(options_, hessian_image_filename, model_.hessian_);
-  return HighsStatus::kOk;
+    status = writeHessianPicToFile(options_, hessian_image_filename,
+                                   model_.hessian_);
+  return status;
 }
 
 HighsStatus Highs::readBasis(const std::string& filename) {

@@ -626,7 +626,8 @@ TEST_CASE("matrix-hessian-image", "[highs_filereader]") {
   std::string matrix_image_filename = test_name + "_matrix";
   std::string hessian_image_filename = test_name + "_hessian";
 
-  h.matrixImage(matrix_image_filename, hessian_image_filename);
+  REQUIRE(h.matrixImage(matrix_image_filename, hessian_image_filename) ==
+          HighsStatus::kOk);
 
   std::string matrix_image_filename_and_extension =
       matrix_image_filename + ".pbm";
