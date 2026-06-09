@@ -1452,14 +1452,15 @@ class HighsOptions : public HighsOptionsStruct {
                                        advanced, &use_warm_start, true);
     records.push_back(record_bool);
 
-    record_bool = new OptionRecordBool("write_matrix_image",
-                                       "Write an image of the constraint matrix to a file",
-                                       advanced, &write_matrix_image, false);
+    record_bool = new OptionRecordBool(
+        "write_matrix_image",
+        "Write an image of the constraint matrix to a file", advanced,
+        &write_matrix_image, false);
     records.push_back(record_bool);
 
-    record_bool = new OptionRecordBool("write_hessian_image",
-                                       "Write an image of the Hessian to a file",
-                                       advanced, &write_hessian_image, false);
+    record_bool = new OptionRecordBool(
+        "write_hessian_image", "Write an image of the Hessian to a file",
+        advanced, &write_hessian_image, false);
     records.push_back(record_bool);
 
     record_int =

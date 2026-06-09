@@ -380,11 +380,11 @@ HighsStatus Highs::passModel(HighsModel model) {
   // Ensure that any non-zero Hessian of dimension less than the
   // number of columns in the model is completed
   if (hessian.dim_) completeHessian(this->model_.lp_.num_col_, hessian);
-  // Possibly write 
-  if (options_.write_matrix_image) 
+  // Possibly write
+  if (options_.write_matrix_image)
     writeLpMatrixPicToFile(options_, "LpMatrix", model_.lp_);
-  if (options_.write_hessian_image) 
-    writeLpMatrixPicToFile(options_, "Hessian", model_.lp_);
+  if (options_.write_hessian_image)
+    writeHessianPicToFile(options_, "Hessian", model_.hessian_);
 
   // Clear solver status, solution, basis and info associated with any
   // previous model; clear any HiGHS model object; create a HiGHS
@@ -698,15 +698,15 @@ HighsStatus Highs::readModel(const std::string& filename) {
   return returnFromHighs(return_status);
 }
 
-HighsStatus Highs::matrixImage(const std::string& matrix_image_filename,
-			       const std::string& hessian_image_filename) const {
+HighsStatus Highs::matrixImage(
+    const std::string& matrix_image_filename,
+    const std::string& hessian_image_filename) const {
   if (matrix_image_filename != "")
-    writeLpMatrixPicToFile(options_, "LpMatrix", model_.lp_);
+    writeLpMatrixPicToFile(options_, matrix_image_filename, model_.lp_);
   if (hessian_image_filename != "")
-    writeLpMatrixPicToFile(options_, "Hessian", model_.lp_);
+    writeHessianPicToFile(options_, hessian_image_filename, model_.hessian_);
   return HighsStatus::kOk;
 }
-
 
 HighsStatus Highs::readBasis(const std::string& filename) {
   this->logHeader();

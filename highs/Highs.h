@@ -211,11 +211,12 @@ class Highs {
   HighsStatus readBasis(const std::string& filename);
 
   /**
-   * @brief Generate an image of the matrix nonzeros, and possibly
-   * Hessian nonzeros
+   * @brief Generate a PBM image of the matrix nonzeros, and possibly
+   * Hessian nonzeros. Note that the .pbm extnesion will be added to
+   * the fime names passed
    */
   HighsStatus matrixImage(const std::string& matrix_image_filename,
-			  const std::string& hessian_image_filename = "") const;
+                          const std::string& hessian_image_filename = "") const;
 
   /**
    * @brief Presolve the incumbent model, allowing the presolved model
