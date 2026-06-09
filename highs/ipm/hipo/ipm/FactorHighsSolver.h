@@ -16,12 +16,10 @@ namespace hipo {
 
 class FactorHighsSolver : public LinearSolver {
   // object to perform factorisation
-  // FHsolver FH_;
-  void* FH_ptr_;
+  FHsolver FH_;
 
   // symbolic factorisation
-  //Symbolic S_;
-  void* S_ptr_;
+  Symbolic S_;
 
   KktMatrix& kkt_;
 
@@ -48,8 +46,6 @@ class FactorHighsSolver : public LinearSolver {
   FactorHighsSolver(KktMatrix& kkt, Options& options, const Model& model,
                     const Regularisation& regul, Info& info, IpmData& record,
                     const Logger& logger);
-
-  ~FactorHighsSolver();
 
   // Override functions
   Int factorAS(const std::vector<double>& scaling) override;

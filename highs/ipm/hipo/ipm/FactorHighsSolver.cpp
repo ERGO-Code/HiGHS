@@ -6,7 +6,6 @@
 #include "Status.h"
 #include "ipm/hipo/auxiliary/Auxiliary.h"
 #include "ipm/hipo/auxiliary/Logger.h"
-#include "ipm/hipo/factorhighs/FactorHighs_c_api.h"
 #include "parallel/HighsParallel.h"
 
 namespace hipo {
@@ -15,27 +14,19 @@ FactorHighsSolver::FactorHighsSolver(KktMatrix& kkt, Options& options,
                                      const Model& model,
                                      const Regularisation& regul, Info& info,
                                      IpmData& record, const Logger& logger)
-    :  // FH_(&logger, options.block_size),
-       // S_{},
+    : FH_(&logger, options.block_size),
+      S_{},
       kkt_{kkt},
       regul_{regul},
       info_{info},
       data_{record},
       logger_{logger},
       model_{model},
-      options_{options} {
-  FH_ptr_ = FactorHighs_create();
-  S_ptr_ = FactorHighs_symbolic_create();
-}
-
-FactorHighsSolver::~FactorHighsSolver() {
-  FactorHighs_destroy(FH_ptr_);
-  FactorHighs_symbolic_destroy(S_ptr_);
-}
+      options_{options} {}
 
 void FactorHighsSolver::clear() {
   valid_ = false;
-  FactorHighs_newIter(FH_ptr_);
+  FH_.newIter();
 }
 
 // =========================================================================
@@ -96,12 +87,11 @@ Int FactorHighsSolver::factorAS(const std::vector<double>& scaling) {
   kkt_.buildASvalues(scaling);
 
   // set static regularisation, since it may have changed
-  FactorHighs_setRegularisation(FH_ptr_, regul_.primal, regul_.dual);
+  FH_.setRegularisation(regul_.primal, regul_.dual);
 
   Clock clock;
-  if (FactorHighs_factorise(FH_ptr_, S_ptr_, kkt_.n(), kkt_.nz(),
-                            kkt_.rowsAS.data(), kkt_.ptrAS.data(),
-                            kkt_.valAS.data()))
+  if (FH_.factorise(S_, kkt_.n(), kkt_.nz(), kkt_.rowsAS.data(),
+                    kkt_.ptrAS.data(), kkt_.valAS.data()))
     return kStatusErrorFactorise;
   info_.factor_time += clock.stop();
   info_.factor_number++;
@@ -117,12 +107,11 @@ Int FactorHighsSolver::factorNE(const std::vector<double>& scaling) {
   kkt_.buildNEvalues(scaling);
 
   // set static regularisation, since it may have changed
-  FactorHighs_setRegularisation(FH_ptr_, regul_.primal, regul_.dual);
+  FH_.setRegularisation(regul_.primal, regul_.dual);
 
   Clock clock;
-  if (FactorHighs_factorise(FH_ptr_, S_ptr_, kkt_.n(), kkt_.nz(),
-                            kkt_.rowsNE.data(), kkt_.ptrNE.data(),
-                            kkt_.valNE.data()))
+  if (FH_.factorise(S_, kkt_.n(), kkt_.nz(), kkt_.rowsNE.data(),
+                    kkt_.ptrNE.data(), kkt_.valNE.data()))
     return kStatusErrorFactorise;
   info_.factor_time += clock.stop();
   info_.factor_number++;
@@ -150,7 +139,7 @@ Int FactorHighsSolver::solveAS(const std::vector<double>& rhs_x,
   rhs.insert(rhs.end(), rhs_y.begin(), rhs_y.end());
 
   Clock clock;
-  if (FactorHighs_solve(FH_ptr_, rhs.data())) return kStatusErrorSolve;
+  if (FH_.solve(rhs.data())) return kStatusErrorSolve;
 
   info_.solve_time += clock.stop();
   info_.solve_number++;
@@ -173,7 +162,7 @@ Int FactorHighsSolver::solveNE(const std::vector<double>& rhs,
   lhs = rhs;
 
   Clock clock;
-  if (FactorHighs_solve(FH_ptr_, lhs.data())) return kStatusErrorSolve;
+  if (FH_.solve(lhs.data())) return kStatusErrorSolve;
 
   info_.solve_time += clock.stop();
   info_.solve_number++;
@@ -199,10 +188,10 @@ Int FactorHighsSolver::setup() {
     logger_.print(log_stream.str().c_str());
   }
 
-  ((Symbolic*)S_ptr_)->print(logger_, logger_.debug(1));
+  S_.print(logger_, logger_.debug(1));
 
   // Warn about large memory consumption
-  if (((Symbolic*)S_ptr_)->storage() > kLargeStorageGB * 1024 * 1024 * 1024) {
+  if (S_.storage() > kLargeStorageGB * 1024 * 1024 * 1024) {
     logger_.printw("Large amount of memory required\n");
   }
 
@@ -355,10 +344,10 @@ Int FactorHighsSolver::chooseNla() {
 
   if (status == kStatusOk) {
     if (options_.nla == kHipoAugmentedString) {
-      *((Symbolic*)S_ptr_) = std::move(symb_AS);
+      S_ = std::move(symb_AS);
       kkt_.freeNEmemory();
     } else {
-      *((Symbolic*)S_ptr_) = std::move(symb_NE);
+      S_ = std::move(symb_NE);
       kkt_.freeASmemory();
     }
   }
@@ -456,9 +445,9 @@ Int FactorHighsSolver::chooseOrdering(const std::vector<Int>& rows,
       return;
     }
 
-    failure[i] = FactorHighs_analyse(
-        FH_ptr_, (void*)&(symbolics[i]), ptr.size() - 1, rows.size(),
-        rows.data(), ptr.data(), signs.data(), permutations[i].data());
+    failure[i] =
+        FH_.analyse(symbolics[i], ptr.size() - 1, rows.size(), rows.data(),
+                    ptr.data(), signs.data(), permutations[i].data());
 
     if (failure[i] && logger_.debug(2)) {
       logger_.print("Failed symbolic:");
@@ -547,7 +536,7 @@ Int FactorHighsSolver::setNla() {
 
   if (options_.nla == kHipoAugmentedString) {
     Int status = kkt_.buildASstructure();
-    if (!status) status = analyseAS(*((Symbolic*)S_ptr_));
+    if (!status) status = analyseAS(S_);
     if (status == kStatusOverflow) {
       logger_.printe("AS requested, integer overflow\n");
       return kStatusOverflow;
@@ -559,7 +548,7 @@ Int FactorHighsSolver::setNla() {
 
   } else if (options_.nla == kHipoNormalEqString) {
     Int status = kkt_.buildNEstructure();
-    if (!status) status = analyseNE(*((Symbolic*)S_ptr_));
+    if (!status) status = analyseNE(S_);
     if (status == kStatusOverflow) {
       logger_.printe("NE requested, integer overflow\n");
       return kStatusOverflow;
@@ -582,7 +571,7 @@ Int FactorHighsSolver::setNla() {
                << '\n';
   logger_.print(log_stream.str().c_str());
 
-  kkt_.iperm = ((Symbolic*)S_ptr_)->iperm();
+  kkt_.iperm = S_.iperm();
 
   return kStatusOk;
 }
@@ -624,13 +613,11 @@ void FactorHighsSolver::setParallel() {
 
     // parallel_tree instead is chosen with a heuristic
 
-    double tree_speedup =
-        ((Symbolic*)S_ptr_)->flops() / ((Symbolic*)S_ptr_)->critops();
-    double sn_size =
-        (double)((Symbolic*)S_ptr_)->size() / ((Symbolic*)S_ptr_)->sn();
+    double tree_speedup = S_.flops() / S_.critops();
+    double sn_size = (double)S_.size() / S_.sn();
 
-    bool enough_sn = ((Symbolic*)S_ptr_)->sn() > kMinNumberSn;
-    bool enough_flops = ((Symbolic*)S_ptr_)->flops() > kLargeFlopsThresh;
+    bool enough_sn = S_.sn() > kMinNumberSn;
+    bool enough_flops = S_.flops() > kLargeFlopsThresh;
     bool speedup_is_large = tree_speedup > kLargeSpeedupThresh;
     bool sn_are_large = sn_size > kLargeSnThresh;
     bool sn_are_not_small = sn_size > kSmallSnThresh;
@@ -646,13 +633,13 @@ void FactorHighsSolver::setParallel() {
 
     // If serial memory is too large, switch off tree parallelism to avoid
     // running out of memory
-    double num_GB = ((Symbolic*)S_ptr_)->storage() / 1024 / 1024 / 1024;
+    double num_GB = S_.storage() / 1024 / 1024 / 1024;
     if (num_GB > kLargeStorageGB) {
       parallel_tree = false;
     }
 
     // switch off tree parallelism if depth of recursion is too large
-    if (((Symbolic*)S_ptr_)->depth() > kMaxTreeDepth) parallel_tree = false;
+    if (S_.depth() > kMaxTreeDepth) parallel_tree = false;
 
     if (parallel_tree && parallel_node)
       log_stream << "Full preferred\n";
@@ -667,20 +654,18 @@ void FactorHighsSolver::setParallel() {
     assert(1 == 0);
 
   logger_.print(log_stream.str().c_str());
-  ((Symbolic*)S_ptr_)->setParallel(parallel_tree, parallel_node);
+  S_.setParallel(parallel_tree, parallel_node);
 }
 
 // =========================================================================
 // Other stuff
 // =========================================================================
 
-double FactorHighsSolver::flops() const { return ((Symbolic*)S_ptr_)->flops(); }
-double FactorHighsSolver::spops() const { return ((Symbolic*)S_ptr_)->spops(); }
-double FactorHighsSolver::nz() const {
-  return (double)((Symbolic*)S_ptr_)->nz();
-}
+double FactorHighsSolver::flops() const { return S_.flops(); }
+double FactorHighsSolver::spops() const { return S_.spops(); }
+double FactorHighsSolver::nz() const { return (double)S_.nz(); }
 void FactorHighsSolver::getReg(std::vector<double>& reg) {
-  FactorHighs_getRegularisation(FH_ptr_, reg.data());
+  FH_.getRegularisation(reg.data());
 }
 
 }  // namespace hipo
