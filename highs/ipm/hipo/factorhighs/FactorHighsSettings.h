@@ -32,6 +32,8 @@
 
 namespace hipo {
 
+const Int kBlockSize = 128;
+
 // supernode amalgamation
 const Int kStartThreshRelax = 256;
 const double kUpperRatioRelax = 0.02;

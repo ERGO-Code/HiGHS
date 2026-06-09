@@ -35,3 +35,7 @@ void FactorHighs_getRegularisation(void* FH, double* reg) {
 }
 
 void FactorHighs_newIter(void* FH) { ((hipo::FHsolver*)FH)->newIter(); }
+
+void FactorHighs_setBlockSize(void* FH, HighsInt nb) {
+  ((hipo::FHsolver*)FH)->setBlockSize(nb);
+}

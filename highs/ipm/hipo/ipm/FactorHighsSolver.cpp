@@ -14,7 +14,7 @@ FactorHighsSolver::FactorHighsSolver(KktMatrix& kkt, Options& options,
                                      const Model& model,
                                      const Regularisation& regul, Info& info,
                                      IpmData& record, const Logger& logger)
-    : FH_(&logger, options.block_size),
+    : FH_(&logger),
       S_{},
       kkt_{kkt},
       regul_{regul},
@@ -22,7 +22,9 @@ FactorHighsSolver::FactorHighsSolver(KktMatrix& kkt, Options& options,
       data_{record},
       logger_{logger},
       model_{model},
-      options_{options} {}
+      options_{options} {
+  FH_.setBlockSize(options.block_size);
+}
 
 void FactorHighsSolver::clear() {
   valid_ = false;

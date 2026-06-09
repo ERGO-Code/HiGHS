@@ -7,8 +7,7 @@
 
 namespace hipo {
 
-FHsolver::FHsolver(const Logger* logger, Int block_size)
-    : logger_{logger}, nb_{block_size > 0 ? block_size : default_nb_} {
+FHsolver::FHsolver(const Logger* logger) : logger_{logger}, nb_{kBlockSize} {
 #ifdef HIPO_COLLECT_EXPENSIVE_DATA
   if (logger_)
     logger_->printw(
@@ -51,5 +50,9 @@ Int FHsolver::factorise(const Symbolic& S, Int n, Int nz, const Int* rows,
 Int FHsolver::solve(double* x) { return N_.solve(x); }
 
 void FHsolver::getRegularisation(double* reg) { N_.getReg(reg); }
+
+void FHsolver::setBlockSize(Int nb) {
+  if (nb > 0) nb_ = nb;
+}
 
 }  // namespace hipo

@@ -62,8 +62,7 @@ class FHsolver {
   Numeric N_;
   CliqueStack serial_stack_;
 
-  const Int nb_;  // block size
-  static const Int default_nb_ = 128;
+  Int nb_;  // block size
 
   // Columns of factorisation, stored by supernode.
   // This memory is allocated the first time that it is used. Subsequent
@@ -72,7 +71,7 @@ class FHsolver {
 
  public:
   // Create object and initialise DataCollector
-  FHsolver(const Logger* logger = nullptr, Int block_size = default_nb_);
+  FHsolver(const Logger* logger = nullptr);
 
   // Print collected data (if any) and terminate DataCollector
   ~FHsolver();
@@ -103,6 +102,9 @@ class FHsolver {
 
   // Extract the regularisation values used, including static and dynamic.
   void getRegularisation(double* reg);
+
+  // Set block size for dense linear algebra
+  void setBlockSize(Int nb);
 };
 
 }  // namespace hipo
