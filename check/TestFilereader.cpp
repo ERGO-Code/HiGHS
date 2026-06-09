@@ -611,3 +611,23 @@ TEST_CASE("efficient-add-row", "[highs_filereader]") {
     printf("Added %d rows together     in %.2gs\n", int(lp.num_row_), tt);
   }
 }
+
+TEST_CASE("matrix-hessian-image", "[highs_filereader]") {
+   const std::string test_name = Catch::getResultCapture().getCurrentTestName();
+  std::string filename;
+  filename = std::string(HIGHS_DIR) + "/check/instances/primal1.mps";
+
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  h.setOptionValue("write_matrix_image", true);
+  h.setOptionValue("write_hessian_image", true);
+  REQUIRE(h.readModel(filename) == HighsStatus::kOk);
+
+  std::string matrix_image_filename = test_name + "_matrix.pbm";
+  std::string hessian_image_filename = test_name + "_hessian.pbm";
+
+  h.matrixImage(matrix_image_filename, hessian_image_filename);
+
+  std::remove(matrix_image_filename.c_str());
+  std::remove(hessian_image_filename.c_str());
+}
