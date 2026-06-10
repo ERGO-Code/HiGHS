@@ -24,10 +24,19 @@ The direct solver uses the following objects:
 - Symbolic, to store the symbolic factorization;
 - FHsolver, to perform analyse and factorise phases.
 
-Define a vector signs that contains the expected sign of each pivot (1 or -1).
 Define a right-hand side rhs, which will be overwritten with the solution of
 M^{-1} * rhs. The pre-computed fill-reducing ordering to use is stored in the
 vector perm.
+
+Define a vector signs that contains the expected sign of each pivot:
+-  1 for pivots expected to be positive
+- -1 for pivots expected to be negative
+-  0 for pivots without an expected sign.
+This is used to determine the sign of the regularisation to apply.
+Only pivots in the (1,1)-block are allowed to have unknown sign, so that pivots
+with unknown sign receive a static regularisation contribution equal to -reg_p.
+Dynamic regularisation uses the computed sign of the pivot, if the sign is
+unknown.
 
 Then, the factorization is performed as follows.
 
@@ -47,9 +56,6 @@ Pass nothing to suppress all logging.
 To add static regularisation when the pivots are selected, use
 setRegularisation(reg_p,reg_d) to choose values of primal and dual
 regularisation. If regularisation is already added to the matrix, ignore.
-
-The default block size is 128. To set a different block size, pass it as second
-input to the constructor.
 
 */
 

@@ -50,9 +50,10 @@ static void staticReg(double& pivot, Int sign, const Regul& regval,
   totalreg = pivot - old_pivot;
 }
 
-static bool blockBunchKaufman(Int j, Int n, double* A, Int lda, Int* swaps,
-                              Int* sign, double thresh, const Regul& regval,
-                              double* totalreg, DataCollector& data) {
+static bool blockBunchKaufman(const Int j, Int n, double* A, Int lda,
+                              Int* swaps, Int* sign, double thresh,
+                              const Regul& regval, double* totalreg,
+                              DataCollector& data) {
   // Perform Bunch-Kaufman pivoting within a block of the supernode (see Schenk,
   // Gartner, ETNA 2006).
   // It works only for upper triangular A.
@@ -82,7 +83,7 @@ static bool blockBunchKaufman(Int j, Int n, double* A, Int lda, Int* swaps,
   // Max in column j of diagonal block
   auto res = maxInCol(j, n, j, A, lda);
   double gamma_j = res.second;
-  Int r = res.first;
+  const Int r = res.first;
   double Ajj = sign[j] > 0 ? A[j + lda * j] + regval.dual
                            : A[j + lda * j] - regval.primal;
 
@@ -99,7 +100,13 @@ static bool blockBunchKaufman(Int j, Int n, double* A, Int lda, Int* swaps,
 
     if (std::max(std::abs(Ajj), gamma_j) < thresh) {
       // perturbe pivot
-      A[j + lda * j] = sign[j] * thresh;
+      double temp_sign = sign[j];
+      if (temp_sign == 0 && A[j + lda * j] > 0)
+        temp_sign = 1;
+      else if (temp_sign == 0)
+        temp_sign = -1;
+
+      A[j + lda * j] = temp_sign * thresh;
       data.countRegPiv();
     }
     totalreg[j] = A[j + lda * j] - old_pivot;
