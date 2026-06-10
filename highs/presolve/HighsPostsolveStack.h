@@ -287,7 +287,20 @@ class HighsPostsolveStack {
               HighsBasis& basis);
   };
 
-  static void undoFourierMotzkinBlock(HighsDataStack& stack,
+  struct FmeStepData {
+    FmeStepHeader header;
+    std::vector<FmeRowHeader> plusHeaders;
+    std::vector<double> plusCoefs;
+    std::vector<std::vector<Nonzero>> plusEntries;
+    std::vector<FmeRowHeader> minusHeaders;
+    std::vector<double> minusCoefs;
+    std::vector<std::vector<Nonzero>> minusEntries;
+    std::vector<std::vector<FmeDescendant>> descendants;
+    std::vector<FmeNewRow> newRows;
+  };
+
+  static std::vector<FmeStepData> popFourierMotzkinBlock(HighsDataStack& stack);
+  static void undoFourierMotzkinBlock(const std::vector<FmeStepData>& steps,
                                       const HighsOptions& options,
                                       HighsSolution& solution,
                                       HighsBasis& basis);
@@ -985,7 +998,8 @@ class HighsPostsolveStack {
           break;
         }
         case ReductionType::kFourierMotzkinBlock: {
-          undoFourierMotzkinBlock(reductionValues, options, solution, basis);
+          auto steps = popFourierMotzkinBlock(reductionValues);
+          undoFourierMotzkinBlock(steps, options, solution, basis);
           break;
         }
         case ReductionType::kFourierMotzkinObjCol: {

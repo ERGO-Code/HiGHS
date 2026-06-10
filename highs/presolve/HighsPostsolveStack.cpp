@@ -1426,27 +1426,12 @@ void HighsPostsolveStack::SlackColSubstitution::undo(
   }
 }
 
-void HighsPostsolveStack::undoFourierMotzkinBlock(HighsDataStack& stack,
-                                                  const HighsOptions& options,
-                                                  HighsSolution& solution,
-                                                  HighsBasis& basis) {
-  // Pop numSteps
+std::vector<HighsPostsolveStack::FmeStepData>
+HighsPostsolveStack::popFourierMotzkinBlock(HighsDataStack& stack) {
   HighsInt numSteps;
   stack.pop(numSteps);
 
-  struct StepData {
-    FmeStepHeader header;
-    std::vector<FmeRowHeader> plusHeaders;
-    std::vector<double> plusCoefs;
-    std::vector<std::vector<Nonzero>> plusEntries;
-    std::vector<FmeRowHeader> minusHeaders;
-    std::vector<double> minusCoefs;
-    std::vector<std::vector<Nonzero>> minusEntries;
-    std::vector<std::vector<FmeDescendant>> descendants;
-    std::vector<FmeNewRow> newRows;
-  };
-
-  std::vector<StepData> steps(numSteps);
+  std::vector<FmeStepData> steps(numSteps);
 
   // Pop step headers
   for (HighsInt s = numSteps - 1; s >= 0; --s) stack.pop(steps[s].header);
@@ -1480,6 +1465,14 @@ void HighsPostsolveStack::undoFourierMotzkinBlock(HighsDataStack& stack,
     for (HighsInt r = numPlus - 1; r >= 0; --r)
       stack.pop(steps[s].plusEntries[r]);
   }
+
+  return steps;
+}
+
+void HighsPostsolveStack::undoFourierMotzkinBlock(
+    const std::vector<FmeStepData>& steps, const HighsOptions& options,
+    HighsSolution& solution, HighsBasis& basis) {
+  HighsInt numSteps = static_cast<HighsInt>(steps.size());
 
   // Primal postsolve (Algorithm 3): process in reverse elimination order
   for (HighsInt s = numSteps - 1; s >= 0; --s) {
