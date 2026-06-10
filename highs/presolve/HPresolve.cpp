@@ -7356,6 +7356,29 @@ HPresolve::Result HPresolve::fourierMotzkin(
   HighsInt numRowsEliminated = 0;
   HighsInt numRowsAdded = 0;
 
+  // FM block data for postsolve
+  using FmeRow =
+      HighsPostsolveStack::FmeRowData<HighsTripletTreeSlicePreOrder>;
+  using FmeDescendant = HighsPostsolveStack::FmeDescendant;
+  std::vector<HighsInt> blockCols;
+  std::vector<double> blockColLowers;
+  std::vector<double> blockColUppers;
+  std::vector<double> blockColCosts;
+  std::vector<HighsInt> blockNumPlus;
+  std::vector<HighsInt> blockNumMinus;
+  std::vector<std::vector<std::vector<FmeDescendant>>> blockDescendants;
+
+  // Ancestry tracking: for each model row, which (step, parentLocalIdx)
+  // pairs contributed to it, with cumulative scale factor.
+  // parentLocalIdx: 0..numPlus-1 for plus parents, numPlus..numPlus+numMinus-1
+  // for minus parents.
+  struct AncestryEntry {
+    HighsInt step;
+    HighsInt parentLocalIdx;
+    double scale;
+  };
+  std::unordered_map<HighsInt, std::vector<AncestryEntry>> rowAncestry;
+
   // main loop: eliminate variables from heap
   while (!heap.empty()) {
     HighsInt col = heap[0].col;
@@ -7369,6 +7392,8 @@ HPresolve::Result HPresolve::fourierMotzkin(
 
     // heap data should be up-to-date
     assert(elimCandidate && isReduction(neRed, mrRed));
+
+    HighsInt stepIdx = static_cast<HighsInt>(blockCols.size());
 
     // perform elimination: generate new rows
     newRows.clear();
@@ -7438,10 +7463,7 @@ HPresolve::Result HPresolve::fourierMotzkin(
       newRowPairs.push_back({nr.plusIndex, nr.minusIndex});
     }
 
-    // record postsolve entry before addToMatrix (which may invalidate
-    // row slices via reallocation)
-    using FmeRow =
-        HighsPostsolveStack::FmeRowData<HighsTripletTreeSlicePreOrder>;
+    // Serialize row data for postsolve before addToMatrix invalidates slices
     std::vector<FmeRow> plusRows;
     std::vector<FmeRow> minusRows;
 
@@ -7456,14 +7478,100 @@ HPresolve::Result HPresolve::fourierMotzkin(
                            model->row_upper_[mRow], getRowVector(mRow)});
     }
 
-    postsolve_stack.fourierMotzkinElimination(
-        col, model->col_lower_[col], model->col_upper_[col],
-        model->col_cost_[col], plusRows, minusRows, newRowPairs);
+    std::pair<HighsInt, HighsInt> storedCounts =
+        postsolve_stack.fourierMotzkinBlockPushStep(col, plusRows, minusRows);
+    HighsInt numPlusStored = storedCounts.first;
+    HighsInt numMinusStored = storedCounts.second;
+
+    // save block metadata
+    blockCols.push_back(col);
+    blockColLowers.push_back(model->col_lower_[col]);
+    blockColUppers.push_back(model->col_upper_[col]);
+    blockColCosts.push_back(model->col_cost_[col]);
+    blockNumPlus.push_back(numPlusStored);
+    blockNumMinus.push_back(numMinusStored);
 
     // add new rows to matrix
+    HighsInt firstNewRow = model->num_row_;
     if (!addToMatrix(postsolve_stack, rowLower, rowUpper, rowEntries))
       return finalise();
     numRowsAdded += static_cast<HighsInt>(rowEntries.size());
+
+    // Build ancestry for new rows
+    // Map from iPlus/iMinus index to parentLocalIdx in this step
+    // plusRows indices: 0..numPlusStored-1, minusRows: numPlusStored..end
+    auto findPlusLocalIdx = [&](HighsInt row) -> HighsInt {
+      HighsInt idx = 0;
+      for (HighsInt pRow : iPlus) {
+        if (pRow < 0) continue;
+        if (pRow == row) return idx;
+        idx++;
+      }
+      return -1;
+    };
+    auto findMinusLocalIdx = [&](HighsInt row) -> HighsInt {
+      HighsInt idx = 0;
+      for (HighsInt mRow : iMinus) {
+        if (mRow < 0) continue;
+        if (mRow == row) return numPlusStored + idx;
+        idx++;
+      }
+      return -1;
+    };
+
+    for (HighsInt k = 0; k < static_cast<HighsInt>(newRowPairs.size()); ++k) {
+      HighsInt newModelRow = firstNewRow + k;
+      HighsInt pRow = newRowPairs[k].first;
+      HighsInt mRow = newRowPairs[k].second;
+
+      std::vector<AncestryEntry>& newAnc = rowAncestry[newModelRow];
+
+      // Compute scale factors for this (pRow, mRow) pair
+      double pCoefAbs = 1.0, mCoefAbs = 1.0;
+      if (pRow >= 0) {
+        HighsInt pPos = findNonzero(pRow, col);
+        if (pPos != -1) pCoefAbs = std::abs(Avalue[pPos]);
+      }
+      if (mRow >= 0) {
+        HighsInt mPos = findNonzero(mRow, col);
+        if (mPos != -1) mCoefAbs = std::abs(Avalue[mPos]);
+      }
+      double s = (pCoefAbs * mCoefAbs) / (pCoefAbs + mCoefAbs);
+      double pScaleFactor = s / pCoefAbs;
+      double mScaleFactor = s / mCoefAbs;
+
+      // Inherit ancestry from plus parent
+      if (pRow >= 0) {
+        auto it = rowAncestry.find(pRow);
+        if (it != rowAncestry.end()) {
+          for (const auto& a : it->second)
+            newAnc.push_back({a.step, a.parentLocalIdx, a.scale * pScaleFactor});
+        }
+        HighsInt pLocalIdx = findPlusLocalIdx(pRow);
+        if (pLocalIdx >= 0)
+          newAnc.push_back({stepIdx, pLocalIdx, pScaleFactor});
+      }
+
+      // Inherit ancestry from minus parent
+      if (mRow >= 0) {
+        auto it = rowAncestry.find(mRow);
+        if (it != rowAncestry.end()) {
+          for (const auto& a : it->second)
+            newAnc.push_back({a.step, a.parentLocalIdx, a.scale * mScaleFactor});
+        }
+        HighsInt mLocalIdx = findMinusLocalIdx(mRow);
+        if (mLocalIdx >= 0)
+          newAnc.push_back({stepIdx, mLocalIdx, mScaleFactor});
+      }
+    }
+
+    // Remove ancestry entries for deleted parent rows
+    for (HighsInt rp : iPlus) {
+      if (rp >= 0) rowAncestry.erase(rp);
+    }
+    for (HighsInt rm : iMinus) {
+      if (rm >= 0) rowAncestry.erase(rm);
+    }
 
     // remove old rows containing col (skip virtual bound rows)
     for (HighsInt rp : iPlus) {
@@ -7513,12 +7621,36 @@ HPresolve::Result HPresolve::fourierMotzkin(
     HPRESOLVE_CHECKED_CALL(checkLimits(postsolve_stack));
   }
 
-  if (numColsEliminated > 0)
+  // Build K^j_i mapping from ancestry and finalize the FM block
+  if (numColsEliminated > 0) {
+    HighsInt numSteps = static_cast<HighsInt>(blockCols.size());
+
+    // Collect all surviving rows with ancestry
+    // For each (step, parentLocalIdx), gather the final descendants
+    blockDescendants.resize(numSteps);
+    for (HighsInt s = 0; s < numSteps; ++s) {
+      HighsInt numParents = blockNumPlus[s] + blockNumMinus[s];
+      blockDescendants[s].resize(numParents);
+    }
+
+    for (const auto& entry : rowAncestry) {
+      HighsInt row = entry.first;
+      HighsInt origRow = postsolve_stack.getOrigRowIndex()[row];
+      for (const auto& a : entry.second)
+        blockDescendants[a.step][a.parentLocalIdx].push_back(
+            {origRow, a.scale});
+    }
+
+    postsolve_stack.fourierMotzkinBlockFinalize(
+        blockCols, blockColLowers, blockColUppers, blockColCosts,
+        blockNumPlus, blockNumMinus, blockDescendants);
+
     highsLogDev(options->log_options, HighsLogType::kInfo,
                 "Fourier-Motzkin eliminated %" HIGHSINT_FORMAT
                 " cols and %" HIGHSINT_FORMAT
                 " rows, and added %" HIGHSINT_FORMAT " rows\n",
                 numColsEliminated, numRowsEliminated, numRowsAdded);
+  }
 
   return finalise();
 }

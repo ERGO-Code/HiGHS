@@ -87,6 +87,15 @@ void HighsPostsolveStack::FourierMotzkinObjCol::transformToPresolvedSpace(
   primalSol[col] = val;
 }
 
+void HighsPostsolveStack::FourierMotzkinObjCol::undo(
+    const std::vector<Nonzero>& costEntries, HighsSolution& solution) const {
+  if (!solution.dual_valid) return;
+  double zDual = solution.col_dual[col];
+  for (const Nonzero& entry : costEntries)
+    solution.col_dual[entry.index] += entry.value * zDual;
+  solution.col_dual[col] = 0.0;
+}
+
 static HighsBasisStatus computeRowStatus(double dual,
                                          HighsPostsolveStack::RowType rowType) {
   if (rowType == HighsPostsolveStack::RowType::kEq)
@@ -1417,283 +1426,129 @@ void HighsPostsolveStack::SlackColSubstitution::undo(
   }
 }
 
-void HighsPostsolveStack::FourierMotzkinElimination::undo(
-    const HighsPostsolveStack& postsolveStack, const HighsOptions& options,
-    const std::vector<FmeRowHeader>& plusHeaders,
-    const std::vector<double>& plusCoefOfCol,
-    const std::vector<std::vector<Nonzero>>& plusEntries,
-    const std::vector<FmeRowHeader>& minusHeaders,
-    const std::vector<double>& minusCoefOfCol,
-    const std::vector<std::vector<Nonzero>>& minusEntries,
-    const std::vector<NewRowOrigin>& newRowOrigins, HighsSolution& solution,
-    HighsBasis& basis) const {
-  HighsInt numPlus = static_cast<HighsInt>(plusHeaders.size());
-  HighsInt numMinus = static_cast<HighsInt>(minusHeaders.size());
+void HighsPostsolveStack::undoFourierMotzkinBlock(
+    HighsDataStack& stack, const HighsOptions& options,
+    HighsSolution& solution, HighsBasis& basis) {
+  // Pop numSteps
+  HighsInt numSteps;
+  stack.pop(numSteps);
 
-  // primal postsolve (algorithm 3)
-  double impliedLower = colLower;
-  double impliedUpper = colUpper;
-
-  // lambda for computing a bound
-  auto computeBounds = [&](HighsInt direction, double val, double rhs,
-                           const HighsCDouble& sum, double& impliedBound) {
-    if (std::abs(rhs) == kHighsInf) return;
-    double bound = static_cast<double>(rhs - sum) / val;
-    impliedBound =
-        direction * std::min(direction * bound, direction * impliedBound);
+  struct StepData {
+    FmeStepHeader header;
+    std::vector<FmeRowHeader> plusHeaders;
+    std::vector<double> plusCoefs;
+    std::vector<std::vector<Nonzero>> plusEntries;
+    std::vector<FmeRowHeader> minusHeaders;
+    std::vector<double> minusCoefs;
+    std::vector<std::vector<Nonzero>> minusEntries;
+    std::vector<std::vector<FmeDescendant>> descendants;
   };
 
-  // lambda for computing lower/upper bound
-  auto tightenBounds = [&](const std::vector<FmeRowHeader>& headers,
-                           const std::vector<double>& coefs,
-                           const std::vector<std::vector<Nonzero>>& entries) {
-    for (size_t r = 0; r < headers.size(); ++r) {
-      const FmeRowHeader& hdr = headers[r];
-      double aij = coefs[r];
+  std::vector<StepData> steps(numSteps);
 
-      HighsCDouble sum = 0.0;
-      for (const auto& nz : entries[r])
-        sum +=
-            static_cast<HighsCDouble>(nz.value) * solution.col_value[nz.index];
+  // Pop step headers (pushed last-to-first, so pop first-to-last... no:
+  // pushed in order s=0..N-1, so pop in reverse s=N-1..0)
+  for (HighsInt s = numSteps - 1; s >= 0; --s)
+    stack.pop(steps[s].header);
 
-      computeBounds(HighsInt{1}, aij, aij > 0 ? hdr.rowUpper : hdr.rowLower,
-                    sum, impliedUpper);
-      computeBounds(HighsInt{-1}, aij, aij > 0 ? hdr.rowLower : hdr.rowUpper,
-                    sum, impliedLower);
-    }
-  };
+  // Pop descendants (pushed in order s=0..N-1, p=0..numParents-1)
+  for (HighsInt s = numSteps - 1; s >= 0; --s) {
+    HighsInt numParents = steps[s].header.numPlus + steps[s].header.numMinus;
+    steps[s].descendants.resize(numParents);
+    for (HighsInt p = numParents - 1; p >= 0; --p)
+      stack.pop(steps[s].descendants[p]);
+  }
 
-  // compute bounds
-  tightenBounds(plusHeaders, plusCoefOfCol, plusEntries);
-  tightenBounds(minusHeaders, minusCoefOfCol, minusEntries);
+  // Pop row data (pushed in order s=0..N-1, so pop s=N-1..0)
+  for (HighsInt s = numSteps - 1; s >= 0; --s) {
+    // pop minus row data
+    stack.pop(steps[s].minusHeaders);
+    stack.pop(steps[s].minusCoefs);
+    HighsInt numMinus = static_cast<HighsInt>(steps[s].minusCoefs.size());
+    steps[s].minusEntries.resize(numMinus);
+    for (HighsInt r = numMinus - 1; r >= 0; --r)
+      stack.pop(steps[s].minusEntries[r]);
 
-  // algorithm 3: assign x_j to 0 if feasible, else closest bound to zero
-  if (impliedLower <= 0.0 && impliedUpper >= 0.0)
-    solution.col_value[col] = 0.0;
-  else if (impliedLower > 0.0)
-    solution.col_value[col] = impliedLower;
-  else
-    solution.col_value[col] = impliedUpper;
+    // pop plus row data
+    stack.pop(steps[s].plusHeaders);
+    stack.pop(steps[s].plusCoefs);
+    HighsInt numPlus = static_cast<HighsInt>(steps[s].plusCoefs.size());
+    steps[s].plusEntries.resize(numPlus);
+    for (HighsInt r = numPlus - 1; r >= 0; --r)
+      stack.pop(steps[s].plusEntries[r]);
+  }
+
+  // Primal postsolve (Algorithm 3): process in reverse elimination order
+  for (HighsInt s = numSteps - 1; s >= 0; --s) {
+    const auto& step = steps[s];
+    HighsInt col = step.header.col;
+    double impliedLower = step.header.colLower;
+    double impliedUpper = step.header.colUpper;
+
+    auto tightenBounds = [&](const std::vector<FmeRowHeader>& headers,
+                             const std::vector<double>& coefs,
+                             const std::vector<std::vector<Nonzero>>& entries) {
+      for (size_t r = 0; r < headers.size(); ++r) {
+        double aij = coefs[r];
+        HighsCDouble sum = 0.0;
+        for (const auto& nz : entries[r])
+          sum += static_cast<HighsCDouble>(nz.value) *
+                 solution.col_value[nz.index];
+        double rhs_upper = aij > 0 ? headers[r].rowUpper : headers[r].rowLower;
+        double rhs_lower = aij > 0 ? headers[r].rowLower : headers[r].rowUpper;
+        if (rhs_upper != kHighsInf) {
+          double bound = static_cast<double>(rhs_upper - sum) / aij;
+          impliedUpper = std::min(impliedUpper, bound);
+        }
+        if (rhs_lower != -kHighsInf) {
+          double bound = static_cast<double>(rhs_lower - sum) / aij;
+          impliedLower = std::max(impliedLower, bound);
+        }
+      }
+    };
+
+    tightenBounds(step.plusHeaders, step.plusCoefs, step.plusEntries);
+    tightenBounds(step.minusHeaders, step.minusCoefs, step.minusEntries);
+
+    if (impliedLower <= 0.0 && impliedUpper >= 0.0)
+      solution.col_value[col] = 0.0;
+    else if (impliedLower > 0.0)
+      solution.col_value[col] = impliedLower;
+    else
+      solution.col_value[col] = impliedUpper;
+  }
 
   if (!solution.dual_valid) return;
 
-  // dual postsolve
-  // zero parent row duals
-  for (HighsInt r = 0; r < numPlus; ++r)
-    solution.row_dual[plusHeaders[r].row] = 0.0;
-  for (HighsInt r = 0; r < numMinus; ++r)
-    solution.row_dual[minusHeaders[r].row] = 0.0;
+  // Dual postsolve (Algorithm 4): process in reverse elimination order
+  for (HighsInt s = numSteps - 1; s >= 0; --s) {
+    const auto& step = steps[s];
+    HighsInt col = step.header.col;
+    HighsInt numPlus = step.header.numPlus;
+    HighsInt numMinus = step.header.numMinus;
 
-  // distribute new row duals back to original rows
-  for (HighsInt k = 0; k < static_cast<HighsInt>(newRowOrigins.size()); ++k) {
-    HighsInt newRow = newRowOrigins[k].newRow;
-    if (!postsolveStack.isModelRow(newRow)) continue;
-    double lambda = solution.row_dual[newRow];
-
-    HighsInt pOrigRow = newRowOrigins[k].plusRow;
-    HighsInt mOrigRow = newRowOrigins[k].minusRow;
-
-    double pCoefAbs = 0.0;
-    double mCoefAbs = 0.0;
-    if (pOrigRow >= 0) {
-      for (HighsInt r = 0; r < numPlus; ++r)
-        if (plusHeaders[r].row == pOrigRow) {
-          pCoefAbs = std::abs(plusCoefOfCol[r]);
-          break;
-        }
+    // u_i = Σ_{k ∈ K^j_i} λ_k * scaleFactor
+    for (HighsInt p = 0; p < numPlus; ++p) {
+      double ui = 0.0;
+      for (const auto& desc : step.descendants[p])
+        ui += solution.row_dual[desc.row] * desc.scaleFactor;
+      solution.row_dual[step.plusHeaders[p].row] = ui;
     }
-    if (mOrigRow >= 0) {
-      for (HighsInt r = 0; r < numMinus; ++r)
-        if (minusHeaders[r].row == mOrigRow) {
-          mCoefAbs = std::abs(minusCoefOfCol[r]);
-          break;
-        }
+    for (HighsInt m = 0; m < numMinus; ++m) {
+      double vi = 0.0;
+      for (const auto& desc : step.descendants[numPlus + m])
+        vi += solution.row_dual[desc.row] * desc.scaleFactor;
+      solution.row_dual[step.minusHeaders[m].row] = vi;
     }
 
-    if (pCoefAbs == 0.0) pCoefAbs = 1.0;
-    if (mCoefAbs == 0.0) mCoefAbs = 1.0;
-    double s = (pCoefAbs * mCoefAbs) / (pCoefAbs + mCoefAbs);
-    if (pOrigRow >= 0) solution.row_dual[pOrigRow] += lambda * (s / pCoefAbs);
-    if (mOrigRow >= 0) solution.row_dual[mOrigRow] += lambda * (s / mCoefAbs);
-    solution.row_dual[newRow] = 0.0;
-  }
-
-  // compute col dual
-  solution.col_dual[col] = colCost;
-  for (HighsInt r = 0; r < numPlus; ++r) {
-    if (postsolveStack.isModelRow(plusHeaders[r].row))
-      solution.col_dual[col] -=
-          plusCoefOfCol[r] * solution.row_dual[plusHeaders[r].row];
-  }
-  for (HighsInt r = 0; r < numMinus; ++r) {
-    if (postsolveStack.isModelRow(minusHeaders[r].row))
-      solution.col_dual[col] -=
-          minusCoefOfCol[r] * solution.row_dual[minusHeaders[r].row];
-  }
-
-  // basis postsolve (algorithm 5)
-  if (!basis.valid) return;
-
-  const double tol = options.mip_feasibility_tolerance;
-
-  // Compute row slacks: s_i / |a_{ij}|
-  auto computeSlacks = [&](const std::vector<FmeRowHeader>& headers,
-                           const std::vector<double>& coefs,
-                           const std::vector<std::vector<Nonzero>>& entries,
-                           std::vector<double>& slacks) {
-    slacks.resize(headers.size());
-    for (size_t r = 0; r < headers.size(); ++r) {
-      HighsCDouble activity =
-          static_cast<HighsCDouble>(coefs[r]) * solution.col_value[col];
-      for (const auto& nz : entries[r])
-        activity +=
-            static_cast<HighsCDouble>(nz.value) * solution.col_value[nz.index];
-      double act = static_cast<double>(activity);
-      double rawSlack = kHighsInf;
-      if (headers[r].rowUpper != kHighsInf)
-        rawSlack = std::min(rawSlack, headers[r].rowUpper - act);
-      if (headers[r].rowLower != -kHighsInf)
-        rawSlack = std::min(rawSlack, act - headers[r].rowLower);
-      slacks[r] = rawSlack / std::abs(coefs[r]);
-    }
-  };
-
-  std::vector<double> plusSlacks, minusSlacks;
-  computeSlacks(plusHeaders, plusCoefOfCol, plusEntries, plusSlacks);
-  computeSlacks(minusHeaders, minusCoefOfCol, minusEntries, minusSlacks);
-
-  auto findPlusIndex = [&](HighsInt origRow) -> HighsInt {
+    // col_dual = cost - Σ a_{ij} * row_dual[i]
+    solution.col_dual[col] = step.header.colCost;
     for (HighsInt r = 0; r < numPlus; ++r)
-      if (plusHeaders[r].row == origRow) return r;
-    return -1;
-  };
-  auto findMinusIndex = [&](HighsInt origRow) -> HighsInt {
+      solution.col_dual[col] -=
+          step.plusCoefs[r] * solution.row_dual[step.plusHeaders[r].row];
     for (HighsInt r = 0; r < numMinus; ++r)
-      if (minusHeaders[r].row == origRow) return r;
-    return -1;
-  };
-
-  // x_j is always at a bound: nonbasic
-  if (impliedLower <= 0.0 && impliedUpper >= 0.0)
-    basis.col_status[col] = HighsBasisStatus::kZero;
-  else if (impliedLower > 0.0)
-    basis.col_status[col] = HighsBasisStatus::kLower;
-  else
-    basis.col_status[col] = HighsBasisStatus::kUpper;
-
-  // build set K of all rows
-  struct KEntry {
-    HighsInt rowIdx;
-    HighsInt type;  // 0 = new row, 1 = parent row
-    HighsInt idx;  // index into newRowOrigins (type=0) or parent index (type=1)
-  };
-
-  std::vector<KEntry> allK;
-  allK.reserve(newRowOrigins.size() + numPlus + numMinus);
-  for (HighsInt k = 0; k < static_cast<HighsInt>(newRowOrigins.size()); ++k)
-    allK.push_back({newRowOrigins[k].newRow, 0, k});
-
-  // add parent rows, deduplicating by row index (ranged rows appear in both)
-  std::vector<bool> parentAdded(basis.row_status.size(), false);
-  for (HighsInt r = 0; r < numPlus; ++r) {
-    HighsInt row = plusHeaders[r].row;
-    if (!parentAdded[row]) {
-      allK.push_back({row, 1, r});
-      parentAdded[row] = true;
-    }
-  }
-  for (HighsInt r = 0; r < numMinus; ++r) {
-    HighsInt row = minusHeaders[r].row;
-    if (!parentAdded[row]) {
-      allK.push_back({row, 1, r});
-      parentAdded[row] = true;
-    }
-  }
-
-  // sort by decreasing row index
-  std::sort(allK.begin(), allK.end(), [](const KEntry& a, const KEntry& b) {
-    return a.rowIdx > b.rowIdx;
-  });
-
-  // determine which parent rows are involved in at least one new row
-  auto isInvolved = [&](HighsInt row) {
-    for (HighsInt k = 0; k < static_cast<HighsInt>(newRowOrigins.size()); ++k)
-      if (newRowOrigins[k].plusRow == row || newRowOrigins[k].minusRow == row)
-        return true;
-    return false;
-  };
-
-  for (const auto& entry : allK) {
-    if (entry.type == 0) {
-      // new row: apply propagation rules
-      HighsInt k = entry.idx;
-      HighsInt pOrigRow = newRowOrigins[k].plusRow;
-      HighsInt mOrigRow = newRowOrigins[k].minusRow;
-      HighsInt pIdx = pOrigRow >= 0 ? findPlusIndex(pOrigRow) : -1;
-      HighsInt mIdx = mOrigRow >= 0 ? findMinusIndex(mOrigRow) : -1;
-
-      double pSlack =
-          pIdx >= 0 ? plusSlacks[pIdx]
-                    : (pOrigRow < 0
-                           ? std::max(colUpper - solution.col_value[col], 0.0)
-                           : 0.0);
-      double mSlack =
-          mIdx >= 0 ? minusSlacks[mIdx]
-                    : (mOrigRow < 0
-                           ? std::max(solution.col_value[col] - colLower, 0.0)
-                           : 0.0);
-      bool betaIsBasic =
-          basis.row_status[entry.rowIdx] == HighsBasisStatus::kBasic;
-
-      if (!betaIsBasic) {
-        // non-basic propagation
-        if (pIdx >= 0)
-          basis.row_status[plusHeaders[pIdx].row] = HighsBasisStatus::kNonbasic;
-        else
-          basis.col_status[col] = HighsBasisStatus::kNonbasic;
-        if (mIdx >= 0)
-          basis.row_status[minusHeaders[mIdx].row] =
-              HighsBasisStatus::kNonbasic;
-        else
-          basis.col_status[col] = HighsBasisStatus::kNonbasic;
-      } else {
-        // basic propagation
-        if (pSlack > tol && mSlack <= tol) {
-          if (pIdx >= 0)
-            basis.row_status[plusHeaders[pIdx].row] = HighsBasisStatus::kBasic;
-          else
-            basis.col_status[col] = HighsBasisStatus::kBasic;
-        } else if (mSlack > tol && pSlack <= tol) {
-          if (mIdx >= 0)
-            basis.row_status[minusHeaders[mIdx].row] = HighsBasisStatus::kBasic;
-          else
-            basis.col_status[col] = HighsBasisStatus::kBasic;
-        } else if (pSlack > tol && mSlack > tol) {
-          if (pIdx >= 0)
-            basis.row_status[plusHeaders[pIdx].row] = HighsBasisStatus::kBasic;
-          else
-            basis.col_status[col] = HighsBasisStatus::kBasic;
-        } else {
-          basis.col_status[col] = HighsBasisStatus::kBasic;
-        }
-      }
-    } else {
-      // parent row: Pk = empty check (vanished constraint / free variable)
-      if (isInvolved(entry.rowIdx)) continue;
-      // free variable rule: if no new rows exist, x_j is basic
-      if (newRowOrigins.empty())
-        basis.col_status[col] = HighsBasisStatus::kBasic;
-      // vanished constraint rule: nonzero slack → basic, else nonbasic
-      HighsInt pIdx = findPlusIndex(entry.rowIdx);
-      HighsInt mIdx = findMinusIndex(entry.rowIdx);
-      double slack = 0.0;
-      if (pIdx >= 0) slack += plusSlacks[pIdx];
-      if (mIdx >= 0) slack += minusSlacks[mIdx];
-      if (slack > tol)
-        basis.row_status[entry.rowIdx] = HighsBasisStatus::kBasic;
-      else
-        basis.row_status[entry.rowIdx] = HighsBasisStatus::kNonbasic;
-    }
+      solution.col_dual[col] -=
+          step.minusCoefs[r] * solution.row_dual[step.minusHeaders[r].row];
   }
 }
 
