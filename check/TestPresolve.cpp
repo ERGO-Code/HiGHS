@@ -71,6 +71,8 @@ TEST_CASE("postsolve-no-basis", "[highs_test_presolve]") {
           "Col      Primal  Col      Primal\n");
     for (HighsInt iCol = 0; iCol < presolved_lp.num_col_; iCol++) {
       HighsInt original_iCol = original_col_indices[iCol];
+      // Skip columns added by presolve (e.g. FME objective reformulation)
+      if (original_iCol >= highs.getNumCol()) continue;
       if (dev_run)
         printf("%3d %11.5g  %3d %11.5g\n", int(iCol), solution.col_value[iCol],
                int(original_iCol), postsolve_solution.col_value[original_iCol]);
