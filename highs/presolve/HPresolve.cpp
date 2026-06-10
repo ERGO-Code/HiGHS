@@ -7472,7 +7472,7 @@ HPresolve::Result HPresolve::fourierMotzkin(
           {nr.plusIndex, nr.minusIndex, nr.plusScale, nr.minusScale});
     }
 
-    // Serialize row data for postsolve before addToMatrix invalidates slices
+    // serialize row data for postsolve before addToMatrix invalidates slices
     auto collectRows = [&](const std::vector<HighsInt>& rows) {
       std::vector<FmeRow> result;
       for (HighsInt r : rows) {
@@ -7501,7 +7501,7 @@ HPresolve::Result HPresolve::fourierMotzkin(
       return finalise();
     numRowsAdded += static_cast<HighsInt>(rowEntries.size());
 
-    // Find 0-based local index of a row within a list (skipping negatives)
+    // find local index of a row within a list (skipping negatives)
     auto findLocalIdx = [](HighsInt row,
                            const std::vector<HighsInt>& rows) -> HighsInt {
       HighsInt idx = 0;
@@ -7526,6 +7526,7 @@ HPresolve::Result HPresolve::fourierMotzkin(
       if (localIdx >= 0) newAnc.push_back({stepIdx, localIdx, scale, isMinus});
     };
 
+    // build FmeNewRow data and ancestry for this step
     std::vector<FmeNewRow> stepNewRows;
     stepNewRows.reserve(newRowOrigins.size());
     for (HighsInt k = 0; k < static_cast<HighsInt>(newRowOrigins.size()); ++k) {
@@ -7540,7 +7541,7 @@ HPresolve::Result HPresolve::fourierMotzkin(
     }
     blockNewRows.push_back(std::move(stepNewRows));
 
-    // Remove old rows containing col (skip virtual bound rows)
+    // remove old rows containing col (skip virtual bound rows)
     for (HighsInt rp : iPlus) {
       if (rp < 0) continue;
       rowAncestry.erase(rp);
@@ -7590,7 +7591,7 @@ HPresolve::Result HPresolve::fourierMotzkin(
     HPRESOLVE_CHECKED_CALL(checkLimits(postsolve_stack));
   }
 
-  // Build K^j_i mapping from ancestry and finalize the FM block
+  // build K^j_i mapping from ancestry and finalize the FM block
   if (numColsEliminated > 0) {
     HighsInt numSteps = static_cast<HighsInt>(blockCols.size());
 
