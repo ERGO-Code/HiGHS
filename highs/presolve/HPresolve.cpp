@@ -7547,22 +7547,16 @@ HPresolve::Result HPresolve::fourierMotzkin(
     }
     blockNewRows.push_back(std::move(stepNewRows));
 
-    // Remove ancestry entries for deleted parent rows
-    for (HighsInt rp : iPlus) {
-      if (rp >= 0) rowAncestry.erase(rp);
-    }
-    for (HighsInt rm : iMinus) {
-      if (rm >= 0) rowAncestry.erase(rm);
-    }
-
-    // remove old rows containing col (skip virtual bound rows)
+    // Remove old rows containing col (skip virtual bound rows)
     for (HighsInt rp : iPlus) {
       if (rp < 0) continue;
+      rowAncestry.erase(rp);
       removeRow(rp);
       ++numRowsEliminated;
     }
     for (HighsInt rm : iMinus) {
       if (rm < 0) continue;
+      rowAncestry.erase(rm);
       if (rowDeleted[rm]) continue;
       removeRow(rm);
       ++numRowsEliminated;
