@@ -230,6 +230,8 @@ class HighsPostsolveStack {
   struct ZeroObjSingletonContinuousCol {
     double origRowLower;
     double origRowUpper;
+    double new_row_lb;
+    double new_row_ub;
     double lb;
     double ub;
     double coef;
@@ -363,15 +365,15 @@ class HighsPostsolveStack {
   template <typename RowStorageFormat>
   void zeroObjSingletonContinuousCol(
       HighsInt row, HighsInt col, double origRowLower, double origRowUpper,
-      double lb, double ub, double coef,
+      double new_row_lb, double new_row_ub, double lb, double ub, double coef,
       const HighsMatrixSlice<RowStorageFormat>& rowVec) {
     rowValues.clear();
     for (const HighsSliceNonzero& rowVal : rowVec)
       rowValues.emplace_back(origColIndex[rowVal.index()], rowVal.value());
 
-    reductionValues.push(
-        ZeroObjSingletonContinuousCol{origRowLower, origRowUpper, lb, ub, coef,
-                                      origColIndex[col], origRowIndex[row]});
+    reductionValues.push(ZeroObjSingletonContinuousCol{
+        origRowLower, origRowUpper, new_row_lb, new_row_ub, lb, ub, coef,
+        origColIndex[col], origRowIndex[row]});
     reductionValues.push(rowValues);
     reductionAdded(ReductionType::kZeroObjSingletonContinuousCol);
   }
