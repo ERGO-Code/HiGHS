@@ -1459,3 +1459,34 @@ TEST_CASE("issue-2975", "[highs_test_mip_solver]") {
 
   highs.resetGlobalScheduler(true);
 }
+
+TEST_CASE("rko-knapsack", "[highs_test_mip_solver]") {
+  std::vector<double> value = {7, 4, 4, 6, 2, 3, 7, 3, 2, 8, 4, 2, 9,
+                               8, 3, 5, 6, 7, 7, 9, 1, 3, 5, 3, 2, 6,
+                               8, 3, 3, 1, 4, 7, 9, 7, 7, 7, 5, 3, 2,
+                               2, 2, 4, 5, 6, 1, 8, 9, 5, 5, 8};
+  std::vector<double> size = {2, 3, 4, 5, 1, 5, 4, 2, 3, 7, 3, 4, 8, 9, 2, 4, 5,
+                              5, 6, 9, 1, 2, 5, 4, 3, 7, 9, 2, 4, 3, 9, 8, 7, 6,
+                              5, 4, 3, 2, 1, 5, 2, 3, 4, 5, 1, 5, 4, 2, 3, 7};
+  double limit = 100;
+  HighsInt dim = value.size();
+  HighsLp lp;
+  lp.num_col_ = dim;
+  lp.num_row_ = 1;
+  lp.sense_ = ObjSense::kMaximize;
+  lp.col_cost_ = value;
+  lp.col_lower_.assign(dim, 0);
+  lp.col_upper_.assign(dim, 1);
+  lp.integrality_.assign(dim, HighsVarType::kInteger);
+  lp.row_lower_ = {-kHighsInf};
+  lp.row_upper_ = {limit};
+  lp.a_matrix_.format_ = MatrixFormat::kRowwise;
+  lp.a_matrix_.start_ = {0, dim};
+  lp.a_matrix_.value_ = size;
+  lp.a_matrix_.index_.resize(dim);
+  for (HighsInt iCol = 0; iCol < dim; iCol++) lp.a_matrix_.index_[iCol] = iCol;
+  Highs h;
+  h.passModel(lp);
+  h.run();
+  h.resetGlobalScheduler(true);
+}
