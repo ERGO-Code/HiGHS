@@ -7513,9 +7513,8 @@ HPresolve::Result HPresolve::fourierMotzkin(
       return -1;
     };
 
-    auto inheritAncestry = [&](HighsInt parentRow, double scale,
-                               const std::vector<HighsInt>& parentList,
-                               bool isMinus,
+    auto inheritAncestry = [&](HighsInt parentRow, HighsInt localIdx,
+                               double scale, bool isMinus,
                                std::vector<AncestryEntry>& newAnc) {
       if (parentRow < 0) return;
       auto it = rowAncestry.find(parentRow);
@@ -7524,25 +7523,19 @@ HPresolve::Result HPresolve::fourierMotzkin(
           newAnc.push_back(
               {a.step, a.parentLocalIdx, a.scale * scale, a.isMinus});
       }
-      HighsInt localIdx = findLocalIdx(parentRow, parentList);
       if (localIdx >= 0) newAnc.push_back({stepIdx, localIdx, scale, isMinus});
     };
 
-    for (HighsInt k = 0; k < static_cast<HighsInt>(newRowOrigins.size()); ++k) {
-      HighsInt newModelRow = firstNewRow + k;
-      const auto& origin = newRowOrigins[k];
-      std::vector<AncestryEntry>& newAnc = rowAncestry[newModelRow];
-      inheritAncestry(origin.plusRow, origin.plusScale, iPlus, false, newAnc);
-      inheritAncestry(origin.minusRow, origin.minusScale, iMinus, true, newAnc);
-    }
-
-    // Build FmeNewRow data for this step (basis postsolve)
     std::vector<FmeNewRow> stepNewRows;
     stepNewRows.reserve(newRowOrigins.size());
     for (HighsInt k = 0; k < static_cast<HighsInt>(newRowOrigins.size()); ++k) {
       HighsInt newModelRow = firstNewRow + k;
-      HighsInt pIdx = findLocalIdx(newRowOrigins[k].plusRow, iPlus);
-      HighsInt mIdx = findLocalIdx(newRowOrigins[k].minusRow, iMinus);
+      const auto& origin = newRowOrigins[k];
+      HighsInt pIdx = findLocalIdx(origin.plusRow, iPlus);
+      HighsInt mIdx = findLocalIdx(origin.minusRow, iMinus);
+      std::vector<AncestryEntry>& newAnc = rowAncestry[newModelRow];
+      inheritAncestry(origin.plusRow, pIdx, origin.plusScale, false, newAnc);
+      inheritAncestry(origin.minusRow, mIdx, origin.minusScale, true, newAnc);
       stepNewRows.push_back({newModelRow, pIdx, mIdx});
     }
     blockNewRows.push_back(std::move(stepNewRows));
