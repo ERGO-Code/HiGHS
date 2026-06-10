@@ -3,21 +3,20 @@
 
 #include "util/HighsInt.h"
 
-/* C API to HiPO linear solver
-
-Refer to FactorHighs.h for a description of the interface.
-    void* S = FactorHighs_symbolic_create();
-    void* FH = FactorHighs_create();
-    FactorHighs_analyse(FH, S, n, nz, rows, ptr, signs, perm);
-    FactorHighs_factorise(FH, S, n, nz, rows, ptr, val);
-    FactorHighs_solve(FH, x);
-    FactorHighs_symbolic_destroy(S);
-    FactorHighs_destroy(FH);
+/*  C API to HiPO linear solver
+    It is meant to be used outside of HiGHS as a standalone linear solver.
+    Refer to FactorHighs.h for a description of the functions.
+    Refer to FactorHighs_c_api_example.c for a small example.
 */
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+// Initialise/terminate parallel scheduler and link BLAS.
+// Returns 0 if something went wrong.
+HighsInt FactorHighs_initialise(void);
+void FactorHighs_terminate(void);
 
 void* FactorHighs_symbolic_create(void);
 void FactorHighs_symbolic_destroy(void* S);
@@ -31,7 +30,7 @@ HighsInt FactorHighs_factorise(void* FH, const void* S, HighsInt n, HighsInt nz,
                                const HighsInt* rows, const HighsInt* ptr,
                                const double* vals);
 HighsInt FactorHighs_solve(void* FH, double* x);
-void FactorHighs_inertia(void* FH, HighsInt& pos, HighsInt& neg, HighsInt& zero,
+void FactorHighs_inertia(void* FH, HighsInt* pos, HighsInt* neg, HighsInt* zero,
                          double tol);
 
 void FactorHighs_setRegularisation(void* FH, double reg_p, double reg_d);
@@ -40,6 +39,7 @@ void FactorHighs_newIter(void* FH);
 void FactorHighs_setBlockSize(void* FH, HighsInt nb);
 void FactorHighs_setPivoting(void* FH, HighsInt pivoting);
 void FactorHighs_setLogging(void* FH, int display);
+void FactorHighs_symbolic_print(void* FH, void* S, int verbose);
 
 #ifdef __cplusplus
 }

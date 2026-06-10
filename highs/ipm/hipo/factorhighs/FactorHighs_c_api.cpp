@@ -1,6 +1,15 @@
 #include "FactorHighs_c_api.h"
 
 #include "FactorHighs.h"
+#include "HighsExternalApi.h"
+#include "parallel/HighsParallel.h"
+
+HighsInt FactorHighs_initialise(void) {
+  highs::parallel::initialize_scheduler();
+  return !HighsExternalApi::isAvailable<HighsExtras::hipo>();
+}
+
+void FactorHighs_terminate(void) { HighsTaskExecutor::shutdown(true); }
 
 void* FactorHighs_create(void) { return new hipo::FHsolver(); }
 void FactorHighs_destroy(void* FH) { delete (hipo::FHsolver*)FH; }
@@ -48,7 +57,11 @@ void FactorHighs_setLogging(void* FH, int display) {
   ((hipo::FHsolver*)FH)->setLogging(nullptr, display);
 }
 
-void FactorHighs_inertia(void* FH, HighsInt& pos, HighsInt& neg, HighsInt& zero,
+void FactorHighs_inertia(void* FH, HighsInt* pos, HighsInt* neg, HighsInt* zero,
                          double tol) {
-  ((hipo::FHsolver*)FH)->inertia(pos, neg, zero, tol);
+  ((hipo::FHsolver*)FH)->inertia(*pos, *neg, *zero, tol);
+}
+
+void FactorHighs_symbolic_print(void* FH, void* S, int verbose) {
+  ((hipo::Symbolic*)S)->print(*(((hipo::FHsolver*)FH)->getLogging()), verbose);
 }

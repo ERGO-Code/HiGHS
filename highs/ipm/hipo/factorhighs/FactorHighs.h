@@ -124,6 +124,7 @@ class FHsolver {
   // used for logging, by passing a nullptr and setting use_printf to true.
   // By default, logging is off.
   void setLogging(const Logger* logger = nullptr, bool use_printf = false);
+  const Logger* getLogging() const { return logger_; }
 
   // Compute number of positive, negative and zero pivots, using tol as
   // tolerance for zero.
