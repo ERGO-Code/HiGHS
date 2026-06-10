@@ -555,5 +555,8 @@ TEST_CASE("incomplete-options-file-line", "[highs_options]") {
 
   Highs h;
   h.setOptionValue("output_flag", dev_run);
+
   REQUIRE(h.readOptions(incomplete_options_file) == HighsStatus::kOk);
+
+  std::remove(incomplete_options_file.c_str());
 }
