@@ -620,9 +620,9 @@ class HighsPostsolveStack {
   //   numSteps (HighsInt)
 
   // Push one step's row data. Must be called before addToMatrix invalidates
-  // the row slices. Returns (numPlus, numMinus) for later use.
+  // the row slices.
   template <typename RowStorageFormat>
-  std::pair<HighsInt, HighsInt> fourierMotzkinBlockPushStep(
+  void fourierMotzkinBlockPushStep(
       HighsInt col, const std::vector<FmeRowData<RowStorageFormat>>& plusRows,
       const std::vector<FmeRowData<RowStorageFormat>>& minusRows) {
     // push plus row entries
@@ -666,9 +666,6 @@ class HighsPostsolveStack {
     }
     reductionValues.push(minusCoefs);
     reductionValues.push(minusHeaders);
-
-    return {static_cast<HighsInt>(plusRows.size()),
-            static_cast<HighsInt>(minusRows.size())};
   }
 
   // Finalize the FM block: push descendants mapping, new row origins,
@@ -680,16 +677,22 @@ class HighsPostsolveStack {
       const std::vector<HighsInt>& numPlusPerStep,
       const std::vector<HighsInt>& numMinusPerStep,
       const std::vector<std::vector<std::vector<FmeDescendant>>>&
-          descendantsAll,
+          plusDescendantsAll,
+      const std::vector<std::vector<std::vector<FmeDescendant>>>&
+          minusDescendantsAll,
       const std::vector<std::vector<FmeNewRow>>& newRowsAll) {
     HighsInt numSteps = static_cast<HighsInt>(eliminatedCols.size());
 
-    // push descendants for each step's parents
+    // push descendants for each step's parents (plus then minus)
     for (HighsInt s = 0; s < numSteps; ++s) {
-      HighsInt numParents = numPlusPerStep[s] + numMinusPerStep[s];
-      assert(static_cast<HighsInt>(descendantsAll[s].size()) == numParents);
-      for (HighsInt p = 0; p < numParents; ++p)
-        reductionValues.push(descendantsAll[s][p]);
+      assert(static_cast<HighsInt>(plusDescendantsAll[s].size()) ==
+             numPlusPerStep[s]);
+      for (HighsInt p = 0; p < numPlusPerStep[s]; ++p)
+        reductionValues.push(plusDescendantsAll[s][p]);
+      assert(static_cast<HighsInt>(minusDescendantsAll[s].size()) ==
+             numMinusPerStep[s]);
+      for (HighsInt m = 0; m < numMinusPerStep[s]; ++m)
+        reductionValues.push(minusDescendantsAll[s][m]);
     }
 
     // push new row origins for each step (translate row to orig space)
