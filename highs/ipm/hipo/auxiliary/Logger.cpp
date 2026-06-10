@@ -1,5 +1,7 @@
 #include "Logger.h"
 
+#include <stdarg.h>
+
 namespace hipo {
 
 Logger::Logger(bool use_printf) : use_printf_{use_printf} {}
