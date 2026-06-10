@@ -119,6 +119,10 @@ class FHsolver {
   // dynamic regularisation. If pivoting is switched off, only static
   // regularisation is applied.
   void setPivoting(bool pivoting);
+
+  // Compute number of positive, negative and zero pivots, using tol as
+  // tolerance for zero.
+  void inertia(Int& pos, Int& neg, Int& zero, double tol = 1e-16) const;
 };
 
 }  // namespace hipo

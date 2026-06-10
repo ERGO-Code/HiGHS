@@ -13,6 +13,7 @@ class HybridSolveHandler : public SolveHandler {
   void forwardSolve(double* x) const override;
   void backwardSolve(double* x) const override;
   void diagSolve(double* x) const override;
+  void inertia(Int& pos, Int& neg, Int& zero, double tol) const override;
 
   HybridSolveHandler(const Symbolic& S,
                      const std::vector<std::vector<double>>& sn_columns,

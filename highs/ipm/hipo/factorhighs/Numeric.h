@@ -38,9 +38,9 @@ class Numeric {
   std::vector<double> total_reg_{};
 
  public:
-  // Full solve
   Int solve(double* x) const;
   void getReg(double* reg);
+  void inertia(Int& pos, Int& neg, Int& zero, double tol) const;
 };
 
 }  // namespace hipo

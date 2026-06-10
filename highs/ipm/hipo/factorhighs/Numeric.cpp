@@ -48,4 +48,10 @@ void Numeric::getReg(double* reg) {
   std::memcpy(reg, total_reg_.data(), total_reg_.size() * sizeof(double));
 }
 
+void Numeric::inertia(Int& pos, Int& neg, Int& zero, double tol) const {
+  HybridSolveHandler SH(*S_, *sn_columns_, swaps_, pivot_2x2_, *data_,
+                        pivoting_);
+  SH.inertia(pos, neg, zero, tol);
+}
+
 }  // namespace hipo

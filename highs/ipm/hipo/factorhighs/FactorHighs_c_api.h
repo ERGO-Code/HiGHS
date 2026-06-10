@@ -38,6 +38,8 @@ void FactorHighs_getRegularisation(void* FH, double* reg);
 void FactorHighs_newIter(void* FH);
 void FactorHighs_setBlockSize(void* FH, HighsInt nb);
 void FactorHighs_setPivoting(void* FH, HighsInt pivoting);
+void FactorHighs_inertia(void* FH, HighsInt& pos, HighsInt& neg,
+                         HighsInt& zero, double tol);
 
 #ifdef __cplusplus
 }

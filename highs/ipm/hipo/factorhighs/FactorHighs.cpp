@@ -57,4 +57,8 @@ void FHsolver::setBlockSize(Int nb) {
 
 void FHsolver::setPivoting(bool pivoting) { pivoting_ = pivoting; }
 
+void FHsolver::inertia(Int& pos, Int& neg, Int& zero, double tol) const {
+  N_.inertia(pos, neg, zero, tol);
+}
+
 }  // namespace hipo

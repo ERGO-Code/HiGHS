@@ -352,4 +352,99 @@ void HybridSolveHandler::diagSolve(double* x) const {
   }
 }
 
+void HybridSolveHandler::inertia(Int& pos, Int& neg, Int& zero,
+                                 double tol) const {
+  pos = 0;
+  neg = 0;
+  zero = 0;
+
+  const Int nb = S_.blockSize();
+
+  for (Int sn = 0; sn < S_.sn(); ++sn) {
+    // leading size of supernode
+    const Int ldSn = S_.ptr(sn + 1) - S_.ptr(sn);
+
+    // number of columns in the supernode
+    const Int sn_size = S_.snStart(sn + 1) - S_.snStart(sn);
+
+    // number of blocks of columns
+    const Int n_blocks = (sn_size - 1) / nb + 1;
+
+    // index to access diagonal part of block
+    Int diag_start{};
+
+    // go through blocks of columns for this supernode
+    for (Int j = 0; j < n_blocks; ++j) {
+      // number of columns in the block
+      const Int jb = std::min(nb, sn_size - nb * j);
+      const double* current_2x2 = &pivot_2x2_[sn][nb * j];
+      Int step = 1;
+
+      // go through columns of block
+      for (Int col = 0; col < jb; col += step) {
+        if (current_2x2[col] == 0.0) {
+          // 1x1 pivots
+          step = 1;
+          const double inv_d = sn_columns_[sn][diag_start + col + jb * col];
+          const double pivot = 1.0 / inv_d;
+
+          if (pivot > tol)
+            ++pos;
+          else if (pivot < -tol)
+            ++neg;
+          else
+            ++zero;
+
+        } else {
+          // 2x2 pivots
+          step = 2;
+
+          // inverse of 2x2 pivot
+          const double i_d1 = sn_columns_[sn][diag_start + col + jb * col];
+          const double i_d2 =
+              sn_columns_[sn][diag_start + col + 1 + jb * (col + 1)];
+          const double i_off = current_2x2[col];
+
+          // determinant and trace of inverse
+          const double i_det = i_d1 * i_d2 - i_off * i_off;
+          const double i_trace = i_d1 + i_d2;
+
+          // determinant and trace of 2x2 pivot
+          const double det = 1.0 / i_det;
+          const double trace = det * i_trace;
+
+          if (std::abs(det) < tol) {
+            // det is zero, so at least one pivot is zero
+            ++zero;
+
+            if (trace > tol)
+              ++pos;
+            else if (trace < -tol)
+              ++neg;
+            else
+              ++zero;
+
+          } else if (det > tol) {
+            // det is positive, so pivots have same sign
+            if (trace > 0)
+              pos += 2;
+            else
+              neg -= 2;
+          } else {
+            // indefinite 2x2 pivot
+            ++pos;
+            ++neg;
+          }
+        }
+      }
+
+      // move diag_start forward by number of diagonal entries in block
+      diag_start += jb * jb;
+
+      // move diag_start forward by number of sub-diagonal entries in block
+      diag_start += (ldSn - nb * j - jb) * jb;
+    }
+  }
+}
+
 }  // namespace hipo

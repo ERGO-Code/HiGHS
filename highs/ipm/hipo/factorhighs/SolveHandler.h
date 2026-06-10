@@ -43,6 +43,8 @@ class SolveHandler {
   virtual void forwardSolve(double* x) const = 0;
   virtual void backwardSolve(double* x) const = 0;
   virtual void diagSolve(double* x) const = 0;
+
+  virtual void inertia(Int& pos, Int& neg, Int& zero, double tol) const = 0;
 };
 
 }  // namespace hipo
