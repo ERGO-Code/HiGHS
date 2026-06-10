@@ -1426,9 +1426,10 @@ void HighsPostsolveStack::SlackColSubstitution::undo(
   }
 }
 
-void HighsPostsolveStack::undoFourierMotzkinBlock(
-    HighsDataStack& stack, const HighsOptions& options,
-    HighsSolution& solution, HighsBasis& basis) {
+void HighsPostsolveStack::undoFourierMotzkinBlock(HighsDataStack& stack,
+                                                  const HighsOptions& options,
+                                                  HighsSolution& solution,
+                                                  HighsBasis& basis) {
   // Pop numSteps
   HighsInt numSteps;
   stack.pop(numSteps);
@@ -1442,16 +1443,18 @@ void HighsPostsolveStack::undoFourierMotzkinBlock(
     std::vector<double> minusCoefs;
     std::vector<std::vector<Nonzero>> minusEntries;
     std::vector<std::vector<FmeDescendant>> descendants;
+    std::vector<FmeNewRow> newRows;
   };
 
   std::vector<StepData> steps(numSteps);
 
-  // Pop step headers (pushed last-to-first, so pop first-to-last... no:
-  // pushed in order s=0..N-1, so pop in reverse s=N-1..0)
-  for (HighsInt s = numSteps - 1; s >= 0; --s)
-    stack.pop(steps[s].header);
+  // Pop step headers
+  for (HighsInt s = numSteps - 1; s >= 0; --s) stack.pop(steps[s].header);
 
-  // Pop descendants (pushed in order s=0..N-1, p=0..numParents-1)
+  // Pop new row origins
+  for (HighsInt s = numSteps - 1; s >= 0; --s) stack.pop(steps[s].newRows);
+
+  // Pop descendants
   for (HighsInt s = numSteps - 1; s >= 0; --s) {
     HighsInt numParents = steps[s].header.numPlus + steps[s].header.numMinus;
     steps[s].descendants.resize(numParents);
@@ -1459,7 +1462,7 @@ void HighsPostsolveStack::undoFourierMotzkinBlock(
       stack.pop(steps[s].descendants[p]);
   }
 
-  // Pop row data (pushed in order s=0..N-1, so pop s=N-1..0)
+  // Pop row data
   for (HighsInt s = numSteps - 1; s >= 0; --s) {
     // pop minus row data
     stack.pop(steps[s].minusHeaders);
@@ -1549,6 +1552,134 @@ void HighsPostsolveStack::undoFourierMotzkinBlock(
     for (HighsInt r = 0; r < numMinus; ++r)
       solution.col_dual[col] -=
           step.minusCoefs[r] * solution.row_dual[step.minusHeaders[r].row];
+  }
+
+  // Basis postsolve (Algorithm 5): process in reverse elimination order
+  if (!basis.valid) return;
+
+  const double tol = options.primal_feasibility_tolerance;
+
+  for (HighsInt s = numSteps - 1; s >= 0; --s) {
+    const auto& step = steps[s];
+    HighsInt col = step.header.col;
+    HighsInt numPlus = step.header.numPlus;
+    HighsInt numMinus = step.header.numMinus;
+
+    // Compute row slacks for parent rows: slack_i = min(u - act, act - l)
+    // divided by |a_ij| for normalization
+    auto computeSlack = [&](const std::vector<FmeRowHeader>& headers,
+                            const std::vector<double>& coefs,
+                            const std::vector<std::vector<Nonzero>>& entries,
+                            HighsInt r) -> double {
+      HighsCDouble activity =
+          static_cast<HighsCDouble>(coefs[r]) * solution.col_value[col];
+      for (const auto& nz : entries[r])
+        activity +=
+            static_cast<HighsCDouble>(nz.value) * solution.col_value[nz.index];
+      double act = static_cast<double>(activity);
+      double rawSlack = kHighsInf;
+      if (headers[r].rowUpper != kHighsInf)
+        rawSlack = std::min(rawSlack, headers[r].rowUpper - act);
+      if (headers[r].rowLower != -kHighsInf)
+        rawSlack = std::min(rawSlack, act - headers[r].rowLower);
+      return rawSlack / std::abs(coefs[r]);
+    };
+
+    // Determine which parent rows are involved in at least one new row
+    std::vector<bool> plusInvolved(numPlus, false);
+    std::vector<bool> minusInvolved(numMinus, false);
+    for (const auto& nr : step.newRows) {
+      if (nr.plusParentIdx >= 0) plusInvolved[nr.plusParentIdx] = true;
+      if (nr.minusParentIdx >= 0) minusInvolved[nr.minusParentIdx] = true;
+    }
+
+    // Default: x_j is nonbasic at the value assigned by primal postsolve
+    if (solution.col_value[col] == 0.0 && step.header.colLower <= 0.0 &&
+        step.header.colUpper >= 0.0)
+      basis.col_status[col] = HighsBasisStatus::kZero;
+    else if (solution.col_value[col] == step.header.colLower)
+      basis.col_status[col] = HighsBasisStatus::kLower;
+    else if (solution.col_value[col] == step.header.colUpper)
+      basis.col_status[col] = HighsBasisStatus::kUpper;
+    else
+      basis.col_status[col] = HighsBasisStatus::kNonbasic;
+
+    // Process new rows in reverse order (highest index first = Algorithm 5)
+    for (HighsInt k = static_cast<HighsInt>(step.newRows.size()) - 1; k >= 0;
+         --k) {
+      const auto& nr = step.newRows[k];
+      HighsInt pIdx = nr.plusParentIdx;
+      HighsInt mIdx = nr.minusParentIdx;
+
+      bool newRowBasic = basis.row_status[nr.row] == HighsBasisStatus::kBasic;
+
+      if (!newRowBasic) {
+        // Nonbasic propagation: both parent rows become nonbasic
+        if (pIdx >= 0)
+          basis.row_status[step.plusHeaders[pIdx].row] =
+              HighsBasisStatus::kNonbasic;
+        if (mIdx >= 0)
+          basis.row_status[step.minusHeaders[mIdx].row] =
+              HighsBasisStatus::kNonbasic;
+      } else {
+        // Basic propagation: determine which parent gets the basic status
+        double pSlack =
+            pIdx >= 0
+                ? computeSlack(step.plusHeaders, step.plusCoefs,
+                               step.plusEntries, pIdx)
+                : std::max(step.header.colUpper - solution.col_value[col], 0.0);
+        double mSlack =
+            mIdx >= 0
+                ? computeSlack(step.minusHeaders, step.minusCoefs,
+                               step.minusEntries, mIdx)
+                : std::max(solution.col_value[col] - step.header.colLower, 0.0);
+
+        if (pSlack > tol && mSlack <= tol) {
+          if (pIdx >= 0)
+            basis.row_status[step.plusHeaders[pIdx].row] =
+                HighsBasisStatus::kBasic;
+          else
+            basis.col_status[col] = HighsBasisStatus::kBasic;
+        } else if (mSlack > tol && pSlack <= tol) {
+          if (mIdx >= 0)
+            basis.row_status[step.minusHeaders[mIdx].row] =
+                HighsBasisStatus::kBasic;
+          else
+            basis.col_status[col] = HighsBasisStatus::kBasic;
+        } else if (pSlack > tol) {
+          if (pIdx >= 0)
+            basis.row_status[step.plusHeaders[pIdx].row] =
+                HighsBasisStatus::kBasic;
+          else
+            basis.col_status[col] = HighsBasisStatus::kBasic;
+        } else {
+          basis.col_status[col] = HighsBasisStatus::kBasic;
+        }
+      }
+    }
+
+    // Vanished constraint check: parent rows not involved in any new row
+    if (step.newRows.empty()) {
+      // Free variable case: no new rows at all
+      basis.col_status[col] = HighsBasisStatus::kBasic;
+    } else {
+      for (HighsInt p = 0; p < numPlus; ++p) {
+        if (plusInvolved[p]) continue;
+        double slack =
+            computeSlack(step.plusHeaders, step.plusCoefs, step.plusEntries, p);
+        basis.row_status[step.plusHeaders[p].row] =
+            slack > tol ? HighsBasisStatus::kBasic
+                        : HighsBasisStatus::kNonbasic;
+      }
+      for (HighsInt m = 0; m < numMinus; ++m) {
+        if (minusInvolved[m]) continue;
+        double slack = computeSlack(step.minusHeaders, step.minusCoefs,
+                                    step.minusEntries, m);
+        basis.row_status[step.minusHeaders[m].row] =
+            slack > tol ? HighsBasisStatus::kBasic
+                        : HighsBasisStatus::kNonbasic;
+      }
+    }
   }
 }
 

@@ -7357,9 +7357,9 @@ HPresolve::Result HPresolve::fourierMotzkin(
   HighsInt numRowsAdded = 0;
 
   // FM block data for postsolve
-  using FmeRow =
-      HighsPostsolveStack::FmeRowData<HighsTripletTreeSlicePreOrder>;
+  using FmeRow = HighsPostsolveStack::FmeRowData<HighsTripletTreeSlicePreOrder>;
   using FmeDescendant = HighsPostsolveStack::FmeDescendant;
+  using FmeNewRow = HighsPostsolveStack::FmeNewRow;
   std::vector<HighsInt> blockCols;
   std::vector<double> blockColLowers;
   std::vector<double> blockColUppers;
@@ -7367,6 +7367,7 @@ HPresolve::Result HPresolve::fourierMotzkin(
   std::vector<HighsInt> blockNumPlus;
   std::vector<HighsInt> blockNumMinus;
   std::vector<std::vector<std::vector<FmeDescendant>>> blockDescendants;
+  std::vector<std::vector<FmeNewRow>> blockNewRows;
 
   // Ancestry tracking: for each model row, which (step, parentLocalIdx)
   // pairs contributed to it, with cumulative scale factor.
@@ -7513,7 +7514,7 @@ HPresolve::Result HPresolve::fourierMotzkin(
       HighsInt idx = 0;
       for (HighsInt mRow : iMinus) {
         if (mRow < 0) continue;
-        if (mRow == row) return numPlusStored + idx;
+        if (mRow == row) return idx;
         idx++;
       }
       return -1;
@@ -7545,7 +7546,8 @@ HPresolve::Result HPresolve::fourierMotzkin(
         auto it = rowAncestry.find(pRow);
         if (it != rowAncestry.end()) {
           for (const auto& a : it->second)
-            newAnc.push_back({a.step, a.parentLocalIdx, a.scale * pScaleFactor});
+            newAnc.push_back(
+                {a.step, a.parentLocalIdx, a.scale * pScaleFactor});
         }
         HighsInt pLocalIdx = findPlusLocalIdx(pRow);
         if (pLocalIdx >= 0)
@@ -7557,13 +7559,25 @@ HPresolve::Result HPresolve::fourierMotzkin(
         auto it = rowAncestry.find(mRow);
         if (it != rowAncestry.end()) {
           for (const auto& a : it->second)
-            newAnc.push_back({a.step, a.parentLocalIdx, a.scale * mScaleFactor});
+            newAnc.push_back(
+                {a.step, a.parentLocalIdx, a.scale * mScaleFactor});
         }
         HighsInt mLocalIdx = findMinusLocalIdx(mRow);
         if (mLocalIdx >= 0)
-          newAnc.push_back({stepIdx, mLocalIdx, mScaleFactor});
+          newAnc.push_back({stepIdx, numPlusStored + mLocalIdx, mScaleFactor});
       }
     }
+
+    // Build FmeNewRow data for this step (basis postsolve)
+    std::vector<FmeNewRow> stepNewRows;
+    stepNewRows.reserve(newRowPairs.size());
+    for (HighsInt k = 0; k < static_cast<HighsInt>(newRowPairs.size()); ++k) {
+      HighsInt newModelRow = firstNewRow + k;
+      HighsInt pIdx = findPlusLocalIdx(newRowPairs[k].first);
+      HighsInt mIdx = findMinusLocalIdx(newRowPairs[k].second);
+      stepNewRows.push_back({newModelRow, pIdx, mIdx});
+    }
+    blockNewRows.push_back(std::move(stepNewRows));
 
     // Remove ancestry entries for deleted parent rows
     for (HighsInt rp : iPlus) {
@@ -7642,8 +7656,8 @@ HPresolve::Result HPresolve::fourierMotzkin(
     }
 
     postsolve_stack.fourierMotzkinBlockFinalize(
-        blockCols, blockColLowers, blockColUppers, blockColCosts,
-        blockNumPlus, blockNumMinus, blockDescendants);
+        blockCols, blockColLowers, blockColUppers, blockColCosts, blockNumPlus,
+        blockNumMinus, blockDescendants, blockNewRows);
 
     highsLogDev(options->log_options, HighsLogType::kInfo,
                 "Fourier-Motzkin eliminated %" HIGHSINT_FORMAT

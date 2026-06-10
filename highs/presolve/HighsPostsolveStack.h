@@ -81,11 +81,18 @@ class HighsPostsolveStack {
     HighsInt col;
     HighsInt numPlus;
     HighsInt numMinus;
+    HighsInt numNewRows;
   };
 
   struct FmeDescendant {
     HighsInt row;
     double scaleFactor;
+  };
+
+  struct FmeNewRow {
+    HighsInt row;
+    HighsInt plusParentIdx;   // index into plus parents (-1 if bound row)
+    HighsInt minusParentIdx;  // index into minus parents (-1 if bound row)
   };
 
   size_t debug_prev_numreductions = 0;
@@ -616,8 +623,7 @@ class HighsPostsolveStack {
   // the row slices. Returns (numPlus, numMinus) for later use.
   template <typename RowStorageFormat>
   std::pair<HighsInt, HighsInt> fourierMotzkinBlockPushStep(
-      HighsInt col,
-      const std::vector<FmeRowData<RowStorageFormat>>& plusRows,
+      HighsInt col, const std::vector<FmeRowData<RowStorageFormat>>& plusRows,
       const std::vector<FmeRowData<RowStorageFormat>>& minusRows) {
     // push plus row entries
     std::vector<FmeRowHeader> plusHeaders;
@@ -665,17 +671,17 @@ class HighsPostsolveStack {
             static_cast<HighsInt>(minusRows.size())};
   }
 
-  // Finalize the FM block: push descendants mapping and step headers.
-  // Called once after all elimination steps are complete.
+  // Finalize the FM block: push descendants mapping, new row origins,
+  // and step headers. Called once after all elimination steps are complete.
   void fourierMotzkinBlockFinalize(
       const std::vector<HighsInt>& eliminatedCols,
       const std::vector<double>& colLowers,
-      const std::vector<double>& colUppers,
-      const std::vector<double>& colCosts,
+      const std::vector<double>& colUppers, const std::vector<double>& colCosts,
       const std::vector<HighsInt>& numPlusPerStep,
       const std::vector<HighsInt>& numMinusPerStep,
       const std::vector<std::vector<std::vector<FmeDescendant>>>&
-          descendantsAll) {
+          descendantsAll,
+      const std::vector<std::vector<FmeNewRow>>& newRowsAll) {
     HighsInt numSteps = static_cast<HighsInt>(eliminatedCols.size());
 
     // push descendants for each step's parents
@@ -686,6 +692,16 @@ class HighsPostsolveStack {
         reductionValues.push(descendantsAll[s][p]);
     }
 
+    // push new row origins for each step (translate row to orig space)
+    for (HighsInt s = 0; s < numSteps; ++s) {
+      std::vector<FmeNewRow> translated;
+      translated.reserve(newRowsAll[s].size());
+      for (const auto& nr : newRowsAll[s])
+        translated.push_back(
+            {origRowIndex[nr.row], nr.plusParentIdx, nr.minusParentIdx});
+      reductionValues.push(translated);
+    }
+
     // push step headers
     for (HighsInt s = 0; s < numSteps; ++s) {
       FmeStepHeader header{colLowers[s],
@@ -693,7 +709,8 @@ class HighsPostsolveStack {
                            colCosts[s],
                            origColIndex[eliminatedCols[s]],
                            numPlusPerStep[s],
-                           numMinusPerStep[s]};
+                           numMinusPerStep[s],
+                           static_cast<HighsInt>(newRowsAll[s].size())};
       reductionValues.push(header);
     }
 
