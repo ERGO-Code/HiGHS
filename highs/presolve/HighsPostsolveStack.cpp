@@ -1439,12 +1439,16 @@ HighsPostsolveStack::popFourierMotzkinBlock(HighsDataStack& stack) {
   // Pop new row origins
   for (HighsInt s = numSteps - 1; s >= 0; --s) stack.pop(steps[s].newRows);
 
-  // Pop descendants
+  // Pop descendants (minus then plus, reverse of push order)
   for (HighsInt s = numSteps - 1; s >= 0; --s) {
-    HighsInt numParents = steps[s].header.numPlus + steps[s].header.numMinus;
-    steps[s].descendants.resize(numParents);
-    for (HighsInt p = numParents - 1; p >= 0; --p)
-      stack.pop(steps[s].descendants[p]);
+    HighsInt numMinus = steps[s].header.numMinus;
+    steps[s].minusDescendants.resize(numMinus);
+    for (HighsInt m = numMinus - 1; m >= 0; --m)
+      stack.pop(steps[s].minusDescendants[m]);
+    HighsInt numPlus = steps[s].header.numPlus;
+    steps[s].plusDescendants.resize(numPlus);
+    for (HighsInt p = numPlus - 1; p >= 0; --p)
+      stack.pop(steps[s].plusDescendants[p]);
   }
 
   // Pop row data
@@ -1524,27 +1528,29 @@ void HighsPostsolveStack::undoFourierMotzkinBlock(
     HighsInt numMinus = step.header.numMinus;
 
     // u_i = Σ_{k ∈ K^j_i} λ_k * scaleFactor
-    for (HighsInt p = 0; p < numPlus; ++p) {
-      double ui = 0.0;
-      for (const auto& desc : step.descendants[p])
-        ui += solution.row_dual[desc.row] * desc.scaleFactor;
-      solution.row_dual[step.plusHeaders[p].row] = ui;
-    }
-    for (HighsInt m = 0; m < numMinus; ++m) {
-      double vi = 0.0;
-      for (const auto& desc : step.descendants[numPlus + m])
-        vi += solution.row_dual[desc.row] * desc.scaleFactor;
-      solution.row_dual[step.minusHeaders[m].row] = vi;
-    }
+    auto recoverDual =
+        [&](const std::vector<FmeRowHeader>& headers,
+            const std::vector<std::vector<FmeDescendant>>& descendants) {
+          for (size_t r = 0; r < headers.size(); ++r) {
+            HighsCDouble dual = 0.0;
+            for (const auto& desc : descendants[r])
+              dual += static_cast<HighsCDouble>(solution.row_dual[desc.row]) *
+                      desc.scaleFactor;
+            solution.row_dual[headers[r].row] = static_cast<double>(dual);
+          }
+        };
+    recoverDual(step.plusHeaders, step.plusDescendants);
+    recoverDual(step.minusHeaders, step.minusDescendants);
 
     // col_dual = cost - Σ a_{ij} * row_dual[i]
-    solution.col_dual[col] = step.header.colCost;
+    HighsCDouble colDual = step.header.colCost;
     for (HighsInt r = 0; r < numPlus; ++r)
-      solution.col_dual[col] -=
-          step.plusCoefs[r] * solution.row_dual[step.plusHeaders[r].row];
+      colDual -= static_cast<HighsCDouble>(step.plusCoefs[r]) *
+                 solution.row_dual[step.plusHeaders[r].row];
     for (HighsInt r = 0; r < numMinus; ++r)
-      solution.col_dual[col] -=
-          step.minusCoefs[r] * solution.row_dual[step.minusHeaders[r].row];
+      colDual -= static_cast<HighsCDouble>(step.minusCoefs[r]) *
+                 solution.row_dual[step.minusHeaders[r].row];
+    solution.col_dual[col] = static_cast<double>(colDual);
   }
 
   // Basis postsolve (Algorithm 5): process in reverse elimination order

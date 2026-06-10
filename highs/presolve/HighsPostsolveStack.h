@@ -292,10 +292,11 @@ class HighsPostsolveStack {
     std::vector<FmeRowHeader> plusHeaders;
     std::vector<double> plusCoefs;
     std::vector<std::vector<Nonzero>> plusEntries;
+    std::vector<std::vector<FmeDescendant>> plusDescendants;
     std::vector<FmeRowHeader> minusHeaders;
     std::vector<double> minusCoefs;
     std::vector<std::vector<Nonzero>> minusEntries;
-    std::vector<std::vector<FmeDescendant>> descendants;
+    std::vector<std::vector<FmeDescendant>> minusDescendants;
     std::vector<FmeNewRow> newRows;
   };
 
