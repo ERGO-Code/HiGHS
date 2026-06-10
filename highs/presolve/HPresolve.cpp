@@ -5946,8 +5946,6 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
     bool trySparsify =
         mipsolver != nullptr || !options->lp_presolve_requires_basis_postsolve;
 #endif
-    bool tryFourierMotzkin =
-        mipsolver != nullptr || !options->lp_presolve_requires_basis_postsolve;
     bool tryProbing = mipsolver != nullptr;
     HighsInt numCliquesBeforeProbing = -1;
     bool domcolAfterProbingCalled = false;
@@ -5977,8 +5975,7 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
             applyConflictGraphSubstitutions(postsolve_stack, numDelCol));
       }
 
-      if (tryFourierMotzkin &&
-          analysis_.allow_rule_[kPresolveRuleFourierMotzkin])
+      if (analysis_.allow_rule_[kPresolveRuleFourierMotzkin])
         HPRESOLVE_CHECKED_CALL(fourierMotzkin(postsolve_stack));
 
       if (analysis_.allow_rule_[kPresolveRuleAggregator])
