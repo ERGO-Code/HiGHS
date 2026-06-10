@@ -7433,8 +7433,8 @@ HPresolve::Result HPresolve::fourierMotzkin(
         double new_upper =
             static_cast<double>(static_cast<HighsCDouble>(pScale) * pBound +
                                 static_cast<HighsCDouble>(mScale) * mBound);
-        newRows.push_back(
-            {newRowEntries, -kHighsInf, new_upper, pRow, mRow, pScale, mScale});
+        newRows.push_back({newRowEntries, -kHighsInf, new_upper, pRow, mRow,
+                           pDirection * pScale, mDirection * mScale});
 
         // clear vector
         newRowEntries.clear();
