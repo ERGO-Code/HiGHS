@@ -1433,13 +1433,13 @@ HighsPostsolveStack::popFourierMotzkinBlock(HighsDataStack& stack) {
 
   std::vector<FmeStepData> steps(numSteps);
 
-  // Pop step headers
+  // step headers
   for (HighsInt s = numSteps - 1; s >= 0; --s) stack.pop(steps[s].header);
 
-  // Pop new row origins
+  // new row origins
   for (HighsInt s = numSteps - 1; s >= 0; --s) stack.pop(steps[s].newRows);
 
-  // Pop descendants
+  // descendants
   for (HighsInt s = numSteps - 1; s >= 0; --s) {
     HighsInt numParents = steps[s].header.numPlus + steps[s].header.numMinus;
     steps[s].descendants.resize(numParents);
@@ -1447,9 +1447,9 @@ HighsPostsolveStack::popFourierMotzkinBlock(HighsDataStack& stack) {
       stack.pop(steps[s].descendants[p]);
   }
 
-  // Pop row data
+  // row data
   for (HighsInt s = numSteps - 1; s >= 0; --s) {
-    // pop minus row data
+    // minus row data
     stack.pop(steps[s].minusHeaders);
     stack.pop(steps[s].minusCoefs);
     HighsInt numMinus = static_cast<HighsInt>(steps[s].minusCoefs.size());
@@ -1457,7 +1457,7 @@ HighsPostsolveStack::popFourierMotzkinBlock(HighsDataStack& stack) {
     for (HighsInt r = numMinus - 1; r >= 0; --r)
       stack.pop(steps[s].minusEntries[r]);
 
-    // pop plus row data
+    // plus row data
     stack.pop(steps[s].plusHeaders);
     stack.pop(steps[s].plusCoefs);
     HighsInt numPlus = static_cast<HighsInt>(steps[s].plusCoefs.size());
@@ -1474,7 +1474,7 @@ void HighsPostsolveStack::undoFourierMotzkinBlock(
     HighsSolution& solution, HighsBasis& basis) {
   HighsInt numSteps = static_cast<HighsInt>(steps.size());
 
-  // Primal postsolve (Algorithm 3): process in reverse elimination order
+  // primal postsolve (Algorithm 3): process in reverse elimination order
   for (HighsInt s = numSteps - 1; s >= 0; --s) {
     const auto& step = steps[s];
     HighsInt col = step.header.col;
@@ -1516,7 +1516,7 @@ void HighsPostsolveStack::undoFourierMotzkinBlock(
 
   if (!solution.dual_valid) return;
 
-  // Dual postsolve (Algorithm 4): process in reverse elimination order
+  // dual postsolve (Algorithm 4): process in reverse elimination order
   for (HighsInt s = numSteps - 1; s >= 0; --s) {
     const auto& step = steps[s];
     HighsInt col = step.header.col;
@@ -1547,7 +1547,7 @@ void HighsPostsolveStack::undoFourierMotzkinBlock(
           step.minusCoefs[r] * solution.row_dual[step.minusHeaders[r].row];
   }
 
-  // Basis postsolve (Algorithm 5): process in reverse elimination order
+  // basis postsolve (Algorithm 5): process in reverse elimination order
   if (!basis.valid) return;
 
   const double tol = options.primal_feasibility_tolerance;
@@ -1558,7 +1558,7 @@ void HighsPostsolveStack::undoFourierMotzkinBlock(
     HighsInt numPlus = step.header.numPlus;
     HighsInt numMinus = step.header.numMinus;
 
-    // Compute row slacks for parent rows: slack_i = min(u - act, act - l)
+    // compute row slacks for parent rows: slack_i = min(u - act, act - l)
     // divided by |a_ij| for normalization
     auto computeSlack = [&](const std::vector<FmeRowHeader>& headers,
                             const std::vector<double>& coefs,
@@ -1578,7 +1578,7 @@ void HighsPostsolveStack::undoFourierMotzkinBlock(
       return rawSlack / std::abs(coefs[r]);
     };
 
-    // Determine which parent rows are involved in at least one new row
+    // determine which parent rows are involved in at least one new row
     std::vector<bool> plusInvolved(numPlus, false);
     std::vector<bool> minusInvolved(numMinus, false);
     for (const auto& nr : step.newRows) {
@@ -1586,7 +1586,7 @@ void HighsPostsolveStack::undoFourierMotzkinBlock(
       if (nr.minusParentIdx >= 0) minusInvolved[nr.minusParentIdx] = true;
     }
 
-    // Default: x_j is nonbasic at the value assigned by primal postsolve
+    // default: x_j is nonbasic at the value assigned by primal postsolve
     if (solution.col_value[col] == 0.0 && step.header.colLower <= 0.0 &&
         step.header.colUpper >= 0.0)
       basis.col_status[col] = HighsBasisStatus::kZero;
@@ -1597,7 +1597,7 @@ void HighsPostsolveStack::undoFourierMotzkinBlock(
     else
       basis.col_status[col] = HighsBasisStatus::kNonbasic;
 
-    // Process new rows in reverse order (highest index first = Algorithm 5)
+    // process new rows in reverse order (highest index first = Algorithm 5)
     for (HighsInt k = static_cast<HighsInt>(step.newRows.size()) - 1; k >= 0;
          --k) {
       const auto& nr = step.newRows[k];
@@ -1607,7 +1607,7 @@ void HighsPostsolveStack::undoFourierMotzkinBlock(
       bool newRowBasic = basis.row_status[nr.row] == HighsBasisStatus::kBasic;
 
       if (!newRowBasic) {
-        // Nonbasic propagation: both parent rows become nonbasic
+        // non-basic propagation: both parent rows become nonbasic
         if (pIdx >= 0)
           basis.row_status[step.plusHeaders[pIdx].row] =
               HighsBasisStatus::kNonbasic;
@@ -1615,7 +1615,7 @@ void HighsPostsolveStack::undoFourierMotzkinBlock(
           basis.row_status[step.minusHeaders[mIdx].row] =
               HighsBasisStatus::kNonbasic;
       } else {
-        // Basic propagation: determine which parent gets the basic status
+        // basic propagation: determine which parent gets the basic status
         double pSlack =
             pIdx >= 0
                 ? computeSlack(step.plusHeaders, step.plusCoefs,
@@ -1651,9 +1651,9 @@ void HighsPostsolveStack::undoFourierMotzkinBlock(
       }
     }
 
-    // Vanished constraint check: parent rows not involved in any new row
+    // vanished constraint check: parent rows not involved in any new row
     if (step.newRows.empty()) {
-      // Free variable case: no new rows at all
+      // free variable case: no new rows at all
       basis.col_status[col] = HighsBasisStatus::kBasic;
     } else {
       for (HighsInt p = 0; p < numPlus; ++p) {
