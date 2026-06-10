@@ -47,11 +47,11 @@ Then, the factorization is performed as follows.
     FH.solve(x);
 
 Printing to screen is achieved using the interface in auxiliary/Logger.h.
-    ...
-    Logger logger;
-    FHsolver FH(&logger);
-    ...
-Pass nothing to suppress all logging.
+Use setLogging to pass the Logger object to use: FH.setLogging(&logger).
+To use printf instead, use FH.setLogging(nullptr,true).
+Logging is off by default. Use FH.setLogging(nullptr,false) to switch logging
+off.
+
 
 To add static regularisation when the pivots are selected, use
 setRegularisation(reg_p,reg_d) to choose values of primal and dual
@@ -69,6 +69,7 @@ class FHsolver {
   CliqueStack serial_stack_;
 
   bool pivoting_ = true;
+  bool local_logger_ = false;
 
   Int nb_;  // block size
 
@@ -78,8 +79,7 @@ class FHsolver {
   std::vector<std::vector<double>> sn_columns_;
 
  public:
-  // Create object and initialise DataCollector
-  FHsolver(const Logger* logger = nullptr);
+  FHsolver();
 
   // Print collected data (if any) and terminate DataCollector
   ~FHsolver();
@@ -119,6 +119,11 @@ class FHsolver {
   // dynamic regularisation. If pivoting is switched off, only static
   // regularisation is applied.
   void setPivoting(bool pivoting);
+
+  // Pass the Logger object to be used for logging. Alternatively, printf can be
+  // used for logging, by passing a nullptr and setting use_printf to true.
+  // By default, logging is off.
+  void setLogging(const Logger* logger = nullptr, bool use_printf = false);
 
   // Compute number of positive, negative and zero pivots, using tol as
   // tolerance for zero.

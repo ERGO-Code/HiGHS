@@ -7,24 +7,14 @@
 
 namespace hipo {
 
-FHsolver::FHsolver(const Logger* logger) : logger_{logger}, nb_{kBlockSize} {
-#ifdef HIPO_COLLECT_EXPENSIVE_DATA
-  if (logger_)
-    logger_->printw(
-        "Running in debug mode: COLLECTING EXPENSIVE FACTORISATION DATA\n");
-#endif
-#if HIPO_TIMING_LEVEL > 0
-  if (logger_)
-    logger_->printw(
-        "Running in debug mode: COLLECTING EXPENSIVE TIMING DATA\n");
-#endif
-}
+FHsolver::FHsolver() : nb_{kBlockSize} {}
 
 FHsolver::~FHsolver() {
   if (logger_) {
     data_.printTimes(*logger_);
     data_.printIter(*logger_);
   }
+  if (local_logger_ && logger_) delete logger_;
 }
 
 void FHsolver::newIter() { data_.append(); }
@@ -56,6 +46,28 @@ void FHsolver::setBlockSize(Int nb) {
 }
 
 void FHsolver::setPivoting(bool pivoting) { pivoting_ = pivoting; }
+
+void FHsolver::setLogging(const Logger* logger, bool use_printf) {
+  if (local_logger_ && logger_) delete logger_;
+  local_logger_ = false;
+
+  logger_ = logger;
+  if (!logger_) {
+    logger_ = new Logger(use_printf);
+    if (logger_) local_logger_ = true;
+  }
+
+#ifdef HIPO_COLLECT_EXPENSIVE_DATA
+  if (logger_)
+    logger_->printw(
+        "Running in debug mode: COLLECTING EXPENSIVE FACTORISATION DATA\n");
+#endif
+#if HIPO_TIMING_LEVEL > 0
+  if (logger_)
+    logger_->printw(
+        "Running in debug mode: COLLECTING EXPENSIVE TIMING DATA\n");
+#endif
+}
 
 void FHsolver::inertia(Int& pos, Int& neg, Int& zero, double tol) const {
   N_.inertia(pos, neg, zero, tol);

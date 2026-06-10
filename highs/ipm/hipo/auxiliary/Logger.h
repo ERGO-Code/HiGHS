@@ -11,11 +11,14 @@
 
 namespace hipo {
 
+void logger_printf(const char* format, ...);
+
 class Logger {
-  const HighsLogOptions* log_options_;
+  const HighsLogOptions* log_options_ = nullptr;
+  const bool use_printf_ = false;
 
  public:
-  Logger() = default;
+  Logger(bool use_printf = false);
   void setOptions(const HighsLogOptions* log_options);
   bool debug(Int level) const;
 
@@ -23,36 +26,48 @@ class Logger {
   void print(const char* format, Args... args) const {
     if (log_options_)
       highsLogUser(*log_options_, HighsLogType::kInfo, format, args...);
+    else if (use_printf_)
+      logger_printf(format, args...);
   }
 
   template <typename... Args>
   void printw(const char* format, Args... args) const {
     if (log_options_)
       highsLogUser(*log_options_, HighsLogType::kWarning, format, args...);
+    else if (use_printf_)
+      logger_printf(format, args...);
   }
 
   template <typename... Args>
   void printe(const char* format, Args... args) const {
     if (log_options_)
       highsLogUser(*log_options_, HighsLogType::kError, format, args...);
+    else if (use_printf_)
+      logger_printf(format, args...);
   }
 
   template <typename... Args>
   void printInfo(const char* format, Args... args) const {
     if (log_options_)
       highsLogDev(*log_options_, HighsLogType::kInfo, format, args...);
+    else if (use_printf_)
+      logger_printf(format, args...);
   }
 
   template <typename... Args>
   void printDetailed(const char* format, Args... args) const {
     if (log_options_)
       highsLogDev(*log_options_, HighsLogType::kDetailed, format, args...);
+    else if (use_printf_)
+      logger_printf(format, args...);
   }
 
   template <typename... Args>
   void printVerbose(const char* format, Args... args) const {
     if (log_options_)
       highsLogDev(*log_options_, HighsLogType::kVerbose, format, args...);
+    else if (use_printf_)
+      logger_printf(format, args...);
   }
 };
 

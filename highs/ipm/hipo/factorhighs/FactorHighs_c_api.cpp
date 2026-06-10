@@ -44,6 +44,10 @@ void FactorHighs_setPivoting(void* FH, HighsInt pivoting) {
   ((hipo::FHsolver*)FH)->setPivoting(pivoting);
 }
 
+void FactorHighs_setLogging(void* FH, int display) {
+  ((hipo::FHsolver*)FH)->setLogging(nullptr, display);
+}
+
 void FactorHighs_inertia(void* FH, HighsInt& pos, HighsInt& neg, HighsInt& zero,
                          double tol) {
   ((hipo::FHsolver*)FH)->inertia(pos, neg, zero, tol);
