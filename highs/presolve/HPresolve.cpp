@@ -5227,16 +5227,16 @@ HPresolve::Result HPresolve::redundantSingletonColDoubleSidedSlack(
   HighsInt nzPos = colhead[col];
   HighsInt row = Arow[nzPos];
   assert(!rowDeleted[row]);
-  // Row must be ranged, but why can't it be an equation?
-  const bool was_equation = isEquation(row);
-  const bool illegal_row_bounds = !isRanged(row);  // || was_equation;
-  if (illegal_row_bounds) return Result::kOk;
+  // Row must be ranged, with the equation case considered explicitly
+  // elsewhere
+  if (!isRanged(row) || isEquation(row)) return Result::kOk;
   double coef = Avalue[nzPos];
 
   if (std::abs(coef) == kHighsInf) return Result::kOk;
 
   // suppress this reduction for now
-  return Result::kOk;
+  // return Result::kOk;
+
   storeRow(row);
 
   double lb = model->col_lower_[col];
@@ -5249,13 +5249,13 @@ HPresolve::Result HPresolve::redundantSingletonColDoubleSidedSlack(
   double newRowUpper =
       model->row_upper_[row] - std::min(change_from_col_lb, change_from_col_ub);
 
-  if (illegal_col_bounds || isEquation(row))
+  //  if (illegal_col_bounds)
     printf(
         "Column %5d [%11.4g, %11.4g] coef %11.4g: Row bounds [%11.4g, %11.4g] "
         "become [%11.4g, %11.4g]\n",
         int(col), lb, ub, coef, model->row_lower_[row], model->row_upper_[row],
         newRowLower, newRowUpper);
-  assert(!illegal_col_bounds || isEquation(row));
+  assert(!illegal_col_bounds);
 
   postsolve_stack.zeroObjSingletonContinuousCol(
       row, col, model->row_lower_[row], model->row_upper_[row], newRowLower,
@@ -5263,12 +5263,6 @@ HPresolve::Result HPresolve::redundantSingletonColDoubleSidedSlack(
 
   model->row_lower_[row] = newRowLower;
   model->row_upper_[row] = newRowUpper;
-  if (was_equation && newRowLower != newRowUpper &&
-      eqiters[row] != equations.end()) {
-    equations.erase(eqiters[row]);
-    eqiters[row] = equations.end();
-  }
-
   // Delete the singleton column
   markColDeleted(col);
   unlink(nzPos);
