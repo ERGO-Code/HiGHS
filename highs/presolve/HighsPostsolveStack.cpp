@@ -1496,11 +1496,11 @@ void HighsPostsolveStack::undoFourierMotzkinBlock(
                  solution.col_value[nz.index];
         double rhs_upper = aij > 0 ? headers[r].rowUpper : headers[r].rowLower;
         double rhs_lower = aij > 0 ? headers[r].rowLower : headers[r].rowUpper;
-        if (rhs_upper != kHighsInf) {
+        if (std::abs(rhs_upper) != kHighsInf) {
           double bound = static_cast<double>(rhs_upper - sum) / aij;
           impliedUpper = std::min(impliedUpper, bound);
         }
-        if (rhs_lower != -kHighsInf) {
+        if (std::abs(rhs_lower) != kHighsInf) {
           double bound = static_cast<double>(rhs_lower - sum) / aij;
           impliedLower = std::max(impliedLower, bound);
         }
@@ -1611,6 +1611,12 @@ void HighsPostsolveStack::undoFourierMotzkinBlock(
     else
       basis.col_status[col] = HighsBasisStatus::kBasic;
 
+    auto parentAvailable = [&](const std::vector<FmeRowHeader>& headers,
+                               HighsInt idx) {
+      return idx >= 0 &&
+             basis.row_status[headers[idx].row] != HighsBasisStatus::kBasic;
+    };
+
     // process new rows in reverse order (highest index first = Algorithm 5)
     for (HighsInt k = static_cast<HighsInt>(step.newRows.size()) - 1; k >= 0;
          --k) {
@@ -1621,32 +1627,43 @@ void HighsPostsolveStack::undoFourierMotzkinBlock(
       if (basis.row_status[nr.row] != HighsBasisStatus::kBasic) continue;
 
       // basic propagation: determine which parent gets the basic status
+      bool pAvail = parentAvailable(step.plusHeaders, pIdx);
+      bool mAvail = parentAvailable(step.minusHeaders, mIdx);
+
       double pSlack =
-          pIdx >= 0
-              ? computeSlack(step.plusHeaders, step.plusCoefs, step.plusEntries,
-                             pIdx)
-              : std::max(step.header.colUpper - solution.col_value[col], 0.0);
+          pAvail ? computeSlack(step.plusHeaders, step.plusCoefs,
+                                step.plusEntries, pIdx)
+          : pIdx < 0
+              ? std::max(step.header.colUpper - solution.col_value[col], 0.0)
+              : 0.0;
       double mSlack =
-          mIdx >= 0
-              ? computeSlack(step.minusHeaders, step.minusCoefs,
-                             step.minusEntries, mIdx)
-              : std::max(solution.col_value[col] - step.header.colLower, 0.0);
+          mAvail ? computeSlack(step.minusHeaders, step.minusCoefs,
+                                step.minusEntries, mIdx)
+          : mIdx < 0
+              ? std::max(solution.col_value[col] - step.header.colLower, 0.0)
+              : 0.0;
 
       if (pSlack > tol && mSlack <= tol) {
-        if (pIdx >= 0)
+        if (pAvail)
           basis.row_status[step.plusHeaders[pIdx].row] =
               HighsBasisStatus::kBasic;
         else
           basis.col_status[col] = HighsBasisStatus::kBasic;
       } else if (mSlack > tol && pSlack <= tol) {
-        if (mIdx >= 0)
+        if (mAvail)
           basis.row_status[step.minusHeaders[mIdx].row] =
               HighsBasisStatus::kBasic;
         else
           basis.col_status[col] = HighsBasisStatus::kBasic;
       } else if (pSlack > tol) {
-        if (pIdx >= 0)
+        if (pAvail)
           basis.row_status[step.plusHeaders[pIdx].row] =
+              HighsBasisStatus::kBasic;
+        else
+          basis.col_status[col] = HighsBasisStatus::kBasic;
+      } else if (mSlack > tol) {
+        if (mAvail)
+          basis.row_status[step.minusHeaders[mIdx].row] =
               HighsBasisStatus::kBasic;
         else
           basis.col_status[col] = HighsBasisStatus::kBasic;

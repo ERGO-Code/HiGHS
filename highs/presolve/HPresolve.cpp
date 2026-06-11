@@ -855,6 +855,8 @@ void HPresolve::shrinkProblem(HighsPostsolveStack& postsolve_stack) {
       }
     }
   }
+  if (model->fme_obj_col_ >= 0)
+    model->fme_obj_col_ = newColIndex[model->fme_obj_col_];
   colDeleted.assign(model->num_col_, false);
   model->col_cost_.resize(model->num_col_);
   model->col_lower_.resize(model->num_col_);
@@ -6969,6 +6971,7 @@ HPresolve::Result HPresolve::fourierMotzkin(
   auto isCandidate = [&](HighsInt col) {
     if (colDeleted[col]) return false;
     if (colsize[col] == 0) return false;
+    if (col == model->fme_obj_col_) return false;
     if (model->integrality_[col] != HighsVarType::kContinuous) return false;
     if (!acceptCoef(model->col_cost_[col])) return false;
     for (const auto& nz : getColumnVector(col))
@@ -7165,7 +7168,14 @@ HPresolve::Result HPresolve::fourierMotzkin(
   // min z with c^T x - z <= -offset. this allows FME to eliminate
   // continuous columns with nonzero cost.
   auto reformulateObjective = [&]() {
-    if (fourierMotzkinObjCol != -1) return;
+    if (model->fme_obj_col_ != -1) {
+      assert(model->fme_obj_col_ < model->num_col_);
+      assert(!colDeleted[model->fme_obj_col_]);
+      assert(model->col_cost_[model->fme_obj_col_] == 1.0);
+      for (HighsInt j = 0; j < model->num_col_; ++j)
+        if (j != model->fme_obj_col_) assert(model->col_cost_[j] == 0.0);
+      return;
+    }
 
     HighsInt zCol = model->num_col_;
     model->num_col_++;
@@ -7223,7 +7233,7 @@ HPresolve::Result HPresolve::fourierMotzkin(
       costEntries.emplace_back(entry.col, entry.val);
     postsolve_stack.fourierMotzkinObjCol(zCol, offset, costEntries);
 
-    fourierMotzkinObjCol = zCol;
+    model->fme_obj_col_ = zCol;
 
     shrinkProblem(postsolve_stack);
   };
