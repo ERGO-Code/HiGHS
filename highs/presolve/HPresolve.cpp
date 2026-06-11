@@ -7498,7 +7498,7 @@ HPresolve::Result HPresolve::fourierMotzkin(
       return finalise();
     numRowsAdded += static_cast<HighsInt>(rowEntries.size());
 
-    // find local index of a row within a list (skipping negatives)
+    // find index of a row within a list
     auto findRowIndex = [](HighsInt row,
                            const std::vector<FmeRow>& rows) -> HighsInt {
       for (HighsInt i = 0; i < static_cast<HighsInt>(rows.size()); ++i)
