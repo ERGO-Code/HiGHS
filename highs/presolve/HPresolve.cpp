@@ -5227,9 +5227,15 @@ HPresolve::Result HPresolve::redundantSingletonColDoubleSidedSlack(
   HighsInt nzPos = colhead[col];
   HighsInt row = Arow[nzPos];
   assert(!rowDeleted[row]);
+  // Row must be ranged, but why can't it be an equation?
+  const bool was_equation = isEquation(row);
+  const bool illegal_row_bounds = !isRanged(row);  // || was_equation;
+  if (illegal_row_bounds) return Result::kOk;
+  /*
   // Row must be ranged, with the equation case considered explicitly
   // elsewhere
   if (!isRanged(row) || isEquation(row)) return Result::kOk;
+  */
   double coef = Avalue[nzPos];
 
   if (std::abs(coef) == kHighsInf) return Result::kOk;
@@ -5263,6 +5269,12 @@ HPresolve::Result HPresolve::redundantSingletonColDoubleSidedSlack(
 
   model->row_lower_[row] = newRowLower;
   model->row_upper_[row] = newRowUpper;
+  if (was_equation && newRowLower != newRowUpper &&
+      eqiters[row] != equations.end()) {
+    equations.erase(eqiters[row]);
+    eqiters[row] = equations.end();
+  }
+
   // Delete the singleton column
   markColDeleted(col);
   unlink(nzPos);

@@ -1416,7 +1416,12 @@ void HighsPostsolveStack::ZeroObjSingletonContinuousCol::undo(
     col_lb = std::max(col_lb, static_cast<double>((origRowUpper - act) / coef));
     col_ub = std::min(col_ub, static_cast<double>((origRowLower - act) / coef));
   }
-
+  const std::string original_row_status = (isModelRow && basis.valid)
+    ? utilBasisStatusToString(basis.row_status[row], true) : "";
+  const std::string original_row_dual = (isModelRow && solution.dual_valid)
+    ? highsFormatToString("%11.4g", solution.row_dual[row]) : "";
+  std:string final_row_status = "";
+  std::string final_row_dual = "";
   auto rowAtLower = [&]() {
     return static_cast<double>(act - options.primal_feasibility_tolerance) <=
            new_row_lb;
@@ -1433,21 +1438,21 @@ void HighsPostsolveStack::ZeroObjSingletonContinuousCol::undo(
   };
   auto errorLog = [&](const bool error, const std::string& message) {
     if (!error) return;
-    printf(
-        "Column %5d [%11.4g, %11.4g] coef %11.4g: Act = %11.4g Row [%11.4g, "
-        "%11.4g] status %2s | Domain [%11.4g, %11.4g] | After value = %11.4g",
-        int(col), lb, ub, coef, static_cast<double>(act), new_row_lb,
-        new_row_ub,
-        (isModelRow && basis.valid)
-	? utilBasisStatusToString(basis.row_status[row], true).c_str()
-            : "",
-        col_lb, col_ub, solution.col_value[col]);
-    if (solution.dual_valid) printf(", Dual = %11.4g", solution.col_dual[col]);
-    if (basis.valid) {
+    printf("Column %5d [%11.4g, %11.4g] coef %11.4g: Act = %11.4g Row [%11.4g, %11.4g] status %2s ",
+	   int(col), lb, ub, coef, static_cast<double>(act), new_row_lb,
+	   new_row_ub, original_row_status.c_str());
+    if (solution.dual_valid) printf(", OgRowDual = %11s", original_row_dual.c_str());
+    printf("| Domain [%11.4g, %11.4g] | After: value (Col = %11.4g, Row = %11.4g)",
+	   col_lb, col_ub,
+	   solution.col_value[col],
+	   static_cast<double>(act + coef * solution.col_value[col]));
+    if (solution.dual_valid) 
+      printf(", Dual (Col = %11.4g, Row = %11s)",
+	     solution.col_dual[col], final_row_dual.c_str());
+    if (basis.valid) 
       printf("; Status (Col = %2s, Row = %2s)",
              utilBasisStatusToString(basis.col_status[col], true).c_str(),
-             utilBasisStatusToString(basis.col_status[col], true).c_str());
-    }
+             final_row_status.c_str());
     printf(": %s\n", message.c_str());
   };
 
@@ -1526,6 +1531,8 @@ void HighsPostsolveStack::ZeroObjSingletonContinuousCol::undo(
     }
     errorCheck(col_basic, "col_basic");
   }
+  final_row_dual = original_row_dual;
+  final_row_status = original_row_status;
   if (col_at_lower) {
     col_value = lb;
     if (basis.valid) basis.col_status[col] = HighsBasisStatus::kLower;
@@ -1543,10 +1550,22 @@ void HighsPostsolveStack::ZeroObjSingletonContinuousCol::undo(
   } else {
     // Column takes value between its bounds and inherits any basic status from
     // the row
-    errorCheck(!solution.dual_valid || solution.row_dual[row] == 0, "!solution.dual_valid || solution.row_dual[row] == 0");
+    errorCheck(!solution.dual_valid || solution.row_dual[row] == 0,
+	       "!solution.dual_valid || solution.row_dual[row] == 0");
+    if (solution.dual_valid) {
+      solution.col_dual[col] = 0;
+      if (isModelRow) {
+	solution.row_dual[row] = 0;
+	final_row_dual = (isModelRow && solution.dual_valid) 
+	  ?  highsFormatToString("%11.4g", solution.row_dual[row]) : "";
+      }
+    }
     if (basis.valid) {
-      basis.row_status[row] =
+      if (isModelRow) {
+	basis.row_status[row] =
           row_at_lower ? HighsBasisStatus::kLower : HighsBasisStatus::kUpper;
+	final_row_status = utilBasisStatusToString(basis.row_status[row], true);
+      }
       basis.col_status[col] = HighsBasisStatus::kBasic;
     }
   }
