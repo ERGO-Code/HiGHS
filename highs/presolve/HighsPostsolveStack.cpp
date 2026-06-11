@@ -1601,7 +1601,9 @@ void HighsPostsolveStack::undoFourierMotzkinBlock(
 
     // default: x_j is non-basic at the value assigned by primal postsolve
     if (step.header.colLower == -kHighsInf && step.header.colUpper == kHighsInf)
-      basis.col_status[col] = HighsBasisStatus::kZero;
+      basis.col_status[col] = std::abs(solution.col_value[col]) <= tol
+                                  ? HighsBasisStatus::kZero
+                                  : HighsBasisStatus::kBasic;
     else if (solution.col_value[col] <= step.header.colLower + tol)
       basis.col_status[col] = HighsBasisStatus::kLower;
     else if (solution.col_value[col] >= step.header.colUpper - tol)
