@@ -13,7 +13,7 @@ bool rkoHeuristic(const HighsLp* lp, std::vector<double>& solution) {
   if (lp->mip_type_ != kMipTypeKnapsack) return false;
   printf("Calling the RKO heuristic for a knapsack problem with %d items\n",
          int(lp->num_col_));
-  // rko_solution is initialised to a vector of zeros, so this is
+  // solution is initialised to a vector of zeros, so this is
   // necessarily an integer feasible solutiuon of the MIP. Hence
   // return true
   return true;
