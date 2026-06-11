@@ -6937,6 +6937,20 @@ HPresolve::Result HPresolve::fourierMotzkin(
     double minusScale;
   };
 
+  struct NewRowOrigin {
+    HighsInt plusRow;
+    HighsInt minusRow;
+    double plusScale;
+    double minusScale;
+  };
+
+  struct AncestryEntry {
+    HighsInt step;
+    HighsInt parentRowIndex;
+    double scale;
+    bool isMinus;
+  };
+
   auto finalise = [&]() {
     analysis_.logging_on_ = logging_on;
     if (logging_on) analysis_.stopPresolveRuleLog(kPresolveRuleFourierMotzkin);
@@ -7370,12 +7384,6 @@ HPresolve::Result HPresolve::fourierMotzkin(
   std::vector<newRow> newRows;
 
   // workspace for filtering new rows
-  struct NewRowOrigin {
-    HighsInt plusRow;
-    HighsInt minusRow;
-    double plusScale;
-    double minusScale;
-  };
   std::vector<double> rowLower;
   std::vector<double> rowUpper;
   std::vector<std::vector<row_entry>> rowEntries;
@@ -7400,12 +7408,6 @@ HPresolve::Result HPresolve::fourierMotzkin(
   std::vector<std::vector<std::vector<FmeDescendant>>> blockMinusDescendants;
   std::vector<std::vector<FmeNewRow>> blockNewRows;
 
-  struct AncestryEntry {
-    HighsInt step;
-    HighsInt parentRowIndex;
-    double scale;
-    bool isMinus;
-  };
   std::unordered_map<HighsInt, std::vector<AncestryEntry>> rowAncestry;
 
   auto inheritAncestry = [&](HighsInt parentRow, HighsInt parentRowIndex,
