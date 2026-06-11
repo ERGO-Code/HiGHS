@@ -7371,7 +7371,7 @@ HPresolve::Result HPresolve::fourierMotzkin(
 
   struct AncestryEntry {
     HighsInt step;
-    HighsInt parentLocalIdx;
+    HighsInt parentRowIndex;
     double scale;
     bool isMinus;
   };
@@ -7499,28 +7499,25 @@ HPresolve::Result HPresolve::fourierMotzkin(
     numRowsAdded += static_cast<HighsInt>(rowEntries.size());
 
     // find local index of a row within a list (skipping negatives)
-    auto findLocalIdx = [](HighsInt row,
-                           const std::vector<HighsInt>& rows) -> HighsInt {
-      HighsInt idx = 0;
-      for (HighsInt r : rows) {
-        if (r < 0) continue;
-        if (r == row) return idx;
-        idx++;
-      }
+    auto findRowIndex = [](HighsInt row,
+                           const std::vector<FmeRow>& rows) -> HighsInt {
+      for (HighsInt i = 0; i < static_cast<HighsInt>(rows.size()); ++i)
+        if (rows[i].row == row) return i;
       return -1;
     };
 
-    auto inheritAncestry = [&](HighsInt parentRow, HighsInt localIdx,
-                               double scale, bool isMinus,
+    auto inheritAncestry = [&](HighsInt parentRow, HighsInt parentRowIndex,
+                               HighsInt stepIndex, double scale, bool isMinus,
                                std::vector<AncestryEntry>& newAnc) {
       if (parentRow < 0) return;
       auto it = rowAncestry.find(parentRow);
       if (it != rowAncestry.end()) {
         for (const auto& a : it->second)
           newAnc.push_back(
-              {a.step, a.parentLocalIdx, a.scale * scale, a.isMinus});
+              {a.step, a.parentRowIndex, a.scale * scale, a.isMinus});
       }
-      if (localIdx >= 0) newAnc.push_back({stepIdx, localIdx, scale, isMinus});
+      if (parentRowIndex >= 0)
+        newAnc.push_back({stepIndex, parentRowIndex, scale, isMinus});
     };
 
     // build FmeNewRow data and ancestry for this step
@@ -7529,11 +7526,13 @@ HPresolve::Result HPresolve::fourierMotzkin(
     for (HighsInt k = 0; k < static_cast<HighsInt>(newRowOrigins.size()); ++k) {
       HighsInt newModelRow = firstNewRow + k;
       const auto& origin = newRowOrigins[k];
-      HighsInt pIdx = findLocalIdx(origin.plusRow, iPlus);
-      HighsInt mIdx = findLocalIdx(origin.minusRow, iMinus);
+      HighsInt pIdx = findRowIndex(origin.plusRow, plusRows);
+      HighsInt mIdx = findRowIndex(origin.minusRow, minusRows);
       std::vector<AncestryEntry>& newAnc = rowAncestry[newModelRow];
-      inheritAncestry(origin.plusRow, pIdx, origin.plusScale, false, newAnc);
-      inheritAncestry(origin.minusRow, mIdx, origin.minusScale, true, newAnc);
+      inheritAncestry(origin.plusRow, pIdx, stepIdx, origin.plusScale, false,
+                      newAnc);
+      inheritAncestry(origin.minusRow, mIdx, stepIdx, origin.minusScale, true,
+                      newAnc);
       stepNewRows.push_back({newModelRow, pIdx, mIdx});
     }
     blockNewRows.push_back(std::move(stepNewRows));
@@ -7604,10 +7603,10 @@ HPresolve::Result HPresolve::fourierMotzkin(
       HighsInt origRow = postsolve_stack.getOrigRowIndex()[row];
       for (const auto& a : entry.second) {
         if (a.isMinus)
-          blockMinusDescendants[a.step][a.parentLocalIdx].push_back(
+          blockMinusDescendants[a.step][a.parentRowIndex].push_back(
               {origRow, a.scale});
         else
-          blockPlusDescendants[a.step][a.parentLocalIdx].push_back(
+          blockPlusDescendants[a.step][a.parentRowIndex].push_back(
               {origRow, a.scale});
       }
     }
