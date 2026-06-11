@@ -682,9 +682,9 @@ class HighsPostsolveStack {
     reductionValues.push(minusHeaders);
   }
 
-  // Finalize the FM block: push descendants mapping, new row origins,
+  // Finalise the FM block: push descendants mapping, new row origins,
   // and step headers. Called once after all elimination steps are complete.
-  void fourierMotzkinBlockFinalize(
+  void fourierMotzkinBlockFinalise(
       const std::vector<HighsInt>& eliminatedCols,
       const std::vector<double>& colLowers,
       const std::vector<double>& colUppers, const std::vector<double>& colCosts,

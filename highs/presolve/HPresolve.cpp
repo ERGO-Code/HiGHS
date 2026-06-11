@@ -7408,6 +7408,7 @@ HPresolve::Result HPresolve::fourierMotzkin(
   std::vector<std::vector<std::vector<FmeDescendant>>> blockMinusDescendants;
   std::vector<std::vector<FmeNewRow>> blockNewRows;
 
+  // maps surviving row to its ancestry (which parent rows it descends from)
   std::unordered_map<HighsInt, std::vector<AncestryEntry>> rowAncestry;
 
   auto inheritAncestry = [&](HighsInt parentRow, HighsInt parentRowIndex,
@@ -7622,7 +7623,8 @@ HPresolve::Result HPresolve::fourierMotzkin(
       }
     }
 
-    postsolve_stack.fourierMotzkinBlockFinalize(
+    // finalise the block: push descendants, new row origins, and step headers
+    postsolve_stack.fourierMotzkinBlockFinalise(
         blockCols, blockColLowers, blockColUppers, blockColCosts, blockNumPlus,
         blockNumMinus, blockPlusDescendants, blockMinusDescendants,
         blockNewRows);
