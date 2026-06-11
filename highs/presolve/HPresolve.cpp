@@ -7383,6 +7383,22 @@ HPresolve::Result HPresolve::fourierMotzkin(
     return result;
   };
 
+  auto inheritAncestry =
+      [&](std::unordered_map<HighsInt, std::vector<AncestryEntry>>& rowAncestry,
+          HighsInt newModelRow, HighsInt parentRow, HighsInt parentRowIndex,
+          HighsInt stepIndex, double scale, bool isMinus) {
+        if (parentRow < 0) return;
+        auto it = rowAncestry.find(parentRow);
+        if (it != rowAncestry.end()) {
+          for (const auto& a : it->second)
+            rowAncestry[newModelRow].push_back(
+                {a.step, a.parentRowIndex, a.scale * scale, a.isMinus});
+        }
+        if (parentRowIndex >= 0)
+          rowAncestry[newModelRow].push_back(
+              {stepIndex, parentRowIndex, scale, isMinus});
+      };
+
   // collect candidate variables
   std::vector<HighsInt> candidates;
   if (!computeCandidates(candidates)) return finalise();
@@ -7451,20 +7467,6 @@ HPresolve::Result HPresolve::fourierMotzkin(
 
   // maps surviving row to its ancestry (which parent rows it descends from)
   std::unordered_map<HighsInt, std::vector<AncestryEntry>> rowAncestry;
-
-  auto inheritAncestry = [&](HighsInt parentRow, HighsInt parentRowIndex,
-                             HighsInt stepIndex, double scale, bool isMinus,
-                             std::vector<AncestryEntry>& newAnc) {
-    if (parentRow < 0) return;
-    auto it = rowAncestry.find(parentRow);
-    if (it != rowAncestry.end()) {
-      for (const auto& a : it->second)
-        newAnc.push_back(
-            {a.step, a.parentRowIndex, a.scale * scale, a.isMinus});
-    }
-    if (parentRowIndex >= 0)
-      newAnc.push_back({stepIndex, parentRowIndex, scale, isMinus});
-  };
 
   // main loop: eliminate variables from heap
   while (!heap.empty()) {
@@ -7596,11 +7598,10 @@ HPresolve::Result HPresolve::fourierMotzkin(
       const auto& origin = newRowOrigins[k];
       HighsInt pIdx = findRowIndex(origin.plusRow, plusRows);
       HighsInt mIdx = findRowIndex(origin.minusRow, minusRows);
-      std::vector<AncestryEntry>& newAnc = rowAncestry[newModelRow];
-      inheritAncestry(origin.plusRow, pIdx, stepIdx, origin.plusScale, false,
-                      newAnc);
-      inheritAncestry(origin.minusRow, mIdx, stepIdx, origin.minusScale, true,
-                      newAnc);
+      inheritAncestry(rowAncestry, newModelRow, origin.plusRow, pIdx, stepIdx,
+                      origin.plusScale, false);
+      inheritAncestry(rowAncestry, newModelRow, origin.minusRow, mIdx, stepIdx,
+                      origin.minusScale, true);
       stepNewRows.push_back({newModelRow, pIdx, mIdx});
     }
     blockNewRows.push_back(std::move(stepNewRows));
