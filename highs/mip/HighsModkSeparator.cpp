@@ -223,7 +223,7 @@ void HighsModkSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
     lpAggregator.getCurrentAggregation(inds, vals, false);
 
     rhs = 0.0;
-    cutGen.generateCut(transLp, inds, vals, rhs, true);
+    cutGen.generateCut(transLp, inds, vals, rhs, true, false);
 
     if (k != 2) {
       lpAggregator.clear();
@@ -237,7 +237,7 @@ void HighsModkSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
     lpAggregator.getCurrentAggregation(inds, vals, true);
 
     rhs = 0.0;
-    cutGen.generateCut(transLp, inds, vals, rhs, true);
+    cutGen.generateCut(transLp, inds, vals, rhs, true, false);
 
     lpAggregator.clear();
   };

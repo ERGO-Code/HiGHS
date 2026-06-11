@@ -70,6 +70,22 @@ class HighsCutGeneration {
   bool cmirCutGenerationHeuristic(double minEfficacy,
                                   bool onlyInitialCMIRScale = false);
 
+  bool computeFlowCover();
+
+  bool separateLiftedFlowCover();
+
+  HighsInt getMaxFlowCoverLen() const;
+
+  bool preprocessSNFRelaxation();
+
+  void setGenFlowCover(std::vector<HighsInt>& inds, std::vector<double>& vals,
+                       bool& genFlowCover) const;
+
+  bool tryGenerateFlowCoverCut(HighsTransformedLp& transLp,
+                               std::vector<HighsInt>& inds,
+                               std::vector<double>& vals, double& rhs,
+                               double& efficacy);
+
   double scale(double val);
 
   bool postprocessCut();
@@ -84,6 +100,12 @@ class HighsCutGeneration {
   void updateViolationAndNorm(HighsInt index, double aj, double& violation,
                               double& norm) const;
 
+  double getCutScore(const std::vector<double>& col_lower,
+                     const std::vector<double>& col_upper,
+                     const std::vector<double>& sol,
+                     const std::vector<HighsInt>& cutInds,
+                     const std::vector<double>& cutVals, double cutRhs);
+
   bool tryGenerateCut(std::vector<HighsInt>& inds, std::vector<double>& vals,
                       bool hasUnboundedInts, bool hasGeneralInts,
                       bool hasContinuous, double minEfficacy,
@@ -97,7 +119,8 @@ class HighsCutGeneration {
   /// separates the LP solution for the given single row relaxation
   bool generateCut(HighsTransformedLp& transLp, std::vector<HighsInt>& inds,
                    std::vector<double>& vals, double& rhs,
-                   bool onlyInitialCMIRScale = false);
+                   bool onlyInitialCMIRScale = false,
+                   bool genFlowCover = false);
 
   /// generate a conflict from the given proof constraint which cuts of the
   /// given local domain
@@ -107,7 +130,42 @@ class HighsCutGeneration {
   /// applies postprocessing to an externally generated cut and adds it to the
   /// cutpool if it is violated enough
   bool finalizeAndAddCut(std::vector<HighsInt>& inds, std::vector<double>& vals,
-                         double& rhs);
+                         double& rhs, bool skipChecks = false);
+
+  /// Single Node Flow Relaxation for flow cover cuts
+  struct SNFRelaxation {
+    HighsInt numNnzs;                    // |N-| + |N+|
+    std::vector<HighsInt> coef;          // (+-1) coefficient of col in SNFR
+    std::vector<double> vubCoef;         // u_j in y'_j <= u_j x_j in SNFR
+    std::vector<double> binSolval;       // lp[x_j], y'_j <= u_j x_j in SNFR
+    std::vector<HighsInt> origBinCols;   // orig x_i, y'_j <= u_j x_j in SNFR
+    std::vector<HighsInt> origContCols;  // orig y_i used to make y'_j in SNFR
+    std::vector<double> aggrBinCoef;     // coef of x_i in y'_j aggregation
+    std::vector<double> aggrContCoef;    // coef of y_i in y'_j aggrregation
+    std::vector<double> aggrConstant;    // constant shift in y'_j aggregation
+    std::vector<bool> complementation;   // was the original bincol complemented
+
+    std::vector<HighsInt>
+        flowCoverStatus;  // (+1) in flow cover (-1) notin flow cover
+    double rhs;           // in \sum_{j \in N+} y'_j - \sum_{j \in N-} y'_j <= b
+    double lambda;  // in sum_{j in C+} u_j - sum_{j in C-} u_j = b + lambda
+  };
+
+  struct flowCover {
+    std::vector<HighsInt> flowCoverItems;
+    std::vector<double> flowCoverWeights;
+    std::vector<double> flowCoverProfitWeightRatios;
+    std::vector<HighsInt> flowCoverPerm;
+  };
+
+ private:
+  SNFRelaxation snfr;
+  void initSNFRelaxation();
+  flowCover fc;
+  void initFlowCover();
+
+ public:
+  SNFRelaxation& getSNFRelaxation() { return snfr; }
 };
 
 #endif

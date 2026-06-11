@@ -16,6 +16,7 @@
 
 #include <vector>
 
+#include "HighsCutGeneration.h"
 #include "lp_data/HConst.h"
 #include "mip/HighsImplications.h"
 #include "util/HighsCDouble.h"
@@ -58,6 +59,13 @@ class HighsTransformedLp {
 
   bool untransform(std::vector<double>& vals, std::vector<HighsInt>& inds,
                    double& rhs, bool integral = false);
+
+  bool transformSNFRelaxation(std::vector<HighsInt>& inds,
+                              std::vector<double>& vals, double& rhs,
+                              HighsCutGeneration::SNFRelaxation& snfr);
+
+  bool cleanup(std::vector<HighsInt>& inds, std::vector<double>& vals,
+               double& rhs, double& efficacy);
 };
 
 #endif
