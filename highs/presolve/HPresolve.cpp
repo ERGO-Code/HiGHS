@@ -6959,9 +6959,10 @@ HPresolve::Result HPresolve::fourierMotzkin(
     return Result::kOk;
   };
 
-  // sentinel row indices for variable bounds
+  // sentinel row indices for variable bounds and virtual objective row
   const HighsInt kUpperBoundRow = -2;
   const HighsInt kLowerBoundRow = -3;
+  const HighsInt kVirtualObjRow = -4;
 
   auto acceptCoef = [&](double val) {
     double absval = std::abs(val);
@@ -6987,7 +6988,8 @@ HPresolve::Result HPresolve::fourierMotzkin(
 
   auto checkRows = [&](HighsInt col, std::vector<HighsInt>& iPlus,
                        std::vector<HighsInt>& iMinus, int64_t& nePlus,
-                       int64_t& neMinus) {
+                       int64_t& neMinus,
+                       const std::vector<HighsInt>& objRowCols) {
     nePlus = 0;
     neMinus = 0;
     iPlus.clear();
@@ -7028,13 +7030,35 @@ HPresolve::Result HPresolve::fourierMotzkin(
       iMinus.push_back(kLowerBoundRow);
       neMinus += 1;
     }
+
+    // simulate the objective constraint row for candidates with nonzero
+    // cost when the reformulation has not yet been performed
+    if (!objRowCols.empty() && model->col_cost_[col] != 0.0) {
+      int64_t objRowSize = static_cast<int64_t>(objRowCols.size());
+      if (model->col_cost_[col] > 0.0) {
+        iPlus.push_back(kVirtualObjRow);
+        nePlus += objRowSize;
+      } else {
+        iMinus.push_back(kVirtualObjRow);
+        neMinus += objRowSize;
+      }
+    }
   };
 
   auto collectAffectedCols = [&](HighsInt col, const std::vector<HighsInt>& set,
                                  std::vector<HighsInt>& mark,
                                  std::vector<HighsInt>& otherMark,
-                                 std::vector<HighsInt>& affectedCols) {
+                                 std::vector<HighsInt>& affectedCols,
+                                 const std::vector<HighsInt>& objRowCols) {
     for (HighsInt row : set) {
+      if (row == kVirtualObjRow) {
+        for (HighsInt k : objRowCols) {
+          if (k == col) continue;
+          if (mark[k] == 0 && otherMark[k] == 0) affectedCols.push_back(k);
+          mark[k]++;
+        }
+        continue;
+      }
       if (row < 0) continue;
       for (const auto& nz : getRowVector(row)) {
         HighsInt k = nz.index();
@@ -7045,51 +7069,53 @@ HPresolve::Result HPresolve::fourierMotzkin(
     }
   };
 
-  auto checkNonZeros =
-      [&](HighsInt col, std::vector<HighsInt>& iPlus,
-          std::vector<HighsInt>& iMinus, std::vector<HighsInt>& pPlus,
-          std::vector<HighsInt>& pMinus, std::vector<HighsInt>& affectedCols,
-          int64_t& neRed, int64_t& mrRed) {
-        // initialise
-        neRed = 0;
-        mrRed = 0;
+  auto checkNonZeros = [&](HighsInt col, std::vector<HighsInt>& iPlus,
+                           std::vector<HighsInt>& iMinus,
+                           std::vector<HighsInt>& pPlus,
+                           std::vector<HighsInt>& pMinus,
+                           std::vector<HighsInt>& affectedCols, int64_t& neRed,
+                           int64_t& mrRed,
+                           const std::vector<HighsInt>& objRowCols) {
+    // initialise
+    neRed = 0;
+    mrRed = 0;
 
-        // check rows
-        int64_t nePlus;
-        int64_t neMinus;
-        checkRows(col, iPlus, iMinus, nePlus, neMinus);
+    // check rows
+    int64_t nePlus;
+    int64_t neMinus;
+    checkRows(col, iPlus, iMinus, nePlus, neMinus, objRowCols);
 
-        if (iPlus.size() == 0 || iMinus.size() == 0) {
-          // other presolve reductions may handle this case (e.g., implied free
-          // column substitution)
-          iPlus.clear();
-          iMinus.clear();
-          return false;
-        }
+    if (iPlus.size() == 0 || iMinus.size() == 0) {
+      // other presolve reductions may handle this case (e.g., implied free
+      // column substitution)
+      iPlus.clear();
+      iMinus.clear();
+      return false;
+    }
 
-        // take into account other variables present in the rows
-        collectAffectedCols(col, iPlus, pPlus, pMinus, affectedCols);
-        collectAffectedCols(col, iMinus, pMinus, pPlus, affectedCols);
+    // take into account other variables present in the rows
+    collectAffectedCols(col, iPlus, pPlus, pMinus, affectedCols, objRowCols);
+    collectAffectedCols(col, iMinus, pMinus, pPlus, affectedCols, objRowCols);
 
-        // compute correction term
-        int64_t correction = 0;
-        for (HighsInt k : affectedCols) {
-          correction += static_cast<int64_t>(pPlus[k]) * pMinus[k];
-          pPlus[k] = 0;
-          pMinus[k] = 0;
-        }
+    // compute correction term
+    int64_t correction = 0;
+    for (HighsInt k : affectedCols) {
+      correction += static_cast<int64_t>(pPlus[k]) * pMinus[k];
+      pPlus[k] = 0;
+      pMinus[k] = 0;
+    }
 
-        int64_t mPlus = static_cast<int64_t>(iPlus.size());
-        int64_t mMinus = static_cast<int64_t>(iMinus.size());
-        int64_t neOld = nePlus + neMinus;
-        // note that we subtract the entries for column 'col' since these are
-        // eliminated
-        int64_t neNew =
-            mPlus * (neMinus - mMinus) + mMinus * (nePlus - mPlus) - correction;
-        neRed = neOld - neNew;
-        mrRed = mPlus + mMinus - mPlus * mMinus;
-        return true;
-      };
+    int64_t mPlus = static_cast<int64_t>(iPlus.size());
+    int64_t mMinus = static_cast<int64_t>(iMinus.size());
+    int64_t neOld = nePlus + neMinus;
+    // note that we subtract the entries for column 'col' since these are
+    // eliminated
+    int64_t neNew =
+        mPlus * (neMinus - mMinus) + mMinus * (nePlus - mPlus) - correction;
+    neRed = neOld - neNew;
+    mrRed = mPlus + mMinus - mPlus * mMinus;
+    return true;
+  };
 
   auto checkNewRow = [&](const newRow& nr, bool& isRedundant) {
     HighsCDouble impliedLower = 0;
@@ -7169,12 +7195,21 @@ HPresolve::Result HPresolve::fourierMotzkin(
   // continuous columns with nonzero cost.
   auto reformulateObjective = [&]() {
     if (model->fme_obj_col_ != -1) {
-      assert(model->fme_obj_col_ < model->num_col_);
-      assert(!colDeleted[model->fme_obj_col_]);
-      assert(model->col_cost_[model->fme_obj_col_] == 1.0);
-      for (HighsInt j = 0; j < model->num_col_; ++j)
-        if (j != model->fme_obj_col_) assert(model->col_cost_[j] == 0.0);
-      return;
+      printf(
+          "reformulateObjective: fme_obj_col_=%d, num_col=%d, "
+          "colDeleted=%d, cost=%.6g\n",
+          (int)model->fme_obj_col_, (int)model->num_col_,
+          model->fme_obj_col_ < model->num_col_
+              ? (int)colDeleted[model->fme_obj_col_]
+              : -1,
+          model->fme_obj_col_ < model->num_col_
+              ? model->col_cost_[model->fme_obj_col_]
+              : -999.0);
+      if (model->fme_obj_col_ < model->num_col_ &&
+          !colDeleted[model->fme_obj_col_]) {
+        return;
+      }
+      model->fme_obj_col_ = -1;
     }
 
     HighsInt zCol = model->num_col_;
@@ -7305,7 +7340,8 @@ HPresolve::Result HPresolve::fourierMotzkin(
       [&](const std::vector<HighsInt>& candidates, std::vector<candidate>& heap,
           std::vector<HighsInt>& heapPos, std::vector<HighsInt>& iPlus,
           std::vector<HighsInt>& iMinus, std::vector<HighsInt>& pPlus,
-          std::vector<HighsInt>& pMinus, std::vector<HighsInt>& affectedCols) {
+          std::vector<HighsInt>& pMinus, std::vector<HighsInt>& affectedCols,
+          const std::vector<HighsInt>& objRowCols) {
         heap.clear();
         heap.reserve(candidates.size());
         heapPos.assign(model->num_col_, -1);
@@ -7317,8 +7353,9 @@ HPresolve::Result HPresolve::fourierMotzkin(
         for (HighsInt col : candidates) {
           int64_t neRed;
           int64_t mrRed;
-          bool elimCandidate = checkNonZeros(col, iPlus, iMinus, pPlus, pMinus,
-                                             affectedCols, neRed, mrRed);
+          bool elimCandidate =
+              checkNonZeros(col, iPlus, iMinus, pPlus, pMinus, affectedCols,
+                            neRed, mrRed, objRowCols);
           affectedCols.clear();
           if (!elimCandidate || !isReduction(neRed, mrRed)) continue;
           heapPos[col] = static_cast<HighsInt>(heap.size());
@@ -7349,6 +7386,16 @@ HPresolve::Result HPresolve::fourierMotzkin(
   std::vector<HighsInt> candidates;
   if (!computeCandidates(candidates)) return finalise();
 
+  // precompute the virtual objective row: columns with nonzero cost
+  // used to simulate the objective constraint in checkRows before
+  // reformulation actually happens
+  std::vector<HighsInt> objRowCols;
+  if (model->fme_obj_col_ == -1) {
+    for (HighsInt j = 0; j < model->num_col_; ++j) {
+      if (!colDeleted[j] && model->col_cost_[j] != 0.0) objRowCols.push_back(j);
+    }
+  }
+
   // workspace vectors
   std::vector<HighsInt> iPlus;
   std::vector<HighsInt> iMinus;
@@ -7362,25 +7409,8 @@ HPresolve::Result HPresolve::fourierMotzkin(
 
   // build initial heap
   if (!heapBuild(candidates, heap, heapPos, iPlus, iMinus, pPlus, pMinus,
-                 affectedCols))
+                 affectedCols, objRowCols))
     return finalise();
-
-  // reformulate objective only if at least one heap candidate has nonzero
-  // cost
-  for (const auto& c : heap) {
-    if (model->col_cost_[c.col] != 0.0) {
-      // reformulate
-      reformulateObjective();
-      // re-compute candidates (shrinkProblem invalidates indices)
-      candidates.clear();
-      if (!computeCandidates(candidates)) return finalise();
-      // re-build heap
-      if (!heapBuild(candidates, heap, heapPos, iPlus, iMinus, pPlus, pMinus,
-                     affectedCols))
-        return finalise();
-      break;
-    }
-  }
 
   // heapify
   for (HighsInt i = static_cast<HighsInt>(heap.size()) / 2 - 1; i >= 0; --i)
@@ -7440,11 +7470,26 @@ HPresolve::Result HPresolve::fourierMotzkin(
     HighsInt col = heap[0].col;
     heapRemove(heap, heapPos, col);
 
+    // if this candidate has nonzero cost and objective has not yet been
+    // reformulated, perform the reformulation now and rebuild the heap
+    if (model->fme_obj_col_ == -1 && model->col_cost_[col] != 0.0) {
+      reformulateObjective();
+      objRowCols.clear();
+      candidates.clear();
+      if (!computeCandidates(candidates)) return finalise();
+      if (!heapBuild(candidates, heap, heapPos, iPlus, iMinus, pPlus, pMinus,
+                     affectedCols, objRowCols))
+        return finalise();
+      for (HighsInt i = static_cast<HighsInt>(heap.size()) / 2 - 1; i >= 0; --i)
+        heapSiftDown(heap, heapPos, i);
+      continue;
+    }
+
     // compute affected columns
     int64_t neRed;
     int64_t mrRed;
     bool elimCandidate = checkNonZeros(col, iPlus, iMinus, pPlus, pMinus,
-                                       affectedCols, neRed, mrRed);
+                                       affectedCols, neRed, mrRed, objRowCols);
 
     // heap data should be up-to-date
     assert(elimCandidate && isReduction(neRed, mrRed));
@@ -7588,8 +7633,8 @@ HPresolve::Result HPresolve::fourierMotzkin(
       // check column non-zeros
       int64_t ne, mr;
       bool elimCandidate =
-          isCandidateCol &&
-          checkNonZeros(k, iPlus, iMinus, pPlus, pMinus, affectedCols, ne, mr);
+          isCandidateCol && checkNonZeros(k, iPlus, iMinus, pPlus, pMinus,
+                                          affectedCols, ne, mr, objRowCols);
       affectedCols.clear();
       if (!elimCandidate || !isReduction(ne, mr)) {
         // no candidate or not beneficial -> remove from heap
