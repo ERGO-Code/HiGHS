@@ -6908,6 +6908,10 @@ HPresolve::Result HPresolve::fourierMotzkin(
   const bool logging_on = analysis_.logging_on_;
   if (logging_on) analysis_.startPresolveRuleLog(kPresolveRuleFourierMotzkin);
 
+  using FmeRow = HighsPostsolveStack::FmeRowData<HighsTripletTreeSlicePreOrder>;
+  using FmeDescendant = HighsPostsolveStack::FmeDescendant;
+  using FmeNewRow = HighsPostsolveStack::FmeNewRow;
+
   // max. absolute coefficient
   const double maxCoef = 1e3;
 
@@ -7223,8 +7227,8 @@ HPresolve::Result HPresolve::fourierMotzkin(
     heapPos[heap[j].col] = j;
   };
 
-  auto heapBubbleUp = [&](std::vector<candidate>& heap,
-                          std::vector<HighsInt>& heapPos, HighsInt i) {
+  auto heapSiftUp = [&](std::vector<candidate>& heap,
+                        std::vector<HighsInt>& heapPos, HighsInt i) {
     if (i >= static_cast<HighsInt>(heap.size())) return;
     while (i > 0) {
       HighsInt parent = (i - 1) / 2;
@@ -7234,8 +7238,8 @@ HPresolve::Result HPresolve::fourierMotzkin(
     }
   };
 
-  auto heapBubbleDown = [&](std::vector<candidate>& heap,
-                            std::vector<HighsInt>& heapPos, HighsInt i) {
+  auto heapSiftDown = [&](std::vector<candidate>& heap,
+                          std::vector<HighsInt>& heapPos, HighsInt i) {
     HighsInt heapSize = static_cast<HighsInt>(heap.size());
     if (i >= heapSize) return;
     while (true) {
@@ -7258,8 +7262,8 @@ HPresolve::Result HPresolve::fourierMotzkin(
     heapSwap(heap, heapPos, pos, last);
     heapPos[col] = -1;
     heap.pop_back();
-    heapBubbleUp(heap, heapPos, pos);
-    heapBubbleDown(heap, heapPos, pos);
+    heapSiftUp(heap, heapPos, pos);
+    heapSiftDown(heap, heapPos, pos);
   };
 
   auto heapUpdate = [&](std::vector<candidate>& heap,
@@ -7269,8 +7273,8 @@ HPresolve::Result HPresolve::fourierMotzkin(
     if (pos == -1) return;
     heap[pos].neRed = neRed;
     heap[pos].mrRed = mrRed;
-    heapBubbleUp(heap, heapPos, pos);
-    heapBubbleDown(heap, heapPos, pos);
+    heapSiftUp(heap, heapPos, pos);
+    heapSiftDown(heap, heapPos, pos);
   };
 
   auto buildHeap =
@@ -7298,6 +7302,24 @@ HPresolve::Result HPresolve::fourierMotzkin(
         }
         return !heap.empty();
       };
+
+  // find index of a row within a list
+  auto findRowIndex = [](HighsInt row,
+                         const std::vector<FmeRow>& rows) -> HighsInt {
+    for (HighsInt i = 0; i < static_cast<HighsInt>(rows.size()); ++i)
+      if (rows[i].row == row) return i;
+    return -1;
+  };
+
+  auto collectRows = [&](const std::vector<HighsInt>& rows) {
+    std::vector<FmeRow> result;
+    for (HighsInt r : rows) {
+      if (r < 0) continue;
+      result.push_back(
+          {r, model->row_lower_[r], model->row_upper_[r], getRowVector(r)});
+    }
+    return result;
+  };
 
   // collect candidate variables
   std::vector<HighsInt> candidates;
@@ -7338,7 +7360,7 @@ HPresolve::Result HPresolve::fourierMotzkin(
 
   // heapify
   for (HighsInt i = static_cast<HighsInt>(heap.size()) / 2 - 1; i >= 0; --i)
-    heapBubbleDown(heap, heapPos, i);
+    heapSiftDown(heap, heapPos, i);
 
   // vectors for computing new row entries
   std::vector<newRowEntry> newRowEntries;
@@ -7346,6 +7368,18 @@ HPresolve::Result HPresolve::fourierMotzkin(
 
   // vector for storing new rows
   std::vector<newRow> newRows;
+
+  // workspace for filtering new rows
+  struct NewRowOrigin {
+    HighsInt plusRow;
+    HighsInt minusRow;
+    double plusScale;
+    double minusScale;
+  };
+  std::vector<double> rowLower;
+  std::vector<double> rowUpper;
+  std::vector<std::vector<row_entry>> rowEntries;
+  std::vector<NewRowOrigin> newRowOrigins;
 
   // vector for saving affected candidates
   std::vector<HighsInt> saveAffectedCols;
@@ -7356,9 +7390,6 @@ HPresolve::Result HPresolve::fourierMotzkin(
   HighsInt numRowsAdded = 0;
 
   // FM block data for postsolve
-  using FmeRow = HighsPostsolveStack::FmeRowData<HighsTripletTreeSlicePreOrder>;
-  using FmeDescendant = HighsPostsolveStack::FmeDescendant;
-  using FmeNewRow = HighsPostsolveStack::FmeNewRow;
   std::vector<HighsInt> blockCols;
   std::vector<double> blockColLowers;
   std::vector<double> blockColUppers;
@@ -7376,6 +7407,20 @@ HPresolve::Result HPresolve::fourierMotzkin(
     bool isMinus;
   };
   std::unordered_map<HighsInt, std::vector<AncestryEntry>> rowAncestry;
+
+  auto inheritAncestry = [&](HighsInt parentRow, HighsInt parentRowIndex,
+                             HighsInt stepIndex, double scale, bool isMinus,
+                             std::vector<AncestryEntry>& newAnc) {
+    if (parentRow < 0) return;
+    auto it = rowAncestry.find(parentRow);
+    if (it != rowAncestry.end()) {
+      for (const auto& a : it->second)
+        newAnc.push_back(
+            {a.step, a.parentRowIndex, a.scale * scale, a.isMinus});
+    }
+    if (parentRowIndex >= 0)
+      newAnc.push_back({stepIndex, parentRowIndex, scale, isMinus});
+  };
 
   // main loop: eliminate variables from heap
   while (!heap.empty()) {
@@ -7442,16 +7487,10 @@ HPresolve::Result HPresolve::fourierMotzkin(
     }
 
     // add new rows, filtering out redundant ones
-    struct NewRowOrigin {
-      HighsInt plusRow;
-      HighsInt minusRow;
-      double plusScale;
-      double minusScale;
-    };
-    std::vector<double> rowLower;
-    std::vector<double> rowUpper;
-    std::vector<std::vector<row_entry>> rowEntries;
-    std::vector<NewRowOrigin> newRowOrigins;
+    rowLower.clear();
+    rowUpper.clear();
+    rowEntries.clear();
+    newRowOrigins.clear();
 
     for (const auto& nr : newRows) {
       bool redundant = false;
@@ -7470,15 +7509,7 @@ HPresolve::Result HPresolve::fourierMotzkin(
     }
 
     // serialize row data for postsolve before addToMatrix invalidates slices
-    auto collectRows = [&](const std::vector<HighsInt>& rows) {
-      std::vector<FmeRow> result;
-      for (HighsInt r : rows) {
-        if (r < 0) continue;
-        result.push_back(
-            {r, model->row_lower_[r], model->row_upper_[r], getRowVector(r)});
-      }
-      return result;
-    };
+
     std::vector<FmeRow> plusRows = collectRows(iPlus);
     std::vector<FmeRow> minusRows = collectRows(iMinus);
 
@@ -7497,28 +7528,6 @@ HPresolve::Result HPresolve::fourierMotzkin(
     if (!addToMatrix(postsolve_stack, rowLower, rowUpper, rowEntries))
       return finalise();
     numRowsAdded += static_cast<HighsInt>(rowEntries.size());
-
-    // find index of a row within a list
-    auto findRowIndex = [](HighsInt row,
-                           const std::vector<FmeRow>& rows) -> HighsInt {
-      for (HighsInt i = 0; i < static_cast<HighsInt>(rows.size()); ++i)
-        if (rows[i].row == row) return i;
-      return -1;
-    };
-
-    auto inheritAncestry = [&](HighsInt parentRow, HighsInt parentRowIndex,
-                               HighsInt stepIndex, double scale, bool isMinus,
-                               std::vector<AncestryEntry>& newAnc) {
-      if (parentRow < 0) return;
-      auto it = rowAncestry.find(parentRow);
-      if (it != rowAncestry.end()) {
-        for (const auto& a : it->second)
-          newAnc.push_back(
-              {a.step, a.parentRowIndex, a.scale * scale, a.isMinus});
-      }
-      if (parentRowIndex >= 0)
-        newAnc.push_back({stepIndex, parentRowIndex, scale, isMinus});
-    };
 
     // build FmeNewRow data and ancestry for this step
     std::vector<FmeNewRow> stepNewRows;
@@ -7576,7 +7585,7 @@ HPresolve::Result HPresolve::fourierMotzkin(
         // new candidate -> insert into heap
         heapPos[k] = static_cast<HighsInt>(heap.size());
         heap.push_back({k, ne, mr});
-        heapBubbleUp(heap, heapPos, heapPos[k]);
+        heapSiftUp(heap, heapPos, heapPos[k]);
       } else {
         // update heap
         heapUpdate(heap, heapPos, k, ne, mr);
