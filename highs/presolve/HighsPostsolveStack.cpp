@@ -1510,9 +1510,9 @@ void HighsPostsolveStack::undoFourierMotzkinBlock(
     tightenBounds(step.plusHeaders, step.plusCoefs, step.plusEntries);
     tightenBounds(step.minusHeaders, step.minusCoefs, step.minusEntries);
 
-    if (impliedLower <= 0.0 && impliedUpper >= 0.0)
+    if (impliedLower == -kHighsInf && impliedUpper == kHighsInf)
       solution.col_value[col] = 0.0;
-    else if (impliedLower > 0.0)
+    else if (impliedLower != -kHighsInf)
       solution.col_value[col] = impliedLower;
     else
       solution.col_value[col] = impliedUpper;
@@ -1556,7 +1556,7 @@ void HighsPostsolveStack::undoFourierMotzkinBlock(
   // basis postsolve (Algorithm 5): process in reverse elimination order
   if (!basis.valid) return;
 
-  const double tol = options.primal_feasibility_tolerance;
+  const double tol = options.mip_feasibility_tolerance;
 
   for (HighsInt s = numSteps - 1; s >= 0; --s) {
     const auto& step = steps[s];
@@ -1592,16 +1592,15 @@ void HighsPostsolveStack::undoFourierMotzkinBlock(
       if (nr.minusParentIdx >= 0) minusInvolved[nr.minusParentIdx] = true;
     }
 
-    // default: x_j is nonbasic at the value assigned by primal postsolve
-    if (solution.col_value[col] == 0.0 && step.header.colLower <= 0.0 &&
-        step.header.colUpper >= 0.0)
+    // default: x_j is non-basic at the value assigned by primal postsolve
+    if (step.header.colLower == -kHighsInf && step.header.colUpper == kHighsInf)
       basis.col_status[col] = HighsBasisStatus::kZero;
-    else if (solution.col_value[col] == step.header.colLower)
+    else if (solution.col_value[col] <= step.header.colLower + tol)
       basis.col_status[col] = HighsBasisStatus::kLower;
-    else if (solution.col_value[col] == step.header.colUpper)
+    else if (solution.col_value[col] >= step.header.colUpper - tol)
       basis.col_status[col] = HighsBasisStatus::kUpper;
     else
-      basis.col_status[col] = HighsBasisStatus::kNonbasic;
+      basis.col_status[col] = HighsBasisStatus::kBasic;
 
     // process new rows in reverse order (highest index first = Algorithm 5)
     for (HighsInt k = static_cast<HighsInt>(step.newRows.size()) - 1; k >= 0;
@@ -1613,7 +1612,7 @@ void HighsPostsolveStack::undoFourierMotzkinBlock(
       bool newRowBasic = basis.row_status[nr.row] == HighsBasisStatus::kBasic;
 
       if (!newRowBasic) {
-        // non-basic propagation: both parent rows become nonbasic
+        // non-basic propagation: both parent rows become non-basic
         if (pIdx >= 0)
           basis.row_status[step.plusHeaders[pIdx].row] =
               HighsBasisStatus::kNonbasic;
