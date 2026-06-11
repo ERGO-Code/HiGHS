@@ -521,7 +521,7 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
     halpern_iteration_ = 0;
   }
 
-  #ifdef CUPDLP_GPU
+#ifdef CUPDLP_GPU
   if (!params_.use_halpern_restart) {
     CUDA_CHECK(cudaMemset(d_x_sum_, 0, lp_.num_col_ * sizeof(double)));
     CUDA_CHECK(cudaMemset(d_y_sum_, 0, lp_.num_row_ * sizeof(double)));
@@ -531,11 +531,9 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
   sum_weights_gpu_ = 0.0;
 
   CUDA_CHECK(cudaMemcpy(d_x_current_, x_current_.data(),
-                        lp_.num_col_ * sizeof(double),
-                        cudaMemcpyHostToDevice));
+                        lp_.num_col_ * sizeof(double), cudaMemcpyHostToDevice));
   CUDA_CHECK(cudaMemcpy(d_y_current_, y_current_.data(),
-                        lp_.num_row_ * sizeof(double),
-                        cudaMemcpyHostToDevice));
+                        lp_.num_row_ * sizeof(double), cudaMemcpyHostToDevice));
 
   if (params_.use_halpern_restart) {
     CUDA_CHECK(cudaMemcpy(d_x_anchor_, d_x_current_,
@@ -548,10 +546,10 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
 
   linalgGpuAx(d_x_current_, d_ax_current_);
   linalgGpuATy(d_y_current_, d_aty_current_);
-  #else
+#else
   linalg::ax(lp_, x_current_, Ax_cache_);
   linalg::aTy(lp_, y_current_, ATy_cache_);
-  #endif
+#endif
 
   TerminationStatus termination_status = TerminationStatus::NOTSET;
   bool do_restart = false;
@@ -834,10 +832,9 @@ bool PDLPSolver::runConvergenceCheck(size_t iter, std::vector<double>& output_x,
         current_results, "[L]", dSlackPos_, dSlackNeg_);
   }
   if (!params_.use_halpern_restart) {
-    average_converged =
-        checkConvergence(iter, x_avg_, y_avg_, Ax_avg_, ATy_avg_,
-                         params_.tolerance, average_results, "[A]",
-                         dSlackPosAvg_, dSlackNegAvg_);
+    average_converged = checkConvergence(
+        iter, x_avg_, y_avg_, Ax_avg_, ATy_avg_, params_.tolerance,
+        average_results, "[A]", dSlackPosAvg_, dSlackNegAvg_);
   }
 #endif
 
@@ -1706,12 +1703,12 @@ double PDLPSolver::powerMethodGpu() {
   cusparseDnVecDescr_t vecEigen = nullptr;
   cusparseDnVecDescr_t vecNextEigen = nullptr;
   cusparseDnVecDescr_t vecDual = nullptr;
-  CUSPARSE_CHECK(cusparseCreateDnVec(&vecEigen, a_num_rows_, d_eigenvector,
-                                     CUDA_R_64F));
+  CUSPARSE_CHECK(
+      cusparseCreateDnVec(&vecEigen, a_num_rows_, d_eigenvector, CUDA_R_64F));
   CUSPARSE_CHECK(cusparseCreateDnVec(&vecNextEigen, a_num_rows_,
                                      d_next_eigenvector, CUDA_R_64F));
-  CUSPARSE_CHECK(cusparseCreateDnVec(&vecDual, a_num_cols_, d_dual_product,
-                                     CUDA_R_64F));
+  CUSPARSE_CHECK(
+      cusparseCreateDnVec(&vecDual, a_num_cols_, d_dual_product, CUDA_R_64F));
 
   CUSPARSE_CHECK(cusparseSpMV_bufferSize(
       cusparse_handle_, CUSPARSE_OPERATION_NON_TRANSPOSE, &one, mat_a_T_csr_,
@@ -1744,18 +1741,16 @@ double PDLPSolver::powerMethodGpu() {
     CUSPARSE_CHECK(cusparseDnVecSetValues(vecNextEigen, d_next_eigenvector));
     CUSPARSE_CHECK(cusparseDnVecSetValues(vecDual, d_dual_product));
 
-    CUSPARSE_CHECK(cusparseSpMV(cusparse_handle_,
-                                CUSPARSE_OPERATION_NON_TRANSPOSE, &one,
-                                mat_a_T_csr_, vecNextEigen, &zero, vecDual,
-                                CUDA_R_64F, CUSPARSE_SPMV_CSR_ALG2,
-                                d_buffer_at));
+    CUSPARSE_CHECK(
+        cusparseSpMV(cusparse_handle_, CUSPARSE_OPERATION_NON_TRANSPOSE, &one,
+                     mat_a_T_csr_, vecNextEigen, &zero, vecDual, CUDA_R_64F,
+                     CUSPARSE_SPMV_CSR_ALG2, d_buffer_at));
 
     CUSPARSE_CHECK(cusparseDnVecSetValues(vecEigen, d_eigenvector));
-    CUSPARSE_CHECK(cusparseSpMV(cusparse_handle_,
-                                CUSPARSE_OPERATION_NON_TRANSPOSE, &one,
-                                mat_a_csr_, vecDual, &zero, vecEigen,
-                                CUDA_R_64F, CUSPARSE_SPMV_CSR_ALG2,
-                                d_buffer_a));
+    CUSPARSE_CHECK(
+        cusparseSpMV(cusparse_handle_, CUSPARSE_OPERATION_NON_TRANSPOSE, &one,
+                     mat_a_csr_, vecDual, &zero, vecEigen, CUDA_R_64F,
+                     CUSPARSE_SPMV_CSR_ALG2, d_buffer_a));
 
     CUBLAS_CHECK(cublasDdot(cublas_handle_, a_num_rows_, d_next_eigenvector, 1,
                             d_eigenvector, 1, &sigma_max_sq));
