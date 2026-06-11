@@ -7509,10 +7509,10 @@ HPresolve::Result HPresolve::fourierMotzkin(
     }
 
     // serialize row data for postsolve before addToMatrix invalidates slices
-
     std::vector<FmeRow> plusRows = collectRows(iPlus);
     std::vector<FmeRow> minusRows = collectRows(iMinus);
 
+    // push row data for this elimination step onto the postsolve stack
     postsolve_stack.fourierMotzkinBlockPushStep(col, plusRows, minusRows);
 
     // save block metadata
