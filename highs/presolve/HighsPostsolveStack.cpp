@@ -1536,7 +1536,7 @@ void HighsPostsolveStack::undoFourierMotzkinBlock(
             for (const auto& desc : descendants[r])
               dual += static_cast<HighsCDouble>(solution.row_dual[desc.row]) *
                       desc.scaleFactor;
-            solution.row_dual[headers[r].row] = static_cast<double>(dual);
+            solution.row_dual[headers[r].row] += static_cast<double>(dual);
           }
         };
     recoverDual(step.plusHeaders, step.plusDescendants);
