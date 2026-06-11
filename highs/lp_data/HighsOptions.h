@@ -1214,9 +1214,8 @@ class HighsOptions : public HighsOptionsStruct {
     records.push_back(record_bool);
 
     record_bool =
-        new OptionRecordBool("mip_heuristic_run_rko",
-                             "Use the RKO heuristic", advanced,
-                             &mip_heuristic_run_rko, true);
+        new OptionRecordBool("mip_heuristic_run_rko", "Use the RKO heuristic",
+                             advanced, &mip_heuristic_run_rko, true);
     records.push_back(record_bool);
 
     record_bool =

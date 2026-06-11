@@ -349,16 +349,14 @@ void HighsMipSolverData::rko() {
   // Only relevant for pure binary MIPs
   const HighsLp* model = this->mipsolver.model_;
   if (objectiveFunction.getNumBinariesInObjective() != model->num_col_) return;
-  
-  const HighsLogOptions& log_options = mipsolver.options_mip_->log_options;
+
   std::vector<double> col_value(model->num_col_, 0.0);
   bool found_integer_feasible_solution = rkoHeuristic(model, col_value);
-  if (found_integer_feasible_solution) {
-    // Initial assignments that violate integrality or column bounds can lead to
-    // infeasible results. Even if those initial assignments should not occur,
-    // use trySolution rather than addIncumbent for an explicit check.
+  // Initial assignments that violate integrality or column bounds can lead to
+  // infeasible results. Even if those initial assignments should not occur,
+  // use trySolution rather than addIncumbent for an explicit check.
+  if (found_integer_feasible_solution)
     trySolution(col_value, kSolutionSourceRko);
-  }
 }
 
 void HighsMipSolverData::startAnalyticCenterComputation(
@@ -770,6 +768,8 @@ void HighsMipSolverData::runMipPresolve(
     const HighsInt presolve_reduction_limit) {
   mipsolver.timer_.start(mipsolver.timer_.presolve_clock);
   presolve::HPresolve presolve;
+  // NB mipsolver.model_ is const, but mipdata_->presolvedModel is the
+  // same memory space, but non-const!
   if (!presolve.okSetInput(mipsolver, presolve_reduction_limit)) {
     mipsolver.modelstatus_ = HighsModelStatus::kMemoryLimit;
     presolve_status = HighsPresolveStatus::kOutOfMemory;
@@ -779,6 +779,10 @@ void HighsMipSolverData::runMipPresolve(
   }
   mipsolver.timer_.stop(mipsolver.timer_.presolve_clock);
 
+  // Check whether MIP type is lost
+  if (mipsolver.mipdata_->presolvedModel.mip_type_ == kMipTypeKnapsack &&
+      !mipsolver.mipdata_->presolvedModel.isKnapsack())
+    mipsolver.mipdata_->presolvedModel.mip_type_ = kMipTypeNone;
   // Report the final presolve reductions unless this is a restart
   if (mipsolver.options_mip_->presolve != kHighsOffString && numRestarts == 0)
     reportPresolveReductions(mipsolver.options_mip_->log_options,

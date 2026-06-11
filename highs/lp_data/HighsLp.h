@@ -46,6 +46,7 @@ class HighsLp {
   std::vector<std::string> row_names_;
 
   std::vector<HighsVarType> integrality_;
+  HighsInt mip_type_ = kMipTypeNone;
 
   HighsNameHash col_hash_;
   HighsNameHash row_hash_;
@@ -64,6 +65,7 @@ class HighsLp {
   bool equalNames(const HighsLp& lp) const;
   bool equalScaling(const HighsLp& lp) const;
   bool isMip() const;
+  bool isKnapsack() const;
   bool hasSemiVariables() const;
   bool hasInfiniteCost(const double infinite_cost) const;
   bool hasMods() const;

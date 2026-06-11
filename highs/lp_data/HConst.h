@@ -108,6 +108,8 @@ enum class HighsOptionType { kBool = 0, kInt, kDouble, kString };
 
 enum class HighsInfoType { kInt64 = -1, kInt = 1, kDouble };
 
+enum MipType { kMipTypeNone = 0, kMipTypeKnapsack };
+
 enum OptionOffChooseOn {
   kHighsOptionOff = -1,
   kHighsOptionChoose,

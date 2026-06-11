@@ -1461,6 +1461,7 @@ TEST_CASE("issue-2975", "[highs_test_mip_solver]") {
 }
 
 TEST_CASE("rko-knapsack", "[highs_test_mip_solver]") {
+  // Data for value and size of knapsack items - taken from kp50.txt
   std::vector<double> value = {7, 4, 4, 6, 2, 3, 7, 3, 2, 8, 4, 2, 9,
                                8, 3, 5, 6, 7, 7, 9, 1, 3, 5, 3, 2, 6,
                                8, 3, 3, 1, 4, 7, 9, 7, 7, 7, 5, 3, 2,
@@ -1478,6 +1479,7 @@ TEST_CASE("rko-knapsack", "[highs_test_mip_solver]") {
   lp.col_lower_.assign(dim, 0);
   lp.col_upper_.assign(dim, 1);
   lp.integrality_.assign(dim, HighsVarType::kInteger);
+  lp.mip_type_ = kMipTypeKnapsack;
   lp.row_lower_ = {-kHighsInf};
   lp.row_upper_ = {limit};
   lp.a_matrix_.format_ = MatrixFormat::kRowwise;
@@ -1485,9 +1487,14 @@ TEST_CASE("rko-knapsack", "[highs_test_mip_solver]") {
   lp.a_matrix_.value_ = size;
   lp.a_matrix_.index_.resize(dim);
   for (HighsInt iCol = 0; iCol < dim; iCol++) lp.a_matrix_.index_[iCol] = iCol;
+  REQUIRE(lp.isKnapsack());
   Highs h;
+  // Switch off MIP presolve, since presolved problem is not knapsack
   h.setOptionValue(kPresolveString, kHighsOffString);
+  // Pass the model to HiGHS
   h.passModel(lp);
+  // Solve the model
   h.run();
+
   h.resetGlobalScheduler(true);
 }

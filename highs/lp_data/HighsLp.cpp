@@ -25,6 +25,37 @@ bool HighsLp::isMip() const {
   return false;
 }
 
+bool HighsLp::isKnapsack() const {
+  if (!this->isMip()) return false;
+  if (this->num_row_ != 1) return false;
+  if (this->row_lower_[0] > 0) return false;
+  if (this->row_upper_[0] >= kHighsInf) return false;
+  const bool is_rowwise = this->a_matrix_.isRowwise();
+  HighsInt sense = this->sense_ == ObjSense::kMinimize ? 1 : -1;
+  if (is_rowwise) {
+    if (this->a_matrix_.start_[1] != this->num_col_) return false;
+    for (HighsInt iCol = 0; iCol < this->num_col_; iCol++)
+      if (this->a_matrix_.index_[iCol] != iCol) return false;
+  } else {
+    for (HighsInt iCol = 0; iCol < this->num_col_; iCol++) {
+      if (this->a_matrix_.start_[iCol] != iCol) return false;
+      if (this->a_matrix_.index_[iCol] != 0) return false;
+    }
+    if (this->a_matrix_.start_[this->num_col_] != this->num_col_) return false;
+  }
+  for (HighsInt iCol = 0; iCol < this->num_col_; iCol++)
+    if (this->a_matrix_.value_[iCol] <= 0) return false;
+  // Ensure that all variables are binary, and that costs are
+  // non-negative for maximization (sense = -1) and non-positive for
+  // minimization (sense = 1)
+  for (HighsInt iCol = 0; iCol < this->num_col_; iCol++) {
+    if (this->integrality_[iCol] != HighsVarType::kInteger ||
+        sense * this->col_cost_[iCol] >= 0 || this->col_lower_[iCol] != 0 ||
+        this->col_upper_[iCol] != 1)
+      return false;
+  }
+  return true;
+}
 bool HighsLp::hasInfiniteCost(const double infinite_cost) const {
   for (HighsInt iCol = 0; iCol < this->num_col_; iCol++) {
     if (this->col_cost_[iCol] >= infinite_cost) return true;
@@ -217,6 +248,7 @@ void HighsLp::clear() {
   this->row_names_.clear();
 
   this->integrality_.clear();
+  this->mip_type_ = kMipTypeNone;
 
   this->col_hash_.clear();
   this->row_hash_.clear();
