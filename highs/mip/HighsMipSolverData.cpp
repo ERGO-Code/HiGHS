@@ -14,6 +14,7 @@
 #include "lp_data/HighsModelUtils.h"
 #include "mip/HighsPseudocost.h"
 #include "mip/HighsRedcostFixing.h"
+#include "mip/HighsRko.h"
 #include "mip/MipTimer.h"
 #include "parallel/HighsParallel.h"
 #include "presolve/HPresolve.h"
@@ -45,6 +46,9 @@ std::string HighsMipSolverData::solutionSourceToString(
   } else if (solution_source == kSolutionSourceFeasibilityJump) {
     if (code) return "J";
     return "Feasibility jump";
+  } else if (solution_source == kSolutionSourceRko) {
+    if (code) return "K";
+    return "RKO";
   } else if (solution_source == kSolutionSourceSubMip) {
     if (code) return "L";
     return "Sub-MIP";
@@ -339,6 +343,22 @@ HighsModelStatus HighsMipSolverData::trivialHeuristics() {
     }
   }
   return HighsModelStatus::kNotset;
+}
+
+void HighsMipSolverData::rko() {
+  // Only relevant for pure binary MIPs
+  const HighsLp* model = this->mipsolver.model_;
+  if (objectiveFunction.getNumBinariesInObjective() != model->num_col_) return;
+  
+  const HighsLogOptions& log_options = mipsolver.options_mip_->log_options;
+  std::vector<double> col_value(model->num_col_, 0.0);
+  bool found_integer_feasible_solution = rkoHeuristic(model, col_value);
+  if (found_integer_feasible_solution) {
+    // Initial assignments that violate integrality or column bounds can lead to
+    // infeasible results. Even if those initial assignments should not occur,
+    // use trySolution rather than addIncumbent for an explicit check.
+    trySolution(col_value, kSolutionSourceRko);
+  }
 }
 
 void HighsMipSolverData::startAnalyticCenterComputation(
@@ -1599,7 +1619,7 @@ void HighsMipSolverData::printSolutionSourceKey() const {
   // Set the index of the last solution source to be printed in each
   // line of the key. Four or five can be printed, depending on the
   // lengths of the solution source strings in that line
-  std::vector<int> limits = {4, 9, 14, last_enum};
+  std::vector<int> limits = {4, 9, 13, 17, last_enum};
   assert(last_enum > limits[limits.size() - 2]);
 
   ss.str(std::string());

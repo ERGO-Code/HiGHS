@@ -49,6 +49,7 @@ enum MipSolutionSource : int {
   kSolutionSourceHeuristic,           // H
   kSolutionSourceShifting,            // I
   kSolutionSourceFeasibilityJump,     // J
+  kSolutionSourceRko,                 // K
   kSolutionSourceSubMip,              // L
   kSolutionSourceEmptyMip,            // P
   kSolutionSourceRandomizedRounding,  // R
@@ -219,6 +220,7 @@ struct HighsMipSolverData {
   bool solutionRowFeasible(const std::vector<double>& solution) const;
   HighsModelStatus feasibilityJump();
   HighsModelStatus trivialHeuristics();
+  void rko();
 
   void startAnalyticCenterComputation(
       const highs::parallel::TaskGroup& taskGroup);

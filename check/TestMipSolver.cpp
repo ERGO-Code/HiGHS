@@ -1486,6 +1486,7 @@ TEST_CASE("rko-knapsack", "[highs_test_mip_solver]") {
   lp.a_matrix_.index_.resize(dim);
   for (HighsInt iCol = 0; iCol < dim; iCol++) lp.a_matrix_.index_[iCol] = iCol;
   Highs h;
+  h.setOptionValue(kPresolveString, kHighsOffString);
   h.passModel(lp);
   h.run();
   h.resetGlobalScheduler(true);

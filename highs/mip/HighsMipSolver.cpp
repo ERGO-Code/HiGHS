@@ -174,6 +174,12 @@ restart:
         return;
       }
     }
+    // Apply the RKO heuristic (if enabled)
+    if (options_mip_->mip_heuristic_run_rko) {
+      //      analysis_.mipTimerStart(kMipClockRko);
+      mipdata_->rko();
+      //      analysis_.mipTimerStop(kMipClockRko);
+    }
     // End of pre-root-node heuristics
     if (analysis_.analyse_mip_time && !submip)
       highsLogUser(options_mip_->log_options, HighsLogType::kInfo,

@@ -278,6 +278,7 @@ _srcs = [
     'mip/HighsPrimalHeuristics.cpp',
     'mip/HighsPseudocost.cpp',
     'mip/HighsRedcostFixing.cpp',
+    'mip/HighsRko.cpp',
     'mip/HighsSearch.cpp',
     'mip/HighsSeparation.cpp',
     'mip/HighsSeparator.cpp',

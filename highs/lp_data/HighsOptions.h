@@ -486,6 +486,7 @@ struct HighsOptionsStruct {
   double mip_abs_gap;
   double mip_heuristic_effort;
   bool mip_heuristic_run_feasibility_jump;
+  bool mip_heuristic_run_rko;
   bool mip_heuristic_run_rins;
   bool mip_heuristic_run_rens;
   bool mip_heuristic_run_root_reduced_cost;
@@ -647,6 +648,7 @@ struct HighsOptionsStruct {
         mip_abs_gap(0.0),
         mip_heuristic_effort(0.0),
         mip_heuristic_run_feasibility_jump(false),
+        mip_heuristic_run_rko(false),
         mip_heuristic_run_rins(false),
         mip_heuristic_run_rens(false),
         mip_heuristic_run_root_reduced_cost(false),
@@ -1209,6 +1211,12 @@ class HighsOptions : public HighsOptionsStruct {
         new OptionRecordBool("mip_heuristic_run_feasibility_jump",
                              "Use the feasibility jump heuristic", advanced,
                              &mip_heuristic_run_feasibility_jump, true);
+    records.push_back(record_bool);
+
+    record_bool =
+        new OptionRecordBool("mip_heuristic_run_rko",
+                             "Use the RKO heuristic", advanced,
+                             &mip_heuristic_run_rko, true);
     records.push_back(record_bool);
 
     record_bool =
