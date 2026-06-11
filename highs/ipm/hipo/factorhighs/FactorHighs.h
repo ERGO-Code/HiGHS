@@ -47,11 +47,10 @@ Then, the factorization is performed as follows.
     FH.solve(x);
 
 Printing to screen is achieved using the interface in auxiliary/Logger.h.
-Use setLogging to pass the Logger object to use: FH.setLogging(&logger).
-To use printf instead, use FH.setLogging(nullptr,true).
-Logging is off by default. Use FH.setLogging(nullptr,false) to switch logging
+Use setLogger to pass the Logger object to use: FH.setLogger(&logger).
+To use printf instead, use FH.setLogger(nullptr,true).
+Logging is off by default. Use FH.setLogger(nullptr, false) to switch logging
 off.
-
 
 To add static regularisation when the pivots are selected, use
 setRegularisation(reg_p,reg_d) to choose values of primal and dual
@@ -123,8 +122,8 @@ class FHsolver {
   // Pass the Logger object to be used for logging. Alternatively, printf can be
   // used for logging, by passing a nullptr and setting use_printf to true.
   // By default, logging is off.
-  void setLogging(const Logger* logger = nullptr, bool use_printf = false);
-  const Logger* getLogging() const { return logger_; }
+  void setLogger(const Logger* logger = nullptr, bool use_printf = false);
+  const Logger* getLogger() const { return logger_; }
 
   // Compute number of positive, negative and zero pivots, using tol as
   // tolerance for zero.

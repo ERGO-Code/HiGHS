@@ -13,9 +13,7 @@
 extern "C" {
 #endif
 
-// Initialise/terminate parallel scheduler and link BLAS.
-// Returns 0 if something went wrong.
-HighsInt FactorHighs_initialise(void);
+HighsInt FactorHighs_initialise(HighsInt threads);
 void FactorHighs_terminate(void);
 
 void* FactorHighs_symbolic_create(void);

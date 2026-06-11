@@ -4,8 +4,8 @@
 #include "HighsExternalApi.h"
 #include "parallel/HighsParallel.h"
 
-HighsInt FactorHighs_initialise(void) {
-  highs::parallel::initialize_scheduler();
+HighsInt FactorHighs_initialise(HighsInt threads) {
+  highs::parallel::initialize_scheduler(threads);
   return !HighsExternalApi::isAvailable<HighsExtras::hipo>();
 }
 
@@ -54,7 +54,7 @@ void FactorHighs_setPivoting(void* FH, HighsInt pivoting) {
 }
 
 void FactorHighs_setLogging(void* FH, int display) {
-  ((hipo::FHsolver*)FH)->setLogging(nullptr, display);
+  ((hipo::FHsolver*)FH)->setLogger(nullptr, display);
 }
 
 void FactorHighs_inertia(void* FH, HighsInt* pos, HighsInt* neg, HighsInt* zero,
@@ -63,5 +63,5 @@ void FactorHighs_inertia(void* FH, HighsInt* pos, HighsInt* neg, HighsInt* zero,
 }
 
 void FactorHighs_symbolic_print(void* FH, void* S, int verbose) {
-  ((hipo::Symbolic*)S)->print(*(((hipo::FHsolver*)FH)->getLogging()), verbose);
+  ((hipo::Symbolic*)S)->print(*(((hipo::FHsolver*)FH)->getLogger()), verbose);
 }

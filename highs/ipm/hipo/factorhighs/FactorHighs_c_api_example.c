@@ -37,8 +37,9 @@ int main() {
                          -0.677966101694915, 0.186440677966102,
                          5.677966101694915};
 
-  // initialise
-  int initialise_status = FactorHighs_initialise();
+  // initialise with default number of threads
+  const int num_threads = 0;
+  int initialise_status = FactorHighs_initialise(num_threads);
   if (initialise_status) return 1;
   void* S = FactorHighs_symbolic_create();
   void* FH = FactorHighs_create();
