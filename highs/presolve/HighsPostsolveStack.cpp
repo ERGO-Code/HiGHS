@@ -1542,14 +1542,21 @@ void HighsPostsolveStack::undoFourierMotzkinBlock(
     recoverDual(step.plusHeaders, step.plusDescendants);
     recoverDual(step.minusHeaders, step.minusDescendants);
 
-    // col_dual = cost - Σ a_{ij} * row_dual[i]
+    // col_dual = cost - Σ a_{ij} * row_dual[i] (each row counted once)
     HighsCDouble colDual = step.header.colCost;
-    for (HighsInt r = 0; r < numPlus; ++r)
-      colDual -= static_cast<HighsCDouble>(step.plusCoefs[r]) *
-                 solution.row_dual[step.plusHeaders[r].row];
-    for (HighsInt r = 0; r < numMinus; ++r)
+    std::vector<bool> visited(solution.row_dual.size(), false);
+    for (HighsInt r = 0; r < numPlus; ++r) {
+      HighsInt row = step.plusHeaders[r].row;
+      colDual -=
+          static_cast<HighsCDouble>(step.plusCoefs[r]) * solution.row_dual[row];
+      visited[row] = true;
+    }
+    for (HighsInt r = 0; r < numMinus; ++r) {
+      HighsInt row = step.minusHeaders[r].row;
+      if (visited[row]) continue;
       colDual -= static_cast<HighsCDouble>(step.minusCoefs[r]) *
-                 solution.row_dual[step.minusHeaders[r].row];
+                 solution.row_dual[row];
+    }
     solution.col_dual[col] = static_cast<double>(colDual);
   }
 
