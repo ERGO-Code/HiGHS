@@ -1618,50 +1618,40 @@ void HighsPostsolveStack::undoFourierMotzkinBlock(
       HighsInt pIdx = nr.plusParentIdx;
       HighsInt mIdx = nr.minusParentIdx;
 
-      bool newRowBasic = basis.row_status[nr.row] == HighsBasisStatus::kBasic;
+      if (basis.row_status[nr.row] != HighsBasisStatus::kBasic) continue;
 
-      if (!newRowBasic) {
-        // non-basic propagation: both parent rows become non-basic
+      // basic propagation: determine which parent gets the basic status
+      double pSlack =
+          pIdx >= 0
+              ? computeSlack(step.plusHeaders, step.plusCoefs, step.plusEntries,
+                             pIdx)
+              : std::max(step.header.colUpper - solution.col_value[col], 0.0);
+      double mSlack =
+          mIdx >= 0
+              ? computeSlack(step.minusHeaders, step.minusCoefs,
+                             step.minusEntries, mIdx)
+              : std::max(solution.col_value[col] - step.header.colLower, 0.0);
+
+      if (pSlack > tol && mSlack <= tol) {
         if (pIdx >= 0)
           basis.row_status[step.plusHeaders[pIdx].row] =
-              HighsBasisStatus::kNonbasic;
+              HighsBasisStatus::kBasic;
+        else
+          basis.col_status[col] = HighsBasisStatus::kBasic;
+      } else if (mSlack > tol && pSlack <= tol) {
         if (mIdx >= 0)
           basis.row_status[step.minusHeaders[mIdx].row] =
-              HighsBasisStatus::kNonbasic;
-      } else {
-        // basic propagation: determine which parent gets the basic status
-        double pSlack =
-            pIdx >= 0
-                ? computeSlack(step.plusHeaders, step.plusCoefs,
-                               step.plusEntries, pIdx)
-                : std::max(step.header.colUpper - solution.col_value[col], 0.0);
-        double mSlack =
-            mIdx >= 0
-                ? computeSlack(step.minusHeaders, step.minusCoefs,
-                               step.minusEntries, mIdx)
-                : std::max(solution.col_value[col] - step.header.colLower, 0.0);
-
-        if (pSlack > tol && mSlack <= tol) {
-          if (pIdx >= 0)
-            basis.row_status[step.plusHeaders[pIdx].row] =
-                HighsBasisStatus::kBasic;
-          else
-            basis.col_status[col] = HighsBasisStatus::kBasic;
-        } else if (mSlack > tol && pSlack <= tol) {
-          if (mIdx >= 0)
-            basis.row_status[step.minusHeaders[mIdx].row] =
-                HighsBasisStatus::kBasic;
-          else
-            basis.col_status[col] = HighsBasisStatus::kBasic;
-        } else if (pSlack > tol) {
-          if (pIdx >= 0)
-            basis.row_status[step.plusHeaders[pIdx].row] =
-                HighsBasisStatus::kBasic;
-          else
-            basis.col_status[col] = HighsBasisStatus::kBasic;
-        } else {
+              HighsBasisStatus::kBasic;
+        else
           basis.col_status[col] = HighsBasisStatus::kBasic;
-        }
+      } else if (pSlack > tol) {
+        if (pIdx >= 0)
+          basis.row_status[step.plusHeaders[pIdx].row] =
+              HighsBasisStatus::kBasic;
+        else
+          basis.col_status[col] = HighsBasisStatus::kBasic;
+      } else {
+        basis.col_status[col] = HighsBasisStatus::kBasic;
       }
     }
 
