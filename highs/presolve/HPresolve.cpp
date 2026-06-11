@@ -7291,7 +7291,7 @@ HPresolve::Result HPresolve::fourierMotzkin(
     heapSiftDown(heap, heapPos, pos);
   };
 
-  auto buildHeap =
+  auto heapBuild =
       [&](const std::vector<HighsInt>& candidates, std::vector<candidate>& heap,
           std::vector<HighsInt>& heapPos, std::vector<HighsInt>& iPlus,
           std::vector<HighsInt>& iMinus, std::vector<HighsInt>& pPlus,
@@ -7351,7 +7351,7 @@ HPresolve::Result HPresolve::fourierMotzkin(
   std::vector<HighsInt> heapPos;
 
   // build initial heap
-  if (!buildHeap(candidates, heap, heapPos, iPlus, iMinus, pPlus, pMinus,
+  if (!heapBuild(candidates, heap, heapPos, iPlus, iMinus, pPlus, pMinus,
                  affectedCols))
     return finalise();
 
@@ -7365,7 +7365,7 @@ HPresolve::Result HPresolve::fourierMotzkin(
       candidates.clear();
       if (!computeCandidates(candidates)) return finalise();
       // re-build heap
-      if (!buildHeap(candidates, heap, heapPos, iPlus, iMinus, pPlus, pMinus,
+      if (!heapBuild(candidates, heap, heapPos, iPlus, iMinus, pPlus, pMinus,
                      affectedCols))
         return finalise();
       break;

@@ -1510,9 +1510,9 @@ void HighsPostsolveStack::undoFourierMotzkinBlock(
     tightenBounds(step.plusHeaders, step.plusCoefs, step.plusEntries);
     tightenBounds(step.minusHeaders, step.minusCoefs, step.minusEntries);
 
-    if (impliedLower == -kHighsInf && impliedUpper == kHighsInf)
+    if (impliedLower <= 0.0 && impliedUpper >= 0.0)
       solution.col_value[col] = 0.0;
-    else if (impliedLower != -kHighsInf)
+    else if (impliedLower > 0.0)
       solution.col_value[col] = impliedLower;
     else
       solution.col_value[col] = impliedUpper;
