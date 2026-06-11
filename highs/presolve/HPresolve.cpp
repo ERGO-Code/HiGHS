@@ -6962,7 +6962,7 @@ HPresolve::Result HPresolve::fourierMotzkin(
   // sentinel row indices for variable bounds and virtual objective row
   const HighsInt kUpperBoundRow = -2;
   const HighsInt kLowerBoundRow = -3;
-  const HighsInt kVirtualObjRow = -4;
+  const HighsInt kObjectiveRow = -4;
 
   auto acceptCoef = [&](double val) {
     double absval = std::abs(val);
@@ -6986,10 +6986,10 @@ HPresolve::Result HPresolve::fourierMotzkin(
     return !candidates.empty();
   };
 
-  auto checkRows = [&](HighsInt col, std::vector<HighsInt>& iPlus,
+  auto checkRows = [&](HighsInt col, const std::vector<HighsInt>& objRowCols,
+                       std::vector<HighsInt>& iPlus,
                        std::vector<HighsInt>& iMinus, int64_t& nePlus,
-                       int64_t& neMinus,
-                       const std::vector<HighsInt>& objRowCols) {
+                       int64_t& neMinus) {
     nePlus = 0;
     neMinus = 0;
     iPlus.clear();
@@ -7036,46 +7036,47 @@ HPresolve::Result HPresolve::fourierMotzkin(
     if (!objRowCols.empty() && model->col_cost_[col] != 0.0) {
       int64_t objRowSize = static_cast<int64_t>(objRowCols.size());
       if (model->col_cost_[col] > 0.0) {
-        iPlus.push_back(kVirtualObjRow);
+        iPlus.push_back(kObjectiveRow);
         nePlus += objRowSize;
       } else {
-        iMinus.push_back(kVirtualObjRow);
+        iMinus.push_back(kObjectiveRow);
         neMinus += objRowSize;
       }
     }
   };
 
   auto collectAffectedCols = [&](HighsInt col, const std::vector<HighsInt>& set,
+                                 const std::vector<HighsInt>& objRowCols,
                                  std::vector<HighsInt>& mark,
                                  std::vector<HighsInt>& otherMark,
-                                 std::vector<HighsInt>& affectedCols,
-                                 const std::vector<HighsInt>& objRowCols) {
+                                 std::vector<HighsInt>& affectedCols) {
     for (HighsInt row : set) {
-      if (row == kVirtualObjRow) {
+      if (row == kObjectiveRow) {
         for (HighsInt k : objRowCols) {
           if (k == col) continue;
           if (mark[k] == 0 && otherMark[k] == 0) affectedCols.push_back(k);
           mark[k]++;
         }
-        continue;
-      }
-      if (row < 0) continue;
-      for (const auto& nz : getRowVector(row)) {
-        HighsInt k = nz.index();
-        if (k == col) continue;
-        if (mark[k] == 0 && otherMark[k] == 0) affectedCols.push_back(k);
-        mark[k]++;
+      } else {
+        if (row < 0) continue;
+        for (const auto& nz : getRowVector(row)) {
+          HighsInt k = nz.index();
+          if (k == col) continue;
+          if (mark[k] == 0 && otherMark[k] == 0) affectedCols.push_back(k);
+          mark[k]++;
+        }
       }
     }
   };
 
-  auto checkNonZeros = [&](HighsInt col, std::vector<HighsInt>& iPlus,
+  auto checkNonZeros = [&](HighsInt col,
+                           const std::vector<HighsInt>& objRowCols,
+                           std::vector<HighsInt>& iPlus,
                            std::vector<HighsInt>& iMinus,
                            std::vector<HighsInt>& pPlus,
                            std::vector<HighsInt>& pMinus,
                            std::vector<HighsInt>& affectedCols, int64_t& neRed,
-                           int64_t& mrRed,
-                           const std::vector<HighsInt>& objRowCols) {
+                           int64_t& mrRed) {
     // initialise
     neRed = 0;
     mrRed = 0;
@@ -7083,7 +7084,7 @@ HPresolve::Result HPresolve::fourierMotzkin(
     // check rows
     int64_t nePlus;
     int64_t neMinus;
-    checkRows(col, iPlus, iMinus, nePlus, neMinus, objRowCols);
+    checkRows(col, objRowCols, iPlus, iMinus, nePlus, neMinus);
 
     if (iPlus.size() == 0 || iMinus.size() == 0) {
       // other presolve reductions may handle this case (e.g., implied free
@@ -7094,8 +7095,8 @@ HPresolve::Result HPresolve::fourierMotzkin(
     }
 
     // take into account other variables present in the rows
-    collectAffectedCols(col, iPlus, pPlus, pMinus, affectedCols, objRowCols);
-    collectAffectedCols(col, iMinus, pMinus, pPlus, affectedCols, objRowCols);
+    collectAffectedCols(col, iPlus, objRowCols, pPlus, pMinus, affectedCols);
+    collectAffectedCols(col, iMinus, objRowCols, pMinus, pPlus, affectedCols);
 
     // compute correction term
     int64_t correction = 0;
@@ -7354,8 +7355,8 @@ HPresolve::Result HPresolve::fourierMotzkin(
           int64_t neRed;
           int64_t mrRed;
           bool elimCandidate =
-              checkNonZeros(col, iPlus, iMinus, pPlus, pMinus, affectedCols,
-                            neRed, mrRed, objRowCols);
+              checkNonZeros(col, objRowCols, iPlus, iMinus, pPlus, pMinus,
+                            affectedCols, neRed, mrRed);
           affectedCols.clear();
           if (!elimCandidate || !isReduction(neRed, mrRed)) continue;
           heapPos[col] = static_cast<HighsInt>(heap.size());
@@ -7488,8 +7489,8 @@ HPresolve::Result HPresolve::fourierMotzkin(
     // compute affected columns
     int64_t neRed;
     int64_t mrRed;
-    bool elimCandidate = checkNonZeros(col, iPlus, iMinus, pPlus, pMinus,
-                                       affectedCols, neRed, mrRed, objRowCols);
+    bool elimCandidate = checkNonZeros(col, objRowCols, iPlus, iMinus, pPlus,
+                                       pMinus, affectedCols, neRed, mrRed);
 
     // heap data should be up-to-date
     assert(elimCandidate && isReduction(neRed, mrRed));
@@ -7633,8 +7634,8 @@ HPresolve::Result HPresolve::fourierMotzkin(
       // check column non-zeros
       int64_t ne, mr;
       bool elimCandidate =
-          isCandidateCol && checkNonZeros(k, iPlus, iMinus, pPlus, pMinus,
-                                          affectedCols, ne, mr, objRowCols);
+          isCandidateCol && checkNonZeros(k, objRowCols, iPlus, iMinus, pPlus,
+                                          pMinus, affectedCols, ne, mr);
       affectedCols.clear();
       if (!elimCandidate || !isReduction(ne, mr)) {
         // no candidate or not beneficial -> remove from heap
