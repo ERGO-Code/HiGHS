@@ -227,6 +227,22 @@ class HighsPostsolveStack {
               HighsBasis& basis);
   };
 
+  struct ZeroObjSingletonContinuousCol {
+    double origRowLower;
+    double origRowUpper;
+    double new_row_lb;
+    double new_row_ub;
+    double lb;
+    double ub;
+    double coef;
+    HighsInt col;
+    HighsInt row;
+
+    void undo(const HighsOptions& options,
+              const std::vector<Nonzero>& rowValues, HighsSolution& solution,
+              HighsBasis& basis);
+  };
+
   /// tags for reduction
   enum class ReductionType : uint8_t {
     kLinearTransform,
@@ -243,6 +259,7 @@ class HighsPostsolveStack {
     kDuplicateRow,
     kDuplicateColumn,
     kSlackColSubstitution,
+    kZeroObjSingletonContinuousCol,
   };
 
   HighsDataStack reductionValues;
@@ -343,6 +360,22 @@ class HighsPostsolveStack {
         SlackColSubstitution{rhs, origRowIndex[row], origColIndex[col]});
     reductionValues.push(rowValues);
     reductionAdded(ReductionType::kSlackColSubstitution);
+  }
+
+  template <typename RowStorageFormat>
+  void zeroObjSingletonContinuousCol(
+      HighsInt row, HighsInt col, double origRowLower, double origRowUpper,
+      double new_row_lb, double new_row_ub, double lb, double ub, double coef,
+      const HighsMatrixSlice<RowStorageFormat>& rowVec) {
+    rowValues.clear();
+    for (const HighsSliceNonzero& rowVal : rowVec)
+      rowValues.emplace_back(origColIndex[rowVal.index()], rowVal.value());
+
+    reductionValues.push(ZeroObjSingletonContinuousCol{
+        origRowLower, origRowUpper, new_row_lb, new_row_ub, lb, ub, coef,
+        origColIndex[col], origRowIndex[row]});
+    reductionValues.push(rowValues);
+    reductionAdded(ReductionType::kZeroObjSingletonContinuousCol);
   }
 
   template <typename ColStorageFormat>
@@ -741,6 +774,13 @@ class HighsPostsolveStack {
           reduction.undo(options, rowValues, solution, basis);
           break;
         }
+        case ReductionType::kZeroObjSingletonContinuousCol: {
+          ZeroObjSingletonContinuousCol reduction;
+          reductionValues.pop(rowValues);
+          reductionValues.pop(reduction);
+          reduction.undo(options, rowValues, solution, basis);
+          break;
+        }
         default:
           printf("Reduction case %d not handled\n",
                  int(reductions[i - 1].first));
@@ -919,6 +959,13 @@ class HighsPostsolveStack {
         }
         case ReductionType::kSlackColSubstitution: {
           SlackColSubstitution reduction;
+          reductionValues.pop(rowValues);
+          reductionValues.pop(reduction);
+          reduction.undo(options, rowValues, solution, basis);
+          break;
+        }
+        case ReductionType::kZeroObjSingletonContinuousCol: {
+          ZeroObjSingletonContinuousCol reduction;
           reductionValues.pop(rowValues);
           reductionValues.pop(reduction);
           reduction.undo(options, rowValues, solution, basis);

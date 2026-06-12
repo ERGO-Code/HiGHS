@@ -3409,7 +3409,10 @@ HPresolve::Result HPresolve::singletonCol(HighsPostsolveStack& postsolve_stack,
     return checkLimits(postsolve_stack);
   }
 
-  // todo: check for zero cost singleton and remove
+  // Remove if col is double-sided finite slack
+  HPRESOLVE_CHECKED_CALL(
+      redundantSingletonColDoubleSidedSlack(postsolve_stack, col));
+
   return Result::kOk;
 }
 
@@ -5202,6 +5205,73 @@ HPresolve::Result HPresolve::singletonColStuffing(
     highsLogDev(options->log_options, HighsLogType::kDetailed,
                 "Singleton column stuffing fixed %d columns\n",
                 static_cast<int>(numFixedCols));
+
+  return Result::kOk;
+}
+
+HPresolve::Result HPresolve::redundantSingletonColDoubleSidedSlack(
+    HighsPostsolveStack& postsolve_stack, HighsInt col) {
+  // For a double-sided row b_0 <= a^Tx + cs <= b_1,
+  // where s is a singleton continuous column with 0 cost,
+  // relax s out as its value can be determined in postsolve.
+  // The row may now admit additional reductions afterwards.
+  // Dual fixing already handles single-sided row case with fixings.
+  const bool illegal_col_bounds = model->col_lower_[col] == -kHighsInf ||
+                                  model->col_upper_[col] == kHighsInf;
+  if (model->integrality_[col] != HighsVarType::kContinuous ||
+      model->col_cost_[col] != 0.0 || colsize[col] != 1 || illegal_col_bounds) {
+    return Result::kOk;
+  }
+  assert(!colDeleted[col]);
+
+  HighsInt nzPos = colhead[col];
+  HighsInt row = Arow[nzPos];
+  assert(!rowDeleted[row]);
+  // Row must be ranged, but why can't it be an equation?
+  const bool was_equation = isEquation(row);
+  const bool illegal_row_bounds = !isRanged(row);  // || was_equation;
+  if (illegal_row_bounds) return Result::kOk;
+  double coef = Avalue[nzPos];
+
+  if (std::abs(coef) == kHighsInf) return Result::kOk;
+
+  // suppress this reduction for now
+  return Result::kOk;
+  storeRow(row);
+
+  double lb = model->col_lower_[col];
+  double ub = model->col_upper_[col];
+  double change_from_col_lb = coef * lb;
+  double change_from_col_ub = coef * ub;
+
+  double newRowLower =
+      model->row_lower_[row] - std::max(change_from_col_lb, change_from_col_ub);
+  double newRowUpper =
+      model->row_upper_[row] - std::min(change_from_col_lb, change_from_col_ub);
+
+  if (illegal_col_bounds || isEquation(row))
+    printf(
+        "Column %5d [%11.4g, %11.4g] coef %11.4g: Row bounds [%11.4g, %11.4g] "
+        "become [%11.4g, %11.4g]\n",
+        int(col), lb, ub, coef, model->row_lower_[row], model->row_upper_[row],
+        newRowLower, newRowUpper);
+  assert(!illegal_col_bounds || isEquation(row));
+
+  postsolve_stack.zeroObjSingletonContinuousCol(
+      row, col, model->row_lower_[row], model->row_upper_[row], newRowLower,
+      newRowUpper, lb, ub, coef, getStoredRow());
+
+  model->row_lower_[row] = newRowLower;
+  model->row_upper_[row] = newRowUpper;
+  if (was_equation && newRowLower != newRowUpper &&
+      eqiters[row] != equations.end()) {
+    equations.erase(eqiters[row]);
+    eqiters[row] = equations.end();
+  }
+
+  // Delete the singleton column
+  markColDeleted(col);
+  unlink(nzPos);
 
   return Result::kOk;
 }
