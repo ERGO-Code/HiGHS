@@ -56,6 +56,23 @@ To install locally, you will need
 - Python >= 3.8
 - BLAS library (bundled or system)
 
+To install locally without an existing OpenBLAS installation, run
+
+```
+python -m pip install ./highspy-extras
+python -m pip install .
+```
+To install locally with an existing OpenBLAS installation, run
+```
+python -m pip install ./highspy-extras --config-settings=cmake.define.BUILD_OPENBLAS=OFF
+python -m pip install .
+```
+If the OpenBLAS installation path is not in the default set, it could be provided with
+```
+    --config-settings=cmake.define.BLAS_LIBRARIES=/path/to/openblas/library
+```
+
+
 ## Uninstall
 
 To remove the HiPO support and go back to the MIT-licenced highspy, simply remove highspy-extras:

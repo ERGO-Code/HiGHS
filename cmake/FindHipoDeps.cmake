@@ -110,6 +110,9 @@ function(highs_configure_blas)
                 message(STATUS "ARM architecture detected. Applying -DTARGET=ARMV8.")
                 list(APPEND OPENBLAS_MINIMAL_FLAGS -DTARGET=ARMV8)
             endif()
+        else()
+            message(STATUS "Non-ARM architecture detected. Enabling DYNAMIC_ARCH for runtime CPU detection.")
+            list(APPEND OPENBLAS_MINIMAL_FLAGS -DDYNAMIC_ARCH=ON)
         endif()
 
         # CMAKE_SIZEOF_VOID_P is 4 for 32-bit and 8 for 64-bit
