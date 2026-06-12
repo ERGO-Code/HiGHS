@@ -3,12 +3,12 @@
 #include "stdio.h"
 
 /*
-  This example factorises the following matrix
+  This example factorises the following symmetric matrix
 
-    5     0     0     0     0
-    0     3     0     0     0
-    3     2     9     0     0
-    4     0    -1     8     0
+    5
+    0     3
+    3     2     9
+    4     0    -1     8
     0     0     1     0     1
 
   and solves a linear system, using the FactorHighs C API.
