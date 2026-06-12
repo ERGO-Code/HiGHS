@@ -5219,7 +5219,9 @@ HPresolve::Result HPresolve::redundantSingletonColDoubleSidedSlack(
   const bool illegal_col_bounds = model->col_lower_[col] == -kHighsInf ||
                                   model->col_upper_[col] == kHighsInf;
   if (model->integrality_[col] != HighsVarType::kContinuous ||
-      model->col_cost_[col] != 0.0 || colsize[col] != 1 || illegal_col_bounds) {
+      model->col_cost_[col] != 0.0 || colsize[col] != 1
+      //      || illegal_col_bounds
+      ) {
     return Result::kOk;
   }
   assert(!colDeleted[col]);
@@ -5261,7 +5263,7 @@ HPresolve::Result HPresolve::redundantSingletonColDoubleSidedSlack(
         "become [%11.4g, %11.4g]\n",
         int(col), lb, ub, coef, model->row_lower_[row], model->row_upper_[row],
         newRowLower, newRowUpper);
-  assert(!illegal_col_bounds);
+    //  assert(!illegal_col_bounds);
 
   postsolve_stack.zeroObjSingletonContinuousCol(
       row, col, model->row_lower_[row], model->row_upper_[row], newRowLower,

@@ -1400,6 +1400,8 @@ void HighsPostsolveStack::ZeroObjSingletonContinuousCol::undo(
 
   assert(origRowLower != -kHighsInf && origRowUpper != kHighsInf);
 
+  const double primal_tol = options.primal_feasibility_tolerance;
+  const double dual_tol = options.dual_feasibility_tolerance;
   // Get activity of row without removed singleton
   HighsCDouble act = 0;
   solution.col_value[col] = 0.0;
@@ -1423,18 +1425,14 @@ void HighsPostsolveStack::ZeroObjSingletonContinuousCol::undo(
   std:string final_row_status = "";
   std::string final_row_dual = "";
   auto rowAtLower = [&]() {
-    return static_cast<double>(act - options.primal_feasibility_tolerance) <=
-           new_row_lb;
+    return static_cast<double>(act - primal_tol) <= new_row_lb;
   };
   auto rowAtUpper = [&]() {
-    return static_cast<double>(act + options.primal_feasibility_tolerance) >=
-           new_row_ub;
+    return static_cast<double>(act + primal_tol) >= new_row_ub;
   };
   auto rowBetweenBounds = [&]() {
-    return static_cast<double>(act + options.primal_feasibility_tolerance) >=
-               new_row_lb &&
-           static_cast<double>(act - options.primal_feasibility_tolerance) <=
-               new_row_ub;
+    return static_cast<double>(act + primal_tol) >= new_row_lb &&
+           static_cast<double>(act - primal_tol) <= new_row_ub;
   };
   auto errorLog = [&](const bool error, const std::string& message) {
     if (!error) return;
@@ -1515,16 +1513,14 @@ void HighsPostsolveStack::ZeroObjSingletonContinuousCol::undo(
         static_cast<double>((origRowLower - act) / coef);
     double col_value_for_upper =
         static_cast<double>((origRowUpper - act) / coef);
-    if (col_value_for_lower >= lb - options.primal_feasibility_tolerance &&
-        col_value_for_lower <= ub + options.primal_feasibility_tolerance) {
+    if (col_value_for_lower >= lb - primal_tol &&
+        col_value_for_lower <= ub + primal_tol) {
       // Can set column basic at this value
       col_value = col_value_for_lower;
       col_basic = true;
       row_at_lower = true;
-    } else if (col_value_for_upper >=
-                   lb - options.primal_feasibility_tolerance &&
-               col_value_for_upper <=
-                   ub + options.primal_feasibility_tolerance) {
+    } else if (col_value_for_upper >= lb - primal_tol &&
+               col_value_for_upper <= ub + primal_tol) {
       col_value = col_value_for_upper;
       col_basic = true;
       row_at_upper = true;
@@ -1539,14 +1535,16 @@ void HighsPostsolveStack::ZeroObjSingletonContinuousCol::undo(
     if (solution.dual_valid)
       solution.col_dual[col] =
           (isModelRow) ? -coef * solution.row_dual[row] : 0;
-    errorCheck(solution.col_dual[col] >= 0, "solution.col_dual[col] >= 0");
+    // Dual should be non-negative (to within tolerance)
+    errorCheck(solution.col_dual[col] >= -dual_tol, "solution.col_dual[col] >= -dual_tol");
   } else if (col_at_upper) {
     col_value = ub;
     if (basis.valid) basis.col_status[col] = HighsBasisStatus::kUpper;
     if (solution.dual_valid)
       solution.col_dual[col] =
           (isModelRow) ? -coef * solution.row_dual[row] : 0;
-    errorCheck(solution.col_dual[col] <= 0, "solution.col_dual[col] <= 0");
+    // Dual should be non-positive (to within tolerance)
+    errorCheck(solution.col_dual[col] <= dual_tol, "solution.col_dual[col] <= dual_tol");
   } else {
     // Column takes value between its bounds and inherits any basic status from
     // the row

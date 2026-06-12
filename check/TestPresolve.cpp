@@ -180,8 +180,8 @@ void presolveSolvePostsolve(const std::string& model_file,
                             const bool solve_relaxation) {
   Highs highs0;
   Highs highs1;
-  highs0.setOptionValue("output_flag", dev_run);
-  highs1.setOptionValue("output_flag", dev_run);
+  //  highs0.setOptionValue("output_flag", dev_run);
+  //  highs1.setOptionValue("output_flag", dev_run);
   HighsStatus return_status;
   highs0.readModel(model_file);
   highs0.setOptionValue("solve_relaxation", solve_relaxation);
@@ -192,11 +192,13 @@ void presolveSolvePostsolve(const std::string& model_file,
     if (dev_run)
       printf("Presolve timeout: return status = %d\n", (int)return_status);
   }
+  REQUIRE(model_presolve_status != HighsPresolveStatus::kUnboundedOrInfeasible);
   HighsLp lp = highs0.getPresolvedLp();
   highs1.passModel(lp);
   highs1.setOptionValue("solve_relaxation", solve_relaxation);
   highs1.setOptionValue("presolve", kHighsOffString);
   highs1.run();
+  REQUIRE(highs1.getModelStatus() == HighsModelStatus::kOptimal);
   HighsSolution solution = highs1.getSolution();
   const double objective_value = highs1.getInfo().objective_function_value;
   if (lp.isMip() && !solve_relaxation) {
