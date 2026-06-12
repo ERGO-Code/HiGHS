@@ -116,9 +116,6 @@ norecursedirs = ["check", ".git", "build", "dist", "*.egg-info"]
 build = "*"
 archs = ["auto64", "auto32"]
 
-# Enable free-threaded support
-enable = ["cpython-freethreading"]
-
 # highspy does not need vcpkg dependencies (avoid unnecessary compile)
 environment = { VCPKG_ROOT = "", VCPKG_INSTALLATION_ROOT = "" }
 
