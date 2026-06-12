@@ -5949,6 +5949,8 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
         mipsolver != nullptr || !options->lp_presolve_requires_basis_postsolve;
 #endif
     bool tryProbing = mipsolver != nullptr;
+    bool tryFourierMotzkin =
+        mipsolver != nullptr || !options->lp_presolve_requires_basis_postsolve;
     HighsInt numCliquesBeforeProbing = -1;
     bool domcolAfterProbingCalled = false;
     bool dependentEquationsCalled = mipsolver != nullptr;
@@ -5977,7 +5979,8 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
             applyConflictGraphSubstitutions(postsolve_stack, numDelCol));
       }
 
-      if (analysis_.allow_rule_[kPresolveRuleFourierMotzkin])
+      if (tryFourierMotzkin &&
+          analysis_.allow_rule_[kPresolveRuleFourierMotzkin])
         HPRESOLVE_CHECKED_CALL(fourierMotzkin(postsolve_stack));
 
       if (analysis_.allow_rule_[kPresolveRuleAggregator])
@@ -6959,7 +6962,7 @@ HPresolve::Result HPresolve::fourierMotzkin(
     return Result::kOk;
   };
 
-  // sentinel row indices for variable bounds and virtual objective row
+  // sentinel row indices for variable bounds and objective row
   const HighsInt kUpperBoundRow = -2;
   const HighsInt kLowerBoundRow = -3;
   const HighsInt kObjectiveRow = -4;
@@ -7021,7 +7024,7 @@ HPresolve::Result HPresolve::fourierMotzkin(
       }
     }
 
-    // include finite variable bounds as virtual singleton rows
+    // include finite variable bounds as singleton rows
     if (model->col_upper_[col] != kHighsInf) {
       iPlus.push_back(kUpperBoundRow);
       nePlus += 1;
@@ -7196,21 +7199,8 @@ HPresolve::Result HPresolve::fourierMotzkin(
   // continuous columns with nonzero cost.
   auto reformulateObjective = [&]() {
     if (model->fme_obj_col_ != -1) {
-      printf(
-          "reformulateObjective: fme_obj_col_=%d, num_col=%d, "
-          "colDeleted=%d, cost=%.6g\n",
-          (int)model->fme_obj_col_, (int)model->num_col_,
-          model->fme_obj_col_ < model->num_col_
-              ? (int)colDeleted[model->fme_obj_col_]
-              : -1,
-          model->fme_obj_col_ < model->num_col_
-              ? model->col_cost_[model->fme_obj_col_]
-              : -999.0);
-      if (model->fme_obj_col_ < model->num_col_ &&
-          !colDeleted[model->fme_obj_col_]) {
-        return;
-      }
-      model->fme_obj_col_ = -1;
+      assert(!colDeleted[model->fme_obj_col_]);
+      return;
     }
 
     HighsInt zCol = model->num_col_;
@@ -7403,7 +7393,7 @@ HPresolve::Result HPresolve::fourierMotzkin(
   std::vector<HighsInt> candidates;
   if (!computeCandidates(candidates)) return finalise();
 
-  // precompute the virtual objective row: columns with nonzero cost
+  // precompute the objective row: columns with nonzero cost
   // used to simulate the objective constraint in checkRows before
   // reformulation actually happens
   std::vector<HighsInt> objRowCols;
@@ -7606,7 +7596,7 @@ HPresolve::Result HPresolve::fourierMotzkin(
     }
     blockNewRows.push_back(std::move(stepNewRows));
 
-    // remove old rows containing col (skip virtual bound rows)
+    // remove old rows containing col (skip bound rows)
     for (HighsInt rp : iPlus) {
       if (rp < 0) continue;
       rowAncestry.erase(rp);
