@@ -1494,14 +1494,17 @@ void HighsPostsolveStack::undoFourierMotzkinBlock(
         for (const auto& nz : entries[r])
           sum += static_cast<HighsCDouble>(nz.value) *
                  solution.col_value[nz.index];
-        double rhs_upper = aij > 0 ? headers[r].rowUpper : headers[r].rowLower;
-        double rhs_lower = aij > 0 ? headers[r].rowLower : headers[r].rowUpper;
-        if (std::abs(rhs_upper) != kHighsInf) {
-          double bound = static_cast<double>(rhs_upper - sum) / aij;
+        HighsInt direction = aij > 0 ? HighsInt{1} : HighsInt{-1};
+        double rhs_upper =
+            direction > 0 ? headers[r].rowUpper : headers[r].rowLower;
+        double rhs_lower =
+            direction > 0 ? headers[r].rowLower : headers[r].rowUpper;
+        if (direction * rhs_upper != kHighsInf) {
+          double bound = static_cast<double>((rhs_upper - sum) / aij);
           impliedUpper = std::min(impliedUpper, bound);
         }
-        if (std::abs(rhs_lower) != kHighsInf) {
-          double bound = static_cast<double>(rhs_lower - sum) / aij;
+        if (direction * rhs_lower != -kHighsInf) {
+          double bound = static_cast<double>((rhs_lower - sum) / aij);
           impliedLower = std::max(impliedLower, bound);
         }
       }
