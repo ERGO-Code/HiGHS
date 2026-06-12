@@ -211,6 +211,14 @@ class Highs {
   HighsStatus readBasis(const std::string& filename);
 
   /**
+   * @brief Generate a PBM image of the matrix nonzeros, and possibly
+   * Hessian nonzeros. Note that the .pbm extnesion will be added to
+   * the fime names passed
+   */
+  HighsStatus matrixImage(const std::string& matrix_image_filename,
+                          const std::string& hessian_image_filename = "") const;
+
+  /**
    * @brief Presolve the incumbent model, allowing the presolved model
    * to be extracted. Subsequent solution of the incumbent model will
    * only use presolve if there is no valid basis
