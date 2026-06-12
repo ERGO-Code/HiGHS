@@ -10,11 +10,11 @@
 #include "LinearSolver.h"
 #include "Model.h"
 #include "ipm/hipo/auxiliary/IntConfig.h"
-#include "ipm/hipo/factorhighs/FactorHiGHS.h"
+#include "ipm/hipo/factorhighs/FactorHighs.h"
 
 namespace hipo {
 
-class FactorHiGHSSolver : public LinearSolver {
+class FactorHighsSolver : public LinearSolver {
   // object to perform factorisation
   FHsolver FH_;
 
@@ -43,7 +43,7 @@ class FactorHiGHSSolver : public LinearSolver {
   Int analyseNE(Symbolic& S);
 
  public:
-  FactorHiGHSSolver(KktMatrix& kkt, Options& options, const Model& model,
+  FactorHighsSolver(KktMatrix& kkt, Options& options, const Model& model,
                     const Regularisation& regul, Info& info, IpmData& record,
                     const Logger& logger);
 

@@ -30,15 +30,17 @@ class Numeric {
 
   DataCollector* data_ = nullptr;
 
+  bool pivoting_ = true;
+
   friend class Factorise;
 
   // dynamic regularisation applied to the matrix
   std::vector<double> total_reg_{};
 
  public:
-  // Full solve
-  Int solve(std::vector<double>& x) const;
-  void getReg(std::vector<double>& reg);
+  Int solve(double* x) const;
+  void getReg(double* reg);
+  void inertia(Int& pos, Int& neg, Int& zero, double tol) const;
 };
 
 }  // namespace hipo

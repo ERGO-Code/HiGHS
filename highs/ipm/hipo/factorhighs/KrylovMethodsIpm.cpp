@@ -54,7 +54,7 @@ void IpmMatrix::apply(std::vector<double>& x) const {
 }
 
 IpmFactor::IpmFactor(const Numeric& N) : N_{N} {}
-void IpmFactor::apply(std::vector<double>& x) const { N_.solve(x); }
+void IpmFactor::apply(std::vector<double>& x) const { N_.solve(x.data()); }
 
 void NeDiagPrec::reset(const HighsSparseMatrix& A,
                        const std::vector<double>& scaling) {

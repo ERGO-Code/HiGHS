@@ -8,7 +8,7 @@
 #include <stack>
 
 #include "DataCollector.h"
-#include "FactorHiGHSSettings.h"
+#include "FactorHighsSettings.h"
 #include "ReturnValues.h"
 #include "ipm/hipo/auxiliary/Auxiliary.h"
 #include "ipm/hipo/auxiliary/Logger.h"
@@ -17,9 +17,9 @@ namespace hipo {
 const Int64 int32_limit = std::numeric_limits<int32_t>::max();
 const Int64 int64_limit = std::numeric_limits<int64_t>::max();
 
-Analyse::Analyse(const std::vector<Int>& rows, const std::vector<Int>& ptr,
-                 const std::vector<Int>& signs, Int nb, const Logger* logger,
-                 DataCollector& data, const std::vector<Int>& perm)
+Analyse::Analyse(Int n, Int nz, const Int* rows, const Int* ptr,
+                 const Int* signs, Int nb, const Logger* logger,
+                 DataCollector& data, const Int* perm)
     : logger_{logger}, data_{data} {
   // Input the symmetric matrix to be analysed in CSC format.
   // rows contains the row indices.
@@ -27,15 +27,18 @@ Analyse::Analyse(const std::vector<Int>& rows, const std::vector<Int>& ptr,
   // Only the lower triangular part is used.
   // signs contains the sign that each pivot should have.
 
-  n_ = ptr.size() - 1;
-  nz_ = rows.size();
-  signs_ = signs;
+  n_ = n;
+  nz_ = nz;
   nb_ = nb;
+
+  rows_lower_ = std::vector<Int>(rows, rows + nz_);
+  ptr_lower_ = std::vector<Int>(ptr, ptr + n_ + 1);
+  signs_ = std::vector<Int>(signs, signs + n_);
 
   // Create upper triangular part
   rows_upper_.resize(nz_);
   ptr_upper_.resize(n_ + 1);
-  transpose(ptr, rows, ptr_upper_, rows_upper_);
+  transpose(ptr_lower_, rows_lower_, ptr_upper_, rows_upper_);
 
   // Permute the matrix with identical permutation, to extract upper triangular
   // part, if the input is not lower triangular.
@@ -55,7 +58,7 @@ Analyse::Analyse(const std::vector<Int>& rows, const std::vector<Int>& ptr,
   transpose(ptr_upper_, rows_upper_, ptr_lower_, rows_lower_);
   transpose(ptr_lower_, rows_lower_, ptr_upper_, rows_upper_);
 
-  perm_ = perm;
+  perm_ = std::vector<Int>(perm, perm + n_);
   iperm_.resize(n_);
   inversePerm(perm_, iperm_);
 

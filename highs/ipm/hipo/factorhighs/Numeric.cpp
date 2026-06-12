@@ -1,7 +1,7 @@
 #include "Numeric.h"
 
 #include "DataCollector.h"
-#include "FactorHiGHSSettings.h"
+#include "FactorHighsSettings.h"
 #include "HybridSolveHandler.h"
 #include "ReturnValues.h"
 #include "Timing.h"
@@ -12,7 +12,7 @@
 
 namespace hipo {
 
-Int Numeric::solve(std::vector<double>& x) const {
+Int Numeric::solve(double* x) const {
   // Return the number of solves performed
 
   if (!sn_columns_ || !S_) return kRetInvalidPointer;
@@ -20,7 +20,8 @@ Int Numeric::solve(std::vector<double>& x) const {
   HIPO_CLOCK_CREATE;
 
   // initialise solve handler
-  HybridSolveHandler SH(*S_, *sn_columns_, swaps_, pivot_2x2_, *data_);
+  HybridSolveHandler SH(*S_, *sn_columns_, swaps_, pivot_2x2_, *data_,
+                        pivoting_);
 
   // permute rhs
   HIPO_CLOCK_START(2);
@@ -43,11 +44,14 @@ Int Numeric::solve(std::vector<double>& x) const {
   return kRetOk;
 }
 
-void Numeric::getReg(std::vector<double>& reg) {
-  // unpermute regularisation
-  permuteVector(total_reg_, S_->iperm());
+void Numeric::getReg(double* reg) {
+  std::memcpy(reg, total_reg_.data(), total_reg_.size() * sizeof(double));
+}
 
-  reg = std::move(total_reg_);
+void Numeric::inertia(Int& pos, Int& neg, Int& zero, double tol) const {
+  HybridSolveHandler SH(*S_, *sn_columns_, swaps_, pivot_2x2_, *data_,
+                        pivoting_);
+  SH.inertia(pos, neg, zero, tol);
 }
 
 }  // namespace hipo

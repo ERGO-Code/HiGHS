@@ -4,7 +4,7 @@
 #include <fstream>
 
 #include "DataCollector.h"
-#include "FactorHiGHSSettings.h"
+#include "FactorHighsSettings.h"
 #include "FormatHandler.h"
 #include "HybridHybridFormatHandler.h"
 #include "ReturnValues.h"
@@ -14,23 +14,23 @@
 
 namespace hipo {
 
-Factorise::Factorise(const Symbolic& S, const std::vector<Int>& rowsM,
-                     const std::vector<Int>& ptrM,
-                     const std::vector<double>& valM, const Regul& regul,
+Factorise::Factorise(const Symbolic& S, Int n, Int nz, const Int* rowsM,
+                     const Int* ptrM, const double* valM, const Regul& regul,
                      const Logger* logger, DataCollector& data,
                      std::vector<std::vector<double>>& sn_columns,
-                     CliqueStack* stack)
+                     CliqueStack* stack, bool pivoting)
     : S_{S},
       sn_columns_{sn_columns},
       regul_{regul},
       logger_{logger},
       data_{data},
-      stack_{stack} {
+      stack_{stack},
+      pivoting_{pivoting} {
   // Input the symmetric matrix to be factorised in CSC format and the symbolic
   // factorisation coming from Analyse.
   // Only the lower triangular part of the matrix is used.
 
-  n_ = ptrM.size() - 1;
+  n_ = n;
 
   if (n_ != S_.size()) {
     if (logger_)
@@ -41,9 +41,9 @@ Factorise::Factorise(const Symbolic& S, const std::vector<Int>& rowsM,
   }
 
   // Make a copy of the matrix to be factorised
-  rowsM_ = rowsM;
-  valM_ = valM;
-  ptrM_ = ptrM;
+  rowsM_ = std::vector<Int>(rowsM, rowsM + nz);
+  valM_ = std::vector<double>(valM, valM + nz);
+  ptrM_ = std::vector<Int>(ptrM, ptrM + n + 1);
 
   // Permute the matrix.
   // This also removes any entry not in the lower triangle.
@@ -141,7 +141,7 @@ void Factorise::processSupernode(Int sn) {
   // initialise the format handler
   // this also allocates space for the frontal matrix and schur complement
   std::unique_ptr<FormatHandler> FH(new HybridHybridFormatHandler(
-      S_, sn, regul_, data_, sn_columns_[sn], clique_ptr));
+      S_, sn, regul_, data_, sn_columns_[sn], clique_ptr, pivoting_));
 
   HIPO_CLOCK_STOP(2, data_, kTimeFactorisePrepare);
 
@@ -185,7 +185,8 @@ void Factorise::processSupernode(Int sn) {
       child_clique = schur_contribution_[child_sn].data();
 
       if (!child_clique) {
-        if (logger_) logger_->printInfo("Missing child supernode contribution\n");
+        if (logger_)
+          logger_->printInfo("Missing child supernode contribution\n");
         flag_stop_.store(true, std::memory_order_relaxed);
         return;
       }
@@ -326,6 +327,8 @@ bool Factorise::run(Numeric& num) {
 
   if (flag_stop_.load(std::memory_order_relaxed)) return true;
 
+  permuteVector(total_reg_, S_.iperm());
+
   // move factorisation to numerical object
   num.S_ = &S_;
   num.sn_columns_ = &sn_columns_;
@@ -333,6 +336,7 @@ bool Factorise::run(Numeric& num) {
   num.swaps_ = std::move(swaps_);
   num.pivot_2x2_ = std::move(pivot_2x2_);
   num.data_ = &data_;
+  num.pivoting_ = pivoting_;
 
   HIPO_CLOCK_STOP(1, data_, kTimeFactorise);
 

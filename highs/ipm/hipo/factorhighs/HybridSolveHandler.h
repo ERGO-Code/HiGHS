@@ -10,15 +10,16 @@ class HybridSolveHandler : public SolveHandler {
   const std::vector<std::vector<double>>& pivot_2x2_;
 
  public:
-  void forwardSolve(std::vector<double>& x) const override;
-  void backwardSolve(std::vector<double>& x) const override;
-  void diagSolve(std::vector<double>& x) const override;
+  void forwardSolve(double* x) const override;
+  void backwardSolve(double* x) const override;
+  void diagSolve(double* x) const override;
+  void inertia(Int& pos, Int& neg, Int& zero, double tol) const override;
 
   HybridSolveHandler(const Symbolic& S,
                      const std::vector<std::vector<double>>& sn_columns,
                      const std::vector<std::vector<Int>>& swaps,
                      const std::vector<std::vector<double>>& pivot_2x2,
-                     DataCollector& data);
+                     DataCollector& data, bool pivoting);
 };
 
 }  // namespace hipo

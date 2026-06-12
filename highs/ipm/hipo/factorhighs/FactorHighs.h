@@ -14,7 +14,7 @@ Direct solver for IPM matrices.
 Consider a sparse symmetric matrix M in CSC format.
 Only its lower triangular part is used; entries in the upper triangle are
 ignored.
-The matrix has n rows/cols and nz nonzero entries in the lower triangle.
+The matrix has n rows/cols and nz nonzero entries.
 It is stored using three arrays:
 - ptr, column pointers, of length n+1;
 - rows, row indices, of length nz;
@@ -24,10 +24,19 @@ The direct solver uses the following objects:
 - Symbolic, to store the symbolic factorization;
 - FHsolver, to perform analyse and factorise phases.
 
-Define a vector signs that contains the expected sign of each pivot (1 or -1).
 Define a right-hand side rhs, which will be overwritten with the solution of
 M^{-1} * rhs. The pre-computed fill-reducing ordering to use is stored in the
 vector perm.
+
+Define a vector signs that contains the expected sign of each pivot:
+-  1 for pivots expected to be positive
+- -1 for pivots expected to be negative
+-  0 for pivots without an expected sign.
+This is used to determine the sign of the regularisation to apply.
+Only pivots in the (1,1)-block are allowed to have unknown sign, so that pivots
+with unknown sign receive a static regularisation contribution equal to -reg_p.
+Dynamic regularisation uses the computed sign of the pivot, if the sign is
+unknown.
 
 Then, the factorization is performed as follows.
 
@@ -38,18 +47,14 @@ Then, the factorization is performed as follows.
     FH.solve(x);
 
 Printing to screen is achieved using the interface in auxiliary/Logger.h.
-    ...
-    Logger logger;
-    FHsolver FH(&logger);
-    ...
-Pass nothing to suppress all logging.
+Use setLogger to pass the Logger object to use: FH.setLogger(&logger).
+To use printf instead, use FH.setLogger(nullptr,true).
+Logging is off by default. Use FH.setLogger(nullptr, false) to switch logging
+off.
 
 To add static regularisation when the pivots are selected, use
 setRegularisation(reg_p,reg_d) to choose values of primal and dual
 regularisation. If regularisation is already added to the matrix, ignore.
-
-The default block size is 128. To set a different block size, pass it as second
-input to the constructor.
 
 */
 
@@ -62,8 +67,10 @@ class FHsolver {
   Numeric N_;
   CliqueStack serial_stack_;
 
-  const Int nb_;  // block size
-  static const Int default_nb_ = 128;
+  bool pivoting_ = true;
+  bool local_logger_ = false;
+
+  Int nb_;  // block size
 
   // Columns of factorisation, stored by supernode.
   // This memory is allocated the first time that it is used. Subsequent
@@ -71,8 +78,7 @@ class FHsolver {
   std::vector<std::vector<double>> sn_columns_;
 
  public:
-  // Create object and initialise DataCollector
-  FHsolver(const Logger* logger = nullptr, Int block_size = default_nb_);
+  FHsolver();
 
   // Print collected data (if any) and terminate DataCollector
   ~FHsolver();
@@ -80,18 +86,17 @@ class FHsolver {
   // Perform analyse phase of matrix with sparsity pattern given by rows and
   // ptr, and store symbolic factorisation in object S.
   // See ReturnValues.h for errors.
-  Int analyse(Symbolic& S, const std::vector<Int>& rows,
-              const std::vector<Int>& ptr, const std::vector<Int>& signs,
-              const std::vector<Int>& perm);
+  Int analyse(Symbolic& S, Int n, Int nz, const Int* rows, const Int* ptr,
+              const Int* signs, const Int* perm);
 
   // Perform factorise phase of matrix given by rows, ptr, vals, and store
   // numerical factorisation in object N. See ReturnValues.h for errors.
-  Int factorise(const Symbolic& S, const std::vector<Int>& rows,
-                const std::vector<Int>& ptr, const std::vector<double>& vals);
+  Int factorise(const Symbolic& S, Int n, Int nz, const Int* rows,
+                const Int* ptr, const double* vals);
 
   // Perform solve phase with rhs given by x, which is overwritten with the
   // solution.
-  Int solve(std::vector<double>& x);
+  Int solve(double* x);
 
   // If multiple factorisation are performed, call newIter() before each
   // factorisation. This is used only to collect data for debugging, if
@@ -100,9 +105,29 @@ class FHsolver {
 
   // Set values for static regularisation to be added when a pivot is selected.
   // If regularisation is already added to the matrix, ignore.
-  void setRegularisation(double reg_p, double reg_d);
+  void setRegularisation(double reg_p = 0.0, double reg_d = 0.0);
 
-  void getRegularisation(std::vector<double>& reg);
+  // Extract the regularisation values used, including static and dynamic.
+  void getRegularisation(double* reg);
+
+  // Set block size for dense linear algebra
+  void setBlockSize(Int nb);
+
+  // Set pivoting optins, on by default.
+  // It uses a static variation of Bunch-Kaufman pivoting, with potential
+  // dynamic regularisation. If pivoting is switched off, only static
+  // regularisation is applied.
+  void setPivoting(bool pivoting);
+
+  // Pass the Logger object to be used for logging. Alternatively, printf can be
+  // used for logging, by passing a nullptr and setting use_printf to true.
+  // By default, logging is off.
+  void setLogger(const Logger* logger = nullptr, bool use_printf = false);
+  const Logger* getLogger() const { return logger_; }
+
+  // Compute number of positive, negative and zero pivots, using tol as
+  // tolerance for zero.
+  void inertia(Int& pos, Int& neg, Int& zero, double tol = 1e-16) const;
 };
 
 }  // namespace hipo

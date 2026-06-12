@@ -1,7 +1,7 @@
 #include "CallAndTimeBlas.h"
 #include "DataCollector.h"
 #include "DenseFact.h"
-#include "FactorHiGHSSettings.h"
+#include "FactorHighsSettings.h"
 #include "ReturnValues.h"
 #include "Swaps.h"
 #include "ipm/hipo/auxiliary/Auxiliary.h"
@@ -50,9 +50,10 @@ static void staticReg(double& pivot, Int sign, const Regul& regval,
   totalreg = pivot - old_pivot;
 }
 
-static bool blockBunchKaufman(Int j, Int n, double* A, Int lda, Int* swaps,
-                              Int* sign, double thresh, const Regul& regval,
-                              double* totalreg, DataCollector& data) {
+static bool blockBunchKaufman(const Int j, Int n, double* A, Int lda,
+                              Int* swaps, Int* sign, double thresh,
+                              const Regul& regval, double* totalreg,
+                              DataCollector& data) {
   // Perform Bunch-Kaufman pivoting within a block of the supernode (see Schenk,
   // Gartner, ETNA 2006).
   // It works only for upper triangular A.
@@ -82,7 +83,7 @@ static bool blockBunchKaufman(Int j, Int n, double* A, Int lda, Int* swaps,
   // Max in column j of diagonal block
   auto res = maxInCol(j, n, j, A, lda);
   double gamma_j = res.second;
-  Int r = res.first;
+  const Int r = res.first;
   double Ajj = sign[j] > 0 ? A[j + lda * j] + regval.dual
                            : A[j + lda * j] - regval.primal;
 
@@ -99,7 +100,13 @@ static bool blockBunchKaufman(Int j, Int n, double* A, Int lda, Int* swaps,
 
     if (std::max(std::abs(Ajj), gamma_j) < thresh) {
       // perturbe pivot
-      A[j + lda * j] = sign[j] * thresh;
+      double temp_sign = sign[j];
+      if (temp_sign == 0 && A[j + lda * j] > 0)
+        temp_sign = 1;
+      else if (temp_sign == 0)
+        temp_sign = -1;
+
+      A[j + lda * j] = temp_sign * thresh;
       data.countRegPiv();
     }
     totalreg[j] = A[j + lda * j] - old_pivot;
@@ -148,7 +155,7 @@ static bool blockBunchKaufman(Int j, Int n, double* A, Int lda, Int* swaps,
 
 Int denseFactK(char uplo, Int n, double* A, Int lda, Int* pivot_sign,
                double thresh, const Regul& regval, double* totalreg, Int* swaps,
-               double* pivot_2x2, DataCollector& data) {
+               double* pivot_2x2, bool pivoting, DataCollector& data) {
   // ===========================================================================
   // Factorisation kernel
   // Matrix A is in format F
@@ -180,10 +187,10 @@ Int denseFactK(char uplo, Int n, double* A, Int lda, Int* pivot_sign,
     for (Int j = 0; j < n; j += step) {
       bool flag_2x2 = false;
 
-#ifdef HIPO_PIVOTING
-      flag_2x2 = blockBunchKaufman(j, n, A, lda, swaps, pivot_sign, thresh,
-                                   regval, totalreg, data);
-#endif
+      if (pivoting) {
+        flag_2x2 = blockBunchKaufman(j, n, A, lda, swaps, pivot_sign, thresh,
+                                     regval, totalreg, data);
+      }
 
       // cannot do 2x2 pivoting on last column
       assert(j < n - 1 || flag_2x2 == false);
@@ -200,11 +207,11 @@ Int denseFactK(char uplo, Int n, double* A, Int lda, Int* pivot_sign,
         // add regularisation
         staticReg(Ajj, pivot_sign[j], regval, totalreg[j]);
 
-#ifndef HIPO_PIVOTING
-        // add static regularisation
-        staticReg(Ajj, pivot_sign[j], regul[j]);
-        data.setMaxReg(std::abs(regul[j]));
-#endif
+        if (!pivoting) {
+          // add static regularisation
+          staticReg(Ajj, pivot_sign[j], regval, totalreg[j]);
+          data.setMaxReg(std::abs(totalreg[j]));
+        }
 
         // save reciprocal of pivot
         A[j + lda * j] = 1.0 / Ajj;

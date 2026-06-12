@@ -13,7 +13,7 @@ namespace hipo {
 Int denseFactFH(char format, Int n, Int k, Int nb, double* A, double* B,
                 const Int* pivot_sign, double thresh, const Regul& regval,
                 double* totalreg, Int* swaps, double* pivot_2x2, bool parnode,
-                DataCollector& data) {
+                bool pivoting, DataCollector& data) {
   // ===========================================================================
   // Partial blocked factorisation
   // Matrix A is in format FH
@@ -93,18 +93,18 @@ Int denseFactFH(char format, Int n, Int k, Int nb, double* A, double* B,
                                         &pivot_sign[j * nb] + jb);
     Int* swaps_current = &swaps[j * nb];
     double* pivot_2x2_current = &pivot_2x2[j * nb];
-    Int info =
-        denseFactK('U', jb, D, jb, pivot_sign_current.data(), thresh, regval,
-                   regul_current, swaps_current, pivot_2x2_current, data);
+    Int info = denseFactK('U', jb, D, jb, pivot_sign_current.data(), thresh,
+                          regval, regul_current, swaps_current,
+                          pivot_2x2_current, pivoting, data);
     if (info != 0) return info;
 
-#ifdef HIPO_PIVOTING
-    // swap columns in R
-    applySwaps(swaps_current, M, jb, R, data);
+    if (pivoting) {
+      // swap columns in R
+      applySwaps(swaps_current, M, jb, R, data);
 
-    // unswap regularisation, to keep it with original ordering
-    permuteWithSwaps(regul_current, swaps_current, jb, true);
-#endif
+      // unswap regularisation, to keep it with original ordering
+      permuteWithSwaps(regul_current, swaps_current, jb, true);
+    }
 
     if (M > 0) {
       // ===========================================================================
@@ -182,7 +182,7 @@ Int denseFactFH(char format, Int n, Int k, Int nb, double* A, double* B,
         offset += jb * col_jj;
       }
       HIPO_CLOCK_STOP(2, data, kTimeDenseFact_main);
-      
+
       // ===========================================================================
       // UPDATE SCHUR COMPLEMENT
       // ===========================================================================
