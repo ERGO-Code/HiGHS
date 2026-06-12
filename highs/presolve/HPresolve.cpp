@@ -5259,9 +5259,10 @@ HPresolve::Result HPresolve::redundantSingletonColDoubleSidedSlack(
 
   //  if (illegal_col_bounds)
     printf(
-        "Column %5d [%11.4g, %11.4g] coef %11.4g: Row bounds [%11.4g, %11.4g] "
-        "become [%11.4g, %11.4g]\n",
-        int(col), lb, ub, coef, model->row_lower_[row], model->row_upper_[row],
+        "Column %5d [%11.4g, %11.4g] coef %11.4g: Row %5d [%11.4g, %11.4g] "
+        "becomes [%11.4g, %11.4g]\n",
+        int(col), lb, ub, coef, int(row),
+	model->row_lower_[row], model->row_upper_[row],
         newRowLower, newRowUpper);
     //  assert(!illegal_col_bounds);
 
