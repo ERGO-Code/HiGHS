@@ -6984,6 +6984,7 @@ HPresolve::Result HPresolve::fourierMotzkin(
   };
 
   auto computeCandidates = [&](std::vector<HighsInt>& candidates) {
+    candidates.clear();
     for (HighsInt col = 0; col < model->num_col_; col++)
       if (isCandidate(col)) candidates.push_back(col);
     return !candidates.empty();
@@ -7327,12 +7328,21 @@ HPresolve::Result HPresolve::fourierMotzkin(
     heapSiftDown(heap, heapPos, pos);
   };
 
-  auto heapBuild =
-      [&](const std::vector<HighsInt>& candidates, std::vector<candidate>& heap,
+  auto heapify = [&](std::vector<candidate>& heap,
+                     std::vector<HighsInt>& heapPos) {
+    for (HighsInt i = static_cast<HighsInt>(heap.size()) / 2 - 1; i >= 0; --i)
+      heapSiftDown(heap, heapPos, i);
+  };
+
+  auto collectCandidatesAndBuildHeap =
+      [&](std::vector<HighsInt>& candidates, std::vector<candidate>& heap,
           std::vector<HighsInt>& heapPos, std::vector<HighsInt>& iPlus,
           std::vector<HighsInt>& iMinus, std::vector<HighsInt>& pPlus,
           std::vector<HighsInt>& pMinus, std::vector<HighsInt>& affectedCols,
           const std::vector<HighsInt>& objRowCols) {
+        // compute candidates
+        if (!computeCandidates(candidates)) return false;
+        // set up data structures for heap
         heap.clear();
         heap.reserve(candidates.size());
         heapPos.assign(model->num_col_, -1);
@@ -7341,6 +7351,7 @@ HPresolve::Result HPresolve::fourierMotzkin(
         iPlus.reserve(model->num_row_);
         iMinus.reserve(model->num_row_);
         affectedCols.reserve(model->num_col_);
+        // inspect candidates
         for (HighsInt col : candidates) {
           int64_t neRed;
           int64_t mrRed;
@@ -7349,10 +7360,14 @@ HPresolve::Result HPresolve::fourierMotzkin(
                             affectedCols, neRed, mrRed);
           affectedCols.clear();
           if (!elimCandidate || !isReduction(neRed, mrRed)) continue;
+          // add to heap
           heapPos[col] = static_cast<HighsInt>(heap.size());
           heap.push_back({col, neRed, mrRed});
         }
-        return !heap.empty();
+        if (heap.empty()) return false;
+        // heapify
+        heapify(heap, heapPos);
+        return true;
       };
 
   // find index of a row within a list
@@ -7389,9 +7404,17 @@ HPresolve::Result HPresolve::fourierMotzkin(
               {stepIndex, parentRowIndex, scale, isMinus});
       };
 
-  // collect candidate variables
+  // workspace vectors
   std::vector<HighsInt> candidates;
-  if (!computeCandidates(candidates)) return finalise();
+  std::vector<HighsInt> iPlus;
+  std::vector<HighsInt> iMinus;
+  std::vector<HighsInt> pPlus;
+  std::vector<HighsInt> pMinus;
+  std::vector<HighsInt> affectedCols;
+
+  // indexed max-heap
+  std::vector<candidate> heap;
+  std::vector<HighsInt> heapPos;
 
   // precompute the objective row: columns with nonzero cost
   // used to simulate the objective constraint in checkRows before
@@ -7403,25 +7426,10 @@ HPresolve::Result HPresolve::fourierMotzkin(
     }
   }
 
-  // workspace vectors
-  std::vector<HighsInt> iPlus;
-  std::vector<HighsInt> iMinus;
-  std::vector<HighsInt> pPlus;
-  std::vector<HighsInt> pMinus;
-  std::vector<HighsInt> affectedCols;
-
-  // indexed max-heap
-  std::vector<candidate> heap;
-  std::vector<HighsInt> heapPos;
-
-  // build initial heap
-  if (!heapBuild(candidates, heap, heapPos, iPlus, iMinus, pPlus, pMinus,
-                 affectedCols, objRowCols))
+  // compute candidates and build initial heap
+  if (!collectCandidatesAndBuildHeap(candidates, heap, heapPos, iPlus, iMinus,
+                                     pPlus, pMinus, affectedCols, objRowCols))
     return finalise();
-
-  // heapify
-  for (HighsInt i = static_cast<HighsInt>(heap.size()) / 2 - 1; i >= 0; --i)
-    heapSiftDown(heap, heapPos, i);
 
   // vectors for computing new row entries
   std::vector<newRowEntry> newRowEntries;
@@ -7466,16 +7474,16 @@ HPresolve::Result HPresolve::fourierMotzkin(
     // if this candidate has nonzero cost and objective has not yet been
     // reformulated, perform the reformulation now and rebuild the heap
     if (model->fme_obj_col_ == -1 && model->col_cost_[col] != 0.0) {
+      // reformulate objective
       reformulateObjective();
+      // clear vector for objective and resize marker
       objRowCols.clear();
-      candidates.clear();
       newRowMark.resize(model->num_col_, -1);
-      if (!computeCandidates(candidates)) return finalise();
-      if (!heapBuild(candidates, heap, heapPos, iPlus, iMinus, pPlus, pMinus,
-                     affectedCols, objRowCols))
+      // re-compute candidates and re-build heap
+      if (!collectCandidatesAndBuildHeap(candidates, heap, heapPos, iPlus,
+                                         iMinus, pPlus, pMinus, affectedCols,
+                                         objRowCols))
         return finalise();
-      for (HighsInt i = static_cast<HighsInt>(heap.size()) / 2 - 1; i >= 0; --i)
-        heapSiftDown(heap, heapPos, i);
       continue;
     }
 
