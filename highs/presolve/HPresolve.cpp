@@ -7469,6 +7469,7 @@ HPresolve::Result HPresolve::fourierMotzkin(
       reformulateObjective();
       objRowCols.clear();
       candidates.clear();
+      newRowMark.resize(model->num_col_, -1);
       if (!computeCandidates(candidates)) return finalise();
       if (!heapBuild(candidates, heap, heapPos, iPlus, iMinus, pPlus, pMinus,
                      affectedCols, objRowCols))
