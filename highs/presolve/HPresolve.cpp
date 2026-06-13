@@ -5240,12 +5240,8 @@ HPresolve::Result HPresolve::zeroCostSingleton(
   // relax s out as its value can be determined in postsolve.
   // The row may now admit additional reductions afterwards.
   // Dual fixing already handles single-sided row case with fixings.
-  const bool illegal_col_bounds = model->col_lower_[col] == -kHighsInf ||
-                                  model->col_upper_[col] == kHighsInf;
   if (model->integrality_[col] != HighsVarType::kContinuous ||
-      model->col_cost_[col] != 0.0 || colsize[col] != 1
-      //      || illegal_col_bounds
-      ) {
+      model->col_cost_[col] != 0.0 || colsize[col] != 1) {
     return Result::kOk;
   }
   assert(!colDeleted[col]);
@@ -5255,20 +5251,11 @@ HPresolve::Result HPresolve::zeroCostSingleton(
   assert(!rowDeleted[row]);
   // Row must be ranged, but why can't it be an equation?
   const bool was_equation = isEquation(row);
-  const bool illegal_row_bounds = !isRanged(row);  // || was_equation;
-  if (illegal_row_bounds) return Result::kOk;
-  //  if (was_equation)  return Result::kOk;
-  /*
-  // Row must be ranged, with the equation case considered explicitly
-  // elsewhere
-  if (!isRanged(row) || isEquation(row)) return Result::kOk;
-  */
+  if (!isRanged(row)) return Result::kOk;
+
   double coef = Avalue[nzPos];
 
   if (std::abs(coef) == kHighsInf) return Result::kOk;
-
-  // suppress this reduction for now
-  // return Result::kOk;
 
   storeRow(row);
 
@@ -5281,15 +5268,6 @@ HPresolve::Result HPresolve::zeroCostSingleton(
       model->row_lower_[row] - std::max(change_from_col_lb, change_from_col_ub);
   double newRowUpper =
       model->row_upper_[row] - std::min(change_from_col_lb, change_from_col_ub);
-
-  //  if (illegal_col_bounds)
-    printf(
-        "Column %5d [%11.4g, %11.4g] coef %11.4g: Row %5d [%11.4g, %11.4g] "
-        "becomes [%11.4g, %11.4g]\n",
-        int(col), lb, ub, coef, int(row),
-	model->row_lower_[row], model->row_upper_[row],
-        newRowLower, newRowUpper);
-    //  assert(!illegal_col_bounds);
 
   postsolve_stack.zeroCostSingleton(
       row, col, model->row_lower_[row], model->row_upper_[row], newRowLower,

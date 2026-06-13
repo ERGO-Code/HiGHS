@@ -1408,90 +1408,16 @@ void HighsPostsolveStack::ZeroObjSingletonContinuousCol::undo(
   for (const auto& rowVal : rowValues)
     act += rowVal.value * solution.col_value[rowVal.index];
 
-  // Determine domain of potential values
-  double col_lb = lb;
-  double col_ub = ub;
-  if (coef > 0) {
-    col_lb = std::max(col_lb, static_cast<double>((origRowLower - act) / coef));
-    col_ub = std::min(col_ub, static_cast<double>((origRowUpper - act) / coef));
-  } else {
-    col_lb = std::max(col_lb, static_cast<double>((origRowUpper - act) / coef));
-    col_ub = std::min(col_ub, static_cast<double>((origRowLower - act) / coef));
-  }
-  const std::string original_row_status = (isModelRow && basis.valid)
-    ? utilBasisStatusToString(basis.row_status[row], true) : "";
-  const std::string original_row_dual = (isModelRow && solution.dual_valid)
-    ? highsFormatToString("%11.4g", solution.row_dual[row]) : "";
-  std:string final_row_status = "";
-  std::string final_row_dual = "";
-  auto rowAtLower = [&]() {
-    return static_cast<double>(act - primal_tol) <= new_row_lb;
-  };
-  auto rowAtUpper = [&]() {
-    return static_cast<double>(act + primal_tol) >= new_row_ub;
-  };
-  auto rowBetweenBounds = [&]() {
-    return static_cast<double>(act + primal_tol) >= new_row_lb &&
-           static_cast<double>(act - primal_tol) <= new_row_ub;
-  };
-  auto errorLog = [&](const bool error, const std::string& message) {
-    if (!error) return;
-    printf("Column %5d [%11.4g, %11.4g] coef %11.4g: Act = %11.4g Row [%11.4g, %11.4g] status %2s ",
-	   int(col), lb, ub, coef, static_cast<double>(act), new_row_lb,
-	   new_row_ub, original_row_status.c_str());
-    if (solution.dual_valid) printf(", OgRowDual = %11s", original_row_dual.c_str());
-    printf("| Domain [%11.4g, %11.4g] | After: value (Col = %11.4g, Row = %11.4g)",
-	   col_lb, col_ub,
-	   solution.col_value[col],
-	   static_cast<double>(act + coef * solution.col_value[col]));
-    if (solution.dual_valid) 
-      printf(", Dual (Col = %11.4g, Row = %11s)",
-	     solution.col_dual[col], final_row_dual.c_str());
-    if (basis.valid) 
-      printf("; Status (Col = %2s, Row = %2s)",
-             utilBasisStatusToString(basis.col_status[col], true).c_str(),
-             final_row_status.c_str());
-    printf(": %s\n", message.c_str());
-  };
-
-  bool error = false;
-  auto errorCheck = [&](const bool ok, const std::string& message) {
-    errorLog(!ok, message);
-    assert(ok);
-    error = error || !ok;
-  };
   // Find a suitable bound within the domain
   double col_value = kHighsInf;
   // Detemine whether the row was at its lower or upper bound by
   // virtue of basis status or value
   bool row_at_lower = (isModelRow && basis.valid &&
                        basis.row_status[row] == HighsBasisStatus::kLower) ||
-                      rowAtLower();
+                      static_cast<double>(act - primal_tol) <= new_row_lb;
   bool row_at_upper = (isModelRow && basis.valid &&
                        basis.row_status[row] == HighsBasisStatus::kUpper) ||
-                      rowAtUpper();
-  // Determine whether the row can be assumed to be between its bounds or basic
-  bool ok_row_between_bounds = rowBetweenBounds();
-  bool ok_basic =
-      basis.valid && basis.row_status[row] == HighsBasisStatus::kBasic;
-
-  if (basis.valid) {
-    // Sanity checks that values reflect basis status
-    if (row_at_lower) {
-      errorCheck(rowAtLower(), "rowAtLower()");
-    } else if (row_at_upper) {
-      errorCheck(rowAtUpper(), "rowAtUpper()");
-    }
-  }
-  if (!row_at_lower && !row_at_upper) {
-    // Row is not at lower or upper
-    if (basis.valid) {
-      // Sanity check that row is basic
-      errorCheck(ok_basic, "ok_basic");
-    }
-    // Sanity check that row is between its bounds
-    errorCheck(ok_row_between_bounds, "ok_row_between_bounds");
-  }
+                      static_cast<double>(act + primal_tol) >= new_row_ub;
   bool col_at_lower = false;
   bool col_at_upper = false;
   bool col_basic = false;
@@ -1516,7 +1442,6 @@ void HighsPostsolveStack::ZeroObjSingletonContinuousCol::undo(
 	     act_with_col_at_upper <= origRowUpper + primal_tol) {
     col_at_upper = true;
   } else {
-    errorCheck(ok_row_between_bounds, "ok_row_between_bounds");
     double col_value_for_lower =
         static_cast<double>((origRowLower - act) / coef);
     double col_value_for_upper =
@@ -1533,10 +1458,7 @@ void HighsPostsolveStack::ZeroObjSingletonContinuousCol::undo(
       col_basic = true;
       row_at_upper = true;
     }
-    errorCheck(col_basic, "col_basic");
   }
-  final_row_dual = original_row_dual;
-  final_row_status = original_row_status;
   if (col_at_lower) {
     col_value = lb;
     if (basis.valid) basis.col_status[col] = HighsBasisStatus::kLower;
@@ -1544,7 +1466,6 @@ void HighsPostsolveStack::ZeroObjSingletonContinuousCol::undo(
       solution.col_dual[col] =
           (isModelRow) ? -coef * solution.row_dual[row] : 0;
     // Dual should be non-negative (to within tolerance)
-    errorCheck(solution.col_dual[col] >= -dual_tol, "solution.col_dual[col] >= -dual_tol");
   } else if (col_at_upper) {
     col_value = ub;
     if (basis.valid) basis.col_status[col] = HighsBasisStatus::kUpper;
@@ -1552,33 +1473,20 @@ void HighsPostsolveStack::ZeroObjSingletonContinuousCol::undo(
       solution.col_dual[col] =
           (isModelRow) ? -coef * solution.row_dual[row] : 0;
     // Dual should be non-positive (to within tolerance)
-    errorCheck(solution.col_dual[col] <= dual_tol, "solution.col_dual[col] <= dual_tol");
   } else {
     // Column takes value between its bounds and inherits any basic status from
     // the row
-    errorCheck(!solution.dual_valid || solution.row_dual[row] == 0,
-	       "!solution.dual_valid || solution.row_dual[row] == 0");
     if (solution.dual_valid) {
       solution.col_dual[col] = 0;
-      if (isModelRow) {
-	solution.row_dual[row] = 0;
-	final_row_dual = (isModelRow && solution.dual_valid) 
-	  ?  highsFormatToString("%11.4g", solution.row_dual[row]) : "";
-      }
+      if (isModelRow) solution.row_dual[row] = 0;
     }
     if (basis.valid) {
-      if (isModelRow) {
-	basis.row_status[row] =
+      if (isModelRow) basis.row_status[row] =
           row_at_lower ? HighsBasisStatus::kLower : HighsBasisStatus::kUpper;
-	final_row_status = utilBasisStatusToString(basis.row_status[row], true);
-      }
       basis.col_status[col] = HighsBasisStatus::kBasic;
     }
   }
-  errorCheck(std::fabs(col_value) < kHighsInf, "std::fabs(col_value) < kHighsInf");
   solution.col_value[col] = col_value;
-
-  errorLog(true, "");
 }
 
 }  // namespace presolve
