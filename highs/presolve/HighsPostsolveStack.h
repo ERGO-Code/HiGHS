@@ -363,7 +363,7 @@ class HighsPostsolveStack {
   }
 
   template <typename RowStorageFormat>
-  void zeroObjSingletonContinuousCol(
+  void zeroCostSingleton(
       HighsInt row, HighsInt col, double origRowLower, double origRowUpper,
       double new_row_lb, double new_row_ub, double lb, double ub, double coef,
       const HighsMatrixSlice<RowStorageFormat>& rowVec) {

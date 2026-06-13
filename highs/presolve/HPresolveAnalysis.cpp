@@ -48,7 +48,7 @@ void HPresolveAnalysis::setup(const HighsLp* model_,
           if (!allow ||
               (!options->presolve_rule_off && options_->log_dev_level))
             highsLogUser(options->log_options, HighsLogType::kInfo,
-                         "   Rule %2d (set bit %2d = %5d): %s\n",
+                         "   Rule %2d (set bit %2d = %6d): %s\n",
                          int(rule_type), int(rule_type), int(bit),
                          utilPresolveRuleTypeToString(rule_type).c_str());
       } else if (!allow && !silent) {

@@ -1520,6 +1520,10 @@ std::string utilPresolveRuleTypeToString(const HighsInt rule_type) {
     return "Probing";
   } else if (rule_type == kPresolveRuleEnumeration) {
     return "Enumeration";
+  } else if (rule_type == kPresolveRuleDualFixing) {
+    return "Dual fixing";
+  } else if (rule_type == kPresolveRuleZeroCostSingleton) {
+    return "Zero cost singleton";
   }
   assert(1 == 0);
   return "????";

@@ -1495,6 +1495,8 @@ void HighsPostsolveStack::ZeroObjSingletonContinuousCol::undo(
   bool col_at_lower = false;
   bool col_at_upper = false;
   bool col_basic = false;
+  double act_with_col_at_lower = static_cast<double>(act + coef * lb);
+  double act_with_col_at_upper = static_cast<double>(act + coef * ub);
   if (row_at_lower) {
     if (coef > 0) {
       col_at_upper = true;
@@ -1507,6 +1509,12 @@ void HighsPostsolveStack::ZeroObjSingletonContinuousCol::undo(
     } else {
       col_at_upper = true;
     }
+  } else if (act_with_col_at_lower >= origRowLower - primal_tol &&
+	     act_with_col_at_lower <= origRowUpper + primal_tol) {
+    col_at_lower = true;
+  } else if (act_with_col_at_upper >= origRowLower - primal_tol &&
+	     act_with_col_at_upper <= origRowUpper + primal_tol) {
+    col_at_upper = true;
   } else {
     errorCheck(ok_row_between_bounds, "ok_row_between_bounds");
     double col_value_for_lower =

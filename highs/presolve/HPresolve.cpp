@@ -2144,7 +2144,6 @@ HighsTripletTreeSliceInOrder HPresolve::getSortedRowVector(HighsInt row) const {
 
 void HPresolve::markRowDeleted(HighsInt row) {
   assert(!rowDeleted[row]);
-
   // remove equations from set of equations
   if (isEquation(row) && eqiters[row] != equations.end()) {
     equations.erase(eqiters[row]);
@@ -2159,7 +2158,6 @@ void HPresolve::markRowDeleted(HighsInt row) {
 
 void HPresolve::markColDeleted(HighsInt col) {
   assert(!colDeleted[col]);
-
   // prevents col from being added to change vector
   changedColFlag[col] = true;
   colDeleted[col] = true;
@@ -3369,8 +3367,10 @@ HPresolve::Result HPresolve::singletonCol(HighsPostsolveStack& postsolve_stack,
         static_cast<Result>(convertImpliedInteger(col, row)));
 
   // dual fixing
-  HPRESOLVE_CHECKED_CALL(dualFixing(postsolve_stack, col));
-  if (colDeleted[col]) return Result::kOk;
+  if (analysis_.allow_rule_[kPresolveRuleDualFixing]) {
+    HPRESOLVE_CHECKED_CALL(dualFixing(postsolve_stack, col));
+    if (colDeleted[col]) return Result::kOk;
+  }
 
   // singleton column stuffing
   HPRESOLVE_CHECKED_CALL(singletonColStuffing(postsolve_stack, col));
@@ -3409,9 +3409,10 @@ HPresolve::Result HPresolve::singletonCol(HighsPostsolveStack& postsolve_stack,
     return checkLimits(postsolve_stack);
   }
 
-  // Remove if col is double-sided finite slack
-  HPRESOLVE_CHECKED_CALL(
-      redundantSingletonColDoubleSidedSlack(postsolve_stack, col));
+  if (analysis_.allow_rule_[kPresolveRuleZeroCostSingleton]) {
+    // Remove if col is double-sided finite slack
+    HPRESOLVE_CHECKED_CALL(zeroCostSingleton(postsolve_stack, col));
+  }
 
   return Result::kOk;
 }
@@ -4496,8 +4497,10 @@ HPresolve::Result HPresolve::colPresolve(HighsPostsolveStack& postsolve_stack,
   }
 
   // dual fixing
-  HPRESOLVE_CHECKED_CALL(dualFixing(postsolve_stack, col));
-  if (colDeleted[col]) return Result::kOk;
+  if (analysis_.allow_rule_[kPresolveRuleDualFixing]) {
+    HPRESOLVE_CHECKED_CALL(dualFixing(postsolve_stack, col));
+    if (colDeleted[col]) return Result::kOk;
+  }
 
   // singleton column stuffing
   HPRESOLVE_CHECKED_CALL(singletonColStuffing(postsolve_stack, col));
@@ -4913,16 +4916,34 @@ HPresolve::Result HPresolve::dualFixing(HighsPostsolveStack& postsolve_stack,
     // cannot be fixed in this case.
     return numDownLocks > 1 && numUpLocks > 1;
   };
+  auto dualFixingLog = [&](const std::string& message) {
+    printf("HPresolve::dualFixing for column %5d [%11.4g, %11.4g] cost %11.4g;"
+	   " count %2d and numLocks = [%2d, %2d]: %s\n",
+	   int(col),
+	   model->col_lower_[col],
+	   model->col_upper_[col],
+	   model->col_cost_[col],
+	   int(colsize[col]),
+	   int(numDownLocks),
+	   int(numUpLocks), message.c_str());
+  };
   // compute locks
   computeLocks(col, true, lockCallback);
 
-  // check if variable can be fixed
+  // Check if variable is fixed: only possible if there are no up
+  // (down) locks, and the cost forces it up (down) to its bound
   if (numDownLocks == 0 || numUpLocks == 0) {
-    // fix variable
-    if (numDownLocks == 0)
+    // fix variable if cost is driving it to its bound
+    if (numDownLocks == 0 &&
+	model->col_cost_[col] <= options->dual_feasibility_tolerance &&
+	model->col_lower_[col] > -kHighsInf) {
       HPRESOLVE_CHECKED_CALL(fixColToLower(postsolve_stack, col));
-    else
+    } else if (numUpLocks == 0 &&
+	       model->col_cost_[col] >= -options->dual_feasibility_tolerance &&
+	       model->col_upper_[col] < kHighsInf) {
       HPRESOLVE_CHECKED_CALL(fixColToUpper(postsolve_stack, col));
+    }
+    dualFixingLog("IsFixed");
   } else {
     bool hasSingleDownLock = numDownLocks == 1 && downLockRow != -1;
     bool hasSingleUpLock = numUpLocks == 1 && upLockRow != -1;
@@ -4937,6 +4958,7 @@ HPresolve::Result HPresolve::dualFixing(HighsPostsolveStack& postsolve_stack,
         // Programming, INFORMS Journal on Computing 32(2):473-506.
         HPRESOLVE_CHECKED_CALL(handleSingleEquation(equationRow));
         singleEquationChecked[equationRow] = true;
+	//	if (colDeleted[col]) dualFixingLog("Single equation ColDeleted");
         if (colDeleted[col]) return Result::kOk;
       } else if (mipsolver != nullptr && model->col_lower_[col] != -kHighsInf &&
                  model->col_upper_[col] != kHighsInf) {
@@ -4945,12 +4967,14 @@ HPresolve::Result HPresolve::dualFixing(HighsPostsolveStack& postsolve_stack,
           HPRESOLVE_CHECKED_CALL(substituteCol(col, downLockRow, HighsInt{1},
                                                model->col_upper_[col],
                                                model->col_lower_[col]));
+	  //	  if (colDeleted[col]) dualFixingLog("DownLock substition ColDeleted");
           if (colDeleted[col]) return Result::kOk;
         }
         if (hasSingleUpLock) {
           HPRESOLVE_CHECKED_CALL(substituteCol(col, upLockRow, HighsInt{-1},
                                                model->col_lower_[col],
                                                model->col_upper_[col]));
+	  //	  if (colDeleted[col]) dualFixingLog("UpLock substition ColDeleted");
           if (colDeleted[col]) return Result::kOk;
         }
       }
@@ -5209,7 +5233,7 @@ HPresolve::Result HPresolve::singletonColStuffing(
   return Result::kOk;
 }
 
-HPresolve::Result HPresolve::redundantSingletonColDoubleSidedSlack(
+HPresolve::Result HPresolve::zeroCostSingleton(
     HighsPostsolveStack& postsolve_stack, HighsInt col) {
   // For a double-sided row b_0 <= a^Tx + cs <= b_1,
   // where s is a singleton continuous column with 0 cost,
@@ -5233,6 +5257,7 @@ HPresolve::Result HPresolve::redundantSingletonColDoubleSidedSlack(
   const bool was_equation = isEquation(row);
   const bool illegal_row_bounds = !isRanged(row);  // || was_equation;
   if (illegal_row_bounds) return Result::kOk;
+  //  if (was_equation)  return Result::kOk;
   /*
   // Row must be ranged, with the equation case considered explicitly
   // elsewhere
@@ -5266,7 +5291,7 @@ HPresolve::Result HPresolve::redundantSingletonColDoubleSidedSlack(
         newRowLower, newRowUpper);
     //  assert(!illegal_col_bounds);
 
-  postsolve_stack.zeroObjSingletonContinuousCol(
+  postsolve_stack.zeroCostSingleton(
       row, col, model->row_lower_[row], model->row_upper_[row], newRowLower,
       newRowUpper, lb, ub, coef, getStoredRow());
 
