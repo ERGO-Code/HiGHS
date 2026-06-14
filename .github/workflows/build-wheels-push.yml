@@ -48,11 +48,11 @@ jobs:
           - [macos-14, macosx_arm64]
           - [windows-2022, win_amd64]
           - [windows-2022, win32]
-        python: ["cp38", "cp39", "cp310", "cp311", "cp312", "cp313", "cp314"]
+        python: ["cp39", "cp310", "cp311", "cp312", "cp313", "cp314"]
     steps:
       - uses: actions/checkout@v6
       - name: Build wheels
-        uses: pypa/cibuildwheel@v3.3.1
+        uses: pypa/cibuildwheel@v4.0.0
         env:
           CIBW_BUILD: ${{ matrix.python }}-${{ matrix.buildplat[1] }}
 
@@ -79,12 +79,12 @@ jobs:
           - [macos-14, macosx_arm64]
           - [windows-2022, win_amd64]
           - [windows-2022, win32]
-        python: ["cp38", "cp39", "cp310", "cp311", "cp312", "cp313", "cp314"]
+        python: ["cp39", "cp310", "cp311", "cp312", "cp313", "cp314"]
     steps:
       - uses: actions/checkout@v6
 
       - name: Build wheels
-        uses: pypa/cibuildwheel@v3.3.1
+        uses: pypa/cibuildwheel@v4.0.0
         with:
           package-dir: ./highspy-extras
         env:
