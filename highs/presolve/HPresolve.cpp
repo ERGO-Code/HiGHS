@@ -3359,6 +3359,23 @@ HPresolve::Result HPresolve::singletonCol(HighsPostsolveStack& postsolve_stack,
     return Result::kOk;
   }
 
+  auto zeroCostSingleton = [&](HighsInt col, HighsInt row, double val,
+                               HighsInt direction) {
+    // try to relax constraint by fixing zero-cost singleton to a bound
+    if (model->col_cost_[col] != 0.0 || isRanged(row)) return Result::kOk;
+    if (direction * val > 0 && model->col_lower_[col] != -kHighsInf)
+      HPRESOLVE_CHECKED_CALL(fixColToLower(postsolve_stack, col));
+    else if (direction * val < 0 && model->col_upper_[col] != kHighsInf)
+      HPRESOLVE_CHECKED_CALL(fixColToUpper(postsolve_stack, col));
+    return Result::kOk;
+  };
+
+  // handle zero-cost singleton
+  HPRESOLVE_CHECKED_CALL(zeroCostSingleton(
+      col, row, colCoef,
+      model->row_upper_[row] != kHighsInf ? HighsInt{1} : HighsInt{-1}));
+  if (colDeleted[col]) return Result::kOk;
+
   // detect strong / weak domination
   HPRESOLVE_CHECKED_CALL(detectDominatedCol(postsolve_stack, col, false));
   if (colDeleted[col]) return Result::kOk;
@@ -3409,7 +3426,6 @@ HPresolve::Result HPresolve::singletonCol(HighsPostsolveStack& postsolve_stack,
     return checkLimits(postsolve_stack);
   }
 
-  // todo: check for zero cost singleton and remove
   return Result::kOk;
 }
 
@@ -4916,10 +4932,15 @@ HPresolve::Result HPresolve::dualFixing(HighsPostsolveStack& postsolve_stack,
   // check if variable can be fixed
   if (numDownLocks == 0 || numUpLocks == 0) {
     // fix variable
-    if (numDownLocks == 0)
-      HPRESOLVE_CHECKED_CALL(fixColToLower(postsolve_stack, col));
-    else
-      HPRESOLVE_CHECKED_CALL(fixColToUpper(postsolve_stack, col));
+    if (numDownLocks == 0) {
+      // avoid fixing zero-cost column to an infinite bound
+      if (model->col_cost_[col] != 0.0 || model->col_lower_[col] != -kHighsInf)
+        HPRESOLVE_CHECKED_CALL(fixColToLower(postsolve_stack, col));
+    } else {
+      // avoid fixing zero-cost column to an infinite bound
+      if (model->col_cost_[col] != 0.0 || model->col_upper_[col] != kHighsInf)
+        HPRESOLVE_CHECKED_CALL(fixColToUpper(postsolve_stack, col));
+    }
   } else {
     bool hasSingleDownLock = numDownLocks == 1 && downLockRow != -1;
     bool hasSingleUpLock = numUpLocks == 1 && upLockRow != -1;
