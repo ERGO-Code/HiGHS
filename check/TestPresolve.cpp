@@ -180,8 +180,8 @@ void presolveSolvePostsolve(const std::string& model_file,
                             const bool solve_relaxation) {
   Highs highs0;
   Highs highs1;
-  //  highs0.setOptionValue("output_flag", dev_run);
-  //  highs1.setOptionValue("output_flag", dev_run);
+  highs0.setOptionValue("output_flag", dev_run);
+  highs1.setOptionValue("output_flag", dev_run);
   HighsStatus return_status;
   highs0.readModel(model_file);
   highs0.setOptionValue("solve_relaxation", solve_relaxation);
@@ -914,13 +914,15 @@ TEST_CASE("presolve-issue-2874", "[highs_test_presolve]") {
 }
 
 TEST_CASE("issue-2962", "[highs_test_presolve]") {
+  // Model that exposes the case where zeroCostSingleton in postsolve
+  // requires the column to inherit the basic status of the row
   std::string model_file =
       std::string(HIGHS_DIR) + "/check/instances/p0548.mps";
   Highs h;
-  //  h.setOptionValue("output_flag", dev_run);
+  h.setOptionValue("output_flag", dev_run);
   h.setOptionValue("solve_relaxation", true);
-  //  h.setOptionValue("log_dev_level", 1);
-  //  h.setOptionValue("presolve_rule_logging", true);
+  h.setOptionValue("log_dev_level", 1);
+  h.setOptionValue("presolve_rule_logging", true);
 
   h.readModel(model_file);
   REQUIRE(h.run() == HighsStatus::kOk);
