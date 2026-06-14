@@ -83,13 +83,13 @@ jobs:
         run: python -m pip install pytest
 
       - name: Install OpenBLAS
-        run: vcpkg install openblas[threads]
+        run: vcpkg install openblas[threads]:x64-windows-static
 
       - name: Install highspy-extras
         run: |
           python -m pip install ./highspy-extras `
               --config-settings=cmake.define.BUILD_OPENBLAS=OFF `
-              --config-settings=cmake.define.HIGHS_VCPKG=ON
+              --config-settings=cmake.define.BLAS_LIBRARIES=$env:VCPKG_ROOT/installed/x64-windows-static/lib/openblas.lib
 
       - name: Install highspy
         run: |
