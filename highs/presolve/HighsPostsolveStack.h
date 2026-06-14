@@ -363,10 +363,10 @@ class HighsPostsolveStack {
   }
 
   template <typename RowStorageFormat>
-  void zeroCostSingleton(
-      HighsInt row, HighsInt col, double origRowLower, double origRowUpper,
-      double new_row_lb, double new_row_ub, double lb, double ub, double coef,
-      const HighsMatrixSlice<RowStorageFormat>& rowVec) {
+  void zeroCostSingleton(HighsInt row, HighsInt col, double origRowLower,
+                         double origRowUpper, double new_row_lb,
+                         double new_row_ub, double lb, double ub, double coef,
+                         const HighsMatrixSlice<RowStorageFormat>& rowVec) {
     rowValues.clear();
     for (const HighsSliceNonzero& rowVal : rowVec)
       rowValues.emplace_back(origColIndex[rowVal.index()], rowVal.value());

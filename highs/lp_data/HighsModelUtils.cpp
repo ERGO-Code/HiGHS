@@ -1379,7 +1379,8 @@ std::string utilSolutionStatusToString(const HighsInt solution_status) {
 }
 
 // Return a string representation of HighsBasisStatus
-std::string utilBasisStatusToString(const HighsBasisStatus basis_status, const bool s2) {
+std::string utilBasisStatusToString(const HighsBasisStatus basis_status,
+                                    const bool s2) {
   switch (basis_status) {
     case HighsBasisStatus::kLower:
       if (s2) return "LO";

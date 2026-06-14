@@ -2153,6 +2153,7 @@ void HPresolve::markRowDeleted(HighsInt row) {
   // prevents row from being added to change vector
   changedRowFlag[row] = true;
   rowDeleted[row] = true;
+  assert(!analysis_.logging_on_);
   ++numDeletedRows;
 }
 
@@ -2161,6 +2162,7 @@ void HPresolve::markColDeleted(HighsInt col) {
   // prevents col from being added to change vector
   changedColFlag[col] = true;
   colDeleted[col] = true;
+  assert(!analysis_.logging_on_);
   ++numDeletedCols;
 }
 
@@ -4916,17 +4918,6 @@ HPresolve::Result HPresolve::dualFixing(HighsPostsolveStack& postsolve_stack,
     // cannot be fixed in this case.
     return numDownLocks > 1 && numUpLocks > 1;
   };
-  auto dualFixingLog = [&](const std::string& message) {
-    printf("HPresolve::dualFixing for column %5d [%11.4g, %11.4g] cost %11.4g;"
-	   " count %2d and numLocks = [%2d, %2d]: %s\n",
-	   int(col),
-	   model->col_lower_[col],
-	   model->col_upper_[col],
-	   model->col_cost_[col],
-	   int(colsize[col]),
-	   int(numDownLocks),
-	   int(numUpLocks), message.c_str());
-  };
   // compute locks
   computeLocks(col, true, lockCallback);
 
@@ -4935,15 +4926,14 @@ HPresolve::Result HPresolve::dualFixing(HighsPostsolveStack& postsolve_stack,
   if (numDownLocks == 0 || numUpLocks == 0) {
     // fix variable if cost is driving it to its bound
     if (numDownLocks == 0 &&
-	model->col_cost_[col] <= options->dual_feasibility_tolerance &&
-	model->col_lower_[col] > -kHighsInf) {
+        model->col_cost_[col] <= options->dual_feasibility_tolerance &&
+        model->col_lower_[col] > -kHighsInf) {
       HPRESOLVE_CHECKED_CALL(fixColToLower(postsolve_stack, col));
     } else if (numUpLocks == 0 &&
-	       model->col_cost_[col] >= -options->dual_feasibility_tolerance &&
-	       model->col_upper_[col] < kHighsInf) {
+               model->col_cost_[col] >= -options->dual_feasibility_tolerance &&
+               model->col_upper_[col] < kHighsInf) {
       HPRESOLVE_CHECKED_CALL(fixColToUpper(postsolve_stack, col));
     }
-    dualFixingLog("IsFixed");
   } else {
     bool hasSingleDownLock = numDownLocks == 1 && downLockRow != -1;
     bool hasSingleUpLock = numUpLocks == 1 && upLockRow != -1;
@@ -4958,7 +4948,6 @@ HPresolve::Result HPresolve::dualFixing(HighsPostsolveStack& postsolve_stack,
         // Programming, INFORMS Journal on Computing 32(2):473-506.
         HPRESOLVE_CHECKED_CALL(handleSingleEquation(equationRow));
         singleEquationChecked[equationRow] = true;
-	//	if (colDeleted[col]) dualFixingLog("Single equation ColDeleted");
         if (colDeleted[col]) return Result::kOk;
       } else if (mipsolver != nullptr && model->col_lower_[col] != -kHighsInf &&
                  model->col_upper_[col] != kHighsInf) {
@@ -4967,14 +4956,12 @@ HPresolve::Result HPresolve::dualFixing(HighsPostsolveStack& postsolve_stack,
           HPRESOLVE_CHECKED_CALL(substituteCol(col, downLockRow, HighsInt{1},
                                                model->col_upper_[col],
                                                model->col_lower_[col]));
-	  //	  if (colDeleted[col]) dualFixingLog("DownLock substition ColDeleted");
           if (colDeleted[col]) return Result::kOk;
         }
         if (hasSingleUpLock) {
           HPRESOLVE_CHECKED_CALL(substituteCol(col, upLockRow, HighsInt{-1},
                                                model->col_lower_[col],
                                                model->col_upper_[col]));
-	  //	  if (colDeleted[col]) dualFixingLog("UpLock substition ColDeleted");
           if (colDeleted[col]) return Result::kOk;
         }
       }
@@ -5235,6 +5222,7 @@ HPresolve::Result HPresolve::singletonColStuffing(
 
 HPresolve::Result HPresolve::zeroCostSingleton(
     HighsPostsolveStack& postsolve_stack, HighsInt col) {
+  assert(analysis_.allow_rule_[kPresolveRuleZeroCostSingleton]);
   // For a double-sided row b_0 <= a^Tx + cs <= b_1,
   // where s is a singleton continuous column with 0 cost,
   // relax s out as its value can be determined in postsolve.
@@ -5257,6 +5245,9 @@ HPresolve::Result HPresolve::zeroCostSingleton(
 
   if (std::abs(coef) == kHighsInf) return Result::kOk;
 
+  const bool logging_on = analysis_.logging_on_;
+  if (logging_on)
+    analysis_.startPresolveRuleLog(kPresolveRuleZeroCostSingleton);
   storeRow(row);
 
   double lb = model->col_lower_[col];
@@ -5269,9 +5260,9 @@ HPresolve::Result HPresolve::zeroCostSingleton(
   double newRowUpper =
       model->row_upper_[row] - std::min(change_from_col_lb, change_from_col_ub);
 
-  postsolve_stack.zeroCostSingleton(
-      row, col, model->row_lower_[row], model->row_upper_[row], newRowLower,
-      newRowUpper, lb, ub, coef, getStoredRow());
+  postsolve_stack.zeroCostSingleton(row, col, model->row_lower_[row],
+                                    model->row_upper_[row], newRowLower,
+                                    newRowUpper, lb, ub, coef, getStoredRow());
 
   model->row_lower_[row] = newRowLower;
   model->row_upper_[row] = newRowUpper;
@@ -5284,6 +5275,9 @@ HPresolve::Result HPresolve::zeroCostSingleton(
   // Delete the singleton column
   markColDeleted(col);
   unlink(nzPos);
+
+  analysis_.logging_on_ = logging_on;
+  if (logging_on) analysis_.stopPresolveRuleLog(kPresolveRuleZeroCostSingleton);
 
   return Result::kOk;
 }
