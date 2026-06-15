@@ -6105,6 +6105,8 @@ HPresolve::Result HPresolve::initialSweep(
     }
   }
   model->a_matrix_.start_[num_col] = nnz;
+  HighsInt num_removed_cols = num_empty_col + num_fixed_col;
+  assert(num_col + num_removed_cols == model->num_col_);
   model->col_cost_.resize(num_col);
   model->col_lower_.resize(num_col);
   model->col_upper_.resize(num_col);
@@ -6128,12 +6130,15 @@ HPresolve::Result HPresolve::initialSweep(
     else if (row_count[iRow] == 1)
       num_singleton_row++;
     else if (localIsRedundant(iRow)) {
-      printf("Redundant row %d\n", int(iRow));
+      printf("Redundant row %d; true = [%11.4g, %11.4g]; implied = [%11.4g, %11.4g]\n", int(iRow),
+	     model->row_lower_[iRow], model->row_upper_[iRow], implied_row_lower[iRow], implied_row_upper[iRow]);
       num_redundant_row++;
     }
   }
   const bool allow_row_sweep = true;
-  const bool remove_redundant_rows = false;
+  const bool remove_redundant_rows = true;//false;
+  HighsInt num_removed_rows = num_empty_row + num_singleton_row;
+  if (remove_redundant_rows) num_removed_rows += num_redundant_row;
   printf("InitialSweep: num_redundant_row = %d\n", int(num_redundant_row));
   if (allow_row_sweep && (num_empty_row || num_singleton_row || num_redundant_row)) {
     HighsInt num_row = 0;
@@ -6157,8 +6162,6 @@ HPresolve::Result HPresolve::initialSweep(
 	if (remove_redundant_rows && localIsRedundant(iRow)) {
 	  postsolve_stack.redundantRow(iRow);
 	  newRowIndex[iRow] = -1;
-	  printf("Need to remove redundant row %d\n", int(iRow));
-	  assert(1111==3333);
 	  continue;
 	}
         newRowIndex[iRow] = num_row;
@@ -6169,21 +6172,14 @@ HPresolve::Result HPresolve::initialSweep(
         num_row++;
       }
     }
-    if (remove_redundant_rows) {
-      assert(num_row + num_empty_row + num_singleton_row + num_redundant_row == model->num_row_);
-    } else {
-      assert(num_row + num_empty_row + num_singleton_row  == model->num_row_);
-    }
-    HighsInt nnz = 0;
-    HighsInt from_col = 0;
-    HighsInt iCol0 = 0;
+    assert(num_row + num_removed_rows == model->num_row_);
+
     if (!remove_redundant_rows || num_redundant_row == 0) {
-      // Only removing entries corresponding to singleton rows so
-      // there are few to remove and it can be done efficiently
-      //
+      nnz = 0;
+      HighsInt from_col = 0;
       // Lambda for shifting column data and updating row indices
-      auto shiftCols = [&]() {
-	for (HighsInt iCol = from_col; iCol < iCol0; iCol++) {
+      auto shiftCols = [&](const HighsInt to_col) {
+	for (HighsInt iCol = from_col; iCol < to_col; iCol++) {
 	  HighsInt from_os = model->a_matrix_.start_[iCol];
 	  HighsInt col_nnz = model->a_matrix_.start_[iCol + 1] - from_os;
 	  HighsInt new_col_start = nnz;
@@ -6198,11 +6194,14 @@ HPresolve::Result HPresolve::initialSweep(
 	  model->a_matrix_.start_[iCol] = new_col_start;
 	}
       };
-      for (iCol0 = 0; iCol0 < model->num_col_; iCol0++) {
+      // Only removing entries corresponding to singleton rows so
+      // there are few to remove and it can be done efficiently
+      //
+      for (HighsInt iCol0 = 0; iCol0 < model->num_col_; iCol0++) {
 	if (!has_singleton_row[iCol0]) continue;
 	// Column iCol0 contains a row singleton, so update the matrix
 	// entries for the columns since the last with a row singleton
-	shiftCols();
+	shiftCols(iCol0);
 	HighsInt from_os = model->a_matrix_.start_[iCol0];
 	HighsInt col_nnz = model->a_matrix_.start_[iCol0 + 1] - from_os;
 	HighsInt new_col_start = nnz;
@@ -6227,12 +6226,45 @@ HPresolve::Result HPresolve::initialSweep(
       }
       // Update the matrix entries for the columns since the last with a
       // row singleton
-      shiftCols();
+      shiftCols(model->num_col_);
       model->a_matrix_.start_[num_col] = nnz;
     } else {
       // Also removing redundant rows, so make the matrix rowwise and
-      // remove rows as columns containing singletons were removed
-      // above
+      // remove rows simply above
+      nnz = 0;
+      HighsInt from_row = 0;
+      num_row = 0;
+      // Lambda for shifting row data and updating row indices
+      auto shiftRows = [&](const HighsInt to_row) {
+	for (HighsInt iRow = from_row; iRow < to_row; iRow++) {
+	  HighsInt new_row_start = nnz;
+	  for (HighsInt iEl = model->a_matrix_.start_[iRow];
+	       iEl < model->a_matrix_.start_[iRow + 1]; iEl++) {
+	    model->a_matrix_.index_[nnz] = model->a_matrix_.index_[iEl];
+	    model->a_matrix_.value_[nnz] = model->a_matrix_.value_[iEl];
+	    nnz++;
+	  }
+	  model->a_matrix_.start_[num_row] = new_row_start;
+	  num_row++;
+	}
+      };
+      // Only removing entries corresponding to singleton rows so
+      // there are few to remove and it can be done efficiently
+      //
+      model->a_matrix_.ensureRowwise();
+      for (HighsInt iRow0 = 0; iRow0 < model->num_row_; iRow0++) {
+	if (newRowIndex[iRow0] >= 0) continue;
+	// Row iRow0 is removed, so update the matrix entries for the
+	// rows since the last removed
+	shiftRows(iRow0);
+	from_row = iRow0 + 1;
+      }
+      // Update the matrix entries for the rows since the last removed
+      shiftRows(model->num_row_);
+      assert(num_row + num_removed_rows == model->num_row_);
+      model->a_matrix_.start_[num_row] = nnz;
+      model->a_matrix_.num_row_ = num_row;
+      model->a_matrix_.ensureColwise();
     }
     model->row_lower_.resize(num_row);
     model->row_upper_.resize(num_row);
@@ -6245,13 +6277,15 @@ HPresolve::Result HPresolve::initialSweep(
   }
   if (num_fixed_col || num_empty_col)
     highsLogUser(options->log_options, HighsLogType::kInfo,
-                 "Initial sweep removes (%d; %d) / %d (empty; fixed) columns\n",
-                 int(num_empty_col), int(num_fixed_col), int(original_num_col));
+                 "Initial sweep removes %d + %d = %d / %d empty + fixed columns\n",
+                 int(num_empty_col), int(num_fixed_col), 
+		 int(num_removed_cols),int(original_num_col));
   if (num_empty_row || num_singleton_row || num_redundant_row)
     highsLogUser(
         options->log_options, HighsLogType::kInfo,
-        "Initial sweep identifies (%d; %d; %d) / %d (empty; singleton; redundant) rows\n",
-        int(num_empty_row), int(num_singleton_row), int(num_redundant_row), int(original_num_row));
+        "Initial sweep identifies %d + %d + %d = %d / %d empty + singleton + redundant rows\n",
+        int(num_empty_row), int(num_singleton_row), int(num_redundant_row),
+	int(num_removed_rows), int(original_num_row));
   analysis_.logging_on_ = logging_on;
   if (logging_on) analysis_.stopPresolveRuleLog(kPresolveRuleInitialSweep);
   return checkLimits(postsolve_stack);
