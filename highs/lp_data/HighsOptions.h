@@ -423,6 +423,8 @@ struct HighsOptionsStruct {
   bool mps_parser_type_free;
   bool use_warm_start;
   std::string presolve_light;
+  bool write_matrix_image;
+  bool write_hessian_image;
   HighsInt keep_n_rows;
   HighsInt cost_scale_factor;
   HighsInt allowed_matrix_scale_factor;
@@ -440,9 +442,7 @@ struct HighsOptionsStruct {
   HighsInt presolve_rule_off;
   bool presolve_rule_logging;
   bool presolve_remove_slacks;
-  bool simplex_initial_condition_check;
   bool no_unnecessary_rebuild_refactor;
-  double simplex_initial_condition_tolerance;
   double rebuild_refactor_solution_error_tolerance;
   double dual_steepest_edge_weight_error_tolerance;
   double dual_steepest_edge_weight_log_error_threshold;
@@ -591,6 +591,8 @@ struct HighsOptionsStruct {
         mps_parser_type_free(false),
         use_warm_start(true),
         presolve_light(""),
+        write_matrix_image(false),
+        write_hessian_image(false),
         keep_n_rows(0),
         cost_scale_factor(0),
         allowed_matrix_scale_factor(0),
@@ -608,9 +610,7 @@ struct HighsOptionsStruct {
         presolve_rule_off(0),
         presolve_rule_logging(false),
         presolve_remove_slacks(false),
-        simplex_initial_condition_check(false),
         no_unnecessary_rebuild_refactor(false),
-        simplex_initial_condition_tolerance(0.0),
         rebuild_refactor_solution_error_tolerance(0.0),
         dual_steepest_edge_weight_error_tolerance(0.0),
         dual_steepest_edge_weight_log_error_threshold(0.0),
@@ -1461,6 +1461,17 @@ class HighsOptions : public HighsOptionsStruct {
         advanced, &presolve_light, kHighsChooseString);
     records.push_back(record_string);
 
+    record_bool = new OptionRecordBool(
+        "write_matrix_image",
+        "Write an image of the constraint matrix to a file", advanced,
+        &write_matrix_image, false);
+    records.push_back(record_bool);
+
+    record_bool = new OptionRecordBool(
+        "write_hessian_image", "Write an image of the Hessian to a file",
+        advanced, &write_hessian_image, false);
+    records.push_back(record_bool);
+
     record_int =
         new OptionRecordInt("keep_n_rows",
                             "For multiple N-rows in MPS files: delete rows / "
@@ -1532,23 +1543,11 @@ class HighsOptions : public HighsOptionsStruct {
                             kSimplexUnscaledSolutionStrategyMax);
     records.push_back(record_int);
 
-    record_bool =
-        new OptionRecordBool("simplex_initial_condition_check",
-                             "Perform initial basis condition check in simplex",
-                             advanced, &simplex_initial_condition_check, true);
-    records.push_back(record_bool);
-
     record_bool = new OptionRecordBool(
         "no_unnecessary_rebuild_refactor",
         "No unnecessary refactorization on simplex rebuild", advanced,
         &no_unnecessary_rebuild_refactor, true);
     records.push_back(record_bool);
-
-    record_double = new OptionRecordDouble(
-        "simplex_initial_condition_tolerance",
-        "Tolerance on initial basis condition in simplex", advanced,
-        &simplex_initial_condition_tolerance, 1.0, 1e14, kHighsInf);
-    records.push_back(record_double);
 
     record_double = new OptionRecordDouble(
         "rebuild_refactor_solution_error_tolerance",

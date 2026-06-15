@@ -53,7 +53,7 @@ print(highspy_extras.get_library_version())
 
 To install locally, you will need
 
-- Python >= 3.8
+- Python >= 3.9
 - BLAS library (bundled or system)
 
 ## Uninstall
