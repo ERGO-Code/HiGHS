@@ -474,11 +474,9 @@ class HPresolve {
   void substitute(HighsInt substcol, HighsInt staycol, double offset,
                   double scale);
 
-  void removeFixedCol(HighsInt col);
+  void removeFixedCol(HighsInt col, const bool initial_sweep = false);
 
-  void removeFixedCol(HighsInt col, double fixval);
-
-  void removeModelFixedCol(HighsInt col);
+  void removeFixedCol(HighsInt col, double fixval, const bool initial_sweep = false);
 
   void removeRow(HighsInt row);
 

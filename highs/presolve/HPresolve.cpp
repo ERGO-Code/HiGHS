@@ -6068,7 +6068,7 @@ HPresolve::Result HPresolve::initialSweep(
       postsolve_stack.removedModelFixedCol(
           iCol, model->col_lower_[iCol], model->col_cost_[iCol], col_nnz,
           &model->a_matrix_.index_[iEl], &model->a_matrix_.value_[iEl]);
-      removeModelFixedCol(iCol);
+      removeFixedCol(iCol, initial_sweep);
     } else {
       newColIndex[iCol] = num_col;
       model->col_cost_[num_col] = model->col_cost_[iCol];
@@ -6265,6 +6265,9 @@ HPresolve::Result HPresolve::initialSweep(
     model->a_matrix_.value_.resize(nnz);
     postsolve_stack.compressRowIndexMap(newRowIndex);
   }
+  // Add doubleton equations, column singletons, variable locks 
+
+
   if (num_fixed_col || num_empty_col)
     highsLogUser(options->log_options, HighsLogType::kInfo,
                  "Initial sweep removes %d + %d = %d / %d empty + fixed columns\n",
@@ -7585,55 +7588,48 @@ void HPresolve::removeRow(HighsInt row) {
   }
 }
 
-void HPresolve::removeFixedCol(HighsInt col) {
+void HPresolve::removeFixedCol(HighsInt col, const bool initial_sweep) {
   const bool logging_on = analysis_.logging_on_;
   if (logging_on) analysis_.startPresolveRuleLog(kPresolveRuleFixedCol);
-  removeFixedCol(col, model->col_lower_[col]);
+  removeFixedCol(col, model->col_lower_[col], initial_sweep);
   analysis_.logging_on_ = logging_on;
   if (logging_on) analysis_.stopPresolveRuleLog(kPresolveRuleFixedCol);
 }
 
-void HPresolve::removeFixedCol(HighsInt col, double fixval) {
+void HPresolve::removeFixedCol(HighsInt col, double fixval, const bool initial_sweep) {
   // mark the column as deleted first so that it is not registered as singleton
   // column upon removing its non-zeros
-  markColDeleted(col);
-
-  for (HighsInt coliter = colhead[col]; coliter != -1;) {
-    HighsInt colrow = Arow[coliter];
-    double colval = Avalue[coliter];
-    assert(Acol[coliter] == col);
-
-    HighsInt colpos = coliter;
-    coliter = Anext[coliter];
-
-    if (model->row_lower_[colrow] != -kHighsInf)
-      model->row_lower_[colrow] -= colval * fixval;
-
-    if (model->row_upper_[colrow] != kHighsInf)
-      model->row_upper_[colrow] -= colval * fixval;
-
-    unlink(colpos);
-
-    reinsertEquation(colrow);
-  }
-
-  model->offset_ += model->col_cost_[col] * fixval;
-  assert(std::isfinite(model->offset_));
-  model->col_cost_[col] = 0;
-}
-
-void HPresolve::removeModelFixedCol(HighsInt col) {
-  const bool initial_sweep = true;
   markColDeleted(col, initial_sweep);
-  double fixval = model->col_lower_[col];
-  for (HighsInt iEl = model->a_matrix_.start_[col];
-       iEl < model->a_matrix_.start_[col + 1]; iEl++) {
-    HighsInt colrow = model->a_matrix_.index_[iEl];
-    double colval = model->a_matrix_.value_[iEl];
-    if (model->row_lower_[colrow] != -kHighsInf)
-      model->row_lower_[colrow] -= colval * fixval;
-    if (model->row_upper_[colrow] != kHighsInf)
-      model->row_upper_[colrow] -= colval * fixval;
+
+  if (initial_sweep) {
+    for (HighsInt iEl = model->a_matrix_.start_[col];
+	 iEl < model->a_matrix_.start_[col + 1]; iEl++) {
+      HighsInt colrow = model->a_matrix_.index_[iEl];
+      double colval = model->a_matrix_.value_[iEl];
+      if (model->row_lower_[colrow] != -kHighsInf)
+	model->row_lower_[colrow] -= colval * fixval;
+      if (model->row_upper_[colrow] != kHighsInf)
+	model->row_upper_[colrow] -= colval * fixval;
+    }
+  } else {
+    for (HighsInt coliter = colhead[col]; coliter != -1;) {
+      HighsInt colrow = Arow[coliter];
+      double colval = Avalue[coliter];
+      assert(Acol[coliter] == col);
+
+      HighsInt colpos = coliter;
+      coliter = Anext[coliter];
+
+      if (model->row_lower_[colrow] != -kHighsInf)
+	model->row_lower_[colrow] -= colval * fixval;
+
+      if (model->row_upper_[colrow] != kHighsInf)
+	model->row_upper_[colrow] -= colval * fixval;
+
+      unlink(colpos);
+
+      reinsertEquation(colrow);
+    }
   }
   model->offset_ += model->col_cost_[col] * fixval;
   assert(std::isfinite(model->offset_));
