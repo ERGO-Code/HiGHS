@@ -106,11 +106,11 @@ function(highs_configure_blas)
                         You could try to compile OpenBLAS separately on your machine, see https://github.com/OpenMathLib/OpenBLAS. \
                         Then link with HiGHS by passing the path to the OpenBLAS installation via BLAS_ROOT. \
                         Please don't hesitate to get in touch with us with details about your related issues.")
-            else()
-                message(STATUS "ARM architecture detected. Applying -DTARGET=ARMV8.")
-                list(APPEND OPENBLAS_MINIMAL_FLAGS -DTARGET=ARMV8)
             endif()
         endif()
+
+        message(STATUS "Enabling DYNAMIC_ARCH for runtime CPU detection.")
+        list(APPEND OPENBLAS_MINIMAL_FLAGS -DDYNAMIC_ARCH=ON)
 
         # CMAKE_SIZEOF_VOID_P is 4 for 32-bit and 8 for 64-bit
         if(CMAKE_SIZEOF_VOID_P EQUAL 4)
@@ -134,16 +134,15 @@ function(highs_configure_blas)
             )
 
             if(SKYLAKE_CHECK EQUAL 0)
-                message(STATUS "Skylake detected - adjusting OpenBLAS target to avoid register spills")
-                set(OPENBLAS_TARGET "HASWELL" CACHE STRING "OpenBLAS target architecture" FORCE)
-                set(NO_AVX512 ON CACHE BOOL "Disable AVX512" FORCE)
+                message(STATUS "Skylake detected - disabling AVX512 to avoid register spills")
+                list(APPEND OPENBLAS_MINIMAL_FLAGS -DNO_AVX512=ON)
             else()
                 message(STATUS "NOT Skylake")
             endif()
 
             if(NO_AVX512)
-                message(STATUS "NO_AVX512 - adjusting OpenBLAS possibly for valgrind")
-                set(NO_AVX512 ON CACHE BOOL "Disable AVX512" FORCE)
+                message(STATUS "NO_AVX512 set - disabling AVX512 in OpenBLAS")
+                list(APPEND OPENBLAS_MINIMAL_FLAGS -DNO_AVX512=ON)
             endif()
         endif()
 

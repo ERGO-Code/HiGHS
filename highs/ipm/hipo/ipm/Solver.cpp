@@ -1109,32 +1109,38 @@ bool Solver::checkTermination() {
 }
 
 bool Solver::checkTerminationKkt() {
-  assert(!model_.qp());
+  if (model_.qp()) {
+    // Not yet implemented for QP
+    logger_.printInfo("kktCheck skipped for QP\n");
+    return false;
 
-  logger_.printInfo("Solution may be optimal, perform kktCheck\n");
-  HighsModelStatus model_status = HighsModelStatus::kOptimal;
-  HighsInfo highs_info;
-  HighsSolution highs_solution;
+  } else {
+    // LP check
+    logger_.printInfo("Solution may be optimal, perform kktCheck\n");
+    HighsModelStatus model_status = HighsModelStatus::kOptimal;
+    HighsInfo highs_info;
+    HighsSolution highs_solution;
 
-  // Allow kktCheck to print only in debug mode (this is a copy of highs
-  // options, not the original)
-  Hoptions_.output_flag = logger_.debug(2);
+    // Allow kktCheck to print only in debug mode (this is a copy of highs
+    // options, not the original)
+    Hoptions_.output_flag = logger_.debug(2);
 
-  if (!model_.lpOrig()) return false;
+    if (!model_.lpOrig()) return false;
 
-  getHipoNonVertexSolution(Hoptions_, *model_.lpOrig(), model_.n_orig(),
-                           model_.m_orig(), model_.rhsOrig(),
-                           model_.constraintsOrig(), *this, model_status,
-                           highs_solution);
+    getHipoNonVertexSolution(Hoptions_, *model_.lpOrig(), model_.n_orig(),
+                             model_.m_orig(), model_.rhsOrig(),
+                             model_.constraintsOrig(), *this, model_status,
+                             highs_solution);
 
-  lpNoBasisKktCheck(model_status, highs_info, *model_.lpOrig(), highs_solution,
-                    Hoptions_, "During HiPO solve");
+    lpNoBasisKktCheck(model_status, highs_info, *model_.lpOrig(),
+                      highs_solution, Hoptions_, "During HiPO solve");
 
-  if (model_status == HighsModelStatus::kOptimal) {
-    logger_.printInfo("Check successfull\n");
-    return true;
-  } else
-    logger_.printInfo("Check failed\n");
+    if (model_status == HighsModelStatus::kOptimal) {
+      logger_.printInfo("Check successfull\n");
+      return true;
+    } else
+      logger_.printInfo("Check failed\n");
+  }
 
   return false;
 }
