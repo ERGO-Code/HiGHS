@@ -276,16 +276,10 @@ bool HPresolve::isRanged(HighsInt row) const {
 }
 
 bool HPresolve::isRedundant(HighsInt row) const {
-  const bool is_redundant = impliedRowBounds.getSumLower(row) >=
-              model->row_lower_[row] - primal_feastol &&
-          impliedRowBounds.getSumUpper(row) <=
+  return impliedRowBounds.getSumLower(row) >=
+    model->row_lower_[row] - primal_feastol &&
+    impliedRowBounds.getSumUpper(row) <=
     model->row_upper_[row] + primal_feastol;
-  if (is_redundant) {
-    printf("HPresolve::isRedundant row %6d LB = %11.4g <= %11.4g = iLB; iUB = %11.4g <= %11.4g = UB\n",
-	   int(row), model->row_lower_[row], impliedRowBounds.getSumLower(row),
-	   impliedRowBounds.getSumUpper(row),  model->row_upper_[row]);
-  }
-  return is_redundant;
 }
 
 bool HPresolve::yieldsImpliedLowerBound(HighsInt row, double val) const {
@@ -6129,17 +6123,11 @@ HPresolve::Result HPresolve::initialSweep(
       num_empty_row++;
     else if (row_count[iRow] == 1)
       num_singleton_row++;
-    else if (localIsRedundant(iRow)) {
-      printf("Redundant row %d; true = [%11.4g, %11.4g]; implied = [%11.4g, %11.4g]\n", int(iRow),
-	     model->row_lower_[iRow], model->row_upper_[iRow], implied_row_lower[iRow], implied_row_upper[iRow]);
+    else if (localIsRedundant(iRow))
       num_redundant_row++;
-    }
   }
   const bool allow_row_sweep = true;
-  const bool remove_redundant_rows = true;//false;
-  HighsInt num_removed_rows = num_empty_row + num_singleton_row;
-  if (remove_redundant_rows) num_removed_rows += num_redundant_row;
-  printf("InitialSweep: num_redundant_row = %d\n", int(num_redundant_row));
+  HighsInt num_removed_rows = num_empty_row + num_singleton_row + num_redundant_row;
   if (allow_row_sweep && (num_empty_row || num_singleton_row || num_redundant_row)) {
     HighsInt num_row = 0;
     std::vector<bool> has_singleton_row(model->num_col_, false);
@@ -6159,7 +6147,7 @@ HPresolve::Result HPresolve::initialSweep(
                                               val_of_row[iRow], initial_sweep));
         }
       } else {
-	if (remove_redundant_rows && localIsRedundant(iRow)) {
+	if (localIsRedundant(iRow)) {
 	  postsolve_stack.redundantRow(iRow);
 	  newRowIndex[iRow] = -1;
 	  continue;
@@ -6174,7 +6162,9 @@ HPresolve::Result HPresolve::initialSweep(
     }
     assert(num_row + num_removed_rows == model->num_row_);
 
-    if (!remove_redundant_rows || num_redundant_row == 0) {
+    if (num_redundant_row == 0) {
+      // Only removing entries corresponding to singleton rows so
+      // there are few to remove and it can be done efficiently
       nnz = 0;
       HighsInt from_col = 0;
       // Lambda for shifting column data and updating row indices
@@ -6194,9 +6184,6 @@ HPresolve::Result HPresolve::initialSweep(
 	  model->a_matrix_.start_[iCol] = new_col_start;
 	}
       };
-      // Only removing entries corresponding to singleton rows so
-      // there are few to remove and it can be done efficiently
-      //
       for (HighsInt iCol0 = 0; iCol0 < model->num_col_; iCol0++) {
 	if (!has_singleton_row[iCol0]) continue;
 	// Column iCol0 contains a row singleton, so update the matrix
