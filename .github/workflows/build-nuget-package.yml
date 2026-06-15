@@ -75,7 +75,7 @@ jobs:
       - name: Configure CMake win32
         shell: bash
         working-directory: ${{github.workspace}}/build32
-        run: cmake $GITHUB_WORKSPACE -DCSHARP=ON -DBUILD_DOTNET=ON -A Win32
+        run: cmake $GITHUB_WORKSPACE -DCSHARP=ON -DBUILD_DOTNET=ON -A Win32 -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded
 
       - name: Build win32
         shell: bash
@@ -145,7 +145,7 @@ jobs:
       - name: Configure CMake
         working-directory: ${{github.workspace}}/build
         shell: bash
-        run: cmake $GITHUB_WORKSPACE -DCSHARP=ON -DBUILD_DOTNET=ON
+        run: cmake $GITHUB_WORKSPACE -DCSHARP=ON -DBUILD_DOTNET=ON -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded
 
       - name: Build
         working-directory: ${{github.workspace}}/build
