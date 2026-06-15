@@ -87,10 +87,11 @@ jobs:
 
       - name: Install highspy-extras
         run: |
-          $blas = "$env:VCPKG_ROOT/installed/x64-windows-static/lib/openblas.lib"
+          $blas = "$env:VCPKG_INSTALLATION_ROOT/installed/x64-windows-static/lib/openblas.lib"
+          Write-Host "BLAS path: $blas"
           python -m pip install ./highspy-extras `
-              --config-settings=cmake.define.BUILD_OPENBLAS=OFF `
-              --config-settings=cmake.define.BLAS_LIBRARIES=$blas
+          --config-settings=cmake.define.BUILD_OPENBLAS=OFF `
+          "--config-settings=cmake.define.BLAS_LIBRARIES=$blas"
 
       - name: Install highspy
         run: |
