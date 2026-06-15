@@ -1046,18 +1046,19 @@ TEST_CASE("presolve-initial-sweep-all", "[highs_test_presolve]") {
   // Rows 0 and 3 singletons; row 1 empty
   REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
 
+  highs.run();
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
+  if (dev_run) highs.writeSolution("", 1);
+
   // Add a redundant row
   std::vector<HighsInt> index = {0, 5, 6};
   std::vector<double> value = {1, 1, 1};
   highs.addRow(-kHighsInf, 4, 3, index.data(), value.data());
 
+  highs.setOptionValue("use_warm_start", false);
   highs.run();
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
   if (dev_run) highs.writeSolution("", 1);
-
-  //  highs.run();
-  //  REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
-  //  if (dev_run) highs.writeSolution("", 1);
 
   highs.resetGlobalScheduler(true);
 }

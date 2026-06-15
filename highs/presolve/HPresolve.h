@@ -294,9 +294,9 @@ class HPresolve {
 
   HighsTripletTreeSliceInOrder getSortedRowVector(HighsInt row) const;
 
-  void markRowDeleted(HighsInt row);
+  void markRowDeleted(HighsInt row, const bool initial_sweep = false);
 
-  void markColDeleted(HighsInt col);
+  void markColDeleted(HighsInt col, const bool initial_sweep = false);
 
   Result fixColToLower(HighsPostsolveStack& postsolve_stack, HighsInt col);
 

@@ -2266,27 +2266,31 @@ HighsTripletTreeSliceInOrder HPresolve::getSortedRowVector(HighsInt row) const {
                                       ARright.data(), rowroot[row]);
 }
 
-void HPresolve::markRowDeleted(HighsInt row) {
-  assert(!rowDeleted[row]);
+void HPresolve::markRowDeleted(HighsInt row, const bool initial_sweep) {
+  if (!initial_sweep) {
+    assert(!rowDeleted[row]);
 
-  // remove equations from set of equations
-  if (isEquation(row) && eqiters[row] != equations.end()) {
-    equations.erase(eqiters[row]);
-    eqiters[row] = equations.end();
+    // remove equations from set of equations
+    if (isEquation(row) && eqiters[row] != equations.end()) {
+      equations.erase(eqiters[row]);
+      eqiters[row] = equations.end();
+    }
+
+    // prevents row from being added to change vector
+    changedRowFlag[row] = true;
+    rowDeleted[row] = true;
   }
-
-  // prevents row from being added to change vector
-  changedRowFlag[row] = true;
-  rowDeleted[row] = true;
   ++numDeletedRows;
 }
 
-void HPresolve::markColDeleted(HighsInt col) {
-  assert(!colDeleted[col]);
+void HPresolve::markColDeleted(HighsInt col, const bool initial_sweep) {
+  if (!initial_sweep) {
+    assert(!colDeleted[col]);
 
-  // prevents col from being added to change vector
-  changedColFlag[col] = true;
-  colDeleted[col] = true;
+    // prevents col from being added to change vector
+    changedColFlag[col] = true;
+    colDeleted[col] = true;
+  }
   ++numDeletedCols;
 }
 
@@ -3372,16 +3376,12 @@ HPresolve::Result HPresolve::singletonRow(HighsPostsolveStack& postsolve_stack,
   HighsInt col = initial_sweep ? col_ : Acol[nzPos];
   double val = initial_sweep ? val_ : Avalue[nzPos];
 
-  if (initial_sweep) {
-    numDeletedRows++;
-  } else {
-    // printf("singleton row\n");
-    // debugPrintRow(row);
-    // delete row singleton nonzero directly, we have all information that we
-    // need in local variables
-    markRowDeleted(row);
-    unlink(nzPos);
-  }
+  // printf("singleton row\n");
+  // debugPrintRow(row);
+  // delete row singleton nonzero directly, we have all information that we
+  // need in local variables
+  markRowDeleted(row, initial_sweep);
+  if (!initial_sweep) unlink(nzPos);
 
   // check for simple
   if (val > 0) {
@@ -4668,7 +4668,8 @@ HPresolve::Result HPresolve::modelEmptyCol(HighsPostsolveStack& postsolve_stack,
   assert(fixval != kHighsInf);
   postsolve_stack.removedModelFixedCol(col, fixval, cost, col_nnz, nullptr,
                                        nullptr);
-  numDeletedCols++;
+  const bool initial_sweep = true;
+  markColDeleted(col, initial_sweep);
 
   return checkLimits(postsolve_stack);
 }
@@ -6138,6 +6139,7 @@ HPresolve::Result HPresolve::initialSweep(
         if (row_count[iRow] == 0) {
           // Empty row
           HPRESOLVE_CHECKED_CALL(emptyRow(postsolve_stack, iRow));
+	  markRowDeleted(iRow, initial_sweep);
         } else {
           // Singleton row
           has_singleton_row[col_of_row[iRow]] = true;
@@ -6150,6 +6152,7 @@ HPresolve::Result HPresolve::initialSweep(
 	if (localIsRedundant(iRow)) {
 	  postsolve_stack.redundantRow(iRow);
 	  newRowIndex[iRow] = -1;
+	  markRowDeleted(iRow, initial_sweep);
 	  continue;
 	}
         newRowIndex[iRow] = num_row;
@@ -7620,7 +7623,8 @@ void HPresolve::removeFixedCol(HighsInt col, double fixval) {
 }
 
 void HPresolve::removeModelFixedCol(HighsInt col) {
-  numDeletedCols++;
+  const bool initial_sweep = true;
+  markColDeleted(col, initial_sweep);
   double fixval = model->col_lower_[col];
   for (HighsInt iEl = model->a_matrix_.start_[col];
        iEl < model->a_matrix_.start_[col + 1]; iEl++) {
