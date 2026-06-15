@@ -235,7 +235,7 @@ class HighsSearch {
 
   void printDisplayLine(char first, bool header = false);
 
-  NodeResult dive(HighsInt nodeLim = kHighsIInf);
+  NodeResult dive(int64_t nodeLim = std::numeric_limits<int64_t>::max());
 
   HighsDomain& getLocalDomain() { return localdom; }
 

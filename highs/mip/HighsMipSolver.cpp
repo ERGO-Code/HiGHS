@@ -676,17 +676,20 @@ restart:
 
   auto dive = [&](HighsInt i, HighsInt nodeLim) -> bool {
     HighsMipWorker& worker = mipdata_->workers[i];
+    const int64_t diveNodeLim = nodeLim == kHighsIInf
+                                    ? std::numeric_limits<int64_t>::max()
+                                    : worker.search_ptr_->nnodes + nodeLim;
     if (!worker.search_ptr_->currentNodePruned()) {
       if (!mipdata_->parallelLockActive()) profiling_->start(kMipClockTheDive);
       const HighsSearch::NodeResult search_dive_result =
-          worker.search_ptr_->dive(nodeLim);
+          worker.search_ptr_->dive(diveNodeLim);
       if (!mipdata_->parallelLockActive()) profiling_->stop(kMipClockTheDive);
       if (search_dive_result == HighsSearch::NodeResult::kSubOptimal) {
         return true;
       }
       worker.search_ptr_->getLocalLeaves()++;
     }
-    return nodeLim == 1;
+    return nodeLim != kHighsIInf && worker.search_ptr_->nnodes >= diveNodeLim;
   };
 
   auto processNodes = [&](std::vector<HighsInt>& indices,

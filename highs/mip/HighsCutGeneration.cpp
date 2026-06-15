@@ -600,6 +600,7 @@ bool HighsCutGeneration::cmirCutGenerationHeuristic(double minEfficacy,
       updateViolationAndNorm(j, aj, viol, sqrnorm);
     }
 
+    // TODO: Add some minimum violation check, e.g., 0.001 * feastol?
     double efficacy = viol / sqrt(sqrnorm);
     if (efficacy > bestefficacy) {
       bestdelta = delta;
@@ -725,10 +726,12 @@ bool HighsCutGeneration::cmirCutGenerationHeuristic(double minEfficacy,
       if (vals[j] == 0.0) continue;
       updateViolationAndNorm(j, vals[j], checkviol, checknorm);
     }
-    double checkefficacy = checkviol / sqrt(checknorm);
-    // the efficacy can become infinite if the cut 0 <= -1 is derived
-    assert(fabs(checkefficacy - bestefficacy) < 0.001 ||
-           fabs(checkefficacy) >= 1e30);
+    if (checknorm != 0.0) {
+      double checkefficacy = checkviol / sqrt(checknorm);
+      // the efficacy can become infinite if the cut 0 <= -1 is derived
+      assert(fabs(checkefficacy - bestefficacy) < 0.001 ||
+             fabs(checkefficacy) >= 1e30);
+    }
   }
 #endif
 

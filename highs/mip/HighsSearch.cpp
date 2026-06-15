@@ -1865,7 +1865,7 @@ bool HighsSearch::backtrackUntilDepth(HighsInt targetDepth) {
   return true;
 }
 
-HighsSearch::NodeResult HighsSearch::dive(HighsInt nodeLim) {
+HighsSearch::NodeResult HighsSearch::dive(int64_t nodeLim) {
   reliableatnode.clear();
 
   do {
