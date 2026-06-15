@@ -277,9 +277,9 @@ bool HPresolve::isRanged(HighsInt row) const {
 
 bool HPresolve::isRedundant(HighsInt row) const {
   return impliedRowBounds.getSumLower(row) >=
-    model->row_lower_[row] - primal_feastol &&
-    impliedRowBounds.getSumUpper(row) <=
-    model->row_upper_[row] + primal_feastol;
+             model->row_lower_[row] - primal_feastol &&
+         impliedRowBounds.getSumUpper(row) <=
+             model->row_upper_[row] + primal_feastol;
 }
 
 bool HPresolve::yieldsImpliedLowerBound(HighsInt row, double val) const {
@@ -652,12 +652,14 @@ void HPresolve::markChangedCol(HighsInt col) {
   }
 }
 
-double HPresolve::getMaxAbsColVal(HighsInt col, const bool initial_sweep) const {
+double HPresolve::getMaxAbsColVal(HighsInt col,
+                                  const bool initial_sweep) const {
   double maxVal = 0.0;
 
   if (initial_sweep) {
-    for (HighsInt iEl = model->a_matrix_.start_[col]; iEl < model->a_matrix_.start_[col+1]; iEl++) {
-      double value = model->a_matrix_.value_[iEl]; 
+    for (HighsInt iEl = model->a_matrix_.start_[col];
+         iEl < model->a_matrix_.start_[col + 1]; iEl++) {
+      double value = model->a_matrix_.value_[iEl];
       maxVal = std::max(std::abs(value), maxVal);
     }
   } else {
@@ -946,6 +948,11 @@ void HPresolve::shrinkProblem(HighsPostsolveStack& postsolve_stack) {
   //  if (numDeletedCols == 0 && numDeletedRows == 0) return;
   HighsInt oldNumCol = model->num_col_;
   HighsInt oldNumRow = model->num_row_;
+  // If HPresolve::shrinkProblem has been called before setting up the
+  // full presolve data structures - implying that presolve has
+  // terminated in HPresolve::initialSweep, when the model is
+  // up-to-date, so no shrinkage is required
+  if (!colDeleted.size()) return;
   assert(colDeleted.size() == static_cast<size_t>(oldNumCol));
   assert(rowDeleted.size() == static_cast<size_t>(oldNumRow));
   model->num_col_ = 0;
@@ -3464,9 +3471,10 @@ HPresolve::Result HPresolve::singletonRow(HighsPostsolveStack& postsolve_stack,
     // errors we choose the bound that was not tightened, or the midpoint if
     // both where tightened.
     //
-    if (ub < lb || (ub > lb && (ub - lb) * std::max(std::fabs(val),
-                                                    getMaxAbsColVal(col, initial_sweep)) <=
-                                   primal_feastol)) {
+    if (ub < lb ||
+        (ub > lb && (ub - lb) * std::max(std::fabs(val),
+                                         getMaxAbsColVal(col, initial_sweep)) <=
+                        primal_feastol)) {
       if (lowerTightened && upperTightened) {
         ub = 0.5 * (ub + lb);
         lb = ub;
@@ -6088,12 +6096,12 @@ HPresolve::Result HPresolve::initialSweep(
         model->a_matrix_.index_[nnz] = iRow;
         model->a_matrix_.value_[nnz] = value;
         nnz++;
-	implied_row_lower[iRow] += (value > 0 ?
-				    value*model->col_lower_[num_col] :
-				    value*model->col_upper_[num_col]);
-	implied_row_upper[iRow] += (value > 0 ?
-				    value*model->col_upper_[num_col] :
-				    value*model->col_lower_[num_col]);
+        implied_row_lower[iRow] +=
+            (value > 0 ? value * model->col_lower_[num_col]
+                       : value * model->col_upper_[num_col]);
+        implied_row_upper[iRow] +=
+            (value > 0 ? value * model->col_upper_[num_col]
+                       : value * model->col_lower_[num_col]);
       }
       model->a_matrix_.start_[num_col] = new_col_start;
       num_col++;
@@ -6113,11 +6121,11 @@ HPresolve::Result HPresolve::initialSweep(
   model->a_matrix_.index_.resize(nnz);
   model->a_matrix_.value_.resize(nnz);
   postsolve_stack.compressColIndexMap(newColIndex);
-  auto localIsRedundant = [&] (const HighsInt row) {
-    return implied_row_lower[row] >=
-      model->row_lower_[row] - primal_feastol &&
-      implied_row_upper[row] <=
-      model->row_upper_[row] + primal_feastol;
+  HPRESOLVE_CHECKED_CALL(checkLimits(postsolve_stack));
+
+  auto localIsRedundant = [&](const HighsInt row) {
+    return implied_row_lower[row] >= model->row_lower_[row] - primal_feastol &&
+           implied_row_upper[row] <= model->row_upper_[row] + primal_feastol;
   };
   for (HighsInt iRow = 0; iRow < model->num_row_; iRow++) {
     if (row_count[iRow] == 0)
@@ -6128,8 +6136,10 @@ HPresolve::Result HPresolve::initialSweep(
       num_redundant_row++;
   }
   const bool allow_row_sweep = true;
-  HighsInt num_removed_rows = num_empty_row + num_singleton_row + num_redundant_row;
-  if (allow_row_sweep && (num_empty_row || num_singleton_row || num_redundant_row)) {
+  HighsInt num_removed_rows =
+      num_empty_row + num_singleton_row + num_redundant_row;
+  if (allow_row_sweep &&
+      (num_empty_row || num_singleton_row || num_redundant_row)) {
     HighsInt num_row = 0;
     std::vector<bool> has_singleton_row(model->num_col_, false);
     std::vector<HighsInt> newRowIndex(model->num_row_);
@@ -6139,7 +6149,7 @@ HPresolve::Result HPresolve::initialSweep(
         if (row_count[iRow] == 0) {
           // Empty row
           HPRESOLVE_CHECKED_CALL(emptyRow(postsolve_stack, iRow));
-	  markRowDeleted(iRow, initial_sweep);
+          markRowDeleted(iRow, initial_sweep);
         } else {
           // Singleton row
           has_singleton_row[col_of_row[iRow]] = true;
@@ -6149,12 +6159,12 @@ HPresolve::Result HPresolve::initialSweep(
                                               val_of_row[iRow], initial_sweep));
         }
       } else {
-	if (localIsRedundant(iRow)) {
-	  postsolve_stack.redundantRow(iRow);
-	  newRowIndex[iRow] = -1;
-	  markRowDeleted(iRow, initial_sweep);
-	  continue;
-	}
+        if (localIsRedundant(iRow)) {
+          postsolve_stack.redundantRow(iRow);
+          newRowIndex[iRow] = -1;
+          markRowDeleted(iRow, initial_sweep);
+          continue;
+        }
         newRowIndex[iRow] = num_row;
         model->row_lower_[num_row] = model->row_lower_[iRow];
         model->row_upper_[num_row] = model->row_upper_[iRow];
@@ -6172,47 +6182,49 @@ HPresolve::Result HPresolve::initialSweep(
       HighsInt from_col = 0;
       // Lambda for shifting column data and updating row indices
       auto shiftCols = [&](const HighsInt to_col) {
-	for (HighsInt iCol = from_col; iCol < to_col; iCol++) {
-	  HighsInt from_os = model->a_matrix_.start_[iCol];
-	  HighsInt col_nnz = model->a_matrix_.start_[iCol + 1] - from_os;
-	  HighsInt new_col_start = nnz;
-	  for (HighsInt iEl = 0; iEl < col_nnz; iEl++) {
-	    HighsInt iRow = model->a_matrix_.index_[from_os + iEl];
-	    HighsInt newRow = newRowIndex[iRow];
-	    assert(newRow >= 0);
-	    model->a_matrix_.index_[nnz] = newRow;
-	    model->a_matrix_.value_[nnz] = model->a_matrix_.value_[from_os + iEl];
-	    nnz++;
-	  }
-	  model->a_matrix_.start_[iCol] = new_col_start;
-	}
+        for (HighsInt iCol = from_col; iCol < to_col; iCol++) {
+          HighsInt from_os = model->a_matrix_.start_[iCol];
+          HighsInt col_nnz = model->a_matrix_.start_[iCol + 1] - from_os;
+          HighsInt new_col_start = nnz;
+          for (HighsInt iEl = 0; iEl < col_nnz; iEl++) {
+            HighsInt iRow = model->a_matrix_.index_[from_os + iEl];
+            HighsInt newRow = newRowIndex[iRow];
+            assert(newRow >= 0);
+            model->a_matrix_.index_[nnz] = newRow;
+            model->a_matrix_.value_[nnz] =
+                model->a_matrix_.value_[from_os + iEl];
+            nnz++;
+          }
+          model->a_matrix_.start_[iCol] = new_col_start;
+        }
       };
       for (HighsInt iCol0 = 0; iCol0 < model->num_col_; iCol0++) {
-	if (!has_singleton_row[iCol0]) continue;
-	// Column iCol0 contains a row singleton, so update the matrix
-	// entries for the columns since the last with a row singleton
-	shiftCols(iCol0);
-	HighsInt from_os = model->a_matrix_.start_[iCol0];
-	HighsInt col_nnz = model->a_matrix_.start_[iCol0 + 1] - from_os;
-	HighsInt new_col_start = nnz;
-	bool found_row_singleton = false;
-	for (HighsInt iEl = 0; iEl < col_nnz; iEl++) {
-	  HighsInt iRow = model->a_matrix_.index_[from_os + iEl];
-	  HighsInt newRow = newRowIndex[iRow];
-	  if (newRow >= 0) {
-	    model->a_matrix_.index_[nnz] = newRow;
-	    model->a_matrix_.value_[nnz] = model->a_matrix_.value_[from_os + iEl];
-	    nnz++;
-	  } else {
-	    assert(row_count[iRow] == 1);
-	    assert(col_of_row[iRow] == iCol0);
-	    assert(val_of_row[iRow] == model->a_matrix_.value_[from_os + iEl]);
-	    found_row_singleton = true;
-	  }
-	}
-	assert(found_row_singleton);
-	model->a_matrix_.start_[iCol0] = new_col_start;
-	from_col = iCol0 + 1;
+        if (!has_singleton_row[iCol0]) continue;
+        // Column iCol0 contains a row singleton, so update the matrix
+        // entries for the columns since the last with a row singleton
+        shiftCols(iCol0);
+        HighsInt from_os = model->a_matrix_.start_[iCol0];
+        HighsInt col_nnz = model->a_matrix_.start_[iCol0 + 1] - from_os;
+        HighsInt new_col_start = nnz;
+        bool found_row_singleton = false;
+        for (HighsInt iEl = 0; iEl < col_nnz; iEl++) {
+          HighsInt iRow = model->a_matrix_.index_[from_os + iEl];
+          HighsInt newRow = newRowIndex[iRow];
+          if (newRow >= 0) {
+            model->a_matrix_.index_[nnz] = newRow;
+            model->a_matrix_.value_[nnz] =
+                model->a_matrix_.value_[from_os + iEl];
+            nnz++;
+          } else {
+            assert(row_count[iRow] == 1);
+            assert(col_of_row[iRow] == iCol0);
+            assert(val_of_row[iRow] == model->a_matrix_.value_[from_os + iEl]);
+            found_row_singleton = true;
+          }
+        }
+        assert(found_row_singleton);
+        model->a_matrix_.start_[iCol0] = new_col_start;
+        from_col = iCol0 + 1;
       }
       // Update the matrix entries for the columns since the last with a
       // row singleton
@@ -6226,28 +6238,28 @@ HPresolve::Result HPresolve::initialSweep(
       num_row = 0;
       // Lambda for shifting row data and updating row indices
       auto shiftRows = [&](const HighsInt to_row) {
-	for (HighsInt iRow = from_row; iRow < to_row; iRow++) {
-	  HighsInt new_row_start = nnz;
-	  for (HighsInt iEl = model->a_matrix_.start_[iRow];
-	       iEl < model->a_matrix_.start_[iRow + 1]; iEl++) {
-	    model->a_matrix_.index_[nnz] = model->a_matrix_.index_[iEl];
-	    model->a_matrix_.value_[nnz] = model->a_matrix_.value_[iEl];
-	    nnz++;
-	  }
-	  model->a_matrix_.start_[num_row] = new_row_start;
-	  num_row++;
-	}
+        for (HighsInt iRow = from_row; iRow < to_row; iRow++) {
+          HighsInt new_row_start = nnz;
+          for (HighsInt iEl = model->a_matrix_.start_[iRow];
+               iEl < model->a_matrix_.start_[iRow + 1]; iEl++) {
+            model->a_matrix_.index_[nnz] = model->a_matrix_.index_[iEl];
+            model->a_matrix_.value_[nnz] = model->a_matrix_.value_[iEl];
+            nnz++;
+          }
+          model->a_matrix_.start_[num_row] = new_row_start;
+          num_row++;
+        }
       };
       // Only removing entries corresponding to singleton rows so
       // there are few to remove and it can be done efficiently
       //
       model->a_matrix_.ensureRowwise();
       for (HighsInt iRow0 = 0; iRow0 < model->num_row_; iRow0++) {
-	if (newRowIndex[iRow0] >= 0) continue;
-	// Row iRow0 is removed, so update the matrix entries for the
-	// rows since the last removed
-	shiftRows(iRow0);
-	from_row = iRow0 + 1;
+        if (newRowIndex[iRow0] >= 0) continue;
+        // Row iRow0 is removed, so update the matrix entries for the
+        // rows since the last removed
+        shiftRows(iRow0);
+        from_row = iRow0 + 1;
       }
       // Update the matrix entries for the rows since the last removed
       shiftRows(model->num_row_);
@@ -6265,20 +6277,21 @@ HPresolve::Result HPresolve::initialSweep(
     model->a_matrix_.value_.resize(nnz);
     postsolve_stack.compressRowIndexMap(newRowIndex);
   }
-  // Add doubleton equations, column singletons, variable locks 
-
+  // Add doubleton equations, column singletons, variable locks
 
   if (num_fixed_col || num_empty_col)
-    highsLogUser(options->log_options, HighsLogType::kInfo,
-                 "Initial sweep removes %d + %d = %d / %d empty + fixed columns\n",
-                 int(num_empty_col), int(num_fixed_col), 
-		 int(num_removed_cols),int(original_num_col));
-  if (num_empty_row || num_singleton_row || num_redundant_row)
     highsLogUser(
         options->log_options, HighsLogType::kInfo,
-        "Initial sweep identifies %d + %d + %d = %d / %d empty + singleton + redundant rows\n",
-        int(num_empty_row), int(num_singleton_row), int(num_redundant_row),
-	int(num_removed_rows), int(original_num_row));
+        "Initial sweep removes %d + %d = %d / %d empty + fixed columns\n",
+        int(num_empty_col), int(num_fixed_col), int(num_removed_cols),
+        int(original_num_col));
+  if (num_empty_row || num_singleton_row || num_redundant_row)
+    highsLogUser(options->log_options, HighsLogType::kInfo,
+                 "Initial sweep identifies %d + %d + %d = %d / %d empty + "
+                 "singleton + redundant rows\n",
+                 int(num_empty_row), int(num_singleton_row),
+                 int(num_redundant_row), int(num_removed_rows),
+                 int(original_num_row));
   analysis_.logging_on_ = logging_on;
   if (logging_on) analysis_.stopPresolveRuleLog(kPresolveRuleInitialSweep);
   return checkLimits(postsolve_stack);
@@ -7596,20 +7609,21 @@ void HPresolve::removeFixedCol(HighsInt col, const bool initial_sweep) {
   if (logging_on) analysis_.stopPresolveRuleLog(kPresolveRuleFixedCol);
 }
 
-void HPresolve::removeFixedCol(HighsInt col, double fixval, const bool initial_sweep) {
+void HPresolve::removeFixedCol(HighsInt col, double fixval,
+                               const bool initial_sweep) {
   // mark the column as deleted first so that it is not registered as singleton
   // column upon removing its non-zeros
   markColDeleted(col, initial_sweep);
 
   if (initial_sweep) {
     for (HighsInt iEl = model->a_matrix_.start_[col];
-	 iEl < model->a_matrix_.start_[col + 1]; iEl++) {
+         iEl < model->a_matrix_.start_[col + 1]; iEl++) {
       HighsInt colrow = model->a_matrix_.index_[iEl];
       double colval = model->a_matrix_.value_[iEl];
       if (model->row_lower_[colrow] != -kHighsInf)
-	model->row_lower_[colrow] -= colval * fixval;
+        model->row_lower_[colrow] -= colval * fixval;
       if (model->row_upper_[colrow] != kHighsInf)
-	model->row_upper_[colrow] -= colval * fixval;
+        model->row_upper_[colrow] -= colval * fixval;
     }
   } else {
     for (HighsInt coliter = colhead[col]; coliter != -1;) {
@@ -7621,10 +7635,10 @@ void HPresolve::removeFixedCol(HighsInt col, double fixval, const bool initial_s
       coliter = Anext[coliter];
 
       if (model->row_lower_[colrow] != -kHighsInf)
-	model->row_lower_[colrow] -= colval * fixval;
+        model->row_lower_[colrow] -= colval * fixval;
 
       if (model->row_upper_[colrow] != kHighsInf)
-	model->row_upper_[colrow] -= colval * fixval;
+        model->row_upper_[colrow] -= colval * fixval;
 
       unlink(colpos);
 

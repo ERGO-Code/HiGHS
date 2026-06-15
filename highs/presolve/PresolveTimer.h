@@ -186,9 +186,8 @@ class PresolveTimer {
   void reportPresolveCoreClock(const std::string& model_name,
                                const HighsTimerClock& presolve_timer_clock) {
     const std::vector<HighsInt> presolve_clock_list{
-        kPresolveClockInitialSweep,
-        kPresolveClockSetupResize, kPresolveClockSetupToCsc,
-        kPresolveClockSetupSubstitutionOpportunities,
+        kPresolveClockInitialSweep, kPresolveClockSetupResize,
+        kPresolveClockSetupToCsc, kPresolveClockSetupSubstitutionOpportunities,
         //      kPresolveClockInitial,
         kPresolveClockInitialRow, kPresolveClockInitialCol,
         //	kPresolveClockFastLoop,
