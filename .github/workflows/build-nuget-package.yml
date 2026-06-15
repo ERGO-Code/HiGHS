@@ -93,8 +93,8 @@ jobs:
 
       - uses: actions/upload-artifact@v7
         with:
-          name: win-x32
-          path: ${{github.workspace}}/build32/dotnet/Highs.Native/runtimes/win-x64/
+          name: win-x86
+          path: ${{github.workspace}}/build32/dotnet/Highs.Native/runtimes/win-x86/
 
   build_linux:
     runs-on: ubuntu-latest
@@ -178,11 +178,11 @@ jobs:
           name: macos-arm64
           path: ${{github.workspace}}/build/dotnet/Highs.Native/runtimes
 
-      - name: Download runtimes win-x32
+      - name: Download runtimes win-x86
         uses: actions/download-artifact@v8
         with:
-          name: win-x32
-          path: ${{github.workspace}}/build/dotnet/Highs.Native/runtimes/win-x32
+          name: win-x86
+          path: ${{github.workspace}}/build/dotnet/Highs.Native/runtimes/win-x86
 
       - name: Download runtimes
         uses: actions/download-artifact@v8
