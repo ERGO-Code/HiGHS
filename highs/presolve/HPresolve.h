@@ -183,7 +183,7 @@ class HPresolve {
 
   void markChangedCol(HighsInt col);
 
-  double getMaxAbsColVal(HighsInt col) const;
+  double getMaxAbsColVal(HighsInt col, const bool initial_sweep = false) const;
 
   double getMaxAbsRowVal(HighsInt row) const;
 
