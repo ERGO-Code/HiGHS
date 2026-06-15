@@ -2,6 +2,15 @@ name: build-nuget-package
 
 on:
   workflow_dispatch:
+    inputs:
+      version:
+        description: 'Package version (e.g. 1.14.0-preview.1)'
+        required: true
+        default: '1.14.0-preview.1'
+      push_package:
+        description: 'Push package to NuGet.org'
+        type: boolean
+        default: false
   pull_request:
   release:
     types:
@@ -196,7 +205,7 @@ jobs:
 
       - name: Dotnet pack
         working-directory: ${{github.workspace}}/build/dotnet/Highs.Native
-        run: dotnet pack -c Release /p:Version=1.14.0
+        run: dotnet pack -c Release /p:Version=${{ inputs.version || '1.14.0' }}
 
       - uses: actions/upload-artifact@v7
         with:
@@ -211,7 +220,7 @@ jobs:
     permissions:
       id-token: write  # enable GitHub OIDC token issuance for this job
 
-    if: github.event_name == 'release'
+    if: github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && inputs.push_package == 'true')
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-dotnet@v5
