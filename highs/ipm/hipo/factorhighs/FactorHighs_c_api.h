@@ -36,9 +36,9 @@ void FactorHighs_getRegularisation(void* FH, double* reg);
 void FactorHighs_newIter(void* FH);
 void FactorHighs_setBlockSize(void* FH, HighsInt nb);
 void FactorHighs_setPivoting(void* FH, HighsInt pivoting);
-void FactorHighs_setLogging(void* FH, int display);
-void FactorHighs_symbolic_print(void* FH, void* S, int verbose);
-void FactorHighs_iperm(void* S, int* ip);
+void FactorHighs_setLogging(void* FH, HighsInt display);
+void FactorHighs_symbolic_print(void* FH, void* S, HighsInt verbose);
+void FactorHighs_iperm(void* S, HighsInt* ip);
 
 #ifdef __cplusplus
 }

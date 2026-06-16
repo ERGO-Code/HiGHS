@@ -53,7 +53,7 @@ void FactorHighs_setPivoting(void* FH, HighsInt pivoting) {
   ((hipo::FHsolver*)FH)->setPivoting(pivoting);
 }
 
-void FactorHighs_setLogging(void* FH, int display) {
+void FactorHighs_setLogging(void* FH, HighsInt display) {
   ((hipo::FHsolver*)FH)->setLogger(nullptr, display);
 }
 
@@ -62,13 +62,14 @@ void FactorHighs_inertia(void* FH, HighsInt* pos, HighsInt* neg, HighsInt* zero,
   ((hipo::FHsolver*)FH)->inertia(*pos, *neg, *zero, tol);
 }
 
-void FactorHighs_symbolic_print(void* FH, void* S, int verbose) {
+void FactorHighs_symbolic_print(const void* FH, const void* S,
+                                HighsInt verbose) {
   ((hipo::Symbolic*)S)->print(*(((hipo::FHsolver*)FH)->getLogger()), verbose);
 }
 
-void FactorHighs_iperm(void* S, int* ip) {
+void FactorHighs_iperm(const void* S, HighsInt* ip) {
   const std::vector<hipo::Int>& iperm = ((hipo::Symbolic*)S)->iperm();
-  for (int i = 0; i < static_cast<int>(iperm.size()); ++i) {
+  for (HighsInt i = 0; i < static_cast<HighsInt>(iperm.size()); ++i) {
     ip[i] = iperm[i];
   }
 }
