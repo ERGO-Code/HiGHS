@@ -19,6 +19,7 @@ It is stored using three arrays:
 - ptr, column pointers, of length n+1;
 - rows, row indices, of length nz;
 - vals, values, of length nz.
+Zero-based indexing is used everywhere.
 
 The direct solver uses the following objects:
 - Symbolic, to store the symbolic factorization;
@@ -59,6 +60,8 @@ regularisation. If regularisation is already added to the matrix, ignore.
 Notice that the fill-reducing ordering can be modified during the call to
 analyse. The inverse permutation used during the factorisation can be accessed
 via the Symbolic object, S.iperm().
+
+Only solves with single right-hand sides are possible at the moment.
 
 */
 
