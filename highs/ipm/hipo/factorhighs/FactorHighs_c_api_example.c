@@ -12,7 +12,13 @@
     0     0     1     0     1
 
   and solves a linear system, using the FactorHighs C API.
-  This file needs to be linked with HiGHS.
+  This file needs to be linked with HiGHS:
+
+  clang FactorHighs_c_api_example.c
+  -I/path/to/HiGHS/highs -I/path/to/HiGHS/build
+  -L/path/to/HiGHS/build/lib -lhighs
+  -Wl,-rpath,/path/to/HiGHS/build/lib
+
 */
 
 int main() {
@@ -20,7 +26,7 @@ int main() {
   const int n = 5;
   const int nz = 10;
 
-  // define the matrix in CSC format
+  // define the matrix in CSC format, with 0-based indexing
   int ptr[n + 1] = {0, 3, 5, 8, 9, 10};
   int rows[nz] = {0, 2, 3, 1, 2, 2, 3, 4, 3, 4};
   double vals[nz] = {5, 3, 4, 3, 2, 9, -1, 1, 8, 1};
@@ -64,6 +70,13 @@ int main() {
   // print extended statistics of symbolic factorisation
   int verbose = 1;
   FactorHighs_symbolic_print(FH, S, verbose);
+
+  // print inverse permutation, that may have been modified by analyse phase
+  int iperm[n];
+  FactorHighs_iperm(S, iperm);
+  printf("\niperm: ");
+  for (int i = 0; i < n; ++i) printf("%d ", iperm[i]);
+  printf("\n");
 
   // factorise the matrix
   int factorise_status = FactorHighs_factorise(FH, S, n, nz, rows, ptr, vals);
