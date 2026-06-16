@@ -35,17 +35,17 @@ int main() {
   int perm[n] = {0, 1, 2, 3, 4};
 
   /*
-    1-based indexing is available as well.
-    We define the problem shifted by 1:
+  1-based indexing is available as well.
+  We define the problem shifted by 1:
 
-      int ptr[n + 1] = {1, 4, 6, 9, 10, 11};
-      int rows[nz] = {1, 3, 4, 2, 3, 3, 4, 5, 4, 5};
-      double vals[nz] = {5, 3, 4, 3, 2, 9, -1, 1, 8, 1};
-      int perm[n] = {1, 2, 3, 4, 5};
+    int ptr[n + 1] = {1, 4, 6, 9, 10, 11};
+    int rows[nz] = {1, 3, 4, 2, 3, 3, 4, 5, 4, 5};
+    double vals[nz] = {5, 3, 4, 3, 2, 9, -1, 1, 8, 1};
+    int perm[n] = {1, 2, 3, 4, 5};
 
-    and set the corresponding option:
+  and set the corresponding option:
 
-        FactorHighs_setOneIndexing(FH, fortran_indexing);
+      FactorHighs_setOneIndexing(FH, fortran_indexing);
   */
 
   // matrix is spd, so expect all pivots to be positive
@@ -105,6 +105,14 @@ int main() {
   // triangular solve
   int solve_status = FactorHighs_solve(FH, rhs);
   if (solve_status) return 1;
+
+  /*
+  could also perform:
+
+    FactorHighs_forwardSolve(FH, rhs);
+    FactorHighs_diagSolve(FH, rhs);
+    FactorHighs_backwardSolve(FH, rhs);
+  */
 
   // compute error
   double error = 0.0;

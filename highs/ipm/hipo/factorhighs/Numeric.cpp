@@ -15,7 +15,7 @@ namespace hipo {
 Int Numeric::solve(double* x) const {
   // Return the number of solves performed
 
-  if (!sn_columns_ || !S_) return kRetInvalidPointer;
+  if (!sn_columns_ || !S_ || !data_ || !options_) return kRetInvalidPointer;
 
   HIPO_CLOCK_CREATE;
 
@@ -44,11 +44,36 @@ Int Numeric::solve(double* x) const {
   return kRetOk;
 }
 
+Int Numeric::forwardSolve(double* x) const {
+  if (!sn_columns_ || !S_ || !data_ || !options_) return kRetInvalidPointer;
+  HybridSolveHandler SH(*S_, *sn_columns_, swaps_, pivot_2x2_, *data_,
+                        *options_);
+  permuteVectorInverse(x, S_->iperm());
+  SH.forwardSolve(x);
+  return kRetOk;
+}
+Int Numeric::diagSolve(double* x) const {
+  if (!sn_columns_ || !S_ || !data_ || !options_) return kRetInvalidPointer;
+  HybridSolveHandler SH(*S_, *sn_columns_, swaps_, pivot_2x2_, *data_,
+                        *options_);
+  SH.diagSolve(x);
+  return kRetOk;
+}
+Int Numeric::backwardSolve(double* x) const {
+  if (!sn_columns_ || !S_ || !data_ || !options_) return kRetInvalidPointer;
+  HybridSolveHandler SH(*S_, *sn_columns_, swaps_, pivot_2x2_, *data_,
+                        *options_);
+  SH.backwardSolve(x);
+  permuteVector(x, S_->iperm());
+  return kRetOk;
+}
+
 void Numeric::getReg(double* reg) {
   std::memcpy(reg, total_reg_.data(), total_reg_.size() * sizeof(double));
 }
 
 void Numeric::inertia(Int& pos, Int& neg, Int& zero, double tol) const {
+  if (!sn_columns_ || !S_ || !data_ || !options_) return;
   HybridSolveHandler SH(*S_, *sn_columns_, swaps_, pivot_2x2_, *data_,
                         *options_);
   SH.inertia(pos, neg, zero, tol);

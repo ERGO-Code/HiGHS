@@ -99,7 +99,12 @@ class FHsolver {
 
   // Perform solve phase with rhs given by x, which is overwritten with the
   // solution.
-  Int solve(double* x);
+  Int solve(double* x) const;
+
+  // Perform partial solves with L, D, L^T (including permutation)
+  Int forwardSolve(double* x) const;
+  Int diagSolve(double* x) const;
+  Int backwardSolve(double* x) const;
 
   // If multiple factorisation are performed, call newIter() before each
   // factorisation. This is used only to collect data for debugging, if

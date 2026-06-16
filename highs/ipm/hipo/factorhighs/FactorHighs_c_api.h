@@ -30,6 +30,11 @@ HighsInt FactorHighs_factorise(void* FH, const void* S, HighsInt n, HighsInt nz,
                                const double* vals);
 HighsInt FactorHighs_solve(void* FH, double* x);
 
+// Partial solves
+HighsInt FactorHighs_forwardSolve(void* FH, double* x);
+HighsInt FactorHighs_diagSolve(void* FH, double* x);
+HighsInt FactorHighs_backwardSolve(void* FH, double* x);
+
 // Set options
 void FactorHighs_setRegularisation(void* FH, double reg_p, double reg_d);
 void FactorHighs_setBlockSize(void* FH, HighsInt nb);
