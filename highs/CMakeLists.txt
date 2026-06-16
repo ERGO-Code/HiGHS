@@ -377,7 +377,7 @@ else()
       # see: https://docs.microsoft.com/en-us/dotnet/core/rid-catalog
       if(CMAKE_SYSTEM_PROCESSOR MATCHES "^(aarch64|arm64)")
         set(DOTNET_PLATFORM arm64)
-      elseif(WIN32 AND CMAKE_SIZEOF_VOID_P EQUAL 4)
+      elseif(WIN32 AND (CMAKE_GENERATOR_PLATFORM STREQUAL "Win32" OR CMAKE_SIZEOF_VOID_P EQUAL 4))
         set(DOTNET_PLATFORM x86)
       else()
         set(DOTNET_PLATFORM x64)
