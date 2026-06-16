@@ -72,6 +72,7 @@ int main() {
 
   FactorHighs_setRegularisation(FH, 0.0, 0.0);
 
+  // compute ordering with metis
   int perm[n];
   int metis_status = FactorHighs_reorderMetis(FH, n, nz, rows, ptr, perm);
   if (metis_status) return 1;

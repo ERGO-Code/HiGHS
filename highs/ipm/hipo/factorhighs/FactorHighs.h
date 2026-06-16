@@ -20,15 +20,18 @@ It is stored using three arrays:
 - ptr, column pointers, of length n+1;
 - rows, row indices, of length nz;
 - vals, values, of length nz.
-Zero-based indexing is used everywhere.
 
 The direct solver uses the following objects:
 - Symbolic, to store the symbolic factorization;
 - FHsolver, to perform analyse and factorise phases.
 
 Define a right-hand side rhs, which will be overwritten with the solution of
-M^{-1} * rhs. The pre-computed fill-reducing ordering to use is stored in the
-vector perm.
+M^{-1} * rhs. Use reorderMetis, reorderAmd, reorderRcm to obtain a fill-reducing
+ordering of the matrix, or use a precomputed one. The ordering is stored in the
+array perm.
+
+Zero-based indexing is assumed for the sparsity pattern and permutation. Use
+setOneIndexing(true) to use one-based indexing.
 
 Define a vector signs that contains the expected sign of each pivot:
 -  1 for pivots expected to be positive
@@ -44,8 +47,8 @@ Then, the factorization is performed as follows.
 
     Symbolic S;
     FHsolver FH;
-    FH.analyse(S, rows, ptr, signs, perm);
-    FH.factorise(S, rows, ptr, val);
+    FH.analyse(S, n, nz rows, ptr, signs, perm);
+    FH.factorise(S, n, nz rows, ptr, val);
     FH.solve(x);
 
 Printing to screen is achieved using the interface in auxiliary/Logger.h.
