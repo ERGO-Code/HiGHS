@@ -1452,8 +1452,8 @@ HPresolve::Result HPresolve::stronglyConnectedComponents() {
   if (!mipsolver->mipdata_->cliquesExtracted || cliquetable.numCliques() <= 1)
     return Result::kOk;
 
-  HighsInt numNodes = 2 * model->num_col_;
-  std::vector<HighsInt> stronglyConnectedComponents(numNodes);
+  const HighsInt numNodes = 2 * model->num_col_;
+  std::vector<HighsInt> stronglyConnectedComponents(numNodes, -1);
   std::vector<bool> infeasibleNodes(numNodes);
   bool infeasible = false;
   cliquetable.tarjan(stronglyConnectedComponents, infeasibleNodes, infeasible);
@@ -1485,8 +1485,9 @@ HPresolve::Result HPresolve::stronglyConnectedComponents() {
     const HighsInt substCol = substNode / 2;
     if (colDeleted[substCol] || domain.isFixed(substCol)) continue;
     const HighsInt stayNode = stronglyConnectedComponents[substNode];
+    if (stayNode == -1) continue;
     const HighsInt stayCol = stayNode / 2;
-    if (stayCol == -1 || stayCol == substCol) continue;
+    if (stayCol == substCol) continue;
 
     // Decides whether the nodes have the same value in the clique table.
     // This decides whether to substitute x = y, or x = 1 - y
