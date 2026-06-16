@@ -72,11 +72,18 @@ if (CUPDLP_GPU)
             DESTINATION highspy
             COMPONENT python)
   else()
-    # On Linux/macOS TARGET_SONAME_FILE gives the SONAME file (e.g.
-    # libhighs.so.1.14)
-    install(FILES $<TARGET_SONAME_FILE:highs>
+    install(FILES $<TARGET_FILE:highs>
             DESTINATION highspy
+            RENAME $<TARGET_SONAME_FILE_NAME:highs>
             COMPONENT python)
+    # install(FILES) does not update RPATH (unlike install(TARGETS)).
+    # Without this, the embedded build-tree RPATH prevents libhighs from
+    # finding libcudalin at $ORIGIN after installation.
+    install(CODE "
+      file(RPATH_SET
+        FILE \"\${CMAKE_INSTALL_PREFIX}/highspy/$<TARGET_SONAME_FILE_NAME:highs>\"
+        NEW_RPATH \"\$ORIGIN\")
+    " COMPONENT python)
   endif()
   if (NOT HIGHS_GPU_LIB)
     install(FILES $<TARGET_FILE:cudalin>
