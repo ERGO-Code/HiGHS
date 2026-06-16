@@ -67,11 +67,17 @@ install(TARGETS _core
 if (CUPDLP_GPU)
   # Use install(FILES) to avoid CMake 4.x cross-directory install(TARGETS)
   # restrictions (silently ignored for targets owned by other directories).
-  # $<TARGET_SONAME_FILE:highs> gives the SONAME file on Linux (libhighs.so.1.14)
-  # or the DLL on Windows — the exact file the extension's linker records.
-  install(FILES $<TARGET_SONAME_FILE:highs>
-          DESTINATION highspy
-          COMPONENT python)
+  if (WIN32)
+    install(FILES $<TARGET_FILE:highs>
+            DESTINATION highspy
+            COMPONENT python)
+  else()
+    # On Linux/macOS TARGET_SONAME_FILE gives the SONAME file (e.g.
+    # libhighs.so.1.14)
+    install(FILES $<TARGET_SONAME_FILE:highs>
+            DESTINATION highspy
+            COMPONENT python)
+  endif()
   if (NOT HIGHS_GPU_LIB)
     install(FILES $<TARGET_FILE:cudalin>
             DESTINATION highspy
