@@ -6571,6 +6571,8 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
         if (problemSizeReduction() > 0.05) continue;
       }
 
+      if (postsolve_stack.numReductions() == 35039) {
+      }
       analysis_.presolveTimerStart(kPresolveClockFastLoop);
       HPRESOLVE_CHECKED_CALL(fastPresolveLoop(postsolve_stack));
       analysis_.presolveTimerStop(kPresolveClockFastLoop);
@@ -7702,6 +7704,10 @@ HPresolve::Result HPresolve::presolveChangedCols(
   changedCols.swap(changedColIndices);
   for (HighsInt col : changedCols) {
     if (colDeleted[col]) continue;
+    size_t num_reductions = postsolve_stack.numReductions();
+    if (num_reductions == 35044) {
+      printf("HPresolve::presolveChangedCols reductions = %d\n", int(num_reductions));
+    }
     HPRESOLVE_CHECKED_CALL(colPresolve(postsolve_stack, col));
     changedColFlag[col] = colDeleted[col];
   }

@@ -22,10 +22,12 @@
 
 #include "lp_data/HConst.h"
 #include "lp_data/HStruct.h"
+#include "lp_data/HighsModelUtils.h" 
 #include "lp_data/HighsOptions.h"
 #include "util/HighsCDouble.h"
 #include "util/HighsDataStack.h"
 #include "util/HighsMatrixSlice.h"
+
 
 // class HighsOptions;
 namespace presolve {
@@ -599,7 +601,7 @@ class HighsPostsolveStack {
   template <typename T>
   void undoIterateBackwards(std::vector<T>& values,
                             const std::vector<HighsInt>& index,
-                            HighsInt origSize) {
+                            HighsInt origSize, T zero) {
     values.resize(origSize);
 #ifdef DEBUG_EXTRA
     // Fill vector with NaN for debugging purposes
@@ -612,8 +614,10 @@ class HighsPostsolveStack {
     std::copy(valuesNew.cbegin(), valuesNew.cend(), values.begin());
 #else
     for (size_t i = index.size(); i > 0; --i) {
-      assert(static_cast<size_t>(index[i - 1]) >= i - 1);
-      values[index[i - 1]] = values[i - 1];
+      size_t to_i = static_cast<size_t>(index[i - 1]);
+      assert(to_i >= i - 1);
+      values[to_i] = values[i - 1];
+      if (to_i > i - 1) values[i - 1] = zero;
     }
 #endif
   }
@@ -637,32 +641,69 @@ class HighsPostsolveStack {
 
     // expand solution to original index space
     assert(origNumCol > 0);
-    undoIterateBackwards(solution.col_value, origColIndex, origNumCol);
+    undoIterateBackwards(solution.col_value, origColIndex, origNumCol, 0.0);
 
     assert(origNumRow >= 0);
-    undoIterateBackwards(solution.row_value, origRowIndex, origNumRow);
+    undoIterateBackwards(solution.row_value, origRowIndex, origNumRow, 0.0);
 
     if (perform_dual_postsolve) {
       // if dual solution is given, expand dual solution and basis to original
       // index space
-      undoIterateBackwards(solution.col_dual, origColIndex, origNumCol);
+      undoIterateBackwards(solution.col_dual, origColIndex, origNumCol, 0.0);
 
-      undoIterateBackwards(solution.row_dual, origRowIndex, origNumRow);
+      undoIterateBackwards(solution.row_dual, origRowIndex, origNumRow, 0.0);
     }
 
     if (perform_basis_postsolve) {
       // if basis is given, expand basis status values to original index space
-      undoIterateBackwards(basis.col_status, origColIndex, origNumCol);
+      undoIterateBackwards(basis.col_status, origColIndex, origNumCol, HighsBasisStatus::kNonbasic);
 
-      undoIterateBackwards(basis.row_status, origRowIndex, origNumRow);
+      undoIterateBackwards(basis.row_status, origRowIndex, origNumRow, HighsBasisStatus::kNonbasic);
     }
 
+    // Initialise to illegal values so that initial values are logged
+    double report_col_value = kHighsInf;
+    double report_col_dual = kHighsInf;
+    HighsBasisStatus report_col_status = HighsBasisStatus::kNonbasic;
+    size_t check_reduction = 31819;
+    auto reportColLogging = [&](const HighsInt reduction) {
+      assert(report_col >= 0);
+      double col_value = solution.col_value[report_col];
+      double col_dual = solution.dual_valid ?
+	solution.col_dual[report_col] : 0;
+      HighsBasisStatus col_status = basis.valid ?
+	basis.col_status[report_col] : HighsBasisStatus::kNonbasic;
+      bool report = col_value != report_col_value;
+      if (solution.dual_valid) report = report || col_dual != report_col_dual;
+      if (basis.valid) report = report || col_status != report_col_status;
+      if (reduction >= 0) {
+	if (report) printf("After reduction %9d (type %2d):",
+	       int(reduction), int(reductions[reduction].first));
+      } else if (reduction == -1) {
+	report = true;
+	printf("Before undo:                        ");
+      } else {
+	report = true;
+	printf("After last reduction:               ");
+      }
+      if (!report) return;
+      printf(" Col %7d value = %11.4g",
+               int(report_col), col_value);
+      if (solution.dual_valid)
+	printf(", dual = %11.4g", col_dual);
+      if (basis.valid)
+	printf(" status = %s", utilBasisStatusToString(col_status).c_str());
+      printf("\n");
+      report_col_value = col_value;
+      report_col_dual = col_dual;
+      report_col_status = col_status;
+    };
     // now undo the changes
+    if (report_col >= 0) reportColLogging(-1);
     for (size_t i = reductions.size(); i > 0; --i) {
-      if (report_col >= 0)
-        printf("Before  reduction %2d (type %2d): col_value[%2d] = %g\n",
-               int(i - 1), int(reductions[i - 1].first), int(report_col),
-               solution.col_value[report_col]);
+      if (i-1 == check_reduction) {
+	printf("Checking reduction %d\n", int(check_reduction));
+      }
       switch (reductions[i - 1].first) {
         case ReductionType::kLinearTransform: {
           LinearTransform reduction;
@@ -764,10 +805,9 @@ class HighsPostsolveStack {
                  int(reductions[i - 1].first));
           if (kAllowDeveloperAssert) assert(1 == 0);
       }
+      if (report_col >= 0) reportColLogging(i-1);
     }
-    if (report_col >= 0)
-      printf("After last reduction: col_value[%2d] = %g\n", int(report_col),
-             solution.col_value[report_col]);
+    if (report_col >= 0) reportColLogging(-2);
 
 #ifdef DEBUG_EXTRA
     // solution should not contain NaN or Inf
@@ -825,23 +865,23 @@ class HighsPostsolveStack {
     bool perform_basis_postsolve = basis.valid;
 
     // expand solution to original index space
-    undoIterateBackwards(solution.col_value, origColIndex, origNumCol);
+    undoIterateBackwards(solution.col_value, origColIndex, origNumCol, 0.0);
 
-    undoIterateBackwards(solution.row_value, origRowIndex, origNumRow);
+    undoIterateBackwards(solution.row_value, origRowIndex, origNumRow, 0.0);
 
     if (perform_dual_postsolve) {
       // if dual solution is given, expand dual solution and basis to original
       // index space
-      undoIterateBackwards(solution.col_dual, origColIndex, origNumCol);
+      undoIterateBackwards(solution.col_dual, origColIndex, origNumCol, 0.0);
 
-      undoIterateBackwards(solution.row_dual, origRowIndex, origNumRow);
+      undoIterateBackwards(solution.row_dual, origRowIndex, origNumRow, 0.0);
     }
 
     if (perform_basis_postsolve) {
       // if basis is given, expand basis status values to original index space
-      undoIterateBackwards(basis.col_status, origColIndex, origNumCol);
+      undoIterateBackwards(basis.col_status, origColIndex, origNumCol, HighsBasisStatus::kNonbasic);
 
-      undoIterateBackwards(basis.row_status, origRowIndex, origNumRow);
+      undoIterateBackwards(basis.row_status, origRowIndex, origNumRow, HighsBasisStatus::kNonbasic);
     }
 
     // now undo the changes

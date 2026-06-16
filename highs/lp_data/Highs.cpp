@@ -3726,9 +3726,11 @@ HighsPostsolveStatus Highs::runPostsolve() {
     return HighsPostsolveStatus::kNoPrimalSolutionError;
   const bool have_dual_solution =
       presolve_.data_.recovered_solution_.dual_valid;
+  const HighsInt report_3040_col = 31382;//-21792;
   presolve_.data_.postSolveStack.undo(options_,
                                       presolve_.data_.recovered_solution_,
-                                      presolve_.data_.recovered_basis_);
+                                      presolve_.data_.recovered_basis_,
+				      report_3040_col);
   // Compute the row activities
   assert(model_.lp_.a_matrix_.isColwise());
   calculateRowValuesQuad(model_.lp_, presolve_.data_.recovered_solution_);
