@@ -131,6 +131,11 @@ class FHsolver {
   // Compute number of positive, negative and zero pivots, using tol as
   // tolerance for zero.
   void inertia(Int& pos, Int& neg, Int& zero, double tol = 1e-16) const;
+
+  // Set options for 1-based indexing, off by default.
+  // If set to true, the vectors passed to analyse and factorise are assumed to
+  // use 1-based indexing, so that all entries are shifted down by 1.
+  void setOneIndexing(bool one_indexing);
 };
 
 }  // namespace hipo

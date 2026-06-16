@@ -71,4 +71,8 @@ void FHsolver::inertia(Int& pos, Int& neg, Int& zero, double tol) const {
   N_.inertia(pos, neg, zero, tol);
 }
 
+void FHsolver::setOneIndexing(bool one_indexing) {
+  options_.one_indexing = one_indexing;
+}
+
 }  // namespace hipo

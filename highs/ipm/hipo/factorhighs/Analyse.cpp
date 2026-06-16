@@ -33,6 +33,14 @@ Analyse::Analyse(Int n, Int nz, const Int* rows, const Int* ptr,
   rows_lower_ = std::vector<Int>(rows, rows + nz_);
   ptr_lower_ = std::vector<Int>(ptr, ptr + n_ + 1);
   signs_ = std::vector<Int>(signs, signs + n_);
+  perm_ = std::vector<Int>(perm, perm + n_);
+
+  // adjust data if one-based indexing is used
+  if (FH_opt_.one_indexing) {
+    for (Int& i : rows_lower_) --i;
+    for (Int& i : ptr_lower_) --i;
+    for (Int& i : perm_) --i;
+  }
 
   // Create upper triangular part
   rows_upper_.resize(nz_);
@@ -57,7 +65,6 @@ Analyse::Analyse(Int n, Int nz, const Int* rows, const Int* ptr,
   transpose(ptr_upper_, rows_upper_, ptr_lower_, rows_lower_);
   transpose(ptr_lower_, rows_lower_, ptr_upper_, rows_upper_);
 
-  perm_ = std::vector<Int>(perm, perm + n_);
   iperm_.resize(n_);
   inversePerm(perm_, iperm_);
 

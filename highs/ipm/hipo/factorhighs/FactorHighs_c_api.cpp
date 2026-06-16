@@ -72,3 +72,7 @@ void FactorHighs_iperm(void* S, HighsInt* ip) {
     ip[i] = iperm[i];
   }
 }
+
+void FactorHighs_setOneIndexing(void* FH, HighsInt one_indexing) {
+  ((hipo::FHsolver*)FH)->setOneIndexing(one_indexing);
+}

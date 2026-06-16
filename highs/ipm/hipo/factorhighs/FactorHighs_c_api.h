@@ -35,6 +35,7 @@ void FactorHighs_setRegularisation(void* FH, double reg_p, double reg_d);
 void FactorHighs_setBlockSize(void* FH, HighsInt nb);
 void FactorHighs_setPivoting(void* FH, HighsInt pivoting);
 void FactorHighs_setLogging(void* FH, HighsInt display);
+void FactorHighs_setOneIndexing(void* FH, HighsInt one_indexing);
 
 // Extract information
 void FactorHighs_getRegularisation(void* FH, double* reg);

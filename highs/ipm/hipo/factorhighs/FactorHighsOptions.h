@@ -9,8 +9,8 @@ namespace hipo {
 struct FHoptions {
   double reg_p = 0.0;
   double reg_d = 0.0;
-  bool pivoting = true;
   Int nb = kBlockSize;
+  bool pivoting = true;
   bool one_indexing = false;
 };
 

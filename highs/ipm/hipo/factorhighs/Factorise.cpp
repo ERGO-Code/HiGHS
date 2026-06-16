@@ -45,6 +45,12 @@ Factorise::Factorise(const Symbolic& S, Int n, Int nz, const Int* rowsM,
   valM_ = std::vector<double>(valM, valM + nz);
   ptrM_ = std::vector<Int>(ptrM, ptrM + n + 1);
 
+  // adjust data if one-based indexing is used
+  if (FH_opt_.one_indexing) {
+    for (Int& i : rowsM_) --i;
+    for (Int& i : ptrM_) --i;
+  }
+
   // Permute the matrix.
   // This also removes any entry not in the lower triangle.
   permute(S_.iperm());

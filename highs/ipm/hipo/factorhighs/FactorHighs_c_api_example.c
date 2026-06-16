@@ -26,13 +26,27 @@ int main() {
   const int n = 5;
   const int nz = 10;
 
-  // define the matrix in CSC format, with 0-based indexing
+  // define the lower triangle in CSC format, with 0-based indexing
   int ptr[n + 1] = {0, 3, 5, 8, 9, 10};
   int rows[nz] = {0, 2, 3, 1, 2, 2, 3, 4, 3, 4};
   double vals[nz] = {5, 3, 4, 3, 2, 9, -1, 1, 8, 1};
 
   // identical permutation for simplicity
   int perm[n] = {0, 1, 2, 3, 4};
+
+  /*
+    1-based indexing is available as well.
+    We define the problem shifted by 1:
+
+      int ptr[n + 1] = {1, 4, 6, 9, 10, 11};
+      int rows[nz] = {1, 3, 4, 2, 3, 3, 4, 5, 4, 5};
+      double vals[nz] = {5, 3, 4, 3, 2, 9, -1, 1, 8, 1};
+      int perm[n] = {1, 2, 3, 4, 5};
+
+    and set the corresponding option:
+
+        FactorHighs_setOneIndexing(FH, fortran_indexing);
+  */
 
   // matrix is spd, so expect all pivots to be positive
   int signs[n] = {1, 1, 1, 1, 1};
