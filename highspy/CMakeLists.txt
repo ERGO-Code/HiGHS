@@ -54,25 +54,37 @@ if (NOT MSVC)
   target_compile_options(_core PRIVATE "-ftemplate-depth=2048")
 endif()
 
+if(CUPDLP_GPU)
+  target_link_libraries(_core PRIVATE cudalin ${CUDA_LIBRARY})
+endif()
+
 # The install directory is the output (wheel) directory
 install(TARGETS _core
         RUNTIME DESTINATION highspy
         LIBRARY DESTINATION highspy
         COMPONENT python)
 
-# Only needed if the wheel is built with a shared library, but can be left in for static linking as well.
-# Include highs library (but ignore .lib file)
-install(TARGETS highs
-        RUNTIME DESTINATION highspy
-        LIBRARY DESTINATION highspy
-        NAMELINK_SKIP
-        COMPONENT python)
-
-# When GPU support is enabled, cudalin is built as a separate shared library
-# that highs.dll depends on at runtime — bundle it with the wheel.
-if (CUPDLP_GPU AND NOT HIGHS_GPU_LIB)
-  install(TARGETS cudalin
-          RUNTIME DESTINATION highspy
+# install(TARGETS highs/cudalin ...) is silently ignored in CMake 4.x when the
+# target is owned by a different directory, and also when BUILD_SHARED_LIBS is
+# OFF in this scope (reset above). Use install(FILES $<TARGET_FILE:...>) which
+# resolves the actual DLL path at install time with no directory restrictions.
+if (CUPDLP_GPU)
+  # Use install(FILES) to avoid CMake 4.x cross-directory install(TARGETS)
+  # restrictions (silently ignored for targets owned by other directories).
+  # $<TARGET_SONAME_FILE:highs> gives the SONAME file on Linux (libhighs.so.1.14)
+  # or the DLL on Windows — the exact file the extension's linker records.
+  install(FILES $<TARGET_SONAME_FILE:highs>
+          DESTINATION highspy
+          COMPONENT python)
+  if (NOT HIGHS_GPU_LIB)
+    install(FILES $<TARGET_FILE:cudalin>
+            DESTINATION highspy
+            COMPONENT python)
+  endif()
+else()
+  # Non-GPU: on Unix highs is shared by default; LIBRARY+NAMELINK_SKIP installs
+  # the SONAME file that the extension's RPATH resolves.
+  install(TARGETS highs
           LIBRARY DESTINATION highspy
           NAMELINK_SKIP
           COMPONENT python)
