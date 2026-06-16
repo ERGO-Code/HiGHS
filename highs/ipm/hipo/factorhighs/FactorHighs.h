@@ -56,6 +56,10 @@ To add static regularisation when the pivots are selected, use
 setRegularisation(reg_p,reg_d) to choose values of primal and dual
 regularisation. If regularisation is already added to the matrix, ignore.
 
+Notice that the fill-reducing ordering can be modified during the call to
+analyse. The inverse permutation used during the factorisation can be accessed
+via the Symbolic object, S.iperm().
+
 */
 
 namespace hipo {

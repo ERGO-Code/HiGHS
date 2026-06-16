@@ -38,6 +38,7 @@ void FactorHighs_setBlockSize(void* FH, HighsInt nb);
 void FactorHighs_setPivoting(void* FH, HighsInt pivoting);
 void FactorHighs_setLogging(void* FH, int display);
 void FactorHighs_symbolic_print(void* FH, void* S, int verbose);
+void FactorHighs_iperm(void* S, int* ip);
 
 #ifdef __cplusplus
 }
