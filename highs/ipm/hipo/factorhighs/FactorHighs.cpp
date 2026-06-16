@@ -3,6 +3,8 @@
 #include "Analyse.h"
 #include "DataCollector.h"
 #include "Factorise.h"
+#include "HighsExternalApi.h"
+#include "ipm/hipo/auxiliary/Auxiliary.h"
 #include "ipm/hipo/auxiliary/Logger.h"
 
 namespace hipo {
@@ -77,6 +79,114 @@ void FHsolver::inertia(Int& pos, Int& neg, Int& zero, double tol) const {
 
 void FHsolver::setOneIndexing(bool one_indexing) {
   options_.one_indexing = one_indexing;
+}
+
+void FHsolver::iperm(const Symbolic& S, Int* ip) const {
+  const std::vector<Int>& iperm = S.iperm();
+  const Int offset = options_.one_indexing ? 1 : 0;
+  for (Int i = 0; i < static_cast<Int>(iperm.size()); ++i) {
+    ip[i] = iperm[i] + offset;
+  }
+}
+
+static void getFull(Int n, Int nz, const Int* rows, const Int* ptr,
+                    bool one_indexing, std::vector<Int>& full_ptr_v,
+                    std::vector<Int>& full_rows_v) {
+  std::vector<Int> rows_tmp(nz);
+  std::vector<Int> ptr_tmp(n + 1);
+  for (Int i = 0; i < nz; ++i) rows_tmp[i] = rows[i];
+  for (Int i = 0; i < n + 1; ++i) ptr_tmp[i] = ptr[i];
+
+  if (one_indexing) {
+    for (Int& i : rows_tmp) --i;
+    for (Int& i : ptr_tmp) --i;
+  }
+
+  // metis, amd, rcm require a full copy of the matrix, without diagonal
+  // entries
+  fullFromLower(n, nz, ptr_tmp.data(), rows_tmp.data(), full_ptr_v,
+                full_rows_v);
+}
+
+Int FHsolver::reorderMetis(Int n, Int nz, const Int* rows, const Int* ptr,
+                           Int* perm, bool full_matrix_0) const {
+  const Int *full_ptr, *full_rows;
+  std::vector<Int> full_ptr_v, full_rows_v;
+  if (full_matrix_0) {
+    full_ptr = ptr;
+    full_rows = rows;
+  } else {
+    getFull(n, nz, rows, ptr, options_.one_indexing, full_ptr_v, full_rows_v);
+    full_ptr = full_ptr_v.data();
+    full_rows = full_rows_v.data();
+  }
+
+  idx_t options[METIS_NOPTIONS];
+  HighsExtras::metis::set_default_options(options);
+  options[METIS_OPTION_SEED] = kMetisSeed;
+
+  options[METIS_OPTION_DBGLVL] = 0;
+
+  // no2hop improves the quality of ordering in general
+  options[METIS_OPTION_NO2HOP] = 1;
+
+  std::vector<Int> iperm(n);
+
+  Int status = HighsExtras::metis::nodeND(&n, full_ptr, full_rows, nullptr,
+                                          options, perm, iperm.data());
+
+  if (options_.one_indexing)
+    for (Int i = 0; i < n; ++i) perm[i]++;
+
+  return status != METIS_OK;
+}
+
+Int FHsolver::reorderAmd(Int n, Int nz, const Int* rows, const Int* ptr,
+                         Int* perm, bool full_matrix_0) const {
+  const Int *full_ptr, *full_rows;
+  std::vector<Int> full_ptr_v, full_rows_v;
+  if (full_matrix_0) {
+    full_ptr = ptr;
+    full_rows = rows;
+  } else {
+    getFull(n, nz, rows, ptr, options_.one_indexing, full_ptr_v, full_rows_v);
+    full_ptr = full_ptr_v.data();
+    full_rows = full_rows_v.data();
+  }
+
+  double control[AMD_CONTROL];
+  HighsExtras::amd::set_defaults(control);
+  double info[AMD_INFO];
+
+  Int status =
+      HighsExtras::amd::order(n, full_ptr, full_rows, perm, control, info);
+
+  if (options_.one_indexing)
+    for (Int i = 0; i < n; ++i) perm[i]++;
+
+  return status != AMD_OK;
+}
+
+Int FHsolver::reorderRcm(Int n, Int nz, const Int* rows, const Int* ptr,
+                         Int* perm, bool full_matrix_0) const {
+  const Int *full_ptr, *full_rows;
+  std::vector<Int> full_ptr_v, full_rows_v;
+  if (full_matrix_0) {
+    full_ptr = ptr;
+    full_rows = rows;
+  } else {
+    getFull(n, nz, rows, ptr, options_.one_indexing, full_ptr_v, full_rows_v);
+    full_ptr = full_ptr_v.data();
+    full_rows = full_rows_v.data();
+  }
+
+  Int status =
+      HighsExtras::rcm::genrcm(n, full_ptr[n], full_ptr, full_rows, perm);
+
+  if (options_.one_indexing)
+    for (Int i = 0; i < n; ++i) perm[i]++;
+
+  return status != 0;
 }
 
 }  // namespace hipo

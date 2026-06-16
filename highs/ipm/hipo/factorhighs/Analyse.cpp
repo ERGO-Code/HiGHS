@@ -733,7 +733,7 @@ void Analyse::snPattern() {
   std::vector<Int64> work(sn_indices_.size());
   for (Int i = 0; i < static_cast<Int>(sn_indices_.size()); ++i)
     work[i] = sn_indices_[i];
-  counts2Ptr(ptr_sn_, work);
+  counts2Ptr(work.size(), ptr_sn_.data(), work.data());
 
   // consider each row
   for (Int i = 0; i < n_; ++i) {

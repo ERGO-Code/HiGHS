@@ -78,13 +78,26 @@ void FactorHighs_symbolic_print(void* FH, void* S, HighsInt verbose) {
   ((hipo::Symbolic*)S)->print(*(((hipo::FHsolver*)FH)->getLogger()), verbose);
 }
 
-void FactorHighs_iperm(void* S, HighsInt* ip) {
-  const std::vector<hipo::Int>& iperm = ((hipo::Symbolic*)S)->iperm();
-  for (HighsInt i = 0; i < static_cast<HighsInt>(iperm.size()); ++i) {
-    ip[i] = iperm[i];
-  }
+void FactorHighs_iperm(void* FH, void* S, HighsInt* ip) {
+  ((hipo::FHsolver*)FH)->iperm(*(hipo::Symbolic*)S, ip);
 }
 
 void FactorHighs_setOneIndexing(void* FH, HighsInt one_indexing) {
   ((hipo::FHsolver*)FH)->setOneIndexing(one_indexing);
+}
+
+HighsInt FactorHighs_reorderMetis(void* FH, HighsInt n, HighsInt nz,
+                                  const HighsInt* rows, const HighsInt* ptr,
+                                  HighsInt* perm) {
+  return ((hipo::FHsolver*)FH)->reorderMetis(n, nz, rows, ptr, perm, 0);
+}
+HighsInt FactorHighs_reorderAmd(void* FH, HighsInt n, HighsInt nz,
+                                const HighsInt* rows, const HighsInt* ptr,
+                                HighsInt* perm) {
+  return ((hipo::FHsolver*)FH)->reorderAmd(n, nz, rows, ptr, perm, 0);
+}
+HighsInt FactorHighs_reorderRcm(void* FH, HighsInt n, HighsInt nz,
+                                const HighsInt* rows, const HighsInt* ptr,
+                                HighsInt* perm) {
+  return ((hipo::FHsolver*)FH)->reorderRcm(n, nz, rows, ptr, perm, 0);
 }

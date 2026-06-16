@@ -26,21 +26,19 @@ void subtreeSize(const std::vector<Int>& parent, std::vector<Int>& sizes) {
   }
 }
 
-void transpose(const std::vector<Int>& ptr, const std::vector<Int>& rows,
-               std::vector<Int>& ptrT, std::vector<Int>& rowsT) {
+void transpose(Int n, Int nz, const Int* ptr, const Int* rows, Int* ptrT,
+               Int* rowsT) {
   // Compute the transpose of the matrix and return it in rowsT and ptrT
-
-  Int n = ptr.size() - 1;
 
   std::vector<Int> work(n);
 
   // count the entries in each row into work
-  for (Int i = 0; i < ptr.back(); ++i) {
+  for (Int i = 0; i < nz; ++i) {
     ++work[rows[i]];
   }
 
   // sum row sums to obtain pointers
-  counts2Ptr(ptrT, work);
+  counts2Ptr(n, ptrT, work.data());
 
   for (Int j = 0; j < n; ++j) {
     for (Int el = ptr[j]; el < ptr[j + 1]; ++el) {
@@ -54,21 +52,24 @@ void transpose(const std::vector<Int>& ptr, const std::vector<Int>& rows,
 }
 
 void transpose(const std::vector<Int>& ptr, const std::vector<Int>& rows,
-               const std::vector<double>& val, std::vector<Int>& ptrT,
-               std::vector<Int>& rowsT, std::vector<double>& valT) {
-  // Compute the transpose of the matrix and return it in rowsT, ptrT and valT
+               std::vector<Int>& ptrT, std::vector<Int>& rowsT) {
+  transpose(ptr.size() - 1, rows.size(), ptr.data(), rows.data(), ptrT.data(),
+            rowsT.data());
+}
 
-  Int n = ptr.size() - 1;
+void transpose(Int n, Int nz, const Int* ptr, const Int* rows,
+               const double* val, Int* ptrT, Int* rowsT, double* valT) {
+  // Compute the transpose of the matrix and return it in rowsT, ptrT and valT
 
   std::vector<Int> work(n);
 
   // count the entries in each row into work
-  for (Int i = 0; i < ptr.back(); ++i) {
+  for (Int i = 0; i < nz; ++i) {
     ++work[rows[i]];
   }
 
   // sum row sums to obtain pointers
-  counts2Ptr(ptrT, work);
+  counts2Ptr(n, ptrT, work.data());
 
   for (Int j = 0; j < n; ++j) {
     for (Int el = ptr[j]; el < ptr[j + 1]; ++el) {
@@ -82,11 +83,18 @@ void transpose(const std::vector<Int>& ptr, const std::vector<Int>& rows,
   }
 }
 
+void transpose(const std::vector<Int>& ptr, const std::vector<Int>& rows,
+               const std::vector<double>& val, std::vector<Int>& ptrT,
+               std::vector<Int>& rowsT, std::vector<double>& valT) {
+  transpose(ptr.size() - 1, rows.size(), ptr.data(), rows.data(), val.data(),
+            ptrT.data(), rowsT.data(), valT.data());
+}
+
 void permuteSym(const std::vector<Int>& iperm, std::vector<Int>& ptr,
                 std::vector<Int>& rows, std::vector<double>& val, bool lower) {
   // Symmetric permutation of the lower (upper) triangular matrix M based on
-  // inverse permutation iperm. The resulting matrix is lower (upper) triangular,
-  // regardless of the input matrix.
+  // inverse permutation iperm. The resulting matrix is lower (upper)
+  // triangular, regardless of the input matrix.
 
   const Int n = ptr.size() - 1;
   std::vector<Int> work(n, 0);
@@ -117,7 +125,7 @@ void permuteSym(const std::vector<Int>& iperm, std::vector<Int>& ptr,
 
   // get column pointers by summing the count of nonzeros in each column.
   // copy column pointers into work
-  counts2Ptr(new_ptr, work);
+  counts2Ptr(n, new_ptr.data(), work.data());
 
   std::vector<Int> new_rows(new_ptr.back());
   std::vector<double> new_val;
@@ -300,16 +308,15 @@ Int maxDepthTree(const std::vector<Int>& parent) {
   return max_depth;
 }
 
-void fullFromLower(const std::vector<Int>& ptrL, const std::vector<Int>& rowsL,
+void fullFromLower(Int n, Int nz, const Int* ptrL, const Int* rowsL,
                    std::vector<Int>& ptrF, std::vector<Int>& rowsF) {
   // Given a sparse matrix in lower triangular format, build the same matrix in
   // full format, without diagonal entries.
 
-  std::vector<Int> rowsU(rowsL.size());
-  std::vector<Int> ptrU(ptrL.size());
-  transpose(ptrL, rowsL, ptrU, rowsU);
+  std::vector<Int> rowsU(nz);
+  std::vector<Int> ptrU(n + 1);
+  transpose(n, nz, ptrL, rowsL, ptrU.data(), rowsU.data());
 
-  const Int n = ptrL.size() - 1;
   std::vector<Int> work(n);
   for (Int j = 0; j < n; ++j) {
     for (Int el = ptrU[j]; el < ptrU[j + 1]; ++el) {
@@ -321,7 +328,7 @@ void fullFromLower(const std::vector<Int>& ptrL, const std::vector<Int>& rowsL,
   }
 
   ptrF.assign(n + 1, 0);
-  counts2Ptr(ptrF, work);
+  counts2Ptr(n, ptrF.data(), work.data());
   rowsF.assign(ptrF.back(), 0);
   for (Int j = 0; j < n; ++j) {
     for (Int el = ptrU[j]; el < ptrU[j + 1]; ++el) {

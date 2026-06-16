@@ -35,6 +35,17 @@ HighsInt FactorHighs_forwardSolve(void* FH, double* x);
 HighsInt FactorHighs_diagSolve(void* FH, double* x);
 HighsInt FactorHighs_backwardSolve(void* FH, double* x);
 
+// Reordering
+HighsInt FactorHighs_reorderMetis(void* FH, HighsInt n, HighsInt nz,
+                                  const HighsInt* rows, const HighsInt* ptr,
+                                  HighsInt* perm);
+HighsInt FactorHighs_reorderAmd(void* FH, HighsInt n, HighsInt nz,
+                                const HighsInt* rows, const HighsInt* ptr,
+                                HighsInt* perm);
+HighsInt FactorHighs_reorderRcm(void* FH, HighsInt n, HighsInt nz,
+                                const HighsInt* rows, const HighsInt* ptr,
+                                HighsInt* perm);
+
 // Set options
 void FactorHighs_setRegularisation(void* FH, double reg_p, double reg_d);
 void FactorHighs_setBlockSize(void* FH, HighsInt nb);
@@ -44,7 +55,7 @@ void FactorHighs_setOneIndexing(void* FH, HighsInt one_indexing);
 
 // Extract information
 void FactorHighs_getRegularisation(void* FH, double* reg);
-void FactorHighs_iperm(void* S, HighsInt* ip);
+void FactorHighs_iperm(void* FH, void* S, HighsInt* ip);
 void FactorHighs_inertia(void* FH, HighsInt* pos, HighsInt* neg, HighsInt* zero,
                          double tol);
 

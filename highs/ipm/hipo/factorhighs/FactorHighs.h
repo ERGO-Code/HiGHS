@@ -141,6 +141,22 @@ class FHsolver {
   // If set to true, the vectors passed to analyse and factorise are assumed to
   // use 1-based indexing, so that all entries are shifted down by 1.
   void setOneIndexing(bool one_indexing);
+
+  void iperm(const Symbolic& S, Int* ip) const;
+
+  // Compute fill-reducing permutation using nested dissection (Metis), approx
+  // minimum degree (amd) or reverse Cuthill-McGee (rcm).
+  // Set full_matrix_0 = false if the sparsity pattern in rows and ptr
+  // corresponds to the lower triangle of the matrix.
+  // Set full_matrix_0 = true if the sparsity pattern in rows and ptr
+  // corresponds to the full matrix (without the diagonal entries), with 0-based
+  // indexing.
+  Int reorderMetis(Int n, Int nz, const Int* rows, const Int* ptr, Int* perm,
+                   bool full_matrix_0) const;
+  Int reorderAmd(Int n, Int nz, const Int* rows, const Int* ptr, Int* perm,
+                 bool full_matrix_0) const;
+  Int reorderRcm(Int n, Int nz, const Int* rows, const Int* ptr, Int* perm,
+                 bool full_matrix_0) const;
 };
 
 }  // namespace hipo

@@ -2,7 +2,6 @@
 
 #include <limits>
 
-#include "HighsExternalApi.h"
 #include "Status.h"
 #include "ipm/hipo/auxiliary/Auxiliary.h"
 #include "ipm/hipo/auxiliary/Logger.h"
@@ -390,7 +389,8 @@ Int FactorHighsSolver::chooseOrdering(const std::vector<Int>& rows,
 
   // compute full-format matrix without diagonal entries
   std::vector<Int> full_ptr, full_rows;
-  fullFromLower(ptr, rows, full_ptr, full_rows);
+  fullFromLower(ptr.size() - 1, rows.size(), ptr.data(), rows.data(), full_ptr,
+                full_rows);
   Int n = full_ptr.size() - 1;
   std::vector<Int> perm(n), iperm(n);
 
@@ -404,36 +404,22 @@ Int FactorHighsSolver::chooseOrdering(const std::vector<Int>& rows,
                       nla.c_str());
 
     if (orderings_to_try[i] == kHipoMetisString) {
-      idx_t options[METIS_NOPTIONS];
-      HighsExtras::metis::set_default_options(options);
-      options[METIS_OPTION_SEED] = kMetisSeed;
-
-      options[METIS_OPTION_DBGLVL] = 0;
-
-      // no2hop improves the quality of ordering in general
-      options[METIS_OPTION_NO2HOP] = 1;
-
-      std::vector<Int> iperm(n);
-      Int status = HighsExtras::metis::nodeND(
-          &n, full_ptr.data(), full_rows.data(), nullptr, options,
-          permutations[i].data(), iperm.data());
-      if (status != METIS_OK) failure[i] = true;
+      Int status =
+          FH_.reorderMetis(n, rows.size(), full_rows.data(), full_ptr.data(),
+                           permutations[i].data(), true);
+      if (status) failure[i] = true;
 
     } else if (orderings_to_try[i] == kHipoAmdString) {
-      double control[AMD_CONTROL];
-      HighsExtras::amd::set_defaults(control);
-      double info[AMD_INFO];
-
       Int status =
-          HighsExtras::amd::order(n, full_ptr.data(), full_rows.data(),
-                                  permutations[i].data(), control, info);
-      if (status != AMD_OK) failure[i] = true;
+          FH_.reorderAmd(n, rows.size(), full_rows.data(), full_ptr.data(),
+                         permutations[i].data(), true);
+      if (status) failure[i] = true;
 
     } else if (orderings_to_try[i] == kHipoRcmString) {
       Int status =
-          HighsExtras::rcm::genrcm(n, full_ptr.back(), full_ptr.data(),
-                                   full_rows.data(), permutations[i].data());
-      if (status != 0) failure[i] = true;
+          FH_.reorderRcm(n, rows.size(), full_rows.data(), full_ptr.data(),
+                         permutations[i].data(), true);
+      if (status) failure[i] = true;
 
     } else {
       assert(1 == 0);
