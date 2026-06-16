@@ -64,10 +64,6 @@ install(TARGETS _core
         LIBRARY DESTINATION highspy
         COMPONENT python)
 
-# install(TARGETS highs/cudalin ...) is silently ignored in CMake 4.x when the
-# target is owned by a different directory, and also when BUILD_SHARED_LIBS is
-# OFF in this scope (reset above). Use install(FILES $<TARGET_FILE:...>) which
-# resolves the actual DLL path at install time with no directory restrictions.
 if (CUPDLP_GPU)
   # Use install(FILES) to avoid CMake 4.x cross-directory install(TARGETS)
   # restrictions (silently ignored for targets owned by other directories).
@@ -82,9 +78,8 @@ if (CUPDLP_GPU)
             COMPONENT python)
   endif()
 else()
-  # Non-GPU: on Unix highs is shared by default; LIBRARY+NAMELINK_SKIP installs
-  # the SONAME file that the extension's RPATH resolves.
   install(TARGETS highs
+          RUNTIME DESTINATION highspy
           LIBRARY DESTINATION highspy
           NAMELINK_SKIP
           COMPONENT python)

@@ -4,7 +4,7 @@ import sys as _sys
 if _sys.platform == "win32" and _os.path.exists(_os.path.join(_os.path.dirname(__file__), "cudalin.dll")):
     # Python 3.8+ no longer searches PATH when loading extension DLLs.
     # cudalin.dll is present only in GPU builds; register the CUDA bin directory
-    # so cudart64_12.dll etc. are found when _core is loaded.
+    # so cuda*.dll etc. are found when _core is loaded.
     _cuda_path = _os.environ.get("CUDA_PATH") or _os.environ.get("CUDA_HOME")
     if _cuda_path:
         _cuda_bin = _os.path.join(_cuda_path, "bin")
