@@ -3,6 +3,7 @@
 
 #include "CliqueStack.h"
 #include "DataCollector.h"
+#include "FactorHighsOptions.h"
 #include "Numeric.h"
 #include "Symbolic.h"
 #include "ipm/hipo/auxiliary/Logger.h"
@@ -70,14 +71,11 @@ namespace hipo {
 class FHsolver {
   const Logger* logger_;
   DataCollector data_;
-  Regul regul_;
   Numeric N_;
   CliqueStack serial_stack_;
-
-  bool pivoting_ = true;
   bool local_logger_ = false;
 
-  Int nb_;  // block size
+  FHoptions options_{};
 
   // Columns of factorisation, stored by supernode.
   // This memory is allocated the first time that it is used. Subsequent
@@ -85,8 +83,6 @@ class FHsolver {
   std::vector<std::vector<double>> sn_columns_;
 
  public:
-  FHsolver();
-
   // Print collected data (if any) and terminate DataCollector
   ~FHsolver();
 

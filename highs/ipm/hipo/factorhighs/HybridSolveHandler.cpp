@@ -13,8 +13,8 @@ HybridSolveHandler::HybridSolveHandler(
     const Symbolic& S, const std::vector<std::vector<double>>& sn_columns,
     const std::vector<std::vector<Int>>& swaps,
     const std::vector<std::vector<double>>& pivot_2x2, DataCollector& data,
-    bool pivoting)
-    : SolveHandler(S, sn_columns, data, pivoting),
+    const FHoptions& options)
+    : SolveHandler(S, sn_columns, data, options),
       swaps_{swaps},
       pivot_2x2_{pivot_2x2} {}
 
@@ -26,7 +26,7 @@ void HybridSolveHandler::forwardSolve(double* x) const {
 
   HIPO_CLOCK_CREATE;
 
-  const Int nb = S_.blockSize();
+  const Int nb = options_.nb;
 
   for (Int sn = 0; sn < S_.sn(); ++sn) {
     // leading size of supernode
@@ -54,7 +54,7 @@ void HybridSolveHandler::forwardSolve(double* x) const {
       const Int x_start = sn_start;
 
       const Int* current_swaps = swaps_[sn].data();
-      if (pivoting_) {
+      if (options_.pivoting) {
         HIPO_CLOCK_START(2);
         // apply swaps to portion of rhs that is affected
         permuteWithSwaps(&x[x_start], current_swaps, jb);
@@ -77,7 +77,7 @@ void HybridSolveHandler::forwardSolve(double* x) const {
       }
       HIPO_CLOCK_STOP(2, data_, kTimeSolveSolve_dense);
 
-      if (pivoting_) {
+      if (options_.pivoting) {
         HIPO_CLOCK_START(2);
         // apply inverse swaps
         permuteWithSwaps(&x[x_start], current_swaps, jb, true);
@@ -97,7 +97,7 @@ void HybridSolveHandler::forwardSolve(double* x) const {
         const Int x_start = sn_start + nb * j;
 
         const Int* current_swaps = &swaps_[sn][nb * j];
-        if (pivoting_) {
+        if (options_.pivoting) {
           HIPO_CLOCK_START(2);
           // apply swaps to portion of rhs that is affected
           permuteWithSwaps(&x[x_start], current_swaps, jb);
@@ -130,7 +130,7 @@ void HybridSolveHandler::forwardSolve(double* x) const {
           HIPO_CLOCK_STOP(2, data_, kTimeSolveSolve_sparse);
         }
 
-        if (pivoting_) {
+        if (options_.pivoting) {
           HIPO_CLOCK_START(2);
           // apply inverse swaps
           permuteWithSwaps(&x[x_start], current_swaps, jb, true);
@@ -149,7 +149,7 @@ void HybridSolveHandler::backwardSolve(double* x) const {
 
   HIPO_CLOCK_CREATE;
 
-  const Int nb = S_.blockSize();
+  const Int nb = options_.nb;
 
   // go through the sn in reverse order
   for (Int sn = S_.sn() - 1; sn >= 0; --sn) {
@@ -179,7 +179,7 @@ void HybridSolveHandler::backwardSolve(double* x) const {
       const Int x_start = sn_start;
 
       const Int* current_swaps = swaps_[sn].data();
-      if (pivoting_) {
+      if (options_.pivoting) {
         HIPO_CLOCK_START(2);
         // apply swaps to portion of rhs that is affected
         permuteWithSwaps(&x[x_start], current_swaps, jb);
@@ -202,7 +202,7 @@ void HybridSolveHandler::backwardSolve(double* x) const {
       }
       HIPO_CLOCK_STOP(2, data_, kTimeSolveSolve_dense);
 
-      if (pivoting_) {
+      if (options_.pivoting) {
         HIPO_CLOCK_START(2);
         // apply inverse swaps
         permuteWithSwaps(&x[x_start], current_swaps, jb, true);
@@ -222,7 +222,7 @@ void HybridSolveHandler::backwardSolve(double* x) const {
         const Int x_start = sn_start + nb * j;
 
         const Int* current_swaps = &swaps_[sn][nb * j];
-        if (pivoting_) {
+        if (options_.pivoting) {
           HIPO_CLOCK_START(2);
           // apply swaps to portion of rhs that is affected
           permuteWithSwaps(&x[x_start], current_swaps, jb);
@@ -255,7 +255,7 @@ void HybridSolveHandler::backwardSolve(double* x) const {
                           &x[x_start], 1, data_);
         HIPO_CLOCK_STOP(2, data_, kTimeSolveSolve_dense);
 
-        if (pivoting_) {
+        if (options_.pivoting) {
           HIPO_CLOCK_START(2);
           // apply inverse swaps
           permuteWithSwaps(&x[x_start], current_swaps, jb, true);
@@ -273,7 +273,7 @@ void HybridSolveHandler::diagSolve(double* x) const {
 
   HIPO_CLOCK_CREATE;
 
-  const Int nb = S_.blockSize();
+  const Int nb = options_.nb;
 
   for (Int sn = 0; sn < S_.sn(); ++sn) {
     // leading size of supernode
@@ -297,7 +297,7 @@ void HybridSolveHandler::diagSolve(double* x) const {
       const Int jb = std::min(nb, sn_size - nb * j);
 
       const Int* current_swaps = &swaps_[sn][nb * j];
-      if (pivoting_) {
+      if (options_.pivoting) {
         HIPO_CLOCK_START(2);
         // apply swaps to portion of rhs that is affected
         permuteWithSwaps(&x[sn_start + nb * j], current_swaps, jb);
@@ -336,7 +336,7 @@ void HybridSolveHandler::diagSolve(double* x) const {
 
       HIPO_CLOCK_STOP(2, data_, kTimeSolveSolve_dense);
 
-      if (pivoting_) {
+      if (options_.pivoting) {
         HIPO_CLOCK_START(2);
         // apply inverse swaps
         permuteWithSwaps(&x[sn_start + nb * j], current_swaps, jb, true);
@@ -358,7 +358,7 @@ void HybridSolveHandler::inertia(Int& pos, Int& neg, Int& zero,
   neg = 0;
   zero = 0;
 
-  const Int nb = S_.blockSize();
+  const Int nb = options_.nb;
 
   for (Int sn = 0; sn < S_.sn(); ++sn) {
     // leading size of supernode

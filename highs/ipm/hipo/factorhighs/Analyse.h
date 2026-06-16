@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "DataCollector.h"
+#include "FactorHighsOptions.h"
 #include "Symbolic.h"
 #include "ipm/hipo/auxiliary/IntConfig.h"
 #include "ipm/hipo/auxiliary/Logger.h"
@@ -79,8 +80,7 @@ class Analyse {
 
   std::vector<std::vector<Int64>> clique_block_start_{};
 
-  // block size
-  Int nb_{};
+  const FHoptions& FH_opt_;
 
   const Logger* logger_;
   DataCollector& data_;
@@ -110,7 +110,8 @@ class Analyse {
  public:
   // Constructor: matrix must be in lower triangular format
   Analyse(Int n, Int nz, const Int* rows, const Int* ptr, const Int* signs,
-          Int nb, const Logger* logger, DataCollector& data, const Int* perm);
+          const FHoptions& FH_opt, const Logger* logger, DataCollector& data,
+          const Int* perm);
 
   // Run analyse phase and save the result in Symbolic object S
   Int run(Symbolic& S);

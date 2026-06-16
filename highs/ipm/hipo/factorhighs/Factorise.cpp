@@ -15,17 +15,17 @@
 namespace hipo {
 
 Factorise::Factorise(const Symbolic& S, Int n, Int nz, const Int* rowsM,
-                     const Int* ptrM, const double* valM, const Regul& regul,
-                     const Logger* logger, DataCollector& data,
+                     const Int* ptrM, const double* valM,
+                     const FHoptions& FH_opt, const Logger* logger,
+                     DataCollector& data,
                      std::vector<std::vector<double>>& sn_columns,
-                     CliqueStack* stack, bool pivoting)
+                     CliqueStack* stack)
     : S_{S},
       sn_columns_{sn_columns},
-      regul_{regul},
       logger_{logger},
       data_{data},
-      stack_{stack},
-      pivoting_{pivoting} {
+      FH_opt_{FH_opt},
+      stack_{stack} {
   // Input the symmetric matrix to be factorised in CSC format and the symbolic
   // factorisation coming from Analyse.
   // Only the lower triangular part of the matrix is used.
@@ -141,7 +141,7 @@ void Factorise::processSupernode(Int sn) {
   // initialise the format handler
   // this also allocates space for the frontal matrix and schur complement
   std::unique_ptr<FormatHandler> FH(new HybridHybridFormatHandler(
-      S_, sn, regul_, data_, sn_columns_[sn], clique_ptr, pivoting_));
+      S_, sn, data_, sn_columns_[sn], clique_ptr, FH_opt_));
 
   HIPO_CLOCK_STOP(2, data_, kTimeFactorisePrepare);
 
@@ -336,7 +336,7 @@ bool Factorise::run(Numeric& num) {
   num.swaps_ = std::move(swaps_);
   num.pivot_2x2_ = std::move(pivot_2x2_);
   num.data_ = &data_;
-  num.pivoting_ = pivoting_;
+  num.options_ = &FH_opt_;
 
   HIPO_CLOCK_STOP(1, data_, kTimeFactorise);
 

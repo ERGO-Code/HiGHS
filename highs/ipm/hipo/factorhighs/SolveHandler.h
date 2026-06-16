@@ -6,6 +6,7 @@
 #include "DataCollector.h"
 #include "Symbolic.h"
 #include "ipm/hipo/auxiliary/IntConfig.h"
+#include "FactorHighsOptions.h"
 
 namespace hipo {
 
@@ -22,12 +23,12 @@ class SolveHandler {
   const std::vector<std::vector<double>>& sn_columns_;
   DataCollector& data_;
 
-  const bool pivoting_;
+  const FHoptions& options_;
 
  public:
   SolveHandler(const Symbolic& S,
                const std::vector<std::vector<double>>& sn_columns,
-               DataCollector& data, bool pivoting);
+               DataCollector& data, const FHoptions& options);
 
   // avoid copies
   SolveHandler(const SolveHandler&) = delete;

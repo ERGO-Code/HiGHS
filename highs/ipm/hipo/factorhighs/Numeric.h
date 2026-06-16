@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "DataCollector.h"
+#include "FactorHighsOptions.h"
 #include "SolveHandler.h"
 #include "Symbolic.h"
 #include "ipm/hipo/auxiliary/IntConfig.h"
@@ -30,7 +31,7 @@ class Numeric {
 
   DataCollector* data_ = nullptr;
 
-  bool pivoting_ = true;
+  const FHoptions* options_;
 
   friend class Factorise;
 

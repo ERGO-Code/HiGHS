@@ -21,7 +21,7 @@ Int Numeric::solve(double* x) const {
 
   // initialise solve handler
   HybridSolveHandler SH(*S_, *sn_columns_, swaps_, pivot_2x2_, *data_,
-                        pivoting_);
+                        *options_);
 
   // permute rhs
   HIPO_CLOCK_START(2);
@@ -50,7 +50,7 @@ void Numeric::getReg(double* reg) {
 
 void Numeric::inertia(Int& pos, Int& neg, Int& zero, double tol) const {
   HybridSolveHandler SH(*S_, *sn_columns_, swaps_, pivot_2x2_, *data_,
-                        pivoting_);
+                        *options_);
   SH.inertia(pos, neg, zero, tol);
 }
 

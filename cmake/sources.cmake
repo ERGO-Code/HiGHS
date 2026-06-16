@@ -313,6 +313,7 @@ set(factor_highs_headers
     ipm/hipo/factorhighs/DgemmParallel.h
     ipm/hipo/factorhighs/FactorHighs_c_api.h
     ipm/hipo/factorhighs/FactorHighs.h
+    ipm/hipo/factorhighs/FactorHighsOptions.h
     ipm/hipo/factorhighs/FactorHighsSettings.h
     ipm/hipo/factorhighs/Factorise.h
     ipm/hipo/factorhighs/FormatHandler.h

@@ -10,10 +10,10 @@ namespace hipo {
 
 // Factorisation with "hybrid formats".
 
-Int denseFactFH(char format, Int n, Int k, Int nb, double* A, double* B,
-                const Int* pivot_sign, double thresh, const Regul& regval,
-                double* totalreg, Int* swaps, double* pivot_2x2, bool parnode,
-                bool pivoting, DataCollector& data) {
+Int denseFactFH(char format, Int n, Int k, double* A, double* B,
+                const Int* pivot_sign, double thresh, double* totalreg,
+                Int* swaps, double* pivot_2x2, bool parnode,
+                DataCollector& data, const FHoptions& options) {
   // ===========================================================================
   // Partial blocked factorisation
   // Matrix A is in format FH
@@ -29,6 +29,8 @@ Int denseFactFH(char format, Int n, Int k, Int nb, double* A, double* B,
 
   // quick return
   if (n == 0) return kRetOk;
+
+  const Int nb = options.nb;
 
   // number of blocks of columns
   const Int n_blocks = (k - 1) / nb + 1;
@@ -94,11 +96,11 @@ Int denseFactFH(char format, Int n, Int k, Int nb, double* A, double* B,
     Int* swaps_current = &swaps[j * nb];
     double* pivot_2x2_current = &pivot_2x2[j * nb];
     Int info = denseFactK('U', jb, D, jb, pivot_sign_current.data(), thresh,
-                          regval, regul_current, swaps_current,
-                          pivot_2x2_current, pivoting, data);
+                          regul_current, swaps_current, pivot_2x2_current, data,
+                          options);
     if (info != 0) return info;
 
-    if (pivoting) {
+    if (options.pivoting) {
       // swap columns in R
       applySwaps(swaps_current, M, jb, R, data);
 

@@ -3,6 +3,7 @@
 
 #include <vector>
 
+#include "FactorHighsOptions.h"
 #include "FactorHighsSettings.h"
 #include "Symbolic.h"
 #include "ipm/hipo/auxiliary/IntConfig.h"
@@ -30,13 +31,8 @@ class FormatHandler {
   // symbolic object
   const Symbolic* S_;
 
-  const Regul& regul_;
-
   // supernode being processed
   const Int sn_{};
-
-  // block size
-  const Int nb_{};
 
   // size of the supernode
   const Int sn_size_{};
@@ -47,7 +43,7 @@ class FormatHandler {
   // size of the clique
   const Int ldc_{};
 
-  const bool pivoting_;
+  const FHoptions& FH_opt_;
 
   // local copies to be moved at the end
   std::vector<double>& frontal_;
@@ -58,9 +54,8 @@ class FormatHandler {
   std::vector<double> pivot_2x2_{};
 
  public:
-  FormatHandler(const Symbolic& S, Int sn, const Regul& regul,
-                std::vector<double>& frontal, double* clique_ptr,
-                bool pivoting);
+  FormatHandler(const Symbolic& S, Int sn, std::vector<double>& frontal,
+                double* clique_ptr, const FHoptions& FH_opt);
   void terminate(std::vector<double>& clique, std::vector<double>& total_reg,
                  std::vector<Int>& swaps, std::vector<double>& pivot_2x2);
 

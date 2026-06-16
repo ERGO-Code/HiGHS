@@ -19,7 +19,7 @@ class HybridSolveHandler : public SolveHandler {
                      const std::vector<std::vector<double>>& sn_columns,
                      const std::vector<std::vector<Int>>& swaps,
                      const std::vector<std::vector<double>>& pivot_2x2,
-                     DataCollector& data, bool pivoting);
+                     DataCollector& data, const FHoptions& options);
 };
 
 }  // namespace hipo

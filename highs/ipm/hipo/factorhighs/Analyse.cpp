@@ -18,9 +18,9 @@ const Int64 int32_limit = std::numeric_limits<int32_t>::max();
 const Int64 int64_limit = std::numeric_limits<int64_t>::max();
 
 Analyse::Analyse(Int n, Int nz, const Int* rows, const Int* ptr,
-                 const Int* signs, Int nb, const Logger* logger,
-                 DataCollector& data, const Int* perm)
-    : logger_{logger}, data_{data} {
+                 const Int* signs, const FHoptions& FH_opt,
+                 const Logger* logger, DataCollector& data, const Int* perm)
+    : FH_opt_{FH_opt}, logger_{logger}, data_{data} {
   // Input the symmetric matrix to be analysed in CSC format.
   // rows contains the row indices.
   // ptr contains the starting points of each column.
@@ -29,7 +29,6 @@ Analyse::Analyse(Int n, Int nz, const Int* rows, const Int* ptr,
 
   n_ = n;
   nz_ = nz;
-  nb_ = nb;
 
   rows_lower_ = std::vector<Int>(rows, rows + nz_);
   ptr_lower_ = std::vector<Int>(ptr, ptr + n_ + 1);
@@ -892,17 +891,18 @@ void Analyse::computeStorage(Int fr, Int sz, Int64& fr_entries,
   // compute storage required by frontal and clique, based on the format used
 
   const Int cl = fr - sz;
+  const Int nb = FH_opt_.nb;
 
-  Int n_blocks = (sz - 1) / nb_ + 1;
+  Int n_blocks = (sz - 1) / nb + 1;
   std::vector<Int64> temp;
-  fr_entries = getDiagStart(fr, sz, nb_, n_blocks, temp);
+  fr_entries = getDiagStart(fr, sz, nb, n_blocks, temp);
 
   // clique is stored as a collection of rectangles
-  n_blocks = (cl - 1) / nb_ + 1;
+  n_blocks = (cl - 1) / nb + 1;
   Int64 schur_size{};
   for (Int j = 0; j < n_blocks; ++j) {
-    const Int jb = std::min(nb_, cl - j * nb_);
-    schur_size += (Int64)(cl - j * nb_) * jb;
+    const Int jb = std::min(nb, cl - j * nb);
+    schur_size += (Int64)(cl - j * nb) * jb;
   }
   cl_entries = schur_size;
 }
@@ -1111,6 +1111,8 @@ void Analyse::reorderChildren() {
 }
 
 void Analyse::computeBlockStart() {
+  const Int nb = FH_opt_.nb;
+
   clique_block_start_.resize(sn_count_);
   // compute starting position of each block of columns in the clique, for
   // each supernode
@@ -1118,10 +1120,10 @@ void Analyse::computeBlockStart() {
     const Int sn_size = sn_start_[sn + 1] - sn_start_[sn];
     const Int ldf = ptr_sn_[sn + 1] - ptr_sn_[sn];
     const Int ldc = ldf - sn_size;
-    const Int n_blocks = (ldc - 1) / nb_ + 1;
+    const Int n_blocks = (ldc - 1) / nb + 1;
 
     Int64 schur_size =
-        getDiagStart(ldc, ldc, nb_, n_blocks, clique_block_start_[sn]);
+        getDiagStart(ldc, ldc, nb, n_blocks, clique_block_start_[sn]);
     clique_block_start_[sn].push_back(schur_size);
   }
 }
@@ -1139,7 +1141,8 @@ Int Analyse::checkOverflow() const {
     const Int sn_size = sn_start_[sn + 1] - sn_start_[sn];
     const Int front_size = ptr_sn_[sn + 1] - ptr_sn_[sn];
 
-    if ((Int64)front_size * std::min(sn_size, nb_) > int32_limit) return 1;
+    if ((Int64)front_size * std::min(sn_size, FH_opt_.nb) > int32_limit)
+      return 1;
   }
 
   return 0;
@@ -1264,7 +1267,6 @@ Int Analyse::run(Symbolic& S) {
   S.largest_front_ = *std::max_element(sn_indices_.begin(), sn_indices_.end());
   S.serial_storage_ = serial_storage_;
   S.flops_ = dense_ops_;
-  S.block_size_ = nb_;
   S.max_stack_size_ = max_stack_size_;
   S.tree_depth_ = maxDepthTree(sn_parent_);
 
