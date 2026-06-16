@@ -67,3 +67,13 @@ install(TARGETS highs
         LIBRARY DESTINATION highspy
         NAMELINK_SKIP
         COMPONENT python)
+
+# When GPU support is enabled, cudalin is built as a separate shared library
+# that highs.dll depends on at runtime — bundle it with the wheel.
+if (CUPDLP_GPU AND NOT HIGHS_GPU_LIB)
+  install(TARGETS cudalin
+          RUNTIME DESTINATION highspy
+          LIBRARY DESTINATION highspy
+          NAMELINK_SKIP
+          COMPONENT python)
+endif()
