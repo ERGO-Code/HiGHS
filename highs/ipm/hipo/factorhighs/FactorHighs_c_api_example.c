@@ -104,7 +104,7 @@ int main() {
   printf("\nInertia (+/-/0): %d %d %d\n", pos, neg, zero);
 
   // triangular solve
-  int solve_status = FactorHighs_solve(FH, rhs);
+  int solve_status = FactorHighs_solve(FH, rhs, 1);
   if (solve_status) return 1;
 
   /*

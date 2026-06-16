@@ -40,6 +40,7 @@ class Numeric {
 
  public:
   Int solve(double* x) const;
+  Int solve(double* x, Int k) const;
 
   Int forwardSolve(double* x) const;
   Int diagSolve(double* x) const;

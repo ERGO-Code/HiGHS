@@ -28,7 +28,7 @@ HighsInt FactorHighs_analyse(void* FH, void* S, HighsInt n, HighsInt nz,
 HighsInt FactorHighs_factorise(void* FH, const void* S, HighsInt n, HighsInt nz,
                                const HighsInt* rows, const HighsInt* ptr,
                                const double* vals);
-HighsInt FactorHighs_solve(void* FH, double* x);
+HighsInt FactorHighs_solve(void* FH, double* x, HighsInt k);
 
 // Partial solves
 HighsInt FactorHighs_forwardSolve(void* FH, double* x);

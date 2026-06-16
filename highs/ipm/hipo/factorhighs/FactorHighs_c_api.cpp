@@ -31,8 +31,8 @@ HighsInt FactorHighs_factorise(void* FH, const void* S, HighsInt n, HighsInt nz,
       ->factorise(*(hipo::Symbolic*)S, n, nz, rows, ptr, vals);
 }
 
-HighsInt FactorHighs_solve(void* FH, double* x) {
-  return ((hipo::FHsolver*)FH)->solve(x);
+HighsInt FactorHighs_solve(void* FH, double* x, HighsInt k) {
+  return ((hipo::FHsolver*)FH)->solve(x, k);
 }
 
 HighsInt FactorHighs_forwardSolve(void* FH, double* x) {

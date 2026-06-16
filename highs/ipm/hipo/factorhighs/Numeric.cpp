@@ -44,6 +44,24 @@ Int Numeric::solve(double* x) const {
   return kRetOk;
 }
 
+Int Numeric::solve(double* x, Int k) const {
+  if (k == 1)
+    return solve(x);
+  else {
+    highs::parallel::TaskGroup tg;
+    const Int n = S_->size();
+    std::atomic<bool> fail{false};
+    for (Int i = 0; i < k; ++i) {
+      tg.spawn([=, &fail]() {
+        Int status = solve(&x[i * n]);
+        if (status) fail.store(true, std::memory_order_relaxed);
+      });
+    }
+    tg.taskWait();
+    return fail;
+  }
+}
+
 Int Numeric::forwardSolve(double* x) const {
   if (!sn_columns_ || !S_ || !data_ || !options_) return kRetInvalidPointer;
   HybridSolveHandler SH(*S_, *sn_columns_, swaps_, pivot_2x2_, *data_,
