@@ -62,12 +62,11 @@ void FactorHighs_inertia(void* FH, HighsInt* pos, HighsInt* neg, HighsInt* zero,
   ((hipo::FHsolver*)FH)->inertia(*pos, *neg, *zero, tol);
 }
 
-void FactorHighs_symbolic_print(const void* FH, const void* S,
-                                HighsInt verbose) {
+void FactorHighs_symbolic_print(void* FH, void* S, HighsInt verbose) {
   ((hipo::Symbolic*)S)->print(*(((hipo::FHsolver*)FH)->getLogger()), verbose);
 }
 
-void FactorHighs_iperm(const void* S, HighsInt* ip) {
+void FactorHighs_iperm(void* S, HighsInt* ip) {
   const std::vector<hipo::Int>& iperm = ((hipo::Symbolic*)S)->iperm();
   for (HighsInt i = 0; i < static_cast<HighsInt>(iperm.size()); ++i) {
     ip[i] = iperm[i];
