@@ -441,6 +441,7 @@ struct HighsOptionsStruct {
   bool presolve_rule_logging;
   bool presolve_remove_slacks;
   bool no_unnecessary_rebuild_refactor;
+  double matrix_image_max_pixels;
   double rebuild_refactor_solution_error_tolerance;
   double dual_steepest_edge_weight_error_tolerance;
   double dual_steepest_edge_weight_log_error_threshold;
@@ -608,6 +609,7 @@ struct HighsOptionsStruct {
         presolve_rule_logging(false),
         presolve_remove_slacks(false),
         no_unnecessary_rebuild_refactor(false),
+        matrix_image_max_pixels(0.0),
         rebuild_refactor_solution_error_tolerance(0.0),
         dual_steepest_edge_weight_error_tolerance(0.0),
         dual_steepest_edge_weight_log_error_threshold(0.0),
@@ -1621,6 +1623,12 @@ class HighsOptions : public HighsOptionsStruct {
         "Maximal fillin allowed for substitutions in presolve", advanced,
         &presolve_substitution_maxfillin, 0, 10, kHighsIInf);
     records.push_back(record_int);
+
+    record_double = new OptionRecordDouble(
+        "matrix_image_max_pixels",
+        "Maximum number of pixels in a matrix PBM image file", advanced,
+        &matrix_image_max_pixels, 144.0, 1440000.0, kHighsInf);
+    records.push_back(record_double);
 
     record_double = new OptionRecordDouble(
         "factor_pivot_threshold", "Matrix factorization pivot threshold",

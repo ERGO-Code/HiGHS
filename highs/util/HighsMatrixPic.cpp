@@ -77,12 +77,17 @@ HighsStatus writeRmatrixPicToFile(const HighsOptions& options,
   std::ofstream f;
   f.open(filename, std::ios::out);
   const HighsInt border_width = 1;
-  const HighsInt max_num_pixel_wide = 1600;
-  const HighsInt max_num_pixel_deep = 900;
-  const HighsInt max_num_matrix_pixel_wide =
-      max_num_pixel_wide - 2 * border_width;
-  const HighsInt max_num_matrix_pixel_deep =
-      max_num_pixel_deep - 2 * border_width;
+  const double profile = std::sqrt(double(numRow) / double(numCol));
+  const HighsInt max_num_matrix_pixel_wide = static_cast<HighsInt>(
+      std::sqrt(options.matrix_image_max_pixels) / profile);
+
+  const HighsInt max_num_matrix_pixel_deep = static_cast<HighsInt>(
+      std::sqrt(options.matrix_image_max_pixels) * profile);
+  const HighsInt max_num_pixel_wide =
+      max_num_matrix_pixel_wide + 2 * border_width;
+  const HighsInt max_num_pixel_deep =
+      max_num_matrix_pixel_deep + 2 * border_width;
+
   HighsInt num_col_per_pixel = 1;
   HighsInt num_row_per_pixel = 1;
   if (numCol > max_num_matrix_pixel_wide) {
@@ -107,12 +112,10 @@ HighsStatus writeRmatrixPicToFile(const HighsOptions& options,
   assert(num_pixel_deep <= max_num_pixel_deep);
 
   highsLogUser(options.log_options, HighsLogType::kInfo,
-               "Representing matrix sparsity pattern %" HIGHSINT_FORMAT
-               "x%" HIGHSINT_FORMAT
-               " .pbm file,"
-               " mapping entries in square of size %" HIGHSINT_FORMAT
-               " onto one pixel\n",
-               num_pixel_wide, num_pixel_deep, dim_per_pixel);
+               "Representing matrix sparsity pattern as %dx%d PBM file %s,"
+               " mapping entries in square of size %d onto one pixel\n",
+               int(num_pixel_wide), int(num_pixel_deep), filename.c_str(),
+               int(dim_per_pixel));
 
   std::vector<HighsInt> value;
   value.assign(num_pixel_wide, 0);
