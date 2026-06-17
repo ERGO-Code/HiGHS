@@ -463,15 +463,140 @@ restart:
   double upperLimLastCheck = mipdata_->upper_limit;
   double lowerBoundLastCheck = mipdata_->lower_bound;
 
+  enum class RestartVote { kNoCheck, kNoHugeTree, kHugeTree, kWouldRestart };
+
   auto nodesInstalled = [&]() -> bool {
-    for (HighsMipWorker& worker : mipdata_->workers) {
+    for (const HighsMipWorker& worker : mipdata_->workers) {
       if (worker.search_ptr_->hasNode()) return true;
     }
     return false;
   };
 
-  auto getSearchIndicesWithNoNodes = [&](std::vector<HighsInt>& indices) {
+  auto checkRestart = [&](const HighsMipWorker& worker,
+                          HighsInt numWorkerVotes) -> RestartVote {
+    int64_t nNodes = worker.search_ptr_->nnodes + mipdata_->num_nodes;
+    if (!submip && nNodes >= nextCheck && options_mip_->mip_allow_restart) {
+      const HighsInt nTreeRestarts =
+          mipdata_->numRestarts - mipdata_->numRestartsRoot;
+      const HighsCDouble treeWeight =
+          worker.search_ptr_->treeweight + mipdata_->pruned_treeweight;
+      double currNodeEstim =
+          numNodesLastCheck - mipdata_->num_nodes_before_run +
+          (nNodes - numNodesLastCheck) * double(1.0 - treeWeight) /
+              std::max(double(treeWeight - treeweightLastCheck),
+                       mipdata_->epsilon);
+      // printf(
+      //     "nTreeRestarts: %d, numNodesThisRun: %ld, numNodesLastCheck: %ld,
+      //     " "currNodeEstim: %g, " "prunedTreeWeightDelta: %g,
+      //     numHugeTreeEstim: %d, numLeavesThisRun:
+      //     "
+      //     "%ld\n",
+      //     nTreeRestarts, mipdata_->num_nodes -
+      //     mipdata_->num_nodes_before_run, numNodesLastCheck -
+      //     mipdata_->num_nodes_before_run, currNodeEstim, 100.0 *
+      //     double(mipdata_->pruned_treeweight - treeweightLastCheck),
+      //     numHugeTreeEstim,
+      //     mipdata_->num_leaves - mipdata_->num_leaves_before_run);
+
+      bool doRestart = false;
+
+      double activeIntegerRatio =
+          1.0 - mipdata_->percentageInactiveIntegers() / 100.0;
+      activeIntegerRatio *= activeIntegerRatio;
+      bool hugeTree = false;
+
+      if (!doRestart) {
+        double gapReduction = 1.0;
+        if (worker.upper_limit != kHighsInf) {
+          double oldGap = upperLimLastCheck - lowerBoundLastCheck;
+          double newGap = worker.upper_limit - mipdata_->lower_bound;
+          gapReduction = oldGap / newGap;
+        }
+
+        if (gapReduction < 1.0 + (0.05 / activeIntegerRatio) &&
+            currNodeEstim >= activeIntegerRatio * 20 *
+                                 (nNodes - mipdata_->num_nodes_before_run)) {
+          hugeTree = true;
+        } else {
+          numWorkerVotes = -kHighsIInf;
+        }
+
+        int64_t minHugeTreeOffset =
+            (mipdata_->num_leaves + worker.search_ptr_->nleaves -
+             mipdata_->num_leaves_before_run) /
+            1000;
+        int64_t minHugeTreeEstim = HighsIntegers::nearestInteger(
+            activeIntegerRatio * (10 + minHugeTreeOffset) *
+            std::pow(1.5, nTreeRestarts));
+
+        doRestart = numHugeTreeEstim + numWorkerVotes >= minHugeTreeEstim;
+      }
+
+      if (doRestart) return RestartVote::kWouldRestart;
+      if (hugeTree) return RestartVote::kHugeTree;
+      return RestartVote::kNoHugeTree;
+    }
+    return RestartVote::kNoCheck;
+  };
+
+  auto performRestart = [&] {
+    highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
+                 "\nRestarting search from the root node\n");
+    mipdata_->performRestart();
+    profiling_->stop(kMipClockSearch);
+  };
+
+  auto checkWorkerRestartVotes =
+      [&](const std::vector<RestartVote>& votes) -> bool {
+    HighsInt numVoters = 0;
+    HighsInt numHugeTreeVotes = 0;
+    HighsInt numRestartVotes = 0;
+    for (const RestartVote vote : votes) {
+      if (vote != RestartVote::kNoCheck) {
+        ++numVoters;
+        if (vote == RestartVote::kWouldRestart) {
+          numRestartVotes++;
+        } else if (vote == RestartVote::kHugeTree) {
+          numHugeTreeVotes++;
+        }
+      }
+    }
+    bool forcedRestart = false;
+    if (options_mip_->mip_allow_restart && numVoters >= 2 &&
+        numRestartVotes / static_cast<double>(numVoters) >= 0.25) {
+      forcedRestart = true;
+    }
+    // Force a restart if enough individual workers vote for it
+    if (forcedRestart) {
+      performRestart();
+      return true;
+    }
+    // Using joint information after workers are synced, query a restart
+    const RestartVote vote = checkRestart(
+        master_worker, (numRestartVotes + numHugeTreeVotes + 2) / 2);
+    if (vote == RestartVote::kWouldRestart) {
+      performRestart();
+      return true;
+    }
+
+    // Update the appropriate values in case of no restart
+    if (vote == RestartVote::kHugeTree) {
+      nextCheck = mipdata_->num_nodes + 100;
+      numHugeTreeEstim += (numRestartVotes + numHugeTreeVotes + 2) / 2;
+    } else if (vote == RestartVote::kNoHugeTree) {
+      numHugeTreeEstim = 0;
+      treeweightLastCheck = static_cast<double>(mipdata_->pruned_treeweight);
+      numNodesLastCheck = mipdata_->num_nodes;
+      upperLimLastCheck = mipdata_->upper_limit;
+      lowerBoundLastCheck = mipdata_->lower_bound;
+    }
+    return false;
+  };
+
+  auto getSearchIndicesWithNoNodes = [&](std::vector<HighsInt>& indices,
+                                         std::vector<RestartVote>& restarts) {
     indices.clear();
+    std::fill(restarts.begin(), restarts.end(), RestartVote::kNoCheck);
     const HighsInt heuristic_allowance_mod = 4;
     HighsInt heuristic_random_mod_index =
         mipdata_->heuristics.getHeuristicRandom(mipdata_->workers.size()) %
@@ -692,7 +817,8 @@ restart:
     return nodeLim != kHighsIInf && worker.search_ptr_->nnodes >= diveNodeLim;
   };
 
-  auto processNodes = [&](std::vector<HighsInt>& indices,
+  auto processNodes = [&](const std::vector<HighsInt>& indices,
+                          std::vector<RestartVote>& restarts,
                           const bool skip_separation, const HighsInt nodeLim,
                           const HighsInt plungeLimit, double avgiter) {
     auto processNode = [&](HighsInt i) {
@@ -739,6 +865,9 @@ restart:
           mipdata_->printDisplayLine();
         }
       }
+      if (nodeLim == kHighsIInf) {
+        restarts[i] = checkRestart(worker, 1);
+      }
     };
     runTask(processNode, tg, true, false, indices);
   };
@@ -751,89 +880,11 @@ restart:
     worker.resetSepaStats();
   };
 
-  auto checkRestart = [&]() -> bool {
-    if (!submip && mipdata_->num_nodes >= nextCheck) {
-      auto nTreeRestarts = mipdata_->numRestarts - mipdata_->numRestartsRoot;
-      double currNodeEstim =
-          numNodesLastCheck - mipdata_->num_nodes_before_run +
-          (mipdata_->num_nodes - numNodesLastCheck) *
-              double(1.0 - mipdata_->pruned_treeweight) /
-              std::max(
-                  double(mipdata_->pruned_treeweight - treeweightLastCheck),
-                  mipdata_->epsilon);
-      // printf(
-      //     "nTreeRestarts: %d, numNodesThisRun: %ld, numNodesLastCheck: %ld,
-      //     " "currNodeEstim: %g, " "prunedTreeWeightDelta: %g,
-      //     numHugeTreeEstim: %d, numLeavesThisRun:
-      //     "
-      //     "%ld\n",
-      //     nTreeRestarts, mipdata_->num_nodes -
-      //     mipdata_->num_nodes_before_run, numNodesLastCheck -
-      //     mipdata_->num_nodes_before_run, currNodeEstim, 100.0 *
-      //     double(mipdata_->pruned_treeweight - treeweightLastCheck),
-      //     numHugeTreeEstim,
-      //     mipdata_->num_leaves - mipdata_->num_leaves_before_run);
-
-      bool doRestart = false;
-
-      double activeIntegerRatio =
-          1.0 - mipdata_->percentageInactiveIntegers() / 100.0;
-      activeIntegerRatio *= activeIntegerRatio;
-
-      if (!doRestart) {
-        double gapReduction = 1.0;
-        if (mipdata_->upper_limit != kHighsInf) {
-          double oldGap = upperLimLastCheck - lowerBoundLastCheck;
-          double newGap = mipdata_->upper_limit - mipdata_->lower_bound;
-          gapReduction = oldGap / newGap;
-        }
-
-        if (gapReduction < 1.0 + (0.05 / activeIntegerRatio) &&
-            currNodeEstim >=
-                activeIntegerRatio * 20 *
-                    (mipdata_->num_nodes - mipdata_->num_nodes_before_run)) {
-          nextCheck = mipdata_->num_nodes + 100;
-          ++numHugeTreeEstim;
-        } else {
-          numHugeTreeEstim = 0;
-          treeweightLastCheck = double(mipdata_->pruned_treeweight);
-          numNodesLastCheck = mipdata_->num_nodes;
-          upperLimLastCheck = mipdata_->upper_limit;
-          lowerBoundLastCheck = mipdata_->lower_bound;
-        }
-
-        // Possibly prevent restart - necessary for debugging presolve
-        // errors: see #1553
-        if (options_mip_->mip_allow_restart) {
-          int64_t minHugeTreeOffset =
-              (mipdata_->num_leaves - mipdata_->num_leaves_before_run) / 1000;
-          int64_t minHugeTreeEstim = HighsIntegers::nearestInteger(
-              activeIntegerRatio * (10 + minHugeTreeOffset) *
-              std::pow(1.5, nTreeRestarts));
-
-          doRestart = numHugeTreeEstim >= minHugeTreeEstim;
-        } else {
-          doRestart = false;
-        }
-      } else {
-        // count restart due to many fixings within the first 1000 nodes as
-        // root restart
-        ++mipdata_->numRestartsRoot;
-      }
-
-      if (doRestart) {
-        highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
-                     "\nRestarting search from the root node\n");
-        mipdata_->performRestart();
-        profiling_->stop(kMipClockSearch);
-        return true;
-      }
-    }
-    return false;
-  };
-
   // Main solve loop
   std::vector<HighsInt> search_indices(1, 0);
+  search_indices.reserve(max_num_workers);
+  std::vector<RestartVote> workerRestartVotes(getMaxNumWorkers(),
+                                              RestartVote::kNoCheck);
   bool root_node = true;  // Don't separate the root node again
   HighsInt nodeLim = max_num_workers > 1 ? 1 : kHighsIInf;  // for ramp up
   while (!mipdata_->nodequeue.empty()) {
@@ -846,7 +897,7 @@ restart:
     syncGlobalPseudoCost();
 
     // Get new candidate worker search indices
-    getSearchIndicesWithNoNodes(search_indices);
+    getSearchIndicesWithNoNodes(search_indices, workerRestartVotes);
 
     // Only update worker's pseudo-costs that have been assigned a node
     resetWorkerPseudoCosts(search_indices);
@@ -871,7 +922,7 @@ restart:
     }
 
     // Process nodes (separation / heuristics / dives)
-    processNodes(search_indices, root_node, nodeLim, 100,
+    processNodes(search_indices, workerRestartVotes, root_node, nodeLim, 100,
                  mipdata_->getLp().getAvgSolveIters());
 
     root_node = false;
@@ -949,7 +1000,8 @@ restart:
                               mipdata_->nodequeue.numNodes() > num_workers;
     resetGlobalDomain(spawn_more_workers, mipdata_->hasMultipleWorkers());
 
-    if (checkRestart()) goto restart;
+    if (nodeLim == kHighsIInf && checkWorkerRestartVotes(workerRestartVotes))
+      goto restart;
 
     if (spawn_more_workers) {
       HighsInt new_max_num_workers =
