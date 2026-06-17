@@ -380,8 +380,11 @@ HighsStatus Highs::passModel(HighsModel model) {
   // Ensure that any non-zero Hessian of dimension less than the
   // number of columns in the model is completed
   if (hessian.dim_) completeHessian(this->model_.lp_.num_col_, hessian);
-  // if (model_.lp_.num_row_>0 && model_.lp_.num_col_>0)
-  //    writeLpMatrixPicToFile(options_, "LpMatrix", model_.lp_);
+  // Possibly create image files of the constraint matrix and Hessian
+  if (options_.write_matrix_image)
+    writeLpMatrixPicToFile(options_, "LpMatrix", model_.lp_);
+  if (options_.write_hessian_image)
+    writeHessianPicToFile(options_, "Hessian", model_.hessian_);
 
   // Clear solver status, solution, basis and info associated with any
   // previous model; clear any HiGHS model object; create a HiGHS
@@ -693,6 +696,21 @@ HighsStatus Highs::readModel(const std::string& filename) {
       interpretCallStatus(options_.log_options, passModel(std::move(model)),
                           return_status, "passModel");
   return returnFromHighs(return_status);
+}
+
+HighsStatus Highs::matrixImage(
+    const std::string& matrix_image_filename,
+    const std::string& hessian_image_filename) const {
+  HighsStatus status = HighsStatus::kOk;
+  if (matrix_image_filename != "") {
+    status =
+        writeLpMatrixPicToFile(options_, matrix_image_filename, model_.lp_);
+    if (status != HighsStatus::kOk) return status;
+  }
+  if (hessian_image_filename != "")
+    status = writeHessianPicToFile(options_, hessian_image_filename,
+                                   model_.hessian_);
+  return status;
 }
 
 HighsStatus Highs::readBasis(const std::string& filename) {
@@ -4069,6 +4087,7 @@ HighsStatus Highs::callSolveQp() {
         [this](QpModelStatus& qp_model_status) {
           if (qp_model_status == QpModelStatus::kUndetermined ||
               qp_model_status == QpModelStatus::kLargeNullspace ||
+              qp_model_status == QpModelStatus::kNonConvex ||
               qp_model_status == QpModelStatus::kError ||
               qp_model_status == QpModelStatus::kNotset)
             highsLogUser(options_.log_options, HighsLogType::kInfo,

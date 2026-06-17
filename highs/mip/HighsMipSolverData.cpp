@@ -1002,10 +1002,6 @@ void HighsMipSolverData::runSetup() {
   getDomain().clearChangedCols();
 
   getLp().getLpSolver().setOptionValue("presolve", kHighsOffString);
-  // lp.getLpSolver().setOptionValue("dual_simplex_cost_perturbation_multiplier",
-  // 0.0); lp.getLpSolver().setOptionValue("parallel", kHighsOnString);
-  getLp().getLpSolver().setOptionValue("simplex_initial_condition_check",
-                                       false);
 
   checkObjIntegrality();
   rootlpsol.clear();
@@ -1086,8 +1082,9 @@ void HighsMipSolverData::runSetup() {
                         num_implied_integer + num_domain_fixed);
   if (numRestarts == 0) {
     numCliqueEntriesAfterFirstPresolve = cliquetable.getNumEntries();
-    highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
-                 // clang-format off
+    highsLogUser(
+        mipsolver.options_mip_->log_options, HighsLogType::kInfo,
+        // clang-format off
 		 "\nSolving MIP model with:\n"
 		 "   %" HIGHSINT_FORMAT " row%s\n"
 		 "   %" HIGHSINT_FORMAT " col%s ("
@@ -1099,14 +1096,12 @@ void HighsMipSolverData::runSetup() {
 		 "   %" HIGHSINT_FORMAT " nonzero%s\n"
 		 "   %" HIGHSINT_FORMAT " threads and "
 		 "%" HIGHSINT_FORMAT " max workers\n",
-                 // clang-format on
-                 mipsolver.numRow(), mipsolver.numRow() == 1 ? "" : "s",
-                 num_col, num_col == 1 ? "" : "s", num_binary,
-                 num_general_integer, num_implied_integer, num_continuous,
-                 num_domain_fixed, mipsolver.numNonzero(),
-                 mipsolver.numNonzero() == 1 ? "" : "s",
-                 HighsInt{highs::parallel::num_threads()},
-                 mipsolver.getMaxNumWorkers());
+        // clang-format on
+        mipsolver.numRow(), mipsolver.numRow() == 1 ? "" : "s", num_col,
+        num_col == 1 ? "" : "s", num_binary, num_general_integer,
+        num_implied_integer, num_continuous, num_domain_fixed,
+        mipsolver.numNonzero(), mipsolver.numNonzero() == 1 ? "" : "s",
+        HighsInt{highs::parallel::num_threads()}, mipsolver.getMaxNumWorkers());
   } else {
     highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
                  "Model after restart has "
