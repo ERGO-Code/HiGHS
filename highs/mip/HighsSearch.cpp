@@ -793,23 +793,23 @@ void HighsSearch::openNodesToQueue(HighsNodeQueue& nodequeue) {
   }
 }
 
-void HighsSearch::flushStatistics() {
-  getNumNodes() += nnodes;
+void HighsSearch::flushStatistics(HighsMipSolver& mipsolver) {
+  mipsolver.mipdata_->num_nodes += nnodes;
   nnodes = 0;
 
-  getNumLeaves() += nleaves;
+  mipsolver.mipdata_->num_leaves += nleaves;
   nleaves = 0;
 
-  getPrunedTreeweight() += treeweight;
+  mipsolver.mipdata_->pruned_treeweight += treeweight;
   treeweight = 0;
 
-  getTotalLpIterations() += lpiterations;
+  mipsolver.mipdata_->total_lp_iterations += lpiterations;
   lpiterations = 0;
 
-  getHeuristicLpIterations() += heurlpiterations;
+  mipsolver.mipdata_->heuristic_lp_iterations += heurlpiterations;
   heurlpiterations = 0;
 
-  getSbLpIterations() += sblpiterations;
+  mipsolver.mipdata_->sb_lp_iterations += sblpiterations;
   sblpiterations = 0;
 }
 
@@ -828,7 +828,7 @@ int64_t& HighsSearch::getLocalNodes() { return nnodes; }
 int64_t& HighsSearch::getLocalLeaves() { return nleaves; }
 
 int64_t HighsSearch::getStrongBranchingLpIterations() const {
-  return sblpiterations + getSbLpIterations();
+  return sblpiterations + mipsolver.mipdata_->sb_lp_iterations;
 }
 
 void HighsSearch::resetLocalDomain() {
@@ -1992,28 +1992,4 @@ bool HighsSearch::addIncumbent(const std::vector<double>& sol, double solobj,
     return mipsolver.mipdata_->addIncumbent(sol, solobj, solution_source,
                                             print_display_line);
   }
-}
-
-int64_t& HighsSearch::getNumNodes() { return mipsolver.mipdata_->num_nodes; }
-
-int64_t& HighsSearch::getNumLeaves() { return mipsolver.mipdata_->num_leaves; }
-
-HighsCDouble& HighsSearch::getPrunedTreeweight() {
-  return mipsolver.mipdata_->pruned_treeweight;
-}
-
-int64_t& HighsSearch::getTotalLpIterations() {
-  return mipsolver.mipdata_->total_lp_iterations;
-}
-
-int64_t& HighsSearch::getHeuristicLpIterations() {
-  return mipsolver.mipdata_->heuristic_lp_iterations;
-}
-
-int64_t& HighsSearch::getSbLpIterations() {
-  return mipsolver.mipdata_->sb_lp_iterations;
-}
-
-int64_t& HighsSearch::getSbLpIterations() const {
-  return mipsolver.mipdata_->sb_lp_iterations;
 }

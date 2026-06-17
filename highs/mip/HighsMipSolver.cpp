@@ -735,7 +735,7 @@ restart:
         }
         if (backtrackPlunge(i)) break;
         if (!mipdata_->parallelLockActive()) {
-          worker.search_ptr_->flushStatistics();
+          worker.search_ptr_->flushStatistics(*this);
           mipdata_->printDisplayLine();
         }
       }
@@ -893,7 +893,7 @@ restart:
             node.lower_bound, node.estimate, node.depth);
       }
       profiling_->stop(kMipClockOpenNodesToQueue0);
-      worker.search_ptr_->flushStatistics();
+      worker.search_ptr_->flushStatistics(*this);
       syncSepaStats(worker);
       mipdata_->heuristics.flushStatistics(*this, worker);
     }

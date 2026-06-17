@@ -204,7 +204,7 @@ class HighsSearch {
 
   void currentNodeToQueue(HighsNodeQueue& nodequeue);
 
-  void flushStatistics();
+  void flushStatistics(HighsMipSolver& mipsolver);
 
   void installNode(HighsNodeQueue::OpenNode&& node);
 
@@ -270,14 +270,6 @@ class HighsSearch {
   bool addIncumbent(const std::vector<double>& sol, double solobj,
                     const int solution_source,
                     const bool print_display_line = true);
-
-  int64_t& getNumNodes();
-  int64_t& getNumLeaves();
-  HighsCDouble& getPrunedTreeweight();
-  int64_t& getTotalLpIterations();
-  int64_t& getHeuristicLpIterations();
-  int64_t& getSbLpIterations();
-  int64_t& getSbLpIterations() const;
 };
 
 #endif
