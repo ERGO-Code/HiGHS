@@ -65,8 +65,6 @@ Notice that the fill-reducing ordering can be modified during the call to
 analyse. The inverse permutation used during the factorisation can be accessed
 via the Symbolic object, S.iperm().
 
-Only solves with single right-hand sides are possible at the moment.
-
 */
 
 namespace hipo {
