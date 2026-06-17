@@ -35,16 +35,16 @@ HighsInt FactorHighs_solve(void* FH, double* x, HighsInt k) {
   return ((hipo::FHsolver*)FH)->solve(x, k);
 }
 
-HighsInt FactorHighs_forwardSolve(void* FH, double* x) {
-  return ((hipo::FHsolver*)FH)->forwardSolve(x);
+HighsInt FactorHighs_forwardSolve(void* FH, double* x, HighsInt k) {
+  return ((hipo::FHsolver*)FH)->forwardSolve(x, k);
 }
 
-HighsInt FactorHighs_diagSolve(void* FH, double* x) {
-  return ((hipo::FHsolver*)FH)->diagSolve(x);
+HighsInt FactorHighs_diagSolve(void* FH, double* x, HighsInt k) {
+  return ((hipo::FHsolver*)FH)->diagSolve(x, k);
 }
 
-HighsInt FactorHighs_backwardSolve(void* FH, double* x) {
-  return ((hipo::FHsolver*)FH)->backwardSolve(x);
+HighsInt FactorHighs_backwardSolve(void* FH, double* x, HighsInt k) {
+  return ((hipo::FHsolver*)FH)->backwardSolve(x, k);
 }
 
 void FactorHighs_setRegularisation(void* FH, double reg_p, double reg_d) {

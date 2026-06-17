@@ -38,9 +38,13 @@ Int FHsolver::factorise(const Symbolic& S, Int n, Int nz, const Int* rows,
 }
 
 Int FHsolver::solve(double* x, Int k) const { return N_.solve(x, k); }
-Int FHsolver::forwardSolve(double* x) const { return N_.forwardSolve(x); }
-Int FHsolver::diagSolve(double* x) const { return N_.diagSolve(x); }
-Int FHsolver::backwardSolve(double* x) const { return N_.backwardSolve(x); }
+Int FHsolver::forwardSolve(double* x, Int k) const {
+  return N_.forwardSolve(x, k);
+}
+Int FHsolver::diagSolve(double* x, Int k) const { return N_.diagSolve(x, k); }
+Int FHsolver::backwardSolve(double* x, Int k) const {
+  return N_.backwardSolve(x, k);
+}
 
 void FHsolver::getRegularisation(double* reg) { N_.getReg(reg); }
 

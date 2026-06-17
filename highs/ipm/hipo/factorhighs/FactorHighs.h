@@ -103,9 +103,9 @@ class FHsolver {
   Int solve(double* x, Int k = 1) const;
 
   // Perform partial solves with L, D, L^T (including permutation)
-  Int forwardSolve(double* x) const;
-  Int diagSolve(double* x) const;
-  Int backwardSolve(double* x) const;
+  Int forwardSolve(double* x, Int k = 1) const;
+  Int diagSolve(double* x, Int k = 1) const;
+  Int backwardSolve(double* x, Int k = 1) const;
 
   // If multiple factorisation are performed, call newIter() before each
   // factorisation. This is used only to collect data for debugging, if

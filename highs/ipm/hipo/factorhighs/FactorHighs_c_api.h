@@ -31,9 +31,9 @@ HighsInt FactorHighs_factorise(void* FH, const void* S, HighsInt n, HighsInt nz,
 HighsInt FactorHighs_solve(void* FH, double* x, HighsInt k);
 
 // Partial solves
-HighsInt FactorHighs_forwardSolve(void* FH, double* x);
-HighsInt FactorHighs_diagSolve(void* FH, double* x);
-HighsInt FactorHighs_backwardSolve(void* FH, double* x);
+HighsInt FactorHighs_forwardSolve(void* FH, double* x, HighsInt k);
+HighsInt FactorHighs_diagSolve(void* FH, double* x, HighsInt k);
+HighsInt FactorHighs_backwardSolve(void* FH, double* x, HighsInt k);
 
 // Reordering
 HighsInt FactorHighs_reorderMetis(void* FH, HighsInt n, HighsInt nz,
