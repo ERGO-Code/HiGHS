@@ -20,9 +20,10 @@ void HPresolveAnalysis::setup(const HighsLp* model_,
   numDeletedCols = &numDeletedCols_;
 
   timer_ = timer;
+  const bool lp_presolve = !model_->isMip() || options->solve_relaxation;
   analyse_presolve_time_ =
       kHighsAnalysisLevelPresolveTime & options->highs_analysis_level &&
-      !model_->isMip();
+      lp_presolve;
   if (analyse_presolve_time_) {
     HighsTimerClock clock;
     clock.timer_pointer_ = timer_;
@@ -31,8 +32,8 @@ void HPresolveAnalysis::setup(const HighsLp* model_,
     presolve_clocks_ = clock;
   }
 
-  // Allow logging if option is set and model is not a MIP
-  allow_logging_ = options_->presolve_rule_logging && !model_->isMip();
+  // Allow logging if option is set and LP presolve is being used
+  allow_logging_ = options_->presolve_rule_logging && lp_presolve;
   logging_on_ = allow_logging_;
   log_rule_type_ = kPresolveRuleIllegal;
   resetNumDeleted();

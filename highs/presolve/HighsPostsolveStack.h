@@ -670,6 +670,7 @@ class HighsPostsolveStack {
     size_t check_reduction = -35044;
 
     auto solutionLogging = [&](const std::string& message) {
+      return;
       printf("\n%s\n", message.c_str());
       for (HighsInt iCol = 0; iCol < origNumCol; iCol++) 
 	printf("Col %9d value = %11.4g; dual = %11.4g; status = %s\n",
