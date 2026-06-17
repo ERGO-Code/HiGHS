@@ -8866,7 +8866,6 @@ void HPresolve::debug(const HighsLp& lp, const HighsOptions& options) {
   {
     HPresolve presolve;
     presolve.setInput(model, options, options.presolve_reduction_limit);
-    // presolve.setReductionLimit(1622017);
     if (presolve.run(postsolve_stack) != HighsModelStatus::kNotset) return;
     Highs highs;
     highs.passModel(model);

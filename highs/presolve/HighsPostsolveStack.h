@@ -613,6 +613,8 @@ class HighsPostsolveStack {
     }
     std::copy(valuesNew.cbegin(), valuesNew.cend(), values.begin());
 #else
+    for (size_t i = index.size(); i < static_cast<size_t>(origSize); i++)
+      values[i] = zero;
     for (size_t i = index.size(); i > 0; --i) {
       size_t to_i = static_cast<size_t>(index[i - 1]);
       assert(to_i >= i - 1);
@@ -665,7 +667,21 @@ class HighsPostsolveStack {
     double report_col_value = kHighsInf;
     double report_col_dual = kHighsInf;
     HighsBasisStatus report_col_status = HighsBasisStatus::kNonbasic;
-    size_t check_reduction = 31819;
+    size_t check_reduction = -35044;
+
+    auto solutionLogging = [&](const std::string& message) {
+      printf("\n%s\n", message.c_str());
+      for (HighsInt iCol = 0; iCol < origNumCol; iCol++) 
+	printf("Col %9d value = %11.4g; dual = %11.4g; status = %s\n",
+	       int(iCol), solution.col_value[iCol], solution.col_dual[iCol],
+	       utilBasisStatusToString(basis.col_status[iCol]).c_str());
+      for (HighsInt iRow = 0; iRow < origNumRow; iRow++) 
+	printf("Row %9d value = %11.4g; dual = %11.4g; status = %s\n",
+	       int(iRow), solution.row_value[iRow], solution.row_dual[iRow],
+	       utilBasisStatusToString(basis.row_status[iRow]).c_str());
+      
+    };
+    
     auto reportColLogging = [&](const HighsInt reduction) {
       assert(report_col >= 0);
       double col_value = solution.col_value[report_col];
@@ -700,9 +716,11 @@ class HighsPostsolveStack {
     };
     // now undo the changes
     if (report_col >= 0) reportColLogging(-1);
+    if (reductions.size() == check_reduction) solutionLogging("After solving presolved LP");
     for (size_t i = reductions.size(); i > 0; --i) {
       if (i-1 == check_reduction) {
 	printf("Checking reduction %d\n", int(check_reduction));
+	solutionLogging("In reductions loop");
       }
       switch (reductions[i - 1].first) {
         case ReductionType::kLinearTransform: {

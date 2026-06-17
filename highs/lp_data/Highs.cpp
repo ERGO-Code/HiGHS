@@ -3726,7 +3726,7 @@ HighsPostsolveStatus Highs::runPostsolve() {
     return HighsPostsolveStatus::kNoPrimalSolutionError;
   const bool have_dual_solution =
       presolve_.data_.recovered_solution_.dual_valid;
-  const HighsInt report_3040_col = 31382;//-21792;
+  const HighsInt report_3040_col = -21792;
   presolve_.data_.postSolveStack.undo(options_,
                                       presolve_.data_.recovered_solution_,
                                       presolve_.data_.recovered_basis_,
