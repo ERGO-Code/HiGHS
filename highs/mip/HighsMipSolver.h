@@ -164,7 +164,7 @@ class HighsMipSolver {
       return 1;
     }
     return static_cast<HighsInt>(
-        std::ceil(1.4 * highs::parallel::num_threads()));
+        std::ceil(1.7 * highs::parallel::num_threads()));
   }
 };
 

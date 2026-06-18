@@ -597,17 +597,18 @@ restart:
                                          std::vector<RestartVote>& restarts) {
     indices.clear();
     std::fill(restarts.begin(), restarts.end(), RestartVote::kNoCheck);
-    const HighsInt heuristic_allowance_mod = 4;
-    HighsInt heuristic_random_mod_index =
-        mipdata_->heuristics.getHeuristicRandom(mipdata_->workers.size()) %
-        heuristic_allowance_mod;
-    for (HighsInt i = 0;
-         i != num_workers && i != mipdata_->nodequeue.numActiveNodes(); i++) {
-      if (!mipdata_->workers[i].search_ptr_->hasNode()) {
-        indices.emplace_back(i);
-        mipdata_->workers[i].setAllowHeuristics(i % heuristic_allowance_mod ==
-                                                heuristic_random_mod_index);
-      }
+    const HighsInt num_search_workers =
+        std::min(num_workers,
+                 static_cast<HighsInt>(mipdata_->nodequeue.numActiveNodes()));
+    const HighsInt num_heuristic_workers =
+        mipdata_->upper_bound < kHighsInf
+            ? std::max(HighsInt{1}, (num_search_workers + 3) / 4)
+            : std::max(HighsInt{1}, (num_search_workers + 1) / 2);
+
+    for (HighsInt i = 0; i < num_search_workers; i++) {
+      assert(!mipdata_->workers[i].search_ptr_->hasNode());
+      indices.emplace_back(i);
+      mipdata_->workers[i].setAllowHeuristics(i < num_heuristic_workers);
     }
   };
 
