@@ -5,9 +5,10 @@
 #include "parallel/HighsParallel.h"
 
 HighsInt FactorHighs_initialise(HighsInt threads) {
-  HighsExtras::blas::openblas_set_num_threads(1);
   highs::parallel::initialize_scheduler(threads);
-  return !HighsExternalApi::isAvailable<HighsExtras::hipo>();
+  bool status = HighsExternalApi::isAvailable<HighsExtras::hipo>();
+  HighsExtras::blas::openblas_set_num_threads(1);
+  return !status;
 }
 
 void FactorHighs_terminate(void) { HighsTaskExecutor::shutdown(true); }
