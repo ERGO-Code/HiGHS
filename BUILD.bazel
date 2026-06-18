@@ -88,6 +88,7 @@ cc_library(
     copts = select({
         "@rules_cc//cc/compiler:msvc-cl": [],
         "//conditions:default": [
+            "-fexceptions",
             "-Wno-unused-variable",
             "-Wno-unused-but-set-variable",
         ],
@@ -240,6 +241,7 @@ TEST_NAMES = [
     copts = ["-Iextern"] + select({
         "@rules_cc//cc/compiler:msvc-cl": [],
         "//conditions:default": [
+            "-fexceptions",
             "-Wno-unused-variable",
             "-Wno-unused-but-set-variable",
         ],
