@@ -5,6 +5,7 @@
 #include "parallel/HighsParallel.h"
 
 HighsInt FactorHighs_initialise(HighsInt threads) {
+  HighsExtras::blas::openblas_set_num_threads(1);
   highs::parallel::initialize_scheduler(threads);
   return !HighsExternalApi::isAvailable<HighsExtras::hipo>();
 }
