@@ -344,7 +344,13 @@ public class HighsLpSolver : IDisposable
     private static extern int Highs_getHessianNumNz(IntPtr highs);
 
     [DllImport(highslibname)]
-    private static extern int Highs_getBasis(IntPtr highs, int[] colstatus, int[] rowstatus);
+    private static extern int Highs_getBasis(IntPtr highs, int[] colstatus, int[] rowstatus);    
+
+    [DllImport(highslibname)]
+    private static extern int Highs_setBasis(IntPtr highs, int[] col_status, int[] row_status);
+
+    [DllImport(highslibname)]
+    private static extern int Highs_setLogicalBasis(IntPtr highs);
 
     [DllImport(highslibname)]
     private static extern double Highs_getObjectiveValue(IntPtr highs);
@@ -459,6 +465,15 @@ public class HighsLpSolver : IDisposable
 
     [DllImport(highslibname)]
     private static extern int Highs_getInt64InfoValue(IntPtr highs, string info, out long value);
+
+    [DllImport(highslibname)]
+    private static extern int Highs_changeObjectiveOffset(IntPtr highs, double offset);
+
+    [DllImport(highslibname)]
+    private static extern int Highs_addLinearObjective(IntPtr highs, double weight, double offset, double[] coefficients, double abs_tolerance, double rel_tolerance, int priority);
+
+    [DllImport(highslibname)]
+    private static extern int Highs_clearLinearObjectives(IntPtr highs);
 
     [DllImport(highslibname)]
     private static extern int Highs_setSolution(IntPtr highs, double[] col_value, double[] row_value, double[] col_dual, double[] row_dual);
@@ -1017,9 +1032,36 @@ public class HighsLpSolver : IDisposable
         return info;
     }
 
+    public HighsStatus changeObjectiveOffset(double offset)
+    {
+        return (HighsStatus)HighsLpSolver.Highs_changeObjectiveOffset(this.highs, offset);
+    }
+
+    public HighsStatus addLinearObjective(double weight, double offset, double[] coefficients, double abs_tolerance, double rel_tolerance, int priority)
+    {
+        return (HighsStatus)HighsLpSolver.Highs_addLinearObjective(this.highs, weight, offset, coefficients, abs_tolerance, rel_tolerance, priority);
+    }
+
+    public HighsStatus clearLinearObjectives()
+    {
+        return (HighsStatus)HighsLpSolver.Highs_clearLinearObjectives(this.highs);
+    }
+
     public HighsStatus setSolution(HighsSolution solution)
     {
         return (HighsStatus)HighsLpSolver.Highs_setSolution(this.highs, solution.colvalue, solution.rowvalue, solution.coldual, solution.rowdual);
+    }
+
+    public HighsStatus setBasis(HighsBasis basis)
+    {
+        int[] col_status = basis.colbasisstatus.Select(x => (int)x).ToArray();
+        int[] row_status = basis.rowbasisstatus.Select(x => (int)x).ToArray();
+        return (HighsStatus)HighsLpSolver.Highs_setBasis(this.highs, col_status, row_status);
+    }
+
+    public HighsStatus setLogicalBasis()
+    {
+        return (HighsStatus)HighsLpSolver.Highs_setLogicalBasis(this.highs);
     }
 
     /// <summary>Set a partial primal solution by passing values for a set of variables</summary>
@@ -1097,6 +1139,36 @@ public class HighsLpSolver : IDisposable
     {
         return (HighsStatus)Highs_writeOptionsDeviations(this.highs, filename);
     }
+
+    public HighsStatus getColsByRange(int from_col, int to_col, ref int num_col, double[] costs, double[] lower, double[] upper, ref int num_nz, int[] matrix_start, int[] matrix_index, double[] matrix_value)
+    {
+        return (HighsStatus)Highs_getColsByRange(this.highs, from_col, to_col, ref num_col, costs, lower, upper, ref num_nz, matrix_start, matrix_index, matrix_value);
+    }
+
+    public HighsStatus getColsBySet(int num_set_entries, int[] set, ref int num_col, double[] costs, double[] lower, double[] upper, ref int num_nz, int[] matrix_start, int[] matrix_index, double[] matrix_value)
+    {
+        return (HighsStatus)Highs_getColsBySet(this.highs, num_set_entries, set, ref num_col, costs, lower, upper, ref num_nz, matrix_start, matrix_index, matrix_value);
+    }
+
+    public HighsStatus getColsByMask(int[] mask, ref int num_col, double[] costs, double[] lower, double[] upper, ref int num_nz, int[] matrix_start, int[] matrix_index, double[] matrix_value)
+    {
+        return (HighsStatus)Highs_getColsByMask(this.highs, mask, ref num_col, costs, lower, upper, ref num_nz, matrix_start, matrix_index, matrix_value);
+    }
+
+    public HighsStatus getRowsByRange(int from_row, int to_row, ref int num_row, double[] lower, double[] upper, ref int num_nz, int[] matrix_start, int[] matrix_index, double[] matrix_value)
+    {
+        return (HighsStatus)Highs_getRowsByRange(this.highs, from_row, to_row, ref num_row, lower, upper, ref num_nz, matrix_start, matrix_index, matrix_value);
+    }
+
+    public HighsStatus getRowsBySet(int num_set_entries, int[] set, ref int num_row, double[] lower, double[] upper, ref int num_nz, int[] matrix_start, int[] matrix_index, double[] matrix_value)
+    {
+        return (HighsStatus)Highs_getRowsBySet(this.highs, num_set_entries, set, ref num_row, lower, upper, ref num_nz, matrix_start, matrix_index, matrix_value);
+    }
+
+    public HighsStatus getRowsByMask(int[] mask, ref int num_row, double[] lower, double[] upper, ref int num_nz, int[] matrix_start, int[] matrix_index, double[] matrix_value)
+    {
+        return (HighsStatus)Highs_getRowsByMask(this.highs, mask, ref num_row, lower, upper, ref num_nz, matrix_start, matrix_index, matrix_value);
+    }    
 }
 
 /// <summary>
