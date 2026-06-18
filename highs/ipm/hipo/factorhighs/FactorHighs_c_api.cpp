@@ -6,9 +6,9 @@
 
 HighsInt FactorHighs_initialise(HighsInt threads) {
   highs::parallel::initialize_scheduler(threads);
-  bool status = HighsExternalApi::isAvailable<HighsExtras::hipo>();
-  HighsExtras::blas::openblas_set_num_threads(1);
-  return !status;
+  bool hipo_available = HighsExternalApi::isAvailable<HighsExtras::hipo>();
+  if (hipo_available) HighsExtras::blas::openblas_set_num_threads(1);
+  return !hipo_available;
 }
 
 void FactorHighs_terminate(void) { HighsTaskExecutor::shutdown(true); }
