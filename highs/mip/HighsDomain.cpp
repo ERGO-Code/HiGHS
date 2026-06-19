@@ -2618,7 +2618,8 @@ void HighsDomain::conflictAnalysis(const HighsInt* proofinds,
 void HighsDomain::conflictAnalyzeReconvergence(
     const HighsDomainChange& domchg, const HighsInt* proofinds,
     const double* proofvals, HighsInt prooflen, double proofrhs,
-    HighsConflictPool& conflictPool, HighsDomain& globaldom) {
+    HighsConflictPool& conflictPool, HighsDomain& globaldom,
+    HighsPseudocost& pseudocost) {
   if (&globaldom == this) return;
 
   if (globaldom.infeasible()) return;
@@ -2658,7 +2659,8 @@ void HighsDomain::conflictAnalyzeReconvergence(
     --depth;
   }
 
-  conflictSet.resolveDepth(conflictSet.reconvergenceFrontier, depth, 0);
+  conflictSet.resolveDepth(conflictSet.reconvergenceFrontier, depth, 0,
+                           pseudocost);
   conflictPool.addReconvergenceCut(*this, conflictSet.reconvergenceFrontier,
                                    domchg);
 }
@@ -3700,6 +3702,7 @@ bool HighsDomain::ConflictSet::resolvable(HighsInt domChgPos) const {
 HighsInt HighsDomain::ConflictSet::resolveDepth(std::set<LocalDomChg>& frontier,
                                                 HighsInt depthLevel,
                                                 HighsInt stopSize,
+                                                HighsPseudocost& pseudocost,
                                                 HighsInt minResolve,
                                                 bool increaseConflictScore) {
   clearQueue();
@@ -3741,16 +3744,13 @@ HighsInt HighsDomain::ConflictSet::resolveDepth(std::set<LocalDomChg>& frontier,
     for (const LocalDomChg& i : resolvedDomainChanges) {
       auto insertResult = frontier.insert(i);
       if (insertResult.second) {
-        // TODO MT: Currently this conflict score update is suppressed during
-        // concurrent search
-        if (increaseConflictScore &&
-            !localdom.mipsolver->mipdata_->parallelLockActive()) {
+        if (increaseConflictScore) {
           if (localdom.domchgstack_[i.pos].boundtype == HighsBoundType::kLower)
-            localdom.mipsolver->mipdata_->getPseudoCost()
-                .increaseConflictScoreUp(localdom.domchgstack_[i.pos].column);
+            pseudocost.increaseConflictScoreUp(
+                localdom.domchgstack_[i.pos].column);
           else
-            localdom.mipsolver->mipdata_->getPseudoCost()
-                .increaseConflictScoreDown(localdom.domchgstack_[i.pos].column);
+            pseudocost.increaseConflictScoreDown(
+                localdom.domchgstack_[i.pos].column);
         }
         if (i.pos >= startPos.pos && resolvable(i.pos))
           pushQueue(insertResult.first);
@@ -3782,10 +3782,11 @@ HighsInt HighsDomain::ConflictSet::resolveDepth(std::set<LocalDomChg>& frontier,
   return numResolved;
 }
 
-HighsInt HighsDomain::ConflictSet::computeCuts(
-    HighsInt depthLevel, HighsConflictPool& conflictPool) {
+HighsInt HighsDomain::ConflictSet::computeCuts(HighsInt depthLevel,
+                                               HighsConflictPool& conflictPool,
+                                               HighsPseudocost& pseudocost) {
   HighsInt numResolved = resolveDepth(
-      reasonSideFrontier, depthLevel, 1,
+      reasonSideFrontier, depthLevel, 1, pseudocost,
       depthLevel == (HighsInt)localdom.branchPos_.size() ? 1 : 0, true);
   if (numResolved == -1) return -1;
   HighsInt numConflicts = 0;
@@ -3807,7 +3808,8 @@ HighsInt HighsDomain::ConflictSet::computeCuts(
     // compute the UIP reconvergence cut
     reconvergenceFrontier.clear();
     reconvergenceFrontier.insert(uip);
-    HighsInt numResolved = resolveDepth(reconvergenceFrontier, depthLevel, 0);
+    HighsInt numResolved =
+        resolveDepth(reconvergenceFrontier, depthLevel, 0, pseudocost);
 
     if (numResolved > 0 && reconvergenceFrontier.count(uip) == 0) {
       localdom.mipsolver->mipdata_->debugSolution
@@ -3828,26 +3830,13 @@ void HighsDomain::ConflictSet::conflictAnalysis(HighsConflictPool& conflictPool,
 
   if (!explainInfeasibility()) return;
 
-  if (!localdom.mipsolver->mipdata_->parallelLockActive()) {
-    localdom.mipsolver->mipdata_->getPseudoCost().increaseConflictWeight();
-  } else {
-    pseudocost.increaseConflictWeight();
-  }
+  pseudocost.increaseConflictWeight();
+
   for (const LocalDomChg& locdomchg : resolvedDomainChanges) {
     if (locdomchg.domchg.boundtype == HighsBoundType::kLower) {
-      if (!localdom.mipsolver->mipdata_->parallelLockActive()) {
-        localdom.mipsolver->mipdata_->getPseudoCost().increaseConflictScoreUp(
-            locdomchg.domchg.column);
-      } else {
-        pseudocost.increaseConflictScoreUp(locdomchg.domchg.column);
-      }
+      pseudocost.increaseConflictScoreUp(locdomchg.domchg.column);
     } else {
-      if (!localdom.mipsolver->mipdata_->parallelLockActive()) {
-        localdom.mipsolver->mipdata_->getPseudoCost().increaseConflictScoreDown(
-            locdomchg.domchg.column);
-      } else {
-        pseudocost.increaseConflictScoreDown(locdomchg.domchg.column);
-      }
+      pseudocost.increaseConflictScoreDown(locdomchg.domchg.column);
     }
   }
 
@@ -3876,7 +3865,7 @@ void HighsDomain::ConflictSet::conflictAnalysis(HighsConflictPool& conflictPool,
         continue;
       }
     }
-    HighsInt numNewConflicts = computeCuts(currDepth, conflictPool);
+    HighsInt numNewConflicts = computeCuts(currDepth, conflictPool, pseudocost);
     // if the depth level was empty, do not consider it
     if (numNewConflicts == -1) {
       --lastDepth;
@@ -3918,15 +3907,12 @@ void HighsDomain::ConflictSet::conflictAnalysis(const HighsInt* proofinds,
                                double(activitymin)))
     return;
 
-  HighsPseudocost& ps = localdom.mipsolver->mipdata_->parallelLockActive()
-                            ? pseudocost
-                            : localdom.mipsolver->mipdata_->getPseudoCost();
-  ps.increaseConflictWeight();
+  pseudocost.increaseConflictWeight();
   for (const LocalDomChg& locdomchg : resolvedDomainChanges) {
     if (locdomchg.domchg.boundtype == HighsBoundType::kLower)
-      ps.increaseConflictScoreUp(locdomchg.domchg.column);
+      pseudocost.increaseConflictScoreUp(locdomchg.domchg.column);
     else
-      ps.increaseConflictScoreDown(locdomchg.domchg.column);
+      pseudocost.increaseConflictScoreDown(locdomchg.domchg.column);
   }
 
   if (10 * resolvedDomainChanges.size() >
@@ -3955,7 +3941,7 @@ void HighsDomain::ConflictSet::conflictAnalysis(const HighsInt* proofinds,
         continue;
       }
     }
-    HighsInt numNewConflicts = computeCuts(currDepth, conflictPool);
+    HighsInt numNewConflicts = computeCuts(currDepth, conflictPool, pseudocost);
     // if the depth level was empty, do not consider it
     if (numNewConflicts == -1) {
       --lastDepth;

@@ -263,7 +263,8 @@ void HighsLpRelaxation::resetToGlobalDomain(const HighsDomain& globaldom) {
 
 void HighsLpRelaxation::computeBasicDegenerateDuals(
     double threshold, HighsDomain& localdom, HighsDomain& globaldom,
-    HighsConflictPool& conflictpool, bool getdualproof) {
+    HighsConflictPool& conflictpool, HighsPseudocost& pseudocost,
+    bool getdualproof) {
   if (!lpsolver.hasInvert()) return;
 
   HighsInt k = 0;
@@ -415,7 +416,7 @@ void HighsLpRelaxation::computeBasicDegenerateDuals(
       localdom.conflictAnalyzeReconvergence(
           domchg, row_ap.nonzeroinds.data(), dualproofvals.data(),
           static_cast<HighsInt>(row_ap.nonzeroinds.size()),
-          static_cast<double>(rhs), conflictpool, globaldom);
+          static_cast<double>(rhs), conflictpool, globaldom, pseudocost);
 
       continue;
     }

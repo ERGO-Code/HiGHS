@@ -1002,11 +1002,12 @@ HighsSearch::NodeResult HighsSearch::evaluateNode() {
               double gap = getUpperLimit() - lp->getObjective();
               lp->computeBasicDegenerateDuals(
                   gap + std::max(10 * getFeasTol(), getEpsilon() * gap),
-                  localdom, getDomain(), getConflictPool(), true);
+                  localdom, getDomain(), getConflictPool(),
+                  mipworker.getPseudocost(), true);
             }
             HighsRedcostFixing::propagateRedCost(
                 mipsolver, localdom, mipworker.getGlobalDomain(), *lp,
-                getConflictPool(), getUpperLimit());
+                getConflictPool(), mipworker.getPseudocost(), getUpperLimit());
             localdom.propagate();
             if (localdom.infeasible()) {
               result = NodeResult::kDomainInfeasible;
@@ -1028,7 +1029,8 @@ HighsSearch::NodeResult HighsSearch::evaluateNode() {
           } else {
             if (!inheuristic) {
               lp->computeBasicDegenerateDuals(kHighsInf, localdom, getDomain(),
-                                              getConflictPool(), true);
+                                              getConflictPool(),
+                                              mipworker.getPseudocost(), true);
               localdom.propagate();
               if (localdom.infeasible()) {
                 result = NodeResult::kDomainInfeasible;

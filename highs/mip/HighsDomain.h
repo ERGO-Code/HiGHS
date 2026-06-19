@@ -111,10 +111,12 @@ class HighsDomain {
     bool resolvable(HighsInt domChgPos) const;
 
     HighsInt resolveDepth(std::set<LocalDomChg>& frontier, HighsInt depthLevel,
-                          HighsInt stopSize, HighsInt minResolve = 0,
+                          HighsInt stopSize, HighsPseudocost& pseudocost,
+                          HighsInt minResolve = 0,
                           bool increaseConflictScore = false);
 
-    HighsInt computeCuts(HighsInt depthLevel, HighsConflictPool& conflictPool);
+    HighsInt computeCuts(HighsInt depthLevel, HighsConflictPool& conflictPool,
+                         HighsPseudocost& pseudocost);
 
     bool explainInfeasibility();
 
@@ -611,7 +613,8 @@ class HighsDomain {
                                     const double* proofvals, HighsInt prooflen,
                                     double proofrhs,
                                     HighsConflictPool& conflictPool,
-                                    HighsDomain& globaldom);
+                                    HighsDomain& globaldom,
+                                    HighsPseudocost& pseudocost);
 
   void tightenCoefficients(HighsInt* inds, double* vals, HighsInt len,
                            double& rhs) const;

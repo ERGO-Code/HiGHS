@@ -179,6 +179,7 @@ class HighsLpRelaxation {
   void computeBasicDegenerateDuals(double threshold, HighsDomain& localdom,
                                    HighsDomain& globaldom,
                                    HighsConflictPool& conflictpol,
+                                   HighsPseudocost& pseudocost,
                                    bool getdualproof);
 
   double getAvgSolveIters() { return avgSolveIters; }
