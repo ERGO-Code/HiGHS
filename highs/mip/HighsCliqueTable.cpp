@@ -2242,7 +2242,7 @@ void HighsCliqueTable::strongConnect(
     std::vector<HighsInt>& predStack, std::vector<HighsInt>& stackNextClique,
     std::vector<HighsInt>& stackNextCliqueVar,
     const std::vector<HighsInt>& cliqueStart,
-    const std::vector<HighsInt>& cliqueIndex, HighsInt n,
+    const std::vector<HighsInt>& cliqueIndex,
     std::vector<HighsInt>& cliqueFirstEntry,
     std::vector<HighsInt>& cliqueCurrExit,
     std::vector<HighsInt>& stronglyConnectedComponents,
@@ -2425,6 +2425,7 @@ void HighsCliqueTable::strongConnect(
     }
 
     if (!stack.empty()) {
+      assert(parentPos >= 0 && parentPos < static_cast<HighsInt>(stack.size()));
       newNode = stack[parentPos];
       lowLink[newNode] = std::min(lowLink[currNode], lowLink[newNode]);
       currStackPos = parentPos;
@@ -2516,8 +2517,8 @@ void HighsCliqueTable::tarjan(
       if (colDeleted[i / 2]) continue;
       strongConnect(i, startPos, onStack, index, lowLink, infeasibleNodes,
                     stack, predStack, stackNextClique, stackNextCliqueVar,
-                    cliqueStart, cliqueIndex, n, cliqueFirstEntry,
-                    cliqueCurrExit, stronglyConnectedComponents, infeasible);
+                    cliqueStart, cliqueIndex, cliqueFirstEntry, cliqueCurrExit,
+                    stronglyConnectedComponents, infeasible);
     }
     if (infeasible) break;
   }

@@ -1466,12 +1466,10 @@ HPresolve::Result HPresolve::stronglyConnectedComponents() {
       if (colDeleted[col] || domain.isFixed(col)) continue;
       if (i % 2 == 0) {
         // Node is ~x, i.e., x = 0 is infeasible -> x = 1
-        printf("Fixing node %d = 1\n", col);
         domain.changeBound(HighsBoundType::kLower, col, 1.0,
                            HighsDomain::Reason::cliqueTable(col, 1));
       } else {
         // Node is x, i.e., x = 1 is infeasible -> x = 0
-        printf("Fixing node %d = 0\n", col);
         domain.changeBound(HighsBoundType::kUpper, col, 0.0,
                            HighsDomain::Reason::cliqueTable(col, 0));
       }
@@ -1482,47 +1480,73 @@ HPresolve::Result HPresolve::stronglyConnectedComponents() {
   // Apply substitutions for all strongly connected components
   std::vector<HighsCliqueTable::CliqueVar> clique(2);
   for (HighsInt substNode = 0; substNode != numNodes; ++substNode) {
-    const HighsInt substCol = substNode / 2;
-    if (colDeleted[substCol] || domain.isFixed(substCol)) continue;
+    HighsInt substCol = substNode / 2;
     const HighsInt stayNode = stronglyConnectedComponents[substNode];
-    if (stayNode == -1) continue;
-    const HighsInt stayCol = stayNode / 2;
-    if (stayCol == substCol) continue;
+    if (stayNode == -1 || stayNode == substNode) continue;
+    HighsInt stayCol = stayNode / 2;
+    if (colDeleted[stayCol] || colDeleted[substCol]) continue;
+    if (stayCol == substCol) return Result::kPrimalInfeasible;
+
+    HighsCliqueTable::CliqueVar stayCliqueVar(stayCol, stayNode % 2);
+    HighsCliqueTable::CliqueVar substCliqueVar(substCol, substNode % 2);
+    cliquetable.resolveSubstitution(stayCliqueVar);
+    cliquetable.resolveSubstitution(substCliqueVar);
+    stayCol = static_cast<HighsInt>(stayCliqueVar.col);
+    substCol = static_cast<HighsInt>(substCliqueVar.col);
+    if (colDeleted[stayCol] || colDeleted[substCol]) continue;
+    if (stayCol == substCol) {
+      if (stayCliqueVar.val == substCliqueVar.val) continue;
+      return Result::kPrimalInfeasible;
+    }
 
     // Decides whether the nodes have the same value in the clique table.
     // This decides whether to substitute x = y, or x = 1 - y
-    const bool sameVals = (substNode % 2 == 0) == (stayNode % 2 == 0);
+    const bool sameVals = stayCliqueVar.val == substCliqueVar.val;
 
-    // If stayCol is deleted, then it might have been fixed in code above via
-    // infeasible assignment detection. Fix all values to the same.
-    if (colDeleted[stayCol] || domain.isFixed(stayCol)) {
+    // One of the columns may have been fixed by the code above
+    if (domain.isFixed(stayCol) || domain.isFixed(substCol)) {
       if ((domain.col_upper_[stayCol] == 0 && sameVals) ||
           (domain.col_lower_[stayCol] == 1 && !sameVals)) {
-        printf("Fixing node %d = 0\n", substCol);
         domain.changeBound(HighsBoundType::kUpper, substCol, 0.0,
                            HighsDomain::Reason::cliqueTable(substCol, 0));
+      } else if ((domain.col_upper_[substCol] == 0 && sameVals) ||
+                 (domain.col_lower_[substCol] == 1 && !sameVals)) {
+        domain.changeBound(HighsBoundType::kUpper, stayCol, 0.0,
+                           HighsDomain::Reason::cliqueTable(stayCol, 0));
       } else if ((domain.col_lower_[stayCol] == 1 && sameVals) ||
                  (domain.col_upper_[stayCol] == 0 && !sameVals)) {
-        printf("Fixing node %d = 1\n", substCol);
         domain.changeBound(HighsBoundType::kLower, substCol, 1.0,
                            HighsDomain::Reason::cliqueTable(substCol, 1));
+      } else if ((domain.col_lower_[substCol] == 1 && sameVals) ||
+                 (domain.col_upper_[substCol] == 0 && !sameVals)) {
+        domain.changeBound(HighsBoundType::kLower, stayCol, 1.0,
+                           HighsDomain::Reason::cliqueTable(stayCol, 1));
       }
       if (domain.infeasible()) return Result::kPrimalInfeasible;
       continue;
     }
 
     // Add both cliques instead of single equality so substitutions are created
-    HighsCliqueTable::CliqueVar stay(stayCol, sameVals ? 1 : 0);
-    clique[0] = HighsCliqueTable::CliqueVar(substCol, 0);
-    clique[1] = stay;
+    clique[0] = stayCliqueVar;
+    clique[1] = substCliqueVar.complement();
     cliquetable.addClique(*mipsolver, clique.data(), 2);
     if (domain.infeasible()) return Result::kPrimalInfeasible;
 
-    clique[0] = HighsCliqueTable::CliqueVar(substCol, 1);
-    clique[1] = stay.complement();
+    // Adding the clique may have already created new substitution
+    cliquetable.resolveSubstitution(stayCliqueVar);
+    cliquetable.resolveSubstitution(substCliqueVar);
+    stayCol = static_cast<HighsInt>(stayCliqueVar.col);
+    substCol = static_cast<HighsInt>(substCliqueVar.col);
+    if (colDeleted[stayCol] || colDeleted[substCol]) continue;
+    if (stayCol == substCol) {
+      if (stayCliqueVar.val == substCliqueVar.val) continue;
+      return Result::kPrimalInfeasible;
+    }
+
+    clique[0] = stayCliqueVar.complement();
+    clique[1] = substCliqueVar;
     cliquetable.addClique(*mipsolver, clique.data(), 2);
     if (domain.infeasible()) return Result::kPrimalInfeasible;
-    printf("Fixing node %d = %d\n", substCol, stayCol);
   }
   return Result::kOk;
 }

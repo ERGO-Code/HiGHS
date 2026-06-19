@@ -326,7 +326,7 @@ class HighsCliqueTable {
                      std::vector<HighsInt>& stackNextClique,
                      std::vector<HighsInt>& stackNextCliqueVar,
                      const std::vector<HighsInt>& cliqueStart,
-                     const std::vector<HighsInt>& cliqueIndex, HighsInt n,
+                     const std::vector<HighsInt>& cliqueIndex,
                      std::vector<HighsInt>& cliqueFirstEntry,
                      std::vector<HighsInt>& cliqueCurrExit,
                      std::vector<HighsInt>& stronglyConnectedComponents,
