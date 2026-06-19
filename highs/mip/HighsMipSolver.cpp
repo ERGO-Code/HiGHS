@@ -843,8 +843,8 @@ restart:
       worker.getLpRelaxation().setIterationLimit(iterlimit);
       bool considerHeuristics = true;
       while (true) {
-        if (considerHeuristics && nodeLim > 1 && worker.getAllowHeuristics() &&
-            mipdata_->moreHeuristicsAllowed()) {
+        if (considerHeuristics && (skip_separation || nodeLim == kHighsIInf) &&
+            worker.getAllowHeuristics() && mipdata_->moreHeuristicsAllowed()) {
           if (runHeuristics(i)) break;
         }
         considerHeuristics = false;
