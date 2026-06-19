@@ -4989,7 +4989,7 @@ HPresolve::Result HPresolve::singletonColStuffing(
   // count number of fixed columns
   HighsInt numFixedCols = 0;
   // Temporary for fix-col-stuffing
-  bool report_stuffing = false;
+  bool report_stuffing = true;
   if (report_stuffing && col == 0) {
     printf("HPresolve::singletonColStuffing for col = 0\n");
   }
@@ -5213,7 +5213,6 @@ HPresolve::Result HPresolve::singletonColStuffing(
 
     // check candidates
     // Temporary for fix-col-stuffing
-    bool report_stuffing = false;
     if (report_stuffing)
       printf(
           "ColStuffing: num candidates = %d; sumLower = %g; sumUpper = %g; rhs "
@@ -5225,7 +5224,7 @@ HPresolve::Result HPresolve::singletonColStuffing(
           model->col_upper_[t.col] == kHighsInf)
         break;
       // Temporary for fix-col-stuffing
-      report_stuffing = false;
+      //      report_stuffing = false;
       /*
         t.col == 532 ||
         t.col == 399 ||
