@@ -77,6 +77,8 @@ endif()
 
 # add optional dependencies (linker)
 if(HIPO)
+  target_compile_definitions(highs_extras PRIVATE ${HIGHS_BLAS_COMPILE_DEFINITION})
+  target_compile_definitions(highs PRIVATE ${HIGHS_BLAS_COMPILE_DEFINITION})
   highs_link_blas(highs_extras)
 endif()
 # end optional dependencies (linker)

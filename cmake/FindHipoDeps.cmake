@@ -372,7 +372,6 @@ function(highs_link_blas target_name)
         message(FATAL_ERROR "Ensure highs_configure_blas() called before highs_link_blas(${target_name}).")
     endif()
 
-    target_compile_definitions(${target_name} PRIVATE ${HIGHS_BLAS_COMPILE_DEFINITION})
     target_compile_definitions(${target_name} PRIVATE HIGHS_BLAS_VENDOR="${HIGHS_BLAS_VENDOR}")
     target_compile_definitions(${target_name} PRIVATE HIGHS_BLAS_VERSION="${HIGHS_BLAS_VERSION}")
     target_compile_definitions(${target_name} PRIVATE HIGHS_BLAS_LICENSE="${HIGHS_BLAS_LICENSE}")
