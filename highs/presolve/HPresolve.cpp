@@ -4988,8 +4988,9 @@ HPresolve::Result HPresolve::singletonColStuffing(
 
   // count number of fixed columns
   HighsInt numFixedCols = 0;
-    // Temporary for fix-col-stuffing
-  if (col == 0) {
+  // Temporary for fix-col-stuffing
+  bool report_stuffing = false;
+  if (report_stuffing && col == 0) {
     printf("HPresolve::singletonColStuffing for col = 0\n");
   }
 
@@ -5134,8 +5135,8 @@ HPresolve::Result HPresolve::singletonColStuffing(
                          numIntegerCandidates);
           }
         } else {
-	  // aj < 0
-	  assert(aj < 0);
+          // aj < 0
+          assert(aj < 0);
           if (cj <= 0)
             // dual fixing: fix to upper bound
             sumLowerBound = sumUpperBound;
@@ -5211,23 +5212,29 @@ HPresolve::Result HPresolve::singletonColStuffing(
     sortCols(candidates);
 
     // check candidates
-    printf("ColStuffing: num candidates = %d; sumLower = %g; sumUpper = %g; rhs = %g\n",
-	   int(candidates.size()), double(sumLower), double(sumUpper), rhs);
+    // Temporary for fix-col-stuffing
+    bool report_stuffing = false;
+    if (report_stuffing)
+      printf(
+          "ColStuffing: num candidates = %d; sumLower = %g; sumUpper = %g; rhs "
+          "= %g\n",
+          int(candidates.size()), double(sumLower), double(sumUpper), rhs);
     for (const auto& t : candidates) {
       // both bounds have to be finite
       if (model->col_lower_[t.col] == -kHighsInf ||
           model->col_upper_[t.col] == kHighsInf)
         break;
-    // Temporary for fix-col-stuffing
-      const bool report_stuffing = true;
+      // Temporary for fix-col-stuffing
+      report_stuffing = false;
       /*
-	t.col == 532 ||
-	t.col == 399 ||
-	t.col == 58653 ||
-	t.col == 58520 ||
-	t.col == 234479;
+        t.col == 532 ||
+        t.col == 399 ||
+        t.col == 58653 ||
+        t.col == 58520 ||
+        t.col == 234479;
       */
-      //      if (report_stuffing) { printf("ColStuffing: Checking candidate t.col - %d\n", int(t.col));      }
+      //      if (report_stuffing) { printf("ColStuffing: Checking candidate
+      //      t.col - %d\n", int(t.col));      }
       // compute delta (bound difference)
       HighsCDouble delta =
           t.multiplier * t.val *
@@ -5236,39 +5243,41 @@ HPresolve::Result HPresolve::singletonColStuffing(
       // check if variable can be fixed
       if (sumUpperFinite &&
           delta <= direction * rhs - sumUpper + primal_feastol) {
-	  if (report_stuffing)
-	    printf("ColStuffing:0 (%2d) fix %6d to %s: cost =  %11.4g; delta = %g; RHS0 = %11.4g\n",
-		 int(t.multiplier),
-		 int(t.col),
-		 t.multiplier < 0 ? "lower" : "upper",
-		   model->col_cost_[t.col],
-		 double(delta),
-		 double(direction * rhs - sumUpper + primal_feastol));
+        if (report_stuffing)
+          printf(
+              "ColStuffing:0 (%2d) fix %6d to %s: cost =  %11.4g; delta = %g; "
+              "RHS0 = %11.4g\n",
+              int(t.multiplier), int(t.col),
+              t.multiplier < 0 ? "lower" : "upper", model->col_cost_[t.col],
+              double(delta),
+              double(direction * rhs - sumUpper + primal_feastol));
         numFixedCols++;
         HPRESOLVE_CHECKED_CALL(fixCol(t.col, t.multiplier));
       } else if (sumLowerFinite &&
-                 delta <= direction * rhs - sumLower + primal_feastol) {
-	const bool alt_logic =direction * rhs <= sumLower + primal_feastol
-	  ;
-	
-	if (report_stuffing) {
-	    printf("ColStuffing:1 (%2d) fix %6d to %s: cost =  %11.4g; delta = %g; RHS0 = %11.4g | direction * rhs = %11.4g; sumLower + primal_feastol = %11.4g\n",
-		 int(-t.multiplier),
-		 int(t.col),
-		 -t.multiplier < 0 ? "lower" : "upper",
-		   model->col_cost_[t.col],
-		 double(delta),
-		 double(direction * rhs - sumUpper + primal_feastol),
-		 double(direction * rhs),
-		 double(sumLower + primal_feastol));
-	    printf("ColStuffing:1 direction * rhs - sumLower - primal_feastol = %11.4g; logic = %s\n\n",
-		   double(direction * rhs - sumLower + primal_feastol),
-		   alt_logic ? "T" : "F");
-	}
-	//	if (alt_logic) {
-	  numFixedCols++;
-	  HPRESOLVE_CHECKED_CALL(fixCol(t.col, -t.multiplier));
-	  //	}
+                 direction * rhs <= sumLower + primal_feastol) {
+        const bool alt_logic =
+            delta <= direction * rhs - sumLower + primal_feastol;
+
+        if (report_stuffing) {
+          printf(
+              "ColStuffing:1 (%2d) fix %6d to %s: cost =  %11.4g; delta = %g; "
+              "RHS0 = %11.4g | direction * rhs = %11.4g; sumLower + "
+              "primal_feastol = %11.4g\n",
+              int(-t.multiplier), int(t.col),
+              -t.multiplier < 0 ? "lower" : "upper", model->col_cost_[t.col],
+              double(delta),
+              double(direction * rhs - sumUpper + primal_feastol),
+              double(direction * rhs), double(sumLower + primal_feastol));
+          printf(
+              "ColStuffing:1 direction * rhs - sumLower - primal_feastol = "
+              "%11.4g; logic = %s\n\n",
+              double(direction * rhs - sumLower + primal_feastol),
+              alt_logic ? "T" : "F");
+        }
+        if (alt_logic) {
+          numFixedCols++;
+          HPRESOLVE_CHECKED_CALL(fixCol(t.col, -t.multiplier));
+        }
       }
       // update row activities
       if (sumLowerFinite) sumLower += delta;
@@ -6221,7 +6230,7 @@ HPresolve::Result HPresolve::checkLimits(HighsPostsolveStack& postsolve_stack) {
 
   if ((numreductions & 1023u) == 0) HPRESOLVE_CHECKED_CALL(checkTimeLimit());
 
-    // Temporary for fix-col-stuffing
+  // Temporary for fix-col-stuffing
   const bool limit_reached = numreductions >= reductionLimit;
   if (limit_reached) {
     printf("HPresolve::checkLimits Reduction limit reached\n");
