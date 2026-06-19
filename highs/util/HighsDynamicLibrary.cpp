@@ -68,6 +68,19 @@ void HighsDynamicLibrary::unload() {
 #if defined(_WIN32) || defined(_WIN64)
   FreeLibrary(static_cast<HMODULE>(handle_));
 #else
+  // check if blas_shutdown exists and potentially use it before dlclose-ing
+
+  using shutdown_t = void (*)();
+
+  shutdown_t shutdown_fn = nullptr;
+
+  if (auto p = dlsym(handle_, "blas_shutdown"))
+    shutdown_fn = reinterpret_cast<shutdown_t>(p);
+  else if (auto p = dlsym(handle_, "openblas_shutdown"))
+    shutdown_fn = reinterpret_cast<shutdown_t>(p);
+
+  if (shutdown_fn) shutdown_fn();
+
   dlclose(handle_);
 #endif
 

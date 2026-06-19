@@ -5,9 +5,3 @@ void highs_openblas_set_num_threads(int num_threads) {
   openblas_set_num_threads(num_threads);
 #endif
 }
-
-void highs_openblas_shutdown() {
-#if defined(HIPO_USES_OPENBLAS)
-  blas_shutdown();
-#endif
-}
