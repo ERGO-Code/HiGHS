@@ -5247,9 +5247,9 @@ HPresolve::Result HPresolve::singletonColStuffing(
         numFixedCols++;
         HPRESOLVE_CHECKED_CALL(fixCol(t.col, t.multiplier));
       } else if (sumLowerFinite &&
-                 direction * rhs <= sumLower + primal_feastol) {
-	const bool alt_logic =
-	  delta <= direction * rhs - sumLower + primal_feastol;
+                 delta <= direction * rhs - sumLower + primal_feastol) {
+	const bool alt_logic =direction * rhs <= sumLower + primal_feastol
+	  ;
 	
 	if (report_stuffing) {
 	    printf("ColStuffing:1 (%2d) fix %6d to %s: cost =  %11.4g; delta = %g; RHS0 = %11.4g | direction * rhs = %11.4g; sumLower + primal_feastol = %11.4g\n",
@@ -5265,10 +5265,10 @@ HPresolve::Result HPresolve::singletonColStuffing(
 		   double(direction * rhs - sumLower + primal_feastol),
 		   alt_logic ? "T" : "F");
 	}
-	if (alt_logic) {
+	//	if (alt_logic) {
 	  numFixedCols++;
 	  HPRESOLVE_CHECKED_CALL(fixCol(t.col, -t.multiplier));
-	}
+	  //	}
       }
       // update row activities
       if (sumLowerFinite) sumLower += delta;
