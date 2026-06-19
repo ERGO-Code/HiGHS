@@ -16,7 +16,7 @@ using namespace HighsExtras;
 
 HighsExternalApi::~HighsExternalApi() {
 #ifdef HIGHS_SHARED_EXTRAS_LIBRARY
-  HighsExtras::blas::openblas_shutdown();
+  if (isAvailable<HighsExtras::blas>()) HighsExtras::blas::openblas_shutdown();
 #endif
   unload();
 }
