@@ -67,7 +67,8 @@ using blas_methods = std::tuple<
     decltype(&cblas_dswap), decltype(&cblas_dgemv), decltype(&cblas_dtpsv),
     decltype(&cblas_dtrsv), decltype(&cblas_dger), decltype(&cblas_dgemm),
     decltype(&cblas_dsyrk), decltype(&cblas_dtrsm),
-    decltype(&highs_openblas_set_num_threads)>;
+    decltype(&highs_openblas_set_num_threads),
+    decltype(&highs_openblas_shutdown)>;
 
 using metis_methods = std::tuple<decltype(&Highs_METIS_SetDefaultOptions),
                                  decltype(&Highs_METIS_NodeND)>;
@@ -187,6 +188,8 @@ struct blas : extras_feature<1> {
   static void openblas_set_num_threads(int num_threads) {
     impl::template fn<11>()(num_threads);
   }
+
+  static void openblas_shutdown(void) { impl::template fn<12>()(); }
 };
 
 struct metis : extras_feature<2> {

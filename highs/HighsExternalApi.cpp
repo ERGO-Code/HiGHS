@@ -14,6 +14,13 @@
 #include <mutex>
 using namespace HighsExtras;
 
+HighsExternalApi::~HighsExternalApi() {
+#ifdef HIGHS_SHARED_EXTRAS_LIBRARY
+  HighsExtras::blas::openblas_shutdown();
+#endif
+  unload();
+}
+
 HighsExternalApi& HighsExternalApi::instance() {
   static HighsExternalApi _instance;
   return _instance;

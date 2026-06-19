@@ -72,11 +72,11 @@ HIGHS_EXTRAS_API bool HighsExtras_getApi(HighsExtrasApi* api) {
                         std::make_tuple(&Highs_amd_defaults, &Highs_amd_order));
 
   bind_api<blas_methods>(
-      api,
-      std::make_tuple(&cblas_daxpy, &cblas_dcopy, &cblas_dscal, &cblas_dswap,
-                      &cblas_dgemv, &cblas_dtpsv, &cblas_dtrsv, &cblas_dger,
-                      &cblas_dgemm, &cblas_dsyrk, &cblas_dtrsm,
-                      &highs_openblas_set_num_threads));
+      api, std::make_tuple(
+               &cblas_daxpy, &cblas_dcopy, &cblas_dscal, &cblas_dswap,
+               &cblas_dgemv, &cblas_dtpsv, &cblas_dtrsv, &cblas_dger,
+               &cblas_dgemm, &cblas_dsyrk, &cblas_dtrsm,
+               &highs_openblas_set_num_threads, &highs_openblas_shutdown));
 
   bind_api<metis_methods>(api, std::make_tuple(&Highs_METIS_SetDefaultOptions,
                                                &Highs_METIS_NodeND));

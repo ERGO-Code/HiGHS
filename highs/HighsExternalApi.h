@@ -119,7 +119,7 @@ struct trait_pack_ops<Trait, Rest...> {
 struct HighsExternalApi {
  public:
   HighsExternalApi() = default;
-  ~HighsExternalApi() { unload(); }
+  ~HighsExternalApi();
 
   // Prevent copying
   HighsExternalApi(const HighsExternalApi&) = delete;
