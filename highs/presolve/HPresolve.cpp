@@ -5031,6 +5031,8 @@ HPresolve::Result HPresolve::singletonColStuffing(
                           double& maxWeight, size_t& numIntegerCandidates) {
     if (model->integrality_[col] == HighsVarType::kInteger)
       numIntegerCandidates++;
+    // Temporary for fix-col-stuffing
+    assert(direction * val > 0);
     minWeight = std::min(minWeight, direction * val);
     maxWeight = std::max(maxWeight, direction * val);
     candidates.push_back(candidate{col, val, direction});
@@ -5072,7 +5074,53 @@ HPresolve::Result HPresolve::singletonColStuffing(
       double sumUpperBound = model->col_upper_[j];
       bool isCandidate = allowIntegerCandidates ||
                          model->integrality_[j] != HighsVarType::kInteger;
-
+      // Considering row as a knapsack
+      //
+      // minimize c^Tx st a^Tx <= W; l <= x <= u
+      //
+      // NB minimize
+      //
+      // If cj/aj >= 0, then dual fixing means that xj can _probably_
+      // be fixed
+      //
+      // If aj > 0, then xj is contributing positively to the
+      // knapsack, but if cj >=0 its optimal value would appear to be
+      // lj, and it must be if cj > 0, in which case lj = -inf implies
+      // dual infeasibility.
+      //
+      // However, if cj = 0 and lj = -inf, then it is not logically
+      // correct to fix it to its lower bound and claim dual
+      // infeasibility. The row is redundant since, whatever values
+      // are assigned to the other variables, xj can be made
+      // sufficiently negative so that a^Tx <= W.
+      //
+      // If lj is finite, then it is fair to fix xj = lj
+      //
+      // If aj < 0 then then xj is contributing negatively to the
+      // knapsack, and if cj < 0 its optimal value is uj, in which
+      // case uj = inf implies dual infeasibility. If cj = 0 then, as
+      // above, if uj is finite fix xj = uj, otherwise the row is
+      // redundant.
+      //
+      // If cj/aj < 0, then xj is a candidate to have its value
+      // assigned optimally. This is done greedily according to the
+      // sorted values of cj/aj, over all such candidates
+      //
+      // Perhaps the cj = 0 issue is moot, since fixing to an infinte
+      // bound leads to at least one of sumLowerFinite and
+      // sumUpperFinite being false, so set of candidates is
+      // abandoned.
+      //
+      // Question: The greedy algorithm is only guaranteed to assign
+      // values optimally if the variables are continuous. What
+      // presolve consequences are there if integer variables are
+      // assigned according to a sub-optimal assignment of values?
+      //
+      // Perhaps the criterion minWeight != maxWeight (ie not all |aj|
+      // values being equal) leading to abandonment of stuffing if
+      // there are only integer columns overcomes this. However, is it
+      // guaranteed that with those continuous decisions the knapsack
+      // is solved optimally?
       if (isSingleton(j)) {
         // check singleton
         if (aj > 0) {
@@ -5086,6 +5134,8 @@ HPresolve::Result HPresolve::singletonColStuffing(
                          numIntegerCandidates);
           }
         } else {
+	  // aj < 0
+	  assert(aj < 0);
           if (cj <= 0)
             // dual fixing: fix to upper bound
             sumLowerBound = sumUpperBound;
@@ -5161,22 +5211,23 @@ HPresolve::Result HPresolve::singletonColStuffing(
     sortCols(candidates);
 
     // check candidates
+    printf("ColStuffing: num candidates = %d; sumLower = %g; sumUpper = %g; rhs = %g\n",
+	   int(candidates.size()), double(sumLower), double(sumUpper), rhs);
     for (const auto& t : candidates) {
       // both bounds have to be finite
       if (model->col_lower_[t.col] == -kHighsInf ||
           model->col_upper_[t.col] == kHighsInf)
         break;
     // Temporary for fix-col-stuffing
-      const bool report_stuffing =
+      const bool report_stuffing = true;
+      /*
 	t.col == 532 ||
 	t.col == 399 ||
 	t.col == 58653 ||
 	t.col == 58520 ||
 	t.col == 234479;
-      if (report_stuffing) {
-	printf("ColStuffing: Checking candidate t.col - %d\n",
-	       int(t.col));
-      }
+      */
+      //      if (report_stuffing) { printf("ColStuffing: Checking candidate t.col - %d\n", int(t.col));      }
       // compute delta (bound difference)
       HighsCDouble delta =
           t.multiplier * t.val *
@@ -5186,10 +5237,11 @@ HPresolve::Result HPresolve::singletonColStuffing(
       if (sumUpperFinite &&
           delta <= direction * rhs - sumUpper + primal_feastol) {
 	  if (report_stuffing)
-	    printf("ColStuffing:0 (%2d) fix %6d to %s: delta = %g; RHS0 = %11.4g\n",
+	    printf("ColStuffing:0 (%2d) fix %6d to %s: cost =  %11.4g; delta = %g; RHS0 = %11.4g\n",
 		 int(t.multiplier),
 		 int(t.col),
 		 t.multiplier < 0 ? "lower" : "upper",
+		   model->col_cost_[t.col],
 		 double(delta),
 		 double(direction * rhs - sumUpper + primal_feastol));
         numFixedCols++;
@@ -5197,23 +5249,26 @@ HPresolve::Result HPresolve::singletonColStuffing(
       } else if (sumLowerFinite &&
                  direction * rhs <= sumLower + primal_feastol) {
 	const bool alt_logic =
-	  delta <= direction * rhs - sumLower - primal_feastol;
+	  delta <= direction * rhs - sumLower + primal_feastol;
 	
 	if (report_stuffing) {
-	    printf("ColStuffing:1 (%2d) fix %6d to %s: delta = %g; RHS0 = %11.4g | direction * rhs = %11.4g; sumLower + primal_feastol = %11.4g\n",
+	    printf("ColStuffing:1 (%2d) fix %6d to %s: cost =  %11.4g; delta = %g; RHS0 = %11.4g | direction * rhs = %11.4g; sumLower + primal_feastol = %11.4g\n",
 		 int(-t.multiplier),
 		 int(t.col),
 		 -t.multiplier < 0 ? "lower" : "upper",
+		   model->col_cost_[t.col],
 		 double(delta),
 		 double(direction * rhs - sumUpper + primal_feastol),
 		 double(direction * rhs),
 		 double(sumLower + primal_feastol));
 	    printf("ColStuffing:1 direction * rhs - sumLower - primal_feastol = %11.4g; logic = %s\n\n",
-		   double(direction * rhs - sumLower - primal_feastol),
+		   double(direction * rhs - sumLower + primal_feastol),
 		   alt_logic ? "T" : "F");
 	}
-        numFixedCols++;
-        HPRESOLVE_CHECKED_CALL(fixCol(t.col, -t.multiplier));
+	if (alt_logic) {
+	  numFixedCols++;
+	  HPRESOLVE_CHECKED_CALL(fixCol(t.col, -t.multiplier));
+	}
       }
       // update row activities
       if (sumLowerFinite) sumLower += delta;
