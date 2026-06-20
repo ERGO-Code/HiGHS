@@ -88,12 +88,14 @@ enum HighsAnalysisLevel {
   kHighsAnalysisLevelNlaTime = 32,
   kHighsAnalysisLevelMipData = 64,
   kHighsAnalysisLevelMipTime = 128,
+  kHighsAnalysisLevelPresolveTime = 256,
   kHighsAnalysisLevelMin = kHighsAnalysisLevelNone,
   kHighsAnalysisLevelMax =
       kHighsAnalysisLevelModelData + kHighsAnalysisLevelSolverSummaryData +
       kHighsAnalysisLevelSolverRuntimeData + kHighsAnalysisLevelSolverTime +
       kHighsAnalysisLevelNlaData + kHighsAnalysisLevelNlaTime +
-      kHighsAnalysisLevelMipData + kHighsAnalysisLevelMipTime
+      kHighsAnalysisLevelMipData + kHighsAnalysisLevelMipTime +
+      kHighsAnalysisLevelPresolveTime
 };
 
 enum class HighsVarType : uint8_t {
@@ -275,7 +277,10 @@ enum PresolveRuleType : int {
   kPresolveRuleSparsify,
   kPresolveRuleProbing,
   kPresolveRuleEnumeration,
-  kPresolveRuleMax = kPresolveRuleEnumeration,
+  kPresolveRuleDualFixing,
+  kPresolveRuleColStuffing,
+  kPresolveRuleInitialSweep,
+  kPresolveRuleMax = kPresolveRuleInitialSweep,
   kPresolveRuleLastAllowOff = kPresolveRuleMax,
   kPresolveRuleCount
 };
