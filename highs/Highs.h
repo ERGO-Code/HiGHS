@@ -70,6 +70,11 @@ class Highs {
   std::string githash() const { return highsGithash(); }
 
   /**
+   * @brief Return third-party notice and attribution details
+   */
+  std::string getThirdPartyNotice() const;
+
+  /**
    * @brief Reset the options and then call clearModel()
    */
   HighsStatus clear();
@@ -170,7 +175,8 @@ class Highs {
    * @brief Get a linear objective from the incumbent model
    */
   const HighsLinearObjective& getLinearObjective(const HighsInt idx) const {
-    assert(idx >= 0 && idx < int(multi_linear_objective_.size()));
+    assert(idx >= 0 &&
+           idx < static_cast<HighsInt>(multi_linear_objective_.size()));
     return multi_linear_objective_[idx];
   }
 
@@ -203,6 +209,14 @@ class Highs {
    * @brief Read in a basis
    */
   HighsStatus readBasis(const std::string& filename);
+
+  /**
+   * @brief Generate a PBM image of the matrix nonzeros, and possibly
+   * Hessian nonzeros. Note that the .pbm extnesion will be added to
+   * the fime names passed
+   */
+  HighsStatus matrixImage(const std::string& matrix_image_filename,
+                          const std::string& hessian_image_filename = "") const;
 
   /**
    * @brief Presolve the incumbent model, allowing the presolved model
@@ -992,7 +1006,7 @@ class Highs {
                                const double* upper);
 
   /**
-   * @brief Change the cost of multiple columns given by a mask (full
+   * @brief Change the bounds of multiple columns given by a mask (full
    * length array with 1 => change; 0 => not)
    */
   HighsStatus changeColsBounds(const HighsInt* mask, const double* lower,
@@ -1019,7 +1033,7 @@ class Highs {
                                const double* upper);
 
   /**
-   * @brief Change the cost of multiple rows given by a mask (full
+   * @brief Change the bounds of multiple rows given by a mask (full
    * length array with 1 => change; 0 => not)
    */
   HighsStatus changeRowsBounds(const HighsInt* mask, const double* lower,
@@ -1578,7 +1592,7 @@ class Highs {
 
   HighsStatus completeSolutionFromDiscreteAssignment();
 
-  HighsStatus callSolveLp(HighsLp& lp, const string message);
+  HighsStatus callSolveLp(HighsLp& lp, const std::string& message);
   HighsStatus callSolveQp();
   HighsStatus callSolveMip();
   HighsStatus callRunPostsolve(const HighsSolution& solution,
@@ -1589,8 +1603,9 @@ class Highs {
                                   const bool force_presolve = false);
   HighsPostsolveStatus runPostsolve();
 
-  HighsStatus openWriteFile(const string filename, const string method_name,
-                            FILE*& file, HighsFileType& file_type) const;
+  HighsStatus openWriteFile(const std::string& filename,
+                            const std::string& method_name, FILE*& file,
+                            HighsFileType& file_type) const;
 
   void reportModel(const HighsModel& model);
   void newHighsBasis();
@@ -1703,7 +1718,7 @@ class Highs {
   HighsStatus changeObjectiveSenseInterface(const ObjSense ext_sense);
   HighsStatus changeObjectiveOffsetInterface(const double ext_offset);
   HighsStatus changeIntegralityInterface(HighsIndexCollection& index_collection,
-                                         const HighsVarType* usr_inegrality);
+                                         const HighsVarType* usr_integrality);
   HighsStatus changeCostsInterface(HighsIndexCollection& index_collection,
                                    const double* usr_col_cost);
 

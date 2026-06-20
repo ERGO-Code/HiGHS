@@ -56,10 +56,11 @@ class HighsNodeQueue::NodeLowerRbTree : public CacheMinRbTree<NodeLowerRbTree> {
   const RbTreeLinks<int64_t>& getRbTreeLinks(int64_t node) const {
     return nodeQueue->nodes[node].lowerLinks;
   }
-  std::tuple<double, HighsInt, double, int64_t> getKey(HighsInt node) const {
-    return std::make_tuple(nodeQueue->nodes[node].lower_bound,
-                           HighsInt(nodeQueue->nodes[node].domchgstack.size()),
-                           nodeQueue->nodes[node].estimate, node);
+  std::tuple<double, HighsInt, double, int64_t> getKey(int64_t node) const {
+    return std::make_tuple(
+        nodeQueue->nodes[node].lower_bound,
+        static_cast<HighsInt>(nodeQueue->nodes[node].domchgstack.size()),
+        nodeQueue->nodes[node].estimate, node);
   }
 };
 

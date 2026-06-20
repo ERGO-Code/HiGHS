@@ -12,10 +12,10 @@ jobs:
         all_tests: [OFF]
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Checkout METIS
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           repository: galabovaa/METIS
           ref: 510-w
