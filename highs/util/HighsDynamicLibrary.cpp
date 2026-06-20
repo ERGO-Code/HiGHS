@@ -67,35 +67,10 @@ bool HighsDynamicLibrary::load(const std::string& filename,
 void HighsDynamicLibrary::unload() {
   if (!handle_) return;
 
-#ifdef HIPO_USES_OPENBLAS
-  // Openblas creates a thread pool that may still exist after dlclose-ing the
-  // library, leading to seg fault. blas_shutdown should prevent this, but its
-  // symbol is not always exposed. If the symbol exists, use it and then call
-  // dlclose. If the symbol does not exist, avoid calling dlclose.
-
-  using shutdown_t = void (*)();
-  shutdown_t shutdown_fn = nullptr;
-  if (auto p = dlsym(handle_, "blas_shutdown"))
-    shutdown_fn = reinterpret_cast<shutdown_t>(p);
-  else if (auto p = dlsym(handle_, "openblas_shutdown"))
-    shutdown_fn = reinterpret_cast<shutdown_t>(p);
-
-  if (shutdown_fn) {
-    shutdown_fn();
 #if defined(_WIN32) || defined(_WIN64)
-    FreeLibrary(static_cast<HMODULE>(handle_));
+  // FreeLibrary(static_cast<HMODULE>(handle_));
 #else
-    dlclose(handle_);
-#endif
-  }
-
-#else
-
-#if defined(_WIN32) || defined(_WIN64)
-  FreeLibrary(static_cast<HMODULE>(handle_));
-#else
-  dlclose(handle_);
-#endif
+  // dlclose(handle_);
 #endif
 
   handle_ = nullptr;
