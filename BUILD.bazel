@@ -225,6 +225,7 @@ TEST_NAMES = [
     "TestLpValidation",
     "TestMipSolver",
     "TestPresolve",
+    "TestPresolveRules",
     "TestQpSolver",
     "TestRanging",
     "TestRays",

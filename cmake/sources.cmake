@@ -410,6 +410,7 @@ set(highs_sources
     presolve/HighsSymmetry.cpp
     presolve/HPresolve.cpp
     presolve/HPresolveAnalysis.cpp
+    presolve/HPresolveTest.cpp
     presolve/ICrash.cpp
     presolve/ICrashUtil.cpp
     presolve/ICrashX.cpp

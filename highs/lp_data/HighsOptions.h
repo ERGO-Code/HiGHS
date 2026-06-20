@@ -438,6 +438,7 @@ struct HighsOptionsStruct {
   HighsInt restart_presolve_reduction_limit;
   HighsInt presolve_substitution_maxfillin;
   HighsInt presolve_rule_off;
+  HighsInt presolve_rule_test;
   bool presolve_rule_logging;
   bool presolve_remove_slacks;
   bool no_unnecessary_rebuild_refactor;
@@ -605,6 +606,7 @@ struct HighsOptionsStruct {
         restart_presolve_reduction_limit(0),
         presolve_substitution_maxfillin(0),
         presolve_rule_off(0),
+        presolve_rule_test(0),
         presolve_rule_logging(false),
         presolve_remove_slacks(false),
         no_unnecessary_rebuild_refactor(false),
@@ -1604,6 +1606,11 @@ class HighsOptions : public HighsOptionsStruct {
     record_int = new OptionRecordInt(
         "presolve_rule_off", "Bit mask of presolve rules that are not allowed",
         advanced, &presolve_rule_off, 0, 0, kHighsIInf);
+    records.push_back(record_int);
+
+    record_int = new OptionRecordInt(
+        "presolve_rule_test", "Presolve rule to test - DEV only!",
+        advanced, &presolve_rule_test, 0, 0, kPresolveRuleMax);
     records.push_back(record_int);
 
     record_bool = new OptionRecordBool(

@@ -5240,6 +5240,8 @@ HPresolve::Result HPresolve::singletonColStuffing(
           (static_cast<HighsCDouble>(model->col_upper_[t.col]) -
            static_cast<HighsCDouble>(model->col_lower_[t.col]));
       // check if variable can be fixed
+      const bool logic0 = direction * rhs <= sumLower + primal_feastol;
+      const bool logic1 = delta <= direction * rhs - sumLower + primal_feastol;
       if (sumUpperFinite &&
           delta <= direction * rhs - sumUpper + primal_feastol) {
         if (report_stuffing)
@@ -5252,11 +5254,8 @@ HPresolve::Result HPresolve::singletonColStuffing(
               double(direction * rhs - sumUpper + primal_feastol));
         numFixedCols++;
         HPRESOLVE_CHECKED_CALL(fixCol(t.col, t.multiplier));
-      } else if (sumLowerFinite &&
-                 direction * rhs <= sumLower + primal_feastol) {
-        const bool alt_logic =
-            delta <= direction * rhs - sumLower + primal_feastol;
-
+      } else if (sumLowerFinite && logic0) {
+	//         direction * rhs <= sumLower + primal_feastol) {
         if (report_stuffing) {
           printf(
               "ColStuffing:1 (%2d) fix %6d to %s: cost =  %11.4g; delta = %g; "
@@ -5271,9 +5270,9 @@ HPresolve::Result HPresolve::singletonColStuffing(
               "ColStuffing:1 direction * rhs - sumLower - primal_feastol = "
               "%11.4g; logic = %s\n\n",
               double(direction * rhs - sumLower + primal_feastol),
-              alt_logic ? "T" : "F");
+              logic1 ? "T" : "F");
         }
-        if (alt_logic) {
+        if (logic0) {
           numFixedCols++;
           HPRESOLVE_CHECKED_CALL(fixCol(t.col, -t.multiplier));
         }
@@ -5893,6 +5892,16 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
   //    - stop
   //
 
+  auto presolveReturn = [&] () {
+    if (mipsolver != nullptr) HPRESOLVE_CHECKED_CALL(scaleMIP(postsolve_stack));
+
+    // analysePresolveRuleLog() should return true - no errors
+    assert(analysis_.analysePresolveRuleLog());
+    // Possibly report presolve log
+    analysis_.analysePresolveRuleLog(true);
+    return Result::kOk;
+  };
+
   // convert model to minimization problem
   if (model->sense_ == ObjSense::kMaximize) {
     for (HighsInt i = 0; i != model->num_col_; ++i)
@@ -5940,6 +5949,10 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
     assert(this->timer);
     assert(this->timer->running());
 
+    if (options->presolve_rule_test) {
+      HPRESOLVE_CHECKED_CALL(presolveRuleTest(postsolve_stack));
+      return presolveReturn();
+    }
     HPRESOLVE_CHECKED_CALL(initialRowAndColPresolve(postsolve_stack));
 
     HighsInt numParallelRowColCalls = 0;
@@ -6117,13 +6130,7 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
                  "\nPresolve is switched off\n");
   }
 
-  if (mipsolver != nullptr) HPRESOLVE_CHECKED_CALL(scaleMIP(postsolve_stack));
-
-  // analysePresolveRuleLog() should return true - no errors
-  assert(analysis_.analysePresolveRuleLog());
-  // Possibly report presolve log
-  analysis_.analysePresolveRuleLog(true);
-  return Result::kOk;
+  return presolveReturn();
 }
 
 HPresolve::Result HPresolve::removeSlacks(
