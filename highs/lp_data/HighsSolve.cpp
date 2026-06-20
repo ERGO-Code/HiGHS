@@ -9,7 +9,7 @@
  * @brief Class-independent utilities for HiGHS
  */
 
-#include "HighsExternalDeps.h"
+#include "HighsExternalApi.h"
 #include "ipm/IpxWrapper.h"
 #include "lp_data/HighsSolutionDebug.h"
 #include "pdlp/CupdlpWrapper.h"
@@ -21,8 +21,7 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
   HighsStatus return_status = HighsStatus::kOk;
   HighsStatus call_status;
   HighsOptions& options = solver_object.options_;
-  HighsSubSolverCallTime* sub_solver_call_time =
-      solver_object.sub_solver_call_time_;
+  HighsProfiling* profiling = solver_object.profiling_;
   // Reset unscaled model status and solution params - except for
   // iteration counts
   resetModelStatusAndHighsInfo(solver_object);
@@ -94,7 +93,7 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
       }
     } else {
       // Use cuPDLP-C or HiPDLP to solve the LP
-      sub_solver_call_time->start(kSubSolverPdlp);
+      profiling->start(kSubSolverPdlp);
       if (options.solver == kPdlpString) {
         try {
           call_status = solveLpCupdlp(solver_object);
@@ -112,7 +111,7 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
           call_status = HighsStatus::kError;
         }
       }
-      sub_solver_call_time->stop(kSubSolverPdlp);
+      profiling->stop(kSubSolverPdlp);
       return_status = interpretCallStatus(options.log_options, call_status,
                                           return_status, "solveLp-Pdlp");
     }
@@ -711,7 +710,7 @@ bool useHipo(const HighsOptions& options,
     use_hipo = false;
   } else if (specific_solver_option_value == kIpmString ||
              specific_solver_option_value == kHipoString || force_ipm) {
-    use_hipo = HighsExternalDeps::isAvailable();
+    use_hipo = HighsExternalApi::isAvailable<HighsExtras::hipo>();
   }
   if (options.run_centring) use_hipo = false;
   // Later decide between HiPO and IPX based on LP properties

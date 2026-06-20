@@ -161,6 +161,7 @@ HighsDomain::ConflictPoolPropagation::operator=(
   conflictFlag_ = other.conflictFlag_;
   propagateConflictInds_ = other.propagateConflictInds_;
   watchedLiterals_ = other.watchedLiterals_;
+  assert(!domain->mipsolver->mipdata_->parallelLockActive());
   if (conflictpool_) conflictpool_->addPropagationDomain(this);
   return *this;
 }
@@ -396,18 +397,11 @@ HighsDomain::CutpoolPropagation::CutpoolPropagation(
     cutpool->addPropagationDomain(this);
 }
 
-// TODO MT: ERORRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
-// When a domain is created (based on another existing domain)
-// , e.g., in randomizedRounding (as an object
-// that we can propagate and play around with) or in RINS (where one
-// is created as part of the HighsSearch object), it is going to notify
-// all cutpools / conflictpools that the original was propagating.
-// This "notify" is going to append the domain to the vector of
-// pools, which is going to be non-deterministic and error-prone.
-// We therefore shouldn't notify the global cut pool.
-// This is fine as the copied domain is likely temporary,
-// and will not be majorly affected by not being notified of new cuts.
-// Does this safety rail need to be added to the copy-assign code below???
+// Warning: When a domain is copy-assigned, e.g., in `resetLocalDomain`,
+// with the line `localdom = getDomain()`, then it is going to notify
+// all cut / conflict pools that the original was propagating.
+// This would be non-deterministic in the order in which the global
+// pool gets notified. Currently, such code is only run in serial.
 
 HighsDomain::CutpoolPropagation& HighsDomain::CutpoolPropagation::operator=(
     const CutpoolPropagation& other) {
@@ -421,6 +415,7 @@ HighsDomain::CutpoolPropagation& HighsDomain::CutpoolPropagation::operator=(
   propagatecutflags_ = other.propagatecutflags_;
   propagatecutinds_ = other.propagatecutinds_;
   capacityThreshold_ = other.capacityThreshold_;
+  assert(!domain->mipsolver->mipdata_->parallelLockActive());
   if (cutpool) cutpool->addPropagationDomain(this);
   return *this;
 }
@@ -544,8 +539,6 @@ void HighsDomain::CutpoolPropagation::updateActivityLbChange(
           if (activitycutsinf_[row] == 0 &&
               activitycuts_[row] - cutpool->getRhs()[row] >
                   domain->mipsolver->mipdata_->feastol) {
-            // todo, now that multiple cutpools are possible the index needs to
-            // be encoded differently
             domain->mipsolver->mipdata_->debugSolution.nodePruned(*domain);
             domain->infeasible_ = true;
             domain->infeasible_pos = domain->domchgstack_.size();
@@ -600,8 +593,6 @@ void HighsDomain::CutpoolPropagation::updateActivityUbChange(
           assert(val < 0);
           HighsCDouble deltamin = computeDelta(
               val, oldbound, newbound, kHighsInf, activitycutsinf_[row]);
-
-          //  std::cout << activitycuts_.size() << std::endl;
 
           activitycuts_[row] += deltamin;
 
@@ -2627,7 +2618,8 @@ void HighsDomain::conflictAnalysis(const HighsInt* proofinds,
 void HighsDomain::conflictAnalyzeReconvergence(
     const HighsDomainChange& domchg, const HighsInt* proofinds,
     const double* proofvals, HighsInt prooflen, double proofrhs,
-    HighsConflictPool& conflictPool, HighsDomain& globaldom) {
+    HighsConflictPool& conflictPool, HighsDomain& globaldom,
+    HighsPseudocost& pseudocost) {
   if (&globaldom == this) return;
 
   if (globaldom.infeasible()) return;
@@ -2667,7 +2659,8 @@ void HighsDomain::conflictAnalyzeReconvergence(
     --depth;
   }
 
-  conflictSet.resolveDepth(conflictSet.reconvergenceFrontier, depth, 0);
+  conflictSet.resolveDepth(conflictSet.reconvergenceFrontier, depth, 0,
+                           pseudocost);
   conflictPool.addReconvergenceCut(*this, conflictSet.reconvergenceFrontier,
                                    domchg);
 }
@@ -3709,6 +3702,7 @@ bool HighsDomain::ConflictSet::resolvable(HighsInt domChgPos) const {
 HighsInt HighsDomain::ConflictSet::resolveDepth(std::set<LocalDomChg>& frontier,
                                                 HighsInt depthLevel,
                                                 HighsInt stopSize,
+                                                HighsPseudocost& pseudocost,
                                                 HighsInt minResolve,
                                                 bool increaseConflictScore) {
   clearQueue();
@@ -3750,16 +3744,13 @@ HighsInt HighsDomain::ConflictSet::resolveDepth(std::set<LocalDomChg>& frontier,
     for (const LocalDomChg& i : resolvedDomainChanges) {
       auto insertResult = frontier.insert(i);
       if (insertResult.second) {
-        // TODO MT: Currently this conflict score update is suppressed during
-        // concurrent search
-        if (increaseConflictScore &&
-            !localdom.mipsolver->mipdata_->parallelLockActive()) {
+        if (increaseConflictScore) {
           if (localdom.domchgstack_[i.pos].boundtype == HighsBoundType::kLower)
-            localdom.mipsolver->mipdata_->getPseudoCost()
-                .increaseConflictScoreUp(localdom.domchgstack_[i.pos].column);
+            pseudocost.increaseConflictScoreUp(
+                localdom.domchgstack_[i.pos].column);
           else
-            localdom.mipsolver->mipdata_->getPseudoCost()
-                .increaseConflictScoreDown(localdom.domchgstack_[i.pos].column);
+            pseudocost.increaseConflictScoreDown(
+                localdom.domchgstack_[i.pos].column);
         }
         if (i.pos >= startPos.pos && resolvable(i.pos))
           pushQueue(insertResult.first);
@@ -3791,10 +3782,11 @@ HighsInt HighsDomain::ConflictSet::resolveDepth(std::set<LocalDomChg>& frontier,
   return numResolved;
 }
 
-HighsInt HighsDomain::ConflictSet::computeCuts(
-    HighsInt depthLevel, HighsConflictPool& conflictPool) {
+HighsInt HighsDomain::ConflictSet::computeCuts(HighsInt depthLevel,
+                                               HighsConflictPool& conflictPool,
+                                               HighsPseudocost& pseudocost) {
   HighsInt numResolved = resolveDepth(
-      reasonSideFrontier, depthLevel, 1,
+      reasonSideFrontier, depthLevel, 1, pseudocost,
       depthLevel == (HighsInt)localdom.branchPos_.size() ? 1 : 0, true);
   if (numResolved == -1) return -1;
   HighsInt numConflicts = 0;
@@ -3816,7 +3808,8 @@ HighsInt HighsDomain::ConflictSet::computeCuts(
     // compute the UIP reconvergence cut
     reconvergenceFrontier.clear();
     reconvergenceFrontier.insert(uip);
-    HighsInt numResolved = resolveDepth(reconvergenceFrontier, depthLevel, 0);
+    HighsInt numResolved =
+        resolveDepth(reconvergenceFrontier, depthLevel, 0, pseudocost);
 
     if (numResolved > 0 && reconvergenceFrontier.count(uip) == 0) {
       localdom.mipsolver->mipdata_->debugSolution
@@ -3837,28 +3830,13 @@ void HighsDomain::ConflictSet::conflictAnalysis(HighsConflictPool& conflictPool,
 
   if (!explainInfeasibility()) return;
 
-  // TODO: Only updating global pseudo cost so solution path is identical to
-  // original code. This should always actually use the given pseudocost?
-  if (!localdom.mipsolver->mipdata_->parallelLockActive()) {
-    localdom.mipsolver->mipdata_->getPseudoCost().increaseConflictWeight();
-  } else {
-    pseudocost.increaseConflictWeight();
-  }
+  pseudocost.increaseConflictWeight();
+
   for (const LocalDomChg& locdomchg : resolvedDomainChanges) {
     if (locdomchg.domchg.boundtype == HighsBoundType::kLower) {
-      if (!localdom.mipsolver->mipdata_->parallelLockActive()) {
-        localdom.mipsolver->mipdata_->getPseudoCost().increaseConflictScoreUp(
-            locdomchg.domchg.column);
-      } else {
-        pseudocost.increaseConflictScoreUp(locdomchg.domchg.column);
-      }
+      pseudocost.increaseConflictScoreUp(locdomchg.domchg.column);
     } else {
-      if (!localdom.mipsolver->mipdata_->parallelLockActive()) {
-        localdom.mipsolver->mipdata_->getPseudoCost().increaseConflictScoreDown(
-            locdomchg.domchg.column);
-      } else {
-        pseudocost.increaseConflictScoreDown(locdomchg.domchg.column);
-      }
+      pseudocost.increaseConflictScoreDown(locdomchg.domchg.column);
     }
   }
 
@@ -3887,7 +3865,7 @@ void HighsDomain::ConflictSet::conflictAnalysis(HighsConflictPool& conflictPool,
         continue;
       }
     }
-    HighsInt numNewConflicts = computeCuts(currDepth, conflictPool);
+    HighsInt numNewConflicts = computeCuts(currDepth, conflictPool, pseudocost);
     // if the depth level was empty, do not consider it
     if (numNewConflicts == -1) {
       --lastDepth;
@@ -3929,15 +3907,12 @@ void HighsDomain::ConflictSet::conflictAnalysis(const HighsInt* proofinds,
                                double(activitymin)))
     return;
 
-  HighsPseudocost& ps = localdom.mipsolver->mipdata_->parallelLockActive()
-                            ? pseudocost
-                            : localdom.mipsolver->mipdata_->getPseudoCost();
-  ps.increaseConflictWeight();
+  pseudocost.increaseConflictWeight();
   for (const LocalDomChg& locdomchg : resolvedDomainChanges) {
     if (locdomchg.domchg.boundtype == HighsBoundType::kLower)
-      ps.increaseConflictScoreUp(locdomchg.domchg.column);
+      pseudocost.increaseConflictScoreUp(locdomchg.domchg.column);
     else
-      ps.increaseConflictScoreDown(locdomchg.domchg.column);
+      pseudocost.increaseConflictScoreDown(locdomchg.domchg.column);
   }
 
   if (10 * resolvedDomainChanges.size() >
@@ -3966,7 +3941,7 @@ void HighsDomain::ConflictSet::conflictAnalysis(const HighsInt* proofinds,
         continue;
       }
     }
-    HighsInt numNewConflicts = computeCuts(currDepth, conflictPool);
+    HighsInt numNewConflicts = computeCuts(currDepth, conflictPool, pseudocost);
     // if the depth level was empty, do not consider it
     if (numNewConflicts == -1) {
       --lastDepth;

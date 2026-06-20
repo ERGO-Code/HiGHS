@@ -191,6 +191,7 @@ void HighsCutPool::performAging() {
       --numLpCuts;
       ++ageDistribution[1];
       ageResetWhileLocked_[i].store(0, std::memory_order_relaxed);
+      continue;
     } else if (ageResetWhileLocked_[i].load(std::memory_order_relaxed) == 1) {
       resetAge(i);
     }
@@ -246,9 +247,9 @@ void HighsCutPool::separate(const std::vector<double>& sol,
 
   for (HighsInt i = 0; i < nrows; ++i) {
     // cuts with an age of -1 are already in the LP and are therefore skipped
-    // TODO MT: Parallel case tries to add cuts already in current LP.
-    // TODO MT: Inefficient. Not sure what happens if added twice.
-    // TODO MT: The cut shouldn't have enough violation to be added though.
+    // Warning: Parallel case tries to add cuts already in current LP.
+    // Inefficient. Not sure what happens if added twice.
+    // The cut shouldn't have enough violation to be added though.
     if (ages_[i] < 0) continue;
 
     HighsInt start = matrix_.getRowStart(i);
@@ -366,7 +367,7 @@ void HighsCutPool::separate(const std::vector<double>& sol,
   bestObservedScore_ = std::max(efficacious_cuts[0].first, bestObservedScore);
   double minScoreFactorCopy = minScoreFactor;
   double& minScoreFactor_ = thread_safe ? minScoreFactorCopy : minScoreFactor;
-  double minScore = minScoreFactor_ * bestObservedScore;
+  double minScore = minScoreFactor_ * bestObservedScore_;
 
   HighsInt numefficacious =
       std::upper_bound(efficacious_cuts.begin(), efficacious_cuts.end(),
@@ -382,10 +383,10 @@ void HighsCutPool::separate(const std::vector<double>& sol,
   if (numefficacious <= lowerThreshold) {
     numefficacious = std::max(efficacious_cuts.size() / 2, size_t{1});
     minScoreFactor_ =
-        efficacious_cuts[numefficacious - 1].first / bestObservedScore;
+        efficacious_cuts[numefficacious - 1].first / bestObservedScore_;
   } else if (numefficacious > upperThreshold) {
     minScoreFactor_ =
-        efficacious_cuts[upperThreshold].first / bestObservedScore;
+        efficacious_cuts[upperThreshold].first / bestObservedScore_;
   }
 
   efficacious_cuts.resize(numefficacious);
@@ -405,9 +406,9 @@ void HighsCutPool::separate(const std::vector<double>& sol,
           break;
         }
       } else {
-        // TODO MT: This assumes the cuts in the pool are not changing during,
-        // TODO MT: this query, i.e., the worker's pool and the global pool.
-        // TODO MT: Currently safe, but doesn't generalise to all designs.
+        // Warning: This assumes the cuts in the pool are not changing during,
+        // this query, i.e., the worker's pool and the global pool.
+        // Currently safe, but doesn't generalise to all designs.
         if (getParallelism(p.second, cutset.cutindices[i],
                            cutpools[cutset.cutpools[i]]) > maxpar) {
           discard = true;
@@ -528,7 +529,7 @@ HighsInt HighsCutPool::addCut(const HighsMipSolver& mipsolver, HighsInt* Rindex,
   uint64_t h = compute_cut_hash(Rindex, Rvalue, maxabscoef, Rlen);
   double normalization = 1.0 / double(sqrt(norm));
 
-  // TODO MT: This global duplicate check assumes the global pool doesn't
+  // Warning: This global duplicate check assumes the global pool doesn't
   // have cuts added or deleted during time when local pools can add a cut.
   if (this != &mipsolver.mipdata_->getCutPool()) {
     if (mipsolver.mipdata_->getCutPool().isDuplicate(h, normalization, Rindex,
@@ -639,6 +640,8 @@ HighsInt HighsCutPool::addCut(const HighsMipSolver& mipsolver, HighsInt* Rindex,
 void HighsCutPool::syncCutPool(const HighsMipSolver& mipsolver,
                                HighsCutPool& syncpool) {
   HighsInt cutIndexEnd = matrix_.getNumRows();
+  std::vector<HighsInt> idxs;
+  std::vector<double> vals;
 
   for (HighsInt i = 0; i != cutIndexEnd; ++i) {
     // Only sync cuts in the LP that are not already synced
@@ -650,8 +653,8 @@ void HighsCutPool::syncCutPool(const HighsMipSolver& mipsolver,
       const double* Rvalue;
       getCut(i, Rlen, Rindex, Rvalue);
       // copy cut into something mutable (addCut reorders so can't take const)
-      std::vector<HighsInt> idxs(Rindex, Rindex + Rlen);
-      std::vector<double> vals(Rvalue, Rvalue + Rlen);
+      idxs.assign(Rindex, Rindex + Rlen);
+      vals.assign(Rvalue, Rvalue + Rlen);
       syncpool.addCut(mipsolver, idxs.data(), vals.data(), Rlen, rhs_[i],
                       rowintegral[i]);
       hasSynced_[i] = true;

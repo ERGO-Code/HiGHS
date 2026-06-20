@@ -8,6 +8,7 @@
 #ifndef HIGHS_CONFLICTPOOL_H_
 #define HIGHS_CONFLICTPOOL_H_
 
+#include <atomic>
 #include <set>
 #include <vector>
 
@@ -22,7 +23,7 @@ class HighsConflictPool {
   std::vector<HighsInt> ageDistribution_;
   std::vector<int16_t> ages_;
   std::vector<unsigned> modification_;
-  std::vector<uint8_t> ageResetWhileLocked_;
+  std::deque<std::atomic<uint8_t>> ageResetWhileLocked_;
 
   std::vector<HighsDomainChange> conflictEntries_;
   std::vector<std::pair<HighsInt, HighsInt>> conflictRanges_;
@@ -75,7 +76,7 @@ class HighsConflictPool {
   void resetAge(HighsInt conflict) {
     if (ages_[conflict] > 0) {
       if (age_lock_) {
-        ageResetWhileLocked_[conflict] = 1;
+        ageResetWhileLocked_[conflict].store(1, std::memory_order_relaxed);
         return;
       }
       ageDistribution_[ages_[conflict]] -= 1;

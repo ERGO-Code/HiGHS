@@ -20,10 +20,9 @@
 #include "util/HighsCDouble.h"
 #include "util/HighsHash.h"
 
-void HighsLpRelaxation::setGlobalSubSolverCallTime(
-    HighsSubSolverCallTime* global_sub_solver_call_time) {
-  assert(global_sub_solver_call_time->timer);
-  lpsolver.setGlobalSubSolverCallTime(global_sub_solver_call_time);
+void HighsLpRelaxation::setProfiling(HighsProfiling* profiling) {
+  assert(profiling);
+  lpsolver.setProfiling(profiling);
 }
 
 void HighsLpRelaxation::getCutPool(HighsInt& num_col, HighsInt& num_cut,
@@ -92,8 +91,6 @@ void HighsLpRelaxation::LpRow::get(const HighsMipSolver& mipsolver,
                                    const double*& vals) const {
   switch (origin) {
     case kCutPool:
-      assert(cutpoolindex <
-             static_cast<HighsInt>(mipsolver.mipdata_->cutpools.size()));
       mipsolver.mipdata_->cutpools[cutpoolindex].getCut(index, len, inds, vals);
       break;
     case kModel:
@@ -105,8 +102,6 @@ HighsInt HighsLpRelaxation::LpRow::getRowLen(
     const HighsMipSolver& mipsolver) const {
   switch (origin) {
     case kCutPool:
-      assert(cutpoolindex <
-             static_cast<HighsInt>(mipsolver.mipdata_->cutpools.size()));
       return mipsolver.mipdata_->cutpools[cutpoolindex].getRowLength(index);
     case kModel:
       return mipsolver.mipdata_->ARstart_[index + 1] -
@@ -121,8 +116,6 @@ bool HighsLpRelaxation::LpRow::isIntegral(
     const HighsMipSolver& mipsolver) const {
   switch (origin) {
     case kCutPool:
-      assert(cutpoolindex <
-             static_cast<HighsInt>(mipsolver.mipdata_->cutpools.size()));
       return mipsolver.mipdata_->cutpools[cutpoolindex].cutIsIntegral(index);
     case kModel:
       return (mipsolver.mipdata_->rowintegral[index] != 0);
@@ -136,8 +129,6 @@ double HighsLpRelaxation::LpRow::getMaxAbsVal(
     const HighsMipSolver& mipsolver) const {
   switch (origin) {
     case kCutPool:
-      assert(cutpoolindex <
-             static_cast<HighsInt>(mipsolver.mipdata_->cutpools.size()));
       return mipsolver.mipdata_->cutpools[cutpoolindex].getMaxAbsCutCoef(index);
     case kModel:
       return mipsolver.mipdata_->maxAbsRowCoef[index];
@@ -151,8 +142,6 @@ double HighsLpRelaxation::slackLower(HighsInt row,
                                      const HighsDomain& globaldom) const {
   switch (lprows[row].origin) {
     case LpRow::kCutPool:
-      assert(lprows[row].cutpoolindex <
-             static_cast<HighsInt>(mipsolver.mipdata_->cutpools.size()));
       return globaldom.getMinCutActivity(
           mipsolver.mipdata_->cutpools[lprows[row].cutpoolindex],
           lprows[row].index);
@@ -274,7 +263,8 @@ void HighsLpRelaxation::resetToGlobalDomain(const HighsDomain& globaldom) {
 
 void HighsLpRelaxation::computeBasicDegenerateDuals(
     double threshold, HighsDomain& localdom, HighsDomain& globaldom,
-    HighsConflictPool& conflictpool, bool getdualproof) {
+    HighsConflictPool& conflictpool, HighsPseudocost& pseudocost,
+    bool getdualproof) {
   if (!lpsolver.hasInvert()) return;
 
   HighsInt k = 0;
@@ -426,7 +416,7 @@ void HighsLpRelaxation::computeBasicDegenerateDuals(
       localdom.conflictAnalyzeReconvergence(
           domchg, row_ap.nonzeroinds.data(), dualproofvals.data(),
           static_cast<HighsInt>(row_ap.nonzeroinds.size()),
-          static_cast<double>(rhs), conflictpool, globaldom);
+          static_cast<double>(rhs), conflictpool, globaldom, pseudocost);
 
       continue;
     }
@@ -556,8 +546,6 @@ void HighsLpRelaxation::removeObsoleteRows(bool notifyPool) {
       ++ndelcuts;
       deletemask[i] = 1;
       if (notifyPool) {
-        assert(lprows[i].cutpoolindex <
-               static_cast<HighsInt>(mipsolver.mipdata_->cutpools.size()));
         mipsolver.mipdata_->cutpools[lprows[i].cutpoolindex].lpCutRemoved(
             lprows[i].index, mipsolver.mipdata_->parallelLockActive());
       }
@@ -615,6 +603,7 @@ void HighsLpRelaxation::removeCuts(HighsInt ndelcuts,
     assert(lpsolver.getLp().num_row_ == (HighsInt)lprows.size());
     basis.debug_origin_name = "HighsLpRelaxation::removeCuts";
     lpsolver.setBasis(basis);
+    mipsolver.profiling_->solveCall("LP0", mipsolver.submip);
     lpsolver.optimizeLp();
   }
 }
@@ -628,8 +617,6 @@ void HighsLpRelaxation::removeCuts() {
   lpsolver.deleteRows(modelrows, nlprows - 1);
   for (HighsInt i = modelrows; i != nlprows; ++i) {
     if (lprows[i].origin == LpRow::Origin::kCutPool) {
-      assert(lprows[i].cutpoolindex <
-             static_cast<HighsInt>(mipsolver.mipdata_->cutpools.size()));
       mipsolver.mipdata_->cutpools[lprows[i].cutpoolindex].lpCutRemoved(
           lprows[i].index, mipsolver.mipdata_->parallelLockActive());
     }
@@ -677,8 +664,6 @@ void HighsLpRelaxation::performAging(bool deleteRows) {
         if (ndelcuts == 0) deletemask.resize(nlprows);
         ++ndelcuts;
         deletemask[i] = 1;
-        assert(lprows[i].cutpoolindex <
-               static_cast<HighsInt>(mipsolver.mipdata_->cutpools.size()));
         mipsolver.mipdata_->cutpools[lprows[i].cutpoolindex].lpCutRemoved(
             lprows[i].index, mipsolver.mipdata_->parallelLockActive());
       }
@@ -717,8 +702,6 @@ void HighsLpRelaxation::notifyCutPoolsLpCopied(HighsInt n) {
   HighsInt modelrows = mipsolver.numRow();
   for (HighsInt i = modelrows; i != nlprows; ++i) {
     if (lprows[i].origin == LpRow::Origin::kCutPool) {
-      assert(lprows[i].cutpoolindex <
-             static_cast<HighsInt>(mipsolver.mipdata_->cutpools.size()));
       mipsolver.mipdata_->cutpools[lprows[i].cutpoolindex].increaseNumLps(
           lprows[i].index, n);
     }
@@ -1149,7 +1132,7 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
   // lpsolver.setOptionValue("output_flag", true);
   const bool valid_basis = lpsolver.getBasis().valid;
 
-  if (mipsolver.analysis_.analyse_mip_time && !mipsolver.submip &&
+  if (mipsolver.profiling_->mip_ && !mipsolver.submip &&
       !this->solved_first_lp) {
     highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
                  "MIP-Timing: %11.2g - start first LP solve (with%s basis)\n",
@@ -1206,6 +1189,7 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
       fflush(stdout);
       exit(1);
     }
+    mipsolver.profiling_->solveCall("LP1", mipsolver.submip);
     callstatus = lpsolver.optimizeLp();
     if (ipm_logging) lpsolver.setOptionValue("output_flag", false);
     if (callstatus == HighsStatus::kError) {
@@ -1218,11 +1202,21 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
     }
   }
   if (use_simplex) {
+    const bool profiling_submip = mipsolver.profiling_->isSubMip();
+    mipsolver.profiling_->setSubMip(mipsolver.submip);
+    if (mipsolver.profiling_->running(kSubSolverSubMip))
+      printf(
+          "HighsLpRelaxation::run Sub-MIP sub-solver clock running on thread "
+          "%2d and this is %sMIP\n",
+          int(mipsolver.profiling_->myThread()),
+          mipsolver.submip ? "sub-" : "");
+    mipsolver.profiling_->setSubMip(profiling_submip);
+    mipsolver.profiling_->solveCall("LP2", mipsolver.submip);
     callstatus = lpsolver.optimizeLp();
   }
   // Revert the value of lpsolver.options_.solver
   lpsolver.setOptionValue("solver", solver);
-  if (mipsolver.analysis_.analyse_mip_time && !mipsolver.submip &&
+  if (mipsolver.profiling_->mip_ && !mipsolver.submip &&
       !this->solved_first_lp) {
     highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
                  "MIP-Timing: %11.2g - finish first LP solve\n",
@@ -1365,7 +1359,7 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
       if (!mipsolver.submip && resolve_on_error) {
         // Highs instantiation
         Highs ipm;
-        ipm.setGlobalSubSolverCallTime(mipsolver.global_sub_solver_call_time_);
+        ipm.setProfiling(mipsolver.profiling_);
         ipm.setOptionValue("output_flag", false);
         // check if only root presolve is allowed
         const bool use_presolve =
@@ -1411,6 +1405,7 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
           (void)output_flag;
           ipm.setOptionValue("output_flag", !mipsolver.submip);
         }
+        mipsolver.profiling_->solveCall("LP3", mipsolver.submip);
         ipm.optimizeLp();
         if (ipm_logging) ipm.setOptionValue("output_flag", false);
         if (use_hipo && !ipm.getBasis().valid) {
@@ -1420,6 +1415,7 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
                       "basis: status = %s Try IPX\n",
                       ipm.modelStatusToString(ipm.getModelStatus()).c_str());
           ipm.setOptionValue("solver", kIpxString);
+          mipsolver.profiling_->solveCall("LP4", mipsolver.submip);
           ipm.optimizeLp();
         }
         lpsolver.setBasis(ipm.getBasis(), "HighsLpRelaxation::run IPM basis");

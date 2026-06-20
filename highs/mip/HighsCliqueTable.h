@@ -96,6 +96,7 @@ class HighsCliqueTable {
   HighsInt maxEntries;
   HighsInt minEntriesForParallelism;
   bool inPresolve;
+  bool allowParallel;
 
   void unlink(HighsInt pos, HighsInt cliqueid);
 
@@ -174,6 +175,7 @@ class HighsCliqueTable {
     maxEntries = kHighsIInf;
     minEntriesForParallelism = kHighsIInf;
     inPresolve = false;
+    allowParallel = true;
   }
 
   void setPresolveFlag(bool inPresolve) { this->inPresolve = inPresolve; }
@@ -328,6 +330,10 @@ class HighsCliqueTable {
 
   HighsInt numCliques(HighsInt col, bool val) const {
     return numcliquesvar[CliqueVar(col, val).index()];
+  }
+
+  void setAllowParallel(const bool allowParallel) {
+    this->allowParallel = allowParallel;
   }
 };
 

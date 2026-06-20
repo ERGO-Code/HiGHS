@@ -421,6 +421,8 @@ struct HighsOptionsStruct {
   bool lp_presolve_requires_basis_postsolve;
   bool mps_parser_type_free;
   bool use_warm_start;
+  bool write_matrix_image;
+  bool write_hessian_image;
   HighsInt keep_n_rows;
   HighsInt cost_scale_factor;
   HighsInt allowed_matrix_scale_factor;
@@ -438,9 +440,7 @@ struct HighsOptionsStruct {
   HighsInt presolve_rule_off;
   bool presolve_rule_logging;
   bool presolve_remove_slacks;
-  bool simplex_initial_condition_check;
   bool no_unnecessary_rebuild_refactor;
-  double simplex_initial_condition_tolerance;
   double rebuild_refactor_solution_error_tolerance;
   double dual_steepest_edge_weight_error_tolerance;
   double dual_steepest_edge_weight_log_error_threshold;
@@ -504,7 +504,6 @@ struct HighsOptionsStruct {
   std::string mip_improving_solution_file;
   bool mip_root_presolve_only;
   HighsInt mip_lifting_for_probing;
-  HighsInt mip_search_concurrency;
   bool mip_search_simulate_concurrency;
   bool mip_allow_cut_separation_at_nodes;
 
@@ -590,6 +589,8 @@ struct HighsOptionsStruct {
         lp_presolve_requires_basis_postsolve(false),
         mps_parser_type_free(false),
         use_warm_start(true),
+        write_matrix_image(false),
+        write_hessian_image(false),
         keep_n_rows(0),
         cost_scale_factor(0),
         allowed_matrix_scale_factor(0),
@@ -607,9 +608,7 @@ struct HighsOptionsStruct {
         presolve_rule_off(0),
         presolve_rule_logging(false),
         presolve_remove_slacks(false),
-        simplex_initial_condition_check(false),
         no_unnecessary_rebuild_refactor(false),
-        simplex_initial_condition_tolerance(0.0),
         rebuild_refactor_solution_error_tolerance(0.0),
         dual_steepest_edge_weight_error_tolerance(0.0),
         dual_steepest_edge_weight_log_error_threshold(0.0),
@@ -669,7 +668,6 @@ struct HighsOptionsStruct {
         mip_improving_solution_file(""),
         mip_root_presolve_only(false),
         mip_lifting_for_probing(-1),
-        mip_search_concurrency(0),
         mip_search_simulate_concurrency(false),
         // clang-format off
         mip_allow_cut_separation_at_nodes(true) {};
@@ -1288,12 +1286,6 @@ class HighsOptions : public HighsOptionsStruct {
         kHighsInf);
     records.push_back(record_double);
 
-    record_int = new OptionRecordInt(
-        "mip_search_concurrency",
-        "Number of workers to create per thread for concurrent MIP search",
-        advanced, &mip_search_concurrency, 0, 0, kMipSearchConcurrencyLimit);
-    records.push_back(record_int);
-
     record_bool = new OptionRecordBool(
         "mip_search_simulate_concurrency",
         "Simulate MIP search concurrency on a single thread", advanced,
@@ -1468,6 +1460,17 @@ class HighsOptions : public HighsOptionsStruct {
                                        advanced, &use_warm_start, true);
     records.push_back(record_bool);
 
+    record_bool = new OptionRecordBool(
+        "write_matrix_image",
+        "Write an image of the constraint matrix to a file", advanced,
+        &write_matrix_image, false);
+    records.push_back(record_bool);
+
+    record_bool = new OptionRecordBool(
+        "write_hessian_image", "Write an image of the Hessian to a file",
+        advanced, &write_hessian_image, false);
+    records.push_back(record_bool);
+
     record_int =
         new OptionRecordInt("keep_n_rows",
                             "For multiple N-rows in MPS files: delete rows / "
@@ -1539,23 +1542,11 @@ class HighsOptions : public HighsOptionsStruct {
                             kSimplexUnscaledSolutionStrategyMax);
     records.push_back(record_int);
 
-    record_bool =
-        new OptionRecordBool("simplex_initial_condition_check",
-                             "Perform initial basis condition check in simplex",
-                             advanced, &simplex_initial_condition_check, true);
-    records.push_back(record_bool);
-
     record_bool = new OptionRecordBool(
         "no_unnecessary_rebuild_refactor",
         "No unnecessary refactorization on simplex rebuild", advanced,
         &no_unnecessary_rebuild_refactor, true);
     records.push_back(record_bool);
-
-    record_double = new OptionRecordDouble(
-        "simplex_initial_condition_tolerance",
-        "Tolerance on initial basis condition in simplex", advanced,
-        &simplex_initial_condition_tolerance, 1.0, 1e14, kHighsInf);
-    records.push_back(record_double);
 
     record_double = new OptionRecordDouble(
         "rebuild_refactor_solution_error_tolerance",

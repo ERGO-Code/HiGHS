@@ -75,11 +75,12 @@ void HighsRedcostFixing::propagateRedCost(const HighsMipSolver& mipsolver,
                                           HighsDomain& localdomain,
                                           HighsDomain& globaldom,
                                           const HighsLpRelaxation& lp,
-                                          HighsConflictPool& conflictpool) {
+                                          HighsConflictPool& conflictpool,
+                                          HighsPseudocost& pseudocost,
+                                          double upper_limit) {
   const std::vector<double>& lpredcost = lp.getSolution().col_dual;
   double lpobjective = lp.getObjective();
-  HighsCDouble gap =
-      HighsCDouble(mipsolver.mipdata_->upper_limit) - lpobjective;
+  HighsCDouble gap = static_cast<HighsCDouble>(upper_limit) - lpobjective;
 
   double tolerance = std::max(10 * mipsolver.mipdata_->feastol,
                               mipsolver.mipdata_->epsilon * double(gap));
@@ -146,16 +147,16 @@ void HighsRedcostFixing::propagateRedCost(const HighsMipSolver& mipsolver,
     double rhs;
 
     if (boundChanges.size() <= 100 &&
-        lp.computeDualProof(globaldom, mipsolver.mipdata_->upper_limit, inds,
-                            vals, rhs, false)) {
+        lp.computeDualProof(globaldom, upper_limit, inds, vals, rhs, false)) {
       bool addedConstraints = false;
 
       HighsInt oldNumConflicts = conflictpool.getNumConflicts();
       for (const HighsDomainChange& domchg : boundChanges) {
         if (localdomain.isActive(domchg)) continue;
-        localdomain.conflictAnalyzeReconvergence(domchg, inds.data(),
-                                                 vals.data(), inds.size(), rhs,
-                                                 conflictpool, globaldom);
+        localdomain.conflictAnalyzeReconvergence(
+            domchg, inds.data(), vals.data(),
+            static_cast<HighsInt>(inds.size()), rhs, conflictpool, globaldom,
+            pseudocost);
       }
       addedConstraints = conflictpool.getNumConflicts() != oldNumConflicts;
 
@@ -201,7 +202,7 @@ void HighsRedcostFixing::addRootRedcost(const HighsMipSolver& mipsolver,
   mipsolver.mipdata_->getLp().computeBasicDegenerateDuals(
       mipsolver.mipdata_->feastol, mipsolver.mipdata_->getDomain(),
       mipsolver.mipdata_->getDomain(), mipsolver.mipdata_->getConflictPool(),
-      false);
+      mipsolver.mipdata_->getPseudoCost(), false);
 
   // Compute maximum number of steps per column with large domain
   // max_steps = 2 ** k, k = max(5, min(10 ,round(log(|D| / 10)))),

@@ -604,9 +604,9 @@ void HighsImplications::separateImpliedBounds(
           (implicationsCached(col, 0) && implicationsCached(col, 1)))
         continue;
 
-      mipsolver.analysis_.mipTimerStart(kMipClockProbingImplications);
+      mipsolver.profiling_->start(kMipClockProbingImplications);
       const bool probing_result = runProbing(col, numboundchgs);
-      mipsolver.analysis_.mipTimerStop(kMipClockProbingImplications);
+      mipsolver.profiling_->stop(kMipClockProbingImplications);
       if (probing_result) {
         if (globaldom.infeasible()) return;
       }

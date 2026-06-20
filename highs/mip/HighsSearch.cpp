@@ -793,23 +793,23 @@ void HighsSearch::openNodesToQueue(HighsNodeQueue& nodequeue) {
   }
 }
 
-void HighsSearch::flushStatistics() {
-  getNumNodes() += nnodes;
+void HighsSearch::flushStatistics(HighsMipSolver& mipsolver) {
+  mipsolver.mipdata_->num_nodes += nnodes;
   nnodes = 0;
 
-  getNumLeaves() += nleaves;
+  mipsolver.mipdata_->num_leaves += nleaves;
   nleaves = 0;
 
-  getPrunedTreeweight() += treeweight;
+  mipsolver.mipdata_->pruned_treeweight += treeweight;
   treeweight = 0;
 
-  getTotalLpIterations() += lpiterations;
+  mipsolver.mipdata_->total_lp_iterations += lpiterations;
   lpiterations = 0;
 
-  getHeuristicLpIterations() += heurlpiterations;
+  mipsolver.mipdata_->heuristic_lp_iterations += heurlpiterations;
   heurlpiterations = 0;
 
-  getSbLpIterations() += sblpiterations;
+  mipsolver.mipdata_->sb_lp_iterations += sblpiterations;
   sblpiterations = 0;
 }
 
@@ -828,7 +828,7 @@ int64_t& HighsSearch::getLocalNodes() { return nnodes; }
 int64_t& HighsSearch::getLocalLeaves() { return nleaves; }
 
 int64_t HighsSearch::getStrongBranchingLpIterations() const {
-  return sblpiterations + getSbLpIterations();
+  return sblpiterations + mipsolver.mipdata_->sb_lp_iterations;
 }
 
 void HighsSearch::resetLocalDomain() {
@@ -886,10 +886,9 @@ HighsSearch::NodeResult HighsSearch::evaluateNode() {
   if (!inheuristic && !localdom.infeasible()) {
     if (getSymmetries().numPerms > 0 && !currnode.stabilizerOrbits &&
         (parent == nullptr || !parent->stabilizerOrbits ||
-         !parent->stabilizerOrbits->orbitCols.empty()) &&
-        !mipsolver.mipdata_->parallelLockActive()) {
-      currnode.stabilizerOrbits =
-          getSymmetries().computeStabilizerOrbits(localdom);
+         !parent->stabilizerOrbits->orbitCols.empty())) {
+      currnode.stabilizerOrbits = getSymmetries().computeStabilizerOrbits(
+          localdom, stabilizerOrbitWorkspace);
     }
 
     if (currnode.stabilizerOrbits)
@@ -1003,11 +1002,12 @@ HighsSearch::NodeResult HighsSearch::evaluateNode() {
               double gap = getUpperLimit() - lp->getObjective();
               lp->computeBasicDegenerateDuals(
                   gap + std::max(10 * getFeasTol(), getEpsilon() * gap),
-                  localdom, getDomain(), getConflictPool(), true);
+                  localdom, getDomain(), getConflictPool(),
+                  mipworker.getPseudocost(), true);
             }
-            HighsRedcostFixing::propagateRedCost(mipsolver, localdom,
-                                                 mipworker.getGlobalDomain(),
-                                                 *lp, getConflictPool());
+            HighsRedcostFixing::propagateRedCost(
+                mipsolver, localdom, mipworker.getGlobalDomain(), *lp,
+                getConflictPool(), mipworker.getPseudocost(), getUpperLimit());
             localdom.propagate();
             if (localdom.infeasible()) {
               result = NodeResult::kDomainInfeasible;
@@ -1029,7 +1029,8 @@ HighsSearch::NodeResult HighsSearch::evaluateNode() {
           } else {
             if (!inheuristic) {
               lp->computeBasicDegenerateDuals(kHighsInf, localdom, getDomain(),
-                                              getConflictPool(), true);
+                                              getConflictPool(),
+                                              mipworker.getPseudocost(), true);
               localdom.propagate();
               if (localdom.infeasible()) {
                 result = NodeResult::kDomainInfeasible;
@@ -1434,7 +1435,10 @@ HighsSearch::NodeResult HighsSearch::branch() {
     // create a fresh LP only with model rows since all integer columns are
     // fixed, the cutting planes are not required and the LP could not be solved
     // so we want to make it as easy as possible
+    //
+    // LP relaxation instantiation
     HighsLpRelaxation lpCopy(mipsolver);
+    lpCopy.setProfiling(mipsolver.profiling_);
     lpCopy.loadModel();
     lpCopy.getLpSolver().changeColsBounds(0, mipsolver.numCol() - 1,
                                           localdom.col_lower_.data(),
@@ -1863,7 +1867,7 @@ bool HighsSearch::backtrackUntilDepth(HighsInt targetDepth) {
   return true;
 }
 
-HighsSearch::NodeResult HighsSearch::dive(bool ramp) {
+HighsSearch::NodeResult HighsSearch::dive(int64_t nodeLim) {
   reliableatnode.clear();
 
   do {
@@ -1876,7 +1880,7 @@ HighsSearch::NodeResult HighsSearch::dive(bool ramp) {
 
     result = branch();
     if (result != NodeResult::kBranched) return result;
-    if (ramp) return result;
+    if (nnodes >= nodeLim) return result;
   } while (true);
 }
 
@@ -1936,8 +1940,45 @@ const HighsNodeQueue& HighsSearch::getNodeQueue() const {
 }
 
 bool HighsSearch::checkLimits(int64_t nodeOffset) const {
-  if (mipsolver.mipdata_->parallelLockActive()) return false;
+  if (mipsolver.mipdata_->parallelLockActive()) {
+    return checkLocalLimits();
+  };
   return mipsolver.mipdata_->checkLimits(nodeOffset);
+}
+
+bool HighsSearch::checkLocalLimits() const {
+  if (mipsolver.mipdata_->terminatorActive())
+    if (mipsolver.mipdata_->terminatorTerminated()) return true;
+
+  if (!mipsolver.submip && mipworker.upper_bound < kHighsInf &&
+      mipsolver.options_mip_->objective_target > -kHighsInf) {
+    const double internal_target =
+        static_cast<HighsInt>(mipsolver.orig_model_->sense_) *
+            mipsolver.options_mip_->objective_target -
+        mipsolver.model_->offset_;
+    if (mipworker.upper_bound < internal_target) {
+      return true;
+    }
+  }
+
+  if (mipsolver.options_mip_->mip_max_nodes != kHighsIInf &&
+      mipsolver.mipdata_->num_nodes + nnodes >=
+          mipsolver.options_mip_->mip_max_nodes) {
+    return true;
+  }
+
+  if (mipsolver.options_mip_->mip_max_leaves != kHighsIInf &&
+      mipsolver.mipdata_->num_leaves + nleaves >=
+          mipsolver.options_mip_->mip_max_leaves) {
+    return true;
+  }
+
+  if (mipsolver.options_mip_->time_limit < kHighsInf &&
+      mipsolver.timer_.read() >= mipsolver.options_mip_->time_limit) {
+    return true;
+  }
+
+  return false;
 }
 
 HighsSymmetries& HighsSearch::getSymmetries() const {
@@ -1953,28 +1994,4 @@ bool HighsSearch::addIncumbent(const std::vector<double>& sol, double solobj,
     return mipsolver.mipdata_->addIncumbent(sol, solobj, solution_source,
                                             print_display_line);
   }
-}
-
-int64_t& HighsSearch::getNumNodes() { return mipsolver.mipdata_->num_nodes; }
-
-int64_t& HighsSearch::getNumLeaves() { return mipsolver.mipdata_->num_leaves; }
-
-HighsCDouble& HighsSearch::getPrunedTreeweight() {
-  return mipsolver.mipdata_->pruned_treeweight;
-}
-
-int64_t& HighsSearch::getTotalLpIterations() {
-  return mipsolver.mipdata_->total_lp_iterations;
-}
-
-int64_t& HighsSearch::getHeuristicLpIterations() {
-  return mipsolver.mipdata_->heuristic_lp_iterations;
-}
-
-int64_t& HighsSearch::getSbLpIterations() {
-  return mipsolver.mipdata_->sb_lp_iterations;
-}
-
-int64_t& HighsSearch::getSbLpIterations() const {
-  return mipsolver.mipdata_->sb_lp_iterations;
 }

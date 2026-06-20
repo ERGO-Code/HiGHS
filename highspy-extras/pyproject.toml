@@ -12,13 +12,15 @@ version = "1.14.0.dev1"
 description = "HiGHS external dependencies extension for highspy"
 authors = [{ name = "HiGHS developers", email = "highsopt@gmail.com" }]
 readme = "README.md"
+license = "Apache-2.0 AND BSD-3-Clause"
+license-files = [
+  "THIRD_PARTY_NOTICES.md",
+]
 
-requires-python = ">=3.8"
+requires-python = ">=3.9"
 
 classifiers = [
-  "License :: OSI Approved :: Apache Software License",
   "Programming Language :: Python :: 3 :: Only",
-  "Programming Language :: Python :: 3.8",
   "Programming Language :: Python :: 3.9",
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
@@ -26,6 +28,9 @@ classifiers = [
   "Programming Language :: Python :: 3.13",
   "Programming Language :: Python :: 3.14",
 ]
+
+[project.optional-dependencies]
+test = ["pytest"]
 
 [project.urls]
 "Source Code" = "https://github.com/ERGO-Code/HiGHS"
@@ -40,13 +45,11 @@ wheel.exclude = ["include", "lib*/", "bin", "LICENSE.txt", "README.md"]
 # Files to include in the SDist even if they are skipped by default. Supports
 # gitignore syntax.
 sdist.include = [
-  "LICENSE.txt",
-  "README.md",
-  "THIRD_PARTY_NOTICES.md",
   "extern",
   "cmake",
   "Version.txt",
-  "highs/HConfig.h.in"
+  "highs/HConfig.h.in",
+  "tests/test_highspy_extras.py"
 ]
 
 sdist.exclude = [
@@ -76,9 +79,22 @@ sdist.exclude = [
 ]
 
 [tool.scikit-build.cmake.define]
+#HIGHS_VCPKG="ON"
 BUILD_OPENBLAS = "ON"
+HIPO = "ON"
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+addopts = ["-ra", "--showlocals", "--strict-markers", "--strict-config"]
+xfail_strict = true
+log_cli_level = "INFO"
+filterwarnings = ["error"]
+testpaths = ["tests"]
+norecursedirs = ["check", ".git", "build", "dist", "*.egg-info"]
 
 [tool.cibuildwheel]
 build = "*"
 archs = ["auto64", "auto32"]
 build-verbosity = 1
+test-command = "pytest {project}/highspy-extras/tests"
+test-extras = ["test"]

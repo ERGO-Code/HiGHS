@@ -50,6 +50,22 @@ struct HighsPseudocostInitialization {
       const presolve::HighsPostsolveStack& postsolveStack);
 };
 
+struct HighsPseudocostDelta {
+  HighsInt col = -1;
+  HighsInt nsamplesup = 0;
+  HighsInt nsamplesdown = 0;
+  HighsInt ninferencesup = 0;
+  HighsInt ninferencesdown = 0;
+  HighsInt ncutoffsup = 0;
+  HighsInt ncutoffsdown = 0;
+  double pseudocostup_sum = 0.0;
+  double pseudocostdown_sum = 0.0;
+  double inferencesup_sum = 0.0;
+  double inferencesdown_sum = 0.0;
+  double conflictscoreup_sum = 0.0;
+  double conflictscoredown_sum = 0.0;
+};
+
 class HighsPseudocost {
   friend struct HighsPseudocostInitialization;
   std::vector<double> pseudocostup;
@@ -64,31 +80,45 @@ class HighsPseudocost {
   std::vector<HighsInt> ncutoffsdown;
   std::vector<double> conflictscoreup;
   std::vector<double> conflictscoredown;
-  std::vector<bool> changed;
-  std::vector<HighsInt> indschanged;
+  std::vector<HighsInt> changedpos;
+  std::vector<HighsPseudocostDelta> deltas;
 
   double conflict_weight;
   double conflict_avg_score;
   double cost_total;
   double inferences_total;
+  double delta_cost_sum;
+  double delta_inferences_sum;
   int64_t nsamplestotal;
   int64_t ninferencestotal;
   int64_t ncutoffstotal;
+  int64_t delta_nsamplestotal;
+  int64_t delta_ninferencestotal;
   HighsInt minreliable;
   double degeneracyFactor;
+
+  HighsPseudocostDelta& markChanged(HighsInt col) {
+    assert(col >= 0 && col < static_cast<HighsInt>(changedpos.size()));
+    if (changedpos[col] == -1) {
+      changedpos[col] = static_cast<HighsInt>(deltas.size());
+      deltas.emplace_back();
+      deltas.back().col = col;
+    }
+    return deltas[changedpos[col]];
+  }
+
+  template <typename CountType>
+  static void addDeltaAverage(double& avg, CountType& count, double delta_sum,
+                              CountType delta_count) {
+    if (delta_count <= 0) return;
+    avg = (avg * static_cast<double>(count) + delta_sum) /
+          static_cast<double>(count + delta_count);
+    count += delta_count;
+  }
 
  public:
   HighsPseudocost() = default;
   HighsPseudocost(const HighsMipSolver& mipsolver);
-
-  void subtractBase(const HighsPseudocost& base) {
-    for (size_t i = 0; i != pseudocostup.size(); ++i) {
-      pseudocostup[i] -= base.pseudocostup[i];
-      pseudocostdown[i] -= base.pseudocostdown[i];
-      nsamplesup[i] -= base.nsamplesup[i];
-      nsamplesdown[i] -= base.nsamplesdown[i];
-    }
-  }
 
   void increaseConflictWeight() {
     conflict_weight *= 1.02;
@@ -102,6 +132,10 @@ class HighsPseudocost {
         conflictscoreup[i] *= scale;
         conflictscoredown[i] *= scale;
       }
+      for (HighsPseudocostDelta& delta : deltas) {
+        delta.conflictscoreup_sum *= scale;
+        delta.conflictscoredown_sum *= scale;
+      }
     }
   }
 
@@ -111,21 +145,17 @@ class HighsPseudocost {
   }
 
   void increaseConflictScoreUp(HighsInt col) {
+    HighsPseudocostDelta& delta = markChanged(col);
     conflictscoreup[col] += conflict_weight;
     conflict_avg_score += conflict_weight;
-    if (!changed[col]) {
-      changed[col] = true;
-      indschanged.push_back(col);
-    }
+    delta.conflictscoreup_sum += conflict_weight;
   }
 
   void increaseConflictScoreDown(HighsInt col) {
+    HighsPseudocostDelta& delta = markChanged(col);
     conflictscoredown[col] += conflict_weight;
     conflict_avg_score += conflict_weight;
-    if (!changed[col]) {
-      changed[col] = true;
-      indschanged.push_back(col);
-    }
+    delta.conflictscoredown_sum += conflict_weight;
   }
 
   void setMinReliable(HighsInt minreliable) { this->minreliable = minreliable; }
@@ -143,62 +173,70 @@ class HighsPseudocost {
   }
 
   void addCutoffObservation(HighsInt col, bool upbranch) {
+    HighsPseudocostDelta& delta = markChanged(col);
     ++ncutoffstotal;
-    if (upbranch)
+    if (upbranch) {
       ncutoffsup[col] += 1;
-    else
+      delta.ncutoffsup += 1;
+    } else {
       ncutoffsdown[col] += 1;
-    if (!changed[col]) {
-      changed[col] = true;
-      indschanged.push_back(col);
+      delta.ncutoffsdown += 1;
     }
   }
 
   void addObservation(HighsInt col, double delta, double objdelta) {
     assert(delta != 0.0);
     assert(objdelta >= 0.0);
+    HighsPseudocostDelta& ps_delta = markChanged(col);
     if (delta > 0.0) {
       double unit_gain = objdelta / delta;
       double d = unit_gain - pseudocostup[col];
       nsamplesup[col] += 1;
       pseudocostup[col] += d / nsamplesup[col];
+      ps_delta.nsamplesup += 1;
+      ps_delta.pseudocostup_sum += unit_gain;
 
       d = unit_gain - cost_total;
       ++nsamplestotal;
       cost_total += d / static_cast<double>(nsamplestotal);
+      ++delta_nsamplestotal;
+      delta_cost_sum += unit_gain;
     } else {
       double unit_gain = -objdelta / delta;
       double d = unit_gain - pseudocostdown[col];
       nsamplesdown[col] += 1;
       pseudocostdown[col] += d / nsamplesdown[col];
+      ps_delta.nsamplesdown += 1;
+      ps_delta.pseudocostdown_sum += unit_gain;
 
       d = unit_gain - cost_total;
       ++nsamplestotal;
       cost_total += d / static_cast<double>(nsamplestotal);
-    }
-    if (!changed[col]) {
-      changed[col] = true;
-      indschanged.push_back(col);
+      ++delta_nsamplestotal;
+      delta_cost_sum += unit_gain;
     }
   }
 
   void addInferenceObservation(HighsInt col, HighsInt ninferences,
                                bool upbranch) {
+    HighsPseudocostDelta& delta = markChanged(col);
     double d = ninferences - inferences_total;
     ++ninferencestotal;
     inferences_total += d / static_cast<double>(ninferencestotal);
+    ++delta_ninferencestotal;
+    delta_inferences_sum += ninferences;
     if (upbranch) {
       d = ninferences - inferencesup[col];
       ninferencesup[col] += 1;
       inferencesup[col] += d / ninferencesup[col];
+      delta.ninferencesup += 1;
+      delta.inferencesup_sum += ninferences;
     } else {
       d = ninferences - inferencesdown[col];
       ninferencesdown[col] += 1;
       inferencesdown[col] += d / ninferencesdown[col];
-    }
-    if (!changed[col]) {
-      changed[col] = true;
-      indschanged.push_back(col);
+      delta.ninferencesdown += 1;
+      delta.inferencesdown_sum += ninferences;
     }
   }
 
@@ -384,110 +422,39 @@ class HighsPseudocost {
     return inferencesdown[col];
   }
 
-  std::vector<HighsInt> getNSamplesUp() const { return nsamplesup; }
-
-  std::vector<HighsInt> getNSamplesDown() const { return nsamplesdown; }
-
-  std::vector<HighsInt> getNInferencesUp() const { return ninferencesup; }
-
-  std::vector<HighsInt> getNInferencesDown() const { return ninferencesdown; }
-
-  std::vector<HighsInt> getNCutoffsUp() const { return ncutoffsup; }
-
-  std::vector<HighsInt> getNCutoffsDown() const { return ncutoffsdown; }
-
-  void flushPseudoCostObservations(double& curr_observation,
-                                   const double& new_observation,
-                                   const HighsInt n_new, const HighsInt n_prev,
-                                   const HighsInt n_curr, bool inference) {
-    const HighsInt n = n_new - n_prev;
-    if (n > 0) {
-      const double r = static_cast<double>(n) / (n_curr + n);
-      const double average = (1 - r) * curr_observation + r * new_observation;
-      curr_observation = average;
-      if (inference) {
-        this->ninferencestotal += n;
-      } else {
-        this->nsamplestotal += n;
-      }
-    }
-  }
-
-  void flushCutoffObservations(HighsInt& curr_observation,
-                               const HighsInt& prev_observation,
-                               const HighsInt& new_observation) {
-    HighsInt delta = new_observation - prev_observation;
-    curr_observation += delta;
-    this->ncutoffstotal += delta;
-  }
-
-  void flushConflictObservations(double& curr_observation,
-                                 double new_observation,
-                                 double conflict_weight) {
-    double s = this->conflict_weight *
-               std::max(curr_observation / this->conflict_weight,
-                        new_observation / conflict_weight);
-    if (s > curr_observation + minThreshold) {
-      this->conflict_avg_score += s - curr_observation;
-    }
-    curr_observation = s;
-  }
-
-  void flushPseudoCost(HighsPseudocost& pseudocost,
-                       std::vector<HighsInt>& nsamplesup,
-                       std::vector<HighsInt>& nsamplesdown,
-                       std::vector<HighsInt>& ninferencesup,
-                       std::vector<HighsInt>& ninferencesdown,
-                       std::vector<HighsInt>& ncutoffsup,
-                       std::vector<HighsInt>& ncutoffsdown) {
-    int64_t orig_nsamplestotal = this->nsamplestotal;
-    int64_t orig_ninferencestotal = this->ninferencestotal;
-    assert(pseudocost.ncutoffsup.size() == ncutoffsup.size() &&
-           pseudocost.ncutoffsup.size() == this->ncutoffsup.size());
-    for (HighsInt col : pseudocost.indschanged) {
+  void flushPseudoCost(HighsPseudocost& pseudocost) {
+    assert(pseudocost.ncutoffsup.size() == this->ncutoffsup.size());
+    for (const HighsPseudocostDelta& delta : pseudocost.deltas) {
+      const HighsInt col = delta.col;
       assert(col >= 0 &&
              col < static_cast<HighsInt>(pseudocost.ncutoffsup.size()));
-      flushPseudoCostObservations(this->pseudocostup[col],
-                                  pseudocost.pseudocostup[col], nsamplesup[col],
-                                  pseudocost.nsamplesup[col],
-                                  this->nsamplesup[col], false);
-      flushPseudoCostObservations(
-          this->pseudocostdown[col], pseudocost.pseudocostdown[col],
-          nsamplesdown[col], pseudocost.nsamplesdown[col],
-          this->nsamplesdown[col], false);
-      flushPseudoCostObservations(
-          this->inferencesup[col], pseudocost.inferencesup[col],
-          ninferencesup[col], pseudocost.ninferencesup[col],
-          this->ninferencesup[col], true);
-      flushPseudoCostObservations(
-          this->inferencesdown[col], pseudocost.inferencesdown[col],
-          ninferencesdown[col], pseudocost.ninferencesdown[col],
-          this->ninferencesdown[col], true);
-      // Take the max conflict score (no way to guess num observations)
-      flushConflictObservations(this->conflictscoreup[col],
-                                pseudocost.conflictscoreup[col],
-                                pseudocost.conflict_weight);
-      flushConflictObservations(this->conflictscoredown[col],
-                                pseudocost.conflictscoredown[col],
-                                pseudocost.conflict_weight);
-      flushCutoffObservations(this->ncutoffsup[col], ncutoffsup[col],
-                              pseudocost.ncutoffsup[col]);
-      flushCutoffObservations(this->ncutoffsdown[col], ncutoffsdown[col],
-                              pseudocost.ncutoffsdown[col]);
-      pseudocost.changed[col] = false;
+      addDeltaAverage(this->pseudocostup[col], this->nsamplesup[col],
+                      delta.pseudocostup_sum, delta.nsamplesup);
+      addDeltaAverage(this->pseudocostdown[col], this->nsamplesdown[col],
+                      delta.pseudocostdown_sum, delta.nsamplesdown);
+      addDeltaAverage(this->inferencesup[col], this->ninferencesup[col],
+                      delta.inferencesup_sum, delta.ninferencesup);
+      addDeltaAverage(this->inferencesdown[col], this->ninferencesdown[col],
+                      delta.inferencesdown_sum, delta.ninferencesdown);
+      const double conflict_scale =
+          this->conflict_weight / pseudocost.conflict_weight;
+      const double conflict_delta_up =
+          conflict_scale * delta.conflictscoreup_sum;
+      const double conflict_delta_down =
+          conflict_scale * delta.conflictscoredown_sum;
+      this->conflictscoreup[col] += conflict_delta_up;
+      this->conflictscoredown[col] += conflict_delta_down;
+      this->conflict_avg_score += conflict_delta_up + conflict_delta_down;
+      this->ncutoffsup[col] += delta.ncutoffsup;
+      this->ncutoffsdown[col] += delta.ncutoffsdown;
+      this->ncutoffstotal += delta.ncutoffsup + delta.ncutoffsdown;
     }
-    pseudocost.indschanged.clear();
-    if (this->ninferencestotal > orig_ninferencestotal) {
-      const double r = static_cast<double>(orig_ninferencestotal) /
-                       static_cast<double>(this->ninferencestotal);
-      this->inferences_total =
-          r * this->inferences_total + (1 - r) * pseudocost.inferences_total;
-    }
-    if (this->nsamplestotal > orig_nsamplestotal) {
-      const double r = static_cast<double>(orig_nsamplestotal) /
-                       static_cast<double>(this->nsamplestotal);
-      this->cost_total = r * this->cost_total + (1 - r) * pseudocost.cost_total;
-    }
+    addDeltaAverage(this->cost_total, this->nsamplestotal,
+                    pseudocost.delta_cost_sum, pseudocost.delta_nsamplestotal);
+    addDeltaAverage(this->inferences_total, this->ninferencestotal,
+                    pseudocost.delta_inferences_sum,
+                    pseudocost.delta_ninferencestotal);
+    pseudocost.removeChanged();
   }
 
   void syncPseudoCost(HighsPseudocost& pseudocost) {
@@ -522,13 +489,18 @@ class HighsPseudocost {
     pseudocost.nsamplestotal = nsamplestotal;
     pseudocost.ninferencestotal = ninferencestotal;
     pseudocost.ncutoffstotal = ncutoffstotal;
+    pseudocost.removeChanged();
   }
 
   void removeChanged() {
-    for (HighsInt col : indschanged) {
-      changed[col] = false;
+    for (const HighsPseudocostDelta& delta : deltas) {
+      changedpos[delta.col] = -1;
     }
-    indschanged.clear();
+    deltas.clear();
+    delta_cost_sum = 0.0;
+    delta_inferences_sum = 0.0;
+    delta_nsamplestotal = 0;
+    delta_ninferencestotal = 0;
   }
 };
 

@@ -24,12 +24,17 @@
 
 HighsSeparation::HighsSeparation(HighsMipWorker& mipworker)
     : mipworker_(mipworker) {
-  const HighsMipSolver& mipsolver = mipworker.getMipSolver();
-  if (mipsolver.analysis_.analyse_mip_time) {
+  /*
+  if (mipworker.mipsolver_.profiling_->mip_) {
     implBoundClock =
-        mipsolver.analysis_.getSepaClockIndex(kImplboundSepaString);
-    cliqueClock = mipsolver.analysis_.getSepaClockIndex(kCliqueSepaString);
+        mipworker.mipsolver_.profiling_->getSepaClockIndex(kImplboundSepaString);
+    cliqueClock =
+        mipworker.mipsolver_.profiling_->getSepaClockIndex(kCliqueSepaString);
   }
+  */
+  implBoundClock = 990;
+  cliqueClock = 991;
+  const HighsMipSolver& mipsolver = mipworker.getMipSolver();
   separators.emplace_back(new HighsTableauSeparator(mipsolver));
   separators.emplace_back(new HighsPathSeparator(mipsolver));
   separators.emplace_back(new HighsModkSeparator(mipsolver));
@@ -68,7 +73,7 @@ HighsInt HighsSeparation::separationRound(HighsDomain& propdomain,
     int numBoundChgs = (int)propdomain.getChangedCols().size();
 
     while (!propdomain.getChangedCols().empty()) {
-      lp->setObjectiveLimit(mipdata.upper_limit);
+      lp->setObjectiveLimit(mipworker_.upper_limit);
       status = lp->resolveLp(&propdomain);
       if (!lp->scaledOptimal(status)) return -1;
 
@@ -76,7 +81,7 @@ HighsInt HighsSeparation::separationRound(HighsDomain& propdomain,
           lp->unscaledDualFeasible(status)) {
         mipdata.redcostfixing.addRootRedcost(
             mipdata.mipsolver, lp->getSolution().col_dual, lp->getObjective());
-        if (mipdata.upper_limit != kHighsInf)
+        if (mipworker_.upper_limit != kHighsInf)
           mipdata.redcostfixing.propagateRootRedcost(mipdata.mipsolver);
       }
     }
@@ -85,13 +90,13 @@ HighsInt HighsSeparation::separationRound(HighsDomain& propdomain,
   };
 
   if (!mipdata.parallelLockActive())
-    lp->getMipSolver().analysis_.mipTimerStart(implBoundClock);
+    lp->getMipSolver().profiling_->start(implBoundClock);
   mipdata.implications.separateImpliedBounds(
       *lp, lp->getSolution().col_value, mipworker_.getCutPool(),
       mipdata.feastol, mipworker_.getGlobalDomain(),
       mipdata.parallelLockActive());
   if (!mipdata.parallelLockActive())
-    lp->getMipSolver().analysis_.mipTimerStop(implBoundClock);
+    lp->getMipSolver().profiling_->stop(implBoundClock);
 
   HighsInt ncuts = 0;
   HighsInt numboundchgs = propagateAndResolve();
@@ -101,7 +106,7 @@ HighsInt HighsSeparation::separationRound(HighsDomain& propdomain,
     ncuts += numboundchgs;
 
   if (!mipdata.parallelLockActive())
-    lp->getMipSolver().analysis_.mipTimerStart(cliqueClock);
+    lp->getMipSolver().profiling_->start(cliqueClock);
   mipdata.cliquetable.separateCliques(
       lp->getMipSolver(), sol.col_value, mipworker_.getCutPool(),
       mipdata.feastol,
@@ -111,7 +116,7 @@ HighsInt HighsSeparation::separationRound(HighsDomain& propdomain,
           ? mipworker_.getNumNeighbourhoodQueries()
           : mipdata.cliquetable.getNumNeighbourhoodQueries());
   if (!mipdata.parallelLockActive())
-    lp->getMipSolver().analysis_.mipTimerStop(cliqueClock);
+    lp->getMipSolver().profiling_->stop(cliqueClock);
 
   numboundchgs = propagateAndResolve();
   if (numboundchgs == -1)
@@ -120,9 +125,9 @@ HighsInt HighsSeparation::separationRound(HighsDomain& propdomain,
     ncuts += numboundchgs;
 
   if (&propdomain != &mipworker_.getGlobalDomain())
-    lp->computeBasicDegenerateDuals(mipdata.feastol, propdomain,
-                                    mipworker_.getGlobalDomain(),
-                                    mipworker_.getConflictPool(), true);
+    lp->computeBasicDegenerateDuals(
+        mipdata.feastol, propdomain, mipworker_.getGlobalDomain(),
+        mipworker_.getConflictPool(), mipworker_.getPseudocost(), true);
 
   HighsTransformedLp transLp(*lp, mipdata.implications,
                              mipworker_.getGlobalDomain());
@@ -181,7 +186,7 @@ void HighsSeparation::separate(HighsDomain& propdomain) {
     // double firstobj = lp->getObjective();
     double firstobj = mipsolver.mipdata_->rootlpsolobj;
 
-    while (lp->getObjective() < mipsolver.mipdata_->optimality_limit) {
+    while (lp->getObjective() < mipworker_.optimality_limit) {
       double lastobj = lp->getObjective();
 
       int64_t nlpiters = -lp->getNumLpIterations();

@@ -119,6 +119,7 @@ class HighsSearch {
 
   std::vector<double> subrootsol;
   std::vector<NodeData> nodestack;
+  StabilizerOrbitWorkspace stabilizerOrbitWorkspace;
   HighsHashTable<HighsInt, int> reliableatnode;
 
   int branchingVarReliableAtNodeFlags(HighsInt col) const {
@@ -203,7 +204,7 @@ class HighsSearch {
 
   void currentNodeToQueue(HighsNodeQueue& nodequeue);
 
-  void flushStatistics();
+  void flushStatistics(HighsMipSolver& mipsolver);
 
   void installNode(HighsNodeQueue::OpenNode&& node);
 
@@ -234,7 +235,7 @@ class HighsSearch {
 
   void printDisplayLine(char first, bool header = false);
 
-  NodeResult dive(const bool ramp = false);
+  NodeResult dive(int64_t nodeLim = std::numeric_limits<int64_t>::max());
 
   HighsDomain& getLocalDomain() { return localdom; }
 
@@ -262,19 +263,13 @@ class HighsSearch {
 
   bool checkLimits(int64_t nodeOffset = 0) const;
 
+  bool checkLocalLimits() const;
+
   HighsSymmetries& getSymmetries() const;
 
   bool addIncumbent(const std::vector<double>& sol, double solobj,
                     const int solution_source,
                     const bool print_display_line = true);
-
-  int64_t& getNumNodes();
-  int64_t& getNumLeaves();
-  HighsCDouble& getPrunedTreeweight();
-  int64_t& getTotalLpIterations();
-  int64_t& getHeuristicLpIterations();
-  int64_t& getSbLpIterations();
-  int64_t& getSbLpIterations() const;
 };
 
 #endif
