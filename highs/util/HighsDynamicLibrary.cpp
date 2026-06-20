@@ -68,9 +68,9 @@ void HighsDynamicLibrary::unload() {
   if (!handle_) return;
 
 #if defined(_WIN32) || defined(_WIN64)
-  // FreeLibrary(static_cast<HMODULE>(handle_));
+    // FreeLibrary(static_cast<HMODULE>(handle_));
 #else
-  // dlclose(handle_);
+    // dlclose(handle_);
 #endif
 
   handle_ = nullptr;
