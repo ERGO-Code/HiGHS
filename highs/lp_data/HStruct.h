@@ -181,7 +181,7 @@ struct HighsProfiling {
   HighsInt num_profiling_clock_ = -1;
   std::vector<std::string> name;
   // These vectors are over threads
-  std::vector<bool> submip;
+  std::vector<uint8_t> submip;
   std::vector<HighsProfilingRecord> record;
   std::vector<HighsProfilingRecord> submip_record;
   bool initialized = false;
