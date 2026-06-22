@@ -9,6 +9,7 @@ namespace hipo {
 class HybridHybridFormatHandler : public FormatHandler {
   std::vector<Int64> diag_start_;
   DataCollector& data_;
+  const Int nb_;
 
   void initFrontal() override;
   void initClique() override;
@@ -21,9 +22,9 @@ class HybridHybridFormatHandler : public FormatHandler {
   void extremeEntries() override;
 
  public:
-  HybridHybridFormatHandler(const Symbolic& S, Int sn, const Regul& regul,
-                            DataCollector& data, std::vector<double>& frontal,
-                            double* clique_ptr);
+  HybridHybridFormatHandler(const Symbolic& S, Int sn, DataCollector& data,
+                            std::vector<double>& frontal, double* clique_ptr,
+                            const FHoptions& FH_opt);
 };
 
 }  // namespace hipo

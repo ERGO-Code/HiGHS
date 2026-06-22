@@ -260,7 +260,7 @@ set(ipx_headers
 
 set(hipo_sources
     ipm/hipo/ipm/IpmData.cpp
-    ipm/hipo/ipm/FactorHiGHSSolver.cpp
+    ipm/hipo/ipm/FactorHighsSolver.cpp
     ipm/hipo/ipm/Control.cpp
     ipm/hipo/ipm/Iterate.cpp
     ipm/hipo/ipm/KktMatrix.cpp
@@ -271,7 +271,7 @@ set(hipo_sources
 
 set(hipo_headers
     ipm/hipo/ipm/IpmData.h
-    ipm/hipo/ipm/FactorHiGHSSolver.h
+    ipm/hipo/ipm/FactorHighsSolver.h
     ipm/hipo/ipm/Parameters.h
     ipm/hipo/ipm/Control.h
     ipm/hipo/ipm/Info.h
@@ -292,7 +292,8 @@ set(factor_highs_sources
     ipm/hipo/factorhighs/DenseFactHybrid.cpp
     ipm/hipo/factorhighs/DenseFactKernel.cpp
     ipm/hipo/factorhighs/DgemmParallel.cpp
-    ipm/hipo/factorhighs/FactorHiGHS.cpp
+    ipm/hipo/factorhighs/FactorHighs_c_api.cpp
+    ipm/hipo/factorhighs/FactorHighs.cpp
     ipm/hipo/factorhighs/Factorise.cpp
     ipm/hipo/factorhighs/FormatHandler.cpp
     ipm/hipo/factorhighs/HybridHybridFormatHandler.cpp
@@ -310,8 +311,10 @@ set(factor_highs_headers
     ipm/hipo/factorhighs/DataCollector.h
     ipm/hipo/factorhighs/DenseFact.h
     ipm/hipo/factorhighs/DgemmParallel.h
-    ipm/hipo/factorhighs/FactorHiGHS.h
-    ipm/hipo/factorhighs/FactorHiGHSSettings.h
+    ipm/hipo/factorhighs/FactorHighs_c_api.h
+    ipm/hipo/factorhighs/FactorHighs.h
+    ipm/hipo/factorhighs/FactorHighsOptions.h
+    ipm/hipo/factorhighs/FactorHighsSettings.h
     ipm/hipo/factorhighs/Factorise.h
     ipm/hipo/factorhighs/FormatHandler.h
     ipm/hipo/factorhighs/HybridHybridFormatHandler.h

@@ -4,6 +4,7 @@
 #include <cmath>
 
 #include "CliqueStack.h"
+#include "FactorHighsOptions.h"
 #include "Numeric.h"
 #include "Symbolic.h"
 #include "ipm/hipo/auxiliary/IntConfig.h"
@@ -56,14 +57,12 @@ class Factorise {
   // regularisation
   std::vector<double> total_reg_{};
 
-  // values for static regularisation
-  const Regul& regul_;
-
   // flag to stop computation
   std::atomic<bool> flag_stop_{false};
 
   const Logger* logger_;
   DataCollector& data_;
+  const FHoptions& FH_opt_;
 
   CliqueStack* stack_;
 
@@ -72,10 +71,10 @@ class Factorise {
   void processSupernode(Int sn);
 
  public:
-  Factorise(const Symbolic& S, const std::vector<Int>& rowsM,
-            const std::vector<Int>& ptrM, const std::vector<double>& valM,
-            const Regul& regul, const Logger* logger, DataCollector& data,
-            std::vector<std::vector<double>>& sn_columns, CliqueStack* stack);
+  Factorise(const Symbolic& S, Int n, Int nz, const Int* rowsM, const Int* ptrM,
+            const double* valM, const FHoptions& FH_opt, const Logger* logger,
+            DataCollector& data, std::vector<std::vector<double>>& sn_columns,
+            CliqueStack* stack);
 
   bool run(Numeric& num);
 };

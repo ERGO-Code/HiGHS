@@ -1,8 +1,7 @@
-#include "FactorHiGHSSolver.h"
+#include "FactorHighsSolver.h"
 
 #include <limits>
 
-#include "HighsExternalApi.h"
 #include "Status.h"
 #include "ipm/hipo/auxiliary/Auxiliary.h"
 #include "ipm/hipo/auxiliary/Logger.h"
@@ -10,11 +9,11 @@
 
 namespace hipo {
 
-FactorHiGHSSolver::FactorHiGHSSolver(KktMatrix& kkt, Options& options,
+FactorHighsSolver::FactorHighsSolver(KktMatrix& kkt, Options& options,
                                      const Model& model,
                                      const Regularisation& regul, Info& info,
                                      IpmData& record, const Logger& logger)
-    : FH_(&logger, options.block_size),
+    : FH_{},
       S_{},
       kkt_{kkt},
       regul_{regul},
@@ -22,9 +21,12 @@ FactorHiGHSSolver::FactorHiGHSSolver(KktMatrix& kkt, Options& options,
       data_{record},
       logger_{logger},
       model_{model},
-      options_{options} {}
+      options_{options} {
+  FH_.setBlockSize(options.block_size);
+  FH_.setLogger(&logger);
+}
 
-void FactorHiGHSSolver::clear() {
+void FactorHighsSolver::clear() {
   valid_ = false;
   FH_.newIter();
 }
@@ -33,7 +35,7 @@ void FactorHiGHSSolver::clear() {
 // Analyse phase
 // =========================================================================
 
-Int FactorHiGHSSolver::analyseAS(Symbolic& S) {
+Int FactorHighsSolver::analyseAS(Symbolic& S) {
   // Perform analyse phase of augmented system and return symbolic factorisation
   // in object S and the status.
 
@@ -56,7 +58,7 @@ Int FactorHiGHSSolver::analyseAS(Symbolic& S) {
   return status;
 }
 
-Int FactorHiGHSSolver::analyseNE(Symbolic& S) {
+Int FactorHighsSolver::analyseNE(Symbolic& S) {
   // Perform analyse phase of normal equations and return symbolic factorisation
   // in object S and the status. Structure of the matrix must be already
   // computed.
@@ -80,7 +82,7 @@ Int FactorHiGHSSolver::analyseNE(Symbolic& S) {
 // Factorise phase
 // =========================================================================
 
-Int FactorHiGHSSolver::factorAS(const std::vector<double>& scaling) {
+Int FactorHighsSolver::factorAS(const std::vector<double>& scaling) {
   // only execute factorisation if it has not been done yet
   assert(!this->valid_);
 
@@ -90,7 +92,8 @@ Int FactorHiGHSSolver::factorAS(const std::vector<double>& scaling) {
   FH_.setRegularisation(regul_.primal, regul_.dual);
 
   Clock clock;
-  if (FH_.factorise(S_, kkt_.rowsAS, kkt_.ptrAS, kkt_.valAS))
+  if (FH_.factorise(S_, kkt_.n(), kkt_.nz(), kkt_.rowsAS.data(),
+                    kkt_.ptrAS.data(), kkt_.valAS.data()))
     return kStatusErrorFactorise;
   info_.factor_time += clock.stop();
   info_.factor_number++;
@@ -99,7 +102,7 @@ Int FactorHiGHSSolver::factorAS(const std::vector<double>& scaling) {
   return kStatusOk;
 }
 
-Int FactorHiGHSSolver::factorNE(const std::vector<double>& scaling) {
+Int FactorHighsSolver::factorNE(const std::vector<double>& scaling) {
   // only execute factorisation if it has not been done yet
   assert(!this->valid_);
 
@@ -109,7 +112,8 @@ Int FactorHiGHSSolver::factorNE(const std::vector<double>& scaling) {
   FH_.setRegularisation(regul_.primal, regul_.dual);
 
   Clock clock;
-  if (FH_.factorise(S_, kkt_.rowsNE, kkt_.ptrNE, kkt_.valNE))
+  if (FH_.factorise(S_, kkt_.n(), kkt_.nz(), kkt_.rowsNE.data(),
+                    kkt_.ptrNE.data(), kkt_.valNE.data()))
     return kStatusErrorFactorise;
   info_.factor_time += clock.stop();
   info_.factor_number++;
@@ -122,7 +126,7 @@ Int FactorHiGHSSolver::factorNE(const std::vector<double>& scaling) {
 // Solve phase
 // =========================================================================
 
-Int FactorHiGHSSolver::solveAS(const std::vector<double>& rhs_x,
+Int FactorHighsSolver::solveAS(const std::vector<double>& rhs_x,
                                const std::vector<double>& rhs_y,
                                std::vector<double>& lhs_x,
                                std::vector<double>& lhs_y) {
@@ -137,7 +141,7 @@ Int FactorHiGHSSolver::solveAS(const std::vector<double>& rhs_x,
   rhs.insert(rhs.end(), rhs_y.begin(), rhs_y.end());
 
   Clock clock;
-  if (FH_.solve(rhs)) return kStatusErrorSolve;
+  if (FH_.solve(rhs.data())) return kStatusErrorSolve;
 
   info_.solve_time += clock.stop();
   info_.solve_number++;
@@ -151,7 +155,7 @@ Int FactorHiGHSSolver::solveAS(const std::vector<double>& rhs_x,
   return kStatusOk;
 }
 
-Int FactorHiGHSSolver::solveNE(const std::vector<double>& rhs,
+Int FactorHighsSolver::solveNE(const std::vector<double>& rhs,
                                std::vector<double>& lhs) {
   // only execute the solve if factorisation is valid
   assert(this->valid_);
@@ -160,7 +164,7 @@ Int FactorHiGHSSolver::solveNE(const std::vector<double>& rhs,
   lhs = rhs;
 
   Clock clock;
-  if (FH_.solve(lhs)) return kStatusErrorSolve;
+  if (FH_.solve(lhs.data())) return kStatusErrorSolve;
 
   info_.solve_time += clock.stop();
   info_.solve_number++;
@@ -174,7 +178,7 @@ Int FactorHiGHSSolver::solveNE(const std::vector<double>& rhs,
 // Automatic selections
 // =========================================================================
 
-Int FactorHiGHSSolver::setup() {
+Int FactorHighsSolver::setup() {
   Clock clock;
 
   if (Int status = setNla()) return status;
@@ -198,7 +202,7 @@ Int FactorHiGHSSolver::setup() {
   return kStatusOk;
 }
 
-Int FactorHiGHSSolver::chooseNla() {
+Int FactorHighsSolver::chooseNla() {
   // Choose whether to use augmented system or normal equations.
 
   Symbolic symb_NE{};
@@ -353,7 +357,7 @@ Int FactorHiGHSSolver::chooseNla() {
   return status;
 }
 
-Int FactorHiGHSSolver::chooseOrdering(const std::vector<Int>& rows,
+Int FactorHighsSolver::chooseOrdering(const std::vector<Int>& rows,
                                       const std::vector<Int>& ptr,
                                       const std::vector<Int>& signs,
                                       Symbolic& S, std::string& ordering,
@@ -385,7 +389,8 @@ Int FactorHiGHSSolver::chooseOrdering(const std::vector<Int>& rows,
 
   // compute full-format matrix without diagonal entries
   std::vector<Int> full_ptr, full_rows;
-  fullFromLower(ptr, rows, full_ptr, full_rows);
+  fullFromLower(ptr.size() - 1, rows.size(), ptr.data(), rows.data(), full_ptr,
+                full_rows);
   Int n = full_ptr.size() - 1;
   std::vector<Int> perm(n), iperm(n);
 
@@ -399,36 +404,22 @@ Int FactorHiGHSSolver::chooseOrdering(const std::vector<Int>& rows,
                       nla.c_str());
 
     if (orderings_to_try[i] == kHipoMetisString) {
-      idx_t options[METIS_NOPTIONS];
-      HighsExtras::metis::set_default_options(options);
-      options[METIS_OPTION_SEED] = kMetisSeed;
-
-      options[METIS_OPTION_DBGLVL] = 0;
-
-      // no2hop improves the quality of ordering in general
-      options[METIS_OPTION_NO2HOP] = 1;
-
-      std::vector<Int> iperm(n);
-      Int status = HighsExtras::metis::nodeND(
-          &n, full_ptr.data(), full_rows.data(), nullptr, options,
-          permutations[i].data(), iperm.data());
-      if (status != METIS_OK) failure[i] = true;
+      Int status =
+          FH_.reorderMetis(n, rows.size(), full_rows.data(), full_ptr.data(),
+                           permutations[i].data(), true);
+      if (status) failure[i] = true;
 
     } else if (orderings_to_try[i] == kHipoAmdString) {
-      double control[AMD_CONTROL];
-      HighsExtras::amd::set_defaults(control);
-      double info[AMD_INFO];
-
       Int status =
-          HighsExtras::amd::order(n, full_ptr.data(), full_rows.data(),
-                                  permutations[i].data(), control, info);
-      if (status != AMD_OK) failure[i] = true;
+          FH_.reorderAmd(n, rows.size(), full_rows.data(), full_ptr.data(),
+                         permutations[i].data(), true);
+      if (status) failure[i] = true;
 
     } else if (orderings_to_try[i] == kHipoRcmString) {
       Int status =
-          HighsExtras::rcm::genrcm(n, full_ptr.back(), full_ptr.data(),
-                                   full_rows.data(), permutations[i].data());
-      if (status != 0) failure[i] = true;
+          FH_.reorderRcm(n, rows.size(), full_rows.data(), full_ptr.data(),
+                         permutations[i].data(), true);
+      if (status) failure[i] = true;
 
     } else {
       assert(1 == 0);
@@ -443,7 +434,9 @@ Int FactorHiGHSSolver::chooseOrdering(const std::vector<Int>& rows,
       return;
     }
 
-    failure[i] = FH_.analyse(symbolics[i], rows, ptr, signs, permutations[i]);
+    failure[i] =
+        FH_.analyse(symbolics[i], ptr.size() - 1, rows.size(), rows.data(),
+                    ptr.data(), signs.data(), permutations[i].data());
 
     if (failure[i] && logger_.debug(2)) {
       logger_.print("Failed symbolic:");
@@ -522,7 +515,7 @@ Int FactorHiGHSSolver::chooseOrdering(const std::vector<Int>& rows,
   return num_success > 0 ? kStatusOk : kStatusErrorAnalyse;
 }
 
-Int FactorHiGHSSolver::setNla() {
+Int FactorHighsSolver::setNla() {
   std::stringstream log_stream;
 
   if (options_.nla == kHipoNormalEqString && model_.nonSeparableQp()) {
@@ -572,7 +565,7 @@ Int FactorHiGHSSolver::setNla() {
   return kStatusOk;
 }
 
-void FactorHiGHSSolver::setParallel() {
+void FactorHighsSolver::setParallel() {
   // Set parallel options
   bool parallel_tree = false;
   bool parallel_node = false;
@@ -657,11 +650,11 @@ void FactorHiGHSSolver::setParallel() {
 // Other stuff
 // =========================================================================
 
-double FactorHiGHSSolver::flops() const { return S_.flops(); }
-double FactorHiGHSSolver::spops() const { return S_.spops(); }
-double FactorHiGHSSolver::nz() const { return (double)S_.nz(); }
-void FactorHiGHSSolver::getReg(std::vector<double>& reg) {
-  FH_.getRegularisation(reg);
+double FactorHighsSolver::flops() const { return S_.flops(); }
+double FactorHighsSolver::spops() const { return S_.spops(); }
+double FactorHighsSolver::nz() const { return (double)S_.nz(); }
+void FactorHighsSolver::getReg(std::vector<double>& reg) {
+  FH_.getRegularisation(reg.data());
 }
 
 }  // namespace hipo

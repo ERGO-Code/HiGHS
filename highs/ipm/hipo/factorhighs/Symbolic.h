@@ -14,9 +14,6 @@ class Symbolic {
   bool parallel_tree_ = false;
   bool parallel_node_ = false;
 
-  // Size of blocks for dense factorisation
-  Int block_size_;
-
   // Statistics about symbolic factorisation
   Int n_{};
   Int64 nz_{};
@@ -109,7 +106,6 @@ class Symbolic {
   double flops() const;
   double spops() const;
   double critops() const;
-  Int blockSize() const;
   Int size() const;
   Int sn() const;
   double fillin() const;

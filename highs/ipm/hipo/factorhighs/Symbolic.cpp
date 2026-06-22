@@ -2,7 +2,7 @@
 
 #include <iostream>
 
-#include "FactorHiGHSSettings.h"
+#include "FactorHighsSettings.h"
 
 namespace hipo {
 
@@ -17,7 +17,6 @@ Int64 Symbolic::nz() const { return nz_; }
 double Symbolic::flops() const { return flops_; }
 double Symbolic::spops() const { return spops_; }
 double Symbolic::critops() const { return critops_; }
-Int Symbolic::blockSize() const { return block_size_; }
 Int Symbolic::size() const { return n_; }
 Int Symbolic::sn() const { return sn_; }
 double Symbolic::fillin() const { return fillin_; }

@@ -11,9 +11,11 @@
 namespace hipo {
 
 HybridHybridFormatHandler::HybridHybridFormatHandler(
-    const Symbolic& S, Int sn, const Regul& regul, DataCollector& data,
-    std::vector<double>& frontal, double* clique_ptr)
-    : FormatHandler(S, sn, regul, frontal, clique_ptr), data_{data} {
+    const Symbolic& S, Int sn, DataCollector& data,
+    std::vector<double>& frontal, double* clique_ptr, const FHoptions& FH_opt)
+    : FormatHandler(S, sn, frontal, clique_ptr, FH_opt),
+      data_{data},
+      nb_{FH_opt_.nb} {
   // initialise frontal and clique
   initFrontal();
 
@@ -94,10 +96,9 @@ Int HybridHybridFormatHandler::denseFactorise(double reg_thresh) {
   Int sn_start = S_->snStart(sn_);
   const Int* pivot_sign = &S_->pivotSign().data()[sn_start];
 
-  status = denseFactFH('H', ldf_, sn_size_, S_->blockSize(), frontal_.data(),
-                       clique_ptr_, pivot_sign, reg_thresh, regul_,
-                       local_reg_.data(), swaps_.data(), pivot_2x2_.data(),
-                       S_->parNode(), data_);
+  status = denseFactFH('H', ldf_, sn_size_, frontal_.data(), clique_ptr_,
+                       pivot_sign, reg_thresh, local_reg_.data(), swaps_.data(),
+                       pivot_2x2_.data(), S_->parNode(), data_, FH_opt_);
 
   return status;
 }

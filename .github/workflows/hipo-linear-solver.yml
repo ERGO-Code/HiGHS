@@ -1,0 +1,37 @@
+name: hipo-linear-solver
+
+on: [push, pull_request]
+
+jobs:
+  ubuntu:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Create Build Environment
+        run: cmake -E make_directory ${{github.workspace}}/build
+
+      - name: Configure CMake
+        working-directory: ${{github.workspace}}/build
+        run: |
+          cmake $GITHUB_WORKSPACE -DHIPO=ON -DBUILD_OPENBLAS=ON
+
+      - name: Build
+        working-directory: ${{github.workspace}}/build
+        run: |
+          cmake --build . -j2
+
+      - name: Compile example
+        working-directory: ${{github.workspace}}
+        run: |
+          clang highs/ipm/hipo/factorhighs/FactorHighs_c_api_example.c \
+          -o example -Ihighs -Ibuild -Lbuild/lib -lhighs
+
+      - name: Run example
+        working-directory: ${{github.workspace}}
+        run: |
+          export LD_LIBRARY_PATH=build/lib
+          ./example
