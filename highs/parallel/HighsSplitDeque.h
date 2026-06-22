@@ -289,8 +289,10 @@ class HighsSplitDeque {
   }
 
   void checkInterrupt() {
-    if (ownerData.rootTask && ownerData.rootTask->isCancelled())
+    if (ownerData.rootTask && ownerData.rootTask->isCancelled()) {
+      ownerData.rootTask = nullptr;
       throw HighsTask::Interrupt();
+    }
   }
 
   void cancelTask(HighsInt taskIndex) {
