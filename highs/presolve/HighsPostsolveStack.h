@@ -82,7 +82,6 @@ class HighsPostsolveStack {
     HighsInt col;
     HighsInt numPlus;
     HighsInt numMinus;
-    HighsInt numNewRows;
   };
 
   struct FmeDescendant {
@@ -754,13 +753,10 @@ class HighsPostsolveStack {
 
     // push step headers
     for (HighsInt s = 0; s < numSteps; ++s) {
-      FmeStepHeader header{blockSteps[s].colLower,
-                           blockSteps[s].colUpper,
-                           blockSteps[s].colCost,
-                           origColIndex[blockSteps[s].col],
-                           blockSteps[s].numPlus,
-                           blockSteps[s].numMinus,
-                           static_cast<HighsInt>(blockSteps[s].newRows.size())};
+      FmeStepHeader header{
+          blockSteps[s].colLower, blockSteps[s].colUpper,
+          blockSteps[s].colCost,  origColIndex[blockSteps[s].col],
+          blockSteps[s].numPlus,  blockSteps[s].numMinus};
       reductionValues.push(header);
     }
 
