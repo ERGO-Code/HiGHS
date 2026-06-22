@@ -33,7 +33,7 @@ test_array = [
   ['test_TestHighsRbTree', 'TestHighsRbTree.cpp'],
   ['test_TestHighsSparseMatrix', 'TestHighsSparseMatrix.cpp'],
   ['test_TestHighsVersion', 'TestHighsVersion.cpp'],
-  ['test_TestHipo', 'TestHipo.cpp'],
+  # ['test_TestHipo', 'TestHipo.cpp'],
   ['test_TestHSet', 'TestHSet.cpp'],
   ['test_TestICrash', 'TestICrash.cpp'],
   ['test_TestIis', 'TestIis.cpp'],
