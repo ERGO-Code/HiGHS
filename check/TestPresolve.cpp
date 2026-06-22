@@ -192,11 +192,13 @@ void presolveSolvePostsolve(const std::string& model_file,
     if (dev_run)
       printf("Presolve timeout: return status = %d\n", (int)return_status);
   }
+  REQUIRE(model_presolve_status != HighsPresolveStatus::kUnboundedOrInfeasible);
   HighsLp lp = highs0.getPresolvedLp();
   highs1.passModel(lp);
   highs1.setOptionValue("solve_relaxation", solve_relaxation);
   highs1.setOptionValue("presolve", kHighsOffString);
   highs1.run();
+  REQUIRE(highs1.getModelStatus() == HighsModelStatus::kOptimal);
   HighsSolution solution = highs1.getSolution();
   const double objective_value = highs1.getInfo().objective_function_value;
   if (lp.isMip() && !solve_relaxation) {
@@ -909,4 +911,21 @@ TEST_CASE("presolve-issue-2874", "[highs_test_presolve]") {
   highs.readModel(model_file);
   REQUIRE(highs.presolve() == HighsStatus::kOk);
   REQUIRE(highs.getModelPresolveStatus() == HighsPresolveStatus::kInfeasible);
+}
+
+TEST_CASE("issue-2962", "[highs_test_presolve]") {
+  // Model that exposes the case where zeroCostSingleton in postsolve
+  // requires the column to inherit the basic status of the row
+  std::string model_file =
+      std::string(HIGHS_DIR) + "/check/instances/p0548.mps";
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  h.setOptionValue("solve_relaxation", true);
+  h.setOptionValue("log_dev_level", 1);
+  h.setOptionValue("presolve_rule_logging", true);
+
+  h.readModel(model_file);
+  REQUIRE(h.run() == HighsStatus::kOk);
+
+  h.resetGlobalScheduler(true);
 }

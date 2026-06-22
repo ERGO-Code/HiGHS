@@ -1392,4 +1392,98 @@ void HighsPostsolveStack::SlackColSubstitution::undo(
   }
 }
 
+void HighsPostsolveStack::ZeroObjSingletonContinuousCol::undo(
+    const HighsOptions& options, const std::vector<Nonzero>& rowValues,
+    HighsSolution& solution, HighsBasis& basis) {
+  // a (removed) cut may have been used in this reduction.
+  bool isModelRow = static_cast<size_t>(row) < solution.row_value.size();
+
+  assert(origRowLower != -kHighsInf && origRowUpper != kHighsInf);
+
+  const double primal_tol = options.primal_feasibility_tolerance;
+  const double dual_tol = options.dual_feasibility_tolerance;
+  // Get activity of row without removed singleton
+  HighsCDouble act = 0;
+  solution.col_value[col] = 0.0;
+  for (const auto& rowVal : rowValues)
+    act += rowVal.value * solution.col_value[rowVal.index];
+
+  // Find a suitable bound within the domain
+  double col_value = kHighsInf;
+  // Detemine whether the row was at its lower or upper bound by
+  // virtue of basis status or value
+  bool row_at_lower = (isModelRow && basis.valid &&
+                       basis.row_status[row] == HighsBasisStatus::kLower) ||
+                      static_cast<double>(act - primal_tol) <= new_row_lb;
+  bool row_at_upper = (isModelRow && basis.valid &&
+                       basis.row_status[row] == HighsBasisStatus::kUpper) ||
+                      static_cast<double>(act + primal_tol) >= new_row_ub;
+  bool col_at_lower = false;
+  bool col_at_upper = false;
+  if (row_at_lower) {
+    if (coef > 0) {
+      col_at_upper = true;
+    } else {
+      col_at_lower = true;
+    }
+  } else if (row_at_upper) {
+    if (coef > 0) {
+      col_at_lower = true;
+    } else {
+      col_at_upper = true;
+    }
+  } else {
+    // Determine whether the column can be at its lower or upper bound
+    // with the row between its bound basic
+    double act_with_col_at_lower = static_cast<double>(act + coef * lb);
+    double act_with_col_at_upper = static_cast<double>(act + coef * ub);
+    if (act_with_col_at_lower >= origRowLower - primal_tol &&
+        act_with_col_at_lower <= origRowUpper + primal_tol) {
+      col_at_lower = true;
+    } else if (act_with_col_at_upper >= origRowLower - primal_tol &&
+               act_with_col_at_upper <= origRowUpper + primal_tol) {
+      col_at_upper = true;
+    } else {
+      // Otherwise, there will be a column value for which the row is at a bound
+      double col_value_for_lower =
+          static_cast<double>((origRowLower - act) / coef);
+      double col_value_for_upper =
+          static_cast<double>((origRowUpper - act) / coef);
+      if (col_value_for_lower >= lb - primal_tol &&
+          col_value_for_lower <= ub + primal_tol) {
+        // Can set column basic at this value
+        col_value = col_value_for_lower;
+        row_at_lower = true;
+      } else if (col_value_for_upper >= lb - primal_tol &&
+                 col_value_for_upper <= ub + primal_tol) {
+        col_value = col_value_for_upper;
+        row_at_upper = true;
+      }
+    }
+  }
+  if (col_at_lower || col_at_upper) {
+    col_value = col_at_lower ? lb : ub;
+    if (solution.dual_valid)
+      solution.col_dual[col] =
+          (isModelRow) ? -coef * solution.row_dual[row] : 0;
+    if (basis.valid)
+      basis.col_status[col] =
+          col_at_lower ? HighsBasisStatus::kLower : HighsBasisStatus::kUpper;
+  } else {
+    // Column takes value between its bounds and inherits any basic status from
+    // the row
+    if (solution.dual_valid) {
+      solution.col_dual[col] = 0;
+      if (isModelRow) solution.row_dual[row] = 0;
+    }
+    if (basis.valid) {
+      if (isModelRow)
+        basis.row_status[row] =
+            row_at_lower ? HighsBasisStatus::kLower : HighsBasisStatus::kUpper;
+      basis.col_status[col] = HighsBasisStatus::kBasic;
+    }
+  }
+  solution.col_value[col] = col_value;
+}
+
 }  // namespace presolve

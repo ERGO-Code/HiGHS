@@ -48,7 +48,7 @@ void HPresolveAnalysis::setup(const HighsLp* model_,
           if (!allow ||
               (!options->presolve_rule_off && options_->log_dev_level))
             highsLogUser(options->log_options, HighsLogType::kInfo,
-                         "   Rule %2d (set bit %2d = %5d): %s\n",
+                         "   Rule %2d (set bit %2d = %6d): %s\n",
                          int(rule_type), int(rule_type), int(bit),
                          utilPresolveRuleTypeToString(rule_type).c_str());
       } else if (!allow && !silent) {
@@ -65,6 +65,21 @@ void HPresolveAnalysis::setup(const HighsLp* model_,
   }
   // Allow logging if option is set and model is not a MIP
   allow_logging_ = options_->presolve_rule_logging && !model_->isMip();
+  // NB logging_on_ is also used to determine whether logging has
+  // started to prevent double-accounting. Specifically,
+  //
+  // * If allow_logging_ is false, then startPresolveRuleLog is never called
+  //
+  // * If allow_logging_ is true, then startPresolveRuleLog will be
+  //   called at some point, and within startPresolveRuleLog,
+  //   allow_logging_ is set to false. Hence, it's never called again -
+  //   which would lead to double-accounting. When stopPresolveRuleLog
+  //   is called - and this is done by saving the value of allow_logging_
+  //   before a posible call to startPresolveRuleLog - allow_logging_
+  //   is set to true
+  //
+  // Since all reductions are logged, logging_on_ must be false in all
+  // calls to markRowDeleted and markColDeleted
   logging_on_ = allow_logging_;
   log_rule_type_ = kPresolveRuleIllegal;
   resetNumDeleted();
