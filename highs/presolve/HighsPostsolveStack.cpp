@@ -1476,6 +1476,8 @@ HighsPostsolveStack::popFourierMotzkinBlock(HighsDataStack& stack) {
 void HighsPostsolveStack::undoFourierMotzkinBlock(
     const std::vector<FmeStepData>& steps, const HighsOptions& options,
     HighsSolution& solution, HighsBasis& basis) {
+  const double tol = options.mip_feasibility_tolerance;
+
   HighsInt numSteps = static_cast<HighsInt>(steps.size());
 
   // primal postsolve (Algorithm 3): process in reverse elimination order
@@ -1513,7 +1515,7 @@ void HighsPostsolveStack::undoFourierMotzkinBlock(
     tightenBounds(step.plusHeaders, step.plusCoefs, step.plusEntries);
     tightenBounds(step.minusHeaders, step.minusCoefs, step.minusEntries);
 
-    if (impliedLower <= 0.0 && impliedUpper >= 0.0)
+    if (impliedLower <= tol && impliedUpper >= -tol)
       solution.col_value[col] = 0.0;
     else if (impliedLower > 0.0)
       solution.col_value[col] = impliedLower;
@@ -1565,8 +1567,6 @@ void HighsPostsolveStack::undoFourierMotzkinBlock(
 
   // basis postsolve (Algorithm 5): process in reverse elimination order
   if (!basis.valid) return;
-
-  const double tol = options.mip_feasibility_tolerance;
 
   for (HighsInt s = numSteps - 1; s >= 0; --s) {
     const auto& step = steps[s];
