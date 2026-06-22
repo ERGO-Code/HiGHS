@@ -864,6 +864,7 @@ class HighsPostsolveStack {
     for (size_t i = index.size(); i > 0; --i) {
       assert(static_cast<size_t>(index[i - 1]) >= i - 1);
       values[index[i - 1]] = values[i - 1];
+      if (index[i - 1] != static_cast<HighsInt>(i - 1)) values[i - 1] = T{};
     }
 #endif
   }
