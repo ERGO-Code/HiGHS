@@ -103,6 +103,16 @@ class HighsPostsolveStack {
     bool isMinus;
   };
 
+  struct FmeBlockStep {
+    HighsInt col;
+    double colLower;
+    double colUpper;
+    double colCost;
+    HighsInt numPlus;
+    HighsInt numMinus;
+    std::vector<FmeNewRow> newRows;
+  };
+
   size_t debug_prev_numreductions = 0;
   double debug_prev_col_lower = 0;
   double debug_prev_col_upper = 0;
@@ -693,15 +703,10 @@ class HighsPostsolveStack {
   // Finalise the FM block: push descendants mapping, new row origins,
   // and step headers. Called once after all elimination steps are complete.
   void fourierMotzkinBlockFinalise(
-      const std::vector<HighsInt>& eliminatedCols,
-      const std::vector<double>& colLowers,
-      const std::vector<double>& colUppers, const std::vector<double>& colCosts,
-      const std::vector<HighsInt>& numPlusPerStep,
-      const std::vector<HighsInt>& numMinusPerStep,
+      const std::vector<FmeBlockStep>& blockSteps,
       const std::unordered_map<HighsInt, std::vector<FmeAncestryEntry>>&
-          rowAncestry,
-      const std::vector<std::vector<FmeNewRow>>& newRowsAll) {
-    HighsInt numSteps = static_cast<HighsInt>(eliminatedCols.size());
+          rowAncestry) {
+    HighsInt numSteps = static_cast<HighsInt>(blockSteps.size());
 
     // build K^j_i mapping from ancestry
     std::vector<std::vector<std::vector<FmeDescendant>>> plusDescendantsAll(
@@ -709,8 +714,8 @@ class HighsPostsolveStack {
     std::vector<std::vector<std::vector<FmeDescendant>>> minusDescendantsAll(
         numSteps);
     for (HighsInt s = 0; s < numSteps; ++s) {
-      plusDescendantsAll[s].resize(numPlusPerStep[s]);
-      minusDescendantsAll[s].resize(numMinusPerStep[s]);
+      plusDescendantsAll[s].resize(blockSteps[s].numPlus);
+      minusDescendantsAll[s].resize(blockSteps[s].numMinus);
     }
     for (const auto& entry : rowAncestry) {
       HighsInt row = entry.first;
@@ -728,20 +733,20 @@ class HighsPostsolveStack {
     // push descendants for each step's parents (plus then minus)
     for (HighsInt s = 0; s < numSteps; ++s) {
       assert(static_cast<HighsInt>(plusDescendantsAll[s].size()) ==
-             numPlusPerStep[s]);
-      for (HighsInt p = 0; p < numPlusPerStep[s]; ++p)
+             blockSteps[s].numPlus);
+      for (HighsInt p = 0; p < blockSteps[s].numPlus; ++p)
         reductionValues.push(plusDescendantsAll[s][p]);
       assert(static_cast<HighsInt>(minusDescendantsAll[s].size()) ==
-             numMinusPerStep[s]);
-      for (HighsInt m = 0; m < numMinusPerStep[s]; ++m)
+             blockSteps[s].numMinus);
+      for (HighsInt m = 0; m < blockSteps[s].numMinus; ++m)
         reductionValues.push(minusDescendantsAll[s][m]);
     }
 
     // push new row origins for each step (translate row to orig space)
     for (HighsInt s = 0; s < numSteps; ++s) {
       std::vector<FmeNewRow> translated;
-      translated.reserve(newRowsAll[s].size());
-      for (const auto& nr : newRowsAll[s])
+      translated.reserve(blockSteps[s].newRows.size());
+      for (const auto& nr : blockSteps[s].newRows)
         translated.push_back(
             {origRowIndex[nr.row], nr.plusParentIdx, nr.minusParentIdx});
       reductionValues.push(translated);
@@ -749,13 +754,13 @@ class HighsPostsolveStack {
 
     // push step headers
     for (HighsInt s = 0; s < numSteps; ++s) {
-      FmeStepHeader header{colLowers[s],
-                           colUppers[s],
-                           colCosts[s],
-                           origColIndex[eliminatedCols[s]],
-                           numPlusPerStep[s],
-                           numMinusPerStep[s],
-                           static_cast<HighsInt>(newRowsAll[s].size())};
+      FmeStepHeader header{blockSteps[s].colLower,
+                           blockSteps[s].colUpper,
+                           blockSteps[s].colCost,
+                           origColIndex[blockSteps[s].col],
+                           blockSteps[s].numPlus,
+                           blockSteps[s].numMinus,
+                           static_cast<HighsInt>(blockSteps[s].newRows.size())};
       reductionValues.push(header);
     }
 

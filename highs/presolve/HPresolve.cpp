@@ -6917,6 +6917,7 @@ HPresolve::Result HPresolve::fourierMotzkin(
   using FmeDescendant = HighsPostsolveStack::FmeDescendant;
   using FmeNewRow = HighsPostsolveStack::FmeNewRow;
   using FmeAncestryEntry = HighsPostsolveStack::FmeAncestryEntry;
+  using FmeBlockStep = HighsPostsolveStack::FmeBlockStep;
 
   // max. absolute coefficient
   const double maxCoef = 1e3;
@@ -7448,13 +7449,7 @@ HPresolve::Result HPresolve::fourierMotzkin(
   HighsInt numRowsAdded = 0;
 
   // FM block data for postsolve
-  std::vector<HighsInt> blockCols;
-  std::vector<double> blockColLowers;
-  std::vector<double> blockColUppers;
-  std::vector<double> blockColCosts;
-  std::vector<HighsInt> blockNumPlus;
-  std::vector<HighsInt> blockNumMinus;
-  std::vector<std::vector<FmeNewRow>> blockNewRows;
+  std::vector<FmeBlockStep> blockSteps;
 
   // maps surviving row to its ancestry (which parent rows it descends from)
   std::unordered_map<HighsInt, std::vector<FmeAncestryEntry>> rowAncestry;
@@ -7489,7 +7484,7 @@ HPresolve::Result HPresolve::fourierMotzkin(
     // heap data should be up-to-date
     assert(elimCandidate && isReduction(neRed, mrRed));
 
-    HighsInt stepIdx = static_cast<HighsInt>(blockCols.size());
+    HighsInt stepIdx = static_cast<HighsInt>(blockSteps.size());
 
     // perform elimination: generate new rows
     newRows.clear();
@@ -7569,12 +7564,13 @@ HPresolve::Result HPresolve::fourierMotzkin(
     postsolve_stack.fourierMotzkinBlockPushStep(col, plusRows, minusRows);
 
     // save block metadata
-    blockCols.push_back(col);
-    blockColLowers.push_back(model->col_lower_[col]);
-    blockColUppers.push_back(model->col_upper_[col]);
-    blockColCosts.push_back(model->col_cost_[col]);
-    blockNumPlus.push_back(static_cast<HighsInt>(plusRows.size()));
-    blockNumMinus.push_back(static_cast<HighsInt>(minusRows.size()));
+    blockSteps.push_back({col,
+                          model->col_lower_[col],
+                          model->col_upper_[col],
+                          model->col_cost_[col],
+                          static_cast<HighsInt>(plusRows.size()),
+                          static_cast<HighsInt>(minusRows.size()),
+                          {}});
 
     // add new rows to matrix
     HighsInt firstNewRow = model->num_row_;
@@ -7583,7 +7579,7 @@ HPresolve::Result HPresolve::fourierMotzkin(
     numRowsAdded += static_cast<HighsInt>(rowEntries.size());
 
     // build FmeNewRow data and ancestry for this step
-    std::vector<FmeNewRow> stepNewRows;
+    auto& stepNewRows = blockSteps.back().newRows;
     stepNewRows.reserve(newRowOrigins.size());
     for (HighsInt k = 0; k < static_cast<HighsInt>(newRowOrigins.size()); ++k) {
       HighsInt newModelRow = firstNewRow + k;
@@ -7596,7 +7592,6 @@ HPresolve::Result HPresolve::fourierMotzkin(
                       origin.minusScale, true);
       stepNewRows.push_back({newModelRow, pIdx, mIdx});
     }
-    blockNewRows.push_back(std::move(stepNewRows));
 
     // remove old rows containing col (skip bound rows)
     for (HighsInt rp : iPlus) {
@@ -7650,9 +7645,7 @@ HPresolve::Result HPresolve::fourierMotzkin(
 
   if (numColsEliminated > 0) {
     // finalize the FM block
-    postsolve_stack.fourierMotzkinBlockFinalise(
-        blockCols, blockColLowers, blockColUppers, blockColCosts, blockNumPlus,
-        blockNumMinus, rowAncestry, blockNewRows);
+    postsolve_stack.fourierMotzkinBlockFinalise(blockSteps, rowAncestry);
 
     // log message
     highsLogDev(options->log_options, HighsLogType::kInfo,
