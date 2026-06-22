@@ -1096,7 +1096,7 @@ bool Solver::checkTermination() {
       }
 
     } else {
-      terminate = checkTerminationKkt();
+      terminate = model_.qp() ? true : checkTerminationKkt();
       if (terminate) {
         assert(info_.status != kStatusPDFeas);
         logger_.print("=== Primal-dual feasible point found\n");
@@ -1112,7 +1112,7 @@ bool Solver::checkTerminationKkt() {
   if (model_.qp()) {
     // Not yet implemented for QP
     logger_.printInfo("kktCheck skipped for QP\n");
-    return true;
+    return false;
 
   } else {
     // LP check
