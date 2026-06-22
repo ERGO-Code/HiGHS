@@ -5221,7 +5221,8 @@ HPresolve::Result HPresolve::singletonColStuffing(
     for (const auto& t : candidates) {
       // both bounds have to be finite
       if (model->col_lower_[t.col] == -kHighsInf ||
-          model->col_upper_[t.col] == kHighsInf) break;
+          model->col_upper_[t.col] == kHighsInf)
+        break;
       // compute delta (bound difference)
       HighsCDouble delta =
           t.multiplier * t.val *
@@ -5232,28 +5233,31 @@ HPresolve::Result HPresolve::singletonColStuffing(
           delta <= direction * rhs - sumUpper + primal_feastol) {
         if (report_stuffing)
           printf(
-              "ColStuffing:0 (%2d) fix %6d to %s: cost =  %11.4g; delta = %11.4g | "
-              "Logic: delta = %11.4g <= %11.4g = direction * rhs - sumUpper + primal_feastol\n",
+              "ColStuffing:0 (%2d) fix %6d to %s: cost =  %11.4g; delta = "
+              "%11.4g | "
+              "Logic: delta = %11.4g <= %11.4g = direction * rhs - sumUpper + "
+              "primal_feastol\n",
               int(t.multiplier), int(t.col),
               t.multiplier < 0 ? "lower" : "upper", model->col_cost_[t.col],
-              double(delta),
-	      double(delta),
+              double(delta), double(delta),
               double(direction * rhs - sumUpper + primal_feastol));
         numFixedCols++;
         HPRESOLVE_CHECKED_CALL(fixCol(t.col, t.multiplier));
       } else if (sumLowerFinite &&
-		 direction * rhs <= sumLower + primal_feastol) {
+                 direction * rhs <= sumLower + primal_feastol) {
         if (report_stuffing) {
           printf(
-              "ColStuffing:1 (%2d) fix %6d to %s: cost =  %11.4g; delta = %11.4g | "
-              "Logic: direction * rhs = %11.4g <= %11.4g = sumLower + primal_feastol\n",
+              "ColStuffing:1 (%2d) fix %6d to %s: cost =  %11.4g; delta = "
+              "%11.4g | "
+              "Logic: direction * rhs = %11.4g <= %11.4g = sumLower + "
+              "primal_feastol\n",
               int(-t.multiplier), int(t.col),
               -t.multiplier < 0 ? "lower" : "upper", model->col_cost_[t.col],
-              double(delta),
-              double(direction * rhs), double(sumLower + primal_feastol));
+              double(delta), double(direction * rhs),
+              double(sumLower + primal_feastol));
         }
-	numFixedCols++;
-	HPRESOLVE_CHECKED_CALL(fixCol(t.col, -t.multiplier));
+        numFixedCols++;
+        HPRESOLVE_CHECKED_CALL(fixCol(t.col, -t.multiplier));
       }
       // update row activities
       if (sumLowerFinite) sumLower += delta;
@@ -5870,7 +5874,7 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
   //    - stop
   //
 
-  auto presolveReturn = [&] () {
+  auto presolveReturn = [&]() {
     if (mipsolver != nullptr) HPRESOLVE_CHECKED_CALL(scaleMIP(postsolve_stack));
 
     // analysePresolveRuleLog() should return true - no errors

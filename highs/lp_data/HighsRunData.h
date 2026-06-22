@@ -19,7 +19,12 @@
 
 class HighsOptions;
 
-enum class RunDataStatus { kOk = 0, kUnknownRunData, kIllegalValue, kUnavailable };
+enum class RunDataStatus {
+  kOk = 0,
+  kUnknownRunData,
+  kIllegalValue,
+  kUnavailable
+};
 
 class RunDataRecord {
  public:
@@ -28,8 +33,8 @@ class RunDataRecord {
   std::string description;
   bool advanced;
 
-  RunDataRecord(HighsRunDataType Xtype, std::string Xname, std::string Xdescription,
-             bool Xadvanced) {
+  RunDataRecord(HighsRunDataType Xtype, std::string Xname,
+                std::string Xdescription, bool Xadvanced) {
     this->type = Xtype;
     this->name = Xname;
     this->description = Xdescription;
@@ -43,9 +48,11 @@ class RunDataRecordInt64 : public RunDataRecord {
  public:
   int64_t* value;
   int64_t default_value;
-  RunDataRecordInt64(std::string Xname, std::string Xdescription, bool Xadvanced,
-                  int64_t* Xvalue_pointer, int64_t Xdefault_value)
-      : RunDataRecord(HighsRunDataType::kInt64, Xname, Xdescription, Xadvanced) {
+  RunDataRecordInt64(std::string Xname, std::string Xdescription,
+                     bool Xadvanced, int64_t* Xvalue_pointer,
+                     int64_t Xdefault_value)
+      : RunDataRecord(HighsRunDataType::kInt64, Xname, Xdescription,
+                      Xadvanced) {
     value = Xvalue_pointer;
     default_value = Xdefault_value;
     *value = default_value;
@@ -59,7 +66,7 @@ class RunDataRecordInt : public RunDataRecord {
   HighsInt* value;
   HighsInt default_value;
   RunDataRecordInt(std::string Xname, std::string Xdescription, bool Xadvanced,
-                HighsInt* Xvalue_pointer, HighsInt Xdefault_value)
+                   HighsInt* Xvalue_pointer, HighsInt Xdefault_value)
       : RunDataRecord(HighsRunDataType::kInt, Xname, Xdescription, Xadvanced) {
     value = Xvalue_pointer;
     default_value = Xdefault_value;
@@ -73,9 +80,11 @@ class RunDataRecordDouble : public RunDataRecord {
  public:
   double* value;
   double default_value;
-  RunDataRecordDouble(std::string Xname, std::string Xdescription, bool Xadvanced,
-                   double* Xvalue_pointer, double Xdefault_value)
-      : RunDataRecord(HighsRunDataType::kDouble, Xname, Xdescription, Xadvanced) {
+  RunDataRecordDouble(std::string Xname, std::string Xdescription,
+                      bool Xadvanced, double* Xvalue_pointer,
+                      double Xdefault_value)
+      : RunDataRecord(HighsRunDataType::kDouble, Xname, Xdescription,
+                      Xadvanced) {
     value = Xvalue_pointer;
     default_value = Xdefault_value;
     *value = default_value;
@@ -144,40 +153,37 @@ class HighsRunData : public HighsRunDataStruct {
     const bool advanced = false;  // Not used
 
     record_int = new RunDataRecordInt("presolved_model_num_col",
-                                   "",
-                                   advanced, &presolved_model_num_col, 0);
+                                      "Number of columns in presolved model",
+                                      advanced, &presolved_model_num_col, 0);
     records.push_back(record_int);
 
     record_int = new RunDataRecordInt("presolved_model_num_row",
-                                   "",
-                                   advanced, &presolved_model_num_row, 0);
+                                      "Number of rows in presolved model",
+                                      advanced, &presolved_model_num_row, 0);
     records.push_back(record_int);
 
     record_int = new RunDataRecordInt("presolved_model_num_nz",
-                                   "",
-                                   advanced, &presolved_model_num_nz, 0);
+                                      "Number of nonzeros in presolved model",
+                                      advanced, &presolved_model_num_nz, 0);
     records.push_back(record_int);
 
-    record_int = new RunDataRecordInt("num_simplex_iterations_after_postsolve",
-                                   "",
-                                   advanced, &num_simplex_iterations_after_postsolve, 0);
+    record_int = new RunDataRecordInt(
+        "num_simplex_iterations_after_postsolve",
+        "Number of simplex iterations after postsolve", advanced,
+        &num_simplex_iterations_after_postsolve, 0);
     records.push_back(record_int);
 
-    record_double = new RunDataRecordDouble("presolve_time",
-                                         "", advanced,
-                                         &presolve_time, 0);
+    record_double = new RunDataRecordDouble("presolve_time", "Presolve time",
+                                            advanced, &presolve_time, 0);
     records.push_back(record_double);
 
-    record_double = new RunDataRecordDouble("solve_time",
-                                         "", advanced,
-                                         &solve_time, 0);
+    record_double = new RunDataRecordDouble("solve_time", "Solve time",
+                                            advanced, &solve_time, 0);
     records.push_back(record_double);
 
-    record_double = new RunDataRecordDouble("postsolve_time",
-                                         "", advanced,
-                                         &postsolve_time, 0);
+    record_double = new RunDataRecordDouble("postsolve_time", "Postsolve time",
+                                            advanced, &postsolve_time, 0);
     records.push_back(record_double);
-
   }
 
  public:
@@ -188,39 +194,40 @@ HighsStatus writeRunDataToFile(
     FILE* file, const bool valid, const HighsRunData& run_data,
     const HighsFileType file_type = HighsFileType::kFull);
 
-RunDataStatus getRunDataIndex(const HighsLogOptions& report_log_options,
-                        const std::string& name,
-                        const std::vector<RunDataRecord*>& run_data_records,
-                        HighsInt& index);
+RunDataStatus getRunDataIndex(
+    const HighsLogOptions& report_log_options, const std::string& name,
+    const std::vector<RunDataRecord*>& run_data_records, HighsInt& index);
 
-RunDataStatus getLocalRunDataValue(const HighsLogOptions& report_log_options,
-                             const std::string& name, const bool valid,
-                             const std::vector<RunDataRecord*>& run_data_records,
-                             int64_t& value);
-RunDataStatus getLocalRunDataValue(const HighsLogOptions& report_log_options,
-                             const std::string& name, const bool valid,
-                             const std::vector<RunDataRecord*>& run_data_records,
-                             HighsInt& value);
-RunDataStatus getLocalRunDataValue(const HighsLogOptions& report_log_options,
-                             const std::string& name, const bool valid,
-                             const std::vector<RunDataRecord*>& run_data_records,
-                             double& value);
+RunDataStatus getLocalRunDataValue(
+    const HighsLogOptions& report_log_options, const std::string& name,
+    const bool valid, const std::vector<RunDataRecord*>& run_data_records,
+    int64_t& value);
+RunDataStatus getLocalRunDataValue(
+    const HighsLogOptions& report_log_options, const std::string& name,
+    const bool valid, const std::vector<RunDataRecord*>& run_data_records,
+    HighsInt& value);
+RunDataStatus getLocalRunDataValue(
+    const HighsLogOptions& report_log_options, const std::string& name,
+    const bool valid, const std::vector<RunDataRecord*>& run_data_records,
+    double& value);
 
-RunDataStatus getLocalRunDataType(const HighsLogOptions& report_log_options,
-                            const std::string& name,
-                            const std::vector<RunDataRecord*>& run_data_records,
-                            HighsRunDataType& type);
+RunDataStatus getLocalRunDataType(
+    const HighsLogOptions& report_log_options, const std::string& name,
+    const std::vector<RunDataRecord*>& run_data_records,
+    HighsRunDataType& type);
 
 HighsStatus writeRunDataToFile(
-    FILE* file, const bool valid, const std::vector<RunDataRecord*>& run_data_records,
+    FILE* file, const bool valid,
+    const std::vector<RunDataRecord*>& run_data_records,
     const HighsFileType file_type = HighsFileType::kFull);
-void reportRunData(FILE* file, const std::vector<RunDataRecord*>& run_data_records,
-                const HighsFileType file_type = HighsFileType::kFull);
+void reportRunData(FILE* file,
+                   const std::vector<RunDataRecord*>& run_data_records,
+                   const HighsFileType file_type = HighsFileType::kFull);
 void reportRunData(FILE* file, const RunDataRecordInt64& run_data,
-                const HighsFileType file_type = HighsFileType::kFull);
+                   const HighsFileType file_type = HighsFileType::kFull);
 void reportRunData(FILE* file, const RunDataRecordInt& run_data,
-                const HighsFileType file_type = HighsFileType::kFull);
+                   const HighsFileType file_type = HighsFileType::kFull);
 void reportRunData(FILE* file, const RunDataRecordDouble& run_data,
-                const HighsFileType file_type = HighsFileType::kFull);
+                   const HighsFileType file_type = HighsFileType::kFull);
 
 #endif

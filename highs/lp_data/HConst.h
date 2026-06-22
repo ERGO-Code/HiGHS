@@ -364,7 +364,7 @@ const HighsInt kHighsIllegalErrorIndex = -1;
 const double kHighsIllegalComplementarityViolation = kHighsInf;
 const HighsInt kHighsIllegalComplementarityCount = -1;
 
-const double kHighsIllegalDoubleMeasure = kHighsInf;
+const double kHighsIllegalDoubleMeasure = -kHighsInf;
 const HighsInt kHighsIllegalIntMeasure = -1;
 
 // Maximum upper bound on semi-variables

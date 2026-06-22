@@ -59,6 +59,7 @@ test_array = [
   ['test_TestQpSolver', 'TestQpSolver.cpp'],
   ['test_TestRanging', 'TestRanging.cpp'],
   ['test_TestRays', 'TestRays.cpp'],
+  ['test_TestRunData', 'TestRunData.cpp'],
   ['test_TestSemiVariables', 'TestSemiVariables.cpp'],
   ['test_TestSetup', 'TestSetup.cpp'],
   ['test_TestSort', 'TestSort.cpp'],

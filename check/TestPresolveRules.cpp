@@ -1,8 +1,8 @@
+#include <numeric>
+
 #include "HCheckConfig.h"
 #include "Highs.h"
 #include "catch.hpp"
-
-#include <numeric>
 
 const bool dev_run = false;
 
@@ -29,7 +29,7 @@ TEST_CASE("test-col-stuffing", "[highs_test_presolve_rules]") {
     lp.row_upper_ = {4};
     lp.a_matrix_.format_ = MatrixFormat::kRowwise;
     lp.a_matrix_.start_ = {0, lp.num_col_};
-    lp.a_matrix_.index_.resize( lp.num_col_);
+    lp.a_matrix_.index_.resize(lp.num_col_);
     std::iota(lp.a_matrix_.index_.begin(), lp.a_matrix_.index_.end(), 0);
     lp.a_matrix_.value_ = {3, 2, 2};
 
@@ -44,15 +44,15 @@ TEST_CASE("test-col-stuffing", "[highs_test_presolve_rules]") {
     lp.clear();
   }
 
-  auto presolveOffOn = [&] (const std::string& message) {
+  auto presolveOffOn = [&](const std::string& message) {
     h.setOptionValue(kPresolveString, kHighsOffString);
     for (int k = 0; k < 2; k++) {
-      printf("\n============\n%s: presolve = %s\n============\n\n", message.c_str(), k == 0 ? "off" : "on");
+      printf("\n============\n%s: presolve = %s\n============\n\n",
+             message.c_str(), k == 0 ? "off" : "on");
       REQUIRE(h.passModel(lp) == HighsStatus::kOk);
       h.run();
       h.writeSolution("", 1);
-      if (k == 1)
-	REQUIRE(h.getInfo().simplex_iteration_count == 0);
+      if (k == 1) REQUIRE(h.getInfo().simplex_iteration_count == 0);
       h.setOptionValue(kPresolveString, kHighsOnString);
     }
   };
@@ -66,7 +66,7 @@ TEST_CASE("test-col-stuffing", "[highs_test_presolve_rules]") {
   lp.row_upper_ = {kHighsInf};
   lp.a_matrix_.format_ = MatrixFormat::kRowwise;
   lp.a_matrix_.start_ = {0, lp.num_col_};
-  lp.a_matrix_.index_.resize( lp.num_col_);
+  lp.a_matrix_.index_.resize(lp.num_col_);
   std::iota(lp.a_matrix_.index_.begin(), lp.a_matrix_.index_.end(), 0);
   if (lp1) {
     lp.col_cost_.assign(lp.num_col_, 1);
@@ -86,5 +86,4 @@ TEST_CASE("test-col-stuffing", "[highs_test_presolve_rules]") {
   lp.clear();
 
   h.resetGlobalScheduler(true);
-  
 }
