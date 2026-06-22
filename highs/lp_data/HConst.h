@@ -110,6 +110,8 @@ enum class HighsOptionType { kBool = 0, kInt, kDouble, kString };
 
 enum class HighsInfoType { kInt64 = -1, kInt = 1, kDouble };
 
+enum class HighsRunDataType { kInt64 = -1, kInt = 1, kDouble };
+
 enum OptionOffChooseOn {
   kHighsOptionOff = -1,
   kHighsOptionChoose,
@@ -361,6 +363,9 @@ const HighsInt kHighsIllegalErrorIndex = -1;
 // values aren't known
 const double kHighsIllegalComplementarityViolation = kHighsInf;
 const HighsInt kHighsIllegalComplementarityCount = -1;
+
+const double kHighsIllegalDoubleMeasure = kHighsInf;
+const HighsInt kHighsIllegalIntMeasure = -1;
 
 // Maximum upper bound on semi-variables
 const double kMaxSemiVariableUpper = 1e5;

@@ -17,6 +17,7 @@
 #include "lp_data/HighsIis.h"
 #include "lp_data/HighsLpUtils.h"
 #include "lp_data/HighsRanging.h"
+#include "lp_data/HighsRunData.h"
 #include "lp_data/HighsSolutionDebug.h"
 #include "model/HighsModel.h"
 #include "presolve/ICrash.h"
@@ -398,8 +399,12 @@ class Highs {
                                     std::string* default_value = nullptr) const;
 
   /**
-   * @brief Get a const reference to the internal info values
-   * type.
+   * @brief Get a const reference to the internal run data values.
+   */
+  const HighsRunData& getRunData() const { return run_data_; }
+
+  /**
+   * @brief Get a const reference to the internal info values.
    */
   const HighsInfo& getInfo() const { return info_; }
 
@@ -1553,6 +1558,7 @@ class Highs {
   HighsCallback callback_;
   HighsOptions options_;
   HighsInfo info_;
+  HighsRunData run_data_;
   HighsRanging ranging_;
   HighsIis iis_;
   std::vector<HighsObjectiveSolution> saved_objective_and_solution_;
