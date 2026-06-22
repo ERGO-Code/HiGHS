@@ -573,6 +573,10 @@ Int FactorHiGHSSolver::setNla() {
   return kStatusOk;
 }
 
+static bool usingAppleBlas() {
+  return strstr(HighsExtras::blas::getInfo()->provider, "Apple") != nullptr;
+}
+
 void FactorHiGHSSolver::setParallel() {
   // Set parallel options
   bool parallel_tree = false;
@@ -598,7 +602,7 @@ void FactorHiGHSSolver::setParallel() {
       assert(1 == 0);
 
   } else if (options_.parallel == kHighsChooseString) {
-    if (strstr(HighsExtras::blas::getInfo()->provider, "Apple")) {
+    if (usingAppleBlas()) {
       // Blas on Apple do not work well with parallel_node, but parallel_tree
       // seems to always be beneficial.
       parallel_node = false;
