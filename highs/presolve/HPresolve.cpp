@@ -4990,10 +4990,6 @@ HPresolve::Result HPresolve::singletonColStuffing(
   HighsInt numFixedCols = 0;
   // Temporary for fix-col-stuffing
   bool report_stuffing = true;
-  if (report_stuffing && col == 0) {
-    printf("HPresolve::singletonColStuffing for col = 0\n");
-  }
-
   struct candidate {
     HighsInt col;
     double val;
@@ -5113,15 +5109,16 @@ HPresolve::Result HPresolve::singletonColStuffing(
       // abandoned.
       //
       // Question: The greedy algorithm is only guaranteed to assign
-      // values optimally if the variables are continuous. What
-      // presolve consequences are there if integer variables are
-      // assigned according to a sub-optimal assignment of values?
-      //
-      // Perhaps the criterion minWeight != maxWeight (ie not all |aj|
-      // values being equal) leading to abandonment of stuffing if
-      // there are only integer columns overcomes this. However, is it
+      // values optimally if the variables are continuous. The
+      // criterion minWeight != maxWeight (ie not all |aj| values
+      // being equal) leading to abandonment of stuffing if there are
+      // only integer columns overcomes this. However, is it
       // guaranteed that with those continuous decisions the knapsack
       // is solved optimally?
+      //
+      // Question: Is there value in solving the knapsack problem by
+      // DP if all variables are integer, and not all |aj| values are
+      // equal?
       if (isSingleton(j)) {
         // check singleton
         if (aj > 0) {
@@ -5245,19 +5242,24 @@ HPresolve::Result HPresolve::singletonColStuffing(
         HPRESOLVE_CHECKED_CALL(fixCol(t.col, t.multiplier));
       } else if (sumLowerFinite &&
                  direction * rhs <= sumLower + primal_feastol) {
+        // Only allow fixing if there is no degeneracy
+        const bool allow_fixing =
+            direction * rhs + delta <= sumLower + primal_feastol;
         if (report_stuffing) {
           printf(
               "ColStuffing:1 (%2d) fix %6d to %s: cost =  %11.4g; delta = "
               "%11.4g | "
               "Logic: direction * rhs = %11.4g <= %11.4g = sumLower + "
-              "primal_feastol\n",
+              "primal_feastol: %s fixing\n",
               int(-t.multiplier), int(t.col),
               -t.multiplier < 0 ? "lower" : "upper", model->col_cost_[t.col],
               double(delta), double(direction * rhs),
-              double(sumLower + primal_feastol));
+              double(sumLower + primal_feastol), allow_fixing ? "allow" : "no");
         }
-        numFixedCols++;
-        HPRESOLVE_CHECKED_CALL(fixCol(t.col, -t.multiplier));
+        if (allow_fixing) {
+          numFixedCols++;
+          HPRESOLVE_CHECKED_CALL(fixCol(t.col, -t.multiplier));
+        }
       }
       // update row activities
       if (sumLowerFinite) sumLower += delta;
