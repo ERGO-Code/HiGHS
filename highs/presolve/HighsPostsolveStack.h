@@ -18,6 +18,7 @@
 #include <cmath>
 #include <numeric>
 #include <tuple>
+#include <unordered_map>
 #include <vector>
 
 #include "lp_data/HConst.h"
@@ -93,6 +94,13 @@ class HighsPostsolveStack {
     HighsInt row;
     HighsInt plusParentIdx;   // index into plus parents (-1 if bound row)
     HighsInt minusParentIdx;  // index into minus parents (-1 if bound row)
+  };
+
+  struct FmeAncestryEntry {
+    HighsInt step;
+    HighsInt parentRowIndex;
+    double scale;
+    bool isMinus;
   };
 
   size_t debug_prev_numreductions = 0;
@@ -690,12 +698,32 @@ class HighsPostsolveStack {
       const std::vector<double>& colUppers, const std::vector<double>& colCosts,
       const std::vector<HighsInt>& numPlusPerStep,
       const std::vector<HighsInt>& numMinusPerStep,
-      const std::vector<std::vector<std::vector<FmeDescendant>>>&
-          plusDescendantsAll,
-      const std::vector<std::vector<std::vector<FmeDescendant>>>&
-          minusDescendantsAll,
+      const std::unordered_map<HighsInt, std::vector<FmeAncestryEntry>>&
+          rowAncestry,
       const std::vector<std::vector<FmeNewRow>>& newRowsAll) {
     HighsInt numSteps = static_cast<HighsInt>(eliminatedCols.size());
+
+    // build K^j_i mapping from ancestry
+    std::vector<std::vector<std::vector<FmeDescendant>>> plusDescendantsAll(
+        numSteps);
+    std::vector<std::vector<std::vector<FmeDescendant>>> minusDescendantsAll(
+        numSteps);
+    for (HighsInt s = 0; s < numSteps; ++s) {
+      plusDescendantsAll[s].resize(numPlusPerStep[s]);
+      minusDescendantsAll[s].resize(numMinusPerStep[s]);
+    }
+    for (const auto& entry : rowAncestry) {
+      HighsInt row = entry.first;
+      HighsInt origRow = origRowIndex[row];
+      for (const auto& a : entry.second) {
+        if (a.isMinus)
+          minusDescendantsAll[a.step][a.parentRowIndex].push_back(
+              {origRow, a.scale});
+        else
+          plusDescendantsAll[a.step][a.parentRowIndex].push_back(
+              {origRow, a.scale});
+      }
+    }
 
     // push descendants for each step's parents (plus then minus)
     for (HighsInt s = 0; s < numSteps; ++s) {

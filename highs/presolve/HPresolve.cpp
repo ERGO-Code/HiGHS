@@ -6916,6 +6916,7 @@ HPresolve::Result HPresolve::fourierMotzkin(
   using FmeRow = HighsPostsolveStack::FmeRowData<HighsTripletTreeSlicePreOrder>;
   using FmeDescendant = HighsPostsolveStack::FmeDescendant;
   using FmeNewRow = HighsPostsolveStack::FmeNewRow;
+  using FmeAncestryEntry = HighsPostsolveStack::FmeAncestryEntry;
 
   // max. absolute coefficient
   const double maxCoef = 1e3;
@@ -6947,13 +6948,6 @@ HPresolve::Result HPresolve::fourierMotzkin(
     HighsInt minusRow;
     double plusScale;
     double minusScale;
-  };
-
-  struct AncestryEntry {
-    HighsInt step;
-    HighsInt parentRowIndex;
-    double scale;
-    bool isMinus;
   };
 
   auto finalise = [&]() {
@@ -7389,7 +7383,8 @@ HPresolve::Result HPresolve::fourierMotzkin(
   };
 
   auto inheritAncestry =
-      [&](std::unordered_map<HighsInt, std::vector<AncestryEntry>>& rowAncestry,
+      [&](std::unordered_map<HighsInt, std::vector<FmeAncestryEntry>>&
+              rowAncestry,
           HighsInt newModelRow, HighsInt parentRow, HighsInt parentRowIndex,
           HighsInt stepIndex, double scale, bool isMinus) {
         if (parentRow < 0) return;
@@ -7459,12 +7454,10 @@ HPresolve::Result HPresolve::fourierMotzkin(
   std::vector<double> blockColCosts;
   std::vector<HighsInt> blockNumPlus;
   std::vector<HighsInt> blockNumMinus;
-  std::vector<std::vector<std::vector<FmeDescendant>>> blockPlusDescendants;
-  std::vector<std::vector<std::vector<FmeDescendant>>> blockMinusDescendants;
   std::vector<std::vector<FmeNewRow>> blockNewRows;
 
   // maps surviving row to its ancestry (which parent rows it descends from)
-  std::unordered_map<HighsInt, std::vector<AncestryEntry>> rowAncestry;
+  std::unordered_map<HighsInt, std::vector<FmeAncestryEntry>> rowAncestry;
 
   // main loop: eliminate variables from heap
   while (!heap.empty()) {
@@ -7655,35 +7648,11 @@ HPresolve::Result HPresolve::fourierMotzkin(
     HPRESOLVE_CHECKED_CALL(checkLimits(postsolve_stack));
   }
 
-  // build K^j_i mapping from ancestry and finalize the FM block
+  // finalize the FM block
   if (numColsEliminated > 0) {
-    HighsInt numSteps = static_cast<HighsInt>(blockCols.size());
-
-    blockPlusDescendants.resize(numSteps);
-    blockMinusDescendants.resize(numSteps);
-    for (HighsInt s = 0; s < numSteps; ++s) {
-      blockPlusDescendants[s].resize(blockNumPlus[s]);
-      blockMinusDescendants[s].resize(blockNumMinus[s]);
-    }
-
-    for (const auto& entry : rowAncestry) {
-      HighsInt row = entry.first;
-      HighsInt origRow = postsolve_stack.getOrigRowIndex()[row];
-      for (const auto& a : entry.second) {
-        if (a.isMinus)
-          blockMinusDescendants[a.step][a.parentRowIndex].push_back(
-              {origRow, a.scale});
-        else
-          blockPlusDescendants[a.step][a.parentRowIndex].push_back(
-              {origRow, a.scale});
-      }
-    }
-
-    // finalise the block: push descendants, new row origins, and step headers
     postsolve_stack.fourierMotzkinBlockFinalise(
         blockCols, blockColLowers, blockColUppers, blockColCosts, blockNumPlus,
-        blockNumMinus, blockPlusDescendants, blockMinusDescendants,
-        blockNewRows);
+        blockNumMinus, rowAncestry, blockNewRows);
 
     highsLogDev(options->log_options, HighsLogType::kInfo,
                 "Fourier-Motzkin eliminated %" HIGHSINT_FORMAT
