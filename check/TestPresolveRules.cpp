@@ -6,43 +6,10 @@
 
 const bool dev_run = true;
 
-void presolveOffOn(const std::string& message, const HighsLp& lp, Highs& h) {
-  const HighsRunData& run_data = h.getRunData();
-  bool presolve_on = false;
-  for (int k = 0; k < 4; k++) {
-    std::string solver = kSimplexString;
-    if (k == 0) {
-      // Presolve off - to get the optimal solution to debug
-      // presolve
-      presolve_on = false;
-    } else {
-      presolve_on = true;
-      if (k == 1) {
-        solver = kSimplexString;
-      } else if (k == 2) {
-        solver = kHipoString;
-      } else {
-        solver = kHiPdlpString;
-      }
-    }
-    std::string presolve = presolve_on ? kHighsOnString : kHighsOffString;
-    h.setOptionValue(kPresolveString, presolve);
-    h.setOptionValue(kSolverString, solver);
-    if (dev_run)
-      printf("\n============\n%s: presolve = %s; solver = %s\n============\n\n",
-             message.c_str(), presolve.c_str(), solver.c_str());
-    REQUIRE(h.passModel(lp) == HighsStatus::kOk);
-    h.run();
-    if (dev_run) h.writeSolution("", 1);
-    if (presolve_on) {
-      REQUIRE(h.getInfo().simplex_iteration_count == 0);
-      REQUIRE(run_data.presolved_model_num_col == 0);
-      REQUIRE(run_data.presolved_model_num_row == 0);
-      REQUIRE(run_data.presolved_model_num_nz == 0);
-      REQUIRE(run_data.num_simplex_iterations_after_postsolve == 0);
-    }
-  }
-}
+void presolveOffOn(const std::string& message, const HighsLp& lp, Highs& h,
+                   const HighsInt require_presolved_model_num_col = 0,
+                   const HighsInt require_presolved_model_num_row = 0,
+                   const HighsInt require_presolved_model_num_nz = 0);
 
 TEST_CASE("test-col-stuffing", "[highs_test_presolve_rules]") {
   HighsLp lp;
@@ -110,4 +77,71 @@ TEST_CASE("test-col-stuffing", "[highs_test_presolve_rules]") {
   lp.clear();
 
   h.resetGlobalScheduler(true);
+}
+
+void presolveOffOn(const std::string& message, const HighsLp& lp, Highs& h,
+                   const HighsInt require_presolved_model_num_col,
+                   const HighsInt require_presolved_model_num_row,
+                   const HighsInt require_presolved_model_num_nz) {
+  const HighsRunData& run_data = h.getRunData();
+  bool presolve_on = false;
+  // If the model reduces to empty, then the output from different
+  // solvers cannot be tested
+  const bool reduce_to_empty = require_presolved_model_num_col == 0 &&
+                               require_presolved_model_num_row == 0;
+  const HighsInt to_k = reduce_to_empty ? 2 : 5;
+  for (int k = 0; k < to_k; k++) {
+    std::string solver = kSimplexString;
+    std::string run_crossover = kHighsOnString;
+    bool basis_postsolve = true;
+    if (k == 0) {
+      // Presolve off - to get the optimal solution to debug
+      // presolve
+      presolve_on = false;
+    } else {
+      presolve_on = true;
+      if (k == 1) {
+        solver = kSimplexString;
+      } else if (k == 2) {
+        solver = kIpmString;
+      } else if (k == 3) {
+        solver = kIpmString;
+        run_crossover = kHighsOffString;
+        basis_postsolve = false;
+      } else {
+        solver = kHiPdlpString;
+        basis_postsolve = false;
+      }
+    }
+    std::string presolve = presolve_on ? kHighsOnString : kHighsOffString;
+    h.setOptionValue(kPresolveString, presolve);
+    h.setOptionValue(kRunCrossoverString, run_crossover);
+    h.setOptionValue(kSolverString, solver);
+    if (dev_run)
+      printf(
+          "\n============\n%s: presolve = %s; solver = %s%s\n============\n\n",
+          message.c_str(), presolve.c_str(), solver.c_str(),
+          solver == kIpmString ? ("; run_crossover = " + run_crossover).c_str()
+                               : "");
+    REQUIRE(h.passModel(lp) == HighsStatus::kOk);
+    h.run();
+    if (dev_run) h.writeSolution("", 1);
+    if (presolve_on) {
+      // Ensure that the model is reduced to empty
+      REQUIRE(run_data.presolved_model_num_col ==
+              require_presolved_model_num_col);
+      REQUIRE(run_data.presolved_model_num_row ==
+              require_presolved_model_num_row);
+      REQUIRE(run_data.presolved_model_num_nz ==
+              require_presolved_model_num_nz);
+      // Ensure that dual postsolve is correct
+      REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
+      REQUIRE(h.getInfo().num_primal_infeasibilities == 0);
+      REQUIRE(h.getInfo().num_dual_infeasibilities == 0);
+      REQUIRE(h.getInfo().simplex_iteration_count == 0);
+      // Ensure that any basis postsolve is correct
+      if (basis_postsolve)
+        REQUIRE(run_data.num_simplex_iterations_after_postsolve == 0);
+    }
+  }
 }
