@@ -14,9 +14,10 @@ Direct solver for IPM matrices.
 
 Consider a sparse symmetric matrix M in CSC format.
 Only its lower triangular part is used; entries in the upper triangle are
-ignored.
-The matrix has n rows/cols and nz nonzero entries.
-It is stored using three arrays:
+ignored. Diagonal entries must be present for each column, even if the entry is
+zero.
+The matrix has n rows/cols and nz nonzero entries. It is stored using
+three arrays:
 - ptr, column pointers, of length n+1;
 - rows, row indices, of length nz;
 - vals, values, of length nz.

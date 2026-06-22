@@ -25,6 +25,7 @@ Analyse::Analyse(Int n, Int nz, const Int* rows, const Int* ptr,
   // rows contains the row indices.
   // ptr contains the starting points of each column.
   // Only the lower triangular part is used.
+  // Diagonal entries must be stored for each column, even if zero.
   // signs contains the sign that each pivot should have.
 
   n_ = n;

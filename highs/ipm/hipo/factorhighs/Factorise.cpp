@@ -29,6 +29,7 @@ Factorise::Factorise(const Symbolic& S, Int n, Int nz, const Int* rowsM,
   // Input the symmetric matrix to be factorised in CSC format and the symbolic
   // factorisation coming from Analyse.
   // Only the lower triangular part of the matrix is used.
+  // Diagonal entries must be stored for each column, even if zero.
 
   n_ = n;
 
