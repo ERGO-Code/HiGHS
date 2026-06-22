@@ -5221,61 +5221,39 @@ HPresolve::Result HPresolve::singletonColStuffing(
     for (const auto& t : candidates) {
       // both bounds have to be finite
       if (model->col_lower_[t.col] == -kHighsInf ||
-          model->col_upper_[t.col] == kHighsInf)
-        break;
-      // Temporary for fix-col-stuffing
-      //      report_stuffing = false;
-      /*
-        t.col == 532 ||
-        t.col == 399 ||
-        t.col == 58653 ||
-        t.col == 58520 ||
-        t.col == 234479;
-      */
-      //      if (report_stuffing) { printf("ColStuffing: Checking candidate
-      //      t.col - %d\n", int(t.col));      }
+          model->col_upper_[t.col] == kHighsInf) break;
       // compute delta (bound difference)
       HighsCDouble delta =
           t.multiplier * t.val *
           (static_cast<HighsCDouble>(model->col_upper_[t.col]) -
            static_cast<HighsCDouble>(model->col_lower_[t.col]));
       // check if variable can be fixed
-      const bool logic0 = direction * rhs <= sumLower + primal_feastol;
-      const bool logic1 = delta <= direction * rhs - sumLower + primal_feastol;
       if (sumUpperFinite &&
           delta <= direction * rhs - sumUpper + primal_feastol) {
         if (report_stuffing)
           printf(
-              "ColStuffing:0 (%2d) fix %6d to %s: cost =  %11.4g; delta = %g; "
-              "RHS0 = %11.4g\n",
+              "ColStuffing:0 (%2d) fix %6d to %s: cost =  %11.4g; delta = %11.4g | "
+              "Logic: delta = %11.4g <= %11.4g = direction * rhs - sumUpper + primal_feastol\n",
               int(t.multiplier), int(t.col),
               t.multiplier < 0 ? "lower" : "upper", model->col_cost_[t.col],
               double(delta),
+	      double(delta),
               double(direction * rhs - sumUpper + primal_feastol));
         numFixedCols++;
         HPRESOLVE_CHECKED_CALL(fixCol(t.col, t.multiplier));
-      } else if (sumLowerFinite && logic0) {
-	//         direction * rhs <= sumLower + primal_feastol) {
+      } else if (sumLowerFinite &&
+		 direction * rhs <= sumLower + primal_feastol) {
         if (report_stuffing) {
           printf(
-              "ColStuffing:1 (%2d) fix %6d to %s: cost =  %11.4g; delta = %g; "
-              "RHS0 = %11.4g | direction * rhs = %11.4g; sumLower + "
-              "primal_feastol = %11.4g\n",
+              "ColStuffing:1 (%2d) fix %6d to %s: cost =  %11.4g; delta = %11.4g | "
+              "Logic: direction * rhs = %11.4g <= %11.4g = sumLower + primal_feastol\n",
               int(-t.multiplier), int(t.col),
               -t.multiplier < 0 ? "lower" : "upper", model->col_cost_[t.col],
               double(delta),
-              double(direction * rhs - sumUpper + primal_feastol),
               double(direction * rhs), double(sumLower + primal_feastol));
-          printf(
-              "ColStuffing:1 direction * rhs - sumLower - primal_feastol = "
-              "%11.4g; logic = %s\n\n",
-              double(direction * rhs - sumLower + primal_feastol),
-              logic1 ? "T" : "F");
         }
-        if (logic0) {
-          numFixedCols++;
-          HPRESOLVE_CHECKED_CALL(fixCol(t.col, -t.multiplier));
-        }
+	numFixedCols++;
+	HPRESOLVE_CHECKED_CALL(fixCol(t.col, -t.multiplier));
       }
       // update row activities
       if (sumLowerFinite) sumLower += delta;
