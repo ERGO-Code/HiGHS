@@ -637,21 +637,6 @@ class HighsPostsolveStack {
     reductionAdded(ReductionType::kForcingColumnRemovedRow);
   }
 
-  // Serialization layout for FM block (push order, so pop is reversed):
-  // For each step (first eliminated to last):
-  //   For each plus row: vector<Nonzero> entries
-  //   vector<double> plusCoefs
-  //   vector<FmeRowHeader> plusHeaders
-  //   For each minus row: vector<Nonzero> entries
-  //   vector<double> minusCoefs
-  //   vector<FmeRowHeader> minusHeaders
-  // Then (after all steps):
-  //   For each step, for each parent: vector<FmeDescendant>
-  //   For each step: FmeStepHeader
-  //   numSteps (HighsInt)
-
-  // Push one step's row data. Must be called before addToMatrix invalidates
-  // the row slices.
   template <typename RowStorageFormat>
   void fourierMotzkinBlockPushStep(
       HighsInt col, const std::vector<FmeRowData<RowStorageFormat>>& plusRows,
@@ -699,8 +684,6 @@ class HighsPostsolveStack {
     reductionValues.push(minusHeaders);
   }
 
-  // Finalise the FM block: push descendants mapping, new row origins,
-  // and step headers. Called once after all elimination steps are complete.
   void fourierMotzkinBlockFinalise(
       const std::vector<FmeBlockStep>& blockSteps,
       const std::unordered_map<HighsInt, std::vector<FmeAncestryEntry>>&

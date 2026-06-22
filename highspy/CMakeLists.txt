@@ -54,16 +54,46 @@ if (NOT MSVC)
   target_compile_options(_core PRIVATE "-ftemplate-depth=2048")
 endif()
 
+if(CUPDLP_GPU)
+  target_link_libraries(_core PRIVATE cudalin ${CUDA_LIBRARY})
+endif()
+
 # The install directory is the output (wheel) directory
 install(TARGETS _core
         RUNTIME DESTINATION highspy
         LIBRARY DESTINATION highspy
         COMPONENT python)
 
-# Only needed if the wheel is built with a shared library, but can be left in for static linking as well.
-# Include highs library (but ignore .lib file)
-install(TARGETS highs
-        RUNTIME DESTINATION highspy
-        LIBRARY DESTINATION highspy
-        NAMELINK_SKIP
-        COMPONENT python)
+if (CUPDLP_GPU)
+  # Use install(FILES) to avoid CMake 4.x cross-directory install(TARGETS)
+  # restrictions (silently ignored for targets owned by other directories).
+  if (WIN32)
+    install(FILES $<TARGET_FILE:highs>
+            DESTINATION highspy
+            COMPONENT python)
+  else()
+    install(FILES $<TARGET_FILE:highs>
+            DESTINATION highspy
+            RENAME $<TARGET_SONAME_FILE_NAME:highs>
+            COMPONENT python)
+    # install(FILES) does not update RPATH (unlike install(TARGETS)).
+    # Without this, the embedded build-tree RPATH prevents libhighs from
+    # finding libcudalin at $ORIGIN after installation.
+    install(CODE "
+      file(RPATH_SET
+        FILE \"\${CMAKE_INSTALL_PREFIX}/highspy/$<TARGET_SONAME_FILE_NAME:highs>\"
+        NEW_RPATH \"\$ORIGIN\")
+    " COMPONENT python)
+  endif()
+  if (NOT HIGHS_GPU_LIB)
+    install(FILES $<TARGET_FILE:cudalin>
+            DESTINATION highspy
+            COMPONENT python)
+  endif()
+else()
+  install(TARGETS highs
+          RUNTIME DESTINATION highspy
+          LIBRARY DESTINATION highspy
+          NAMELINK_SKIP
+          COMPONENT python)
+endif()
