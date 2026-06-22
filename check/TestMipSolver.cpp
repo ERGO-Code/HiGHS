@@ -1416,6 +1416,7 @@ TEST_CASE("parallel-mip-determinism", "[highs_test_mip_solver]") {
     highs.setOptionValue("output_flag", dev_run);
     highs.setOptionValue("mip_rel_gap", 0);
     highs.setOptionValue("threads", 2);
+    highs.setOptionValue("parallel", kHighsOnString);
     if (i % 2 == 0) highs.setOptionValue("mip_search_simulate_concurrency", 1);
     highs.readModel(filename);
     const HighsModelStatus require_model_status = HighsModelStatus::kOptimal;
