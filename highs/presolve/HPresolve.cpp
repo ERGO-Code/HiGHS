@@ -6953,7 +6953,7 @@ HPresolve::Result HPresolve::fourierMotzkin(
   auto finalise = [&]() {
     analysis_.logging_on_ = logging_on;
     if (logging_on) analysis_.stopPresolveRuleLog(kPresolveRuleFourierMotzkin);
-    return Result::kOk;
+    return checkLimits(postsolve_stack);
   };
 
   // sentinel row indices for variable bounds and objective row
@@ -7645,7 +7645,7 @@ HPresolve::Result HPresolve::fourierMotzkin(
     }
     saveAffectedCols.clear();
 
-    HPRESOLVE_CHECKED_CALL(checkLimits(postsolve_stack));
+    if (checkLimits(postsolve_stack) != Result::kOk) break;
   }
 
   if (numColsEliminated > 0) {
