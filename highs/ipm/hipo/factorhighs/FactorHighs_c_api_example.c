@@ -55,7 +55,10 @@ int main() {
   // initialise with default number of threads
   const int num_threads = 0;
   int initialise_status = FactorHighs_initialise(num_threads);
-  if (initialise_status) return 1;
+  if (initialise_status) {
+    printf("HiPO or its dependencies are not available in this build\n");
+    return 1;
+  }
   void* S = FactorHighs_symbolic_create();
   void* FH = FactorHighs_create();
 
@@ -74,12 +77,18 @@ int main() {
   // compute ordering with metis
   int perm[N];
   int metis_status = FactorHighs_reorderMetis(FH, N, NZ, rows, ptr, perm);
-  if (metis_status) return 1;
+  if (metis_status) {
+    printf("Failed to compute a fill-reducing ordering with Metis\n");
+    return 1;
+  }
 
   // perform analyse phase
   int analyse_status =
       FactorHighs_analyse(FH, S, N, NZ, rows, ptr, signs, perm);
-  if (analyse_status) return 1;
+  if (analyse_status) {
+    printf("Failed to compute symbolic factorisation\n");
+    return 1;
+  }
 
   // print extended statistics of symbolic factorisation
   int verbose = 1;
@@ -94,7 +103,10 @@ int main() {
 
   // factorise the matrix
   int factorise_status = FactorHighs_factorise(FH, S, N, NZ, rows, ptr, vals);
-  if (factorise_status) return 1;
+  if (factorise_status) {
+    printf("Failed to factorise the matrix\n");
+    return 1;
+  }
 
   // compute the inertia of the factorisation
   int pos, neg, zero;
@@ -104,7 +116,10 @@ int main() {
 
   // triangular solve
   int solve_status = FactorHighs_solve(FH, rhs, 1);
-  if (solve_status) return 1;
+  if (solve_status) {
+    printf("Failed to solve the linear system\n");
+    return 1;
+  }
 
   /*
   could also perform:
