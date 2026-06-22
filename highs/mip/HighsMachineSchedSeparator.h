@@ -14,7 +14,7 @@
  *
  * Given a set of jobs N with start times s_j, processing times p_ij,
  * release times r_j, and binary dependency variables y_ij,
- * where y = 1 -> s_i - s_j < 0.
+ * where y = 1 -> s_i - s_j < p_ij.
  * To simplify the problem: We set p_j = min{p_ji : i \in N / j}
  * A valid inequality is then:
  * s_j >= min{r_{i} : i \in N} + \sum_{i \in N / j} p_i y_ij
@@ -37,16 +37,16 @@ class HighsMachineSchedSeparator : public HighsSeparator {
   bool has_single_machine_schedule = false;
   bool separated = false;
 
+  bool findSingleMachineScheduleClique(std::vector<std::vector<double>>& vals,
+                                       std::vector<std::vector<HighsInt>>& inds,
+                                       std::vector<double>& rhss,
+                                       const HighsMipSolver& mipsolver);
+
  public:
   void separateLpSolution(HighsLpRelaxation& lpRelaxation,
                           HighsLpAggregator& lpAggregator,
                           HighsTransformedLp& transLp,
                           HighsCutPool& cutpool) override;
-
-  bool findSingleMachineScheduleClique(std::vector<std::vector<double>>& vals,
-                                       std::vector<std::vector<HighsInt>>& inds,
-                                       std::vector<double>& rhss,
-                                       const HighsMipSolver& mipsolver);
 
   HighsMachineSchedSeparator(const HighsMipSolver& mipsolver)
       : HighsSeparator(mipsolver, kMachineSchedSepaString) {
