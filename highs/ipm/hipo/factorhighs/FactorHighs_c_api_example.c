@@ -23,13 +23,12 @@
 
 int main() {
   // problem size
-  const int n = 5;
-  const int nz = 10;
+  enum { N = 5, NZ = 10, NP1 = N + 1 };
 
   // define the lower triangle in CSC format, with 0-based indexing
-  int ptr[n + 1] = {0, 3, 5, 8, 9, 10};
-  int rows[nz] = {0, 2, 3, 1, 2, 2, 3, 4, 3, 4};
-  double vals[nz] = {5, 3, 4, 3, 2, 9, -1, 1, 8, 1};
+  int ptr[NP1] = {0, 3, 5, 8, 9, 10};
+  int rows[NZ] = {0, 2, 3, 1, 2, 2, 3, 4, 3, 4};
+  double vals[NZ] = {5, 3, 4, 3, 2, 9, -1, 1, 8, 1};
 
   /*
   1-based indexing is available as well.
@@ -45,11 +44,11 @@ int main() {
   */
 
   // matrix is spd, so expect all pivots to be positive
-  int signs[n] = {1, 1, 1, 1, 1};
+  int signs[N] = {1, 1, 1, 1, 1};
 
   // rhs and expected solution
-  double rhs[n] = {1, 2, 3, 4, 5};
-  const double lhs[n] = {0.457627118644068, 1.118644067796610,
+  double rhs[N] = {1, 2, 3, 4, 5};
+  const double lhs[N] = {0.457627118644068, 1.118644067796610,
                          -0.677966101694915, 0.186440677966102,
                          5.677966101694915};
 
@@ -73,13 +72,13 @@ int main() {
   FactorHighs_setRegularisation(FH, 0.0, 0.0);
 
   // compute ordering with metis
-  int perm[n];
-  int metis_status = FactorHighs_reorderMetis(FH, n, nz, rows, ptr, perm);
+  int perm[N];
+  int metis_status = FactorHighs_reorderMetis(FH, N, NZ, rows, ptr, perm);
   if (metis_status) return 1;
 
   // perform analyse phase
   int analyse_status =
-      FactorHighs_analyse(FH, S, n, nz, rows, ptr, signs, perm);
+      FactorHighs_analyse(FH, S, N, NZ, rows, ptr, signs, perm);
   if (analyse_status) return 1;
 
   // print extended statistics of symbolic factorisation
@@ -87,14 +86,14 @@ int main() {
   FactorHighs_symbolic_print(FH, S, verbose);
 
   // print inverse permutation, that may have been modified by analyse phase
-  int iperm[n];
+  int iperm[N];
   FactorHighs_iperm(FH, S, iperm);
   printf("\niperm: ");
-  for (int i = 0; i < n; ++i) printf("%d ", iperm[i]);
+  for (int i = 0; i < N; ++i) printf("%d ", iperm[i]);
   printf("\n");
 
   // factorise the matrix
-  int factorise_status = FactorHighs_factorise(FH, S, n, nz, rows, ptr, vals);
+  int factorise_status = FactorHighs_factorise(FH, S, N, NZ, rows, ptr, vals);
   if (factorise_status) return 1;
 
   // compute the inertia of the factorisation
@@ -110,14 +109,14 @@ int main() {
   /*
   could also perform:
 
-    FactorHighs_forwardSolve(FH, rhs);
-    FactorHighs_diagSolve(FH, rhs);
-    FactorHighs_backwardSolve(FH, rhs);
+    FactorHighs_forwardSolve(FH, rhs, 1);
+    FactorHighs_diagSolve(FH, rhs, 1);
+    FactorHighs_backwardSolve(FH, rhs, 1);
   */
 
   // compute error
   double error = 0.0;
-  for (int i = 0; i < n; ++i) error += fabs(rhs[i] - lhs[i]);
+  for (int i = 0; i < N; ++i) error += fabs(rhs[i] - lhs[i]);
   printf("\nError: %e\n", error);
 
   // terminate
