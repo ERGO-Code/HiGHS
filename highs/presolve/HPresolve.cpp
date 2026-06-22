@@ -7648,12 +7648,13 @@ HPresolve::Result HPresolve::fourierMotzkin(
     HPRESOLVE_CHECKED_CALL(checkLimits(postsolve_stack));
   }
 
-  // finalize the FM block
   if (numColsEliminated > 0) {
+    // finalize the FM block
     postsolve_stack.fourierMotzkinBlockFinalise(
         blockCols, blockColLowers, blockColUppers, blockColCosts, blockNumPlus,
         blockNumMinus, rowAncestry, blockNewRows);
 
+    // log message
     highsLogDev(options->log_options, HighsLogType::kInfo,
                 "Fourier-Motzkin eliminated %" HIGHSINT_FORMAT
                 " cols and %" HIGHSINT_FORMAT
