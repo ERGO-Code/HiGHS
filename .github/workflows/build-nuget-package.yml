@@ -2,6 +2,15 @@ name: build-nuget-package
 
 on:
   workflow_dispatch:
+    inputs:
+      version:
+        description: 'Package version (e.g. 1.14.0-preview.1)'
+        required: true
+        default: '1.14.0-preview.1'
+      push_package:
+        description: 'Push package to NuGet.org'
+        type: boolean
+        default: false
   pull_request:
   release:
     types:
@@ -75,7 +84,7 @@ jobs:
       - name: Configure CMake win32
         shell: bash
         working-directory: ${{github.workspace}}/build32
-        run: cmake $GITHUB_WORKSPACE -DCSHARP=ON -DBUILD_DOTNET=ON -A Win32
+        run: cmake $GITHUB_WORKSPACE -DCSHARP=ON -DBUILD_DOTNET=ON -A Win32 -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded
 
       - name: Build win32
         shell: bash
@@ -84,8 +93,8 @@ jobs:
 
       - uses: actions/upload-artifact@v7
         with:
-          name: win-x32
-          path: ${{github.workspace}}/build32/dotnet/Highs.Native/runtimes/win-x64/
+          name: win-x86
+          path: ${{github.workspace}}/build32/dotnet/Highs.Native/runtimes/win-x86/
 
   build_linux:
     runs-on: ubuntu-latest
@@ -145,7 +154,7 @@ jobs:
       - name: Configure CMake
         working-directory: ${{github.workspace}}/build
         shell: bash
-        run: cmake $GITHUB_WORKSPACE -DCSHARP=ON -DBUILD_DOTNET=ON
+        run: cmake $GITHUB_WORKSPACE -DCSHARP=ON -DBUILD_DOTNET=ON -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded
 
       - name: Build
         working-directory: ${{github.workspace}}/build
@@ -169,11 +178,11 @@ jobs:
           name: macos-arm64
           path: ${{github.workspace}}/build/dotnet/Highs.Native/runtimes
 
-      - name: Download runtimes win-x32
+      - name: Download runtimes win-x86
         uses: actions/download-artifact@v8
         with:
-          name: win-x32
-          path: ${{github.workspace}}/build/dotnet/Highs.Native/runtimes/win-x32
+          name: win-x86
+          path: ${{github.workspace}}/build/dotnet/Highs.Native/runtimes/win-x86
 
       - name: Download runtimes
         uses: actions/download-artifact@v8
@@ -196,7 +205,7 @@ jobs:
 
       - name: Dotnet pack
         working-directory: ${{github.workspace}}/build/dotnet/Highs.Native
-        run: dotnet pack -c Release /p:Version=1.14.0
+        run: dotnet pack -c Release /p:Version=${{ inputs.version || '1.14.0' }}
 
       - uses: actions/upload-artifact@v7
         with:
@@ -211,7 +220,7 @@ jobs:
     permissions:
       id-token: write  # enable GitHub OIDC token issuance for this job
 
-    if: github.event_name == 'release'
+    if: github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && inputs.push_package)
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-dotnet@v5
