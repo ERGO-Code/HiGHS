@@ -7124,8 +7124,8 @@ HPresolve::Result HPresolve::fourierMotzkin(
     bool upperFinite = true;
     isRedundant = false;
     for (const auto& e : nr.entries) {
-      double lb = implColLower[e.col];
-      double ub = implColUpper[e.col];
+      double lb = model->col_lower_[e.col];
+      double ub = model->col_upper_[e.col];
       if (e.val > 0) {
         lowerFinite = lowerFinite && lb != -kHighsInf;
         if (lowerFinite) impliedLower += e.val * lb;
