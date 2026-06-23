@@ -59,17 +59,16 @@ order to select the best one.
 
 ## MIP
 
-The only parallel computation currently implemented in the MIP solver
-occurs when performing symmetry detection on the model, when querying
+If the [parallel](@ref option-parallel) option is set to "on", the MIP solver
+will explore the branch-and-bound tree using multiple threads.
+This exploration includes cuts and heuristics that are not run from the root node.
+In addition, the MIP solver utilises parallelism when performing 
+symmetry detection on the model, when querying
 clique tables, and when the interior point solver is used to compute
 the analytic centre. This parallelism is always advantageous, so is
 performed regardless of the value of the [parallel](@ref option-parallel) option.
 
 ## Future plans
-
-The MIP solver has been written with parallel tree search in mind. A
-prototype multithreaded solver was completed in February 2026, and is
-expected to be released by June.
 
 Multi-threading within HiPO will be extended to other phases of the solver,
 including the solve phase of the factorisation and the process of assembling 
