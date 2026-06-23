@@ -20,7 +20,6 @@ bool HighsMachineSchedSeparator::findSingleMachineScheduleClique(
     std::vector<std::vector<double>>& vals,
     std::vector<std::vector<HighsInt>>& inds, std::vector<double>& rhss,
     const HighsMipSolver& mipsolver) {
-  std::vector<HighsCliqueTable::CliqueVar> clique(2);
   enum class ArcType {
     kIfBinOne,
     kIfBinZero,
@@ -32,6 +31,9 @@ bool HighsMachineSchedSeparator::findSingleMachineScheduleClique(
   HighsHashTable<std::pair<HighsInt, HighsInt>,
                  std::tuple<double, HighsInt, ArcType>>
       adjacency(maxRows + 2);
+  HighsHashTable<std::pair<HighsInt, HighsInt>, std::vector<HighsInt>> arcToBin;
+  // 1 -> (i,j) y = 0, 2 -> (i,j) y = 1, 4 -> (j,i) y = 0, 8 -> (j,i) y = 1
+  HighsHashTable<std::tuple<HighsInt, HighsInt, HighsInt>, uint8_t> jobOrder;
 
   auto addEntry = [&](HighsInt posCol, HighsInt negCol, HighsInt binCol,
                       double p, ArcType t) {
@@ -53,6 +55,19 @@ bool HighsMachineSchedSeparator::findSingleMachineScheduleClique(
       }
       adjacency.insert(std::make_pair(negCol, posCol),
                        std::make_tuple(p, binCol, t));
+    }
+    // Store binaries to later check if any two binaries
+    // imply the same ordering of two jobs.
+    HighsInt u = std::min(negCol, posCol);
+    HighsInt v = std::max(negCol, posCol);
+    if (jobOrder.find({u, v, binCol}) == nullptr) {
+      jobOrder[{u, v, binCol}] = 0;
+    }
+    if (negCol < posCol) {
+      arcToBin[{negCol, posCol}].emplace_back(binCol);
+      jobOrder[{negCol, posCol, binCol}] |= t == ArcType::kIfBinOne ? 2 : 1;
+    } else {
+      jobOrder[{posCol, negCol, binCol}] |= t == ArcType::kIfBinOne ? 8 : 4;
     }
   };
 
@@ -130,6 +145,41 @@ bool HighsMachineSchedSeparator::findSingleMachineScheduleClique(
       }
     }
     if (numRows >= maxRows) break;
+  }
+
+  // Extract binary variables that imply the same job ordering
+  std::vector<HighsCliqueTable::CliqueVar> clique(2);
+  for (const auto& entry : arcToBin) {
+    std::pair<HighsInt, HighsInt> arc = entry.key();
+    HighsInt baseBinCol = -1;
+    bool baseForward = false;
+    for (const HighsInt& binCol : entry.value()) {
+      bool forward = false;
+      bool impliesOrder = false;
+      if ((jobOrder[{arc.first, arc.second, binCol}] & 9) == 9) {
+        impliesOrder = true;
+      } else if ((jobOrder[{arc.first, arc.second, binCol}] & 6) == 6) {
+        impliesOrder = true;
+        forward = true;
+      }
+      if (!impliesOrder) continue;
+      if (baseBinCol == -1) {
+        baseBinCol = binCol;
+        baseForward = forward;
+        continue;
+      }
+      HighsCliqueTable::CliqueVar stayCliqueVar =
+          HighsCliqueTable::CliqueVar(baseBinCol, baseForward);
+      HighsCliqueTable::CliqueVar substCliqueVar =
+          HighsCliqueTable::CliqueVar(binCol, forward);
+      clique[0] = stayCliqueVar;
+      clique[1] = substCliqueVar.complement();
+      mipsolver.mipdata_->cliquetable.addClique(mipsolver, clique.data(), 2);
+      clique[0] = stayCliqueVar.complement();
+      clique[1] = substCliqueVar;
+      mipsolver.mipdata_->cliquetable.addClique(mipsolver, clique.data(), 2);
+      if (mipsolver.mipdata_->domain.infeasible()) return false;
+    }
   }
 
   // A clique of size 3 needs at least 6 arcs
