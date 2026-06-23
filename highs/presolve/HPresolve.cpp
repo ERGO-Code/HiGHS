@@ -7462,6 +7462,21 @@ HPresolve::Result HPresolve::fourierMotzkin(
     // if this candidate has nonzero cost and objective has not yet been
     // reformulated, perform the reformulation now and rebuild the heap
     if (model->fme_obj_col_ == -1 && model->col_cost_[col] != 0.0) {
+      // finalise any in-progress FM block before reformulating, since
+      // reformulateObjective pushes other reductions onto the data stack
+      if (!blockSteps.empty()) {
+        postsolve_stack.fourierMotzkinBlockFinalise(blockSteps, rowAncestry);
+        highsLogDev(options->log_options, HighsLogType::kInfo,
+                    "Fourier-Motzkin eliminated %" HIGHSINT_FORMAT
+                    " cols and %" HIGHSINT_FORMAT
+                    " rows, and added %" HIGHSINT_FORMAT " rows\n",
+                    numColsEliminated, numRowsEliminated, numRowsAdded);
+        blockSteps.clear();
+        rowAncestry.clear();
+        numColsEliminated = 0;
+        numRowsEliminated = 0;
+        numRowsAdded = 0;
+      }
       // reformulate objective
       reformulateObjective();
       // clear vector for objective and resize marker
