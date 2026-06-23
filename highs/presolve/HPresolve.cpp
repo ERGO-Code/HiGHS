@@ -2254,6 +2254,8 @@ void HPresolve::markRowDeleted(HighsInt row) {
 void HPresolve::markColDeleted(HighsInt col) {
   assert(!colDeleted[col]);
 
+  if (col == model->fme_obj_col_) model->fme_obj_col_ = -1;
+
   // prevents col from being added to change vector
   changedColFlag[col] = true;
   colDeleted[col] = true;
@@ -3654,11 +3656,11 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
   double origRowUpper = model->row_upper_[row];
   double origRowLower = model->row_lower_[row];
 
+  // Convert to equality constraint and record for dual postsolve
   if (!isEquation(row)) {
     if (isImpliedEquationAtLower(row)) {
-      // Convert to equality constraint (note that currently postsolve will not
-      // know about this conversion)
       model->row_upper_[row] = model->row_lower_[row];
+      postsolve_stack.impliedEquation(row, true, getRowVector(row));
       // Since row upper bound is now finite, lower bound on row dual is
       // -kHighsInf
       changeRowDualLower(row, -kHighsInf);
@@ -3666,9 +3668,8 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
         HPRESOLVE_CHECKED_CALL(
             checkRedundantBounds(rowDualLowerSource[row], row));
     } else if (isImpliedEquationAtUpper(row)) {
-      // Convert to equality constraint (note that currently postsolve will not
-      // know about this conversion)
       model->row_lower_[row] = model->row_upper_[row];
+      postsolve_stack.impliedEquation(row, false, getRowVector(row));
       // Since row lower bound is now finite, upper bound on row dual is
       // kHighsInf
       changeRowDualUpper(row, kHighsInf);

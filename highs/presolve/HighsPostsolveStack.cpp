@@ -493,6 +493,19 @@ void HighsPostsolveStack::RedundantRow::undo(
   if (basis.valid) basis.row_status[row] = HighsBasisStatus::kBasic;
 }
 
+void HighsPostsolveStack::ImpliedEquation::undo(
+    const HighsPostsolveStack& postsolveStack,
+    const std::vector<Nonzero>& rowValues, HighsSolution& solution) const {
+  if (!solution.dual_valid) return;
+  if (!postsolveStack.isModelRow(row)) return;
+  double oldDual = solution.row_dual[row];
+  if (atLower ? (oldDual < 0) : (oldDual > 0)) {
+    solution.row_dual[row] = 0;
+    for (const auto& nz : rowValues)
+      solution.col_dual[nz.index] += nz.value * oldDual;
+  }
+}
+
 void HighsPostsolveStack::ForcingRow::undo(
     const HighsPostsolveStack& postsolveStack, const HighsOptions& options,
     const std::vector<Nonzero>& rowValues, HighsSolution& solution,

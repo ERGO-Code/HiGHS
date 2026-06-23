@@ -229,6 +229,15 @@ class HighsPostsolveStack {
               HighsBasis& basis) const;
   };
 
+  struct ImpliedEquation {
+    HighsInt row;
+    bool atLower;
+
+    void undo(const HighsPostsolveStack& postsolveStack,
+              const std::vector<Nonzero>& rowValues,
+              HighsSolution& solution) const;
+  };
+
   struct ForcingRow {
     double side;
     HighsInt row;
@@ -333,6 +342,7 @@ class HighsPostsolveStack {
     kSingletonRow,
     kFixedCol,
     kRedundantRow,
+    kImpliedEquation,
     kForcingRow,
     kForcingColumn,
     kForcingColumnRemovedRow,
@@ -593,6 +603,17 @@ class HighsPostsolveStack {
   void redundantRow(HighsInt row) {
     reductionValues.push(RedundantRow{origRowIndex[row]});
     reductionAdded(ReductionType::kRedundantRow);
+  }
+
+  template <typename RowStorageFormat>
+  void impliedEquation(HighsInt row, bool atLower,
+                       const HighsMatrixSlice<RowStorageFormat>& rowVec) {
+    rowValues.clear();
+    for (const HighsSliceNonzero& rowVal : rowVec)
+      rowValues.emplace_back(origColIndex[rowVal.index()], rowVal.value());
+    reductionValues.push(ImpliedEquation{origRowIndex[row], atLower});
+    reductionValues.push(rowValues);
+    reductionAdded(ReductionType::kImpliedEquation);
   }
 
   template <typename RowStorageFormat>
@@ -969,6 +990,13 @@ class HighsPostsolveStack {
           RedundantRow reduction;
           reductionValues.pop(reduction);
           reduction.undo(*this, options, solution, basis);
+          break;
+        }
+        case ReductionType::kImpliedEquation: {
+          ImpliedEquation reduction;
+          reductionValues.pop(rowValues);
+          reductionValues.pop(reduction);
+          reduction.undo(*this, rowValues, solution);
           break;
         }
         case ReductionType::kForcingRow: {
