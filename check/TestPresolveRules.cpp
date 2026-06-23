@@ -4,7 +4,7 @@
 #include "Highs.h"
 #include "catch.hpp"
 
-const bool dev_run = true;
+const bool dev_run = false;
 
 void presolveOffOn(const std::string& message, const HighsLp& lp, Highs& h,
                    const HighsInt require_presolved_model_num_col = 0,
@@ -15,12 +15,12 @@ TEST_CASE("test-col-stuffing", "[highs_test_presolve_rules]") {
   HighsLp lp;
 
   Highs h;
-  //  h.setOptionValue("output_flag", dev_run);
+  h.setOptionValue("output_flag", dev_run);
   h.setOptionValue("presolve_rule_test", kPresolveRuleColStuffing);
-  const bool lp0 = false;
-  const bool lp1 = false;
+  const bool lp0 = true;
+  const bool lp1 = true;
   const bool lp1a = true;
-  const bool lp1b = false;
+  const bool lp1b = true;
 
   if (lp0) {
     lp.num_col_ = 3;

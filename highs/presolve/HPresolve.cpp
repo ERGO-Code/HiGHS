@@ -4988,8 +4988,7 @@ HPresolve::Result HPresolve::singletonColStuffing(
 
   // count number of fixed columns
   HighsInt numFixedCols = 0;
-  // Temporary for fix-col-stuffing
-  bool report_stuffing = true;
+
   struct candidate {
     HighsInt col;
     double val;
@@ -5028,8 +5027,7 @@ HPresolve::Result HPresolve::singletonColStuffing(
                           double& maxWeight, size_t& numIntegerCandidates) {
     if (model->integrality_[col] == HighsVarType::kInteger)
       numIntegerCandidates++;
-    // Temporary for fix-col-stuffing
-    assert(direction * val > 0);
+
     minWeight = std::min(minWeight, direction * val);
     maxWeight = std::max(maxWeight, direction * val);
     candidates.push_back(candidate{col, val, direction});
@@ -5071,54 +5069,6 @@ HPresolve::Result HPresolve::singletonColStuffing(
       double sumUpperBound = model->col_upper_[j];
       bool isCandidate = allowIntegerCandidates ||
                          model->integrality_[j] != HighsVarType::kInteger;
-      // Considering row as a knapsack
-      //
-      // minimize c^Tx st a^Tx <= W; l <= x <= u
-      //
-      // NB minimize
-      //
-      // If cj/aj >= 0, then dual fixing means that xj can _probably_
-      // be fixed
-      //
-      // If aj > 0, then xj is contributing positively to the
-      // knapsack, but if cj >=0 its optimal value would appear to be
-      // lj, and it must be if cj > 0, in which case lj = -inf implies
-      // dual infeasibility.
-      //
-      // However, if cj = 0 and lj = -inf, then it is not logically
-      // correct to fix it to its lower bound and claim dual
-      // infeasibility. The row is redundant since, whatever values
-      // are assigned to the other variables, xj can be made
-      // sufficiently negative so that a^Tx <= W.
-      //
-      // If lj is finite, then it is fair to fix xj = lj
-      //
-      // If aj < 0 then then xj is contributing negatively to the
-      // knapsack, and if cj < 0 its optimal value is uj, in which
-      // case uj = inf implies dual infeasibility. If cj = 0 then, as
-      // above, if uj is finite fix xj = uj, otherwise the row is
-      // redundant.
-      //
-      // If cj/aj < 0, then xj is a candidate to have its value
-      // assigned optimally. This is done greedily according to the
-      // sorted values of cj/aj, over all such candidates
-      //
-      // Perhaps the cj = 0 issue is moot, since fixing to an infinte
-      // bound leads to at least one of sumLowerFinite and
-      // sumUpperFinite being false, so set of candidates is
-      // abandoned.
-      //
-      // Question: The greedy algorithm is only guaranteed to assign
-      // values optimally if the variables are continuous. The
-      // criterion minWeight != maxWeight (ie not all |aj| values
-      // being equal) leading to abandonment of stuffing if there are
-      // only integer columns overcomes this. However, is it
-      // guaranteed that with those continuous decisions the knapsack
-      // is solved optimally?
-      //
-      // Question: Is there value in solving the knapsack problem by
-      // DP if all variables are integer, and not all |aj| values are
-      // equal?
       if (isSingleton(j)) {
         // check singleton
         if (aj > 0) {
@@ -5209,12 +5159,6 @@ HPresolve::Result HPresolve::singletonColStuffing(
     sortCols(candidates);
 
     // check candidates
-    // Temporary for fix-col-stuffing
-    if (report_stuffing)
-      printf(
-          "ColStuffing: num candidates = %d; sumLower = %g; sumUpper = %g; rhs "
-          "= %g\n",
-          int(candidates.size()), double(sumLower), double(sumUpper), rhs);
     for (const auto& t : candidates) {
       // both bounds have to be finite
       if (model->col_lower_[t.col] == -kHighsInf ||
@@ -5228,38 +5172,20 @@ HPresolve::Result HPresolve::singletonColStuffing(
       // check if variable can be fixed
       if (sumUpperFinite &&
           delta <= direction * rhs - sumUpper + primal_feastol) {
-        if (report_stuffing)
-          printf(
-              "ColStuffing:0 (%2d) fix %6d to %s: cost =  %11.4g; delta = "
-              "%11.4g | "
-              "Logic: delta = %11.4g <= %11.4g = direction * rhs - sumUpper + "
-              "primal_feastol\n",
-              int(t.multiplier), int(t.col),
-              t.multiplier < 0 ? "lower" : "upper", model->col_cost_[t.col],
-              double(delta), double(delta),
-              double(direction * rhs - sumUpper + primal_feastol));
         numFixedCols++;
         HPRESOLVE_CHECKED_CALL(fixCol(t.col, t.multiplier));
       } else if (sumLowerFinite &&
-                 direction * rhs <= sumLower + primal_feastol) {
-        // Only allow fixing if there is no degeneracy
-        const bool allow_fixing =
-            direction * rhs + delta <= sumLower + primal_feastol;
-        if (report_stuffing) {
-          printf(
-              "ColStuffing:1 (%2d) fix %6d to %s: cost =  %11.4g; delta = "
-              "%11.4g | "
-              "Logic: direction * rhs = %11.4g <= %11.4g = sumLower + "
-              "primal_feastol: %s fixing\n",
-              int(-t.multiplier), int(t.col),
-              -t.multiplier < 0 ? "lower" : "upper", model->col_cost_[t.col],
-              double(delta), double(direction * rhs),
-              double(sumLower + primal_feastol), allow_fixing ? "allow" : "no");
-        }
-        if (allow_fixing) {
-          numFixedCols++;
-          HPRESOLVE_CHECKED_CALL(fixCol(t.col, -t.multiplier));
-        }
+                 delta <= sumLower - direction * rhs + primal_feastol) {
+        // Previously
+        //
+        // direction * rhs <= sumLower + primal_feastol
+        //
+        // But this led to fixing at -t.multiplier until row activity
+        // was at its bound, which is primal optmal but degenerate,
+        // and does not yield an optimal basis if column costs are
+        // positive
+        numFixedCols++;
+        HPRESOLVE_CHECKED_CALL(fixCol(t.col, -t.multiplier));
       }
       // update row activities
       if (sumLowerFinite) sumLower += delta;
@@ -5842,9 +5768,6 @@ HPresolve::Result HPresolve::fastPresolveLoop(
 
     HPRESOLVE_CHECKED_CALL(presolveChangedCols(postsolve_stack));
 
-    // Temporary for fix-col-stuffing
-    HPRESOLVE_CHECKED_CALL(checkLimits(postsolve_stack));
-
   } while (problemSizeReduction() > 0.01);
 
   return Result::kOk;
@@ -6220,12 +6143,7 @@ HPresolve::Result HPresolve::checkLimits(HighsPostsolveStack& postsolve_stack) {
 
   if ((numreductions & 1023u) == 0) HPRESOLVE_CHECKED_CALL(checkTimeLimit());
 
-  // Temporary for fix-col-stuffing
-  const bool limit_reached = numreductions >= reductionLimit;
-  if (limit_reached) {
-    printf("HPresolve::checkLimits Reduction limit reached\n");
-  }
-  return limit_reached ? Result::kStopped : Result::kOk;
+  return numreductions >= reductionLimit ? Result::kStopped : Result::kOk;
 }
 
 void HPresolve::storeCurrentProblemSize() {
@@ -7040,8 +6958,6 @@ HPresolve::Result HPresolve::presolveColSingletons(
     HighsInt col = singletonColumns[i];
     if (colDeleted[col]) continue;
     HPRESOLVE_CHECKED_CALL(colPresolve(postsolve_stack, col));
-    // Temporary for fix-col-stuffing
-    HPRESOLVE_CHECKED_CALL(checkLimits(postsolve_stack));
   }
   singletonColumns.erase(
       std::remove_if(
