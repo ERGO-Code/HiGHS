@@ -8,6 +8,7 @@
 #ifndef HIGHS_CONFLICTPOOL_H_
 #define HIGHS_CONFLICTPOOL_H_
 
+#include <atomic>
 #include <set>
 #include <vector>
 
@@ -18,9 +19,11 @@ class HighsConflictPool {
  private:
   HighsInt agelim_;
   HighsInt softlimit_;
+  bool age_lock_;
   std::vector<HighsInt> ageDistribution_;
   std::vector<int16_t> ages_;
   std::vector<unsigned> modification_;
+  std::deque<std::atomic<uint8_t>> ageResetWhileLocked_;
 
   std::vector<HighsDomainChange> conflictEntries_;
   std::vector<std::pair<HighsInt, HighsInt>> conflictRanges_;
@@ -38,9 +41,11 @@ class HighsConflictPool {
   HighsConflictPool(HighsInt agelim, HighsInt softlimit)
       : agelim_(agelim),
         softlimit_(softlimit),
+        age_lock_(false),
         ageDistribution_(),
         ages_(),
         modification_(),
+        ageResetWhileLocked_(),
         conflictEntries_(),
         conflictRanges_(),
         freeSpaces_(),
@@ -61,10 +66,19 @@ class HighsConflictPool {
 
   void removeConflict(HighsInt conflict);
 
-  void performAging();
+  void performAging(bool thread_safe = false);
+
+  void addConflictFromOtherPool(const HighsDomainChange* conflictEntries,
+                                HighsInt conflictLen);
+
+  void syncConflictPool(HighsConflictPool& syncpool);
 
   void resetAge(HighsInt conflict) {
     if (ages_[conflict] > 0) {
+      if (age_lock_) {
+        ageResetWhileLocked_[conflict].store(1, std::memory_order_relaxed);
+        return;
+      }
       ageDistribution_[ages_[conflict]] -= 1;
       ageDistribution_[0] += 1;
       ages_[conflict] = 0;
@@ -104,6 +118,8 @@ class HighsConflictPool {
   HighsInt getNumConflicts() const {
     return conflictRanges_.size() - deletedConflicts_.size();
   }
+
+  void setAgeLock(const bool ageLock) { age_lock_ = ageLock; }
 };
 
 #endif
