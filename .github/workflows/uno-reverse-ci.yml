@@ -1,0 +1,99 @@
+# Reverse CI: build this HiGHS PR branch with HiPO, then build and test Uno against it.
+#
+# Symmetric setup, each side testing its PR against the other's last *release* (a fixed
+# reference), so a red run points at the PR under test, not at unrelated work on the other main:
+#   here (HiGHS): every HiGHS PR  x  latest Uno release
+#   Uno side:     every Uno PR    x  latest HiGHS release
+#
+# TEMPORARY (until HiPO is merged and in a Uno release): point at Uno's `hipo` branch
+# instead of a release tag.
+name: uno-reverse-ci
+
+on:
+  # TEMPORARY: HiPO work branch. STEADY STATE: PRs into the default branch.
+  push:
+    branches: [hipo-c]
+  pull_request:
+    branches: [hipo-c]
+  workflow_dispatch:
+    inputs:
+      uno_repository:
+        description: "Uno repository to test"
+        default: "cvanaret/Uno"
+      uno_ref:
+        description: "Uno branch/ref to test"
+        default: "hipo"
+  schedule:
+    # weekly, to also catch Uno-side changes
+    - cron: "0 6 * * 1"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  uno-hipo:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # ON  = shared extras (libhighs_extras.so, dlopen'd); also guards the dlclose/teardown fix
+        #       (a regression there brings back the at-exit SIGSEGV).
+        # OFF = static extras (linked into libhighs); self-contained.
+        extras: ["ON", "OFF"]
+    steps:
+      - name: Checkout HiGHS (current branch)
+        uses: actions/checkout@v4
+        with:
+          path: HiGHS
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake g++ git libopenblas-dev liblapack-dev
+
+      - name: Build and install HiGHS with HiPO (BUILD_SHARED_EXTRAS_LIB=${{ matrix.extras }})
+        run: |
+          echo "HiGHS commit: $(git -C HiGHS rev-parse --short HEAD)"
+          cmake -S HiGHS -B HiGHS/build \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DHIPO=ON \
+            -DFAST_BUILD=ON \
+            -DBUILD_SHARED_EXTRAS_LIB=${{ matrix.extras }} \
+            -DALL_TESTS=OFF \
+            -DCMAKE_INSTALL_PREFIX=${{ github.workspace }}/highs-install
+          cmake --build HiGHS/build --parallel
+          cmake --install HiGHS/build
+
+      - name: Checkout Uno
+        # TEMPORARY: Uno's `hipo` branch. STEADY STATE: pin to the latest Uno release tag.
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.event.inputs.uno_repository || 'cvanaret/Uno' }}
+          ref: ${{ github.event.inputs.uno_ref || 'hipo' }}
+          path: Uno
+
+      - name: Build Uno against HiGHS with HiPO
+        run: |
+          echo "Uno commit: $(git -C Uno rev-parse --short HEAD)"
+          cmake -S Uno -B Uno/build \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DENABLE_TESTS=ON \
+            -DHIGHS_WITH_HIPO=ON \
+            -DCMAKE_PREFIX_PATH=${{ github.workspace }}/highs-install
+          cmake --build Uno/build --target run_unotest --parallel
+
+      # HiGHS/build/lib is needed for the shared-extras case (libhighs_extras.so isn't installed);
+      # harmless otherwise.
+      - name: Run Uno tests (HiPO solver)
+        run: |
+          export LD_LIBRARY_PATH=${{ github.workspace }}/highs-install/lib:${{ github.workspace }}/HiGHS/build/lib:$LD_LIBRARY_PATH
+          # fail if the HiPOSolver tests weren't compiled in, instead of a filter matching 0 tests.
+          ./Uno/build/run_unotest --gtest_list_tests --gtest_filter='HiPOSolver.*' | grep -q 'HiPOSolver' \
+            || { echo "ERROR: HiPOSolver tests are not present - HiPO was not built into Uno"; exit 1; }
+          ./Uno/build/run_unotest --gtest_filter='HiPOSolver.*'
+
+      - name: Run Uno tests (full suite)
+        run: |
+          export LD_LIBRARY_PATH=${{ github.workspace }}/highs-install/lib:${{ github.workspace }}/HiGHS/build/lib:$LD_LIBRARY_PATH
+          ./Uno/build/run_unotest
