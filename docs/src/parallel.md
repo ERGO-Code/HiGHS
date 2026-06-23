@@ -9,9 +9,13 @@ and the MIP solver. Details of these and future plans are set out below.
 HiGHS has an implementation of a first order method (PDLP) for solving LPs
 that can exploit the availability of a [GPU](@ref gpu).
 
-By default, when running in parallel, HiGHS will use half the
-available threads on a machine. This number can be modified by setting
-the value of the [threads](@ref option-threads) option.
+The value of the [threads](@ref option-threads) option determines the 
+number of threads used by HiGHS. By default it is zero, in which case 
+HiGHS will use half the available threads on a machine. 
+If it is set to one, then HiGHS will never use more than one thread. 
+The maximum value that is advantageous is machine-dependent, 
+but it is unlikely to be more than eight due to most computation in 
+HiGHS being memory-bound.
 
 ## Dual simplex
 
@@ -62,11 +66,15 @@ order to select the best one.
 If the [parallel](@ref option-parallel) option is set to "on", the MIP solver
 will explore the branch-and-bound tree using multiple threads.
 This exploration includes cuts and heuristics that are not run from the root node.
+
 In addition, the MIP solver utilises parallelism when performing 
 symmetry detection on the model, when querying
 clique tables, and when the interior point solver is used to compute
 the analytic centre. This parallelism is always advantageous, so is
 performed regardless of the value of the [parallel](@ref option-parallel) option.
+
+The extent to which parallelism is used in the MIP solver depends on the value of the 
+[threads](@ref option-threads) option (see above).
 
 ## Future plans
 
