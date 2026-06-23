@@ -11,10 +11,9 @@
 #ifndef PDHG_HPP
 #define PDHG_HPP
 
-#ifdef CUPDLP_GPU
-#include <cublas_v2.h>
-#include <cuda_runtime.h>
-#include <cusparse.h>
+#include "HConfig.h"
+#if defined(CUPDLP_GPU) || defined(HIPDLP_GPU)
+#include "gpu_backend.hpp"
 #endif
 
 #define PDLP_PROFILE (0)
@@ -36,42 +35,8 @@
 const bool kUseCupdlpx = true;
 const bool kTempSetting = true;
 
-// --- GPU Macros (Defined at file scope for visibility) ---
-#ifdef CUPDLP_GPU
-#include <cublas_v2.h>
-#include <cuda_runtime.h>
-#include <cusparse.h>
-
-#define CUDA_CHECK(call)                                               \
-  do {                                                                 \
-    cudaError_t err = (call);                                          \
-    if (err != cudaSuccess) {                                          \
-      fprintf(stderr, "CUDA Error at %s:%d: %s\n", __FILE__, __LINE__, \
-              cudaGetErrorString(err));                                \
-      exit(EXIT_FAILURE);                                              \
-    }                                                                  \
-  } while (0)
-
-#define CUSPARSE_CHECK(call)                                               \
-  do {                                                                     \
-    cusparseStatus_t status = (call);                                      \
-    if (status != CUSPARSE_STATUS_SUCCESS) {                               \
-      fprintf(stderr, "cuSPARSE Error at %s:%d: %s\n", __FILE__, __LINE__, \
-              cusparseGetErrorString(status));                             \
-      exit(EXIT_FAILURE);                                                  \
-    }                                                                      \
-  } while (0)
-
-#define CUBLAS_CHECK(call)                                               \
-  do {                                                                   \
-    cublasStatus_t status = call;                                        \
-    if (status != CUBLAS_STATUS_SUCCESS) {                               \
-      fprintf(stderr, "cuBLAS Error at %s:%d: %d\n", __FILE__, __LINE__, \
-              status);                                                   \
-      exit(EXIT_FAILURE);                                                \
-    }                                                                    \
-  } while (0)
-#endif
+// GPU error-checking macros are defined in gpu_backend.hpp as
+// GPU_CHECK / GPU_BLAS_CHECK / GPU_SPARSE_CHECK.
 
 // Forward declarations
 struct StepSizeConfig;
@@ -126,7 +91,7 @@ class PDLPSolver {
 
   // --- Convergence & Math Helpers ---
   double powerMethod();
-#ifdef CUPDLP_GPU
+#if defined(CUPDLP_GPU) || defined(HIPDLP_GPU)
   double powerMethodGpu();
 #endif
   void initializeStepSizes();
@@ -263,28 +228,37 @@ class PDLPSolver {
   void hipdlpTimerStop(const HighsInt hipdlp_clock);
 #endif
 
-#ifdef CUPDLP_GPU
+#if defined(CUPDLP_GPU) || defined(HIPDLP_GPU)
   HighsInt a_num_rows_ = 0;
   HighsInt a_num_cols_ = 0;
   HighsInt a_nnz_ = 0;
   double sum_weights_gpu_ = 0.0;
   // --- GPU Specifics ---
-  cudaStream_t gpu_stream_ = nullptr;
-  cusparseHandle_t cusparse_handle_ = nullptr;
-  cublasHandle_t cublas_handle_ = nullptr;
+  gpuStream_t gpu_stream_ = nullptr;
+  gpuSparseHandle_t cusparse_handle_ = nullptr;
+  gpuBlasHandle_t cublas_handle_ = nullptr;
 
   // Matrix descriptors
-  cusparseSpMatDescr_t mat_a_csr_ = nullptr;
-  cusparseSpMatDescr_t mat_a_T_csr_ = nullptr;
+  gpuSpMatDescr_t mat_a_csr_ = nullptr;
+  gpuSpMatDescr_t mat_a_T_csr_ = nullptr;
 
   // Device Pointers
   HighsInt *d_a_row_ptr_ = nullptr, *d_a_col_ind_ = nullptr;
   double* d_a_val_ = nullptr;
   HighsInt *d_at_row_ptr_ = nullptr, *d_at_col_ind_ = nullptr;
   double* d_at_val_ = nullptr;
-  int* d_halpern_iteration_ = nullptr;
-  double* d_primal_step_size_ = nullptr;
-  double* d_dual_step_size_ = nullptr;
+  // Packed into a single device allocation to avoid 3 separate H→D transfers
+  // per iteration. Layout: [primal_step, dual_step, halpern_iteration (as int)].
+  struct GpuStepParams {
+    double primal_step;
+    double dual_step;
+    int    halpern_iteration;
+  };
+  GpuStepParams* d_step_params_ = nullptr;
+  // Convenience device pointers aliasing into d_step_params_
+  int*    d_halpern_iteration_ = nullptr;
+  double* d_primal_step_size_  = nullptr;
+  double* d_dual_step_size_    = nullptr;
 
   // GPU Vectors (Device memory)
   double *d_x_current_ = nullptr, *d_y_current_ = nullptr;
@@ -323,8 +297,8 @@ class PDLPSolver {
   size_t spmv_buffer_size_aty_ = 0;
 
   // Vector Descriptors
-  cusparseDnVecDescr_t vec_x_desc_ = nullptr, vec_y_desc_ = nullptr;
-  cusparseDnVecDescr_t vec_ax_desc_ = nullptr, vec_aty_desc_ = nullptr;
+  gpuDnVecDescr_t vec_x_desc_ = nullptr, vec_y_desc_ = nullptr;
+  gpuDnVecDescr_t vec_ax_desc_ = nullptr, vec_aty_desc_ = nullptr;
 
   // GPU Methods
   void setupGpu();
