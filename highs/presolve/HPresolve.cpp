@@ -5950,8 +5950,7 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
         mipsolver != nullptr || !options->lp_presolve_requires_basis_postsolve;
 #endif
     bool tryProbing = mipsolver != nullptr;
-    bool tryFourierMotzkin =
-        mipsolver != nullptr || !options->lp_presolve_requires_basis_postsolve;
+    bool tryFourierMotzkin = true;
     HighsInt numCliquesBeforeProbing = -1;
     bool domcolAfterProbingCalled = false;
     bool dependentEquationsCalled = mipsolver != nullptr;
