@@ -39,10 +39,6 @@ Define a vector signs that contains the expected sign of each pivot:
 - -1 for pivots expected to be negative
 -  0 for pivots without an expected sign.
 This is used to determine the sign of the regularisation to apply.
-Only pivots in the (1,1)-block are allowed to have unknown sign, so that pivots
-with unknown sign receive a static regularisation contribution equal to -reg_p.
-Dynamic regularisation uses the computed sign of the pivot, if the sign is
-unknown.
 
 Then, the factorization is performed as follows.
 
@@ -61,6 +57,19 @@ off.
 To add static regularisation when the pivots are selected, use
 setRegularisation(reg_p,reg_d) to choose values of primal and dual
 regularisation. If regularisation is already added to the matrix, ignore.
+
+The expected sign of a pivot is used to determine which static regularisation to
+apply. Pivots with negative expected sign are regularised with -reg_p, pivots
+with positive expected sign are regularised with +reg_d. If the sign is unknown,
+the computed sign of the pivot is used to determine which regularisation to
+apply.
+
+Notice that this sign convention corresponds to a saddle point system with
+negative (1,1) block and positive (2,2) block.
+
+Dynamic regularisation may perturb a pivot if it is too small, and it
+does so based on the expected sign of the pivot. This procedure uses the
+computed sign of the pivot, if the sign is unknown.
 
 Notice that the fill-reducing ordering can be modified during the call to
 analyse. The inverse permutation used during the factorisation can be accessed
