@@ -61,6 +61,9 @@ If the [parallel](@ref option-parallel) option is set to "on" or "choose", HiPO 
 multiple threads to run multiple orderings and Newton system approaches in parallel, in 
 order to select the best one.
 
+The extent to which parallelism is used in HiPO depends on the value of the
+[threads](@ref option-threads) option (see above).
+
 ## MIP
 
 If the [parallel](@ref option-parallel) option is set to "on", the MIP solver
@@ -77,10 +80,6 @@ The extent to which parallelism is used in the MIP solver depends on the value o
 [threads](@ref option-threads) option (see above).
 
 ## Future plans
-
-Multi-threading within HiPO will be extended to other phases of the solver,
-including the solve phase of the factorisation and the process of assembling 
-the matrices.
 
 First-order solvers for LP are still very much in their infancy, and
 are not robust. Hence the availability of a PDLP solver for LP is
