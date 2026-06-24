@@ -380,9 +380,9 @@ set(highs_sources
     mip/HighsImplications.cpp
     mip/HighsLpAggregator.cpp
     mip/HighsLpRelaxation.cpp
-    mip/HighsMipAnalysis.cpp
     mip/HighsMipSolver.cpp
     mip/HighsMipSolverData.cpp
+    mip/HighsMipWorker.cpp
     mip/HighsModkSeparator.cpp
     mip/HighsNodeQueue.cpp
     mip/HighsObjectiveFunction.cpp
@@ -510,9 +510,9 @@ set(highs_headers
     mip/HighsImplications.h
     mip/HighsLpAggregator.h
     mip/HighsLpRelaxation.h
-    mip/HighsMipAnalysis.h
     mip/HighsMipSolver.h
     mip/HighsMipSolverData.h
+    mip/HighsMipWorker.h
     mip/HighsModkSeparator.h
     mip/HighsNodeQueue.h
     mip/HighsObjectiveFunction.h

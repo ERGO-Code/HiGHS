@@ -1243,24 +1243,9 @@ class Highs {
   HighsStatus setBasis();
 
   /**
-   * @brief Return a const reference to the internal sub-solver call and time
-   * instance
+   * @brief Report profiling
    */
-  const HighsSubSolverCallTime& getSubSolverCallTime() const {
-    return sub_solver_call_time_;
-  }
-
-  /**
-   * @brief Report internal sub-solver call and time instance
-   */
-  void reportSubSolverCallTime() const;
-
-  /**
-   * @brief Initialise the internal sub-solver call and time instance
-   */
-  void initialiseSubSolverCallTime() {
-    this->sub_solver_call_time_.initialise();
-  }
+  void reportProfiling() const;
 
   /**
    * @brief Run IPX crossover from a given HighsSolution instance and,
@@ -1291,6 +1276,14 @@ class Highs {
   std::string presolveRuleTypeToString(const HighsInt presolve_rule) const;
 
   /**
+   * @brief Ensures that the global scheduler is initialized,
+   * returning HighsStatus::kError if it has already been initialized,
+   * but the threads option is nonzero and not equal to
+   * this->max_threads_.
+   */
+  HighsStatus initializeMultiThreading();
+
+  /**
    * @brief Releases all resources held by the global scheduler instance. It is
    * not thread-safe to call this function while calling run() or presolve() on
    * any other Highs instance in any thread. After this function has terminated
@@ -1304,6 +1297,29 @@ class Highs {
    * which is usually not necessary.
    */
   static void resetGlobalScheduler(bool blocking = false);
+
+  /**
+   * @brief If profiling is not nullptr, sets up profiling and copies
+   * its pointer to Highs
+   */
+  void initializeProfiling(HighsProfiling* profiling);
+  void initializeSingleThreadedProfiling(HighsProfiling* profiling);
+
+  /**
+   * @brief Clears and then initializes profiling
+   */
+  void resetProfiling();
+
+  /**
+   * @brief If Highs::profiling_ is not nullptr, clears profiling and
+   * sets Highs::profiling_ to nullptr
+   */
+  void clearProfiling();
+
+  /**
+   * @brief Checks that pointer is not nullptr, and copies it to Highs
+   */
+  void setProfiling(HighsProfiling* profiling);
 
   // Start of advanced methods: only for internal use!
 
@@ -1571,9 +1587,9 @@ class Highs {
 
   HighsPresolveLog presolve_log_;
 
-  HighsSubSolverCallTime sub_solver_call_time_;
+  HighsProfiling* profiling_ = nullptr;
 
-  HighsInt max_threads = 0;
+  HighsInt max_threads_ = 0;
   // This is strictly for debugging. It's used to check whether
   // returnFromOptimizeModel() was called after the previous call to
   // Highs::optimizeModel() and, assuming that this is always done, it checks
