@@ -88,12 +88,14 @@ enum HighsAnalysisLevel {
   kHighsAnalysisLevelNlaTime = 32,
   kHighsAnalysisLevelMipData = 64,
   kHighsAnalysisLevelMipTime = 128,
+  kHighsAnalysisLevelPresolveTime = 256,
   kHighsAnalysisLevelMin = kHighsAnalysisLevelNone,
   kHighsAnalysisLevelMax =
       kHighsAnalysisLevelModelData + kHighsAnalysisLevelSolverSummaryData +
       kHighsAnalysisLevelSolverRuntimeData + kHighsAnalysisLevelSolverTime +
       kHighsAnalysisLevelNlaData + kHighsAnalysisLevelNlaTime +
-      kHighsAnalysisLevelMipData + kHighsAnalysisLevelMipTime
+      kHighsAnalysisLevelMipData + kHighsAnalysisLevelMipTime +
+      kHighsAnalysisLevelPresolveTime
 };
 
 enum class HighsVarType : uint8_t {
@@ -107,6 +109,8 @@ enum class HighsVarType : uint8_t {
 enum class HighsOptionType { kBool = 0, kInt, kDouble, kString };
 
 enum class HighsInfoType { kInt64 = -1, kInt = 1, kDouble };
+
+enum class HighsRunDataType { kInt64 = -1, kInt = 1, kDouble };
 
 enum OptionOffChooseOn {
   kHighsOptionOff = -1,
@@ -275,7 +279,10 @@ enum PresolveRuleType : int {
   kPresolveRuleSparsify,
   kPresolveRuleProbing,
   kPresolveRuleEnumeration,
-  kPresolveRuleMax = kPresolveRuleEnumeration,
+  kPresolveRuleDualFixing,
+  kPresolveRuleColStuffing,
+  kPresolveRuleInitialSweep,
+  kPresolveRuleMax = kPresolveRuleInitialSweep,
   kPresolveRuleLastAllowOff = kPresolveRuleMax,
   kPresolveRuleCount
 };
@@ -371,6 +378,9 @@ const HighsInt kHighsIllegalErrorIndex = -1;
 // values aren't known
 const double kHighsIllegalComplementarityViolation = kHighsInf;
 const HighsInt kHighsIllegalComplementarityCount = -1;
+
+const double kHighsIllegalDoubleMeasure = -kHighsInf;
+const HighsInt kHighsIllegalIntMeasure = -1;
 
 // Maximum upper bound on semi-variables
 const double kMaxSemiVariableUpper = 1e5;

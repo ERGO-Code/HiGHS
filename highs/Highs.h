@@ -17,6 +17,7 @@
 #include "lp_data/HighsIis.h"
 #include "lp_data/HighsLpUtils.h"
 #include "lp_data/HighsRanging.h"
+#include "lp_data/HighsRunData.h"
 #include "lp_data/HighsSolutionDebug.h"
 #include "model/HighsModel.h"
 #include "presolve/ICrash.h"
@@ -398,8 +399,37 @@ class Highs {
                                     std::string* default_value = nullptr) const;
 
   /**
-   * @brief Get a const reference to the internal info values
-   * type.
+   * @brief Get a const reference to the internal run data values.
+   */
+  const HighsRunData& getRunData() const { return run_data_; }
+
+  /**
+   * @brief Get an run_data value as HighsInt/int64_t/double, and only if
+   * it's of the correct type.
+   */
+
+  HighsStatus getRunDataValue(const std::string& run_data,
+                              HighsInt& value) const;
+
+#ifndef HIGHSINT64
+  HighsStatus getRunDataValue(const std::string& run_data,
+                              int64_t& value) const;
+#endif
+
+  HighsStatus getRunDataValue(const std::string& run_data, double& value) const;
+
+  HighsStatus getRunDataType(const std::string& run_data,
+                             HighsRunDataType& type) const;
+
+  /**
+   * @brief Write run data values to a file, with the extension ".html"
+   * producing HTML, otherwise using the standard format used to read
+   * options from a file.
+   */
+  HighsStatus writeRunData(const std::string& filename = "") const;
+
+  /**
+   * @brief Get a const reference to the internal info values.
    */
   const HighsInfo& getInfo() const { return info_; }
 
@@ -1569,6 +1599,7 @@ class Highs {
   HighsCallback callback_;
   HighsOptions options_;
   HighsInfo info_;
+  HighsRunData run_data_;
   HighsRanging ranging_;
   HighsIis iis_;
   std::vector<HighsObjectiveSolution> saved_objective_and_solution_;
@@ -1653,8 +1684,8 @@ class Highs {
   //
   // Invalidates all solver data in Highs class members by calling
   // invalidateModelStatus(), invalidateSolution(), invalidateBasis(),
-  // invalidateRanging(), invalidateInfo(), invalidateEkk() and
-  // clearIis()
+  // invalidateRanging(), invalidateInfo(), invalidateRunData(),
+  // invalidateEkk() and clearIis()
   void invalidateSolverData();
 
   // Invalidates all solver dual data in Highs class members by calling
@@ -1680,6 +1711,9 @@ class Highs {
   //
   // Invalidates info_ and resets the values of its members
   void invalidateInfo();
+  //
+  // Invalidates run_data_ and resets the values of its members
+  void invalidateRunData();
   //
   // Invalidates ranging_
   void invalidateRanging();
