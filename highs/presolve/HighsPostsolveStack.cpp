@@ -1493,26 +1493,17 @@ void HighsPostsolveStack::undoFourierMotzkinBlock(
 
   HighsInt numSteps = static_cast<HighsInt>(steps.size());
 
-  struct ImpliedBound {
-    double value;
-    HighsInt rowIdx = -1;  // index into plus/minus arrays, -1 = own bound
-    bool isPlus = false;
-    bool isUpper = false;
-  };
-  std::vector<ImpliedBound> bindingBounds(numSteps);
-
   // primal postsolve (Algorithm 3): process in reverse elimination order
   for (HighsInt s = numSteps - 1; s >= 0; --s) {
     const auto& step = steps[s];
     HighsInt col = step.header.col;
-    ImpliedBound lower = {step.header.colLower, -1, false, false};
-    ImpliedBound upper = {step.header.colUpper, -1, false, true};
+    double lower = step.header.colLower;
+    double upper = step.header.colUpper;
 
     auto tightenBounds = [&](const std::vector<FmeRowHeader>& headers,
                              const std::vector<double>& coefs,
                              const std::vector<std::vector<Nonzero>>& entries,
-                             bool isPlus, ImpliedBound& bLower,
-                             ImpliedBound& bUpper) {
+                             double& lowerBound, double& upperBound) {
       for (size_t r = 0; r < headers.size(); ++r) {
         double aij = coefs[r];
         HighsCDouble sum = 0.0;
@@ -1526,34 +1517,26 @@ void HighsPostsolveStack::undoFourierMotzkinBlock(
             direction > 0 ? headers[r].rowLower : headers[r].rowUpper;
         if (direction * rhs_upper != kHighsInf) {
           double bound = static_cast<double>((rhs_upper - sum) / aij);
-          if (bound < bUpper.value) {
-            bUpper = {bound, static_cast<HighsInt>(r), isPlus, true};
-          }
+          upperBound = std::min(upperBound, bound);
         }
         if (direction * rhs_lower != -kHighsInf) {
           double bound = static_cast<double>((rhs_lower - sum) / aij);
-          if (bound > bLower.value) {
-            bLower = {bound, static_cast<HighsInt>(r), isPlus, false};
-          }
+          lowerBound = std::max(lowerBound, bound);
         }
       }
     };
 
-    tightenBounds(step.plusHeaders, step.plusCoefs, step.plusEntries, true,
-                  lower, upper);
-    tightenBounds(step.minusHeaders, step.minusCoefs, step.minusEntries, false,
-                  lower, upper);
+    tightenBounds(step.plusHeaders, step.plusCoefs, step.plusEntries, lower,
+                  upper);
+    tightenBounds(step.minusHeaders, step.minusCoefs, step.minusEntries, lower,
+                  upper);
 
-    if (lower.value <= tol && upper.value >= -tol) {
+    if (lower <= tol && upper >= -tol)
       solution.col_value[col] = 0.0;
-      bindingBounds[s] = {};
-    } else if (lower.value > 0.0) {
-      solution.col_value[col] = lower.value;
-      bindingBounds[s] = lower;
-    } else {
-      solution.col_value[col] = upper.value;
-      bindingBounds[s] = upper;
-    }
+    else if (lower > 0.0)
+      solution.col_value[col] = lower;
+    else
+      solution.col_value[col] = upper;
   }
 
   if (!solution.dual_valid) return;
@@ -1606,7 +1589,6 @@ void HighsPostsolveStack::undoFourierMotzkinBlock(
     HighsInt col = step.header.col;
     HighsInt numPlus = step.header.numPlus;
     HighsInt numMinus = step.header.numMinus;
-    const ImpliedBound& binding = bindingBounds[s];
 
     // compute row activity for determining row basis status
     auto computeSlack = [&](const std::vector<FmeRowHeader>& headers,
@@ -1627,66 +1609,86 @@ void HighsPostsolveStack::undoFourierMotzkinBlock(
       return rawSlack / std::abs(coefs[r]);
     };
 
-    // propagate basis status from descendant rows to parent rows
-    for (HighsInt k = static_cast<HighsInt>(step.newRows.size()) - 1; k >= 0;
-         --k) {
-      const auto& nr = step.newRows[k];
-      if (basis.row_status[nr.row] == HighsBasisStatus::kBasic) {
-        if (nr.plusParentIdx >= 0)
-          basis.row_status[step.plusHeaders[nr.plusParentIdx].row] =
-              HighsBasisStatus::kBasic;
-        if (nr.minusParentIdx >= 0)
-          basis.row_status[step.minusHeaders[nr.minusParentIdx].row] =
-              HighsBasisStatus::kBasic;
+    // propagate basis from descendants to parents/col.
+    // basis dimension increases by (numPlus + numMinus - numNewRows).
+    // need that many new basic items plus one for each basic descendant
+    // removed. total new basic needed = (numPlus + numMinus - numNewRows) +
+    // numBasicDesc.
+    auto setRowNonbasic = [&](const FmeRowHeader& h) {
+      if (h.rowLower == h.rowUpper)
+        basis.row_status[h.row] = HighsBasisStatus::kLower;
+      else if (h.rowLower == -kHighsInf)
+        basis.row_status[h.row] = HighsBasisStatus::kUpper;
+      else if (h.rowUpper == kHighsInf)
+        basis.row_status[h.row] = HighsBasisStatus::kLower;
+      else {
+        basis.row_status[h.row] = solution.row_dual[h.row] < 0
+                                      ? HighsBasisStatus::kUpper
+                                      : HighsBasisStatus::kLower;
+      }
+    };
+
+    HighsInt numNewRows = static_cast<HighsInt>(step.newRows.size());
+    HighsInt numBasicDesc = 0;
+    for (const auto& nr : step.newRows)
+      if (basis.row_status[nr.row] == HighsBasisStatus::kBasic) numBasicDesc++;
+
+    HighsInt basicNeeded = (numPlus + numMinus - numNewRows) + numBasicDesc;
+    assert(basicNeeded <= numPlus + numMinus);
+    HighsInt basicAssigned = 0;
+
+    // assign basic to parents with nonzero slack, non-basic otherwise
+    for (HighsInt p = 0; p < numPlus; ++p) {
+      double slack =
+          computeSlack(step.plusHeaders, step.plusCoefs, step.plusEntries, p);
+      if (slack > tol && basicAssigned < basicNeeded) {
+        basis.row_status[step.plusHeaders[p].row] = HighsBasisStatus::kBasic;
+        basicAssigned++;
       } else {
-        if (nr.plusParentIdx >= 0)
-          basis.row_status[step.plusHeaders[nr.plusParentIdx].row] =
-              HighsBasisStatus::kNonbasic;
-        if (nr.minusParentIdx >= 0)
-          basis.row_status[step.minusHeaders[nr.minusParentIdx].row] =
-              HighsBasisStatus::kNonbasic;
+        setRowNonbasic(step.plusHeaders[p]);
+      }
+    }
+    for (HighsInt m = 0; m < numMinus; ++m) {
+      double slack = computeSlack(step.minusHeaders, step.minusCoefs,
+                                  step.minusEntries, m);
+      if (slack > tol && basicAssigned < basicNeeded) {
+        basis.row_status[step.minusHeaders[m].row] = HighsBasisStatus::kBasic;
+        basicAssigned++;
+      } else {
+        setRowNonbasic(step.minusHeaders[m]);
       }
     }
 
-    // handle parent rows not involved in any descendant (vanished constraints)
-    std::vector<bool> plusInvolved(numPlus, false);
-    std::vector<bool> minusInvolved(numMinus, false);
-    for (const auto& nr : step.newRows) {
-      if (nr.plusParentIdx >= 0) plusInvolved[nr.plusParentIdx] = true;
-      if (nr.minusParentIdx >= 0) minusInvolved[nr.minusParentIdx] = true;
-    }
-    for (HighsInt p = 0; p < numPlus; ++p) {
-      if (plusInvolved[p]) continue;
-      double slack =
-          computeSlack(step.plusHeaders, step.plusCoefs, step.plusEntries, p);
-      basis.row_status[step.plusHeaders[p].row] =
-          slack > tol ? HighsBasisStatus::kBasic
-                      : HighsBasisStatus::kNonbasic;
-    }
-    for (HighsInt m = 0; m < numMinus; ++m) {
-      if (minusInvolved[m]) continue;
-      double slack = computeSlack(step.minusHeaders, step.minusCoefs,
-                                  step.minusEntries, m);
-      basis.row_status[step.minusHeaders[m].row] =
-          slack > tol ? HighsBasisStatus::kBasic
-                      : HighsBasisStatus::kNonbasic;
-    }
-
-    // set x_j basis status using binding row info from primal postsolve
-    if (binding.rowIdx >= 0) {
-      // a parent row is binding: that row is nonbasic (tight), x_j is basic
-      HighsInt bindingRow = binding.isPlus
-                                ? step.plusHeaders[binding.rowIdx].row
-                                : step.minusHeaders[binding.rowIdx].row;
-      basis.row_status[bindingRow] = HighsBasisStatus::kNonbasic;
+    // col is basic if between bounds, or if we still need more basic items
+    if (solution.col_value[col] > step.header.colLower + tol &&
+        solution.col_value[col] < step.header.colUpper - tol) {
       basis.col_status[col] = HighsBasisStatus::kBasic;
+      basicAssigned++;
+    } else if (basicAssigned < basicNeeded) {
+      basis.col_status[col] = HighsBasisStatus::kBasic;
+      basicAssigned++;
     } else if (solution.col_value[col] <= step.header.colLower + tol) {
       basis.col_status[col] = HighsBasisStatus::kLower;
-    } else if (solution.col_value[col] >= step.header.colUpper - tol) {
-      basis.col_status[col] = HighsBasisStatus::kUpper;
     } else {
-      basis.col_status[col] = HighsBasisStatus::kBasic;
+      basis.col_status[col] = HighsBasisStatus::kUpper;
     }
+
+    // if still short, flip tight parents to basic (degenerate basic at bound)
+    for (HighsInt p = 0; p < numPlus && basicAssigned < basicNeeded; ++p) {
+      if (basis.row_status[step.plusHeaders[p].row] !=
+          HighsBasisStatus::kBasic) {
+        basis.row_status[step.plusHeaders[p].row] = HighsBasisStatus::kBasic;
+        basicAssigned++;
+      }
+    }
+    for (HighsInt m = 0; m < numMinus && basicAssigned < basicNeeded; ++m) {
+      if (basis.row_status[step.minusHeaders[m].row] !=
+          HighsBasisStatus::kBasic) {
+        basis.row_status[step.minusHeaders[m].row] = HighsBasisStatus::kBasic;
+        basicAssigned++;
+      }
+    }
+    assert(basicAssigned == basicNeeded);
   }
 }
 
