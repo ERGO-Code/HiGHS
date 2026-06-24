@@ -1610,10 +1610,10 @@ void HighsPostsolveStack::undoFourierMotzkinBlock(
     };
 
     // propagate basis from descendants to parents/col.
-    // basis dimension increases by (numPlus + numMinus - numNewRows).
-    // need that many new basic items plus one for each basic descendant
-    // removed. total new basic needed = (numPlus + numMinus - numNewRows) +
-    // numBasicDesc.
+    // ranged rows appear in both plus and minus but are one physical row.
+    // distinct parents = numPlus + numMinus - numRanged.
+    // basis dimension increases by (distinct parents - numNewRows).
+    // total new basic needed = (distinct parents - numNewRows) + numBasicDesc.
     auto setRowNonbasic = [&](const FmeRowHeader& h) {
       if (h.rowLower == h.rowUpper)
         basis.row_status[h.row] = HighsBasisStatus::kLower;
@@ -1633,8 +1633,20 @@ void HighsPostsolveStack::undoFourierMotzkinBlock(
     for (const auto& nr : step.newRows)
       if (basis.row_status[nr.row] == HighsBasisStatus::kBasic) numBasicDesc++;
 
-    HighsInt basicNeeded = (numPlus + numMinus - numNewRows) + numBasicDesc;
-    assert(basicNeeded <= numPlus + numMinus);
+    // mark ranged rows (appearing in both plus and minus sets)
+    std::vector<bool> isMinusRowRanged(numMinus, false);
+    HighsInt numRanged = 0;
+    for (HighsInt m = 0; m < numMinus; ++m)
+      for (HighsInt p = 0; p < numPlus; ++p)
+        if (step.minusHeaders[m].row == step.plusHeaders[p].row) {
+          isMinusRowRanged[m] = true;
+          numRanged++;
+          break;
+        }
+
+    HighsInt basicNeeded =
+        (numPlus + numMinus - numRanged - numNewRows) + numBasicDesc;
+    assert(basicNeeded <= numPlus + numMinus - numRanged);
     HighsInt basicAssigned = 0;
 
     // assign basic to parents with nonzero slack, non-basic otherwise
@@ -1649,6 +1661,7 @@ void HighsPostsolveStack::undoFourierMotzkinBlock(
       }
     }
     for (HighsInt m = 0; m < numMinus; ++m) {
+      if (isMinusRowRanged[m]) continue;
       double slack = computeSlack(step.minusHeaders, step.minusCoefs,
                                   step.minusEntries, m);
       if (slack > tol && basicAssigned < basicNeeded) {
@@ -1682,6 +1695,7 @@ void HighsPostsolveStack::undoFourierMotzkinBlock(
       }
     }
     for (HighsInt m = 0; m < numMinus && basicAssigned < basicNeeded; ++m) {
+      if (isMinusRowRanged[m]) continue;
       if (basis.row_status[step.minusHeaders[m].row] !=
           HighsBasisStatus::kBasic) {
         basis.row_status[step.minusHeaders[m].row] = HighsBasisStatus::kBasic;
