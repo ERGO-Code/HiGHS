@@ -678,8 +678,7 @@ void testNames() {
       printf("Row    %" HIGHSINT_FORMAT " has name %s\n", iRow, name);
   }
 
-  // Check extraction of names for the presolved LP, in which the
-  // first row is removed
+  // Check extraction of names for the presolved LP
   Highs_presolve(highs);
   if (dev_run) Highs_writePresolvedModel(highs, "");
 
@@ -689,7 +688,7 @@ void testNames() {
   //assert(presolved_num_col == num_col);
   //assert(presolved_num_row == num_row-1);
 
-  char presolved_name[5];
+  char presolved_name[512];
 
   return_status = Highs_getPresolvedColName(highs, -1, presolved_name);
   assert(return_status == kHighsStatusError);
@@ -1404,7 +1403,10 @@ void passPresolveGetLp() {
     double* presolved_row_upper =
         (double*)malloc(sizeof(double) * presolved_num_row);
     HighsInt* presolved_a_start =
-        (HighsInt*)malloc(sizeof(HighsInt) * (presolved_num_col + 1));
+        (HighsInt*)malloc(sizeof(HighsInt) *
+                          (presolved_a_format == kHighsMatrixFormatColwise
+                               ? presolved_num_col + 1
+                               : presolved_num_row + 1));
     HighsInt* presolved_a_index =
         (HighsInt*)malloc(sizeof(HighsInt) * presolved_num_nz);
     double* presolved_a_value =
@@ -1431,9 +1433,9 @@ void passPresolveGetLp() {
     assert(return_status == kHighsStatusOk);
     return_status = Highs_run(local_highs);
 
-    double* col_value = (double*)malloc(sizeof(double) * num_col);
-    double* col_dual = (double*)malloc(sizeof(double) * num_col);
-    double* row_dual = (double*)malloc(sizeof(double) * num_row);
+    double* col_value = (double*)malloc(sizeof(double) * presolved_num_col);
+    double* col_dual = (double*)malloc(sizeof(double) * presolved_num_col);
+    double* row_dual = (double*)malloc(sizeof(double) * presolved_num_row);
 
     return_status =
         Highs_getSolution(local_highs, col_value, col_dual, NULL, row_dual);
