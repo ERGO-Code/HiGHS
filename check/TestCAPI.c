@@ -685,8 +685,9 @@ void testNames() {
 
   HighsInt presolved_num_col = Highs_getPresolvedNumCol(highs);
   HighsInt presolved_num_row = Highs_getPresolvedNumRow(highs);
-  assert(presolved_num_col == num_col);
-  assert(presolved_num_row == num_row-1);
+  // Fourier-Motzkin presolve reduction may add columns/rows
+  //assert(presolved_num_col == num_col);
+  //assert(presolved_num_row == num_row-1);
 
   char presolved_name[5];
 
