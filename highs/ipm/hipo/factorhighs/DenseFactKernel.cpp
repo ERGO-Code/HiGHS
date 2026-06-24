@@ -44,6 +44,7 @@ static void staticReg(double& pivot, Int sign, const FHoptions& options,
   // apply static regularisation
 
   double old_pivot = pivot;
+  if (sign == 0) sign = pivot > 0 ? 1 : -1;
   if (sign > 0)
     pivot += options.reg_p;
   else
@@ -85,29 +86,24 @@ static bool blockBunchKaufman(const Int j, Int n, double* A, Int lda,
   auto res = maxInCol(j, n, j, A, lda);
   double gamma_j = res.second;
   const Int r = res.first;
-  double Ajj = sign[j] > 0 ? A[j + lda * j] + options.reg_d
-                           : A[j + lda * j] - options.reg_p;
+  const Int sign_j = sign[j] != 0 ? sign[j] : (A[j + lda * j] > 0 ? 1 : -1);
+  double Ajj = sign_j > 0 ? A[j + lda * j] + options.reg_d
+                          : A[j + lda * j] - options.reg_p;
 
-  if (std::max(std::abs(Ajj), gamma_j) <= thresh || sign[j] * Ajj < 0 ||
+  if (std::max(std::abs(Ajj), gamma_j) <= thresh || sign_j * Ajj < 0 ||
       j == n - 1) {
     // Must accept current pivot
     double old_pivot = A[j + lda * j];
-    staticReg(A[j + lda * j], sign[j], options, totalreg[j]);
+    staticReg(A[j + lda * j], sign_j, options, totalreg[j]);
 
-    if (sign[j] * A[j + lda * j] < 0) {
+    if (sign_j * A[j + lda * j] < 0) {
       data.setWrongSign(A[j + lda * j]);
-      // A[j + lda * j] = sign[j] * thresh;
+      // A[j + lda * j] = sign_j * thresh;
     }
 
     if (std::max(std::abs(Ajj), gamma_j) < thresh) {
       // perturbe pivot
-      double temp_sign = sign[j];
-      if (temp_sign == 0 && A[j + lda * j] > 0)
-        temp_sign = 1;
-      else if (temp_sign == 0)
-        temp_sign = -1;
-
-      A[j + lda * j] = temp_sign * thresh;
+      A[j + lda * j] = sign_j * thresh;
       data.countRegPiv();
     }
     totalreg[j] = A[j + lda * j] - old_pivot;
@@ -118,35 +114,38 @@ static bool blockBunchKaufman(const Int j, Int n, double* A, Int lda,
     assert(r >= 0);
     res = maxInCol(j, n, r, A, lda);
     double gamma_r = res.second;
-    double Arr = sign[r] > 0 ? A[r + lda * r] + options.reg_p
-                             : A[r + lda * r] - options.reg_d;
+    const Int sign_r = sign[r] != 0 ? sign[r] : (A[r + lda * r] > 0 ? 1 : -1);
+    double Arr = sign_r > 0 ? A[r + lda * r] + options.reg_p
+                            : A[r + lda * r] - options.reg_d;
 
     if ((std::abs(Ajj) >= kAlphaBK * gamma_j ||
          std::abs(Ajj) * gamma_r >= kAlphaBK * gamma_j * gamma_j)) {
       // Accept current pivot
-      staticReg(A[j + lda * j], sign[j], options, totalreg[j]);
+      staticReg(A[j + lda * j], sign_j, options, totalreg[j]);
 
-      if (sign[j] * A[j + lda * j] < 0) data.setWrongSign(A[j + lda * j]);
+      if (sign_j * A[j + lda * j] < 0) data.setWrongSign(A[j + lda * j]);
 
     } else if (std::abs(Arr) >= kAlphaBK * gamma_r) {
       // Use pivot r
 
       swapCols('U', n, A, lda, j, r, swaps, sign, data);
-      staticReg(A[j + lda * j], sign[j], options, totalreg[j]);
+      staticReg(A[j + lda * j], sign_j, options, totalreg[j]);
 
-      if (sign[j] * A[j + lda * j] < 0) data.setWrongSign(A[j + lda * j]);
+      if (sign_j * A[j + lda * j] < 0) data.setWrongSign(A[j + lda * j]);
 
     } else {
       // Use 2x2 pivot (j,r)
 
+      const Int sign_jp1 = sign[j + 1] != 0
+                               ? sign[j + 1]
+                               : (A[j + 1 + lda * (j + 1)] > 0 ? 1 : -1);
       swapCols('U', n, A, lda, j + 1, r, swaps, sign, data);
       flag_2x2 = true;
-      staticReg(A[j + lda * j], sign[j], options, totalreg[j]);
-      staticReg(A[j + 1 + lda * (j + 1)], sign[j + 1], options,
-                totalreg[j + 1]);
+      staticReg(A[j + lda * j], sign_j, options, totalreg[j]);
+      staticReg(A[j + 1 + lda * (j + 1)], sign_jp1, options, totalreg[j + 1]);
 
-      if (sign[j] * A[j + lda * j] < 0) data.setWrongSign(A[j + lda * j]);
-      if (sign[j + 1] * A[j + 1 + lda * (j + 1)] < 0)
+      if (sign_j * A[j + lda * j] < 0) data.setWrongSign(A[j + lda * j]);
+      if (sign_jp1 * A[j + 1 + lda * (j + 1)] < 0)
         data.setWrongSign(A[j + 1 + lda * (j + 1)]);
     }
   }
