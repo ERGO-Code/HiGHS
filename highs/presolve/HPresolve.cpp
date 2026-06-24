@@ -6913,8 +6913,6 @@ HPresolve::Result HPresolve::fourierMotzkin(
   if (logging_on) analysis_.startPresolveRuleLog(kPresolveRuleFourierMotzkin);
 
   using FmeRow = HighsPostsolveStack::FmeRowData<HighsTripletTreeSlicePreOrder>;
-  using FmeDescendant = HighsPostsolveStack::FmeDescendant;
-  using FmeNewRow = HighsPostsolveStack::FmeNewRow;
   using FmeAncestryEntry = HighsPostsolveStack::FmeAncestryEntry;
   using FmeBlockStep = HighsPostsolveStack::FmeBlockStep;
 
