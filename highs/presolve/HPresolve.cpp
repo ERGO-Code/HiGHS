@@ -7580,10 +7580,10 @@ HPresolve::Result HPresolve::fourierMotzkin(
     postsolve_stack.fourierMotzkinBlockPushStep(col, plusRows, minusRows);
 
     // save block metadata
+    assert(model->col_cost_[col] == 0.0);
     blockSteps.push_back({col,
                           model->col_lower_[col],
                           model->col_upper_[col],
-                          model->col_cost_[col],
                           static_cast<HighsInt>(plusRows.size()),
                           static_cast<HighsInt>(minusRows.size()),
                           {}});

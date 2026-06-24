@@ -78,7 +78,6 @@ class HighsPostsolveStack {
   struct FmeStepHeader {
     double colLower;
     double colUpper;
-    double colCost;
     HighsInt col;
     HighsInt numPlus;
     HighsInt numMinus;
@@ -106,7 +105,6 @@ class HighsPostsolveStack {
     HighsInt col;
     double colLower;
     double colUpper;
-    double colCost;
     HighsInt numPlus;
     HighsInt numMinus;
     std::vector<FmeNewRow> newRows;
@@ -757,10 +755,9 @@ class HighsPostsolveStack {
 
     // push step headers
     for (HighsInt s = 0; s < numSteps; ++s) {
-      FmeStepHeader header{
-          blockSteps[s].colLower, blockSteps[s].colUpper,
-          blockSteps[s].colCost,  origColIndex[blockSteps[s].col],
-          blockSteps[s].numPlus,  blockSteps[s].numMinus};
+      FmeStepHeader header{blockSteps[s].colLower, blockSteps[s].colUpper,
+                           origColIndex[blockSteps[s].col],
+                           blockSteps[s].numPlus, blockSteps[s].numMinus};
       reductionValues.push(header);
     }
 

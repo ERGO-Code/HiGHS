@@ -1560,8 +1560,8 @@ void HighsPostsolveStack::undoFourierMotzkinBlock(
     recoverDual(step.plusHeaders, step.plusDescendants);
     recoverDual(step.minusHeaders, step.minusDescendants);
 
-    // col_dual = cost - Σ a_{ij} * row_dual[i] (each row counted once)
-    HighsCDouble colDual = step.header.colCost;
+    // col_dual = -Σ a_{ij} * row_dual[i] (cost is zero after reformulation)
+    HighsCDouble colDual = 0.0;
     std::vector<bool> visited(solution.row_dual.size(), false);
     for (HighsInt r = 0; r < numPlus; ++r) {
       HighsInt row = step.plusHeaders[r].row;
