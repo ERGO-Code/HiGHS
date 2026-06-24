@@ -13,7 +13,7 @@ dotnet add package Highs.Native --version 1.14.0
 The nuget package contains runtime libraries for
 
 * `win-x64`
-* `win-x32`
+* `win-x86`
 * `linux-x64`
 * `linux-arm64`
 * `macos-x64`

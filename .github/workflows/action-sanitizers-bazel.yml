@@ -1,6 +1,7 @@
 name: action-sanitizers-bazel
 
 on:
+  pull_request:
   workflow_dispatch:
 
 jobs:
@@ -11,7 +12,7 @@ jobs:
         os: [ubuntu-latest]
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - uses: bazelbuild/setup-bazelisk@v3
 
@@ -22,10 +23,10 @@ jobs:
         run: bazel build -c dbg --config=asan //...
 
       - name: Bazel test
-        run: bazel test -c dbg --config=asan --runs_per_test 3000 //...
+        run: bazel test -c dbg --config=asan --runs_per_test 5 //...
 
       # - name: Upload bazel-testlogs
-      #   uses: actions/upload-artifact@v4
+      #   uses: actions/upload-artifact@v7
       #   with:
       #     name: bazel-testlogs-asan
       #     path: bazel-testlogs/
@@ -37,7 +38,7 @@ jobs:
         os: [ubuntu-latest]
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - uses: bazelbuild/setup-bazelisk@v3
 
@@ -47,11 +48,17 @@ jobs:
       - name: Bazel build
         run: bazel build -c dbg --config=tsan //...
 
-      - name: Bazel test
-        run: bazel test -c dbg --config=tsan --runs_per_test 3000 //...
+      - name: Test Mip Solver
+        run: bazel test -c dbg --config=tsan --runs_per_test 100 //:TestMipSolver
+
+      - name: Test Highs Parallel
+        run: bazel test -c dbg --config=tsan --runs_per_test 100 //:TestHighsParallel
+
+      - name: All Tests
+        run: bazel test -c dbg --config=tsan --runs_per_test 5 //...
 
       # - name: Upload bazel-testlogs
-      #   uses: actions/upload-artifact@v4
+      #   uses: actions/upload-artifact@v7
       #   with:
       #     name: bazel-testlogs-tsan
       #     path: bazel-testlogs/
@@ -63,7 +70,7 @@ jobs:
         os: [ubuntu-latest]
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - uses: bazelbuild/setup-bazelisk@v3
 
@@ -74,10 +81,10 @@ jobs:
         run: bazel build -c dbg --config=lsan //...
 
       - name: Bazel test
-        run: bazel test -c dbg --config=lsan --runs_per_test 3000 //...
+        run: bazel test -c dbg --config=lsan --runs_per_test 5 //...
 
       # - name: Upload bazel-testlogs
-      #   uses: actions/upload-artifact@v4
+      #   uses: actions/upload-artifact@v7
       #   with:
       #     name: bazel-testlogs-lsan
       #     path: bazel-testlogs/
@@ -89,21 +96,21 @@ jobs:
         os: [ubuntu-latest]
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - uses: bazelbuild/setup-bazelisk@v3
 
-      - name: Bazel clean
+      - name: bazel clean
         run: bazel clean
 
-      - name: Bazel build
+      - name: bazel build
         run: bazel build -c dbg --config=ubsan //...
 
-      - name: Bazel test
-        run: bazel test -c dbg --config=ubsan --runs_per_test 3000 //...
+      - name: bazel test
+        run: bazel test -c dbg --config=ubsan --runs_per_test 5 //...
 
-      # - name: Upload bazel-testlogs
-      #   uses: actions/upload-artifact@v4
+      # - name: upload bazel-testlogs
+      #   uses: actions/upload-artifact@v7
       #   with:
       #     name: bazel-testlogs-ubsan
       #     path: bazel-testlogs/

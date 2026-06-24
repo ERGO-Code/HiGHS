@@ -126,6 +126,9 @@ class PDLPSolver {
 
   // --- Convergence & Math Helpers ---
   double powerMethod();
+#ifdef CUPDLP_GPU
+  double powerMethodGpu();
+#endif
   void initializeStepSizes();
 
   // Convergence checks

@@ -123,6 +123,7 @@ bool HPresolve::okSetInput(HighsLp& model_, const HighsOptions& options_,
   if (!okResize(colDeleted, model->num_col_)) return false;
   if (!okReserve(changedColIndices, model->num_col_)) return false;
   if (!okReserve(liftingOpportunities, model->num_row_)) return false;
+  if (!okResize(singleEquationChecked, model->num_row_)) return false;
   numDeletedCols = 0;
   numDeletedRows = 0;
   // initialize substitution opportunities
@@ -161,9 +162,9 @@ bool HPresolve::okSetInput(HighsMipSolver& mipsolver,
     mipsolver.model_ = &mipsolver.mipdata_->presolvedModel;
   } else {
     mipsolver.mipdata_->presolvedModel.col_lower_ =
-        mipsolver.mipdata_->domain.col_lower_;
+        mipsolver.mipdata_->getDomain().col_lower_;
     mipsolver.mipdata_->presolvedModel.col_upper_ =
-        mipsolver.mipdata_->domain.col_upper_;
+        mipsolver.mipdata_->getDomain().col_upper_;
   }
 
   return okSetInput(mipsolver.mipdata_->presolvedModel, *mipsolver.options_mip_,
@@ -534,6 +535,7 @@ void HPresolve::markChangedRow(HighsInt row) {
     changedRowIndices.push_back(row);
     changedRowFlag[row] = true;
   }
+  singleEquationChecked[row] = false;
 }
 
 void HPresolve::markChangedCol(HighsInt col) {
@@ -786,7 +788,8 @@ void HPresolve::resetColImpliedBoundsDerivedFromRow(HighsInt row) {
   // reset implied column bounds affected by a modification in a row
   // (removed / added non-zeros, etc.)
   if (colImplSourceByRow[row].empty()) return;
-  std::set<HighsInt> affectedCols(colImplSourceByRow[row]);
+  std::set<HighsInt> affectedCols;
+  affectedCols.swap(colImplSourceByRow[row]);
   for (const HighsInt& col : affectedCols) {
     // set implied bounds to infinite values if they were deduced from the
     // given row
@@ -798,7 +801,8 @@ void HPresolve::resetRowDualImpliedBoundsDerivedFromCol(HighsInt col) {
   // reset implied row dual bounds affected by a modification in a column
   // (removed / added non-zeros, etc.)
   if (implRowDualSourceByCol[col].empty()) return;
-  std::set<HighsInt> affectedRows(implRowDualSourceByCol[col]);
+  std::set<HighsInt> affectedRows;
+  affectedRows.swap(implRowDualSourceByCol[col]);
   for (const HighsInt& row : affectedRows) {
     // set implied bounds to infinite values if they were deduced from the
     // given column
@@ -897,6 +901,7 @@ void HPresolve::shrinkProblem(HighsPostsolveStack& postsolve_stack) {
         if (have_row_names)
           model->row_names_[newRowIndex[i]] = std::move(model->row_names_[i]);
         changedRowFlag[newRowIndex[i]] = changedRowFlag[i];
+        singleEquationChecked[newRowIndex[i]] = singleEquationChecked[i];
       }
     }
   }
@@ -949,6 +954,7 @@ void HPresolve::shrinkProblem(HighsPostsolveStack& postsolve_stack) {
   rowsizeImplInt.resize(model->num_row_);
   if (have_row_names) model->row_names_.resize(model->num_row_);
   changedRowFlag.resize(model->num_row_);
+  singleEquationChecked.resize(model->num_row_);
 
   numDeletedRows = 0;
   postsolve_stack.compressIndexMaps(newRowIndex, newColIndex);
@@ -1008,17 +1014,17 @@ void HPresolve::shrinkProblem(HighsPostsolveStack& postsolve_stack) {
   if (mipsolver != nullptr) {
     mipsolver->mipdata_->rowMatrixSet = false;
     mipsolver->mipdata_->objectiveFunction = HighsObjectiveFunction(*mipsolver);
-    mipsolver->mipdata_->domain = HighsDomain(*mipsolver);
+    mipsolver->mipdata_->getDomain() = HighsDomain(*mipsolver);
     mipsolver->mipdata_->cliquetable.rebuild(model->num_col_, postsolve_stack,
-                                             mipsolver->mipdata_->domain,
+                                             mipsolver->mipdata_->getDomain(),
                                              newColIndex, newRowIndex);
     mipsolver->mipdata_->implications.rebuild(model->num_col_, newColIndex,
                                               newRowIndex);
-    mipsolver->mipdata_->cutpool =
+    mipsolver->mipdata_->getCutPool() =
         HighsCutPool(mipsolver->model_->num_col_,
                      mipsolver->options_mip_->mip_pool_age_limit,
-                     mipsolver->options_mip_->mip_pool_soft_limit);
-    mipsolver->mipdata_->conflictPool =
+                     mipsolver->options_mip_->mip_pool_soft_limit, 0);
+    mipsolver->mipdata_->getConflictPool() =
         HighsConflictPool(5 * mipsolver->options_mip_->mip_pool_age_limit,
                           mipsolver->options_mip_->mip_pool_soft_limit);
 
@@ -1445,7 +1451,7 @@ HPresolve::Result HPresolve::dominatedColumns(
 
 HPresolve::Result HPresolve::prepareProbing(
     HighsPostsolveStack& postsolve_stack, bool& firstCall) {
-  HighsDomain& domain = mipsolver->mipdata_->domain;
+  HighsDomain& domain = mipsolver->mipdata_->getDomain();
   HighsCliqueTable& cliquetable = mipsolver->mipdata_->cliquetable;
 
   shrinkProblem(postsolve_stack);
@@ -1514,7 +1520,7 @@ HPresolve::Result HPresolve::finaliseProbing(
     HighsPostsolveStack& postsolve_stack, bool firstCall,
     HighsInt& numVarsFixed, HighsInt& numBndsTightened,
     HighsInt& numVarsSubstituted, HighsInt& liftedNonZeros) {
-  HighsDomain& domain = mipsolver->mipdata_->domain;
+  HighsDomain& domain = mipsolver->mipdata_->getDomain();
   HighsCliqueTable& cliquetable = mipsolver->mipdata_->cliquetable;
 
   cliquetable.cleanupFixed(domain);
@@ -1589,7 +1595,7 @@ std::pair<int64_t, HighsInt> HPresolve::computeProbingScore(
 }
 
 HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postsolve_stack) {
-  mipsolver->analysis_.mipTimerStart(kMipClockProbingPresolve);
+  mipsolver->profiling_->start(kMipClockProbingPresolve);
   probingEarlyAbort = false;
 
   HighsInt oldNumProbed = numProbed;
@@ -1598,11 +1604,11 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postsolve_stack) {
   bool firstCall = false;
   Result prepareResult = prepareProbing(postsolve_stack, firstCall);
   if (prepareResult != Result::kOk) {
-    mipsolver->analysis_.mipTimerStop(kMipClockProbingPresolve);
+    mipsolver->profiling_->stop(kMipClockProbingPresolve);
     return prepareResult;
   }
 
-  HighsDomain& domain = mipsolver->mipdata_->domain;
+  HighsDomain& domain = mipsolver->mipdata_->getDomain();
   HighsCliqueTable& cliquetable = mipsolver->mipdata_->cliquetable;
   HighsImplications& implications = mipsolver->mipdata_->implications;
 
@@ -1824,7 +1830,7 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postsolve_stack) {
         implications.storeLiftingOpportunity = nullptr;
 
       if (domain.infeasible()) {
-        mipsolver->analysis_.mipTimerStop(kMipClockProbingPresolve);
+        mipsolver->profiling_->stop(kMipClockProbingPresolve);
         return Result::kPrimalInfeasible;
       }
     }
@@ -1858,7 +1864,7 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postsolve_stack) {
     }
   }
 
-  mipsolver->analysis_.mipTimerStop(kMipClockProbingPresolve);
+  mipsolver->profiling_->stop(kMipClockProbingPresolve);
   return checkLimits(postsolve_stack);
 }
 
@@ -1868,7 +1874,7 @@ HPresolve::Result HPresolve::liftingForProbing(
   // al. (2019) Presolve Reductions in Mixed Integer Programming. INFORMS
   // Journal on Computing 32(2):473-506.
   HighsCliqueTable& cliquetable = mipsolver->mipdata_->cliquetable;
-  const HighsDomain& domain = mipsolver->mipdata_->domain;
+  const HighsDomain& domain = mipsolver->mipdata_->getDomain();
 
   // collect best lifting opportunity for each row in a vector
   typedef std::pair<HighsCliqueTable::CliqueVar, double> liftingvar;
@@ -4922,11 +4928,12 @@ HPresolve::Result HPresolve::dualFixing(HighsPostsolveStack& postsolve_stack,
           hasSingleDownLock && isEquation(downLockRow)
               ? downLockRow
               : (hasSingleUpLock && isEquation(upLockRow) ? upLockRow : -1);
-      if (equationRow != -1) {
+      if (equationRow != -1 && !singleEquationChecked[equationRow]) {
         // see section 6.1 "Extension of dual fixing for single equations",
         // Achterberg et al., Presolve Reductions in Mixed Integer
         // Programming, INFORMS Journal on Computing 32(2):473-506.
         HPRESOLVE_CHECKED_CALL(handleSingleEquation(equationRow));
+        singleEquationChecked[equationRow] = true;
         if (colDeleted[col]) return Result::kOk;
       } else if (mipsolver != nullptr && model->col_lower_[col] != -kHighsInf &&
                  model->col_upper_[col] != kHighsInf) {
@@ -4982,7 +4989,11 @@ HPresolve::Result HPresolve::singletonColStuffing(
   // count number of fixed columns
   HighsInt numFixedCols = 0;
 
-  typedef std::tuple<HighsInt, double, HighsInt> candidate;
+  struct candidate {
+    HighsInt col;
+    double val;
+    HighsInt multiplier;
+  };
 
   auto isSingleton = [&](HighsInt col) {
     return (!colDeleted[col] && colsize[col] == 1 &&
@@ -4991,9 +5002,9 @@ HPresolve::Result HPresolve::singletonColStuffing(
 
   auto sortCols = [&](std::vector<candidate>& vec) {
     pdqsort(vec.begin(), vec.end(),
-            [&](const candidate& col1, const candidate& col2) {
-              return model->col_cost_[std::get<0>(col1)] / std::get<1>(col1) <
-                     model->col_cost_[std::get<0>(col2)] / std::get<1>(col2);
+            [&](const candidate& c1, const candidate& c2) {
+              return model->col_cost_[c1.col] / c1.val <
+                     model->col_cost_[c2.col] / c2.val;
             });
   };
 
@@ -5013,12 +5024,13 @@ HPresolve::Result HPresolve::singletonColStuffing(
   // lambda for storing a candidate
   auto addCandidate = [&](std::vector<candidate>& candidates, HighsInt col,
                           double val, HighsInt direction, double& minWeight,
-                          double& maxWeight, bool& allInteger) {
-    allInteger =
-        allInteger && model->integrality_[col] == HighsVarType::kInteger;
+                          double& maxWeight, size_t& numIntegerCandidates) {
+    if (model->integrality_[col] == HighsVarType::kInteger)
+      numIntegerCandidates++;
+
     minWeight = std::min(minWeight, direction * val);
     maxWeight = std::max(maxWeight, direction * val);
-    candidates.push_back(std::make_tuple(col, val, direction));
+    candidates.push_back(candidate{col, val, direction});
   };
 
   // lambda for fixing a variable
@@ -5030,21 +5042,23 @@ HPresolve::Result HPresolve::singletonColStuffing(
     return Result::kOk;
   };
 
-  // lambda for actual stuffing
-  auto checkRow = [&](HighsInt row, double rhs, HighsInt direction) {
-    // skip row if rhs is not finite
-    if (direction * rhs == kHighsInf) return Result::kOk;
-
+  // lambda for computing candidates for stuffing
+  auto computeCandidates = [&](HighsInt row, HighsInt direction,
+                               std::vector<candidate>& candidates,
+                               HighsCDouble& sumLower, HighsCDouble& sumUpper,
+                               bool& sumLowerFinite, bool& sumUpperFinite,
+                               size_t& numIntegerCandidates, double& minWeight,
+                               double& maxWeight, bool allowIntegerCandidates) {
     // vectors for candidates and activity bounds
-    std::vector<candidate> candidates;
+    candidates.clear();
     candidates.reserve(rowsize[row]);
-    HighsCDouble sumLower = 0.0;
-    HighsCDouble sumUpper = 0.0;
-    bool sumLowerFinite = true;
-    bool sumUpperFinite = true;
-    bool allInteger = true;
-    double minWeight = kHighsInf;
-    double maxWeight = -kHighsInf;
+    sumLower = 0.0;
+    sumUpper = 0.0;
+    sumLowerFinite = true;
+    sumUpperFinite = true;
+    numIntegerCandidates = 0;
+    minWeight = kHighsInf;
+    maxWeight = -kHighsInf;
 
     for (auto& nz : getRowVector(row)) {
       // get column index, coefficient, cost and bounds
@@ -5053,70 +5067,125 @@ HPresolve::Result HPresolve::singletonColStuffing(
       double cj = model->col_cost_[j];
       double sumLowerBound = model->col_lower_[j];
       double sumUpperBound = model->col_upper_[j];
+      bool isCandidate = allowIntegerCandidates ||
+                         model->integrality_[j] != HighsVarType::kInteger;
       if (isSingleton(j)) {
         // check singleton
         if (aj > 0) {
-          // use lower bound
-          sumUpperBound = sumLowerBound;
-          // candidate for stuffing?
-          if (cj < 0)
+          if (cj >= 0)
+            // dual fixing: fix to lower bound
+            sumUpperBound = sumLowerBound;
+          else if (isCandidate) {
+            // candidate for stuffing
+            sumUpperBound = sumLowerBound;
             addCandidate(candidates, j, aj, HighsInt{1}, minWeight, maxWeight,
-                         allInteger);
+                         numIntegerCandidates);
+          }
         } else {
-          // use upper bound
-          sumLowerBound = sumUpperBound;
-          // candidate for stuffing? multiply column with -1
-          if (cj > 0)
+          // aj < 0
+          assert(aj < 0);
+          if (cj <= 0)
+            // dual fixing: fix to upper bound
+            sumLowerBound = sumUpperBound;
+          else if (isCandidate) {
+            // candidate for stuffing; multiply column with -1
+            sumLowerBound = sumUpperBound;
             addCandidate(candidates, j, aj, HighsInt{-1}, minWeight, maxWeight,
-                         allInteger);
+                         numIntegerCandidates);
+          }
         }
-      } else if (aj < 0)
-        std::swap(sumLowerBound, sumUpperBound);
+      }
       // update activities
+      if (aj < 0) std::swap(sumLowerBound, sumUpperBound);
       updateActivityBounds(sumLower, sumUpper, sumLowerFinite, sumUpperFinite,
                            aj, sumLowerBound, sumUpperBound);
-      if (!sumLowerFinite && !sumUpperFinite) return Result::kOk;
+      if (!sumLowerFinite && !sumUpperFinite) return false;
+    }
+    return true;
+  };
+
+  // lambda for computing and checking candidates for stuffing
+  auto checkCandidates = [&](HighsInt row, HighsInt direction,
+                             std::vector<candidate>& candidates,
+                             HighsCDouble& sumLower, HighsCDouble& sumUpper,
+                             bool& sumLowerFinite, bool& sumUpperFinite) {
+    // number of integer candidates and weights
+    size_t numIntegerCandidates;
+    double minWeight;
+    double maxWeight;
+
+    // compute candidates
+    if (computeCandidates(row, direction, candidates, sumLower, sumUpper,
+                          sumLowerFinite, sumUpperFinite, numIntegerCandidates,
+                          minWeight, maxWeight, true)) {
+      // return if there are no integer columns
+      if (numIntegerCandidates == 0) return true;
+      // all columns need to have same weights if we only have integer
+      // columns
+      if (numIntegerCandidates == candidates.size()) {
+        if (minWeight != maxWeight) return false;
+        return true;
+      }
     }
 
-    // all columns need to have same weights if we only have integer columns
-    if (allInteger && minWeight != maxWeight) return Result::kOk;
+    // recompute candidates without integer columns
+    if (numIntegerCandidates > 0 &&
+        computeCandidates(row, direction, candidates, sumLower, sumUpper,
+                          sumLowerFinite, sumUpperFinite, numIntegerCandidates,
+                          minWeight, maxWeight, false))
+      return true;
 
-    // remove integer columns if there are also continuous ones
-    if (!allInteger)
-      candidates.erase(
-          std::remove_if(candidates.begin(), candidates.end(),
-                         [&](const candidate& p) {
-                           return model->integrality_[std::get<0>(p)] ==
-                                  HighsVarType::kInteger;
-                         }),
-          candidates.end());
+    return false;
+  };
+
+  // lambda for actual stuffing
+  auto checkRow = [&](HighsInt row, double rhs, HighsInt direction) {
+    // skip row if rhs is not finite
+    if (direction * rhs == kHighsInf) return Result::kOk;
+
+    // vectors for candidates and activity bounds
+    std::vector<candidate> candidates;
+    HighsCDouble sumLower;
+    HighsCDouble sumUpper;
+    bool sumLowerFinite;
+    bool sumUpperFinite;
+
+    // compute candidates
+    if (!checkCandidates(row, direction, candidates, sumLower, sumUpper,
+                         sumLowerFinite, sumUpperFinite))
+      return Result::kOk;
 
     // sort candidates
     sortCols(candidates);
 
     // check candidates
     for (const auto& t : candidates) {
-      // get variable index, coefficient and multiplier (-1 if sign was flipped)
-      HighsInt j = std::get<0>(t);
-      double aj = std::get<1>(t);
-      HighsInt multiplier = std::get<2>(t);
       // both bounds have to be finite
-      if (model->col_lower_[j] == -kHighsInf ||
-          model->col_upper_[j] == kHighsInf)
+      if (model->col_lower_[t.col] == -kHighsInf ||
+          model->col_upper_[t.col] == kHighsInf)
         break;
       // compute delta (bound difference)
-      HighsCDouble delta = multiplier * aj *
-                           (static_cast<HighsCDouble>(model->col_upper_[j]) -
-                            static_cast<HighsCDouble>(model->col_lower_[j]));
+      HighsCDouble delta =
+          t.multiplier * t.val *
+          (static_cast<HighsCDouble>(model->col_upper_[t.col]) -
+           static_cast<HighsCDouble>(model->col_lower_[t.col]));
       // check if variable can be fixed
       if (sumUpperFinite &&
           delta <= direction * rhs - sumUpper + primal_feastol) {
         numFixedCols++;
-        HPRESOLVE_CHECKED_CALL(fixCol(j, multiplier));
+        HPRESOLVE_CHECKED_CALL(fixCol(t.col, t.multiplier));
       } else if (sumLowerFinite &&
-                 direction * rhs <= sumLower + primal_feastol) {
+                 delta <= sumLower - direction * rhs + primal_feastol) {
+        // Previously
+        //
+        // direction * rhs <= sumLower + primal_feastol
+        //
+        // But this led to fixing at -t.multiplier until row activity
+        // was at its bound, which is primal optmal but degenerate,
+        // and does not yield an optimal basis if column costs are
+        // positive
         numFixedCols++;
-        HPRESOLVE_CHECKED_CALL(fixCol(j, -multiplier));
+        HPRESOLVE_CHECKED_CALL(fixCol(t.col, -t.multiplier));
       }
       // update row activities
       if (sumLowerFinite) sumLower += delta;
@@ -5151,17 +5220,17 @@ HPresolve::Result HPresolve::enumerateSolutions(
     HighsPostsolveStack& postsolve_stack) {
   // enumerate all solutions for pure binary constraints with a small number of
   // variables
-  mipsolver->analysis_.mipTimerStart(kMipClockEnumerationPresolve);
+  mipsolver->profiling_->start(kMipClockEnumerationPresolve);
 
   // prepare probing
   bool firstCall = false;
   Result prepareResult = prepareProbing(postsolve_stack, firstCall);
   if (prepareResult != Result::kOk) {
-    mipsolver->analysis_.mipTimerStop(kMipClockEnumerationPresolve);
+    mipsolver->profiling_->stop(kMipClockEnumerationPresolve);
     return prepareResult;
   }
 
-  HighsDomain& domain = mipsolver->mipdata_->domain;
+  HighsDomain& domain = mipsolver->mipdata_->getDomain();
   HighsCliqueTable& cliquetable = mipsolver->mipdata_->cliquetable;
 
   typedef std::tuple<double, double, HighsInt, HighsInt, uint32_t> candidateRow;
@@ -5406,7 +5475,7 @@ HPresolve::Result HPresolve::enumerateSolutions(
 
   auto handleInfeasibility = [&](bool infeasible) {
     if (infeasible) {
-      mipsolver->analysis_.mipTimerStop(kMipClockEnumerationPresolve);
+      mipsolver->profiling_->stop(kMipClockEnumerationPresolve);
       return Result::kPrimalInfeasible;
     }
     return Result::kOk;
@@ -5617,7 +5686,7 @@ HPresolve::Result HPresolve::enumerateSolutions(
                 static_cast<int>(numBndsTightened),
                 static_cast<int>(numVarsSubstituted));
 
-  mipsolver->analysis_.mipTimerStop(kMipClockEnumerationPresolve);
+  mipsolver->profiling_->stop(kMipClockEnumerationPresolve);
 
   return checkLimits(postsolve_stack);
 }
@@ -5730,6 +5799,16 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
   //    - stop
   //
 
+  auto presolveReturn = [&]() {
+    if (mipsolver != nullptr) HPRESOLVE_CHECKED_CALL(scaleMIP(postsolve_stack));
+
+    // analysePresolveRuleLog() should return true - no errors
+    assert(analysis_.analysePresolveRuleLog());
+    // Possibly report presolve log
+    analysis_.analysePresolveRuleLog(true);
+    return Result::kOk;
+  };
+
   // convert model to minimization problem
   if (model->sense_ == ObjSense::kMaximize) {
     for (HighsInt i = 0; i != model->num_col_; ++i)
@@ -5777,6 +5856,10 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
     assert(this->timer);
     assert(this->timer->running());
 
+    if (options->presolve_rule_test) {
+      HPRESOLVE_CHECKED_CALL(presolveRuleTest(postsolve_stack));
+      return presolveReturn();
+    }
     HPRESOLVE_CHECKED_CALL(initialRowAndColPresolve(postsolve_stack));
 
     HighsInt numParallelRowColCalls = 0;
@@ -5954,13 +6037,7 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
                  "\nPresolve is switched off\n");
   }
 
-  if (mipsolver != nullptr) HPRESOLVE_CHECKED_CALL(scaleMIP(postsolve_stack));
-
-  // analysePresolveRuleLog() should return true - no errors
-  assert(analysis_.analysePresolveRuleLog());
-  // Possibly report presolve log
-  analysis_.analysePresolveRuleLog(true);
-  return Result::kOk;
+  return presolveReturn();
 }
 
 HPresolve::Result HPresolve::removeSlacks(
@@ -6286,9 +6363,10 @@ HighsModelStatus HPresolve::run(HighsPostsolveStack& postsolve_stack) {
   if (mipsolver != nullptr) {
     mipsolver->mipdata_->cliquetable.setPresolveFlag(false);
     mipsolver->mipdata_->cliquetable.setMaxEntries(numNonzeros());
-    mipsolver->mipdata_->domain.addCutpool(mipsolver->mipdata_->cutpool);
-    mipsolver->mipdata_->domain.addConflictPool(
-        mipsolver->mipdata_->conflictPool);
+    mipsolver->mipdata_->getDomain().addCutpool(
+        mipsolver->mipdata_->getCutPool());
+    mipsolver->mipdata_->getDomain().addConflictPool(
+        mipsolver->mipdata_->getConflictPool());
 
     if (mipsolver->mipdata_->numRestarts != 0) {
       std::vector<HighsInt> cutinds;
@@ -6312,7 +6390,7 @@ HighsModelStatus HPresolve::run(HighsPostsolveStack& postsolve_stack) {
           cutvals.push_back(Avalue[j]);
         }
 
-        mipsolver->mipdata_->cutpool.addCut(
+        mipsolver->mipdata_->getCutPool().addCut(
             *mipsolver, cutinds.data(), cutvals.data(), cutinds.size(),
             model->row_upper_[i],
             rowsizeInteger[i] + rowsizeImplInt[i] == rowsize[i] &&

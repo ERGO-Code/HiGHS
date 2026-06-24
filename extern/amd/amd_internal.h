@@ -79,7 +79,7 @@
 /* AMD routine definitions (not user-callable) */
 /* ------------------------------------------------------------------------- */
 
-size_t amd_aat
+size_t Highs_amd_aat
 (
     amd_int n,
     const amd_int Ap [ ],
@@ -89,7 +89,7 @@ size_t amd_aat
     double Info [ ]
 ) ;
 
-void amd_1
+void Highs_amd_1
 (
     amd_int n,
     const amd_int Ap [ ],
@@ -103,7 +103,7 @@ void amd_1
     double Info [ ]
 ) ;
 
-void amd_postorder
+void Highs_amd_postorder
 (
     amd_int nn,
     amd_int Parent [ ],
@@ -115,7 +115,7 @@ void amd_postorder
     amd_int Stack [ ]
 ) ;
 
-amd_int amd_post_tree
+amd_int Highs_amd_post_tree
 (
     amd_int root,
     amd_int k,
@@ -125,7 +125,7 @@ amd_int amd_post_tree
     amd_int Stack [ ]
 ) ;
 
-void amd_preprocess
+void Highs_amd_preprocess
 (
     amd_int n,
     const amd_int Ap [ ],

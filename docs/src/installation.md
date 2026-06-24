@@ -49,7 +49,7 @@ cmake -S. -B build -DHIPO=ON
 On Windows, OpenBLAS is required. It could be installed via [vcpkg](https://learn.microsoft.com/en-us/vcpkg/get_started/overview) with
 
 ```
-vcpkg install openblas[threads]
+vcpkg install openblas[threads]:x64-windows-static
 ```
 
 Note, that `[threads]` is required for HiPO.

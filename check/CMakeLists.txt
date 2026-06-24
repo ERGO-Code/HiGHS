@@ -16,7 +16,7 @@ endif()
 
 if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
   # prepare Catch library
-  set(CATCH_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/extern)
+  set(CATCH_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/extern/catch)
   add_library(Catch INTERFACE)
   target_include_directories(Catch INTERFACE ${CATCH_INCLUDE_DIR})
 
@@ -39,6 +39,7 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
       TestFactor.cpp
       TestFilereader.cpp
       TestHighsCDouble.cpp
+      TestHighsExternalDeps.cpp
       TestHighsGFkSolve.cpp
       TestHighsHash.cpp
       TestHighsHessian.cpp
@@ -70,9 +71,11 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
       TestPdlp.cpp
       TestPdlpHi.cpp
       TestPresolve.cpp
+      TestPresolveRules.cpp
       TestQpSolver.cpp
       TestRanging.cpp
       TestRays.cpp
+      TestRunData.cpp
       TestSemiVariables.cpp
       TestSetup.cpp
       TestSort.cpp
@@ -106,6 +109,7 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
   add_executable(unit_tests ${TEST_SOURCES})
 
   set_target_properties(unit_tests PROPERTIES UNITY_BUILD OFF)
+
 
   if (UNIX)
       target_compile_options(unit_tests PRIVATE "-Wno-unused-variable")
@@ -518,7 +522,7 @@ endif()
 
 if (BUILD_EXTRA_UNIT_TESTS AND BUILD_EXTRA_UNIT_ONLY)
     # prepare Catch library
-    set(CATCH_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/extern)
+    set(CATCH_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/extern/catch)
     add_library(Catch INTERFACE)
     target_include_directories(Catch INTERFACE ${CATCH_INCLUDE_DIR})
 
