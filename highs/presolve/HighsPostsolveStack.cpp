@@ -1690,6 +1690,8 @@ void HighsPostsolveStack::undoFourierMotzkinBlock(
     for (HighsInt p = 0; p < numPlus && basicAssigned < basicNeeded; ++p) {
       if (basis.row_status[step.plusHeaders[p].row] !=
           HighsBasisStatus::kBasic) {
+        assert(computeSlack(step.plusHeaders, step.plusCoefs, step.plusEntries,
+                            p) <= tol);
         basis.row_status[step.plusHeaders[p].row] = HighsBasisStatus::kBasic;
         basicAssigned++;
       }
@@ -1698,6 +1700,8 @@ void HighsPostsolveStack::undoFourierMotzkinBlock(
       if (isMinusRowRanged[m]) continue;
       if (basis.row_status[step.minusHeaders[m].row] !=
           HighsBasisStatus::kBasic) {
+        assert(computeSlack(step.minusHeaders, step.minusCoefs,
+                            step.minusEntries, m) <= tol);
         basis.row_status[step.minusHeaders[m].row] = HighsBasisStatus::kBasic;
         basicAssigned++;
       }
