@@ -95,9 +95,25 @@ class TaskGroup {
       workerDeque->cancelTask(i);
   }
 
-  ~TaskGroup() {
+  ~TaskGroup() noexcept(false) {
+    // Cancel and wait for all tasks to complete, even if one of them throws the
+    // exception, or they may access invalid memory. If exceptions were thrown,
+    // rethrow after all tasks have finished. The destructor needs to be
+    // noexcept(false) for this to work.
+
     cancel();
-    taskWait();
+
+    bool exception_caught = false;
+    while (true) {
+      try {
+        taskWait();
+        break;
+      } catch (HighsTask::Interrupt) {
+        exception_caught = true;
+        continue;
+      }
+    }
+    if (exception_caught) throw HighsTask::Interrupt();
   }
 };
 

@@ -276,9 +276,10 @@ TEST_CASE("FibonacciTasksOmp", "[parallel]") {
 }
 #endif
 
-// Test that consistently fails with
+// Test that consistently failed with
 // > terminating due to uncaught exception of type HighsTask::Interrupt
 // when compiled in debug.
+// This was fixed by catching and rethrowing in the TaskGroup destructor.
 
 static void loseTime() {
   int total = 0;
