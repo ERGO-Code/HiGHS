@@ -162,7 +162,7 @@ bool HighsMachineSchedSeparator::findSingleMachineScheduleClique(
         impliesOrder = true;
         forward = true;
       }
-      if (!impliesOrder) continue;
+      if (!impliesOrder || binCol == baseBinCol) continue;
       if (baseBinCol == -1) {
         baseBinCol = binCol;
         baseForward = forward;
