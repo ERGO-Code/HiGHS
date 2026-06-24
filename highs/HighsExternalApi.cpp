@@ -14,8 +14,6 @@
 #include <mutex>
 using namespace HighsExtras;
 
-HighsExternalApi::~HighsExternalApi() { unload(); }
-
 HighsExternalApi& HighsExternalApi::instance() {
   static HighsExternalApi _instance;
   return _instance;
