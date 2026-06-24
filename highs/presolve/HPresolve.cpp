@@ -7605,6 +7605,10 @@ HPresolve::Result HPresolve::fourierMotzkin(
       stepNewRows.push_back({newModelRow, pIdx, mIdx});
     }
 
+    // mark column as deleted
+    markColDeleted(col);
+    ++numColsEliminated;
+
     // remove old rows containing col (skip bound rows)
     for (HighsInt rp : iPlus) {
       if (rp < 0) continue;
@@ -7619,10 +7623,6 @@ HPresolve::Result HPresolve::fourierMotzkin(
       removeRow(rm);
       ++numRowsEliminated;
     }
-
-    // mark column as deleted
-    markColDeleted(col);
-    ++numColsEliminated;
 
     // update affected candidates in the heap
     saveAffectedCols.swap(affectedCols);
