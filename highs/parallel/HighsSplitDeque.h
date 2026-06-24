@@ -301,6 +301,12 @@ class HighsSplitDeque {
     taskArray[taskIndex].cancel();
   }
 
+  HighsTask* setRootTask(HighsTask* newRoot) {
+    HighsTask* prevRoot = ownerData.rootTask;
+    ownerData.rootTask = newRoot;
+    return prevRoot;
+  }
+
   template <typename F>
   void push(F&& f) {
     if (ownerData.head >= kTaskArraySize) {
