@@ -138,11 +138,14 @@ TEST_CASE("presolve", "[highs_test_presolve]") {
   // Have to set matrix dimensions to match presolved_model.lp_
   lp.setMatrixDimensions();
   highs.passModel(lp);
+  // Disable Fourier-Motzkin so this LP is not reduced
+  highs.setOptionValue("presolve_rule_off", 1 << kPresolveRuleFourierMotzkin);
   REQUIRE(highs.presolve() == HighsStatus::kOk);
   REQUIRE(lp.equalButForNames(presolved_model.lp_));
   REQUIRE(highs.getModelPresolveStatus() == HighsPresolveStatus::kNotReduced);
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kNotset);
   REQUIRE(!presolved_model.isEmpty());
+  highs.setOptionValue("presolve_rule_off", 0);
 
   special_lps.primalDualInfeasible1Lp(lp, require_model_status);
   highs.passModel(lp);
