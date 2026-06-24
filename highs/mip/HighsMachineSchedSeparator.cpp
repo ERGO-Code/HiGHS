@@ -19,7 +19,7 @@
 bool HighsMachineSchedSeparator::findSingleMachineScheduleClique(
     std::vector<std::vector<double>>& vals,
     std::vector<std::vector<HighsInt>>& inds, std::vector<double>& rhss,
-    const HighsMipSolver& mipsolver) {
+    const HighsDomain& globaldom, const HighsMipSolver& mipsolver) {
   enum class ArcType {
     kIfBinOne,
     kIfBinZero,
@@ -86,11 +86,11 @@ bool HighsMachineSchedSeparator::findSingleMachineScheduleClique(
     double binCoef = 0;
     for (HighsInt i = start; i != end; i++) {
       HighsInt col = mipsolver.mipdata_->ARindex_[i];
-      if (mipsolver.mipdata_->domain.col_lower_[col] == -kHighsInf) {
+      if (globaldom.col_lower_[col] == -kHighsInf) {
         machineSchedRow = false;
         break;
       }
-      if (mipsolver.mipdata_->domain.isBinary(col)) {
+      if (globaldom.isBinary(col)) {
         if (binCol != -1) {
           machineSchedRow = false;
           break;
@@ -148,37 +148,39 @@ bool HighsMachineSchedSeparator::findSingleMachineScheduleClique(
   }
 
   // Extract binary variables that imply the same job ordering
-  std::vector<HighsCliqueTable::CliqueVar> clique(2);
-  for (const auto& entry : arcToBin) {
-    std::pair<HighsInt, HighsInt> arc = entry.key();
-    HighsInt baseBinCol = -1;
-    bool baseForward = false;
-    for (const HighsInt& binCol : entry.value()) {
-      bool forward = false;
-      bool impliesOrder = false;
-      if ((jobOrder[{arc.first, arc.second, binCol}] & 9) == 9) {
-        impliesOrder = true;
-      } else if ((jobOrder[{arc.first, arc.second, binCol}] & 6) == 6) {
-        impliesOrder = true;
-        forward = true;
+  if (!mipsolver.mipdata_->parallelLockActive()) {
+    std::vector<HighsCliqueTable::CliqueVar> clique(2);
+    for (const auto& entry : arcToBin) {
+      std::pair<HighsInt, HighsInt> arc = entry.key();
+      HighsInt baseBinCol = -1;
+      bool baseForward = false;
+      for (const HighsInt& binCol : entry.value()) {
+        bool forward = false;
+        bool impliesOrder = false;
+        if ((jobOrder[{arc.first, arc.second, binCol}] & 9) == 9) {
+          impliesOrder = true;
+        } else if ((jobOrder[{arc.first, arc.second, binCol}] & 6) == 6) {
+          impliesOrder = true;
+          forward = true;
+        }
+        if (!impliesOrder || binCol == baseBinCol) continue;
+        if (baseBinCol == -1) {
+          baseBinCol = binCol;
+          baseForward = forward;
+          continue;
+        }
+        HighsCliqueTable::CliqueVar stayCliqueVar =
+            HighsCliqueTable::CliqueVar(baseBinCol, baseForward);
+        HighsCliqueTable::CliqueVar substCliqueVar =
+            HighsCliqueTable::CliqueVar(binCol, forward);
+        clique[0] = stayCliqueVar;
+        clique[1] = substCliqueVar.complement();
+        mipsolver.mipdata_->cliquetable.addClique(mipsolver, clique.data(), 2);
+        clique[0] = stayCliqueVar.complement();
+        clique[1] = substCliqueVar;
+        mipsolver.mipdata_->cliquetable.addClique(mipsolver, clique.data(), 2);
+        if (globaldom.infeasible()) return false;
       }
-      if (!impliesOrder || binCol == baseBinCol) continue;
-      if (baseBinCol == -1) {
-        baseBinCol = binCol;
-        baseForward = forward;
-        continue;
-      }
-      HighsCliqueTable::CliqueVar stayCliqueVar =
-          HighsCliqueTable::CliqueVar(baseBinCol, baseForward);
-      HighsCliqueTable::CliqueVar substCliqueVar =
-          HighsCliqueTable::CliqueVar(binCol, forward);
-      clique[0] = stayCliqueVar;
-      clique[1] = substCliqueVar.complement();
-      mipsolver.mipdata_->cliquetable.addClique(mipsolver, clique.data(), 2);
-      clique[0] = stayCliqueVar.complement();
-      clique[1] = substCliqueVar;
-      mipsolver.mipdata_->cliquetable.addClique(mipsolver, clique.data(), 2);
-      if (mipsolver.mipdata_->domain.infeasible()) return false;
     }
   }
 
@@ -204,7 +206,7 @@ bool HighsMachineSchedSeparator::findSingleMachineScheduleClique(
   std::vector<HighsInt> neighbours;
   neighbours.reserve(largestDegree + 1);
   neighbours.emplace_back(largestDegreeCol);
-  double releaseDate = mipsolver.mipdata_->domain.col_lower_[largestDegreeCol];
+  double releaseDate = globaldom.col_lower_[largestDegreeCol];
   std::vector<double> processingTimes;
   processingTimes.resize(largestDegree + 1, kHighsInf);
   // Iterate over potential neighbours and check validity
@@ -232,8 +234,7 @@ bool HighsMachineSchedSeparator::findSingleMachineScheduleClique(
           std::min(processingTimes[newNeighbourIndex], std::get<0>(*fromArc));
       processingTimes[i] = std::min(processingTimes[i], std::get<0>(*toArc));
     }
-    releaseDate =
-        std::min(mipsolver.mipdata_->domain.col_lower_[col], releaseDate);
+    releaseDate = std::min(globaldom.col_lower_[col], releaseDate);
     neighbours.emplace_back(col);
   }
   if (neighbours.size() < 3) return false;
@@ -275,8 +276,8 @@ void HighsMachineSchedSeparator::separateLpSolution(
   std::vector<std::vector<double>> vals;
   std::vector<std::vector<HighsInt>> inds;
   std::vector<double> rhss;
-  has_single_machine_schedule =
-      findSingleMachineScheduleClique(vals, inds, rhss, mip);
+  has_single_machine_schedule = findSingleMachineScheduleClique(
+      vals, inds, rhss, transLp.getGlobaldom(), mip);
   if (!has_single_machine_schedule) {
     separated = true;
     return;

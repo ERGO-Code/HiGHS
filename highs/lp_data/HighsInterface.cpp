@@ -15,7 +15,9 @@
 #include "lp_data/HighsLpUtils.h"
 #include "lp_data/HighsModelUtils.h"
 #include "mip/HighsMipSolver.h"  // For getGapString
+#include "mip/MipTimer.h"
 #include "model/HighsHessianUtils.h"
+#include "parallel/HighsParallel.h"
 #include "simplex/HSimplex.h"
 #include "util/HighsMatrixUtils.h"
 #include "util/HighsSort.h"
@@ -1451,7 +1453,8 @@ HighsStatus Highs::getBasicVariablesInterface(HighsInt* basic_variables) {
     // for the current basis, so return_value is the rank deficiency.
     HighsLpSolverObject solver_object(lp, basis_, solution_, info_,
                                       ekk_instance_, callback_, options_,
-                                      timer_, sub_solver_call_time_);
+                                      timer_);
+    solver_object.setProfiling(this->profiling_);
     const bool only_from_known_basis = true;
     return_status = interpretCallStatus(
         options_.log_options,
@@ -1821,8 +1824,8 @@ HighsStatus Highs::getPrimalRayInterface(bool& has_primal_ray,
 
 HighsStatus Highs::getRangingInterface() {
   HighsLpSolverObject solver_object(model_.lp_, basis_, solution_, info_,
-                                    ekk_instance_, callback_, options_, timer_,
-                                    sub_solver_call_time_);
+                                    ekk_instance_, callback_, options_, timer_);
+  solver_object.setProfiling(this->profiling_);
   solver_object.model_status_ = model_status_;
   return getRangingData(this->ranging_, solver_object);
 }
@@ -4281,75 +4284,381 @@ void HighsLinearObjective::clear() {
   this->priority = 0;
 }
 
-void HighsSubSolverCallTime::initialise() {
-  this->num_call.assign(kSubSolverCount, 0);
-  this->run_time.assign(kSubSolverCount, 0);
-  this->name.assign(kSubSolverCount, "");
-  this->name[kSubSolverDuSimplexBasis] = "Du simplex (basis)";
-  this->name[kSubSolverDuSimplexNoBasis] = "Du simplex (no basis)";
-  this->name[kSubSolverPrSimplexBasis] = "Pr simplex (basis)";
-  this->name[kSubSolverPrSimplexNoBasis] = "Pr simplex (no basis)";
-  this->name[kSubSolverHipo] = "HiPO";
-  this->name[kSubSolverIpx] = "IPX";
-  this->name[kSubSolverHipoAc] = "HiPO (AC)";
-  this->name[kSubSolverIpxAc] = "IPX (AC)";
-  this->name[kSubSolverPdlp] = "PDLP";
-  this->name[kSubSolverQpAsm] = "QP ASM";
-  this->name[kSubSolverMip] = "MIP";
-  this->name[kSubSolverSubMip] = "Sub-MIP";
+void HighsProfiling::initialize(HighsTimer& timer_, const bool sub_solver,
+                                const bool mip) {
+  // NB this->multi_threaded is set externally:
+  //
+  // * true in HighsProfiling::clear()
+  //
+  // * false in initializeSingleThreadedProfiling
+  //
+  // Hence don't call this->clear() here!
+  this->timer = &timer_;
+  this->num_profiling_clock_ = kToPresolveSolvePostsolve;
+  this->name.assign(this->num_profiling_clock_, "");
+  this->name[kPresolveTime] = "Presolve";
+  this->name[kSolveTime] = "Solve";
+  this->name[kPostsolveTime] = "Postsolve";
+  // Now add clocks if performing subsolver profiling
+  this->sub_solver_ = sub_solver;
+  if (this->sub_solver_) {
+    this->num_profiling_clock_ = kToSubSolver;
+    this->name.resize(this->num_profiling_clock_);
+    this->name[kSubSolverDuSimplexBasis] = "Du simplex (basis)";
+    this->name[kSubSolverDuSimplexNoBasis] = "Du simplex (no basis)";
+    this->name[kSubSolverPrSimplexBasis] = "Pr simplex (basis)";
+    this->name[kSubSolverPrSimplexNoBasis] = "Pr simplex (no basis)";
+    this->name[kSubSolverHipo] = "HiPO";
+    this->name[kSubSolverIpx] = "IPX";
+    this->name[kSubSolverHipoAc] = "HiPO (AC)";
+    this->name[kSubSolverIpxAc] = "IPX (AC)";
+    this->name[kSubSolverPdlp] = "PDLP";
+    this->name[kSubSolverQpAsm] = "QP ASM";
+    this->name[kSubSolverMip] = "MIP";
+    this->name[kSubSolverSubMip] = "Sub-MIP";
+  }
+  // Now add clocks if also performing MIP profiling
+  // Cannot perform MIP profiling without subsolver profiling
+  if (mip) assert(sub_solver);
+  this->mip_ = sub_solver && mip;
+  if (this->mip_) {
+    this->num_profiling_clock_ = kToMipClock;
+    this->name.resize(this->num_profiling_clock_);
+    initialiseMipProfilingNames(this->name);
+  }
+  HighsProfilingRecord thread_record;
+  thread_record.num_call.assign(this->num_profiling_clock_, 0);
+  thread_record.run_time.assign(this->num_profiling_clock_, 0);
+  thread_record.start_time.assign(this->num_profiling_clock_, 1);
+  HighsInt num_thread = this->numThread();
+  assert(num_thread > 0);
+  this->submip.assign(num_thread, false);
+  this->record.assign(num_thread, thread_record);
+  this->submip_record.assign(num_thread, thread_record);
+  this->initialized = true;
 }
 
-void HighsSubSolverCallTime::add(
-    const HighsSubSolverCallTime& sub_solver_call_time,
-    const bool analytic_centre) {
-  for (HighsInt Ix = 0; Ix < kSubSolverCount; Ix++) {
-    HighsInt ToIx = Ix;
-    if (Ix == kSubSolverHipo) {
-      if (analytic_centre) ToIx = kSubSolverHipoAc;
-    } else if (Ix == kSubSolverIpx) {
-      if (analytic_centre) ToIx = kSubSolverIpxAc;
+void HighsProfiling::clear() {
+  this->timer = nullptr;
+  this->multi_threaded = true;
+  this->model_name_ = "";
+  this->sub_solver_ = false;
+  this->mip_ = false;
+  this->num_profiling_clock_ = -1;
+  this->name.clear();
+  this->submip.clear();
+  this->record.clear();
+  this->submip_record.clear();
+  this->initialized = false;
+}
+
+HighsInt HighsProfiling::numThread() {
+  return this->multi_threaded ? highs::parallel::num_threads() : 1;
+}
+
+HighsInt HighsProfiling::myThread() {
+  return this->multi_threaded ? highs::parallel::thread_num() : 0;
+}
+
+void HighsProfiling::setSubMip(const bool submip) {
+  this->submip[this->myThread()] = submip;
+}
+
+bool HighsProfiling::isSubMip() { return this->submip[this->myThread()]; }
+
+// Gets the MIP or sub-MIP record according to record_type which, by
+// default is kChooseRecord so this->submip is used
+HighsProfilingRecord* HighsProfiling::getHighsProfilingRecord(
+    const HighsInt record_type) {
+  HighsInt thread = this->myThread();
+  if (record_type == kSubMipRecord ||
+      (record_type == kChooseRecord && this->submip[thread]))
+    return &this->submip_record[thread];
+  return &this->record[thread];
+}
+
+void HighsProfiling::start(const HighsInt profiling_clock, const bool restart) {
+  assert(profiling_clock >= 0);
+  if (profiling_clock >= this->num_profiling_clock_) return;
+  // For a sub-MIP, don't start the clock for anything but a
+  // sub-solver
+  if (this->isSubMip() && profiling_clock >= kToSubSolver) return;
+  // Start timing sub-solver profiling_clock
+  HighsInt thread = this->myThread();
+  HighsProfilingRecord* thread_record = this->getHighsProfilingRecord();
+  double time_start = timer->read();
+
+  if (profiling_clock == kMipClockSubMipSolve) {
+    printf("HighsProfiling::start SubMipSolve on thread %2d with submip = %s\n",
+           int(thread), this->submip[thread] ? "T" : "F");
+  }
+  const bool clock_running =
+      std::signbit(thread_record->start_time[profiling_clock]);
+  if (clock_running && profiling_clock != kSubSolverHipoAc &&
+      profiling_clock != kSubSolverIpxAc) {
+    // Check for starting a clock that's currently running - except
+    // for analytic centre calculation that may by stopped by
+    // terminating the task
+    printf(
+        "HighsProfiling: clock running for thread %d when starting clock %d "
+        "(%s) and subMip = %s\n",
+        int(thread), int(profiling_clock), this->name[profiling_clock].c_str(),
+        this->submip[thread] ? "T" : "F");
+    assert(!clock_running);
+  }
+  thread_record->start_time[profiling_clock] = -time_start;
+  if (restart) thread_record->num_call[profiling_clock]--;
+}
+
+void HighsProfiling::stop(const HighsInt profiling_clock) {
+  assert(profiling_clock >= 0);
+  if (profiling_clock >= this->num_profiling_clock_) return;
+  // For a sub-MIP, don't start the clock for anything but a
+  // sub-solver
+  if (this->isSubMip() && profiling_clock >= kToSubSolver) return;
+  HighsInt thread = this->myThread();
+  HighsProfilingRecord* thread_record = this->getHighsProfilingRecord();
+  double time_stop = timer->read();
+  double time_start = thread_record->start_time[profiling_clock];
+  const bool clock_running = std::signbit(time_start);
+  if (!clock_running) {
+    // Check for stopping a clock that's currently stopped
+    printf(
+        "HighsProfiling: clock not running for thread %d when stopping clock "
+        "%d (%s) \n",
+        int(thread), int(profiling_clock), this->name[profiling_clock].c_str());
+    assert(clock_running);
+  } else {
+    thread_record->num_call[profiling_clock]++;
+    thread_record->run_time[profiling_clock] += (time_stop + time_start);
+  }
+  thread_record->start_time[profiling_clock] = time_stop;
+}
+
+double HighsProfiling::read(const HighsInt profiling_clock,
+                            const HighsInt record_type) {
+  assert(profiling_clock >= 0);
+  if (profiling_clock >= this->num_profiling_clock_) return -kHighsInf;
+  HighsProfilingRecord* thread_record =
+      this->getHighsProfilingRecord(record_type);
+  // If the clock is running, work out current running time
+  const double current_running_time =
+      this->running(profiling_clock, record_type)
+          ? thread_record->start_time[profiling_clock] + timer->read()
+          : 0;
+  return thread_record->run_time[profiling_clock] + current_running_time;
+}
+
+HighsInt HighsProfiling::numCall(const HighsInt profiling_clock,
+                                 const HighsInt record_type) {
+  assert(profiling_clock >= 0);
+  if (profiling_clock >= this->num_profiling_clock_) return -kHighsIInf;
+  HighsProfilingRecord* thread_record =
+      this->getHighsProfilingRecord(record_type);
+  const HighsInt this_call_counts =
+      this->running(profiling_clock, record_type) ? 1 : 0;
+  return thread_record->num_call[profiling_clock] + this_call_counts;
+}
+
+bool HighsProfiling::running(const HighsInt profiling_clock,
+                             const HighsInt record_type) {
+  assert(profiling_clock >= 0);
+  if (profiling_clock >= this->num_profiling_clock_) return false;
+  HighsProfilingRecord* thread_record =
+      this->getHighsProfilingRecord(record_type);
+  double time_start = thread_record->start_time[profiling_clock];
+  const bool clock_running = std::signbit(time_start);
+  return clock_running;
+}
+
+void HighsProfiling::solveCall(const std::string& model, const bool submip) {
+  const bool printing = false;
+  if (this->num_profiling_clock_ <= kToPresolveSolvePostsolve) return;
+  const bool local_submip_ok = this->isSubMip() == submip;
+  HighsInt thread = this->myThread();
+  if (!local_submip_ok) {
+    printf("Solving %3s for %4sMIP on thread %d with isSubMip() = %4sMIP\n",
+           model.c_str(), submip ? "sub-" : "", int(thread),
+           isSubMip() ? "sub-" : "");
+  }
+  assert(local_submip_ok);
+  if (thread != 0 || submip) {
+    if (model == "MIP") {
+      if (printing)
+        printf("Solving MIP for %4sMIP on thread %d\n", submip ? "sub-" : "",
+               int(thread));
+    } else {
+      if (printing)
+        printf("Solving %3s for %4sMIP on thread %d\n", model.c_str(),
+               submip ? "sub-" : "", int(thread));
     }
-    this->num_call[ToIx] += sub_solver_call_time.num_call[Ix];
-    this->run_time[ToIx] += sub_solver_call_time.run_time[Ix];
   }
 }
 
-void Highs::reportSubSolverCallTime() const {
-  double mip_time = this->sub_solver_call_time_.run_time[kSubSolverMip];
-  std::stringstream ss;
-  ss.str(std::string());
-  ss << highsFormatToString(
-      "\nSub-solver timing\nSolver                    Calls    Time       "
-      "Time/call");
-  if (mip_time > 0) ss << "  MIP%";
-  highsLogUser(options_.log_options, HighsLogType::kInfo, "%s\n",
-               ss.str().c_str());
+// HighsInt HighsProfiling::getSepaClockIndex(const std::string& name) {
+// assert(1==4);  return 0;}
 
-  double sum_mip_sub_solve_time = 0;
-  for (HighsInt Ix = 0; Ix < kSubSolverCount; Ix++) {
-    if (this->sub_solver_call_time_.num_call[Ix]) {
+void Highs::reportProfiling() const {
+  if (!this->profiling_->sub_solver_) return;
+  HighsInt num_thread = this->profiling_->numThread();
+  double mip_time = 0;
+  double max_sumip_time = 0;
+  const std::vector<HighsProfilingRecord>& record = this->profiling_->record;
+  const std::vector<HighsProfilingRecord>& submip_record =
+      this->profiling_->submip_record;
+  for (HighsInt thread_num = 0; thread_num < num_thread; thread_num++) {
+    mip_time = std::max(record[thread_num].run_time[kSubSolverMip], mip_time);
+    max_sumip_time =
+        std::max(record[thread_num].run_time[kSubSolverSubMip], max_sumip_time);
+  }
+
+  std::vector<HighsInt> used_thread;
+  for (HighsInt thread_num = 0; thread_num < num_thread; thread_num++) {
+    bool used = false;
+    for (HighsInt Ix = kFromSubSolver; Ix < kToSubSolver; Ix++)
+      if (record[thread_num].num_call[Ix]) used = true;
+    for (HighsInt Ix = kFromSubSolver; Ix < kToSubSolver; Ix++)
+      if (submip_record[thread_num].num_call[Ix]) used = true;
+    if (!used) continue;
+    used_thread.push_back(thread_num);
+  }
+  const double num_threads_used = used_thread.size();
+  std::stringstream ss;
+  std::vector<bool> mip_used_sub_solver(kToSubSolver, false);
+  std::vector<bool> submip_used_sub_solver(kToSubSolver, false);
+  const HighsInt to_k = max_sumip_time > 0 ? 2 : 1;
+  const std::vector<std::string>& name = this->profiling_->name;
+  double sum_sum_mip_sub_solve_time = 0;
+  for (HighsInt k = 0; k < to_k; k++) {
+    if (k == 0) {
+      highsLogUser(options_.log_options, HighsLogType::kInfo,
+                   "\nMIP sub-solver profiling: number of threads used = %d\n",
+                   int(num_threads_used));
+    } else {
+      highsLogUser(options_.log_options, HighsLogType::kInfo,
+                   "\nSub-MIP sub-solver profiling\n");
+    }
+    for (HighsInt thread_ix = 0; thread_ix < HighsInt(num_threads_used);
+         thread_ix++) {
+      HighsInt thread_num = used_thread[thread_ix];
+      double ideal_time =
+          k == 0
+              ? mip_time
+              : this->profiling_->record[thread_num].run_time[kSubSolverSubMip];
+      if (ideal_time <= 0) continue;
+      const std::vector<HighsProfilingRecord>& record =
+          k == 0 ? this->profiling_->record : this->profiling_->submip_record;
+      std::vector<bool>& used_sub_solver =
+          k == 0 ? mip_used_sub_solver : submip_used_sub_solver;
+      const std::vector<HighsInt>& num_call = record[thread_num].num_call;
+      const std::vector<double>& run_time = record[thread_num].run_time;
       ss.str(std::string());
       ss << highsFormatToString(
-          "%-21s %9d %11.4e %11.4e",
-          this->sub_solver_call_time_.name[Ix].c_str(),
-          int(this->sub_solver_call_time_.num_call[Ix]),
-          this->sub_solver_call_time_.run_time[Ix],
-          this->sub_solver_call_time_.run_time[Ix] /
-              (1.0 * this->sub_solver_call_time_.num_call[Ix]));
-      if (mip_time > 0 && Ix != kSubSolverMip) {
-        if (Ix != kSubSolverHipoAc && Ix != kSubSolverIpxAc)
-          sum_mip_sub_solve_time += this->sub_solver_call_time_.run_time[Ix];
-        ss << highsFormatToString(
-            " %5.1f",
-            1e2 * this->sub_solver_call_time_.run_time[Ix] / mip_time);
+          "\nThread %d\n"
+          "Solver                    Calls    Time       "
+          "Time/call",
+          int(thread_num));
+      if (ideal_time > 0) ss << (k == 0 ? "      MIP%" : "  Sub-MIP%");
+      highsLogUser(options_.log_options, HighsLogType::kInfo, "%s\n",
+                   ss.str().c_str());
+      double sum_mip_sub_solve_time = 0;
+      for (HighsInt Ix = kFromSubSolver; Ix < kToSubSolver; Ix++) {
+        double pct = 0;
+        if (!num_call[Ix]) continue;
+        used_sub_solver[Ix] = true;
+        ss.str(std::string());
+        ss << highsFormatToString("%-21s %9d %11.4e %11.4e", name[Ix].c_str(),
+                                  int(num_call[Ix]), run_time[Ix],
+                                  run_time[Ix] / (1.0 * num_call[Ix]));
+        if (ideal_time > 0 && Ix != kSubSolverMip) {
+          sum_mip_sub_solve_time += run_time[Ix];
+          ss << highsFormatToString("     %5.1f",
+                                    1e2 * run_time[Ix] / ideal_time);
+        }
+        highsLogUser(options_.log_options, HighsLogType::kInfo, "%s\n",
+                     ss.str().c_str());
+      }
+      sum_sum_mip_sub_solve_time += sum_mip_sub_solve_time;
+      if (ideal_time > 0 && sum_mip_sub_solve_time > 0)
+        highsLogUser(
+            options_.log_options, HighsLogType::kInfo,
+            "TOTAL                           %11.4e                 %5.1f\n",
+            sum_mip_sub_solve_time, 1e2 * sum_mip_sub_solve_time / ideal_time);
+    }
+  }
+  if (mip_time <= 0) return;
+  if (sum_sum_mip_sub_solve_time <= 0) return;
+  // Lambda for horizontal rule
+  auto hrule = [&]() {
+    ss.str(std::string());
+    ss << "=====================";
+    for (HighsInt thread_ix = 0; thread_ix < HighsInt(num_threads_used);
+         thread_ix++)
+      ss << "======";
+    highsLogUser(options_.log_options, HighsLogType::kInfo, "%s\n",
+                 ss.str().c_str());
+  };
+  // Determine the sub-solver percentage breakdown over all threads
+  // when solving MIPs
+  highsLogUser(options_.log_options, HighsLogType::kInfo,
+               "\nPercent (sub-)MIP time by thread\n");
+  for (HighsInt k = 0; k < to_k; k++) {
+    if (k == 0) {
+      ss.str(std::string());
+      ss << highsFormatToString("\nMIP sub-solver       ");
+    } else {
+      if (max_sumip_time <= 0) continue;
+      ss.str(std::string());
+      ss << highsFormatToString("\nSub-MIP sub-solver   ");
+    }
+    for (HighsInt thread_ix = 0; thread_ix < HighsInt(num_threads_used);
+         thread_ix++) {
+      HighsInt thread_num = used_thread[thread_ix];
+      ss << highsFormatToString("%6d", int(thread_num));
+    }
+    highsLogUser(options_.log_options, HighsLogType::kInfo, "%s\n",
+                 ss.str().c_str());
+    std::vector<bool>& used_sub_solver =
+        k == 0 ? mip_used_sub_solver : submip_used_sub_solver;
+    const std::vector<HighsProfilingRecord>& record =
+        k == 0 ? this->profiling_->record : this->profiling_->submip_record;
+    std::vector<double> totalPct(num_threads_used, 0);
+    for (HighsInt Ix = kFromSubSolver + 1; Ix < kToSubSolver; Ix++) {
+      if (!used_sub_solver[Ix]) continue;
+      ss.str(std::string());
+      ss << highsFormatToString("%-21s", name[Ix].c_str());
+      for (HighsInt thread_ix = 0; thread_ix < HighsInt(num_threads_used);
+           thread_ix++) {
+        HighsInt thread_num = used_thread[thread_ix];
+        double ideal_time = k == 0 ? mip_time
+                                   : this->profiling_->record[thread_num]
+                                         .run_time[kSubSolverSubMip];
+        HighsInt num_call = record[thread_num].num_call[Ix];
+        double run_time = record[thread_num].run_time[Ix];
+        if (num_call && ideal_time > 0) {
+          double pct = 1e2 * run_time / ideal_time;
+          totalPct[thread_ix] += pct;
+          ss << highsFormatToString(" %5.1f", pct);
+        } else {
+          ss << "      ";
+        }
       }
       highsLogUser(options_.log_options, HighsLogType::kInfo, "%s\n",
                    ss.str().c_str());
     }
+    hrule();
+    ss.str(std::string());
+    ss << "Total                ";
+    for (HighsInt thread_ix = 0; thread_ix < HighsInt(num_threads_used);
+         thread_ix++) {
+      if (totalPct[thread_ix]) {
+        ss << highsFormatToString(" %5.1f", totalPct[thread_ix]);
+      } else {
+        ss << "      ";
+      }
+    }
+    highsLogUser(options_.log_options, HighsLogType::kInfo, "%s\n",
+                 ss.str().c_str());
+    hrule();
   }
-  if (mip_time > 0)
-    highsLogUser(options_.log_options, HighsLogType::kInfo,
-                 "TOTAL (excluding AC)            %11.4e             %5.1f\n",
-                 sum_mip_sub_solve_time,
-                 1e2 * sum_mip_sub_solve_time / mip_time);
 }
