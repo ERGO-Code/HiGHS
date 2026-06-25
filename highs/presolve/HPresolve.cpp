@@ -162,9 +162,9 @@ bool HPresolve::okSetInput(HighsMipSolver& mipsolver,
     mipsolver.model_ = &mipsolver.mipdata_->presolvedModel;
   } else {
     mipsolver.mipdata_->presolvedModel.col_lower_ =
-        mipsolver.mipdata_->domain.col_lower_;
+        mipsolver.mipdata_->getDomain().col_lower_;
     mipsolver.mipdata_->presolvedModel.col_upper_ =
-        mipsolver.mipdata_->domain.col_upper_;
+        mipsolver.mipdata_->getDomain().col_upper_;
   }
 
   return okSetInput(mipsolver.mipdata_->presolvedModel, *mipsolver.options_mip_,
@@ -1015,17 +1015,17 @@ void HPresolve::shrinkProblem(HighsPostsolveStack& postsolve_stack) {
   if (mipsolver != nullptr) {
     mipsolver->mipdata_->rowMatrixSet = false;
     mipsolver->mipdata_->objectiveFunction = HighsObjectiveFunction(*mipsolver);
-    mipsolver->mipdata_->domain = HighsDomain(*mipsolver);
+    mipsolver->mipdata_->getDomain() = HighsDomain(*mipsolver);
     mipsolver->mipdata_->cliquetable.rebuild(model->num_col_, postsolve_stack,
-                                             mipsolver->mipdata_->domain,
+                                             mipsolver->mipdata_->getDomain(),
                                              newColIndex, newRowIndex);
     mipsolver->mipdata_->implications.rebuild(model->num_col_, newColIndex,
                                               newRowIndex);
-    mipsolver->mipdata_->cutpool =
+    mipsolver->mipdata_->getCutPool() =
         HighsCutPool(mipsolver->model_->num_col_,
                      mipsolver->options_mip_->mip_pool_age_limit,
-                     mipsolver->options_mip_->mip_pool_soft_limit);
-    mipsolver->mipdata_->conflictPool =
+                     mipsolver->options_mip_->mip_pool_soft_limit, 0);
+    mipsolver->mipdata_->getConflictPool() =
         HighsConflictPool(5 * mipsolver->options_mip_->mip_pool_age_limit,
                           mipsolver->options_mip_->mip_pool_soft_limit);
 
@@ -1450,7 +1450,7 @@ HPresolve::Result HPresolve::dominatedColumns(
 
 HPresolve::Result HPresolve::prepareProbing(
     HighsPostsolveStack& postsolve_stack, bool& firstCall) {
-  HighsDomain& domain = mipsolver->mipdata_->domain;
+  HighsDomain& domain = mipsolver->mipdata_->getDomain();
   HighsCliqueTable& cliquetable = mipsolver->mipdata_->cliquetable;
 
   shrinkProblem(postsolve_stack);
@@ -1519,7 +1519,7 @@ HPresolve::Result HPresolve::finaliseProbing(
     HighsPostsolveStack& postsolve_stack, bool firstCall,
     HighsInt& numVarsFixed, HighsInt& numBndsTightened,
     HighsInt& numVarsSubstituted, HighsInt& liftedNonZeros) {
-  HighsDomain& domain = mipsolver->mipdata_->domain;
+  HighsDomain& domain = mipsolver->mipdata_->getDomain();
   HighsCliqueTable& cliquetable = mipsolver->mipdata_->cliquetable;
 
   cliquetable.cleanupFixed(domain);
@@ -1594,7 +1594,7 @@ std::pair<int64_t, HighsInt> HPresolve::computeProbingScore(
 }
 
 HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postsolve_stack) {
-  mipsolver->analysis_.mipTimerStart(kMipClockProbingPresolve);
+  mipsolver->profiling_->start(kMipClockProbingPresolve);
   probingEarlyAbort = false;
 
   HighsInt oldNumProbed = numProbed;
@@ -1603,11 +1603,11 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postsolve_stack) {
   bool firstCall = false;
   Result prepareResult = prepareProbing(postsolve_stack, firstCall);
   if (prepareResult != Result::kOk) {
-    mipsolver->analysis_.mipTimerStop(kMipClockProbingPresolve);
+    mipsolver->profiling_->stop(kMipClockProbingPresolve);
     return prepareResult;
   }
 
-  HighsDomain& domain = mipsolver->mipdata_->domain;
+  HighsDomain& domain = mipsolver->mipdata_->getDomain();
   HighsCliqueTable& cliquetable = mipsolver->mipdata_->cliquetable;
   HighsImplications& implications = mipsolver->mipdata_->implications;
 
@@ -1829,7 +1829,7 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postsolve_stack) {
         implications.storeLiftingOpportunity = nullptr;
 
       if (domain.infeasible()) {
-        mipsolver->analysis_.mipTimerStop(kMipClockProbingPresolve);
+        mipsolver->profiling_->stop(kMipClockProbingPresolve);
         return Result::kPrimalInfeasible;
       }
     }
@@ -1863,7 +1863,7 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postsolve_stack) {
     }
   }
 
-  mipsolver->analysis_.mipTimerStop(kMipClockProbingPresolve);
+  mipsolver->profiling_->stop(kMipClockProbingPresolve);
   return checkLimits(postsolve_stack);
 }
 
@@ -1873,7 +1873,7 @@ HPresolve::Result HPresolve::liftingForProbing(
   // al. (2019) Presolve Reductions in Mixed Integer Programming. INFORMS
   // Journal on Computing 32(2):473-506.
   HighsCliqueTable& cliquetable = mipsolver->mipdata_->cliquetable;
-  const HighsDomain& domain = mipsolver->mipdata_->domain;
+  const HighsDomain& domain = mipsolver->mipdata_->getDomain();
 
   // collect best lifting opportunity for each row in a vector
   typedef std::pair<HighsCliqueTable::CliqueVar, double> liftingvar;
@@ -5122,6 +5122,7 @@ HPresolve::Result HPresolve::singletonColStuffing(
                           double& maxWeight, size_t& numIntegerCandidates) {
     if (model->integrality_[col] == HighsVarType::kInteger)
       numIntegerCandidates++;
+
     minWeight = std::min(minWeight, direction * val);
     maxWeight = std::max(maxWeight, direction * val);
     candidates.push_back(candidate{col, val, direction});
@@ -5163,7 +5164,6 @@ HPresolve::Result HPresolve::singletonColStuffing(
       double sumUpperBound = model->col_upper_[j];
       bool isCandidate = allowIntegerCandidates ||
                          model->integrality_[j] != HighsVarType::kInteger;
-
       if (isSingleton(j)) {
         // check singleton
         if (aj > 0) {
@@ -5177,6 +5177,8 @@ HPresolve::Result HPresolve::singletonColStuffing(
                          numIntegerCandidates);
           }
         } else {
+          // aj < 0
+          assert(aj < 0);
           if (cj <= 0)
             // dual fixing: fix to upper bound
             sumLowerBound = sumUpperBound;
@@ -5268,7 +5270,15 @@ HPresolve::Result HPresolve::singletonColStuffing(
         numFixedCols++;
         HPRESOLVE_CHECKED_CALL(fixCol(t.col, t.multiplier));
       } else if (sumLowerFinite &&
-                 direction * rhs <= sumLower + primal_feastol) {
+                 delta <= sumLower - direction * rhs + primal_feastol) {
+        // Previously
+        //
+        // direction * rhs <= sumLower + primal_feastol
+        //
+        // But this led to fixing at -t.multiplier until row activity
+        // was at its bound, which is primal optmal but degenerate,
+        // and does not yield an optimal basis if column costs are
+        // positive
         numFixedCols++;
         HPRESOLVE_CHECKED_CALL(fixCol(t.col, -t.multiplier));
       }
@@ -5305,17 +5315,17 @@ HPresolve::Result HPresolve::enumerateSolutions(
     HighsPostsolveStack& postsolve_stack) {
   // enumerate all solutions for pure binary constraints with a small number of
   // variables
-  mipsolver->analysis_.mipTimerStart(kMipClockEnumerationPresolve);
+  mipsolver->profiling_->start(kMipClockEnumerationPresolve);
 
   // prepare probing
   bool firstCall = false;
   Result prepareResult = prepareProbing(postsolve_stack, firstCall);
   if (prepareResult != Result::kOk) {
-    mipsolver->analysis_.mipTimerStop(kMipClockEnumerationPresolve);
+    mipsolver->profiling_->stop(kMipClockEnumerationPresolve);
     return prepareResult;
   }
 
-  HighsDomain& domain = mipsolver->mipdata_->domain;
+  HighsDomain& domain = mipsolver->mipdata_->getDomain();
   HighsCliqueTable& cliquetable = mipsolver->mipdata_->cliquetable;
 
   typedef std::tuple<double, double, HighsInt, HighsInt, uint32_t> candidateRow;
@@ -5560,7 +5570,7 @@ HPresolve::Result HPresolve::enumerateSolutions(
 
   auto handleInfeasibility = [&](bool infeasible) {
     if (infeasible) {
-      mipsolver->analysis_.mipTimerStop(kMipClockEnumerationPresolve);
+      mipsolver->profiling_->stop(kMipClockEnumerationPresolve);
       return Result::kPrimalInfeasible;
     }
     return Result::kOk;
@@ -5771,7 +5781,7 @@ HPresolve::Result HPresolve::enumerateSolutions(
                 static_cast<int>(numBndsTightened),
                 static_cast<int>(numVarsSubstituted));
 
-  mipsolver->analysis_.mipTimerStop(kMipClockEnumerationPresolve);
+  mipsolver->profiling_->stop(kMipClockEnumerationPresolve);
 
   return checkLimits(postsolve_stack);
 }
@@ -5884,6 +5894,16 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
   //    - stop
   //
 
+  auto presolveReturn = [&]() {
+    if (mipsolver != nullptr) HPRESOLVE_CHECKED_CALL(scaleMIP(postsolve_stack));
+
+    // analysePresolveRuleLog() should return true - no errors
+    assert(analysis_.analysePresolveRuleLog());
+    // Possibly report presolve log
+    analysis_.analysePresolveRuleLog(true);
+    return Result::kOk;
+  };
+
   // convert model to minimization problem
   if (model->sense_ == ObjSense::kMaximize) {
     for (HighsInt i = 0; i != model->num_col_; ++i)
@@ -5931,6 +5951,10 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
     assert(this->timer);
     assert(this->timer->running());
 
+    if (options->presolve_rule_test) {
+      HPRESOLVE_CHECKED_CALL(presolveRuleTest(postsolve_stack));
+      return presolveReturn();
+    }
     HPRESOLVE_CHECKED_CALL(initialRowAndColPresolve(postsolve_stack));
 
     HighsInt numParallelRowColCalls = 0;
@@ -6112,13 +6136,7 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
                  "\nPresolve is switched off\n");
   }
 
-  if (mipsolver != nullptr) HPRESOLVE_CHECKED_CALL(scaleMIP(postsolve_stack));
-
-  // analysePresolveRuleLog() should return true - no errors
-  assert(analysis_.analysePresolveRuleLog());
-  // Possibly report presolve log
-  analysis_.analysePresolveRuleLog(true);
-  return Result::kOk;
+  return presolveReturn();
 }
 
 HPresolve::Result HPresolve::removeSlacks(
@@ -6444,9 +6462,10 @@ HighsModelStatus HPresolve::run(HighsPostsolveStack& postsolve_stack) {
   if (mipsolver != nullptr) {
     mipsolver->mipdata_->cliquetable.setPresolveFlag(false);
     mipsolver->mipdata_->cliquetable.setMaxEntries(numNonzeros());
-    mipsolver->mipdata_->domain.addCutpool(mipsolver->mipdata_->cutpool);
-    mipsolver->mipdata_->domain.addConflictPool(
-        mipsolver->mipdata_->conflictPool);
+    mipsolver->mipdata_->getDomain().addCutpool(
+        mipsolver->mipdata_->getCutPool());
+    mipsolver->mipdata_->getDomain().addConflictPool(
+        mipsolver->mipdata_->getConflictPool());
 
     if (mipsolver->mipdata_->numRestarts != 0) {
       std::vector<HighsInt> cutinds;
@@ -6468,7 +6487,7 @@ HighsModelStatus HPresolve::run(HighsPostsolveStack& postsolve_stack) {
           cutvals.push_back(Avalue[j]);
         }
 
-        mipsolver->mipdata_->cutpool.addCut(
+        mipsolver->mipdata_->getCutPool().addCut(
             *mipsolver, cutinds.data(), cutvals.data(), cutinds.size(),
             model->row_upper_[i],
             rowsizeInteger[i] + rowsizeImplInt[i] == rowsize[i] &&

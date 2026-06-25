@@ -1515,6 +1515,12 @@ std::string utilPresolveRuleTypeToString(const HighsInt rule_type) {
     return "Probing";
   } else if (rule_type == kPresolveRuleEnumeration) {
     return "Enumeration";
+  } else if (rule_type == kPresolveRuleDualFixing) {
+    return "Dual fixing";
+  } else if (rule_type == kPresolveRuleColStuffing) {
+    return "Col stuffing";
+  } else if (rule_type == kPresolveRuleInitialSweep) {
+    return "Initial sweep";
   } else if (rule_type == kPresolveRuleFourierMotzkin) {
     return "Fourier-Motzkin";
   }

@@ -438,6 +438,7 @@ struct HighsOptionsStruct {
   HighsInt restart_presolve_reduction_limit;
   HighsInt presolve_substitution_maxfillin;
   HighsInt presolve_rule_off;
+  HighsInt presolve_rule_test;
   bool presolve_rule_logging;
   bool presolve_remove_slacks;
   bool no_unnecessary_rebuild_refactor;
@@ -504,6 +505,7 @@ struct HighsOptionsStruct {
   std::string mip_improving_solution_file;
   bool mip_root_presolve_only;
   HighsInt mip_lifting_for_probing;
+  bool mip_search_simulate_concurrency;
   bool mip_allow_cut_separation_at_nodes;
 
   // Logging callback identifiers
@@ -605,6 +607,7 @@ struct HighsOptionsStruct {
         restart_presolve_reduction_limit(0),
         presolve_substitution_maxfillin(0),
         presolve_rule_off(0),
+        presolve_rule_test(0),
         presolve_rule_logging(false),
         presolve_remove_slacks(false),
         no_unnecessary_rebuild_refactor(false),
@@ -667,6 +670,7 @@ struct HighsOptionsStruct {
         mip_improving_solution_file(""),
         mip_root_presolve_only(false),
         mip_lifting_for_probing(-1),
+        mip_search_simulate_concurrency(false),
         // clang-format off
         mip_allow_cut_separation_at_nodes(true) {};
   // clang-format on
@@ -1284,6 +1288,12 @@ class HighsOptions : public HighsOptionsStruct {
         kHighsInf);
     records.push_back(record_double);
 
+    record_bool = new OptionRecordBool(
+        "mip_search_simulate_concurrency",
+        "Simulate MIP search concurrency on a single thread", advanced,
+        &mip_search_simulate_concurrency, false);
+    records.push_back(record_bool);
+
     record_int = new OptionRecordInt(
         "ipm_iteration_limit", "Iteration limit for IPM solver", advanced,
         &ipm_iteration_limit, 0, kHighsIInf, kHighsIInf);
@@ -1604,6 +1614,11 @@ class HighsOptions : public HighsOptionsStruct {
     record_int = new OptionRecordInt(
         "presolve_rule_off", "Bit mask of presolve rules that are not allowed",
         advanced, &presolve_rule_off, 0, 0, kHighsIInf);
+    records.push_back(record_int);
+
+    record_int = new OptionRecordInt(
+        "presolve_rule_test", "Presolve rule to test - DEV only!", advanced,
+        &presolve_rule_test, 0, 0, kPresolveRuleMax);
     records.push_back(record_int);
 
     record_bool = new OptionRecordBool(

@@ -22,6 +22,7 @@
 #include "lp_data/HighsLpUtils.h"
 #include "lp_data/HighsSolution.h"
 #include "lp_data/HighsSolve.h"
+#include "parallel/HighsParallel.h"
 #include "simplex/HEkk.h"
 #include "simplex/HSimplex.h"
 
@@ -41,41 +42,21 @@ inline HighsStatus returnFromSolveLpSimplex(HighsLpSolverObject& solver_object,
   // Copy the simplex iteration count to highs_info_ from ekk_instance
   solver_object.highs_info_.simplex_iteration_count =
       ekk_instance.iteration_count_;
-  // Identify which clock to stop. Can't inspect the basis, as there
-  // will generally be one after simplex, so have to deduce whether
-  // there was one before
-  HighsInt sub_solver_ix = -1;
-  if (std::signbit(solver_object.sub_solver_call_time_
-                       .run_time[kSubSolverDuSimplexBasis]))
-    sub_solver_ix = kSubSolverDuSimplexBasis;
-  if (std::signbit(solver_object.sub_solver_call_time_
-                       .run_time[kSubSolverDuSimplexNoBasis]))
-    sub_solver_ix = kSubSolverDuSimplexNoBasis;
-  if (std::signbit(solver_object.sub_solver_call_time_
-                       .run_time[kSubSolverPrSimplexBasis]))
-    sub_solver_ix = kSubSolverPrSimplexBasis;
-  if (std::signbit(solver_object.sub_solver_call_time_
-                       .run_time[kSubSolverPrSimplexNoBasis]))
-    sub_solver_ix = kSubSolverPrSimplexNoBasis;
-  // Ensure that one clock has been identified
-  assert(sub_solver_ix >= 0);
-  // Check that only one clock was started
-  if (sub_solver_ix != kSubSolverDuSimplexBasis)
-    assert(!std::signbit(solver_object.sub_solver_call_time_
-                             .run_time[kSubSolverDuSimplexBasis]));
-  if (sub_solver_ix != kSubSolverDuSimplexNoBasis)
-    assert(!std::signbit(solver_object.sub_solver_call_time_
-                             .run_time[kSubSolverDuSimplexNoBasis]));
-  if (sub_solver_ix != kSubSolverPrSimplexBasis)
-    assert(!std::signbit(solver_object.sub_solver_call_time_
-                             .run_time[kSubSolverPrSimplexBasis]));
-  if (sub_solver_ix != kSubSolverPrSimplexNoBasis)
-    assert(!std::signbit(solver_object.sub_solver_call_time_
-                             .run_time[kSubSolverPrSimplexNoBasis]));
-  // Update the call count and run time
-  solver_object.sub_solver_call_time_.num_call[sub_solver_ix]++;
-  solver_object.sub_solver_call_time_.run_time[sub_solver_ix] +=
-      solver_object.timer_.read();
+  // Stop whichever clock was running
+  if (solver_object.profiling_->sub_solver_) {
+    HighsInt profiling_clock = -1;
+    HighsProfilingRecord* thread_record =
+        solver_object.profiling_->getHighsProfilingRecord();
+    if (std::signbit(thread_record->start_time[kSubSolverDuSimplexBasis]))
+      profiling_clock = kSubSolverDuSimplexBasis;
+    if (std::signbit(thread_record->start_time[kSubSolverDuSimplexNoBasis]))
+      profiling_clock = kSubSolverDuSimplexNoBasis;
+    if (std::signbit(thread_record->start_time[kSubSolverPrSimplexBasis]))
+      profiling_clock = kSubSolverPrSimplexBasis;
+    if (std::signbit(thread_record->start_time[kSubSolverPrSimplexNoBasis]))
+      profiling_clock = kSubSolverPrSimplexNoBasis;
+    solver_object.profiling_->stop(profiling_clock);
+  }
   // Ensure that the incumbent LP is neither moved, nor scaled
   assert(!incumbent_lp.is_moved_);
   assert(!incumbent_lp.is_scaled_);
@@ -136,24 +117,26 @@ inline HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
     assert(retained_ekk_data_ok);
     return_status = HighsStatus::kError;
   }
-  HighsInt sub_solver_ix = -1;
-  if (options.simplex_strategy == kSimplexStrategyPrimal) {
-    if (basis.valid) {
-      sub_solver_ix = kSubSolverPrSimplexBasis;
+  if (solver_object.profiling_) {
+    HighsInt profiling_clock = -1;
+    if (options.simplex_strategy == kSimplexStrategyPrimal) {
+      if (basis.valid) {
+        profiling_clock = kSubSolverPrSimplexBasis;
+      } else {
+        profiling_clock = kSubSolverPrSimplexNoBasis;
+      }
     } else {
-      sub_solver_ix = kSubSolverPrSimplexNoBasis;
+      if (basis.valid) {
+        profiling_clock = kSubSolverDuSimplexBasis;
+      } else {
+        profiling_clock = kSubSolverDuSimplexNoBasis;
+      }
     }
-  } else {
-    if (basis.valid) {
-      sub_solver_ix = kSubSolverDuSimplexBasis;
-    } else {
-      sub_solver_ix = kSubSolverDuSimplexNoBasis;
-    }
+    assert(profiling_clock >= 0);
+    //    if (solver_object.profiling_->isSubMip()) { printf("solveLpSimplex:
+    //    sub-MIP on thread %d\n", int(solver_object.profiling_->myThread())); }
+    solver_object.profiling_->start(profiling_clock);
   }
-  assert(sub_solver_ix >= 0);
-  assert(solver_object.sub_solver_call_time_.run_time.size() > 0);
-  solver_object.sub_solver_call_time_.run_time[sub_solver_ix] =
-      -solver_object.timer_.read();
   // Copy the simplex iteration count from highs_info_ to ekk_instance, just for
   // convenience
   ekk_instance.iteration_count_ = highs_info.simplex_iteration_count;
