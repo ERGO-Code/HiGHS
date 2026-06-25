@@ -1626,6 +1626,11 @@ class TestHighsPy(unittest.TestCase):
         self.assertTrue(x.__ne__(None))
         self.assertRaises(Exception, lambda: x.__ne__(5))
 
+    def test_with_context_manager(self):
+        with highspy.Highs() as h:
+            x = h.addVariable()
+            h.minimize(x)
+            self.assertEqual(h.val(x), 0.0)
 
 
 class TestHighsLinearExpressionPy(unittest.TestCase):
