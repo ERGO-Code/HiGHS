@@ -54,9 +54,9 @@ static void computeStartingPointHighs(
   // compute initial feasible point
   HighsBasis use_basis;
   HighsSolution use_solution;
-  auto isfreevar = [&] (const HighsInt iVar) {
+  auto isfreevar = [&](const HighsInt iVar) {
     return instance.var_lo[iVar] == -kHighsInf &&
-         instance.var_up[iVar] == kHighsInf;
+           instance.var_up[iVar] == kHighsInf;
   };
   if (have_starting_point) {
     use_basis = highs_basis;

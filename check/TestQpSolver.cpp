@@ -1002,6 +1002,7 @@ TEST_CASE("test-qp-hot-start", "[qpsolver]") {
   HighsStatus return_status;
   Highs highs;
   highs.setOptionValue("output_flag", dev_run);
+  highs.setOptionValue("qp_allow_hot_start", true);
   const HighsInfo& info = highs.getInfo();
 
   double required_objective_function_value = 0;
@@ -1488,6 +1489,9 @@ TEST_CASE("issue-3045", "[qpsolver]") {
 TEST_CASE("test-qp-atwood", "[qpsolver]") {
   Highs h;
   h.setOptionValue("output_flag", dev_run);
+  // This instance (cf #2521) exposes the error in QP hot start, so
+  // don't allow hot start
+  h.setOptionValue("qp_allow_hot_start", false);
   std::string filename =
       std::string(HIGHS_DIR) + "/check/instances/atwood0.mps";
   REQUIRE(h.readModel(filename) == HighsStatus::kOk);
@@ -1580,4 +1584,3 @@ TEST_CASE("test-qp-atwood", "[qpsolver]") {
   }
   h.resetGlobalScheduler(true);
 }
-

@@ -577,7 +577,7 @@ struct HighsOptionsStruct {
         pdlp_cupdlpc_restart_method(0),
         pdlp_step_size_strategy(0),
         pdlp_optimality_tolerance(0.0),
-	qp_allow_hot_start(false),
+        qp_allow_hot_start(false),
         qp_iteration_limit(0),
         qp_nullspace_limit(0),
         qp_regularization_value(0),
@@ -1375,9 +1375,8 @@ class HighsOptions : public HighsOptionsStruct {
     records.push_back(record_double);
 
     record_bool = new OptionRecordBool(
-        "qp_allow_hot_start",
-        "Allow the active set QP solver to hot start", advanced,
-        &qp_allow_hot_start, false);
+        "qp_allow_hot_start", "Allow the active set QP solver to hot start",
+        advanced, &qp_allow_hot_start, false);
     records.push_back(record_bool);
 
     record_int = new OptionRecordInt(
