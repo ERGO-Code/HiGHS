@@ -1371,10 +1371,6 @@ PYBIND11_MODULE(_core, m, py::mod_gil_not_used()) {
                      &HighsOptions::mip_min_logging_interval);
   py::class_<Highs>(m, "_Highs", py::module_local())
       .def(py::init<>())
-      .def("__enter__", [](Highs& self) -> Highs& { return self; })
-      .def("__exit__",
-           [](Highs& self, py::object exc_type, py::object exc_value,
-              py::object traceback) { self.clear(); })
       .def("version", &Highs::version)
       .def("versionMajor", &Highs::versionMajor)
       .def("versionMinor", &Highs::versionMinor)

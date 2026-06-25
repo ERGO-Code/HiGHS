@@ -97,6 +97,18 @@ class Highs(_Highs):
         self.callbacks = [HighsCallback(cb.HighsCallbackType(_), self) for _ in range(int(cb.HighsCallbackType.kCallbackMax) + 1)]
         self.enableCallbacks()
 
+    # support 'with' syntax (context manager)
+    def __enter__(self):
+        return self
+
+    # support 'with' syntax (context manager)
+    def __exit__(self, exc_type, exc_value, traceback):
+        if self.is_solver_running():
+            self.cancelSolve()
+            self.wait()
+
+        self.clear()
+
     # Silence logging
     def silent(self, turn_off_output: bool = True):
         """
