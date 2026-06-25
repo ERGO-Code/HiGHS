@@ -1,5 +1,6 @@
 from __future__ import annotations
 import sys
+import re
 import numpy as np
 from numbers import Integral
 from itertools import product
@@ -55,7 +56,10 @@ if TYPE_CHECKING:
         np.ndarray[Any, np.dtype[Any]],
     ]
 else:
-    np_version = tuple(map(int, np.__version__.split('.')))
+    # backwards typing support information for HighspyArray
+    # Use re.match to strip non-numeric suffixes (e.g. "0rc1") before converting
+    # to int, so that pre-release numpy versions don't raise a ValueError here.
+    np_version = tuple(int(re.match(r'\d+', part).group()) for part in np.__version__.split('.'))
     if sys.version_info >= (3, 9) and np_version >= (1,22,0):
         ndarray_object_type = np.ndarray[Any, np.dtype[np.object_]]
     else:
