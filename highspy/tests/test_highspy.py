@@ -1314,6 +1314,7 @@ class TestHighsPy(unittest.TestCase):
         h.joinSolve(h.startSolve(), 0)
 
         # replace wait function with Ctrl+C signal
+        __tmp_wait = highspy.highs.Highs.wait
         highspy.highs.Highs.wait = lambda self, t: signal.raise_signal(signal.SIGINT)  # type: ignore[assignment]
         h.HandleKeyboardInterrupt = False
 
@@ -1328,6 +1329,9 @@ class TestHighsPy(unittest.TestCase):
             h.startSolve()
             h.joinSolve(None, 5)
             unittest.main(exit=False)
+
+        # restore wait function (avoid issues in other tests)
+        highspy.highs.Highs.wait = __tmp_wait
 
     def test_callbacks(self):
         N = 8
