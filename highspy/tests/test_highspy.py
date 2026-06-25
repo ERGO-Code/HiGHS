@@ -6,7 +6,6 @@ import numpy as np
 from sys import platform
 import signal
 
-
 class TestHighsPy(unittest.TestCase):
     def assertArrayEqual(self, first, second, msg=None):
         first, second = list(first), list(second)
@@ -1158,6 +1157,36 @@ class TestHighsPy(unittest.TestCase):
 
         y3 = h.addVariables(2, name=["a", "b"])
         self.assertArrayEqual(y3.idx(), [11, 12])
+
+    def test_add_variable_as_key(self):
+        # tests to see if we can use a variable as a key in a dictionary
+        # previously this would fail because of the lb <= expr <= ub chain
+        h = highspy.Highs()
+        var = h.addBinary()
+
+        values = {var: 0}
+
+        # chain uses: `__bool__(lb <= expr) and (expr <= ub)`
+        # key lookup: `hash(key) == hash(var) and key == var`,
+        #    but `key == var` is translated as `__bool__(highs_linear_expression(key == var))`
+        #    and __bool__ invokes the highs_linear_expression.chain
+        # performing both in sequence can lead to an assert after a false positive in highs_linear_expression.__is_active_chain()
+        values[h.getVariables()[0]]
+        h.addConstr(h.getVariables()[0] <= 1)
+        self.assertEqualExpr(h.getConstrs()[0].expr(), [0], [1], None, [-h.inf, 1])
+
+        # test inf edge cases (these will raise exceptions if adding constraints)
+        self.assertEqualExpr(h.inf <= h.getVariables()[0] <= h.inf, [0], [1], None, [h.inf, h.inf])
+        self.assertEqualExpr(-h.inf >= h.getVariables()[0] >= -h.inf, [0], [1], None, [-h.inf, -h.inf])
+
+        # test that we can set equality via chain
+        self.assertEqualExpr(1 <= h.getVariables()[0] <= 1, [0], [1], None, [1, 1])
+        self.assertEqualExpr(1 >= h.getVariables()[0] >= 1, [0], [1], None, [1, 1])
+
+        # test equality chain (left hand side ignored)
+        self.assertEqualExpr(1 == h.getVariables()[0] >= 5, [0], [1], None, [5, h.inf])
+        self.assertEqualExpr(5 <= h.getVariables()[0] == 1, [0], [1], None, [1, 1])
+
 
     def test_delete_variable(self):
         h = highspy.Highs()
