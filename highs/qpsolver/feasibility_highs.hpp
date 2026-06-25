@@ -10,7 +10,6 @@
 
 #include "Highs.h"
 #include "qpsolver/a_asm.hpp"
-#include "qpsolver/crashsolution.hpp"
 
 static void computeStartingPointHighs(
     Instance& instance, Settings& settings, Statistics& stats,
@@ -19,7 +18,7 @@ static void computeStartingPointHighs(
     HighsSolution& highs_solution, HighsTimer& timer) {
   bool have_starting_point = false;
   const bool debug_report = false;
-  if (highs_solution.value_valid) {
+  if (settings.allow_hot_start && highs_solution.value_valid) {
     // #1350 add primal_feasibility_tolerance to settings
     const double primal_feasibility_tolerance = settings.lambda_zero_threshold;
 
@@ -55,6 +54,10 @@ static void computeStartingPointHighs(
   // compute initial feasible point
   HighsBasis use_basis;
   HighsSolution use_solution;
+  auto isfreevar = [&] (const HighsInt iVar) {
+    return instance.var_lo[iVar] == -kHighsInf &&
+         instance.var_up[iVar] == kHighsInf;
+  };
   if (have_starting_point) {
     use_basis = highs_basis;
     use_solution = highs_solution;
@@ -89,7 +92,7 @@ static void computeStartingPointHighs(
     assert(!settings.phase1boundfreevars);
     if (settings.phase1boundfreevars) {
       for (HighsInt i = 0; i < instance.num_var; i++) {
-        if (isfreevar(instance, i)) {
+        if (isfreevar(i)) {
           lp.col_lower_[i] = -1E5;
           lp.col_upper_[i] = 1E5;
         }
@@ -233,7 +236,7 @@ static void computeStartingPointHighs(
     HighsBasisStatus status = use_basis.col_status[i];
     debug_col_status_count[HighsInt(status)]++;
     if (status == HighsBasisStatus::kLower) {
-      if (isfreevar(instance, i)) {
+      if (isfreevar(i)) {
         initial_inactive.push_back(instance.num_con + i);
       } else {
         initial_active.push_back(instance.num_con + i);
@@ -241,7 +244,7 @@ static void computeStartingPointHighs(
       }
 
     } else if (status == HighsBasisStatus::kUpper) {
-      if (isfreevar(instance, i)) {
+      if (isfreevar(i)) {
         initial_inactive.push_back(instance.num_con + i);
       } else {
         initial_active.push_back(instance.num_con + i);
