@@ -337,7 +337,8 @@ TEST_CASE("3015", "[highs_test_semi_variables]") {
   highs.setOptionValue("output_flag", dev_run);
   // Disable Fourier-Motzkin presolve so that the semi-variable
   // infeasibility is still triggered with default mip_feasibility_tolerance
-  highs.setOptionValue("presolve_rule_off", 131072);
+  highs.setOptionValue("presolve_rule_off",
+                       1 << kPresolveRuleFourierMotzkin);
   highs.readModel(filename);
   HighsStatus status = highs.run();
   REQUIRE(status == HighsStatus::kError);
