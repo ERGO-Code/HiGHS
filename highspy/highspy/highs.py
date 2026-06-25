@@ -1291,7 +1291,11 @@ class Highs(_Highs):
         """
         if expr.bounds is not None:
             idxs, vals = expr.unique_elements()  # if we have duplicate variables, add the vals
-            super().addRow(expr.bounds[0], expr.bounds[1], len(idxs), idxs, vals)
+            status = super().addRow(expr.bounds[0], expr.bounds[1], len(idxs), idxs, vals)
+            
+            if status != HighsStatus.kOk:
+                raise Exception("Error adding constraint to the model.")
+
             return highs_cons(idx, self)
         else:
             raise Exception("Constraint bounds must be set via comparison (>=,==,<=).")
@@ -2628,7 +2632,16 @@ class highs_linear_expression(object):
 
     # capture the chain
     def __bool__(self):
-        highs_linear_expression.__chain.check = self
+        # ignore equality constraints or expressions without bounds
+        # a chain (lb <= expr <= ub) has intermediate bounds = (lb,  inf) 
+        #     and (ub >= expr >= lb) has intermediate bounds = (-inf, ub).
+        # 
+        # equal bounds aren't possible unless lb = inf or ub = -inf (respectively),
+        # additionally, we ignore the LHS expression of (lb == expr <= ub) and 
+        # (lb <= expr == ub) since those are not valid chains.
+        highs_linear_expression.__chain.check = (
+            self if self.bounds is not None and (self.bounds[0] != self.bounds[1] or (self.bounds[0] == kHighsInf or self.bounds[1] == -kHighsInf)) else None
+        )
 
         # take copies of the chain to avoid issues with mutable expressions
         LHS = getattr(highs_linear_expression.__chain, "left", None)
