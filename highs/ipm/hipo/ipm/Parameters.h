@@ -38,6 +38,7 @@ const double kMaxTreeDepth = 1000;
 
 // parameters for choice of ordering
 const double kFlopsOrderingThresh = 1.2;
+const Int kExtraParallelMetisSeeds = 2;
 
 // parameters for skipping AS or NE
 const double kNzBoundsRatio = 50.0;

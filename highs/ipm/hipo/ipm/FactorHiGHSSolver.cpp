@@ -270,15 +270,10 @@ Int FactorHiGHSSolver::chooseNla() {
   // In parallel, run AS analyse and build NE structure. NE analyse runs only
   // after AS analyse is finished, so that it can be skipped based on the number
   // of nz of NE matrix and AS factor.
-  if (options_.parallel == kHighsOffString) {
-    run_analyse_AS();
-    run_structure_NE();
-  } else {
-    TaskGroupSpecial tg;
-    tg.spawn([&]() { run_analyse_AS(); });
-    tg.spawn([&]() { run_structure_NE(); });
-    tg.taskWait();
-  }
+  TaskGroupSpecial tg;
+  tg.spawn([&]() { run_analyse_AS(); });
+  tg.spawn([&]() { run_structure_NE(); });
+  tg.taskWait();
 
   // if NE was skipped but AS failed, use NE
   if (skip_NE && failure_AS) {
@@ -365,17 +360,47 @@ Int FactorHiGHSSolver::chooseOrdering(const std::vector<Int>& rows,
 
   // select which fill-reducing orderings should be tried
   std::vector<std::string> orderings_to_try;
-  if (options_.ordering != kHighsChooseString)
+  std::vector<Int> random_seeds;
+  if (options_.ordering != kHighsChooseString) {
     orderings_to_try.push_back(options_.ordering);
-  else {
-    orderings_to_try.push_back(kHipoAmdString);
+    random_seeds.push_back(options_.random_seed);
+  } else {
+    // Try multiple orderings in parallel:
+    // - metis is always tried.
+    // - amd is tried if at least 1 more thread is available.
+    // - metis with other seeds is tries if there are more threads.
+
+    // if running AS, 1 thread is taken by NE structure
+    const Int threads_used = nla == "NE" ? 0 : 1;
+    Int threads_avail = highs::parallel::num_threads() - threads_used;
+
     orderings_to_try.push_back(kHipoMetisString);
+    random_seeds.push_back(options_.random_seed);
+    --threads_avail;
+
+    if (threads_avail > 0) {
+      orderings_to_try.push_back(kHipoAmdString);
+      random_seeds.push_back(0);
+      --threads_avail;
+    }
+
+    for (Int i = 0; i < kExtraParallelMetisSeeds; ++i) {
+      if (threads_avail > 0) {
+        orderings_to_try.push_back(kHipoMetisString);
+        random_seeds.push_back(options_.random_seed + i + 1);
+        --threads_avail;
+      } else
+        break;
+    }
 
     // rcm is much worse in general, so no point in trying for now
   }
 
+  assert(orderings_to_try.size() == random_seeds.size());
+  const Int k = orderings_to_try.size();
+
   // vector<bool> is not thread-safe
-  std::vector<char> failure(orderings_to_try.size(), 0);
+  std::vector<char> failure(k, 0);
 
   if (nla == "NE") {
     if (ptr.back() >= kkt_.NE_nz_limit.load(std::memory_order_relaxed)) {
@@ -390,19 +415,18 @@ Int FactorHiGHSSolver::chooseOrdering(const std::vector<Int>& rows,
   Int n = full_ptr.size() - 1;
   std::vector<Int> perm(n), iperm(n);
 
-  std::vector<std::vector<Int>> permutations(orderings_to_try.size(),
-                                             std::vector<Int>(n));
+  std::vector<std::vector<Int>> permutations(k, std::vector<Int>(n));
 
-  std::vector<Symbolic> symbolics(orderings_to_try.size(), S);
+  std::vector<Symbolic> symbolics(k, S);
 
   auto run_ordering_and_analyse = [&](Int i) {
-    logger_.printInfo("Running %s for %s\n", orderings_to_try[i].c_str(),
-                      nla.c_str());
+    logger_.printInfo("Running %5s (%2d) for %s\n", orderings_to_try[i].c_str(),
+                      random_seeds[i], nla.c_str());
 
     if (orderings_to_try[i] == kHipoMetisString) {
       idx_t options[METIS_NOPTIONS];
       HighsExtras::metis::set_default_options(options);
-      options[METIS_OPTION_SEED] = kMetisSeed;
+      options[METIS_OPTION_SEED] = random_seeds[i];
 
       options[METIS_OPTION_DBGLVL] = 0;
 
@@ -435,11 +459,13 @@ Int FactorHiGHSSolver::chooseOrdering(const std::vector<Int>& rows,
       assert(1 == 0);
     }
 
-    logger_.printInfo("Finished %s for %s\n", orderings_to_try[i].c_str(),
+    logger_.printInfo("Finished %5s (%2d) for %s\n",
+                      orderings_to_try[i].c_str(), random_seeds[i],
                       nla.c_str());
 
     if (failure[i]) {
-      logger_.printInfo("Error with %s for %s\n", orderings_to_try[i].c_str(),
+      logger_.printInfo("Error with %5s (%2d) for %s\n",
+                        orderings_to_try[i].c_str(), random_seeds[i],
                         nla.c_str());
       return;
     }
@@ -452,13 +478,8 @@ Int FactorHiGHSSolver::chooseOrdering(const std::vector<Int>& rows,
     }
   };
 
-  if (options_.parallel == kHighsOffString) {
-    for (Int i = 0; i < static_cast<Int>(orderings_to_try.size()); ++i)
-      run_ordering_and_analyse(i);
-  } else
-    highs::parallel::for_each(
-        0, orderings_to_try.size(),
-        [&](Int start, Int end) { run_ordering_and_analyse(start); }, 1);
+  highs::parallel::for_each(
+      0, k, [&](Int start, Int end) { run_ordering_and_analyse(start); }, 1);
 
   Int num_success = 0;
   for (bool b : failure) {
@@ -466,17 +487,17 @@ Int FactorHiGHSSolver::chooseOrdering(const std::vector<Int>& rows,
   }
 
   if (num_success > 0) {
-    for (Int i = 0; i < static_cast<Int>(orderings_to_try.size()); ++i) {
+    for (Int i = 0; i < k; ++i) {
       if (!failure[i])
         logger_.printInfo(
-            "%20s for %s: %.2e %.2f\n", orderings_to_try[i].c_str(),
-            nla.c_str(), symbolics[i].flops(),
+            "%20s (%2d) for %s: %.2e %.2f\n", orderings_to_try[i].c_str(),
+            random_seeds[i], nla.c_str(), symbolics[i].flops(),
             static_cast<double>(symbolics[i].size()) / symbolics[i].sn());
     }
 
     // find the ordering with best flops
     double best_flops = kHighsInf;
-    for (Int i = 0; i < static_cast<Int>(orderings_to_try.size()); ++i) {
+    for (Int i = 0; i < k; ++i) {
       if (!failure[i] && symbolics[i].flops() < best_flops) {
         best_flops = symbolics[i].flops();
       }
@@ -484,7 +505,7 @@ Int FactorHiGHSSolver::chooseOrdering(const std::vector<Int>& rows,
 
     // find orderings with flops within kFlopsOrderingThresh of the best
     std::vector<Int> consider;
-    for (Int i = 0; i < static_cast<Int>(orderings_to_try.size()); ++i) {
+    for (Int i = 0; i < k; ++i) {
       if (!failure[i] &&
           symbolics[i].flops() <= kFlopsOrderingThresh * best_flops) {
         consider.push_back(i);
@@ -507,14 +528,14 @@ Int FactorHiGHSSolver::chooseOrdering(const std::vector<Int>& rows,
     const double bytes_thresh = kLargeStorageGB * 1024 * 1024 * 1024;
     double best_memory = kHighsInf;
     Int ind_best_memory = -1;
-    for (Int i = 0; i < static_cast<Int>(orderings_to_try.size()); ++i) {
+    for (Int i = 0; i < k; ++i) {
       if (symbolics[i].storage() < best_memory) {
         best_memory = symbolics[i].storage();
         ind_best_memory = i;
       }
     }
 
-    assert(chosen >= 0 && chosen < static_cast<Int>(orderings_to_try.size()));
+    assert(chosen >= 0 && chosen < k);
 
     S = std::move(symbolics[chosen]);
     ordering = orderings_to_try[chosen];
