@@ -3,16 +3,17 @@
 #include <cstdio>
 #include <cstdlib>
 
-#include "ipm/hipo/auxiliary/OrderingPrint.h"
+#include "OrderingPrint.h"
 
 // offset from C to Fortran numbering
 const HighsInt offset = 1;
 
 //****************************************************************************80
 
-static void Highs_rcm_degree(HighsInt root, HighsInt adj_num, const HighsInt adj_row[],
-            const HighsInt adj[], HighsInt mask[], HighsInt deg[],
-            HighsInt* iccsze, HighsInt ls[], HighsInt node_num)
+static void Highs_rcm_degree(HighsInt root, HighsInt adj_num,
+                             const HighsInt adj_row[], const HighsInt adj[],
+                             HighsInt mask[], HighsInt deg[], HighsInt* iccsze,
+                             HighsInt ls[], HighsInt node_num)
 
 //****************************************************************************80
 //
@@ -204,9 +205,11 @@ static void Highs_rcm_i4vec_reverse(HighsInt n, HighsInt a[])
 }
 //****************************************************************************80
 
-static void Highs_rcm_level_set(HighsInt root, HighsInt adj_num, const HighsInt adj_row[],
-               const HighsInt adj[], HighsInt mask[], HighsInt* level_num,
-               HighsInt level_row[], HighsInt level[], HighsInt node_num)
+static void Highs_rcm_level_set(HighsInt root, HighsInt adj_num,
+                                const HighsInt adj_row[], const HighsInt adj[],
+                                HighsInt mask[], HighsInt* level_num,
+                                HighsInt level_row[], HighsInt level[],
+                                HighsInt node_num)
 
 //****************************************************************************80
 //
@@ -341,9 +344,10 @@ static void Highs_rcm_level_set(HighsInt root, HighsInt adj_num, const HighsInt 
 }
 //****************************************************************************80
 
-static HighsInt Highs_rcm(HighsInt root, HighsInt adj_num, const HighsInt adj_row[],
-             const HighsInt adj[], HighsInt mask[], HighsInt perm[],
-             HighsInt* iccsze, HighsInt node_num)
+static HighsInt Highs_rcm(HighsInt root, HighsInt adj_num,
+                          const HighsInt adj_row[], const HighsInt adj[],
+                          HighsInt mask[], HighsInt perm[], HighsInt* iccsze,
+                          HighsInt node_num)
 
 //****************************************************************************80
 //
@@ -458,7 +462,8 @@ static HighsInt Highs_rcm(HighsInt root, HighsInt adj_num, const HighsInt adj_ro
   //
   //  Find the degrees of the nodes in the component specified by MASK and ROOT.
   //
-  Highs_rcm_degree(root, adj_num, adj_row, adj, mask, deg, iccsze, perm, node_num);
+  Highs_rcm_degree(root, adj_num, adj_row, adj, mask, deg, iccsze, perm,
+                   node_num);
   //
   //  If the connected component size is less than 1, something is wrong.
   //
@@ -561,9 +566,11 @@ static HighsInt Highs_rcm(HighsInt root, HighsInt adj_num, const HighsInt adj_ro
 }
 //****************************************************************************80
 
-static void Highs_rcm_root_find(HighsInt* root, HighsInt adj_num, const HighsInt adj_row[],
-               const HighsInt adj[], HighsInt mask[], HighsInt* level_num,
-               HighsInt level_row[], HighsInt level[], HighsInt node_num)
+static void Highs_rcm_root_find(HighsInt* root, HighsInt adj_num,
+                                const HighsInt adj_row[], const HighsInt adj[],
+                                HighsInt mask[], HighsInt* level_num,
+                                HighsInt level_row[], HighsInt level[],
+                                HighsInt node_num)
 
 //****************************************************************************80
 //
@@ -670,8 +677,8 @@ static void Highs_rcm_root_find(HighsInt* root, HighsInt adj_num, const HighsInt
   //
   //  Determine the level structure rooted at ROOT.
   //
-  Highs_rcm_level_set(*root, adj_num, adj_row, adj, mask, level_num, level_row, level,
-            node_num);
+  Highs_rcm_level_set(*root, adj_num, adj_row, adj, mask, level_num, level_row,
+                      level, node_num);
   //
   //  Count the number of nodes in this level structure.
   //
@@ -725,8 +732,8 @@ static void Highs_rcm_root_find(HighsInt* root, HighsInt adj_num, const HighsInt
     //
     //  Generate the rooted level structure associated with this node.
     //
-    Highs_rcm_level_set(*root, adj_num, adj_row, adj, mask, &level_num2, level_row, level,
-              node_num);
+    Highs_rcm_level_set(*root, adj_num, adj_row, adj, mask, &level_num2,
+                        level_row, level, node_num);
     //
     //  If the number of levels did not increase, accept the new ROOT.
     //
@@ -838,13 +845,13 @@ HighsInt Highs_genrcm(HighsInt node_num, HighsInt adj_num,
       //  Find a pseudo-peripheral node ROOT.  The level structure found by
       //  ROOT_FIND is stored starting at PERM(NUM).
       //
-      Highs_rcm_root_find(&root, adj_num, adj_row, adj, mask, &level_num, level_row,
-                perm + num - 1, node_num);
+      Highs_rcm_root_find(&root, adj_num, adj_row, adj, mask, &level_num,
+                          level_row, perm + num - 1, node_num);
       //
       //  RCM orders the component using ROOT as the starting node.
       //
       if (Highs_rcm(root, adj_num, adj_row, adj, mask, perm + num - 1, &iccsze,
-              node_num)) {
+                    node_num)) {
         delete[] level_row;
         delete[] mask;
         return 1;

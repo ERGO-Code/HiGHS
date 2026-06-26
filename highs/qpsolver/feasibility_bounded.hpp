@@ -10,7 +10,6 @@
 
 #include "Highs.h"
 #include "qpsolver/a_asm.hpp"
-#include "qpsolver/crashsolution.hpp"
 
 static void computeStartingPointBounded(Instance& instance, Settings& settings,
                                         Statistics& stats,

@@ -12,11 +12,13 @@
 #include <memory>
 
 #include "Highs.h"
+#include "mip/HighsConflictPool.h"
 #include "mip/HighsMipSolver.h"
 
 class HighsDomain;
 struct HighsCutSet;
 class HighsPseudocost;
+class HighsMipWorker;
 
 class HighsLpRelaxation {
  public:
@@ -41,6 +43,7 @@ class HighsLpRelaxation {
     Origin origin;
     HighsInt index;
     HighsInt age;
+    HighsInt cutpoolindex;
 
     void get(const HighsMipSolver& mipsolver, HighsInt& len,
              const HighsInt*& inds, const double*& vals) const;
@@ -51,8 +54,10 @@ class HighsLpRelaxation {
 
     double getMaxAbsVal(const HighsMipSolver& mipsolver) const;
 
-    static LpRow cut(HighsInt index) { return LpRow{kCutPool, index, 0}; }
-    static LpRow model(HighsInt index) { return LpRow{kModel, index, 0}; }
+    static LpRow cut(HighsInt index, HighsInt cutpoolindex) {
+      return LpRow{kCutPool, index, 0, cutpoolindex};
+    }
+    static LpRow model(HighsInt index) { return LpRow{kModel, index, 0, -1}; }
   };
 
   const HighsMipSolver& mipsolver;
@@ -82,6 +87,7 @@ class HighsLpRelaxation {
   Status status;
   bool adjustSymBranchingCol;
   bool solved_first_lp;
+  HighsMipWorker* worker_;
 
   void storeDualInfProof();
 
@@ -93,6 +99,8 @@ class HighsLpRelaxation {
   HighsLpRelaxation(const HighsMipSolver& mip);
 
   HighsLpRelaxation(const HighsLpRelaxation& other);
+
+  void setProfiling(HighsProfiling* profiling);
 
   void getCutPool(HighsInt& num_col, HighsInt& num_cut,
                   std::vector<double>& cut_lower,
@@ -166,10 +174,13 @@ class HighsLpRelaxation {
     this->adjustSymBranchingCol = adjustSymBranchingCol;
   }
 
-  void resetToGlobalDomain();
+  void resetToGlobalDomain(const HighsDomain& globaldom);
 
-  void computeBasicDegenerateDuals(double threshold,
-                                   HighsDomain* localdom = nullptr);
+  void computeBasicDegenerateDuals(double threshold, HighsDomain& localdom,
+                                   HighsDomain& globaldom,
+                                   HighsConflictPool& conflictpol,
+                                   HighsPseudocost& pseudocost,
+                                   bool getdualproof);
 
   double getAvgSolveIters() { return avgSolveIters; }
 
@@ -185,9 +196,9 @@ class HighsLpRelaxation {
 
   const HighsSolution& getSolution() const { return lpsolver.getSolution(); }
 
-  double slackUpper(HighsInt row) const;
+  double slackUpper(HighsInt row, const HighsDomain& globaldom) const;
 
-  double slackLower(HighsInt row) const;
+  double slackLower(HighsInt row, const HighsDomain& globaldom) const;
 
   double rowLower(HighsInt row) const {
     return lpsolver.getLp().row_lower_[row];
@@ -197,16 +208,16 @@ class HighsLpRelaxation {
     return lpsolver.getLp().row_upper_[row];
   }
 
-  double colLower(HighsInt col) const {
+  double colLower(HighsInt col, const HighsDomain& globaldom) const {
     return col < lpsolver.getLp().num_col_
                ? lpsolver.getLp().col_lower_[col]
-               : slackLower(col - lpsolver.getLp().num_col_);
+               : slackLower(col - lpsolver.getLp().num_col_, globaldom);
   }
 
-  double colUpper(HighsInt col) const {
+  double colUpper(HighsInt col, const HighsDomain& globaldom) const {
     return col < lpsolver.getLp().num_col_
                ? lpsolver.getLp().col_upper_[col]
-               : slackUpper(col - lpsolver.getLp().num_col_);
+               : slackUpper(col - lpsolver.getLp().num_col_, globaldom);
   }
 
   bool isColIntegral(HighsInt col) const {
@@ -235,6 +246,8 @@ class HighsLpRelaxation {
 
     return false;
   }
+
+  void setMipWorker(HighsMipWorker& worker) { worker_ = &worker; };
 
   double computeBestEstimate(const HighsPseudocost& ps) const;
 
@@ -308,7 +321,11 @@ class HighsLpRelaxation {
 
   void resetAges();
 
+  void notifyCutPoolsLpCopied(HighsInt n);
+
   void removeObsoleteRows(bool notifyPool = true);
+
+  void removeWorkerSpecificRows();
 
   void removeCuts(HighsInt ndelcuts, std::vector<HighsInt>& deletemask);
 

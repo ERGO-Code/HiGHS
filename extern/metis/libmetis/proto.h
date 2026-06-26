@@ -15,6 +15,11 @@
 #ifndef _LIBMETIS_PROTO_H_
 #define _LIBMETIS_PROTO_H_
 
+#ifndef NDEBUG
+#define HIGHS_ORDERING_PRINT(...) printf(__VA_ARGS__)
+#else
+#define HIGHS_ORDERING_PRINT(...)
+#endif
 #include "metis_mangle.h"
 
 /* auxapi.c */

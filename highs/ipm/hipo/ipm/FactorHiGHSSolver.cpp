@@ -1,14 +1,13 @@
 #include "FactorHiGHSSolver.h"
 
+#include <cstring>
 #include <limits>
 
+#include "HighsExternalApi.h"
 #include "Status.h"
-#include "amd/amd.h"
 #include "ipm/hipo/auxiliary/Auxiliary.h"
 #include "ipm/hipo/auxiliary/Logger.h"
-#include "metis/metis.h"
 #include "parallel/HighsParallel.h"
-#include "rcm/rcm.h"
 
 namespace hipo {
 
@@ -182,9 +181,11 @@ Int FactorHiGHSSolver::setup() {
   if (Int status = setNla()) return status;
   setParallel();
 
-  std::stringstream log_stream;
-  log_stream << textline("Analyse time:") << fix(clock.stop(), 0, 2) << '\n';
-  logger_.print(log_stream.str().c_str());
+  if (!options_.timeless_log) {
+    std::stringstream log_stream;
+    log_stream << textline("Analyse time:") << fix(clock.stop(), 0, 2) << '\n';
+    logger_.print(log_stream.str().c_str());
+  }
 
   S_.print(logger_, logger_.debug(1));
 
@@ -315,7 +316,7 @@ Int FactorHiGHSSolver::chooseNla() {
     // Total number of operations, given by dense flops and sparse indexing
     // operations, weighted with an empirical factor
     double ops_NE = symb_NE.flops() + symb_NE.spops() * kSpopsWeight;
-    double ops_AS = symb_AS.flops() + symb_AS.spops() + kSpopsWeight;
+    double ops_AS = symb_AS.flops() + symb_AS.spops() * kSpopsWeight;
 
     // Average size of supernodes
     double sn_size_NE = (double)symb_NE.size() / symb_NE.sn();
@@ -400,7 +401,7 @@ Int FactorHiGHSSolver::chooseOrdering(const std::vector<Int>& rows,
 
     if (orderings_to_try[i] == kHipoMetisString) {
       idx_t options[METIS_NOPTIONS];
-      Highs_METIS_SetDefaultOptions(options);
+      HighsExtras::metis::set_default_options(options);
       options[METIS_OPTION_SEED] = kMetisSeed;
 
       options[METIS_OPTION_DBGLVL] = 0;
@@ -409,22 +410,25 @@ Int FactorHiGHSSolver::chooseOrdering(const std::vector<Int>& rows,
       options[METIS_OPTION_NO2HOP] = 1;
 
       std::vector<Int> iperm(n);
-      Int status =
-          Highs_METIS_NodeND(&n, full_ptr.data(), full_rows.data(), NULL,
-                             options, permutations[i].data(), iperm.data());
+      Int status = HighsExtras::metis::nodeND(
+          &n, full_ptr.data(), full_rows.data(), nullptr, options,
+          permutations[i].data(), iperm.data());
       if (status != METIS_OK) failure[i] = true;
 
     } else if (orderings_to_try[i] == kHipoAmdString) {
       double control[AMD_CONTROL];
-      Highs_amd_defaults(control);
+      HighsExtras::amd::set_defaults(control);
       double info[AMD_INFO];
-      Int status = Highs_amd_order(n, full_ptr.data(), full_rows.data(),
-                                   permutations[i].data(), control, info);
+
+      Int status =
+          HighsExtras::amd::order(n, full_ptr.data(), full_rows.data(),
+                                  permutations[i].data(), control, info);
       if (status != AMD_OK) failure[i] = true;
 
     } else if (orderings_to_try[i] == kHipoRcmString) {
-      Int status = Highs_genrcm(n, full_ptr.back(), full_ptr.data(),
-                                full_rows.data(), permutations[i].data());
+      Int status =
+          HighsExtras::rcm::genrcm(n, full_ptr.back(), full_ptr.data(),
+                                   full_rows.data(), permutations[i].data());
       if (status != 0) failure[i] = true;
 
     } else {
@@ -569,6 +573,10 @@ Int FactorHiGHSSolver::setNla() {
   return kStatusOk;
 }
 
+static bool usingAppleBlas() {
+  return strstr(HighsExtras::blas::getInfo()->provider, "Apple") != nullptr;
+}
+
 void FactorHiGHSSolver::setParallel() {
   // Set parallel options
   bool parallel_tree = false;
@@ -594,35 +602,35 @@ void FactorHiGHSSolver::setParallel() {
       assert(1 == 0);
 
   } else if (options_.parallel == kHighsChooseString) {
-#ifdef HIPO_USES_APPLE_BLAS
-    // Blas on Apple do not work well with parallel_node, but parallel_tree
-    // seems to always be beneficial.
-    parallel_node = false;
-    parallel_tree = true;
-#else
-    // Otherwise, parallel_node is active because it is triggered only if the
-    // frontal matrix is large enough anyway.
-    parallel_node = true;
-
-    // parallel_tree instead is chosen with a heuristic
-
-    double tree_speedup = S_.flops() / S_.critops();
-    double sn_size = (double)S_.size() / S_.sn();
-
-    bool enough_sn = S_.sn() > kMinNumberSn;
-    bool enough_flops = S_.flops() > kLargeFlopsThresh;
-    bool speedup_is_large = tree_speedup > kLargeSpeedupThresh;
-    bool sn_are_large = sn_size > kLargeSnThresh;
-    bool sn_are_not_small = sn_size > kSmallSnThresh;
-
-    // parallel_tree is active if the supernodes are large, or if there is a
-    // large expected speedup and the supernodes are not too small, provided
-    // that the number of flops and supernodes is not too small.
-    if (enough_sn && enough_flops &&
-        (sn_are_large || (speedup_is_large && sn_are_not_small))) {
+    if (usingAppleBlas()) {
+      // Blas on Apple do not work well with parallel_node, but parallel_tree
+      // seems to always be beneficial.
+      parallel_node = false;
       parallel_tree = true;
+    } else {
+      // Otherwise, parallel_node is active because it is triggered only if the
+      // frontal matrix is large enough anyway.
+      parallel_node = true;
+
+      // parallel_tree instead is chosen with a heuristic
+
+      double tree_speedup = S_.flops() / S_.critops();
+      double sn_size = (double)S_.size() / S_.sn();
+
+      bool enough_sn = S_.sn() > kMinNumberSn;
+      bool enough_flops = S_.flops() > kLargeFlopsThresh;
+      bool speedup_is_large = tree_speedup > kLargeSpeedupThresh;
+      bool sn_are_large = sn_size > kLargeSnThresh;
+      bool sn_are_not_small = sn_size > kSmallSnThresh;
+
+      // parallel_tree is active if the supernodes are large, or if there is a
+      // large expected speedup and the supernodes are not too small, provided
+      // that the number of flops and supernodes is not too small.
+      if (enough_sn && enough_flops &&
+          (sn_are_large || (speedup_is_large && sn_are_not_small))) {
+        parallel_tree = true;
+      }
     }
-#endif
 
     // If serial memory is too large, switch off tree parallelism to avoid
     // running out of memory

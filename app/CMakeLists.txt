@@ -11,13 +11,14 @@ if(FAST_BUILD)
     endif()
 
     add_executable(highs-bin)
-    target_sources(highs-bin PRIVATE RunHighs.cpp HighsRuntimeOptions.h ${win_version_file})
+    target_sources(highs-bin PRIVATE RunHighs.cpp HighsRuntimeOptions.h HighsAppExternalDeps.h ${win_version_file})
 
     target_include_directories(highs-bin PRIVATE
       $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/app>
     )
 
     set_target_properties(highs-bin PROPERTIES POSITION_INDEPENDENT_CODE ON)
+
 
     if(UNIX)
       target_compile_options(highs-bin PUBLIC "-Wno-unused-variable")
@@ -54,6 +55,25 @@ if(FAST_BUILD)
           SKIP_BUILD_RPATH TRUE
           SKIP_INSTALL_RPATH TRUE
       )
+    endif()
+
+    # Set the build RPATH for the highs app
+    if (APPLE OR UNIX)
+      set(highs_bin_build_rpath)
+
+      if(BUILD_SHARED_LIBS)
+        list(APPEND highs_bin_build_rpath "$<TARGET_FILE_DIR:highs>")
+      endif()
+
+      if(HIPO AND BUILD_SHARED_EXTRAS_LIB)
+        list(APPEND highs_bin_build_rpath "$<TARGET_FILE_DIR:highs_extras>")
+      endif()
+
+      if(highs_bin_build_rpath)
+        list(REMOVE_DUPLICATES highs_bin_build_rpath)
+        set_target_properties(highs-bin PROPERTIES
+          BUILD_RPATH "${highs_bin_build_rpath}")
+      endif()
     endif()
 
     if(WIN32 AND HIPO AND BUILD_OPENBLAS AND BUILD_SHARED_LIBS)

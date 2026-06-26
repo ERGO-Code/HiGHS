@@ -197,7 +197,7 @@ void HighsTableauSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
       break;
 
     assert(lpAggregator.isEmpty());
-    for (std::pair<HighsInt, double> rowWeight : fracvar.row_ep)
+    for (const auto& rowWeight : fracvar.row_ep)
       lpAggregator.addRow(rowWeight.first, rowWeight.second);
 
     lpAggregator.getCurrentAggregation(baseRowInds, baseRowVals, false);
@@ -230,12 +230,12 @@ void HighsTableauSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
 
     double rhs = 0;
     cutGen.generateCut(transLp, baseRowInds, baseRowVals, rhs);
-    if (mip.mipdata_->domain.infeasible()) break;
+    if (transLp.getGlobaldom().infeasible()) break;
 
     lpAggregator.getCurrentAggregation(baseRowInds, baseRowVals, true);
     rhs = 0;
     cutGen.generateCut(transLp, baseRowInds, baseRowVals, rhs);
-    if (mip.mipdata_->domain.infeasible()) break;
+    if (transLp.getGlobaldom().infeasible()) break;
 
     lpAggregator.clear();
     if (bestScore == -1.0 && cutpool.getNumCuts() != numCuts)

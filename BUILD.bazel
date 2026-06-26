@@ -50,12 +50,19 @@ cuda_library(
 
 cc_library(
     name = "highs",
-    srcs = ["highs/interfaces/highs_c_api.cpp"] + glob([
+    srcs = [
+        "highs/interfaces/highs_c_api.cpp",
+        "highs/HighsExternalApi.cpp",
+        "highs/HighsExternalDeps.cpp",
+    ] + glob([
         "highs/io/*.cpp",
         "highs/io/filereaderlp/*.cpp",
         "highs/ipm/*.cpp",
         "highs/ipm/ipx/*.cc",
         "highs/ipm/basiclu/*.c",
+        "highs/ipm/hipo/ipm/*.cpp",
+        "highs/ipm/hipo/factorhighs/*.cpp",
+        "highs/ipm/hipo/auxiliary/*.cpp",
         "highs/lp_data/*.cpp",
         "highs/mip/*.cpp",
         "highs/model/*.cpp",
@@ -81,6 +88,7 @@ cc_library(
     copts = select({
         "@rules_cc//cc/compiler:msvc-cl": [],
         "//conditions:default": [
+            "-fexceptions",
             "-Wno-unused-variable",
             "-Wno-unused-but-set-variable",
         ],
@@ -91,6 +99,7 @@ cc_library(
     }),
     includes = [
         "extern",
+        "extern/catch",
         # "extern/filereaderlp",
         # "extern/zstr",
         "highs",
@@ -124,7 +133,7 @@ cc_library(
 cc_library(
     name = "highs-runtime-opts",
     hdrs = [
-        "extern/CLI11.hpp",
+        "extern/cli11/CLI11.hpp",
         "app/HighsRuntimeOptions.h",
     ],
     visibility = ["//visibility:public"],
@@ -176,7 +185,7 @@ cc_library(
         "check/Avgas.h",
         "check/SpecialLps.h",
         "check/matrix_multiplication.hpp",
-        "extern/catch.hpp",
+        "extern/catch/catch.hpp",
     ],
     copts = ["-Iextern"],
     data = glob(["check/instances/*"]),
@@ -216,8 +225,10 @@ TEST_NAMES = [
     "TestLpValidation",
     "TestMipSolver",
     "TestPresolve",
+    "TestPresolveRules",
     "TestQpSolver",
     "TestRanging",
+    "TestRunData",
     "TestRays",
     "TestSemiVariables",
     "TestSetup",
@@ -232,6 +243,7 @@ TEST_NAMES = [
     copts = ["-Iextern"] + select({
         "@rules_cc//cc/compiler:msvc-cl": [],
         "//conditions:default": [
+            "-fexceptions",
             "-Wno-unused-variable",
             "-Wno-unused-but-set-variable",
         ],
