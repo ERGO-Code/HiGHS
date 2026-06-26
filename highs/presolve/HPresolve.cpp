@@ -7620,7 +7620,7 @@ HPresolve::Result HPresolve::fourierMotzkin(
       // Cernikov redundancy check
       auto merged =
           mergeOriginals(rowOriginals, nr.plusIndex, nr.minusIndex, col);
-      if (static_cast<HighsInt>(merged.size()) > numColsEliminated + 1)
+      if (static_cast<HighsInt>(merged.size()) > numColsEliminated + 2)
         continue;
 
       std::vector<row_entry> entries;
