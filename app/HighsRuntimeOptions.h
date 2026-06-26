@@ -27,6 +27,7 @@ struct HighsCommandLineOptions {
   bool cmd_notice = false;
   double cmd_time_limit = 0;
   int cmd_random_seed = 0;
+  int cmd_threads = 0;
 
   std::string model_file = "";
   std::string cmd_read_basis_file = "";
@@ -36,7 +37,6 @@ struct HighsCommandLineOptions {
   std::string cmd_presolve = "";
   std::string cmd_solver = "";
   std::string cmd_parallel = "";
-  std::string cmd_threads = "";
   std::string cmd_crossover = "";
   std::string cmd_write_solution_file = "";
   std::string cmd_write_model_file = "";
@@ -67,8 +67,7 @@ void setupCommandLineOptions(CLI::App& app,
       ->check(CLI::ExistingFile);
 
   app.add_option("--" + kReadSolutionFileString,
-                 cmd_options.cmd_read_solution_file,
-                 "File of solution to read")
+                 cmd_options.cmd_read_solution_file, "File of solution to read")
       // ->check(checkSingle)
       ->check(CLI::ExistingFile);
 
@@ -117,8 +116,8 @@ void setupCommandLineOptions(CLI::App& app,
                  "\"off\"");
 
   app.add_option("--" + kThreadsString, cmd_options.cmd_threads,
-                 "Set maximum number of threads used:\n"
-                 "0: automatic\n");
+                 "Set maximum number of threads to use:\n"
+                 "0: automatic * default");
 
   app.add_option("--" + kRunCrossoverString, cmd_options.cmd_crossover,
                  "Set run_crossover option to:\n"
@@ -249,10 +248,10 @@ bool loadOptions(const CLI::App& app, const HighsLogOptions& report_log_options,
   }
 
   // Threads option.
-  if (c.cmd_threads != "") {
-    if (setLocalOptionValue(report_log_options, kThreadsString,
-                            options.log_options, options.records,
-                            c.cmd_threads) != OptionStatus::kOk)
+  if (app.count("--" + kThreadsString) > 0) {
+    HighsInt value = c.cmd_threads;
+    if (setLocalOptionValue(report_log_options, kThreadsString, options.records,
+                            value) != OptionStatus::kOk)
       return false;
   }
 

@@ -755,7 +755,8 @@ class HighsOptions : public HighsOptionsStruct {
     records.push_back(record_string);
 
     record_int = new OptionRecordInt(
-        kThreadsString, "Maximum number of threads used by HiGHS (0: automatic)", advanced,
+        kThreadsString,
+        "Maximum number of threads used by HiGHS (0: automatic)", advanced,
         &threads, 0, 0, kHighsIInf);
     records.push_back(record_int);
 
