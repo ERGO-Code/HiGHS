@@ -4170,6 +4170,7 @@ HighsStatus Highs::callSolveQp() {
       settings.reinvertfrequency = qp_update_limit;
     }
 
+    settings.allow_hot_start = options_.qp_allow_hot_start;
     settings.iteration_limit = options_.qp_iteration_limit;
     settings.nullspace_limit = options_.qp_nullspace_limit;
     assert(settings.hessian_regularization_value ==
