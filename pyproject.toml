@@ -8,7 +8,7 @@ build-backend = "scikit_build_core.build"
 
 [project]
 name = "highspy"
-version = "1.14.0.dev1"
+version = "1.14.0.dev2"
 description = "A thin set of pybind11 wrappers to HiGHS"
 authors = [{ name = "HiGHS developers", email = "highsopt@gmail.com" }]
 readme = "README.md"
@@ -35,7 +35,7 @@ classifiers = [
 
 [project.optional-dependencies]
 test = ["pytest", "numpy"]
-extras = ["highspy-extras==1.14.0.dev1"]
+extras = ["highspy-extras==1.14.0.dev2"]
 
 [tool.scikit-build]
 wheel.expand-macos-universal-tags = true
