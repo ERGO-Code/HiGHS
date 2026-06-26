@@ -19,6 +19,11 @@
 
 // class HighsHessian;
 
+using HighsHessianFunctionType =
+  std::function<void(const HighsInt x_value_size, const double* x_value, const HighsInt* x_index,
+		     HighsInt& q_x_value_size, double* q_x_value, const HighsInt* q_x_index,
+                     void*)>;
+
 class HighsHessian {
  public:
   HighsHessian() { clear(); }
@@ -27,9 +32,13 @@ class HighsHessian {
   std::vector<HighsInt> start_;
   std::vector<HighsInt> index_;
   std::vector<double> value_;
+  HighsHessianFunctionType oracle_ = nullptr;
+  void* oracle_data_ = nullptr;
   bool operator==(const HighsHessian& hessian) const;
   void product(const std::vector<double>& solution,
                std::vector<double>& product) const;
+  void product(const HighsInt x_value_size, const double* x_value, const HighsInt* x_index,
+	       HighsInt& q_x_value_size, double* q_x_value, const HighsInt* q_x_index) const;
   void alphaProductPlusY(const double alpha, const std::vector<double>& x,
                          std::vector<double>& y) const;
   double objectiveValue(const std::vector<double>& solution) const;

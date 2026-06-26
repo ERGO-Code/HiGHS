@@ -163,6 +163,12 @@ class Highs {
                           const HighsInt format, const HighsInt* start,
                           const HighsInt* index, const double* value);
   /**
+   * @brief Pass a Hessian oracle for the incumbent model
+   */
+  HighsStatus passHessian(HighsHessianFunctionType oracle,
+			  void* oracle_data);
+
+  /**
    * @brief Pass multiple linear objectives for the incumbent model
    */
   HighsStatus passLinearObjectives(

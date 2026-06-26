@@ -6,7 +6,7 @@
 #include "catch.hpp"
 #include "io/FilereaderLp.h"
 
-const bool dev_run = false;
+const bool dev_run = true;//false;
 const double inf = kHighsInf;
 const double double_equal_tolerance = 1e-5;
 
@@ -1584,3 +1584,62 @@ TEST_CASE("test-qp-atwood", "[qpsolver]") {
   }
   h.resetGlobalScheduler(true);
 }
+
+HighsHessianFunctionType oracle =
+    [](const HighsInt x_value_size, const double* x_value, const HighsInt* x_index,
+       HighsInt& q_x_value_size, double* q_x_value, const HighsInt* q_x_index,
+       void* hessian_p) {
+      HighsHessian hessian = *(static_cast<HighsHessian*>(hessian_p));
+      printf("hessian.dim = %d\n", int(hessian.dim_));
+    };
+
+TEST_CASE("test-hessian-oracle", "[qpsolver]") {
+  HighsLp lp;
+  HighsHessian hessian;
+  // Start with an unconstrained QP
+  lp.model_name_ = "qjh";
+  lp.num_col_ = 3;
+  lp.num_row_ = 1;
+  lp.col_cost_ = {0.0, -1.0, -3.0};
+  lp.col_lower_ = {0.0, 0.0, 0.0};
+  lp.col_upper_ = {inf, inf, inf};
+  lp.sense_ = ObjSense::kMinimize;
+  lp.offset_ = 0;
+  lp.row_lower_ = {-inf};
+  lp.row_upper_ = {2};
+  lp.a_matrix_.start_ = {0, 1, 1, 2};
+  lp.a_matrix_.index_ = {0, 0};
+  lp.a_matrix_.value_ = {1.0, 1.0};
+  lp.a_matrix_.format_ = MatrixFormat::kColwise;
+  hessian.dim_ = lp.num_col_;
+  hessian.format_ = HessianFormat::kTriangular;
+  hessian.start_ = {0, 2, 3, 4};
+  hessian.index_ = {0, 2, 1, 2};
+  hessian.value_ = {2.0, -1.0, 0.2, 2.0};
+
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  h.setOptionValue("solver", kQpAsmString);
+  const HighsInfo& info = h.getInfo();
+  const double& objective_function_value = info.objective_function_value;
+
+  HighsStatus return_status = h.passModel(lp);
+  REQUIRE(return_status == HighsStatus::kOk);
+
+  void* p_oracle = &hessian;
+
+  return_status = h.passHessian(oracle, p_oracle);
+  REQUIRE(return_status == HighsStatus::kOk);
+
+  if (dev_run) h.writeModel("");
+  REQUIRE(h.writeModel("Null.mps") == HighsStatus::kError);
+  return_status = h.run();
+  REQUIRE(return_status == HighsStatus::kOk);
+
+  double required_objective_function_value = -5.50;
+  
+  REQUIRE(fabs(required_objective_function_value-objective_function_value) < double_equal_tolerance);
+  
+  h.resetGlobalScheduler(true);
+}
+

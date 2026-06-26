@@ -710,6 +710,14 @@ HighsStatus Highs::passHessian(const HighsInt dim, const HighsInt num_nz,
   return passHessian(hessian);
 }
 
+HighsStatus Highs::passHessian(HighsHessianFunctionType oracle,
+                               void* oracle_data) {
+  this->model_.hessian_.clear();
+  this->model_.hessian_.oracle_ = oracle;
+  this->model_.hessian_.oracle_data_ = oracle_data;
+  return HighsStatus::kOk;
+}
+
 HighsStatus Highs::passLinearObjectives(
     const HighsInt num_linear_objective,
     const HighsLinearObjective* linear_objective) {
@@ -934,6 +942,11 @@ HighsStatus Highs::writeLocalModel(HighsModel& model,
     // Empty file name: report model on logging stream
     reportModel(model);
   } else {
+    if (model.hessian_.oracle_) {
+      highsLogUser(options_.log_options, HighsLogType::kError,
+		   "Cannot write QP to an %s file with Hessian represented via an oracle\n", getFilenameExt(filename).c_str());
+      return returnFromHighs(HighsStatus::kError);
+    }
     Filereader* writer =
         Filereader::getFilereader(options_.log_options, filename);
     if (writer == NULL) {
@@ -4688,6 +4701,9 @@ void Highs::reportModel(const HighsModel& model) {
     reportHessian(options_.log_options, dim, model.hessian_.start_[dim],
                   model.hessian_.start_.data(), model.hessian_.index_.data(),
                   model.hessian_.value_.data());
+  } else if (model.hessian_.oracle_) {
+    highsLogUser(options_.log_options, HighsLogType::kInfo,
+		 "Hessian is represented via an oracle\n");
   }
 }
 
