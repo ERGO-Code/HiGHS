@@ -1446,9 +1446,6 @@ HPresolve::Result HPresolve::dominatedColumns(
 HPresolve::Result HPresolve::stronglyConnectedComponents() {
   HighsDomain& domain = mipsolver->mipdata_->domain;
   HighsCliqueTable& cliquetable = mipsolver->mipdata_->cliquetable;
-  // Warning: If all binaries removed by this technique, then
-  // fixings are never applied because finaliseProbing is skipped
-  // TODO: Skip call if clique table isn't changed much?
   if (!mipsolver->mipdata_->cliquesExtracted || cliquetable.numCliques() <= 1)
     return Result::kOk;
 
@@ -1710,20 +1707,6 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postsolve_stack) {
     return prepareResult;
   }
 
-  // Extract strongly connected components from the clique table
-  if (analysis_.allow_rule_[kPresolveRuleStronglyConnectedComponents]) {
-    Result tarjanResult = stronglyConnectedComponents();
-    if (tarjanResult != Result::kOk) {
-      mipsolver->analysis_.mipTimerStop(kMipClockProbingPresolve);
-      return tarjanResult;
-    }
-    mipsolver->mipdata_->domain.propagate();
-    if (mipsolver->mipdata_->domain.infeasible()) {
-      mipsolver->analysis_.mipTimerStop(kMipClockProbingPresolve);
-      return Result::kPrimalInfeasible;
-    }
-  }
-
   HighsDomain& domain = mipsolver->mipdata_->domain;
   HighsCliqueTable& cliquetable = mipsolver->mipdata_->cliquetable;
   HighsImplications& implications = mipsolver->mipdata_->implications;
@@ -1744,6 +1727,20 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postsolve_stack) {
     }
   }
   if (!binaries.empty()) {
+    // Extract strongly connected components from the clique table
+    if (analysis_.allow_rule_[kPresolveRuleStronglyConnectedComponents]) {
+      Result tarjanResult = stronglyConnectedComponents();
+      if (tarjanResult != Result::kOk) {
+        mipsolver->analysis_.mipTimerStop(kMipClockProbingPresolve);
+        return tarjanResult;
+      }
+      mipsolver->mipdata_->domain.propagate();
+      if (mipsolver->mipdata_->domain.infeasible()) {
+        mipsolver->analysis_.mipTimerStop(kMipClockProbingPresolve);
+        return Result::kPrimalInfeasible;
+      }
+    }
+
     // sort variables with many implications on other binaries first
     pdqsort(binaries.begin(), binaries.end());
 

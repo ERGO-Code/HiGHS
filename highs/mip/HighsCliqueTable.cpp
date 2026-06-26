@@ -2236,7 +2236,7 @@ void HighsCliqueTable::buildFrom(const HighsLp* origModel,
 }
 
 void HighsCliqueTable::strongConnect(
-    HighsInt startNode, HighsInt& startPos, std::vector<bool>& onStack,
+    const HighsInt startNode, HighsInt& startPos, std::vector<bool>& onStack,
     std::vector<HighsInt>& index, std::vector<HighsInt>& lowLink,
     std::vector<bool>& infeasibleNodes, std::vector<HighsInt>& stack,
     std::vector<HighsInt>& predStack, std::vector<HighsInt>& stackNextClique,
@@ -2260,8 +2260,8 @@ void HighsCliqueTable::strongConnect(
   HighsInt newNode = -1;
   HighsInt currStackPos = 0;
 
-  auto negatedNode = [&](const HighsInt i) -> HighsInt {
-    return i + 1 - 2 * (i % 2);
+  auto complementNode = [&](const HighsInt i) -> HighsInt {
+    return i ^ HighsInt { 1 };
   };
 
   while (!stack.empty()) {
@@ -2318,14 +2318,14 @@ void HighsCliqueTable::strongConnect(
           }
           if (infeasibleNode >= 0) {
             // Identified an infeasible node
-            if (infeasibleNodes[negatedNode(infeasibleNode)]) {
+            if (infeasibleNodes[complementNode(infeasibleNode)]) {
               // If both sides are infeasible then the whole problem is
               infeasible = true;
               return;
             }
             infeasibleNodes[infeasibleNode] = true;
             if (cliqueCurrExit[cliqueId] > 0 &&
-                currNode != negatedNode(cliqueCurrExit[cliqueId] - 1) &&
+                currNode != complementNode(cliqueCurrExit[cliqueId] - 1) &&
                 onStack[cliqueCurrExit[cliqueId] - 1] &&
                 index[cliqueCurrExit[cliqueId] - 1] < lowLink[currNode]) {
               // Last exited node from clique is not negation of the current
@@ -2335,7 +2335,7 @@ void HighsCliqueTable::strongConnect(
           } else if (cliqueFirstEntry[cliqueId] > 0) {
             // Clique is entered for the second time. Only edge to
             // negation of first is left to investigate
-            newNode = negatedNode(cliqueFirstEntry[cliqueId] - 1);
+            newNode = complementNode(cliqueFirstEntry[cliqueId] - 1);
             if (index[newNode] == -1) {
               // node was not investigated next
               found = true;
@@ -2351,8 +2351,8 @@ void HighsCliqueTable::strongConnect(
       }
       for (HighsInt i = stackNextCliqueVar[currStackPos]; i < cliqueLen; ++i) {
         const CliqueVar var = cliqueentries[i + cliques[cliqueId].start];
-        if (2 * var.col + var.val == currNode || colDeleted[var.col]) continue;
-        newNode = 2 * var.col + (1 - var.val);
+        if (var.index() == currNode || colDeleted[var.col]) continue;
+        newNode = var.complement().index();
         if (index[newNode] == -1) {
           // Break when first unvisited node is reached
           stackNextCliqueVar[currStackPos] = i + 1;
@@ -2377,7 +2377,7 @@ void HighsCliqueTable::strongConnect(
     }
     const HighsInt parentPos = predStack[currStackPos];
     if (found) {
-      const HighsInt negatedNewNode = negatedNode(newNode);
+      const HighsInt negatedNewNode = complementNode(newNode);
       HighsInt infeasibleNode = -1;
       assert(newNode >= 0);
       assert(!onStack[newNode]);
@@ -2392,7 +2392,7 @@ void HighsCliqueTable::strongConnect(
         infeasibleNode = startNode;
       }
       if (infeasibleNode >= 0) {
-        if (infeasibleNodes[negatedNode(infeasibleNode)]) {
+        if (infeasibleNodes[complementNode(infeasibleNode)]) {
           // Both assignments for a column are infeasible.
           infeasible = true;
           return;
@@ -2453,6 +2453,12 @@ void HighsCliqueTable::tarjan(
   // x + ~y <= 1, y + ~z <= 1, z + x <= 1
   // x implies y, which implies z, which implies ~x.
   // Therefore, x -> ~x, which cannot be true, and we can fix x = 0
+  // Main reason so much data needs to be tracked:
+  // We only ever enter a clique twice. The first time explore the arcs
+  // x_i -> ~x_j for all x_j in the clique i != j
+  // The second time explore x_j -> ~x_i for some x_j.
+  // The order of exploration has no effect on finding SCCs, but it does
+  // have an effect on finding infeasible assignments.
 
   const HighsInt n = static_cast<HighsInt>(stronglyConnectedComponents.size());
 
