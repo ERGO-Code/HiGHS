@@ -17,6 +17,7 @@
 #include "lp_data/HighsIis.h"
 #include "lp_data/HighsLpUtils.h"
 #include "lp_data/HighsRanging.h"
+#include "lp_data/HighsRunData.h"
 #include "lp_data/HighsSolutionDebug.h"
 #include "model/HighsModel.h"
 #include "presolve/ICrash.h"
@@ -68,6 +69,11 @@ class Highs {
    * @brief Return githash
    */
   std::string githash() const { return highsGithash(); }
+
+  /**
+   * @brief Return third-party notice and attribution details
+   */
+  std::string getThirdPartyNotice() const;
 
   /**
    * @brief Reset the options and then call clearModel()
@@ -170,7 +176,8 @@ class Highs {
    * @brief Get a linear objective from the incumbent model
    */
   const HighsLinearObjective& getLinearObjective(const HighsInt idx) const {
-    assert(idx >= 0 && idx < int(multi_linear_objective_.size()));
+    assert(idx >= 0 &&
+           idx < static_cast<HighsInt>(multi_linear_objective_.size()));
     return multi_linear_objective_[idx];
   }
 
@@ -203,6 +210,14 @@ class Highs {
    * @brief Read in a basis
    */
   HighsStatus readBasis(const std::string& filename);
+
+  /**
+   * @brief Generate a PBM image of the matrix nonzeros, and possibly
+   * Hessian nonzeros. Note that the .pbm extnesion will be added to
+   * the fime names passed
+   */
+  HighsStatus matrixImage(const std::string& matrix_image_filename,
+                          const std::string& hessian_image_filename = "") const;
 
   /**
    * @brief Presolve the incumbent model, allowing the presolved model
@@ -384,8 +399,37 @@ class Highs {
                                     std::string* default_value = nullptr) const;
 
   /**
-   * @brief Get a const reference to the internal info values
-   * type.
+   * @brief Get a const reference to the internal run data values.
+   */
+  const HighsRunData& getRunData() const { return run_data_; }
+
+  /**
+   * @brief Get an run_data value as HighsInt/int64_t/double, and only if
+   * it's of the correct type.
+   */
+
+  HighsStatus getRunDataValue(const std::string& run_data,
+                              HighsInt& value) const;
+
+#ifndef HIGHSINT64
+  HighsStatus getRunDataValue(const std::string& run_data,
+                              int64_t& value) const;
+#endif
+
+  HighsStatus getRunDataValue(const std::string& run_data, double& value) const;
+
+  HighsStatus getRunDataType(const std::string& run_data,
+                             HighsRunDataType& type) const;
+
+  /**
+   * @brief Write run data values to a file, with the extension ".html"
+   * producing HTML, otherwise using the standard format used to read
+   * options from a file.
+   */
+  HighsStatus writeRunData(const std::string& filename = "") const;
+
+  /**
+   * @brief Get a const reference to the internal info values.
    */
   const HighsInfo& getInfo() const { return info_; }
 
@@ -992,7 +1036,7 @@ class Highs {
                                const double* upper);
 
   /**
-   * @brief Change the cost of multiple columns given by a mask (full
+   * @brief Change the bounds of multiple columns given by a mask (full
    * length array with 1 => change; 0 => not)
    */
   HighsStatus changeColsBounds(const HighsInt* mask, const double* lower,
@@ -1019,7 +1063,7 @@ class Highs {
                                const double* upper);
 
   /**
-   * @brief Change the cost of multiple rows given by a mask (full
+   * @brief Change the bounds of multiple rows given by a mask (full
    * length array with 1 => change; 0 => not)
    */
   HighsStatus changeRowsBounds(const HighsInt* mask, const double* lower,
@@ -1229,24 +1273,9 @@ class Highs {
   HighsStatus setBasis();
 
   /**
-   * @brief Return a const reference to the internal sub-solver call and time
-   * instance
+   * @brief Report profiling
    */
-  const HighsSubSolverCallTime& getSubSolverCallTime() const {
-    return sub_solver_call_time_;
-  }
-
-  /**
-   * @brief Report internal sub-solver call and time instance
-   */
-  void reportSubSolverCallTime() const;
-
-  /**
-   * @brief Initialise the internal sub-solver call and time instance
-   */
-  void initialiseSubSolverCallTime() {
-    this->sub_solver_call_time_.initialise();
-  }
+  void reportProfiling() const;
 
   /**
    * @brief Run IPX crossover from a given HighsSolution instance and,
@@ -1277,6 +1306,14 @@ class Highs {
   std::string presolveRuleTypeToString(const HighsInt presolve_rule) const;
 
   /**
+   * @brief Ensures that the global scheduler is initialized,
+   * returning HighsStatus::kError if it has already been initialized,
+   * but the threads option is nonzero and not equal to
+   * this->max_threads_.
+   */
+  HighsStatus initializeMultiThreading();
+
+  /**
    * @brief Releases all resources held by the global scheduler instance. It is
    * not thread-safe to call this function while calling run() or presolve() on
    * any other Highs instance in any thread. After this function has terminated
@@ -1290,6 +1327,29 @@ class Highs {
    * which is usually not necessary.
    */
   static void resetGlobalScheduler(bool blocking = false);
+
+  /**
+   * @brief If profiling is not nullptr, sets up profiling and copies
+   * its pointer to Highs
+   */
+  void initializeProfiling(HighsProfiling* profiling);
+  void initializeSingleThreadedProfiling(HighsProfiling* profiling);
+
+  /**
+   * @brief Clears and then initializes profiling
+   */
+  void resetProfiling();
+
+  /**
+   * @brief If Highs::profiling_ is not nullptr, clears profiling and
+   * sets Highs::profiling_ to nullptr
+   */
+  void clearProfiling();
+
+  /**
+   * @brief Checks that pointer is not nullptr, and copies it to Highs
+   */
+  void setProfiling(HighsProfiling* profiling);
 
   // Start of advanced methods: only for internal use!
 
@@ -1539,6 +1599,7 @@ class Highs {
   HighsCallback callback_;
   HighsOptions options_;
   HighsInfo info_;
+  HighsRunData run_data_;
   HighsRanging ranging_;
   HighsIis iis_;
   std::vector<HighsObjectiveSolution> saved_objective_and_solution_;
@@ -1557,9 +1618,9 @@ class Highs {
 
   HighsPresolveLog presolve_log_;
 
-  HighsSubSolverCallTime sub_solver_call_time_;
+  HighsProfiling* profiling_ = nullptr;
 
-  HighsInt max_threads = 0;
+  HighsInt max_threads_ = 0;
   // This is strictly for debugging. It's used to check whether
   // returnFromOptimizeModel() was called after the previous call to
   // Highs::optimizeModel() and, assuming that this is always done, it checks
@@ -1578,7 +1639,7 @@ class Highs {
 
   HighsStatus completeSolutionFromDiscreteAssignment();
 
-  HighsStatus callSolveLp(HighsLp& lp, const string message);
+  HighsStatus callSolveLp(HighsLp& lp, const std::string& message);
   HighsStatus callSolveQp();
   HighsStatus callSolveMip();
   HighsStatus callRunPostsolve(const HighsSolution& solution,
@@ -1589,8 +1650,9 @@ class Highs {
                                   const bool force_presolve = false);
   HighsPostsolveStatus runPostsolve();
 
-  HighsStatus openWriteFile(const string filename, const string method_name,
-                            FILE*& file, HighsFileType& file_type) const;
+  HighsStatus openWriteFile(const std::string& filename,
+                            const std::string& method_name, FILE*& file,
+                            HighsFileType& file_type) const;
 
   void reportModel(const HighsModel& model);
   void newHighsBasis();
@@ -1622,8 +1684,8 @@ class Highs {
   //
   // Invalidates all solver data in Highs class members by calling
   // invalidateModelStatus(), invalidateSolution(), invalidateBasis(),
-  // invalidateRanging(), invalidateInfo(), invalidateEkk() and
-  // clearIis()
+  // invalidateRanging(), invalidateInfo(), invalidateRunData(),
+  // invalidateEkk() and clearIis()
   void invalidateSolverData();
 
   // Invalidates all solver dual data in Highs class members by calling
@@ -1649,6 +1711,9 @@ class Highs {
   //
   // Invalidates info_ and resets the values of its members
   void invalidateInfo();
+  //
+  // Invalidates run_data_ and resets the values of its members
+  void invalidateRunData();
   //
   // Invalidates ranging_
   void invalidateRanging();
@@ -1703,7 +1768,7 @@ class Highs {
   HighsStatus changeObjectiveSenseInterface(const ObjSense ext_sense);
   HighsStatus changeObjectiveOffsetInterface(const double ext_offset);
   HighsStatus changeIntegralityInterface(HighsIndexCollection& index_collection,
-                                         const HighsVarType* usr_inegrality);
+                                         const HighsVarType* usr_integrality);
   HighsStatus changeCostsInterface(HighsIndexCollection& index_collection,
                                    const double* usr_col_cost);
 

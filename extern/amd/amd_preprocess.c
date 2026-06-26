@@ -22,7 +22,7 @@
  * On input, the condition (AMD_valid (n,n,Ap,Ai) != AMD_INVALID) must hold.
  */
 
-void amd_preprocess
+void Highs_amd_preprocess
 (
     amd_int n,		/* input matrix: A is n-by-n */
     const amd_int Ap [ ],	/* size n+1 */

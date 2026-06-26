@@ -401,6 +401,7 @@ struct HighsOptionsStruct {
   double pdlp_optimality_tolerance;
 
   // Options for QP solver
+  bool qp_allow_hot_start;
   HighsInt qp_iteration_limit;
   HighsInt qp_nullspace_limit;
   double qp_regularization_value;
@@ -421,6 +422,8 @@ struct HighsOptionsStruct {
   bool lp_presolve_requires_basis_postsolve;
   bool mps_parser_type_free;
   bool use_warm_start;
+  bool write_matrix_image;
+  bool write_hessian_image;
   HighsInt keep_n_rows;
   HighsInt cost_scale_factor;
   HighsInt allowed_matrix_scale_factor;
@@ -436,11 +439,10 @@ struct HighsOptionsStruct {
   HighsInt restart_presolve_reduction_limit;
   HighsInt presolve_substitution_maxfillin;
   HighsInt presolve_rule_off;
+  HighsInt presolve_rule_test;
   bool presolve_rule_logging;
   bool presolve_remove_slacks;
-  bool simplex_initial_condition_check;
   bool no_unnecessary_rebuild_refactor;
-  double simplex_initial_condition_tolerance;
   double rebuild_refactor_solution_error_tolerance;
   double dual_steepest_edge_weight_error_tolerance;
   double dual_steepest_edge_weight_log_error_threshold;
@@ -504,6 +506,7 @@ struct HighsOptionsStruct {
   std::string mip_improving_solution_file;
   bool mip_root_presolve_only;
   HighsInt mip_lifting_for_probing;
+  bool mip_search_simulate_concurrency;
   bool mip_allow_cut_separation_at_nodes;
 
   // Logging callback identifiers
@@ -574,6 +577,7 @@ struct HighsOptionsStruct {
         pdlp_cupdlpc_restart_method(0),
         pdlp_step_size_strategy(0),
         pdlp_optimality_tolerance(0.0),
+        qp_allow_hot_start(false),
         qp_iteration_limit(0),
         qp_nullspace_limit(0),
         qp_regularization_value(0),
@@ -588,6 +592,8 @@ struct HighsOptionsStruct {
         lp_presolve_requires_basis_postsolve(false),
         mps_parser_type_free(false),
         use_warm_start(true),
+        write_matrix_image(false),
+        write_hessian_image(false),
         keep_n_rows(0),
         cost_scale_factor(0),
         allowed_matrix_scale_factor(0),
@@ -603,11 +609,10 @@ struct HighsOptionsStruct {
         restart_presolve_reduction_limit(0),
         presolve_substitution_maxfillin(0),
         presolve_rule_off(0),
+        presolve_rule_test(0),
         presolve_rule_logging(false),
         presolve_remove_slacks(false),
-        simplex_initial_condition_check(false),
         no_unnecessary_rebuild_refactor(false),
-        simplex_initial_condition_tolerance(0.0),
         rebuild_refactor_solution_error_tolerance(0.0),
         dual_steepest_edge_weight_error_tolerance(0.0),
         dual_steepest_edge_weight_log_error_threshold(0.0),
@@ -667,6 +672,7 @@ struct HighsOptionsStruct {
         mip_improving_solution_file(""),
         mip_root_presolve_only(false),
         mip_lifting_for_probing(-1),
+        mip_search_simulate_concurrency(false),
         // clang-format off
         mip_allow_cut_separation_at_nodes(true) {};
   // clang-format on
@@ -1284,6 +1290,12 @@ class HighsOptions : public HighsOptionsStruct {
         kHighsInf);
     records.push_back(record_double);
 
+    record_bool = new OptionRecordBool(
+        "mip_search_simulate_concurrency",
+        "Simulate MIP search concurrency on a single thread", advanced,
+        &mip_search_simulate_concurrency, false);
+    records.push_back(record_bool);
+
     record_int = new OptionRecordInt(
         "ipm_iteration_limit", "Iteration limit for IPM solver", advanced,
         &ipm_iteration_limit, 0, kHighsIInf, kHighsIInf);
@@ -1361,6 +1373,11 @@ class HighsOptions : public HighsOptionsStruct {
         &pdlp_optimality_tolerance, kMinimumKktTolerance, kDefaultKktTolerance,
         kHighsInf);
     records.push_back(record_double);
+
+    record_bool = new OptionRecordBool(
+        "qp_allow_hot_start", "Allow the active set QP solver to hot start",
+        advanced, &qp_allow_hot_start, false);
+    records.push_back(record_bool);
 
     record_int = new OptionRecordInt(
         "qp_iteration_limit", "Iteration limit for the active set QP solver",
@@ -1452,6 +1469,17 @@ class HighsOptions : public HighsOptionsStruct {
                                        advanced, &use_warm_start, true);
     records.push_back(record_bool);
 
+    record_bool = new OptionRecordBool(
+        "write_matrix_image",
+        "Write an image of the constraint matrix to a file", advanced,
+        &write_matrix_image, false);
+    records.push_back(record_bool);
+
+    record_bool = new OptionRecordBool(
+        "write_hessian_image", "Write an image of the Hessian to a file",
+        advanced, &write_hessian_image, false);
+    records.push_back(record_bool);
+
     record_int =
         new OptionRecordInt("keep_n_rows",
                             "For multiple N-rows in MPS files: delete rows / "
@@ -1523,23 +1551,11 @@ class HighsOptions : public HighsOptionsStruct {
                             kSimplexUnscaledSolutionStrategyMax);
     records.push_back(record_int);
 
-    record_bool =
-        new OptionRecordBool("simplex_initial_condition_check",
-                             "Perform initial basis condition check in simplex",
-                             advanced, &simplex_initial_condition_check, true);
-    records.push_back(record_bool);
-
     record_bool = new OptionRecordBool(
         "no_unnecessary_rebuild_refactor",
         "No unnecessary refactorization on simplex rebuild", advanced,
         &no_unnecessary_rebuild_refactor, true);
     records.push_back(record_bool);
-
-    record_double = new OptionRecordDouble(
-        "simplex_initial_condition_tolerance",
-        "Tolerance on initial basis condition in simplex", advanced,
-        &simplex_initial_condition_tolerance, 1.0, 1e14, kHighsInf);
-    records.push_back(record_double);
 
     record_double = new OptionRecordDouble(
         "rebuild_refactor_solution_error_tolerance",
@@ -1605,6 +1621,11 @@ class HighsOptions : public HighsOptionsStruct {
     record_int = new OptionRecordInt(
         "presolve_rule_off", "Bit mask of presolve rules that are not allowed",
         advanced, &presolve_rule_off, 0, 0, kHighsIInf);
+    records.push_back(record_int);
+
+    record_int = new OptionRecordInt(
+        "presolve_rule_test", "Presolve rule to test - DEV only!", advanced,
+        &presolve_rule_test, 0, 0, kPresolveRuleMax);
     records.push_back(record_int);
 
     record_bool = new OptionRecordBool(

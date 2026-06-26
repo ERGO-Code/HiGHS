@@ -13,15 +13,18 @@
 #define LP_DATA_HIGHSRUNTIMEOPTIONS_H_
 
 #include <cassert>
+#include <tuple>
 
-#include "../extern/CLI11.hpp"
+#include "../extern/cli11/CLI11.hpp"
 #include "HConfig.h"
+#include "HighsAppExternalDeps.h"
 #include "io/HighsIO.h"
 #include "io/LoadOptions.h"
 #include "util/stringutil.h"
 
 struct HighsCommandLineOptions {
   bool cmd_version = false;
+  bool cmd_notice = false;
   double cmd_time_limit = 0;
   int cmd_random_seed = 0;
 
@@ -103,9 +106,7 @@ void setupCommandLineOptions(CLI::App& app,
                  "Set solver option to:\n"
                  "\"choose\" * default\n"
                  "\"simplex\"\n"
-#ifdef HIPO
                  "\"hipo\"\n"
-#endif
                  "\"ipm\"");
 
   app.add_option("--" + kParallelString, cmd_options.cmd_parallel,
@@ -133,6 +134,8 @@ void setupCommandLineOptions(CLI::App& app,
 
   // Version.
   app.add_flag("--version,-v", cmd_options.cmd_version, "Print version.");
+  app.add_flag("--notice", cmd_options.cmd_notice,
+               "Print third-party information.");
   app.set_help_flag("-h,--help", "Print help.");
 
   app.get_formatter()->column_width(33);
@@ -146,11 +149,19 @@ void setupCommandLineOptions(CLI::App& app,
 
 bool loadOptions(const CLI::App& app, const HighsLogOptions& report_log_options,
                  const HighsCommandLineOptions& c, HighsOptions& options) {
-  if (c.cmd_version) {
+  if (c.cmd_version || c.cmd_notice) {
     std::cout << "HiGHS version " << HIGHS_VERSION_MAJOR << "."
               << HIGHS_VERSION_MINOR << "." << HIGHS_VERSION_PATCH;
     std::cout << " Githash " << HIGHS_GITHASH << ". ";
     std::cout << kHighsCopyrightStatement << std::endl;
+    std::cout << HighsExternalApi::thirdPartyNoticeHeader() << std::endl;
+
+    if (c.cmd_notice) {
+      std::cout << std::endl
+                << HighsExternalApi::getThirdPartyNotice<HighsExtras::appAll>()
+                << std::endl;
+    }
+
     exit(0);
   }
 

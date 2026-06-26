@@ -96,6 +96,7 @@ class HighsCliqueTable {
   HighsInt maxEntries;
   HighsInt minEntriesForParallelism;
   bool inPresolve;
+  bool allowParallel;
 
   void unlink(HighsInt pos, HighsInt cliqueid);
 
@@ -174,6 +175,7 @@ class HighsCliqueTable {
     maxEntries = kHighsIInf;
     minEntriesForParallelism = kHighsIInf;
     inPresolve = false;
+    allowParallel = true;
   }
 
   void setPresolveFlag(bool inPresolve) { this->inPresolve = inPresolve; }
@@ -181,6 +183,10 @@ class HighsCliqueTable {
   bool getPresolveFlag() const { return inPresolve; }
 
   HighsInt getNumEntries() const { return numEntries; }
+
+  HighsRandom& getRandgen() { return randgen; }
+
+  int64_t& getNumNeighbourhoodQueries() { return numNeighbourhoodQueries; }
 
   HighsInt partitionNeighbourhood(std::vector<HighsInt>& neighbourhoodInds,
                                   int64_t& numNeighbourhoodqueries, CliqueVar v,
@@ -287,7 +293,8 @@ class HighsCliqueTable {
 
   void separateCliques(const HighsMipSolver& mipsolver,
                        const std::vector<double>& sol, HighsCutPool& cutpool,
-                       double feastol);
+                       double feastol, HighsRandom& randgen,
+                       int64_t& localNumNeighbourhoodQueries);
 
   std::vector<std::vector<CliqueVar>> separateCliques(
       const std::vector<double>& sol, const HighsDomain& globaldom,
@@ -300,9 +307,9 @@ class HighsCliqueTable {
 
   void addImplications(HighsDomain& domain, HighsInt col, HighsInt val);
 
-  HighsInt getNumImplications(HighsInt col);
+  HighsInt getNumImplications(HighsInt col) const;
 
-  HighsInt getNumImplications(HighsInt col, bool val);
+  HighsInt getNumImplications(HighsInt col, bool val) const;
 
   void runCliqueMerging(HighsDomain& globaldomain);
 
@@ -341,6 +348,10 @@ class HighsCliqueTable {
 
   HighsInt numCliques(HighsInt col, bool val) const {
     return numcliquesvar[CliqueVar(col, val).index()];
+  }
+
+  void setAllowParallel(const bool allowParallel) {
+    this->allowParallel = allowParallel;
   }
 };
 

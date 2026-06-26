@@ -566,3 +566,75 @@ TEST_CASE("lp-duplicate-variable", "[highs_filereader]") {
 
   std::remove(lp_file.c_str());
 }
+
+inline double getWallTime() {
+  using namespace std::chrono;
+  return duration_cast<duration<double> >(
+             std::chrono::high_resolution_clock::now().time_since_epoch())
+      .count();
+}
+
+TEST_CASE("efficient-add-row", "[highs_filereader]") {
+  std::string filename;
+  filename = std::string(HIGHS_DIR) + "/check/instances/adlittle.mps";
+  //    "/srv/mps_da/neos.mps.gz";
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  REQUIRE(h.readModel(filename) == HighsStatus::kOk);
+  HighsLp lp = h.getLp();
+  h.passModel(lp.num_col_, 0, 0, 0, 0, 0, 0, 0.0, lp.col_cost_.data(),
+              lp.col_lower_.data(), lp.col_upper_.data(), nullptr, nullptr,
+              nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr);
+  lp.a_matrix_.ensureRowwise();
+  double tt = 0;
+  if (dev_run) tt = -getWallTime();
+  for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
+    HighsInt iEl = lp.a_matrix_.start_[iRow];
+    h.addRow(lp.row_lower_[iRow], lp.row_upper_[iRow],
+             lp.a_matrix_.start_[iRow + 1] - iEl, &lp.a_matrix_.index_[iEl],
+             &lp.a_matrix_.value_[iEl]);
+  }
+  if (dev_run) {
+    tt += getWallTime();
+    printf("Added %d rows individually in %.2gs\n", int(lp.num_row_), tt);
+  }
+
+  REQUIRE(h.deleteRows(0, lp.num_row_ - 1) == HighsStatus::kOk);
+  REQUIRE(h.getLp().num_row_ == 0);
+
+  if (dev_run) tt = -getWallTime();
+  h.addRows(lp.num_row_, lp.row_lower_.data(), lp.row_upper_.data(),
+            lp.a_matrix_.start_[lp.num_row_], lp.a_matrix_.start_.data(),
+            lp.a_matrix_.index_.data(), lp.a_matrix_.value_.data());
+  if (dev_run) {
+    tt += getWallTime();
+    printf("Added %d rows together     in %.2gs\n", int(lp.num_row_), tt);
+  }
+}
+
+TEST_CASE("matrix-hessian-image", "[highs_filereader]") {
+  const std::string test_name = Catch::getResultCapture().getCurrentTestName();
+  std::string filename;
+  filename = std::string(HIGHS_DIR) + "/check/instances/primal1.mps";
+
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  h.setOptionValue("write_matrix_image", true);
+  h.setOptionValue("write_hessian_image", true);
+  REQUIRE(h.readModel(filename) == HighsStatus::kOk);
+
+  std::string matrix_image_filename = test_name + "_matrix";
+  std::string hessian_image_filename = test_name + "_hessian";
+
+  REQUIRE(h.matrixImage(matrix_image_filename, hessian_image_filename) ==
+          HighsStatus::kOk);
+
+  std::string matrix_image_filename_and_extension =
+      matrix_image_filename + ".pbm";
+  std::string hessian_image_filename_and_extension =
+      hessian_image_filename + ".pbm";
+  std::remove(matrix_image_filename_and_extension.c_str());
+  std::remove(hessian_image_filename_and_extension.c_str());
+  std::remove("LpMatrix.pbm");
+  std::remove("Hessian.pbm");
+}
