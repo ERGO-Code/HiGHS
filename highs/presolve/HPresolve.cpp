@@ -7400,14 +7400,13 @@ HPresolve::Result HPresolve::fourierMotzkin(
   };
 
   auto inheritAncestry =
-      [&](std::unordered_map<HighsInt, std::vector<FmeAncestryEntry>>&
-              rowAncestry,
+      [&](HighsHashTable<HighsInt, std::vector<FmeAncestryEntry>>& rowAncestry,
           HighsInt newModelRow, HighsInt parentRow, HighsInt parentRowIndex,
           HighsInt stepIndex, double scale, bool isMinus) {
         if (parentRow < 0) return;
-        auto it = rowAncestry.find(parentRow);
-        if (it != rowAncestry.end()) {
-          for (const auto& a : it->second)
+        auto parentAncestry = rowAncestry.find(parentRow);
+        if (parentAncestry) {
+          for (const auto& a : *parentAncestry)
             rowAncestry[newModelRow].push_back(
                 {a.step, a.parentRowIndex, a.scale * scale, a.isMinus});
         }
@@ -7477,8 +7476,8 @@ HPresolve::Result HPresolve::fourierMotzkin(
   // FM block data for postsolve
   std::vector<FmeBlockStep> blockSteps;
 
-  // maps surviving row to its ancestry (which parent rows it descends from)
-  std::unordered_map<HighsInt, std::vector<FmeAncestryEntry>> rowAncestry;
+  // surviving row to its ancestry (which parent rows it descends from)
+  HighsHashTable<HighsInt, std::vector<FmeAncestryEntry>> rowAncestry;
 
   // main loop: eliminate variables from heap
   while (!heap.empty()) {
