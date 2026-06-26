@@ -1343,6 +1343,7 @@ class TestHighsPy(unittest.TestCase):
         h.joinSolve(h.startSolve(), 0)
 
         # replace wait function with Ctrl+C signal
+        __tmp_wait = highspy.highs.Highs.wait
         highspy.highs.Highs.wait = lambda self, t: signal.raise_signal(signal.SIGINT)  # type: ignore[assignment]
         h.HandleKeyboardInterrupt = False
 
@@ -1357,6 +1358,9 @@ class TestHighsPy(unittest.TestCase):
             h.startSolve()
             h.joinSolve(None, 5)
             unittest.main(exit=False)
+
+        # restore wait function (avoid issues in other tests)
+        highspy.highs.Highs.wait = __tmp_wait
 
     def test_callbacks(self):
         N = 8
@@ -1655,6 +1659,37 @@ class TestHighsPy(unittest.TestCase):
         self.assertTrue(x.__ne__(None))
         self.assertRaises(Exception, lambda: x.__ne__(5))
 
+    def test_with_context_manager(self):
+        with highspy.Highs() as h:
+            x = h.addVariable()
+            h.minimize(x)
+            self.assertEqual(h.val(x), 0.0)
+
+        # manually call enter/exit to test threading, e.g.,
+        # 
+        # with Highs() as h:
+        #    ...
+        #    h.startSolve()
+        #
+        h = highspy.Highs()
+        h.__enter__()
+
+        # nqueens
+        N = 10
+        x = h.addBinaries(N, N)
+        y = np.fliplr(x)
+
+        h.addConstrs(x.sum(axis = 0) == 1)
+        h.addConstrs(x.sum(axis = 1) == 1),
+        h.addConstrs(x.diagonal(k).sum() <= 1 for k in range(-N + 1, N)) 
+        h.addConstrs(y.diagonal(k).sum() <= 1 for k in range(-N + 1, N))
+
+        h.HandleUserInterrupt = True
+        h.startSolve()
+        self.assertEqual(h.is_solver_running(), True)
+
+        h.__exit__(None, None, None)
+        self.assertEqual(h.is_solver_running(), False)
 
 
 class TestHighsLinearExpressionPy(unittest.TestCase):
