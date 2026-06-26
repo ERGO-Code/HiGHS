@@ -18,6 +18,7 @@
 #include <cmath>
 #include <numeric>
 #include <tuple>
+#include <unordered_map>
 #include <vector>
 
 #include "lp_data/HConst.h"
@@ -25,7 +26,6 @@
 #include "lp_data/HighsOptions.h"
 #include "util/HighsCDouble.h"
 #include "util/HighsDataStack.h"
-#include "util/HighsHash.h"
 #include "util/HighsMatrixSlice.h"
 
 // class HighsOptions;
@@ -705,7 +705,7 @@ class HighsPostsolveStack {
 
   void fourierMotzkinBlockFinalise(
       const std::vector<FmeBlockStep>& blockSteps,
-      const HighsHashTable<HighsInt, std::vector<FmeAncestryEntry>>&
+      const std::unordered_map<HighsInt, std::vector<FmeAncestryEntry>>&
           rowAncestry) {
     HighsInt numSteps = static_cast<HighsInt>(blockSteps.size());
 
@@ -719,9 +719,9 @@ class HighsPostsolveStack {
       minusDescendantsAll[s].resize(blockSteps[s].numMinus);
     }
     for (const auto& entry : rowAncestry) {
-      HighsInt row = entry.key();
+      HighsInt row = entry.first;
       HighsInt origRow = origRowIndex[row];
-      for (const auto& a : entry.value()) {
+      for (const auto& a : entry.second) {
         if (a.isMinus)
           minusDescendantsAll[a.step][a.parentRowIndex].push_back(
               {origRow, a.scale});
