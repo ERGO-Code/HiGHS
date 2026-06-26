@@ -5,6 +5,34 @@
 HiGHS uses CMake as build system, and requires at least version
 3.15. Details about building from source using CMake can be found in `HiGHS/cmake/README.md`.
 
+### Bazel build
+
+Alternatively, building with Bazel is supported for Bazel-based projects. To build HiGHS, from the root directory, run
+
+```
+bazel build //...
+```
+
+## Install via a package manager
+
+HiGHS can be installed using a package manager in the cases of
+[`Julia`](@ref HiGHS.jl), [`Python`](@ref python-getting-started), [`CSharp`](@ref nuget) and [`Rust`](@ref Rust).
+
+Note, that HiGHS is available via apt on Linux. For simplex, ipx and the MIP and QP solvers, the execution should be as expected. We advise users not to use HiPO from the apt installation, the Metis version linked there is not thread safe. If you consider using HiPO, please use the binaries linked below, compilation from source or the python wrapper.
+
+## Precompiled Binaries
+
+Precompiled static binaries are available at https://github.com/ERGO-Code/HiGHS/releases.
+
+Additionally, there is one package containing shared libraries for Windows x63.
+
+The `*-mit` binary packages contain HiGHS and are MIT-licenced.
+The `*-apache` binary packages contain HiGHS with HiPO and are Apache-licenced, due to the licensing of the dependencies of HiPO. For more information, see [THIRD_PARTY_NOTICES.md](https://github.com/ERGO-Code/HiGHS/blob/master/THIRD_PARTY_NOTICES.md).
+
+If you have any questions or requests for more platforms and binaries, please get in touch with us at hello@highs.dev.
+
+To install a precompiled binary, download and extract the archive corresponding to your Operating System and architecture, the executable is located at `/bin/highs`.
+
 ## HiGHS with HiPO
 
 HiGHS does not have any external dependencies, however, the new interior point solver HiPO uses BLAS. At the moment HiPO is optional and can be enabled via CMake.
@@ -63,32 +91,6 @@ cmake -S. -B build -DHIPO=ON -DCMAKE_TOOLCHAIN_FILE="C:/vcpkg/scripts/buildsyste
 
 To specify explicitly which BLAS vendor to look for, `BLA_VENDOR` coud be set in CMake, e.g. `-DBLA_VENDOR=Apple` or `-DBLA_VENDOR=OpenBLAS`. Alternatively, to specify which BLAS library to use, set `BLAS_LIBRARIES` to the full path of the library e.g. `-DBLAS_LIBRARIES=/path_to/libopenblas.so`.
 
-
-## Bazel build
-
-Alternatively, building with Bazel is supported for Bazel-based projects. To build HiGHS, from the root directory, run
-
-```
-bazel build //...
-```
-
-## Install via a package manager
-
-HiGHS can be installed using a package manager in the cases of
-[`Julia`](@ref HiGHS.jl), [`Python`](@ref python-getting-started), [`CSharp`](@ref nuget) and [`Rust`](@ref Rust).
-
-## Precompiled Binaries
-
-Precompiled static binaries are available at https://github.com/ERGO-Code/HiGHS/releases.
-
-Additionally, there is one package containing shared libraries for Windows x64.
-
-The `*-mit` binary packages contain HiGHS and are MIT-licenced.
-The `*-apache` binary packages contain HiGHS with HiPO and are Apache-licenced, due to the licensing of the dependencies of HiPO. For more information, see [THIRD_PARTY_NOTICES.md](https://github.com/ERGO-Code/HiGHS/blob/master/THIRD_PARTY_NOTICES.md).
-
-If you have any questions or requests for more platforms and binaries, please get in touch with us at hello@highs.dev.
-
-To install a precompiled binary, download and extract the archive corresponding to your Operating System and architecture, the executable is located at `/bin/highs`.
 
 ## [Building HiGHS with NVidia GPU support](@id gpu-build)
 
