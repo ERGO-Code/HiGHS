@@ -7416,6 +7416,16 @@ HPresolve::Result HPresolve::fourierMotzkin(
               {stepIndex, parentRowIndex, scale, isMinus});
       };
 
+  auto printLog = [&](HighsInt colsRemoved, HighsInt rowRemoved,
+                      HighsInt rowsAdded) {
+    highsLogDev(options->log_options, HighsLogType::kInfo,
+                "Fourier-Motzkin eliminated %" HIGHSINT_FORMAT
+                " cols and %" HIGHSINT_FORMAT
+                " rows, and added %" HIGHSINT_FORMAT " rows\n",
+                static_cast<int>(colsRemoved), static_cast<int>(rowRemoved),
+                static_cast<int>(rowsAdded));
+  };
+
   // workspace vectors
   std::vector<HighsInt> candidates;
   std::vector<HighsInt> iPlus;
@@ -7482,11 +7492,7 @@ HPresolve::Result HPresolve::fourierMotzkin(
       // reformulateObjective pushes other reductions onto the data stack
       if (!blockSteps.empty()) {
         postsolve_stack.fourierMotzkinBlockFinalise(blockSteps, rowAncestry);
-        highsLogDev(options->log_options, HighsLogType::kInfo,
-                    "Fourier-Motzkin eliminated %" HIGHSINT_FORMAT
-                    " cols and %" HIGHSINT_FORMAT
-                    " rows, and added %" HIGHSINT_FORMAT " rows\n",
-                    numColsEliminated, numRowsEliminated, numRowsAdded);
+        printLog(numColsEliminated, numRowsEliminated, numRowsAdded);
         blockSteps.clear();
         rowAncestry.clear();
         numColsEliminated = 0;
@@ -7679,11 +7685,7 @@ HPresolve::Result HPresolve::fourierMotzkin(
     postsolve_stack.fourierMotzkinBlockFinalise(blockSteps, rowAncestry);
 
     // log message
-    highsLogDev(options->log_options, HighsLogType::kInfo,
-                "Fourier-Motzkin eliminated %" HIGHSINT_FORMAT
-                " cols and %" HIGHSINT_FORMAT
-                " rows, and added %" HIGHSINT_FORMAT " rows\n",
-                numColsEliminated, numRowsEliminated, numRowsAdded);
+    printLog(numColsEliminated, numRowsEliminated, numRowsAdded);
   }
 
   return finalise();
