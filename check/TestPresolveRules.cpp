@@ -107,7 +107,14 @@ TEST_CASE("test-fourier-motzkin", "[highs_test_presolve_rules]") {
   
   REQUIRE(h.passModel(lp) == HighsStatus::kOk);
 
-  presolveOffOn("test-fourier-motzkin", lp, h);
+  presolveOffOn("FM example from paper", lp, h);
+
+  lp.col_upper_[0] = 5.0;
+  lp.row_upper_ = {-30, 75, 50};
+
+  REQUIRE(h.passModel(lp) == HighsStatus::kOk);
+
+  presolveOffOn("FM example from paper - tightened", lp, h);
 
   h.resetGlobalScheduler(true);
 
