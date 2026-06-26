@@ -14,9 +14,12 @@ HPresolve::Result HPresolve::presolveRuleTest(
   assert(options->presolve_rule_test);
   if (options->presolve_rule_test == kPresolveRuleColStuffing) {
     return presolveRuleTestColStuffing(postsolve_stack);
+  } else if (options->presolve_rule_test == kPresolveRuleFourierMotzkin) {
+    return presolveRuleTestFourierMotzkin(postsolve_stack);
   }
   return Result::kOk;
 }
+
 HPresolve::Result HPresolve::presolveRuleTestColStuffing(
     HighsPostsolveStack& postsolve_stack) {
   assert(options->presolve_rule_test == kPresolveRuleColStuffing);
@@ -35,5 +38,23 @@ HPresolve::Result HPresolve::presolveRuleTestColStuffing(
                int(numDeletedRows), int(numDeletedCols));
   // Possibly remove the row
   return rowPresolve(postsolve_stack, 0);
+}
+
+HPresolve::Result HPresolve::presolveRuleTestFourierMotzkin(
+    HighsPostsolveStack& postsolve_stack) {
+  assert(options->presolve_rule_test == kPresolveRuleFourierMotzkin);
+  highsLogUser(options->log_options, HighsLogType::kInfo,
+               "HPresolve::presolveRuleTestFourierMotzkin\n");
+
+  HPresolve::Result result = fourierMotzkin(postsolve_stack);
+  if (result != Result::kOk) return result;
+
+  highsLogUser(options->log_options, HighsLogType::kInfo,
+               "HPresolve::presolveRuleTestFourierMotzkin: Removed %d "
+               "rows and %d columns\n",
+               int(numDeletedRows), int(numDeletedCols));
+  // Possibly remove the row
+  //  result = rowPresolve(postsolve_stack, 0);
+  return result;
 }
 }  // namespace presolve
