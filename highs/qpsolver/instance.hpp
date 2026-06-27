@@ -30,7 +30,7 @@ struct Instance {
   Matrix A;
   std::vector<double> var_lo;
   std::vector<double> var_up;
-
+  
   Instance(HighsInt nv = 0, HighsInt nc = 0)
       : num_var(nv),
         num_con(nc),

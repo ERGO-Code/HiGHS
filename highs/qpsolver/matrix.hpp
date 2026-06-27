@@ -12,6 +12,7 @@
 #include <vector>
 
 #include "qpvector.hpp"
+#include "lp_data/HStruct.h"
 
 struct MatrixBase {
   HighsInt num_row;
@@ -197,6 +198,8 @@ struct Matrix {
 
  public:
   MatrixBase mat;
+  HighsInt oracle_mu_ = 1.0; // Minimize
+  HessianOracle oracle_;
 
   Matrix(HighsInt nr, HighsInt nc) {
     mat.num_row = nr;

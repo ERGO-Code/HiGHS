@@ -4161,12 +4161,18 @@ HighsStatus Highs::callSolveQp() {
   HighsLp& lp = model_.lp_;
   assert(model_.lp_.a_matrix_.isColwise());
   HighsHessian& hessian = model_.hessian_;
-  assert(hessian.format_ == HessianFormat::kTriangular);
-  if (hessian.dim_ > lp.num_col_) {
+  HighsInt dim = hessian.dim_;
+  if (dim > 0) {
+    assert(hessian.format_ == HessianFormat::kTriangular);
+  } else {
+    assert(hessian.isOracle());
+    dim = hessian.oracle_.dim_;
+  }
+  if (dim != lp.num_col_) {
     highsLogDev(
         options_.log_options, HighsLogType::kError,
         "Hessian dimension = %d is incompatible with matrix dimension = %d\n",
-        int(hessian.dim_), int(lp.num_col_));
+        int(dim), int(lp.num_col_));
     model_status_ = HighsModelStatus::kModelError;
     solution_.value_valid = false;
     solution_.dual_valid = false;
@@ -4179,6 +4185,12 @@ HighsStatus Highs::callSolveQp() {
   bool use_hipo =
       (options_.solver == kHipoString || options_.solver == kIpmString) &&
       HighsExternalApi::isAvailable<HighsExtras::hipo>();
+
+  if (use_hipo && hessian.isOracle()) {
+    highsLogUser(options_.log_options, HighsLogType::kError,
+		 "Cannot use HiPO for QP with Hessian given by oracle: switching to active set method\n");
+    use_hipo = false;
+  }  
 
   if (use_hipo) {
     if (this->profiling_) this->profiling_->start(kSubSolverHipo);
@@ -4208,10 +4220,19 @@ HighsStatus Highs::callSolveQp() {
     instance.con_up = lp.row_upper_;
     instance.var_lo = lp.col_lower_;
     instance.var_up = lp.col_upper_;
-    instance.Q.mat.num_col = lp.num_col_;
-    instance.Q.mat.num_row = lp.num_col_;
-    triangularToSquareHessian(hessian, instance.Q.mat.start,
-                              instance.Q.mat.index, instance.Q.mat.value);
+    if (hessian.dim_ > 0) {
+      assert(instance.Q.oracle_.call_ == nullptr);
+      instance.Q.mat.num_col = lp.num_col_;
+      instance.Q.mat.num_row = lp.num_col_;
+      triangularToSquareHessian(hessian, instance.Q.mat.start,
+				instance.Q.mat.index, instance.Q.mat.value);
+    } else {
+      assert(hessian.isOracle());
+      instance.Q.oracle_ = hessian.oracle_;
+      instance.Q.mat.num_col = 0;
+      instance.Q.mat.num_row = 0;
+    }
+    
 
     for (HighsInt i = 0; i < (HighsInt)instance.c.value.size(); i++) {
       if (instance.c.value[i] != 0.0) {
@@ -4224,9 +4245,13 @@ HighsStatus Highs::callSolveQp() {
       for (double& i : instance.c.value) {
         i *= -1.0;
       }
-      for (double& i : instance.Q.mat.value) {
-        i *= -1.0;
-      }
+      if (instance.Q.mat.num_col > 0) {
+	for (double& i : instance.Q.mat.value) {
+	  i *= -1.0;
+	}
+      } else {
+	instance.Q.oracle_mu_ = -1;
+      }	
     }
 
     Settings settings;

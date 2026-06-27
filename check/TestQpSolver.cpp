@@ -1590,7 +1590,42 @@ HighsHessianFunctionType oracleCall =
        HighsInt& q_x_value_size, double* q_x_value, const HighsInt* q_x_index,
        void* hessian_p) {
       HighsHessian hessian = *(static_cast<HighsHessian*>(hessian_p));
-      printf("hessian.dim = %d\n", int(hessian.dim_));
+      if (!x_index) {
+	assert(x_value_size == hessian.dim_);
+	assert(q_x_value_size == hessian.dim_);
+	for (HighsInt iCol = 0; iCol < hessian.dim_; iCol++)
+	  q_x_value[iCol] = 0;
+	//
+	for (HighsInt iCol = 0; iCol < hessian.dim_; iCol++) {
+	  HighsInt iEl = hessian.start_[iCol];
+	  HighsInt iRow = hessian.index_[iEl];
+	  assert(iRow == iCol);
+	  q_x_value[iRow] += hessian.value_[iEl] * x_value[iRow];
+	  iEl++;
+	  for (; iEl < hessian.start_[iCol+1]; iEl++) {
+	    iRow = hessian.index_[iEl];
+	    q_x_value[iRow] += hessian.value_[iEl] * x_value[iRow];
+	    q_x_value[iCol] += hessian.value_[iEl] * x_value[iCol];
+	  }
+	}
+	return;
+      } else {
+	// x is sparse with x_value_size entries in rows x_index
+	if (x_value_size == 1 && q_x_value_size == 1) {
+	  HighsInt iCol = x_index[0];
+	  HighsInt iRow = q_x_index[0];
+	  q_x_value[0] = 0;
+	  for (HighsInt iEl = hessian.start_[iCol]; iEl <hessian.start_[iCol+1]; iEl++) {
+	    if (hessian.index_[iEl] == iRow ||
+		hessian.index_[iEl] == iCol) {
+	      q_x_value[0] = x_value[0] * hessian.value_[iEl];
+	      return;
+	    }
+	  }
+	  return;
+	} 
+      }
+      assert(1234 == 5678);
     };
 
 TEST_CASE("hessian-oracle", "[qpsolver]") {
