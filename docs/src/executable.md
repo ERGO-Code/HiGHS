@@ -52,6 +52,8 @@ options:
                                    "choose" * default 
                                    "on" 
                                    "off" 
+      --threads int              Set maximum number of threads to use:
+                                 0: automatic * default
       --run_crossover text       Set run_crossover option to: 
                                    "choose" 
                                    "on" * default 
