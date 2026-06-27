@@ -288,6 +288,7 @@ const string kWriteBasisFileString = "write_basis_file";
 const string kPresolveString = "presolve";
 const string kSolverString = "solver";
 const string kParallelString = "parallel";
+const string kThreadsString = "threads";
 const string kRunCrossoverString = "run_crossover";
 const string kTimeLimitString = "time_limit";
 const string kOptionsFileString = "options_file";
@@ -328,6 +329,7 @@ struct HighsOptionsStruct {
   std::string presolve;
   std::string solver;
   std::string parallel;
+  HighsInt threads;
   std::string run_crossover;
   double time_limit;
   std::string read_solution_file;
@@ -351,7 +353,6 @@ struct HighsOptionsStruct {
   double optimality_tolerance;
   double objective_bound;
   double objective_target;
-  HighsInt threads;
   HighsInt user_objective_scale;
   HighsInt user_bound_scale;
   HighsInt highs_debug_level;
@@ -517,6 +518,7 @@ struct HighsOptionsStruct {
       : presolve(""),
         solver(""),
         parallel(""),
+        threads(0),
         run_crossover(""),
         time_limit(0.0),
         read_solution_file(""),
@@ -538,7 +540,6 @@ struct HighsOptionsStruct {
         optimality_tolerance(0.0),
         objective_bound(0.0),
         objective_target(0.0),
-        threads(0),
         user_objective_scale(0),
         user_bound_scale(0),
         highs_debug_level(0),
@@ -753,6 +754,12 @@ class HighsOptions : public HighsOptionsStruct {
         &parallel, kHighsChooseString);
     records.push_back(record_string);
 
+    record_int = new OptionRecordInt(
+        kThreadsString,
+        "Maximum number of threads used by HiGHS (0: automatic)", advanced,
+        &threads, 0, 0, kHighsIInf);
+    records.push_back(record_int);
+
     record_string = new OptionRecordString(
         kRunCrossoverString, "Run IPM crossover: \"off\", \"choose\" or \"on\"",
         advanced, &run_crossover, kHighsOnString);
@@ -854,11 +861,6 @@ class HighsOptions : public HighsOptionsStruct {
     record_int =
         new OptionRecordInt(kRandomSeedString, "Random seed used in HiGHS",
                             advanced, &random_seed, 0, 0, kHighsIInf);
-    records.push_back(record_int);
-
-    record_int = new OptionRecordInt(
-        "threads", "Number of threads used by HiGHS (0: automatic)", advanced,
-        &threads, 0, 0, kHighsIInf);
     records.push_back(record_int);
 
     record_int = new OptionRecordInt(
