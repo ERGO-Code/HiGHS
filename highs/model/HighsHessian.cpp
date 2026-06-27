@@ -29,13 +29,13 @@ void HighsHessian::exactResize() {
     HighsInt num_nz = this->start_[this->dim_];
     this->index_.resize(num_nz);
     this->value_.resize(num_nz);
-  } else {
+  } else if (!this->isOracle()) {
     this->clear();
   }
 }
 
 void HighsHessian::deleteCols(const HighsIndexCollection& index_collection) {
-  if (this->dim_ == 0) return;
+  if (this->dim_ == 0 || this->isOracle()) return;
   // Can't handle non-triangular matrices yet
   assert(this->format_ == HessianFormat::kTriangular);
   assert(ok(index_collection));
@@ -129,6 +129,8 @@ bool HighsHessian::scaleOk(const HighsInt hessian_scale,
                            const double small_matrix_value,
                            const double large_matrix_value) const {
   if (!this->dim_) return true;
+  assert(!this->isOracle());
+  if (this->isOracle()) return false;
   double hessian_scale_value = std::pow(2, hessian_scale);
   for (HighsInt iEl = 0; iEl < this->start_[this->dim_]; iEl++) {
     double abs_new_value = std::abs(this->value_[iEl] * hessian_scale_value);
