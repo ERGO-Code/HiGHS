@@ -112,7 +112,7 @@ void Highs::reportModelStats() const {
       stats_line << "; " << a_num_nz << " nonzero"
                  << (a_num_nz == 1 ? "" : "s");
     }
-    if (hessian.oracle_)
+    if (hessian.isOracle())
       stats_line << "; Hessian as oracle";
     if (num_integer)
       stats_line << "; " << num_integer << " integer variable"
@@ -3095,7 +3095,7 @@ void Highs::restoreInfCost(HighsStatus& return_status) {
 HighsStatus Highs::userScale(HighsUserScaleData& data) {
   if (!options_.user_objective_scale && !options_.user_bound_scale)
     return HighsStatus::kOk;
-  if (this->model_.hessian_.oracle_) {
+  if (this->model_.hessian_.isOracle()) {
     highsLogUser(this->options_.log_options, HighsLogType::kWarning,
 		 "Hessian is represented via an oracle, so user scaling cannot be applied\n");
     return HighsStatus::kWarning;

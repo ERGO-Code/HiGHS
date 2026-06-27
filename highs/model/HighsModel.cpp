@@ -36,12 +36,8 @@ double HighsModel::objectiveValue(const std::vector<double>& solution) const {
 
 void HighsModel::objectiveGradient(const std::vector<double>& solution,
                                    std::vector<double>& gradient) const {
-  if (this->hessian_.dim_ > 0) {
+  if (this->isQp()) {
     this->hessian_.product(solution, gradient);
-  } else if (this->hessian_.oracle_) {
-    HighsInt dim = static_cast<HighsInt>(solution.size());
-    this->hessian_.product(dim, solution.data(), nullptr,
-			   dim, gradient.data(), nullptr);
   } else {
     gradient.assign(this->lp_.num_col_, 0);
   }

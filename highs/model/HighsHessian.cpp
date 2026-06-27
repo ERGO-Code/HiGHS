@@ -20,8 +20,7 @@ void HighsHessian::clear() {
   this->value_.clear();
   this->format_ = HessianFormat::kTriangular;
   this->start_.assign(1, 0);
-  this->oracle_ = nullptr;
-  this->oracle_data_ = nullptr;
+  this->oracle_.clear();
 }
 
 void HighsHessian::exactResize() {
@@ -140,14 +139,14 @@ bool HighsHessian::scaleOk(const HighsInt hessian_scale,
 }
 
 HighsInt HighsHessian::numNz() const {
-  if (this->oracle_) return 0;
+  if (this->isOracle()) return 0;
   assert(this->formatOk());
   assert((HighsInt)this->start_.size() >= this->dim_ + 1);
   return this->start_[this->dim_];
 }
 
 void HighsHessian::print(const std::string& message) const {
-  if (this->oracle_) {
+  if (this->isOracle()) {
     printf("Hessian is represented via an oracle\n");
     return;
   }
@@ -188,11 +187,8 @@ bool HighsHessian::operator==(const HighsHessian& hessian) const {
 
 void HighsHessian::product(const std::vector<double>& solution,
                            std::vector<double>& product) const {
-  if (this->oracle_) {
-    HighsInt dim = static_cast<HighsInt>(solution.size());
-    this->oracle_(dim, solution.data(), nullptr,
-		  dim, product.data(), nullptr,
-		  this->oracle_data_);
+  if (this->isOracle()) {
+    this->oracle_.product(solution, product);
     return;
   }
   if (this->dim_ <= 0) return;
@@ -209,23 +205,13 @@ void HighsHessian::product(const std::vector<double>& solution,
   }
 }
 
-void HighsHessian::product(const HighsInt x_value_size, const double* x_value, const HighsInt* x_index,
-			   HighsInt& q_x_value_size, double* q_x_value, const HighsInt* q_x_index) const {
-  assert(this->oracle_);
-  this->oracle_(x_value_size, x_value, x_index,
-		q_x_value_size, q_x_value, q_x_index,
-		this->oracle_data_);
-}
-
 void HighsHessian::alphaProductPlusY(const double alpha,
                                      const std::vector<double>& x,
                                      std::vector<double>& y) const {
-  if (this->oracle_) {
+  if (this->isOracle()) {
     HighsInt dim = static_cast<HighsInt>(y.size());
     std::vector<double> q_x(dim, 0);
-    this->oracle_(dim, x.data(), nullptr,
-		  dim, q_x.data(), nullptr,
-		  this->oracle_data_);
+    this->oracle_.product(x, q_x);
     for (HighsInt iCol = 0; iCol < dim; iCol++)
       y[iCol] += alpha * q_x[iCol];
     assert(111 == 888);
@@ -248,12 +234,10 @@ void HighsHessian::alphaProductPlusY(const double alpha,
 
 double HighsHessian::objectiveValue(const std::vector<double>& solution) const {
   double objective_function_value = 0;
-  if (this->oracle_) {
+  if (this->isOracle()) {
     HighsInt dim = static_cast<HighsInt>(solution.size());
     std::vector<double> q_solution(dim, 0);
-    this->oracle_(dim, solution.data(), nullptr,
-		  dim, q_solution.data(), nullptr,
-		  this->oracle_data_);
+    this->oracle_.product(solution, q_solution);
     for (HighsInt iCol = 0; iCol < dim; iCol++)
       objective_function_value += solution[iCol] * q_solution[iCol];
     objective_function_value *= 0.5;
@@ -276,7 +260,7 @@ double HighsHessian::objectiveValue(const std::vector<double>& solution) const {
 
 HighsCDouble HighsHessian::objectiveCDoubleValue(
     const std::vector<double>& solution) const {
-  if (this->oracle_) {
+  if (this->isOracle()) {
     assert(111 == 888);
     return static_cast<HighsCDouble>(this->objectiveValue(solution));
   }
@@ -297,7 +281,7 @@ HighsCDouble HighsHessian::objectiveCDoubleValue(
 
 bool HighsHessian::empty() const {
   if (dim_ <= 0) return true;
-  if (this->oracle_) {
+  if (this->isOracle()) {
     assert(111 == 888);
     return false;
   }
@@ -305,7 +289,7 @@ bool HighsHessian::empty() const {
 }
 
 bool HighsHessian::isDiagonal() const {
-  if (this->oracle_) {
+  if (this->isOracle()) {
     assert(111 == 888);
     return false;
   }
@@ -320,15 +304,9 @@ bool HighsHessian::isDiagonal() const {
 }
 
 double HighsHessian::diag(HighsInt i) const {
-  if (this->oracle_) {
-    double x = 1;
-    HighsInt diag_size = 1;
-    double diag;
-    this->oracle_(HighsInt(1), &x, &i,
-		  diag_size, &diag, &i,
-		  this->oracle_data_);
+  if (this->isOracle()) {
     assert(111 == 888);
-    return diag;
+    return this->diag(i);
   }
   assert(i < dim_);
   assert(index_[start_[i]] == i);
@@ -336,7 +314,7 @@ double HighsHessian::diag(HighsInt i) const {
 }
 
 HighsHessian HighsHessian::toSquare() const {
-  if (this->oracle_) {
+  if (this->isOracle()) {
     assert(111 == 888);
     return *this;
   }
@@ -392,4 +370,37 @@ HighsHessian HighsHessian::toSquare() const {
     }
   }
   return square_hessian;
+}
+
+void HessianOracle::clear() {
+  this->call_ = nullptr;
+  this->data_ = nullptr;
+}
+
+void HessianOracle::product(const HighsInt x_value_size, const double* x_value, const HighsInt* x_index,
+	       HighsInt& q_x_value_size, double* q_x_value, const HighsInt* q_x_index) const {
+  assert(this->call_);
+  this->call_(x_value_size, x_value, x_index,
+	      q_x_value_size, q_x_value, q_x_index,
+	      this->data_);
+}
+
+void HessianOracle::product(const std::vector<double>& x_value,
+			  std::vector<double>& q_x_value) const {
+  assert(this->call_);
+  HighsInt dim = static_cast<HighsInt>(x_value.size());
+  this->call_(dim, x_value.data(), nullptr,
+		dim, q_x_value.data(), nullptr,
+		this->data_);
+}
+
+double HessianOracle::diag(const HighsInt i) const {
+  assert(this->call_);
+  double x = 1;
+  HighsInt diag_size = 1;
+  double diag;
+  this->call_(HighsInt(1), &x, &i,
+	      diag_size, &diag, &i,
+	      this->data_);
+  return diag;
 }

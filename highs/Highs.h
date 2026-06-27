@@ -165,7 +165,7 @@ class Highs {
   /**
    * @brief Pass a Hessian oracle for the incumbent model
    */
-  HighsStatus passHessian(HighsHessianFunctionType oracle,
+  HighsStatus passHessian(HighsHessianFunctionType oracleCall,
 			  void* oracle_data);
 
   /**

@@ -11,6 +11,7 @@
 #ifndef LP_DATA_HSTRUCT_H_
 #define LP_DATA_HSTRUCT_H_
 
+#include <functional>
 #include <unordered_map>
 #include <vector>
 
@@ -244,6 +245,22 @@ struct HighsUserScaleData {
                   const double& large_matrix_value_);
   bool scaleError(std::string& message) const;
   bool scaleWarning(std::string& message) const;
+};
+
+using HighsHessianFunctionType =
+  std::function<void(const HighsInt x_value_size, const double* x_value, const HighsInt* x_index,
+		     HighsInt& q_x_value_size, double* q_x_value, const HighsInt* q_x_index,
+                     void*)>;
+
+struct HessianOracle {
+  HighsHessianFunctionType call_ = nullptr;
+  void* data_ = nullptr;
+  void clear();
+  void product(const std::vector<double>& x_value,
+	       std::vector<double>& q_x_value) const;
+  void product(const HighsInt x_value_size, const double* x_value, const HighsInt* x_index,
+	       HighsInt& q_x_value_size, double* q_x_value, const HighsInt* q_x_index) const;
+  double diag(const HighsInt i) const;
 };
 
 #endif /* LP_DATA_HSTRUCT_H_ */

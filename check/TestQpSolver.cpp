@@ -1585,7 +1585,7 @@ TEST_CASE("test-qp-atwood", "[qpsolver]") {
   h.resetGlobalScheduler(true);
 }
 
-HighsHessianFunctionType oracle =
+HighsHessianFunctionType oracleCall =
     [](const HighsInt x_value_size, const double* x_value, const HighsInt* x_index,
        HighsInt& q_x_value_size, double* q_x_value, const HighsInt* q_x_index,
        void* hessian_p) {
@@ -1626,9 +1626,9 @@ TEST_CASE("test-hessian-oracle", "[qpsolver]") {
   HighsStatus return_status = h.passModel(lp);
   REQUIRE(return_status == HighsStatus::kOk);
 
-  void* p_oracle = &hessian;
+  void* oracle_data = &hessian;
 
-  return_status = h.passHessian(oracle, p_oracle);
+  return_status = h.passHessian(oracleCall, oracle_data);
   REQUIRE(return_status == HighsStatus::kOk);
 
   if (dev_run) h.writeModel("");
