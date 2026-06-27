@@ -1593,7 +1593,7 @@ HighsHessianFunctionType oracleCall =
       printf("hessian.dim = %d\n", int(hessian.dim_));
     };
 
-TEST_CASE("test-hessian-oracle", "[qpsolver]") {
+TEST_CASE("hessian-oracle", "[qpsolver]") {
   HighsLp lp;
   HighsHessian hessian;
   // Start with an unconstrained QP
@@ -1628,7 +1628,7 @@ TEST_CASE("test-hessian-oracle", "[qpsolver]") {
 
   void* oracle_data = &hessian;
 
-  return_status = h.passHessian(oracleCall, oracle_data);
+  return_status = h.passHessian(hessian.dim_, oracleCall, oracle_data);
   REQUIRE(return_status == HighsStatus::kOk);
 
   if (dev_run) h.writeModel("");

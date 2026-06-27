@@ -253,6 +253,7 @@ using HighsHessianFunctionType =
                      void*)>;
 
 struct HessianOracle {
+  HighsInt dim_ = 0;
   HighsHessianFunctionType call_ = nullptr;
   void* data_ = nullptr;
   void clear();

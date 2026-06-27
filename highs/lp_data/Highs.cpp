@@ -710,9 +710,16 @@ HighsStatus Highs::passHessian(const HighsInt dim, const HighsInt num_nz,
   return passHessian(hessian);
 }
 
-HighsStatus Highs::passHessian(HighsHessianFunctionType oracleCall,
+HighsStatus Highs::passHessian(const HighsInt dim,
+			       HighsHessianFunctionType oracleCall,
                                void* oracle_data) {
   this->model_.hessian_.clear();
+  if (dim <= 0) {
+    highsLogUser(options_.log_options, HighsLogType::kWarning,
+		 "Ignoring Hessian oracle data since dimension is %d\n", int(dim));
+    return HighsStatus::kWarning;
+  }
+  this->model_.hessian_.oracle_.dim_ = dim;
   this->model_.hessian_.oracle_.call_ = oracleCall;
   this->model_.hessian_.oracle_.data_ = oracle_data;
   return HighsStatus::kOk;

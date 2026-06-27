@@ -176,7 +176,7 @@ bool okHessianDiagonal(const HighsOptions& options, HighsHessian& hessian,
                        const ObjSense sense) {
   double min_diagonal_value = kHighsInf;
   double max_diagonal_value = -kHighsInf;
-  const HighsInt dim = hessian.dim_;
+  const HighsInt dim = hessian.isOracle() ? hessian.oracle_.dim_ : hessian.dim_;
   const HighsInt sense_sign = (HighsInt)sense;
   HighsInt num_illegal_diagonal_value = 0;
   for (HighsInt iCol = 0; iCol < dim; iCol++) {

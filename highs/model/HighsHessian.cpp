@@ -211,7 +211,9 @@ void HighsHessian::alphaProductPlusY(const double alpha,
                                      const std::vector<double>& x,
                                      std::vector<double>& y) const {
   if (this->isOracle()) {
-    HighsInt dim = static_cast<HighsInt>(y.size());
+    HighsInt dim = this->oracle_.dim_;
+    assert(static_cast<size_t>(dim) == y.size());
+    assert(static_cast<size_t>(dim) == x.size());
     std::vector<double> q_x(dim, 0);
     this->oracle_.product(x, q_x);
     for (HighsInt iCol = 0; iCol < dim; iCol++)
@@ -237,7 +239,8 @@ void HighsHessian::alphaProductPlusY(const double alpha,
 double HighsHessian::objectiveValue(const std::vector<double>& solution) const {
   double objective_function_value = 0;
   if (this->isOracle()) {
-    HighsInt dim = static_cast<HighsInt>(solution.size());
+    HighsInt dim = this->oracle_.dim_;
+    assert(static_cast<size_t>(dim) == solution.size());
     std::vector<double> q_solution(dim, 0);
     this->oracle_.product(solution, q_solution);
     for (HighsInt iCol = 0; iCol < dim; iCol++)
@@ -306,10 +309,9 @@ bool HighsHessian::isDiagonal() const {
 }
 
 double HighsHessian::diag(HighsInt i) const {
-  if (this->isOracle()) {
-    assert(111 == 888);
-    return this->diag(i);
-  }
+  if (this->isOracle()) return this->oracle_.diag(i);
+  // Assumes that the diagonal entry is always first, possibly with explicit
+  // zero value
   assert(i < dim_);
   assert(index_[start_[i]] == i);
   return value_[start_[i]];
@@ -375,6 +377,7 @@ HighsHessian HighsHessian::toSquare() const {
 }
 
 void HessianOracle::clear() {
+  this->dim_ = 0;
   this->call_ = nullptr;
   this->data_ = nullptr;
 }
@@ -390,7 +393,9 @@ void HessianOracle::product(const HighsInt x_value_size, const double* x_value, 
 void HessianOracle::product(const std::vector<double>& x_value,
 			  std::vector<double>& q_x_value) const {
   assert(this->call_);
-  HighsInt dim = static_cast<HighsInt>(x_value.size());
+  HighsInt dim = this->dim_;
+  assert(static_cast<size_t>(dim) == x_value.size());
+  assert(static_cast<size_t>(dim) == q_x_value.size());
   this->call_(dim, x_value.data(), nullptr,
 		dim, q_x_value.data(), nullptr,
 		this->data_);
