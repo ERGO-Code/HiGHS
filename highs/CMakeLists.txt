@@ -4,13 +4,8 @@ endif()
 
 # Define library.
 include(sources)
-set(sources ${highs_sources} ${cupdlp_sources} ${ipx_sources} ${basiclu_sources})
-set(headers ${highs_headers} ${cupdlp_headers} ${ipx_headers} ${basiclu_headers})
-
-if(HIPO)
-  set(sources ${sources} ${hipo_sources} ${factor_highs_sources} ${hipo_util_sources} ${hipo_orderings_sources})
-  set(headers ${headers} ${hipo_headers} ${factor_highs_headers} ${hipo_util_headers} ${hipo_orderings_headers})
-endif()
+set(sources ${highs_sources} ${cupdlp_sources} ${ipx_sources} ${basiclu_sources} ${hipo_sources} ${factor_highs_sources} ${hipo_util_sources})
+set(headers ${highs_headers} ${cupdlp_headers} ${ipx_headers} ${basiclu_headers} ${hipo_headers} ${factor_highs_headers} ${hipo_util_headers})
 
 # Configure the config windows version file
 if(MSVC)
@@ -27,6 +22,17 @@ if(NOT FAST_BUILD)
 
   add_library(libhighs ${sources} ${headers} ${win_version_file})
   target_include_directories(libhighs PRIVATE ${include_dirs})
+
+  if(APPLE)
+    # linker was taking ~1 hour, unity build reduces it to ~1 minute
+    set_target_properties(libhighs PROPERTIES
+      UNITY_BUILD ON
+      UNITY_BUILD_BATCH_SIZE 8)
+
+    if(NOT CMAKE_VERSION VERSION_LESS 3.20)
+      set_target_properties(libhighs PROPERTIES UNITY_BUILD_UNIQUE_ID "HIGHS_UNITY_ID")
+    endif()
+  endif()
 
   if(${BUILD_SHARED_LIBS})
     # put version information into shared library file
@@ -137,8 +143,18 @@ else()
   # Define library in modern CMake using target_*()
   # No interfaces (apart from c); No ipx; New (short) ctest instances.
   add_library(highs)
-
   add_library(${PROJECT_NAMESPACE}::highs ALIAS highs)
+
+  if(APPLE)
+    # linker was taking ~1 hour, unity build reduces it to ~1 minute
+    set_target_properties(highs PROPERTIES
+      UNITY_BUILD ON
+      UNITY_BUILD_BATCH_SIZE 8)
+
+    if(NOT CMAKE_VERSION VERSION_LESS 3.20)
+      set_target_properties(highs PROPERTIES UNITY_BUILD_UNIQUE_ID "HIGHS_UNITY_ID")
+    endif()
+  endif()
 
   if(${BUILD_SHARED_LIBS})
     # put version information into shared library file
@@ -156,6 +172,25 @@ else()
       set_target_properties(highs PROPERTIES INSTALL_RPATH "$ORIGIN")
   endif()
 
+  if (BUILD_SHARED_EXTRAS_LIB)
+    if (NOT HIPO_PYTHON)
+      if(APPLE)
+        set_target_properties(highs PROPERTIES
+          INSTALL_RPATH "@loader_path;@loader_path/../${CMAKE_INSTALL_LIBDIR}"
+          BUILD_RPATH   "$<TARGET_FILE_DIR:highs_extras>"
+        )
+      elseif(UNIX)
+        set_target_properties(highs PROPERTIES
+          INSTALL_RPATH "$ORIGIN"
+          BUILD_RPATH   "$<TARGET_FILE_DIR:highs_extras>"
+        )
+      endif()
+    endif()
+  else()
+    # PUBLIC: propagate link dependency in the highs library, so that 
+    # consumers don't need to explicitly link against highs_extras
+    target_link_libraries(highs PUBLIC highs_extras)
+  endif()
 
   target_sources(highs PRIVATE ${sources} ${headers} ${win_version_file})
 
@@ -225,75 +260,12 @@ else()
 
   target_include_directories(highs PRIVATE ${include_dirs})
 
-  # Optional HIPO
-  if (HIPO)
-
-    target_include_directories(highs PRIVATE
-      $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/hipo>
-      $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/hipo/auxiliary>
-      $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/hipo/factorhighs>
-      $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/hipo/ipm>
-    )
-
-    if (NOT USE_CMAKE_FIND_BLAS)
-      if(APPLE)
-          target_link_libraries(highs PRIVATE "-framework Accelerate")
-          target_compile_definitions(highs PRIVATE HIPO_USES_APPLE_BLAS)
-      elseif(WIN32)
-        if(TARGET OpenBLAS::OpenBLAS)
-            target_compile_definitions(highs PRIVATE HIPO_USES_OPENBLAS)
-            target_link_libraries(highs PRIVATE OpenBLAS::OpenBLAS)
-        elseif(OPENBLAS_LIB)
-            target_compile_definitions(highs PRIVATE HIPO_USES_OPENBLAS)
-            message(STATUS "Linking against OpenBLAS via raw library: ${OPENBLAS_LIB}")
-            target_link_libraries(highs PRIVATE ${OPENBLAS_LIB})
-            target_include_directories(highs PRIVATE ${OPENBLAS_INCLUDE_DIR})
-        elseif(BUILD_OPENBLAS)
-            target_link_libraries(highs PRIVATE openblas)
-            target_compile_definitions(highs PRIVATE HIPO_USES_OPENBLAS)
-        else()
-            message(FATAL_ERROR "OpenBLAS not found on Windows.")
-        endif()
-
-        target_compile_definitions(highs PRIVATE HIPO_USES_OPENBLAS)
-      else()
-          # LINUX
-          if(BLAS_LIB)
-              target_link_libraries(highs PRIVATE "${BLAS_LIB}" cblas)
-          elseif(OPENBLAS_LIB)
-              target_link_libraries(highs PRIVATE "${OPENBLAS_LIB}")
-              target_compile_definitions(highs PRIVATE HIPO_USES_OPENBLAS)
-          elseif(BUILD_OPENBLAS)
-              target_link_libraries(highs PRIVATE openblas)
-              target_compile_definitions(highs PRIVATE HIPO_USES_OPENBLAS)
-          else()
-              message(FATAL_ERROR "No BLAS library available")
-          endif(BLAS_LIB)
-      endif(APPLE)
-    else()
-
-      if (WIN32 AND TARGET OpenBLAS::OpenBLAS)
-          target_compile_definitions(highs PRIVATE HIPO_USES_OPENBLAS)
-          target_link_libraries(highs PRIVATE OpenBLAS::OpenBLAS)
-      elseif (NOT BLAS_FOUND AND
-              NOT BUILD_SHARED_LIBS AND
-              NOT BUILD_CXX_EXE AND
-              NOT BUILD_EXAMPLES)
-          # Allow for static build without openblas
-          # Do nothing
-      else()
-          target_link_libraries(highs PRIVATE BLAS::BLAS)
-
-          string(TOLOWER "${BLAS_LIBRARIES}" blas_lower)
-          if(blas_lower MATCHES "openblas")
-              target_compile_definitions(highs PRIVATE HIPO_USES_OPENBLAS)
-          elseif(blas_lower MATCHES "accelerate")
-              target_compile_definitions(highs PRIVATE HIPO_USES_APPLE_BLAS)
-          endif()
-      endif()
-    endif()
-    
-  endif()
+  target_include_directories(highs PRIVATE
+    $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/hipo>
+    $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/hipo/auxiliary>
+    $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/hipo/factorhighs>
+    $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/hipo/ipm>
+  )
 
   if(MSVC)
     if (NOT HIGHS_GPU_LIB)
@@ -350,6 +322,12 @@ else()
     target_link_libraries(highs PRIVATE ZLIB::ZLIB)
   endif()
 
+  # allow consumers of highs to be aware of potential external dependencies
+  # without forcing them to explicitly call target_include_directories
+  target_include_directories(highs PUBLIC
+    $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/extern>
+  )
+
   # install the header files of highs
   foreach(file ${headers})
     get_filename_component(dir ${file} DIRECTORY)
@@ -399,6 +377,8 @@ else()
       # see: https://docs.microsoft.com/en-us/dotnet/core/rid-catalog
       if(CMAKE_SYSTEM_PROCESSOR MATCHES "^(aarch64|arm64)")
         set(DOTNET_PLATFORM arm64)
+      elseif(WIN32 AND (CMAKE_GENERATOR_PLATFORM STREQUAL "Win32" OR CMAKE_SIZEOF_VOID_P EQUAL 4))
+        set(DOTNET_PLATFORM x86)
       else()
         set(DOTNET_PLATFORM x64)
       endif()
@@ -494,6 +474,7 @@ if(FAST_BUILD)
   endif()
 
   target_link_libraries(highs PRIVATE Threads::Threads)
+  target_link_libraries(highs PRIVATE ${CMAKE_DL_LIBS})
 else()
   target_link_libraries(libhighs Threads::Threads)
 endif()

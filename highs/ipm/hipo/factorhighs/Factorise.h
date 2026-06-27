@@ -7,7 +7,7 @@
 #include "Numeric.h"
 #include "Symbolic.h"
 #include "ipm/hipo/auxiliary/IntConfig.h"
-#include "ipm/hipo/auxiliary/Log.h"
+#include "ipm/hipo/auxiliary/Logger.h"
 
 namespace hipo {
 
@@ -62,7 +62,7 @@ class Factorise {
   // flag to stop computation
   std::atomic<bool> flag_stop_{false};
 
-  const Log* log_;
+  const Logger* logger_;
   DataCollector& data_;
 
   CliqueStack* stack_;
@@ -74,7 +74,7 @@ class Factorise {
  public:
   Factorise(const Symbolic& S, const std::vector<Int>& rowsM,
             const std::vector<Int>& ptrM, const std::vector<double>& valM,
-            const Regul& regul, const Log* log, DataCollector& data,
+            const Regul& regul, const Logger* logger, DataCollector& data,
             std::vector<std::vector<double>>& sn_columns, CliqueStack* stack);
 
   bool run(Numeric& num);

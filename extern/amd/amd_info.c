@@ -13,7 +13,12 @@
  */
 
 #include "amd_internal.h"
-#include "ipm/hipo/auxiliary/OrderingPrint.h"
+
+#ifndef NDEBUG
+#define HIGHS_ORDERING_PRINT(...) printf(__VA_ARGS__)
+#else
+#define HIGHS_ORDERING_PRINT(...)
+#endif
 
 #define PRI(format,x) { if (x >= 0) { HIGHS_ORDERING_PRINT (format, x) ; }}
 

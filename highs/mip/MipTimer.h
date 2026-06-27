@@ -11,14 +11,15 @@
 #ifndef MIP_MIPTIMER_H_
 #define MIP_MIPTIMER_H_
 
-// Clocks for profiling the MIP dual mip solver
-enum iClockMip {
+// Clocks for profiling the MIP solver
+enum iClockMip : int {
   kMipClockTotal = 0,
-  kMipClockPresolve,
+  kMipClockPresolve = kToSubSolver,
   kMipClockSolve,
   kMipClockPostsolve,
   // Level 1
-  kMipClockInit,
+  kFromMipClock,
+  kMipClockInit = kFromMipClock,
   kMipClockRunPresolve,
   kMipClockRunSetup,
   kMipClockFeasibilityJump,
@@ -111,18 +112,112 @@ enum iClockMip {
 
   kMipClockProbingImplications,
 
-  kNumMipClock  //!< Number of MIP clocks
+  kLastMipClock = kMipClockProbingImplications,
+  kToMipClock = kLastMipClock + 1
 };
+
+const HighsInt kNumThreadMipClock = kLastMipClock;
 
 const double tolerance_percent_report = 0.1;
 
+inline void initialiseMipProfilingNames(std::vector<std::string>& name) {
+  assert(name.size() == static_cast<size_t>(kToMipClock));
+  // Level 1 - Should correspond to kMipClockTotal
+  name[kMipClockInit] = "Initialise";
+  name[kMipClockRunPresolve] = "Run presolve";
+  name[kMipClockRunSetup] = "Run setup";
+  name[kMipClockFeasibilityJump] = "Feasibility jump";
+  name[kMipClockTrivialHeuristics] = "Trivial heuristics";
+  name[kMipClockEvaluateRootNode] = "Evaluate root node";
+  name[kMipClockPerformAging0] = "Perform aging 0";
+  name[kMipClockSearch] = "Search";
+  // kMipClockPostsolve
+
+  // Evaluate root node
+  name[kMipClockStartSymmetryDetection] = "Start symmetry detection";
+  name[kMipClockStartAnalyticCentreComputation] = "A-centre - start";
+  name[kMipClockEvaluateRootLp] = "Evaluate root LP";
+  name[kMipClockSeparateLpCuts] = "Separate LP cuts";
+  name[kMipClockRandomizedRounding] = "Randomized rounding";
+  name[kMipClockPerformRestart] = "Perform restart";
+  name[kMipClockRootSeparation] = "Root separation";
+  name[kMipClockFinishAnalyticCentreComputation] = "A-centre - finish";
+  name[kMipClockRootCentralRounding] = "Root central rounding";
+  name[kMipClockRootSeparationRound0] = "Root separation round 0";
+  name[kMipClockRootHeuristicsReducedCost] = "Root heuristics reduced cost";
+  name[kMipClockRootSeparationRound1] = "Root separation round 1";
+  name[kMipClockRootHeuristicsRens] = "Root heuristics RENS";
+  name[kMipClockRootSeparationRound2] = "Root separation round 2";
+  name[kMipClockRootFeasibilityPump] = "Root feasibility pump";
+  name[kMipClockRootSeparationRound3] = "Root separation round 3";
+  name[kMipClockEvaluateRootNode0] = "kMipClockEvaluateRootNode0";
+  name[kMipClockEvaluateRootNode1] = "kMipClockEvaluateRootNode1";
+  name[kMipClockEvaluateRootNode2] = "kMipClockEvaluateRootNode2";
+
+  // Separation
+  name[kMipClockRootSeparationRound] = "Separation";
+  name[kMipClockRootSeparationFinishAnalyticCentreComputation] =
+      "A-centre - finish";
+  name[kMipClockRootSeparationCentralRounding] = "Central rounding";
+  name[kMipClockRootSeparationEvaluateRootLp] = "Evaluate root LP";
+
+  /*
+    clock[kMipClockImplboundSepa] =
+    timer_pointer->clock_def(kImplboundSepaString.c_str());
+    clock[kMipClockCliqueSepa] =
+    timer_pointer->clock_def(kCliqueSepaString.c_str());
+    clock[kMipClockTableauSepa] =
+    timer_pointer->clock_def(kTableauSepaString.c_str());
+    clock[kMipClockPathAggrSepa] =
+    timer_pointer->clock_def(kPathAggrSepaString.c_str());
+    clock[kMipClockModKSepa] =
+    timer_pointer->clock_def(kModKSepaString.c_str());
+  */
+  // Presolve - Should correspond to kMipClockRunPresolve
+  name[kMipClockProbingPresolve] = "Probing - presolve";
+  name[kMipClockEnumerationPresolve] = "Enumeration - presolve";
+
+  // Search - Should correspond to kMipClockSearch
+  name[kMipClockPerformAging1] = "Perform aging 1";
+  name[kMipClockDive] = "Dive";
+  name[kMipClockOpenNodesToQueue0] = "Open nodes to queue 0";
+  name[kMipClockDomainPropgate] = "Domain propagate";
+  name[kMipClockPruneInfeasibleNodes] = "Prune infeasible nodes";
+  name[kMipClockUpdateLocalDomain] = "Update local domain";
+  name[kMipClockNodeSearch] = "Node search";
+
+  // Dive - Should correspond to kMipClockDive
+  name[kMipClockDiveEvaluateNode] = "Evaluate node";
+  name[kMipClockDivePrimalHeuristics] = "Dive primal heuristics";
+  name[kMipClockTheDive] = "The dive";
+  name[kMipClockBacktrackPlunge] = "Backtrack plunge";
+  name[kMipClockPerformAging2] = "Perform aging 2";
+
+  // Primal heuristics - Should correspond to kMipDiveClockPrimalHeuristics
+  name[kMipClockDiveRandomizedRounding] = "Dive Randomized rounding";
+  name[kMipClockDiveRens] = "Dive RENS";
+  name[kMipClockDiveRins] = "Dive RINS";
+
+  // Node search
+  name[kMipClockCurrentNodeToQueue] = "Current node to queue";
+  name[kMipClockSearchBacktrack] = "Search backtrack";
+  name[kMipClockNodePrunedLoop] = "Pruned loop search";
+  name[kMipClockOpenNodesToQueue1] = "Open nodes to queue 1";
+  name[kMipClockEvaluateNode1] = "Evaluate node 1";
+  name[kMipClockNodeSearchSeparation] = "Node search separation";
+  name[kMipClockStoreBasis] = "Store basis";
+
+  name[kMipClockProbingImplications] = "Probing - implications";
+};
+
 class MipTimer {
  public:
-  void initialiseMipClocks(HighsTimerClock& mip_timer_clock) {
+  void initialiseMipClocks(HighsTimerClock& mip_timer_clock,
+                           const HighsInt thread_mip_clock_offset) {
     HighsTimer* timer_pointer = mip_timer_clock.timer_pointer_;
     std::vector<HighsInt>& clock = mip_timer_clock.clock_;
 
-    clock.resize(kNumMipClock);
+    clock.resize(kLastMipClock);
     clock[kMipClockTotal] = 0;
     clock[kMipClockPresolve] = timer_pointer->clock_def("MIP presolve");
     clock[kMipClockSolve] = timer_pointer->clock_def("MIP solve");
@@ -135,21 +230,18 @@ class MipTimer {
     // clock IDs that need to equal clock[kMipClockHipoSolveAnalyticCentreLp]
     // and clock[kMipClockIpxSolveAnalyticCentreLp]
     //
-    // Define the clocks for evaluating the LPs first, so that
-    // clock[kMipClockHipoSolveAnalyticCentreLp] and
-    // clock[kMipClockIpxSolveAnalyticCentreLp] aren't changed by inserting new
-    // clocks
+    // Define the clocks for evaluating the LPs first, so that they
+    // aren't changed by inserting new clocks
     clock[kMipClockDuSimplexBasisSolveLp] =
         timer_pointer->clock_def("Solve LP - du simplex basis");
+    assert(clock[kMipClockDuSimplexBasisSolveLp] ==
+           thread_mip_clock_offset + 7);
     clock[kMipClockDuSimplexNoBasisSolveLp] =
         timer_pointer->clock_def("Solve LP - du simplex no basis");
-    assert(clock[kMipClockDuSimplexNoBasisSolveLp] == 8);
     clock[kMipClockHipoSolveAnalyticCentreLp] =
         timer_pointer->clock_def("Solve LP: HiPO analytic centre");
     clock[kMipClockIpxSolveAnalyticCentreLp] =
         timer_pointer->clock_def("Solve LP: IPX analytic centre");
-    assert(clock[kMipClockHipoSolveAnalyticCentreLp] == 9);
-    assert(clock[kMipClockIpxSolveAnalyticCentreLp] == 10);
     clock[kMipClockHipoSolveLp] = timer_pointer->clock_def("Solve LP: HiPO");
     clock[kMipClockIpxSolveLp] = timer_pointer->clock_def("Solve LP: IPX");
     clock[kMipClockPrSimplexBasisSolveLp] =
@@ -223,6 +315,7 @@ class MipTimer {
     clock[kMipClockRootSeparationEvaluateRootLp] =
         timer_pointer->clock_def("Evaluate root LP");
 
+    /*
     clock[kMipClockImplboundSepa] =
         timer_pointer->clock_def(kImplboundSepaString.c_str());
     clock[kMipClockCliqueSepa] =
@@ -233,7 +326,7 @@ class MipTimer {
         timer_pointer->clock_def(kPathAggrSepaString.c_str());
     clock[kMipClockModKSepa] =
         timer_pointer->clock_def(kModKSepaString.c_str());
-
+    */
     // Presolve - Should correspond to kMipClockRunPresolve
     clock[kMipClockProbingPresolve] =
         timer_pointer->clock_def("Probing - presolve");

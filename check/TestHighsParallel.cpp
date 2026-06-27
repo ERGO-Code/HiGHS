@@ -275,3 +275,34 @@ TEST_CASE("FibonacciTasksOmp", "[parallel]") {
   REQUIRE(result == 267914296);
 }
 #endif
+
+// Test that consistently failed with
+// > terminating due to uncaught exception of type HighsTask::Interrupt
+// when compiled in debug.
+// This was fixed by catching and rethrowing in the TaskGroup destructor.
+
+static void loseTime() {
+  int total = 0;
+  for (int i = 0; i < 1000; ++i) {
+    total += i * i * i;
+  }
+}
+
+static void nestedTask() {
+  highs::parallel::TaskGroup tg;
+  tg.spawn([]() { loseTime(); });
+  tg.spawn([]() { loseTime(); });
+}
+
+TEST_CASE("CancelNestedTasks", "[parallel]") {
+  highs::parallel::initialize_scheduler();
+
+  for (int i = 0; i < 1000; ++i) {
+    highs::parallel::TaskGroup tg;
+    tg.spawn([]() { nestedTask(); });
+    tg.spawn([]() { nestedTask(); });
+    loseTime();
+  }
+
+  HighsTaskExecutor::shutdown();
+}

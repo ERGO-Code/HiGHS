@@ -1,61 +1,144 @@
-The highlight of v1.14 is the extension of the HiPO interior point LP
-solver to handle convex QPs.
+The highlights of v1.15 are the first variant of the parallel MIP solver
+and the addition of HiPO in Python.
 
 ## Code changes
 
-Prompted by [#2821](https://github.com/ERGO-Code/HiGHS/issues/2821),
-the treatment of Hessian matrix anomalies has been changed. Firstly,
-any duplicate entries in the Hessian are now summed.
+Following [PR #2886](https://github.com/ERGO-Code/HiGHS/pull/2886), our
+prototype multithreaded MIP solver is available, refactoring
+the worker/node-search logic of the branch-and-cut solver to run
+across multiple threads. This is the first release of the parallel MIP
+solver.
 
-- When a square Hessian is read from the `QMATRIX` section of an MPS
-  file, or passed by a user, any asymmetry results in
-  `Highs::readModel` or `Highs::passHessian` returning
-  `HighsStatus::kError`. Previously HiGHS would use $$(Q+Q^T)/2$$ as
-  the Hessian.
+A fix to the parallel scheduler was merged in
+[PR #3087](https://github.com/ERGO-Code/HiGHS/pull/3087).
 
-- A triangular Hessian, whether read from the `QUADOBJ` section of an
-  MPS file, or passed by a user, was previsouly assumed to be given by
-  only lower triangular entries, with any entries in the upper
-  triangle being ignored. Now, any entries in the upper triangle of
-  the Hessian are accepted, being added to any corresponding entries
-  in the lower triangle. If there are entries in the upper triangle,
-  their number is logged in a warning message, which also states the
-  number of any summations, and `Highs::readModel` or
-  `Highs::passHessian` will return `HighsStatus::kWarning`.
+Following [PR #2994](https://github.com/ERGO-Code/HiGHS/pull/2994),
+HiPO can now be used to solve LPs and QPs from `highspy`, with
+documentation added in
+[PR #3024](https://github.com/ERGO-Code/HiGHS/pull/3024) and
+[PR #3060](https://github.com/ERGO-Code/HiGHS/pull/3060). HiPO
+performance was further improved by faster handling of free variables
+([PR #3013](https://github.com/ERGO-Code/HiGHS/pull/3013)) and faster
+triangular solves
+([PR #3014](https://github.com/ERGO-Code/HiGHS/pull/3014)).
 
-Prompted by [#2849](https://github.com/ERGO-Code/HiGHS/issues/2849),
-console, file and callback logging are now independent, allowing any
-combination to be on/off.
+Prompted by [#2957](https://github.com/ERGO-Code/HiGHS/issues/2957),
+square Hessians that are only slightly asymmetric are now accepted by
+`Highs::qFormatOk`, rather than being rejected outright
+([PR #2965](https://github.com/ERGO-Code/HiGHS/pull/2965),
+[PR #2984](https://github.com/ERGO-Code/HiGHS/pull/2984) and
+[PR #3003](https://github.com/ERGO-Code/HiGHS/pull/3003)). Identification
+of non-convexity in the QP solvers was also improved, with extended
+documentation added in
+[PR #3056](https://github.com/ERGO-Code/HiGHS/pull/3056), and a further
+bug affecting some QPs was fixed in
+[PR #3069](https://github.com/ERGO-Code/HiGHS/pull/3069). QP hot start
+was added in [PR #3089](https://github.com/ERGO-Code/HiGHS/pull/3089).
 
-Following PR [#2854](https://github.com/ERGO-Code/HiGHS/pull/2854),
-HiPO is now capable of solving convex QP problems. Option
-solver="qpasm" selects the previous active-set QP solver, while
-solver="hipo" or solver="ipm" selects the HiPO solver.
+Following [PR #2982](https://github.com/ERGO-Code/HiGHS/pull/2982),
+several bugs in the computation of an Irreducible Infeasible Subsystem
+(IIS) via `Highs::getIis` were fixed.
 
-Following PR [#2865](https://github.com/ERGO-Code/HiGHS/pull/2865),
-HiGHS performs logging during probing in MIP presolve and checks for
-time-out
+Following [PR #3046](https://github.com/ERGO-Code/HiGHS/pull/3046),
+zero-cost singleton columns are no longer fixed to an infinite bound
+during `HPresolve::dualFixing`, and the size of shifts applied during
+reduced-cost fixing was reduced in
+[PR #2986](https://github.com/ERGO-Code/HiGHS/pull/2986). Strengthened
+variable bounds found during presolve are now retained
+([PR #3010](https://github.com/ERGO-Code/HiGHS/pull/3010)), a bug in
+the computation of the fractional value of a variable with finite
+lower and upper bounds was fixed
+([PR #3005](https://github.com/ERGO-Code/HiGHS/pull/3005)), and the
+handling of infeasibilities for semi-continuous and semi-integer
+variables was corrected
+([PR #3018](https://github.com/ERGO-Code/HiGHS/pull/3018)).
 
-Following PR [#2870](https://github.com/ERGO-Code/HiGHS/pull/2870),
-dedicated time-out during IIS calculation (using HiGHS option
-`iis_time_limit`) has been enabled.
+Following [PR #3042](https://github.com/ERGO-Code/HiGHS/pull/3042),
+parallel simplex is no longer used when solving the LP relaxations
+that arise within the MIP solver, since it isn't safe to do so when
+the MIP solver is itself running in parallel.
 
-Prompted by [#2883](https://github.com/ERGO-Code/HiGHS/issues/2883),
-the function signature for `Highs_getInfinity` in the C# API has been
-corrected.
+Following [PR #2971](https://github.com/ERGO-Code/HiGHS/pull/2971),
+`highspy` now supports scalar division, and significant improvements
+were made to `highspy`'s static typing in
+[PR #2983](https://github.com/ERGO-Code/HiGHS/pull/2983). Context
+manager support was added to `highspy` in
+[PR #3093](https://github.com/ERGO-Code/HiGHS/pull/3093).
 
-Prompted by [#2887](https://github.com/ERGO-Code/HiGHS/issues/2887),
-`addVariable` in `highspy` cannot create names with spaces, illegal
-variable or constraint names when writing MPS or LP files no longer
-leads to an error return - generic names are created - and the EMS
-file facility has been removed.
+Following [PR #3039](https://github.com/ERGO-Code/HiGHS/pull/3039),
+`Highs::setBasis` and `Highs::setLogicalBasis` have been implemented,
+and additional methods were added to the C# wrapper in
+[PR #3041](https://github.com/ERGO-Code/HiGHS/pull/3041).
 
-Following PR [#2918](https://github.com/ERGO-Code/HiGHS/pull/2918),
-logging during IIS calculation has been improved.
+Prompted by [#3044](https://github.com/ERGO-Code/HiGHS/issues/3044),
+a further bug was fixed in
+[PR #3092](https://github.com/ERGO-Code/HiGHS/pull/3092), and
+[PR #3091](https://github.com/ERGO-Code/HiGHS/pull/3091) corrects the
+re-checking of an implied bound, fixing
+[#3090](https://github.com/ERGO-Code/HiGHS/issues/3090).
 
-Following PR [#2934](https://github.com/ERGO-Code/HiGHS/pull/2934),
-HiPO uses infinity-norm equilibration of the rows and columns of the
-matrix rather than Curtis-Reid scaling.
+Following [PR #2981](https://github.com/ERGO-Code/HiGHS/pull/2981),
+C-heap memory leaks in solver state cleanup were fixed, and
+[PR #3081](https://github.com/ERGO-Code/HiGHS/pull/3081) fixes a bug
+in column stuffing.
+
+Following [PR #3016](https://github.com/ERGO-Code/HiGHS/pull/3016),
+`Highs::presolve()` now logs and returns failure appropriately when
+called inconsistently with the state of the incumbent model.
+
+Prompted by [#3007](https://github.com/ERGO-Code/HiGHS/issues/3007), a
+potential typo in `FactorHiGHSSolver::chooseNla()` was corrected, and
+several other minor fixes were collected in
+[PR #3017](https://github.com/ERGO-Code/HiGHS/pull/3017) and
+[PR #3004](https://github.com/ERGO-Code/HiGHS/pull/3004) (the latter
+for `HighsCliqueTable`).
+
+Following [PR #3057](https://github.com/ERGO-Code/HiGHS/pull/3057),
+lines in HiGHS options files that contain only spaces are now ignored,
+and the text of the first line containing an error is printed in the
+resulting message.
 
 ## Build changes
 
+The Python build has been updated and an additional python package is
+available. The HiPO dependencies are linked via the optional
+`highspy-extras`, e.g. Metis, for all platforms, and OpenBLAS, for
+Windows and Linux. The `highspy-extras` package is automatically
+consumed by `highspy` and does not need to be imported manually. Note,
+that `highspy-extras` is distributed under the Apache 2.0 license, due
+to the dependencies' licensing.
+
+On Linux, `libblas` is no longer supported, in favour of OpenBLAS. MKL
+support would be considered at a later stage.
+
+Prompted by [#3000](https://github.com/ERGO-Code/HiGHS/issues/3000),
+[PR #3027](https://github.com/ERGO-Code/HiGHS/pull/3027) fixes a
+recent `alpine:edge` compilation issue.
+
+Following [PR #3025](https://github.com/ERGO-Code/HiGHS/pull/3025),
+all remaining thread sanitizer data race warnings are cleared.
+
+GPU support was added for local Python pip installs in
+[PR #3071](https://github.com/ERGO-Code/HiGHS/pull/3071) and the BLAS
+library used by HiPO is now checked at runtime
+([PR #3080](https://github.com/ERGO-Code/HiGHS/pull/3080)).
+
+The `cibuildwheel` workflow and `pyproject` configuration were updated
+to `cibuildwheel` 4.0.0
+([PR #3061](https://github.com/ERGO-Code/HiGHS/pull/3061)), and the
+NuGet publishing workflow now uses trusted publishing rather than an
+API key
+([PR #3062](https://github.com/ERGO-Code/HiGHS/pull/3062),
+following [PR #2959](https://github.com/ERGO-Code/HiGHS/pull/2959)).
+
+The macOS GitHub Actions build times were significantly improved in
+[PR #3033](https://github.com/ERGO-Code/HiGHS/pull/3033), and the C#
+wrapper build was fixed to statically link the MSVC STL and correctly
+install on win32
+([PR #3070](https://github.com/ERGO-Code/HiGHS/pull/3070)).
+
+Following [PR #3001](https://github.com/ERGO-Code/HiGHS/pull/3001),
+the install location of the readme and license files was corrected,
+and explicit `-fexceptions` copts were added to the Bazel config
+([PR #3072](https://github.com/ERGO-Code/HiGHS/pull/3072) and
+[PR #3075](https://github.com/ERGO-Code/HiGHS/pull/3075)).

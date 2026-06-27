@@ -186,6 +186,8 @@ options:
                                    "choose" * default
                                    "on"
                                    "off"
+      --threads int              Set maximum number of threads to use:
+                                 0: automatic * default
       --run_crossover text       Set run_crossover option to:
                                    "choose"
                                    "on" * default
@@ -228,11 +230,19 @@ pip install .
 ```
 from the root directory.
 
-The HiGHS C++ library no longer needs to be separately installed. The python package `highspy` depends on the `numpy` package and `numpy` will be installed as well, if it is not already present.
+The python package `highspy` depends on the `numpy` package and `numpy` will be installed as well, if it is not already present.
 
 The installation can be tested using the small example `HiGHS/examples/call_highs_from_python_highspy.py`.
 
 The [Google Colab Example Notebook](https://colab.research.google.com/drive/1JmHF53OYfU-0Sp9bzLw-D2TQyRABSjHb?usp=sharing) also demonstrates how to call `highspy`.
+
+To use HiPO in Python, the additional `highspy-extras` is required. It contains the HiPO dependencies and is Apache 2.0 licensed. It can be installed with
+
+```shell
+$ pip install highspy[extras]
+```
+
+For more details, see https://ergo-code.github.io/HiGHS/ at Interfaces -> Python -> HiPO in Python.
 
 <a id="c"></a>
 
@@ -248,13 +258,13 @@ The nuget package Highs.Native is on https://www.nuget.org, at https://www.nuget
 It can be added to your C# project with `dotnet`
 
 ```shell
-dotnet add package Highs.Native --version 1.14.0
+dotnet add package Highs.Native --version 1.15.0
 ```
 
 The nuget package contains runtime libraries for
 
 * `win-x64`
-* `win-x32`
+* `win-x86`
 * `linux-x64`
 * `linux-arm64`
 * `macos-x64`

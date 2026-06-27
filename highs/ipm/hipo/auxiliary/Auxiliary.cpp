@@ -82,6 +82,77 @@ void transpose(const std::vector<Int>& ptr, const std::vector<Int>& rows,
   }
 }
 
+void permuteSym(const std::vector<Int>& iperm, std::vector<Int>& ptr,
+                std::vector<Int>& rows, std::vector<double>& val, bool lower) {
+  // Symmetric permutation of the lower (upper) triangular matrix M based on
+  // inverse permutation iperm. The resulting matrix is lower (upper)
+  // triangular, regardless of the input matrix.
+
+  const Int n = ptr.size() - 1;
+  std::vector<Int> work(n, 0);
+  const bool use_val = !val.empty();
+
+  // go through the columns to count the nonzeros
+  for (Int j = 0; j < n; ++j) {
+    // get new index of column
+    const Int col = iperm[j];
+
+    // go through elements of column
+    for (Int el = ptr[j]; el < ptr[j + 1]; ++el) {
+      const Int i = rows[el];
+
+      // ignore potential entries in upper(lower) triangular part
+      if ((lower && i < j) || (!lower && i > j)) continue;
+
+      // get new index of row
+      const Int row = iperm[i];
+
+      // if only lower triangular part is used, col is smaller than row
+      Int actual_col = lower ? std::min(row, col) : std::max(row, col);
+      ++work[actual_col];
+    }
+  }
+
+  std::vector<Int> new_ptr(n + 1);
+
+  // get column pointers by summing the count of nonzeros in each column.
+  // copy column pointers into work
+  counts2Ptr(new_ptr, work);
+
+  std::vector<Int> new_rows(new_ptr.back());
+  std::vector<double> new_val;
+  if (use_val) new_val.resize(new_ptr.back());
+
+  // go through the columns to assign row indices
+  for (Int j = 0; j < n; ++j) {
+    // get new index of column
+    const Int col = iperm[j];
+
+    // go through elements of column
+    for (Int el = ptr[j]; el < ptr[j + 1]; ++el) {
+      const Int i = rows[el];
+
+      // ignore potential entries in upper triangular part
+      if ((lower && i < j) || (!lower && i > j)) continue;
+
+      // get new index of row
+      const Int row = iperm[i];
+
+      // if only lower triangular part is used, col is smaller than row
+      const Int actual_col = lower ? std::min(row, col) : std::max(row, col);
+      const Int actual_row = lower ? std::max(row, col) : std::min(row, col);
+
+      Int pos = work[actual_col]++;
+      new_rows[pos] = actual_row;
+      if (use_val) new_val[pos] = val[el];
+    }
+  }
+
+  ptr = std::move(new_ptr);
+  rows = std::move(new_rows);
+  if (use_val) val = std::move(new_val);
+}
+
 void childrenLinkedList(const std::vector<Int>& parent, std::vector<Int>& head,
                         std::vector<Int>& next) {
   // Create linked lists of children in elimination tree.
@@ -277,25 +348,6 @@ double Clock::stop() const {
   auto t1 = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double> d = t1 - t0;
   return d.count();
-}
-
-TaskGroupSpecial::~TaskGroupSpecial() {
-  // Using TaskGroup may throw an exception when tasks are cancelled. Not sure
-  // exactly why this happens, but for now this fix seems to work.
-
-  // No virtual destructor in TaskGroup. Do not call this class via pointer to
-  // the base!
-
-  cancel();
-
-  while (true) {
-    try {
-      taskWait();
-      break;
-    } catch (HighsTask::Interrupt) {
-      continue;
-    }
-  }
 }
 
 }  // namespace hipo

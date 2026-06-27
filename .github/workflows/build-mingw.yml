@@ -45,7 +45,7 @@ jobs:
             ${{ matrix.target-prefix }}-cc
             ${{ matrix.target-prefix }}-ninja
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Configure CMake
         run: |

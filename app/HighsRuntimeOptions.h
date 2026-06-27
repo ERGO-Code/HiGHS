@@ -13,17 +13,21 @@
 #define LP_DATA_HIGHSRUNTIMEOPTIONS_H_
 
 #include <cassert>
+#include <tuple>
 
-#include "../extern/CLI11.hpp"
+#include "../extern/cli11/CLI11.hpp"
 #include "HConfig.h"
+#include "HighsAppExternalDeps.h"
 #include "io/HighsIO.h"
 #include "io/LoadOptions.h"
 #include "util/stringutil.h"
 
 struct HighsCommandLineOptions {
   bool cmd_version = false;
+  bool cmd_notice = false;
   double cmd_time_limit = 0;
   int cmd_random_seed = 0;
+  int cmd_threads = 0;
 
   std::string model_file = "";
   std::string cmd_read_basis_file = "";
@@ -51,43 +55,42 @@ void setupCommandLineOptions(CLI::App& app,
 
   // Command line file specifications.
   app.add_option("--" + kModelFileString + "," + kModelFileString,
-                 cmd_options.model_file, "File of model to solve.")
+                 cmd_options.model_file, "File of model to solve")
       // Can't use required here because it breaks version printing with -v.
       // ->required()
       // ->check(checkSingle)
       ->check(CLI::ExistingFile);
 
   app.add_option("--" + kOptionsFileString, cmd_options.options_file,
-                 "File containing HiGHS options.")
+                 "File containing HiGHS options")
       // ->check(checkSingle)
       ->check(CLI::ExistingFile);
 
   app.add_option("--" + kReadSolutionFileString,
-                 cmd_options.cmd_read_solution_file,
-                 "File of solution to read.")
+                 cmd_options.cmd_read_solution_file, "File of solution to read")
       // ->check(checkSingle)
       ->check(CLI::ExistingFile);
 
   app.add_option("--" + kReadBasisFileString, cmd_options.cmd_read_basis_file,
-                 "File of initial basis to read.")
+                 "File of initial basis to read")
       // ->check(checkSingle)
       ->check(CLI::ExistingFile);
 
   app.add_option("--" + kWriteModelFileString, cmd_options.cmd_write_model_file,
-                 "File for writing out model.");
+                 "File for writing out model");
   // File does not need to exist
   //      ->check(CLI::ExistingFile)
   // ->check(checkSingle);
 
   app.add_option("--" + kWriteSolutionFileString,
                  cmd_options.cmd_write_solution_file,
-                 "File for writing out solution.");
+                 "File for writing out solution");
   // File does not need to exist
   //      ->check(CLI::ExistingFile)
   // ->check(checkSingle);
 
   app.add_option("--" + kWriteBasisFileString, cmd_options.cmd_write_basis_file,
-                 "File for writing out final basis.");
+                 "File for writing out final basis");
   // File does not need to exist
   //      ->check(CLI::ExistingFile)
   // ->check(checkSingle);
@@ -103,9 +106,7 @@ void setupCommandLineOptions(CLI::App& app,
                  "Set solver option to:\n"
                  "\"choose\" * default\n"
                  "\"simplex\"\n"
-#ifdef HIPO
                  "\"hipo\"\n"
-#endif
                  "\"ipm\"");
 
   app.add_option("--" + kParallelString, cmd_options.cmd_parallel,
@@ -114,6 +115,10 @@ void setupCommandLineOptions(CLI::App& app,
                  "\"on\"\n"
                  "\"off\"");
 
+  app.add_option("--" + kThreadsString, cmd_options.cmd_threads,
+                 "Set maximum number of threads to use:\n"
+                 "0: automatic * default");
+
   app.add_option("--" + kRunCrossoverString, cmd_options.cmd_crossover,
                  "Set run_crossover option to:\n"
                  "\"choose\"\n"
@@ -121,19 +126,21 @@ void setupCommandLineOptions(CLI::App& app,
                  "\"off\"");
 
   app.add_option("--" + kTimeLimitString, cmd_options.cmd_time_limit,
-                 "Run time limit (seconds - double).");
+                 "Run time limit (seconds - double)");
 
   app.add_option("--" + kRandomSeedString, cmd_options.cmd_random_seed,
-                 "Seed to initialize random number \ngeneration.");
+                 "Seed to initialize random number\ngeneration");
 
   app.add_option("--" + kRangingString, cmd_options.cmd_ranging,
-                 "Compute cost, bound, RHS and basic \nsolution ranging:\n"
+                 "Compute cost, bound, RHS and basic\nsolution ranging:\n"
                  "\"on\"\n"
                  "\"off\" * default");
 
   // Version.
-  app.add_flag("--version,-v", cmd_options.cmd_version, "Print version.");
-  app.set_help_flag("-h,--help", "Print help.");
+  app.add_flag("--version,-v", cmd_options.cmd_version, "Print version");
+  app.add_flag("--notice", cmd_options.cmd_notice,
+               "Print third-party information");
+  app.set_help_flag("-h,--help", "Print help");
 
   app.get_formatter()->column_width(33);
 
@@ -146,11 +153,19 @@ void setupCommandLineOptions(CLI::App& app,
 
 bool loadOptions(const CLI::App& app, const HighsLogOptions& report_log_options,
                  const HighsCommandLineOptions& c, HighsOptions& options) {
-  if (c.cmd_version) {
+  if (c.cmd_version || c.cmd_notice) {
     std::cout << "HiGHS version " << HIGHS_VERSION_MAJOR << "."
               << HIGHS_VERSION_MINOR << "." << HIGHS_VERSION_PATCH;
     std::cout << " Githash " << HIGHS_GITHASH << ". ";
     std::cout << kHighsCopyrightStatement << std::endl;
+    std::cout << HighsExternalApi::thirdPartyNoticeHeader() << std::endl;
+
+    if (c.cmd_notice) {
+      std::cout << std::endl
+                << HighsExternalApi::getThirdPartyNotice<HighsExtras::appAll>()
+                << std::endl;
+    }
+
     exit(0);
   }
 
@@ -229,6 +244,14 @@ bool loadOptions(const CLI::App& app, const HighsLogOptions& report_log_options,
     if (setLocalOptionValue(report_log_options, kParallelString,
                             options.log_options, options.records,
                             c.cmd_parallel) != OptionStatus::kOk)
+      return false;
+  }
+
+  // Threads option.
+  if (app.count("--" + kThreadsString) > 0) {
+    HighsInt value = c.cmd_threads;
+    if (setLocalOptionValue(report_log_options, kThreadsString, options.records,
+                            value) != OptionStatus::kOk)
       return false;
   }
 

@@ -314,7 +314,7 @@ HighsStatus HEkkPrimal::solve(const bool pass_force_phase2) {
       highsLogDev(options.log_options, HighsLogType::kWarning,
                   "HEkkPrimal:: Dual simplex clean up yields  optimality, but "
                   "with %" HIGHSINT_FORMAT
-                  " (max %g) primal infeasibilities and " HIGHSINT_FORMAT
+                  " (max %g) primal infeasibilities and %" HIGHSINT_FORMAT
                   " (max %g) dual infeasibilities\n",
                   info.num_primal_infeasibilities,
                   info.max_primal_infeasibility, info.num_dual_infeasibilities,
@@ -813,7 +813,7 @@ void HEkkPrimal::iterate() {
         ekk_instance_.iteration_count_ >= from_check_iter &&
         ekk_instance_.iteration_count_ <= to_check_iter;
     if (ekk_instance_.debug_iteration_report_) {
-      printf("HEkkDual::iterate Debug iteration %d\n",
+      printf("HEkkPrimal::iterate Debug iteration %d\n",
              (int)ekk_instance_.iteration_count_);
     }
   }

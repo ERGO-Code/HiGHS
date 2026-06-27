@@ -8,7 +8,7 @@ h = highspy.Highs()
 # Set up problem
 inf = highspy.kHighsInf
 h.addVars(2, np.array([-inf, -inf]), np.array([inf, inf]))
-h.changeColsCost(2, np.array([0, 1]), np.array([0, 1], dtype=np.double));
+h.changeColsCost(2, np.array([0, 1]), np.array([0, 1], dtype=np.double))
 num_cons = 2
 lower = np.array([2, 0], dtype=np.double)
 upper = np.array([inf, inf], dtype=np.double)
