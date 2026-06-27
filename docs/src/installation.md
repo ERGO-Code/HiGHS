@@ -24,7 +24,7 @@ Note, that HiGHS is available via apt on Linux. For simplex, ipx and the MIP and
 
 Precompiled static binaries are available at https://github.com/ERGO-Code/HiGHS/releases.
 
-Additionally, there is one package containing shared libraries for Windows x63.
+Additionally, there is one package containing shared libraries for Windows x64.
 
 The `*-mit` binary packages contain HiGHS and are MIT-licenced.
 The `*-apache` binary packages contain HiGHS with HiPO and are Apache-licenced, due to the licensing of the dependencies of HiPO. For more information, see [THIRD_PARTY_NOTICES.md](https://github.com/ERGO-Code/HiGHS/blob/master/THIRD_PARTY_NOTICES.md).
