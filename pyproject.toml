@@ -108,7 +108,7 @@ addopts = ["-ra", "--showlocals", "--strict-markers", "--strict-config"]
 xfail_strict = true
 log_cli_level = "INFO"
 filterwarnings = ["error"]
-testpaths = ["tests"]
+testpaths = ["highspy/tests"]
 norecursedirs = ["check", ".git", "build", "dist", "*.egg-info"]
 
 [tool.cibuildwheel]
