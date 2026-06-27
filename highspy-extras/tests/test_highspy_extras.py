@@ -7,7 +7,7 @@ import highspy_extras
 class TestHighsPyExtras(unittest.TestCase):
     def test_version(self):
         # Ensure the library version matches the release part of the package version,
-        # e.g., "1.14.0.dev1" -> "1.14.0"
+        # e.g., "1.15.0.dev1" -> "1.15.0"
         package_release = re.match(r"\d+(?:\.\d+)*", highspy_extras.__version__)
         if package_release is None:
             self.fail(f"Could not parse a release version from {highspy_extras.__version__!r}")
