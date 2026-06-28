@@ -20,6 +20,10 @@ struct MatrixBase {
   std::vector<HighsInt> start;
   std::vector<HighsInt> index;
   std::vector<double> value;
+  HighsInt oracle_mu_ = 1.0; // Minimize
+  HessianOracle oracle_;
+
+  bool isOracle() const { return oracle_.call_ != nullptr; }
 
   QpVector& mat_vec(const QpVector& other, QpVector& target) const {
     return mat_vec_seq(other, target);
@@ -27,11 +31,17 @@ struct MatrixBase {
 
   QpVector& mat_vec_seq(const QpVector& other, QpVector& target) const {
     target.reset();
-    for (HighsInt i = 0; i < other.num_nz; i++) {
-      HighsInt col = other.index[i];
-      for (HighsInt idx = start[col]; idx < start[col + 1]; idx++) {
-        HighsInt row = index[idx];
-        target.value[row] += value[idx] * other.value[col];
+    if (isOracle()) {
+      HighsInt dim = oracle_.dim_;
+      oracle_.call_(other.num_nz, other.value.data(), other.index.data(), 
+		    dim, target.value.data(), nullptr, oracle_.data_);
+    } else {
+      for (HighsInt i = 0; i < other.num_nz; i++) {
+	HighsInt col = other.index[i];
+	for (HighsInt idx = start[col]; idx < start[col + 1]; idx++) {
+	  HighsInt row = index[idx];
+	  target.value[row] += value[idx] * other.value[col];
+	}
       }
     }
     target.resparsify();
@@ -198,8 +208,6 @@ struct Matrix {
 
  public:
   MatrixBase mat;
-  HighsInt oracle_mu_ = 1.0; // Minimize
-  HessianOracle oracle_;
 
   Matrix(HighsInt nr, HighsInt nc) {
     mat.num_row = nr;

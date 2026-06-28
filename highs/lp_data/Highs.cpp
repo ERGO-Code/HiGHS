@@ -4221,14 +4221,14 @@ HighsStatus Highs::callSolveQp() {
     instance.var_lo = lp.col_lower_;
     instance.var_up = lp.col_upper_;
     if (hessian.dim_ > 0) {
-      assert(instance.Q.oracle_.call_ == nullptr);
+      assert(instance.Q.mat.oracle_.call_ == nullptr);
       instance.Q.mat.num_col = lp.num_col_;
       instance.Q.mat.num_row = lp.num_col_;
       triangularToSquareHessian(hessian, instance.Q.mat.start,
 				instance.Q.mat.index, instance.Q.mat.value);
     } else {
       assert(hessian.isOracle());
-      instance.Q.oracle_ = hessian.oracle_;
+      instance.Q.mat.oracle_ = hessian.oracle_;
       instance.Q.mat.num_col = 0;
       instance.Q.mat.num_row = 0;
     }
@@ -4250,7 +4250,7 @@ HighsStatus Highs::callSolveQp() {
 	  i *= -1.0;
 	}
       } else {
-	instance.Q.oracle_mu_ = -1;
+	instance.Q.mat.oracle_mu_ = -1;
       }	
     }
 
