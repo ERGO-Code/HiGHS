@@ -560,3 +560,22 @@ TEST_CASE("incomplete-options-file-line", "[highs_options]") {
 
   std::remove(incomplete_options_file.c_str());
 }
+
+TEST_CASE("string-option-case-insensitivity", "[highs_options]") {
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  REQUIRE(highs.setOptionValue("output_flag", "True") == HighsStatus::kOk);
+  REQUIRE(highs.setOptionValue("output_flag", "TRUE ") == HighsStatus::kOk);
+  REQUIRE(highs.setOptionValue("output_flag", "FaLsE") == HighsStatus::kOk);
+  REQUIRE(highs.setOptionValue("output_flag", " false") == HighsStatus::kOk);
+  REQUIRE(highs.setOptionValue(kParallelString, "On") == HighsStatus::kOk);
+  REQUIRE(highs.setOptionValue(kParallelString, "OFF ") == HighsStatus::kOk);
+  REQUIRE(highs.setOptionValue(kSolverString, " Choose") == HighsStatus::kOk);
+  REQUIRE(highs.setOptionValue(kSolverString, "HiPO") == HighsStatus::kOk);
+  REQUIRE(highs.setOptionValue(kHipoOrderingString, "Metis") ==
+          HighsStatus::kOk);
+  REQUIRE(highs.setOptionValue(kHipoParallelString, "Tree") ==
+          HighsStatus::kOk);
+  REQUIRE(highs.setOptionValue(kHipoSystemString, "NormalEQ") ==
+          HighsStatus::kOk);
+}

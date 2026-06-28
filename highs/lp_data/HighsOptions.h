@@ -211,6 +211,8 @@ OptionStatus setLocalOptionValue(const HighsLogOptions& report_log_options,
                                  OptionRecordString& option,
                                  const std::string& value);
 
+void possibleLowerCaseOptionValue(const std::string& name, std::string& value);
+
 OptionStatus passLocalOptions(const HighsLogOptions& report_log_options,
                               const HighsOptions& from_options,
                               HighsOptions& to_options);
@@ -303,6 +305,12 @@ const string kReadSolutionFileString = "read_solution_file";
 
 // String for HiGHS log file option
 const string kLogFileString = "log_file";
+
+// String for other file names
+#ifdef HIGHS_DEBUGSOL
+const string kMipDebugSolutionFileString = "mip_debug_solution_file";
+#endif
+const string kMipImprovingSolutionFileString = "mip_improving_solution_file";
 
 // Strings for HiPO system option
 const string kHipoSystemString = "hipo_system";
@@ -1116,7 +1124,7 @@ class HighsOptions : public HighsOptionsStruct {
 
 #ifdef HIGHS_DEBUGSOL
     record_string = new OptionRecordString(
-        "mip_debug_solution_file",
+        kMipDebugSolutionFileString,
         "Solution file for debug solution of the MIP solver", advanced,
         &mip_debug_solution_file, kHighsFilenameDefault);
     records.push_back(record_string);
@@ -1135,7 +1143,7 @@ class HighsOptions : public HighsOptionsStruct {
     records.push_back(record_bool);
 
     record_string = new OptionRecordString(
-        "mip_improving_solution_file",
+        kMipImprovingSolutionFileString,
         "File for reporting improving MIP solutions: not reported for an empty "
         "string \\\"\\\"",
         advanced, &mip_improving_solution_file, kHighsFilenameDefault);
