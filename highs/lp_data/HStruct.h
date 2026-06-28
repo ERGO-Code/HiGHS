@@ -248,8 +248,8 @@ struct HighsUserScaleData {
 };
 
 using HighsHessianFunctionType =
-  std::function<void(const HighsInt x_value_size, const double* x_value, const HighsInt* x_index,
-		     HighsInt& q_x_value_size, double* q_x_value, const HighsInt* q_x_index,
+  std::function<void(const double* x_value, const HighsInt x_index_size, const HighsInt* x_index,
+		     double* q_x_value, HighsInt& q_x_index_size, HighsInt* q_x_index,
                      void*)>;
 
 struct HessianOracle {
@@ -257,11 +257,13 @@ struct HessianOracle {
   HighsHessianFunctionType call_ = nullptr;
   void* data_ = nullptr;
   void clear();
+  double diag(const HighsInt i) const;
   void product(const std::vector<double>& x_value,
 	       std::vector<double>& q_x_value) const;
-  void product(const HighsInt x_value_size, const double* x_value, const HighsInt* x_index,
-	       HighsInt& q_x_value_size, double* q_x_value, const HighsInt* q_x_index) const;
-  double diag(const HighsInt i) const;
+  void productScattered(const double* x_value, const HighsInt x_index_size, const HighsInt* x_index,
+			double* q_x_value, HighsInt& q_x_index_size, HighsInt* q_x_index) const;
+  void product(const double* x_value, const HighsInt x_index_size, const HighsInt* x_index,
+	       double* q_x_value, HighsInt& q_x_index_size, HighsInt* q_x_index) const;
 };
 
 #endif /* LP_DATA_HSTRUCT_H_ */

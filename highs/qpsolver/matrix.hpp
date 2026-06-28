@@ -32,9 +32,10 @@ struct MatrixBase {
   QpVector& mat_vec_seq(const QpVector& other, QpVector& target) const {
     target.reset();
     if (isOracle()) {
+      // Meed local copy of dim_ since mat_vec_seq is const
       HighsInt dim = oracle_.dim_;
-      oracle_.call_(other.num_nz, other.value.data(), other.index.data(), 
-		    dim, target.value.data(), nullptr, oracle_.data_);
+      oracle_.productScattered(other.value.data(), other.num_nz, other.index.data(), 
+			       target.value.data(), dim, nullptr);
     } else {
       for (HighsInt i = 0; i < other.num_nz; i++) {
 	HighsInt col = other.index[i];

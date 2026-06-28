@@ -382,12 +382,16 @@ void HessianOracle::clear() {
   this->data_ = nullptr;
 }
 
-void HessianOracle::product(const HighsInt x_value_size, const double* x_value, const HighsInt* x_index,
-	       HighsInt& q_x_value_size, double* q_x_value, const HighsInt* q_x_index) const {
+double HessianOracle::diag(const HighsInt i) const {
   assert(this->call_);
-  this->call_(x_value_size, x_value, x_index,
-	      q_x_value_size, q_x_value, q_x_index,
+  double x = 1;
+  double diag;
+  HighsInt diag_size = 1;
+  HighsInt q_x_index = i;
+  this->call_(&x, HighsInt(1), &i, 
+	      &diag, diag_size, &q_x_index, 
 	      this->data_);
+  return diag;
 }
 
 void HessianOracle::product(const std::vector<double>& x_value,
@@ -396,18 +400,36 @@ void HessianOracle::product(const std::vector<double>& x_value,
   HighsInt dim = this->dim_;
   assert(static_cast<size_t>(dim) == x_value.size());
   assert(static_cast<size_t>(dim) == q_x_value.size());
-  this->call_(dim, x_value.data(), nullptr,
-		dim, q_x_value.data(), nullptr,
-		this->data_);
+  this->call_(x_value.data(), dim, nullptr,
+	      q_x_value.data(), dim, nullptr,
+	      this->data_);
 }
 
-double HessianOracle::diag(const HighsInt i) const {
-  assert(this->call_);
-  double x = 1;
-  HighsInt diag_size = 1;
-  double diag;
-  this->call_(HighsInt(1), &x, &i,
-	      diag_size, &diag, &i,
-	      this->data_);
-  return diag;
+// For scattered, sparse, x
+void HessianOracle::productScattered(const double* x_value, const HighsInt x_index_size, const HighsInt* x_index,
+				     double* q_x_value, HighsInt& q_x_index_size, HighsInt* q_x_index) const {
+  // Must have indices
+  assert(x_index_size >= 0);
+  assert(x_index);
+  // Gather the values
+  std::vector<double> x_packed(x_index_size);
+  for (HighsInt iEl = 0; iEl < x_index_size; iEl++) {
+    HighsInt iCol = x_index[iEl];
+    assert(iCol < this->dim_);
+    x_packed[iEl] = x_value[iCol];
+  }
+  this->product(x_packed.data(), x_index_size, x_index,
+		q_x_value, q_x_index_size, q_x_index);
 }
+
+// For full x or packed, sparse, x
+void HessianOracle::product(const double* x_value, const HighsInt x_index_size, const HighsInt* x_index,
+			    double* q_x_value, HighsInt& q_x_index_size, HighsInt* q_x_index) const {
+  assert(this->call_);
+  // Must either have indices or x_value has full dimension
+  assert(x_index || x_index_size == this->dim_);
+  this->call_(x_value, x_index_size, x_index,
+	      q_x_value, q_x_index_size, q_x_index,
+	      this->data_);
+}
+
