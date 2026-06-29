@@ -226,6 +226,7 @@ TEST_NAMES = [
     "TestMipSolver",
     "TestPresolve",
     "TestPresolveRules",
+    "TestQpOracle",
     "TestQpSolver",
     "TestRanging",
     "TestRunData",
