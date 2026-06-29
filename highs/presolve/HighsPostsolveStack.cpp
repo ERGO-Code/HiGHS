@@ -1585,8 +1585,6 @@ void HighsPostsolveStack::undoFourierMotzkinBlock(
   // basis postsolve: use dual solution to determine basis status
   if (!basis.valid) return;
 
-  const bool debug_print = options.log_dev_level > 0;
-
   // Pre-compute lower and upper slacks for each row
   auto computeSlacks =
       [&](HighsInt col, const std::vector<FmeRowHeader>& headers,
@@ -1696,16 +1694,6 @@ void HighsPostsolveStack::undoFourierMotzkinBlock(
     bool colCanBeBasic =
         colMustBeBasic || std::abs(solution.col_dual[col]) <= dual_tol;
 
-    if (debug_print)
-      printf(
-          "FM basis step %d: col=%d val=%.6g lb=%.6g ub=%.6g dual=%.6g "
-          "mustBasic=%d canBasic=%d basicNeeded=%d "
-          "numPlus=%d numMinus=%d numRanged=%d numNewRows=%d numBasicDesc=%d\n",
-          int(s), int(col), solution.col_value[col], step.header.colLower,
-          step.header.colUpper, solution.col_dual[col], int(colMustBeBasic),
-          int(colCanBeBasic), int(basicNeeded), int(numPlus), int(numMinus),
-          int(numRanged), int(numNewRows), int(numBasicDesc));
-
     // Pass 1: assign all must-be-basic (col and rows)
     if (colMustBeBasic) {
       basis.col_status[col] = HighsBasisStatus::kBasic;
@@ -1727,11 +1715,6 @@ void HighsPostsolveStack::undoFourierMotzkinBlock(
       }
     }
 
-    if (debug_print)
-      printf("  after must-be-basic: basicAssigned=%d/%d (col %s)\n",
-             int(basicAssigned), int(basicNeeded),
-             colMustBeBasic ? "BASIC" : "pending");
-
     // Pass 2: assign can-be-basic col (if not already assigned)
     if (!colMustBeBasic) {
       if (colCanBeBasic && basicAssigned < basicNeeded) {
@@ -1744,14 +1727,7 @@ void HighsPostsolveStack::undoFourierMotzkinBlock(
       }
     }
 
-    if (debug_print)
-      printf("  col %d -> %s (basicAssigned=%d)\n", int(col),
-             basis.col_status[col] == HighsBasisStatus::kBasic   ? "BASIC"
-             : basis.col_status[col] == HighsBasisStatus::kLower ? "LOWER"
-                                                                 : "UPPER",
-             int(basicAssigned));
-
-    // Pass 3: assign can-be-basic rows (zero dual, at bound)
+    // Pass 3: assign can-be-basic rows (zero dual)
     for (HighsInt p = 0; p < numPlus; ++p)
       assignRowStatus(step.plusHeaders[p].row, plusLowerSlack[p],
                       plusUpperSlack[p], basicAssigned, basicNeeded);
@@ -1770,10 +1746,6 @@ void HighsPostsolveStack::undoFourierMotzkinBlock(
       forceRowBasic(step.minusHeaders[m].row, minusLowerSlack[m],
                     minusUpperSlack[m], step.minusCoefs[m], basicAssigned);
     }
-
-    if (debug_print && basicAssigned != basicNeeded)
-      printf("FM basis step %d: col=%d basicAssigned=%d != basicNeeded=%d\n",
-             int(s), int(col), int(basicAssigned), int(basicNeeded));
   }
 }
 
