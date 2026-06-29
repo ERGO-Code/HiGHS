@@ -20,7 +20,8 @@ cd $WORKSPACE/srcdir/HiGHS
 # Remove system CMake to use the jll version
 apk del cmake
 
-mkdir -p build
+rm -rf build
+mkdir build
 cd build
 
 # Do fully static build only on Windows
