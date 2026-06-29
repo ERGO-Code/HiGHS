@@ -59,9 +59,6 @@ jobs:
 
       - name: Test
         run: ./bin/highs --solver=hipo $GITHUB_WORKSPACE/check/instances/afiro.mps
-        run: |
-          & ".\Release\bin\highs.exe" --solver=hipo `
-          "$env:GITHUB_WORKSPACE/check/instances/afiro.mps"
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v7
