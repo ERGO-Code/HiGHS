@@ -26,7 +26,7 @@ jobs:
           cd build && cpack
 
       - name: Test
-        run: ./bin/highs --solver=hipo $GITHUB_WORKSPACE/check/instances/afiro.mps
+        run: ./build/bin/highs --solver=hipo $GITHUB_WORKSPACE/check/instances/afiro.mps
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v7
@@ -58,7 +58,7 @@ jobs:
           cd build && cpack
 
       - name: Test
-        run: ./bin/highs --solver=hipo $GITHUB_WORKSPACE/check/instances/afiro.mps
+        run: ./build/bin/highs --solver=hipo $GITHUB_WORKSPACE/check/instances/afiro.mps
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v7
@@ -91,7 +91,7 @@ jobs:
 
       - name: Test
         run: |
-          & ".\Release\bin\highs.exe" --solver=hipo `
+          & ".\build\Release\bin\highs.exe" --solver=hipo `
           "$env:GITHUB_WORKSPACE/check/instances/afiro.mps"
 
       - name: Upload artifacts
@@ -126,7 +126,7 @@ jobs:
 
       - name: Test
         run: |
-          & ".\Release\bin\highs.exe" --solver=hipo `
+          & ".\build\Release\bin\highs.exe" --solver=hipo `
           "$env:GITHUB_WORKSPACE/check/instances/afiro.mps"
 
       - name: Upload artifacts
@@ -152,7 +152,7 @@ jobs:
 
       - name: Test
         run: |
-          & ".\Release\bin\highs.exe" --solver=hipo `
+          & ".\build\Release\bin\highs.exe" --solver=hipo `
           "$env:GITHUB_WORKSPACE/check/instances/afiro.mps"
 
       - name: Upload artifacts
@@ -181,7 +181,7 @@ jobs:
           cd build && cpack
 
       - name: Test
-        run: ./bin/highs --solver=hipo $GITHUB_WORKSPACE/check/instances/afiro.mps
+        run: ./build/bin/highs --solver=hipo $GITHUB_WORKSPACE/check/instances/afiro.mps
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v7
@@ -211,7 +211,7 @@ jobs:
           cd build && cpack
 
       - name: Test
-        run: ./bin/highs $GITHUB_WORKSPACE/check/instances/afiro.mps
+        run: ./build/bin/highs $GITHUB_WORKSPACE/check/instances/afiro.mps
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v7
@@ -242,7 +242,7 @@ jobs:
           cd build && cpack
 
       - name: Test
-        run: ./bin/highs $GITHUB_WORKSPACE/check/instances/afiro.mps
+        run: ./build/bin/highs $GITHUB_WORKSPACE/check/instances/afiro.mps
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v7
@@ -275,7 +275,7 @@ jobs:
 
       - name: Test
         run: |
-          & ".\Release\bin\highs.exe" `
+          & ".\build\Release\bin\highs.exe" `
           "$env:GITHUB_WORKSPACE/check/instances/afiro.mps"
 
       - name: Upload artifacts
@@ -309,7 +309,7 @@ jobs:
 
       - name: Test
         run: |
-          & ".\Release\bin\highs.exe" `
+          & ".\build\Release\bin\highs.exe" `
           "$env:GITHUB_WORKSPACE/check/instances/afiro.mps"
 
       - name: Upload artifacts
@@ -344,7 +344,7 @@ jobs:
 
       - name: Test
         run: |
-          & ".\Release\bin\highs.exe" `
+          & ".\build\Release\bin\highs.exe" `
           "$env:GITHUB_WORKSPACE/check/instances/afiro.mps"
 
       - name: Upload artifacts
@@ -370,7 +370,7 @@ jobs:
 
       - name: Test
         run: |
-          & ".\Release\bin\highs.exe" `
+          & ".\build\Release\bin\highs.exe" `
           "$env:GITHUB_WORKSPACE/check/instances/afiro.mps"
 
       - name: Upload artifacts
@@ -399,7 +399,7 @@ jobs:
           cd build && cpack
 
       - name: Test
-        run: ./bin/highs $GITHUB_WORKSPACE/check/instances/afiro.mps
+        run: ./build/bin/highs $GITHUB_WORKSPACE/check/instances/afiro.mps
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v7
