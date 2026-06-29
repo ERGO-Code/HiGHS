@@ -60,7 +60,7 @@ public:
              const Int* Ap, const Int* Ai, const double* Ax,
              const double* rhs, const char* constr_type, const double offset,
 	     const double* obj, const double* lbuser, const double* ubuser);
-    // Performs Flippo's test for deciding dualization
+    // Performs Filippo's test for deciding dualization
     bool filippoDualizationTest() const;
     // Writes statistics of input data and preprocessing to @info.
     void GetInfo(Info* info) const;

@@ -1,5 +1,5 @@
 project('highs', 'cpp', 'c',
-  version : '1.12.0',
+  version : '1.15.0',
   meson_version: '>= 1.1.0',
   default_options : ['warning_level=1',
                      'cpp_std=c++17',
@@ -162,8 +162,8 @@ endif
 # Include Sources
 _incdirs += include_directories([
   'extern/',
+  'extern/catch',
   'extern/pdqsort/',
-  'extern/filereaderlp/',
 ])
 
 # Optional arguments

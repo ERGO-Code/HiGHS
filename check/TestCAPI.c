@@ -238,6 +238,31 @@ void assertLogical(const char* name, const HighsInt is) {
   }
 }
 
+void createBlendingLp(void* highs) {
+  // Special variant of the blending LP, with redundant constraint so
+  // that LP is reduced by presolve - but not to empty!
+  const double kHighsInf = Highs_getInfinity(highs);
+
+  HighsInt num_col = 2;
+  HighsInt num_row = 3;
+  HighsInt num_nz = 6;
+  HighsInt sense = -1;
+  double col_cost[2] = {8, 10};
+  double col_lower[2] = {0, 0};
+  double col_upper[2] = {kHighsInf, kHighsInf};
+  double row_lower[3] = {-kHighsInf, -kHighsInf, -kHighsInf};
+  double row_upper[3] = {500, 120, 210};
+  HighsInt a_index[6] = {0, 1, 0, 1, 0, 1};
+  double a_value[6] = {0.5, 0.5, 0.3, 0.5, 0.7, 0.5};
+  HighsInt a_start[3] = {0, 2, 4};
+  Highs_addVars(highs, num_col, col_lower, col_upper);
+  Highs_changeColsCostByRange(highs, 0, num_col - 1, col_cost);
+  Highs_addRows(highs, num_row, row_lower, row_upper, num_nz, a_start, a_index,
+                a_value);
+  Highs_changeObjectiveSense(highs, sense);
+}
+
+// Test methods
 void versionApi() {
   if (dev_run) {
     printf("HiGHS version %s\n", Highs_version());
@@ -245,8 +270,6 @@ void versionApi() {
     printf("HiGHS version minor %" HIGHSINT_FORMAT "\n", Highs_versionMinor());
     printf("HiGHS version patch %" HIGHSINT_FORMAT "\n", Highs_versionPatch());
     printf("HiGHS githash: %s\n", Highs_githash());
-    // Compilation date is deprecated.
-    // printf("HiGHS compilation date %s\n", Highs_compilationDate());
   }
 }
 
@@ -465,9 +488,7 @@ void minimalApiQp() {
   HighsInt num_col = 3;
   HighsInt num_row = 1;
   HighsInt num_nz = 2;
-  HighsInt q_num_nz = 4;
   HighsInt a_format = kHighsMatrixFormatColwise;
-  HighsInt q_format = kHighsHessianFormatTriangular;
   HighsInt sense = kHighsObjSenseMinimize;
   double offset = 0;
   double col_cost[3] = {0.0, -1.0, -3.0};
@@ -475,31 +496,56 @@ void minimalApiQp() {
   double col_upper[3] = {inf, inf, inf};
   double row_lower[1] = {-inf};
   double row_upper[1] = {2};
+
   HighsInt a_start[3] = {0, 1, 1};
   HighsInt a_index[2] = {0, 0};
   double a_value[2] = {1.0, 1.0};
+
+  // Start with triangular Hessian, then 
+  HighsInt q_format = kHighsHessianFormatTriangular;
+  HighsInt q_num_nz = 4;
   HighsInt q_start[3] = {0, 2, 3};
   HighsInt q_index[4] = {0, 2, 1, 2};
   double q_value[4] = {2.0, -1.0, 0.2, 2.0};
 
+  double required_x[3] = {0.5, 5.0, 1.5};
+
   double* col_value = (double*)malloc(sizeof(double) * num_col);
+
   HighsInt model_status;
-  HighsInt return_status = Highs_qpCall(
-      num_col, num_row, num_nz, q_num_nz, a_format, q_format, sense, offset,
-      col_cost, col_lower, col_upper, row_lower, row_upper, a_start, a_index,
-      a_value, q_start, q_index, q_value, col_value, NULL, NULL, NULL, NULL,
-      NULL, &model_status);
+  HighsInt return_status =
+    Highs_qpCall(num_col, num_row, num_nz, q_num_nz, a_format, q_format, sense, offset,
+		 col_cost, col_lower, col_upper, row_lower, row_upper, a_start, a_index,
+		 a_value, q_start, q_index, q_value, col_value, NULL, NULL, NULL, NULL,
+		 NULL, &model_status);
   assert(return_status == kHighsStatusOk);
   assertIntValuesEqual("Model status for QP qph", model_status,
-                       kHighsModelStatusOptimal);
-  double required_x[3] = {0.5, 5.0, 1.5};
-  if (dev_run) {
-    for (HighsInt iCol = 0; iCol < num_col; iCol++) {
-      printf("x%d1 = %g\n", (int)iCol, col_value[iCol]);
-      assertDoubleValuesEqual("Solution value for QP qph", col_value[iCol],
-                              required_x[iCol]);
-    }
+		       kHighsModelStatusOptimal);
+  for (HighsInt iCol = 0; iCol < num_col; iCol++) {
+    if (dev_run) printf("x%d1 = %g\n", (int)iCol, col_value[iCol]);
+    assertDoubleValuesEqual("Solution value for QP qph", col_value[iCol],
+			    required_x[iCol]);
   }
+
+  HighsInt square_q_format = kHighsHessianFormatSquare;
+  HighsInt square_q_num_nz = 5;
+  HighsInt square_q_start[3] = {0, 2, 3};
+  HighsInt square_q_index[5] = {0, 2, 1, 0, 2};
+  double   square_q_value[5] = {2.0, -1.0, 0.2, -1.0, 2.0};
+
+  Highs_qpCall(num_col, num_row, num_nz, square_q_num_nz, a_format, square_q_format, sense, offset,
+	       col_cost, col_lower, col_upper, row_lower, row_upper, a_start, a_index,
+	       a_value, square_q_start, square_q_index, square_q_value, col_value, NULL, NULL, NULL, NULL,
+	       NULL, &model_status);
+  assert(return_status == kHighsStatusOk);
+  assertIntValuesEqual("Model status for QP qph", model_status,
+		       kHighsModelStatusOptimal);
+  for (HighsInt iCol = 0; iCol < num_col; iCol++) {
+    if (dev_run) printf("x%d1 = %g\n", (int)iCol, col_value[iCol]);
+    assertDoubleValuesEqual("Solution value for QP qph", col_value[iCol],
+			    required_x[iCol]);
+  }
+
   free(col_value);
 }
 
@@ -530,79 +576,29 @@ void minimalApiIllegalLp() {
   assert(model_status == kHighsModelStatusNotset);
 }
 
-void fullApi() {
+void testNames() {
   void* highs = Highs_create();
 
   if (!dev_run) Highs_setBoolOptionValue(highs, "output_flag", 0);
 
-  HighsInt num_col = 2;
-  HighsInt num_row = 2;
-  HighsInt num_nz = 4;
-  HighsInt a_format = kHighsMatrixFormatRowwise;
-  HighsInt sense = kHighsObjSenseMinimize;
-  double offset = 0;
-  double cc[2] = {1.0, -2.0};
-  double cl[2] = {0.0, 0.0};
-  double cu[2] = {10.0, 10.0};
-  double rl[2] = {0.0, 0.0};
-  double ru[2] = {2.0, 1.0};
-  HighsInt a_start[3] = {0, 2, 4};
-  HighsInt a_index[4] = {0, 1, 0, 1};
-  double a_value[4] = {1.0, 2.0, 1.0, 3.0};
+  createBlendingLp(highs);
 
-  assert(Highs_addCols(highs, 2, cc, cl, cu, 0, NULL, NULL, NULL) == 0);
-  assert(Highs_addRows(highs, 2, rl, ru, 4, a_start, a_index, a_value) == 0);
-
-  assert(Highs_getNumCols(highs) == num_col);
-  assert(Highs_getNumRows(highs) == num_row);
-  assert(Highs_getNumNz(highs) == num_nz);
-  assert(Highs_getHessianNumNz(highs) == 0);
-
-  HighsInt ck_num_col;
-  HighsInt ck_num_row;
-  HighsInt ck_num_nz;
-  HighsInt ck_sense;
-  double ck_offset;
-  double ck_cc[2];
-  double ck_cl[2];
-  double ck_cu[2];
-  double ck_rl[2];
-  double ck_ru[2];
-  HighsInt ck_a_start[3];
-  HighsInt ck_a_index[4];
-  double ck_a_value[4];
   HighsInt return_status;
-  return_status = Highs_getModel(
-      highs, a_format, 0, &ck_num_col, &ck_num_row, &ck_num_nz, NULL, &ck_sense,
-      &ck_offset, ck_cc, ck_cl, ck_cu, ck_rl, ck_ru, ck_a_start, ck_a_index,
-      ck_a_value, NULL, NULL, NULL, NULL);
-  assert(return_status == kHighsStatusOk);
 
-  assert(ck_num_col == num_col);
-  assert(ck_num_row == num_row);
-  assert(ck_num_nz == num_nz);
-  assert(ck_sense == sense);
-  assert(ck_offset == offset);
-  assert(doubleArraysEqual(num_col, ck_cc, cc));
-  assert(doubleArraysEqual(num_col, ck_cl, cl));
-  assert(doubleArraysEqual(num_col, ck_cu, cu));
-  assert(doubleArraysEqual(num_row, ck_rl, rl));
-  assert(doubleArraysEqual(num_row, ck_ru, ru));
-  assert(highsIntArraysEqual(num_col, ck_a_start, a_start));
-  assert(highsIntArraysEqual(num_nz, ck_a_index, a_index));
-  assert(doubleArraysEqual(num_nz, ck_a_value, a_value));
-
-  return_status = Highs_run(highs);
-  assert(return_status == kHighsStatusOk);
+  const HighsInt num_col = 2;
+  const HighsInt num_row = 3;
+  assert(num_col == Highs_getNumCols(highs));
+  assert(num_row == Highs_getNumRows(highs));
 
   char* col_prefix = "Col";
   char* row_prefix = "Row";
   // Check index out of bounds
+
   return_status = Highs_passColName(highs, -1, col_prefix);
   assert(return_status == kHighsStatusError);
-  return_status = Highs_passColName(highs, num_col, col_prefix);
-  assert(return_status == kHighsStatusError);
   return_status = Highs_passRowName(highs, -1, row_prefix);
+  assert(return_status == kHighsStatusError);
+  return_status = Highs_passColName(highs, num_col, col_prefix);
   assert(return_status == kHighsStatusError);
   return_status = Highs_passRowName(highs, num_row, row_prefix);
   assert(return_status == kHighsStatusError);
@@ -613,14 +609,14 @@ void fullApi() {
     assert(return_status == kHighsStatusOk);
   }
   return_status = Highs_writeModel(highs, "");
-  assert(return_status == kHighsStatusError);
+  assert(return_status == kHighsStatusWarning);
+
+  char name[5];  // 3 chars prefix, 1 char iCol, 1 char 0-terminator
 
   // Define all column names to be different
   for (HighsInt iCol = 0; iCol < num_col; iCol++) {
-    char name[5];  // 3 chars prefix, 1 char iCol, 1 char 0-terminator
     sprintf(name, "%s%" HIGHSINT_FORMAT "", col_prefix, iCol);
-    const char* name_p = name;
-    return_status = Highs_passColName(highs, iCol, name_p);
+    return_status = Highs_passColName(highs, iCol, name);
     assert(return_status == kHighsStatusOk);
   }
   return_status = Highs_writeModel(highs, "");
@@ -629,7 +625,6 @@ void fullApi() {
   // Check that the columns can be found by name
   HighsInt ck_iCol;
   for (HighsInt iCol = 0; iCol < num_col; iCol++) {
-    char name[5];
     return_status = Highs_getColName(highs, iCol, name);
     assert(return_status == kHighsStatusOk);
     return_status = Highs_getColByName(highs, name, &ck_iCol);
@@ -645,14 +640,12 @@ void fullApi() {
     assert(return_status == kHighsStatusOk);
   }
   return_status = Highs_writeModel(highs, "");
-  assert(return_status == kHighsStatusError);
+  assert(return_status == kHighsStatusWarning);
 
   // Define all row names to be different
   for (HighsInt iRow = 0; iRow < num_row; iRow++) {
-    char name[5];  // 3 chars prefix, 1 char iCol, 1 char 0-terminator
-    sprintf(name, "%s%" HIGHSINT_FORMAT "", row_prefix, iRow);
-    const char* name_p = name;
-    return_status = Highs_passRowName(highs, iRow, name_p);
+    sprintf(name, "%s%" HIGHSINT_FORMAT, row_prefix, iRow);
+    return_status = Highs_passRowName(highs, iRow, name);
     assert(return_status == kHighsStatusOk);
   }
   return_status = Highs_writeModel(highs, "");
@@ -672,21 +665,52 @@ void fullApi() {
   assert(return_status == kHighsStatusError);
 
   for (HighsInt iCol = 0; iCol < num_col; iCol++) {
-    char name[5];
-    char* name_p = name;
-    return_status = Highs_getColName(highs, iCol, name_p);
+    return_status = Highs_getColName(highs, iCol, name);
     assert(return_status == kHighsStatusOk);
     if (dev_run)
-      printf("Column %" HIGHSINT_FORMAT " has name %s\n", iCol, name_p);
+      printf("Column %" HIGHSINT_FORMAT " has name %s\n", iCol, name);
   }
 
   for (HighsInt iRow = 0; iRow < num_row; iRow++) {
-    char name[5];
-    char* name_p = name;
-    return_status = Highs_getRowName(highs, iRow, name_p);
+    return_status = Highs_getRowName(highs, iRow, name);
     assert(return_status == kHighsStatusOk);
     if (dev_run)
-      printf("Row    %" HIGHSINT_FORMAT " has name %s\n", iRow, name_p);
+      printf("Row    %" HIGHSINT_FORMAT " has name %s\n", iRow, name);
+  }
+
+  // Check extraction of names for the presolved LP, in which the
+  // first row is removed
+  Highs_presolve(highs);
+  if (dev_run) Highs_writePresolvedModel(highs, "");
+
+  HighsInt presolved_num_col = Highs_getPresolvedNumCol(highs);
+  HighsInt presolved_num_row = Highs_getPresolvedNumRow(highs);
+  assert(presolved_num_col == num_col);
+  assert(presolved_num_row == num_row-1);
+
+  char presolved_name[5];
+
+  return_status = Highs_getPresolvedColName(highs, -1, presolved_name);
+  assert(return_status == kHighsStatusError);
+  return_status = Highs_getPresolvedRowName(highs, -1, presolved_name);
+  assert(return_status == kHighsStatusError);
+  return_status = Highs_getPresolvedColName(highs, presolved_num_col, presolved_name);
+  assert(return_status == kHighsStatusError);
+  return_status = Highs_getPresolvedRowName(highs, presolved_num_row, presolved_name);
+  assert(return_status == kHighsStatusError);
+  
+  for (HighsInt iCol = 0; iCol < presolved_num_col; iCol++) {
+    return_status = Highs_getPresolvedColName(highs, iCol, presolved_name);
+    assert(return_status == kHighsStatusOk);
+    if (dev_run)
+      printf("Presolved column %" HIGHSINT_FORMAT " has name %s\n", iCol, presolved_name);
+  }
+
+  for (HighsInt iRow = 0; iRow < presolved_num_row; iRow++) {
+    return_status = Highs_getPresolvedRowName(highs, iRow, presolved_name);
+    assert(return_status == kHighsStatusOk);
+    if (dev_run)
+      printf("Presolved row    %" HIGHSINT_FORMAT " has name %s\n", iRow, presolved_name);
   }
 
   Highs_destroy(highs);
@@ -1512,23 +1536,33 @@ void testPassHessian() {
   HighsInt index[1] = {0};
   double value[1] = {-2.0};
   HighsInt return_status;
-  return_status = Highs_passHessian(highs, 1, 1, 1, start, index, value);
-  assertIntValuesEqual("Return of passHessian", return_status, kHighsStatusOk);
-  Highs_run(highs);
-  // Solving max -x^2 + 2x
+
   const double optimal_objective_value = 1;
   const double primal = 1;
   const double dual = 0;
-  assertIntValuesEqual("Status", Highs_getModelStatus(highs),
-                       kHighsModelStatusOptimal);  // kOptimal
   double col_value[1] = {-123.0};
   double col_dual[1] = {0.0};
-  Highs_getSolution(highs, col_value, col_dual, NULL, NULL);
-  double objective_value = Highs_getObjectiveValue(highs);
-  assertDoubleValuesEqual("Objective", objective_value,
-                          optimal_objective_value);
-  assertDoubleValuesEqual("Primal", col_value[0], primal);
-  assertDoubleValuesEqual("Dual", col_dual[0], dual);
+
+  for (HighsInt k = 0; k < 2; k++) {
+    HighsInt q_format = -1;
+    if (k == 0) {
+      q_format = kHighsHessianFormatTriangular;
+    } else {
+      q_format = kHighsHessianFormatSquare;
+    }
+    return_status = Highs_passHessian(highs, 1, 1, q_format, start, index, value);
+    assertIntValuesEqual("Return of passHessian", return_status, kHighsStatusOk);
+    Highs_run(highs);
+    // Solving max -x^2 + 2x
+    assertIntValuesEqual("Status", Highs_getModelStatus(highs),
+			 kHighsModelStatusOptimal);  // kOptimal
+    Highs_getSolution(highs, col_value, col_dual, NULL, NULL);
+    double objective_value = Highs_getObjectiveValue(highs);
+    assertDoubleValuesEqual("Objective", objective_value,
+			    optimal_objective_value);
+    assertDoubleValuesEqual("Primal", col_value[0], primal);
+    assertDoubleValuesEqual("Dual", col_dual[0], dual);
+  }
 
   Highs_destroy(highs);
 }
@@ -1799,18 +1833,25 @@ void testGetModel() {
   Highs_addRows(highs, num_row, row_lower, row_upper, num_nz, a_start, a_index,
                 a_value);
   Highs_changeObjectiveSense(highs, sense);
-  Highs_run(highs);
+
+  assert(Highs_getNumCols(highs) == num_col);
+  assert(Highs_getNumRows(highs) == num_row);
+  assert(Highs_getNumNz(highs) == num_nz);
+  assert(Highs_getHessianNumNz(highs) == 0);
 
   HighsInt ck_num_col;
   HighsInt ck_num_row;
   HighsInt ck_num_nz;
   HighsInt ck_sense;
   double ck_offset;
+  HighsInt a_format = kHighsMatrixFormatRowwise;
 
   // Get the model dimensions by passing array pointers as NULL
-  Highs_getLp(highs, kHighsMatrixFormatRowwise, &ck_num_col, &ck_num_row,
+  HighsInt return_status;
+  return_status = Highs_getLp(highs, a_format, &ck_num_col, &ck_num_row,
               &ck_num_nz, &ck_sense, &ck_offset, NULL, NULL, NULL, NULL, NULL,
               NULL, NULL, NULL, NULL);
+  assert(return_status == kHighsStatusOk);
 
   assert(ck_num_col == num_col);
   assert(ck_num_row == num_row);
@@ -1829,11 +1870,32 @@ void testGetModel() {
   double* ck_a_value = (double*)malloc(sizeof(double) * num_nz);
 
   // Get the arrays
-  Highs_getLp(highs, kHighsMatrixFormatRowwise, &ck_num_col, &ck_num_row,
+  return_status = Highs_getLp(highs, a_format, &ck_num_col, &ck_num_row,
               &ck_num_nz, &ck_sense, &ck_offset, ck_col_cost, ck_col_lower,
               ck_col_upper, ck_row_lower, ck_row_upper, ck_a_start, ck_a_index,
               ck_a_value, NULL);
+  assert(return_status == kHighsStatusOk);
 
+  assert(doubleArraysEqual(num_col, ck_col_cost, col_cost));
+  assert(doubleArraysEqual(num_col, ck_col_lower, col_lower));
+  assert(doubleArraysEqual(num_col, ck_col_upper, col_upper));
+  assert(doubleArraysEqual(num_row, ck_row_lower, row_lower));
+  assert(doubleArraysEqual(num_row, ck_row_upper, row_upper));
+  assert(highsIntArraysEqual(num_col, ck_a_start, a_start));
+  assert(highsIntArraysEqual(num_nz, ck_a_index, a_index));
+  assert(doubleArraysEqual(num_nz, ck_a_value, a_value));
+
+  return_status = Highs_getModel(
+      highs, a_format, 0, &ck_num_col, &ck_num_row, &ck_num_nz, NULL, &ck_sense,
+      &ck_offset, ck_col_cost, ck_col_lower,
+      ck_col_upper, ck_row_lower, ck_row_upper, ck_a_start, ck_a_index,
+      ck_a_value, NULL, NULL, NULL, NULL);
+  assert(return_status == kHighsStatusOk);
+
+  assert(ck_num_col == num_col);
+  assert(ck_num_row == num_row);
+  assert(ck_num_nz == num_nz);
+  assert(ck_sense == sense);
   assert(doubleArraysEqual(num_col, ck_col_cost, col_cost));
   assert(doubleArraysEqual(num_col, ck_col_lower, col_lower));
   assert(doubleArraysEqual(num_col, ck_col_upper, col_upper));
@@ -2458,7 +2520,6 @@ int main() {
   minimalApiIllegalLp();
   testCallback();
   versionApi();
-  fullApi();
   minimalApiLp();
   minimalApiMip();
   minimalApiQp();
@@ -2472,6 +2533,7 @@ int main() {
   testPassHessian();
   testRanging();
   testFeasibilityRelaxation();
+  testNames();
   testGetModel();
   testMultiObjective();
   testQpIndefiniteFailure();

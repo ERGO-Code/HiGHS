@@ -122,11 +122,19 @@ class HighsImplications {
 
   bool tooManyVarBounds() const { return numVarBounds >= maxVarBounds; }
 
+  void strengthenVarBound(VarBound& vbnd, HighsInt multiplier) const;
+
   void addVUB(HighsInt col, HighsInt vubcol, double vubcoef,
               double vubconstant);
 
+  void addVUB(HighsInt col, HighsInt vubcol, double vubcoef, double vubconstant,
+              double colupperbound, bool colisinteger);
+
   void addVLB(HighsInt col, HighsInt vlbcol, double vlbcoef,
               double vlbconstant);
+
+  void addVLB(HighsInt col, HighsInt vlbcol, double vlbcoef, double vlbconstant,
+              double collowerbound, bool colisinteger);
 
   void columnTransformed(HighsInt col, double scale, double constant) {
     // Update variable bounds affected by transformation
@@ -153,11 +161,13 @@ class HighsImplications {
 
   std::pair<HighsInt, VarBound> getBestVub(HighsInt col,
                                            const HighsSolution& lpSolution,
-                                           double& bestUb) const;
+                                           double& bestUb,
+                                           const HighsDomain& globaldom) const;
 
   std::pair<HighsInt, VarBound> getBestVlb(HighsInt col,
                                            const HighsSolution& lpSolution,
-                                           double& bestLb) const;
+                                           double& bestLb,
+                                           const HighsDomain& globaldom) const;
 
   bool runProbing(HighsInt col, HighsInt& numReductions);
 
@@ -168,7 +178,8 @@ class HighsImplications {
 
   void separateImpliedBounds(const HighsLpRelaxation& lpRelaxation,
                              const std::vector<double>& sol,
-                             HighsCutPool& cutpool, double feastol);
+                             HighsCutPool& cutpool, double feastol,
+                             HighsDomain& globaldom, bool thread_safe);
 
   void cleanupVarbounds(HighsInt col);
 
@@ -179,6 +190,8 @@ class HighsImplications {
   void cleanupVub(HighsInt col, HighsInt vubCol,
                   HighsImplications::VarBound& vub, double ub, bool& redundant,
                   bool& infeasible, bool allowBoundChanges = true) const;
+
+  void applyImplications(HighsDomain& domain, HighsInt col, HighsInt val);
 };
 
 #endif

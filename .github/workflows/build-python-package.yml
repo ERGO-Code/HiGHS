@@ -10,12 +10,12 @@ jobs:
   build_sdist:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: seanmiddleditch/gha-setup-ninja@master
+      - uses: actions/checkout@v6
+      # - uses: seanmiddleditch/gha-setup-ninja@master
 
       - name: Build sdist
         run: |
-          python3 -m pip install build 
+          python3 -m pip install build
           python3 -m build --sdist
 
       - name: Install sdist
@@ -26,12 +26,12 @@ jobs:
       - name: Test highspy
         run: |
           python3 -m pip install pytest
-          python3 -m pytest $GITHUB_WORKSPACE
-          
+          python3 -m pytest ./highspy
+
   build_sdist_mac:
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Build sdist
         run: |
@@ -46,15 +46,15 @@ jobs:
       - name: Test highspy
         run: |
           python3 -m pip install pytest --break-system-packages
-          python3 -m pytest $GITHUB_WORKSPACE
+          python3 -m pytest ./highspy
 
   build_sdist_win:
     runs-on: windows-2022
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Install correct python version
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: 3.9
 
@@ -72,18 +72,19 @@ jobs:
       - name: Test highspy
         run: |
           python -m pip install pytest
-          python -m pytest 
-             
+          python -m pytest ./highspy
+
   build_wheel_linux:
     runs-on: ubuntu-24.04
     strategy:
         matrix:
-          python: [3.11]
+          python: [3.14]
+
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Install correct python version
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python }}
 
@@ -91,17 +92,16 @@ jobs:
         run: |
           python3 --version
           python3 -m pip install cibuildwheel
-          python3 -m cibuildwheel --only cp311-manylinux_x86_64 $GITHUB_WORKSPACE
+          python3 -m cibuildwheel --only cp314-manylinux_x86_64
 
       - name: Install wheel
         run: |
-          ls wheelhouse
           python3 -m pip install wheelhouse/*.whl
 
       - name: Test highspy
         run: |
           python3 -m pip install pytest
-          python3 -m pytest $GITHUB_WORKSPACE
+          python3 -m pytest ./highspy
 
   build_wheel_linux_arm:
     runs-on: ubuntu-24.04-arm
@@ -109,10 +109,10 @@ jobs:
         matrix:
           python: [3.11]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Install python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python }}
 
@@ -120,39 +120,37 @@ jobs:
         run: |
           python3 --version
           python3 -m pip install cibuildwheel
-          python3 -m cibuildwheel --only cp311-manylinux_aarch64 $GITHUB_WORKSPACE
+          python3 -m cibuildwheel --only cp311-manylinux_aarch64
 
       - name: Install wheel
         run: |
-          ls wheelhouse
           python3 -m pip install wheelhouse/*.whl
 
       - name: Test highspy
         run: |
           python3 -m pip install pytest
-          python3 -m pytest $GITHUB_WORKSPACE
+          python3 -m pytest ./highspy
 
   build_wheel_macos_intel:
     runs-on: macos-15-intel
     strategy:
       matrix:
-        python: [3.11]    
+        python: [3.11]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Install correct python version
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python }}
 
       - name: Build wheel
         run: |
           python3 -m pip install cibuildwheel
-          python3 -m cibuildwheel --only cp311-macosx_x86_64 $GITHUB_WORKSPACE
+          python3 -m cibuildwheel --only cp311-macosx_x86_64
 
       - name: Install wheel
         run: |
-          ls wheelhouse
           python3 --version
           python3 -m pip install wheelhouse/*.whl
           python3 -c "import highspy; print(dir(highspy))"
@@ -160,29 +158,28 @@ jobs:
       - name: Test highspy
         run: |
           python3 -m pip install pytest
-          python3 -m pytest $GITHUB_WORKSPACE
-            
+          python3 -m pytest ./highspy
+
   build_wheel_macos_arm:
     runs-on: macos-14  # macos-14 is arm64
     strategy:
       matrix:
-        python: [3.11]    
+        python: [3.11]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Install correct python version
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python }}
 
       - name: Build wheel
         run: |
           python3 -m pip install cibuildwheel
-          python3 -m cibuildwheel --only cp311-macosx_arm64 $GITHUB_WORKSPACE
+          python3 -m cibuildwheel --only cp311-macosx_arm64
 
       - name: Install wheel
         run: |
-          ls wheelhouse
           python3 --version
           python3 -m pip install wheelhouse/*.whl
           python3 -c "import highspy; print(dir(highspy))"
@@ -190,22 +187,22 @@ jobs:
       - name: Test highspy
         run: |
           python3 -m pip install pytest
-          python3 -m pytest $GITHUB_WORKSPACE
+          python3 -m pytest ./highspy
 
   build_wheel_windows:
     runs-on: windows-2022
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Install correct python version
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
-          python-version: 3.9
+          python-version: 3.14
 
       - name: Build wheel
         run: |
           python -m pip install cibuildwheel
-          python -m cibuildwheel --only cp39-win_amd64 $GITHUB_WORKSPACE
+          python -m cibuildwheel --only cp314-win_amd64
 
       - name: Install wheel
         run: |
@@ -217,22 +214,22 @@ jobs:
       - name: Test highspy
         run: |
           python -m pip install pytest
-          python -m pytest 
-          
+          python -m pytest ./highspy
+
   build_wheel_windows_313:
     runs-on: windows-2022
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Install correct python version
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: 3.13
 
       - name: Build wheel
         run: |
           python -m pip install cibuildwheel
-          python -m cibuildwheel --only cp313-win_amd64 $GITHUB_WORKSPACE
+          python -m cibuildwheel --only cp313-win_amd64
 
       - name: Install wheel
         run: |
@@ -244,5 +241,4 @@ jobs:
       - name: Test highspy
         run: |
           python -m pip install pytest
-          python -m pytest 
-          
+          python -m pytest ./highspy

@@ -139,6 +139,9 @@ class HEkk {
   void initialisePartitionedRowwiseMatrix();
   bool lpFactorRowCompatible() const;
   bool lpFactorRowCompatible(const HighsInt expectedNumRow) const;
+  std::string simplexStrategyToString(const HighsInt simplex_strategy) const;
+
+  void zeroBasicDuals();
 
   // Interface methods
   void appendColsToVectors(const HighsInt num_new_col,
@@ -406,7 +409,7 @@ class HEkk {
   HighsDebugStatus debugSimplexDualInfeasible(const std::string message,
                                               const bool force_report = false);
   HighsDebugStatus debugComputeDual(const bool initialise = false) const;
-
+  bool debugNoShiftsOrPerturbations() const;
   friend class HEkkPrimal;
   friend class HEkkDual;
   friend class HEkkDualRow;

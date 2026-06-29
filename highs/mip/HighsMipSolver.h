@@ -11,7 +11,7 @@
 #include "Highs.h"
 #include "lp_data/HighsCallback.h"
 #include "lp_data/HighsOptions.h"
-#include "mip/HighsMipAnalysis.h"
+#include "parallel/HighsParallel.h"
 
 struct HighsMipSolverData;
 class HighsCutPool;
@@ -67,8 +67,6 @@ class HighsMipSolver {
 
   std::unique_ptr<HighsMipSolverData> mipdata_;
 
-  HighsMipAnalysis analysis_;
-
   HighsModelStatus termination_status_;
   HighsTerminator terminator_;
 
@@ -100,11 +98,29 @@ class HighsMipSolver {
     return model_->integrality_[col];
   }
 
+  bool isColIntegral(const HighsInt col) const {
+    return variableType(col) != HighsVarType::kContinuous;
+  }
+
+  bool isColInteger(const HighsInt col) const {
+    return variableType(col) == HighsVarType::kInteger;
+  }
+
+  bool isColContinuous(const HighsInt col) const {
+    return variableType(col) == HighsVarType::kContinuous;
+  }
+
   HighsMipSolver(HighsCallback& callback, const HighsOptions& options,
                  const HighsLp& lp, const HighsSolution& solution,
                  bool submip = false, HighsInt submip_level = 0);
 
   ~HighsMipSolver();
+
+  template <class F>
+  void runTask(F&& f, highs::parallel::TaskGroup& tg, bool parallel_lock,
+               bool force_serial,
+               const std::vector<HighsInt>& indices = std::vector<HighsInt>(1,
+                                                                            0));
 
   void setModel(const HighsLp& model) {
     model_ = &model;
@@ -112,9 +128,10 @@ class HighsMipSolver {
   }
 
   mutable HighsTimer timer_;
-  mutable HighsSubSolverCallTime sub_solver_call_time_;
+  HighsProfiling* profiling_ = nullptr;
 
   void cleanupSolve();
+  void solvingReport(const std::string& solutionstatus) const;
 
   void runMipPresolve(const HighsInt presolve_reduction_limit);
   const HighsLp& getPresolvedModel() const;
@@ -138,6 +155,16 @@ class HighsMipSolver {
   }
   HighsModelStatus terminationStatus() const {
     return this->termination_status_;
+  }
+  void setParallelLock(bool lock) const;
+  void setProfiling(HighsProfiling* profiling);
+  HighsInt getMaxNumWorkers() const {
+    if (highs::parallel::num_threads() == 1 ||
+        options_mip_->parallel != kHighsOnString || submip) {
+      return 1;
+    }
+    return static_cast<HighsInt>(
+        std::ceil(1.7 * highs::parallel::num_threads()));
   }
 };
 

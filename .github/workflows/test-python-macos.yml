@@ -2,27 +2,62 @@ name: test-python-macos
 
 on: [push, pull_request]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         os: [macos-latest]
-        python: [3.11]
+        python: [3.14]
+
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Install correct python version
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python }}
 
-      - name: Install build dependencies
-        run: python3 -m pip install numpy setuptools wheel pytest 
-  
+      - name: Install pytest
+        run: python3 -m pip install pytest
+
       - name: Test Python Interface
         run: |
           python3 -m pip install .
-          pytest -v 
+          pytest -v ./highspy
+
+      - name: Test Python Examples
+        run: |
+         python3 ./examples/call_highs_from_python_highspy.py
+         python3 ./examples/call_highs_from_python_mps.py
+         python3 ./examples/call_highs_from_python.py
+         python3 ./examples/minimal.py
+
+  build_hipo:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [macos-latest]
+        python: [3.12]
+    steps:
+      - uses: actions/checkout@v6
+      - name: Install correct python version
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python }}
+
+      - name: Install test dependencies
+        run: python3 -m pip install pytest
+
+      - name: Test Python Interface
+        run: |
+          python3 -m pip install -v ./highspy-extras
+          python3 -m pip install .
+          pytest -v ./highspy
+          pytest check/test_highspy_hipo.py
 
       - name: Test Python Examples
         run: |

@@ -49,9 +49,7 @@ struct HighsPrimalDualErrors {
   double max_off_bound_nonbasic;
   double sum_off_bound_nonbasic;
   HighsInt glpsol_num_primal_residual_errors;
-  double glpsol_sum_primal_residual_errors;
   HighsInt glpsol_num_dual_residual_errors;
-  double glpsol_sum_dual_residual_errors;
   HighsError glpsol_max_primal_residual;
   HighsError glpsol_max_primal_infeasibility;
   HighsError glpsol_max_dual_residual;
@@ -78,6 +76,7 @@ void getLpKktFailures(const HighsOptions& options, const HighsLp& lp,
                       HighsPrimalDualErrors& primal_dual_errors,
                       const bool get_residuals = false);
 
+// Inner getKktFailures
 void getKktFailures(const HighsOptions& options, const bool is_qp,
                     const HighsLp& lp, const std::vector<double>& gradient,
                     const HighsSolution& solution, HighsInfo& highs_info,
@@ -85,12 +84,23 @@ void getKktFailures(const HighsOptions& options, const bool is_qp,
 
 void getVariableKktFailures(const double primal_feasibility_tolerance,
                             const double dual_feasibility_tolerance,
+                            const double mip_feasibility_tolerance,
                             const double lower, const double upper,
                             const double value, const double dual,
                             const HighsVarType integrality,
                             double& primal_infeasibility,
-                            double& dual_infeasibility, uint8_t& at_status,
-                            uint8_t& mid_status);
+                            double& dual_infeasibility,
+                            double& semi_infeasibility, uint8_t& at_status,
+                            uint8_t& mid_status, const HighsInt index = 0);
+
+void lpNoBasisKktCheck(HighsModelStatus& model_status, HighsInfo& info,
+                       const HighsLp& lp, const HighsSolution& solution,
+                       const HighsOptions& options, const std::string& message);
+
+void lpKktCheck(HighsModelStatus& model_status, HighsInfo& info,
+                const HighsLp& lp, const HighsSolution& solution,
+                const HighsBasis& basis, const HighsOptions& options,
+                const std::string& message);
 
 void getPrimalDualGlpsolErrors(const HighsOptions& options, const HighsLp& lp,
                                const std::vector<double>& gradient,

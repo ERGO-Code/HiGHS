@@ -7,13 +7,13 @@ The nuget package Highs.Native is on https://www.nuget.org, at https://www.nuget
 It can be added to your C# project with `dotnet`
 
 ```shell
-dotnet add package Highs.Native --version 1.12.0
+dotnet add package Highs.Native --version 1.15.0
 ```
 
 The nuget package contains runtime libraries for
 
 * `win-x64`
-* `win-x32`
+* `win-x86`
 * `linux-x64`
 * `linux-arm64`
 * `macos-x64`
@@ -34,3 +34,5 @@ dotnet pack -c Release /p:Version=$version
 ```
 
 At the moment version is set manually.
+
+Many thanks to Markus-Ludwig Wermer and the team at MENTZ GmbH for the NuGet packaging support!

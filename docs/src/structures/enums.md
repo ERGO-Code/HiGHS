@@ -46,7 +46,7 @@ This defines the feasible values of a variable within a model:
 This defines the format of a [HighsHessian](@ref):
 
  * `kTriangular`: The lower triangular component of the Hessian is stored column-wise or, equivalently, the upper triangular component is stored row-wise 
- * `kSquare`: The whole Hessian ``Q`` is stored column-wise. This is for input only: internally the lower triangular component of ``(Q+Q^T)/2`` will be stored
+ * `kSquare`: The whole Hessian ``Q`` is stored column-wise. This is for input only: internally the Hessian is stored in `kTriangular` format
 
 ## SolutionStatus
 

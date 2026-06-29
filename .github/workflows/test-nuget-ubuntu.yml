@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     container: stabletec/build-core:debian-11
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Build HiGHS
         run: |
          cmake -E make_directory /__w/HiGHS/HiGHS/build
@@ -26,13 +26,13 @@ jobs:
         working-directory: /__w/HiGHS/HiGHS/build
         run: cmake --build . --config Release --parallel
 
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/setup-dotnet@v5
         with:
           dotnet-version: '6.0.x'
 
       - name: Dotnet pack
         working-directory: /__w/HiGHS/HiGHS/build/dotnet/Highs.Native
-        run: dotnet pack -c Release /p:Version=1.12.0
+        run: dotnet pack -c Release /p:Version=1.15.0
 
       - name: Add local feed
         run: dotnet nuget add source /__w/HiGHS/HiGHS/nugets
@@ -55,7 +55,7 @@ jobs:
     runs-on: ubuntu-latest
     container: stabletec/build-core:debian-11
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Build HiGHS
         run: |
          cmake -E make_directory /__w/HiGHS/HiGHS/build
@@ -70,13 +70,13 @@ jobs:
         working-directory: /__w/HiGHS/HiGHS/build
         run: cmake --build . --config Release --parallel
 
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/setup-dotnet@v5
         with:
           dotnet-version: '8.0.x'
 
       - name: Dotnet pack
         working-directory: /__w/HiGHS/HiGHS/build/dotnet/Highs.Native
-        run: dotnet pack -c Release /p:Version=1.12.0
+        run: dotnet pack -c Release /p:Version=1.15.0
 
       - name: Add local feed
         run: dotnet nuget add source /__w/HiGHS/HiGHS/nugets

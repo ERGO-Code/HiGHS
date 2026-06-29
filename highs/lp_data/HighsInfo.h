@@ -110,6 +110,9 @@ struct HighsInfoStruct {
   HighsInt num_dual_infeasibilities;
   double max_dual_infeasibility;
   double sum_dual_infeasibilities;
+  HighsInt num_semi_infeasibilities;
+  double max_semi_infeasibility;
+  double sum_semi_infeasibilities;
   HighsInt num_relative_primal_infeasibilities;
   double max_relative_primal_infeasibility;
   HighsInt num_relative_dual_infeasibilities;
@@ -166,6 +169,8 @@ class HighsInfo : public HighsInfoStruct {
   void invalidateKkt();
   void invalidatePrimalKkt();
   void invalidateDualKkt();
+
+  bool equal(const HighsInfo& info_) const;
 
  private:
   void deleteRecords() {
@@ -261,6 +266,21 @@ class HighsInfo : public HighsInfoStruct {
     record_double = new InfoRecordDouble(
         "sum_primal_infeasibilities", "Sum of primal infeasibilities", advanced,
         &sum_primal_infeasibilities, 0);
+    records.push_back(record_double);
+
+    record_int = new InfoRecordInt("num_semi_infeasibilities",
+                                   "Number of semi infeasibilities", advanced,
+                                   &num_semi_infeasibilities, -1);
+    records.push_back(record_int);
+
+    record_double = new InfoRecordDouble("max_semi_infeasibility",
+                                         "Maximum semi infeasibility", advanced,
+                                         &max_semi_infeasibility, 0);
+    records.push_back(record_double);
+
+    record_double = new InfoRecordDouble(
+        "sum_semi_infeasibilities", "Sum of semi infeasibilities", advanced,
+        &sum_semi_infeasibilities, 0);
     records.push_back(record_double);
 
     record_int = new InfoRecordInt("num_dual_infeasibilities",

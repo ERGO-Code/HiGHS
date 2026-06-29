@@ -1,4 +1,5 @@
 #include <cstdio>
+#include <fstream>
 
 #include "HCheckConfig.h"
 #include "Highs.h"
@@ -7,6 +8,16 @@
 #include "io/LoadOptions.h"
 
 const bool dev_run = false;
+
+TEST_CASE("definitions-md", "[highs_options]") {
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  // Use this name so that it can be copied to docs and provides code
+  // coverage
+  const std::string definitions_file = "definitions.md";
+  REQUIRE(h.writeOptions(definitions_file) == HighsStatus::kOk);
+  std::remove(definitions_file.c_str());
+}
 
 TEST_CASE("external-options", "[highs_options]") {
   Highs highs;
@@ -531,4 +542,21 @@ TEST_CASE("default-options", "[highs_options]") {
   REQUIRE(h.passOptions(options) == HighsStatus::kError);
   options.solver = kSimplexString;
   REQUIRE(h.passOptions(options) == HighsStatus::kOk);
+}
+
+TEST_CASE("incomplete-options-file-line", "[highs_options]") {
+  const std::string test_name = Catch::getResultCapture().getCurrentTestName();
+  const std::string incomplete_options_file = test_name + ".set";
+  std::ofstream f;
+  f.open(incomplete_options_file, std::ios::out);
+  f << "presolve = off\n";
+  f << " \n";
+  f.close();
+
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+
+  REQUIRE(h.readOptions(incomplete_options_file) == HighsStatus::kOk);
+
+  std::remove(incomplete_options_file.c_str());
 }

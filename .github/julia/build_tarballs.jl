@@ -33,9 +33,8 @@ cmake -DCMAKE_INSTALL_PREFIX=${prefix} \
     -DCMAKE_BUILD_TYPE=Release \
     -DBUILD_SHARED_LIBS=${BUILD_SHARED} \
     -DZLIB_USE_STATIC_LIBS=${BUILD_STATIC} \
-    -DHIPO=ON \
+    -DHIPO=ON -DBUILD_SHARED_EXTRAS_LIB=OFF \
     -DBLAS_LIBRARIES="${libdir}/libopenblas.${dlext}" \
-    -DMETIS_ROOT=${prefix} \
     ..
 
 if [[ "${target}" == *-linux-* ]]; then
@@ -63,7 +62,6 @@ platforms = expand_cxxstring_abis(platforms)
 dependencies = [
     Dependency("CompilerSupportLibraries_jll"),
     Dependency("Zlib_jll"),
-    Dependency("METIS_jll"),
     Dependency("OpenBLAS32_jll"),
     HostBuildDependency(PackageSpec(; name="CMake_jll")),
 ]
@@ -77,6 +75,6 @@ build_tarballs(
     platforms,
     products,
     dependencies;
-    preferred_gcc_version = v"6",
+    preferred_gcc_version = v"11",
     julia_compat = "1.6",
 )

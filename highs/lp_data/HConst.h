@@ -18,7 +18,7 @@
 #include "util/HighsInt.h"
 
 const std::string kHighsCopyrightStatement =
-    "Copyright (c) 2025 HiGHS under MIT licence terms";
+    "Copyright (c) 2026 under MIT licence terms";
 
 const size_t kHighsSize_tInf = (std::numeric_limits<size_t>::max)();
 const HighsInt kHighsIInf = (std::numeric_limits<HighsInt>::max)();
@@ -88,12 +88,14 @@ enum HighsAnalysisLevel {
   kHighsAnalysisLevelNlaTime = 32,
   kHighsAnalysisLevelMipData = 64,
   kHighsAnalysisLevelMipTime = 128,
+  kHighsAnalysisLevelPresolveTime = 256,
   kHighsAnalysisLevelMin = kHighsAnalysisLevelNone,
   kHighsAnalysisLevelMax =
       kHighsAnalysisLevelModelData + kHighsAnalysisLevelSolverSummaryData +
       kHighsAnalysisLevelSolverRuntimeData + kHighsAnalysisLevelSolverTime +
       kHighsAnalysisLevelNlaData + kHighsAnalysisLevelNlaTime +
-      kHighsAnalysisLevelMipData + kHighsAnalysisLevelMipTime
+      kHighsAnalysisLevelMipData + kHighsAnalysisLevelMipTime +
+      kHighsAnalysisLevelPresolveTime
 };
 
 enum class HighsVarType : uint8_t {
@@ -107,6 +109,8 @@ enum class HighsVarType : uint8_t {
 enum class HighsOptionType { kBool = 0, kInt, kDouble, kString };
 
 enum class HighsInfoType { kInt64 = -1, kInt = 1, kDouble };
+
+enum class HighsRunDataType { kInt64 = -1, kInt = 1, kDouble };
 
 enum OptionOffChooseOn {
   kHighsOptionOff = -1,
@@ -274,7 +278,11 @@ enum PresolveRuleType : int {
   kPresolveRuleParallelRowsAndCols,
   kPresolveRuleSparsify,
   kPresolveRuleProbing,
-  kPresolveRuleMax = kPresolveRuleProbing,
+  kPresolveRuleEnumeration,
+  kPresolveRuleDualFixing,
+  kPresolveRuleColStuffing,
+  kPresolveRuleInitialSweep,
+  kPresolveRuleMax = kPresolveRuleInitialSweep,
   kPresolveRuleLastAllowOff = kPresolveRuleMax,
   kPresolveRuleCount
 };
@@ -293,7 +301,7 @@ enum IisStrategy : int {
                     kIisStrategyRelaxation
 };
 
-enum IisStatus {
+enum IisStatus : int {
   kIisStatusMin = -1,
   kIisStatusNotInConflict = kIisStatusMin,  // -1
   kIisStatusMaybeInConflict,                // 0
@@ -301,10 +309,26 @@ enum IisStatus {
   kIisStatusMax = kIisStatusInConflict
 };
 
+enum MipChooseSubMipRecord : int {
+  kMipRecord = -1,
+  kChooseRecord,
+  kSubMipRecord
+};
+
+enum PresolveSolvePostsolveIndex : int {
+  kPresolveTime = 0,
+  kSolveTime,
+  kPostsolveTime,
+  kToPresolveSolvePostsolve
+};
+
 enum SubSolverIndex : int {
-  kSubSolverMip = 0,
-  kSubSolverSimplexBasis,
-  kSubSolverSimplexNoBasis,
+  kFromSubSolver = kToPresolveSolvePostsolve,
+  kSubSolverMip = kFromSubSolver,
+  kSubSolverDuSimplexBasis,
+  kSubSolverDuSimplexNoBasis,
+  kSubSolverPrSimplexBasis,
+  kSubSolverPrSimplexNoBasis,
   kSubSolverHipo,
   kSubSolverIpx,
   kSubSolverHipoAc,
@@ -312,11 +336,21 @@ enum SubSolverIndex : int {
   kSubSolverPdlp,
   kSubSolverQpAsm,
   kSubSolverSubMip,
-  kSubSolverCount
+  kLastSubSolver = kSubSolverSubMip,
+  kToSubSolver = kLastSubSolver + 1
 };
 
-// Default KKT tolerance
+// Minimum and default KKT tolerance
+const double kMinimumKktTolerance = 1e-10;
 const double kDefaultKktTolerance = 1e-7;
+
+// Minimum and default MIP tolerance
+const double kMinimumMipTolerance = 1e-10;
+const double kDefaultMipTolerance = 1e-6;
+
+// Minimum and default IPM optimality tolerance
+const double kMinimumIpmTolerance = 1e-12;
+const double kDefaultIpmTolerance = 1e-1 * kDefaultKktTolerance;
 
 // Default QP Hessian regularization value
 const double kHessianRegularizationValue = 1e-7;
@@ -345,6 +379,9 @@ const HighsInt kHighsIllegalErrorIndex = -1;
 const double kHighsIllegalComplementarityViolation = kHighsInf;
 const HighsInt kHighsIllegalComplementarityCount = -1;
 
+const double kHighsIllegalDoubleMeasure = -kHighsInf;
+const HighsInt kHighsIllegalIntMeasure = -1;
+
 // Maximum upper bound on semi-variables
 const double kMaxSemiVariableUpper = 1e5;
 
@@ -369,4 +406,46 @@ const int8_t kPivotUnit = 1;
 const int8_t kPivotRowSingleton = 2;
 const int8_t kPivotColSingleton = 3;
 const int8_t kPivotMarkowitz = 4;
+
+// For converting general LPs to form for PDLP
+//
+// Requires non-conforming names for cuPDLP-C
+enum ConstraintType { EQ = 0, LEQ, GEQ, BOUND, FREE };
+
+// Mask for switching off PDLP features
+enum PdlpFeaturesOff {
+  kPdlpAllFeaturesOn = 0,
+  kPdlpScalingOff = 1,
+  kPdlpRestartOff = 2,
+  kPdlpAdaptiveStepSizeOff = 4,
+  kPdlpAllFeaturesOff =
+      kPdlpScalingOff + kPdlpRestartOff + kPdlpAdaptiveStepSizeOff
+};
+
+enum PdlpScalingBit {
+  kPdlpScalingMin = 0,
+  kPdlpScalingRuiz = 1,
+  kPdlpScalingL2 = 2,
+  kPdlpScalingPC = 4,
+  kPdlpScalingMax = kPdlpScalingRuiz + kPdlpScalingL2 + kPdlpScalingPC
+};
+
+enum PdlpStepSizeStrategy {
+  kPdlpStepSizeStrategyFixed = 0,
+  kPdlpStepSizeStrategyMin = kPdlpStepSizeStrategyFixed,
+  kPdlpStepSizeStrategyAdaptive,
+  kPdlpStepSizeStrategyMalitskyPock,
+  kPdlpStepSizeStrategyPid,
+  kPdlpStepSizeStrategyMax = kPdlpStepSizeStrategyPid
+};
+
+enum PdlpRestartStrategy {
+  kPdlpRestartStrategyOff = 0,
+  kPdlpRestartStrategyMin = kPdlpRestartStrategyOff,
+  kPdlpRestartStrategyFixed,
+  kPdlpRestartStrategyAdaptive,
+  kPdlpRestartStrategyHalpern,
+  kPdlpRestartStrategyMax = kPdlpRestartStrategyHalpern
+};
+
 #endif /* LP_DATA_HCONST_H_ */

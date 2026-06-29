@@ -2,27 +2,157 @@ name: test-python-ubuntu
 
 on: [push, pull_request]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest]
-        python: [3.11]
+        os: [ubuntu-latest, ubuntu-24.04-arm]
+        python: [3.11, 3.14]
+
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Install correct python version
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python }}
 
       - name: Install build dependencies
-        run: python3 -m pip install numpy setuptools wheel pytest 
-  
+        run: python3 -m pip install pytest
+
       - name: Test Python Interface
         run: |
           python3 -m pip install .
-          pytest -v 
+          pytest -v ./highspy
+
+      - name: Test Python Examples
+        run: |
+         python3 ./examples/call_highs_from_python_highspy.py
+         python3 ./examples/call_highs_from_python_mps.py
+         python3 ./examples/call_highs_from_python.py
+         python3 ./examples/minimal.py
+
+  build_hipo:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, ubuntu-24.04-arm]
+        python: [3.12]
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install correct python version
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python }}
+
+      - name: Install test dependencies
+        run: python3 -m pip install pytest
+
+      - name: Test Python Interface
+        run: |
+          python3 -m pip install ./highspy-extras
+          python3 -m pip install .
+          pytest -v ./highspy
+          pytest check/test_highspy_hipo.py
+
+      - name: Test Python Examples
+        run: |
+         python3 ./examples/call_highs_from_python_highspy.py
+         python3 ./examples/call_highs_from_python_mps.py
+         python3 ./examples/call_highs_from_python.py
+         python3 ./examples/minimal.py
+
+  build_hipo_local:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, ubuntu-24.04-arm]
+        python: [3.12]
+    steps:
+      - uses: actions/checkout@v6
+      - name: Install correct python version
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python }}
+
+      - name: Install test dependencies
+        run: python3 -m pip install pytest
+
+      - name: Install OpenBLAS
+        shell: bash
+        run: |
+          sudo apt update
+          sudo apt install libopenblas-dev
+
+        # Can pass path with an additional
+        # --config-settings=cmake.define.BLAS_LIBRARIES=/home/ivet/installs/openblas/lib/libopenblas.a
+
+      - name: Test Python Interface
+        run: |
+          python3 -m pip install ./highspy-extras --config-settings=cmake.define.BUILD_OPENBLAS=OFF
+          python3 -m pip install .
+          pytest -v ./highspy
+          pytest check/test_highspy_hipo.py
+
+      - name: Test Python Examples
+        run: |
+         python3 ./examples/call_highs_from_python_highspy.py
+         python3 ./examples/call_highs_from_python_mps.py
+         python3 ./examples/call_highs_from_python.py
+         python3 ./examples/minimal.py
+
+  build_hipo_local_non_default_path:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, ubuntu-24.04-arm]
+        python: [3.12]
+    steps:
+      - uses: actions/checkout@v6
+      - name: Install correct python version
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python }}
+
+      - name: Install test dependencies
+        run: python3 -m pip install pytest
+
+      - name: Create install dir for openblas
+        run: mkdir ${{github.workspace}}/install-openblas
+
+      - name: Checkout OpenBLAS
+        uses: actions/checkout@v6
+        with:
+          repository: OpenMathLib/OpenBLAS
+          ref: v0.3.30
+          path: pathtoopenblas
+
+      - name: Configure openblas
+        working-directory: ${{github.workspace}}/pathtoopenblas
+        run: |
+          make -j2 PREFIX=${{github.workspace}}/install-openblas
+          make install PREFIX=${{github.workspace}}/install-openblas
+          ls ${{github.workspace}}/install-openblas
+          echo ""
+          ls ${{github.workspace}}/install-openblas/lib
+          echo ""
+
+        # Can pass path with an additional
+        # --config-settings=cmake.define.BLAS_LIBRARIES=/home/ivet/installs/openblas/lib/libopenblas.a
+
+      - name: Test Python Interface
+        run: |
+          python3 -m pip install ./highspy-extras \
+              --config-settings=cmake.define.BUILD_OPENBLAS=OFF \
+              --config-settings=cmake.define.BLAS_LIBRARIES=${{github.workspace}}/install-openblas/lib/libopenblas.a
+          python3 -m pip install .
+          pytest -v ./highspy
+          pytest check/test_highspy_hipo.py
 
       - name: Test Python Examples
         run: |

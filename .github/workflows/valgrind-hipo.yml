@@ -2,75 +2,42 @@ name: valgrind-hipo
 
 on: [push, pull_request]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   unit_tests:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
-      
+      - uses: actions/checkout@v6
+
       - name: Install Valgrind
         run: sudo apt-get update && sudo apt-get install valgrind
 
-      - name: Checkout METIS
-        uses: actions/checkout@v4
-        with:
-          repository: galabovaa/METIS
-          ref: 521-ts
-          path: METIS
-
-      - name: Create installs dir
-        working-directory: ${{runner.workspace}}
-        run: |
-          mkdir installs
-          ls
-
-      - name: Install METIS
-        run: |
-          cmake \
-          -S $GITHUB_WORKSPACE/METIS \
-          -B build \
-          -DGKLIB_PATH=${{ github.workspace }}/METIS/GKlib \
-          -DCMAKE_INSTALL_PREFIX=${{ runner.workspace }}/installs
-          cmake --build build --parallel
-          cmake --install build
-
-      # no default blas available on runner
-
-      - name: Cache APT packages
-        uses: actions/cache@v4
-        with:
-          path: |
-            /var/cache/apt/archives
-            /var/lib/apt/lists
-          key: ${{ runner.os }}-apt-libopenblas
-
-      - name: Install OpenBLAS
-        shell: bash
-        run: |
-          sudo apt update
-          sudo apt install libopenblas-dev
       - name: Create Build Environment
-        run: cmake -E make_directory ${{runner.workspace}}/build
+        run: cmake -E make_directory ${{github.workspace}}/build
 
       - name: Configure CMake
         shell: bash
-        working-directory: ${{runner.workspace}}/build
+        working-directory: ${{github.workspace}}/build
         run: |
           cmake $GITHUB_WORKSPACE -DHIPO=ON \
+          -DBUILD_OPENBLAS=ON \
+          -DNO_AVX512=ON \
           -DCMAKE_BUILD_TYPE=Debug \
           -DALL_TESTS=ON \
-          -DBLA_VENDOR=OpenBLAS \
-          -DMETIS_ROOT=${{runner.workspace}}/installs
+          -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=OFF
 
       - name: Build
-        working-directory: ${{runner.workspace}}/build
+        working-directory: ${{github.workspace}}/build
         shell: bash
         run: |
           cmake --build . -j2
 
       - name: Test
-        working-directory: ${{runner.workspace}}/build
+        working-directory: ${{github.workspace}}/build
         shell: bash
         run: |
           valgrind \
@@ -82,7 +49,7 @@ jobs:
           2>&1 | tee logfile
 
       - name: Check log for Errors
-        working-directory: ${{runner.workspace}}/build
+        working-directory: ${{github.workspace}}/build
         shell: bash
         run: |
           cat logfile
@@ -99,73 +66,33 @@ jobs:
         os: [ubuntu-latest]
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Install Valgrind
         run: sudo apt-get update && sudo apt-get install valgrind
 
-      - name: Checkout METIS
-        uses: actions/checkout@v4
-        with:
-          repository: galabovaa/METIS
-          ref: 521-ts
-          path: METIS
-
-      - name: Create installs dir
-        working-directory: ${{runner.workspace}}
-        run: |
-          mkdir installs
-          ls
-
-      - name: Install METIS
-        run: |
-          cmake \
-          -S $GITHUB_WORKSPACE/METIS \
-          -B build \
-          -DGKLIB_PATH=${{ github.workspace }}/METIS/GKlib \
-          -DCMAKE_INSTALL_PREFIX=${{ runner.workspace }}/installs
-          cmake --build build --parallel
-          cmake --install build
-
-      # no default blas available on runner
-
-      - name: Cache APT packages
-        uses: actions/cache@v4
-        with:
-          path: |
-            /var/cache/apt/archives
-            /var/lib/apt/lists
-          key: ${{ runner.os }}-apt-libopenblas
-
-      - name: Install OpenBLAS
-        shell: bash
-        run: |
-          sudo apt update
-          sudo apt install libopenblas-dev
       - name: Create Build Environment
-        run: cmake -E make_directory ${{runner.workspace}}/build
-
-      - name: Create Build Environment
-        run: cmake -E make_directory ${{runner.workspace}}/build
+        run: cmake -E make_directory ${{github.workspace}}/build
 
       - name: Configure CMake
         shell: bash
-        working-directory: ${{runner.workspace}}/build
+        working-directory: ${{github.workspace}}/build
         run: |
           cmake $GITHUB_WORKSPACE -DHIPO=ON \
+          -DBUILD_OPENBLAS=ON \
+          -DNO_AVX512=ON \
           -DCMAKE_BUILD_TYPE=Debug \
           -DALL_TESTS=ON \
-          -DBLA_VENDOR=OpenBLAS \
-          -DMETIS_ROOT=${{runner.workspace}}/installs
+          -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=OFF
 
       - name: Build
-        working-directory: ${{runner.workspace}}/build
+        working-directory: ${{github.workspace}}/build
         shell: bash
         run: |
           cmake --build . -j2
 
       - name: Test
-        working-directory: ${{runner.workspace}}/build
+        working-directory: ${{github.workspace}}/build
         shell: bash
         run: |
           valgrind \
@@ -179,7 +106,7 @@ jobs:
           2>&1 | tee logfile2
 
       - name: Check log for Errors
-        working-directory: ${{runner.workspace}}/build
+        working-directory: ${{github.workspace}}/build
         shell: bash
         run: |
           cat logfile2
@@ -196,74 +123,32 @@ jobs:
         os: [ubuntu-latest]
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Install Valgrind
         run: sudo apt-get update && sudo apt-get install valgrind
-      
-      - name: Checkout METIS
-        uses: actions/checkout@v4
-        with:
-          repository: galabovaa/METIS
-          ref: 521-ts
-          path: METIS
-
-      - name: Create installs dir
-        working-directory: ${{runner.workspace}}
-        run: |
-          mkdir installs
-          ls
-
-      - name: Install METIS
-        run: |
-          cmake \
-          -S $GITHUB_WORKSPACE/METIS \
-          -B build \
-          -DGKLIB_PATH=${{ github.workspace }}/METIS/GKlib \
-          -DCMAKE_INSTALL_PREFIX=${{ runner.workspace }}/installs
-          cmake --build build --parallel
-          cmake --install build
-
-      # no default blas available on runner
-
-      - name: Cache APT packages
-        uses: actions/cache@v4
-        with:
-          path: |
-            /var/cache/apt/archives
-            /var/lib/apt/lists
-          key: ${{ runner.os }}-apt-libopenblas
-
-      - name: Install OpenBLAS
-        shell: bash
-        run: |
-          sudo apt update
-          sudo apt install libopenblas-dev
-      - name: Create Build Environment
-        run: cmake -E make_directory ${{runner.workspace}}/build
 
       - name: Create Build Environment
-        run: cmake -E make_directory ${{runner.workspace}}/build
+        run: cmake -E make_directory ${{github.workspace}}/build
 
       - name: Configure CMake
         shell: bash
-        working-directory: ${{runner.workspace}}/build
+        working-directory: ${{github.workspace}}/build
         run: |
           cmake $GITHUB_WORKSPACE -DHIPO=ON \
+          -DBUILD_OPENBLAS=ON \
+          -DNO_AVX512=ON \
           -DCMAKE_BUILD_TYPE=Debug \
-          -DALL_TESTS=ON \
-          -DBLA_VENDOR=OpenBLAS \
-          -DMETIS_ROOT=${{runner.workspace}}/installs
-
+          -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=OFF
 
       - name: Build
-        working-directory: ${{runner.workspace}}/build
+        working-directory: ${{github.workspace}}/build
         shell: bash
         run: |
           cmake --build . -j2
 
       - name: Test cpp example
-        working-directory: ${{runner.workspace}}/build
+        working-directory: ${{github.workspace}}/build
         shell: bash
         run: |
           valgrind \
@@ -277,7 +162,7 @@ jobs:
           2>&1 | tee logfile2
 
       - name: Check log for Errors
-        working-directory: ${{runner.workspace}}/build
+        working-directory: ${{github.workspace}}/build
         shell: bash
         run: |
           cat logfile2
@@ -286,9 +171,9 @@ jobs:
             exit 0
           fi
           exit 1
-      
+
       - name: Test C example
-        working-directory: ${{runner.workspace}}/build
+        working-directory: ${{github.workspace}}/build
         shell: bash
         run: |
           valgrind \
@@ -302,7 +187,7 @@ jobs:
           2>&1 | tee logfile2
 
       - name: Check log for Errors
-        working-directory: ${{runner.workspace}}/build
+        working-directory: ${{github.workspace}}/build
         shell: bash
         run: |
           cat logfile2

@@ -13,12 +13,16 @@
 
 #include "lp_data/HighsInfo.h"
 #include "model/HighsModel.h"
-// #include "Highs.h"
-// #include "lp_data/HighsStatus.h"
-// #include "lp_data/HStruct.h"
-// #include "lp_data/HighsInfo.h"
-// #include "lp_data/HighsLp.h"
-// #include "lp_data/HighsOptions.h"
+
+const std::string kLegalLpFileColRowNameFirstChar =
+    "abcdefghijklmnopqrstuvwxyz"
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    "0123456789."
+    "!\"#$%&(),.;?@_‘’{}~";
+// According to CPLEX (cf fix-2887) names in LP files cannot begin
+// with a digit or a full stop. However, HiGHS can read these, and
+// models like rgn have row names that are integers, so allow it
+const std::string kLegalLpFileColRowNameChar = kLegalLpFileColRowNameFirstChar;
 
 // Analyse lower and upper bounds of a model
 void analyseModelBounds(const HighsLogOptions& log_options, const char* message,
@@ -27,6 +31,7 @@ void analyseModelBounds(const HighsLogOptions& log_options, const char* message,
 bool hasNamesWithSpaces(const HighsLogOptions& log_options, const HighsLp& lp);
 bool hasNamesWithSpaces(const HighsLogOptions& log_options, const bool col,
                         const std::vector<std::string>& names);
+bool hasIllegalNameForLpFile(const std::vector<std::string>& names);
 
 void writeModelBoundSolution(
     FILE* file, const HighsLogOptions& log_options, const bool columns,
@@ -57,16 +62,22 @@ void writeModelSolution(FILE* file, const HighsLogOptions& log_options,
                         const HighsModel& model, const HighsSolution& solution,
                         const HighsInfo& info, const bool sparse = false);
 
+bool replaceSpacesByUnderscores(std::string& name);
+
 HighsInt maxNameLength(const HighsLp& lp);
 HighsInt maxNameLength(const std::vector<std::string>& names);
 
-HighsStatus normaliseNames(const HighsLogOptions& log_options, HighsLp& lp);
+HighsStatus normaliseNames(const HighsLogOptions& log_options, HighsLp& lp,
+                           HighsFileType type = HighsFileType::kMps);
 
 HighsStatus normaliseNames(const HighsLogOptions& log_options, bool column,
                            HighsInt num_name_required, std::string& name_prefix,
                            HighsInt& name_suffix,
                            std::vector<std::string>& names,
-                           HighsNameHash& name_hash);
+                           HighsNameHash& name_hash,
+                           HighsFileType type = HighsFileType::kMps);
+
+HighsFileType getFileType(const std::string filename);
 
 void writeSolutionFile(FILE* file, const HighsOptions& options,
                        const HighsModel& model, const HighsBasis& basis,
@@ -76,7 +87,8 @@ void writeSolutionFile(FILE* file, const HighsOptions& options,
 
 void writeGlpsolCostRow(FILE* file, const HighsLogOptions& log_options,
                         const bool raw, const bool is_mip,
-                        const HighsInt row_id, const std::string objective_name,
+                        const HighsInt row_id,
+                        const std::string& objective_name,
                         const double objective_function_value);
 
 void writeGlpsolSolution(FILE* file, const HighsOptions& options,

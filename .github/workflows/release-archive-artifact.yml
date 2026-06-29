@@ -5,12 +5,16 @@ on:
     # tags:
     #   - "v*.*.*"
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Create Build Environment
         run: cmake -E make_directory ${{runner.workspace}}/archive
@@ -18,23 +22,13 @@ jobs:
       - name: Create Build Environment
         run: cmake -E make_directory ${{runner.workspace}}/archive_unzipped
 
-      - name: working dir
-        run: |
-          pwd
-          echo ${{runner.workspace}}
-          echo ""
-          ls ${{runner.workspace}}/HiGHS
-
-        # ls 
-        # echo $GITHUB_WORKSPACE
-
       - name:  Generate archive artifact
         run: |
           pwd
           cd ${{runner.workspace}}
           pwd
           tar -czvf source-archive.tar.gz HiGHS
-          
+
         # --exclude='./archive'
 
       - name: unzip archive

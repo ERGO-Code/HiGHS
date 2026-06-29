@@ -53,6 +53,7 @@ struct Settings {
       1e-7;  // multiple of identity matrix added to Hessian in case of
              // regularization
 
+  bool allow_hot_start = false;
   Phase1Strategy phase1strategy = Phase1Strategy::HIGHS;
   bool phase1movefreevarsbasic = false;
   bool phase1boundfreevars = false;
@@ -61,6 +62,7 @@ struct Settings {
   Eventhandler<Statistics&> iteration_log;
   Eventhandler<QpModelStatus&> qp_model_status_log;
   Eventhandler<HighsInt&> nullspace_limit_log;
+  Eventhandler<std::pair<HighsInt, double>&> degeneracy_fail_log;
 
   HighsInt nullspace_limit = 4000;
 

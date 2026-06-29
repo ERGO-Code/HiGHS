@@ -4,13 +4,8 @@ endif()
 
 # Define library.
 include(sources)
-set(sources ${highs_sources} ${cupdlp_sources} ${ipx_sources} ${basiclu_sources})
-set(headers ${highs_headers} ${cupdlp_headers} ${ipx_headers} ${basiclu_headers})
-
-if(HIPO)
-  set(sources ${sources} ${hipo_sources} ${factor_highs_sources} ${hipo_util_sources})
-  set(headers ${headers} ${hipo_headers} ${factor_highs_headers} ${hipo_util_headers})
-endif()
+set(sources ${highs_sources} ${cupdlp_sources} ${ipx_sources} ${basiclu_sources} ${hipo_sources} ${factor_highs_sources} ${hipo_util_sources})
+set(headers ${highs_headers} ${cupdlp_headers} ${ipx_headers} ${basiclu_headers} ${hipo_headers} ${factor_highs_headers} ${hipo_util_headers})
 
 # Configure the config windows version file
 if(MSVC)
@@ -27,6 +22,17 @@ if(NOT FAST_BUILD)
 
   add_library(libhighs ${sources} ${headers} ${win_version_file})
   target_include_directories(libhighs PRIVATE ${include_dirs})
+
+  if(APPLE)
+    # linker was taking ~1 hour, unity build reduces it to ~1 minute
+    set_target_properties(libhighs PROPERTIES
+      UNITY_BUILD ON
+      UNITY_BUILD_BATCH_SIZE 8)
+
+    if(NOT CMAKE_VERSION VERSION_LESS 3.20)
+      set_target_properties(libhighs PROPERTIES UNITY_BUILD_UNIQUE_ID "HIGHS_UNITY_ID")
+    endif()
+  endif()
 
   if(${BUILD_SHARED_LIBS})
     # put version information into shared library file
@@ -121,7 +127,7 @@ if(NOT FAST_BUILD)
     "${HIGHS_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/highs.pc" @ONLY)
 
   # Install the targets of the highs export group, the config file so that other
-  # cmake-projects can link easily against highs, and the pkg-config flie so that
+  # cmake-projects can link easily against highs, and the pkg-config file so that
   # other projects can easily build against highs
   install(EXPORT highs-targets FILE highs-targets.cmake DESTINATION
     ${CMAKE_INSTALL_LIBDIR}/cmake/highs)
@@ -137,8 +143,18 @@ else()
   # Define library in modern CMake using target_*()
   # No interfaces (apart from c); No ipx; New (short) ctest instances.
   add_library(highs)
-
   add_library(${PROJECT_NAMESPACE}::highs ALIAS highs)
+
+  if(APPLE)
+    # linker was taking ~1 hour, unity build reduces it to ~1 minute
+    set_target_properties(highs PROPERTIES
+      UNITY_BUILD ON
+      UNITY_BUILD_BATCH_SIZE 8)
+
+    if(NOT CMAKE_VERSION VERSION_LESS 3.20)
+      set_target_properties(highs PROPERTIES UNITY_BUILD_UNIQUE_ID "HIGHS_UNITY_ID")
+    endif()
+  endif()
 
   if(${BUILD_SHARED_LIBS})
     # put version information into shared library file
@@ -156,6 +172,25 @@ else()
       set_target_properties(highs PROPERTIES INSTALL_RPATH "$ORIGIN")
   endif()
 
+  if (BUILD_SHARED_EXTRAS_LIB)
+    if (NOT HIPO_PYTHON)
+      if(APPLE)
+        set_target_properties(highs PROPERTIES
+          INSTALL_RPATH "@loader_path;@loader_path/../${CMAKE_INSTALL_LIBDIR}"
+          BUILD_RPATH   "$<TARGET_FILE_DIR:highs_extras>"
+        )
+      elseif(UNIX)
+        set_target_properties(highs PROPERTIES
+          INSTALL_RPATH "$ORIGIN"
+          BUILD_RPATH   "$<TARGET_FILE_DIR:highs_extras>"
+        )
+      endif()
+    endif()
+  else()
+    # PUBLIC: propagate link dependency in the highs library, so that 
+    # consumers don't need to explicitly link against highs_extras
+    target_link_libraries(highs PUBLIC highs_extras)
+  endif()
 
   target_sources(highs PRIVATE ${sources} ${headers} ${win_version_file})
 
@@ -163,111 +198,94 @@ else()
   if (CUPDLP_GPU)
 
     target_include_directories(highs PUBLIC "$<BUILD_INTERFACE:${CMAKE_CUDA_PATH}/include>")
-    set(CUPDLP_INCLUDE_DIR "${PROJECT_SOURCE_DIR}/highs/pdlp/cupdlp/")
 
-    add_subdirectory(pdlp/cupdlp/cuda)
+    if (HIGHS_GPU_LIB)
+      # like in cuda CMakeLists
+      enable_language(CXX CUDA)
 
-    if (WIN32)
-      target_link_libraries(highs PRIVATE cudalin ${CUDA_LIBRARY})
+      # Remove /MP flag from CUDA targets (nvcc doesn't support it)
+      if(MSVC)
+        string(REPLACE "/MP" "" CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS}")
+        string(REPLACE "/bigobj" "" CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS}")
+
+        foreach(flag_var
+          CMAKE_CUDA_FLAGS_DEBUG
+          CMAKE_CUDA_FLAGS_RELEASE
+          CMAKE_CUDA_FLAGS_RELWITHDEBINFO
+          CMAKE_CUDA_FLAGS_MINSIZEREL)
+          string(REPLACE "/MP" "" ${flag_var} "${${flag_var}}")
+          string(REPLACE "/bigobj" "" ${flag_var} "${${flag_var}}")
+        endforeach()
+      endif()
+
+      target_sources(highs PRIVATE
+        pdlp/cupdlp/cuda/cupdlp_cuda_kernels.cu
+        pdlp/cupdlp/cuda/cupdlp_cuda_kernels.cuh
+        pdlp/cupdlp/cuda/cupdlp_cudalinalg.cuh
+        pdlp/cupdlp/cuda/cupdlp_cudalinalg.cu
+        pdlp/cupdlp/cupdlp_cs.c
+        pdlp/hipdlp/pdhg.cu)
+
+      set_target_properties(highs PROPERTIES
+        CUDA_SEPARABLE_COMPILATION ON
+        #CUDA_ARCHITECTURES "60;70;75;80;86" )
+        #Deleted 60;70 due to errors
+        #nvcc fatal   : Unsupported gpu architecture 'compute_60'
+        #nvcc fatal   : Unsupported gpu architecture 'compute_70'
+        CUDA_ARCHITECTURES "75;80;86" )
+
+      # set_target_properties(cudalin PROPERTIES CUDA_ARCHITECTURES native)
+
+      target_include_directories(highs PUBLIC "$<BUILD_INTERFACE:${CMAKE_CUDA_PATH}/include>")
+
+      if (WIN32)
+        target_link_libraries(highs PRIVATE ${CUDA_LIBRARY})  # linking happens here
+      else() # linux
+        target_link_libraries(highs PRIVATE ${CUDA_LIBRARY} m)
+      endif()
+
     else()
-      target_link_libraries(highs PRIVATE cudalin ${CUDA_LIBRARY} m)
+        set(CUPDLP_INCLUDE_DIR "${PROJECT_SOURCE_DIR}/highs/pdlp/cupdlp/")
+        add_subdirectory(pdlp/cupdlp/cuda)
+
+        if (WIN32)
+            target_link_libraries(highs PRIVATE cudalin ${CUDA_LIBRARY})
+          else()
+            target_link_libraries(highs PRIVATE cudalin ${CUDA_LIBRARY} m)
+          endif()
+
+          set_target_properties(highs PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
+      endif()
     endif()
-
-    set_target_properties(highs PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
-
-  endif()
 
   target_include_directories(highs PRIVATE ${include_dirs})
 
-  # Optional HIPO
-  if (HIPO)
-
-    target_include_directories(highs PRIVATE
-      $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/hipo>
-      $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/hipo/auxiliary>
-      $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/hipo/factorhighs>
-      $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/hipo/ipm>
-    )
-
-    if (NOT USE_CMAKE_FIND_BLAS)
-      if(APPLE)
-          target_link_libraries(highs PRIVATE "-framework Accelerate")
-          target_compile_definitions(highs PRIVATE HIPO_USES_APPLE_BLAS)
-      elseif(WIN32)
-        if(TARGET OpenBLAS::OpenBLAS)
-            target_compile_definitions(highs PRIVATE HIPO_USES_OPENBLAS)
-            target_link_libraries(highs PRIVATE OpenBLAS::OpenBLAS)
-        elseif(OPENBLAS_LIB)
-            target_compile_definitions(highs PRIVATE HIPO_USES_OPENBLAS)
-            message(STATUS "Linking against OpenBLAS via raw library: ${OPENBLAS_LIB}")
-            target_link_libraries(highs PRIVATE ${OPENBLAS_LIB})
-            target_include_directories(highs PRIVATE ${OPENBLAS_INCLUDE_DIR})
-        else()
-            message(FATAL_ERROR "OpenBLAS not found on Windows.")
-        endif()
-
-        target_compile_definitions(highs PRIVATE HIPO_USES_OPENBLAS)
-      else()
-          # LINUX
-          if(BLAS_LIB)
-              target_link_libraries(highs PRIVATE "${BLAS_LIB}" cblas)
-          elseif(OPENBLAS_LIB)
-              target_link_libraries(highs PRIVATE "${OPENBLAS_LIB}")
-              target_compile_definitions(highs PRIVATE HIPO_USES_OPENBLAS)
-          else()
-              message(FATAL_ERROR "No BLAS library available")
-          endif(BLAS_LIB)
-      endif(APPLE)
-    else()
-
-      if (WIN32 AND TARGET OpenBLAS::OpenBLAS)
-          target_compile_definitions(highs PRIVATE HIPO_USES_OPENBLAS)
-          target_link_libraries(highs PRIVATE OpenBLAS::OpenBLAS)
-      else()
-          target_link_libraries(highs PRIVATE BLAS::BLAS)
-
-          string(TOLOWER "${BLAS_LIBRARIES}" blas_lower)
-          if(blas_lower MATCHES "openblas")
-              target_compile_definitions(highs PRIVATE HIPO_USES_OPENBLAS)
-          elseif(blas_lower MATCHES "accelerate")
-              target_compile_definitions(highs PRIVATE HIPO_USES_APPLE_BLAS)
-          endif()
-      endif()
-    endif()
-
-    if(metis_FOUND)
-      target_link_libraries(highs PRIVATE metis)
-    else()
-      target_include_directories(highs PRIVATE "${METIS_PATH}")
-      target_link_libraries(highs PRIVATE "${METIS_LIB}")
-    endif()
-
-    if (NOT (GKLIB_ROOT STREQUAL ""))
-      if(GKlib_FOUND)
-        target_link_libraries(highs PRIVATE GKlib::GKlib)
-      else()
-        target_include_directories(highs PRIVATE "${GKLIB_PATH}")
-        target_link_libraries(highs PRIVATE "${GKLIB_LIB}")
-      endif()
-    endif()
-  endif()
+  target_include_directories(highs PRIVATE
+    $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/hipo>
+    $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/hipo/auxiliary>
+    $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/hipo/factorhighs>
+    $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/hipo/ipm>
+  )
 
   if(MSVC)
-    list(APPEND highs_compile_opts
-      "/bigobj" # Allow big object
-      "/DNOMINMAX"
-      "/DWIN32_LEAN_AND_MEAN=1"
-      "/D_CRT_SECURE_NO_WARNINGS"
-      "/D_CRT_SECURE_NO_DEPRECATE"
-      "/MP" # Build with multiple processes
-      "/Zc:preprocessor" # Enable preprocessor conformance mode
-      "/fp:precise"
-      )
+    if (NOT HIGHS_GPU_LIB)
+      list(APPEND highs_compile_opts
+        "/bigobj" # Allow big object
+        "/DNOMINMAX"
+        "/DWIN32_LEAN_AND_MEAN=1"
+        "/D_CRT_SECURE_NO_WARNINGS"
+        "/D_CRT_SECURE_NO_DEPRECATE"
+        "/MP" # Build with multiple processes
+        "/Zc:preprocessor" # Enable preprocessor conformance mode
+        "/fp:precise"
+        )
+    endif()
     if (CMAKE_BUILD_TYPE STREQUAL Release)
       list(APPEND highs_compile_opts
         "/DNDEBUG")
     endif()
     # MSVC warning suppressions
+    if (NOT HIGHS_GPU_LIB)
     list(APPEND highs_compile_opts
       "/wd4005" # 'macro-redefinition'
       "/wd4018" # 'expression' : signed/unsigned mismatch
@@ -290,6 +308,7 @@ else()
       "/wd4800" # 'type' : forcing value to bool 'true' or 'false' (performance warning)
       "/wd4996" # The compiler encountered a deprecated declaration.
       )
+    endif()
     target_compile_options(highs PRIVATE ${highs_compile_opts})
   # else()
   #   list(APPEND highs_compile_opts "-fwrapv")
@@ -302,6 +321,12 @@ else()
     )
     target_link_libraries(highs PRIVATE ZLIB::ZLIB)
   endif()
+
+  # allow consumers of highs to be aware of potential external dependencies
+  # without forcing them to explicitly call target_include_directories
+  target_include_directories(highs PUBLIC
+    $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/extern>
+  )
 
   # install the header files of highs
   foreach(file ${headers})
@@ -352,6 +377,8 @@ else()
       # see: https://docs.microsoft.com/en-us/dotnet/core/rid-catalog
       if(CMAKE_SYSTEM_PROCESSOR MATCHES "^(aarch64|arm64)")
         set(DOTNET_PLATFORM arm64)
+      elseif(WIN32 AND (CMAKE_GENERATOR_PLATFORM STREQUAL "Win32" OR CMAKE_SIZEOF_VOID_P EQUAL 4))
+        set(DOTNET_PLATFORM x86)
       else()
         set(DOTNET_PLATFORM x64)
       endif()
@@ -442,7 +469,12 @@ if(Threads_FOUND)
 endif()
 
 if(FAST_BUILD)
+  if(CMAKE_SIZEOF_VOID_P EQUAL 4)
+      set(THREADS_PREFER_PTHREAD_FLAG ON)
+  endif()
+
   target_link_libraries(highs PRIVATE Threads::Threads)
+  target_link_libraries(highs PRIVATE ${CMAKE_DL_LIBS})
 else()
   target_link_libraries(libhighs Threads::Threads)
 endif()

@@ -10,19 +10,18 @@ If `highspy` is not already installed, run:
 $ pip install highspy
 ```
 
+The `highspy` package is also available on conda-forge.
+
+## HiPO in Python
+
+In order to use HiPO it is necessary to install the `highspy-extras` package as well. Note, that the `highspy-extras` wheel includes Metis and other dependencies and is licensed under the Apache 2.0 license. See [HiPO in Python](@ref hipo-in-python) for more details.
+
 ## Import
 
 To use `highspy` within a Python program, it must be imported
 
 ```python
 import highspy
-```
-
-When using `highspy`, it is likely that `numpy` structures will be needed,
-so must also be imported
-
-```python
-import numpy as np
 ```
 
 ## Initialize

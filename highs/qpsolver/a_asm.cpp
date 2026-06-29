@@ -67,6 +67,8 @@ std::string qpModelStatusToString(const QpModelStatus qp_model_status) {
       return "Time ;limit";
     case QpModelStatus::kLargeNullspace:
       return "Large nullspace";
+    case QpModelStatus::kNonConvex:
+      return "Non-convex";
     case QpModelStatus::kError:
       return "Error";
     default:

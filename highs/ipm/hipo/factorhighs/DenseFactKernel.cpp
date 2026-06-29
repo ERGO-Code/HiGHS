@@ -1,18 +1,18 @@
-#include "DenseFact.h"
 #include "CallAndTimeBlas.h"
 #include "DataCollector.h"
+#include "DenseFact.h"
 #include "FactorHiGHSSettings.h"
 #include "ReturnValues.h"
 #include "Swaps.h"
 #include "ipm/hipo/auxiliary/Auxiliary.h"
-#include "ipm/hipo/auxiliary/Log.h"
 #include "util/HighsRandom.h"
 
 namespace hipo {
 
 // Dense Factorisation kernel
 
-static std::pair<Int, double> maxInCol(Int j, Int n, Int m, double* A, Int lda) {
+static std::pair<Int, double> maxInCol(Int j, Int n, Int m, double* A,
+                                       Int lda) {
   // Given the symemtric matrix A, of size nxn, accessed with leading dimension
   // lda, in upper triangular format, ignoring rows 0:j-1, find the maximum in
   // row/col m.
@@ -38,7 +38,8 @@ static std::pair<Int, double> maxInCol(Int j, Int n, Int m, double* A, Int lda) 
   return {r, maxval};
 }
 
-static void staticReg(double& pivot, Int sign, const Regul& regval, double& totalreg) {
+static void staticReg(double& pivot, Int sign, const Regul& regval,
+                      double& totalreg) {
   // apply static regularisation
 
   double old_pivot = pivot;
@@ -49,9 +50,9 @@ static void staticReg(double& pivot, Int sign, const Regul& regval, double& tota
   totalreg = pivot - old_pivot;
 }
 
-static bool blockBunchKaufman(Int j, Int n, double* A, Int lda, Int* swaps, Int* sign,
-                              double thresh, const Regul& regval, double* totalreg,
-                              DataCollector& data) {
+static bool blockBunchKaufman(Int j, Int n, double* A, Int lda, Int* swaps,
+                              Int* sign, double thresh, const Regul& regval,
+                              double* totalreg, DataCollector& data) {
   // Perform Bunch-Kaufman pivoting within a block of the supernode (see Schenk,
   // Gartner, ETNA 2006).
   // It works only for upper triangular A.
@@ -59,9 +60,8 @@ static bool blockBunchKaufman(Int j, Int n, double* A, Int lda, Int* swaps, Int*
   // Swap of columns may be performed.
   // Regularisation of pivot may be performed.
 
-#if HIPO_TIMING_LEVEL >= 2
-  Clock clock;
-#endif
+  HIPO_CLOCK_CREATE;
+
   bool flag_2x2 = false;
 
   // Find largest diagonal entry in the residual part of the block
@@ -142,9 +142,7 @@ static bool blockBunchKaufman(Int j, Int n, double* A, Int lda, Int* swaps, Int*
     }
   }
 
-#if HIPO_TIMING_LEVEL >= 2
-  data.sumTime(kTimeDenseFact_pivoting, clock.stop());
-#endif
+  HIPO_CLOCK_STOP(2, data, kTimeDenseFact_pivoting);
   return flag_2x2;
 }
 
@@ -163,9 +161,7 @@ Int denseFactK(char uplo, Int n, double* A, Int lda, Int* pivot_sign,
   // quick return
   if (n == 0) return kRetOk;
 
-#if HIPO_TIMING_LEVEL >= 2
-  Clock clock;
-#endif
+  HIPO_CLOCK_CREATE;
 
   if (uplo == 'L') {
     assert(1 == 0);
@@ -280,10 +276,7 @@ Int denseFactK(char uplo, Int n, double* A, Int lda, Int* pivot_sign,
     }
   }
 
-#if HIPO_TIMING_LEVEL >= 2
-  data.sumTime(kTimeDenseFact_kernel, clock.stop());
-#endif
-
+  HIPO_CLOCK_STOP(2, data, kTimeDenseFact_kernel);
   return kRetOk;
 }
 

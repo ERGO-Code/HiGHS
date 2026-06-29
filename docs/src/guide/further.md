@@ -1,5 +1,29 @@
 # [Further features](@id guide-further)
 
+## [Presolve](@id guide-presolve)
+
+HiGHS has a sophisticated presolve procedure for LPs and MIPs that
+aims to reduce the dimension of the model that must be solved. In most
+cases, the time saved by solving the reduced model is very much
+greater than the time taken to perform presolve. Once the presolved
+model is solved, a postsolve procedure (of minimal computational cost)
+deduces the optimal solution to the original model. Hence presolve is
+performed by default. The only exception occus when there is a valid
+basis for an LP and the simplex solver is used. In this case the
+original LP is solved, starting from this basis. In cases where the
+use of presolve is found not to be advantageous, its use can be
+switched off by setting the [presolve](@ref option-presolve) option to
+"off".
+
+HiGHS has a method [presolve](@ref Presolve/postsolve) that performs presolve on
+the incumbent model, allowing the presolved model to be extracted or
+written to a file. This is intended for users who have their own
+solution technique that they wish to test using models presolved by
+HiGHS. Note that this does not affect how the incumbent model is
+solved. There are two corresponding [postsolve](@ref Presolve/postsolve)
+methods, according to whether there are just solution values, or also
+a basis.
+
 ## Model and solution management
 
 HiGHS has comprehensive tools for defining and extracting models. This can be
@@ -55,10 +79,20 @@ this is possible depends on the the class of model being solved, the
 solver to be used, and the modifications (if any) that have been to
 the incumbent model since it was last solved.
 
-### LP
+This process is most efficient when solving a sequence of related LP
+problems and the optimal [basic solution](@ref term-basic-solution)
+for some problem earlier in the sequence is known. Only the
+[simplex](@ref solvers-simplex) solver can be hot-started in this
+way. Note that if LP modifications are made via HiGHS methods, any
+basis stored internally will be modified to allow the best possible
+hot start.
 
-To run HiGHS from a user-defined solution or basis, this is passed to HiGHS
-using the methods [setSolution](@ref Set-solution) or [setBasis](@ref Set-basis). The basis passed to HiGHS need not be complete
+### [LP](@id hot-start-lp)
+
+To run HiGHS from a user-defined solution or basis, this is passed to
+HiGHS using the methods [setSolution](@ref Set-solution) or
+[setBasis](@ref Set-basis). The basis passed to HiGHS need not be
+complete
 
 * There can be more basic variables then the number of rows in the
   model. HiGHS will identify a set of basic variables of the correct
@@ -71,6 +105,21 @@ using the methods [setSolution](@ref Set-solution) or [setBasis](@ref Set-basis)
 * For nonbasic variables, it is unnecessary to specify whether they
   are at their lower or upper bound unless they are "boxed" variables.
 
+If a basis is known, then the simplex solver is applied to the LP,
+starting from the known basis. Presolve is not performed because it is
+not currently possible to solve a presolved LP using a basis for the
+original problem. This default strategy is typically the most
+efficient. However, it may be more efficient to solve the LP from
+scratch using the IPM solver (following presolve) in the following
+circumstances
+
+* If the modifications are too great
+
+* If the LP can be reduced greatly via presolve
+
+To achieve this, any basis held internally must be cleared by calling
+`HighsLp::setBasis` with no argument.
+
 ### MIP
 
 If a (partial) feasible assignment of the integer variables is known,
@@ -81,36 +130,12 @@ integer variables is not complete). If a feasible solution is
 obtained, it will be used to provide the MIP solver with an initial
 primal bound when it run to solve for all integer variables.
 
-## [Presolve](@id guide-presolve)
-
-HiGHS has a sophisticated presolve procedure for LPs and MIPs that
-aims to reduce the dimension of the model that must be solved. In most
-cases, the time saved by solving the reduced model is very much
-greater than the time taken to perform presolve. Once he presolved
-model is solved, a postsolve procedure (of minimal computational cost)
-deduces the optimal solution to the original model. Hence presolve is
-performed by default. The only exception occus when there is a valid
-basis for an LP and the simplex solver is used. In this case the
-original LP is solved, starting from this basis. In cases where the
-use of presolve is found not to be advantageous, its use can be
-switched off by setting the [presolve](@ref option-presolve) option to
-"off".
-
-HiGHS has a method [presolve](@ref Presolve/postsolve) that performs presolve on
-the incumbent model, allowing the presolved model to be extracted or
-written to a file. This is intended for users who have their own
-solution technique that they wish to test using models presolved by
-HiGHS. Note that this does not affect how the incumbent model is
-solved. There are two corresponding [postsolve](@ref Presolve/postsolve)
-methods, according to whether there are just solution values, or also
-a basis.
-
 ## [Multi-objective optimization](@id guide-multi-objective-optimization)
 
 Users can specify multiple linear objectives with respect to which
 HiGHS will optimize by either blending them, or by performing
 lexicographic optimization according to the truth of the
-[blend\_multi\_objectives](@ref blend_multi_objectives) option. Each
+[blend\_multi\_objectives](@ref option-blend-multi-objectives) option. Each
 linear objective is represented by the following data, held in the
 [HighsLinearObjective](@ref HighsLinearObjective) structure
 
@@ -133,7 +158,7 @@ the `col_cost_` data in the incumbent model is ignored.
 
 ### Blending multiple linear objectives
 
-When [blend\_multi\_objectives](@ref blend_multi_objectives) is `true`,
+When [blend\_multi\_objectives](@ref option-blend-multi-objectives) is `true`,
 as it is by default, any `HighsLinearObjective` instances will be
 combined according to the `weight` values, and the resulting objective
 will be minimized. Hence, any objectives that should be maximized
@@ -141,7 +166,7 @@ within the combination must have a negative `weight` value.
 
 ### Lexicographic optimization of multiple linear objectives
 
-When [blend\_multi\_objectives](@ref blend_multi_objectives) is `false`,
+When [blend\_multi\_objectives](@ref option-blend-multi-objectives) is `false`,
 HiGHS will optimize lexicographically with respect to any
 `HighsLinearObjective` instances. This is carried out as follows, according to the
 `priority` values in `HighsLinearObjective` instances. Note that _all

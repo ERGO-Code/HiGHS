@@ -27,7 +27,7 @@ const double excessive_residual_error = sqrt(large_residual_error);
 
 // Called from HighsSolve - solveLp
 HighsDebugStatus debugHighsLpSolution(
-    const std::string message, const HighsLpSolverObject& solver_object) {
+    const std::string& message, const HighsLpSolverObject& solver_object) {
   // Non-trivially expensive analysis of a solution to a model
   //
   // Called to check the unscaled model status and solution params
@@ -85,7 +85,7 @@ HighsDebugStatus debugHighsSolution(
 }
 
 HighsDebugStatus debugHighsSolution(
-    const std::string message, const HighsOptions& options, const HighsLp& lp,
+    const std::string& message, const HighsOptions& options, const HighsLp& lp,
     const HighsHessian& hessian, const HighsSolution& solution,
     const HighsBasis& basis, const HighsModelStatus model_status,
     const HighsInfo& highs_info, const bool check_model_status_and_highs_info) {
@@ -339,11 +339,10 @@ HighsDebugStatus debugAnalysePrimalDualErrors(
         options.log_options, report_level,
         "PrDuErrors : %-9s Primal residual:           num = %7" HIGHSINT_FORMAT
         "; "
-        "max = %9.4g; sum = %9.4g\n",
+        "max = %9.4g\n",
         value_adjective.c_str(),
         primal_dual_errors.glpsol_num_primal_residual_errors,
-        primal_dual_errors.glpsol_max_primal_residual.absolute_value,
-        primal_dual_errors.glpsol_sum_primal_residual_errors);
+        primal_dual_errors.glpsol_max_primal_residual.absolute_value);
   }
   if (primal_dual_errors.glpsol_num_dual_residual_errors >= 0) {
     if (primal_dual_errors.glpsol_max_dual_residual.absolute_value >
@@ -366,11 +365,10 @@ HighsDebugStatus debugAnalysePrimalDualErrors(
         options.log_options, report_level,
         "PrDuErrors : %-9s Dual residual:             num = %7" HIGHSINT_FORMAT
         "; "
-        "max = %9.4g; sum = %9.4g\n",
+        "max = %9.4g\n",
         value_adjective.c_str(),
         primal_dual_errors.glpsol_num_dual_residual_errors,
-        primal_dual_errors.glpsol_max_dual_residual.absolute_value,
-        primal_dual_errors.glpsol_sum_dual_residual_errors);
+        primal_dual_errors.glpsol_max_dual_residual.absolute_value);
   }
   return return_status;
 }

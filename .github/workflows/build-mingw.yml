@@ -2,6 +2,10 @@ name: build-mingw
 
 on: [pull_request]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   mingw:
     runs-on: windows-latest
@@ -41,7 +45,7 @@ jobs:
             ${{ matrix.target-prefix }}-cc
             ${{ matrix.target-prefix }}-ninja
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Configure CMake
         run: |

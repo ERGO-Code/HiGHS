@@ -4,6 +4,7 @@
 
 #include "HCheckConfig.h"
 #include "Highs.h"
+#include "HighsExternalApi.h"
 #include "catch.hpp"
 #include "lp_data/HConst.h"
 #include "lp_data/HighsCallback.h"
@@ -254,7 +255,9 @@ HighsCallbackFunctionType userkMipUserSetPartialSolution =
         std::vector<HighsInt> index;
         std::vector<double> value;
 
-        for (HighsInt i = 0; i < callback_data.optimal_solution.size(); i++) {
+        for (HighsInt i = 0;
+             i < static_cast<HighsInt>(callback_data.optimal_solution.size());
+             i++) {
           if (i % 2 == 0) {
             index.push_back(i);
             value.push_back(callback_data.optimal_solution[i]);
@@ -404,14 +407,15 @@ TEST_CASE("highs-callback-ipm-interrupt", "[highs_callback]") {
           adlittle_ipm_iteration_limit + 1);
 
   highs.readModel(filename);
-#ifdef HIPO
-  REQUIRE(highs.setOptionValue("solver", kHipoString) == HighsStatus::kOk);
-  ;
-  REQUIRE(highs.run() == HighsStatus::kWarning);
-  REQUIRE(highs.getModelStatus() == HighsModelStatus::kInterrupt);
-  REQUIRE(highs.getInfo().ipm_iteration_count ==
-          adlittle_ipm_iteration_limit + 1);
-#endif
+
+  if (HighsExternalApi::isAvailable<HighsExtras::hipo>()) {
+    REQUIRE(highs.setOptionValue("solver", kHipoString) == HighsStatus::kOk);
+    ;
+    REQUIRE(highs.run() == HighsStatus::kWarning);
+    REQUIRE(highs.getModelStatus() == HighsModelStatus::kInterrupt);
+    REQUIRE(highs.getInfo().ipm_iteration_count ==
+            adlittle_ipm_iteration_limit + 1);
+  }
   highs.resetGlobalScheduler(true);
 }
 
@@ -496,9 +500,6 @@ TEST_CASE("highs-callback-mip-cut-pool", "[highs_callback]") {
 
 static void runMipUserSolutionTest(
     HighsCallbackFunctionType callback_function) {
-  //  const std::vector<std::string> model = {"rgn", "flugpl", "gt2", "egout",
-  //  "bell5", "lseu", "sp150x300d"};//, "p0548", "dcmulti"}; const
-  //  std::vector<HighsInt> require_origin = {0, 1, 2, 3, 4, 5, 6};
   const std::vector<std::string> model = {"p0548", "flugpl", "gt2", "egout",
                                           "sp150x300d"};
   const std::vector<HighsInt> require_origin = {0, 1, 2, 3, 4};  //, 4, 5, 6};

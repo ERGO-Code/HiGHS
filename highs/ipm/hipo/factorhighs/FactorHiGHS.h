@@ -1,15 +1,15 @@
 #ifndef FACTOR_HIGHS_H
 #define FACTOR_HIGHS_H
 
+#include "CliqueStack.h"
 #include "DataCollector.h"
 #include "Numeric.h"
 #include "Symbolic.h"
-#include "ipm/hipo/auxiliary/Log.h"
+#include "ipm/hipo/auxiliary/Logger.h"
 
 /*
 
 Direct solver for IPM matrices.
-It requires Metis and BLAS.
 
 Consider a sparse symmetric matrix M in CSC format.
 Only its lower triangular part is used; entries in the upper triangle are
@@ -26,23 +26,22 @@ The direct solver uses the following objects:
 
 Define a vector signs that contains the expected sign of each pivot (1 or -1).
 Define a right-hand side rhs, which will be overwritten with the solution of
-M^{-1} * rhs.
+M^{-1} * rhs. The pre-computed fill-reducing ordering to use is stored in the
+vector perm.
 
 Then, the factorization is performed as follows.
 
     Symbolic S;
     FHsolver FH;
-    FH.analyse(S, rows, ptr, signs);
+    FH.analyse(S, rows, ptr, signs, perm);
     FH.factorise(S, rows, ptr, val);
     FH.solve(x);
 
-Printing to screen is achieved using the interface in auxiliary/Log.h. Pass an
-object of type Log for normal printing:
+Printing to screen is achieved using the interface in auxiliary/Logger.h.
     ...
-    Log log;
-    FHsolver FH(&log);
+    Logger logger;
+    FHsolver FH(&logger);
     ...
-Pass an object of type LogHighs for Highs logging.
 Pass nothing to suppress all logging.
 
 To add static regularisation when the pivots are selected, use
@@ -57,10 +56,11 @@ input to the constructor.
 namespace hipo {
 
 class FHsolver {
-  const Log* log_;
+  const Logger* logger_;
   DataCollector data_;
   Regul regul_;
   Numeric N_;
+  CliqueStack serial_stack_;
 
   const Int nb_;  // block size
   static const Int default_nb_ = 128;
@@ -72,7 +72,7 @@ class FHsolver {
 
  public:
   // Create object and initialise DataCollector
-  FHsolver(const Log* log = nullptr, Int block_size = default_nb_);
+  FHsolver(const Logger* logger = nullptr, Int block_size = default_nb_);
 
   // Print collected data (if any) and terminate DataCollector
   ~FHsolver();
@@ -81,12 +81,11 @@ class FHsolver {
   // ptr, and store symbolic factorisation in object S.
   // See ReturnValues.h for errors.
   Int analyse(Symbolic& S, const std::vector<Int>& rows,
-              const std::vector<Int>& ptr, const std::vector<Int>& signs);
+              const std::vector<Int>& ptr, const std::vector<Int>& signs,
+              const std::vector<Int>& perm);
 
   // Perform factorise phase of matrix given by rows, ptr, vals, and store
-  // numerical factorisation in object N. Matrix is moved into the object, so
-  // rows, ptr, vals are invalid afterwards.
-  // See ReturnValues.h for errors.
+  // numerical factorisation in object N. See ReturnValues.h for errors.
   Int factorise(const Symbolic& S, const std::vector<Int>& rows,
                 const std::vector<Int>& ptr, const std::vector<double>& vals);
 

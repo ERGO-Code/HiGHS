@@ -14,6 +14,7 @@
 #include <set>
 #include <vector>
 
+#include "HighsPseudocost.h"
 #include "mip/HighsDomainChange.h"
 #include "mip/HighsMipSolver.h"
 #include "util/HighsCDouble.h"
@@ -61,7 +62,7 @@ class HighsDomain {
   class ConflictSet {
     friend class HighsDomain;
     HighsDomain& localdom;
-    HighsDomain& globaldom;
+    const HighsDomain& globaldom;
 
    public:
     struct LocalDomChg {
@@ -71,12 +72,14 @@ class HighsDomain {
       bool operator<(const LocalDomChg& other) const { return pos < other.pos; }
     };
 
-    ConflictSet(HighsDomain& localdom);
+    ConflictSet(HighsDomain& localdom, const HighsDomain& globaldom);
 
-    void conflictAnalysis(HighsConflictPool& conflictPool);
+    void conflictAnalysis(HighsConflictPool& conflictPool,
+                          HighsPseudocost& pseudocost);
     void conflictAnalysis(const HighsInt* proofinds, const double* proofvals,
                           HighsInt prooflen, double proofrhs,
-                          HighsConflictPool& conflictPool);
+                          HighsConflictPool& conflictPool,
+                          HighsPseudocost& pseudocost);
 
    private:
     std::set<LocalDomChg> reasonSideFrontier;
@@ -108,10 +111,12 @@ class HighsDomain {
     bool resolvable(HighsInt domChgPos) const;
 
     HighsInt resolveDepth(std::set<LocalDomChg>& frontier, HighsInt depthLevel,
-                          HighsInt stopSize, HighsInt minResolve = 0,
+                          HighsInt stopSize, HighsPseudocost& pseudocost,
+                          HighsInt minResolve = 0,
                           bool increaseConflictScore = false);
 
-    HighsInt computeCuts(HighsInt depthLevel, HighsConflictPool& conflictPool);
+    HighsInt computeCuts(HighsInt depthLevel, HighsConflictPool& conflictPool,
+                         HighsPseudocost& pseudocost);
 
     bool explainInfeasibility();
 
@@ -166,6 +171,8 @@ class HighsDomain {
 
     CutpoolPropagation(const CutpoolPropagation& other);
 
+    CutpoolPropagation& operator=(const CutpoolPropagation& other);
+
     ~CutpoolPropagation();
 
     void recomputeCapacityThreshold(HighsInt cut);
@@ -176,9 +183,13 @@ class HighsDomain {
 
     void markPropagateCut(HighsInt cut);
 
-    void updateActivityLbChange(HighsInt col, double oldbound, double newbound);
+    void updateActivityLbChange(HighsInt col, double oldbound, double newbound,
+                                bool threshold, bool activity,
+                                bool infeasdomain);
 
-    void updateActivityUbChange(HighsInt col, double oldbound, double newbound);
+    void updateActivityUbChange(HighsInt col, double oldbound, double newbound,
+                                bool threshold, bool activity,
+                                bool infeasdomain);
   };
 
   struct ConflictPoolPropagation {
@@ -202,6 +213,8 @@ class HighsDomain {
                             HighsConflictPool& cutpool);
 
     ConflictPoolPropagation(const ConflictPoolPropagation& other);
+
+    ConflictPoolPropagation& operator=(const ConflictPoolPropagation& other);
 
     ~ConflictPoolPropagation();
 
@@ -324,8 +337,7 @@ class HighsDomain {
 
   void recomputeCapacityThreshold(HighsInt row);
 
-  void updateRedundantRows(HighsInt row, HighsInt direction, HighsInt numInf,
-                           HighsCDouble activity, double bound);
+  void updateRedundantRows(HighsInt row);
 
   double doChangeBound(const HighsDomainChange& boundchg);
 
@@ -440,22 +452,22 @@ class HighsDomain {
 
   void removeContinuousChangedCols() {
     for (HighsInt i : changedcols_)
-      changedcolsflags_[i] =
-          mipsolver->variableType(i) != HighsVarType::kContinuous;
+      changedcolsflags_[i] = mipsolver->isColIntegral(i);
 
     changedcols_.erase(
         std::remove_if(changedcols_.begin(), changedcols_.end(),
-                       [&](HighsInt i) { return !changedcolsflags_[i]; }),
+                       [&](HighsInt i) { return !isChangedCol(i); }),
         changedcols_.end());
   }
 
-  void clearChangedCols(HighsInt start) {
-    HighsInt end = changedcols_.size();
-    for (HighsInt i = start; i != end; ++i)
+  void clearChangedCols(size_t start) {
+    for (size_t i = start; i != changedcols_.size(); ++i)
       changedcolsflags_[changedcols_[i]] = 0;
 
     changedcols_.resize(start);
   }
+
+  bool isChangedCol(HighsInt col) const { return changedcolsflags_[col] != 0; }
 
   void markPropagate(HighsInt row);
 
@@ -486,6 +498,9 @@ class HighsDomain {
                    Reason reason = Reason::branching()) {
     changeBound({boundval, col, boundtype}, reason);
   }
+
+  bool checkChangeBound(HighsBoundType boundtype, HighsInt col,
+                        HighsCDouble boundval, Reason reason);
 
   void fixCol(HighsInt col, double val, Reason reason = Reason::unspecified()) {
     if (kAllowDeveloperAssert) {
@@ -585,17 +600,21 @@ class HighsDomain {
 
   double getColUpperPos(HighsInt col, HighsInt stackpos, HighsInt& pos) const;
 
-  void conflictAnalysis(HighsConflictPool& conflictPool);
+  void conflictAnalysis(HighsConflictPool& conflictPool, HighsDomain& globaldom,
+                        HighsPseudocost& pseudocost);
 
   void conflictAnalysis(const HighsInt* proofinds, const double* proofvals,
                         HighsInt prooflen, double proofrhs,
-                        HighsConflictPool& conflictPool);
+                        HighsConflictPool& conflictPool, HighsDomain& globaldom,
+                        HighsPseudocost& pseudocost);
 
   void conflictAnalyzeReconvergence(const HighsDomainChange& domchg,
                                     const HighsInt* proofinds,
                                     const double* proofvals, HighsInt prooflen,
                                     double proofrhs,
-                                    HighsConflictPool& conflictPool);
+                                    HighsConflictPool& conflictPool,
+                                    HighsDomain& globaldom,
+                                    HighsPseudocost& pseudocost);
 
   void tightenCoefficients(HighsInt* inds, double* vals, HighsInt len,
                            double& rhs) const;
@@ -611,12 +630,12 @@ class HighsDomain {
   double getMinCutActivity(const HighsCutPool& cutpool, HighsInt cut) const;
 
   bool isBinary(HighsInt col) const {
-    return mipsolver->variableType(col) != HighsVarType::kContinuous &&
-           col_lower_[col] == 0.0 && col_upper_[col] == 1.0;
+    return mipsolver->isColIntegral(col) && col_lower_[col] == 0.0 &&
+           col_upper_[col] == 1.0;
   }
 
   bool isGlobalBinary(HighsInt col) const {
-    return mipsolver->variableType(col) != HighsVarType::kContinuous &&
+    return mipsolver->isColIntegral(col) &&
            mipsolver->model_->col_lower_[col] == 0.0 &&
            mipsolver->model_->col_upper_[col] == 1.0;
   }
@@ -648,6 +667,8 @@ class HighsDomain {
   double getRedundantRowValue(HighsInt row) const;
 
   void setRecordRedundantRows(bool val) { recordRedundantRows_ = val; };
+
+  bool isRedundantRow(HighsInt row) const;
 };
 
 #endif

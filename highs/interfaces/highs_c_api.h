@@ -396,6 +396,20 @@ HighsInt Highs_clearModel(void* highs);
 HighsInt Highs_clearSolver(void* highs);
 
 /**
+ * Release all retained memory back to the allocator.
+ *
+ * Clears all solver state and shrinks internal vectors to free unused
+ * capacity. Useful in long-running services that reuse a Highs instance
+ * across multiple solves to prevent unbounded RSS growth from heap
+ * fragmentation.
+ *
+ * @param highs     A pointer to the Highs instance.
+ *
+ * @returns A `kHighsStatus` constant indicating whether the call succeeded.
+ */
+HighsInt Highs_releaseMemory(void* highs);
+
+/**
  * Presolve a model.
  *
  * @param highs     A pointer to the Highs instance.
@@ -2253,6 +2267,29 @@ HighsInt Highs_getPresolvedLp(const void* highs, const HighsInt a_format,
                               double* row_upper, HighsInt* a_start,
                               HighsInt* a_index, double* a_value,
                               HighsInt* integrality);
+/**
+ * Get the name of a column of the presolved LP.
+ *
+ * @param col   The index of the column to query.
+ * @param name  A pointer in which to store the name of the column. This must
+ *              have length `kHighsMaximumStringLength`.
+ *
+ * @returns A `kHighsStatus` constant indicating whether the call succeeded.
+ */
+HighsInt Highs_getPresolvedColName(const void* highs, const HighsInt col,
+                                   char* name);
+
+/**
+ * Get the name of a row of the presolved LP.
+ *
+ * @param row   The index of the row to query.
+ * @param name  A pointer in which to store the name of the row. This must
+ *              have length `kHighsMaximumStringLength`.
+ *
+ * @returns A `kHighsStatus` constant indicating whether the call succeeded.
+ */
+HighsInt Highs_getPresolvedRowName(const void* highs, const HighsInt row,
+                                   char* name);
 
 /**
  * Get the data from a HiGHS IIS LP.
@@ -2540,7 +2577,7 @@ HighsInt Highs_repairCallbackSolution(HighsCallbackDataIn* data_in);
 /**
  * Return the HiGHS compilation date.
  *
- * @returns Thse HiGHS compilation date.
+ * @returns The HiGHS compilation date.
  */
 static const char* Highs_compilationDate(void);
 

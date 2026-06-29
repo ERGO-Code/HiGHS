@@ -15,7 +15,7 @@
 // specified.
 HighsLoadOptionsStatus loadOptionsFromFile(
     const HighsLogOptions& report_log_options, HighsOptions& options,
-    const std::string filename) {
+    const std::string& filename) {
   if (filename.size() == 0) return HighsLoadOptionsStatus::kEmpty;
 
   string line, option, value;
@@ -29,13 +29,15 @@ HighsLoadOptionsStatus loadOptionsFromFile(
     while (file.good()) {
       getline(file, line);
       line_count++;
-      if (line.size() == 0 || line[0] == '#') continue;
-
+      size_t non_space = line.find_first_not_of(" ");
+      if (line.size() == 0 || line[0] == '#' || non_space == std::string::npos)
+        continue;
       size_t equals = line.find_first_of("=");
       if (equals == std::string::npos || equals + 1 >= line.size()) {
         highsLogUser(report_log_options, HighsLogType::kError,
-                     "Error on line %" HIGHSINT_FORMAT " of options file.\n",
-                     line_count);
+                     "Error on line %" HIGHSINT_FORMAT
+                     " (\"%s\") of options file\n",
+                     line_count, line.c_str());
         return HighsLoadOptionsStatus::kError;
       }
       option = line.substr(0, equals);

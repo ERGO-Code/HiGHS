@@ -8,6 +8,7 @@
 #include "mip/HighsCutGeneration.h"
 
 #include "../extern/pdqsort/pdqsort.h"
+#include "mip/HighsDomain.h"
 #include "mip/HighsMipSolverData.h"
 #include "mip/HighsTransformedLp.h"
 #include "util/HighsIntegers.h"
@@ -128,8 +129,6 @@ bool HighsCutGeneration::determineCover(bool lpSol) {
 }
 
 void HighsCutGeneration::separateLiftedKnapsackCover() {
-  const double feastol = lpRelaxation.getMipSolver().mipdata_->feastol;
-
   const HighsInt coversize = cover.size();
 
   std::vector<double> S;
@@ -434,7 +433,7 @@ bool HighsCutGeneration::separateLiftedMixedIntegerCover() {
   auto gamma_l = [&](double z) {
     assert(z > 0);
     for (HighsInt i = 0; i < cplussize; ++i) {
-      HighsInt upperi = upper[cover[i]];
+      HighsInt upperi = static_cast<HighsInt>(upper[cover[i]]);
 
       for (HighsInt h = 0; h <= upperi; ++h) {
         HighsCDouble mih = m[i] + h * a[i];
@@ -607,6 +606,7 @@ bool HighsCutGeneration::cmirCutGenerationHeuristic(double minEfficacy,
       updateViolationAndNorm(j, aj, viol, sqrnorm);
     }
 
+    // TODO: Add some minimum violation check, e.g., 0.001 * feastol?
     double efficacy = viol / sqrt(sqrnorm);
     if (efficacy > bestefficacy) {
       bestdelta = delta;
@@ -787,15 +787,17 @@ bool HighsCutGeneration::cmirCutGenerationHeuristic(double minEfficacy,
       if (vals[j] == 0.0) continue;
       updateViolationAndNorm(j, vals[j], checkviol, checknorm);
     }
-    double checkefficacy = checkviol / sqrt(checknorm);
-    // the efficacy can become infinite if the cut 0 <= -1 is derived
-    if (!strongcg) {
-      assert(fabs(checkefficacy - bestefficacy) < 0.001 ||
-             fabs(checkefficacy) >= 1e30);
-    } else {
-      // Rounded conservatively for scoring => strongcg cut can be stronger
-      assert(bestefficacy - checkefficacy < 0.001 ||
-             fabs(checkefficacy) >= 1e30);
+    if (checknorm != 0.0) {
+      double checkefficacy = checkviol / sqrt(checknorm);
+      // the efficacy can become infinite if the cut 0 <= -1 is derived
+      if (!strongcg) {
+        assert(fabs(checkefficacy - bestefficacy) < 0.001 ||
+               fabs(checkefficacy) >= 1e30);
+      } else {
+        // Rounded conservatively for scoring => strongcg cut can be stronger
+        assert(bestefficacy - checkefficacy < 0.001 ||
+               fabs(checkefficacy) >= 1e30);
+      }
     }
   }
 #endif
@@ -822,7 +824,7 @@ double HighsCutGeneration::scale(double val) {
   return std::ldexp(1.0, expshift);
 }
 
-bool HighsCutGeneration::postprocessCut() {
+bool HighsCutGeneration::postprocessCut(const HighsDomain& globaldom) {
   // right hand sides slightly below zero are likely due to numerical errors and
   // can cause numerical troubles with scaling, so set them to zero
   if (rhs < 0 && rhs > -epsilon) rhs = 0;
@@ -840,7 +842,6 @@ bool HighsCutGeneration::postprocessCut() {
     return true;
   }
 
-  HighsDomain& globaldomain = lpRelaxation.getMipSolver().mipdata_->domain;
   // determine maximal absolute coefficient
   double maxAbsValue = 0.0;
   for (HighsInt i = 0; i != rowlen; ++i)
@@ -856,13 +857,13 @@ bool HighsCutGeneration::postprocessCut() {
     if (vals[i] == 0) continue;
     if (std::abs(vals[i]) <= minCoefficientValue) {
       if (vals[i] < 0) {
-        double ub = globaldomain.col_upper_[inds[i]];
+        double ub = globaldom.col_upper_[inds[i]];
         if (ub == kHighsInf)
           return false;
         else
           rhs -= ub * vals[i];
       } else {
-        double lb = globaldomain.col_lower_[inds[i]];
+        double lb = globaldom.col_lower_[inds[i]];
         if (lb == -kHighsInf)
           return false;
         else
@@ -921,12 +922,12 @@ bool HighsCutGeneration::postprocessCut() {
         // upperbound constraint to make it exactly integral instead and
         // therefore weaken the right hand side
         if (delta < 0.0) {
-          double ub = globaldomain.col_upper_[inds[i]];
+          double ub = globaldom.col_upper_[inds[i]];
           if (ub == kHighsInf) return false;
 
           rhs -= delta * ub;
         } else {
-          double lb = globaldomain.col_lower_[inds[i]];
+          double lb = globaldom.col_lower_[inds[i]];
           if (lb == -kHighsInf) return false;
 
           rhs -= delta * lb;
@@ -1025,15 +1026,6 @@ bool HighsCutGeneration::preprocessBaseInequality(bool& hasUnboundedInts,
       }
 
       hasContinuous = true;
-      // if (lpRelaxation.isColIntegral(inds[i]))
-      //   printf("vals[i] = %g  upper[i] = %g\n", vals[i], upper[i]);
-
-      if (vals[i] > 0) {
-        if (upper[i] == kHighsInf)
-          maxact = kHighsInf;
-        else
-          maxact += vals[i] * upper[i];
-      }
     } else {
       if (upper[i] == kHighsInf) {
         hasUnboundedInts = true;
@@ -1243,7 +1235,7 @@ bool HighsCutGeneration::generateCut(HighsTransformedLp& transLp,
                                                                rowlen, rhs_);
   // apply cut postprocessing including scaling and removal of small
   // coefficients
-  if (!postprocessCut()) return false;
+  if (!postprocessCut(transLp.getGlobaldom())) return false;
   rhs_ = (double)rhs;
   vals_.resize(rowlen);
   inds_.resize(rowlen);
@@ -1258,8 +1250,7 @@ bool HighsCutGeneration::generateCut(HighsTransformedLp& transLp,
 
   if (violation <= 10 * feastol) return false;
 
-  lpRelaxation.getMipSolver().mipdata_->domain.tightenCoefficients(
-      inds, vals, rowlen, rhs_);
+  transLp.getGlobaldom().tightenCoefficients(inds, vals, rowlen, rhs_);
 
   // if the cut is violated by a small factor above the feasibility
   // tolerance, add it to the cutpool
@@ -1272,7 +1263,8 @@ bool HighsCutGeneration::generateCut(HighsTransformedLp& transLp,
   return cutindex != -1;
 }
 
-bool HighsCutGeneration::generateConflict(HighsDomain& localdomain,
+bool HighsCutGeneration::generateConflict(const HighsDomain& localdomain,
+                                          const HighsDomain& globaldom,
                                           std::vector<HighsInt>& proofinds,
                                           std::vector<double>& proofvals,
                                           double& proofrhs) {
@@ -1289,27 +1281,26 @@ bool HighsCutGeneration::generateConflict(HighsDomain& localdomain,
   upper.resize(rowlen);
   solval.resize(rowlen);
 
-  HighsDomain& globaldomain = lpRelaxation.getMipSolver().mipdata_->domain;
   double activity = 0.0;
   for (HighsInt i = 0; i != rowlen; ++i) {
     HighsInt col = inds[i];
 
-    upper[i] = globaldomain.col_upper_[col] - globaldomain.col_lower_[col];
+    upper[i] = globaldom.col_upper_[col] - globaldom.col_lower_[col];
 
-    solval[i] = vals[i] < 0 ? std::min(globaldomain.col_upper_[col],
-                                       localdomain.col_upper_[col])
-                            : std::max(globaldomain.col_lower_[col],
-                                       localdomain.col_lower_[col]);
-    if (vals[i] < 0 && globaldomain.col_upper_[col] != kHighsInf) {
-      rhs -= globaldomain.col_upper_[col] * vals[i];
+    solval[i] =
+        vals[i] < 0
+            ? std::min(globaldom.col_upper_[col], localdomain.col_upper_[col])
+            : std::max(globaldom.col_lower_[col], localdomain.col_lower_[col]);
+    if (vals[i] < 0 && globaldom.col_upper_[col] != kHighsInf) {
+      rhs -= globaldom.col_upper_[col] * vals[i];
       vals[i] = -vals[i];
       complementation[i] = 1;
 
-      solval[i] = globaldomain.col_upper_[col] - solval[i];
+      solval[i] = globaldom.col_upper_[col] - solval[i];
     } else {
-      rhs -= globaldomain.col_lower_[col] * vals[i];
+      rhs -= globaldom.col_lower_[col] * vals[i];
       complementation[i] = 0;
-      solval[i] = solval[i] - globaldomain.col_lower_[col];
+      solval[i] = solval[i] - globaldom.col_lower_[col];
     }
 
     activity += solval[i] * vals[i];
@@ -1337,16 +1328,16 @@ bool HighsCutGeneration::generateConflict(HighsDomain& localdomain,
   if (!complementation.empty()) {
     for (HighsInt i = 0; i != rowlen; ++i) {
       if (complementation[i]) {
-        rhs -= globaldomain.col_upper_[inds[i]] * vals[i];
+        rhs -= globaldom.col_upper_[inds[i]] * vals[i];
         vals[i] = -vals[i];
       } else
-        rhs += globaldomain.col_lower_[inds[i]] * vals[i];
+        rhs += globaldom.col_lower_[inds[i]] * vals[i];
     }
   }
 
   // apply cut postprocessing including scaling and removal of small
   // coefficients
-  if (!postprocessCut()) return false;
+  if (!postprocessCut(globaldom)) return false;
 
   proofvals.resize(rowlen);
   proofinds.resize(rowlen);
@@ -1354,8 +1345,8 @@ bool HighsCutGeneration::generateConflict(HighsDomain& localdomain,
 
   bool cutintegral = integralSupport && integralCoefficients;
 
-  lpRelaxation.getMipSolver().mipdata_->domain.tightenCoefficients(
-      proofinds.data(), proofvals.data(), rowlen, proofrhs);
+  globaldom.tightenCoefficients(proofinds.data(), proofvals.data(), rowlen,
+                                proofrhs);
 
   HighsInt cutindex = cutpool.addCut(lpRelaxation.getMipSolver(),
                                      proofinds.data(), proofvals.data(), rowlen,
@@ -1366,7 +1357,8 @@ bool HighsCutGeneration::generateConflict(HighsDomain& localdomain,
   return cutindex != -1;
 }
 
-bool HighsCutGeneration::finalizeAndAddCut(std::vector<HighsInt>& inds_,
+bool HighsCutGeneration::finalizeAndAddCut(const HighsDomain& globaldom,
+                                           std::vector<HighsInt>& inds_,
                                            std::vector<double>& vals_,
                                            double& rhs_) {
   complementation.clear();
@@ -1395,7 +1387,7 @@ bool HighsCutGeneration::finalizeAndAddCut(std::vector<HighsInt>& inds_,
                                                                rowlen, rhs_);
   // apply cut postprocessing including scaling and removal of small
   // coefficients
-  if (!postprocessCut()) return false;
+  if (!postprocessCut(globaldom)) return false;
   rhs_ = (double)rhs;
   vals_.resize(rowlen);
   inds_.resize(rowlen);
@@ -1410,8 +1402,7 @@ bool HighsCutGeneration::finalizeAndAddCut(std::vector<HighsInt>& inds_,
 
   if (violation <= 10 * feastol) return false;
 
-  lpRelaxation.getMipSolver().mipdata_->domain.tightenCoefficients(
-      inds, vals, rowlen, rhs_);
+  globaldom.tightenCoefficients(inds, vals, rowlen, rhs_);
 
   // if the cut is violated by a small factor above the feasibility
   // tolerance, add it to the cutpool
@@ -1467,10 +1458,10 @@ bool HighsCutGeneration::tryGenerateCut(std::vector<HighsInt>& inds_,
     return cmirCutGenerationHeuristic(minEfficacy, onlyInitialCMIRScale);
 
   // 0. Save data before determining cover and applying lifting functions
-  std::vector<double> tmpVals(vals, vals + rowlen);
-  std::vector<HighsInt> tmpInds(inds, inds + rowlen);
-  std::vector<uint8_t> tmpComplementation(complementation);
-  std::vector<double> tmpSolval(solval);
+  tmpVals.assign(vals, vals + rowlen);
+  tmpInds.assign(inds, inds + rowlen);
+  tmpComplementation = complementation;
+  tmpSolval = solval;
   HighsCDouble tmpRhs = rhs;
 
   // 1. Determine a cover, cover does not need to be minimal as neither of

@@ -1,0 +1,41 @@
+name: action-dispatch
+
+on:
+  workflow_dispatch:
+  # push:
+  #   branches:
+  #     - '*'
+  # pull_request:
+  #   branches:
+  #     - '*'
+
+run-name: ${{ github.actor }} is testing out Actions 🚀
+
+jobs:
+  trigger:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Generate token from GitHub App
+        id: generate-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          owner: ERGO-Code
+          repositories: tests
+
+      - name: Trigger the automated test in another repo
+        uses: peter-evans/repository-dispatch@v4
+        with:
+          token: ${{ steps.generate-token.outputs.token }}
+          repository: ERGO-Code/tests
+          event-type: highs-mip-tests
+          client-payload: |
+            {
+              "repository": "${{ github.repository }}",
+              "ref": "${{ github.ref }}",
+              "sha": "${{ github.sha }}"
+            }
+
+      - name: my-step
+        run: echo "${{ github.actor }} Hello automations!"

@@ -173,6 +173,7 @@ class HMpsFF {
   std::vector<HighsInt> integer_column;
 
   std::vector<Triplet> entries;
+  HessianFormat q_format;
   std::vector<Triplet> q_entries;
   std::vector<std::vector<Triplet>> qrows_entries;
   std::vector<std::pair<HighsInt, double>> coeffobj;
@@ -223,6 +224,11 @@ class HMpsFF {
   HMpsFF::Parsekey parseQuadRows(const HighsLogOptions& log_options,
                                  std::istream& file,
                                  const HMpsFF::Parsekey keyword);
+  HMpsFF::Parsekey parseQuadMatrix(const HighsLogOptions& log_options,
+                                   std::istream& file,
+                                   const std::string& section_name,
+                                   std::vector<Triplet>& q_entries);
+
   HMpsFF::Parsekey parseCones(const HighsLogOptions& log_options,
                               std::istream& file);
   HMpsFF::Parsekey parseSos(const HighsLogOptions& log_options,

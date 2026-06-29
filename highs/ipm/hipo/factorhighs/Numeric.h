@@ -28,9 +28,6 @@ class Numeric {
   // symbolic object
   const Symbolic* S_;
 
-  // object to handle solve phase in different formats
-  mutable std::unique_ptr<SolveHandler> SH_;
-
   DataCollector* data_ = nullptr;
 
   friend class Factorise;

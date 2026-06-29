@@ -8,6 +8,7 @@
 #include "Parameters.h"
 #include "ipm/hipo/auxiliary/IntConfig.h"
 #include "ipm/hipo/auxiliary/VectorOperations.h"
+#include "model/HighsHessian.h"
 #include "util/HighsSparseMatrix.h"
 
 namespace hipo {
@@ -50,16 +51,14 @@ class LinearSolver {
   // Pure virtual functions.
   // These need to be defined by any derived class.
   // =================================================================
-  virtual Int factorAS(const HighsSparseMatrix& A,
-                       const std::vector<double>& scaling) = 0;
+  virtual Int factorAS(const std::vector<double>& scaling) = 0;
 
   virtual Int solveAS(const std::vector<double>& rhs_x,
                       const std::vector<double>& rhs_y,
                       std::vector<double>& lhs_x,
                       std::vector<double>& lhs_y) = 0;
 
-  virtual Int factorNE(const HighsSparseMatrix& A,
-                       const std::vector<double>& scaling) = 0;
+  virtual Int factorNE(const std::vector<double>& scaling) = 0;
 
   virtual Int solveNE(const std::vector<double>& rhs,
                       std::vector<double>& lhs) = 0;
