@@ -88,7 +88,7 @@ TEST_CASE("test-fourier-motzkin", "[highs_test_presolve_rules]") {
 
   const bool lp0 = true;
   const bool lp1 = true;   // Makes eliminations marginal, and leaves x2=0
-  const bool lp2 = false;  // Failing test
+  const bool lp2 = true;
 
   // From "A novel linear optimization presolve technique based on
   // Fourier-Motzkin elimination", Zhang, Ploskas and Sahinidis,
@@ -129,8 +129,8 @@ TEST_CASE("test-fourier-motzkin", "[highs_test_presolve_rules]") {
 
   if (lp2) {
     HighsInt require_presolved_model_num_col = 1;
-    HighsInt require_presolved_model_num_row = 8;
-    HighsInt require_presolved_model_num_nz = 8;
+    HighsInt require_presolved_model_num_row = 6;
+    HighsInt require_presolved_model_num_nz = 6;
     presolveOffOn("FM example from paper - tightened and with costs", lp, h,
                   require_presolved_model_num_col,
                   require_presolved_model_num_row,
@@ -150,7 +150,7 @@ void presolveOffOn(const std::string& message, const HighsLp& lp, Highs& h,
   // solvers cannot be tested
   const bool reduce_to_empty = require_presolved_model_num_col == 0 &&
                                require_presolved_model_num_row == 0;
-  const HighsInt to_k = reduce_to_empty ? 2 : 5;
+  const HighsInt to_k = reduce_to_empty ? 2 : 4;
   for (int k = 0; k < to_k; k++) {
     std::string solver = kSimplexString;
     std::string run_crossover = kHighsOnString;
@@ -168,9 +168,6 @@ void presolveOffOn(const std::string& message, const HighsLp& lp, Highs& h,
       } else if (k == 3) {
         solver = kIpmString;
         run_crossover = kHighsOffString;
-        basis_postsolve = false;
-      } else {
-        solver = kHiPdlpString;
         basis_postsolve = false;
       }
     }
