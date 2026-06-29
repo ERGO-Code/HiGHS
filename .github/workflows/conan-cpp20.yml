@@ -7,14 +7,17 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build:
+  cmake-cpp20-libcxx:
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v6
 
       - name: Install libc++
         run: sudo apt-get install -y libc++-dev libc++abi-dev
+
+      - name: Patch CMakeLists.txt
+        run: |
+          sed -i 's/set(CMAKE_CXX_STANDARD /## set(CMAKE_CXX_STANDARD /' CMakeLists.txt
 
       - name: Create Build Environment
         run: cmake -E make_directory ${{github.workspace}}/build
@@ -33,3 +36,94 @@ jobs:
       - name: Build
         working-directory: ${{github.workspace}}/build
         run: cmake --build . --parallel
+
+  conan-cpp20-libcxx:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get install -y libc++-dev libc++abi-dev python3-pip
+          pip3 install conan
+
+      - name: Create conan profile
+        run: |
+          conan profile detect
+          cat >> ~/.conan2/profiles/default << 'EOF'
+          [settings]
+          compiler=clang
+          compiler.version=18
+          compiler.libcxx=libc++
+          compiler.cppstd=20
+          [conf]
+          tools.build:compiler_executables={'c': 'clang', 'cpp': 'clang++'}
+          EOF
+
+      - name: Create conan recipe
+        env:
+          HIGHS_SOURCE: ${{ github.workspace }}
+        run: |
+          mkdir -p /tmp/conan-highs
+          cat > /tmp/conan-highs/conanfile.py << 'CONANEOF'
+          import os
+          from conan import ConanFile
+          from conan.tools.cmake import CMake, CMakeDeps, CMakeToolchain, cmake_layout
+          from conan.tools.files import copy, replace_in_file
+
+          class HiGHSConan(ConanFile):
+              name = "highs"
+              settings = "os", "arch", "compiler", "build_type"
+              options = {"shared": [True, False], "fPIC": [True, False]}
+              default_options = {"shared": False, "fPIC": True}
+
+              def config_options(self):
+                  if self.settings.os == "Windows":
+                      del self.options.fPIC
+
+              def configure(self):
+                  if self.options.shared:
+                      self.options.rm_safe("fPIC")
+
+              def layout(self):
+                  cmake_layout(self, src_folder="src")
+
+              def source(self):
+                  copy(self, "*", src=os.environ["HIGHS_SOURCE"], dst=self.source_folder,
+                       excludes=[".git/*"])
+                  replace_in_file(self, os.path.join(self.source_folder, "CMakeLists.txt"),
+                                  "set(CMAKE_CXX_STANDARD ", "## set(CMAKE_CXX_STANDARD ")
+
+              def generate(self):
+                  tc = CMakeToolchain(self)
+                  tc.variables["FAST_BUILD"] = True
+                  tc.variables["BUILD_TESTING"] = False
+                  tc.variables["PYTHON"] = False
+                  tc.variables["FORTRAN"] = False
+                  tc.variables["CSHARP"] = False
+                  tc.variables["EXP"] = False
+                  tc.variables["BUILD_EXAMPLES"] = False
+                  tc.variables["JULIA"] = False
+                  tc.generate()
+                  CMakeDeps(self).generate()
+
+              def build(self):
+                  cmake = CMake(self)
+                  cmake.configure()
+                  cmake.build()
+
+              def package(self):
+                  copy(self, "LICENSE*", src=self.source_folder,
+                       dst=os.path.join(self.package_folder, "licenses"))
+                  cmake = CMake(self)
+                  cmake.install()
+
+              def package_info(self):
+                  self.cpp_info.libs = ["highs"]
+          CONANEOF
+
+      - name: Build conan package
+        env:
+          HIGHS_SOURCE: ${{ github.workspace }}
+        run: |
+          conan create /tmp/conan-highs --version 1.15.0 --build=missing
