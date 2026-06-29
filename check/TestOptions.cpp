@@ -571,7 +571,9 @@ TEST_CASE("string-option-case-insensitivity", "[highs_options]") {
   REQUIRE(highs.setOptionValue(kParallelString, "On") == HighsStatus::kOk);
   REQUIRE(highs.setOptionValue(kParallelString, "OFF ") == HighsStatus::kOk);
   REQUIRE(highs.setOptionValue(kSolverString, " Choose") == HighsStatus::kOk);
-  REQUIRE(highs.setOptionValue(kSolverString, "HiPO") == HighsStatus::kOk);
+  REQUIRE(highs.setOptionValue(kSolverString, "Simplex") == HighsStatus::kOk);
+  REQUIRE(highs.setOptionValue(kSolverString, " IPM") == HighsStatus::kOk);
+  REQUIRE(highs.setOptionValue(kSolverString, "PDLP ") == HighsStatus::kOk);
   REQUIRE(highs.setOptionValue(kHipoOrderingString, "Metis") ==
           HighsStatus::kOk);
   REQUIRE(highs.setOptionValue(kHipoParallelString, "Tree") ==
