@@ -83,6 +83,12 @@ message(STATUS "Build C++ executable: ${BUILD_CXX_EXE}")
 option(BUILD_TESTING "Build Tests" ON)
 option(BUILD_SHARED_EXTRAS_LIB "Build shared extras library" ON)
 message(STATUS "Build shared extras library: ${BUILD_SHARED_EXTRAS_LIB}")
+
+option(BUILD_STATIC_EXE "Build static executable" OFF)
+if (BUILD_STATIC_EXE)
+  set (BUILD_SHARED_EXTRAS_LIB OFF)
+endif()
+
 set(HIGHS_SHARED_EXTRAS_LIBRARY ${BUILD_SHARED_EXTRAS_LIB})
 
 option(FORTRAN "Build Fortran interface" OFF)
@@ -208,8 +214,6 @@ else()
     set(CUDA_LIBRARY-NOTFOUND true)
 endif()
 
-# Option to build static
-option(BUILD_STATIC_EXE "Build static executable" OFF)
 
 if(BUILD_STATIC_EXE)
   set(BUILD_SHARED_LIBS OFF)
