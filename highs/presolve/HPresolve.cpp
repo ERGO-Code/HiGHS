@@ -7455,10 +7455,10 @@ HPresolve::Result HPresolve::fourierMotzkin(
   auto printLog = [&](HighsInt colsRemoved, HighsInt rowsRemoved,
                       HighsInt rowsAdded) {
     highsLogDev(options->log_options, HighsLogType::kInfo,
-                "Fourier-Motzkin eliminated %" HIGHSINT_FORMAT
-                " cols and %" HIGHSINT_FORMAT
-                " rows, and added %" HIGHSINT_FORMAT " rows\n",
-                colsRemoved, rowsRemoved, rowsAdded);
+                "Fourier-Motzkin added %" HIGHSINT_FORMAT
+                " rows and eliminated %" HIGHSINT_FORMAT
+                " rows and %" HIGHSINT_FORMAT " columns\n",
+                rowsAdded, rowsRemoved, colsRemoved);
   };
 
   // workspace vectors

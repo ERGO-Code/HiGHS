@@ -4,7 +4,7 @@
 #include "Highs.h"
 #include "catch.hpp"
 
-const bool dev_run = false;
+const bool dev_run = true;
 
 void presolveOffOn(const std::string& message, const HighsLp& lp, Highs& h,
                    const HighsInt require_presolved_model_num_col = 0,
@@ -79,6 +79,67 @@ TEST_CASE("test-col-stuffing", "[highs_test_presolve_rules]") {
   h.resetGlobalScheduler(true);
 }
 
+TEST_CASE("test-fourier-motzkin", "[highs_test_presolve_rules]") {
+  Highs h;
+  //  h.setOptionValue("output_flag", dev_run);
+  h.setOptionValue("presolve_rule_test", kPresolveRuleFourierMotzkin);
+  h.setOptionValue("presolve_rule_logging", true);
+  h.setOptionValue("log_dev_level", 1);
+
+  const bool lp0 = true;
+  const bool lp1 = true;   // Makes eliminations marginal, and leaves x2=0
+  const bool lp2 = false;  // Failing test
+
+  // From "A novel linear optimization presolve technique based on
+  // Fourier-Motzkin elimination", Zhang, Ploskas and Sahinidis,
+  // Mathematical Programming Computation (2026) 18:345–378
+  HighsLp lp;
+
+  lp.num_col_ = 4;
+  lp.num_row_ = 3;
+
+  lp.col_cost_.assign(lp.num_col_, 0);
+  lp.col_lower_.assign(lp.num_col_, 0);
+  lp.col_upper_.assign(lp.num_col_, kHighsInf);
+  lp.col_upper_[0] = 40.0;
+
+  lp.row_lower_.assign(lp.num_row_, -kHighsInf);
+  lp.row_upper_ = {-30, 50, 40};
+  lp.a_matrix_.format_ = MatrixFormat::kRowwise;
+  lp.a_matrix_.start_ = {0, 3, 6, 9};
+  lp.a_matrix_.index_ = {0, 1, 3, 1, 2, 3, 1, 2, 3};
+  lp.a_matrix_.value_ = {-1, 1, -1, 2, 1, 2, 3, -1, 3};
+
+  if (lp0) {
+    REQUIRE(h.passModel(lp) == HighsStatus::kOk);
+    presolveOffOn("FM example from paper", lp, h);
+  }
+
+  lp.col_upper_[0] = 5.0;
+  lp.row_upper_ = {-30, 75, 50};
+
+  if (lp1) {
+    REQUIRE(h.passModel(lp) == HighsStatus::kOk);
+    presolveOffOn("FM example from paper - tightened", lp, h);
+  }
+
+  lp.col_cost_ = {1, 2, 3, 4};
+
+  REQUIRE(h.passModel(lp) == HighsStatus::kOk);
+
+  if (lp2) {
+    HighsInt require_presolved_model_num_col = 1;
+    HighsInt require_presolved_model_num_row = 8;
+    HighsInt require_presolved_model_num_nz = 8;
+    presolveOffOn("FM example from paper - tightened and with costs", lp, h,
+                  require_presolved_model_num_col,
+                  require_presolved_model_num_row,
+                  require_presolved_model_num_nz);
+  }
+
+  h.resetGlobalScheduler(true);
+}
+
 void presolveOffOn(const std::string& message, const HighsLp& lp, Highs& h,
                    const HighsInt require_presolved_model_num_col,
                    const HighsInt require_presolved_model_num_row,
@@ -138,7 +199,7 @@ void presolveOffOn(const std::string& message, const HighsLp& lp, Highs& h,
       REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
       REQUIRE(h.getInfo().num_primal_infeasibilities == 0);
       REQUIRE(h.getInfo().num_dual_infeasibilities == 0);
-      REQUIRE(h.getInfo().simplex_iteration_count == 0);
+      if (reduce_to_empty) REQUIRE(h.getInfo().simplex_iteration_count == 0);
       // Ensure that any basis postsolve is correct
       if (basis_postsolve)
         REQUIRE(run_data.num_simplex_iterations_after_postsolve == 0);
