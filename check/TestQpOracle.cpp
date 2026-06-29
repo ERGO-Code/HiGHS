@@ -11,6 +11,7 @@ const double inf = kHighsInf;
 const double double_equal_tolerance = 1e-5;
 
 HighsModel getQp();
+bool vectorsEqual(const HighsInt dim, double* v0, double* v1);
 
 HighsHessianFunctionType oracleCall =
     [](const double* x_value, const HighsInt x_index_size, const HighsInt* x_index,
@@ -127,7 +128,43 @@ HighsHessianFunctionType oracleCall =
       assert(1234 == 5678);
     };
 
-TEST_CASE("hessian-oracle", "[qpsolver]") {
+TEST_CASE("hessian-oracle-methods", "[qpsolver]") {
+  HighsModel model = getQp();
+  HighsLp lp = model.lp_;
+  HighsHessian hessian = model.hessian_;
+
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  HighsStatus return_status = h.passModel(lp);
+  REQUIRE(return_status == HighsStatus::kOk);
+
+  void* oracle_data = &hessian;
+
+  return_status = h.passHessian(hessian.dim_, oracleCall, oracle_data);
+  REQUIRE(return_status == HighsStatus::kOk);
+
+  const HessianOracle& oracle = h.getModel().hessian_.oracle_;
+  std::vector<double> column;
+  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
+    column.assign(lp.num_col_, 0);
+    for (HighsInt iEl = hessian.start_[iCol]; iEl < hessian.start_[iCol+1]; iEl++) 
+      column[hessian.index_[iEl]] = hessian.value_[iEl];
+    REQUIRE(oracle.diag(iCol) == column[iCol]);
+    for (HighsInt iRow = iCol+1; iRow < lp.num_col_; iRow++) {
+      REQUIRE(oracle.entry(iRow, iCol) == column[iRow]);
+      REQUIRE(oracle.entry(iCol, iRow) == column[iRow]);
+    }
+  }
+  std::vector<double> x(lp.num_col_);
+  std::vector<double> q_x(lp.num_col_);
+  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
+    x.assign(lp.num_col_, 0);
+    x[iCol] = 1;
+    
+  
+}
+
+TEST_CASE("hessian-oracle-solve", "[qpsolver]") {
   HighsModel model = getQp();
   HighsLp lp = model.lp_;
   HighsHessian hessian = model.hessian_;
@@ -184,4 +221,10 @@ HighsModel getQp() {
   hessian.value_ = {2.0, -1.0, 0.2, 2.0};
 
   return model;
+}
+
+bool vectorsEqual(const HighsInt dim, double* v0, double* v1) {
+  for (HighsInt iCol = 0; iCol < dim; iCol++) 
+    if (v0[iCol] != v1[iCol]) return false;
+  return true;
 }

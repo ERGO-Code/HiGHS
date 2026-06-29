@@ -258,6 +258,7 @@ struct HessianOracle {
   void* data_ = nullptr;
   void clear();
   double diag(const HighsInt i) const;
+  double entry(const HighsInt i, const HighsInt j) const;
   void product(const std::vector<double>& x_value,
 	       std::vector<double>& q_x_value) const;
   void productScattered(const double* x_value, const HighsInt x_index_size, const HighsInt* x_index,

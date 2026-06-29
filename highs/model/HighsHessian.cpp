@@ -382,16 +382,18 @@ void HessianOracle::clear() {
   this->data_ = nullptr;
 }
 
-double HessianOracle::diag(const HighsInt i) const {
+double HessianOracle::diag(const HighsInt i) const { return entry(i, i); }
+
+double HessianOracle::entry(const HighsInt i, const HighsInt j) const {
   assert(this->call_);
   double x = 1;
-  double diag;
-  HighsInt diag_size = 1;
-  HighsInt q_x_index = i;
+  double entry;
+  HighsInt entry_size = 1;
+  HighsInt q_x_index = j;
   this->call_(&x, HighsInt(1), &i, 
-	      &diag, diag_size, &q_x_index, 
+	      &entry, entry_size, &q_x_index, 
 	      this->data_);
-  return diag;
+  return entry;
 }
 
 void HessianOracle::product(const std::vector<double>& x_value,
