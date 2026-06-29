@@ -20,3 +20,29 @@ set(HIGHS_HAVE_BLAS ${_HIGHS_HAVE_BLAS})
 @CONF_ZLIB@
 
 include("${CMAKE_CURRENT_LIST_DIR}/highs-targets.cmake")
+
+# When MinGW consumers use a package built with MSVC, the IMPORTED_IMPLIB will
+# point to a .lib (MSVC import library format) that MinGW's linker cannot use.
+# If a MinGW-compatible .dll.a import library exists alongside it, prefer that.
+# Only the C API (extern "C") is ABI-compatible between MSVC and MinGW builds.
+if(MINGW AND TARGET HiGHS::highs)
+  foreach(_highs_cfg IN ITEMS "" RELEASE DEBUG RELWITHDEBINFO MINSIZEREL)
+    if(_highs_cfg STREQUAL "")
+      set(_prop IMPORTED_IMPLIB)
+    else()
+      set(_prop "IMPORTED_IMPLIB_${_highs_cfg}")
+    endif()
+    get_target_property(_highs_implib HiGHS::highs ${_prop})
+    if(_highs_implib)
+      get_filename_component(_highs_libdir "${_highs_implib}" DIRECTORY)
+      if(EXISTS "${_highs_libdir}/libhighs.dll.a")
+        set_target_properties(HiGHS::highs PROPERTIES
+          ${_prop} "${_highs_libdir}/libhighs.dll.a")
+      endif()
+    endif()
+  endforeach()
+  unset(_highs_cfg)
+  unset(_prop)
+  unset(_highs_implib)
+  unset(_highs_libdir)
+endif()

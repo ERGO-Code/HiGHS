@@ -162,6 +162,14 @@ else()
       VERSION
       ${HIGHS_VERSION_MAJOR}.${HIGHS_VERSION_MINOR}.${HIGHS_VERSION_PATCH}
       SOVERSION ${HIGHS_VERSION_MAJOR}.${HIGHS_VERSION_MINOR})
+    if(MINGW)
+      # MinGW shared builds: disable __declspec(dllimport) for consumers so they
+      # don't pick up MSVC-style symbol imports from the generated highs_export.h.
+      # Mirrors the libhighs handling in the non-FAST_BUILD path.
+      target_compile_definitions(highs PUBLIC HIGHS_STATIC_DEFINE)
+    endif()
+  else()
+    target_compile_definitions(highs PUBLIC HIGHS_STATIC_DEFINE)
   endif()
 
   set_target_properties(highs PROPERTIES POSITION_INDEPENDENT_CODE ON)

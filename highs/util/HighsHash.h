@@ -25,6 +25,9 @@
 
 #ifdef HIGHS_HAVE_BITSCAN_REVERSE
 #include <intrin.h>
+#ifdef _MSC_VER
+// pragma intrinsic is MSVC-only; MinGW provides _BitScanReverse via intrin.h
+// without needing these hints
 #pragma intrinsic(_BitScanReverse)
 #ifdef _WIN64
 #pragma intrinsic(_BitScanReverse64)
@@ -32,7 +35,8 @@
 #else
 #pragma intrinsic(__popcnt)
 #endif
-#endif
+#endif  // _MSC_VER
+#endif  // HIGHS_HAVE_BITSCAN_REVERSE
 
 #if __GNUG__ && __GNUC__ < 5 && !defined(__clang__)
 #define IS_TRIVIALLY_COPYABLE(T) __has_trivial_copy(T)
