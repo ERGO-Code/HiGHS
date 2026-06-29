@@ -915,3 +915,13 @@ TEST_CASE("presolve-issue-2874", "[highs_test_presolve]") {
   REQUIRE(highs.presolve() == HighsStatus::kOk);
   REQUIRE(highs.getModelPresolveStatus() == HighsPresolveStatus::kInfeasible);
 }
+
+TEST_CASE("bound_implied", "[highs_test_presolve]") {
+  std::string model_file =
+      std::string(HIGHS_DIR) + "/check/instances/bound_implied.mps";
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  highs.readModel(model_file);
+  highs.run();
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
+}

@@ -51,10 +51,13 @@
           scikit-build-core
           pkgs.cmake
           pkgs.ninja
+          pytestCheckHook
         ];
         buildInputs = [
           pkgs.zlib
         ];
+        # Tests moved to highspy/tests/ in the v9.14 restructure
+        pytestFlags = [ "highspy/tests" ];
       };
 
     in rec {

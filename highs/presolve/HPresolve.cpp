@@ -1328,8 +1328,12 @@ HPresolve::Result HPresolve::dominatedColumns(
         if (!tryToFix) numDomChecksPredBndAnalysis++;
         // check for domination
         if (checkDomination(direction, col, direction_k, k)) {
+          // Re-check the implied bound condition since earlier fixings in
+          // this dominatedColumns call may have changed the model state
+          bool currentBoundImplied =
+              direction > 0 ? isUpperImplied(col) : isLowerImplied(col);
           if (tryToFix &&
-              (boundImplied ||
+              (currentBoundImplied ||
                mipsolver->mipdata_->cliquetable.haveCommonClique(
                    HighsCliqueTable::CliqueVar(col, direction > 0 ? 1 : 0),
                    HighsCliqueTable::CliqueVar(k, direction_k > 0 ? 1 : 0)))) {

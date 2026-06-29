@@ -57,7 +57,7 @@ extern "C" {
  * Get the version string of the HiGHS extras library, used to verify
  * compatibility with the main HiGHS library.
  *
- * @return Version string (e.g., "1.14.0")
+ * @return Version string (e.g., "1.15.0")
  */
 HIGHS_EXTRAS_API const char* HighsExtras_getVersion(void);
 

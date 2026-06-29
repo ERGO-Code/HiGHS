@@ -6,7 +6,6 @@ import numpy as np
 from sys import platform
 import signal
 
-
 class TestHighsPy(unittest.TestCase):
     def assertArrayEqual(self, first, second, msg=None):
         first, second = list(first), list(second)
@@ -134,9 +133,9 @@ class TestHighsPy(unittest.TestCase):
 
     def test_version(self):
         h = self.get_basic_model()
-        self.assertEqual(h.version(), "1.14.0")
+        self.assertEqual(h.version(), "1.15.0")
         self.assertEqual(h.versionMajor(), 1)
-        self.assertEqual(h.versionMinor(), 14)
+        self.assertEqual(h.versionMinor(), 15)
         self.assertEqual(h.versionPatch(), 0)
 
     def test_basics(self):
@@ -1159,6 +1158,36 @@ class TestHighsPy(unittest.TestCase):
         y3 = h.addVariables(2, name=["a", "b"])
         self.assertArrayEqual(y3.idx(), [11, 12])
 
+    def test_add_variable_as_key(self):
+        # tests to see if we can use a variable as a key in a dictionary
+        # previously this would fail because of the lb <= expr <= ub chain
+        h = highspy.Highs()
+        var = h.addBinary()
+
+        values = {var: 0}
+
+        # chain uses: `__bool__(lb <= expr) and (expr <= ub)`
+        # key lookup: `hash(key) == hash(var) and key == var`,
+        #    but `key == var` is translated as `__bool__(highs_linear_expression(key == var))`
+        #    and __bool__ invokes the highs_linear_expression.chain
+        # performing both in sequence can lead to an assert after a false positive in highs_linear_expression.__is_active_chain()
+        values[h.getVariables()[0]]
+        h.addConstr(h.getVariables()[0] <= 1)
+        self.assertEqualExpr(h.getConstrs()[0].expr(), [0], [1], None, [-h.inf, 1])
+
+        # test inf edge cases (these will raise exceptions if adding constraints)
+        self.assertEqualExpr(h.inf <= h.getVariables()[0] <= h.inf, [0], [1], None, [h.inf, h.inf])
+        self.assertEqualExpr(-h.inf >= h.getVariables()[0] >= -h.inf, [0], [1], None, [-h.inf, -h.inf])
+
+        # test that we can set equality via chain
+        self.assertEqualExpr(1 <= h.getVariables()[0] <= 1, [0], [1], None, [1, 1])
+        self.assertEqualExpr(1 >= h.getVariables()[0] >= 1, [0], [1], None, [1, 1])
+
+        # test equality chain (left hand side ignored)
+        self.assertEqualExpr(1 == h.getVariables()[0] >= 5, [0], [1], None, [5, h.inf])
+        self.assertEqualExpr(5 <= h.getVariables()[0] == 1, [0], [1], None, [1, 1])
+
+
     def test_delete_variable(self):
         h = highspy.Highs()
 
@@ -1314,6 +1343,7 @@ class TestHighsPy(unittest.TestCase):
         h.joinSolve(h.startSolve(), 0)
 
         # replace wait function with Ctrl+C signal
+        __tmp_wait = highspy.highs.Highs.wait
         highspy.highs.Highs.wait = lambda self, t: signal.raise_signal(signal.SIGINT)  # type: ignore[assignment]
         h.HandleKeyboardInterrupt = False
 
@@ -1328,6 +1358,9 @@ class TestHighsPy(unittest.TestCase):
             h.startSolve()
             h.joinSolve(None, 5)
             unittest.main(exit=False)
+
+        # restore wait function (avoid issues in other tests)
+        highspy.highs.Highs.wait = __tmp_wait
 
     def test_callbacks(self):
         N = 8
@@ -1514,6 +1547,24 @@ class TestHighsPy(unittest.TestCase):
         h.solve()
         self.assertEqual(check_called[0], True)
 
+    def test_releaseMemory(self):
+        """Test that releaseMemory() frees memory and allows solving again."""
+        # Create and solve first problem
+        h = self.get_example_model()
+        h.run()
+        first_objective = h.getInfo().objective_function_value
+
+        # Release memory
+        status = h.releaseMemory()
+        self.assertEqual(status, highspy.HighsStatus.kOk)
+
+        # Solve a different problem to verify the solver still works
+        h2 = self.get_basic_model()
+        h2.run()
+        second_objective = h2.getInfo().objective_function_value
+
+        # Verify objectives are different (different problems)
+        self.assertNotEqual(first_objective, second_objective)
     def test_addVars_invalid_parameter(self):
         """ensure_real raises on invalid parameter"""
         h = highspy.Highs()
@@ -1626,6 +1677,37 @@ class TestHighsPy(unittest.TestCase):
         self.assertTrue(x.__ne__(None))
         self.assertRaises(Exception, lambda: x.__ne__(5))
 
+    def test_with_context_manager(self):
+        with highspy.Highs() as h:
+            x = h.addVariable()
+            h.minimize(x)
+            self.assertEqual(h.val(x), 0.0)
+
+        # manually call enter/exit to test threading, e.g.,
+        # 
+        # with Highs() as h:
+        #    ...
+        #    h.startSolve()
+        #
+        h = highspy.Highs()
+        h.__enter__()
+
+        # nqueens
+        N = 10
+        x = h.addBinaries(N, N)
+        y = np.fliplr(x)
+
+        h.addConstrs(x.sum(axis = 0) == 1)
+        h.addConstrs(x.sum(axis = 1) == 1),
+        h.addConstrs(x.diagonal(k).sum() <= 1 for k in range(-N + 1, N)) 
+        h.addConstrs(y.diagonal(k).sum() <= 1 for k in range(-N + 1, N))
+
+        h.HandleUserInterrupt = True
+        h.startSolve()
+        self.assertEqual(h.is_solver_running(), True)
+
+        h.__exit__(None, None, None)
+        self.assertEqual(h.is_solver_running(), False)
 
 
 class TestHighsLinearExpressionPy(unittest.TestCase):

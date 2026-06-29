@@ -85,8 +85,8 @@ void transpose(const std::vector<Int>& ptr, const std::vector<Int>& rows,
 void permuteSym(const std::vector<Int>& iperm, std::vector<Int>& ptr,
                 std::vector<Int>& rows, std::vector<double>& val, bool lower) {
   // Symmetric permutation of the lower (upper) triangular matrix M based on
-  // inverse permutation iperm. The resulting matrix is lower (upper) triangular,
-  // regardless of the input matrix.
+  // inverse permutation iperm. The resulting matrix is lower (upper)
+  // triangular, regardless of the input matrix.
 
   const Int n = ptr.size() - 1;
   std::vector<Int> work(n, 0);
@@ -348,25 +348,6 @@ double Clock::stop() const {
   auto t1 = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double> d = t1 - t0;
   return d.count();
-}
-
-TaskGroupSpecial::~TaskGroupSpecial() {
-  // Using TaskGroup may throw an exception when tasks are cancelled. Not sure
-  // exactly why this happens, but for now this fix seems to work.
-
-  // No virtual destructor in TaskGroup. Do not call this class via pointer to
-  // the base!
-
-  cancel();
-
-  while (true) {
-    try {
-      taskWait();
-      break;
-    } catch (HighsTask::Interrupt) {
-      continue;
-    }
-  }
 }
 
 }  // namespace hipo

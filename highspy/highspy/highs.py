@@ -1,5 +1,6 @@
 from __future__ import annotations
 import sys
+import re
 import numpy as np
 from numbers import Integral
 from itertools import product
@@ -55,7 +56,10 @@ if TYPE_CHECKING:
         np.ndarray[Any, np.dtype[Any]],
     ]
 else:
-    np_version = tuple(map(int, np.__version__.split('.')))
+    # backwards typing support information for HighspyArray
+    # Use re.match to strip non-numeric suffixes (e.g. "0rc1") before converting
+    # to int, so that pre-release numpy versions don't raise a ValueError here.
+    np_version = tuple(int(re.match(r'\d+', part).group()) for part in np.__version__.split('.'))
     if sys.version_info >= (3, 9) and np_version >= (1,22,0):
         ndarray_object_type = np.ndarray[Any, np.dtype[np.object_]]
     else:
@@ -96,6 +100,18 @@ class Highs(_Highs):
         super().__init__()
         self.callbacks = [HighsCallback(cb.HighsCallbackType(_), self) for _ in range(int(cb.HighsCallbackType.kCallbackMax) + 1)]
         self.enableCallbacks()
+
+    # support 'with' syntax (context manager)
+    def __enter__(self):
+        return self
+
+    # support 'with' syntax (context manager)
+    def __exit__(self, exc_type, exc_value, traceback):
+        if self.is_solver_running():
+            self.cancelSolve()
+            self.wait()
+
+        self.clear()
 
     # Silence logging
     def silent(self, turn_off_output: bool = True):
@@ -1291,7 +1307,11 @@ class Highs(_Highs):
         """
         if expr.bounds is not None:
             idxs, vals = expr.unique_elements()  # if we have duplicate variables, add the vals
-            super().addRow(expr.bounds[0], expr.bounds[1], len(idxs), idxs, vals)
+            status = super().addRow(expr.bounds[0], expr.bounds[1], len(idxs), idxs, vals)
+            
+            if status != HighsStatus.kOk:
+                raise Exception("Error adding constraint to the model.")
+
             return highs_cons(idx, self)
         else:
             raise Exception("Constraint bounds must be set via comparison (>=,==,<=).")
@@ -2628,7 +2648,16 @@ class highs_linear_expression(object):
 
     # capture the chain
     def __bool__(self):
-        highs_linear_expression.__chain.check = self
+        # ignore equality constraints or expressions without bounds
+        # a chain (lb <= expr <= ub) has intermediate bounds = (lb,  inf) 
+        #     and (ub >= expr >= lb) has intermediate bounds = (-inf, ub).
+        # 
+        # equal bounds aren't possible unless lb = inf or ub = -inf (respectively),
+        # additionally, we ignore the LHS expression of (lb == expr <= ub) and 
+        # (lb <= expr == ub) since those are not valid chains.
+        highs_linear_expression.__chain.check = (
+            self if self.bounds is not None and (self.bounds[0] != self.bounds[1] or (self.bounds[0] == kHighsInf or self.bounds[1] == -kHighsInf)) else None
+        )
 
         # take copies of the chain to avoid issues with mutable expressions
         LHS = getattr(highs_linear_expression.__chain, "left", None)
