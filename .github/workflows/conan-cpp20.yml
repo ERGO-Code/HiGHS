@@ -49,13 +49,16 @@ jobs:
 
       - name: Create conan profile
         run: |
-          conan profile detect
-          cat >> ~/.conan2/profiles/default << 'EOF'
+          mkdir -p ~/.conan2/profiles
+          cat > ~/.conan2/profiles/default << 'EOF'
           [settings]
+          arch=x86_64
+          build_type=Release
           compiler=clang
           compiler.version=18
           compiler.libcxx=libc++
           compiler.cppstd=20
+          os=Linux
           [conf]
           tools.build:compiler_executables={'c': 'clang', 'cpp': 'clang++'}
           EOF
