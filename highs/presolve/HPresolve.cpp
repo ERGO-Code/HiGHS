@@ -7509,6 +7509,7 @@ HPresolve::Result HPresolve::fourierMotzkin(
 
   // counters for numbers of eliminations
   HighsInt numColsEliminated = 0;
+  HighsInt numColsEliminatedTotal = 0;
   HighsInt numRowsEliminated = 0;
   HighsInt numRowsAdded = 0;
 
@@ -7537,7 +7538,6 @@ HPresolve::Result HPresolve::fourierMotzkin(
         printLog(numColsEliminated, numRowsEliminated, numRowsAdded);
         blockSteps.clear();
         rowAncestry.clear();
-        rowOriginals.clear();
         numColsEliminated = 0;
         numRowsEliminated = 0;
         numRowsAdded = 0;
@@ -7627,7 +7627,7 @@ HPresolve::Result HPresolve::fourierMotzkin(
 
       // Cernikov redundancy check
       if (cernikovRedundant(mergedOriginals, rowOriginals, nr.plusIndex,
-                            nr.minusIndex, col, numColsEliminated))
+                            nr.minusIndex, col, numColsEliminatedTotal))
         continue;
 
       std::vector<row_entry> entries;
@@ -7684,6 +7684,7 @@ HPresolve::Result HPresolve::fourierMotzkin(
     // mark column as deleted
     markColDeleted(col);
     ++numColsEliminated;
+    ++numColsEliminatedTotal;
 
     // remove old rows containing col (skip bound rows)
     for (HighsInt rp : iPlus) {
