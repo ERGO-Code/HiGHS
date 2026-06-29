@@ -586,6 +586,43 @@ void Iterate::makeStep(double alpha_primal, double alpha_dual) {
   vectorAdd(zu, delta.zu, alpha_dual);
 }
 
+void Iterate::saveBest(double feas_tol, double opt_tol, Int iter) {
+  const double primal_violation = pinf / feas_tol;
+  const double dual_violation = dinf / feas_tol;
+  const double gap_violation = pdgap / opt_tol;
+
+  double violation = std::max(primal_violation, dual_violation);
+  violation = std::max(violation, gap_violation);
+
+  if (violation < best_violation) {
+    best_x = x;
+    best_xl = xl;
+    best_xu = xu;
+    best_y = y;
+    best_zl = zl;
+    best_zu = zu;
+    best_violation = violation;
+    best_iter = iter;
+  }
+}
+
+bool Iterate::resetBest(Int iter) {
+  if (iter == best_iter) return false;
+
+  x = best_x;
+  xl = best_xl;
+  xu = best_xu;
+  y = best_y;
+  zl = best_zl;
+  zu = best_zu;
+
+  computeMu();
+  residual1234();
+  indicators();
+
+  return true;
+}
+
 bool Iterate::stagnation(std::stringstream& log_stream) {
   // too many iterations in a row with small stepsize
   bool stagnation = (bad_iter_ >= kMaxBadIter);

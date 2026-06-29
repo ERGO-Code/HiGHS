@@ -184,6 +184,7 @@ bool Solver::prepareIter() {
   // Prepare next iteration.
   // Return true if Ipm main loop should be stopped
 
+  it_->saveBest(options_.feasibility_tol, options_.optimality_tol, iter_);
   if (checkIterate()) return true;
   if (checkBadIter()) return true;
   if (checkTermination()) return true;
@@ -1070,6 +1071,10 @@ bool Solver::checkBadIter() {
       } else
         info_.status = kStatusNoProgress;
       terminate = true;
+
+      if (it_->resetBest(iter_)) {
+        printOutput(true);
+      }
     }
   }
 
@@ -1170,11 +1175,17 @@ void Solver::printHeader() const {
   }
 }
 
-void Solver::printOutput() const {
+void Solver::printOutput(bool reset) const {
   printHeader();
 
-  logger_.print("%5d %16.8e %16.8e %10.2e %10.2e %9.2e", iter_, it_->pobj,
-                it_->dobj, it_->pinf, it_->dinf, it_->pdgap);
+  if (!reset) {
+    logger_.print("%5d ", iter_);
+  } else {
+    logger_.print("   >  ");
+  }
+
+  logger_.print("%16.8e %16.8e %10.2e %10.2e %9.2e", it_->pobj, it_->dobj,
+                it_->pinf, it_->dinf, it_->pdgap);
   if (!options_.timeless_log) logger_.print(" %7.1f", control_.elapsed());
   if (logger_.debug(1)) {
     const IpmIterData& data = it_->data.back();

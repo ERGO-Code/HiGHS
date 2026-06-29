@@ -8,13 +8,13 @@
 #include "Info.h"
 #include "Iterate.h"
 #include "LinearSolver.h"
-#include "ipm/hipo/auxiliary/Logger.h"
 #include "Model.h"
 #include "Options.h"
 #include "Parameters.h"
 #include "Status.h"
 #include "ipm/hipo/auxiliary/Auxiliary.h"
 #include "ipm/hipo/auxiliary/IntConfig.h"
+#include "ipm/hipo/auxiliary/Logger.h"
 #include "ipm/hipo/auxiliary/VectorOperations.h"
 #include "ipm/hipo/factorhighs/FactorHiGHS.h"
 #include "ipm/ipx/lp_solver.h"
@@ -328,7 +328,7 @@ class Solver {
   // ===================================================================================
   void printInfo() const;
   void printHeader() const;
-  void printOutput() const;
+  void printOutput(bool reset = false) const;
   void printSummary() const;
 
   void resetOptions();
