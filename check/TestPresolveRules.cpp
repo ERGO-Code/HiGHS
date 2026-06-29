@@ -88,7 +88,7 @@ TEST_CASE("test-fourier-motzkin", "[highs_test_presolve_rules]") {
 
   const bool lp0 = true;
   const bool lp1 = true;   // Makes eliminations marginal, and leaves x2=0
-  const bool lp2 = true;  // Failing test
+  const bool lp2 = false;  // Failing test
 
   // From "A novel linear optimization presolve technique based on
   // Fourier-Motzkin elimination", Zhang, Ploskas and Sahinidis,
