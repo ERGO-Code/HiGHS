@@ -92,15 +92,7 @@ function(highs_configure_blas)
         set(CMAKE_Fortran_COMPILER OFF)
 
         # Exclude components not used by HiGHS
-        set(OPENBLAS_MINIMAL_FLAGS
-                -DONLY_CBLAS:BOOL=ON
-                -DNO_LAPACK:BOOL=ON
-                -DNO_LAPACKE:BOOL=ON
-                -DNO_COMPLEX:BOOL=ON
-                -DNO_COMPLEX16:BOOL=ON
-                -DNO_DOUBLE_COMPLEX:BOOL=ON
-                -DNO_SINGLE:BOOL=ON
-        )
+        set(_highs_openblas_disable_avx512 OFF)
 
         if(CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64|arm64|armv8|arm")
             if(CMAKE_SIZEOF_VOID_P EQUAL 4)
@@ -112,17 +104,10 @@ function(highs_configure_blas)
         endif()
 
         message(STATUS "Enabling DYNAMIC_ARCH for runtime CPU detection.")
-        list(APPEND OPENBLAS_MINIMAL_FLAGS -DDYNAMIC_ARCH=ON)
 
         # CMAKE_SIZEOF_VOID_P is 4 for 32-bit and 8 for 64-bit
         if(CMAKE_SIZEOF_VOID_P EQUAL 4)
             message(STATUS "32-bit target detected. Applying 32-bit configuration flags for OpenBLAS.")
-
-            if(WIN32)
-                list(APPEND OPENBLAS_MINIMAL_FLAGS -DCMAKE_GENERATOR_PLATFORM=Win32)
-            endif()
-
-            list(APPEND OPENBLAS_MINIMAL_FLAGS -DINTERFACE64=0)
         endif()
 
         # TODO: potentially improve (not great for cross-compilation)
@@ -137,14 +122,14 @@ function(highs_configure_blas)
 
             if(SKYLAKE_CHECK EQUAL 0)
                 message(STATUS "Skylake detected - disabling AVX512 to avoid register spills")
-                list(APPEND OPENBLAS_MINIMAL_FLAGS -DNO_AVX512=ON)
+                set(_highs_openblas_disable_avx512 ON)
             else()
                 message(STATUS "NOT Skylake")
             endif()
 
             if(NO_AVX512)
                 message(STATUS "NO_AVX512 set - disabling AVX512 in OpenBLAS")
-                list(APPEND OPENBLAS_MINIMAL_FLAGS -DNO_AVX512=ON)
+                set(_highs_openblas_disable_avx512 ON)
             endif()
         endif()
 
@@ -163,10 +148,24 @@ function(highs_configure_blas)
                 GIT_TAG        "v${_highs_openblas_version}"
                 GIT_SHALLOW TRUE
                 UPDATE_COMMAND git reset --hard
-                CMAKE_ARGS
-                        ${OPENBLAS_MINIMAL_FLAGS}
         )
+        # FetchContent_MakeAvailable uses add_subdirectory, not ExternalProject,
+        # so CMAKE_ARGS in FetchContent_Declare are silently ignored. Set all
+        # OpenBLAS options as cache variables so the subdirectory build picks them up.
+        set(ONLY_CBLAS ON CACHE BOOL "" FORCE)
+        set(NO_LAPACK ON CACHE BOOL "" FORCE)
         set(NO_LAPACKE ON CACHE BOOL "" FORCE)
+        set(NO_COMPLEX ON CACHE BOOL "" FORCE)
+        set(NO_COMPLEX16 ON CACHE BOOL "" FORCE)
+        set(NO_DOUBLE_COMPLEX ON CACHE BOOL "" FORCE)
+        set(NO_SINGLE ON CACHE BOOL "" FORCE)
+        set(DYNAMIC_ARCH ON CACHE BOOL "" FORCE)
+        if(CMAKE_SIZEOF_VOID_P EQUAL 4)
+            set(INTERFACE64 0 CACHE STRING "" FORCE)
+        endif()
+        if(_highs_openblas_disable_avx512)
+            set(NO_AVX512 ON CACHE BOOL "" FORCE)
+        endif()
         FetchContent_MakeAvailable(openblas)
         get_property(all_targets DIRECTORY ${openblas_SOURCE_DIR} PROPERTY BUILDSYSTEM_TARGETS)
         message(STATUS "OpenBLAS targets: ${all_targets}")
