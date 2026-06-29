@@ -170,10 +170,14 @@ endif()
   # message(STATUS "CUPLDP with Nvidia is only supported on Linux at the moment. Using CPU version.")
 # endif()
 
-
 option(BUILD_OPENBLAS "Build OpenBLAS" OFF)
 message(STATUS "Build OpenBLAS: ${BUILD_OPENBLAS}")
 option(NO_AVX512 "Build OpenBLAS without AVX512" OFF)
+
+if (HIPO_PYTHON OR BUILD_STATIC_EXE)
+  set(NO_AVX512 ON)
+endif()
+
 if (NO_AVX512)
   message(STATUS "Build OpenBLAS without AVX512: ON")
 endif()
@@ -213,7 +217,6 @@ else()
   set (CUPDLP_CPU ON)
     set(CUDA_LIBRARY-NOTFOUND true)
 endif()
-
 
 if(BUILD_STATIC_EXE)
   set(BUILD_SHARED_LIBS OFF)
