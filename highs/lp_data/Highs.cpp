@@ -725,6 +725,10 @@ HighsStatus Highs::passHessian(const HighsInt dim,
   return HighsStatus::kOk;
 }
 
+HighsStatus Highs::checkHessianOracle(const bool exit_on_first_error) const {
+  return this->model_.hessian_.checkOracle(options_.log_options, exit_on_first_error);
+}
+
 HighsStatus Highs::passLinearObjectives(
     const HighsInt num_linear_objective,
     const HighsLinearObjective* linear_objective) {

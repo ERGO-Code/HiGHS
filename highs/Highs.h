@@ -170,6 +170,11 @@ class Highs {
 			  void* oracle_data);
 
   /**
+   * @brief Checks any incumbent Hessian oracle
+   */
+  HighsStatus checkHessianOracle(const bool exit_on_first_error = false) const;
+
+  /**
    * @brief Pass multiple linear objectives for the incumbent model
    */
   HighsStatus passLinearObjectives(

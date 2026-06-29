@@ -376,6 +376,111 @@ HighsHessian HighsHessian::toSquare() const {
   return square_hessian;
 }
 
+HighsStatus HighsHessian::checkOracle(const HighsLogOptions& log_options,
+				      const bool exit_on_first_error) const {
+  if (!this->isOracle()) {
+    highsLogUser(log_options, HighsLogType::kError,
+                 "Hessian oracle is not defined\n");
+    return HighsStatus::kError;
+  }
+  bool warning_found = false;
+  bool error_found = false;
+  const HessianOracle& oracle = this->oracle_;
+  HighsInt dim = oracle.dim_;
+  // Set up a square Hessian corresponding to the oracle (naturally)
+  // assuming that oracle.entry is implemented correctly
+  HighsHessian hessian;
+  hessian.dim_ = dim;
+  hessian.format_ = HessianFormat::kSquare;
+  for (HighsInt iCol = 0; iCol < dim; iCol++) {
+    for (HighsInt iRow = 0; iRow < dim; iRow++) {
+      double value = oracle.entry(iCol, iRow);
+      if (value) {
+	hessian.index_.push_back(iRow);
+	hessian.value_.push_back(value);
+      }
+    }
+    hessian.start_.push_back(static_cast<HighsInt>(hessian.index_.size()));
+  }
+  
+  // Check for symmetry
+  double asymmetry;
+  HighsInt num_illegal_asymmetry = 0;
+  double min_illegal_asymmetry = kHighsInf;
+  double max_illegal_asymmetry = 0;
+  HighsInt num_ok_asymmetry = 0;
+  double min_ok_asymmetry = kHighsInf;
+  double max_ok_asymmetry = 0;
+
+  auto asymmetryCheck = [&]() {
+    if (asymmetry > kSquareHessianAsymmetryTolerance) {
+      num_illegal_asymmetry++;
+      min_illegal_asymmetry = std::min(asymmetry, min_illegal_asymmetry);
+      max_illegal_asymmetry = std::max(asymmetry, max_illegal_asymmetry);
+    } else if (asymmetry) {
+      num_ok_asymmetry++;
+      min_ok_asymmetry = std::min(asymmetry, min_ok_asymmetry);
+      max_ok_asymmetry = std::max(asymmetry, max_ok_asymmetry);
+    }
+  };
+
+  std::vector<double> column;
+  column.assign(dim, 0);
+  for (HighsInt iCol = 0; iCol < dim; iCol++) {
+    // Scatter the entries below the diagonal 
+    for (HighsInt iEl = hessian.start_[iCol]; iEl < hessian.start_[iCol+1]; iEl++) {
+      HighsInt iRow = hessian.index_[iEl];
+      if (iRow > iCol) column[iRow] = hessian.value_[iEl];
+    }
+    // Inspect the entries above the diagonal in the row corresponding
+    // to this column
+    for (HighsInt iX = iCol+1; iX < dim; iX++) {
+      for (HighsInt iEl = hessian.start_[iX]; iEl < hessian.start_[iX+1]; iEl++) {
+	HighsInt iRow = hessian.index_[iEl];
+	if (iRow == iCol) {
+	  // Found an entry above the diagonal in the row
+	  // corresponding to this column
+	  asymmetry = std::fabs(column[iX] - hessian.value_[iEl]);
+	  asymmetryCheck();
+	  column[iX] = 0;
+	  break;
+	}
+      }
+    }
+    // Check for missing values in the row corresponding to this column
+    for (HighsInt iEl = hessian.start_[iCol]; iEl < hessian.start_[iCol+1]; iEl++) {
+      HighsInt iRow = hessian.index_[iEl];
+      if (iRow <= iCol) continue;
+      asymmetry = std::fabs(column[iRow]);
+      asymmetryCheck();
+    }
+  }
+  if (num_ok_asymmetry) {
+    highsLogUser(log_options, HighsLogType::kWarning,
+                 "Hessian oracle contains %d non-symmetr%s in [%.2g, %.2g] "
+                 "within tolerance of %.1g\n",
+                 int(num_ok_asymmetry), num_ok_asymmetry == 1 ? "y" : "ies",
+                 min_ok_asymmetry, max_ok_asymmetry,
+                 kSquareHessianAsymmetryTolerance);
+    warning_found = true;
+  }
+  if (num_illegal_asymmetry) {
+    highsLogUser(log_options, HighsLogType::kError,
+                 "Hessian oracle contains %d non-symmetr%s in [%.2g, %.2g] "
+                 "exceeding tolerance of %.1g\n",
+                 int(num_illegal_asymmetry),
+                 num_illegal_asymmetry == 1 ? "y" : "ies",
+                 min_illegal_asymmetry, max_illegal_asymmetry,
+                 kSquareHessianAsymmetryTolerance);
+    if (exit_on_first_error) return HighsStatus::kError;
+    error_found = true;
+  }
+    
+  if (error_found) return HighsStatus::kError;
+  if (warning_found) return HighsStatus::kWarning;
+  return HighsStatus::kOk;
+}
+
 void HessianOracle::clear() {
   this->dim_ = 0;
   this->call_ = nullptr;

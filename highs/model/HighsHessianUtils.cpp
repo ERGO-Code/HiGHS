@@ -411,7 +411,6 @@ HighsStatus normaliseHessian(const HighsOptions& options,
   HighsInt num_summation = 0;
   HighsInt num_upper_triangle = 0;
   HighsInt num_hessian_el = 0;
-  const double kSquareHessianAsymmetryTolerance = 1e-10;
   HighsInt num_illegal_asymmetry = 0;
   double min_illegal_asymmetry = kHighsInf;
   double max_illegal_asymmetry = 0;
@@ -440,7 +439,7 @@ HighsStatus normaliseHessian(const HighsOptions& options,
       if (square) {
         // When square, ensure that the upper triangular value matches
         // the corresponding lower triangular value to within the
-        // tolaernace used by JuMP
+        // toleranace used by JuMP
         const double asymmetry =
             std::fabs(upper_off_diagonal[iRow] - lower_on_below_diagonal[iRow]);
         if (asymmetry > kSquareHessianAsymmetryTolerance) {
