@@ -7210,37 +7210,40 @@ HPresolve::Result HPresolve::fourierMotzkin(
     return neRed > 0 || (neRed == 0 && mrRed > 0);
   };
 
-  auto mergeOriginals =
-      [&kUpperBoundRow, &kLowerBoundRow](
-          const std::unordered_map<HighsInt, std::set<HighsInt>>& rowOriginals,
-          HighsInt plusRow, HighsInt minusRow,
-          HighsInt col) -> std::set<HighsInt> {
-    std::set<HighsInt> merged;
-    if (plusRow == kUpperBoundRow)
-      merged.insert(-(2 * col + 1));
-    else if (plusRow == kLowerBoundRow)
-      merged.insert(-(2 * col + 2));
-    else {
-      auto itP = rowOriginals.find(plusRow);
-      if (itP != rowOriginals.end())
-        merged.insert(itP->second.begin(), itP->second.end());
-      else
-        merged.insert(plusRow);
-    }
-    if (minusRow == kUpperBoundRow)
-      merged.insert(-(2 * col + 1));
-    else if (minusRow == kLowerBoundRow)
-      merged.insert(-(2 * col + 2));
-    else {
-      auto itM = rowOriginals.find(minusRow);
-      if (itM != rowOriginals.end())
-        merged.insert(itM->second.begin(), itM->second.end());
-      else
-        merged.insert(minusRow);
-    }
-    return merged;
-  };
+  auto insertOriginals =
+      [&](std::set<HighsInt>& rows,
+          const std::unordered_map<HighsInt, std::set<HighsInt>>& originals,
+          HighsInt row, HighsInt col) {
+        if (row == kUpperBoundRow)
+          rows.insert(-(2 * col + 1));
+        else if (row == kLowerBoundRow)
+          rows.insert(-(2 * col + 2));
+        else {
+          auto it = originals.find(row);
+          if (it != originals.end())
+            rows.insert(it->second.begin(), it->second.end());
+          else
+            rows.insert(row);
+        }
+      };
 
+  auto mergeOriginals =
+      [&](std::set<HighsInt>& rows,
+          const std::unordered_map<HighsInt, std::set<HighsInt>>& originals,
+          HighsInt plusRow, HighsInt minusRow, HighsInt col) {
+        rows.clear();
+        insertOriginals(rows, originals, plusRow, col);
+        insertOriginals(rows, originals, minusRow, col);
+      };
+
+  auto cernikovRedundant =
+      [&](std::set<HighsInt>& rows,
+          const std::unordered_map<HighsInt, std::set<HighsInt>>& originals,
+          HighsInt plusRow, HighsInt minusRow, HighsInt col,
+          HighsInt numColsElim) {
+        mergeOriginals(rows, originals, plusRow, minusRow, col);
+        return static_cast<HighsInt>(rows.size()) > numColsElim + 2;
+      };
 
   // reformulate objective as a constraint: min c^T x + offset becomes
   // min z with c^T x - z <= -offset. this allows FME to eliminate
@@ -7517,6 +7520,7 @@ HPresolve::Result HPresolve::fourierMotzkin(
 
   // distinct original parent rows for each derived row (Cernikov check)
   std::unordered_map<HighsInt, std::set<HighsInt>> rowOriginals;
+  std::set<HighsInt> mergedOriginals;
 
   // main loop: eliminate variables from heap
   while (!heap.empty()) {
@@ -7622,9 +7626,8 @@ HPresolve::Result HPresolve::fourierMotzkin(
       if (redundant) continue;
 
       // Cernikov redundancy check
-      auto merged =
-          mergeOriginals(rowOriginals, nr.plusIndex, nr.minusIndex, col);
-      if (static_cast<HighsInt>(merged.size()) > numColsEliminated + 2)
+      if (cernikovRedundant(mergedOriginals, rowOriginals, nr.plusIndex,
+                            nr.minusIndex, col, numColsEliminated))
         continue;
 
       std::vector<row_entry> entries;
@@ -7672,8 +7675,9 @@ HPresolve::Result HPresolve::fourierMotzkin(
                       origin.plusScale, false);
       inheritAncestry(rowAncestry, newModelRow, origin.minusRow, mIdx, stepIdx,
                       origin.minusScale, true);
-      rowOriginals[newModelRow] =
-          mergeOriginals(rowOriginals, origin.plusRow, origin.minusRow, col);
+      mergeOriginals(mergedOriginals, rowOriginals, origin.plusRow,
+                     origin.minusRow, col);
+      rowOriginals[newModelRow] = mergedOriginals;
       stepNewRows.push_back({newModelRow, pIdx, mIdx});
     }
 
