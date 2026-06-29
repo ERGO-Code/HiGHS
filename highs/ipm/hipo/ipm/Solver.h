@@ -128,6 +128,9 @@ class Solver {
   bool predictor();
   bool correctors();
 
+  void getPointForCrossover(std::vector<double>& x, std::vector<double>& slack,
+                           std::vector<double>& y, std::vector<double>& z);
+
   // ===================================================================================
   // Load model and parameters into ipx and set the last iterate as starting
   // point.

@@ -16,6 +16,13 @@ void PreprocessorPoint::assertConsistency(Int n, Int m) const {
   assert(static_cast<Int>(zu.size()) == n);
 }
 
+void DroppedPoint::assertConsistency(Int n, Int m) const {
+  assert(static_cast<Int>(x.size()) == n);
+  assert(static_cast<Int>(slack.size()) == m);
+  assert(static_cast<Int>(y.size()) == m);
+  assert(static_cast<Int>(z.size()) == n);
+}
+
 void PreprocessEmptyRows::apply(Model& model) {
   Int& n = model.n_;
   Int& m = model.m_;
@@ -78,6 +85,35 @@ void PreprocessEmptyRows::apply(Model& model) {
 }
 
 void PreprocessEmptyRows::undo(PreprocessorPoint& point, const Model& model,
+                               const Iterate& it) const {
+  point.assertConsistency(n_post, m_post);
+  if (empty_rows > 0) {
+    // Add Lagrange multiplier for empty rows that were removed
+    // Add slack for constraints that were removed
+
+    std::vector<double> new_y(m_pre, 0.0);
+    std::vector<double> new_slack(m_pre, 0.0);
+
+    // position to read from y and slack
+    Int pos = 0;
+
+    for (Int i = 0; i < m_pre; ++i) {
+      // ignore shift of empty rows, they will receive a value of 0
+      if (rows_shift[i] == -1) continue;
+
+      // re-align value of y and slack, considering empty rows
+      new_y[pos + rows_shift[i]] = point.y[pos];
+      new_slack[pos + rows_shift[i]] = point.slack[pos];
+      ++pos;
+    }
+
+    point.y = std::move(new_y);
+    point.slack = std::move(new_slack);
+  }
+  point.assertConsistency(n_pre, m_pre);
+}
+
+void PreprocessEmptyRows::undo(DroppedPoint& point, const Model& model,
                                const Iterate& it) const {
   point.assertConsistency(n_post, m_post);
   if (empty_rows > 0) {
@@ -276,6 +312,58 @@ void PreprocessFixedVars::undo(PreprocessorPoint& point, const Model& model,
     point.xu = std::move(new_xu);
     point.zl = std::move(new_zl);
     point.zu = std::move(new_zu);
+  }
+
+  point.assertConsistency(n_pre, m_pre);
+}
+
+void PreprocessFixedVars::undo(DroppedPoint& point, const Model& model,
+                               const Iterate& it) const {
+  point.assertConsistency(n_post, m_post);
+
+  if (fixed_vars > 0) {
+    // Add primal and dual variables for fixed variables
+
+    std::vector<double> new_x(n_pre, 0.0);
+    std::vector<double> new_z(n_pre, 0.0);
+
+    Int pos{};
+    for (Int j = 0; j < n_pre; ++j) {
+      if (std::isfinite(fixed_at[j])) {
+        new_x[j] = fixed_at[j];
+      } else {
+        new_x[j] = point.x[pos];
+        new_z[j] = point.z[pos];
+        ++pos;
+      }
+    }
+
+    for (Int j = 0; j < n_pre; ++j) {
+      if (std::isfinite(fixed_at[j])) {
+        // compute dual variables so that they are dual feasible
+        // z = c - A^T * y + Q * x
+        // need to do this after all x have been computed, due to Q*x term
+        const auto& dataj = data.at(j);
+        double z = dataj.c;
+        for (Int i = 0; i < static_cast<Int>(dataj.indA.size()); ++i) {
+          const Int row = dataj.indA[i];
+          const double val = dataj.valA[i];
+          z -= val * point.y[row];
+        }
+        if (model.qp()) {
+          for (Int i = 0; i < static_cast<Int>(dataj.indQ.size()); ++i) {
+            const Int row = dataj.indQ[i];
+            const double val = dataj.valQ[i];
+            z += val * new_x[row];
+          }
+        }
+
+        new_z[j] = z;
+      }
+    }
+
+    point.x = std::move(new_x);
+    point.z = std::move(new_z);
   }
 
   point.assertConsistency(n_pre, m_pre);
@@ -502,6 +590,25 @@ void PreprocessScaling::undo(PreprocessorPoint& point, const Model& model,
   point.assertConsistency(n_pre, m_pre);
 }
 
+void PreprocessScaling::undo(DroppedPoint& point, const Model& model,
+                             const Iterate& it) const {
+  point.assertConsistency(n_post, m_post);
+  if (model.scaled()) {
+    const std::vector<double>& colscale = model.colscale_;
+    const std::vector<double>& rowscale = model.rowscale_;
+
+    for (Int i = 0; i < n_post; ++i) {
+      point.x[i] *= colscale[i];
+      point.z[i] /= colscale[i];
+    }
+    for (Int i = 0; i < m_post; ++i) {
+      point.y[i] *= rowscale[i];
+      point.slack[i] /= rowscale[i];
+    }
+  }
+  point.assertConsistency(n_pre, m_pre);
+}
+
 void PreprocessScaling::print(std::stringstream& stream) const {}
 
 void PreprocessFormulation::apply(Model& model) {
@@ -625,6 +732,57 @@ void PreprocessFormulation::undo(PreprocessorPoint& point, const Model& model,
   point.assertConsistency(n_pre, m_pre);
 }
 
+void PreprocessFormulation::undo(DroppedPoint& point, const Model& model,
+                                 const Iterate& it) const {
+  // Construct complementary point (x_temp, y_temp, z_temp)
+  std::vector<double> x_temp, y_temp, z_temp;
+  it.dropToComplementarity(x_temp, y_temp, z_temp);
+
+  // Both x_temp and z_temp include slacks.
+  // They are removed from x and z, but they are used to compute slack and y.
+
+  // Remove slacks from x and z
+  point.x = std::vector<double>(x_temp.begin(), x_temp.begin() + n_pre);
+  point.z = std::vector<double>(z_temp.begin(), z_temp.begin() + n_pre);
+
+  // For inequality constraints, the corresponding z-slack may have been dropped
+  // to zero, so build y from z-slacks.
+  // NB: there is no explicit slack stored for equality constraints.
+  point.y.resize(m_pre);
+  Int slack_pos = 0;
+  for (Int i = 0; i < m_pre; ++i) {
+    switch (model.constraint(i)) {
+      case '=':
+        point.y[i] = y_temp[i];
+        break;
+      case '>':
+      case '<':
+        point.y[i] = -z_temp[n_pre + slack_pos];
+        ++slack_pos;
+        break;
+    }
+  }
+
+  // Use slacks from x_temp and add slack for equality constraints.
+  // NB: there is no explicit slack stored for equality constraints.
+  point.slack.resize(m_pre);
+  slack_pos = 0;
+  for (Int i = 0; i < m_pre; ++i) {
+    switch (model.constraint(i)) {
+      case '=':
+        point.slack[i] = 0.0;
+        break;
+      case '>':
+      case '<':
+        point.slack[i] = x_temp[n_pre + slack_pos];
+        ++slack_pos;
+        break;
+    }
+  }
+
+  point.assertConsistency(n_pre, m_pre);
+}
+
 void PreprocessFormulation::print(std::stringstream& stream) const {
   stream << "Added " << n_post - n_pre << " slacks\n";
 }
@@ -651,6 +809,9 @@ void PreprocessFreeVars::apply(Model& model) {
 void PreprocessFreeVars::undo(PreprocessorPoint& point, const Model& model,
                               const Iterate& it) const {}
 
+void PreprocessFreeVars::undo(DroppedPoint& point, const Model& model,
+                              const Iterate& it) const {}
+
 void PreprocessFreeVars::print(std::stringstream& stream) const {
   if (free_vars_count > 0)
     stream << "Found " << free_vars_count << " free variables\n";
@@ -661,8 +822,8 @@ void PreprocessFreeVars::print(std::stringstream& stream) const {
   stack.back()->apply(model);
 
 void Preprocessor::apply(Model& model) {
-  // Remove fixed variables before removing empty rows, because removing columns
-  // may create empty rows
+  // Remove fixed variables before removing empty rows, because removing
+  // columns may create empty rows
 
   APPLY_ACTION(PreprocessFixedVars);
   APPLY_ACTION(PreprocessEmptyRows);
@@ -671,6 +832,12 @@ void Preprocessor::apply(Model& model) {
   APPLY_ACTION(PreprocessFreeVars);
 }
 void Preprocessor::undo(PreprocessorPoint& point, const Model& model,
+                        const Iterate& it) const {
+  for (auto iterator = stack.rbegin(); iterator != stack.rend(); ++iterator) {
+    (*iterator)->undo(point, model, it);
+  }
+}
+void Preprocessor::undo(DroppedPoint& point, const Model& model,
                         const Iterate& it) const {
   for (auto iterator = stack.rbegin(); iterator != stack.rend(); ++iterator) {
     (*iterator)->undo(point, model, it);

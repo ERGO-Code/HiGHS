@@ -26,12 +26,23 @@ struct PreprocessorPoint {
   void assertConsistency(Int n, Int m) const;
 };
 
+struct DroppedPoint {
+  std::vector<double>& x;
+  std::vector<double>& slack;
+  std::vector<double>& y;
+  std::vector<double>& z;
+
+  void assertConsistency(Int n, Int m) const;
+};
+
 struct PreprocessAction {
   Int n_pre, m_pre, n_post, m_post;
 
   virtual ~PreprocessAction() = default;
   virtual void apply(Model& model) = 0;
   virtual void undo(PreprocessorPoint& point, const Model& model,
+                    const Iterate& it) const = 0;
+  virtual void undo(DroppedPoint& point, const Model& model,
                     const Iterate& it) const = 0;
   virtual void print(std::stringstream& stream) const = 0;
 };
@@ -42,6 +53,8 @@ struct PreprocessEmptyRows : public PreprocessAction {
 
   void apply(Model& model) override;
   void undo(PreprocessorPoint& point, const Model& model,
+            const Iterate& it) const override;
+  void undo(DroppedPoint& point, const Model& model,
             const Iterate& it) const override;
   void print(std::stringstream& stream) const override;
 };
@@ -61,6 +74,8 @@ struct PreprocessFixedVars : public PreprocessAction {
   void apply(Model& model) override;
   void undo(PreprocessorPoint& point, const Model& model,
             const Iterate& it) const override;
+  void undo(DroppedPoint& point, const Model& model,
+            const Iterate& it) const override;
   void print(std::stringstream& stream) const override;
 };
 
@@ -70,12 +85,16 @@ struct PreprocessScaling : public PreprocessAction {
   void apply(Model& model) override;
   void undo(PreprocessorPoint& point, const Model& model,
             const Iterate& it) const override;
+  void undo(DroppedPoint& point, const Model& model,
+            const Iterate& it) const override;
   void print(std::stringstream& stream) const override;
 };
 
 struct PreprocessFormulation : public PreprocessAction {
   void apply(Model& model) override;
   void undo(PreprocessorPoint& point, const Model& model,
+            const Iterate& it) const override;
+  void undo(DroppedPoint& point, const Model& model,
             const Iterate& it) const override;
   void print(std::stringstream& stream) const override;
 };
@@ -86,6 +105,8 @@ struct PreprocessFreeVars : public PreprocessAction {
   void apply(Model& model) override;
   void undo(PreprocessorPoint& point, const Model& model,
             const Iterate& it) const override;
+  void undo(DroppedPoint& point, const Model& model,
+            const Iterate& it) const override;
   void print(std::stringstream& stream) const override;
 };
 
@@ -95,6 +116,7 @@ struct Preprocessor {
   void apply(Model& model);
   void undo(PreprocessorPoint& point, const Model& model,
             const Iterate& it) const;
+  void undo(DroppedPoint& point, const Model& model, const Iterate& it) const;
   void print(std::stringstream& log_stream) const;
 };
 
