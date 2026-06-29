@@ -447,7 +447,6 @@ set(highs_sources
     util/HFactorExtend.cpp
     util/HFactorRefactor.cpp
     util/HFactorUtils.cpp
-    util/HighsDynamicLibrary.cpp
     util/HighsHash.cpp
     util/HighsLinearSumBounds.cpp
     util/HighsMatrixPic.cpp
@@ -460,6 +459,10 @@ set(highs_sources
     util/stringutil.cpp
     HighsExternalApi.cpp
     HighsExternalDeps.cpp)
+
+if (BUILD_SHARED_EXTRAS_LIB)
+  list(APPEND highs_sources util/HighsDynamicLibrary.cpp)
+endif()
 
 # add catch header?
 set(highs_headers
