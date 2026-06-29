@@ -9,6 +9,7 @@
 #ifndef HIGHS_MIP_SOLVER_DATA_H_
 #define HIGHS_MIP_SOLVER_DATA_H_
 
+#include <atomic>
 #include <vector>
 
 #include "mip/HighsCliqueTable.h"
@@ -77,6 +78,7 @@ struct HighsMipSolverData {
   std::deque<HighsPseudocost> pseudocosts;
   std::deque<HighsMipWorker> workers;
   bool parallel_lock;
+  std::atomic<int64_t> worker_lp_iterations_stop;
 
   HighsPrimalHeuristics heuristics;
   HighsCliqueTable cliquetable;
@@ -260,6 +262,17 @@ struct HighsMipSolverData {
 
   bool parallelLockActive() const {
     return (parallel_lock && hasMultipleWorkers());
+  }
+
+  void updateWorkerEarlyTermination(HighsMipWorker& worker) {
+    int64_t current = worker_lp_iterations_stop.load(std::memory_order_relaxed);
+    const int64_t candidate = worker.search_ptr_->lpiterations;
+    while (candidate < current &&
+           !worker_lp_iterations_stop.compare_exchange_weak(
+               current, candidate, std::memory_order_relaxed,
+               std::memory_order_relaxed)) {
+    }
+    worker.early_termination = true;
   }
 
   bool hasMultipleWorkers() const { return workers.size() > 1; }

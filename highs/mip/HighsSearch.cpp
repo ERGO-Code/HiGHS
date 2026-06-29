@@ -795,21 +795,20 @@ void HighsSearch::openNodesToQueue(HighsNodeQueue& nodequeue) {
 
 void HighsSearch::flushStatistics(HighsMipSolver& mipsolver) {
   mipsolver.mipdata_->num_nodes += nnodes;
-  nnodes = 0;
-
   mipsolver.mipdata_->num_leaves += nleaves;
-  nleaves = 0;
-
   mipsolver.mipdata_->pruned_treeweight += treeweight;
-  treeweight = 0;
-
   mipsolver.mipdata_->total_lp_iterations += lpiterations;
-  lpiterations = 0;
-
   mipsolver.mipdata_->heuristic_lp_iterations += heurlpiterations;
-  heurlpiterations = 0;
-
   mipsolver.mipdata_->sb_lp_iterations += sblpiterations;
+  resetStatistics();
+}
+
+void HighsSearch::resetStatistics() {
+  nnodes = 0;
+  nleaves = 0;
+  treeweight = 0;
+  lpiterations = 0;
+  heurlpiterations = 0;
   sblpiterations = 0;
 }
 
@@ -1949,6 +1948,11 @@ bool HighsSearch::checkLimits(int64_t nodeOffset) const {
 bool HighsSearch::checkLocalLimits() const {
   if (mipsolver.mipdata_->terminatorActive())
     if (mipsolver.mipdata_->terminatorTerminated()) return true;
+
+  if (mipsolver.mipdata_->worker_lp_iterations_stop.load(
+          std::memory_order_relaxed) <= lpiterations) {
+    return true;
+  }
 
   if (!mipsolver.submip && mipworker.upper_bound < kHighsInf &&
       mipsolver.options_mip_->objective_target > -kHighsInf) {
