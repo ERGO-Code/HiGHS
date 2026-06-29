@@ -84,8 +84,11 @@ option(BUILD_TESTING "Build Tests" ON)
 option(BUILD_SHARED_EXTRAS_LIB "Build shared extras library" ON)
 message(STATUS "Build shared extras library: ${BUILD_SHARED_EXTRAS_LIB}")
 
+option(HIPO "Build HIPO" OFF)
+message(STATUS "Build HIPO: ${HIPO}")
+
 option(BUILD_STATIC_EXE "Build static executable" OFF)
-if (BUILD_STATIC_EXE)
+if (BUILD_STATIC_EXE AND HIPO)
   set (BUILD_SHARED_EXTRAS_LIB OFF)
 endif()
 
@@ -99,9 +102,6 @@ message(STATUS "Build CSharp: ${CSHARP}")
 if (FORTRAN OR CSHARP)
   set(BUILD_SHARED_LIBS ON)
 endif()
-
-option(HIPO "Build HIPO" OFF)
-message(STATUS "Build HIPO: ${HIPO}")
 
 option(HIPO_PYTHON OFF)
 if (HIPO_PYTHON)
@@ -174,7 +174,7 @@ option(BUILD_OPENBLAS "Build OpenBLAS" OFF)
 message(STATUS "Build OpenBLAS: ${BUILD_OPENBLAS}")
 option(NO_AVX512 "Build OpenBLAS without AVX512" OFF)
 
-if (HIPO_PYTHON OR BUILD_STATIC_EXE)
+if (HIPO_PYTHON OR (BUILD_STATIC_EXE AND HIPO))
   set(NO_AVX512 ON)
 endif()
 
