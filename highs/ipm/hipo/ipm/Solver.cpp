@@ -1068,13 +1068,12 @@ bool Solver::checkBadIter() {
             "HiPO stagnated but HiGHS considers the solution acceptable\n");
         logger_.print("=== Primal-dual feasible point found\n");
         info_.status = kStatusPDFeas;
-      } else
+      } else {
         info_.status = kStatusNoProgress;
-      terminate = true;
-
-      if (it_->resetBest(iter_)) {
-        printOutput(true);
+        if (it_->resetBest(iter_)) printOutput(true);
       }
+
+      terminate = true;
     }
   }
 
