@@ -397,7 +397,8 @@ function(highs_link_blas target_name)
         target_link_libraries(${target_name} PUBLIC ${HIGHS_BLAS_TARGET})
 
         if(HIGHS_BLAS_INCLUDE_DIRS)
-            target_include_directories(${target_name} PUBLIC ${HIGHS_BLAS_INCLUDE_DIRS})
+            target_include_directories(${target_name} PUBLIC
+                $<BUILD_INTERFACE:${HIGHS_BLAS_INCLUDE_DIRS}>)
         endif()
     endif()
 endfunction()
