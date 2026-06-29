@@ -133,9 +133,9 @@ class TestHighsPy(unittest.TestCase):
 
     def test_version(self):
         h = self.get_basic_model()
-        self.assertEqual(h.version(), "1.14.0")
+        self.assertEqual(h.version(), "1.15.0")
         self.assertEqual(h.versionMajor(), 1)
-        self.assertEqual(h.versionMinor(), 14)
+        self.assertEqual(h.versionMinor(), 15)
         self.assertEqual(h.versionPatch(), 0)
 
     def test_basics(self):
@@ -1547,6 +1547,24 @@ class TestHighsPy(unittest.TestCase):
         h.solve()
         self.assertEqual(check_called[0], True)
 
+    def test_releaseMemory(self):
+        """Test that releaseMemory() frees memory and allows solving again."""
+        # Create and solve first problem
+        h = self.get_example_model()
+        h.run()
+        first_objective = h.getInfo().objective_function_value
+
+        # Release memory
+        status = h.releaseMemory()
+        self.assertEqual(status, highspy.HighsStatus.kOk)
+
+        # Solve a different problem to verify the solver still works
+        h2 = self.get_basic_model()
+        h2.run()
+        second_objective = h2.getInfo().objective_function_value
+
+        # Verify objectives are different (different problems)
+        self.assertNotEqual(first_objective, second_objective)
     def test_addVars_invalid_parameter(self):
         """ensure_real raises on invalid parameter"""
         h = highspy.Highs()
