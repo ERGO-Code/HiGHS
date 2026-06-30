@@ -503,6 +503,98 @@ static double fast_ceil(double x) { return (int64_t)x + (x > (int64_t)x); }
 
 static double fast_floor(double x) { return (int64_t)x - (x < (int64_t)x); }
 
+template <typename T>
+static T strongCgLl1(const T& scalaj, const T& f0, const T& oneoveroneminusf0,
+                     const double& k, const double& tol,
+                     const bool roundUp = true) {
+  using std::ceil;
+  using std::floor;
+
+  T downaj = floor(scalaj + kHighsTiny);
+  T fj = scalaj - downaj;
+  T aj = downaj;
+
+  if (fj > f0 + 0.1 * tol) {
+    T pj = ceil(k * (fj - f0) * oneoveroneminusf0 - (roundUp ? tol : -tol));
+    aj += pj / (k + 1);
+  }
+
+  return aj;
+}
+
+template <typename T>
+static T strongCgLl2(const T& scalaj, const T& f0, const T& oneoveroneminusf0,
+                     const T& rhs, const double downrhs, const double& k,
+                     const T& partition, const double& tol) {
+  using std::ceil;
+  using std::floor;
+
+  if (scalaj < partition)
+    return strongCgLl1(scalaj, f0, oneoveroneminusf0, k, tol);
+
+  T aj =
+      downrhs - strongCgLl1(rhs - scalaj, f0, oneoveroneminusf0, k, tol, false);
+
+  return aj;
+}
+
+void HighsCutGeneration::tryStrongCG(const double delta, bool& strongCG,
+                                     bool& strongCGll2, double& bestefficacy) {
+  // ll1 is the standard strongCG from "Strengthening Chvatal–Gomory cuts and
+  // Gomory fractional cuts", 2002, A. Letchford et.al.
+  // ll2 is the strengthened function from "A survey of dual-feasible and
+  // superadditive functions", 2010, F. Clautiaux et.al."
+  const double scale = 1.0 / delta;
+  const double scalrhs = static_cast<double>(rhs) * scale;
+  const double downrhs = fast_floor(scalrhs);
+  const double f0 = scalrhs - downrhs;
+  const double oneoveroneminusf0 = 1.0 / (1.0 - f0);
+  // Skip numerically troublesome cuts
+  if (fractionality(1 / f0) < 1e-3) {
+    strongCG = false;
+    return;
+  }
+  // All coefficients of continuous variables are 0 in strong CG cut
+  double k = fast_ceil(1 / f0) - 1;
+  double sqrnorm = 0;
+  double viol = -downrhs;
+  const double partition = scalrhs / 2;
+
+  // Check if the stronger lifting function can be used without worrying about
+  // numerics
+  strongCGll2 = true;
+  for (const HighsInt j : integerinds) {
+    const double scalaj = vals[j] * scale;
+    if (std::abs(scalaj - partition) < 10 * feastol ||
+        std::abs((scalrhs - scalaj) - fast_floor(scalrhs - scalaj) - f0) <
+            10 * feastol) {
+      strongCGll2 = false;
+      break;
+    }
+  }
+
+  for (const HighsInt j : integerinds) {
+    const double scalaj = vals[j] * scale;
+    const double aj =
+        strongCGll2 ? strongCgLl2(scalaj, f0, oneoveroneminusf0, scalrhs,
+                                  downrhs, k, partition, feastol)
+                    : strongCgLl1(scalaj, f0, oneoveroneminusf0, k, feastol);
+    updateViolationAndNorm(j, aj, viol, sqrnorm);
+  }
+
+  if (sqrnorm <= kHighsTiny) {
+    strongCG = false;
+    return;
+  }
+
+  const double efficacy = viol / sqrt(sqrnorm);
+  if (efficacy < bestefficacy + epsilon) {
+    strongCG = false;
+    return;
+  }
+  bestefficacy = efficacy;
+}
+
 bool HighsCutGeneration::cmirCutGenerationHeuristic(double minEfficacy,
                                                     bool onlyInitialCMIRScale) {
   using std::abs;
@@ -522,7 +614,7 @@ bool HighsCutGeneration::cmirCutGenerationHeuristic(double minEfficacy,
   integerinds.clear();
   integerinds.reserve(rowlen);
 
-  bool strongcg = !onlyInitialCMIRScale;
+  bool strongCG = !onlyInitialCMIRScale;
   double maxabsdelta = 0.0;
   constexpr double maxCMirScale = 1e6;
   constexpr double f0min = 0.005;
@@ -549,7 +641,7 @@ bool HighsCutGeneration::cmirCutGenerationHeuristic(double minEfficacy,
       updateViolationAndNorm(i, vals[i], continuouscontribution,
                              continuoussqrnorm);
       // StrongCG cannot be computed when negative coefficients for cont exist
-      strongcg = false;
+      strongCG = false;
     }
   }
 
@@ -693,49 +785,13 @@ bool HighsCutGeneration::cmirCutGenerationHeuristic(double minEfficacy,
     }
   }
 
-  // Calc strongcg cut as potential alternative to CMIR
+  // Calc StrongCG cut as potential alternative to CMIR
+  bool strongCGLl2 = true;
   if (bestefficacy <= 0 || rowlen == 0) {
-    strongcg = false;
+    strongCG = false;
   }
-  if (strongcg) {
-    double delta = bestdelta;
-    double scale = 1.0 / delta;
-    double scalrhs = double(rhs) * scale;
-    double downrhs = fast_floor(scalrhs);
-    double f0 = scalrhs - downrhs;
-    double oneoveroneminusf0 = 1.0 / (1.0 - f0);
-    // Skip numerically troublesome cuts
-    if (fractionality(1 / f0) < 1e-3) {
-      strongcg = false;
-    } else {
-      double k = fast_ceil(1 / f0) - 1;
-      // All coefficients of continuous variables are 0 in strong CG cut
-      double sqrnorm = 0;
-      double viol = -downrhs;
-
-      for (HighsInt j : integerinds) {
-        double scalaj = vals[j] * scale;
-        double downaj = fast_floor(scalaj + kHighsTiny);
-        double fj = scalaj - downaj;
-        double aj = downaj;
-        if (fj >= f0 + 10 * feastol) {
-          double pj = fast_ceil(k * (fj - f0) * oneoveroneminusf0 - 1e-4);
-          aj += pj / (k + 1);
-        }
-        updateViolationAndNorm(j, aj, viol, sqrnorm);
-      }
-      if (sqrnorm <= kHighsTiny) {
-        strongcg = false;
-      } else {
-        double efficacy = viol / sqrt(sqrnorm);
-        // Use the strongCG cut instead of the CMIR if efficacy is larger
-        if (efficacy < bestefficacy + epsilon) {
-          strongcg = false;
-        } else {
-          bestefficacy = efficacy;
-        }
-      }
-    }
+  if (strongCG) {
+    tryStrongCG(bestdelta, strongCG, strongCGLl2, bestefficacy);
   }
 
   HighsCDouble scale = 1.0 / HighsCDouble(bestdelta);
@@ -745,7 +801,7 @@ bool HighsCutGeneration::cmirCutGenerationHeuristic(double minEfficacy,
   HighsCDouble f0 = scalrhs - downrhs;
   HighsCDouble oneoveroneminusf0 = 1.0 / (1.0 - f0);
 
-  double k = strongcg ? ceil(static_cast<double>(1 / f0)) - 1 : 0;
+  double k = ceil(static_cast<double>(1 / f0)) - 1;
 
   rhs = downrhs * bestdelta;
   integralSupport = true;
@@ -760,42 +816,42 @@ bool HighsCutGeneration::cmirCutGenerationHeuristic(double minEfficacy,
         integralSupport = false;
       }
     } else {
-      HighsCDouble scalaj = scale * vals[j];
-      double downaj = floor(double(scalaj + kHighsTiny));
-      HighsCDouble fj = scalaj - downaj;
-      HighsCDouble aj = downaj;
-      if (fj > f0) {
-        if (strongcg) {
-          if (fj - f0 > epsilon) {
-            HighsCDouble pj = ceil(k * (fj - f0) * oneoveroneminusf0 - feastol);
-            aj += pj / (k + 1);
-          }
-        } else {
+      if (strongCG) {
+        HighsCDouble aj =
+            strongCGLl2
+                ? strongCgLl2(scale * vals[j], f0, oneoveroneminusf0, scalrhs,
+                              downrhs, k, scalrhs / 2, feastol)
+                : strongCgLl1(scale * vals[j], f0, oneoveroneminusf0, k,
+                              feastol);
+        vals[j] = double(aj * bestdelta);
+      } else {
+        HighsCDouble scalaj = scale * vals[j];
+        double downaj = floor(double(scalaj + kHighsTiny));
+        HighsCDouble fj = scalaj - downaj;
+        HighsCDouble aj = downaj;
+        if (fj > f0) {
           aj += (fj - f0) * oneoveroneminusf0;
         }
+        vals[j] = double(aj * bestdelta);
       }
-      vals[j] = double(aj * bestdelta);
     }
   }
 
 #ifndef NDEBUG
   // Check if the computed cut has the correct efficacy
+  // Due to rounding strongCg cuts in higher precision can differ
   {
-    double checkviol = -downrhs * bestdelta;
-    double checknorm = 0.0;
-    for (HighsInt j = 0; j != rowlen; ++j) {
-      if (vals[j] == 0.0) continue;
-      updateViolationAndNorm(j, vals[j], checkviol, checknorm);
-    }
-    if (checknorm != 0.0) {
-      double checkefficacy = checkviol / sqrt(checknorm);
-      // the efficacy can become infinite if the cut 0 <= -1 is derived
-      if (!strongcg) {
+    if (!strongCG) {
+      double checkviol = -downrhs * bestdelta;
+      double checknorm = 0.0;
+      for (HighsInt j = 0; j != rowlen; ++j) {
+        if (vals[j] == 0.0) continue;
+        updateViolationAndNorm(j, vals[j], checkviol, checknorm);
+      }
+      if (checknorm != 0.0) {
+        double checkefficacy = checkviol / sqrt(checknorm);
+        // the efficacy can become infinite if the cut 0 <= -1 is derived
         assert(fabs(checkefficacy - bestefficacy) < 0.001 ||
-               fabs(checkefficacy) >= 1e30);
-      } else {
-        // Rounded conservatively for scoring => strongcg cut can be stronger
-        assert(bestefficacy - checkefficacy < 0.001 ||
                fabs(checkefficacy) >= 1e30);
       }
     }
