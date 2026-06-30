@@ -281,7 +281,7 @@ if (BUILD_CXX)
     endforeach()
   endif()
 
-  if(BUILD_SHARED_LIBS AND MSVC)
+  if(BUILD_SHARED_LIBS AND (MSVC OR MINGW))
     set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
   endif()
 

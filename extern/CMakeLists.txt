@@ -114,3 +114,16 @@ else()
   export(TARGETS highs_extras
     APPEND FILE "${HIGHS_BINARY_DIR}/highs-targets.cmake")
 endif()
+
+# endif()
+
+# install(TARGETS highs_extras
+#     EXPORT highs-targets
+#     INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+#     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+#     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+#     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+#     COMPONENT libs)
+
+# export(TARGETS highs_extras
+#   APPEND FILE "${HIGHS_BINARY_DIR}/highs-targets.cmake")

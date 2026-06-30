@@ -192,6 +192,12 @@ else()
     target_link_libraries(highs PUBLIC highs_extras)
   endif()
 
+  # endif()
+
+  # # PUBLIC: propagate link dependency in the highs library, so that
+  # # consumers don't need to explicitly link against highs_extras
+  # target_link_libraries(highs PUBLIC highs_extras)
+
   target_sources(highs PRIVATE ${sources} ${headers} ${win_version_file})
 
   # Optional Cuda
@@ -364,12 +370,12 @@ else()
     endif()
   endif()
   if (CMAKE_CXX_COMPILER_ID STREQUAL "IntelLLVM")
-    target_compile_options(highs PUBLIC "-Wno-invalid-offsetof")
+    target_compile_options(highs PRIVATE "-Wno-invalid-offsetof")
   endif()
 
   check_cxx_compiler_flag("-Wno-invalid-offsetof" COMPILER_SUPPORTS_INVALID_OFFSET)
   if(COMPILER_SUPPORTS_INVALID_OFFSET)
-      target_compile_options(highs PUBLIC "$<$<COMPILE_LANGUAGE:CXX>:-Wno-invalid-offsetof>")
+      target_compile_options(highs PRIVATE "$<$<COMPILE_LANGUAGE:CXX>:-Wno-invalid-offsetof>")
   endif()
 
   if (BUILD_DOTNET)
