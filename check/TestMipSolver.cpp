@@ -1485,13 +1485,14 @@ TEST_CASE("issue-2975", "[highs_test_mip_solver]") {
 }
 
 TEST_CASE("issue-3118", "[highs_test_mip_solver]") {
-  //   min  a + b
-  //   s.t. a + 1e7*b = 1
-  //        1e7*a + b = 1
-  //        a, b binary
-  //   Initial "solution" a = 1e-7, b = 1e-7
+  const double M = 1e10;
+  //   min    a +   b
+  //   s.t.   a + M*b = 1
+  //        M*a +   b = 1
+  //          a, b binary
+  //   Initial "solution" a = b = 1/M
   Highs highs;
-  highs.setOptionValue("output_flag", dev_run);
+  //  highs.setOptionValue("output_flag", dev_run);
 
   HighsInt a = 0;
   HighsInt b = 1;
@@ -1507,14 +1508,16 @@ TEST_CASE("issue-3118", "[highs_test_mip_solver]") {
   lp.a_matrix_.format_ = MatrixFormat::kRowwise;
   lp.a_matrix_.start_ = {0, 2, 4};
   lp.a_matrix_.index_ = {a, b, a, b};
-  lp.a_matrix_.value_ = {1., 1e7, 1e7, 1};
+  lp.a_matrix_.value_ = {1., M, M, 1};
   highs.passModel(lp);
+  //  highs.writeModel("3118.mps");
 
   std::vector<HighsInt> solution_index = {0, 1};
-  std::vector<double> solution_values = {1e-7, 1e-7};
+  std::vector<double> solution_values(lp.num_col_, 1 / M);
   highs.setSolution(2, solution_index.data(), solution_values.data());
 
   highs.run();
+  highs.writeSolution("", 1);
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kInfeasible);
 
   highs.resetGlobalScheduler(true);
