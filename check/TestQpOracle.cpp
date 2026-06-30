@@ -85,40 +85,63 @@ HighsHessianFunctionType oracleCallTriangularHessian =
       if (x_index == nullptr) {
 	// Simple product with full vector x, full vector q_x, and no
 	// Qx indices required
-	assert(x_index_size == hessian.dim_);
-	assert(q_x_index_size == hessian.dim_);
 	assert(q_x_index == nullptr);
 	zeroQx(hessian.dim_);
 	for (HighsInt iCol = 0; iCol < hessian.dim_; iCol++) 
 	  addScaledQcol(iCol);
 	return;
-      } else if (x_index_size >= 1 && q_x_index == nullptr) {
+      } else if (x_index_size > 1) {
 	// x is sparse with x_index_size entries in rows x_index, and
 	// no Qx indices required
-	assert(q_x_index_size == hessian.dim_);
+	assert(q_x_index == nullptr);
 	zeroQx(hessian.dim_);
 	for (HighsInt iX = 0; iX < x_index_size; iX++) 
 	  addScaledQcol(x_index[iX]);
 	return;
       } else if (x_index_size == 1) {
-	// x is sparse with one entry in row x_index, and one Qx index
-	// required
-	assert(q_x_index_size == 1);
 	assert(q_x_index != nullptr);
-	// With a triangular Hessian, need to identify which column to
-	// search down, and which row to look for
-	HighsInt iCol = std::min(x_index[0], q_x_index[0]);
-	HighsInt iRow = std::max(x_index[0], q_x_index[0]);
-	// Zero Qx value in case the Hessian entry requested is zero
-	q_x_value[0] = 0;
-	for (HighsInt iEl = hessian.start_[iCol]; iEl <hessian.start_[iCol+1]; iEl++) {
-	  if (hessian.index_[iEl] == iRow) {
-	    q_x_value[0] = use_x_value[0] * hessian.value_[iEl];
-	    return;
+	if (q_x_index_size < 0) {
+	  // x is sparse with one entry in row x_index, and all Qx index
+	  // required
+	  q_x_index_size = 0;
+	  // Get the entries below the diagonal in column iCol
+	  HighsInt iCol = x_index[0];
+	  for (HighsInt iEl = hessian.start_[iCol]; iEl <hessian.start_[iCol+1]; iEl++) {
+	    q_x_index[q_x_index_size] = hessian.index_[iEl];
+	    q_x_value[q_x_index_size] = hessian.value_[iEl];
+	    q_x_index_size++;
 	  }
+	  // Get the entries in row iCol in previous columns
+	  for (HighsInt iCol = 0; iCol < x_index[0]; iCol++) {
+	    for (HighsInt iEl = hessian.start_[iCol]; iEl <hessian.start_[iCol+1]; iEl++) {
+	      HighsInt iRow = hessian.index_[iEl];
+	      if (iRow == x_index[0]) {
+		q_x_index[q_x_index_size] = hessian.index_[iEl];
+		q_x_value[q_x_index_size] = hessian.value_[iEl];
+		q_x_index_size++;
+		break;
+	      }
+	    }
+	  }
+	  return;
+	} else if (q_x_index_size == 1) {
+	  // x is sparse with one entry in row x_index, and one Qx index
+	  // required
+	  // With a triangular Hessian, need to identify which column to
+	  // search down, and which row to look for
+	  HighsInt iCol = std::min(x_index[0], q_x_index[0]);
+	  HighsInt iRow = std::max(x_index[0], q_x_index[0]);
+	  // Zero Qx value in case the Hessian entry requested is zero
+	  q_x_value[0] = 0;
+	  for (HighsInt iEl = hessian.start_[iCol]; iEl <hessian.start_[iCol+1]; iEl++) {
+	    if (hessian.index_[iEl] == iRow) {
+	      q_x_value[0] = use_x_value[0] * hessian.value_[iEl];
+	      return;
+	    }
+	  }
+	  // Hessian entry is zero
+	  return;
 	}
-	// Hessian entry is zero
-	return;
       }
       // Case not coded, since it may be unnecessary
       assert(1234 == 5678);
@@ -144,45 +167,56 @@ HighsHessianFunctionType oracleCallSquareHessian =
       auto addScaledQcol = [&] (const HighsInt iCol) {
 	for (HighsInt iEl = hessian.start_[iCol]; iEl < hessian.start_[iCol+1]; iEl++) {
 	  HighsInt iRow = hessian.index_[iEl];
-	  q_x_value[iRow] += hessian.value_[iEl] * x_value[iRow];
+	  q_x_value[iRow] += hessian.value_[iEl] * x_value[iCol];
 	}
       };
 
       if (x_index == nullptr) {
 	// Simple product with full vector x, full vector q_x, and no
 	// Qx indices required
-	assert(x_index_size == hessian.dim_);
-	assert(q_x_index_size == hessian.dim_);
 	assert(q_x_index == nullptr);
 	zeroQx(hessian.dim_);
 	for (HighsInt iCol = 0; iCol < hessian.dim_; iCol++) 
 	  addScaledQcol(iCol);
 	return;
-      } else if (x_index_size >= 1 && q_x_index == nullptr) {
+      } else if (x_index_size > 1) {
 	// x is sparse with x_index_size entries in rows x_index, and
 	// no Qx indices required
-	assert(q_x_index_size == hessian.dim_);
+	assert(q_x_index == nullptr);
 	zeroQx(hessian.dim_);
 	for (HighsInt iX = 0; iX < x_index_size; iX++) 
 	  addScaledQcol(x_index[iX]);
 	return;
       } else if (x_index_size == 1) {
-	// x is sparse with one entry in row x_index, and one Qx index
-	// required
-	assert(q_x_index_size == 1);
 	assert(q_x_index != nullptr);
-	HighsInt iCol = x_index[0];
-	HighsInt iRow = q_x_index[0];
-	// Zero Qx value in case the Hessian entry requested is zero
-	q_x_value[0] = 0;
-	for (HighsInt iEl = hessian.start_[iCol]; iEl <hessian.start_[iCol+1]; iEl++) {
-	  if (hessian.index_[iEl] == iRow) {
-	    q_x_value[0] = x_value[0] * hessian.value_[iEl];
-	    return;
+	if (q_x_index_size < 0) {
+	  // x is sparse with one entry in row x_index, and all Qx index
+	  // required
+	  q_x_index_size = 0;
+	  // Get the entries below the diagonal in column iCol
+	  HighsInt iCol = x_index[0];
+	  for (HighsInt iEl = hessian.start_[iCol]; iEl <hessian.start_[iCol+1]; iEl++) {
+	    q_x_index[q_x_index_size] = hessian.index_[iEl];
+	    q_x_value[q_x_index_size] = hessian.value_[iEl];
+	    q_x_index_size++;
 	  }
+	  return;
+	} else if (q_x_index_size == 1) {
+	  // x is sparse with one entry in row x_index, and one Qx index
+	  // required
+	  HighsInt iCol = x_index[0];
+	  HighsInt iRow = q_x_index[0];
+	  // Zero Qx value in case the Hessian entry requested is zero
+	  q_x_value[0] = 0;
+	  for (HighsInt iEl = hessian.start_[iCol]; iEl <hessian.start_[iCol+1]; iEl++) {
+	    if (hessian.index_[iEl] == iRow) {
+	      q_x_value[0] = x_value[0] * hessian.value_[iEl];
+	      return;
+	    }
+	  }
+	  // Hessian entry is zero
+	  return;
 	}
-	// Hessian entry is zero
-	return;
       }
       // Case not coded, since it may be unnecessary
       assert(1234 == 5678);
