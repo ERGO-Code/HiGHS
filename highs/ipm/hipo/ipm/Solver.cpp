@@ -1180,13 +1180,13 @@ void Solver::printOutput(bool reset) const {
   if (!reset) {
     logger_.print("%5d ", iter_);
   } else {
-    logger_.print("   >  ");
+    logger_.print(">%4d ",it_->best_iter);
   }
 
   logger_.print("%16.8e %16.8e %10.2e %10.2e %9.2e", it_->pobj, it_->dobj,
                 it_->pinf, it_->dinf, it_->pdgap);
   if (!options_.timeless_log) logger_.print(" %7.1f", control_.elapsed());
-  if (logger_.debug(1)) {
+  if (logger_.debug(1) && !reset) {
     const IpmIterData& data = it_->data.back();
     logger_.print(
         " %6.2f %6.2f %6.2f %6.2f %5d %5d %8.1e %8.1e %8.1e %8.1e %8.1e %8.1e "
