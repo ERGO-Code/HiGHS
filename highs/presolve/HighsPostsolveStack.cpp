@@ -1585,7 +1585,7 @@ void HighsPostsolveStack::undoFourierMotzkinBlock(
   // basis postsolve: use dual solution to determine basis status
   if (!basis.valid) return;
 
-  // Pre-compute lower and upper slacks for each row
+  // pre-compute lower and upper slacks for each row
   auto computeSlacks =
       [&](HighsInt col, const std::vector<FmeRowHeader>& headers,
           const std::vector<double>& coefs,
@@ -1610,7 +1610,7 @@ void HighsPostsolveStack::undoFourierMotzkinBlock(
         }
       };
 
-  // A row must be basic if it has zero dual and activity strictly
+  // row must be basic if it has zero dual and activity strictly
   // between bounds (complementary slackness)
   auto rowMustBeBasic = [&](HighsInt row, double lowerSlack,
                             double upperSlack) {
@@ -1618,40 +1618,35 @@ void HighsPostsolveStack::undoFourierMotzkinBlock(
            upperSlack > tol;
   };
 
-  // Minimum slack scaled by coefficient (for assertions in pass 4)
-  auto computeSlack = [&](double lowerSlack, double upperSlack, double coef) {
-    return std::min(lowerSlack, upperSlack) / std::abs(coef);
-  };
-
-  // Flip tight nonbasic row to basic (degenerate)
-  auto forceRowBasic = [&](HighsInt row, double lowerSlack, double upperSlack,
-                           double coef, HighsInt& basicAssigned) {
-    if (basis.row_status[row] == HighsBasisStatus::kBasic) return;
-    assert(std::abs(solution.row_dual[row]) <= dual_tol);
-    assert(computeSlack(lowerSlack, upperSlack, coef) <= tol);
+  // assign row as basic
+  auto assignBasicRowStatus = [&](HighsInt row, HighsInt& basicAssigned) {
+    if (basis.row_status[row] == HighsBasisStatus::kBasic ||
+        std::abs(solution.row_dual[row]) > dual_tol)
+      return false;
     basis.row_status[row] = HighsBasisStatus::kBasic;
     basicAssigned++;
+    return true;
   };
 
-  // Assign row as basic (if zero dual and budget allows) or non-basic
+  // assign row as non-basic
+  auto assignNonBasicRowStatus = [&](HighsInt row, double lowerSlack,
+                                     double upperSlack) {
+    if (solution.row_dual[row] > dual_tol)
+      basis.row_status[row] = HighsBasisStatus::kLower;
+    else if (solution.row_dual[row] < -dual_tol)
+      basis.row_status[row] = HighsBasisStatus::kUpper;
+    else
+      basis.row_status[row] = upperSlack < lowerSlack
+                                  ? HighsBasisStatus::kUpper
+                                  : HighsBasisStatus::kLower;
+  };
+
+  // assign row status
   auto assignRowStatus = [&](HighsInt row, double lowerSlack, double upperSlack,
-                             HighsInt& basicAssigned, HighsInt basicNeeded) {
-    if (basis.row_status[row] == HighsBasisStatus::kBasic) return;
-    if (std::abs(solution.row_dual[row]) <= dual_tol &&
-        basicAssigned < basicNeeded) {
-      basis.row_status[row] = HighsBasisStatus::kBasic;
-      basicAssigned++;
-    } else {
-      double dual = solution.row_dual[row];
-      if (dual > dual_tol)
-        basis.row_status[row] = HighsBasisStatus::kLower;
-      else if (dual < -dual_tol)
-        basis.row_status[row] = HighsBasisStatus::kUpper;
-      else
-        basis.row_status[row] = upperSlack < lowerSlack
-                                    ? HighsBasisStatus::kUpper
-                                    : HighsBasisStatus::kLower;
-    }
+                             HighsInt& basicAssigned,
+                             bool forceNonBasic = false) {
+    if (forceNonBasic || !assignBasicRowStatus(row, basicAssigned))
+      assignNonBasicRowStatus(row, lowerSlack, upperSlack);
   };
 
   for (HighsInt s = numSteps - 1; s >= 0; --s) {
@@ -1676,10 +1671,28 @@ void HighsPostsolveStack::undoFourierMotzkinBlock(
           break;
         }
 
+    // non-basic propagation: if a generated row is non-basic (with nonzero
+    // dual), both its parents are forced non-basic. mark them so the greedy
+    // passes skip them.
+    std::vector<bool> forcedNonBasicPlus(numPlus, false);
+    std::vector<bool> forcedNonBasicMinus(numMinus, false);
+    for (const auto& nr : step.newRows) {
+      HighsInt p = nr.plusParentIdx;
+      HighsInt m = nr.minusParentIdx;
+      if (p < 0 || m < 0 ||
+          basis.row_status[nr.row] == HighsBasisStatus::kBasic ||
+          std::abs(solution.row_dual[nr.row]) <= dual_tol)
+        continue;
+      forcedNonBasicPlus[p] = true;
+      forcedNonBasicMinus[m] = true;
+    }
+
+    // how many basic variables are needed?
     HighsInt basicNeeded =
         (numPlus + numMinus - numRanged - numNewRows) + numBasicDesc;
     HighsInt basicAssigned = 0;
 
+    // compute slacks
     std::vector<double> plusLowerSlack, plusUpperSlack;
     std::vector<double> minusLowerSlack, minusUpperSlack;
     computeSlacks(col, step.plusHeaders, step.plusCoefs, step.plusEntries,
@@ -1687,35 +1700,32 @@ void HighsPostsolveStack::undoFourierMotzkinBlock(
     computeSlacks(col, step.minusHeaders, step.minusCoefs, step.minusEntries,
                   minusLowerSlack, minusUpperSlack);
 
-    // Determine col status
+    // determine col status
     bool colMustBeBasic =
         solution.col_value[col] > step.header.colLower + tol &&
         solution.col_value[col] < step.header.colUpper - tol;
     bool colCanBeBasic =
         colMustBeBasic || std::abs(solution.col_dual[col]) <= dual_tol;
 
-    // Pass 1: assign all must-be-basic (col and rows)
+    // pass 1: assign all must-be-basic (col and rows)
     if (colMustBeBasic) {
       basis.col_status[col] = HighsBasisStatus::kBasic;
       basicAssigned++;
     }
     for (HighsInt p = 0; p < numPlus; ++p) {
+      if (forcedNonBasicPlus[p]) continue;
       if (rowMustBeBasic(step.plusHeaders[p].row, plusLowerSlack[p],
-                         plusUpperSlack[p])) {
-        basis.row_status[step.plusHeaders[p].row] = HighsBasisStatus::kBasic;
-        basicAssigned++;
-      }
+                         plusUpperSlack[p]))
+        assignBasicRowStatus(step.plusHeaders[p].row, basicAssigned);
     }
     for (HighsInt m = 0; m < numMinus; ++m) {
-      if (isMinusRowRanged[m]) continue;
+      if (isMinusRowRanged[m] || forcedNonBasicMinus[m]) continue;
       if (rowMustBeBasic(step.minusHeaders[m].row, minusLowerSlack[m],
-                         minusUpperSlack[m])) {
-        basis.row_status[step.minusHeaders[m].row] = HighsBasisStatus::kBasic;
-        basicAssigned++;
-      }
+                         minusUpperSlack[m]))
+        assignBasicRowStatus(step.minusHeaders[m].row, basicAssigned);
     }
 
-    // Pass 2: assign can-be-basic col (if not already assigned)
+    // pass 2: assign can-be-basic col (if not already assigned)
     if (!colMustBeBasic) {
       if (colCanBeBasic && basicAssigned < basicNeeded) {
         basis.col_status[col] = HighsBasisStatus::kBasic;
@@ -1727,24 +1737,32 @@ void HighsPostsolveStack::undoFourierMotzkinBlock(
       }
     }
 
-    // Pass 3: assign can-be-basic rows (zero dual)
-    for (HighsInt p = 0; p < numPlus; ++p)
+    // pass 3: assign can-be-basic rows
+    for (HighsInt p = 0; p < numPlus; ++p) {
+      if (basis.row_status[step.plusHeaders[p].row] == HighsBasisStatus::kBasic)
+        continue;
       assignRowStatus(step.plusHeaders[p].row, plusLowerSlack[p],
-                      plusUpperSlack[p], basicAssigned, basicNeeded);
+                      plusUpperSlack[p], basicAssigned,
+                      forcedNonBasicPlus[p] || basicAssigned >= basicNeeded);
+    }
     for (HighsInt m = 0; m < numMinus; ++m) {
       if (isMinusRowRanged[m]) continue;
+      if (basis.row_status[step.minusHeaders[m].row] ==
+          HighsBasisStatus::kBasic)
+        continue;
       assignRowStatus(step.minusHeaders[m].row, minusLowerSlack[m],
-                      minusUpperSlack[m], basicAssigned, basicNeeded);
+                      minusUpperSlack[m], basicAssigned,
+                      forcedNonBasicMinus[m] || basicAssigned >= basicNeeded);
     }
 
-    // Pass 4: if still short, flip tight non-basic rows to basic (degenerate)
-    for (HighsInt p = 0; p < numPlus && basicAssigned < basicNeeded; ++p)
-      forceRowBasic(step.plusHeaders[p].row, plusLowerSlack[p],
-                    plusUpperSlack[p], step.plusCoefs[p], basicAssigned);
+    // pass 4: if still short, flip tight non-basic rows to basic (degenerate)
+    for (HighsInt p = 0; p < numPlus && basicAssigned < basicNeeded; ++p) {
+      if (forcedNonBasicPlus[p]) continue;
+      assignBasicRowStatus(step.plusHeaders[p].row, basicAssigned);
+    }
     for (HighsInt m = 0; m < numMinus && basicAssigned < basicNeeded; ++m) {
-      if (isMinusRowRanged[m]) continue;
-      forceRowBasic(step.minusHeaders[m].row, minusLowerSlack[m],
-                    minusUpperSlack[m], step.minusCoefs[m], basicAssigned);
+      if (isMinusRowRanged[m] || forcedNonBasicMinus[m]) continue;
+      assignBasicRowStatus(step.minusHeaders[m].row, basicAssigned);
     }
   }
 }
