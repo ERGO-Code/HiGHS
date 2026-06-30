@@ -1780,7 +1780,8 @@ void HighsPostsolveStack::undoFourierMotzkinBlock(
     }
     // sort descending by non-basic support count
     std::sort(candidates.begin(), candidates.end(),
-              [](const auto& a, const auto& b) {
+              [](const std::tuple<HighsInt, HighsInt, bool>& a,
+                 const std::tuple<HighsInt, HighsInt, bool>& b) {
                 return std::get<0>(a) > std::get<0>(b);
               });
     for (const auto& cand : candidates) {
