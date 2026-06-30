@@ -7,9 +7,9 @@ authors:
 - given-names: Ivet
   family-names: Galabova
 title: "HiGHS"
-version: 1.14.0
+version: 1.15.0
 date-released: 2022-04-18
-url: "https://github.com/ERGO-Code/HiGHS/releases/tag/v1.14.0"
+url: "https://github.com/ERGO-Code/HiGHS/releases/tag/v1.15.0"
 preferred-citation:
   type: article
   authors:

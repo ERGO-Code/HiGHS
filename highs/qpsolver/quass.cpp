@@ -15,7 +15,6 @@
 #include "Highs.h"
 #include "lp_data/HighsAnalysis.h"
 #include "qpsolver/basis.hpp"
-#include "qpsolver/crashsolution.hpp"
 #include "qpsolver/dantzigpricing.hpp"
 #include "qpsolver/devexpricing.hpp"
 #include "qpsolver/factor.hpp"

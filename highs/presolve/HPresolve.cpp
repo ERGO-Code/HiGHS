@@ -1329,8 +1329,12 @@ HPresolve::Result HPresolve::dominatedColumns(
         if (!tryToFix) numDomChecksPredBndAnalysis++;
         // check for domination
         if (checkDomination(direction, col, direction_k, k)) {
+          // Re-check the implied bound condition since earlier fixings in
+          // this dominatedColumns call may have changed the model state
+          bool currentBoundImplied =
+              direction > 0 ? isUpperImplied(col) : isLowerImplied(col);
           if (tryToFix &&
-              (boundImplied ||
+              (currentBoundImplied ||
                mipsolver->mipdata_->cliquetable.haveCommonClique(
                    HighsCliqueTable::CliqueVar(col, direction > 0 ? 1 : 0),
                    HighsCliqueTable::CliqueVar(k, direction_k > 0 ? 1 : 0)))) {
@@ -5028,6 +5032,7 @@ HPresolve::Result HPresolve::singletonColStuffing(
                           double& maxWeight, size_t& numIntegerCandidates) {
     if (model->integrality_[col] == HighsVarType::kInteger)
       numIntegerCandidates++;
+
     minWeight = std::min(minWeight, direction * val);
     maxWeight = std::max(maxWeight, direction * val);
     candidates.push_back(candidate{col, val, direction});
@@ -5069,7 +5074,6 @@ HPresolve::Result HPresolve::singletonColStuffing(
       double sumUpperBound = model->col_upper_[j];
       bool isCandidate = allowIntegerCandidates ||
                          model->integrality_[j] != HighsVarType::kInteger;
-
       if (isSingleton(j)) {
         // check singleton
         if (aj > 0) {
@@ -5083,6 +5087,8 @@ HPresolve::Result HPresolve::singletonColStuffing(
                          numIntegerCandidates);
           }
         } else {
+          // aj < 0
+          assert(aj < 0);
           if (cj <= 0)
             // dual fixing: fix to upper bound
             sumLowerBound = sumUpperBound;
@@ -5174,7 +5180,15 @@ HPresolve::Result HPresolve::singletonColStuffing(
         numFixedCols++;
         HPRESOLVE_CHECKED_CALL(fixCol(t.col, t.multiplier));
       } else if (sumLowerFinite &&
-                 direction * rhs <= sumLower + primal_feastol) {
+                 delta <= sumLower - direction * rhs + primal_feastol) {
+        // Previously
+        //
+        // direction * rhs <= sumLower + primal_feastol
+        //
+        // But this led to fixing at -t.multiplier until row activity
+        // was at its bound, which is primal optmal but degenerate,
+        // and does not yield an optimal basis if column costs are
+        // positive
         numFixedCols++;
         HPRESOLVE_CHECKED_CALL(fixCol(t.col, -t.multiplier));
       }
@@ -5790,6 +5804,16 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
   //    - stop
   //
 
+  auto presolveReturn = [&]() {
+    if (mipsolver != nullptr) HPRESOLVE_CHECKED_CALL(scaleMIP(postsolve_stack));
+
+    // analysePresolveRuleLog() should return true - no errors
+    assert(analysis_.analysePresolveRuleLog());
+    // Possibly report presolve log
+    analysis_.analysePresolveRuleLog(true);
+    return Result::kOk;
+  };
+
   // convert model to minimization problem
   if (model->sense_ == ObjSense::kMaximize) {
     for (HighsInt i = 0; i != model->num_col_; ++i)
@@ -5837,6 +5861,10 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
     assert(this->timer);
     assert(this->timer->running());
 
+    if (options->presolve_rule_test) {
+      HPRESOLVE_CHECKED_CALL(presolveRuleTest(postsolve_stack));
+      return presolveReturn();
+    }
     HPRESOLVE_CHECKED_CALL(initialRowAndColPresolve(postsolve_stack));
 
     HighsInt numParallelRowColCalls = 0;
@@ -6014,13 +6042,7 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
                  "\nPresolve is switched off\n");
   }
 
-  if (mipsolver != nullptr) HPRESOLVE_CHECKED_CALL(scaleMIP(postsolve_stack));
-
-  // analysePresolveRuleLog() should return true - no errors
-  assert(analysis_.analysePresolveRuleLog());
-  // Possibly report presolve log
-  analysis_.analysePresolveRuleLog(true);
-  return Result::kOk;
+  return presolveReturn();
 }
 
 HPresolve::Result HPresolve::removeSlacks(

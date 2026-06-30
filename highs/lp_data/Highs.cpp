@@ -63,6 +63,7 @@ HighsStatus Highs::clear() {
 HighsStatus Highs::clearModel() {
   model_.clear();
   multi_linear_objective_.clear();
+  saved_objective_and_solution_.clear();
   return clearSolver();
 }
 
@@ -70,6 +71,7 @@ HighsStatus Highs::clearSolver() {
   HighsStatus return_status = HighsStatus::kOk;
   clearDerivedModelProperties();
   invalidateSolverData();
+  ekk_instance_.clear();
   return returnFromHighs(return_status);
 }
 
@@ -77,6 +79,61 @@ HighsStatus Highs::clearSolverDualData() {
   HighsStatus return_status = HighsStatus::kOk;
   clearDerivedModelProperties();
   invalidateSolverDualData();
+  return returnFromHighs(return_status);
+}
+
+HighsStatus Highs::releaseMemory() {
+  HighsStatus return_status = HighsStatus::kOk;
+  // 1. Clear all model and solver state (same as clear()).
+  clearModel();
+
+  // 2. Clear and shrink vectors that clearModel/clearSolver only
+  //    invalidate or leave with residual capacity.  After this block the
+  //    instance holds zero allocated heap memory for solver state —
+  //    equivalent to a freshly constructed Highs.
+  saved_objective_and_solution_.shrink_to_fit();
+  solution_.clear();
+  solution_.col_value.shrink_to_fit();
+  solution_.col_dual.shrink_to_fit();
+  solution_.row_value.shrink_to_fit();
+  solution_.row_dual.shrink_to_fit();
+  basis_.clear();
+  basis_.col_status.shrink_to_fit();
+  basis_.row_status.shrink_to_fit();
+  ranging_.clear();
+  ranging_.col_cost_up.value_.shrink_to_fit();
+  ranging_.col_cost_up.objective_.shrink_to_fit();
+  ranging_.col_cost_up.in_var_.shrink_to_fit();
+  ranging_.col_cost_up.ou_var_.shrink_to_fit();
+  ranging_.col_cost_dn.value_.shrink_to_fit();
+  ranging_.col_cost_dn.objective_.shrink_to_fit();
+  ranging_.col_cost_dn.in_var_.shrink_to_fit();
+  ranging_.col_cost_dn.ou_var_.shrink_to_fit();
+  ranging_.col_bound_up.value_.shrink_to_fit();
+  ranging_.col_bound_up.objective_.shrink_to_fit();
+  ranging_.col_bound_up.in_var_.shrink_to_fit();
+  ranging_.col_bound_up.ou_var_.shrink_to_fit();
+  ranging_.col_bound_dn.value_.shrink_to_fit();
+  ranging_.col_bound_dn.objective_.shrink_to_fit();
+  ranging_.col_bound_dn.in_var_.shrink_to_fit();
+  ranging_.col_bound_dn.ou_var_.shrink_to_fit();
+  ranging_.row_bound_up.value_.shrink_to_fit();
+  ranging_.row_bound_up.objective_.shrink_to_fit();
+  ranging_.row_bound_up.in_var_.shrink_to_fit();
+  ranging_.row_bound_up.ou_var_.shrink_to_fit();
+  ranging_.row_bound_dn.value_.shrink_to_fit();
+  ranging_.row_bound_dn.objective_.shrink_to_fit();
+  ranging_.row_bound_dn.in_var_.shrink_to_fit();
+  ranging_.row_bound_dn.ou_var_.shrink_to_fit();
+  iis_.clear();
+
+  // 3. Shrink standard form LP vectors.
+  standard_form_cost_.shrink_to_fit();
+  standard_form_rhs_.shrink_to_fit();
+
+  // 4. Reset timer clocks (accumulated timing data).
+  timer_.zeroAllClocks();
+
   return returnFromHighs(return_status);
 }
 
@@ -232,6 +289,79 @@ HighsStatus Highs::getStringOptionValues(const std::string& option,
                            current_value, default_value) != OptionStatus::kOk)
     return HighsStatus::kError;
   return HighsStatus::kOk;
+}
+
+HighsStatus Highs::getRunDataValue(const std::string& run_data,
+                                   HighsInt& value) const {
+  RunDataStatus status =
+      getLocalRunDataValue(options_.log_options, run_data, run_data_.valid,
+                           run_data_.records, value);
+  if (status == RunDataStatus::kOk) {
+    return HighsStatus::kOk;
+  } else if (status == RunDataStatus::kUnavailable) {
+    return HighsStatus::kWarning;
+  } else {
+    return HighsStatus::kError;
+  }
+}
+
+#ifndef HIGHSINT64
+HighsStatus Highs::getRunDataValue(const std::string& run_data,
+                                   int64_t& value) const {
+  RunDataStatus status =
+      getLocalRunDataValue(options_.log_options, run_data, run_data_.valid,
+                           run_data_.records, value);
+  if (status == RunDataStatus::kOk) {
+    return HighsStatus::kOk;
+  } else if (status == RunDataStatus::kUnavailable) {
+    return HighsStatus::kWarning;
+  } else {
+    return HighsStatus::kError;
+  }
+}
+#endif
+
+HighsStatus Highs::getRunDataType(const std::string& run_data,
+                                  HighsRunDataType& type) const {
+  if (getLocalRunDataType(options_.log_options, run_data, run_data_.records,
+                          type) == RunDataStatus::kOk)
+    return HighsStatus::kOk;
+  return HighsStatus::kError;
+}
+
+HighsStatus Highs::getRunDataValue(const std::string& run_data,
+                                   double& value) const {
+  RunDataStatus status =
+      getLocalRunDataValue(options_.log_options, run_data, run_data_.valid,
+                           run_data_.records, value);
+  if (status == RunDataStatus::kOk) {
+    return HighsStatus::kOk;
+  } else if (status == RunDataStatus::kUnavailable) {
+    return HighsStatus::kWarning;
+  } else {
+    return HighsStatus::kError;
+  }
+}
+
+HighsStatus Highs::writeRunData(const std::string& filename) const {
+  HighsStatus return_status = HighsStatus::kOk;
+  FILE* file;
+  HighsFileType file_type;
+  return_status = interpretCallStatus(
+      options_.log_options,
+      openWriteFile(filename, "writeRunData", file, file_type), return_status,
+      "openWriteFile");
+  if (return_status == HighsStatus::kError) return return_status;
+  // Report to user that options are being written to a file
+  if (filename != "")
+    highsLogUser(options_.log_options, HighsLogType::kInfo,
+                 "Writing the run_data values to %s\n", filename.c_str());
+  return_status = interpretCallStatus(
+      options_.log_options,
+      writeRunDataToFile(file, run_data_.valid, run_data_.records, file_type),
+      return_status, "writeRunDataToFile");
+  if (file != stdout) fclose(file);
+  return return_status;
 }
 
 HighsStatus Highs::getInfoValue(const std::string& info,
@@ -957,7 +1087,6 @@ HighsStatus Highs::presolve() {
 
 HighsStatus Highs::run() {
   // Level 0 of Highs::run()
-  //
   // Action the file operations associated with running HiGHS, and
   // call Highs::runFromUserScaling()
   HighsStatus status = HighsStatus::kOk;
@@ -986,6 +1115,9 @@ HighsStatus Highs::run() {
   // Optimize the model in the Highs instance
   status = optimizeHighs();
   if (status == HighsStatus::kError) return status;
+
+  // Assume that run data are valid
+  this->run_data_.valid = true;
 
   // Undo any user objective and bound scaling
   if (this->userUnscale(user_scale_data) == HighsStatus::kError)
@@ -1145,8 +1277,9 @@ HighsStatus Highs::calledOptimizeModel() {
   HighsStatus call_status;
   // Initialise the HiGHS model status
   model_status_ = HighsModelStatus::kNotset;
-  // Clear the run info
+  // Clear the run info and data
   invalidateInfo();
+  invalidateRunData();
   // Zero the iteration counts
   zeroIterationCounts();
   // Start the HiGHS run clock
@@ -1441,6 +1574,7 @@ HighsStatus Highs::calledOptimizeModel() {
     const double to_presolve_time = timer_.read(timer_.presolve_clock);
     this_presolve_time += to_presolve_time;
     presolve_.info_.presolve_time = this_presolve_time;
+    this->run_data_.presolve_time = this_presolve_time;
     // Recover any modified options
     options_.lp_presolve_requires_basis_postsolve =
         lp_presolve_requires_basis_postsolve;
@@ -1460,6 +1594,12 @@ HighsStatus Highs::calledOptimizeModel() {
     // Log the presolve reductions
     reportPresolveReductions(log_options, model_presolve_status_, incumbent_lp,
                              presolve_.getReducedProblem());
+    this->run_data_.presolved_model_num_col =
+        presolve_.getReducedProblem().num_col_;
+    this->run_data_.presolved_model_num_row =
+        presolve_.getReducedProblem().num_row_;
+    this->run_data_.presolved_model_num_nz =
+        presolve_.getReducedProblem().a_matrix_.numNz();
     switch (model_presolve_status_) {
       case HighsPresolveStatus::kNotPresolved: {
         ekk_instance_.lp_name_ = "Original LP";
@@ -1523,6 +1663,7 @@ HighsStatus Highs::calledOptimizeModel() {
         options_.objective_bound = kHighsInf;
         solveLp(reduced_lp, "Solving the presolved LP",
                 this_solve_presolved_lp_time);
+        this->run_data_.solve_time = this_solve_presolved_lp_time;
         if (ekk_instance_.status_.initialised_for_solve) {
           // Record the pivot threshold resulting from solving the presolved LP
           // with simplex
@@ -1566,6 +1707,7 @@ HighsStatus Highs::calledOptimizeModel() {
         // Optimality will not be spotted if there's no basis
         // postsolve
         model_status_ = HighsModelStatus::kOptimal;
+        this->run_data_.solve_time = 0;
         break;
       }
       case HighsPresolveStatus::kInfeasible: {
@@ -1690,6 +1832,7 @@ HighsStatus Highs::calledOptimizeModel() {
       timer_.stop(timer_.postsolve_clock);
       this_postsolve_time += timer_.read(timer_.postsolve_clock);
       presolve_.info_.postsolve_time = this_postsolve_time;
+      this->run_data_.postsolve_time = this_postsolve_time;
 
       if (postsolve_status == HighsPostsolveStatus::kSolutionRecovered) {
         // Indicate that nontrivial postsolve has been performed
@@ -1772,6 +1915,8 @@ HighsStatus Highs::calledOptimizeModel() {
           options_ = save_options;
           if (return_status == HighsStatus::kError)
             return returnFromOptimizeModel(return_status, undo_mods);
+          this->run_data_.num_simplex_iterations_after_postsolve =
+              postsolve_iteration_count;
           if (postsolve_iteration_count > 0)
             highsLogUser(options_.log_options, HighsLogType::kInfo,
                          "Required %d simplex iterations after postsolve\n",
@@ -1784,6 +1929,8 @@ HighsStatus Highs::calledOptimizeModel() {
             HighsModelStatus::kPostsolveError);
         return returnFromOptimizeModel(HighsStatus::kError, undo_mods);
       }
+    } else {
+      this->run_data_.postsolve_time = 0;
     }
     // Final chance to resolve model_status_ ==
     // HighsModelStatus::kUnknown after solver that doesn't yield a
@@ -3779,6 +3926,7 @@ void Highs::invalidateSolverDualData() {
   invalidateModelStatus();
   invalidateRanging();
   invalidateInfo();
+  invalidateRunData();
 }
 
 void Highs::invalidateModelStatusSolutionAndInfo() {
@@ -3790,6 +3938,7 @@ void Highs::invalidateModelStatusAndInfo() {
   invalidateModelStatus();
   invalidateRanging();
   invalidateInfo();
+  invalidateRunData();
   clearIis();
 }
 
@@ -3815,6 +3964,8 @@ void Highs::invalidateBasis() {
 }
 
 void Highs::invalidateInfo() { info_.invalidate(); }
+
+void Highs::invalidateRunData() { run_data_.invalidate(); }
 
 void Highs::invalidateRanging() { ranging_.invalidate(); }
 
@@ -4076,6 +4227,7 @@ HighsStatus Highs::callSolveQp() {
       settings.reinvertfrequency = qp_update_limit;
     }
 
+    settings.allow_hot_start = options_.qp_allow_hot_start;
     settings.iteration_limit = options_.qp_iteration_limit;
     settings.nullspace_limit = options_.qp_nullspace_limit;
     assert(settings.hessian_regularization_value ==
@@ -4345,7 +4497,7 @@ HighsStatus Highs::callRunPostsolve(const HighsSolution& solution,
     if (postsolve_status == HighsPostsolveStatus::kSolutionRecovered) {
       this->solution_ = presolve_.data_.recovered_solution_;
       this->model_status_ = HighsModelStatus::kUnknown;
-      this->info_.invalidate();
+      invalidateInfo();
       HighsLp& lp = this->model_.lp_;
       this->info_.objective_function_value =
           computeObjectiveValue(lp, this->solution_);
@@ -4655,6 +4807,7 @@ HighsStatus Highs::returnFromOptimizeModel(const HighsStatus run_return_status,
       // Don't clear the model status!
       //      invalidateSolverData();
       invalidateInfo();
+      invalidateRunData();
       invalidateSolution();
       invalidateBasis();
       assert(return_status == HighsStatus::kError);
@@ -4663,6 +4816,7 @@ HighsStatus Highs::returnFromOptimizeModel(const HighsStatus run_return_status,
       // Then consider the OK returns
     case HighsModelStatus::kModelEmpty:
       invalidateInfo();
+      invalidateRunData();
       invalidateSolution();
       invalidateBasis();
       assert(return_status == HighsStatus::kOk);

@@ -98,7 +98,7 @@ void Factorise::processSupernode(Int sn) {
   // Assemble frontal matrix for supernode sn, perform partial factorisation and
   // store the result.
 
-  TaskGroupSpecial tg;
+  highs::parallel::TaskGroup tg;
   HIPO_CLOCK_CREATE;
 
   const bool parallel = S_.parTree();
@@ -185,7 +185,8 @@ void Factorise::processSupernode(Int sn) {
       child_clique = schur_contribution_[child_sn].data();
 
       if (!child_clique) {
-        if (logger_) logger_->printInfo("Missing child supernode contribution\n");
+        if (logger_)
+          logger_->printInfo("Missing child supernode contribution\n");
         flag_stop_.store(true, std::memory_order_relaxed);
         return;
       }
@@ -288,7 +289,7 @@ void Factorise::processSupernode(Int sn) {
 bool Factorise::run(Numeric& num) {
   HIPO_CLOCK_CREATE;
 
-  TaskGroupSpecial tg;
+  highs::parallel::TaskGroup tg;
 
   total_reg_.assign(n_, 0.0);
 

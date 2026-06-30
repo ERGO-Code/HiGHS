@@ -364,6 +364,7 @@ set(highs_sources
     lp_data/HighsModelUtils.cpp
     lp_data/HighsOptions.cpp
     lp_data/HighsRanging.cpp
+    lp_data/HighsRunData.cpp
     lp_data/HighsSolution.cpp
     lp_data/HighsSolutionDebug.cpp
     lp_data/HighsSolve.cpp
@@ -411,6 +412,7 @@ set(highs_sources
     presolve/HighsSymmetry.cpp
     presolve/HPresolve.cpp
     presolve/HPresolveAnalysis.cpp
+    presolve/HPresolveTest.cpp
     presolve/ICrash.cpp
     presolve/ICrashUtil.cpp
     presolve/ICrashX.cpp
@@ -493,6 +495,7 @@ set(highs_headers
     lp_data/HighsModelUtils.h
     lp_data/HighsOptions.h
     lp_data/HighsRanging.h
+    lp_data/HighsRunData.h
     lp_data/HighsSolution.h
     lp_data/HighsSolutionDebug.h
     lp_data/HighsSolve.h
@@ -563,7 +566,6 @@ set(highs_headers
     qpsolver/a_asm.hpp
     qpsolver/a_quass.hpp
     qpsolver/basis.hpp
-    qpsolver/crashsolution.hpp
     qpsolver/dantzigpricing.hpp
     qpsolver/devexpricing.hpp
     qpsolver/eventhandler.hpp

@@ -53,6 +53,7 @@ struct Settings {
       1e-7;  // multiple of identity matrix added to Hessian in case of
              // regularization
 
+  bool allow_hot_start = false;
   Phase1Strategy phase1strategy = Phase1Strategy::HIGHS;
   bool phase1movefreevarsbasic = false;
   bool phase1boundfreevars = false;

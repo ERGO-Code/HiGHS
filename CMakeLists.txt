@@ -400,6 +400,11 @@ if (BUILD_CXX)
       message(STATUS "IPO / LTO is not supported for 32-bit linux.")
   endif()
 
+  if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+      set(CMAKE_INTERPROCEDURAL_OPTIMIZATION FALSE)
+      message(STATUS "IPO / LTO: disabled for Debug build")
+  endif()
+
 endif()
 
 

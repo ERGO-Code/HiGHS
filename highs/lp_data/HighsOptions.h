@@ -211,6 +211,8 @@ OptionStatus setLocalOptionValue(const HighsLogOptions& report_log_options,
                                  OptionRecordString& option,
                                  const std::string& value);
 
+void possibleLowerCaseOptionValue(const std::string& name, std::string& value);
+
 OptionStatus passLocalOptions(const HighsLogOptions& report_log_options,
                               const HighsOptions& from_options,
                               HighsOptions& to_options);
@@ -288,6 +290,7 @@ const string kWriteBasisFileString = "write_basis_file";
 const string kPresolveString = "presolve";
 const string kSolverString = "solver";
 const string kParallelString = "parallel";
+const string kThreadsString = "threads";
 const string kRunCrossoverString = "run_crossover";
 const string kTimeLimitString = "time_limit";
 const string kOptionsFileString = "options_file";
@@ -302,6 +305,12 @@ const string kReadSolutionFileString = "read_solution_file";
 
 // String for HiGHS log file option
 const string kLogFileString = "log_file";
+
+// String for other file names
+#ifdef HIGHS_DEBUGSOL
+const string kMipDebugSolutionFileString = "mip_debug_solution_file";
+#endif
+const string kMipImprovingSolutionFileString = "mip_improving_solution_file";
 
 // Strings for HiPO system option
 const string kHipoSystemString = "hipo_system";
@@ -328,6 +337,7 @@ struct HighsOptionsStruct {
   std::string presolve;
   std::string solver;
   std::string parallel;
+  HighsInt threads;
   std::string run_crossover;
   double time_limit;
   std::string read_solution_file;
@@ -351,7 +361,6 @@ struct HighsOptionsStruct {
   double optimality_tolerance;
   double objective_bound;
   double objective_target;
-  HighsInt threads;
   HighsInt user_objective_scale;
   HighsInt user_bound_scale;
   HighsInt highs_debug_level;
@@ -401,6 +410,7 @@ struct HighsOptionsStruct {
   double pdlp_optimality_tolerance;
 
   // Options for QP solver
+  bool qp_allow_hot_start;
   HighsInt qp_iteration_limit;
   HighsInt qp_nullspace_limit;
   double qp_regularization_value;
@@ -438,6 +448,7 @@ struct HighsOptionsStruct {
   HighsInt restart_presolve_reduction_limit;
   HighsInt presolve_substitution_maxfillin;
   HighsInt presolve_rule_off;
+  HighsInt presolve_rule_test;
   bool presolve_rule_logging;
   bool presolve_remove_slacks;
   bool no_unnecessary_rebuild_refactor;
@@ -515,6 +526,7 @@ struct HighsOptionsStruct {
       : presolve(""),
         solver(""),
         parallel(""),
+        threads(0),
         run_crossover(""),
         time_limit(0.0),
         read_solution_file(""),
@@ -536,7 +548,6 @@ struct HighsOptionsStruct {
         optimality_tolerance(0.0),
         objective_bound(0.0),
         objective_target(0.0),
-        threads(0),
         user_objective_scale(0),
         user_bound_scale(0),
         highs_debug_level(0),
@@ -575,6 +586,7 @@ struct HighsOptionsStruct {
         pdlp_cupdlpc_restart_method(0),
         pdlp_step_size_strategy(0),
         pdlp_optimality_tolerance(0.0),
+        qp_allow_hot_start(false),
         qp_iteration_limit(0),
         qp_nullspace_limit(0),
         qp_regularization_value(0),
@@ -606,6 +618,7 @@ struct HighsOptionsStruct {
         restart_presolve_reduction_limit(0),
         presolve_substitution_maxfillin(0),
         presolve_rule_off(0),
+        presolve_rule_test(0),
         presolve_rule_logging(false),
         presolve_remove_slacks(false),
         no_unnecessary_rebuild_refactor(false),
@@ -749,6 +762,12 @@ class HighsOptions : public HighsOptionsStruct {
         &parallel, kHighsChooseString);
     records.push_back(record_string);
 
+    record_int = new OptionRecordInt(
+        kThreadsString,
+        "Maximum number of threads used by HiGHS (0: automatic)", advanced,
+        &threads, 0, 0, kHighsIInf);
+    records.push_back(record_int);
+
     record_string = new OptionRecordString(
         kRunCrossoverString, "Run IPM crossover: \"off\", \"choose\" or \"on\"",
         advanced, &run_crossover, kHighsOnString);
@@ -850,11 +869,6 @@ class HighsOptions : public HighsOptionsStruct {
     record_int =
         new OptionRecordInt(kRandomSeedString, "Random seed used in HiGHS",
                             advanced, &random_seed, 0, 0, kHighsIInf);
-    records.push_back(record_int);
-
-    record_int = new OptionRecordInt(
-        "threads", "Number of threads used by HiGHS (0: automatic)", advanced,
-        &threads, 0, 0, kHighsIInf);
     records.push_back(record_int);
 
     record_int = new OptionRecordInt(
@@ -1110,7 +1124,7 @@ class HighsOptions : public HighsOptionsStruct {
 
 #ifdef HIGHS_DEBUGSOL
     record_string = new OptionRecordString(
-        "mip_debug_solution_file",
+        kMipDebugSolutionFileString,
         "Solution file for debug solution of the MIP solver", advanced,
         &mip_debug_solution_file, kHighsFilenameDefault);
     records.push_back(record_string);
@@ -1129,7 +1143,7 @@ class HighsOptions : public HighsOptionsStruct {
     records.push_back(record_bool);
 
     record_string = new OptionRecordString(
-        "mip_improving_solution_file",
+        kMipImprovingSolutionFileString,
         "File for reporting improving MIP solutions: not reported for an empty "
         "string \\\"\\\"",
         advanced, &mip_improving_solution_file, kHighsFilenameDefault);
@@ -1369,6 +1383,11 @@ class HighsOptions : public HighsOptionsStruct {
         &pdlp_optimality_tolerance, kMinimumKktTolerance, kDefaultKktTolerance,
         kHighsInf);
     records.push_back(record_double);
+
+    record_bool = new OptionRecordBool(
+        "qp_allow_hot_start", "Allow the active set QP solver to hot start",
+        advanced, &qp_allow_hot_start, false);
+    records.push_back(record_bool);
 
     record_int = new OptionRecordInt(
         "qp_iteration_limit", "Iteration limit for the active set QP solver",
@@ -1612,6 +1631,11 @@ class HighsOptions : public HighsOptionsStruct {
     record_int = new OptionRecordInt(
         "presolve_rule_off", "Bit mask of presolve rules that are not allowed",
         advanced, &presolve_rule_off, 0, 0, kHighsIInf);
+    records.push_back(record_int);
+
+    record_int = new OptionRecordInt(
+        "presolve_rule_test", "Presolve rule to test - DEV only!", advanced,
+        &presolve_rule_test, 0, 0, kPresolveRuleMax);
     records.push_back(record_int);
 
     record_bool = new OptionRecordBool(
