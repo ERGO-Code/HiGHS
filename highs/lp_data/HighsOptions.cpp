@@ -707,11 +707,34 @@ OptionStatus setLocalOptionValue(const HighsLogOptions& report_log_options,
 OptionStatus setLocalOptionValue(const HighsLogOptions& report_log_options,
                                  OptionRecordString& option,
                                  const std::string& value) {
+  std::string possible_lower_case_value = value;
+  // Trim any leading and trailing spaces
+  trim(possible_lower_case_value, " ");
+  // Possibly convert to lower case - not done for file names
+  possibleLowerCaseOptionValue(option.name, possible_lower_case_value);
   OptionStatus return_status =
-      checkOptionValue(report_log_options, option, value);
+      checkOptionValue(report_log_options, option, possible_lower_case_value);
   if (return_status != OptionStatus::kOk) return return_status;
-  option.assignvalue(value);
+  option.assignvalue(possible_lower_case_value);
   return OptionStatus::kOk;
+}
+
+void possibleLowerCaseOptionValue(const std::string& name, std::string& value) {
+  // Don't convert values for file name options to lower case
+  if (name == kModelFileString || name == kReadBasisFileString ||
+      name == kWriteBasisFileString || name == kOptionsFileString ||
+      name == kWriteSolutionFileString || name == kWriteModelFileString ||
+      name == kWritePresolvedModelFileString ||
+      name == kWriteIisModelFileString || name == kReadSolutionFileString ||
+      name == kLogFileString ||
+#ifdef HIGHS_DEBUGSOL
+      name == kMipDebugSolutionFileString ||
+#endif
+      name == kMipImprovingSolutionFileString)
+    return;
+  // Transform other options to lower case
+  std::transform(value.begin(), value.end(), value.begin(),
+                 [](unsigned char c) { return std::tolower(c); });
 }
 
 OptionStatus passLocalOptions(const HighsLogOptions& report_log_options,
