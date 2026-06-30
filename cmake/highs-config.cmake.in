@@ -7,10 +7,12 @@ set(@PACKAGE_PREFIX@_VERSION @PROJECT_VERSION@)
 include(CMakeFindDependencyMacro)
 find_dependency(Threads)
 
-# Only look for BLAS if highs was built with it
+# Only look for BLAS if highs was built with it and did not bundle OpenBLAS.
+# When BUILD_OPENBLAS=ON, the OpenBLAS target is already in highs-targets.cmake.
 set(_HIGHS_HAVE_BLAS @HIPO@)
+set(_HIGHS_BUILT_OPENBLAS @BUILD_OPENBLAS@)
 
-if(_HIGHS_HAVE_BLAS)
+if(_HIGHS_HAVE_BLAS AND NOT _HIGHS_BUILT_OPENBLAS)
     find_dependency(BLAS)
 endif()
 
