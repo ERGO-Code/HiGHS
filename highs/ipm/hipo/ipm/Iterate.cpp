@@ -438,7 +438,7 @@ double Iterate::infeasAfterDropping() const {
   return std::max(pinf_max, dinf_max);
 }
 
-Int Iterate::finalResiduals(Info& info) const {
+void Iterate::finalResiduals(Info& info) const {
   // If ipx has been used, the information is already available, otherwise,
   // compute it.
 
@@ -481,8 +481,6 @@ Int Iterate::finalResiduals(Info& info) const {
     info.d_obj = info.ipx_info.dobjval;
     info.pd_gap = std::abs(info.ipx_info.rel_objgap);
   }
-
-  return kStatusOk;
 }
 
 void Iterate::getReg(LinearSolver& LS, const std::string& nla) {

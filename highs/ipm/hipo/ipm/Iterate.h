@@ -155,7 +155,7 @@ struct Iterate {
                              std::vector<double>& y_cmp,
                              std::vector<double>& z_cmp) const;
 
-  Int finalResiduals(Info& info) const;
+  void finalResiduals(Info& info) const;
 
   // ===================================================================================
   // Compute residual of 6x6 linear system for iterative refinement.

@@ -25,7 +25,7 @@ Int KktMatrix::buildASstructure() {
   const Int nzBlock11 = model.qp() ? nzQ : n;
 
   // AS matrix must fit into HighsInt
-  if ((Int64)nzBlock11 + m + nzA >= kHighsIInf) return kStatusOverflow;
+  if ((Int64)nzBlock11 + m + nzA >= kHighsIInf) return kErrorOverflow;
 
   ptrAS.resize(n + m + 1);
   rowsAS.resize(nzBlock11 + nzA + m);
@@ -67,7 +67,7 @@ Int KktMatrix::buildASstructure() {
 
   info.AS_structure_time = clock.stop();
 
-  return kStatusOk;
+  return kOk;
 }
 
 Int KktMatrix::buildASvalues(const std::vector<double>& scaling) {
@@ -86,7 +86,7 @@ Int KktMatrix::buildASvalues(const std::vector<double>& scaling) {
 
   info.matrix_time += clock.stop();
 
-  return kStatusOk;
+  return kOk;
 }
 
 Int KktMatrix::buildNEstructure() {
@@ -170,7 +170,7 @@ Int KktMatrix::buildNEstructure() {
     // if the total number of nonzeros exceeds the maximum, return error.
     if ((Int64)ptrNE[row] + nz_in_col >=
         NE_nz_limit.load(std::memory_order_relaxed))
-      return kStatusOverflow;
+      return kErrorOverflow;
 
     // update pointers
     ptrNE[row + 1] = ptrNE[row] + nz_in_col;
@@ -185,7 +185,7 @@ Int KktMatrix::buildNEstructure() {
   }
 
   info.NE_structure_time = clock.stop();
-  return kStatusOk;
+  return kOk;
 }
 
 Int KktMatrix::buildNEvalues(const std::vector<double>& scaling) {
@@ -242,7 +242,7 @@ Int KktMatrix::buildNEvalues(const std::vector<double>& scaling) {
 
   info.matrix_time += clock.stop();
 
-  return kStatusOk;
+  return kOk;
 }
 
 void KktMatrix::freeASmemory() {

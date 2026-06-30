@@ -121,9 +121,9 @@ class Solver {
 
  private:
   // Functions to run the various stages of the ipm
+  void doSolve();
   void runIpm();
   bool initialise();
-  void terminate();
   bool prepareIter();
   bool predictor();
   bool correctors();
@@ -175,8 +175,8 @@ class Solver {
   // NB: normal equations available only if Q is zero or diagonal.
   // ===================================================================================
   bool solveNewtonSystem(NewtonDir& delta);
-  bool solve2x2(NewtonDir& delta, const Residuals& rhs);
-  bool solve6x6(NewtonDir& delta, const Residuals& rhs);
+  void solve2x2(NewtonDir& delta, const Residuals& rhs);
+  void solve6x6(NewtonDir& delta, const Residuals& rhs);
 
   // ===================================================================================
   // Reconstruct the solution of the full Newton system:

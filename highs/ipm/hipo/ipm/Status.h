@@ -8,37 +8,36 @@
 
 namespace hipo {
 
-// Status is used both as return value for intermediate functions and as final
-// status of the solver.
+enum Error {
+  kOk = 0,
+  kErrorModel,
+  kErrorOverflow,
+  kErrorAnalyse,
+  kErrorFactorise,
+  kErrorSolve,
+  kErrorIpx,
+  kErrorNan,
+  kErrorInvalidPointer,
+  kErrorFailedAllocation,
+};
 
 enum Status {
-  // used only to return positive status
-  kStatusOk,
-
-  // Stopped status: solver did not converge and does not have errors
+  kStatusTypeStopped = 100,
   kStatusNotRun,
   kStatusNoProgress,
   kStatusMaxIter,
   kStatusTimeLimit,
   kStatusUserInterrupt,
 
-  // Failed status: solver has some error or interrupt
-  kStatusFailed,
+  kStatusTypeFailed,
   kStatusError,
-  kStatusOverflow,
-  kStatusErrorAnalyse,
-  kStatusErrorFactorise,
-  kStatusErrorSolve,
-  kStatusBadModel,
   kStatusUnknown,
+  kStatusImprecise,
 
-  // Solved status: solver found a solution
-  kStatusSolved,
+  kStatusTypeSolved,
   kStatusPrimalInfeasible,
   kStatusDualInfeasible,
-  kStatusImprecise,
-  kStatusPDFeas,
-  kStatusBasic
+  kStatusOptimal,
 };
 
 inline Status IpxToHipoStatus(Int ipx_status) {
@@ -51,7 +50,7 @@ inline Status IpxToHipoStatus(Int ipx_status) {
       {IPX_STATUS_user_interrupt, kStatusUserInterrupt},
       {IPX_STATUS_primal_infeas, kStatusPrimalInfeasible},
       {IPX_STATUS_dual_infeas, kStatusDualInfeasible},
-      {IPX_STATUS_optimal, kStatusPDFeas},
+      {IPX_STATUS_optimal, kStatusOptimal},
       {IPX_STATUS_imprecise, kStatusImprecise}};
 
   auto found = status_map.find(ipx_status);
@@ -59,28 +58,40 @@ inline Status IpxToHipoStatus(Int ipx_status) {
   return kStatusUnknown;
 }
 
+inline std::string errorString(Error error) {
+  static const std::map<Error, std::string> status_map{
+      {kErrorModel, "Error with model"},
+      {kErrorOverflow, "Integer overflow"},
+      {kErrorAnalyse, "Error in analyse phase"},
+      {kErrorFactorise, "Error in factorise phase"},
+      {kErrorSolve, "Error in solve phase"},
+      {kErrorIpx, "Error in IPX"},
+      {kErrorNan, "NaN detected"},
+      {kErrorInvalidPointer, "Invalid pointer"},
+      {kErrorFailedAllocation, "Failed allocation"},
+  };
+
+  auto found = status_map.find(error);
+  if (found != status_map.end()) return found->second;
+  return "unknown";
+}
+
 inline std::string statusString(Status status) {
   static const std::map<Status, std::string> status_map{
-      {kStatusNotRun, "not run"},
-      {kStatusMaxIter, "max iterations"},
-      {kStatusNoProgress, "no progress"},
-      {kStatusImprecise, "imprecise"},
-      {kStatusError, "internal error"},
-      {kStatusOverflow, "integer overflow"},
-      {kStatusErrorAnalyse, "error in analyse phase"},
-      {kStatusErrorFactorise, "error in factorise phase"},
-      {kStatusErrorSolve, "error in solve phase"},
-      {kStatusBadModel, "invalid model"},
-      {kStatusTimeLimit, "time limit"},
-      {kStatusUserInterrupt, "user interrupt"},
-      {kStatusPrimalInfeasible, "primal infeasible"},
-      {kStatusDualInfeasible, "dual infeasible"},
-      {kStatusPDFeas, "primal-dual feasible"},
-      {kStatusBasic, "crossover optimal"}};
+      {kStatusNotRun, "Not run"},
+      {kStatusMaxIter, "Reached maximum iterations"},
+      {kStatusNoProgress, "No progress"},
+      {kStatusImprecise, "Imprecise solution"},
+      {kStatusError, "Internal error"},
+      {kStatusTimeLimit, "Time limit"},
+      {kStatusUserInterrupt, "User interrupt"},
+      {kStatusPrimalInfeasible, "Primal infeasible"},
+      {kStatusDualInfeasible, "Dual infeasible"},
+      {kStatusOptimal, "Optimal"}};
 
   auto found = status_map.find(status);
   if (found != status_map.end()) return found->second;
-  return "unknown";
+  return "Unknown";
 }
 
 }  // namespace hipo

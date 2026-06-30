@@ -17,7 +17,7 @@ Int Model::init(const HighsLp& lp, const HighsHessian& Q) {
   if (qp()) completeHessian(n_, Q_);
   sense_ = lp.sense_;
 
-  if (checkData()) return kStatusBadModel;
+  if (checkData()) return kErrorModel;
 
   lp_orig_ = &lp;
   n_orig_ = n_;
@@ -34,7 +34,7 @@ Int Model::init(const HighsLp& lp, const HighsHessian& Q) {
   A_.ensureRowwise();
   A_.ensureColwise();
 
-  if (checkData()) return kStatusBadModel;
+  if (checkData()) return kErrorModel;
 
   ready_ = true;
 
@@ -73,7 +73,7 @@ Int Model::checkData() const {
   // Return kStatusBadModel if something is wrong.
 
   // Dimensions are valid
-  if (n_ <= 0 || m_ < 0) return kStatusBadModel;
+  if (n_ <= 0 || m_ < 0) return kErrorModel;
 
   // Vectors are of correct size
   if (static_cast<Int>(c_.size()) != n_ || static_cast<Int>(b_.size()) != m_ ||
@@ -83,32 +83,30 @@ Int Model::checkData() const {
       static_cast<Int>(A_.start_.size()) != n_ + 1 ||
       static_cast<Int>(A_.index_.size()) != A_.start_.back() ||
       static_cast<Int>(A_.value_.size()) != A_.start_.back())
-    return kStatusBadModel;
+    return kErrorModel;
 
   // Hessian is ok, for QPs only
   if (qp() && (Q_.dim_ != n_ || Q_.format_ != HessianFormat::kTriangular))
-    return kStatusBadModel;
+    return kErrorModel;
 
   // Vectors are valid
   for (Int i = 0; i < n_; ++i)
-    if (!std::isfinite(c_[i])) return kStatusBadModel;
+    if (!std::isfinite(c_[i])) return kErrorModel;
   for (Int i = 0; i < m_; ++i)
-    if (!std::isfinite(b_[i])) return kStatusBadModel;
+    if (!std::isfinite(b_[i])) return kErrorModel;
   for (Int i = 0; i < n_; ++i) {
-    if (!std::isfinite(lower_[i]) && lower_[i] != -INFINITY)
-      return kStatusBadModel;
-    if (!std::isfinite(upper_[i]) && upper_[i] != INFINITY)
-      return kStatusBadModel;
-    if (lower_[i] > upper_[i]) return kStatusBadModel;
+    if (!std::isfinite(lower_[i]) && lower_[i] != -INFINITY) return kErrorModel;
+    if (!std::isfinite(upper_[i]) && upper_[i] != INFINITY) return kErrorModel;
+    if (lower_[i] > upper_[i]) return kErrorModel;
   }
   for (Int i = 0; i < m_; ++i)
     if (constraints_[i] != '<' && constraints_[i] != '=' &&
         constraints_[i] != '>')
-      return kStatusBadModel;
+      return kErrorModel;
 
   // Matrix is valid
   for (Int i = 0; i < A_.start_[n_]; ++i)
-    if (!std::isfinite(A_.value_[i])) return kStatusBadModel;
+    if (!std::isfinite(A_.value_[i])) return kErrorModel;
 
   return 0;
 }
@@ -359,7 +357,7 @@ Int Model::loadIntoIpx(ipx::LpSolver& lps) const {
   std::vector<char> ipx_constraints;
   double ipx_offset;
 
-  if (!lp_orig_) return kStatusError;
+  if (!lp_orig_) return kErrorInvalidPointer;
 
   fillInIpxData(*lp_orig_, ipx_n, ipx_m, ipx_offset, ipx_c, ipx_lower,
                 ipx_upper, ipx_A_ptr, ipx_A_rows, ipx_A_vals, ipx_b,
@@ -424,8 +422,8 @@ void Model::adjustFreeVars(std::vector<double>& x, std::vector<double>& xl,
       // getting close to lower bound
       const double new_lower = x[i] / kFreeVarsCloseRatio;
       logger.printDetailed(
-          "Free var %5d is at %8.1e with lb %8.1e, lb changed to %8.1e\n", i, x[i],
-          lower_[i], new_lower);
+          "Free var %5d is at %8.1e with lb %8.1e, lb changed to %8.1e\n", i,
+          x[i], lower_[i], new_lower);
       lower_[i] = new_lower;
       xl[i] = x[i] - lower_[i];
     }
@@ -433,8 +431,8 @@ void Model::adjustFreeVars(std::vector<double>& x, std::vector<double>& xl,
       // getting close to upper bound
       const double new_upper = x[i] / kFreeVarsCloseRatio;
       logger.printDetailed(
-          "Free var %5d is at %8.1e with ub %8.1e, ub changed to %8.1e\n", i, x[i],
-          upper_[i], new_upper);
+          "Free var %5d is at %8.1e with ub %8.1e, ub changed to %8.1e\n", i,
+          x[i], upper_[i], new_upper);
       upper_[i] = new_upper;
       xu[i] = upper_[i] - x[i];
     }
