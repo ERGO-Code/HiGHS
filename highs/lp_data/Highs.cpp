@@ -2573,6 +2573,8 @@ HighsStatus Highs::getColOrRowName(const HighsLp& lp, const bool is_col,
   return HighsStatus::kOk;
 }
 
+/*
+  // 3118-temp
 HighsStatus Highs::setSolution(const HighsInt num_entries,
                                const HighsInt* index, const double* value) {
   deprecationMessage(
@@ -2582,7 +2584,7 @@ HighsStatus Highs::setSolution(const HighsInt num_entries,
       "HighsInt* index)");
   return this->setSolution(value, num_entries, index);
 }
-
+*/
 HighsStatus Highs::setSolution(const double* value, const HighsInt num_index,
                                const HighsInt* index) {
   HighsStatus return_status = HighsStatus::kOk;

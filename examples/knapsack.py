@@ -31,13 +31,13 @@ print_solution(h, x)
 h.clearSolver()
 index = np.array([0, 3])
 value = np.array([1, 1], dtype=np.float64)
-h.setSolution(2, index, value)
+h.setSolution(value, 2, index)
 h.run()
 print_solution(h, x)
 
 # Test passing back the optimal value of one variable, and a non-optimal value of another, as a sparse solution in untyped array
 h.clearSolver()
-h.setSolution(2, np.array([0, 4]), np.array([1, 1]))
+h.setSolution(np.array([1, 1]), 2, np.array([0, 4]))
 h.run()
 print_solution(h, x)
 

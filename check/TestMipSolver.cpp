@@ -1519,7 +1519,7 @@ TEST_CASE("issue-3118", "[highs_test_mip_solver]") {
   highs.setSolution(solution_values.data());
   /*
   std::vector<HighsInt> solution_index = {0, 1};
-  highs.setSolution(2, solution_index.data(), solution_values.data());
+  highs.setSolution(solution_values.data(), 2, solution_index.data());
   */
 
   // assessPrimalSolution is a Highs utility for users to check the

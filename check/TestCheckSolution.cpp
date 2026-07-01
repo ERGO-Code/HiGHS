@@ -283,8 +283,8 @@ TEST_CASE("check-set-mip-solution", "[highs_check_solution]") {
     value.push_back(1);
     index.push_back(0);
     value.push_back(2);
-    HighsInt num_entries = index.size();
-    return_status = highs.setSolution(num_entries, index.data(), value.data());
+    HighsInt num_index = index.size();
+    return_status = highs.setSolution(value.data(), num_index, index.data());
     REQUIRE(return_status == HighsStatus::kWarning);
 
     index.clear();
@@ -303,9 +303,9 @@ TEST_CASE("check-set-mip-solution", "[highs_check_solution]") {
       value.push_back(optimal_solution.col_value[iCol]);
       iSet++;
     }
-    num_entries = index.size();
-    assert(num_entries == num_to_set);
-    return_status = highs.setSolution(num_entries, index.data(), value.data());
+    num_index = index.size();
+    assert(num_index == num_to_set);
+    return_status = highs.setSolution(value.data(), num_index, index.data());
     REQUIRE(return_status == HighsStatus::kOk);
     highs.run();
     const bool different_search =

@@ -655,8 +655,22 @@ HighsStatus highs_setSparseSolution(Highs* h, HighsInt num_entries,
 
   HighsInt* index_ptr = reinterpret_cast<HighsInt*>(index_info.ptr);
   double* value_ptr = static_cast<double*>(value_info.ptr);
-
+  // 3118-temp
+  /*
   return h->setSolution(num_entries, index_ptr, value_ptr);
+  */
+  return h->setSolution(value_ptr, num_entries, index_ptr);
+}
+
+HighsStatus highs_setSolutionSparse(Highs* h, dense_array_t<double> value,
+				    HighsInt num_entries,
+                                    dense_array_t<HighsInt> index) {
+  py::buffer_info index_info = index.request();
+  py::buffer_info value_info = value.request();
+
+  HighsInt* index_ptr = reinterpret_cast<HighsInt*>(index_info.ptr);
+  double* value_ptr = static_cast<double*>(value_info.ptr);
+  return h->setSolution(value_ptr, num_entries, index_ptr);
 }
 
 HighsStatus highs_setBasis(Highs* h, HighsBasis& basis) {
@@ -1558,6 +1572,7 @@ PYBIND11_MODULE(_core, m, py::mod_gil_not_used()) {
       .def("deleteRows", &highs_deleteRows)
       .def("setSolution", &highs_setSolution)
       .def("setSolution", &highs_setSparseSolution)
+      .def("setSolution", &highs_setSolutionSparse)
       .def("setBasis", &highs_setBasis)
       .def("setBasis", &highs_setLogicalBasis)
       .def("modelStatusToString", &Highs::modelStatusToString)

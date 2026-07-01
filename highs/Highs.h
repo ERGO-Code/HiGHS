@@ -1564,8 +1564,11 @@ class Highs {
 
   void logHeader();
 
+  // 3118-temp
+  /*
   HighsStatus setSolution(const HighsInt num_entries, const HighsInt* index,
                           const double* value);
+  */
 
   void deprecationMessage(const std::string& method_name,
                           const std::string& alt_method_name) const;
