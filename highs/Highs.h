@@ -1260,8 +1260,9 @@ class Highs {
    * index, const double* value); which is now deprecated
    *
    * In particular, it allows a full primal solution to be passed (for
-   * MIPs) without requiring a HighsSolution that contains (empty
-   * vectors of) spurious dual information
+   * MIPs) without requiring either a HighsSolution that contains
+   * (empty vectors of) spurious dual information, or a full list of
+   * indices
    */
   HighsStatus setSolution(const double* value, const HighsInt num_index = -1,
                           const HighsInt* index = nullptr);
