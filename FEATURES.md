@@ -1,3 +1,14 @@
+Patch release v1.15.1 fixes:
+
+Apache release binaries not including HiPO fixed in [PR #3112](https://github.com/ERGO-Code/HiGHS/pull/3112).
+
+Build for users with C++20 fixed in [PR #3114](https://github.com/ERGO-Code/HiGHS/pull/3114).
+
+OpenBLAS setup issue affecting performance fixed in [PR #3122](https://github.com/ERGO-Code/HiGHS/pull/3122).
+
+---
+
+
 The highlights of v1.15 are the first variant of the parallel MIP solver
 and the addition of HiPO in Python.
 
