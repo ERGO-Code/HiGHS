@@ -102,6 +102,11 @@ if(BUILD_SHARED_EXTRAS_LIB)
     set_target_properties(highs_extras PROPERTIES
       WINDOWS_EXPORT_ALL_SYMBOLS OFF)
   endif()
+
+  install(TARGETS highs_extras
+      LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+      RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+      COMPONENT libs)
 else()
   install(TARGETS highs_extras
       EXPORT highs-targets
