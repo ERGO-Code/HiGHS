@@ -505,40 +505,23 @@ static double fast_floor(double x) { return (int64_t)x - (x < (int64_t)x); }
 
 template <typename T>
 static T strongCgLl1(const T& scalaj, const T& f0, const T& oneoveroneminusf0,
-                     const double& k, const double& tol,
-                     const bool roundUp = true) {
+                     const double& k, const double& tol) {
   T downaj = floor(scalaj + kHighsTiny);
   T fj = scalaj - downaj;
   T aj = downaj;
 
   if (fj > f0 + 0.1 * tol) {
-    T pj = ceil(k * (fj - f0) * oneoveroneminusf0 - (roundUp ? tol : -tol));
+    T pj = ceil(k * (fj - f0) * oneoveroneminusf0 - tol);
     aj += pj / (k + 1);
   }
 
   return aj;
 }
 
-template <typename T>
-static T strongCgLl2(const T& scalaj, const T& f0, const T& oneoveroneminusf0,
-                     const T& rhs, const double downrhs, const double& k,
-                     const T& partition, const double& tol) {
-  if (scalaj < partition)
-    return strongCgLl1(scalaj, f0, oneoveroneminusf0, k, tol);
-
-  T aj =
-      downrhs - strongCgLl1(rhs - scalaj, f0, oneoveroneminusf0, k, tol, false);
-
-  return aj;
-}
-
 void HighsCutGeneration::tryStrongCg(const double delta, bool& strongCg,
-                                     bool& useStrongCgLl2,
                                      double& bestefficacy) {
   // ll1 is the standard strongCG from "Strengthening Chvatal–Gomory cuts and
   // Gomory fractional cuts", 2002, A. Letchford et.al.
-  // ll2 is the strengthened function from "A survey of dual-feasible and
-  // superadditive functions", 2010, F. Clautiaux et.al."
   const double scale = 1.0 / delta;
   const double scalrhs = static_cast<double>(rhs) * scale;
   const double downrhs = fast_floor(scalrhs);
@@ -553,28 +536,10 @@ void HighsCutGeneration::tryStrongCg(const double delta, bool& strongCg,
   double k = fast_ceil(1 / f0) - 1;
   double sqrnorm = 0;
   double viol = -downrhs;
-  const double partition = scalrhs / 2;
-
-  // Check if the stronger lifting function can be used without worrying about
-  // numerics
-  useStrongCgLl2 = true;
-  for (const HighsInt j : integerinds) {
-    const double scalaj = vals[j] * scale;
-    if (scalaj < 0 || scalaj > scalrhs ||
-        std::abs(scalaj - partition) < 10 * feastol ||
-        std::abs((scalrhs - scalaj) - fast_floor(scalrhs - scalaj) - f0) <
-            10 * feastol) {
-      useStrongCgLl2 = false;
-      break;
-    }
-  }
 
   for (const HighsInt j : integerinds) {
     const double scalaj = vals[j] * scale;
-    const double aj =
-        useStrongCgLl2 ? strongCgLl2(scalaj, f0, oneoveroneminusf0, scalrhs,
-                                     downrhs, k, partition, feastol)
-                       : strongCgLl1(scalaj, f0, oneoveroneminusf0, k, feastol);
+    const double aj = strongCgLl1(scalaj, f0, oneoveroneminusf0, k, feastol);
     updateViolationAndNorm(j, aj, viol, sqrnorm);
   }
 
@@ -782,13 +747,10 @@ bool HighsCutGeneration::cmirCutGenerationHeuristic(double minEfficacy,
   }
 
   // Calc StrongCG cut as potential alternative to CMIR
-  bool useStrongCgLl2 = true;
   if (bestefficacy <= 0 || rowlen == 0) {
     strongCg = false;
   }
-  if (strongCg) {
-    tryStrongCg(bestdelta, strongCg, useStrongCgLl2, bestefficacy);
-  }
+  if (strongCg) tryStrongCg(bestdelta, strongCg, bestefficacy);
 
   HighsCDouble scale = 1.0 / HighsCDouble(bestdelta);
   HighsCDouble scalrhs = rhs * scale;
@@ -814,11 +776,7 @@ bool HighsCutGeneration::cmirCutGenerationHeuristic(double minEfficacy,
     } else {
       if (strongCg) {
         HighsCDouble aj =
-            useStrongCgLl2
-                ? strongCgLl2(scale * vals[j], f0, oneoveroneminusf0, scalrhs,
-                              downrhs, k, scalrhs / 2, feastol)
-                : strongCgLl1(scale * vals[j], f0, oneoveroneminusf0, k,
-                              feastol);
+            strongCgLl1(scale * vals[j], f0, oneoveroneminusf0, k, feastol);
         vals[j] = static_cast<double>(aj * bestdelta);
       } else {
         HighsCDouble scalaj = scale * vals[j];

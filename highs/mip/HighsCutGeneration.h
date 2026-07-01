@@ -67,8 +67,7 @@ class HighsCutGeneration {
 
   bool separateLiftedMixedIntegerCover();
 
-  void tryStrongCg(double delta, bool& strongCG, bool& strongCGll2,
-                   double& bestefficacy);
+  void tryStrongCg(double delta, bool& strongCG, double& bestefficacy);
 
   bool cmirCutGenerationHeuristic(double minEfficacy,
                                   bool onlyInitialCMIRScale = false,
