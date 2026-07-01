@@ -1949,8 +1949,9 @@ bool HighsSearch::checkLocalLimits() const {
   if (mipsolver.mipdata_->terminatorActive())
     if (mipsolver.mipdata_->terminatorTerminated()) return true;
 
-  if (mipsolver.mipdata_->worker_lp_iterations_stop.load(
-          std::memory_order_relaxed) <= lpiterations) {
+  const int64_t stop = mipsolver.mipdata_->worker_lp_iterations_stop.load(
+      std::memory_order_relaxed);
+  if (stop <= lpiterations) {
     return true;
   }
 

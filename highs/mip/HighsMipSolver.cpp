@@ -949,19 +949,27 @@ restart:
         }
       }
       assert(early_terminated_worker != -1);
-      // Clear all buffered solve information from workers that are not
-      // the earliest to terminate
-      for (const HighsInt i : search_indices) {
-        if (i == early_terminated_worker) continue;
-        HighsMipWorker& worker = mipdata_->workers[i];
-        worker.nodequeue.clear();
-        worker.search_ptr_->resetStatistics();
-        worker.resetHeurStats();
-        worker.resetSepaStats();
-        worker.solutions_.clear();
+      if (early_terminated_worker == -1) {
+        mipdata_->worker_lp_iterations_stop.store(
+            std::numeric_limits<int64_t>::max(), std::memory_order_relaxed);
+        for (const HighsInt i : search_indices) {
+          mipdata_->workers[i].early_termination = false;
+        }
+      } else {
+        // Clear all buffered solve information from workers that are not
+        // the earliest to terminate
+        for (const HighsInt i : search_indices) {
+          if (i == early_terminated_worker) continue;
+          HighsMipWorker& worker = mipdata_->workers[i];
+          worker.nodequeue.clear();
+          worker.search_ptr_->resetStatistics();
+          worker.resetHeurStats();
+          worker.resetSepaStats();
+          worker.solutions_.clear();
+        }
+        search_indices.clear();
+        search_indices.emplace_back(early_terminated_worker);
       }
-      search_indices.clear();
-      search_indices.emplace_back(early_terminated_worker);
     }
 
     // Sync statistics, check infeasibility, and flush nodes from worker queues
