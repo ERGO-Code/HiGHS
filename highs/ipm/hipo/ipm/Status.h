@@ -17,6 +17,7 @@ enum Error {
   kErrorSolve,
   kErrorIpx,
   kErrorNan,
+  kErrorNegativeComponent,
   kErrorInvalidPointer,
   kErrorFailedAllocation,
 };
@@ -32,9 +33,9 @@ enum Status {
   kStatusTypeFailed,
   kStatusError,
   kStatusUnknown,
-  kStatusImprecise,
 
   kStatusTypeSolved,
+  kStatusImprecise,
   kStatusPrimalInfeasible,
   kStatusDualInfeasible,
   kStatusOptimal,
@@ -43,15 +44,16 @@ enum Status {
 inline Status IpxToHipoStatus(Int ipx_status) {
   static const std::map<Int, Status> status_map{
       {IPX_STATUS_not_run, kStatusNotRun},
-      {IPX_STATUS_iter_limit, kStatusMaxIter},
       {IPX_STATUS_no_progress, kStatusNoProgress},
-      {IPX_STATUS_failed, kStatusError},
+      {IPX_STATUS_iter_limit, kStatusMaxIter},
       {IPX_STATUS_time_limit, kStatusTimeLimit},
       {IPX_STATUS_user_interrupt, kStatusUserInterrupt},
+      {IPX_STATUS_failed, kStatusError},
+      {IPX_STATUS_imprecise, kStatusImprecise},
       {IPX_STATUS_primal_infeas, kStatusPrimalInfeasible},
       {IPX_STATUS_dual_infeas, kStatusDualInfeasible},
       {IPX_STATUS_optimal, kStatusOptimal},
-      {IPX_STATUS_imprecise, kStatusImprecise}};
+  };
 
   auto found = status_map.find(ipx_status);
   if (found != status_map.end()) return found->second;
@@ -67,31 +69,32 @@ inline std::string errorString(Error error) {
       {kErrorSolve, "Error in solve phase"},
       {kErrorIpx, "Error in IPX"},
       {kErrorNan, "NaN detected"},
+      {kErrorNegativeComponent, "Negative component detected"},
       {kErrorInvalidPointer, "Invalid pointer"},
       {kErrorFailedAllocation, "Failed allocation"},
   };
 
   auto found = status_map.find(error);
   if (found != status_map.end()) return found->second;
-  return "unknown";
+  return "Unknown error";
 }
 
 inline std::string statusString(Status status) {
   static const std::map<Status, std::string> status_map{
       {kStatusNotRun, "Not run"},
-      {kStatusMaxIter, "Reached maximum iterations"},
       {kStatusNoProgress, "No progress"},
-      {kStatusImprecise, "Imprecise solution"},
-      {kStatusError, "Internal error"},
+      {kStatusMaxIter, "Reached maximum iterations"},
       {kStatusTimeLimit, "Time limit"},
       {kStatusUserInterrupt, "User interrupt"},
+      {kStatusError, "Internal error"},
+      {kStatusImprecise, "Imprecise solution"},
       {kStatusPrimalInfeasible, "Primal infeasible"},
       {kStatusDualInfeasible, "Dual infeasible"},
       {kStatusOptimal, "Optimal"}};
 
   auto found = status_map.find(status);
   if (found != status_map.end()) return found->second;
-  return "Unknown";
+  return "Unknown status";
 }
 
 }  // namespace hipo

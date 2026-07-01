@@ -496,7 +496,7 @@ HighsStatus solveHipo(const HighsOptions& options, HighsTimer& timer,
 
   // Get solver and solution information.
   const hipo::Info hipo_info = hipo.getInfo();
-  hipo::Status solve_status = hipo_info.status_ipm;
+  hipo::Status solve_status = hipo_info.status;
   highs_info.ipm_iteration_count +=
       hipo_info.ipm_iter + hipo_info.ipx_info.iter;
   highs_info.crossover_iteration_count += hipo_info.ipx_info.updates_crossover;
@@ -539,16 +539,16 @@ HighsStatus solveHipo(const HighsOptions& options, HighsTimer& timer,
     }
 
     // if crossover didn't time out, then solver can only stop as follows
-    if (solve_status == hipo::Status::kStatusUserInterrupt) {
+    if (solve_status == hipo::kStatusUserInterrupt) {
       model_status = HighsModelStatus::kInterrupt;
       return HighsStatus::kWarning;
-    } else if (solve_status == hipo::Status::kStatusTimeLimit) {
+    } else if (solve_status == hipo::kStatusTimeLimit) {
       model_status = HighsModelStatus::kTimeLimit;
       return HighsStatus::kWarning;
-    } else if (solve_status == hipo::Status::kStatusMaxIter) {
+    } else if (solve_status == hipo::kStatusMaxIter) {
       model_status = HighsModelStatus::kIterationLimit;
       return HighsStatus::kWarning;
-    } else if (solve_status == hipo::Status::kStatusNoProgress) {
+    } else if (solve_status == hipo::kStatusNoProgress) {
       reportHipoNoProgress(options, hipo_info);
       model_status = HighsModelStatus::kUnknown;
       return HighsStatus::kWarning;
@@ -589,7 +589,7 @@ HighsStatus solveHipo(const HighsOptions& options, HighsTimer& timer,
       hipo_info.ipx_info.status_crossover != IPX_STATUS_not_run;
 
   const bool imprecise_solution =
-      hipo_info.status_ipm == hipo::kStatusImprecise ||
+      hipo_info.status == hipo::kStatusImprecise ||
       hipo_info.ipx_info.status_crossover == IPX_STATUS_imprecise;
 
   if (have_basic_solution) {
@@ -1389,7 +1389,7 @@ HighsStatus reportHipoStatus(const HighsOptions& options,
     return HighsStatus::kOk;
   }
 
-  else if (hipo.stopped() || status == hipo::kStatusImprecise) {
+  else if (hipo.stopped()) {
     highsLogUser(options.log_options, HighsLogType::kWarning, "Hipo: %s\n",
                  hipo::statusString((hipo::Status)status).c_str());
     return HighsStatus::kWarning;

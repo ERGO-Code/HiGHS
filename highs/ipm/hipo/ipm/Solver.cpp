@@ -95,10 +95,10 @@ void Solver::reset() {
 void Solver::solve() {
   doSolve();
 
-  if (info_.error) info_.status_ipm = kStatusError;
+  if (info_.error) info_.status = kStatusError;
 
   info_.ipm_iter = iter_;
-  if (info_.status_ipm == kStatusNotRun) info_.status_ipm = kStatusMaxIter;
+  if (info_.status == kStatusNotRun) info_.status = kStatusMaxIter;
 
   printSummary();
 }
@@ -311,17 +311,8 @@ void Solver::refineWithIpx() {
   info_.ipx_info = ipx_lps_.GetInfo();
 
   // Convert between ipx and hipo status
-  info_.status_ipm = IpxToHipoStatus(info_.ipx_info.status_ipm);
-  info_.status_crossover = IpxToHipoStatus(info_.ipx_info.status_crossover);
-
-  std::stringstream log_stream;
-  log_stream << "IPX reports: ipm "
-             << ipx::StatusString(info_.ipx_info.status_ipm);
-  if (info_.ipx_info.status_crossover != IPX_STATUS_not_run)
-    log_stream << ", crossover "
-               << ipx::StatusString(info_.ipx_info.status_crossover);
-  log_stream << '\n';
-  logger_.print(log_stream.str().c_str());
+  info_.status = IpxToHipoStatus(info_.ipx_info.status_ipm);
+  if (info_.status == kStatusError) info_.error = kErrorIpx;
 }
 
 bool Solver::solveNewtonSystem(NewtonDir& delta) {
@@ -1019,6 +1010,7 @@ bool Solver::checkIterate() {
         (model_.hasUb(i) && it_->xu[i] < 0) ||
         (model_.hasUb(i) && it_->zu[i] < 0)) {
       logger_.printInfo("\nIterate has negative component\n");
+      info_.error = kErrorNegativeComponent;
       return true;
     }
   }
@@ -1058,25 +1050,26 @@ bool Solver::checkBadIter() {
     if (pobj_is_larger) {
       // problem is likely to be primal unbounded, i.e. dual infeasible
       logger_.print("=== Dual infeasible\n");
-      info_.status_ipm = kStatusDualInfeasible;
+      info_.status = kStatusDualInfeasible;
       terminate = true;
     } else if (dobj_is_larger) {
       // problem is likely to be dual unbounded, i.e. primal infeasible
       logger_.print("=== Primal infeasible\n");
-      info_.status_ipm = kStatusPrimalInfeasible;
+      info_.status = kStatusPrimalInfeasible;
       terminate = true;
     } else if (stagnation) {
-      if (info_.status_ipm == kStatusOptimal) {
+      if (info_.status == kStatusOptimal) {
         assert(crossoverIsOn());
-        info_.status_crossover = kStatusNoProgress;
+        info_.status = kStatusNoProgress;
+        if (it_->resetBest(iter_)) printOutput(true);
       } else {
         if (checkTerminationKkt()) {
           logger_.printw(
               "HiPO stagnated but HiGHS considers the solution acceptable\n");
           logger_.print("=== Primal-dual feasible point found\n");
-          info_.status_ipm = kStatusOptimal;
+          info_.status = kStatusOptimal;
         } else {
-          info_.status_ipm = kStatusNoProgress;
+          info_.status = kStatusNoProgress;
           if (it_->resetBest(iter_)) printOutput(true);
         }
       }
@@ -1097,9 +1090,9 @@ bool Solver::checkTermination() {
 
   if (feasible && optimal) {
     if (crossoverIsOn()) {
-      if (info_.status_ipm != kStatusOptimal)
+      if (info_.status != kStatusOptimal)
         logger_.print("=== Primal-dual feasible point found\n");
-      info_.status_ipm = kStatusOptimal;
+      info_.status = kStatusOptimal;
       bool ready_for_crossover =
           it_->infeasAfterDropping() < options_.crossover_tol;
       if (ready_for_crossover) {
@@ -1111,7 +1104,7 @@ bool Solver::checkTermination() {
       terminate = model_.qp() ? true : checkTerminationKkt();
       if (terminate) {
         logger_.print("=== Primal-dual feasible point found\n");
-        info_.status_ipm = kStatusOptimal;
+        info_.status = kStatusOptimal;
       }
     }
   }
@@ -1160,7 +1153,7 @@ bool Solver::checkInterrupt() {
   bool terminate = false;
   Int status = control_.interruptCheck(iter_);
   if (status) {
-    info_.status_ipm = (Status)status;
+    info_.status = (Status)status;
     terminate = true;
   }
   return terminate;
@@ -1232,11 +1225,11 @@ void Solver::printSummary() const {
     log_stream << textline("HiPO runtime:")
                << fix(control_.elapsed() - start_time_, 0, 2) << "\n";
 
-  log_stream << textline("Status IPM:") << statusString(info_.status_ipm)
-             << "\n";
-  if (info_.status_crossover != kStatusNotRun)
+  log_stream << textline("Status IPM:") << statusString(info_.status) << "\n";
+  if (info_.ipx_info.status_crossover != IPX_STATUS_not_run)
     log_stream << textline("Status Crossover:")
-               << statusString(info_.status_crossover) << "\n";
+               << statusString(IpxToHipoStatus(info_.ipx_info.status_crossover))
+               << "\n";
   if (info_.error)
     log_stream << textline("Error:") << errorString((Error)info_.error) << "\n";
   log_stream << textline("HiPO iterations:") << integer(iter_) << "\n";
@@ -1344,22 +1337,19 @@ void Solver::maxCorrectors() {
 }
 
 bool Solver::statusIsSolved() const {
-  return info_.status_ipm >= kStatusTypeSolved;
+  return info_.status >= kStatusTypeSolved;
 }
 bool Solver::statusIsStopped() const {
-  return info_.status_ipm > kStatusTypeStopped &&
-         info_.status_ipm < kStatusTypeFailed;
+  return info_.status > kStatusTypeStopped && info_.status < kStatusTypeFailed;
 }
 bool Solver::statusIsFailed() const {
-  return info_.status_ipm > kStatusTypeFailed &&
-         info_.status_ipm < kStatusTypeSolved;
+  return info_.status > kStatusTypeFailed && info_.status < kStatusTypeSolved;
 }
 bool Solver::statusAllowsCrossover() const {
-  return info_.status_ipm == kStatusOptimal;
+  return info_.status == kStatusOptimal;
 }
 bool Solver::statusNeedsRefinement() const {
-  return info_.status_ipm == kStatusNoProgress ||
-         info_.status_ipm == kStatusImprecise;
+  return info_.status == kStatusNoProgress || info_.status == kStatusImprecise;
 }
 bool Solver::refinementIsOn() const {
   return options_.refine_with_ipx && !model_.qp();

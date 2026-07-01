@@ -15,9 +15,8 @@ struct Info {
   // Size of original problem
   Int m_original, n_original;
 
-  // Status of solver, see IpmStatus.h
-  Status status_ipm = kStatusNotRun;
-  Status status_crossover = kStatusNotRun;
+  // Status of solver, see Status.h
+  Status status = kStatusNotRun;
   Int error = kOk;
 
   // residuals and objectives of final solution
