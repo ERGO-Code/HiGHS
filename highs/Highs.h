@@ -266,8 +266,11 @@ class Highs {
 
   /**
    * @brief Assess the validity, integrality and feasibility of the
-   * current primal solution. Of value after calling
-   * Highs::readSolution
+   * current primal solution. Row values are computed and checked
+   * against what's in Highs::solution_.row_value and, if the
+   * differences exceed a tolernace, valid returns false.  If any of
+   * valid, integral or feasible is false, then assessPrimalSolution
+   * returns HighsStatus::kWarning.
    */
   HighsStatus assessPrimalSolution(bool& valid, bool& integral,
                                    bool& feasible) const;
@@ -1245,10 +1248,23 @@ class Highs {
   HighsStatus setSolution(const HighsSolution& solution);
 
   /**
-   * @brief Pass a sparse primal solution
+   * @brief Pass a primal solution. If index is not a null pointer,
+   * then it is assumed that value and index contain num_index
+   * entries, where index defines the components of the primal
+   * solution corresponding to the entries in value.  if num_index is
+   * not passed, or index is a null pointer, then value is assumed to
+   * be a full primal solution.
+   *
+   * This method has greater functionality than
+   * Highs::setSolution(const HighsInt num_entries, const HighsInt*
+   * index, const double* value); which is now deprecated
+   *
+   * In particular, it allows a full primal solution to be passed (for
+   * MIPs) without requiring a HighsSolution that contains (empty
+   * vectors of) spurious dual information
    */
-  HighsStatus setSolution(const HighsInt num_entries, const HighsInt* index,
-                          const double* value);
+  HighsStatus setSolution(const double* value, const HighsInt num_index = -1,
+                          const HighsInt* index = nullptr);
 
   /**
    * @brief Set the callback method to use for HiGHS
@@ -1546,6 +1562,9 @@ class Highs {
   const HighsModelStatus& getModelStatus(const bool scaled_model) const;
 
   void logHeader();
+
+  HighsStatus setSolution(const HighsInt num_entries, const HighsInt* index,
+                          const double* value);
 
   void deprecationMessage(const std::string& method_name,
                           const std::string& alt_method_name) const;

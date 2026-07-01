@@ -2575,15 +2575,29 @@ HighsStatus Highs::getColOrRowName(const HighsLp& lp, const bool is_col,
 
 HighsStatus Highs::setSolution(const HighsInt num_entries,
                                const HighsInt* index, const double* value) {
+  deprecationMessage(
+      "setSolution(const HighsInt num_entries, const HighsInt* index, const "
+      "double* value)",
+      "setSolution(const double* value, const HighsInt num_entries, const "
+      "HighsInt* index)");
+  return this->setSolution(value, num_entries, index);
+}
+
+HighsStatus Highs::setSolution(const double* value, const HighsInt num_index,
+                               const HighsInt* index) {
   HighsStatus return_status = HighsStatus::kOk;
   if (model_.lp_.num_col_ == 0) return return_status;
   // Warn about duplicates in index
   HighsInt num_duplicates = 0;
   std::vector<bool> is_set;
   is_set.assign(model_.lp_.num_col_, false);
-  for (HighsInt iX = 0; iX < num_entries; iX++) {
-    HighsInt iCol = index[iX];
+  const bool packed = index != nullptr;
+  assert(!packed || num_index >= 0);
+  const HighsInt to_ix = packed ? num_index : model_.lp_.num_col_;
+  for (HighsInt iX = 0; iX < to_ix; iX++) {
+    HighsInt iCol = packed ? index[iX] : iX;
     if (iCol < 0 || iCol >= model_.lp_.num_col_) {
+      assert(packed);
       highsLogUser(options_.log_options, HighsLogType::kError,
                    "setSolution: User solution index %d has value %d out of "
                    "range [0, %d)\n",
@@ -2605,6 +2619,7 @@ HighsStatus Highs::setSolution(const HighsInt num_entries,
     is_set[iCol] = true;
   }
   if (num_duplicates > 0) {
+    assert(packed);
     highsLogUser(options_.log_options, HighsLogType::kWarning,
                  "setSolution: User set of indices has %d duplicate%s: last "
                  "value used\n",
@@ -2616,8 +2631,8 @@ HighsStatus Highs::setSolution(const HighsInt num_entries,
   // user, and insert the values determined by the user
   HighsSolution new_solution;
   new_solution.col_value.assign(model_.lp_.num_col_, kHighsUndefined);
-  for (HighsInt iX = 0; iX < num_entries; iX++) {
-    HighsInt iCol = index[iX];
+  for (HighsInt iX = 0; iX < to_ix; iX++) {
+    HighsInt iCol = packed ? index[iX] : iX;
     new_solution.col_value[iCol] = value[iX];
   }
   return interpretCallStatus(options_.log_options, setSolution(new_solution),
@@ -3680,8 +3695,9 @@ HighsStatus Highs::readSolution(const std::string& filename,
 
 HighsStatus Highs::assessPrimalSolution(bool& valid, bool& integral,
                                         bool& feasible) const {
+  const bool log_only_warning = false;
   return assessLpPrimalSolution("", options_, model_.lp_, solution_, valid,
-                                integral, feasible);
+                                integral, feasible, log_only_warning);
 }
 
 std::string Highs::presolveStatusToString(
@@ -3990,6 +4006,7 @@ HighsStatus Highs::completeSolutionFromDiscreteAssignment() {
     HighsStatus return_status = assessLpPrimalSolution(
         "", options_, lp, solution_, valid, integral, feasible);
     assert(return_status != HighsStatus::kError);
+    if (return_status == HighsStatus::kError) return HighsStatus::kError;
     assert(valid);
     // If the current solution is integer feasible, then it can be
     // used by MIP solver to get a primal bound
@@ -4050,7 +4067,8 @@ HighsStatus Highs::completeSolutionFromDiscreteAssignment() {
       // There are no continuous variables, so no feasible solution can be
       // deduced
       highsLogUser(options_.log_options, HighsLogType::kInfo,
-                   "User-supplied values of discrete variables cannot yield "
+                   "No continuous variables, so user-supplied values of "
+                   "discrete variables cannot yield "
                    "feasible solution\n");
       call_run = false;
     } else {

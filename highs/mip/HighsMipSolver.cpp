@@ -54,8 +54,9 @@ HighsMipSolver::HighsMipSolver(HighsCallback& callback,
     // MIP solver doesn't check row residuals, but they should be OK
     // so validate using assert
     bool valid, integral, feasible;
+    const bool log_only_warning = false;
     assessLpPrimalSolution("For debugging: ", options, lp, solution, valid,
-                           integral, feasible);
+                           integral, feasible, log_only_warning);
     assert(valid);
 #endif
     // Initial solution can be infeasible, but need to set values for violation
