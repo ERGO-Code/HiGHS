@@ -43,7 +43,7 @@ bool HighsMachineSchedSeparator::findSingleMachineScheduleClique(
     if (p < 0) return;
     const auto it = adjacency.find({negCol, posCol});
     if (it != nullptr) {
-      if (std::get<0>(*it) > p) {
+      if (std::get<0>(*it) < p) {
         adjacency[{negCol, posCol}] = std::make_tuple(p, binCol, t);
       }
     } else {
@@ -121,7 +121,7 @@ bool HighsMachineSchedSeparator::findSingleMachineScheduleClique(
       const double rhs_0 = -rowUpper;
       const double rhs_1 = -rowUpper + binCoef;
       if (rhs_0 > 0 || rhs_1 > 0) {
-        if (rhs_0 > 0) {
+        if (rhs_0 > rhs_1) {
           addEntry(negContCol, posContCol, binCol, rhs_0, ArcType::kIfBinZero);
         } else {
           addEntry(negContCol, posContCol, binCol, rhs_1, ArcType::kIfBinOne);
@@ -136,7 +136,7 @@ bool HighsMachineSchedSeparator::findSingleMachineScheduleClique(
       const double rhs_0 = rowLower;
       const double rhs_1 = rowLower - binCoef;
       if (rhs_0 > 0 || rhs_1 > 0) {
-        if (rhs_0 > 0) {
+        if (rhs_0 > rhs_1) {
           addEntry(posContCol, negContCol, binCol, rhs_0, ArcType::kIfBinZero);
         } else {
           addEntry(posContCol, negContCol, binCol, rhs_1, ArcType::kIfBinOne);
