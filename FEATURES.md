@@ -6,6 +6,9 @@ Build for users with C++20 fixed in [PR #3114](https://github.com/ERGO-Code/HiGH
 
 OpenBLAS setup issue affecting performance fixed in [PR #3122](https://github.com/ERGO-Code/HiGHS/pull/3122).
 
+Values passed for string option values (except for file names) are
+converted to lower case [PR #3108](https://github.com/ERGO-Code/HiGHS/pull/3108).
+
 ---
 
 
