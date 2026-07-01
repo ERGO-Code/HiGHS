@@ -747,13 +747,13 @@ HighsInt Highs_setSolution(void* highs, const double* col_value,
   return (HighsInt)((Highs*)highs)->setSolution(solution);
 }
 
-  // 3118-temp
-  /*
+// 3118-temp
+/*
 HighsInt Highs_setSparseSolution(void* highs, const HighsInt num_entries,
-                                 const HighsInt* index, const double* value) {
-  return (HighsInt)((Highs*)highs)->setSolution(num_entries, index, value);
+                               const HighsInt* index, const double* value) {
+return (HighsInt)((Highs*)highs)->setSolution(num_entries, index, value);
 }
- */
+*/
 
 HighsInt Highs_setSparseSolution(void* highs, const HighsInt num_entries,
                                  const HighsInt* index, const double* value) {
