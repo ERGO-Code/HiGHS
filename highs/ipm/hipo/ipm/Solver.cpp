@@ -346,7 +346,7 @@ void Solver::runIpxCrossover() {
   if (info_.ipx_info.status_crossover != IPX_STATUS_not_run)
     info_.status = IpxToHipoStatus(info_.ipx_info.status_crossover);
 
-  if (info_.ipx_info.errflag) info_.error = kErrorIpx;
+  if (info_.status == kStatusError) info_.error = kErrorIpx;
 }
 
 bool Solver::solveNewtonSystem(NewtonDir& delta) {
