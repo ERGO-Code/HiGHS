@@ -129,19 +129,22 @@ class Solver {
   bool correctors();
 
   void getPointForCrossover(std::vector<double>& x, std::vector<double>& slack,
-                           std::vector<double>& y, std::vector<double>& z);
+                            std::vector<double>& y, std::vector<double>& z);
 
   // ===================================================================================
   // Load model and parameters into ipx and set the last iterate as starting
   // point.
   // ===================================================================================
   bool prepareIpx();
+  bool prepareIpxStartingPoint();
 
   // ===================================================================================
   // If solution is not precise, try running ipx starting from last iterate.
   // If solution is precise and crossover is requested, run ipx.
   // ===================================================================================
+  void runIpx();
   void refineWithIpx();
+  void runIpxCrossover();
 
   // ===================================================================================
   // Determine the maximum number of correctors to use, based on the relative

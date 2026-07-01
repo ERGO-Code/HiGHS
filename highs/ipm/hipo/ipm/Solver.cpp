@@ -125,7 +125,9 @@ void Solver::doSolve() {
   runIpm();
   if (info_.error) return;
 
-  refineWithIpx();
+  runIpx();
+  if (info_.error) return;
+
   it_->finalResiduals(info_);
 }
 
@@ -276,6 +278,10 @@ bool Solver::prepareIpx() {
     return true;
   }
 
+  return false;
+}
+
+bool Solver::prepareIpxStartingPoint() {
   std::vector<double> x, xl, xu, slack, y, zl, zu;
   getInteriorSolution(x, xl, xu, slack, y, zl, zu);
 
@@ -292,27 +298,55 @@ bool Solver::prepareIpx() {
   return false;
 }
 
-void Solver::refineWithIpx() {
+void Solver::runIpx() {
   if (checkInterrupt()) return;
 
   if (statusNeedsRefinement() && refinementIsOn()) {
     logger_.print("\nRestarting with IPX\n");
+    refineWithIpx();
   } else if (statusAllowsCrossover() && crossoverIsOn()) {
     logger_.print("\nRunning crossover with IPX\n");
+    runIpxCrossover();
   } else {
     return;
   }
+}
 
+void Solver::refineWithIpx() {
   if (prepareIpx()) return;
+  if (prepareIpxStartingPoint()) return;
 
   ipx_lps_.Solve();
   info_.ipx_used = true;
 
   info_.ipx_info = ipx_lps_.GetInfo();
 
-  // Convert between ipx and hipo status
   info_.status = IpxToHipoStatus(info_.ipx_info.status_ipm);
   if (info_.status == kStatusError) info_.error = kErrorIpx;
+}
+
+void Solver::runIpxCrossover() {
+  if (prepareIpx()) return;
+
+  std::vector<double> x, slack, y, z;
+  getPointForCrossover(x, slack, y, z);
+
+  Int status = ipx_lps_.CrossoverFromStartingPoint(x.data(), slack.data(),
+                                                   y.data(), z.data());
+  info_.ipx_used = true;
+
+  if (status) {
+    logger_.printInfo("Error loading starting point into IPX\n");
+    info_.error = kErrorIpx;
+    return;
+  }
+
+  info_.ipx_info = ipx_lps_.GetInfo();
+
+  if (info_.ipx_info.status_crossover != IPX_STATUS_not_run)
+    info_.status = IpxToHipoStatus(info_.ipx_info.status_crossover);
+
+  if (info_.ipx_info.errflag) info_.error = kErrorIpx;
 }
 
 bool Solver::solveNewtonSystem(NewtonDir& delta) {
@@ -1068,6 +1102,7 @@ bool Solver::checkBadIter() {
               "HiPO stagnated but HiGHS considers the solution acceptable\n");
           logger_.print("=== Primal-dual feasible point found\n");
           info_.status = kStatusOptimal;
+          info_.pd_feas_found = true;
         } else {
           info_.status = kStatusNoProgress;
           if (it_->resetBest(iter_)) printOutput(true);
@@ -1093,6 +1128,7 @@ bool Solver::checkTermination() {
       if (info_.status != kStatusOptimal)
         logger_.print("=== Primal-dual feasible point found\n");
       info_.status = kStatusOptimal;
+      info_.pd_feas_found = true;
       bool ready_for_crossover =
           it_->infeasAfterDropping() < options_.crossover_tol;
       if (ready_for_crossover) {
@@ -1105,6 +1141,7 @@ bool Solver::checkTermination() {
       if (terminate) {
         logger_.print("=== Primal-dual feasible point found\n");
         info_.status = kStatusOptimal;
+        info_.pd_feas_found = true;
       }
     }
   }
@@ -1346,10 +1383,12 @@ bool Solver::statusIsFailed() const {
   return info_.status > kStatusTypeFailed && info_.status < kStatusTypeSolved;
 }
 bool Solver::statusAllowsCrossover() const {
-  return info_.status == kStatusOptimal;
+  return info_.pd_feas_found == true;
 }
 bool Solver::statusNeedsRefinement() const {
-  return info_.status == kStatusNoProgress || info_.status == kStatusImprecise;
+  return (info_.status == kStatusNoProgress ||
+          info_.status == kStatusImprecise) &&
+         !info_.pd_feas_found;
 }
 bool Solver::refinementIsOn() const {
   return options_.refine_with_ipx && !model_.qp();

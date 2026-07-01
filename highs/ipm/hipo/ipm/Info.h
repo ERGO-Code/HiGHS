@@ -28,6 +28,8 @@ struct Info {
   // True if ipx was invoked, whether to refine solution or for crossover
   bool ipx_used = false;
 
+  bool pd_feas_found = false;
+
   // Info from ipx
   ipx::Info ipx_info;
 
