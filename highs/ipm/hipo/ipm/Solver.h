@@ -319,7 +319,7 @@ class Solver {
   bool checkInterrupt();
 
   // ===================================================================================
-  // Check if the current status has various properties.
+  // Check and set status
   // ===================================================================================
   bool statusIsSolved() const;
   bool statusIsStopped() const;
@@ -328,6 +328,15 @@ class Solver {
   bool statusAllowsCrossover() const;
   bool refinementIsOn() const;
   bool crossoverIsOn() const;
+  bool errorOrInterrupt() const;
+
+  void setStatus1(Status status);
+  void setStatus2(Status status);
+  void setStatus(Status status);
+  Status getStatus1() const;
+  Status getStatus2() const;
+  Status getStatus() const;
+  void finaliseStatus();
 
   // ===================================================================================
   // Print to screen

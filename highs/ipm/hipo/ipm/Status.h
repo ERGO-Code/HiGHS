@@ -24,7 +24,7 @@ enum Error {
 
 enum Status {
   kStatusTypeStopped = 100,
-  kStatusNotRun,
+  kStatusNotSet,
   kStatusNoProgress,
   kStatusMaxIter,
   kStatusTimeLimit,
@@ -43,7 +43,7 @@ enum Status {
 
 inline Status IpxToHipoStatus(Int ipx_status) {
   static const std::map<Int, Status> status_map{
-      {IPX_STATUS_not_run, kStatusNotRun},
+      {IPX_STATUS_not_run, kStatusNotSet},
       {IPX_STATUS_no_progress, kStatusNoProgress},
       {IPX_STATUS_iter_limit, kStatusMaxIter},
       {IPX_STATUS_time_limit, kStatusTimeLimit},
@@ -81,7 +81,7 @@ inline std::string errorString(Error error) {
 
 inline std::string statusString(Status status) {
   static const std::map<Status, std::string> status_map{
-      {kStatusNotRun, "Not run"},
+      {kStatusNotSet, "Not run"},
       {kStatusNoProgress, "No progress"},
       {kStatusMaxIter, "Reached maximum iterations"},
       {kStatusTimeLimit, "Time limit"},

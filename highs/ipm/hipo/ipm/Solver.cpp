@@ -95,12 +95,8 @@ void Solver::reset() {
 
 void Solver::solve() {
   doSolve();
-
-  if (info_.error) info_.status = kStatusError;
-
   info_.ipm_iter = iter_;
-  if (info_.status == kStatusNotRun) info_.status = kStatusMaxIter;
-
+  finaliseStatus();
   printSummary();
 }
 
@@ -124,10 +120,10 @@ void Solver::doSolve() {
   printInfo();
 
   runIpm();
-  if (info_.error) return;
+  if (errorOrInterrupt()) return;
 
   runIpx();
-  if (info_.error) return;
+  if (errorOrInterrupt()) return;
 
   it_->finalResiduals(info_);
 }
@@ -322,8 +318,10 @@ void Solver::refineWithIpx() {
 
   info_.ipx_info = ipx_lps_.GetInfo();
 
-  info_.status = IpxToHipoStatus(info_.ipx_info.status_ipm);
-  if (info_.status == kStatusError) info_.error = kErrorIpx;
+  setStatus1(IpxToHipoStatus(info_.ipx_info.status_ipm));
+  if (info_.ipx_info.status_crossover != IPX_STATUS_not_run)
+    setStatus2(IpxToHipoStatus(info_.ipx_info.status_crossover));
+  if (info_.ipx_info.errflag) info_.error = kErrorIpx;
 }
 
 void Solver::runIpxCrossover() {
@@ -365,9 +363,9 @@ void Solver::runIpxCrossover() {
   info_.ipx_info = ipx_lps_.GetInfo();
 
   if (info_.ipx_info.status_crossover != IPX_STATUS_not_run)
-    info_.status = IpxToHipoStatus(info_.ipx_info.status_crossover);
+    setStatus2(IpxToHipoStatus(info_.ipx_info.status_crossover));
 
-  if (info_.status == kStatusError) info_.error = kErrorIpx;
+  if (info_.ipx_info.errflag) info_.error = kErrorIpx;
 }
 
 bool Solver::solveNewtonSystem(NewtonDir& delta) {
@@ -1105,27 +1103,27 @@ bool Solver::checkBadIter() {
     if (pobj_is_larger) {
       // problem is likely to be primal unbounded, i.e. dual infeasible
       logger_.print("=== Dual infeasible\n");
-      info_.status = kStatusDualInfeasible;
+      setStatus(kStatusDualInfeasible);
       terminate = true;
     } else if (dobj_is_larger) {
       // problem is likely to be dual unbounded, i.e. primal infeasible
       logger_.print("=== Primal infeasible\n");
-      info_.status = kStatusPrimalInfeasible;
+      setStatus(kStatusPrimalInfeasible);
       terminate = true;
     } else if (stagnation) {
-      if (info_.status == kStatusOptimal) {
+      if (getStatus1() == kStatusOptimal) {
         assert(crossoverIsOn());
-        info_.status = kStatusNoProgress;
+        setStatus2(kStatusNoProgress);
         if (it_->resetBest(iter_)) printOutput(true);
       } else {
         if (checkTerminationKkt()) {
           logger_.printw(
               "HiPO stagnated but HiGHS considers the solution acceptable\n");
           logger_.print("=== Primal-dual feasible point found\n");
-          info_.status = kStatusOptimal;
+          setStatus1(kStatusOptimal);
           info_.pd_feas_found = true;
         } else {
-          info_.status = kStatusNoProgress;
+          setStatus1(kStatusNoProgress);
           if (it_->resetBest(iter_)) printOutput(true);
         }
       }
@@ -1146,10 +1144,11 @@ bool Solver::checkTermination() {
 
   if (feasible && optimal) {
     if (crossoverIsOn()) {
-      if (info_.status != kStatusOptimal)
+      if (getStatus1() != kStatusOptimal) {
         logger_.print("=== Primal-dual feasible point found\n");
-      info_.status = kStatusOptimal;
-      info_.pd_feas_found = true;
+        setStatus1(kStatusOptimal);
+        info_.pd_feas_found = true;
+      }
       bool ready_for_crossover =
           it_->infeasAfterDropping() < options_.crossover_tol;
       if (ready_for_crossover) {
@@ -1161,7 +1160,7 @@ bool Solver::checkTermination() {
       terminate = model_.qp() ? true : checkTerminationKkt();
       if (terminate) {
         logger_.print("=== Primal-dual feasible point found\n");
-        info_.status = kStatusOptimal;
+        setStatus1(kStatusOptimal);
         info_.pd_feas_found = true;
       }
     }
@@ -1211,7 +1210,7 @@ bool Solver::checkInterrupt() {
   bool terminate = false;
   Int status = control_.interruptCheck(iter_);
   if (status) {
-    info_.status = (Status)status;
+    setStatus((Status)status);
     terminate = true;
   }
   return terminate;
@@ -1283,7 +1282,7 @@ void Solver::printSummary() const {
     log_stream << textline("HiPO runtime:")
                << fix(control_.elapsed() - start_time_, 0, 2) << "\n";
 
-  log_stream << textline("Status IPM:") << statusString(info_.status) << "\n";
+  log_stream << textline("Status:") << statusString(info_.status) << "\n";
   if (info_.ipx_info.status_crossover != IPX_STATUS_not_run)
     log_stream << textline("Status Crossover:")
                << statusString(IpxToHipoStatus(info_.ipx_info.status_crossover))
@@ -1407,8 +1406,8 @@ bool Solver::statusAllowsCrossover() const {
   return info_.pd_feas_found == true;
 }
 bool Solver::statusNeedsRefinement() const {
-  return (info_.status == kStatusNoProgress ||
-          info_.status == kStatusImprecise) &&
+  return (getStatus1() == kStatusNoProgress ||
+          getStatus1() == kStatusImprecise) &&
          !info_.pd_feas_found;
 }
 bool Solver::refinementIsOn() const {
@@ -1421,11 +1420,50 @@ bool Solver::solved() const { return statusIsSolved(); }
 bool Solver::stopped() const { return statusIsStopped(); }
 bool Solver::failed() const { return statusIsFailed(); }
 
+bool Solver::errorOrInterrupt() const {
+  return getStatus() == kStatusTimeLimit ||
+         getStatus() == kStatusUserInterrupt || info_.error;
+}
+
 void Solver::getPointForCrossover(std::vector<double>& x,
                                   std::vector<double>& slack,
                                   std::vector<double>& y,
                                   std::vector<double>& z) {
   model_.postprocess(x, slack, y, z, *it_);
+}
+
+// status1 should only be set if status2 is empty.
+// status2 should only be set if status1 is optimal.
+// status should
+
+void Solver::setStatus1(Status status) {
+  assert(getStatus2() == kStatusNotSet);
+  info_.status_phase1 = status;
+}
+void Solver::setStatus2(Status status) {
+  assert(getStatus1() == kStatusOptimal);
+  info_.status_phase2 = status;
+}
+void Solver::setStatus(Status status) {
+  if (info_.status_phase1 == kStatusNotSet)
+    setStatus1(status);
+  else
+    setStatus2(status);
+}
+
+Status Solver::getStatus1() const { return info_.status_phase1; }
+Status Solver::getStatus2() const { return info_.status_phase2; }
+Status Solver::getStatus() const {
+  if (getStatus2() != kStatusNotSet)
+    return getStatus2();
+  else
+    return getStatus1();
+}
+
+void Solver::finaliseStatus() {
+  info_.status = getStatus();
+  if (info_.error) info_.status = kStatusError;
+  if (info_.status == kStatusNotSet) info_.status = kStatusMaxIter;
 }
 
 }  // namespace hipo
