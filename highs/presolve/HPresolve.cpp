@@ -6943,10 +6943,99 @@ HPresolve::Result HPresolve::fourierMotzkin(
   const double maxCoef = 1e3;
 
   // structs
-  struct candidate {
-    HighsInt col;
-    int64_t neRed;
-    int64_t mrRed;
+  struct Heap {
+    struct Entry {
+      HighsInt col;
+      int64_t neRed;
+      int64_t mrRed;
+    };
+
+    std::vector<Entry> entries;
+    std::vector<HighsInt> pos;
+
+    bool empty() const { return entries.empty(); }
+    HighsInt top() const { return entries[0].col; }
+    bool contains(HighsInt col) const { return pos[col] != -1; }
+
+    void reset(HighsInt numCol, HighsInt reserveSize) {
+      entries.clear();
+      entries.reserve(reserveSize);
+      pos.assign(numCol, -1);
+    }
+
+    void push(HighsInt col, int64_t neRed, int64_t mrRed) {
+      pos[col] = size();
+      entries.push_back({col, neRed, mrRed});
+    }
+
+    void insert(HighsInt col, int64_t neRed, int64_t mrRed) {
+      push(col, neRed, mrRed);
+      siftUp(pos[col]);
+    }
+
+    void remove(HighsInt col) {
+      HighsInt p = pos[col];
+      if (p == -1) return;
+      swap(p, size() - 1);
+      pos[col] = -1;
+      entries.pop_back();
+      siftUp(p);
+      siftDown(p);
+    }
+
+    void update(HighsInt col, int64_t neRed, int64_t mrRed) {
+      HighsInt p = pos[col];
+      if (p == -1) return;
+      entries[p].neRed = neRed;
+      entries[p].mrRed = mrRed;
+      siftUp(p);
+      siftDown(p);
+    }
+
+    void heapify() {
+      for (HighsInt i = size() / 2 - 1; i >= 0; --i) siftDown(i);
+    }
+
+   private:
+    HighsInt size() const { return static_cast<HighsInt>(entries.size()); }
+
+    bool better(HighsInt i, HighsInt j) const {
+      if (entries[i].neRed != entries[j].neRed)
+        return entries[i].neRed > entries[j].neRed;
+      return entries[i].mrRed > entries[j].mrRed;
+    }
+
+    void swap(HighsInt i, HighsInt j) {
+      if (i == j) return;
+      std::swap(entries[i], entries[j]);
+      pos[entries[i].col] = i;
+      pos[entries[j].col] = j;
+    }
+
+    void siftUp(HighsInt i) {
+      if (i >= size()) return;
+      while (i > 0) {
+        HighsInt parent = (i - 1) / 2;
+        if (!better(i, parent)) break;
+        swap(i, parent);
+        i = parent;
+      }
+    }
+
+    void siftDown(HighsInt i) {
+      HighsInt n = size();
+      if (i >= n) return;
+      while (true) {
+        HighsInt best = i;
+        HighsInt left = 2 * i + 1;
+        HighsInt right = 2 * i + 2;
+        if (left < n && better(left, best)) best = left;
+        if (right < n && better(right, best)) best = right;
+        if (best == i) break;
+        swap(i, best);
+        i = best;
+      }
+    }
   };
 
   struct newRowEntry {
@@ -7317,87 +7406,16 @@ HPresolve::Result HPresolve::fourierMotzkin(
     shrinkProblem(postsolve_stack);
   };
 
-  auto heapBetter = [](const candidate& a, const candidate& b) {
-    if (a.neRed != b.neRed) return a.neRed > b.neRed;
-    return a.mrRed > b.mrRed;
-  };
-
-  auto heapSwap = [&](std::vector<candidate>& heap,
-                      std::vector<HighsInt>& heapPos, HighsInt i, HighsInt j) {
-    if (i == j) return;
-    std::swap(heap[i], heap[j]);
-    heapPos[heap[i].col] = i;
-    heapPos[heap[j].col] = j;
-  };
-
-  auto heapSiftUp = [&](std::vector<candidate>& heap,
-                        std::vector<HighsInt>& heapPos, HighsInt i) {
-    if (i >= static_cast<HighsInt>(heap.size())) return;
-    while (i > 0) {
-      HighsInt parent = (i - 1) / 2;
-      if (!heapBetter(heap[i], heap[parent])) break;
-      heapSwap(heap, heapPos, i, parent);
-      i = parent;
-    }
-  };
-
-  auto heapSiftDown = [&](std::vector<candidate>& heap,
-                          std::vector<HighsInt>& heapPos, HighsInt i) {
-    HighsInt heapSize = static_cast<HighsInt>(heap.size());
-    if (i >= heapSize) return;
-    while (true) {
-      HighsInt best = i;
-      HighsInt left = 2 * i + 1;
-      HighsInt right = 2 * i + 2;
-      if (left < heapSize && heapBetter(heap[left], heap[best])) best = left;
-      if (right < heapSize && heapBetter(heap[right], heap[best])) best = right;
-      if (best == i) break;
-      heapSwap(heap, heapPos, i, best);
-      i = best;
-    }
-  };
-
-  auto heapRemove = [&](std::vector<candidate>& heap,
-                        std::vector<HighsInt>& heapPos, HighsInt col) {
-    HighsInt pos = heapPos[col];
-    if (pos == -1) return;
-    HighsInt last = static_cast<HighsInt>(heap.size()) - 1;
-    heapSwap(heap, heapPos, pos, last);
-    heapPos[col] = -1;
-    heap.pop_back();
-    heapSiftUp(heap, heapPos, pos);
-    heapSiftDown(heap, heapPos, pos);
-  };
-
-  auto heapUpdate = [&](std::vector<candidate>& heap,
-                        std::vector<HighsInt>& heapPos, HighsInt col,
-                        int64_t neRed, int64_t mrRed) {
-    HighsInt pos = heapPos[col];
-    if (pos == -1) return;
-    heap[pos].neRed = neRed;
-    heap[pos].mrRed = mrRed;
-    heapSiftUp(heap, heapPos, pos);
-    heapSiftDown(heap, heapPos, pos);
-  };
-
-  auto heapify = [&](std::vector<candidate>& heap,
-                     std::vector<HighsInt>& heapPos) {
-    for (HighsInt i = static_cast<HighsInt>(heap.size()) / 2 - 1; i >= 0; --i)
-      heapSiftDown(heap, heapPos, i);
-  };
-
   auto collectCandidatesAndBuildHeap =
-      [&](std::vector<HighsInt>& candidates, std::vector<candidate>& heap,
-          std::vector<HighsInt>& heapPos, std::vector<HighsInt>& iPlus,
-          std::vector<HighsInt>& iMinus, std::vector<HighsInt>& pPlus,
-          std::vector<HighsInt>& pMinus, std::vector<HighsInt>& affectedCols,
+      [&](std::vector<HighsInt>& candidates, Heap& heap,
+          std::vector<HighsInt>& iPlus, std::vector<HighsInt>& iMinus,
+          std::vector<HighsInt>& pPlus, std::vector<HighsInt>& pMinus,
+          std::vector<HighsInt>& affectedCols,
           const std::vector<HighsInt>& objRowCols) {
         // compute candidates
         if (!computeCandidates(candidates)) return false;
         // set up data structures for heap
-        heap.clear();
-        heap.reserve(candidates.size());
-        heapPos.assign(model->num_col_, -1);
+        heap.reset(model->num_col_, static_cast<HighsInt>(candidates.size()));
         pPlus.assign(model->num_col_, 0);
         pMinus.assign(model->num_col_, 0);
         iPlus.reserve(model->num_row_);
@@ -7413,12 +7431,11 @@ HPresolve::Result HPresolve::fourierMotzkin(
           affectedCols.clear();
           if (!elimCandidate || !isReduction(neRed, mrRed)) continue;
           // add to heap
-          heapPos[col] = static_cast<HighsInt>(heap.size());
-          heap.push_back({col, neRed, mrRed});
+          heap.push(col, neRed, mrRed);
         }
         if (heap.empty()) return false;
         // heapify
-        heapify(heap, heapPos);
+        heap.heapify();
         return true;
       };
 
@@ -7475,8 +7492,7 @@ HPresolve::Result HPresolve::fourierMotzkin(
   std::vector<HighsInt> affectedCols;
 
   // indexed max-heap
-  std::vector<candidate> heap;
-  std::vector<HighsInt> heapPos;
+  Heap heap;
 
   // precompute the objective row: columns with nonzero cost
   // used to simulate the objective constraint in checkRows before
@@ -7489,8 +7505,8 @@ HPresolve::Result HPresolve::fourierMotzkin(
   }
 
   // compute candidates and build initial heap
-  if (!collectCandidatesAndBuildHeap(candidates, heap, heapPos, iPlus, iMinus,
-                                     pPlus, pMinus, affectedCols, objRowCols))
+  if (!collectCandidatesAndBuildHeap(candidates, heap, iPlus, iMinus, pPlus,
+                                     pMinus, affectedCols, objRowCols))
     return finalise();
 
   // vectors for computing new row entries
@@ -7527,8 +7543,8 @@ HPresolve::Result HPresolve::fourierMotzkin(
 
   // main loop: eliminate variables from heap
   while (!heap.empty()) {
-    HighsInt col = heap[0].col;
-    heapRemove(heap, heapPos, col);
+    HighsInt col = heap.top();
+    heap.remove(col);
 
     // if this candidate has nonzero cost and objective has not yet been
     // reformulated, perform the reformulation now and rebuild the heap
@@ -7550,9 +7566,8 @@ HPresolve::Result HPresolve::fourierMotzkin(
       objRowCols.clear();
       newRowMark.resize(model->num_col_, -1);
       // re-compute candidates and re-build heap
-      if (!collectCandidatesAndBuildHeap(candidates, heap, heapPos, iPlus,
-                                         iMinus, pPlus, pMinus, affectedCols,
-                                         objRowCols))
+      if (!collectCandidatesAndBuildHeap(candidates, heap, iPlus, iMinus, pPlus,
+                                         pMinus, affectedCols, objRowCols))
         return finalise();
       continue;
     }
@@ -7711,7 +7726,7 @@ HPresolve::Result HPresolve::fourierMotzkin(
       // check if variable is a candidate
       bool isCandidateCol = isCandidate(k);
       // skip variable if it is not on the heap and no candidate
-      if (heapPos[k] == -1 && !isCandidateCol) continue;
+      if (!heap.contains(k) && !isCandidateCol) continue;
       // check column non-zeros
       int64_t ne, mr;
       bool elimCandidate =
@@ -7720,15 +7735,13 @@ HPresolve::Result HPresolve::fourierMotzkin(
       affectedCols.clear();
       if (!elimCandidate || !isReduction(ne, mr)) {
         // no candidate or not beneficial -> remove from heap
-        heapRemove(heap, heapPos, k);
-      } else if (heapPos[k] == -1) {
+        heap.remove(k);
+      } else if (!heap.contains(k)) {
         // new candidate -> insert into heap
-        heapPos[k] = static_cast<HighsInt>(heap.size());
-        heap.push_back({k, ne, mr});
-        heapSiftUp(heap, heapPos, heapPos[k]);
+        heap.insert(k, ne, mr);
       } else {
         // update heap
-        heapUpdate(heap, heapPos, k, ne, mr);
+        heap.update(k, ne, mr);
       }
     }
     saveAffectedCols.clear();
