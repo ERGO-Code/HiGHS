@@ -39,8 +39,6 @@ struct Info {
   bool ipx_used_refine = false;
   bool ipx_used_crossover = false;
 
-  bool pd_feas_found = false;
-
   // Info from ipx
   ipx::Info ipx_info;
 

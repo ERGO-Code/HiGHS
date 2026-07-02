@@ -1121,7 +1121,6 @@ bool Solver::checkBadIter() {
               "HiPO stagnated but HiGHS considers the solution acceptable\n");
           logger_.print("=== Primal-dual feasible point found\n");
           setStatus1(kStatusOptimal);
-          info_.pd_feas_found = true;
         } else {
           setStatus1(kStatusNoProgress);
           if (it_->resetBest(iter_)) printOutput(true);
@@ -1147,7 +1146,6 @@ bool Solver::checkTermination() {
       if (getStatus1() != kStatusOptimal) {
         logger_.print("=== Primal-dual feasible point found\n");
         setStatus1(kStatusOptimal);
-        info_.pd_feas_found = true;
       }
       bool ready_for_crossover =
           it_->infeasAfterDropping() < options_.crossover_tol;
@@ -1161,7 +1159,6 @@ bool Solver::checkTermination() {
       if (terminate) {
         logger_.print("=== Primal-dual feasible point found\n");
         setStatus1(kStatusOptimal);
-        info_.pd_feas_found = true;
       }
     }
   }
@@ -1356,6 +1353,13 @@ Int Solver::getBasicSolution(std::vector<double>& x, std::vector<double>& slack,
                                    cbasis, vbasis);
 }
 
+void Solver::getPointForCrossover(std::vector<double>& x,
+                                  std::vector<double>& slack,
+                                  std::vector<double>& y,
+                                  std::vector<double>& z) {
+  model_.postprocess(x, slack, y, z, *it_);
+}
+
 void Solver::maxCorrectors() {
   if (kMaxCorrectors > 0) {
     // Compute estimate of effort to factorise and solve
@@ -1403,12 +1407,10 @@ bool Solver::statusIsFailed() const {
   return info_.status > kStatusTypeFailed && info_.status < kStatusTypeSolved;
 }
 bool Solver::statusAllowsCrossover() const {
-  return info_.pd_feas_found == true;
+  return getStatus1() == kStatusOptimal;
 }
 bool Solver::statusNeedsRefinement() const {
-  return (getStatus1() == kStatusNoProgress ||
-          getStatus1() == kStatusImprecise) &&
-         !info_.pd_feas_found;
+  return getStatus1() == kStatusNoProgress || getStatus1() == kStatusImprecise;
 }
 bool Solver::refinementIsOn() const {
   return options_.refine_with_ipx && !model_.qp();
@@ -1423,13 +1425,6 @@ bool Solver::failed() const { return statusIsFailed(); }
 bool Solver::errorOrInterrupt() const {
   return getStatus() == kStatusTimeLimit ||
          getStatus() == kStatusUserInterrupt || info_.error;
-}
-
-void Solver::getPointForCrossover(std::vector<double>& x,
-                                  std::vector<double>& slack,
-                                  std::vector<double>& y,
-                                  std::vector<double>& z) {
-  model_.postprocess(x, slack, y, z, *it_);
 }
 
 // status1 should only be set if status2 is empty.
