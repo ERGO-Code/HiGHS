@@ -333,13 +333,33 @@ void Solver::runIpxCrossover() {
 
   Int status = ipx_lps_.CrossoverFromStartingPoint(x.data(), slack.data(),
                                                    y.data(), z.data());
-  info_.ipx_used = true;
-
-  if (status) {
+  if (status == IPX_ERROR_invalid_vector) {
     logger_.printInfo("Error loading starting point into IPX\n");
     info_.error = kErrorIpx;
     return;
   }
+
+  if (status) {
+    // CrossoverFromStartingPoint can fail before running crossover while doing
+    // crash_basis
+
+    ipx_parameters param = ipx_lps_.GetParameters();
+    param.crash_basis = 0;
+    ipx_lps_.SetParameters(param);
+
+    logger_.printInfo("Re-trying without crash basis\n");
+
+    status = ipx_lps_.CrossoverFromStartingPoint(x.data(), slack.data(),
+                                                 y.data(), z.data());
+
+    if (status) {
+      logger_.printInfo("Error loading starting point into IPX\n");
+      info_.error = kErrorIpx;
+      return;
+    }
+  }
+
+  info_.ipx_used = true;
 
   info_.ipx_info = ipx_lps_.GetInfo();
 

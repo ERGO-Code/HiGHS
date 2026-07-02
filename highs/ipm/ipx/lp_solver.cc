@@ -236,7 +236,7 @@ Int LpSolver::CrossoverFromStartingPoint(const double* x_start,
         info_.time_starting_basis += timer.Elapsed();
         if (info_.errflag) {
             ClearSolution();
-            return 0;
+            return 1;
         }
     }
 
