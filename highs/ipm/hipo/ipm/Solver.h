@@ -55,6 +55,16 @@ class Solver {
   // General information
   Info info_;
 
+  // Status of ipm iterations up to pd feas solution found (potentially using
+  // ipx to refine, in which case the ipx status_ipm is converted to hipo
+  // status).
+  Status status_phase1 = kStatusNotSet;
+
+  // Status of ipm iterations after pd feas solution found, or status of
+  // crossover if it is run, in which case ipx status_crossover is converted to
+  // hipo status.
+  Status status_phase2 = kStatusNotSet;
+
   Control control_;
 
   // Run-time options

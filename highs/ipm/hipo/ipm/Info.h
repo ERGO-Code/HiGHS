@@ -19,16 +19,6 @@ struct Info {
   Status status = kStatusNotSet;
   Int error = kOk;
 
-  // Status of ipm iterations up to pd feas solution found (potentially using
-  // ipx to refine, in which case the ipx status_ipm is converted to hipo
-  // status).
-  Status status_phase1 = kStatusNotSet;
-
-  // Status of ipm iterations after pd feas solution found, or status of
-  // crossover if it is run, in which case ipx status_crossover is converted to
-  // hipo status.
-  Status status_phase2 = kStatusNotSet;
-
   // residuals and objectives of final solution
   double p_res_rel, p_res_abs, d_res_rel, d_res_abs, p_obj, d_obj, pd_gap;
 

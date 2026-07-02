@@ -1428,26 +1428,26 @@ bool Solver::errorOrInterrupt() const {
 }
 
 // status1 should only be set if status2 is empty.
-// status2 should only be set if status1 is optimal.
-// status should
+// status2 should only be set if status1 is optimal or imprecise.
+// final status should consider status2 if non empty, or status 1 otherwise.
 
 void Solver::setStatus1(Status status) {
   assert(getStatus2() == kStatusNotSet);
-  info_.status_phase1 = status;
+  status_phase1 = status;
 }
 void Solver::setStatus2(Status status) {
-  assert(getStatus1() == kStatusOptimal);
-  info_.status_phase2 = status;
+  assert(getStatus1() == kStatusOptimal || getStatus1() == kStatusImprecise);
+  status_phase2 = status;
 }
 void Solver::setStatus(Status status) {
-  if (info_.status_phase1 == kStatusNotSet)
+  if (status_phase1 == kStatusNotSet)
     setStatus1(status);
   else
     setStatus2(status);
 }
 
-Status Solver::getStatus1() const { return info_.status_phase1; }
-Status Solver::getStatus2() const { return info_.status_phase2; }
+Status Solver::getStatus1() const { return status_phase1; }
+Status Solver::getStatus2() const { return status_phase2; }
 Status Solver::getStatus() const {
   if (getStatus2() != kStatusNotSet)
     return getStatus2();
