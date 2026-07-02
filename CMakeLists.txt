@@ -83,6 +83,12 @@ message(STATUS "Build C++ executable: ${BUILD_CXX_EXE}")
 option(BUILD_TESTING "Build Tests" ON)
 option(BUILD_SHARED_EXTRAS_LIB "Build shared extras library" ON)
 message(STATUS "Build shared extras library: ${BUILD_SHARED_EXTRAS_LIB}")
+
+option(BUILD_STATIC_EXE "Build static executable" OFF)
+if (BUILD_STATIC_EXE)
+  set (BUILD_SHARED_EXTRAS_LIB OFF)
+endif()
+
 set(HIGHS_SHARED_EXTRAS_LIBRARY ${BUILD_SHARED_EXTRAS_LIB})
 
 option(FORTRAN "Build Fortran interface" OFF)
@@ -164,10 +170,14 @@ endif()
   # message(STATUS "CUPLDP with Nvidia is only supported on Linux at the moment. Using CPU version.")
 # endif()
 
-
 option(BUILD_OPENBLAS "Build OpenBLAS" OFF)
 message(STATUS "Build OpenBLAS: ${BUILD_OPENBLAS}")
 option(NO_AVX512 "Build OpenBLAS without AVX512" OFF)
+
+if (HIPO_PYTHON OR BUILD_STATIC_EXE)
+  set(NO_AVX512 ON)
+endif()
+
 if (NO_AVX512)
   message(STATUS "Build OpenBLAS without AVX512: ON")
 endif()
@@ -207,9 +217,6 @@ else()
   set (CUPDLP_CPU ON)
     set(CUDA_LIBRARY-NOTFOUND true)
 endif()
-
-# Option to build static
-option(BUILD_STATIC_EXE "Build static executable" OFF)
 
 if(BUILD_STATIC_EXE)
   set(BUILD_SHARED_LIBS OFF)

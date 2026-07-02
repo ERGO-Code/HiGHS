@@ -434,10 +434,10 @@ void HighsPostsolveStack::SingletonRow::undo(
         break;
       case HighsBasisStatus::kUpper:
         if (coef > 0)
-          // tightened upper bound comes from row lower bound
+          // tightened upper bound comes from row upper bound
           basis.row_status[row] = HighsBasisStatus::kUpper;
         else
-          // tightened lower bound comes from row upper bound
+          // tightened upper bound comes from row lower bound
           basis.row_status[row] = HighsBasisStatus::kLower;
         break;
       default:
