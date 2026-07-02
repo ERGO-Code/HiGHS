@@ -1453,6 +1453,111 @@ HPresolve::Result HPresolve::dominatedColumns(
   return Result::kOk;
 }
 
+HPresolve::Result HPresolve::stronglyConnectedComponents() {
+  HighsDomain& domain = mipsolver->mipdata_->getDomain();
+  HighsCliqueTable& cliquetable = mipsolver->mipdata_->cliquetable;
+  if (!mipsolver->mipdata_->cliquesExtracted || cliquetable.numCliques() <= 1)
+    return Result::kOk;
+
+  const HighsInt numNodes = 2 * model->num_col_;
+  std::vector<HighsInt> stronglyConnectedComponents(numNodes, -1);
+  std::vector<bool> infeasibleNodes(numNodes);
+  bool infeasible = false;
+  cliquetable.tarjan(stronglyConnectedComponents, infeasibleNodes, infeasible);
+
+  if (infeasible) return Result::kPrimalInfeasible;
+
+  for (HighsInt i = 0; i != numNodes; ++i) {
+    if (infeasibleNodes[i]) {
+      const HighsInt col = i / 2;
+      if (colDeleted[col] || domain.isFixed(col)) continue;
+      if (i % 2 == 0) {
+        // Node is ~x, i.e., x = 0 is infeasible -> x = 1
+        domain.changeBound(HighsBoundType::kLower, col, 1.0,
+                           HighsDomain::Reason::cliqueTable(col, 1));
+      } else {
+        // Node is x, i.e., x = 1 is infeasible -> x = 0
+        domain.changeBound(HighsBoundType::kUpper, col, 0.0,
+                           HighsDomain::Reason::cliqueTable(col, 0));
+      }
+      if (domain.infeasible()) return Result::kPrimalInfeasible;
+    }
+  }
+
+  // Apply substitutions for all strongly connected components
+  std::vector<HighsCliqueTable::CliqueVar> clique(2);
+  for (HighsInt substNode = 0; substNode != numNodes; ++substNode) {
+    HighsInt substCol = substNode / 2;
+    const HighsInt stayNode = stronglyConnectedComponents[substNode];
+    if (stayNode == -1 || stayNode == substNode) continue;
+    HighsInt stayCol = stayNode / 2;
+    if (colDeleted[stayCol] || colDeleted[substCol]) continue;
+    if (stayCol == substCol) return Result::kPrimalInfeasible;
+
+    HighsCliqueTable::CliqueVar stayCliqueVar(stayCol, stayNode % 2);
+    HighsCliqueTable::CliqueVar substCliqueVar(substCol, substNode % 2);
+    cliquetable.resolveSubstitution(stayCliqueVar);
+    cliquetable.resolveSubstitution(substCliqueVar);
+    stayCol = static_cast<HighsInt>(stayCliqueVar.col);
+    substCol = static_cast<HighsInt>(substCliqueVar.col);
+    if (colDeleted[stayCol] || colDeleted[substCol]) continue;
+    if (stayCol == substCol) {
+      if (stayCliqueVar.val == substCliqueVar.val) continue;
+      return Result::kPrimalInfeasible;
+    }
+
+    // Decides whether the nodes have the same value in the clique table.
+    // This decides whether to substitute x = y, or x = 1 - y
+    const bool sameVals = stayCliqueVar.val == substCliqueVar.val;
+
+    // One of the columns may have been fixed by the code above
+    if (domain.isFixed(stayCol) || domain.isFixed(substCol)) {
+      if ((domain.col_upper_[stayCol] == 0 && sameVals) ||
+          (domain.col_lower_[stayCol] == 1 && !sameVals)) {
+        domain.changeBound(HighsBoundType::kUpper, substCol, 0.0,
+                           HighsDomain::Reason::cliqueTable(substCol, 0));
+      } else if ((domain.col_upper_[substCol] == 0 && sameVals) ||
+                 (domain.col_lower_[substCol] == 1 && !sameVals)) {
+        domain.changeBound(HighsBoundType::kUpper, stayCol, 0.0,
+                           HighsDomain::Reason::cliqueTable(stayCol, 0));
+      } else if ((domain.col_lower_[stayCol] == 1 && sameVals) ||
+                 (domain.col_upper_[stayCol] == 0 && !sameVals)) {
+        domain.changeBound(HighsBoundType::kLower, substCol, 1.0,
+                           HighsDomain::Reason::cliqueTable(substCol, 1));
+      } else if ((domain.col_lower_[substCol] == 1 && sameVals) ||
+                 (domain.col_upper_[substCol] == 0 && !sameVals)) {
+        domain.changeBound(HighsBoundType::kLower, stayCol, 1.0,
+                           HighsDomain::Reason::cliqueTable(stayCol, 1));
+      }
+      if (domain.infeasible()) return Result::kPrimalInfeasible;
+      continue;
+    }
+
+    // Add both cliques instead of single equality so substitutions are created
+    clique[0] = stayCliqueVar;
+    clique[1] = substCliqueVar.complement();
+    cliquetable.addClique(*mipsolver, clique.data(), 2);
+    if (domain.infeasible()) return Result::kPrimalInfeasible;
+
+    // Adding the clique may have already created new substitution
+    cliquetable.resolveSubstitution(stayCliqueVar);
+    cliquetable.resolveSubstitution(substCliqueVar);
+    stayCol = static_cast<HighsInt>(stayCliqueVar.col);
+    substCol = static_cast<HighsInt>(substCliqueVar.col);
+    if (colDeleted[stayCol] || colDeleted[substCol]) continue;
+    if (stayCol == substCol) {
+      if (stayCliqueVar.val == substCliqueVar.val) continue;
+      return Result::kPrimalInfeasible;
+    }
+
+    clique[0] = stayCliqueVar.complement();
+    clique[1] = substCliqueVar;
+    cliquetable.addClique(*mipsolver, clique.data(), 2);
+    if (domain.infeasible()) return Result::kPrimalInfeasible;
+  }
+  return Result::kOk;
+}
+
 HPresolve::Result HPresolve::prepareProbing(
     HighsPostsolveStack& postsolve_stack, bool& firstCall) {
   HighsDomain& domain = mipsolver->mipdata_->getDomain();
@@ -1632,6 +1737,20 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postsolve_stack) {
     }
   }
   if (!binaries.empty()) {
+    // Extract strongly connected components from the clique table
+    if (analysis_.allow_rule_[kPresolveRuleStronglyConnectedComponents]) {
+      const Result tarjanResult = stronglyConnectedComponents();
+      if (tarjanResult != Result::kOk) {
+        mipsolver->profiling_->stop(kMipClockProbingPresolve);
+        return tarjanResult;
+      }
+      domain.propagate();
+      if (domain.infeasible()) {
+        mipsolver->profiling_->stop(kMipClockProbingPresolve);
+        return Result::kPrimalInfeasible;
+      }
+    }
+
     // sort variables with many implications on other binaries first
     pdqsort(binaries.begin(), binaries.end());
 
