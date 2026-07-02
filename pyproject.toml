@@ -129,3 +129,13 @@ repair-wheel-command = """
     -e libunwind \
     -w {dest_dir} -v {wheel}
 """
+
+[tool.cibuildwheel.pyodide]
+test-requires = ["pytest"]
+test-command = "python -m pytest -k \"not test_user_interrupts and not test_with_context_manager\" {project}/highspy/tests -x"
+repair-wheel-command = """
+rm -rf /tmp/wheel_repair && mkdir -p /tmp/wheel_repair && \
+python -m zipfile -e {wheel} /tmp/wheel_repair && \
+LIBDIR=$(dirname $(find /tmp/wheel_repair -name 'libhighs.so' | head -n1)) && \
+pyodide auditwheel repair --libdir "$LIBDIR" --output-dir {dest_dir} {wheel}
+"""
