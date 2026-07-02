@@ -585,7 +585,6 @@ HighsStatus solveHipo(const HighsOptions& options, HighsTimer& timer,
     return HighsStatus::kError;
 
   const bool have_basic_solution =
-      hipo_info.ipx_used &&
       hipo_info.ipx_info.status_crossover != IPX_STATUS_not_run;
 
   const bool imprecise_solution =

@@ -19,14 +19,25 @@ struct Info {
   Status status = kStatusNotRun;
   Int error = kOk;
 
+  // Status of ipm iterations up to pd feas solution found (potentially using
+  // ipx to refine, in which case the ipx status_ipm is converted to hipo
+  // status).
+  Status status_phase1 = kStatusNotRun;
+
+  // Status of ipm iterations after pd feas solution found, or status of
+  // crossover if it is run, in which case ipx status_crossover is converted to
+  // hipo status.
+  Status status_phase2 = kStatusNotRun;
+
   // residuals and objectives of final solution
   double p_res_rel, p_res_abs, d_res_rel, d_res_abs, p_obj, d_obj, pd_gap;
 
   // Number of ipm iterations performed
   Int ipm_iter = 0;
 
-  // True if ipx was invoked, whether to refine solution or for crossover
-  bool ipx_used = false;
+  // True if ipx was used to refine solution or for crossover.
+  bool ipx_used_refine = false;
+  bool ipx_used_crossover = false;
 
   bool pd_feas_found = false;
 
