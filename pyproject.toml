@@ -131,6 +131,8 @@ repair-wheel-command = """
 """
 
 [tool.cibuildwheel.pyodide]
+test-requires = ["pytest"]
+test-command = "python -m pytest -k \"not test_user_interrupts and not test_with_context_manager\" {project}/highspy/tests -x"
 repair-wheel-command = """
 rm -rf /tmp/wheel_repair && mkdir -p /tmp/wheel_repair && \
 python -m zipfile -e {wheel} /tmp/wheel_repair && \

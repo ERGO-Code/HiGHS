@@ -257,14 +257,3 @@ jobs:
         run: |
           python3 -m pip install cibuildwheel
           python3 -m cibuildwheel --only cp314-pyodide_wasm32
-        env:
-          CIBW_TEST_COMMAND: ""
-
-      - name: Install wheel
-        run: |
-          python3 -m pip install wheelhouse/*.whl
-
-      - name: Test highspy
-        run: |
-          python3 -m pip install pytest
-          python3 -m pytest -k "not test_user_interrupts and not test_with_context_manager" ./highspy
