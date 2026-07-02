@@ -1,0 +1,66 @@
+name: build-hip
+
+# Compile-only CI for the AMD GPU (HIP/ROCm) backend of HiPDLP.
+#
+# This job runs inside an official ROCm container and only *compiles and links*
+# the HIP backend (-DHIPDLP_HIP=ON). It does NOT execute any GPU code: the
+# GitHub-hosted runners have no AMD GPU. Its purpose is to catch HIP build
+# regressions (wrong hip* API names, desynchronised #ifdef guards, signature
+# mismatches) that are invisible to the CPU/CUDA builds.
+#
+# Running the GPU code (numerical validation) requires a self-hosted runner
+# with an AMD GPU and is intentionally out of scope here.
+
+on:
+  push:
+    paths:
+      - 'highs/pdlp/hipdlp/**'
+      - 'CMakeLists.txt'
+      - 'highs/CMakeLists.txt'
+      - '.github/workflows/build-hip.yml'
+  pull_request:
+    paths:
+      - 'highs/pdlp/hipdlp/**'
+      - 'CMakeLists.txt'
+      - 'highs/CMakeLists.txt'
+      - '.github/workflows/build-hip.yml'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  hip-compile:
+    runs-on: ubuntu-latest
+    container:
+      # 24.04 + ROCm 7.x; the "-complete" image bundles hipBLAS/hipSPARSE.
+      image: rocm/dev-ubuntu-24.04:7.2.4-complete
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install build dependencies
+        shell: bash
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends \
+            cmake make git ca-certificates zlib1g-dev
+          cmake --version
+          hipcc --version || /opt/rocm/bin/hipcc --version
+
+      - name: Configure CMake (HIP backend)
+        shell: bash
+        run: |
+          export PATH=/opt/rocm/bin:$PATH
+          export CMAKE_PREFIX_PATH=/opt/rocm
+          cmake -S . -B build_hip \
+            -DHIPDLP_HIP=ON \
+            -DBUILD_TESTING=OFF \
+            -DBUILD_EXAMPLES=OFF \
+            -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build (compile + link, no GPU execution)
+        shell: bash
+        run: |
+          export PATH=/opt/rocm/bin:$PATH
+          cmake --build build_hip --target highs --parallel
