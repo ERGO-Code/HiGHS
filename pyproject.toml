@@ -133,7 +133,7 @@ repair-wheel-command = """
 [tool.cibuildwheel.pyodide]
 repair-wheel-command = """
 rm -rf /tmp/wheel_repair && mkdir -p /tmp/wheel_repair && \
-python -m zipfile -e {wheel} /tmp/wheel_repair &&  \
+python -m zipfile -e {wheel} /tmp/wheel_repair && \
 LIBDIR=$(dirname $(find /tmp/wheel_repair -name 'libhighs.so' | head -n1)) && \
 pyodide auditwheel repair --libdir "$LIBDIR" --output-dir {dest_dir} {wheel}
 """
