@@ -7002,6 +7002,8 @@ HPresolve::Result HPresolve::fourierMotzkin(
     candidates.clear();
     for (HighsInt col = 0; col < model->num_col_; col++)
       if (isCandidate(col)) candidates.push_back(col);
+    pdqsort(candidates.begin(), candidates.end(),
+            [&](HighsInt a, HighsInt b) { return colsize[a] < colsize[b]; });
     return !candidates.empty();
   };
 
