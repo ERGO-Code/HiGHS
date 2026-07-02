@@ -206,6 +206,8 @@ class HighsSearch {
 
   void flushStatistics(HighsMipSolver& mipsolver);
 
+  void resetStatistics();
+
   void installNode(HighsNodeQueue::OpenNode&& node);
 
   void addInfeasibleConflict();

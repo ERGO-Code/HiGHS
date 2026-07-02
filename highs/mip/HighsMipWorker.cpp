@@ -27,6 +27,7 @@ HighsMipWorker::HighsMipWorker(const HighsMipSolver& mipsolver,
   upper_limit = mipdata_.upper_limit;
   optimality_limit = mipdata_.optimality_limit;
   heuristics_allowed = true;
+  early_termination = false;
   search_ptr_ =
       std::unique_ptr<HighsSearch>(new HighsSearch(*this, getPseudocost()));
   sepa_ptr_ = std::unique_ptr<HighsSeparation>(new HighsSeparation(*this));

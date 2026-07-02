@@ -681,6 +681,13 @@ restart:
     return mipdata_->workers[i].getGlobalDomain().infeasible() || pruned;
   };
 
+  auto assignEarlyTermination = [&](HighsMipWorker& worker) {
+    if (worker.getGlobalDomain().infeasible() ||
+        mipdata_->lower_bound > worker.optimality_limit) {
+      mipdata_->updateWorkerEarlyTermination(worker);
+    }
+  };
+
   auto separateAndStoreBasis = [&](HighsInt i) -> bool {
     HighsMipWorker& worker = mipdata_->workers[i];
     if (options_mip_->mip_allow_cut_separation_at_nodes) {
@@ -699,6 +706,7 @@ restart:
                                         ? worker.nodequeue
                                         : mipdata_->nodequeue;
       worker.search_ptr_->openNodesToQueue(globalqueue);
+      assignEarlyTermination(worker);
       return true;
     }
 
@@ -822,18 +830,15 @@ restart:
                           std::vector<RestartVote>& restarts,
                           const bool skip_separation, const HighsInt nodeLim,
                           const HighsInt plungeLimit, double avgiter) {
-    auto processNode = [&](HighsInt i) {
+    auto processNode = [&](const HighsInt i) {
       HighsMipWorker& worker = mipdata_->workers[i];
       int64_t nodes_explored = 0;
       if (!skip_separation) {
         evaluateNode(i);
+        assignEarlyTermination(worker);
         if (pruneNode(i)) return;
-        if (!mipdata_->parallelLockActive()) {
-          if (mipdata_->checkLimits()) return;
-          mipdata_->printDisplayLine();
-        } else {
-          if (worker.search_ptr_->checkLocalLimits()) return;
-        }
+        if (worker.search_ptr_->checkLimits()) return;
+        if (!mipdata_->parallelLockActive()) mipdata_->printDisplayLine();
         if (separateAndStoreBasis(i)) return;
       }
       worker.getConflictPool().performAging();
@@ -866,6 +871,7 @@ restart:
           mipdata_->printDisplayLine();
         }
       }
+      assignEarlyTermination(worker);
       if (nodeLim == kHighsIInf) {
         restarts[i] = checkRestart(worker, 1);
       }
@@ -928,9 +934,47 @@ restart:
 
     root_node = false;
 
+    // Check if one worker sent an early global termination signal
+    const int64_t early_termination_lp_iterations =
+        mipdata_->worker_lp_iterations_stop.load(std::memory_order_relaxed);
+    HighsInt early_terminated_worker = -1;
+    if (early_termination_lp_iterations !=
+        std::numeric_limits<int64_t>::max()) {
+      for (const HighsInt i : search_indices) {
+        if (mipdata_->workers[i].early_termination &&
+            mipdata_->workers[i].search_ptr_->lpiterations ==
+                early_termination_lp_iterations) {
+          early_terminated_worker = i;
+          break;
+        }
+      }
+      assert(early_terminated_worker != -1);
+      if (early_terminated_worker == -1) {
+        mipdata_->worker_lp_iterations_stop.store(
+            std::numeric_limits<int64_t>::max(), std::memory_order_relaxed);
+        for (const HighsInt i : search_indices) {
+          mipdata_->workers[i].early_termination = false;
+        }
+      } else {
+        // Clear all buffered solve information from workers that are not
+        // the earliest to terminate
+        for (const HighsInt i : search_indices) {
+          if (i == early_terminated_worker) continue;
+          HighsMipWorker& worker = mipdata_->workers[i];
+          worker.nodequeue.clear();
+          worker.search_ptr_->resetStatistics();
+          worker.resetHeurStats();
+          worker.resetSepaStats();
+          worker.solutions_.clear();
+        }
+        search_indices.clear();
+        search_indices.emplace_back(early_terminated_worker);
+      }
+    }
+
     // Sync statistics, check infeasibility, and flush nodes from worker queues
     bool infeasible = false;
-    for (HighsInt i : search_indices) {
+    for (const HighsInt i : search_indices) {
       HighsMipWorker& worker = mipdata_->workers[i];
       if (worker.getGlobalDomain().infeasible()) {
         infeasible = true;
@@ -957,13 +1001,15 @@ restart:
       break;
     }
 
-    mipdata_->updateLowerBound(std::min(
-        mipdata_->upper_bound, mipdata_->nodequeue.getBestLowerBound()));
-
     syncSolutions();
 
+    if (early_terminated_worker == -1) {
+      mipdata_->updateLowerBound(std::min(
+          mipdata_->upper_bound, mipdata_->nodequeue.getBestLowerBound()));
+    }
+
     limit_reached = mipdata_->checkLimits();
-    if (limit_reached) {
+    if (limit_reached || early_terminated_worker != -1) {
       mipdata_->printDisplayLine();
       break;
     }
