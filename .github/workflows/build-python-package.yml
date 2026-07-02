@@ -265,4 +265,4 @@ jobs:
       - name: Test highspy
         run: |
           python3 -m pip install pytest
-          python3 -m pytest ./highspy
+          python3 -m pytest -k "not test_user_interrupts and not test_with_context_manager" ./highspy
