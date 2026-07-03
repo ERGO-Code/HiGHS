@@ -34,8 +34,8 @@ struct MatrixBase {
     if (isOracle()) {
       // Meed local copy of dim_ since mat_vec_seq is const
       HighsInt dim = oracle_.dim_;
-      oracle_.productScatteredX(other.value.data(), other.num_nz, other.index.data(), 
-				target.value.data(), dim, nullptr);
+      oracle_.productScatteredX(other.num_nz, other.index.data(), other.value.data(), dim, nullptr, 
+				target.value.data());
     } else {
       for (HighsInt i = 0; i < other.num_nz; i++) {
 	HighsInt col = other.index[i];

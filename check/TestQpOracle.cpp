@@ -21,11 +21,11 @@ bool vectorsEqual(const HighsInt dim, double* v0, double* v1);
 // values of x are scattered in x_value
 //
 // If x_index is not a null pointer, it is assumed that there
-// are x_index_size values of x, packed in x_value, with the
+// are x_num_entries values of x, packed in x_value, with the
 // corresponding indices in x_index.
 //
-// If q_x_index is not a null pointer, and q_x_index_size is
-// non-negative, then it is assumed that only the q_x_index_size
+// If q_x_index is not a null pointer, and q_x_num_entries is
+// non-negative, then it is assumed that only the q_x_num_entries
 // indices in q_x_index of the result are needed. Typical use
 // case: getting an individual Hessian entry - particularly the
 // diagonal
@@ -36,19 +36,19 @@ bool vectorsEqual(const HighsInt dim, double* v0, double* v1);
 // values of Qx are scattered in q_x_value. Typical use case:
 // forming the full vector Qx
 //
-// If q_x_index is not a null pointer, and q_x_index_size was
+// If q_x_index is not a null pointer, and q_x_num_entries was
 // non-negative on entry, then the values of Qx corresponding to
 // q_x_index are packed in q_x_value. Typical use case: getting
 // an individual Hessian entry - particularly the diagonal
 //
-// If q_x_index is not a null pointer, and q_x_index_size was
+// If q_x_index is not a null pointer, and q_x_num_entries was
 // negative on entry, then the values of Qx are packed in
 // q_x_value, with corresponding indices in q_x_index. Typical
 // use case: getting a column of the Hessian
 
 HighsHessianFunctionType oracleCallTriangularHessian =
-    [](const double* x_value, const HighsInt x_index_size, const HighsInt* x_index,
-       double* q_x_value, HighsInt& q_x_index_size, HighsInt* q_x_index,
+    [](const HighsInt x_num_entries, const HighsInt* x_index, const double* x_value,
+       HighsInt& q_x_num_entries, HighsInt* q_x_index, double* q_x_value,
        void* hessian_p) {
 
       assert(x_value != nullptr);
@@ -63,11 +63,11 @@ HighsHessianFunctionType oracleCallTriangularHessian =
       assert(hessian.format_ == HessianFormat::kTriangular);
       // With a triangular Hessian, have to scatter any packed values
       // of x unless only one Qx index is required
-      const bool scatter = x_index != nullptr && (q_x_index == nullptr || q_x_index_size != 1);
+      const bool scatter = x_index != nullptr && (q_x_index == nullptr || q_x_num_entries != 1);
       std::vector<double>scattered_x;
       if (scatter) {
 	scattered_x.assign(hessian.dim_, 0);
-	for (HighsInt iX = 0; iX < x_index_size; iX++)
+	for (HighsInt iX = 0; iX < x_num_entries; iX++)
 	  scattered_x[x_index[iX]] = x_value[iX];
       }
       const double* use_x_value = scatter ? scattered_x.data() : x_value;
@@ -90,41 +90,41 @@ HighsHessianFunctionType oracleCallTriangularHessian =
 	for (HighsInt iCol = 0; iCol < hessian.dim_; iCol++) 
 	  addScaledQcol(iCol);
 	return;
-      } else if (x_index_size > 1) {
-	// x is sparse with x_index_size entries in rows x_index, and
+      } else if (x_num_entries > 1) {
+	// x is sparse with x_num_entries entries in rows x_index, and
 	// no Qx indices required
 	assert(q_x_index == nullptr);
 	zeroQx(hessian.dim_);
-	for (HighsInt iX = 0; iX < x_index_size; iX++) 
+	for (HighsInt iX = 0; iX < x_num_entries; iX++) 
 	  addScaledQcol(x_index[iX]);
 	return;
-      } else if (x_index_size == 1) {
+      } else if (x_num_entries == 1) {
 	assert(q_x_index != nullptr);
-	if (q_x_index_size < 0) {
+	if (q_x_num_entries < 0) {
 	  // x is sparse with one entry in row x_index, and all Qx index
 	  // required
-	  q_x_index_size = 0;
+	  q_x_num_entries = 0;
 	  // Get the entries below the diagonal in column iCol
 	  HighsInt iCol = x_index[0];
 	  for (HighsInt iEl = hessian.start_[iCol]; iEl <hessian.start_[iCol+1]; iEl++) {
-	    q_x_index[q_x_index_size] = hessian.index_[iEl];
-	    q_x_value[q_x_index_size] = hessian.value_[iEl];
-	    q_x_index_size++;
+	    q_x_index[q_x_num_entries] = hessian.index_[iEl];
+	    q_x_value[q_x_num_entries] = hessian.value_[iEl];
+	    q_x_num_entries++;
 	  }
 	  // Get the entries in row iCol in previous columns
 	  for (HighsInt iCol = 0; iCol < x_index[0]; iCol++) {
 	    for (HighsInt iEl = hessian.start_[iCol]; iEl <hessian.start_[iCol+1]; iEl++) {
 	      HighsInt iRow = hessian.index_[iEl];
 	      if (iRow == x_index[0]) {
-		q_x_index[q_x_index_size] = hessian.index_[iEl];
-		q_x_value[q_x_index_size] = hessian.value_[iEl];
-		q_x_index_size++;
+		q_x_index[q_x_num_entries] = hessian.index_[iEl];
+		q_x_value[q_x_num_entries] = hessian.value_[iEl];
+		q_x_num_entries++;
 		break;
 	      }
 	    }
 	  }
 	  return;
-	} else if (q_x_index_size == 1) {
+	} else if (q_x_num_entries == 1) {
 	  // x is sparse with one entry in row x_index, and one Qx index
 	  // required
 	  // With a triangular Hessian, need to identify which column to
@@ -148,8 +148,8 @@ HighsHessianFunctionType oracleCallTriangularHessian =
     };
 
 HighsHessianFunctionType oracleCallSquareHessian =
-    [](const double* x_value, const HighsInt x_index_size, const HighsInt* x_index,
-       double* q_x_value, HighsInt& q_x_index_size, HighsInt* q_x_index,
+    [](const HighsInt x_num_entries, const HighsInt* x_index, const double* x_value, 
+       HighsInt& q_x_num_entries, HighsInt* q_x_index, double* q_x_value, 
        void* hessian_p) {
 
       assert(x_value != nullptr);
@@ -179,29 +179,29 @@ HighsHessianFunctionType oracleCallSquareHessian =
 	for (HighsInt iCol = 0; iCol < hessian.dim_; iCol++) 
 	  addScaledQcol(iCol);
 	return;
-      } else if (x_index_size > 1) {
-	// x is sparse with x_index_size entries in rows x_index, and
+      } else if (x_num_entries > 1) {
+	// x is sparse with x_num_entries entries in rows x_index, and
 	// no Qx indices required
 	assert(q_x_index == nullptr);
 	zeroQx(hessian.dim_);
-	for (HighsInt iX = 0; iX < x_index_size; iX++) 
+	for (HighsInt iX = 0; iX < x_num_entries; iX++) 
 	  addScaledQcol(x_index[iX]);
 	return;
-      } else if (x_index_size == 1) {
+      } else if (x_num_entries == 1) {
 	assert(q_x_index != nullptr);
-	if (q_x_index_size < 0) {
+	if (q_x_num_entries < 0) {
 	  // x is sparse with one entry in row x_index, and all Qx index
 	  // required
-	  q_x_index_size = 0;
+	  q_x_num_entries = 0;
 	  // Get the entries below the diagonal in column iCol
 	  HighsInt iCol = x_index[0];
 	  for (HighsInt iEl = hessian.start_[iCol]; iEl <hessian.start_[iCol+1]; iEl++) {
-	    q_x_index[q_x_index_size] = hessian.index_[iEl];
-	    q_x_value[q_x_index_size] = hessian.value_[iEl];
-	    q_x_index_size++;
+	    q_x_index[q_x_num_entries] = hessian.index_[iEl];
+	    q_x_value[q_x_num_entries] = hessian.value_[iEl];
+	    q_x_num_entries++;
 	  }
 	  return;
-	} else if (q_x_index_size == 1) {
+	} else if (q_x_num_entries == 1) {
 	  // x is sparse with one entry in row x_index, and one Qx index
 	  // required
 	  HighsInt iCol = x_index[0];
