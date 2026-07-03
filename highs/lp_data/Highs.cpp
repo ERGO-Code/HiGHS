@@ -3708,6 +3708,20 @@ HighsStatus Highs::assessPrimalSolution(bool& valid, bool& integral,
                                 integral, feasible);
 }
 
+std::string Highs::highsStatusToString(const HighsStatus status) const {
+  switch (status) {
+    case HighsStatus::kOk:
+      return "Ok";
+    case HighsStatus::kWarning:
+      return "Warning";
+    case HighsStatus::kError:
+      return "Error";
+    default:
+      assert(1 == 0);
+      return "Unrecognised Highs status";
+  }
+}
+
 std::string Highs::presolveStatusToString(
     const HighsPresolveStatus presolve_status) const {
   switch (presolve_status) {

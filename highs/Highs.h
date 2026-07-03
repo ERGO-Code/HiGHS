@@ -1319,6 +1319,7 @@ class Highs {
   /**
    * @brief Interpret common qualifiers to string values
    */
+  std::string highsStatusToString(const HighsStatus status) const;
   std::string presolveStatusToString(
       const HighsPresolveStatus presolve_status) const;
   std::string modelStatusToString(const HighsModelStatus model_status) const;

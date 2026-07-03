@@ -291,9 +291,9 @@ TEST_CASE("hessian-oracle-check", "[qpsolver]") {
       }
     }
     if (square) {
-      // Test the asymmetry check by replacing the zero (2, 4) entry
-      // with a nonzero, and then perturbing the (0, 3) entry by less
-      // than the asymmetry tolerance
+      // Test the asymmetry check:
+      //
+      // By replacing the zero (2, 4) entry with a nonzero
       HighsInt zero_el = square_hessian.numNz();
       HighsInt zero_entry_row = 2;
       HighsInt zero_entry_col = 4;
@@ -304,6 +304,7 @@ TEST_CASE("hessian-oracle-check", "[qpsolver]") {
       square_hessian.index_.push_back(zero_entry_row);
       square_hessian.value_.push_back(1.0);
       if (dev_run) square_hessian.print("Added nonzero");
+      // Asymmetry yields error
       REQUIRE(h.checkHessianOracle(true) == HighsStatus::kError);
 
       // Remove the nonzero from the (2, 4) entry
@@ -312,6 +313,8 @@ TEST_CASE("hessian-oracle-check", "[qpsolver]") {
       square_hessian.value_.resize(zero_el);
       if (dev_run) square_hessian.print("Reversion 0");
 
+      // By perturbing the (0, 3) entry by less than the asymmetry
+      // tolerance
       HighsInt nonzero_entry_row = 0;
       HighsInt nonzero_entry_col = 3;
       HighsInt nonzero_el = -1;
@@ -330,7 +333,9 @@ TEST_CASE("hessian-oracle-check", "[qpsolver]") {
 
       square_hessian.value_[nonzero_el] += 0.5 * kSquareHessianAsymmetryTolerance;
       if (dev_run) square_hessian.print("Perturbed nonzero");
+      // Perturbed nonzero yields warning
       REQUIRE(h.checkHessianOracle() == HighsStatus::kWarning);
+      // Restore the nonzero value
       square_hessian.value_[nonzero_el] = nonzero_value;
 
       if (dev_run) square_hessian.print("Reversion 1");
@@ -338,7 +343,10 @@ TEST_CASE("hessian-oracle-check", "[qpsolver]") {
       
     }
     // Oracle should be OK
-    REQUIRE(h.checkHessianOracle() == HighsStatus::kOk);
+    const HighsStatus status = h.checkHessianOracle();
+    printf("Check for %s Hessian oracle has status %s\n", square ? "square" : "triangular",
+	   h.highsStatusToString(status).c_str());
+    REQUIRE(status == HighsStatus::kOk);
   }
 }
 

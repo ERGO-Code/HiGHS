@@ -440,14 +440,14 @@ HighsStatus HighsHessian::checkOracle(const HighsLogOptions& log_options,
   };
   
   auto isZero = [&](double* v) {
-    bool error_found = false;
+    bool is_zero = true;
     for (HighsInt iCol = 0; iCol < dim; iCol++) {
       if (v[iCol]) {
-	error_found = true;
+	is_zero = false;
 	v[iCol] = 0;
       }
     }
-    return error_found;
+    return is_zero;
   };
   
   auto packedVectorsEqual = [&](HighsInt& v0_num_entries, const HighsInt* v0_index, double* v0_value, HighsInt& v1_num_entries, const HighsInt* v1_index, 
@@ -456,12 +456,12 @@ HighsStatus HighsHessian::checkOracle(const HighsLogOptions& log_options,
     std::vector<double> v1(dim, 0);
     scatterValues(v0.data(), v0_num_entries, v0_index, v0_value);
     scatterValues(v1.data(), v1_num_entries, v1_index, v1_value);
-    bool error_found = !vectorsEqual(dim, v0.data(), v1.data());
+    bool packed_values_equal = vectorsEqual(dim, v0.data(), v1.data());
     zeroScatteredValues(v0.data(), v0_num_entries, v0_index);
-    zeroScatteredValues(v0.data(), v0_num_entries, v0_index);
-    error_found = isZero(v0.data()) || error_found;
-    error_found = isZero(v1.data()) || error_found;
-    return error_found;
+    zeroScatteredValues(v1.data(), v1_num_entries, v1_index);
+    packed_values_equal = isZero(v0.data()) && packed_values_equal;
+    packed_values_equal = isZero(v1.data()) && packed_values_equal;
+    return packed_values_equal;
   };
 
   std::vector<double> column;
