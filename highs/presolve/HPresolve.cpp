@@ -6942,6 +6942,11 @@ HPresolve::Result HPresolve::fourierMotzkin(
   // max. absolute coefficient
   const double maxCoef = 1e3;
 
+  // sentinel row indices for variable bounds and objective row
+  const HighsInt kUpperBoundRow = -2;
+  const HighsInt kLowerBoundRow = -3;
+  const HighsInt kObjectiveRow = -4;
+
   // structs
   struct Heap {
     struct Entry {
@@ -7065,11 +7070,6 @@ HPresolve::Result HPresolve::fourierMotzkin(
     if (logging_on) analysis_.stopPresolveRuleLog(kPresolveRuleFourierMotzkin);
     return checkLimits(postsolve_stack);
   };
-
-  // sentinel row indices for variable bounds and objective row
-  const HighsInt kUpperBoundRow = -2;
-  const HighsInt kLowerBoundRow = -3;
-  const HighsInt kObjectiveRow = -4;
 
   auto acceptCoef = [&](double val) {
     double absval = std::abs(val);
