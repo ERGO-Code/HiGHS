@@ -200,45 +200,50 @@ Int KktMatrix::buildNEvalues(const std::vector<double>& scaling) {
 
   valNE.resize(rowsNE.size());
 
-  std::vector<double> work(m, 0.0);
+  highs::parallel::for_each(
+      0, m,
+      [&](Int start, Int end) {
+        std::vector<double> work(m, 0.0);
 
-  for (Int row = 0; row < m; ++row) {
-    // go along the entries of the row, and then down each column.
-    // this builds the lower triangular part of the row-th column of AAt.
+        for (Int row = start; row < end; ++row) {
+          // go along the entries of the row, and then down each column.
+          // this builds the lower triangular part of the row-th column of AAt.
 
-    for (Int el = ptrA_rw[row]; el < ptrA_rw[row + 1]; ++el) {
-      Int col = idxA_rw[el];
-      Int corr = corr_A[el];
+          for (Int el = ptrA_rw[row]; el < ptrA_rw[row + 1]; ++el) {
+            Int col = idxA_rw[el];
+            Int corr = corr_A[el];
 
-      double denom = scaling.empty() ? 1.0 : scaling[col];
-      denom += regul.primal;
-      if (model.qp()) denom += model.sense() * Q.diag(col);
+            double denom = scaling.empty() ? 1.0 : scaling[col];
+            denom += regul.primal;
+            if (model.qp()) denom += model.sense() * Q.diag(col);
 
-      const double mult = 1.0 / denom;
-      const double row_value = mult * A.value_[corr];
+            const double mult = 1.0 / denom;
+            const double row_value = mult * A.value_[corr];
 
-      // for each nonzero in the row, go down corresponding column, starting
-      // from current position
-      for (Int colEl = corr; colEl < A.start_[col + 1]; ++colEl) {
-        Int row2 = A.index_[colEl];
+            // for each nonzero in the row, go down corresponding column,
+            // starting from current position
+            for (Int colEl = corr; colEl < A.start_[col + 1]; ++colEl) {
+              Int row2 = A.index_[colEl];
 
-        // row2 is guaranteed to be larger or equal than row
-        // (provided that the columns of A are sorted)
+              // row2 is guaranteed to be larger or equal than row
+              // (provided that the columns of A are sorted)
 
-        // compute and accumulate value
-        double value = row_value * A.value_[colEl];
-        work[row2] += value;
-      }
-    }
-    // intersection of row with rows below finished.
+              // compute and accumulate value
+              double value = row_value * A.value_[colEl];
+              work[row2] += value;
+            }
+          }
+          // intersection of row with rows below finished.
 
-    // read from work, using indices of column "row" of AAt
-    for (Int el = ptrNE[row]; el < ptrNE[row + 1]; ++el) {
-      Int index = rowsNE[el];
-      valNE[el] = work[index];
-      work[index] = 0.0;
-    }
-  }
+          // read from work, using indices of column "row" of AAt
+          for (Int el = ptrNE[row]; el < ptrNE[row + 1]; ++el) {
+            Int index = rowsNE[el];
+            valNE[el] = work[index];
+            work[index] = 0.0;
+          }
+        }
+      },
+      kParallelNEGrainsize);
 
   info.matrix_time += clock.stop();
 
