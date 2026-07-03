@@ -6008,18 +6008,19 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
             applyConflictGraphSubstitutions(postsolve_stack, numDelCol));
       }
 
+      HighsInt numColsEliminatedFourierMotzkin = 0;
       if (tryFourierMotzkin &&
-          analysis_.allow_rule_[kPresolveRuleFourierMotzkin]) {
-        HighsInt numColsEliminated;
+          analysis_.allow_rule_[kPresolveRuleFourierMotzkin])
         HPRESOLVE_CHECKED_CALL(
-            fourierMotzkin(postsolve_stack, numColsEliminated));
-        tryFourierMotzkin = numColsEliminated > 0;
-      }
+            fourierMotzkin(postsolve_stack, numColsEliminatedFourierMotzkin));
 
       if (analysis_.allow_rule_[kPresolveRuleAggregator])
         HPRESOLVE_CHECKED_CALL(aggregator(postsolve_stack));
 
-      if (problemSizeReduction() > 0.05) continue;
+      // check if there were reductions
+      bool haveReductions = problemSizeReduction() > 0.05;
+      tryFourierMotzkin = haveReductions || numColsEliminatedFourierMotzkin > 0;
+      if (haveReductions) continue;
 
       if (trySparsify && analysis_.allow_rule_[kPresolveRuleSparsify]) {
         HighsInt numNz = numNonzeros();
