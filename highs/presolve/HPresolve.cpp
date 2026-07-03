@@ -5978,6 +5978,7 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
         mipsolver != nullptr || !options->lp_presolve_requires_basis_postsolve;
 #endif
     bool tryProbing = mipsolver != nullptr;
+    bool tryFourierMotzkin = true;
 
     HighsInt numCliquesBeforeProbing = -1;
     bool domcolAfterProbingCalled = false;
@@ -6007,8 +6008,12 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
             applyConflictGraphSubstitutions(postsolve_stack, numDelCol));
       }
 
-      if (analysis_.allow_rule_[kPresolveRuleFourierMotzkin])
+      if (tryFourierMotzkin &&
+          analysis_.allow_rule_[kPresolveRuleFourierMotzkin]) {
+        storeCurrentProblemSize();
         HPRESOLVE_CHECKED_CALL(fourierMotzkin(postsolve_stack));
+        tryFourierMotzkin = problemSizeReduction() > 0.0;
+      }
 
       if (analysis_.allow_rule_[kPresolveRuleAggregator])
         HPRESOLVE_CHECKED_CALL(aggregator(postsolve_stack));
@@ -7425,7 +7430,7 @@ HPresolve::Result HPresolve::fourierMotzkin(
         iPlus.reserve(model->num_row_);
         iMinus.reserve(model->num_row_);
         affectedCols.reserve(model->num_col_);
-        // inspect candidates
+        // inspect candidates (with limits)
         HighsInt numFails = 0;
         for (HighsInt col : candidates) {
           int64_t neRed;
