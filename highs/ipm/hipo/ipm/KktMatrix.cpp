@@ -196,7 +196,7 @@ Int KktMatrix::buildNEstructure() {
           }
         }
       },
-      kParallelNEGrainsize);
+      kParallelNEStructGrainsize);
 
   if (overflow) return kErrorOverflow;
 
@@ -267,7 +267,7 @@ Int KktMatrix::buildNEvalues(const std::vector<double>& scaling) {
           }
         }
       },
-      kParallelNEGrainsize);
+      kParallelNEValuesGrainsize);
 
   info.matrix_time += clock.stop();
 
