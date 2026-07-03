@@ -77,8 +77,8 @@ HighsHessianFunctionType oracleCallTriangularHessian =
 	HighsInt iEl = hessian.start_[iCol];
 	for (HighsInt iEl = hessian.start_[iCol]; iEl < hessian.start_[iCol+1]; iEl++) {
 	  HighsInt iRow = hessian.index_[iEl];
-	  q_x_value[iRow] += hessian.value_[iEl] * use_x_value[iRow];
-	  if (iRow != iCol) q_x_value[iCol] += hessian.value_[iEl] * use_x_value[iCol];
+	  q_x_value[iRow] += hessian.value_[iEl] * use_x_value[iCol];
+	  if (iRow != iCol) q_x_value[iCol] += hessian.value_[iEl] * use_x_value[iRow];
 	}
       };
 
@@ -104,20 +104,20 @@ HighsHessianFunctionType oracleCallTriangularHessian =
 	  // x is sparse with one entry in row x_index, and all Qx index
 	  // required
 	  q_x_num_entries = 0;
-	  // Get the entries below the diagonal in column iCol
+	  // Get the entries below the diagonal in column x_index[0]
 	  HighsInt iCol = x_index[0];
 	  for (HighsInt iEl = hessian.start_[iCol]; iEl <hessian.start_[iCol+1]; iEl++) {
 	    q_x_index[q_x_num_entries] = hessian.index_[iEl];
-	    q_x_value[q_x_num_entries] = hessian.value_[iEl];
+	    q_x_value[q_x_num_entries] = hessian.value_[iEl] * use_x_value[iCol];
 	    q_x_num_entries++;
 	  }
-	  // Get the entries in row iCol in previous columns
+	  // Get the entries in row x_index[0] in previous columns
 	  for (HighsInt iCol = 0; iCol < x_index[0]; iCol++) {
 	    for (HighsInt iEl = hessian.start_[iCol]; iEl <hessian.start_[iCol+1]; iEl++) {
 	      HighsInt iRow = hessian.index_[iEl];
 	      if (iRow == x_index[0]) {
-		q_x_index[q_x_num_entries] = hessian.index_[iEl];
-		q_x_value[q_x_num_entries] = hessian.value_[iEl];
+		q_x_index[q_x_num_entries] = iCol;
+		q_x_value[q_x_num_entries] = hessian.value_[iEl] * use_x_value[iRow];
 		q_x_num_entries++;
 		break;
 	      }
@@ -135,7 +135,7 @@ HighsHessianFunctionType oracleCallTriangularHessian =
 	  q_x_value[0] = 0;
 	  for (HighsInt iEl = hessian.start_[iCol]; iEl <hessian.start_[iCol+1]; iEl++) {
 	    if (hessian.index_[iEl] == iRow) {
-	      q_x_value[0] = use_x_value[0] * hessian.value_[iEl];
+	      q_x_value[0] = hessian.value_[iEl] * use_x_value[0];
 	      return;
 	    }
 	  }
@@ -197,7 +197,7 @@ HighsHessianFunctionType oracleCallSquareHessian =
 	  HighsInt iCol = x_index[0];
 	  for (HighsInt iEl = hessian.start_[iCol]; iEl <hessian.start_[iCol+1]; iEl++) {
 	    q_x_index[q_x_num_entries] = hessian.index_[iEl];
-	    q_x_value[q_x_num_entries] = hessian.value_[iEl];
+	    q_x_value[q_x_num_entries] = hessian.value_[iEl] * x_value[0];
 	    q_x_num_entries++;
 	  }
 	  return;
@@ -210,7 +210,7 @@ HighsHessianFunctionType oracleCallSquareHessian =
 	  q_x_value[0] = 0;
 	  for (HighsInt iEl = hessian.start_[iCol]; iEl <hessian.start_[iCol+1]; iEl++) {
 	    if (hessian.index_[iEl] == iRow) {
-	      q_x_value[0] = x_value[0] * hessian.value_[iEl];
+	      q_x_value[0] = hessian.value_[iEl] * x_value[0];
 	      return;
 	    }
 	  }

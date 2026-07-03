@@ -521,7 +521,7 @@ HighsStatus HighsHessian::checkOracle(const HighsLogOptions& log_options,
   std::vector<double> check_q_x_value(dim, 0);
   HighsRandom random;
   for (HighsInt iCol = 0; iCol < dim; iCol++) {
-    x_value[iCol] = random.fraction();
+    x_value[iCol] = random.fraction();//-1.0;//
     for (HighsInt iEl = hessian.start_[iCol]; iEl < hessian.start_[iCol+1]; iEl++) 
       check_q_x_value[hessian.index_[iEl]] += hessian.value_[iEl] * x_value[iCol];
   }
@@ -546,7 +546,7 @@ HighsStatus HighsHessian::checkOracle(const HighsLogOptions& log_options,
     check_q_x_value.assign(dim, 0);
     for (HighsInt iCol = 0; iCol < dim; iCol++) {
       HighsInt x_nonzero_location = scattered ? iCol : 0;
-      x_value[x_nonzero_location] = 1.0;//random.fraction();
+      x_value[x_nonzero_location] = random.fraction();
       x_index[0] = iCol;
       HighsInt check_q_x_num_entries = 0;
       for (HighsInt iEl = hessian.start_[iCol]; iEl < hessian.start_[iCol+1]; iEl++) {
