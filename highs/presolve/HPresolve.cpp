@@ -6942,6 +6942,11 @@ HPresolve::Result HPresolve::fourierMotzkin(
   // max. absolute coefficient
   const double maxCoef = 1e3;
 
+  // max. number of consecutive failures (while trying to build the heap)
+  const HighsInt maxNumFails = 100;
+  // max. size of the heap
+  const HighsInt maxHeapSize = 10000;
+
   // sentinel row indices for variable bounds and objective row
   const HighsInt kUpperBoundRow = -2;
   const HighsInt kLowerBoundRow = -3;
@@ -6959,6 +6964,7 @@ HPresolve::Result HPresolve::fourierMotzkin(
     std::vector<HighsInt> pos;
 
     bool empty() const { return entries.empty(); }
+    HighsInt size() const { return static_cast<HighsInt>(entries.size()); }
     HighsInt top() const { return entries[0].col; }
     bool contains(HighsInt col) const { return pos[col] != -1; }
 
@@ -7002,8 +7008,6 @@ HPresolve::Result HPresolve::fourierMotzkin(
     }
 
    private:
-    HighsInt size() const { return static_cast<HighsInt>(entries.size()); }
-
     bool better(HighsInt i, HighsInt j) const {
       if (entries[i].neRed != entries[j].neRed)
         return entries[i].neRed > entries[j].neRed;
@@ -7422,6 +7426,7 @@ HPresolve::Result HPresolve::fourierMotzkin(
         iMinus.reserve(model->num_row_);
         affectedCols.reserve(model->num_col_);
         // inspect candidates
+        HighsInt numFails = 0;
         for (HighsInt col : candidates) {
           int64_t neRed;
           int64_t mrRed;
@@ -7429,9 +7434,15 @@ HPresolve::Result HPresolve::fourierMotzkin(
               checkNonZeros(col, objRowCols, iPlus, iMinus, pPlus, pMinus,
                             affectedCols, neRed, mrRed);
           affectedCols.clear();
-          if (!elimCandidate || !isReduction(neRed, mrRed)) continue;
+          if (!elimCandidate || !isReduction(neRed, mrRed)) {
+            // count number of failures
+            if (++numFails > maxNumFails) break;
+            continue;
+          }
           // add to heap
+          numFails = 0;
           heap.push(col, neRed, mrRed);
+          if (heap.size() >= maxHeapSize) break;
         }
         if (heap.empty()) return false;
         // heapify
