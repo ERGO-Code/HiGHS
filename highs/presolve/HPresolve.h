@@ -475,7 +475,8 @@ class HPresolve {
 
   Result aggregator(HighsPostsolveStack& postsolve_stack);
 
-  Result fourierMotzkin(HighsPostsolveStack& postsolve_stack);
+  Result fourierMotzkin(HighsPostsolveStack& postsolve_stack,
+                        HighsInt& numColsEliminated);
 
   Result removeRowSingletons(HighsPostsolveStack& postsolve_stack);
 

@@ -6010,9 +6010,10 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
 
       if (tryFourierMotzkin &&
           analysis_.allow_rule_[kPresolveRuleFourierMotzkin]) {
-        storeCurrentProblemSize();
-        HPRESOLVE_CHECKED_CALL(fourierMotzkin(postsolve_stack));
-        tryFourierMotzkin = problemSizeReduction() > 0.0;
+        HighsInt numColsEliminated;
+        HPRESOLVE_CHECKED_CALL(
+            fourierMotzkin(postsolve_stack, numColsEliminated));
+        tryFourierMotzkin = numColsEliminated > 0;
       }
 
       if (analysis_.allow_rule_[kPresolveRuleAggregator])
@@ -6935,7 +6936,7 @@ HPresolve::Result HPresolve::aggregator(HighsPostsolveStack& postsolve_stack) {
 }
 
 HPresolve::Result HPresolve::fourierMotzkin(
-    HighsPostsolveStack& postsolve_stack) {
+    HighsPostsolveStack& postsolve_stack, HighsInt& numColsEliminated) {
   assert(analysis_.allow_rule_[kPresolveRuleFourierMotzkin]);
   const bool logging_on = analysis_.logging_on_;
   if (logging_on) analysis_.startPresolveRuleLog(kPresolveRuleFourierMotzkin);
@@ -7542,8 +7543,8 @@ HPresolve::Result HPresolve::fourierMotzkin(
   std::vector<HighsInt> saveAffectedCols;
 
   // counters for numbers of eliminations
-  HighsInt numColsEliminated = 0;
-  HighsInt numColsEliminatedTotal = 0;
+  numColsEliminated = 0;
+  HighsInt numColsEliminatedBlock = 0;
   HighsInt numRowsEliminated = 0;
   HighsInt numRowsAdded = 0;
 
@@ -7569,10 +7570,10 @@ HPresolve::Result HPresolve::fourierMotzkin(
       // reformulateObjective pushes other reductions onto the data stack
       if (!blockSteps.empty()) {
         postsolve_stack.fourierMotzkinBlockFinalise(blockSteps, rowAncestry);
-        printLog(numColsEliminated, numRowsEliminated, numRowsAdded);
+        printLog(numColsEliminatedBlock, numRowsEliminated, numRowsAdded);
         blockSteps.clear();
         rowAncestry.clear();
-        numColsEliminated = 0;
+        numColsEliminatedBlock = 0;
         numRowsEliminated = 0;
         numRowsAdded = 0;
       }
@@ -7660,7 +7661,7 @@ HPresolve::Result HPresolve::fourierMotzkin(
 
       // Cernikov redundancy check
       if (cernikovRedundant(mergedOriginals, rowOriginals, nr.plusIndex,
-                            nr.minusIndex, col, numColsEliminatedTotal))
+                            nr.minusIndex, col, numColsEliminated))
         continue;
 
       std::vector<row_entry> entries;
@@ -7716,8 +7717,8 @@ HPresolve::Result HPresolve::fourierMotzkin(
 
     // mark column as deleted
     markColDeleted(col);
+    ++numColsEliminatedBlock;
     ++numColsEliminated;
-    ++numColsEliminatedTotal;
 
     // remove old rows containing col (skip bound rows)
     for (HighsInt rp : iPlus) {
@@ -7765,12 +7766,12 @@ HPresolve::Result HPresolve::fourierMotzkin(
     if (checkLimits(postsolve_stack) != Result::kOk) break;
   }
 
-  if (numColsEliminated > 0) {
+  if (numColsEliminatedBlock > 0) {
     // finalize the FM block
     postsolve_stack.fourierMotzkinBlockFinalise(blockSteps, rowAncestry);
 
     // log message
-    printLog(numColsEliminated, numRowsEliminated, numRowsAdded);
+    printLog(numColsEliminatedBlock, numRowsEliminated, numRowsAdded);
   }
 
   return finalise();

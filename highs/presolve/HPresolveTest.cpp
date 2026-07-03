@@ -46,7 +46,8 @@ HPresolve::Result HPresolve::presolveRuleTestFourierMotzkin(
   highsLogUser(options->log_options, HighsLogType::kInfo,
                "HPresolve::presolveRuleTestFourierMotzkin\n");
 
-  HPresolve::Result result = fourierMotzkin(postsolve_stack);
+  HighsInt numColsEliminated;
+  HPresolve::Result result = fourierMotzkin(postsolve_stack, numColsEliminated);
   if (result != Result::kOk) return result;
 
   highsLogUser(options->log_options, HighsLogType::kInfo,
