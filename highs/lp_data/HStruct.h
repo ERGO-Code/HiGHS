@@ -252,7 +252,13 @@ using HighsHessianFunctionType = std::function<void(
     HighsInt& q_x_index_size, HighsInt* q_x_index, double* q_x_value, void*)>;
 
 struct HessianOracle {
+  // Oracle to obtain values of Q' = multiplier_*Q + shift_*I and form
+  // products with Q', by calling a user-supplied function (call_) to
+  // form products with Q and then apply any non-trivial multiplier_
+  // or shift_
   HighsInt dim_ = 0;
+  HighsInt multiplier_ = 1.0;  // Minimize
+  HighsInt shift_ = 0.0;  // No regularization
   HighsHessianFunctionType call_ = nullptr;
   void* data_ = nullptr;
   void clear();
@@ -267,6 +273,12 @@ struct HessianOracle {
   void productPackedX(const HighsInt x_num_entries, const HighsInt* x_index,
                       const double* x_value, HighsInt& q_x_num_entries,
                       HighsInt* q_x_index, double* q_x_value) const;
+  void scaleAndShift(const HighsInt x_num_entries,
+		     const HighsInt* x_index,
+		     const double* x_value,
+		     HighsInt& q_x_num_entries,
+		     HighsInt* q_x_index,
+		     double* q_x_value) const;
 };
 
 #endif /* LP_DATA_HSTRUCT_H_ */

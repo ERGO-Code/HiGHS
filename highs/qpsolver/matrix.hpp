@@ -20,7 +20,6 @@ struct MatrixBase {
   std::vector<HighsInt> start;
   std::vector<HighsInt> index;
   std::vector<double> value;
-  HighsInt oracle_mu_ = 1.0;  // Minimize
   HessianOracle oracle_;
 
   bool isOracle() const { return oracle_.call_ != nullptr; }

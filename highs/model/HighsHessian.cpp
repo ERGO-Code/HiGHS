@@ -629,6 +629,8 @@ HighsStatus HighsHessian::checkOracle(const HighsLogOptions& log_options,
 
 void HessianOracle::clear() {
   this->dim_ = 0;
+  this->multiplier_ = 1;
+  this->shift_ = 0;
   this->call_ = nullptr;
   this->data_ = nullptr;
 }
@@ -643,6 +645,8 @@ double HessianOracle::entry(const HighsInt i, const HighsInt j) const {
   HighsInt q_x_index = j;
   this->call_(HighsInt(1), &i, &x, q_x_num_entries, &q_x_index, &entry,
               this->data_);
+  entry *= this->multiplier_;
+  if (i == j) entry += this->shift_;
   return entry;
 }
 
@@ -660,6 +664,7 @@ void HessianOracle::product(const double* x_value, double* q_x_value) const {
   HighsInt q_x_num_entries = -1;
   this->call_(this->dim_, nullptr, x_value, q_x_num_entries, nullptr, q_x_value,
               this->data_);
+  this->scaleAndShift(this->dim_, nullptr, x_value, q_x_num_entries, nullptr, q_x_value);
 }
 
 // For scattered, sparse, x
@@ -695,4 +700,41 @@ void HessianOracle::productPackedX(const HighsInt x_num_entries,
   assert(x_index == nullptr || x_num_entries >= 0);
   this->call_(x_num_entries, x_index, x_value, q_x_num_entries, q_x_index,
               q_x_value, this->data_);
+  this->scaleAndShift(x_num_entries, x_index, x_value,
+		      q_x_num_entries, q_x_index, q_x_value);
 }
+
+void HessianOracle::scaleAndShift(const HighsInt x_num_entries,
+				  const HighsInt* x_index,
+				  const double* x_value,
+				  HighsInt& q_x_num_entries,
+				  HighsInt* q_x_index,
+				  double* q_x_value) const {
+  // Compute multiplier_*Qx + scale_*x
+  if (this->multiplier_ != 1.0) {
+    if (q_x_index != nullptr) {
+      assert(q_x_num_entries >= 0);
+      for (HighsInt iX = 0; iX < q_x_num_entries; iX++) 
+	q_x_value[q_x_index[iX]] *= this->multiplier_;
+    } else {
+      for (HighsInt iRow = 0; iRow < this->dim_; iRow++) 
+	q_x_value[iRow] *= this->multiplier_;
+    }
+  }
+  if (this->shift_ != 0.0) {
+    if (q_x_index == nullptr) {
+      if (x_index != nullptr) {
+	assert(x_num_entries >= 0);
+	for (HighsInt iX = 0; iX < x_num_entries; iX++) 
+	  q_x_value[x_index[iX]] += this->shift_ * x_value[iX];
+      } else {
+	for (HighsInt iRow = 0; iRow < this->dim_; iRow++) 
+	  q_x_value[iRow] += this->shift_ * x_value[iRow];
+      }
+    } else {
+      // Qx is packed, so can't easily add in scale_*x
+      assert(1234==5678);
+    }
+  }
+}
+
