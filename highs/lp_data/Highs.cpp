@@ -711,12 +711,13 @@ HighsStatus Highs::passHessian(const HighsInt dim, const HighsInt num_nz,
 }
 
 HighsStatus Highs::passHessian(const HighsInt dim,
-			       HighsHessianFunctionType oracleCall,
+                               HighsHessianFunctionType oracleCall,
                                void* oracle_data) {
   this->model_.hessian_.clear();
   if (dim <= 0) {
     highsLogUser(options_.log_options, HighsLogType::kWarning,
-		 "Ignoring Hessian oracle data since dimension is %d\n", int(dim));
+                 "Ignoring Hessian oracle data since dimension is %d\n",
+                 int(dim));
     return HighsStatus::kWarning;
   }
   this->model_.hessian_.oracle_.dim_ = dim;
@@ -726,7 +727,8 @@ HighsStatus Highs::passHessian(const HighsInt dim,
 }
 
 HighsStatus Highs::checkHessianOracle(const bool exit_on_first_error) const {
-  return this->model_.hessian_.checkOracle(options_.log_options, exit_on_first_error);
+  return this->model_.hessian_.checkOracle(options_.log_options,
+                                           exit_on_first_error);
 }
 
 HighsStatus Highs::passLinearObjectives(
@@ -955,7 +957,9 @@ HighsStatus Highs::writeLocalModel(HighsModel& model,
   } else {
     if (model.hessian_.isOracle()) {
       highsLogUser(options_.log_options, HighsLogType::kError,
-		   "Cannot write QP to an %s file with Hessian represented via an oracle\n", getFilenameExt(filename).c_str());
+                   "Cannot write QP to an %s file with Hessian represented via "
+                   "an oracle\n",
+                   getFilenameExt(filename).c_str());
       return returnFromHighs(HighsStatus::kError);
     }
     Filereader* writer =
@@ -4206,9 +4210,10 @@ HighsStatus Highs::callSolveQp() {
 
   if (use_hipo && hessian.isOracle()) {
     highsLogUser(options_.log_options, HighsLogType::kError,
-		 "Cannot use HiPO for QP with Hessian given by oracle: switching to active set method\n");
+                 "Cannot use HiPO for QP with Hessian given by oracle: "
+                 "switching to active set method\n");
     use_hipo = false;
-  }  
+  }
 
   if (use_hipo) {
     if (this->profiling_) this->profiling_->start(kSubSolverHipo);
@@ -4243,14 +4248,13 @@ HighsStatus Highs::callSolveQp() {
       instance.Q.mat.num_col = lp.num_col_;
       instance.Q.mat.num_row = lp.num_col_;
       triangularToSquareHessian(hessian, instance.Q.mat.start,
-				instance.Q.mat.index, instance.Q.mat.value);
+                                instance.Q.mat.index, instance.Q.mat.value);
     } else {
       assert(hessian.isOracle());
       instance.Q.mat.oracle_ = hessian.oracle_;
       instance.Q.mat.num_col = 0;
       instance.Q.mat.num_row = 0;
     }
-    
 
     for (HighsInt i = 0; i < (HighsInt)instance.c.value.size(); i++) {
       if (instance.c.value[i] != 0.0) {
@@ -4264,12 +4268,12 @@ HighsStatus Highs::callSolveQp() {
         i *= -1.0;
       }
       if (instance.Q.mat.num_col > 0) {
-	for (double& i : instance.Q.mat.value) {
-	  i *= -1.0;
-	}
+        for (double& i : instance.Q.mat.value) {
+          i *= -1.0;
+        }
       } else {
-	instance.Q.mat.oracle_mu_ = -1;
-      }	
+        instance.Q.mat.oracle_mu_ = -1;
+      }
     }
 
     Settings settings;
@@ -4753,7 +4757,7 @@ void Highs::reportModel(const HighsModel& model) {
                   model.hessian_.value_.data());
   } else if (model.hessian_.isOracle()) {
     highsLogUser(options_.log_options, HighsLogType::kInfo,
-		 "Hessian is represented via an oracle\n");
+                 "Hessian is represented via an oracle\n");
   }
 }
 

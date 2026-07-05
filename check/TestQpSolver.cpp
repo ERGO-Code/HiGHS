@@ -1584,4 +1584,3 @@ TEST_CASE("test-qp-atwood", "[qpsolver]") {
   }
   h.resetGlobalScheduler(true);
 }
-

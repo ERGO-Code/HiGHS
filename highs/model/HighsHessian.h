@@ -51,7 +51,7 @@ class HighsHessian {
   double diag(HighsInt i) const;
   HighsHessian toSquare() const;
   HighsStatus checkOracle(const HighsLogOptions& log_options,
-			  const bool exit_on_first_error) const;
+                          const bool exit_on_first_error) const;
   void print(const std::string& message = "") const;
 };
 

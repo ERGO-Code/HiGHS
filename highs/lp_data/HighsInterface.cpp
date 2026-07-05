@@ -112,8 +112,7 @@ void Highs::reportModelStats() const {
       stats_line << "; " << a_num_nz << " nonzero"
                  << (a_num_nz == 1 ? "" : "s");
     }
-    if (hessian.isOracle())
-      stats_line << "; Hessian as oracle";
+    if (hessian.isOracle()) stats_line << "; Hessian as oracle";
     if (num_integer)
       stats_line << "; " << num_integer << " integer variable"
                  << (a_num_nz == 1 ? "" : "s") << " (" << num_binary
@@ -3097,7 +3096,8 @@ HighsStatus Highs::userScale(HighsUserScaleData& data) {
     return HighsStatus::kOk;
   if (this->model_.hessian_.isOracle()) {
     highsLogUser(this->options_.log_options, HighsLogType::kWarning,
-		 "Hessian is represented via an oracle, so user scaling cannot be applied\n");
+                 "Hessian is represented via an oracle, so user scaling cannot "
+                 "be applied\n");
     return HighsStatus::kWarning;
   }
   // User objective and bound scaling data are accumulated in the

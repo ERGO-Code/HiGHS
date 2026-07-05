@@ -9,10 +9,11 @@
  * @brief
  */
 #include "model/HighsHessian.h"
-#include "util/HighsRandom.h"
 
 #include <cassert>
 #include <cstdio>
+
+#include "util/HighsRandom.h"
 
 void HighsHessian::clear() {
   this->dim_ = 0;
@@ -217,12 +218,11 @@ void HighsHessian::alphaProductPlusY(const double alpha,
     assert(static_cast<size_t>(dim) == x.size());
     std::vector<double> q_x(dim, 0);
     this->oracle_.product(x, q_x);
-    for (HighsInt iCol = 0; iCol < dim; iCol++)
-      y[iCol] += alpha * q_x[iCol];
+    for (HighsInt iCol = 0; iCol < dim; iCol++) y[iCol] += alpha * q_x[iCol];
     assert(111 == 888);
     return;
-  }   
-  
+  }
+
   if (this->dim_ <= 0) return;
 
   const bool triangular = this->format_ == HessianFormat::kTriangular;
@@ -378,7 +378,7 @@ HighsHessian HighsHessian::toSquare() const {
 }
 
 HighsStatus HighsHessian::checkOracle(const HighsLogOptions& log_options,
-				      const bool exit_on_first_error) const {
+                                      const bool exit_on_first_error) const {
   if (!this->isOracle()) {
     highsLogUser(log_options, HighsLogType::kError,
                  "Hessian oracle is not defined\n");
@@ -397,13 +397,13 @@ HighsStatus HighsHessian::checkOracle(const HighsLogOptions& log_options,
     for (HighsInt iRow = 0; iRow < dim; iRow++) {
       double value = oracle.entry(iCol, iRow);
       if (value) {
-	hessian.index_.push_back(iRow);
-	hessian.value_.push_back(value);
+        hessian.index_.push_back(iRow);
+        hessian.value_.push_back(value);
       }
     }
     hessian.start_.push_back(static_cast<HighsInt>(hessian.index_.size()));
   }
-  
+
   // Check for symmetry
   double asymmetry;
   HighsInt num_illegal_asymmetry = 0;
@@ -425,33 +425,39 @@ HighsStatus HighsHessian::checkOracle(const HighsLogOptions& log_options,
     }
   };
 
-  auto vectorsEqual = [&](const HighsInt dim, const double* v0, const double* v1) {
-    for (HighsInt iCol = 0; iCol < dim; iCol++) 
+  auto vectorsEqual = [&](const HighsInt dim, const double* v0,
+                          const double* v1) {
+    for (HighsInt iCol = 0; iCol < dim; iCol++)
       if (std::fabs(v0[iCol] - v1[iCol]) > 1e-5) return false;
     return true;
   };
 
-  auto scatterValues = [&](double* v, HighsInt& v_num_entries, const HighsInt* v_index, double* v_value) {
-    for (HighsInt iX = 0; iX < v_num_entries; iX++) v[v_index[iX]] = v_value[iX];
+  auto scatterValues = [&](double* v, HighsInt& v_num_entries,
+                           const HighsInt* v_index, double* v_value) {
+    for (HighsInt iX = 0; iX < v_num_entries; iX++)
+      v[v_index[iX]] = v_value[iX];
   };
-  
-  auto zeroScatteredValues = [&](double* v, HighsInt& v_num_entries, const HighsInt* v_index) {
+
+  auto zeroScatteredValues = [&](double* v, HighsInt& v_num_entries,
+                                 const HighsInt* v_index) {
     for (HighsInt iX = 0; iX < v_num_entries; iX++) v[v_index[iX]] = 0;
   };
-  
+
   auto isZero = [&](double* v) {
     bool is_zero = true;
     for (HighsInt iCol = 0; iCol < dim; iCol++) {
       if (v[iCol]) {
-	is_zero = false;
-	v[iCol] = 0;
+        is_zero = false;
+        v[iCol] = 0;
       }
     }
     return is_zero;
   };
-  
-  auto packedVectorsEqual = [&](HighsInt& v0_num_entries, const HighsInt* v0_index, double* v0_value, HighsInt& v1_num_entries, const HighsInt* v1_index, 
-				double* v1_value) {
+
+  auto packedVectorsEqual = [&](HighsInt& v0_num_entries,
+                                const HighsInt* v0_index, double* v0_value,
+                                HighsInt& v1_num_entries,
+                                const HighsInt* v1_index, double* v1_value) {
     std::vector<double> v0(dim, 0);
     std::vector<double> v1(dim, 0);
     scatterValues(v0.data(), v0_num_entries, v0_index, v0_value);
@@ -467,28 +473,31 @@ HighsStatus HighsHessian::checkOracle(const HighsLogOptions& log_options,
   std::vector<double> column;
   column.assign(dim, 0);
   for (HighsInt iCol = 0; iCol < dim; iCol++) {
-    // Scatter the entries below the diagonal 
-    for (HighsInt iEl = hessian.start_[iCol]; iEl < hessian.start_[iCol+1]; iEl++) {
+    // Scatter the entries below the diagonal
+    for (HighsInt iEl = hessian.start_[iCol]; iEl < hessian.start_[iCol + 1];
+         iEl++) {
       HighsInt iRow = hessian.index_[iEl];
       if (iRow > iCol) column[iRow] = hessian.value_[iEl];
     }
     // Inspect the entries above the diagonal in the row corresponding
     // to this column
-    for (HighsInt iX = iCol+1; iX < dim; iX++) {
-      for (HighsInt iEl = hessian.start_[iX]; iEl < hessian.start_[iX+1]; iEl++) {
-	HighsInt iRow = hessian.index_[iEl];
-	if (iRow == iCol) {
-	  // Found an entry above the diagonal in the row
-	  // corresponding to this column
-	  asymmetry = std::fabs(column[iX] - hessian.value_[iEl]);
-	  asymmetryCheck();
-	  column[iX] = 0;
-	  break;
-	}
+    for (HighsInt iX = iCol + 1; iX < dim; iX++) {
+      for (HighsInt iEl = hessian.start_[iX]; iEl < hessian.start_[iX + 1];
+           iEl++) {
+        HighsInt iRow = hessian.index_[iEl];
+        if (iRow == iCol) {
+          // Found an entry above the diagonal in the row
+          // corresponding to this column
+          asymmetry = std::fabs(column[iX] - hessian.value_[iEl]);
+          asymmetryCheck();
+          column[iX] = 0;
+          break;
+        }
       }
     }
     // Check for missing values in the row corresponding to this column
-    for (HighsInt iEl = hessian.start_[iCol]; iEl < hessian.start_[iCol+1]; iEl++) {
+    for (HighsInt iEl = hessian.start_[iCol]; iEl < hessian.start_[iCol + 1];
+         iEl++) {
       HighsInt iRow = hessian.index_[iEl];
       if (iRow <= iCol) continue;
       asymmetry = std::fabs(column[iRow]);
@@ -521,61 +530,98 @@ HighsStatus HighsHessian::checkOracle(const HighsLogOptions& log_options,
   std::vector<double> check_q_x_value(dim, 0);
   HighsRandom random;
   for (HighsInt iCol = 0; iCol < dim; iCol++) {
-    x_value[iCol] = random.fraction();//-1.0;//
-    for (HighsInt iEl = hessian.start_[iCol]; iEl < hessian.start_[iCol+1]; iEl++) 
-      check_q_x_value[hessian.index_[iEl]] += hessian.value_[iEl] * x_value[iCol];
+    x_value[iCol] = random.fraction();  //-1.0;//
+    for (HighsInt iEl = hessian.start_[iCol]; iEl < hessian.start_[iCol + 1];
+         iEl++)
+      check_q_x_value[hessian.index_[iEl]] +=
+          hessian.value_[iEl] * x_value[iCol];
   }
 
   std::vector<double> q_x_value(dim);
   oracle.product(x_value, q_x_value);
   if (!vectorsEqual(dim, q_x_value.data(), check_q_x_value.data())) {
-    highsLogUser(log_options, HighsLogType::kError,
-                 "Hessian oracle product with std::vector: values are incorrect\n");
+    highsLogUser(
+        log_options, HighsLogType::kError,
+        "Hessian oracle product with std::vector: values are incorrect\n");
     if (exit_on_first_error) return HighsStatus::kError;
     error_found = true;
   }
 
   // Test product from a scattered (k=0) or packed (k=1), sparse, x
   x_value.assign(dim, 0);
+  std::vector<HighsInt> x_index(dim);
+  std::vector<HighsInt> q_x_index(dim);
+  std::vector<HighsInt> check_q_x_index(dim, 0);
+  //  std::vector<double> q_q_x_value(dim, 0);
+  //  std::vector<HighsInt> q_q_x_index(dim, 0);
+  //  std::vector<double> check_q_q_x_value(dim, 0);
+  //  std::vector<HighsInt> check_q_q_x_index(dim, 0);
   for (HighsInt k = 0; k < 2; k++) {
     const bool scattered = k == 0;
-    std::vector<HighsInt> x_index(dim);
-    std::vector<HighsInt> q_x_index(dim);
-    std::vector<HighsInt> check_q_x_index(dim, 0);
     q_x_value.assign(dim, 0);
     check_q_x_value.assign(dim, 0);
     for (HighsInt iCol = 0; iCol < dim; iCol++) {
       HighsInt x_nonzero_location = scattered ? iCol : 0;
-      x_value[x_nonzero_location] = random.fraction();
+      x_value[x_nonzero_location] = 1.0;//random.fraction();//
       x_index[0] = iCol;
       HighsInt check_q_x_num_entries = 0;
-      for (HighsInt iEl = hessian.start_[iCol]; iEl < hessian.start_[iCol+1]; iEl++) {
-	HighsInt iRow = hessian.index_[iEl];
-	check_q_x_value[check_q_x_num_entries] = hessian.value_[iEl] * x_value[x_nonzero_location];
-	check_q_x_index[check_q_x_num_entries] = iRow;
-	check_q_x_num_entries++;
+      for (HighsInt iEl = hessian.start_[iCol]; iEl < hessian.start_[iCol + 1];
+           iEl++) {
+        HighsInt iRow = hessian.index_[iEl];
+        check_q_x_value[check_q_x_num_entries] =
+            hessian.value_[iEl] * x_value[x_nonzero_location];
+        check_q_x_index[check_q_x_num_entries] = iRow;
+        check_q_x_num_entries++;
       }
       HighsInt q_x_num_entries = -1;
       if (scattered) {
-	oracle.productScatteredX(HighsInt(1), x_index.data(), x_value.data(), q_x_num_entries, q_x_index.data(), 
-				q_x_value.data());
+        oracle.productScatteredX(HighsInt(1), x_index.data(), x_value.data(),
+                                 q_x_num_entries, q_x_index.data(),
+                                 q_x_value.data());
       } else {
-	oracle.productPackedX(HighsInt(1), x_index.data(), x_value.data(), q_x_num_entries, q_x_index.data(), 
-		       q_x_value.data());
+        oracle.productPackedX(HighsInt(1), x_index.data(), x_value.data(),
+                              q_x_num_entries, q_x_index.data(),
+                              q_x_value.data());
       }
-      // Check diffence between q_x and check_q_x 
-      if (!packedVectorsEqual(q_x_num_entries, q_x_index.data(), q_x_value.data(), check_q_x_num_entries, check_q_x_index.data(), 
-			      check_q_x_value.data())) {
+      /*
+      if (k == 0) {
+	// Now multiply Q and (packed) Qx to form scattered Q(Qx)
+	// values
+	HighsInt q_q_x_num_entries = dim;
+	for (HighsInt iX = 0; iX < q_x_num_entries; iX++) {
+	  HighsInt iCol = q_x_index[iX];
+	  for (HighsInt iEl = hessian.start_[iCol]; iEl < hessian.start_[iCol + 1];
+	       iEl++) {
+	    HighsInt iRow = hessian.index_[iEl];
+	    check_q_q_x_value[iRow] +=
+	      hessian.value_[iEl] * q_x_value[iX];
+	  }
+	}
+	oracle.productPackedX(q_x_num_entries, q_x_index.data(), q_x_value.data(),
+			      q_q_x_num_entries, nullptr, q_q_x_value.data());
+	if (!vectorsEqual(dim, q_q_x_value.data(), check_q_q_x_value.data())) {
+	  highsLogUser(log_options, HighsLogType::kError,
+		       "Hessian oracle product %d with packed Qx: values are incorrect\n", int(iCol));
+	  if (exit_on_first_error) return HighsStatus::kError;
+	  error_found = true;
+	}
+      }
+      */
+      // Check diffence between q_x and check_q_x in zeroing both
+      if (!packedVectorsEqual(q_x_num_entries, q_x_index.data(),
+			      q_x_value.data(), check_q_x_num_entries,
+			      check_q_x_index.data(), check_q_x_value.data())) {
 	highsLogUser(log_options, HighsLogType::kError,
-		     "Hessian oracle product %d with %s, sparse, x: Qx values are incorrect\n",
+		     "Hessian oracle product %d with %s, sparse, x: Qx values "
+		     "are incorrect\n",
 		     int(iCol), scattered ? "scattered" : "packed");
 	if (exit_on_first_error) return HighsStatus::kError;
-	error_found = true;
+        error_found = true;
       }
       x_value[x_nonzero_location] = 0.0;
     }
   }
-  
+
   if (error_found) return HighsStatus::kError;
   if (warning_found) return HighsStatus::kWarning;
   return HighsStatus::kOk;
@@ -595,14 +641,13 @@ double HessianOracle::entry(const HighsInt i, const HighsInt j) const {
   double entry;
   HighsInt q_x_num_entries = 1;
   HighsInt q_x_index = j;
-  this->call_(HighsInt(1), &i, &x, 
-	      q_x_num_entries, &q_x_index, &entry, 
-	      this->data_);
+  this->call_(HighsInt(1), &i, &x, q_x_num_entries, &q_x_index, &entry,
+              this->data_);
   return entry;
 }
 
 void HessianOracle::product(const std::vector<double>& x_value,
-			    std::vector<double>& q_x_value) const {
+                            std::vector<double>& q_x_value) const {
   HighsInt dim = this->dim_;
   assert(static_cast<size_t>(dim) == x_value.size());
   assert(static_cast<size_t>(dim) == q_x_value.size());
@@ -613,13 +658,17 @@ void HessianOracle::product(const std::vector<double>& x_value,
 void HessianOracle::product(const double* x_value, double* q_x_value) const {
   assert(this->call_);
   HighsInt q_x_num_entries = -1;
-  this->call_(this->dim_, nullptr, x_value,
-	      q_x_num_entries, nullptr, q_x_value, this->data_);
+  this->call_(this->dim_, nullptr, x_value, q_x_num_entries, nullptr, q_x_value,
+              this->data_);
 }
 
 // For scattered, sparse, x
-void HessianOracle::productScatteredX(const HighsInt x_num_entries, const HighsInt* x_index, const double* x_value,
-				      HighsInt& q_x_num_entries, HighsInt* q_x_index, double* q_x_value) const {
+void HessianOracle::productScatteredX(const HighsInt x_num_entries,
+                                      const HighsInt* x_index,
+                                      const double* x_value,
+                                      HighsInt& q_x_num_entries,
+                                      HighsInt* q_x_index,
+                                      double* q_x_value) const {
   // Must have non-negative number of indices
   assert(x_index != nullptr && x_num_entries >= 0);
   // Gather the values
@@ -629,19 +678,21 @@ void HessianOracle::productScatteredX(const HighsInt x_num_entries, const HighsI
     assert(iCol < this->dim_);
     x_packed[iEl] = x_value[iCol];
   }
-  this->productPackedX(x_num_entries, x_index, x_packed.data(),
-		       q_x_num_entries, q_x_index, q_x_value);
+  this->productPackedX(x_num_entries, x_index, x_packed.data(), q_x_num_entries,
+                       q_x_index, q_x_value);
 }
 
 // For packed, sparse, x
-void HessianOracle::productPackedX(const HighsInt x_num_entries, const HighsInt* x_index, const double* x_value, HighsInt& q_x_num_entries, HighsInt* q_x_index, 
-				   double* q_x_value) const {
+void HessianOracle::productPackedX(const HighsInt x_num_entries,
+                                   const HighsInt* x_index,
+                                   const double* x_value,
+                                   HighsInt& q_x_num_entries,
+                                   HighsInt* q_x_index,
+                                   double* q_x_value) const {
   assert(this->call_);
   // Must either have no indices (x assumed full) or have non-negative
   // number of indices
   assert(x_index == nullptr || x_num_entries >= 0);
   this->call_(x_num_entries, x_index, x_value, q_x_num_entries, q_x_index,
-	      q_x_value, 
-	      this->data_);
+              q_x_value, this->data_);
 }
-

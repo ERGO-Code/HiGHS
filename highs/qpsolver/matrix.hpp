@@ -11,8 +11,8 @@
 #include <cassert>
 #include <vector>
 
-#include "qpvector.hpp"
 #include "lp_data/HStruct.h"
+#include "qpvector.hpp"
 
 struct MatrixBase {
   HighsInt num_row;
@@ -20,7 +20,7 @@ struct MatrixBase {
   std::vector<HighsInt> start;
   std::vector<HighsInt> index;
   std::vector<double> value;
-  HighsInt oracle_mu_ = 1.0; // Minimize
+  HighsInt oracle_mu_ = 1.0;  // Minimize
   HessianOracle oracle_;
 
   bool isOracle() const { return oracle_.call_ != nullptr; }
@@ -34,15 +34,16 @@ struct MatrixBase {
     if (isOracle()) {
       // Meed local copy of dim_ since mat_vec_seq is const
       HighsInt dim = oracle_.dim_;
-      oracle_.productScatteredX(other.num_nz, other.index.data(), other.value.data(), dim, nullptr, 
-				target.value.data());
+      oracle_.productScatteredX(other.num_nz, other.index.data(),
+                                other.value.data(), dim, nullptr,
+                                target.value.data());
     } else {
       for (HighsInt i = 0; i < other.num_nz; i++) {
-	HighsInt col = other.index[i];
-	for (HighsInt idx = start[col]; idx < start[col + 1]; idx++) {
-	  HighsInt row = index[idx];
-	  target.value[row] += value[idx] * other.value[col];
-	}
+        HighsInt col = other.index[i];
+        for (HighsInt idx = start[col]; idx < start[col + 1]; idx++) {
+          HighsInt row = index[idx];
+          target.value[row] += value[idx] * other.value[col];
+        }
       }
     }
     target.resparsify();

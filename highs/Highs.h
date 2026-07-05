@@ -166,8 +166,8 @@ class Highs {
    * @brief Pass a Hessian oracle for the incumbent model
    */
   HighsStatus passHessian(const HighsInt dim,
-			  HighsHessianFunctionType oracleCall,
-			  void* oracle_data);
+                          HighsHessianFunctionType oracleCall,
+                          void* oracle_data);
 
   /**
    * @brief Checks any incumbent Hessian oracle

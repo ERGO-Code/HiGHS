@@ -247,10 +247,9 @@ struct HighsUserScaleData {
   bool scaleWarning(std::string& message) const;
 };
 
-using HighsHessianFunctionType =
-  std::function<void(const HighsInt x_index_size, const HighsInt* x_index, const double* x_value,
-		     HighsInt& q_x_index_size, HighsInt* q_x_index, double* q_x_value,
-                     void*)>;
+using HighsHessianFunctionType = std::function<void(
+    const HighsInt x_index_size, const HighsInt* x_index, const double* x_value,
+    HighsInt& q_x_index_size, HighsInt* q_x_index, double* q_x_value, void*)>;
 
 struct HessianOracle {
   HighsInt dim_ = 0;
@@ -260,12 +259,14 @@ struct HessianOracle {
   double diag(const HighsInt i) const;
   double entry(const HighsInt i, const HighsInt j) const;
   void product(const std::vector<double>& x_value,
-	       std::vector<double>& q_x_value) const;
+               std::vector<double>& q_x_value) const;
   void product(const double* x_value, double* q_x_value) const;
-  void productScatteredX(const HighsInt x_num_entries, const HighsInt* x_index, const double* x_value,
-			 HighsInt& q_x_num_entries, HighsInt* q_x_index, double* q_x_value) const;
-  void productPackedX(const HighsInt x_num_entries, const HighsInt* x_index, const double* x_value,
-		      HighsInt& q_x_num_entries, HighsInt* q_x_index, double* q_x_value) const;
+  void productScatteredX(const HighsInt x_num_entries, const HighsInt* x_index,
+                         const double* x_value, HighsInt& q_x_num_entries,
+                         HighsInt* q_x_index, double* q_x_value) const;
+  void productPackedX(const HighsInt x_num_entries, const HighsInt* x_index,
+                      const double* x_value, HighsInt& q_x_num_entries,
+                      HighsInt* q_x_index, double* q_x_value) const;
 };
 
 #endif /* LP_DATA_HSTRUCT_H_ */
