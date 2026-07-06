@@ -264,6 +264,7 @@ struct HessianOracle {
   void clear();
   double diag(const HighsInt i) const;
   double entry(const HighsInt i, const HighsInt j) const;
+  void getColumn(const HighsInt col, HighsInt& col_num_entries, HighsInt* col_index, double* col_value) const;
   void product(const std::vector<double>& x_value,
                std::vector<double>& q_x_value) const;
   void product(const double* x_value, double* q_x_value) const;
@@ -272,7 +273,8 @@ struct HessianOracle {
                          HighsInt* q_x_index, double* q_x_value) const;
   void productPackedX(const HighsInt x_num_entries, const HighsInt* x_index,
                       const double* x_value, HighsInt& q_x_num_entries,
-                      HighsInt* q_x_index, double* q_x_value) const;
+                      HighsInt* q_x_index, double* q_x_value,
+		      const bool scale_and_shift = true) const;
   void scaleAndShift(const HighsInt x_num_entries,
 		     const HighsInt* x_index,
 		     const double* x_value,

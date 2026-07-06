@@ -99,14 +99,22 @@ struct MatrixBase {
 
   QpVector& vec_mat_1(const QpVector& other, QpVector& target) const {
     target.reset();
-    for (HighsInt col = 0; col < num_col; col++) {
-      double dot = 0.0;
-      for (HighsInt j = start[col]; j < start[col + 1]; j++) {
-        dot += other.value[index[j]] * value[j];
+    if (this->isOracle()) {
+      HighsInt target_num_col = num_col;
+      this->oracle_.call_(num_col, other.index.data(), other.value.data(),
+			  target_num_col, nullptr, target.value.data(),
+			  this->oracle_.data_);
+      this->oracle_.scaleAndShift(num_col, other.index.data(), other.value.data(),
+			  target_num_col, nullptr, target.value.data());
+    } else {
+      for (HighsInt col = 0; col < num_col; col++) {
+	double dot = 0.0;
+	for (HighsInt j = start[col]; j < start[col + 1]; j++) {
+	  dot += other.value[index[j]] * value[j];
+	}
+	target.value[col] = dot;
       }
-      target.value[col] = dot;
     }
-
     target.resparsify();
     return target;
   }
@@ -149,11 +157,18 @@ struct MatrixBase {
       target.value[col - num_col] = 1.0;
       target.num_nz = 1;
     } else {
-      for (HighsInt i = 0; i < start[col + 1] - start[col]; i++) {
-        target.index[i] = index[start[col] + i];
-        target.value[target.index[i]] = value[start[col] + i];
+      if (this->isOracle()) {
+	double x_value = 1.0;
+        target.num_nz = -1;
+	this->oracle_.productPackedX(HighsInt{1}, &col, &x_value,
+				     target.num_nz, target.index.data(), target.value.data());
+      } else {
+	for (HighsInt i = 0; i < start[col + 1] - start[col]; i++) {
+	  target.index[i] = index[start[col] + i];
+	  target.value[target.index[i]] = value[start[col] + i];
+	}
+	target.num_nz = start[col + 1] - start[col];
       }
-      target.num_nz = start[col + 1] - start[col];
     }
 
     return target;

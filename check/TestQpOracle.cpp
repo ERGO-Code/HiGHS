@@ -10,7 +10,9 @@ const bool dev_run = true;  // false;
 const double inf = kHighsInf;
 const double double_equal_tolerance = 1e-5;
 
-HighsModel getQp();
+HighsModel getQp4();
+HighsModel getQp5();
+HighsModel getQpQjh();
 bool vectorsEqual(const HighsInt dim, double* v0, double* v1);
 
 // On entry:
@@ -232,26 +234,32 @@ HighsHessianFunctionType oracleCallSquareHessian =
     };
 
 TEST_CASE("hessian-oracle-check", "[qpsolver]") {
-  HighsLp lp;
-  lp.num_col_ = 5;
-  lp.num_row_ = 0;
-  lp.col_cost_.assign(lp.num_col_, 0);
-  lp.col_lower_.assign(lp.num_col_, 0);
-  lp.col_upper_.assign(lp.num_col_, 1);
-  // Test using both triangular and square instances of this Hessian
-  //
-  // .  0  1  2  3  4
-  // 0  5
-  // 1  1  4
-  // 2        0
-  // 3 -1    -1  3
-  // 4  2  1    -2  2
-  HighsHessian hessian;
-  hessian.dim_ = lp.num_col_;
-  hessian.format_ = HessianFormat::kTriangular;
-  hessian.start_ = {0, 4, 6, 8, 10, 11};
-  hessian.index_ = {0, 1, 3, 4, 1, 4, 2, 3, 3, 4, 4};
-  hessian.value_ = {5, 1, -1, 2, 4, 1, 0, -1, 3, -2, 2};
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+
+  const bool qp4 = true;
+  HighsModel model = qp4 ? getQp4(): getQp5(); //
+  HighsLp& lp = model.lp_;
+  HighsHessian& hessian = model.hessian_;
+
+  HighsInt zero_diagonal_el;
+  if (!qp4) {
+     HighsInt zero_diagonal_col = 2;
+      zero_diagonal_el = 6;
+    REQUIRE(hessian.index_[zero_diagonal_el] == zero_diagonal_col);
+    REQUIRE(hessian.value_[zero_diagonal_el] == 0);
+    hessian.value_[zero_diagonal_el] = 10.0;
+  }
+  h.passModel(model);
+  h.writeModel("");
+  h.writeModel("qp5.mps");
+  h.setOptionValue("qp_regularization_value", 0);
+  h.run();
+  h.writeSolution("", 1);
+
+  if (!qp4) hessian.value_[zero_diagonal_el] = 0.0;
+  
+  // Test using both triangular and square instances of the Hessian
   HighsHessian square_hessian = hessian.toSquare();
   if (dev_run) square_hessian.print();
 
@@ -265,8 +273,6 @@ TEST_CASE("hessian-oracle-check", "[qpsolver]") {
   hessian.value_ = {5, 1, -1, 2, 1, 4, -1, 3, -2, 2};
   if (dev_run) hessian.print();
 
-  Highs h;
-  h.setOptionValue("output_flag", dev_run);
   HighsStatus return_status = h.passModel(lp);
   REQUIRE(return_status == HighsStatus::kOk);
 
@@ -363,7 +369,7 @@ TEST_CASE("hessian-oracle-check", "[qpsolver]") {
 }
 
 TEST_CASE("hessian-oracle-solve", "[qpsolver]") {
-  HighsModel model = getQp();
+  HighsModel model = getQpQjh();
   HighsLp lp = model.lp_;
   HighsHessian hessian = model.hessian_;
 
@@ -395,7 +401,58 @@ TEST_CASE("hessian-oracle-solve", "[qpsolver]") {
   h.resetGlobalScheduler(true);
 }
 
-HighsModel getQp() {
+HighsModel getQp4() {
+  // 
+  HighsModel model;
+  HighsLp& lp = model.lp_;
+  HighsHessian& hessian = model.hessian_;
+
+  lp.num_col_ = 4;
+  lp.num_row_ = 0;
+  lp.col_cost_ = {-4, 1, -7, -7};
+  lp.col_lower_.assign(lp.num_col_, 0);
+  lp.col_upper_.assign(lp.num_col_, kHighsInf);
+  // Row|    0    1    2    3
+  //-------------------------
+  //   0|    4   -2         2
+  //   1|   -2    2    1   -2
+  //   2|         1    5    1     
+  //   3|    2         1    6
+  hessian.dim_ = lp.num_col_;
+  hessian.format_ = HessianFormat::kTriangular;
+  hessian.start_ = {0, 3, 6, 8, 9};
+  hessian.index_ = {0,  1, 3,  1, 2,  3,  2, 3,  3};
+  hessian.value_ = {4, -2, 2,  2, 1, -2,  5, 1,  6};
+  return model;
+}
+
+HighsModel getQp5() {
+  // 
+  HighsModel model;
+  HighsLp& lp = model.lp_;
+  HighsHessian& hessian = model.hessian_;
+
+  lp.num_col_ = 5;
+  lp.num_row_ = 0;
+  lp.col_cost_ = {-7, -6, -9, 1, -3};
+  lp.col_lower_.assign(lp.num_col_, 0);
+  lp.col_upper_.assign(lp.num_col_, kHighsInf);
+  // Row|    0    1    2    3    4
+  //------------------------------
+  //   0|    5    1        -1    2
+  //   1|    1    4              1
+  //   2|             10   -1     
+  //   3|   -1        -1    3   -2
+  //   4|    2    1        -2    2
+  hessian.dim_ = lp.num_col_;
+  hessian.format_ = HessianFormat::kTriangular;
+  hessian.start_ = {0, 4, 6, 8, 10, 11};
+  hessian.index_ = {0, 1, 3, 4, 1, 4, 2, 3, 3, 4, 4};
+  hessian.value_ = {5, 1, -1, 2, 4, 1, 0, -1, 3, -2, 2};
+  return model;
+}
+
+HighsModel getQpQjh() {
   HighsModel model;
   HighsLp& lp = model.lp_;
   HighsHessian& hessian = model.hessian_;

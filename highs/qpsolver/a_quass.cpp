@@ -141,9 +141,11 @@ QpAsmStatus solveqp(Instance& instance, Settings& settings, Statistics& stats,
 
   // perturb instance, store perturbance information
 
-  if (instance.Q.mat.num_col > 0) {
-    // Regularize explicit Hessian: oracle regularization is done in
-    // place
+  if (instance.Q.mat.isOracle()) {
+    // Save the regularization value to apply in oracle operations
+    instance.Q.mat.oracle_.shift_ = settings.hessian_regularization_value;
+  } else {
+    // Regularize explicit Hessian
     for (HighsInt i = 0; i < instance.num_var; i++) {
       for (HighsInt index = instance.Q.mat.start[i];
            index < instance.Q.mat.start[i + 1]; index++) {

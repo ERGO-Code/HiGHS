@@ -23,22 +23,45 @@ static void computeStartingPointBounded(Instance& instance, Settings& settings,
   std::vector<double> L;
   L.resize(instance.num_var * instance.num_var);
 
-  // compute cholesky factorization of Q
-  for (size_t col = 0; col < (size_t)instance.num_var; col++) {
-    for (size_t idx = instance.Q.mat.start[col];
-         idx < (size_t)instance.Q.mat.start[col + 1]; idx++) {
+  auto printL = [&] () {
+    for (HighsInt iRow = 0; iRow < instance.num_var; iRow++) {
+      for (HighsInt iCol = 0; iCol <= iRow; iCol++) 
+	printf(" %11.4g", L[iRow * instance.num_var + iCol]);
+      printf("\n");
+    }
+  };
+  // Compute cholesky factorization of Q
+  //
+  
+  // First copy the lower triangle of Q into L
+  L.assign(instance.num_var * instance.num_var, 0);
+  for (HighsInt iCol = 0; iCol < instance.num_var; iCol++) {
+    for (HighsInt iEl = instance.Q.mat.start[iCol]; iEl < instance.Q.mat.start[iCol + 1]; iEl++) {
+      HighsInt iRow = instance.Q.mat.index[iEl];
+      // Take the entries above or on the diagonal in column iCol of
+      // (column-wise) Q as the entries before or on the diagonal in
+      // row iCol of (row-wise) L
+      if (iRow <= iCol) L[iCol * instance.num_var + iRow] = instance.Q.mat.value[iEl];
+    }
+  }
+  for (HighsInt iRow = 0; iRow < instance.num_var; iRow++) {
+    printL();
+    for (HighsInt iCol = 0; iCol <= iRow; iCol++) {
       double sum = 0;
-      size_t row = instance.Q.mat.index[idx];
-      if (row == col) {
-        for (size_t k = 0; k < row; k++)
-          sum += L[k * instance.num_var + row] * L[k * instance.num_var + row];
-        L[row * instance.num_var + row] = sqrt(instance.Q.mat.value[idx] - sum);
+      for (HighsInt k = 0; k < iCol; k++) 
+	sum += L[iRow * instance.num_var + k] * L[iCol * instance.num_var + k];
+      if (iCol < iRow) {
+	double value = (L[iRow * instance.num_var + iCol] - sum) / L[iCol * instance.num_var + iCol];
+	printf("Computed L[%1d, %1d] = (%11.4g - %11.4g) / %11.4g = %11.4g\n",
+	       int(iRow), int(iCol),
+	       L[iRow * instance.num_var + iCol], sum, L[iCol * instance.num_var + iCol], value);
+	L[iRow * instance.num_var + iCol] = value;
       } else {
-        for (size_t k = 0; k < row; k++)
-          sum +=
-              (L[k * instance.num_var + col] * L[k * instance.num_var + row]);
-        L[row * instance.num_var + col] =
-            (instance.Q.mat.value[idx] - sum) / L[row * instance.num_var + row];
+	double value = L[iCol * instance.num_var + iCol] - sum;
+	printf("Computed L[%1d, %1d] = sqrt(%11.4g - %11.4g) = sqrt(%11.4g) = %11.4g\n",
+	       int(iCol), int(iCol),
+	       L[iCol * instance.num_var + iCol], sum, value, std::sqrt(value));
+	L[iCol * instance.num_var + iCol] = std::sqrt(value);
       }
     }
   }

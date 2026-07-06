@@ -650,6 +650,39 @@ double HessianOracle::entry(const HighsInt i, const HighsInt j) const {
   return entry;
 }
 
+void HessianOracle::getColumn(const HighsInt col,
+			      HighsInt& col_num_entries,
+			      HighsInt* col_index,
+			      double* col_value) const {
+  assert(col >= 0 && col < this->dim_);
+  double value = 1.0;
+  col_num_entries = -1;
+  bool scale_and_shift = false;
+  this->productPackedX(HighsInt{1}, &col, &value,
+		       col_num_entries,
+                       col_index, col_value,
+		       scale_and_shift);
+  if (this->multiplier_ != 1.0) {
+    for (HighsInt iX = 0; iX < col_num_entries; iX++)
+      col_value[iX] *= this->multiplier_;
+  }
+  if (this->shift_) {
+    bool found = false;
+    for (HighsInt iX = 0; iX < col_num_entries; iX++) {
+      if (col_index[iX] == col) {
+	col_value[iX] += this->shift_; // Exploits value = 1
+	found = true;
+	break;
+      }
+    }
+    if (!found) {
+      col_index[col_num_entries] = col;
+      col_value[col_num_entries] = this->shift_;
+      col_num_entries++;
+    }
+  }
+}
+
 void HessianOracle::product(const std::vector<double>& x_value,
                             std::vector<double>& q_x_value) const {
   HighsInt dim = this->dim_;
@@ -683,8 +716,12 @@ void HessianOracle::productScatteredX(const HighsInt x_num_entries,
     assert(iCol < this->dim_);
     x_packed[iEl] = x_value[iCol];
   }
+  // Perform scale and shift here, not with the packed x
+  const bool scale_and_shift = false;
   this->productPackedX(x_num_entries, x_index, x_packed.data(), q_x_num_entries,
-                       q_x_index, q_x_value);
+                       q_x_index, q_x_value, scale_and_shift);
+  this->scaleAndShift(x_num_entries, x_index, x_packed.data(), q_x_num_entries,
+		      q_x_index, q_x_value);  
 }
 
 // For packed, sparse, x
@@ -693,14 +730,16 @@ void HessianOracle::productPackedX(const HighsInt x_num_entries,
                                    const double* x_value,
                                    HighsInt& q_x_num_entries,
                                    HighsInt* q_x_index,
-                                   double* q_x_value) const {
+                                   double* q_x_value,
+				   const bool scale_and_shift) const {
   assert(this->call_);
   // Must either have no indices (x assumed full) or have non-negative
   // number of indices
   assert(x_index == nullptr || x_num_entries >= 0);
   this->call_(x_num_entries, x_index, x_value, q_x_num_entries, q_x_index,
               q_x_value, this->data_);
-  this->scaleAndShift(x_num_entries, x_index, x_value,
+  if (scale_and_shift)
+    this->scaleAndShift(x_num_entries, x_index, x_value,
 		      q_x_num_entries, q_x_index, q_x_value);
 }
 
@@ -715,14 +754,60 @@ void HessianOracle::scaleAndShift(const HighsInt x_num_entries,
     if (q_x_index != nullptr) {
       assert(q_x_num_entries >= 0);
       for (HighsInt iX = 0; iX < q_x_num_entries; iX++) 
-	q_x_value[q_x_index[iX]] *= this->multiplier_;
+	q_x_value[iX] *= this->multiplier_;
     } else {
       for (HighsInt iRow = 0; iRow < this->dim_; iRow++) 
 	q_x_value[iRow] *= this->multiplier_;
     }
   }
   if (this->shift_ != 0.0) {
-    if (q_x_index == nullptr) {
+    if (q_x_index != nullptr) {
+      // Scatter the packed Qx values
+      std::vector<double>scattered(this->dim_, 0);
+      for (HighsInt iX = 0; iX < q_x_num_entries; iX++)
+	scattered[q_x_index[iX]] = q_x_value[iX];
+      // Add in this->shift_ * x
+      if (x_index != nullptr) {
+	for (HighsInt iX = 0; iX < x_num_entries; iX++) 
+	  scattered[x_index[iX]] += this->shift_ * x_value[iX];
+      } else {
+	for (HighsInt iRow = 0; iRow < this->dim_; iRow++) 
+	  scattered[iRow] += this->shift_ * x_value[iRow];
+      }
+      // Determine the new packed Qx
+      HighsInt new_q_x_num_entries = 0;
+      if (x_index != nullptr) {
+	// Gather the entries corresponding to q_x_index
+	for (HighsInt iX = 0; iX < q_x_num_entries; iX++) {
+	  HighsInt iRow = q_x_index[iX];
+	  if (scattered[iRow]) {
+	    q_x_index[new_q_x_num_entries] = iRow;
+	    q_x_value[new_q_x_num_entries] = scattered[iRow];
+	    new_q_x_num_entries++;
+	    scattered[iRow] = 0;
+	  }
+	}
+	// Gather the entries corresponding to x_index
+	for (HighsInt iX = 0; iX < x_num_entries; iX++) {
+	  HighsInt iRow = x_index[iX];
+	  if (scattered[iRow]) {
+	    q_x_index[new_q_x_num_entries] = iRow;
+	    q_x_value[new_q_x_num_entries] = scattered[iRow];
+	    new_q_x_num_entries++;
+	  }
+	}
+      } else {
+	// Gather the entries 
+	for (HighsInt iRow = 0; iRow < this->dim_; iRow++) {
+	  if (scattered[iRow]) {
+	    q_x_index[new_q_x_num_entries] = iRow;
+	    q_x_value[new_q_x_num_entries] = scattered[iRow];
+	    new_q_x_num_entries++;
+	  }
+	}
+      }
+      q_x_num_entries = new_q_x_num_entries;
+    } else {
       if (x_index != nullptr) {
 	assert(x_num_entries >= 0);
 	for (HighsInt iX = 0; iX < x_num_entries; iX++) 
@@ -731,9 +816,6 @@ void HessianOracle::scaleAndShift(const HighsInt x_num_entries,
 	for (HighsInt iRow = 0; iRow < this->dim_; iRow++) 
 	  q_x_value[iRow] += this->shift_ * x_value[iRow];
       }
-    } else {
-      // Qx is packed, so can't easily add in scale_*x
-      assert(1234==5678);
     }
   }
 }
