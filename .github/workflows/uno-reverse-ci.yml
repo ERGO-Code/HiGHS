@@ -48,7 +48,7 @@ jobs:
 
       - name: Install dependencies (macOS)
         if: runner.os == 'macOS'
-        run: brew install cmake openblas lapack
+        run: brew install cmake openblas lapack gcc
 
       - name: Build and install HiGHS
         run: |
@@ -86,11 +86,18 @@ jobs:
       - name: Build Uno against HiGHS
         run: |
           echo "Uno commit: $(git -C Uno rev-parse --short HEAD)"
+          # macOS: point the linker at libgfortran (Uno links -lgfortran without its -L path).
+          ldflags=""
+          if [ "$RUNNER_OS" = "macOS" ]; then
+            gfdir=$(dirname "$(gfortran -print-file-name=libgfortran.dylib)")
+            ldflags="-DCMAKE_EXE_LINKER_FLAGS=-L${gfdir} -DCMAKE_SHARED_LINKER_FLAGS=-L${gfdir}"
+          fi
           cmake -S Uno -B Uno/build \
             -DCMAKE_BUILD_TYPE=Release \
             -DENABLE_TESTS=ON \
             -DCMAKE_PREFIX_PATH=${{ github.workspace }}/highs-install \
-            -DHIGHS_INCLUDE_DIR=${{ github.workspace }}/highs-install/include/highs
+            -DHIGHS_INCLUDE_DIR=${{ github.workspace }}/highs-install/include/highs \
+            $ldflags
           cmake --build Uno/build --target run_unotest --parallel
 
       - name: Run Uno tests (HiGHS solver)
@@ -129,7 +136,7 @@ jobs:
 
       - name: Install dependencies (macOS)
         if: runner.os == 'macOS'
-        run: brew install cmake openblas lapack
+        run: brew install cmake openblas lapack gcc
 
       - name: Build and install HiGHS with HiPO (BUILD_SHARED_EXTRAS_LIB=${{ matrix.extras }})
         run: |
@@ -154,12 +161,19 @@ jobs:
       - name: Build Uno against HiGHS with HiPO
         run: |
           echo "Uno commit: $(git -C Uno rev-parse --short HEAD)"
+          # macOS: point the linker at libgfortran (Uno links -lgfortran without its -L path).
+          ldflags=""
+          if [ "$RUNNER_OS" = "macOS" ]; then
+            gfdir=$(dirname "$(gfortran -print-file-name=libgfortran.dylib)")
+            ldflags="-DCMAKE_EXE_LINKER_FLAGS=-L${gfdir} -DCMAKE_SHARED_LINKER_FLAGS=-L${gfdir}"
+          fi
           cmake -S Uno -B Uno/build \
             -DCMAKE_BUILD_TYPE=Release \
             -DENABLE_TESTS=ON \
             -DHIGHS_WITH_HIPO=ON \
             -DCMAKE_PREFIX_PATH=${{ github.workspace }}/highs-install \
-            -DHIGHS_INCLUDE_DIR=${{ github.workspace }}/highs-install/include/highs
+            -DHIGHS_INCLUDE_DIR=${{ github.workspace }}/highs-install/include/highs \
+            $ldflags
           cmake --build Uno/build --target run_unotest --parallel
 
       - name: Run Uno tests (HiPO solver)
