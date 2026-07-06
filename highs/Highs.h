@@ -266,8 +266,11 @@ class Highs {
 
   /**
    * @brief Assess the validity, integrality and feasibility of the
-   * current primal solution. Of value after calling
-   * Highs::readSolution
+   * current primal solution. Row values are computed and checked
+   * against what's in Highs::solution_.row_value and, if the
+   * differences exceed a tolernace, valid returns false.  If any of
+   * valid, integral or feasible is false, then assessPrimalSolution
+   * returns HighsStatus::kWarning.
    */
   HighsStatus assessPrimalSolution(bool& valid, bool& integral,
                                    bool& feasible) const;
@@ -1245,7 +1248,15 @@ class Highs {
   HighsStatus setSolution(const HighsSolution& solution);
 
   /**
-   * @brief Pass a sparse primal solution
+   * @brief Pass a primal solution. If index is not a null pointer,
+   * then it is assumed that value contains num_entries of packed
+   * values, with index defing the corresponding primal solution
+   * components. If index is a null pointer, then value is assumed to
+   * be a full primal solution.
+   *
+   * It allows a full primal solution to be passed (for MIPs) without
+   * requiring either a HighsSolution that contains (empty vectors of)
+   * spurious dual information, or a full list of indices
    */
   HighsStatus setSolution(const HighsInt num_entries, const HighsInt* index,
                           const double* value);
