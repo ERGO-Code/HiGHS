@@ -1328,12 +1328,8 @@ HPresolve::Result HPresolve::dominatedColumns(
         if (!tryToFix) numDomChecksPredBndAnalysis++;
         // check for domination
         if (checkDomination(direction, col, direction_k, k)) {
-          // Re-check the implied bound condition since earlier fixings in
-          // this dominatedColumns call may have changed the model state
-          bool currentBoundImplied =
-              direction > 0 ? isUpperImplied(col) : isLowerImplied(col);
           if (tryToFix &&
-              (currentBoundImplied ||
+              (boundImplied ||
                mipsolver->mipdata_->cliquetable.haveCommonClique(
                    HighsCliqueTable::CliqueVar(col, direction > 0 ? 1 : 0),
                    HighsCliqueTable::CliqueVar(k, direction_k > 0 ? 1 : 0)))) {
@@ -1365,9 +1361,8 @@ HPresolve::Result HPresolve::dominatedColumns(
 
     // lambda for finding a domination relationship in the given row
     auto checkRow = [&](HighsInt row, HighsInt col, HighsInt direction,
-                        double bestVal, bool boundImplied, bool hasCliques) {
+                        double bestVal, bool hasCliques) {
       storeRow(row);
-      bool onlyPredBndAnalysis = !boundImplied && !hasCliques;
       for (const HighsSliceNonzero& nonz : getStoredRow()) {
         // get column index
         HighsInt k = nonz.index();
@@ -1381,8 +1376,12 @@ HPresolve::Result HPresolve::dominatedColumns(
         // check if variables have the same type
         bool sameVarType = varsHaveSameType(col, k);
 
+        // check if bound is implied (computed fresh due to earlier fixings)
+        bool boundImplied =
+            direction > 0 ? isUpperImplied(col) : isLowerImplied(col);
+
         // skip checks if nothing to do
-        if (onlyPredBndAnalysis && !sameVarType) continue;
+        if (!boundImplied && !hasCliques && !sameVarType) continue;
 
         // try to fix variables or strengthen bounds
         // check already known non-zeros in respective columns in advance to
@@ -1417,15 +1416,13 @@ HPresolve::Result HPresolve::dominatedColumns(
     if (bestRowMinus != -1 &&
         (allowPredBndAnalysis || lowerImplied || hasNegCliques))
       HPRESOLVE_CHECKED_CALL(checkRow(bestRowMinus, j, HighsInt{-1},
-                                      ajBestRowMinus, lowerImplied,
-                                      hasNegCliques));
+                                      ajBestRowMinus, hasNegCliques));
 
     // use row 'bestRowPlus'
     if (!colDeleted[j] && bestRowPlus != -1 &&
         (allowPredBndAnalysis || upperImplied || hasPosCliques))
-      HPRESOLVE_CHECKED_CALL(checkRow(bestRowPlus, j, HighsInt{1},
-                                      ajBestRowPlus, upperImplied,
-                                      hasPosCliques));
+      HPRESOLVE_CHECKED_CALL(
+          checkRow(bestRowPlus, j, HighsInt{1}, ajBestRowPlus, hasPosCliques));
 
     // do not use predictive bound analysis if it requires many domination
     // checks and only yields few fixings or improved bounds on average
