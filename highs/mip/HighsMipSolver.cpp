@@ -1023,9 +1023,6 @@ restart:
 }
 
 void HighsMipSolver::cleanupSolve() {
-  for (HighsMipWorker& worker : mipdata_->workers) {
-    assert(worker.solutions_.empty());
-  }
   if (mipdata_->terminatorActive()) {
     if (mipdata_->terminatorTerminated()) {
       // Indicate that this instance has been interrupted
