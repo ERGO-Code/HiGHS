@@ -3703,9 +3703,8 @@ HighsStatus Highs::readSolution(const std::string& filename,
 
 HighsStatus Highs::assessPrimalSolution(bool& valid, bool& integral,
                                         bool& feasible) const {
-  const bool log_only_warning = false;
   return assessLpPrimalSolution("", options_, model_.lp_, solution_, valid,
-                                integral, feasible, log_only_warning);
+                                integral, feasible);
 }
 
 std::string Highs::presolveStatusToString(

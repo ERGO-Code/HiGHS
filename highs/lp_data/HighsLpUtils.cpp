@@ -2627,8 +2627,7 @@ HighsStatus assessLpPrimalSolution(const std::string& message,
                                    const HighsOptions& options,
                                    const HighsLp& lp,
                                    const HighsSolution& solution, bool& valid,
-                                   bool& integral, bool& feasible,
-                                   const bool log_only_warning) {
+                                   bool& integral, bool& feasible) {
   valid = false;
   integral = false;
   feasible = false;
@@ -2650,14 +2649,14 @@ HighsStatus assessLpPrimalSolution(const std::string& message,
       lp.isMip() ? options.mip_feasibility_tolerance
                  : options.primal_feasibility_tolerance;
   // Warning logging is done if an infeasibility or row residual
-  // exceeding the tolerance is found.  Ultimately, if
-  // log_only_warning is false and no warnings have been issued,
-  // warning is set to false, and a one-line OK logging message is
-  // issued.
+  // exceeding the tolerance is found.  Ultimately, if no warnings
+  // have been issued, warning is set to false, and a one-line OK
+  // logging message is issued.
   bool warning = true;
   bool logged_header = false;
 
   auto logHeader = [&]() {
+    if (logged_header) return;
     highsLogUser(
         options.log_options,
         warning ? HighsLogType::kWarning : HighsLogType::kInfo,
@@ -2692,7 +2691,7 @@ HighsStatus assessLpPrimalSolution(const std::string& message,
     if (col_infeasibility > 0) {
       if (col_infeasibility > kPrimalFeasibilityTolerance) {
         if (col_infeasibility > 2 * max_col_infeasibility) {
-          if (!logged_header) logHeader();
+          logHeader();
           highsLogUser(options.log_options, HighsLogType::kWarning,
                        "Col %6d%s has         infeasibility of %11.4g from "
                        "[lower, value, upper] = [%15.8g; %15.8g; %15.8g]\n",
@@ -2708,7 +2707,7 @@ HighsStatus assessLpPrimalSolution(const std::string& message,
     if (integer_infeasibility > 0) {
       if (integer_infeasibility > options.mip_feasibility_tolerance) {
         if (integer_infeasibility > 2 * max_integer_infeasibility) {
-          if (!logged_header) logHeader();
+          logHeader();
           highsLogUser(options.log_options, HighsLogType::kWarning,
                        "Col %6d%s has integer infeasibility of %11.4g\n",
                        (int)iCol, name_string.c_str(), integer_infeasibility);
@@ -2741,7 +2740,7 @@ HighsStatus assessLpPrimalSolution(const std::string& message,
     if (row_infeasibility > 0) {
       if (row_infeasibility > kPrimalFeasibilityTolerance) {
         if (row_infeasibility > 2 * max_row_infeasibility) {
-          if (!logged_header) logHeader();
+          logHeader();
           highsLogUser(options.log_options, HighsLogType::kWarning,
                        "Row %6d%s has         infeasibility of %11.4g from "
                        "[lower, value, upper] = [%15.8g; %15.8g; %15.8g]\n",
@@ -2757,7 +2756,7 @@ HighsStatus assessLpPrimalSolution(const std::string& message,
     double row_residual = fabs(primal - row_value[iRow]);
     if (row_residual > kRowResidualTolerance) {
       if (row_residual > 2 * max_row_residual) {
-        if (!logged_header) logHeader();
+        logHeader();
         highsLogUser(options.log_options, HighsLogType::kWarning,
                      "Row %6d%s has         residual      of %11.4g\n",
                      int(iRow), name_string.c_str(), row_residual);
@@ -2774,38 +2773,34 @@ HighsStatus assessLpPrimalSolution(const std::string& message,
   feasible = valid && num_col_infeasibilities == 0 &&
              num_integer_infeasibilities == 0 && num_row_infeasibilities == 0;
   warning = !(integral && feasible);
-  if (!log_only_warning || warning) {
-    // If log_only_warning and warning are both false, then the
-    // following line issues the "OK" logging message
-    if (!logged_header) logHeader();
-    if (warning) {
-      highsLogUser(
-          options.log_options, HighsLogType::kWarning,
-          "Solution has               num          max          sum\n");
-      if (num_col_infeasibilities > 0)
-        highsLogUser(options.log_options, HighsLogType::kWarning,
-                     "Col     infeasibilities %6d  %11.4g  %11.4g\n",
-                     int(num_col_infeasibilities), max_col_infeasibility,
-                     sum_col_infeasibilities);
-      if (lp.isMip() && num_integer_infeasibilities > 0)
-        highsLogUser(options.log_options, HighsLogType::kWarning,
-                     "Integer infeasibilities %6d  %11.4g  %11.4g\n",
-                     int(num_integer_infeasibilities),
-                     max_integer_infeasibility, sum_integer_infeasibilities);
-      if (num_row_infeasibilities > 0)
-        highsLogUser(options.log_options, HighsLogType::kWarning,
-                     "Row     infeasibilities %6d  %11.4g  %11.4g\n",
-                     int(num_row_infeasibilities), max_row_infeasibility,
-                     sum_row_infeasibilities);
-      if (num_row_residuals > 0)
-        highsLogUser(options.log_options, HighsLogType::kWarning,
-                     "Row     residuals       %6d  %11.4g  %11.4g\n",
-                     int(num_row_residuals), max_row_residual,
-                     sum_row_residuals);
-    }
+  if (!warning) {
+    // Issue the "OK" logging message
+    logHeader();
+    return HighsStatus::kOk;
   }
-  if (warning) return HighsStatus::kWarning;
-  return HighsStatus::kOk;
+  assert(logged_header);
+  highsLogUser(options.log_options, HighsLogType::kWarning,
+               "Solution has               num          max          sum\n");
+  if (num_col_infeasibilities > 0)
+    highsLogUser(options.log_options, HighsLogType::kWarning,
+                 "Col     infeasibilities %6d  %11.4g  %11.4g\n",
+                 int(num_col_infeasibilities), max_col_infeasibility,
+                 sum_col_infeasibilities);
+  if (lp.isMip() && num_integer_infeasibilities > 0)
+    highsLogUser(options.log_options, HighsLogType::kWarning,
+                 "Integer infeasibilities %6d  %11.4g  %11.4g\n",
+                 int(num_integer_infeasibilities), max_integer_infeasibility,
+                 sum_integer_infeasibilities);
+  if (num_row_infeasibilities > 0)
+    highsLogUser(options.log_options, HighsLogType::kWarning,
+                 "Row     infeasibilities %6d  %11.4g  %11.4g\n",
+                 int(num_row_infeasibilities), max_row_infeasibility,
+                 sum_row_infeasibilities);
+  if (num_row_residuals > 0)
+    highsLogUser(options.log_options, HighsLogType::kWarning,
+                 "Row     residuals       %6d  %11.4g  %11.4g\n",
+                 int(num_row_residuals), max_row_residual, sum_row_residuals);
+  return HighsStatus::kWarning;
 }
 
 void writeBasisFile(FILE*& file, const HighsOptions& options, const HighsLp& lp,

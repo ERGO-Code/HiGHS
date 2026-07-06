@@ -1492,7 +1492,7 @@ TEST_CASE("issue-3118", "[highs_test_mip_solver]") {
   //          a, b binary
   //   Initial "solution" a = b = 1/M
   Highs highs;
-  highs.setOptionValue("output_flag", dev_run);
+  // highs.setOptionValue("output_flag", dev_run);
 
   HighsInt a = 0;
   HighsInt b = 1;

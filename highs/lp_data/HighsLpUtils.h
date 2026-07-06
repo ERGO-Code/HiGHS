@@ -256,8 +256,7 @@ HighsStatus assessLpPrimalSolution(const std::string& message,
                                    const HighsOptions& options,
                                    const HighsLp& lp,
                                    const HighsSolution& solution, bool& valid,
-                                   bool& integral, bool& feasible,
-                                   const bool log_only_warning = true);
+                                   bool& integral, bool& feasible);
 
 HighsStatus calculateRowValuesQuad(const HighsLp& lp,
                                    const std::vector<double>& col_value,
