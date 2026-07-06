@@ -1515,7 +1515,8 @@ TEST_CASE("issue-3118", "[highs_test_mip_solver]") {
   highs.setSolution(2, solution_index.data(), solution_values.data());
 
   highs.run();
-  REQUIRE(highs.getModelStatus() == HighsModelStatus::kInfeasible);
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
+  REQUIRE(std::abs(2e-7 - highs.getInfo().objective_function_value) < 1e-9);
 
   highs.resetGlobalScheduler(true);
 }
