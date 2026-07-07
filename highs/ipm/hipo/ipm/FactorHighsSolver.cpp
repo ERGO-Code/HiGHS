@@ -1,5 +1,6 @@
 #include "FactorHighsSolver.h"
 
+#include <cstring>
 #include <limits>
 
 #include "Status.h"
@@ -277,7 +278,7 @@ Int FactorHighsSolver::chooseNla() {
     run_analyse_AS();
     run_structure_NE();
   } else {
-    TaskGroupSpecial tg;
+    highs::parallel::TaskGroup tg;
     tg.spawn([&]() { run_analyse_AS(); });
     tg.spawn([&]() { run_structure_NE(); });
     tg.taskWait();
@@ -565,6 +566,10 @@ Int FactorHighsSolver::setNla() {
   return kStatusOk;
 }
 
+static bool usingAppleBlas() {
+  return strstr(HighsExtras::blas::getInfo()->provider, "Apple") != nullptr;
+}
+
 void FactorHighsSolver::setParallel() {
   // Set parallel options
   bool parallel_tree = false;
@@ -590,35 +595,35 @@ void FactorHighsSolver::setParallel() {
       assert(1 == 0);
 
   } else if (options_.parallel == kHighsChooseString) {
-#ifdef HIPO_USES_APPLE_BLAS
-    // Blas on Apple do not work well with parallel_node, but parallel_tree
-    // seems to always be beneficial.
-    parallel_node = false;
-    parallel_tree = true;
-#else
-    // Otherwise, parallel_node is active because it is triggered only if the
-    // frontal matrix is large enough anyway.
-    parallel_node = true;
-
-    // parallel_tree instead is chosen with a heuristic
-
-    double tree_speedup = S_.flops() / S_.critops();
-    double sn_size = (double)S_.size() / S_.sn();
-
-    bool enough_sn = S_.sn() > kMinNumberSn;
-    bool enough_flops = S_.flops() > kLargeFlopsThresh;
-    bool speedup_is_large = tree_speedup > kLargeSpeedupThresh;
-    bool sn_are_large = sn_size > kLargeSnThresh;
-    bool sn_are_not_small = sn_size > kSmallSnThresh;
-
-    // parallel_tree is active if the supernodes are large, or if there is a
-    // large expected speedup and the supernodes are not too small, provided
-    // that the number of flops and supernodes is not too small.
-    if (enough_sn && enough_flops &&
-        (sn_are_large || (speedup_is_large && sn_are_not_small))) {
+    if (usingAppleBlas()) {
+      // Blas on Apple do not work well with parallel_node, but parallel_tree
+      // seems to always be beneficial.
+      parallel_node = false;
       parallel_tree = true;
+    } else {
+      // Otherwise, parallel_node is active because it is triggered only if the
+      // frontal matrix is large enough anyway.
+      parallel_node = true;
+
+      // parallel_tree instead is chosen with a heuristic
+
+      double tree_speedup = S_.flops() / S_.critops();
+      double sn_size = (double)S_.size() / S_.sn();
+
+      bool enough_sn = S_.sn() > kMinNumberSn;
+      bool enough_flops = S_.flops() > kLargeFlopsThresh;
+      bool speedup_is_large = tree_speedup > kLargeSpeedupThresh;
+      bool sn_are_large = sn_size > kLargeSnThresh;
+      bool sn_are_not_small = sn_size > kSmallSnThresh;
+
+      // parallel_tree is active if the supernodes are large, or if there is a
+      // large expected speedup and the supernodes are not too small, provided
+      // that the number of flops and supernodes is not too small.
+      if (enough_sn && enough_flops &&
+          (sn_are_large || (speedup_is_large && sn_are_not_small))) {
+        parallel_tree = true;
+      }
     }
-#endif
 
     // If serial memory is too large, switch off tree parallelism to avoid
     // running out of memory

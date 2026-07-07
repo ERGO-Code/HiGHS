@@ -396,6 +396,20 @@ HighsInt Highs_clearModel(void* highs);
 HighsInt Highs_clearSolver(void* highs);
 
 /**
+ * Release all retained memory back to the allocator.
+ *
+ * Clears all solver state and shrinks internal vectors to free unused
+ * capacity. Useful in long-running services that reuse a Highs instance
+ * across multiple solves to prevent unbounded RSS growth from heap
+ * fragmentation.
+ *
+ * @param highs     A pointer to the Highs instance.
+ *
+ * @returns A `kHighsStatus` constant indicating whether the call succeeded.
+ */
+HighsInt Highs_releaseMemory(void* highs);
+
+/**
  * Presolve a model.
  *
  * @param highs     A pointer to the Highs instance.

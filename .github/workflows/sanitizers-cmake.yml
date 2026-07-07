@@ -25,7 +25,7 @@ jobs:
         working-directory: ${{github.workspace}}/build
         run: |
           cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=RelWithDebInfo -DDEBUG_MEMORY=${{ matrix.sanitizer }} -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++
-          cmake --build . --parallel
+          cmake --build . -j2
 
       - name: Run
         working-directory: ${{github.workspace}}/build
@@ -51,7 +51,7 @@ jobs:
         working-directory: ${{github.workspace}}/build
         run: |
           cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=Debug -DDEBUG_MEMORY=${{ matrix.sanitizer }} -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++
-          cmake --build . --parallel
+          cmake --build . -j2
 
       - name: Run
         working-directory: ${{github.workspace}}/build
@@ -77,7 +77,7 @@ jobs:
         working-directory: ${{github.workspace}}/build
         run: |
           cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=RelWithDebInfo -DDEBUG_MEMORY=${{ matrix.sanitizer }} -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++
-          cmake --build . --parallel
+          cmake --build . -j2
 
       - name: Run
         working-directory: ${{github.workspace}}/build
@@ -103,7 +103,7 @@ jobs:
         working-directory: ${{github.workspace}}/build
         run: |
           cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=Debug -DDEBUG_MEMORY=${{ matrix.sanitizer }} -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++
-          cmake --build . --parallel
+          cmake --build . -j2
 
       - name: Run
         working-directory: ${{github.workspace}}/build

@@ -74,7 +74,7 @@ void HighsDebugSol::activate() {
       debugSolObjective = double(debugsolobj + mipsolver->orig_model_->offset_);
       debugSolActive = true;
       printf("debug sol active\n");
-      registerDomain(mipsolver->mipdata_->domain);
+      registerDomain(mipsolver->mipdata_->getDomain());
     } else {
       highsLogUser(mipsolver->options_mip_->log_options, HighsLogType::kWarning,
                    "debug solution: could not open file '%s'\n",
@@ -83,8 +83,8 @@ void HighsDebugSol::activate() {
       model.lp_ = *mipsolver->model_;
       model.lp_.col_names_.clear();
       model.lp_.row_names_.clear();
-      model.lp_.col_lower_ = mipsolver->mipdata_->domain.col_lower_;
-      model.lp_.col_upper_ = mipsolver->mipdata_->domain.col_upper_;
+      model.lp_.col_lower_ = mipsolver->mipdata_->getDomain().col_lower_;
+      model.lp_.col_upper_ = mipsolver->mipdata_->getDomain().col_upper_;
       FilereaderMps().writeModelToFile(*mipsolver->options_mip_,
                                        "debug_mip.mps", model);
     }
@@ -297,7 +297,7 @@ void HighsDebugSol::checkConflictReconvergenceFrontier(
     }
   }
 
-  auto reconvChg = mipsolver->mipdata_->domain.flip(reconvDomchg.domchg);
+  auto reconvChg = mipsolver->mipdata_->getDomain().flip(reconvDomchg.domchg);
 
   if (reconvChg.boundtype == HighsBoundType::kLower) {
     if (debugSolution[reconvChg.column] >= reconvChg.boundval)

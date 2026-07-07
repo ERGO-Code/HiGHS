@@ -20,8 +20,7 @@ class HighsLpSolverObject {
   HighsLpSolverObject(HighsLp& lp, HighsBasis& basis, HighsSolution& solution,
                       HighsInfo& highs_info, HEkk& ekk_instance,
                       HighsCallback& callback, HighsOptions& options,
-                      HighsTimer& timer,
-                      HighsSubSolverCallTime& sub_solver_call_time)
+                      HighsTimer& timer)
       : lp_(lp),
         basis_(basis),
         solution_(solution),
@@ -29,8 +28,7 @@ class HighsLpSolverObject {
         ekk_instance_(ekk_instance),
         callback_(callback),
         options_(options),
-        timer_(timer),
-        sub_solver_call_time_(sub_solver_call_time) {}
+        timer_(timer) {}
 
   HighsLp& lp_;
   HighsBasis& basis_;
@@ -40,8 +38,12 @@ class HighsLpSolverObject {
   HighsCallback& callback_;
   HighsOptions& options_;
   HighsTimer& timer_;
-  HighsSubSolverCallTime& sub_solver_call_time_;
+  HighsProfiling* profiling_ = nullptr;
   HighsModelStatus model_status_ = HighsModelStatus::kNotset;
+  void setProfiling(HighsProfiling* profiling) {
+    assert(profiling);
+    profiling_ = profiling;
+  }
 };
 
 #endif  // LP_DATA_HIGHS_LP_SOLVER_OBJECT_H_

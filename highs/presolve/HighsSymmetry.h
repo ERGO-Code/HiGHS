@@ -54,6 +54,12 @@ class HighsMatrixColoring {
 class HighsDomain;
 class HighsCliqueTable;
 struct HighsSymmetries;
+struct StabilizerOrbitWorkspace {
+  std::vector<HighsInt> orbitPartition;
+  std::vector<HighsInt> orbitSize;
+  std::vector<HighsInt> linkCompressionStack;
+};
+
 struct StabilizerOrbits {
   std::vector<HighsInt> orbitCols;
   std::vector<HighsInt> orbitStarts;
@@ -126,8 +132,18 @@ struct HighsSymmetries {
   HighsInt numGenerators = 0;
 
   void clear();
-  void mergeOrbits(HighsInt col1, HighsInt col2);
-  HighsInt getOrbit(HighsInt col);
+  void mergeOrbits(HighsInt col1, HighsInt col2,
+                   std::vector<HighsInt>& orbitPartition,
+                   std::vector<HighsInt>& orbitSize,
+                   std::vector<HighsInt>& linkCompressionStack);
+  void mergeOrbits(HighsInt col1, HighsInt col2) {
+    mergeOrbits(col1, col2, orbitPartition, orbitSize, linkCompressionStack);
+  }
+  HighsInt getOrbit(HighsInt col, std::vector<HighsInt>& orbitPartition,
+                    std::vector<HighsInt>& linkCompressionStack);
+  HighsInt getOrbit(HighsInt col) {
+    return getOrbit(col, orbitPartition, linkCompressionStack);
+  }
 
   HighsInt propagateOrbitopes(HighsDomain& domain) const;
 
@@ -142,7 +158,7 @@ struct HighsSymmetries {
   }
 
   std::shared_ptr<const StabilizerOrbits> computeStabilizerOrbits(
-      const HighsDomain& localdom);
+      const HighsDomain& localdom, StabilizerOrbitWorkspace& workspace);
 };
 
 class HighsSymmetryDetection {

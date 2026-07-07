@@ -115,11 +115,6 @@ class Clock {
   double stop() const;
 };
 
-class TaskGroupSpecial : public highs::parallel::TaskGroup {
- public:
-  ~TaskGroupSpecial();
-};
-
 }  // namespace hipo
 
 #endif

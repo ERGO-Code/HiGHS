@@ -105,7 +105,7 @@ void Factorise::processSupernode(Int sn) {
   // Assemble frontal matrix for supernode sn, perform partial factorisation and
   // store the result.
 
-  TaskGroupSpecial tg;
+  highs::parallel::TaskGroup tg;
   HIPO_CLOCK_CREATE;
 
   const bool parallel = S_.parTree();
@@ -296,7 +296,7 @@ void Factorise::processSupernode(Int sn) {
 bool Factorise::run(Numeric& num) {
   HIPO_CLOCK_CREATE;
 
-  TaskGroupSpecial tg;
+  highs::parallel::TaskGroup tg;
 
   total_reg_.assign(n_, 0.0);
 
