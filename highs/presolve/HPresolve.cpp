@@ -6944,7 +6944,7 @@ void HPresolve::removeFixedCol(HighsInt col, double fixval) {
 
 HPresolve::Result HPresolve::removeRowSingletons(
     HighsPostsolveStack& postsolve_stack) {
-  for (size_t i = 0; i != singletonRows.size(); ++i) {
+  for (size_t i = 0; i < singletonRows.size(); ++i) {
     HighsInt row = singletonRows[i];
     if (rowDeleted[row] || rowsize[row] > 1) continue;
     // row presolve will delegate to rowSingleton() if the row size is 1
