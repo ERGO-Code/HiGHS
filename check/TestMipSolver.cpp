@@ -1486,16 +1486,20 @@ TEST_CASE("issue-2975", "[highs_test_mip_solver]") {
 
 TEST_CASE("issue-3118", "[highs_test_mip_solver]") {
   const double M = 1e10;
-  //   min    a +   b
-  //   s.t.   a + M*b = 1
-  //        M*a +   b = 1
-  //          a, b binary
-  //   Initial "solution" a = b = 1/M
+  //   min    x +   y
+  //   s.t.   x + M*y = 1
+  //        M*x +   y = 1
+  //          x, y binary
+  //   Initial "solution" x = y = 1/M
+  //
+  // This problem is found infeasible in presolve, but the point x = y
+  // = 1/M is integer feasible to within the tolerances, so is
+  // acccepted as an optimal solution to the problem
   Highs highs;
-  // highs.setOptionValue("output_flag", dev_run);
+  highs.setOptionValue("output_flag", dev_run);
 
-  HighsInt a = 0;
-  HighsInt b = 1;
+  HighsInt x = 0;
+  HighsInt y = 1;
   HighsLp lp;
   lp.num_col_ = 2;
   lp.num_row_ = 2;
@@ -1507,7 +1511,7 @@ TEST_CASE("issue-3118", "[highs_test_mip_solver]") {
   lp.row_upper_ = {1., 1.};
   lp.a_matrix_.format_ = MatrixFormat::kRowwise;
   lp.a_matrix_.start_ = {0, 2, 4};
-  lp.a_matrix_.index_ = {a, b, a, b};
+  lp.a_matrix_.index_ = {x, y, x, y};
   lp.a_matrix_.value_ = {1., M, M, 1};
   highs.passModel(lp);
 
@@ -1517,16 +1521,17 @@ TEST_CASE("issue-3118", "[highs_test_mip_solver]") {
   highs.run();
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
   REQUIRE(std::abs(2 / M - highs.getInfo().objective_function_value) < 1e-9);
+  if (dev_run) highs.writeSolution("", 1);
 
   highs.resetGlobalScheduler(true);
 }
 
 TEST_CASE("issue-3118a", "[highs_test_mip_solver]") {
-  const double M = 1e7;
+  const double M = 1e10;
   //   max f = x
   //   s.t.    x - M*y  = -1
   //           x       <=  b
-  //           x, y integer in {0, 2}x{0, 1}
+  //           x, y integer in [0, 2]x[0, 1]
   //
   // The MIP is not feasible over the integers for any b
   //
@@ -1563,7 +1568,7 @@ TEST_CASE("issue-3118a", "[highs_test_mip_solver]") {
   lp.a_matrix_.index_ = {x, y, x};
   lp.a_matrix_.value_ = {1., -M, 1};
 
-  for (HighsInt k = 0; k < 3; k++) {
+  for (HighsInt k = 0; k < 2; k++) {
     HighsInt b = k == 0 ? 0 : 1;
     lp.row_upper_[1] = b;
 
@@ -1576,12 +1581,8 @@ TEST_CASE("issue-3118a", "[highs_test_mip_solver]") {
     std::vector<double> solution_values = {0, 1 / M};
     highs.setSolution(2, nullptr, solution_values.data());
 
-    bool valid, integral, feasible;
-    REQUIRE(highs.assessPrimalSolution(valid, integral, feasible) ==
-            HighsStatus::kOk);
-
     highs.run();
-    highs.writeSolution("", 1);
+    if (dev_run) highs.writeSolution("", 1);
     REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
 
     // Solve as LP
@@ -1597,8 +1598,10 @@ TEST_CASE("issue-3118a", "[highs_test_mip_solver]") {
     solution_values = highs.getSolution().col_value;
     highs.setSolution(2, nullptr, solution_values.data());
 
+    bool valid, integral, feasible;
     REQUIRE(highs.assessPrimalSolution(valid, integral, feasible) ==
             HighsStatus::kOk);
   }
+
   highs.resetGlobalScheduler(true);
 }

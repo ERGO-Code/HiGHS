@@ -268,7 +268,7 @@ class Highs {
    * @brief Assess the validity, integrality and feasibility of the
    * current primal solution. Row values are computed and checked
    * against what's in Highs::solution_.row_value and, if the
-   * differences exceed a tolernace, valid returns false.  If any of
+   * differences exceed a tolerance, valid returns false.  If any of
    * valid, integral or feasible is false, then assessPrimalSolution
    * returns HighsStatus::kWarning.
    */
