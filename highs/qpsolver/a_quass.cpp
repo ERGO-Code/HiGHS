@@ -158,16 +158,26 @@ QpAsmStatus solveqp(Instance& instance, Settings& settings, Statistics& stats,
 
   // compute initial feasible point
   QpHotstartInformation startinfo(instance.num_var, instance.num_con);
-  if (instance.num_con == 0 && instance.num_var <= 15000) {
+  
+  if (instance.num_con == 0 && (instance.num_var <= 5000 ||
+				instance.num_var >= instance.Q.mat.nnz())) {
+    // For a pure bounded QP compute a starting point from the
+    // unconstrained QP solution. If Q is diagonal, do this directly,
+    // otherwise compute a Cholesky decomposition (hence dimension
+    // restriction).
     computeStartingPointBounded(instance, settings, stats, qp_model_status,
                                 startinfo, qp_timer);
-    if (qp_model_status == QpModelStatus::kOptimal) {
-      qp_solution.primal = startinfo.primal;
-      return quass2highs(instance, settings, stats, qp_model_status,
-                         qp_solution, highs_model_status, highs_basis,
-                         highs_solution);
-    }
-    if (qp_model_status == QpModelStatus::kUnbounded) {
+    if (qp_model_status == QpModelStatus::kOptimal ||
+	qp_model_status == QpModelStatus::kUnbounded ||
+	qp_model_status == QpModelStatus::kNonConvex) {
+      if (qp_model_status == QpModelStatus::kOptimal) {
+	// Optimality occurs only if the unconstrained solution is
+	// feasible, so copy in the primal solution, zero the column
+	// duals and set the column status to inactive
+	qp_solution.primal = startinfo.primal;
+	qp_solution.dualvar.value.assign(instance.num_var, 0);
+	qp_solution.status_var.assign(instance.num_var, BasisStatus::kInactive);	
+      }
       return quass2highs(instance, settings, stats, qp_model_status,
                          qp_solution, highs_model_status, highs_basis,
                          highs_solution);

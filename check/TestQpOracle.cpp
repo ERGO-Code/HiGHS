@@ -237,7 +237,7 @@ TEST_CASE("hessian-oracle-check", "[qpsolver]") {
   Highs h;
   h.setOptionValue("output_flag", dev_run);
 
-  const bool qp4 = true;
+  const bool qp4 = false;
   HighsModel model = qp4 ? getQp4(): getQp5(); //
   HighsLp& lp = model.lp_;
   HighsHessian& hessian = model.hessian_;
@@ -409,7 +409,7 @@ HighsModel getQp4() {
 
   lp.num_col_ = 4;
   lp.num_row_ = 0;
-  lp.col_cost_ = {-4, 1, -7, -7};
+  lp.col_cost_ = {-4, 1, -7, -5};
   lp.col_lower_.assign(lp.num_col_, 0);
   lp.col_upper_.assign(lp.num_col_, kHighsInf);
   // Row|    0    1    2    3
@@ -417,12 +417,12 @@ HighsModel getQp4() {
   //   0|    4   -2         2
   //   1|   -2    2    1   -2
   //   2|         1    5    1     
-  //   3|    2         1    6
+  //   3|    2         1    4
   hessian.dim_ = lp.num_col_;
   hessian.format_ = HessianFormat::kTriangular;
   hessian.start_ = {0, 3, 6, 8, 9};
   hessian.index_ = {0,  1, 3,  1, 2,  3,  2, 3,  3};
-  hessian.value_ = {4, -2, 2,  2, 1, -2,  5, 1,  6};
+  hessian.value_ = {4, -2, 2,  2, 1, -2,  5, 1,  4};
   return model;
 }
 

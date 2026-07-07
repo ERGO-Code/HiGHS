@@ -19,68 +19,85 @@ static void computeStartingPointBounded(Instance& instance, Settings& settings,
   // compute initial feasible point for problems with bounds only (no general
   // linear constraints)
 
-  // compute  Qx + c = 0 --> x = Q^-1c
-  std::vector<double> L;
-  L.resize(instance.num_var * instance.num_var);
+  // Solve  Qx + c = 0 --> x = -Q^-1c
+  HighsInt dim = instance.num_var;
+  QpVector res = -instance.c;
+  assert(res.dim == dim);
+  if (instance.Q.mat.nnz() == dim) {
+    // Diagonal Hessian
+    for (HighsInt iRow = 0; iRow < dim; iRow++) {
+      double value = instance.Q.mat.value[iRow];
+      if (value <= 0) {
+	modelstatus = QpModelStatus::kNonConvex;
+	return;
+      }
+      res.value[iRow] /= value;
+    }
+  } else {
+    // General Hessian: compute Cholesky factorization of Q
+    std::vector<double> L;
+    L.resize(dim * dim);
 
-  auto printL = [&] () {
-    for (HighsInt iRow = 0; iRow < instance.num_var; iRow++) {
-      for (HighsInt iCol = 0; iCol <= iRow; iCol++) 
-	printf(" %11.4g", L[iRow * instance.num_var + iCol]);
-      printf("\n");
-    }
-  };
-  // Compute cholesky factorization of Q
-  //
-  
-  // First copy the lower triangle of Q into L
-  L.assign(instance.num_var * instance.num_var, 0);
-  for (HighsInt iCol = 0; iCol < instance.num_var; iCol++) {
-    for (HighsInt iEl = instance.Q.mat.start[iCol]; iEl < instance.Q.mat.start[iCol + 1]; iEl++) {
-      HighsInt iRow = instance.Q.mat.index[iEl];
-      // Take the entries above or on the diagonal in column iCol of
-      // (column-wise) Q as the entries before or on the diagonal in
-      // row iCol of (row-wise) L
-      if (iRow <= iCol) L[iCol * instance.num_var + iRow] = instance.Q.mat.value[iEl];
-    }
-  }
-  for (HighsInt iRow = 0; iRow < instance.num_var; iRow++) {
-    printL();
-    for (HighsInt iCol = 0; iCol <= iRow; iCol++) {
-      double sum = 0;
-      for (HighsInt k = 0; k < iCol; k++) 
-	sum += L[iRow * instance.num_var + k] * L[iCol * instance.num_var + k];
-      if (iCol < iRow) {
-	double value = (L[iRow * instance.num_var + iCol] - sum) / L[iCol * instance.num_var + iCol];
-	printf("Computed L[%1d, %1d] = (%11.4g - %11.4g) / %11.4g = %11.4g\n",
-	       int(iRow), int(iCol),
-	       L[iRow * instance.num_var + iCol], sum, L[iCol * instance.num_var + iCol], value);
-	L[iRow * instance.num_var + iCol] = value;
-      } else {
-	double value = L[iCol * instance.num_var + iCol] - sum;
-	printf("Computed L[%1d, %1d] = sqrt(%11.4g - %11.4g) = sqrt(%11.4g) = %11.4g\n",
-	       int(iCol), int(iCol),
-	       L[iCol * instance.num_var + iCol], sum, value, std::sqrt(value));
-	L[iCol * instance.num_var + iCol] = std::sqrt(value);
+    auto printL = [&] () {
+      for (HighsInt iRow = 0; iRow < dim; iRow++) {
+	for (HighsInt iCol = 0; iCol <= iRow; iCol++) 
+	  printf(" %11.4g", L[iRow * dim + iCol]);
+	printf("\n");
+      }
+    };
+
+    // First copy the lower triangle of Q into L
+    L.assign(dim * dim, 0);
+    for (HighsInt iCol = 0; iCol < dim; iCol++) {
+      for (HighsInt iEl = instance.Q.mat.start[iCol]; iEl < instance.Q.mat.start[iCol + 1]; iEl++) {
+	HighsInt iRow = instance.Q.mat.index[iEl];
+	// Take the entries above or on the diagonal in column iCol of
+	// (column-wise) Q as the entries before or on the diagonal in
+	// row iCol of (row-wise) L
+	if (iRow <= iCol) L[iCol * dim + iRow] = instance.Q.mat.value[iEl];
       }
     }
-  }
-
-  // solve for c
-  QpVector res = -instance.c;
-  for (HighsInt r = 0; r < res.dim; r++) {
-    for (HighsInt j = 0; j < r; j++) {
-      res.value[r] -= res.value[j] * L[j * instance.num_var + r];
+    // Now compute Cholesky factorization of L
+    for (HighsInt iRow = 0; iRow < dim; iRow++) {
+      printL();
+      for (HighsInt iCol = 0; iCol <= iRow; iCol++) {
+	double sum = 0;
+	for (HighsInt k = 0; k < iCol; k++) 
+	  sum += L[iRow * dim + k] * L[iCol * dim + k];
+	if (iCol < iRow) {
+	  double value = (L[iRow * dim + iCol] - sum) / L[iCol * dim + iCol];
+	  printf("Computed L[%1d, %1d] = (%11.4g - %11.4g) / %11.4g = %11.4g\n",
+		 int(iRow), int(iCol),
+		 L[iRow * dim + iCol], sum, L[iCol * dim + iCol], value);
+	  L[iRow * dim + iCol] = value;
+	} else {
+	  double value = L[iCol * dim + iCol] - sum;
+	  printf("Computed L[%1d, %1d] = sqrt(%11.4g - %11.4g) = sqrt(%11.4g) = %11.4g\n",
+		 int(iCol), int(iCol),
+		 L[iCol * dim + iCol], sum, value, std::sqrt(value));
+	  if (value <= 0) {
+	    modelstatus = QpModelStatus::kNonConvex;
+	    return;
+	  }
+	  L[iCol * dim + iCol] = std::sqrt(value);
+	}
+      }
     }
-    res.value[r] /= L[r * instance.num_var + r];
-  }
-
-  for (HighsInt i = res.dim - 1; i >= 0; i--) {
-    double sum = 0.0;
-    for (HighsInt j = res.dim - 1; j > i; j--) {
-      sum += res.value[j] * L[i * instance.num_var + j];
+    printL();
+    // Solve for Qx = -c
+    // Solve Ly = -c
+    for (HighsInt iRow = 0; iRow < dim; iRow++) {
+      double sum = 0.0;
+      for (HighsInt iCol = 0; iCol < iRow; iCol++) 
+	sum += res.value[iCol] * L[iRow * dim + iCol];
+      res.value[iRow] = (res.value[iRow] - sum) / L[iRow * dim + iRow];
     }
-    res.value[i] = (res.value[i] - sum) / L[i * instance.num_var + i];
+    // Solve L^Tx = y
+    for (HighsInt iRow = dim - 1; iRow >= 0; iRow--) {
+      res.value[iRow] /= L[iRow * dim + iRow];
+      for (HighsInt iCol = 0; iCol < iRow; iCol++) 
+	res.value[iCol] -= res.value[iRow] * L[iRow * dim + iCol];
+    }
   }
 
   // project solution to bounds and collect active bounds

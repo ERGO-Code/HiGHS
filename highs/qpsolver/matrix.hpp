@@ -179,6 +179,12 @@ struct MatrixBase {
 
     return extractcol(col, res);
   }
+
+  HighsInt nnz() const {
+    assert(this->start.size() >= static_cast<size_t>(this->num_col));
+    return this->start[this->num_col];
+  }
+
 };
 
 struct Matrix {
