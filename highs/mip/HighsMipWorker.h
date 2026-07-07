@@ -130,6 +130,8 @@ class HighsMipWorker {
 
   bool getAllowHeuristics() const { return heuristics_allowed; }
 
+  double getOptimalityLimit() const;
+
   int64_t& getNumNeighbourhoodQueries() {
     return sepa_stats.numNeighbourhoodQueries;
   }

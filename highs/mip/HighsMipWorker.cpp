@@ -146,6 +146,14 @@ bool HighsMipWorker::trySolution(const std::vector<double>& solution,
   return addIncumbent(solution, static_cast<double>(obj), solution_source);
 }
 
+double HighsMipWorker::getOptimalityLimit() const {
+  if (!mipdata_.parallelLockActive()) {
+    return mipdata_.optimality_limit;
+  } else {
+    return optimality_limit;
+  }
+}
+
 void HighsMipWorker::resetSepaStats() {
   sepa_stats.numNeighbourhoodQueries = 0;
   sepa_stats.sepa_lp_iterations = 0;

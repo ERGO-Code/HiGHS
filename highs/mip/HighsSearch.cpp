@@ -616,7 +616,7 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters,
           } else {
             downbound[candidate] = solobj;
           }
-          if (solobj > getOptimalityLimit()) {
+          if (solobj > mipworker.getOptimalityLimit()) {
             addBoundExceedingConflict();
 
             bool pruned = solobj > getCutoffBound();
@@ -877,7 +877,7 @@ HighsSearch::NodeResult HighsSearch::evaluateNode() {
 
   const auto& domchgstack = localdom.getDomainChangeStack();
 
-  if (!inheuristic && currnode.lower_bound > getOptimalityLimit())
+  if (!inheuristic && currnode.lower_bound > mipworker.getOptimalityLimit())
     return NodeResult::kSubOptimal;
 
   localdom.propagate();
@@ -1086,7 +1086,7 @@ HighsSearch::NodeResult HighsSearch::evaluateNode() {
     treeweight += std::ldexp(1.0, 1 - getCurrentDepth());
     currnode.opensubtrees = 0;
   } else if (!inheuristic) {
-    if (currnode.lower_bound > getOptimalityLimit()) {
+    if (currnode.lower_bound > mipworker.getOptimalityLimit()) {
       result = NodeResult::kSubOptimal;
       addBoundExceedingConflict();
     }
@@ -1736,7 +1736,7 @@ bool HighsSearch::backtrackPlunge(HighsNodeQueue& nodequeue) {
     }
 
     nodelb = std::max(nodelb, localdom.getObjectiveLowerBound());
-    bool nodeToQueue = nodelb > getOptimalityLimit();
+    bool nodeToQueue = nodelb > mipworker.getOptimalityLimit();
     // we check if switching to the other branch of an ancestor yields a higher
     // additive branch score than staying in this node and if so we postpone the
     // node and put it to the queue to backtrack further.
@@ -1907,14 +1907,6 @@ double HighsSearch::getUpperLimit() const {
 }
 
 double HighsSearch::getEpsilon() const { return mipsolver.mipdata_->epsilon; }
-
-double HighsSearch::getOptimalityLimit() const {
-  if (!mipsolver.mipdata_->parallelLockActive()) {
-    return mipsolver.mipdata_->optimality_limit;
-  } else {
-    return mipworker.optimality_limit;
-  }
-}
 
 const std::vector<double>& HighsSearch::getRootLpSol() const {
   return mipsolver.mipdata_->rootlpsol;

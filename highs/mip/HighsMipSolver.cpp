@@ -683,7 +683,7 @@ restart:
 
   auto assignEarlyTermination = [&](HighsMipWorker& worker) {
     if (worker.getGlobalDomain().infeasible() ||
-        mipdata_->lower_bound > worker.optimality_limit) {
+        mipdata_->lower_bound > worker.getOptimalityLimit()) {
       mipdata_->updateWorkerEarlyTermination(worker);
     }
   };
