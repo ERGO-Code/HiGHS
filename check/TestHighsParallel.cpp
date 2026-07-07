@@ -4,6 +4,16 @@
 #include <omp.h>
 #endif
 
+#if defined(_WIN32) || defined(_WIN64)
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#include <windows.h>
+#endif
+
 #include <iostream>
 
 #include "catch.hpp"
@@ -299,6 +309,50 @@ TEST_CASE("AvailableConcurrency", "[parallel]") {
   REQUIRE(cores > 0);
   REQUIRE(cores <= std::thread::hardware_concurrency());
 }
+
+#if defined(_WIN32) || defined(_WIN64)
+TEST_CASE("AffinityReducedCores", "[parallel]") {
+  // Initialize scheduler with full core count
+  highs::parallel::initialize_scheduler();
+  int initial_threads = highs::parallel::num_threads();
+
+  // Restrict affinity to a single core
+  DWORD_PTR original_mask, system_mask;
+  GetProcessAffinityMask(GetCurrentProcess(), &original_mask, &system_mask);
+  SetProcessAffinityMask(GetCurrentProcess(), 1);
+
+  // available_concurrency should now report 1
+  unsigned int cores = highs::parallel::available_concurrency();
+  REQUIRE(cores == 1);
+  REQUIRE(initial_threads >= static_cast<int>(cores));
+
+  // Restore original affinity
+  SetProcessAffinityMask(GetCurrentProcess(), original_mask);
+  HighsTaskExecutor::shutdown();
+}
+#elif defined(__linux__)
+TEST_CASE("AffinityReducedCores", "[parallel]") {
+  // Initialize scheduler with full core count
+  highs::parallel::initialize_scheduler();
+  int initial_threads = highs::parallel::num_threads();
+
+  // Restrict affinity to a single core
+  cpu_set_t original_set, restricted_set;
+  sched_getaffinity(0, sizeof(original_set), &original_set);
+  CPU_ZERO(&restricted_set);
+  CPU_SET(0, &restricted_set);
+  sched_setaffinity(0, sizeof(restricted_set), &restricted_set);
+
+  // available_concurrency should now report 1
+  unsigned int cores = highs::parallel::available_concurrency();
+  REQUIRE(cores == 1);
+  REQUIRE(initial_threads >= static_cast<int>(cores));
+
+  // Restore original affinity
+  sched_setaffinity(0, sizeof(original_set), &original_set);
+  HighsTaskExecutor::shutdown();
+}
+#endif
 
 TEST_CASE("CancelNestedTasks", "[parallel]") {
   highs::parallel::initialize_scheduler();
