@@ -8,8 +8,6 @@
 #ifndef HIGHS_PARALLEL_H_
 #define HIGHS_PARALLEL_H_
 
-#include <thread>
-
 #if defined(__linux__)
 #include <sched.h>
 #elif defined(_WIN32)
