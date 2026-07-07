@@ -294,6 +294,12 @@ static void nestedTask() {
   tg.spawn([]() { loseTime(); });
 }
 
+TEST_CASE("AvailableConcurrency", "[parallel]") {
+  unsigned int cores = highs::parallel::available_concurrency();
+  REQUIRE(cores > 0);
+  REQUIRE(cores <= std::thread::hardware_concurrency());
+}
+
 TEST_CASE("CancelNestedTasks", "[parallel]") {
   highs::parallel::initialize_scheduler();
 
