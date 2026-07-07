@@ -5114,8 +5114,8 @@ HighsStatus Highs::initializeMultiThreading() {
   HighsLogOptions& log_options = this->options_.log_options;
   highsLogDev(log_options, HighsLogType::kInfo,
               "Scheduler initialized: %d threads (available cores: %d)\n",
-              int(this->max_threads_),
-              int(highs::parallel::available_concurrency()));
+              static_cast<int>(this->max_threads_),
+              static_cast<int>(highs::parallel::available_concurrency()));
   if (this->options_.threads != 0 &&
       this->max_threads_ != this->options_.threads) {
     highsLogUser(
