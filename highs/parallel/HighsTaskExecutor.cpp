@@ -8,6 +8,7 @@
 #include "parallel/HighsTaskExecutor.h"
 
 #include "parallel/HighsParallel.h"
+#include "util/HighsHash.h"
 
 #if defined(__linux__)
 #include <sched.h>
@@ -35,7 +36,7 @@ unsigned int highs::parallel::available_concurrency() {
   DWORD_PTR process_mask, system_mask;
   if (GetProcessAffinityMask(GetCurrentProcess(), &process_mask,
                              &system_mask)) {
-    int count = static_cast<int>(__popcnt64(process_mask));
+    int count = HighsHashHelpers::popcnt(static_cast<uint64_t>(process_mask));
     if (count > 0) return static_cast<unsigned int>(count);
   }
 #endif
