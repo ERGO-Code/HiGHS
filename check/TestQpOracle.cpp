@@ -13,7 +13,10 @@ const double double_equal_tolerance = 1e-5;
 HighsModel getQp4();
 HighsModel getQp5();
 HighsModel getQpQjh();
-bool vectorsEqual(const HighsInt dim, double* v0, double* v1);
+bool valuesRelEqual(const double v0, const double v1);
+bool vectorsRelEqual(const HighsInt dim, const double* v0, const double* v1);
+void testUnconConOracleSolve(HighsModel& model);
+void testOracleSolve(HighsModel& model);
 
 // On entry:
 //
@@ -369,36 +372,16 @@ TEST_CASE("hessian-oracle-check", "[qpsolver]") {
 }
 
 TEST_CASE("hessian-oracle-solve", "[qpsolver]") {
-  HighsModel model = getQpQjh();
-  HighsLp lp = model.lp_;
-  HighsHessian hessian = model.hessian_;
-
-  Highs h;
-  h.setOptionValue("output_flag", dev_run);
-  h.setOptionValue("solver", kQpAsmString);
-  const HighsInfo& info = h.getInfo();
-  const double& objective_function_value = info.objective_function_value;
-
-  HighsStatus return_status = h.passModel(lp);
-  REQUIRE(return_status == HighsStatus::kOk);
-
-  void* oracle_data = &hessian;
-
-  return_status =
-      h.passHessian(hessian.dim_, oracleCallTriangularHessian, oracle_data);
-  REQUIRE(return_status == HighsStatus::kOk);
-
-  if (dev_run) h.writeModel("");
-  REQUIRE(h.writeModel("Null.mps") == HighsStatus::kError);
-  return_status = h.run();
-  REQUIRE(return_status == HighsStatus::kOk);
-
-  double required_objective_function_value = -5.50;
-
-  REQUIRE(fabs(required_objective_function_value - objective_function_value) <
-          double_equal_tolerance);
-
-  h.resetGlobalScheduler(true);
+  HighsModel model;
+  for (HighsInt k = 0; k < 3; k++) {
+    if (k == 0) {
+      model = getQp5();
+      testUnconConOracleSolve(model);
+    } else {
+      model = getQpQjh();
+      testOracleSolve(model);
+    }
+  }
 }
 
 HighsModel getQp4() {
@@ -480,8 +463,60 @@ HighsModel getQpQjh() {
   return model;
 }
 
-bool vectorsEqual(const HighsInt dim, double* v0, double* v1) {
+bool valuesRelEqual(const double v0, const double v1) {
+  return std::fabs(v0-v1)/(1.0 + std::fabs(v0) + std::fabs(v1)) < double_equal_tolerance;
+}
+
+bool vectorsRelEqual(const HighsInt dim, const double* v0, const double* v1) {
   for (HighsInt iCol = 0; iCol < dim; iCol++)
-    if (v0[iCol] != v1[iCol]) return false;
+    if (!valuesRelEqual(v0[iCol], v1[iCol])) return false;
   return true;
+}
+
+void testUnconConOracleSolve(HighsModel& model) {
+  HighsLp& lp = model.lp_;
+  HighsHessian& hessian = model.hessian_;
+  testOracleSolve(model);
+}
+
+void testOracleSolve(HighsModel& model) {
+  HighsLp& lp = model.lp_;
+  HighsHessian& hessian = model.hessian_;
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  h.setOptionValue("solver", kQpAsmString);
+  const HighsInfo& info = h.getInfo();
+  const double& objective_function_value = info.objective_function_value;
+  double required_objective_function_value = 0;
+  // Three passes, one with Hessian; one with oracle based on square
+  // Hessian; one with oracle based on triangular Hessian
+  for (HighsInt k = 0; k < 2; k++) {
+    if (k == 0) {
+      REQUIRE(h.passModel(model) == HighsStatus::kOk);
+    } else {
+      REQUIRE(h.passModel(lp) == HighsStatus::kOk);
+      void* oracle_data = &hessian;
+      HighsStatus return_status;
+      if (hessian.format_ == HessianFormat::kSquare) {
+	return_status =
+          h.passHessian(lp.num_col_, oracleCallSquareHessian, oracle_data);
+      } else {
+	return_status =
+          h.passHessian(lp.num_col_, oracleCallTriangularHessian, oracle_data);
+      }
+    }
+    if (dev_run) h.writeModel("");
+    REQUIRE(h.writeModel("Null.mps") == HighsStatus::kError);
+    REQUIRE(h.run() == HighsStatus::kOk);
+    
+    if (k == 0) {
+      required_objective_function_value = objective_function_value;
+    } else {
+      REQUIRE(valuesRelEqual(objective_function_value, required_objective_function_value));
+    }
+    if (hessian.format_ == HessianFormat::kSquare) break;
+    hessian = hessian.toSquare();
+  }
+
+  h.resetGlobalScheduler(true);
 }

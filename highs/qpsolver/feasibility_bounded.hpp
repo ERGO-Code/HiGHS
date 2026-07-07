@@ -23,7 +23,7 @@ static void computeStartingPointBounded(Instance& instance, Settings& settings,
   HighsInt dim = instance.num_var;
   QpVector res = -instance.c;
   assert(res.dim == dim);
-  if (instance.Q.mat.nnz() == dim) {
+  if (instance.Q.mat.isDiagonal()) {
     // Diagonal Hessian
     for (HighsInt iRow = 0; iRow < dim; iRow++) {
       double value = instance.Q.mat.value[iRow];

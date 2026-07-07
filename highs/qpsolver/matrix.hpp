@@ -180,9 +180,33 @@ struct MatrixBase {
     return extractcol(col, res);
   }
 
-  HighsInt nnz() const {
-    assert(this->start.size() >= static_cast<size_t>(this->num_col));
-    return this->start[this->num_col];
+  HighsInt numNz() const {
+    if (this->isOracle()) {
+      HighsInt nnz = 0;
+      for (HighsInt iCol = 0; iCol < this->oracle_.dim_; iCol++) {
+	for (HighsInt iRow = 0; iRow < iCol; iRow++)
+	  if (this->oracle_.entry(iRow, iCol)) nnz += 2;
+	if (this->oracle_.entry(iCol, iCol)) nnz++;
+      }
+      return nnz;
+    } else {
+      assert(this->start.size() >= static_cast<size_t>(this->num_col));
+      return this->start[this->num_col];
+    }
+  }
+
+  bool isDiagonal() const {
+    if (this->isOracle()) {
+      HighsInt nnz = 0;
+      for (HighsInt iCol = 0; iCol < this->oracle_.dim_; iCol++) {
+	for (HighsInt iRow = 0; iRow < iCol; iRow++)
+	  if (this->oracle_.entry(iRow, iCol)) return false;
+      }
+      return true;
+    } 
+    // Only relevant if matrix is square
+    assert(this->num_col == this->num_row);
+    return this->numNz() == this->num_col;
   }
 
 };

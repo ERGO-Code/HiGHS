@@ -160,7 +160,7 @@ QpAsmStatus solveqp(Instance& instance, Settings& settings, Statistics& stats,
   QpHotstartInformation startinfo(instance.num_var, instance.num_con);
   
   if (instance.num_con == 0 && (instance.num_var <= 5000 ||
-				instance.num_var >= instance.Q.mat.nnz())) {
+				instance.Q.mat.isDiagonal())) {
     // For a pure bounded QP compute a starting point from the
     // unconstrained QP solution. If Q is diagonal, do this directly,
     // otherwise compute a Cholesky decomposition (hence dimension
