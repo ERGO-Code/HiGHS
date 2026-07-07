@@ -3,6 +3,7 @@
 #include <cstring>
 #include <limits>
 
+#include "HighsExternalApi.h"
 #include "Status.h"
 #include "ipm/hipo/auxiliary/Auxiliary.h"
 #include "ipm/hipo/auxiliary/Logger.h"
