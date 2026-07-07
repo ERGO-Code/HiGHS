@@ -8,6 +8,14 @@
 #ifndef HIGHS_PARALLEL_H_
 #define HIGHS_PARALLEL_H_
 
+#include <thread>
+
+#if defined(__linux__)
+#include <sched.h>
+#elif defined(_WIN32)
+#include <windows.h>
+#endif
+
 #include "parallel/HighsMutex.h"
 #include "parallel/HighsTaskExecutor.h"
 
@@ -17,12 +25,30 @@ namespace parallel {
 
 using mutex = HighsMutex;
 
+inline unsigned int available_concurrency() {
+#if defined(__linux__)
+  cpu_set_t set;
+  if (sched_getaffinity(0, sizeof(set), &set) == 0) {
+    int count = CPU_COUNT(&set);
+    if (count > 0) return static_cast<unsigned int>(count);
+  }
+#elif defined(_WIN32)
+  DWORD_PTR process_mask, system_mask;
+  if (GetProcessAffinityMask(GetCurrentProcess(), &process_mask,
+                             &system_mask)) {
+    int count = static_cast<int>(__popcnt64(process_mask));
+    if (count > 0) return static_cast<unsigned int>(count);
+  }
+#endif
+  return std::thread::hardware_concurrency();
+}
+
 inline void initialize_scheduler(int numThreads = 0) {
   if (numThreads == 0) {
 #ifdef HIGHS_NO_DEFAULT_THREADS
     numThreads = 1;
 #else
-    numThreads = (std::thread::hardware_concurrency() + 1) / 2;
+    numThreads = (available_concurrency() + 1) / 2;
 #endif
   }
   HighsTaskExecutor::initialize(numThreads);
