@@ -82,6 +82,8 @@ HighsMipSolverData::HighsMipSolverData(HighsMipSolver& mipsolver)
   getDomain().addCutpool(getCutPool());
   getDomain().addConflictPool(getConflictPool());
   cliquetable.setAllowParallel(!mipsolver.submip);
+  worker_lp_iterations_stop.store(std::numeric_limits<int64_t>::max(),
+                                  std::memory_order_relaxed);
 }
 
 std::string HighsMipSolverData::solutionSourceToString(
@@ -798,6 +800,8 @@ void HighsMipSolverData::init() {
   upper_bound = kHighsInf;
   upper_limit = mipsolver.options_mip_->objective_bound;
   optimality_limit = mipsolver.options_mip_->objective_bound;
+  worker_lp_iterations_stop.store(std::numeric_limits<int64_t>::max(),
+                                  std::memory_order_relaxed);
   primal_dual_integral.initialise();
 
   if (mipsolver.options_mip_->mip_report_level == 0)
