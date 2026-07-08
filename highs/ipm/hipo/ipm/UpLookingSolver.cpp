@@ -61,7 +61,7 @@ Int UpLookingSolver::setup() {
   rowsL_.resize(nzL);
   valL_.resize(nzL);
 
-  counts2Ptr(ptrL_, colcount);
+  counts2Ptr(n_, ptrL_.data(), colcount.data());
 
   regularisation_.assign(n_, 0.0);
 

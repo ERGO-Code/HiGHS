@@ -162,9 +162,9 @@ bool Solver::initialise() {
   // - multifrontal is dominated by assembly operations
   bool switch_to_uplooking =
       LS_->flops() < kUplookFlopsThresh ||
-      LS_->nz() < kUplookNzPerColLower * LS_->n() ||
+      LS_->nz() < kUplookNzPerColLower * kkt_->n() ||
       LS_->flops() < kUplookSpopsRatioLower * LS_->spops() ||
-      (LS_->nz() < kUplookNzPerColUpper * LS_->n() &&
+      (LS_->nz() < kUplookNzPerColUpper * kkt_->n() &&
        LS_->flops() < kUplookSpopsRatioUpper * LS_->spops());
 
   // always use for now
