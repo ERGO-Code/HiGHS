@@ -168,7 +168,7 @@ bool Solver::initialise() {
        LS_->flops() < kUplookSpopsRatioUpper * LS_->spops());
 
   // always use for now
-  switch_to_uplooking = true;
+  switch_to_uplooking = false;
 
   if (switch_to_uplooking) {
     LS_.reset(new UpLookingSolver(*kkt_, info_, it_->data, regul_, model_));
