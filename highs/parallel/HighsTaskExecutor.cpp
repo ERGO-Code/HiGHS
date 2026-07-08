@@ -60,6 +60,7 @@ unsigned int highs::parallel::available_cpu_count() {
   if (!GetProcessAffinityMask(GetCurrentProcess(), &process_mask, &system_mask))
     return fallback_cpu_count();
 
+  // First call with nullptr to query the required buffer size
   DWORD length = 0;
   GetLogicalProcessorInformation(nullptr, &length);
   if (GetLastError() != ERROR_INSUFFICIENT_BUFFER) return fallback_cpu_count();
