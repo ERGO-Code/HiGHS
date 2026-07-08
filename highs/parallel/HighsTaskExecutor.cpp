@@ -37,25 +37,30 @@ static unsigned int fallback_core_count() {
 // respecting the OS affinity mask.
 unsigned int highs::parallel::available_core_count() {
 #if defined(__linux__)
-  // Get the affinity mask, then count unique physical core IDs
+  // Get the affinity mask, then count unique (package, core) pairs
   cpu_set_t affinity;
   if (sched_getaffinity(0, sizeof(affinity), &affinity) == 0) {
-    std::set<int> physical_cores;
+    std::set<std::pair<int, int>> physical_cores;
     for (int cpu = 0; cpu < CPU_SETSIZE; ++cpu) {
       if (!CPU_ISSET(cpu, &affinity)) continue;
-      std::ifstream topology_file("/sys/devices/system/cpu/cpu" +
-                                  std::to_string(cpu) + "/topology/core_id");
-      if (topology_file.is_open()) {
-        int core_id;
-        topology_file >> core_id;
-        physical_cores.insert(core_id);
+      std::string prefix =
+          "/sys/devices/system/cpu/cpu" + std::to_string(cpu) + "/topology/";
+      std::ifstream pkg_file(prefix + "physical_package_id");
+      std::ifstream core_file(prefix + "core_id");
+      if (pkg_file.is_open() && core_file.is_open()) {
+        int package_id, core_id;
+        pkg_file >> package_id;
+        core_file >> core_id;
+        physical_cores.insert({package_id, core_id});
       }
     }
     if (!physical_cores.empty())
       return static_cast<unsigned int>(physical_cores.size());
   }
 #elif defined(_WIN32) || defined(_WIN64)
-  // Count physical cores whose logical processors overlap with process affinity
+  // Count physical cores whose logical processors overlap with process
+  // affinity. Note: limited to a single processor group (<=64 logical
+  // processors).
   DWORD_PTR process_mask, system_mask;
   if (!GetProcessAffinityMask(GetCurrentProcess(), &process_mask, &system_mask))
     return fallback_core_count();
