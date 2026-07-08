@@ -324,30 +324,34 @@ TEST_CASE("ParallelCApi", "[parallel]") {
   double actual_obj;
   double total = 0;
 
-  highs::parallel::TaskGroup tg;
+  {
+    highs::parallel::TaskGroup tg;
 
-  tg.spawn([&]() {
-    void* highs = Highs_create();
-    Highs_setBoolOptionValue(highs, "output_flag", dev_run);
-    Highs_setStringOptionValue(highs, "parallel", "on");
-    Highs_readModel(highs, model.c_str());
-    Highs_run(highs);
-    Highs_getDoubleInfoValue(highs, "objective_function_value", &actual_obj);
-    Highs_destroy(highs);
-  });
+    tg.spawn([&]() {
+      void* highs = Highs_create();
+      Highs_setBoolOptionValue(highs, "output_flag", dev_run);
+      Highs_setStringOptionValue(highs, "parallel", "on");
+      Highs_readModel(highs, model.c_str());
+      Highs_run(highs);
+      Highs_getDoubleInfoValue(highs, "objective_function_value", &actual_obj);
+      Highs_destroy(highs);
+    });
 
-  tg.spawn([&]() {
-    void* highs = Highs_create();
-    for (int i = 0; i < 1e6; ++i) {
-      total += (double)i * i * i;
-    }
-    Highs_destroy(highs);
-  });
+    tg.spawn([&]() {
+      void* highs = Highs_create();
+      for (int i = 0; i < 1e6; ++i) {
+        total += (double)i * i * i;
+      }
+      Highs_destroy(highs);
+    });
 
-  tg.taskWait();
+    tg.taskWait();
 
-  REQUIRE(total > 1e18);
-  REQUIRE(std::abs(actual_obj - expected_obj) / std::abs(expected_obj) < 1e-4);
+    REQUIRE(total > 1e18);
+    REQUIRE(std::abs(actual_obj - expected_obj) / std::abs(expected_obj) <
+            1e-4);
+  }
+  // TaskGroup destructor must be called before scheduler is killed
 
   HighsTaskExecutor::shutdown(true);
 }
