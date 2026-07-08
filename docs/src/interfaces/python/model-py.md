@@ -1,6 +1,6 @@
 # [Modelling](@id model-py)
 
-HiGHS has a rudimentary modeling language that allows models to be built and run using `highspy`.
+HiGHS has a rudimentary modelling language that allows models to be built and run using `highspy`.
 
 Below is an example of building a mathematical LP. The functions used are documented in detail below
 ```
