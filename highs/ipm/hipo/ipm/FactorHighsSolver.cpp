@@ -183,23 +183,49 @@ Int FactorHighsSolver::solveNE(const std::vector<double>& rhs,
 Int FactorHighsSolver::setup() {
   Clock clock;
 
-  if (Int status = setNla()) return status;
-  setParallel();
+  if (kkt_.iperm.empty()) {
+    if (Int status = setNla()) return status;
+    setParallel();
 
-  if (!options_.timeless_log) {
-    std::stringstream log_stream;
-    log_stream << textline("Analyse time:") << fix(clock.stop(), 0, 2) << '\n';
-    logger_.print(log_stream.str().c_str());
+    if (!options_.timeless_log) {
+      std::stringstream log_stream;
+      log_stream << textline("Analyse time:") << fix(clock.stop(), 0, 2)
+                 << '\n';
+      logger_.print(log_stream.str().c_str());
+    }
+
+    S_.print(logger_, logger_.debug(1));
+
+    // Warn about large memory consumption
+    if (S_.storage() > kLargeStorageGB * 1024 * 1024 * 1024) {
+      logger_.printw("Large amount of memory required\n");
+    }
+
+    logger_.print("\n");
+  } else {
+    // permutation already available
+
+    const Int n = model_.A().num_col_;
+    const Int m = model_.A().num_row_;
+
+    std::vector<Int> perm(kkt_.n());
+    inversePerm(kkt_.iperm, perm);
+
+    if (kkt_.nla() == kHipoAugmentedString) {
+      assert(kkt_.n() == n + m);
+      std::vector<Int> signs(m + n, -1);
+      for (Int i = 0; i < m; ++i) signs[n + i] = 1;
+      return FH_.analyse(S_, kkt_.n(), kkt_.nz(), kkt_.rowsAS.data(),
+                         kkt_.ptrAS.data(), signs.data(), perm.data());
+    } else if (kkt_.nla() == kHipoNormalEqString) {
+      assert(kkt_.n() == m);
+      std::vector<Int> signs(m, 1);
+      return FH_.analyse(S_, kkt_.n(), kkt_.nz(), kkt_.rowsNE.data(),
+                         kkt_.ptrNE.data(), signs.data(), perm.data());
+    } else {
+      return kStatusErrorFactorise;
+    }
   }
-
-  S_.print(logger_, logger_.debug(1));
-
-  // Warn about large memory consumption
-  if (S_.storage() > kLargeStorageGB * 1024 * 1024 * 1024) {
-    logger_.printw("Large amount of memory required\n");
-  }
-
-  logger_.print("\n");
 
   return kStatusOk;
 }
