@@ -133,9 +133,17 @@ void HighsMipSolver::run() {
     modelstatus_ = HighsModelStatus::kTimeLimit;
 
   if (modelstatus_ != HighsModelStatus::kNotset) {
+    HighsModelStatus presolveStatus = modelstatus_;
+    if (presolveStatus == HighsModelStatus::kInfeasible &&
+        solution_objective_ != kHighsInf &&
+        bound_violation_ <= options_mip_->mip_feasibility_tolerance &&
+        integrality_violation_ <= options_mip_->mip_feasibility_tolerance &&
+        row_violation_ <= options_mip_->mip_feasibility_tolerance) {
+      presolveStatus = HighsModelStatus::kOptimal;
+    }
     highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
                  "Presolve: %s\n",
-                 utilModelStatusToString(modelstatus_).c_str());
+                 utilModelStatusToString(presolveStatus).c_str());
     if (modelstatus_ == HighsModelStatus::kOptimal) {
       mipdata_->lower_bound = 0;
       mipdata_->upper_bound = 0;
@@ -1102,13 +1110,21 @@ void HighsMipSolver::cleanupSolve() {
 
   bool havesolution = solution_objective_ != kHighsInf;
   bool feasible;
-  if (havesolution)
+  if (havesolution) {
     feasible =
         bound_violation_ <= options_mip_->mip_feasibility_tolerance &&
         integrality_violation_ <= options_mip_->mip_feasibility_tolerance &&
         row_violation_ <= options_mip_->mip_feasibility_tolerance;
-  else
+    if (feasible && mipdata_->upper_bound == kHighsInf) {
+      mipdata_->checkAddSolution();
+      if (modelstatus_ == HighsModelStatus::kInfeasible &&
+          mipdata_->upper_bound != kHighsInf) {
+        mipdata_->lower_bound = mipdata_->upper_bound;
+      }
+    }
+  } else {
     feasible = false;
+  }
 
   dual_bound_ = mipdata_->lower_bound;
   if (mipdata_->objectiveFunction.isIntegral()) {
