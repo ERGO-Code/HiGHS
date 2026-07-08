@@ -26,25 +26,25 @@ struct MatrixBase {
 
   double diagonal(const HighsInt iCol) const {
     if (this->isOracle()) return this->oracle_.diagonal(iCol);
-    for (HighsInt iEl = this->start[iCol]; iEl < this->start[iCol+1]; iEl++)
+    for (HighsInt iEl = this->start[iCol]; iEl < this->start[iCol + 1]; iEl++)
       if (this->index[iEl] == iCol) return this->value[iEl];
     return 0;
   }
 
-  void getColumn(const HighsInt iCol, HighsInt& num_entries, HighsInt* index, double* value) {
+  void getColumn(const HighsInt iCol, HighsInt& num_entries, HighsInt* index,
+                 double* value) {
     if (this->isOracle()) {
       this->oracle_.getColumn(iCol, num_entries, index, value);
       return;
     }
     num_entries = 0;
-    for (HighsInt iEl = this->start[iCol]; iEl < this->start[iCol+1]; iEl++) {
+    for (HighsInt iEl = this->start[iCol]; iEl < this->start[iCol + 1]; iEl++) {
       index[num_entries] = this->index[iEl];
       value[num_entries] = this->value[iEl];
       num_entries++;
     }
   }
-	
-  
+
   QpVector& mat_vec(const QpVector& other, QpVector& target) const {
     return mat_vec_seq(other, target);
   }
@@ -123,17 +123,18 @@ struct MatrixBase {
     if (this->isOracle()) {
       HighsInt target_num_col = num_col;
       this->oracle_.call_(num_col, other.index.data(), other.value.data(),
-			  target_num_col, nullptr, target.value.data(),
-			  this->oracle_.data_);
-      this->oracle_.scaleAndShift(num_col, other.index.data(), other.value.data(),
-			  target_num_col, nullptr, target.value.data());
+                          target_num_col, nullptr, target.value.data(),
+                          this->oracle_.data_);
+      this->oracle_.scaleAndShift(num_col, other.index.data(),
+                                  other.value.data(), target_num_col, nullptr,
+                                  target.value.data());
     } else {
       for (HighsInt col = 0; col < num_col; col++) {
-	double dot = 0.0;
-	for (HighsInt j = start[col]; j < start[col + 1]; j++) {
-	  dot += other.value[index[j]] * value[j];
-	}
-	target.value[col] = dot;
+        double dot = 0.0;
+        for (HighsInt j = start[col]; j < start[col + 1]; j++) {
+          dot += other.value[index[j]] * value[j];
+        }
+        target.value[col] = dot;
       }
     }
     target.resparsify();
@@ -179,16 +180,16 @@ struct MatrixBase {
       target.num_nz = 1;
     } else {
       if (this->isOracle()) {
-	double x_value = 1.0;
+        double x_value = 1.0;
         target.num_nz = -1;
-	this->oracle_.productPackedX(HighsInt{1}, &col, &x_value,
-				     target.num_nz, target.index.data(), target.value.data());
+        this->oracle_.productPackedX(HighsInt{1}, &col, &x_value, target.num_nz,
+                                     target.index.data(), target.value.data());
       } else {
-	for (HighsInt i = 0; i < start[col + 1] - start[col]; i++) {
-	  target.index[i] = index[start[col] + i];
-	  target.value[target.index[i]] = value[start[col] + i];
-	}
-	target.num_nz = start[col + 1] - start[col];
+        for (HighsInt i = 0; i < start[col + 1] - start[col]; i++) {
+          target.index[i] = index[start[col] + i];
+          target.value[target.index[i]] = value[start[col] + i];
+        }
+        target.num_nz = start[col + 1] - start[col];
       }
     }
 
@@ -205,9 +206,9 @@ struct MatrixBase {
     if (this->isOracle()) {
       HighsInt nnz = 0;
       for (HighsInt iCol = 0; iCol < this->oracle_.dim_; iCol++) {
-	for (HighsInt iRow = 0; iRow < iCol; iRow++)
-	  if (this->oracle_.entry(iRow, iCol)) nnz += 2;
-	if (this->oracle_.entry(iCol, iCol)) nnz++;
+        for (HighsInt iRow = 0; iRow < iCol; iRow++)
+          if (this->oracle_.entry(iRow, iCol)) nnz += 2;
+        if (this->oracle_.entry(iCol, iCol)) nnz++;
       }
       return nnz;
     } else {
@@ -220,16 +221,15 @@ struct MatrixBase {
     if (this->isOracle()) {
       HighsInt nnz = 0;
       for (HighsInt iCol = 0; iCol < this->oracle_.dim_; iCol++) {
-	for (HighsInt iRow = 0; iRow < iCol; iRow++)
-	  if (this->oracle_.entry(iRow, iCol)) return false;
+        for (HighsInt iRow = 0; iRow < iCol; iRow++)
+          if (this->oracle_.entry(iRow, iCol)) return false;
       }
       return true;
-    } 
+    }
     // Only relevant if matrix is square
     assert(this->num_col == this->num_row);
     return this->numNz() == this->num_col;
   }
-
 };
 
 struct Matrix {

@@ -29,8 +29,8 @@ static void computeStartingPointBounded(Instance& instance, Settings& settings,
     for (HighsInt iRow = 0; iRow < dim; iRow++) {
       double value = hessian.diagonal(iRow);
       if (value <= 0) {
-	modelstatus = QpModelStatus::kNonConvex;
-	return;
+        modelstatus = QpModelStatus::kNonConvex;
+        return;
       }
       res.value[iRow] /= value;
     }
@@ -39,11 +39,11 @@ static void computeStartingPointBounded(Instance& instance, Settings& settings,
     std::vector<double> L;
     L.resize(dim * dim);
 
-    auto printL = [&] () {
+    auto printL = [&]() {
       for (HighsInt iRow = 0; iRow < dim; iRow++) {
-	for (HighsInt iCol = 0; iCol <= iRow; iCol++) 
-	  printf(" %11.4g", L[iRow * dim + iCol]);
-	printf("\n");
+        for (HighsInt iCol = 0; iCol <= iRow; iCol++)
+          printf(" %11.4g", L[iRow * dim + iCol]);
+        printf("\n");
       }
     };
 
@@ -55,37 +55,39 @@ static void computeStartingPointBounded(Instance& instance, Settings& settings,
     for (HighsInt iCol = 0; iCol < dim; iCol++) {
       hessian.getColumn(iCol, num_entries, index.data(), value.data());
       for (HighsInt iEl = 0; iEl < num_entries; iEl++) {
-	HighsInt iRow = index[iEl];
-	// Take the entries above or on the diagonal in column iCol of
-	// Q as the entries before or on the diagonal in row iCol of
-	// (row-wise) L
-	if (iRow <= iCol) L[iCol * dim + iRow] = value[iEl];
+        HighsInt iRow = index[iEl];
+        // Take the entries above or on the diagonal in column iCol of
+        // Q as the entries before or on the diagonal in row iCol of
+        // (row-wise) L
+        if (iRow <= iCol) L[iCol * dim + iRow] = value[iEl];
       }
     }
     // Now compute Cholesky factorization of L
     for (HighsInt iRow = 0; iRow < dim; iRow++) {
       printL();
       for (HighsInt iCol = 0; iCol <= iRow; iCol++) {
-	double sum = 0;
-	for (HighsInt k = 0; k < iCol; k++) 
-	  sum += L[iRow * dim + k] * L[iCol * dim + k];
-	if (iCol < iRow) {
-	  double value = (L[iRow * dim + iCol] - sum) / L[iCol * dim + iCol];
-	  printf("Computed L[%1d, %1d] = (%11.4g - %11.4g) / %11.4g = %11.4g\n",
-		 int(iRow), int(iCol),
-		 L[iRow * dim + iCol], sum, L[iCol * dim + iCol], value);
-	  L[iRow * dim + iCol] = value;
-	} else {
-	  double value = L[iCol * dim + iCol] - sum;
-	  printf("Computed L[%1d, %1d] = sqrt(%11.4g - %11.4g) = sqrt(%11.4g) = %11.4g\n",
-		 int(iCol), int(iCol),
-		 L[iCol * dim + iCol], sum, value, std::sqrt(value));
-	  if (value <= 0) {
-	    modelstatus = QpModelStatus::kNonConvex;
-	    return;
-	  }
-	  L[iCol * dim + iCol] = std::sqrt(value);
-	}
+        double sum = 0;
+        for (HighsInt k = 0; k < iCol; k++)
+          sum += L[iRow * dim + k] * L[iCol * dim + k];
+        if (iCol < iRow) {
+          double value = (L[iRow * dim + iCol] - sum) / L[iCol * dim + iCol];
+          printf("Computed L[%1d, %1d] = (%11.4g - %11.4g) / %11.4g = %11.4g\n",
+                 int(iRow), int(iCol), L[iRow * dim + iCol], sum,
+                 L[iCol * dim + iCol], value);
+          L[iRow * dim + iCol] = value;
+        } else {
+          double value = L[iCol * dim + iCol] - sum;
+          printf(
+              "Computed L[%1d, %1d] = sqrt(%11.4g - %11.4g) = sqrt(%11.4g) = "
+              "%11.4g\n",
+              int(iCol), int(iCol), L[iCol * dim + iCol], sum, value,
+              std::sqrt(value));
+          if (value <= 0) {
+            modelstatus = QpModelStatus::kNonConvex;
+            return;
+          }
+          L[iCol * dim + iCol] = std::sqrt(value);
+        }
       }
     }
     printL();
@@ -93,15 +95,15 @@ static void computeStartingPointBounded(Instance& instance, Settings& settings,
     // Solve Ly = -c
     for (HighsInt iRow = 0; iRow < dim; iRow++) {
       double sum = 0.0;
-      for (HighsInt iCol = 0; iCol < iRow; iCol++) 
-	sum += res.value[iCol] * L[iRow * dim + iCol];
+      for (HighsInt iCol = 0; iCol < iRow; iCol++)
+        sum += res.value[iCol] * L[iRow * dim + iCol];
       res.value[iRow] = (res.value[iRow] - sum) / L[iRow * dim + iRow];
     }
     // Solve L^Tx = y
     for (HighsInt iRow = dim - 1; iRow >= 0; iRow--) {
       res.value[iRow] /= L[iRow * dim + iRow];
-      for (HighsInt iCol = 0; iCol < iRow; iCol++) 
-	res.value[iCol] -= res.value[iRow] * L[iRow * dim + iCol];
+      for (HighsInt iCol = 0; iCol < iRow; iCol++)
+        res.value[iCol] -= res.value[iRow] * L[iRow * dim + iCol];
     }
   }
 
@@ -117,11 +119,15 @@ static void computeStartingPointBounded(Instance& instance, Settings& settings,
     // res.value[i] exceeding
     // 0.5/settings.hessian_regularization_value, where the
     // denominator can be zero
-    if (res.value[i] < instance.var_lo[i] - settings.primal_feasibility_tolerance) {
+    //
+    // Clearly need something for qp-unbounded and test-qod
+    if (res.value[i] <
+        instance.var_lo[i] - settings.primal_feasibility_tolerance) {
       res.value[i] = instance.var_lo[i];
       initialactive.push_back(i + instance.num_con);
       atlower.push_back(BasisStatus::kActiveAtLower);
-    } else if (res.value[i] > instance.var_up[i] + settings.primal_feasibility_tolerance) {
+    } else if (res.value[i] >
+               instance.var_up[i] + settings.primal_feasibility_tolerance) {
       res.value[i] = instance.var_up[i];
       initialactive.push_back(i + instance.num_con);
       atlower.push_back(BasisStatus::kActiveAtUpper);

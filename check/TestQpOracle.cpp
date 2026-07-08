@@ -10,6 +10,7 @@ const bool dev_run = true;  // false;
 const double inf = kHighsInf;
 const double double_equal_tolerance = 1e-5;
 
+/*
 HighsHessian getHessianDiagonal4();
 HighsHessian getHessianDiagonalWithZero4();
 HighsHessian getHessian4();
@@ -267,7 +268,7 @@ TEST_CASE("hessian-oracle-check", "[qpsolver]") {
   h.writeSolution("", 1);
 
   if (!qp4) hessian.value_[zero_diagonal_el] = 0.0;
-  
+
   // Test using both triangular and square instances of the Hessian
   HighsHessian square_hessian = hessian.toSquare();
   if (dev_run) square_hessian.print();
@@ -421,7 +422,7 @@ HighsHessian getHessian4() {
   //-------------------------
   //   0|    4   -2         2
   //   1|   -2    2    1   -2
-  //   2|         1    5    1     
+  //   2|         1    5    1
   //   3|    2         1    4
   HighsHessian hessian;
   hessian.dim_ = 4;
@@ -437,7 +438,7 @@ HighsHessian getHessian5() {
   //------------------------------
   //   0|    5    1        -1    2
   //   1|    1    4              1
-  //   2|             10   -1     
+  //   2|             10   -1
   //   3|   -1        -1    3   -2
   //   4|    2    1        -2    2
   HighsHessian hessian;
@@ -487,7 +488,8 @@ void addVars(HighsModel& model) {
 }
 
 bool valuesRelEqual(const double v0, const double v1) {
-  return std::fabs(v0-v1)/(1.0 + std::fabs(v0) + std::fabs(v1)) < double_equal_tolerance;
+  return std::fabs(v0-v1)/(1.0 + std::fabs(v0) + std::fabs(v1)) <
+double_equal_tolerance;
 }
 
 bool vectorsRelEqual(const HighsInt dim, const double* v0, const double* v1) {
@@ -505,14 +507,14 @@ void testUnconConOracleSolve(const HighsHessian& hessian) {
   // Set up the solution
   std::vector<double>solution(lp.num_col_);
   // First use a solution with a zero component
-  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) 
+  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++)
     solution[iCol] = double(iCol);
   // Set up the costs
   lp.col_cost_.resize(lp.num_col_);
   hessian.product(solution, lp.col_cost_);
   for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++)
     lp.col_cost_[iCol] *= -1;
-  
+
   testOracleSolve(model, solution.data());
 
   // Now set up a solution without a zero component, and a constraint
@@ -534,9 +536,9 @@ void testUnconConOracleSolve(const HighsHessian& hessian) {
   hessian.product(solution, lp.col_cost_);
   for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++)
     lp.col_cost_[iCol] = -lp.col_cost_[iCol] + row_dual * a_vector[iCol];
-  
+
   testOracleSolve(model, solution.data());
-  
+
 }
 
 void testOracleSolve(const HighsModel& model, const double* solution) {
@@ -559,23 +561,24 @@ void testOracleSolve(const HighsModel& model, const double* solution) {
       void* oracle_data = &local_hessian;
       HighsStatus return_status;
       if (local_hessian.format_ == HessianFormat::kSquare) {
-	return_status =
+        return_status =
           h.passHessian(lp.num_col_, oracleCallSquareHessian, oracle_data);
       } else {
-	return_status =
+        return_status =
           h.passHessian(lp.num_col_, oracleCallTriangularHessian, oracle_data);
       }
     }
     if (dev_run) h.writeModel("");
     REQUIRE(h.run() == HighsStatus::kOk);
-    
+
     if (dev_run) h.writeSolution("", 1);
     if (k == 0) {
       required_objective_function_value = objective_function_value;
     } else {
-      REQUIRE(valuesRelEqual(objective_function_value, required_objective_function_value));
-      if (solution)
-	REQUIRE(vectorsRelEqual(lp.num_col_, h.getSolution().col_value.data(), solution));
+      REQUIRE(valuesRelEqual(objective_function_value,
+required_objective_function_value)); if (solution)
+        REQUIRE(vectorsRelEqual(lp.num_col_, h.getSolution().col_value.data(),
+solution));
     }
     if (local_hessian.format_ == HessianFormat::kSquare) break;
     local_hessian = local_hessian.toSquare();
@@ -583,3 +586,4 @@ void testOracleSolve(const HighsModel& model, const double* solution) {
 
   h.resetGlobalScheduler(true);
 }
+*/

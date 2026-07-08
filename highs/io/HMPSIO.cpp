@@ -767,20 +767,20 @@ HighsStatus writeMps(
   HighsInt nIntegerMk = 0;
   fprintf(file, "COLUMNS\n");
 
-  auto noCostZeroColumn = [&] (const HighsInt c_n) {
+  auto noCostZeroColumn = [&](const HighsInt c_n) {
     if (col_cost[c_n]) return false;
     if (a_start[c_n] < a_start[c_n + 1]) return false;
     if (q_dim > 0 && q_value[q_start[c_n]]) return false;
     return true;
   };
-  
+
   for (HighsInt c_n = 0; c_n < num_col; c_n++) {
     if (noCostZeroColumn(c_n)) {
       // Possibly skip this column as it's zero and has no cost
       num_no_cost_zero_columns++;
       // Give the column a presence by writing out a zero cost
       fprintf(file, "    %-8s  %-8s  %.15g\n", col_names[c_n].c_str(),
-	      objective_name.c_str(), 0.0);
+              objective_name.c_str(), 0.0);
       continue;
     }
     if (have_int) {

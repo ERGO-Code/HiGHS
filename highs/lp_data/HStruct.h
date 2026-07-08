@@ -258,13 +258,14 @@ struct HessianOracle {
   // or shift_
   HighsInt dim_ = 0;
   HighsInt multiplier_ = 1.0;  // Minimize
-  HighsInt shift_ = 0.0;  // No regularization
+  HighsInt shift_ = 0.0;       // No regularization
   HighsHessianFunctionType call_ = nullptr;
   void* data_ = nullptr;
   void clear();
   double diagonal(const HighsInt i) const;
   double entry(const HighsInt i, const HighsInt j) const;
-  void getColumn(const HighsInt col, HighsInt& col_num_entries, HighsInt* col_index, double* col_value) const;
+  void getColumn(const HighsInt col, HighsInt& col_num_entries,
+                 HighsInt* col_index, double* col_value) const;
   void product(const std::vector<double>& x_value,
                std::vector<double>& q_x_value) const;
   void product(const double* x_value, double* q_x_value) const;
@@ -274,13 +275,10 @@ struct HessianOracle {
   void productPackedX(const HighsInt x_num_entries, const HighsInt* x_index,
                       const double* x_value, HighsInt& q_x_num_entries,
                       HighsInt* q_x_index, double* q_x_value,
-		      const bool scale_and_shift = true) const;
-  void scaleAndShift(const HighsInt x_num_entries,
-		     const HighsInt* x_index,
-		     const double* x_value,
-		     HighsInt& q_x_num_entries,
-		     HighsInt* q_x_index,
-		     double* q_x_value) const;
+                      const bool scale_and_shift = true) const;
+  void scaleAndShift(const HighsInt x_num_entries, const HighsInt* x_index,
+                     const double* x_value, HighsInt& q_x_num_entries,
+                     HighsInt* q_x_index, double* q_x_value) const;
 };
 
 #endif /* LP_DATA_HSTRUCT_H_ */

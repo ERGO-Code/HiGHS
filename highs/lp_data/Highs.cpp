@@ -963,7 +963,8 @@ HighsStatus Highs::writeLocalModel(HighsModel& model,
       return returnFromHighs(HighsStatus::kError);
     }
     assert(lp.a_matrix_.isColwise());
-    if (model.hessian_.dim_) assert(model.hessian_.format_ == HessianFormat::kTriangular);
+    if (model.hessian_.dim_)
+      assert(model.hessian_.format_ == HessianFormat::kTriangular);
     Filereader* writer =
         Filereader::getFilereader(options_.log_options, filename);
     if (writer == NULL) {
@@ -4181,81 +4182,81 @@ HighsStatus Highs::callSolveLp(HighsLp& lp, const std::string& message) {
 }
 
 HighsHessianFunctionType oracleCallSquareHessian =
-  [](const HighsInt x_num_entries, const HighsInt* x_index,
-     const double* x_value, HighsInt& q_x_num_entries, HighsInt* q_x_index,
-     double* q_x_value, void* hessian_p) {
-    assert(x_value != nullptr);
-    assert(q_x_value != nullptr);
+    [](const HighsInt x_num_entries, const HighsInt* x_index,
+       const double* x_value, HighsInt& q_x_num_entries, HighsInt* q_x_index,
+       double* q_x_value, void* hessian_p) {
+      assert(x_value != nullptr);
+      assert(q_x_value != nullptr);
 
-    // Lambda for zeroing q_x_value
-    auto zeroQx = [&](const HighsInt dim) {
-      for (HighsInt iCol = 0; iCol < dim; iCol++) q_x_value[iCol] = 0;
-    };
+      // Lambda for zeroing q_x_value
+      auto zeroQx = [&](const HighsInt dim) {
+        for (HighsInt iCol = 0; iCol < dim; iCol++) q_x_value[iCol] = 0;
+      };
 
-    HighsHessian hessian = *(static_cast<HighsHessian*>(hessian_p));
-    assert(hessian.format_ == HessianFormat::kSquare);
+      HighsHessian hessian = *(static_cast<HighsHessian*>(hessian_p));
+      assert(hessian.format_ == HessianFormat::kSquare);
 
-    // Lambda for adding multiple of Hessian column into q_x_value
-    auto addScaledQcol = [&](const HighsInt iCol, const double x_value) {
-      for (HighsInt iEl = hessian.start_[iCol];
-	   iEl < hessian.start_[iCol + 1]; iEl++) {
-	HighsInt iRow = hessian.index_[iEl];
-	q_x_value[iRow] += hessian.value_[iEl] * x_value;
+      // Lambda for adding multiple of Hessian column into q_x_value
+      auto addScaledQcol = [&](const HighsInt iCol, const double x_value) {
+        for (HighsInt iEl = hessian.start_[iCol];
+             iEl < hessian.start_[iCol + 1]; iEl++) {
+          HighsInt iRow = hessian.index_[iEl];
+          q_x_value[iRow] += hessian.value_[iEl] * x_value;
+        }
+      };
+
+      if (x_index == nullptr) {
+        // Simple product with full vector x, full vector q_x, and no
+        // Qx indices required
+        assert(q_x_index == nullptr);
+        zeroQx(hessian.dim_);
+        for (HighsInt iCol = 0; iCol < hessian.dim_; iCol++)
+          addScaledQcol(iCol, x_value[iCol]);
+        return;
+      } else if (x_num_entries > 1) {
+        // x is sparse with x_num_entries entries in rows x_index, and
+        // no Qx indices required
+        assert(q_x_index == nullptr);
+        zeroQx(hessian.dim_);
+        for (HighsInt iX = 0; iX < x_num_entries; iX++)
+          addScaledQcol(x_index[iX], x_value[iX]);
+        return;
+      } else if (x_num_entries == 1) {
+        assert(q_x_index != nullptr);
+        if (q_x_num_entries < 0) {
+          // x is sparse with one entry in row x_index, and all Qx index
+          // required
+          q_x_num_entries = 0;
+          // Get the entries below the diagonal in column iCol
+          HighsInt iCol = x_index[0];
+          for (HighsInt iEl = hessian.start_[iCol];
+               iEl < hessian.start_[iCol + 1]; iEl++) {
+            q_x_index[q_x_num_entries] = hessian.index_[iEl];
+            q_x_value[q_x_num_entries] = hessian.value_[iEl] * x_value[0];
+            q_x_num_entries++;
+          }
+          return;
+        } else if (q_x_num_entries == 1) {
+          // x is sparse with one entry in row x_index, and one Qx index
+          // required
+          HighsInt iCol = x_index[0];
+          HighsInt iRow = q_x_index[0];
+          // Zero Qx value in case the Hessian entry requested is zero
+          q_x_value[0] = 0;
+          for (HighsInt iEl = hessian.start_[iCol];
+               iEl < hessian.start_[iCol + 1]; iEl++) {
+            if (hessian.index_[iEl] == iRow) {
+              q_x_value[0] = hessian.value_[iEl] * x_value[0];
+              return;
+            }
+          }
+          // Hessian entry is zero
+          return;
+        }
       }
+      // Case not coded, since it may be unnecessary
+      assert(1234 == 5678);
     };
-
-    if (x_index == nullptr) {
-      // Simple product with full vector x, full vector q_x, and no
-      // Qx indices required
-      assert(q_x_index == nullptr);
-      zeroQx(hessian.dim_);
-      for (HighsInt iCol = 0; iCol < hessian.dim_; iCol++)
-	addScaledQcol(iCol, x_value[iCol]);
-      return;
-    } else if (x_num_entries > 1) {
-      // x is sparse with x_num_entries entries in rows x_index, and
-      // no Qx indices required
-      assert(q_x_index == nullptr);
-      zeroQx(hessian.dim_);
-      for (HighsInt iX = 0; iX < x_num_entries; iX++)
-	addScaledQcol(x_index[iX], x_value[iX]);
-      return;
-    } else if (x_num_entries == 1) {
-      assert(q_x_index != nullptr);
-      if (q_x_num_entries < 0) {
-	// x is sparse with one entry in row x_index, and all Qx index
-	// required
-	q_x_num_entries = 0;
-	// Get the entries below the diagonal in column iCol
-	HighsInt iCol = x_index[0];
-	for (HighsInt iEl = hessian.start_[iCol];
-	     iEl < hessian.start_[iCol + 1]; iEl++) {
-	  q_x_index[q_x_num_entries] = hessian.index_[iEl];
-	  q_x_value[q_x_num_entries] = hessian.value_[iEl] * x_value[0];
-	  q_x_num_entries++;
-	}
-	return;
-      } else if (q_x_num_entries == 1) {
-	// x is sparse with one entry in row x_index, and one Qx index
-	// required
-	HighsInt iCol = x_index[0];
-	HighsInt iRow = q_x_index[0];
-	// Zero Qx value in case the Hessian entry requested is zero
-	q_x_value[0] = 0;
-	for (HighsInt iEl = hessian.start_[iCol];
-	     iEl < hessian.start_[iCol + 1]; iEl++) {
-	  if (hessian.index_[iEl] == iRow) {
-	    q_x_value[0] = hessian.value_[iEl] * x_value[0];
-	    return;
-	  }
-	}
-	// Hessian entry is zero
-	return;
-      }
-    }
-    // Case not coded, since it may be unnecessary
-    assert(1234 == 5678);
-  };
 
 HighsStatus Highs::callSolveQp() {
   // Check that the model is column-wise
@@ -4325,20 +4326,20 @@ HighsStatus Highs::callSolveQp() {
     HighsHessian oracle_hessian;
     if (hessian.dim_ > 0) {
       if (options_.test_qp_oracle) {
-	// Test the Hessian oracle by using the incumbent Hessian as data for it
-	oracle_hessian = hessian.toSquare();
-	instance.Q.mat.oracle_.dim_ = hessian.dim_;
-	instance.Q.mat.oracle_.call_ = oracleCallSquareHessian;
-	instance.Q.mat.oracle_.data_ = &oracle_hessian;
-	instance.Q.mat.start.clear();
-	instance.Q.mat.index.clear();
-	instance.Q.mat.value.clear();
+        // Test the Hessian oracle by using the incumbent Hessian as data for it
+        oracle_hessian = hessian.toSquare();
+        instance.Q.mat.oracle_.dim_ = hessian.dim_;
+        instance.Q.mat.oracle_.call_ = oracleCallSquareHessian;
+        instance.Q.mat.oracle_.data_ = &oracle_hessian;
+        instance.Q.mat.start.clear();
+        instance.Q.mat.index.clear();
+        instance.Q.mat.value.clear();
       } else {
-	assert(instance.Q.mat.oracle_.call_ == nullptr);
-	instance.Q.mat.num_col = lp.num_col_;
-	instance.Q.mat.num_row = lp.num_col_;
-	triangularToSquareHessian(hessian, instance.Q.mat.start,
-				  instance.Q.mat.index, instance.Q.mat.value);
+        assert(instance.Q.mat.oracle_.call_ == nullptr);
+        instance.Q.mat.num_col = lp.num_col_;
+        instance.Q.mat.num_row = lp.num_col_;
+        triangularToSquareHessian(hessian, instance.Q.mat.start,
+                                  instance.Q.mat.index, instance.Q.mat.value);
       }
     } else {
       assert(hessian.isOracle());
@@ -4391,7 +4392,8 @@ HighsStatus Highs::callSolveQp() {
     assert(settings.hessian_regularization_value ==
            kHessianRegularizationValue);
     settings.hessian_regularization_value = options_.qp_regularization_value;
-    settings.primal_feasibility_tolerance = options_.primal_feasibility_tolerance;
+    settings.primal_feasibility_tolerance =
+        options_.primal_feasibility_tolerance;
 
     // Define the QP model status logging function
     settings.qp_model_status_log.subscribe(

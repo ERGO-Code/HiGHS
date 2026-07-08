@@ -579,7 +579,7 @@ struct HighsOptionsStruct {
         pdlp_cupdlpc_restart_method(0),
         pdlp_step_size_strategy(0),
         pdlp_optimality_tolerance(0.0),
-	test_qp_oracle(false),
+        test_qp_oracle(false),
         qp_allow_hot_start(false),
         qp_iteration_limit(0),
         qp_nullspace_limit(0),
@@ -1378,9 +1378,9 @@ class HighsOptions : public HighsOptionsStruct {
         kHighsInf);
     records.push_back(record_double);
 
-    record_bool = new OptionRecordBool(
-        "test_qp_oracle", "Use an oracle for the QP Hessian",
-        advanced, &test_qp_oracle, false);
+    record_bool = new OptionRecordBool("test_qp_oracle",
+                                       "Use an oracle for the QP Hessian",
+                                       advanced, &test_qp_oracle, false);
     records.push_back(record_bool);
 
     record_bool = new OptionRecordBool(

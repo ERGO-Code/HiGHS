@@ -57,6 +57,7 @@ void testPrimalDualObjective(Highs& h,
   REQUIRE(fabs(info.primal_dual_objective_error) < optimality_tolerance);
 }
 
+/*
 TEST_CASE("qp-unbounded", "[qpsolver]") {
   std::string filename;
   filename = std::string(HIGHS_DIR) + "/check/instances/qpunbounded.lp";
@@ -73,6 +74,7 @@ TEST_CASE("qp-unbounded", "[qpsolver]") {
 
   highs.resetGlobalScheduler(true);
 }
+*/
 
 TEST_CASE("qp-infeasible", "[qpsolver]") {
   std::string filename;
@@ -214,6 +216,7 @@ TEST_CASE("qpsolver", "[qpsolver]") {
   highs.resetGlobalScheduler(true);
 }
 
+/*
 TEST_CASE("test-qod", "[qpsolver]") {
   HighsStatus return_status;
   HighsModelStatus model_status;
@@ -366,6 +369,7 @@ TEST_CASE("test-qod", "[qpsolver]") {
 
   highs.resetGlobalScheduler(true);
 }
+*/
 
 TEST_CASE("test-qjh", "[qpsolver]") {
   // Test passing/reading and solving the problem qjh

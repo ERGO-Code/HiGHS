@@ -23,7 +23,7 @@ struct Settings {
   double ratiotest_t = 1e-9;
   double ratiotest_d = 1e-8;
   double primal_feasibility_tolerance = 1e-7;
-  
+
   PricingStrategy pricing = PricingStrategy::Devex;
 
   double pnorm_zero_threshold =
