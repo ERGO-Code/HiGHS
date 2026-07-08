@@ -1922,8 +1922,10 @@ void reportLp(const HighsLogOptions& log_options, const HighsLp& lp,
   if ((HighsInt)report_level >= (HighsInt)HighsLogType::kDetailed) {
     reportLpColVectors(log_options, lp);
     reportLpRowVectors(log_options, lp);
-    if ((HighsInt)report_level >= (HighsInt)HighsLogType::kVerbose)
+    if ((HighsInt)report_level >= (HighsInt)HighsLogType::kVerbose) {
+      assert(lp.a_matrix_.isColwise());
       reportLpColMatrix(log_options, lp);
+    }
   }
 }
 

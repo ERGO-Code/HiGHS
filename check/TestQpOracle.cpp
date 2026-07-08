@@ -10,13 +10,16 @@ const bool dev_run = true;  // false;
 const double inf = kHighsInf;
 const double double_equal_tolerance = 1e-5;
 
-HighsModel getQp4();
-HighsModel getQp5();
+HighsHessian getHessianDiagonal4();
+HighsHessian getHessianDiagonalWithZero4();
+HighsHessian getHessian4();
+HighsHessian getHessian5();
 HighsModel getQpQjh();
 bool valuesRelEqual(const double v0, const double v1);
 bool vectorsRelEqual(const HighsInt dim, const double* v0, const double* v1);
-void testUnconConOracleSolve(HighsModel& model);
-void testOracleSolve(HighsModel& model);
+void addVars(HighsModel& model);
+void testUnconConOracleSolve(const HighsHessian& model);
+void testOracleSolve(const HighsModel& model, const double* solution = nullptr);
 
 // On entry:
 //
@@ -241,7 +244,10 @@ TEST_CASE("hessian-oracle-check", "[qpsolver]") {
   h.setOptionValue("output_flag", dev_run);
 
   const bool qp4 = false;
-  HighsModel model = qp4 ? getQp4(): getQp5(); //
+  HighsModel model;
+  model.hessian_ = qp4 ? getHessian4(): getHessian5(); //
+  // Add an LP so that the Hessian can be passed
+  addVars(model);
   HighsLp& lp = model.lp_;
   HighsHessian& hessian = model.hessian_;
 
@@ -372,54 +378,61 @@ TEST_CASE("hessian-oracle-check", "[qpsolver]") {
 }
 
 TEST_CASE("hessian-oracle-solve", "[qpsolver]") {
-  HighsModel model;
-  for (HighsInt k = 0; k < 3; k++) {
+  HighsHessian hessian;
+  for (HighsInt k = 0; k < 4; k++) {
     if (k == 0) {
-      model = getQp5();
-      testUnconConOracleSolve(model);
+      hessian = getHessianDiagonal4();
+      testUnconConOracleSolve(hessian);
+    } else if (k == 1) {
+      hessian = getHessianDiagonalWithZero4();
+      testUnconConOracleSolve(hessian);
+    } else if (k == 2) {
+      hessian = getHessian5();
+      testUnconConOracleSolve(hessian);
     } else {
-      model = getQpQjh();
+      HighsModel model = getQpQjh();
       testOracleSolve(model);
     }
   }
 }
 
-HighsModel getQp4() {
-  // 
-  HighsModel model;
-  HighsLp& lp = model.lp_;
-  HighsHessian& hessian = model.hessian_;
+HighsHessian getHessianDiagonal4() {
+  HighsHessian hessian;
+  hessian.dim_ = 4;
+  hessian.format_ = HessianFormat::kTriangular;
+  hessian.start_ = {0, 1, 2, 3, 4};
+  hessian.index_ = {0, 1, 2, 3};
+  hessian.value_ = {1, 2, 3, 4};
+  return hessian;
+}
 
-  lp.num_col_ = 4;
-  lp.num_row_ = 0;
-  lp.col_cost_ = {-4, 1, -7, -5};
-  lp.col_lower_.assign(lp.num_col_, 0);
-  lp.col_upper_.assign(lp.num_col_, kHighsInf);
+HighsHessian getHessianDiagonalWithZero4() {
+  HighsHessian hessian;
+  hessian.dim_ = 4;
+  hessian.format_ = HessianFormat::kSquare;
+  hessian.start_ = {0, 1, 2, 2, 3};
+  hessian.index_ = {0, 1, 3};
+  hessian.value_ = {1, 2, 4};
+  return hessian;
+}
+
+HighsHessian getHessian4() {
   // Row|    0    1    2    3
   //-------------------------
   //   0|    4   -2         2
   //   1|   -2    2    1   -2
   //   2|         1    5    1     
   //   3|    2         1    4
-  hessian.dim_ = lp.num_col_;
+  HighsHessian hessian;
+  hessian.dim_ = 4;
   hessian.format_ = HessianFormat::kTriangular;
   hessian.start_ = {0, 3, 6, 8, 9};
   hessian.index_ = {0,  1, 3,  1, 2,  3,  2, 3,  3};
   hessian.value_ = {4, -2, 2,  2, 1, -2,  5, 1,  4};
-  return model;
+  return hessian;
 }
 
-HighsModel getQp5() {
-  // 
-  HighsModel model;
-  HighsLp& lp = model.lp_;
-  HighsHessian& hessian = model.hessian_;
-
-  lp.num_col_ = 5;
-  lp.num_row_ = 0;
-  lp.col_cost_ = {-7, -6, -9, 1, -3};
-  lp.col_lower_.assign(lp.num_col_, 0);
-  lp.col_upper_.assign(lp.num_col_, kHighsInf);
+HighsHessian getHessian5() {
   // Row|    0    1    2    3    4
   //------------------------------
   //   0|    5    1        -1    2
@@ -427,12 +440,13 @@ HighsModel getQp5() {
   //   2|             10   -1     
   //   3|   -1        -1    3   -2
   //   4|    2    1        -2    2
-  hessian.dim_ = lp.num_col_;
+  HighsHessian hessian;
+  hessian.dim_ = 5;
   hessian.format_ = HessianFormat::kTriangular;
   hessian.start_ = {0, 4, 6, 8, 10, 11};
   hessian.index_ = {0, 1, 3, 4, 1, 4, 2, 3, 3, 4, 4};
   hessian.value_ = {5, 1, -1, 2, 4, 1, 0, -1, 3, -2, 2};
-  return model;
+  return hessian;
 }
 
 HighsModel getQpQjh() {
@@ -463,6 +477,15 @@ HighsModel getQpQjh() {
   return model;
 }
 
+void addVars(HighsModel& model) {
+  HighsLp& lp = model.lp_;
+  lp.num_col_ = model.hessian_.dim_;
+  lp.num_row_ = 0;
+  lp.col_cost_.assign(lp.num_col_, 0);
+  lp.col_lower_.assign(lp.num_col_, 0);
+  lp.col_upper_.assign(lp.num_col_, kHighsInf);
+}
+
 bool valuesRelEqual(const double v0, const double v1) {
   return std::fabs(v0-v1)/(1.0 + std::fabs(v0) + std::fabs(v1)) < double_equal_tolerance;
 }
@@ -473,18 +496,56 @@ bool vectorsRelEqual(const HighsInt dim, const double* v0, const double* v1) {
   return true;
 }
 
-void testUnconConOracleSolve(HighsModel& model) {
+void testUnconConOracleSolve(const HighsHessian& hessian) {
+
+  HighsModel model;
   HighsLp& lp = model.lp_;
-  HighsHessian& hessian = model.hessian_;
-  testOracleSolve(model);
+  model.hessian_ = hessian;
+  addVars(model);
+  // Set up the solution
+  std::vector<double>solution(lp.num_col_);
+  // First use a solution with a zero component
+  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) 
+    solution[iCol] = double(iCol);
+  // Set up the costs
+  lp.col_cost_.resize(lp.num_col_);
+  hessian.product(solution, lp.col_cost_);
+  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++)
+    lp.col_cost_[iCol] *= -1;
+  
+  testOracleSolve(model, solution.data());
+
+  // Now set up a solution without a zero component, and a constraint
+  // that lies on it but cuts off the unconstrained minimizer
+  std::vector<double>a_vector(lp.num_col_, 1);
+  double rhs = 0;
+  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
+    solution[iCol] = double(iCol+1);
+    rhs += solution[iCol] * a_vector[iCol];
+  }
+  lp.num_row_ = 1;
+  lp.a_matrix_.format_ = MatrixFormat::kRowwise;
+  lp.a_matrix_.start_ = {0, lp.num_col_};
+  lp.a_matrix_.index_.assign(lp.num_col_, 0);
+  lp.a_matrix_.value_ = a_vector;
+  lp.row_lower_ = {rhs};
+  lp.row_lower_ = {kHighsInf};
+  double row_dual = 1;
+  hessian.product(solution, lp.col_cost_);
+  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++)
+    lp.col_cost_[iCol] = -lp.col_cost_[iCol] + row_dual * a_vector[iCol];
+  
+  testOracleSolve(model, solution.data());
+  
 }
 
-void testOracleSolve(HighsModel& model) {
-  HighsLp& lp = model.lp_;
-  HighsHessian& hessian = model.hessian_;
+void testOracleSolve(const HighsModel& model, const double* solution) {
+  const HighsLp& lp = model.lp_;
+  HighsHessian local_hessian = model.hessian_;
   Highs h;
   h.setOptionValue("output_flag", dev_run);
   h.setOptionValue("solver", kQpAsmString);
+  h.setOptionValue("qp_regularization_value", 0);
   const HighsInfo& info = h.getInfo();
   const double& objective_function_value = info.objective_function_value;
   double required_objective_function_value = 0;
@@ -495,9 +556,9 @@ void testOracleSolve(HighsModel& model) {
       REQUIRE(h.passModel(model) == HighsStatus::kOk);
     } else {
       REQUIRE(h.passModel(lp) == HighsStatus::kOk);
-      void* oracle_data = &hessian;
+      void* oracle_data = &local_hessian;
       HighsStatus return_status;
-      if (hessian.format_ == HessianFormat::kSquare) {
+      if (local_hessian.format_ == HessianFormat::kSquare) {
 	return_status =
           h.passHessian(lp.num_col_, oracleCallSquareHessian, oracle_data);
       } else {
@@ -506,16 +567,16 @@ void testOracleSolve(HighsModel& model) {
       }
     }
     if (dev_run) h.writeModel("");
-    REQUIRE(h.writeModel("Null.mps") == HighsStatus::kError);
     REQUIRE(h.run() == HighsStatus::kOk);
     
+    if (dev_run) h.writeSolution("", 1);
     if (k == 0) {
       required_objective_function_value = objective_function_value;
     } else {
       REQUIRE(valuesRelEqual(objective_function_value, required_objective_function_value));
     }
-    if (hessian.format_ == HessianFormat::kSquare) break;
-    hessian = hessian.toSquare();
+    if (local_hessian.format_ == HessianFormat::kSquare) break;
+    local_hessian = local_hessian.toSquare();
   }
 
   h.resetGlobalScheduler(true);

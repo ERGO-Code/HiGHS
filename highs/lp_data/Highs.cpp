@@ -962,6 +962,8 @@ HighsStatus Highs::writeLocalModel(HighsModel& model,
                    getFilenameExt(filename).c_str());
       return returnFromHighs(HighsStatus::kError);
     }
+    assert(lp.a_matrix_.isColwise());
+    if (model.hessian_.dim_) assert(model.hessian_.format_ == HessianFormat::kTriangular);
     Filereader* writer =
         Filereader::getFilereader(options_.log_options, filename);
     if (writer == NULL) {
@@ -4840,6 +4842,7 @@ void Highs::logHeader() {
 void Highs::reportModel(const HighsModel& model) {
   reportLp(options_.log_options, model.lp_, HighsLogType::kVerbose);
   if (model.hessian_.dim_) {
+    assert(model.hessian_.format_ == HessianFormat::kTriangular);
     const HighsInt dim = model.hessian_.dim_;
     reportHessian(options_.log_options, dim, model.hessian_.start_[dim],
                   model.hessian_.start_.data(), model.hessian_.index_.data(),
