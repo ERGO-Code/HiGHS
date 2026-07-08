@@ -45,10 +45,12 @@ class HighsHessian {
   };
   bool scaleOk(const HighsInt cost_scale, const double small_matrix_value,
                const double large_matrix_value) const;
+  HighsInt dim() const;
   HighsInt numNz() const;
   bool empty() const;
   bool isDiagonal() const;
   double diag(HighsInt i) const;
+  double diagonal(HighsInt i) const;
   HighsHessian toSquare() const;
   HighsStatus checkOracle(const HighsLogOptions& log_options,
                           const bool exit_on_first_error) const;

@@ -142,6 +142,8 @@ bool HighsHessian::scaleOk(const HighsInt hessian_scale,
   return true;
 }
 
+HighsInt HighsHessian::dim() const { return this->isOracle() ? this->oracle_.dim_ : this->dim_; }
+
 HighsInt HighsHessian::numNz() const {
   if (this->isOracle()) return 0;
   assert(this->formatOk());
@@ -191,14 +193,15 @@ bool HighsHessian::operator==(const HighsHessian& hessian) const {
 
 void HighsHessian::product(const std::vector<double>& solution,
                            std::vector<double>& product) const {
+  HighsInt dim = this->dim();
+  if (dim <= 0) return;
+  product.assign(dim, 0);
   if (this->isOracle()) {
     this->oracle_.product(solution, product);
     return;
   }
-  if (this->dim_ <= 0) return;
-  product.assign(this->dim_, 0);
   const bool triangular = this->format_ == HessianFormat::kTriangular;
-  for (HighsInt iCol = 0; iCol < this->dim_; iCol++) {
+  for (HighsInt iCol = 0; iCol < dim; iCol++) {
     for (HighsInt iEl = this->start_[iCol]; iEl < this->start_[iCol + 1];
          iEl++) {
       const HighsInt iRow = this->index_[iEl];
@@ -238,29 +241,13 @@ void HighsHessian::alphaProductPlusY(const double alpha,
 }
 
 double HighsHessian::objectiveValue(const std::vector<double>& solution) const {
+  HighsInt dim = this->dim();
+  std::vector<double> q_solution(dim, 0);
+  this->product(solution, q_solution);
   double objective_function_value = 0;
-  if (this->isOracle()) {
-    HighsInt dim = this->oracle_.dim_;
-    assert(static_cast<size_t>(dim) == solution.size());
-    std::vector<double> q_solution(dim, 0);
-    this->oracle_.product(solution, q_solution);
-    for (HighsInt iCol = 0; iCol < dim; iCol++)
-      objective_function_value += solution[iCol] * q_solution[iCol];
-    objective_function_value *= 0.5;
-    assert(111 == 888);
-    return objective_function_value;
-  }
-  for (HighsInt iCol = 0; iCol < this->dim_; iCol++) {
-    HighsInt iEl = this->start_[iCol];
-    // Assumes Hessian format is triangular
-    assert(this->index_[iEl] == iCol);
-    objective_function_value +=
-        0.5 * solution[iCol] * this->value_[iEl] * solution[iCol];
-    for (HighsInt iEl = this->start_[iCol] + 1; iEl < this->start_[iCol + 1];
-         iEl++)
-      objective_function_value +=
-          solution[iCol] * this->value_[iEl] * solution[this->index_[iEl]];
-  }
+  for (HighsInt iCol = 0; iCol < dim; iCol++)
+    objective_function_value += solution[iCol] * q_solution[iCol];
+  objective_function_value *= 0.5;
   return objective_function_value;
 }
 
@@ -309,8 +296,9 @@ bool HighsHessian::isDiagonal() const {
   return true;
 }
 
-double HighsHessian::diag(HighsInt i) const {
-  if (this->isOracle()) return this->oracle_.diag(i);
+double HighsHessian::diag(HighsInt i) const { return this->diagonal(i); }
+double HighsHessian::diagonal(HighsInt i) const {
+  if (this->isOracle()) return this->oracle_.diagonal(i);
   // Assumes that the diagonal entry is always first, possibly with explicit
   // zero value
   assert(i < dim_);
@@ -635,7 +623,7 @@ void HessianOracle::clear() {
   this->data_ = nullptr;
 }
 
-double HessianOracle::diag(const HighsInt i) const { return entry(i, i); }
+double HessianOracle::diagonal(const HighsInt i) const { return entry(i, i); }
 
 double HessianOracle::entry(const HighsInt i, const HighsInt j) const {
   assert(this->call_);

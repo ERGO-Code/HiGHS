@@ -20,20 +20,20 @@ void perturb(Runtime& rt) {
 
   for (HighsInt i = 0; i < rt.perturbed.num_con; i++) {
     if (rt.perturbed.con_lo[i] != rt.perturbed.con_up[i]) {
-      if (rt.perturbed.con_lo[i] != -std::numeric_limits<double>::infinity()) {
+      if (rt.perturbed.con_lo[i] != -kHighsInf) {
         rt.perturbed.con_lo[i] -= randomperturb(re);
       }
-      if (rt.perturbed.con_up[i] != std::numeric_limits<double>::infinity()) {
+      if (rt.perturbed.con_up[i] != kHighsInf) {
         rt.perturbed.con_up[i] += randomperturb(re);
       }
     }
   }
   for (HighsInt i = 0; i < rt.perturbed.num_var; i++) {
     if (rt.perturbed.var_lo[i] != rt.perturbed.var_up[i]) {
-      if (rt.perturbed.var_lo[i] != -std::numeric_limits<double>::infinity()) {
+      if (rt.perturbed.var_lo[i] != -kHighsInf) {
         rt.perturbed.var_lo[i] -= randomperturb(re);
       }
-      if (rt.perturbed.var_up[i] != std::numeric_limits<double>::infinity()) {
+      if (rt.perturbed.var_up[i] != kHighsInf) {
         rt.perturbed.var_up[i] += randomperturb(re);
       }
     }

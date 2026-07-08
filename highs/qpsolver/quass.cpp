@@ -146,7 +146,7 @@ static double computemaxsteplength(Runtime& runtime, const QpVector& p,
     }
   } else {
     zcd = true;
-    return std::numeric_limits<double>::infinity();
+    return kHighsInf;
   }
 }
 
@@ -348,6 +348,8 @@ void Quass::solve(const QpVector& x0, const QpVector& ra, Basis& b0,
 
   const HighsInt current_num_active = basis.getnumactive();
   bool atfsep = current_num_active == runtime.instance.num_var;
+  HighsInt null = 0;
+  runtime.settings.iteration_log_header.fire(null);
   while (true) {
     // check iteration limit
     if (runtime.statistics.num_iterations >= runtime.settings.iteration_limit) {
@@ -431,7 +433,7 @@ void Quass::solve(const QpVector& x0, const QpVector& ra, Basis& b0,
       basis.deactivate(minidx);
       computerowmove(runtime, basis, p, rowmove);
       tidyup(p, rowmove, basis, runtime);
-      maxsteplength = std::numeric_limits<double>::infinity();
+      maxsteplength = kHighsInf;
       // if (runtime.instance.Q.mat.value.size() > 0) {
       maxsteplength = computemaxsteplength(runtime, p, gradient, buffer_Qp,
                                            zero_curvature_direction);
@@ -506,7 +508,7 @@ void Quass::solve(const QpVector& x0, const QpVector& ra, Basis& b0,
           atfsep = false;
         }
       } else {
-        if (stepres.alpha == std::numeric_limits<double>::infinity()) {
+        if (stepres.alpha == kHighsInf) {
           // unbounded
           runtime.status = QpModelStatus::kUnbounded;
           return;

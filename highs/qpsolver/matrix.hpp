@@ -24,6 +24,27 @@ struct MatrixBase {
 
   bool isOracle() const { return oracle_.call_ != nullptr; }
 
+  double diagonal(const HighsInt iCol) const {
+    if (this->isOracle()) return this->oracle_.diagonal(iCol);
+    for (HighsInt iEl = this->start[iCol]; iEl < this->start[iCol+1]; iEl++)
+      if (this->index[iEl] == iCol) return this->value[iEl];
+    return 0;
+  }
+
+  void getColumn(const HighsInt iCol, HighsInt& num_entries, HighsInt* index, double* value) {
+    if (this->isOracle()) {
+      this->oracle_.getColumn(iCol, num_entries, index, value);
+      return;
+    }
+    num_entries = 0;
+    for (HighsInt iEl = this->start[iCol]; iEl < this->start[iCol+1]; iEl++) {
+      index[num_entries] = this->index[iEl];
+      value[num_entries] = this->value[iEl];
+      num_entries++;
+    }
+  }
+	
+  
   QpVector& mat_vec(const QpVector& other, QpVector& target) const {
     return mat_vec_seq(other, target);
   }

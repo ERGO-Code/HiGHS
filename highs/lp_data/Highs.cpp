@@ -4391,6 +4391,7 @@ HighsStatus Highs::callSolveQp() {
     assert(settings.hessian_regularization_value ==
            kHessianRegularizationValue);
     settings.hessian_regularization_value = options_.qp_regularization_value;
+    settings.primal_feasibility_tolerance = options_.primal_feasibility_tolerance;
 
     // Define the QP model status logging function
     settings.qp_model_status_log.subscribe(
@@ -4404,6 +4405,12 @@ HighsStatus Highs::callSolveQp() {
                          "QP solver model status: %s\n",
                          qpModelStatusToString(qp_model_status).c_str());
         });
+
+    // Define the QP solver iteration logging function
+    settings.iteration_log_header.subscribe([this](HighsInt& null) {
+      highsLogUser(options_.log_options, HighsLogType::kInfo,
+                   "  Iteration        Objective     NullspaceDim\n");
+    });
 
     // Define the QP solver iteration logging function
     settings.iteration_log.subscribe([this](Statistics& stats) {
@@ -4452,10 +4459,6 @@ HighsStatus Highs::callSolveQp() {
       default:
         settings.pricing = PricingStrategy::Devex;
     }
-
-    // print header for QP solver output
-    highsLogUser(options_.log_options, HighsLogType::kInfo,
-                 "  Iteration        Objective     NullspaceDim\n");
 
     QpAsmStatus status = solveqp(instance, settings, stats, model_status_,
                                  basis_, solution_, timer_);

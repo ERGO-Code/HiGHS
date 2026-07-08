@@ -22,11 +22,12 @@ static void computeStartingPointBounded(Instance& instance, Settings& settings,
   // Solve  Qx + c = 0 --> x = -Q^-1c
   HighsInt dim = instance.num_var;
   QpVector res = -instance.c;
+  MatrixBase& hessian = instance.Q.mat;
   assert(res.dim == dim);
-  if (instance.Q.mat.isDiagonal()) {
+  if (hessian.isDiagonal()) {
     // Diagonal Hessian
     for (HighsInt iRow = 0; iRow < dim; iRow++) {
-      double value = instance.Q.mat.value[iRow];
+      double value = hessian.diagonal(iRow);
       if (value <= 0) {
 	modelstatus = QpModelStatus::kNonConvex;
 	return;
@@ -48,13 +49,17 @@ static void computeStartingPointBounded(Instance& instance, Settings& settings,
 
     // First copy the lower triangle of Q into L
     L.assign(dim * dim, 0);
+    HighsInt num_entries;
+    std::vector<double> value(dim);
+    std::vector<HighsInt> index(dim);
     for (HighsInt iCol = 0; iCol < dim; iCol++) {
-      for (HighsInt iEl = instance.Q.mat.start[iCol]; iEl < instance.Q.mat.start[iCol + 1]; iEl++) {
-	HighsInt iRow = instance.Q.mat.index[iEl];
+      hessian.getColumn(iCol, num_entries, index.data(), value.data());
+      for (HighsInt iEl = 0; iEl < num_entries; iEl++) {
+	HighsInt iRow = index[iEl];
 	// Take the entries above or on the diagonal in column iCol of
-	// (column-wise) Q as the entries before or on the diagonal in
-	// row iCol of (row-wise) L
-	if (iRow <= iCol) L[iCol * dim + iRow] = instance.Q.mat.value[iEl];
+	// Q as the entries before or on the diagonal in row iCol of
+	// (row-wise) L
+	if (iRow <= iCol) L[iCol * dim + iRow] = value[iEl];
       }
     }
     // Now compute Cholesky factorization of L
@@ -108,21 +113,15 @@ static void computeStartingPointBounded(Instance& instance, Settings& settings,
   std::vector<BasisStatus> atlower;
 
   for (int i = 0; i < instance.num_var; i++) {
-    if (res.value[i] > 0.5 / settings.hessian_regularization_value &&
-        instance.var_up[i] == std::numeric_limits<double>::infinity() &&
-        instance.c.value[i] < 0.0) {
-      modelstatus = QpModelStatus::kUnbounded;
-      return;
-    } else if (res.value[i] < 0.5 / settings.hessian_regularization_value &&
-               instance.var_lo[i] == std::numeric_limits<double>::infinity() &&
-               instance.c.value[i] > 0.0) {
-      modelstatus = QpModelStatus::kUnbounded;
-      return;
-    } else if (res.value[i] <= instance.var_lo[i]) {
+    // Deleted spurious identification of unboundedness based on
+    // res.value[i] exceeding
+    // 0.5/settings.hessian_regularization_value, where the
+    // denominator can be zero
+    if (res.value[i] < instance.var_lo[i] - settings.primal_feasibility_tolerance) {
       res.value[i] = instance.var_lo[i];
       initialactive.push_back(i + instance.num_con);
       atlower.push_back(BasisStatus::kActiveAtLower);
-    } else if (res.value[i] >= instance.var_up[i]) {
+    } else if (res.value[i] > instance.var_up[i] + settings.primal_feasibility_tolerance) {
       res.value[i] = instance.var_up[i];
       initialactive.push_back(i + instance.num_con);
       atlower.push_back(BasisStatus::kActiveAtUpper);

@@ -311,7 +311,7 @@ TEST_CASE("hessian-oracle-check", "[qpsolver]") {
       for (HighsInt iEl = hessian.start_[iCol]; iEl < hessian.start_[iCol + 1];
            iEl++)
         column[hessian.index_[iEl]] = hessian.value_[iEl];
-      REQUIRE(oracle.diag(iCol) == column[iCol]);
+      REQUIRE(oracle.diagonal(iCol) == column[iCol]);
       for (HighsInt iRow = iCol + 1; iRow < lp.num_col_; iRow++) {
         REQUIRE(oracle.entry(iRow, iCol) == column[iRow]);
         REQUIRE(oracle.entry(iCol, iRow) == column[iRow]);
@@ -574,6 +574,8 @@ void testOracleSolve(const HighsModel& model, const double* solution) {
       required_objective_function_value = objective_function_value;
     } else {
       REQUIRE(valuesRelEqual(objective_function_value, required_objective_function_value));
+      if (solution)
+	REQUIRE(vectorsRelEqual(lp.num_col_, h.getSolution().col_value.data(), solution));
     }
     if (local_hessian.format_ == HessianFormat::kSquare) break;
     local_hessian = local_hessian.toSquare();

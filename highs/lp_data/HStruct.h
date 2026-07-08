@@ -262,7 +262,7 @@ struct HessianOracle {
   HighsHessianFunctionType call_ = nullptr;
   void* data_ = nullptr;
   void clear();
-  double diag(const HighsInt i) const;
+  double diagonal(const HighsInt i) const;
   double entry(const HighsInt i, const HighsInt j) const;
   void getColumn(const HighsInt col, HighsInt& col_num_entries, HighsInt* col_index, double* col_value) const;
   void product(const std::vector<double>& x_value,
