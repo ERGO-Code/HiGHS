@@ -29,13 +29,13 @@
 using namespace highs;
 
 // Fallback: assume 2 vthreads per core
-static unsigned int fallback_cpu_count() {
+static unsigned int fallback_core_count() {
   return (std::thread::hardware_concurrency() + 1) / 2;
 }
 
-// Returns the number of physical CPU cores available to this process,
+// Returns the number of physical cores available to this process,
 // respecting the OS affinity mask.
-unsigned int highs::parallel::available_cpu_count() {
+unsigned int highs::parallel::available_core_count() {
 #if defined(__linux__)
   // Get the affinity mask, then count unique physical core IDs
   cpu_set_t affinity;
@@ -58,17 +58,17 @@ unsigned int highs::parallel::available_cpu_count() {
   // Count physical cores whose logical processors overlap with process affinity
   DWORD_PTR process_mask, system_mask;
   if (!GetProcessAffinityMask(GetCurrentProcess(), &process_mask, &system_mask))
-    return fallback_cpu_count();
+    return fallback_core_count();
 
   // First call with nullptr to query the required buffer size
   DWORD length = 0;
   GetLogicalProcessorInformation(nullptr, &length);
-  if (GetLastError() != ERROR_INSUFFICIENT_BUFFER) return fallback_cpu_count();
+  if (GetLastError() != ERROR_INSUFFICIENT_BUFFER) return fallback_core_count();
 
   std::vector<SYSTEM_LOGICAL_PROCESSOR_INFORMATION> info(
       length / sizeof(SYSTEM_LOGICAL_PROCESSOR_INFORMATION));
   if (!GetLogicalProcessorInformation(info.data(), &length))
-    return fallback_cpu_count();
+    return fallback_core_count();
 
   unsigned int physical_cores = 0;
   for (const auto& entry : info) {
@@ -83,7 +83,7 @@ unsigned int highs::parallel::available_cpu_count() {
   if (sysctlbyname("hw.physicalcpu", &n, &size, nullptr, 0) == 0 && n > 0)
     return static_cast<unsigned int>(n);
 #endif
-  return fallback_cpu_count();
+  return fallback_core_count();
 }
 
 #ifdef _WIN32

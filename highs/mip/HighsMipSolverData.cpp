@@ -1104,7 +1104,7 @@ void HighsMipSolverData::runSetup() {
         num_implied_integer, num_continuous, num_domain_fixed,
         mipsolver.numNonzero(), mipsolver.numNonzero() == 1 ? "" : "s",
         HighsInt{highs::parallel::num_threads()},
-        HighsInt{static_cast<int>(highs::parallel::available_cpu_count())},
+        HighsInt{static_cast<int>(highs::parallel::available_core_count())},
         mipsolver.getMaxNumWorkers(),
         mipsolver.getMaxNumWorkers() > 1 ? "on" : "off");
   } else {
