@@ -8,40 +8,81 @@
 #include "parallel/HighsTaskExecutor.h"
 
 #include "parallel/HighsParallel.h"
-#include "util/HighsHash.h"
 
 #if defined(__linux__)
 #include <sched.h>
+
+#include <fstream>
+#include <set>
+#include <string>
 #elif defined(_WIN32) || defined(_WIN64)
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
 #endif
 #include <windows.h>
+
+#include <vector>
+#elif defined(__APPLE__)
+#include <sys/sysctl.h>
 #endif
 
 using namespace highs;
 
-// Like std::thread::hardware_concurrency(), but respects the process
-// CPU affinity mask set by the OS (e.g., taskset or start /affinity).
-unsigned int highs::parallel::available_concurrency() {
+// Fallback: assume 2 vthreads per core
+static unsigned int fallback_cpu_count() {
+  return (std::thread::hardware_concurrency() + 1) / 2;
+}
+
+// Returns the number of physical CPU cores available to this process,
+// respecting the OS affinity mask.
+unsigned int highs::parallel::available_cpu_count() {
 #if defined(__linux__)
-  // Query the set of CPUs this process is allowed to run on
-  cpu_set_t set;
-  if (sched_getaffinity(0, sizeof(set), &set) == 0) {
-    int count = CPU_COUNT(&set);
-    if (count > 0) return static_cast<unsigned int>(count);
+  // Get the affinity mask, then count unique physical core IDs
+  cpu_set_t affinity;
+  if (sched_getaffinity(0, sizeof(affinity), &affinity) == 0) {
+    std::set<int> physical_cores;
+    for (int cpu = 0; cpu < CPU_SETSIZE; ++cpu) {
+      if (!CPU_ISSET(cpu, &affinity)) continue;
+      std::ifstream topology_file("/sys/devices/system/cpu/cpu" +
+                                  std::to_string(cpu) + "/topology/core_id");
+      if (topology_file.is_open()) {
+        int core_id;
+        topology_file >> core_id;
+        physical_cores.insert(core_id);
+      }
+    }
+    if (!physical_cores.empty())
+      return static_cast<unsigned int>(physical_cores.size());
   }
 #elif defined(_WIN32) || defined(_WIN64)
-  // Query the process affinity bitmask and count set bits
+  // Count physical cores whose logical processors overlap with process affinity
   DWORD_PTR process_mask, system_mask;
-  if (GetProcessAffinityMask(GetCurrentProcess(), &process_mask,
-                             &system_mask)) {
-    int count = HighsHashHelpers::popcnt(static_cast<uint64_t>(process_mask));
-    if (count > 0) return static_cast<unsigned int>(count);
+  if (!GetProcessAffinityMask(GetCurrentProcess(), &process_mask, &system_mask))
+    return fallback_cpu_count();
+
+  DWORD length = 0;
+  GetLogicalProcessorInformation(nullptr, &length);
+  if (GetLastError() != ERROR_INSUFFICIENT_BUFFER) return fallback_cpu_count();
+
+  std::vector<SYSTEM_LOGICAL_PROCESSOR_INFORMATION> info(
+      length / sizeof(SYSTEM_LOGICAL_PROCESSOR_INFORMATION));
+  if (!GetLogicalProcessorInformation(info.data(), &length))
+    return fallback_cpu_count();
+
+  unsigned int physical_cores = 0;
+  for (const auto& entry : info) {
+    if (entry.Relationship != RelationProcessorCore) continue;
+    if (entry.ProcessorMask & process_mask) physical_cores++;
   }
+  if (physical_cores > 0) return physical_cores;
+#elif defined(__APPLE__)
+  // macOS does not support affinity; return physical core count
+  int n;
+  size_t size = sizeof(n);
+  if (sysctlbyname("hw.physicalcpu", &n, &size, nullptr, 0) == 0 && n > 0)
+    return static_cast<unsigned int>(n);
 #endif
-  // Fallback when affinity query is unavailable or fails
-  return std::thread::hardware_concurrency();
+  return fallback_cpu_count();
 }
 
 #ifdef _WIN32

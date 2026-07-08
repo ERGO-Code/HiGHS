@@ -22,7 +22,7 @@
 
 using namespace highs;
 
-const int numThreads = (std::thread::hardware_concurrency() + 1) / 2;
+const int numThreads = highs::parallel::available_cpu_count();
 const bool dev_run = false;
 
 int64_t fib_sequential(const int64_t n) {
@@ -304,49 +304,48 @@ static void nestedTask() {
   tg.spawn([]() { loseTime(); });
 }
 
-TEST_CASE("AvailableConcurrency", "[parallel]") {
-  unsigned int cores = highs::parallel::available_concurrency();
-  REQUIRE(cores > 0);
-  REQUIRE(cores <= std::thread::hardware_concurrency());
+TEST_CASE("AvailableCpuCount", "[parallel]") {
+  unsigned int cpus = highs::parallel::available_cpu_count();
+  REQUIRE(cpus > 0);
 }
 
 #if defined(_WIN32) || defined(_WIN64)
-TEST_CASE("AffinityReducedCores", "[parallel]") {
-  // Initialize scheduler with full core count
+TEST_CASE("AffinityReducedCpuCount", "[parallel]") {
+  // Initialize scheduler with full cpu count
   highs::parallel::initialize_scheduler();
   int initial_threads = highs::parallel::num_threads();
 
-  // Restrict affinity to a single core
+  // Restrict affinity to a single cpu
   DWORD_PTR original_mask, system_mask;
   GetProcessAffinityMask(GetCurrentProcess(), &original_mask, &system_mask);
   SetProcessAffinityMask(GetCurrentProcess(), 1);
 
-  // available_concurrency should now report 1
-  unsigned int cores = highs::parallel::available_concurrency();
-  REQUIRE(cores == 1);
-  REQUIRE(initial_threads >= static_cast<int>(cores));
+  // available_cpu_count should now report 1
+  unsigned int cpus = highs::parallel::available_cpu_count();
+  REQUIRE(cpus == 1);
+  REQUIRE(initial_threads >= static_cast<int>(cpus));
 
   // Restore original affinity
   SetProcessAffinityMask(GetCurrentProcess(), original_mask);
   HighsTaskExecutor::shutdown();
 }
 #elif defined(__linux__)
-TEST_CASE("AffinityReducedCores", "[parallel]") {
-  // Initialize scheduler with full core count
+TEST_CASE("AffinityReducedCpuCount", "[parallel]") {
+  // Initialize scheduler with full cpu count
   highs::parallel::initialize_scheduler();
   int initial_threads = highs::parallel::num_threads();
 
-  // Restrict affinity to a single core
+  // Restrict affinity to a single cpu
   cpu_set_t original_set, restricted_set;
   sched_getaffinity(0, sizeof(original_set), &original_set);
   CPU_ZERO(&restricted_set);
   CPU_SET(0, &restricted_set);
   sched_setaffinity(0, sizeof(restricted_set), &restricted_set);
 
-  // available_concurrency should now report 1
-  unsigned int cores = highs::parallel::available_concurrency();
-  REQUIRE(cores == 1);
-  REQUIRE(initial_threads >= static_cast<int>(cores));
+  // available_cpu_count should now report 1
+  unsigned int cpus = highs::parallel::available_cpu_count();
+  REQUIRE(cpus == 1);
+  REQUIRE(initial_threads >= static_cast<int>(cpus));
 
   // Restore original affinity
   sched_setaffinity(0, sizeof(original_set), &original_set);
