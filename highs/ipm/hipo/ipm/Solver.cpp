@@ -369,10 +369,12 @@ bool Solver::solveNewtonSystem(NewtonDir& delta) {
       LS_->clear();
       it_->data.back().factorisation_used = LS_->type();
       logger_.printInfo("Switching to FactorHighs because of bad direction\n");
+      resetToBestIter(iter_ - 1);
 
       // Solve again. This does not create an infinite loop, as the if statement
       // cannot trigger in the second solve.
       delta.clear();
+      it_->data.back().omega = 0.0;
       terminate = solveNewtonSystem(delta);
     } else
       info_.status = kStatusError;
@@ -1116,7 +1118,7 @@ bool Solver::checkBadIter() {
         LS_->clear();
         it_->bad_iter_ = 0;
         logger_.printInfo("Switching to FactorHighs because of no progress\n");
-        if (it_->resetBest(iter_)) printOutput(true);
+        resetToBestIter(iter_);
       } else {
         // stagnation detected, solution may still be good for highs kktCheck
         if (info_.status != kStatusPDFeas && checkTerminationKkt()) {
@@ -1126,7 +1128,7 @@ bool Solver::checkBadIter() {
           info_.status = kStatusPDFeas;
         } else {
           info_.status = kStatusNoProgress;
-          if (it_->resetBest(iter_)) printOutput(true);
+          resetToBestIter(iter_);
         }
 
         terminate = true;
@@ -1214,6 +1216,11 @@ bool Solver::checkInterrupt() {
     terminate = true;
   }
   return terminate;
+}
+
+void Solver::resetToBestIter(Int iter, bool print) {
+  bool did_reset = it_->resetBest(iter);
+  if (did_reset && print) printOutput(true);
 }
 
 void Solver::printHeader() const {

@@ -333,6 +333,7 @@ class Solver {
 
   void resetOptions();
   void reset();
+  void resetToBestIter(Int iter, bool print = true);
 };
 
 }  // namespace hipo
