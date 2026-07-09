@@ -730,12 +730,14 @@ HighsDomain::ObjectivePropagation::ObjectivePropagation(HighsDomain* domain)
       if (domain->col_lower_[col] == -kHighsInf)
         ++numInfObjLower;
       else
-        objectiveLower += domain->col_lower_[col] * cost[col];
+        objectiveLower +=
+            static_cast<HighsCDouble>(domain->col_lower_[col]) * cost[col];
     } else {
       if (domain->col_upper_[col] == kHighsInf)
         ++numInfObjLower;
       else
-        objectiveLower += domain->col_upper_[col] * cost[col];
+        objectiveLower +=
+            static_cast<HighsCDouble>(domain->col_upper_[col]) * cost[col];
     }
   }
 
@@ -845,12 +847,12 @@ void HighsDomain::ObjectivePropagation::updateActivityLbChange(
     if (oldbound == -kHighsInf)
       --numInfObjLower;
     else
-      objectiveLower -= oldbound * cost[col];
+      objectiveLower -= static_cast<HighsCDouble>(oldbound) * cost[col];
 
     if (newbound == -kHighsInf)
       ++numInfObjLower;
     else
-      objectiveLower += newbound * cost[col];
+      objectiveLower += static_cast<HighsCDouble>(newbound) * cost[col];
 
     debugCheckObjectiveLower();
 
@@ -965,12 +967,12 @@ void HighsDomain::ObjectivePropagation::updateActivityUbChange(
     if (oldbound == kHighsInf)
       --numInfObjLower;
     else
-      objectiveLower -= oldbound * cost[col];
+      objectiveLower -= static_cast<HighsCDouble>(oldbound) * cost[col];
 
     if (newbound == kHighsInf)
       ++numInfObjLower;
     else
-      objectiveLower += newbound * cost[col];
+      objectiveLower += static_cast<HighsCDouble>(newbound) * cost[col];
 
     debugCheckObjectiveLower();
 
@@ -1105,18 +1107,19 @@ void HighsDomain::ObjectivePropagation::debugCheckObjectiveLower() const {
     HighsInt col = objNonzeros[i];
     if (cost[col] > 0) {
       if (domain->col_lower_[col] > -kHighsInf)
-        lowerFromScratch += domain->col_lower_[col] * cost[col];
+        lowerFromScratch +=
+            static_cast<HighsCDouble>(domain->col_lower_[col]) * cost[col];
       else
         ++numInf;
     } else {
       if (domain->col_upper_[col] < kHighsInf)
-        lowerFromScratch += domain->col_upper_[col] * cost[col];
+        lowerFromScratch +=
+            static_cast<HighsCDouble>(domain->col_upper_[col]) * cost[col];
       else
         ++numInf;
     }
   }
-  assert(std::fabs(double(lowerFromScratch - objectiveLower)) <=
-         domain->feastol());
+  assert(abs(lowerFromScratch - objectiveLower) <= domain->feastol());
   assert(numInf == numInfObjLower);
 #endif
 }
