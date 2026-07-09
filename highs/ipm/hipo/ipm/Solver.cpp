@@ -205,6 +205,7 @@ bool Solver::prepareIter() {
   // Prepare next iteration.
   // Return true if Ipm main loop should be stopped
 
+  it_->saveBest(options_.feasibility_tol, options_.optimality_tol, iter_);
   if (checkIterate()) return true;
   if (checkBadIter()) return true;
   if (checkTermination()) return true;
@@ -1115,6 +1116,7 @@ bool Solver::checkBadIter() {
         LS_->clear();
         it_->bad_iter_ = 0;
         logger_.printInfo("Switching to FactorHighs because of no progress\n");
+        if (it_->resetBest(iter_)) printOutput(true);
       } else {
         // stagnation detected, solution may still be good for highs kktCheck
         if (info_.status != kStatusPDFeas && checkTerminationKkt()) {
@@ -1122,8 +1124,10 @@ bool Solver::checkBadIter() {
               "HiPO stagnated but HiGHS considers the solution acceptable\n");
           logger_.print("=== Primal-dual feasible point found\n");
           info_.status = kStatusPDFeas;
-        } else
+        } else {
           info_.status = kStatusNoProgress;
+          if (it_->resetBest(iter_)) printOutput(true);
+        }
 
         terminate = true;
       }
@@ -1227,13 +1231,19 @@ void Solver::printHeader() const {
   }
 }
 
-void Solver::printOutput() const {
+void Solver::printOutput(bool reset) const {
   printHeader();
 
-  logger_.print("%5d %16.8e %16.8e %10.2e %10.2e %9.2e", iter_, it_->pobj,
-                it_->dobj, it_->pinf, it_->dinf, it_->pdgap);
+  if (!reset) {
+    logger_.print("%5d ", iter_);
+  } else {
+    logger_.print(">%4d ", it_->best_iter);
+  }
+
+  logger_.print("%16.8e %16.8e %10.2e %10.2e %9.2e", it_->pobj, it_->dobj,
+                it_->pinf, it_->dinf, it_->pdgap);
   if (!options_.timeless_log) logger_.print(" %7.1f", control_.elapsed());
-  if (logger_.debug(1)) {
+  if (logger_.debug(1) && !reset) {
     const IpmIterData& data = it_->data.back();
     logger_.print(
         " %6.2f %6.2f %6.2f %6.2f %5d %5d %5c %8.1e %8.1e %8.1e %8.1e %8.1e "
