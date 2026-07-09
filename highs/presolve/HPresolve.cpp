@@ -6944,12 +6944,17 @@ void HPresolve::removeFixedCol(HighsInt col, double fixval) {
 
 HPresolve::Result HPresolve::removeRowSingletons(
     HighsPostsolveStack& postsolve_stack) {
-  for (size_t i = 0; i < singletonRows.size(); ++i) {
+  size_t i = 0;
+  while (i < singletonRows.size()) {
     HighsInt row = singletonRows[i];
-    if (rowDeleted[row] || rowsize[row] > 1) continue;
+    if (rowDeleted[row] || rowsize[row] > 1) {
+      i++;
+      continue;
+    }
     // row presolve will delegate to rowSingleton() if the row size is 1
     // if the singleton row has become empty it will also remove the row
     HPRESOLVE_CHECKED_CALL(rowPresolve(postsolve_stack, row));
+    i++;
   }
 
   singletonRows.clear();
@@ -6959,10 +6964,15 @@ HPresolve::Result HPresolve::removeRowSingletons(
 
 HPresolve::Result HPresolve::presolveColSingletons(
     HighsPostsolveStack& postsolve_stack) {
-  for (size_t i = 0; i < singletonColumns.size(); ++i) {
+  size_t i = 0;
+  while (i < singletonColumns.size()) {
     HighsInt col = singletonColumns[i];
-    if (colDeleted[col]) continue;
+    if (colDeleted[col]) {
+      i++;
+      continue;
+    }
     HPRESOLVE_CHECKED_CALL(colPresolve(postsolve_stack, col));
+    i++;
   }
   singletonColumns.erase(
       std::remove_if(
