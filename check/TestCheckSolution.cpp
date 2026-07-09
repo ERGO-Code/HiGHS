@@ -78,7 +78,9 @@ TEST_CASE("check-set-mip-solution", "[highs_check_solution]") {
       std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
   Highs highs;
   const HighsInfo& info = highs.getInfo();
-  if (dev_run) printf("\n********************\nSolving from scratch\n");
+  if (dev_run)
+    printf(
+        "\n********************\nSolving from scratch\n********************\n");
   highs.setOptionValue("output_flag", dev_run);
   highs.readModel(model_file);
   HighsLp lp = highs.getLp();
@@ -92,7 +94,7 @@ TEST_CASE("check-set-mip-solution", "[highs_check_solution]") {
 
   std::string solution_file = test_name + model + ".sol";
   if (dev_run) REQUIRE(highs.writeSolution("") == HighsStatus::kOk);
-  ;
+
   REQUIRE(highs.writeSolution(solution_file) == HighsStatus::kOk);
 
   highs.clear();
@@ -102,7 +104,9 @@ TEST_CASE("check-set-mip-solution", "[highs_check_solution]") {
   bool valid, integral, feasible;
   if (test0) {
     if (dev_run)
-      printf("\n***************************\nSolving from saved solution\n");
+      printf(
+          "\n***************************\nSolving from saved "
+          "solution\n***************************\n");
     highs.setOptionValue("output_flag", dev_run);
     highs.readModel(model_file);
 
@@ -124,7 +128,9 @@ TEST_CASE("check-set-mip-solution", "[highs_check_solution]") {
   const bool test1 = other_tests;
   if (test1) {
     if (dev_run)
-      printf("\n***************************\nSolving from solution file\n");
+      printf(
+          "\n**************************\nSolving from solution "
+          "file\n**************************\n");
     highs.setOptionValue("output_flag", dev_run);
     highs.readModel(model_file);
 
@@ -147,8 +153,8 @@ TEST_CASE("check-set-mip-solution", "[highs_check_solution]") {
   if (test2) {
     if (dev_run)
       printf(
-          "\n***************************\nSolving from saved integer "
-          "solution\n");
+          "\n***********************************\nSolving from saved integer "
+          "solution\n***********************************\n");
     highs.setOptionValue("output_flag", dev_run);
     highs.readModel(model_file);
 
@@ -180,7 +186,8 @@ TEST_CASE("check-set-mip-solution", "[highs_check_solution]") {
   if (test3) {
     if (dev_run)
       printf(
-          "\n***************************\nSolving from column solution file\n");
+          "\n*********************************\nSolving from column solution "
+          "file\n*********************************\n");
     std::string column_solution_file =
         std::string(HIGHS_DIR) + "/check/instances/flugpl_integer.sol";
 
@@ -206,8 +213,9 @@ TEST_CASE("check-set-mip-solution", "[highs_check_solution]") {
   if (test4) {
     if (dev_run)
       printf(
-          "\n***************************\nSolving from illegal column solution "
-          "file\n");
+          "\n*****************************************\nSolving from illegal "
+          "column solution "
+          "file\n*****************************************\n");
     std::string column_solution_file =
         std::string(HIGHS_DIR) + "/check/instances/flugpl_illegal_integer.sol";
 
@@ -225,8 +233,9 @@ TEST_CASE("check-set-mip-solution", "[highs_check_solution]") {
     HighsSolution starting_solution = optimal_solution;
     if (dev_run)
       printf(
-          "\n***************************\nSolving from partial integer "
-          "solution\n");
+          "\n*************************************\nSolving from partial "
+          "integer "
+          "solution\n*************************************\n");
     highs.setOptionValue("output_flag", dev_run);
     highs.readModel(model_file);
 
@@ -256,8 +265,8 @@ TEST_CASE("check-set-mip-solution", "[highs_check_solution]") {
   if (test6) {
     if (dev_run)
       printf(
-          "\n***************************\nSolving from sparse integer "
-          "solution\n");
+          "\n************************************\nSolving from sparse integer "
+          "solution\n************************************\n");
     HighsInt num_integer_variable = 0;
     for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++)
       if (lp.integrality_[iCol] == HighsVarType::kInteger)

@@ -139,11 +139,11 @@ lexicographic optimization according to the truth of the
 linear objective is represented by the following data, held in the
 [HighsLinearObjective](@ref HighsLinearObjective) structure
 
-- weight: Scalar of type double - The weight of this objective when blending 
+- weight: Scalar of type double - The weight of this objective when blending
 - offset: Scalar of type double - The offset of this objective
 - coefficients: Vector of type double - The coefficients of this objective
-- abs\_tolerance: Scalar of type double - The absolute tolerance on this objective when performing lexicographic optimization 
-- rel\_tolerance: Scalar of type double - The relative tolerance on this objective when performing lexicographic optimization 
+- abs\_tolerance: Scalar of type double - The absolute tolerance on this objective when performing lexicographic optimization
+- rel\_tolerance: Scalar of type double - The relative tolerance on this objective when performing lexicographic optimization
 - priority: Scalar of type HighsInt - The priority of this objective when performing lexicographic optimization
 
 ### Methods
@@ -174,7 +174,7 @@ priority values must be distinct_.
 
 * Minimize/maximize with respect to the linear objective of highest priority value, according to whether its `weight` is positive/negative
 
-* Add a constraint to the model so that the value of the linear objective of highest priority satsifies a bound given by the values of `abs_tolerance` and/or `rel_tolerance`.
+* Add a constraint to the model so that the value of the linear objective of highest priority satisfies a bound given by the values of `abs_tolerance` and/or `rel_tolerance`.
     + If the objective was minimized to a value ``f^*\ge0``, then the constraint ensures that the this objective value is no greater than ``\min(f^*+abs\_tolerance,~f^*\times[1+rel\_tolerance]).``
 
     + If the objective was minimized to a value ``f^*<0``, then the constraint ensures that the this objective value is no greater than ``\min(f^*+abs\_tolerance,~f^*\times[1-rel\_tolerance]).``
@@ -189,5 +189,3 @@ Note
 
 * Negative values of `abs_tolerance` and `rel_tolerance` will be ignored. This is a convenient way of "switching off" a bounding technique that is not of interest.
 * When the model is continuous, no dual information will be returned if there is more than one linear objective.
-
-
