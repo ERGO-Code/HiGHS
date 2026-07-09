@@ -82,13 +82,12 @@ unsigned int highs::parallel::available_core_count() {
                                process_groups.data()))
     return fallback_core_count();
 
-  // For single-group processes, get the affinity mask for precise filtering
-  DWORD_PTR process_mask = 0;
+  // For single-group processes, get the affinity mask for precise filtering;
+  // for multi-group, all bits set means no filtering.
+  DWORD_PTR process_mask = ~static_cast<DWORD_PTR>(0);
   if (process_group_count == 1) {
     DWORD_PTR system_mask;
-    if (!GetProcessAffinityMask(GetCurrentProcess(), &process_mask,
-                                &system_mask))
-      process_mask = 0;
+    GetProcessAffinityMask(GetCurrentProcess(), &process_mask, &system_mask);
   }
 
   // Query topology across all groups via GetLogicalProcessorInformationEx
@@ -96,19 +95,20 @@ unsigned int highs::parallel::available_core_count() {
   GetLogicalProcessorInformationEx(RelationProcessorCore, nullptr, &length);
   if (GetLastError() != ERROR_INSUFFICIENT_BUFFER) return fallback_core_count();
 
+  // Variable-size entries packed in a byte buffer
   std::vector<char> buffer(length);
-  if (!GetLogicalProcessorInformationEx(
-          RelationProcessorCore,
-          reinterpret_cast<PSYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX>(
-              buffer.data()),
-          &length))
+  auto entry_at = [&](DWORD offset) {
+    return reinterpret_cast<PSYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX>(
+        buffer.data() + offset);
+  };
+  if (!GetLogicalProcessorInformationEx(RelationProcessorCore, entry_at(0),
+                                        &length))
     return fallback_core_count();
 
   unsigned int physical_cores = 0;
   DWORD offset = 0;
   while (offset < length) {
-    auto* entry = reinterpret_cast<PSYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX>(
-        buffer.data() + offset);
+    auto* entry = entry_at(offset);
     if (entry->Relationship == RelationProcessorCore) {
       for (WORD i = 0; i < entry->Processor.GroupCount; i++) {
         WORD group = entry->Processor.GroupMask[i].Group;
@@ -117,14 +117,7 @@ unsigned int highs::parallel::available_core_count() {
         if (std::find(process_groups.begin(), process_groups.end(), group) ==
             process_groups.end())
           continue;
-        // For single-group processes, filter by affinity mask
-        if (process_mask) {
-          if (mask & process_mask) physical_cores++;
-        } else {
-          // Multi-group: no per-group affinity API, count all cores
-          assert(mask);
-          physical_cores++;
-        }
+        if (mask & process_mask) physical_cores++;
       }
     }
     offset += entry->Size;
