@@ -2852,9 +2852,9 @@ bool HighsDomain::ConflictSet::explainBoundChangeGeq(
     // in case of an integral variable the bound was rounded and can be
     // relaxed by 1-feastol. We use 1 - 10 * feastol for numerical safety.
     if (domchg.domchg.boundtype == HighsBoundType::kLower)
-      b0 -= (1.0 - 10 * localdom.mipsolver->mipdata_->feastol);
+      b0 -= (1.0 - 10 * localdom.feastol());
     else
-      b0 += (1.0 - 10 * localdom.mipsolver->mipdata_->feastol);
+      b0 += (1.0 - 10 * localdom.feastol());
   } else {
     // for a continuous variable we relax the bound by epsilon to
     // accommodate for tiny rounding errors
@@ -2965,9 +2965,9 @@ bool HighsDomain::ConflictSet::explainBoundChangeLeq(
     // in case of an integral variable the bound was rounded and can be
     // relaxed by 1-feastol. We use 1 - 10 * feastol for numerical safety
     if (domchg.domchg.boundtype == HighsBoundType::kLower)
-      b0 -= (1.0 - 10 * localdom.mipsolver->mipdata_->feastol);
+      b0 -= (1.0 - 10 * localdom.feastol());
     else
-      b0 += (1.0 - 10 * localdom.mipsolver->mipdata_->feastol);
+      b0 += (1.0 - 10 * localdom.feastol());
   } else {
     // for a continuous variable we relax the bound by epsilon to
     // accommodate for tiny rounding errors
@@ -3095,7 +3095,7 @@ bool HighsDomain::ConflictSet::resolveLinearGeq(HighsCDouble M, double Mupper,
       //          (int)numRelaxed, (int)numDropped,
       //          (int)resolvedDomainChanges.size());
 
-      assert(covered <= localdom.mipsolver->mipdata_->feastol);
+      assert(covered <= localdom.feastol());
     }
   }
 
@@ -3207,7 +3207,7 @@ bool HighsDomain::ConflictSet::resolveLinearLeq(HighsCDouble M, double Mlower,
       //          (int)numRelaxed, (int)numDropped,
       //          (int)resolvedDomainChanges.size());
 
-      assert(covered >= -localdom.mipsolver->mipdata_->feastol);
+      assert(covered >= -localdom.feastol());
     }
   }
   return true;
@@ -3232,12 +3232,12 @@ bool HighsDomain::ConflictSet::explainInfeasibility() {
         double ub =
             localdom.getColUpperPos(col, conflictingBoundPos, otherBoundPos);
         assert(localdom.domchgstack_[conflictingBoundPos].boundval - ub >
-               +localdom.mipsolver->mipdata_->feastol);
+               +localdom.feastol());
       } else {
         double lb =
             localdom.getColLowerPos(col, conflictingBoundPos, otherBoundPos);
         assert(localdom.domchgstack_[conflictingBoundPos].boundval - lb <
-               -localdom.mipsolver->mipdata_->feastol);
+               -localdom.feastol());
       }
       if (otherBoundPos != -1)
         resolvedDomainChanges.push_back(
@@ -3424,8 +3424,7 @@ bool HighsDomain::ConflictSet::explainInfeasibilityGeq(const HighsInt* inds,
   pdqsort(resolveBuffer.begin(), resolveBuffer.end());
 
   // compute the lower bound of M that is necessary
-  double Mupper = rhs - std::max(10.0, std::fabs(rhs)) *
-                            localdom.mipsolver->mipdata_->feastol;
+  double Mupper = rhs - std::max(10.0, std::fabs(rhs)) * localdom.feastol();
 
   assert(reasonSideFrontier.empty());
   return resolveLinearGeq(maxAct, Mupper, vals);
@@ -3471,8 +3470,7 @@ bool HighsDomain::ConflictSet::explainInfeasibilityLeq(const HighsInt* inds,
   pdqsort(resolveBuffer.begin(), resolveBuffer.end());
 
   // compute the lower bound of M that is necessary
-  double Mlower = rhs + std::max(10.0, std::fabs(rhs)) *
-                            localdom.mipsolver->mipdata_->feastol;
+  double Mlower = rhs + std::max(10.0, std::fabs(rhs)) * localdom.feastol();
 
   return resolveLinearLeq(minAct, Mlower, vals);
 }
