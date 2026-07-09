@@ -52,6 +52,9 @@ static QpAsmStatus quass2highs(Instance& instance, Settings& settings,
     case QpModelStatus::kLargeNullspace:
       highs_model_status = HighsModelStatus::kSolveError;
       return QpAsmStatus::kError;
+    case QpModelStatus::kNonConvex:
+      highs_model_status = HighsModelStatus::kSolveError;
+      return QpAsmStatus::kError;
     case QpModelStatus::kError:
       highs_model_status = HighsModelStatus::kSolveError;
       return QpAsmStatus::kError;
@@ -60,6 +63,7 @@ static QpAsmStatus quass2highs(Instance& instance, Settings& settings,
       return QpAsmStatus::kError;
     default:
       highs_model_status = HighsModelStatus::kNotset;
+      assert(highs_model_status != HighsModelStatus::kNotset);
       return QpAsmStatus::kError;
   }
 

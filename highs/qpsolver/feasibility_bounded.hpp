@@ -18,7 +18,7 @@ static void computeStartingPointBounded(Instance& instance, Settings& settings,
                                         HighsTimer& timer) {
   // compute initial feasible point for problems with bounds only (no general
   // linear constraints)
-
+  const bool debug_printing = false;
   // Solve  Qx + c = 0 --> x = -Q^-1c
   HighsInt dim = instance.num_var;
   QpVector res = -instance.c;
@@ -40,6 +40,7 @@ static void computeStartingPointBounded(Instance& instance, Settings& settings,
     L.resize(dim * dim);
 
     auto printL = [&]() {
+      if (!debug_printing) return;
       for (HighsInt iRow = 0; iRow < dim; iRow++) {
         for (HighsInt iCol = 0; iCol <= iRow; iCol++)
           printf(" %11.4g", L[iRow * dim + iCol]);
@@ -71,17 +72,20 @@ static void computeStartingPointBounded(Instance& instance, Settings& settings,
           sum += L[iRow * dim + k] * L[iCol * dim + k];
         if (iCol < iRow) {
           double value = (L[iRow * dim + iCol] - sum) / L[iCol * dim + iCol];
-          printf("Computed L[%1d, %1d] = (%11.4g - %11.4g) / %11.4g = %11.4g\n",
-                 int(iRow), int(iCol), L[iRow * dim + iCol], sum,
-                 L[iCol * dim + iCol], value);
+          if (debug_printing)
+            printf(
+                "Computed L[%1d, %1d] = (%11.4g - %11.4g) / %11.4g = %11.4g\n",
+                int(iRow), int(iCol), L[iRow * dim + iCol], sum,
+                L[iCol * dim + iCol], value);
           L[iRow * dim + iCol] = value;
         } else {
           double value = L[iCol * dim + iCol] - sum;
-          printf(
-              "Computed L[%1d, %1d] = sqrt(%11.4g - %11.4g) = sqrt(%11.4g) = "
-              "%11.4g\n",
-              int(iCol), int(iCol), L[iCol * dim + iCol], sum, value,
-              std::sqrt(value));
+          if (debug_printing)
+            printf(
+                "Computed L[%1d, %1d] = sqrt(%11.4g - %11.4g) = sqrt(%11.4g) = "
+                "%11.4g\n",
+                int(iCol), int(iCol), L[iCol * dim + iCol], sum, value,
+                std::sqrt(value));
           if (value <= 0) {
             modelstatus = QpModelStatus::kNonConvex;
             return;
@@ -115,12 +119,21 @@ static void computeStartingPointBounded(Instance& instance, Settings& settings,
   std::vector<BasisStatus> atlower;
 
   for (int i = 0; i < instance.num_var; i++) {
-    // Deleted spurious identification of unboundedness based on
-    // res.value[i] exceeding
-    // 0.5/settings.hessian_regularization_value, where the
-    // denominator can be zero
-    //
-    // Clearly need something for qp-unbounded and test-qod
+    // Check for unboundedness so that qp-unbounded and test-qod pass:
+    // assumes diagonal Hessian and
+    // settings.hessian_regularization_value > 0
+    if (settings.hessian_regularization_value > 0) {
+      if (res.value[i] > 0.5 / settings.hessian_regularization_value &&
+          instance.var_up[i] == kHighsInf && instance.c.value[i] < 0.0) {
+        modelstatus = QpModelStatus::kUnbounded;
+        return;
+      } else if (res.value[i] < -0.5 / settings.hessian_regularization_value &&
+                 instance.var_lo[i] == -kHighsInf &&
+                 instance.c.value[i] > 0.0) {
+        modelstatus = QpModelStatus::kUnbounded;
+        return;
+      }
+    }
     if (res.value[i] <
         instance.var_lo[i] - settings.primal_feasibility_tolerance) {
       res.value[i] = instance.var_lo[i];

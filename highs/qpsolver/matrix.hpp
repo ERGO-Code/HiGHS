@@ -22,6 +22,15 @@ struct MatrixBase {
   std::vector<double> value;
   HessianOracle oracle_;
 
+  void clear() {
+    num_row = 0;
+    num_col = 0;
+    start.clear();
+    index.clear();
+    value.clear();
+    oracle_.clear();
+  }
+
   bool isOracle() const { return oracle_.call_ != nullptr; }
 
   double diagonal(const HighsInt iCol) const {

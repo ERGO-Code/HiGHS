@@ -4323,6 +4323,8 @@ HighsStatus Highs::callSolveQp() {
     instance.con_up = lp.row_upper_;
     instance.var_lo = lp.col_lower_;
     instance.var_up = lp.col_upper_;
+    // Clear the instance Hessian data
+    instance.Q.mat.clear();
     HighsHessian oracle_hessian;
     if (hessian.dim_ > 0) {
       if (options_.test_qp_oracle) {
@@ -4331,9 +4333,6 @@ HighsStatus Highs::callSolveQp() {
         instance.Q.mat.oracle_.dim_ = hessian.dim_;
         instance.Q.mat.oracle_.call_ = oracleCallSquareHessian;
         instance.Q.mat.oracle_.data_ = &oracle_hessian;
-        instance.Q.mat.start.clear();
-        instance.Q.mat.index.clear();
-        instance.Q.mat.value.clear();
       } else {
         assert(instance.Q.mat.oracle_.call_ == nullptr);
         instance.Q.mat.num_col = lp.num_col_;
@@ -4344,8 +4343,6 @@ HighsStatus Highs::callSolveQp() {
     } else {
       assert(hessian.isOracle());
       instance.Q.mat.oracle_ = hessian.oracle_;
-      instance.Q.mat.num_col = 0;
-      instance.Q.mat.num_row = 0;
     }
 
     for (HighsInt i = 0; i < (HighsInt)instance.c.value.size(); i++) {

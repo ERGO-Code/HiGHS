@@ -257,8 +257,8 @@ struct HessianOracle {
   // form products with Q and then apply any non-trivial multiplier_
   // or shift_
   HighsInt dim_ = 0;
-  HighsInt multiplier_ = 1.0;  // Minimize
-  HighsInt shift_ = 0.0;       // No regularization
+  double multiplier_ = 1.0;  // Minimize
+  double shift_ = 0.0;       // No regularization
   HighsHessianFunctionType call_ = nullptr;
   void* data_ = nullptr;
   void clear();

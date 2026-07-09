@@ -57,24 +57,41 @@ void testPrimalDualObjective(Highs& h,
   REQUIRE(fabs(info.primal_dual_objective_error) < optimality_tolerance);
 }
 
-/*
 TEST_CASE("qp-unbounded", "[qpsolver]") {
   std::string filename;
   filename = std::string(HIGHS_DIR) + "/check/instances/qpunbounded.lp";
-
+  // Maximize
+  //  obj: x2 + [ - x1^2 ]/2
+  // Bounds
+  //  0 <= x1 <= 40
+  // End
   Highs highs;
   highs.setOptionValue("output_flag", dev_run);
   REQUIRE(highs.readModel(filename) == HighsStatus::kOk);
 
-  for (auto& solver : solvers) {
-    highs.setOptionValue("solver", solver);
-    REQUIRE(highs.run() == HighsStatus::kOk);
-    REQUIRE(highs.getModelStatus() == unboundedStatus(solver));
+  for (HighsInt k = 0; k < 2; k++) {
+    for (auto& solver : solvers) {
+      highs.setOptionValue("solver", solver);
+      REQUIRE(highs.run() == HighsStatus::kOk);
+      REQUIRE(highs.getModelStatus() == unboundedStatus(solver));
+      // Test the oracle Hessian
+      highs.setOptionValue("test_qp_oracle", true);
+      REQUIRE(highs.run() == HighsStatus::kOk);
+      REQUIRE(highs.getModelStatus() == unboundedStatus(solver));
+      highs.setOptionValue("test_qp_oracle", false);
+    }
+    // Now flip the cost and bounds of x2 (which has index 0 since it
+    // appears first in LP file objective) for code coverage
+    REQUIRE(highs.changeColCost(0, -highs.getLp().col_cost_[0]) ==
+            HighsStatus::kOk);
+    REQUIRE(highs.changeColBounds(0, -highs.getLp().col_upper_[0],
+                                  -highs.getLp().col_lower_[0]) ==
+            HighsStatus::kOk);
+    highs.clearSolver();
   }
 
   highs.resetGlobalScheduler(true);
 }
-*/
 
 TEST_CASE("qp-infeasible", "[qpsolver]") {
   std::string filename;
@@ -216,7 +233,6 @@ TEST_CASE("qpsolver", "[qpsolver]") {
   highs.resetGlobalScheduler(true);
 }
 
-/*
 TEST_CASE("test-qod", "[qpsolver]") {
   HighsStatus return_status;
   HighsModelStatus model_status;
@@ -225,6 +241,7 @@ TEST_CASE("test-qod", "[qpsolver]") {
   double required_x1;
 
   Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
 
   for (auto& solver : solvers) {
     HighsModel local_model;
@@ -250,7 +267,6 @@ TEST_CASE("test-qod", "[qpsolver]") {
     hessian.index_ = {0};
     hessian.value_ = {2.0};
 
-    highs.setOptionValue("output_flag", dev_run);
     const HighsInfo& info = highs.getInfo();
     const HighsSolution& solution = highs.getSolution();
     const double& objective_function_value = info.objective_function_value;
@@ -369,7 +385,6 @@ TEST_CASE("test-qod", "[qpsolver]") {
 
   highs.resetGlobalScheduler(true);
 }
-*/
 
 TEST_CASE("test-qjh", "[qpsolver]") {
   // Test passing/reading and solving the problem qjh
@@ -382,6 +397,7 @@ TEST_CASE("test-qjh", "[qpsolver]") {
   double required_objective_function_value;
 
   Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
 
   for (auto& solver : solvers) {
     HighsModel local_model;
@@ -408,7 +424,6 @@ TEST_CASE("test-qjh", "[qpsolver]") {
     hessian.index_ = {0, 2, 1, 2};
     hessian.value_ = {2.0, -1.0, 0.2, 2.0};
 
-    highs.setOptionValue("output_flag", dev_run);
     highs.setOptionValue("solver", solver);
     const HighsInfo& info = highs.getInfo();
     const double& objective_function_value = info.objective_function_value;
