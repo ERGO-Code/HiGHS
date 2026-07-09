@@ -2803,12 +2803,13 @@ bool HighsDomain::ConflictSet::explainBoundChangeGeq(
       if (it != currentFrontier.end()) {
         cand.baseBound = it->domchg.boundval;
         if (cand.baseBound != globaldom.col_upper_[col])
-          M += vals[i] * (cand.baseBound - globaldom.col_upper_[col]);
+          M += vals[i] * (static_cast<HighsCDouble>(cand.baseBound) -
+                          globaldom.col_upper_[col]);
         if (cand.baseBound <= ub) continue;
       } else
         cand.baseBound = globaldom.col_upper_[col];
 
-      cand.delta = vals[i] * (ub - cand.baseBound);
+      cand.delta = vals[i] * (static_cast<HighsCDouble>(ub) - cand.baseBound);
       cand.prio = computePrio(vals[i], ub, globaldom.col_upper_[col],
                               nodequeue.numNodesDown(col));
     } else {
@@ -2820,12 +2821,13 @@ bool HighsDomain::ConflictSet::explainBoundChangeGeq(
       if (it != currentFrontier.end()) {
         cand.baseBound = it->domchg.boundval;
         if (cand.baseBound != globaldom.col_lower_[col])
-          M += vals[i] * (cand.baseBound - globaldom.col_lower_[col]);
+          M += vals[i] * (static_cast<HighsCDouble>(cand.baseBound) -
+                          globaldom.col_lower_[col]);
         if (cand.baseBound >= lb) continue;
       } else
         cand.baseBound = globaldom.col_lower_[col];
 
-      cand.delta = vals[i] * (lb - cand.baseBound);
+      cand.delta = vals[i] * (static_cast<HighsCDouble>(lb) - cand.baseBound);
       cand.prio = computePrio(vals[i], lb, globaldom.col_lower_[col],
                               nodequeue.numNodesUp(col));
     }
@@ -2871,9 +2873,11 @@ bool HighsDomain::ConflictSet::explainBoundChangeGeq(
 
   // M is the current residual activity initially
   if (domchgVal < 0)
-    M -= domchgVal * globaldom.col_lower_[domchg.domchg.column];
+    M -= static_cast<HighsCDouble>(domchgVal) *
+         globaldom.col_lower_[domchg.domchg.column];
   else
-    M -= domchgVal * globaldom.col_upper_[domchg.domchg.column];
+    M -= static_cast<HighsCDouble>(domchgVal) *
+         globaldom.col_upper_[domchg.domchg.column];
 
   return resolveLinearGeq(M, Mupper, vals);
 }
@@ -2911,12 +2915,13 @@ bool HighsDomain::ConflictSet::explainBoundChangeLeq(
       if (it != currentFrontier.end()) {
         cand.baseBound = it->domchg.boundval;
         if (cand.baseBound != globaldom.col_lower_[col])
-          M += vals[i] * (cand.baseBound - globaldom.col_lower_[col]);
+          M += vals[i] * (static_cast<HighsCDouble>(cand.baseBound) -
+                          globaldom.col_lower_[col]);
         if (cand.baseBound >= lb) continue;
       } else
         cand.baseBound = globaldom.col_lower_[col];
 
-      cand.delta = vals[i] * (lb - cand.baseBound);
+      cand.delta = vals[i] * (static_cast<HighsCDouble>(lb) - cand.baseBound);
       cand.prio = computePrio(vals[i], lb, globaldom.col_lower_[col],
                               nodequeue.numNodesUp(col));
     } else {
@@ -2927,12 +2932,13 @@ bool HighsDomain::ConflictSet::explainBoundChangeLeq(
       if (it != currentFrontier.end()) {
         cand.baseBound = it->domchg.boundval;
         if (cand.baseBound != globaldom.col_upper_[col])
-          M += vals[i] * (cand.baseBound - globaldom.col_upper_[col]);
+          M += vals[i] * (static_cast<HighsCDouble>(cand.baseBound) -
+                          globaldom.col_upper_[col]);
         if (cand.baseBound <= ub) continue;
       } else
         cand.baseBound = globaldom.col_upper_[col];
 
-      cand.delta = vals[i] * (ub - cand.baseBound);
+      cand.delta = vals[i] * (static_cast<HighsCDouble>(ub) - cand.baseBound);
       cand.prio = computePrio(vals[i], ub, globaldom.col_upper_[col],
                               nodequeue.numNodesDown(col));
     }
@@ -2980,9 +2986,11 @@ bool HighsDomain::ConflictSet::explainBoundChangeLeq(
 
   // M is the global residual activity initially
   if (domchgVal < 0)
-    M -= domchgVal * globaldom.col_upper_[domchg.domchg.column];
+    M -= static_cast<HighsCDouble>(domchgVal) *
+         globaldom.col_upper_[domchg.domchg.column];
   else
-    M -= domchgVal * globaldom.col_lower_[domchg.domchg.column];
+    M -= static_cast<HighsCDouble>(domchgVal) *
+         globaldom.col_lower_[domchg.domchg.column];
 
   return resolveLinearLeq(M, Mlower, vals);
 }
@@ -3042,7 +3050,7 @@ bool HighsDomain::ConflictSet::resolveLinearGeq(HighsCDouble M, double Mupper,
               locdomchg.pos = localdom.prevboundval_[locdomchg.pos].second;
 
             // bound can be relaxed
-            M += vals[i] * (relaxLb - lb);
+            M += vals[i] * (static_cast<HighsCDouble>(relaxLb) - lb);
             // ++numRelaxed;
           }
 
@@ -3073,7 +3081,7 @@ bool HighsDomain::ConflictSet::resolveLinearGeq(HighsCDouble M, double Mupper,
             while (relaxUb >= localdom.prevboundval_[locdomchg.pos].first)
               locdomchg.pos = localdom.prevboundval_[locdomchg.pos].second;
 
-            M += vals[i] * (relaxUb - ub);
+            M += vals[i] * (static_cast<HighsCDouble>(relaxUb) - ub);
             // ++numRelaxed;
           }
 
@@ -3154,7 +3162,7 @@ bool HighsDomain::ConflictSet::resolveLinearLeq(HighsCDouble M, double Mlower,
             while (relaxLb <= localdom.prevboundval_[locdomchg.pos].first)
               locdomchg.pos = localdom.prevboundval_[locdomchg.pos].second;
 
-            M += vals[i] * (relaxLb - lb);
+            M += vals[i] * (static_cast<HighsCDouble>(relaxLb) - lb);
             // ++numRelaxed;
           }
 
@@ -3185,7 +3193,7 @@ bool HighsDomain::ConflictSet::resolveLinearLeq(HighsCDouble M, double Mlower,
             while (relaxUb >= localdom.prevboundval_[locdomchg.pos].first)
               locdomchg.pos = localdom.prevboundval_[locdomchg.pos].second;
 
-            M += vals[i] * (relaxUb - ub);
+            M += vals[i] * (static_cast<HighsCDouble>(relaxUb) - ub);
             // ++numRelaxed;
           }
 
@@ -3398,14 +3406,14 @@ bool HighsDomain::ConflictSet::explainInfeasibilityGeq(const HighsInt* inds,
       double ub = localdom.getColUpperPos(col, infeasible_pos, cand.boundPos);
       cand.baseBound = globaldom.col_upper_[col];
       if (cand.baseBound <= ub || cand.boundPos == -1) continue;
-      cand.delta = vals[i] * (ub - cand.baseBound);
+      cand.delta = vals[i] * (static_cast<HighsCDouble>(ub) - cand.baseBound);
       cand.prio = computePrio(vals[i], ub, globaldom.col_upper_[col],
                               nodequeue.numNodesDown(col));
     } else {
       double lb = localdom.getColLowerPos(col, infeasible_pos, cand.boundPos);
       cand.baseBound = globaldom.col_lower_[col];
       if (cand.baseBound >= lb || cand.boundPos == -1) continue;
-      cand.delta = vals[i] * (lb - cand.baseBound);
+      cand.delta = vals[i] * (static_cast<HighsCDouble>(lb) - cand.baseBound);
       cand.prio = computePrio(vals[i], lb, globaldom.col_lower_[col],
                               nodequeue.numNodesUp(col));
     }
@@ -3445,14 +3453,14 @@ bool HighsDomain::ConflictSet::explainInfeasibilityLeq(const HighsInt* inds,
       double lb = localdom.getColLowerPos(col, infeasible_pos, cand.boundPos);
       cand.baseBound = globaldom.col_lower_[col];
       if (cand.baseBound >= lb || cand.boundPos == -1) continue;
-      cand.delta = vals[i] * (lb - cand.baseBound);
+      cand.delta = vals[i] * (static_cast<HighsCDouble>(lb) - cand.baseBound);
       cand.prio = computePrio(vals[i], lb, globaldom.col_lower_[col],
                               nodequeue.numNodesUp(col));
     } else {
       double ub = localdom.getColUpperPos(col, infeasible_pos, cand.boundPos);
       cand.baseBound = globaldom.col_upper_[col];
       if (cand.baseBound <= ub || cand.boundPos == -1) continue;
-      cand.delta = vals[i] * (ub - cand.baseBound);
+      cand.delta = vals[i] * (static_cast<HighsCDouble>(ub) - cand.baseBound);
       cand.prio = computePrio(vals[i], ub, globaldom.col_upper_[col],
                               nodequeue.numNodesDown(col));
     }
