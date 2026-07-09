@@ -121,6 +121,7 @@ unsigned int highs::parallel::available_core_count() {
         if (process_mask) {
           if (mask & process_mask) physical_cores++;
         } else {
+          // Multi-group: no per-group affinity API, count all cores
           assert(mask);
           physical_cores++;
         }
