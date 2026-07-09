@@ -3028,14 +3028,14 @@ bool HighsDomain::ConflictSet::resolveLinearGeq(HighsCDouble M, double Mupper,
         if (locdomchg.domchg.boundtype == HighsBoundType::kLower) {
           double lb = locdomchg.domchg.boundval;
           double glb = reasonDomchg.baseBound;
-          double relaxLb =
-              double(((Mupper - (M - reasonDomchg.delta)) / vals[i]) + glb);
+          HighsCDouble relaxLb =
+              ((Mupper - (M - reasonDomchg.delta)) / vals[i]) + glb;
           if (!localdom.mipsolver->isColContinuous(col))
-            relaxLb = std::ceil(relaxLb);
+            relaxLb = ceil(relaxLb);
 
           if (relaxLb - lb >= -localdom.feastol()) continue;
 
-          locdomchg.domchg.boundval = relaxLb;
+          locdomchg.domchg.boundval = static_cast<double>(relaxLb);
 
           if (relaxLb - glb <= localdom.mipsolver->mipdata_->epsilon) {
             // domain change can be fully removed from conflict
@@ -3059,14 +3059,14 @@ bool HighsDomain::ConflictSet::resolveLinearGeq(HighsCDouble M, double Mupper,
         } else {
           double ub = locdomchg.domchg.boundval;
           double gub = reasonDomchg.baseBound;
-          double relaxUb =
-              double(((Mupper - (M - reasonDomchg.delta)) / vals[i]) + gub);
+          HighsCDouble relaxUb =
+              ((Mupper - (M - reasonDomchg.delta)) / vals[i]) + gub;
           if (!localdom.mipsolver->isColContinuous(col))
-            relaxUb = std::floor(relaxUb);
+            relaxUb = floor(relaxUb);
 
           if (relaxUb - ub <= localdom.feastol()) continue;
 
-          locdomchg.domchg.boundval = relaxUb;
+          locdomchg.domchg.boundval = static_cast<double>(relaxUb);
 
           if (relaxUb - gub >= -localdom.mipsolver->mipdata_->epsilon) {
             // domain change can be fully removed from conflict
@@ -3140,14 +3140,14 @@ bool HighsDomain::ConflictSet::resolveLinearLeq(HighsCDouble M, double Mlower,
         if (locdomchg.domchg.boundtype == HighsBoundType::kLower) {
           double lb = locdomchg.domchg.boundval;
           double glb = reasonDomchg.baseBound;
-          double relaxLb =
-              double(((Mlower - (M - reasonDomchg.delta)) / vals[i]) + glb);
+          HighsCDouble relaxLb =
+              ((Mlower - (M - reasonDomchg.delta)) / vals[i]) + glb;
           if (!localdom.mipsolver->isColContinuous(col))
-            relaxLb = std::ceil(relaxLb);
+            relaxLb = ceil(relaxLb);
 
           if (relaxLb - lb >= -localdom.feastol()) continue;
 
-          locdomchg.domchg.boundval = relaxLb;
+          locdomchg.domchg.boundval = static_cast<double>(relaxLb);
 
           if (relaxLb - glb <= localdom.mipsolver->mipdata_->epsilon) {
             // domain change can be fully removed from conflict
@@ -3171,14 +3171,14 @@ bool HighsDomain::ConflictSet::resolveLinearLeq(HighsCDouble M, double Mlower,
         } else {
           double ub = locdomchg.domchg.boundval;
           double gub = reasonDomchg.baseBound;
-          double relaxUb =
-              double(((Mlower - (M - reasonDomchg.delta)) / vals[i]) + gub);
+          HighsCDouble relaxUb =
+              ((Mlower - (M - reasonDomchg.delta)) / vals[i]) + gub;
           if (!localdom.mipsolver->isColContinuous(col))
-            relaxUb = std::floor(relaxUb);
+            relaxUb = floor(relaxUb);
 
           if (relaxUb - ub <= localdom.feastol()) continue;
 
-          locdomchg.domchg.boundval = relaxUb;
+          locdomchg.domchg.boundval = static_cast<double>(relaxUb);
 
           if (relaxUb - gub >= -localdom.mipsolver->mipdata_->epsilon) {
             // domain change can be fully removed from conflict
