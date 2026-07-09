@@ -6959,7 +6959,7 @@ HPresolve::Result HPresolve::removeRowSingletons(
 
 HPresolve::Result HPresolve::presolveColSingletons(
     HighsPostsolveStack& postsolve_stack) {
-  for (size_t i = 0; i != singletonColumns.size(); ++i) {
+  for (size_t i = 0; i < singletonColumns.size(); ++i) {
     HighsInt col = singletonColumns[i];
     if (colDeleted[col]) continue;
     HPRESOLVE_CHECKED_CALL(colPresolve(postsolve_stack, col));
