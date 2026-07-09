@@ -342,18 +342,18 @@ void Solver::refineWithIpx() {
 }
 
 bool Solver::solveNewtonSystem(NewtonDir& delta) {
-  solve6x6(delta, it_->res);
-  refine(delta);
+  bool terminate = solve6x6(delta, it_->res);
 
-  bool terminate = false;
-
-  // Check for NaN of Inf
-  if (it_->isDirNan(delta)) {
-    logger_.printInfo("Direction is nan\n");
-    terminate = true;
-  } else if (it_->isDirInf(delta)) {
-    logger_.printInfo("Direction is inf\n");
-    terminate = true;
+  if (!terminate) {
+    refine(delta);
+    // Check for NaN of Inf
+    if (it_->isDirNan(delta)) {
+      logger_.printInfo("Direction is nan\n");
+      terminate = true;
+    } else if (it_->isDirInf(delta)) {
+      logger_.printInfo("Direction is inf\n");
+      terminate = true;
+    }
   }
 
   if (terminate) {
