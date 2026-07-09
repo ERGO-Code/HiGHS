@@ -30,7 +30,7 @@ struct Residuals {
 };
 
 struct Iterate {
-  const Model& model;
+  Model& model;
   IpmData data;
   std::vector<double> x, xl, xu, y, zl, zu;
   Residuals res;
@@ -57,7 +57,7 @@ struct Iterate {
   // ===================================================================================
   // Functions to construct, clear and check for nan or inf
   // ===================================================================================
-  Iterate(const Model& model_input, Regularisation& r);
+  Iterate(Model& model_input, Regularisation& r);
 
   // clear existing data
   void clearIter();

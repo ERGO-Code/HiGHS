@@ -424,8 +424,8 @@ void Model::adjustFreeVars(std::vector<double>& x, std::vector<double>& xl,
       // getting close to lower bound
       const double new_lower = x[i] / kFreeVarsCloseRatio;
       logger.printDetailed(
-          "Free var %5d is at %8.1e with lb %8.1e, lb changed to %8.1e\n", i, x[i],
-          lower_[i], new_lower);
+          "Free var %5d is at %8.1e with lb %8.1e, lb changed to %8.1e\n", i,
+          x[i], lower_[i], new_lower);
       lower_[i] = new_lower;
       xl[i] = x[i] - lower_[i];
     }
@@ -433,11 +433,30 @@ void Model::adjustFreeVars(std::vector<double>& x, std::vector<double>& xl,
       // getting close to upper bound
       const double new_upper = x[i] / kFreeVarsCloseRatio;
       logger.printDetailed(
-          "Free var %5d is at %8.1e with ub %8.1e, ub changed to %8.1e\n", i, x[i],
-          upper_[i], new_upper);
+          "Free var %5d is at %8.1e with ub %8.1e, ub changed to %8.1e\n", i,
+          x[i], upper_[i], new_upper);
       upper_[i] = new_upper;
       xu[i] = upper_[i] - x[i];
     }
+  }
+}
+
+void Model::saveBounds() {
+  best_lower_.resize(free_variables_.size());
+  best_upper_.resize(free_variables_.size());
+  Int next = 0;
+  for (Int i : free_variables_) {
+    best_lower_[next] = lower_[i];
+    best_upper_[next] = upper_[i];
+    ++next;
+  }
+}
+void Model::resetBounds() {
+  Int next = 0;
+  for (Int i : free_variables_) {
+    lower_[i] = best_lower_[next];
+    upper_[i] = best_upper_[next];
+    ++next;
   }
 }
 

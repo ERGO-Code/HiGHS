@@ -167,8 +167,6 @@ bool Solver::initialise() {
       (LS_->nz() < kUplookNzPerColUpper * kkt_->n() &&
        LS_->flops() < kUplookSpopsRatioUpper * LS_->spops());
 
-  switch_to_uplooking = true;
-
   if (switch_to_uplooking) {
     LS_.reset(new UpLookingSolver(*kkt_, info_, it_->data, regul_, model_));
     LS_->setup();
@@ -368,6 +366,7 @@ bool Solver::solveNewtonSystem(NewtonDir& delta) {
       }
       LS_->clear();
       it_->data.back().factorisation_used = LS_->type();
+      it_->bad_iter_ = 0;
       logger_.printInfo("Switching to FactorHighs because of bad direction\n");
       resetToBestIter(iter_ - 1);
 

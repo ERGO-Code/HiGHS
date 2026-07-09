@@ -28,7 +28,7 @@ void NewtonDir::add(const NewtonDir& d) {
   vectorAdd(zu, d.zu);
 }
 
-Iterate::Iterate(const Model& model_input, Regularisation& r)
+Iterate::Iterate(Model& model_input, Regularisation& r)
     : model{model_input}, delta(model.m(), model.n()), regul{r} {
   clearIter();
   clearRes();
@@ -608,6 +608,7 @@ void Iterate::saveBest(double feas_tol, double opt_tol, Int iter) {
     best_zu = zu;
     best_violation = violation;
     best_iter = iter;
+    model.saveBounds();
   }
 }
 
@@ -620,6 +621,7 @@ bool Iterate::resetBest(Int iter) {
   y = best_y;
   zl = best_zl;
   zu = best_zu;
+  model.resetBounds();
 
   computeMu();
   residual1234();
