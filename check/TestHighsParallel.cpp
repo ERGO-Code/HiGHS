@@ -305,8 +305,8 @@ static void nestedTask() {
 }
 
 TEST_CASE("AvailableCoreCount", "[parallel]") {
-  unsigned int cpus = highs::parallel::available_core_count();
-  REQUIRE(cpus > 0);
+  unsigned int cores = highs::parallel::available_core_count();
+  REQUIRE(cores > 0);
 }
 
 #if defined(_WIN32) || defined(_WIN64)
@@ -321,9 +321,9 @@ TEST_CASE("AffinityReducedCoreCount", "[parallel]") {
   SetProcessAffinityMask(GetCurrentProcess(), 1);
 
   // available_core_count should now report 1
-  unsigned int cpus = highs::parallel::available_core_count();
-  REQUIRE(cpus == 1);
-  REQUIRE(initial_threads >= static_cast<int>(cpus));
+  unsigned int cores = highs::parallel::available_core_count();
+  REQUIRE(cores == 1);
+  REQUIRE(initial_threads >= static_cast<int>(cores));
 
   // Restore original affinity
   SetProcessAffinityMask(GetCurrentProcess(), original_mask);
@@ -343,9 +343,9 @@ TEST_CASE("AffinityReducedCoreCount", "[parallel]") {
   sched_setaffinity(0, sizeof(restricted_set), &restricted_set);
 
   // available_core_count should now report 1
-  unsigned int cpus = highs::parallel::available_core_count();
-  REQUIRE(cpus == 1);
-  REQUIRE(initial_threads >= static_cast<int>(cpus));
+  unsigned int cores = highs::parallel::available_core_count();
+  REQUIRE(cores == 1);
+  REQUIRE(initial_threads >= static_cast<int>(cores));
 
   // Restore original affinity
   sched_setaffinity(0, sizeof(original_set), &original_set);

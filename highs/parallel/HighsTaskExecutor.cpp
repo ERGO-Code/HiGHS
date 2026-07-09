@@ -11,6 +11,7 @@
 
 #if defined(__linux__)
 #include <sched.h>
+#include <unistd.h>
 
 #include <fstream>
 #include <set>
@@ -21,6 +22,7 @@
 #endif
 #include <windows.h>
 
+#include <algorithm>
 #include <vector>
 #elif defined(__APPLE__)
 #include <sys/sysctl.h>
@@ -37,48 +39,94 @@ static unsigned int fallback_core_count() {
 // respecting the OS affinity mask.
 unsigned int highs::parallel::available_core_count() {
 #if defined(__linux__)
-  // Get the affinity mask, then count unique (package, core) pairs
-  cpu_set_t affinity;
-  if (sched_getaffinity(0, sizeof(affinity), &affinity) == 0) {
+  // Use dynamically-allocated cpu_set to support systems with >1024 CPUs
+  int num_cpus = sysconf(_SC_NPROCESSORS_CONF);
+  if (num_cpus < 1) num_cpus = CPU_SETSIZE;
+  size_t setsize = CPU_ALLOC_SIZE(num_cpus);
+  cpu_set_t* affinity = CPU_ALLOC(num_cpus);
+  if (affinity == nullptr) return fallback_core_count();
+
+  if (sched_getaffinity(0, setsize, affinity) == 0) {
+    // Count unique (package, core) pairs across the affinity set
     std::set<std::pair<int, int>> physical_cores;
-    for (int cpu = 0; cpu < CPU_SETSIZE; ++cpu) {
-      if (!CPU_ISSET(cpu, &affinity)) continue;
+    for (int cpu = 0; cpu < num_cpus; ++cpu) {
+      if (!CPU_ISSET_S(cpu, setsize, affinity)) continue;
       std::string prefix =
           "/sys/devices/system/cpu/cpu" + std::to_string(cpu) + "/topology/";
       std::ifstream pkg_file(prefix + "physical_package_id");
       std::ifstream core_file(prefix + "core_id");
-      if (pkg_file.is_open() && core_file.is_open()) {
-        int package_id, core_id;
-        pkg_file >> package_id;
-        core_file >> core_id;
-        physical_cores.insert({package_id, core_id});
+      if (!pkg_file.is_open() || !core_file.is_open()) {
+        // Topology files unavailable; fall back
+        CPU_FREE(affinity);
+        return fallback_core_count();
       }
+      int package_id, core_id;
+      pkg_file >> package_id;
+      core_file >> core_id;
+      physical_cores.insert({package_id, core_id});
     }
+    CPU_FREE(affinity);
     if (!physical_cores.empty())
       return static_cast<unsigned int>(physical_cores.size());
+  } else {
+    CPU_FREE(affinity);
   }
 #elif defined(_WIN32) || defined(_WIN64)
-  // Count physical cores whose logical processors overlap with process
-  // affinity. Note: limited to a single processor group (<=64 logical
-  // processors).
-  DWORD_PTR process_mask, system_mask;
-  if (!GetProcessAffinityMask(GetCurrentProcess(), &process_mask, &system_mask))
+  // Query which processor groups this process spans
+  USHORT process_group_count = 0;
+  std::vector<USHORT> process_groups;
+  GetProcessGroupAffinity(GetCurrentProcess(), &process_group_count, nullptr);
+  if (process_group_count <= 0) return fallback_core_count();
+  process_groups.resize(process_group_count);
+  if (!GetProcessGroupAffinity(GetCurrentProcess(), &process_group_count,
+                               process_groups.data()))
     return fallback_core_count();
 
-  // First call with nullptr to query the required buffer size
+  // For single-group processes, get the affinity mask for precise filtering
+  DWORD_PTR process_mask = 0;
+  if (process_group_count == 1) {
+    DWORD_PTR system_mask;
+    if (!GetProcessAffinityMask(GetCurrentProcess(), &process_mask,
+                                &system_mask))
+      process_mask = 0;
+  }
+
+  // Query topology across all groups via GetLogicalProcessorInformationEx
   DWORD length = 0;
-  GetLogicalProcessorInformation(nullptr, &length);
+  GetLogicalProcessorInformationEx(RelationProcessorCore, nullptr, &length);
   if (GetLastError() != ERROR_INSUFFICIENT_BUFFER) return fallback_core_count();
 
-  std::vector<SYSTEM_LOGICAL_PROCESSOR_INFORMATION> info(
-      length / sizeof(SYSTEM_LOGICAL_PROCESSOR_INFORMATION));
-  if (!GetLogicalProcessorInformation(info.data(), &length))
+  std::vector<char> buffer(length);
+  if (!GetLogicalProcessorInformationEx(
+          RelationProcessorCore,
+          reinterpret_cast<PSYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX>(
+              buffer.data()),
+          &length))
     return fallback_core_count();
 
   unsigned int physical_cores = 0;
-  for (const auto& entry : info) {
-    if (entry.Relationship != RelationProcessorCore) continue;
-    if (entry.ProcessorMask & process_mask) physical_cores++;
+  DWORD offset = 0;
+  while (offset < length) {
+    auto* entry = reinterpret_cast<PSYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX>(
+        buffer.data() + offset);
+    if (entry->Relationship == RelationProcessorCore) {
+      for (WORD i = 0; i < entry->Processor.GroupCount; i++) {
+        WORD group = entry->Processor.GroupMask[i].Group;
+        KAFFINITY mask = entry->Processor.GroupMask[i].Mask;
+        // Only count cores in groups the process can use
+        if (std::find(process_groups.begin(), process_groups.end(), group) ==
+            process_groups.end())
+          continue;
+        // For single-group processes, filter by affinity mask
+        if (process_mask) {
+          if (mask & process_mask) physical_cores++;
+        } else {
+          assert(mask);
+          physical_cores++;
+        }
+      }
+    }
+    offset += entry->Size;
   }
   if (physical_cores > 0) return physical_cores;
 #elif defined(__APPLE__)
