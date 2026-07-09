@@ -212,14 +212,6 @@ bool Solver::prepareIter() {
 
   ++iter_;
 
-  if (iter_ > 10 && LS_->type() == kUpLookingType) {
-    LS_.reset(new FactorHighsSolver(*kkt_, options_, model_, regul_, info_,
-                                    it_->data, logger_));
-
-    LS_->setup();
-    LS_->clear();
-  }
-
   model_.adjustFreeVars(it_->x, it_->xl, it_->xu, logger_);
 
   // Clear Newton direction
@@ -353,18 +345,39 @@ bool Solver::solveNewtonSystem(NewtonDir& delta) {
   solve6x6(delta, it_->res);
   refine(delta);
 
+  bool terminate = false;
+
   // Check for NaN of Inf
   if (it_->isDirNan(delta)) {
     logger_.printInfo("Direction is nan\n");
-    info_.status = kStatusError;
-    return true;
+    terminate = true;
   } else if (it_->isDirInf(delta)) {
     logger_.printInfo("Direction is inf\n");
-    info_.status = kStatusError;
-    return true;
+    terminate = true;
   }
 
-  return false;
+  if (terminate) {
+    if (LS_->type() == kUpLookingType) {
+      // try FactorHighs factorisation before giving up
+      LS_.reset(new FactorHighsSolver(*kkt_, options_, model_, regul_, info_,
+                                      it_->data, logger_));
+      if (!LS_) {
+        info_.status = kStatusError;
+        return true;
+      }
+      LS_->clear();
+      it_->data.back().factorisation_used = LS_->type();
+      logger_.printInfo("Switching to FactorHighs because of bad direction\n");
+
+      // Solve again. This does not create an infinite loop, as the if statement
+      // cannot trigger in the second solve.
+      delta.clear();
+      terminate = solveNewtonSystem(delta);
+    } else
+      info_.status = kStatusError;
+  }
+
+  return terminate;
 }
 
 bool Solver::solve2x2(NewtonDir& delta, const Residuals& rhs) {
@@ -1091,15 +1104,29 @@ bool Solver::checkBadIter() {
       info_.status = kStatusPrimalInfeasible;
       terminate = true;
     } else if (stagnation) {
-      // stagnation detected, solution may still be good for highs kktCheck
-      if (info_.status != kStatusPDFeas && checkTerminationKkt()) {
-        logger_.printw(
-            "HiPO stagnated but HiGHS considers the solution acceptable\n");
-        logger_.print("=== Primal-dual feasible point found\n");
-        info_.status = kStatusPDFeas;
-      } else
-        info_.status = kStatusNoProgress;
-      terminate = true;
+      if (LS_->type() == kUpLookingType) {
+        // try FactorHighs factorisation before giving up
+        LS_.reset(new FactorHighsSolver(*kkt_, options_, model_, regul_, info_,
+                                        it_->data, logger_));
+        if (!LS_) {
+          info_.status = kStatusError;
+          return true;
+        }
+        LS_->clear();
+        it_->bad_iter_ = 0;
+        logger_.printInfo("Switching to FactorHighs because of no progress\n");
+      } else {
+        // stagnation detected, solution may still be good for highs kktCheck
+        if (info_.status != kStatusPDFeas && checkTerminationKkt()) {
+          logger_.printw(
+              "HiPO stagnated but HiGHS considers the solution acceptable\n");
+          logger_.print("=== Primal-dual feasible point found\n");
+          info_.status = kStatusPDFeas;
+        } else
+          info_.status = kStatusNoProgress;
+
+        terminate = true;
+      }
     }
   }
 
