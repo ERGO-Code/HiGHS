@@ -114,7 +114,7 @@ unsigned int highs::parallel::available_core_count() {
         WORD group = entry->Processor.GroupMask[i].Group;
         KAFFINITY mask = entry->Processor.GroupMask[i].Mask;
         // Only count cores that match the affinity mask and process groups
-        if (mask & process_mask &&
+        if ((mask & process_mask) &&
             std::find(process_groups.begin(), process_groups.end(), group) !=
                 process_groups.end())
           physical_cores++;
