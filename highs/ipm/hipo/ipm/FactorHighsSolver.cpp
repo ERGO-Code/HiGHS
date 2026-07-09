@@ -16,7 +16,6 @@ FactorHighsSolver::FactorHighsSolver(KktMatrix& kkt, Options& options,
                                      const Regularisation& regul, Info& info,
                                      IpmData& record, const Logger& logger)
     : FH_{},
-      S_{},
       kkt_{kkt},
       regul_{regul},
       info_{info},
@@ -94,7 +93,7 @@ Int FactorHighsSolver::factorAS(const std::vector<double>& scaling) {
   FH_.setRegularisation(regul_.primal, regul_.dual);
 
   Clock clock;
-  if (FH_.factorise(S_, kkt_.n(), kkt_.nz(), kkt_.rowsAS.data(),
+  if (FH_.factorise(kkt_.S, kkt_.n(), kkt_.nz(), kkt_.rowsAS.data(),
                     kkt_.ptrAS.data(), kkt_.valAS.data()))
     return kStatusErrorFactorise;
   info_.factor_time += clock.stop();
@@ -114,7 +113,7 @@ Int FactorHighsSolver::factorNE(const std::vector<double>& scaling) {
   FH_.setRegularisation(regul_.primal, regul_.dual);
 
   Clock clock;
-  if (FH_.factorise(S_, kkt_.n(), kkt_.nz(), kkt_.rowsNE.data(),
+  if (FH_.factorise(kkt_.S, kkt_.n(), kkt_.nz(), kkt_.rowsNE.data(),
                     kkt_.ptrNE.data(), kkt_.valNE.data()))
     return kStatusErrorFactorise;
   info_.factor_time += clock.stop();
@@ -183,7 +182,7 @@ Int FactorHighsSolver::solveNE(const std::vector<double>& rhs,
 Int FactorHighsSolver::setup() {
   Clock clock;
 
-  if (kkt_.iperm.empty()) {
+  if (kkt_.S.empty()) {
     if (Int status = setNla()) return status;
     setParallel();
 
@@ -194,37 +193,14 @@ Int FactorHighsSolver::setup() {
       logger_.print(log_stream.str().c_str());
     }
 
-    S_.print(logger_, logger_.debug(1));
+    kkt_.S.print(logger_, logger_.debug(1));
 
     // Warn about large memory consumption
-    if (S_.storage() > kLargeStorageGB * 1024 * 1024 * 1024) {
+    if (kkt_.S.storage() > kLargeStorageGB * 1024 * 1024 * 1024) {
       logger_.printw("Large amount of memory required\n");
     }
 
     logger_.print("\n");
-  } else {
-    // permutation already available
-
-    const Int n = model_.A().num_col_;
-    const Int m = model_.A().num_row_;
-
-    std::vector<Int> perm(kkt_.n());
-    inversePerm(kkt_.iperm, perm);
-
-    if (kkt_.nla() == kHipoAugmentedString) {
-      assert(kkt_.n() == n + m);
-      std::vector<Int> signs(m + n, -1);
-      for (Int i = 0; i < m; ++i) signs[n + i] = 1;
-      return FH_.analyse(S_, kkt_.n(), kkt_.nz(), kkt_.rowsAS.data(),
-                         kkt_.ptrAS.data(), signs.data(), perm.data());
-    } else if (kkt_.nla() == kHipoNormalEqString) {
-      assert(kkt_.n() == m);
-      std::vector<Int> signs(m, 1);
-      return FH_.analyse(S_, kkt_.n(), kkt_.nz(), kkt_.rowsNE.data(),
-                         kkt_.ptrNE.data(), signs.data(), perm.data());
-    } else {
-      return kStatusErrorFactorise;
-    }
   }
 
   return kStatusOk;
@@ -374,10 +350,10 @@ Int FactorHighsSolver::chooseNla() {
 
   if (status == kStatusOk) {
     if (options_.nla == kHipoAugmentedString) {
-      S_ = std::move(symb_AS);
+      kkt_.S = std::move(symb_AS);
       kkt_.freeNEmemory();
     } else {
-      S_ = std::move(symb_NE);
+      kkt_.S = std::move(symb_NE);
       kkt_.freeASmemory();
     }
   }
@@ -553,7 +529,7 @@ Int FactorHighsSolver::setNla() {
 
   if (options_.nla == kHipoAugmentedString) {
     Int status = kkt_.buildASstructure();
-    if (!status) status = analyseAS(S_);
+    if (!status) status = analyseAS(kkt_.S);
     if (status == kStatusOverflow) {
       logger_.printe("AS requested, integer overflow\n");
       return kStatusOverflow;
@@ -565,7 +541,7 @@ Int FactorHighsSolver::setNla() {
 
   } else if (options_.nla == kHipoNormalEqString) {
     Int status = kkt_.buildNEstructure();
-    if (!status) status = analyseNE(S_);
+    if (!status) status = analyseNE(kkt_.S);
     if (status == kStatusOverflow) {
       logger_.printe("NE requested, integer overflow\n");
       return kStatusOverflow;
@@ -587,8 +563,6 @@ Int FactorHighsSolver::setNla() {
                                                         : ordering_NE_)
                << '\n';
   logger_.print(log_stream.str().c_str());
-
-  kkt_.iperm = S_.iperm();
 
   return kStatusOk;
 }
@@ -634,11 +608,11 @@ void FactorHighsSolver::setParallel() {
 
       // parallel_tree instead is chosen with a heuristic
 
-      double tree_speedup = S_.flops() / S_.critops();
-      double sn_size = (double)S_.size() / S_.sn();
+      double tree_speedup = kkt_.S.flops() / kkt_.S.critops();
+      double sn_size = (double)kkt_.S.size() / kkt_.S.sn();
 
-      bool enough_sn = S_.sn() > kMinNumberSn;
-      bool enough_flops = S_.flops() > kLargeFlopsThresh;
+      bool enough_sn = kkt_.S.sn() > kMinNumberSn;
+      bool enough_flops = kkt_.S.flops() > kLargeFlopsThresh;
       bool speedup_is_large = tree_speedup > kLargeSpeedupThresh;
       bool sn_are_large = sn_size > kLargeSnThresh;
       bool sn_are_not_small = sn_size > kSmallSnThresh;
@@ -654,13 +628,13 @@ void FactorHighsSolver::setParallel() {
 
     // If serial memory is too large, switch off tree parallelism to avoid
     // running out of memory
-    double num_GB = S_.storage() / 1024 / 1024 / 1024;
+    double num_GB = kkt_.S.storage() / 1024 / 1024 / 1024;
     if (num_GB > kLargeStorageGB) {
       parallel_tree = false;
     }
 
     // switch off tree parallelism if depth of recursion is too large
-    if (S_.depth() > kMaxTreeDepth) parallel_tree = false;
+    if (kkt_.S.depth() > kMaxTreeDepth) parallel_tree = false;
 
     if (parallel_tree && parallel_node)
       log_stream << "Full preferred\n";
@@ -675,16 +649,16 @@ void FactorHighsSolver::setParallel() {
     assert(1 == 0);
 
   logger_.print(log_stream.str().c_str());
-  S_.setParallel(parallel_tree, parallel_node);
+  kkt_.S.setParallel(parallel_tree, parallel_node);
 }
 
 // =========================================================================
 // Other stuff
 // =========================================================================
 
-double FactorHighsSolver::flops() const { return S_.flops(); }
-double FactorHighsSolver::spops() const { return S_.spops(); }
-double FactorHighsSolver::nz() const { return (double)S_.nz(); }
+double FactorHighsSolver::flops() const { return kkt_.S.flops(); }
+double FactorHighsSolver::spops() const { return kkt_.S.spops(); }
+double FactorHighsSolver::nz() const { return (double)kkt_.S.nz(); }
 void FactorHighsSolver::getReg(std::vector<double>& reg) {
   FH_.getRegularisation(reg.data());
 }

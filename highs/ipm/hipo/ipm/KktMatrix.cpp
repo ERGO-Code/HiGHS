@@ -278,4 +278,6 @@ std::string KktMatrix::nla() const {
   return "empty";
 }
 
+const std::vector<Int>& KktMatrix::iperm() const { return S.iperm(); }
+
 }  // namespace hipo

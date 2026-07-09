@@ -167,7 +167,6 @@ bool Solver::initialise() {
       (LS_->nz() < kUplookNzPerColUpper * kkt_->n() &&
        LS_->flops() < kUplookSpopsRatioUpper * LS_->spops());
 
-  // always use for now
   switch_to_uplooking = false;
 
   if (switch_to_uplooking) {

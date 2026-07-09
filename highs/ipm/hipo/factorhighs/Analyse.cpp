@@ -1309,6 +1309,8 @@ Int Analyse::run(Symbolic& S) {
   S.consecutive_sums_ = std::move(consecutive_sums_);
   S.clique_block_start_ = std::move(clique_block_start_);
 
+  S.empty_ = false;
+
   HIPO_CLOCK_STOP(1, data_, kTimeAnalyse);
 
   return kRetOk;

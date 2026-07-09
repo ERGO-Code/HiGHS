@@ -18,9 +18,6 @@ class FactorHighsSolver : public LinearSolver {
   // object to perform factorisation
   FHsolver FH_;
 
-  // symbolic factorisation
-  Symbolic S_;
-
   KktMatrix& kkt_;
 
   const Regularisation& regul_;

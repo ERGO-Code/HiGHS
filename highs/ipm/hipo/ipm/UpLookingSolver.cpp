@@ -45,7 +45,7 @@ Int UpLookingSolver::setup() {
   std::vector<Int> ptrT(ptr_.size()), rowsT(rows_.size());
   transpose(ptr_, rows_, ptrT, rowsT);
   std::vector<double> empty_val;
-  permuteSym(kkt_.iperm, ptrT, rowsT, empty_val, false);
+  permuteSym(kkt_.iperm(), ptrT, rowsT, empty_val, false);
 
   std::vector<Int64> colcount;
   etreeAndCounts(ptrT, rowsT, colcount);
@@ -68,7 +68,7 @@ Int UpLookingSolver::setup() {
   signs_.assign(n_, 1.0);
   if (!kkt_.ptrAS.empty())
     for (Int i = 0; i < model_.A().num_col_; ++i) signs_[i] = -1.0;
-  permuteVectorInverse(signs_, kkt_.iperm);
+  permuteVectorInverse(signs_, kkt_.iperm());
 
   return kStatusOk;
 }
@@ -208,7 +208,7 @@ Int UpLookingSolver::factorAS(const std::vector<double>& scaling) {
   std::vector<Int> ptrT(ptr_.size()), rowsT(rows_.size());
   std::vector<double> valT(val_.size());
   transpose(ptr_, rows_, val_, ptrT, rowsT, valT);
-  permuteSym(kkt_.iperm, ptrT, rowsT, valT, false);
+  permuteSym(kkt_.iperm(), ptrT, rowsT, valT, false);
 
   clock.start();
   factor(ptrT, rowsT, valT);
@@ -230,7 +230,7 @@ Int UpLookingSolver::factorNE(const std::vector<double>& scaling) {
   std::vector<Int> ptrT(ptr_.size()), rowsT(rows_.size());
   std::vector<double> valT(val_.size());
   transpose(ptr_, rows_, val_, ptrT, rowsT, valT);
-  permuteSym(kkt_.iperm, ptrT, rowsT, valT, false);
+  permuteSym(kkt_.iperm(), ptrT, rowsT, valT, false);
 
   clock.start();
   factor(ptrT, rowsT, valT);
@@ -255,9 +255,9 @@ Int UpLookingSolver::solveAS(const std::vector<double>& rhs_x,
   rhs.insert(rhs.end(), rhs_y.begin(), rhs_y.end());
 
   Clock clock;
-  permuteVectorInverse(rhs, kkt_.iperm);
+  permuteVectorInverse(rhs, kkt_.iperm());
   solve(rhs);
-  permuteVector(rhs, kkt_.iperm);
+  permuteVector(rhs, kkt_.iperm());
   info_.solve_time += clock.stop();
   info_.solve_number++;
   data_.back().num_solves++;
@@ -274,9 +274,9 @@ Int UpLookingSolver::solveNE(const std::vector<double>& rhs,
 
   lhs = rhs;
   Clock clock;
-  permuteVectorInverse(lhs, kkt_.iperm);
+  permuteVectorInverse(lhs, kkt_.iperm());
   solve(lhs);
-  permuteVector(lhs, kkt_.iperm);
+  permuteVector(lhs, kkt_.iperm());
   info_.solve_time += clock.stop();
   info_.solve_number++;
   data_.back().num_solves++;
@@ -286,7 +286,7 @@ Int UpLookingSolver::solveNE(const std::vector<double>& rhs,
 
 void UpLookingSolver::getReg(std::vector<double>& reg) {
   reg = regularisation_;
-  permuteVector(reg, kkt_.iperm);
+  permuteVector(reg, kkt_.iperm());
 }
 
 }  // namespace hipo
