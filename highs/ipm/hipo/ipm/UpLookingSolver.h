@@ -63,6 +63,8 @@ class UpLookingSolver : public LinearSolver {
   double spops() const override { return 0; }
   double nz() const override { return valL_.size(); }
   void getReg(std::vector<double>& reg) override;
+
+  LinearSolverType type() const override { return kUpLookingType; }
 };
 
 }  // namespace hipo

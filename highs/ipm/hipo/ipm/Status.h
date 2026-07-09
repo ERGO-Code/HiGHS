@@ -4,6 +4,7 @@
 #include <map>
 #include <string>
 
+#include "ipm/hipo/auxiliary/IntConfig.h"
 #include "ipm/ipx/ipx_status.h"
 
 namespace hipo {

@@ -167,7 +167,7 @@ bool Solver::initialise() {
       (LS_->nz() < kUplookNzPerColUpper * kkt_->n() &&
        LS_->flops() < kUplookSpopsRatioUpper * LS_->spops());
 
-  switch_to_uplooking = false;
+  switch_to_uplooking = true;
 
   if (switch_to_uplooking) {
     LS_.reset(new UpLookingSolver(*kkt_, info_, it_->data, regul_, model_));
@@ -176,6 +176,7 @@ bool Solver::initialise() {
   }
 
   it_->data.append();
+  it_->data.back().factorisation_used = LS_->type();
 
   if (checkInterrupt()) return true;
 
@@ -211,6 +212,14 @@ bool Solver::prepareIter() {
 
   ++iter_;
 
+  if (iter_ > 10 && LS_->type() == kUpLookingType) {
+    LS_.reset(new FactorHighsSolver(*kkt_, options_, model_, regul_, info_,
+                                    it_->data, logger_));
+
+    LS_->setup();
+    LS_->clear();
+  }
+
   model_.adjustFreeVars(it_->x, it_->xl, it_->xu, logger_);
 
   // Clear Newton direction
@@ -220,6 +229,7 @@ bool Solver::prepareIter() {
   LS_->clear();
 
   it_->data.append();
+  it_->data.back().factorisation_used = LS_->type();
 
   // compute theta inverse
   it_->computeScaling();
@@ -1183,8 +1193,8 @@ void Solver::printHeader() const {
     if (!options_.timeless_log) logger_.print("    time");
     if (logger_.debug(1)) {
       logger_.print(
-          "     alpha p/d   sigma af/co   cor  solv    static reg p/d     minT "
-          "    maxT  (xj * zj / mu)_range_&_num   max_res");
+          "     alpha p/d   sigma af/co   cor  solv  Fact    static reg p/d    "
+          " minT     maxT  (xj * zj / mu)_range_&_num   max_res");
     }
     logger_.print("\n");
   }
@@ -1199,13 +1209,15 @@ void Solver::printOutput() const {
   if (logger_.debug(1)) {
     const IpmIterData& data = it_->data.back();
     logger_.print(
-        " %6.2f %6.2f %6.2f %6.2f %5d %5d %8.1e %8.1e %8.1e %8.1e %8.1e %8.1e "
-        "%4d "
-        "%4d %9.1e",
+        " %6.2f %6.2f %6.2f %6.2f %5d %5d %5c %8.1e %8.1e %8.1e %8.1e %8.1e "
+        "%8.1e %4d %4d %9.1e",
         alpha_primal_, alpha_dual_, data.sigma_aff, data.sigma, data.correctors,
-        data.num_solves, regul_.primal, regul_.dual, data.min_theta,
-        data.max_theta, data.min_prod, data.max_prod, data.num_small_prod,
-        data.num_large_prod, data.omega);
+        data.num_solves,
+        LinearSolverTypeToString((LinearSolverType)data.factorisation_used)
+            .front(),
+        regul_.primal, regul_.dual, data.min_theta, data.max_theta,
+        data.min_prod, data.max_prod, data.num_small_prod, data.num_large_prod,
+        data.omega);
   }
   logger_.print("\n");
 }
