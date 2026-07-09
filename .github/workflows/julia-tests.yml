@@ -109,7 +109,7 @@ jobs:
       - shell: julia --color=yes {0}
         run: |
           import HiGHS_jll
-          file = joinpath(ENV["GITHUB_WORKSPACE"], "check", "instances", "flugpl.mps")
+          file = joinpath(ENV["GITHUB_WORKSPACE"], "check", "instances", "25fv47.mps")
           run(`$(HiGHS_jll.highs()) --solver=hipo $file`)
           run(`$(HiGHS_jll.highs()) $file`)
       - shell: julia --color=yes {0}
