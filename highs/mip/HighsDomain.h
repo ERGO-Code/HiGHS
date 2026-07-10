@@ -88,7 +88,7 @@ class HighsDomain {
     std::vector<LocalDomChg> resolvedDomainChanges;
 
     struct ResolveCandidate {
-      HighsCDouble delta;
+      double delta;
       double baseBound;
       double prio;
       HighsInt boundPos;

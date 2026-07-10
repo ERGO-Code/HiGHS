@@ -2803,7 +2803,7 @@ bool HighsDomain::ConflictSet::explainBoundChangeGeq(
       } else
         cand.baseBound = globaldom.col_upper_[col];
 
-      cand.delta = vals[i] * (static_cast<HighsCDouble>(ub) - cand.baseBound);
+      cand.delta = vals[i] * (ub - cand.baseBound);
       cand.prio = computePrio(vals[i], ub, globaldom.col_upper_[col],
                               nodequeue.numNodesDown(col));
     } else {
@@ -2821,7 +2821,7 @@ bool HighsDomain::ConflictSet::explainBoundChangeGeq(
       } else
         cand.baseBound = globaldom.col_lower_[col];
 
-      cand.delta = vals[i] * (static_cast<HighsCDouble>(lb) - cand.baseBound);
+      cand.delta = vals[i] * (lb - cand.baseBound);
       cand.prio = computePrio(vals[i], lb, globaldom.col_lower_[col],
                               nodequeue.numNodesUp(col));
     }
@@ -2915,7 +2915,7 @@ bool HighsDomain::ConflictSet::explainBoundChangeLeq(
       } else
         cand.baseBound = globaldom.col_lower_[col];
 
-      cand.delta = vals[i] * (static_cast<HighsCDouble>(lb) - cand.baseBound);
+      cand.delta = vals[i] * (lb - cand.baseBound);
       cand.prio = computePrio(vals[i], lb, globaldom.col_lower_[col],
                               nodequeue.numNodesUp(col));
     } else {
@@ -2932,7 +2932,7 @@ bool HighsDomain::ConflictSet::explainBoundChangeLeq(
       } else
         cand.baseBound = globaldom.col_upper_[col];
 
-      cand.delta = vals[i] * (static_cast<HighsCDouble>(ub) - cand.baseBound);
+      cand.delta = vals[i] * (ub - cand.baseBound);
       cand.prio = computePrio(vals[i], ub, globaldom.col_upper_[col],
                               nodequeue.numNodesDown(col));
     }
@@ -3239,16 +3239,17 @@ bool HighsDomain::ConflictSet::resolveLinearLeq(HighsCDouble M, double Mlower,
             covered, localdom.feastol(), static_cast<double>(M_entry),
             static_cast<double>(M), Mlower, (int)numDropped, (int)numRelaxed,
             (int)numSkipped, (int)resolvedDomainChanges.size());
-        printf("  last_drop: col=%d vals[i]=%.17g lb=%.17g glb=%.17g\n"
-               "    delta=%.17g relaxLb=%.17g relaxLb-glb=%.17g eps=%.17g\n"
-               "    M_before_drop=%.17g M-delta-Mlower=%.17g\n"
-               "    continuous=%d\n",
-               (int)dbg_col, dbg_val, dbg_lb, dbg_glb,
-               static_cast<double>(dbg_delta), static_cast<double>(dbg_relaxLb),
-               static_cast<double>(dbg_relaxLb - dbg_glb), localdom.epsilon(),
-               static_cast<double>(dbg_M_before),
-               static_cast<double>(dbg_M_before - dbg_delta - Mlower),
-               (int)dbg_continuous);
+        printf(
+            "  last_drop: col=%d vals[i]=%.17g lb=%.17g glb=%.17g\n"
+            "    delta=%.17g relaxLb=%.17g relaxLb-glb=%.17g eps=%.17g\n"
+            "    M_before_drop=%.17g M-delta-Mlower=%.17g\n"
+            "    continuous=%d\n",
+            (int)dbg_col, dbg_val, dbg_lb, dbg_glb,
+            static_cast<double>(dbg_delta), static_cast<double>(dbg_relaxLb),
+            static_cast<double>(dbg_relaxLb - dbg_glb), localdom.epsilon(),
+            static_cast<double>(dbg_M_before),
+            static_cast<double>(dbg_M_before - dbg_delta - Mlower),
+            (int)dbg_continuous);
       }
       assert(covered >= -localdom.feastol());
     }
@@ -3450,14 +3451,14 @@ bool HighsDomain::ConflictSet::explainInfeasibilityGeq(const HighsInt* inds,
       double ub = localdom.getColUpperPos(col, infeasible_pos, cand.boundPos);
       cand.baseBound = globaldom.col_upper_[col];
       if (cand.baseBound <= ub || cand.boundPos == -1) continue;
-      cand.delta = vals[i] * (static_cast<HighsCDouble>(ub) - cand.baseBound);
+      cand.delta = vals[i] * (ub - cand.baseBound);
       cand.prio = computePrio(vals[i], ub, globaldom.col_upper_[col],
                               nodequeue.numNodesDown(col));
     } else {
       double lb = localdom.getColLowerPos(col, infeasible_pos, cand.boundPos);
       cand.baseBound = globaldom.col_lower_[col];
       if (cand.baseBound >= lb || cand.boundPos == -1) continue;
-      cand.delta = vals[i] * (static_cast<HighsCDouble>(lb) - cand.baseBound);
+      cand.delta = vals[i] * (lb - cand.baseBound);
       cand.prio = computePrio(vals[i], lb, globaldom.col_lower_[col],
                               nodequeue.numNodesUp(col));
     }
@@ -3496,14 +3497,14 @@ bool HighsDomain::ConflictSet::explainInfeasibilityLeq(const HighsInt* inds,
       double lb = localdom.getColLowerPos(col, infeasible_pos, cand.boundPos);
       cand.baseBound = globaldom.col_lower_[col];
       if (cand.baseBound >= lb || cand.boundPos == -1) continue;
-      cand.delta = vals[i] * (static_cast<HighsCDouble>(lb) - cand.baseBound);
+      cand.delta = vals[i] * (lb - cand.baseBound);
       cand.prio = computePrio(vals[i], lb, globaldom.col_lower_[col],
                               nodequeue.numNodesUp(col));
     } else {
       double ub = localdom.getColUpperPos(col, infeasible_pos, cand.boundPos);
       cand.baseBound = globaldom.col_upper_[col];
       if (cand.baseBound <= ub || cand.boundPos == -1) continue;
-      cand.delta = vals[i] * (static_cast<HighsCDouble>(ub) - cand.baseBound);
+      cand.delta = vals[i] * (ub - cand.baseBound);
       cand.prio = computePrio(vals[i], ub, globaldom.col_upper_[col],
                               nodequeue.numNodesDown(col));
     }
