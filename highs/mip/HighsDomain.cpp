@@ -3207,7 +3207,14 @@ bool HighsDomain::ConflictSet::resolveLinearLeq(HighsCDouble M, double Mlower,
       //          (int)numRelaxed, (int)numDropped,
       //          (int)resolvedDomainChanges.size());
 
-      assert(covered >= -localdom.feastol());
+      if (covered < -localdom.mipsolver->mipdata_->feastol) {
+        printf(
+            "resolveLinearLeq assertion: covered = %.17g, feastol = %.17g, "
+            "M = %.17g, Mlower = %.17g, resolvedDomainChanges.size() = %d\n",
+            covered, localdom.mipsolver->mipdata_->feastol,
+            static_cast<double>(M), Mlower, (int)resolvedDomainChanges.size());
+      }
+      assert(covered >= -localdom.mipsolver->mipdata_->feastol);
     }
   }
   return true;
