@@ -439,14 +439,31 @@ double HighsLpRelaxation::computeBestEstimate(const HighsPseudocost& ps) const {
         static_cast<double>(mipsolver.mipdata_->integral_cols.size());
 
     for (const std::pair<HighsInt, double>& f : fractionalints) {
-      increase += std::min(ps.getPseudocostUp(f.first, f.second, offset),
-                           ps.getPseudocostDown(f.first, f.second, offset));
+      double up = ps.getPseudocostUp(f.first, f.second, offset);
+      double down = ps.getPseudocostDown(f.first, f.second, offset);
+      double contrib = std::min(up, down);
+      if (!std::isfinite(contrib)) {
+        printf(
+            "computeBestEstimate: infinite pseudocost for col %d frac=%.17g\n"
+            "  up=%.17g down=%.17g offset=%.17g objective=%.17g\n",
+            (int)f.first, f.second, up, down, offset, objective);
+        assert(std::isfinite(contrib));
+      }
+      increase += contrib;
     }
 
     estimate += double(increase);
   }
 
-  return double(estimate);
+  double result = static_cast<double>(estimate);
+  if (!std::isfinite(result)) {
+    printf(
+        "computeBestEstimate: infinite estimate=%.17g objective=%.17g "
+        "nfrac=%d\n",
+        result, objective, (int)fractionalints.size());
+    assert(std::isfinite(result));
+  }
+  return result;
 }
 
 double HighsLpRelaxation::computeLPDegneracy(
