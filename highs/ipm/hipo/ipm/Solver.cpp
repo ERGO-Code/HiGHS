@@ -144,20 +144,7 @@ bool Solver::initialise() {
     return true;
   }
 
-  // initialise linear solver
-  LS_.reset(new FactorHighsSolver(*kkt_, options_, model_, regul_, info_,
-                                  it_->data, logger_));
-  if (!LS_) {
-    info_.status = kStatusError;
-    return true;
-  }
-  if (Int status = LS_->setup()) {
-    info_.status = (Status)status;
-    return true;
-  }
-  LS_->clear();
-
-  chooseFactorisation();
+  if (initialiseLinearSolver()) return true;
 
   it_->data.append();
   it_->data.back().factorisation_used = LS_->type();
@@ -1191,7 +1178,19 @@ void Solver::resetToBestIter(Int iter, bool print) {
   if (did_reset && print) printOutput(true);
 }
 
-void Solver::chooseFactorisation() {
+bool Solver::initialiseLinearSolver() {
+  LS_.reset(new FactorHighsSolver(*kkt_, options_, model_, regul_, info_,
+                                  it_->data, logger_));
+  if (!LS_) {
+    info_.status = kStatusError;
+    return true;
+  }
+  if (Int status = LS_->setup()) {
+    info_.status = (Status)status;
+    return true;
+  }
+  LS_->clear();
+
   // Use uplooking factorisation instead of multifrontal if
   // - very few operations needed or
   // - very few nz per column in L or
@@ -1213,25 +1212,33 @@ void Solver::chooseFactorisation() {
 
   if (do_switch) {
     LS_.reset(new UpLookingSolver(*kkt_, info_, it_->data, regul_, model_));
+    if (!LS_) {
+      info_.status = kStatusError;
+      return true;
+    }
     LS_->setup();
     LS_->clear();
   }
+
+  return false;
 }
 
 bool Solver::switchToMultifrontal() {
-  // return true if switch successfull
+  bool switch_successfull = false;
+
   if (LS_->type() == kUpLookingType && options_.factor == kHighsChooseString) {
     LS_.reset(new FactorHighsSolver(*kkt_, options_, model_, regul_, info_,
                                     it_->data, logger_));
     if (!LS_) {
       info_.status = kStatusError;
-      return false;
+    } else {
+      LS_->clear();
+      it_->bad_iter_ = 0;
+      switch_successfull = true;
     }
-    LS_->clear();
-    it_->bad_iter_ = 0;
-    return true;
   }
-  return false;
+
+  return switch_successfull;
 }
 
 void Solver::printHeader() const {

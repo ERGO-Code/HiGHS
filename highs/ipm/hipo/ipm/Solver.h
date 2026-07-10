@@ -335,7 +335,7 @@ class Solver {
   void reset();
   void resetToBestIter(Int iter, bool print = true);
 
-  void chooseFactorisation();
+  bool initialiseLinearSolver();
   bool switchToMultifrontal();
 };
 
