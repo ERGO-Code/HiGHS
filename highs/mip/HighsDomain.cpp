@@ -3032,7 +3032,9 @@ bool HighsDomain::ConflictSet::resolveLinearGeq(HighsCDouble M, double Mupper,
 
           locdomchg.domchg.boundval = static_cast<double>(relaxLb);
 
-          if (relaxLb - glb <= localdom.epsilon()) {
+          if (relaxLb - glb <= localdom.epsilon() &&
+              static_cast<double>(M - reasonDomchg.delta - Mupper) <=
+                  localdom.feastol()) {
             // domain change can be fully removed from conflict
             HighsInt last =
                 static_cast<HighsInt>(resolvedDomainChanges.size()) - 1;
@@ -3064,7 +3066,9 @@ bool HighsDomain::ConflictSet::resolveLinearGeq(HighsCDouble M, double Mupper,
 
           locdomchg.domchg.boundval = static_cast<double>(relaxUb);
 
-          if (relaxUb - gub >= -localdom.epsilon()) {
+          if (relaxUb - gub >= -localdom.epsilon() &&
+              static_cast<double>(M - reasonDomchg.delta - Mupper) <=
+                  localdom.feastol()) {
             // domain change can be fully removed from conflict
             HighsInt last =
                 static_cast<HighsInt>(resolvedDomainChanges.size()) - 1;
@@ -3156,7 +3160,9 @@ bool HighsDomain::ConflictSet::resolveLinearLeq(HighsCDouble M, double Mlower,
 
           locdomchg.domchg.boundval = static_cast<double>(relaxLb);
 
-          if (relaxLb - glb <= localdom.epsilon()) {
+          if (relaxLb - glb <= localdom.epsilon() &&
+              static_cast<double>(M - reasonDomchg.delta - Mlower) >=
+                  -localdom.feastol()) {
             // domain change can be fully removed from conflict
             dbg_col = col;
             dbg_val = vals[i];
@@ -3199,7 +3205,9 @@ bool HighsDomain::ConflictSet::resolveLinearLeq(HighsCDouble M, double Mlower,
 
           locdomchg.domchg.boundval = static_cast<double>(relaxUb);
 
-          if (relaxUb - gub >= -localdom.epsilon()) {
+          if (relaxUb - gub >= -localdom.epsilon() &&
+              static_cast<double>(M - reasonDomchg.delta - Mlower) >=
+                  -localdom.feastol()) {
             // domain change can be fully removed from conflict
             dbg_col = col;
             dbg_val = vals[i];
