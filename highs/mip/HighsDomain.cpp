@@ -3131,6 +3131,10 @@ bool HighsDomain::ConflictSet::resolveLinearLeq(HighsCDouble M, double Mlower,
       HighsInt numDropped = 0;
       HighsInt numSkipped = 0;
       HighsCDouble M_entry = M;
+      HighsInt dbg_col = -1;
+      double dbg_val = 0, dbg_lb = 0, dbg_glb = 0;
+      HighsCDouble dbg_delta = 0, dbg_relaxLb = 0, dbg_M_before = 0;
+      int dbg_continuous = 0;
       for (HighsInt k = static_cast<HighsInt>(resolvedDomainChanges.size()) - 1;
            k >= 0; --k) {
         ResolveCandidate& reasonDomchg = resolveBuffer[k];
@@ -3154,6 +3158,14 @@ bool HighsDomain::ConflictSet::resolveLinearLeq(HighsCDouble M, double Mlower,
 
           if (relaxLb - glb <= localdom.epsilon()) {
             // domain change can be fully removed from conflict
+            dbg_col = col;
+            dbg_val = vals[i];
+            dbg_lb = lb;
+            dbg_glb = glb;
+            dbg_delta = reasonDomchg.delta;
+            dbg_relaxLb = relaxLb;
+            dbg_M_before = M;
+            dbg_continuous = localdom.mipsolver->isColContinuous(col);
             HighsInt last =
                 static_cast<HighsInt>(resolvedDomainChanges.size()) - 1;
             std::swap(resolvedDomainChanges[last], resolvedDomainChanges[k]);
@@ -3189,6 +3201,14 @@ bool HighsDomain::ConflictSet::resolveLinearLeq(HighsCDouble M, double Mlower,
 
           if (relaxUb - gub >= -localdom.epsilon()) {
             // domain change can be fully removed from conflict
+            dbg_col = col;
+            dbg_val = vals[i];
+            dbg_lb = ub;
+            dbg_glb = gub;
+            dbg_delta = reasonDomchg.delta;
+            dbg_relaxLb = relaxUb;
+            dbg_M_before = M;
+            dbg_continuous = localdom.mipsolver->isColContinuous(col);
             HighsInt last =
                 static_cast<HighsInt>(resolvedDomainChanges.size()) - 1;
             std::swap(resolvedDomainChanges[last], resolvedDomainChanges[k]);
@@ -3219,6 +3239,16 @@ bool HighsDomain::ConflictSet::resolveLinearLeq(HighsCDouble M, double Mlower,
             covered, localdom.feastol(), static_cast<double>(M_entry),
             static_cast<double>(M), Mlower, (int)numDropped, (int)numRelaxed,
             (int)numSkipped, (int)resolvedDomainChanges.size());
+        printf("  last_drop: col=%d vals[i]=%.17g lb=%.17g glb=%.17g\n"
+               "    delta=%.17g relaxLb=%.17g relaxLb-glb=%.17g eps=%.17g\n"
+               "    M_before_drop=%.17g M-delta-Mlower=%.17g\n"
+               "    continuous=%d\n",
+               (int)dbg_col, dbg_val, dbg_lb, dbg_glb,
+               static_cast<double>(dbg_delta), static_cast<double>(dbg_relaxLb),
+               static_cast<double>(dbg_relaxLb - dbg_glb), localdom.epsilon(),
+               static_cast<double>(dbg_M_before),
+               static_cast<double>(dbg_M_before - dbg_delta - Mlower),
+               (int)dbg_continuous);
       }
       assert(covered >= -localdom.feastol());
     }
