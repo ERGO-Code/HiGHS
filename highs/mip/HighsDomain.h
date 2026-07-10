@@ -654,6 +654,8 @@ class HighsDomain {
 
   double feastol() const;
 
+  double epsilon() const;
+
   HighsInt numModelNonzeros() const { return mipsolver->numNonzero(); }
 
   bool inSubmip() const { return mipsolver->submip; }
