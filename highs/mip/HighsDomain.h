@@ -537,7 +537,7 @@ class HighsDomain {
 
   double getObjectiveLowerBound() const {
     if (objProp_.isActive() && objProp_.numInfObjLower == 0)
-      return double(objProp_.objectiveLower);
+      return static_cast<double>(objProp_.objectiveLower);
 
     return -kHighsInf;
   }
@@ -620,11 +620,13 @@ class HighsDomain {
                            double& rhs) const;
 
   double getMinActivity(HighsInt row) const {
-    return activitymininf_[row] == 0 ? double(activitymin_[row]) : -kHighsInf;
+    return activitymininf_[row] == 0 ? static_cast<double>(activitymin_[row])
+                                     : -kHighsInf;
   }
 
   double getMaxActivity(HighsInt row) const {
-    return activitymaxinf_[row] == 0 ? double(activitymax_[row]) : kHighsInf;
+    return activitymaxinf_[row] == 0 ? static_cast<double>(activitymax_[row])
+                                     : kHighsInf;
   }
 
   double getMinCutActivity(const HighsCutPool& cutpool, HighsInt cut) const;
