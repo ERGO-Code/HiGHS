@@ -501,7 +501,7 @@ void HighsDomain::CutpoolPropagation::cutDeleted(
 void HighsDomain::CutpoolPropagation::markPropagateCut(HighsInt cut) {
   if (!propagatecutflags_[cut] &&
       (activitycutsinf_[cut] == 1 ||
-       (cutpool->getRhs()[cut] - static_cast<double>(activitycuts_[cut]) <=
+       (cutpool->getRhs()[cut] - activitycuts_[cut] <=
         capacityThreshold_[cut]))) {
     propagatecutinds_.push_back(cut);
     propagatecutflags_[cut] |= 1;
@@ -1935,14 +1935,14 @@ void HighsDomain::markPropagate(HighsInt row) {
         (activitymininf_[row] != 0 ||
          activitymin_[row] < mipsolver->rowLower(row) - feastol()) &&
         (activitymaxinf_[row] == 1 ||
-         (static_cast<double>(activitymax_[row]) - mipsolver->rowLower(row)) <=
+         activitymax_[row] - mipsolver->rowLower(row) <=
              capacityThreshold_[row]);
     bool propupper =
         mipsolver->rowUpper(row) != kHighsInf &&
         (activitymaxinf_[row] != 0 ||
          activitymax_[row] > mipsolver->rowUpper(row) + feastol()) &&
         (activitymininf_[row] == 1 ||
-         (mipsolver->rowUpper(row) - static_cast<double>(activitymin_[row])) <=
+         mipsolver->rowUpper(row) - activitymin_[row] <=
              capacityThreshold_[row]);
 
     if (proplower || propupper) {
