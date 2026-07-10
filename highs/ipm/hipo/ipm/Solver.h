@@ -28,46 +28,21 @@ namespace hipo {
 
 class Solver {
   Model model_;
-
-  // Linear solver interface
   std::unique_ptr<LinearSolver> LS_;
-
   std::unique_ptr<KktMatrix> kkt_;
-
-  // Iterate object interface
   std::unique_ptr<Iterate> it_;
-
-  // Size of the problem
   Int m_{}, n_{};
-
-  // Iterations counters
   Int iter_{};
-
-  // Stepsizes
   double alpha_primal_{}, alpha_dual_{};
-
-  // Coefficient for reduction of mu
   double sigma_{};
-
-  // Values for static regularisation
   Regularisation regul_{};
-
-  // General information
   Info info_;
-
   Control control_;
-
-  // Run-time options
   Options options_{};
   Options options_orig_{};
   HighsOptions Hoptions_{};
-
-  // Interface to ipx
   ipx::LpSolver ipx_lps_;
-
-  // Interface to Highs logging
   Logger logger_;
-
   double start_time_;
 
  public:
@@ -109,12 +84,10 @@ class Solver {
   const Info& getInfo() const;
   void getOriginalDims(Int& num_row, Int& num_col) const;
 
-  // check the status of the solver
   bool solved() const;
   bool stopped() const;
   bool failed() const;
 
-  // Set the IPX timer offset
   void setIpxTimerOffset(const double offset) {
     this->ipx_lps_.setTimerOffset(offset);
   }
@@ -145,7 +118,7 @@ class Solver {
   // cost of factorisation and solve. Based on the heuristic in "Multiple
   // Centrality Corrections in a Primal-Dual Method for Linear Programming".
   // ===================================================================================
-  void maxCorrectors();
+  void chooseNumberOfCorrectors();
 
   // ===================================================================================
   // Solve:

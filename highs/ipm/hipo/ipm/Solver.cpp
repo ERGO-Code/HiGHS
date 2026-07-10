@@ -151,8 +151,7 @@ bool Solver::initialise() {
 
   if (checkInterrupt()) return true;
 
-  // decide number of correctors to use
-  maxCorrectors();
+  chooseNumberOfCorrectors();
 
   if (startingPoint()) return true;
 
@@ -186,16 +185,13 @@ bool Solver::prepareIter() {
 
   model_.adjustFreeVars(it_->x, it_->xl, it_->xu, logger_);
 
-  // Clear Newton direction
   it_->clearDir();
 
-  // Clear any existing data in the linear solver
   LS_->clear();
 
   it_->data.append();
   it_->data.back().factorisation_used = LS_->type();
 
-  // compute theta inverse
   it_->computeScaling();
 
   return false;
@@ -207,7 +203,6 @@ bool Solver::predictor() {
 
   if (checkInterrupt()) return true;
 
-  // compute sigma and residuals for affine scaling direction
   sigmaAffine();
   it_->residual56(sigma_);
 
@@ -296,7 +291,6 @@ void Solver::refineWithIpx() {
 
   info_.ipx_info = ipx_lps_.GetInfo();
 
-  // Convert between ipx and hipo status
   info_.status = IpxToHipoStatus(info_.ipx_info.status_ipm);
 
   std::stringstream log_stream;
@@ -318,7 +312,6 @@ bool Solver::solveNewtonSystem(NewtonDir& delta) {
 
   if (!terminate) {
     refine(delta);
-    // Check for NaN of Inf
     if (it_->isDirNan(delta)) {
       logger_.printInfo("Direction is nan\n");
       terminate = true;
@@ -356,7 +349,6 @@ bool Solver::solve2x2(NewtonDir& delta, const Residuals& rhs) {
   if (options_.nla == kHipoNormalEqString) {
     std::vector<double> res8 = it_->residual8(rhs, res7);
 
-    // factorise normal equations, if not yet done
     if (!LS_->valid_) {
       if (Int status = LS_->factorNE(theta_inv)) {
         logger_.printe("Error while factorising normal equations\n");
@@ -366,7 +358,6 @@ bool Solver::solve2x2(NewtonDir& delta, const Residuals& rhs) {
       it_->getReg(*LS_, options_.nla);
     }
 
-    // solve with normal equations
     if (Int status = LS_->solveNE(res8, delta.y)) {
       logger_.printe("Error while solving normal equations\n");
       info_.status = (Status)status;
@@ -390,7 +381,6 @@ bool Solver::solve2x2(NewtonDir& delta, const Residuals& rhs) {
 
   // AUGMENTED SYSTEM
   else {
-    // factorise augmented system, if not yet done
     if (!LS_->valid_) {
       if (Int status = LS_->factorAS(theta_inv)) {
         logger_.printe("Error while factorising augmented system\n");
@@ -400,7 +390,6 @@ bool Solver::solve2x2(NewtonDir& delta, const Residuals& rhs) {
       it_->getReg(*LS_, options_.nla);
     }
 
-    // solve with augmented system
     if (Int status = LS_->solveAS(res7, rhs.r1, delta.x, delta.y)) {
       logger_.printe("Error while solving augmented system\n");
       info_.status = (Status)status;
@@ -418,7 +407,6 @@ bool Solver::solve6x6(NewtonDir& delta, const Residuals& rhs) {
 }
 
 void Solver::recoverDirection(NewtonDir& delta, const Residuals& rhs) const {
-  // Recover components xl, xu, zl, zu of partial direction delta.
   const std::vector<double>& xl = it_->xl;
   const std::vector<double>& xu = it_->xu;
   const std::vector<double>& zl = it_->zl;
@@ -499,7 +487,6 @@ void Solver::stepsToBoundary(double& alpha_primal, double& alpha_dual,
 }
 
 void Solver::stepSizes() {
-  // Compute primal and dual stepsizes.
   std::vector<double>& xl = it_->xl;
   std::vector<double>& xu = it_->xu;
   std::vector<double>& zl = it_->zl;
@@ -849,7 +836,6 @@ void Solver::residualsMcc() {
   std::vector<double>& res6 = it_->res.r6;
   double& mu = it_->mu;
 
-  // clear existing residuals
   it_->clearRes();
 
   // stepsizes of current direction
@@ -923,17 +909,15 @@ bool Solver::centralityCorrectors() {
 
   Int cor;
   for (cor = 0; cor < info_.correctors; ++cor) {
-    // compute rhs for corrector
     residualsMcc();
 
-    // compute corrector
-    NewtonDir corr(m_, n_);
-    if (solveNewtonSystem(corr)) return true;
+    NewtonDir corrector(m_, n_);
+    if (solveNewtonSystem(corrector)) return true;
 
     double alpha_p, alpha_d;
     double wp = alpha_p_old * alpha_d_old;
     double wd = wp;
-    bestWeight(it_->delta, corr, wp, wd, alpha_p, alpha_d);
+    bestWeight(it_->delta, corrector, wp, wd, alpha_p, alpha_d);
 
     if (alpha_p < alpha_p_old + kMccIncreaseAlpha * kMccIncreaseMin &&
         alpha_d < alpha_d_old + kMccIncreaseAlpha * kMccIncreaseMin) {
@@ -943,16 +927,16 @@ bool Solver::centralityCorrectors() {
 
     if (alpha_p >= alpha_p_old + kMccIncreaseAlpha * kMccIncreaseMin) {
       // accept primal corrector
-      vectorAdd(it_->delta.x, corr.x, wp);
-      vectorAdd(it_->delta.xl, corr.xl, wp);
-      vectorAdd(it_->delta.xu, corr.xu, wp);
+      vectorAdd(it_->delta.x, corrector.x, wp);
+      vectorAdd(it_->delta.xl, corrector.xl, wp);
+      vectorAdd(it_->delta.xu, corrector.xu, wp);
       alpha_p_old = alpha_p;
     }
     if (alpha_d >= alpha_d_old + kMccIncreaseAlpha * kMccIncreaseMin) {
       // accept dual corrector
-      vectorAdd(it_->delta.y, corr.y, wd);
-      vectorAdd(it_->delta.zl, corr.zl, wd);
-      vectorAdd(it_->delta.zu, corr.zu, wd);
+      vectorAdd(it_->delta.y, corrector.y, wd);
+      vectorAdd(it_->delta.zl, corrector.zl, wd);
+      vectorAdd(it_->delta.zu, corrector.zu, wd);
       alpha_d_old = alpha_d;
     }
 
@@ -1006,7 +990,6 @@ void Solver::bestWeight(const NewtonDir& delta, const NewtonDir& corrector,
 }
 
 bool Solver::checkIterate() {
-  // Check that iterate is not NaN or Inf
   if (it_->isNan()) {
     logger_.printInfo("\nIterate is nan\n");
     info_.status = kStatusError;
@@ -1017,7 +1000,6 @@ bool Solver::checkIterate() {
     return true;
   }
 
-  // check that no component is negative
   for (Int i = 0; i < n_; ++i) {
     if ((model_.hasLb(i) && it_->xl[i] < 0) ||
         (model_.hasLb(i) && it_->zl[i] < 0) ||
@@ -1288,7 +1270,6 @@ void Solver::printInfo() const {
   std::stringstream log_stream;
   log_stream << "\nRunning HiPO\n";
 
-  // Print number of threads
   if (options_.parallel == kHighsOffString)
     log_stream << textline("Threads:") << 1 << '\n';
   else
@@ -1297,7 +1278,6 @@ void Solver::printInfo() const {
 
   logger_.print(log_stream.str().c_str());
 
-  // print information about model
   model_.print(logger_);
 }
 
@@ -1372,12 +1352,11 @@ void Solver::getInteriorSolution(
 Int Solver::getBasicSolution(std::vector<double>& x, std::vector<double>& slack,
                              std::vector<double>& y, std::vector<double>& z,
                              Int* cbasis, Int* vbasis) const {
-  // interface to ipx getBasicSolution
   return ipx_lps_.GetBasicSolution(x.data(), slack.data(), y.data(), z.data(),
                                    cbasis, vbasis);
 }
 
-void Solver::maxCorrectors() {
+void Solver::chooseNumberOfCorrectors() {
   if (kMaxCorrectors > 0) {
     // Compute estimate of effort to factorise and solve
 
