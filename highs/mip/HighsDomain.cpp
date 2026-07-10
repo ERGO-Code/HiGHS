@@ -78,12 +78,13 @@ HighsDomain::HighsDomain(HighsMipSolver& mipsolver) : mipsolver(&mipsolver) {
 }
 
 void HighsDomain::addCutpool(HighsCutPool& cutpool) {
-  HighsInt cutpoolindex = cutpoolpropagation.size();
+  HighsInt cutpoolindex = static_cast<HighsInt>(cutpoolpropagation.size());
   cutpoolpropagation.emplace_back(cutpoolindex, this, cutpool);
 }
 
 void HighsDomain::addConflictPool(HighsConflictPool& conflictPool) {
-  HighsInt conflictPoolIndex = conflictPoolPropagation.size();
+  HighsInt conflictPoolIndex =
+      static_cast<HighsInt>(conflictPoolPropagation.size());
   conflictPoolPropagation.emplace_back(conflictPoolIndex, this, conflictPool);
 }
 
@@ -182,7 +183,7 @@ void HighsDomain::ConflictPoolPropagation::conflictAdded(HighsInt conflict) {
   const std::vector<HighsDomainChange>& conflictEntries =
       conflictpool_->getConflictEntryVector();
 
-  if (HighsInt(conflictFlag_.size()) <= conflict) {
+  if (static_cast<HighsInt>(conflictFlag_.size()) <= conflict) {
     watchedLiterals_.resize(2 * conflict + 2);
     conflictFlag_.resize(conflict + 1);
   }
@@ -453,7 +454,7 @@ void HighsDomain::CutpoolPropagation::cutAdded(HighsInt cut, bool propagate) {
     const HighsInt* arindex = cutpool->getMatrix().getARindex();
     const double* arvalue = cutpool->getMatrix().getARvalue();
 
-    if (HighsInt(activitycuts_.size()) <= cut) {
+    if (static_cast<HighsInt>(activitycuts_.size()) <= cut) {
       activitycuts_.resize(cut + 1);
       activitycutsinf_.resize(cut + 1);
       propagatecutflags_.resize(cut + 1, 2);
@@ -469,7 +470,7 @@ void HighsDomain::CutpoolPropagation::cutAdded(HighsInt cut, bool propagate) {
     const HighsInt* arindex = cutpool->getMatrix().getARindex();
     const double* arvalue = cutpool->getMatrix().getARvalue();
 
-    if (HighsInt(activitycuts_.size()) <= cut) {
+    if (static_cast<HighsInt>(activitycuts_.size()) <= cut) {
       activitycuts_.resize(cut + 1);
       activitycutsinf_.resize(cut + 1);
       propagatecutflags_.resize(cut + 1, 2);
@@ -493,7 +494,8 @@ void HighsDomain::CutpoolPropagation::cutDeleted(
     return;
   }
 
-  if (cut < (HighsInt)propagatecutflags_.size()) propagatecutflags_[cut] |= 2;
+  if (cut < static_cast<HighsInt>(propagatecutflags_.size()))
+    propagatecutflags_[cut] |= 2;
 }
 
 void HighsDomain::CutpoolPropagation::markPropagateCut(HighsInt cut) {
@@ -721,7 +723,7 @@ HighsDomain::ObjectivePropagation::ObjectivePropagation(HighsDomain* domain)
   }
 
   // add contribution of remaining objective nonzeros
-  const HighsInt numObjNz = objNonzeros.size();
+  const HighsInt numObjNz = static_cast<HighsInt>(objNonzeros.size());
   for (HighsInt i = partitionStarts[numPartitions]; i < numObjNz; ++i) {
     HighsInt col = objNonzeros[i];
     if (cost[col] > 0.0) {
@@ -748,7 +750,7 @@ void HighsDomain::ObjectivePropagation::getPropagationConstraint(
     HighsInt& len, double& rhs, HighsInt domchgCol) {
   const HighsInt numPartitions = objFunc->getNumCliquePartitions();
   inds = objFunc->getObjectiveNonzeros().data();
-  len = objFunc->getObjectiveNonzeros().size();
+  len = static_cast<HighsInt>(objFunc->getObjectiveNonzeros().size());
   if (numPartitions == 0) {
     vals = objFunc->getObjectiveValuesPacked().data();
     rhs = domain->mipsolver->mipdata_->upper_limit;
@@ -811,7 +813,7 @@ void HighsDomain::ObjectivePropagation::recomputeCapacityThreshold() {
   }
 
   const auto& objNonzeros = objFunc->getObjectiveNonzeros();
-  const HighsInt numObjNzs = objNonzeros.size();
+  const HighsInt numObjNzs = static_cast<HighsInt>(objNonzeros.size());
   for (HighsInt i = partitionStarts[numPartitions]; i < numObjNzs; ++i) {
     HighsInt col = objNonzeros[i];
 
@@ -1083,7 +1085,7 @@ void HighsDomain::ObjectivePropagation::debugCheckObjectiveLower() const {
   const auto& partitionStarts = objFunc->getCliquePartitionStarts();
   const auto& objNonzeros = objFunc->getObjectiveNonzeros();
 
-  const HighsInt numObjNzs = objNonzeros.size();
+  const HighsInt numObjNzs = static_cast<HighsInt>(objNonzeros.size());
   for (HighsInt i = 0; i < numPartitions; ++i) {
     HighsInt start = partitionStarts[i];
     HighsInt end = partitionStarts[i + 1];
@@ -1142,7 +1144,7 @@ void HighsDomain::ObjectivePropagation::propagate() {
     // Scan non-binary columns for infinite bound contribution until the one
     // column that contributes with an infinite bound is found which is the only
     // column that can be propagated
-    HighsInt numCol = objNonzeros.size();
+    HighsInt numCol = static_cast<HighsInt>(objNonzeros.size());
     for (HighsInt i = objFunc->getNumBinariesInObjective(); i < numCol; ++i) {
       HighsInt col = objNonzeros[i];
       if ((cost[col] > 0 && domain->col_lower_[col] != -kHighsInf) ||
@@ -1227,7 +1229,7 @@ void HighsDomain::ObjectivePropagation::propagate() {
 
       if (domain->infeasible_) break;
 
-      const HighsInt numObjNzs = objNonzeros.size();
+      const HighsInt numObjNzs = static_cast<HighsInt>(objNonzeros.size());
       for (HighsInt i = objFunc->getCliquePartitionStarts()[numPartitions];
            i < numObjNzs; ++i) {
         HighsInt col = objNonzeros[i];
@@ -1269,7 +1271,7 @@ void HighsDomain::computeMinActivity(HighsInt start, HighsInt end,
       HighsInt col = ARindex[j];
       double val = ARvalue[j];
 
-      assert(col < int(col_lower_.size()));
+      assert(col < static_cast<HighsInt>(col_lower_.size()));
 
       HighsInt tmp;
       double lb = getColLowerPos(col, infeasible_pos - 1, tmp);
@@ -1289,7 +1291,7 @@ void HighsDomain::computeMinActivity(HighsInt start, HighsInt end,
       HighsInt col = ARindex[j];
       double val = ARvalue[j];
 
-      assert(col < int(col_lower_.size()));
+      assert(col < static_cast<HighsInt>(col_lower_.size()));
 
       double contributionmin =
           activityContributionMin(val, col_lower_[col], col_upper_[col]);
@@ -1314,7 +1316,7 @@ void HighsDomain::computeMaxActivity(HighsInt start, HighsInt end,
       HighsInt col = ARindex[j];
       double val = ARvalue[j];
 
-      assert(col < int(col_lower_.size()));
+      assert(col < static_cast<HighsInt>(col_lower_.size()));
 
       HighsInt tmp;
       double lb = getColLowerPos(col, infeasible_pos - 1, tmp);
@@ -1333,7 +1335,7 @@ void HighsDomain::computeMaxActivity(HighsInt start, HighsInt end,
       HighsInt col = ARindex[j];
       double val = ARvalue[j];
 
-      assert(col < int(col_lower_.size()));
+      assert(col < static_cast<HighsInt>(col_lower_.size()));
 
       double contributionmin =
           activityContributionMax(val, col_lower_[col], col_upper_[col]);
@@ -1914,9 +1916,10 @@ void HighsDomain::markPropagateCut(Reason reason) {
       break;
     default:
       assert(reason.type >= 0 &&
-             reason.type < HighsInt(cutpoolpropagation.size() +
-                                    conflictPoolPropagation.size()));
-      if (reason.type < (HighsInt)cutpoolpropagation.size())
+             reason.type <
+                 static_cast<HighsInt>(cutpoolpropagation.size() +
+                                       conflictPoolPropagation.size()));
+      if (reason.type < static_cast<HighsInt>(cutpoolpropagation.size()))
         cutpoolpropagation[reason.type].markPropagateCut(reason.index);
       else
         conflictPoolPropagation[reason.type - cutpoolpropagation.size()]
@@ -2013,7 +2016,7 @@ double HighsDomain::doChangeBound(const HighsDomainChange& boundchg) {
 
 void HighsDomain::changeBound(HighsDomainChange boundchg, Reason reason) {
   assert(boundchg.column >= 0);
-  assert(boundchg.column < (HighsInt)col_upper_.size());
+  assert(boundchg.column < static_cast<HighsInt>(col_upper_.size()));
   // assert(infeasible_ == 0);
   // if (reason.type == Reason::kObjective) {
   //   if (!mipsolver->submip)
@@ -2073,7 +2076,7 @@ void HighsDomain::changeBound(HighsDomainChange boundchg, Reason reason) {
   if (reason.type == Reason::kBranching)
     branchPos_.push_back(domchgstack_.size());
 
-  assert(prevPos < (HighsInt)domchgstack_.size());
+  assert(prevPos < static_cast<HighsInt>(domchgstack_.size()));
 
   bool binary = isBinary(boundchg.column);
 
@@ -2124,7 +2127,7 @@ void HighsDomain::setDomainChangeStack(
   domchgstack_.clear();
   domchgreason_.clear();
   branchPos_.clear();
-  HighsInt stacksize = domchgstack.size();
+  HighsInt stacksize = static_cast<HighsInt>(domchgstack.size());
   for (HighsInt k = 0; k != stacksize; ++k) {
     if (domchgstack[k].boundtype == HighsBoundType::kLower &&
         domchgstack[k].boundval <= col_lower_[domchgstack[k].column])
@@ -2158,7 +2161,7 @@ void HighsDomain::setDomainChangeStack(
   domchgstack_.clear();
   domchgreason_.clear();
   branchPos_.clear();
-  HighsInt stacksize = domchgstack.size();
+  HighsInt stacksize = static_cast<HighsInt>(domchgstack.size());
   HighsInt k = 0;
   for (HighsInt branchPos : branchingPositions) {
     for (; k < branchPos; ++k) {
@@ -2221,13 +2224,14 @@ void HighsDomain::setDomainChangeStack(
 }
 
 void HighsDomain::backtrackToGlobal() {
-  HighsInt k = HighsInt(domchgstack_.size()) - 1;
+  HighsInt k = static_cast<HighsInt>(domchgstack_.size()) - 1;
   bool old_infeasible = infeasible_;
   Reason old_reason = infeasible_reason;
 
-  if (infeasible_ && infeasible_pos == HighsInt(domchgstack_.size())) {
+  if (infeasible_ &&
+      infeasible_pos == static_cast<HighsInt>(domchgstack_.size())) {
     assert(old_infeasible);
-    assert(k == HighsInt(domchgstack_.size()) - 1);
+    assert(k == static_cast<HighsInt>(domchgstack_.size()) - 1);
     infeasible_ = false;
     infeasible_reason = Reason::unspecified();
   }
@@ -2256,7 +2260,7 @@ void HighsDomain::backtrackToGlobal() {
 
     if (infeasible_ && infeasible_pos == k) {
       assert(old_infeasible);
-      assert(k == HighsInt(domchgstack_.size()) - 1);
+      assert(k == static_cast<HighsInt>(domchgstack_.size()) - 1);
       infeasible_ = false;
       infeasible_reason = Reason::unspecified();
     }
@@ -2270,7 +2274,7 @@ void HighsDomain::backtrackToGlobal() {
     infeasible_ = false;
   }
 
-  HighsInt numreason = domchgreason_.size();
+  HighsInt numreason = static_cast<HighsInt>(domchgreason_.size());
   for (HighsInt i = k + 1; i < numreason; ++i)
     markPropagateCut(domchgreason_[i]);
 
@@ -2281,13 +2285,14 @@ void HighsDomain::backtrackToGlobal() {
 }
 
 HighsDomainChange HighsDomain::backtrack() {
-  HighsInt k = HighsInt(domchgstack_.size()) - 1;
+  HighsInt k = static_cast<HighsInt>(domchgstack_.size()) - 1;
   bool old_infeasible = infeasible_;
   Reason old_reason = infeasible_reason;
 
-  if (infeasible_ && infeasible_pos == HighsInt(domchgstack_.size())) {
+  if (infeasible_ &&
+      infeasible_pos == static_cast<HighsInt>(domchgstack_.size())) {
     assert(old_infeasible);
-    assert(k == HighsInt(domchgstack_.size()) - 1);
+    assert(k == static_cast<HighsInt>(domchgstack_.size()) - 1);
     infeasible_ = false;
     infeasible_reason = Reason::unspecified();
   }
@@ -2313,7 +2318,7 @@ HighsDomainChange HighsDomain::backtrack() {
 
     if (infeasible_ && infeasible_pos == k) {
       assert(old_infeasible);
-      assert(k == HighsInt(domchgstack_.size()) - 1);
+      assert(k == static_cast<HighsInt>(domchgstack_.size()) - 1);
       infeasible_ = false;
       infeasible_reason = Reason::unspecified();
     }
@@ -2332,7 +2337,7 @@ HighsDomainChange HighsDomain::backtrack() {
     infeasible_ = false;
   }
 
-  HighsInt numreason = domchgreason_.size();
+  HighsInt numreason = static_cast<HighsInt>(domchgreason_.size());
   for (HighsInt i = k + 1; i < numreason; ++i)
     markPropagateCut(domchgreason_[i]);
 
@@ -2385,7 +2390,8 @@ bool HighsDomain::propagate() {
   while (havePropagationRows()) {
     if (objProp_.isActive()) objProp_.propagate();
 
-    const HighsInt numConflictPools = conflictPoolPropagation.size();
+    const HighsInt numConflictPools =
+        static_cast<HighsInt>(conflictPoolPropagation.size());
     for (HighsInt conflictPool = 0; conflictPool < numConflictPools;
          ++conflictPool) {
       auto& conflictprop = conflictPoolPropagation[conflictPool];
@@ -2402,7 +2408,7 @@ bool HighsDomain::propagate() {
     if (!propagateinds_.empty()) {
       propagateinds.swap(propagateinds_);
 
-      HighsInt numproprows = propagateinds.size();
+      HighsInt numproprows = static_cast<HighsInt>(propagateinds.size());
       for (HighsInt i = 0; i != numproprows; ++i) {
         HighsInt row = propagateinds[i];
         propagateflags_[row] = 0;
@@ -2484,13 +2490,13 @@ bool HighsDomain::propagate() {
       propagateinds.clear();
     }
 
-    const HighsInt numpools = cutpoolpropagation.size();
+    const HighsInt numpools = static_cast<HighsInt>(cutpoolpropagation.size());
     for (HighsInt cutpool = 0; cutpool != numpools; ++cutpool) {
       auto& cutpoolprop = cutpoolpropagation[cutpool];
       if (!cutpoolprop.propagatecutinds_.empty()) {
         propagateinds.swap(cutpoolprop.propagatecutinds_);
 
-        HighsInt numproprows = propagateinds.size();
+        HighsInt numproprows = static_cast<HighsInt>(propagateinds.size());
         for (HighsInt i = 0; i != numproprows; ++i) {
           HighsInt cut = propagateinds[i];
           cutpoolprop.propagatecutflags_[cut] &= 2;
@@ -2624,7 +2630,8 @@ void HighsDomain::conflictAnalyzeReconvergence(
 
   if (!conflictSet.explainBoundChangeLeq(
           conflictSet.reconvergenceFrontier,
-          ConflictSet::LocalDomChg{HighsInt(domchgstack_.size()), domchg},
+          ConflictSet::LocalDomChg{static_cast<HighsInt>(domchgstack_.size()),
+                                   domchg},
           proofinds, proofvals, prooflen, proofrhs, double(activitymin)))
     return;
 
@@ -2636,7 +2643,7 @@ void HighsDomain::conflictAnalyzeReconvergence(
       conflictSet.resolvedDomainChanges.begin(),
       conflictSet.resolvedDomainChanges.end());
 
-  HighsInt depth = branchPos_.size();
+  HighsInt depth = static_cast<HighsInt>(branchPos_.size());
 
   while (depth > 0) {
     HighsInt branchPos = branchPos_[depth - 1];
@@ -2702,7 +2709,8 @@ double HighsDomain::getMinCutActivity(const HighsCutPool& cutpool,
     if (cutpoolprop.cutpool == &cutpool) {
       // assert((cutpoolprop.propagatecutflags_[cut] & 2) == 0);
 
-      return cut < (HighsInt)cutpoolprop.propagatecutflags_.size() &&
+      return cut < static_cast<HighsInt>(
+                       cutpoolprop.propagatecutflags_.size()) &&
                      (cutpoolprop.propagatecutflags_[cut] & 2) == 0 &&
                      cutpoolprop.activitycutsinf_[cut] == 0
                  ? double(cutpoolprop.activitycuts_[cut])
@@ -2993,7 +3001,7 @@ bool HighsDomain::ConflictSet::resolveLinearGeq(HighsCDouble M, double Mupper,
       resolvedDomainChanges.push_back(locdomchg);
       assert(resolvedDomainChanges.back().pos >= 0);
       assert(resolvedDomainChanges.back().pos <
-             (HighsInt)localdom.domchgstack_.size());
+             static_cast<HighsInt>(localdom.domchgstack_.size()));
       covered = double(M - Mupper);
       if (covered <= 0) break;
     }
@@ -3005,7 +3013,8 @@ bool HighsDomain::ConflictSet::resolveLinearGeq(HighsCDouble M, double Mupper,
       // from the explanation
       // HighsInt numRelaxed = 0;
       // HighsInt numDropped = 0;
-      for (HighsInt k = resolvedDomainChanges.size() - 1; k >= 0; --k) {
+      for (HighsInt k = static_cast<HighsInt>(resolvedDomainChanges.size()) - 1;
+           k >= 0; --k) {
         ResolveCandidate& reasonDomchg = resolveBuffer[k];
         LocalDomChg& locdomchg = resolvedDomainChanges[k];
         HighsInt i = reasonDomchg.valuePos;
@@ -3024,7 +3033,8 @@ bool HighsDomain::ConflictSet::resolveLinearGeq(HighsCDouble M, double Mupper,
 
           if (relaxLb - glb <= localdom.epsilon()) {
             // domain change can be fully removed from conflict
-            HighsInt last = resolvedDomainChanges.size() - 1;
+            HighsInt last =
+                static_cast<HighsInt>(resolvedDomainChanges.size()) - 1;
             std::swap(resolvedDomainChanges[last], resolvedDomainChanges[k]);
             resolvedDomainChanges.resize(last);
 
@@ -3055,7 +3065,8 @@ bool HighsDomain::ConflictSet::resolveLinearGeq(HighsCDouble M, double Mupper,
 
           if (relaxUb - gub >= -localdom.epsilon()) {
             // domain change can be fully removed from conflict
-            HighsInt last = resolvedDomainChanges.size() - 1;
+            HighsInt last =
+                static_cast<HighsInt>(resolvedDomainChanges.size()) - 1;
             std::swap(resolvedDomainChanges[last], resolvedDomainChanges[k]);
             resolvedDomainChanges.resize(last);
 
@@ -3100,7 +3111,7 @@ bool HighsDomain::ConflictSet::resolveLinearLeq(HighsCDouble M, double Mlower,
       resolvedDomainChanges.push_back(locdomchg);
       assert(resolvedDomainChanges.back().pos >= 0);
       assert(resolvedDomainChanges.back().pos <
-             (HighsInt)localdom.domchgstack_.size());
+             static_cast<HighsInt>(localdom.domchgstack_.size()));
       covered = double(M - Mlower);
       if (covered >= 0) break;
     }
@@ -3117,7 +3128,8 @@ bool HighsDomain::ConflictSet::resolveLinearLeq(HighsCDouble M, double Mlower,
       // from the explanation
       // HighsInt numRelaxed = 0;
       // HighsInt numDropped = 0;
-      for (HighsInt k = resolvedDomainChanges.size() - 1; k >= 0; --k) {
+      for (HighsInt k = static_cast<HighsInt>(resolvedDomainChanges.size()) - 1;
+           k >= 0; --k) {
         ResolveCandidate& reasonDomchg = resolveBuffer[k];
         LocalDomChg& locdomchg = resolvedDomainChanges[k];
         HighsInt i = reasonDomchg.valuePos;
@@ -3136,7 +3148,8 @@ bool HighsDomain::ConflictSet::resolveLinearLeq(HighsCDouble M, double Mlower,
 
           if (relaxLb - glb <= localdom.epsilon()) {
             // domain change can be fully removed from conflict
-            HighsInt last = resolvedDomainChanges.size() - 1;
+            HighsInt last =
+                static_cast<HighsInt>(resolvedDomainChanges.size()) - 1;
             std::swap(resolvedDomainChanges[last], resolvedDomainChanges[k]);
             resolvedDomainChanges.resize(last);
 
@@ -3167,7 +3180,8 @@ bool HighsDomain::ConflictSet::resolveLinearLeq(HighsCDouble M, double Mlower,
 
           if (relaxUb - gub >= -localdom.epsilon()) {
             // domain change can be fully removed from conflict
-            HighsInt last = resolvedDomainChanges.size() - 1;
+            HighsInt last =
+                static_cast<HighsInt>(resolvedDomainChanges.size()) - 1;
             std::swap(resolvedDomainChanges[last], resolvedDomainChanges[k]);
             resolvedDomainChanges.resize(last);
 
@@ -3289,11 +3303,11 @@ bool HighsDomain::ConflictSet::explainInfeasibility() {
     default:
       assert(localdom.infeasible_reason.type >= 0);
       assert(localdom.infeasible_reason.type <
-             HighsInt(localdom.cutpoolpropagation.size() +
-                      localdom.conflictPoolPropagation.size()));
+             static_cast<HighsInt>(localdom.cutpoolpropagation.size() +
+                                   localdom.conflictPoolPropagation.size()));
 
       if (localdom.infeasible_reason.type <
-          (HighsInt)localdom.cutpoolpropagation.size()) {
+          static_cast<HighsInt>(localdom.cutpoolpropagation.size())) {
         HighsInt cutpoolIndex = localdom.infeasible_reason.type;
         HighsInt cutIndex = localdom.infeasible_reason.index;
 
@@ -3482,13 +3496,13 @@ bool HighsDomain::ConflictSet::explainBoundChange(
       if (val) {
         assert(localdom.colLowerPos_[col] >= 0);
         assert(localdom.colLowerPos_[col] <
-               (HighsInt)localdom.domchgstack_.size());
+               static_cast<HighsInt>(localdom.domchgstack_.size()));
 
         localdom.getColLowerPos(col, domchg.pos, boundPos);
       } else {
         assert(localdom.colUpperPos_[col] >= 0);
         assert(localdom.colUpperPos_[col] <
-               (HighsInt)localdom.domchgstack_.size());
+               static_cast<HighsInt>(localdom.domchgstack_.size()));
 
         localdom.getColUpperPos(col, domchg.pos, boundPos);
       }
@@ -3552,10 +3566,10 @@ bool HighsDomain::ConflictSet::explainBoundChange(
     default:
       assert(localdom.domchgreason_[domchg.pos].type >= 0);
       assert(localdom.domchgreason_[domchg.pos].type <
-             (HighsInt)(localdom.cutpoolpropagation.size() +
-                        localdom.conflictPoolPropagation.size()));
+             static_cast<HighsInt>(localdom.cutpoolpropagation.size() +
+                                   localdom.conflictPoolPropagation.size()));
       if (localdom.domchgreason_[domchg.pos].type <
-          (HighsInt)localdom.cutpoolpropagation.size()) {
+          static_cast<HighsInt>(localdom.cutpoolpropagation.size())) {
         HighsInt cutpoolIndex = localdom.domchgreason_[domchg.pos].type;
         HighsInt cutIndex = localdom.domchgreason_[domchg.pos].index;
 
@@ -3688,7 +3702,7 @@ HighsInt HighsDomain::ConflictSet::queueSize() const {
 
 bool HighsDomain::ConflictSet::resolvable(HighsInt domChgPos) const {
   assert(domChgPos >= 0);
-  assert(domChgPos < (HighsInt)localdom.domchgreason_.size());
+  assert(domChgPos < static_cast<HighsInt>(localdom.domchgreason_.size()));
   // printf("domchgPos: %d\n", domChgPos);
   // printf("stacksize: %ld\n", localdom.domchgreason_.size());
   switch (localdom.domchgreason_[domChgPos].type) {
@@ -3710,7 +3724,7 @@ HighsInt HighsDomain::ConflictSet::resolveDepth(std::set<LocalDomChg>& frontier,
   LocalDomChg startPos =
       LocalDomChg{depthLevel == 0 ? 0 : localdom.branchPos_[depthLevel - 1] + 1,
                   HighsDomainChange()};
-  while (depthLevel < (HighsInt)localdom.branchPos_.size()) {
+  while (depthLevel < static_cast<HighsInt>(localdom.branchPos_.size())) {
     HighsInt branchPos = localdom.branchPos_[depthLevel];
     if (localdom.domchgstack_[branchPos].boundval !=
         localdom.prevboundval_[branchPos].first)
@@ -3720,7 +3734,7 @@ HighsInt HighsDomain::ConflictSet::resolveDepth(std::set<LocalDomChg>& frontier,
   }
 
   auto iterEnd =
-      depthLevel == (HighsInt)localdom.branchPos_.size()
+      depthLevel == static_cast<HighsInt>(localdom.branchPos_.size())
           ? frontier.end()
           : frontier.upper_bound(LocalDomChg{localdom.branchPos_[depthLevel],
                                              HighsDomainChange()});
@@ -3788,7 +3802,8 @@ HighsInt HighsDomain::ConflictSet::computeCuts(HighsInt depthLevel,
                                                HighsPseudocost& pseudocost) {
   HighsInt numResolved = resolveDepth(
       reasonSideFrontier, depthLevel, 1, pseudocost,
-      depthLevel == (HighsInt)localdom.branchPos_.size() ? 1 : 0, true);
+      depthLevel == static_cast<HighsInt>(localdom.branchPos_.size()) ? 1 : 0,
+      true);
   if (numResolved == -1) return -1;
   HighsInt numConflicts = 0;
   if (numResolved > 0) {
@@ -3852,7 +3867,7 @@ void HighsDomain::ConflictSet::conflictAnalysis(HighsConflictPool& conflictPool,
       reasonSideFrontier, localdom.domchgstack_);
 
   HighsInt numConflicts = 0;
-  HighsInt lastDepth = localdom.branchPos_.size();
+  HighsInt lastDepth = static_cast<HighsInt>(localdom.branchPos_.size());
   // printf("start conflict analysis\n");
   HighsInt currDepth;
   for (currDepth = lastDepth; currDepth >= 0; --currDepth) {
@@ -3929,7 +3944,7 @@ void HighsDomain::ConflictSet::conflictAnalysis(const HighsInt* proofinds,
       reasonSideFrontier, localdom.domchgstack_);
 
   HighsInt numConflicts = 0;
-  HighsInt lastDepth = localdom.branchPos_.size();
+  HighsInt lastDepth = static_cast<HighsInt>(localdom.branchPos_.size());
   HighsInt currDepth;
   for (currDepth = lastDepth; currDepth >= 0; --currDepth) {
     if (currDepth > 0) {

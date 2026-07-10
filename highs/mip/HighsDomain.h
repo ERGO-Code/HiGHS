@@ -561,7 +561,7 @@ class HighsDomain {
     std::vector<HighsDomainChange> reducedstack;
     reducedstack.reserve(domchgstack_.size());
     branchingPositions.reserve(branchPos_.size());
-    for (HighsInt i = 0; i < (HighsInt)domchgstack_.size(); ++i) {
+    for (HighsInt i = 0; i < static_cast<HighsInt>(domchgstack_.size()); ++i) {
       // keep only the tightest bound change for each variable
       if ((domchgstack_[i].boundtype == HighsBoundType::kLower &&
            colLowerPos_[domchgstack_[i].column] != i) ||
