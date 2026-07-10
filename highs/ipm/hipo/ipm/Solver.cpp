@@ -52,6 +52,7 @@ void Solver::setOptions(const HighsOptions& highs_options) {
   options_.parallel_type = highs_options.hipo_parallel_type;
   options_.nla = highs_options.hipo_system;
   options_.ordering = highs_options.hipo_ordering;
+  options_.factor = highs_options.hipo_factor;
   options_.block_size = highs_options.hipo_block_size;
 
   options_orig_ = options_;
@@ -156,22 +157,7 @@ bool Solver::initialise() {
   }
   LS_->clear();
 
-  // Use uplooking factorisation instead of multifrontal if
-  // - very few operations needed or
-  // - very few nz per column in L or
-  // - multifrontal is dominated by assembly operations
-  bool switch_to_uplooking =
-      LS_->flops() < kUplookFlopsThresh ||
-      LS_->nz() < kUplookNzPerColLower * kkt_->n() ||
-      LS_->flops() < kUplookSpopsRatioLower * LS_->spops() ||
-      (LS_->nz() < kUplookNzPerColUpper * kkt_->n() &&
-       LS_->flops() < kUplookSpopsRatioUpper * LS_->spops());
-
-  if (switch_to_uplooking) {
-    LS_.reset(new UpLookingSolver(*kkt_, info_, it_->data, regul_, model_));
-    LS_->setup();
-    LS_->clear();
-  }
+  chooseFactorisation();
 
   it_->data.append();
   it_->data.back().factorisation_used = LS_->type();
@@ -356,22 +342,14 @@ bool Solver::solveNewtonSystem(NewtonDir& delta) {
   }
 
   if (terminate) {
-    if (LS_->type() == kUpLookingType) {
+    if (switchToMultifrontal()) {
       // try FactorHighs factorisation before giving up
-      LS_.reset(new FactorHighsSolver(*kkt_, options_, model_, regul_, info_,
-                                      it_->data, logger_));
-      if (!LS_) {
-        info_.status = kStatusError;
-        return true;
-      }
-      LS_->clear();
       it_->data.back().factorisation_used = LS_->type();
-      it_->bad_iter_ = 0;
       logger_.printInfo("Switching to FactorHighs because of bad direction\n");
       resetToBestIter(iter_ - 1);
 
-      // Solve again. This does not create an infinite loop, as the if statement
-      // cannot trigger in the second solve.
+      // Solve again. This does not create an infinite loop, as
+      // switchToMultifrontal() is false in the second solve.
       delta.clear();
       it_->data.back().omega = 0.0;
       terminate = solveNewtonSystem(delta);
@@ -1106,16 +1084,7 @@ bool Solver::checkBadIter() {
       info_.status = kStatusPrimalInfeasible;
       terminate = true;
     } else if (stagnation) {
-      if (LS_->type() == kUpLookingType) {
-        // try FactorHighs factorisation before giving up
-        LS_.reset(new FactorHighsSolver(*kkt_, options_, model_, regul_, info_,
-                                        it_->data, logger_));
-        if (!LS_) {
-          info_.status = kStatusError;
-          return true;
-        }
-        LS_->clear();
-        it_->bad_iter_ = 0;
+      if (switchToMultifrontal()) {
         logger_.printInfo("Switching to FactorHighs because of no progress\n");
         resetToBestIter(iter_);
       } else {
@@ -1220,6 +1189,49 @@ bool Solver::checkInterrupt() {
 void Solver::resetToBestIter(Int iter, bool print) {
   bool did_reset = it_->resetBest(iter);
   if (did_reset && print) printOutput(true);
+}
+
+void Solver::chooseFactorisation() {
+  // Use uplooking factorisation instead of multifrontal if
+  // - very few operations needed or
+  // - very few nz per column in L or
+  // - multifrontal is dominated by assembly operations
+  const bool should_switch_to_uplooking =
+      LS_->flops() < kUplookFlopsThresh ||
+      LS_->nz() < kUplookNzPerColLower * kkt_->n() ||
+      LS_->flops() < kUplookSpopsRatioLower * LS_->spops() ||
+      (LS_->nz() < kUplookNzPerColUpper * kkt_->n() &&
+       LS_->flops() < kUplookSpopsRatioUpper * LS_->spops());
+
+  bool do_switch;
+  if (options_.factor == kHipoFactorMultifrontal)
+    do_switch = false;
+  else if (options_.factor == kHipoFactorUplooking)
+    do_switch = true;
+  else
+    do_switch = should_switch_to_uplooking;
+
+  if (do_switch) {
+    LS_.reset(new UpLookingSolver(*kkt_, info_, it_->data, regul_, model_));
+    LS_->setup();
+    LS_->clear();
+  }
+}
+
+bool Solver::switchToMultifrontal() {
+  // return true if switch successfull
+  if (LS_->type() == kUpLookingType && options_.factor == kHighsChooseString) {
+    LS_.reset(new FactorHighsSolver(*kkt_, options_, model_, regul_, info_,
+                                    it_->data, logger_));
+    if (!LS_) {
+      info_.status = kStatusError;
+      return false;
+    }
+    LS_->clear();
+    it_->bad_iter_ = 0;
+    return true;
+  }
+  return false;
 }
 
 void Solver::printHeader() const {

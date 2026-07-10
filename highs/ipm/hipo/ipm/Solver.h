@@ -334,6 +334,9 @@ class Solver {
   void resetOptions();
   void reset();
   void resetToBestIter(Int iter, bool print = true);
+
+  void chooseFactorisation();
+  bool switchToMultifrontal();
 };
 
 }  // namespace hipo
