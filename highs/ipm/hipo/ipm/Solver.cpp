@@ -123,7 +123,7 @@ void Solver::doSolve() {
   runIpm();
   if (errorOrInterrupt()) return;
 
-  refineWithIpx();
+  runIpx();
   if (errorOrInterrupt()) return;
 
   it_->finalResiduals(info_);
@@ -261,7 +261,10 @@ bool Solver::prepareIpx() {
     info_.error = kErrorIpx;
     return true;
   }
+  return false;
+}
 
+bool Solver::prepareIpxStartingPoint() {
   std::vector<double> x, xl, xu, slack, y, zl, zu;
   getInteriorSolution(x, xl, xu, slack, y, zl, zu);
 
@@ -278,34 +281,43 @@ bool Solver::prepareIpx() {
   return false;
 }
 
-void Solver::refineWithIpx() {
+void Solver::runIpx() {
   if (checkInterrupt()) return;
 
-  bool refine = false;
   if (statusNeedsRefinement() && refinementIsOn()) {
     logger_.print("\nRestarting with IPX\n");
-    refine = true;
+    refineWithIpx();
   } else if (statusAllowsCrossover() && crossoverIsOn()) {
     logger_.print("\nRunning crossover with IPX\n");
+    crossoverWithIpx();
   } else {
     return;
   }
+}
 
+void Solver::refineWithIpx() {
   if (prepareIpx()) return;
-
+  if (prepareIpxStartingPoint()) return;
   ipx_lps_.Solve();
   info_.ipx_used = true;
-
   info_.ipx_info = ipx_lps_.GetInfo();
-
-  if (refine)
-    setStatus1(IpxToHipoStatus(info_.ipx_info.status_ipm));
-  else
-    setStatus2(IpxToHipoStatus(info_.ipx_info.status_ipm));
-
+  setStatus1(IpxToHipoStatus(info_.ipx_info.status_ipm));
   if (info_.ipx_info.status_crossover != IPX_STATUS_not_run)
     setStatus2(IpxToHipoStatus(info_.ipx_info.status_crossover));
+  if (info_.ipx_info.errflag) info_.error = kErrorIpx;
+}
 
+void Solver::crossoverWithIpx() {
+  // at the moment this is almost identical to refineWithIpx, but in the future
+  // it will use ipx_lps_.CrossoverFromStartingPoint
+  if (prepareIpx()) return;
+  if (prepareIpxStartingPoint()) return;
+  ipx_lps_.Solve();
+  info_.ipx_used = true;
+  info_.ipx_info = ipx_lps_.GetInfo();
+  setStatus2(IpxToHipoStatus(info_.ipx_info.status_ipm));
+  if (info_.ipx_info.status_crossover != IPX_STATUS_not_run)
+    setStatus2(IpxToHipoStatus(info_.ipx_info.status_crossover));
   if (info_.ipx_info.errflag) info_.error = kErrorIpx;
 }
 
@@ -1026,6 +1038,8 @@ bool Solver::checkStagnation() {
 bool Solver::checkBadIter() {
   bool terminate = false;
   bool stagnation = iter_ > 0 ? checkStagnation() : false;
+
+  if (iter_ == 18) stagnation = true;
 
   // check for infeasibility
   bool mu_is_large =

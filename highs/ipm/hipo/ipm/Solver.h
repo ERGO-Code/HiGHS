@@ -112,16 +112,13 @@ class Solver {
   bool correctors();
 
   // ===================================================================================
-  // Load model and parameters into ipx and set the last iterate as starting
-  // point.
+  // Interface with IPX
   // ===================================================================================
   bool prepareIpx();
-
-  // ===================================================================================
-  // If solution is not precise, try running ipx starting from last iterate.
-  // If solution is precise and crossover is requested, run ipx.
-  // ===================================================================================
+  bool prepareIpxStartingPoint();
+  void runIpx();
   void refineWithIpx();
+  void crossoverWithIpx();
 
   // ===================================================================================
   // Determine the maximum number of correctors to use, based on the relative
