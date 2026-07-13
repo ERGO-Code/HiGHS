@@ -1298,10 +1298,9 @@ void Solver::printSummary() const {
                << fix(control_.elapsed() - start_time_, 0, 2) << "\n";
 
   log_stream << textline("Status:") << statusString(info_.status) << "\n";
-  if (info_.ipx_info.status_crossover != IPX_STATUS_not_run)
-    log_stream << textline("Status Crossover:")
-               << statusString(IpxToHipoStatus(info_.ipx_info.status_crossover))
-               << "\n";
+  log_stream << textline("Status Crossover:")
+             << statusString(IpxToHipoStatus(info_.ipx_info.status_crossover))
+             << "\n";
   if (info_.error)
     log_stream << textline("Error:") << errorString((Error)info_.error) << "\n";
 
