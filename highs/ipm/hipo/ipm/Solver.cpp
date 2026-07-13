@@ -1407,20 +1407,18 @@ void Solver::chooseNumberOfCorrectors() {
   }
 }
 
-bool Solver::statusIsSolved() const {
-  return info_.status >= kStatusTypeSolved;
-}
-bool Solver::statusIsStopped() const {
+bool Solver::solved() const { return info_.status >= kStatusTypeSolved; }
+bool Solver::stopped() const {
   return info_.status > kStatusTypeStopped && info_.status < kStatusTypeFailed;
 }
-bool Solver::statusIsFailed() const {
+bool Solver::failed() const {
   return info_.status > kStatusTypeFailed && info_.status < kStatusTypeSolved;
 }
 bool Solver::statusAllowsCrossover() const {
   return getStatus1() == kStatusOptimal;
 }
 bool Solver::statusNeedsRefinement() const {
-  return getStatus1() == kStatusNoProgress || getStatus1() == kStatusImprecise;
+  return getStatus1() == kStatusNoProgress;
 }
 bool Solver::refinementIsOn() const {
   return options_.refine_with_ipx && !model_.qp();
@@ -1428,9 +1426,6 @@ bool Solver::refinementIsOn() const {
 bool Solver::crossoverIsOn() const {
   return options_.crossover == kHighsOnString && !model_.qp();
 }
-bool Solver::solved() const { return statusIsSolved(); }
-bool Solver::stopped() const { return statusIsStopped(); }
-bool Solver::failed() const { return statusIsFailed(); }
 
 bool Solver::errorOrInterrupt() const {
   return getStatus() == kStatusTimeLimit ||

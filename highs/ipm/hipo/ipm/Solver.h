@@ -298,9 +298,6 @@ class Solver {
   // ===================================================================================
   // Check and set status
   // ===================================================================================
-  bool statusIsSolved() const;
-  bool statusIsStopped() const;
-  bool statusIsFailed() const;
   bool statusNeedsRefinement() const;
   bool statusAllowsCrossover() const;
   bool refinementIsOn() const;
