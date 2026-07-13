@@ -1272,6 +1272,8 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
 
     recoverBasis();
 
+    printf(
+        "resolveLp: kError from LP solver (HighsStatus::kError after retry)\n");
     return Status::kError;
   }
 
@@ -1325,6 +1327,7 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
       // %" HIGHSINT_FORMAT ")\n",
       //        (HighsInt)lpsolver.getModelStatus(),
       //        (HighsInt)lpsolver.getModelStatus(true));
+      printf("resolveLp: kError from unreliable infeasibility proof\n");
       return Status::kError;
     }
     case HighsModelStatus::kUnbounded:
@@ -1349,7 +1352,10 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
 
       return Status::kUnbounded;
     case HighsModelStatus::kUnknown:
-      if (info.basis_validity == kBasisValidityInvalid) return Status::kError;
+      if (info.basis_validity == kBasisValidityInvalid) {
+        printf("resolveLp: kError from kUnknown with invalid basis\n");
+        return Status::kError;
+      }
       // fall through
     case HighsModelStatus::kOptimal:
       assert(info.max_primal_infeasibility >= 0);
@@ -1371,6 +1377,10 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
       if (model_status == HighsModelStatus::kOptimal)
         return Status::kUnscaledInfeasible;
 
+      printf(
+          "resolveLp: kError from kUnknown with large infeasibilities "
+          "(primal=%.4g dual=%.4g)\n",
+          info.max_primal_infeasibility, info.max_dual_infeasibility);
       return Status::kError;
     case HighsModelStatus::kIterationLimit: {
       if (!mipsolver.submip && resolve_on_error) {
@@ -1439,10 +1449,11 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
         return run(false);
       }
 
-      // printf("error: lpsolver reached iteration limit\n");
+      printf("resolveLp: kError from iteration limit\n");
       return Status::kError;
     }
     case HighsModelStatus::kTimeLimit:
+      printf("resolveLp: kError from time limit\n");
       return Status::kError;
     default:
       // printf("error: lpsolver stopped with unexpected status %"
@@ -1451,6 +1462,8 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
       highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kWarning,
                    "LP solved to unexpected status: %s\n",
                    lpsolver.modelStatusToString(model_status).c_str());
+      printf("resolveLp: kError from unexpected model status %d\n",
+             (int)model_status);
       return Status::kError;
   }
 }
