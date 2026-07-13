@@ -121,6 +121,13 @@ void Model::postprocess(std::vector<double>& x, std::vector<double>& xl,
   preprocessor_.undo(point, *this, it);
 }
 
+void Model::postprocess(std::vector<double>& x, std::vector<double>& slack,
+                        std::vector<double>& y, std::vector<double>& z,
+                        const Iterate& it) const {
+  DroppedPoint point{x, slack, y, z};
+  preprocessor_.undo(point, *this, it);
+}
+
 void Model::computeNorms() {
   norm_scaled_obj_ = infNorm(c_);
 

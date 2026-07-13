@@ -85,6 +85,10 @@ class Model {
                    std::vector<double>& y, std::vector<double>& zl,
                    std::vector<double>& zu, const Iterate& it) const;
 
+  void postprocess(std::vector<double>& x, std::vector<double>& slack,
+                   std::vector<double>& y, std::vector<double>& z,
+                   const Iterate& it) const;
+
   double normScaledRhs() const { return norm_scaled_rhs_; }
   double normScaledObj() const { return norm_scaled_obj_; }
   double normUnscaledObj() const { return norm_unscaled_obj_; }

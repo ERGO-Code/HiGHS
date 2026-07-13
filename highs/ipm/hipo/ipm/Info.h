@@ -26,7 +26,8 @@ struct Info {
   Int ipm_iter = 0;
 
   // True if ipx was invoked, whether to refine solution or for crossover
-  bool ipx_used = false;
+  bool ipx_used_refine = false;
+  bool ipx_used_crossover = false;
 
   // Info from ipx
   ipx::Info ipx_info;

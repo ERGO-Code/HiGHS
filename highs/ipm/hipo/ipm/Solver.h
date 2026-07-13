@@ -120,6 +120,9 @@ class Solver {
   void refineWithIpx();
   void crossoverWithIpx();
 
+  void getPointForCrossover(std::vector<double>& x, std::vector<double>& slack,
+                            std::vector<double>& y, std::vector<double>& z);
+
   // ===================================================================================
   // Determine the maximum number of correctors to use, based on the relative
   // cost of factorisation and solve. Based on the heuristic in "Multiple
