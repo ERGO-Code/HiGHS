@@ -1629,7 +1629,8 @@ HighsLpRelaxation::Status HighsLpRelaxation::resolveLp(HighsDomain* domain) {
           }
 
           for (HighsInt i = 0; i != mipsolver.numCol(); ++i)
-            objsum += roundsol[i] * mipsolver.colCost(i);
+            objsum +=
+                static_cast<HighsCDouble>(roundsol[i]) * mipsolver.colCost(i);
 
           if (!mipsolver.mipdata_->parallelLockActive() || !worker_) {
             mipsolver.mipdata_->addIncumbent(
@@ -1642,7 +1643,8 @@ HighsLpRelaxation::Status HighsLpRelaxation::resolveLp(HighsDomain* domain) {
         }
 
         for (HighsInt i = 0; i != mipsolver.numCol(); ++i) {
-          objsum += sol.col_value[i] * mipsolver.colCost(i);
+          objsum += static_cast<HighsCDouble>(sol.col_value[i]) *
+                    mipsolver.colCost(i);
           if (!std::isfinite(static_cast<double>(objsum))) {
             printf(
                 "resolveLp objsum overflow: col=%d val=%.17g cost=%.17g "
@@ -1673,7 +1675,7 @@ HighsLpRelaxation::Status HighsLpRelaxation::resolveLp(HighsDomain* domain) {
           }
         }
 
-        objective = double(objsum);
+        objective = static_cast<double>(objsum);
         break;
       }
       case Status::kInfeasible:
