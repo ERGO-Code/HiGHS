@@ -1641,8 +1641,17 @@ HighsLpRelaxation::Status HighsLpRelaxation::resolveLp(HighsDomain* domain) {
           objsum = 0;
         }
 
-        for (HighsInt i = 0; i != mipsolver.numCol(); ++i)
+        for (HighsInt i = 0; i != mipsolver.numCol(); ++i) {
           objsum += sol.col_value[i] * mipsolver.colCost(i);
+          if (!std::isfinite(static_cast<double>(objsum))) {
+            printf(
+                "resolveLp objsum overflow: col=%d val=%.17g cost=%.17g "
+                "objsum=%.17g status=%d\n",
+                (int)i, sol.col_value[i], mipsolver.colCost(i),
+                static_cast<double>(objsum), (int)status);
+            assert(std::isfinite(static_cast<double>(objsum)));
+          }
+        }
 
         if (fractionalints.empty() && !unscaledPrimalFeasible(status)) {
           std::vector<double> fixSol = sol.col_value;
