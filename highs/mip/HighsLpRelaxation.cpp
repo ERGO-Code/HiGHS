@@ -456,12 +456,12 @@ double HighsLpRelaxation::computeBestEstimate(const HighsPseudocost& ps) const {
   }
 
   double result = static_cast<double>(estimate);
-  if (!std::isfinite(result)) {
+  if (result == kHighsInf) {
     printf(
-        "computeBestEstimate: infinite estimate=%.17g objective=%.17g "
+        "computeBestEstimate: +inf estimate objective=%.17g "
         "nfrac=%d\n",
-        result, objective, (int)fractionalints.size());
-    assert(std::isfinite(result));
+        objective, (int)fractionalints.size());
+    assert(result != kHighsInf);
   }
   return result;
 }
