@@ -200,7 +200,10 @@ Int KktMatrix::buildNEstructure() {
       // execute the function is roughly kParallelNEStructTasks
       std::ceil((double)m / kParallelNEStructTasks));
 
-  if (overflow) return kErrorOverflow;
+  if (overflow) {
+    info.NE_structure_time = clock.stop();
+    return kErrorOverflow;
+  }
 
   // update pointers
   ptrNE.resize(m + 1, 0);
