@@ -1070,8 +1070,6 @@ bool Solver::checkBadIter() {
   bool terminate = false;
   bool stagnation = iter_ > 0 ? checkStagnation() : false;
 
-  if (iter_ == 18) stagnation = true;
-
   // check for infeasibility
   bool mu_is_large =
       it_->best_mu > 0.0 ? it_->mu > it_->best_mu * kDivergeTol : false;
