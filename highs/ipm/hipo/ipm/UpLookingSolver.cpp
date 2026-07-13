@@ -70,7 +70,7 @@ Int UpLookingSolver::setup() {
     for (Int i = 0; i < model_.A().num_col_; ++i) signs_[i] = -1.0;
   permuteVectorInverse(signs_, kkt_.iperm());
 
-  return kStatusOk;
+  return kOk;
 }
 
 void UpLookingSolver::factor(const std::vector<Int>& ptr,
@@ -216,7 +216,7 @@ Int UpLookingSolver::factorAS(const std::vector<double>& scaling) {
   info_.factor_number++;
 
   valid_ = true;
-  return kStatusOk;
+  return kOk;
 }
 Int UpLookingSolver::factorNE(const std::vector<double>& scaling) {
   assert(!valid_);
@@ -238,7 +238,7 @@ Int UpLookingSolver::factorNE(const std::vector<double>& scaling) {
   info_.factor_number++;
 
   valid_ = true;
-  return kStatusOk;
+  return kOk;
 }
 
 Int UpLookingSolver::solveAS(const std::vector<double>& rhs_x,
@@ -266,7 +266,7 @@ Int UpLookingSolver::solveAS(const std::vector<double>& rhs_x,
   lhs_x = std::vector<double>(rhs.begin(), rhs.begin() + n);
   lhs_y = std::vector<double>(rhs.begin() + n, rhs.end());
 
-  return kStatusOk;
+  return kOk;
 }
 Int UpLookingSolver::solveNE(const std::vector<double>& rhs,
                              std::vector<double>& lhs) {
@@ -281,7 +281,7 @@ Int UpLookingSolver::solveNE(const std::vector<double>& rhs,
   info_.solve_number++;
   data_.back().num_solves++;
 
-  return kStatusOk;
+  return kOk;
 }
 
 void UpLookingSolver::getReg(std::vector<double>& reg) {

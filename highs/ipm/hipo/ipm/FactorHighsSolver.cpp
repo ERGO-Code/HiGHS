@@ -40,7 +40,7 @@ Int FactorHighsSolver::analyseAS(Symbolic& S) {
   // Perform analyse phase of augmented system and return symbolic factorisation
   // in object S and the status.
 
-  if (kkt_.rowsAS.empty() || kkt_.ptrAS.empty()) return kStatusErrorAnalyse;
+  if (kkt_.rowsAS.empty() || kkt_.ptrAS.empty()) return kErrorAnalyse;
 
   const Int m = model_.A().num_row_;
   const Int n = model_.A().num_col_;
@@ -64,7 +64,7 @@ Int FactorHighsSolver::analyseNE(Symbolic& S) {
   // in object S and the status. Structure of the matrix must be already
   // computed.
 
-  if (kkt_.rowsNE.empty() || kkt_.ptrNE.empty()) return kStatusErrorAnalyse;
+  if (kkt_.rowsNE.empty() || kkt_.ptrNE.empty()) return kErrorAnalyse;
 
   // create vector of signs of pivots
   std::vector<Int> pivot_signs(model_.A().num_row_, 1);
@@ -95,12 +95,12 @@ Int FactorHighsSolver::factorAS(const std::vector<double>& scaling) {
   Clock clock;
   if (FH_.factorise(kkt_.S, kkt_.n(), kkt_.nz(), kkt_.rowsAS.data(),
                     kkt_.ptrAS.data(), kkt_.valAS.data()))
-    return kStatusErrorFactorise;
+    return kErrorFactorise;
   info_.factor_time += clock.stop();
   info_.factor_number++;
 
   this->valid_ = true;
-  return kStatusOk;
+  return kOk;
 }
 
 Int FactorHighsSolver::factorNE(const std::vector<double>& scaling) {
@@ -115,12 +115,12 @@ Int FactorHighsSolver::factorNE(const std::vector<double>& scaling) {
   Clock clock;
   if (FH_.factorise(kkt_.S, kkt_.n(), kkt_.nz(), kkt_.rowsNE.data(),
                     kkt_.ptrNE.data(), kkt_.valNE.data()))
-    return kStatusErrorFactorise;
+    return kErrorFactorise;
   info_.factor_time += clock.stop();
   info_.factor_number++;
 
   this->valid_ = true;
-  return kStatusOk;
+  return kOk;
 }
 
 // =========================================================================
@@ -142,7 +142,7 @@ Int FactorHighsSolver::solveAS(const std::vector<double>& rhs_x,
   rhs.insert(rhs.end(), rhs_y.begin(), rhs_y.end());
 
   Clock clock;
-  if (FH_.solve(rhs.data())) return kStatusErrorSolve;
+  if (FH_.solve(rhs.data())) return kErrorSolve;
 
   info_.solve_time += clock.stop();
   info_.solve_number++;
@@ -153,7 +153,7 @@ Int FactorHighsSolver::solveAS(const std::vector<double>& rhs_x,
   lhs_x = std::vector<double>(rhs.begin(), rhs.begin() + n);
   lhs_y = std::vector<double>(rhs.begin() + n, rhs.end());
 
-  return kStatusOk;
+  return kOk;
 }
 
 Int FactorHighsSolver::solveNE(const std::vector<double>& rhs,
@@ -165,14 +165,14 @@ Int FactorHighsSolver::solveNE(const std::vector<double>& rhs,
   lhs = rhs;
 
   Clock clock;
-  if (FH_.solve(lhs.data())) return kStatusErrorSolve;
+  if (FH_.solve(lhs.data())) return kErrorSolve;
 
   info_.solve_time += clock.stop();
   info_.solve_number++;
 
   data_.back().num_solves++;
 
-  return kStatusOk;
+  return kOk;
 }
 
 // =========================================================================
@@ -203,7 +203,7 @@ Int FactorHighsSolver::setup() {
     logger_.print("\n");
   }
 
-  return kStatusOk;
+  return kOk;
 }
 
 Int FactorHighsSolver::chooseNla() {
@@ -238,7 +238,7 @@ Int FactorHighsSolver::chooseNla() {
       Int status = kkt_.buildNEstructure();
       if (status) {
         failure_NE = true;
-        if (status == kStatusOverflow) {
+        if (status == kErrorOverflow) {
           logger_.printInfo("Integer overflow forming NE matrix\n");
           overflow_NE = true;
         }
@@ -261,7 +261,7 @@ Int FactorHighsSolver::chooseNla() {
       Int AS_status = kkt_.buildASstructure();
       if (!AS_status) AS_status = analyseAS(symb_AS);
       if (AS_status) failure_AS = true;
-      if (AS_status == kStatusOverflow) {
+      if (AS_status == kErrorOverflow) {
         logger_.printInfo("Integer overflow forming AS matrix\n");
         overflow_AS = true;
       }
@@ -301,7 +301,7 @@ Int FactorHighsSolver::chooseNla() {
     run_analyse_AS();
   }
 
-  Int status = kStatusOk;
+  Int status = kOk;
 
   std::stringstream log_stream;
 
@@ -314,9 +314,9 @@ Int FactorHighsSolver::chooseNla() {
     log_stream << textline("Newton system:") << "NE preferred (AS failed)\n";
   } else if (failure_AS && failure_NE) {
     if (overflow_AS && overflow_NE)
-      status = kStatusOverflow;
+      status = kErrorOverflow;
     else
-      status = kStatusErrorAnalyse;
+      status = kErrorAnalyse;
 
     logger_.printe("Both NE and AS failed analyse phase\n");
   } else {
@@ -348,7 +348,7 @@ Int FactorHighsSolver::chooseNla() {
 
   logger_.print(log_stream.str().c_str());
 
-  if (status == kStatusOk) {
+  if (status == kOk) {
     if (options_.nla == kHipoAugmentedString) {
       kkt_.S = std::move(symb_AS);
       kkt_.freeNEmemory();
@@ -387,7 +387,7 @@ Int FactorHighsSolver::chooseOrdering(const std::vector<Int>& rows,
   if (nla == "NE") {
     if (ptr.back() >= kkt_.NE_nz_limit.load(std::memory_order_relaxed)) {
       logger_.printInfo("NE interrupted\n");
-      return kStatusErrorAnalyse;
+      return kErrorAnalyse;
     }
   }
 
@@ -516,7 +516,7 @@ Int FactorHighsSolver::chooseOrdering(const std::vector<Int>& rows,
     ordering = orderings_to_try[chosen];
   }
 
-  return num_success > 0 ? kStatusOk : kStatusErrorAnalyse;
+  return num_success > 0 ? kOk : kErrorAnalyse;
 }
 
 Int FactorHighsSolver::setNla() {
@@ -530,24 +530,24 @@ Int FactorHighsSolver::setNla() {
   if (options_.nla == kHipoAugmentedString) {
     Int status = kkt_.buildASstructure();
     if (!status) status = analyseAS(kkt_.S);
-    if (status == kStatusOverflow) {
+    if (status == kErrorOverflow) {
       logger_.printe("AS requested, integer overflow\n");
-      return kStatusOverflow;
+      return kErrorOverflow;
     } else if (status) {
       logger_.printe("AS requested, failed analyse phase\n");
-      return kStatusErrorAnalyse;
+      return kErrorAnalyse;
     }
     log_stream << textline("Newton system:") << "AS requested\n";
 
   } else if (options_.nla == kHipoNormalEqString) {
     Int status = kkt_.buildNEstructure();
     if (!status) status = analyseNE(kkt_.S);
-    if (status == kStatusOverflow) {
+    if (status == kErrorOverflow) {
       logger_.printe("NE requested, integer overflow\n");
-      return kStatusOverflow;
+      return kErrorOverflow;
     } else if (status) {
       logger_.printe("NE requested, failed analyse phase\n");
-      return kStatusErrorAnalyse;
+      return kErrorAnalyse;
     }
     log_stream << textline("Newton system:") << "NE requested\n";
 
@@ -564,7 +564,7 @@ Int FactorHighsSolver::setNla() {
                << '\n';
   logger_.print(log_stream.str().c_str());
 
-  return kStatusOk;
+  return kOk;
 }
 
 static bool usingAppleBlas() {

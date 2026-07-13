@@ -15,9 +15,9 @@ namespace hipo {
 Int Solver::load(const HighsLp& lp, const HighsHessian& Q) {
   if (model_.init(lp, Q)) {
     logger_.printInfo("Error with model\n");
-    return kStatusBadModel;
+    return kErrorModel;
   }
-  return kStatusOk;
+  return kOk;
 }
 
 void Solver::setOptions(const HighsOptions& highs_options) {
@@ -95,8 +95,15 @@ void Solver::reset() {
 }
 
 void Solver::solve() {
+  doSolve();
+  info_.ipm_iter = iter_;
+  finaliseStatus();
+  printSummary();
+}
+
+void Solver::doSolve() {
   if (!model_.ready()) {
-    info_.status = kStatusBadModel;
+    info_.error = kErrorModel;
     return;
   }
 
@@ -105,7 +112,7 @@ void Solver::solve() {
   // iterate object needs to be initialised before potentially interrupting
   it_.reset(new Iterate(model_, regul_));
   if (!it_) {
-    info_.status = kStatusError;
+    info_.error = kErrorFailedAllocation;
     return;
   }
 
@@ -114,9 +121,12 @@ void Solver::solve() {
   printInfo();
 
   runIpm();
+  if (errorOrInterrupt()) return;
+
   refineWithIpx();
+  if (errorOrInterrupt()) return;
+
   it_->finalResiduals(info_);
-  printSummary();
 }
 
 void Solver::runIpm() {
@@ -128,8 +138,6 @@ void Solver::runIpm() {
     if (correctors()) break;
     makeStep();
   }
-
-  terminate();
 }
 
 bool Solver::initialise() {
@@ -140,7 +148,7 @@ bool Solver::initialise() {
 
   kkt_.reset(new KktMatrix(model_, regul_, info_, logger_));
   if (!kkt_) {
-    info_.status = kStatusError;
+    info_.error = kErrorFailedAllocation;
     return true;
   }
 
@@ -164,11 +172,6 @@ bool Solver::initialise() {
   if (checkInterrupt()) return true;
 
   return false;
-}
-
-void Solver::terminate() {
-  info_.ipm_iter = iter_;
-  if (info_.status == kStatusNotRun) info_.status = kStatusMaxIter;
 }
 
 bool Solver::prepareIter() {
@@ -255,6 +258,7 @@ bool Solver::prepareIpx() {
 
   if (load_status) {
     logger_.printInfo("Error loading model into IPX\n");
+    info_.error = kErrorIpx;
     return true;
   }
 
@@ -267,6 +271,7 @@ bool Solver::prepareIpx() {
 
   if (start_point_status) {
     logger_.printInfo("Error loading starting point into IPX\n");
+    info_.error = kErrorIpx;
     return true;
   }
 
@@ -276,8 +281,10 @@ bool Solver::prepareIpx() {
 void Solver::refineWithIpx() {
   if (checkInterrupt()) return;
 
+  bool refine = false;
   if (statusNeedsRefinement() && refinementIsOn()) {
     logger_.print("\nRestarting with IPX\n");
+    refine = true;
   } else if (statusAllowsCrossover() && crossoverIsOn()) {
     logger_.print("\nRunning crossover with IPX\n");
   } else {
@@ -291,33 +298,31 @@ void Solver::refineWithIpx() {
 
   info_.ipx_info = ipx_lps_.GetInfo();
 
-  info_.status = IpxToHipoStatus(info_.ipx_info.status_ipm);
+  if (refine)
+    setStatus1(IpxToHipoStatus(info_.ipx_info.status_ipm));
+  else
+    setStatus2(IpxToHipoStatus(info_.ipx_info.status_ipm));
 
-  std::stringstream log_stream;
-  log_stream << "IPX reports: ipm "
-             << ipx::StatusString(info_.ipx_info.status_ipm);
   if (info_.ipx_info.status_crossover != IPX_STATUS_not_run)
-    log_stream << ", crossover "
-               << ipx::StatusString(info_.ipx_info.status_crossover);
-  log_stream << '\n';
-  logger_.print(log_stream.str().c_str());
+    setStatus2(IpxToHipoStatus(info_.ipx_info.status_crossover));
 
-  if (info_.ipx_info.status_crossover == IPX_STATUS_optimal) {
-    info_.status = kStatusBasic;
-  }
+  if (info_.ipx_info.errflag) info_.error = kErrorIpx;
 }
 
 bool Solver::solveNewtonSystem(NewtonDir& delta) {
-  bool terminate = solve6x6(delta, it_->res);
+  solve6x6(delta, it_->res);
+  bool terminate = info_.error;
 
   if (!terminate) {
     refine(delta);
     if (it_->isDirNan(delta)) {
       logger_.printInfo("Direction is nan\n");
       terminate = true;
+      info_.error = kErrorNan;
     } else if (it_->isDirInf(delta)) {
       logger_.printInfo("Direction is inf\n");
       terminate = true;
+      info_.error = kErrorNan;
     }
   }
 
@@ -333,14 +338,13 @@ bool Solver::solveNewtonSystem(NewtonDir& delta) {
       delta.clear();
       it_->data.back().omega = 0.0;
       terminate = solveNewtonSystem(delta);
-    } else
-      info_.status = kStatusError;
+    }
   }
 
   return terminate;
 }
 
-bool Solver::solve2x2(NewtonDir& delta, const Residuals& rhs) {
+void Solver::solve2x2(NewtonDir& delta, const Residuals& rhs) {
   std::vector<double>& theta_inv = it_->scaling;
 
   std::vector<double> res7 = it_->residual7(rhs);
@@ -350,18 +354,18 @@ bool Solver::solve2x2(NewtonDir& delta, const Residuals& rhs) {
     std::vector<double> res8 = it_->residual8(rhs, res7);
 
     if (!LS_->valid_) {
-      if (Int status = LS_->factorNE(theta_inv)) {
-        logger_.printe("Error while factorising normal equations\n");
-        info_.status = (Status)status;
-        return true;
+      info_.error = LS_->factorNE(theta_inv);
+      if (info_.error) {
+        logger_.printInfo("Error while factorising normal equations\n");
+        return;
       }
       it_->getReg(*LS_, options_.nla);
     }
 
-    if (Int status = LS_->solveNE(res8, delta.y)) {
-      logger_.printe("Error while solving normal equations\n");
-      info_.status = (Status)status;
-      return true;
+    info_.error = LS_->solveNE(res8, delta.y);
+    if (info_.error) {
+      logger_.printInfo("Error while solving normal equations\n");
+      return;
     }
 
     // Compute delta.x
@@ -382,28 +386,26 @@ bool Solver::solve2x2(NewtonDir& delta, const Residuals& rhs) {
   // AUGMENTED SYSTEM
   else {
     if (!LS_->valid_) {
-      if (Int status = LS_->factorAS(theta_inv)) {
-        logger_.printe("Error while factorising augmented system\n");
-        info_.status = (Status)status;
-        return true;
+      info_.error = LS_->factorAS(theta_inv);
+      if (info_.error) {
+        logger_.printInfo("Error while factorising augmented system\n");
+        return;
       }
       it_->getReg(*LS_, options_.nla);
     }
 
-    if (Int status = LS_->solveAS(res7, rhs.r1, delta.x, delta.y)) {
-      logger_.printe("Error while solving augmented system\n");
-      info_.status = (Status)status;
-      return true;
+    info_.error = LS_->solveAS(res7, rhs.r1, delta.x, delta.y);
+    if (info_.error) {
+      logger_.printInfo("Error while solving augmented system\n");
+      return;
     }
   }
-
-  return false;
 }
 
-bool Solver::solve6x6(NewtonDir& delta, const Residuals& rhs) {
-  if (solve2x2(delta, rhs)) return true;
+void Solver::solve6x6(NewtonDir& delta, const Residuals& rhs) {
+  solve2x2(delta, rhs);
+  if (info_.error) return;
   recoverDirection(delta, rhs);
-  return false;
 }
 
 void Solver::recoverDirection(NewtonDir& delta, const Residuals& rhs) const {
@@ -615,15 +617,15 @@ bool Solver::startingPoint() {
     // temp_m
 
     // factorise A*A^T
-    if (Int status = LS_->factorNE(empty_scaling)) {
-      logger_.printe("Error while factorising normal equations\n");
-      info_.status = (Status)status;
+    info_.error = LS_->factorNE(empty_scaling);
+    if (info_.error) {
+      logger_.printInfo("Error while factorising normal equations\n");
       return true;
     }
 
-    if (Int status = LS_->solveNE(y, temp_m)) {
-      logger_.printe("Error while solving normal equations\n");
-      info_.status = (Status)status;
+    info_.error = LS_->solveNE(y, temp_m);
+    if (info_.error) {
+      logger_.printInfo("Error while solving normal equations\n");
       return true;
     }
 
@@ -632,18 +634,18 @@ bool Solver::startingPoint() {
     // [ -I  A^T] [...] = [ -x]
     // [  A   0 ] [ dx] = [ b ]
 
-    if (Int status = LS_->factorAS(empty_scaling)) {
-      logger_.printe("Error while factorising augmented system\n");
-      info_.status = (Status)status;
+    info_.error = LS_->factorAS(empty_scaling);
+    if (info_.error) {
+      logger_.printInfo("Error while factorising augmented system\n");
       return true;
     }
 
     std::vector<double> rhs_x(n_);
     for (Int i = 0; i < n_; ++i) rhs_x[i] = -x[i];
     std::vector<double> lhs_x(n_);
-    if (Int status = LS_->solveAS(rhs_x, y, lhs_x, temp_m)) {
-      logger_.printe("Error while solving augmented system\n");
-      info_.status = (Status)status;
+    info_.error = LS_->solveAS(rhs_x, y, lhs_x, temp_m);
+    if (info_.error) {
+      logger_.printInfo("Error while solving augmented system\n");
       return true;
     }
   }
@@ -700,9 +702,9 @@ bool Solver::startingPoint() {
     std::fill(temp_m.begin(), temp_m.end(), 0.0);
     model_.A().alphaProductPlusY(1.0, cPlusQx, temp_m);
 
-    if (Int status = LS_->solveNE(temp_m, y)) {
-      logger_.printe("Error while solvingF normal equations\n");
-      info_.status = (Status)status;
+    info_.error = LS_->solveNE(temp_m, y);
+    if (info_.error) {
+      logger_.printInfo("Error while solvingF normal equations\n");
       return true;
     }
 
@@ -714,9 +716,9 @@ bool Solver::startingPoint() {
     std::vector<double> rhs_y(m_, 0.0);
     std::vector<double> lhs_x(n_);
 
-    if (Int status = LS_->solveAS(cPlusQx, rhs_y, lhs_x, y)) {
-      logger_.printe("Error while solving augmented system\n");
-      info_.status = (Status)status;
+    info_.error = LS_->solveAS(cPlusQx, rhs_y, lhs_x, y);
+    if (info_.error) {
+      logger_.printInfo("Error while solving augmented system\n");
       return true;
     }
   }
@@ -992,11 +994,11 @@ void Solver::bestWeight(const NewtonDir& delta, const NewtonDir& corrector,
 bool Solver::checkIterate() {
   if (it_->isNan()) {
     logger_.printInfo("\nIterate is nan\n");
-    info_.status = kStatusError;
+    info_.error = kErrorNan;
     return true;
   } else if (it_->isInf()) {
     logger_.printInfo("\nIterate is inf\n");
-    info_.status = kStatusError;
+    info_.error = kErrorNan;
     return true;
   }
 
@@ -1006,6 +1008,7 @@ bool Solver::checkIterate() {
         (model_.hasUb(i) && it_->xu[i] < 0) ||
         (model_.hasUb(i) && it_->zu[i] < 0)) {
       logger_.printInfo("\nIterate has negative component\n");
+      info_.error = kErrorNegativeComponent;
       return true;
     }
   }
@@ -1045,27 +1048,32 @@ bool Solver::checkBadIter() {
     if (pobj_is_larger) {
       // problem is likely to be primal unbounded, i.e. dual infeasible
       logger_.print("=== Dual infeasible\n");
-      info_.status = kStatusDualInfeasible;
+      setStatus(kStatusDualInfeasible);
       terminate = true;
     } else if (dobj_is_larger) {
       // problem is likely to be dual unbounded, i.e. primal infeasible
       logger_.print("=== Primal infeasible\n");
-      info_.status = kStatusPrimalInfeasible;
+      setStatus(kStatusPrimalInfeasible);
       terminate = true;
     } else if (stagnation) {
       if (switchToMultifrontal()) {
         logger_.printInfo("Switching to FactorHighs because of no progress\n");
         resetToBestIter(iter_);
       } else {
-        // stagnation detected, solution may still be good for highs kktCheck
-        if (info_.status != kStatusPDFeas && checkTerminationKkt()) {
-          logger_.printw(
-              "HiPO stagnated but HiGHS considers the solution acceptable\n");
-          logger_.print("=== Primal-dual feasible point found\n");
-          info_.status = kStatusPDFeas;
-        } else {
-          info_.status = kStatusNoProgress;
+        if (getStatus1() == kStatusOptimal) {
+          assert(crossoverIsOn());
+          setStatus2(kStatusNoProgress);
           resetToBestIter(iter_);
+        } else {
+          if (checkTerminationKkt()) {
+            logger_.printw(
+                "HiPO stagnated but HiGHS considers the solution acceptable\n");
+            logger_.print("=== Primal-dual feasible point found\n");
+            setStatus1(kStatusOptimal);
+          } else {
+            setStatus1(kStatusNoProgress);
+            resetToBestIter(iter_);
+          }
         }
 
         terminate = true;
@@ -1085,9 +1093,10 @@ bool Solver::checkTermination() {
 
   if (feasible && optimal) {
     if (crossoverIsOn()) {
-      if (info_.status != kStatusPDFeas)
+      if (getStatus1() != kStatusOptimal) {
         logger_.print("=== Primal-dual feasible point found\n");
-      info_.status = kStatusPDFeas;
+        setStatus1(kStatusOptimal);
+      }
       bool ready_for_crossover =
           it_->infeasAfterDropping() < options_.crossover_tol;
       if (ready_for_crossover) {
@@ -1098,9 +1107,8 @@ bool Solver::checkTermination() {
     } else {
       terminate = model_.qp() ? true : checkTerminationKkt();
       if (terminate) {
-        assert(info_.status != kStatusPDFeas);
         logger_.print("=== Primal-dual feasible point found\n");
-        info_.status = kStatusPDFeas;
+        setStatus1(kStatusOptimal);
       }
     }
   }
@@ -1149,7 +1157,7 @@ bool Solver::checkInterrupt() {
   bool terminate = false;
   Int status = control_.interruptCheck(iter_);
   if (status) {
-    info_.status = (Status)status;
+    setStatus((Status)status);
     terminate = true;
   }
   return terminate;
@@ -1164,13 +1172,12 @@ bool Solver::initialiseLinearSolver() {
   LS_.reset(new FactorHighsSolver(*kkt_, options_, model_, regul_, info_,
                                   it_->data, logger_));
   if (!LS_) {
-    info_.status = kStatusError;
+    info_.error = kErrorFailedAllocation;
     return true;
   }
-  if (Int status = LS_->setup()) {
-    info_.status = (Status)status;
-    return true;
-  }
+  info_.error = LS_->setup();
+  if (info_.error) return true;
+
   LS_->clear();
 
   // Use uplooking factorisation instead of multifrontal if
@@ -1195,7 +1202,7 @@ bool Solver::initialiseLinearSolver() {
   if (do_switch) {
     LS_.reset(new UpLookingSolver(*kkt_, info_, it_->data, regul_, model_));
     if (!LS_) {
-      info_.status = kStatusError;
+      info_.error = kErrorFailedAllocation;
       return true;
     }
     LS_->setup();
@@ -1212,10 +1219,11 @@ bool Solver::switchToMultifrontal() {
     LS_.reset(new FactorHighsSolver(*kkt_, options_, model_, regul_, info_,
                                     it_->data, logger_));
     if (!LS_) {
-      info_.status = kStatusError;
+      info_.error = kErrorFailedAllocation;
     } else {
       LS_->clear();
       it_->bad_iter_ = 0;
+      info_.error = kOk;
       switch_successfull = true;
     }
   }
@@ -1290,6 +1298,13 @@ void Solver::printSummary() const {
                << fix(control_.elapsed() - start_time_, 0, 2) << "\n";
 
   log_stream << textline("Status:") << statusString(info_.status) << "\n";
+  if (info_.ipx_info.status_crossover != IPX_STATUS_not_run)
+    log_stream << textline("Status Crossover:")
+               << statusString(IpxToHipoStatus(info_.ipx_info.status_crossover))
+               << "\n";
+  if (info_.error)
+    log_stream << textline("Error:") << errorString((Error)info_.error) << "\n";
+
   log_stream << textline("HiPO iterations:") << integer(iter_) << "\n";
   if (info_.ipx_used)
     log_stream << textline("IPX iterations:") << integer(info_.ipx_info.iter)
@@ -1393,16 +1408,20 @@ void Solver::chooseNumberOfCorrectors() {
   }
 }
 
-bool Solver::statusIsSolved() const { return info_.status >= kStatusSolved; }
-bool Solver::statusIsStopped() const { return info_.status < kStatusFailed; }
+bool Solver::statusIsSolved() const {
+  return info_.status >= kStatusTypeSolved;
+}
+bool Solver::statusIsStopped() const {
+  return info_.status > kStatusTypeStopped && info_.status < kStatusTypeFailed;
+}
 bool Solver::statusIsFailed() const {
-  return info_.status >= kStatusFailed && info_.status < kStatusSolved;
+  return info_.status > kStatusTypeFailed && info_.status < kStatusTypeSolved;
 }
 bool Solver::statusAllowsCrossover() const {
-  return info_.status >= kStatusPDFeas;
+  return getStatus1() == kStatusOptimal;
 }
 bool Solver::statusNeedsRefinement() const {
-  return info_.status == kStatusNoProgress || info_.status == kStatusImprecise;
+  return getStatus1() == kStatusNoProgress || getStatus1() == kStatusImprecise;
 }
 bool Solver::refinementIsOn() const {
   return options_.refine_with_ipx && !model_.qp();
@@ -1413,5 +1432,44 @@ bool Solver::crossoverIsOn() const {
 bool Solver::solved() const { return statusIsSolved(); }
 bool Solver::stopped() const { return statusIsStopped(); }
 bool Solver::failed() const { return statusIsFailed(); }
+
+bool Solver::errorOrInterrupt() const {
+  return getStatus() == kStatusTimeLimit ||
+         getStatus() == kStatusUserInterrupt || info_.error;
+}
+
+// status1 should only be set if status2 is empty.
+// status2 should only be set if status1 is optimal or imprecise.
+// final status should consider status2 if non empty, or status 1 otherwise.
+
+void Solver::setStatus1(Status status) {
+  assert(getStatus2() == kStatusNotSet);
+  status_phase1 = status;
+}
+void Solver::setStatus2(Status status) {
+  assert(getStatus1() == kStatusOptimal || getStatus1() == kStatusImprecise);
+  status_phase2 = status;
+}
+void Solver::setStatus(Status status) {
+  if (status_phase1 == kStatusNotSet)
+    setStatus1(status);
+  else
+    setStatus2(status);
+}
+
+Status Solver::getStatus1() const { return status_phase1; }
+Status Solver::getStatus2() const { return status_phase2; }
+Status Solver::getStatus() const {
+  if (getStatus2() != kStatusNotSet)
+    return getStatus2();
+  else
+    return getStatus1();
+}
+
+void Solver::finaliseStatus() {
+  info_.status = getStatus();
+  if (info_.error) info_.status = kStatusError;
+  if (info_.status == kStatusNotSet) info_.status = kStatusMaxIter;
+}
 
 }  // namespace hipo
