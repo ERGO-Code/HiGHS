@@ -45,7 +45,6 @@ Int FactorHighsSolver::analyseAS(Symbolic& S) {
   const Int m = model_.A().num_row_;
   const Int n = model_.A().num_col_;
 
-  // create vector of signs of pivots
   std::vector<Int> pivot_signs(n + m, -1);
   for (Int i = 0; i < m; ++i) pivot_signs[n + i] = 1;
 
@@ -66,7 +65,6 @@ Int FactorHighsSolver::analyseNE(Symbolic& S) {
 
   if (kkt_.rowsNE.empty() || kkt_.ptrNE.empty()) return kErrorAnalyse;
 
-  // create vector of signs of pivots
   std::vector<Int> pivot_signs(model_.A().num_row_, 1);
 
   logger_.printInfo("Performing NE analyse phase\n");
@@ -84,7 +82,6 @@ Int FactorHighsSolver::analyseNE(Symbolic& S) {
 // =========================================================================
 
 Int FactorHighsSolver::factorAS(const std::vector<double>& scaling) {
-  // only execute factorisation if it has not been done yet
   assert(!this->valid_);
 
   kkt_.buildASvalues(scaling);
@@ -104,7 +101,6 @@ Int FactorHighsSolver::factorAS(const std::vector<double>& scaling) {
 }
 
 Int FactorHighsSolver::factorNE(const std::vector<double>& scaling) {
-  // only execute factorisation if it has not been done yet
   assert(!this->valid_);
 
   kkt_.buildNEvalues(scaling);
@@ -131,12 +127,10 @@ Int FactorHighsSolver::solveAS(const std::vector<double>& rhs_x,
                                const std::vector<double>& rhs_y,
                                std::vector<double>& lhs_x,
                                std::vector<double>& lhs_y) {
-  // only execute the solve if factorisation is valid
   assert(this->valid_);
 
   Int n = rhs_x.size();
 
-  // create single rhs
   std::vector<double> rhs;
   rhs.insert(rhs.end(), rhs_x.begin(), rhs_x.end());
   rhs.insert(rhs.end(), rhs_y.begin(), rhs_y.end());
@@ -149,7 +143,6 @@ Int FactorHighsSolver::solveAS(const std::vector<double>& rhs_x,
 
   data_.back().num_solves++;
 
-  // split lhs
   lhs_x = std::vector<double>(rhs.begin(), rhs.begin() + n);
   lhs_y = std::vector<double>(rhs.begin() + n, rhs.end());
 
@@ -158,10 +151,8 @@ Int FactorHighsSolver::solveAS(const std::vector<double>& rhs_x,
 
 Int FactorHighsSolver::solveNE(const std::vector<double>& rhs,
                                std::vector<double>& lhs) {
-  // only execute the solve if factorisation is valid
   assert(this->valid_);
 
-  // initialise lhs with rhs
   lhs = rhs;
 
   Clock clock;
@@ -195,7 +186,6 @@ Int FactorHighsSolver::setup() {
 
     kkt_.S.print(logger_, logger_.debug(1));
 
-    // Warn about large memory consumption
     if (kkt_.S.storage() > kLargeStorageGB * 1024 * 1024 * 1024) {
       logger_.printw("Large amount of memory required\n");
     }
@@ -207,8 +197,6 @@ Int FactorHighsSolver::setup() {
 }
 
 Int FactorHighsSolver::chooseNla() {
-  // Choose whether to use augmented system or normal equations.
-
   Symbolic symb_NE{};
   Symbolic symb_AS{};
   bool failure_NE = false;
@@ -305,7 +293,6 @@ Int FactorHighsSolver::chooseNla() {
 
   std::stringstream log_stream;
 
-  // Decision may be forced by failures
   if (failure_NE && !failure_AS) {
     options_.nla = kHipoAugmentedString;
     log_stream << textline("Newton system:") << "AS preferred (NE failed)\n";
@@ -325,7 +312,6 @@ Int FactorHighsSolver::chooseNla() {
     double ops_NE = symb_NE.flops() + symb_NE.spops() * kSpopsWeight;
     double ops_AS = symb_AS.flops() + symb_AS.spops() * kSpopsWeight;
 
-    // Average size of supernodes
     double sn_size_NE = (double)symb_NE.size() / symb_NE.sn();
     double sn_size_AS = (double)symb_AS.size() / symb_AS.sn();
 
@@ -370,7 +356,6 @@ Int FactorHighsSolver::chooseOrdering(const std::vector<Int>& rows,
   // - If ordering is "amd", "metis", "rcm" run only the ordering requested.
   // - If ordering is "choose", run "amd", "metis", and choose the best.
 
-  // select which fill-reducing orderings should be tried
   std::vector<std::string> orderings_to_try;
   if (options_.ordering != kHighsChooseString)
     orderings_to_try.push_back(options_.ordering);
@@ -572,7 +557,6 @@ static bool usingAppleBlas() {
 }
 
 void FactorHighsSolver::setParallel() {
-  // Set parallel options
   bool parallel_tree = false;
   bool parallel_node = false;
 

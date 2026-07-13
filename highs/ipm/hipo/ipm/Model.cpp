@@ -299,7 +299,6 @@ void Model::print(const Logger& logger) const {
   }
   if (std::isinf(scalemin)) scalemin = 0.0;
 
-  // print ranges
   log_stream << textline("Range of A:") << "[" << sci(Amin, 5, 1) << ", "
              << sci(Amax, 5, 1) << "]\n";
 

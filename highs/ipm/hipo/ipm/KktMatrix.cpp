@@ -263,20 +263,23 @@ void KktMatrix::freeNEmemory() {
 }
 
 Int KktMatrix::n() const {
-  if (nla() == kHipoNormalEqString) return ptrNE.size() - 1;
-  if (nla() == kHipoAugmentedString) return ptrAS.size() - 1;
+  if (isNE()) return ptrNE.size() - 1;
+  if (isAS()) return ptrAS.size() - 1;
   return -1;
 }
 Int KktMatrix::nz() const {
-  if (nla() == kHipoNormalEqString) return rowsNE.size();
-  if (nla() == kHipoAugmentedString) return rowsAS.size();
+  if (isNE()) return rowsNE.size();
+  if (isAS()) return rowsAS.size();
   return -1;
 }
 std::string KktMatrix::nla() const {
-  if (!ptrNE.empty()) return kHipoNormalEqString;
-  if (!ptrAS.empty()) return kHipoAugmentedString;
+  if (isNE()) return kHipoNormalEqString;
+  if (isAS()) return kHipoAugmentedString;
   return "empty";
 }
+
+bool KktMatrix::isAS() const { return !ptrAS.empty(); }
+bool KktMatrix::isNE() const { return !ptrNE.empty(); }
 
 const std::vector<Int>& KktMatrix::iperm() const { return S.iperm(); }
 
