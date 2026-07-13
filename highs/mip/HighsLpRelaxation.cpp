@@ -459,8 +459,8 @@ double HighsLpRelaxation::computeBestEstimate(const HighsPseudocost& ps) const {
   if (result == kHighsInf) {
     printf(
         "computeBestEstimate: +inf estimate objective=%.17g "
-        "nfrac=%d\n",
-        objective, (int)fractionalints.size());
+        "nfrac=%d status=%d\n",
+        objective, (int)fractionalints.size(), (int)status);
     assert(result != kHighsInf);
   }
   return result;
