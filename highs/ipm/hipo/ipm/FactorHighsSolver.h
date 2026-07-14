@@ -15,7 +15,6 @@
 namespace hipo {
 
 class FactorHighsSolver : public LinearSolver {
-  // object to perform factorisation
   FHsolver FH_;
 
   KktMatrix& kkt_;
@@ -44,7 +43,6 @@ class FactorHighsSolver : public LinearSolver {
                     const Regularisation& regul, Info& info, IpmData& record,
                     const Logger& logger);
 
-  // Override functions
   Int factorAS(const std::vector<double>& scaling) override;
   Int factorNE(const std::vector<double>& scaling) override;
   Int solveNE(const std::vector<double>& rhs,

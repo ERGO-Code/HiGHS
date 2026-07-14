@@ -45,6 +45,16 @@ class Solver {
   Logger logger_;
   double start_time_;
 
+  // Status of ipm iterations up to pd feas solution found (potentially using
+  // ipx to refine, in which case the ipx status_ipm is converted to hipo
+  // status).
+  Status status_phase1 = kStatusNotSet;
+
+  // Status of ipm iterations after pd feas solution found, or status of
+  // crossover if it is run, in which case ipx status_crossover is converted to
+  // hipo status.
+  Status status_phase2 = kStatusNotSet;
+
  public:
   // ===================================================================================
   // Load an LP or QP:
@@ -94,24 +104,21 @@ class Solver {
 
  private:
   // Functions to run the various stages of the ipm
+  void doSolve();
   void runIpm();
   bool initialise();
-  void terminate();
   bool prepareIter();
   bool predictor();
   bool correctors();
 
   // ===================================================================================
-  // Load model and parameters into ipx and set the last iterate as starting
-  // point.
+  // Interface with IPX
   // ===================================================================================
   bool prepareIpx();
-
-  // ===================================================================================
-  // If solution is not precise, try running ipx starting from last iterate.
-  // If solution is precise and crossover is requested, run ipx.
-  // ===================================================================================
+  bool prepareIpxStartingPoint();
+  void runIpx();
   void refineWithIpx();
+  void crossoverWithIpx();
 
   // ===================================================================================
   // Determine the maximum number of correctors to use, based on the relative
@@ -148,8 +155,8 @@ class Solver {
   // NB: normal equations available only if Q is zero or diagonal.
   // ===================================================================================
   bool solveNewtonSystem(NewtonDir& delta);
-  bool solve2x2(NewtonDir& delta, const Residuals& rhs);
-  bool solve6x6(NewtonDir& delta, const Residuals& rhs);
+  void solve2x2(NewtonDir& delta, const Residuals& rhs);
+  void solve6x6(NewtonDir& delta, const Residuals& rhs);
 
   // ===================================================================================
   // Reconstruct the solution of the full Newton system:
@@ -286,15 +293,21 @@ class Solver {
   bool checkInterrupt();
 
   // ===================================================================================
-  // Check if the current status has various properties.
+  // Check and set status
   // ===================================================================================
-  bool statusIsSolved() const;
-  bool statusIsStopped() const;
-  bool statusIsFailed() const;
   bool statusNeedsRefinement() const;
   bool statusAllowsCrossover() const;
   bool refinementIsOn() const;
   bool crossoverIsOn() const;
+  bool errorOrInterrupt() const;
+
+  void setStatus1(Status status);
+  void setStatus2(Status status);
+  void setStatus(Status status);
+  Status getStatus1() const;
+  Status getStatus2() const;
+  Status getStatus() const;
+  void finaliseStatus();
 
   // ===================================================================================
   // Print to screen

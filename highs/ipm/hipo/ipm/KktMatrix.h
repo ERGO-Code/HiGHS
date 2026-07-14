@@ -44,6 +44,8 @@ struct KktMatrix {
   Int n() const;
   Int nz() const;
   std::string nla() const;
+  bool isNE() const;
+  bool isAS() const;
   const std::vector<Int>& iperm() const;
 };
 

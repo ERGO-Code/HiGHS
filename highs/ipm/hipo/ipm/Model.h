@@ -74,10 +74,8 @@ class Model {
   void computeNorms();
 
  public:
-  // Initialise the model
   Int init(const HighsLp& lp, const HighsHessian& Q);
 
-  // Print information of model
   void print(const Logger& logger) const;
 
   void printDense() const;
@@ -100,7 +98,6 @@ class Model {
   void saveBounds();
   void resetBounds();
 
-  // Check if variable has finite lower/upper bound
   bool hasLb(Int j) const { return std::isfinite(lower_[j]); }
   bool hasUb(Int j) const { return std::isfinite(upper_[j]); }
 
