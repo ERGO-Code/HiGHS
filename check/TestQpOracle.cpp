@@ -10,7 +10,6 @@ const bool dev_run = true;  // false;
 const double inf = kHighsInf;
 const double double_equal_tolerance = 1e-5;
 
-/*
 HighsHessian getHessianDiagonal4();
 HighsHessian getHessianDiagonalWithZero4();
 HighsHessian getHessian4();
@@ -526,12 +525,16 @@ void testUnconConOracleSolve(const HighsHessian& hessian) {
     rhs += solution[iCol] * a_vector[iCol];
   }
   lp.num_row_ = 1;
+  lp.a_matrix_.num_col_ = lp.num_col_;
+  lp.a_matrix_.num_row_ = 1;
   lp.a_matrix_.format_ = MatrixFormat::kRowwise;
   lp.a_matrix_.start_ = {0, lp.num_col_};
-  lp.a_matrix_.index_.assign(lp.num_col_, 0);
+  lp.a_matrix_.index_.clear();
+  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++)
+    lp.a_matrix_.index_.push_back(iCol);
   lp.a_matrix_.value_ = a_vector;
   lp.row_lower_ = {rhs};
-  lp.row_lower_ = {kHighsInf};
+  lp.row_upper_ = {kHighsInf};
   double row_dual = 1;
   hessian.product(solution, lp.col_cost_);
   for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++)
@@ -556,6 +559,7 @@ void testOracleSolve(const HighsModel& model, const double* solution) {
   for (HighsInt k = 0; k < 2; k++) {
     if (k == 0) {
       REQUIRE(h.passModel(model) == HighsStatus::kOk);
+      h.writeModel("qp.mps");
     } else {
       REQUIRE(h.passModel(lp) == HighsStatus::kOk);
       void* oracle_data = &local_hessian;
@@ -586,4 +590,3 @@ solution));
 
   h.resetGlobalScheduler(true);
 }
-*/
