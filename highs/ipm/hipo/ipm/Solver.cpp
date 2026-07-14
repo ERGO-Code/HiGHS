@@ -110,7 +110,7 @@ void Solver::doSolve() {
   reset();
 
   // iterate object needs to be initialised before potentially interrupting
-  it_.reset(new Iterate(model_, regul_));
+  it_.reset(new Iterate(model_, info_, regul_));
   if (!it_) {
     info_.error = kErrorFailedAllocation;
     return;
@@ -126,7 +126,7 @@ void Solver::doSolve() {
   runIpx();
   if (errorOrInterrupt()) return;
 
-  it_->finalResiduals(info_);
+  it_->finalResiduals();
 }
 
 void Solver::runIpm() {
@@ -137,12 +137,14 @@ void Solver::runIpm() {
     if (predictor()) break;
     if (correctors()) break;
     makeStep();
+    printOutput();
   }
 }
 
 bool Solver::initialise() {
   // Prepare ipm for execution.
   // Return true if an error occurred.
+  Clock clock;
 
   start_time_ = control_.elapsed();
 
@@ -171,12 +173,14 @@ bool Solver::initialise() {
 
   if (checkInterrupt()) return true;
 
+  info_.times[kInitialiseTime] += clock.stop();
   return false;
 }
 
 bool Solver::prepareIter() {
   // Prepare next iteration.
   // Return true if Ipm main loop should be stopped
+  Clock clock;
 
   it_->saveBest(options_.feasibility_tol, options_.optimality_tol, iter_);
   if (checkIterate()) return true;
@@ -197,12 +201,14 @@ bool Solver::prepareIter() {
 
   it_->computeScaling();
 
+  info_.times[kPrepareTime] += clock.stop();
   return false;
 }
 
 bool Solver::predictor() {
   // Compute affine scaling direction.
   // Return true if an error occurred.
+  Clock clock;
 
   if (checkInterrupt()) return true;
 
@@ -211,18 +217,21 @@ bool Solver::predictor() {
 
   if (solveNewtonSystem(it_->delta)) return true;
 
+  info_.times[kPredictorTime] += clock.stop();
   return false;
 }
 
 bool Solver::correctors() {
   // Compute multiple centrality correctors.
   // Return true if an error occurred.
+  Clock clock;
 
   if (checkInterrupt()) return true;
 
   sigmaCorrectors();
   if (centralityCorrectors()) return true;
 
+  info_.times[kCorrectorsTime] += clock.stop();
   return false;
 }
 
@@ -357,6 +366,8 @@ bool Solver::solveNewtonSystem(NewtonDir& delta) {
 }
 
 void Solver::solve2x2(NewtonDir& delta, const Residuals& rhs) {
+  Clock clock;
+
   std::vector<double>& theta_inv = it_->scaling;
 
   std::vector<double> res7 = it_->residual7(rhs);
@@ -412,6 +423,8 @@ void Solver::solve2x2(NewtonDir& delta, const Residuals& rhs) {
       return;
     }
   }
+
+  info_.times[kSolve2x2Time] += clock.stop();
 }
 
 void Solver::solve6x6(NewtonDir& delta, const Residuals& rhs) {
@@ -420,7 +433,9 @@ void Solver::solve6x6(NewtonDir& delta, const Residuals& rhs) {
   recoverDirection(delta, rhs);
 }
 
-void Solver::recoverDirection(NewtonDir& delta, const Residuals& rhs) const {
+void Solver::recoverDirection(NewtonDir& delta, const Residuals& rhs) {
+  Clock clock;
+
   const std::vector<double>& xl = it_->xl;
   const std::vector<double>& xu = it_->xu;
   const std::vector<double>& zl = it_->zl;
@@ -432,7 +447,7 @@ void Solver::recoverDirection(NewtonDir& delta, const Residuals& rhs) const {
   const std::vector<double>& res6 = rhs.r6;
 
   for (Int i = 0; i < n_; ++i) {
-    if (model_.hasLb(i) || model_.hasUb(i)) {
+    if (model_.hasLb(i)) {
       delta.xl[i] = delta.x[i] - res2[i];
       delta.zl[i] = (res5[i] - zl[i] * delta.xl[i]) / xl[i];
     } else {
@@ -441,7 +456,7 @@ void Solver::recoverDirection(NewtonDir& delta, const Residuals& rhs) const {
     }
   }
   for (Int i = 0; i < n_; ++i) {
-    if (model_.hasLb(i) || model_.hasUb(i)) {
+    if (model_.hasUb(i)) {
       delta.xu[i] = res3[i] - delta.x[i];
       delta.zu[i] = (res6[i] - zu[i] * delta.xu[i]) / xu[i];
     } else {
@@ -449,6 +464,8 @@ void Solver::recoverDirection(NewtonDir& delta, const Residuals& rhs) const {
       delta.zu[i] = 0.0;
     }
   }
+
+  info_.times[kRecoverTime] += clock.stop();
 }
 
 double Solver::stepToBoundary(const std::vector<double>& x,
@@ -586,12 +603,13 @@ void Solver::stepSizes() {
 }
 
 void Solver::makeStep() {
+  Clock clock;
   stepSizes();
   it_->makeStep(alpha_primal_, alpha_dual_);
   it_->residual1234();
   it_->computeMu();
   it_->indicators();
-  printOutput();
+  info_.times[kStepTime] += clock.stop();
 }
 
 bool Solver::startingPoint() {
@@ -841,6 +859,8 @@ void Solver::sigmaCorrectors() {
 }
 
 void Solver::residualsMcc() {
+  Clock clock;
+
   // compute right-hand side for multiple centrality correctors
   std::vector<double>& xl = it_->xl;
   std::vector<double>& xu = it_->xu;
@@ -914,6 +934,8 @@ void Solver::residualsMcc() {
       res6[i] = 0.0;
     }
   }
+
+  info_.times[kResidualsTime] += clock.stop();
 }
 
 bool Solver::centralityCorrectors() {
@@ -1333,32 +1355,48 @@ void Solver::printSummary() const {
     log_stream << textline("Solves:") << integer(info_.solve_number) << '\n';
 
     if (!options_.timeless_log) {
-      log_stream << textline("Analyse AS time:")
-                 << fix(info_.analyse_AS_time, 0, 2) << '\n';
-      log_stream << textline("Analyse NE time:")
-                 << fix(info_.analyse_NE_time, 0, 2) << '\n';
-      log_stream << textline("Matrix time:") << fix(info_.matrix_time, 0, 2)
-                 << '\n';
-      log_stream << textline("AS structure time:")
-                 << fix(info_.AS_structure_time, 0, 2) << '\n';
-      log_stream << textline("NE structure time:")
-                 << fix(info_.NE_structure_time, 0, 2) << '\n';
-      log_stream << textline("Factorisation time:")
-                 << fix(info_.factor_time, 0, 2) << '\n';
-      log_stream << textline("Solve time:") << fix(info_.solve_time, 0, 2)
-                 << '\n';
-      log_stream << textline("Residual time:") << fix(info_.residual_time, 0, 2)
-                 << '\n';
-      log_stream << textline("Omega time:") << fix(info_.omega_time, 0, 2)
-                 << '\n';
       log_stream << textline("Avg time per factorisation:")
-                 << sci(info_.factor_time / info_.factor_number, 0, 2) << '\n';
+                 << sci(info_.times[kFactoriseTime] / info_.factor_number, 0, 2)
+                 << '\n';
       log_stream << textline("Avg time per solve:")
-                 << sci(info_.solve_time / info_.solve_number, 0, 2) << '\n';
+                 << sci(info_.times[kSolveTime] / info_.solve_number, 0, 2)
+                 << '\n';
     }
   }
-
   logger_.print(log_stream.str().c_str());
+
+  logger_.print("\nTime profile\n");
+
+  logger_.print(" Initialise           %.2f\n", info_.times[kInitialiseTime]);
+  logger_.print(" Prepare iter         %.2f\n", info_.times[kPrepareTime]);
+  logger_.print(" Predictor            %.2f\n", info_.times[kPredictorTime]);
+  logger_.print(" Correctors           %.2f\n", info_.times[kCorrectorsTime]);
+  logger_.print(" Step                 %.2f\n", info_.times[kStepTime]);
+  logger_.print("\n");
+
+  logger_.print(" 2x2 system           %.2f\n", info_.times[kSolve2x2Time]);
+  logger_.print(" Recover direction    %.2f\n", info_.times[kRecoverTime]);
+  logger_.print(" Residuals            %.2f\n", info_.times[kResidualsTime]);
+  logger_.print("\n");
+
+  logger_.print(" Structure NE         %.2f\n",
+                info_.times[kMatrixStructureTime_NE]);
+  logger_.print(" Structure AS         %.2f\n",
+                info_.times[kMatrixStructureTime_AS]);
+  logger_.print(" Matrix values        %.2f\n", info_.times[kMatrixValuesTime]);
+
+  logger_.print(" Analyse NE           %.2f\n", info_.times[kAnalyseTime_NE]);
+  logger_.print(" Analyse AS           %.2f\n", info_.times[kAnalyseTime_AS]);
+
+  logger_.print(" Factorise            %.2f\n", info_.times[kFactoriseTime]);
+
+  logger_.print(" Solve                %.2f\n", info_.times[kSolveTime]);
+  logger_.print(" Residual             %.2f\n",
+                info_.times[kRefinementResTime]);
+  logger_.print(" Omega                %.2f\n",
+                info_.times[kRefinementOmegaTime]);
+  logger_.print(" Insert/split         %.2f\n", info_.times[kInsertSplitTime]);
+  logger_.print("\n");
 }
 
 void Solver::getOriginalDims(Int& num_row, Int& num_col) const {

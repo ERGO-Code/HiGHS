@@ -28,8 +28,11 @@ void NewtonDir::add(const NewtonDir& d) {
   vectorAdd(zu, d.zu);
 }
 
-Iterate::Iterate(Model& model_input, Regularisation& r)
-    : model{model_input}, delta(model.m(), model.n()), regul{r} {
+Iterate::Iterate(Model& model_input, Info& info_input, Regularisation& r)
+    : model{model_input},
+      info{info_input},
+      delta(model.m(), model.n()),
+      regul{r} {
   clearIter();
   clearRes();
   clearIres();
@@ -199,6 +202,8 @@ void Iterate::dualInfeasUnscaled() {
 }
 
 void Iterate::residual1234() {
+  Clock clock;
+
   // res1
   res.r1 = model.b();
   model.A().alphaProductPlusY(-1.0, x, res.r1);
@@ -227,8 +232,12 @@ void Iterate::residual1234() {
     if (model.hasUb(i)) res.r4[i] += zu[i];
   }
   if (model.qp()) model.Q().alphaProductPlusY(model.sense(), x, res.r4);
+
+  info.times[kResidualsTime] += clock.stop();
 }
 void Iterate::residual56(double sigma) {
+  Clock clock;
+
   for (Int i = 0; i < model.n(); ++i) {
     // res5
     if (model.hasLb(i))
@@ -242,6 +251,8 @@ void Iterate::residual56(double sigma) {
     else
       res.r6[i] = 0.0;
   }
+
+  info.times[kResidualsTime] += clock.stop();
 }
 
 std::vector<double> Iterate::residual7(const Residuals& r) const {
@@ -438,7 +449,7 @@ double Iterate::infeasAfterDropping() const {
   return std::max(pinf_max, dinf_max);
 }
 
-void Iterate::finalResiduals(Info& info) const {
+void Iterate::finalResiduals() const {
   // If ipx has been used, the information is already available, otherwise,
   // compute it.
 

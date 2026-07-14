@@ -65,7 +65,7 @@ Int KktMatrix::buildASstructure() {
     ptrAS[n + i + 1] = ptrAS[n + i] + 1;
   }
 
-  info.AS_structure_time = clock.stop();
+  info.times[kMatrixStructureTime_AS] = clock.stop();
 
   return kOk;
 }
@@ -84,7 +84,7 @@ Int KktMatrix::buildASvalues(const std::vector<double>& scaling) {
     if (model.qp()) valAS[ptrAS[i]] -= model.sense() * model.Q().diag(i);
   }
 
-  info.matrix_time += clock.stop();
+  info.times[kMatrixValuesTime] += clock.stop();
 
   return kOk;
 }
@@ -184,7 +184,7 @@ Int KktMatrix::buildNEstructure() {
     }
   }
 
-  info.NE_structure_time = clock.stop();
+  info.times[kMatrixStructureTime_NE] = clock.stop();
   return kOk;
 }
 
@@ -240,7 +240,7 @@ Int KktMatrix::buildNEvalues(const std::vector<double>& scaling) {
     }
   }
 
-  info.matrix_time += clock.stop();
+ info.times[kMatrixValuesTime] += clock.stop();
 
   return kOk;
 }

@@ -31,6 +31,7 @@ struct Residuals {
 
 struct Iterate {
   Model& model;
+  Info& info;
   IpmData data;
   std::vector<double> x, xl, xu, y, zl, zu;
   Residuals res;
@@ -57,7 +58,7 @@ struct Iterate {
   // ===================================================================================
   // Functions to construct, clear and check for nan or inf
   // ===================================================================================
-  Iterate(Model& model_input, Regularisation& r);
+  Iterate(Model& model_input, Info& info_input, Regularisation& r);
 
   // clear existing data
   void clearIter();
@@ -155,7 +156,7 @@ struct Iterate {
                              std::vector<double>& y_cmp,
                              std::vector<double>& z_cmp) const;
 
-  void finalResiduals(Info& info) const;
+  void finalResiduals() const;
 
   // ===================================================================================
   // Compute residual of 6x6 linear system for iterative refinement.

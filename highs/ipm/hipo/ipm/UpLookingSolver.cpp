@@ -202,7 +202,7 @@ Int UpLookingSolver::factorAS(const std::vector<double>& scaling) {
 
   Clock clock;
   kkt_.buildASvalues(scaling);
-  info_.matrix_time += clock.stop();
+  info_.times[kMatrixValuesTime] += clock.stop();
 
   // construct permuted upper triangle
   std::vector<Int> ptrT(ptr_.size()), rowsT(rows_.size());
@@ -212,7 +212,7 @@ Int UpLookingSolver::factorAS(const std::vector<double>& scaling) {
 
   clock.start();
   factor(ptrT, rowsT, valT);
-  info_.factor_time += clock.stop();
+  info_.times[kFactoriseTime] += clock.stop();
   info_.factor_number++;
 
   valid_ = true;
@@ -224,7 +224,7 @@ Int UpLookingSolver::factorNE(const std::vector<double>& scaling) {
 
   Clock clock;
   kkt_.buildNEvalues(scaling);
-  info_.matrix_time += clock.stop();
+  info_.times[kMatrixValuesTime] += clock.stop();
 
   // construct permuted upper triangle
   std::vector<Int> ptrT(ptr_.size()), rowsT(rows_.size());
@@ -234,7 +234,7 @@ Int UpLookingSolver::factorNE(const std::vector<double>& scaling) {
 
   clock.start();
   factor(ptrT, rowsT, valT);
-  info_.factor_time += clock.stop();
+  info_.times[kFactoriseTime] += clock.stop();
   info_.factor_number++;
 
   valid_ = true;
@@ -249,20 +249,24 @@ Int UpLookingSolver::solveAS(const std::vector<double>& rhs_x,
 
   Int n = rhs_x.size();
 
+  Clock clock;
   as_buffer_.resize(rhs_x.size() + rhs_y.size());
   std::copy(rhs_x.begin(), rhs_x.end(), as_buffer_.begin());
   std::copy(rhs_y.begin(), rhs_y.end(), as_buffer_.begin() + n);
+  info_.times[kInsertSplitTime] += clock.stop();
 
-  Clock clock;
+  clock.start();
   permuteVectorInverse(as_buffer_, kkt_.iperm());
   solve(as_buffer_);
   permuteVector(as_buffer_, kkt_.iperm());
-  info_.solve_time += clock.stop();
+  info_.times[kSolveTime] += clock.stop();
   info_.solve_number++;
   data_.back().num_solves++;
 
+  clock.start();
   lhs_x.assign(as_buffer_.begin(), as_buffer_.begin() + n);
   lhs_y.assign(as_buffer_.begin() + n, as_buffer_.end());
+  info_.times[kInsertSplitTime] += clock.stop();
 
   return kOk;
 }
@@ -275,7 +279,7 @@ Int UpLookingSolver::solveNE(const std::vector<double>& rhs,
   permuteVectorInverse(lhs, kkt_.iperm());
   solve(lhs);
   permuteVector(lhs, kkt_.iperm());
-  info_.solve_time += clock.stop();
+  info_.times[kSolveTime] += clock.stop();
   info_.solve_number++;
   data_.back().num_solves++;
 

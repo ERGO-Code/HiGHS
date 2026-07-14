@@ -166,7 +166,7 @@ class Solver {
   //  Deltazl = Xl^{-1} * (res5 - zl * Deltaxl)
   //  Deltazu = Xu^{-1} * (res6 - zu * Deltaxu)
   // ===================================================================================
-  void recoverDirection(NewtonDir& delta, const Residuals& rhs) const;
+  void recoverDirection(NewtonDir& delta, const Residuals& rhs);
 
   // ===================================================================================
   // Functions for iterative refinement on the large 6x6 system
