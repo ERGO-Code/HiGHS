@@ -164,9 +164,7 @@ HighsInt Highs_qpCall(
 
 void* Highs_create(void) { return new Highs(); }
 
-void Highs_destroy(void* highs) {
-  delete (Highs*)highs;
-}
+void Highs_destroy(void* highs) { delete (Highs*)highs; }
 
 const char* Highs_version(void) { return highsVersion(); }
 HighsInt Highs_versionMajor(void) { return highsVersionMajor(); }
