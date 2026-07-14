@@ -64,6 +64,8 @@ const double kFreeVarsCloseRatio = 0.5;
 
 const Int kParallelNEStructTasks = 50;   // 32 < . <= 64
 const Int kParallelNEValuesTasks = 100;  // 64 < . <= 128
+const Int kParallelNEnzPerColThresh = 10;
+const Int kParallelNEnzPerRowThresh = 30;
 
 // static regularisation
 struct Regularisation {
