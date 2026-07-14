@@ -1216,6 +1216,10 @@ bool Solver::switchToMultifrontal() {
     } else {
       LS_->clear();
       it_->bad_iter_ = 0;
+      it_->best_pinf_ = kHighsInf;
+      it_->best_dinf_ = kHighsInf;
+      it_->largest_dx_x_ = 0;
+      it_->largest_dy_y_ = 0;
       switch_successfull = true;
     }
   }
