@@ -1268,7 +1268,8 @@ void Solver::printOutput(bool reset) const {
   if (!reset) {
     logger_.print("%5d ", iter_);
   } else {
-    logger_.print(">%4d ", it_->best_iter);
+    logger_.print(" Resetting to iteration %d\n", it_->best_iter);
+    logger_.print("%5d ", it_->best_iter);
   }
 
   logger_.print("%16.8e %16.8e %10.2e %10.2e %9.2e", it_->pobj, it_->dobj,
