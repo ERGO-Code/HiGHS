@@ -37,7 +37,7 @@ jobs:
 
       - name: Dotnet pack
         working-directory: ${{github.workspace}}/build/dotnet/Highs.Native
-        run: dotnet pack -c Release /p:Version=1.15.0
+        run: dotnet pack -c Release /p:Version=1.15.1
 
       - name: Add local feed
         run: dotnet nuget add source ${{github.workspace}}/nugets
@@ -85,7 +85,7 @@ jobs:
 
       - name: Dotnet pack
         working-directory: ${{github.workspace}}/build/dotnet/Highs.Native
-        run: dotnet pack -c Release /p:Version=1.15.0
+        run: dotnet pack -c Release /p:Version=1.15.1
 
       - name: Add local feed
         run: dotnet nuget add source ${{github.workspace}}/nugets

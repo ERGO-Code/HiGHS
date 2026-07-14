@@ -1,7 +1,7 @@
 #ifndef FACTORHIGHS_TIMING_H
 #define FACTORHIGHS_TIMING_H
 
-#include "FactorHiGHSSettings.h"
+#include "FactorHighsSettings.h"
 
 namespace hipo {
 

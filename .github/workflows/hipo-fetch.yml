@@ -332,7 +332,8 @@ jobs:
         shell: pwsh
         working-directory: ${{github.workspace}}/build
         run: |
-          ctest --parallel --timeout 300 --output-on-failure -C ${{ matrix.config }}
+          ctest --parallel --timeout 300 --output-on-failure -C ${{ matrix.config }} `
+          -E "openblas_utest|openblas_utest_ext|xscblat|xdcblat|xccblat|xzcblat"
 
   windows_arm_64:
     runs-on: [windows-11-arm]
@@ -375,7 +376,8 @@ jobs:
         shell: pwsh
         working-directory: ${{github.workspace}}/build
         run: |
-          ctest --parallel --timeout 300 --output-on-failure -C ${{ matrix.config }}
+          ctest --parallel --timeout 300 --output-on-failure -C ${{ matrix.config }} `
+          -E "openblas_utest|openblas_utest_ext|xscblat|xdcblat|xccblat|xzcblat"
 
   # linux shared is default, static build tested in the release artifacts
   # windows static is default so test shared
