@@ -194,7 +194,7 @@ _ipx_srcs = [
 
 _hipo_srcs = [
     'ipm/hipo/ipm/IpmData.cpp',
-    'ipm/hipo/ipm/FactorHiGHSSolver.cpp',
+    'ipm/hipo/ipm/FactorHighsSolver.cpp',
     'ipm/hipo/ipm/Control.cpp',
     'ipm/hipo/ipm/Iterate.cpp',
     'ipm/hipo/ipm/KktMatrix.cpp',
@@ -209,7 +209,8 @@ _hipo_srcs = [
     'ipm/hipo/factorhighs/DenseFactHybrid.cpp',
     'ipm/hipo/factorhighs/DenseFactKernel.cpp',
     'ipm/hipo/factorhighs/DgemmParallel.cpp',
-    'ipm/hipo/factorhighs/FactorHiGHS.cpp',
+    'ipm/hipo/factorhighs/FactorHighs_c_api.cpp',
+    'ipm/hipo/factorhighs/FactorHighs.cpp',
     'ipm/hipo/factorhighs/Factorise.cpp',
     'ipm/hipo/factorhighs/FormatHandler.cpp',
     'ipm/hipo/factorhighs/HybridHybridFormatHandler.cpp',
