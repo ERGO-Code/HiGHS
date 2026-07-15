@@ -82,6 +82,8 @@ HighsMipSolverData::HighsMipSolverData(HighsMipSolver& mipsolver)
   getDomain().addCutpool(getCutPool());
   getDomain().addConflictPool(getConflictPool());
   cliquetable.setAllowParallel(!mipsolver.submip);
+  worker_lp_iterations_stop.store(std::numeric_limits<int64_t>::max(),
+                                  std::memory_order_relaxed);
 }
 
 std::string HighsMipSolverData::solutionSourceToString(
@@ -798,6 +800,8 @@ void HighsMipSolverData::init() {
   upper_bound = kHighsInf;
   upper_limit = mipsolver.options_mip_->objective_bound;
   optimality_limit = mipsolver.options_mip_->objective_bound;
+  worker_lp_iterations_stop.store(std::numeric_limits<int64_t>::max(),
+                                  std::memory_order_relaxed);
   primal_dual_integral.initialise();
 
   if (mipsolver.options_mip_->mip_report_level == 0)
@@ -828,26 +832,7 @@ void HighsMipSolverData::runMipPresolve(
                              *mipsolver.model_);
 }
 
-void HighsMipSolverData::runSetup() {
-  const HighsLp& model = *mipsolver.model_;
-
-  // Indicate that the first LP has not been solved
-  this->getLp().setSolvedFirstLp(false);
-
-  last_disptime = -kHighsInf;
-  disptime = 0;
-
-  // Transform the reference of the objective limit and lower/upper
-  // bounds from the original model to the current model, undoing the
-  // transformation done before restart so that the offset change due
-  // to presolve is incorporated. Bound changes are transitory, so no
-  // real gap change, and no update to P-D integral is necessary
-  upper_limit -= mipsolver.model_->offset_;
-  optimality_limit -= mipsolver.model_->offset_;
-
-  lower_bound -= mipsolver.model_->offset_;
-  upper_bound -= mipsolver.model_->offset_;
-
+void HighsMipSolverData::checkAddSolution() {
   if (mipsolver.solution_objective_ != kHighsInf) {
     // Assigning new incumbent
     incumbent = postSolveStack.getReducedPrimalSolution(mipsolver.solution_);
@@ -899,6 +884,29 @@ void HighsMipSolverData::runSetup() {
       assert(!interrupt);
     }
   }
+}
+
+void HighsMipSolverData::runSetup() {
+  const HighsLp& model = *mipsolver.model_;
+
+  // Indicate that the first LP has not been solved
+  this->getLp().setSolvedFirstLp(false);
+
+  last_disptime = -kHighsInf;
+  disptime = 0;
+
+  // Transform the reference of the objective limit and lower/upper
+  // bounds from the original model to the current model, undoing the
+  // transformation done before restart so that the offset change due
+  // to presolve is incorporated. Bound changes are transitory, so no
+  // real gap change, and no update to P-D integral is necessary
+  upper_limit -= mipsolver.model_->offset_;
+  optimality_limit -= mipsolver.model_->offset_;
+
+  lower_bound -= mipsolver.model_->offset_;
+  upper_bound -= mipsolver.model_->offset_;
+
+  checkAddSolution();
 
   if (mipsolver.numCol() == 0)
     addIncumbent(std::vector<double>(), 0, kSolutionSourceEmptyMip);

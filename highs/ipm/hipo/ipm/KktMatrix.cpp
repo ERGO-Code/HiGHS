@@ -262,4 +262,20 @@ void KktMatrix::freeNEmemory() {
   freeVector(corr_A);
 }
 
+Int KktMatrix::n() const {
+  if (nla() == kHipoNormalEqString) return ptrNE.size() - 1;
+  if (nla() == kHipoAugmentedString) return ptrAS.size() - 1;
+  return -1;
+}
+Int KktMatrix::nz() const {
+  if (nla() == kHipoNormalEqString) return rowsNE.size();
+  if (nla() == kHipoAugmentedString) return rowsAS.size();
+  return -1;
+}
+std::string KktMatrix::nla() const {
+  if (!ptrNE.empty()) return kHipoNormalEqString;
+  if (!ptrAS.empty()) return kHipoAugmentedString;
+  return "empty";
+}
+
 }  // namespace hipo

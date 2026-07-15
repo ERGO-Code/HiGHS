@@ -61,9 +61,6 @@ HighsInt Highs_lpCall(const HighsInt num_col, const HighsInt num_row,
       if (copy_row_basis) row_basis_status[i] = (HighsInt)basis.row_status[i];
     }
   }
-
-  highs.resetGlobalScheduler(true);
-
   return (HighsInt)status;
 }
 
@@ -106,9 +103,6 @@ HighsInt Highs_mipCall(const HighsInt num_col, const HighsInt num_row,
         row_value[i] = solution.row_value[i];
     }
   }
-
-  highs.resetGlobalScheduler(true);
-
   return (HighsInt)status;
 }
 
@@ -165,16 +159,12 @@ HighsInt Highs_qpCall(
       if (copy_row_basis) row_basis_status[i] = (HighsInt)basis.row_status[i];
     }
   }
-
-  highs.resetGlobalScheduler(true);
-
   return (HighsInt)status;
 }
 
 void* Highs_create(void) { return new Highs(); }
 
 void Highs_destroy(void* highs) {
-  Highs::resetGlobalScheduler(true);
   delete (Highs*)highs;
 }
 
