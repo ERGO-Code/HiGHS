@@ -638,7 +638,7 @@ double HessianOracle::entry(const HighsInt i, const HighsInt j) const {
   return entry;
 }
 
-void HessianOracle::getColumn(const HighsInt col, HighsInt& col_num_entries,
+void HessianOracle::getPackedColumn(const HighsInt col, HighsInt& col_num_entries,
                               HighsInt* col_index, double* col_value) const {
   assert(col >= 0 && col < this->dim_);
   double value = 1.0;
@@ -664,6 +664,22 @@ void HessianOracle::getColumn(const HighsInt col, HighsInt& col_num_entries,
       col_value[col_num_entries] = this->shift_;
       col_num_entries++;
     }
+  }
+}
+
+void HessianOracle::getScatteredColumn(const HighsInt col, HighsInt& col_num_entries,
+                              HighsInt* col_index, double* col_value) const {
+  // Get the packed column values using col_value to avoid allocating
+  // a full vector
+  this->getPackedColumn(col, col_num_entries, col_index, col_value);
+  // Copy col_value into col_packed to avoid corrupting col_value...
+  std::vector<double> col_packed(col_num_entries);
+  for (HighsInt iEl = 0; iEl < col_num_entries; iEl++) 
+    col_packed[iEl] = col_value[iEl];
+  // .. when scattering into col_value
+  for (HighsInt iEl = 0; iEl < col_num_entries; iEl++) {
+    HighsInt iRow = col_index[iEl];
+    col_value[iRow] = col_packed[iEl];
   }
 }
 

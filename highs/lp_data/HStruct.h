@@ -264,8 +264,10 @@ struct HessianOracle {
   void clear();
   double diagonal(const HighsInt i) const;
   double entry(const HighsInt i, const HighsInt j) const;
-  void getColumn(const HighsInt col, HighsInt& col_num_entries,
+  void getPackedColumn(const HighsInt col, HighsInt& col_num_entries,
                  HighsInt* col_index, double* col_value) const;
+  void getScatteredColumn(const HighsInt col, HighsInt& col_num_entries,
+			  HighsInt* col_index, double* col_value) const;
   void product(const std::vector<double>& x_value,
                std::vector<double>& q_x_value) const;
   void product(const double* x_value, double* q_x_value) const;

@@ -40,22 +40,44 @@ struct MatrixBase {
     return rel_v < 1e-5;
   }
 
-  bool vectorRelEqual(const double* v_check, const double* v_true) const {
+  bool doubleVectorRelEqual(const double* v_check, const double* v_true) const {
     for (HighsInt iRow = 0; iRow < this->num_col; iRow++) 
       if (!doubleRelEqual(v_check[iRow], v_true[iRow])) return false;
     return true;
   }
 
+  bool intVectorEqual(const HighsInt* v_check, const HighsInt* v_true) const {
+    for (HighsInt iRow = 0; iRow < this->num_col; iRow++) 
+      if (v_check[iRow] != v_true[iRow]) return false;
+    return true;
+  }
+
   bool packedVectorRelEqual(const HighsInt v_check_num_entries, const HighsInt* v_check_index , const double* v_check_value,
 			    const HighsInt v_true_num_entries, const HighsInt* v_true_index, const double* v_true_value) const {
-    if (v_true_num_entries != v_check_num_entries) return false;
-    std::vector<double> v_true(this->num_col, 0);
+    if (v_check_num_entries != v_true_num_entries) return false;
     std::vector<double> v_check(this->num_col, 0);
+    std::vector<double> v_true(this->num_col, 0);
     for (HighsInt iX = 0; iX < v_true_num_entries; iX++) {
-      v_true[v_true_index[iX]] = v_true_value[iX];
       v_check[v_check_index[iX]] = v_check_value[iX];
+      v_true[v_true_index[iX]] = v_true_value[iX];
     }
-    return vectorRelEqual(v_true.data(), v_check.data());
+    return scatteredVectorRelEqual(v_check_num_entries, v_check_index, v_check.data(),
+				   v_true_num_entries, v_true_index, v_true.data());
+  }
+
+  bool scatteredVectorRelEqual(const HighsInt v_check_num_entries, const HighsInt* v_check_index , const double* v_check_value,
+			    const HighsInt v_true_num_entries, const HighsInt* v_true_index, const double* v_true_value) const {
+    if (v_check_num_entries != v_true_num_entries) return false;
+    std::vector<HighsInt> v_check(this->num_col, -1);
+    std::vector<HighsInt> v_true(this->num_col, -1);
+    for (HighsInt iX = 0; iX < v_true_num_entries; iX++) {
+      HighsInt check_row = v_check_index[iX];
+      if (v_check[check_row] != -1) return false;
+      v_true[v_true_index[iX]] = v_true_index[iX];
+      v_check[check_row] = v_check_index[iX];
+    }
+    return intVectorEqual(v_check_index, v_true_index) &&
+      doubleVectorRelEqual(v_check_value, v_true_value);
   }
 
   void callLog(std::string message, const HighsInt id = 0) const {
@@ -96,11 +118,11 @@ struct MatrixBase {
 	HighsInt oracle_num_entries;
 	std::vector<HighsInt> oracle_index(this->oracle_.dim_);
 	std::vector<double> oracle_value(this->oracle_.dim_);
-	this->oracle_.getColumn(iCol, oracle_num_entries, oracle_index.data(), oracle_value.data());
+	this->oracle_.getPackedColumn(iCol, oracle_num_entries, oracle_index.data(), oracle_value.data());
 	assert(packedVectorRelEqual(oracle_num_entries, oracle_index.data(), oracle_value.data(),
 				    num_entries, index, value));
       } else {
-	this->oracle_.getColumn(iCol, num_entries, index, value);
+	this->oracle_.getPackedColumn(iCol, num_entries, index, value);
       }
       return;
     }
@@ -134,7 +156,7 @@ struct MatrixBase {
 	oracle_.productScatteredX(other.num_nz, other.index.data(),
 				  other.value.data(), dim, nullptr,
 				  oracle_value.data());
-	assert(vectorRelEqual(oracle_value.data(), target.value.data()));
+	assert(doubleVectorRelEqual(oracle_value.data(), target.value.data()));
       } else {
 	oracle_.productScatteredX(other.num_nz, other.index.data(),
 				  other.value.data(), dim, nullptr,
@@ -222,7 +244,7 @@ struct MatrixBase {
 	this->oracle_.scaleAndShift(num_col, other.index.data(),
 				    other.value.data(), target_dim, nullptr,
 				    oracle_value.data());
-	assert(vectorRelEqual(oracle_value.data(), target.value.data()));
+	assert(doubleVectorRelEqual(oracle_value.data(), target.value.data()));
       } else {	
 	this->oracle_.call_(other.dim, other.index.data(), other.value.data(),
 			    target_dim, nullptr, target.value.data(),
@@ -281,17 +303,24 @@ struct MatrixBase {
       target.value[col - num_col] = 1.0;
       target.num_nz = 1;
     } else {
-      if (this->isOracle()) {
-        double x_value = 1.0;
-        target.num_nz = -1;
-        this->oracle_.productPackedX(HighsInt{1}, &col, &x_value, target.num_nz,
-                                     target.index.data(), target.value.data());
-      } else {
+      if (this->num_col > 0) {
         for (HighsInt i = 0; i < start[col + 1] - start[col]; i++) {
           target.index[i] = index[start[col] + i];
           target.value[target.index[i]] = value[start[col] + i];
         }
         target.num_nz = start[col + 1] - start[col];
+      }
+      if (this->isOracle()) {
+	callLog("MatrixBase::extractcol");
+	if (testOracle()) {
+	  HighsInt oracle_num_entries;
+	  std::vector<HighsInt> oracle_index(this->oracle_.dim_);
+	  std::vector<double> oracle_value(this->oracle_.dim_);
+	  this->oracle_.getScatteredColumn(col, oracle_num_entries, oracle_index.data(), oracle_value.data());
+	  assert(scatteredVectorRelEqual(oracle_num_entries, oracle_index.data(), oracle_value.data(),
+					 target.num_nz, target.index.data(), target.value.data()));
+	}
+        this->oracle_.getScatteredColumn(col, target.num_nz, target.index.data(), target.value.data());
       }
     }
 
