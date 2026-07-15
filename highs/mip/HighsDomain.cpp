@@ -3032,8 +3032,7 @@ bool HighsDomain::ConflictSet::resolveLinearGeq(HighsCDouble M, double Mupper,
           locdomchg.domchg.boundval = relaxLb;
 
           if (relaxLb - glb <= localdom.epsilon() &&
-              static_cast<double>(M - reasonDomchg.delta - Mupper) <=
-                  localdom.feastol()) {
+              M - reasonDomchg.delta - Mupper <= localdom.feastol()) {
             // domain change can be fully removed from conflict
             HighsInt last =
                 static_cast<HighsInt>(resolvedDomainChanges.size()) - 1;
@@ -3066,8 +3065,7 @@ bool HighsDomain::ConflictSet::resolveLinearGeq(HighsCDouble M, double Mupper,
           locdomchg.domchg.boundval = relaxUb;
 
           if (relaxUb - gub >= -localdom.epsilon() &&
-              static_cast<double>(M - reasonDomchg.delta - Mupper) <=
-                  localdom.feastol()) {
+              M - reasonDomchg.delta - Mupper <= localdom.feastol()) {
             // domain change can be fully removed from conflict
             HighsInt last =
                 static_cast<HighsInt>(resolvedDomainChanges.size()) - 1;
@@ -3149,8 +3147,7 @@ bool HighsDomain::ConflictSet::resolveLinearLeq(HighsCDouble M, double Mlower,
           locdomchg.domchg.boundval = relaxLb;
 
           if (relaxLb - glb <= localdom.epsilon() &&
-              static_cast<double>(M - reasonDomchg.delta - Mlower) >=
-                  -localdom.feastol()) {
+              M - reasonDomchg.delta - Mlower >= -localdom.feastol()) {
             // domain change can be fully removed from conflict
             HighsInt last =
                 static_cast<HighsInt>(resolvedDomainChanges.size()) - 1;
@@ -3181,8 +3178,7 @@ bool HighsDomain::ConflictSet::resolveLinearLeq(HighsCDouble M, double Mlower,
           locdomchg.domchg.boundval = relaxUb;
 
           if (relaxUb - gub >= -localdom.epsilon() &&
-              static_cast<double>(M - reasonDomchg.delta - Mlower) >=
-                  -localdom.feastol()) {
+              M - reasonDomchg.delta - Mlower >= -localdom.feastol()) {
             // domain change can be fully removed from conflict
             HighsInt last =
                 static_cast<HighsInt>(resolvedDomainChanges.size()) - 1;
