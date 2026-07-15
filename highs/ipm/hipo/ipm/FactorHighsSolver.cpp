@@ -391,7 +391,7 @@ Int FactorHighsSolver::chooseOrdering(const std::vector<Int>& rows,
     if (orderings_to_try[i] == kHipoMetisString) {
       Int status =
           FH_.reorderMetis(n, rows.size(), full_rows.data(), full_ptr.data(),
-                           permutations[i].data(), true);
+                           permutations[i].data(), true, options_.random_seed);
       if (status) failure[i] = true;
 
     } else if (orderings_to_try[i] == kHipoAmdString) {

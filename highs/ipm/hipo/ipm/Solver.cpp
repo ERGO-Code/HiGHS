@@ -54,6 +54,7 @@ void Solver::setOptions(const HighsOptions& highs_options) {
   options_.ordering = highs_options.hipo_ordering;
   options_.factor = highs_options.hipo_factor;
   options_.block_size = highs_options.hipo_block_size;
+  options_.random_seed = highs_options.random_seed + 42;
 
   options_orig_ = options_;
   Hoptions_ = highs_options;

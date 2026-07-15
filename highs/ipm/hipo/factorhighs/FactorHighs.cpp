@@ -112,7 +112,7 @@ static void getFull(Int n, Int nz, const Int* rows, const Int* ptr,
 }
 
 Int FHsolver::reorderMetis(Int n, Int nz, const Int* rows, const Int* ptr,
-                           Int* perm, bool full_matrix_0) const {
+                           Int* perm, bool full_matrix_0, Int seed) const {
   const Int *full_ptr, *full_rows;
   std::vector<Int> full_ptr_v, full_rows_v;
   if (full_matrix_0) {
@@ -126,7 +126,7 @@ Int FHsolver::reorderMetis(Int n, Int nz, const Int* rows, const Int* ptr,
 
   idx_t options[METIS_NOPTIONS];
   HighsExtras::metis::set_default_options(options);
-  options[METIS_OPTION_SEED] = kMetisSeed;
+  options[METIS_OPTION_SEED] = seed;
 
   options[METIS_OPTION_DBGLVL] = 0;
 
