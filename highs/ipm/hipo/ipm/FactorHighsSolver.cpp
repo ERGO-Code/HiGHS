@@ -571,7 +571,10 @@ void FactorHighsSolver::setParallel() {
       assert(1 == 0);
 
   } else if (options_.parallel == kHighsChooseString) {
-    if (usingAppleBlas()) {
+    if (highs::parallel::num_threads() == 1) {
+      parallel_node = false;
+      parallel_tree = false;
+    } else if (usingAppleBlas()) {
       // Blas on Apple do not work well with parallel_node, but parallel_tree
       // seems to always be beneficial.
       parallel_node = false;
