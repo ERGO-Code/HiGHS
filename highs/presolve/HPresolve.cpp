@@ -5171,7 +5171,7 @@ HPresolve::Result HPresolve::singletonColStuffing(
         break;
       // compute delta (bound difference)
       HighsCDouble delta =
-          t.multiplier * static_cast<HighsCDouble>(t.val) *
+          t.multiplier * t.val *
           (static_cast<HighsCDouble>(model->col_upper_[t.col]) -
            static_cast<HighsCDouble>(model->col_lower_[t.col]));
       // check if variable can be fixed
