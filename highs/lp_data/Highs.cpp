@@ -4206,7 +4206,7 @@ HighsStatus Highs::callSolveLp(HighsLp& lp, const std::string& message) {
   return return_status;
 }
 
-HighsHessianFunctionType oracleCallSquareHessian =
+HighsHessianFunctionType testOracleCallSquareHessian =
     [](const HighsInt x_num_entries, const HighsInt* x_index,
        const double* x_value, HighsInt& q_x_num_entries, HighsInt* q_x_index,
        double* q_x_value, void* hessian_p) {
@@ -4247,37 +4247,50 @@ HighsHessianFunctionType oracleCallSquareHessian =
           addScaledQcol(x_index[iX], x_value[iX]);
         return;
       } else if (x_num_entries == 1) {
-        assert(q_x_index != nullptr);
-        if (q_x_num_entries < 0) {
-          // x is sparse with one entry in row x_index, and all Qx index
-          // required
-          q_x_num_entries = 0;
-          // Get the entries below the diagonal in column iCol
-          HighsInt iCol = x_index[0];
-          for (HighsInt iEl = hessian.start_[iCol];
-               iEl < hessian.start_[iCol + 1]; iEl++) {
-            q_x_index[q_x_num_entries] = hessian.index_[iEl];
-            q_x_value[q_x_num_entries] = hessian.value_[iEl] * x_value[0];
-            q_x_num_entries++;
-          }
-          return;
-        } else if (q_x_num_entries == 1) {
-          // x is sparse with one entry in row x_index, and one Qx index
-          // required
-          HighsInt iCol = x_index[0];
-          HighsInt iRow = q_x_index[0];
-          // Zero Qx value in case the Hessian entry requested is zero
-          q_x_value[0] = 0;
-          for (HighsInt iEl = hessian.start_[iCol];
-               iEl < hessian.start_[iCol + 1]; iEl++) {
-            if (hessian.index_[iEl] == iRow) {
-              q_x_value[0] = hessian.value_[iEl] * x_value[0];
-              return;
-            }
-          }
-          // Hessian entry is zero
-          return;
-        }
+        if (q_x_index == nullptr) {
+	    // x is sparse with one entry in row x_index, and no Qx
+	    // index required
+	    q_x_num_entries = 0;
+	    // Get the entries in column iCol
+	    HighsInt iCol = x_index[0];
+	    for (HighsInt iEl = hessian.start_[iCol];
+		 iEl < hessian.start_[iCol + 1]; iEl++) {
+	      q_x_value[hessian.index_[iEl]] = hessian.value_[iEl] * x_value[0];
+	      q_x_num_entries++;
+	    }
+	    return;
+	} else {
+	  if (q_x_num_entries < 0) {
+	    // x is sparse with one entry in row x_index, and all Qx index
+	    // required
+	    q_x_num_entries = 0;
+	    // Get the entries in column iCol
+	    HighsInt iCol = x_index[0];
+	    for (HighsInt iEl = hessian.start_[iCol];
+		 iEl < hessian.start_[iCol + 1]; iEl++) {
+	      q_x_index[q_x_num_entries] = hessian.index_[iEl];
+	      q_x_value[q_x_num_entries] = hessian.value_[iEl] * x_value[0];
+	      q_x_num_entries++;
+	    }
+	    return;
+	  } else if (q_x_num_entries == 1) {
+	    // x is sparse with one entry in row x_index, and one Qx index
+	    // required
+	    HighsInt iCol = x_index[0];
+	    HighsInt iRow = q_x_index[0];
+	    // Zero Qx value in case the Hessian entry requested is zero
+	    q_x_value[0] = 0;
+	    for (HighsInt iEl = hessian.start_[iCol];
+		 iEl < hessian.start_[iCol + 1]; iEl++) {
+	      if (hessian.index_[iEl] == iRow) {
+		q_x_value[0] = hessian.value_[iEl] * x_value[0];
+		return;
+	      }
+	    }
+	    // Hessian entry is zero
+	    return;
+	  }
+	}
       }
       // Case not coded, since it may be unnecessary
       assert(1234 == 5678);
@@ -4356,7 +4369,7 @@ HighsStatus Highs::callSolveQp() {
         // Test the Hessian oracle by using the incumbent Hessian as data for it
         oracle_hessian = hessian.toSquare();
         instance.Q.mat.oracle_.dim_ = hessian.dim_;
-        instance.Q.mat.oracle_.call_ = oracleCallSquareHessian;
+        instance.Q.mat.oracle_.call_ = testOracleCallSquareHessian;
         instance.Q.mat.oracle_.data_ = &oracle_hessian;
       } else {
         assert(instance.Q.mat.oracle_.call_ == nullptr);

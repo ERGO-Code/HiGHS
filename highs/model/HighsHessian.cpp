@@ -672,11 +672,13 @@ void HessianOracle::getScatteredColumn(const HighsInt col, HighsInt& col_num_ent
   // Get the packed column values using col_value to avoid allocating
   // a full vector
   this->getPackedColumn(col, col_num_entries, col_index, col_value);
-  // Copy col_value into col_packed to avoid corrupting col_value...
+  // Copy col_value into col_packed to and zero col_value
   std::vector<double> col_packed(col_num_entries);
-  for (HighsInt iEl = 0; iEl < col_num_entries; iEl++) 
+  for (HighsInt iEl = 0; iEl < col_num_entries; iEl++) {
     col_packed[iEl] = col_value[iEl];
-  // .. when scattering into col_value
+    col_value[iEl] = 0;
+  }
+  // Now scatter into col_value
   for (HighsInt iEl = 0; iEl < col_num_entries; iEl++) {
     HighsInt iRow = col_index[iEl];
     col_value[iRow] = col_packed[iEl];

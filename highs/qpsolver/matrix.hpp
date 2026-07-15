@@ -238,20 +238,12 @@ struct MatrixBase {
       if (testOracle()) {
 	HighsInt dim = oracle_.dim_;
 	std::vector<double> oracle_value(dim);
-	this->oracle_.call_(other.dim, other.index.data(), other.value.data(),
-			    target_dim, nullptr, oracle_value.data(),
-			    this->oracle_.data_);
-	this->oracle_.scaleAndShift(num_col, other.index.data(),
-				    other.value.data(), target_dim, nullptr,
-				    oracle_value.data());
+	this->oracle_.productScatteredX(other.num_nz, other.index.data(), other.value.data(),
+			    target_dim, nullptr, oracle_value.data());
 	assert(doubleVectorRelEqual(oracle_value.data(), target.value.data()));
       } else {	
-	this->oracle_.call_(other.dim, other.index.data(), other.value.data(),
-			    target_dim, nullptr, target.value.data(),
-			    this->oracle_.data_);
-	this->oracle_.scaleAndShift(num_col, other.index.data(),
-				    other.value.data(), target_dim, nullptr,
-				    target.value.data());
+	this->oracle_.productScatteredX(other.num_nz, other.index.data(), other.value.data(),
+			    target_dim, nullptr, target.value.data());
       }
     }
     target.resparsify();
