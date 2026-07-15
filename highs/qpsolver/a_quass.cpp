@@ -145,11 +145,8 @@ QpAsmStatus solveqp(Instance& instance, Settings& settings, Statistics& stats,
 
   // perturb instance, store perturbance information
 
-  if (instance.Q.mat.isOracle()) {
-    // Save the regularization value to apply in oracle operations
-    instance.Q.mat.oracle_.shift_ = settings.hessian_regularization_value;
-  } else {
-    // Regularize explicit Hessian
+  // Regularize any explicit Hessian
+  if (instance.Q.mat.num_col > 0) {
     for (HighsInt i = 0; i < instance.num_var; i++) {
       for (HighsInt index = instance.Q.mat.start[i];
            index < instance.Q.mat.start[i + 1]; index++) {
@@ -158,6 +155,10 @@ QpAsmStatus solveqp(Instance& instance, Settings& settings, Statistics& stats,
         }
       }
     }
+  }
+  if (instance.Q.mat.isOracle()) {
+    // Save the regularization value to apply in oracle operations
+    instance.Q.mat.oracle_.shift_ = settings.hessian_regularization_value;
   }
 
   // compute initial feasible point

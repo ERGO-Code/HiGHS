@@ -33,24 +33,72 @@ struct MatrixBase {
 
   bool isOracle() const { return oracle_.call_ != nullptr; }
 
+  bool testOracle() const { return this->num_col > 0 && this->isOracle(); }
+
+  bool doubleRelEqual(const double v_check, const double v_true) const {
+    double rel_v = std::fabs(v_check-v_true) / (1.0 + std::fabs(v_true));
+    return rel_v < 1e-5;
+  }
+
+  bool packedVectorRelEqual(const HighsInt v_check_num_entries, const HighsInt* v_check_index , const double* v_check_value,
+			    const HighsInt v_true_num_entries, const HighsInt* v_true_index, const double* v_true_value) const {
+    if (v_true_num_entries != v_check_num_entries) return false;
+    std::vector<double> v_true(this->num_col, 0);
+    std::vector<double> v_check(this->num_col, 0);
+    for (HighsInt iX = 0; iX < v_true_num_entries; iX++) {
+      v_true[v_true_index[iX]] = v_true_value[iX];
+      v_check[v_check_index[iX]] = v_check_value[iX];
+    }
+    for (HighsInt iRow = 0; iRow < this->num_col; iRow++) 
+      if (!doubleRelEqual(v_check[iRow], v_true[iRow])) return false;
+    return true;
+  }
+
+  void callLog(std::string message, const HighsInt id = 0) const {
+    printf("%s: %d\n", message.c_str(), int(id));
+  }
+
   double diagonal(const HighsInt iCol) const {
-    if (this->isOracle()) return this->oracle_.diagonal(iCol);
-    for (HighsInt iEl = this->start[iCol]; iEl < this->start[iCol + 1]; iEl++)
-      if (this->index[iEl] == iCol) return this->value[iEl];
-    return 0;
+    double diagonal_value = 0;
+    if (this->num_col > 0) {
+      for (HighsInt iEl = this->start[iCol]; iEl < this->start[iCol + 1]; iEl++)
+	if (this->index[iEl] == iCol) {
+	  diagonal_value = this->value[iEl];
+	  break;
+	}
+    }
+    if (this->isOracle()) {
+      callLog("MatrixBase::diagonal", iCol);
+      double oracle_diagonal_value = this->oracle_.diagonal(iCol);
+      if (testOracle()) assert(doubleRelEqual(oracle_diagonal_value, diagonal_value));
+      return oracle_diagonal_value;
+    }
+    return diagonal_value;
   }
 
   void getColumn(const HighsInt iCol, HighsInt& num_entries, HighsInt* index,
                  double* value) {
-    if (this->isOracle()) {
-      this->oracle_.getColumn(iCol, num_entries, index, value);
-      return;
+    if (this->num_col > 0) {
+      num_entries = 0;
+      for (HighsInt iEl = this->start[iCol]; iEl < this->start[iCol + 1]; iEl++) {
+	index[num_entries] = this->index[iEl];
+	value[num_entries] = this->value[iEl];
+	num_entries++;
+      }
     }
-    num_entries = 0;
-    for (HighsInt iEl = this->start[iCol]; iEl < this->start[iCol + 1]; iEl++) {
-      index[num_entries] = this->index[iEl];
-      value[num_entries] = this->value[iEl];
-      num_entries++;
+    if (this->isOracle()) {
+      callLog("MatrixBase::getColumn", iCol);
+      if (testOracle()) {
+	HighsInt oracle_num_entries;
+	std::vector<HighsInt> oracle_index(this->oracle_.dim_);
+	std::vector<double> oracle_value(this->oracle_.dim_);
+	this->oracle_.getColumn(iCol, oracle_num_entries, oracle_index.data(), oracle_value.data());
+	assert(packedVectorRelEqual(oracle_num_entries, oracle_index.data(), oracle_value.data(),
+				    num_entries, index, value));
+      } else {
+	this->oracle_.getColumn(iCol, num_entries, index, value);
+      }
+      return;
     }
   }
 

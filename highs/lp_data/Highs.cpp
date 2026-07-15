@@ -4360,11 +4360,13 @@ HighsStatus Highs::callSolveQp() {
         instance.Q.mat.oracle_.data_ = &oracle_hessian;
       } else {
         assert(instance.Q.mat.oracle_.call_ == nullptr);
-        instance.Q.mat.num_col = lp.num_col_;
-        instance.Q.mat.num_row = lp.num_col_;
-        triangularToSquareHessian(hessian, instance.Q.mat.start,
-                                  instance.Q.mat.index, instance.Q.mat.value);
       }
+      // Generate the explicit Hessian data to use if not testing the
+      // oracle, and to cross-check the oracle results
+      instance.Q.mat.num_col = lp.num_col_;
+      instance.Q.mat.num_row = lp.num_col_;
+      triangularToSquareHessian(hessian, instance.Q.mat.start,
+				instance.Q.mat.index, instance.Q.mat.value);
     } else {
       assert(hessian.isOracle());
       instance.Q.mat.oracle_ = hessian.oracle_;
