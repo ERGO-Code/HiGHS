@@ -1295,13 +1295,7 @@ void Solver::printOutput(bool reset) const {
 void Solver::printInfo() const {
   std::stringstream log_stream;
   log_stream << "\nRunning HiPO\n";
-
-  if (options_.parallel == kHighsOffString)
-    log_stream << textline("Threads:") << 1 << '\n';
-  else
-    log_stream << textline("Threads:") << highs::parallel::num_threads()
-               << '\n';
-
+  log_stream << textline("Threads:") << highs::parallel::num_threads() << '\n';
   logger_.print(log_stream.str().c_str());
 
   model_.print(logger_);
