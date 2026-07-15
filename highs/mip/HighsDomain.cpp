@@ -1071,8 +1071,7 @@ bool HighsDomain::ObjectivePropagation::shouldBePropagated() const {
   if (domain->infeasible_) return false;
   double upperLimit = domain->mipsolver->mipdata_->upper_limit;
   if (upperLimit == kHighsInf) return false;
-  if (upperLimit - static_cast<double>(objectiveLower) > capacityThreshold)
-    return false;
+  if (upperLimit - objectiveLower > capacityThreshold) return false;
 
   return true;
 }
@@ -3023,14 +3022,14 @@ bool HighsDomain::ConflictSet::resolveLinearGeq(HighsCDouble M, double Mupper,
         if (locdomchg.domchg.boundtype == HighsBoundType::kLower) {
           double lb = locdomchg.domchg.boundval;
           double glb = reasonDomchg.baseBound;
-          HighsCDouble relaxLb =
-              ((Mupper - (M - reasonDomchg.delta)) / vals[i]) + glb;
+          double relaxLb = static_cast<double>(
+              ((Mupper - (M - reasonDomchg.delta)) / vals[i]) + glb);
           if (!localdom.mipsolver->isColContinuous(col))
-            relaxLb = ceil(relaxLb);
+            relaxLb = std::ceil(relaxLb);
 
           if (relaxLb - lb >= -localdom.feastol()) continue;
 
-          locdomchg.domchg.boundval = static_cast<double>(relaxLb);
+          locdomchg.domchg.boundval = relaxLb;
 
           if (relaxLb - glb <= localdom.epsilon() &&
               static_cast<double>(M - reasonDomchg.delta - Mupper) <=
@@ -3057,14 +3056,14 @@ bool HighsDomain::ConflictSet::resolveLinearGeq(HighsCDouble M, double Mupper,
         } else {
           double ub = locdomchg.domchg.boundval;
           double gub = reasonDomchg.baseBound;
-          HighsCDouble relaxUb =
-              ((Mupper - (M - reasonDomchg.delta)) / vals[i]) + gub;
+          double relaxUb = static_cast<double>(
+              ((Mupper - (M - reasonDomchg.delta)) / vals[i]) + gub);
           if (!localdom.mipsolver->isColContinuous(col))
-            relaxUb = floor(relaxUb);
+            relaxUb = std::floor(relaxUb);
 
           if (relaxUb - ub <= localdom.feastol()) continue;
 
-          locdomchg.domchg.boundval = static_cast<double>(relaxUb);
+          locdomchg.domchg.boundval = relaxUb;
 
           if (relaxUb - gub >= -localdom.epsilon() &&
               static_cast<double>(M - reasonDomchg.delta - Mupper) <=
@@ -3140,14 +3139,14 @@ bool HighsDomain::ConflictSet::resolveLinearLeq(HighsCDouble M, double Mlower,
         if (locdomchg.domchg.boundtype == HighsBoundType::kLower) {
           double lb = locdomchg.domchg.boundval;
           double glb = reasonDomchg.baseBound;
-          HighsCDouble relaxLb =
-              ((Mlower - (M - reasonDomchg.delta)) / vals[i]) + glb;
+          double relaxLb = static_cast<double>(
+              ((Mlower - (M - reasonDomchg.delta)) / vals[i]) + glb);
           if (!localdom.mipsolver->isColContinuous(col))
-            relaxLb = ceil(relaxLb);
+            relaxLb = std::ceil(relaxLb);
 
           if (relaxLb - lb >= -localdom.feastol()) continue;
 
-          locdomchg.domchg.boundval = static_cast<double>(relaxLb);
+          locdomchg.domchg.boundval = relaxLb;
 
           if (relaxLb - glb <= localdom.epsilon() &&
               static_cast<double>(M - reasonDomchg.delta - Mlower) >=
@@ -3172,14 +3171,14 @@ bool HighsDomain::ConflictSet::resolveLinearLeq(HighsCDouble M, double Mlower,
         } else {
           double ub = locdomchg.domchg.boundval;
           double gub = reasonDomchg.baseBound;
-          HighsCDouble relaxUb =
-              ((Mlower - (M - reasonDomchg.delta)) / vals[i]) + gub;
+          double relaxUb = static_cast<double>(
+              ((Mlower - (M - reasonDomchg.delta)) / vals[i]) + gub);
           if (!localdom.mipsolver->isColContinuous(col))
-            relaxUb = floor(relaxUb);
+            relaxUb = std::floor(relaxUb);
 
           if (relaxUb - ub <= localdom.feastol()) continue;
 
-          locdomchg.domchg.boundval = static_cast<double>(relaxUb);
+          locdomchg.domchg.boundval = relaxUb;
 
           if (relaxUb - gub >= -localdom.epsilon() &&
               static_cast<double>(M - reasonDomchg.delta - Mlower) >=
