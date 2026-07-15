@@ -40,6 +40,12 @@ struct MatrixBase {
     return rel_v < 1e-5;
   }
 
+  bool vectorRelEqual(const double* v_check, const double* v_true) const {
+    for (HighsInt iRow = 0; iRow < this->num_col; iRow++) 
+      if (!doubleRelEqual(v_check[iRow], v_true[iRow])) return false;
+    return true;
+  }
+
   bool packedVectorRelEqual(const HighsInt v_check_num_entries, const HighsInt* v_check_index , const double* v_check_value,
 			    const HighsInt v_true_num_entries, const HighsInt* v_true_index, const double* v_true_value) const {
     if (v_true_num_entries != v_check_num_entries) return false;
@@ -49,9 +55,7 @@ struct MatrixBase {
       v_true[v_true_index[iX]] = v_true_value[iX];
       v_check[v_check_index[iX]] = v_check_value[iX];
     }
-    for (HighsInt iRow = 0; iRow < this->num_col; iRow++) 
-      if (!doubleRelEqual(v_check[iRow], v_true[iRow])) return false;
-    return true;
+    return vectorRelEqual(v_true.data(), v_check.data());
   }
 
   void callLog(std::string message, const HighsInt id = 0) const {
@@ -108,23 +112,33 @@ struct MatrixBase {
 
   QpVector& mat_vec_seq(const QpVector& other, QpVector& target) const {
     target.reset();
-    if (isOracle()) {
-    // productScatteredX packs values in other, which yields nullptr
-    // if other.num_nz = 0, and then assert in the oracle, so just
-    // return target - which is correct since it's zero
-    if (other.num_nz == 0) return target;
-      // Meed local copy of dim_ since mat_vec_seq is const
-      HighsInt dim = oracle_.dim_;
-      oracle_.productScatteredX(other.num_nz, other.index.data(),
-                                other.value.data(), dim, nullptr,
-                                target.value.data());
-    } else {
+    if (this->num_col > 0) { 
       for (HighsInt i = 0; i < other.num_nz; i++) {
         HighsInt col = other.index[i];
         for (HighsInt idx = start[col]; idx < start[col + 1]; idx++) {
           HighsInt row = index[idx];
           target.value[row] += value[idx] * other.value[col];
         }
+      }
+    }
+    if (isOracle()) {
+      callLog("MatrixBase::mat_vec_seq");
+      // productScatteredX packs values in other, which yields nullptr
+      // if other.num_nz = 0, and then assert in the oracle, so just
+      // return target - which is correct since it's zero
+      if (other.num_nz == 0) return target;
+      // Need local copy of dim_ since mat_vec_seq is const
+      HighsInt dim = oracle_.dim_;
+      if (testOracle()) {
+	std::vector<double> oracle_value(dim);
+	oracle_.productScatteredX(other.num_nz, other.index.data(),
+				  other.value.data(), dim, nullptr,
+				  oracle_value.data());
+	assert(vectorRelEqual(oracle_value.data(), target.value.data()));
+      } else {
+	oracle_.productScatteredX(other.num_nz, other.index.data(),
+				  other.value.data(), dim, nullptr,
+				  target.value.data());
       }
     }
     target.resparsify();
@@ -187,21 +201,35 @@ struct MatrixBase {
 
   QpVector& vec_mat_1(const QpVector& other, QpVector& target) const {
     target.reset();
-    if (this->isOracle()) {
-      HighsInt target_dim = other.dim;
-      this->oracle_.call_(other.dim, other.index.data(), other.value.data(),
-                          target_dim, nullptr, target.value.data(),
-                          this->oracle_.data_);
-      this->oracle_.scaleAndShift(num_col, other.index.data(),
-                                  other.value.data(), target_dim, nullptr,
-                                  target.value.data());
-    } else {
+    if (num_col > 0) {
       for (HighsInt col = 0; col < num_col; col++) {
         double dot = 0.0;
         for (HighsInt j = start[col]; j < start[col + 1]; j++) {
           dot += other.value[index[j]] * value[j];
         }
         target.value[col] = dot;
+      }
+    }
+    if (this->isOracle()) {
+      callLog("MatrixBase::vec_mat_1");
+      HighsInt target_dim = other.dim;
+      if (testOracle()) {
+	HighsInt dim = oracle_.dim_;
+	std::vector<double> oracle_value(dim);
+	this->oracle_.call_(other.dim, other.index.data(), other.value.data(),
+			    target_dim, nullptr, oracle_value.data(),
+			    this->oracle_.data_);
+	this->oracle_.scaleAndShift(num_col, other.index.data(),
+				    other.value.data(), target_dim, nullptr,
+				    oracle_value.data());
+	assert(vectorRelEqual(oracle_value.data(), target.value.data()));
+      } else {	
+	this->oracle_.call_(other.dim, other.index.data(), other.value.data(),
+			    target_dim, nullptr, target.value.data(),
+			    this->oracle_.data_);
+	this->oracle_.scaleAndShift(num_col, other.index.data(),
+				    other.value.data(), target_dim, nullptr,
+				    target.value.data());
       }
     }
     target.resparsify();
