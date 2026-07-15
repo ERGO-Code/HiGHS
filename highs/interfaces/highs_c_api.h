@@ -281,7 +281,8 @@ HighsInt Highs_qpCall(
 /**
  * Create a Highs instance and return the reference.
  *
- * Call `Highs_destroy` on the returned reference to clean up allocated memory.
+ * Call `Highs_destroy` on the returned reference to clean up memory
+ * allocated for this instance.
  *
  * @returns A pointer to the Highs instance.
  */
@@ -289,7 +290,13 @@ void* Highs_create(void);
 
 /**
  * Destroy the model `highs` created by `Highs_create` and free all
- * corresponding memory. Future calls using `highs` are not allowed.
+ * memory allocated for this instance. Future calls using `highs` are
+ * not allowed.
+ *
+ * Since the global scheduler's memory is shared by concurrent Highs
+ * instances, it cannot be freed by `Highs_destroy`. Hence, to free
+ * all memory used by HiGHS, `Highs_resetGlobalScheduler` must also be
+ * called.
  *
  * To empty a model without invalidating `highs`, see `Highs_clearModel`.
  *
@@ -2490,6 +2497,12 @@ HighsInt Highs_getIis(void* highs, HighsInt* iis_num_col, HighsInt* iis_num_row,
                       HighsInt* col_status, HighsInt* row_status);
 /**
  * Releases all resources held by the global scheduler instance.
+ *
+ * Although the scheduler instance is created internally by a Highs
+ * instance, any subsequent Highs instances share the
+ * scheduler. Hence, calling `Highs_destroy` does not free the global
+ * scheduler's memory, so `Highs_resetGlobalScheduler` must also be
+ * called.
  *
  * It is not thread-safe to call this function while calling `Highs_run` or one
  * of the `Highs_XXXcall` methods on any other Highs instance in any thread.
