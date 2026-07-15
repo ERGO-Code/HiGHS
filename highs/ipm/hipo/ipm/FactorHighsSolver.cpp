@@ -83,6 +83,7 @@ Int FactorHighsSolver::analyseNE(Symbolic& S) {
 
 Int FactorHighsSolver::factorAS(const std::vector<double>& scaling) {
   assert(!this->valid_);
+  assert(kkt_.isAS());
 
   kkt_.buildASvalues(scaling);
 
@@ -102,6 +103,7 @@ Int FactorHighsSolver::factorAS(const std::vector<double>& scaling) {
 
 Int FactorHighsSolver::factorNE(const std::vector<double>& scaling) {
   assert(!this->valid_);
+  assert(kkt_.isNE());
 
   kkt_.buildNEvalues(scaling);
 
@@ -128,6 +130,7 @@ Int FactorHighsSolver::solveAS(const std::vector<double>& rhs_x,
                                std::vector<double>& lhs_x,
                                std::vector<double>& lhs_y) {
   assert(this->valid_);
+  assert(kkt_.isAS());
 
   Int n = rhs_x.size();
 
@@ -152,6 +155,7 @@ Int FactorHighsSolver::solveAS(const std::vector<double>& rhs_x,
 Int FactorHighsSolver::solveNE(const std::vector<double>& rhs,
                                std::vector<double>& lhs) {
   assert(this->valid_);
+  assert(kkt_.isNE());
 
   lhs = rhs;
 

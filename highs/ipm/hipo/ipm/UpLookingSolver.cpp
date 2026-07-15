@@ -8,9 +8,9 @@ UpLookingSolver::UpLookingSolver(KktMatrix& kkt, Info& info, IpmData& data,
                                  const Regularisation& regul,
                                  const Model& model)
     : kkt_{kkt},
-      ptr_{kkt_.ptrAS.empty() ? kkt_.ptrNE : kkt_.ptrAS},
-      rows_{kkt_.rowsAS.empty() ? kkt_.rowsNE : kkt_.rowsAS},
-      val_{kkt_.valAS.empty() ? kkt_.valNE : kkt_.valAS},
+      ptr_{kkt_.isNE() ? kkt_.ptrNE : kkt_.ptrAS},
+      rows_{kkt_.isNE() ? kkt_.rowsNE : kkt_.rowsAS},
+      val_{kkt_.isNE() ? kkt_.valNE : kkt_.valAS},
       n_{static_cast<Int>(ptr_.size() - 1)},
       info_{info},
       data_{data},
@@ -66,7 +66,7 @@ Int UpLookingSolver::setup() {
   regularisation_.assign(n_, 0.0);
 
   signs_.assign(n_, 1.0);
-  if (!kkt_.ptrAS.empty())
+  if (kkt_.isAS())
     for (Int i = 0; i < model_.A().num_col_; ++i) signs_[i] = -1.0;
   permuteVectorInverse(signs_, kkt_.iperm());
 
@@ -198,7 +198,7 @@ void UpLookingSolver::solve(std::vector<double>& x) {
 
 Int UpLookingSolver::factorAS(const std::vector<double>& scaling) {
   assert(!valid_);
-  assert(kkt_.ptrNE.empty());
+  assert(kkt_.isAS());
 
   Clock clock;
   kkt_.buildASvalues(scaling);
@@ -220,7 +220,7 @@ Int UpLookingSolver::factorAS(const std::vector<double>& scaling) {
 }
 Int UpLookingSolver::factorNE(const std::vector<double>& scaling) {
   assert(!valid_);
-  assert(kkt_.ptrAS.empty());
+  assert(kkt_.isNE());
 
   Clock clock;
   kkt_.buildNEvalues(scaling);
