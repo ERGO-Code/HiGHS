@@ -260,7 +260,7 @@ TEST_CASE("hessian-oracle-check", "[qpsolver]") {
     hessian.value_[zero_diagonal_el] = 10.0;
   }
   h.passModel(model);
-  h.writeModel("");
+  //  h.writeModel("");
   h.writeModel("qp5.mps");
   h.setOptionValue("qp_regularization_value", 0);
   h.run();
@@ -559,7 +559,7 @@ void testOracleSolve(const HighsModel& model, const double* solution) {
   for (HighsInt k = 0; k < 2; k++) {
     if (k == 0) {
       REQUIRE(h.passModel(model) == HighsStatus::kOk);
-      h.writeModel("qp.mps");
+      //      h.writeModel("qp.mps");
     } else {
       REQUIRE(h.passModel(lp) == HighsStatus::kOk);
       void* oracle_data = &local_hessian;
@@ -572,7 +572,7 @@ void testOracleSolve(const HighsModel& model, const double* solution) {
           h.passHessian(lp.num_col_, oracleCallTriangularHessian, oracle_data);
       }
     }
-    if (dev_run) h.writeModel("");
+    //    if (dev_run) h.writeModel("");
     REQUIRE(h.run() == HighsStatus::kOk);
 
     if (dev_run) h.writeSolution("", 1);
