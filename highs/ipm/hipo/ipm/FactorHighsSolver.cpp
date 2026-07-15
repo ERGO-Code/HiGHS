@@ -265,15 +265,10 @@ Int FactorHighsSolver::chooseNla() {
   // In parallel, run AS analyse and build NE structure. NE analyse runs only
   // after AS analyse is finished, so that it can be skipped based on the number
   // of nz of NE matrix and AS factor.
-  if (options_.parallel == kHighsOffString) {
-    run_analyse_AS();
-    run_structure_NE();
-  } else {
-    highs::parallel::TaskGroup tg;
-    tg.spawn([&]() { run_analyse_AS(); });
-    tg.spawn([&]() { run_structure_NE(); });
-    tg.taskWait();
-  }
+  highs::parallel::TaskGroup tg;
+  tg.spawn([&]() { run_analyse_AS(); });
+  tg.spawn([&]() { run_structure_NE(); });
+  tg.taskWait();
 
   // if NE was skipped but AS failed, use NE
   if (skip_NE && failure_AS) {
@@ -433,13 +428,9 @@ Int FactorHighsSolver::chooseOrdering(const std::vector<Int>& rows,
     }
   };
 
-  if (options_.parallel == kHighsOffString) {
-    for (Int i = 0; i < static_cast<Int>(orderings_to_try.size()); ++i)
-      run_ordering_and_analyse(i);
-  } else
-    highs::parallel::for_each(
-        0, orderings_to_try.size(),
-        [&](Int start, Int end) { run_ordering_and_analyse(start); }, 1);
+  highs::parallel::for_each(
+      0, orderings_to_try.size(),
+      [&](Int start, Int end) { run_ordering_and_analyse(start); }, 1);
 
   Int num_success = 0;
   for (bool b : failure) {
