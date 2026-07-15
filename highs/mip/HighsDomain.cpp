@@ -3031,6 +3031,7 @@ bool HighsDomain::ConflictSet::resolveLinearGeq(HighsCDouble M, double Mupper,
 
           locdomchg.domchg.boundval = relaxLb;
 
+          // only drop if explanation stays valid without this entry
           if (relaxLb - glb <= localdom.epsilon() &&
               M - reasonDomchg.delta - Mupper <= localdom.feastol()) {
             // domain change can be fully removed from conflict
@@ -3064,6 +3065,7 @@ bool HighsDomain::ConflictSet::resolveLinearGeq(HighsCDouble M, double Mupper,
 
           locdomchg.domchg.boundval = relaxUb;
 
+          // only drop if explanation stays valid without this entry
           if (relaxUb - gub >= -localdom.epsilon() &&
               M - reasonDomchg.delta - Mupper <= localdom.feastol()) {
             // domain change can be fully removed from conflict
@@ -3128,6 +3130,8 @@ bool HighsDomain::ConflictSet::resolveLinearLeq(HighsCDouble M, double Mlower,
     if (covered > localdom.feastol()) {
       // there is room for relaxing bounds / dropping unneeded bound changes
       // from the explanation
+      // HighsInt numRelaxed = 0;
+      // HighsInt numDropped = 0;
       for (HighsInt k = static_cast<HighsInt>(resolvedDomainChanges.size()) - 1;
            k >= 0; --k) {
         ResolveCandidate& reasonDomchg = resolveBuffer[k];
@@ -3146,6 +3150,7 @@ bool HighsDomain::ConflictSet::resolveLinearLeq(HighsCDouble M, double Mlower,
 
           locdomchg.domchg.boundval = relaxLb;
 
+          // only drop if explanation stays valid without this entry
           if (relaxLb - glb <= localdom.epsilon() &&
               M - reasonDomchg.delta - Mlower >= -localdom.feastol()) {
             // domain change can be fully removed from conflict
@@ -3155,12 +3160,14 @@ bool HighsDomain::ConflictSet::resolveLinearLeq(HighsCDouble M, double Mlower,
             resolvedDomainChanges.resize(last);
 
             M -= reasonDomchg.delta;
+            // ++numDropped;
           } else {
             // bound can be relaxed
             while (relaxLb <= localdom.prevboundval_[locdomchg.pos].first)
               locdomchg.pos = localdom.prevboundval_[locdomchg.pos].second;
 
             M += vals[i] * (static_cast<HighsCDouble>(relaxLb) - lb);
+            // ++numRelaxed;
           }
 
           covered = static_cast<double>(M - Mlower);
@@ -3177,6 +3184,7 @@ bool HighsDomain::ConflictSet::resolveLinearLeq(HighsCDouble M, double Mlower,
 
           locdomchg.domchg.boundval = relaxUb;
 
+          // only drop if explanation stays valid without this entry
           if (relaxUb - gub >= -localdom.epsilon() &&
               M - reasonDomchg.delta - Mlower >= -localdom.feastol()) {
             // domain change can be fully removed from conflict
@@ -3186,18 +3194,25 @@ bool HighsDomain::ConflictSet::resolveLinearLeq(HighsCDouble M, double Mlower,
             resolvedDomainChanges.resize(last);
 
             M -= reasonDomchg.delta;
+            // ++numDropped;
           } else {
             // bound can be relaxed
             while (relaxUb >= localdom.prevboundval_[locdomchg.pos].first)
               locdomchg.pos = localdom.prevboundval_[locdomchg.pos].second;
 
             M += vals[i] * (static_cast<HighsCDouble>(relaxUb) - ub);
+            // ++numRelaxed;
           }
 
           covered = static_cast<double>(M - Mlower);
           if (covered <= localdom.feastol()) break;
         }
       }
+
+      // if (numRelaxed + numDropped)
+      //   printf("relaxed %d and dropped %d of %d resolved domain changes\n",
+      //          (int)numRelaxed, (int)numDropped,
+      //          (int)resolvedDomainChanges.size());
 
       assert(covered >= -localdom.feastol());
     }
