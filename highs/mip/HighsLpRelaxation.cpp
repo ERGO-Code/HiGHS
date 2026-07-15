@@ -439,31 +439,14 @@ double HighsLpRelaxation::computeBestEstimate(const HighsPseudocost& ps) const {
         static_cast<double>(mipsolver.mipdata_->integral_cols.size());
 
     for (const std::pair<HighsInt, double>& f : fractionalints) {
-      double up = ps.getPseudocostUp(f.first, f.second, offset);
-      double down = ps.getPseudocostDown(f.first, f.second, offset);
-      double contrib = std::min(up, down);
-      if (!std::isfinite(contrib)) {
-        printf(
-            "computeBestEstimate: infinite pseudocost for col %d frac=%.17g\n"
-            "  up=%.17g down=%.17g offset=%.17g objective=%.17g\n",
-            (int)f.first, f.second, up, down, offset, objective);
-        assert(std::isfinite(contrib));
-      }
-      increase += contrib;
+      increase += std::min(ps.getPseudocostUp(f.first, f.second, offset),
+                           ps.getPseudocostDown(f.first, f.second, offset));
     }
 
     estimate += double(increase);
   }
 
-  double result = static_cast<double>(estimate);
-  if (result == kHighsInf) {
-    printf(
-        "computeBestEstimate: +inf estimate objective=%.17g "
-        "nfrac=%d status=%d\n",
-        objective, (int)fractionalints.size(), (int)status);
-    assert(result != kHighsInf);
-  }
-  return result;
+  return static_cast<double>(estimate);
 }
 
 double HighsLpRelaxation::computeLPDegneracy(
@@ -1272,8 +1255,6 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
 
     recoverBasis();
 
-    printf(
-        "resolveLp: kError from LP solver (HighsStatus::kError after retry)\n");
     return Status::kError;
   }
 
@@ -1327,7 +1308,6 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
       // %" HIGHSINT_FORMAT ")\n",
       //        (HighsInt)lpsolver.getModelStatus(),
       //        (HighsInt)lpsolver.getModelStatus(true));
-      printf("resolveLp: kError from unreliable infeasibility proof\n");
       return Status::kError;
     }
     case HighsModelStatus::kUnbounded:
@@ -1352,10 +1332,7 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
 
       return Status::kUnbounded;
     case HighsModelStatus::kUnknown:
-      if (info.basis_validity == kBasisValidityInvalid) {
-        printf("resolveLp: kError from kUnknown with invalid basis\n");
-        return Status::kError;
-      }
+      if (info.basis_validity == kBasisValidityInvalid) return Status::kError;
       // fall through
     case HighsModelStatus::kOptimal:
       assert(info.max_primal_infeasibility >= 0);
@@ -1377,10 +1354,6 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
       if (model_status == HighsModelStatus::kOptimal)
         return Status::kUnscaledInfeasible;
 
-      printf(
-          "resolveLp: kError from kUnknown with large infeasibilities "
-          "(primal=%.4g dual=%.4g)\n",
-          info.max_primal_infeasibility, info.max_dual_infeasibility);
       return Status::kError;
     case HighsModelStatus::kIterationLimit: {
       if (!mipsolver.submip && resolve_on_error) {
@@ -1449,11 +1422,10 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
         return run(false);
       }
 
-      printf("resolveLp: kError from iteration limit\n");
+      // printf("error: lpsolver reached iteration limit\n");
       return Status::kError;
     }
     case HighsModelStatus::kTimeLimit:
-      printf("resolveLp: kError from time limit\n");
       return Status::kError;
     default:
       // printf("error: lpsolver stopped with unexpected status %"
@@ -1462,8 +1434,6 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
       highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kWarning,
                    "LP solved to unexpected status: %s\n",
                    lpsolver.modelStatusToString(model_status).c_str());
-      printf("resolveLp: kError from unexpected model status %d\n",
-             (int)model_status);
       return Status::kError;
   }
 }
@@ -1655,18 +1625,9 @@ HighsLpRelaxation::Status HighsLpRelaxation::resolveLp(HighsDomain* domain) {
           objsum = 0;
         }
 
-        for (HighsInt i = 0; i != mipsolver.numCol(); ++i) {
+        for (HighsInt i = 0; i != mipsolver.numCol(); ++i)
           objsum += static_cast<HighsCDouble>(sol.col_value[i]) *
                     mipsolver.colCost(i);
-          if (!std::isfinite(static_cast<double>(objsum))) {
-            printf(
-                "resolveLp objsum overflow: col=%d val=%.17g cost=%.17g "
-                "objsum=%.17g status=%d\n",
-                (int)i, sol.col_value[i], mipsolver.colCost(i),
-                static_cast<double>(objsum), (int)status);
-            assert(std::isfinite(static_cast<double>(objsum)));
-          }
-        }
 
         if (fractionalints.empty() && !unscaledPrimalFeasible(status)) {
           std::vector<double> fixSol = sol.col_value;

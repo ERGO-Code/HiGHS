@@ -3131,14 +3131,6 @@ bool HighsDomain::ConflictSet::resolveLinearLeq(HighsCDouble M, double Mlower,
     if (covered > localdom.feastol()) {
       // there is room for relaxing bounds / dropping unneeded bound changes
       // from the explanation
-      HighsInt numRelaxed = 0;
-      HighsInt numDropped = 0;
-      HighsInt numSkipped = 0;
-      HighsCDouble M_entry = M;
-      HighsInt dbg_col = -1;
-      double dbg_val = 0, dbg_lb = 0, dbg_glb = 0;
-      HighsCDouble dbg_delta = 0, dbg_relaxLb = 0, dbg_M_before = 0;
-      int dbg_continuous = 0;
       for (HighsInt k = static_cast<HighsInt>(resolvedDomainChanges.size()) - 1;
            k >= 0; --k) {
         ResolveCandidate& reasonDomchg = resolveBuffer[k];
@@ -3153,10 +3145,7 @@ bool HighsDomain::ConflictSet::resolveLinearLeq(HighsCDouble M, double Mlower,
           if (!localdom.mipsolver->isColContinuous(col))
             relaxLb = ceil(relaxLb);
 
-          if (relaxLb - lb >= -localdom.feastol()) {
-            ++numSkipped;
-            continue;
-          }
+          if (relaxLb - lb >= -localdom.feastol()) continue;
 
           locdomchg.domchg.boundval = static_cast<double>(relaxLb);
 
@@ -3164,28 +3153,18 @@ bool HighsDomain::ConflictSet::resolveLinearLeq(HighsCDouble M, double Mlower,
               static_cast<double>(M - reasonDomchg.delta - Mlower) >=
                   -localdom.feastol()) {
             // domain change can be fully removed from conflict
-            dbg_col = col;
-            dbg_val = vals[i];
-            dbg_lb = lb;
-            dbg_glb = glb;
-            dbg_delta = reasonDomchg.delta;
-            dbg_relaxLb = relaxLb;
-            dbg_M_before = M;
-            dbg_continuous = localdom.mipsolver->isColContinuous(col);
             HighsInt last =
                 static_cast<HighsInt>(resolvedDomainChanges.size()) - 1;
             std::swap(resolvedDomainChanges[last], resolvedDomainChanges[k]);
             resolvedDomainChanges.resize(last);
 
             M -= reasonDomchg.delta;
-            ++numDropped;
           } else {
             // bound can be relaxed
             while (relaxLb <= localdom.prevboundval_[locdomchg.pos].first)
               locdomchg.pos = localdom.prevboundval_[locdomchg.pos].second;
 
             M += vals[i] * (static_cast<HighsCDouble>(relaxLb) - lb);
-            ++numRelaxed;
           }
 
           covered = static_cast<double>(M - Mlower);
@@ -3198,10 +3177,7 @@ bool HighsDomain::ConflictSet::resolveLinearLeq(HighsCDouble M, double Mlower,
           if (!localdom.mipsolver->isColContinuous(col))
             relaxUb = floor(relaxUb);
 
-          if (relaxUb - ub <= localdom.feastol()) {
-            ++numSkipped;
-            continue;
-          }
+          if (relaxUb - ub <= localdom.feastol()) continue;
 
           locdomchg.domchg.boundval = static_cast<double>(relaxUb);
 
@@ -3209,28 +3185,18 @@ bool HighsDomain::ConflictSet::resolveLinearLeq(HighsCDouble M, double Mlower,
               static_cast<double>(M - reasonDomchg.delta - Mlower) >=
                   -localdom.feastol()) {
             // domain change can be fully removed from conflict
-            dbg_col = col;
-            dbg_val = vals[i];
-            dbg_lb = ub;
-            dbg_glb = gub;
-            dbg_delta = reasonDomchg.delta;
-            dbg_relaxLb = relaxUb;
-            dbg_M_before = M;
-            dbg_continuous = localdom.mipsolver->isColContinuous(col);
             HighsInt last =
                 static_cast<HighsInt>(resolvedDomainChanges.size()) - 1;
             std::swap(resolvedDomainChanges[last], resolvedDomainChanges[k]);
             resolvedDomainChanges.resize(last);
 
             M -= reasonDomchg.delta;
-            ++numDropped;
           } else {
             // bound can be relaxed
             while (relaxUb >= localdom.prevboundval_[locdomchg.pos].first)
               locdomchg.pos = localdom.prevboundval_[locdomchg.pos].second;
 
             M += vals[i] * (static_cast<HighsCDouble>(relaxUb) - ub);
-            ++numRelaxed;
           }
 
           covered = static_cast<double>(M - Mlower);
@@ -3238,27 +3204,6 @@ bool HighsDomain::ConflictSet::resolveLinearLeq(HighsCDouble M, double Mlower,
         }
       }
 
-      if (covered < -localdom.feastol()) {
-        printf(
-            "resolveLinearLeq FAIL: covered=%.17g feastol=%.17g\n"
-            "  M_entry=%.17g M_final=%.17g Mlower=%.17g\n"
-            "  numDropped=%d numRelaxed=%d numSkipped=%d "
-            "remaining_size=%d\n",
-            covered, localdom.feastol(), static_cast<double>(M_entry),
-            static_cast<double>(M), Mlower, (int)numDropped, (int)numRelaxed,
-            (int)numSkipped, (int)resolvedDomainChanges.size());
-        printf(
-            "  last_drop: col=%d vals[i]=%.17g lb=%.17g glb=%.17g\n"
-            "    delta=%.17g relaxLb=%.17g relaxLb-glb=%.17g eps=%.17g\n"
-            "    M_before_drop=%.17g M-delta-Mlower=%.17g\n"
-            "    continuous=%d\n",
-            (int)dbg_col, dbg_val, dbg_lb, dbg_glb,
-            static_cast<double>(dbg_delta), static_cast<double>(dbg_relaxLb),
-            static_cast<double>(dbg_relaxLb - dbg_glb), localdom.epsilon(),
-            static_cast<double>(dbg_M_before),
-            static_cast<double>(dbg_M_before - dbg_delta - Mlower),
-            (int)dbg_continuous);
-      }
       assert(covered >= -localdom.feastol());
     }
   }
