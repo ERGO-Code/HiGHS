@@ -297,7 +297,7 @@ Int KktMatrix::buildNEvalues(const std::vector<double>& scaling) {
     }
   };
 
-  // computing the structure in parallel only if matrix A is large
+  // computing the values in parallel only if matrix A is large
   const bool is_large = model.A().num_row_ > kParallelNEsizeThresh ||
                         model.A().num_col_ > kParallelNEsizeThresh;
 
