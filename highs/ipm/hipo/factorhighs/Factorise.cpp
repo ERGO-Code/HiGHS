@@ -396,6 +396,7 @@ bool Factorise::run(Numeric& num) {
   num.swaps_ = std::move(swaps_);
   num.pivot_2x2_ = std::move(pivot_2x2_);
   num.data_ = &data_;
+  num.finaliseFactor();
 
   HIPO_CLOCK_STOP(1, data_, kTimeFactorise);
 

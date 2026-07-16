@@ -22,6 +22,18 @@ class Numeric {
   // swaps of columns for each supernode, ordered locally within a block
   std::vector<std::vector<Int>> swaps_{};
 
+  // per supernode, per block of columns: 1 iff the block contains any
+  // non-identity swap, so that solves can skip the swap permutations
+  std::vector<std::vector<uint8_t>> swap_flags_{};
+
+  // workspace for the solve phase, sized once per factorisation to the
+  // largest supernode leading dimension; avoids per-block allocations
+  mutable std::vector<double> solve_work_{};
+
+  // Compute swap_flags_ and size solve_work_; called by Factorise once the
+  // factor has been handed over
+  void finaliseFactor();
+
   // information about 2x2 pivots
   std::vector<std::vector<double>> pivot_2x2_{};
 

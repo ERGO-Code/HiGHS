@@ -33,6 +33,10 @@ class FactorHiGHSSolver : public LinearSolver {
   std::vector<Int> rowsAS_;
   std::vector<double> valAS_;
 
+  // persistent buffer for the augmented-system rhs/lhs, to avoid a heap
+  // allocation on every solve
+  std::vector<double> as_rhs_;
+
   const Regularisation& regul_;
 
   Info& info_;
