@@ -685,7 +685,7 @@ bool Solver::startingPoint() {
   model_.A().alphaProductPlusY(1.0, temp_m, xl, true);
 
   // x += dx;
-  vectorAdd(x, xl, 1.0);
+  vectorAdd(x, 1.0, xl, 1.0);
   // *********************************************************************
 
   // *********************************************************************
@@ -885,10 +885,10 @@ void Solver::residualsMcc() {
   std::vector<double> xut = xu;
   std::vector<double> zlt = zl;
   std::vector<double> zut = zu;
-  vectorAdd(xlt, it_->delta.xl, alpha_p);
-  vectorAdd(xut, it_->delta.xu, alpha_p);
-  vectorAdd(zlt, it_->delta.zl, alpha_d);
-  vectorAdd(zut, it_->delta.zu, alpha_d);
+  vectorAdd(xlt, 1.0, it_->delta.xl, alpha_p);
+  vectorAdd(xut, 1.0, it_->delta.xu, alpha_p);
+  vectorAdd(zlt, 1.0, it_->delta.zl, alpha_d);
+  vectorAdd(zut, 1.0, it_->delta.zu, alpha_d);
 
   // compute right-hand side for mcc
   for (Int i = 0; i < n_; ++i) {
@@ -963,16 +963,16 @@ bool Solver::centralityCorrectors() {
 
     if (alpha_p >= alpha_p_old + kMccIncreaseAlpha * kMccIncreaseMin) {
       // accept primal corrector
-      vectorAdd(it_->delta.x, corrector.x, wp);
-      vectorAdd(it_->delta.xl, corrector.xl, wp);
-      vectorAdd(it_->delta.xu, corrector.xu, wp);
+      vectorAdd(it_->delta.x, 1.0, corrector.x, wp);
+      vectorAdd(it_->delta.xl, 1.0, corrector.xl, wp);
+      vectorAdd(it_->delta.xu, 1.0, corrector.xu, wp);
       alpha_p_old = alpha_p;
     }
     if (alpha_d >= alpha_d_old + kMccIncreaseAlpha * kMccIncreaseMin) {
       // accept dual corrector
-      vectorAdd(it_->delta.y, corrector.y, wd);
-      vectorAdd(it_->delta.zl, corrector.zl, wd);
-      vectorAdd(it_->delta.zu, corrector.zu, wd);
+      vectorAdd(it_->delta.y, 1.0, corrector.y, wd);
+      vectorAdd(it_->delta.zl, 1.0, corrector.zl, wd);
+      vectorAdd(it_->delta.zu, 1.0, corrector.zu, wd);
       alpha_d_old = alpha_d;
     }
 

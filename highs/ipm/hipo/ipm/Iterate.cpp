@@ -20,12 +20,12 @@ void NewtonDir::clear() {
 }
 
 void NewtonDir::add(const NewtonDir& d) {
-  vectorAdd(x, d.x);
-  vectorAdd(y, d.y);
-  vectorAdd(xl, d.xl);
-  vectorAdd(xu, d.xu);
-  vectorAdd(zl, d.zl);
-  vectorAdd(zu, d.zu);
+  vectorAdd(x, 1.0, d.x, 1.0);
+  vectorAdd(y, 1.0, d.y, 1.0);
+  vectorAdd(xl, 1.0, d.xl, 1.0);
+  vectorAdd(xu, 1.0, d.xu, 1.0);
+  vectorAdd(zl, 1.0, d.zl, 1.0);
+  vectorAdd(zu, 1.0, d.zu, 1.0);
 }
 
 Iterate::Iterate(Model& model_input, Info& info_input, Regularisation& r)
@@ -592,12 +592,12 @@ void Iterate::makeStep(double alpha_primal, double alpha_dual) {
   else
     bad_iter_ = 0;
 
-  vectorAdd(x, delta.x, alpha_primal);
-  vectorAdd(xl, delta.xl, alpha_primal);
-  vectorAdd(xu, delta.xu, alpha_primal);
-  vectorAdd(y, delta.y, alpha_dual);
-  vectorAdd(zl, delta.zl, alpha_dual);
-  vectorAdd(zu, delta.zu, alpha_dual);
+  vectorAdd(x, 1.0, delta.x, alpha_primal);
+  vectorAdd(xl, 1.0, delta.xl, alpha_primal);
+  vectorAdd(xu, 1.0, delta.xu, alpha_primal);
+  vectorAdd(y, 1.0, delta.y, alpha_dual);
+  vectorAdd(zl, 1.0, delta.zl, alpha_dual);
+  vectorAdd(zu, 1.0, delta.zu, alpha_dual);
 }
 
 void Iterate::saveBest(double feas_tol, double opt_tol, Int iter) {

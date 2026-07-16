@@ -11,9 +11,9 @@ namespace hipo {
 // COMPONENT-WISE VECTOR OPERATIONS
 // =======================================================================
 
-// alpha * v1[i] + beta * v2[i]
-void vectorAdd(std::vector<double>& v1, const std::vector<double>& v2,
-               double beta = 1.0, double alpha = 1.0);
+// v1[i] = alpha * v1[i] + beta * v2[i]
+void vectorAdd(std::vector<double>& v1, double alpha,
+               const std::vector<double>& v2, double beta);
 
 // v1[i] + alpha
 void vectorAdd(std::vector<double>& v1, const double alpha);

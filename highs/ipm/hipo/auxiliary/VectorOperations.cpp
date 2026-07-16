@@ -5,8 +5,8 @@
 
 namespace hipo {
 
-void vectorAdd(std::vector<double>& v1, const std::vector<double>& v2,
-               double beta, double alpha) {
+void vectorAdd(std::vector<double>& v1, double alpha,
+               const std::vector<double>& v2, double beta) {
   for (Int i = 0; i < static_cast<Int>(v1.size()); ++i) {
     v1[i] = alpha * v1[i] + beta * v2[i];
   }
