@@ -112,13 +112,11 @@ HighsHessianFunctionType oracleCallSquareHessian =
 	    addScaledQcol(x_index[iX], x_value[iX]);
 	} else if (x_num_entries == 1) {
 	  // x is sparse with one entry in row x_index
-	  q_x_num_entries = 0;
 	  // Get the entries in column iCol
 	  HighsInt iCol = x_index[0];
 	  for (HighsInt iEl = hessian.start_[iCol];
 	       iEl < hessian.start_[iCol + 1]; iEl++) {
 	    q_x_value[hessian.index_[iEl]] = hessian.value_[iEl] * x_value[0];
-	    q_x_num_entries++;
 	  }
 	}
       }

@@ -81,6 +81,7 @@ struct MatrixBase {
   }
 
   void callLog(std::string message, const HighsInt id = 0) const {
+    return;
     printf("%s: %d\n", message.c_str(), int(id));
   }
 
