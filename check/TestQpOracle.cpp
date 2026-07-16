@@ -19,7 +19,7 @@ bool valuesRelEqual(const double v0, const double v1);
 bool vectorsRelEqual(const HighsInt dim, const double* v0, const double* v1);
 void addVars(HighsModel& model);
 void testUnconConOracleSolve(const HighsHessian& model);
-void testOracleSolve(const HighsModel& model, const double* solution = nullptr);
+void testOracleSolve(const HighsModel& model);
 
 // On entry:
 //
@@ -53,128 +53,6 @@ void testOracleSolve(const HighsModel& model, const double* solution = nullptr);
 // negative on entry, then the values of Qx are packed in
 // q_x_value, with corresponding indices in q_x_index. Typical
 // use case: getting a column of the Hessian
-
-HighsHessianFunctionType oracleCallTriangularHessian =
-    [](const HighsInt x_num_entries, const HighsInt* x_index,
-       const double* x_value, HighsInt& q_x_num_entries, HighsInt* q_x_index,
-       double* q_x_value, void* hessian_p) {
-      assert(x_value != nullptr);
-      assert(q_x_value != nullptr);
-
-      // Lambda for zeroing q_x_value
-      auto zeroQx = [&](const HighsInt dim) {
-        for (HighsInt iCol = 0; iCol < dim; iCol++) q_x_value[iCol] = 0;
-      };
-
-      HighsHessian hessian = *(static_cast<HighsHessian*>(hessian_p));
-      assert(hessian.format_ == HessianFormat::kTriangular);
-      // With a triangular Hessian, have to scatter any packed values
-      // of x unless only one Qx index is required
-      const bool scatter =
-          x_index != nullptr && (q_x_index == nullptr || q_x_num_entries != 1);
-      std::vector<double> scattered_x;
-      if (scatter) {
-        scattered_x.assign(hessian.dim_, 0);
-        for (HighsInt iX = 0; iX < x_num_entries; iX++)
-          scattered_x[x_index[iX]] = x_value[iX];
-      }
-      const double* use_x_value = scatter ? scattered_x.data() : x_value;
-
-      // Lambda for adding multiple of Hessian column into q_x_value
-      auto addScaledQcol = [&](const HighsInt iCol) {
-        HighsInt iEl = hessian.start_[iCol];
-        for (HighsInt iEl = hessian.start_[iCol];
-             iEl < hessian.start_[iCol + 1]; iEl++) {
-          HighsInt iRow = hessian.index_[iEl];
-          q_x_value[iRow] += hessian.value_[iEl] * use_x_value[iCol];
-          if (iRow != iCol)
-            q_x_value[iCol] += hessian.value_[iEl] * use_x_value[iRow];
-        }
-      };
-
-      if (x_index == nullptr) {
-        // Simple product with full vector x, full vector q_x, and no
-        // Qx indices required
-        assert(q_x_index == nullptr);
-        zeroQx(hessian.dim_);
-        for (HighsInt iCol = 0; iCol < hessian.dim_; iCol++)
-          addScaledQcol(iCol);
-        return;
-      } else if (x_num_entries > 1) {
-        // x is sparse with x_num_entries entries in rows x_index, and
-        // no Qx indices required
-        assert(q_x_index == nullptr);
-        zeroQx(hessian.dim_);
-        for (HighsInt iX = 0; iX < x_num_entries; iX++)
-          addScaledQcol(x_index[iX]);
-        return;
-      } else if (x_num_entries == 1) {
-        if (q_x_index == nullptr) {
-	  // x is sparse with one entry in row x_index, and no Qx
-	  // index required
-	  q_x_num_entries = 0;
-	  // Get the entries in column iCol
-	  HighsInt iCol = x_index[0];
-	  for (HighsInt iEl = hessian.start_[iCol];
-	       iEl < hessian.start_[iCol + 1]; iEl++) {
-	    q_x_value[hessian.index_[iEl]] = hessian.value_[iEl] * x_value[0];
-	    q_x_num_entries++;
-	  }
-	  return;
-	} else {
-	  assert(q_x_index != nullptr);
-	  if (q_x_num_entries < 0) {
-	    // x is sparse with one entry in row x_index, and all Qx index
-	    // required
-	    q_x_num_entries = 0;
-	    // Get the entries below the diagonal in column x_index[0]
-	    HighsInt iCol = x_index[0];
-	    for (HighsInt iEl = hessian.start_[iCol];
-		 iEl < hessian.start_[iCol + 1]; iEl++) {
-	      q_x_index[q_x_num_entries] = hessian.index_[iEl];
-	      q_x_value[q_x_num_entries] =
-                hessian.value_[iEl] * use_x_value[iCol];
-	      q_x_num_entries++;
-	    }
-	    // Get the entries in row x_index[0] in previous columns
-	    for (HighsInt iCol = 0; iCol < x_index[0]; iCol++) {
-	      for (HighsInt iEl = hessian.start_[iCol];
-		   iEl < hessian.start_[iCol + 1]; iEl++) {
-		HighsInt iRow = hessian.index_[iEl];
-		if (iRow == x_index[0]) {
-		  q_x_index[q_x_num_entries] = iCol;
-		  q_x_value[q_x_num_entries] =
-                    hessian.value_[iEl] * use_x_value[iRow];
-		  q_x_num_entries++;
-		  break;
-		}
-	      }
-	    }
-	    return;
-	  } else if (q_x_num_entries == 1) {
-	    // x is sparse with one entry in row x_index, and one Qx index
-	    // required
-	    // With a triangular Hessian, need to identify which column to
-	    // search down, and which row to look for
-	    HighsInt iCol = std::min(x_index[0], q_x_index[0]);
-	    HighsInt iRow = std::max(x_index[0], q_x_index[0]);
-	    // Zero Qx value in case the Hessian entry requested is zero
-	    q_x_value[0] = 0;
-	    for (HighsInt iEl = hessian.start_[iCol];
-		 iEl < hessian.start_[iCol + 1]; iEl++) {
-	      if (hessian.index_[iEl] == iRow) {
-		q_x_value[0] = hessian.value_[iEl] * use_x_value[0];
-		return;
-	      }
-	    }
-	    // Hessian entry is zero
-	    return;
-	  }
-	}
-      }
-      // Case not coded, since it may be unnecessary
-      assert(1234 == 5678);
-    };
 
 HighsHessianFunctionType oracleCallSquareHessian =
     [](const HighsInt x_num_entries, const HighsInt* x_index,
@@ -264,7 +142,7 @@ HighsHessianFunctionType oracleCallSquareHessian =
       assert(1234 == 5678);
     };
 
-TEST_CASE("hessian-oracle-check", "[qpsolver]") {
+TEST_CASE("hessian-oracle-check", "[qp-oracle]") {
   Highs h;
   h.setOptionValue("output_flag", dev_run);
 
@@ -279,10 +157,10 @@ TEST_CASE("hessian-oracle-check", "[qpsolver]") {
   HighsInt zero_diagonal_el;
   if (!qp4) {
      HighsInt zero_diagonal_col = 2;
-      zero_diagonal_el = 6;
-    REQUIRE(hessian.index_[zero_diagonal_el] == zero_diagonal_col);
-    REQUIRE(hessian.value_[zero_diagonal_el] == 0);
-    hessian.value_[zero_diagonal_el] = 10.0;
+     zero_diagonal_el = 6;
+     REQUIRE(hessian.index_[zero_diagonal_el] == zero_diagonal_col);
+     double zero_diagonal_original_value = hessian.value_[zero_diagonal_el];
+     REQUIRE(zero_diagonal_original_value != 0);
   }
   h.passModel(model);
   //  h.writeModel("");
@@ -293,7 +171,6 @@ TEST_CASE("hessian-oracle-check", "[qpsolver]") {
 
   if (!qp4) hessian.value_[zero_diagonal_el] = 0.0;
 
-  // Test using both triangular and square instances of the Hessian
   HighsHessian square_hessian = hessian.toSquare();
   if (dev_run) square_hessian.print();
 
@@ -313,96 +190,84 @@ TEST_CASE("hessian-oracle-check", "[qpsolver]") {
   // No oracle defined returns error
   REQUIRE(h.checkHessianOracle() == HighsStatus::kError);
 
-  for (HighsInt k = 0; k < 2; k++) {
-    // First pass is with square Hessian
-    bool square = k == 0;
-    if (square) {
-      return_status =
-          h.passHessian(lp.num_col_, oracleCallSquareHessian, &square_hessian);
-    } else {
-      return_status =
-          h.passHessian(lp.num_col_, oracleCallTriangularHessian, &hessian);
+  REQUIRE(h.passHessian(lp.num_col_, oracleCallSquareHessian, &square_hessian)  == HighsStatus::kOk);
+
+
+  // Check the method to extract Hessian entries from the oracle
+  //
+  // This is used to form the Hessian as a matrix in
+  // Highs::checkHessianOracle(), so has to be tested externally
+  const HessianOracle& oracle = h.getModel().hessian_.oracle_;
+  std::vector<double> column;
+  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
+    column.assign(lp.num_col_, 0);
+    for (HighsInt iEl = hessian.start_[iCol]; iEl < hessian.start_[iCol + 1];
+	 iEl++)
+      column[hessian.index_[iEl]] = hessian.value_[iEl];
+    REQUIRE(oracle.diagonal(iCol) == column[iCol]);
+    for (HighsInt iRow = iCol + 1; iRow < lp.num_col_; iRow++) {
+      REQUIRE(oracle.entry(iRow, iCol) == column[iRow]);
+      REQUIRE(oracle.entry(iCol, iRow) == column[iRow]);
     }
-    REQUIRE(return_status == HighsStatus::kOk);
-
-    // Check the method to extract Hessian entries from the oracle
-    //
-    // This is used to form the Hessian as a matrix in
-    // Highs::checkHessianOracle(), so has to be tested externally
-    const HessianOracle& oracle = h.getModel().hessian_.oracle_;
-    std::vector<double> column;
-    for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
-      column.assign(lp.num_col_, 0);
-      for (HighsInt iEl = hessian.start_[iCol]; iEl < hessian.start_[iCol + 1];
-           iEl++)
-        column[hessian.index_[iEl]] = hessian.value_[iEl];
-      REQUIRE(oracle.diagonal(iCol) == column[iCol]);
-      for (HighsInt iRow = iCol + 1; iRow < lp.num_col_; iRow++) {
-        REQUIRE(oracle.entry(iRow, iCol) == column[iRow]);
-        REQUIRE(oracle.entry(iCol, iRow) == column[iRow]);
-      }
-    }
-    if (square) {
-      // Test the asymmetry check:
-      //
-      // By replacing the zero (2, 4) entry with a nonzero
-      HighsInt zero_el = square_hessian.numNz();
-      HighsInt zero_entry_row = 2;
-      HighsInt zero_entry_col = 4;
-      REQUIRE(oracle.entry(zero_entry_row, zero_entry_col) == 0);
-
-      // Replacing the zero (2, 4) entry with a nonzero
-      square_hessian.start_[zero_entry_col + 1]++;
-      square_hessian.index_.push_back(zero_entry_row);
-      square_hessian.value_.push_back(1.0);
-      if (dev_run) square_hessian.print("Added nonzero");
-      // Asymmetry yields error
-      REQUIRE(h.checkHessianOracle(true) == HighsStatus::kError);
-
-      // Remove the nonzero from the (2, 4) entry
-      square_hessian.start_[zero_entry_col + 1]--;
-      square_hessian.index_.resize(zero_el);
-      square_hessian.value_.resize(zero_el);
-      if (dev_run) square_hessian.print("Reversion 0");
-
-      // By perturbing the (0, 3) entry by less than the asymmetry
-      // tolerance
-      HighsInt nonzero_entry_row = 0;
-      HighsInt nonzero_entry_col = 3;
-      HighsInt nonzero_el = -1;
-      for (HighsInt iEl = square_hessian.start_[nonzero_entry_col];
-           iEl < square_hessian.start_[nonzero_entry_col + 1]; iEl++) {
-        if (square_hessian.index_[iEl] == nonzero_entry_row) {
-          nonzero_el = iEl;
-          break;
-        }
-      }
-      REQUIRE(nonzero_el >= 0);
-      double nonzero_value = oracle.entry(nonzero_entry_row, nonzero_entry_col);
-      REQUIRE(nonzero_value != 0);
-      REQUIRE(square_hessian.index_[nonzero_el] == nonzero_entry_row);
-      REQUIRE(square_hessian.value_[nonzero_el] == nonzero_value);
-
-      square_hessian.value_[nonzero_el] +=
-          0.5 * kSquareHessianAsymmetryTolerance;
-      if (dev_run) square_hessian.print("Perturbed nonzero");
-      // Perturbed nonzero yields warning
-      REQUIRE(h.checkHessianOracle() == HighsStatus::kWarning);
-      // Restore the nonzero value
-      square_hessian.value_[nonzero_el] = nonzero_value;
-
-      if (dev_run) square_hessian.print("Reversion 1");
-    }
-    // Oracle should be OK
-    const HighsStatus status = h.checkHessianOracle();
-    printf("Check for %s Hessian oracle has status %s\n",
-           square ? "square" : "triangular",
-           h.highsStatusToString(status).c_str());
-    REQUIRE(status == HighsStatus::kOk);
   }
+  // Test the asymmetry check:
+  //
+  // By replacing the zero (2, 4) entry with a nonzero
+  HighsInt zero_el = square_hessian.numNz();
+  HighsInt zero_entry_row = 2;
+  HighsInt zero_entry_col = 4;
+  REQUIRE(oracle.entry(zero_entry_row, zero_entry_col) == 0);
+
+  // Replacing the zero (2, 4) entry with a nonzero
+  square_hessian.start_[zero_entry_col + 1]++;
+  square_hessian.index_.push_back(zero_entry_row);
+  square_hessian.value_.push_back(1.0);
+  if (dev_run) square_hessian.print("Added nonzero");
+  // Asymmetry yields error
+  REQUIRE(h.checkHessianOracle(true) == HighsStatus::kError);
+
+  // Remove the nonzero from the (2, 4) entry
+  square_hessian.start_[zero_entry_col + 1]--;
+  square_hessian.index_.resize(zero_el);
+  square_hessian.value_.resize(zero_el);
+  if (dev_run) square_hessian.print("Reversion 0");
+
+  // By perturbing the (0, 3) entry by less than the asymmetry
+  // tolerance
+  HighsInt nonzero_entry_row = 0;
+  HighsInt nonzero_entry_col = 3;
+  HighsInt nonzero_el = -1;
+  for (HighsInt iEl = square_hessian.start_[nonzero_entry_col];
+       iEl < square_hessian.start_[nonzero_entry_col + 1]; iEl++) {
+    if (square_hessian.index_[iEl] == nonzero_entry_row) {
+      nonzero_el = iEl;
+      break;
+    }
+  }
+  REQUIRE(nonzero_el >= 0);
+  double nonzero_value = oracle.entry(nonzero_entry_row, nonzero_entry_col);
+  REQUIRE(nonzero_value != 0);
+  REQUIRE(square_hessian.index_[nonzero_el] == nonzero_entry_row);
+  REQUIRE(square_hessian.value_[nonzero_el] == nonzero_value);
+
+  square_hessian.value_[nonzero_el] +=
+    0.5 * kSquareHessianAsymmetryTolerance;
+  if (dev_run) square_hessian.print("Perturbed nonzero");
+  // Perturbed nonzero yields warning
+  REQUIRE(h.checkHessianOracle() == HighsStatus::kWarning);
+  // Restore the nonzero value
+  square_hessian.value_[nonzero_el] = nonzero_value;
+
+  if (dev_run) square_hessian.print("Reversion 1");
+  
+  // Oracle should be OK
+  const HighsStatus status = h.checkHessianOracle();
+  printf("Check for square Hessian oracle has status %s\n",
+	 h.highsStatusToString(status).c_str());
+  REQUIRE(status == HighsStatus::kOk);
 }
 
-TEST_CASE("hessian-oracle-solve", "[qpsolver]") {
+TEST_CASE("hessian-oracle-solve", "[qp-oracle]") {
   HighsHessian hessian;
   auto header = [&] (const HighsInt k, const std::string& message) {
     if (!dev_run) return;
@@ -410,8 +275,8 @@ TEST_CASE("hessian-oracle-solve", "[qpsolver]") {
     printf("Case %d: %s\n", int(k), message.c_str());
     printf("==============================\n\n");
   };
-    
-  for (HighsInt k = 0; k < 4; k++) {
+  const HighsInt from_k = 0;
+  for (HighsInt k = from_k; k < 4; k++) {
     if (k == 0) {
       header(k, "Hessian - diagonal of dimension 4");
       hessian = getHessianDiagonal4();
@@ -446,9 +311,9 @@ HighsHessian getHessianDiagonalWithZero4() {
   HighsHessian hessian;
   hessian.dim_ = 4;
   hessian.format_ = HessianFormat::kTriangular;
-  hessian.start_ = {0, 1, 2, 2, 3};
-  hessian.index_ = {0, 1, 3};
-  hessian.value_ = {1, 2, 4};
+  hessian.start_ = {0, 1, 2, 3, 4};
+  hessian.index_ = {0, 1, 2, 3};
+  hessian.value_ = {1, 2, 0, 4};
   return hessian;
 }
 
@@ -481,7 +346,7 @@ HighsHessian getHessian5() {
   hessian.format_ = HessianFormat::kTriangular;
   hessian.start_ = {0, 4, 6, 8, 10, 11};
   hessian.index_ = {0, 1, 3, 4, 1, 4, 2, 3, 3, 4, 4};
-  hessian.value_ = {5, 1, -1, 2, 4, 1, 0, -1, 3, -2, 2};
+  hessian.value_ = {5, 1, -1, 2, 4, 1, 10, -1, 3, -2, 2};
   return hessian;
 }
 
@@ -550,7 +415,7 @@ void testUnconConOracleSolve(const HighsHessian& hessian) {
   for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++)
     lp.col_cost_[iCol] *= -1;
 
-  testOracleSolve(model, solution.data());
+  testOracleSolve(model);
 
   // Now set up a solution without a zero component, and a constraint
   // that lies on it but cuts off the unconstrained minimizer
@@ -576,11 +441,11 @@ void testUnconConOracleSolve(const HighsHessian& hessian) {
   for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++)
     lp.col_cost_[iCol] = -lp.col_cost_[iCol] + row_dual * a_vector[iCol];
 
-  testOracleSolve(model, solution.data());
+  testOracleSolve(model);
 
 }
 
-void testOracleSolve(const HighsModel& model, const double* solution) {
+void testOracleSolve(const HighsModel& model) {
   const HighsLp& lp = model.lp_;
   HighsHessian local_hessian = model.hessian_;
   Highs h;
@@ -589,6 +454,7 @@ void testOracleSolve(const HighsModel& model, const double* solution) {
   const HighsInfo& info = h.getInfo();
   const double& objective_function_value = info.objective_function_value;
   double required_objective_function_value = 0;
+  std::vector<double> required_solution(lp.num_col_, 0);
   // Four passes:
   //
   // 0: with triangular Hessian
@@ -599,7 +465,7 @@ void testOracleSolve(const HighsModel& model, const double* solution) {
   //
   // 3: with square Hessian oracle
   
-  for (HighsInt k = 0; k < 4; k++) {
+  for (HighsInt k = 0; k < 3; k++) {
     if (dev_run) {
       printf("\n========================================================\n");
       if (k == 0) {
@@ -607,8 +473,6 @@ void testOracleSolve(const HighsModel& model, const double* solution) {
       }	else if (k == 1) {
 	printf("QPASM with triangular Hessian and internal test_oracle\n");
       }	else if (k == 2) {
-	printf("QPASM with triangular Hessian oracle\n");
-      }	else if (k == 3) {
 	printf("QPASM with square Hessian oracle\n");
       }	
       printf("========================================================\n\n");
@@ -625,13 +489,9 @@ void testOracleSolve(const HighsModel& model, const double* solution) {
       } else {
 	void* oracle_data = &local_hessian;
 	HighsStatus return_status;
-	if (local_hessian.format_ == HessianFormat::kSquare) {
-	  return_status =
-	    h.passHessian(lp.num_col_, oracleCallSquareHessian, oracle_data);
-	} else {
-	  return_status =
-	    h.passHessian(lp.num_col_, oracleCallTriangularHessian, oracle_data);
-	}
+	REQUIRE(local_hessian.format_ == HessianFormat::kSquare);
+	return_status =
+	  h.passHessian(lp.num_col_, oracleCallSquareHessian, oracle_data);
       }
     }
     //    if (dev_run) h.writeModel("");
@@ -640,16 +500,17 @@ void testOracleSolve(const HighsModel& model, const double* solution) {
     if (dev_run) h.writeSolution("", 1);
     if (k == 0) {
       required_objective_function_value = objective_function_value;
+      required_solution = h.getSolution().col_value;
     } else {
       REQUIRE(valuesRelEqual(objective_function_value,
 			     required_objective_function_value));
-      if (solution) REQUIRE(vectorsRelEqual(lp.num_col_, h.getSolution().col_value.data(),
-					    solution));
+      REQUIRE(vectorsRelEqual(lp.num_col_, h.getSolution().col_value.data(),
+			      required_solution.data()));
     }
     if (internal_test_oracle)
       REQUIRE(h.setOptionValue("test_qp_oracle", false) == HighsStatus::kOk);
     if (local_hessian.format_ == HessianFormat::kSquare) break;
-    if (k == 2) local_hessian = local_hessian.toSquare();
+    if (k == 1) local_hessian = local_hessian.toSquare();
   }
 
   h.resetGlobalScheduler(true);
