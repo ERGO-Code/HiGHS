@@ -4232,6 +4232,22 @@ HighsHessianFunctionType testOracleCallSquareHessian =
         }
       };
 
+      if (call_type == kHessianOracleCallTypeEntry) {
+	HighsInt iCol = x_index[0];
+	HighsInt iRow = q_x_index[0];
+	// Zero Qx value in case the Hessian entry requested is zero
+	q_x_value[0] = 0;
+	for (HighsInt iEl = hessian.start_[iCol];
+	     iEl < hessian.start_[iCol + 1]; iEl++) {
+	  if (hessian.index_[iEl] == iRow) {
+	    q_x_value[0] = hessian.value_[iEl];
+	    return;
+	  }
+	}
+	// Hessian entry is zero
+	return;
+      }
+
       if (x_index == nullptr) {
         // Simple product with full vector x, full vector q_x, and no
         // Qx indices required
