@@ -373,11 +373,12 @@ void Quass::solve(const QpVector& x0, const QpVector& ra, Basis& b0,
     // LOGGING
     const bool force_logging = false;
     double run_time = timer.read();
-    if (force_logging || ((runtime.statistics.num_iterations %
-                 runtime.settings.reportingfequency ==
-             0 ||
-         run_time - last_logging_time > logging_time_interval) &&
-	 runtime.statistics.num_iterations > last_logging_iteration)) {
+    if (force_logging ||
+        ((runtime.statistics.num_iterations %
+                  runtime.settings.reportingfequency ==
+              0 ||
+          run_time - last_logging_time > logging_time_interval) &&
+         runtime.statistics.num_iterations > last_logging_iteration)) {
       bool log_report = true;
       if (runtime.statistics.num_iterations >
           10 * runtime.settings.reportingfequency) {

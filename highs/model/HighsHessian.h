@@ -32,7 +32,8 @@ class HighsHessian {
   bool isOracle() const { return oracle_.call_ != nullptr; }
   void product(const std::vector<double>& solution,
                std::vector<double>& product) const;
-  void alphaProductPlusY(const double alpha, const std::vector<double>& x, std::vector<double>& y) const;
+  void alphaProductPlusY(const double alpha, const std::vector<double>& x,
+                         std::vector<double>& y) const;
   double objectiveValue(const std::vector<double>& solution) const;
   HighsCDouble objectiveCDoubleValue(const std::vector<double>& solution) const;
   void exactResize();

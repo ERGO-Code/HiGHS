@@ -36,24 +36,28 @@ struct MatrixBase {
   bool testOracle() const { return this->num_col > 0 && this->isOracle(); }
 
   bool doubleRelEqual(const double v_check, const double v_true) const {
-    double rel_v = std::fabs(v_check-v_true) / (1.0 + std::fabs(v_true));
+    double rel_v = std::fabs(v_check - v_true) / (1.0 + std::fabs(v_true));
     return rel_v < 1e-5;
   }
 
   bool doubleVectorRelEqual(const double* v_check, const double* v_true) const {
-    for (HighsInt iRow = 0; iRow < this->num_col; iRow++) 
+    for (HighsInt iRow = 0; iRow < this->num_col; iRow++)
       if (!doubleRelEqual(v_check[iRow], v_true[iRow])) return false;
     return true;
   }
 
   bool intVectorEqual(const HighsInt* v_check, const HighsInt* v_true) const {
-    for (HighsInt iRow = 0; iRow < this->num_col; iRow++) 
+    for (HighsInt iRow = 0; iRow < this->num_col; iRow++)
       if (v_check[iRow] != v_true[iRow]) return false;
     return true;
   }
 
-  bool packedVectorRelEqual(const HighsInt v_check_num_entries, const HighsInt* v_check_index , const double* v_check_value,
-			    const HighsInt v_true_num_entries, const HighsInt* v_true_index, const double* v_true_value) const {
+  bool packedVectorRelEqual(const HighsInt v_check_num_entries,
+                            const HighsInt* v_check_index,
+                            const double* v_check_value,
+                            const HighsInt v_true_num_entries,
+                            const HighsInt* v_true_index,
+                            const double* v_true_value) const {
     if (v_check_num_entries != v_true_num_entries) return false;
     std::vector<double> v_check(this->num_col, 0);
     std::vector<double> v_true(this->num_col, 0);
@@ -61,12 +65,17 @@ struct MatrixBase {
       v_check[v_check_index[iX]] = v_check_value[iX];
       v_true[v_true_index[iX]] = v_true_value[iX];
     }
-    return scatteredVectorRelEqual(v_check_num_entries, v_check_index, v_check.data(),
-				   v_true_num_entries, v_true_index, v_true.data());
+    return scatteredVectorRelEqual(v_check_num_entries, v_check_index,
+                                   v_check.data(), v_true_num_entries,
+                                   v_true_index, v_true.data());
   }
 
-  bool scatteredVectorRelEqual(const HighsInt v_check_num_entries, const HighsInt* v_check_index , const double* v_check_value,
-			    const HighsInt v_true_num_entries, const HighsInt* v_true_index, const double* v_true_value) const {
+  bool scatteredVectorRelEqual(const HighsInt v_check_num_entries,
+                               const HighsInt* v_check_index,
+                               const double* v_check_value,
+                               const HighsInt v_true_num_entries,
+                               const HighsInt* v_true_index,
+                               const double* v_true_value) const {
     if (v_check_num_entries != v_true_num_entries) return false;
     std::vector<HighsInt> v_check(this->num_col, -1);
     std::vector<HighsInt> v_true(this->num_col, -1);
@@ -77,7 +86,7 @@ struct MatrixBase {
       v_check[check_row] = v_check_index[iX];
     }
     return intVectorEqual(v_check.data(), v_true.data()) &&
-      doubleVectorRelEqual(v_check_value, v_true_value);
+           doubleVectorRelEqual(v_check_value, v_true_value);
   }
 
   void callLog(std::string message, const HighsInt id = 0) const {
@@ -89,15 +98,16 @@ struct MatrixBase {
     double diagonal_value = 0;
     if (this->num_col > 0) {
       for (HighsInt iEl = this->start[iCol]; iEl < this->start[iCol + 1]; iEl++)
-	if (this->index[iEl] == iCol) {
-	  diagonal_value = this->value[iEl];
-	  break;
-	}
+        if (this->index[iEl] == iCol) {
+          diagonal_value = this->value[iEl];
+          break;
+        }
     }
     if (this->isOracle()) {
       callLog("MatrixBase::diagonal", iCol);
       double oracle_diagonal_value = this->oracle_.diagonal(iCol);
-      if (testOracle()) assert(doubleRelEqual(oracle_diagonal_value, diagonal_value));
+      if (testOracle())
+        assert(doubleRelEqual(oracle_diagonal_value, diagonal_value));
       return oracle_diagonal_value;
     }
     return diagonal_value;
@@ -107,23 +117,26 @@ struct MatrixBase {
                  double* value) {
     if (this->num_col > 0) {
       num_entries = 0;
-      for (HighsInt iEl = this->start[iCol]; iEl < this->start[iCol + 1]; iEl++) {
-	index[num_entries] = this->index[iEl];
-	value[num_entries] = this->value[iEl];
-	num_entries++;
+      for (HighsInt iEl = this->start[iCol]; iEl < this->start[iCol + 1];
+           iEl++) {
+        index[num_entries] = this->index[iEl];
+        value[num_entries] = this->value[iEl];
+        num_entries++;
       }
     }
     if (this->isOracle()) {
       callLog("MatrixBase::getColumn", iCol);
       if (testOracle()) {
-	HighsInt oracle_num_entries;
-	std::vector<HighsInt> oracle_index(this->oracle_.dim_);
-	std::vector<double> oracle_value(this->oracle_.dim_);
-	this->oracle_.getPackedColumn(iCol, oracle_num_entries, oracle_index.data(), oracle_value.data());
-	assert(packedVectorRelEqual(oracle_num_entries, oracle_index.data(), oracle_value.data(),
-				    num_entries, index, value));
+        HighsInt oracle_num_entries;
+        std::vector<HighsInt> oracle_index(this->oracle_.dim_);
+        std::vector<double> oracle_value(this->oracle_.dim_);
+        this->oracle_.getPackedColumn(iCol, oracle_num_entries,
+                                      oracle_index.data(), oracle_value.data());
+        assert(packedVectorRelEqual(oracle_num_entries, oracle_index.data(),
+                                    oracle_value.data(), num_entries, index,
+                                    value));
       } else {
-	this->oracle_.getPackedColumn(iCol, num_entries, index, value);
+        this->oracle_.getPackedColumn(iCol, num_entries, index, value);
       }
       return;
     }
@@ -135,7 +148,7 @@ struct MatrixBase {
 
   QpVector& mat_vec_seq(const QpVector& other, QpVector& target) const {
     target.reset();
-    if (this->num_col > 0) { 
+    if (this->num_col > 0) {
       for (HighsInt i = 0; i < other.num_nz; i++) {
         HighsInt col = other.index[i];
         for (HighsInt idx = start[col]; idx < start[col + 1]; idx++) {
@@ -153,13 +166,13 @@ struct MatrixBase {
       // Need local copy of dim_ since mat_vec_seq is const
       HighsInt dim = oracle_.dim_;
       if (testOracle()) {
-	std::vector<double> oracle_value(dim);
-	oracle_.product(other.num_nz, other.index.data(),
-				  other.value.data(), oracle_value.data());
-	assert(doubleVectorRelEqual(oracle_value.data(), target.value.data()));
+        std::vector<double> oracle_value(dim);
+        oracle_.product(other.num_nz, other.index.data(), other.value.data(),
+                        oracle_value.data());
+        assert(doubleVectorRelEqual(oracle_value.data(), target.value.data()));
       } else {
-	oracle_.product(other.num_nz, other.index.data(),
-				  other.value.data(), target.value.data());
+        oracle_.product(other.num_nz, other.index.data(), other.value.data(),
+                        target.value.data());
       }
     }
     target.resparsify();
@@ -167,7 +180,7 @@ struct MatrixBase {
   }
 
   QpVector mat_vec(const QpVector& other) {
-    // Check to see whether this is needed for a Hessian oracle 
+    // Check to see whether this is needed for a Hessian oracle
     assert(!this->isOracle());
     HighsInt dim = this->isOracle() ? this->oracle_.dim_ : this->num_row;
     QpVector result(dim);
@@ -176,7 +189,7 @@ struct MatrixBase {
   }
 
   QpVector vec_mat(HighsInt* idx, double* val, HighsInt nnz) {
-    // Check to see whether this is needed for a Hessian oracle 
+    // Check to see whether this is needed for a Hessian oracle
     assert(!this->isOracle());
     HighsInt dim = this->isOracle() ? this->oracle_.dim_ : this->num_col;
     QpVector result(dim);
@@ -236,14 +249,14 @@ struct MatrixBase {
       callLog("MatrixBase::vec_mat_1");
       HighsInt target_dim = other.dim;
       if (testOracle()) {
-	HighsInt dim = oracle_.dim_;
-	std::vector<double> oracle_value(dim);
-	this->oracle_.product(other.num_nz, other.index.data(), other.value.data(),
-					oracle_value.data());
-	assert(doubleVectorRelEqual(oracle_value.data(), target.value.data()));
-      } else {	
-	this->oracle_.product(other.num_nz, other.index.data(), other.value.data(),
-					target.value.data());
+        HighsInt dim = oracle_.dim_;
+        std::vector<double> oracle_value(dim);
+        this->oracle_.product(other.num_nz, other.index.data(),
+                              other.value.data(), oracle_value.data());
+        assert(doubleVectorRelEqual(oracle_value.data(), target.value.data()));
+      } else {
+        this->oracle_.product(other.num_nz, other.index.data(),
+                              other.value.data(), target.value.data());
       }
     }
     target.resparsify();
@@ -251,7 +264,7 @@ struct MatrixBase {
   }
 
   QpVector vec_mat(const QpVector& other) const {
-    // Check to see whether this is needed for a Hessian oracle 
+    // Check to see whether this is needed for a Hessian oracle
     HighsInt dim = this->isOracle() ? this->oracle_.dim_ : this->num_col;
     QpVector result(dim);
 
@@ -260,7 +273,7 @@ struct MatrixBase {
 
   // computes this * mat, where "this" is a transposed matrix
   MatrixBase tran_mat_(const MatrixBase& other) {
-    // Check to see whether this is needed for a Hessian oracle 
+    // Check to see whether this is needed for a Hessian oracle
     assert(!this->isOracle());
     MatrixBase res;
     res.num_row = num_col;
@@ -303,16 +316,20 @@ struct MatrixBase {
         target.num_nz = start[col + 1] - start[col];
       }
       if (this->isOracle()) {
-	callLog("MatrixBase::extractcol");
-	if (testOracle()) {
-	  HighsInt oracle_num_entries;
-	  std::vector<HighsInt> oracle_index(this->oracle_.dim_);
-	  std::vector<double> oracle_value(this->oracle_.dim_);
-	  this->oracle_.getScatteredColumn(col, oracle_num_entries, oracle_index.data(), oracle_value.data());
-	  assert(scatteredVectorRelEqual(oracle_num_entries, oracle_index.data(), oracle_value.data(),
-					 target.num_nz, target.index.data(), target.value.data()));
-	}
-        this->oracle_.getScatteredColumn(col, target.num_nz, target.index.data(), target.value.data());
+        callLog("MatrixBase::extractcol");
+        if (testOracle()) {
+          HighsInt oracle_num_entries;
+          std::vector<HighsInt> oracle_index(this->oracle_.dim_);
+          std::vector<double> oracle_value(this->oracle_.dim_);
+          this->oracle_.getScatteredColumn(col, oracle_num_entries,
+                                           oracle_index.data(),
+                                           oracle_value.data());
+          assert(scatteredVectorRelEqual(
+              oracle_num_entries, oracle_index.data(), oracle_value.data(),
+              target.num_nz, target.index.data(), target.value.data()));
+        }
+        this->oracle_.getScatteredColumn(
+            col, target.num_nz, target.index.data(), target.value.data());
       }
     }
 
@@ -320,7 +337,7 @@ struct MatrixBase {
   }
 
   QpVector extractcol(HighsInt col) const {
-    // Check to see whether this is needed for a Hessian oracle 
+    // Check to see whether this is needed for a Hessian oracle
     assert(!this->isOracle());
     HighsInt dim = this->isOracle() ? this->oracle_.dim_ : this->num_row;
     QpVector res(dim);
@@ -364,7 +381,7 @@ struct Matrix {
   bool has_transpose = false;
 
   void transpose() {
-    // Check to see whether this is needed for a Hessian oracle 
+    // Check to see whether this is needed for a Hessian oracle
     assert(!this->mat.isOracle());
     if (!has_transpose) {
       std::vector<std::vector<HighsInt>> row_indices(mat.num_row);
@@ -417,7 +434,7 @@ struct Matrix {
   }
 
   void append(const QpVector& vec) {
-    // Check to see whether this is needed for a Hessian oracle 
+    // Check to see whether this is needed for a Hessian oracle
     assert(!this->mat.isOracle());
     if (mat.num_col == 0 && mat.start.size() == 0) {
       mat.start.push_back(0);
@@ -432,7 +449,7 @@ struct Matrix {
   }
 
   void append(HighsInt* idx, double* val, HighsInt nnz) {
-    // Check to see whether this is needed for a Hessian oracle 
+    // Check to see whether this is needed for a Hessian oracle
     assert(!this->mat.isOracle());
     if (mat.num_col == 0 && mat.start.size() == 0) {
       mat.start.push_back(0);
@@ -447,7 +464,7 @@ struct Matrix {
   }
 
   void append(HighsInt num_nz, HighsInt* index, double* value) {
-    // Check to see whether this is needed for a Hessian oracle 
+    // Check to see whether this is needed for a Hessian oracle
     assert(!this->mat.isOracle());
     if (mat.num_col == 0 && mat.start.size() == 0) {
       mat.start.push_back(0);
@@ -462,7 +479,7 @@ struct Matrix {
   }
 
   void dropcol(HighsInt col) {
-    // Check to see whether this is needed for a Hessian oracle 
+    // Check to see whether this is needed for a Hessian oracle
     assert(!this->mat.isOracle());
     assert(col < mat.num_col);
     has_transpose = false;
@@ -501,7 +518,7 @@ struct Matrix {
   }
 
   Matrix tran_mat(Matrix& other) {
-    // Check to see whether this is needed for a Hessian oracle 
+    // Check to see whether this is needed for a Hessian oracle
     assert(!this->mat.isOracle());
     Matrix res(mat.num_col, 0);
 
@@ -530,7 +547,7 @@ struct Matrix {
   }
 
   void report(std::string name = "") const {
-    // Check to see whether this is needed for a Hessian oracle 
+    // Check to see whether this is needed for a Hessian oracle
     assert(!this->mat.isOracle());
     if (name != "") {
       printf("%s:", name.c_str());
