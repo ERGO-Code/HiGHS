@@ -114,14 +114,14 @@ static bool blockBunchKaufman(Int j, Int n, double* A, Int lda, Int* swaps,
     double Arr = sign[r] > 0 ? A[r + lda * r] + regval.primal
                              : A[r + lda * r] - regval.dual;
 
-    if ((std::abs(Ajj) >= kAlphaBK * gamma_j ||
-         std::abs(Ajj) * gamma_r >= kAlphaBK * gamma_j * gamma_j)) {
+    if ((std::abs(Ajj) >= hipoTuning().alpha_bk * gamma_j ||
+         std::abs(Ajj) * gamma_r >= hipoTuning().alpha_bk * gamma_j * gamma_j)) {
       // Accept current pivot
       staticReg(A[j + lda * j], sign[j], regval, totalreg[j]);
 
       if (sign[j] * A[j + lda * j] < 0) data.setWrongSign(A[j + lda * j]);
 
-    } else if (std::abs(Arr) >= kAlphaBK * gamma_r) {
+    } else if (std::abs(Arr) >= hipoTuning().alpha_bk * gamma_r) {
       // Use pivot r
 
       swapCols('U', n, A, lda, j, r, swaps, sign, data);

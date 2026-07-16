@@ -337,12 +337,12 @@ void Analyse::relaxSupernodes() {
   double flops_1{};
   double spops_1{};
   relaxSnMaxNz(flops_1, spops_1);
-  double ops_1 = flops_1 + kSpopsWeightSn * spops_1;
+  double ops_1 = flops_1 + hipoTuning().sn_spops_weight * spops_1;
 
   double flops_2{};
   double spops_2{};
   relaxSnNetOps(flops_2, spops_2);
-  double ops_2 = flops_2 + kSpopsWeightSn * spops_2;
+  double ops_2 = flops_2 + hipoTuning().sn_spops_weight * spops_2;
 
   bool total_ops_reduced = ops_2 < ops_1;
   bool spops_reduced_enough = spops_2 < spops_1 * 0.6;
@@ -407,7 +407,7 @@ void Analyse::relaxSnNetOps(double& flops, double& spops) {
       const double spops_removed =
           clique_size[child] * (clique_size[child] + 1) / 2;
 
-      const double net_ops = flops_added - kSpopsWeightSn * spops_removed;
+      const double net_ops = flops_added - hipoTuning().sn_spops_weight * spops_removed;
 
       if (net_ops < 0) {
         // merge child with parent
@@ -554,28 +554,28 @@ void Analyse::relaxSnMaxNz(double& flops, double& spops) {
   // Multiple values of max_artificial_nz are tried, chosen with bisection
   // method, until the percentage of artificial nonzeros is in the range [1,2]%.
 
-  Int64 max_artificial_nz = kStartThreshRelax;
+  Int64 max_artificial_nz = hipoTuning().sn_start_thresh;
   Int64 largest_below = -1;
   Int64 smallest_above = -1;
 
   double best_dist_ratio = kHighsInf;
   Int64 best_max_art_nz = -1;
 
-  for (Int iter = 0; iter < kMaxIterRelax; ++iter) {
+  for (Int iter = 0; iter < hipoTuning().sn_max_iter_relax; ++iter) {
     // relax the supernodes and obtain the ratio of how many new ops have been
     // added with the current value of max_artificial_nz
     const double ratio_fake = doRelaxSnMaxNz(flops, spops, max_artificial_nz);
 
     // store the best ratio, in case a good ratio is never found
-    double dist_ratio_fake = std::min(std::abs(ratio_fake - kLowerRatioRelax),
-                                      std::abs(ratio_fake - kUpperRatioRelax));
+    double dist_ratio_fake = std::min(std::abs(ratio_fake - hipoTuning().sn_lower_ratio),
+                                      std::abs(ratio_fake - hipoTuning().sn_upper_ratio));
     if (dist_ratio_fake < best_dist_ratio) {
       best_dist_ratio = dist_ratio_fake;
       best_max_art_nz = max_artificial_nz;
     }
 
     // try to find ratio in interval [0.01,0.02] using bisection
-    if (ratio_fake < kLowerRatioRelax) {
+    if (ratio_fake < hipoTuning().sn_lower_ratio) {
       // ratio too small
       largest_below = max_artificial_nz;
       if (smallest_above == -1) {
@@ -583,7 +583,7 @@ void Analyse::relaxSnMaxNz(double& flops, double& spops) {
       } else {
         max_artificial_nz = (largest_below + smallest_above) / 2;
       }
-    } else if (ratio_fake > kUpperRatioRelax) {
+    } else if (ratio_fake > hipoTuning().sn_upper_ratio) {
       // ratio too large
       smallest_above = max_artificial_nz;
       if (largest_below == -1) {
@@ -597,7 +597,7 @@ void Analyse::relaxSnMaxNz(double& flops, double& spops) {
     }
   }
 
-  // If reach here, no good ratio was found within kMaxIterRelax
+  // If reach here, no good ratio was found within hipoTuning().sn_max_iter_relax
   // To avoid having a catastrophically bad ratio in pathological problems,
   // choose the best ratio found
 

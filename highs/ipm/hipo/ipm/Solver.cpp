@@ -6,6 +6,7 @@
 
 #include "ipm/IpxWrapper.h"
 #include "ipm/hipo/auxiliary/Log.h"
+#include "ipm/hipo/factorhighs/FactorHiGHSSettings.h"
 #include "lp_data/HighsSolution.h"
 #include "parallel/HighsParallel.h"
 
@@ -52,6 +53,22 @@ void Solver::setOptions(const HighsOptions& highs_options) {
   options_.nla = highs_options.hipo_system;
   options_.ordering = highs_options.hipo_ordering;
   options_.block_size = highs_options.hipo_block_size;
+
+  // Populate the factorisation tuning parameters. This runs once, during
+  // single-threaded setup, before any factorisation work starts.
+  HipoTuning& tuning = hipoTuning();
+  tuning.sn_start_thresh = highs_options.hipo_sn_start_thresh;
+  tuning.sn_upper_ratio = highs_options.hipo_sn_upper_ratio;
+  tuning.sn_lower_ratio = highs_options.hipo_sn_lower_ratio;
+  tuning.sn_max_iter_relax = highs_options.hipo_sn_max_iter_relax;
+  tuning.sn_size_relax = highs_options.hipo_sn_size_relax;
+  tuning.sn_spops_weight = highs_options.hipo_spops_weight;
+  tuning.alpha_bk = highs_options.hipo_alpha_bk;
+  tuning.block_grain_size = highs_options.hipo_block_grain_size;
+  tuning.block_parallel_threshold = highs_options.hipo_block_parallel_threshold;
+  tuning.min_consecutive_sums = highs_options.hipo_min_consecutive_sums;
+  tuning.dynamic_reg_coeff = highs_options.hipo_dynamic_reg_coeff;
+  tuning.metis_seed = highs_options.hipo_metis_seed;
 
   options_orig_ = options_;
   Hoptions_ = highs_options;

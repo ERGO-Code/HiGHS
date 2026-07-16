@@ -389,6 +389,20 @@ struct HighsOptionsStruct {
   std::string hipo_parallel_type;
   std::string hipo_ordering;
   HighsInt hipo_block_size;
+  // HiPO factorisation tuning parameters (defaults match the historical
+  // compile-time constants in ipm/hipo/factorhighs/FactorHiGHSSettings.h)
+  HighsInt hipo_sn_start_thresh;
+  double hipo_sn_upper_ratio;
+  double hipo_sn_lower_ratio;
+  HighsInt hipo_sn_max_iter_relax;
+  HighsInt hipo_sn_size_relax;
+  double hipo_spops_weight;
+  double hipo_alpha_bk;
+  HighsInt hipo_block_grain_size;
+  HighsInt hipo_block_parallel_threshold;
+  HighsInt hipo_min_consecutive_sums;
+  double hipo_dynamic_reg_coeff;
+  HighsInt hipo_metis_seed;
 
   // Options for PDLP solver
   HighsInt pdlp_features_off;
@@ -566,6 +580,18 @@ struct HighsOptionsStruct {
         hipo_parallel_type(""),
         hipo_ordering(""),
         hipo_block_size(0),
+        hipo_sn_start_thresh(0),
+        hipo_sn_upper_ratio(0.0),
+        hipo_sn_lower_ratio(0.0),
+        hipo_sn_max_iter_relax(0),
+        hipo_sn_size_relax(0),
+        hipo_spops_weight(0.0),
+        hipo_alpha_bk(0.0),
+        hipo_block_grain_size(0),
+        hipo_block_parallel_threshold(0),
+        hipo_min_consecutive_sums(0),
+        hipo_dynamic_reg_coeff(0.0),
+        hipo_metis_seed(0),
         pdlp_features_off(0),
         pdlp_iteration_limit(0),
         pdlp_scaling_mode(0),
@@ -1312,6 +1338,84 @@ class HighsOptions : public HighsOptionsStruct {
     record_int = new OptionRecordInt(
         "hipo_block_size", "Block size for dense linear algebra within HiPO",
         advanced, &hipo_block_size, 0, 128, kHighsIInf);
+    records.push_back(record_int);
+
+    // HiPO factorisation tuning parameters: defaults match the historical
+    // compile-time constants in ipm/hipo/factorhighs/FactorHiGHSSettings.h
+    record_int = new OptionRecordInt(
+        "hipo_sn_start_thresh",
+        "HiPO supernode amalgamation: initial artificial nonzero threshold",
+        advanced, &hipo_sn_start_thresh, 1, 256, kHighsIInf);
+    records.push_back(record_int);
+
+    record_double = new OptionRecordDouble(
+        "hipo_sn_upper_ratio",
+        "HiPO supernode amalgamation: upper target ratio of artificial "
+        "nonzeros",
+        advanced, &hipo_sn_upper_ratio, 0.0, 0.02, 1.0);
+    records.push_back(record_double);
+
+    record_double = new OptionRecordDouble(
+        "hipo_sn_lower_ratio",
+        "HiPO supernode amalgamation: lower target ratio of artificial "
+        "nonzeros",
+        advanced, &hipo_sn_lower_ratio, 0.0, 0.01, 1.0);
+    records.push_back(record_double);
+
+    record_int = new OptionRecordInt(
+        "hipo_sn_max_iter_relax",
+        "HiPO supernode amalgamation: iterations of threshold search",
+        advanced, &hipo_sn_max_iter_relax, 1, 20, kHighsIInf);
+    records.push_back(record_int);
+
+    record_int = new OptionRecordInt(
+        "hipo_sn_size_relax",
+        "HiPO supernode amalgamation: target supernode size", advanced,
+        &hipo_sn_size_relax, 1, 16, kHighsIInf);
+    records.push_back(record_int);
+
+    record_double = new OptionRecordDouble(
+        "hipo_spops_weight",
+        "HiPO supernode amalgamation: relative weight of sparse operations "
+        "against flops",
+        advanced, &hipo_spops_weight, 0.0, 50.0, kHighsInf);
+    records.push_back(record_double);
+
+    record_double = new OptionRecordDouble(
+        "hipo_alpha_bk",
+        "HiPO dense factorisation: Bunch-Kaufman pivoting threshold", advanced,
+        &hipo_alpha_bk, 1e-12, 0.01, 0.5);
+    records.push_back(record_double);
+
+    record_int = new OptionRecordInt(
+        "hipo_block_grain_size",
+        "HiPO dense factorisation: grain size multiplier for parallel gemm",
+        advanced, &hipo_block_grain_size, 1, 1, kHighsIInf);
+    records.push_back(record_int);
+
+    record_int = new OptionRecordInt(
+        "hipo_block_parallel_threshold",
+        "HiPO dense factorisation: minimum rows (in blocks) to parallelise "
+        "gemm",
+        advanced, &hipo_block_parallel_threshold, 1, 5, kHighsIInf);
+    records.push_back(record_int);
+
+    record_int = new OptionRecordInt(
+        "hipo_min_consecutive_sums",
+        "HiPO frontal assembly: minimum consecutive entries for vectorised "
+        "summation",
+        advanced, &hipo_min_consecutive_sums, 1, 1, kHighsIInf);
+    records.push_back(record_int);
+
+    record_double = new OptionRecordDouble(
+        "hipo_dynamic_reg_coeff",
+        "HiPO factorisation: dynamic regularisation coefficient", advanced,
+        &hipo_dynamic_reg_coeff, 0.0, 1e-24, 1.0);
+    records.push_back(record_double);
+
+    record_int = new OptionRecordInt(
+        "hipo_metis_seed", "HiPO ordering: random seed passed to Metis",
+        advanced, &hipo_metis_seed, 0, 42, kHighsIInf);
     records.push_back(record_int);
 
     record_int = new OptionRecordInt(

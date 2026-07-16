@@ -6,6 +6,7 @@
 #include "amd/amd.h"
 #include "ipm/hipo/auxiliary/Auxiliary.h"
 #include "ipm/hipo/auxiliary/Log.h"
+#include "ipm/hipo/factorhighs/FactorHiGHSSettings.h"
 #include "metis/metis.h"
 #include "parallel/HighsParallel.h"
 #include "rcm/rcm.h"
@@ -592,7 +593,7 @@ Int FactorHiGHSSolver::chooseOrdering(const std::vector<Int>& rows,
     if (orderings_to_try[i] == kHipoMetisString) {
       idx_t options[METIS_NOPTIONS];
       Highs_METIS_SetDefaultOptions(options);
-      options[METIS_OPTION_SEED] = kMetisSeed;
+      options[METIS_OPTION_SEED] = hipoTuning().metis_seed;
 
       // set logging of Metis depending on debug level
       options[METIS_OPTION_DBGLVL] = 0;

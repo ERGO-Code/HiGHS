@@ -20,7 +20,7 @@ void dgemmParalleliser::run(Int start, Int end, double beta) const {
 void dgemmParallel(const double* P, const double* R, double* Q, Int col, Int jb,
                    Int row, Int nb, double beta, DataCollector& data) {
   // if there is enough work to be done, parallelise
-  if (col >= nb / 2 && jb >= nb / 2 && row >= kBlockParallelThreshold * nb) {
+  if (col >= nb / 2 && jb >= nb / 2 && row >= hipoTuning().block_parallel_threshold * nb) {
     dgemmParalleliser gemmP(P, R, Q, col, jb, data);
     dgemmParalleliser* pt = &gemmP;
 
@@ -28,7 +28,7 @@ void dgemmParallel(const double* P, const double* R, double* Q, Int col, Int jb,
     // static_assert in the parallel deque fails.
     highs::parallel::for_each(
         0, row, [pt, beta](Int start, Int end) { pt->run(start, end, beta); },
-        kBlockGrainSize * jb);
+        hipoTuning().block_grain_size * jb);
   } else {
     callAndTime_dgemm('T', 'N', col, row, jb, -1.0, P, jb, R, jb, beta, Q, col,
                       data);

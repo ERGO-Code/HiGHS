@@ -32,26 +32,35 @@
 
 namespace hipo {
 
-// supernode amalgamation
-const Int kStartThreshRelax = 256;
-const double kUpperRatioRelax = 0.02;
-const double kLowerRatioRelax = 0.01;
-const Int kMaxIterRelax = 20;
-const Int kSnSizeRelax = 16;
-const double kSpopsWeightSn = 50.0;
+// Tuning parameters, historically compile-time constants. They are now held in
+// a single process-wide instance so that they can be overridden at runtime via
+// the advanced HiGHS options hipo_* (see HighsOptions.h). The instance is
+// written once, from Solver::load() during single-threaded setup, and is
+// read-only while a solve is in progress.
+struct HipoTuning {
+  // supernode amalgamation
+  Int sn_start_thresh = 256;         // was kStartThreshRelax
+  double sn_upper_ratio = 0.02;      // was kUpperRatioRelax
+  double sn_lower_ratio = 0.01;      // was kLowerRatioRelax
+  Int sn_max_iter_relax = 20;        // was kMaxIterRelax
+  Int sn_size_relax = 16;            // was kSnSizeRelax
+  double sn_spops_weight = 50.0;     // was kSpopsWeightSn
 
-// dense factorisation
-const double kAlphaBK = 0.01;  //(sqrt(17.0) + 1.0) / 8.0;
-const Int kBlockGrainSize = 1;
-const Int kBlockParallelThreshold = 5;
+  // dense factorisation
+  double alpha_bk = 0.01;            // was kAlphaBK; (sqrt(17.0) + 1.0) / 8.0
+  Int block_grain_size = 1;          // was kBlockGrainSize
+  Int block_parallel_threshold = 5;  // was kBlockParallelThreshold
 
-const Int kMinConsecutiveSums = 1;
+  Int min_consecutive_sums = 1;      // was kMinConsecutiveSums
 
-// regularisation
-const double kDynamicDiagCoeff = 1e-24;
+  // regularisation
+  double dynamic_reg_coeff = 1e-24;  // was kDynamicDiagCoeff
 
-// metis
-const Int kMetisSeed = 42;
+  // metis
+  Int metis_seed = 42;               // was kMetisSeed
+};
+
+HipoTuning& hipoTuning();
 
 struct Regul {
   double primal{};

@@ -6,6 +6,7 @@
 #include "CallAndTimeBlas.h"
 #include "DataCollector.h"
 #include "DenseFact.h"
+#include "FactorHiGHSSettings.h"
 #include "ipm/hipo/auxiliary/Auxiliary.h"
 
 namespace hipo {
@@ -71,7 +72,7 @@ void HybridHybridFormatHandler::assembleFrontalMultiple(Int& num,
   Int ii = i - block * nb_;
   Int jj = j - block * nb_;
 
-  if (num > kMinConsecutiveSums)
+  if (num > hipoTuning().min_consecutive_sums)
     callAndTime_daxpy(num, 1.0, &child[start_block + col_ + jb * row_], jb,
                       &frontal_[diag_start_[block] + ii + ldb * jj], 1, data_);
   else {
@@ -166,7 +167,7 @@ void HybridHybridFormatHandler::assembleClique(const double* child, Int nc,
         const Int j_ = j - jblock * nb_;
         const Int64 start_block = S_->cliqueBlockStart(sn_, jblock);
 
-        if (consecutive > kMinConsecutiveSums) {
+        if (consecutive > hipoTuning().min_consecutive_sums) {
           callAndTime_daxpy(consecutive, 1.0,
                             &child[start_block_c + col_ + jb_c * row_], 1,
                             &clique_ptr_[start_block + j_ + jb * i_], 1, data_);

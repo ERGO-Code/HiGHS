@@ -212,6 +212,7 @@ set(factor_highs_sources
     ipm/hipo/factorhighs/DenseFactKernel.cpp
     ipm/hipo/factorhighs/DgemmParallel.cpp
     ipm/hipo/factorhighs/FactorHiGHS.cpp
+    ipm/hipo/factorhighs/FactorHiGHSSettings.cpp
     ipm/hipo/factorhighs/Factorise.cpp
     ipm/hipo/factorhighs/FormatHandler.cpp
     ipm/hipo/factorhighs/HybridHybridFormatHandler.cpp
