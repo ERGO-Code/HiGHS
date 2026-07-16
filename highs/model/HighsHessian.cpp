@@ -669,8 +669,7 @@ void HessianOracle::product(const double* x_value, double* q_x_value) const {
   HighsInt q_x_num_entries = -1;
   this->call_(kHessianOracleCallTypeProduct, this->dim_, nullptr, x_value, q_x_num_entries, nullptr, q_x_value,
               this->data_);
-  this->scaleAndShift(this->dim_, nullptr, x_value, q_x_num_entries, nullptr,
-                      q_x_value);
+  this->scaleAndShift(this->dim_, nullptr, x_value, q_x_value);
 }
 
 // For scattered, sparse, x
@@ -686,88 +685,28 @@ void HessianOracle::productScatteredX(const HighsInt x_num_entries,
   assert(x_index != nullptr && x_num_entries > 0);
   this->call_(kHessianOracleCallTypeProduct, x_num_entries, x_index, x_value, q_x_num_entries, q_x_index,
               q_x_value, this->data_);
-  this->scaleAndShift(x_num_entries, x_index, x_value, q_x_num_entries,
-                      q_x_index, q_x_value);
+  this->scaleAndShift(x_num_entries, x_index, x_value, q_x_value);
 }
 
 void HessianOracle::scaleAndShift(const HighsInt x_num_entries,
                                   const HighsInt* x_index,
                                   const double* x_value,
-                                  HighsInt& q_x_num_entries,
-                                  HighsInt* q_x_index,
                                   double* q_x_value) const {
-  assert(q_x_index == nullptr);
   // Compute multiplier_*Qx + scale_*x
   if (this->multiplier_ != 1.0) {
-    if (q_x_index != nullptr) {
-      assert(q_x_num_entries >= 0);
-      for (HighsInt iX = 0; iX < q_x_num_entries; iX++)
-        q_x_value[iX] *= this->multiplier_;
-    } else {
-      for (HighsInt iRow = 0; iRow < this->dim_; iRow++)
-        q_x_value[iRow] *= this->multiplier_;
-    }
+    for (HighsInt iRow = 0; iRow < this->dim_; iRow++)
+      q_x_value[iRow] *= this->multiplier_;
   }
   if (this->shift_ != 0.0) {
-    if (q_x_index != nullptr) {
-      // Scatter the packed Qx values
-      std::vector<double> scattered(this->dim_, 0);
-      for (HighsInt iX = 0; iX < q_x_num_entries; iX++)
-        scattered[q_x_index[iX]] = q_x_value[iX];
-      // Add in this->shift_ * x
-      if (x_index != nullptr) {
-        for (HighsInt iX = 0; iX < x_num_entries; iX++) {
-	  HighsInt iRow = x_index[iX];
-          scattered[iRow] += this->shift_ * x_value[iRow];
-	}
-      } else {
-        for (HighsInt iRow = 0; iRow < this->dim_; iRow++)
-          scattered[iRow] += this->shift_ * x_value[iRow];
+    if (x_index != nullptr) {
+      assert(x_num_entries >= 0);
+      for (HighsInt iX = 0; iX < x_num_entries; iX++) {
+	HighsInt iRow = x_index[iX];
+	q_x_value[iRow] += this->shift_ * x_value[iRow];
       }
-      // Determine the new packed Qx
-      HighsInt new_q_x_num_entries = 0;
-      if (x_index != nullptr) {
-        // Gather the entries corresponding to q_x_index
-        for (HighsInt iX = 0; iX < q_x_num_entries; iX++) {
-          HighsInt iRow = q_x_index[iX];
-          if (scattered[iRow]) {
-            q_x_index[new_q_x_num_entries] = iRow;
-            q_x_value[new_q_x_num_entries] = scattered[iRow];
-            new_q_x_num_entries++;
-            scattered[iRow] = 0;
-          }
-        }
-        // Gather the entries corresponding to x_index
-        for (HighsInt iX = 0; iX < x_num_entries; iX++) {
-          HighsInt iRow = x_index[iX];
-          if (scattered[iRow]) {
-            q_x_index[new_q_x_num_entries] = iRow;
-            q_x_value[new_q_x_num_entries] = scattered[iRow];
-            new_q_x_num_entries++;
-          }
-        }
-      } else {
-        // Gather the entries
-        for (HighsInt iRow = 0; iRow < this->dim_; iRow++) {
-          if (scattered[iRow]) {
-            q_x_index[new_q_x_num_entries] = iRow;
-            q_x_value[new_q_x_num_entries] = scattered[iRow];
-            new_q_x_num_entries++;
-          }
-        }
-      }
-      q_x_num_entries = new_q_x_num_entries;
     } else {
-      if (x_index != nullptr) {
-        assert(x_num_entries >= 0);
-        for (HighsInt iX = 0; iX < x_num_entries; iX++) {
-	  HighsInt iRow = x_index[iX];
-          q_x_value[iRow] += this->shift_ * x_value[iRow];
-	}
-      } else {
-        for (HighsInt iRow = 0; iRow < this->dim_; iRow++)
-          q_x_value[iRow] += this->shift_ * x_value[iRow];
-      }
+      for (HighsInt iRow = 0; iRow < this->dim_; iRow++)
+	q_x_value[iRow] += this->shift_ * x_value[iRow];
     }
   }
 }

@@ -276,8 +276,7 @@ struct HessianOracle {
                          const double* x_value, HighsInt& q_x_num_entries,
                          HighsInt* q_x_index, double* q_x_value) const;
   void scaleAndShift(const HighsInt x_num_entries, const HighsInt* x_index,
-                     const double* x_value, HighsInt& q_x_num_entries,
-                     HighsInt* q_x_index, double* q_x_value) const;
+                     const double* x_value, double* q_x_value) const;
 };
 
 #endif /* LP_DATA_HSTRUCT_H_ */
