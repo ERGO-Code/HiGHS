@@ -642,10 +642,13 @@ void HessianOracle::getPackedColumn(const HighsInt col, HighsInt& col_num_entrie
                               HighsInt* col_index, double* col_value) const {
   assert(col >= 0 && col < this->dim_);
   double value = 1.0;
-  col_num_entries = -1;
-  bool scale_and_shift = false;
-  this->productPackedX(HighsInt{1}, &col, &value, col_num_entries, col_index,
-                       col_value, scale_and_shift);
+  //  col_num_entries = -1;
+  this->call_(kHessianOracleCallTypeColumn,
+	      HighsInt{1}, &col, &value, col_num_entries, col_index,
+	      col_value, this->data_);
+  //  bool scale_and_shift = false;
+  //  this->productPackedX(HighsInt{1}, &col, &value, col_num_entries, col_index,
+  //                       col_value, scale_and_shift);
   if (this->multiplier_ != 1.0) {
     for (HighsInt iX = 0; iX < col_num_entries; iX++)
       col_value[iX] *= this->multiplier_;

@@ -4246,6 +4246,17 @@ HighsHessianFunctionType testOracleCallSquareHessian =
 	}
 	// Hessian entry is zero
 	return;
+      } else if (call_type == kHessianOracleCallTypeColumn) {
+	// Get the entries in column iCol
+	q_x_num_entries = 0;
+	HighsInt iCol = x_index[0];
+	for (HighsInt iEl = hessian.start_[iCol];
+	     iEl < hessian.start_[iCol + 1]; iEl++) {
+	  q_x_index[q_x_num_entries] = hessian.index_[iEl];
+	  q_x_value[q_x_num_entries] = hessian.value_[iEl] * x_value[0];
+	  q_x_num_entries++;
+	}
+	return;
       }
 
       if (x_index == nullptr) {

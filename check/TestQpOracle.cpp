@@ -80,6 +80,33 @@ HighsHessianFunctionType oracleCallSquareHessian =
         }
       };
 
+      if (call_type == kHessianOracleCallTypeEntry) {
+	HighsInt iCol = x_index[0];
+	HighsInt iRow = q_x_index[0];
+	// Zero Qx value in case the Hessian entry requested is zero
+	q_x_value[0] = 0;
+	for (HighsInt iEl = hessian.start_[iCol];
+	     iEl < hessian.start_[iCol + 1]; iEl++) {
+	  if (hessian.index_[iEl] == iRow) {
+	    q_x_value[0] = hessian.value_[iEl];
+	    return;
+	  }
+	}
+	// Hessian entry is zero
+	return;
+      } else if (call_type == kHessianOracleCallTypeColumn) {
+	// Get the entries in column iCol
+	q_x_num_entries = 0;
+	HighsInt iCol = x_index[0];
+	for (HighsInt iEl = hessian.start_[iCol];
+	     iEl < hessian.start_[iCol + 1]; iEl++) {
+	  q_x_index[q_x_num_entries] = hessian.index_[iEl];
+	  q_x_value[q_x_num_entries] = hessian.value_[iEl] * x_value[0];
+	  q_x_num_entries++;
+	}
+	return;
+      }
+
       if (x_index == nullptr) {
         // Simple product with full vector x, full vector q_x, and no
         // Qx indices required
