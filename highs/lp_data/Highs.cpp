@@ -4257,9 +4257,11 @@ HighsHessianFunctionType testOracleCallSquareHessian =
 	  for (HighsInt iCol = 0; iCol < hessian.dim_; iCol++)
 	    addScaledQcol(iCol, x_value[iCol]);
 	} else {
-	  // x is sparse with x_num_entries entries in rows x_index
-	  for (HighsInt iX = 0; iX < x_num_entries; iX++)
-	    addScaledQcol(x_index[iX], x_value[iX]);
+	  // x is scattered with x_num_entries entries in rows x_index
+	  for (HighsInt iX = 0; iX < x_num_entries; iX++) {
+	    HighsInt iCol = x_index[iX];
+	    addScaledQcol(iCol, x_value[iCol]);
+	  }
 	}
       }
     };

@@ -537,7 +537,7 @@ HighsStatus HighsHessian::checkOracle(const HighsLogOptions& log_options,
     error_found = true;
   }
 
-  // Test product from a scattered (k=0) or packed (k=1), sparse, x
+  // Test product from a scattered, sparse, x
   x_value.assign(dim, 0);
   std::vector<HighsInt> x_index(dim);
   std::vector<HighsInt> q_x_index(dim);
@@ -546,68 +546,36 @@ HighsStatus HighsHessian::checkOracle(const HighsLogOptions& log_options,
   //  std::vector<HighsInt> q_q_x_index(dim, 0);
   //  std::vector<double> check_q_q_x_value(dim, 0);
   //  std::vector<HighsInt> check_q_q_x_index(dim, 0);
-  for (HighsInt k = 0; k < 2; k++) {
-    const bool scattered = k == 0;
-    q_x_value.assign(dim, 0);
-    check_q_x_value.assign(dim, 0);
-    for (HighsInt iCol = 0; iCol < dim; iCol++) {
-      HighsInt x_nonzero_location = scattered ? iCol : 0;
-      x_value[x_nonzero_location] = 1.0;  // random.fraction();//
-      x_index[0] = iCol;
-      HighsInt check_q_x_num_entries = 0;
-      for (HighsInt iEl = hessian.start_[iCol]; iEl < hessian.start_[iCol + 1];
-           iEl++) {
-        HighsInt iRow = hessian.index_[iEl];
-        check_q_x_value[check_q_x_num_entries] =
-            hessian.value_[iEl] * x_value[x_nonzero_location];
-        check_q_x_index[check_q_x_num_entries] = iRow;
-        check_q_x_num_entries++;
-      }
-      HighsInt q_x_num_entries = -1;
-      if (scattered) {
-        oracle.productScatteredX(HighsInt(1), x_index.data(), x_value.data(),
-                                 q_x_num_entries, q_x_index.data(),
-                                 q_x_value.data());
-      } else {
-        oracle.productPackedX(HighsInt(1), x_index.data(), x_value.data(),
-                              q_x_num_entries, q_x_index.data(),
-                              q_x_value.data());
-      }
-      /*
-      if (k == 0) {
-        // Now multiply Q and (packed) Qx to form scattered Q(Qx)
-        // values
-        HighsInt q_q_x_num_entries = dim;
-        for (HighsInt iX = 0; iX < q_x_num_entries; iX++) {
-          HighsInt iCol = q_x_index[iX];
-          for (HighsInt iEl = hessian.start_[iCol]; iEl < hessian.start_[iCol +
-      1]; iEl++) { HighsInt iRow = hessian.index_[iEl]; check_q_q_x_value[iRow]
-      += hessian.value_[iEl] * q_x_value[iX];
-          }
-        }
-        oracle.productPackedX(q_x_num_entries, q_x_index.data(),
-      q_x_value.data(), q_q_x_num_entries, nullptr, q_q_x_value.data()); if
-      (!vectorsEqual(dim, q_q_x_value.data(), check_q_q_x_value.data())) {
-          highsLogUser(log_options, HighsLogType::kError,
-                       "Hessian oracle product %d with packed Qx: values are
-      incorrect\n", int(iCol)); if (exit_on_first_error) return
-      HighsStatus::kError; error_found = true;
-        }
-      }
-      */
-      // Check diffence between q_x and check_q_x in zeroing both
-      if (!packedVectorsEqual(q_x_num_entries, q_x_index.data(),
-                              q_x_value.data(), check_q_x_num_entries,
-                              check_q_x_index.data(), check_q_x_value.data())) {
-        highsLogUser(log_options, HighsLogType::kError,
-                     "Hessian oracle product %d with %s, sparse, x: Qx values "
-                     "are incorrect\n",
-                     int(iCol), scattered ? "scattered" : "packed");
-        if (exit_on_first_error) return HighsStatus::kError;
-        error_found = true;
-      }
-      x_value[x_nonzero_location] = 0.0;
+  q_x_value.assign(dim, 0);
+  check_q_x_value.assign(dim, 0);
+  for (HighsInt iCol = 0; iCol < dim; iCol++) {
+    x_value[iCol] = 1.0;  // random.fraction();//
+    x_index[0] = iCol;
+    HighsInt check_q_x_num_entries = 0;
+    for (HighsInt iEl = hessian.start_[iCol]; iEl < hessian.start_[iCol + 1];
+	 iEl++) {
+      HighsInt iRow = hessian.index_[iEl];
+      check_q_x_value[check_q_x_num_entries] =
+	hessian.value_[iEl] * x_value[iCol];
+      check_q_x_index[check_q_x_num_entries] = iRow;
+      check_q_x_num_entries++;
     }
+    HighsInt q_x_num_entries = -1;
+    oracle.productScatteredX(HighsInt(1), x_index.data(), x_value.data(),
+			     q_x_num_entries, q_x_index.data(),
+			     q_x_value.data());
+    // Check diffence between q_x and check_q_x in zeroing both
+    if (!packedVectorsEqual(q_x_num_entries, q_x_index.data(),
+			    q_x_value.data(), check_q_x_num_entries,
+			    check_q_x_index.data(), check_q_x_value.data())) {
+      highsLogUser(log_options, HighsLogType::kError,
+		   "Hessian oracle product %d with sparse, x: Qx values "
+		   "are incorrect\n",
+		   int(iCol));
+      if (exit_on_first_error) return HighsStatus::kError;
+      error_found = true;
+    }
+    x_value[iCol] = 0.0;
   }
 
   if (error_found) return HighsStatus::kError;
@@ -642,13 +610,9 @@ void HessianOracle::getPackedColumn(const HighsInt col, HighsInt& col_num_entrie
                               HighsInt* col_index, double* col_value) const {
   assert(col >= 0 && col < this->dim_);
   double value = 1.0;
-  //  col_num_entries = -1;
   this->call_(kHessianOracleCallTypeColumn,
 	      HighsInt{1}, &col, &value, col_num_entries, col_index,
 	      col_value, this->data_);
-  //  bool scale_and_shift = false;
-  //  this->productPackedX(HighsInt{1}, &col, &value, col_num_entries, col_index,
-  //                       col_value, scale_and_shift);
   if (this->multiplier_ != 1.0) {
     for (HighsInt iX = 0; iX < col_num_entries; iX++)
       col_value[iX] *= this->multiplier_;
@@ -713,8 +677,9 @@ void HessianOracle::productScatteredX(const HighsInt x_num_entries,
                                       HighsInt& q_x_num_entries,
                                       HighsInt* q_x_index,
                                       double* q_x_value) const {
-  // Must have non-negative number of indices
-  assert(x_index != nullptr && x_num_entries >= 0);
+  assert(this->call_);
+  // Must have positive number of indices
+  assert(x_index != nullptr && x_num_entries > 0);
   // Gather the values
   std::vector<double> x_packed(x_num_entries);
   for (HighsInt iEl = 0; iEl < x_num_entries; iEl++) {
@@ -722,10 +687,12 @@ void HessianOracle::productScatteredX(const HighsInt x_num_entries,
     assert(iCol < this->dim_);
     x_packed[iEl] = x_value[iCol];
   }
+  this->call_(kHessianOracleCallTypeProduct, x_num_entries, x_index, x_value, q_x_num_entries, q_x_index,
+              q_x_value, this->data_);
   // Perform scale and shift here, not with the packed x
-  const bool scale_and_shift = false;
-  this->productPackedX(x_num_entries, x_index, x_packed.data(), q_x_num_entries,
-                       q_x_index, q_x_value, scale_and_shift);
+  //  const bool scale_and_shift = false;
+  //  this->productPackedX(x_num_entries, x_index, x_packed.data(), q_x_num_entries,
+  //                       q_x_index, q_x_value, scale_and_shift);
   this->scaleAndShift(x_num_entries, x_index, x_packed.data(), q_x_num_entries,
                       q_x_index, q_x_value);
 }
