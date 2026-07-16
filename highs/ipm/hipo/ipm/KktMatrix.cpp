@@ -187,11 +187,14 @@ Int KktMatrix::buildNEstructure() {
     }
   };
 
-  // computing the structure in parallel is beneficial if matrix A is dense
+  // computing the structure in parallel only if matrix A is dense and large
   const double nz_per_col = (double)model.A().numNz() / model.A().num_col_;
   const double nz_per_row = (double)model.A().numNz() / model.A().num_row_;
-  const bool parallel = nz_per_col > kParallelNEnzPerColThresh ||
-                  nz_per_row > kParallelNEnzPerRowThresh;
+  const bool is_dense = nz_per_col > kParallelNEnzPerColThresh ||
+                        nz_per_row > kParallelNEnzPerRowThresh;
+  const bool is_large = model.A().num_row_ > kParallelNEsizeThresh ||
+                        model.A().num_col_ > kParallelNEsizeThresh;
+  const bool parallel = is_dense && is_large;
 
   if (parallel) {
     logger.printInfo("NE structure in parallel\n");
