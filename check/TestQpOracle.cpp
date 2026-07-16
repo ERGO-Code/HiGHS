@@ -60,8 +60,6 @@ HighsHessianFunctionType oracleCallSquareHessian =
      HighsInt& q_x_num_entries, HighsInt* q_x_index, double* q_x_value,
      void* hessian_p) {
       assert(kHessianOracleCallTypeMin <= call_type && call_type <= kHessianOracleCallTypeMax);
-      assert(x_value != nullptr);
-      assert(q_x_value != nullptr);
 
       HighsHessian hessian = *(static_cast<HighsHessian*>(hessian_p));
       assert(hessian.format_ == HessianFormat::kSquare);
@@ -76,6 +74,10 @@ HighsHessianFunctionType oracleCallSquareHessian =
       };
 
       if (call_type == kHessianOracleCallTypeEntry) {
+	assert(x_value == nullptr);
+	assert(x_index != nullptr);
+	assert(q_x_index != nullptr);
+	assert(q_x_value != nullptr);
 	HighsInt iCol = x_index[0];
 	HighsInt iRow = q_x_index[0];
 	// Zero Qx value in case the Hessian entry requested is zero
@@ -89,17 +91,22 @@ HighsHessianFunctionType oracleCallSquareHessian =
 	}
       } else if (call_type == kHessianOracleCallTypeColumn) {
 	// Get the entries in column iCol
+	assert(x_value == nullptr);
+	assert(x_index != nullptr);
+	assert(q_x_index != nullptr);
+	assert(q_x_value != nullptr);
 	q_x_num_entries = 0;
 	HighsInt iCol = x_index[0];
 	for (HighsInt iEl = hessian.start_[iCol];
 	     iEl < hessian.start_[iCol + 1]; iEl++) {
 	  q_x_index[q_x_num_entries] = hessian.index_[iEl];
-	  q_x_value[q_x_num_entries] = hessian.value_[iEl] * x_value[0];
+	  q_x_value[q_x_num_entries] = hessian.value_[iEl];
 	  q_x_num_entries++;
 	}
       } else {
-	assert(x_index == nullptr || x_num_entries >= 1);
+	assert(x_index == nullptr || x_num_entries > 0);
 	assert(q_x_index == nullptr);
+	assert(q_x_value != nullptr);
 	if (x_index == nullptr) {
 	  // Simple product with full vector x, full vector q_x
 	  for (HighsInt iCol = 0; iCol < hessian.dim_; iCol++)

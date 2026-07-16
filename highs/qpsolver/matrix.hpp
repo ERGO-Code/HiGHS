@@ -146,7 +146,7 @@ struct MatrixBase {
     }
     if (isOracle()) {
       callLog("MatrixBase::mat_vec_seq");
-      // productScatteredX packs values in other, which yields nullptr
+      // product packs values in other, which yields nullptr
       // if other.num_nz = 0, and then assert in the oracle, so just
       // return target - which is correct since it's zero
       if (other.num_nz == 0) return target;
@@ -154,14 +154,12 @@ struct MatrixBase {
       HighsInt dim = oracle_.dim_;
       if (testOracle()) {
 	std::vector<double> oracle_value(dim);
-	oracle_.productScatteredX(other.num_nz, other.index.data(),
-				  other.value.data(), dim, nullptr,
-				  oracle_value.data());
+	oracle_.product(other.num_nz, other.index.data(),
+				  other.value.data(), oracle_value.data());
 	assert(doubleVectorRelEqual(oracle_value.data(), target.value.data()));
       } else {
-	oracle_.productScatteredX(other.num_nz, other.index.data(),
-				  other.value.data(), dim, nullptr,
-				  target.value.data());
+	oracle_.product(other.num_nz, other.index.data(),
+				  other.value.data(), target.value.data());
       }
     }
     target.resparsify();
@@ -240,12 +238,12 @@ struct MatrixBase {
       if (testOracle()) {
 	HighsInt dim = oracle_.dim_;
 	std::vector<double> oracle_value(dim);
-	this->oracle_.productScatteredX(other.num_nz, other.index.data(), other.value.data(),
-			    target_dim, nullptr, oracle_value.data());
+	this->oracle_.product(other.num_nz, other.index.data(), other.value.data(),
+					oracle_value.data());
 	assert(doubleVectorRelEqual(oracle_value.data(), target.value.data()));
       } else {	
-	this->oracle_.productScatteredX(other.num_nz, other.index.data(), other.value.data(),
-			    target_dim, nullptr, target.value.data());
+	this->oracle_.product(other.num_nz, other.index.data(), other.value.data(),
+					target.value.data());
       }
     }
     target.resparsify();
