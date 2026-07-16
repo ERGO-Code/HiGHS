@@ -631,7 +631,7 @@ double HessianOracle::entry(const HighsInt i, const HighsInt j) const {
   double entry;
   HighsInt q_x_num_entries = 1;
   HighsInt q_x_index = j;
-  this->call_(HighsInt(1), &i, &x, q_x_num_entries, &q_x_index, &entry,
+  this->call_(kHessianOracleCallTypeEntry, HighsInt(1), &i, &x, q_x_num_entries, &q_x_index, &entry,
               this->data_);
   entry *= this->multiplier_;
   if (i == j) entry += this->shift_;
@@ -672,7 +672,7 @@ void HessianOracle::getScatteredColumn(const HighsInt col, HighsInt& col_num_ent
   // Get the packed column values using col_value to avoid allocating
   // a full vector
   this->getPackedColumn(col, col_num_entries, col_index, col_value);
-  // Copy col_value into col_packed to and zero col_value
+  // Copy col_value into col_packed and zero col_value
   std::vector<double> col_packed(col_num_entries);
   for (HighsInt iEl = 0; iEl < col_num_entries; iEl++) {
     col_packed[iEl] = col_value[iEl];
@@ -697,7 +697,7 @@ void HessianOracle::product(const std::vector<double>& x_value,
 void HessianOracle::product(const double* x_value, double* q_x_value) const {
   assert(this->call_);
   HighsInt q_x_num_entries = -1;
-  this->call_(this->dim_, nullptr, x_value, q_x_num_entries, nullptr, q_x_value,
+  this->call_(kHessianOracleCallTypeProduct, this->dim_, nullptr, x_value, q_x_num_entries, nullptr, q_x_value,
               this->data_);
   this->scaleAndShift(this->dim_, nullptr, x_value, q_x_num_entries, nullptr,
                       q_x_value);
@@ -738,7 +738,7 @@ void HessianOracle::productPackedX(const HighsInt x_num_entries,
   // Must either have no indices (x assumed full) or have non-negative
   // number of indices
   assert(x_index == nullptr || x_num_entries >= 0);
-  this->call_(x_num_entries, x_index, x_value, q_x_num_entries, q_x_index,
+  this->call_(kHessianOracleCallTypeProduct, x_num_entries, x_index, x_value, q_x_num_entries, q_x_index,
               q_x_value, this->data_);
   if (scale_and_shift)
     this->scaleAndShift(x_num_entries, x_index, x_value, q_x_num_entries,

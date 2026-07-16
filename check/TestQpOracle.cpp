@@ -55,9 +55,11 @@ void testOracleSolve(const HighsModel& model);
 // use case: getting a column of the Hessian
 
 HighsHessianFunctionType oracleCallSquareHessian =
-    [](const HighsInt x_num_entries, const HighsInt* x_index,
-       const double* x_value, HighsInt& q_x_num_entries, HighsInt* q_x_index,
-       double* q_x_value, void* hessian_p) {
+  [](const HighsInt call_type,
+     const HighsInt x_num_entries, const HighsInt* x_index, const double* x_value, 
+     HighsInt& q_x_num_entries, HighsInt* q_x_index, double* q_x_value,
+     void* hessian_p) {
+      assert(kHessianOracleCallTypeMin <= call_type && call_type <= kHessianOracleCallTypeMax);
       assert(x_value != nullptr);
       assert(q_x_value != nullptr);
 

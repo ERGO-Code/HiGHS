@@ -309,6 +309,14 @@ enum IisStatus : int {
   kIisStatusMax = kIisStatusInConflict
 };
 
+enum HessianOracleCallType : int {
+  kHessianOracleCallTypeMin = 0,
+  kHessianOracleCallTypeEntry = kHessianOracleCallTypeMin,
+  kHessianOracleCallTypeColumn,
+  kHessianOracleCallTypeProduct,
+  kHessianOracleCallTypeMax = kHessianOracleCallTypeProduct
+};
+
 enum MipChooseSubMipRecord : int {
   kMipRecord = -1,
   kChooseRecord,

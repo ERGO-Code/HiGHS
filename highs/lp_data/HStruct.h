@@ -248,8 +248,10 @@ struct HighsUserScaleData {
 };
 
 using HighsHessianFunctionType = std::function<void(
-    const HighsInt x_index_size, const HighsInt* x_index, const double* x_value,
-    HighsInt& q_x_index_size, HighsInt* q_x_index, double* q_x_value, void*)>;
+    const HighsInt call_type,
+    const HighsInt x_num_entries, const HighsInt* x_index, const double* x_value,
+    HighsInt& q_x_num_entries, HighsInt* q_x_index, double* q_x_value,
+    void*)>;
 
 struct HessianOracle {
   // Oracle to obtain values of Q' = multiplier_*Q + shift_*I and form

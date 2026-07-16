@@ -76,7 +76,7 @@ struct MatrixBase {
       v_true[v_true_index[iX]] = v_true_index[iX];
       v_check[check_row] = v_check_index[iX];
     }
-    return intVectorEqual(v_check_index, v_true_index) &&
+    return intVectorEqual(v_check.data(), v_true.data()) &&
       doubleVectorRelEqual(v_check_value, v_true_value);
   }
 
@@ -223,6 +223,7 @@ struct MatrixBase {
 
   QpVector& vec_mat_1(const QpVector& other, QpVector& target) const {
     target.reset();
+    if (other.num_nz == 0) return target;
     if (num_col > 0) {
       for (HighsInt col = 0; col < num_col; col++) {
         double dot = 0.0;
