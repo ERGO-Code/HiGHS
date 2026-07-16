@@ -403,6 +403,7 @@ struct HighsOptionsStruct {
   HighsInt hipo_min_consecutive_sums;
   double hipo_dynamic_reg_coeff;
   HighsInt hipo_metis_seed;
+  bool hipo_parallel_solve;
 
   // Options for PDLP solver
   HighsInt pdlp_features_off;
@@ -592,6 +593,7 @@ struct HighsOptionsStruct {
         hipo_min_consecutive_sums(0),
         hipo_dynamic_reg_coeff(0.0),
         hipo_metis_seed(0),
+        hipo_parallel_solve(false),
         pdlp_features_off(0),
         pdlp_iteration_limit(0),
         pdlp_scaling_mode(0),
@@ -1417,6 +1419,12 @@ class HighsOptions : public HighsOptionsStruct {
         "hipo_metis_seed", "HiPO ordering: random seed passed to Metis",
         advanced, &hipo_metis_seed, 0, 42, kHighsIInf);
     records.push_back(record_int);
+
+    record_bool = new OptionRecordBool(
+        "hipo_parallel_solve",
+        "HiPO: use the experimental parallel triangular solve", advanced,
+        &hipo_parallel_solve, false);
+    records.push_back(record_bool);
 
     record_int = new OptionRecordInt(
         "pdlp_iteration_limit", "Iteration limit for PDLP solver", advanced,

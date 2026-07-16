@@ -30,9 +30,29 @@ class Numeric {
   // largest supernode leading dimension; avoids per-block allocations
   mutable std::vector<double> solve_work_{};
 
+  // ===========================================================================
+  // Schedule for the experimental parallel triangular solve (see
+  // PHASE3_DESIGN.md). Built only when hipoTuning().parallel_solve is set.
+  //
+  // solve_schedule_[level][task] is an ascending list of supernodes. All
+  // supernodes of level L depend only on supernodes of levels < L (forward
+  // solve) resp. > L (backward solve). Tasks within a level are independent
+  // up to the deferred forward-solve scatters, which are merged serially.
+  // ===========================================================================
+  std::vector<std::vector<std::vector<Int>>> solve_schedule_{};
+
+  // per-task-slot buffers for the parallel solve (gemv workspace and the
+  // deferred scatter contributions of the forward solve)
+  mutable std::vector<std::vector<double>> task_work_{};
+  mutable std::vector<std::vector<Int>> task_def_rows_{};
+  mutable std::vector<std::vector<double>> task_def_vals_{};
+
   // Compute swap_flags_ and size solve_work_; called by Factorise once the
   // factor has been handed over
   void finaliseFactor();
+
+  // Build solve_schedule_ from the supernodal elimination tree
+  void buildSolveSchedule();
 
   // information about 2x2 pivots
   std::vector<std::vector<double>> pivot_2x2_{};

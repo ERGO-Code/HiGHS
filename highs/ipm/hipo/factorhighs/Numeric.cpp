@@ -5,6 +5,7 @@
 #include "DataCollector.h"
 #include "FactorHiGHSSettings.h"
 #include "HybridSolveHandler.h"
+#include "ParallelSolveHandler.h"
 #include "ReturnValues.h"
 #include "Timing.h"
 #include "ipm/hipo/auxiliary/Auxiliary.h"
@@ -47,6 +48,75 @@ void Numeric::finaliseFactor() {
   }
 
   solve_work_.resize(max_ld);
+
+  if (hipoTuning().parallel_solve) buildSolveSchedule();
+}
+
+void Numeric::buildSolveSchedule() {
+  // Build the level schedule for the parallel triangular solve.
+  //
+  // Levels: level[sn] = 1 + max level of its children, so that all
+  // dependencies of a supernode (its descendants) lie in strictly lower
+  // levels. Relies on the postordering of the supernodal elimination tree
+  // (children have smaller indices than their parent); if that does not
+  // hold, no schedule is built and the serial handler is used.
+
+  const Int n_sn = S_->sn();
+  solve_schedule_.clear();
+
+  std::vector<Int> level(n_sn, 0);
+  Int max_level = 0;
+  for (Int sn = 0; sn < n_sn; ++sn) {
+    const Int parent = S_->snParent(sn);
+    if (parent < 0) continue;
+    if (parent <= sn) return;  // not postordered: bail out, stay serial
+    level[parent] = std::max(level[parent], level[sn] + 1);
+    max_level = std::max(max_level, level[parent]);
+  }
+
+  // group supernodes by level, in ascending order
+  std::vector<std::vector<Int>> levels(max_level + 1);
+  for (Int sn = 0; sn < n_sn; ++sn) levels[level[sn]].push_back(sn);
+
+  // Chunk each level into tasks of at least kMinSnPerTask supernodes.
+  // Chain-shaped portions of the tree produce long runs of single-supernode
+  // levels; consecutive such levels are merged into one serial task to
+  // reduce the number of barriers (they are sequentially dependent anyway).
+  const Int kMinSnPerTask = 8;
+  const Int kMaxTasksPerLevel = 64;
+
+  for (size_t lv = 0; lv < levels.size(); ++lv) {
+    const std::vector<Int>& sns = levels[lv];
+    if (sns.size() == 1) {
+      // Singleton level (typical of chain-shaped portions of the tree):
+      // append to the previous level if that level consists of a single
+      // task. Single-task levels are executed serially with immediate
+      // scatters, so extending them preserves dependencies and reduces the
+      // number of barriers.
+      if (!solve_schedule_.empty() && solve_schedule_.back().size() == 1) {
+        solve_schedule_.back()[0].push_back(sns[0]);
+        continue;
+      }
+      solve_schedule_.push_back({{sns[0]}});
+      continue;
+    }
+    const Int n_tasks = std::min<Int>(
+        kMaxTasksPerLevel,
+        std::max<Int>(1, (Int)sns.size() / kMinSnPerTask));
+    std::vector<std::vector<Int>> tasks(n_tasks);
+    for (size_t k = 0; k < sns.size(); ++k)
+      tasks[k * n_tasks / sns.size()].push_back(sns[k]);
+    solve_schedule_.push_back(std::move(tasks));
+  }
+
+  // per-task-slot buffers: one gemv workspace per slot, sized like
+  // solve_work_; deferred-scatter buffers grow on demand and are reused
+  size_t max_tasks = 0;
+  for (const auto& lv_tasks : solve_schedule_)
+    max_tasks = std::max(max_tasks, lv_tasks.size());
+  task_work_.assign(max_tasks, std::vector<double>(solve_work_.size()));
+  task_def_rows_.assign(max_tasks, {});
+  task_def_vals_.assign(max_tasks, {});
 }
 
 Int Numeric::solve(std::vector<double>& x) const {
@@ -56,9 +126,17 @@ Int Numeric::solve(std::vector<double>& x) const {
 
   HIPO_CLOCK_CREATE;
 
-  // initialise solve handler
-  HybridSolveHandler SH(*S_, *sn_columns_, swaps_, swap_flags_, pivot_2x2_,
-                        solve_work_, *data_);
+  // initialise solve handler: the experimental parallel handler if a solve
+  // schedule was built (hipo_parallel_solve on), otherwise the serial one
+  std::unique_ptr<SolveHandler> SH;
+  if (hipoTuning().parallel_solve && !solve_schedule_.empty()) {
+    SH.reset(new ParallelSolveHandler(*S_, *sn_columns_, swaps_, swap_flags_,
+                                      pivot_2x2_, solve_schedule_, task_work_,
+                                      task_def_rows_, task_def_vals_, *data_));
+  } else {
+    SH.reset(new HybridSolveHandler(*S_, *sn_columns_, swaps_, swap_flags_,
+                                    pivot_2x2_, solve_work_, *data_));
+  }
 
   // permute rhs
   HIPO_CLOCK_START(2);
@@ -67,9 +145,9 @@ Int Numeric::solve(std::vector<double>& x) const {
 
   // solve
   HIPO_CLOCK_START(2);
-  SH.forwardSolve(x);
-  SH.diagSolve(x);
-  SH.backwardSolve(x);
+  SH->forwardSolve(x);
+  SH->diagSolve(x);
+  SH->backwardSolve(x);
   HIPO_CLOCK_STOP(2, *data_, kTimeSolveSolve);
 
   // unpermute solution

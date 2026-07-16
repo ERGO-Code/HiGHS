@@ -58,6 +58,11 @@ struct HipoTuning {
 
   // metis
   Int metis_seed = 42;               // was kMetisSeed
+
+  // parallel triangular solve (experimental sketch; see PHASE3_DESIGN.md).
+  // In an upstreamable version this belongs in hipo::Options rather than in
+  // the tuning parameters.
+  bool parallel_solve = false;
 };
 
 HipoTuning& hipoTuning();
