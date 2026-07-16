@@ -270,8 +270,7 @@ struct HessianOracle {
                  HighsInt* col_index, double* col_value) const;
   void getScatteredColumn(const HighsInt col, HighsInt& col_num_entries,
 			  HighsInt* col_index, double* col_value) const;
-  void product(const std::vector<double>& x_value,
-               std::vector<double>& q_x_value) const;
+  void product(const std::vector<double>& x_value, std::vector<double>& q_x_value) const;
   void product(const double* x_value, double* q_x_value) const;
   void productScatteredX(const HighsInt x_num_entries, const HighsInt* x_index,
                          const double* x_value, HighsInt& q_x_num_entries,

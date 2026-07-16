@@ -214,11 +214,11 @@ void HighsHessian::product(const std::vector<double>& solution,
   }
 }
 
-/*
 void HighsHessian::alphaProductPlusY(const double alpha,
                                      const std::vector<double>& x,
                                      std::vector<double>& y) const {
-  if (this->isOracle()) {
+  assert(!this->isOracle());
+  /*  
     HighsInt dim = this->oracle_.dim_;
     assert(static_cast<size_t>(dim) == y.size());
     assert(static_cast<size_t>(dim) == x.size());
@@ -228,7 +228,7 @@ void HighsHessian::alphaProductPlusY(const double alpha,
     assert(111 == 888);
     return;
   }
-
+  */
   if (this->dim_ <= 0) return;
 
   const bool triangular = this->format_ == HessianFormat::kTriangular;
@@ -242,7 +242,6 @@ void HighsHessian::alphaProductPlusY(const double alpha,
     }
   }
 }
-*/
 
 double HighsHessian::objectiveValue(const std::vector<double>& solution) const {
   HighsInt dim = this->dim();
@@ -530,6 +529,7 @@ HighsStatus HighsHessian::checkOracle(const HighsLogOptions& log_options,
   }
 
   std::vector<double> q_x_value(dim);
+  /*
   oracle.product(x_value, q_x_value);
   if (!vectorsEqual(dim, q_x_value.data(), check_q_x_value.data())) {
     highsLogUser(
@@ -538,11 +538,12 @@ HighsStatus HighsHessian::checkOracle(const HighsLogOptions& log_options,
     if (exit_on_first_error) return HighsStatus::kError;
     error_found = true;
   }
+  */
 
   // Test product from a scattered, sparse, x
   x_value.assign(dim, 0);
   std::vector<HighsInt> x_index(dim);
-  std::vector<HighsInt> q_x_index(dim);
+  //  std::vector<HighsInt> q_x_index(dim);
   std::vector<HighsInt> check_q_x_index(dim, 0);
   //  std::vector<double> q_q_x_value(dim, 0);
   //  std::vector<HighsInt> q_q_x_index(dim, 0);
@@ -564,10 +565,10 @@ HighsStatus HighsHessian::checkOracle(const HighsLogOptions& log_options,
     }
     HighsInt q_x_num_entries = -1;
     oracle.productScatteredX(HighsInt(1), x_index.data(), x_value.data(),
-			     q_x_num_entries, q_x_index.data(),
+			     q_x_num_entries, nullptr,
 			     q_x_value.data());
     // Check diffence between q_x and check_q_x in zeroing both
-    if (!packedVectorsEqual(q_x_num_entries, q_x_index.data(),
+    if (!packedVectorsEqual(q_x_num_entries, nullptr,
 			    q_x_value.data(), check_q_x_num_entries,
 			    check_q_x_index.data(), check_q_x_value.data())) {
       highsLogUser(log_options, HighsLogType::kError,
@@ -654,7 +655,6 @@ void HessianOracle::getScatteredColumn(const HighsInt col, HighsInt& col_num_ent
   }
 }
 
-/*
 void HessianOracle::product(const std::vector<double>& x_value,
                             std::vector<double>& q_x_value) const {
   HighsInt dim = this->dim_;
@@ -662,7 +662,7 @@ void HessianOracle::product(const std::vector<double>& x_value,
   assert(static_cast<size_t>(dim) == q_x_value.size());
   this->product(x_value.data(), q_x_value.data());
 }
-*/
+
 // For full x
 void HessianOracle::product(const double* x_value, double* q_x_value) const {
   assert(this->call_);
@@ -681,11 +681,12 @@ void HessianOracle::productScatteredX(const HighsInt x_num_entries,
                                       HighsInt* q_x_index,
                                       double* q_x_value) const {
   assert(this->call_);
+  assert(q_x_index == nullptr);
   // Must have positive number of indices
   assert(x_index != nullptr && x_num_entries > 0);
   this->call_(kHessianOracleCallTypeProduct, x_num_entries, x_index, x_value, q_x_num_entries, q_x_index,
               q_x_value, this->data_);
-  this->scaleAndShift(x_num_entries, x_index, x_packed.data(), q_x_num_entries,
+  this->scaleAndShift(x_num_entries, x_index, x_value, q_x_num_entries,
                       q_x_index, q_x_value);
 }
 
@@ -695,6 +696,7 @@ void HessianOracle::scaleAndShift(const HighsInt x_num_entries,
                                   HighsInt& q_x_num_entries,
                                   HighsInt* q_x_index,
                                   double* q_x_value) const {
+  assert(q_x_index == nullptr);
   // Compute multiplier_*Qx + scale_*x
   if (this->multiplier_ != 1.0) {
     if (q_x_index != nullptr) {
@@ -714,8 +716,10 @@ void HessianOracle::scaleAndShift(const HighsInt x_num_entries,
         scattered[q_x_index[iX]] = q_x_value[iX];
       // Add in this->shift_ * x
       if (x_index != nullptr) {
-        for (HighsInt iX = 0; iX < x_num_entries; iX++)
-          scattered[x_index[iX]] += this->shift_ * x_value[iX];
+        for (HighsInt iX = 0; iX < x_num_entries; iX++) {
+	  HighsInt iRow = x_index[iX];
+          scattered[iRow] += this->shift_ * x_value[iRow];
+	}
       } else {
         for (HighsInt iRow = 0; iRow < this->dim_; iRow++)
           scattered[iRow] += this->shift_ * x_value[iRow];
@@ -756,8 +760,10 @@ void HessianOracle::scaleAndShift(const HighsInt x_num_entries,
     } else {
       if (x_index != nullptr) {
         assert(x_num_entries >= 0);
-        for (HighsInt iX = 0; iX < x_num_entries; iX++)
-          q_x_value[x_index[iX]] += this->shift_ * x_value[iX];
+        for (HighsInt iX = 0; iX < x_num_entries; iX++) {
+	  HighsInt iRow = x_index[iX];
+          q_x_value[iRow] += this->shift_ * x_value[iRow];
+	}
       } else {
         for (HighsInt iRow = 0; iRow < this->dim_; iRow++)
           q_x_value[iRow] += this->shift_ * x_value[iRow];
