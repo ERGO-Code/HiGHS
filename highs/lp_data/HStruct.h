@@ -276,10 +276,6 @@ struct HessianOracle {
   void productScatteredX(const HighsInt x_num_entries, const HighsInt* x_index,
                          const double* x_value, HighsInt& q_x_num_entries,
                          HighsInt* q_x_index, double* q_x_value) const;
-  void productPackedX(const HighsInt x_num_entries, const HighsInt* x_index,
-                      const double* x_value, HighsInt& q_x_num_entries,
-                      HighsInt* q_x_index, double* q_x_value,
-                      const bool scale_and_shift = true) const;
   void scaleAndShift(const HighsInt x_num_entries, const HighsInt* x_index,
                      const double* x_value, HighsInt& q_x_num_entries,
                      HighsInt* q_x_index, double* q_x_value) const;

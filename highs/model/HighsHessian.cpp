@@ -214,6 +214,7 @@ void HighsHessian::product(const std::vector<double>& solution,
   }
 }
 
+/*
 void HighsHessian::alphaProductPlusY(const double alpha,
                                      const std::vector<double>& x,
                                      std::vector<double>& y) const {
@@ -241,6 +242,7 @@ void HighsHessian::alphaProductPlusY(const double alpha,
     }
   }
 }
+*/
 
 double HighsHessian::objectiveValue(const std::vector<double>& solution) const {
   HighsInt dim = this->dim();
@@ -652,6 +654,7 @@ void HessianOracle::getScatteredColumn(const HighsInt col, HighsInt& col_num_ent
   }
 }
 
+/*
 void HessianOracle::product(const std::vector<double>& x_value,
                             std::vector<double>& q_x_value) const {
   HighsInt dim = this->dim_;
@@ -659,7 +662,7 @@ void HessianOracle::product(const std::vector<double>& x_value,
   assert(static_cast<size_t>(dim) == q_x_value.size());
   this->product(x_value.data(), q_x_value.data());
 }
-
+*/
 // For full x
 void HessianOracle::product(const double* x_value, double* q_x_value) const {
   assert(this->call_);
@@ -680,39 +683,10 @@ void HessianOracle::productScatteredX(const HighsInt x_num_entries,
   assert(this->call_);
   // Must have positive number of indices
   assert(x_index != nullptr && x_num_entries > 0);
-  // Gather the values
-  std::vector<double> x_packed(x_num_entries);
-  for (HighsInt iEl = 0; iEl < x_num_entries; iEl++) {
-    HighsInt iCol = x_index[iEl];
-    assert(iCol < this->dim_);
-    x_packed[iEl] = x_value[iCol];
-  }
   this->call_(kHessianOracleCallTypeProduct, x_num_entries, x_index, x_value, q_x_num_entries, q_x_index,
               q_x_value, this->data_);
-  // Perform scale and shift here, not with the packed x
-  //  const bool scale_and_shift = false;
-  //  this->productPackedX(x_num_entries, x_index, x_packed.data(), q_x_num_entries,
-  //                       q_x_index, q_x_value, scale_and_shift);
   this->scaleAndShift(x_num_entries, x_index, x_packed.data(), q_x_num_entries,
                       q_x_index, q_x_value);
-}
-
-// For packed, sparse, x
-void HessianOracle::productPackedX(const HighsInt x_num_entries,
-                                   const HighsInt* x_index,
-                                   const double* x_value,
-                                   HighsInt& q_x_num_entries,
-                                   HighsInt* q_x_index, double* q_x_value,
-                                   const bool scale_and_shift) const {
-  assert(this->call_);
-  // Must either have no indices (x assumed full) or have non-negative
-  // number of indices
-  assert(x_index == nullptr || x_num_entries >= 0);
-  this->call_(kHessianOracleCallTypeProduct, x_num_entries, x_index, x_value, q_x_num_entries, q_x_index,
-              q_x_value, this->data_);
-  if (scale_and_shift)
-    this->scaleAndShift(x_num_entries, x_index, x_value, q_x_num_entries,
-                        q_x_index, q_x_value);
 }
 
 void HessianOracle::scaleAndShift(const HighsInt x_num_entries,
