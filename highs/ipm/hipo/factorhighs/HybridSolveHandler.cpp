@@ -12,11 +12,13 @@ namespace hipo {
 HybridSolveHandler::HybridSolveHandler(
     const Symbolic& S, const std::vector<std::vector<double>>& sn_columns,
     const std::vector<std::vector<Int>>& swaps,
+    const std::vector<std::vector<char>>& any_swap,
     const std::vector<std::vector<double>>& pivot_2x2,
     std::vector<double>& gemv_work, DataCollector& data,
     const FHoptions& options)
     : SolveHandler(S, sn_columns, data, options),
       swaps_{swaps},
+      any_swaps_{any_swap},
       pivot_2x2_{pivot_2x2},
       gemv_workspace_{gemv_work} {}
 
@@ -55,11 +57,17 @@ void HybridSolveHandler::forwardSolve(double* x) const {
       const Int jb = sn_size;
       const Int x_start = sn_start;
 
-      const Int* current_swaps = swaps_[sn].data();
+      const Int* current_swaps = nullptr;
+      bool any_swaps_in_block = false;
+
       if (options_.pivoting) {
         HIPO_CLOCK_START(2);
-        // apply swaps to portion of rhs that is affected
-        permuteWithSwaps(&x[x_start], current_swaps, jb);
+        any_swaps_in_block = any_swaps_[sn][0];
+        if (any_swaps_in_block) {
+          current_swaps = swaps_[sn].data();
+          // apply swaps to portion of rhs that is affected
+          permuteWithSwaps(&x[x_start], current_swaps, jb);
+        }
         HIPO_CLOCK_STOP(2, data_, kTimeSolveSolve_swap);
       }
 
@@ -79,7 +87,7 @@ void HybridSolveHandler::forwardSolve(double* x) const {
       }
       HIPO_CLOCK_STOP(2, data_, kTimeSolveSolve_dense);
 
-      if (options_.pivoting) {
+      if (any_swaps_in_block && options_.pivoting) {
         HIPO_CLOCK_START(2);
         // apply inverse swaps
         permuteWithSwaps(&x[x_start], current_swaps, jb, true);
@@ -98,11 +106,17 @@ void HybridSolveHandler::forwardSolve(double* x) const {
         // index to access vector x
         const Int x_start = sn_start + nb * j;
 
-        const Int* current_swaps = &swaps_[sn][nb * j];
+        const Int* current_swaps = nullptr;
+        bool any_swaps_in_block = false;
+
         if (options_.pivoting) {
           HIPO_CLOCK_START(2);
-          // apply swaps to portion of rhs that is affected
-          permuteWithSwaps(&x[x_start], current_swaps, jb);
+          any_swaps_in_block = any_swaps_[sn][j];
+          if (any_swaps_in_block) {
+            current_swaps = &swaps_[sn][nb * j];
+            // apply swaps to portion of rhs that is affected
+            permuteWithSwaps(&x[x_start], current_swaps, jb);
+          }
           HIPO_CLOCK_STOP(2, data_, kTimeSolveSolve_swap);
         }
 
@@ -131,7 +145,7 @@ void HybridSolveHandler::forwardSolve(double* x) const {
           HIPO_CLOCK_STOP(2, data_, kTimeSolveSolve_sparse);
         }
 
-        if (options_.pivoting) {
+        if (any_swaps_in_block && options_.pivoting) {
           HIPO_CLOCK_START(2);
           // apply inverse swaps
           permuteWithSwaps(&x[x_start], current_swaps, jb, true);
@@ -179,11 +193,17 @@ void HybridSolveHandler::backwardSolve(double* x) const {
       const Int jb = sn_size;
       const Int x_start = sn_start;
 
-      const Int* current_swaps = swaps_[sn].data();
+      const Int* current_swaps = nullptr;
+      bool any_swaps_in_block = false;
+
       if (options_.pivoting) {
         HIPO_CLOCK_START(2);
-        // apply swaps to portion of rhs that is affected
-        permuteWithSwaps(&x[x_start], current_swaps, jb);
+        any_swaps_in_block = any_swaps_[sn][0];
+        if (any_swaps_in_block) {
+          current_swaps = swaps_[sn].data();
+          // apply swaps to portion of rhs that is affected
+          permuteWithSwaps(&x[x_start], current_swaps, jb);
+        }
         HIPO_CLOCK_STOP(2, data_, kTimeSolveSolve_swap);
       }
 
@@ -203,7 +223,7 @@ void HybridSolveHandler::backwardSolve(double* x) const {
       }
       HIPO_CLOCK_STOP(2, data_, kTimeSolveSolve_dense);
 
-      if (options_.pivoting) {
+      if (any_swaps_in_block && options_.pivoting) {
         HIPO_CLOCK_START(2);
         // apply inverse swaps
         permuteWithSwaps(&x[x_start], current_swaps, jb, true);
@@ -222,11 +242,17 @@ void HybridSolveHandler::backwardSolve(double* x) const {
         // index to access vector x
         const Int x_start = sn_start + nb * j;
 
-        const Int* current_swaps = &swaps_[sn][nb * j];
+        const Int* current_swaps = nullptr;
+        bool any_swaps_in_block = false;
+
         if (options_.pivoting) {
           HIPO_CLOCK_START(2);
-          // apply swaps to portion of rhs that is affected
-          permuteWithSwaps(&x[x_start], current_swaps, jb);
+          any_swaps_in_block = any_swaps_[sn][j];
+          if (any_swaps_in_block) {
+            current_swaps = &swaps_[sn][nb * j];
+            // apply swaps to portion of rhs that is affected
+            permuteWithSwaps(&x[x_start], current_swaps, jb);
+          }
           HIPO_CLOCK_STOP(2, data_, kTimeSolveSolve_swap);
         }
 
@@ -255,7 +281,7 @@ void HybridSolveHandler::backwardSolve(double* x) const {
                           &x[x_start], 1, data_);
         HIPO_CLOCK_STOP(2, data_, kTimeSolveSolve_dense);
 
-        if (options_.pivoting) {
+        if (any_swaps_in_block && options_.pivoting) {
           HIPO_CLOCK_START(2);
           // apply inverse swaps
           permuteWithSwaps(&x[x_start], current_swaps, jb, true);
