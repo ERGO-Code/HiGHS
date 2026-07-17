@@ -89,6 +89,7 @@ Documenter.makedocs(
                 "interfaces/python/index.md",
                 "interfaces/python/example-py.md",
                 "interfaces/python/model-py.md",
+                "interfaces/python/hipo-in-python.md",
             ],
             "CSharp" => "interfaces/csharp.md",
             "Julia" => "interfaces/julia/index.md",

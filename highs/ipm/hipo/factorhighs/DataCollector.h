@@ -9,7 +9,7 @@
 #include "FactorHiGHSSettings.h"
 #include "Timing.h"
 #include "ipm/hipo/auxiliary/IntConfig.h"
-#include "ipm/hipo/auxiliary/Log.h"
+#include "ipm/hipo/auxiliary/Logger.h"
 
 namespace hipo {
 
@@ -77,8 +77,8 @@ class DataCollector {
                          double maxoffD);
   void setNorms(double norm1, double maxdiag);
 
-  void printTimes(const Log& log) const;
-  void printIter(const Log& log) const;
+  void printTimes(const Logger& logger) const;
+  void printIter(const Logger& logger) const;
 };
 
 }  // namespace hipo

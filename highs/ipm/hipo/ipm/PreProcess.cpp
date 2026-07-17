@@ -492,6 +492,12 @@ void PreprocessScaling::undo(PreprocessorPoint& point, const Model& model,
         point.zu[i] = 0.0;
       }
     }
+    for (Int i : model.freeVars()) {
+      point.xl[i] = kHighsInf;
+      point.zl[i] = 0.0;
+      point.xu[i] = kHighsInf;
+      point.zu[i] = 0.0;
+    }
   }
   point.assertConsistency(n_pre, m_pre);
 }
@@ -570,6 +576,12 @@ void PreprocessFormulation::undo(PreprocessorPoint& point, const Model& model,
       point.zu[i] = 0.0;
     }
   }
+  for (Int i : model.freeVars()) {
+    point.xl[i] = kHighsInf;
+    point.zl[i] = 0.0;
+    point.xu[i] = kHighsInf;
+    point.zu[i] = 0.0;
+  }
 
   // For the Lagrange multipliers, use slacks from zl and zu, to get correct
   // sign. NB: there is no explicit slack stored for equality constraints.
@@ -617,6 +629,33 @@ void PreprocessFormulation::print(std::stringstream& stream) const {
   stream << "Added " << n_post - n_pre << " slacks\n";
 }
 
+void PreprocessFreeVars::apply(Model& model) {
+  Int& n = model.n_;
+  std::vector<double>& lower = model.lower_;
+  std::vector<double>& upper = model.upper_;
+  std::vector<Int>& free_variables = model.free_variables_;
+
+  free_variables.clear();
+  for (Int i = 0; i < n; ++i) {
+    if (!std::isfinite(lower[i]) && !std::isfinite(upper[i]) &&
+        lower[i] != upper[i]) {
+      // free variable
+      free_variables.push_back(i);
+      ++free_vars_count;
+      lower[i] = -kFreeVarsInitialBound;
+      upper[i] = kFreeVarsInitialBound;
+    }
+  }
+}
+
+void PreprocessFreeVars::undo(PreprocessorPoint& point, const Model& model,
+                              const Iterate& it) const {}
+
+void PreprocessFreeVars::print(std::stringstream& stream) const {
+  if (free_vars_count > 0)
+    stream << "Found " << free_vars_count << " free variables\n";
+}
+
 #define APPLY_ACTION(T)                                      \
   stack.push_back(std::unique_ptr<PreprocessAction>(new T)); \
   stack.back()->apply(model);
@@ -629,6 +668,7 @@ void Preprocessor::apply(Model& model) {
   APPLY_ACTION(PreprocessEmptyRows);
   APPLY_ACTION(PreprocessScaling);
   APPLY_ACTION(PreprocessFormulation);
+  APPLY_ACTION(PreprocessFreeVars);
 }
 void Preprocessor::undo(PreprocessorPoint& point, const Model& model,
                         const Iterate& it) const {

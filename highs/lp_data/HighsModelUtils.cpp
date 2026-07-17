@@ -1515,6 +1515,12 @@ std::string utilPresolveRuleTypeToString(const HighsInt rule_type) {
     return "Probing";
   } else if (rule_type == kPresolveRuleEnumeration) {
     return "Enumeration";
+  } else if (rule_type == kPresolveRuleDualFixing) {
+    return "Dual fixing";
+  } else if (rule_type == kPresolveRuleColStuffing) {
+    return "Col stuffing";
+  } else if (rule_type == kPresolveRuleInitialSweep) {
+    return "Initial sweep";
   }
   assert(1 == 0);
   return "????";
@@ -1602,7 +1608,7 @@ std::string findModelObjectiveName(const HighsLp* lp,
     // If there are no row names, then the objective name is certainly
     // OK
     if (lp->row_names_.size() == 0) break;
-    if (pass != 0) objective_name += pass;
+    if (pass != 0) objective_name += std::to_string(pass);
     // Ensure that the objective name doesn't clash with any row names
     bool ok_objective_name = true;
     for (HighsInt iRow = 0; iRow < lp->num_row_; iRow++) {

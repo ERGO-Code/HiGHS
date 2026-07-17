@@ -26,6 +26,7 @@ TEST_CASE("semi-variable-model", "[highs_test_semi_variables]") {
   const double semi_col_lower = lp.col_lower_[semi_col];
   const double semi_col_upper = lp.col_upper_[semi_col];
   lp.col_cost_[semi_col] = semi_col_cost;
+  lp.model_name_ = "semi-variable-model";
   optimal_objective_function_value = 6.83333;
   // Legal to have infinte upper bounds on semi-variables
   lp.col_upper_[semi_col] = inf;
@@ -326,4 +327,28 @@ void semiModel0(HighsLp& lp) {
   lp.a_matrix_.format_ = MatrixFormat::kColwise;
   lp.sense_ = ObjSense::kMaximize;
   lp.integrality_ = {continuous, continuous, semi_continuous, continuous};
+}
+
+TEST_CASE("3015", "[highs_test_semi_variables]") {
+  std::string filename;
+  filename = std::string(HIGHS_DIR) + "/check/instances/3015.mps";
+  double optimal_objective_value = -1407973.679417;
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  highs.readModel(filename);
+  HighsStatus status = highs.run();
+  REQUIRE(status == HighsStatus::kError);
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kSolveError);
+
+  REQUIRE(highs.setOptionValue("mip_feasibility_tolerance", 7e-08) ==
+          HighsStatus::kOk);
+  status = highs.run();
+  double objective_value = highs.getObjectiveValue();
+  double abs_gap = std::fabs(objective_value - optimal_objective_value);
+  double rel_gap = abs_gap / std::fabs(optimal_objective_value);
+  REQUIRE(rel_gap < 1e-4);
+  REQUIRE(status == HighsStatus::kOk);
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
+
+  highs.resetGlobalScheduler(true);
 }

@@ -23,16 +23,28 @@ HighsStatus writeLpMatrixPicToFile(const HighsOptions& options,
                               lp.a_matrix_.start_, lp.a_matrix_.index_);
 }
 
+HighsStatus writeHessianPicToFile(const HighsOptions& options,
+                                  const std::string& fileprefix,
+                                  const HighsHessian& hessian) {
+  return writeMatrixPicToFile(options, fileprefix, hessian.dim_, hessian.dim_,
+                              hessian.start_, hessian.index_);
+}
+
 HighsStatus writeMatrixPicToFile(const HighsOptions& options,
                                  const std::string& fileprefix,
                                  const HighsInt numRow, const HighsInt numCol,
                                  const std::vector<HighsInt>& Astart,
                                  const std::vector<HighsInt>& Aindex) {
+  if (numRow == 0 || numCol == 0) {
+    highsLogUser(options.log_options, HighsLogType::kError,
+                 "Cannot generate image of matrix with a zero dimension\n");
+    return HighsStatus::kError;
+  }
+  assert(numRow > 0);
+  assert(numCol > 0);
   std::vector<HighsInt> ARlength;
   std::vector<HighsInt> ARstart;
   std::vector<HighsInt> ARindex;
-  assert(numRow > 0);
-  assert(numCol > 0);
   const HighsInt numNz = Astart[numCol];
   ARlength.assign(numRow, 0);
   ARstart.resize(numRow + 1);
@@ -94,14 +106,13 @@ HighsStatus writeRmatrixPicToFile(const HighsOptions& options,
   assert(num_pixel_wide <= max_num_pixel_wide);
   assert(num_pixel_deep <= max_num_pixel_deep);
 
-  highsLogUser(
-      options.log_options, HighsLogType::kInfo,
-      "Representing LP constraint matrix sparsity pattern %" HIGHSINT_FORMAT
-      "x%" HIGHSINT_FORMAT
-      " .pbm file,"
-      " mapping entries in square of size %" HIGHSINT_FORMAT
-      " onto one pixel\n",
-      num_pixel_wide, num_pixel_deep, dim_per_pixel);
+  highsLogUser(options.log_options, HighsLogType::kInfo,
+               "Representing matrix sparsity pattern %" HIGHSINT_FORMAT
+               "x%" HIGHSINT_FORMAT
+               " .pbm file,"
+               " mapping entries in square of size %" HIGHSINT_FORMAT
+               " onto one pixel\n",
+               num_pixel_wide, num_pixel_deep, dim_per_pixel);
 
   std::vector<HighsInt> value;
   value.assign(num_pixel_wide, 0);

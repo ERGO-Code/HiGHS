@@ -118,7 +118,7 @@ int Highs_amd_order
 	    return (AMD_OUT_OF_MEMORY) ;
 	}
 	/* use Len and Pinv as workspace to create R = A' */
-	amd_preprocess (n, Ap, Ai, Rp, Ri, Len, Pinv) ;
+	Highs_amd_preprocess (n, Ap, Ai, Rp, Ri, Len, Pinv) ;
 	Cp = Rp ;
 	Ci = Ri ;
     }
@@ -135,7 +135,7 @@ int Highs_amd_order
     /* determine the symmetry and count off-diagonal nonzeros in A+A' */
     /* --------------------------------------------------------------------- */
 
-    nzaat = amd_aat (n, Cp, Ci, Len, P, Info) ;
+    nzaat = Highs_amd_aat (n, Cp, Ci, Len, P, Info) ;
     
     
 
@@ -179,7 +179,7 @@ int Highs_amd_order
     /* order the matrix */
     /* --------------------------------------------------------------------- */
 
-    amd_1 (n, Cp, Ci, P, Pinv, Len, slen, S, Control, Info) ;
+    Highs_amd_1 (n, Cp, Ci, P, Pinv, Len, slen, S, Control, Info) ;
 
     /* --------------------------------------------------------------------- */
     /* free the workspace */

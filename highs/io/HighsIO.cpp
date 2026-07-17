@@ -14,6 +14,7 @@
 #include <cstdarg>
 #include <cstdio>
 
+#include "HighsExternalApi.h"
 #include "lp_data/HighsLp.h"
 #include "lp_data/HighsOptions.h"
 
@@ -27,18 +28,13 @@ void highsLogHeader(const HighsLogOptions& log_options,
                (int)HIGHS_VERSION_MINOR, (int)HIGHS_VERSION_PATCH,
                githash_text.c_str(), kHighsCopyrightStatement.c_str());
 
-#ifdef HIPO
-#ifdef BLAS_LIBRARIES
-  highsLogUser(log_options, HighsLogType::kInfo, "Using BLAS: %s \n",
-               BLAS_LIBRARIES);
-#else
-#ifdef HIPO_USES_OPENBLAS
-  highsLogUser(log_options, HighsLogType::kInfo, "Using BLAS: OpenBLAS \n");
-#else
-  highsLogUser(log_options, HighsLogType::kInfo, "Using BLAS: unknown \n");
-#endif
-#endif
-#endif
+  highsLogUser(log_options, HighsLogType::kInfo, "%s\n",
+               HighsExternalApi::thirdPartyNoticeHeader().c_str());
+
+  if (HighsExternalApi::isAvailable<HighsExtras::blas>()) {
+    highsLogUser(log_options, HighsLogType::kInfo, "Using BLAS: %s \n",
+                 HighsExtras::blas::getInfo()->provider);
+  }
 }
 
 std::array<char, 32> highsDoubleToString(const double val,

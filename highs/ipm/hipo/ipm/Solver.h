@@ -8,7 +8,7 @@
 #include "Info.h"
 #include "Iterate.h"
 #include "LinearSolver.h"
-#include "LogHighs.h"
+#include "ipm/hipo/auxiliary/Logger.h"
 #include "Model.h"
 #include "Options.h"
 #include "Parameters.h"
@@ -31,6 +31,8 @@ class Solver {
 
   // Linear solver interface
   std::unique_ptr<LinearSolver> LS_;
+
+  std::unique_ptr<KktMatrix> kkt_;
 
   // Iterate object interface
   std::unique_ptr<Iterate> it_;
@@ -64,7 +66,7 @@ class Solver {
   ipx::LpSolver ipx_lps_;
 
   // Interface to Highs logging
-  LogHighs logH_;
+  Logger logger_;
 
   double start_time_;
 

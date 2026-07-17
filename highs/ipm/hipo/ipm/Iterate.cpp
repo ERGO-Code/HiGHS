@@ -619,12 +619,8 @@ bool Iterate::stagnation(std::stringstream& log_stream) {
   // infeasibilities jumping back up
   const double thresh_inf_to_best = 1e12;
 
-  best_pinf_ = std::min(best_pinf_, pinf);
-  best_dinf_ = std::min(best_dinf_, dinf);
-
-  // if the best is zero, the test would always be triggered
-  best_pinf_ = std::max(best_pinf_, 1e-16);
-  best_dinf_ = std::max(best_dinf_, 1e-16);
+  if (pinf > 0.0) best_pinf_ = std::min(best_pinf_, pinf);
+  if (dinf > 0.0) best_dinf_ = std::min(best_dinf_, dinf);
 
   if (pinf > thresh_inf_to_best * best_pinf_ ||
       dinf > thresh_inf_to_best * best_dinf_) {

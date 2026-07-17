@@ -1,7 +1,7 @@
 #include "DataCollector.h"
 
 #include "FactorHiGHSSettings.h"
-#include "ipm/hipo/auxiliary/Log.h"
+#include "ipm/hipo/auxiliary/Logger.h"
 
 namespace hipo {
 
@@ -93,7 +93,7 @@ void DataCollector::setNorms(double norm1, double maxdiag) {
 // Printing
 //
 
-void DataCollector::printTimes(const Log& log) const {
+void DataCollector::printTimes(const Logger& logger) const {
 #if HIPO_TIMING_LEVEL >= 1
 
   std::stringstream log_stream;
@@ -289,11 +289,11 @@ void DataCollector::printTimes(const Log& log) const {
   log_stream << "----------------------------------------------------\n";
 #endif
 
-  log.print(log_stream);
+  logger.print(log_stream.str().c_str());
 #endif
 }
 
-void DataCollector::printIter(const Log& log) const {
+void DataCollector::printIter(const Logger& logger) const {
 #ifdef HIPO_COLLECT_EXPENSIVE_DATA
 
   std::stringstream log_stream;
@@ -319,7 +319,7 @@ void DataCollector::printIter(const Log& log) const {
     log_stream << sci(iter.M_norm1, 9, 1) << " ";
     log_stream << sci(iter.M_maxdiag, 9, 1) << "|\n";
   }
-  log.print(log_stream);
+  logger.print(log_stream.str().c_str());
 #endif
 }
 

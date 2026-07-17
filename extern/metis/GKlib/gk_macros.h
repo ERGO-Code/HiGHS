@@ -10,7 +10,11 @@
 #ifndef _GK_MACROS_H_
 #define _GK_MACROS_H_
 
-#include "ipm/hipo/auxiliary/OrderingPrint.h"
+#ifndef NDEBUG
+#define HIGHS_ORDERING_PRINT(...) printf(__VA_ARGS__)
+#else
+#define HIGHS_ORDERING_PRINT(...)
+#endif
 
 /*-------------------------------------------------------------
  * Usefull commands 
@@ -21,7 +25,7 @@
 #define INC_DEC(a, b, val) do {(a) += (val); (b) -= (val);} while(0)
 
 #define ONEOVERRANDMAX (1.0/(RAND_MAX+1.0))
-#define RandomInRange(u, rng_state) ((int) (ONEOVERRANDMAX*(u)*my_rand_r(rng_state)))
+#define RandomInRange(u, rng_state) ((int) (ONEOVERRANDMAX*(u)*gk_rand_r(rng_state)))
 #define RandomInRange_r(s, u) ((int) (ONEOVERRANDMAX*(u)*rand_r(s)))
 
 /*-------------------------------------------------------------

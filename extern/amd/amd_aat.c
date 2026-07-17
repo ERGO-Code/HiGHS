@@ -17,7 +17,7 @@
 
 #include "amd_internal.h"
 
-size_t amd_aat	/* returns nz in A+A' */
+size_t Highs_amd_aat	/* returns nz in A+A' */
 (
     amd_int n,
     const amd_int Ap [ ],

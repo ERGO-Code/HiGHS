@@ -162,8 +162,8 @@ class HighsNodeQueue {
     OpenNode(std::vector<HighsDomainChange>&& domchgstack,
              std::vector<HighsInt>&& branchings, double lower_bound,
              double estimate, HighsInt depth)
-        : domchgstack(domchgstack),
-          branchings(branchings),
+        : domchgstack(std::move(domchgstack)),
+          branchings(std::move(branchings)),
           lower_bound(lower_bound),
           estimate(estimate),
           depth(depth),

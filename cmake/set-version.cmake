@@ -1,10 +1,10 @@
-function(set_version VERSION)
+function(set_version VERSION BASE_DIR)
   if(DEFINED ENV{HIGHS_MAJOR} AND DEFINED ENV{HIGHS_MINOR})
     set(MAJOR $ENV{HIGHS_MAJOR})
     set(MINOR $ENV{HIGHS_MINOR})
   else()
     # Get Major and Minor and maybe Patch from Version.txt
-    file(STRINGS "Version.txt" VERSION_STR)
+    file(STRINGS "${BASE_DIR}/Version.txt" VERSION_STR)
     foreach(STR ${VERSION_STR})
       if(${STR} MATCHES "HIGHS_MAJOR=(.*)")
         set(MAJOR ${CMAKE_MATCH_1})

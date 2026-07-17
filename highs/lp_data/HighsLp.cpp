@@ -134,7 +134,8 @@ HighsCDouble HighsLp::objectiveCDoubleValue(
   assert((int)solution.size() >= this->num_col_);
   HighsCDouble objective_function_value = this->offset_;
   for (HighsInt iCol = 0; iCol < this->num_col_; iCol++)
-    objective_function_value += this->col_cost_[iCol] * solution[iCol];
+    objective_function_value +=
+        static_cast<HighsCDouble>(this->col_cost_[iCol]) * solution[iCol];
   return objective_function_value;
 }
 
@@ -515,7 +516,7 @@ bool HighsLpMods::isClear() {
   if (this->save_inconsistent_semi_variable_upper_bound_value.size())
     return false;
   if (this->save_inconsistent_semi_variable_type.size()) return false;
-  if (this->save_relaxed_semi_variable_lower_bound_value.size()) return false;
+  if (this->save_relaxed_semi_variable_lower_bound_index.size()) return false;
   if (this->save_relaxed_semi_variable_lower_bound_value.size()) return false;
   if (this->save_tightened_semi_variable_upper_bound_index.size()) return false;
   if (this->save_tightened_semi_variable_upper_bound_value.size()) return false;

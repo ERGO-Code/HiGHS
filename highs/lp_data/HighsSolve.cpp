@@ -9,6 +9,7 @@
  * @brief Class-independent utilities for HiGHS
  */
 
+#include "HighsExternalApi.h"
 #include "ipm/IpxWrapper.h"
 #include "lp_data/HighsSolutionDebug.h"
 #include "pdlp/CupdlpWrapper.h"
@@ -20,8 +21,7 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
   HighsStatus return_status = HighsStatus::kOk;
   HighsStatus call_status;
   HighsOptions& options = solver_object.options_;
-  HighsSubSolverCallTime& sub_solver_call_time =
-      solver_object.sub_solver_call_time_;
+  HighsProfiling* profiling = solver_object.profiling_;
   // Reset unscaled model status and solution params - except for
   // iteration counts
   resetModelStatusAndHighsInfo(solver_object);
@@ -40,11 +40,7 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
   }
   const bool use_only_ipm = useIpm(options.solver) || options.run_centring;
   bool use_hipo = useHipo(options, kSolverString, solver_object.lp_);
-#ifndef HIPO
-  // Shouldn't be possible to choose HiPO if it's not in the build
-  assert(!use_hipo);
-  use_hipo = false;
-#endif
+
   const bool use_ipx = use_only_ipm && !use_hipo;
   // Now actually solve LPs!
   //
@@ -74,11 +70,7 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
     if (use_only_ipm) {
       // Use IPM to solve the LP
       if (use_hipo) {
-#ifdef HIPO
         // Use HIPO to solve the LP
-        sub_solver_call_time.num_call[kSubSolverHipo]++;
-        sub_solver_call_time.run_time[kSubSolverHipo] =
-            -solver_object.timer_.read();
         try {
           call_status = solveLpHipo(solver_object);
         } catch (const std::exception& exception) {
@@ -86,19 +78,9 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
                       "Exception %s in solveLpHipo\n", exception.what());
           call_status = HighsStatus::kError;
         }
-        sub_solver_call_time.run_time[kSubSolverHipo] +=
-            solver_object.timer_.read();
         return_status = interpretCallStatus(options.log_options, call_status,
                                             return_status, "solveLpHipo");
-#else
-        highsLogUser(options.log_options, HighsLogType::kError,
-                     "HiPO is not available in this build.\n");
-        return HighsStatus::kError;
-#endif
       } else if (use_ipx) {
-        sub_solver_call_time.num_call[kSubSolverIpx]++;
-        sub_solver_call_time.run_time[kSubSolverIpx] =
-            -solver_object.timer_.read();
         try {
           call_status = solveLpIpx(solver_object);
         } catch (const std::exception& exception) {
@@ -106,16 +88,12 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
                       "Exception %s in solveLpIpx\n", exception.what());
           call_status = HighsStatus::kError;
         }
-        sub_solver_call_time.run_time[kSubSolverIpx] +=
-            solver_object.timer_.read();
         return_status = interpretCallStatus(options.log_options, call_status,
                                             return_status, "solveLpIpx");
       }
     } else {
       // Use cuPDLP-C or HiPDLP to solve the LP
-      sub_solver_call_time.num_call[kSubSolverPdlp]++;
-      sub_solver_call_time.run_time[kSubSolverPdlp] =
-          -solver_object.timer_.read();
+      profiling->start(kSubSolverPdlp);
       if (options.solver == kPdlpString) {
         try {
           call_status = solveLpCupdlp(solver_object);
@@ -133,8 +111,7 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
           call_status = HighsStatus::kError;
         }
       }
-      sub_solver_call_time.run_time[kSubSolverPdlp] +=
-          solver_object.timer_.read();
+      profiling->stop(kSubSolverPdlp);
       return_status = interpretCallStatus(options.log_options, call_status,
                                           return_status, "solveLp-Pdlp");
     }
@@ -733,11 +710,7 @@ bool useHipo(const HighsOptions& options,
     use_hipo = false;
   } else if (specific_solver_option_value == kIpmString ||
              specific_solver_option_value == kHipoString || force_ipm) {
-#ifdef HIPO
-    use_hipo = true;
-#else
-    use_hipo = false;
-#endif
+    use_hipo = HighsExternalApi::isAvailable<HighsExtras::hipo>();
   }
   if (options.run_centring) use_hipo = false;
   // Later decide between HiPO and IPX based on LP properties

@@ -379,6 +379,10 @@ HighsInt Highs_clearSolver(void* highs) {
   return (HighsInt)((Highs*)highs)->clearSolver();
 }
 
+HighsInt Highs_releaseMemory(void* highs) {
+  return (HighsInt)((Highs*)highs)->releaseMemory();
+}
+
 HighsInt Highs_setBoolOptionValue(void* highs, const char* option,
                                   const HighsInt value) {
   return (HighsInt)((Highs*)highs)

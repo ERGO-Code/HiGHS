@@ -2,8 +2,8 @@ name: release-cpack
 
 on:
   push:
-    tags:
-      - 'v*'
+    # tags:
+    #   - 'v*'
   pull_request:
 
 concurrency:
@@ -17,7 +17,7 @@ jobs:
       matrix:
         arch: [x64]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v6
       - name: Build
         run: |
           cmake -B build -DHIPO=ON -DBUILD_OPENBLAS=ON -DBUILD_STATIC_EXE=ON \
@@ -25,8 +25,11 @@ jobs:
           cmake --build build -j2
           cd build && cpack
 
+      - name: Test
+        run: ./build/bin/highs --solver=hipo $GITHUB_WORKSPACE/check/instances/afiro.mps
+
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: linux-x64-apache
           path: build/*.tar.gz
@@ -45,7 +48,7 @@ jobs:
       matrix:
         arch: [arm64]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v6
 
       - name: Build
         run: |
@@ -54,8 +57,11 @@ jobs:
           cmake --build build -j2
           cd build && cpack
 
+      - name: Test
+        run: ./build/bin/highs --solver=hipo $GITHUB_WORKSPACE/check/instances/afiro.mps
+
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: linux-arm64-apache
           path: build/*.tar.gz
@@ -74,17 +80,22 @@ jobs:
       matrix:
         arch: [x64]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v6
       - name: Build
         run: |
-          cmake -B build -G "Visual Studio 17 2022" -A ${{ matrix.arch }} `
+          cmake -B build -G "Visual Studio 18 2026" -A ${{ matrix.arch }} `
               -DHIPO=ON -DBUILD_OPENBLAS=ON -DBUILD_STATIC_EXE=ON
           cmake --build build --config Release --parallel
           cd build
           cpack -C Release
 
+      - name: Test
+        run: |
+          & ".\build\Release\bin\highs.exe" --solver=hipo `
+          "$env:GITHUB_WORKSPACE/check/instances/afiro.mps"
+
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: windows-x64-apache
           path: build/*.zip
@@ -104,17 +115,22 @@ jobs:
       matrix:
         arch: [Win32]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v6
       - name: Build
         run: |
-          cmake -B build -G "Visual Studio 17 2022" -A ${{ matrix.arch }} `
+          cmake -B build -G "Visual Studio 18 2026" -A ${{ matrix.arch }} `
               -DHIPO=ON -DBUILD_OPENBLAS=ON -DBUILD_STATIC_EXE=ON
           cmake --build build --config Release --parallel
           cd build
           cpack -C Release
 
+      - name: Test
+        run: |
+          & ".\build\Release\bin\highs.exe" --solver=hipo `
+          "$env:GITHUB_WORKSPACE/check/instances/afiro.mps"
+
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: windows-win32-apache
           path: build/*.zip
@@ -125,7 +141,7 @@ jobs:
       matrix:
         arch: [ARM64]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v6
       - name: Build
         run: |
           cmake -B build -G "Visual Studio 17 2022" -A ${{ matrix.arch }} `
@@ -134,8 +150,13 @@ jobs:
           cd build
           cpack -C Release
 
+      - name: Test
+        run: |
+          & ".\build\Release\bin\highs.exe" --solver=hipo `
+          "$env:GITHUB_WORKSPACE/check/instances/afiro.mps"
+
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: windows-arm64-apache
           path: build/*.zip
@@ -151,7 +172,7 @@ jobs:
   build-macos:
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v6
       - name: Build Universal Binary
         run: |
           cmake -B build -DCMAKE_OSX_ARCHITECTURES="x86_64;arm64" \
@@ -159,8 +180,11 @@ jobs:
           cmake --build build --parallel
           cd build && cpack
 
+      - name: Test
+        run: ./build/bin/highs --solver=hipo $GITHUB_WORKSPACE/check/instances/afiro.mps
+
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: macos-universal-apache
           path: build/*.tar.gz
@@ -179,15 +203,18 @@ jobs:
       matrix:
         arch: [x64]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v6
       - name: Build
         run: |
           cmake -B build -DBUILD_STATIC_EXE=ON
           cmake --build build -j2
           cd build && cpack
 
+      - name: Test
+        run: ./build/bin/highs $GITHUB_WORKSPACE/check/instances/afiro.mps
+
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: linux-x64-mit
           path: build/*.tar.gz
@@ -206,7 +233,7 @@ jobs:
       matrix:
         arch: [arm64]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v6
 
       - name: Build
         run: |
@@ -214,8 +241,11 @@ jobs:
           cmake --build build -j2
           cd build && cpack
 
+      - name: Test
+        run: ./build/bin/highs $GITHUB_WORKSPACE/check/instances/afiro.mps
+
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: linux-arm64-mit
           path: build/*.tar.gz
@@ -234,17 +264,22 @@ jobs:
       matrix:
         arch: [x64]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v6
       - name: Build
         run: |
-          cmake -B build -G "Visual Studio 17 2022" -A ${{ matrix.arch }} `
+          cmake -B build -G "Visual Studio 18 2026" -A ${{ matrix.arch }} `
               -DBUILD_STATIC_EXE=ON
           cmake --build build --config Release --parallel
           cd build
           cpack -C Release
 
+      - name: Test
+        run: |
+          & ".\build\Release\bin\highs.exe" `
+          "$env:GITHUB_WORKSPACE/check/instances/afiro.mps"
+
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: windows-x64-mit
           path: build/*.zip
@@ -263,17 +298,22 @@ jobs:
       matrix:
         arch: [x64]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v6
       - name: Build
         run: |
-          cmake -B build -G "Visual Studio 17 2022" -A ${{ matrix.arch }} `
+          cmake -B build -G "Visual Studio 18 2026" -A ${{ matrix.arch }} `
             -DBUILD_SHARED_LIBS=ON
           cmake --build build --config Release --parallel
           cd build
           cpack -C Release
 
+      - name: Test
+        run: |
+          & ".\build\Release\bin\highs.exe" `
+          "$env:GITHUB_WORKSPACE/check/instances/afiro.mps"
+
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: windows-x64-shared-mit
           path: build/*.zip
@@ -293,17 +333,22 @@ jobs:
       matrix:
         arch: [Win32]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v6
       - name: Build
         run: |
-          cmake -B build -G "Visual Studio 17 2022" -A ${{ matrix.arch }} `
+          cmake -B build -G "Visual Studio 18 2026" -A ${{ matrix.arch }} `
               -DBUILD_STATIC_EXE=ON
           cmake --build build --config Release --parallel
           cd build
           cpack -C Release
 
+      - name: Test
+        run: |
+          & ".\build\Release\bin\highs.exe" `
+          "$env:GITHUB_WORKSPACE/check/instances/afiro.mps"
+
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: windows-win32-mit
           path: build/*.zip
@@ -314,7 +359,7 @@ jobs:
       matrix:
         arch: [ARM64]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v6
       - name: Build
         run: |
           cmake -B build -G "Visual Studio 17 2022" -A ${{ matrix.arch }} `
@@ -323,8 +368,13 @@ jobs:
           cd build
           cpack -C Release
 
+      - name: Test
+        run: |
+          & ".\build\Release\bin\highs.exe" `
+          "$env:GITHUB_WORKSPACE/check/instances/afiro.mps"
+
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: windows-arm64-mit
           path: build/*.zip
@@ -340,7 +390,7 @@ jobs:
   build-macos-mit:
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v6
       - name: Build Universal Binary
         run: |
           cmake -B build -DCMAKE_OSX_ARCHITECTURES="x86_64;arm64" \
@@ -348,8 +398,11 @@ jobs:
           cmake --build build --parallel
           cd build && cpack
 
+      - name: Test
+        run: ./build/bin/highs $GITHUB_WORKSPACE/check/instances/afiro.mps
+
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: macos-universal-mit
           path: build/*.tar.gz

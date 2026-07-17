@@ -67,7 +67,7 @@ if (NOT HIGHS_COVERAGE)
   # Add library targets to the build-tree export set
   export(TARGETS highs
     NAMESPACE ${PROJECT_NAMESPACE}::
-    FILE "${HIGHS_BINARY_DIR}/highs-targets.cmake")
+    APPEND FILE "${HIGHS_BINARY_DIR}/highs-targets.cmake")
 endif()
 
 if (CUPDLP_GPU AND NOT HIGHS_GPU_LIB)
@@ -87,8 +87,8 @@ if (CUPDLP_GPU AND NOT HIGHS_GPU_LIB)
   endif()
 endif()
 
-if (BUILD_OPENBLAS)
-  install(TARGETS ${_openblas_target}
+if (BUILD_OPENBLAS AND TARGET ${HIGHS_BLAS_TARGET})
+  install(TARGETS ${HIGHS_BLAS_TARGET}
       EXPORT ${lower}-targets
       INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
       ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
@@ -98,7 +98,7 @@ if (BUILD_OPENBLAS)
 
   if (NOT HIGHS_COVERAGE)
     # Add library targets to the build-tree export set
-    export(TARGETS ${_openblas_target}
+    export(TARGETS ${HIGHS_BLAS_TARGET}
       NAMESPACE ${PROJECT_NAMESPACE}::
       APPEND FILE "${HIGHS_BINARY_DIR}/highs-targets.cmake")
   endif()
@@ -140,13 +140,14 @@ install(
   DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/highs"
   COMPONENT Devel)
 
-# Configure the pkg-config file for the install
-configure_file(${PROJECT_SOURCE_DIR}/highs.pc.in
-  "${HIGHS_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/highs.pc" @ONLY)
+if (NOT HIPO_PYTHON)
+  # Configure the pkg-config file for the install
+  configure_file(${PROJECT_SOURCE_DIR}/highs.pc.in
+    "${HIGHS_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/highs.pc" @ONLY)
 
-install(FILES "${HIGHS_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/highs.pc"
-  DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig)
-
+  install(FILES "${HIGHS_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/highs.pc"
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig)
+endif()
 
 # highs_cxx_test()
 # CMake function to generate and build C++ test.

@@ -8,7 +8,6 @@
 #include "ReturnValues.h"
 #include "Timing.h"
 #include "ipm/hipo/auxiliary/Auxiliary.h"
-#include "ipm/hipo/auxiliary/Log.h"
 #include "ipm/hipo/auxiliary/VectorOperations.h"
 #include "util/HighsCDouble.h"
 #include "util/HighsRandom.h"

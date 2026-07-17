@@ -1,7 +1,17 @@
 #ifndef REVERSE_CUTHILL_MCKEE_H
 #define REVERSE_CUTHILL_MCKEE_H
 
-#include "util/HighsInt.h"
+#include "HConfig.h"
+
+#ifdef HIGHSINT64
+typedef int64_t HighsInt;
+typedef uint64_t HighsUInt;
+#define HIGHSINT_FORMAT PRId64
+#else
+typedef int HighsInt;
+typedef unsigned int HighsUInt;
+#define HIGHSINT_FORMAT "d"
+#endif
 
 // Function to compute Reverse Cuthill-McKee ordering.
 // Taken from sparsepak:

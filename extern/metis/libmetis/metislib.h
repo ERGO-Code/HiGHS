@@ -14,15 +14,17 @@
 #ifndef _LIBMETIS_METISLIB_H_
 #define _LIBMETIS_METISLIB_H_
 
-#include "../extern/metis/GKlib/GKlib.h"
+#include "metis/GKlib/GKlib.h"
 
-#include "../extern/metis/metis.h"
+#include "metis/metis.h"
 #include "gklib_defs.h"
 
 #include "defs.h"
 #include "struct.h"
 #include "macros.h"
 #include "proto.h"
+
+#include "OrderingPrint.h"
 
 
 #if defined(COMPILER_MSC) && (_MSC_VER < 1900)

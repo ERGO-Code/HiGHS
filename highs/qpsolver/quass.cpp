@@ -15,9 +15,7 @@
 #include "Highs.h"
 #include "lp_data/HighsAnalysis.h"
 #include "qpsolver/basis.hpp"
-#include "qpsolver/crashsolution.hpp"
 #include "qpsolver/dantzigpricing.hpp"
-#include "qpsolver/devexharrispricing.hpp"
 #include "qpsolver/devexpricing.hpp"
 #include "qpsolver/factor.hpp"
 #include "qpsolver/gradient.hpp"
@@ -89,11 +87,14 @@ static void computerowmove(Runtime& runtime, Basis& basis, QpVector& p,
 static QpVector& computesearchdirection_minor(Runtime& rt, Basis& bas,
                                               CholeskyFactor& cf,
                                               ReducedGradient& redgrad,
-                                              QpVector& p) {
+                                              QpVector& p,
+                                              QpSolverStatus& status) {
+  status = QpSolverStatus::OK;
   QpVector g2 = -redgrad.get();  // TODO PERF: buffer QpVector
   g2.sanitize();
-  cf.solve(g2);
-
+  status = cf.solve(g2);
+  if (status != QpSolverStatus::OK)
+    return bas.Zprod(g2, p);  // Bogus return to satisfy method definition
   g2.sanitize();
 
   return bas.Zprod(g2, p);
@@ -102,7 +103,9 @@ static QpVector& computesearchdirection_minor(Runtime& rt, Basis& bas,
 // VECTOR
 static QpVector& computesearchdirection_major(
     Runtime& runtime, Basis& basis, CholeskyFactor& factor, const QpVector& yp,
-    Gradient& gradient, QpVector& gyp, QpVector& l, QpVector& m, QpVector& p) {
+    Gradient& gradient, QpVector& gyp, QpVector& l, QpVector& m, QpVector& p,
+    QpSolverStatus& status) {
+  status = QpSolverStatus::OK;
   QpVector yyp = yp;  // TODO PERF: buffer QpVector
   // if (gradient.getGradient().dot(yp) > 0.0) {
   //   yyp.scale(-1.0);
@@ -111,8 +114,11 @@ static QpVector& computesearchdirection_major(
   if (basis.getnumactive() < runtime.instance.num_var) {
     basis.Ztprod(gyp, m);
     l = m;
-    factor.solveL(l);
-    QpVector v = l;  // TODO PERF: buffer QpVector
+    status = factor.solveL(l);
+    if (status != QpSolverStatus::OK)
+      return p.saxpy(-1.0, 1.0,
+                     yyp);  // Bogus return to satisfy method definition
+    QpVector v = l;         // TODO PERF: buffer QpVector
     factor.solveLT(v);
     basis.Zprod(v, p);
     if (gradient.getGradient().dot(yyp) < 0.0) {
@@ -285,15 +291,19 @@ static bool check_reinvert_due(Basis& basis) {
   return basis.getreinversionhint();
 }
 
-static void reinvert(Basis& basis, CholeskyFactor& factor, Gradient& grad,
-                     ReducedCosts& rc, ReducedGradient& rg,
-                     std::unique_ptr<Pricing>& pricing) {
+static QpSolverStatus reinvert(Basis& basis, CholeskyFactor& factor,
+                               Gradient& grad, ReducedCosts& rc,
+                               ReducedGradient& rg,
+                               std::unique_ptr<Pricing>& pricing) {
   basis.rebuild();
-  factor.recompute();
+  // Recompute Cholesky
+  QpSolverStatus status = factor.recompute();
+  if (status != QpSolverStatus::OK) return status;
   grad.recompute();
   rc.recompute();
   rg.recompute();
   // pricing->recompute();
+  return QpSolverStatus::OK;
 }
 
 void Quass::solve(const QpVector& x0, const QpVector& ra, Basis& b0,
@@ -381,11 +391,20 @@ void Quass::solve(const QpVector& x0, const QpVector& ra, Basis& b0,
     }
 
     // REINVERSION
-    if (check_reinvert_due(basis)) {
-      reinvert(basis, factor, gradient, redcosts, redgrad, pricing);
-    }
-
     QpSolverStatus status;
+    auto notOkReturn = [&]() {
+      if (status == QpSolverStatus::NOTPOSITIVDEFINITE) {
+        runtime.status = QpModelStatus::kNonConvex;
+      } else {
+        runtime.status = QpModelStatus::kError;
+      }
+      return;
+    };
+
+    if (check_reinvert_due(basis)) {
+      status = reinvert(basis, factor, gradient, redcosts, redgrad, pricing);
+      if (status != QpSolverStatus::OK) return notOkReturn();
+    }
 
     bool zero_curvature_direction = false;
     double maxsteplength = 1.0;
@@ -407,7 +426,8 @@ void Quass::solve(const QpVector& x0, const QpVector& ra, Basis& b0,
       buffer_l.dim = basis.getnuminactive();
       buffer_m.dim = basis.getnuminactive();
       computesearchdirection_major(runtime, basis, factor, buffer_yp, gradient,
-                                   buffer_gyp, buffer_l, buffer_m, p);
+                                   buffer_gyp, buffer_l, buffer_m, p, status);
+      if (status != QpSolverStatus::OK) return notOkReturn();
       basis.deactivate(minidx);
       computerowmove(runtime, basis, p, rowmove);
       tidyup(p, rowmove, basis, runtime);
@@ -417,10 +437,7 @@ void Quass::solve(const QpVector& x0, const QpVector& ra, Basis& b0,
                                            zero_curvature_direction);
       if (!zero_curvature_direction) {
         status = factor.expand(buffer_yp, buffer_gyp, buffer_l, buffer_m);
-        if (status != QpSolverStatus::OK) {
-          runtime.status = QpModelStatus::kUndetermined;
-          return;
-        }
+        if (status != QpSolverStatus::OK) return notOkReturn();
       }
       redgrad.expand(buffer_yp);
     } else {
@@ -428,7 +445,8 @@ void Quass::solve(const QpVector& x0, const QpVector& ra, Basis& b0,
       // atfsep is set true and the loop repeats with this
       // condition. In particular, this happens when the current basis
       // is optimal
-      computesearchdirection_minor(runtime, basis, factor, redgrad, p);
+      computesearchdirection_minor(runtime, basis, factor, redgrad, p, status);
+      if (status != QpSolverStatus::OK) return notOkReturn();
       computerowmove(runtime, basis, p, rowmove);
       tidyup(p, rowmove, basis, runtime);
       runtime.instance.Q.mat_vec(p, buffer_Qp);
