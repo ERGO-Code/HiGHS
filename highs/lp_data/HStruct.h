@@ -263,6 +263,9 @@ struct HessianOracle {
   HighsHessianFunctionType call_ = nullptr;
   void* data_ = nullptr;
   void clear();
+  bool isValid() const { return hasProductCall(); }
+  bool hasProductCall() const;
+  void formFromOracle();
   double diagonal(const HighsInt i) const;
   double entry(const HighsInt i, const HighsInt j) const;
   void getPackedColumn(const HighsInt col, HighsInt& col_num_entries,

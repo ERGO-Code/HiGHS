@@ -713,16 +713,36 @@ HighsStatus Highs::passHessian(const HighsInt dim, const HighsInt num_nz,
 HighsStatus Highs::passHessian(const HighsInt dim,
                                HighsHessianFunctionType oracleCall,
                                void* oracle_data) {
-  this->model_.hessian_.clear();
   if (dim <= 0) {
     highsLogUser(options_.log_options, HighsLogType::kWarning,
                  "Ignoring Hessian oracle data since dimension is %d\n",
                  int(dim));
     return HighsStatus::kWarning;
   }
-  this->model_.hessian_.oracle_.dim_ = dim;
-  this->model_.hessian_.oracle_.call_ = oracleCall;
-  this->model_.hessian_.oracle_.data_ = oracle_data;
+  HessianOracle& oracle = this->model_.hessian_.oracle_;
+  // Save any previous oracle
+  HighsInt dim_ = oracle.dim_;
+  auto call_ = oracle.call_;
+  auto data_ = oracle.data_;
+  // Set up the passed oracle for checking validity
+  oracle.dim_ = dim;
+  oracle.call_ = oracleCall;
+  oracle.data_ = oracle_data;
+  // Check whether the new oracle is valid
+  if (!oracle.isValid()) {
+    highsLogUser(options_.log_options, HighsLogType::kError,
+                 "Cannot solve QP when Hessian oracle has no product call\n");
+    // Recove the previous oracle
+    oracle.dim_ = dim_;
+    oracle.call_ = call_;
+    oracle.data_ = data_;
+    return HighsStatus::kError;
+  }
+  // Clear any previous Hessian and initialise the oracle
+  this->model_.hessian_.clear();
+  oracle.dim_ = dim;
+  oracle.call_ = oracleCall;
+  oracle.data_ = oracle_data;
   return HighsStatus::kOk;
 }
 
@@ -4288,8 +4308,10 @@ HighsStatus Highs::callSolveQp() {
   HighsInt dim = hessian.dim_;
   if (dim > 0) {
     assert(hessian.format_ == HessianFormat::kTriangular);
+    assert(!hessian.isOracle());
   } else {
     assert(hessian.isOracle());
+    assert(hessian.oracle_.isValid());
     dim = hessian.oracle_.dim_;
   }
   if (dim != lp.num_col_) {
@@ -4310,18 +4332,22 @@ HighsStatus Highs::callSolveQp() {
       (options_.solver == kHipoString || options_.solver == kIpmString) &&
       HighsExternalApi::isAvailable<HighsExtras::hipo>();
 
-  if (use_hipo && hessian.isOracle()) {
-    highsLogUser(options_.log_options, HighsLogType::kError,
-                 "Cannot use HiPO for QP with Hessian given by oracle: "
-                 "switching to active set method\n");
-    use_hipo = false;
-  }
-
   if (use_hipo) {
+    // Need to convert oracle to an explicit Hessian without an oracle
+    const bool was_oracle = hessian.isOracle();
+    auto oracle_call = hessian.oracle_.call_;
+    if (was_oracle) {
+      hessian.formFromOracle();
+      hessian.oracle_.call_ = nullptr;
+    }
+    assert(!hessian.isOracle());
     if (this->profiling_) this->profiling_->start(kSubSolverHipo);
     return_status = solveHipo(options_, timer_, lp, hessian, basis_, solution_,
                               model_status_, info_, callback_);
     if (this->profiling_) this->profiling_->stop(kSubSolverHipo);
+    // Restore any oracle call;
+    hessian.oracle_.call_ = oracle_call;
+    assert(hessian.isOracle() == was_oracle);
     if (return_status == HighsStatus::kError) return return_status;
   } else {
     //

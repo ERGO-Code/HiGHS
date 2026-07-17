@@ -4,7 +4,6 @@
 #include "HCheckConfig.h"
 #include "Highs.h"
 #include "catch.hpp"
-#include "io/FilereaderLp.h"
 
 const bool dev_run = false;
 const double inf = kHighsInf;

@@ -193,6 +193,43 @@ bool HighsHessian::operator==(const HighsHessian& hessian) const {
   return equal;
 }
 
+void HighsHessian::formFromOracle() {
+  assert(this->isOracle());
+  assert(this->oracle_.isValid());
+  this->start_.clear();
+  this->index_.clear();
+  this->value_.clear();
+  HighsInt col_nnz;
+  HighsInt dim = this->oracle_.dim_;
+  std::vector<HighsInt> index(dim, 0);
+  std::vector<double> value(dim, 0);
+  HighsInt hessian_nnz = 0;
+  this->dim_ = dim;
+  this->format_ = HessianFormat::kTriangular;
+  this->start_.push_back(hessian_nnz);
+  for (HighsInt iCol = 0; iCol < dim; iCol++) {
+    this->oracle_.getPackedColumn(iCol, col_nnz, index.data(), value.data());
+    // Set the iagonal value to zero in case it's not set to a nonzero
+    // value by passing through the packed values
+    HighsInt diag_el = hessian_nnz++;
+    this->index_.push_back(iCol);
+    this->value_.push_back(0.0);
+    for (HighsInt iX = 0; iX < col_nnz; iX++) {
+      HighsInt iRow = index[iX];
+      double entry = value[iX];
+      value[iX] = 0;
+      if (iRow == iCol) {
+        this->value_[diag_el] = entry;
+      } else if (iRow > iCol) {
+        this->index_.push_back(iRow);
+        this->value_.push_back(entry);
+        hessian_nnz++;
+      }
+    }
+    this->start_.push_back(hessian_nnz);
+  }
+}
+
 void HighsHessian::product(const std::vector<double>& solution,
                            std::vector<double>& product) const {
   HighsInt dim = this->dim();
@@ -277,10 +314,7 @@ HighsCDouble HighsHessian::objectiveCDoubleValue(
 
 bool HighsHessian::empty() const {
   if (dim_ <= 0) return true;
-  if (this->isOracle()) {
-    assert(111 == 888);
-    return false;
-  }
+  if (this->isOracle() && this->oracle_.dim_ <= 0) return true;
   return false;
 }
 
@@ -383,11 +417,9 @@ HighsStatus HighsHessian::checkOracle(const HighsLogOptions& log_options,
   std::vector<double> value(dim, 0);
   std::vector<double> oracle_value(dim, 0);
 
-  num_nz = 1;
+  num_nz = 0;
   // A Hessian oracle product call is necessary
-  if (oracle.call_(kHessianOracleCallTypeProduct, &num_nz, index.data(),
-                   value.data(), nullptr, nullptr, oracle_value.data(),
-                   oracle.data_)) {
+  if (!oracle.hasProductCall()) {
     highsLogUser(log_options, HighsLogType::kError,
                  "Hessian oracle has no product call\n");
     return HighsStatus::kError;
@@ -605,6 +637,17 @@ void HessianOracle::clear() {
   this->shift_ = 0;
   this->call_ = nullptr;
   this->data_ = nullptr;
+}
+
+bool HessianOracle::hasProductCall() const {
+  assert(this->call_);
+  if (!this->call_) return false;
+  // A Hessian oracle is valid if it has product call
+  HighsInt num_nz = 0;
+  HighsInt index;
+  double value;
+  return this->call_(kHessianOracleCallTypeProduct, &num_nz, &index, &value,
+                     nullptr, nullptr, &value, this->data_) == 0;
 }
 
 double HessianOracle::diagonal(const HighsInt i) const { return entry(i, i); }

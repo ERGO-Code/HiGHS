@@ -4,11 +4,17 @@
 #include "HCheckConfig.h"
 #include "Highs.h"
 #include "catch.hpp"
-// #include "io/FilereaderLp.h"
 
 const bool dev_run = false;  // true;  //
 const double inf = kHighsInf;
 const double double_equal_tolerance = 1e-5;
+
+const std::vector<std::string> solvers{kQpAsmString
+#ifdef HIPO
+                                       ,
+                                       kHipoString
+#endif
+};
 
 HighsHessian getHessianDiagonal4();
 HighsHessian getHessianDiagonalWithZero4();
@@ -142,8 +148,6 @@ TEST_CASE("hessian-oracle-check", "[qp-oracle]") {
   REQUIRE(zero_diagonal_original_value != 0);
 
   h.passModel(model);
-  //  h.writeModel("");
-  h.writeModel("qp5.mps");
   h.setOptionValue("qp_regularization_value", 0);
   h.run();
   h.writeSolution("", 1);
@@ -413,6 +417,9 @@ TEST_CASE("hessian-oracle-check", "[qp-oracle]") {
         "status %s\n\n",
         h.highsStatusToString(status).c_str());
   REQUIRE(status == HighsStatus::kError);
+  // Code coverage of code testing for passing an invalid Hessian oracle
+  REQUIRE(h.passHessian(lp.num_col_, oracleCallSquareHessianCustomised,
+                        &square_hessian) == HighsStatus::kError);
 }
 
 TEST_CASE("hessian-oracle-solve", "[qp-oracle]") {
@@ -443,6 +450,35 @@ TEST_CASE("hessian-oracle-solve", "[qp-oracle]") {
       testOracleSolve(model);
     }
   }
+}
+
+TEST_CASE("hessian-oracle-primal1", "[qp-oracle]") {
+  std::string filename =
+      std::string(HIGHS_DIR) + "/check/instances/primal1.mps";
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  REQUIRE(h.readModel(filename) == HighsStatus::kOk);
+  HighsLp lp = h.getModel().lp_;
+  HighsHessian square_hessian = h.getModel().hessian_.toSquare();
+  REQUIRE(h.passModel(lp) == HighsStatus::kOk);
+  REQUIRE(h.passHessian(lp.num_col_, oracleCallSquareHessian,
+                        &square_hessian) == HighsStatus::kOk);
+  double optimal_obective_value;
+  std::vector<double> solution;
+  for (auto& solver : solvers) {
+    h.setOptionValue("solver", solver);
+    h.run();
+    if (solver == kQpAsmString) {
+      optimal_obective_value = h.getObjectiveValue();
+      solution = h.getSolution().col_value;
+    } else {
+      REQUIRE(valuesRelEqual(h.getObjectiveValue(), optimal_obective_value));
+      REQUIRE(vectorsRelEqual(lp.num_col_, h.getSolution().col_value.data(),
+                              solution.data()));
+    }
+  }
+
+  h.resetGlobalScheduler(true);
 }
 
 HighsHessian getHessianDiagonal4() {
@@ -609,7 +645,6 @@ void testOracleSolve(const HighsModel& model) {
     const bool internal_test_oracle = k == 1;
     if (k == 0) {
       REQUIRE(h.passModel(model) == HighsStatus::kOk);
-      //      h.writeModel("qp.mps");
     } else {
       REQUIRE(h.passModel(lp) == HighsStatus::kOk);
       if (internal_test_oracle) {
@@ -623,7 +658,6 @@ void testOracleSolve(const HighsModel& model) {
             h.passHessian(lp.num_col_, oracleCallSquareHessian, oracle_data);
       }
     }
-    //    if (dev_run) h.writeModel("");
     REQUIRE(h.run() == HighsStatus::kOk);
 
     if (dev_run) h.writeSolution("", 1);
