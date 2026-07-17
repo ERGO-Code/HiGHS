@@ -187,7 +187,6 @@ Following is a list of available options:
 | `FORTRAN` | OFF | Build Fortran interface |
 | `CSHARP` | OFF | Build CSharp wrapper |
 | `BUILD_DOTNET` | OFF | Build .Net package |
-| `PYTHON_BUILD_SETUP` | OFF | Build Python bindings. Called at `pip install` from pyproject.toml |
 | `ZLIB` | ON | Use ZLIB if available |
 | `ALL_TESTS` | OFF | Run unit tests and extended instance test set |
 

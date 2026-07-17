@@ -18,12 +18,12 @@ jobs:
       matrix:
         triplet: ['x86_64-linux-gnu-cxx11', 'aarch64-apple-darwin', 'x86_64-w64-mingw32-cxx11']
     steps:
-      - uses: actions/checkout@v4
-      - uses: julia-actions/setup-julia@v2
+      - uses: actions/checkout@v6
+      - uses: julia-actions/setup-julia@v3
         with:
           version: "1.7"
           arch: x64
-      - uses: julia-actions/cache@v2
+      - uses: julia-actions/cache@v3
       - run: |
           git fetch --tags
           echo "HIGHS_RELEASE=$(git describe --tags $(git rev-list --tags --max-count=1) | sed 's/^v//')" >> $GITHUB_ENV
@@ -39,11 +39,11 @@ jobs:
           julia --color=yes .github/julia/build_tarballs.jl ${{ matrix.triplet }} --verbose --deploy="local"
         env:
           BINARYBUILDER_AUTOMATIC_APPLE: true
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: ${{ matrix.triplet }}
           path: ${{ github.workspace }}/products/*
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: ${{ matrix.triplet }}-jll
           path: /home/runner/.julia/dev/HiGHS_jll
@@ -64,13 +64,13 @@ jobs:
             os: 'windows-latest'
             arch: x64
     steps:
-      - uses: actions/checkout@v4
-      - uses: julia-actions/setup-julia@v2
+      - uses: actions/checkout@v6
+      - uses: julia-actions/setup-julia@v3
         with:
           version: "1.10"
           arch: ${{ matrix.arch }}
       # Download and setup the artifact
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: ${{ matrix.triplet }}
           path: ${{ github.workspace }}/products
@@ -78,7 +78,7 @@ jobs:
         run: tar -xzf products/HiGHS.*.${{ matrix.triplet }}.tar.gz -C products
       # We also need to download the JLL package, because it contains the new
       # dependencies
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: ${{ matrix.triplet }}-jll
           path: ${{ github.workspace }}/HiGHS_jll
@@ -115,4 +115,9 @@ jobs:
       - shell: julia --color=yes {0}
         run: |
           using Pkg
-          Pkg.test("HiGHS")
+          # HiGHS uses (N+1)/2 threads. HiGHS.jl parallelises the tests and, in
+          # the default setting, it may use up to 4 parallel jobs. This means
+          # HiGHS may attempt to start up to 2(N+1) threads and we get unhandled
+          # exceptions on macOS and a SIGTERM on linux. To avoid these errors,
+          # opt out of running the tests in parallel.
+          Pkg.test("HiGHS"; test_args=["--parallel=false"])

@@ -39,9 +39,8 @@ const double kMaxTreeDepth = 1000;
 // parameters for choice of ordering
 const double kFlopsOrderingThresh = 1.2;
 
-// parameters for dense columns
-const double kDenseColThresh = 0.5;
-const Int kMinRowsForDensity = 2000;
+// parameters for skipping AS or NE
+const double kNzBoundsRatio = 50.0;
 
 // parameters for iterative refinement
 const Int kMaxIterRefine = 3;
@@ -51,6 +50,10 @@ const double kTolRefine = 1e-12;
 const double kSmallScalingCoeff = 1e-4;
 const double kLargeScalingCoeff = 1e4;
 const double kSmallBoundDiff = 1e-3;
+
+// parameters for free variables
+const double kFreeVarsInitialBound = 1e4;
+const double kFreeVarsCloseRatio = 0.5;
 
 // static regularisation
 struct Regularisation {

@@ -13,7 +13,7 @@ jobs:
   fast-build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Create Build Environment
         run: |
           mkdir build
@@ -42,7 +42,7 @@ jobs:
   fast-build-off:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Create Build Environment
         run: |
           mkdir build

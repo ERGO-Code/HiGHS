@@ -117,6 +117,10 @@ class HPresolve {
   std::vector<uint8_t> rowDeleted;
   std::vector<uint8_t> colDeleted;
 
+  // flags to skip repeated single-equation handling (dual fixing) on unchanged
+  // rows
+  std::vector<uint8_t> singleEquationChecked;
+
   std::vector<uint16_t> numProbes;
 
   int64_t probingContingent;
@@ -496,6 +500,9 @@ class HPresolve {
 
   HighsInt debugGetCheckCol() const;
   HighsInt debugGetCheckRow() const;
+
+  Result presolveRuleTest(HighsPostsolveStack& postsolve_stack);
+  Result presolveRuleTestColStuffing(HighsPostsolveStack& postsolve_stack);
 
   // Not currently called
   static void debug(const HighsLp& lp, const HighsOptions& options);

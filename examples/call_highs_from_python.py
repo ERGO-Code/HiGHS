@@ -360,19 +360,19 @@ h.clear()
 # Test MIP callbacks
 print("\negout as HighsModel")
 
-h.setOptionValue("output_flag", False);
-h.setOptionValue("presolve", "off");
+h.setOptionValue("output_flag", False)
+h.setOptionValue("presolve", "off")
 
 h.readModel("check/instances/egout.mps")
 
 for iCase in range(0, 2):
     if iCase == 0:
-        user_callback_data = EGOUT_OBJECTIVE_TARGET;
+        user_callback_data = EGOUT_OBJECTIVE_TARGET
         h.setCallback(user_callback, user_callback_data)
         h.startCallback(hscb.HighsCallbackType.kCallbackMipInterrupt)
         required_model_status = highspy.HighsModelStatus.kInterrupt
     else:
-        user_callback_data = 1e30;
+        user_callback_data = 1e30
         h.setCallback(user_callback, user_callback_data)
         h.startCallback(hscb.HighsCallbackType.kCallbackMipImprovingSolution)
         required_model_status = highspy.HighsModelStatus.kOptimal

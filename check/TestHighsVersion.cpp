@@ -48,6 +48,9 @@ TEST_CASE("HighsVersion", "[highs_version]") {
   REQUIRE(githash0 == githash);
   const std::string compilation0 = highs.compilationDate();
   REQUIRE(compilation == compilation);
+  const std::string third_party_notice = highs.getThirdPartyNotice();
+  REQUIRE(third_party_notice.find("Third-party components") !=
+          std::string::npos);
 }
 
 TEST_CASE("sizeof-highs-int", "[highs_version]") {

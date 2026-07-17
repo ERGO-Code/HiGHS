@@ -39,7 +39,7 @@ upper = 7
 num_nz = 1
 index = 1
 value = 1
-h.addRow(lower, upper, num_nz, index, value)
+h.addRow(lower, upper, num_nz, [index], [value])
 # The second constraint (5 <= x_0 + 2x_1 <= 15) has two nonzero
 # coefficients, so arrays of indices and values are required
 num_nz = 2
@@ -70,7 +70,7 @@ num_nz = 0
 start = 0
 index = 0
 value = 0
-h.addCols(2, cost, lower, upper, num_nz, start, index, value)
+h.addCols(2, cost, lower, upper, num_nz, [start], [index], [value])
 # Add the rows, with the constraint matrix row-wise
 lower = np.array([-inf, 5, 6], dtype=np.double)
 upper = np.array([7, 15, inf], dtype=np.double)
@@ -87,8 +87,8 @@ h.run()
 h.clear()
 print("Passing the model via HighsLp")
 lp = highspy.HighsLp()
-lp.num_col_ = 2;
-lp.num_row_ = 3;
+lp.num_col_ = 2
+lp.num_row_ = 3
 lp.col_cost_ = np.array([1, 1], dtype=np.double)
 lp.col_lower_ = np.array([0, 1], dtype=np.double)
 lp.col_upper_ = np.array([4, inf], dtype=np.double)

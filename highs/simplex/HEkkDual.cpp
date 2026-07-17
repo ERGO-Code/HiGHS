@@ -375,7 +375,7 @@ HighsStatus HEkkDual::solve(const bool pass_force_phase2) {
         highsLogDev(options.log_options, HighsLogType::kWarning,
                     "HEkkDual:: Primal simplex clean up yields optimality, "
                     "but with %" HIGHSINT_FORMAT
-                    " (max %g) primal infeasibilities and " HIGHSINT_FORMAT
+                    " (max %g) primal infeasibilities and %" HIGHSINT_FORMAT
                     " (max %g) dual infeasibilities\n",
                     info.num_primal_infeasibilities,
                     info.max_primal_infeasibility,

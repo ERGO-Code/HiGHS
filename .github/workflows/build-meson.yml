@@ -15,7 +15,7 @@ jobs:
         # windows-latest takes to long
         os: [ubuntu-latest] 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           submodules: "recursive"
           fetch-depth: 0
@@ -25,7 +25,7 @@ jobs:
         with:
           environment-name: highsdev
           create-args: >-
-            python==3.8
+            python==3.9
             meson
             pkgconfig
             ninja

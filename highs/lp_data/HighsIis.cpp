@@ -641,13 +641,6 @@ HighsStatus HighsIis::compute(const HighsLp& lp, const HighsOptions& options,
   HighsStatus run_status = highs.passModel(lp);
   assert(run_status == HighsStatus::kOk);
   if (basis) highs.setBasis(*basis);
-
-  // Initial logging
-  this->clearLogInfo();
-  HighsInt iter = 0;
-  highsLogUser(log_options, HighsLogType::kInfo,
-               "\nRunning deletion filter to identify an IIS\n");
-  this->reportIteration(options, iter, num_rows, true);
   // Zero the objective
   std::vector<double> cost;
   cost.assign(lp.num_col_, 0);
@@ -780,6 +773,13 @@ HighsStatus HighsIis::compute(const HighsLp& lp, const HighsOptions& options,
   assert(highs.getModelStatus() == HighsModelStatus::kInfeasible);
   IisModelStatus iis_status = kIisModelStatusIrreducible;
   HighsStatus search_return_status = HighsStatus::kOk;
+
+  // Initial logging
+  this->clearLogInfo();
+  HighsInt iter = 0;
+  highsLogUser(log_options, HighsLogType::kInfo,
+               "\nRunning deletion filter to identify an IIS\n");
+  this->reportIteration(options, iter, num_rows, true);
 
   // Pass twice: rows before columns, or columns before rows, according to
   // row_priority

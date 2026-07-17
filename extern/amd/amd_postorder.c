@@ -12,7 +12,7 @@
 
 #include "amd_internal.h"
 
-void amd_postorder
+void Highs_amd_postorder
 (
     /* inputs, not modified on output: */
     amd_int nn,		/* nodes are in the range 0..nn-1 */
@@ -134,7 +134,7 @@ void amd_postorder
 	if (Parent [i] == EMPTY && Nv [i] > 0)
 	{
 	    
-	    k = amd_post_tree (i, k, Child, Sibling, Order, Stack) ;
+	    k = Highs_amd_post_tree (i, k, Child, Sibling, Order, Stack) ;
 	}
     }
 }

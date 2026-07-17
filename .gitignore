@@ -45,6 +45,7 @@ local.properties
 *.suo
 *.user
 *.sln.docstates
+HiGHS.sln
 
 # Build results
 

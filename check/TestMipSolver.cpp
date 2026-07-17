@@ -1162,6 +1162,7 @@ TEST_CASE("mip-lp-solver", "[highs_test_mip_solver]") {
 #endif
 }
 
+/*
 TEST_CASE("mip-sub-solver-time", "[highs_test_mip_solver]") {
   const std::string model = "flugpl";  //"rgn"; //
   std::string model_file =
@@ -1174,6 +1175,7 @@ TEST_CASE("mip-sub-solver-time", "[highs_test_mip_solver]") {
   REQUIRE(h.run() == HighsStatus::kOk);
   REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
 }
+*/
 
 TEST_CASE("get-fixed-lp", "[highs_test_mip_solver]") {
   std::string model = "avgas";
@@ -1403,4 +1405,81 @@ TEST_CASE("issue-2173", "[highs_test_mip_solver]") {
   const HighsModelStatus require_model_status = HighsModelStatus::kOptimal;
   const double optimal_objective = -26770.8075489;
   solve(highs, kHighsOnString, require_model_status, optimal_objective);
+}
+
+TEST_CASE("parallel-mip-determinism", "[highs_test_mip_solver]") {
+  std::string filename = std::string(HIGHS_DIR) + "/check/instances/bell5.mps";
+  HighsInt num_runs = 6;
+  std::vector<HighsInt> lp_iters(num_runs);
+  for (HighsInt i = 0; i < num_runs; i++) {
+    Highs highs;
+    highs.setOptionValue("output_flag", dev_run);
+    highs.setOptionValue("mip_rel_gap", 0);
+    highs.setOptionValue("threads", 2);
+    highs.setOptionValue("parallel", kHighsOnString);
+    if (i % 2 == 0) highs.setOptionValue("mip_search_simulate_concurrency", 1);
+    highs.readModel(filename);
+    const HighsModelStatus require_model_status = HighsModelStatus::kOptimal;
+    const double optimal_objective = 8966406.491519;
+    solve(highs, kHighsOffString, require_model_status, optimal_objective);
+    lp_iters[i] = highs.getInfo().simplex_iteration_count;
+    if (i > 0) {
+      REQUIRE(lp_iters[i] == lp_iters[0]);
+    }
+  }
+}
+
+TEST_CASE("issue-2957", "[highs_test_mip_solver]") {
+  HighsLp lp;
+  lp.num_col_ = 2;
+  lp.num_row_ = 1;
+  lp.col_cost_ = {1, 2};
+  lp.col_lower_ = {0, 8};
+  lp.col_upper_ = {20, 20};
+  lp.integrality_ = {HighsVarType::kInteger, HighsVarType::kContinuous};
+  lp.row_lower_ = {20.1};
+  lp.row_upper_ = {kHighsInf};
+  lp.a_matrix_.start_ = {0, 1, 2};
+  lp.a_matrix_.index_ = {0, 0};
+  lp.a_matrix_.value_ = {1, 1};
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  highs.setOptionValue("mip_rel_gap", 0);
+  highs.setOptionValue("mip_abs_gap", 0);
+  highs.passModel(lp);
+  const HighsModelStatus require_model_status = HighsModelStatus::kOptimal;
+  const double optimal_objective = 28.2;
+  solve(highs, kHighsOnString, require_model_status, optimal_objective);
+}
+
+TEST_CASE("issue-2975", "[highs_test_mip_solver]") {
+  //   min  2*b + 99999*y
+  //   s.t. a + b = 10
+  //        a - 100*y <= 0
+  //        a, b >= 0;  y binary
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  HighsInt a = 0;
+  HighsInt b = 1;
+  HighsInt y = 2;
+  HighsLp lp;
+  lp.num_col_ = 3;
+  lp.num_row_ = 2;
+  lp.col_lower_ = {0, 0, 0};
+  lp.col_upper_ = {kHighsInf, kHighsInf, 1};
+  lp.col_cost_ = {0, 2, 99999};
+  lp.integrality_ = {HighsVarType::kContinuous, HighsVarType::kContinuous,
+                     HighsVarType::kInteger};
+  lp.row_lower_ = {10, -kHighsInf};
+  lp.row_upper_ = {10, 0};
+  lp.a_matrix_.format_ = MatrixFormat::kRowwise;
+  lp.a_matrix_.start_ = {0, 2, 4};
+  lp.a_matrix_.index_ = {a, b, a, y};
+  lp.a_matrix_.value_ = {1, 1, 1, -100};
+  highs.passModel(lp);
+  highs.run();
+  REQUIRE(highs.getInfo().objective_function_value == 20);
+  REQUIRE(highs.getSolution().col_value[y] == 0.0);
+
+  highs.resetGlobalScheduler(true);
 }

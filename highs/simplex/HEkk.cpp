@@ -1723,13 +1723,18 @@ void HEkk::chooseSimplexStrategyThreads(const HighsOptions& options,
   const HighsInt simplex_max_concurrency = options.simplex_max_concurrency;
   HighsInt max_threads = highs::parallel::num_threads();
 
-  if (options.parallel == kHighsOnString &&
-      simplex_strategy == kSimplexStrategyDual) {
-    // The parallel strategy is on and the simplex strategy is dual so use
-    // PAMI if there are enough threads
-    if (max_threads >= kDualMultiMinConcurrency)
-      simplex_strategy = kSimplexStrategyDualMulti;
-  }
+  // Don't allow the parallel option to switch from
+  // kSimplexStrategyDual to kSimplexStrategyDualMulti so the MIP
+  // solver only ever uses serial simplex
+  //
+  //  if (options.parallel == kHighsOnString &&
+  //      simplex_strategy == kSimplexStrategyDual) {
+  //    // The parallel strategy is on and the simplex strategy is dual so use
+  //    // PAMI if there are enough threads
+  //    if (max_threads >= kDualMultiMinConcurrency)
+  //      simplex_strategy = kSimplexStrategyDualMulti;
+  //  }
+
   //
   // If parallel strategies are used, the minimum concurrency will be
   // set to be at least the minimum required for the strategy

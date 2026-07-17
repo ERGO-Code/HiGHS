@@ -41,6 +41,9 @@ void HighsInfo::invalidatePrimalKkt() {
   num_primal_infeasibilities = kHighsIllegalInfeasibilityCount;
   max_primal_infeasibility = kHighsIllegalInfeasibilityMeasure;
   sum_primal_infeasibilities = kHighsIllegalInfeasibilityMeasure;
+  num_semi_infeasibilities = kHighsIllegalInfeasibilityCount;
+  max_semi_infeasibility = kHighsIllegalInfeasibilityMeasure;
+  sum_semi_infeasibilities = kHighsIllegalInfeasibilityMeasure;
   num_relative_primal_infeasibilities = kHighsIllegalInfeasibilityCount;
   max_relative_primal_infeasibility = kHighsIllegalInfeasibilityMeasure;
   num_primal_residual_errors = kHighsIllegalResidualCount;
@@ -99,6 +102,12 @@ bool HighsInfo::equal(const HighsInfo& info_) const {
   if (info_.max_dual_infeasibility != this->max_dual_infeasibility)
     return false;
   if (info_.sum_dual_infeasibilities != this->sum_dual_infeasibilities)
+    return false;
+  if (info_.num_semi_infeasibilities != this->num_semi_infeasibilities)
+    return false;
+  if (info_.max_semi_infeasibility != this->max_semi_infeasibility)
+    return false;
+  if (info_.sum_semi_infeasibilities != this->sum_semi_infeasibilities)
     return false;
   if (info_.num_relative_primal_infeasibilities !=
       this->num_relative_primal_infeasibilities)

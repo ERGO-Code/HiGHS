@@ -112,11 +112,19 @@ TEST_CASE("test-hipo-qp", "[highs_hipo]") {
   highs.resetGlobalScheduler(true);
 }
 
-TEST_CASE("test-hipo-infeas", "[highs)hipo]") {
+TEST_CASE("test-hipo-infeas", "[highs_hipo]") {
   const HighsModelStatus expected_status = HighsModelStatus::kInfeasible;
   Highs highs;
   runHipoTest(highs, "bgetam.mps", 0, expected_status, "off");
   runHipoTest(highs, "forest6.mps", 0, expected_status, "off");
   runHipoTest(highs, "klein1.mps", 0, expected_status, "off");
+  highs.resetGlobalScheduler(true);
+}
+
+TEST_CASE("test-hipo-freevar", "[highs_hipo]") {
+  const HighsModelStatus expected_status = HighsModelStatus::kOptimal;
+  Highs highs;
+  runHipoTest(highs, "perold.mps", -9.381e3, expected_status, "on");
+  runHipoTest(highs, "perold.mps", -9.381e3, expected_status, "off");
   highs.resetGlobalScheduler(true);
 }

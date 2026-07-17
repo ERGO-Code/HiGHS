@@ -1,0 +1,179 @@
+name: hipo-vcpkg
+
+on: [push, pull_request]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  win-vcpkg:
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Configure CMake
+        shell: pwsh
+        run: |
+          cmake `
+          -S "$env:GITHUB_WORKSPACE" `
+          -B "${{ github.workspace }}/build" `
+          -DHIPO=ON `
+          -DALL_TESTS=OFF `
+          -DHIGHS_VCPKG=ON
+
+      - name: Build Release
+        shell: pwsh
+        working-directory: ${{github.workspace}}/build
+        run: |
+          cmake --build . --parallel --config Release
+
+      - name: Test executable (Release)
+        shell: pwsh
+        working-directory: ${{github.workspace}}/build
+        run: |
+          & ".\Release\bin\highs.exe" --solver=hipo `
+          "$env:GITHUB_WORKSPACE/check/instances/afiro.mps"
+
+      - name: Ctest (Release)
+        shell: pwsh
+        working-directory: ${{github.workspace}}/build
+        run: |
+          ctest --parallel --timeout 300 --output-on-failure -C Release
+
+      - name: Build Debug
+        shell: pwsh
+        working-directory: ${{github.workspace}}/build
+        run: |
+          cmake --build . --parallel --config Debug
+
+      - name: Test executable (Debug)
+        shell: pwsh
+        working-directory: ${{github.workspace}}/build
+        run: |
+          & ".\Debug\bin\highs.exe" --solver=hipo `
+          "$env:GITHUB_WORKSPACE/check/instances/afiro.mps"
+
+      - name: Ctest (Debug)
+        shell: pwsh
+        working-directory: ${{github.workspace}}/build
+        run: |
+          ctest --parallel --timeout 300 --output-on-failure -C Debug
+
+  ubuntu_vcpkg:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, ubuntu-24.04-arm]
+        config: [Release, Debug]
+        all_tests: [OFF, ON]
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Create Build Environment
+        run: cmake -E make_directory ${{github.workspace}}/build
+
+      - name: Configure CMake
+        working-directory: ${{github.workspace}}/build
+        run: |
+          cmake $GITHUB_WORKSPACE -DHIPO=ON \
+          -DCMAKE_BUILD_TYPE=${{ matrix.config }} \
+          -DALL_TESTS=${{ matrix.all_tests }} \
+          -DHIGHS_VCPKG=ON
+
+      - name: Build
+        working-directory: ${{github.workspace}}/build
+        run: |
+          cmake --build . --parallel
+
+      - name: Test executable
+        working-directory: ${{github.workspace}}/build
+        run: ./bin/highs --solver=hipo $GITHUB_WORKSPACE/check/instances/afiro.mps
+
+      - name: Ctest
+        working-directory: ${{github.workspace}}/build
+        run: |
+          ctest --parallel --timeout 300 --output-on-failure
+
+  ubuntu_debug:
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+        config: [Debug]
+        all_tests: [ON]
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Create Build Environment
+        run: cmake -E make_directory ${{github.workspace}}/build
+
+      - name: Configure CMake
+        working-directory: ${{github.workspace}}/build
+        run: |
+          cmake $GITHUB_WORKSPACE -DHIPO=ON \
+            -DALL_TESTS=${{ matrix.all_tests }} \
+            -DCMAKE_BUILD_TYPE=${{ matrix.config }} \
+            -DHIGHS_VCPKG=ON
+
+      - name: Build
+        working-directory: ${{github.workspace}}/build
+        run: |
+          cmake --build . -j2
+
+      - name: Test executable
+        working-directory: ${{github.workspace}}/build
+        run: ./bin/highs --solver=hipo $GITHUB_WORKSPACE/check/instances/afiro.mps
+
+      - name: Ctest
+        working-directory: ${{github.workspace}}/build
+        run: |
+          ctest --parallel --timeout 300 --output-on-failure
+
+  windows_debug:
+    runs-on: [windows-latest]
+    strategy:
+      fail-fast: false
+      matrix:
+        config: [Debug]
+        all_tests: [ON]
+        arch: ["x64"]
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Configure CMake
+        shell: pwsh
+        run: |
+          cmake `
+          -S "$env:GITHUB_WORKSPACE" `
+          -B "${{ github.workspace }}/build" `
+          -A ${{ matrix.arch }} `
+          -DHIPO=ON `
+          -DALL_TESTS=${{ matrix.all_tests }} `
+          -DHIGHS_VCPKG=ON
+
+      - name: Build
+        shell: pwsh
+        working-directory: ${{github.workspace}}/build
+        run: |
+          cmake --build . --parallel --config ${{ matrix.config }}
+
+      - name: Test executable
+        shell: pwsh
+        working-directory: ${{github.workspace}}/build
+        run: |
+          & ".\${{ matrix.config }}\bin\highs.exe" --solver=hipo `
+          "$env:GITHUB_WORKSPACE/check/instances/afiro.mps"
+
+      - name: Ctest
+        shell: pwsh
+        working-directory: ${{github.workspace}}/build
+        run: |
+          ctest --parallel --timeout 300 --output-on-failure -C ${{ matrix.config }}

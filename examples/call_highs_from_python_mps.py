@@ -3,7 +3,6 @@
 # from the root directory.
 
 import highspy
-import numpy as np
 
 # Highs h
 h = highspy.Highs()
