@@ -416,49 +416,23 @@ HighsStatus HighsHessian::checkOracle(const HighsLogOptions& log_options,
     }
   };
 
-  auto vectorsEqual = [&](const HighsInt dim, const double* v0,
-                          const double* v1) {
-    for (HighsInt iCol = 0; iCol < dim; iCol++)
-      if (std::fabs(v0[iCol] - v1[iCol]) > 1e-5) return false;
-    return true;
+  auto columnValuesEqual = [&](const HighsInt iCol, const HighsInt iRow, const double oracle_v, const double true_v) {
+    if (oracle_v == true_v) return true;
+    highsLogUser(log_options, HighsLogType::kError,
+		 "Hessian oracle yields column %d value %d of %g, not %g\n",
+		 int(iCol), int(iRow), oracle_v, true_v);
+    return false;
   };
 
-  auto scatterValues = [&](double* v, HighsInt& v_num_entries,
-                           const HighsInt* v_index, double* v_value) {
-    for (HighsInt iX = 0; iX < v_num_entries; iX++)
-      v[v_index[iX]] = v_value[iX];
-  };
-
-  auto zeroScatteredValues = [&](double* v, HighsInt& v_num_entries,
-                                 const HighsInt* v_index) {
-    for (HighsInt iX = 0; iX < v_num_entries; iX++) v[v_index[iX]] = 0;
-  };
-
-  auto isZero = [&](double* v) {
-    bool is_zero = true;
-    for (HighsInt iCol = 0; iCol < dim; iCol++) {
-      if (v[iCol]) {
-        is_zero = false;
-        v[iCol] = 0;
-      }
-    }
-    return is_zero;
-  };
-
-  auto packedVectorsEqual = [&](HighsInt& v0_num_entries,
-                                const HighsInt* v0_index, double* v0_value,
-                                HighsInt& v1_num_entries,
-                                const HighsInt* v1_index, double* v1_value) {
-    std::vector<double> v0(dim, 0);
-    std::vector<double> v1(dim, 0);
-    scatterValues(v0.data(), v0_num_entries, v0_index, v0_value);
-    scatterValues(v1.data(), v1_num_entries, v1_index, v1_value);
-    bool packed_values_equal = vectorsEqual(dim, v0.data(), v1.data());
-    zeroScatteredValues(v0.data(), v0_num_entries, v0_index);
-    zeroScatteredValues(v1.data(), v1_num_entries, v1_index);
-    packed_values_equal = isZero(v0.data()) && packed_values_equal;
-    packed_values_equal = isZero(v1.data()) && packed_values_equal;
-    return packed_values_equal;
+  auto productValuesClose = [&](const HighsInt iCol, const HighsInt iRow,
+				const double oracle_v, const double true_v,
+				const double tolerance = 0.0) {
+    double delta = std::fabs(oracle_v - true_v) / (1.0 + std::fabs(true_v));
+    if (delta <= tolerance) return true;
+    highsLogUser(log_options, HighsLogType::kError,
+		 "Hessian oracle product %d yields value %d of %g, not %g, a relative difference of %g\n",
+		 int(iCol), int(iRow), oracle_v, true_v, delta);
+    return false;
   };
 
   std::vector<double> column;
@@ -516,73 +490,91 @@ HighsStatus HighsHessian::checkOracle(const HighsLogOptions& log_options,
     error_found = true;
   }
 
-  // Test product from and to a std::vector
-  std::vector<double> x_value(dim);
-  std::vector<double> check_q_x_value(dim, 0);
+  // Test column extraction, then use the column to check product
+  HighsInt oracle_num_el;
+  std::vector<HighsInt> oracle_index(dim, 0);
+  std::vector<double> oracle_value(dim, 0);
+  HighsInt num_nz;
+  std::vector<HighsInt> index(dim, 0);
+  std::vector<double> value(dim, 0);
+  std::vector<double> check(dim, 0);
   HighsRandom random;
   for (HighsInt iCol = 0; iCol < dim; iCol++) {
-    x_value[iCol] = random.fraction();  //-1.0;//
-    for (HighsInt iEl = hessian.start_[iCol]; iEl < hessian.start_[iCol + 1];
-         iEl++)
-      check_q_x_value[hessian.index_[iEl]] +=
-          hessian.value_[iEl] * x_value[iCol];
-  }
+     // Get the scattered column from the local Hessian and the oracle
+     num_nz = 0;
+     for (HighsInt iEl = hessian.start_[iCol]; iEl < hessian.start_[iCol + 1];
+	  iEl++) {
+       HighsInt iRow = hessian.index_[iEl];
+       index[num_nz] = iRow;
+       value[iRow] = hessian.value_[iEl];
+       num_nz++;
+     }
+     oracle.getScatteredColumn(iCol, oracle_num_el, oracle_index.data(), oracle_value.data());
+     // NB Oracle may return explicit zeros, so cannot expect
+     // oracle_num_el to equal num_nz
+     //
+     // Check oracle values are the same as column values (ie oracle
+     // hasn't inserted any values)
+     for (HighsInt iX = 0; iX < oracle_num_el; iX++) {
+       HighsInt iRow = oracle_index[iX];
+       if (!columnValuesEqual(iCol, iRow, oracle_value[iRow], value[iRow])) {
+	 if (exit_on_first_error) return HighsStatus::kError;
+	 error_found = true;
+       }
+     }
+     // Check column values are the same as oracle values (ie oracle
+     // hasn't missed any values), zeroing oracle_value
+     for (HighsInt iX = 0; iX < num_nz; iX++) {
+       HighsInt iRow = index[iX];
+       if (!columnValuesEqual(iCol, iRow, oracle_value[iRow], value[iRow])) {
+	 if (exit_on_first_error) return HighsStatus::kError;
+	 error_found = true;
+       }
+       oracle_value[iRow] = 0;
+     }
+     // Check remaining oracle values are zero
+     for (HighsInt iRow = 0; iRow < dim; iRow++) {
+       if (!columnValuesEqual(iCol, iRow, oracle_value[iRow], 0.0)) {
+	 if (exit_on_first_error) return HighsStatus::kError;
+	 error_found = true;
+       }
+     }
+     // Reinstate oracle nonzeros, scaling with a random number for
+     // product experiement and zero value
+     for (HighsInt iX = 0; iX < num_nz; iX++) {
+       HighsInt iRow = index[iX];
+       oracle_value[iRow] = value[iRow];// * random.fraction();
+       value[iRow] = 0;
+     }
+     // Compute the product in check directly, 
+     for (HighsInt iX = 0; iX < num_nz; iX++) {
+       HighsInt iCol1 = index[iX];
+       for (HighsInt iEl = hessian.start_[iCol1]; iEl < hessian.start_[iCol1 + 1];
+	  iEl++) 
+	 check[hessian.index_[iEl]] += hessian.value_[iEl] * oracle_value[iCol1];
+     }
+     // Compute the product in value using the oracle
+     oracle.product(oracle_num_el, oracle_index.data(), oracle_value.data(), value.data());
+     // Check results are close
+     for (HighsInt iRow = 0; iRow < dim; iRow++) {
+       if (!productValuesClose(iCol, iRow, value[iRow], check[iRow])) {
+	 if (exit_on_first_error) return HighsStatus::kError;
+	 error_found = true;
+       }
+     }
+     // Zero value and check
+      for (HighsInt iRow = 0; iRow < dim; iRow++) {
+       value[iRow] = 0;
+       check[iRow] = 0;
+      }
+     // Zero oracle entries
+      for (HighsInt iX = 0; iX < oracle_num_el; iX++) 
+       oracle_value[oracle_index[iX]] = 0;
+   }
 
-  std::vector<double> q_x_value(dim);
-  /*
-  oracle.product(x_value, q_x_value);
-  if (!vectorsEqual(dim, q_x_value.data(), check_q_x_value.data())) {
-    highsLogUser(
-        log_options, HighsLogType::kError,
-        "Hessian oracle product with std::vector: values are incorrect\n");
-    if (exit_on_first_error) return HighsStatus::kError;
-    error_found = true;
-  }
-  */
-
-  // Test product from a scattered, sparse, x
-  x_value.assign(dim, 0);
-  std::vector<HighsInt> x_index(dim);
-  //  std::vector<HighsInt> q_x_index(dim);
-  std::vector<HighsInt> check_q_x_index(dim, 0);
-  //  std::vector<double> q_q_x_value(dim, 0);
-  //  std::vector<HighsInt> q_q_x_index(dim, 0);
-  //  std::vector<double> check_q_q_x_value(dim, 0);
-  //  std::vector<HighsInt> check_q_q_x_index(dim, 0);
-  q_x_value.assign(dim, 0);
-  check_q_x_value.assign(dim, 0);
-  for (HighsInt iCol = 0; iCol < dim; iCol++) {
-    x_value[iCol] = 1.0;  // random.fraction();//
-    x_index[0] = iCol;
-    HighsInt check_q_x_num_entries = 0;
-    for (HighsInt iEl = hessian.start_[iCol]; iEl < hessian.start_[iCol + 1];
-         iEl++) {
-      HighsInt iRow = hessian.index_[iEl];
-      check_q_x_value[check_q_x_num_entries] =
-          hessian.value_[iEl] * x_value[iCol];
-      check_q_x_index[check_q_x_num_entries] = iRow;
-      check_q_x_num_entries++;
-    }
-    HighsInt q_x_num_entries = -1;
-    oracle.product(HighsInt(1), x_index.data(), x_value.data(),
-                   q_x_value.data());
-    // Check diffence between q_x and check_q_x in zeroing both
-    if (!packedVectorsEqual(q_x_num_entries, nullptr, q_x_value.data(),
-                            check_q_x_num_entries, check_q_x_index.data(),
-                            check_q_x_value.data())) {
-      highsLogUser(log_options, HighsLogType::kError,
-                   "Hessian oracle product %d with sparse, x: Qx values "
-                   "are incorrect\n",
-                   int(iCol));
-      if (exit_on_first_error) return HighsStatus::kError;
-      error_found = true;
-    }
-    x_value[iCol] = 0.0;
-  }
-
-  if (error_found) return HighsStatus::kError;
-  if (warning_found) return HighsStatus::kWarning;
-  return HighsStatus::kOk;
+   if (error_found) return HighsStatus::kError;
+   if (warning_found) return HighsStatus::kWarning;
+   return HighsStatus::kOk;
 }
 
 void HessianOracle::clear() {
