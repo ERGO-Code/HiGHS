@@ -122,6 +122,7 @@ class Symbolic {
   Int64 cliqueBlockStart(Int sn, Int bl) const;
   Int64 cliqueSize(Int sn) const;
   Int64 maxStackSize() const;
+  Int largestFront() const;
   Int depth() const;
   bool parTree() const;
   bool parNode() const;

@@ -12,11 +12,13 @@ namespace hipo {
 HybridSolveHandler::HybridSolveHandler(
     const Symbolic& S, const std::vector<std::vector<double>>& sn_columns,
     const std::vector<std::vector<Int>>& swaps,
-    const std::vector<std::vector<double>>& pivot_2x2, DataCollector& data,
+    const std::vector<std::vector<double>>& pivot_2x2,
+    std::vector<double>& gemv_work, DataCollector& data,
     const FHoptions& options)
     : SolveHandler(S, sn_columns, data, options),
       swaps_{swaps},
-      pivot_2x2_{pivot_2x2} {}
+      pivot_2x2_{pivot_2x2},
+      gemv_workspace_{gemv_work} {}
 
 void HybridSolveHandler::forwardSolve(double* x) const {
   // Forward solve.
@@ -111,21 +113,20 @@ void HybridSolveHandler::forwardSolve(double* x) const {
         SnCol_ind += diag_entries;
 
         // temporary space for gemv
-        const Int gemv_space = ldSn - nb * j - jb;
-        std::vector<double> y(gemv_space);
-        if (gemv_space > 0) {
-          callAndTime_dgemv('T', jb, gemv_space, 1.0,
+        const Int gemv_size = ldSn - nb * j - jb;
+        if (gemv_size > 0) {
+          callAndTime_dgemv('T', jb, gemv_size, 1.0,
                             &sn_columns_[sn][SnCol_ind], jb, &x[x_start], 1,
-                            0.0, y.data(), 1, data_);
+                            0.0, gemv_workspace_.data(), 1, data_);
 
-          SnCol_ind += jb * gemv_space;
+          SnCol_ind += jb * gemv_size;
           HIPO_CLOCK_STOP(2, data_, kTimeSolveSolve_dense);
 
           HIPO_CLOCK_START(2);
           // scatter solution of gemv
-          for (Int i = 0; i < gemv_space; ++i) {
+          for (Int i = 0; i < gemv_size; ++i) {
             const Int row = S_.rows(start_row + nb * j + jb + i);
-            x[row] -= y[i];
+            x[row] -= gemv_workspace_[i];
           }
           HIPO_CLOCK_STOP(2, data_, kTimeSolveSolve_sparse);
         }
@@ -230,22 +231,21 @@ void HybridSolveHandler::backwardSolve(double* x) const {
         }
 
         // temporary space for gemv
-        const Int gemv_space = ldSn - nb * j - jb;
-        std::vector<double> y(gemv_space);
-        if (gemv_space > 0) {
+        const Int gemv_size = ldSn - nb * j - jb;
+        if (gemv_size > 0) {
           HIPO_CLOCK_START(2);
           // scatter entries into y
-          for (Int i = 0; i < gemv_space; ++i) {
+          for (Int i = 0; i < gemv_size; ++i) {
             const Int row = S_.rows(start_row + nb * j + jb + i);
-            y[i] = x[row];
+            gemv_workspace_[i] = x[row];
           }
           HIPO_CLOCK_STOP(2, data_, kTimeSolveSolve_sparse);
 
           HIPO_CLOCK_START(2);
-          SnCol_ind -= jb * gemv_space;
-          callAndTime_dgemv('N', jb, gemv_space, -1.0,
-                            &sn_columns_[sn][SnCol_ind], jb, y.data(), 1, 1.0,
-                            &x[x_start], 1, data_);
+          SnCol_ind -= jb * gemv_size;
+          callAndTime_dgemv(
+              'N', jb, gemv_size, -1.0, &sn_columns_[sn][SnCol_ind], jb,
+              gemv_workspace_.data(), 1, 1.0, &x[x_start], 1, data_);
           HIPO_CLOCK_STOP(2, data_, kTimeSolveSolve_dense);
         }
 

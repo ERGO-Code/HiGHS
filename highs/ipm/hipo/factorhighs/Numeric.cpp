@@ -15,8 +15,12 @@ namespace hipo {
 Int Numeric::prepare() {
   if (!sn_columns_ || !S_ || !data_ || !options_) return kRetInvalidPointer;
   SH_.reset(new HybridSolveHandler(*S_, *sn_columns_, swaps_, pivot_2x2_,
-                                   *data_, *options_));
+                                   gemv_workspace_, *data_, *options_));
   if (!SH_) return kRetGeneric;
+
+  // memory allocation should happen only the first time, then memory is reused.
+  // No need to zero memory each time, as it is overwritten by solveHandler.
+  gemv_workspace_.resize(S_->largestFront());
 
   return kRetOk;
 }

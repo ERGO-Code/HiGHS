@@ -28,6 +28,7 @@ class Numeric {
   DataCollector* data_ = nullptr;
   const FHoptions* options_;
   std::unique_ptr<SolveHandler> SH_;
+  std::vector<double> gemv_workspace_;
 
   friend class Factorise;
 
