@@ -249,22 +249,20 @@ Int UpLookingSolver::solveAS(const std::vector<double>& rhs_x,
 
   Int n = rhs_x.size();
 
-  // create single rhs
-  std::vector<double> rhs;
-  rhs.insert(rhs.end(), rhs_x.begin(), rhs_x.end());
-  rhs.insert(rhs.end(), rhs_y.begin(), rhs_y.end());
+  as_buffer_.resize(rhs_x.size() + rhs_y.size());
+  std::copy(rhs_x.begin(), rhs_x.end(), as_buffer_.begin());
+  std::copy(rhs_y.begin(), rhs_y.end(), as_buffer_.begin() + n);
 
   Clock clock;
-  permuteVectorInverse(rhs, kkt_.iperm());
-  solve(rhs);
-  permuteVector(rhs, kkt_.iperm());
+  permuteVectorInverse(as_buffer_, kkt_.iperm());
+  solve(as_buffer_);
+  permuteVector(as_buffer_, kkt_.iperm());
   info_.solve_time += clock.stop();
   info_.solve_number++;
   data_.back().num_solves++;
 
-  // split lhs
-  lhs_x = std::vector<double>(rhs.begin(), rhs.begin() + n);
-  lhs_y = std::vector<double>(rhs.begin() + n, rhs.end());
+  lhs_x.assign(as_buffer_.begin(), as_buffer_.begin() + n);
+  lhs_y.assign(as_buffer_.begin() + n, as_buffer_.end());
 
   return kOk;
 }

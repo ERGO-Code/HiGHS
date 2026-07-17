@@ -35,6 +35,8 @@ class UpLookingSolver : public LinearSolver {
   std::vector<Int> parent_;
   double flops_;
 
+  std::vector<double> as_buffer_;
+
   Info& info_;
   IpmData& data_;
   const Regularisation& regul_;
