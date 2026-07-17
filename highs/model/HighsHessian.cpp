@@ -375,10 +375,26 @@ HighsStatus HighsHessian::checkOracle(const HighsLogOptions& log_options,
                  "Hessian oracle is not defined\n");
     return HighsStatus::kError;
   }
-  bool warning_found = false;
-  bool error_found = false;
   const HessianOracle& oracle = this->oracle_;
   HighsInt dim = oracle.dim_;
+
+  HighsInt num_nz;
+  std::vector<HighsInt> index(dim, 0);
+  std::vector<double> value(dim, 0);
+  std::vector<double> oracle_value(dim, 0);
+
+  num_nz = 1;
+  // A Hessian oracle product call is necessary
+  if (oracle.call_(kHessianOracleCallTypeProduct, &num_nz, index.data(),
+                   value.data(), nullptr, nullptr, oracle_value.data(),
+                   oracle.data_)) {
+    highsLogUser(log_options, HighsLogType::kError,
+                 "Hessian oracle has no product call\n");
+    return HighsStatus::kError;
+  }
+
+  bool warning_found = false;
+  bool error_found = false;
   // Set up a square Hessian corresponding to the oracle (naturally)
   // assuming that oracle.entry is implemented correctly
   HighsHessian hessian;
@@ -416,22 +432,24 @@ HighsStatus HighsHessian::checkOracle(const HighsLogOptions& log_options,
     }
   };
 
-  auto columnValuesEqual = [&](const HighsInt iCol, const HighsInt iRow, const double oracle_v, const double true_v) {
+  auto columnValuesEqual = [&](const HighsInt iCol, const HighsInt iRow,
+                               const double oracle_v, const double true_v) {
     if (oracle_v == true_v) return true;
     highsLogUser(log_options, HighsLogType::kError,
-		 "Hessian oracle yields column %d value %d of %g, not %g\n",
-		 int(iCol), int(iRow), oracle_v, true_v);
+                 "Hessian oracle yields column %d value %d of %g, not %g\n",
+                 int(iCol), int(iRow), oracle_v, true_v);
     return false;
   };
 
   auto productValuesClose = [&](const HighsInt iCol, const HighsInt iRow,
-				const double oracle_v, const double true_v,
-				const double tolerance = 0.0) {
+                                const double oracle_v, const double true_v,
+                                const double tolerance = 0.0) {
     double delta = std::fabs(oracle_v - true_v) / (1.0 + std::fabs(true_v));
     if (delta <= tolerance) return true;
     highsLogUser(log_options, HighsLogType::kError,
-		 "Hessian oracle product %d yields value %d of %g, not %g, a relative difference of %g\n",
-		 int(iCol), int(iRow), oracle_v, true_v, delta);
+                 "Hessian oracle product %d yields value %d of %g, not %g, a "
+                 "relative difference of %g\n",
+                 int(iCol), int(iRow), oracle_v, true_v, delta);
     return false;
   };
 
@@ -493,10 +511,6 @@ HighsStatus HighsHessian::checkOracle(const HighsLogOptions& log_options,
   // Test column extraction, then use the column to check product
   HighsInt oracle_num_el;
   std::vector<HighsInt> oracle_index(dim, 0);
-  std::vector<double> oracle_value(dim, 0);
-  HighsInt num_nz;
-  std::vector<HighsInt> index(dim, 0);
-  std::vector<double> value(dim, 0);
   std::vector<double> check(dim, 0);
   HighsRandom random;
   for (HighsInt iCol = 0; iCol < dim; iCol++) {
@@ -504,13 +518,14 @@ HighsStatus HighsHessian::checkOracle(const HighsLogOptions& log_options,
     // Get the scattered column from the local Hessian and the oracle
     num_nz = 0;
     for (HighsInt iEl = hessian.start_[iCol]; iEl < hessian.start_[iCol + 1];
-	 iEl++) {
+         iEl++) {
       HighsInt iRow = hessian.index_[iEl];
       index[num_nz] = iRow;
       value[iRow] = hessian.value_[iEl];
       num_nz++;
     }
-    oracle.getScatteredColumn(iCol, oracle_num_el, oracle_index.data(), oracle_value.data());
+    oracle.getScatteredColumn(iCol, oracle_num_el, oracle_index.data(),
+                              oracle_value.data());
     // NB Oracle may return explicit zeros, so cannot expect
     // oracle_num_el to equal num_nz
     //
@@ -519,9 +534,9 @@ HighsStatus HighsHessian::checkOracle(const HighsLogOptions& log_options,
     for (HighsInt iX = 0; iX < oracle_num_el; iX++) {
       HighsInt iRow = oracle_index[iX];
       if (!columnValuesEqual(iCol, iRow, oracle_value[iRow], value[iRow])) {
-	if (exit_on_first_error) return HighsStatus::kError;
-	error_found = true;
-	column_error_found = true;
+        if (exit_on_first_error) return HighsStatus::kError;
+        error_found = true;
+        column_error_found = true;
       }
     }
     // Check column values are the same as oracle values (ie oracle
@@ -529,18 +544,18 @@ HighsStatus HighsHessian::checkOracle(const HighsLogOptions& log_options,
     for (HighsInt iX = 0; iX < num_nz; iX++) {
       HighsInt iRow = index[iX];
       if (!columnValuesEqual(iCol, iRow, oracle_value[iRow], value[iRow])) {
-	if (exit_on_first_error) return HighsStatus::kError;
-	error_found = true;
-	column_error_found = true;
+        if (exit_on_first_error) return HighsStatus::kError;
+        error_found = true;
+        column_error_found = true;
       }
       oracle_value[iRow] = 0;
     }
     // Check remaining oracle values are zero
     for (HighsInt iRow = 0; iRow < dim; iRow++) {
       if (!columnValuesEqual(iCol, iRow, oracle_value[iRow], 0.0)) {
-	if (exit_on_first_error) return HighsStatus::kError;
-	error_found = true;
-	column_error_found = true;
+        if (exit_on_first_error) return HighsStatus::kError;
+        error_found = true;
+        column_error_found = true;
       }
     }
     // Reinstate oracle nonzeros, scaling with a random number for
@@ -551,31 +566,32 @@ HighsStatus HighsHessian::checkOracle(const HighsLogOptions& log_options,
       value[iRow] = 0;
     }
     if (!column_error_found) {
-      // Compute the product in check directly, 
+      // Compute the product in check directly,
       for (HighsInt iX = 0; iX < num_nz; iX++) {
-	HighsInt iCol1 = index[iX];
-	for (HighsInt iEl = hessian.start_[iCol1]; iEl < hessian.start_[iCol1 + 1];
-	     iEl++) 
-	  check[hessian.index_[iEl]] += hessian.value_[iEl] * oracle_value[iCol1];
+        HighsInt iCol1 = index[iX];
+        for (HighsInt iEl = hessian.start_[iCol1];
+             iEl < hessian.start_[iCol1 + 1]; iEl++)
+          check[hessian.index_[iEl]] +=
+              hessian.value_[iEl] * oracle_value[iCol1];
       }
       // Compute the product in value using the oracle
-      oracle.product(oracle_num_el, oracle_index.data(), oracle_value.data(), value.data());
+      oracle.product(oracle_num_el, oracle_index.data(), oracle_value.data(),
+                     value.data());
       // Check results are close
       for (HighsInt iRow = 0; iRow < dim; iRow++) {
-	if (!productValuesClose(iCol, iRow, value[iRow], check[iRow], 1e-12)) {
-	  if (exit_on_first_error) return HighsStatus::kError;
-	  error_found = true;
-	}
+        if (!productValuesClose(iCol, iRow, value[iRow], check[iRow], 1e-12)) {
+          if (exit_on_first_error) return HighsStatus::kError;
+          error_found = true;
+        }
       }
       // Zero value and check
       for (HighsInt iRow = 0; iRow < dim; iRow++) {
-	value[iRow] = 0;
-	check[iRow] = 0;
+        value[iRow] = 0;
+        check[iRow] = 0;
       }
     }
     // Zero oracle entries
-    for (HighsInt iX = 0; iX < num_nz; iX++) 
-      oracle_value[index[iX]] = 0;
+    for (HighsInt iX = 0; iX < num_nz; iX++) oracle_value[index[iX]] = 0;
   }
 
   if (error_found) return HighsStatus::kError;
@@ -597,8 +613,16 @@ double HessianOracle::entry(const HighsInt i, const HighsInt j) const {
   assert(this->call_);
   double entry;
   HighsInt q_x_index = j;
-  this->call_(kHessianOracleCallTypeEntry, nullptr, &i, nullptr, nullptr,
-              &q_x_index, &entry, this->data_);
+  HighsInt status =
+      this->call_(kHessianOracleCallTypeEntry, nullptr, &i, nullptr, nullptr,
+                  &q_x_index, &entry, this->data_);
+  if (status) {
+    HighsInt num_entries;
+    std::vector<HighsInt> index(this->dim_, 0);
+    std::vector<double> value(this->dim_, 0);
+    this->getScatteredColumn(i, num_entries, index.data(), value.data());
+    entry = value[j];
+  }
   entry *= this->multiplier_;
   if (i == j) entry += this->shift_;
   return entry;
@@ -609,8 +633,21 @@ void HessianOracle::getPackedColumn(const HighsInt col,
                                     HighsInt* col_index,
                                     double* col_value) const {
   assert(col >= 0 && col < this->dim_);
-  this->call_(kHessianOracleCallTypeColumn, nullptr, &col, nullptr,
-              &col_num_entries, col_index, col_value, this->data_);
+  HighsInt status =
+      this->call_(kHessianOracleCallTypeColumn, nullptr, &col, nullptr,
+                  &col_num_entries, col_index, col_value, this->data_);
+  if (status) {
+    std::vector<double> x_value(this->dim_, 0);
+    x_value[col] = 1.0;
+    this->product(1, &col, x_value.data(), col_value);
+    col_num_entries = 0;
+    for (HighsInt iRow = 0; iRow < this->dim_; iRow++) {
+      if (!col_value[iRow]) continue;
+      col_value[col_num_entries] = col_value[iRow];
+      col_index[col_num_entries] = iRow;
+      col_num_entries++;
+    }
+  }
   if (this->multiplier_ != 1.0) {
     for (HighsInt iX = 0; iX < col_num_entries; iX++)
       col_value[iX] *= this->multiplier_;

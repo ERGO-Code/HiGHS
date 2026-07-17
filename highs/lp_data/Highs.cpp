@@ -4241,7 +4241,7 @@ HighsHessianFunctionType testOracleCallSquareHessian =
              iEl < hessian.start_[iCol + 1]; iEl++) {
           if (hessian.index_[iEl] == iRow) {
             q_x_value[0] = hessian.value_[iEl];
-            return;
+            return 0;
           }
         }
       } else if (call_type == kHessianOracleCallTypeColumn) {
@@ -4261,7 +4261,7 @@ HighsHessianFunctionType testOracleCallSquareHessian =
           (*q_x_num_entries)++;
         }
       } else {
-        assert(x_index == nullptr || *x_num_entries > 0);
+        assert(x_index == nullptr || *x_num_entries >= 0);
         assert(q_x_num_entries == nullptr);
         assert(q_x_index == nullptr);
         assert(q_x_value != nullptr);
@@ -4277,6 +4277,7 @@ HighsHessianFunctionType testOracleCallSquareHessian =
           }
         }
       }
+      return 0;
     };
 
 HighsStatus Highs::callSolveQp() {
@@ -4376,16 +4377,11 @@ HighsStatus Highs::callSolveQp() {
 
     if (lp.sense_ == ObjSense::kMaximize) {
       // Negate the vector and Hessian
-      for (double& i : instance.c.value) {
-        i *= -1.0;
-      }
+      for (double& i : instance.c.value) i *= -1.0;
       if (instance.Q.mat.num_col > 0) {
-        for (double& i : instance.Q.mat.value) {
-          i *= -1.0;
-        }
-      } else {
-        instance.Q.mat.oracle_.multiplier_ = -1;
+        for (double& i : instance.Q.mat.value) i *= -1.0;
       }
+      if (instance.Q.mat.isOracle()) instance.Q.mat.oracle_.multiplier_ = -1;
     }
 
     Settings settings;

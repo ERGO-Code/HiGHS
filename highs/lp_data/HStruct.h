@@ -247,7 +247,7 @@ struct HighsUserScaleData {
   bool scaleWarning(std::string& message) const;
 };
 
-using HighsHessianFunctionType = std::function<void(
+using HighsHessianFunctionType = std::function<HighsInt(
     const HighsInt call_type, const HighsInt* x_num_entries,
     const HighsInt* x_index, const double* x_value, HighsInt* q_x_num_entries,
     HighsInt* q_x_index, double* q_x_value, void*)>;
