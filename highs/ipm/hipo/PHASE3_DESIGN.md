@@ -131,6 +131,20 @@ What mode 2 guarantees instead, both verified on full IPM runs:
   KKT residuals; iterate trajectories may differ from serial after several
   iterations (a different, equally valid FP summation grouping).
 
+## Measured results (4-vCPU cloud VM, post v1.15.1 merge)
+
+`pypsa-de-elec-10-1h`, 600s budget: serial (default) 45 iterations / 159.7s solve;
+mode 2 at 4 threads 26 iterations / 340.0s solve (per-solve 0.49s vs 1.62s).
+Small instance full solve: serial 5.5s, mode 2 at 4 threads 20.5s.
+**Mode 2 loses decisively on this machine.** Single-thread mode 2 is close to
+serial (locality preserved by the LIFO/chain-fast-path executor), so the loss is
+specific to multi-worker execution: triangular solves are memory-bandwidth-bound
+and the shared-bandwidth vCPUs cannot feed multiple workers — parallel execution
+mostly migrates cache lines. The go/no-go question (≥1.5× at 4 threads) remains
+open for hardware with real per-core bandwidth; if it fails there too, the
+conclusion is that solve parallelism requires layout-level changes (blocked
+multi-RHS, GPU offload) rather than scheduling alone.
+
 ## Remaining work beyond this implementation
 
 - The backward solve is run-grain (block-splitting its gathers would split dot-product
