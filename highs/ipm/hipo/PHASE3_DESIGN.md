@@ -88,3 +88,56 @@ solve at 4 and 8+ threads. Gate for continuing the full Phase 3: **≥1.5× solv
 speedup at 4 threads** with determinism and clean KKT residuals. The sketch as-is is
 expected to fail that gate on chain-dominated instances (by design); the gate applies
 after the block-level DAG lands.
+
+# Block-level DAG (parallel_solve_mode = 2)
+
+Mode 2 implements the block-level DAG in `factorhighs/SolveDag.{h,cpp}` and the
+`dag*` methods of `ParallelSolveHandler`.
+
+## Structure
+
+- **Run coarsening**: supernode sn joins the current run iff *all* of its incoming
+  update sources are already members (a pure chain step) and the run is below
+  `hipo_dag_min_task_ops` estimated flops. Runs are contiguous in the postordered
+  index, so each run owns a contiguous global row range. Rows of a supernode's panel
+  below `intEnd(sn)` belong to its own run and are applied inline by the run's solve
+  task; rows above are covered by **delivery tasks** (segments of at least
+  `hipo_dag_min_seg_rows` rows, split only at destination-run boundaries).
+- **Forward dependencies**: SolveTask(r) waits for every delivery into r; a delivery
+  waits for its source run's SolveTask and for the previous delivery in each covered
+  destination's inbox (inboxes ordered by ascending source supernode). All edges
+  increase the (source, kind) key, so the graph is acyclic by construction.
+- **Backward**: one task per run, members processed in descending order;
+  BwdTask(r) waits for the runs owning its members' external panel rows (read-only
+  dependencies — values read are final, so execution order cannot affect results).
+- **Executor**: LIFO ready-stack with a chain fast-path (a task that unlocks exactly
+  one dependent hands it straight to the same worker with no locking — depth-first
+  execution preserves the serial traversal's memory locality) and idle backoff.
+
+## Determinism, not bit-identity — and why (measured)
+
+The original design aimed for bit-identity with the serial handler via row-split
+gemvs. **Measurement killed that assumption**: OpenBLAS `dgemv('T')` is *not* bitwise
+row-splittable — per-output dot products change with the output count n (verified
+with a direct test: jb in 2..64, splits at many points, diffs of ~1 ulp appear
+routinely). Any genuine block decomposition therefore cannot reproduce serial results
+bit-for-bit with BLAS kernels.
+
+What mode 2 guarantees instead, both verified on full IPM runs:
+- **Bit-determinism across thread counts and repeats**: the application order into
+  every row of x is fixed by the inbox chains and split points, independent of
+  scheduling, so 1-thread and N-thread runs produce identical iterate sequences.
+- **Optimality equivalence**: same optimal objective to all printed digits and clean
+  KKT residuals; iterate trajectories may differ from serial after several
+  iterations (a different, equally valid FP summation grouping).
+
+## Remaining work beyond this implementation
+
+- The backward solve is run-grain (block-splitting its gathers would split dot-product
+  summations; with bit-identity to serial already off the table, a segmented
+  deterministic accumulation is now a reasonable next step).
+- Delivery tasks recompute their slice of every column block's sub-gemv; per-block
+  flops match serial but small blocks pay per-call BLAS overhead.
+- Worker count is not adapted to DAG width (idle workers on narrow DAGs cost a
+  little); `hipo_dag_min_task_ops` / `hipo_dag_min_seg_rows` defaults are first
+  guesses, exposed for the tuning loop.

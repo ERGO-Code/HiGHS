@@ -16,6 +16,7 @@ ParallelSolveHandler::ParallelSolveHandler(
     const std::vector<std::vector<uint8_t>>& swap_flags,
     const std::vector<std::vector<double>>& pivot_2x2,
     const std::vector<std::vector<std::vector<Int>>>& schedule,
+    const SolveDag* dag, std::vector<double>& fwd_stash,
     std::vector<std::vector<double>>& task_work,
     std::vector<std::vector<Int>>& task_def_rows,
     std::vector<std::vector<double>>& task_def_vals, DataCollector& data)
@@ -24,9 +25,134 @@ ParallelSolveHandler::ParallelSolveHandler(
       swap_flags_{swap_flags},
       pivot_2x2_{pivot_2x2},
       schedule_{schedule},
+      dag_{dag},
+      fwd_stash_{fwd_stash},
       task_work_{task_work},
       task_def_rows_{task_def_rows},
       task_def_vals_{task_def_vals} {}
+
+// ===========================================================================
+// Block-level DAG paths (parallel_solve_mode == 2)
+// ===========================================================================
+
+void ParallelSolveHandler::dagSolveTask(Int run, std::vector<double>& x,
+                                        Int slot) const {
+  // Solve one run of supernodes: for each member (ascending), swaps, dtrsv
+  // and the gemv restricted to rows owned by the run (positions below
+  // intEnd(sn)), scattered immediately. All external deliveries into the
+  // run have been applied (DAG dependency), and non-first members receive
+  // updates only from earlier members (the run-merge condition), so this
+  // reproduces the serial state and update order of x exactly. The
+  // post-dtrsv block values (swapped layout) are stashed for the delivery
+  // tasks.
+
+  const Int nb = S_.blockSize();
+  double* y = task_work_[slot].data();
+
+  for (Int sn = dag_->runFirst(run); sn <= dag_->runLast(run); ++sn) {
+    const Int ldSn = S_.ptr(sn + 1) - S_.ptr(sn);
+    const Int sn_size = S_.snStart(sn + 1) - S_.snStart(sn);
+    const Int sn_start = S_.snStart(sn);
+    const Int64 start_row = S_.ptr(sn);
+    const Int n_blocks = (sn_size - 1) / nb + 1;
+    const Int int_end = dag_->intEnd(sn);
+    Int64 SnCol_ind{};
+
+    for (Int j = 0; j < n_blocks; ++j) {
+      const Int jb = std::min(nb, sn_size - nb * j);
+      const Int x_start = sn_start + nb * j;
+
+#ifdef HIPO_PIVOTING
+      const bool block_has_swaps = swap_flags_[sn][j] != 0;
+      const Int* current_swaps = &swaps_[sn][nb * j];
+      if (block_has_swaps) permuteWithSwaps(&x[x_start], current_swaps, jb);
+#endif
+
+      callAndTime_dtrsv('U', 'T', 'U', jb, &sn_columns_[sn][SnCol_ind], jb,
+                        &x[x_start], 1, data_);
+      SnCol_ind += (Int64)jb * jb;
+
+      // stash the gemv input state for the delivery tasks
+      std::copy(&x[x_start], &x[x_start] + jb, &fwd_stash_[x_start]);
+
+      const Int gemv_space = ldSn - nb * j - jb;
+      const Int int_len = int_end - (nb * j + jb);
+      if (int_len > 0) {
+        // rows owned by this run: the first int_len columns of the block's
+        // rectangle. Row-splitting the gemv is exact: each output element
+        // is an independent dot product.
+        callAndTime_dgemv('T', jb, int_len, 1.0, &sn_columns_[sn][SnCol_ind],
+                          jb, &x[x_start], 1, 0.0, y, 1, data_);
+        for (Int i = 0; i < int_len; ++i) {
+          const Int row = S_.rows(start_row + nb * j + jb + i);
+          x[row] -= y[i];
+        }
+      }
+      SnCol_ind += (Int64)jb * gemv_space;
+
+#ifdef HIPO_PIVOTING
+      if (block_has_swaps)
+        permuteWithSwaps(&x[x_start], current_swaps, jb, true);
+#endif
+    }
+  }
+}
+
+void ParallelSolveHandler::dagDeliveryTask(const SolveDag::Delivery& D,
+                                           std::vector<double>& x,
+                                           Int slot) const {
+  // Apply one coarsened external segment of supernode D.src to x: for each
+  // column block j (in order, matching the serial application order per
+  // destination row), the sub-gemv of the block's rectangle restricted to
+  // panel positions [p0, p0+len). Inputs come from the stash, which holds
+  // the post-dtrsv (swapped) block values.
+
+  const Int sn = D.src;
+  const Int nb = S_.blockSize();
+  double* y = task_work_[slot].data();
+
+  const Int ldSn = S_.ptr(sn + 1) - S_.ptr(sn);
+  const Int sn_size = S_.snStart(sn + 1) - S_.snStart(sn);
+  const Int sn_start = S_.snStart(sn);
+  const Int64 start_row = S_.ptr(sn);
+  const Int n_blocks = (sn_size - 1) / nb + 1;
+  Int64 SnCol_ind{};
+
+  for (Int j = 0; j < n_blocks; ++j) {
+    const Int jb = std::min(nb, sn_size - nb * j);
+    const Int x_start = sn_start + nb * j;
+    SnCol_ind += (Int64)jb * jb;  // skip the diagonal block
+
+    const Int gemv_space = ldSn - nb * j - jb;
+    // offset of the segment within this block's rectangle
+    const Int64 off = SnCol_ind + (Int64)jb * (D.p0 - (nb * j + jb));
+    callAndTime_dgemv('T', jb, D.len, 1.0, &sn_columns_[sn][off], jb,
+                      &fwd_stash_[x_start], 1, 0.0, y, 1, data_);
+    for (Int i = 0; i < D.len; ++i) {
+      const Int row = S_.rows(start_row + D.p0 + i);
+      x[row] -= y[i];
+    }
+    SnCol_ind += (Int64)jb * gemv_space;
+  }
+}
+
+void ParallelSolveHandler::forwardSolveDag(std::vector<double>& x) const {
+  const Int n_runs = dag_->numRuns();
+  const std::vector<SolveDag::Delivery>& deliveries = dag_->deliveries();
+  dag_->runForward([&](Int t, Int wid) {
+    if (t < n_runs)
+      dagSolveTask(t, x, wid);
+    else
+      dagDeliveryTask(deliveries[t - n_runs], x, wid);
+  });
+}
+
+void ParallelSolveHandler::backwardSolveDag(std::vector<double>& x) const {
+  dag_->runBackward([&](Int run, Int wid) {
+    for (Int sn = dag_->runLast(run); sn >= dag_->runFirst(run); --sn)
+      backwardOne(sn, x, wid);
+  });
+}
 
 void ParallelSolveHandler::forwardTask(const std::vector<Int>& sns,
                                        std::vector<double>& x, bool defer,
@@ -95,6 +221,11 @@ void ParallelSolveHandler::forwardTask(const std::vector<Int>& sns,
 }
 
 void ParallelSolveHandler::forwardSolve(std::vector<double>& x) const {
+  if (dag_ && dag_->valid()) {
+    forwardSolveDag(x);
+    return;
+  }
+
   const bool run_parallel = highs::parallel::num_threads() > 1;
 
   for (const std::vector<std::vector<Int>>& tasks : schedule_) {
@@ -137,11 +268,16 @@ void ParallelSolveHandler::backwardTask(const std::vector<Int>& sns,
   // given supernodes, processed in reverse order (within a merged chain the
   // later entries are ancestors and must be solved first).
 
+  for (auto it = sns.rbegin(); it != sns.rend(); ++it)
+    backwardOne(*it, x, slot);
+}
+
+void ParallelSolveHandler::backwardOne(Int sn, std::vector<double>& x,
+                                       Int slot) const {
   const Int nb = S_.blockSize();
   double* y = task_work_[slot].data();
 
-  for (auto it = sns.rbegin(); it != sns.rend(); ++it) {
-    const Int sn = *it;
+  {
     const Int ldSn = S_.ptr(sn + 1) - S_.ptr(sn);
     const Int sn_size = S_.snStart(sn + 1) - S_.snStart(sn);
     const Int sn_start = S_.snStart(sn);
@@ -186,6 +322,11 @@ void ParallelSolveHandler::backwardTask(const std::vector<Int>& sns,
 }
 
 void ParallelSolveHandler::backwardSolve(std::vector<double>& x) const {
+  if (dag_ && dag_->valid()) {
+    backwardSolveDag(x);
+    return;
+  }
+
   const bool run_parallel = highs::parallel::num_threads() > 1;
 
   for (auto lv = schedule_.rbegin(); lv != schedule_.rend(); ++lv) {

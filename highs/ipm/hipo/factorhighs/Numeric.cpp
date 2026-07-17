@@ -49,7 +49,17 @@ void Numeric::finaliseFactor() {
 
   solve_work_.resize(max_ld);
 
-  if (hipoTuning().parallel_solve) buildSolveSchedule();
+  const Int mode = hipoTuning().parallel_solve_mode;
+  if (mode == 1) buildSolveSchedule();
+  if (mode == 2) {
+    if (solve_dag_.build(*S_, hipoTuning().dag_min_seg_rows,
+                         hipoTuning().dag_min_task_ops)) {
+      // per-worker gemv workspaces and the forward stash
+      task_work_.assign(SolveDag::kMaxWorkers, std::vector<double>(max_ld));
+      fwd_stash_.assign(S_->snStart(S_->sn()), 0.0);
+    }
+    // on build failure solve_dag_ stays invalid and the serial handler is used
+  }
 }
 
 void Numeric::buildSolveSchedule() {
@@ -126,13 +136,16 @@ Int Numeric::solve(std::vector<double>& x) const {
 
   HIPO_CLOCK_CREATE;
 
-  // initialise solve handler: the experimental parallel handler if a solve
-  // schedule was built (hipo_parallel_solve on), otherwise the serial one
+  // initialise solve handler: the experimental parallel handler if a level
+  // schedule (mode 1) or block DAG (mode 2) was built, else the serial one
+  const Int mode = hipoTuning().parallel_solve_mode;
   std::unique_ptr<SolveHandler> SH;
-  if (hipoTuning().parallel_solve && !solve_schedule_.empty()) {
-    SH.reset(new ParallelSolveHandler(*S_, *sn_columns_, swaps_, swap_flags_,
-                                      pivot_2x2_, solve_schedule_, task_work_,
-                                      task_def_rows_, task_def_vals_, *data_));
+  if ((mode == 1 && !solve_schedule_.empty()) ||
+      (mode == 2 && solve_dag_.valid())) {
+    SH.reset(new ParallelSolveHandler(
+        *S_, *sn_columns_, swaps_, swap_flags_, pivot_2x2_, solve_schedule_,
+        mode == 2 ? &solve_dag_ : nullptr, fwd_stash_, task_work_,
+        task_def_rows_, task_def_vals_, *data_));
   } else {
     SH.reset(new HybridSolveHandler(*S_, *sn_columns_, swaps_, swap_flags_,
                                     pivot_2x2_, solve_work_, *data_));

@@ -403,7 +403,9 @@ struct HighsOptionsStruct {
   HighsInt hipo_min_consecutive_sums;
   double hipo_dynamic_reg_coeff;
   HighsInt hipo_metis_seed;
-  bool hipo_parallel_solve;
+  HighsInt hipo_parallel_solve;
+  HighsInt hipo_dag_min_seg_rows;
+  HighsInt hipo_dag_min_task_ops;
 
   // Options for PDLP solver
   HighsInt pdlp_features_off;
@@ -593,7 +595,9 @@ struct HighsOptionsStruct {
         hipo_min_consecutive_sums(0),
         hipo_dynamic_reg_coeff(0.0),
         hipo_metis_seed(0),
-        hipo_parallel_solve(false),
+        hipo_parallel_solve(0),
+        hipo_dag_min_seg_rows(0),
+        hipo_dag_min_task_ops(0),
         pdlp_features_off(0),
         pdlp_iteration_limit(0),
         pdlp_scaling_mode(0),
@@ -1420,11 +1424,24 @@ class HighsOptions : public HighsOptionsStruct {
         advanced, &hipo_metis_seed, 0, 42, kHighsIInf);
     records.push_back(record_int);
 
-    record_bool = new OptionRecordBool(
+    record_int = new OptionRecordInt(
         "hipo_parallel_solve",
-        "HiPO: use the experimental parallel triangular solve", advanced,
-        &hipo_parallel_solve, false);
-    records.push_back(record_bool);
+        "HiPO experimental parallel triangular solve: 0 => off, 1 => level "
+        "schedule, 2 => block-level DAG",
+        advanced, &hipo_parallel_solve, 0, 0, 2);
+    records.push_back(record_int);
+
+    record_int = new OptionRecordInt(
+        "hipo_dag_min_seg_rows",
+        "HiPO block-DAG solve: minimum rows per delivery segment", advanced,
+        &hipo_dag_min_seg_rows, 1, 256, kHighsIInf);
+    records.push_back(record_int);
+
+    record_int = new OptionRecordInt(
+        "hipo_dag_min_task_ops",
+        "HiPO block-DAG solve: minimum work per solve task", advanced,
+        &hipo_dag_min_task_ops, 1, 100000, kHighsIInf);
+    records.push_back(record_int);
 
     record_int = new OptionRecordInt(
         "pdlp_iteration_limit", "Iteration limit for PDLP solver", advanced,

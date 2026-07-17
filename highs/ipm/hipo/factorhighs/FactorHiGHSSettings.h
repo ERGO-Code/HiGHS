@@ -59,10 +59,19 @@ struct HipoTuning {
   // metis
   Int metis_seed = 42;               // was kMetisSeed
 
-  // parallel triangular solve (experimental sketch; see PHASE3_DESIGN.md).
+  // parallel triangular solve (experimental; see PHASE3_DESIGN.md).
+  // 0 = off (serial handler), 1 = level schedule, 2 = block-level DAG.
   // In an upstreamable version this belongs in hipo::Options rather than in
   // the tuning parameters.
-  bool parallel_solve = false;
+  Int parallel_solve_mode = 0;
+
+  // block-DAG solve: minimum rows per delivery segment before coarsening
+  // merges it with the next destination's segment
+  Int dag_min_seg_rows = 256;
+
+  // block-DAG solve: minimum work (~flops) per solve task; chains of
+  // supernodes are merged into one task until this threshold is reached
+  Int dag_min_task_ops = 100000;
 };
 
 HipoTuning& hipoTuning();

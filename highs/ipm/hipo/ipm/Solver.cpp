@@ -69,7 +69,9 @@ void Solver::setOptions(const HighsOptions& highs_options) {
   tuning.min_consecutive_sums = highs_options.hipo_min_consecutive_sums;
   tuning.dynamic_reg_coeff = highs_options.hipo_dynamic_reg_coeff;
   tuning.metis_seed = highs_options.hipo_metis_seed;
-  tuning.parallel_solve = highs_options.hipo_parallel_solve;
+  tuning.parallel_solve_mode = highs_options.hipo_parallel_solve;
+  tuning.dag_min_seg_rows = highs_options.hipo_dag_min_seg_rows;
+  tuning.dag_min_task_ops = highs_options.hipo_dag_min_task_ops;
 
   options_orig_ = options_;
   Hoptions_ = highs_options;

@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "DataCollector.h"
+#include "SolveDag.h"
 #include "SolveHandler.h"
 #include "Symbolic.h"
 #include "ipm/hipo/auxiliary/IntConfig.h"
@@ -46,6 +47,13 @@ class Numeric {
   mutable std::vector<std::vector<double>> task_work_{};
   mutable std::vector<std::vector<Int>> task_def_rows_{};
   mutable std::vector<std::vector<double>> task_def_vals_{};
+
+  // Block-level DAG for parallel_solve_mode == 2 (see PHASE3_DESIGN.md),
+  // plus the forward-solve stash: post-dtrsv (pre-inverse-swap) block values
+  // of x, written by each supernode's solve task and read by its delivery
+  // tasks so that deliveries need no swap handling of their own.
+  SolveDag solve_dag_{};
+  mutable std::vector<double> fwd_stash_{};
 
   // Compute swap_flags_ and size solve_work_; called by Factorise once the
   // factor has been handed over
