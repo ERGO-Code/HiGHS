@@ -422,7 +422,6 @@ set(highs_sources
     qpsolver/a_asm.cpp
     qpsolver/a_quass.cpp
     qpsolver/basis.cpp
-    qpsolver/perturbation.cpp
     qpsolver/quass.cpp
     qpsolver/ratiotest.cpp
     qpsolver/scaling.cpp
@@ -576,7 +575,6 @@ set(highs_headers
     qpsolver/gradient.hpp
     qpsolver/instance.hpp
     qpsolver/matrix.hpp
-    qpsolver/perturbation.hpp
     qpsolver/pricing.hpp
     qpsolver/qpconst.hpp
     qpsolver/qpvector.hpp

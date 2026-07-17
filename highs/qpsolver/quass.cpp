@@ -20,7 +20,6 @@
 #include "qpsolver/factor.hpp"
 #include "qpsolver/gradient.hpp"
 #include "qpsolver/instance.hpp"
-#include "qpsolver/perturbation.hpp"
 #include "qpsolver/ratiotest.hpp"
 #include "qpsolver/reducedcosts.hpp"
 #include "qpsolver/reducedgradient.hpp"

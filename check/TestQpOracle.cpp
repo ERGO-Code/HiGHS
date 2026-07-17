@@ -418,6 +418,8 @@ TEST_CASE("hessian-oracle-check", "[qp-oracle]") {
         h.highsStatusToString(status).c_str());
   REQUIRE(status == HighsStatus::kError);
   // Code coverage of code testing for passing an invalid Hessian oracle
+  REQUIRE(h.passHessian(0, oracleCallSquareHessianCustomised,
+                        &square_hessian) == HighsStatus::kError);
   REQUIRE(h.passHessian(lp.num_col_, oracleCallSquareHessianCustomised,
                         &square_hessian) == HighsStatus::kError);
 }
@@ -453,6 +455,8 @@ TEST_CASE("hessian-oracle-solve", "[qp-oracle]") {
 }
 
 TEST_CASE("hessian-oracle-primal1", "[qp-oracle]") {
+  const std::string test_name = Catch::getResultCapture().getCurrentTestName();
+  std::string write_model_filename = test_name + ".mps";
   std::string filename =
       std::string(HIGHS_DIR) + "/check/instances/primal1.mps";
   Highs h;
@@ -469,6 +473,7 @@ TEST_CASE("hessian-oracle-primal1", "[qp-oracle]") {
     h.setOptionValue("solver", solver);
     h.run();
     if (solver == kQpAsmString) {
+      REQUIRE(h.writeModel(write_model_filename) == HighsStatus::kError);
       optimal_obective_value = h.getObjectiveValue();
       solution = h.getSolution().col_value;
     } else {
@@ -477,6 +482,7 @@ TEST_CASE("hessian-oracle-primal1", "[qp-oracle]") {
                               solution.data()));
     }
   }
+  //  std::remove(write_model_filename.c_str());
 
   h.resetGlobalScheduler(true);
 }
