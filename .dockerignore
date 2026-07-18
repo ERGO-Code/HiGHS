@@ -1,0 +1,23 @@
+# Build artifacts
+build/
+build-*/
+
+# Git
+.git/
+.gitignore
+
+# Python cache
+__pycache__/
+*.pyc
+test/__pycache__/
+test/solver_pb2.py
+test/solver_pb2_grpc.py
+
+# Docs (not needed for build, reduces context)
+*.md
+!server/README.md
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store

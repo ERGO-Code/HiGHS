@@ -1,0 +1,38 @@
+# Dockerfile.gpu - HiGHS-Server GPU build (requires NVIDIA Container Toolkit)
+# Usage: docker build -f Dockerfile.gpu -t highs-server:gpu .
+#       docker run --gpus all -p 50051:50051 highs-server:gpu
+#
+# Use CUDA 12.4 devel as build base (12.4 cusparse has SpMV_preprocess; patch still compatible)
+FROM nvidia/cuda:12.4.1-devel-ubuntu22.04 AS build
+
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates git cmake g++ gcc \
+    libgrpc++-dev libprotobuf-dev protobuf-compiler-grpc \
+    zlib1g-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /src
+COPY . .
+
+# GPU build: configure.sh finds nvcc -> CUPDLP_GPU=ON automatically
+# Use system gcc (container has gcc-11, compatible with nvcc 12.4)
+RUN ./configure.sh --cuda --build build \
+      -DCMAKE_CUDA_ARCHITECTURES=native \
+    && cmake --build build --parallel --target highs_grpc_server
+
+# Runtime stage: use CUDA runtime base image (no devel, smaller)
+FROM nvidia/cuda:12.4.1-runtime-ubuntu22.04
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libgrpc++1 libprotobuf23 zlib1g \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=build /src/build/bin/highs_grpc_server /usr/local/bin/
+COPY --from=build /src/build/lib/libhighs.so* /usr/local/lib/
+COPY --from=build /src/build/lib/libcudalin.so* /usr/local/lib/
+RUN ldconfig
+
+EXPOSE 50051
+# GPU default serial solve (max-concurrent=1) to avoid VRAM contention
+ENTRYPOINT ["highs_grpc_server", "--bind", "0.0.0.0:50051", "--max-concurrent", "1"]

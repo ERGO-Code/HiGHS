@@ -1,0 +1,48 @@
+# docker-compose.yml - HiGHS-Server deployment
+#
+# CPU (default):  docker compose up
+# GPU:             docker compose --profile gpu up highs-server-gpu
+#
+# Requires NVIDIA Container Toolkit for GPU profile:
+#   https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html
+
+services:
+  # CPU (default)
+  highs-server:
+    build:
+      context: .
+      dockerfile: Dockerfile.cpu
+    image: highs-server:cpu
+    ports:
+      - "50051:50051"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "grpcurl -plaintext localhost:50051 list || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  # GPU (requires --profile gpu)
+  highs-server-gpu:
+    profiles: ["gpu"]
+    build:
+      context: .
+      dockerfile: Dockerfile.gpu
+    image: highs-server:gpu
+    ports:
+      - "50051:50051"
+    restart: unless-stopped
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD-SHELL", "grpcurl -plaintext localhost:50051 list || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s

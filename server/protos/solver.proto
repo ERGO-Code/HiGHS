@@ -1,0 +1,141 @@
+syntax = "proto3";
+
+package highsserver.v1;
+
+// Objective sense — avoids the "negate cost" hack for maximization
+enum ObjSense {
+  OBJ_SENSE_MIN = 0;
+  OBJ_SENSE_MAX = 1;
+}
+
+// Variable type (supports MIP)
+enum VarType {
+  VAR_CONTINUOUS = 0;
+  VAR_INTEGER = 1;
+  VAR_BINARY = 2;
+}
+
+// Model solve status (aligned with HiGHS HighsModelStatus)
+enum ModelStatus {
+  MODEL_STATUS_NOT_SET = 0;
+  MODEL_STATUS_OPTIMAL = 1;
+  MODEL_STATUS_INFEASIBLE = 2;
+  MODEL_STATUS_UNBOUNDED = 3;
+  MODEL_STATUS_ITERATION_LIMIT = 4;
+  MODEL_STATUS_TIME_LIMIT = 5;
+  MODEL_STATUS_NUMERICAL_ERROR = 6;
+  MODEL_STATUS_OTHER = 99;
+}
+
+// Job lifecycle status (async mode)
+enum JobStatus {
+  JOB_STATUS_PENDING = 0;     // submitted, waiting for worker
+  JOB_STATUS_RUNNING = 1;     // solving
+  JOB_STATUS_SUCCEEDED = 2;   // finished (check result.model_status for optimality)
+  JOB_STATUS_FAILED = 3;      // failed (e.g. passModel error)
+  JOB_STATUS_CANCELLED = 4;   // cancelled by client
+}
+
+message SolveRequest {
+  string model_name = 1;
+  ObjSense sense = 2;                       // default MIN
+
+  // Column data
+  repeated double col_cost = 3;
+  repeated double col_lower = 4;
+  repeated double col_upper = 5;
+  repeated VarType col_integrality = 11;    // optional, default all continuous
+
+  // Constraint matrix A (CSC sparse format, int64 indices to prevent overflow)
+  repeated int64 a_format_index = 6;
+  repeated int64 a_format_start = 7;        // length must be num_col + 1
+  repeated double a_format_value = 8;
+
+  // Row bounds
+  repeated double row_lower = 9;
+  repeated double row_upper = 10;
+
+  // Solver options, e.g. {"solver": "pdlp", "pdlp_iteration_limit": "10000"}
+  map<string, string> options = 12;
+
+  // Solve time limit (seconds), 0 = HiGHS default
+  double time_limit = 13;
+}
+
+message SolveResponse {
+  ModelStatus model_status = 1;
+  string status_message = 2;
+  repeated double col_value = 3;
+  repeated double col_dual = 4;             // dual solution (PDLP produces natively)
+  repeated double row_value = 5;            // constraint activity
+  repeated double row_dual = 6;
+  double objective_value = 7;
+  int64 iteration_count = 8;                // PDLP iteration count
+  double solve_time = 9;                    // seconds
+}
+
+// Solve progress (returned by GetResult while PENDING/RUNNING, for progress bars)
+message SolveProgress {
+  int64 iteration_count = 1;                // current iterations (PDLP/simplex/ipm)
+  double objective_value = 2;               // current objective
+  double running_time = 3;                  // elapsed seconds
+  double mip_gap = 4;                       // MIP gap (0 for non-MIP)
+  int64 mip_node_count = 5;                 // MIP node count (0 for non-MIP)
+}
+
+// === Async job mode ===
+
+message SubmitResponse {
+  string job_id = 1;          // UUID
+  JobStatus job_status = 2;   // PENDING on submit
+}
+
+message GetResultRequest {
+  string job_id = 1;
+  bool wait = 2;              // true: long-poll until terminal (still bounded by gRPC deadline)
+  double wait_timeout = 3;    // max wait seconds when wait=true, 0=return immediately
+}
+
+message GetResultResponse {
+  JobStatus job_status = 1;
+  string status_message = 2;
+  SolveResponse result = 3;   // populated only when SUCCEEDED
+  double elapsed_time = 4;    // elapsed seconds (available even when PENDING/RUNNING)
+  SolveProgress progress = 5; // real-time progress while PENDING/RUNNING
+}
+
+message CancelRequest {
+  string job_id = 1;
+}
+
+message CancelResponse {
+  bool cancelled = 1;         // true=cancelled, false=already terminal
+  string message = 2;
+}
+
+message HealthCheckRequest {}
+message HealthCheckResponse {
+  bool serving = 1;
+  string message = 2;
+  bool gpu_available = 3;   // whether CUPDLP_GPU was enabled at build time
+}
+
+service HighsService {
+  // === Synchronous mode (small tasks, long connection, returns in seconds) ===
+  // Blocks until solve completes; suitable for sub-10s tasks
+  rpc Solve(SolveRequest) returns (SolveResponse);
+  // Streaming upload for large models (bypasses gRPC 4MB default limit), sync solve
+  rpc SolveStream(stream SolveRequest) returns (SolveResponse);
+
+  // === Async job mode (large tasks, short connections, avoids holding connection) ===
+  // Submit task, returns job_id immediately; solved by background worker pool
+  rpc SubmitSolve(SolveRequest) returns (SubmitResponse);
+  // Query / long-poll for result
+  rpc GetResult(GetResultRequest) returns (GetResultResponse);
+  // Cancel a job (only PENDING/RUNNING can be cancelled)
+  rpc CancelSolve(CancelRequest) returns (CancelResponse);
+
+  // === Common ===
+  // Health check (for K8s / load balancer liveness probes)
+  rpc Check(HealthCheckRequest) returns (HealthCheckResponse);
+}
