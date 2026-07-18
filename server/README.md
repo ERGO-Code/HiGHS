@@ -2,7 +2,7 @@
 
 A gRPC solving service built on [HiGHS](https://github.com/ERGO-Code/HiGHS), with **CPU/GPU adaptive builds**, exposing HiGHS LP/MIP solving as a remote service.
 
-> This directory is a subproject of the HiGHS fork, integrated via `HIGHS_BUILD_GRPC_SERVER=ON`. It does not modify HiGHS core logic.
+> This is a **standalone external interface** to HiGHS (like highspy / C API / Fortran), not a subdirectory integrated into HiGHS main CMake. It links against an already-installed HiGHS via `find_package(HiGHS)`. Zero modifications to upstream HiGHS files.
 
 ---
 
@@ -72,12 +72,14 @@ sudo apt install cmake g++-11 libgrpc++-dev libprotobuf-dev protobuf-compiler-gr
   python3-venv python3-grpcio python3-grpc-tools
 ```
 
-### 2. Configure + build
+### 2. Build (two-step: install HiGHS, then build server)
+
+`configure.sh` automates both steps:
 
 ```bash
 # Adaptive (auto-detect CUDA, recommended)
 ./configure.sh
-cmake --build build --parallel --target highs_grpc_server
+# Binary: build-server/highs_grpc_server
 
 # Force CPU-only (even if CUDA present)
 ./configure.sh --no-cuda
@@ -86,14 +88,28 @@ cmake --build build --parallel --target highs_grpc_server
 ./configure.sh --cuda
 ```
 
-> If system gcc-13 is too new for nvcc, append:
-> `./configure.sh --cuda -- -DCMAKE_CXX_COMPILER=/usr/bin/g++-11`
+What it does:
+1. **Step 1**: build & install HiGHS to `build-highs-install/` (with `CUPDLP_GPU=ON` if CUDA detected)
+2. **Step 2**: build `highs-server` against the installed HiGHS via `find_package(HiGHS)`
+
+Manual two-step (if you need control):
+```bash
+# Step 1: install HiGHS
+cmake -S. -Bbuild-highs -DCMAKE_INSTALL_PREFIX=./build-highs-install   -DCMAKE_C_COMPILER=gcc-11 -DCMAKE_CXX_COMPILER=g++-11   -DCUPDLP_GPU=OFF -DCMAKE_BUILD_TYPE=Release
+cmake --build build-highs --parallel --target install
+
+# Step 2: build server
+cmake -Sserver -Bbuild-server -DCMAKE_PREFIX_PATH=./build-highs-install -DCMAKE_BUILD_TYPE=Release
+cmake --build build-server --parallel --target highs_grpc_server
+```
+
+> If system gcc-13 is too new for nvcc, `configure.sh` auto-uses gcc-11/g++-11 when available.
 
 ### 3. Start service
 
 ```bash
-export LD_LIBRARY_PATH=$CONDA_PREFIX/lib:${LD_LIBRARY_PATH:-}
-./build/bin/highs_grpc_server --bind 127.0.0.1:50051 --max-concurrent 1 --job-workers 2
+export LD_LIBRARY_PATH=$CONDA_PREFIX/lib:$(pwd)/build-highs-install/lib:${LD_LIBRARY_PATH:-}
+./build-server/highs_grpc_server --bind 127.0.0.1:50051 --max-concurrent 1 --job-workers 2
 ```
 
 Output (GPU build):

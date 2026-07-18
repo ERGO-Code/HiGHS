@@ -3,9 +3,10 @@
 set -euo pipefail
 cd "$(dirname "$0")/../.."
 
-# Auto-detect binary location (CMake may put in build/ or build/bin/)
+# Auto-detect binary location (standalone build: build-server/;
+# legacy subdir build: build/ or build/bin/)
 if [[ -z "${SERVER_BIN:-}" ]]; then
-  for cand in ./build/bin/highs_grpc_server ./build/highs_grpc_server; do
+  for cand in ./build-server/highs_grpc_server ./build/bin/highs_grpc_server ./build/highs_grpc_server; do
     [[ -x "$cand" ]] && SERVER_BIN="$cand" && break
   done
 fi

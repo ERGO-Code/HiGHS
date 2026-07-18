@@ -1,34 +1,30 @@
 # Dockerfile.cpu - HiGHS-Server CPU-only build (no CUDA dependency, smaller image)
 # Usage: docker build -f Dockerfile.cpu -t highs-server:cpu .
-#       docker run -p 50051:50051 highs-server:cpu
+#        docker run -p 50051:50051 highs-server:cpu
 FROM ubuntu:22.04 AS build
 
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates git cmake g++ gcc \
     libgrpc++-dev libprotobuf-dev protobuf-compiler-grpc \
-    zlib1g-dev \
+    zlib1g-dev libsqlite3-dev \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /src
 COPY . .
 
-# CPU-only build: configure.sh finds no nvcc -> CUPDLP_GPU=OFF automatically
-# Use gcc explicitly (CPU build works with default g++, explicit for stability)
-RUN ./configure.sh --no-cuda --build build \
-      -DCMAKE_CXX_COMPILER=g++ \
-      -DCMAKE_C_COMPILER=gcc \
-    && cmake --build build --parallel --target highs_grpc_server
+# Two-step build: install HiGHS, then build server (CPU-only, no CUDA)
+RUN ./configure.sh --no-cuda --install-prefix /usr/local
 
 # Runtime stage: minimize image
 FROM ubuntu:22.04
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    libgrpc++1 libprotobuf23 zlib1g \
+    libgrpc++1 libprotobuf23 zlib1g libsqlite3-0 \
     && rm -rf /var/lib/apt/lists/*
 
-COPY --from=build /src/build/bin/highs_grpc_server /usr/local/bin/
-COPY --from=build /src/build/lib/libhighs.so* /usr/local/lib/
+COPY --from=build /usr/local/lib/libhighs.so* /usr/local/lib/
+COPY --from=build /src/build-server/highs_grpc_server /usr/local/bin/
 RUN ldconfig
 
 EXPOSE 50051
