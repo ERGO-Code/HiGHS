@@ -162,12 +162,10 @@ const HighsInt kHighsIisStatusMaybeInConflict = 0;
 const HighsInt kHighsIisStatusInConflict = 1;
 
 const HighsInt kHighsHessianOracleCallTypeMin = 0;
-const HighsInt kHighsHessianOracleCallTypeEntry =
-    kHighsHessianOracleCallTypeMin;
+const HighsInt kHighsHessianOracleCallTypeEntry = 0;
 const HighsInt kHighsHessianOracleCallTypeColumn = 1;
 const HighsInt kHighsHessianOracleCallTypeProduct = 2;
-const HighsInt kHighsHessianOracleCallTypeMax =
-    kHighsHessianOracleCallTypeProduct;
+const HighsInt kHighsHessianOracleCallTypeMax = 2;
 
 #ifdef __cplusplus
 extern "C" {
