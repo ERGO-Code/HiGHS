@@ -301,3 +301,6 @@ test/__pycache__/
 test/*.pyc
 test/solver_pb2.py
 test/solver_pb2_grpc.py
+
+# examples/grpc 自动生成的桩
+examples/grpc/_generated/

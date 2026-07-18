@@ -18,8 +18,24 @@
   1. 先启动服务: ./build/bin/highs_grpc_server --bind 127.0.0.1:50051
   2. python test/example_pyomo.py
 """
-import sys, os
-sys.path.insert(0, os.path.dirname(__file__))
+import sys, os, subprocess
+
+# --- 自动生成 gRPC Python 桩（自包含，无需依赖 test/ 下预生成文件）---
+_EXAMPLE_DIR = os.path.dirname(os.path.abspath(__file__))
+_PROTO_DIR = os.path.normpath(os.path.join(_EXAMPLE_DIR, "..", "..", "server", "protos"))
+_GEN_DIR = os.path.join(_EXAMPLE_DIR, "_generated")
+os.makedirs(_GEN_DIR, exist_ok=True)
+# 仅在桩文件不存在或 proto 更新时重新生成
+_need_gen = (not os.path.exists(os.path.join(_GEN_DIR, "solver_pb2.py")) or
+             os.path.getmtime(os.path.join(_PROTO_DIR, "solver.proto")) >
+             os.path.getmtime(os.path.join(_GEN_DIR, "solver_pb2.py")))
+if _need_gen:
+    subprocess.check_call([
+        sys.executable, "-m", "grpc_tools.protoc",
+        f"-I{_PROTO_DIR}", f"--python_out={_GEN_DIR}", f"--grpc_python_out={_GEN_DIR}",
+        os.path.join(_PROTO_DIR, "solver.proto"),
+    ])
+sys.path.insert(0, _GEN_DIR)
 
 import grpc
 import pyomo.environ as pyo
