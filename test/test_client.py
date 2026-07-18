@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""E2E 测试客户端：覆盖可行/不可行/非法参数，自适应探测 GPU 构建选 solver。"""
+"""E2E test client: covers feasible/infeasible/bad-args + async job/cancel/not-found."""
 import grpc
 import sys, os
 sys.path.insert(0, os.path.dirname(__file__))

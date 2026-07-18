@@ -1,18 +1,19 @@
 #!/usr/bin/env python3
 """
-异步 job 模式示例：SubmitSolve → 轮询 GetResult → 取结果
+Async job mode example: SubmitSolve -> poll GetResult -> fetch result.
 
-适合：大模型、长求解（>10s），避免长连接占用、支持取消、断线可恢复。
+Suitable for: large models, long solves (>10s), avoids holding connection,
+supports cancellation, resumable on disconnect.
 
-模型：生产计划 LP（与 pyomo_lp.py 相同），最优解 obj=38
+Model: production planning LP (same as pyomo_lp.py), optimal obj=38
 
-流程：
-  1. SubmitSolve(req) → 立即返回 job_id（连接 ~1ms 释放）
-  2. GetResult(job_id, wait=true, wait_timeout=2) → 短轮询等终态
-  3. 终态后取 result
+Flow:
+  1. SubmitSolve(req) -> returns job_id immediately (connection ~1ms released)
+  2. GetResult(job_id, wait=true, wait_timeout=2) -> short-poll until terminal
+  3. Fetch result at terminal state
 
-运行：
-  1. 启动服务: ./build/bin/highs_grpc_server --bind 127.0.0.1:50051
+Run:
+  1. Start server: ./build/bin/highs_grpc_server --bind 127.0.0.1:50051
   2. python examples/grpc/async_job.py
 """
 import sys, os, subprocess, time

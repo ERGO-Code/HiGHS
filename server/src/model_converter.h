@@ -1,6 +1,8 @@
 // model_converter.h
-// 将 SolveRequest 转换为 HighsModel。修复 v1 漏设 a_matrix_.num_col_/num_row_、
-// 目标方向 hack、integrality 缺失。
+// Converts SolveRequest to HighsModel. Fixes v1 issues:
+//   - sets a_matrix_.num_col_/num_row_ (v1 omitted, caused HiGHS assertion)
+//   - uses sense field directly (no "negate cost" hack)
+//   - maps col_integrality for MIP support
 #pragma once
 #include <grpcpp/grpcpp.h>
 #include "Highs.h"

@@ -1,10 +1,10 @@
 # HiGHS - Linear optimization software
 
 > ## 🚀 This fork: HiGHS-Server
-> This fork adds a **gRPC server** subproject (`server/`) that exposes HiGHS LP/MIP
-> solving as a remote service with **CPU/GPU adaptive builds** (PDLP on GPU when CUDA
-> available, IPM on CPU otherwise), **sync + async dual mode** (short `Solve` for small
-> tasks, `SubmitSolve`+`GetResult` job mode with **progress reporting** for large tasks),
+> This fork adds a **gRPC server** subproject (`server/`) exposing HiGHS LP/MIP solving
+> as a remote service with **CPU/GPU adaptive builds** (PDLP on GPU when CUDA available,
+> IPM on CPU otherwise), **sync + async dual mode** (sync `Solve` for small tasks,
+> `SubmitSolve`+`GetResult` job mode with **progress reporting** for large tasks),
 > and optional **SQLite job persistence**.
 >
 > 👉 **[Read the HiGHS-Server docs →](server/README.md)**
@@ -17,7 +17,7 @@
 > ./test/run_e2e.sh                                       # run E2E tests
 > ```
 >
-> The upstream HiGHS documentation continues below.
+> Upstream HiGHS documentation continues below.
 
 <!-- ![Build Status](https://github.com/ERGO-Code/HiGHS/actions/workflows/build.yml/badge.svg) -->
 

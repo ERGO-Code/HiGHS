@@ -1,22 +1,22 @@
 #!/usr/bin/env python3
 """
-端到端示例：用 Pyomo 建模 → 编码为 gRPC 请求 → 请求 highs-server 求解
+End-to-end example: Pyomo modeling -> encode as gRPC request -> solve via highs-server.
 
-演示两条路径：
-  路径 A（推荐）：Pyomo 模型 → 直接提取 CSC 矩阵 → SolveRequest
-  路径 B（文件）：Pyomo 模型 → 写 MPS 文件 → highspy 读取 → SolveRequest
+Two paths:
+  Path A (recommended): Pyomo model -> extract CSC matrix directly -> SolveRequest
+  Path B (file):        Pyomo model -> write MPS -> read via highspy -> SolveRequest
 
-模型：生产计划 LP
-  Maximize  利润 = 3*x1 + 5*x2
-  s.t.  x1 + 2*x2 <= 14   (原料 A)
-        x1       <= 6      (原料 B)
-        x1 +  x2 <= 10     (工时)
+Model: production planning LP
+  Maximize  profit = 3*x1 + 5*x2
+  s.t.  x1 + 2*x2 <= 14   (raw material A)
+        x1       <= 6      (raw material B)
+        x1 +  x2 <= 10     (labor)
         x1, x2 >= 0
-  最优解：x1=6, x2=4, obj=38
+  Optimal: x1=6, x2=4, obj=38
 
-运行：
-  1. 先启动服务: ./build/bin/highs_grpc_server --bind 127.0.0.1:50051
-  2. python test/example_pyomo.py
+Run:
+  1. Start server: ./build/bin/highs_grpc_server --bind 127.0.0.1:50051
+  2. python examples/grpc/pyomo_lp.py
 """
 import sys, os, subprocess
 

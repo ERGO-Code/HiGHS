@@ -12,24 +12,24 @@ HighsServiceImpl::HighsServiceImpl(int max_concurrent, int job_workers,
       job_store_(std::make_unique<highs_server::JobStore>(
           job_workers, 3600, job_db_path)) {}
 
-// === 同步模式 ===
+// === Synchronous mode ===
 
 grpc::Status HighsServiceImpl::Solve(
     grpc::ServerContext* ctx,
     const highsserver::v1::SolveRequest* req,
     highsserver::v1::SolveResponse* resp) {
-  // 1. 输入校验 → INVALID_ARGUMENT
+  // 1. Validate input → INVALID_ARGUMENT
   auto st = ValidateRequest(*req);
   if (!st.ok()) return st;
 
-  // 2. 取消检查（gRPC deadline 传播）
+  // 2. Cancellation check (gRPC deadline propagation)
   if (ctx->IsCancelled())
     return {grpc::StatusCode::CANCELLED, "client cancelled before solve"};
 
-  // 3. 串行化求解（GPU 资源保护）
+  // 3. Serialize solve (GPU resource protection)
   std::lock_guard<std::mutex> lk(solve_mutex_);
 
-  // 4. 复用异步 job 的核心求解逻辑
+  // 4. Reuse async job core solve logic
   *resp = highs_server::RunSolveOne(*req);
 
   if (std::getenv("HIGHS_SERVER_DEBUG")) {
@@ -44,7 +44,7 @@ grpc::Status HighsServiceImpl::SolveStream(
     grpc::ServerContext* ctx,
     grpc::ServerReader<highsserver::v1::SolveRequest>* reader,
     highsserver::v1::SolveResponse* resp) {
-  // 大模型分片：首片含完整结构，后续片仅追加 a_format_* 增量
+  // Large model sharding: first chunk has full structure, later chunks append a_format_*
   highsserver::v1::SolveRequest first;
   if (!reader->Read(&first))
     return {grpc::INVALID_ARGUMENT, "no chunks received"};
@@ -57,13 +57,13 @@ grpc::Status HighsServiceImpl::SolveStream(
   return Solve(ctx, &merged, resp);
 }
 
-// === 异步 job 模式 ===
+// === Async job mode ===
 
 grpc::Status HighsServiceImpl::SubmitSolve(
     grpc::ServerContext*,
     const highsserver::v1::SolveRequest* req,
     highsserver::v1::SubmitResponse* resp) {
-  // 异步模式下输入校验也立即做（快速失败比投到 worker 再失败体验好）
+  // Validate immediately in async mode (fail-fast is better than worker-side failure)
   auto st = ValidateRequest(*req);
   if (!st.ok()) return st;
   std::string job_id = job_store_->Submit(*req);
@@ -98,7 +98,7 @@ grpc::Status HighsServiceImpl::CancelSolve(
   return grpc::Status::OK;
 }
 
-// === 公共 ===
+// === Common ===
 
 grpc::Status HighsServiceImpl::Check(
     grpc::ServerContext*, const highsserver::v1::HealthCheckRequest*,

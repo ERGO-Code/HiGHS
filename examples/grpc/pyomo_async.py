@@ -1,17 +1,17 @@
 #!/usr/bin/env python3
 """
-Pyomo 建模 + 异步 job 模式求解示例
+Pyomo modeling + async job mode example.
 
-最实用的生产场景组合：
-  Pyomo 建大模型 → 提取 CSC 矩阵 → SubmitSolve 异步提交 → 进度监控 → 取结果
+Most practical production scenario combo:
+  Pyomo build large model -> extract CSC -> SubmitSolve async -> progress monitor -> fetch result
 
-复用 pyomo_lp.py 的建模（build_model）和矩阵提取（pyomo_model_to_request），
-演示如何把同步 Pyomo 工作流无缝迁移到异步 job 模式。
+Reuses build_model and pyomo_model_to_request from pyomo_lp.py (DRY),
+demonstrates migrating a sync Pyomo workflow to async job mode seamlessly.
 
-模型：生产计划 LP（与 pyomo_lp.py 相同），最优解 obj=38
+Model: production planning LP (same as pyomo_lp.py), optimal obj=38
 
-运行：
-  1. 启动服务: ./build/bin/highs_grpc_server --bind 127.0.0.1:50051 --job-workers 2
+Run:
+  1. Start server: ./build/bin/highs_grpc_server --bind 127.0.0.1:50051 --job-workers 2
   2. python examples/grpc/pyomo_async.py
 """
 import sys, os, subprocess, time

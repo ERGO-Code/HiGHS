@@ -9,7 +9,7 @@
 
 namespace highs_server {
 
-// === 核心求解逻辑（同步/异步共用）===
+// === Core solve logic (shared by sync and async) ===
 
 highsserver::v1::SolveResponse RunSolveOne(
     const highsserver::v1::SolveRequest& req,
@@ -25,7 +25,7 @@ highsserver::v1::SolveResponse RunSolveOne(
   Highs highs;
   highs.setOptionValue("output_flag", false);
 
-  // 挂 callback 写进度 + 检查取消（仅异步 job 场景）
+  // Register callback for progress + cancellation (async job only)
   if (job_state) {
     highs.setCallback([&job_state](int, const std::string&,
                                     const HighsCallbackOutput* out,
@@ -39,14 +39,14 @@ highsserver::v1::SolveResponse RunSolveOne(
       job_state->progress.mip_gap.store(out->mip_gap);
       job_state->progress.mip_node_count.store(out->mip_node_count);
     });
-    // 启用 PDLP/simplex/MIP callback
-    // kCallbackLogging 对 PDLP/simplex/IPM/MIP 都会周期性触发，携带 iteration/objective
-    // （注意：无 kCallbackPdlp/kCallbackSimplex，logging 是通用进度通道）
+    // Enable callbacks for progress reporting
+    // kCallbackLogging fires periodically for PDLP/simplex/IPM/MIP, carrying iteration/objective
+    // (Note: no kCallbackPdlp/kCallbackSimplex; logging is the universal progress channel)
     highs.startCallback(kCallbackLogging);
     highs.startCallback(kCallbackMipSolution);
   }
 
-  // 自适应默认 solver
+  // Adaptive default solver
   bool user_specified_solver =
       req.options().find("solver") != req.options().end();
   if (!user_specified_solver) {
@@ -70,7 +70,7 @@ highsserver::v1::SolveResponse RunSolveOne(
   auto t1 = std::chrono::steady_clock::now();
   resp.set_solve_time(std::chrono::duration<double>(t1 - t0).count());
 
-  // 状态映射
+  // Status mapping
   const auto ms = highs.getModelStatus();
   switch (ms) {
     case HighsModelStatus::kOptimal:
@@ -106,7 +106,7 @@ highsserver::v1::SolveResponse RunSolveOne(
 
 // === JobStore ===
 
-// 简化 SQLite 调用的辅助宏（检查返回码）
+// Helper macro for SQLite calls (checks return code)
 #define SQL_CHECK(rc, msg) do { \
   if ((rc) != SQLITE_OK && (rc) != SQLITE_DONE && (rc) != SQLITE_ROW) { \
     std::cerr << "[sqlite] " << (msg) << ": " << sqlite3_errmsg((sqlite3*)db_) << std::endl; \
@@ -114,7 +114,7 @@ highsserver::v1::SolveResponse RunSolveOne(
 
 JobStore::JobStore(int num_workers, int ttl_seconds, const std::string& db_path)
     : ttl_seconds_(ttl_seconds), db_path_(db_path) {
-  // 初始化 SQLite（若启用）
+  // Initialize SQLite (if enabled)
   if (!db_path_.empty() && db_path_ != ":memory:") {
     int rc = sqlite3_open(db_path_.c_str(), (sqlite3**)&db_);
     if (rc == SQLITE_OK) {
@@ -125,14 +125,14 @@ JobStore::JobStore(int num_workers, int ttl_seconds, const std::string& db_path)
         "  status_message TEXT,"
         "  submit_time INTEGER,"
         "  end_time INTEGER,"
-        "  request BLOB,"      // 序列化的 SolveRequest
-        "  response BLOB)";    // 序列化的 SolveResponse
+        "  request BLOB,"      // serialized SolveRequest
+        "  response BLOB)";    // serialized SolveResponse
       char* err = nullptr;
       sqlite3_exec((sqlite3*)db_, ddl, nullptr, nullptr, &err);
       if (err) { std::cerr << "[sqlite] init: " << err << std::endl; sqlite3_free(err); }
       RecoverFromDb();
     } else {
-      std::cerr << "[sqlite] open failed, 持久化禁用: " << sqlite3_errmsg((sqlite3*)db_) << std::endl;
+      std::cerr << "[sqlite] open failed, persistence disabled: " << sqlite3_errmsg((sqlite3*)db_) << std::endl;
       db_ = nullptr;
     }
   }
@@ -162,7 +162,7 @@ void JobStore::RecoverFromDb() {
     auto job = std::make_shared<JobState>();
     job->job_id = (const char*)sqlite3_column_text(stmt, 0);
     int status = sqlite3_column_int(stmt, 1);
-    // 重启后未完成的 job 一律标 FAILED（无法恢复运行现场）
+    // Unfinished jobs marked FAILED on restart (cannot resume runtime state)
     if (status == highsserver::v1::JOB_STATUS_PENDING ||
         status == highsserver::v1::JOB_STATUS_RUNNING) {
       job->status = highsserver::v1::JOB_STATUS_FAILED;
@@ -179,7 +179,7 @@ void JobStore::RecoverFromDb() {
       job->end_time = std::chrono::steady_clock::time_point(
           std::chrono::seconds(end_ts));
     }
-    // 反序列化 request（用于展示，不重新求解）
+    // Deserialize request (for display, not re-solved)
     const void* req_blob = sqlite3_column_blob(stmt, 5);
     int req_len = sqlite3_column_bytes(stmt, 5);
     if (req_blob && req_len > 0) {
@@ -190,14 +190,14 @@ void JobStore::RecoverFromDb() {
   }
   sqlite3_finalize(stmt);
   if (recovered > 0) {
-    std::cerr << "[sqlite] 恢复 " << recovered << " 个历史 job（未完成的标记 FAILED）" << std::endl;
+    std::cerr << "[sqlite] recovered " << recovered << " historical jobs (unfinished marked FAILED)" << std::endl;
   }
 }
 
 void JobStore::UpdateJobStatusDb(const JobState& job) {
   if (!db_) return;
   std::lock_guard<std::mutex> lk(db_mtx_);
-  // 序列化 request
+  // Serialize request
   std::string req_str = job.request.SerializeAsString();
   std::string resp_str;
   if (job.status == highsserver::v1::JOB_STATUS_SUCCEEDED) {
@@ -275,7 +275,7 @@ bool JobStore::Get(const std::string& job_id, bool wait, double wait_timeout,
   if (job->status == highsserver::v1::JOB_STATUS_SUCCEEDED) {
     *out->mutable_result() = job->response;
   }
-  // 填充进度（PENDING/RUNNING 时尤其有用）
+  // Fill progress (especially useful while PENDING/RUNNING)
   auto* prog = out->mutable_progress();
   prog->set_iteration_count(job->progress.iteration_count.load());
   prog->set_objective_value(job->progress.objective_value.load());
@@ -364,7 +364,7 @@ void JobStore::CleanupLoop() {
       if (IsTerminal(job->status) &&
           std::chrono::duration_cast<std::chrono::seconds>(
               now - job->end_time).count() > ttl_seconds_) {
-        // DB 也删
+        // Also delete from DB
         if (db_) {
           std::lock_guard<std::mutex> dlk(db_mtx_);
           sqlite3_stmt* stmt = nullptr;

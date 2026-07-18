@@ -1,85 +1,87 @@
-# HiGHS-Server gRPC 示例
+# HiGHS-Server gRPC Examples
 
-本目录提供调用 highs-server gRPC 服务的示例代码，涵盖从最简调用到带建模工具的完整流程。
+Client examples for calling the highs-server gRPC service, from minimal to full modeling-tool workflows.
 
-## 📋 示例一览
+## 📋 Examples
 
-| 示例 | 说明 | 依赖 |
+| Example | Description | Dependencies |
 |---|---|---|
-| [`minimal_lp.py`](minimal_lp.py) | **同步**最小示例：手构造 `SolveRequest`，不依赖建模工具 | grpcio, grpcio-tools |
-| [`pyomo_lp.py`](pyomo_lp.py) | **同步** Pyomo 建模 → 提取 CSC 矩阵 → 求解（含 MPS 文件路径） | pyomo, highspy, grpcio, grpcio-tools |
-| [`pyomo_async.py`](pyomo_async.py) | **异步** Pyomo 建模 → SubmitSolve → 进度监控 → 批量提交 | pyomo, grpcio, grpcio-tools |
-| [`async_job.py`](async_job.py) | **异步** job 模式：SubmitSolve → 轮询 GetResult → 取消 | grpcio, grpcio-tools |
-| [`progress_demo.py`](progress_demo.py) | **进度上报**：高频轮询展示实时迭代数/目标值 | grpcio, grpcio-tools |
+| [`minimal_lp.py`](minimal_lp.py) | **Sync** minimal: construct `SolveRequest` by hand, no modeling tool | grpcio, grpcio-tools |
+| [`pyomo_lp.py`](pyomo_lp.py) | **Sync** Pyomo modeling -> extract CSC -> solve (incl. MPS file path) | pyomo, highspy, grpcio, grpcio-tools |
+| [`pyomo_async.py`](pyomo_async.py) | **Async** Pyomo modeling -> SubmitSolve -> progress monitor -> batch submit | pyomo, grpcio, grpcio-tools |
+| [`async_job.py`](async_job.py) | **Async** job mode: SubmitSolve -> poll GetResult -> cancel | grpcio, grpcio-tools |
+| [`progress_demo.py`](progress_demo.py) | **Progress**: high-freq poll showing real-time iteration/objective | grpcio, grpcio-tools |
+| [`config_examples.md`](config_examples.md) | Config reference: 7 scenarios + HiGHS options table | - |
 
-## 🚀 运行
+## 🚀 Run
 
-### 前置
-1. 启动 highs-server 服务：
+### Prerequisites
+1. Start highs-server:
    ```bash
    ./build/bin/highs_grpc_server --bind 127.0.0.1:50051
    ```
-2. 安装 Python 依赖：
+2. Install Python deps:
    ```bash
-   pip install grpcio grpcio-tools          # minimal_lp.py
-   pip install grpcio grpcio-tools pyomo highspy  # pyomo_lp.py
+   pip install grpcio grpcio-tools                  # minimal_lp.py, async_job.py, progress_demo.py
+   pip install grpcio grpcio-tools pyomo highspy    # pyomo_lp.py, pyomo_async.py
    ```
 
-> 示例脚本会自动从 `server/protos/solver.proto` 生成 gRPC Python 桩到 `_generated/`，无需手工生成。
+> Examples auto-generate gRPC Python stubs from `server/protos/solver.proto` into `_generated/`; no manual `grpc_tools.protoc` needed.
 
-### 跑示例
+### Run an example
 ```bash
-# 最小示例（快速验证）
 python examples/grpc/minimal_lp.py
-
-# Pyomo 示例（生产计划 LP，演示两条路径）
-python examples/grpc/pyomo_lp.py
+python examples/grpc/pyomo_async.py
 ```
 
-### 预期输出（GPU 构建）
+### Expected output (GPU build)
 ```
-server: GPU-enabled (CUPDLP_GPU=ON) → 使用 solver=pdlp
+server: GPU-enabled (CUPDLP_GPU=ON) → solver=pdlp
 status: MODEL_STATUS_OPTIMAL
-objective: 4.0  (期望 4.0)
-✓ 验证通过
+objective: 4.0
+✓ verified
 ```
 
-## 📐 关键概念
+## 📐 Key Concepts
 
-### CSC 稀疏矩阵格式
-gRPC 请求用 CSC（Compressed Sparse Column）格式传输约束矩阵 $A$：
+### CSC sparse matrix format
+The request uses CSC (Compressed Sparse Column) for constraint matrix $A$:
 
 ```
-a_format_start: 长度 = num_col + 1，列指针
-a_format_index: 非零元素的行索引
-a_format_value: 非零元素的值
+a_format_start: length = num_col + 1, column pointers
+a_format_index: row indices of nonzeros
+a_format_value: values of nonzeros
 ```
 
-对 $A = \begin{pmatrix} 1 & 2 \end{pmatrix}$（1 行 2 列）：
+For $A = \begin{pmatrix} 1 & 2 \end{pmatrix}$ (1 row, 2 cols):
 ```python
-a_format_start = [0, 1, 2]   # 列0 从0开始, 列1 从1开始, 结束于2
-a_format_index = [0, 0]      # 列0的非零在行0, 列1的非零在行0
+a_format_start = [0, 1, 2]   # col0 starts at 0, col1 at 1, end at 2
+a_format_index = [0, 0]      # col0 nonzero at row0; col1 nonzero at row0
 a_format_value = [1.0, 2.0]
 ```
 
-### 目标方向
-直接用 `sense=OBJ_SENSE_MAX`，无需像某些接口那样取负 cost。服务端处理。
+### Objective sense
+Use `sense=OBJ_SENSE_MAX` directly; no need to negate cost like some APIs. Server handles it.
 
-### 自适应 solver
-示例先调 `Check` 健康检查拿到 `gpu_available`，据此选 `pdlp`（GPU）或 `ipm`（CPU），无需人工判断环境。
+### Adaptive solver
+Examples call `Check` health check to get `gpu_available`, then pick `pdlp` (GPU) or `ipm` (CPU) adaptively — no manual env detection needed.
 
-## 📂 目录结构
+## 📂 Directory Structure
 ```
 examples/grpc/
-├── README.md          # 本文档
-├── minimal_lp.py      # 最小示例
-├── pyomo_lp.py        # Pyomo 建模示例
-└── _generated/        # 自动生成的桩（gitignore，运行时生成）
+├── README.md              # this doc
+├── minimal_lp.py          # sync minimal
+├── pyomo_lp.py            # sync Pyomo
+├── pyomo_async.py         # async Pyomo + progress + batch
+├── async_job.py           # async basic + cancel
+├── progress_demo.py       # progress reporting
+├── config_examples.md     # config reference
+└── _generated/            # auto-generated stubs (gitignored, generated at runtime)
     ├── solver_pb2.py
     └── solver_pb2_grpc.py
 ```
 
-## 🔗 相关
-- [协议定义](../../server/protos/solver.proto)
-- [服务端文档](../../server/README.md)
-- [E2E 测试](../../test/)
+## 🔗 Related
+- [Protocol definition](../../server/protos/solver.proto)
+- [Server docs](../../server/README.md)
+- [E2E tests](../../test/)

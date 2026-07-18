@@ -1,6 +1,6 @@
 // main.cpp
-// 修复 v1 无优雅退出、无 ResourceQuota、监听 0.0.0.0 不安全、无健康检查注册。
-// 启动日志打印 GPU 构建状态，一眼可辨。
+// Fixes v1 issues: no graceful shutdown, no ResourceQuota, insecure 0.0.0.0
+// bind, no health check. Startup log prints GPU build status for clarity.
 #include <csignal>
 #include <cstdlib>
 #include <memory>
@@ -21,17 +21,17 @@ static void OnSignal(int) {
   if (!g_shutdown) {
     g_shutdown = true;
     if (g_server) {
-      // Shutdown 必须在独立线程，避免在 signal handler 里阻塞
+      // Shutdown in a detached thread to avoid blocking in signal handler
       std::thread([] { g_server->Shutdown(); }).detach();
     }
   }
 }
 
 int main(int argc, char** argv) {
-  std::string bind = "127.0.0.1:50051";   // 默认仅本机；公网需配 TLS + 鉴权
-  int max_concurrent = 1;                  // 同步 Solve 并发上限（GPU 默认串行）
-  int job_workers = 1;                     // 异步 job worker 数（GPU 默认 1，CPU 可调大）
-  std::string job_db;                      // 异步 job 持久化路径，空=不持久化
+  std::string bind = "127.0.0.1:50051";   // localhost only; add TLS + auth for public
+  int max_concurrent = 1;                  // sync Solve concurrency limit (GPU default: serial)
+  int job_workers = 1;                     // async job worker count (GPU: 1, CPU: scalable)
+  std::string job_db;                      // async job SQLite path, empty = no persistence
   for (int i = 1; i < argc; ++i) {
     std::string a = argv[i];
     if (a == "--bind" && i + 1 < argc) bind = argv[++i];
@@ -51,7 +51,7 @@ int main(int argc, char** argv) {
   builder.AddListeningPort(bind, grpc::InsecureServerCredentials());
   builder.RegisterService(&service);
 
-  // 限制并发线程数，防止 OOM
+  // Limit concurrent threads to prevent OOM
   grpc::ResourceQuota quota;
   quota.SetMaxThreads(static_cast<size_t>(max_concurrent) + 2);
   builder.SetResourceQuota(quota);

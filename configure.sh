@@ -1,20 +1,20 @@
 #!/usr/bin/env bash
-# 自适应配置：有 CUDA 就开 GPU，没有就 CPU-only，二者皆可编译运行
+# Adaptive config: enable GPU if CUDA present, otherwise CPU-only. Both build and run.
 #
-# 用法:
-#   ./configure.sh                       # 自适应：探测 nvcc 决定 GPU/CPU
-#   ./configure.sh --no-cuda             # 强制 CPU-only（即便有 nvcc）
-#   ./configure.sh --cuda                # 强制 GPU（无 nvcc 则报错退出）
-#   ./configure.sh --build mybuild ...   # 指定 build 目录 + 透传额外 cmake 参数
+# Usage:
+#   ./configure.sh                       # adaptive: probe nvcc for GPU/CPU
+#   ./configure.sh --no-cuda             # force CPU-only (even if nvcc present)
+#   ./configure.sh --cuda                # force GPU (error if no nvcc)
+#   ./configure.sh --build mybuild ...   # specify build dir + pass-through extra cmake args
 #
-# 环境变量:
-#   CUDA_HOME          CUDA toolkit 根目录（默认从 nvcc 路径推导）
-#   CMAKE_PREFIX_PATH_EXTRA  额外的 cmake 前缀路径（如 conda env / venv）
+# Environment variables:
+#   CUDA_HOME          CUDA toolkit root (default: derived from nvcc path)
+#   CMAKE_PREFIX_PATH_EXTRA  extra cmake prefix path (e.g. conda env / venv)
 set -euo pipefail
 cd "$(dirname "$0")"
 
-# ---- 解析参数 ----
-FORCE_GPU=""        # "" 自适应 / "on" 强制开 / "off" 强制关
+# ---- Parse args ----
+FORCE_GPU=""        # "" adaptive / "on" force on / "off" force off
 BUILD_DIR="build"
 EXTRA_CMAKE_ARGS=()
 while [[ $# -gt 0 ]]; do
@@ -27,7 +27,7 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-# ---- 1. GPU 自适应探测 ----
+# ---- 1. GPU adaptive probe ----
 NVCC_PATH=""
 if [[ "$FORCE_GPU" != "off" ]]; then
   if command -v nvcc >/dev/null 2>&1; then
@@ -38,7 +38,7 @@ if [[ "$FORCE_GPU" != "off" ]]; then
 fi
 
 if [[ "$FORCE_GPU" == "on" && -z "$NVCC_PATH" ]]; then
-  echo "[configure] 错误：--cuda 指定但未找到 nvcc" >&2
+  echo "[configure] error: --cuda specified but nvcc not found" >&2
   exit 1
 fi
 
@@ -53,18 +53,18 @@ if [[ -n "${NVCC_PATH}" ]]; then
   fi
   echo "[configure] CUDA_HOME=${CUDA_HOME} → CUPDLP_GPU=ON"
 elif [[ "$FORCE_GPU" == "off" ]]; then
-  echo "[configure] --no-cuda 指定 → CUPDLP_GPU=OFF（强制 CPU-only）"
+  echo "[configure] --no-cuda specified → CUPDLP_GPU=OFF (forced CPU-only)"
   EXTRA_CMAKE_ARGS+=(-DCUPDLP_GPU=OFF)
 else
-  echo "[configure] nvcc 未找到 → CUPDLP_GPU=OFF（CPU-only，PDLP 仍可跑在 CPU）"
+  echo "[configure] nvcc not found → CUPDLP_GPU=OFF (CPU-only, PDLP still runs on CPU)"
   EXTRA_CMAKE_ARGS+=(-DCUPDLP_GPU=OFF)
 fi
 
-# ---- 2. 强制开启 gRPC server 子项目 ----
+# ---- 2. Force-enable gRPC server subproject ----
 EXTRA_CMAKE_ARGS+=(-DHIGHS_BUILD_GRPC_SERVER=ON)
 EXTRA_CMAKE_ARGS+=(-DCMAKE_BUILD_TYPE=Release)
 
-# ---- 3. 自适应 CMAKE_PREFIX_PATH（conda env / venv / 自定义）----
+# ---- 3. Adaptive CMAKE_PREFIX_PATH (conda env / venv / custom) ----
 PREFIX_PATHS=()
 [[ -n "${CONDA_PREFIX:-}" ]] && PREFIX_PATHS+=("${CONDA_PREFIX}")
 [[ -n "${VIRTUAL_ENV:-}" ]]  && PREFIX_PATHS+=("${VIRTUAL_ENV}")
@@ -79,4 +79,4 @@ fi
 
 echo "[configure] cmake -S. -B${BUILD_DIR} ${EXTRA_CMAKE_ARGS[*]}"
 cmake -S. -B"${BUILD_DIR}" "${EXTRA_CMAKE_ARGS[@]}"
-echo "[configure] 完成。下一步: cmake --build ${BUILD_DIR} --parallel --target highs_grpc_server"
+echo "[configure] done. Next: cmake --build ${BUILD_DIR} --parallel --target highs_grpc_server"

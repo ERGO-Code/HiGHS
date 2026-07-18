@@ -2,20 +2,20 @@ syntax = "proto3";
 
 package highsserver.v1;
 
-// 目标方向：消除 v1 中"取负 cost"的 hack
+// Objective sense — avoids the "negate cost" hack for maximization
 enum ObjSense {
   OBJ_SENSE_MIN = 0;
   OBJ_SENSE_MAX = 1;
 }
 
-// 变量类型，支持 MIP
+// Variable type (supports MIP)
 enum VarType {
   VAR_CONTINUOUS = 0;
   VAR_INTEGER = 1;
   VAR_BINARY = 2;
 }
 
-// 模型求解状态枚举（对齐 HiGHS HighsModelStatus 主要取值）
+// Model solve status (aligned with HiGHS HighsModelStatus)
 enum ModelStatus {
   MODEL_STATUS_NOT_SET = 0;
   MODEL_STATUS_OPTIMAL = 1;
@@ -27,38 +27,38 @@ enum ModelStatus {
   MODEL_STATUS_OTHER = 99;
 }
 
-// job 生命周期状态（异步模式）
+// Job lifecycle status (async mode)
 enum JobStatus {
-  JOB_STATUS_PENDING = 0;     // 已提交，等待 worker
-  JOB_STATUS_RUNNING = 1;     // 求解中
-  JOB_STATUS_SUCCEEDED = 2;   // 求解完成（看 result.model_status 判断是否最优）
-  JOB_STATUS_FAILED = 3;      // 求解失败（passModel 错等）
-  JOB_STATUS_CANCELLED = 4;   // 已取消
+  JOB_STATUS_PENDING = 0;     // submitted, waiting for worker
+  JOB_STATUS_RUNNING = 1;     // solving
+  JOB_STATUS_SUCCEEDED = 2;   // finished (check result.model_status for optimality)
+  JOB_STATUS_FAILED = 3;      // failed (e.g. passModel error)
+  JOB_STATUS_CANCELLED = 4;   // cancelled by client
 }
 
 message SolveRequest {
   string model_name = 1;
-  ObjSense sense = 2;                       // 默认 MIN
+  ObjSense sense = 2;                       // default MIN
 
-  // 列信息
+  // Column data
   repeated double col_cost = 3;
   repeated double col_lower = 4;
   repeated double col_upper = 5;
-  repeated VarType col_integrality = 11;    // 可选，缺省全连续
+  repeated VarType col_integrality = 11;    // optional, default all continuous
 
-  // 约束矩阵 A（CSC 稀疏格式，索引用 int64 防溢出）
+  // Constraint matrix A (CSC sparse format, int64 indices to prevent overflow)
   repeated int64 a_format_index = 6;
-  repeated int64 a_format_start = 7;        // 长度必须 = num_col + 1
+  repeated int64 a_format_start = 7;        // length must be num_col + 1
   repeated double a_format_value = 8;
 
-  // 约束上下界
+  // Row bounds
   repeated double row_lower = 9;
   repeated double row_upper = 10;
 
-  // 求解器参数，如 {"solver": "pdlp", "pdlp_iteration_limit": "10000"}
+  // Solver options, e.g. {"solver": "pdlp", "pdlp_iteration_limit": "10000"}
   map<string, string> options = 12;
 
-  // 求解时间上限（秒），0 表示用 HiGHS 默认
+  // Solve time limit (seconds), 0 = HiGHS default
   double time_limit = 13;
 }
 
@@ -66,42 +66,42 @@ message SolveResponse {
   ModelStatus model_status = 1;
   string status_message = 2;
   repeated double col_value = 3;
-  repeated double col_dual = 4;             // 对偶解（PDLP 原生产出）
-  repeated double row_value = 5;            // 约束活动值
+  repeated double col_dual = 4;             // dual solution (PDLP produces natively)
+  repeated double row_value = 5;            // constraint activity
   repeated double row_dual = 6;
   double objective_value = 7;
-  int64 iteration_count = 8;                // PDLP 迭代数
-  double solve_time = 9;                    // 秒
+  int64 iteration_count = 8;                // PDLP iteration count
+  double solve_time = 9;                    // seconds
 }
 
-// 求解进度（PENDING/RUNNING 时由 GetResult 返回，供客户端展示进度条）
+// Solve progress (returned by GetResult while PENDING/RUNNING, for progress bars)
 message SolveProgress {
-  int64 iteration_count = 1;                // 当前迭代数（PDLP/simplex/ipm 通用）
-  double objective_value = 2;               // 当前目标值
-  double running_time = 3;                  // 已运行秒数
-  double mip_gap = 4;                       // MIP 间隙（非 MIP 为 0）
-  int64 mip_node_count = 5;                 // MIP 节点数（非 MIP 为 0）
+  int64 iteration_count = 1;                // current iterations (PDLP/simplex/ipm)
+  double objective_value = 2;               // current objective
+  double running_time = 3;                  // elapsed seconds
+  double mip_gap = 4;                       // MIP gap (0 for non-MIP)
+  int64 mip_node_count = 5;                 // MIP node count (0 for non-MIP)
 }
 
-// === 异步 job 模式 ===
+// === Async job mode ===
 
 message SubmitResponse {
   string job_id = 1;          // UUID
-  JobStatus job_status = 2;   // 提交时 = PENDING
+  JobStatus job_status = 2;   // PENDING on submit
 }
 
 message GetResultRequest {
   string job_id = 1;
-  bool wait = 2;              // true: 长轮询等到终态（仍受 gRPC deadline 限制）
-  double wait_timeout = 3;    // wait=true 时最长等待秒数，0=立即返回当前状态
+  bool wait = 2;              // true: long-poll until terminal (still bounded by gRPC deadline)
+  double wait_timeout = 3;    // max wait seconds when wait=true, 0=return immediately
 }
 
 message GetResultResponse {
   JobStatus job_status = 1;
   string status_message = 2;
-  SolveResponse result = 3;   // 仅 SUCCEEDED 时填充
-  double elapsed_time = 4;    // 已耗时（秒），PENDING/RUNNING 时也有
-  SolveProgress progress = 5; // PENDING/RUNNING 时的实时进度
+  SolveResponse result = 3;   // populated only when SUCCEEDED
+  double elapsed_time = 4;    // elapsed seconds (available even when PENDING/RUNNING)
+  SolveProgress progress = 5; // real-time progress while PENDING/RUNNING
 }
 
 message CancelRequest {
@@ -109,7 +109,7 @@ message CancelRequest {
 }
 
 message CancelResponse {
-  bool cancelled = 1;         // true=已取消, false=已结束无法取消
+  bool cancelled = 1;         // true=cancelled, false=already terminal
   string message = 2;
 }
 
@@ -117,25 +117,25 @@ message HealthCheckRequest {}
 message HealthCheckResponse {
   bool serving = 1;
   string message = 2;
-  bool gpu_available = 3;   // 编译期是否开启 CUPDLP_GPU，客户端据此自适应选 solver
+  bool gpu_available = 3;   // whether CUPDLP_GPU was enabled at build time
 }
 
 service HighsService {
-  // === 同步模式（小任务，长连接）===
-  // 求解完成才返回，适合秒级任务
+  // === Synchronous mode (small tasks, long connection, returns in seconds) ===
+  // Blocks until solve completes; suitable for sub-10s tasks
   rpc Solve(SolveRequest) returns (SolveResponse);
-  // 大模型分片流式上传（规避 gRPC 默认 4MB 上限），同步求解
+  // Streaming upload for large models (bypasses gRPC 4MB default limit), sync solve
   rpc SolveStream(stream SolveRequest) returns (SolveResponse);
 
-  // === 异步 job 模式（大任务，短连接）===
-  // 提交任务，立即返回 job_id，后台求解
+  // === Async job mode (large tasks, short connections, avoids holding connection) ===
+  // Submit task, returns job_id immediately; solved by background worker pool
   rpc SubmitSolve(SolveRequest) returns (SubmitResponse);
-  // 查询/长轮询任务结果
+  // Query / long-poll for result
   rpc GetResult(GetResultRequest) returns (GetResultResponse);
-  // 取消任务（仅 PENDING/RUNNING 可取消）
+  // Cancel a job (only PENDING/RUNNING can be cancelled)
   rpc CancelSolve(CancelRequest) returns (CancelResponse);
 
-  // === 公共 ===
-  // 健康检查（供 K8s/负载均衡探活）
+  // === Common ===
+  // Health check (for K8s / load balancer liveness probes)
   rpc Check(HealthCheckRequest) returns (HealthCheckResponse);
 }

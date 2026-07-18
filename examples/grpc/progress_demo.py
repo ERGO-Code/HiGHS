@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 """
-进度上报示例：提交任务后轮询 GetResult，展示实时进度（迭代数/目标值/耗时）
+Progress reporting example: poll GetResult after submit, show real-time progress
+(iteration count / objective / elapsed).
 
-适合：长求解任务，客户端需要展示进度条或监控求解过程。
+Suitable for: long solves where client needs a progress bar or monitoring.
 
-模型：稍大的 LP（让 PDLP 跑足够多迭代以观察进度变化）
-  用一个 100 变量的随机 LP，PDLP 需要数百次迭代
+Model: a 100-var random LP so PDLP runs enough iterations to observe progress.
 
-运行：
-  1. 启动服务: ./build/bin/highs_grpc_server --bind 127.0.0.1:50051 --job-workers 2
+Run:
+  1. Start server: ./build/bin/highs_grpc_server --bind 127.0.0.1:50051 --job-workers 2
   2. python examples/grpc/progress_demo.py
 """
 import sys, os, subprocess, time, random

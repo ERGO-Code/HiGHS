@@ -1,25 +1,23 @@
 # HiGHS-Server
 
-基于 [HiGHS](https://github.com/ERGO-Code/HiGHS) 的 gRPC 在线求解服务，支持 **CPU / GPU 自适应构建**，将 HiGHS 的 LP/MIP 求解能力通过 gRPC 暴露为远程调用服务。
+A gRPC solving service built on [HiGHS](https://github.com/ERGO-Code/HiGHS), with **CPU/GPU adaptive builds**, exposing HiGHS LP/MIP solving as a remote service.
 
-> 本目录是 HiGHS fork 仓库的子项目，通过 `HIGHS_BUILD_GRPC_SERVER=ON` 开关集成进主构建，不改动 HiGHS 核心逻辑。
-
----
-
-## ✨ 特性
-
-- **自适应 GPU**：构建期自动探测 CUDA，有则启用 `CUPDLP_GPU`（PDLP on GPU），无则 CPU-only（默认 solver=ipm）。同一份源码、同一套命令，两种环境皆可编译运行。
-- **能力上报**：服务端通过 gRPC 健康检查上报 `gpu_available`，客户端据此自适应选择 `pdlp`（GPU）或 `ipm`（CPU），无需人工判断环境。
-- **完整协议**：支持 LP/MIP、对偶解、目标方向（Max/Min 无需取负 hack）、int64 索引防溢出、流式分片上传（绕过 4MB 限制）。
-- **同步 + 异步双模式**：小任务用同步 `Solve`（长连接，秒级返回），大任务用异步 `SubmitSolve`→`GetResult`→`CancelSolve`（短连接，避免长连接占用）。
-- **进度上报**：异步 job 实时返回迭代数/目标值/耗时/MIP 间隙（HiGHS callback 驱动），客户端可展示进度条。
-- **job 持久化**：可选 SQLite 后端（`--job-db`），进程重启后历史 job 仍可查询，未完成 job 标记 FAILED。
-- **工程化**：输入校验（`INVALID_ARGUMENT`）、并发控制、取消传播、优雅退出（SIGINT/SIGTERM）、ResourceQuota、健康检查、服务反射。
-- **零侵入**：仅 `add_subdirectory(server)` 挂入 HiGHS 主 CMake，与上游解耦，便于跟踪上游更新。
+> This directory is a subproject of the HiGHS fork, integrated via `HIGHS_BUILD_GRPC_SERVER=ON`. It does not modify HiGHS core logic.
 
 ---
 
-## 📐 架构
+## ✨ Features
+
+- **Sync + Async dual mode**: small tasks use sync `Solve` (long connection, returns in seconds); large tasks use async `SubmitSolve`→`GetResult`→`CancelSolve` (short connections, avoids holding connection).
+- **Progress reporting**: async jobs return real-time iteration count / objective / elapsed / MIP gap (HiGHS callback driven), so clients can show progress bars.
+- **Job persistence**: optional SQLite backend (`--job-db`); historical jobs remain queryable after restart, unfinished jobs marked FAILED.
+- **CPU/GPU adaptive**: build-time `nvcc` probe enables `CUPDLP_GPU` (PDLP on GPU) or falls back to CPU (default solver=ipm). Same source, same `configure.sh`, both environments build and run.
+- **Capability reporting**: server reports `gpu_available` via health check; clients adaptively pick `pdlp` (GPU) or `ipm` (CPU) without manual env detection.
+- **Engineering**: input validation (`INVALID_ARGUMENT`), concurrency control, cancellation propagation, graceful shutdown (SIGINT/SIGTERM), ResourceQuota, health check, server reflection.
+
+---
+
+## 📐 Architecture
 
 ```
 ┌──────────────┐   gRPC    ┌─────────────────────────────────┐
@@ -31,241 +29,233 @@
                            │  │  ├─ highs.run()            │  │
                            │  │  │   ├─ CPU: ipm/simplex   │  │
                            │  │  │   └─ GPU: pdlp+CUDA     │  │
-                           │  │  └─ 装填解(含对偶)          │  │
+                           │  │  └─ Fill solution+duals    │  │
                            │  └───────────────────────────┘  │
-                           │  健康检查: gpu_available 上报    │
+                           │  Health check: gpu_available    │
                            └─────────────────────────────────┘
 ```
 
-**自适应闭环**：
-1. 构建期 `configure.sh` 探测 `nvcc` → 决定 `CUPDLP_GPU` 开关
-2. 编译期 `HIGHS_SERVER_CUPDLP_GPU` 宏固化进二进制
-3. 启动日志打印 `GPU-enabled` / `CPU-only`
-4. 健康检查 RPC 上报 `gpu_available` 字段
-5. 客户端 `probe_gpu()` 据此选 `solver=pdlp`（GPU）或 `solver=ipm`（CPU）
+**Adaptive loop**:
+1. Build-time `configure.sh` probes `nvcc` → decides `CUPDLP_GPU`
+2. Compile-time `HIGHS_SERVER_CUPDLP_GPU` macro baked into binary
+3. Startup log prints `GPU-enabled` / `CPU-only`
+4. Health check RPC reports `gpu_available`
+5. Client `probe_gpu()` picks `solver=pdlp` (GPU) or `solver=ipm` (CPU)
 
 ---
 
-## 🚀 快速开始
+## 🚀 Quick Start
 
-### 环境要求
-
-- C++17 编译器（gcc-11/12，**注意 nvcc 12.x 不支持 gcc-13+**）
+### Requirements
+- C++17 compiler (gcc-11/12; **nvcc 12.x does not support gcc-13+**)
 - CMake ≥ 3.24
-- gRPC + Protobuf（系统装或 conda 装，见下）
-- **可选** CUDA Toolkit 12.x（启用 GPU 加速）
+- gRPC + Protobuf (system or conda)
+- **Optional** CUDA Toolkit 12.x (GPU acceleration)
 
-### 1. 准备依赖（推荐 conda，免 sudo）
+### 1. Prepare dependencies (conda recommended, no sudo)
 
 ```bash
-# 创建专用环境
 conda create -n highs-server python=3.11
 conda activate highs-server
 
-# C++ 构建依赖（清华镜像，按需替换）
+# C++ build deps (Tsinghua mirror, replace as needed)
 conda install --channel https://mirrors.tuna.tsinghua.edu.cn/anaconda/cloud/conda-forge/ \
   cmake grpc protobuf gcc=12 gxx=12
 
-# Python 测试依赖
+# Python test deps
 pip install -i https://pypi.tuna.tsinghua.edu.cn/simple grpcio grpcio-tools
 ```
 
-系统装方式（需 sudo）：
+System install (needs sudo):
 ```bash
 sudo apt install cmake g++-11 libgrpc++-dev libprotobuf-dev protobuf-compiler-grpc \
   python3-venv python3-grpcio python3-grpc-tools
 ```
 
-### 2. 配置 + 编译
+### 2. Configure + build
 
 ```bash
-# 自适应（自动探测 CUDA，推荐）
+# Adaptive (auto-detect CUDA, recommended)
 ./configure.sh
 cmake --build build --parallel --target highs_grpc_server
 
-# 强制 CPU-only（即便有 CUDA）
+# Force CPU-only (even if CUDA present)
 ./configure.sh --no-cuda
-cmake --build build --parallel --target highs_grpc_server
 
-# 强制 GPU（无 nvcc 则报错）
+# Force GPU (error if no nvcc)
 ./configure.sh --cuda
-cmake --build build --parallel --target highs_grpc_server
 ```
 
-> 若系统 gcc-13 太新导致 nvcc 报错，追加：
+> If system gcc-13 is too new for nvcc, append:
 > `./configure.sh --cuda -- -DCMAKE_CXX_COMPILER=/usr/bin/g++-11`
 
-### 3. 启动服务
+### 3. Start service
 
 ```bash
-# 默认绑 127.0.0.1:50051（仅本机，安全）
 export LD_LIBRARY_PATH=$CONDA_PREFIX/lib:${LD_LIBRARY_PATH:-}
-./build/bin/highs_grpc_server --bind 127.0.0.1:50051 --max-concurrent 1
+./build/bin/highs_grpc_server --bind 127.0.0.1:50051 --max-concurrent 1 --job-workers 2
 ```
 
-输出（GPU 构建）：
+Output (GPU build):
 ```
-HiGHS-Server listening on 127.0.0.1:50051 (max_concurrent=1) GPU-enabled (CUPDLP_GPU=ON)
+HiGHS-Server listening on 127.0.0.1:50051 (max_concurrent=1, job_workers=2) GPU-enabled (CUPDLP_GPU=ON)
 ```
 
-启动参数：
-| 参数 | 默认 | 说明 |
+Startup flags:
+| Flag | Default | Description |
 |---|---|---|
-| `--bind` | `127.0.0.1:50051` | 监听地址（公网需配 TLS） |
-| `--max-concurrent` | `1` | 同步 `Solve` 并发上限（GPU 建议 1，CPU 可调大） |
-| `--job-workers` | `1` | 异步 job worker 数（GPU 建议 1，CPU 可 = 核数） |
-| `--job-db` | 空 | 异步 job 持久化 SQLite 路径，空=不持久化（重启丢 job） |
+| `--bind` | `127.0.0.1:50051` | Listen address (add TLS for public) |
+| `--max-concurrent` | `1` | Sync `Solve` concurrency limit (GPU: 1, CPU: higher) |
+| `--job-workers` | `1` | Async job worker count (GPU: 1, CPU: = core count) |
+| `--job-db` | empty | Async job SQLite path; empty = no persistence (jobs lost on restart) |
 
-### 4. 跑测试
+### 4. Run tests
 
 ```bash
 ./test/run_e2e.sh
 ```
 
-预期输出：
+Expected:
 ```
 [ok] health check: serving=True gpu_available=True msg='GPU-enabled (CUPDLP_GPU=ON)'
 [ok] feasible obj=4.0 (solver=pdlp, gpu_build=True)
 [ok] infeasible detected
-[ok] bad args rejected: col arrays size mismatch
+[ok] bad args rejected
+[ok] async job: obj=4.0 elapsed=0.002s
+[ok] async cancel → CANCELLED
+[ok] async not_found → NOT_FOUND
 ALL TESTS PASSED
 ```
 
 ---
 
-## 📡 协议
+## 📡 Protocol
 
-完整定义见 `protos/solver.proto`，要点：
+### Service methods
 
-### 服务方法
-
-**同步模式**（小任务，长连接，秒级返回）
-| RPC | 类型 | 用途 |
+**Synchronous mode** (small tasks, long connection, returns in seconds)
+| RPC | Type | Purpose |
 |---|---|---|
-| `Solve` | unary | 单次求解（模型 < 4MB） |
-| `SolveStream` | client stream | 分片上传大模型（> 4MB），同步求解 |
+| `Solve` | unary | Single solve (model < 4MB) |
+| `SolveStream` | client stream | Sharded upload for large models (> 4MB), sync solve |
 
-**异步 job 模式**（大任务，短连接，避免长连接占用）
-| RPC | 类型 | 用途 |
+**Async job mode** (large tasks, short connections, avoids holding connection)
+| RPC | Type | Purpose |
 |---|---|---|
-| `SubmitSolve` | unary | 提交任务，立即返回 `job_id`（~ms 级） |
-| `GetResult` | unary | 查询/长轮询结果（`wait`+`wait_timeout`），返回进度 |
-| `CancelSolve` | unary | 取消任务（仅 PENDING/RUNNING 可取消） |
+| `SubmitSolve` | unary | Submit task, returns `job_id` immediately (~ms) |
+| `GetResult` | unary | Query / long-poll result (`wait`+`wait_timeout`), returns progress |
+| `CancelSolve` | unary | Cancel job (only PENDING/RUNNING) |
 
-**公共**
-| RPC | 类型 | 用途 |
+**Common**
+| RPC | Type | Purpose |
 |---|---|---|
-| `Check` | unary | 健康检查 + GPU 能力上报（`gpu_available`） |
+| `Check` | unary | Health check + GPU capability (`gpu_available`) |
 
-### 模型表示（CSC 稀疏格式）
+### Model representation (CSC sparse format)
 ```
 SolveRequest {
-  sense: MIN/MAX              // 目标方向，无需取负
-  col_cost[], col_lower[], col_upper[]      // 列信息
-  col_integrality[]           // 可选，变量类型（连续/整数/二值）→ MIP
-  a_format_index[], a_format_start[], a_format_value[]  // CSC 约束矩阵
-  row_lower[], row_upper[]    // 约束上下界
-  options: map<string,string> // 求解器参数，如 {"solver":"pdlp","time_limit":60}
-  time_limit: double          // 求解时间上限（秒）
+  sense: MIN/MAX              // objective sense, no need to negate cost
+  col_cost[], col_lower[], col_upper[]      // column data
+  col_integrality[]           // optional, var type (continuous/integer/binary) → MIP
+  a_format_index[], a_format_start[], a_format_value[]  // CSC constraint matrix
+  row_lower[], row_upper[]    // row bounds
+  options: map<string,string> // solver params, e.g. {"solver":"pdlp","time_limit":60}
+  time_limit: double          // solve time limit (seconds)
 }
 ```
 
-### 响应
+### Response
 
-**同步 `SolveResponse`**
+**Sync `SolveResponse`**
 ```
 SolveResponse {
   model_status: enum           // OPTIMAL/INFEASIBLE/UNBOUNDED/...
-  col_value[], col_dual[]      // 原始解 + 对偶解
-  row_value[], row_dual[]      // 约束活动值 + 对偶
-  objective_value              // 目标值
-  iteration_count              // PDLP 迭代数
-  solve_time                   // 求解耗时（秒）
+  col_value[], col_dual[]      // primal + dual solution
+  row_value[], row_dual[]      // constraint activity + dual
+  objective_value              // objective
+  iteration_count              // PDLP iteration count
+  solve_time                   // solve elapsed (seconds)
 }
 ```
 
-**异步 `GetResultResponse`**（含进度）
+**Async `GetResultResponse`** (with progress)
 ```
 GetResultResponse {
   job_status: enum             // PENDING/RUNNING/SUCCEEDED/FAILED/CANCELLED
   status_message: string
-  result: SolveResponse        // 仅 SUCCEEDED 时填充
-  elapsed_time: double         // 已耗时（秒）
-  progress: SolveProgress {    // PENDING/RUNNING 时的实时进度
-    iteration_count            // 当前迭代数（PDLP/simplex/ipm 通用）
-    objective_value            // 当前目标值
-    running_time               // 已运行秒数
-    mip_gap                    // MIP 间隙（非 MIP 为 0）
-    mip_node_count             // MIP 节点数（非 MIP 为 0）
+  result: SolveResponse        // populated only when SUCCEEDED
+  elapsed_time: double         // elapsed (seconds), available even when PENDING/RUNNING
+  progress: SolveProgress {    // real-time progress while PENDING/RUNNING
+    iteration_count            // current iterations (PDLP/simplex/ipm)
+    objective_value            // current objective
+    running_time               // elapsed seconds
+    mip_gap                    // MIP gap (0 for non-MIP)
+    mip_node_count             // MIP node count (0 for non-MIP)
   }
 }
 ```
 
-进度由 HiGHS callback 驱动（`kCallbackLogging` + `kCallbackMipSolution`），覆盖 PDLP/simplex/IPM/MIP。
+Progress is driven by HiGHS callbacks (`kCallbackLogging` + `kCallbackMipSolution`), covering PDLP/simplex/IPM/MIP.
 
 ---
 
-## 🐍 Python 客户端示例
+## 🐍 Python Client Examples
+
+### Sync Solve (small tasks)
 
 ```python
 import grpc
 import solver_pb2 as pb
 import solver_pb2_grpc as pbg
 
-# 生成桩代码：python -m grpc_tools.protoc -Iserver/protos --python_out=. --grpc_python_out=. server/protos/solver.proto
-
 channel = grpc.insecure_channel('localhost:50051')
 stub = pbg.HighsServiceStub(channel)
 
-# 1. 探测 GPU 能力，自适应选 solver
+# Adaptive solver selection
 hc = stub.Check(pb.HealthCheckRequest())
 solver = "pdlp" if hc.gpu_available else "ipm"
 
-# 2. 构造 LP: Maximize x1 + x2  s.t. x1 + 2*x2 <= 4, x >= 0
 req = pb.SolveRequest(
     sense=pb.OBJ_SENSE_MAX,
     col_cost=[1.0, 1.0],
     col_lower=[0.0, 0.0], col_upper=[1e30, 1e30],
-    a_format_start=[0, 1, 2],      # CSC: 长度 = num_col+1
-    a_format_index=[0, 0],          # 行索引
-    a_format_value=[1.0, 2.0],      # 非零值
+    a_format_start=[0, 1, 2], a_format_index=[0, 0], a_format_value=[1.0, 2.0],
     row_lower=[-1e30], row_upper=[4.0],
     options={"solver": solver},
 )
-
 resp = stub.Solve(req, timeout=60)
 print(f"status={resp.model_status} obj={resp.objective_value}")
 print(f"solution={list(resp.col_value)}")
 ```
 
-### 异步 job 模式（大任务，避免长连接）
+### Async job mode (large tasks, avoid long connection)
 
 ```python
-# 1. 提交，立即返回 job_id（~ms 级）
+# 1. Submit, returns job_id immediately (~ms)
 sub = stub.SubmitSolve(req, timeout=5)
 job_id = sub.job_id
 
-# 2. 长轮询等结果（服务端阻塞最多 wait_timeout 秒）
+# 2. Long-poll for result (server blocks up to wait_timeout)
 while True:
     gr = stub.GetResult(pb.GetResultRequest(job_id=job_id, wait=True, wait_timeout=2.0),
                         timeout=10)
     if gr.job_status in (pb.JOB_STATUS_SUCCEEDED, pb.JOB_STATUS_FAILED,
                          pb.JOB_STATUS_CANCELLED):
         break
-    # 运行中可读进度
+    # Read progress while running
     print(f"running: iter={gr.progress.iteration_count} obj={gr.progress.objective_value}")
 
-# 3. 取结果
+# 3. Fetch result
 if gr.job_status == pb.JOB_STATUS_SUCCEEDED:
     print(f"obj={gr.result.objective_value}")
 
-# 4. 取消（可选）
+# 4. Cancel (optional)
 stub.CancelSolve(pb.CancelRequest(job_id=job_id))
 ```
 
-### 进度上报
+### Progress reporting
 
-异步 job 在 `RUNNING` 时，`GetResult` 返回 `progress` 字段：
+Async jobs return `progress` field while RUNNING:
 ```python
 gr = stub.GetResult(pb.GetResultRequest(job_id=job_id, wait=False), timeout=5)
 p = gr.progress
@@ -273,112 +263,90 @@ print(f"iter={p.iteration_count} obj={p.objective_value} "
       f"time={p.running_time}s mip_gap={p.mip_gap}")
 ```
 
-进度由 HiGHS callback 驱动（`kCallbackLogging` + `kCallbackMipSolution`），覆盖 PDLP/simplex/IPM/MIP。
+More examples: [`examples/grpc/`](../examples/grpc/)
 
 ---
 
-## 🔧 构建选项
+## 🔧 Build Options
 
-| CMake 选项 | 默认 | 说明 |
+| CMake option | Default | Description |
 |---|---|---|
-| `HIGHS_BUILD_GRPC_SERVER` | `OFF` | 启用 gRPC server 子项目 |
-| `CUPDLP_GPU` | `OFF` | HiGHS 官方选项，启用 PDLP GPU 加速 |
-| `CMAKE_PREFIX_PATH` | 自动 | conda env / venv 前缀（`configure.sh` 自动注入） |
+| `HIGHS_BUILD_GRPC_SERVER` | `OFF` | Enable gRPC server subproject |
+| `CUPDLP_GPU` | `OFF` | HiGHS official option, enable PDLP GPU acceleration |
+| `CMAKE_PREFIX_PATH` | auto | conda env / venv prefix (auto-injected by `configure.sh`) |
 
 ---
 
-## ⚠️ 注意事项
+## ⚠️ Notes
 
-1. **GPU 支持是编译期决定**：`CUPDLP_GPU=ON` 编译的二进制才能用 GPU PDLP；`OFF` 编译的即便机器有 GPU 也只跑 CPU。启动日志会明确打印构建类型。
-2. **nvcc 与 gcc 版本**：CUDA 12.x 的 nvcc 不支持 gcc-13+，需用 gcc-11 或 gcc-12（conda 装的 gcc-12 可用）。
-3. **不可行模型构造**：HiGHS `passModel` 校验 `lower <= upper`，单行 `lower > upper` 会被拒。不可行性需用两行矛盾约束表达（如 `x>=5` 和 `x<=1`）。
-4. **运行时库路径**：若用 conda 装依赖，运行前需 `export LD_LIBRARY_PATH=$CONDA_PREFIX/lib`。
-5. **公网部署安全**：默认绑 `127.0.0.1`，公网暴露需自行加 TLS + 鉴权拦截器。
-6. **job 持久化**：`--job-db` 指定 SQLite 路径则 job 跨重启可查；不指定则仅内存。未完成 job 重启后标记 FAILED（无法恢复运行现场）。
-7. **进度上报局限**：HiGHS `run()` 中 callback 触发频率取决于求解器（PDLP 周期性 logging），极小问题可能求解太快采不到中间进度。
+1. **GPU support is compile-time**: `CUPDLP_GPU=ON` build uses GPU PDLP; `OFF` build runs CPU even if GPU present. Startup log clearly prints build type.
+2. **nvcc vs gcc**: CUDA 12.x nvcc does not support gcc-13+; use gcc-11 or gcc-12 (conda gcc-12 works).
+3. **Infeasible model construction**: HiGHS `passModel` validates `lower <= upper`; a single row with `lower > upper` is rejected. Express infeasibility via two contradictory constraints (e.g. `x>=5` and `x<=1`).
+4. **Runtime library path**: if deps installed via conda, run `export LD_LIBRARY_PATH=$CONDA_PREFIX/lib` before starting.
+5. **Public deployment security**: default bind `127.0.0.1`; add TLS + auth interceptor for public exposure.
+6. **Job persistence**: `--job-db` SQLite path makes jobs queryable across restarts; without it, jobs are in-memory only. Unfinished jobs marked FAILED on restart (cannot resume runtime state).
+7. **Progress reporting limitation**: HiGHS `run()` callback frequency depends on solver (PDLP periodic logging); tiny problems may solve too fast to sample intermediate progress.
 
 ---
 
-## 📂 目录结构
+## 📂 Directory Structure
 
 ```
 server/
-├── CMakeLists.txt          # 子项目构建
-├── README.md               # 本文档
+├── CMakeLists.txt          # subproject build
+├── README.md               # this doc
 ├── protos/
-│   └── solver.proto        # gRPC 协议定义
+│   └── solver.proto        # gRPC protocol
 └── src/
-    ├── main.cpp            # 入口：优雅退出、ResourceQuota、健康检查注册
-    ├── service_impl.{h,cpp}# gRPC 服务实现：Solve/SolveStream/Check
-    ├── model_converter.{h,cpp} # proto → HighsModel 转换
-    ├── validator.{h,cpp}   # 输入校验
-    └── build_info.h        # 编译期 GPU 能力上报
+    ├── main.cpp            # entry: graceful shutdown, ResourceQuota, health check
+    ├── service_impl.{h,cpp}# gRPC service: Solve/SolveStream/Submit/Get/Cancel/Check
+    ├── job_store.{h,cpp}   # JobStore + WorkerPool + progress + SQLite
+    ├── model_converter.{h,cpp} # proto -> HighsModel
+    ├── validator.{h,cpp}   # input validation
+    └── build_info.h        # compile-time GPU capability
 test/
-├── test_client.py          # E2E 测试客户端（4 用例）
-└── run_e2e.sh              # E2E 启动脚本
-configure.sh                # 自适应构建脚本
+├── test_client.py          # E2E client (7 cases)
+└── run_e2e.sh              # E2E runner
+configure.sh                # adaptive build script
 ```
 
 ---
 
-## 🧪 已验证环境
+## 🧪 Verified Environments
 
-| 环境 | GPU | 状态 |
+| Environment | GPU | Status |
 |---|---|---|
-| Ubuntu 24.04 + CUDA 12.1 + RTX 4070 Ti + gcc-11 + conda gRPC 1.51 | ✅ | E2E 4/4 通过 |
-| Ubuntu 24.04 + 无 CUDA + gcc-11 + conda gRPC 1.51 | ❌ | E2E 4/4 通过 |
+| Ubuntu 24.04 + CUDA 12.1 + RTX 4070 Ti + gcc-11 + conda gRPC 1.51 | ✅ | E2E 7/7 pass |
+| Ubuntu 24.04 + no CUDA + gcc-11 + conda gRPC 1.51 | ❌ | E2E 7/7 pass |
 
 ---
 
-## 🐳 Docker 部署
+## 🐳 Docker Deployment
 
-提供 CPU / GPU 双镜像，通过 docker compose profile 切换。
+See [root README](../README.md) and `Dockerfile.cpu` / `Dockerfile.gpu` / `docker-compose.yml`.
 
-### 前置条件
-- Docker + Docker Compose v2
-- **GPU 版额外需要** [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html)
-
-### CPU 版（默认）
+### CPU (default)
 ```bash
 docker compose up -d --build
-# 服务启动在 localhost:50051，CPU-only 模式，max-concurrent=4
 ```
 
-### GPU 版
+### GPU
 ```bash
 docker compose --profile gpu up -d --build highs-server-gpu
-# 服务启动在 localhost:50051，GPU 模式，max-concurrent=1（串行避免显存争抢）
 ```
-
-### 验证
-```bash
-# 查看启动日志确认 GPU 构建状态
-docker compose logs highs-server-gpu | head
-# 预期: HiGHS-Server listening on 0.0.0.0:50051 (max_concurrent=1) GPU-enabled (CUPDLP_GPU=ON)
-
-# 健康检查（需 grpcurl）
-grpcurl -plaintext localhost:50051 highsserver.v1.HighsService/Check
-```
-
-### 文件说明
-| 文件 | 用途 |
-|---|---|
-| `Dockerfile.cpu` | CPU 镜像（ubuntu:22.04 基础，无 CUDA 依赖，镜像更小） |
-| `Dockerfile.gpu` | GPU 镜像（nvidia/cuda:12.4.1 基础，含 PDLP GPU 加速） |
-| `docker-compose.yml` | 编排文件，CPU 默认 / GPU 用 `--profile gpu` |
-| `.dockerignore` | 减小构建上下文（排除 build 产物、.git、缓存） |
 
 ---
 
-## 📖 相关文档
+## 📖 Related Docs
 
-- [执行计划](../plan.md) — 完整设计与 v1→v2 修复对照
-- [HiGHS 官方文档](https://github.com/ERGO-Code/HiGHS) — 求解器本体
-- [HiGHS GPU 加速指南](https://github.com/ERGO-Code/HiGHS/blob/master/docs/src/guide/gpu.md)
-- [cuPDLP-C](https://github.com/COPT-Public/cuPDLP-C) — GPU PDLP 实现
+- [Execution plan](../plan.md)
+- [Examples](../examples/grpc/)
+- [HiGHS docs](https://github.com/ERGO-Code/HiGHS)
+- [HiGHS GPU guide](https://github.com/ERGO-Code/HiGHS/blob/master/docs/src/guide/gpu.md)
+- [cuPDLP-C](https://github.com/COPT-Public/cuPDLP-C)
 
 ---
 
-## 📄 许可证
+## 📄 License
 
-继承 HiGHS 的 [MIT License](../LICENSE.txt)。
+Inherits HiGHS [MIT License](../LICENSE.txt).

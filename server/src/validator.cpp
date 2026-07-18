@@ -24,7 +24,7 @@ grpc::Status ValidateRequest(const highsserver::v1::SolveRequest& req) {
     return {grpc::INVALID_ARGUMENT, os.str()};
   }
 
-  // CSC: start 长度必须 = n_col + 1
+  // CSC: start length must be num_col + 1
   if (req.a_format_start_size() != n_col + 1) {
     std::ostringstream os;
     os << "a_format_start size must be num_col+1=" << (n_col + 1)

@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """
-最小示例：不依赖任何建模工具，直接手构造 SolveRequest 调用 highs-server。
+Minimal example: construct SolveRequest by hand, no modeling tool needed.
 
-适合：快速验证服务连通性、不使用 Pyomo 的用户、嵌入式调用场景。
+Suitable for: quick connectivity check, users not using Pyomo, embedded calls.
 
-模型：Maximize x1 + x2  s.t. x1 + 2*x2 <= 4, x >= 0  →  最优解 (4,0), obj=4
+Model: Maximize x1 + x2  s.t. x1 + 2*x2 <= 4, x >= 0  ->  optimal (4,0), obj=4
 
-运行：
-  1. 启动服务: ./build/bin/highs_grpc_server --bind 127.0.0.1:50051
+Run:
+  1. Start server: ./build/bin/highs_grpc_server --bind 127.0.0.1:50051
   2. python examples/grpc/minimal_lp.py
 """
 import sys, os, subprocess
