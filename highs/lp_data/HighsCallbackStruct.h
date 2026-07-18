@@ -64,8 +64,9 @@ typedef void (*HighsCCallbackType)(int, const char*,
                                    HighsCallbackDataIn*, void*);
 
 typedef HighsInt (*HighsCHessianFunctionType)(const HighsInt, const HighsInt*,
-					      const HighsInt*, const double*, HighsInt*,
-					      HighsInt*, double* , void*);
+                                              const HighsInt*, const double*,
+                                              HighsInt*, HighsInt*, double*,
+                                              void*);
 
 #ifdef __cplusplus
 }

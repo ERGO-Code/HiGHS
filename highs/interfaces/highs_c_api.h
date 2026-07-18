@@ -161,6 +161,14 @@ const HighsInt kHighsIisStatusNotInConflict = -1;
 const HighsInt kHighsIisStatusMaybeInConflict = 0;
 const HighsInt kHighsIisStatusInConflict = 1;
 
+const HighsInt kHighsHessianOracleCallTypeMin = 0;
+const HighsInt kHighsHessianOracleCallTypeEntry =
+    kHighsHessianOracleCallTypeMin;
+const HighsInt kHighsHessianOracleCallTypeColumn = 1;
+const HighsInt kHighsHessianOracleCallTypeProduct = 2;
+const HighsInt kHighsHessianOracleCallTypeMax =
+    kHighsHessianOracleCallTypeProduct;
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -599,9 +607,28 @@ HighsInt Highs_passHessian(void* highs, const HighsInt dim,
                            const HighsInt* start, const HighsInt* index,
                            const double* value);
 
+/**
+ * Set the Hessian oracle callback method
+ *
+ * @param highs        A pointer to the Highs instance.
+ * @param dim          Dimension of the Hessian
+ * @param oracleCall   A pointer to the Hessian oracle callback
+ * @param oracle_data  A pointer to the Hessian oracle callback data
+ *
+ * @returns A `kHighsStatus` constant indicating whether the call succeeded.
+ */
 HighsInt Highs_passHessianOracle(void* highs, const HighsInt dim,
-				 HighsCHessianFunctionType oracleCall,
-				 void* oracle_data);
+                                 HighsCHessianFunctionType oracleCall,
+                                 void* oracle_data);
+
+/**
+ * Check the Hessian oracle callback method
+ *
+ * @param highs     A pointer to the Highs instance.
+ *
+ * @returns A `kHighsStatus` constant indicating whether the call succeeded.
+ */
+HighsInt Highs_checkHessianOracle(void* highs);
 
 /**
  * Passes multiple linear objective data to HiGHS, clearing any such

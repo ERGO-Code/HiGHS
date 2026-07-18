@@ -713,7 +713,7 @@ HighsStatus Highs::passHessian(const HighsInt dim, const HighsInt num_nz,
 HighsStatus Highs::passHessian(const HighsInt dim,
                                HighsHessianFunctionType oracleCall,
                                void* oracle_data,
-			       HighsCHessianFunctionType c_oracleCall) {
+                               HighsCHessianFunctionType c_oracleCall) {
   if (dim <= 0) {
     highsLogUser(options_.log_options, HighsLogType::kWarning,
                  "Ignoring Hessian oracle data since dimension is %d\n",
@@ -724,10 +724,13 @@ HighsStatus Highs::passHessian(const HighsInt dim,
   HessianOracle& oracle = test_hessian.oracle_;
   oracle.dim_ = dim;
   if (c_oracleCall) {
-    oracle.call_ = [c_oracleCall](const HighsInt type, const HighsInt* x_num_entries, 
-				  const HighsInt* x_index, const double* x_value, HighsInt* q_x_num_entries,
-				  HighsInt* q_x_index, double* q_x_value, void* data) {
-      return c_oracleCall(type, x_num_entries, x_index, x_value, q_x_num_entries, q_x_index, q_x_value, data);
+    oracle.call_ = [c_oracleCall](
+                       const HighsInt type, const HighsInt* x_num_entries,
+                       const HighsInt* x_index, const double* x_value,
+                       HighsInt* q_x_num_entries, HighsInt* q_x_index,
+                       double* q_x_value, void* data) {
+      return c_oracleCall(type, x_num_entries, x_index, x_value,
+                          q_x_num_entries, q_x_index, q_x_value, data);
     };
   } else {
     oracle.call_ = oracleCall;

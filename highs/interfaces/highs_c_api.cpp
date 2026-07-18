@@ -288,12 +288,16 @@ HighsInt Highs_passHessian(void* highs, const HighsInt dim,
 }
 
 HighsInt Highs_passHessianOracle(void* highs, const HighsInt dim,
-				 HighsCHessianFunctionType oracleCall,
-				 void* oracle_data) {
-  auto status = static_cast<Highs*>(highs)->passHessian(dim, oracleCall,
-                                                        oracle_data);
+                                 HighsCHessianFunctionType oracleCall,
+                                 void* oracle_data) {
+  auto status =
+      static_cast<Highs*>(highs)->passHessian(dim, oracleCall, oracle_data);
   return static_cast<HighsInt>(status);
+}
 
+HighsInt Highs_checkHessianOracle(void* highs) {
+  auto status = static_cast<Highs*>(highs)->checkHessianOracle();
+  return static_cast<HighsInt>(status);
 }
 
 HighsInt Highs_passLinearObjectives(const void* highs,
