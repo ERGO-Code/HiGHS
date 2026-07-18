@@ -62,7 +62,9 @@ if [[ -n "${NVCC_PATH}" ]]; then
     CUDA_HOME="$(dirname "$(dirname "${NVCC_PATH}")")"
     export CUDA_HOME
   fi
-  echo "[configure] CUDA_HOME=${CUDA_HOME} -> CUPDLP_GPU=ON"
+  # Extract CUDA version (e.g. 12.1) for compat patch decision
+  CUDART_VERSION=$("${NVCC_PATH}" --version 2>/dev/null | grep -oP 'release \K[0-9]+\.[0-9]+' || echo "")
+  echo "[configure] CUDA_HOME=${CUDA_HOME} CUDA=${CUDART_VERSION} -> CUPDLP_GPU=ON"
 else
   echo "[configure] nvcc not found -> CUPDLP_GPU=OFF (CPU-only)"
   HIGHS_CMAKE_ARGS+=(-DCUPDLP_GPU=OFF)
@@ -82,7 +84,21 @@ if [[ ${#PREFIX_PATHS[@]} -gt 0 ]]; then
   echo "[configure] CMAKE_PREFIX_PATH=${JOIN_PREFIX}"
 fi
 
-# ---- 3. Step 1: build & install HiGHS ----
+# ---- 3. CUDA <12.4 compatibility patch (applied to source tree, not committed) ----
+# cusparseSpMV_preprocess only exists in CUDA 12.4+. For 12.1-12.3, comment out
+# the two call sites in pdhg.cc. This patches the working tree but is never
+# committed (zero upstream modifications in the repo).
+if [[ -n "${NVCC_PATH}" ]] && [[ "${CUDART_VERSION:-}" == "12."[0-3]* ]]; then
+  _pdhg="highs/pdlp/hipdlp/pdhg.cc"
+  if grep -q 'cusparseSpMV_preprocess' "${_pdhg}" 2>/dev/null; then
+    echo "[configure] CUDA <12.4 detected: patching ${_pdhg} (cusparseSpMV_preprocess)"
+    sed -i '/CUSPARSE_CHECK(cusparseSpMV_preprocess(/,/));/s|^|//|' "${_pdhg}"
+    # Mark so we can unpatch after build
+    touch .patched-pdhg
+  fi
+fi
+
+# ---- 4. Step 1: build & install HiGHS ----
 HIGHS_CMAKE_ARGS+=(
   -DCMAKE_INSTALL_PREFIX="${INSTALL_PREFIX}"
   -DCMAKE_BUILD_TYPE=Release
@@ -92,6 +108,13 @@ echo "[configure] Step 1: configure + build + install HiGHS"
 echo "[configure]   cmake -S. -B${HIGHS_BUILD_DIR} ${HIGHS_CMAKE_ARGS[*]}"
 cmake -S. -B"${HIGHS_BUILD_DIR}" "${HIGHS_CMAKE_ARGS[@]}"
 cmake --build "${HIGHS_BUILD_DIR}" --parallel --target install
+
+# Unpatch pdhg.cc after build (restore working tree to clean state)
+if [[ -f .patched-pdhg ]]; then
+  git checkout -- highs/pdlp/hipdlp/pdhg.cc 2>/dev/null || true
+  rm -f .patched-pdhg
+  echo "[configure] restored pdhg.cc to clean state"
+fi
 
 # ---- 4. Step 2: build highs-server against installed HiGHS ----
 SERVER_CMAKE_ARGS=(

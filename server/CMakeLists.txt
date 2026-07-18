@@ -17,6 +17,10 @@ cmake_minimum_required(VERSION 3.24)
 project(highs_server LANGUAGES CXX)
 
 # --- 1. Find dependencies ---
+# CUDAToolkit: required when HiGHS was built with CUPDLP_GPU (highs::cudalin
+# depends on CUDA::cudart). Find it before HiGHS so the target is available.
+find_package(CUDAToolkit QUIET)
+
 # HiGHS (must be installed first; provides highs::highs target)
 find_package(HiGHS REQUIRED)
 message(STATUS "HiGHS found: ${HIGHS_VERSION}")
