@@ -719,12 +719,8 @@ HighsStatus Highs::passHessian(const HighsInt dim,
                  int(dim));
     return HighsStatus::kWarning;
   }
-  HessianOracle& oracle = this->model_.hessian_.oracle_;
-  // Save any previous oracle
-  HighsInt dim_ = oracle.dim_;
-  auto call_ = oracle.call_;
-  auto data_ = oracle.data_;
-  // Set up the passed oracle for checking validity
+  HighsHessian test_hessian;
+  HessianOracle& oracle = test_hessian.oracle_;
   oracle.dim_ = dim;
   oracle.call_ = oracleCall;
   oracle.data_ = oracle_data;
@@ -732,17 +728,10 @@ HighsStatus Highs::passHessian(const HighsInt dim,
   if (!oracle.isValid()) {
     highsLogUser(options_.log_options, HighsLogType::kError,
                  "Cannot solve QP when Hessian oracle has no product call\n");
-    // Recove the previous oracle
-    oracle.dim_ = dim_;
-    oracle.call_ = call_;
-    oracle.data_ = data_;
     return HighsStatus::kError;
   }
-  // Clear any previous Hessian and initialise the oracle
-  this->model_.hessian_.clear();
-  oracle.dim_ = dim;
-  oracle.call_ = oracleCall;
-  oracle.data_ = oracle_data;
+  // Update the incumbent Hessian
+  this->model_.hessian_ = test_hessian;
   return HighsStatus::kOk;
 }
 
@@ -755,21 +744,26 @@ HighsStatus Highs::passHessian(const HighsInt dim,
                  int(dim));
     return HighsStatus::kWarning;
   }
-  HessianOracle& oracle = this->model_.hessian_.oracle_;
-  this->model_.hessian_.clear();
+  HighsHessian test_hessian;
+  HessianOracle& oracle = test_hessian.oracle_;
   oracle.dim_ = dim;
-/*
-  oracle.call_ = [c_oracleCall](
-				const HighsInt type, const HighsInt* x_num_entries, 
+  oracle.call_ = [c_oracleCall](const HighsInt type, const HighsInt* x_num_entries, 
 				const HighsInt* x_index, const double* x_value, HighsInt* q_x_num_entries,
 				HighsInt* q_x_index, double* q_x_value, void* data) {
-    c_oracleCall(type, x_num_entries, x_index, x_value, q_x_num_entries, q_x_index, q_x_value, data);
-
-};
-    */
+    return c_oracleCall(type, x_num_entries, x_index, x_value, q_x_num_entries, q_x_index, q_x_value, data);
+  };
   oracle.data_ = oracle_data;
+  // Check whether the new oracle is valid
+  if (!oracle.isValid()) {
+    highsLogUser(options_.log_options, HighsLogType::kError,
+                 "Cannot solve QP when Hessian oracle has no product call\n");
+    return HighsStatus::kError;
+  }
+  // Update the incumbent Hessian
+  this->model_.hessian_ = test_hessian;
   return HighsStatus::kOk;
 }
+
 HighsStatus Highs::checkHessianOracle(const bool exit_on_first_error) const {
   return this->model_.hessian_.checkOracle(options_.log_options,
                                            exit_on_first_error);
