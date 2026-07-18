@@ -9,6 +9,7 @@
 | [`minimal_lp.py`](minimal_lp.py) | **同步**最小示例：手构造 `SolveRequest`，不依赖建模工具 | grpcio, grpcio-tools |
 | [`pyomo_lp.py`](pyomo_lp.py) | **同步** Pyomo 建模 → 提取 CSC 矩阵 → 求解（含 MPS 文件路径） | pyomo, highspy, grpcio, grpcio-tools |
 | [`async_job.py`](async_job.py) | **异步** job 模式：SubmitSolve → 轮询 GetResult → 取消 | grpcio, grpcio-tools |
+| [`progress_demo.py`](progress_demo.py) | **进度上报**：高频轮询展示实时迭代数/目标值 | grpcio, grpcio-tools |
 
 ## 🚀 运行
 

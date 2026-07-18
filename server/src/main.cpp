@@ -31,6 +31,7 @@ int main(int argc, char** argv) {
   std::string bind = "127.0.0.1:50051";   // 默认仅本机；公网需配 TLS + 鉴权
   int max_concurrent = 1;                  // 同步 Solve 并发上限（GPU 默认串行）
   int job_workers = 1;                     // 异步 job worker 数（GPU 默认 1，CPU 可调大）
+  std::string job_db;                      // 异步 job 持久化路径，空=不持久化
   for (int i = 1; i < argc; ++i) {
     std::string a = argv[i];
     if (a == "--bind" && i + 1 < argc) bind = argv[++i];
@@ -38,9 +39,11 @@ int main(int argc, char** argv) {
       max_concurrent = std::atoi(argv[++i]);
     else if (a == "--job-workers" && i + 1 < argc)
       job_workers = std::atoi(argv[++i]);
+    else if (a == "--job-db" && i + 1 < argc)
+      job_db = argv[++i];
   }
 
-  HighsServiceImpl service(max_concurrent, job_workers);
+  HighsServiceImpl service(max_concurrent, job_workers, job_db);
   grpc::EnableDefaultHealthCheckService(true);
   grpc::reflection::InitProtoReflectionServerBuilderPlugin();
 
@@ -58,7 +61,8 @@ int main(int argc, char** argv) {
   std::signal(SIGTERM, OnSignal);
   std::cout << "HiGHS-Server listening on " << bind
             << " (max_concurrent=" << max_concurrent
-            << ", job_workers=" << job_workers << ") "
+            << ", job_workers=" << job_workers
+            << (job_db.empty() ? "" : ", job_db=" + job_db) << ") "
             << highs_server::GpuBuildString() << std::endl;
   g_server->Wait();
   return 0;

@@ -6,9 +6,11 @@
 #include <cstdlib>
 #include <iostream>
 
-HighsServiceImpl::HighsServiceImpl(int max_concurrent, int job_workers)
+HighsServiceImpl::HighsServiceImpl(int max_concurrent, int job_workers,
+                                       const std::string& job_db_path)
     : max_concurrent_(max_concurrent),
-      job_store_(std::make_unique<highs_server::JobStore>(job_workers)) {}
+      job_store_(std::make_unique<highs_server::JobStore>(
+          job_workers, 3600, job_db_path)) {}
 
 // === 同步模式 ===
 

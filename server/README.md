@@ -11,7 +11,10 @@
 - **自适应 GPU**：构建期自动探测 CUDA，有则启用 `CUPDLP_GPU`（PDLP on GPU），无则 CPU-only（默认 solver=ipm）。同一份源码、同一套命令，两种环境皆可编译运行。
 - **能力上报**：服务端通过 gRPC 健康检查上报 `gpu_available`，客户端据此自适应选择 `pdlp`（GPU）或 `ipm`（CPU），无需人工判断环境。
 - **完整协议**：支持 LP/MIP、对偶解、目标方向（Max/Min 无需取负 hack）、int64 索引防溢出、流式分片上传（绕过 4MB 限制）。
-- **工程化**：输入校验（`INVALID_ARGUMENT`）、并发串行化（GPU 资源保护）、取消传播、优雅退出（SIGINT/SIGTERM）、ResourceQuota、健康检查、服务反射。
+- **同步 + 异步双模式**：小任务用同步 `Solve`（长连接，秒级返回），大任务用异步 `SubmitSolve`→`GetResult`→`CancelSolve`（短连接，避免长连接占用）。
+- **进度上报**：异步 job 实时返回迭代数/目标值/耗时/MIP 间隙（HiGHS callback 驱动），客户端可展示进度条。
+- **job 持久化**：可选 SQLite 后端（`--job-db`），进程重启后历史 job 仍可查询，未完成 job 标记 FAILED。
+- **工程化**：输入校验（`INVALID_ARGUMENT`）、并发控制、取消传播、优雅退出（SIGINT/SIGTERM）、ResourceQuota、健康检查、服务反射。
 - **零侵入**：仅 `add_subdirectory(server)` 挂入 HiGHS 主 CMake，与上游解耦，便于跟踪上游更新。
 
 ---
@@ -109,7 +112,9 @@ HiGHS-Server listening on 127.0.0.1:50051 (max_concurrent=1) GPU-enabled (CUPDLP
 | 参数 | 默认 | 说明 |
 |---|---|---|
 | `--bind` | `127.0.0.1:50051` | 监听地址（公网需配 TLS） |
-| `--max-concurrent` | `1` | 最大并发求解数（GPU 建议 1，CPU 可调大） |
+| `--max-concurrent` | `1` | 同步 `Solve` 并发上限（GPU 建议 1，CPU 可调大） |
+| `--job-workers` | `1` | 异步 job worker 数（GPU 建议 1，CPU 可 = 核数） |
+| `--job-db` | 空 | 异步 job 持久化 SQLite 路径，空=不持久化（重启丢 job） |
 
 ### 4. 跑测试
 
@@ -199,6 +204,43 @@ print(f"status={resp.model_status} obj={resp.objective_value}")
 print(f"solution={list(resp.col_value)}")
 ```
 
+### 异步 job 模式（大任务，避免长连接）
+
+```python
+# 1. 提交，立即返回 job_id（~ms 级）
+sub = stub.SubmitSolve(req, timeout=5)
+job_id = sub.job_id
+
+# 2. 长轮询等结果（服务端阻塞最多 wait_timeout 秒）
+while True:
+    gr = stub.GetResult(pb.GetResultRequest(job_id=job_id, wait=True, wait_timeout=2.0),
+                        timeout=10)
+    if gr.job_status in (pb.JOB_STATUS_SUCCEEDED, pb.JOB_STATUS_FAILED,
+                         pb.JOB_STATUS_CANCELLED):
+        break
+    # 运行中可读进度
+    print(f"running: iter={gr.progress.iteration_count} obj={gr.progress.objective_value}")
+
+# 3. 取结果
+if gr.job_status == pb.JOB_STATUS_SUCCEEDED:
+    print(f"obj={gr.result.objective_value}")
+
+# 4. 取消（可选）
+stub.CancelSolve(pb.CancelRequest(job_id=job_id))
+```
+
+### 进度上报
+
+异步 job 在 `RUNNING` 时，`GetResult` 返回 `progress` 字段：
+```python
+gr = stub.GetResult(pb.GetResultRequest(job_id=job_id, wait=False), timeout=5)
+p = gr.progress
+print(f"iter={p.iteration_count} obj={p.objective_value} "
+      f"time={p.running_time}s mip_gap={p.mip_gap}")
+```
+
+进度由 HiGHS callback 驱动（`kCallbackLogging` + `kCallbackMipSolution`），覆盖 PDLP/simplex/IPM/MIP。
+
 ---
 
 ## 🔧 构建选项
@@ -218,6 +260,8 @@ print(f"solution={list(resp.col_value)}")
 3. **不可行模型构造**：HiGHS `passModel` 校验 `lower <= upper`，单行 `lower > upper` 会被拒。不可行性需用两行矛盾约束表达（如 `x>=5` 和 `x<=1`）。
 4. **运行时库路径**：若用 conda 装依赖，运行前需 `export LD_LIBRARY_PATH=$CONDA_PREFIX/lib`。
 5. **公网部署安全**：默认绑 `127.0.0.1`，公网暴露需自行加 TLS + 鉴权拦截器。
+6. **job 持久化**：`--job-db` 指定 SQLite 路径则 job 跨重启可查；不指定则仅内存。未完成 job 重启后标记 FAILED（无法恢复运行现场）。
+7. **进度上报局限**：HiGHS `run()` 中 callback 触发频率取决于求解器（PDLP 周期性 logging），极小问题可能求解太快采不到中间进度。
 
 ---
 

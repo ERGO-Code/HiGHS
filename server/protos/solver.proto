@@ -74,6 +74,15 @@ message SolveResponse {
   double solve_time = 9;                    // 秒
 }
 
+// 求解进度（PENDING/RUNNING 时由 GetResult 返回，供客户端展示进度条）
+message SolveProgress {
+  int64 iteration_count = 1;                // 当前迭代数（PDLP/simplex/ipm 通用）
+  double objective_value = 2;               // 当前目标值
+  double running_time = 3;                  // 已运行秒数
+  double mip_gap = 4;                       // MIP 间隙（非 MIP 为 0）
+  int64 mip_node_count = 5;                 // MIP 节点数（非 MIP 为 0）
+}
+
 // === 异步 job 模式 ===
 
 message SubmitResponse {
@@ -92,6 +101,7 @@ message GetResultResponse {
   string status_message = 2;
   SolveResponse result = 3;   // 仅 SUCCEEDED 时填充
   double elapsed_time = 4;    // 已耗时（秒），PENDING/RUNNING 时也有
+  SolveProgress progress = 5; // PENDING/RUNNING 时的实时进度
 }
 
 message CancelRequest {

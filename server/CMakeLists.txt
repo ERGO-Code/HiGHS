@@ -68,6 +68,20 @@ target_include_directories(highs_grpc_server PRIVATE
   "${CMAKE_SOURCE_DIR}"        # HiGHS 根（找 Highs.h）
   "${CMAKE_BINARY_DIR}"        # HConfig.h（含 CUPDLP_GPU 宏定义）
 )
+# SQLite3（job 持久化）：优先系统，其次 conda env
+find_package(SQLite3 QUIET)
+if(SQLite3_FOUND)
+  target_link_libraries(highs_grpc_server PRIVATE SQLite::SQLite3)
+else()
+  message(STATUS "SQLite3 cmake config 未找到，用 find_library 兜底")
+  find_library(SQLITE3_LIB NAMES sqlite3)
+  if(SQLITE3_LIB)
+    target_link_libraries(highs_grpc_server PRIVATE ${SQLITE3_LIB})
+  else()
+    message(FATAL_ERROR "SQLite3 未找到，请安装 libsqlite3-dev 或在 conda env 装 sqlite")
+  endif()
+endif()
+
 target_link_libraries(highs_grpc_server PRIVATE
   highs
   gRPC::grpc++

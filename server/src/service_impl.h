@@ -15,7 +15,8 @@ class HighsServiceImpl final : public highsserver::v1::HighsService::Service {
  public:
   // max_concurrent: 同步 Solve 的并发上限（GPU 建议 1，CPU 可调大）
   // job_workers: 异步 job 的 worker 数（GPU 建议 1，CPU 可 = 核数）
-  HighsServiceImpl(int max_concurrent, int job_workers);
+  HighsServiceImpl(int max_concurrent, int job_workers,
+                   const std::string& job_db_path = "");
   ~HighsServiceImpl() = default;
 
   // === 同步模式 ===
