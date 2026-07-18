@@ -339,8 +339,8 @@ docker compose --profile gpu up -d --build highs-server-gpu
 
 ## 📖 Related Docs
 
-- [Execution plan](../plan.md)
 - [Examples](../examples/grpc/)
+- [Config reference](../examples/grpc/config_examples.md)
 - [HiGHS docs](https://github.com/ERGO-Code/HiGHS)
 - [HiGHS GPU guide](https://github.com/ERGO-Code/HiGHS/blob/master/docs/src/guide/gpu.md)
 - [cuPDLP-C](https://github.com/COPT-Public/cuPDLP-C)
