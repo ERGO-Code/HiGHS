@@ -29,15 +29,18 @@ static void OnSignal(int) {
 
 int main(int argc, char** argv) {
   std::string bind = "127.0.0.1:50051";   // 默认仅本机；公网需配 TLS + 鉴权
-  int max_concurrent = 1;                  // GPU 默认串行；CPU 可调大
+  int max_concurrent = 1;                  // 同步 Solve 并发上限（GPU 默认串行）
+  int job_workers = 1;                     // 异步 job worker 数（GPU 默认 1，CPU 可调大）
   for (int i = 1; i < argc; ++i) {
     std::string a = argv[i];
     if (a == "--bind" && i + 1 < argc) bind = argv[++i];
     else if (a == "--max-concurrent" && i + 1 < argc)
       max_concurrent = std::atoi(argv[++i]);
+    else if (a == "--job-workers" && i + 1 < argc)
+      job_workers = std::atoi(argv[++i]);
   }
 
-  HighsServiceImpl service(max_concurrent);
+  HighsServiceImpl service(max_concurrent, job_workers);
   grpc::EnableDefaultHealthCheckService(true);
   grpc::reflection::InitProtoReflectionServerBuilderPlugin();
 
@@ -54,7 +57,8 @@ int main(int argc, char** argv) {
   std::signal(SIGINT, OnSignal);
   std::signal(SIGTERM, OnSignal);
   std::cout << "HiGHS-Server listening on " << bind
-            << " (max_concurrent=" << max_concurrent << ") "
+            << " (max_concurrent=" << max_concurrent
+            << ", job_workers=" << job_workers << ") "
             << highs_server::GpuBuildString() << std::endl;
   g_server->Wait();
   return 0;

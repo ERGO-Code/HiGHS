@@ -56,6 +56,7 @@ add_custom_command(
 add_executable(highs_grpc_server
   src/main.cpp
   src/service_impl.cpp
+  src/job_store.cpp
   src/model_converter.cpp
   src/validator.cpp
   ${proto_srcs}

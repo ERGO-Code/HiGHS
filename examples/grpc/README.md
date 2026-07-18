@@ -6,8 +6,9 @@
 
 | 示例 | 说明 | 依赖 |
 |---|---|---|
-| [`minimal_lp.py`](minimal_lp.py) | 最小示例：手构造 `SolveRequest`，不依赖建模工具 | grpcio, grpcio-tools |
-| [`pyomo_lp.py`](pyomo_lp.py) | Pyomo 建模 → 提取 CSC 矩阵 → 求解（含 MPS 文件路径） | pyomo, highspy, grpcio, grpcio-tools |
+| [`minimal_lp.py`](minimal_lp.py) | **同步**最小示例：手构造 `SolveRequest`，不依赖建模工具 | grpcio, grpcio-tools |
+| [`pyomo_lp.py`](pyomo_lp.py) | **同步** Pyomo 建模 → 提取 CSC 矩阵 → 求解（含 MPS 文件路径） | pyomo, highspy, grpcio, grpcio-tools |
+| [`async_job.py`](async_job.py) | **异步** job 模式：SubmitSolve → 轮询 GetResult → 取消 | grpcio, grpcio-tools |
 
 ## 🚀 运行
 

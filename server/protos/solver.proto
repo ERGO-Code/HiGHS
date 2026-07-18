@@ -27,6 +27,15 @@ enum ModelStatus {
   MODEL_STATUS_OTHER = 99;
 }
 
+// job 生命周期状态（异步模式）
+enum JobStatus {
+  JOB_STATUS_PENDING = 0;     // 已提交，等待 worker
+  JOB_STATUS_RUNNING = 1;     // 求解中
+  JOB_STATUS_SUCCEEDED = 2;   // 求解完成（看 result.model_status 判断是否最优）
+  JOB_STATUS_FAILED = 3;      // 求解失败（passModel 错等）
+  JOB_STATUS_CANCELLED = 4;   // 已取消
+}
+
 message SolveRequest {
   string model_name = 1;
   ObjSense sense = 2;                       // 默认 MIN
@@ -65,6 +74,35 @@ message SolveResponse {
   double solve_time = 9;                    // 秒
 }
 
+// === 异步 job 模式 ===
+
+message SubmitResponse {
+  string job_id = 1;          // UUID
+  JobStatus job_status = 2;   // 提交时 = PENDING
+}
+
+message GetResultRequest {
+  string job_id = 1;
+  bool wait = 2;              // true: 长轮询等到终态（仍受 gRPC deadline 限制）
+  double wait_timeout = 3;    // wait=true 时最长等待秒数，0=立即返回当前状态
+}
+
+message GetResultResponse {
+  JobStatus job_status = 1;
+  string status_message = 2;
+  SolveResponse result = 3;   // 仅 SUCCEEDED 时填充
+  double elapsed_time = 4;    // 已耗时（秒），PENDING/RUNNING 时也有
+}
+
+message CancelRequest {
+  string job_id = 1;
+}
+
+message CancelResponse {
+  bool cancelled = 1;         // true=已取消, false=已结束无法取消
+  string message = 2;
+}
+
 message HealthCheckRequest {}
 message HealthCheckResponse {
   bool serving = 1;
@@ -73,10 +111,21 @@ message HealthCheckResponse {
 }
 
 service HighsService {
-  // 单次求解
+  // === 同步模式（小任务，长连接）===
+  // 求解完成才返回，适合秒级任务
   rpc Solve(SolveRequest) returns (SolveResponse);
-  // 大模型分片流式上传（规避 gRPC 默认 4MB 上限）
+  // 大模型分片流式上传（规避 gRPC 默认 4MB 上限），同步求解
   rpc SolveStream(stream SolveRequest) returns (SolveResponse);
+
+  // === 异步 job 模式（大任务，短连接）===
+  // 提交任务，立即返回 job_id，后台求解
+  rpc SubmitSolve(SolveRequest) returns (SubmitResponse);
+  // 查询/长轮询任务结果
+  rpc GetResult(GetResultRequest) returns (GetResultResponse);
+  // 取消任务（仅 PENDING/RUNNING 可取消）
+  rpc CancelSolve(CancelRequest) returns (CancelResponse);
+
+  // === 公共 ===
   // 健康检查（供 K8s/负载均衡探活）
   rpc Check(HealthCheckRequest) returns (HealthCheckResponse);
 }

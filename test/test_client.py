@@ -96,9 +96,75 @@ def case_health_check():
           f"gpu_available={hc.gpu_available} msg={hc.message!r}")
 
 
+def case_async_job():
+    """异步 job 模式：SubmitSolve → GetResult 轮询 → 验证结果"""
+    stub = get_stub()
+    gpu = probe_gpu(stub)
+    solver = "pdlp" if gpu else "ipm"
+    req = pb.SolveRequest(
+        sense=pb.OBJ_SENSE_MAX,
+        col_cost=[1.0, 1.0],
+        col_lower=[0.0, 0.0], col_upper=[1e30, 1e30],
+        a_format_start=[0, 1, 2], a_format_index=[0, 0], a_format_value=[1.0, 2.0],
+        row_lower=[-1e30], row_upper=[4.0],
+        options={"solver": solver},
+    )
+    # 提交
+    sub = stub.SubmitSolve(req, timeout=5)
+    assert sub.job_id, "empty job_id"
+    assert sub.job_status == pb.JOB_STATUS_PENDING
+    # 轮询直到终态
+    import time
+    t0 = time.time()
+    while True:
+        gr = stub.GetResult(pb.GetResultRequest(job_id=sub.job_id, wait=True, wait_timeout=2.0),
+                            timeout=10)
+        if gr.job_status in (pb.JOB_STATUS_SUCCEEDED, pb.JOB_STATUS_FAILED, pb.JOB_STATUS_CANCELLED):
+            break
+        assert time.time() - t0 < 30, "async job timeout"
+    assert gr.job_status == pb.JOB_STATUS_SUCCEEDED,         f"expected SUCCEEDED, got {pb.JobStatus.Name(gr.job_status)}: {gr.status_message}"
+    assert abs(gr.result.objective_value - 4.0) < 1e-4,         f"expected obj=4.0, got {gr.result.objective_value}"
+    print(f"[ok] async job: {sub.job_id[:8]}... obj={gr.result.objective_value} "
+          f"elapsed={gr.elapsed_time:.3f}s")
+
+
+def case_async_cancel():
+    """异步取消：提交后立即取消，验证终态 CANCELLED"""
+    stub = get_stub()
+    req = pb.SolveRequest(
+        sense=pb.OBJ_SENSE_MIN,
+        col_cost=[1.0], col_lower=[0.0], col_upper=[1e30],
+        a_format_start=[0, 1], a_format_index=[0], a_format_value=[1.0],
+        row_lower=[-1e30], row_upper=[1.0],
+        options={"solver": "ipm"}, time_limit=60,
+    )
+    sub = stub.SubmitSolve(req, timeout=5)
+    cancel = stub.CancelSolve(pb.CancelRequest(job_id=sub.job_id), timeout=5)
+    assert cancel.cancelled, f"cancel failed: {cancel.message}"
+    gr = stub.GetResult(pb.GetResultRequest(job_id=sub.job_id, wait=True, wait_timeout=2.0),
+                        timeout=10)
+    assert gr.job_status in (pb.JOB_STATUS_CANCELLED, pb.JOB_STATUS_SUCCEEDED),         f"expected CANCELLED/SUCCEEDED, got {pb.JobStatus.Name(gr.job_status)}"
+    print(f"[ok] async cancel: {sub.job_id[:8]}... → {pb.JobStatus.Name(gr.job_status)}")
+
+
+def case_async_not_found():
+    """查询不存在的 job_id → NOT_FOUND"""
+    stub = get_stub()
+    try:
+        stub.GetResult(pb.GetResultRequest(job_id="nonexistent_job_id"), timeout=5)
+        print("[fail] expected NOT_FOUND")
+        sys.exit(1)
+    except grpc.RpcError as e:
+        assert e.code() == grpc.StatusCode.NOT_FOUND, f"expected NOT_FOUND, got {e.code()}"
+        print(f"[ok] async not_found rejected: {e.details()}")
+
+
 if __name__ == '__main__':
     case_health_check()
     case_feasible()
     case_infeasible()
     case_bad_args()
+    case_async_job()
+    case_async_cancel()
+    case_async_not_found()
     print("ALL TESTS PASSED")
