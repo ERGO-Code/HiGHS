@@ -599,6 +599,10 @@ HighsInt Highs_passHessian(void* highs, const HighsInt dim,
                            const HighsInt* start, const HighsInt* index,
                            const double* value);
 
+HighsInt Highs_passHessianOracle(void* highs, const HighsInt dim,
+				 HighsCHessianFunctionType oracleCall,
+				 void* oracle_data);
+
 /**
  * Passes multiple linear objective data to HiGHS, clearing any such
  * data already in HiGHS
