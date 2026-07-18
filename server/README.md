@@ -112,7 +112,7 @@ Startup flags:
 ### 4. Run tests
 
 ```bash
-./test/run_e2e.sh
+./server/test/run_e2e.sh
 ```
 
 Expected:

@@ -84,4 +84,4 @@ examples/grpc/
 ## 🔗 Related
 - [Protocol definition](../../server/protos/solver.proto)
 - [Server docs](../../server/README.md)
-- [E2E tests](../../test/)
+- [E2E tests](../../server/test/)

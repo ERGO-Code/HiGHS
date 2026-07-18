@@ -59,7 +59,6 @@ test64/
 [Bb]in/
 [Oo]bj/
 test/
-!test/
 
 # MSTest test Results
 [Tt]est[Rr]esult*/
@@ -296,11 +295,3 @@ highs-problem-set
 Options.md
 
 build-latest
-# highs-server: Python 测试产物
-test/__pycache__/
-test/*.pyc
-test/solver_pb2.py
-test/solver_pb2_grpc.py
-
-# examples/grpc 自动生成的桩
-examples/grpc/_generated/

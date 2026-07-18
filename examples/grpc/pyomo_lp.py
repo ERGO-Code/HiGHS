@@ -20,7 +20,7 @@ Run:
 """
 import sys, os, subprocess
 
-# --- 自动生成 gRPC Python 桩（自包含，无需依赖 test/ 下预生成文件）---
+# --- 自动生成 gRPC Python 桩（自包含，no need for pre-generated stubs）---
 _EXAMPLE_DIR = os.path.dirname(os.path.abspath(__file__))
 _PROTO_DIR = os.path.normpath(os.path.join(_EXAMPLE_DIR, "..", "..", "server", "protos"))
 _GEN_DIR = os.path.join(_EXAMPLE_DIR, "_generated")

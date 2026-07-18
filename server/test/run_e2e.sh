@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # E2E 测试脚本：修复 v1 sleep 2 不可靠、kill 无 trap 兜底
 set -euo pipefail
-cd "$(dirname "$0")/.."
+cd "$(dirname "$0")/../.."
 
 # 自动探测二进制位置（CMake 可能放 build/ 或 build/bin/）
 if [[ -z "${SERVER_BIN:-}" ]]; then
@@ -28,9 +28,9 @@ for i in $(seq 1 60); do
 done
 
 # 生成 Python 桩
-cd test
+cd server/test
 echo "[e2e] generating python stubs..."
-python3 -m grpc_tools.protoc -I../server/protos --python_out=. --grpc_python_out=. ../server/protos/solver.proto
+python3 -m grpc_tools.protoc -I../protos --python_out=. --grpc_python_out=. ../protos/solver.proto
 
 echo "[e2e] running tests..."
 python3 test_client.py

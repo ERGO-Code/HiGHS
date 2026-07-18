@@ -14,7 +14,7 @@
 > ./configure.sh                                          # auto-detect CUDA
 > cmake --build build --parallel --target highs_grpc_server
 > ./build/bin/highs_grpc_server --bind 127.0.0.1:50051   # start service
-> ./test/run_e2e.sh                                       # run E2E tests
+> ./server/test/run_e2e.sh                                       # run E2E tests
 > ```
 >
 > Upstream HiGHS documentation continues below.

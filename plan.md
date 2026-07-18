@@ -651,7 +651,7 @@ cmake --build build --parallel --target highs_grpc_server
 - 装了 CUDA → 输出含 `CUPDLP_GPU=ON`，启动日志 `GPU-enabled (CUPDLP_GPU=ON)`
 - 没装 CUDA → 输出含 `CUPDLP_GPU=OFF`，启动日志 `CPU-only (CUPDLP_GPU=OFF)`，仍可正常求解（默认 solver=ipm）
 
-### 4.2 Python 测试客户端 `test/test_client.py`
+### 4.2 Python 测试客户端 `server/test/test_client.py`
 修复 v1 无 deadline、无 `with`、依赖 cost 取负 hack 的问题；**新增：先查健康检查自适应选 solver**。
 
 ```python
@@ -726,7 +726,7 @@ if __name__ == '__main__':
     case_bad_args()
 ```
 
-### 4.3 E2E 启动脚本 `test/run_e2e.sh`
+### 4.3 E2E 启动脚本 `server/test/run_e2e.sh`
 修复 v1 `sleep 2` 不可靠、`kill` 无 `trap` 兜底。
 
 ```bash
@@ -849,7 +849,7 @@ steps:
   - uses: actions/checkout@v4
   - run: ./configure.sh
   - run: cmake --build build --parallel --target highs_grpc_server
-  - run: ./test/run_e2e.sh
+  - run: ./server/test/run_e2e.sh
 ```
 CPU runner 用 GitHub 托管，GPU runner 用 `self-hosted` + `nvidia` label。同一套脚本，无需分支判断。
 
