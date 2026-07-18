@@ -1,5 +1,22 @@
 # HiGHS - Linear optimization software
 
+> ## 🚀 This fork: HiGHS-Server
+> This fork adds a **gRPC server** subproject (`server/`) that exposes HiGHS LP/MIP
+> solving as a remote service with **CPU/GPU adaptive builds** (PDLP on GPU when CUDA
+> available, IPM on CPU otherwise).
+>
+> 👉 **[Read the HiGHS-Server docs →](server/README.md)**
+>
+> Quick start:
+> ```bash
+> ./configure.sh                                          # auto-detect CUDA
+> cmake --build build --parallel --target highs_grpc_server
+> ./build/bin/highs_grpc_server --bind 127.0.0.1:50051   # start service
+> ./test/run_e2e.sh                                       # run E2E tests
+> ```
+>
+> The upstream HiGHS documentation continues below.
+
 <!-- ![Build Status](https://github.com/ERGO-Code/HiGHS/actions/workflows/build.yml/badge.svg) -->
 
 [![Build Status][fast_build_svg]][fast_build_link]
