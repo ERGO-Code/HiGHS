@@ -342,32 +342,27 @@ TEST_CASE("hessian-oracle-check", "[qp-oracle]") {
   REQUIRE(h.passHessian(lp.num_col_, oracleCallSquareHessianCustomised,
                         &square_hessian) == HighsStatus::kOk);
 
+  auto checkLog = [&](const std::string& insert) {
+    if (dev_run)
+      printf("Check for customised square Hessian oracle %shas status %s\n\n",
+             insert.c_str(), h.highsStatusToString(status).c_str());
+  };
   // Default oracle should be OK
   status = h.checkHessianOracle();
-  if (dev_run)
-    printf("Check for customised square Hessian oracle has status %s\n\n",
-           h.highsStatusToString(status).c_str());
+  checkLog("");
   REQUIRE(status == HighsStatus::kOk);
 
   // With a column error
   column_error = true;
   status = h.checkHessianOracle();
-  if (dev_run)
-    printf(
-        "Check for customised square Hessian oracle with column error has "
-        "status %s\n\n",
-        h.highsStatusToString(status).c_str());
+  checkLog("with column error ");
   REQUIRE(status == HighsStatus::kError);
   column_error = false;
 
   // With a product error
   product_error = true;
   status = h.checkHessianOracle();
-  if (dev_run)
-    printf(
-        "Check for customised square Hessian oracle with product error has "
-        "status %s\n\n",
-        h.highsStatusToString(status).c_str());
+  checkLog("with product error ");
   REQUIRE(status == HighsStatus::kError);
   product_error = false;
 
@@ -376,22 +371,14 @@ TEST_CASE("hessian-oracle-check", "[qp-oracle]") {
   // With no entry call
   no_entry_call = true;
   status = h.checkHessianOracle();
-  if (dev_run)
-    printf(
-        "Check for customised square Hessian oracle with no entry call has "
-        "status %s\n\n",
-        h.highsStatusToString(status).c_str());
+  checkLog("with no entry call ");
   REQUIRE(status == HighsStatus::kOk);
   no_entry_call = false;
 
   // With no column call
   no_column_call = true;
   status = h.checkHessianOracle();
-  if (dev_run)
-    printf(
-        "Check for customised square Hessian oracle with no column call has "
-        "status %s\n\n",
-        h.highsStatusToString(status).c_str());
+  checkLog("with no column call ");
   REQUIRE(status == HighsStatus::kOk);
   no_column_call = false;
 
@@ -399,11 +386,7 @@ TEST_CASE("hessian-oracle-check", "[qp-oracle]") {
   no_entry_call = true;
   no_column_call = true;
   status = h.checkHessianOracle();
-  if (dev_run)
-    printf(
-        "Check for customised square Hessian oracle with no entry or column "
-        "call has status %s\n\n",
-        h.highsStatusToString(status).c_str());
+  checkLog("with no entry or column call ");
   REQUIRE(status == HighsStatus::kOk);
   no_entry_call = false;
   no_column_call = false;
@@ -411,17 +394,26 @@ TEST_CASE("hessian-oracle-check", "[qp-oracle]") {
   // With no product call, the Hessian oracle is not valid
   no_product_call = true;
   status = h.checkHessianOracle();
+  checkLog("with no product call ");
+  REQUIRE(status == HighsStatus::kError);
+
+  // Code coverage of code testing for passing an invalid Hessian oracle
+  status = h.passHessian(0, oracleCallSquareHessianCustomised, &square_hessian);
+  REQUIRE(status == HighsStatus::kWarning);
   if (dev_run)
     printf(
-        "Check for customised square Hessian oracle with no product call has "
+        "Check for passing Hessian oracle with zero dimension has "
         "status %s\n\n",
         h.highsStatusToString(status).c_str());
+
+  status = h.passHessian(lp.num_col_, oracleCallSquareHessianCustomised,
+                         &square_hessian);
   REQUIRE(status == HighsStatus::kError);
-  // Code coverage of code testing for passing an invalid Hessian oracle
-  REQUIRE(h.passHessian(0, oracleCallSquareHessianCustomised,
-                        &square_hessian) == HighsStatus::kError);
-  REQUIRE(h.passHessian(lp.num_col_, oracleCallSquareHessianCustomised,
-                        &square_hessian) == HighsStatus::kError);
+  if (dev_run)
+    printf(
+        "Check for passing invalid Hessian oracle has "
+        "status %s\n\n",
+        h.highsStatusToString(status).c_str());
 }
 
 TEST_CASE("hessian-oracle-solve", "[qp-oracle]") {
