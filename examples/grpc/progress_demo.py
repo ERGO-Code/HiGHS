@@ -31,15 +31,15 @@ import solver_pb2_grpc as pbg
 
 
 def build_random_lp(n=50):
-    """构造 n 变量的随机 LP: min c·x s.t. Ax <= b, x>=0"""
+    """Construct n-var random LP: min c·x s.t. Ax <= b, x>=0"""
     random.seed(42)
-    m = n // 2  # 约束数
+    m = n // 2  # number of constraints
     col_cost = [random.uniform(-1, 1) for _ in range(n)]
     col_lower = [0.0] * n
     col_upper = [1e30] * n
     row_lower = [-1e30] * m
     row_upper = [random.uniform(1, 10) for _ in range(m)]
-    # CSC: 每列约 m/2 个非零
+    # CSC: ~m/2 nonzeros per column
     a_start = [0]
     a_index = []
     a_value = []
@@ -67,19 +67,19 @@ def main(addr="localhost:50051"):
     hc = stub.Check(pb.HealthCheckRequest(), timeout=5)
     print(f"server: {hc.message}")
 
-    # 构造稍大 LP，强制 PDLP 跑多迭代
+    # Build a larger LP to force PDLP to run many iterations
     req = build_random_lp(80)
     req.options["solver"] = "pdlp"
-    req.options["pdlp_iteration_limit"] = "5000"  # 给足迭代上限
+    req.options["pdlp_iteration_limit"] = "5000"  # ample iteration limit
     print(f"[model] {req.model_name}: {len(req.col_cost)} vars")
 
-    # 提交
+    # Submit
     sub = stub.SubmitSolve(req, timeout=5)
     print(f"[submit] job_id={sub.job_id[:12]}...")
 
-    # 高频轮询看进度变化（wait=false 立即返回当前状态）
-    print("\n[progress] 实时进度（每 0.3s 采样）:")
-    print(f"{'轮次':>4} {'状态':<20} {'迭代':>6} {'目标值':>14} {'耗时':>8}")
+    # High-freq poll for progress (wait=false returns current state immediately)
+    print("\n[progress] real-time (sampled every 0.3s):")
+    print(f"{'poll':>4} {'status':<20} {'iter':>6} {'objective':>14} {'time':>8}")
     poll = 0
     final = None
     while True:

@@ -991,8 +991,8 @@ if(NOT CPack_CMake_INCLUDED)
   include(CPack)
 endif()
 
-# ===== highs-server gRPC 子项目（可选，与 CUPDLP_GPU 解耦）=====
-# 通过 -DHIGHS_BUILD_GRPC_SERVER=ON 开启；CUPDLP_GPU 由 configure.sh 自适应决定
+# ===== highs-server gRPC subproject (optional, decoupled from CUPDLP_GPU) =====
+# Enable via -DHIGHS_BUILD_GRPC_SERVER=ON; CUPDLP_GPU is decided adaptively by configure.sh
 option(HIGHS_BUILD_GRPC_SERVER "Build the gRPC server subproject" OFF)
 if(HIGHS_BUILD_GRPC_SERVER AND BUILD_CXX)
   add_subdirectory(server)

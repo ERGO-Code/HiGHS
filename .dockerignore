@@ -1,4 +1,4 @@
-# 构建产物
+# Build artifacts
 build/
 build-*/
 
@@ -6,14 +6,14 @@ build-*/
 .git/
 .gitignore
 
-# Python 缓存
+# Python cache
 __pycache__/
 *.pyc
 test/__pycache__/
 test/solver_pb2.py
 test/solver_pb2_grpc.py
 
-# 文档（不影响构建，减小上下文）
+# Docs (not needed for build, reduces context)
 *.md
 !server/README.md
 

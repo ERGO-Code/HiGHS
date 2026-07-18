@@ -1,5 +1,5 @@
-# Dockerfile.cpu — HiGHS-Server CPU-only 构建（无 CUDA 依赖，镜像更小）
-# 用法: docker build -f Dockerfile.cpu -t highs-server:cpu .
+# Dockerfile.cpu - HiGHS-Server CPU-only build (no CUDA dependency, smaller image)
+# Usage: docker build -f Dockerfile.cpu -t highs-server:cpu .
 #       docker run -p 50051:50051 highs-server:cpu
 FROM ubuntu:22.04 AS build
 
@@ -13,14 +13,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 WORKDIR /src
 COPY . .
 
-# CPU-only 构建：configure.sh 探测不到 nvcc → 自动 CUPDLP_GPU=OFF
-# 用 gcc-11 避免 nvcc 兼容问题（CPU 构建下 g++ 默认即可，这里显式指定求稳）
+# CPU-only build: configure.sh finds no nvcc -> CUPDLP_GPU=OFF automatically
+# Use gcc explicitly (CPU build works with default g++, explicit for stability)
 RUN ./configure.sh --no-cuda --build build \
       -DCMAKE_CXX_COMPILER=g++ \
       -DCMAKE_C_COMPILER=gcc \
     && cmake --build build --parallel --target highs_grpc_server
 
-# 运行阶段：最小化镜像
+# Runtime stage: minimize image
 FROM ubuntu:22.04
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -32,5 +32,5 @@ COPY --from=build /src/build/lib/libhighs.so* /usr/local/lib/
 RUN ldconfig
 
 EXPOSE 50051
-# 默认绑 0.0.0.0 让容器外可访问；生产环境请加 TLS + 鉴权
+# Bind 0.0.0.0 for container access; add TLS + auth for production
 ENTRYPOINT ["highs_grpc_server", "--bind", "0.0.0.0:50051", "--max-concurrent", "4"]

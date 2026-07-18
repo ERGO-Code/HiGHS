@@ -1,13 +1,13 @@
-# docker-compose.yml — HiGHS-Server 部署
+# docker-compose.yml - HiGHS-Server deployment
 #
-# CPU 部署（默认）:  docker compose up
-# GPU 部署:          docker compose --profile gpu up highs-server-gpu
+# CPU (default):  docker compose up
+# GPU:             docker compose --profile gpu up highs-server-gpu
 #
-# 需安装 NVIDIA Container Toolkit 才能用 GPU profile:
+# Requires NVIDIA Container Toolkit for GPU profile:
 #   https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html
 
 services:
-  # CPU 版（默认启动）
+  # CPU (default)
   highs-server:
     build:
       context: .
@@ -23,7 +23,7 @@ services:
       retries: 3
       start_period: 10s
 
-  # GPU 版（需 --profile gpu 显式启用）
+  # GPU (requires --profile gpu)
   highs-server-gpu:
     profiles: ["gpu"]
     build:

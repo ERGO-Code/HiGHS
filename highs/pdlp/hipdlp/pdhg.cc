@@ -2544,8 +2544,9 @@ void PDLPSolver::setupGpu() {
       &spmv_buffer_size_ax_));
   CUDA_CHECK(cudaMalloc(&d_spmv_buffer_ax_, spmv_buffer_size_ax_));
 
-  // cusparseSpMV_preprocess 仅 CUDA 12.4+ 的 cusparse 提供（12.1 无此 API）。
-  // 它是可选的矩阵预处理优化，跳过不影响 SpMV 数值正确性，仅微小性能损失。
+  // cusparseSpMV_preprocess only in CUDA 12.4+ cusparse (12.1 lacks this API).
+  // It is an optional matrix preprocessing optimization; skipping does not affect
+  // SpMV numerical correctness, only a minor performance cost.
 #if CUDART_VERSION >= 12040
   CUSPARSE_CHECK(cusparseSpMV_preprocess(
       cusparse_handle_, CUSPARSE_OPERATION_NON_TRANSPOSE, &alpha, mat_a_csr_,

@@ -18,7 +18,7 @@ Run:
 """
 import sys, os, subprocess, time
 
-# --- 自动生成 gRPC Python 桩（自包含）---
+# --- Auto-generate gRPC Python stubs (self-contained) ---
 _EXAMPLE_DIR = os.path.dirname(os.path.abspath(__file__))
 _PROTO_DIR = os.path.normpath(os.path.join(_EXAMPLE_DIR, "..", "..", "server", "protos"))
 _GEN_DIR = os.path.join(_EXAMPLE_DIR, "_generated")
@@ -37,15 +37,15 @@ import solver_pb2_grpc as pbg
 
 
 def build_production_lp():
-    """生产计划 LP: Max 3x1+5x2 s.t. 3 约束，最优解 x1=6,x2=4,obj=38"""
+    """Production planning LP: Max 3x1+5x2 s.t. 3 constraints, optimal x1=6,x2=4,obj=38"""
     return pb.SolveRequest(
         model_name="production_planning",
         sense=pb.OBJ_SENSE_MAX,
         col_cost=[3.0, 5.0],
         col_lower=[0.0, 0.0], col_upper=[1e30, 1e30],
-        # 3 行 2 列 CSC
-        a_format_start=[0, 3, 5],       # 列0 有3个非零, 列1 有2个
-        a_format_index=[0, 1, 2, 0, 2], # 列0: 行0,1,2; 列1: 行0,2
+        # 3 rows 2 cols CSC
+        a_format_start=[0, 3, 5],       # col0 has 3 nonzeros, col1 has 2
+        a_format_index=[0, 1, 2, 0, 2], # col0: rows 0,1,2; col1: rows 0,2
         a_format_value=[1.0, 1.0, 1.0, 2.0, 1.0],
         row_lower=[-1e30, -1e30, -1e30],
         row_upper=[14.0, 6.0, 10.0],
@@ -57,7 +57,7 @@ def main(addr="localhost:50051"):
     grpc.channel_ready_future(ch).result(timeout=5)
     stub = pbg.HighsServiceStub(ch)
 
-    # 0. 健康检查 + 自适应选 solver
+    # 0. Health check + adaptive solver selection
     hc = stub.Check(pb.HealthCheckRequest(), timeout=5)
     solver = "pdlp" if hc.gpu_available else "ipm"
     print(f"server: {hc.message} → solver={solver}")
@@ -65,16 +65,16 @@ def main(addr="localhost:50051"):
     req = build_production_lp()
     req.options["solver"] = solver
 
-    # 1. 提交任务（立即返回 job_id）
+    # 1. Submit task (returns job_id immediately)
     t0 = time.time()
     submit_resp = stub.SubmitSolve(req, timeout=5)
     job_id = submit_resp.job_id
     print(f"[submit] job_id={job_id} status={pb.JobStatus.Name(submit_resp.job_status)} "
           f"({(time.time()-t0)*1000:.1f}ms)")
 
-    # 2. 轮询/长轮询等结果
-    #    wait=true + wait_timeout=2: 服务端阻塞最多 2s，终态则立即返回
-    #    客户端循环直到终态（比纯客户端 sleep 轮询更高效）
+    # 2. Poll / long-poll for result
+    #    wait=true + wait_timeout=2: server blocks up to 2s, returns immediately if terminal
+    #    Client loops until terminal (more efficient than pure client-side sleep polling)
     final = None
     poll_count = 0
     while True:
@@ -89,30 +89,30 @@ def main(addr="localhost:50051"):
             final = gr
             break
 
-    # 3. 输出结果
+    # 3. Output result
     if final.job_status == pb.JOB_STATUS_SUCCEEDED:
         r = final.result
         print(f"\n[result] model_status={pb.ModelStatus.Name(r.model_status)}")
-        print(f"[result] objective={r.objective_value}  (期望 38)")
-        print(f"[result] col_value={list(r.col_value)}  (期望 [6.0, 4.0])")
+        print(f"[result] objective={r.objective_value}  (expected 38)")
+        print(f"[result] col_value={list(r.col_value)}  (expected [6.0, 4.0])")
         print(f"[result] solve_time={r.solve_time:.4f}s iter={r.iteration_count}")
-        assert abs(r.objective_value - 38) < 1e-4, "obj 不符"
-        print("\n✓ 异步 job 模式验证通过")
+        assert abs(r.objective_value - 38) < 1e-4, "obj mismatch"
+        print("\n✓ async job mode verified")
     else:
-        print(f"\n[!] job 终态非 SUCCEEDED: {pb.JobStatus.Name(final.job_status)} "
+        print(f"\n[!] job terminal but not SUCCEEDED: {pb.JobStatus.Name(final.job_status)} "
               f"msg={final.status_message}")
         sys.exit(1)
 
-    # 4. 演示取消（提交后立即取消）
-    print("\n--- 演示取消 ---")
+    # 4. Demo cancel (submit then cancel immediately)
+    print("\n--- cancel demo ---")
     req2 = build_production_lp()
     req2.options["solver"] = solver
-    req2.time_limit = 60  # 给个长时限，便于取消演示
+    req2.time_limit = 60  # long time limit for cancel demo
     sub2 = stub.SubmitSolve(req2, timeout=5)
     print(f"[submit] job_id={sub2.job_id}")
     cancel = stub.CancelSolve(pb.CancelRequest(job_id=sub2.job_id), timeout=5)
     print(f"[cancel] cancelled={cancel.cancelled} msg={cancel.message}")
-    # 查最终状态
+    # Query final status
     gr2 = stub.GetResult(pb.GetResultRequest(job_id=sub2.job_id, wait=True, wait_timeout=2.0),
                          timeout=10)
     print(f"[final] status={pb.JobStatus.Name(gr2.job_status)} msg={gr2.status_message}")

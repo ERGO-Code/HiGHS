@@ -12,7 +12,7 @@ Run:
 """
 import sys, os, subprocess
 
-# --- 自动生成 gRPC Python 桩（与 pyomo_lp.py 相同逻辑，自包含）---
+# --- Auto-generate gRPC Python stubs (same logic as pyomo_lp.py, self-contained) ---
 _EXAMPLE_DIR = os.path.dirname(os.path.abspath(__file__))
 _PROTO_DIR = os.path.normpath(os.path.join(_EXAMPLE_DIR, "..", "..", "server", "protos"))
 _GEN_DIR = os.path.join(_EXAMPLE_DIR, "_generated")
@@ -35,40 +35,40 @@ def main(addr="localhost:50051"):
     grpc.channel_ready_future(ch).result(timeout=5)
     stub = pbg.HighsServiceStub(ch)
 
-    # 1. 健康检查 + 自适应选 solver
+    # 1. Health check + adaptive solver selection
     hc = stub.Check(pb.HealthCheckRequest(), timeout=5)
     solver = "pdlp" if hc.gpu_available else "ipm"
-    print(f"server: {hc.message} → 使用 solver={solver}")
+    print(f"server: {hc.message} -> using solver={solver}")
 
-    # 2. 手构造 LP 模型（CSC 稀疏格式）
+    # 2. Construct LP model by hand (CSC sparse format)
     #    Maximize x1 + x2
     #    s.t.  x1 + 2*x2 <= 4
     #          x1, x2 >= 0
     req = pb.SolveRequest(
         model_name="minimal_lp",
         sense=pb.OBJ_SENSE_MAX,
-        col_cost=[1.0, 1.0],          # 目标系数
-        col_lower=[0.0, 0.0],         # 变量下界
-        col_upper=[1e30, 1e30],       # 变量上界（无界）
-        # CSC 约束矩阵：2 列 → start 长度 3
-        a_format_start=[0, 1, 2],     # 列0 非零起始0, 列1 起始1, 结束2
-        a_format_index=[0, 0],        # 列0 的非零在行0; 列1 的非零在行0
-        a_format_value=[1.0, 2.0],    # 列0 系数1; 列1 系数2
-        row_lower=[-1e30],            # 约束下界（-inf）
-        row_upper=[4.0],              # 约束上界 4
+        col_cost=[1.0, 1.0],          # objective coefficients
+        col_lower=[0.0, 0.0],         # variable lower bounds
+        col_upper=[1e30, 1e30],       # variable upper bounds (unbounded)
+        # CSC constraint matrix: 2 cols -> start length 3
+        a_format_start=[0, 1, 2],     # col0 nonzero starts at 0, col1 at 1, end 2
+        a_format_index=[0, 0],        # col0 nonzero at row0; col1 nonzero at row0
+        a_format_value=[1.0, 2.0],    # col0 coef 1; col1 coef 2
+        row_lower=[-1e30],            # row lower bound (-inf)
+        row_upper=[4.0],              # row upper bound 4
         options={"solver": solver},
     )
 
-    # 3. 求解
+    # 3. Solve
     resp = stub.Solve(req, timeout=60)
     print(f"status: {pb.ModelStatus.Name(resp.model_status)}")
-    print(f"objective: {resp.objective_value}  (期望 4.0)")
-    print(f"col_value: {list(resp.col_value)}  (期望 [4.0, 0.0])")
+    print(f"objective: {resp.objective_value}  (expected 4.0)")
+    print(f"col_value: {list(resp.col_value)}  (expected [4.0, 0.0])")
     print(f"col_dual:  {list(resp.col_dual)}")
     print(f"solve_time: {resp.solve_time:.4f}s, iter: {resp.iteration_count}")
 
-    assert abs(resp.objective_value - 4.0) < 1e-4, "obj 不符"
-    print("\n✓ 验证通过")
+    assert abs(resp.objective_value - 4.0) < 1e-4, "obj mismatch"
+    print("\n✓ verified")
 
 
 if __name__ == "__main__":

@@ -1,12 +1,11 @@
-# highs-server gRPC 子项目 CMake
-# 修复 v1 三大致命问题：① 不再 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}) 自引用；
-# ② 不硬编码 CUDA 开关（由 configure.sh 自适应传入 CUPDLP_GPU）；
-# ③ protoc 命令补 DEPENDS 防并行竞态。
-# 关键：服务端源码本身不依赖任何 CUDA 宏，CPU/GPU 二进制由同一份代码产出。
+# highs-server gRPC subproject CMake
+# Fixes v1 issues: (1) no self-referencing add_subdirectory; (2) no hardcoded CUDA flag
+# (CUPDLP_GPU passed adaptively by configure.sh); (3) protoc DEPENDS to prevent parallel race.
+# Key: server source does not depend on any CUDA macro; CPU/GPU binaries from same source.
 
-# 1. 依赖 gRPC（gRPC 的 config 会自动带上 Protobuf/absl/c-ares 等，无需单独找）
-#    优先用系统/conda 预装的 config（CMAKE_PREFIX_PATH 已由 configure.sh 注入），
-#    失败才 FetchContent（兜底，并设 CMAKE_POLICY_VERSION_MINIMUM 兼容 cmake>=4）
+# 1. Find gRPC (its config brings Protobuf/absl/c-ares automatically, no separate find)
+#    Prefer system/conda preinstalled config (CMAKE_PREFIX_PATH injected by configure.sh);
+#    fall back to FetchContent (with CMAKE_POLICY_VERSION_MINIMUM for cmake>=4 compat)
 find_package(gRPC CONFIG QUIET)
 if(NOT gRPC_FOUND)
   message(STATUS "gRPC not found via config; falling back to FetchContent")
@@ -21,13 +20,13 @@ if(NOT gRPC_FOUND)
   FetchContent_MakeAvailable(grpc)
 else()
   message(STATUS "gRPC found via config: ${gRPC_VERSION}")
-  # Protobuf 由 gRPC 带入，确保 protoc/plugin target 可用
+  # Protobuf brought in by gRPC; ensure protoc/plugin targets available
   if(NOT TARGET protobuf::protoc)
     find_package(Protobuf CONFIG REQUIRED)
   endif()
 endif()
 
-# 2. 生成 proto（补全 DEPENDS，避免并行构建竞态）
+# 2. Generate proto (add DEPENDS to prevent parallel build race)
 set(PROTO_FILE "${CMAKE_CURRENT_SOURCE_DIR}/protos/solver.proto")
 set(GENERATED_DIR "${CMAKE_CURRENT_BINARY_DIR}/generated")
 file(MAKE_DIRECTORY "${GENERATED_DIR}")
@@ -52,7 +51,7 @@ add_custom_command(
   COMMENT "Generating gRPC + protobuf sources for solver.proto"
 )
 
-# 3. server 可执行
+# 3. server executable
 add_executable(highs_grpc_server
   src/main.cpp
   src/service_impl.cpp
@@ -65,20 +64,20 @@ add_executable(highs_grpc_server
 target_include_directories(highs_grpc_server PRIVATE
   "${GENERATED_DIR}"
   "${CMAKE_CURRENT_SOURCE_DIR}/src"
-  "${CMAKE_SOURCE_DIR}"        # HiGHS 根（找 Highs.h）
-  "${CMAKE_BINARY_DIR}"        # HConfig.h（含 CUPDLP_GPU 宏定义）
+  "${CMAKE_SOURCE_DIR}"        # HiGHS root (for Highs.h)
+  "${CMAKE_BINARY_DIR}"        # HConfig.h (contains CUPDLP_GPU macro)
 )
-# SQLite3（job 持久化）：优先系统，其次 conda env
+# SQLite3 (job persistence): prefer system, then conda env
 find_package(SQLite3 QUIET)
 if(SQLite3_FOUND)
   target_link_libraries(highs_grpc_server PRIVATE SQLite::SQLite3)
 else()
-  message(STATUS "SQLite3 cmake config 未找到，用 find_library 兜底")
+  message(STATUS "SQLite3 cmake config not found, falling back to find_library")
   find_library(SQLITE3_LIB NAMES sqlite3)
   if(SQLITE3_LIB)
     target_link_libraries(highs_grpc_server PRIVATE ${SQLITE3_LIB})
   else()
-    message(FATAL_ERROR "SQLite3 未找到，请安装 libsqlite3-dev 或在 conda env 装 sqlite")
+    message(FATAL_ERROR "SQLite3 not found; install libsqlite3-dev or sqlite in conda env")
   endif()
 endif()
 
@@ -87,8 +86,8 @@ target_link_libraries(highs_grpc_server PRIVATE
   gRPC::grpc++
   protobuf::libprotobuf
 )
-# 健康检查 API 在 gRPC >=1.51 由 grpc++ 主库 + 头文件提供，无需独立 target
-# 服务反射：target 名随 gRPC 版本变化，按存在性链接以兼容
+# Health check API in gRPC >=1.51 provided by grpc++ main lib + header, no separate target
+# Reflection: target name varies by gRPC version; link by existence for compatibility
 if(TARGET gRPC::grpcpp_reflection)
   target_link_libraries(highs_grpc_server PRIVATE gRPC::grpcpp_reflection)
 elseif(TARGET gRPC::grpc++_reflection)
@@ -96,7 +95,7 @@ elseif(TARGET gRPC::grpc++_reflection)
 endif()
 target_compile_features(highs_grpc_server PRIVATE cxx_std_17)
 
-# 4. 运行时打印编译期 GPU 开关（读 CUPDLP_GPU 变量注入宏，无需 CUDA 宏）
+# 4. Runtime GPU build flag (inject macro from CUPDLP_GPU variable, no CUDA macro needed)
 target_compile_definitions(highs_grpc_server PRIVATE
   HIGHS_SERVER_CUPDLP_GPU=$<BOOL:${CUPDLP_GPU}>
 )

@@ -16,7 +16,7 @@ Run:
 """
 import sys, os, subprocess, time
 
-# --- 自动生成 gRPC Python 桩（自包含）---
+# --- Auto-generate gRPC Python stubs (self-contained) ---
 _EXAMPLE_DIR = os.path.dirname(os.path.abspath(__file__))
 _PROTO_DIR = os.path.normpath(os.path.join(_EXAMPLE_DIR, "..", "..", "server", "protos"))
 _GEN_DIR = os.path.join(_EXAMPLE_DIR, "_generated")
@@ -28,30 +28,30 @@ if not os.path.exists(os.path.join(_GEN_DIR, "solver_pb2.py")):
         os.path.join(_PROTO_DIR, "solver.proto"),
     ])
 sys.path.insert(0, _GEN_DIR)
-sys.path.insert(0, _EXAMPLE_DIR)  # 导入同目录 pyomo_lp
+sys.path.insert(0, _EXAMPLE_DIR)  # import pyomo_lp from same dir
 
 import grpc
 import solver_pb2 as pb
 import solver_pb2_grpc as pbg
-# 复用 pyomo_lp.py 的建模 + 矩阵提取逻辑（DRY）
+# Reuse build_model + pyomo_model_to_request from pyomo_lp.py (DRY)
 from pyomo_lp import build_model, pyomo_model_to_request
 
 
 def submit_and_monitor(stub, req, poll_interval=0.3):
     """
-    异步提交 + 进度监控 + 取结果
+    Async submit + progress monitor + fetch result
     
-    返回最终 GetResultResponse（终态）
+    Returns final GetResultResponse (terminal state)
     """
-    # 1. 提交，立即返回 job_id
+    # 1. Submit, returns job_id immediately
     t0 = time.time()
     sub = stub.SubmitSolve(req, timeout=5)
     job_id = sub.job_id
     print(f"[submit] job_id={job_id[:12]}... ({(time.time()-t0)*1000:.1f}ms)")
 
-    # 2. 进度监控循环
-    #    wait=false 立即返回当前状态 + 进度，便于展示进度条
-    print(f"\n{'轮次':>4} {'状态':<20} {'迭代':>6} {'目标值':>14} {'耗时':>8}")
+    # 2. Progress monitor loop
+    #    wait=false returns current state + progress immediately, for progress bars
+    print(f"\n{'poll':>4} {'status':<20} {'iter':>6} {'objective':>14} {'time':>8}")
     poll = 0
     while True:
         poll += 1
@@ -73,42 +73,42 @@ def main(addr="localhost:50051"):
     grpc.channel_ready_future(ch).result(timeout=5)
     stub = pbg.HighsServiceStub(ch)
 
-    # 0. 健康检查 + 自适应选 solver
+    # 0. Health check + adaptive solver selection
     hc = stub.Check(pb.HealthCheckRequest(), timeout=5)
     solver = "pdlp" if hc.gpu_available else "ipm"
     print(f"server: {hc.message} → solver={solver}")
-    print(f"  提示: 异步 job 模式适合大模型长求解，本例用小模型演示流程\n")
+    print(f"  Note: async job mode suits large models with long solves; this demo uses a small model\n")
 
-    # 1. Pyomo 建模（复用 pyomo_lp.build_model）
+    # 1. Pyomo modeling (reuse pyomo_lp.build_model)
     model = build_model()
     print(f"[model] {model.name}")
 
-    # 2. Pyomo → CSC 矩阵 → SolveRequest（复用 pyomo_lp.pyomo_model_to_request）
+    # 2. Pyomo -> CSC matrix -> SolveRequest (reuse pyomo_lp.pyomo_model_to_request)
     req = pyomo_model_to_request(model)
     req.options["solver"] = solver
 
-    # 3. 异步提交 + 进度监控
-    print("\n=== 异步求解 ===")
+    # 3. Async submit + progress monitor
+    print("\n=== Async solve ===")
     final = submit_and_monitor(stub, req)
 
-    # 4. 输出结果
-    print(f"\n=== 结果 ===")
+    # 4. Output result
+    print(f"\n=== Result ===")
     print(f"job_status: {pb.JobStatus.Name(final.job_status)}")
     print(f"elapsed: {final.elapsed_time:.3f}s")
     if final.job_status == pb.JOB_STATUS_SUCCEEDED:
         r = final.result
         print(f"model_status: {pb.ModelStatus.Name(r.model_status)}")
-        print(f"objective: {r.objective_value}  (期望 38)")
-        print(f"col_value: {list(r.col_value)}  (期望 [6.0, 4.0])")
+        print(f"objective: {r.objective_value}  (expected 38)")
+        print(f"col_value: {list(r.col_value)}  (expected [6.0, 4.0])")
         print(f"solve_time: {r.solve_time:.4f}s, iter: {r.iteration_count}")
-        assert abs(r.objective_value - 38) < 1e-4, "obj 不符"
-        print("\n✓ Pyomo + 异步 job 模式验证通过")
+        assert abs(r.objective_value - 38) < 1e-4, "obj mismatch"
+        print("\n✓ Pyomo + async job mode verified")
     else:
         print(f"msg: {final.status_message}")
         sys.exit(1)
 
-    # 5. 演示：Pyomo 建不同模型批量提交
-    print("\n=== 批量提交演示（3 个不同 sense 的变体）===")
+    # 5. Demo: batch submit with different Pyomo models
+    print("\n=== batch submit demo (max/min variants) ===")
     jobs = []
     for sense_name, sense in [("max", pb.OBJ_SENSE_MAX), ("min", pb.OBJ_SENSE_MIN)]:
         m = build_model()
@@ -118,10 +118,10 @@ def main(addr="localhost:50051"):
         r.model_name = f"{m.name}_{sense_name}"
         sub = stub.SubmitSolve(r, timeout=5)
         jobs.append((sub.job_id, sense_name, r.model_name))
-        print(f"  提交 {r.model_name}: job_id={sub.job_id[:12]}...")
+        print(f"  submitted {r.model_name}: job_id={sub.job_id[:12]}...")
 
-    # 等所有完成
-    print("\n  等待所有 job 完成...")
+    # Wait for all to complete
+    print("\n  waiting for all jobs to complete...")
     for job_id, sense_name, name in jobs:
         gr = stub.GetResult(
             pb.GetResultRequest(job_id=job_id, wait=True, wait_timeout=10),
@@ -131,7 +131,7 @@ def main(addr="localhost:50051"):
         print(f"  {name}: {pb.JobStatus.Name(gr.job_status)} obj={obj}")
 
 
-# pyomo sense 常量（build_model 用 maximize，这里便于切换演示）
+# Pyomo sense constants (build_model uses maximize; here for switching demo)
 import pyomo.environ as pyo
 pyo_maximize = pyo.maximize
 pyo_minimize = pyo.minimize
