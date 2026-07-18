@@ -1,0 +1,38 @@
+# Dockerfile.gpu — HiGHS-Server GPU 构建（需 NVIDIA Container Toolkit）
+# 用法: docker build -f Dockerfile.gpu -t highs-server:gpu .
+#       docker run --gpus all -p 50051:50051 highs-server:gpu
+#
+# 用 CUDA 12.4 devel 作构建基础（12.4 的 cusparse 含 SpMV_preprocess，patch 仍兼容）
+FROM nvidia/cuda:12.4.1-devel-ubuntu22.04 AS build
+
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates git cmake g++ gcc \
+    libgrpc++-dev libprotobuf-dev protobuf-compiler-grpc \
+    zlib1g-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /src
+COPY . .
+
+# GPU 构建：configure.sh 探测到 nvcc → 自动 CUPDLP_GPU=ON
+# 用系统 gcc（容器内是 gcc-11，兼容 nvcc 12.4）
+RUN ./configure.sh --cuda --build build \
+      -DCMAKE_CUDA_ARCHITECTURES=native \
+    && cmake --build build --parallel --target highs_grpc_server
+
+# 运行阶段：用 CUDA runtime 基础镜像（无 devel，更小）
+FROM nvidia/cuda:12.4.1-runtime-ubuntu22.04
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libgrpc++1 libprotobuf23 zlib1g \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=build /src/build/bin/highs_grpc_server /usr/local/bin/
+COPY --from=build /src/build/lib/libhighs.so* /usr/local/lib/
+COPY --from=build /src/build/lib/libcudalin.so* /usr/local/lib/
+RUN ldconfig
+
+EXPOSE 50051
+# GPU 默认串行求解（max-concurrent=1），避免显存争抢
+ENTRYPOINT ["highs_grpc_server", "--bind", "0.0.0.0:50051", "--max-concurrent", "1"]

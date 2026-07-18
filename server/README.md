@@ -252,6 +252,46 @@ configure.sh                # 自适应构建脚本
 
 ---
 
+## 🐳 Docker 部署
+
+提供 CPU / GPU 双镜像，通过 docker compose profile 切换。
+
+### 前置条件
+- Docker + Docker Compose v2
+- **GPU 版额外需要** [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html)
+
+### CPU 版（默认）
+```bash
+docker compose up -d --build
+# 服务启动在 localhost:50051，CPU-only 模式，max-concurrent=4
+```
+
+### GPU 版
+```bash
+docker compose --profile gpu up -d --build highs-server-gpu
+# 服务启动在 localhost:50051，GPU 模式，max-concurrent=1（串行避免显存争抢）
+```
+
+### 验证
+```bash
+# 查看启动日志确认 GPU 构建状态
+docker compose logs highs-server-gpu | head
+# 预期: HiGHS-Server listening on 0.0.0.0:50051 (max_concurrent=1) GPU-enabled (CUPDLP_GPU=ON)
+
+# 健康检查（需 grpcurl）
+grpcurl -plaintext localhost:50051 highsserver.v1.HighsService/Check
+```
+
+### 文件说明
+| 文件 | 用途 |
+|---|---|
+| `Dockerfile.cpu` | CPU 镜像（ubuntu:22.04 基础，无 CUDA 依赖，镜像更小） |
+| `Dockerfile.gpu` | GPU 镜像（nvidia/cuda:12.4.1 基础，含 PDLP GPU 加速） |
+| `docker-compose.yml` | 编排文件，CPU 默认 / GPU 用 `--profile gpu` |
+| `.dockerignore` | 减小构建上下文（排除 build 产物、.git、缓存） |
+
+---
+
 ## 📖 相关文档
 
 - [执行计划](../plan.md) — 完整设计与 v1→v2 修复对照

@@ -1,0 +1,23 @@
+# 构建产物
+build/
+build-*/
+
+# Git
+.git/
+.gitignore
+
+# Python 缓存
+__pycache__/
+*.pyc
+test/__pycache__/
+test/solver_pb2.py
+test/solver_pb2_grpc.py
+
+# 文档（不影响构建，减小上下文）
+*.md
+!server/README.md
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
