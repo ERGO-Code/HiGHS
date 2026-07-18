@@ -295,3 +295,8 @@ highs-problem-set
 Options.md
 
 build-latest
+# highs-server: Python 测试产物
+test/__pycache__/
+test/*.pyc
+test/solver_pb2.py
+test/solver_pb2_grpc.py

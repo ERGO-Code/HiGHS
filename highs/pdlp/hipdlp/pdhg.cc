@@ -2544,10 +2544,14 @@ void PDLPSolver::setupGpu() {
       &spmv_buffer_size_ax_));
   CUDA_CHECK(cudaMalloc(&d_spmv_buffer_ax_, spmv_buffer_size_ax_));
 
+  // cusparseSpMV_preprocess 仅 CUDA 12.4+ 的 cusparse 提供（12.1 无此 API）。
+  // 它是可选的矩阵预处理优化，跳过不影响 SpMV 数值正确性，仅微小性能损失。
+#if CUDART_VERSION >= 12040
   CUSPARSE_CHECK(cusparseSpMV_preprocess(
       cusparse_handle_, CUSPARSE_OPERATION_NON_TRANSPOSE, &alpha, mat_a_csr_,
       vec_x_desc_, &beta, vec_ax_desc_, CUDA_R_64F, CUSPARSE_SPMV_CSR_ALG2,
       d_spmv_buffer_ax_));
+#endif
 
   CUSPARSE_CHECK(cusparseDestroyDnVec(vec_x));
   CUSPARSE_CHECK(cusparseDestroyDnVec(vec_ax));
@@ -2564,10 +2568,12 @@ void PDLPSolver::setupGpu() {
       &spmv_buffer_size_aty_));
   CUDA_CHECK(cudaMalloc(&d_spmv_buffer_aty_, spmv_buffer_size_aty_));
 
+#if CUDART_VERSION >= 12040
   CUSPARSE_CHECK(cusparseSpMV_preprocess(
       cusparse_handle_, CUSPARSE_OPERATION_NON_TRANSPOSE, &alpha, mat_a_T_csr_,
       vec_y_desc_, &beta, vec_aty_desc_, CUDA_R_64F, CUSPARSE_SPMV_CSR_ALG2,
       d_spmv_buffer_aty_));
+#endif
 
   CUSPARSE_CHECK(cusparseDestroyDnVec(vec_y));
   CUSPARSE_CHECK(cusparseDestroyDnVec(vec_aty));

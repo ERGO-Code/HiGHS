@@ -1,0 +1,82 @@
+syntax = "proto3";
+
+package highsserver.v1;
+
+// 目标方向：消除 v1 中"取负 cost"的 hack
+enum ObjSense {
+  OBJ_SENSE_MIN = 0;
+  OBJ_SENSE_MAX = 1;
+}
+
+// 变量类型，支持 MIP
+enum VarType {
+  VAR_CONTINUOUS = 0;
+  VAR_INTEGER = 1;
+  VAR_BINARY = 2;
+}
+
+// 模型求解状态枚举（对齐 HiGHS HighsModelStatus 主要取值）
+enum ModelStatus {
+  MODEL_STATUS_NOT_SET = 0;
+  MODEL_STATUS_OPTIMAL = 1;
+  MODEL_STATUS_INFEASIBLE = 2;
+  MODEL_STATUS_UNBOUNDED = 3;
+  MODEL_STATUS_ITERATION_LIMIT = 4;
+  MODEL_STATUS_TIME_LIMIT = 5;
+  MODEL_STATUS_NUMERICAL_ERROR = 6;
+  MODEL_STATUS_OTHER = 99;
+}
+
+message SolveRequest {
+  string model_name = 1;
+  ObjSense sense = 2;                       // 默认 MIN
+
+  // 列信息
+  repeated double col_cost = 3;
+  repeated double col_lower = 4;
+  repeated double col_upper = 5;
+  repeated VarType col_integrality = 11;    // 可选，缺省全连续
+
+  // 约束矩阵 A（CSC 稀疏格式，索引用 int64 防溢出）
+  repeated int64 a_format_index = 6;
+  repeated int64 a_format_start = 7;        // 长度必须 = num_col + 1
+  repeated double a_format_value = 8;
+
+  // 约束上下界
+  repeated double row_lower = 9;
+  repeated double row_upper = 10;
+
+  // 求解器参数，如 {"solver": "pdlp", "pdlp_iteration_limit": "10000"}
+  map<string, string> options = 12;
+
+  // 求解时间上限（秒），0 表示用 HiGHS 默认
+  double time_limit = 13;
+}
+
+message SolveResponse {
+  ModelStatus model_status = 1;
+  string status_message = 2;
+  repeated double col_value = 3;
+  repeated double col_dual = 4;             // 对偶解（PDLP 原生产出）
+  repeated double row_value = 5;            // 约束活动值
+  repeated double row_dual = 6;
+  double objective_value = 7;
+  int64 iteration_count = 8;                // PDLP 迭代数
+  double solve_time = 9;                    // 秒
+}
+
+message HealthCheckRequest {}
+message HealthCheckResponse {
+  bool serving = 1;
+  string message = 2;
+  bool gpu_available = 3;   // 编译期是否开启 CUPDLP_GPU，客户端据此自适应选 solver
+}
+
+service HighsService {
+  // 单次求解
+  rpc Solve(SolveRequest) returns (SolveResponse);
+  // 大模型分片流式上传（规避 gRPC 默认 4MB 上限）
+  rpc SolveStream(stream SolveRequest) returns (SolveResponse);
+  // 健康检查（供 K8s/负载均衡探活）
+  rpc Check(HealthCheckRequest) returns (HealthCheckResponse);
+}
