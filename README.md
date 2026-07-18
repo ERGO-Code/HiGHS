@@ -3,7 +3,9 @@
 > ## 🚀 This fork: HiGHS-Server
 > This fork adds a **gRPC server** subproject (`server/`) that exposes HiGHS LP/MIP
 > solving as a remote service with **CPU/GPU adaptive builds** (PDLP on GPU when CUDA
-> available, IPM on CPU otherwise).
+> available, IPM on CPU otherwise), **sync + async dual mode** (short `Solve` for small
+> tasks, `SubmitSolve`+`GetResult` job mode with **progress reporting** for large tasks),
+> and optional **SQLite job persistence**.
 >
 > 👉 **[Read the HiGHS-Server docs →](server/README.md)**
 >

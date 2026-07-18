@@ -138,11 +138,24 @@ ALL TESTS PASSED
 完整定义见 `protos/solver.proto`，要点：
 
 ### 服务方法
+
+**同步模式**（小任务，长连接，秒级返回）
 | RPC | 类型 | 用途 |
 |---|---|---|
 | `Solve` | unary | 单次求解（模型 < 4MB） |
-| `SolveStream` | client stream | 分片上传大模型（> 4MB） |
-| `Check` | unary | 健康检查 + GPU 能力上报 |
+| `SolveStream` | client stream | 分片上传大模型（> 4MB），同步求解 |
+
+**异步 job 模式**（大任务，短连接，避免长连接占用）
+| RPC | 类型 | 用途 |
+|---|---|---|
+| `SubmitSolve` | unary | 提交任务，立即返回 `job_id`（~ms 级） |
+| `GetResult` | unary | 查询/长轮询结果（`wait`+`wait_timeout`），返回进度 |
+| `CancelSolve` | unary | 取消任务（仅 PENDING/RUNNING 可取消） |
+
+**公共**
+| RPC | 类型 | 用途 |
+|---|---|---|
+| `Check` | unary | 健康检查 + GPU 能力上报（`gpu_available`） |
 
 ### 模型表示（CSC 稀疏格式）
 ```
@@ -158,6 +171,8 @@ SolveRequest {
 ```
 
 ### 响应
+
+**同步 `SolveResponse`**
 ```
 SolveResponse {
   model_status: enum           // OPTIMAL/INFEASIBLE/UNBOUNDED/...
@@ -168,6 +183,25 @@ SolveResponse {
   solve_time                   // 求解耗时（秒）
 }
 ```
+
+**异步 `GetResultResponse`**（含进度）
+```
+GetResultResponse {
+  job_status: enum             // PENDING/RUNNING/SUCCEEDED/FAILED/CANCELLED
+  status_message: string
+  result: SolveResponse        // 仅 SUCCEEDED 时填充
+  elapsed_time: double         // 已耗时（秒）
+  progress: SolveProgress {    // PENDING/RUNNING 时的实时进度
+    iteration_count            // 当前迭代数（PDLP/simplex/ipm 通用）
+    objective_value            // 当前目标值
+    running_time               // 已运行秒数
+    mip_gap                    // MIP 间隙（非 MIP 为 0）
+    mip_node_count             // MIP 节点数（非 MIP 为 0）
+  }
+}
+```
+
+进度由 HiGHS callback 驱动（`kCallbackLogging` + `kCallbackMipSolution`），覆盖 PDLP/simplex/IPM/MIP。
 
 ---
 
