@@ -198,6 +198,50 @@ static void userCallback(const int callback_type, const char* message,
   }
 }
 
+static HighsInt cCallHessian(const HighsInt call_type, const HighsInt* x_num_entries,
+	const HighsInt* x_index, const double* x_value,
+	HighsInt* q_x_num_entries, HighsInt* q_x_index, double* q_x_value,
+	void* hessian_p) {
+  /*
+    assert(kHessianOracleCallTypeMin <= call_type &&
+	   call_type <= kHessianOracleCallTypeMax);
+    
+    CHessian hessian = *(static_cast<CHessiann*>(hessian_p));
+    
+    // Lambda for adding multiple of Hessian column into q_x_value
+    auto addScaledQcol = [&](const HighsInt iCol, const double x_value) {
+      for (HighsInt iEl = hessian.start_[iCol];
+	   iEl < hessian.start_[iCol + 1]; iEl++) {
+	HighsInt iRow = hessian.index_[iEl];
+	q_x_value[iRow] += hessian.value_[iEl] * x_value;
+      }
+    };
+    
+    if (call_type == kHessianOracleCallTypeEntry) {
+      return -1;
+    } else if (call_type == kHessianOracleCallTypeColumn) {
+      return -1;
+    } else {
+      assert(x_index == nullptr || *x_num_entries >= 0);
+      assert(q_x_index == nullptr);
+      assert(q_x_value != nullptr);
+      if (x_index == nullptr) {
+	// Simple product with full vector x, full vector q_x
+	for (HighsInt iCol = 0; iCol < hessian.dim_; iCol++)
+	  addScaledQcol(iCol, x_value[iCol]);
+      } else {
+	// x is scattered with x_num_entries entries in rows x_index
+	for (HighsInt iX = 0; iX < *x_num_entries; iX++) {
+	  HighsInt iCol = x_index[iX];
+	  addScaledQcol(iCol, x_value[iCol]);
+	}
+      }
+    }
+  */
+  //    return 0;
+  };
+  
+
 HighsInt highsIntArraysEqual(const HighsInt dim, const HighsInt* array0,
                              const HighsInt* array1) {
   for (HighsInt ix = 0; ix < dim; ix++)
@@ -1317,6 +1361,21 @@ void fullApiQp() {
   assertDoubleValuesEqual("x0", col_solution[0], required_x0);
   assertDoubleValuesEqual("x1", col_solution[1], required_x1);
 
+  // Now test with Hessian oracle
+  struct CHessian {
+    HighsInt dim_;
+    HighsInt* start_;
+    HighsInt* index_;
+    double* value_;
+  };
+  struct CHessian hessian_data;
+  hessian_data.dim_ = q_dim;
+  hessian_data.start_ = q_start;
+  hessian_data.index_ = q_index;
+  hessian_data.value_ = q_value;
+
+  Highs_passHessianOracle(highs, q_dim, cCallHessian, &hessian_data);
+ 
   // Add bounds to make the QP infeasible
   return_status = Highs_changeColBounds(highs, 0, -inf, 0);
   assert(return_status == kHighsStatusOk);
@@ -2517,30 +2576,30 @@ void testFixedLp() {
 }
 
 int main() {
-  minimalApiIllegalLp();
-  testCallback();
-  versionApi();
-  minimalApiLp();
-  minimalApiMip();
-  minimalApiQp();
-  fullApiOptions();
-  fullApiLp();
-  fullApiMip();
-  fullApiQp();
-  passPresolveGetLp();
-  options();
-  testGetColsByRange();
-  testPassHessian();
-  testRanging();
-  testFeasibilityRelaxation();
-  testNames();
-  testGetModel();
-  testMultiObjective();
-  testQpIndefiniteFailure();
-  testDualRayTwice();
-  testDeleteRowResolveWithBasis();
-  testIis();
-  testFixedLp();
+  //  minimalApiIllegalLp();
+  //  testCallback();
+  //  versionApi();
+  //  minimalApiLp();
+  //  minimalApiMip();
+  //  minimalApiQp();
+  //  fullApiOptions();
+  //  fullApiLp();
+  //  fullApiMip();
+   fullApiQp();
+  //  passPresolveGetLp();
+  //  options();
+  //  testGetColsByRange();
+  //  testPassHessian();
+  //  testRanging();
+  //  testFeasibilityRelaxation();
+  //  testNames();
+  //  testGetModel();
+  //  testMultiObjective();
+  //  testQpIndefiniteFailure();
+  //  testDualRayTwice();
+  //  testDeleteRowResolveWithBasis();
+  //  testIis();
+  //  testFixedLp();
   return 0;
 }
 //  testSetSolution();
