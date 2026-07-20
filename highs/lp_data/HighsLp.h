@@ -14,6 +14,7 @@
 #include <string>
 
 #include "lp_data/HStruct.h"
+#include "mip/HighsThlp.h"
 #include "util/HighsSparseMatrix.h"
 
 class HighsLp {
@@ -58,6 +59,8 @@ class HighsLp {
   bool has_infinite_cost_;
   HighsLpMods mods_;
 
+  THLPData thlp_data_;
+
   bool operator==(const HighsLp& lp) const;
   bool equalButForNames(const HighsLp& lp) const;
   bool equalButForScalingAndNames(const HighsLp& lp) const;
@@ -93,6 +96,7 @@ class HighsLp {
   void deleteCols(const HighsIndexCollection& index_collection);
   void deleteRows(const HighsIndexCollection& index_collection);
   void unapplyMods();
+  bool getThlp(const std::string& filename);
   void clear();
 };
 

@@ -18,7 +18,11 @@
 #include "util/HighsInt.h"
 
 const std::string kHighsCopyrightStatement =
+#ifdef HIPO
+    "Copyright (c) 2026 under Apache 2.0 license terms";
+#else
     "Copyright (c) 2026 under MIT licence terms";
+#endif
 
 const size_t kHighsSize_tInf = (std::numeric_limits<size_t>::max)();
 const HighsInt kHighsIInf = (std::numeric_limits<HighsInt>::max)();
@@ -108,7 +112,7 @@ enum class HighsOptionType { kBool = 0, kInt, kDouble, kString };
 
 enum class HighsInfoType { kInt64 = -1, kInt = 1, kDouble };
 
-enum MipType { kMipTypeNone = 0, kMipTypeKnapsack };
+enum MipType { kMipTypeNone = 0, kMipTypeKnapsack, kMipTypeThlp };
 
 enum OptionOffChooseOn {
   kHighsOptionOff = -1,

@@ -1498,3 +1498,32 @@ TEST_CASE("rko-knapsack", "[highs_test_mip_solver]") {
 
   h.resetGlobalScheduler(true);
 }
+
+TEST_CASE("rko-thlp", "[highs_test_mip_solver]") {
+  // Also have /check/instances/phub4.txt
+  std::string filename = std::string(HIGHS_DIR) + "/check/instances/cab25.txt";
+  HighsLp lp;
+  const bool thlp_ok = lp.getThlp(filename);
+  //  REQUIRE(thlp_ok);
+  Highs h;
+  // Switch off MIP presolve, since presolved problem is not knapsack
+  h.setOptionValue(kPresolveString, kHighsOffString);
+  if (thlp_ok) {
+    // Pass the THLP model to HiGHS
+    REQUIRE(h.passModel(lp) == HighsStatus::kOk);
+  } else {
+    // Until THLP model can be formed, load a dummy MIP to which the
+    // THLP data can be attached
+    std::string dummy_mip_filename =
+        std::string(HIGHS_DIR) + "/check/instances/flugpl.mps";
+    h.readModel(dummy_mip_filename);
+    HighsLp dummy_mip = h.getLp();
+    dummy_mip.mip_type_ = kMipTypeThlp;
+    dummy_mip.thlp_data_ = lp.thlp_data_;
+    REQUIRE(h.passModel(dummy_mip) == HighsStatus::kOk);
+  }
+  // Solve the model
+  h.run();
+
+  h.resetGlobalScheduler(true);
+}

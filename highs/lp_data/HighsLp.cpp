@@ -165,8 +165,7 @@ HighsCDouble HighsLp::objectiveCDoubleValue(
   assert((int)solution.size() >= this->num_col_);
   HighsCDouble objective_function_value = this->offset_;
   for (HighsInt iCol = 0; iCol < this->num_col_; iCol++)
-    objective_function_value +=
-        static_cast<HighsCDouble>(this->col_cost_[iCol]) * solution[iCol];
+    objective_function_value += this->col_cost_[iCol] * solution[iCol];
   return objective_function_value;
 }
 
@@ -524,6 +523,26 @@ void HighsLp::unapplyMods() {
   this->mods_.clear();
 }
 
+bool HighsLp::getThlp(const std::string& filename) {
+  if (!this->thlp_data_.parseCABFile(filename, 5, 0.5)) return false;
+  std::vector<bool> is_integer;
+  if (!this->thlp_data_.formLp(this->num_col_, this->num_row_, this->col_cost_,
+                               this->col_lower_, this->col_upper_,
+                               this->row_lower_, this->row_upper_,
+                               this->a_matrix_.start_, this->a_matrix_.index_,
+                               this->a_matrix_.value_, is_integer))
+    return false;
+  for (HighsInt iCol = 0; iCol < this->num_col_; iCol++)
+    this->integrality_[iCol] =
+        is_integer[iCol] ? HighsVarType::kInteger : HighsVarType::kContinuous;
+  this->a_matrix_.num_col_ = this->num_col_;
+  this->a_matrix_.num_row_ = this->num_row_;
+  this->a_matrix_.format_ = MatrixFormat::kRowwise;
+  this->a_matrix_.ensureColwise();
+  this->mip_type_ = kMipTypeThlp;
+  return true;
+}
+
 void HighsLpMods::clear() {
   this->save_non_semi_variable_index.clear();
   this->save_inconsistent_semi_variable_index.clear();
@@ -548,7 +567,7 @@ bool HighsLpMods::isClear() {
   if (this->save_inconsistent_semi_variable_upper_bound_value.size())
     return false;
   if (this->save_inconsistent_semi_variable_type.size()) return false;
-  if (this->save_relaxed_semi_variable_lower_bound_index.size()) return false;
+  if (this->save_relaxed_semi_variable_lower_bound_value.size()) return false;
   if (this->save_relaxed_semi_variable_lower_bound_value.size()) return false;
   if (this->save_tightened_semi_variable_upper_bound_index.size()) return false;
   if (this->save_tightened_semi_variable_upper_bound_value.size()) return false;

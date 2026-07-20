@@ -191,8 +191,7 @@ bool HighsMipSolverData::solutionRowFeasible(
     HighsInt end = ARstart_[i + 1];
 
     for (HighsInt j = start; j != end; ++j)
-      c_double_rowactivity +=
-          static_cast<HighsCDouble>(solution[ARindex_[j]]) * ARvalue_[j];
+      c_double_rowactivity += HighsCDouble(solution[ARindex_[j]] * ARvalue_[j]);
 
     double rowactivity = double(c_double_rowactivity);
     if (rowactivity > mipsolver.rowUpper(i) + feastol) return false;
@@ -346,10 +345,11 @@ HighsModelStatus HighsMipSolverData::trivialHeuristics() {
 }
 
 void HighsMipSolverData::rko() {
-  // Only relevant for pure binary MIPs
   const HighsLp* model = this->mipsolver.model_;
+  /*
+  // Only relevant for pure binary MIPs
   if (objectiveFunction.getNumBinariesInObjective() != model->num_col_) return;
-
+  */
   std::vector<double> col_value(model->num_col_, 0.0);
   bool found_integer_feasible_solution = rkoHeuristic(model, col_value);
   // Initial assignments that violate integrality or column bounds can lead to
@@ -386,6 +386,11 @@ void HighsMipSolverData::startAnalyticCenterComputation(
         mip_ipm_solver == kHipoString;
     // Later still, pass mip_ipm_solver and take action on failure in
     // solveLp
+#ifndef HIPO
+    // Shouldn't be possible to choose HiPO if it's not in the build
+    assert(!use_hipo);
+    use_hipo = false;
+#endif
     const std::string ipm_solver = use_hipo ? kHipoString : kIpxString;
     ipm.setOptionValue("solver", ipm_solver);
     ipm.setOptionValue("ipm_iteration_limit", 200);
@@ -768,8 +773,6 @@ void HighsMipSolverData::runMipPresolve(
     const HighsInt presolve_reduction_limit) {
   mipsolver.timer_.start(mipsolver.timer_.presolve_clock);
   presolve::HPresolve presolve;
-  // NB mipsolver.model_ is const, but mipdata_->presolvedModel is the
-  // same memory space, but non-const!
   if (!presolve.okSetInput(mipsolver, presolve_reduction_limit)) {
     mipsolver.modelstatus_ = HighsModelStatus::kMemoryLimit;
     presolve_status = HighsPresolveStatus::kOutOfMemory;
@@ -964,6 +967,9 @@ void HighsMipSolverData::runSetup() {
   domain.clearChangedCols();
 
   lp.getLpSolver().setOptionValue("presolve", kHighsOffString);
+  // lp.getLpSolver().setOptionValue("dual_simplex_cost_perturbation_multiplier",
+  // 0.0); lp.getLpSolver().setOptionValue("parallel", kHighsOnString);
+  lp.getLpSolver().setOptionValue("simplex_initial_condition_check", false);
 
   checkObjIntegrality();
   rootlpsol.clear();
@@ -1193,7 +1199,7 @@ try_again:
       mipsolver.analysis_.mipTimerUpdate(sub_solver_call_time, valid_basis,
                                          use_presolve, analytic_centre);
     }
-    this->total_repair_lp_iterations +=
+    this->total_repair_lp_iterations =
         tmpSolver.getInfo().simplex_iteration_count;
     if (tmpSolver.getInfo().primal_solution_status == kSolutionStatusFeasible) {
       this->total_repair_lp_feasible++;
@@ -1286,6 +1292,7 @@ void HighsMipSolverData::performRestart() {
   mipsolver.pscostinit = &pscostinit;
   ++numRestarts;
   num_leaves_before_run = num_leaves;
+  num_nodes_before_run = num_nodes;
   num_nodes_before_run = num_nodes;
   total_lp_iterations_before_run = total_lp_iterations;
   heuristic_lp_iterations_before_run = heuristic_lp_iterations;
