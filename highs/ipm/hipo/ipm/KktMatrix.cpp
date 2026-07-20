@@ -194,7 +194,8 @@ Int KktMatrix::buildNEstructure() {
                         nz_per_row > kParallelNEnzPerRowThresh;
   const bool is_large = model.A().num_row_ > kParallelNEsizeThresh ||
                         model.A().num_col_ > kParallelNEsizeThresh;
-  const bool parallel = is_dense && is_large;
+  const bool parallel =
+      is_dense && is_large && highs::parallel::num_threads() > 1;
 
   if (parallel) {
     logger.printInfo("NE structure in parallel\n");
@@ -300,8 +301,9 @@ Int KktMatrix::buildNEvalues(const std::vector<double>& scaling) {
   // computing the values in parallel only if matrix A is large
   const bool is_large = model.A().num_row_ > kParallelNEsizeThresh ||
                         model.A().num_col_ > kParallelNEsizeThresh;
+  const bool parallel = is_large && highs::parallel::num_threads() > 1;
 
-  if (is_large) {
+  if (parallel) {
     highs::parallel::for_each(
         0, m,
         [&](Int start, Int end) {
