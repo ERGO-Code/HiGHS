@@ -235,6 +235,53 @@ class HighsDomain {
     void propagateConflict(HighsInt conflict);
   };
 
+  struct DualfixingProbingPropagation {
+    HighsDomain* domain;
+    HighsMipSolver* mipsolver;
+    std::vector<int> zeroCostVarsDirection_;
+    vector<HighsInt> colLowerLockNum_;
+    vector<HighsInt> colUpperLockNum_;
+    // row lower and upper, length = 2 * rownum
+    std::vector<char> redundantPropagateflags_;
+    std::vector<HighsInt> redundantPropagateinds_;
+    std::vector<std::pair<HighsInt, bool>> zeroCostFixedVariables_;
+    HighsInt probingStatusSide = 0;
+    bool startZeroCostFixing;
+  
+    std::vector<HighsInt> tmpColLoLock_;
+    std::vector<HighsInt> tmpColUpLock_;
+    std::vector<HighsInt> involvedVars;
+    std::vector<char> indsVars;
+
+    void clearInvolved(HighsInt start) {
+      for (const auto x : involvedVars)
+        indsVars[x] = false;
+      involvedVars.clear();
+    }
+
+    void clearRedundant();
+
+
+
+    DualfixingProbingPropagation() {};
+    
+    DualfixingProbingPropagation(HighsDomain* domain) : domain(domain) {};
+
+    DualfixingProbingPropagation(const DualfixingProbingPropagation& other);
+
+    DualfixingProbingPropagation& operator=(const DualfixingProbingPropagation& other);
+
+    ~DualfixingProbingPropagation();
+
+    void recomputeLocks();
+    bool isUpperRedundant(HighsInt row);
+    bool isLowerRedundant(HighsInt row);
+    void markRedundantPropagate(HighsInt row, bool isUpper);
+
+    void propagate();
+    
+  };
+
  private:
   struct ObjectivePropagation {
     HighsDomain* domain = nullptr;
@@ -320,6 +367,7 @@ class HighsDomain {
  private:
   std::deque<CutpoolPropagation> cutpoolpropagation;
   std::deque<ConflictPoolPropagation> conflictPoolPropagation;
+  DualfixingProbingPropagation dfprobingPropagation;
 
   bool infeasible_ = false;
   Reason infeasible_reason;
@@ -370,6 +418,7 @@ class HighsDomain {
         mipsolver(other.mipsolver),
         cutpoolpropagation(other.cutpoolpropagation),
         conflictPoolPropagation(other.conflictPoolPropagation),
+        dfprobingPropagation(other.dfprobingPropagation),
         infeasible_(other.infeasible_),
         infeasible_reason(other.infeasible_reason),
         infeasible_pos(other.infeasible_pos),
@@ -383,6 +432,7 @@ class HighsDomain {
     for (ConflictPoolPropagation& conflictprop : conflictPoolPropagation)
       conflictprop.domain = this;
     if (objProp_.domain) objProp_.domain = this;
+    dfprobingPropagation.domain = this;
   }
 
   HighsDomain& operator=(const HighsDomain& other) {
@@ -414,6 +464,7 @@ class HighsDomain {
     for (ConflictPoolPropagation& conflictprop : conflictPoolPropagation)
       conflictprop.domain = this;
     if (objProp_.domain) objProp_.domain = this;
+    dfprobingPropagation.domain = this;
     return *this;
   }
 

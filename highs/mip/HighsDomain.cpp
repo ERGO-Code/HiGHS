@@ -75,6 +75,7 @@ HighsDomain::HighsDomain(HighsMipSolver& mipsolver) : mipsolver(&mipsolver) {
   changedcols_.reserve(mipsolver.numCol());
   infeasible_reason = Reason::unspecified();
   infeasible_ = false;
+  dfprobingPropagation.domain = this;
 }
 
 void HighsDomain::addCutpool(HighsCutPool& cutpool) {
@@ -635,6 +636,78 @@ void HighsDomain::CutpoolPropagation::updateActivityUbChange(
           return true;
         });
   }
+}
+
+HighsDomain::DualfixingProbingPropagation::DualfixingProbingPropagation(const DualfixingProbingPropagation& other)
+  : zeroCostVarsDirection_(other.zeroCostVarsDirection_),
+    colLowerLockNum_(other.colLowerLockNum_),
+    colUpperLockNum_(other.colUpperLockNum_),
+    redundantPropagateflags_(other.redundantPropagateflags_),
+    redundantPropagateinds_(other.redundantPropagateinds_),
+    zeroCostFixedVariables_(other.zeroCostFixedVariables_),
+    tmpColLoLock_(other.tmpColLoLock_),
+    tmpColUpLock_(other.tmpColUpLock_),
+    involvedVars(other.involvedVars),
+    indsVars(other.indsVars) {;}
+
+
+void HighsDomain::DualfixingProbingPropagation::recomputeLocks() {
+  redundantPropagateflags_.assign(2 * mipsolver->numRow(), false);
+  redundantPropagateinds_.clear();
+  redundantPropagateinds_.reserve(2 * mipsolver->numRow());
+  zeroCostFixedVariables_.clear();
+  zeroCostFixedVariables_.reserve(2 * mipsolver->numCol());
+
+  tmpColLoLock_.assign(mipsolver->numCol(), 0);
+  tmpColUpLock_.assign(mipsolver->numCol(), 0);
+
+  involvedVars.clear();
+  involvedVars.reserve(mipsolver->numCol());
+  indsVars.assign(mipsolver->numCol(), false);
+}
+
+bool HighsDomain::DualfixingProbingPropagation::isUpperRedundant(HighsInt row) {
+  bool upperRedundant;
+
+  upperRedundant = (mipsolver->model_->row_upper_[row] != kHighsInf) &&
+    (domain->getMaxActivity(row) <= mipsolver->model_->row_upper_[row] + mipsolver->mipdata_->feastol);
+  return upperRedundant;
+}
+
+bool HighsDomain::DualfixingProbingPropagation::isLowerRedundant(HighsInt row) {
+  bool lowerRedundant;
+
+  lowerRedundant = (mipsolver->model_->row_lower_[row] != -kHighsInf) &&
+      (domain->getMinActivity(row) >= mipsolver->model_->row_lower_[row] - mipsolver->mipdata_->feastol);
+  return lowerRedundant;
+}
+
+void HighsDomain::DualfixingProbingPropagation::markRedundantPropagate(HighsInt row, bool isUpper) {
+  assert(row < (int)mipsolver->numRow());
+  if (mipsolver->submip)
+    return;
+  const HighsInt pos = 2 * row + isUpper;
+  if (!redundantPropagateflags_[pos]) {
+    if (isUpper) {
+      const bool upperRedundant = isUpperRedundant(row);
+      if (upperRedundant) {
+        redundantPropagateinds_.push_back(pos);
+        redundantPropagateflags_[pos] = 1;
+      }
+    }
+    else {
+      const bool lowerRedundant = isLowerRedundant(row);
+      if (lowerRedundant) {
+        redundantPropagateinds_.push_back(pos);
+        redundantPropagateflags_[pos] = 1;
+      }
+    }
+  }
+}
+
+void HighsDomain::DualfixingProbingPropagation::propagate() {
+  mipsolver = domain->mipsolver;
+  
 }
 
 namespace highs {
