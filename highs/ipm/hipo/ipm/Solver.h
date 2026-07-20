@@ -26,6 +26,10 @@
 
 namespace hipo {
 
+using isFailure = bool;
+using shouldTerminate = bool;
+using isSuccess = bool;
+
 class Solver {
   Model model_;
   std::unique_ptr<LinearSolver> LS_;
@@ -106,16 +110,16 @@ class Solver {
   // Functions to run the various stages of the ipm
   void doSolve();
   void runIpm();
-  bool initialise();
-  bool prepareIter();
-  bool predictor();
-  bool correctors();
+  isFailure initialise();
+  shouldTerminate prepareIter();
+  isFailure predictor();
+  isFailure correctors();
 
   // ===================================================================================
   // Interface with IPX
   // ===================================================================================
-  bool prepareIpx();
-  bool prepareIpxStartingPoint();
+  isFailure prepareIpx();
+  isFailure prepareIpxStartingPoint();
   void runIpx();
   void refineWithIpx();
   void crossoverWithIpx();
@@ -154,7 +158,7 @@ class Solver {
   //
   // NB: normal equations available only if Q is zero or diagonal.
   // ===================================================================================
-  bool solveNewtonSystem(NewtonDir& delta);
+  isFailure solveNewtonSystem(NewtonDir& delta);
   void solve2x2(NewtonDir& delta, const Residuals& rhs);
   void solve6x6(NewtonDir& delta, const Residuals& rhs);
 
@@ -218,7 +222,7 @@ class Solver {
   // Compute the Mehrotra starting point.
   // This requires to solve two linear systems with matrix A*A^T.
   // ===================================================================================
-  bool startingPoint();
+  isFailure startingPoint();
 
   // ===================================================================================
   // Compute the sigma to use for affine scaling direction or correctors, based
@@ -256,7 +260,7 @@ class Solver {
   // for linear programming" and Colombo, Gondzio, "Further Development of
   // Multiple Centrality Correctors for Interior Point Methods".
   // ===================================================================================
-  bool centralityCorrectors();
+  isFailure centralityCorrectors();
 
   // ===================================================================================
   // Given the current direction delta and the latest corrector, compute the
@@ -269,14 +273,14 @@ class Solver {
   // ===================================================================================
   // If the current iterate is nan or inf, abort the iterations.
   // ===================================================================================
-  bool checkIterate();
+  shouldTerminate checkIterate();
 
   // ===================================================================================
   // Stop if detection is detected, or if the problem is primal or dual
   // infeasible.
   // ===================================================================================
-  bool checkStagnation();
-  bool checkBadIter();
+  shouldTerminate checkStagnation();
+  shouldTerminate checkBadIter();
 
   // ===================================================================================
   // Check the termination criterion:
@@ -284,13 +288,13 @@ class Solver {
   //  - dual infeasiblity    < tolerance
   //  - relative dual gap    < tolerance
   // ===================================================================================
-  bool checkTermination();
-  bool checkTerminationKkt();
+  shouldTerminate checkTermination();
+  isSuccess checkTerminationKkt();
 
   // ===================================================================================
   // Check for user interrupt or time limit
   // ===================================================================================
-  bool checkInterrupt();
+  shouldTerminate checkInterrupt();
 
   // ===================================================================================
   // Check and set status
@@ -321,8 +325,8 @@ class Solver {
   void reset();
   void resetToBestIter(Int iter, bool print = true);
 
-  bool initialiseLinearSolver();
-  bool switchToMultifrontal();
+  isFailure initialiseLinearSolver();
+  isSuccess switchToMultifrontal();
 };
 
 }  // namespace hipo

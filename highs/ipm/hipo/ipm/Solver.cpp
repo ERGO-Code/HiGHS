@@ -141,9 +141,7 @@ void Solver::runIpm() {
   }
 }
 
-bool Solver::initialise() {
-  // Prepare ipm for execution.
-  // Return true if an error occurred.
+isFailure Solver::initialise() {
   Clock clock;
 
   start_time_ = control_.elapsed();
@@ -177,9 +175,7 @@ bool Solver::initialise() {
   return false;
 }
 
-bool Solver::prepareIter() {
-  // Prepare next iteration.
-  // Return true if Ipm main loop should be stopped
+shouldTerminate Solver::prepareIter() {
   Clock clock;
 
   it_->saveBest(options_.feasibility_tol, options_.optimality_tol, iter_);
@@ -205,9 +201,7 @@ bool Solver::prepareIter() {
   return false;
 }
 
-bool Solver::predictor() {
-  // Compute affine scaling direction.
-  // Return true if an error occurred.
+isFailure Solver::predictor() {
   Clock clock;
 
   if (checkInterrupt()) return true;
@@ -221,9 +215,7 @@ bool Solver::predictor() {
   return false;
 }
 
-bool Solver::correctors() {
-  // Compute multiple centrality correctors.
-  // Return true if an error occurred.
+isFailure Solver::correctors() {
   Clock clock;
 
   if (checkInterrupt()) return true;
@@ -235,9 +227,7 @@ bool Solver::correctors() {
   return false;
 }
 
-bool Solver::prepareIpx() {
-  // Return true if an error occurred;
-
+isFailure Solver::prepareIpx() {
   assert(!model_.qp());
 
   ipx::Parameters ipx_param;
@@ -273,7 +263,7 @@ bool Solver::prepareIpx() {
   return false;
 }
 
-bool Solver::prepareIpxStartingPoint() {
+isFailure Solver::prepareIpxStartingPoint() {
   std::vector<double> x, xl, xu, slack, y, zl, zu;
   getInteriorSolution(x, xl, xu, slack, y, zl, zu);
 
@@ -299,8 +289,6 @@ void Solver::runIpx() {
   } else if (statusAllowsCrossover() && crossoverIsOn()) {
     logger_.print("\nRunning crossover with IPX\n");
     crossoverWithIpx();
-  } else {
-    return;
   }
 }
 
@@ -330,7 +318,7 @@ void Solver::crossoverWithIpx() {
   if (info_.ipx_info.errflag) info_.error = kErrorIpx;
 }
 
-bool Solver::solveNewtonSystem(NewtonDir& delta) {
+isFailure Solver::solveNewtonSystem(NewtonDir& delta) {
   solve6x6(delta, it_->res);
   bool terminate = info_.error;
 
@@ -612,9 +600,7 @@ void Solver::makeStep() {
   info_.times[kStepTime] += clock.stop();
 }
 
-bool Solver::startingPoint() {
-  // Return true if an error occurred
-
+isFailure Solver::startingPoint() {
   std::vector<double>& x = it_->x;
   std::vector<double>& xl = it_->xl;
   std::vector<double>& xu = it_->xu;
@@ -938,7 +924,7 @@ void Solver::residualsMcc() {
   info_.times[kResidualsTime] += clock.stop();
 }
 
-bool Solver::centralityCorrectors() {
+isFailure Solver::centralityCorrectors() {
   // compute stepsizes of current direction
   double alpha_p_old, alpha_d_old;
   stepsToBoundary(alpha_p_old, alpha_d_old, it_->delta);
@@ -1025,39 +1011,41 @@ void Solver::bestWeight(const NewtonDir& delta, const NewtonDir& corrector,
   }
 }
 
-bool Solver::checkIterate() {
+shouldTerminate Solver::checkIterate() {
+  bool terminate = false;
+
   if (it_->isNan()) {
     logger_.printInfo("\nIterate is nan\n");
     info_.error = kErrorNan;
-    return true;
+    terminate = true;
   } else if (it_->isInf()) {
     logger_.printInfo("\nIterate is inf\n");
     info_.error = kErrorNan;
-    return true;
-  }
-
-  for (Int i = 0; i < n_; ++i) {
-    if ((model_.hasLb(i) && it_->xl[i] < 0) ||
-        (model_.hasLb(i) && it_->zl[i] < 0) ||
-        (model_.hasUb(i) && it_->xu[i] < 0) ||
-        (model_.hasUb(i) && it_->zu[i] < 0)) {
-      logger_.printInfo("\nIterate has negative component\n");
-      info_.error = kErrorNegativeComponent;
-      return true;
+    bool terminate = true;
+  } else {
+    for (Int i = 0; i < n_; ++i) {
+      if ((model_.hasLb(i) && it_->xl[i] < 0) ||
+          (model_.hasLb(i) && it_->zl[i] < 0) ||
+          (model_.hasUb(i) && it_->xu[i] < 0) ||
+          (model_.hasUb(i) && it_->zu[i] < 0)) {
+        logger_.printInfo("\nIterate has negative component\n");
+        info_.error = kErrorNegativeComponent;
+        terminate = true;
+      }
     }
   }
 
-  return false;
+  return terminate;
 }
 
-bool Solver::checkStagnation() {
+shouldTerminate Solver::checkStagnation() {
   std::stringstream log_stream;
   bool stagnation = it_->stagnation(log_stream);
   logger_.printInfo(log_stream.str().c_str());
   return stagnation;
 }
 
-bool Solver::checkBadIter() {
+shouldTerminate Solver::checkBadIter() {
   bool terminate = false;
   bool stagnation = iter_ > 0 ? checkStagnation() : false;
 
@@ -1118,7 +1106,7 @@ bool Solver::checkBadIter() {
   return terminate;
 }
 
-bool Solver::checkTermination() {
+shouldTerminate Solver::checkTermination() {
   bool feasible = it_->pinf < options_.feasibility_tol &&
                   it_->dinf < options_.feasibility_tol;
   bool optimal = it_->pdgap < options_.optimality_tol;
@@ -1150,7 +1138,7 @@ bool Solver::checkTermination() {
   return terminate;
 }
 
-bool Solver::checkTerminationKkt() {
+isSuccess Solver::checkTerminationKkt() {
   if (model_.qp()) {
     // Not yet implemented for QP
     logger_.printInfo("kktCheck skipped for QP\n");
@@ -1187,7 +1175,7 @@ bool Solver::checkTerminationKkt() {
   return false;
 }
 
-bool Solver::checkInterrupt() {
+shouldTerminate Solver::checkInterrupt() {
   bool terminate = false;
   Int status = control_.interruptCheck(iter_);
   if (status) {
@@ -1202,7 +1190,7 @@ void Solver::resetToBestIter(Int iter, bool print) {
   if (did_reset && print) printOutput(true);
 }
 
-bool Solver::initialiseLinearSolver() {
+isFailure Solver::initialiseLinearSolver() {
   LS_.reset(new FactorHighsSolver(*kkt_, options_, model_, regul_, info_,
                                   it_->data, logger_));
   if (!LS_) {
@@ -1246,7 +1234,7 @@ bool Solver::initialiseLinearSolver() {
   return false;
 }
 
-bool Solver::switchToMultifrontal() {
+isSuccess Solver::switchToMultifrontal() {
   bool switch_successfull = false;
 
   if (LS_->type() == kUpLookingType && options_.factor == kHighsChooseString) {
