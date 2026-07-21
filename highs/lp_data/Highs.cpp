@@ -710,6 +710,48 @@ HighsStatus Highs::passHessian(const HighsInt dim, const HighsInt num_nz,
   return passHessian(hessian);
 }
 
+HighsStatus Highs::passHessian(const HighsInt dim,
+                               HighsHessianFunctionType oracleCall,
+                               void* oracle_data,
+                               HighsCHessianFunctionType c_oracleCall) {
+  if (dim <= 0) {
+    highsLogUser(options_.log_options, HighsLogType::kWarning,
+                 "Ignoring Hessian oracle data since dimension is %d\n",
+                 int(dim));
+    return HighsStatus::kWarning;
+  }
+  HighsHessian test_hessian;
+  HessianOracle& oracle = test_hessian.oracle_;
+  oracle.dim_ = dim;
+  if (c_oracleCall) {
+    oracle.call_ = [c_oracleCall](
+                       const HighsInt type, const HighsInt* x_num_entries,
+                       const HighsInt* x_index, const double* x_value,
+                       HighsInt* q_x_num_entries, HighsInt* q_x_index,
+                       double* q_x_value, void* data) {
+      return c_oracleCall(type, x_num_entries, x_index, x_value,
+                          q_x_num_entries, q_x_index, q_x_value, data);
+    };
+  } else {
+    oracle.call_ = oracleCall;
+  }
+  oracle.data_ = oracle_data;
+  // Check whether the new oracle is valid
+  if (!oracle.isValid()) {
+    highsLogUser(options_.log_options, HighsLogType::kError,
+                 "Cannot solve QP when Hessian oracle has no product call\n");
+    return HighsStatus::kError;
+  }
+  // Update the incumbent Hessian
+  this->model_.hessian_ = test_hessian;
+  return HighsStatus::kOk;
+}
+
+HighsStatus Highs::checkHessianOracle(const bool exit_on_first_error) const {
+  return this->model_.hessian_.checkOracle(options_.log_options,
+                                           exit_on_first_error);
+}
+
 HighsStatus Highs::passLinearObjectives(
     const HighsInt num_linear_objective,
     const HighsLinearObjective* linear_objective) {
@@ -934,6 +976,16 @@ HighsStatus Highs::writeLocalModel(HighsModel& model,
     // Empty file name: report model on logging stream
     reportModel(model);
   } else {
+    if (model.hessian_.isOracle()) {
+      highsLogUser(options_.log_options, HighsLogType::kError,
+                   "Cannot write QP to an %s file with Hessian represented via "
+                   "an oracle\n",
+                   getFilenameExt(filename).c_str());
+      return returnFromHighs(HighsStatus::kError);
+    }
+    assert(lp.a_matrix_.isColwise());
+    if (model.hessian_.dim_)
+      assert(model.hessian_.format_ == HessianFormat::kTriangular);
     Filereader* writer =
         Filereader::getFilereader(options_.log_options, filename);
     if (writer == NULL) {
@@ -3707,6 +3759,20 @@ HighsStatus Highs::assessPrimalSolution(bool& valid, bool& integral,
                                 integral, feasible);
 }
 
+std::string Highs::highsStatusToString(const HighsStatus status) const {
+  switch (status) {
+    case HighsStatus::kOk:
+      return "Ok";
+    case HighsStatus::kWarning:
+      return "Warning";
+    case HighsStatus::kError:
+      return "Error";
+    default:
+      assert(1 == 0);
+      return "Unrecognised Highs status";
+  }
+}
+
 std::string Highs::presolveStatusToString(
     const HighsPresolveStatus presolve_status) const {
   switch (presolve_status) {
@@ -4161,17 +4227,99 @@ HighsStatus Highs::callSolveLp(HighsLp& lp, const std::string& message) {
   return return_status;
 }
 
+HighsHessianFunctionType testOracleCallSquareHessian =
+    [](const HighsInt call_type, const HighsInt* x_num_entries,
+       const HighsInt* x_index, const double* x_value,
+       HighsInt* q_x_num_entries, HighsInt* q_x_index, double* q_x_value,
+       void* hessian_p) {
+      assert(kHessianOracleCallTypeMin <= call_type &&
+             call_type <= kHessianOracleCallTypeMax);
+
+      HighsHessian hessian = *(static_cast<HighsHessian*>(hessian_p));
+      assert(hessian.format_ == HessianFormat::kSquare);
+
+      // Lambda for adding multiple of Hessian column into q_x_value
+      auto addScaledQcol = [&](const HighsInt iCol, const double x_value) {
+        for (HighsInt iEl = hessian.start_[iCol];
+             iEl < hessian.start_[iCol + 1]; iEl++) {
+          HighsInt iRow = hessian.index_[iEl];
+          q_x_value[iRow] += hessian.value_[iEl] * x_value;
+        }
+      };
+
+      if (call_type == kHessianOracleCallTypeEntry) {
+        assert(x_num_entries == nullptr);
+        assert(x_value == nullptr);
+        assert(x_index != nullptr);
+        assert(q_x_num_entries == nullptr);
+        assert(q_x_index != nullptr);
+        assert(q_x_value != nullptr);
+        HighsInt iCol = x_index[0];
+        HighsInt iRow = q_x_index[0];
+        // Zero Qx value in case the Hessian entry requested is zero
+        q_x_value[0] = 0;
+        for (HighsInt iEl = hessian.start_[iCol];
+             iEl < hessian.start_[iCol + 1]; iEl++) {
+          if (hessian.index_[iEl] == iRow) {
+            q_x_value[0] = hessian.value_[iEl];
+            return 0;
+          }
+        }
+      } else if (call_type == kHessianOracleCallTypeColumn) {
+        // Get the entries in column iCol
+        assert(x_num_entries == nullptr);
+        assert(x_value == nullptr);
+        assert(x_index != nullptr);
+        assert(q_x_num_entries != nullptr);
+        assert(q_x_index != nullptr);
+        assert(q_x_value != nullptr);
+        (*q_x_num_entries) = 0;
+        HighsInt iCol = x_index[0];
+        for (HighsInt iEl = hessian.start_[iCol];
+             iEl < hessian.start_[iCol + 1]; iEl++) {
+          q_x_index[*q_x_num_entries] = hessian.index_[iEl];
+          q_x_value[*q_x_num_entries] = hessian.value_[iEl];
+          (*q_x_num_entries)++;
+        }
+      } else {
+        assert(x_index == nullptr || *x_num_entries >= 0);
+        assert(q_x_num_entries == nullptr);
+        assert(q_x_index == nullptr);
+        assert(q_x_value != nullptr);
+        if (x_index == nullptr) {
+          // Simple product with full vector x, full vector q_x
+          for (HighsInt iCol = 0; iCol < hessian.dim_; iCol++)
+            addScaledQcol(iCol, x_value[iCol]);
+        } else {
+          // x is scattered with x_num_entries entries in rows x_index
+          for (HighsInt iX = 0; iX < *x_num_entries; iX++) {
+            HighsInt iCol = x_index[iX];
+            addScaledQcol(iCol, x_value[iCol]);
+          }
+        }
+      }
+      return 0;
+    };
+
 HighsStatus Highs::callSolveQp() {
   // Check that the model is column-wise
   HighsLp& lp = model_.lp_;
   assert(model_.lp_.a_matrix_.isColwise());
   HighsHessian& hessian = model_.hessian_;
-  assert(hessian.format_ == HessianFormat::kTriangular);
-  if (hessian.dim_ > lp.num_col_) {
+  HighsInt dim = hessian.dim_;
+  if (dim > 0) {
+    assert(hessian.format_ == HessianFormat::kTriangular);
+    assert(!hessian.isOracle());
+  } else {
+    assert(hessian.isOracle());
+    assert(hessian.oracle_.isValid());
+    dim = hessian.oracle_.dim_;
+  }
+  if (dim != lp.num_col_) {
     highsLogDev(
         options_.log_options, HighsLogType::kError,
         "Hessian dimension = %d is incompatible with matrix dimension = %d\n",
-        int(hessian.dim_), int(lp.num_col_));
+        int(dim), int(lp.num_col_));
     model_status_ = HighsModelStatus::kModelError;
     solution_.value_valid = false;
     solution_.dual_valid = false;
@@ -4186,10 +4334,21 @@ HighsStatus Highs::callSolveQp() {
       HighsExternalApi::isAvailable<HighsExtras::hipo>();
 
   if (use_hipo) {
+    // Need to convert oracle to an explicit Hessian without an oracle
+    const bool was_oracle = hessian.isOracle();
+    auto oracle_call = hessian.oracle_.call_;
+    if (was_oracle) {
+      hessian.formFromOracle();
+      hessian.oracle_.call_ = nullptr;
+    }
+    assert(!hessian.isOracle());
     if (this->profiling_) this->profiling_->start(kSubSolverHipo);
     return_status = solveHipo(options_, timer_, lp, hessian, basis_, solution_,
                               model_status_, info_, callback_);
     if (this->profiling_) this->profiling_->stop(kSubSolverHipo);
+    // Restore any oracle call;
+    hessian.oracle_.call_ = oracle_call;
+    assert(hessian.isOracle() == was_oracle);
     if (return_status == HighsStatus::kError) return return_status;
   } else {
     //
@@ -4213,10 +4372,29 @@ HighsStatus Highs::callSolveQp() {
     instance.con_up = lp.row_upper_;
     instance.var_lo = lp.col_lower_;
     instance.var_up = lp.col_upper_;
-    instance.Q.mat.num_col = lp.num_col_;
-    instance.Q.mat.num_row = lp.num_col_;
-    triangularToSquareHessian(hessian, instance.Q.mat.start,
-                              instance.Q.mat.index, instance.Q.mat.value);
+    // Clear the instance Hessian data
+    instance.Q.mat.clear();
+    HighsHessian oracle_hessian;
+    if (hessian.dim_ > 0) {
+      if (options_.test_qp_oracle) {
+        // Test the Hessian oracle by using the incumbent Hessian as data for it
+        oracle_hessian = hessian.toSquare();
+        instance.Q.mat.oracle_.dim_ = hessian.dim_;
+        instance.Q.mat.oracle_.call_ = testOracleCallSquareHessian;
+        instance.Q.mat.oracle_.data_ = &oracle_hessian;
+      } else {
+        assert(instance.Q.mat.oracle_.call_ == nullptr);
+      }
+      // Generate the explicit Hessian data to use if not testing the
+      // oracle, and to cross-check the oracle results
+      instance.Q.mat.num_col = lp.num_col_;
+      instance.Q.mat.num_row = lp.num_col_;
+      triangularToSquareHessian(hessian, instance.Q.mat.start,
+                                instance.Q.mat.index, instance.Q.mat.value);
+    } else {
+      assert(hessian.isOracle());
+      instance.Q.mat.oracle_ = hessian.oracle_;
+    }
 
     for (HighsInt i = 0; i < (HighsInt)instance.c.value.size(); i++) {
       if (instance.c.value[i] != 0.0) {
@@ -4226,12 +4404,11 @@ HighsStatus Highs::callSolveQp() {
 
     if (lp.sense_ == ObjSense::kMaximize) {
       // Negate the vector and Hessian
-      for (double& i : instance.c.value) {
-        i *= -1.0;
+      for (double& i : instance.c.value) i *= -1.0;
+      if (instance.Q.mat.num_col > 0) {
+        for (double& i : instance.Q.mat.value) i *= -1.0;
       }
-      for (double& i : instance.Q.mat.value) {
-        i *= -1.0;
-      }
+      if (instance.Q.mat.isOracle()) instance.Q.mat.oracle_.multiplier_ = -1;
     }
 
     Settings settings;
@@ -4258,6 +4435,8 @@ HighsStatus Highs::callSolveQp() {
     assert(settings.hessian_regularization_value ==
            kHessianRegularizationValue);
     settings.hessian_regularization_value = options_.qp_regularization_value;
+    settings.primal_feasibility_tolerance =
+        options_.primal_feasibility_tolerance;
 
     // Define the QP model status logging function
     settings.qp_model_status_log.subscribe(
@@ -4271,6 +4450,12 @@ HighsStatus Highs::callSolveQp() {
                          "QP solver model status: %s\n",
                          qpModelStatusToString(qp_model_status).c_str());
         });
+
+    // Define the QP solver iteration logging function
+    settings.iteration_log_header.subscribe([this](HighsInt& null) {
+      highsLogUser(options_.log_options, HighsLogType::kInfo,
+                   "  Iteration        Objective     NullspaceDim\n");
+    });
 
     // Define the QP solver iteration logging function
     settings.iteration_log.subscribe([this](Statistics& stats) {
@@ -4319,10 +4504,6 @@ HighsStatus Highs::callSolveQp() {
       default:
         settings.pricing = PricingStrategy::Devex;
     }
-
-    // print header for QP solver output
-    highsLogUser(options_.log_options, HighsLogType::kInfo,
-                 "  Iteration        Objective     NullspaceDim\n");
 
     QpAsmStatus status = solveqp(instance, settings, stats, model_status_,
                                  basis_, solution_, timer_);
@@ -4709,10 +4890,14 @@ void Highs::logHeader() {
 void Highs::reportModel(const HighsModel& model) {
   reportLp(options_.log_options, model.lp_, HighsLogType::kVerbose);
   if (model.hessian_.dim_) {
+    assert(model.hessian_.format_ == HessianFormat::kTriangular);
     const HighsInt dim = model.hessian_.dim_;
     reportHessian(options_.log_options, dim, model.hessian_.start_[dim],
                   model.hessian_.start_.data(), model.hessian_.index_.data(),
                   model.hessian_.value_.data());
+  } else if (model.hessian_.isOracle()) {
+    highsLogUser(options_.log_options, HighsLogType::kInfo,
+                 "Hessian is represented via an oracle\n");
   }
 }
 
