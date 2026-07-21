@@ -1265,7 +1265,7 @@ void Solver::printHeader() const {
     if (!options_.timeless_log) logger_.print("    time");
     if (logger_.debug(1)) {
       logger_.print(
-          "     alpha p/d   sigma af/co   cor  solv  Fact    static reg p/d    "
+          "     alpha p/d   sigma af/co   cor  solv  fact    static reg p/d    "
           " minT     maxT  (xj * zj / mu)_range_&_num   max_res");
     }
     logger_.print("\n");
@@ -1353,37 +1353,43 @@ void Solver::printSummary() const {
   }
   logger_.print(log_stream.str().c_str());
 
-  logger_.print("\nTime profile\n");
+  if (logger_.debug(1)) {
+    logger_.print("\nTime profile\n");
 
-  logger_.print(" Initialise           %.2f\n", info_.times[kInitialiseTime]);
-  logger_.print(" Prepare iter         %.2f\n", info_.times[kPrepareTime]);
-  logger_.print(" Predictor            %.2f\n", info_.times[kPredictorTime]);
-  logger_.print(" Correctors           %.2f\n", info_.times[kCorrectorsTime]);
-  logger_.print(" Step                 %.2f\n", info_.times[kStepTime]);
-  logger_.print("\n");
+    logger_.print(" Initialise           %.2f\n", info_.times[kInitialiseTime]);
+    logger_.print(" Prepare iter         %.2f\n", info_.times[kPrepareTime]);
+    logger_.print(" Predictor            %.2f\n", info_.times[kPredictorTime]);
+    logger_.print(" Correctors           %.2f\n", info_.times[kCorrectorsTime]);
+    logger_.print(" Step                 %.2f\n", info_.times[kStepTime]);
+    logger_.print("\n");
 
-  logger_.print(" 2x2 system           %.2f\n", info_.times[kSolve2x2Time]);
-  logger_.print(" Recover direction    %.2f\n", info_.times[kRecoverTime]);
-  logger_.print(" Residuals            %.2f\n", info_.times[kResidualsTime]);
-  logger_.print("\n");
+    logger_.print(" 2x2 system           %.2f\n", info_.times[kSolve2x2Time]);
+    logger_.print(" Recover direction    %.2f\n", info_.times[kRecoverTime]);
+    logger_.print(" Residuals            %.2f\n", info_.times[kResidualsTime]);
+    logger_.print("\n");
 
-  logger_.print(" Structure NE         %.2f\n",
-                info_.times[kMatrixStructureTime_NE]);
-  logger_.print(" Structure AS         %.2f\n",
-                info_.times[kMatrixStructureTime_AS]);
-  logger_.print(" Matrix values        %.2f\n", info_.times[kMatrixValuesTime]);
+    logger_.print(" Structure NE         %.2f\n",
+                  info_.times[kMatrixStructureTime_NE]);
+    logger_.print(" Structure AS         %.2f\n",
+                  info_.times[kMatrixStructureTime_AS]);
+    logger_.print(" Matrix values        %.2f\n",
+                  info_.times[kMatrixValuesTime]);
 
-  logger_.print(" Analyse NE           %.2f\n", info_.times[kAnalyseTime_NE]);
-  logger_.print(" Analyse AS           %.2f\n", info_.times[kAnalyseTime_AS]);
+    logger_.print(" Analyse NE           %.2f\n", info_.times[kAnalyseTime_NE]);
+    logger_.print(" Analyse AS           %.2f\n", info_.times[kAnalyseTime_AS]);
 
-  logger_.print(" Factorise            %.2f\n", info_.times[kFactoriseTime]);
+    logger_.print(" Factorise            %.2f\n", info_.times[kFactoriseTime]);
 
-  logger_.print(" Solve                %.2f\n", info_.times[kSolveTime]);
-  logger_.print(" Residual             %.2f\n",
-                info_.times[kRefinementResTime]);
-  logger_.print(" Omega                %.2f\n",
-                info_.times[kRefinementOmegaTime]);
-  logger_.print(" Insert/split         %.2f\n", info_.times[kInsertSplitTime]);
+    logger_.print(" Solve                %.2f\n", info_.times[kSolveTime]);
+    logger_.print(" Residual             %.2f\n",
+                  info_.times[kRefinementResTime]);
+    logger_.print(" Omega                %.2f\n",
+                  info_.times[kRefinementOmegaTime]);
+    logger_.print(" Insert/split         %.2f\n",
+                  info_.times[kInsertSplitTime]);
+    logger_.print("\n");
+  }
+
   logger_.print("\n");
 }
 
@@ -1488,7 +1494,7 @@ void Solver::setStatus2(Status status) {
   status_phase2 = status;
 }
 void Solver::setStatus(Status status) {
-  if (status_phase1 == kStatusNotSet)
+  if (getStatus1() == kStatusNotSet)
     setStatus1(status);
   else
     setStatus2(status);
