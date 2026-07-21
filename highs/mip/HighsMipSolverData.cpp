@@ -226,7 +226,7 @@ bool HighsMipSolverData::trySolution(const std::vector<double>& solution,
     if (mipsolver.isColInteger(i) && fractionality(solution[i]) > feastol)
       return false;
 
-    obj += mipsolver.colCost(i) * solution[i];
+    obj += static_cast<HighsCDouble>(mipsolver.colCost(i)) * solution[i];
   }
 
   for (HighsInt i = 0; i != mipsolver.numRow(); ++i) {
@@ -389,8 +389,9 @@ HighsModelStatus HighsMipSolverData::trivialHeuristics() {
 
     HighsCDouble cdouble_obj = 0.0;
     for (HighsInt iCol = 0; iCol < mipsolver.numCol(); iCol++)
-      cdouble_obj += mipsolver.colCost(iCol) * solution[iCol];
-    double obj = double(cdouble_obj);
+      cdouble_obj +=
+          static_cast<HighsCDouble>(mipsolver.colCost(iCol)) * solution[iCol];
+    double obj = static_cast<double>(cdouble_obj);
     const double save_upper_bound = upper_bound;
     const bool new_incumbent =
         addIncumbent(solution, obj, heuristic_source[try_heuristic]);
@@ -1145,8 +1146,8 @@ void HighsMipSolverData::runSetup() {
     debugSolution.debugSolObjective = 0;
     HighsCDouble debugsolobj = 0.0;
     for (HighsInt i = 0; i != mipsolver.numCol(); ++i)
-      debugsolobj +=
-          mipsolver.colCost(i) * HighsCDouble(debugSolution.debugSolution[i]);
+      debugsolobj += static_cast<HighsCDouble>(mipsolver.colCost(i)) *
+                     debugSolution.debugSolution[i];
     debugSolution.debugSolObjective = static_cast<double>(debugsolobj);
     debugSolution.registerDomain(getDomain());
     assert(checkSolution(debugSolution.debugSolution));

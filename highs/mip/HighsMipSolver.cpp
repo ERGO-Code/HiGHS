@@ -1365,7 +1365,7 @@ bool HighsMipSolver::solutionFeasible(const HighsLp* lp,
     assert(col_value.size() == static_cast<size_t>(lp->num_col_));
   for (HighsInt i = 0; i != lp->num_col_; ++i) {
     const double value = col_value[i];
-    obj += lp->col_cost_[i] * value;
+    obj += static_cast<HighsCDouble>(lp->col_cost_[i]) * value;
 
     if (lp->integrality_[i] == HighsVarType::kInteger) {
       integrality_violation =

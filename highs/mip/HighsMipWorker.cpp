@@ -127,7 +127,7 @@ bool HighsMipWorker::trySolution(const std::vector<double>& solution,
         fractionality(solution[i]) > mipdata_.feastol)
       return false;
 
-    obj += mipsolver_.colCost(i) * solution[i];
+    obj += static_cast<HighsCDouble>(mipsolver_.colCost(i)) * solution[i];
   }
 
   for (HighsInt i = 0; i != mipsolver_.model_->num_row_; ++i) {
