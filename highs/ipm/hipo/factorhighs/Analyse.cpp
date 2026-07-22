@@ -1237,7 +1237,8 @@ void Analyse::computeTreeSchedule() {
   std::vector<Int> head, next;
   childrenLinkedList(sn_parent_, head, next);
 
-  const double task_ops_thresh = total_ops * kLargeTaskRelativeThresh;
+  const double task_ops_thresh =
+      std::max(total_ops * kLargeTaskRelativeThresh, kLargeTaskAbsoluteThres);
 
   HighsDisjointSets<> sets(sn_count_);
   std::vector<double> child_ops(sn_count_, 0.0);

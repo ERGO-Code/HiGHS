@@ -54,6 +54,7 @@ const double kDynamicDiagCoeff = 1e-24;
 const Int kMetisSeed = 42;
 
 const double kLargeTaskRelativeThresh = 0.001;
+const double kLargeTaskAbsoluteThres = 1e6;
 
 struct Regul {
   double primal{};
