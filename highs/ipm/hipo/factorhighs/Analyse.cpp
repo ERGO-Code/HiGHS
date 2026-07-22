@@ -4,6 +4,7 @@
 #include <fstream>
 #include <iostream>
 #include <limits>
+#include <map>
 #include <random>
 #include <stack>
 
@@ -12,6 +13,8 @@
 #include "ReturnValues.h"
 #include "ipm/hipo/auxiliary/Auxiliary.h"
 #include "ipm/hipo/auxiliary/Logger.h"
+#include "util/HighsDisjointSets.h"
+
 namespace hipo {
 
 const Int64 int32_limit = std::numeric_limits<int32_t>::max();
@@ -1208,6 +1211,103 @@ void Analyse::computeStackSize() {
   serial_storage_ = (total_frontal + max_stack_size_) * 8;
 }
 
+void Analyse::computeTreeSchedule() {
+  // compute number of operations for each supernode
+  std::vector<double> sn_ops(sn_count_);
+  double total_ops = 0;
+  for (Int sn = 0; sn < sn_count_; ++sn) {
+    const Int sz = sn_start_[sn + 1] - sn_start_[sn];
+    const Int fr = ptr_sn_[sn + 1] - ptr_sn_[sn];
+
+    for (Int i = 0; i < sz; ++i) {
+      const double this_sn_dense_ops = (double)(fr - i - 1) * (fr - i - 1);
+      sn_ops[sn] += this_sn_dense_ops;
+      total_ops += this_sn_dense_ops;
+    }
+
+    if (sn_parent_[sn] != -1) {
+      const Int ldc = fr - sz;
+      const double this_sn_sparse_ops =
+          (double)ldc * (ldc + 1) / 2 * kSpopsWeightSn;
+      sn_ops[sn_parent_[sn]] += this_sn_sparse_ops;
+      total_ops += this_sn_sparse_ops;
+    }
+  }
+
+  std::vector<Int> head, next;
+  childrenLinkedList(sn_parent_, head, next);
+
+  const double task_ops_thresh = total_ops * 0.001;
+
+  HighsDisjointSets<> sets(sn_count_);
+  std::vector<double> child_ops(sn_count_, 0.0);
+  std::map<Int, Int> task_numbering;
+  Int task_count = 0;
+
+  // Assign supernodes to tasks:
+  // if a supernode is part of a task that is large enough, then the task is
+  // considered complete. Otherwise, the task is still open and the parent
+  // supernode will continue it.
+  for (Int sn = 0; sn < sn_count_; ++sn) {
+    double this_sn_task_ops = sn_ops[sn];
+    Int child = head[sn];
+    while (child != -1) {
+      this_sn_task_ops += child_ops[child];
+      child = next[child];
+    }
+
+    const bool task_large = this_sn_task_ops > task_ops_thresh;
+    const bool task_root = sn_parent_[sn] == -1;
+
+    if (task_large || task_root) {
+      // completed a task
+      child_ops[sn] = 0.0;
+      task_numbering[sets.getSet(sn)] = task_count;
+      task_count++;
+    } else {
+      // task still incomplete
+      child_ops[sn] = this_sn_task_ops;
+      sets.merge(sn, sn_parent_[sn]);
+    }
+  }
+
+  schedule_.sn_per_task.resize(task_count);
+  std::vector<double> tasks_ops(task_count);
+  for (Int sn = 0; sn < sn_count_; ++sn) {
+    const Int task_id = task_numbering[sets.getSet(sn)];
+    schedule_.sn_per_task[task_id].push_back(sn);
+    tasks_ops[task_id] += sn_ops[sn];
+  }
+
+  // Create tree of dependencies among tasks.
+  // Since the supernodal tree is postordered, the tree of dependencies among
+  // tasks should be automatically postordered as well.
+  schedule_.task_parent.assign(task_count, -1);
+  for (Int task = 0; task < task_count; ++task) {
+    for (Int sn : schedule_.sn_per_task[task]) {
+      Int child = head[sn];
+      while (child != -1) {
+        const Int child_task = task_numbering[sets.getSet(child)];
+        if (child_task != task) {
+          assert(child_task < task);
+          assert(schedule_.task_parent[child_task] == -1);
+          schedule_.task_parent[child_task] = task;
+        }
+        child = next[child];
+      }
+    }
+  }
+
+  // verify that task elimination tree has topological ordering
+  for (Int task = 0; task < task_count; ++task) {
+    const Int this_parent = schedule_.task_parent[task];
+    if (this_parent <= task) {
+      schedule_.clear();
+      break;
+    }
+  }
+}
+
 Int Analyse::run(Symbolic& S) {
   // Perform analyse phase and store the result into the symbolic object S.
   // After Run returns, the Analyse object is not valid.
@@ -1248,6 +1348,7 @@ Int Analyse::run(Symbolic& S) {
   computeBlockStart();
   computeCriticalPath();
   computeStackSize();
+  computeTreeSchedule();
 
   // move relevant stuff into S
   S.n_ = n_;
@@ -1295,6 +1396,7 @@ Int Analyse::run(Symbolic& S) {
   S.relind_clique_ = std::move(relind_clique_);
   S.consecutive_sums_ = std::move(consecutive_sums_);
   S.clique_block_start_ = std::move(clique_block_start_);
+  S.schedule_ = std::move(schedule_);
 
   HIPO_CLOCK_STOP(1, data_, kTimeAnalyse);
 

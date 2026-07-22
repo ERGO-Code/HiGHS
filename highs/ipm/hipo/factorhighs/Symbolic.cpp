@@ -6,7 +6,11 @@
 
 namespace hipo {
 
-Symbolic::Symbolic() {}
+void TreeSchedule::clear() {
+  sn_per_task.clear();
+  task_parent.clear();
+  valid = false;
+}
 
 void Symbolic::setParallel(bool par_tree, bool par_node) {
   parallel_tree_ = par_tree;
@@ -47,6 +51,7 @@ const std::vector<Int>& Symbolic::iperm() const { return iperm_; }
 const std::vector<Int>& Symbolic::snParent() const { return sn_parent_; }
 const std::vector<Int>& Symbolic::snStart() const { return sn_start_; }
 const std::vector<Int>& Symbolic::pivotSign() const { return pivot_sign_; }
+const TreeSchedule& Symbolic::schedule() const { return schedule_; }
 
 static std::string memoryString(double mem) {
   std::stringstream ss;
