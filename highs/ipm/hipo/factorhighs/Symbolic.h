@@ -21,6 +21,7 @@ struct TreeSchedule {
   std::vector<Int> task_parent;
 
   void clear();
+  Int count() const { return task_parent.size(); }
 };
 
 // Symbolic factorisation object

@@ -98,26 +98,12 @@ void Factorise::processSupernode(Int sn) {
   // Assemble frontal matrix for supernode sn, perform partial factorisation and
   // store the result.
 
-  highs::parallel::TaskGroup tg;
+  if (flag_stop_.load(std::memory_order_relaxed)) return;
+
   HIPO_CLOCK_CREATE;
 
   const bool parallel = S_.parTree();
   const bool serial = !parallel;
-
-  if (flag_stop_.load(std::memory_order_relaxed)) return;
-
-  if (parallel) {
-    // spawn children of this supernode in forward order
-    Int child_to_spawn = first_child_[sn];
-    while (child_to_spawn != -1) {
-      tg.spawn([=]() { processSupernode(child_to_spawn); });
-      child_to_spawn = next_child_[child_to_spawn];
-    }
-
-    // wait for first child to finish, before starting the parent (if there is a
-    // first child)
-    if (first_child_[sn] != -1) tg.sync();
-  }
 
   // ===================================================
   // Supernode information
@@ -177,13 +163,7 @@ void Factorise::processSupernode(Int sn) {
     const double* child_clique;
 
     if (parallel) {
-      // sync with spawned child, apart from the first one
-      if (child_sn != first_child_reverse_[sn]) tg.sync();
-
-      if (flag_stop_.load(std::memory_order_relaxed)) return;
-
       child_clique = schur_contribution_[child_sn].data();
-
       if (!child_clique) {
         if (logger_)
           logger_->printInfo("Missing child supernode contribution\n");
@@ -286,6 +266,47 @@ void Factorise::processSupernode(Int sn) {
   HIPO_CLOCK_STOP(2, data_, kTimeFactoriseTerminate);
 }
 
+void Factorise::processTask(Int task) {
+  highs::parallel::TaskGroup tg;
+  Int child = first_task_child_[task];
+  while (child != -1) {
+    tg.spawn([=]() { processTask(child); });
+    child = next_task_child_[child];
+  }
+  tg.taskWait();
+
+  for (Int sn : S_.schedule().sn_per_task[task]) {
+    processSupernode(sn);
+  }
+}
+
+void Factorise::processParallelTree() {
+  const TreeSchedule& sched = S_.schedule();
+  childrenLinkedList(sched.task_parent, first_task_child_, next_task_child_);
+
+  highs::parallel::TaskGroup tg;
+  for (Int task = 0; task < sched.count(); ++task) {
+    if (sched.task_parent[task] == -1) {
+      tg.spawn([=]() { processTask(task); });
+    }
+  }
+  tg.taskWait();
+}
+
+void Factorise::processSerialTree() {
+  // processing the tree in serial requires a CliqueStack
+  if (!stack_) {
+    flag_stop_.store(true, std::memory_order_relaxed);
+    return;
+  }
+
+  if (stack_->empty()) stack_->init(S_.maxStackSize());
+
+  for (Int sn = 0; sn < S_.sn(); ++sn) {
+    processSupernode(sn);
+  }
+}
+
 bool Factorise::run(Numeric& num) {
   HIPO_CLOCK_CREATE;
 
@@ -302,28 +323,12 @@ bool Factorise::run(Numeric& num) {
   // the memory of previous factorisations.
   sn_columns_.resize(S_.sn());
 
-  if (S_.parTree()) {
-    Int spawned_roots{};
-    // spawn tasks for root supernodes
-    for (Int sn = 0; sn < S_.sn(); ++sn) {
-      if (S_.snParent(sn) == -1) {
-        tg.spawn([=]() { processSupernode(sn); });
-        ++spawned_roots;
-      }
-    }
+  const bool use_parallel_tree = S_.parTree() && S_.schedule().valid;
 
-    // sync tasks for root supernodes
-    tg.taskWait();
-  } else {
-    // processing the tree in serial requires a CliqueStack
-    if (!stack_) return true;
-    if (stack_->empty()) stack_->init(S_.maxStackSize());
-
-    // go through each supernode serially
-    for (Int sn = 0; sn < S_.sn(); ++sn) {
-      processSupernode(sn);
-    }
-  }
+  if (use_parallel_tree)
+    processParallelTree();
+  else
+    processSerialTree();
 
   if (flag_stop_.load(std::memory_order_relaxed)) return true;
 

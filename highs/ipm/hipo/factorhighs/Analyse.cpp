@@ -1301,7 +1301,7 @@ void Analyse::computeTreeSchedule() {
   // verify that task elimination tree has topological ordering
   for (Int task = 0; task < task_count; ++task) {
     const Int this_parent = schedule_.task_parent[task];
-    if (this_parent <= task) {
+    if (this_parent != -1 && this_parent <= task) {
       schedule_.clear();
       break;
     }
