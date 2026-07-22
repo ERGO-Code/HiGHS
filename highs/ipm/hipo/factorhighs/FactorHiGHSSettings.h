@@ -53,6 +53,8 @@ const double kDynamicDiagCoeff = 1e-24;
 // metis
 const Int kMetisSeed = 42;
 
+const double kLargeTaskRelativeThresh = 0.001;
+
 struct Regul {
   double primal{};
   double dual{};
