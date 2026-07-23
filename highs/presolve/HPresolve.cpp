@@ -1735,6 +1735,8 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postsolve_stack) {
       }
     };
 
+    domain.getDfProbingPropagation().recomputeLocks();
+
     for (const auto& binvar : binaries) {
       // Count the binaries considered
       iBin++;
