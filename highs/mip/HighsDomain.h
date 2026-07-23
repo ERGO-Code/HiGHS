@@ -250,6 +250,7 @@ class HighsDomain {
     std::vector<DFPROBING_FIX_DIRECTION> zeroCostVarsDirection_;
     std::vector<std::pair<HighsInt, bool>> zeroCostFixedVariables_;
     bool startZeroCostFixing_;
+    size_t zeroCostStartPos_;
 
     bool enabled_ = false;
     size_t previousSize_;
@@ -275,6 +276,14 @@ class HighsDomain {
 
     bool isActive() {
       return enabled_ && redundantPropagateinds_.size() > previousSize_;
+    }
+
+    void setZeroCostFixingPosition(HighsInt v) {
+      zeroCostStartPos_ = v;
+    }
+
+    size_t getZeroCostFixingPosition() {
+      return zeroCostStartPos_;
     }
 
     void enableZeroObjFixing() {
@@ -447,6 +456,8 @@ class HighsDomain {
  public:
   std::vector<double> col_lower_;
   std::vector<double> col_upper_;
+
+  bool inProbing_ = false;
 
   HighsDomain(HighsMipSolver& mipsolver);
 
@@ -769,6 +780,10 @@ class HighsDomain {
   void setRecordRedundantRows(bool val) { recordRedundantRows_ = val; };
 
   bool isRedundantRow(HighsInt row) const;
+
+  DualfixingProbingPropagation& getDfProbingPropagation() {
+    return dfprobingPropagation;
+  }
 };
 
 #endif
