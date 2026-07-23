@@ -238,32 +238,79 @@ class HighsDomain {
   struct DualfixingProbingPropagation {
     HighsDomain* domain;
     HighsMipSolver* mipsolver;
-    std::vector<int> zeroCostVarsDirection_;
-    vector<HighsInt> colLowerLockNum_;
-    vector<HighsInt> colUpperLockNum_;
     // row lower and upper, length = 2 * rownum
     std::vector<char> redundantPropagateflags_;
     std::vector<HighsInt> redundantPropagateinds_;
-    std::vector<std::pair<HighsInt, bool>> zeroCostFixedVariables_;
-    HighsInt probingStatusSide = 0;
-    bool startZeroCostFixing;
-  
-    std::vector<HighsInt> tmpColLoLock_;
-    std::vector<HighsInt> tmpColUpLock_;
-    std::vector<HighsInt> involvedVars;
-    std::vector<char> indsVars;
 
-    void clearInvolved(HighsInt start) {
-      for (const auto x : involvedVars)
-        indsVars[x] = false;
-      involvedVars.clear();
+    enum DFPROBING_FIX_DIRECTION {
+      FIXDIRECTION_NOT_DECIDED = 0,
+      FIXDIRECTION_LOWER_BOUND = 1,
+      FIXDIRECTION_UPPER_BOUND = 2,
+    };
+    std::vector<DFPROBING_FIX_DIRECTION> zeroCostVarsDirection_;
+    std::vector<std::pair<HighsInt, bool>> zeroCostFixedVariables_;
+    bool startZeroCostFixing_;
+
+    bool enabled_ = false;
+    size_t previousSize_;
+
+    std::vector<HighsInt> colLowerLockOriginal_;
+    std::vector<HighsInt> colUpperLockOriginal_;
+    std::vector<HighsInt> colLowerLockReduced_;
+    std::vector<HighsInt> colUpperLockReduced_;
+    std::vector<HighsInt> candidatesVec_;
+    std::vector<char> candidatesFlag_;
+
+    void enablePropagator() {
+      enabled_ = true;
     }
 
-    void clearRedundant();
+    void disablePropagator() {
+      enabled_ = false;
+    }
+
+    bool isEnabled() {
+      return enabled_;
+    }
+
+    bool isActive() {
+      return enabled_ && redundantPropagateinds_.size() > previousSize_;
+    }
+
+    void enableZeroObjFixing() {
+      startZeroCostFixing_ = true;
+    }
+
+    void disableZeroObjFixing() {
+      startZeroCostFixing_ = false;
+    }
+
+    bool ableToFixToLb(int col) {
+      return mipsolver->model_->col_cost_[col] >= -mipsolver->options_mip_->dual_feasibility_tolerance 
+        && mipsolver->model_->col_lower_[col] > -kHighsInf;
+    }
+
+    bool ableToFixToUb(int col) {
+      return mipsolver->model_->col_cost_[col] <= mipsolver->options_mip_->dual_feasibility_tolerance 
+        && mipsolver->model_->col_upper_[col] < kHighsInf;
+    }
 
 
+    void clearRedundant() {
+      if (!redundantPropagateinds_.empty()) { // clear buffers
+        for (auto x : redundantPropagateinds_)
+          redundantPropagateflags_[x] = false;
 
-    DualfixingProbingPropagation() {};
+        redundantPropagateinds_.clear();
+      }
+    
+      for (size_t i = 0; i < redundantPropagateflags_.size(); ++ i)
+        assert(!redundantPropagateflags_[i]);
+    
+      zeroCostFixedVariables_.clear();
+    }
+
+    DualfixingProbingPropagation() {;};
     
     DualfixingProbingPropagation(HighsDomain* domain) : domain(domain) {};
 
@@ -271,14 +318,16 @@ class HighsDomain {
 
     DualfixingProbingPropagation& operator=(const DualfixingProbingPropagation& other);
 
-    ~DualfixingProbingPropagation();
+    ~DualfixingProbingPropagation() {;};
 
     void recomputeLocks();
-    bool isUpperRedundant(HighsInt row);
-    bool isLowerRedundant(HighsInt row);
-    void markRedundantPropagate(HighsInt row, bool isUpper);
+    void updateRhsRedundant(HighsInt row);
+    void updateLhsRedundant(HighsInt row);
 
     void propagate();
+
+   
+
     
   };
 
