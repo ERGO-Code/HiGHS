@@ -651,9 +651,6 @@ HighsDomain::DualfixingProbingPropagation::DualfixingProbingPropagation(const Du
     candidatesFlag_(other.candidatesFlag_) {;}
 
 void HighsDomain::DualfixingProbingPropagation::recomputeLocks() {
-  if (!isEnabled())
-    return;
-
   mipsolver = domain->mipsolver;
   redundantPropagateflags_.assign(2 * mipsolver->numRow(), false);
   redundantPropagateinds_.clear();
@@ -673,6 +670,19 @@ void HighsDomain::DualfixingProbingPropagation::recomputeLocks() {
   candidatesVec_.clear();
   candidatesVec_.reserve(mipsolver->numCol());
   candidatesFlag_.assign(mipsolver->numCol(), false);
+
+  const auto model = mipsolver->model_;
+  for (HighsInt iCol = 0; iCol < model->a_matrix_.num_col_; iCol ++) {
+    for (HighsInt k = model->a_matrix_.start_[iCol]; k < model->a_matrix_.start_[iCol + 1]; k ++) {
+      const HighsInt iRow = model->a_matrix_.index_[k];
+      const double iValue = model->a_matrix_.value_[k];
+      const double lhs = model->row_lower_[iRow], rhs = model->row_upper_[iRow];
+      if ((iValue > 0 && rhs != kHighsInf) || (iValue < 0 && lhs != -kHighsInf))
+        colUpperLockOriginal_[iCol] ++;
+      if ((iValue > 0 && lhs != -kHighsInf) || (iValue < 0 && rhs != kHighsInf))
+        colLowerLockOriginal_[iCol] ++;
+    }
+  }
 }
 
 void HighsDomain::DualfixingProbingPropagation::updateRhsRedundant(HighsInt row) {
@@ -965,7 +975,7 @@ void HighsDomain::DualfixingProbingPropagation::propagate() {
   }
 
   for (j ++; j < domainchangeProbing.size(); ++ j) {
-    assert(domain->infeasible);
+    assert(domain->infeasible_);
     delete domainchangeProbing[j];
   }
 

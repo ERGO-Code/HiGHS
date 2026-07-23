@@ -82,7 +82,6 @@ bool HighsImplications::computeImplications(HighsInt col, bool val) {
   // data structure to cache implications for non-binary variables
   std::vector<HighsDomainChange> implics_tentative;
   implics_tentative.reserve(numImplications);
-  std::vector<char> isTentative(numImplications, false);
 
   HighsInt numEntries = mipsolver.mipdata_->cliquetable.getNumEntries();
   HighsInt maxEntries = 100000 + mipsolver.numNonzero();
@@ -90,8 +89,6 @@ bool HighsImplications::computeImplications(HighsInt col, bool val) {
   const HighsInt tentativeStart = globaldomain.inProbing_ ? globaldomain.getDfProbingPropagation().getZeroCostFixingPosition() : kHighsIInf32;
   if (globaldomain.inProbing_) {
     implics_tentative.assign(domchgstack.begin() + stackimplicstart, domchgstack.begin() + stackimplicend);
-    for (int i = 0; i < stackimplicend - stackimplicstart; i ++)
-      isTentative[i] = (i + stackimplicstart >= tentativeStart);
   }
   for (HighsInt i = stackimplicstart; i < stackimplicend; ++i) {
     if (domchgreason[i].type == HighsDomain::Reason::kCliqueTable &&
@@ -182,7 +179,6 @@ bool HighsImplications::computeImplications(HighsInt col, bool val) {
   if (!implics_tentative.empty()) {
     pdqsort(implics_tentative.begin(), implics_tentative.end());
     implications[loc].implics_tentative = std::move(implics_tentative);
-    implications[loc].isTentative = std::move(isTentative);
   }
 
   return false;
@@ -500,14 +496,10 @@ bool HighsImplications::runProbing(HighsInt col, HighsInt& numReductions) {
       }
     }
 
-    if (haveTentativeImplics_zero) {
+    if (haveTentativeImplics_zero)
       implications[2 * col].implics_tentative.clear();
-      implications[2 * col].isTentative.clear();
-    }
-    if (haveTentativeImplics_one) {
+    if (haveTentativeImplics_one)
       implications[2 * col + 1].implics_tentative.clear();
-      implications[2 * col + 1].isTentative.clear();
-    }
 
     return true;
   }

@@ -33,7 +33,6 @@ class HighsImplications {
       Therefore, special treatment is required.
     */
     std::vector<HighsDomainChange> implics_tentative;
-    std::vector<char> isTentative;
     bool computed = false;
   };
   std::vector<Implics> implications;
