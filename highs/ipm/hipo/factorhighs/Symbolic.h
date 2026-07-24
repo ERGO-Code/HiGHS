@@ -50,6 +50,9 @@ class Symbolic {
   Int sn_size_10_{};
   Int sn_size_100_{};
 
+  double ops_solve_{};
+  double critops_solve_{};
+
   // Inverse permutation
   std::vector<Int> iperm_{};
 
@@ -114,7 +117,7 @@ class Symbolic {
   Int64 max_stack_size_{};
   Int tree_depth_{};
 
-  TreeSchedule schedule_;
+  TreeSchedule schedule_solve_;
 
   friend class Analyse;
 

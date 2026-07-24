@@ -948,6 +948,49 @@ void Analyse::computeCriticalPath() {
   }
 }
 
+void Analyse::computeCriticalPathSolve() {
+  // Compute the critical path within the supernodal elimination tree, and the
+  // number of operations along the path. This is the number of operations that
+  // need to be done sequentially while doing tree parallelism.
+
+  std::vector<double> critical_ops(sn_count_);
+
+  // linked lists of children
+  std::vector<Int> head, next;
+  childrenLinkedList(sn_parent_, head, next);
+
+  ops_solve_ = 0.0;
+  critical_ops_solve_ = 0.0;
+
+  for (Int sn = 0; sn < sn_count_; ++sn) {
+    const Int sz = sn_start_[sn + 1] - sn_start_[sn];
+    const Int fr = ptr_sn_[sn + 1] - ptr_sn_[sn];
+    const double this_sn_ops =
+        (double)sz * (sz + 1) / 2 + (double)sz * (fr - sz);
+    critical_ops[sn] = this_sn_ops;
+    ops_solve_ += this_sn_ops;
+  }
+
+  for (Int sn = 0; sn < sn_count_; ++sn) {
+    // leaf nodes
+    if (head[sn] == -1) continue;
+
+    double max_ops{};
+    Int child = head[sn];
+    while (child != -1) {
+      // critical_ops of this supernode is max over children of
+      // (ops_of_this_sn + critical_ops_of_child)
+      max_ops = std::max(max_ops, critical_ops[sn] + critical_ops[child]);
+      child = next[child];
+    }
+    critical_ops[sn] = max_ops;
+  }
+
+  for (Int sn = 0; sn < sn_count_; ++sn) {
+    critical_ops_solve_ = std::max(critical_ops_solve_, critical_ops[sn]);
+  }
+}
+
 void Analyse::reorderChildren() {
   std::vector<Int64> clique_entries(sn_count_);
   std::vector<Int64> frontal_entries(sn_count_);
@@ -1211,7 +1254,7 @@ void Analyse::computeStackSize() {
   serial_storage_ = (total_frontal + max_stack_size_) * 8;
 }
 
-void Analyse::computeTreeSchedule() {
+void Analyse::computeTreeScheduleSolve() {
   // compute number of operations for each supernode
   std::vector<double> sn_ops(sn_count_);
   double total_ops = 0;
@@ -1220,17 +1263,10 @@ void Analyse::computeTreeSchedule() {
     const Int fr = ptr_sn_[sn + 1] - ptr_sn_[sn];
 
     for (Int i = 0; i < sz; ++i) {
-      const double this_sn_dense_ops = (double)(fr - i - 1) * (fr - i - 1);
+      const double this_sn_dense_ops =
+          (double)sz * (sz + 1) / 2 + (double)sz * (fr - sz);
       sn_ops[sn] += this_sn_dense_ops;
       total_ops += this_sn_dense_ops;
-    }
-
-    if (sn_parent_[sn] != -1) {
-      const Int ldc = fr - sz;
-      const double this_sn_sparse_ops =
-          (double)ldc * (ldc + 1) / 2 * kSpopsWeightSn;
-      sn_ops[sn_parent_[sn]] += this_sn_sparse_ops;
-      total_ops += this_sn_sparse_ops;
     }
   }
 
@@ -1272,40 +1308,43 @@ void Analyse::computeTreeSchedule() {
     }
   }
 
-  schedule_.sn_per_task.resize(task_count);
+  schedule_solve_.sn_per_task.resize(task_count);
   std::vector<double> tasks_ops(task_count);
   for (Int sn = 0; sn < sn_count_; ++sn) {
     const Int task_id = task_numbering[sets.getSet(sn)];
-    schedule_.sn_per_task[task_id].push_back(sn);
+    schedule_solve_.sn_per_task[task_id].push_back(sn);
     tasks_ops[task_id] += sn_ops[sn];
   }
+
+  for (double d : tasks_ops) printf("%.2f ", d / total_ops);
+  printf("\n");
 
   // Create tree of dependencies among tasks.
   // Since the supernodal tree is postordered, the tree of dependencies among
   // tasks should be automatically postordered as well.
-  schedule_.task_parent.assign(task_count, -1);
+  schedule_solve_.task_parent.assign(task_count, -1);
   for (Int task = 0; task < task_count; ++task) {
-    for (Int sn : schedule_.sn_per_task[task]) {
+    for (Int sn : schedule_solve_.sn_per_task[task]) {
       Int child = head[sn];
       while (child != -1) {
         const Int child_task = task_numbering[sets.getSet(child)];
         if (child_task != task) {
           assert(child_task < task);
-          assert(schedule_.task_parent[child_task] == -1);
-          schedule_.task_parent[child_task] = task;
+          assert(schedule_solve_.task_parent[child_task] == -1);
+          schedule_solve_.task_parent[child_task] = task;
         }
         child = next[child];
       }
     }
   }
 
-  schedule_.valid = true;
+  schedule_solve_.valid = true;
 
   // verify that task elimination tree has topological ordering
   for (Int task = 0; task < task_count; ++task) {
-    const Int this_parent = schedule_.task_parent[task];
+    const Int this_parent = schedule_solve_.task_parent[task];
     if (this_parent != -1 && this_parent <= task) {
-      schedule_.clear();
+      schedule_solve_.clear();
       break;
     }
   }
@@ -1350,8 +1389,9 @@ Int Analyse::run(Symbolic& S) {
 
   computeBlockStart();
   computeCriticalPath();
+  computeCriticalPathSolve();
   computeStackSize();
-  computeTreeSchedule();
+  computeTreeScheduleSolve();
 
   // move relevant stuff into S
   S.n_ = n_;
@@ -1368,6 +1408,8 @@ Int Analyse::run(Symbolic& S) {
   S.block_size_ = nb_;
   S.max_stack_size_ = max_stack_size_;
   S.tree_depth_ = maxDepthTree(sn_parent_);
+  S.ops_solve_ = ops_solve_;
+  S.critops_solve_ = critical_ops_solve_;
 
   // compute largest supernode
   std::vector<Int> sn_size(sn_start_.begin() + 1, sn_start_.end());
@@ -1399,7 +1441,7 @@ Int Analyse::run(Symbolic& S) {
   S.relind_clique_ = std::move(relind_clique_);
   S.consecutive_sums_ = std::move(consecutive_sums_);
   S.clique_block_start_ = std::move(clique_block_start_);
-  S.schedule_ = std::move(schedule_);
+  S.schedule_solve_ = std::move(schedule_solve_);
 
   HIPO_CLOCK_STOP(1, data_, kTimeAnalyse);
 

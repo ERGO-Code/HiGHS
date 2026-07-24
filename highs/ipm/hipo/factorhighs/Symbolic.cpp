@@ -51,7 +51,7 @@ const std::vector<Int>& Symbolic::iperm() const { return iperm_; }
 const std::vector<Int>& Symbolic::snParent() const { return sn_parent_; }
 const std::vector<Int>& Symbolic::snStart() const { return sn_start_; }
 const std::vector<Int>& Symbolic::pivotSign() const { return pivot_sign_; }
-const TreeSchedule& Symbolic::schedule() const { return schedule_; }
+const TreeSchedule& Symbolic::schedule() const { return schedule_solve_; }
 
 static std::string memoryString(double mem) {
   std::stringstream ss;
@@ -83,7 +83,10 @@ void Symbolic::print(const Logger& logger, bool verbose) const {
     log_stream << textline("Max tree speedup:") << fix(flops_ / critops_, 0, 2)
                << '\n';
     log_stream << textline("Tree depth:") << integer(tree_depth_, 0) << '\n';
-    log_stream << textline("Number of tasks:") << integer(schedule_.count(), 0)
+    log_stream << textline("Number of tasks:")
+               << integer(schedule_solve_.count(), 0) << '\n';
+    log_stream << textline("Ops solve:") << sci(ops_solve_, 0, 1) << '\n';
+    log_stream << textline("Critical ops solve:") << sci(critops_solve_, 0, 1)
                << '\n';
     log_stream << textline("Artificial nz:") << sci(artificial_nz_, 0, 1)
                << '\n';
