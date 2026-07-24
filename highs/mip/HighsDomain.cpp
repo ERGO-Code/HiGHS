@@ -75,6 +75,7 @@ HighsDomain::HighsDomain(HighsMipSolver& mipsolver) : mipsolver(&mipsolver) {
   changedcols_.reserve(mipsolver.numCol());
   infeasible_reason = Reason::unspecified();
   infeasible_ = false;
+  dfprobingPropagation.domain = this;
 }
 
 void HighsDomain::addCutpool(HighsCutPool& cutpool) {
@@ -636,6 +637,357 @@ void HighsDomain::CutpoolPropagation::updateActivityUbChange(
         });
   }
 }
+
+HighsDomain::DualfixingProbingPropagation::DualfixingProbingPropagation(const DualfixingProbingPropagation& other)
+  : redundantPropagateflags_(other.redundantPropagateflags_),
+    redundantPropagateinds_(other.redundantPropagateinds_),
+    zeroCostVarsDirection_(other.zeroCostVarsDirection_),
+    zeroCostFixedVariables_(other.zeroCostFixedVariables_),
+    colLowerLockOriginal_(other.colLowerLockOriginal_),
+    colUpperLockOriginal_(other.colUpperLockOriginal_),
+    colLowerLockReduced_(other.colLowerLockReduced_),
+    colUpperLockReduced_(other.colUpperLockReduced_),
+    candidatesVec_(other.candidatesVec_),
+    candidatesFlag_(other.candidatesFlag_),
+    lockNeedClear_(other.lockNeedClear_) {;}
+
+void HighsDomain::DualfixingProbingPropagation::recomputeLocks() {
+  mipsolver = domain->mipsolver;
+  redundantPropagateflags_.assign(2 * mipsolver->numRow(), false);
+  redundantPropagateinds_.clear();
+  redundantPropagateinds_.reserve(2 * mipsolver->numRow());
+  zeroCostVarsDirection_.assign(2 * mipsolver->numCol(), FIXDIRECTION_NOT_DECIDED);
+  zeroCostFixedVariables_.clear();
+  zeroCostFixedVariables_.reserve(2 * mipsolver->numCol());
+
+  startZeroCostFixing_ = false;
+  previousSize_ = 0;
+
+  colLowerLockOriginal_.assign(mipsolver->numCol(), 0);
+  colUpperLockOriginal_.assign(mipsolver->numCol(), 0);
+  colLowerLockReduced_.assign(mipsolver->numCol(), 0);
+  colUpperLockReduced_.assign(mipsolver->numCol(), 0);
+
+  candidatesVec_.clear();
+  candidatesVec_.reserve(mipsolver->numCol());
+  candidatesFlag_.assign(mipsolver->numCol(), false);
+  lockNeedClear_.reserve(mipsolver->numCol());
+
+  const auto model = mipsolver->model_;
+  for (HighsInt iCol = 0; iCol < model->a_matrix_.num_col_; iCol ++) {
+    for (HighsInt k = model->a_matrix_.start_[iCol]; k < model->a_matrix_.start_[iCol + 1]; k ++) {
+      const HighsInt iRow = model->a_matrix_.index_[k];
+      const double iValue = model->a_matrix_.value_[k];
+      const double lhs = model->row_lower_[iRow], rhs = model->row_upper_[iRow];
+      if ((iValue > 0 && rhs != kHighsInf) || (iValue < 0 && lhs != -kHighsInf))
+        colUpperLockOriginal_[iCol] ++;
+      if ((iValue > 0 && lhs != -kHighsInf) || (iValue < 0 && rhs != kHighsInf))
+        colLowerLockOriginal_[iCol] ++;
+    }
+  }
+}
+
+void HighsDomain::DualfixingProbingPropagation::updateRhsRedundant(HighsInt row) {
+  if (!isEnabled())
+    return;
+
+  if (domain->activitymaxinf_[row] != 0 || redundantPropagateflags_[2 * row + 1] || mipsolver->model_->row_upper_[row] == kHighsInf)
+    return;
+
+  if (domain->getMaxActivity(row) <= mipsolver->model_->row_upper_[row] + mipsolver->mipdata_->feastol) {
+    redundantPropagateinds_.push_back(2 * row + 1);
+    redundantPropagateflags_[2 * row + 1] = 1;
+  }
+}
+
+void HighsDomain::DualfixingProbingPropagation::updateLhsRedundant(HighsInt row) {
+  if (!isEnabled())
+    return;
+
+  if (domain->activitymininf_[row] != 0 || redundantPropagateflags_[2 * row] || mipsolver->model_->row_lower_[row] == -kHighsInf)
+    return;
+
+  if (domain->getMinActivity(row) >= mipsolver->model_->row_lower_[row] - mipsolver->mipdata_->feastol) {
+    redundantPropagateinds_.push_back(2 * row);
+    redundantPropagateflags_[2 * row] = 1;
+  }
+}
+
+
+void HighsDomain::DualfixingProbingPropagation::propagate() {
+  // The boolean variable ``startZeroCostFixing_'' is used to flag if we allow variables with zero cost objective coefficients can be fixed in domain propagation.
+  // The process of domain propagtion in probing is executed in two phases:
+  //     Phase 1: Apply classic domain propagation, and additionally fix variables with nonzero objective coefficients using dual fixing
+  //     Phase 2: Apply classic domain propagation, and additionally fix variables (including those with zero objective coefficients) using dual fixing
+  // In Phase 1, ``startZeroCostFixing_'' is set to be ``false'' to exclude variable with zero objective coefficients.
+  // In Phase 2, ``startZeroCostFixing_'' is set to be ``true''.
+  // Note that
+  //   (1) For all the bound changes in Phase 1, reductions deduced from them are valid for all optimal solutions;
+  //   (2) For the bound changes in Phase 2, reductions deduced from them can only be used to derive global valid reductions (i.e., variable fixing, global bound tightening, variable substitution).
+  if (!isEnabled())
+    return;
+
+  assert(candidatesVec_.empty());
+  vector<HighsDomainChange*> domainchangeProbing;
+
+  // tool lambda functions
+  auto addToCandidate = [&](HighsInt k) {
+    // std::cout << "k = " << k << std::endl;
+    if (candidatesFlag_[k])
+      return;
+    else {
+      candidatesVec_.push_back(k);
+      candidatesFlag_[k] = true;
+    }
+  };
+
+  auto checkVariableLowerLock = [&](HighsInt iCol) {
+    auto model = mipsolver->model_;
+    if (ableToFixToLb(iCol)) {
+      for (HighsInt k = model->a_matrix_.start_[iCol]; k < model->a_matrix_.start_[iCol + 1]; k ++) {
+        const HighsInt iRow = model->a_matrix_.index_[k];
+        const double iValue = model->a_matrix_.value_[k];
+        const double blower = model->row_lower_[iRow], bupper = model->row_upper_[iRow];
+        const bool lhsOk = iValue > 0 && domain->getMinActivity(iRow) >= blower - domain->feastol();
+        const bool rhsOk = iValue < 0 && domain->getMaxActivity(iRow) <= bupper + domain->feastol();
+        if (!lhsOk && !rhsOk) {
+          std::cout << "Lower lock: variable " << iCol << " at row = " << iRow << " coef = " << iValue
+                    << " not redundant at constraint " << iRow << ", minact = " << domain->getMinActivity(iRow) << ", maxact = " << domain->getMaxActivity(iRow) 
+                    << " lhs = " << blower << " rhs = " << bupper << std::endl;
+        }
+      }
+    }
+  };
+
+  auto checkVariableUpperLock = [&](HighsInt iCol) {
+    auto model = mipsolver->model_;
+    if (ableToFixToUb(iCol)) {
+      for (HighsInt k = model->a_matrix_.start_[iCol]; k < model->a_matrix_.start_[iCol + 1]; k ++) {
+        const HighsInt iRow = model->a_matrix_.index_[k];
+        const double iValue = model->a_matrix_.value_[k];
+        const double blower = model->row_lower_[iRow], bupper = model->row_upper_[iRow];
+        const bool lhsOk = iValue < 0 && domain->getMinActivity(iRow) >= blower - domain->feastol();
+        const bool rhsOk = iValue > 0 && domain->getMaxActivity(iRow) <= bupper + domain->feastol();
+        if (!lhsOk && !rhsOk) {
+          std::cout << "Upper lock: variable " << iCol << " at row = " << iRow << " coef = " << iValue
+                    << " not redundant at constraint " << iRow << ", minact = " << domain->getMinActivity(iRow) << ", maxact = " << domain->getMaxActivity(iRow) 
+                    << " lhs = " << blower << " rhs = " << bupper << std::endl;
+        }
+      }
+    }
+  };
+
+  auto addFixLower = [&](int iCol) {
+    HighsDomainChange* thisbchg = new HighsDomainChange;
+    thisbchg->column = iCol;
+    thisbchg->boundtype = HighsBoundType::kUpper;
+    thisbchg->boundval = domain->col_lower_[iCol];
+    domainchangeProbing.push_back(thisbchg);
+    // std::cout << "fixing to lower " << iCol << std::endl;
+  };
+
+  auto addFixUpper = [&](int iCol) {
+    HighsDomainChange* thisbchg = new HighsDomainChange;
+    thisbchg->column = iCol;
+    thisbchg->boundtype = HighsBoundType::kLower;
+    thisbchg->boundval = domain->col_upper_[iCol];
+    domainchangeProbing.push_back(thisbchg);
+    // std::cout << "fixing to upper " << iCol << std::endl;
+  };
+
+  auto collectFixLower = [&](int iCol) {
+    zeroCostFixedVariables_.emplace_back(iCol, FIXDIRECTION_LOWER_BOUND);
+  };
+
+  auto collectFixUpper = [&](int iCol) {
+    zeroCostFixedVariables_.emplace_back(iCol, FIXDIRECTION_UPPER_BOUND);
+  };
+
+
+
+  // get candidate
+  HighsInt maxLockLeft = redundantPropagateinds_.size() - previousSize_;
+  if (maxLockLeft == 0)
+    return;
+  for (; previousSize_ < redundantPropagateinds_.size(); ++ previousSize_, -- maxLockLeft) {
+    const HighsInt i = redundantPropagateinds_[previousSize_];
+    const HighsInt iRow = i / 2;
+    assert(iRow < mipsolver->numRow());
+
+    if (i % 2 == 0) { // lower redundant
+      HighsInt rstart = mipsolver->mipdata_->ARstart_[iRow];
+      HighsInt rend = mipsolver->mipdata_->ARstart_[iRow + 1];
+      for (auto k = rstart; k < rend; ++ k) {
+        const HighsInt iCol = mipsolver->mipdata_->ARindex_[k];
+        if (domain->isFixed(iCol))
+          continue;
+        const double iValue = mipsolver->mipdata_->ARvalue_[k];
+        const double cost = mipsolver->model_->col_cost_[iCol];
+
+        bool lowerNoInsert = colLowerLockReduced_[iCol] + maxLockLeft < colLowerLockOriginal_[iCol];
+        bool upperNoInsert = colUpperLockReduced_[iCol] + maxLockLeft < colUpperLockOriginal_[iCol];
+
+        if (iValue > 0 && cost >= mipsolver->options_mip_->dual_feasibility_tolerance) {
+          colLowerLockReduced_[iCol] ++;
+          lowerNoInsert = lowerNoInsert && colLowerLockReduced_[iCol] + maxLockLeft < colLowerLockOriginal_[iCol];
+        }
+        else if (iValue < 0 && cost <= mipsolver->options_mip_->dual_feasibility_tolerance) {
+          colUpperLockReduced_[iCol] ++;
+          upperNoInsert = upperNoInsert && colUpperLockReduced_[iCol] + maxLockLeft < colUpperLockOriginal_[iCol];
+        }
+
+        if (!lowerNoInsert || !upperNoInsert)
+          addToCandidate(iCol);
+      }
+    }
+    else { // upper redundant
+      HighsInt rstart = mipsolver->mipdata_->ARstart_[iRow];
+      HighsInt rend = mipsolver->mipdata_->ARstart_[iRow + 1];
+      for (auto k = rstart; k < rend; k++) {
+        const HighsInt iCol = mipsolver->mipdata_->ARindex_[k];
+        if (domain->isFixed(iCol))
+          continue;
+        const double iValue = mipsolver->mipdata_->ARvalue_[k];
+        const double cost = mipsolver->model_->col_cost_[iCol];
+
+        bool lowerNoInsert = colLowerLockReduced_[iCol] + maxLockLeft < colLowerLockOriginal_[iCol];
+        bool upperNoInsert = colUpperLockReduced_[iCol] + maxLockLeft < colUpperLockOriginal_[iCol];
+
+        if (iValue < 0 && cost >= mipsolver->options_mip_->dual_feasibility_tolerance) {
+          colLowerLockReduced_[iCol] ++;
+          lowerNoInsert = lowerNoInsert && colLowerLockReduced_[iCol] + maxLockLeft < colLowerLockOriginal_[iCol];
+        }
+        else if (iValue > 0 && cost <= mipsolver->options_mip_->dual_feasibility_tolerance) {
+          colUpperLockReduced_[iCol] ++;
+          upperNoInsert = upperNoInsert && colUpperLockReduced_[iCol] + maxLockLeft < colUpperLockOriginal_[iCol];
+        }
+
+        if (!lowerNoInsert || !upperNoInsert)
+          addToCandidate(iCol);
+      }
+    }
+  }
+
+  for (auto iCol : candidatesVec_) {
+    if (domain->isFixed(iCol))
+      continue;
+    const bool canBeFixedToLower = colLowerLockReduced_[iCol] == colLowerLockOriginal_[iCol];
+    const bool canBeFixedToUpper = colUpperLockReduced_[iCol] == colUpperLockOriginal_[iCol];
+    if (!canBeFixedToLower && !canBeFixedToUpper)
+      continue;
+
+    if (fabs(mipsolver->model_->col_cost_[iCol]) <= mipsolver->options_mip_->dual_feasibility_tolerance) {
+      if (startZeroCostFixing_) {
+        // not fixed before
+        if (zeroCostVarsDirection_[iCol] == FIXDIRECTION_NOT_DECIDED) {
+          // both directions are ok - depending on cost (no tolerance)
+          if (canBeFixedToLower && canBeFixedToUpper) {
+            if (mipsolver->model_->col_cost_[iCol] >= 0) {
+              addFixLower(iCol);
+              zeroCostVarsDirection_[iCol] = FIXDIRECTION_LOWER_BOUND;
+            }
+            else {
+              addFixUpper(iCol);
+              zeroCostVarsDirection_[iCol] = FIXDIRECTION_UPPER_BOUND;
+            }
+          }
+          // fix depending on the direction
+          else if (canBeFixedToLower) {
+            addFixLower(iCol);
+            zeroCostVarsDirection_[iCol] = FIXDIRECTION_LOWER_BOUND;
+          }
+          else if (canBeFixedToUpper) {
+            addFixUpper(iCol);
+            zeroCostVarsDirection_[iCol] = FIXDIRECTION_UPPER_BOUND;
+          }
+        }
+        // fix to lb
+        else if (zeroCostVarsDirection_[iCol] == FIXDIRECTION_LOWER_BOUND && canBeFixedToLower)
+          addFixLower(iCol);
+          // fix to ub
+        else if (zeroCostVarsDirection_[iCol] == FIXDIRECTION_UPPER_BOUND && canBeFixedToUpper)
+          addFixUpper(iCol);
+
+        continue;
+      }
+      // do not perfrom zero cost variable fixing, just collect them and choose directions
+      else {
+        // not fixed before
+        if (zeroCostVarsDirection_[iCol] == FIXDIRECTION_NOT_DECIDED) {
+          // both directions are ok - depending on cost (no tolerance)
+          if (canBeFixedToLower && canBeFixedToUpper) {
+            if (mipsolver->model_->col_cost_[iCol] >= 0) {
+              collectFixLower(iCol);
+              zeroCostVarsDirection_[iCol] = FIXDIRECTION_LOWER_BOUND;
+            }
+            else {
+              collectFixUpper(iCol);
+              zeroCostVarsDirection_[iCol] = FIXDIRECTION_UPPER_BOUND;
+            }
+          }
+          else if (canBeFixedToLower) { // fix to lower and set its direction
+            collectFixLower(iCol);
+            zeroCostVarsDirection_[iCol] = FIXDIRECTION_LOWER_BOUND;
+          }
+          else if (canBeFixedToUpper) {
+            collectFixUpper(iCol);
+            zeroCostVarsDirection_[iCol] = FIXDIRECTION_UPPER_BOUND;
+          }
+        }
+        else if (zeroCostVarsDirection_[iCol] == FIXDIRECTION_UPPER_BOUND && canBeFixedToUpper) { // fix to upper
+          collectFixUpper(iCol);
+        }
+        else if (zeroCostVarsDirection_[iCol] == FIXDIRECTION_LOWER_BOUND && canBeFixedToLower) { // fix to lower
+          collectFixLower(iCol);
+        }
+        // we have collected this column
+        continue;
+      }
+    }
+
+
+    // if (mipsolver->model_->col_cost_[iCol] >= mipsolver->options_mip_->dual_feasibility_tolerance) {
+    if (mipsolver->model_->col_cost_[iCol] >= mipsolver->options_mip_->dual_feasibility_tolerance) {
+      if (canBeFixedToLower) {
+        checkVariableLowerLock(iCol);
+        addFixLower(iCol);
+        continue;
+      }
+    }
+    // if (mipsolver->model_->col_cost_[iCol] <= mipsolver->options_mip_->dual_feasibility_tolerance) {
+    if (mipsolver->model_->col_cost_[iCol] <= mipsolver->options_mip_->dual_feasibility_tolerance) {
+      if (canBeFixedToUpper) {
+        checkVariableUpperLock(iCol);
+        addFixUpper(iCol);
+        continue;
+      }
+    }
+  }
+
+  // clear candidate info
+  for (const auto x : candidatesVec_) {
+    candidatesFlag_[x] = false;
+    lockNeedClear_.insert(x);
+  }
+  candidatesVec_.clear();
+
+  // change bound
+  size_t j = 0;
+  for (; j != domainchangeProbing.size() && !domain->infeasible_; ++ j) {
+    domain->changeBound(*domainchangeProbing[j], Reason::unspecified());
+    delete domainchangeProbing[j];
+  }
+
+  for (j ++; j < domainchangeProbing.size(); ++ j) {
+    assert(domain->infeasible_);
+    delete domainchangeProbing[j];
+  }
+
+  // record the current number of redundant constraints.
+  previousSize_ = redundantPropagateinds_.size();
+}
+
+
 
 namespace highs {
 template <>
@@ -1559,6 +1911,9 @@ void HighsDomain::updateActivityLbChange(HighsInt col, double oldbound,
           mip->row_lower_[mip->a_matrix_.index_[i]] != -kHighsInf &&
           mip->row_upper_[mip->a_matrix_.index_[i]] == kHighsInf)
         updateRedundantRows(mip->a_matrix_.index_[i]);
+      
+      if (newbound >= oldbound + mipsolver->mipdata_->feastol)
+        dfprobingPropagation.updateLhsRedundant(mip->a_matrix_.index_[i]);
 
       if (deltamin <= 0) {
         updateThresholdLbChange(col, newbound, mip->a_matrix_.value_[i],
@@ -1608,6 +1963,9 @@ void HighsDomain::updateActivityLbChange(HighsInt col, double oldbound,
           mip->row_lower_[mip->a_matrix_.index_[i]] == -kHighsInf &&
           mip->row_upper_[mip->a_matrix_.index_[i]] != kHighsInf)
         updateRedundantRows(mip->a_matrix_.index_[i]);
+
+      if (newbound >= oldbound + mipsolver->mipdata_->feastol)
+        dfprobingPropagation.updateRhsRedundant(mip->a_matrix_.index_[i]);
 
       if (deltamax >= 0) {
         updateThresholdLbChange(col, newbound, mip->a_matrix_.value_[i],
@@ -1726,6 +2084,9 @@ void HighsDomain::updateActivityUbChange(HighsInt col, double oldbound,
           mip->row_lower_[mip->a_matrix_.index_[i]] == -kHighsInf &&
           mip->row_upper_[mip->a_matrix_.index_[i]] != kHighsInf)
         updateRedundantRows(mip->a_matrix_.index_[i]);
+      
+      if (newbound <= oldbound - mipsolver->mipdata_->feastol)
+        dfprobingPropagation.updateRhsRedundant(mip->a_matrix_.index_[i]);
 
       if (deltamax >= 0) {
         updateThresholdUbChange(col, newbound, mip->a_matrix_.value_[i],
@@ -1778,6 +2139,9 @@ void HighsDomain::updateActivityUbChange(HighsInt col, double oldbound,
           mip->row_lower_[mip->a_matrix_.index_[i]] != -kHighsInf &&
           mip->row_upper_[mip->a_matrix_.index_[i]] == kHighsInf)
         updateRedundantRows(mip->a_matrix_.index_[i]);
+      
+      if (newbound <= oldbound - mipsolver->mipdata_->feastol)
+        dfprobingPropagation.updateLhsRedundant(mip->a_matrix_.index_[i]);
 
       if (deltamin <= 0) {
         updateThresholdUbChange(col, newbound, mip->a_matrix_.value_[i],
@@ -2372,6 +2736,9 @@ bool HighsDomain::propagate() {
       if (!conflictprop.propagateConflictInds_.empty()) return true;
     }
 
+    if (dfprobingPropagation.isActive())
+      return true;
+
     return false;
   };
 
@@ -2545,6 +2912,15 @@ bool HighsDomain::propagate() {
         }
 
         propagateinds.clear();
+      }
+    }
+  
+    if (dfprobingPropagation.isActive()) {
+      dfprobingPropagation.propagate();
+      if (!havePropagationRows() && !dfprobingPropagation.isZeroObjFixingEnabled()) {
+        dfprobingPropagation.enableZeroObjFixing();
+        dfprobingPropagation.setZeroCostFixingPosition(domchgstack_.size());
+        dfprobingPropagation.propagate();
       }
     }
   }

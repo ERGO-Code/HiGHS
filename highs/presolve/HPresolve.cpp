@@ -1735,6 +1735,8 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postsolve_stack) {
       }
     };
 
+    domain.getDfProbingPropagation().recomputeLocks();
+
     for (const auto& binvar : binaries) {
       // Count the binaries considered
       iBin++;
@@ -1799,7 +1801,9 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postsolve_stack) {
 
       HighsInt numBoundChgs = 0;
       HighsInt numNewCliques = -cliquetable.numCliques();
+      domain.inProbing_ = true;
       const bool probing_result = implications.runProbing(i, numBoundChgs);
+      domain.inProbing_ = false;
       if (!probing_result) continue;
       probingContingent += numBoundChgs;
       numNewCliques += cliquetable.numCliques();

@@ -13,6 +13,7 @@
 #include <memory>
 #include <set>
 #include <vector>
+#include <unordered_set>
 
 #include "HighsPseudocost.h"
 #include "mip/HighsDomainChange.h"
@@ -235,6 +236,118 @@ class HighsDomain {
     void propagateConflict(HighsInt conflict);
   };
 
+  struct DualfixingProbingPropagation {
+    HighsDomain* domain;
+    HighsMipSolver* mipsolver;
+    // row lower and upper, length = 2 * rownum
+    std::vector<char> redundantPropagateflags_;
+    std::vector<HighsInt> redundantPropagateinds_;
+
+    enum DFPROBING_FIX_DIRECTION {
+      FIXDIRECTION_NOT_DECIDED = 0,
+      FIXDIRECTION_LOWER_BOUND = 1,
+      FIXDIRECTION_UPPER_BOUND = 2,
+    };
+    std::vector<DFPROBING_FIX_DIRECTION> zeroCostVarsDirection_;
+    std::vector<std::pair<HighsInt, bool>> zeroCostFixedVariables_;
+    bool startZeroCostFixing_;
+    size_t zeroCostStartPos_;
+
+    bool enabled_ = false;
+    size_t previousSize_;
+
+    std::vector<HighsInt> colLowerLockOriginal_;
+    std::vector<HighsInt> colUpperLockOriginal_;
+    std::vector<HighsInt> colLowerLockReduced_;
+    std::vector<HighsInt> colUpperLockReduced_;
+    std::vector<HighsInt> candidatesVec_;
+    std::vector<char> candidatesFlag_;
+    std::unordered_set<HighsInt> lockNeedClear_;
+
+    void enablePropagator() {
+      enabled_ = true;
+    }
+
+    void disablePropagator() {
+      enabled_ = false;
+    }
+
+    bool isEnabled() {
+      return enabled_;
+    }
+
+    bool isActive() {
+      return enabled_ && redundantPropagateinds_.size() > previousSize_;
+    }
+
+    void setZeroCostFixingPosition(HighsInt v) {
+      zeroCostStartPos_ = v;
+    }
+
+    size_t getZeroCostFixingPosition() {
+      return zeroCostStartPos_;
+    }
+
+    void enableZeroObjFixing() {
+      startZeroCostFixing_ = true;
+    }
+
+    void disableZeroObjFixing() {
+      startZeroCostFixing_ = false;
+    }
+
+    bool isZeroObjFixingEnabled() {
+      return startZeroCostFixing_;
+    }
+
+    bool ableToFixToLb(int col) {
+      return mipsolver->model_->col_cost_[col] >= -mipsolver->options_mip_->dual_feasibility_tolerance 
+        && mipsolver->model_->col_lower_[col] > -kHighsInf;
+    }
+
+    bool ableToFixToUb(int col) {
+      return mipsolver->model_->col_cost_[col] <= mipsolver->options_mip_->dual_feasibility_tolerance 
+        && mipsolver->model_->col_upper_[col] < kHighsInf;
+    }
+
+
+    void clearRedundant() {
+      if (!redundantPropagateinds_.empty()) { // clear buffers
+        for (auto x : redundantPropagateinds_)
+          redundantPropagateflags_[x] = false;
+
+        redundantPropagateinds_.clear();
+      }
+    
+      for (size_t i = 0; i < redundantPropagateflags_.size(); ++ i)
+        assert(!redundantPropagateflags_[i]);
+    
+      zeroCostFixedVariables_.clear();
+
+      for (const auto x : lockNeedClear_)
+        colLowerLockReduced_[x] = colUpperLockReduced_[x] = 0;
+      lockNeedClear_.clear();
+    }
+
+    DualfixingProbingPropagation() {;};
+    
+    DualfixingProbingPropagation(HighsDomain* domain) : domain(domain) {};
+
+    DualfixingProbingPropagation(const DualfixingProbingPropagation& other);
+
+    ~DualfixingProbingPropagation() {;};
+
+    void recomputeLocks();
+    void updateRhsRedundant(HighsInt row);
+    void updateLhsRedundant(HighsInt row);
+
+    void propagate();
+
+   
+
+    
+  };
+
  private:
   struct ObjectivePropagation {
     HighsDomain* domain = nullptr;
@@ -320,6 +433,7 @@ class HighsDomain {
  private:
   std::deque<CutpoolPropagation> cutpoolpropagation;
   std::deque<ConflictPoolPropagation> conflictPoolPropagation;
+  DualfixingProbingPropagation dfprobingPropagation;
 
   bool infeasible_ = false;
   Reason infeasible_reason;
@@ -351,6 +465,8 @@ class HighsDomain {
   std::vector<double> col_lower_;
   std::vector<double> col_upper_;
 
+  bool inProbing_ = false;
+
   HighsDomain(HighsMipSolver& mipsolver);
 
   HighsDomain(const HighsDomain& other)
@@ -370,6 +486,7 @@ class HighsDomain {
         mipsolver(other.mipsolver),
         cutpoolpropagation(other.cutpoolpropagation),
         conflictPoolPropagation(other.conflictPoolPropagation),
+        dfprobingPropagation(other.dfprobingPropagation),
         infeasible_(other.infeasible_),
         infeasible_reason(other.infeasible_reason),
         infeasible_pos(other.infeasible_pos),
@@ -383,6 +500,7 @@ class HighsDomain {
     for (ConflictPoolPropagation& conflictprop : conflictPoolPropagation)
       conflictprop.domain = this;
     if (objProp_.domain) objProp_.domain = this;
+    dfprobingPropagation.domain = this;
   }
 
   HighsDomain& operator=(const HighsDomain& other) {
@@ -414,6 +532,7 @@ class HighsDomain {
     for (ConflictPoolPropagation& conflictprop : conflictPoolPropagation)
       conflictprop.domain = this;
     if (objProp_.domain) objProp_.domain = this;
+    dfprobingPropagation.domain = this;
     return *this;
   }
 
@@ -673,6 +792,10 @@ class HighsDomain {
   void setRecordRedundantRows(bool val) { recordRedundantRows_ = val; };
 
   bool isRedundantRow(HighsInt row) const;
+
+  DualfixingProbingPropagation& getDfProbingPropagation() {
+    return dfprobingPropagation;
+  }
 };
 
 #endif
