@@ -9,6 +9,8 @@ class ParallelHybridSolveHandler : public SolveHandler {
   const std::vector<std::vector<Int>>& swaps_;
   const std::vector<std::vector<double>>& pivot_2x2_;
 
+  void processBackwardTask(Int task, std::vector<double>& x) const;
+
  public:
   void forwardSolve(std::vector<double>& x) const override;
   void backwardSolve(std::vector<double>& x) const override;

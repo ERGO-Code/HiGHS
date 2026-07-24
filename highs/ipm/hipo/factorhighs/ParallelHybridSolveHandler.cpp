@@ -1,5 +1,7 @@
 #include "ParallelHybridSolveHandler.h"
 
+#include <set>
+
 #include "CallAndTimeBlas.h"
 #include "DataCollector.h"
 #include "FactorHiGHSSettings.h"
@@ -138,18 +140,15 @@ void ParallelHybridSolveHandler::forwardSolve(std::vector<double>& x) const {
   }
 }
 
-void ParallelHybridSolveHandler::backwardSolve(std::vector<double>& x) const {
-  // Backward solve.
-  // Blas calls: dtrsv, dgemv
-
-  // supernode columns in format FH
-
+void ParallelHybridSolveHandler::processBackwardTask(
+    Int task, std::vector<double>& x) const {
   HIPO_CLOCK_CREATE;
-
   const Int nb = S_.blockSize();
 
-  // go through the sn in reverse order
-  for (Int sn = S_.sn() - 1; sn >= 0; --sn) {
+  for (auto rit = S_.schedule().sn_per_task[task].rbegin();
+       rit != S_.schedule().sn_per_task[task].rend(); ++rit) {
+    const Int sn = *rit;
+
     // leading size of supernode
     const Int ldSn = S_.ptr(sn + 1) - S_.ptr(sn);
 
@@ -260,6 +259,42 @@ void ParallelHybridSolveHandler::backwardSolve(std::vector<double>& x) const {
 #endif
       }
     }
+  }
+}
+
+void ParallelHybridSolveHandler::backwardSolve(std::vector<double>& x) const {
+  // Backward solve.
+  // Blas calls: dtrsv, dgemv
+  // supernode columns in format FH
+
+  std::vector<Int> first_child, next_child;
+  childrenLinkedList(S_.schedule().task_parent, first_child, next_child);
+
+  std::set<Int> children_to_run;
+  highs::parallel::TaskGroup tg;
+
+  for (Int task = 0; task < S_.schedule().count(); ++task) {
+    if (S_.schedule().task_parent[task] == -1) {
+      children_to_run.insert(task);
+    }
+  }
+
+  while (!children_to_run.empty()) {
+    for (Int task : children_to_run)
+      tg.spawn([=, &x]() { processBackwardTask(task, x); });
+
+    tg.taskWait();
+
+    std::set<Int> next_children_to_run;
+    for (Int task : children_to_run) {
+      Int child = first_child[task];
+      while (child != -1) {
+        next_children_to_run.insert(child);
+        child = next_child[child];
+      }
+    }
+
+    children_to_run = std::move(next_children_to_run);
   }
 }
 
