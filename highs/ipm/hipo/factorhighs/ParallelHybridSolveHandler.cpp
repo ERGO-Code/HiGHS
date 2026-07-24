@@ -100,20 +100,19 @@ void ParallelHybridSolveHandler::processForwardTask(
         }
       }
 
-      if (sn == lead_sn) {
-        for (Int row = jb; row < ldSn; ++row) {
-          for (Int col = 0; col < jb; ++col) {
-            task_rows_[task].push_back(S_.rows(start_row + row));
-            task_vals_[task].push_back(sn_columns_[sn][col + jb * row] *
-                                       x[x_start + col]);
-          }
-        }
-      } else {
-        for (Int row = jb; row < ldSn; ++row) {
+      for (Int row = jb; row < ldSn; ++row) {
+        const Int row_to_write = S_.rows(start_row + row);
+        if (row_to_write < end_col_in_task) {
           for (Int col = 0; col < jb; ++col) {
             x[S_.rows(start_row + row)] -=
                 sn_columns_[sn][col + jb * row] * x[x_start + col];
           }
+        } else {
+          task_rows_[task].push_back(S_.rows(start_row + row));
+          task_vals_[task].push_back(0.0);
+          for (Int col = 0; col < jb; ++col)
+            task_vals_[task].back() +=
+                sn_columns_[sn][col + jb * row] * x[x_start + col];
         }
       }
       HIPO_CLOCK_STOP(2, data_, kTimeSolveSolve_dense);
@@ -164,21 +163,13 @@ void ParallelHybridSolveHandler::processForwardTask(
 
           HIPO_CLOCK_START(2);
           // scatter solution of gemv
-          if (sn == lead_sn) {
-            for (Int i = 0; i < gemv_space; ++i) {
-              const Int pos = nb * j + jb + i;
-              if (pos < sn_size) {
-                const Int row = S_.rows(start_row + nb * j + jb + i);
-                x[row] -= y[i];
-              } else {
-                task_rows_[task].push_back(S_.rows(start_row + pos));
-                task_vals_[task].push_back(y[i]);
-              }
-            }
-          } else {
-            for (Int i = 0; i < gemv_space; ++i) {
-              const Int row = S_.rows(start_row + nb * j + jb + i);
+          for (Int i = 0; i < gemv_space; ++i) {
+            const Int row = S_.rows(start_row + nb * j + jb + i);
+            if (row < end_col_in_task) {
               x[row] -= y[i];
+            } else {
+              task_rows_[task].push_back(row);
+              task_vals_[task].push_back(y[i]);
             }
           }
           HIPO_CLOCK_STOP(2, data_, kTimeSolveSolve_sparse);
