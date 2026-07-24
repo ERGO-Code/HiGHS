@@ -4,7 +4,6 @@
 #include <cmath>
 
 #include "CliqueStack.h"
-#include "FormatHandler.h"
 #include "Numeric.h"
 #include "Symbolic.h"
 #include "ipm/hipo/auxiliary/IntConfig.h"
@@ -31,12 +30,6 @@ class Factorise {
   // reverse linked lists of chidlren
   std::vector<Int> first_child_reverse_{};
   std::vector<Int> next_child_reverse_{};
-
-  std::vector<Int> first_task_child_{};
-  std::vector<Int> next_task_child_{};
-
-  std::vector<Int> first_task_child_reverse_{};
-  std::vector<Int> next_task_child_reverse_{};
 
   // generated elements, aka Schur complements.
   std::vector<std::vector<double>> schur_contribution_{};
@@ -74,18 +67,9 @@ class Factorise {
 
   CliqueStack* stack_;
 
-  std::vector<std::unique_ptr<FormatHandler>> sn_FH_;
-
  public:
   void permute(const std::vector<Int>& iperm);
   void processSupernode(Int sn);
-  void processTask(Int task);
-  void processSerialTree();
-  void processParallelTree();
-
-  void assembleInitial(Int sn);
-  void assembleChild(Int sn, Int child);
-  void denseFactorise(Int sn);
 
  public:
   Factorise(const Symbolic& S, const std::vector<Int>& rowsM,
