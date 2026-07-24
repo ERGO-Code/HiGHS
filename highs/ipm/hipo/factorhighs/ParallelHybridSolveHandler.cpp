@@ -19,19 +19,38 @@ ParallelHybridSolveHandler::ParallelHybridSolveHandler(
   childrenLinkedList(S_.schedule().task_parent, first_child_, next_child_);
 }
 
-void ParallelHybridSolveHandler::forwardSolve(std::vector<double>& x) const {
+void ParallelHybridSolveHandler::processForwardTask(
+    Int task, std::vector<double>& x) const {
   // Blas calls: dtrsv, dgemv
   // supernode columns in format FH
 
-  // Not parallel yet: a sn depends on its children in the tree; multiple
-  // children may be writing to the same location in x at the same time. Special
-  // care is needed for the writes, involving private buffers.
-
   HIPO_CLOCK_CREATE;
-
   const Int nb = S_.blockSize();
 
-  for (Int sn = 0; sn < S_.sn(); ++sn) {
+  // wait for children to complete
+  highs::parallel::TaskGroup tg;
+  Int child = first_child_[task];
+  while (child != -1) {
+    tg.spawn([=, &x]() { processForwardTask(child, x); });
+    child = next_child_[child];
+  }
+  tg.taskWait();
+
+  // assembel contributions of children
+  child = first_child_[task];
+  while (child != -1) {
+    for (Int i = 0; i < task_rows_[child].size(); ++i) {
+      x[task_rows_[child][i]] -= task_vals_[child][i];
+    }
+    child = next_child_[child];
+  }
+
+  const Int lead_sn = S_.schedule().sn_per_task[task].back();
+
+  for (auto it = S_.schedule().sn_per_task[task].begin();
+       it != S_.schedule().sn_per_task[task].end(); ++it) {
+    const Int sn = *it;
+
     // leading size of supernode
     const Int ldSn = S_.ptr(sn + 1) - S_.ptr(sn);
 
@@ -72,10 +91,20 @@ void ParallelHybridSolveHandler::forwardSolve(std::vector<double>& x) const {
         }
       }
 
-      for (Int row = jb; row < ldSn; ++row) {
-        for (Int col = 0; col < jb; ++col) {
-          x[S_.rows(start_row + row)] -=
-              sn_columns_[sn][col + jb * row] * x[x_start + col];
+      if (sn == lead_sn) {
+        for (Int row = jb; row < ldSn; ++row) {
+          for (Int col = 0; col < jb; ++col) {
+            task_rows_[task].push_back(S_.rows(start_row + row));
+            task_vals_[task].push_back(sn_columns_[sn][col + jb * row] *
+                                       x[x_start + col]);
+          }
+        }
+      } else {
+        for (Int row = jb; row < ldSn; ++row) {
+          for (Int col = 0; col < jb; ++col) {
+            x[S_.rows(start_row + row)] -=
+                sn_columns_[sn][col + jb * row] * x[x_start + col];
+          }
         }
       }
       HIPO_CLOCK_STOP(2, data_, kTimeSolveSolve_dense);
@@ -126,9 +155,22 @@ void ParallelHybridSolveHandler::forwardSolve(std::vector<double>& x) const {
 
           HIPO_CLOCK_START(2);
           // scatter solution of gemv
-          for (Int i = 0; i < gemv_space; ++i) {
-            const Int row = S_.rows(start_row + nb * j + jb + i);
-            x[row] -= y[i];
+          if (sn == lead_sn) {
+            for (Int i = 0; i < gemv_space; ++i) {
+              const Int pos = nb * j + jb + i;
+              if (pos < sn_size) {
+                const Int row = S_.rows(start_row + nb * j + jb + i);
+                x[row] -= y[i];
+              } else {
+                task_rows_[task].push_back(S_.rows(start_row + pos));
+                task_vals_[task].push_back(y[i]);
+              }
+            }
+          } else {
+            for (Int i = 0; i < gemv_space; ++i) {
+              const Int row = S_.rows(start_row + nb * j + jb + i);
+              x[row] -= y[i];
+            }
           }
           HIPO_CLOCK_STOP(2, data_, kTimeSolveSolve_sparse);
         }
@@ -142,6 +184,23 @@ void ParallelHybridSolveHandler::forwardSolve(std::vector<double>& x) const {
       }
     }
   }
+}
+
+void ParallelHybridSolveHandler::forwardSolve(std::vector<double>& x) const {
+  // Hard to parallelise: a sn depends on its children in the tree; multiple
+  // children may be writing to the same location in x at the same time. Special
+  // care is needed for the writes, involving private buffers.
+
+  task_rows_.assign(S_.schedule().count(), {});
+  task_vals_.assign(S_.schedule().count(), {});
+
+  highs::parallel::TaskGroup tg;
+  for (Int task = 0; task < S_.schedule().count(); ++task) {
+    if (S_.schedule().task_parent[task] == -1) {
+      tg.spawn([=, &x]() { processForwardTask(task, x); });
+    }
+  }
+  tg.taskWait();
 }
 
 void ParallelHybridSolveHandler::processBackwardTask(
@@ -268,7 +327,7 @@ void ParallelHybridSolveHandler::processBackwardTask(
     }
   }
 
-  // spawn the children
+  // wait for children to complete
   highs::parallel::TaskGroup tg;
   Int child = first_child_[task];
   while (child != -1) {

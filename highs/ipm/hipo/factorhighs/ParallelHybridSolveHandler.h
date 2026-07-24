@@ -11,6 +11,10 @@ class ParallelHybridSolveHandler : public SolveHandler {
 
   std::vector<Int> first_child_, next_child_;
 
+  mutable std::vector<std::vector<Int>> task_rows_;
+  mutable std::vector<std::vector<double>> task_vals_;
+
+  void processForwardTask(Int task, std::vector<double>& x) const;
   void processBackwardTask(Int task, std::vector<double>& x) const;
 
  public:
