@@ -36,16 +36,25 @@ void ParallelHybridSolveHandler::processForwardTask(
   }
   tg.taskWait();
 
+  task_rows_[task].clear();
+  task_vals_[task].clear();
+
+  const Int lead_sn = S_.schedule().sn_per_task[task].back();
+  Int end_col_in_task = S_.snStart(lead_sn + 1);
+
   // assembel contributions of children
   child = first_child_[task];
   while (child != -1) {
     for (Int i = 0; i < task_rows_[child].size(); ++i) {
-      x[task_rows_[child][i]] -= task_vals_[child][i];
+      if (task_rows_[child][i] < end_col_in_task)
+        x[task_rows_[child][i]] -= task_vals_[child][i];
+      else {
+        task_rows_[task].push_back(task_rows_[child][i]);
+        task_vals_[task].push_back(task_vals_[child][i]);
+      }
     }
     child = next_child_[child];
   }
-
-  const Int lead_sn = S_.schedule().sn_per_task[task].back();
 
   for (auto it = S_.schedule().sn_per_task[task].begin();
        it != S_.schedule().sn_per_task[task].end(); ++it) {
@@ -191,8 +200,8 @@ void ParallelHybridSolveHandler::forwardSolve(std::vector<double>& x) const {
   // children may be writing to the same location in x at the same time. Special
   // care is needed for the writes, involving private buffers.
 
-  task_rows_.assign(S_.schedule().count(), {});
-  task_vals_.assign(S_.schedule().count(), {});
+  task_rows_.resize(S_.schedule().count());
+  task_vals_.resize(S_.schedule().count());
 
   highs::parallel::TaskGroup tg;
   for (Int task = 0; task < S_.schedule().count(); ++task) {
