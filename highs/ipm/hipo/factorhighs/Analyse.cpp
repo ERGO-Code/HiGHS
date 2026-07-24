@@ -1316,9 +1316,6 @@ void Analyse::computeTreeScheduleSolve() {
     tasks_ops[task_id] += sn_ops[sn];
   }
 
-  for (double d : tasks_ops) printf("%.2f ", d / total_ops);
-  printf("\n");
-
   // Create tree of dependencies among tasks.
   // Since the supernodal tree is postordered, the tree of dependencies among
   // tasks should be automatically postordered as well.

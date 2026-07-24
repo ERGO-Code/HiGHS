@@ -216,6 +216,7 @@ _hipo_srcs = [
     'ipm/hipo/factorhighs/HybridSolveHandler.cpp',
     'ipm/hipo/factorhighs/KrylovMethodsIpm.cpp',
     'ipm/hipo/factorhighs/Numeric.cpp',
+    'ipm/hipo/factorhighs/ParallelHybridSolveHandler.cpp',
     'ipm/hipo/factorhighs/SolveHandler.cpp',
     'ipm/hipo/factorhighs/Swaps.cpp',
     'ipm/hipo/factorhighs/Symbolic.cpp',

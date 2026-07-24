@@ -3,6 +3,7 @@
 #include "DataCollector.h"
 #include "FactorHiGHSSettings.h"
 #include "HybridSolveHandler.h"
+#include "ParallelHybridSolveHandler.h"
 #include "ReturnValues.h"
 #include "Timing.h"
 #include "ipm/hipo/auxiliary/Auxiliary.h"
@@ -20,7 +21,7 @@ Int Numeric::solve(std::vector<double>& x) const {
   HIPO_CLOCK_CREATE;
 
   // initialise solve handler
-  HybridSolveHandler SH(*S_, *sn_columns_, swaps_, pivot_2x2_, *data_);
+  ParallelHybridSolveHandler SH(*S_, *sn_columns_, swaps_, pivot_2x2_, *data_);
 
   // permute rhs
   HIPO_CLOCK_START(2);
