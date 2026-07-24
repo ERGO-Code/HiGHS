@@ -89,6 +89,7 @@ class Analyse {
 
   double ops_solve_;
   double critical_ops_solve_;
+  std::vector<double> task_ops_solve_;
 
   // Functions to perform analyse phase
   void permute(const std::vector<Int>& iperm);

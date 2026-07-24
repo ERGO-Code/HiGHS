@@ -949,45 +949,41 @@ void Analyse::computeCriticalPath() {
 }
 
 void Analyse::computeCriticalPathSolve() {
-  // Compute the critical path within the supernodal elimination tree, and the
+  // Compute the critical path within the task elimination tree, and the
   // number of operations along the path. This is the number of operations that
   // need to be done sequentially while doing tree parallelism.
 
-  std::vector<double> critical_ops(sn_count_);
+  std::vector<double> critical_ops(schedule_solve_.count());
 
   // linked lists of children
   std::vector<Int> head, next;
-  childrenLinkedList(sn_parent_, head, next);
+  childrenLinkedList(schedule_solve_.task_parent, head, next);
 
   ops_solve_ = 0.0;
   critical_ops_solve_ = 0.0;
 
-  for (Int sn = 0; sn < sn_count_; ++sn) {
-    const Int sz = sn_start_[sn + 1] - sn_start_[sn];
-    const Int fr = ptr_sn_[sn + 1] - ptr_sn_[sn];
-    const double this_sn_ops =
-        (double)sz * (sz + 1) / 2 + (double)sz * (fr - sz);
-    critical_ops[sn] = this_sn_ops;
-    ops_solve_ += this_sn_ops;
+  for (Int task = 0; task < schedule_solve_.count(); ++task) {
+    critical_ops[task] = task_ops_solve_[task];
+    ops_solve_ += task_ops_solve_[task];
   }
 
-  for (Int sn = 0; sn < sn_count_; ++sn) {
-    // leaf nodes
-    if (head[sn] == -1) continue;
+  for (Int task = 0; task < schedule_solve_.count(); ++task) {
+    // leaf task
+    if (head[task] == -1) continue;
 
     double max_ops{};
-    Int child = head[sn];
+    Int child = head[task];
     while (child != -1) {
       // critical_ops of this supernode is max over children of
-      // (ops_of_this_sn + critical_ops_of_child)
-      max_ops = std::max(max_ops, critical_ops[sn] + critical_ops[child]);
+      // (ops_of_this_task + critical_ops_of_child)
+      max_ops = std::max(max_ops, critical_ops[task] + critical_ops[child]);
       child = next[child];
     }
-    critical_ops[sn] = max_ops;
+    critical_ops[task] = max_ops;
   }
 
-  for (Int sn = 0; sn < sn_count_; ++sn) {
-    critical_ops_solve_ = std::max(critical_ops_solve_, critical_ops[sn]);
+  for (Int task = 0; task < schedule_solve_.count(); ++task) {
+    critical_ops_solve_ = std::max(critical_ops_solve_, critical_ops[task]);
   }
 }
 
@@ -1261,13 +1257,10 @@ void Analyse::computeTreeScheduleSolve() {
   for (Int sn = 0; sn < sn_count_; ++sn) {
     const Int sz = sn_start_[sn + 1] - sn_start_[sn];
     const Int fr = ptr_sn_[sn + 1] - ptr_sn_[sn];
-
-    for (Int i = 0; i < sz; ++i) {
-      const double this_sn_dense_ops =
-          (double)sz * (sz + 1) / 2 + (double)sz * (fr - sz);
-      sn_ops[sn] += this_sn_dense_ops;
-      total_ops += this_sn_dense_ops;
-    }
+    const double this_sn_dense_ops =
+        (double)sz * (sz + 1) / 2 + (double)sz * (fr - sz);
+    sn_ops[sn] += this_sn_dense_ops;
+    total_ops += this_sn_dense_ops;
   }
 
   std::vector<Int> head, next;
@@ -1309,11 +1302,11 @@ void Analyse::computeTreeScheduleSolve() {
   }
 
   schedule_solve_.sn_per_task.resize(task_count);
-  std::vector<double> tasks_ops(task_count);
+  task_ops_solve_.assign(task_count, 0.0);
   for (Int sn = 0; sn < sn_count_; ++sn) {
     const Int task_id = task_numbering[sets.getSet(sn)];
     schedule_solve_.sn_per_task[task_id].push_back(sn);
-    tasks_ops[task_id] += sn_ops[sn];
+    task_ops_solve_[task_id] += sn_ops[sn];
   }
 
   // Create tree of dependencies among tasks.
@@ -1386,9 +1379,10 @@ Int Analyse::run(Symbolic& S) {
 
   computeBlockStart();
   computeCriticalPath();
-  computeCriticalPathSolve();
   computeStackSize();
+
   computeTreeScheduleSolve();
+  computeCriticalPathSolve();
 
   // move relevant stuff into S
   S.n_ = n_;

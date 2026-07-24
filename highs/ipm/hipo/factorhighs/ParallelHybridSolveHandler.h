@@ -9,6 +9,8 @@ class ParallelHybridSolveHandler : public SolveHandler {
   const std::vector<std::vector<Int>>& swaps_;
   const std::vector<std::vector<double>>& pivot_2x2_;
 
+  std::vector<Int> first_child_, next_child_;
+
   void processBackwardTask(Int task, std::vector<double>& x) const;
 
  public:

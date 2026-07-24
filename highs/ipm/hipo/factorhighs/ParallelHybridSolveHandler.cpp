@@ -15,13 +15,17 @@ ParallelHybridSolveHandler::ParallelHybridSolveHandler(
     const Symbolic& S, const std::vector<std::vector<double>>& sn_columns,
     const std::vector<std::vector<Int>>& swaps,
     const std::vector<std::vector<double>>& pivot_2x2, DataCollector& data)
-    : SolveHandler(S, sn_columns, data), swaps_{swaps}, pivot_2x2_{pivot_2x2} {}
+    : SolveHandler(S, sn_columns, data), swaps_{swaps}, pivot_2x2_{pivot_2x2} {
+  childrenLinkedList(S_.schedule().task_parent, first_child_, next_child_);
+}
 
 void ParallelHybridSolveHandler::forwardSolve(std::vector<double>& x) const {
-  // Forward solve.
   // Blas calls: dtrsv, dgemv
-
   // supernode columns in format FH
+
+  // Not parallel yet: a sn depends on its children in the tree; multiple
+  // children may be writing to the same location in x at the same time. Special
+  // care is needed for the writes, involving private buffers.
 
   HIPO_CLOCK_CREATE;
 
@@ -142,6 +146,9 @@ void ParallelHybridSolveHandler::forwardSolve(std::vector<double>& x) const {
 
 void ParallelHybridSolveHandler::processBackwardTask(
     Int task, std::vector<double>& x) const {
+  // Blas calls: dtrsv, dgemv
+  // supernode columns in format FH
+
   HIPO_CLOCK_CREATE;
   const Int nb = S_.blockSize();
 
@@ -260,48 +267,36 @@ void ParallelHybridSolveHandler::processBackwardTask(
       }
     }
   }
+
+  // spawn the children
+  highs::parallel::TaskGroup tg;
+  Int child = first_child_[task];
+  while (child != -1) {
+    tg.spawn([=, &x]() { processBackwardTask(child, x); });
+    child = next_child_[child];
+  }
+  tg.taskWait();
 }
 
 void ParallelHybridSolveHandler::backwardSolve(std::vector<double>& x) const {
-  // Backward solve.
-  // Blas calls: dtrsv, dgemv
-  // supernode columns in format FH
+  // Easy to parallelise: a sn depends on its ancestors in the tree; the
+  // ancestor is the only sn running in a given branch when it writes the
+  // update, so no special care needs to be taken for the writes. Respecting the
+  // dependencies of the tree is enough.
 
-  std::vector<Int> first_child, next_child;
-  childrenLinkedList(S_.schedule().task_parent, first_child, next_child);
-
-  std::set<Int> children_to_run;
   highs::parallel::TaskGroup tg;
-
   for (Int task = 0; task < S_.schedule().count(); ++task) {
     if (S_.schedule().task_parent[task] == -1) {
-      children_to_run.insert(task);
-    }
-  }
-
-  while (!children_to_run.empty()) {
-    for (Int task : children_to_run)
       tg.spawn([=, &x]() { processBackwardTask(task, x); });
-
-    tg.taskWait();
-
-    std::set<Int> next_children_to_run;
-    for (Int task : children_to_run) {
-      Int child = first_child[task];
-      while (child != -1) {
-        next_children_to_run.insert(child);
-        child = next_child[child];
-      }
     }
-
-    children_to_run = std::move(next_children_to_run);
   }
+  tg.taskWait();
 }
 
 void ParallelHybridSolveHandler::diagSolve(std::vector<double>& x) const {
   // Diagonal solve
-
   // supernode columns in format FH
+  // Embarassingly parallel: each sn reads and writes independent entries in x.
 
   HIPO_CLOCK_CREATE;
 

@@ -83,11 +83,10 @@ void Symbolic::print(const Logger& logger, bool verbose) const {
     log_stream << textline("Max tree speedup:") << fix(flops_ / critops_, 0, 2)
                << '\n';
     log_stream << textline("Tree depth:") << integer(tree_depth_, 0) << '\n';
-    log_stream << textline("Number of tasks:")
+    log_stream << textline("Number of solve tasks:")
                << integer(schedule_solve_.count(), 0) << '\n';
-    log_stream << textline("Ops solve:") << sci(ops_solve_, 0, 1) << '\n';
-    log_stream << textline("Critical ops solve:") << sci(critops_solve_, 0, 1)
-               << '\n';
+    log_stream << textline("Solve tree speedup:")
+               << fix(ops_solve_ / critops_solve_, 0, 2) << '\n';
     log_stream << textline("Artificial nz:") << sci(artificial_nz_, 0, 1)
                << '\n';
     log_stream << textline("Artificial ops:") << sci(artificial_ops_, 0, 1)
