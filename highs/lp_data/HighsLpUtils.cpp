@@ -47,8 +47,7 @@ HighsStatus assessLp(HighsLp& lp, const HighsOptions& options) {
     index_collection.from_ = 0;
     index_collection.to_ = lp.num_col_ - 1;
     call_status = assessCosts(options, 0, index_collection, lp.col_cost_,
-                              lp.has_infinite_cost_, options.infinite_cost,
-                              lp.col_names_.data());
+                              lp.has_infinite_cost_, options.infinite_cost);
     return_status = interpretCallStatus(options.log_options, call_status,
                                         return_status, "assessCosts");
     if (return_status == HighsStatus::kError) return return_status;
@@ -274,8 +273,7 @@ bool lpDimensionsOk(const std::string& message, const HighsLp& lp,
 HighsStatus assessCosts(const HighsOptions& options, const HighsInt ml_col_os,
                         const HighsIndexCollection& index_collection,
                         vector<double>& cost, bool& has_infinite_cost,
-                        const double infinite_cost,
-                        const std::string* col_names) {
+                        const double infinite_cost) {
   HighsStatus return_status = HighsStatus::kOk;
   assert(ok(index_collection));
   HighsInt from_k;
@@ -305,12 +303,6 @@ HighsStatus assessCosts(const HighsOptions& options, const HighsInt ml_col_os,
   // [0...num_new_col) which must be offset by the current number of
   // columns in the model.
   //
-
-  auto possible_col_name = [&](const HighsInt ix) {
-    std::string name = "";
-    if (col_names) name = " (col " + col_names[ix] + ")";
-    return name;
-  };
 
   HighsInt local_col;
   HighsInt usr_col = -1;
