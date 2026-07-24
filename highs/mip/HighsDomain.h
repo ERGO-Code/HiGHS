@@ -13,6 +13,7 @@
 #include <memory>
 #include <set>
 #include <vector>
+#include <unordered_set>
 
 #include "HighsPseudocost.h"
 #include "mip/HighsDomainChange.h"
@@ -261,6 +262,7 @@ class HighsDomain {
     std::vector<HighsInt> colUpperLockReduced_;
     std::vector<HighsInt> candidatesVec_;
     std::vector<char> candidatesFlag_;
+    std::unordered_set<HighsInt> lockNeedClear_;
 
     void enablePropagator() {
       enabled_ = true;
@@ -294,6 +296,10 @@ class HighsDomain {
       startZeroCostFixing_ = false;
     }
 
+    bool isZeroObjFixingEnabled() {
+      return startZeroCostFixing_;
+    }
+
     bool ableToFixToLb(int col) {
       return mipsolver->model_->col_cost_[col] >= -mipsolver->options_mip_->dual_feasibility_tolerance 
         && mipsolver->model_->col_lower_[col] > -kHighsInf;
@@ -317,6 +323,10 @@ class HighsDomain {
         assert(!redundantPropagateflags_[i]);
     
       zeroCostFixedVariables_.clear();
+
+      for (const auto x : lockNeedClear_)
+        colLowerLockReduced_[x] = colUpperLockReduced_[x] = 0;
+      lockNeedClear_.clear();
     }
 
     DualfixingProbingPropagation() {;};
@@ -324,8 +334,6 @@ class HighsDomain {
     DualfixingProbingPropagation(HighsDomain* domain) : domain(domain) {};
 
     DualfixingProbingPropagation(const DualfixingProbingPropagation& other);
-
-    DualfixingProbingPropagation& operator=(const DualfixingProbingPropagation& other);
 
     ~DualfixingProbingPropagation() {;};
 

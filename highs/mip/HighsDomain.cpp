@@ -648,7 +648,8 @@ HighsDomain::DualfixingProbingPropagation::DualfixingProbingPropagation(const Du
     colLowerLockReduced_(other.colLowerLockReduced_),
     colUpperLockReduced_(other.colUpperLockReduced_),
     candidatesVec_(other.candidatesVec_),
-    candidatesFlag_(other.candidatesFlag_) {;}
+    candidatesFlag_(other.candidatesFlag_),
+    lockNeedClear_(other.lockNeedClear_) {;}
 
 void HighsDomain::DualfixingProbingPropagation::recomputeLocks() {
   mipsolver = domain->mipsolver;
@@ -670,6 +671,7 @@ void HighsDomain::DualfixingProbingPropagation::recomputeLocks() {
   candidatesVec_.clear();
   candidatesVec_.reserve(mipsolver->numCol());
   candidatesFlag_.assign(mipsolver->numCol(), false);
+  lockNeedClear_.reserve(mipsolver->numCol());
 
   const auto model = mipsolver->model_;
   for (HighsInt iCol = 0; iCol < model->a_matrix_.num_col_; iCol ++) {
@@ -963,8 +965,10 @@ void HighsDomain::DualfixingProbingPropagation::propagate() {
   }
 
   // clear candidate info
-  for (const auto x : candidatesVec_)
-      candidatesFlag_[x] = false;
+  for (const auto x : candidatesVec_) {
+    candidatesFlag_[x] = false;
+    lockNeedClear_.insert(x);
+  }
   candidatesVec_.clear();
 
   // change bound
@@ -2919,8 +2923,14 @@ bool HighsDomain::propagate() {
       }
     }
   
-    if (dfprobingPropagation.isActive())
+    if (dfprobingPropagation.isActive()) {
       dfprobingPropagation.propagate();
+      if (!havePropagationRows() && !dfprobingPropagation.isZeroObjFixingEnabled()) {
+        dfprobingPropagation.enableZeroObjFixing();
+        dfprobingPropagation.setZeroCostFixingPosition(domchgstack_.size());
+        dfprobingPropagation.propagate();
+      }
+    }
   }
 
   return true;

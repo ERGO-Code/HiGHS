@@ -28,6 +28,8 @@ bool HighsImplications::computeImplications(HighsInt col, bool val) {
   size_t changedend = globaldomain.getChangedCols().size();
 
   globaldomain.getDfProbingPropagation().clearRedundant();
+  if (globaldomain.inProbing_)
+    globaldomain.getDfProbingPropagation().enablePropagator();
 
   HighsInt stackimplicstart = domchgstack.size() + 1;
   HighsInt numImplications = -stackimplicstart;
@@ -63,8 +65,6 @@ bool HighsImplications::computeImplications(HighsInt col, bool val) {
 
   if (isInfeasible(col, val)) return true;
 
-  if (globaldomain.inProbing_)
-    globaldomain.getDfProbingPropagation().enablePropagator();
   globaldomain.propagate();
   if (globaldomain.inProbing_)
     globaldomain.getDfProbingPropagation().disablePropagator();
