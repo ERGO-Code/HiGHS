@@ -1965,6 +1965,11 @@ bool THLPData::formLp(
     }
     z.push_back(zm);
   }
+  // Costs are excessively large, so scale by a constant
+  const double cost_scale = 1e-4;
+  for (HighsInt iCol = 0; iCol < num_col; iCol++)
+    col_cost[iCol] *= cost_scale;
+  
   printf("LP has %d variables, of which %d are integer\n", int(num_col), int(num_integer_var));
 
   num_row = 0;
@@ -2003,7 +2008,7 @@ bool THLPData::formLp(
       index.push_back(z[m][m]);
       value.push_back(-1);
       num_nz++;
-      row_lower.push_back(ThlpInf);
+      row_lower.push_back(-ThlpInf);
       row_upper.push_back(0);
       num_row++;
       start.push_back(num_nz);
@@ -2022,7 +2027,7 @@ bool THLPData::formLp(
       index.push_back(z[k][k]);   
       value.push_back(-1);
       num_nz++;
-      row_lower.push_back(ThlpInf);  
+      row_lower.push_back(-ThlpInf);  
       row_upper.push_back(0);
       num_row++;
       start.push_back(num_nz);
@@ -2042,7 +2047,7 @@ bool THLPData::formLp(
         index.push_back(y[k][m]);
         value.push_back(-this->O[i]);
         num_nz++;
-        row_lower.push_back(ThlpInf);
+        row_lower.push_back(-ThlpInf);
         row_upper.push_back(0);
         num_row++;
         start.push_back(num_nz);
@@ -2054,9 +2059,9 @@ bool THLPData::formLp(
     for (HighsInt k = 0; k < this->n; k++) {
       if (i == k) continue;
       
-      index.push_back(z[i][k]);
-      value.push_back(this->O[i]);
-      num_nz++;
+      //      index.push_back(z[i][k]);
+      //      value.push_back(this->O[i]);
+      //      num_nz++;
       
       // sum_m x_imk (incoming to k from m)
       for (HighsInt m = 0; m < this->n; m++) {
@@ -2079,7 +2084,9 @@ bool THLPData::formLp(
       for (HighsInt m = 0; m < this->n; m++) {
         if (m == k) continue;
         index.push_back(z[m][k]);
-        value.push_back(-this->W[i][m]);
+	double coeff = -this->W[i][m];
+	if (m == i) coeff += this->O[i];
+        value.push_back(coeff);
         num_nz++;
       }
       

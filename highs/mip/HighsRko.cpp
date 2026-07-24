@@ -28,11 +28,20 @@ bool rkoHeuristic(const HighsLp* lp, std::vector<double>& solution) {
   } else if (lp->mip_type_ == kMipTypeThlp) {
     printf("Calling the RKO heuristic for a THLP problem with n = %d\n",
            int(lp->thlp_data_.n));
-    const bool have_solution = testAllAlgorithmsOnTHLP(lp->thlp_data_);
-    // Reinstate the following when solution is actually passed back
-    //
-    //    return have_solution;
-    return false;
+    RKOConfig config;
+    config.num_algorithms = 1;
+    config.num_runs = 1;
+    RKOOptimizer optimizer(config);
+    const bool have_solution = optimizer.solveTHLP(lp->thlp_data_, solution);
+    const bool ok_solution = static_cast<HighsInt>(solution.size()) >= lp->num_col_;
+    if (have_solution && !ok_solution) {
+      printf("RKO heuristic returns a solution with %d components, not %d\n",
+	     int( solution.size()), int(lp->num_col_));
+      assert(ok_solution);
+    }
+    //testAllAlgorithmsOnTHLP(lp->thlp_data_);
+      
+    return have_solution;
   }
   return false;
 }

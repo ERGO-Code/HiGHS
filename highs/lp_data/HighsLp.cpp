@@ -533,8 +533,7 @@ bool HighsLp::getThlp(const std::string& filename) {
                                this->a_matrix_.value_, is_integer))
     return false;
   for (HighsInt iCol = 0; iCol < this->num_col_; iCol++)
-    this->integrality_[iCol] =
-        is_integer[iCol] ? HighsVarType::kInteger : HighsVarType::kContinuous;
+    this->integrality_.push_back(is_integer[iCol] ? HighsVarType::kInteger : HighsVarType::kContinuous);
   this->a_matrix_.num_col_ = this->num_col_;
   this->a_matrix_.num_row_ = this->num_row_;
   this->a_matrix_.format_ = MatrixFormat::kRowwise;
