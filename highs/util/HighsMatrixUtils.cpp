@@ -17,50 +17,44 @@
 
 #include "util/HighsHash.h"
 
-HighsStatus assessMatrix(const HighsLogOptions& log_options,
-                         const std::string& matrix_name, const HighsInt vec_dim,
-                         const HighsInt num_vec, vector<HighsInt>& matrix_start,
-                         vector<HighsInt>& matrix_index,
-                         vector<double>& matrix_value,
-                         const double small_matrix_value,
-                         const double large_matrix_value,
-                         const bool sum_duplicates,
-		     const std::string* col_names,
-		     const std::string* row_names) {
+HighsStatus assessMatrix(
+    const HighsLogOptions& log_options, const std::string& matrix_name,
+    const HighsInt vec_dim, const HighsInt num_vec,
+    vector<HighsInt>& matrix_start, vector<HighsInt>& matrix_index,
+    vector<double>& matrix_value, const double small_matrix_value,
+    const double large_matrix_value, const bool sum_duplicates,
+    const std::string* col_names, const std::string* row_names) {
   vector<HighsInt> matrix_p_end;
   const bool partitioned = false;
   return assessMatrix(log_options, matrix_name, vec_dim, num_vec, partitioned,
                       matrix_start, matrix_p_end, matrix_index, matrix_value,
                       small_matrix_value, large_matrix_value, sum_duplicates,
-		      col_names, row_names);
+                      col_names, row_names);
 }
 
-HighsStatus assessMatrix(const HighsLogOptions& log_options,
-                         const std::string& matrix_name, const HighsInt vec_dim,
-                         const HighsInt num_vec, vector<HighsInt>& matrix_start,
-                         vector<HighsInt>& matrix_p_end,
-                         vector<HighsInt>& matrix_index,
-                         vector<double>& matrix_value,
-                         const double small_matrix_value,
-                         const double large_matrix_value,
-                         const bool sum_duplicates,
-		     const std::string* col_names,
-		     const std::string* row_names) {
+HighsStatus assessMatrix(
+    const HighsLogOptions& log_options, const std::string& matrix_name,
+    const HighsInt vec_dim, const HighsInt num_vec,
+    vector<HighsInt>& matrix_start, vector<HighsInt>& matrix_p_end,
+    vector<HighsInt>& matrix_index, vector<double>& matrix_value,
+    const double small_matrix_value, const double large_matrix_value,
+    const bool sum_duplicates, const std::string* col_names,
+    const std::string* row_names) {
   const bool partitioned = false;
   return assessMatrix(log_options, matrix_name, vec_dim, num_vec, partitioned,
                       matrix_start, matrix_p_end, matrix_index, matrix_value,
                       small_matrix_value, large_matrix_value, sum_duplicates,
-		      col_names, row_names);
+                      col_names, row_names);
 }
 
-HighsStatus assessMatrix(const HighsLogOptions& log_options, const std::string& matrix_name,
-			 const HighsInt vec_dim, const HighsInt num_vec, const bool partitioned,
-			 vector<HighsInt>& matrix_start, vector<HighsInt>& matrix_p_end,
-			 vector<HighsInt>& matrix_index, vector<double>& matrix_value,
-			 const double small_matrix_value, const double large_matrix_value,
-			 const bool sum_duplicates,
-			 const std::string* col_names,
-			 const std::string* row_names) {
+HighsStatus assessMatrix(
+    const HighsLogOptions& log_options, const std::string& matrix_name,
+    const HighsInt vec_dim, const HighsInt num_vec, const bool partitioned,
+    vector<HighsInt>& matrix_start, vector<HighsInt>& matrix_p_end,
+    vector<HighsInt>& matrix_index, vector<double>& matrix_value,
+    const double small_matrix_value, const double large_matrix_value,
+    const bool sum_duplicates, const std::string* col_names,
+    const std::string* row_names) {
   if (assessMatrixDimensions(log_options, num_vec, partitioned, matrix_start,
                              matrix_p_end, matrix_index,
                              matrix_value) == HighsStatus::kError) {
@@ -187,7 +181,8 @@ HighsStatus assessMatrix(const HighsLogOptions& log_options, const std::string& 
                      "%s matrix packed vector %" HIGHSINT_FORMAT
                      "%s, entry %" HIGHSINT_FORMAT
                      ", is illegal index %" HIGHSINT_FORMAT "\n",
-                     matrix_name.c_str(), ix, possible_col_name(ix).c_str(), el, component);
+                     matrix_name.c_str(), ix, possible_col_name(ix).c_str(), el,
+                     component);
         return HighsStatus::kError;
       }
       // Check that the index does not exceed the vector dimension
@@ -199,7 +194,8 @@ HighsStatus assessMatrix(const HighsLogOptions& log_options, const std::string& 
                      ", is illegal index "
                      "%12" HIGHSINT_FORMAT " >= %" HIGHSINT_FORMAT
                      " = vector dimension\n",
-                     matrix_name.c_str(), ix, possible_col_name(ix).c_str(), el, component, vec_dim);
+                     matrix_name.c_str(), ix, possible_col_name(ix).c_str(), el,
+                     component, vec_dim);
         return HighsStatus::kError;
       }
       // Check whether the index has already occurred.
@@ -221,12 +217,12 @@ HighsStatus assessMatrix(const HighsLogOptions& log_options, const std::string& 
           matrix_value[previous_el] += matrix_value[el];
           continue;
         }
-	highsLogUser(log_options, HighsLogType::kError,
+        highsLogUser(log_options, HighsLogType::kError,
                      "%s matrix packed vector %" HIGHSINT_FORMAT
-                     "%s, has duplicate entries for index %" HIGHSINT_FORMAT "%s\n",
-                     matrix_name.c_str(),
-		     ix, possible_col_name(ix).c_str(),
-		     component, possible_row_name(component).c_str());
+                     "%s, has duplicate entries for index %" HIGHSINT_FORMAT
+                     "%s\n",
+                     matrix_name.c_str(), ix, possible_col_name(ix).c_str(),
+                     component, possible_row_name(component).c_str());
         return HighsStatus::kError;
       }
       // Not a duplicate

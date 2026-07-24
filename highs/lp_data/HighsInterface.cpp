@@ -450,7 +450,8 @@ HighsStatus Highs::addColsInterface(
   return_status = interpretCallStatus(
       options_.log_options,
       assessBounds(options, "Col", lp.num_col_, index_collection,
-                   local_colLower, local_colUpper, options.infinite_bound),
+                   local_colLower, local_colUpper, options.infinite_bound,
+                   nullptr),
       return_status, "assessBounds");
   if (return_status == HighsStatus::kError) return return_status;
   // Append the columns to the LP vectors and matrix
@@ -471,13 +472,12 @@ HighsStatus Highs::addColsInterface(
     local_a_matrix.value_ = {ext_a_value, ext_a_value + ext_num_new_nz};
     const bool sum_duplicates = false;
     // Assess the matrix rows
-    return_status =
-        interpretCallStatus(options_.log_options,
-                            local_a_matrix.assess(options.log_options, "LP",
-                                                  options.small_matrix_value,
-                                                  options.large_matrix_value,
-						  sum_duplicates),
-                            return_status, "assessMatrix");
+    return_status = interpretCallStatus(
+        options_.log_options,
+        local_a_matrix.assess(options.log_options, "LP",
+                              options.small_matrix_value,
+                              options.large_matrix_value, sum_duplicates),
+        return_status, "assessMatrix");
     if (return_status == HighsStatus::kError) return return_status;
   } else {
     // No nonzeros so, whether the constraint matrix is column-wise or
@@ -582,7 +582,8 @@ HighsStatus Highs::addRowsInterface(HighsInt ext_num_new_row,
   return_status = interpretCallStatus(
       options_.log_options,
       assessBounds(options, "Row", lp.num_row_, index_collection,
-                   local_rowLower, local_rowUpper, options.infinite_bound),
+                   local_rowLower, local_rowUpper, options.infinite_bound,
+                   nullptr),
       return_status, "assessBounds");
   if (return_status == HighsStatus::kError) return return_status;
   // Append the rows to the LP vectors
@@ -603,13 +604,12 @@ HighsStatus Highs::addRowsInterface(HighsInt ext_num_new_row,
     local_ar_matrix.value_ = {ext_ar_value, ext_ar_value + ext_num_new_nz};
     // Assess the matrix columns
     const bool sum_duplicates = false;
-    return_status =
-        interpretCallStatus(options_.log_options,
-                            local_ar_matrix.assess(options.log_options, "LP",
-                                                   options.small_matrix_value,
-                                                   options.large_matrix_value,
-						   sum_duplicates),
-                            return_status, "assessMatrix");
+    return_status = interpretCallStatus(
+        options_.log_options,
+        local_ar_matrix.assess(options.log_options, "LP",
+                               options.small_matrix_value,
+                               options.large_matrix_value, sum_duplicates),
+        return_status, "assessMatrix");
     if (return_status == HighsStatus::kError) return return_status;
   } else {
     // No nonzeros so, whether the constraint matrix is row-wise or
@@ -988,7 +988,7 @@ HighsStatus Highs::changeColBoundsInterface(
   return_status = interpretCallStatus(
       options_.log_options,
       assessBounds(options_, "col", 0, index_collection, local_colLower,
-                   local_colUpper, options_.infinite_bound),
+                   local_colUpper, options_.infinite_bound, nullptr),
       return_status, "assessBounds");
   if (return_status == HighsStatus::kError) return return_status;
   HighsLp& lp = model_.lp_;
@@ -1039,7 +1039,7 @@ HighsStatus Highs::changeRowBoundsInterface(
   return_status = interpretCallStatus(
       options_.log_options,
       assessBounds(options_, "row", 0, index_collection, local_rowLower,
-                   local_rowUpper, options_.infinite_bound),
+                   local_rowUpper, options_.infinite_bound, nullptr),
       return_status, "assessBounds");
   if (return_status == HighsStatus::kError) return return_status;
   HighsLp& lp = model_.lp_;
