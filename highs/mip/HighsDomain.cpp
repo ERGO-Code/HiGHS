@@ -978,6 +978,8 @@ void HighsDomain::DualfixingProbingPropagation::propagate() {
     delete domainchangeProbing[j];
   }
 
+  std::cout << "#Bchg = " << j << std::endl;
+
   for (j ++; j < domainchangeProbing.size(); ++ j) {
     assert(domain->infeasible_);
     delete domainchangeProbing[j];
@@ -2916,6 +2918,7 @@ bool HighsDomain::propagate() {
     }
   
     if (dfprobingPropagation.isActive()) {
+      std::cout << "Activated by nRedundantIndices = " << dfprobingPropagation.redundantPropagateinds_.size() << std::endl;
       dfprobingPropagation.propagate();
       if (!havePropagationRows() && !dfprobingPropagation.isZeroObjFixingEnabled()) {
         dfprobingPropagation.enableZeroObjFixing();
