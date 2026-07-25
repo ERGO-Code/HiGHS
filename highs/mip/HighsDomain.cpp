@@ -727,6 +727,7 @@ void HighsDomain::DualfixingProbingPropagation::propagate() {
   if (!isEnabled())
     return;
 
+  // printf("%f, %f\n", domain->getMaxActivity(1001), domain->getMinActivity(1001));
 // #ifndef NDEBUG
   for (const HighsInt x : redundantPropagateVec_) {
     HighsInt iRow = x / 2;
@@ -765,11 +766,11 @@ void HighsDomain::DualfixingProbingPropagation::propagate() {
           std::cout << "Lower lock: variable " << iCol << " at row = " << iRow << " coef = " << iValue
                     << " not redundant at constraint " << iRow << ", minact = " << domain->getMinActivity(iRow) << ", maxact = " << domain->getMaxActivity(iRow) 
                     << " lhs = " << blower << " rhs = " << bupper << std::endl;
-          std::cout << "lock rows:\n";
-          for (int kk = model->a_matrix_.start_[iCol]; kk < model->a_matrix_.start_[iCol + 1]; kk ++) {
-            std::cout << kk << " ";
-          }
-          std::cout << std::endl;
+          // std::cout << "lock rows:\n";
+          // for (int kk = model->a_matrix_.start_[iCol]; kk < model->a_matrix_.start_[iCol + 1]; kk ++) {
+          //   std::cout << kk << " ";
+          // }
+          // std::cout << std::endl;
         }
       }
     }
@@ -844,10 +845,12 @@ void HighsDomain::DualfixingProbingPropagation::propagate() {
         bool upperNoInsert = colUpperLockReduced_[iCol] + maxLockLeft < colUpperLockOriginal_[iCol];
 
         if (iValue > 0 && cost >= mipsolver->options_mip_->dual_feasibility_tolerance) {
+          lockNeedClear_.insert(iCol);
           colLowerLockReduced_[iCol] ++;
           lowerNoInsert = lowerNoInsert && colLowerLockReduced_[iCol] + maxLockLeft < colLowerLockOriginal_[iCol];
         }
         else if (iValue < 0 && cost <= mipsolver->options_mip_->dual_feasibility_tolerance) {
+          lockNeedClear_.insert(iCol);
           colUpperLockReduced_[iCol] ++;
           upperNoInsert = upperNoInsert && colUpperLockReduced_[iCol] + maxLockLeft < colUpperLockOriginal_[iCol];
         }
@@ -870,10 +873,12 @@ void HighsDomain::DualfixingProbingPropagation::propagate() {
         bool upperNoInsert = colUpperLockReduced_[iCol] + maxLockLeft < colUpperLockOriginal_[iCol];
 
         if (iValue < 0 && cost >= mipsolver->options_mip_->dual_feasibility_tolerance) {
+          lockNeedClear_.insert(iCol);
           colLowerLockReduced_[iCol] ++;
           lowerNoInsert = lowerNoInsert && colLowerLockReduced_[iCol] + maxLockLeft < colLowerLockOriginal_[iCol];
         }
         else if (iValue > 0 && cost <= mipsolver->options_mip_->dual_feasibility_tolerance) {
+          lockNeedClear_.insert(iCol);
           colUpperLockReduced_[iCol] ++;
           upperNoInsert = upperNoInsert && colUpperLockReduced_[iCol] + maxLockLeft < colUpperLockOriginal_[iCol];
         }
@@ -983,7 +988,6 @@ void HighsDomain::DualfixingProbingPropagation::propagate() {
   // clear candidate info
   for (const auto x : candidatesVec_) {
     candidatesFlag_[x] = false;
-    lockNeedClear_.insert(x);
   }
   candidatesVec_.clear();
 
@@ -2933,7 +2937,7 @@ bool HighsDomain::propagate() {
       }
     }
   
-    if (dfprobingPropagation.isActive()) {
+    if (!infeasible_ && dfprobingPropagation.isActive()) {
       std::cout << "Activated by nRedundantIndices = " << dfprobingPropagation.redundantPropagateVec_.size() << std::endl;
       dfprobingPropagation.propagate();
       if (!havePropagationRows() && !dfprobingPropagation.isZeroObjFixingEnabled()) {

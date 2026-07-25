@@ -312,6 +312,7 @@ class HighsDomain {
 
 
     void clearRedundant() {
+      previousSize_ = 0;
       if (!redundantPropagateVec_.empty()) { // clear buffers
         for (auto x : redundantPropagateVec_)
           redundantPropagateFlag_[x] = false;
