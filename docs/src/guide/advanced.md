@@ -99,13 +99,13 @@ The oracle call type is a cast of the relevant member of the C++ enum
 `HessianOracleCallType`, and is available in C as a constant. There
 are three possible call types
 
-###kHessianOracleCallTypeEntry###
+### kHessianOracleCallTypeEntry ###
 
 For this call type, set `*q_x_value` as Hessian entry (`*x_index`,
 `*q_x_index`). Return 0 if the Hessian entry is available, otherwise,
 return a nonzero value.
 
-###kHessianOracleCallTypeColumn###
+### kHessianOracleCallTypeColumn ###
 
 For this call type, set `*q_x_num_entries`, `*q_x_index` and
 `*q_x_value` as Hessian column `*x_index`, where `*q_x_index` contains
@@ -113,7 +113,7 @@ the `*q_x_num_entries` indices of the column nonzeros, and their
 values are assumed to be scattered in `*q_x_value`. Return 0 if the
 Hessian column is available, otherwise, return a nonzero value.
 
-###kHessianOracleCallTypeProduct###
+### kHessianOracleCallTypeProduct ###
 
 For this call type, set `*q_x_value` as the values of the product
  between the Hessian and vector which is either
@@ -128,8 +128,8 @@ nonzero value - in which case the oracle is not valid.
 The user's oracle is communicated to HiGHS via the method that in the HiGHS C++ class is
 ```cpp
 HighsStatus passHessian(const HighsInt dim,
-                               HighsHessianFunctionType oracleCall,
-                               void* oracle_data);
+                        HighsHessianFunctionType oracleCall,
+                        void* oracle_data);
 ```
 and, in the HiGHS C API is
 ```cpp
