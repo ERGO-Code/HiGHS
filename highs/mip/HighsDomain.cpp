@@ -639,8 +639,8 @@ void HighsDomain::CutpoolPropagation::updateActivityUbChange(
 }
 
 HighsDomain::DualfixingProbingPropagation::DualfixingProbingPropagation(const DualfixingProbingPropagation& other)
-  : redundantPropagateflags_(other.redundantPropagateflags_),
-    redundantPropagateinds_(other.redundantPropagateinds_),
+  : redundantPropagateFlag_(other.redundantPropagateFlag_),
+    redundantPropagateVec_(other.redundantPropagateVec_),
     zeroCostVarsDirection_(other.zeroCostVarsDirection_),
     zeroCostFixedVariables_(other.zeroCostFixedVariables_),
     colLowerLockOriginal_(other.colLowerLockOriginal_),
@@ -653,9 +653,9 @@ HighsDomain::DualfixingProbingPropagation::DualfixingProbingPropagation(const Du
 
 void HighsDomain::DualfixingProbingPropagation::recomputeLocks() {
   mipsolver = domain->mipsolver;
-  redundantPropagateflags_.assign(2 * mipsolver->numRow(), false);
-  redundantPropagateinds_.clear();
-  redundantPropagateinds_.reserve(2 * mipsolver->numRow());
+  redundantPropagateFlag_.assign(2 * mipsolver->numRow(), false);
+  redundantPropagateVec_.clear();
+  redundantPropagateVec_.reserve(2 * mipsolver->numRow());
   zeroCostVarsDirection_.assign(2 * mipsolver->numCol(), FIXDIRECTION_NOT_DECIDED);
   zeroCostFixedVariables_.clear();
   zeroCostFixedVariables_.reserve(2 * mipsolver->numCol());
@@ -691,12 +691,12 @@ void HighsDomain::DualfixingProbingPropagation::updateRhsRedundant(HighsInt row)
   if (!isEnabled())
     return;
 
-  if (domain->activitymaxinf_[row] != 0 || redundantPropagateflags_[2 * row + 1] || mipsolver->model_->row_upper_[row] == kHighsInf)
+  if (domain->activitymaxinf_[row] != 0 || redundantPropagateFlag_[2 * row + 1] || mipsolver->model_->row_upper_[row] == kHighsInf)
     return;
 
   if (domain->getMaxActivity(row) <= mipsolver->model_->row_upper_[row] + mipsolver->mipdata_->feastol) {
-    redundantPropagateinds_.push_back(2 * row + 1);
-    redundantPropagateflags_[2 * row + 1] = 1;
+    redundantPropagateVec_.push_back(2 * row + 1);
+    redundantPropagateFlag_[2 * row + 1] = 1;
   }
 }
 
@@ -704,12 +704,12 @@ void HighsDomain::DualfixingProbingPropagation::updateLhsRedundant(HighsInt row)
   if (!isEnabled())
     return;
 
-  if (domain->activitymininf_[row] != 0 || redundantPropagateflags_[2 * row] || mipsolver->model_->row_lower_[row] == -kHighsInf)
+  if (domain->activitymininf_[row] != 0 || redundantPropagateFlag_[2 * row] || mipsolver->model_->row_lower_[row] == -kHighsInf)
     return;
 
   if (domain->getMinActivity(row) >= mipsolver->model_->row_lower_[row] - mipsolver->mipdata_->feastol) {
-    redundantPropagateinds_.push_back(2 * row);
-    redundantPropagateflags_[2 * row] = 1;
+    redundantPropagateVec_.push_back(2 * row);
+    redundantPropagateFlag_[2 * row] = 1;
   }
 }
 
@@ -726,6 +726,17 @@ void HighsDomain::DualfixingProbingPropagation::propagate() {
   //   (2) For the bound changes in Phase 2, reductions deduced from them can only be used to derive global valid reductions (i.e., variable fixing, global bound tightening, variable substitution).
   if (!isEnabled())
     return;
+
+// #ifndef NDEBUG
+  for (const HighsInt x : redundantPropagateVec_) {
+    HighsInt iRow = x / 2;
+    bool isUpper = x % 2;
+    if (isUpper && domain->getMaxActivity(iRow) > mipsolver->model_->row_upper_[iRow] + domain->feastol())
+      printf("Row %d not rhs redundant, maxAct = %f, rhs = %f.\n", iRow, domain->getMaxActivity(iRow), mipsolver->model_->row_upper_[iRow]);
+    if (!isUpper && domain->getMinActivity(iRow) < mipsolver->model_->row_lower_[iRow] - domain->feastol())
+      printf("Row %d not lhs redundant, minAct = %f, lhs = %f.\n", iRow, domain->getMinActivity(iRow), mipsolver->model_->row_lower_[iRow]);
+  }
+// #endif
 
   assert(candidatesVec_.empty());
   vector<HighsDomainChange*> domainchangeProbing;
@@ -754,6 +765,11 @@ void HighsDomain::DualfixingProbingPropagation::propagate() {
           std::cout << "Lower lock: variable " << iCol << " at row = " << iRow << " coef = " << iValue
                     << " not redundant at constraint " << iRow << ", minact = " << domain->getMinActivity(iRow) << ", maxact = " << domain->getMaxActivity(iRow) 
                     << " lhs = " << blower << " rhs = " << bupper << std::endl;
+          std::cout << "lock rows:\n";
+          for (int kk = model->a_matrix_.start_[iCol]; kk < model->a_matrix_.start_[iCol + 1]; kk ++) {
+            std::cout << kk << " ";
+          }
+          std::cout << std::endl;
         }
       }
     }
@@ -806,11 +822,11 @@ void HighsDomain::DualfixingProbingPropagation::propagate() {
 
 
   // get candidate
-  HighsInt maxLockLeft = redundantPropagateinds_.size() - previousSize_;
+  HighsInt maxLockLeft = redundantPropagateVec_.size() - previousSize_;
   if (maxLockLeft == 0)
     return;
-  for (; previousSize_ < redundantPropagateinds_.size(); ++ previousSize_, -- maxLockLeft) {
-    const HighsInt i = redundantPropagateinds_[previousSize_];
+  for (; previousSize_ < redundantPropagateVec_.size(); ++ previousSize_, -- maxLockLeft) {
+    const HighsInt i = redundantPropagateVec_[previousSize_];
     const HighsInt iRow = i / 2;
     assert(iRow < mipsolver->numRow());
 
@@ -986,7 +1002,7 @@ void HighsDomain::DualfixingProbingPropagation::propagate() {
   }
 
   // record the current number of redundant constraints.
-  previousSize_ = redundantPropagateinds_.size();
+  previousSize_ = redundantPropagateVec_.size();
 }
 
 
@@ -2918,7 +2934,7 @@ bool HighsDomain::propagate() {
     }
   
     if (dfprobingPropagation.isActive()) {
-      std::cout << "Activated by nRedundantIndices = " << dfprobingPropagation.redundantPropagateinds_.size() << std::endl;
+      std::cout << "Activated by nRedundantIndices = " << dfprobingPropagation.redundantPropagateVec_.size() << std::endl;
       dfprobingPropagation.propagate();
       if (!havePropagationRows() && !dfprobingPropagation.isZeroObjFixingEnabled()) {
         dfprobingPropagation.enableZeroObjFixing();

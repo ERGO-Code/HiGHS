@@ -240,8 +240,8 @@ class HighsDomain {
     HighsDomain* domain;
     HighsMipSolver* mipsolver;
     // row lower and upper, length = 2 * rownum
-    std::vector<char> redundantPropagateflags_;
-    std::vector<HighsInt> redundantPropagateinds_;
+    std::vector<char> redundantPropagateFlag_;
+    std::vector<HighsInt> redundantPropagateVec_;
 
     enum DFPROBING_FIX_DIRECTION {
       FIXDIRECTION_NOT_DECIDED = 0,
@@ -277,7 +277,7 @@ class HighsDomain {
     }
 
     bool isActive() {
-      return enabled_ && redundantPropagateinds_.size() > previousSize_;
+      return enabled_ && redundantPropagateVec_.size() > previousSize_;
     }
 
     void setZeroCostFixingPosition(HighsInt v) {
@@ -312,15 +312,15 @@ class HighsDomain {
 
 
     void clearRedundant() {
-      if (!redundantPropagateinds_.empty()) { // clear buffers
-        for (auto x : redundantPropagateinds_)
-          redundantPropagateflags_[x] = false;
+      if (!redundantPropagateVec_.empty()) { // clear buffers
+        for (auto x : redundantPropagateVec_)
+          redundantPropagateFlag_[x] = false;
 
-        redundantPropagateinds_.clear();
+        redundantPropagateVec_.clear();
       }
     
-      for (size_t i = 0; i < redundantPropagateflags_.size(); ++ i)
-        assert(!redundantPropagateflags_[i]);
+      for (size_t i = 0; i < redundantPropagateFlag_.size(); ++ i)
+        assert(!redundantPropagateFlag_[i]);
     
       zeroCostFixedVariables_.clear();
 
