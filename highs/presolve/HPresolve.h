@@ -173,6 +173,8 @@ class HPresolve {
            numDeletedRows == model->num_row_;
   }
 
+  bool hasPresolveDataStructures() const { return colDeleted.size() > 0; }
+
   void chooseRules();
 
   void link(HighsInt pos);

@@ -952,7 +952,7 @@ void HPresolve::shrinkProblem(HighsPostsolveStack& postsolve_stack) {
   // full presolve data structures - implying that presolve has
   // terminated in HPresolve::initialSweep, when the model is
   // up-to-date, so no shrinkage is required
-  if (!colDeleted.size()) return;
+  if (!hasPresolveDataStructures()) return;
   assert(colDeleted.size() == static_cast<size_t>(oldNumCol));
   assert(rowDeleted.size() == static_cast<size_t>(oldNumRow));
   model->num_col_ = 0;
@@ -7100,8 +7100,11 @@ HighsModelStatus HPresolve::run(HighsPostsolveStack& postsolve_stack) {
     }
   }
 
-  toCSC(model->a_matrix_.value_, model->a_matrix_.index_,
-        model->a_matrix_.start_);
+  // Possibly populate the model matrix from the presolve matrix data
+  // structure
+  if (hasPresolveDataStructures())
+    toCSC(model->a_matrix_.value_, model->a_matrix_.index_,
+          model->a_matrix_.start_);
 
   reportProfiling();
 
@@ -7739,7 +7742,8 @@ HPresolve::Result HPresolve::presolveChangedCols(
     if (colDeleted[col]) continue;
     size_t num_reductions = postsolve_stack.numReductions();
     if (num_reductions == 35044) {
-      printf("HPresolve::presolveChangedCols reductions = %d\n", int(num_reductions));
+      printf("HPresolve::presolveChangedCols reductions = %d\n",
+             int(num_reductions));
     }
     HPRESOLVE_CHECKED_CALL(colPresolve(postsolve_stack, col));
     changedColFlag[col] = colDeleted[col];

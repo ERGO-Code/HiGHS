@@ -22,12 +22,11 @@
 
 #include "lp_data/HConst.h"
 #include "lp_data/HStruct.h"
-#include "lp_data/HighsModelUtils.h" 
+#include "lp_data/HighsModelUtils.h"
 #include "lp_data/HighsOptions.h"
 #include "util/HighsCDouble.h"
 #include "util/HighsDataStack.h"
 #include "util/HighsMatrixSlice.h"
-
 
 // class HighsOptions;
 namespace presolve {
@@ -673,9 +672,11 @@ class HighsPostsolveStack {
 
     if (perform_basis_postsolve) {
       // if basis is given, expand basis status values to original index space
-      undoIterateBackwards(basis.col_status, origColIndex, origNumCol, HighsBasisStatus::kNonbasic);
+      undoIterateBackwards(basis.col_status, origColIndex, origNumCol,
+                           HighsBasisStatus::kNonbasic);
 
-      undoIterateBackwards(basis.row_status, origRowIndex, origNumRow, HighsBasisStatus::kNonbasic);
+      undoIterateBackwards(basis.row_status, origRowIndex, origNumRow,
+                           HighsBasisStatus::kNonbasic);
     }
 
     // Initialise to illegal values so that initial values are logged
@@ -687,44 +688,41 @@ class HighsPostsolveStack {
     auto solutionLogging = [&](const std::string& message) {
       return;
       printf("\n%s\n", message.c_str());
-      for (HighsInt iCol = 0; iCol < origNumCol; iCol++) 
-	printf("Col %9d value = %11.4g; dual = %11.4g; status = %s\n",
-	       int(iCol), solution.col_value[iCol], solution.col_dual[iCol],
-	       utilBasisStatusToString(basis.col_status[iCol]).c_str());
-      for (HighsInt iRow = 0; iRow < origNumRow; iRow++) 
-	printf("Row %9d value = %11.4g; dual = %11.4g; status = %s\n",
-	       int(iRow), solution.row_value[iRow], solution.row_dual[iRow],
-	       utilBasisStatusToString(basis.row_status[iRow]).c_str());
-      
+      for (HighsInt iCol = 0; iCol < origNumCol; iCol++)
+        printf("Col %9d value = %11.4g; dual = %11.4g; status = %s\n",
+               int(iCol), solution.col_value[iCol], solution.col_dual[iCol],
+               utilBasisStatusToString(basis.col_status[iCol]).c_str());
+      for (HighsInt iRow = 0; iRow < origNumRow; iRow++)
+        printf("Row %9d value = %11.4g; dual = %11.4g; status = %s\n",
+               int(iRow), solution.row_value[iRow], solution.row_dual[iRow],
+               utilBasisStatusToString(basis.row_status[iRow]).c_str());
     };
-    
+
     auto reportColLogging = [&](const HighsInt reduction) {
       assert(report_col >= 0);
       double col_value = solution.col_value[report_col];
-      double col_dual = solution.dual_valid ?
-	solution.col_dual[report_col] : 0;
-      HighsBasisStatus col_status = basis.valid ?
-	basis.col_status[report_col] : HighsBasisStatus::kNonbasic;
+      double col_dual = solution.dual_valid ? solution.col_dual[report_col] : 0;
+      HighsBasisStatus col_status = basis.valid ? basis.col_status[report_col]
+                                                : HighsBasisStatus::kNonbasic;
       bool report = col_value != report_col_value;
       if (solution.dual_valid) report = report || col_dual != report_col_dual;
       if (basis.valid) report = report || col_status != report_col_status;
       if (reduction >= 0) {
-	if (report) printf("After reduction %9d (type %2d):",
-	       int(reduction), int(reductions[reduction].first));
+        if (report)
+          printf("After reduction %9d (type %2d):", int(reduction),
+                 int(reductions[reduction].first));
       } else if (reduction == -1) {
-	report = true;
-	printf("Before undo:                        ");
+        report = true;
+        printf("Before undo:                        ");
       } else {
-	report = true;
-	printf("After last reduction:               ");
+        report = true;
+        printf("After last reduction:               ");
       }
       if (!report) return;
-      printf(" Col %7d value = %11.4g",
-               int(report_col), col_value);
-      if (solution.dual_valid)
-	printf(", dual = %11.4g", col_dual);
+      printf(" Col %7d value = %11.4g", int(report_col), col_value);
+      if (solution.dual_valid) printf(", dual = %11.4g", col_dual);
       if (basis.valid)
-	printf(" status = %s", utilBasisStatusToString(col_status).c_str());
+        printf(" status = %s", utilBasisStatusToString(col_status).c_str());
       printf("\n");
       report_col_value = col_value;
       report_col_dual = col_dual;
@@ -732,11 +730,12 @@ class HighsPostsolveStack {
     };
     // now undo the changes
     if (report_col >= 0) reportColLogging(-1);
-    if (reductions.size() == check_reduction) solutionLogging("After solving presolved LP");
+    if (reductions.size() == check_reduction)
+      solutionLogging("After solving presolved LP");
     for (size_t i = reductions.size(); i > 0; --i) {
-      if (i-1 == check_reduction) {
-	printf("Checking reduction %d\n", int(check_reduction));
-	solutionLogging("In reductions loop");
+      if (i - 1 == check_reduction) {
+        printf("Checking reduction %d\n", int(check_reduction));
+        solutionLogging("In reductions loop");
       }
       switch (reductions[i - 1].first) {
         case ReductionType::kLinearTransform: {
@@ -839,7 +838,7 @@ class HighsPostsolveStack {
                  int(reductions[i - 1].first));
           if (kAllowDeveloperAssert) assert(1 == 0);
       }
-      if (report_col >= 0) reportColLogging(i-1);
+      if (report_col >= 0) reportColLogging(i - 1);
     }
     if (report_col >= 0) reportColLogging(-2);
 
@@ -914,9 +913,11 @@ class HighsPostsolveStack {
 
     if (perform_basis_postsolve) {
       // if basis is given, expand basis status values to original index space
-      undoIterateBackwards(basis.col_status, origColIndex, origNumCol, HighsBasisStatus::kNonbasic);
+      undoIterateBackwards(basis.col_status, origColIndex, origNumCol,
+                           HighsBasisStatus::kNonbasic);
 
-      undoIterateBackwards(basis.row_status, origRowIndex, origNumRow, HighsBasisStatus::kNonbasic);
+      undoIterateBackwards(basis.row_status, origRowIndex, origNumRow,
+                           HighsBasisStatus::kNonbasic);
     }
 
     // now undo the changes
