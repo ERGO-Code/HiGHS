@@ -1062,3 +1062,13 @@ TEST_CASE("presolve-initial-sweep-all", "[highs_test_presolve]") {
 
   highs.resetGlobalScheduler(true);
 }
+
+TEST_CASE("bound_implied", "[highs_test_presolve]") {
+  std::string model_file =
+      std::string(HIGHS_DIR) + "/check/instances/bound_implied.mps";
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  highs.readModel(model_file);
+  highs.run();
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
+}

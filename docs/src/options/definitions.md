@@ -15,6 +15,12 @@
 - Type: string
 - Default: "choose"
 
+## [threads](@id option-threads)
+- Maximum number of threads used by HiGHS (0: automatic)
+- Type: integer
+- Range: {0, 2147483647}
+- Default: 0
+
 ## [run\_crossover](@id option-run-crossover)
 - Run IPM crossover: "off", "choose" or "on"
 - Type: string
@@ -105,12 +111,6 @@
 
 ## [random\_seed](@id option-random-seed)
 - Random seed used in HiGHS
-- Type: integer
-- Range: {0, 2147483647}
-- Default: 0
-
-## [threads](@id option-threads)
-- Number of threads used by HiGHS (0: automatic)
 - Type: integer
 - Range: {0, 2147483647}
 - Default: 0
@@ -423,6 +423,11 @@
 - Range: [1e-12, inf]
 - Default: 1e-08
 
+## [mip\_search\_simulate\_concurrency](@id option-mip-search-simulate-concurrency)
+- Simulate MIP search concurrency on a single thread
+- Type: boolean
+- Default: "false"
+
 ## [ipm\_iteration\_limit](@id option-ipm-iteration-limit)
 - Iteration limit for IPM solver
 - Type: integer
@@ -491,6 +496,11 @@
 - Type: double
 - Range: [1e-10, inf]
 - Default: 1e-07
+
+## [qp\_allow\_hot\_start](@id option-qp-allow-hot-start)
+- Allow the active set QP solver to hot start
+- Type: boolean
+- Default: "false"
 
 ## [qp\_iteration\_limit](@id option-qp-iteration-limit)
 - Iteration limit for the active set QP solver

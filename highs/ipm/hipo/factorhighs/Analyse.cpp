@@ -8,7 +8,7 @@
 #include <stack>
 
 #include "DataCollector.h"
-#include "FactorHiGHSSettings.h"
+#include "FactorHighsSettings.h"
 #include "ReturnValues.h"
 #include "ipm/hipo/auxiliary/Auxiliary.h"
 #include "ipm/hipo/auxiliary/Logger.h"
@@ -17,25 +17,36 @@ namespace hipo {
 const Int64 int32_limit = std::numeric_limits<int32_t>::max();
 const Int64 int64_limit = std::numeric_limits<int64_t>::max();
 
-Analyse::Analyse(const std::vector<Int>& rows, const std::vector<Int>& ptr,
-                 const std::vector<Int>& signs, Int nb, const Logger* logger,
-                 DataCollector& data, const std::vector<Int>& perm)
-    : logger_{logger}, data_{data} {
+Analyse::Analyse(Int n, Int nz, const Int* rows, const Int* ptr,
+                 const Int* signs, const FHoptions& FH_opt,
+                 const Logger* logger, DataCollector& data, const Int* perm)
+    : FH_opt_{FH_opt}, logger_{logger}, data_{data} {
   // Input the symmetric matrix to be analysed in CSC format.
   // rows contains the row indices.
   // ptr contains the starting points of each column.
   // Only the lower triangular part is used.
+  // Diagonal entries must be stored for each column, even if zero.
   // signs contains the sign that each pivot should have.
 
-  n_ = ptr.size() - 1;
-  nz_ = rows.size();
-  signs_ = signs;
-  nb_ = nb;
+  n_ = n;
+  nz_ = nz;
+
+  rows_lower_ = std::vector<Int>(rows, rows + nz_);
+  ptr_lower_ = std::vector<Int>(ptr, ptr + n_ + 1);
+  signs_ = std::vector<Int>(signs, signs + n_);
+  perm_ = std::vector<Int>(perm, perm + n_);
+
+  // adjust data if one-based indexing is used
+  if (FH_opt_.one_indexing) {
+    for (Int& i : rows_lower_) --i;
+    for (Int& i : ptr_lower_) --i;
+    for (Int& i : perm_) --i;
+  }
 
   // Create upper triangular part
   rows_upper_.resize(nz_);
   ptr_upper_.resize(n_ + 1);
-  transpose(ptr, rows, ptr_upper_, rows_upper_);
+  transpose(ptr_lower_, rows_lower_, ptr_upper_, rows_upper_);
 
   // Permute the matrix with identical permutation, to extract upper triangular
   // part, if the input is not lower triangular.
@@ -55,7 +66,6 @@ Analyse::Analyse(const std::vector<Int>& rows, const std::vector<Int>& ptr,
   transpose(ptr_upper_, rows_upper_, ptr_lower_, rows_lower_);
   transpose(ptr_lower_, rows_lower_, ptr_upper_, rows_upper_);
 
-  perm_ = perm;
   iperm_.resize(n_);
   inversePerm(perm_, iperm_);
 
@@ -724,7 +734,7 @@ void Analyse::snPattern() {
   std::vector<Int64> work(sn_indices_.size());
   for (Int i = 0; i < static_cast<Int>(sn_indices_.size()); ++i)
     work[i] = sn_indices_[i];
-  counts2Ptr(ptr_sn_, work);
+  counts2Ptr(work.size(), ptr_sn_.data(), work.data());
 
   // consider each row
   for (Int i = 0; i < n_; ++i) {
@@ -889,17 +899,18 @@ void Analyse::computeStorage(Int fr, Int sz, Int64& fr_entries,
   // compute storage required by frontal and clique, based on the format used
 
   const Int cl = fr - sz;
+  const Int nb = FH_opt_.nb;
 
-  Int n_blocks = (sz - 1) / nb_ + 1;
+  Int n_blocks = (sz - 1) / nb + 1;
   std::vector<Int64> temp;
-  fr_entries = getDiagStart(fr, sz, nb_, n_blocks, temp);
+  fr_entries = getDiagStart(fr, sz, nb, n_blocks, temp);
 
   // clique is stored as a collection of rectangles
-  n_blocks = (cl - 1) / nb_ + 1;
+  n_blocks = (cl - 1) / nb + 1;
   Int64 schur_size{};
   for (Int j = 0; j < n_blocks; ++j) {
-    const Int jb = std::min(nb_, cl - j * nb_);
-    schur_size += (Int64)(cl - j * nb_) * jb;
+    const Int jb = std::min(nb, cl - j * nb);
+    schur_size += (Int64)(cl - j * nb) * jb;
   }
   cl_entries = schur_size;
 }
@@ -1108,6 +1119,8 @@ void Analyse::reorderChildren() {
 }
 
 void Analyse::computeBlockStart() {
+  const Int nb = FH_opt_.nb;
+
   clique_block_start_.resize(sn_count_);
   // compute starting position of each block of columns in the clique, for
   // each supernode
@@ -1115,10 +1128,10 @@ void Analyse::computeBlockStart() {
     const Int sn_size = sn_start_[sn + 1] - sn_start_[sn];
     const Int ldf = ptr_sn_[sn + 1] - ptr_sn_[sn];
     const Int ldc = ldf - sn_size;
-    const Int n_blocks = (ldc - 1) / nb_ + 1;
+    const Int n_blocks = (ldc - 1) / nb + 1;
 
     Int64 schur_size =
-        getDiagStart(ldc, ldc, nb_, n_blocks, clique_block_start_[sn]);
+        getDiagStart(ldc, ldc, nb, n_blocks, clique_block_start_[sn]);
     clique_block_start_[sn].push_back(schur_size);
   }
 }
@@ -1136,7 +1149,8 @@ Int Analyse::checkOverflow() const {
     const Int sn_size = sn_start_[sn + 1] - sn_start_[sn];
     const Int front_size = ptr_sn_[sn + 1] - ptr_sn_[sn];
 
-    if ((Int64)front_size * std::min(sn_size, nb_) > int32_limit) return 1;
+    if ((Int64)front_size * std::min(sn_size, FH_opt_.nb) > int32_limit)
+      return 1;
   }
 
   return 0;
@@ -1261,7 +1275,6 @@ Int Analyse::run(Symbolic& S) {
   S.largest_front_ = *std::max_element(sn_indices_.begin(), sn_indices_.end());
   S.serial_storage_ = serial_storage_;
   S.flops_ = dense_ops_;
-  S.block_size_ = nb_;
   S.max_stack_size_ = max_stack_size_;
   S.tree_depth_ = maxDepthTree(sn_parent_);
 

@@ -110,6 +110,8 @@ enum class HighsOptionType { kBool = 0, kInt, kDouble, kString };
 
 enum class HighsInfoType { kInt64 = -1, kInt = 1, kDouble };
 
+enum class HighsRunDataType { kInt64 = -1, kInt = 1, kDouble };
+
 enum OptionOffChooseOn {
   kHighsOptionOff = -1,
   kHighsOptionChoose,
@@ -307,8 +309,30 @@ enum IisStatus : int {
   kIisStatusMax = kIisStatusInConflict
 };
 
+enum HessianOracleCallType : int {
+  kHessianOracleCallTypeMin = 0,
+  kHessianOracleCallTypeEntry = kHessianOracleCallTypeMin,
+  kHessianOracleCallTypeColumn,
+  kHessianOracleCallTypeProduct,
+  kHessianOracleCallTypeMax = kHessianOracleCallTypeProduct
+};
+
+enum MipChooseSubMipRecord : int {
+  kMipRecord = -1,
+  kChooseRecord,
+  kSubMipRecord
+};
+
+enum PresolveSolvePostsolveIndex : int {
+  kPresolveTime = 0,
+  kSolveTime,
+  kPostsolveTime,
+  kToPresolveSolvePostsolve
+};
+
 enum SubSolverIndex : int {
-  kSubSolverMip = 0,
+  kFromSubSolver = kToPresolveSolvePostsolve,
+  kSubSolverMip = kFromSubSolver,
   kSubSolverDuSimplexBasis,
   kSubSolverDuSimplexNoBasis,
   kSubSolverPrSimplexBasis,
@@ -320,7 +344,8 @@ enum SubSolverIndex : int {
   kSubSolverPdlp,
   kSubSolverQpAsm,
   kSubSolverSubMip,
-  kSubSolverCount
+  kLastSubSolver = kSubSolverSubMip,
+  kToSubSolver = kLastSubSolver + 1
 };
 
 // Minimum and default KKT tolerance
@@ -361,6 +386,12 @@ const HighsInt kHighsIllegalErrorIndex = -1;
 // values aren't known
 const double kHighsIllegalComplementarityViolation = kHighsInf;
 const HighsInt kHighsIllegalComplementarityCount = -1;
+
+const double kHighsIllegalDoubleMeasure = -kHighsInf;
+const HighsInt kHighsIllegalIntMeasure = -1;
+
+// Tolerance on asymmetry in square Hessians
+const double kSquareHessianAsymmetryTolerance = 1e-10;
 
 // Maximum upper bound on semi-variables
 const double kMaxSemiVariableUpper = 1e5;

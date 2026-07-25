@@ -61,9 +61,6 @@ HighsInt Highs_lpCall(const HighsInt num_col, const HighsInt num_row,
       if (copy_row_basis) row_basis_status[i] = (HighsInt)basis.row_status[i];
     }
   }
-
-  highs.resetGlobalScheduler(true);
-
   return (HighsInt)status;
 }
 
@@ -106,9 +103,6 @@ HighsInt Highs_mipCall(const HighsInt num_col, const HighsInt num_row,
         row_value[i] = solution.row_value[i];
     }
   }
-
-  highs.resetGlobalScheduler(true);
-
   return (HighsInt)status;
 }
 
@@ -165,18 +159,12 @@ HighsInt Highs_qpCall(
       if (copy_row_basis) row_basis_status[i] = (HighsInt)basis.row_status[i];
     }
   }
-
-  highs.resetGlobalScheduler(true);
-
   return (HighsInt)status;
 }
 
 void* Highs_create(void) { return new Highs(); }
 
-void Highs_destroy(void* highs) {
-  Highs::resetGlobalScheduler(true);
-  delete (Highs*)highs;
-}
+void Highs_destroy(void* highs) { delete (Highs*)highs; }
 
 const char* Highs_version(void) { return highsVersion(); }
 HighsInt Highs_versionMajor(void) { return highsVersionMajor(); }
@@ -299,6 +287,19 @@ HighsInt Highs_passHessian(void* highs, const HighsInt dim,
       ->passHessian(dim, num_nz, format, start, index, value);
 }
 
+HighsInt Highs_passHessianOracle(void* highs, const HighsInt dim,
+                                 HighsCHessianFunctionType oracleCall,
+                                 void* oracle_data) {
+  auto status =
+      static_cast<Highs*>(highs)->passHessian(dim, oracleCall, oracle_data);
+  return static_cast<HighsInt>(status);
+}
+
+HighsInt Highs_checkHessianOracle(void* highs) {
+  auto status = static_cast<Highs*>(highs)->checkHessianOracle();
+  return static_cast<HighsInt>(status);
+}
+
 HighsInt Highs_passLinearObjectives(const void* highs,
                                     const HighsInt num_linear_objective,
                                     const double* weight, const double* offset,
@@ -377,6 +378,10 @@ HighsInt Highs_clearModel(void* highs) {
 
 HighsInt Highs_clearSolver(void* highs) {
   return (HighsInt)((Highs*)highs)->clearSolver();
+}
+
+HighsInt Highs_releaseMemory(void* highs) {
+  return (HighsInt)((Highs*)highs)->releaseMemory();
 }
 
 HighsInt Highs_setBoolOptionValue(void* highs, const char* option,
@@ -752,7 +757,7 @@ HighsInt Highs_setCallback(void* highs, HighsCCallbackType user_callback,
                            void* user_callback_data) {
   auto status = static_cast<Highs*>(highs)->setCallback(user_callback,
                                                         user_callback_data);
-  return static_cast<int>(status);
+  return static_cast<HighsInt>(status);
 }
 
 HighsInt Highs_startCallback(void* highs, const HighsInt callback_type) {

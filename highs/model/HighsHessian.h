@@ -27,7 +27,10 @@ class HighsHessian {
   std::vector<HighsInt> start_;
   std::vector<HighsInt> index_;
   std::vector<double> value_;
+  HessianOracle oracle_;
   bool operator==(const HighsHessian& hessian) const;
+  bool isOracle() const { return oracle_.call_ != nullptr; }
+  void formFromOracle();
   void product(const std::vector<double>& solution,
                std::vector<double>& product) const;
   void alphaProductPlusY(const double alpha, const std::vector<double>& x,
@@ -43,11 +46,15 @@ class HighsHessian {
   };
   bool scaleOk(const HighsInt cost_scale, const double small_matrix_value,
                const double large_matrix_value) const;
+  HighsInt dim() const;
   HighsInt numNz() const;
   bool empty() const;
   bool isDiagonal() const;
   double diag(HighsInt i) const;
+  double diagonal(HighsInt i) const;
   HighsHessian toSquare() const;
+  HighsStatus checkOracle(const HighsLogOptions& log_options,
+                          const bool exit_on_first_error) const;
   void print(const std::string& message = "") const;
 };
 

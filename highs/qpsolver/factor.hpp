@@ -91,7 +91,9 @@ class CholeskyFactor {
           for (size_t k = 0; k < row; k++)
             sum += L[k * current_k_max + row] * L[k * current_k_max + row];
           double d_value = orig[row][row] - sum;
-          if (d_value <= 0) return QpSolverStatus::NOTPOSITIVDEFINITE;
+          if (d_value <= 0) {
+            return QpSolverStatus::NOTPOSITIVDEFINITE;
+          }
           L[row * current_k_max + row] = sqrt(d_value);
         } else {
           for (size_t k = 0; k < row; k++)
