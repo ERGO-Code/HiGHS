@@ -27,7 +27,7 @@ bool HighsImplications::computeImplications(HighsInt col, bool val) {
   const auto& domchgreason = globaldomain.getDomainChangeReason();
   size_t changedend = globaldomain.getChangedCols().size();
 
-  globaldomain.getDfProbingPropagation().clearRedundant();
+  globaldomain.getDfProbingPropagation().clearRedundantInfo();
   if (globaldomain.inProbing_)
     globaldomain.getDfProbingPropagation().enablePropagator();
 
@@ -117,7 +117,7 @@ bool HighsImplications::computeImplications(HighsInt col, bool val) {
                                   });
     // Store the tentative bound changes (fixing) of binary variables separately 
     for (auto i = binstart_tmp; i != implics_tentative.end(); ++ i)
-      cacheTmpCliques(val, *i);
+      recordTentativeCliques(val, *i);
     implics_tentative.erase(binstart_tmp, implics_tentative.end());
   }
 
@@ -337,7 +337,7 @@ bool HighsImplications::runProbing(HighsInt col, HighsInt& numReductions) {
       mipsolver.mipdata_->cliquetable.getSubstitution(col) == nullptr) {
     
     // setup for dfprobingPropagation 
-    clearCacheClique();
+    clearTentativeClique();
     globaldomain.getDfProbingPropagation().setZeroCostFixingPosition(kHighsIInf32);
 
     bool infeasible = computeImplications(col, 1);
@@ -421,7 +421,7 @@ bool HighsImplications::runProbing(HighsInt col, HighsInt& numReductions) {
       } while (haveReduction);
 
       // clear the tentative bound changes for binary variables obtained from probing on x[col] 
-      clearCacheClique();
+      clearTentativeClique();
     }
 
     // analyze implications

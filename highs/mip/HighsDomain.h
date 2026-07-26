@@ -245,8 +245,8 @@ class HighsDomain {
 
     enum DFPROBING_FIX_DIRECTION {
       FIXDIRECTION_NOT_DECIDED = 0,
-      FIXDIRECTION_LOWER_BOUND = 1,
-      FIXDIRECTION_UPPER_BOUND = 2,
+      FIXDIRECTION_LOWER_BOUND,
+      FIXDIRECTION_UPPER_BOUND,
     };
     std::vector<DFPROBING_FIX_DIRECTION> zeroCostVarsDirection_;
     std::vector<std::pair<HighsInt, bool>> zeroCostFixedVariables_;
@@ -311,7 +311,7 @@ class HighsDomain {
     }
 
 
-    void clearRedundant() {
+    void clearRedundantInfo() {
       previousSize_ = 0;
       if (!redundantPropagateVec_.empty()) { // clear buffers
         for (auto x : redundantPropagateVec_)

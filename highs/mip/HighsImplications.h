@@ -239,7 +239,7 @@ class HighsImplications {
   void applyImplications(HighsDomain& domain, HighsInt col, HighsInt val);
 
   // collect tentative binary implications
-  void cacheTmpCliques(bool val, const HighsDomainChange& bchg) {
+  void recordTentativeCliques(bool val, const HighsDomainChange& bchg) {
     const int iCol = bchg.column;
     if (val == 0) { // probing x_k = 0
       if (bchg.boundtype == HighsBoundType::kLower) { // fixed to 1
@@ -275,37 +275,37 @@ class HighsImplications {
     }
   }
   // clear tentative binary implications
-  void clearCacheClique() {
+  void clearTentativeClique() {
     for (auto iCol : binaryInvolvedInds_)
       binaryInvolvedFlags_[iCol] = binaryFixType::kNoReduction;
     binaryInvolvedInds_.clear();
   }
-  // tools for cacheTmpCliques
+  // tools for recordTentativeCliques
   bool isFixedTo0(bool val, HighsInt iCol) {
     if (binaryInvolvedFlags_[iCol] == 0)
       return false;
 
     uint8_t mask;
-    if (val == 0) { // x_k = 0, last two digits
+    if (val == 0) { // probing at x = 0, last two digits
       mask = 1 << (1);
       return (binaryInvolvedFlags_[iCol] & mask) != 0;
     }
-    else { // x_k = 1, first two digits
+    else { // probing at x = 1, first two digits
       mask = 1 << (3);
       return (binaryInvolvedFlags_[iCol] & mask) != 0;
     }
   }
-  // tools for cacheTmpCliques
+  // tools for recordTentativeCliques
   bool isFixedTo1(bool val, HighsInt iCol) {
     if (binaryInvolvedFlags_[iCol] == 0)
       return false;
 
     uint8_t mask;
-    if (val == 0) { // x_k = 0, last two digits
+    if (val == 0) { // probing at x = 0, last two digits
       mask = 1;
       return (binaryInvolvedFlags_[iCol] & mask) != 0;
     }
-    else { // x_k = 1, first two digits
+    else { // probint at x = 1, first two digits
       mask = 1 << (2);
       return (binaryInvolvedFlags_[iCol] & mask) != 0;
     }
