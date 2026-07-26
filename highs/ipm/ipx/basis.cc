@@ -375,7 +375,12 @@ void Basis::ConstructBasisFromWeights(const double* colscale, Info* info) {
     info->dependent_cols = 0;
 
     if (control_.crash_basis()) {
-        CrashBasis(colscale);
+	bool interrupt = false;
+        CrashBasis(colscale, interrupt);
+	if (interrupt) {
+	  info->errflag = IPX_ERROR_time_interrupt;
+	  return;
+	}
         double sigma = MinSingularValue();
         control_.Debug()
             << Textline("Minimum singular value of crash basis:") << sci2(sigma)
@@ -522,14 +527,16 @@ bool Basis::TightenLuPivotTol() {
     return true;
 }
 
-void Basis::CrashBasis(const double* colweights) {
+  void Basis::CrashBasis(const double* colweights, bool& interrupt) {
     const Int m = model_.rows();
 
     // Make a guess for a basis. Then use LU factorization with a strict
     // absolute pivot tolerance to remove dependent columns. This is not a
     // rank revealing factorization, but it detects many dependencies in
     // practice.
-    std::vector<Int> cols_guessed = GuessBasis(control_, model_, colweights);
+    std::vector<Int> cols_guessed = GuessBasis(control_, model_, colweights, interrupt);
+    if (interrupt) return;
+
     assert((Int)cols_guessed.size() <= m);
     assert((Int)cols_guessed.size() == m); // at the moment
 

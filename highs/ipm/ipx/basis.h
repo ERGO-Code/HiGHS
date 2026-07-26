@@ -246,7 +246,7 @@ private:
     // On return the object has been initialized to a basis that is nonsingular
     // in exact arithmetic. The condition number of the basis matrix can be
     // unacceptably high, however.
-    void CrashBasis(const double* colweights);
+    void CrashBasis(const double* colweights, bool& interrupt);
 
     // Repairs singularities in the basis matrix by replacing basic columns by
     // slack columns. The status of slack variables that enter the basis becomes
