@@ -1230,6 +1230,7 @@ HighsStatus Highs::optimizeModelCatchFpe() {
                 "Exception %s in calledOptimizeModel\n", exception.what());
     // Clear all solver data, since there may be nothing useful
     this->clearSolver();
+    model_status_ = HighsModelStatus::kSolveError;
     status = HighsStatus::kError;
   }
   return status;
@@ -1433,8 +1434,14 @@ HighsStatus Highs::calledOptimizeModel() {
       return returnFromOptimizeModel(HighsStatus::kError, undo_mods);
     }
     if (!solverValidForQp(options_.solver)) warnSolverInvalid(options_, "QP");
-
-    call_status = callSolveQp();
+    try {
+      call_status = callSolveQp();
+    } catch (const std::exception& exception) {
+      highsLogDev(options_.log_options, HighsLogType::kError,
+                  "Exception %s in callSolveQp\n", exception.what());
+      model_status_ = HighsModelStatus::kSolveError;
+      call_status = HighsStatus::kError;
+    }
     return_status = interpretCallStatus(options_.log_options, call_status,
                                         return_status, "callSolveQp");
     return returnFromOptimizeModel(return_status, undo_mods);
@@ -4582,7 +4589,14 @@ HighsStatus Highs::callSolveMip() {
   HighsMipSolver solver(callback_, options_, lp, solution_);
   solver.setProfiling(this->profiling_);
   profiling_->start(kSubSolverMip);
-  solver.run();
+  try {
+    solver.run();
+  } catch (const std::exception& exception) {
+    highsLogDev(options_.log_options, HighsLogType::kError,
+                "Exception %s in MIP solver\n", exception.what());
+    solver.modelstatus_ = HighsModelStatus::kSolveError;
+  }
+
   profiling_->stop(kSubSolverMip);
   options_.log_dev_level = log_dev_level;
   // Set the return_status, model status and, for completeness, scaled

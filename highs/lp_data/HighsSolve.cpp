@@ -47,7 +47,14 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
   // lambda for solving LP by simplex
   auto simplexSolve = [&]() -> HighsStatus {
     return_status = HighsStatus::kOk;
-    call_status = solveLpSimplex(solver_object);
+    try {
+      call_status = solveLpSimplex(solver_object);
+    } catch (const std::exception& exception) {
+      highsLogDev(options.log_options, HighsLogType::kError,
+                  "Exception %s in solveLpSimplex\n", exception.what());
+      solver_object.model_status_ = HighsModelStatus::kSolveError;
+      call_status = HighsStatus::kError;
+    }
     return_status = interpretCallStatus(options.log_options, call_status,
                                         return_status, "solveLpSimplex");
     if (return_status == HighsStatus::kError) return return_status;
@@ -76,6 +83,7 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
         } catch (const std::exception& exception) {
           highsLogDev(options.log_options, HighsLogType::kError,
                       "Exception %s in solveLpHipo\n", exception.what());
+          solver_object.model_status_ = HighsModelStatus::kSolveError;
           call_status = HighsStatus::kError;
         }
         return_status = interpretCallStatus(options.log_options, call_status,
@@ -86,6 +94,7 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
         } catch (const std::exception& exception) {
           highsLogDev(options.log_options, HighsLogType::kError,
                       "Exception %s in solveLpIpx\n", exception.what());
+          solver_object.model_status_ = HighsModelStatus::kSolveError;
           call_status = HighsStatus::kError;
         }
         return_status = interpretCallStatus(options.log_options, call_status,
@@ -100,6 +109,7 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
         } catch (const std::exception& exception) {
           highsLogDev(options.log_options, HighsLogType::kError,
                       "Exception %s in solveLpCupdlp\n", exception.what());
+          solver_object.model_status_ = HighsModelStatus::kSolveError;
           call_status = HighsStatus::kError;
         }
       } else {
@@ -108,6 +118,7 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
         } catch (const std::exception& exception) {
           highsLogDev(options.log_options, HighsLogType::kError,
                       "Exception %s in solveHiPdlp\n", exception.what());
+          solver_object.model_status_ = HighsModelStatus::kSolveError;
           call_status = HighsStatus::kError;
         }
       }
