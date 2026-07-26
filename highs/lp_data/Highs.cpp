@@ -1199,7 +1199,7 @@ HighsStatus Highs::optimizeLp() {
   assert(!this->model_.isQp());
   assert(!this->model_.lp_.hasSemiVariables());
   assert(!this->multi_linear_objective_.size());
-  return this->calledOptimizeModel();
+  return this->optimizeModelCatchFpe();
 }
 
 HighsStatus Highs::optimizeModel() {
@@ -1211,10 +1211,26 @@ HighsStatus Highs::optimizeModel() {
   const bool already_profiling = this->profiling_;
   HighsProfiling profiling;
   if (!already_profiling) this->initializeProfiling(&profiling);
-  status = this->calledOptimizeModel();
+  status = this->optimizeModelCatchFpe();
   if (!already_profiling) {
     this->reportProfiling();
     this->clearProfiling();
+  }
+  return status;
+}
+
+HighsStatus Highs::optimizeModelCatchFpe() {
+  // Wrap the call to Highs::calledOptimizeModel() in a try-catch
+  // block
+  HighsStatus status;
+  try {
+    status = calledOptimizeModel();
+  } catch (const std::exception& exception) {
+    highsLogDev(options_.log_options, HighsLogType::kError,
+                "Exception %s in calledOptimizeModel\n", exception.what());
+    // Clear all solver data, since there may be nothing useful
+    this->clearSolver();
+    status = HighsStatus::kError;
   }
   return status;
 }

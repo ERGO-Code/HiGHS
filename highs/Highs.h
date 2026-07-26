@@ -1392,10 +1392,11 @@ class Highs {
   //
   // See highs/HighsRun.md
   HighsStatus optimizeHighs();
-  HighsStatus optimizeModel();
-  HighsStatus calledOptimizeModel();
   // Used in MIP solver as minimal LP solve
   HighsStatus optimizeLp();
+  HighsStatus optimizeModel();
+  HighsStatus optimizeModelCatchFpe();
+  HighsStatus calledOptimizeModel();
 
   const HighsSimplexStats& getSimplexStats() const {
     return ekk_instance_.getSimplexStats();
