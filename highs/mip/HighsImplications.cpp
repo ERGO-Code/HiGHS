@@ -57,6 +57,8 @@ bool HighsImplications::computeImplications(HighsInt col, bool val) {
 
   auto isInfeasible = [&](HighsInt col, bool val) {
     if (!globaldomain.infeasible()) return false;
+    if (globaldomain.inProbing_)
+      globaldomain.getDfProbingPropagation().disablePropagator();
     storeLiftingOpportunities(col, val);
     doBacktrack(changedend);
     cliquetable.vertexInfeasible(globaldomain, col, val);
