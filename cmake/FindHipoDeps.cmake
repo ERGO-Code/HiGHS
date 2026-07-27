@@ -116,8 +116,25 @@ function(highs_configure_blas)
             endif()
         endif()
 
-        message(STATUS "Enabling DYNAMIC_ARCH for runtime CPU detection.")
-        set(DYNAMIC_ARCH ON CACHE BOOL "" FORCE)
+        if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+            # OpenBLAS' DYNAMIC_ARCH kernel objects (and some of its generic,
+            # non-per-arch fallback kernels, e.g. kernel/x86_64/dscal.c and
+            # common_arm64.h) rely on GNU inline assembly (__asm__ __volatile__,
+            # __attribute__) that plain MSVC (cl.exe) cannot parse at all - unlike
+            # clang-cl, which accepts it under its GCC-compatibility mode. Rather
+            # than silently building a single-target library (which is what
+            # happened before this file started actually forwarding these options
+            # to OpenBLAS - see the FetchContent_Declare CMAKE_ARGS note above),
+            # explicitly pin the portable GENERIC target with DYNAMIC_ARCH off, so
+            # the result stays correct (if unoptimized) on any x86_64/ARM64 host
+            # regardless of what CPU it happened to be built on.
+            message(STATUS "MSVC detected: building OpenBLAS as a single portable GENERIC target (no DYNAMIC_ARCH) since MSVC cannot compile OpenBLAS's GNU-inline-asm kernel objects.")
+            set(DYNAMIC_ARCH OFF CACHE BOOL "" FORCE)
+            set(TARGET GENERIC CACHE STRING "" FORCE)
+        else()
+            message(STATUS "Enabling DYNAMIC_ARCH for runtime CPU detection.")
+            set(DYNAMIC_ARCH ON CACHE BOOL "" FORCE)
+        endif()
 
         # CMAKE_SIZEOF_VOID_P is 4 for 32-bit and 8 for 64-bit
         if(CMAKE_SIZEOF_VOID_P EQUAL 4)
