@@ -1605,3 +1605,43 @@ TEST_CASE("issue-3118a", "[highs_test_mip_solver]") {
 
   highs.resetGlobalScheduler(true);
 }
+
+TEST_CASE("issue-3171", "[highs_test_mip_solver]") {
+  // A path mixing cut is assembled from several base rows, each transformed by
+  // its own HighsTransformedLp::transform() call, and mapped back by a single
+  // untransform() at the end. The substitution chosen for each column lives in
+  // the shared boundTypes array, and untransform() reads whatever is in there
+  // when it runs.
+  //
+  // A base row is transformed before its right hand side is checked for the
+  // required monotonicity, and dropped only afterwards, so a discarded row's
+  // mutation of boundTypes survives. Since the substitution chosen for a binary
+  // depends on the sign of its coefficient in the row being transformed, a
+  // discarded row can flip a binary's complementation, and untransform() then
+  // resubstitutes a different variable than the coefficients were computed
+  // against. The resulting cut is not globally valid and can remove the
+  // optimum, after which the search closes and reports the incumbent as optimal
+  // at a zero gap.
+  //
+  // Without the fix this model is solved incorrectly, silently: the returned
+  // point is feasible and integral and the gap is certified 0. The optimum was
+  // verified independently of the branch and bound search, by fixing every
+  // integer column to the reported values and solving the remaining LP.
+  const std::string filename =
+      std::string(HIGHS_DIR) + "/check/instances/3171-1.mps";
+  const double optimal_objective = 42215.525000540001;
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  REQUIRE(highs.readModel(filename) == HighsStatus::kOk);
+  // the defect is reached under default options; pin the search so that the
+  // test does not depend on the scheduler or the random seed
+  REQUIRE(highs.setOptionValue("random_seed", 0) == HighsStatus::kOk);
+  REQUIRE(highs.setOptionValue("threads", 1) == HighsStatus::kOk);
+  REQUIRE(highs.setOptionValue("parallel", kHighsOffString) ==
+          HighsStatus::kOk);
+  REQUIRE(highs.run() == HighsStatus::kOk);
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
+  REQUIRE(objectiveOk(highs.getInfo().objective_function_value,
+                      optimal_objective, dev_run));
+  highs.resetGlobalScheduler(true);
+}
