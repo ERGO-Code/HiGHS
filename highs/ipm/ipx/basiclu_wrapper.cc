@@ -33,7 +33,7 @@ BasicLu::BasicLu(const Control& control, Int dim) : control_(control) {
 
 Int BasicLu::_Factorize(const Int* Bbegin, const Int* Bend, const Int* Bi,
                         const double* Bx, bool strict_abs_pivottol,
-			double basiclu_time_limit) {
+			const double basiclu_time_limit) {
     Int status;
     if (strict_abs_pivottol) {
         xstore_[BASICLU_REMOVE_COLUMNS] = 1;

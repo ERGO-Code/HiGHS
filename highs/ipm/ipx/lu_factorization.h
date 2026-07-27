@@ -55,7 +55,7 @@ public:
                    SparseMatrix* L, SparseMatrix* U,
                    std::vector<Int>* rowperm, std::vector<Int>* colperm,
                    std::vector<Int>* dependent_cols,
-		   double basiclu_time_limit);
+		   const double basiclu_time_limit);
 
     // Returns a stability measure for the factorization computed in the last
     // call to Factorize(). 0.0 means ultimately stable; a value >> machine
@@ -71,7 +71,7 @@ private:
                             std::vector<Int>* rowperm,
                             std::vector<Int>* colperm,
                             std::vector<Int>* dependent_cols,
-			    double basiclu_time_limit) = 0;
+			    const double basiclu_time_limit) = 0;
 
     double stability_{0.0};
 };

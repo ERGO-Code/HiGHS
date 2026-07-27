@@ -15,7 +15,7 @@ ForrestTomlin::ForrestTomlin(const Control& control, Int dim,
 
 Int ForrestTomlin::_Factorize(const Int* Bbegin, const Int* Bend, const Int* Bi,
                               const double* Bx, bool strict_abs_pivottol,
-			      double basiclu_time_limit) {
+			      const double basiclu_time_limit) {
     // Reset updates.
     R_.resize(dim_, 0);
     replaced_.clear();

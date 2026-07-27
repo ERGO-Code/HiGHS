@@ -22,7 +22,7 @@ lu_int basiclu_factorize
     const lu_int Bi[],
     const double Bx[],
     lu_int c0ntinue,
-    double basiclu_time_limit
+    const double basiclu_time_limit
 )
 {
     struct lu this;

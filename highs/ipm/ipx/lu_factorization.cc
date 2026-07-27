@@ -118,7 +118,7 @@ void LuFactorization::Factorize(Int dim, const Int* Bbegin, const Int* Bend,
                                 std::vector<Int>* rowperm,
                                 std::vector<Int>* colperm,
                                 std::vector<Int>* dependent_cols,
-				double basiclu_time_limit) {
+				const double basiclu_time_limit) {
     _Factorize(dim, Bbegin, Bend, Bi, Bx, pivottol, strict_abs_pivottol,
                L, U, rowperm, colperm, dependent_cols,
 	       basiclu_time_limit);

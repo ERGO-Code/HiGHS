@@ -4,7 +4,7 @@ namespace ipx {
 
 Int LuUpdate::Factorize(const Int* Bbegin, const Int* Bend, const Int* Bi,
                         const double* Bx, bool strict_abs_pivottol,
-			double basiclu_time_limit) {
+			const double basiclu_time_limit) {
     updates_ = 0;
     return _Factorize(Bbegin, Bend, Bi, Bx, strict_abs_pivottol,
 		      basiclu_time_limit);

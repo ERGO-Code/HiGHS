@@ -13,7 +13,7 @@ private:
                     SparseMatrix* L, SparseMatrix* U,
                     std::vector<Int>* rowperm, std::vector<Int>* colperm,
                     std::vector<Int>* dependent_cols,
-		    double basiclu_time_limit) override;
+		    const double basiclu_time_limit) override;
 };
 
 }  // namespace ipx

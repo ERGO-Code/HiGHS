@@ -34,7 +34,7 @@ void BasicLuKernel::_Factorize(Int dim, const Int* Bbegin, const Int* Bend,
                                std::vector<Int>* rowperm,
                                std::vector<Int>* colperm,
                                std::vector<Int>* dependent_cols,
-			       double basiclu_time_limit) {
+			       const double basiclu_time_limit) {
     BasicLuHelper lu(dim);
     lu.obj.xstore[BASICLU_REL_PIVOT_TOLERANCE] = pivottol;
     if (strict_abs_pivottol) {

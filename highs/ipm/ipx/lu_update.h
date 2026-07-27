@@ -37,7 +37,7 @@ public:
     // 3 = 1 and 2
     Int Factorize(const Int* Bbegin, const Int* Bend, const Int* Bi,
                   const double* Bx, bool strict_abs_pivottol,
-		  double basiclu_time_limit);
+		  const double basiclu_time_limit);
 
     // Exports LU factors. The method can only be called after a fresh
     // factorization. (Otherwise an assertion will fail.) It returns L, U and
@@ -108,7 +108,7 @@ public:
 private:
     virtual Int _Factorize(const Int* Bbegin, const Int* Bend, const Int* Bi,
                            const double* Bx, bool strict_abs_pivottol,
-			   double basiclu_time_limit) = 0;
+			   const double basiclu_time_limit) = 0;
     virtual void _GetFactors(SparseMatrix* L, SparseMatrix* U, Int* rowperm,
                              Int* colperm, std::vector<Int>* dep_cols) = 0;
     virtual void _SolveDense(const Vector& rhs, Vector& lhs, char trans) = 0;
