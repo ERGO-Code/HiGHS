@@ -122,30 +122,28 @@ function(highs_configure_blas)
                 list(APPEND OPENBLAS_MINIMAL_FLAGS -DCMAKE_GENERATOR_PLATFORM=Win32)
             endif()
 
+            if(UNIX AND NOT APPLE)
+                # OpenBLAS' build-time cpuid probe reports the host's real (64-bit-capable)
+                # microarchitecture (e.g. ZEN), which has no 32-bit-compatible kernel and
+                # leaves PREFETCH-related macros undefined, breaking assembly of the 32-bit
+                # kernels (e.g. gemm_kernel_2x4_sse3.S). Pin a generic 32-bit-safe default
+                # target; DYNAMIC_ARCH still dispatches to better kernels at runtime.
+                message(STATUS "Pinning OpenBLAS TARGET=PRESCOTT for 32-bit Linux build to avoid cpuid misdetection.")
+                list(APPEND OPENBLAS_MINIMAL_FLAGS -DTARGET=PRESCOTT)
+            endif()
+
             list(APPEND OPENBLAS_MINIMAL_FLAGS -DINTERFACE64=0)
         endif()
 
-        # TODO: potentially improve (not great for cross-compilation)
-        # can use cmake to read /proc/cpuinfo instead of using bash
+        # OpenBLAS' DYNAMIC_ARCH CMake build repeatedly mis-scopes AVX512-gated macros
+        # (e.g. HAVE_AVX512F leaking into generic kernel objects, like kernel/arm/sum.c's
+        # ssum_k/dsum_k, that are compiled without a matching -mavx512f flag), which both
+        # clang and gcc reject as a hard error. This reproduces across unrelated hosts/
+        # toolchains (Skylake register spills were only one manifestation), so always
+        # disable AVX512 for Linux builds of OpenBLAS rather than special-casing Skylake.
         if(UNIX AND NOT APPLE)
-            execute_process(
-                    COMMAND bash -c "grep -m1 'model name' /proc/cpuinfo | grep -i skylake"
-                    RESULT_VARIABLE SKYLAKE_CHECK
-                    OUTPUT_QUIET
-                    ERROR_QUIET
-            )
-
-            if(SKYLAKE_CHECK EQUAL 0)
-                message(STATUS "Skylake detected - disabling AVX512 to avoid register spills")
-                list(APPEND OPENBLAS_MINIMAL_FLAGS -DNO_AVX512=ON)
-            else()
-                message(STATUS "NOT Skylake")
-            endif()
-
-            if(NO_AVX512)
-                message(STATUS "NO_AVX512 set - disabling AVX512 in OpenBLAS")
-                list(APPEND OPENBLAS_MINIMAL_FLAGS -DNO_AVX512=ON)
-            endif()
+            message(STATUS "Disabling AVX512 in OpenBLAS (unreliable with DYNAMIC_ARCH's CMake build).")
+            list(APPEND OPENBLAS_MINIMAL_FLAGS -DNO_AVX512=ON)
         endif()
 
         set(OPENBLAS_BUILD_TYPE "Release" CACHE STRING "Build type for OpenBLAS" FORCE)
