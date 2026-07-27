@@ -28,6 +28,7 @@ private:
     double _fill_factor() const override;
     double _pivottol() const override;
     void _pivottol(double new_pivottol) override;
+    void _timeLimit(double new_time_limit) override;
 
     // Reallocates (Li,Lx), (Ui,Ux) and/or (Wi,Wx) as requested by BASICLU.
     void Reallocate();

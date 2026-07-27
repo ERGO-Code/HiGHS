@@ -101,6 +101,7 @@ public:
     // Gets/sets the tolerance for partial threshold pivoting in Factorize().
     double pivottol() const;
     void pivottol(double new_pivottol);
+    void timeLimit(double new_time_limit);
 
     // Returns the number of updates since the last factorization.
     Int updates() const;
@@ -122,6 +123,7 @@ private:
     virtual double _fill_factor() const = 0;
     virtual double _pivottol() const = 0;
     virtual void _pivottol(double new_pivottol) = 0;
+    virtual void _timeLimit(double new_time_limit) = 0;
 
     Int updates_{0};            // counts updates since factorization
 };

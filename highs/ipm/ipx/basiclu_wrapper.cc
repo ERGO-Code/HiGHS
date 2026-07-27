@@ -274,6 +274,10 @@ void BasicLu::_pivottol(double new_pivottol) {
     xstore_[BASICLU_REL_PIVOT_TOLERANCE] = new_pivottol;
 }
 
+void BasicLu::_timeLimit(double new_time_limit) {
+    xstore_[BASICLU_TIME_LIMIT] = new_time_limit;
+}
+
 void BasicLu::Reallocate() {
     assert(Li_.size() == static_cast<size_t>(xstore_[BASICLU_MEMORYL]));
     assert(Lx_.size() == static_cast<size_t>(xstore_[BASICLU_MEMORYL]));

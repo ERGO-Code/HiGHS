@@ -137,14 +137,20 @@ Int Basis::Factorize() {
 
     Int err = 0;                // return code
     while (true) {
-        double basiclu_time_limit = 0;
 	double highs_time_limit = control_.timeLimit();
 	double elapsed = control_.Elapsed();
-	printf("Basis::Factorize time %g / %g\n",
-	   elapsed, highs_time_limit);
+        double basiclu_time_limit = 0;
+	if (highs_time_limit < INFINITY) {
+	  basiclu_time_limit = highs_time_limit - elapsed;
+	  if (basiclu_time_limit <= 0) return IPX_ERROR_time_interrupt;
+	  lu_->timeLimit(basiclu_time_limit);
+	}
+	printf("Basis::Factorize time %g / %g => limit %g\n",
+	       elapsed, highs_time_limit, basiclu_time_limit);
         Int flag = lu_->Factorize(begin.data(), end.data(), AI.rowidx(),
                                   AI.values(), false,
 				  basiclu_time_limit);
+	if (flag == IPX_ERROR_time_interrupt) return flag;
         num_factorizations_++;
         fill_factors_.push_back(lu_->fill_factor());
         if (flag & 2) {
@@ -391,7 +397,11 @@ void Basis::ConstructBasisFromWeights(const double* colscale, Info* info) {
         control_.Debug()
             << Textline("Minimum singular value of crash basis:") << sci2(sigma)
             << '\n';
-        Repair(info);
+        Repair(info, interrupt);
+	if (interrupt) {
+	  info->errflag = IPX_ERROR_time_interrupt;
+	  return;
+	}
         if (info->basis_repairs < 0) {
 	  control_.hLog(" discarding crash basis\n");
             SetToSlackBasis();
@@ -557,7 +567,8 @@ bool Basis::TightenLuPivotTol() {
         map2basis_[basis_[k]] = k;
     }
     Int num_dropped = 0;
-    CrashFactorize(&num_dropped);
+    CrashFactorize(&num_dropped, interrupt);
+    if (interrupt) return;
     control_.Debug()
         << Textline("Number of columns dropped from guessed basis:")
         << num_dropped << '\n';
@@ -600,7 +611,7 @@ static std::tuple<Int,Int,double> InverseSearch(const Basis& basis,
     return std::make_tuple(-1,-1,INFINITY); // failure
 }
 
-void Basis::Repair(Info* info) {
+void Basis::Repair(Info* info, bool& interrupt) {
     const Int m = model_.rows();
     const Int n = model_.cols();
     Vector work(m);
@@ -629,14 +640,16 @@ void Basis::Repair(Info* info) {
         }
         SolveForUpdate(jb);
         SolveForUpdate(jn);
-        CrashExchange(jb, jn, pivot, 0, nullptr);
+        CrashExchange(jb, jn, pivot, 0, nullptr, interrupt);
+	if (interrupt) return;
+
         info->basis_repairs++;
         control_.Debug(3) << " basis repair: |pivot| = "
                       << sci2(std::abs(pivot)) << '\n';
     }
 }
 
-void Basis::CrashFactorize(Int* num_dropped) {
+void Basis::CrashFactorize(Int* num_dropped, bool& interrupt) {
     const Int m = model_.rows();
     const SparseMatrix& AI = model_.AI();
     Timer timer;
@@ -659,11 +672,23 @@ void Basis::CrashFactorize(Int* num_dropped) {
     double basiclu_time_limit = 0;
     double highs_time_limit = control_.timeLimit();
     double elapsed = control_.Elapsed();
-    printf("Basis::CrashFactorize time %g / %g\n",
-	   elapsed, highs_time_limit);
+    if (highs_time_limit < INFINITY) {
+      basiclu_time_limit = highs_time_limit - elapsed;
+      if (basiclu_time_limit <= 0) {
+	interrupt = true;
+	return;
+      }
+      lu_->timeLimit(basiclu_time_limit);
+    }
+    printf("Basis::CrashFactorize time %g / %g => limit %g\n",
+	   elapsed, highs_time_limit, basiclu_time_limit);
     Int flag = lu_->Factorize(begin.data(), end.data(), AI.rowidx(),
                               AI.values(), true,
 			      basiclu_time_limit);
+    if (flag == IPX_ERROR_time_interrupt) {
+      interrupt = true;
+      return;
+    }
     num_factorizations_++;
     fill_factors_.push_back(lu_->fill_factor());
     Int ndropped = 0;
@@ -683,7 +708,7 @@ void Basis::CrashFactorize(Int* num_dropped) {
 }
 
 void Basis::CrashExchange(Int jb, Int jn, double tableau_entry, int sys,
-                          Int* num_dropped) {
+                          Int* num_dropped, bool& interrupt) {
     assert(IsBasic(jb));
     assert(IsNonbasic(jn));
     if (sys > 0)                // forward system needs to be solved
@@ -708,7 +733,8 @@ void Basis::CrashExchange(Int jb, Int jn, double tableau_entry, int sys,
     time_update_ += timer.Elapsed();
     if (err != 0 || lu_->NeedFreshFactorization()) {
         control_.Debug(3) << " refactorization required in CrashExchange()\n";
-        CrashFactorize(num_dropped);
+        CrashFactorize(num_dropped, interrupt);
+	if (interrupt) return;
     }
 }
 

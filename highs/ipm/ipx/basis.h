@@ -253,14 +253,14 @@ private:
     // BASIC and the status of variables that leave the basis becomes NONBASIC.
     // On return info->basis_repairs >= 0 if repaired successfully, < 0 if
     // failed.
-    void Repair(Info* info);
+    void Repair(Info* info, bool& interrupt);
 
     // Factorizes the basis matrix using a strict absolute pivot tolerance (if
     // supported by the LU implementation). Does not perform the stability check
     // that Factorize() does.
     // @num_dropped: if not NULL, returns the # columns that were dropped from
     //               the basis matrix and replaced by unit columns.
-    void CrashFactorize(Int* num_dropped);
+    void CrashFactorize(Int* num_dropped, bool& interrupt);
 
     // Similar to ExchangeIfStable() but is guaranteed to exchange jb and jn.
     // If refactorization is required (either for speed or because the LU
@@ -268,7 +268,7 @@ private:
     // @num_dropped: is passed to CrashFactorize() if called; otherwise is set
     //               to 0 if not NULL.
     void CrashExchange(Int jb, Int jn, double tableau_entry, int sys,
-                       Int* num_dropped);
+		      Int* num_dropped, bool& interrupt);
 
     // Pivots free variables into the basis if they can replace a nonfree
     // basic variable. A variable is "free" if its weight is infinite. If a free
