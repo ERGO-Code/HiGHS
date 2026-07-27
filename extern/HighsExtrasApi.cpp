@@ -11,6 +11,7 @@
 
 #include "HighsExtrasApi.h"
 
+#include "HConfig.h"
 #include "HighsExtrasExternalDeps.h"
 
 using namespace HighsExtras;
