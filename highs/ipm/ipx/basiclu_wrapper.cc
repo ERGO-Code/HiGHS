@@ -32,8 +32,7 @@ BasicLu::BasicLu(const Control& control, Int dim) : control_(control) {
 }
 
 Int BasicLu::_Factorize(const Int* Bbegin, const Int* Bend, const Int* Bi,
-                        const double* Bx, bool strict_abs_pivottol,
-			const double basiclu_time_limit) {
+                        const double* Bx, bool strict_abs_pivottol) {
     Int status;
     if (strict_abs_pivottol) {
         xstore_[BASICLU_REMOVE_COLUMNS] = 1;
@@ -47,8 +46,7 @@ Int BasicLu::_Factorize(const Int* Bbegin, const Int* Bend, const Int* Bi,
                                    Li_.data(), Lx_.data(),
                                    Ui_.data(), Ux_.data(),
                                    Wi_.data(), Wx_.data(),
-                                   Bbegin, Bend, Bi, Bx, ncall,
-				   basiclu_time_limit);
+                                   Bbegin, Bend, Bi, Bx, ncall);
 	struct timespec ts;
 	clock_gettime(CLOCK_REALTIME, &ts);
 	double wallclock = (double)ts.tv_sec + (double)ts.tv_nsec / 1000000000.0;

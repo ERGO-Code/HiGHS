@@ -12,8 +12,7 @@ lu_int basiclu_factorize
     const lu_int Bend[],
     const lu_int Bi[],
     const double Bx[],
-    lu_int c0ntinue,
-    const double basiclu_time_limit
+    lu_int c0ntinue
 );
 
 /*

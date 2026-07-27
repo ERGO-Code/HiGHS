@@ -54,8 +54,7 @@ public:
                    bool strict_abs_pivottol,
                    SparseMatrix* L, SparseMatrix* U,
                    std::vector<Int>* rowperm, std::vector<Int>* colperm,
-                   std::vector<Int>* dependent_cols,
-		   const double basiclu_time_limit);
+                   std::vector<Int>* dependent_cols);
 
     // Returns a stability measure for the factorization computed in the last
     // call to Factorize(). 0.0 means ultimately stable; a value >> machine
@@ -70,8 +69,7 @@ private:
                             SparseMatrix* L, SparseMatrix* U,
                             std::vector<Int>* rowperm,
                             std::vector<Int>* colperm,
-                            std::vector<Int>* dependent_cols,
-			    const double basiclu_time_limit) = 0;
+                            std::vector<Int>* dependent_cols) = 0;
 
     double stability_{0.0};
 };

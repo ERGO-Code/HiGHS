@@ -104,6 +104,7 @@ Int Basis::Factorize(const bool allow_timeout) {
     Int err = 0;                // return code
     while (true) {
 	double highs_time_limit = control_.timeLimit();
+	assert(highs_time_limit >= 0);
 	double elapsed = control_.Elapsed();
 	double wallclock = luTime();
 	lu_->timeStart(wallclock);
@@ -118,8 +119,7 @@ Int Basis::Factorize(const bool allow_timeout) {
 	printf("Basis::Factorize time %.2f / %.2f => limit = %.2f\n",
 	       elapsed, highs_time_limit, basiclu_time_limit);
         Int flag = lu_->Factorize(begin.data(), end.data(), AI.rowidx(),
-                                  AI.values(), false,
-				  basiclu_time_limit);
+                                  AI.values(), false);
 	if (flag == IPX_ERROR_time_interrupt) return flag;
         num_factorizations_++;
         fill_factors_.push_back(lu_->fill_factor());
@@ -638,6 +638,7 @@ void Basis::CrashFactorize(Int* num_dropped, bool& interrupt) {
         }
     }
     double highs_time_limit = control_.timeLimit();
+    assert(highs_time_limit >= 0);
     double elapsed = control_.Elapsed();
     double wallclock = luTime();
     lu_->timeStart(wallclock);
@@ -655,8 +656,7 @@ void Basis::CrashFactorize(Int* num_dropped, bool& interrupt) {
     printf("Basis::CrashFactorize time %.2f / %.2f => limit = %.2f\n",
 	   elapsed, highs_time_limit, basiclu_time_limit);
     Int flag = lu_->Factorize(begin.data(), end.data(), AI.rowidx(),
-                              AI.values(), true,
-			      basiclu_time_limit);
+                              AI.values(), true);
     if (flag == IPX_ERROR_time_interrupt) {
       interrupt = true;
       return;

@@ -202,8 +202,7 @@ void basiclu_obj_free(struct basiclu_object *obj)
  */
 lu_int basiclu_obj_factorize(struct basiclu_object *obj, const lu_int *Bbegin,
                              const lu_int *Bend, const lu_int *Bi,
-                             const double *Bx,
-			     const double basiclu_time_limit)
+                             const double *Bx)
 {
     lu_int status;
 
@@ -212,7 +211,7 @@ lu_int basiclu_obj_factorize(struct basiclu_object *obj, const lu_int *Bbegin,
 
     status = basiclu_factorize(obj->istore, obj->xstore, obj->Li, obj->Lx,
                                obj->Ui, obj->Ux, obj->Wi, obj->Wx, Bbegin, Bend,
-                               Bi, Bx, 0, basiclu_time_limit);
+                               Bi, Bx, 0);
 
     while (status == BASICLU_REALLOCATE)
     {
@@ -221,7 +220,7 @@ lu_int basiclu_obj_factorize(struct basiclu_object *obj, const lu_int *Bbegin,
             break;
         status = basiclu_factorize(obj->istore, obj->xstore, obj->Li, obj->Lx,
                                    obj->Ui, obj->Ux, obj->Wi, obj->Wx, Bbegin,
-                                   Bend, Bi, Bx, 1, basiclu_time_limit);
+                                   Bend, Bi, Bx, 1);
     }
 
     return status;

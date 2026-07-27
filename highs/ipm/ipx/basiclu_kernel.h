@@ -12,8 +12,7 @@ private:
                     bool strict_abs_pivottol,
                     SparseMatrix* L, SparseMatrix* U,
                     std::vector<Int>* rowperm, std::vector<Int>* colperm,
-                    std::vector<Int>* dependent_cols,
-		    const double basiclu_time_limit) override;
+                    std::vector<Int>* dependent_cols) override;
 };
 
 }  // namespace ipx

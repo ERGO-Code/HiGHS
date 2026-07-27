@@ -3,11 +3,9 @@
 namespace ipx {
 
 Int LuUpdate::Factorize(const Int* Bbegin, const Int* Bend, const Int* Bi,
-                        const double* Bx, bool strict_abs_pivottol,
-			const double basiclu_time_limit) {
+                        const double* Bx, bool strict_abs_pivottol) {
     updates_ = 0;
-    return _Factorize(Bbegin, Bend, Bi, Bx, strict_abs_pivottol,
-		      basiclu_time_limit);
+    return _Factorize(Bbegin, Bend, Bi, Bx, strict_abs_pivottol);
 }
 
 void LuUpdate::GetFactors(SparseMatrix* L, SparseMatrix* U, Int* rowperm,

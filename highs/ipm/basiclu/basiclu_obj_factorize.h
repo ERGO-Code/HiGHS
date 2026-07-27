@@ -4,8 +4,7 @@ lu_int basiclu_obj_factorize
     const lu_int *Bbegin,
     const lu_int *Bend,
     const lu_int *Bi,
-    const double *Bx,
-    const double basiclu_time_limit
+    const double *Bx
 );
 
 /*
