@@ -82,7 +82,6 @@ sdist.exclude = [
 #HIGHS_VCPKG="ON"
 BUILD_OPENBLAS = "ON"
 HIPO = "ON"
-NO_AVX512 = "ON"
 
 [tool.pytest.ini_options]
 minversion = "6.0"
