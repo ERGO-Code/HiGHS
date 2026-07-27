@@ -3,6 +3,9 @@
 #include <algorithm>
 #include <cmath>
 #include <tuple>
+
+#include <sys/time.h>
+
 #include "ipm/ipx/basiclu_kernel.h"
 #include "ipm/ipx/basiclu_wrapper.h"
 #include "ipm/ipx/forrest_tomlin.h"
@@ -951,10 +954,9 @@ void Basis::PivotFixedVariablesOutOfBasis(const double* colweights, Info* info){
 }
 
 double luTime() {
-  struct timespec ts;
-  const Int MY_CLOCK_REALTIME = 0;
-  clock_gettime(MY_CLOCK_REALTIME, &ts);
-  return (double)ts.tv_sec + (double)ts.tv_nsec / 1000000000.0;
+  struct timeval t1;
+  gettimeofday(&t1, NULL);
+  return (double)t1.tv_sec +  (double)t1.tv_usec * 1e-6;
 }
 
 Vector CopyBasic(const Vector& x, const Basis& basis) {
