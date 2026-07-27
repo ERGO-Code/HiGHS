@@ -138,6 +138,10 @@ Int Basis::Factorize() {
     Int err = 0;                // return code
     while (true) {
         double basiclu_time_limit = 0;
+	double highs_time_limit = control_.timeLimit();
+	double elapsed = control_.Elapsed();
+	printf("Basis::Factorize time %g / %g\n",
+	   elapsed, highs_time_limit);
         Int flag = lu_->Factorize(begin.data(), end.data(), AI.rowidx(),
                                   AI.values(), false,
 				  basiclu_time_limit);
@@ -544,7 +548,7 @@ bool Basis::TightenLuPivotTol() {
 
     // Initialize the Basis object and factorize the (partial) basis. If
     // basis_[p] is negative, the p-th column of the basis matrix is zero,
-    // and a slack column will be inserted by CrashFacorize().
+    // and a slack column will be inserted by CrashFactorize().
     std::fill(basis_.begin(), basis_.end(), -1);
     std::fill(map2basis_.begin(), map2basis_.end(), -1);
     for (size_t k = 0; k < cols_guessed.size(); k++) {
@@ -653,6 +657,10 @@ void Basis::CrashFactorize(Int* num_dropped) {
         }
     }
     double basiclu_time_limit = 0;
+    double highs_time_limit = control_.timeLimit();
+    double elapsed = control_.Elapsed();
+    printf("Basis::CrashFactorize time %g / %g\n",
+	   elapsed, highs_time_limit);
     Int flag = lu_->Factorize(begin.data(), end.data(), AI.rowidx(),
                               AI.values(), true,
 			      basiclu_time_limit);
