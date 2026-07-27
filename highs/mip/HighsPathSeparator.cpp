@@ -412,12 +412,14 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
 
         double delta = 1.0;
 
+        transLp.initMultiRowTransform();
+
         for (HighsInt k = 0; k < pathLen; ++k) {
           bool integralPositive = false;
 
           if (!transLp.transform(aggregatedPath[k].second, tmpUpper, tmpSolval,
                                  aggregatedPath[k].first, rhs[k],
-                                 integralPositive)) {
+                                 integralPositive, false, true)) {
             pathLen = k;
             break;
           }

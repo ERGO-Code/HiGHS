@@ -133,7 +133,8 @@ bool HighsTransformedLp::transform(std::vector<double>& vals,
                                    std::vector<double>& upper,
                                    std::vector<double>& solval,
                                    std::vector<HighsInt>& inds, double& rhs,
-                                   bool& integersPositive, bool preferVbds) {
+                                   bool& integersPositive, bool preferVbds,
+                                   bool enforceSameBds) {
   // vector sum should be empty
   assert(vectorsum.getNonzeros().empty());
 
@@ -223,7 +224,17 @@ bool HighsTransformedLp::transform(std::vector<double>& vals,
     // column.
     BoundType oldBoundType = boundTypes[col];
 
-    if (lprelaxation.isColIntegral(col)) {
+    if (enforceSameBds && oldBoundType != BoundType::kUnused) {
+      // Don't allow different bound types to be used in stacked
+      // transformations unless they're going to be relaxed out
+      // This ensures that a single call to untransform remains valid
+      if (lprelaxation.isColIntegral(col) &&
+          (ub - lb <= 1.5 || boundDist[col] != 0.0 || simpleLbDist[col] == 0 ||
+           simpleUbDist[col] == 0)) {
+        i++;
+        continue;
+      }
+    } else if (lprelaxation.isColIntegral(col)) {
       if (ub - lb <= 1.5 || boundDist[col] != 0.0 || simpleLbDist[col] == 0 ||
           simpleUbDist[col] == 0) {
         // since we skip the handling of variable bound constraints for all
@@ -292,6 +303,11 @@ bool HighsTransformedLp::transform(std::vector<double>& vals,
     }
 
     switch (boundTypes[col]) {
+      case BoundType::kUnused: {
+        assert(false);
+        vectorsum.clear();
+        return false;
+      }
       case BoundType::kSimpleLb:
         if (vals[i] > 0) {
           // relax away using lower bound
@@ -365,6 +381,8 @@ bool HighsTransformedLp::transform(std::vector<double>& vals,
   for (HighsInt j = 0; j != numNz; ++j) {
     HighsInt col = inds[j];
 
+    if (enforceSameBds && boundTypes[col] != BoundType::kUnused) continue;
+
     // get bounds
     double lb = getLb(col);
     double ub = getUb(col);
@@ -409,6 +427,10 @@ bool HighsTransformedLp::transform(std::vector<double>& vals,
     upper[j] = ub - lb;
 
     switch (boundTypes[col]) {
+      case BoundType::kUnused: {
+        assert(false);
+        return false;
+      }
       case BoundType::kSimpleLb: {
         // shift (lower bound)
         assert(lb != -kHighsInf);
@@ -460,6 +482,11 @@ bool HighsTransformedLp::untransform(std::vector<double>& vals,
     HighsInt col = inds[i];
 
     switch (boundTypes[col]) {
+      case BoundType::kUnused: {
+        assert(false);
+        vectorsum.clear();
+        return false;
+      }
       case BoundType::kVariableLb: {
         tmpRhs += bestVlb[col].second.constant * vals[i];
         vectorsum.add(bestVlb[col].first, -vals[i] * bestVlb[col].second.coef);
