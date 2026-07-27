@@ -13,6 +13,10 @@
 
 namespace hipo {
 
+static TempTimer forwardTimer("forward");
+static TempTimer backwardTimer("backward");
+static TempTimer diagTimer("diag");
+
 Int Numeric::prepare() {
   if (!sn_columns_ || !S_ || !data_ || !options_) return kRetInvalidPointer;
 
@@ -70,9 +74,19 @@ Int Numeric::solve(double* x) const {
 
   // solve
   HIPO_CLOCK_START(2);
+
+  forwardTimer.start();
   SH_->forwardSolve(x);
+  forwardTimer.stop();
+
+  diagTimer.start();
   SH_->diagSolve(x);
+  diagTimer.stop();
+
+  backwardTimer.start();
   SH_->backwardSolve(x);
+  backwardTimer.stop();
+
   HIPO_CLOCK_STOP(2, *data_, kTimeSolveSolve);
 
   // unpermute solution
