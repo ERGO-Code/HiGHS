@@ -44,7 +44,7 @@ double HighsSearch::checkSol(const std::vector<double>& sol,
   HighsCDouble objval = 0.0;
   integerfeasible = true;
   for (HighsInt i = 0; i != mipsolver.numCol(); ++i) {
-    objval += sol[i] * mipsolver.colCost(i);
+    objval += static_cast<HighsCDouble>(sol[i]) * mipsolver.colCost(i);
     assert(std::isfinite(sol[i]));
 
     if (!integerfeasible || !mipsolver.isColInteger(i)) continue;
@@ -616,7 +616,7 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters,
           } else {
             downbound[candidate] = solobj;
           }
-          if (solobj > getOptimalityLimit()) {
+          if (solobj > mipworker.getOptimalityLimit()) {
             addBoundExceedingConflict();
 
             bool pruned = solobj > getCutoffBound();
@@ -795,21 +795,20 @@ void HighsSearch::openNodesToQueue(HighsNodeQueue& nodequeue) {
 
 void HighsSearch::flushStatistics(HighsMipSolver& mipsolver) {
   mipsolver.mipdata_->num_nodes += nnodes;
-  nnodes = 0;
-
   mipsolver.mipdata_->num_leaves += nleaves;
-  nleaves = 0;
-
   mipsolver.mipdata_->pruned_treeweight += treeweight;
-  treeweight = 0;
-
   mipsolver.mipdata_->total_lp_iterations += lpiterations;
-  lpiterations = 0;
-
   mipsolver.mipdata_->heuristic_lp_iterations += heurlpiterations;
-  heurlpiterations = 0;
-
   mipsolver.mipdata_->sb_lp_iterations += sblpiterations;
+  resetStatistics();
+}
+
+void HighsSearch::resetStatistics() {
+  nnodes = 0;
+  nleaves = 0;
+  treeweight = 0;
+  lpiterations = 0;
+  heurlpiterations = 0;
   sblpiterations = 0;
 }
 
@@ -878,7 +877,7 @@ HighsSearch::NodeResult HighsSearch::evaluateNode() {
 
   const auto& domchgstack = localdom.getDomainChangeStack();
 
-  if (!inheuristic && currnode.lower_bound > getOptimalityLimit())
+  if (!inheuristic && currnode.lower_bound > mipworker.getOptimalityLimit())
     return NodeResult::kSubOptimal;
 
   localdom.propagate();
@@ -1087,7 +1086,7 @@ HighsSearch::NodeResult HighsSearch::evaluateNode() {
     treeweight += std::ldexp(1.0, 1 - getCurrentDepth());
     currnode.opensubtrees = 0;
   } else if (!inheuristic) {
-    if (currnode.lower_bound > getOptimalityLimit()) {
+    if (currnode.lower_bound > mipworker.getOptimalityLimit()) {
       result = NodeResult::kSubOptimal;
       addBoundExceedingConflict();
     }
@@ -1737,7 +1736,7 @@ bool HighsSearch::backtrackPlunge(HighsNodeQueue& nodequeue) {
     }
 
     nodelb = std::max(nodelb, localdom.getObjectiveLowerBound());
-    bool nodeToQueue = nodelb > getOptimalityLimit();
+    bool nodeToQueue = nodelb > mipworker.getOptimalityLimit();
     // we check if switching to the other branch of an ancestor yields a higher
     // additive branch score than staying in this node and if so we postpone the
     // node and put it to the queue to backtrack further.
@@ -1909,14 +1908,6 @@ double HighsSearch::getUpperLimit() const {
 
 double HighsSearch::getEpsilon() const { return mipsolver.mipdata_->epsilon; }
 
-double HighsSearch::getOptimalityLimit() const {
-  if (!mipsolver.mipdata_->parallelLockActive()) {
-    return mipsolver.mipdata_->optimality_limit;
-  } else {
-    return mipworker.optimality_limit;
-  }
-}
-
 const std::vector<double>& HighsSearch::getRootLpSol() const {
   return mipsolver.mipdata_->rootlpsol;
 }
@@ -1949,6 +1940,12 @@ bool HighsSearch::checkLimits(int64_t nodeOffset) const {
 bool HighsSearch::checkLocalLimits() const {
   if (mipsolver.mipdata_->terminatorActive())
     if (mipsolver.mipdata_->terminatorTerminated()) return true;
+
+  const int64_t stop = mipsolver.mipdata_->worker_lp_iterations_stop.load(
+      std::memory_order_relaxed);
+  if (stop <= lpiterations) {
+    return true;
+  }
 
   if (!mipsolver.submip && mipworker.upper_bound < kHighsInf &&
       mipsolver.options_mip_->objective_target > -kHighsInf) {

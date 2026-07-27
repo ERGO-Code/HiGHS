@@ -51,7 +51,7 @@ void Highs::reportModelStats() const {
   std::string problem_type;
   const bool non_continuous =
       num_integer + num_semi_continuous + num_semi_integer;
-  if (hessian.dim_) {
+  if (model_.isQp()) {
     if (non_continuous) {
       problem_type = "MIQP";
     } else {
@@ -112,6 +112,7 @@ void Highs::reportModelStats() const {
       stats_line << "; " << a_num_nz << " nonzero"
                  << (a_num_nz == 1 ? "" : "s");
     }
+    if (hessian.isOracle()) stats_line << "; Hessian as oracle";
     if (num_integer)
       stats_line << "; " << num_integer << " integer variable"
                  << (a_num_nz == 1 ? "" : "s") << " (" << num_binary
@@ -3093,6 +3094,12 @@ void Highs::restoreInfCost(HighsStatus& return_status) {
 HighsStatus Highs::userScale(HighsUserScaleData& data) {
   if (!options_.user_objective_scale && !options_.user_bound_scale)
     return HighsStatus::kOk;
+  if (this->model_.hessian_.isOracle()) {
+    highsLogUser(this->options_.log_options, HighsLogType::kWarning,
+                 "Hessian is represented via an oracle, so user scaling cannot "
+                 "be applied\n");
+    return HighsStatus::kWarning;
+  }
   // User objective and bound scaling data are accumulated in the
   // HighsUserScaleData struct, in particular, there is a local copy
   // of the user objective and bound scaling options values, and

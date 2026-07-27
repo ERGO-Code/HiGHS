@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "DataCollector.h"
+#include "FactorHighsOptions.h"
 #include "SolveHandler.h"
 #include "Symbolic.h"
 #include "ipm/hipo/auxiliary/IntConfig.h"
@@ -30,15 +31,27 @@ class Numeric {
 
   DataCollector* data_ = nullptr;
 
+  const FHoptions* options_;
+
   friend class Factorise;
 
   // dynamic regularisation applied to the matrix
   std::vector<double> total_reg_{};
 
  public:
-  // Full solve
-  Int solve(std::vector<double>& x) const;
-  void getReg(std::vector<double>& reg);
+  Int solve(double* x) const;
+  Int solve(double* x, Int k) const;
+
+  Int forwardSolve(double* x) const;
+  Int diagSolve(double* x) const;
+  Int backwardSolve(double* x) const;
+
+  Int forwardSolve(double* x, Int k) const;
+  Int diagSolve(double* x, Int k) const;
+  Int backwardSolve(double* x, Int k) const;
+
+  void getReg(double* reg);
+  void inertia(Int& pos, Int& neg, Int& zero, double tol) const;
 };
 
 }  // namespace hipo

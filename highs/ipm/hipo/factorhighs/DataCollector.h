@@ -6,7 +6,7 @@
 #include <mutex>
 #include <vector>
 
-#include "FactorHiGHSSettings.h"
+#include "FactorHighsSettings.h"
 #include "Timing.h"
 #include "ipm/hipo/auxiliary/IntConfig.h"
 #include "ipm/hipo/auxiliary/Logger.h"
