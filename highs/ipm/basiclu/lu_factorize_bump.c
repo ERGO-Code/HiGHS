@@ -51,6 +51,7 @@ lu_int lu_factorize_bump(struct lu *this)
             this->pivot_row = -1;
             this->rank++;
         }
+	if (luTime() - this->basiclu_time_start > this->basiclu_time_limit) return BASICLU_WARNING_timeout;
     }
     return status;
 }

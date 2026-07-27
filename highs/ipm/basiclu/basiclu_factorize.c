@@ -5,6 +5,8 @@
  *
  */
 
+#include <time.h>
+
 #include "ipm/basiclu/lu_internal.h"
 
 lu_int basiclu_factorize

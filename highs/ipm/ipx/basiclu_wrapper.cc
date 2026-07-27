@@ -49,7 +49,11 @@ Int BasicLu::_Factorize(const Int* Bbegin, const Int* Bend, const Int* Bi,
                                    Wi_.data(), Wx_.data(),
                                    Bbegin, Bend, Bi, Bx, ncall,
 				   basiclu_time_limit);
-                                   printf("BasicLu::_Factorize status = %d\n", int(status));
+	struct timespec ts;
+	clock_gettime(CLOCK_REALTIME, &ts);
+	double wallclock = (double)ts.tv_sec + (double)ts.tv_nsec / 1000000000.0;
+	double factorize_time = wallclock - xstore_[BASICLU_TIME_START];
+	printf("BasicLu::_Factorize status = %d time = %.2f\n", int(status), factorize_time);
         if (status != BASICLU_REALLOCATE)
             break;
         Reallocate();
@@ -57,6 +61,7 @@ Int BasicLu::_Factorize(const Int* Bbegin, const Int* Bend, const Int* Bi,
 
     if (status == BASICLU_WARNING_timeout) {
       printf("basiclu_factorize times out\n");
+      return IPX_ERROR_time_interrupt;
     }
 
     if (status != BASICLU_OK
@@ -272,6 +277,10 @@ double BasicLu::_pivottol() const {
 
 void BasicLu::_pivottol(double new_pivottol) {
     xstore_[BASICLU_REL_PIVOT_TOLERANCE] = new_pivottol;
+}
+
+void BasicLu::_timeStart(double new_time_start) {
+    xstore_[BASICLU_TIME_START] = new_time_start;
 }
 
 void BasicLu::_timeLimit(double new_time_limit) {

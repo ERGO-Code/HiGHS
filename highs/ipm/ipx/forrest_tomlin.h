@@ -48,6 +48,7 @@ private:
     double _fill_factor() const override;
     double _pivottol() const override;
     void _pivottol(double new_pivottol) override;
+    void _timeStart(double new_time_start) override;
     void _timeLimit(double new_time_limit) override;
 
     // Maximum # updates before refactorization is required.
@@ -96,7 +97,8 @@ private:
     bool have_ftran_{false};    // true if spike has been computed
     double fill_factor_{0.0};   // fill factor from last factorization
     double pivottol_{0.1};      // LU pivot tolerance for next factorization
-    double time_limit_{INFINITY}; // Time limit for LU
+    double basiclu_time_start_{0.0}; // Time start for LU
+    double basiclu_time_limit_{INFINITY}; // Time limit for LU
     Vector work_;               // size dim_ + kMaxUpdates workspace
 };
 

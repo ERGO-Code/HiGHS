@@ -33,6 +33,7 @@ struct lu
     double compress_thres;
     double sparse_thres;
     lu_int search_rows;
+    double basiclu_time_start;
     double basiclu_time_limit;
 
     /* user readable */
@@ -217,5 +218,7 @@ void lu_matrix_norm(
 void lu_residual_test(
     struct lu *this, const lu_int *Bbegin, const lu_int *Bend, const lu_int *Bi,
     const double *Bx);
+
+double luTime();
 
 #endif

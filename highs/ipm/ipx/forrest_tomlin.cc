@@ -249,8 +249,12 @@ void ForrestTomlin::_pivottol(double new_pivottol) {
     pivottol_ = new_pivottol;
 }
 
+void ForrestTomlin::_timeStart(double new_time_start) {
+    basiclu_time_start_ = new_time_start;
+}
+
 void ForrestTomlin::_timeLimit(double new_time_limit) {
-    time_limit_ = new_time_limit;
+    basiclu_time_limit_ = new_time_limit;
 }
 
 void ForrestTomlin::SolvePermuted(Vector& lhs, char trans) {

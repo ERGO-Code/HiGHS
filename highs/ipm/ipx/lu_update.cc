@@ -57,6 +57,10 @@ void LuUpdate::pivottol(double new_pivottol) {
     _pivottol(new_pivottol);
 }
 
+void LuUpdate::timeStart(double new_time_start) {
+    _timeStart(new_time_start);
+}
+
 void LuUpdate::timeLimit(double new_time_limit) {
     _timeLimit(new_time_limit);
 }

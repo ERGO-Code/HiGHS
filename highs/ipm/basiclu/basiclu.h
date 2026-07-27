@@ -81,7 +81,8 @@ typedef int lu_int;
 #define BASICLU_SPARSE_THRESHOLD 12
 #define BASICLU_REMOVE_COLUMNS 13
 #define BASICLU_SEARCH_ROWS 14
-#define BASICLU_TIME_LIMIT 15
+#define BASICLU_TIME_START 15
+#define BASICLU_TIME_LIMIT 16
 
 /* user readable */
 #define BASICLU_DIM 64

@@ -82,16 +82,6 @@ public:
     // Sets the basis to the slack basis.
     void SetToSlackBasis();
 
-    // Loads basis and factorizes it.
-    // @basic_status: size n+m array with BasicStatus of each variable
-    // Returns: IPX_ERROR_invalid_basis if the basis is invalid (basic_status
-    //          contains an invalid entry or # basic variables != m). In this
-    //          case the old basis is unchanged.
-    //          Otherwise the return code from Factorize() is returned and the
-    //          old basis has been replaced. If the given basis is singular, it
-    //          will be repaired with slack variables by the LU factorization.
-    Int Load(const int* basic_status);
-
     // Factorizes the current basis matrix from scratch. If nonsingular, a
     // stability check is performed afterwards and the factorization is repeated
     // with a tighter pivot tolerance if the LU factors were unstable.
@@ -100,7 +90,7 @@ public:
     //          "error" from the view point of the Basis object, which remains
     //          in a perfectly valid state.
     //          0 otherwise.
-    Int Factorize();
+    Int Factorize(const bool allow_timeout = true);
 
     // Returns true if the LU factorization has not been updated.
     bool FactorizationIsFresh() const;
@@ -341,6 +331,8 @@ inline bool Basis::IsBasic(Int j) const {
 inline bool Basis::IsNonbasic(Int j) const {
     return StatusOf(j) == NONBASIC || StatusOf(j) == NONBASIC_FIXED;
 }
+
+double luTime();
 
 // Returns x[basis] (in Matlab notation).
 Vector CopyBasic(const Vector& x, const Basis& basis);

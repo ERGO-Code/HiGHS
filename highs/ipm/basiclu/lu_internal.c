@@ -7,6 +7,8 @@
  *
  */
 
+#include <time.h>
+
 #include "ipm/basiclu/lu_internal.h"
 
 /* private entries in xstore */
@@ -61,6 +63,7 @@ lu_int lu_load(
     this->compress_thres        = xstore[BASICLU_COMPRESSION_THRESHOLD];
     this->sparse_thres          = xstore[BASICLU_SPARSE_THRESHOLD];
     this->search_rows           = xstore[BASICLU_SEARCH_ROWS] != 0;
+    this->basiclu_time_start    = xstore[BASICLU_TIME_START];
     this->basiclu_time_limit    = xstore[BASICLU_TIME_LIMIT];
 
     /* user readable */
@@ -351,3 +354,10 @@ void lu_reset(struct lu *this)
     memset(this->iwork0, 0, this->m * sizeof(lu_int));
     memset(this->work0, 0, this->m * sizeof(lu_int));
 }
+
+double luTime() {
+  struct timespec ts;
+  clock_gettime(CLOCK_REALTIME, &ts);
+  return (double)ts.tv_sec + (double)ts.tv_nsec / 1000000000.0;
+}
+

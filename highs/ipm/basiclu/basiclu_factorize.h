@@ -116,6 +116,10 @@ Parameters:
         scans columns. If nonzero, then both columns and rows are searched in
         increasing order of number of entries. Default: 1
 
+    xstore[BASICLU_TIME_START]
+
+        The time offset for computing factorization time. Default: 0
+
     xstore[BASICLU_TIME_LIMIT]
 
         The factorization terminates if the time reaches

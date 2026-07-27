@@ -72,47 +72,13 @@ void Basis::SetToSlackBasis() {
         map2basis_[j] = -1;
     for (Int i = 0; i < m; i++)
         map2basis_[n+i] = i;
-    Int err = Factorize();
+    const bool allow_timeout = false;
+    Int err = Factorize(allow_timeout);
     // factorization of slack basis cannot fail other than out of memory
     assert(err == 0);
 }
 
-Int Basis::Load(const int* basic_status) {
-    const Int m = model_.rows();
-    const Int n = model_.cols();
-
-    // Change member variables only when basis is valid.
-    std::vector<Int> basis, map2basis(n+m);
-    Int p = 0;
-    for (Int j = 0; j < n+m; j++) {
-        switch (basic_status[j]) {
-        case NONBASIC_FIXED:
-            map2basis[j] = -2;
-            break;
-        case NONBASIC:
-            map2basis[j] = -1;
-            break;
-        case BASIC:
-            basis.push_back(j);
-            map2basis[j] = p++;
-            break;
-        case BASIC_FREE:
-            basis.push_back(j);
-            map2basis[j] = p++ + m;
-            break;
-        default:
-            return IPX_ERROR_invalid_basis;
-        }
-    }
-    if (p != m)
-        return IPX_ERROR_invalid_basis;
-
-    std::copy(basis.begin(), basis.end(), basis_.begin());
-    std::copy(map2basis.begin(), map2basis.end(), map2basis_.begin());
-    return Factorize();
-}
-
-Int Basis::Factorize() {
+Int Basis::Factorize(const bool allow_timeout) {
     const Int m = model_.rows();
     const SparseMatrix& AI = model_.AI();
     Timer timer;
@@ -139,13 +105,17 @@ Int Basis::Factorize() {
     while (true) {
 	double highs_time_limit = control_.timeLimit();
 	double elapsed = control_.Elapsed();
+	double wallclock = luTime();
+	lu_->timeStart(wallclock);
         double basiclu_time_limit = 0;
-	if (highs_time_limit < INFINITY) {
+	if (allow_timeout && highs_time_limit < INFINITY) {
 	  basiclu_time_limit = highs_time_limit - elapsed;
 	  if (basiclu_time_limit <= 0) return IPX_ERROR_time_interrupt;
-	  lu_->timeLimit(basiclu_time_limit);
+	} else {
+	  basiclu_time_limit = INFINITY;
 	}
-	printf("Basis::Factorize time %g / %g => limit %g\n",
+	lu_->timeLimit(basiclu_time_limit);
+	printf("Basis::Factorize time %.2f / %.2f => limit = %.2f\n",
 	       elapsed, highs_time_limit, basiclu_time_limit);
         Int flag = lu_->Factorize(begin.data(), end.data(), AI.rowidx(),
                                   AI.values(), false,
@@ -404,7 +374,7 @@ void Basis::ConstructBasisFromWeights(const double* colscale, Info* info) {
 	}
         if (info->basis_repairs < 0) {
 	  control_.hLog(" discarding crash basis\n");
-            SetToSlackBasis();
+	  SetToSlackBasis();
         }
         else if (info->basis_repairs > 0) {
             sigma = MinSingularValue();
@@ -413,14 +383,12 @@ void Basis::ConstructBasisFromWeights(const double* colscale, Info* info) {
                 << sci2(sigma) << '\n';
         }
     } else {
-        SetToSlackBasis();
+      SetToSlackBasis();
     }
     PivotFreeVariablesIntoBasis(colscale, info);
-    if (info->errflag)
-        return;
+    if (info->errflag) return;
     PivotFixedVariablesOutOfBasis(colscale, info);
-    if (info->errflag)
-        return;
+    if (info->errflag) return;
 }
 
 double Basis::MinSingularValue() const {
@@ -669,18 +637,22 @@ void Basis::CrashFactorize(Int* num_dropped, bool& interrupt) {
             end[i] = 0;
         }
     }
-    double basiclu_time_limit = 0;
     double highs_time_limit = control_.timeLimit();
     double elapsed = control_.Elapsed();
+    double wallclock = luTime();
+    lu_->timeStart(wallclock);
+    double basiclu_time_limit = 0;
     if (highs_time_limit < INFINITY) {
       basiclu_time_limit = highs_time_limit - elapsed;
       if (basiclu_time_limit <= 0) {
 	interrupt = true;
 	return;
       }
-      lu_->timeLimit(basiclu_time_limit);
+    } else {
+      basiclu_time_limit = INFINITY;
     }
-    printf("Basis::CrashFactorize time %g / %g => limit %g\n",
+    lu_->timeLimit(basiclu_time_limit);
+    printf("Basis::CrashFactorize time %.2f / %.2f => limit = %.2f\n",
 	   elapsed, highs_time_limit, basiclu_time_limit);
     Int flag = lu_->Factorize(begin.data(), end.data(), AI.rowidx(),
                               AI.values(), true,
@@ -984,6 +956,12 @@ void Basis::PivotFixedVariablesOutOfBasis(const double* colweights, Info* info){
     control_.Debug()
         << Textline("Number of fixed variables swapped for stability:")
         << stability_pivots << '\n';
+}
+
+double luTime() {
+  struct timespec ts;
+  clock_gettime(CLOCK_REALTIME, &ts);
+  return (double)ts.tv_sec + (double)ts.tv_nsec / 1000000000.0;
 }
 
 Vector CopyBasic(const Vector& x, const Basis& basis) {
