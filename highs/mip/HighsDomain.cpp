@@ -1035,7 +1035,7 @@ void HighsDomain::DualfixingProbingPropagation::updateGDFInfo(HighsInt probing_v
     }
   };
   
-  for (const auto x : redundantPropagateFlag_) {
+  for (const auto x : redundantPropagateVec_) {
     const HighsInt iRow = x / 2;
     const bool isRhs = x % 2;
     HighsInt rstart = mipsolver->mipdata_->ARstart_[iRow];
@@ -1174,7 +1174,7 @@ HighsInt HighsDomain::DualfixingProbingPropagation::processGDFFixing() {
       HighsDomainChange* thisbchg = new HighsDomainChange;
       thisbchg->column = iCol;
       thisbchg->boundtype = HighsBoundType::kUpper;
-      thisbchg->boundval = mipsolver->model_->col_lower_[iCol];
+      thisbchg->boundval = domain->col_lower_[iCol];
       gdfFixingStack_.push_back(thisbchg);
     }
     // a variable cannot be fixed to lb and ub simultaneously
@@ -1182,7 +1182,7 @@ HighsInt HighsDomain::DualfixingProbingPropagation::processGDFFixing() {
       HighsDomainChange* thisbchg = new HighsDomainChange;
       thisbchg->column = iCol;
       thisbchg->boundtype = HighsBoundType::kLower;
-      thisbchg->boundval = mipsolver->model_->col_upper_[iCol];
+      thisbchg->boundval = domain->col_upper_[iCol];
       gdfFixingStack_.push_back(thisbchg);
     }
   }
