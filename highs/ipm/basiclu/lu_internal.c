@@ -357,7 +357,8 @@ void lu_reset(struct lu *this)
 
 double luTime() {
   struct timespec ts;
-  clock_gettime(CLOCK_REALTIME, &ts);
+  const lu_int MY_CLOCK_REALTIME = 0;
+  clock_gettime(MY_CLOCK_REALTIME, &ts);
   return (double)ts.tv_sec + (double)ts.tv_nsec / 1000000000.0;
 }
 
