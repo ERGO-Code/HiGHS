@@ -1447,6 +1447,8 @@ Int Analyse::run(Symbolic& S) {
   S.clique_block_start_ = std::move(clique_block_start_);
   S.schedule_solve_ = std::move(schedule_solve_);
 
+  S.empty_ = false;
+
   HIPO_CLOCK_STOP(1, data_, kTimeAnalyse);
 
   return kRetOk;

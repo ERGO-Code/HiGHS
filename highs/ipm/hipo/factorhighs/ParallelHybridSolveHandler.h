@@ -7,6 +7,7 @@ namespace hipo {
 
 class ParallelHybridSolveHandler : public SolveHandler {
   const std::vector<std::vector<Int>>& swaps_;
+  const std::vector<std::vector<char>>& any_swaps_;
   const std::vector<std::vector<double>>& pivot_2x2_;
 
   std::vector<Int> first_child_, next_child_;
@@ -21,14 +22,14 @@ class ParallelHybridSolveHandler : public SolveHandler {
   void forwardSolve(double* x) const override;
   void backwardSolve(double* x) const override;
   void diagSolve(double* x) const override;
+  void inertia(Int& pos, Int& neg, Int& zero, double tol) const override{};
 
   ParallelHybridSolveHandler(const Symbolic& S,
                              const std::vector<std::vector<double>>& sn_columns,
                              const std::vector<std::vector<Int>>& swaps,
+                             const std::vector<std::vector<char>>& any_swap,
                              const std::vector<std::vector<double>>& pivot_2x2,
                              DataCollector& data, const FHoptions& options);
-
-  void inertia(Int& pos, Int& neg, Int& zero, double tol) const override{};
 };
 
 }  // namespace hipo

@@ -345,6 +345,8 @@ bool Factorise::run(Numeric& num) {
   num.data_ = &data_;
   num.options_ = &FH_opt_;
 
+  if (num.prepare()) return true;
+
   HIPO_CLOCK_STOP(1, data_, kTimeFactorise);
 
   return false;
