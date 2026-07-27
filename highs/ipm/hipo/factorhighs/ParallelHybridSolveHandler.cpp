@@ -60,6 +60,13 @@ void ParallelHybridSolveHandler::processForwardTask(Int task, double* x) const {
     child = next_child_[child];
   }
 
+  // allocate space for gemv, once per task
+  Int64 largest_front = 0;
+  for (Int sn : S_.schedule().sn_per_task[task]) {
+    largest_front = std::max(largest_front, S_.ptr(sn + 1) - S_.ptr(sn));
+  }
+  std::vector<double> gemv_workspace(largest_front);
+
   for (auto it = S_.schedule().sn_per_task[task].begin();
        it != S_.schedule().sn_per_task[task].end(); ++it) {
     const Int sn = *it;
@@ -167,25 +174,24 @@ void ParallelHybridSolveHandler::processForwardTask(Int task, double* x) const {
         SnCol_ind += diag_entries;
 
         // temporary space for gemv
-        const Int gemv_space = ldSn - nb * j - jb;
-        std::vector<double> y(gemv_space);
-        if (gemv_space > 0) {
-          callAndTime_dgemv('T', jb, gemv_space, 1.0,
+        const Int gemv_size = ldSn - nb * j - jb;
+        if (gemv_size > 0) {
+          callAndTime_dgemv('T', jb, gemv_size, 1.0,
                             &sn_columns_[sn][SnCol_ind], jb, &x[x_start], 1,
-                            0.0, y.data(), 1, data_);
+                            0.0, gemv_workspace.data(), 1, data_);
 
-          SnCol_ind += jb * gemv_space;
+          SnCol_ind += jb * gemv_size;
           HIPO_CLOCK_STOP(2, data_, kTimeSolveSolve_dense);
 
           HIPO_CLOCK_START(2);
           // scatter solution of gemv
-          for (Int i = 0; i < gemv_space; ++i) {
+          for (Int i = 0; i < gemv_size; ++i) {
             const Int row = S_.rows(start_row + nb * j + jb + i);
             if (row < end_col_in_task) {
-              x[row] -= y[i];
+              x[row] -= gemv_workspace[i];
             } else {
               task_rows_[task].push_back(row);
-              task_vals_[task].push_back(y[i]);
+              task_vals_[task].push_back(gemv_workspace[i]);
             }
           }
           HIPO_CLOCK_STOP(2, data_, kTimeSolveSolve_sparse);
@@ -226,6 +232,13 @@ void ParallelHybridSolveHandler::processBackwardTask(Int task,
 
   HIPO_CLOCK_CREATE;
   const Int nb = options_.nb;
+
+  // allocate space for gemv, once per task
+  Int64 largest_front = 0;
+  for (Int sn : S_.schedule().sn_per_task[task]) {
+    largest_front = std::max(largest_front, S_.ptr(sn + 1) - S_.ptr(sn));
+  }
+  std::vector<double> gemv_workspace(largest_front);
 
   for (auto rit = S_.schedule().sn_per_task[task].rbegin();
        rit != S_.schedule().sn_per_task[task].rend(); ++rit) {
@@ -320,22 +333,21 @@ void ParallelHybridSolveHandler::processBackwardTask(Int task,
         }
 
         // temporary space for gemv
-        const Int gemv_space = ldSn - nb * j - jb;
-        std::vector<double> y(gemv_space);
-        if (gemv_space > 0) {
+        const Int gemv_size = ldSn - nb * j - jb;
+        if (gemv_size > 0) {
           HIPO_CLOCK_START(2);
           // scatter entries into y
-          for (Int i = 0; i < gemv_space; ++i) {
+          for (Int i = 0; i < gemv_size; ++i) {
             const Int row = S_.rows(start_row + nb * j + jb + i);
-            y[i] = x[row];
+            gemv_workspace[i] = x[row];
           }
           HIPO_CLOCK_STOP(2, data_, kTimeSolveSolve_sparse);
 
           HIPO_CLOCK_START(2);
-          SnCol_ind -= jb * gemv_space;
-          callAndTime_dgemv('N', jb, gemv_space, -1.0,
-                            &sn_columns_[sn][SnCol_ind], jb, y.data(), 1, 1.0,
-                            &x[x_start], 1, data_);
+          SnCol_ind -= jb * gemv_size;
+          callAndTime_dgemv(
+              'N', jb, gemv_size, -1.0, &sn_columns_[sn][SnCol_ind], jb,
+              gemv_workspace.data(), 1, 1.0, &x[x_start], 1, data_);
           HIPO_CLOCK_STOP(2, data_, kTimeSolveSolve_dense);
         }
 
