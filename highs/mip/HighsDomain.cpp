@@ -1046,7 +1046,7 @@ void HighsDomain::DualfixingProbingPropagation::updateGDFInfo(HighsInt probing_v
       const double iValue = mipsolver->mipdata_->ARvalue_[k];
       const double cost = mipsolver->model_->col_cost_[iCol];
       bool considered = false;
-      if (domain->isFixed(iCol) || mipsolver->mipdata_->implications.colsubstituted[iCol])
+      if (mipsolver->model_->col_lower_[iCol] == mipsolver->model_->col_upper_[iCol] || mipsolver->mipdata_->implications.colsubstituted[iCol])
         continue;
       
       if (iValue > 0) {
