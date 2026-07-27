@@ -133,8 +133,10 @@ function(highs_configure_blas)
                 # -DNO_AVX{,2,512} to the getarch probe itself (its CMAKE_SIZEOF_VOID_P
                 # fallback check for this is broken - see system.cmake's GETARCH_FLAGS
                 # setup). DYNAMIC_ARCH still dispatches to better kernels at runtime.
-                message(STATUS "Pinning OpenBLAS TARGET=PRESCOTT for 32-bit Linux build to avoid cpuid misdetection.")
-                set(TARGET PRESCOTT CACHE STRING "" FORCE)
+
+                # message(STATUS "Pinning OpenBLAS TARGET=PRESCOTT for 32-bit Linux build to avoid cpuid misdetection.")
+                # set(TARGET PRESCOTT CACHE STRING "" FORCE)
+
                 set(BINARY 32 CACHE STRING "" FORCE)
             endif()
 
@@ -153,6 +155,33 @@ function(highs_configure_blas)
         endif()
 
         set(OPENBLAS_BUILD_TYPE "Release" CACHE STRING "Build type for OpenBLAS" FORCE)
+
+        if(NOT DEBUG_MEMORY STREQUAL "Off")
+            # OpenBLAS's own CMake build (getarch's compiler probe in particular,
+            # see cmake/prebuild.cmake) compiles a throwaway test program with
+            # whatever CMAKE_<LANG>_FLAGS_<CONFIG> is in scope, but does not
+            # forward the matching sanitizer runtime to the link step it uses to
+            # link that program, so the probe fails with undefined references to
+            # e.g. __tsan_func_entry. OpenBLAS is vendored/third-party code we
+            # don't sanitize anyway, so strip the sanitizer flags HiGHS added to
+            # these variables just for fetching/building it here; this is a
+            # function-local shadow (no CACHE), so it reverts automatically once
+            # highs_configure_blas() returns and has no effect on HiGHS's own
+            # targets.
+            message(STATUS "DEBUG_MEMORY=${DEBUG_MEMORY}: building OpenBLAS without sanitizer instrumentation")
+            foreach(_highs_blas_flags_var
+                    CMAKE_C_FLAGS_DEBUG
+                    CMAKE_C_FLAGS_RELWITHDEBINFO
+                    CMAKE_CXX_FLAGS_DEBUG
+                    CMAKE_CXX_FLAGS_RELWITHDEBINFO
+                    CMAKE_EXE_LINKER_FLAGS_DEBUG
+                    CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO
+                    CMAKE_SHARED_LINKER_FLAGS_DEBUG
+                    CMAKE_SHARED_LINKER_FLAGS_RELWITHDEBINFO)
+                string(REGEX REPLACE "-f(no-)?sanitize[-=][A-Za-z0-9,-]+" "" ${_highs_blas_flags_var} "${${_highs_blas_flags_var}}")
+                set(${_highs_blas_flags_var} "${${_highs_blas_flags_var}}")
+            endforeach()
+        endif()
 
         if(DEFINED CMAKE_INTERPROCEDURAL_OPTIMIZATION)
             set(_highs_blas_ipo_backup "${CMAKE_INTERPROCEDURAL_OPTIMIZATION}")
