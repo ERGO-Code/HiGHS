@@ -84,7 +84,7 @@ struct HighsOrbitopeMatrix {
   };
   HighsInt rowLength;
   HighsInt numRows;
-  HighsInt numSetPackingRows;
+  HighsInt numSetPackingRows = 0;
   HighsHashTable<HighsInt, HighsInt> columnToRow;
   std::vector<RowPackingStatus> rowIsSetPacking;
   std::vector<HighsInt> matrix;

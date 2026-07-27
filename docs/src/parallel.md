@@ -17,6 +17,9 @@ The maximum value that is advantageous is machine-dependent,
 but it is unlikely to be more than eight due to most computation in 
 HiGHS being memory-bound.
 
+Note that since parallelism is controlled by a static scheduler,
+concurrent Highs instances must use the same value of `threads`.
+
 ## Dual simplex
 
 By default, the HiGHS dual simplex solver runs in serial. However, it

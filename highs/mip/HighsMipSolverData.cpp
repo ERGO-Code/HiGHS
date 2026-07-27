@@ -82,6 +82,8 @@ HighsMipSolverData::HighsMipSolverData(HighsMipSolver& mipsolver)
   getDomain().addCutpool(getCutPool());
   getDomain().addConflictPool(getConflictPool());
   cliquetable.setAllowParallel(!mipsolver.submip);
+  worker_lp_iterations_stop.store(std::numeric_limits<int64_t>::max(),
+                                  std::memory_order_relaxed);
 }
 
 std::string HighsMipSolverData::solutionSourceToString(
@@ -224,7 +226,7 @@ bool HighsMipSolverData::trySolution(const std::vector<double>& solution,
     if (mipsolver.isColInteger(i) && fractionality(solution[i]) > feastol)
       return false;
 
-    obj += mipsolver.colCost(i) * solution[i];
+    obj += static_cast<HighsCDouble>(mipsolver.colCost(i)) * solution[i];
   }
 
   for (HighsInt i = 0; i != mipsolver.numRow(); ++i) {
@@ -387,8 +389,9 @@ HighsModelStatus HighsMipSolverData::trivialHeuristics() {
 
     HighsCDouble cdouble_obj = 0.0;
     for (HighsInt iCol = 0; iCol < mipsolver.numCol(); iCol++)
-      cdouble_obj += mipsolver.colCost(iCol) * solution[iCol];
-    double obj = double(cdouble_obj);
+      cdouble_obj +=
+          static_cast<HighsCDouble>(mipsolver.colCost(iCol)) * solution[iCol];
+    double obj = static_cast<double>(cdouble_obj);
     const double save_upper_bound = upper_bound;
     const bool new_incumbent =
         addIncumbent(solution, obj, heuristic_source[try_heuristic]);
@@ -798,6 +801,8 @@ void HighsMipSolverData::init() {
   upper_bound = kHighsInf;
   upper_limit = mipsolver.options_mip_->objective_bound;
   optimality_limit = mipsolver.options_mip_->objective_bound;
+  worker_lp_iterations_stop.store(std::numeric_limits<int64_t>::max(),
+                                  std::memory_order_relaxed);
   primal_dual_integral.initialise();
 
   if (mipsolver.options_mip_->mip_report_level == 0)
@@ -828,26 +833,7 @@ void HighsMipSolverData::runMipPresolve(
                              *mipsolver.model_);
 }
 
-void HighsMipSolverData::runSetup() {
-  const HighsLp& model = *mipsolver.model_;
-
-  // Indicate that the first LP has not been solved
-  this->getLp().setSolvedFirstLp(false);
-
-  last_disptime = -kHighsInf;
-  disptime = 0;
-
-  // Transform the reference of the objective limit and lower/upper
-  // bounds from the original model to the current model, undoing the
-  // transformation done before restart so that the offset change due
-  // to presolve is incorporated. Bound changes are transitory, so no
-  // real gap change, and no update to P-D integral is necessary
-  upper_limit -= mipsolver.model_->offset_;
-  optimality_limit -= mipsolver.model_->offset_;
-
-  lower_bound -= mipsolver.model_->offset_;
-  upper_bound -= mipsolver.model_->offset_;
-
+void HighsMipSolverData::checkAddSolution() {
   if (mipsolver.solution_objective_ != kHighsInf) {
     // Assigning new incumbent
     incumbent = postSolveStack.getReducedPrimalSolution(mipsolver.solution_);
@@ -899,6 +885,29 @@ void HighsMipSolverData::runSetup() {
       assert(!interrupt);
     }
   }
+}
+
+void HighsMipSolverData::runSetup() {
+  const HighsLp& model = *mipsolver.model_;
+
+  // Indicate that the first LP has not been solved
+  this->getLp().setSolvedFirstLp(false);
+
+  last_disptime = -kHighsInf;
+  disptime = 0;
+
+  // Transform the reference of the objective limit and lower/upper
+  // bounds from the original model to the current model, undoing the
+  // transformation done before restart so that the offset change due
+  // to presolve is incorporated. Bound changes are transitory, so no
+  // real gap change, and no update to P-D integral is necessary
+  upper_limit -= mipsolver.model_->offset_;
+  optimality_limit -= mipsolver.model_->offset_;
+
+  lower_bound -= mipsolver.model_->offset_;
+  upper_bound -= mipsolver.model_->offset_;
+
+  checkAddSolution();
 
   if (mipsolver.numCol() == 0)
     addIncumbent(std::vector<double>(), 0, kSolutionSourceEmptyMip);
@@ -1137,8 +1146,8 @@ void HighsMipSolverData::runSetup() {
     debugSolution.debugSolObjective = 0;
     HighsCDouble debugsolobj = 0.0;
     for (HighsInt i = 0; i != mipsolver.numCol(); ++i)
-      debugsolobj +=
-          mipsolver.colCost(i) * HighsCDouble(debugSolution.debugSolution[i]);
+      debugsolobj += static_cast<HighsCDouble>(mipsolver.colCost(i)) *
+                     debugSolution.debugSolution[i];
     debugSolution.debugSolObjective = static_cast<double>(debugsolobj);
     debugSolution.registerDomain(getDomain());
     assert(checkSolution(debugSolution.debugSolution));

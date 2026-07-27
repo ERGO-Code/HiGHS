@@ -14,19 +14,21 @@ class ParallelHybridSolveHandler : public SolveHandler {
   mutable std::vector<std::vector<Int>> task_rows_;
   mutable std::vector<std::vector<double>> task_vals_;
 
-  void processForwardTask(Int task, std::vector<double>& x) const;
-  void processBackwardTask(Int task, std::vector<double>& x) const;
+  void processForwardTask(Int task, double* x) const;
+  void processBackwardTask(Int task, double* x) const;
 
  public:
-  void forwardSolve(std::vector<double>& x) const override;
-  void backwardSolve(std::vector<double>& x) const override;
-  void diagSolve(std::vector<double>& x) const override;
+  void forwardSolve(double* x) const override;
+  void backwardSolve(double* x) const override;
+  void diagSolve(double* x) const override;
 
   ParallelHybridSolveHandler(const Symbolic& S,
                              const std::vector<std::vector<double>>& sn_columns,
                              const std::vector<std::vector<Int>>& swaps,
                              const std::vector<std::vector<double>>& pivot_2x2,
-                             DataCollector& data);
+                             DataCollector& data, const FHoptions& options);
+
+  void inertia(Int& pos, Int& neg, Int& zero, double tol) const override{};
 };
 
 }  // namespace hipo

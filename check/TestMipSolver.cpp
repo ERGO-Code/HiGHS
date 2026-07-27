@@ -1483,3 +1483,125 @@ TEST_CASE("issue-2975", "[highs_test_mip_solver]") {
 
   highs.resetGlobalScheduler(true);
 }
+
+TEST_CASE("issue-3118", "[highs_test_mip_solver]") {
+  const double M = 1e10;
+  //   min    x +   y
+  //   s.t.   x + M*y = 1
+  //        M*x +   y = 1
+  //          x, y binary
+  //   Initial "solution" x = y = 1/M
+  //
+  // This problem is found infeasible in presolve, but the point x = y
+  // = 1/M is integer feasible to within the tolerances, so is
+  // acccepted as an optimal solution to the problem
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+
+  HighsInt x = 0;
+  HighsInt y = 1;
+  HighsLp lp;
+  lp.num_col_ = 2;
+  lp.num_row_ = 2;
+  lp.col_lower_ = {0., 0.};
+  lp.col_upper_ = {1., 1.};
+  lp.col_cost_ = {1., 1.};
+  lp.integrality_ = {HighsVarType::kInteger, HighsVarType::kInteger};
+  lp.row_lower_ = {1., 1.};
+  lp.row_upper_ = {1., 1.};
+  lp.a_matrix_.format_ = MatrixFormat::kRowwise;
+  lp.a_matrix_.start_ = {0, 2, 4};
+  lp.a_matrix_.index_ = {x, y, x, y};
+  lp.a_matrix_.value_ = {1., M, M, 1};
+  highs.passModel(lp);
+
+  std::vector<double> solution_values(lp.num_col_, 1 / M);
+  highs.setSolution(2, nullptr, solution_values.data());
+
+  highs.run();
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
+  REQUIRE(std::abs(2 / M - highs.getInfo().objective_function_value) < 1e-9);
+  if (dev_run) highs.writeSolution("", 1);
+
+  highs.resetGlobalScheduler(true);
+}
+
+TEST_CASE("issue-3118a", "[highs_test_mip_solver]") {
+  const double M = 1e10;
+  //   max f = x
+  //   s.t.    x - M*y  = -1
+  //           x       <=  b
+  //           x, y integer in [0, 2]x[0, 1]
+  //
+  // The MIP is not feasible over the integers for any b
+  //
+  // With initial "solution" x = 0; y = 1/M
+  //
+  // For b = 0: (0, 1/M) with f = 0 is the only feasible solution of
+  // the relaxation, and it's also feasible for the MIP, so claiming
+  // it is optimal when presolve identifies infeasibility is clearly
+  // justified
+  //
+  // For b = 1: (1, 2/M) with f = 1 is the optimal solution of the
+  // relaxation, and it's also feasible for the MIP. However, claiming
+  // that the initial "solution" (0, 1/M) with f = 0 is optimal when
+  // presolve identifies infeasibility is still justified, because
+  // it's a point that is feasible for a MIP that is deemed infeasible
+  // by presolve
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+
+  HighsInt x = 0;
+  HighsInt y = 1;
+  HighsLp lp;
+  lp.sense_ = ObjSense::kMaximize;
+  lp.num_col_ = 2;
+  lp.num_row_ = 2;
+  lp.col_lower_ = {0, 0};
+  lp.col_upper_ = {2, 1};
+  lp.col_cost_ = {1, 0};
+  lp.integrality_ = {HighsVarType::kInteger, HighsVarType::kInteger};
+  lp.row_lower_ = {-1, -kHighsInf};
+  lp.row_upper_ = {-1, 0};
+  lp.a_matrix_.format_ = MatrixFormat::kRowwise;
+  lp.a_matrix_.start_ = {0, 2, 3};
+  lp.a_matrix_.index_ = {x, y, x};
+  lp.a_matrix_.value_ = {1., -M, 1};
+
+  for (HighsInt k = 0; k < 2; k++) {
+    HighsInt b = k == 0 ? 0 : 1;
+    lp.row_upper_[1] = b;
+
+    highs.passModel(lp);
+
+    // Solve as MIP
+    if (dev_run)
+      printf("================\nCase b = %d (MIP)\n================\n", int(b));
+    highs.setOptionValue("solve_relaxation", false);
+    std::vector<double> solution_values = {0, 1 / M};
+    highs.setSolution(2, nullptr, solution_values.data());
+
+    highs.run();
+    if (dev_run) highs.writeSolution("", 1);
+    REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
+
+    // Solve as LP
+    if (dev_run)
+      printf("===============\nCase b = %d (LP)\n===============\n", int(b));
+    highs.setOptionValue("solve_relaxation", true);
+    highs.clearSolver();
+    highs.run();
+    highs.writeSolution("", 1);
+    REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
+    double lp_objective_value = highs.getInfo().objective_function_value;
+
+    solution_values = highs.getSolution().col_value;
+    highs.setSolution(2, nullptr, solution_values.data());
+
+    bool valid, integral, feasible;
+    REQUIRE(highs.assessPrimalSolution(valid, integral, feasible) ==
+            HighsStatus::kOk);
+  }
+
+  highs.resetGlobalScheduler(true);
+}

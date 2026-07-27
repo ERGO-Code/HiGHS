@@ -143,7 +143,7 @@ bool Solver::initialise() {
   }
 
   // initialise linear solver
-  LS_.reset(new FactorHiGHSSolver(*kkt_, options_, model_, regul_, info_,
+  LS_.reset(new FactorHighsSolver(*kkt_, options_, model_, regul_, info_,
                                   it_->data, logger_));
   if (!LS_) {
     info_.status = kStatusError;

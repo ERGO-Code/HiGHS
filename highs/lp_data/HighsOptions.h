@@ -410,6 +410,7 @@ struct HighsOptionsStruct {
   double pdlp_optimality_tolerance;
 
   // Options for QP solver
+  bool test_qp_oracle;
   bool qp_allow_hot_start;
   HighsInt qp_iteration_limit;
   HighsInt qp_nullspace_limit;
@@ -586,6 +587,7 @@ struct HighsOptionsStruct {
         pdlp_cupdlpc_restart_method(0),
         pdlp_step_size_strategy(0),
         pdlp_optimality_tolerance(0.0),
+        test_qp_oracle(false),
         qp_allow_hot_start(false),
         qp_iteration_limit(0),
         qp_nullspace_limit(0),
@@ -1383,6 +1385,11 @@ class HighsOptions : public HighsOptionsStruct {
         &pdlp_optimality_tolerance, kMinimumKktTolerance, kDefaultKktTolerance,
         kHighsInf);
     records.push_back(record_double);
+
+    record_bool = new OptionRecordBool("test_qp_oracle",
+                                       "Use an oracle for the QP Hessian",
+                                       advanced, &test_qp_oracle, false);
+    records.push_back(record_bool);
 
     record_bool = new OptionRecordBool(
         "qp_allow_hot_start", "Allow the active set QP solver to hot start",

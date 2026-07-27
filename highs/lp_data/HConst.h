@@ -309,6 +309,14 @@ enum IisStatus : int {
   kIisStatusMax = kIisStatusInConflict
 };
 
+enum HessianOracleCallType : int {
+  kHessianOracleCallTypeMin = 0,
+  kHessianOracleCallTypeEntry = kHessianOracleCallTypeMin,
+  kHessianOracleCallTypeColumn,
+  kHessianOracleCallTypeProduct,
+  kHessianOracleCallTypeMax = kHessianOracleCallTypeProduct
+};
+
 enum MipChooseSubMipRecord : int {
   kMipRecord = -1,
   kChooseRecord,
@@ -381,6 +389,9 @@ const HighsInt kHighsIllegalComplementarityCount = -1;
 
 const double kHighsIllegalDoubleMeasure = -kHighsInf;
 const HighsInt kHighsIllegalIntMeasure = -1;
+
+// Tolerance on asymmetry in square Hessians
+const double kSquareHessianAsymmetryTolerance = 1e-10;
 
 // Maximum upper bound on semi-variables
 const double kMaxSemiVariableUpper = 1e5;
