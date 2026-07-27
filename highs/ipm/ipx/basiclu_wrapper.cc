@@ -47,23 +47,14 @@ Int BasicLu::_Factorize(const Int* Bbegin, const Int* Bend, const Int* Bi,
                                    Ui_.data(), Ux_.data(),
                                    Wi_.data(), Wx_.data(),
                                    Bbegin, Bend, Bi, Bx, ncall);
-	struct timespec ts;
-	clock_gettime(CLOCK_REALTIME, &ts);
-	double wallclock = (double)ts.tv_sec + (double)ts.tv_nsec / 1000000000.0;
-	double factorize_time = wallclock - xstore_[BASICLU_TIME_START];
-	printf("BasicLu::_Factorize status = %d time = %.2f\n", int(status), factorize_time);
         if (status != BASICLU_REALLOCATE)
             break;
         Reallocate();
     }
 
-    if (status == BASICLU_WARNING_timeout) {
-      printf("basiclu_factorize times out\n");
-      return IPX_ERROR_time_interrupt;
-    }
+    if (status == BASICLU_WARNING_timeout) return IPX_ERROR_time_interrupt;
 
-    if (status != BASICLU_OK
-	&& status != BASICLU_WARNING_singular_matrix)
+    if (status != BASICLU_OK && status != BASICLU_WARNING_singular_matrix)
         throw std::logic_error("basiclu_factorize failed");
 
     Int matrix_nz = xstore_[BASICLU_MATRIX_NZ];

@@ -79,6 +79,8 @@ void Basis::SetToSlackBasis() {
 }
 
 Int Basis::Factorize(const bool allow_timeout) {
+    // Factorize the basis, where allow_timeout is false for a slack
+    // basis
     const Int m = model_.rows();
     const SparseMatrix& AI = model_.AI();
     Timer timer;
@@ -105,19 +107,13 @@ Int Basis::Factorize(const bool allow_timeout) {
     while (true) {
 	double highs_time_limit = control_.timeLimit();
 	assert(highs_time_limit >= 0);
-	double elapsed = control_.Elapsed();
-	double wallclock = luTime();
-	lu_->timeStart(wallclock);
-        double basiclu_time_limit = 0;
+	lu_->timeStart(luTime());
+        double basiclu_time_limit = INFINITY;
 	if (allow_timeout && highs_time_limit < INFINITY) {
-	  basiclu_time_limit = highs_time_limit - elapsed;
+	  basiclu_time_limit = highs_time_limit - control_.Elapsed();
 	  if (basiclu_time_limit <= 0) return IPX_ERROR_time_interrupt;
-	} else {
-	  basiclu_time_limit = INFINITY;
 	}
 	lu_->timeLimit(basiclu_time_limit);
-	printf("Basis::Factorize time %.2f / %.2f => limit = %.2f\n",
-	       elapsed, highs_time_limit, basiclu_time_limit);
         Int flag = lu_->Factorize(begin.data(), end.data(), AI.rowidx(),
                                   AI.values(), false);
 	if (flag == IPX_ERROR_time_interrupt) return flag;
@@ -374,7 +370,7 @@ void Basis::ConstructBasisFromWeights(const double* colscale, Info* info) {
 	}
         if (info->basis_repairs < 0) {
 	  control_.hLog(" discarding crash basis\n");
-	  SetToSlackBasis();
+	     SetToSlackBasis();
         }
         else if (info->basis_repairs > 0) {
             sigma = MinSingularValue();
@@ -383,12 +379,14 @@ void Basis::ConstructBasisFromWeights(const double* colscale, Info* info) {
                 << sci2(sigma) << '\n';
         }
     } else {
-      SetToSlackBasis();
+        SetToSlackBasis();
     }
     PivotFreeVariablesIntoBasis(colscale, info);
-    if (info->errflag) return;
+    if (info->errflag)
+        return;
     PivotFixedVariablesOutOfBasis(colscale, info);
-    if (info->errflag) return;
+    if (info->errflag)
+        return;
 }
 
 double Basis::MinSingularValue() const {
@@ -639,22 +637,16 @@ void Basis::CrashFactorize(Int* num_dropped, bool& interrupt) {
     }
     double highs_time_limit = control_.timeLimit();
     assert(highs_time_limit >= 0);
-    double elapsed = control_.Elapsed();
-    double wallclock = luTime();
-    lu_->timeStart(wallclock);
-    double basiclu_time_limit = 0;
+    lu_->timeStart(luTime());
+    double basiclu_time_limit = INFINITY;
     if (highs_time_limit < INFINITY) {
-      basiclu_time_limit = highs_time_limit - elapsed;
+      basiclu_time_limit = highs_time_limit - control_.Elapsed();
       if (basiclu_time_limit <= 0) {
 	interrupt = true;
 	return;
       }
-    } else {
-      basiclu_time_limit = INFINITY;
     }
     lu_->timeLimit(basiclu_time_limit);
-    printf("Basis::CrashFactorize time %.2f / %.2f => limit = %.2f\n",
-	   elapsed, highs_time_limit, basiclu_time_limit);
     Int flag = lu_->Factorize(begin.data(), end.data(), AI.rowidx(),
                               AI.values(), true);
     if (flag == IPX_ERROR_time_interrupt) {
