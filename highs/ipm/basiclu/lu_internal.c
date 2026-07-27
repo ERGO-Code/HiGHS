@@ -61,6 +61,7 @@ lu_int lu_load(
     this->compress_thres        = xstore[BASICLU_COMPRESSION_THRESHOLD];
     this->sparse_thres          = xstore[BASICLU_SPARSE_THRESHOLD];
     this->search_rows           = xstore[BASICLU_SEARCH_ROWS] != 0;
+    this->basiclu_time_limit    = xstore[BASICLU_TIME_LIMIT];
 
     /* user readable */
     this->m = m                 = xstore[BASICLU_DIM];

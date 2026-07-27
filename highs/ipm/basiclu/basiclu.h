@@ -30,6 +30,8 @@ typedef int64_t lu_int;
 typedef int lu_int;
 #define LU_INT_MAX INT_MAX
 #endif
+
+#define LU_DOUBLE_INFINITY INFINITY
 /* #include <limits.h> */
 /* typedef long lu_int; */
 /* #define LU_INT_MAX LONG_MAX */
@@ -79,6 +81,7 @@ typedef int lu_int;
 #define BASICLU_SPARSE_THRESHOLD 12
 #define BASICLU_REMOVE_COLUMNS 13
 #define BASICLU_SEARCH_ROWS 14
+#define BASICLU_TIME_LIMIT 15
 
 /* user readable */
 #define BASICLU_DIM 64
