@@ -137,8 +137,10 @@ Int Basis::Factorize() {
 
     Int err = 0;                // return code
     while (true) {
+        double basiclu_time_limit = 0;
         Int flag = lu_->Factorize(begin.data(), end.data(), AI.rowidx(),
-                                  AI.values(), false);
+                                  AI.values(), false,
+				  basiclu_time_limit);
         num_factorizations_++;
         fill_factors_.push_back(lu_->fill_factor());
         if (flag & 2) {
@@ -650,8 +652,10 @@ void Basis::CrashFactorize(Int* num_dropped) {
             end[i] = 0;
         }
     }
+    double basiclu_time_limit = 0;
     Int flag = lu_->Factorize(begin.data(), end.data(), AI.rowidx(),
-                              AI.values(), true);
+                              AI.values(), true,
+			      basiclu_time_limit);
     num_factorizations_++;
     fill_factors_.push_back(lu_->fill_factor());
     Int ndropped = 0;

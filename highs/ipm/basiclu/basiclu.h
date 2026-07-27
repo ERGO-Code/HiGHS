@@ -49,6 +49,7 @@ typedef int lu_int;
 #define BASICLU_OK 0
 #define BASICLU_REALLOCATE 1
 #define BASICLU_WARNING_singular_matrix 2
+#define BASICLU_WARNING_timeout 3
 #define BASICLU_ERROR_invalid_store (-1)
 #define BASICLU_ERROR_invalid_call (-2)
 #define BASICLU_ERROR_argument_missing (-3)

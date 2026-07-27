@@ -33,7 +33,8 @@ public:
 
 private:
     Int _Factorize(const Int* Bbegin, const Int* Bend, const Int* Bi,
-                   const double* Bx, bool strict_abs_pivottol) override;
+                   const double* Bx, bool strict_abs_pivottol,
+		   double basiclu_time_limit) override;
     void _GetFactors(SparseMatrix* L, SparseMatrix* U, Int* rowperm,
                      Int* colperm, std::vector<Int>* dependent_cols) override;
     void _SolveDense(const Vector& rhs, Vector& lhs, char trans) override;

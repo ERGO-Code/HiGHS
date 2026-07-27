@@ -32,7 +32,8 @@ BasicLu::BasicLu(const Control& control, Int dim) : control_(control) {
 }
 
 Int BasicLu::_Factorize(const Int* Bbegin, const Int* Bend, const Int* Bi,
-                        const double* Bx, bool strict_abs_pivottol) {
+                        const double* Bx, bool strict_abs_pivottol,
+			double basiclu_time_limit) {
     Int status;
     if (strict_abs_pivottol) {
         xstore_[BASICLU_REMOVE_COLUMNS] = 1;
@@ -46,12 +47,20 @@ Int BasicLu::_Factorize(const Int* Bbegin, const Int* Bend, const Int* Bi,
                                    Li_.data(), Lx_.data(),
                                    Ui_.data(), Ux_.data(),
                                    Wi_.data(), Wx_.data(),
-                                   Bbegin, Bend, Bi, Bx, ncall);
+                                   Bbegin, Bend, Bi, Bx, ncall,
+				   basiclu_time_limit);
+                                   printf("BasicLu::_Factorize status = %d\n", int(status));
         if (status != BASICLU_REALLOCATE)
             break;
         Reallocate();
     }
-    if (status != BASICLU_OK && status != BASICLU_WARNING_singular_matrix)
+
+    if (status == BASICLU_WARNING_timeout) {
+      printf("basiclu_factorize times out\n");
+    }
+
+    if (status != BASICLU_OK
+	&& status != BASICLU_WARNING_singular_matrix)
         throw std::logic_error("basiclu_factorize failed");
 
     Int matrix_nz = xstore_[BASICLU_MATRIX_NZ];

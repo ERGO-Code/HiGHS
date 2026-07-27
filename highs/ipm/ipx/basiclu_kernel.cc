@@ -33,14 +33,15 @@ void BasicLuKernel::_Factorize(Int dim, const Int* Bbegin, const Int* Bend,
                                SparseMatrix* L, SparseMatrix* U,
                                std::vector<Int>* rowperm,
                                std::vector<Int>* colperm,
-                               std::vector<Int>* dependent_cols) {
+                               std::vector<Int>* dependent_cols,
+			       double basiclu_time_limit) {
     BasicLuHelper lu(dim);
     lu.obj.xstore[BASICLU_REL_PIVOT_TOLERANCE] = pivottol;
     if (strict_abs_pivottol) {
         lu.obj.xstore[BASICLU_ABS_PIVOT_TOLERANCE] = kLuDependencyTol;
         lu.obj.xstore[BASICLU_REMOVE_COLUMNS] = 1;
     }
-    Int err = basiclu_obj_factorize(&lu.obj, Bbegin, Bend, Bi, Bx);
+    Int err = basiclu_obj_factorize(&lu.obj, Bbegin, Bend, Bi, Bx, basiclu_time_limit);
     if (err == BASICLU_ERROR_out_of_memory)
         throw std::bad_alloc();
     if (err != BASICLU_OK && err != BASICLU_WARNING_singular_matrix)

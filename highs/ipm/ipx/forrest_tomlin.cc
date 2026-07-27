@@ -14,7 +14,8 @@ ForrestTomlin::ForrestTomlin(const Control& control, Int dim,
 }
 
 Int ForrestTomlin::_Factorize(const Int* Bbegin, const Int* Bend, const Int* Bi,
-                              const double* Bx, bool strict_abs_pivottol) {
+                              const double* Bx, bool strict_abs_pivottol,
+			      double basiclu_time_limit) {
     // Reset updates.
     R_.resize(dim_, 0);
     replaced_.clear();
@@ -23,7 +24,8 @@ Int ForrestTomlin::_Factorize(const Int* Bbegin, const Int* Bend, const Int* Bi,
     have_ftran_ = false;
 
     lu_->Factorize(dim_, Bbegin, Bend, Bi, Bx, pivottol_, strict_abs_pivottol,
-                   &L_, &U_, &rowperm_, &colperm_, &dependent_cols_);
+                   &L_, &U_, &rowperm_, &colperm_, &dependent_cols_,
+		   basiclu_time_limit);
     rowperm_inv_ = InversePerm(rowperm_);
     colperm_inv_ = InversePerm(colperm_);
 

@@ -117,9 +117,11 @@ void LuFactorization::Factorize(Int dim, const Int* Bbegin, const Int* Bend,
                                 SparseMatrix* L, SparseMatrix* U,
                                 std::vector<Int>* rowperm,
                                 std::vector<Int>* colperm,
-                                std::vector<Int>* dependent_cols) {
+                                std::vector<Int>* dependent_cols,
+				double basiclu_time_limit) {
     _Factorize(dim, Bbegin, Bend, Bi, Bx, pivottol, strict_abs_pivottol,
-               L, U, rowperm, colperm, dependent_cols);
+               L, U, rowperm, colperm, dependent_cols,
+	       basiclu_time_limit);
     stability_ = StabilityEstimate(Bbegin, Bend, Bi, Bx, *L, *U, *rowperm,
                                    *colperm, *dependent_cols);
 }
