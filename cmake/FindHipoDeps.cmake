@@ -91,16 +91,21 @@ function(highs_configure_blas)
         set(BUILD_TESTING OFF CACHE BOOL "" FORCE)
         set(CMAKE_Fortran_COMPILER OFF)
 
+        # NOTE: FetchContent_MakeAvailable() populates OpenBLAS via add_subdirectory(),
+        # not a separate `cmake` invocation, so FetchContent_Declare's CMAKE_ARGS has no
+        # effect here (that option only applies to ExternalProject-style population) -
+        # it was silently a no-op. Every OpenBLAS build option below is instead a real
+        # CACHE variable set in this (shared) scope, so OpenBLAS's own option()/
+        # if(DEFINED ...) checks in its CMakeLists.txt/cmake/system.cmake actually see it.
+
         # Exclude components not used by HiGHS
-        set(OPENBLAS_MINIMAL_FLAGS
-                -DONLY_CBLAS:BOOL=ON
-                -DNO_LAPACK:BOOL=ON
-                -DNO_LAPACKE:BOOL=ON
-                -DNO_COMPLEX:BOOL=ON
-                -DNO_COMPLEX16:BOOL=ON
-                -DNO_DOUBLE_COMPLEX:BOOL=ON
-                -DNO_SINGLE:BOOL=ON
-        )
+        set(ONLY_CBLAS ON CACHE BOOL "" FORCE)
+        set(NO_LAPACK ON CACHE BOOL "" FORCE)
+        set(NO_LAPACKE ON CACHE BOOL "" FORCE)
+        set(NO_COMPLEX ON CACHE BOOL "" FORCE)
+        set(NO_COMPLEX16 ON CACHE BOOL "" FORCE)
+        set(NO_DOUBLE_COMPLEX ON CACHE BOOL "" FORCE)
+        set(NO_SINGLE ON CACHE BOOL "" FORCE)
 
         if(CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64|arm64|armv8|arm")
             if(CMAKE_SIZEOF_VOID_P EQUAL 4)
@@ -112,27 +117,28 @@ function(highs_configure_blas)
         endif()
 
         message(STATUS "Enabling DYNAMIC_ARCH for runtime CPU detection.")
-        list(APPEND OPENBLAS_MINIMAL_FLAGS -DDYNAMIC_ARCH=ON)
+        set(DYNAMIC_ARCH ON CACHE BOOL "" FORCE)
 
         # CMAKE_SIZEOF_VOID_P is 4 for 32-bit and 8 for 64-bit
         if(CMAKE_SIZEOF_VOID_P EQUAL 4)
             message(STATUS "32-bit target detected. Applying 32-bit configuration flags for OpenBLAS.")
 
-            if(WIN32)
-                list(APPEND OPENBLAS_MINIMAL_FLAGS -DCMAKE_GENERATOR_PLATFORM=Win32)
-            endif()
-
             if(UNIX AND NOT APPLE)
-                # OpenBLAS' build-time cpuid probe reports the host's real (64-bit-capable)
-                # microarchitecture (e.g. ZEN), which has no 32-bit-compatible kernel and
-                # leaves PREFETCH-related macros undefined, breaking assembly of the 32-bit
-                # kernels (e.g. gemm_kernel_2x4_sse3.S). Pin a generic 32-bit-safe default
-                # target; DYNAMIC_ARCH still dispatches to better kernels at runtime.
+                # OpenBLAS' build-time cpuid probe (getarch) reports the host's real
+                # (64-bit-capable) microarchitecture (e.g. ZEN), which has no
+                # 32-bit-compatible kernel and leaves PREFETCH-related macros undefined,
+                # breaking assembly of the 32-bit kernels (e.g. gemm_kernel_2x4_sse3.S /
+                # gemm_kernel_4x4_sse3.S). Pin a generic 32-bit-safe default target, and
+                # set BINARY=32 so OpenBLAS's own cmake/system.cmake also passes
+                # -DNO_AVX{,2,512} to the getarch probe itself (its CMAKE_SIZEOF_VOID_P
+                # fallback check for this is broken - see system.cmake's GETARCH_FLAGS
+                # setup). DYNAMIC_ARCH still dispatches to better kernels at runtime.
                 message(STATUS "Pinning OpenBLAS TARGET=PRESCOTT for 32-bit Linux build to avoid cpuid misdetection.")
-                list(APPEND OPENBLAS_MINIMAL_FLAGS -DTARGET=PRESCOTT)
+                set(TARGET PRESCOTT CACHE STRING "" FORCE)
+                set(BINARY 32 CACHE STRING "" FORCE)
             endif()
 
-            list(APPEND OPENBLAS_MINIMAL_FLAGS -DINTERFACE64=0)
+            set(INTERFACE64 0 CACHE STRING "" FORCE)
         endif()
 
         # OpenBLAS' DYNAMIC_ARCH CMake build repeatedly mis-scopes AVX512-gated macros
@@ -143,7 +149,7 @@ function(highs_configure_blas)
         # disable AVX512 for Linux builds of OpenBLAS rather than special-casing Skylake.
         if(UNIX AND NOT APPLE)
             message(STATUS "Disabling AVX512 in OpenBLAS (unreliable with DYNAMIC_ARCH's CMake build).")
-            list(APPEND OPENBLAS_MINIMAL_FLAGS -DNO_AVX512=ON)
+            set(NO_AVX512 ON CACHE BOOL "Build OpenBLAS without AVX512" FORCE)
         endif()
 
         set(OPENBLAS_BUILD_TYPE "Release" CACHE STRING "Build type for OpenBLAS" FORCE)
@@ -161,10 +167,7 @@ function(highs_configure_blas)
                 GIT_TAG        "v${_highs_openblas_version}"
                 GIT_SHALLOW TRUE
                 UPDATE_COMMAND git reset --hard
-                CMAKE_ARGS
-                        ${OPENBLAS_MINIMAL_FLAGS}
         )
-        set(NO_LAPACKE ON CACHE BOOL "" FORCE)
         FetchContent_MakeAvailable(openblas)
         get_property(all_targets DIRECTORY ${openblas_SOURCE_DIR} PROPERTY BUILDSYSTEM_TARGETS)
         message(STATUS "OpenBLAS targets: ${all_targets}")
