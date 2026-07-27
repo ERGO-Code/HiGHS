@@ -15,14 +15,22 @@ namespace hipo {
 
 Int Numeric::prepare() {
   if (!sn_columns_ || !S_ || !data_ || !options_) return kRetInvalidPointer;
-  SH_.reset(new HybridSolveHandler(*S_, *sn_columns_, swaps_, any_swaps_,
-                                   pivot_2x2_, gemv_workspace_, *data_,
-                                   *options_));
-  if (!SH_) return kRetGeneric;
 
-  // memory allocation should happen only the first time, then memory is reused.
-  // No need to zero memory each time, as it is overwritten by solveHandler.
-  gemv_workspace_.resize(S_->largestFront());
+  if (options_->parallel_solve) {
+    SH_.reset(new ParallelHybridSolveHandler(
+        *S_, *sn_columns_, swaps_, any_swaps_, pivot_2x2_, *data_, *options_));
+  } else {
+    SH_.reset(new HybridSolveHandler(*S_, *sn_columns_, swaps_, any_swaps_,
+                                     pivot_2x2_, gemv_workspace_, *data_,
+                                     *options_));
+
+    // memory allocation should happen only the first time, then memory is
+    // reused. No need to zero memory each time, as it is overwritten by
+    // solveHandler.
+    gemv_workspace_.resize(S_->largestFront());
+  }
+
+  if (!SH_) return kRetGeneric;
 
   // compute which blocks of columns require swaps
   if (options_->pivoting) {

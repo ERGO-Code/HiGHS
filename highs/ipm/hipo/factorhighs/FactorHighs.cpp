@@ -54,6 +54,8 @@ void FHsolver::setBlockSize(Int nb) {
 
 void FHsolver::setPivoting(bool pivoting) { options_.pivoting = pivoting; }
 
+void FHsolver::setParallelSolve(bool p) { options_.parallel_solve = p; }
+
 void FHsolver::setLogger(const Logger* logger, bool use_printf) {
   if (local_logger_ && logger_) delete logger_;
   local_logger_ = false;
