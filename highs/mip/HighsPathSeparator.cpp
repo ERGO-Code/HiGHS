@@ -401,6 +401,17 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
         std::vector<double> solval;
         std::vector<double> upper;
         std::vector<uint8_t> isIntegral;
+        // Bound substitution that transform() used for each index when its cut
+        // coefficient was computed. transform() keeps this state per column in
+        // transLp, so a later call - in particular for a base row that is
+        // rejected below, or one belonging to a different path - can change it
+        // before the cut is untransformed. Untransforming with a different
+        // substitution silently inverts the complementation of a variable and
+        // produces an invalid cut, so record the substitutions here and restore
+        // them before calling untransform().
+        std::vector<HighsTransformedLp::BoundType> boundTypes;
+        boundTypes.reserve(lp.num_col_ + lp.num_row_);
+        bool inconsistentBoundTypes = false;
         inds.reserve(lp.num_col_ + lp.num_row_);
         solval.reserve(lp.num_col_ + lp.num_row_);
         upper.reserve(lp.num_col_ + lp.num_row_);
@@ -443,6 +454,7 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
               inds.push_back(index);
               solval.push_back(tmpSolval[j]);
               upper.push_back(tmpUpper[j]);
+              boundTypes.push_back(transLp.boundType(index));
               isIntegral.push_back(lpRelaxation.isColIntegral(index));
               if (isIntegral.back())
                 delta = std::max(std::abs(aggregatedPath[k].second[j]), delta);
@@ -451,13 +463,24 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
               assert(inds[*pos - 1] == index);
               assert(solval[*pos - 1] == tmpSolval[j]);
               assert(upper[*pos - 1] == tmpUpper[j]);
+              // Base rows that disagree on the substitution for a shared column
+              // cannot be combined into a single cut
+              if (boundTypes[*pos - 1] != transLp.boundType(index))
+                inconsistentBoundTypes = true;
               if (isIntegral[*pos - 1])
                 delta = std::max(std::abs(aggregatedPath[k].second[j]), delta);
             }
           }
         }
 
-        if (pathLen > 1) {
+        if (pathLen > 1 && !inconsistentBoundTypes) {
+          // Restore the bound substitutions that the cut coefficients below are
+          // computed with, undoing any change made by a transform() call for a
+          // base row that is not part of the path
+          HighsInt numRecorded = inds.size();
+          for (HighsInt j = 0; j < numRecorded; ++j)
+            transLp.setBoundType(inds[j], boundTypes[j]);
+
           delta = std::exp2(std::ceil(std::log2(delta + 1.0)));
 
           HighsInt numInds = inds.size();
