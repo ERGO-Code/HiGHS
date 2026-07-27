@@ -122,6 +122,16 @@ function(highs_configure_blas)
                 list(APPEND OPENBLAS_MINIMAL_FLAGS -DCMAKE_GENERATOR_PLATFORM=Win32)
             endif()
 
+            if(UNIX AND NOT APPLE)
+                # OpenBLAS' build-time cpuid probe reports the host's real (64-bit-capable)
+                # microarchitecture (e.g. ZEN), which has no 32-bit-compatible kernel and
+                # leaves PREFETCH-related macros undefined, breaking assembly of the 32-bit
+                # kernels (e.g. gemm_kernel_2x4_sse3.S). Pin a generic 32-bit-safe default
+                # target; DYNAMIC_ARCH still dispatches to better kernels at runtime.
+                message(STATUS "Pinning OpenBLAS TARGET=PRESCOTT for 32-bit Linux build to avoid cpuid misdetection.")
+                list(APPEND OPENBLAS_MINIMAL_FLAGS -DTARGET=PRESCOTT)
+            endif()
+
             list(APPEND OPENBLAS_MINIMAL_FLAGS -DINTERFACE64=0)
         endif()
 
