@@ -1735,7 +1735,8 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postsolve_stack) {
       }
     };
 
-    domain.getDfProbingPropagation().recomputeLocks();
+    if (options->presolve_dfprobing || options->presolve_gdf)
+      domain.getDfProbingPropagation().recomputeLocks();
 
     for (const auto& binvar : binaries) {
       // Count the binaries considered
@@ -1843,6 +1844,8 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postsolve_stack) {
       }
     }
 
+    if (options->presolve_gdf)
+      domain.getDfProbingPropagation().finalRoundGDF();
     // finalise probing
     HighsInt numVarsFixed = 0;
     HighsInt numBndsTightened = 0;

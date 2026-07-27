@@ -649,7 +649,15 @@ HighsDomain::DualfixingProbingPropagation::DualfixingProbingPropagation(const Du
     colUpperLockReduced_(other.colUpperLockReduced_),
     candidatesVec_(other.candidatesVec_),
     candidatesFlag_(other.candidatesFlag_),
-    lockNeedClear_(other.lockNeedClear_) {;}
+    lockNeedClear_(other.lockNeedClear_),
+    gdfCandidatesVec_(other.gdfCandidatesVec_),
+    gdfCandidatesFlag_(other.gdfCandidatesFlag_),
+    gdfLbReachable0_(other.gdfLbReachable0_),
+    gdfLbReachable1_(other.gdfLbReachable1_),
+    gdfUbReachable0_(other.gdfUbReachable0_),
+    gdfUbReachable1_(other.gdfUbReachable1_),
+    gdfLbReachable_(other.gdfLbReachable_),
+    gdfUbReachable_(other.gdfUbReachable_) {;}
 
 void HighsDomain::DualfixingProbingPropagation::recomputeLocks() {
   mipsolver = domain->mipsolver;
@@ -672,6 +680,16 @@ void HighsDomain::DualfixingProbingPropagation::recomputeLocks() {
   candidatesVec_.reserve(mipsolver->numCol());
   candidatesFlag_.assign(mipsolver->numCol(), false);
   lockNeedClear_.reserve(mipsolver->numCol());
+
+  gdfCandidatesVec_.reserve(mipsolver->numCol());
+  gdfCandidatesFlag_.assign(mipsolver->numCol(), false);
+
+  gdfLbReachable0_.clear();
+  gdfLbReachable1_.clear();
+  gdfUbReachable0_.clear();
+  gdfUbReachable1_.clear();
+  gdfLbReachable_.clear();
+  gdfUbReachable_.clear();
 
   const auto model = mipsolver->model_;
   for (HighsInt iCol = 0; iCol < model->a_matrix_.num_col_; iCol ++) {
@@ -740,11 +758,10 @@ void HighsDomain::DualfixingProbingPropagation::propagate() {
 // #endif
 
   assert(candidatesVec_.empty());
-  vector<HighsDomainChange*> domainchangeProbing;
+  vector<HighsDomainChange*> domainchangeDFProbing;
 
   // tool lambda functions
   auto addToCandidate = [&](HighsInt k) {
-    // std::cout << "k = " << k << std::endl;
     if (candidatesFlag_[k])
       return;
     else {
@@ -799,8 +816,7 @@ void HighsDomain::DualfixingProbingPropagation::propagate() {
     thisbchg->column = iCol;
     thisbchg->boundtype = HighsBoundType::kUpper;
     thisbchg->boundval = domain->col_lower_[iCol];
-    domainchangeProbing.push_back(thisbchg);
-    // std::cout << "fixing to lower " << iCol << std::endl;
+    domainchangeDFProbing.push_back(thisbchg);
   };
 
   auto addFixUpper = [&](int iCol) {
@@ -808,8 +824,7 @@ void HighsDomain::DualfixingProbingPropagation::propagate() {
     thisbchg->column = iCol;
     thisbchg->boundtype = HighsBoundType::kLower;
     thisbchg->boundval = domain->col_upper_[iCol];
-    domainchangeProbing.push_back(thisbchg);
-    // std::cout << "fixing to upper " << iCol << std::endl;
+    domainchangeDFProbing.push_back(thisbchg);
   };
 
   auto collectFixLower = [&](int iCol) {
@@ -993,23 +1008,217 @@ void HighsDomain::DualfixingProbingPropagation::propagate() {
 
   // change bound
   size_t j = 0;
-  for (; j != domainchangeProbing.size() && !domain->infeasible_; ++ j) {
-    domain->changeBound(*domainchangeProbing[j], Reason::unspecified());
-    delete domainchangeProbing[j];
+  for (; j != domainchangeDFProbing.size() && !domain->infeasible_; ++ j) {
+    domain->changeBound(*domainchangeDFProbing[j], Reason::unspecified());
+    delete domainchangeDFProbing[j];
   }
 
   // std::cout << "#Bchg = " << j << std::endl;
 
-  for (j ++; j < domainchangeProbing.size(); ++ j) {
+  for (j ++; j < domainchangeDFProbing.size(); ++ j) {
     assert(domain->infeasible_);
-    delete domainchangeProbing[j];
+    delete domainchangeDFProbing[j];
   }
 
   // record the current number of redundant constraints.
   previousSize_ = redundantPropagateVec_.size();
 }
 
+void HighsDomain::DualfixingProbingPropagation::updateGDFInfo(HighsInt probing_variable, bool val) {
+  // tool lambda functions
+  auto addToCandidate = [&](HighsInt k) {
+    if (gdfCandidatesFlag_[k])
+      return;
+    else {
+      gdfCandidatesVec_.push_back(k);
+      gdfCandidatesFlag_[k] = true;
+    }
+  };
+  
+  for (const auto x : redundantPropagateFlag_) {
+    const HighsInt iRow = x / 2;
+    const bool isRhs = x % 2;
+    HighsInt rstart = mipsolver->mipdata_->ARstart_[iRow];
+    HighsInt rend = mipsolver->mipdata_->ARstart_[iRow + 1];
+    
+    for (auto k = rstart; k < rend; k++) {
+      const HighsInt iCol = mipsolver->mipdata_->ARindex_[k];
+      const double iValue = mipsolver->mipdata_->ARvalue_[k];
+      const double cost = mipsolver->model_->col_cost_[iCol];
+      bool considered = false;
+      if (domain->isFixed(iCol) || mipsolver->mipdata_->implications.colsubstituted[iCol])
+        continue;
+      
+      if (iValue > 0) {
+        if (isRhs) { // consider upper bound reachable
+          const double globalUb = mipsolver->model_->col_upper_[iCol];
+          const double probingUb = domain->col_upper_[iCol];
+          if (!ableToFixToUb(iCol) || domain->getMaxActivity(iRow) == kHighsInf)
+            continue;
+          const bool upper_bound_reachable = 
+            domain->getMaxActivity(iRow) + iValue * (globalUb - probingUb) <= mipsolver->model_->row_upper_[iRow] + domain->feastol();
+          if (upper_bound_reachable) {
+            considered = true;
+            if (iCol == probing_variable && val == 0)
+              gdfUbReachable_[iCol].insert(iRow);
+            else {
+              if (val == 0)
+                gdfUbReachable0_[iCol].insert(iRow);
+              if (val == 1)
+                gdfUbReachable1_[iCol].insert(iRow);
+            }
+          }
+        }
+        else { // consider lower bound reachable
+          const double globalLb = mipsolver->model_->col_lower_[iCol];
+          const double probingLb = domain->col_lower_[iCol];
+          if (!ableToFixToLb(iCol) || domain->getMinActivity(iRow) == -kHighsInf)
+            continue;
+          const bool lower_bound_reachable = 
+            domain->getMinActivity(iRow) + iValue * (globalLb - probingLb) >= mipsolver->model_->row_lower_[iRow] - domain->feastol();
+          if (lower_bound_reachable) {
+            considered = true;
+            if (iCol == probing_variable && val == 1)
+              gdfLbReachable_[iCol].insert(iRow);
+            else {
+              if (val == 0)
+                gdfLbReachable0_[iCol].insert(iRow);
+              if (val == 1)
+                gdfLbReachable1_[iCol].insert(iRow);
+            }
+          }
+        }
+      }
 
+      else {
+        if (isRhs) { // consider lower bound reachable
+          const double globalLb = mipsolver->model_->col_lower_[iCol];
+          const double probingLb = domain->col_lower_[iCol];
+          if (!ableToFixToLb(iCol) || domain->getMaxActivity(iRow) == kHighsInf)
+            continue;
+          const bool lower_bound_reachable = 
+            domain->getMaxActivity(iRow) + iValue * (globalLb - probingLb) <= mipsolver->model_->row_upper_[iRow] + domain->feastol();
+          if (lower_bound_reachable) {
+            considered = true;
+            if (iCol == probing_variable && val == 1)
+              gdfLbReachable_[iCol].insert(iRow);
+            else {
+              if (val == 0)
+                gdfLbReachable0_[iCol].insert(iRow);
+              if (val == 1)
+                gdfLbReachable1_[iCol].insert(iRow);
+            }
+          }
+        }
+        else { // consider upper bound reachable
+          const double globalUb = mipsolver->model_->col_upper_[iCol];
+          const double probingUb = domain->col_upper_[iCol];
+          if (!ableToFixToUb(iCol) || domain->getMinActivity(iRow) == -kHighsInf)
+            continue;
+          const bool upper_bound_reachable = 
+            domain->getMinActivity(iRow) + iValue * (globalUb - probingUb) >= mipsolver->model_->row_lower_[iRow] - domain->feastol();
+          if (upper_bound_reachable) {
+            considered = true;
+            if (iCol == probing_variable && val == 0)
+              gdfUbReachable_[iCol].insert(iRow);
+            else {
+              if (val == 0)
+                gdfUbReachable0_[iCol].insert(iRow);
+              if (val == 1)
+                gdfUbReachable1_[iCol].insert(iRow);
+            }
+          }
+        }
+      }
+
+      if (considered)
+        addToCandidate(iCol);
+    }
+  }
+}
+
+HighsInt HighsDomain::DualfixingProbingPropagation::processGDFFixing() {
+  // extract reachable information
+  auto getIntersection = [&](const std::unordered_set<HighsInt>& vec0,
+    const std::unordered_set<HighsInt>& vec1,
+    std::unordered_set<HighsInt>& vReachable) {
+    if (vec0.empty() || vec1.empty())
+      return;
+
+    // always loop in the smaller vector, and search in the larger vector
+    if (vec0.size() < vec1.size()) {
+      for (auto it1 = vec0.begin(); it1 != vec0.end(); it1 ++) {
+        auto it2 = vec1.find(*it1);
+        if (it2 != vec1.end())
+          vReachable.insert(*it1);
+      }
+    }
+    else {
+      for (auto it1 = vec1.begin(); it1 != vec1.end(); it1 ++) {
+        auto it2 = vec0.find(*it1);
+        if (it2 != vec0.end())
+          vReachable.insert(*it1);
+      }
+    }
+  };
+  
+  std::vector<HighsDomainChange*> gdfFixingStack_;
+
+  for (const auto iCol : gdfCandidatesVec_) {
+    // lower bound reachable
+    getIntersection(gdfLbReachable0_[iCol], gdfLbReachable1_[iCol], gdfLbReachable_[iCol]);
+    // upper bound reachable
+    getIntersection(gdfUbReachable0_[iCol], gdfUbReachable1_[iCol], gdfUbReachable_[iCol]);
+    // extract fixings
+    if ((HighsInt)gdfLbReachable_[iCol].size() == colLowerLockOriginal_[iCol]) {
+      HighsDomainChange* thisbchg = new HighsDomainChange;
+      thisbchg->column = iCol;
+      thisbchg->boundtype = HighsBoundType::kUpper;
+      thisbchg->boundval = mipsolver->model_->col_lower_[iCol];
+      gdfFixingStack_.push_back(thisbchg);
+    }
+    // a variable cannot be fixed to lb and ub simultaneously
+    else if ((HighsInt)gdfUbReachable_[iCol].size() == colUpperLockOriginal_[iCol]) {
+      HighsDomainChange* thisbchg = new HighsDomainChange;
+      thisbchg->column = iCol;
+      thisbchg->boundtype = HighsBoundType::kLower;
+      thisbchg->boundval = mipsolver->model_->col_upper_[iCol];
+      gdfFixingStack_.push_back(thisbchg);
+    }
+  }
+  
+  // apply bound change
+  size_t j = 0;
+  for (; j != gdfFixingStack_.size() && !domain->infeasible_; ++ j) {
+    domain->changeBound(*gdfFixingStack_[j], Reason::unspecified());
+    delete gdfFixingStack_[j];
+  }
+
+  for (j ++; j < gdfFixingStack_.size(); ++ j) {
+    assert(domain->infeasible_);
+    delete gdfFixingStack_[j];
+  }
+
+  gdfFixingStack_.clear();
+  std::cout << "GDF find " << j << " fixings.\n";
+
+  return (HighsInt)j;
+}
+
+void HighsDomain::DualfixingProbingPropagation::clearGDFInfo() {
+  for (const auto x : gdfCandidatesVec_)
+    gdfCandidatesFlag_[x] = false;
+  gdfCandidatesVec_.clear();
+  
+  gdfLbReachable0_.clear();
+  gdfUbReachable0_.clear();
+  gdfLbReachable1_.clear();
+  gdfUbReachable1_.clear();
+}
+
+HighsInt HighsDomain::DualfixingProbingPropagation::finalRoundGDF() {
+  ;
+}
 
 namespace highs {
 template <>
@@ -2937,7 +3146,7 @@ bool HighsDomain::propagate() {
       }
     }
   
-    if (!infeasible_ && dfprobingPropagation.isActive()) {
+    if (!infeasible_ && dfprobingPropagation.isActive() && mipsolver->options_mip_->presolve_dfprobing) {
       // std::cout << "Activated by nRedundantIndices = " << dfprobingPropagation.redundantPropagateVec_.size() << std::endl;
       dfprobingPropagation.propagate();
       if (!havePropagationRows() && !dfprobingPropagation.isZeroObjFixingEnabled()) {

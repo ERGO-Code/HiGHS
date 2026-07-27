@@ -264,6 +264,15 @@ class HighsDomain {
     std::vector<char> candidatesFlag_;
     std::unordered_set<HighsInt> lockNeedClear_;
 
+    std::vector<HighsInt> gdfCandidatesVec_;
+    std::vector<char> gdfCandidatesFlag_;
+    std::unordered_map<HighsInt, std::unordered_set<HighsInt>> gdfLbReachable0_;
+    std::unordered_map<HighsInt, std::unordered_set<HighsInt>> gdfLbReachable1_;
+    std::unordered_map<HighsInt, std::unordered_set<HighsInt>> gdfUbReachable0_;
+    std::unordered_map<HighsInt, std::unordered_set<HighsInt>> gdfUbReachable1_;
+    std::unordered_map<HighsInt, std::unordered_set<HighsInt>> gdfLbReachable_;
+    std::unordered_map<HighsInt, std::unordered_set<HighsInt>> gdfUbReachable_;
+
     void enablePropagator() {
       enabled_ = true;
     }
@@ -314,7 +323,7 @@ class HighsDomain {
     void clearRedundantInfo() {
       previousSize_ = 0;
       if (!redundantPropagateVec_.empty()) { // clear buffers
-        for (auto x : redundantPropagateVec_)
+        for (const auto x : redundantPropagateVec_)
           redundantPropagateFlag_[x] = false;
 
         redundantPropagateVec_.clear();
@@ -341,12 +350,12 @@ class HighsDomain {
     void recomputeLocks();
     void updateRhsRedundant(HighsInt row);
     void updateLhsRedundant(HighsInt row);
-
     void propagate();
 
-   
-
-    
+    void updateGDFInfo(HighsInt probing_variable, bool val);
+    HighsInt processGDFFixing();
+    HighsInt finalRoundGDF();
+    void clearGDFInfo();
   };
 
  private:

@@ -27,9 +27,12 @@ bool HighsImplications::computeImplications(HighsInt col, bool val) {
   const auto& domchgreason = globaldomain.getDomainChangeReason();
   size_t changedend = globaldomain.getChangedCols().size();
 
-  globaldomain.getDfProbingPropagation().clearRedundantInfo();
-  if (globaldomain.inProbing_)
+  const bool useDFProbing = globaldomain.inProbing_ && mipsolver.options_mip_->presolve_dfprobing;
+  const bool useGDF = globaldomain.inProbing_ && mipsolver.options_mip_->presolve_gdf;
+  if (useDFProbing || useGDF) {
+    globaldomain.getDfProbingPropagation().clearRedundantInfo();
     globaldomain.getDfProbingPropagation().enablePropagator();
+  }
 
   HighsInt stackimplicstart = domchgstack.size() + 1;
   HighsInt numImplications = -stackimplicstart;
@@ -68,7 +71,7 @@ bool HighsImplications::computeImplications(HighsInt col, bool val) {
   if (isInfeasible(col, val)) return true;
 
   globaldomain.propagate();
-  if (globaldomain.inProbing_)
+  if (useDFProbing || useGDF)
     globaldomain.getDfProbingPropagation().disablePropagator();
 
   if (isInfeasible(col, val)) return true;
@@ -88,10 +91,10 @@ bool HighsImplications::computeImplications(HighsInt col, bool val) {
   HighsInt numEntries = mipsolver.mipdata_->cliquetable.getNumEntries();
   HighsInt maxEntries = 100000 + mipsolver.numNonzero();
 
-  const HighsInt tentativeStart = globaldomain.inProbing_ ? globaldomain.getDfProbingPropagation().getZeroCostFixingPosition() : kHighsIInf32;
-  if (globaldomain.inProbing_) {
+  const HighsInt tentativeStart = useDFProbing ? globaldomain.getDfProbingPropagation().getZeroCostFixingPosition() : kHighsIInf32;
+  if (useDFProbing)
     implics_tentative.assign(domchgstack.begin() + stackimplicstart, domchgstack.begin() + stackimplicend);
-  }
+
   for (HighsInt i = stackimplicstart; i < stackimplicend; ++i) {
     if (domchgreason[i].type == HighsDomain::Reason::kCliqueTable &&
         ((domchgreason[i].index >> 1) == col || numEntries >= maxEntries))
@@ -105,6 +108,10 @@ bool HighsImplications::computeImplications(HighsInt col, bool val) {
 
   // inform caller about lifting opportunities
   storeLiftingOpportunities(col, val);
+
+  // update information to derive generalized dual fixings
+  if (useGDF)
+    globaldomain.getDfProbingPropagation().updateGDFInfo(col, val);
 
   // backtrack
   doBacktrack(changedend);
@@ -336,9 +343,16 @@ bool HighsImplications::runProbing(HighsInt col, HighsInt& numReductions) {
       !implicationsCached(col, 0) &&
       mipsolver.mipdata_->cliquetable.getSubstitution(col) == nullptr) {
     
-    // setup for dfprobingPropagation 
-    clearTentativeClique();
-    globaldomain.getDfProbingPropagation().setZeroCostFixingPosition(kHighsIInf32);
+    const bool useDFProbing = globaldomain.inProbing_ && mipsolver.options_mip_->presolve_dfprobing;
+    const bool useGDF = globaldomain.inProbing_ && mipsolver.options_mip_->presolve_gdf;
+    // setup for dfprobingPropagation
+    if (useDFProbing) {
+      clearTentativeClique();
+      globaldomain.getDfProbingPropagation().setZeroCostFixingPosition(kHighsIInf32);
+    }
+    if (useGDF)
+      globaldomain.getDfProbingPropagation().clearGDFInfo();
+
 
     bool infeasible = computeImplications(col, 1);
     if (globaldomain.infeasible()) return true;
@@ -352,7 +366,7 @@ bool HighsImplications::runProbing(HighsInt col, HighsInt& numReductions) {
     if (mipsolver.mipdata_->cliquetable.getSubstitution(col) != nullptr)
       return true;
 
-    if (globaldomain.inProbing_ && !binaryInvolvedInds_.empty()) {
+    if (useDFProbing && !binaryInvolvedInds_.empty()) {
       HighsCliqueTable& cliquetable = mipsolver.mipdata_->cliquetable;
       HighsCliqueTable::CliqueVar clique[2];
       bool haveReduction;
@@ -502,6 +516,13 @@ bool HighsImplications::runProbing(HighsInt col, HighsInt& numReductions) {
       implications[2 * col].implics_tentative.clear();
     if (haveTentativeImplics_one)
       implications[2 * col + 1].implics_tentative.clear();
+
+    if (useGDF) {
+      // fix variables using generalized dual fixing
+      HighsInt nfix = globaldomain.getDfProbingPropagation().processGDFFixing();
+      if (nfix > 0)
+        globaldomain.propagate();
+    }
 
     return true;
   }
