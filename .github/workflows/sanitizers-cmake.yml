@@ -152,3 +152,41 @@ jobs:
         working-directory: ${{github.workspace}}/build
         run: |
           ./bin/unit_tests [highs_hipo]
+
+  hipo_macos:
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest]
+        config: [Debug]
+        sanitizer: [Address, Thread]
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Create Build Environment
+        run: cmake -E make_directory ${{github.workspace}}/build
+
+      - name: Configure CMake
+        working-directory: ${{github.workspace}}/build
+        run: |
+          cmake $GITHUB_WORKSPACE -DHIPO=ON \
+            -DCMAKE_BUILD_TYPE=${{ matrix.config }} \
+            -DDEBUG_MEMORY=${{ matrix.sanitizer }} \
+            -DALL_TESTS=ON
+
+      - name: Build
+        working-directory: ${{github.workspace}}/build
+        run: |
+          cmake --build . -j3
+
+      - name: Test executable
+        working-directory: ${{github.workspace}}/build
+        run: ./bin/highs --solver=hipo $GITHUB_WORKSPACE/check/instances/afiro.mps
+
+      - name: Test hipo
+        working-directory: ${{github.workspace}}/build
+        run: |
+          ./bin/unit_tests [highs_hipo]
