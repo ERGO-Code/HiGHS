@@ -4,8 +4,6 @@
 #include <cmath>
 #include <tuple>
 
-#include <sys/time.h>
-
 #include "ipm/ipx/basiclu_kernel.h"
 #include "ipm/ipx/basiclu_wrapper.h"
 #include "ipm/ipx/forrest_tomlin.h"
