@@ -405,7 +405,9 @@ void LpSolver::RunIPM() {
         if (info_.status_ipm != IPX_STATUS_not_run)
             return;
     }
+    printf("LpSolver::RunIPM before BuildStartingBasis(); timer.Elapsed() = %s\n", time(this->control_.Elapsed()).c_str());
     BuildStartingBasis();
+    printf("LpSolver::RunIPM after  BuildStartingBasis(); timer.Elapsed() = %s\n", time(this->control_.Elapsed()).c_str());
     if (info_.status_ipm != IPX_STATUS_not_run || 
         info_.centring_tried)
         return;

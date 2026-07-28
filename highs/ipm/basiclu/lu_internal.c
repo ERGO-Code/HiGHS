@@ -7,8 +7,6 @@
  *
  */
 
-#include <time.h>
-
 #include "ipm/basiclu/lu_internal.h"
 
 /* private entries in xstore */
