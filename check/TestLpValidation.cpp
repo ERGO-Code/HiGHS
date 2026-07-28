@@ -30,7 +30,8 @@ TEST_CASE("LP-dimension-validation", "[highs_data]") {
   lp.a_matrix_.value_.resize(2);
   lp.row_lower_.resize(1);
   lp.row_upper_.resize(1);
-
+  lp.col_names_ = {"C0"};
+  lp.row_names_ = {"R0"};
   // Set up invalid scale data once scaling can be imported
   //  lp.scale_.strategy = -1;
   //  lp.scale_.num_col = 1;
@@ -676,6 +677,8 @@ TEST_CASE("LP-infeasible-bounds", "[highs_data]") {
   lp.a_matrix_.value_ = {1, 2, 1, 4};
   lp.row_lower_ = {6, -inf};
   lp.row_upper_ = {6 - epsilon, 11 - epsilon};
+  lp.col_names_ = {"C0", "C1"};
+  lp.row_names_ = {"R0", "R1"};
   highs.passModel(lp);
   highs.run();
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
