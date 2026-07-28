@@ -25,10 +25,6 @@ class HybridSolveHandler : public SolveHandler {
   void processBackwardSn(Int sn, double* x, std::vector<double>& work) const;
   void processDiagSn(Int sn, double* x) const;
 
-  bool parallel_diag_ = false;
-  bool parallel_forward_ = false;
-  bool parallel_backward_ = false;
-
  public:
   void forwardSolve(double* x) const override;
   void backwardSolve(double* x) const override;

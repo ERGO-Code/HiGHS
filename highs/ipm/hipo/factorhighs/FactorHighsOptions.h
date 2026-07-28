@@ -14,6 +14,9 @@ struct FHoptions {
   bool one_indexing = false;
   bool parallel_tree = false;
   bool parallel_node = false;
+  bool parallel_forward = false;
+  bool parallel_backward = false;
+  bool parallel_diag = false;
 };
 
 }  // namespace hipo

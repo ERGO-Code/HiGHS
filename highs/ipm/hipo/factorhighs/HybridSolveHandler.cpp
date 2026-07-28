@@ -21,22 +21,10 @@ HybridSolveHandler::HybridSolveHandler(
       pivot_2x2_{pivot_2x2} {
   childrenLinkedList(S_.schedule().task_parent, first_child_, next_child_);
 
-  // heuristic to choose when to use parallel solve
-  parallel_forward_ = false;
-  parallel_backward_ = false;
-  parallel_diag_ = false;
-  if (S_.size() > kParallelSolveMinSize) {
-    parallel_diag_ = true;
-
-    if (S_.solveTreeSpeedup() > kParallelForwardMinSpeedup)
-      parallel_forward_ = true;
-
-    if (S_.solveTreeSpeedup() > kParallelBackwardMinSpeedup)
-      parallel_backward_ = true;
-  }
-
-  bool need_parallel_work = parallel_backward_ || parallel_forward_;
-  bool need_serial_work = !parallel_backward_ || !parallel_forward_;
+  bool need_parallel_work =
+      options_.parallel_backward || options_.parallel_forward;
+  bool need_serial_work =
+      !options_.parallel_backward || !options_.parallel_forward;
 
   // allocate workspace for gemv
   if (need_parallel_work) {
@@ -253,7 +241,7 @@ void HybridSolveHandler::processForwardTask(Int task, double* x) const {
 }
 
 void HybridSolveHandler::forwardSolve(double* x) const {
-  if (parallel_forward_) {
+  if (options_.parallel_forward) {
     // Hard to parallelise: a sn depends on its children in the tree; multiple
     // children may be writing to the same location in x at the same time.
     // Special care is needed for the writes, involving private buffers.
@@ -422,7 +410,7 @@ void HybridSolveHandler::processBackwardTask(Int task, double* x) const {
 }
 
 void HybridSolveHandler::backwardSolve(double* x) const {
-  if (parallel_backward_) {
+  if (options_.parallel_backward) {
     // Easy to parallelise: a sn depends on its ancestors in the tree; the
     // ancestor is the only sn running in a given branch when it writes the
     // update, so no special care needs to be taken for the writes. Respecting
@@ -530,7 +518,7 @@ void HybridSolveHandler::processDiagSn(Int sn, double* x) const {
 }
 
 void HybridSolveHandler::diagSolve(double* x) const {
-  if (parallel_diag_) {
+  if (options_.parallel_diag) {
     // Embarassingly parallel: each sn reads/writes independent entries in x.
     highs::parallel::for_each(
         0, S_.sn(),

@@ -638,8 +638,32 @@ void FactorHighsSolver::setParallel() {
   } else
     assert(1 == 0);
 
-  logger_.print(log_stream.str().c_str());
   FH_.setParallel(parallel_tree, parallel_node);
+
+  // choose parallelism for solve phase
+  bool parallel_forward = false;
+  bool parallel_backward = false;
+  bool parallel_diag = false;
+  if (kkt_.S.size() > kParallelSolveMinSize) {
+    parallel_diag = true;
+
+    if (kkt_.S.solveTreeSpeedup() > kParallelForwardMinSpeedup)
+      parallel_forward = true;
+
+    if (kkt_.S.solveTreeSpeedup() > kParallelBackwardMinSpeedup)
+      parallel_backward = true;
+  }
+  FH_.setParallelSolve(parallel_forward, parallel_backward, parallel_diag);
+
+  if (logger_.debug(1)) {
+    log_stream << textline("Parallel solve:");
+    log_stream << (parallel_forward ? "F" : " ");
+    log_stream << (parallel_backward ? "B" : " ");
+    log_stream << (parallel_diag ? "D" : " ");
+    log_stream << "\n";
+  }
+
+  logger_.print(log_stream.str().c_str());
 }
 
 // =========================================================================
