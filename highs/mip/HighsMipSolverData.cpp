@@ -11,6 +11,7 @@
 #include <sstream>
 
 #include "../extern/pdqsort/pdqsort.h"
+#include "lp_data/HighsLpUtils.h"
 #include "lp_data/HighsModelUtils.h"
 #include "mip/HighsPseudocost.h"
 #include "mip/HighsRedcostFixing.h"
@@ -1239,11 +1240,31 @@ try_again:
     // HiPO or IPX to solve an LP without a basis, use simplex
     tmpSolver.setOptionValue("solver", kSimplexString);
     tmpSolver.optimizeLp();
+    // The repair LP is solved in the original space, which for a badly scaled
+    // model can defeat the dual simplex ratio test ("excessive dual values")
+    // or its primal counterpart. That is a failure of the solver, not a
+    // statement about the solution, so retry once without presolve rather than
+    // discarding a solution that may be the incumbent - or the optimum. Only
+    // worth doing if presolve was used for the first attempt: otherwise the
+    // retry would solve an identical LP and fail in the same way.
+    if (use_presolve &&
+        tmpSolver.getModelStatus() == HighsModelStatus::kSolveError) {
+      tmpSolver.setOptionValue("presolve", kHighsOffString);
+      tmpSolver.optimizeLp();
+    }
     this->total_repair_lp_iterations +=
         tmpSolver.getInfo().simplex_iteration_count;
     if (tmpSolver.getInfo().primal_solution_status == kSolutionStatusFeasible) {
       this->total_repair_lp_feasible++;
       solution = tmpSolver.getSolution();
+      // Recompute the row activities from the repaired column values. The
+      // feasibility test below is given solution.row_value and trusts it, but
+      // the values returned by the LP solver need only satisfy the LP to its
+      // own tolerance, so they can differ from a quad-precision recomputation -
+      // which is what the check applied to the returned solution uses. Without
+      // this, a repaired solution can pass here and fail that later check.
+      calculateRowValuesQuad(*mipsolver.orig_model_, solution.col_value,
+                             solution.row_value);
       allow_try_again = false;
       goto try_again;
     }
