@@ -3,7 +3,6 @@
 #include "DataCollector.h"
 #include "FactorHighsSettings.h"
 #include "HybridSolveHandler.h"
-#include "ParallelHybridSolveHandler.h"
 #include "ReturnValues.h"
 #include "Timing.h"
 #include "ipm/hipo/auxiliary/Auxiliary.h"
@@ -20,19 +19,8 @@ static TempTimer diagTimer("diag");
 Int Numeric::prepare() {
   if (!sn_columns_ || !S_ || !data_ || !options_) return kRetInvalidPointer;
 
-  if (options_->parallel_solve) {
-    SH_.reset(new ParallelHybridSolveHandler(
-        *S_, *sn_columns_, swaps_, any_swaps_, pivot_2x2_, *data_, *options_));
-  } else {
-    SH_.reset(new HybridSolveHandler(*S_, *sn_columns_, swaps_, any_swaps_,
-                                     pivot_2x2_, gemv_workspace_, *data_,
-                                     *options_));
-
-    // memory allocation should happen only the first time, then memory is
-    // reused. No need to zero memory each time, as it is overwritten by
-    // solveHandler.
-    gemv_workspace_.resize(S_->largestFront());
-  }
+  SH_.reset(new HybridSolveHandler(*S_, *sn_columns_, swaps_, any_swaps_,
+                                   pivot_2x2_, *data_, *options_));
 
   if (!SH_) return kRetGeneric;
 

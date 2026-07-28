@@ -302,7 +302,6 @@ set(factor_highs_sources
     ipm/hipo/factorhighs/HybridSolveHandler.cpp
     ipm/hipo/factorhighs/KrylovMethodsIpm.cpp
     ipm/hipo/factorhighs/Numeric.cpp
-    ipm/hipo/factorhighs/ParallelHybridSolveHandler.cpp
     ipm/hipo/factorhighs/SolveHandler.cpp
     ipm/hipo/factorhighs/Swaps.cpp
     ipm/hipo/factorhighs/Symbolic.cpp)
@@ -324,7 +323,6 @@ set(factor_highs_headers
     ipm/hipo/factorhighs/HybridSolveHandler.h
     ipm/hipo/factorhighs/KrylovMethodsIpm.h
     ipm/hipo/factorhighs/Numeric.h
-    ipm/hipo/factorhighs/ParallelHybridSolveHandler.h
     ipm/hipo/factorhighs/ReturnValues.h
     ipm/hipo/factorhighs/SolveHandler.h
     ipm/hipo/factorhighs/Swaps.h
