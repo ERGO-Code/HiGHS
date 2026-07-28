@@ -165,12 +165,32 @@ HighsStatus assessMatrix(
   // duplicates so they can be summed
   std::unordered_map<HighsInt, HighsInt> index_el_map;
 
+  // Lambda to handle matrix entry magnitude
+  auto okMatrixValueMagnitude = [&](const HighsInt el) {
+    HighsInt component = matrix_index[el];
+    // Check the value
+    double abs_value = fabs(matrix_value[el]);
+    // Check that the value is not too large
+    bool large_value = abs_value >= large_matrix_value;
+    if (large_value) {
+      if (max_large_value < abs_value) max_large_value = abs_value;
+      if (min_large_value > abs_value) min_large_value = abs_value;
+      num_large_value++;
+    }
+    bool ok_value = abs_value > small_matrix_value;
+    if (!ok_value) {
+      if (max_small_value < abs_value) max_small_value = abs_value;
+      if (min_small_value > abs_value) min_small_value = abs_value;
+      num_small_value++;
+    }
+    return ok_value;
+  };
+
   for (HighsInt ix = 0; ix < num_vec; ix++) {
     HighsInt from_el = matrix_start[ix];
     HighsInt to_el = matrix_start[ix + 1];
     // Account for any index-value pairs removed so far
     matrix_start[ix] = num_new_nz;
-    HighsInt vec_original_num_nz = to_el - from_el;
     for (HighsInt el = from_el; el < to_el; el++) {
       // Check the index
       HighsInt component = matrix_index[el];
@@ -226,6 +246,9 @@ HighsStatus assessMatrix(
         return HighsStatus::kError;
       }
       // Not a duplicate
+      //
+      // If not summing duplicates, can check matrix value magnitude
+      if (!sum_duplicates && !okMatrixValueMagnitude(el)) continue;
       // Shift the index and value of the OK entry to the new
       // position in the index and value vectors, and increment
       // the new number of nonzeros
@@ -240,28 +263,15 @@ HighsStatus assessMatrix(
       }
       num_new_nz++;
     }
-    from_el = matrix_start[ix];
-    to_el = num_new_nz;
-    // Reset num_new_nz
-    num_new_nz = matrix_start[ix];
-    for (HighsInt el = from_el; el < to_el; el++) {
-      HighsInt component = matrix_index[el];
-      // Check the value
-      double abs_value = fabs(matrix_value[el]);
-      // Check that the value is not too large
-      bool large_value = abs_value >= large_matrix_value;
-      if (large_value) {
-        if (max_large_value < abs_value) max_large_value = abs_value;
-        if (min_large_value > abs_value) min_large_value = abs_value;
-        num_large_value++;
-      }
-      bool ok_value = abs_value > small_matrix_value;
-      if (!ok_value) {
-        if (max_small_value < abs_value) max_small_value = abs_value;
-        if (min_small_value > abs_value) min_small_value = abs_value;
-        num_small_value++;
-      }
-      if (ok_value) {
+    if (sum_duplicates) {
+      // Now that any duplicates have been summed, can check matrix
+      // value magnitude
+      from_el = matrix_start[ix];
+      to_el = num_new_nz;
+      // Reset num_new_nz
+      num_new_nz = matrix_start[ix];
+      for (HighsInt el = from_el; el < to_el; el++) {
+        if (!okMatrixValueMagnitude(el)) continue;
         // Shift the index and value of the OK entry to the new
         // position in the index and value vectors, and increment
         // the new number of nonzeros
@@ -269,7 +279,8 @@ HighsStatus assessMatrix(
         matrix_value[num_new_nz] = matrix_value[el];
         num_new_nz++;
       }
-    }  // Loop from_el; to_el
+    }
+
     if (use_highs_hash) {
       highs_hash.clear();
     } else {
