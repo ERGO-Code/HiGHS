@@ -793,14 +793,14 @@ HighsStatus userScaleLp(HighsLp& lp, HighsUserScaleData& data,
 }
 
 void userScaleLp(HighsLp& lp, HighsUserScaleData& data, const bool apply) {
-  userScaleCosts(lp.integrality_, lp.col_cost_, data, apply);
+  userScaleCosts(lp.integrality_, lp.offset_, lp.col_cost_, data, apply);
   userScaleColBounds(lp.integrality_, lp.col_lower_, lp.col_upper_, data,
                      apply);
   userScaleMatrix(lp.integrality_, lp.a_matrix_, data, apply);
   userScaleRowBounds(lp.row_lower_, lp.row_upper_, data, apply);
 }
 
-void userScaleCosts(const vector<HighsVarType>& integrality,
+void userScaleCosts(const vector<HighsVarType>& integrality, double& offset,
                     vector<double>& cost, HighsUserScaleData& data,
                     const bool apply) {
   data.num_infinite_costs = 0;
@@ -822,6 +822,7 @@ void userScaleCosts(const vector<HighsVarType>& integrality,
     if (std::abs(value) > data.infinite_cost) data.num_infinite_costs++;
     if (apply) cost[iCol] = value;
   }
+  if (apply) offset *= (bound_scale_value * objective_scale_value);
 }
 
 void userScaleColBounds(const vector<HighsVarType>& integrality,

@@ -68,7 +68,7 @@ HighsStatus userScaleLp(HighsLp& lp, HighsUserScaleData& data,
 void userScaleLp(HighsLp& lp, HighsUserScaleData& data,
                  const bool apply = true);
 
-void userScaleCosts(const vector<HighsVarType>& integrality,
+void userScaleCosts(const vector<HighsVarType>& integrality, double& offset,
                     vector<double>& cost, HighsUserScaleData& data,
                     const bool apply = true);
 
