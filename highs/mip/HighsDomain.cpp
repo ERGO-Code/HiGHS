@@ -1059,6 +1059,7 @@ void HighsDomain::DualfixingProbingPropagation::updateGDFInfo(HighsInt probing_v
             domain->getMaxActivity(iRow) + iValue * (globalUb - probingUb) <= mipsolver->model_->row_upper_[iRow] + domain->feastol();
           if (upper_bound_reachable) {
             considered = true;
+            printf("Probing on x-%d = %d, for non-zero (%d, %d) = %f, rhs = %f, demonstrate ub reachable.\n", probing_variable, val, iRow, iCol, iValue, mipsolver->model_->row_upper_[iRow]);
             if (iCol == probing_variable && val == 0)
               gdfUbReachable_[iCol].insert(iRow);
             else {
@@ -1078,6 +1079,7 @@ void HighsDomain::DualfixingProbingPropagation::updateGDFInfo(HighsInt probing_v
             domain->getMinActivity(iRow) + iValue * (globalLb - probingLb) >= mipsolver->model_->row_lower_[iRow] - domain->feastol();
           if (lower_bound_reachable) {
             considered = true;
+            printf("Probing on x-%d = %d, for non-zero (%d, %d) = %f, lhs = %f, demonstrate lb reachable.\n", probing_variable, val, iRow, iCol, iValue, mipsolver->model_->row_lower_[iRow]);
             if (iCol == probing_variable && val == 1)
               gdfLbReachable_[iCol].insert(iRow);
             else {
@@ -1100,6 +1102,7 @@ void HighsDomain::DualfixingProbingPropagation::updateGDFInfo(HighsInt probing_v
             domain->getMaxActivity(iRow) + iValue * (globalLb - probingLb) <= mipsolver->model_->row_upper_[iRow] + domain->feastol();
           if (lower_bound_reachable) {
             considered = true;
+            printf("Probing on x-%d = %d, for non-zero (%d, %d) = %f, rhs = %f, demonstrate lb reachable.\n", probing_variable, val, iRow, iCol, iValue, mipsolver->model_->row_upper_[iRow]);
             if (iCol == probing_variable && val == 1)
               gdfLbReachable_[iCol].insert(iRow);
             else {
@@ -1119,6 +1122,7 @@ void HighsDomain::DualfixingProbingPropagation::updateGDFInfo(HighsInt probing_v
             domain->getMinActivity(iRow) + iValue * (globalUb - probingUb) >= mipsolver->model_->row_lower_[iRow] - domain->feastol();
           if (upper_bound_reachable) {
             considered = true;
+            printf("Probing on x-%d = %d, for non-zero (%d, %d) = %f, lhs = %f, demonstrate ub reachable.\n", probing_variable, val, iRow, iCol, iValue, mipsolver->model_->row_lower_[iRow]);
             if (iCol == probing_variable && val == 0)
               gdfUbReachable_[iCol].insert(iRow);
             else {
