@@ -1,4 +1,5 @@
 #include <cassert>
+#include <chrono>
 #include <cmath>
 #include <stdexcept>
 
@@ -306,5 +307,11 @@ void BasicLu::Reallocate() {
         xstore_[BASICLU_MEMORYW] = new_size;
     }
 }
+
+double basiclu_wallclock() {
+  using namespace std::chrono;
+  return duration_cast<duration<double> >(high_resolution_clock::now().time_since_epoch()).count();
+}
+  
 
 }  // namespace ipx

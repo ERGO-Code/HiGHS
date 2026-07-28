@@ -953,11 +953,7 @@ void Basis::PivotFixedVariablesOutOfBasis(const double* colweights, Info* info){
         << stability_pivots << '\n';
 }
 
-double luTime() {
-  struct timeval t1;
-  gettimeofday(&t1, NULL);
-  return (double)t1.tv_sec +  (double)t1.tv_usec * 1e-6;
-}
+double luTime() { return basiclu_wallclock(); }
 
 Vector CopyBasic(const Vector& x, const Basis& basis) {
     const Int m = basis.model().rows();

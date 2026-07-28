@@ -159,6 +159,8 @@ typedef int lu_int;
 #include "ipm/basiclu/basiclu_obj_update.h"
 #include "ipm/basiclu/basiclu_obj_free.h"
 
+double basiclu_wallclock();
+
 #ifdef __cplusplus
 }
 #endif

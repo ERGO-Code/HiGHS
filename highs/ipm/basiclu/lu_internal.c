@@ -356,8 +356,6 @@ void lu_reset(struct lu *this)
 }
 
 double luTime() {
-  struct timeval t1;
-  gettimeofday(&t1, NULL);
-  return (double)t1.tv_sec +  (double)t1.tv_usec * 1e-6;
+  return basiclu_wallclock();
 }
 

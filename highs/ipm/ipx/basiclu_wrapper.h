@@ -44,6 +44,8 @@ private:
     double fill_factor_;
 };
 
+extern "C" double basiclu_wallclock();
+
 }  // namespace ipx
 
 #endif  // IPX_BASICLU_WRAPPER_H_
