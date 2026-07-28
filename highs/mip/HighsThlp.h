@@ -146,6 +146,7 @@ struct THLPSolution {
   std::vector<std::pair<int, int> > hub_tree;
   double total_cost = 0.0;
   bool feasible = false;
+  std::vector<double> full_solution; 
 
   THLPSolution() {}
   explicit THLPSolution(int n) : assignment(n, -1) {}

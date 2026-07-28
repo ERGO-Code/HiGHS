@@ -354,17 +354,58 @@ THLPSolution THLPDecoder::decode(const std::vector<double>& rk,
   }
   solution.feasible = (count == p);
 
-  if (solution.feasible) {
+    if (solution.feasible) {
     solution.total_cost = calculateCost(solution);
   } else {
     solution.total_cost = 1e9;
   }
 
-  binary_solution.assign(n, 0.0);
-  for (std::vector<int>::const_iterator it = solution.hubs.begin();
-       it != solution.hubs.end(); ++it) {
-    binary_solution[*it] = 1.0;
+  // Build full LP solution: x_ikm + y_km + z_ik
+  solution.full_solution.clear();
+  
+  // x_ikm: n*n*n
+  for (int i = 0; i < n; i++) {
+    for (int k = 0; k < n; k++) {
+      for (int m = 0; m < n; m++) {
+        double x_val = 0.0;
+        if (solution.assignment[i] == k && m == k) x_val = 1.0;
+        solution.full_solution.push_back(x_val);
+      }
+    }
   }
+  
+  // y_km: n*n
+  for (int k = 0; k < n; k++) {
+    for (int m = 0; m < n; m++) {
+      double y_val = 0.0;
+      bool k_is_hub = false, m_is_hub = false;
+      for (int h = 0; h < p; h++) {
+        if (solution.hubs[h] == k) k_is_hub = true;
+        if (solution.hubs[h] == m) m_is_hub = true;
+      }
+      if (k_is_hub && m_is_hub) {
+        for (size_t e = 0; e < solution.hub_tree.size(); e++) {
+          if ((solution.hub_tree[e].first == k && solution.hub_tree[e].second == m) ||
+              (solution.hub_tree[e].first == m && solution.hub_tree[e].second == k)) {
+            y_val = 1.0;
+            break;
+          }
+        }
+      }
+      solution.full_solution.push_back(y_val);
+    }
+  }
+  
+  // z_ik: n*n
+  for (int i = 0; i < n; i++) {
+    for (int k = 0; k < n; k++) {
+      double z_val = 0.0;
+      if (solution.assignment[i] == k) z_val = 1.0;
+      solution.full_solution.push_back(z_val);
+    }
+  }
+  
+  binary_solution = solution.full_solution;
 
   return solution;
 }
@@ -1838,7 +1879,7 @@ bool THLPData::parseCABFile(const std::string& filename, int p_,
     int i = std::get<0>(*it);
     int j = std::get<1>(*it);
     this->W[i][j] = std::get<2>(*it);
-    this->C[i][j] = std::get<3>(*it);
+    this->C[i][j] = std::get<3>(*it) * 1e-4;
   }
 
   this->precompute();
@@ -1884,7 +1925,7 @@ bool THLPData::parseAPFile(const std::string& filename, int p_,
     for (int j = 0; j < n; j++) {
       double dx = x[i] - x[j];
       double dy = y[i] - y[j];
-      this->C[i][j] = sqrt(dx * dx + dy * dy) / 1000.0;
+      this->C[i][j] = sqrt(dx * dx + dy * dy) / 1000.0 * 1e-4;
     }
   }
 
@@ -1965,11 +2006,6 @@ bool THLPData::formLp(
     }
     z.push_back(zm);
   }
-  // Costs are excessively large, so scale by a constant
-  const double cost_scale = 1e-4;
-  for (HighsInt iCol = 0; iCol < num_col; iCol++)
-    col_cost[iCol] *= cost_scale;
-  
   printf("LP has %d variables, of which %d are integer\n", int(num_col), int(num_integer_var));
 
   num_row = 0;
@@ -2059,9 +2095,9 @@ bool THLPData::formLp(
     for (HighsInt k = 0; k < this->n; k++) {
       if (i == k) continue;
       
-      //      index.push_back(z[i][k]);
-      //      value.push_back(this->O[i]);
-      //      num_nz++;
+      index.push_back(z[i][k]);
+      value.push_back(this->O[i]);
+      num_nz++;
       
       // sum_m x_imk (incoming to k from m)
       for (HighsInt m = 0; m < this->n; m++) {
@@ -2083,10 +2119,9 @@ bool THLPData::formLp(
       // -sum_m W_im*z_mk
       for (HighsInt m = 0; m < this->n; m++) {
         if (m == k) continue;
+        if (m == i) continue;
         index.push_back(z[m][k]);
-	double coeff = -this->W[i][m];
-	if (m == i) coeff += this->O[i];
-        value.push_back(coeff);
+        value.push_back(-this->W[i][m]);
         num_nz++;
       }
       
