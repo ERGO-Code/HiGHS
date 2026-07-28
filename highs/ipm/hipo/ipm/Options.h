@@ -29,8 +29,6 @@ struct Options {
   bool display = true;
   bool timeless_log = false;
   const HighsLogOptions* log_options = nullptr;
-
-  bool parallel_solve = false;
 };
 
 }  // namespace hipo

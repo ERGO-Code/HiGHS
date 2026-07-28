@@ -405,7 +405,6 @@ struct HighsOptionsStruct {
   std::string hipo_ordering;
   std::string hipo_factor;
   HighsInt hipo_block_size;
-  bool hipo_parallel_solve;
 
   // Options for PDLP solver
   HighsInt pdlp_features_off;
@@ -588,7 +587,6 @@ struct HighsOptionsStruct {
         hipo_ordering(""),
         hipo_factor(""),
         hipo_block_size(0),
-        hipo_parallel_solve(false),
         pdlp_features_off(0),
         pdlp_iteration_limit(0),
         pdlp_scaling_mode(0),
@@ -1354,11 +1352,6 @@ class HighsOptions : public HighsOptionsStruct {
         "hipo_block_size", "Block size for dense linear algebra within HiPO",
         advanced, &hipo_block_size, 0, 128, kHighsIInf);
     records.push_back(record_int);
-
-    record_bool = new OptionRecordBool("hipo_parallel_solve",
-                                       "Use parallel solve in HiPO", advanced,
-                                       &hipo_parallel_solve, false);
-    records.push_back(record_bool);
 
     record_int = new OptionRecordInt(
         "pdlp_iteration_limit", "Iteration limit for PDLP solver", advanced,

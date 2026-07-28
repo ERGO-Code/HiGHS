@@ -55,8 +55,6 @@ void Solver::setOptions(const HighsOptions& highs_options) {
   options_.factor = highs_options.hipo_factor;
   options_.block_size = highs_options.hipo_block_size;
 
-  options_.parallel_solve = highs_options.hipo_parallel_solve;
-
   options_orig_ = options_;
   Hoptions_ = highs_options;
   resetOptions();

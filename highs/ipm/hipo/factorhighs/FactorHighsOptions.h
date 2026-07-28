@@ -12,8 +12,6 @@ struct FHoptions {
   Int nb = kBlockSize;
   bool pivoting = true;
   bool one_indexing = false;
-
-  bool parallel_solve = false;
 };
 
 }  // namespace hipo

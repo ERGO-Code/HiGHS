@@ -25,7 +25,6 @@ FactorHighsSolver::FactorHighsSolver(KktMatrix& kkt, Options& options,
       options_{options} {
   FH_.setBlockSize(options.block_size);
   FH_.setLogger(&logger);
-  FH_.setParallelSolve(options_.parallel_solve);
 }
 
 void FactorHighsSolver::clear() {
