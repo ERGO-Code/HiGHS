@@ -293,10 +293,31 @@ void Factorise::processSupernode(Int sn) {
   HIPO_CLOCK_STOP(2, data_, kTimeFactoriseTerminate);
 }
 
+void Factorise::processTreeSerial() {
+  if (!stack_) {
+    // processing the tree in serial requires a CliqueStack
+    flag_stop_.store(true, std::memory_order_relaxed);
+    return;
+  }
+  if (stack_->empty()) stack_->init(S_.maxStackSize());
+  for (Int sn = 0; sn < S_.sn(); ++sn) {
+    processSupernode(sn);
+  }
+}
+
+void Factorise::processTreeParallel() {
+  highs::parallel::TaskGroup tg;
+  // spawn roots
+  for (Int sn = 0; sn < S_.sn(); ++sn) {
+    if (S_.snParent(sn) == -1) {
+      tg.spawn([=]() { processSupernode(sn); });
+    }
+  }
+  tg.taskWait();
+}
+
 bool Factorise::run(Numeric& num) {
   HIPO_CLOCK_CREATE;
-
-  highs::parallel::TaskGroup tg;
 
   total_reg_.assign(n_, 0.0);
 
@@ -310,26 +331,9 @@ bool Factorise::run(Numeric& num) {
   sn_columns_.resize(S_.sn());
 
   if (FH_opt_.parallel_tree) {
-    Int spawned_roots{};
-    // spawn tasks for root supernodes
-    for (Int sn = 0; sn < S_.sn(); ++sn) {
-      if (S_.snParent(sn) == -1) {
-        tg.spawn([=]() { processSupernode(sn); });
-        ++spawned_roots;
-      }
-    }
-
-    // sync tasks for root supernodes
-    tg.taskWait();
+    processTreeParallel();
   } else {
-    // processing the tree in serial requires a CliqueStack
-    if (!stack_) return true;
-    if (stack_->empty()) stack_->init(S_.maxStackSize());
-
-    // go through each supernode serially
-    for (Int sn = 0; sn < S_.sn(); ++sn) {
-      processSupernode(sn);
-    }
+    processTreeSerial();
   }
 
   if (flag_stop_.load(std::memory_order_relaxed)) return true;

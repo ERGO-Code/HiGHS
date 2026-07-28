@@ -38,6 +38,8 @@ class Numeric {
   // dynamic regularisation applied to the matrix
   std::vector<double> total_reg_{};
 
+  void computeAnySwaps();
+
  public:
   Int prepare();
 

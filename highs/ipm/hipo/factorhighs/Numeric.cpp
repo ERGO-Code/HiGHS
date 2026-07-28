@@ -16,35 +16,33 @@ static TempTimer forwardTimer("forward");
 static TempTimer backwardTimer("backward");
 static TempTimer diagTimer("diag");
 
-Int Numeric::prepare() {
-  if (!sn_columns_ || !S_ || !data_ || !options_) return kRetInvalidPointer;
-
-  SH_.reset(new HybridSolveHandler(*S_, *sn_columns_, swaps_, any_swaps_,
-                                   pivot_2x2_, *data_, *options_));
-
-  if (!SH_) return kRetGeneric;
-
+void Numeric::computeAnySwaps() {
   // compute which blocks of columns require swaps
-  if (options_->pivoting) {
-    any_swaps_.resize(S_->sn());
-    const Int nb = options_->nb;
-    for (Int sn = 0; sn < S_->sn(); ++sn) {
-      const Int sn_size = S_->snStart(sn + 1) - S_->snStart(sn);
-      const Int n_blocks = (sn_size - 1) / nb + 1;
-      any_swaps_[sn].assign(n_blocks, 0);
+  any_swaps_.resize(S_->sn());
+  const Int nb = options_->nb;
+  for (Int sn = 0; sn < S_->sn(); ++sn) {
+    const Int sn_size = S_->snStart(sn + 1) - S_->snStart(sn);
+    const Int n_blocks = (sn_size - 1) / nb + 1;
+    any_swaps_[sn].assign(n_blocks, 0);
 
-      for (Int j = 0; j < n_blocks; ++j) {
-        const Int jb = std::min(nb, sn_size - nb * j);
-        for (Int i = 0; i < jb; ++i) {
-          if (swaps_[sn][nb * j + i] != i) {
-            any_swaps_[sn][j] = 1;
-            break;
-          }
+    for (Int j = 0; j < n_blocks; ++j) {
+      const Int jb = std::min(nb, sn_size - nb * j);
+      for (Int i = 0; i < jb; ++i) {
+        if (swaps_[sn][nb * j + i] != i) {
+          any_swaps_[sn][j] = 1;
+          break;
         }
       }
     }
   }
+}
 
+Int Numeric::prepare() {
+  if (!sn_columns_ || !S_ || !data_ || !options_) return kRetInvalidPointer;
+  SH_.reset(new HybridSolveHandler(*S_, *sn_columns_, swaps_, any_swaps_,
+                                   pivot_2x2_, *data_, *options_));
+  if (!SH_) return kRetGeneric;
+  if (options_->pivoting) computeAnySwaps();
   return kRetOk;
 }
 
