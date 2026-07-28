@@ -21,9 +21,19 @@ HybridSolveHandler::HybridSolveHandler(
       pivot_2x2_{pivot_2x2} {
   childrenLinkedList(S_.schedule().task_parent, first_child_, next_child_);
 
-  parallel_forward_ = true;
-  parallel_backward_ = true;
-  parallel_diag_ = true;
+  // heuristic to choose when to use parallel solve
+  parallel_forward_ = false;
+  parallel_backward_ = false;
+  parallel_diag_ = false;
+  if (S_.size() > kParallelSolveMinSize) {
+    parallel_diag_ = true;
+
+    if (S_.solveTreeSpeedup() > kParallelForwardMinSpeedup)
+      parallel_forward_ = true;
+
+    if (S_.solveTreeSpeedup() > kParallelBackwardMinSpeedup)
+      parallel_backward_ = true;
+  }
 
   bool need_parallel_work = parallel_backward_ || parallel_forward_;
   bool need_serial_work = !parallel_backward_ || !parallel_forward_;
@@ -529,7 +539,9 @@ void HybridSolveHandler::diagSolve(double* x) const {
             processDiagSn(sn, x);
           }
         },
-        1024);
+        // choose grainsize so that the number of tasks in the for_each loop
+        // that execute the function is roughly kParallelDiagTargetNumTasks
+        std::ceil((double)S_.size() / kParallelDiagTargetNumTasks));
 
   } else {
     for (Int sn = 0; sn < S_.sn(); ++sn) {

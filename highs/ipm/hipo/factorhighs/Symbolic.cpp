@@ -45,6 +45,9 @@ bool Symbolic::parTree() const { return parallel_tree_; }
 bool Symbolic::parNode() const { return parallel_node_; }
 double Symbolic::storage() const { return serial_storage_; }
 Int Symbolic::depth() const { return tree_depth_; }
+double Symbolic::solveTreeSpeedup() const {
+  return ops_solve_ / critops_solve_;
+}
 
 const std::vector<Int64>& Symbolic::ptr() const { return ptr_; }
 const std::vector<Int>& Symbolic::iperm() const { return iperm_; }

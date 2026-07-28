@@ -144,6 +144,7 @@ class Symbolic {
   Int64 maxStackSize() const;
   Int largestFront() const;
   Int depth() const;
+  double solveTreeSpeedup() const;
   bool parTree() const;
   bool parNode() const;
   double storage() const;
