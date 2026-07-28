@@ -527,8 +527,8 @@ bool HighsLp::getThlp(const std::string& filename) {
   if (!this->thlp_data_.parseCABFile(filename, 5, 0.5)) return false;
   std::vector<bool> is_integer;
   if (!this->thlp_data_.formLp(this->num_col_, this->num_row_, this->col_cost_,
-                               this->col_lower_, this->col_upper_,
-                               this->row_lower_, this->row_upper_,
+                               this->col_lower_, this->col_upper_, this->col_names_,
+                               this->row_lower_, this->row_upper_, this->row_names_,
                                this->a_matrix_.start_, this->a_matrix_.index_,
                                this->a_matrix_.value_, is_integer))
     return false;

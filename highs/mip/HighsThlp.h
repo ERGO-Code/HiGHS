@@ -41,8 +41,8 @@ struct THLPData {
                     double alpha_ = 0.8); 
   bool formLp(HighsInt& num_col, HighsInt& num_row,
               std::vector<double>& col_cost, std::vector<double>& col_lower,
-              std::vector<double>& col_upper, std::vector<double>& row_lower,
-              std::vector<double>& row_upper, std::vector<HighsInt>& start,
+              std::vector<double>& col_upper, std::vector<std::string>& col_names, std::vector<double>& row_lower,
+              std::vector<double>& row_upper, std::vector<std::string>& row_names, std::vector<HighsInt>& start,
               std::vector<HighsInt>& index, std::vector<double>& value,
               std::vector<bool>& is_integer);
   void cleanSolution(std::vector<double>& solution) const;

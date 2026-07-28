@@ -167,14 +167,21 @@ bool HighsMipSolverData::trySolution(const std::vector<double>& solution,
   }
 
   bool feasible = true;
+  HighsInt check_row = 8126;
   for (HighsInt i = 0; i != mipsolver.numRow(); ++i) {
     double rowactivity = 0.0;
 
     HighsInt start = ARstart_[i];
     HighsInt end = ARstart_[i + 1];
 
-    for (HighsInt j = start; j != end; ++j)
+    for (HighsInt j = start; j != end; ++j) {
       rowactivity += solution[ARindex_[j]] * ARvalue_[j];
+      if (i == check_row) {
+	HighsInt iVar = ARindex_[j];
+	if (solution[iVar])
+	printf("Row 8126 has term in variable %7d (%30s) with coefficient %11.4g and variable value %11.4g : activity = %11.4g\n", int(iVar), mipsolver.model_->col_names_[iVar].c_str(), ARvalue_[j], solution[iVar], rowactivity);
+      }
+    }
 
     const bool ok_activity =
       rowactivity <= mipsolver.rowUpper(i) + feastol &&
@@ -183,8 +190,8 @@ bool HighsMipSolverData::trySolution(const std::vector<double>& solution,
       feasible = false;
       double lower = mipsolver.rowLower(i);
       double upper = mipsolver.rowUpper(i);
-      printf("Row %7d is [%11.4g, %11.4g, %11.4g] so not feasible\n",
-	     int(i), lower, rowactivity, upper);
+      printf("Row %7d (%s) is [%11.4g, %11.4g, %11.4g] so not feasible\n",
+	     int(i), mipsolver.model_->row_names_[i].c_str(), lower, rowactivity, upper);
     }
     //    if (rowactivity > mipsolver.rowUpper(i) + feastol) return false;
     //    if (rowactivity < mipsolver.rowLower(i) - feastol) return false;

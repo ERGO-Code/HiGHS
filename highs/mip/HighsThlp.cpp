@@ -1939,8 +1939,8 @@ bool THLPData::parseAPFile(const std::string& filename, int p_,
 // ============================================================================
 bool THLPData::formLp(
     HighsInt& num_col, HighsInt& num_row, std::vector<double>& col_cost,
-    std::vector<double>& col_lower, std::vector<double>& col_upper,
-    std::vector<double>& row_lower, std::vector<double>& row_upper,
+    std::vector<double>& col_lower, std::vector<double>& col_upper, std::vector<std::string>& col_names, 
+    std::vector<double>& row_lower, std::vector<double>& row_upper, std::vector<std::string>& row_names, 
     std::vector<HighsInt>& start, std::vector<HighsInt>& index,
     std::vector<double>& value, std::vector<bool>& is_integer) {
   // Form the THLP as an LP, where all vectors are of size 0 on entry,
@@ -1956,17 +1956,21 @@ bool THLPData::formLp(
     for (HighsInt k = 0; k < this->n; k++) {
       std::vector<HighsInt> xm;
       for (HighsInt m = 0; m < this->n; m++) {
-        HighsInt iVar = num_col;
-        xm.push_back(iVar);
-        col_cost.push_back(this->alpha * this->C[k][m]);
-        col_lower.push_back(0);
-        if (m == k) {
-          col_upper.push_back(0);
-        } else {
-          col_upper.push_back(ThlpInf);
-        }
-        is_integer.push_back(false);
-        num_col++;
+	HighsInt iVar = num_col;
+	xm.push_back(iVar);
+	col_cost.push_back(this->alpha * this->C[k][m]);
+	col_lower.push_back(0);
+	if (m == k) {
+	  col_upper.push_back(0);
+	} else {
+	  col_upper.push_back(ThlpInf);
+	}
+	is_integer.push_back(false);
+	col_names.push_back("x_" +
+			    std::to_string(i) + "_" +
+			    std::to_string(k) + "_" +
+			    std::to_string(m));
+	num_col++;
       }
       xkm.push_back(xm);
     }
@@ -1986,6 +1990,9 @@ bool THLPData::formLp(
       //	col_upper.push_back(0);
       //      }
       is_integer.push_back(true);
+      col_names.push_back("y_" +
+			  std::to_string(k) + "_" +
+			  std::to_string(m));
       num_integer_var++;
       num_col++;
     }
@@ -2005,6 +2012,9 @@ bool THLPData::formLp(
 	//	col_upper.push_back(0);
 	//      }
       is_integer.push_back(true);
+      col_names.push_back("z_" +
+			  std::to_string(i) + "_" +
+			  std::to_string(k));
       num_integer_var++;
       num_col++;
     }
@@ -2013,8 +2023,10 @@ bool THLPData::formLp(
   printf("LP has %d variables, of which %d are integer\n", int(num_col), int(num_integer_var));
 
   num_row = 0;
+  HighsInt from_row = num_row;
   HighsInt num_nz = 0;
   for (HighsInt i = 0; i < this->n; i++) {
+    // sum z_ik = 1
     for (HighsInt k = 0; k < this->n; k++) {
       index.push_back(z[i][k]);
       value.push_back(1);
@@ -2022,10 +2034,14 @@ bool THLPData::formLp(
     }
     row_lower.push_back(1);
     row_upper.push_back(1);
+    row_names.push_back("A(" + std::to_string(i) + "):sum_i(z_" + std::to_string(i) + "_k)=1");
     num_row++;
     start.push_back(num_nz);
   }
+  printf("Rows %d to %d are sum z_ik = 1\n", int(from_row), int(num_row-1));
 
+  from_row = num_row;
+  // sum z_kk = 1
   for (HighsInt k = 0; k < this->n; k++) {
     index.push_back(z[k][k]);
     value.push_back(1);
@@ -2033,9 +2049,12 @@ bool THLPData::formLp(
   }
   row_lower.push_back(this->p);
   row_upper.push_back(this->p);
+  row_names.push_back("B:sum_zkk=p");
   num_row++;
   start.push_back(num_nz);
-  
+  printf("Rows %d to %d are sum z_kk = 1\n", int(from_row), int(num_row-1));
+
+  from_row = num_row;
   for (HighsInt k = 0; k < this->n; k++) {
     for (HighsInt m = k+1; m < this->n; m++) {
       // z_km + y_km - z_mm <= 0; forall k\in N, m\in N; m > k
@@ -2050,11 +2069,17 @@ bool THLPData::formLp(
       num_nz++;
       row_lower.push_back(-ThlpInf);
       row_upper.push_back(0);
+      row_names.push_back("C(" + std::to_string(k) + "," + std::to_string(m) + ")"
+			  ":z_" + std::to_string(k) + "_" + std::to_string(m) +
+			  "+y_" + std::to_string(k) + "_" + std::to_string(m) +
+			  "-z_" + std::to_string(m) + "_" + std::to_string(m) + "<=0");
       num_row++;
       start.push_back(num_nz);
     }
   }
-  
+  printf("Rows %d to %d are z_km + y_km - z_mm <= 0; forall k\\in N, m\\in N; m > k\n", int(from_row), int(num_row-1));
+
+  from_row = num_row;
   for (HighsInt k = 0; k < this->n; k++) {
     for (HighsInt m = k + 1; m < this->n; m++) {
       // z_mk + y_km - z_kk <= 0; forall k\in N, m\in N; m > k
@@ -2069,41 +2094,51 @@ bool THLPData::formLp(
       num_nz++;
       row_lower.push_back(-ThlpInf);  
       row_upper.push_back(0);
+      row_names.push_back("D(" + std::to_string(k) + "," + std::to_string(m) + ")"
+			  ":z_" + std::to_string(m) + "_" + std::to_string(k) +
+			  "+y_" + std::to_string(m) + "_" + std::to_string(k) +
+			  "-z_" + std::to_string(k) + "_" + std::to_string(k) + "<=0");
       num_row++;
       start.push_back(num_nz);
     }
   }
+  printf("Rows %d to %d are z_mk + y_mk - z_kk <= 0; forall k\\in N, m\\in N; m > k\n", int(from_row), int(num_row-1));
 
+  from_row = num_row;
   for (HighsInt i = 0; i < this->n; i++) {
     for (HighsInt k = 0; k < this->n; k++) {
-      for (HighsInt m = k + 1; m < this->n; m++) {
-        // x_ikm + x_imk - O_i*y_km <= 0
-        index.push_back(x[i][k][m]);
-        value.push_back(1);
-        num_nz++;
-        index.push_back(x[i][m][k]);
-        value.push_back(1);
-        num_nz++;
-        index.push_back(y[k][m]);
-        value.push_back(-this->O[i]);
-        num_nz++;
-        row_lower.push_back(-ThlpInf);
-        row_upper.push_back(0);
-        num_row++;
-        start.push_back(num_nz);
+      for (HighsInt m = k+1; m < this->n; m++) {
+	// x_ikm + x_imk - O_i*y_km <= 0; forall i, k\in N, m\in N; m > k
+	index.push_back(x[i][k][m]);
+	value.push_back(1);
+	num_nz++;
+	index.push_back(x[i][m][k]);
+	value.push_back(1);
+	num_nz++;
+	index.push_back(y[k][m]);
+	value.push_back(-this->O[i]);
+	num_nz++;
+	row_lower.push_back(-ThlpInf);
+	row_upper.push_back(0);
+	row_names.push_back("E(" + std::to_string(i) + "," + std::to_string(k) + "," + std::to_string(m) + ")"
+			    ":x_" + std::to_string(i) + "_" + std::to_string(k) + "_" + std::to_string(m) +
+			    "+x_" + std::to_string(i) + "_" + std::to_string(m) + "_" + std::to_string(k) +
+			    "-O_" + std::to_string(i) +
+			    ".y_" + std::to_string(k) + "_" + std::to_string(m) + "<=0");
+	num_row++;
+	start.push_back(num_nz);
       }
     }
   }
+  printf("Rows %d to %d are x_ikm + x_imk - O_i*ykm <= 0; forall i, k\\in N, m\\in N; m > k\n", int(from_row), int(num_row-1));
 
+  from_row = num_row;
   for (HighsInt i = 0; i < this->n; i++) {
     for (HighsInt k = 0; k < this->n; k++) {
-      if (i == k) continue;
-      
-      index.push_back(z[i][k]);
-      value.push_back(this->O[i]);
-      num_nz++;
-      
-      // sum_m x_imk (incoming to k from m)
+      if (k == i) continue;
+      // O_i z_ik + sum_m\ne k x_imk - sum_m\ne k x_ikm - sum W_im * z_mk -= 0; forall i, k\in N, k /ne i
+      //
+      // O_i z_ik term included with -sum W_im * z_mk
       for (HighsInt m = 0; m < this->n; m++) {
         if (m == k) continue;
         index.push_back(x[i][m][k]);
@@ -2122,20 +2157,26 @@ bool THLPData::formLp(
       
       // -sum_m W_im*z_mk
       for (HighsInt m = 0; m < this->n; m++) {
-        if (m == k) continue;
-        if (m == i) continue;
-        index.push_back(z[m][k]);
-        value.push_back(-this->W[i][m]);
-        num_nz++;
+	index.push_back(z[m][k]);
+	double coeff = -W[i][m];
+	if (m == i) coeff += this->O[i];
+	value.push_back(coeff);
+	num_nz++;
       }
       
       // Equation: left - right = 0
       row_lower.push_back(0);
       row_upper.push_back(0);
+      row_names.push_back("F(" + std::to_string(i) + "," + std::to_string(k) + ")"
+			  ":O_" + std::to_string(i) + ".z_" + std::to_string(i) + "_" + std::to_string(k) + "+sum_m(x_" + std::to_string(i) + "_m_" + std::to_string(k) +
+			  ")-sum_m(x_" + std::to_string(i) + "_" + std::to_string(k) + "_m" +
+			  ")-sum_m(W_" + std::to_string(i) +
+			  "_m.z_m_" + std::to_string(k) + ")<=0");
       num_row++;
       start.push_back(num_nz);
     }
   }
+  printf("Rows %d to %d are O_i z_ik + sum_m\\ne k x_imk - sum_m\\ne k x_ikm - sum W_im * z_mk -= 0; forall i, k\\in N, k /ne i\n", int(from_row), int(num_row-1));
 
 for (HighsInt k = 0; k < this->n; k++) {
     for (HighsInt m = k + 1; m < this->n; m++) {
@@ -2144,11 +2185,15 @@ for (HighsInt k = 0; k < this->n; k++) {
       num_nz++;
     }
   }
-  row_lower.push_back(this->p - 1);
-  row_upper.push_back(this->p - 1);
+  row_lower.push_back(this->p-1);
+  row_upper.push_back(this->p-1);
+  row_names.push_back("G:sum_k_sum_m_y_km");
   num_row++;
   start.push_back(num_nz);
+  printf("Rows %d to %d are sum_k sum_m y_km = p-1\n", int(from_row), int(num_row-1));
 
+  printf("MIP has %d variables, of which %d are integer, and %d constraints\n", int(num_col), int(num_integer_var), int(num_row));
+  
   return true;
 }
 
