@@ -9,7 +9,6 @@
  * @brief Defines the set of external features available
  */
 
-#include "HConfig.h"
 #include "HighsExtrasExternalDeps.h"
 
 namespace HighsExtras {
