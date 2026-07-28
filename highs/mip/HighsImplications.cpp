@@ -369,70 +369,61 @@ bool HighsImplications::runProbing(HighsInt col, HighsInt& numReductions) {
     if (useDFProbing && !binaryInvolvedInds_.empty()) {
       HighsCliqueTable& cliquetable = mipsolver.mipdata_->cliquetable;
       HighsCliqueTable::CliqueVar clique[2];
-      bool haveReduction;
-      do
-      {
-        haveReduction = false;
-        // Loop over binary variables that are tighened at least once
-        for (auto k : binaryInvolvedInds_) {
-          // Skip non-binary variables (being fixed now) or those can be substituted by other binary variables
-          if (!globaldomain.isBinary(k) || colsubstituted[k])
-            continue;
-          // Return if the whole problem is infeasible
-          if (globaldomain.infeasible())
-            return true;
-          // Get the information how x[k] is fixed in probing on x[col] = 0 and x[col] = 1
-          // For the meaning of ``data'', please see lines 71-82 in HighsImplications.h
-          uint8_t data = binaryInvolvedFlags_[k];
-          if (data == 0) // flag for no reduction
-            continue;
+      // Loop over binary variables that are tighened at least once
+      for (auto k : binaryInvolvedInds_) {
+        // Skip non-binary variables (being fixed now) or those can be substituted by other binary variables
+        if (!globaldomain.isBinary(k) || colsubstituted[k])
+          continue;
+        // Return if the whole problem is infeasible
+        if (globaldomain.infeasible())
+          return true;
+        // Get the information how x[k] is fixed in probing on x[col] = 0 and x[col] = 1
+        // For the meaning of ``data'', please see lines 71-82 in HighsImplications.h
+        uint8_t data = binaryInvolvedFlags_[k];
+        if (data == 0) // flag for no reduction
+          continue;
 
-          if (data == binaryFixType::kGlobalLower) { // x[k] is fixed at 0 under both x[col] = 0 and x[col] = 1
-            // fix x[k] = 0 by adding two cliques (i.e., these two cliques should be added in computeImplications() to derive global reductions)
-            clique[0] = HighsCliqueTable::CliqueVar(col, 0);
-            clique[1] = HighsCliqueTable::CliqueVar(k, 1);
-            cliquetable.addClique(mipsolver, &clique[0], 2);
-            clique[0] = HighsCliqueTable::CliqueVar(col, 1);
-            clique[1] = HighsCliqueTable::CliqueVar(k, 1);
-            cliquetable.addClique(mipsolver, &clique[0], 2);
-            data = 0;
-            haveReduction = true;    
-          }
-          else if (data == binaryFixType::kGlobalUpper) { // x[k] is fixed at 1 under both x[col] = 0 and x[col] = 1
-            // fix x[k] = 1 by adding two cliques (i.e., these two cliques should be added in computeImplications() to derive global reductions)
-            clique[0] = HighsCliqueTable::CliqueVar(col, 0);
-            clique[1] = HighsCliqueTable::CliqueVar(k, 0);
-            cliquetable.addClique(mipsolver, &clique[0], 2);
-            clique[0] = HighsCliqueTable::CliqueVar(col, 1);
-            clique[1] = HighsCliqueTable::CliqueVar(k, 0);
-            cliquetable.addClique(mipsolver, &clique[0], 2);
-            data = 0;
-            haveReduction = true;
-          }
-          else if (data == binaryFixType::kSubstituteComplement) { // x[k] is fixed at 0 under x[col] = 1, and is fixed at 1 under x[col] = 0; this makes x[col] + x[k] = 1
-            // Adding two cliques (i.e., these two cliques should be added in computeImplications() to derive global reductions)
-            clique[0] = HighsCliqueTable::CliqueVar(col, 1);
-            clique[1] = HighsCliqueTable::CliqueVar(k, 1);
-            cliquetable.addClique(mipsolver, &clique[0], 2);
-            clique[0] = HighsCliqueTable::CliqueVar(col, 0);
-            clique[1] = HighsCliqueTable::CliqueVar(k, 0);
-            cliquetable.addClique(mipsolver, &clique[0], 2);
-            data = 0;
-            haveReduction = true;
-          }
-          else if (data == binaryFixType::kSubstituteEqual) { // x[k] is fixed at 0 under x[col] = 0, and is fixed at 1 under x[col] = 1; this makes x[col] = x[k]
-            // Adding two cliques (i.e., these two cliques should be added in computeImplications() to derive global reductions)
-            clique[0] = HighsCliqueTable::CliqueVar(col, 1);
-            clique[1] = HighsCliqueTable::CliqueVar(k, 0);
-            cliquetable.addClique(mipsolver, &clique[0], 2);
-            clique[0] = HighsCliqueTable::CliqueVar(col, 0);
-            clique[1] = HighsCliqueTable::CliqueVar(k, 1);
-            cliquetable.addClique(mipsolver, &clique[0], 2);
-            data = 0;
-            haveReduction = true;
-          }
+        if (data == binaryFixType::kGlobalLower) { // x[k] is fixed at 0 under both x[col] = 0 and x[col] = 1
+          // fix x[k] = 0 by adding two cliques (i.e., these two cliques should be added in computeImplications() to derive global reductions)
+          clique[0] = HighsCliqueTable::CliqueVar(col, 0);
+          clique[1] = HighsCliqueTable::CliqueVar(k, 1);
+          cliquetable.addClique(mipsolver, &clique[0], 2);
+          clique[0] = HighsCliqueTable::CliqueVar(col, 1);
+          clique[1] = HighsCliqueTable::CliqueVar(k, 1);
+          cliquetable.addClique(mipsolver, &clique[0], 2);
+          data = 0;
         }
-      } while (haveReduction);
+        else if (data == binaryFixType::kGlobalUpper) { // x[k] is fixed at 1 under both x[col] = 0 and x[col] = 1
+          // fix x[k] = 1 by adding two cliques (i.e., these two cliques should be added in computeImplications() to derive global reductions)
+          clique[0] = HighsCliqueTable::CliqueVar(col, 0);
+          clique[1] = HighsCliqueTable::CliqueVar(k, 0);
+          cliquetable.addClique(mipsolver, &clique[0], 2);
+          clique[0] = HighsCliqueTable::CliqueVar(col, 1);
+          clique[1] = HighsCliqueTable::CliqueVar(k, 0);
+          cliquetable.addClique(mipsolver, &clique[0], 2);
+          data = 0;
+        }
+        else if (data == binaryFixType::kSubstituteComplement) { // x[k] is fixed at 0 under x[col] = 1, and is fixed at 1 under x[col] = 0; this makes x[col] + x[k] = 1
+          // Adding two cliques (i.e., these two cliques should be added in computeImplications() to derive global reductions)
+          clique[0] = HighsCliqueTable::CliqueVar(col, 1);
+          clique[1] = HighsCliqueTable::CliqueVar(k, 1);
+          cliquetable.addClique(mipsolver, &clique[0], 2);
+          clique[0] = HighsCliqueTable::CliqueVar(col, 0);
+          clique[1] = HighsCliqueTable::CliqueVar(k, 0);
+          cliquetable.addClique(mipsolver, &clique[0], 2);
+          data = 0;
+        }
+        else if (data == binaryFixType::kSubstituteEqual) { // x[k] is fixed at 0 under x[col] = 0, and is fixed at 1 under x[col] = 1; this makes x[col] = x[k]
+          // Adding two cliques (i.e., these two cliques should be added in computeImplications() to derive global reductions)
+          clique[0] = HighsCliqueTable::CliqueVar(col, 1);
+          clique[1] = HighsCliqueTable::CliqueVar(k, 0);
+          cliquetable.addClique(mipsolver, &clique[0], 2);
+          clique[0] = HighsCliqueTable::CliqueVar(col, 0);
+          clique[1] = HighsCliqueTable::CliqueVar(k, 1);
+          cliquetable.addClique(mipsolver, &clique[0], 2);
+          data = 0;
+        }
+      }
 
       // clear the tentative bound changes for binary variables obtained from probing on x[col] 
       clearTentativeClique();

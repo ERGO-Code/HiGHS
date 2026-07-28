@@ -985,7 +985,7 @@ void HighsDomain::DualfixingProbingPropagation::propagate() {
     // if (mipsolver->model_->col_cost_[iCol] >= mipsolver->options_mip_->dual_feasibility_tolerance) {
     if (mipsolver->model_->col_cost_[iCol] >= mipsolver->options_mip_->dual_feasibility_tolerance) {
       if (canBeFixedToLower) {
-        checkVariableLowerLock(iCol);
+        // checkVariableLowerLock(iCol);
         addFixLower(iCol);
         continue;
       }
@@ -993,7 +993,7 @@ void HighsDomain::DualfixingProbingPropagation::propagate() {
     // if (mipsolver->model_->col_cost_[iCol] <= mipsolver->options_mip_->dual_feasibility_tolerance) {
     if (mipsolver->model_->col_cost_[iCol] <= mipsolver->options_mip_->dual_feasibility_tolerance) {
       if (canBeFixedToUpper) {
-        checkVariableUpperLock(iCol);
+        // checkVariableUpperLock(iCol);
         addFixUpper(iCol);
         continue;
       }
@@ -1059,7 +1059,7 @@ void HighsDomain::DualfixingProbingPropagation::updateGDFInfo(HighsInt probing_v
             domain->getMaxActivity(iRow) + iValue * (globalUb - probingUb) <= mipsolver->model_->row_upper_[iRow] + domain->feastol();
           if (upper_bound_reachable) {
             considered = true;
-            printf("Probing on x-%d = %d, for non-zero (%d, %d) = %f, rhs = %f, demonstrate ub reachable.\n", probing_variable, val, iRow, iCol, iValue, mipsolver->model_->row_upper_[iRow]);
+            // printf("Probing on x-%d = %d, for non-zero (%d, %d) = %f, rhs = %f, demonstrate ub reachable.\n", probing_variable, val, iRow, iCol, iValue, mipsolver->model_->row_upper_[iRow]);
             if (iCol == probing_variable && val == 0)
               gdfUbReachable_[iCol].insert(iRow);
             else {
@@ -1079,7 +1079,7 @@ void HighsDomain::DualfixingProbingPropagation::updateGDFInfo(HighsInt probing_v
             domain->getMinActivity(iRow) + iValue * (globalLb - probingLb) >= mipsolver->model_->row_lower_[iRow] - domain->feastol();
           if (lower_bound_reachable) {
             considered = true;
-            printf("Probing on x-%d = %d, for non-zero (%d, %d) = %f, lhs = %f, demonstrate lb reachable.\n", probing_variable, val, iRow, iCol, iValue, mipsolver->model_->row_lower_[iRow]);
+            // printf("Probing on x-%d = %d, for non-zero (%d, %d) = %f, lhs = %f, demonstrate lb reachable.\n", probing_variable, val, iRow, iCol, iValue, mipsolver->model_->row_lower_[iRow]);
             if (iCol == probing_variable && val == 1)
               gdfLbReachable_[iCol].insert(iRow);
             else {
@@ -1102,7 +1102,7 @@ void HighsDomain::DualfixingProbingPropagation::updateGDFInfo(HighsInt probing_v
             domain->getMaxActivity(iRow) + iValue * (globalLb - probingLb) <= mipsolver->model_->row_upper_[iRow] + domain->feastol();
           if (lower_bound_reachable) {
             considered = true;
-            printf("Probing on x-%d = %d, for non-zero (%d, %d) = %f, rhs = %f, demonstrate lb reachable.\n", probing_variable, val, iRow, iCol, iValue, mipsolver->model_->row_upper_[iRow]);
+            // printf("Probing on x-%d = %d, for non-zero (%d, %d) = %f, rhs = %f, demonstrate lb reachable.\n", probing_variable, val, iRow, iCol, iValue, mipsolver->model_->row_upper_[iRow]);
             if (iCol == probing_variable && val == 1)
               gdfLbReachable_[iCol].insert(iRow);
             else {
@@ -1122,7 +1122,7 @@ void HighsDomain::DualfixingProbingPropagation::updateGDFInfo(HighsInt probing_v
             domain->getMinActivity(iRow) + iValue * (globalUb - probingUb) >= mipsolver->model_->row_lower_[iRow] - domain->feastol();
           if (upper_bound_reachable) {
             considered = true;
-            printf("Probing on x-%d = %d, for non-zero (%d, %d) = %f, lhs = %f, demonstrate ub reachable.\n", probing_variable, val, iRow, iCol, iValue, mipsolver->model_->row_lower_[iRow]);
+            // printf("Probing on x-%d = %d, for non-zero (%d, %d) = %f, lhs = %f, demonstrate ub reachable.\n", probing_variable, val, iRow, iCol, iValue, mipsolver->model_->row_lower_[iRow]);
             if (iCol == probing_variable && val == 0)
               gdfUbReachable_[iCol].insert(iRow);
             else {
@@ -1174,7 +1174,7 @@ HighsInt HighsDomain::DualfixingProbingPropagation::processGDFFixing() {
     // upper bound reachable
     getIntersection(gdfUbReachable0_[iCol], gdfUbReachable1_[iCol], gdfUbReachable_[iCol]);
     // extract fixings
-    if ((HighsInt)gdfLbReachable_[iCol].size() == colLowerLockOriginal_[iCol]) {
+    if (ableToFixToLb(iCol) && (HighsInt)gdfLbReachable_[iCol].size() == colLowerLockOriginal_[iCol]) {
       HighsDomainChange* thisbchg = new HighsDomainChange;
       thisbchg->column = iCol;
       thisbchg->boundtype = HighsBoundType::kUpper;
@@ -1182,7 +1182,7 @@ HighsInt HighsDomain::DualfixingProbingPropagation::processGDFFixing() {
       gdfFixingStack_.push_back(thisbchg);
     }
     // a variable cannot be fixed to lb and ub simultaneously
-    else if ((HighsInt)gdfUbReachable_[iCol].size() == colUpperLockOriginal_[iCol]) {
+    else if (ableToFixToUb(iCol) && (HighsInt)gdfUbReachable_[iCol].size() == colUpperLockOriginal_[iCol]) {
       HighsDomainChange* thisbchg = new HighsDomainChange;
       thisbchg->column = iCol;
       thisbchg->boundtype = HighsBoundType::kLower;
@@ -1198,13 +1198,14 @@ HighsInt HighsDomain::DualfixingProbingPropagation::processGDFFixing() {
     delete gdfFixingStack_[j];
   }
 
-  for (j ++; j < gdfFixingStack_.size(); ++ j) {
+  for (; j < gdfFixingStack_.size(); ++ j) {
     assert(domain->infeasible_);
     delete gdfFixingStack_[j];
   }
 
   gdfFixingStack_.clear();
-  std::cout << "GDF find " << j << " fixings.\n";
+  if (j > 0)
+    std::cout << "GDF find " << j << " fixings.\n";
 
   return (HighsInt)j;
 }
@@ -2971,7 +2972,7 @@ bool HighsDomain::propagate() {
       if (!conflictprop.propagateConflictInds_.empty()) return true;
     }
 
-    if (dfprobingPropagation.isActive())
+    if (dfprobingPropagation.isActive() && mipsolver->options_mip_->presolve_dfprobing)
       return true;
 
     return false;
