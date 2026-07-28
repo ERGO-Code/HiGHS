@@ -42,12 +42,16 @@ Int BasicLu::_Factorize(const Int* Bbegin, const Int* Bend, const Int* Bi,
         xstore_[BASICLU_REMOVE_COLUMNS] = 0;
         xstore_[BASICLU_ABS_PIVOT_TOLERANCE] = 1e-14; // BASICLU default
     }
+    bool has_logged = false;
+    double last_log = basiclu_wallclock();
     for (Int ncall = 0; ; ncall++) {
         status = basiclu_factorize(istore_.data(), xstore_.data(),
                                    Li_.data(), Lx_.data(),
                                    Ui_.data(), Ux_.data(),
                                    Wi_.data(), Wx_.data(),
                                    Bbegin, Bend, Bi, Bx, ncall);
+	// Possibly log factorization progress 
+	logFactorization(status, has_logged, last_log);
         if (status != BASICLU_REALLOCATE)
             break;
         Reallocate();
@@ -306,6 +310,60 @@ void BasicLu::Reallocate() {
         Wx_.resize(new_size);
         xstore_[BASICLU_MEMORYW] = new_size;
     }
+}
+
+void BasicLu::logFactorization(const Int status, bool& has_logged, double& last_log) {
+
+  auto forceLogging = [&] () {
+    if ((has_logged && status == BASICLU_OK) ||
+	status == BASICLU_WARNING_singular_matrix ||
+	status == BASICLU_WARNING_timeout ||
+	status == BASICLU_ERROR_invalid_store ||
+	status == BASICLU_ERROR_invalid_call ||
+	status == BASICLU_ERROR_argument_missing ||
+	status == BASICLU_ERROR_invalid_argument ||
+	status == BASICLU_ERROR_maximum_updates ||
+	status == BASICLU_ERROR_singular_update ||
+	status == BASICLU_ERROR_invalid_object ||
+	status == BASICLU_ERROR_out_of_memory) return true;
+    return false;
+  };
+
+  auto statusToString = [&] () {
+    if (status == BASICLU_OK) return "OK";
+    if (status == BASICLU_REALLOCATE) return "Reallocate";
+    if (status == BASICLU_WARNING_singular_matrix) return "Warning: singular matrix";
+    if (status == BASICLU_WARNING_timeout) return "Warning: timeout";
+    if (status == BASICLU_ERROR_invalid_store) return "Error: invalid store";
+    if (status == BASICLU_ERROR_invalid_call) return "Error: invalid call";
+    if (status == BASICLU_ERROR_argument_missing) return "Error: argument missing";
+    if (status == BASICLU_ERROR_invalid_argument) return "Error: invalid argument";
+    if (status == BASICLU_ERROR_maximum_updates) return "Error: maximum updates";
+    if (status == BASICLU_ERROR_singular_update) return "Error: singular update";
+    if (status == BASICLU_ERROR_invalid_object) return "Error: invalid object";
+    if (status == BASICLU_ERROR_out_of_memory) return "Error: out of memory";
+    return "Unknown status";
+  };
+
+  const double min_log_interval = 5.0;
+  double wallclock = basiclu_wallclock();
+  if (wallclock > last_log + min_log_interval || forceLogging()) {
+    Int num_pivot = xstore_[BASICLU_RANK] + xstore_[BASICLU_RANKDEF];
+    Int dim = xstore_[BASICLU_DIM];
+    std::stringstream factorization_logging_stream;
+    factorization_logging_stream.str(std::string());
+    factorization_logging_stream << "   Factorization: pivoted on";
+    factorization_logging_stream 
+      << " "  << Format(num_pivot, 7) << " of " << Format(dim, 7) << " rows";
+    
+    if (!control_.timelessLog())
+      factorization_logging_stream << "  " << time(control_.Elapsed());
+    factorization_logging_stream << " " << statusToString() << "\n";
+    control_.hLog(factorization_logging_stream);
+     
+    has_logged = true;
+    last_log = wallclock;
+  }
 }
 
 double basiclu_wallclock() {

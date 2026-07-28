@@ -33,6 +33,8 @@ private:
     // Reallocates (Li,Lx), (Ui,Ux) and/or (Wi,Wx) as requested by BASICLU.
     void Reallocate();
 
+    void logFactorization(const Int status, bool& has_logged, double& last_log);
+
     // When memory is reallocated, allocate for kReallocFactor*required amount.
     static constexpr double kReallocFactor = 1.5;
 

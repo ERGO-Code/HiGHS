@@ -137,6 +137,9 @@ typedef int lu_int;
 
 #define BASICLU_PIVOT_ERROR 120
 
+/* Moved from private entries in xstore */
+#define BASICLU_RANKDEF 261
+  
 /* ----------------------- */
 /* user callable functions */
 /* ----------------------- */
