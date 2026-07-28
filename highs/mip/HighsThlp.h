@@ -28,6 +28,10 @@ struct THLPData {
   std::vector<double> D;
   std::vector<std::string> node_names;
 
+  std::vector<std::vector<std::vector<HighsInt>>>x;
+  std::vector<std::vector<HighsInt>>y;
+  std::vector<std::vector<HighsInt>>z;
+
   void init(int size);
   void precompute();
   void printSummary() const;
@@ -40,7 +44,8 @@ struct THLPData {
               std::vector<double>& col_upper, std::vector<double>& row_lower,
               std::vector<double>& row_upper, std::vector<HighsInt>& start,
               std::vector<HighsInt>& index, std::vector<double>& value,
-              std::vector<bool>& is_integer) const;
+              std::vector<bool>& is_integer);
+  void cleanSolution(std::vector<double>& solution) const;
 };
 
 // ============================================================================

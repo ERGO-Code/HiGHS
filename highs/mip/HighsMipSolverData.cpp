@@ -166,6 +166,7 @@ bool HighsMipSolverData::trySolution(const std::vector<double>& solution,
     obj += mipsolver.colCost(i) * solution[i];
   }
 
+  bool feasible = true;
   for (HighsInt i = 0; i != mipsolver.numRow(); ++i) {
     double rowactivity = 0.0;
 
@@ -175,9 +176,20 @@ bool HighsMipSolverData::trySolution(const std::vector<double>& solution,
     for (HighsInt j = start; j != end; ++j)
       rowactivity += solution[ARindex_[j]] * ARvalue_[j];
 
-    if (rowactivity > mipsolver.rowUpper(i) + feastol) return false;
-    if (rowactivity < mipsolver.rowLower(i) - feastol) return false;
+    const bool ok_activity =
+      rowactivity <= mipsolver.rowUpper(i) + feastol &&
+      rowactivity >= mipsolver.rowLower(i) - feastol;
+    if (!ok_activity) {
+      feasible = false;
+      double lower = mipsolver.rowLower(i);
+      double upper = mipsolver.rowUpper(i);
+      printf("Row %7d is [%11.4g, %11.4g, %11.4g] so not feasible\n",
+	     int(i), lower, rowactivity, upper);
+    }
+    //    if (rowactivity > mipsolver.rowUpper(i) + feastol) return false;
+    //    if (rowactivity < mipsolver.rowLower(i) - feastol) return false;
   }
+  if (!feasible) return false;
 
   return addIncumbent(solution, double(obj), solution_source);
 }

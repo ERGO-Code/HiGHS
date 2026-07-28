@@ -39,6 +39,7 @@ bool rkoHeuristic(const HighsLp* lp, std::vector<double>& solution) {
 	     int( solution.size()), int(lp->num_col_));
       assert(ok_solution);
     }
+    lp->thlp_data_.cleanSolution(solution);    
     //testAllAlgorithmsOnTHLP(lp->thlp_data_);
       
     return have_solution;

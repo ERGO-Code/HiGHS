@@ -1942,17 +1942,13 @@ bool THLPData::formLp(
     std::vector<double>& col_lower, std::vector<double>& col_upper,
     std::vector<double>& row_lower, std::vector<double>& row_upper,
     std::vector<HighsInt>& start, std::vector<HighsInt>& index,
-    std::vector<double>& value, std::vector<bool>& is_integer) const {
+    std::vector<double>& value, std::vector<bool>& is_integer) {
   // Form the THLP as an LP, where all vectors are of size 0 on entry,
   // since the numbers of columns and rows are not known.
   //
   // The start, index and value vectors define the sparse constraint
   // matrix row-by-row
 
-  std::vector<std::vector<std::vector<HighsInt>>>x;
-  std::vector<std::vector<HighsInt>>y;
-  std::vector<std::vector<HighsInt>>z;
-  
   num_col = 0;
   HighsInt num_integer_var = 0;
   for (HighsInt i = 0; i < this->n; i++) {
@@ -1984,7 +1980,11 @@ bool THLPData::formLp(
       ym.push_back(iVar);
       col_cost.push_back(0);
       col_lower.push_back(0);
-      col_upper.push_back(1);
+      //      if (k < m) {
+      	col_upper.push_back(1);
+      //      } else {
+      //	col_upper.push_back(0);
+      //      }
       is_integer.push_back(true);
       num_integer_var++;
       num_col++;
@@ -1999,7 +1999,11 @@ bool THLPData::formLp(
       zm.push_back(iVar);
       col_cost.push_back(this->C[i][k] * this->O[i] + this->C[k][i] * this->D[i]);
       col_lower.push_back(0);
-      col_upper.push_back(1);
+      //      if (i != k) {
+	col_upper.push_back(1);
+	//      } else {
+	//	col_upper.push_back(0);
+	//      }
       is_integer.push_back(true);
       num_integer_var++;
       num_col++;
@@ -2148,6 +2152,41 @@ for (HighsInt k = 0; k < this->n; k++) {
   return true;
 }
 
+void THLPData::cleanSolution(std::vector<double>& solution) const {
+  HighsInt num_illegal_x = 0;
+  for (HighsInt i = 0; i < this->n; i++) {
+    for (HighsInt k = 0; k < this->n; k++) {
+      HighsInt iVar = x[i][k][k];
+      if (solution[iVar] != 0) {
+	if (std::fabs(solution[iVar]) > 1e-7) num_illegal_x++;
+	solution[iVar] = 0;
+      }
+    }
+  }
+  printf("THLPData::cleanSolution Has %d illegal x values\n", int(num_illegal_x));
+  /*
+  HighsInt num_illegal_y = 0;
+  for (HighsInt m = 0; m < this->n; m++) {
+    for (HighsInt k = 0; k <= m; k++) {
+      HighsInt iVar = y[k][m];
+      if (solution[iVar] != 0) {
+	if (std::fabs(solution[iVar]) > 1e-7) num_illegal_y++;
+	solution[iVar] = 0;
+      }
+    }
+  }
+  printf("THLPData::cleanSolution Has %d illegal y values\n", int(num_illegal_y));
+  HighsInt num_illegal_z = 0;
+  for (HighsInt k = 0; k < this->n; k++) {
+    HighsInt iVar = z[k][k];
+    if (solution[iVar] != 0) {
+      if (std::fabs(solution[iVar]) > 1e-7) num_illegal_z++;
+      solution[iVar] = 0;
+    }
+  }
+  printf("THLPData::cleanSolution Has %d illegal z values\n", int(num_illegal_z));
+  */
+}
 
 
 
