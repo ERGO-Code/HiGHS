@@ -12,11 +12,6 @@ void TreeSchedule::clear() {
   valid = false;
 }
 
-void Symbolic::setParallel(bool par_tree, bool par_node) {
-  parallel_tree_ = par_tree;
-  parallel_node_ = par_node;
-}
-
 Int64 Symbolic::nz() const { return nz_; }
 double Symbolic::flops() const { return flops_; }
 double Symbolic::spops() const { return spops_; }
@@ -41,8 +36,6 @@ Int64 Symbolic::cliqueSize(Int sn) const {
 }
 Int64 Symbolic::maxStackSize() const { return max_stack_size_; }
 Int Symbolic::largestFront() const { return largest_front_; }
-bool Symbolic::parTree() const { return parallel_tree_; }
-bool Symbolic::parNode() const { return parallel_node_; }
 double Symbolic::storage() const { return serial_storage_; }
 Int Symbolic::depth() const { return tree_depth_; }
 double Symbolic::solveTreeSpeedup() const {

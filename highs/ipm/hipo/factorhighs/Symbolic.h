@@ -28,10 +28,6 @@ struct TreeSchedule {
 class Symbolic {
   bool empty_ = true;
 
-  // Options for parallelism
-  bool parallel_tree_ = false;
-  bool parallel_node_ = false;
-
   // Statistics about symbolic factorisation
   Int n_{};
   Int64 nz_{};
@@ -121,8 +117,6 @@ class Symbolic {
   friend class Analyse;
 
  public:
-  void setParallel(bool par_tree, bool par_node);
-
   // provide const access to symbolic factorisation
   bool empty() const { return empty_; }
   Int64 nz() const;
@@ -145,8 +139,6 @@ class Symbolic {
   Int largestFront() const;
   Int depth() const;
   double solveTreeSpeedup() const;
-  bool parTree() const;
-  bool parNode() const;
   double storage() const;
   const std::vector<Int64>& ptr() const;
   const std::vector<Int>& iperm() const;

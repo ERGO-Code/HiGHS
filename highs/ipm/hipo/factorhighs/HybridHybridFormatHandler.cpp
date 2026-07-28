@@ -98,7 +98,7 @@ Int HybridHybridFormatHandler::denseFactorise(double reg_thresh) {
 
   status = denseFactFH('H', ldf_, sn_size_, frontal_.data(), clique_ptr_,
                        pivot_sign, reg_thresh, local_reg_.data(), swaps_.data(),
-                       pivot_2x2_.data(), S_->parNode(), data_, FH_opt_);
+                       pivot_2x2_.data(), data_, FH_opt_);
 
   return status;
 }

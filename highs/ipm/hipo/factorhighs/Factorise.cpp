@@ -108,7 +108,7 @@ void Factorise::processSupernode(Int sn) {
   highs::parallel::TaskGroup tg;
   HIPO_CLOCK_CREATE;
 
-  const bool parallel = S_.parTree();
+  const bool parallel = FH_opt_.parallel_tree;
   const bool serial = !parallel;
 
   if (flag_stop_.load(std::memory_order_relaxed)) return;
@@ -309,7 +309,7 @@ bool Factorise::run(Numeric& num) {
   // the memory of previous factorisations.
   sn_columns_.resize(S_.sn());
 
-  if (S_.parTree()) {
+  if (FH_opt_.parallel_tree) {
     Int spawned_roots{};
     // spawn tasks for root supernodes
     for (Int sn = 0; sn < S_.sn(); ++sn) {

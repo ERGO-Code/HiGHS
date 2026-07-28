@@ -639,7 +639,7 @@ void FactorHighsSolver::setParallel() {
     assert(1 == 0);
 
   logger_.print(log_stream.str().c_str());
-  kkt_.S.setParallel(parallel_tree, parallel_node);
+  FH_.setParallel(parallel_tree, parallel_node);
 }
 
 // =========================================================================
