@@ -215,7 +215,7 @@ Int KktMatrix::buildNEstructure() {
         std::ceil((double)m / kParallelNEStructTasks));
 
     if (overflow) {
-      info.NE_structure_time = clock.stop();
+      info.times[kMatrixStructureTime_NE] = clock.stop();
       return kErrorOverflow;
     }
 
@@ -236,7 +236,7 @@ Int KktMatrix::buildNEstructure() {
     }
 
     if (overflow) {
-      info.NE_structure_time = clock.stop();
+      info.times[kMatrixStructureTime_NE] = clock.stop();
       return kErrorOverflow;
     }
 
@@ -319,7 +319,7 @@ Int KktMatrix::buildNEvalues(const std::vector<double>& scaling) {
     for (Int row = 0; row < m; ++row) process_row(row, work);
   }
 
- info.times[kMatrixValuesTime] += clock.stop();
+  info.times[kMatrixValuesTime] += clock.stop();
 
   return kOk;
 }
