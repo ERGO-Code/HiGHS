@@ -641,21 +641,27 @@ void getVariableKktFailures(const double primal_feasibility_tolerance,
   if (semi_variable) {
     primal_infeasibility = 0;
     semi_infeasibility = 0;
+    // The withoutSemiVariables reformulation (x - lower*y >= 0, x - upper*y <= 0)
+    // only pins the binary y to integer within mip_feasibility_tolerance, which
+    // lets x deviate from 0 / lower by bound*tol; assess each side at that scale
+    // so this check stays consistent with the integrality check on y.
+    const double tol = mip_feasibility_tolerance;
+    const double upper_scale = upper < kHighsInf ? std::max(1.0, upper) : 1.0;
     if (value < mid) {
-      // Value is less than half way between 0 and lower, so treat its
-      // feasibility relative to 0
+      // feasibility relative to 0 (via x <= upper*y)
       semi_infeasibility = std::fabs(value);
-      if (semi_infeasibility < mip_feasibility_tolerance)
-        semi_infeasibility = 0;
+      if (semi_infeasibility < upper_scale * tol) semi_infeasibility = 0;
     } else {
+      double scale = 1.0;
       if (value < lower) {
         semi_infeasibility = lower - value;
+        scale = std::max(1.0, lower);  // via x >= lower*y
       } else if (value > upper) {
         semi_infeasibility = value - upper;
+        scale = upper_scale;
       }
       assert(semi_infeasibility >= 0);
-      if (semi_infeasibility < primal_feasibility_tolerance)
-        semi_infeasibility = 0;
+      if (semi_infeasibility < scale * tol) semi_infeasibility = 0;
     }
   }
 }
