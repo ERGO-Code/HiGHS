@@ -143,6 +143,22 @@ option(HIGHS_COVERAGE "Activate the code coverage compilation" OFF)
 # See below for RelWithDeb info, todo test wip
 set(DEBUG_MEMORY "Off" CACHE STRING "Sanitizers")
 
+if (NOT DEBUG_MEMORY STREQUAL "Off" AND BUILD_SHARED_EXTRAS_LIB)
+  # On Apple platforms, sanitizer runtimes interpose dlopen() such that the
+  # "@loader_path" token used to locate the highs_extras plugin resolves
+  # relative to the sanitizer runtime itself rather than libhighs, so the
+  # dynamic load fails. On Linux, HighsDynamicLibrary::load() dlopen()s
+  # "libhighs_extras.so" by bare filename, and dlopen() never consults the
+  # calling executable's own DT_RUNPATH (that only applies to resolving its
+  # own DT_NEEDED entries), so the plugin isn't found unless it happens to
+  # already be on LD_LIBRARY_PATH or a system library path. Statically link
+  # highs_extras instead to avoid the dlopen path entirely when sanitizers
+  # are enabled.
+  message(STATUS "DEBUG_MEMORY=${DEBUG_MEMORY}: forcing BUILD_SHARED_EXTRAS_LIB=OFF")
+  set (BUILD_SHARED_EXTRAS_LIB OFF)
+  set(HIGHS_SHARED_EXTRAS_LIBRARY ${BUILD_SHARED_EXTRAS_LIB})
+endif()
+
 # emscripten
 option(EMSCRIPTEN_HTML "Emscripten HTML output" OFF)
 
@@ -622,6 +638,10 @@ if (DEBUG_MEMORY STREQUAL "Address")
       -fsanitize=address,undefined \
       -fno-omit-frame-pointer \
       -fsanitize-address-use-after-scope")
+  set (CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_RELWITHDEBINFO} \
+      -fsanitize=address,undefined \
+      -fno-omit-frame-pointer \
+      -fsanitize-address-use-after-scope")
   set (CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO "${CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO} \
       -fsanitize=address,undefined \
       -fno-omit-frame-pointer \
@@ -636,18 +656,26 @@ if (DEBUG_MEMORY STREQUAL "Address")
       -fsanitize=address,undefined \
       -fno-omit-frame-pointer \
       -fno-optimize-sibling-calls ")
+  set (CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} \
+      -fsanitize=address,undefined \
+      -fno-omit-frame-pointer \
+      -fno-optimize-sibling-calls ")
   set (CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG} \
       -fsanitize=address,undefined \
       -fno-omit-frame-pointer \
       -fno-optimize-sibling-calls ")
 
 elseif (DEBUG_MEMORY STREQUAL "Thread")
-  set (CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} -fsanitize=thread,undefined \
+  set (CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} -fsanitize=thread \
       -fno-omit-frame-pointer")
-  set (CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO "${CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO} -fsanitize=thread,undefined \
+  set (CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_RELWITHDEBINFO} -fsanitize=thread \
+      -fno-omit-frame-pointer")
+  set (CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO "${CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO} -fsanitize=thread \
       -fno-omit-frame-pointer")
 
   set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fsanitize=thread \
+      -fno-omit-frame-pointer ")
+  set (CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -fsanitize=thread \
       -fno-omit-frame-pointer ")
   set (CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG} -fsanitize=thread \
       -fno-omit-frame-pointer ")
@@ -657,10 +685,15 @@ elseif (DEBUG_MEMORY STREQUAL "Leak")
     set (CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} \
         -fsanitize=leak \
         -fno-omit-frame-pointer")
+    set (CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_RELWITHDEBINFO} \
+        -fsanitize=leak \
+        -fno-omit-frame-pointer")
     set (CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO "${CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO} \
         -fsanitize=leak \
         -fno-omit-frame-pointer")
     set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fsanitize=leak \
+        -fno-omit-frame-pointer ")
+    set (CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -fsanitize=leak \
         -fno-omit-frame-pointer ")
     set (CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG} -fsanitize=leak \
         -fno-omit-frame-pointer ")
@@ -668,10 +701,15 @@ elseif (DEBUG_MEMORY STREQUAL "Leak")
     set (CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} \
         -fsanitize=leak,undefined \
         -fno-omit-frame-pointer")
+    set (CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_RELWITHDEBINFO} \
+        -fsanitize=leak,undefined \
+        -fno-omit-frame-pointer")
     set (CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO "${CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO} \
         -fsanitize=leak,undefined \
         -fno-omit-frame-pointer")
     set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fsanitize=leak,undefined \
+        -fno-omit-frame-pointer ")
+    set (CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -fsanitize=leak,undefined \
         -fno-omit-frame-pointer ")
     set (CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG} -fsanitize=leak,undefined \
         -fno-omit-frame-pointer ")
@@ -681,10 +719,15 @@ elseif (DEBUG_MEMORY STREQUAL "Memory")
     set (CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} \
         -fsanitize=memory \
         -fno-omit-frame-pointer")
+    set (CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_RELWITHDEBINFO} \
+        -fsanitize=memory \
+        -fno-omit-frame-pointer")
     set (CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO "${CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO} \
         -fsanitize=memory \
         -fno-omit-frame-pointer")
     set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fsanitize=memory \
+        -fno-omit-frame-pointer ")
+    set (CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -fsanitize=memory \
         -fno-omit-frame-pointer ")
     set (CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG} -fsanitize=memory \
         -fno-omit-frame-pointer ")
