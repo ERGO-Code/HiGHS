@@ -461,6 +461,7 @@ restart:
       master_worker.search_ptr_->getLocalDomain());
 
   profiling_->start(kMipClockSearch);
+  HighsInt maxNodesPerWorkerLim = max_num_workers > 1 ? 100 : kHighsIInf;
   int64_t numStallNodes = 0;
   int64_t lastLbLeave = 0;
   int64_t numQueueLeaves = 0;
@@ -626,7 +627,7 @@ restart:
     for (const HighsInt i : indices) {
       for (HighsInt j = 0; j != numNodesPerWorker; j++) {
         if ((indices.size() == 1 && numQueueLeaves - lastLbLeave >= 10) ||
-            (indices.size() > 1 && i == 0 && j == 1)) {
+            (indices.size() > 1 && i == 0 && j == 0)) {
           mipdata_->workers[i].openNodes.push(
               mipdata_->nodequeue.popBestBoundNode());
           lastLbLeave = numQueueLeaves;
@@ -643,41 +644,6 @@ restart:
         }
         ++numQueueLeaves;
       }
-    }
-  };
-
-  auto installNodesOld = [&](std::vector<HighsInt>& indices,
-                             bool& limit_reached) -> void {
-    for (const HighsInt i : indices) {
-      if ((indices.size() == 1 && numQueueLeaves - lastLbLeave >= 10) ||
-          (indices.size() > 1 && i == 0)) {
-        mipdata_->workers[i].search_ptr_->installNode(
-            mipdata_->nodequeue.popBestBoundNode());
-        lastLbLeave = numQueueLeaves;
-      } else {
-        HighsInt bestBoundNodeStackSize =
-            mipdata_->nodequeue.getBestBoundDomchgStackSize();
-        double bestBoundNodeLb = mipdata_->nodequeue.getBestLowerBound();
-        HighsNodeQueue::OpenNode nextNode(mipdata_->nodequeue.popBestNode());
-        if (nextNode.lower_bound == bestBoundNodeLb &&
-            (HighsInt)nextNode.domchgstack.size() == bestBoundNodeStackSize)
-          lastLbLeave = numQueueLeaves;
-        mipdata_->workers[i].search_ptr_->installNode(std::move(nextNode));
-      }
-
-      ++numQueueLeaves;
-
-      if (mipdata_->workers[i].search_ptr_->getCurrentEstimate() >=
-          mipdata_->upper_limit) {
-        ++numStallNodes;
-        if (options_mip_->mip_max_stall_nodes != kHighsIInf &&
-            numStallNodes >= options_mip_->mip_max_stall_nodes) {
-          limit_reached = true;
-          modelstatus_ = HighsModelStatus::kSolutionLimit;
-          break;
-        }
-      } else
-        numStallNodes = 0;
     }
   };
 
@@ -909,7 +875,7 @@ restart:
         worker.getLpRelaxation().setIterationLimit(iterlimit);
         while (true) {
           if (considerHeuristics &&
-              (skip_separation || nodeLim == kHighsIInf) &&
+              (skip_separation || nodeLim == maxNodesPerWorkerLim) &&
               worker.getAllowHeuristics() &&
               mipdata_->moreHeuristicsAllowed()) {
             if (runHeuristics(i, stop)) break;
@@ -959,7 +925,7 @@ restart:
                               std::move(node.branchings), node.lower_bound,
                               node.estimate, node.depth);
       }
-      if (nodeLim == kHighsIInf) {
+      if (nodeLim == maxNodesPerWorkerLim) {
         restarts[i] = checkRestart(worker, 1);
       }
     };
@@ -981,7 +947,7 @@ restart:
                                               RestartVote::kNoCheck);
   std::vector<HighsInt> stallNodesPerWorker(getMaxNumWorkers());
   bool root_node = true;  // Don't separate the root node again
-  HighsInt nodeLim = max_num_workers > 1 ? 1 : kHighsIInf;  // for ramp up
+  HighsInt nodeLim = max_num_workers > 1 ? 1 : maxNodesPerWorkerLim;  // ramp-up
   while (!mipdata_->nodequeue.empty()) {
     // Possibly query existence of an external solution
     if (!submip)
@@ -1005,12 +971,12 @@ restart:
       prepareNodes(search_indices);
     }
 
-    if (nodeLim != kHighsIInf) {
+    if (nodeLim != maxNodesPerWorkerLim) {
       if (num_workers >= max_num_workers) {
         nodeLim = std::max(HighsInt{20}, 2 * nodeLim);
       }
-      if (nodeLim > 100) {
-        nodeLim = kHighsIInf;
+      if (nodeLim >= maxNodesPerWorkerLim) {
+        nodeLim = maxNodesPerWorkerLim;
       }
     }
 
@@ -1108,7 +1074,8 @@ restart:
       }
       stallNodesPerWorker[i] = 0;
       if (options_mip_->mip_max_stall_nodes != kHighsIInf &&
-          numStallNodes >= options_mip_->mip_max_stall_nodes) {
+          numStallNodes >=
+              std::max(HighsInt{1}, options_mip_->mip_max_stall_nodes)) {
         limit_reached = true;
         modelstatus_ = HighsModelStatus::kSolutionLimit;
         break;
@@ -1149,7 +1116,8 @@ restart:
                               mipdata_->nodequeue.numNodes() > num_workers;
     resetGlobalDomain(spawn_more_workers, mipdata_->hasMultipleWorkers());
 
-    if (nodeLim == kHighsIInf && checkWorkerRestartVotes(workerRestartVotes))
+    if (nodeLim == maxNodesPerWorkerLim &&
+        checkWorkerRestartVotes(workerRestartVotes))
       goto restart;
 
     if (spawn_more_workers) {
