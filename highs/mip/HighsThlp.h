@@ -277,7 +277,8 @@ class RandomGenerator {
 
  private:
   RandomGenerator()
-      : rng_(std::chrono::steady_clock::now().time_since_epoch().count()) {}
+    //      : rng_(std::chrono::steady_clock::now().time_since_epoch().count()) {}
+      : rng_() {}
   std::mt19937 rng_;
 };
 
