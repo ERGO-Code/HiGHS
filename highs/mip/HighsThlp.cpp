@@ -1961,6 +1961,7 @@ bool THLPData::formLp(
 	col_cost.push_back(this->alpha * this->C[k][m]);
 	col_lower.push_back(0);
 	if (m == k) {
+	  // x_ikk are in the model for completeness, so fix at zero
 	  col_upper.push_back(0);
 	} else {
 	  col_upper.push_back(ThlpInf);
@@ -1984,11 +1985,13 @@ bool THLPData::formLp(
       ym.push_back(iVar);
       col_cost.push_back(0);
       col_lower.push_back(0);
-      //      if (k < m) {
+      if (m <= k) {
+	// y_km for m <= k are in the model for completeness, so fix
+	// at zero
+      	col_upper.push_back(0);
+      } else {
       	col_upper.push_back(1);
-      //      } else {
-      //	col_upper.push_back(0);
-      //      }
+      }
       is_integer.push_back(true);
       col_names.push_back("y_" +
 			  std::to_string(k) + "_" +
@@ -2006,11 +2009,7 @@ bool THLPData::formLp(
       zm.push_back(iVar);
       col_cost.push_back(this->C[i][k] * this->O[i] + this->C[k][i] * this->D[i]);
       col_lower.push_back(0);
-      //      if (i != k) {
-	col_upper.push_back(1);
-	//      } else {
-	//	col_upper.push_back(0);
-	//      }
+      col_upper.push_back(1);
       is_integer.push_back(true);
       col_names.push_back("z_" +
 			  std::to_string(i) + "_" +
@@ -2197,40 +2196,70 @@ for (HighsInt k = 0; k < this->n; k++) {
   return true;
 }
 
+bool THLPData::checkLp(
+    HighsInt& num_col, HighsInt& num_row, std::vector<double>& col_cost,
+    std::vector<double>& col_lower, std::vector<double>& col_upper, std::vector<std::string>& col_names, 
+    std::vector<double>& row_lower, std::vector<double>& row_upper, std::vector<std::string>& row_names, 
+    std::vector<HighsInt>& start, std::vector<HighsInt>& index,
+    std::vector<double>& value) const {
+  // Sanity check on variables that are not algebraically in the model
+
+  auto okColumn = [&] (const HighsInt iCol) {
+      const bool ok = col_cost[iCol] == 0 && col_lower[iCol] == 0 && col_upper[iCol] == 0 && start[iCol] == start[iCol+1];
+      if (!ok) printf("Column %7d has [c, l, u] = [%11.4g, %11.4g, %11.4g] and %7d nonzeros: %s\n",
+		      int(), col_cost[iCol], col_lower[iCol], col_upper[iCol], int(start[iCol+1]-start[iCol]),
+		      col_names[iCol].c_str());
+      return ok;
+  };
+  //
+  // x_ikk
+   for (HighsInt i = 0; i < this->n; i++) {
+    for (HighsInt k = 0; k < this->n; k++) {
+      if (!okColumn(x[i][k][k])) return false;
+    }
+   }
+  // y_km, m <= k
+   for (HighsInt k = 0; k < this->n; k++) {
+     for (HighsInt m = 0; m <= k; m++) {
+       if (!okColumn(y[k][m])) return false;
+     }
+   }
+   return true;
+}
+
 void THLPData::cleanSolution(std::vector<double>& solution) const {
   HighsInt num_illegal_x = 0;
   for (HighsInt i = 0; i < this->n; i++) {
     for (HighsInt k = 0; k < this->n; k++) {
-      HighsInt iVar = x[i][k][k];
-      if (solution[iVar] != 0) {
-	if (std::fabs(solution[iVar]) > 1e-7) num_illegal_x++;
-	solution[iVar] = 0;
+      HighsInt iCol = x[i][k][k];
+      double x_value = solution[iCol];
+      if (x_value != 0) {
+	if (std::fabs(x_value) > 1e-7) {
+	  printf("RKO solution has illegal value x[%2d][%2d][%2d] = %g\n",
+		 int(i), int(k), int(k), x_value);
+	  num_illegal_x++;
+	}
+	solution[iCol] = 0;
       }
     }
   }
   printf("THLPData::cleanSolution Has %d illegal x values\n", int(num_illegal_x));
-  /*
   HighsInt num_illegal_y = 0;
-  for (HighsInt m = 0; m < this->n; m++) {
-    for (HighsInt k = 0; k <= m; k++) {
-      HighsInt iVar = y[k][m];
-      if (solution[iVar] != 0) {
-	if (std::fabs(solution[iVar]) > 1e-7) num_illegal_y++;
-	solution[iVar] = 0;
+   for (HighsInt k = 0; k < this->n; k++) {
+     for (HighsInt m = 0; m <= k; m++) {
+      HighsInt iCol = y[k][m];
+      double y_value = solution[iCol];
+      if (y_value != 0) {
+	if (std::fabs(y_value) > 1e-7) {
+	  printf("RKO solution has illegal value y[%2d][%2d] = %g\n",
+		 int(k), int(m), y_value);
+	  num_illegal_y++;
+	}
+	solution[iCol] = 0;
       }
     }
   }
   printf("THLPData::cleanSolution Has %d illegal y values\n", int(num_illegal_y));
-  HighsInt num_illegal_z = 0;
-  for (HighsInt k = 0; k < this->n; k++) {
-    HighsInt iVar = z[k][k];
-    if (solution[iVar] != 0) {
-      if (std::fabs(solution[iVar]) > 1e-7) num_illegal_z++;
-      solution[iVar] = 0;
-    }
-  }
-  printf("THLPData::cleanSolution Has %d illegal z values\n", int(num_illegal_z));
-  */
 }
 
 

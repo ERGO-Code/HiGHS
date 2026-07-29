@@ -539,6 +539,11 @@ bool HighsLp::getThlp(const std::string& filename) {
   this->a_matrix_.format_ = MatrixFormat::kRowwise;
   this->a_matrix_.ensureColwise();
   this->mip_type_ = kMipTypeThlp;
+  assert(this->thlp_data_.checkLp(this->num_col_, this->num_row_, this->col_cost_,
+				  this->col_lower_, this->col_upper_, this->col_names_,
+				  this->row_lower_, this->row_upper_, this->row_names_,
+				  this->a_matrix_.start_, this->a_matrix_.index_,
+				  this->a_matrix_.value_));
   return true;
 }
 
