@@ -1501,7 +1501,8 @@ TEST_CASE("rko-knapsack", "[highs_test_mip_solver]") {
 
 TEST_CASE("rko-thlp", "[highs_test_mip_solver]") {
   // Also have /check/instances/phub4.txt
-  std::string filename = std::string(HIGHS_DIR) + "/check/instances/cab25.txt";
+  std::string model = "cab10"; //"cab25"; // 
+  std::string filename = std::string(HIGHS_DIR) + "/check/instances/" + model + ".txt";
   HighsLp lp;
   const bool thlp_ok = lp.getThlp(filename);
   //  REQUIRE(thlp_ok);

@@ -372,5 +372,12 @@ class RKOOptimizer {
 bool solveTHLP(const THLPData& data, std::vector<double>& solution);
 bool testAllAlgorithmsOnTHLP(const THLPData& data);
 
+// ============================================================================
+// 25. CONVERSION TO FULL SOLUTION
+// ============================================================================
+
+void fullSolution(const THLPData& data,
+		  const THLPSolution& solution,
+		  std::vector<double>& full_solution);
 
 #endif  // HIGHS_THLP_H_

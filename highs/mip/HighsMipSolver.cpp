@@ -175,7 +175,9 @@ restart:
       }
     }
     // Apply the RKO heuristic (if enabled)
-    if (options_mip_->mip_heuristic_run_rko) {
+    if (options_mip_->mip_heuristic_run_rko &&
+	!submip &&
+	mipdata_->numRestarts == 0) {
       //      analysis_.mipTimerStart(kMipClockRko);
       mipdata_->rko();
       //      analysis_.mipTimerStop(kMipClockRko);

@@ -346,10 +346,6 @@ HighsModelStatus HighsMipSolverData::trivialHeuristics() {
 
 void HighsMipSolverData::rko() {
   const HighsLp* model = this->mipsolver.model_;
-  /*
-  // Only relevant for pure binary MIPs
-  if (objectiveFunction.getNumBinariesInObjective() != model->num_col_) return;
-  */
   std::vector<double> col_value(model->num_col_, 0.0);
   bool found_integer_feasible_solution = rkoHeuristic(model, col_value);
   // Initial assignments that violate integrality or column bounds can lead to

@@ -1803,6 +1803,7 @@ bool RKOOptimizer::solveTHLP(const THLPData& data,
   }
 
   solution = best_binary_solution_;
+  fullSolution(data, best_solution_, solution);
   return best_solution_.feasible;
 }
 
@@ -2352,3 +2353,86 @@ int main() {
   
   return 0;
 }
+
+// ============================================================================
+// 25. CONVERSION TO FULL SOLUTION
+// ============================================================================
+void fullSolution(const THLPData& data,
+		  const THLPSolution& solution,
+		  std::vector<double>& full_solution) {
+  const std::vector<int>& hubs = solution.hubs;
+  const std::vector<int>& assignment = solution.assignment;
+  const std::vector<std::pair<int, int> >& hub_tree = solution.hub_tree;
+  int n = data.n;
+  int p = data.p;
+  int num_var = n*n*(n+2);
+  full_solution.assign(num_var, 0);
+
+  struct treeRecord {
+    int node;
+    int from_node;
+  };
+  std::vector<treeRecord> my_tree;
+    
+  for (int i = 0; i < n; i++) {
+    int my_hub = assignment[i];
+    my_tree.clear();
+    const bool i_is_hub = my_hub == i;
+    // Explore the tree containing the hubs and i (if it is not a hub)
+    // - ie with p+1 or p nodes if i is a hub.
+    //
+    // Identify the leaves of the tree according to the hub_tree arcs,
+    // and colour the leaves
+    int num_coloured = 0;
+    const int num_to_colour = p;//i_is_hub ? p-1 : p;
+    std::vector<int> coloured(n, 0);
+    for (int pass = 0; pass < num_to_colour; pass++) {
+      std::vector<int> arc_count(n, 0);
+      std::vector<int> to_node(n, 0);
+      if (i_is_hub) {
+	// The self-hub i has an arc from artificial node -1 so that
+	// tree is rooted at i
+	to_node[my_hub] = -1;
+	arc_count[my_hub] = 1;
+      } else {
+	// The hub of i has the arc from i
+	to_node[my_hub] = i;
+	arc_count[my_hub] = 1;
+      }
+      for (int h = 0; h < p-1; h++) {
+	int node1 = hub_tree[h].first;
+	int node2 = hub_tree[h].second;
+	if (coloured[node1] || coloured[node2]) continue;
+	to_node[node1] = node2;
+	to_node[node2] = node1;
+	arc_count[node1]++;
+	arc_count[node2]++;
+      }
+      for (int h = 0; h < p; h++) {
+	int node = hubs[h];
+	if (arc_count[node] == 1) {
+	  // New leaf, so add it and its arc to the tree - unless it's
+	  // an arc to the artificial node from the self-hub
+	  if (to_node[node] >= 0) {
+	    treeRecord entry;
+	    entry.node = node;
+	    entry.from_node = to_node[node];
+	    my_tree.push_back(entry);
+	  }
+	  coloured[node] = 1;
+	  num_coloured++;
+	  if (num_coloured == num_to_colour) {
+	    // The last node to be coloured should be i if it is a
+	    // hub, otherwise my_hub
+	    assert(node == i_is_hub ? i : my_hub);
+	    break;
+	  }
+	}
+      }
+      if (num_coloured == num_to_colour) break;
+    }
+    assert(my_tree.size() == static_cast<size_t>(i_is_hub ? p-1 : p));
+    // Now process tree from leaves
+  }
+}
+
