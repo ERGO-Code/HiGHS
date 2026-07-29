@@ -111,7 +111,7 @@ void Solver::doSolve() {
   reset();
 
   // iterate object needs to be initialised before potentially interrupting
-  it_.reset(new Iterate(model_, regul_));
+  it_.reset(new Iterate(model_, info_, regul_));
   if (!it_) {
     info_.error = kErrorFailedAllocation;
     return;
@@ -127,7 +127,7 @@ void Solver::doSolve() {
   runIpx();
   if (errorOrInterrupt()) return;
 
-  it_->finalResiduals(info_);
+  it_->finalResiduals();
 }
 
 void Solver::runIpm() {
@@ -138,12 +138,12 @@ void Solver::runIpm() {
     if (predictor()) break;
     if (correctors()) break;
     makeStep();
+    printOutput();
   }
 }
 
-bool Solver::initialise() {
-  // Prepare ipm for execution.
-  // Return true if an error occurred.
+isFailure Solver::initialise() {
+  Clock clock;
 
   start_time_ = control_.elapsed();
 
@@ -172,12 +172,12 @@ bool Solver::initialise() {
 
   if (checkInterrupt()) return true;
 
+  info_.times[kInitialiseTime] += clock.stop();
   return false;
 }
 
-bool Solver::prepareIter() {
-  // Prepare next iteration.
-  // Return true if Ipm main loop should be stopped
+shouldTerminate Solver::prepareIter() {
+  Clock clock;
 
   it_->saveBest(options_.feasibility_tol, options_.optimality_tol, iter_);
   if (checkIterate()) return true;
@@ -198,12 +198,12 @@ bool Solver::prepareIter() {
 
   it_->computeScaling();
 
+  info_.times[kPrepareTime] += clock.stop();
   return false;
 }
 
-bool Solver::predictor() {
-  // Compute affine scaling direction.
-  // Return true if an error occurred.
+isFailure Solver::predictor() {
+  Clock clock;
 
   if (checkInterrupt()) return true;
 
@@ -212,24 +212,23 @@ bool Solver::predictor() {
 
   if (solveNewtonSystem(it_->delta)) return true;
 
+  info_.times[kPredictorTime] += clock.stop();
   return false;
 }
 
-bool Solver::correctors() {
-  // Compute multiple centrality correctors.
-  // Return true if an error occurred.
+isFailure Solver::correctors() {
+  Clock clock;
 
   if (checkInterrupt()) return true;
 
   sigmaCorrectors();
   if (centralityCorrectors()) return true;
 
+  info_.times[kCorrectorsTime] += clock.stop();
   return false;
 }
 
-bool Solver::prepareIpx() {
-  // Return true if an error occurred;
-
+isFailure Solver::prepareIpx() {
   assert(!model_.qp());
 
   ipx::Parameters ipx_param;
@@ -265,7 +264,7 @@ bool Solver::prepareIpx() {
   return false;
 }
 
-bool Solver::prepareIpxStartingPoint() {
+isFailure Solver::prepareIpxStartingPoint() {
   std::vector<double> x, xl, xu, slack, y, zl, zu;
   getInteriorSolution(x, xl, xu, slack, y, zl, zu);
 
@@ -291,8 +290,6 @@ void Solver::runIpx() {
   } else if (statusAllowsCrossover() && crossoverIsOn()) {
     logger_.print("\nRunning crossover with IPX\n");
     crossoverWithIpx();
-  } else {
-    return;
   }
 }
 
@@ -322,7 +319,7 @@ void Solver::crossoverWithIpx() {
   if (info_.ipx_info.errflag) info_.error = kErrorIpx;
 }
 
-bool Solver::solveNewtonSystem(NewtonDir& delta) {
+isFailure Solver::solveNewtonSystem(NewtonDir& delta) {
   solve6x6(delta, it_->res);
   bool terminate = info_.error;
 
@@ -358,6 +355,8 @@ bool Solver::solveNewtonSystem(NewtonDir& delta) {
 }
 
 void Solver::solve2x2(NewtonDir& delta, const Residuals& rhs) {
+  Clock clock;
+
   std::vector<double>& theta_inv = it_->scaling;
 
   std::vector<double> res7 = it_->residual7(rhs);
@@ -413,6 +412,8 @@ void Solver::solve2x2(NewtonDir& delta, const Residuals& rhs) {
       return;
     }
   }
+
+  info_.times[kSolve2x2Time] += clock.stop();
 }
 
 void Solver::solve6x6(NewtonDir& delta, const Residuals& rhs) {
@@ -421,7 +422,9 @@ void Solver::solve6x6(NewtonDir& delta, const Residuals& rhs) {
   recoverDirection(delta, rhs);
 }
 
-void Solver::recoverDirection(NewtonDir& delta, const Residuals& rhs) const {
+void Solver::recoverDirection(NewtonDir& delta, const Residuals& rhs) {
+  Clock clock;
+
   const std::vector<double>& xl = it_->xl;
   const std::vector<double>& xu = it_->xu;
   const std::vector<double>& zl = it_->zl;
@@ -433,7 +436,7 @@ void Solver::recoverDirection(NewtonDir& delta, const Residuals& rhs) const {
   const std::vector<double>& res6 = rhs.r6;
 
   for (Int i = 0; i < n_; ++i) {
-    if (model_.hasLb(i) || model_.hasUb(i)) {
+    if (model_.hasLb(i)) {
       delta.xl[i] = delta.x[i] - res2[i];
       delta.zl[i] = (res5[i] - zl[i] * delta.xl[i]) / xl[i];
     } else {
@@ -442,7 +445,7 @@ void Solver::recoverDirection(NewtonDir& delta, const Residuals& rhs) const {
     }
   }
   for (Int i = 0; i < n_; ++i) {
-    if (model_.hasLb(i) || model_.hasUb(i)) {
+    if (model_.hasUb(i)) {
       delta.xu[i] = res3[i] - delta.x[i];
       delta.zu[i] = (res6[i] - zu[i] * delta.xu[i]) / xu[i];
     } else {
@@ -450,6 +453,8 @@ void Solver::recoverDirection(NewtonDir& delta, const Residuals& rhs) const {
       delta.zu[i] = 0.0;
     }
   }
+
+  info_.times[kRecoverTime] += clock.stop();
 }
 
 double Solver::stepToBoundary(const std::vector<double>& x,
@@ -587,17 +592,16 @@ void Solver::stepSizes() {
 }
 
 void Solver::makeStep() {
+  Clock clock;
   stepSizes();
   it_->makeStep(alpha_primal_, alpha_dual_);
   it_->residual1234();
   it_->computeMu();
   it_->indicators();
-  printOutput();
+  info_.times[kStepTime] += clock.stop();
 }
 
-bool Solver::startingPoint() {
-  // Return true if an error occurred
-
+isFailure Solver::startingPoint() {
   std::vector<double>& x = it_->x;
   std::vector<double>& xl = it_->xl;
   std::vector<double>& xu = it_->xu;
@@ -668,7 +672,7 @@ bool Solver::startingPoint() {
   model_.A().alphaProductPlusY(1.0, temp_m, xl, true);
 
   // x += dx;
-  vectorAdd(x, xl, 1.0);
+  vectorAdd(x, 1.0, xl, 1.0);
   // *********************************************************************
 
   // *********************************************************************
@@ -842,6 +846,8 @@ void Solver::sigmaCorrectors() {
 }
 
 void Solver::residualsMcc() {
+  Clock clock;
+
   // compute right-hand side for multiple centrality correctors
   std::vector<double>& xl = it_->xl;
   std::vector<double>& xu = it_->xu;
@@ -866,10 +872,10 @@ void Solver::residualsMcc() {
   std::vector<double> xut = xu;
   std::vector<double> zlt = zl;
   std::vector<double> zut = zu;
-  vectorAdd(xlt, it_->delta.xl, alpha_p);
-  vectorAdd(xut, it_->delta.xu, alpha_p);
-  vectorAdd(zlt, it_->delta.zl, alpha_d);
-  vectorAdd(zut, it_->delta.zu, alpha_d);
+  vectorAdd(xlt, 1.0, it_->delta.xl, alpha_p);
+  vectorAdd(xut, 1.0, it_->delta.xu, alpha_p);
+  vectorAdd(zlt, 1.0, it_->delta.zl, alpha_d);
+  vectorAdd(zut, 1.0, it_->delta.zu, alpha_d);
 
   // compute right-hand side for mcc
   for (Int i = 0; i < n_; ++i) {
@@ -915,9 +921,11 @@ void Solver::residualsMcc() {
       res6[i] = 0.0;
     }
   }
+
+  info_.times[kResidualsTime] += clock.stop();
 }
 
-bool Solver::centralityCorrectors() {
+isFailure Solver::centralityCorrectors() {
   // compute stepsizes of current direction
   double alpha_p_old, alpha_d_old;
   stepsToBoundary(alpha_p_old, alpha_d_old, it_->delta);
@@ -942,16 +950,16 @@ bool Solver::centralityCorrectors() {
 
     if (alpha_p >= alpha_p_old + kMccIncreaseAlpha * kMccIncreaseMin) {
       // accept primal corrector
-      vectorAdd(it_->delta.x, corrector.x, wp);
-      vectorAdd(it_->delta.xl, corrector.xl, wp);
-      vectorAdd(it_->delta.xu, corrector.xu, wp);
+      vectorAdd(it_->delta.x, 1.0, corrector.x, wp);
+      vectorAdd(it_->delta.xl, 1.0, corrector.xl, wp);
+      vectorAdd(it_->delta.xu, 1.0, corrector.xu, wp);
       alpha_p_old = alpha_p;
     }
     if (alpha_d >= alpha_d_old + kMccIncreaseAlpha * kMccIncreaseMin) {
       // accept dual corrector
-      vectorAdd(it_->delta.y, corrector.y, wd);
-      vectorAdd(it_->delta.zl, corrector.zl, wd);
-      vectorAdd(it_->delta.zu, corrector.zu, wd);
+      vectorAdd(it_->delta.y, 1.0, corrector.y, wd);
+      vectorAdd(it_->delta.zl, 1.0, corrector.zl, wd);
+      vectorAdd(it_->delta.zu, 1.0, corrector.zu, wd);
       alpha_d_old = alpha_d;
     }
 
@@ -1004,39 +1012,41 @@ void Solver::bestWeight(const NewtonDir& delta, const NewtonDir& corrector,
   }
 }
 
-bool Solver::checkIterate() {
+shouldTerminate Solver::checkIterate() {
+  bool terminate = false;
+
   if (it_->isNan()) {
     logger_.printInfo("\nIterate is nan\n");
     info_.error = kErrorNan;
-    return true;
+    terminate = true;
   } else if (it_->isInf()) {
     logger_.printInfo("\nIterate is inf\n");
     info_.error = kErrorNan;
-    return true;
-  }
-
-  for (Int i = 0; i < n_; ++i) {
-    if ((model_.hasLb(i) && it_->xl[i] < 0) ||
-        (model_.hasLb(i) && it_->zl[i] < 0) ||
-        (model_.hasUb(i) && it_->xu[i] < 0) ||
-        (model_.hasUb(i) && it_->zu[i] < 0)) {
-      logger_.printInfo("\nIterate has negative component\n");
-      info_.error = kErrorNegativeComponent;
-      return true;
+    bool terminate = true;
+  } else {
+    for (Int i = 0; i < n_; ++i) {
+      if ((model_.hasLb(i) && it_->xl[i] < 0) ||
+          (model_.hasLb(i) && it_->zl[i] < 0) ||
+          (model_.hasUb(i) && it_->xu[i] < 0) ||
+          (model_.hasUb(i) && it_->zu[i] < 0)) {
+        logger_.printInfo("\nIterate has negative component\n");
+        info_.error = kErrorNegativeComponent;
+        terminate = true;
+      }
     }
   }
 
-  return false;
+  return terminate;
 }
 
-bool Solver::checkStagnation() {
+shouldTerminate Solver::checkStagnation() {
   std::stringstream log_stream;
   bool stagnation = it_->stagnation(log_stream);
   logger_.printInfo(log_stream.str().c_str());
   return stagnation;
 }
 
-bool Solver::checkBadIter() {
+shouldTerminate Solver::checkBadIter() {
   bool terminate = false;
   bool stagnation = iter_ > 0 ? checkStagnation() : false;
 
@@ -1097,7 +1107,7 @@ bool Solver::checkBadIter() {
   return terminate;
 }
 
-bool Solver::checkTermination() {
+shouldTerminate Solver::checkTermination() {
   bool feasible = it_->pinf < options_.feasibility_tol &&
                   it_->dinf < options_.feasibility_tol;
   bool optimal = it_->pdgap < options_.optimality_tol;
@@ -1129,7 +1139,7 @@ bool Solver::checkTermination() {
   return terminate;
 }
 
-bool Solver::checkTerminationKkt() {
+isSuccess Solver::checkTerminationKkt() {
   if (model_.qp()) {
     // Not yet implemented for QP
     logger_.printInfo("kktCheck skipped for QP\n");
@@ -1166,7 +1176,7 @@ bool Solver::checkTerminationKkt() {
   return false;
 }
 
-bool Solver::checkInterrupt() {
+shouldTerminate Solver::checkInterrupt() {
   bool terminate = false;
   Int status = control_.interruptCheck(iter_);
   if (status) {
@@ -1181,7 +1191,7 @@ void Solver::resetToBestIter(Int iter, bool print) {
   if (did_reset && print) printOutput(true);
 }
 
-bool Solver::initialiseLinearSolver() {
+isFailure Solver::initialiseLinearSolver() {
   LS_.reset(new FactorHighsSolver(*kkt_, options_, model_, regul_, info_,
                                   it_->data, logger_));
   if (!LS_) {
@@ -1225,7 +1235,7 @@ bool Solver::initialiseLinearSolver() {
   return false;
 }
 
-bool Solver::switchToMultifrontal() {
+isSuccess Solver::switchToMultifrontal() {
   bool switch_successfull = false;
 
   if (LS_->type() == kUpLookingType && options_.factor == kHighsChooseString) {
@@ -1256,7 +1266,7 @@ void Solver::printHeader() const {
     if (!options_.timeless_log) logger_.print("    time");
     if (logger_.debug(1)) {
       logger_.print(
-          "     alpha p/d   sigma af/co   cor  solv  Fact    static reg p/d    "
+          "     alpha p/d   sigma af/co   cor  solv  fact    static reg p/d    "
           " minT     maxT  (xj * zj / mu)_range_&_num   max_res");
     }
     logger_.print("\n");
@@ -1328,32 +1338,54 @@ void Solver::printSummary() const {
     log_stream << textline("Solves:") << integer(info_.solve_number) << '\n';
 
     if (!options_.timeless_log) {
-      log_stream << textline("Analyse AS time:")
-                 << fix(info_.analyse_AS_time, 0, 2) << '\n';
-      log_stream << textline("Analyse NE time:")
-                 << fix(info_.analyse_NE_time, 0, 2) << '\n';
-      log_stream << textline("Matrix time:") << fix(info_.matrix_time, 0, 2)
-                 << '\n';
-      log_stream << textline("AS structure time:")
-                 << fix(info_.AS_structure_time, 0, 2) << '\n';
-      log_stream << textline("NE structure time:")
-                 << fix(info_.NE_structure_time, 0, 2) << '\n';
-      log_stream << textline("Factorisation time:")
-                 << fix(info_.factor_time, 0, 2) << '\n';
-      log_stream << textline("Solve time:") << fix(info_.solve_time, 0, 2)
-                 << '\n';
-      log_stream << textline("Residual time:") << fix(info_.residual_time, 0, 2)
-                 << '\n';
-      log_stream << textline("Omega time:") << fix(info_.omega_time, 0, 2)
-                 << '\n';
       log_stream << textline("Avg time per factorisation:")
-                 << sci(info_.factor_time / info_.factor_number, 0, 2) << '\n';
+                 << sci(info_.times[kFactoriseTime] / info_.factor_number, 0, 2)
+                 << '\n';
       log_stream << textline("Avg time per solve:")
-                 << sci(info_.solve_time / info_.solve_number, 0, 2) << '\n';
+                 << sci(info_.times[kSolveTime] / info_.solve_number, 0, 2)
+                 << '\n';
     }
   }
-
   logger_.print(log_stream.str().c_str());
+
+  if (logger_.debug(1)) {
+    logger_.print("\nTime profile\n");
+
+    logger_.print(" Initialise           %.2f\n", info_.times[kInitialiseTime]);
+    logger_.print(" Prepare iter         %.2f\n", info_.times[kPrepareTime]);
+    logger_.print(" Predictor            %.2f\n", info_.times[kPredictorTime]);
+    logger_.print(" Correctors           %.2f\n", info_.times[kCorrectorsTime]);
+    logger_.print(" Step                 %.2f\n", info_.times[kStepTime]);
+    logger_.print("\n");
+
+    logger_.print(" 2x2 system           %.2f\n", info_.times[kSolve2x2Time]);
+    logger_.print(" Recover direction    %.2f\n", info_.times[kRecoverTime]);
+    logger_.print(" Residuals            %.2f\n", info_.times[kResidualsTime]);
+    logger_.print("\n");
+
+    logger_.print(" Structure NE         %.2f\n",
+                  info_.times[kMatrixStructureTime_NE]);
+    logger_.print(" Structure AS         %.2f\n",
+                  info_.times[kMatrixStructureTime_AS]);
+    logger_.print(" Matrix values        %.2f\n",
+                  info_.times[kMatrixValuesTime]);
+
+    logger_.print(" Analyse NE           %.2f\n", info_.times[kAnalyseTime_NE]);
+    logger_.print(" Analyse AS           %.2f\n", info_.times[kAnalyseTime_AS]);
+
+    logger_.print(" Factorise            %.2f\n", info_.times[kFactoriseTime]);
+
+    logger_.print(" Solve                %.2f\n", info_.times[kSolveTime]);
+    logger_.print(" Residual             %.2f\n",
+                  info_.times[kRefinementResTime]);
+    logger_.print(" Omega                %.2f\n",
+                  info_.times[kRefinementOmegaTime]);
+    logger_.print(" Insert/split         %.2f\n",
+                  info_.times[kInsertSplitTime]);
+    logger_.print("\n");
+  }
+
+  logger_.print("\n");
 }
 
 void Solver::getOriginalDims(Int& num_row, Int& num_col) const {
@@ -1457,7 +1489,7 @@ void Solver::setStatus2(Status status) {
   status_phase2 = status;
 }
 void Solver::setStatus(Status status) {
-  if (status_phase1 == kStatusNotSet)
+  if (getStatus1() == kStatusNotSet)
     setStatus1(status);
   else
     setStatus2(status);

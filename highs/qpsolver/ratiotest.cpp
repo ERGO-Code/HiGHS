@@ -8,12 +8,12 @@
 #include "qpsolver/ratiotest.hpp"
 
 static double step(double x, double p, double l, double u, double t) {
-  if (p < -t && l > -std::numeric_limits<double>::infinity()) {
+  if (p < -t && l > -kHighsInf) {
     return (l - x) / p;
-  } else if (p > t && u < std::numeric_limits<double>::infinity()) {
+  } else if (p > t && u < kHighsInf) {
     return (u - x) / p;
   } else {
-    return std::numeric_limits<double>::infinity();
+    return kHighsInf;
   }
 }
 
@@ -107,25 +107,25 @@ static RatiotestResult ratiotest_twopass(Runtime& runtime, const QpVector& p,
 Instance ratiotest_relax_instance(Runtime& runtime) {
   Instance relaxed_instance = runtime.instance;
   for (double& bound : relaxed_instance.con_lo) {
-    if (bound != -std::numeric_limits<double>::infinity()) {
+    if (bound != -kHighsInf) {
       bound -= runtime.settings.ratiotest_d;
     }
   }
 
   for (double& bound : relaxed_instance.con_up) {
-    if (bound != std::numeric_limits<double>::infinity()) {
+    if (bound != kHighsInf) {
       bound += runtime.settings.ratiotest_d;
     }
   }
 
   for (double& bound : relaxed_instance.var_lo) {
-    if (bound != -std::numeric_limits<double>::infinity()) {
+    if (bound != -kHighsInf) {
       bound -= runtime.settings.ratiotest_d;
     }
   }
 
   for (double& bound : relaxed_instance.var_up) {
-    if (bound != std::numeric_limits<double>::infinity()) {
+    if (bound != kHighsInf) {
       bound += runtime.settings.ratiotest_d;
     }
   }

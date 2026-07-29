@@ -23,15 +23,16 @@ class Numeric {
   // swaps of columns for each supernode, ordered locally within a block
   std::vector<std::vector<Int>> swaps_{};
 
-  // information about 2x2 pivots
+  // indicates whether a block of columns in a supernode has any non-identical
+  // swap
+  std::vector<std::vector<char>> any_swaps_{};
+
   std::vector<std::vector<double>> pivot_2x2_{};
-
-  // symbolic object
   const Symbolic* S_;
-
   DataCollector* data_ = nullptr;
-
   const FHoptions* options_;
+  std::unique_ptr<SolveHandler> SH_;
+  std::vector<double> gemv_workspace_;
 
   friend class Factorise;
 
@@ -39,6 +40,8 @@ class Numeric {
   std::vector<double> total_reg_{};
 
  public:
+  Int prepare();
+
   Int solve(double* x) const;
   Int solve(double* x, Int k) const;
 

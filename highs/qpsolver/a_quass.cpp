@@ -52,6 +52,9 @@ static QpAsmStatus quass2highs(Instance& instance, Settings& settings,
     case QpModelStatus::kLargeNullspace:
       highs_model_status = HighsModelStatus::kSolveError;
       return QpAsmStatus::kError;
+    case QpModelStatus::kNonConvex:
+      highs_model_status = HighsModelStatus::kSolveError;
+      return QpAsmStatus::kError;
     case QpModelStatus::kError:
       highs_model_status = HighsModelStatus::kSolveError;
       return QpAsmStatus::kError;
@@ -60,6 +63,7 @@ static QpAsmStatus quass2highs(Instance& instance, Settings& settings,
       return QpAsmStatus::kError;
     default:
       highs_model_status = HighsModelStatus::kNotset;
+      assert(highs_model_status != HighsModelStatus::kNotset);
       return QpAsmStatus::kError;
   }
 
@@ -141,28 +145,44 @@ QpAsmStatus solveqp(Instance& instance, Settings& settings, Statistics& stats,
 
   // perturb instance, store perturbance information
 
-  // regularize
-  for (HighsInt i = 0; i < instance.num_var; i++) {
-    for (HighsInt index = instance.Q.mat.start[i];
-         index < instance.Q.mat.start[i + 1]; index++) {
-      if (instance.Q.mat.index[index] == i) {
-        instance.Q.mat.value[index] += settings.hessian_regularization_value;
+  // Regularize any explicit Hessian
+  if (instance.Q.mat.num_col > 0) {
+    for (HighsInt i = 0; i < instance.num_var; i++) {
+      for (HighsInt index = instance.Q.mat.start[i];
+           index < instance.Q.mat.start[i + 1]; index++) {
+        if (instance.Q.mat.index[index] == i) {
+          instance.Q.mat.value[index] += settings.hessian_regularization_value;
+        }
       }
     }
+  }
+  if (instance.Q.mat.isOracle()) {
+    // Save the regularization value to apply in oracle operations
+    instance.Q.mat.oracle_.shift_ = settings.hessian_regularization_value;
   }
 
   // compute initial feasible point
   QpHotstartInformation startinfo(instance.num_var, instance.num_con);
-  if (instance.num_con == 0 && instance.num_var <= 15000) {
+
+  if (instance.num_con == 0 &&
+      (instance.num_var <= 5000 || instance.Q.mat.isDiagonal())) {
+    // For a pure bounded QP compute a starting point from the
+    // unconstrained QP solution. If Q is diagonal, do this directly,
+    // otherwise compute a Cholesky decomposition (hence dimension
+    // restriction).
     computeStartingPointBounded(instance, settings, stats, qp_model_status,
                                 startinfo, qp_timer);
-    if (qp_model_status == QpModelStatus::kOptimal) {
-      qp_solution.primal = startinfo.primal;
-      return quass2highs(instance, settings, stats, qp_model_status,
-                         qp_solution, highs_model_status, highs_basis,
-                         highs_solution);
-    }
-    if (qp_model_status == QpModelStatus::kUnbounded) {
+    if (qp_model_status == QpModelStatus::kOptimal ||
+        qp_model_status == QpModelStatus::kUnbounded ||
+        qp_model_status == QpModelStatus::kNonConvex) {
+      if (qp_model_status == QpModelStatus::kOptimal) {
+        // Optimality occurs only if the unconstrained solution is
+        // feasible, so copy in the primal solution, zero the column
+        // duals and set the column status to inactive
+        qp_solution.primal = startinfo.primal;
+        qp_solution.dualvar.value.assign(instance.num_var, 0);
+        qp_solution.status_var.assign(instance.num_var, BasisStatus::kInactive);
+      }
       return quass2highs(instance, settings, stats, qp_model_status,
                          qp_solution, highs_model_status, highs_basis,
                          highs_solution);

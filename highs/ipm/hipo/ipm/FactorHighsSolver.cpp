@@ -53,7 +53,7 @@ Int FactorHighsSolver::analyseAS(Symbolic& S) {
   Clock clock;
   Int status = chooseOrdering(kkt_.rowsAS, kkt_.ptrAS, pivot_signs, S,
                               ordering_AS_, "AS");
-  info_.analyse_AS_time += clock.stop();
+  info_.times[kAnalyseTime_AS] += clock.stop();
 
   return status;
 }
@@ -72,7 +72,7 @@ Int FactorHighsSolver::analyseNE(Symbolic& S) {
   Clock clock;
   Int status = chooseOrdering(kkt_.rowsNE, kkt_.ptrNE, pivot_signs, S,
                               ordering_NE_, "NE");
-  info_.analyse_NE_time += clock.stop();
+  info_.times[kAnalyseTime_NE] += clock.stop();
 
   return status;
 }
@@ -83,6 +83,7 @@ Int FactorHighsSolver::analyseNE(Symbolic& S) {
 
 Int FactorHighsSolver::factorAS(const std::vector<double>& scaling) {
   assert(!this->valid_);
+  assert(kkt_.isAS());
 
   kkt_.buildASvalues(scaling);
 
@@ -93,7 +94,7 @@ Int FactorHighsSolver::factorAS(const std::vector<double>& scaling) {
   if (FH_.factorise(kkt_.S, kkt_.n(), kkt_.nz(), kkt_.rowsAS.data(),
                     kkt_.ptrAS.data(), kkt_.valAS.data()))
     return kErrorFactorise;
-  info_.factor_time += clock.stop();
+  info_.times[kFactoriseTime] += clock.stop();
   info_.factor_number++;
 
   this->valid_ = true;
@@ -102,6 +103,7 @@ Int FactorHighsSolver::factorAS(const std::vector<double>& scaling) {
 
 Int FactorHighsSolver::factorNE(const std::vector<double>& scaling) {
   assert(!this->valid_);
+  assert(kkt_.isNE());
 
   kkt_.buildNEvalues(scaling);
 
@@ -112,7 +114,7 @@ Int FactorHighsSolver::factorNE(const std::vector<double>& scaling) {
   if (FH_.factorise(kkt_.S, kkt_.n(), kkt_.nz(), kkt_.rowsNE.data(),
                     kkt_.ptrNE.data(), kkt_.valNE.data()))
     return kErrorFactorise;
-  info_.factor_time += clock.stop();
+  info_.times[kFactoriseTime] += clock.stop();
   info_.factor_number++;
 
   this->valid_ = true;
@@ -128,23 +130,27 @@ Int FactorHighsSolver::solveAS(const std::vector<double>& rhs_x,
                                std::vector<double>& lhs_x,
                                std::vector<double>& lhs_y) {
   assert(this->valid_);
+  assert(kkt_.isAS());
 
   Int n = rhs_x.size();
 
-  std::vector<double> rhs;
-  rhs.insert(rhs.end(), rhs_x.begin(), rhs_x.end());
-  rhs.insert(rhs.end(), rhs_y.begin(), rhs_y.end());
-
   Clock clock;
-  if (FH_.solve(rhs.data())) return kErrorSolve;
+  as_buffer_.resize(rhs_x.size() + rhs_y.size());
+  std::copy(rhs_x.begin(), rhs_x.end(), as_buffer_.begin());
+  std::copy(rhs_y.begin(), rhs_y.end(), as_buffer_.begin() + n);
+  info_.times[kInsertSplitTime] += clock.stop();
 
-  info_.solve_time += clock.stop();
+  clock.start();
+  if (FH_.solve(as_buffer_.data())) return kErrorSolve;
+  info_.times[kSolveTime] += clock.stop();
   info_.solve_number++;
 
   data_.back().num_solves++;
 
-  lhs_x = std::vector<double>(rhs.begin(), rhs.begin() + n);
-  lhs_y = std::vector<double>(rhs.begin() + n, rhs.end());
+  clock.start();
+  lhs_x.assign(as_buffer_.begin(), as_buffer_.begin() + n);
+  lhs_y.assign(as_buffer_.begin() + n, as_buffer_.end());
+  info_.times[kInsertSplitTime] += clock.stop();
 
   return kOk;
 }
@@ -152,13 +158,13 @@ Int FactorHighsSolver::solveAS(const std::vector<double>& rhs_x,
 Int FactorHighsSolver::solveNE(const std::vector<double>& rhs,
                                std::vector<double>& lhs) {
   assert(this->valid_);
+  assert(kkt_.isNE());
 
   lhs = rhs;
 
   Clock clock;
   if (FH_.solve(lhs.data())) return kErrorSolve;
-
-  info_.solve_time += clock.stop();
+  info_.times[kSolveTime] += clock.stop();
   info_.solve_number++;
 
   data_.back().num_solves++;
@@ -171,16 +177,16 @@ Int FactorHighsSolver::solveNE(const std::vector<double>& rhs,
 // =========================================================================
 
 Int FactorHighsSolver::setup() {
-  Clock clock;
-
   if (kkt_.S.empty()) {
+    Clock clock;
     if (Int status = setNla()) return status;
     setParallel();
+    info_.times[kAnalyseTime] += clock.stop();
 
     if (!options_.timeless_log) {
       std::stringstream log_stream;
-      log_stream << textline("Analyse time:") << fix(clock.stop(), 0, 2)
-                 << '\n';
+      log_stream << textline("Analyse time:")
+                 << fix(info_.times[kAnalyseTime], 0, 2) << '\n';
       logger_.print(log_stream.str().c_str());
     }
 

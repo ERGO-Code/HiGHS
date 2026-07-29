@@ -101,7 +101,7 @@ bool optionSolverOk(const HighsLogOptions& report_log_options,
                  "%s\"%s\", \"%s\", \"%s\", \"%s\" or \"%s\"\n",
                  value.c_str(), kSolverString.c_str(),
                  HighsExternalApi::isAvailable<HighsExtras::hipo>()
-                     ? (kHipoString + "\", \"").c_str()
+                     ? ("\"" + kHipoString + "\", ").c_str()
                      : "",
                  kHighsChooseString.c_str(), kSimplexString.c_str(),
                  kIpmString.c_str(), kIpxString.c_str(), kPdlpString.c_str(),
@@ -131,7 +131,7 @@ bool optionMipLpSolverOk(const HighsLogOptions& report_log_options,
                  "%s\"%s\", \"%s\", \"%s\" or \"%s\"\n",
                  value.c_str(), kMipLpSolverString.c_str(),
                  HighsExternalApi::isAvailable<HighsExtras::hipo>()
-                     ? (kHipoString + "\", \"").c_str()
+                     ? ("\"" + kHipoString + "\", ").c_str()
                      : "",
                  kHighsChooseString.c_str(), kSimplexString.c_str(),
                  kIpmString.c_str(), kIpxString.c_str());
@@ -160,7 +160,7 @@ bool optionMipIpmSolverOk(const HighsLogOptions& report_log_options,
         "%s\"%s\", \"%s\" or \"%s\"\n",
         value.c_str(), kMipIpmSolverString.c_str(),
         HighsExternalApi::isAvailable<HighsExtras::hipo>()
-            ? (kHipoString + "\", \"").c_str()
+            ? ("\"" + kHipoString + "\", ").c_str()
             : "",
         kHighsChooseString.c_str(), kIpmString.c_str(), kIpxString.c_str());
     return false;

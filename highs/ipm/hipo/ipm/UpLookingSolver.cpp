@@ -8,9 +8,9 @@ UpLookingSolver::UpLookingSolver(KktMatrix& kkt, Info& info, IpmData& data,
                                  const Regularisation& regul,
                                  const Model& model)
     : kkt_{kkt},
-      ptr_{kkt_.ptrAS.empty() ? kkt_.ptrNE : kkt_.ptrAS},
-      rows_{kkt_.rowsAS.empty() ? kkt_.rowsNE : kkt_.rowsAS},
-      val_{kkt_.valAS.empty() ? kkt_.valNE : kkt_.valAS},
+      ptr_{kkt_.isNE() ? kkt_.ptrNE : kkt_.ptrAS},
+      rows_{kkt_.isNE() ? kkt_.rowsNE : kkt_.rowsAS},
+      val_{kkt_.isNE() ? kkt_.valNE : kkt_.valAS},
       n_{static_cast<Int>(ptr_.size() - 1)},
       info_{info},
       data_{data},
@@ -66,7 +66,7 @@ Int UpLookingSolver::setup() {
   regularisation_.assign(n_, 0.0);
 
   signs_.assign(n_, 1.0);
-  if (!kkt_.ptrAS.empty())
+  if (kkt_.isAS())
     for (Int i = 0; i < model_.A().num_col_; ++i) signs_[i] = -1.0;
   permuteVectorInverse(signs_, kkt_.iperm());
 
@@ -198,11 +198,11 @@ void UpLookingSolver::solve(std::vector<double>& x) {
 
 Int UpLookingSolver::factorAS(const std::vector<double>& scaling) {
   assert(!valid_);
-  assert(kkt_.ptrNE.empty());
+  assert(kkt_.isAS());
 
   Clock clock;
   kkt_.buildASvalues(scaling);
-  info_.matrix_time += clock.stop();
+  info_.times[kMatrixValuesTime] += clock.stop();
 
   // construct permuted upper triangle
   std::vector<Int> ptrT(ptr_.size()), rowsT(rows_.size());
@@ -212,7 +212,7 @@ Int UpLookingSolver::factorAS(const std::vector<double>& scaling) {
 
   clock.start();
   factor(ptrT, rowsT, valT);
-  info_.factor_time += clock.stop();
+  info_.times[kFactoriseTime] += clock.stop();
   info_.factor_number++;
 
   valid_ = true;
@@ -220,11 +220,11 @@ Int UpLookingSolver::factorAS(const std::vector<double>& scaling) {
 }
 Int UpLookingSolver::factorNE(const std::vector<double>& scaling) {
   assert(!valid_);
-  assert(kkt_.ptrAS.empty());
+  assert(kkt_.isNE());
 
   Clock clock;
   kkt_.buildNEvalues(scaling);
-  info_.matrix_time += clock.stop();
+  info_.times[kMatrixValuesTime] += clock.stop();
 
   // construct permuted upper triangle
   std::vector<Int> ptrT(ptr_.size()), rowsT(rows_.size());
@@ -234,7 +234,7 @@ Int UpLookingSolver::factorNE(const std::vector<double>& scaling) {
 
   clock.start();
   factor(ptrT, rowsT, valT);
-  info_.factor_time += clock.stop();
+  info_.times[kFactoriseTime] += clock.stop();
   info_.factor_number++;
 
   valid_ = true;
@@ -249,22 +249,24 @@ Int UpLookingSolver::solveAS(const std::vector<double>& rhs_x,
 
   Int n = rhs_x.size();
 
-  // create single rhs
-  std::vector<double> rhs;
-  rhs.insert(rhs.end(), rhs_x.begin(), rhs_x.end());
-  rhs.insert(rhs.end(), rhs_y.begin(), rhs_y.end());
-
   Clock clock;
-  permuteVectorInverse(rhs, kkt_.iperm());
-  solve(rhs);
-  permuteVector(rhs, kkt_.iperm());
-  info_.solve_time += clock.stop();
+  as_buffer_.resize(rhs_x.size() + rhs_y.size());
+  std::copy(rhs_x.begin(), rhs_x.end(), as_buffer_.begin());
+  std::copy(rhs_y.begin(), rhs_y.end(), as_buffer_.begin() + n);
+  info_.times[kInsertSplitTime] += clock.stop();
+
+  clock.start();
+  permuteVectorInverse(as_buffer_, kkt_.iperm());
+  solve(as_buffer_);
+  permuteVector(as_buffer_, kkt_.iperm());
+  info_.times[kSolveTime] += clock.stop();
   info_.solve_number++;
   data_.back().num_solves++;
 
-  // split lhs
-  lhs_x = std::vector<double>(rhs.begin(), rhs.begin() + n);
-  lhs_y = std::vector<double>(rhs.begin() + n, rhs.end());
+  clock.start();
+  lhs_x.assign(as_buffer_.begin(), as_buffer_.begin() + n);
+  lhs_y.assign(as_buffer_.begin() + n, as_buffer_.end());
+  info_.times[kInsertSplitTime] += clock.stop();
 
   return kOk;
 }
@@ -277,7 +279,7 @@ Int UpLookingSolver::solveNE(const std::vector<double>& rhs,
   permuteVectorInverse(lhs, kkt_.iperm());
   solve(lhs);
   permuteVector(lhs, kkt_.iperm());
-  info_.solve_time += clock.stop();
+  info_.times[kSolveTime] += clock.stop();
   info_.solve_number++;
   data_.back().num_solves++;
 

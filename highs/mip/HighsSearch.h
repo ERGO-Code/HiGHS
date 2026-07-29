@@ -206,6 +206,8 @@ class HighsSearch {
 
   void flushStatistics(HighsMipSolver& mipsolver);
 
+  void resetStatistics();
+
   void installNode(HighsNodeQueue::OpenNode&& node);
 
   void addInfeasibleConflict();
@@ -250,7 +252,6 @@ class HighsSearch {
   double getFeasTol() const;
   double getUpperLimit() const;
   double getEpsilon() const;
-  double getOptimalityLimit() const;
 
   const std::vector<double>& getRootLpSol() const;
   const std::vector<HighsInt>& getIntegralCols() const;

@@ -16,15 +16,15 @@ namespace hipo {
 
 class FactorHighsSolver : public LinearSolver {
   FHsolver FH_;
-
   KktMatrix& kkt_;
-
   const Regularisation& regul_;
   Info& info_;
   IpmData& data_;
   const Logger& logger_;
   const Model& model_;
   Options& options_;
+
+  std::vector<double> as_buffer_;
 
   std::string ordering_AS_ = "none";
   std::string ordering_NE_ = "none";
