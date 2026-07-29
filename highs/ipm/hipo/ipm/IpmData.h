@@ -21,9 +21,7 @@ struct IpmIterData {
   Int num_small_prod = 0;
   Int num_large_prod = 0;
   double omega = 0.0;
-  double nw_back_err = 0.0;
-  double cw_back_err = 0.0;
-  Int large_components_cw = 0;
+  Int factorisation_used = 0;
 };
 
 struct IpmData {
