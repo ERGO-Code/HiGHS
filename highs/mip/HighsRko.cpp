@@ -33,16 +33,28 @@ bool rkoHeuristic(const HighsLp* lp, std::vector<double>& solution) {
     config.num_runs = 1;
     RKOOptimizer optimizer(config);
     const bool have_solution = optimizer.solveTHLP(lp->thlp_data_, solution);
-    const bool ok_solution = static_cast<HighsInt>(solution.size()) >= lp->num_col_;
-    if (have_solution && !ok_solution) {
-      printf("RKO heuristic returns a solution with %d components, not %d\n",
-	     int( solution.size()), int(lp->num_col_));
-      assert(ok_solution);
+    bool have_feasible_solution = false;
+    if (have_solution) {
+      const bool ok_solution_size = static_cast<HighsInt>(solution.size()) >= lp->num_col_;
+      if (!ok_solution_size) {
+	printf("RKO heuristic returns a solution with %d components, not %d\n",
+	       int( solution.size()), int(lp->num_col_));
+	return false;
+      }
+      const bool legal_solution =
+	lp->thlp_data_.legalSolution(solution);
+      HighsSparseMatrix ar_matrix = lp->a_matrix_;
+      ar_matrix.ensureRowwise();
+      const bool feasible_solution =
+	lp->thlp_data_.feasibleSolution(lp->num_col_, lp->num_row_, 
+					lp->col_lower_, lp->col_upper_, lp->col_names_,
+					lp->row_lower_, lp->row_upper_, lp->row_names_,
+					ar_matrix.start_, ar_matrix.index_,
+					ar_matrix.value_, solution);
+      have_feasible_solution = legal_solution && feasible_solution;
     }
-    lp->thlp_data_.cleanSolution(solution);    
-    //testAllAlgorithmsOnTHLP(lp->thlp_data_);
       
-    return have_solution;
+    return have_feasible_solution;
   }
   return false;
 }

@@ -526,24 +526,23 @@ void HighsLp::unapplyMods() {
 bool HighsLp::getThlp(const std::string& filename) {
   if (!this->thlp_data_.parseCABFile(filename, 5, 0.5)) return false;
   std::vector<bool> is_integer;
-  if (!this->thlp_data_.formLp(this->num_col_, this->num_row_, this->col_cost_,
-                               this->col_lower_, this->col_upper_, this->col_names_,
-                               this->row_lower_, this->row_upper_, this->row_names_,
-                               this->a_matrix_.start_, this->a_matrix_.index_,
-                               this->a_matrix_.value_, is_integer))
+  if (!this->thlp_data_.formLp(
+          this->num_col_, this->num_row_, this->col_cost_, this->col_lower_,
+          this->col_upper_, this->col_names_, this->row_lower_,
+          this->row_upper_, this->row_names_, this->a_matrix_.start_,
+          this->a_matrix_.index_, this->a_matrix_.value_, is_integer))
     return false;
   for (HighsInt iCol = 0; iCol < this->num_col_; iCol++)
-    this->integrality_.push_back(is_integer[iCol] ? HighsVarType::kInteger : HighsVarType::kContinuous);
+    this->integrality_.push_back(is_integer[iCol] ? HighsVarType::kInteger
+                                                  : HighsVarType::kContinuous);
   this->a_matrix_.num_col_ = this->num_col_;
   this->a_matrix_.num_row_ = this->num_row_;
   this->a_matrix_.format_ = MatrixFormat::kRowwise;
   this->a_matrix_.ensureColwise();
   this->mip_type_ = kMipTypeThlp;
-  assert(this->thlp_data_.checkLp(this->num_col_, this->num_row_, this->col_cost_,
-				  this->col_lower_, this->col_upper_, this->col_names_,
-				  this->row_lower_, this->row_upper_, this->row_names_,
-				  this->a_matrix_.start_, this->a_matrix_.index_,
-				  this->a_matrix_.value_));
+  assert(this->thlp_data_.checkNullCols(
+      this->num_col_, this->col_cost_, this->col_lower_, this->col_upper_,
+      this->col_names_, this->a_matrix_.start_));
   return true;
 }
 

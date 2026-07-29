@@ -45,12 +45,25 @@ struct THLPData {
               std::vector<double>& row_upper, std::vector<std::string>& row_names, std::vector<HighsInt>& start,
               std::vector<HighsInt>& index, std::vector<double>& value,
               std::vector<bool>& is_integer);
-  bool checkLp(HighsInt& num_col, HighsInt& num_row, std::vector<double>& col_cost,
-	       std::vector<double>& col_lower, std::vector<double>& col_upper, std::vector<std::string>& col_names, 
-	       std::vector<double>& row_lower, std::vector<double>& row_upper, std::vector<std::string>& row_names, 
-	       std::vector<HighsInt>& start, std::vector<HighsInt>& index,
-	       std::vector<double>& value) const;
-  void cleanSolution(std::vector<double>& solution) const;
+  bool checkNullCols(const HighsInt num_col,
+		     const std::vector<double>& col_cost,
+		     const std::vector<double>& col_lower,
+		     const std::vector<double>& col_upper,
+		     const std::vector<std::string>& col_names, 
+		     const std::vector<HighsInt>& start) const;
+  bool legalSolution(std::vector<double>& solution) const;
+  bool feasibleSolution(const HighsInt num_col,
+			const HighsInt num_row,
+			const std::vector<double>& col_lower,
+			const std::vector<double>& col_upper,
+			const std::vector<std::string>& col_names, 
+			const std::vector<double>& row_lower,
+			const std::vector<double>& row_upper,
+			const std::vector<std::string>& row_names, 
+			const std::vector<HighsInt>& start,
+			const std::vector<HighsInt>& index,
+			const std::vector<double>& value,
+			const std::vector<double>& solution) const;
 };
 
 // ============================================================================

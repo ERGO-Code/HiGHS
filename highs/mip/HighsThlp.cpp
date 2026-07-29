@@ -8,6 +8,8 @@
 
 #include "HighsThlp.h"
 
+#include <assert.h>
+
 #include <algorithm>
 #include <chrono>
 #include <cmath>
@@ -2196,12 +2198,12 @@ for (HighsInt k = 0; k < this->n; k++) {
   return true;
 }
 
-bool THLPData::checkLp(
-    HighsInt& num_col, HighsInt& num_row, std::vector<double>& col_cost,
-    std::vector<double>& col_lower, std::vector<double>& col_upper, std::vector<std::string>& col_names, 
-    std::vector<double>& row_lower, std::vector<double>& row_upper, std::vector<std::string>& row_names, 
-    std::vector<HighsInt>& start, std::vector<HighsInt>& index,
-    std::vector<double>& value) const {
+bool THLPData::checkNullCols(const HighsInt num_col,
+			     const std::vector<double>& col_cost,
+			     const std::vector<double>& col_lower,
+			     const std::vector<double>& col_upper,
+			     const std::vector<std::string>& col_names, 
+			     const std::vector<HighsInt>& start) const {
   // Sanity check on variables that are not algebraically in the model
 
   auto okColumn = [&] (const HighsInt iCol) {
@@ -2227,7 +2229,7 @@ bool THLPData::checkLp(
    return true;
 }
 
-void THLPData::cleanSolution(std::vector<double>& solution) const {
+bool THLPData::legalSolution(std::vector<double>& solution) const {
   HighsInt num_illegal_x = 0;
   for (HighsInt i = 0; i < this->n; i++) {
     for (HighsInt k = 0; k < this->n; k++) {
@@ -2260,8 +2262,55 @@ void THLPData::cleanSolution(std::vector<double>& solution) const {
     }
   }
   printf("THLPData::cleanSolution Has %d illegal y values\n", int(num_illegal_y));
+  return num_illegal_x + num_illegal_y == 0;
 }
 
+bool THLPData::feasibleSolution(const HighsInt num_col,
+				const HighsInt num_row,
+				const std::vector<double>& col_lower,
+				const std::vector<double>& col_upper,
+				const std::vector<std::string>& col_names, 
+				const std::vector<double>& row_lower,
+				const std::vector<double>& row_upper,
+				const std::vector<std::string>& row_names, 
+				const std::vector<HighsInt>& start,
+				const std::vector<HighsInt>& index,
+				const std::vector<double>& value,
+				const std::vector<double>& solution) const {
+  assert(col_names.size() == static_cast<size_t>(num_col));
+  assert(row_names.size() == static_cast<size_t>(num_row));
+  for (HighsInt iCol = 0; iCol < num_col; iCol++) {
+    if (solution[iCol] < col_lower[iCol] ||
+	solution[iCol] > col_upper[iCol]) {
+      printf("Column %d (%s) has value %g that violates bounds of [%g, %g]\n",
+	     int(iCol), col_names[iCol].c_str(),
+	     solution[iCol],  col_lower[iCol], col_upper[iCol]);
+      return false;
+    }
+  }
+
+  for (HighsInt iRow = 0; iRow < num_row; iRow++) {
+    double row_value = 0;
+    for (HighsInt iEl = start[iRow]; iEl < start[iRow+1]; iEl++)
+      row_value += solution[index[iEl]] * value[iEl];
+    if (row_value < row_lower[iRow] ||
+	row_value > row_upper[iRow]) {
+      printf("Row %d (%s) has value %g that violates bounds of [%g, %g]\n",
+	     int(iRow), row_names[iRow].c_str(),
+	     row_value,  row_lower[iRow], row_upper[iRow]);
+      row_value = 0;
+      for (HighsInt iEl = start[iRow]; iEl < start[iRow+1]; iEl++) {
+	HighsInt iCol = index[iEl];
+	row_value += solution[iCol] * value[iEl];
+	if (solution[iCol])
+	  printf("  Row value now %11.4g after adding coeff %11.4g times solution %11.4g for variable %d (%s)\n",
+		 row_value, value[iEl], solution[iCol], int(iCol), col_names[iCol].c_str());
+      }
+      return false;
+    }
+  }
+  return true;
+}
 
 
 // ============================================================================
