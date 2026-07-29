@@ -51,12 +51,12 @@ const double kDynamicDiagCoeff = 1e-24;
 const Int kMetisSeed = 42;
 
 // parallel solve
-const double kLargeTaskRelativeThresh = 0.05;
+const double kLargeTaskRelativeThresh = 0.01;
 const double kLargeTaskAbsoluteThres = 1e3;
 const double kParallelSolveMinSize = 1e4;
 const double kParallelForwardMinSpeedup = 2;
 const double kParallelBackwardMinSpeedup = 1.2;
-const double kParallelDiagTargetNumTasks = 16;
+const double kParallelDiagTargetNumTasks = 32;
 
 struct Regul {
   double primal{};
