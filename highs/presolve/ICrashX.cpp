@@ -48,6 +48,7 @@ HighsStatus callCrossover(const HighsOptions& options, const HighsLp& lp,
   }
   parameters.highs_logging = true;
   parameters.log_options = &options.log_options;
+  parameters.time_limit = options.time_limit;
 
   ipx::LpSolver lps;
   lps.SetParameters(parameters);

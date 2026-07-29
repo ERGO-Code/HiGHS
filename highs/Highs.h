@@ -17,6 +17,7 @@
 #include "lp_data/HighsIis.h"
 #include "lp_data/HighsLpUtils.h"
 #include "lp_data/HighsRanging.h"
+#include "lp_data/HighsRunData.h"
 #include "lp_data/HighsSolutionDebug.h"
 #include "model/HighsModel.h"
 #include "presolve/ICrash.h"
@@ -95,6 +96,16 @@ class Highs {
   HighsStatus clearSolverDualData();
 
   /**
+   * @brief Release all retained memory back to the allocator
+   *
+   * Clears all solver state and shrinks internal vectors to free
+   * unused capacity. Useful in long-running services that reuse a
+   * Highs instance across multiple solves to prevent unbounded RSS
+   * growth from heap fragmentation.
+   */
+  HighsStatus releaseMemory();
+
+  /**
    * Methods for model input
    */
 
@@ -151,6 +162,19 @@ class Highs {
   HighsStatus passHessian(const HighsInt dim, const HighsInt num_nz,
                           const HighsInt format, const HighsInt* start,
                           const HighsInt* index, const double* value);
+  /**
+   * @brief Pass a Hessian oracle for the incumbent model
+   */
+  HighsStatus passHessian(const HighsInt dim,
+                          HighsHessianFunctionType oracleCall,
+                          void* oracle_data,
+                          HighsCHessianFunctionType c_oracleCall = nullptr);
+
+  /**
+   * @brief Checks any incumbent Hessian oracle
+   */
+  HighsStatus checkHessianOracle(const bool exit_on_first_error = false) const;
+
   /**
    * @brief Pass multiple linear objectives for the incumbent model
    */
@@ -211,6 +235,14 @@ class Highs {
   HighsStatus readBasis(const std::string& filename);
 
   /**
+   * @brief Generate a PBM image of the matrix nonzeros, and possibly
+   * Hessian nonzeros. Note that the .pbm extnesion will be added to
+   * the fime names passed
+   */
+  HighsStatus matrixImage(const std::string& matrix_image_filename,
+                          const std::string& hessian_image_filename = "") const;
+
+  /**
    * @brief Presolve the incumbent model, allowing the presolved model
    * to be extracted. Subsequent solution of the incumbent model will
    * only use presolve if there is no valid basis
@@ -247,8 +279,11 @@ class Highs {
 
   /**
    * @brief Assess the validity, integrality and feasibility of the
-   * current primal solution. Of value after calling
-   * Highs::readSolution
+   * current primal solution. Row values are computed and checked
+   * against what's in Highs::solution_.row_value and, if the
+   * differences exceed a tolerance, valid returns false.  If any of
+   * valid, integral or feasible is false, then assessPrimalSolution
+   * returns HighsStatus::kWarning.
    */
   HighsStatus assessPrimalSolution(bool& valid, bool& integral,
                                    bool& feasible) const;
@@ -390,8 +425,37 @@ class Highs {
                                     std::string* default_value = nullptr) const;
 
   /**
-   * @brief Get a const reference to the internal info values
-   * type.
+   * @brief Get a const reference to the internal run data values.
+   */
+  const HighsRunData& getRunData() const { return run_data_; }
+
+  /**
+   * @brief Get an run_data value as HighsInt/int64_t/double, and only if
+   * it's of the correct type.
+   */
+
+  HighsStatus getRunDataValue(const std::string& run_data,
+                              HighsInt& value) const;
+
+#ifndef HIGHSINT64
+  HighsStatus getRunDataValue(const std::string& run_data,
+                              int64_t& value) const;
+#endif
+
+  HighsStatus getRunDataValue(const std::string& run_data, double& value) const;
+
+  HighsStatus getRunDataType(const std::string& run_data,
+                             HighsRunDataType& type) const;
+
+  /**
+   * @brief Write run data values to a file, with the extension ".html"
+   * producing HTML, otherwise using the standard format used to read
+   * options from a file.
+   */
+  HighsStatus writeRunData(const std::string& filename = "") const;
+
+  /**
+   * @brief Get a const reference to the internal info values.
    */
   const HighsInfo& getInfo() const { return info_; }
 
@@ -1197,7 +1261,15 @@ class Highs {
   HighsStatus setSolution(const HighsSolution& solution);
 
   /**
-   * @brief Pass a sparse primal solution
+   * @brief Pass a primal solution. If index is not a null pointer,
+   * then it is assumed that value contains num_entries of packed
+   * values, with index defing the corresponding primal solution
+   * components. If index is a null pointer, then value is assumed to
+   * be a full primal solution.
+   *
+   * It allows a full primal solution to be passed (for MIPs) without
+   * requiring either a HighsSolution that contains (empty vectors of)
+   * spurious dual information, or a full list of indices
    */
   HighsStatus setSolution(const HighsInt num_entries, const HighsInt* index,
                           const double* value);
@@ -1235,24 +1307,9 @@ class Highs {
   HighsStatus setBasis();
 
   /**
-   * @brief Return a const reference to the internal sub-solver call and time
-   * instance
+   * @brief Report profiling
    */
-  const HighsSubSolverCallTime& getSubSolverCallTime() const {
-    return sub_solver_call_time_;
-  }
-
-  /**
-   * @brief Report internal sub-solver call and time instance
-   */
-  void reportSubSolverCallTime() const;
-
-  /**
-   * @brief Initialise the internal sub-solver call and time instance
-   */
-  void initialiseSubSolverCallTime() {
-    this->sub_solver_call_time_.initialise();
-  }
+  void reportProfiling() const;
 
   /**
    * @brief Run IPX crossover from a given HighsSolution instance and,
@@ -1274,6 +1331,7 @@ class Highs {
   /**
    * @brief Interpret common qualifiers to string values
    */
+  std::string highsStatusToString(const HighsStatus status) const;
   std::string presolveStatusToString(
       const HighsPresolveStatus presolve_status) const;
   std::string modelStatusToString(const HighsModelStatus model_status) const;
@@ -1281,6 +1339,14 @@ class Highs {
   std::string basisStatusToString(const HighsBasisStatus basis_status) const;
   std::string basisValidityToString(const HighsInt basis_validity) const;
   std::string presolveRuleTypeToString(const HighsInt presolve_rule) const;
+
+  /**
+   * @brief Ensures that the global scheduler is initialized,
+   * returning HighsStatus::kError if it has already been initialized,
+   * but the threads option is nonzero and not equal to
+   * this->max_threads_.
+   */
+  HighsStatus initializeMultiThreading();
 
   /**
    * @brief Releases all resources held by the global scheduler instance. It is
@@ -1296,6 +1362,29 @@ class Highs {
    * which is usually not necessary.
    */
   static void resetGlobalScheduler(bool blocking = false);
+
+  /**
+   * @brief If profiling is not nullptr, sets up profiling and copies
+   * its pointer to Highs
+   */
+  void initializeProfiling(HighsProfiling* profiling);
+  void initializeSingleThreadedProfiling(HighsProfiling* profiling);
+
+  /**
+   * @brief Clears and then initializes profiling
+   */
+  void resetProfiling();
+
+  /**
+   * @brief If Highs::profiling_ is not nullptr, clears profiling and
+   * sets Highs::profiling_ to nullptr
+   */
+  void clearProfiling();
+
+  /**
+   * @brief Checks that pointer is not nullptr, and copies it to Highs
+   */
+  void setProfiling(HighsProfiling* profiling);
 
   // Start of advanced methods: only for internal use!
 
@@ -1545,6 +1634,7 @@ class Highs {
   HighsCallback callback_;
   HighsOptions options_;
   HighsInfo info_;
+  HighsRunData run_data_;
   HighsRanging ranging_;
   HighsIis iis_;
   std::vector<HighsObjectiveSolution> saved_objective_and_solution_;
@@ -1563,9 +1653,9 @@ class Highs {
 
   HighsPresolveLog presolve_log_;
 
-  HighsSubSolverCallTime sub_solver_call_time_;
+  HighsProfiling* profiling_ = nullptr;
 
-  HighsInt max_threads = 0;
+  HighsInt max_threads_ = 0;
   // This is strictly for debugging. It's used to check whether
   // returnFromOptimizeModel() was called after the previous call to
   // Highs::optimizeModel() and, assuming that this is always done, it checks
@@ -1629,8 +1719,8 @@ class Highs {
   //
   // Invalidates all solver data in Highs class members by calling
   // invalidateModelStatus(), invalidateSolution(), invalidateBasis(),
-  // invalidateRanging(), invalidateInfo(), invalidateEkk() and
-  // clearIis()
+  // invalidateRanging(), invalidateInfo(), invalidateRunData(),
+  // invalidateEkk() and clearIis()
   void invalidateSolverData();
 
   // Invalidates all solver dual data in Highs class members by calling
@@ -1656,6 +1746,9 @@ class Highs {
   //
   // Invalidates info_ and resets the values of its members
   void invalidateInfo();
+  //
+  // Invalidates run_data_ and resets the values of its members
+  void invalidateRunData();
   //
   // Invalidates ranging_
   void invalidateRanging();

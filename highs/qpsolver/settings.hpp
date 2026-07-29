@@ -22,6 +22,7 @@ struct Settings {
   RatiotestStrategy ratiotest = RatiotestStrategy::TwoPass;
   double ratiotest_t = 1e-9;
   double ratiotest_d = 1e-8;
+  double primal_feasibility_tolerance = 1e-7;
 
   PricingStrategy pricing = PricingStrategy::Devex;
 
@@ -53,11 +54,13 @@ struct Settings {
       1e-7;  // multiple of identity matrix added to Hessian in case of
              // regularization
 
+  bool allow_hot_start = false;
   Phase1Strategy phase1strategy = Phase1Strategy::HIGHS;
   bool phase1movefreevarsbasic = false;
   bool phase1boundfreevars = false;
 
   HighsInt reportingfequency = 1;
+  Eventhandler<HighsInt&> iteration_log_header;
   Eventhandler<Statistics&> iteration_log;
   Eventhandler<QpModelStatus&> qp_model_status_log;
   Eventhandler<HighsInt&> nullspace_limit_log;
@@ -67,13 +70,11 @@ struct Settings {
 
   HighsInt reinvertfrequency = 1000;
   HighsInt gradientrecomputefrequency = 100;
-  HighsInt reducedgradientrecomputefrequency =
-      std::numeric_limits<HighsInt>::infinity();
-  HighsInt reducedhessianrecomputefrequency =
-      std::numeric_limits<HighsInt>::infinity();
+  HighsInt reducedgradientrecomputefrequency = kHighsIInf;
+  HighsInt reducedhessianrecomputefrequency = kHighsIInf;
 
-  HighsInt iteration_limit = std::numeric_limits<HighsInt>::infinity();
-  double time_limit = std::numeric_limits<double>::infinity();
+  HighsInt iteration_limit = kHighsIInf;
+  double time_limit = kHighsInf;
 
   bool rowscaling = true;
   bool varscaling = true;

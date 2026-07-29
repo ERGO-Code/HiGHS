@@ -10,7 +10,6 @@
 
 #include "Highs.h"
 #include "qpsolver/a_asm.hpp"
-#include "qpsolver/crashsolution.hpp"
 
 static void computeStartingPointBounded(Instance& instance, Settings& settings,
                                         Statistics& stats,
@@ -19,46 +18,97 @@ static void computeStartingPointBounded(Instance& instance, Settings& settings,
                                         HighsTimer& timer) {
   // compute initial feasible point for problems with bounds only (no general
   // linear constraints)
+  const bool debug_printing = false;
+  // Solve  Qx + c = 0 --> x = -Q^-1c
+  HighsInt dim = instance.num_var;
+  QpVector res = -instance.c;
+  MatrixBase& hessian = instance.Q.mat;
+  assert(res.dim == dim);
+  if (hessian.isDiagonal()) {
+    // Diagonal Hessian
+    for (HighsInt iRow = 0; iRow < dim; iRow++) {
+      double value = hessian.diagonal(iRow);
+      if (value <= 0) {
+        modelstatus = QpModelStatus::kNonConvex;
+        return;
+      }
+      res.value[iRow] /= value;
+    }
+  } else {
+    // General Hessian: compute Cholesky factorization of Q
+    std::vector<double> L;
+    L.resize(dim * dim);
 
-  // compute  Qx + c = 0 --> x = Q^-1c
-  std::vector<double> L;
-  L.resize(instance.num_var * instance.num_var);
+    auto printL = [&]() {
+      if (!debug_printing) return;
+      for (HighsInt iRow = 0; iRow < dim; iRow++) {
+        for (HighsInt iCol = 0; iCol <= iRow; iCol++)
+          printf(" %11.4g", L[iRow * dim + iCol]);
+        printf("\n");
+      }
+    };
 
-  // compute cholesky factorization of Q
-  for (size_t col = 0; col < (size_t)instance.num_var; col++) {
-    for (size_t idx = instance.Q.mat.start[col];
-         idx < (size_t)instance.Q.mat.start[col + 1]; idx++) {
-      double sum = 0;
-      size_t row = instance.Q.mat.index[idx];
-      if (row == col) {
-        for (size_t k = 0; k < row; k++)
-          sum += L[k * instance.num_var + row] * L[k * instance.num_var + row];
-        L[row * instance.num_var + row] = sqrt(instance.Q.mat.value[idx] - sum);
-      } else {
-        for (size_t k = 0; k < row; k++)
-          sum +=
-              (L[k * instance.num_var + col] * L[k * instance.num_var + row]);
-        L[row * instance.num_var + col] =
-            (instance.Q.mat.value[idx] - sum) / L[row * instance.num_var + row];
+    // First copy the lower triangle of Q into L
+    L.assign(dim * dim, 0);
+    HighsInt num_entries;
+    std::vector<double> value(dim);
+    std::vector<HighsInt> index(dim);
+    for (HighsInt iCol = 0; iCol < dim; iCol++) {
+      hessian.getColumn(iCol, num_entries, index.data(), value.data());
+      for (HighsInt iEl = 0; iEl < num_entries; iEl++) {
+        HighsInt iRow = index[iEl];
+        // Take the entries above or on the diagonal in column iCol of
+        // Q as the entries before or on the diagonal in row iCol of
+        // (row-wise) L
+        if (iRow <= iCol) L[iCol * dim + iRow] = value[iEl];
       }
     }
-  }
-
-  // solve for c
-  QpVector res = -instance.c;
-  for (HighsInt r = 0; r < res.dim; r++) {
-    for (HighsInt j = 0; j < r; j++) {
-      res.value[r] -= res.value[j] * L[j * instance.num_var + r];
+    // Now compute Cholesky factorization of L
+    for (HighsInt iRow = 0; iRow < dim; iRow++) {
+      printL();
+      for (HighsInt iCol = 0; iCol <= iRow; iCol++) {
+        double sum = 0;
+        for (HighsInt k = 0; k < iCol; k++)
+          sum += L[iRow * dim + k] * L[iCol * dim + k];
+        if (iCol < iRow) {
+          double value = (L[iRow * dim + iCol] - sum) / L[iCol * dim + iCol];
+          if (debug_printing)
+            printf(
+                "Computed L[%1d, %1d] = (%11.4g - %11.4g) / %11.4g = %11.4g\n",
+                int(iRow), int(iCol), L[iRow * dim + iCol], sum,
+                L[iCol * dim + iCol], value);
+          L[iRow * dim + iCol] = value;
+        } else {
+          double value = L[iCol * dim + iCol] - sum;
+          if (debug_printing)
+            printf(
+                "Computed L[%1d, %1d] = sqrt(%11.4g - %11.4g) = sqrt(%11.4g) = "
+                "%11.4g\n",
+                int(iCol), int(iCol), L[iCol * dim + iCol], sum, value,
+                std::sqrt(value));
+          if (value <= 0) {
+            modelstatus = QpModelStatus::kNonConvex;
+            return;
+          }
+          L[iCol * dim + iCol] = std::sqrt(value);
+        }
+      }
     }
-    res.value[r] /= L[r * instance.num_var + r];
-  }
-
-  for (HighsInt i = res.dim - 1; i >= 0; i--) {
-    double sum = 0.0;
-    for (HighsInt j = res.dim - 1; j > i; j--) {
-      sum += res.value[j] * L[i * instance.num_var + j];
+    printL();
+    // Solve for Qx = -c
+    // Solve Ly = -c
+    for (HighsInt iRow = 0; iRow < dim; iRow++) {
+      double sum = 0.0;
+      for (HighsInt iCol = 0; iCol < iRow; iCol++)
+        sum += res.value[iCol] * L[iRow * dim + iCol];
+      res.value[iRow] = (res.value[iRow] - sum) / L[iRow * dim + iRow];
     }
-    res.value[i] = (res.value[i] - sum) / L[i * instance.num_var + i];
+    // Solve L^Tx = y
+    for (HighsInt iRow = dim - 1; iRow >= 0; iRow--) {
+      res.value[iRow] /= L[iRow * dim + iRow];
+      for (HighsInt iCol = 0; iCol < iRow; iCol++)
+        res.value[iCol] -= res.value[iRow] * L[iRow * dim + iCol];
+    }
   }
 
   // project solution to bounds and collect active bounds
@@ -69,21 +119,28 @@ static void computeStartingPointBounded(Instance& instance, Settings& settings,
   std::vector<BasisStatus> atlower;
 
   for (int i = 0; i < instance.num_var; i++) {
-    if (res.value[i] > 0.5 / settings.hessian_regularization_value &&
-        instance.var_up[i] == std::numeric_limits<double>::infinity() &&
-        instance.c.value[i] < 0.0) {
-      modelstatus = QpModelStatus::kUnbounded;
-      return;
-    } else if (res.value[i] < 0.5 / settings.hessian_regularization_value &&
-               instance.var_lo[i] == std::numeric_limits<double>::infinity() &&
-               instance.c.value[i] > 0.0) {
-      modelstatus = QpModelStatus::kUnbounded;
-      return;
-    } else if (res.value[i] <= instance.var_lo[i]) {
+    // Check for unboundedness so that qp-unbounded and test-qod pass:
+    // assumes diagonal Hessian and
+    // settings.hessian_regularization_value > 0
+    if (settings.hessian_regularization_value > 0) {
+      if (res.value[i] > 0.5 / settings.hessian_regularization_value &&
+          instance.var_up[i] == kHighsInf && instance.c.value[i] < 0.0) {
+        modelstatus = QpModelStatus::kUnbounded;
+        return;
+      } else if (res.value[i] < -0.5 / settings.hessian_regularization_value &&
+                 instance.var_lo[i] == -kHighsInf &&
+                 instance.c.value[i] > 0.0) {
+        modelstatus = QpModelStatus::kUnbounded;
+        return;
+      }
+    }
+    if (res.value[i] <
+        instance.var_lo[i] - settings.primal_feasibility_tolerance) {
       res.value[i] = instance.var_lo[i];
       initialactive.push_back(i + instance.num_con);
       atlower.push_back(BasisStatus::kActiveAtLower);
-    } else if (res.value[i] >= instance.var_up[i]) {
+    } else if (res.value[i] >
+               instance.var_up[i] + settings.primal_feasibility_tolerance) {
       res.value[i] = instance.var_up[i];
       initialactive.push_back(i + instance.num_con);
       atlower.push_back(BasisStatus::kActiveAtUpper);

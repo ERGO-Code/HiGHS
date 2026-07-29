@@ -2,7 +2,7 @@
 
 #include <iostream>
 
-#include "FactorHiGHSSettings.h"
+#include "FactorHighsSettings.h"
 
 namespace hipo {
 
@@ -17,7 +17,6 @@ Int64 Symbolic::nz() const { return nz_; }
 double Symbolic::flops() const { return flops_; }
 double Symbolic::spops() const { return spops_; }
 double Symbolic::critops() const { return critops_; }
-Int Symbolic::blockSize() const { return block_size_; }
 Int Symbolic::size() const { return n_; }
 Int Symbolic::sn() const { return sn_; }
 double Symbolic::fillin() const { return fillin_; }
@@ -37,6 +36,7 @@ Int64 Symbolic::cliqueSize(Int sn) const {
   return clique_block_start_[sn].back();
 }
 Int64 Symbolic::maxStackSize() const { return max_stack_size_; }
+Int Symbolic::largestFront() const { return largest_front_; }
 bool Symbolic::parTree() const { return parallel_tree_; }
 bool Symbolic::parNode() const { return parallel_node_; }
 double Symbolic::storage() const { return serial_storage_; }
