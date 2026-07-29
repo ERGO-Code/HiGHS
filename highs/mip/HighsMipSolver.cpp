@@ -608,20 +608,46 @@ restart:
     const HighsInt num_search_workers =
         std::min(num_workers,
                  static_cast<HighsInt>(mipdata_->nodequeue.numActiveNodes()));
-    const HighsInt num_heuristic_workers =
-        mipdata_->upper_bound < kHighsInf
-            ? std::max(HighsInt{1}, (num_search_workers + 3) / 4)
-            : std::max(HighsInt{1}, (num_search_workers + 1) / 2);
 
     for (HighsInt i = 0; i < num_search_workers; i++) {
       assert(!mipdata_->workers[i].search_ptr_->hasNode());
       indices.emplace_back(i);
-      mipdata_->workers[i].setAllowHeuristics(i < num_heuristic_workers);
+      mipdata_->workers[i].setAllowHeuristics(true);
     }
   };
 
-  auto installNodes = [&](std::vector<HighsInt>& indices,
-                          bool& limit_reached) -> void {
+  auto prepareNodes = [&](std::vector<HighsInt>& indices) {
+    const HighsInt numNodesPerWorker =
+        indices.size() > 1 &&
+                static_cast<size_t>(mipdata_->nodequeue.numActiveNodes()) >=
+                    2 * indices.size()
+            ? 2
+            : 1;
+    for (const HighsInt i : indices) {
+      for (HighsInt j = 0; j != numNodesPerWorker; j++) {
+        if ((indices.size() == 1 && numQueueLeaves - lastLbLeave >= 10) ||
+            (indices.size() > 1 && i == 0 && j == 1)) {
+          mipdata_->workers[i].openNodes.push(
+              mipdata_->nodequeue.popBestBoundNode());
+          lastLbLeave = numQueueLeaves;
+        } else {
+          HighsInt bestBoundNodeStackSize =
+              mipdata_->nodequeue.getBestBoundDomchgStackSize();
+          double bestBoundNodeLb = mipdata_->nodequeue.getBestLowerBound();
+          HighsNodeQueue::OpenNode nextNode(mipdata_->nodequeue.popBestNode());
+          if (nextNode.lower_bound == bestBoundNodeLb &&
+              static_cast<HighsInt>(nextNode.domchgstack.size()) ==
+                  bestBoundNodeStackSize)
+            lastLbLeave = numQueueLeaves;
+          mipdata_->workers[i].openNodes.push(std::move(nextNode));
+        }
+        ++numQueueLeaves;
+      }
+    }
+  };
+
+  auto installNodesOld = [&](std::vector<HighsInt>& indices,
+                             bool& limit_reached) -> void {
     for (const HighsInt i : indices) {
       if ((indices.size() == 1 && numQueueLeaves - lastLbLeave >= 10) ||
           (indices.size() > 1 && i == 0)) {
@@ -673,7 +699,14 @@ restart:
     return false;
   };
 
-  auto pruneNode = [&](HighsInt i) -> bool {
+  auto assignEarlyTermination = [&](HighsMipWorker& worker) {
+    if (worker.getGlobalDomain().infeasible() ||
+        mipdata_->lower_bound > worker.getOptimalityLimit()) {
+      mipdata_->updateWorkerEarlyTermination(worker);
+    }
+  };
+
+  auto pruneNode = [&](const HighsInt i, bool& infeasible) -> bool {
     if (!mipdata_->parallelLockActive())
       profiling_->start(kMipClockNodePrunedLoop);
     bool pruned = false;
@@ -683,20 +716,17 @@ restart:
       pruned = true;
       ++mipdata_->workers[i].search_ptr_->getLocalNodes();
       ++mipdata_->workers[i].search_ptr_->getLocalLeaves();
+      if (mipdata_->workers[i].getGlobalDomain().infeasible()) {
+        assignEarlyTermination(mipdata_->workers[i]);
+        infeasible = true;
+      }
     }
     if (!mipdata_->parallelLockActive())
       profiling_->stop(kMipClockNodePrunedLoop);
-    return mipdata_->workers[i].getGlobalDomain().infeasible() || pruned;
+    return pruned;
   };
 
-  auto assignEarlyTermination = [&](HighsMipWorker& worker) {
-    if (worker.getGlobalDomain().infeasible() ||
-        mipdata_->lower_bound > worker.getOptimalityLimit()) {
-      mipdata_->updateWorkerEarlyTermination(worker);
-    }
-  };
-
-  auto separateAndStoreBasis = [&](HighsInt i) -> bool {
+  auto separateAndStoreBasis = [&](const HighsInt i, bool& infeasible) -> void {
     HighsMipWorker& worker = mipdata_->workers[i];
     if (options_mip_->mip_allow_cut_separation_at_nodes) {
       if (!mipdata_->parallelLockActive())
@@ -715,7 +745,8 @@ restart:
                                         : mipdata_->nodequeue;
       worker.search_ptr_->openNodesToQueue(globalqueue);
       assignEarlyTermination(worker);
-      return true;
+      infeasible = true;
+      return;
     }
 
     if (worker.getLpRelaxation().getStatus() !=
@@ -734,8 +765,6 @@ restart:
       basis = std::make_shared<const HighsBasis>(std::move(b));
       worker.getLpRelaxation().setStoredBasis(basis);
     }
-
-    return false;
   };
 
   auto backtrackPlunge = [&](HighsInt i) {
@@ -759,7 +788,7 @@ restart:
     return false;
   };
 
-  auto runHeuristics = [&](HighsInt i) -> bool {
+  auto runHeuristics = [&](const HighsInt i, bool& infeasible) -> bool {
     HighsMipWorker& worker = mipdata_->workers[i];
     if (!mipdata_->parallelLockActive())
       profiling_->start(kMipClockDiveEvaluateNode);
@@ -813,7 +842,8 @@ restart:
     if (!mipdata_->parallelLockActive())
       profiling_->stop(kMipClockDivePrimalHeuristics);
 
-    return worker.getGlobalDomain().infeasible();
+    if (worker.getGlobalDomain().infeasible()) infeasible = true;
+    return false;
   };
 
   auto dive = [&](HighsInt i, HighsInt nodeLim) -> bool {
@@ -836,50 +866,99 @@ restart:
 
   auto processNodes = [&](const std::vector<HighsInt>& indices,
                           std::vector<RestartVote>& restarts,
+                          std::vector<HighsInt>& stallNodes,
                           const bool skip_separation, const HighsInt nodeLim,
                           const HighsInt plungeLimit, double avgiter) {
     auto processNode = [&](const HighsInt i) {
       HighsMipWorker& worker = mipdata_->workers[i];
-      int64_t nodes_explored = 0;
-      if (!skip_separation) {
-        evaluateNode(i);
-        assignEarlyTermination(worker);
-        if (pruneNode(i)) return;
-        if (worker.search_ptr_->checkLimits()) return;
-        if (!mipdata_->parallelLockActive()) mipdata_->printDisplayLine();
-        if (separateAndStoreBasis(i)) return;
-      }
-      worker.getConflictPool().performAging();
-      HighsInt iterlimit = 10 * std::max(avgiter, mipdata_->avgrootlpiters);
-      iterlimit = std::max({HighsInt{10000}, iterlimit,
-                            HighsInt((3 * mipdata_->firstrootlpiters) / 2)});
-      worker.getLpRelaxation().setIterationLimit(iterlimit);
+      HighsNodeQueue& nodequeue = mipdata_->parallelLockActive()
+                                      ? worker.nodequeue
+                                      : mipdata_->nodequeue;
+      int64_t total_nodes_explored = 0;
       bool considerHeuristics = true;
-      while (true) {
-        if (considerHeuristics && (skip_separation || nodeLim == kHighsIInf) &&
-            worker.getAllowHeuristics() && mipdata_->moreHeuristicsAllowed()) {
-          if (runHeuristics(i)) break;
+      bool stop = false;
+      while (!worker.openNodes.empty()) {
+        int64_t nodes_explored = 0;
+        int64_t lastLocalNodeCount = worker.search_ptr_->getLocalNodes();
+        worker.search_ptr_->installNode(std::move(worker.openNodes.front()));
+        worker.openNodes.pop();
+        if (worker.search_ptr_->getCurrentEstimate() >= worker.upper_limit) {
+          stallNodes[i]++;
         }
-        considerHeuristics = false;
-        if (worker.getGlobalDomain().infeasible()) break;
-        if (dive(i, nodeLim)) break;
-        if (worker.search_ptr_->checkLimits(
-                worker.search_ptr_->getLocalNodes())) {
-          break;
+        if (!skip_separation) {
+          evaluateNode(i);
+          assignEarlyTermination(worker);
+          if (pruneNode(i, stop)) {
+            total_nodes_explored++;
+            if (worker.early_termination) stop = true;
+            if (stop || total_nodes_explored >= nodeLim) break;
+            continue;
+          }
+          if (stop || worker.search_ptr_->checkLimits()) {
+            stop = true;
+            break;
+          };
+          if (!mipdata_->parallelLockActive()) mipdata_->printDisplayLine();
+          separateAndStoreBasis(i, stop);
+          if (stop) break;
         }
+        worker.getConflictPool().performAging();
+        HighsInt iterlimit = 10 * std::max(avgiter, mipdata_->avgrootlpiters);
+        iterlimit = std::max({HighsInt{10000}, iterlimit,
+                              HighsInt((3 * mipdata_->firstrootlpiters) / 2)});
+        worker.getLpRelaxation().setIterationLimit(iterlimit);
+        while (true) {
+          if (considerHeuristics &&
+              (skip_separation || nodeLim == kHighsIInf) &&
+              worker.getAllowHeuristics() &&
+              mipdata_->moreHeuristicsAllowed()) {
+            if (runHeuristics(i, stop)) break;
+            if (stop) break;
+          }
+          considerHeuristics = false;
+          if (worker.getGlobalDomain().infeasible()) {
+            stop = true;
+            break;
+          }
+          if (dive(i, nodeLim)) break;
+          if (worker.search_ptr_->checkLimits(
+                  worker.search_ptr_->getLocalNodes())) {
+            stop = true;
+            break;
+          }
 
-        if (worker.search_ptr_->getLocalNodes() + nodes_explored >= plungeLimit)
-          break;
-        if (!mipdata_->parallelLockActive()) {
-          nodes_explored += worker.search_ptr_->getLocalNodes();
+          nodes_explored +=
+              worker.search_ptr_->getLocalNodes() - lastLocalNodeCount;
+          lastLocalNodeCount = worker.search_ptr_->getLocalNodes();
+          if (nodes_explored >= plungeLimit) break;
+          if (backtrackPlunge(i)) break;
+          if (!mipdata_->parallelLockActive()) {
+            worker.search_ptr_->flushStatistics(*this);
+            mipdata_->printDisplayLine();
+            lastLocalNodeCount = 0;
+          }
         }
-        if (backtrackPlunge(i)) break;
-        if (!mipdata_->parallelLockActive()) {
-          worker.search_ptr_->flushStatistics(*this);
-          mipdata_->printDisplayLine();
+        nodes_explored +=
+            worker.search_ptr_->getLocalNodes() - lastLocalNodeCount;
+        lastLocalNodeCount = worker.search_ptr_->getLocalNodes();
+        total_nodes_explored += nodes_explored;
+        assignEarlyTermination(worker);
+        if (worker.early_termination) stop = true;
+        worker.search_ptr_->openNodesToQueue(nodequeue);
+        if (total_nodes_explored >= nodeLim || stop) {
+          break;
         }
       }
-      assignEarlyTermination(worker);
+      if (worker.search_ptr_->hasNode()) {
+        worker.search_ptr_->openNodesToQueue(nodequeue);
+      }
+      while (!worker.openNodes.empty()) {
+        HighsNodeQueue::OpenNode node = std::move(worker.openNodes.front());
+        worker.openNodes.pop();
+        nodequeue.emplaceNode(std::move(node.domchgstack),
+                              std::move(node.branchings), node.lower_bound,
+                              node.estimate, node.depth);
+      }
       if (nodeLim == kHighsIInf) {
         restarts[i] = checkRestart(worker, 1);
       }
@@ -900,6 +979,7 @@ restart:
   search_indices.reserve(max_num_workers);
   std::vector<RestartVote> workerRestartVotes(getMaxNumWorkers(),
                                               RestartVote::kNoCheck);
+  std::vector<HighsInt> stallNodesPerWorker(getMaxNumWorkers());
   bool root_node = true;  // Don't separate the root node again
   HighsInt nodeLim = max_num_workers > 1 ? 1 : kHighsIInf;  // for ramp up
   while (!mipdata_->nodequeue.empty()) {
@@ -920,12 +1000,10 @@ restart:
     // Assign nodes to workers
     bool limit_reached = false;
     if (root_node) {
-      master_worker.search_ptr_->installNode(
-          mipdata_->nodequeue.popBestBoundNode());
+      master_worker.openNodes.push(mipdata_->nodequeue.popBestBoundNode());
     } else {
-      installNodes(search_indices, limit_reached);
+      prepareNodes(search_indices);
     }
-    if (limit_reached) break;
 
     if (nodeLim != kHighsIInf) {
       if (num_workers >= max_num_workers) {
@@ -937,8 +1015,8 @@ restart:
     }
 
     // Process nodes (separation / heuristics / dives)
-    processNodes(search_indices, workerRestartVotes, root_node, nodeLim, 100,
-                 mipdata_->getLp().getAvgSolveIters());
+    processNodes(search_indices, workerRestartVotes, stallNodesPerWorker,
+                 root_node, nodeLim, 100, mipdata_->getLp().getAvgSolveIters());
 
     root_node = false;
 
@@ -988,7 +1066,7 @@ restart:
         infeasible = true;
       }
       profiling_->start(kMipClockOpenNodesToQueue0);
-      worker.search_ptr_->openNodesToQueue(mipdata_->nodequeue);
+      assert(!worker.search_ptr_->hasNode());
       while (worker.nodequeue.numNodes() > 0) {
         HighsNodeQueue::OpenNode node =
             std::move(worker.nodequeue.popBestNode());
@@ -1021,6 +1099,22 @@ restart:
       mipdata_->printDisplayLine();
       break;
     }
+
+    for (const HighsInt i : search_indices) {
+      if (stallNodesPerWorker[i] == 0) {
+        numStallNodes = 0;
+      } else {
+        numStallNodes += stallNodesPerWorker[i];
+      }
+      stallNodesPerWorker[i] = 0;
+      if (options_mip_->mip_max_stall_nodes != kHighsIInf &&
+          numStallNodes >= options_mip_->mip_max_stall_nodes) {
+        limit_reached = true;
+        modelstatus_ = HighsModelStatus::kSolutionLimit;
+        break;
+      }
+    }
+    if (limit_reached) break;
 
     assert(!nodesInstalled());
 
