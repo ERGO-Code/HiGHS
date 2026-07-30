@@ -27,9 +27,13 @@ private:
     double _fill_factor() const override;
     double _pivottol() const override;
     void _pivottol(double new_pivottol) override;
+    void _timeStart(double new_time_start) override;
+    void _timeLimit(double new_time_limit) override;
 
     // Reallocates (Li,Lx), (Ui,Ux) and/or (Wi,Wx) as requested by BASICLU.
     void Reallocate();
+
+    void logFactorization(const Int status, bool& has_logged, double& last_log);
 
     // When memory is reallocated, allocate for kReallocFactor*required amount.
     static constexpr double kReallocFactor = 1.5;
@@ -41,6 +45,8 @@ private:
     std::vector<double> Lx_, Ux_, Wx_;
     double fill_factor_;
 };
+
+extern "C" double basiclu_wallclock();
 
 }  // namespace ipx
 

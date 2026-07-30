@@ -54,7 +54,8 @@ HighsStatus assessLp(HighsLp& lp, const HighsOptions& options) {
     // Assess the LP column bounds
     call_status = assessBounds(
         options, "Col", 0, index_collection, lp.col_lower_, lp.col_upper_,
-        options.infinite_bound, lp.isMip() ? lp.integrality_.data() : nullptr);
+        options.infinite_bound, lp.isMip() ? lp.integrality_.data() : nullptr,
+        lp.col_names_.data());
     return_status = interpretCallStatus(options.log_options, call_status,
                                         return_status, "assessBounds");
     if (return_status == HighsStatus::kError) return return_status;
@@ -66,9 +67,9 @@ HighsStatus assessLp(HighsLp& lp, const HighsOptions& options) {
     index_collection.is_interval_ = true;
     index_collection.from_ = 0;
     index_collection.to_ = lp.num_row_ - 1;
-    call_status =
-        assessBounds(options, "Row", 0, index_collection, lp.row_lower_,
-                     lp.row_upper_, options.infinite_bound);
+    call_status = assessBounds(
+        options, "Row", 0, index_collection, lp.row_lower_, lp.row_upper_,
+        options.infinite_bound, nullptr, lp.row_names_.data());
     return_status = interpretCallStatus(options.log_options, call_status,
                                         return_status, "assessBounds");
     if (return_status == HighsStatus::kError) return return_status;
@@ -84,9 +85,11 @@ HighsStatus assessLp(HighsLp& lp, const HighsOptions& options) {
   assert(lp.num_col_ > 0);
 
   // Assess the LP matrix - even if there are no rows!
+  const bool sum_duplicates = false;
   call_status =
       lp.a_matrix_.assess(options.log_options, "LP", options.small_matrix_value,
-                          options.large_matrix_value);
+                          options.large_matrix_value, sum_duplicates,
+                          lp.col_names_.data(), lp.row_names_.data());
   return_status = interpretCallStatus(options.log_options, call_status,
                                       return_status, "assessMatrix");
   if (return_status == HighsStatus::kError) return return_status;
@@ -300,6 +303,7 @@ HighsStatus assessCosts(const HighsOptions& options, const HighsInt ml_col_os,
   // [0...num_new_col) which must be offset by the current number of
   // columns in the model.
   //
+
   HighsInt local_col;
   HighsInt usr_col = -1;
   HighsInt num_infinite_cost = 0;
@@ -335,12 +339,13 @@ HighsStatus assessCosts(const HighsOptions& options, const HighsInt ml_col_os,
   return return_status;
 }
 
-HighsStatus assessBounds(const HighsOptions& options, const char* type,
+HighsStatus assessBounds(const HighsOptions& options, const std::string& type,
                          const HighsInt ml_ix_os,
                          const HighsIndexCollection& index_collection,
                          vector<double>& lower, vector<double>& upper,
                          const double infinite_bound,
-                         const HighsVarType* integrality) {
+                         const HighsVarType* integrality,
+                         const std::string* names) {
   HighsStatus return_status = HighsStatus::kOk;
   assert(ok(index_collection));
   HighsInt from_k;
@@ -373,6 +378,12 @@ HighsStatus assessBounds(const HighsOptions& options, const char* type,
   // [0...num_new_row/col) which must be offset by the current number
   // of rows/columns (generically indices) in the model.
   //
+  auto possible_name = [&](const HighsInt ix) {
+    std::string name = "";
+    if (names) name = " (" + type + " " + names[ix] + ")";
+    return name;
+  };
+
   HighsInt num_infinite_lower_bound = 0;
   HighsInt num_infinite_upper_bound = 0;
   HighsInt local_ix;
@@ -421,8 +432,9 @@ HighsStatus assessBounds(const HighsOptions& options, const char* type,
       // Leave inconsistent bounds to be used to deduce infeasibility
       highsLogUser(options.log_options, HighsLogType::kWarning,
                    "%3s  %12" HIGHSINT_FORMAT
-                   " has inconsistent bounds [%12g, %12g]\n",
-                   type, ml_ix, lower[usr_ix], upper[usr_ix]);
+                   "%s has inconsistent bounds [%12g, %12g]\n",
+                   type.c_str(), ml_ix, possible_name(ml_ix).c_str(),
+                   lower[usr_ix], upper[usr_ix]);
       warning_found = true;
     }
     // Check that the lower bound is not as much as +Infinity
@@ -430,8 +442,9 @@ HighsStatus assessBounds(const HighsOptions& options, const char* type,
     if (!legalLowerBound) {
       highsLogUser(options.log_options, HighsLogType::kError,
                    "%3s  %12" HIGHSINT_FORMAT
-                   " has lower bound of %12g >= %12g\n",
-                   type, ml_ix, lower[usr_ix], infinite_bound);
+                   "%s  has lower bound of %12g >= %12g\n",
+                   type.c_str(), ml_ix, possible_name(ml_ix).c_str(),
+                   lower[usr_ix], infinite_bound);
       error_found = true;
     }
     // Check that the upper bound is not as little as -Infinity
@@ -439,8 +452,9 @@ HighsStatus assessBounds(const HighsOptions& options, const char* type,
     if (!legalUpperBound) {
       highsLogUser(options.log_options, HighsLogType::kError,
                    "%3s  %12" HIGHSINT_FORMAT
-                   " has upper bound of %12g <= %12g\n",
-                   type, ml_ix, upper[usr_ix], -infinite_bound);
+                   "%s  has upper bound of %12g <= %12g\n",
+                   type.c_str(), ml_ix, possible_name(ml_ix).c_str(),
+                   upper[usr_ix], -infinite_bound);
       error_found = true;
     }
   }
@@ -449,14 +463,14 @@ HighsStatus assessBounds(const HighsOptions& options, const char* type,
                  "%3ss:%12" HIGHSINT_FORMAT
                  " lower bounds    less than or equal to %12g are treated as "
                  "-Infinity\n",
-                 type, num_infinite_lower_bound, -infinite_bound);
+                 type.c_str(), num_infinite_lower_bound, -infinite_bound);
   }
   if (num_infinite_upper_bound) {
     highsLogUser(options.log_options, HighsLogType::kInfo,
                  "%3ss:%12" HIGHSINT_FORMAT
                  " upper bounds greater than or equal to %12g are treated as "
                  "+Infinity\n",
-                 type, num_infinite_upper_bound, infinite_bound);
+                 type.c_str(), num_infinite_upper_bound, infinite_bound);
   }
 
   if (error_found)
@@ -779,14 +793,14 @@ HighsStatus userScaleLp(HighsLp& lp, HighsUserScaleData& data,
 }
 
 void userScaleLp(HighsLp& lp, HighsUserScaleData& data, const bool apply) {
-  userScaleCosts(lp.integrality_, lp.col_cost_, data, apply);
+  userScaleCosts(lp.integrality_, lp.offset_, lp.col_cost_, data, apply);
   userScaleColBounds(lp.integrality_, lp.col_lower_, lp.col_upper_, data,
                      apply);
   userScaleMatrix(lp.integrality_, lp.a_matrix_, data, apply);
   userScaleRowBounds(lp.row_lower_, lp.row_upper_, data, apply);
 }
 
-void userScaleCosts(const vector<HighsVarType>& integrality,
+void userScaleCosts(const vector<HighsVarType>& integrality, double& offset,
                     vector<double>& cost, HighsUserScaleData& data,
                     const bool apply) {
   data.num_infinite_costs = 0;
@@ -808,6 +822,7 @@ void userScaleCosts(const vector<HighsVarType>& integrality,
     if (std::abs(value) > data.infinite_cost) data.num_infinite_costs++;
     if (apply) cost[iCol] = value;
   }
+  if (apply) offset *= (bound_scale_value * objective_scale_value);
 }
 
 void userScaleColBounds(const vector<HighsVarType>& integrality,

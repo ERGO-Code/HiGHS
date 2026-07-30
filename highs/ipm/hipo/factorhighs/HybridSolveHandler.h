@@ -7,7 +7,9 @@ namespace hipo {
 
 class HybridSolveHandler : public SolveHandler {
   const std::vector<std::vector<Int>>& swaps_;
+  const std::vector<std::vector<char>>& any_swaps_;
   const std::vector<std::vector<double>>& pivot_2x2_;
+  std::vector<double>& gemv_workspace_;
 
  public:
   void forwardSolve(double* x) const override;
@@ -18,8 +20,10 @@ class HybridSolveHandler : public SolveHandler {
   HybridSolveHandler(const Symbolic& S,
                      const std::vector<std::vector<double>>& sn_columns,
                      const std::vector<std::vector<Int>>& swaps,
+                     const std::vector<std::vector<char>>& any_swap,
                      const std::vector<std::vector<double>>& pivot_2x2,
-                     DataCollector& data, const FHoptions& options);
+                     std::vector<double>& gemv_work, DataCollector& data,
+                     const FHoptions& options);
 };
 
 }  // namespace hipo
