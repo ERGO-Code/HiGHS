@@ -638,15 +638,20 @@ void FactorHighsSolver::setParallel() {
   bool parallel_forward = false;
   bool parallel_backward = false;
   bool parallel_diag = false;
-  if (kkt_.S.size() > kParallelSolveMinSize) {
-    parallel_diag = true;
 
-    if (kkt_.S.solveTreeSpeedup() > kParallelForwardMinSpeedup)
-      parallel_forward = true;
+  if (options_.parallel == kHighsChooseString ||
+      options_.parallel == kHighsOnString) {
+    if (kkt_.S.size() > kParallelSolveMinSize) {
+      parallel_diag = true;
 
-    if (kkt_.S.solveTreeSpeedup() > kParallelBackwardMinSpeedup)
-      parallel_backward = true;
+      if (kkt_.S.solveTreeSpeedup() > kParallelForwardMinSpeedup)
+        parallel_forward = true;
+
+      if (kkt_.S.solveTreeSpeedup() > kParallelBackwardMinSpeedup)
+        parallel_backward = true;
+    }
   }
+
   FH_.setParallelSolve(parallel_forward, parallel_backward, parallel_diag);
 
   if (logger_.debug(1)) {
