@@ -2369,11 +2369,28 @@ void fullSolution(const THLPData& data,
   full_solution.assign(num_var, 0);
 
   struct treeRecord {
-    int node;
     int from_node;
+    int node;
+    double outflow;
   };
   std::vector<treeRecord> my_tree;
-    
+
+  auto printMyTree = [&] (const int leaf) {
+    printf("After processing leaf %d\n", leaf);
+    int num_tree_arc = static_cast<int>(my_tree.size());
+    for (int iArc = 0; iArc < num_tree_arc; iArc++) {
+      printf("   arc(%2d, %2d) has outflow from %2d of %g\n",
+	     my_tree[iArc].from_node, my_tree[iArc].node, my_tree[iArc].node, my_tree[iArc].outflow);
+    }
+  };
+
+  auto assignXimk = [&] (const int i, const int k, const int m, const double flow) {
+    int iCol = data.x[i][k][m];
+    assert(full_solution[iCol] == 0);
+    full_solution[iCol] = flow;
+    printf("Assign x[%2d][%2d][%2d] = %g\n", i, k, m, flow);
+  };
+
   for (int i = 0; i < n; i++) {
     int my_hub = assignment[i];
     my_tree.clear();
@@ -2388,35 +2405,38 @@ void fullSolution(const THLPData& data,
     std::vector<int> coloured(n, 0);
     for (int pass = 0; pass < num_to_colour; pass++) {
       std::vector<int> arc_count(n, 0);
-      std::vector<int> to_node(n, 0);
+      std::vector<int> from_node(n, 0);
       if (i_is_hub) {
 	// The self-hub i has an arc from artificial node -1 so that
 	// tree is rooted at i
-	to_node[my_hub] = -1;
+	from_node[my_hub] = -1;
 	arc_count[my_hub] = 1;
       } else {
 	// The hub of i has the arc from i
-	to_node[my_hub] = i;
+	from_node[my_hub] = i;
 	arc_count[my_hub] = 1;
       }
       for (int h = 0; h < p-1; h++) {
 	int node1 = hub_tree[h].first;
 	int node2 = hub_tree[h].second;
 	if (coloured[node1] || coloured[node2]) continue;
-	to_node[node1] = node2;
-	to_node[node2] = node1;
+	from_node[node1] = node2;
+	from_node[node2] = node1;
 	arc_count[node1]++;
 	arc_count[node2]++;
       }
       for (int h = 0; h < p; h++) {
 	int node = hubs[h];
 	if (arc_count[node] == 1) {
-	  // New leaf, so add it and its arc to the tree - unless it's
-	  // an arc to the artificial node from the self-hub
-	  if (to_node[node] >= 0) {
+	  // New leaf, so add it and its arc (from_node, node) to the
+	  // tree - unless it's an arc to the artificial node from the
+	  // self-hub - also initialising the flow along its arc
+	  // (from_node, node)
+	  if (from_node[node] >= 0) {
 	    treeRecord entry;
+	    entry.from_node = from_node[node];
 	    entry.node = node;
-	    entry.from_node = to_node[node];
+	    entry.outflow = 0;
 	    my_tree.push_back(entry);
 	  }
 	  coloured[node] = 1;
@@ -2431,8 +2451,51 @@ void fullSolution(const THLPData& data,
       }
       if (num_coloured == num_to_colour) break;
     }
-    assert(my_tree.size() == static_cast<size_t>(i_is_hub ? p-1 : p));
+    int num_tree_arc = static_cast<int>(my_tree.size());
+    assert(num_tree_arc == i_is_hub ? p-1 : p);
     // Now process tree from leaves
+    printMyTree(-1);
+    for (int iArc = 0; iArc < num_tree_arc; iArc++) {
+      // Arc (from_node, node) is the arc into node from lower in the
+      // tree: flows from the (hub) node to non-hubs are known
+      // immediately
+      int node = my_tree[iArc].node;
+      int from_node = my_tree[iArc].from_node;
+      double inflow = my_tree[iArc].outflow;
+      printf("\nProcessing leaf %d\n", node);
+      // Assign flows for the non-hubs assigned to node and determine
+      // the flow in the arc (from_node, node)
+      double outflow = inflow + data.W[i][node];
+      for (int m = 0; m < n; m++) {
+	int k = assignment[m];
+	if (k != m && k == node && m != i) {
+	  double flow = data.W[i][m];
+	  assignXimk(i, k, m, flow);
+	  outflow += flow;
+	}
+      }
+      // Assign the flow in the arc (from_node, node)
+      double flow = outflow;
+      if (from_node == i) {
+	printf("For node i = %d; flow = %.0f; O_{%2d} = %.0f\n",
+	       i, flow, i, data.O[i]);
+	assert(flow == data.O[i]);
+      }
+      assignXimk(i, from_node, node, outflow);
+      if (from_node == i) break;
+      // Add the outflow to the outflow from from_node
+      bool found_from_node = false;
+      for (int iArc1 = iArc+1; iArc1 < num_tree_arc; iArc1++) {
+	if (my_tree[iArc1].node == from_node) {
+	  my_tree[iArc1].outflow += outflow;
+	  found_from_node = true;
+	  break;
+	}
+      }
+      assert(found_from_node);
+      printMyTree(node);      
+    }
+    
   }
 }
 
