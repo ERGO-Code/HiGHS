@@ -163,7 +163,7 @@ class FHsolver {
   // corresponds to the full matrix (without the diagonal entries), with 0-based
   // indexing.
   Int reorderMetis(Int n, Int nz, const Int* rows, const Int* ptr, Int* perm,
-                   bool full_matrix_0) const;
+                   bool full_matrix_0, Int seed) const;
   Int reorderAmd(Int n, Int nz, const Int* rows, const Int* ptr, Int* perm,
                  bool full_matrix_0) const;
   Int reorderRcm(Int n, Int nz, const Int* rows, const Int* ptr, Int* perm,
