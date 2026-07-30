@@ -54,6 +54,7 @@ void Solver::setOptions(const HighsOptions& highs_options) {
   options_.ordering = highs_options.hipo_ordering;
   options_.factor = highs_options.hipo_factor;
   options_.block_size = highs_options.hipo_block_size;
+  options_.random_seed = highs_options.random_seed + 42;
 
   options_orig_ = options_;
   Hoptions_ = highs_options;
@@ -1304,13 +1305,7 @@ void Solver::printOutput(bool reset) const {
 void Solver::printInfo() const {
   std::stringstream log_stream;
   log_stream << "\nRunning HiPO\n";
-
-  if (options_.parallel == kHighsOffString)
-    log_stream << textline("Threads:") << 1 << '\n';
-  else
-    log_stream << textline("Threads:") << highs::parallel::num_threads()
-               << '\n';
-
+  log_stream << textline("Threads:") << highs::parallel::num_threads() << '\n';
   logger_.print(log_stream.str().c_str());
 
   model_.print(logger_);
