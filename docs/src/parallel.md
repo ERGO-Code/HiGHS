@@ -46,24 +46,32 @@ parallel dual simplex solver is unlikely to be worth using.
 
 ## IPM
 
-The interior point solver HiPO uses multiple threads to process the 
-elimination tree during the multifrontal factorisation (_tree level_)
-and to perform the dense factorisation of the frontal matrices 
-(_node level_).
+The interior point solver HiPO uses multi-threading in various phases:
 
-If the [parallel](@ref option-parallel) option is set "on", the level of parallelism is 
-determined by the [hipo\_parallel\_type](@ref option-hipo-parallel-type) option, 
-which can be "tree" for tree level only, "node" for node level only, or 
-"both" for both levels.
+* To run multiple orderings heuristics on different Newton system approaches, 
+  in order to choose the best one.
+* To construct the normal equations matrix. 
+* To process the elimination tree during the multifrontal factorisation 
+  (_tree level_ parallelism).
+* To perform the dense factorisation of the frontal matrices (_node level_ parallelism).
+* To perform the triangular solves.
 
+Running multiple orderings and building the normal equations in parallel is always 
+advantageous, so is performed regardless of the value of the 
+[parallel](@ref option-parallel) option.
+
+If the [parallel](@ref option-parallel) option is set "on", the level of parallelism 
+in the factorisation is determined by the 
+[hipo\_parallel\_type](@ref option-hipo-parallel-type) option, which can be "tree" for 
+tree level only, "node" for node level only, or "both" for both levels.
 If the [parallel](@ref option-parallel) option is set "choose", the solver selects which 
 level to use based on a heuristic. When the [parallel](@ref option-parallel) option is set 
-"choose" or "off", the value of the hipo\_parallel\_type option is ignored.
+"choose" or "off", the value of the [hipo\_parallel\_type](@ref option-hipo-parallel-type) 
+option is ignored.
 
-In addition, HiPO utilises parallelism to run multiple orderings heuristics on different 
-Newton system approaches (in order to choose the best one), and to construct the normal 
-equations matrix. This parallelism is always advantageous, so is performed regardless of 
-the value of the [parallel](@ref option-parallel) option.
+If the [parallel](@ref option-parallel) option is set "on" or "choose", the parallelism 
+in triangular solves is controlled by a heuristic. Otherwise, triangluar solves do not 
+exploit parallelism.
 
 The extent to which parallelism is used in HiPO depends on the value of the
 [threads](@ref option-threads) option (see above).
