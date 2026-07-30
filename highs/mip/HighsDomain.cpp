@@ -2972,7 +2972,7 @@ bool HighsDomain::propagate() {
       if (!conflictprop.propagateConflictInds_.empty()) return true;
     }
 
-    if (dfprobingPropagation.isActive() && mipsolver->options_mip_->presolve_dfprobing)
+    if (!infeasible_ && dfprobingPropagation.isActive() && mipsolver->options_mip_->presolve_dfprobing)
       return true;
 
     return false;
