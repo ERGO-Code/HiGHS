@@ -2246,10 +2246,11 @@ bool THLPData::legalSolution(std::vector<double>& solution) const {
       }
     }
   }
-  printf("THLPData::cleanSolution Has %d illegal x values\n", int(num_illegal_x));
+  if (num_illegal_x)
+    printf("THLPData::cleanSolution Has %d illegal x values\n", int(num_illegal_x));
   HighsInt num_illegal_y = 0;
-   for (HighsInt k = 0; k < this->n; k++) {
-     for (HighsInt m = 0; m <= k; m++) {
+  for (HighsInt k = 0; k < this->n; k++) {
+    for (HighsInt m = 0; m <= k; m++) {
       HighsInt iCol = y[k][m];
       double y_value = solution[iCol];
       if (y_value != 0) {
@@ -2262,7 +2263,8 @@ bool THLPData::legalSolution(std::vector<double>& solution) const {
       }
     }
   }
-  printf("THLPData::cleanSolution Has %d illegal y values\n", int(num_illegal_y));
+  if (num_illegal_y)
+    printf("THLPData::cleanSolution Has %d illegal y values\n", int(num_illegal_y));
   return num_illegal_x + num_illegal_y == 0;
 }
 
@@ -2368,28 +2370,56 @@ void fullSolution(const THLPData& data,
   int num_var = n*n*(n+2);
   full_solution.assign(num_var, 0);
 
+  const bool log_construction = false;
+
   struct treeRecord {
     int from_node;
     int node;
-    double outflow;
   };
   std::vector<treeRecord> my_tree;
 
-  auto printMyTree = [&] (const int leaf) {
-    printf("After processing leaf %d\n", leaf);
+  auto printMyTree = [&] () {
+    if (!log_construction) return;
+    printf("Initial tree\n");
     int num_tree_arc = static_cast<int>(my_tree.size());
     for (int iArc = 0; iArc < num_tree_arc; iArc++) {
-      printf("   arc(%2d, %2d) has outflow from %2d of %g\n",
-	     my_tree[iArc].from_node, my_tree[iArc].node, my_tree[iArc].node, my_tree[iArc].outflow);
+      printf("   arc(%2d, %2d)\n", my_tree[iArc].from_node, my_tree[iArc].node);
     }
   };
 
-  auto assignXimk = [&] (const int i, const int k, const int m, const double flow) {
+  auto assignXikm = [&] (const int i, const int k, const int m, const double flow) {
     int iCol = data.x[i][k][m];
     assert(full_solution[iCol] == 0);
     full_solution[iCol] = flow;
-    printf("Assign x[%2d][%2d][%2d] = %g\n", i, k, m, flow);
+    if (log_construction) printf("Assign x[%2d][%2d][%2d] = %g\n", i, k, m, flow);
   };
+
+  auto assignYkm = [&] (const int k, const int m) {
+    assert(m > k);
+    int iCol = data.y[k][m];
+    assert(full_solution[iCol] == 0);
+    full_solution[iCol] = 1;
+    if (log_construction) printf("Assign y[%2d][%2d] = 1\n", k, m);
+  };
+
+  auto assignZik = [&] (const int i, const int k) {
+    int iCol = data.z[i][k];
+    assert(full_solution[iCol] == 0);
+    full_solution[iCol] = 1;
+    if (log_construction) printf("Assign z[%2d][%2d] = 1\n", i, k);
+  };
+
+  auto assignHubNonhubFlows = [&] (const int i, const int node, double& outflow) {
+    for (int m = 0; m < n; m++) {
+      int k = assignment[m];
+      if (k != m && k == node && m != i) {
+	double flow = data.W[i][m];
+	outflow += flow;
+      }
+    }
+  };
+
+  auto isHub = [&] (const int node) { return node == assignment[node]; };
 
   for (int i = 0; i < n; i++) {
     int my_hub = assignment[i];
@@ -2430,14 +2460,24 @@ void fullSolution(const THLPData& data,
 	if (arc_count[node] == 1) {
 	  // New leaf, so add it and its arc (from_node, node) to the
 	  // tree - unless it's an arc to the artificial node from the
-	  // self-hub - also initialising the flow along its arc
-	  // (from_node, node)
+	  // self-hub
 	  if (from_node[node] >= 0) {
 	    treeRecord entry;
 	    entry.from_node = from_node[node];
 	    entry.node = node;
-	    entry.outflow = 0;
 	    my_tree.push_back(entry);
+	    if (i == 0) {
+	      // On the first pass, define define y_km 
+	      if (isHub(from_node[node])) {
+		// Both nodes are hubs, so define y_km for k < m
+		assert(from_node[node] != node);
+		if (node < from_node[node]) {
+		  assignYkm(node, from_node[node]);
+		} else {
+		  assignYkm(from_node[node], node);
+		}
+	      }
+	    }
 	  }
 	  coloured[node] = 1;
 	  num_coloured++;
@@ -2454,48 +2494,56 @@ void fullSolution(const THLPData& data,
     int num_tree_arc = static_cast<int>(my_tree.size());
     assert(num_tree_arc == i_is_hub ? p-1 : p);
     // Now process tree from leaves
-    printMyTree(-1);
+    if (log_construction) printf("\n\nFor node i = %d\n", i);
+    std::vector<double>node_outflow(n, 0);
+    printMyTree();
     for (int iArc = 0; iArc < num_tree_arc; iArc++) {
+      if (log_construction) {
+	printf("\nOutflows:\n");
+	for (int iHub = 0; iHub < p; iHub++) {
+	  int hub = hubs[iHub];
+	  printf("  Hub %2d outflow is %.0f\n", hub, node_outflow[hub]);
+	}
+      }
       // Arc (from_node, node) is the arc into node from lower in the
       // tree: flows from the (hub) node to non-hubs are known
       // immediately
       int node = my_tree[iArc].node;
       int from_node = my_tree[iArc].from_node;
-      double inflow = my_tree[iArc].outflow;
-      printf("\nProcessing leaf %d\n", node);
+      assert(isHub(node));
+      assert(isHub(from_node) || iArc == num_tree_arc-1);
+      if (log_construction) printf("\nProcessing leaf %d\n", node);
       // Assign flows for the non-hubs assigned to node and determine
       // the flow in the arc (from_node, node)
-      double outflow = inflow + data.W[i][node];
-      for (int m = 0; m < n; m++) {
-	int k = assignment[m];
-	if (k != m && k == node && m != i) {
-	  double flow = data.W[i][m];
-	  assignXimk(i, k, m, flow);
-	  outflow += flow;
+      double flow = node_outflow[node] + data.W[i][node];
+      assignHubNonhubFlows(i, node, flow);
+      if (isHub(from_node)) {
+	// Assign the flow in the arc between hubs (from_node, node)
+	assignXikm(i, from_node, node, flow);
+      }
+      node_outflow[from_node] += flow;
+      // If this is the last arc and from_node is the root, process it now
+      const bool processing_root = iArc == num_tree_arc-1 && from_node == i;
+      if (processing_root) {
+	// Check that the outflow from the root matches the total
+	// supply at the root
+	double outflow = node_outflow[i];
+	if (i_is_hub) {
+	  // If the root is a hub, have to assign the flows to its
+	  // associated non-hubs, and add them in to get the total
+	  // flow out of the root
+	  if (log_construction) printf("\nProcessing root %d (which is hub) with current outflow %.0f\n", i, outflow);
+	  assignHubNonhubFlows(i, i, outflow);
 	}
+	if (log_construction) printf("For root node i = %d; outflow = %.0f; O_{%2d} = %.0f\n", i, outflow, i, data.O[i]);
+	assert(outflow == data.O[i]);
       }
-      // Assign the flow in the arc (from_node, node)
-      double flow = outflow;
-      if (from_node == i) {
-	printf("For node i = %d; flow = %.0f; O_{%2d} = %.0f\n",
-	       i, flow, i, data.O[i]);
-	assert(flow == data.O[i]);
-      }
-      assignXimk(i, from_node, node, outflow);
-      if (from_node == i) break;
-      // Add the outflow to the outflow from from_node
-      bool found_from_node = false;
-      for (int iArc1 = iArc+1; iArc1 < num_tree_arc; iArc1++) {
-	if (my_tree[iArc1].node == from_node) {
-	  my_tree[iArc1].outflow += outflow;
-	  found_from_node = true;
-	  break;
-	}
-      }
-      assert(found_from_node);
-      printMyTree(node);      
     }
-    
   }
+  for (int i = 0; i < n; i++) {
+    int k = assignment[i];
+    assignZik(i, k);
+  }
+      
 }
 
