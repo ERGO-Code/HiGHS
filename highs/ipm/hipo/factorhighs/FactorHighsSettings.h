@@ -47,9 +47,6 @@ const Int kMinConsecutiveSums = 1;
 // regularisation
 const double kDynamicDiagCoeff = 1e-24;
 
-// metis
-const Int kMetisSeed = 42;
-
 // parallel solve
 const double kLargeTaskRelativeThresh = 0.01;
 const double kLargeTaskAbsoluteThres = 1e3;

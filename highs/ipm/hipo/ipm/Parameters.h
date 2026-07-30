@@ -62,6 +62,12 @@ const double kSmallBoundDiff = 1e-3;
 const double kFreeVarsInitialBound = 1e4;
 const double kFreeVarsCloseRatio = 0.5;
 
+const Int kParallelNEStructTasks = 50;   // 32 < . <= 64
+const Int kParallelNEValuesTasks = 100;  // 64 < . <= 128
+const Int kParallelNEnzPerColThresh = 10;
+const Int kParallelNEnzPerRowThresh = 30;
+const Int kParallelNEsizeThresh = 1e4;
+
 // static regularisation
 struct Regularisation {
   double primal = 1e-12;

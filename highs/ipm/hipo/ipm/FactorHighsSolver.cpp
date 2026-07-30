@@ -271,15 +271,10 @@ Int FactorHighsSolver::chooseNla() {
   // In parallel, run AS analyse and build NE structure. NE analyse runs only
   // after AS analyse is finished, so that it can be skipped based on the number
   // of nz of NE matrix and AS factor.
-  if (options_.parallel == kHighsOffString) {
-    run_analyse_AS();
-    run_structure_NE();
-  } else {
-    highs::parallel::TaskGroup tg;
-    tg.spawn([&]() { run_analyse_AS(); });
-    tg.spawn([&]() { run_structure_NE(); });
-    tg.taskWait();
-  }
+  highs::parallel::TaskGroup tg;
+  tg.spawn([&]() { run_analyse_AS(); });
+  tg.spawn([&]() { run_structure_NE(); });
+  tg.taskWait();
 
   // if NE was skipped but AS failed, use NE
   if (skip_NE && failure_AS) {
@@ -372,8 +367,10 @@ Int FactorHighsSolver::chooseOrdering(const std::vector<Int>& rows,
     // rcm is much worse in general, so no point in trying for now
   }
 
+  const Int k = orderings_to_try.size();
+
   // vector<bool> is not thread-safe
-  std::vector<char> failure(orderings_to_try.size(), 0);
+  std::vector<char> failure(k, 0);
 
   if (nla == "NE") {
     if (ptr.back() >= kkt_.NE_nz_limit.load(std::memory_order_relaxed)) {
@@ -389,10 +386,9 @@ Int FactorHighsSolver::chooseOrdering(const std::vector<Int>& rows,
   Int n = full_ptr.size() - 1;
   std::vector<Int> perm(n), iperm(n);
 
-  std::vector<std::vector<Int>> permutations(orderings_to_try.size(),
-                                             std::vector<Int>(n));
+  std::vector<std::vector<Int>> permutations(k, std::vector<Int>(n));
 
-  std::vector<Symbolic> symbolics(orderings_to_try.size(), S);
+  std::vector<Symbolic> symbolics(k, S);
 
   auto run_ordering_and_analyse = [&](Int i) {
     logger_.printInfo("Running %s for %s\n", orderings_to_try[i].c_str(),
@@ -401,7 +397,7 @@ Int FactorHighsSolver::chooseOrdering(const std::vector<Int>& rows,
     if (orderings_to_try[i] == kHipoMetisString) {
       Int status =
           FH_.reorderMetis(n, rows.size(), full_rows.data(), full_ptr.data(),
-                           permutations[i].data(), true);
+                           permutations[i].data(), true, options_.random_seed);
       if (status) failure[i] = true;
 
     } else if (orderings_to_try[i] == kHipoAmdString) {
@@ -439,13 +435,8 @@ Int FactorHighsSolver::chooseOrdering(const std::vector<Int>& rows,
     }
   };
 
-  if (options_.parallel == kHighsOffString) {
-    for (Int i = 0; i < static_cast<Int>(orderings_to_try.size()); ++i)
-      run_ordering_and_analyse(i);
-  } else
-    highs::parallel::for_each(
-        0, orderings_to_try.size(),
-        [&](Int start, Int end) { run_ordering_and_analyse(start); }, 1);
+  highs::parallel::for_each(
+      0, k, [&](Int start, Int end) { run_ordering_and_analyse(start); }, 1);
 
   Int num_success = 0;
   for (bool b : failure) {
@@ -453,7 +444,7 @@ Int FactorHighsSolver::chooseOrdering(const std::vector<Int>& rows,
   }
 
   if (num_success > 0) {
-    for (Int i = 0; i < static_cast<Int>(orderings_to_try.size()); ++i) {
+    for (Int i = 0; i < k; ++i) {
       if (!failure[i])
         logger_.printInfo(
             "%20s for %s: %.2e %.2f\n", orderings_to_try[i].c_str(),
@@ -463,7 +454,7 @@ Int FactorHighsSolver::chooseOrdering(const std::vector<Int>& rows,
 
     // find the ordering with best flops
     double best_flops = kHighsInf;
-    for (Int i = 0; i < static_cast<Int>(orderings_to_try.size()); ++i) {
+    for (Int i = 0; i < k; ++i) {
       if (!failure[i] && symbolics[i].flops() < best_flops) {
         best_flops = symbolics[i].flops();
       }
@@ -471,7 +462,7 @@ Int FactorHighsSolver::chooseOrdering(const std::vector<Int>& rows,
 
     // find orderings with flops within kFlopsOrderingThresh of the best
     std::vector<Int> consider;
-    for (Int i = 0; i < static_cast<Int>(orderings_to_try.size()); ++i) {
+    for (Int i = 0; i < k; ++i) {
       if (!failure[i] &&
           symbolics[i].flops() <= kFlopsOrderingThresh * best_flops) {
         consider.push_back(i);
@@ -494,14 +485,14 @@ Int FactorHighsSolver::chooseOrdering(const std::vector<Int>& rows,
     const double bytes_thresh = kLargeStorageGB * 1024 * 1024 * 1024;
     double best_memory = kHighsInf;
     Int ind_best_memory = -1;
-    for (Int i = 0; i < static_cast<Int>(orderings_to_try.size()); ++i) {
+    for (Int i = 0; i < k; ++i) {
       if (symbolics[i].storage() < best_memory) {
         best_memory = symbolics[i].storage();
         ind_best_memory = i;
       }
     }
 
-    assert(chosen >= 0 && chosen < static_cast<Int>(orderings_to_try.size()));
+    assert(chosen >= 0 && chosen < k);
 
     S = std::move(symbolics[chosen]);
     ordering = orderings_to_try[chosen];
@@ -586,7 +577,10 @@ void FactorHighsSolver::setParallel() {
       assert(1 == 0);
 
   } else if (options_.parallel == kHighsChooseString) {
-    if (usingAppleBlas()) {
+    if (highs::parallel::num_threads() == 1) {
+      parallel_node = false;
+      parallel_tree = false;
+    } else if (usingAppleBlas()) {
       // Blas on Apple do not work well with parallel_node, but parallel_tree
       // seems to always be beneficial.
       parallel_node = false;
