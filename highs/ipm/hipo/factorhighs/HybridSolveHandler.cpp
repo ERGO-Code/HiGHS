@@ -241,7 +241,7 @@ void HybridSolveHandler::processForwardTask(Int task, double* x) const {
 }
 
 void HybridSolveHandler::forwardSolve(double* x) const {
-  if (options_.parallel_forward) {
+  if (options_.parallel_forward && S_.schedule().valid) {
     // Hard to parallelise: a sn depends on its children in the tree; multiple
     // children may be writing to the same location in x at the same time.
     // Special care is needed for the writes, involving private buffers.
@@ -410,7 +410,7 @@ void HybridSolveHandler::processBackwardTask(Int task, double* x) const {
 }
 
 void HybridSolveHandler::backwardSolve(double* x) const {
-  if (options_.parallel_backward) {
+  if (options_.parallel_backward && S_.schedule().valid) {
     // Easy to parallelise: a sn depends on its ancestors in the tree; the
     // ancestor is the only sn running in a given branch when it writes the
     // update, so no special care needs to be taken for the writes. Respecting

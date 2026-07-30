@@ -1349,6 +1349,7 @@ void Analyse::computeTreeScheduleSolve() {
     const Int this_parent = schedule_solve_.task_parent[task];
     if (this_parent != -1 && this_parent <= task) {
       schedule_solve_.clear();
+      logger_->printInfo("Task tree does not have topological ordering\n");
       break;
     }
   }
