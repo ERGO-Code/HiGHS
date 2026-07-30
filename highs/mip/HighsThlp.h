@@ -64,6 +64,7 @@ struct THLPData {
 			const std::vector<HighsInt>& index,
 			const std::vector<double>& value,
 			const std::vector<double>& solution) const;
+  void interpretSolution(const std::vector<double>& solution) const;
 };
 
 // ============================================================================

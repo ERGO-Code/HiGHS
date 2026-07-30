@@ -29,8 +29,15 @@ bool rkoHeuristic(const HighsLp* lp, std::vector<double>& solution) {
     printf("Calling the RKO heuristic for a THLP problem with n = %d\n",
            int(lp->thlp_data_.n));
     RKOConfig config;
-    config.num_algorithms = 1;
-    config.num_runs = 1;
+    const bool dev_run = false;
+    if (dev_run) {
+      config.num_algorithms = 1;
+      config.num_runs = 1;
+    } else {
+      config.num_algorithms = 8;
+      config.num_runs = 4;
+      config.enable_ipr = true;
+    }     
     RKOOptimizer optimizer(config);
     const bool have_solution = optimizer.solveTHLP(lp->thlp_data_, solution);
     bool have_feasible_solution = false;
