@@ -203,49 +203,7 @@ void Factorise::processSupernode(Int sn) {
       assert(child == child_sn);
     }
 
-    // determine size of clique of child
-    const Int child_begin = S_.snStart(child_sn);
-    const Int child_end = S_.snStart(child_sn + 1);
-
-    // number of nodes in child sn
-    const Int child_size = child_end - child_begin;
-
-    // size of clique of child sn
-    const Int nc = S_.ptr(child_sn + 1) - S_.ptr(child_sn) - child_size;
-
-    // ASSEMBLE INTO FRONTAL
-    HIPO_CLOCK_START(2);
-    // go through the columns of the contribution of the child
-    for (Int col = 0; col < nc; ++col) {
-      // relative index of column in the frontal matrix
-      Int j = S_.relindClique(child_sn, col);
-
-      if (j < sn_size) {
-        // assemble into frontal
-
-        // go through the rows of the contribution of the child
-        Int row = col;
-        while (row < nc) {
-          // relative index of the entry in the matrix frontal
-          const Int i = S_.relindClique(child_sn, row);
-
-          // how many entries to sum
-          Int consecutive = S_.consecutiveSums(child_sn, row);
-
-          FH->assembleFrontalMultiple(consecutive, child_clique, nc, child_sn,
-                                      row, col, i, j);
-
-          row += consecutive;
-        }
-      } else
-        break;
-    }
-    HIPO_CLOCK_STOP(2, data_, kTimeFactoriseAssembleChildrenFrontal);
-
-    // ASSEMBLE INTO CLIQUE
-    HIPO_CLOCK_START(2);
-    FH->assembleClique(child_clique, nc, child_sn);
-    HIPO_CLOCK_STOP(2, data_, kTimeFactoriseAssembleChildrenClique);
+    FH->assembleChild(child_sn, child_clique);
 
     // Schur contribution of the child is no longer needed
     if (parallel) {
