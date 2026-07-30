@@ -289,14 +289,22 @@ class HighsSplitDeque {
   }
 
   void checkInterrupt() {
-    if (ownerData.rootTask && ownerData.rootTask->isCancelled())
+    if (ownerData.rootTask && ownerData.rootTask->isCancelled()) {
+      ownerData.rootTask = nullptr;
       throw HighsTask::Interrupt();
+    }
   }
 
   void cancelTask(HighsInt taskIndex) {
     assert(taskIndex < (HighsInt)ownerData.head);
     assert(taskIndex >= 0);
     taskArray[taskIndex].cancel();
+  }
+
+  HighsTask* setRootTask(HighsTask* newRoot) {
+    HighsTask* prevRoot = ownerData.rootTask;
+    ownerData.rootTask = newRoot;
+    return prevRoot;
   }
 
   template <typename F>

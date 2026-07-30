@@ -10,25 +10,21 @@
 #include "LinearSolver.h"
 #include "Model.h"
 #include "ipm/hipo/auxiliary/IntConfig.h"
-#include "ipm/hipo/factorhighs/FactorHiGHS.h"
+#include "ipm/hipo/factorhighs/FactorHighs.h"
 
 namespace hipo {
 
-class FactorHiGHSSolver : public LinearSolver {
-  // object to perform factorisation
+class FactorHighsSolver : public LinearSolver {
   FHsolver FH_;
-
-  // symbolic factorisation
-  Symbolic S_;
-
   KktMatrix& kkt_;
-
   const Regularisation& regul_;
   Info& info_;
   IpmData& data_;
   const Logger& logger_;
   const Model& model_;
   Options& options_;
+
+  std::vector<double> as_buffer_;
 
   std::string ordering_AS_ = "none";
   std::string ordering_NE_ = "none";
@@ -43,11 +39,10 @@ class FactorHiGHSSolver : public LinearSolver {
   Int analyseNE(Symbolic& S);
 
  public:
-  FactorHiGHSSolver(KktMatrix& kkt, Options& options, const Model& model,
+  FactorHighsSolver(KktMatrix& kkt, Options& options, const Model& model,
                     const Regularisation& regul, Info& info, IpmData& record,
                     const Logger& logger);
 
-  // Override functions
   Int factorAS(const std::vector<double>& scaling) override;
   Int factorNE(const std::vector<double>& scaling) override;
   Int solveNE(const std::vector<double>& rhs,
@@ -61,6 +56,7 @@ class FactorHiGHSSolver : public LinearSolver {
   double spops() const override;
   double nz() const override;
   void getReg(std::vector<double>& reg) override;
+  LinearSolverType type() const override { return kFactorHighsType; }
 };
 
 }  // namespace hipo

@@ -9,7 +9,7 @@
 #ifndef __SRC_LIB_QPCONST_HPP__
 #define __SRC_LIB_QPCONST_HPP__
 
-enum class QpSolverStatus { OK, NOTPOSITIVDEFINITE, DEGENERATE };
+enum class QpSolverStatus { OK, NOTPOSITIVDEFINITE, DEGENERATE, kError };
 
 enum class QpModelStatus {
   kNotset,  // 0
@@ -20,6 +20,7 @@ enum class QpModelStatus {
   kIterationLimit,
   kTimeLimit,
   kLargeNullspace,
+  kNonConvex,
   kInterrupt,
   kError
 };

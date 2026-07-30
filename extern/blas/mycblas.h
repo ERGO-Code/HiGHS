@@ -82,7 +82,6 @@ void openblas_set_num_threads(int num_threads);
 #endif
 
 void highs_openblas_set_num_threads(int num_threads);
-
 #ifdef __cplusplus
 }
 #endif

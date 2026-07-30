@@ -8,7 +8,7 @@ build-backend = "scikit_build_core.build"
 
 [project]
 name = "highspy"
-version = "1.14.0.dev1"
+version = "1.15.1"
 description = "A thin set of pybind11 wrappers to HiGHS"
 authors = [{ name = "HiGHS developers", email = "highsopt@gmail.com" }]
 readme = "README.md"
@@ -18,13 +18,12 @@ license-files = [
   "THIRD_PARTY_NOTICES.md",
 ]
 
-requires-python = ">=3.8"
+requires-python = ">=3.9"
 dependencies = ["numpy", "typing_extensions; python_version < '3.10'"]
 
 classifiers = [
   # "Development Status :: 4 - Beta",
   "Programming Language :: Python :: 3 :: Only",
-  "Programming Language :: Python :: 3.8",
   "Programming Language :: Python :: 3.9",
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
@@ -36,7 +35,7 @@ classifiers = [
 
 [project.optional-dependencies]
 test = ["pytest", "numpy"]
-extras = ["highspy-extras==1.14.0.dev1"]
+extras = ["highspy-extras==1.15.1"]
 
 [tool.scikit-build]
 wheel.expand-macos-universal-tags = true
@@ -109,15 +108,12 @@ addopts = ["-ra", "--showlocals", "--strict-markers", "--strict-config"]
 xfail_strict = true
 log_cli_level = "INFO"
 filterwarnings = ["error"]
-testpaths = ["tests"]
+testpaths = ["highspy/tests"]
 norecursedirs = ["check", ".git", "build", "dist", "*.egg-info"]
 
 [tool.cibuildwheel]
 build = "*"
 archs = ["auto64", "auto32"]
-
-# Enable free-threaded support
-enable = ["cpython-freethreading"]
 
 # highspy does not need vcpkg dependencies (avoid unnecessary compile)
 environment = { VCPKG_ROOT = "", VCPKG_INSTALLATION_ROOT = "" }
