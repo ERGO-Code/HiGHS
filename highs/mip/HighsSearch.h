@@ -200,9 +200,9 @@ class HighsSearch {
 
   HighsInt getCurrentDepth() const { return nodestack.size() + depthoffset; }
 
-  void openNodesToQueue(HighsNodeQueue& nodequeue);
+  void stashOpenNodes();
 
-  void currentNodeToQueue(HighsNodeQueue& nodequeue);
+  void stashCurrentNode();
 
   void flushStatistics(HighsMipSolver& mipsolver);
 
@@ -226,10 +226,9 @@ class HighsSearch {
   /// backtrack one level in DFS manner
   bool backtrack(bool recoverBasis = true);
 
-  /// backtrack an unspecified amount of depth level until the next
-  /// node that seems worthwhile to continue the plunge. Put unpromising nodes
-  /// to the node queue
-  bool backtrackPlunge(HighsNodeQueue& nodequeue);
+  /// backtrack until the next node (DFS manner) that can be worthwhile
+  /// to continue the plunge. Put unpromising nodes to workers processedNodes
+  bool backtrackPlunge();
 
   /// for heuristics. Will discard nodes above targetDepth regardless of their
   /// status

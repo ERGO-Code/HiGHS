@@ -309,7 +309,6 @@ restart:
       mipdata_->lps.back().notifyCutPoolsLpCopied(1);
       mipdata_->workers.back().randgen.initialise(options_mip_->random_seed +
                                                   mipdata_->workers.size() - 1);
-      mipdata_->workers.back().nodequeue.setNumCol(numCol());
       mipdata_->debugSolution.registerDomain(
           mipdata_->workers.back().search_ptr_->getLocalDomain());
     }
@@ -336,8 +335,6 @@ restart:
     worker.getLpRelaxation().setMipWorker(worker);
     worker.resetSearch();
     worker.resetSepa();
-    worker.nodequeue.clear();
-    worker.nodequeue.setNumCol(numCol());
   };
 
   auto syncSolutions = [&]() -> void {
@@ -451,8 +448,6 @@ restart:
 
   master_worker.resetSearch();
   master_worker.resetSepa();
-  master_worker.nodequeue.clear();
-  master_worker.nodequeue.setNumCol(numCol());
   master_worker.upper_bound = mipdata_->upper_bound;
   master_worker.upper_limit = mipdata_->upper_limit;
   master_worker.optimality_limit = mipdata_->optimality_limit;
@@ -481,14 +476,14 @@ restart:
     return false;
   };
 
-  auto checkRestart = [&](const HighsMipWorker& worker,
-                          HighsInt numWorkerVotes) -> RestartVote {
+  auto checkRestart = [&](const HighsMipWorker& worker, HighsInt numWorkerVotes,
+                          HighsCDouble currTreeWeight) -> RestartVote {
     int64_t nNodes = worker.search_ptr_->nnodes + mipdata_->num_nodes;
     if (!submip && nNodes >= nextCheck && options_mip_->mip_allow_restart) {
       const HighsInt nTreeRestarts =
           mipdata_->numRestarts - mipdata_->numRestartsRoot;
       const HighsCDouble treeWeight =
-          worker.search_ptr_->treeweight + mipdata_->pruned_treeweight;
+          currTreeWeight + mipdata_->pruned_treeweight;
       double currNodeEstim =
           numNodesLastCheck - mipdata_->num_nodes_before_run +
           (nNodes - numNodesLastCheck) * double(1.0 - treeWeight) /
@@ -582,7 +577,8 @@ restart:
     }
     // Using joint information after workers are synced, query a restart
     const RestartVote vote = checkRestart(
-        master_worker, (numRestartVotes + numHugeTreeVotes + 2) / 2);
+        master_worker, (numRestartVotes + numHugeTreeVotes + 2) / 2,
+        master_worker.search_ptr_->treeweight);
     if (vote == RestartVote::kWouldRestart) {
       performRestart();
       return true;
@@ -624,23 +620,25 @@ restart:
                     2 * indices.size()
             ? 2
             : 1;
-    for (const HighsInt i : indices) {
-      for (HighsInt j = 0; j != numNodesPerWorker; j++) {
+    for (HighsInt j = 0; j != numNodesPerWorker; j++) {
+      for (const HighsInt i : indices) {
         if ((indices.size() == 1 && numQueueLeaves - lastLbLeave >= 10) ||
             (indices.size() > 1 && i == 0 && j == 0)) {
-          mipdata_->workers[i].openNodes.push(
-              mipdata_->nodequeue.popBestBoundNode());
+          mipdata_->workers[i].preparedNodes.push_back(
+              std::move(mipdata_->nodequeue.popBestBoundNode()));
           lastLbLeave = numQueueLeaves;
         } else {
           HighsInt bestBoundNodeStackSize =
               mipdata_->nodequeue.getBestBoundDomchgStackSize();
           double bestBoundNodeLb = mipdata_->nodequeue.getBestLowerBound();
-          HighsNodeQueue::OpenNode nextNode(mipdata_->nodequeue.popBestNode());
+          mipdata_->workers[i].preparedNodes.push_back(
+              std::move(mipdata_->nodequeue.popBestNode()));
+          HighsNodeQueue::OpenNode& nextNode =
+              mipdata_->workers[i].preparedNodes.back();
           if (nextNode.lower_bound == bestBoundNodeLb &&
               static_cast<HighsInt>(nextNode.domchgstack.size()) ==
                   bestBoundNodeStackSize)
             lastLbLeave = numQueueLeaves;
-          mipdata_->workers[i].openNodes.push(std::move(nextNode));
         }
         ++numQueueLeaves;
       }
@@ -650,12 +648,10 @@ restart:
   auto evaluateNode = [&](HighsInt i) -> bool {
     if (!mipdata_->parallelLockActive())
       profiling_->start(kMipClockEvaluateNode1);
-    if (mipdata_->workers[i].search_ptr_->evaluateNode() ==
+    HighsMipWorker& worker = mipdata_->workers[i];
+    if (worker.search_ptr_->evaluateNode() ==
         HighsSearch::NodeResult::kSubOptimal) {
-      HighsNodeQueue& globalqueue = mipdata_->parallelLockActive()
-                                        ? mipdata_->workers[i].nodequeue
-                                        : mipdata_->nodequeue;
-      mipdata_->workers[i].search_ptr_->currentNodeToQueue(globalqueue);
+      worker.search_ptr_->stashCurrentNode();
       if (!mipdata_->parallelLockActive())
         profiling_->stop(kMipClockEvaluateNode1);
       return true;
@@ -706,10 +702,7 @@ restart:
 
     if (worker.getGlobalDomain().infeasible()) {
       worker.search_ptr_->cutoffNode();
-      HighsNodeQueue& globalqueue = mipdata_->parallelLockActive()
-                                        ? worker.nodequeue
-                                        : mipdata_->nodequeue;
-      worker.search_ptr_->openNodesToQueue(globalqueue);
+      worker.search_ptr_->stashOpenNodes();
       assignEarlyTermination(worker);
       infeasible = true;
       return;
@@ -736,20 +729,18 @@ restart:
   auto backtrackPlunge = [&](HighsInt i) {
     if (!mipdata_->parallelLockActive())
       profiling_->start(kMipClockBacktrackPlunge);
-    const bool backtrack_plunge =
-        mipdata_->workers[i].search_ptr_->backtrackPlunge(
-            mipdata_->parallelLockActive() ? mipdata_->workers[i].nodequeue
-                                           : mipdata_->nodequeue);
+    HighsMipWorker& worker = mipdata_->workers[i];
+    const bool backtrack_plunge = worker.search_ptr_->backtrackPlunge();
     if (!mipdata_->parallelLockActive())
       profiling_->stop(kMipClockBacktrackPlunge);
 
     if (!backtrack_plunge) return true;
 
-    assert(mipdata_->workers[i].search_ptr_->hasNode());
+    assert(worker.search_ptr_->hasNode());
 
-    if (mipdata_->workers[i].getConflictPool().getNumConflicts() >
+    if (worker.getConflictPool().getNumConflicts() >
         options_mip_->mip_pool_soft_limit) {
-      mipdata_->workers[i].getConflictPool().performAging();
+      worker.getConflictPool().performAging();
     }
     return false;
   };
@@ -837,17 +828,16 @@ restart:
                           const HighsInt plungeLimit, double avgiter) {
     auto processNode = [&](const HighsInt i) {
       HighsMipWorker& worker = mipdata_->workers[i];
-      HighsNodeQueue& nodequeue = mipdata_->parallelLockActive()
-                                      ? worker.nodequeue
-                                      : mipdata_->nodequeue;
+      worker.prepNodeIdx = 0;
       int64_t total_nodes_explored = 0;
       bool considerHeuristics = true;
       bool stop = false;
-      while (!worker.openNodes.empty()) {
+      while (worker.prepNodeIdx != worker.preparedNodes.size()) {
         int64_t nodes_explored = 0;
         int64_t lastLocalNodeCount = worker.search_ptr_->getLocalNodes();
-        worker.search_ptr_->installNode(std::move(worker.openNodes.front()));
-        worker.openNodes.pop();
+        worker.search_ptr_->installNode(
+            std::move(worker.preparedNodes[worker.prepNodeIdx]));
+        ++worker.prepNodeIdx;
         if (worker.search_ptr_->getCurrentEstimate() >= worker.upper_limit) {
           stallNodes[i]++;
         }
@@ -910,23 +900,33 @@ restart:
         total_nodes_explored += nodes_explored;
         assignEarlyTermination(worker);
         if (worker.early_termination) stop = true;
-        worker.search_ptr_->openNodesToQueue(nodequeue);
+        worker.search_ptr_->stashOpenNodes();
         if (total_nodes_explored >= nodeLim || stop) {
           break;
         }
       }
       if (worker.search_ptr_->hasNode()) {
-        worker.search_ptr_->openNodesToQueue(nodequeue);
+        worker.search_ptr_->stashOpenNodes();
       }
-      while (!worker.openNodes.empty()) {
-        HighsNodeQueue::OpenNode node = std::move(worker.openNodes.front());
-        worker.openNodes.pop();
-        nodequeue.emplaceNode(std::move(node.domchgstack),
-                              std::move(node.branchings), node.lower_bound,
-                              node.estimate, node.depth);
+      for (size_t j = worker.prepNodeIdx; j != worker.preparedNodes.size();
+           j++) {
+        worker.processedNodes.emplace_back(std::move(worker.preparedNodes[j]),
+                                           worker.search_ptr_->countTreeWeight);
       }
+      worker.preparedNodes.clear();
+      worker.prepNodeIdx = 0;
       if (nodeLim == maxNodesPerWorkerLim) {
-        restarts[i] = checkRestart(worker, 1);
+        // Need to spoof tree weight
+        HighsCDouble currTreeWeight = worker.search_ptr_->treeweight;
+        for (auto& node_treeweight_pair : worker.processedNodes) {
+          if (node_treeweight_pair.second &&
+              node_treeweight_pair.first.lower_bound >
+                  worker.optimality_limit) {
+            currTreeWeight +=
+                std::ldexp(1.0, 1 - node_treeweight_pair.first.depth);
+          }
+        }
+        restarts[i] = checkRestart(worker, 1, currTreeWeight);
       }
     };
     runTask(processNode, tg, true, false, indices);
@@ -966,7 +966,8 @@ restart:
     // Assign nodes to workers
     bool limit_reached = false;
     if (root_node) {
-      master_worker.openNodes.push(mipdata_->nodequeue.popBestBoundNode());
+      master_worker.preparedNodes.push_back(
+          std::move(mipdata_->nodequeue.popBestBoundNode()));
     } else {
       prepareNodes(search_indices);
     }
@@ -1013,7 +1014,7 @@ restart:
         for (const HighsInt i : search_indices) {
           if (i == early_terminated_worker) continue;
           HighsMipWorker& worker = mipdata_->workers[i];
-          worker.nodequeue.clear();
+          worker.processedNodes.clear();
           worker.search_ptr_->resetStatistics();
           worker.resetHeurStats();
           worker.resetSepaStats();
@@ -1033,13 +1034,16 @@ restart:
       }
       profiling_->start(kMipClockOpenNodesToQueue0);
       assert(!worker.search_ptr_->hasNode());
-      while (worker.nodequeue.numNodes() > 0) {
-        HighsNodeQueue::OpenNode node =
-            std::move(worker.nodequeue.popBestNode());
-        mipdata_->nodequeue.emplaceNode(
+      for (auto& node_treeweight_pair : worker.processedNodes) {
+        HighsNodeQueue::OpenNode& node = node_treeweight_pair.first;
+        double tmpTreeWeight = mipdata_->nodequeue.emplaceNode(
             std::move(node.domchgstack), std::move(node.branchings),
             node.lower_bound, node.estimate, node.depth);
+        if (node_treeweight_pair.second) {
+          worker.search_ptr_->treeweight += tmpTreeWeight;
+        }
       }
+      worker.processedNodes.clear();
       profiling_->stop(kMipClockOpenNodesToQueue0);
       worker.search_ptr_->flushStatistics(*this);
       syncSepaStats(worker);
