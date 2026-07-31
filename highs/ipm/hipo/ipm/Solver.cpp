@@ -1440,7 +1440,7 @@ void Solver::chooseNumberOfCorrectors() {
     // all the time, so use f/2.
     // Therefore, we want (1+k)(1+f/2) < ratio.
 
-    double thresh = ratio / (1.0 + kMaxIterRefine / 2.0) - 1;
+    double thresh = ratio / (1.0 + kRefineMaxIter / 2.0) - 1;
 
     info_.correctors = std::floor(thresh);
     info_.correctors = std::max(info_.correctors, (Int)1);

@@ -21,8 +21,8 @@ void Solver::refine(NewtonDir& delta) {
 
   double old_omega{};
 
-  for (Int iter = 0; iter < kMaxIterRefine; ++iter) {
-    if (omega < kTolRefine) break;
+  for (Int iter = 0; iter < kRefineMaxIter; ++iter) {
+    if (omega < kRefineTol) break;
 
     correction.clear();
     solve6x6(correction, it_->ires);

@@ -192,7 +192,7 @@ Int FactorHighsSolver::setup() {
 
     kkt_.S.print(logger_, logger_.debug(1));
 
-    if (kkt_.S.storage() > kLargeStorageGB * 1024 * 1024 * 1024) {
+    if (kkt_.S.storage() > kParallelLargeStorageGB * 1024 * 1024 * 1024) {
       logger_.printw("Large amount of memory required\n");
     }
 
@@ -214,9 +214,9 @@ Int FactorHighsSolver::chooseNla() {
   const bool NE_possible = !(model_.nonSeparableQp() || model_.m() == 0);
 
   const bool expect_AS_much_cheaper =
-      model_.nzNElb() > model_.nzAS() * kNzBoundsRatio;
+      model_.nzNElb() > model_.nzAS() * kSkipSystemNzBoundsRatio;
   const bool expect_NE_much_cheaper =
-      model_.nzAS() > model_.nzNEub() * kNzBoundsRatio;
+      model_.nzAS() > model_.nzNEub() * kSkipSystemNzBoundsRatio;
 
   const bool skip_AS = NE_possible && expect_NE_much_cheaper;
   const bool skip_NE = AS_possible && expect_AS_much_cheaper;
@@ -262,7 +262,7 @@ Int FactorHighsSolver::chooseNla() {
 
       // If NE has more nonzeros than the factor of AS, then it's likely that AS
       // will be preferred, so stop computation of NE.
-      Int64 NE_nz_limit = symb_AS.nz() * kSymbNzMult;
+      Int64 NE_nz_limit = symb_AS.nz() * kSystemSymbNzMult;
       if (failure_AS || NE_nz_limit > kHighsIInf) NE_nz_limit = kHighsIInf;
       kkt_.NE_nz_limit.store(NE_nz_limit, std::memory_order_relaxed);
     }
@@ -310,8 +310,8 @@ Int FactorHighsSolver::chooseNla() {
   } else {
     // Total number of operations, given by dense flops and sparse indexing
     // operations, weighted with an empirical factor
-    double ops_NE = symb_NE.flops() + symb_NE.spops() * kSpopsWeight;
-    double ops_AS = symb_AS.flops() + symb_AS.spops() * kSpopsWeight;
+    double ops_NE = symb_NE.flops() + symb_NE.spops() * kSystemSpopsWeight;
+    double ops_AS = symb_AS.flops() + symb_AS.spops() * kSystemSpopsWeight;
 
     double sn_size_NE = (double)symb_NE.size() / symb_NE.sn();
     double sn_size_AS = (double)symb_AS.size() / symb_AS.sn();
@@ -319,9 +319,9 @@ Int FactorHighsSolver::chooseNla() {
     double ratio_ops = ops_NE / ops_AS;
     double ratio_sn = sn_size_AS / sn_size_NE;
 
-    bool NE_much_more_expensive = ratio_ops > kRatioOpsThresh;
-    bool AS_not_too_expensive = ratio_ops > 1.0 / kRatioOpsThresh;
-    bool sn_AS_larger_than_NE = ratio_sn > kRatioSnThresh;
+    bool NE_much_more_expensive = ratio_ops > kSystemRatioOpsThresh;
+    bool AS_not_too_expensive = ratio_ops > 1.0 / kSystemRatioOpsThresh;
+    bool sn_AS_larger_than_NE = ratio_sn > kSystemRatioSnThresh;
 
     if (NE_much_more_expensive ||
         (sn_AS_larger_than_NE && AS_not_too_expensive)) {
@@ -460,11 +460,11 @@ Int FactorHighsSolver::chooseOrdering(const std::vector<Int>& rows,
       }
     }
 
-    // find orderings with flops within kFlopsOrderingThresh of the best
+    // find orderings with flops within kOrderingFlopsThresh of the best
     std::vector<Int> consider;
     for (Int i = 0; i < k; ++i) {
       if (!failure[i] &&
-          symbolics[i].flops() <= kFlopsOrderingThresh * best_flops) {
+          symbolics[i].flops() <= kOrderingFlopsThresh * best_flops) {
         consider.push_back(i);
       }
     }
@@ -482,7 +482,7 @@ Int FactorHighsSolver::chooseOrdering(const std::vector<Int>& rows,
     }
 
     // fix selection if one or more require too much memory
-    const double bytes_thresh = kLargeStorageGB * 1024 * 1024 * 1024;
+    const double bytes_thresh = kParallelLargeStorageGB * 1024 * 1024 * 1024;
     double best_memory = kHighsInf;
     Int ind_best_memory = -1;
     for (Int i = 0; i < k; ++i) {
@@ -595,11 +595,11 @@ void FactorHighsSolver::setParallel() {
       double tree_speedup = kkt_.S.flops() / kkt_.S.critops();
       double sn_size = (double)kkt_.S.size() / kkt_.S.sn();
 
-      bool enough_sn = kkt_.S.sn() > kMinNumberSn;
-      bool enough_flops = kkt_.S.flops() > kLargeFlopsThresh;
-      bool speedup_is_large = tree_speedup > kLargeSpeedupThresh;
-      bool sn_are_large = sn_size > kLargeSnThresh;
-      bool sn_are_not_small = sn_size > kSmallSnThresh;
+      bool enough_sn = kkt_.S.sn() > kParallelMinNumberSn;
+      bool enough_flops = kkt_.S.flops() > kParallelLargeFlopsThresh;
+      bool speedup_is_large = tree_speedup > kParallelLargeSpeedupThresh;
+      bool sn_are_large = sn_size > kParallelLargeSnThresh;
+      bool sn_are_not_small = sn_size > kParallelSmallSnThresh;
 
       // parallel_tree is active if the supernodes are large, or if there is a
       // large expected speedup and the supernodes are not too small, provided
@@ -613,12 +613,12 @@ void FactorHighsSolver::setParallel() {
     // If serial memory is too large, switch off tree parallelism to avoid
     // running out of memory
     double num_GB = kkt_.S.storage() / 1024 / 1024 / 1024;
-    if (num_GB > kLargeStorageGB) {
+    if (num_GB > kParallelLargeStorageGB) {
       parallel_tree = false;
     }
 
     // switch off tree parallelism if depth of recursion is too large
-    if (kkt_.S.depth() > kMaxTreeDepth) parallel_tree = false;
+    if (kkt_.S.depth() > kParallelMaxTreeDepth) parallel_tree = false;
 
     if (parallel_tree && parallel_node)
       log_stream << "Full preferred\n";

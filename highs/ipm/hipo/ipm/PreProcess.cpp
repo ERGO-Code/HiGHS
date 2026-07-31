@@ -364,14 +364,14 @@ void PreprocessScaling::apply(Model& model) {
         const double u = upper[i] / colscale[i];
         const double diff = std::abs(u - l);
 
-        if (diff / coeff < kSmallBoundDiff)
-          coeff = std::sqrt(coeff * diff / kSmallBoundDiff);
+        if (diff / coeff < kScalingSmallBoundDiff)
+          coeff = std::sqrt(coeff * diff / kScalingSmallBoundDiff);
       }
 
       if (!std::isinf(coeff) && !std::isnan(coeff)) colscale[i] *= coeff;
 
-      colscale[i] = std::max(colscale[i], kSmallScalingCoeff);
-      colscale[i] = std::min(colscale[i], kLargeScalingCoeff);
+      colscale[i] = std::max(colscale[i], kScalingSmallCoeff);
+      colscale[i] = std::min(colscale[i], kScalingLargeCoeff);
     }
   };
   auto rowScaling = [&]() {
@@ -390,8 +390,8 @@ void PreprocessScaling::apply(Model& model) {
     // apply row scaling
     for (Int i = 0; i < m; ++i) {
       if (norm_rows[i] > 0.0) rowscale[i] *= 1.0 / std::sqrt(norm_rows[i]);
-      rowscale[i] = std::max(rowscale[i], kSmallScalingCoeff);
-      rowscale[i] = std::min(rowscale[i], kLargeScalingCoeff);
+      rowscale[i] = std::max(rowscale[i], kScalingSmallCoeff);
+      rowscale[i] = std::min(rowscale[i], kScalingLargeCoeff);
     }
   };
 
@@ -416,13 +416,13 @@ void PreprocessScaling::apply(Model& model) {
   // *********************************************************************
 
   for (Int i = 0; i < n; ++i) {
-    colscale[i] = std::max(colscale[i], kSmallScalingCoeff);
-    colscale[i] = std::min(colscale[i], kLargeScalingCoeff);
+    colscale[i] = std::max(colscale[i], kScalingSmallCoeff);
+    colscale[i] = std::min(colscale[i], kScalingLargeCoeff);
     colscale[i] = roundToPowerOf2(colscale[i]);
   }
   for (Int i = 0; i < m; ++i) {
-    rowscale[i] = std::max(rowscale[i], kSmallScalingCoeff);
-    rowscale[i] = std::min(rowscale[i], kLargeScalingCoeff);
+    rowscale[i] = std::max(rowscale[i], kScalingSmallCoeff);
+    rowscale[i] = std::min(rowscale[i], kScalingLargeCoeff);
     rowscale[i] = roundToPowerOf2(rowscale[i]);
   }
 
