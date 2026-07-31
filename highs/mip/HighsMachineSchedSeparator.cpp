@@ -128,7 +128,7 @@ bool HighsMachineSchedSeparator::findSingleMachineScheduleClique(
       continue;
     // We want to put the row into form:
     // My_ji + s_i - s_j >= p_ji, p_ji >= 0
-    // y_ji = 1 -> s_i >= s_j + p_jj - M
+    // y_ji = 1 -> s_i >= s_j + p_ji - M
     if (rowUpper != kHighsInf) {
       // Given My_ij + s_i - s_j <= d
       // The row becomes (after multiplying by -1):
@@ -264,28 +264,29 @@ bool HighsMachineSchedSeparator::findSingleMachineScheduleClique(
   if (neighbours.size() < 3) return false;
 
   // Now populate the actual inequalities
-  vals.resize(neighbours.size(), std::vector<double>(neighbours.size()));
-  inds.resize(neighbours.size(), std::vector<HighsInt>(neighbours.size()));
+  vals.resize(neighbours.size());
+  inds.resize(neighbours.size());
   rhss.resize(neighbours.size());
   for (size_t i = 0; i != neighbours.size(); ++i) {
+    vals[i].reserve(neighbours.size());
+    inds[i].reserve(neighbours.size());
     rhss[i] -= releaseDate;
     HighsInt col = neighbours[i];
     for (size_t j = 0; j != neighbours.size(); ++j) {
-      size_t jj = j >= i ? j + 1 : j;
-      if (jj >= neighbours.size()) continue;
-      HighsInt neighbour = neighbours[jj];
+      if (i == j) continue;
+      HighsInt neighbour = neighbours[j];
       const auto toArc = adjacency.find({neighbour, col});
       assert(toArc != nullptr);
-      inds[i][j] = std::get<1>(*toArc);
-      vals[i][j] = processingTimes[jj];
+      inds[i].emplace_back(std::get<1>(*toArc));
+      vals[i].emplace_back(processingTimes[j]);
       if (std::get<2>(*toArc) == ArcType::kImplicationWhenZero) {
-        rhss[i] -= vals[i][j];
-        vals[i][j] *= -1;
+        rhss[i] -= vals[i].back();
+        vals[i].back() *= -1;
       }
     }
     // Put the job start time on the LHS
-    inds[i].back() = col;
-    vals[i].back() = -1;
+    inds[i].emplace_back(col);
+    vals[i].emplace_back(-1);
   }
 
   return true;
