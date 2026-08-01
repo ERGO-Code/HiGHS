@@ -11,6 +11,7 @@
 #include <sstream>
 
 #include "../extern/pdqsort/pdqsort.h"
+#include "lp_data/HighsLpUtils.h"
 #include "lp_data/HighsModelUtils.h"
 #include "mip/HighsPseudocost.h"
 #include "mip/HighsRedcostFixing.h"
@@ -1239,11 +1240,18 @@ try_again:
     // HiPO or IPX to solve an LP without a basis, use simplex
     tmpSolver.setOptionValue("solver", kSimplexString);
     tmpSolver.optimizeLp();
+    if (use_presolve &&
+        tmpSolver.getModelStatus() == HighsModelStatus::kSolveError) {
+      tmpSolver.setOptionValue("presolve", kHighsOffString);
+      tmpSolver.optimizeLp();
+    }
     this->total_repair_lp_iterations +=
         tmpSolver.getInfo().simplex_iteration_count;
     if (tmpSolver.getInfo().primal_solution_status == kSolutionStatusFeasible) {
       this->total_repair_lp_feasible++;
       solution = tmpSolver.getSolution();
+      calculateRowValuesQuad(*mipsolver.orig_model_, solution.col_value,
+                             solution.row_value);
       allow_try_again = false;
       goto try_again;
     }
