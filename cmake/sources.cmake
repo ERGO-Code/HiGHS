@@ -493,6 +493,7 @@ set(highs_headers
     lp_data/HighsLp.h
     lp_data/HighsLpSolverObject.h
     lp_data/HighsLpUtils.h
+    lp_data/HighsModelSolverObject.h
     lp_data/HighsModelUtils.h
     lp_data/HighsOptions.h
     lp_data/HighsRanging.h
