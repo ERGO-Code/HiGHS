@@ -20,7 +20,8 @@
 #include "simplex/HApp.h"
 
 // The method below runs the simplex, IPX, HiPO or PDLP solver on the LP
-HighsStatus solveLp(HighsLpSolverObject& solver_object, const std::string& message) {
+HighsStatus solveLp(HighsLpSolverObject& solver_object,
+                    const std::string& message) {
   HighsStatus return_status = HighsStatus::kOk;
   HighsStatus call_status;
   HighsOptions& options = solver_object.options_;
@@ -733,88 +734,13 @@ bool useHipo(const HighsOptions& options,
   return use_hipo;
 }
 
-HighsHessianFunctionType testOracleCallSquareHessianDeprecated =
-    [](const HighsInt call_type, const HighsInt* x_num_entries,
-       const HighsInt* x_index, const double* x_value,
-       HighsInt* q_x_num_entries, HighsInt* q_x_index, double* q_x_value,
-       void* hessian_p) {
-      assert(kHessianOracleCallTypeMin <= call_type &&
-             call_type <= kHessianOracleCallTypeMax);
-
-      HighsHessian hessian = *(static_cast<HighsHessian*>(hessian_p));
-      assert(hessian.format_ == HessianFormat::kSquare);
-
-      // Lambda for adding multiple of Hessian column into q_x_value
-      auto addScaledQcol = [&](const HighsInt iCol, const double x_value) {
-        for (HighsInt iEl = hessian.start_[iCol];
-             iEl < hessian.start_[iCol + 1]; iEl++) {
-          HighsInt iRow = hessian.index_[iEl];
-          q_x_value[iRow] += hessian.value_[iEl] * x_value;
-        }
-      };
-
-      if (call_type == kHessianOracleCallTypeEntry) {
-        assert(x_num_entries == nullptr);
-        assert(x_value == nullptr);
-        assert(x_index != nullptr);
-        assert(q_x_num_entries == nullptr);
-        assert(q_x_index != nullptr);
-        assert(q_x_value != nullptr);
-        HighsInt iCol = x_index[0];
-        HighsInt iRow = q_x_index[0];
-        // Zero Qx value in case the Hessian entry requested is zero
-        q_x_value[0] = 0;
-        for (HighsInt iEl = hessian.start_[iCol];
-             iEl < hessian.start_[iCol + 1]; iEl++) {
-          if (hessian.index_[iEl] == iRow) {
-            q_x_value[0] = hessian.value_[iEl];
-            return 0;
-          }
-        }
-      } else if (call_type == kHessianOracleCallTypeColumn) {
-        // Get the entries in column iCol
-        assert(x_num_entries == nullptr);
-        assert(x_value == nullptr);
-        assert(x_index != nullptr);
-        assert(q_x_num_entries != nullptr);
-        assert(q_x_index != nullptr);
-        assert(q_x_value != nullptr);
-        (*q_x_num_entries) = 0;
-        HighsInt iCol = x_index[0];
-        for (HighsInt iEl = hessian.start_[iCol];
-             iEl < hessian.start_[iCol + 1]; iEl++) {
-          q_x_index[*q_x_num_entries] = hessian.index_[iEl];
-          q_x_value[*q_x_num_entries] = hessian.value_[iEl];
-          (*q_x_num_entries)++;
-        }
-      } else {
-        assert(x_index == nullptr || *x_num_entries >= 0);
-        assert(q_x_num_entries == nullptr);
-        assert(q_x_index == nullptr);
-        assert(q_x_value != nullptr);
-        if (x_index == nullptr) {
-          // Simple product with full vector x, full vector q_x
-          for (HighsInt iCol = 0; iCol < hessian.dim_; iCol++)
-            addScaledQcol(iCol, x_value[iCol]);
-        } else {
-          // x is scattered with x_num_entries entries in rows x_index
-          for (HighsInt iX = 0; iX < *x_num_entries; iX++) {
-            HighsInt iCol = x_index[iX];
-            addScaledQcol(iCol, x_value[iCol]);
-          }
-        }
-      }
-      return 0;
-    };
-
-HighsStatus solveQp(HighsQpSolverObject& solver_object, const std::string& message) {
+HighsStatus solveQp(HighsQpSolverObject& solver_object,
+                    const std::string& message) {
   HighsModel& model_ = solver_object.model_;
   HighsBasis& basis = solver_object.basis_;
   HighsSolution& solution = solver_object.solution_;
   HighsInfo& info = solver_object.highs_info_;
-  HighsCallback& callback = solver_object.callback_;
   HighsOptions& options = solver_object.options_;
-  HighsTimer& timer = solver_object.timer_;
   HighsProfiling* profiling = solver_object.profiling_;
   HighsModelStatus& model_status = solver_object.model_status_;
 
@@ -865,13 +791,13 @@ HighsStatus solveQp(HighsQpSolverObject& solver_object, const std::string& messa
     // Restore any oracle call;
     hessian.oracle_.call_ = oracle_call;
     assert(hessian.isOracle() == was_oracle);
-    if (return_status == HighsStatus::kError) return return_status;
   } else {
     // Run the active set QP solver
     if (profiling) profiling->start(kSubSolverQpAsm);
     return_status = solveQpAsm(solver_object);
     if (profiling) profiling->stop(kSubSolverQpAsm);
   }
+  if (return_status == HighsStatus::kError) return return_status;
 
   // Get the objective and any KKT failures
   info.objective_function_value = model_.objectiveValue(solution.col_value);

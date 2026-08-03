@@ -13,6 +13,7 @@
 
 #include "lp_data/HighsInfo.h"
 #include "lp_data/HighsOptions.h"
+#include "model/HighsModel.h"
 
 class HighsQpSolverObject {
  public:
