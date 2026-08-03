@@ -19,6 +19,20 @@
 #include "qpsolver/QpAsmWrapper.h"
 #include "simplex/HApp.h"
 
+#define LP_SOLVE_CATCH_CALL(LpSolve, LpSolveString)			\
+  do {									\
+    try {								\
+      call_status = LpSolve;						\
+    } catch (const std::exception& exception) {				\
+      highsLogDev(options.log_options, HighsLogType::kError,		\
+		  "Exception %s in %s\n", exception.what(),		\
+		  LpSolveString);					\
+      solver_object.model_status_ = HighsModelStatus::kSolveError;	\
+      call_status = HighsStatus::kError;				\
+    }									\
+  } while (0)
+
+
 // The method below runs the simplex, IPX, HiPO or PDLP solver on the LP
 HighsStatus solveLp(HighsLpSolverObject& solver_object,
                     const std::string& message) {
@@ -51,6 +65,7 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object,
   // lambda for solving LP by simplex
   auto simplexSolve = [&]() -> HighsStatus {
     return_status = HighsStatus::kOk;
+    //    LP_SOLVE_CATCH_CALL(solveLpSimplex(solver_object), "solveLpSimplex");
     try {
       call_status = solveLpSimplex(solver_object);
     } catch (const std::exception& exception) {
