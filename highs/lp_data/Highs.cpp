@@ -26,12 +26,10 @@
 #include "lp_data/HighsInfoDebug.h"
 #include "lp_data/HighsLpSolverObject.h"
 #include "lp_data/HighsSolve.h"
-#include "mip/HighsMipSolver.h" //QY
-#include "model/HighsHessianUtils.h" // QY
+#include "mip/HighsMipSolver.h"
+#include "model/HighsHessianUtils.h"
 #include "parallel/HighsParallel.h"
 #include "presolve/ICrashX.h"
-#include "qpsolver/a_quass.hpp" // QY
-#include "qpsolver/runtime.hpp" // QY
 #include "simplex/HSimplex.h"
 #include "simplex/HSimplexDebug.h"
 #include "util/HighsMatrixPic.h"
@@ -1565,7 +1563,7 @@ HighsStatus Highs::calledOptimizeModel() {
 
   // lambda for Lp solving
   auto timedSolveLp = [&](HighsLp& lp, const std::string& lpSolveDescription,
-                     double& time) {
+                          double& time) {
     time = -timer_.read(timer_.solve_clock);
     if (possibly_use_log_dev_level_2) {
       options_.log_dev_level = use_log_dev_level;
@@ -1680,7 +1678,7 @@ HighsStatus Highs::calledOptimizeModel() {
       case HighsPresolveStatus::kNotPresolved: {
         ekk_instance_.lp_name_ = "Original LP";
         timedSolveLp(incumbent_lp, "Not presolved: solving the LP",
-                this_solve_original_lp_time);
+                     this_solve_original_lp_time);
         return_status = interpretCallStatus(options_.log_options, call_status,
                                             return_status, "callSolveLp");
         if (return_status == HighsStatus::kError)
@@ -1690,8 +1688,9 @@ HighsStatus Highs::calledOptimizeModel() {
       case HighsPresolveStatus::kNotReduced: {
         ekk_instance_.lp_name_ = "Unreduced LP";
         // Log the presolve reductions
-        timedSolveLp(incumbent_lp, "Problem not reduced by presolve: solving the LP",
-                this_solve_original_lp_time);
+        timedSolveLp(incumbent_lp,
+                     "Problem not reduced by presolve: solving the LP",
+                     this_solve_original_lp_time);
         return_status = interpretCallStatus(options_.log_options, call_status,
                                             return_status, "callSolveLp");
         if (return_status == HighsStatus::kError)
@@ -1738,7 +1737,7 @@ HighsStatus Highs::calledOptimizeModel() {
         const double save_objective_bound = options_.objective_bound;
         options_.objective_bound = kHighsInf;
         timedSolveLp(reduced_lp, "Solving the presolved LP",
-                this_solve_presolved_lp_time);
+                     this_solve_presolved_lp_time);
         this->run_data_.solve_time = this_solve_presolved_lp_time;
         if (ekk_instance_.status_.initialised_for_solve) {
           // Record the pivot threshold resulting from solving the presolved LP
@@ -1812,9 +1811,9 @@ HighsStatus Highs::calledOptimizeModel() {
         options_.solver = "simplex";
         options_.simplex_strategy = kSimplexStrategyPrimal;
         timedSolveLp(incumbent_lp,
-                "Solving the original LP with primal simplex "
-                "to determine infeasible or unbounded",
-                this_solve_original_lp_time);
+                     "Solving the original LP with primal simplex "
+                     "to determine infeasible or unbounded",
+                     this_solve_original_lp_time);
         // Recover the options
         options_ = save_options;
         if (return_status == HighsStatus::kError)
@@ -1978,9 +1977,10 @@ HighsStatus Highs::calledOptimizeModel() {
           // adding the corresponding values after callSolveLp gives
           // difference
           postsolve_iteration_count = -info_.simplex_iteration_count;
-          timedSolveLp(incumbent_lp,
-                  "Solving the original LP from the solution after postsolve",
-                  this_solve_original_lp_time);
+          timedSolveLp(
+              incumbent_lp,
+              "Solving the original LP from the solution after postsolve",
+              this_solve_original_lp_time);
           // Determine the iteration count
           postsolve_iteration_count += info_.simplex_iteration_count;
           //
@@ -2038,10 +2038,11 @@ HighsStatus Highs::calledOptimizeModel() {
             options_.kkt_tolerance, int(pdlp_cleanup_iteration_limit));
         options_.solver = kPdlpString;
         options_.pdlp_iteration_limit = pdlp_cleanup_iteration_limit;
-        timedSolveLp(incumbent_lp,
-                "Using PDLP to solve the original LP from the solution after "
-                "postsolve",
-                this_solve_original_lp_time);
+        timedSolveLp(
+            incumbent_lp,
+            "Using PDLP to solve the original LP from the solution after "
+            "postsolve",
+            this_solve_original_lp_time);
         // Recover solver and time limit option values
         options_.solver = solver;
         options_.pdlp_iteration_limit = pdlp_iteration_limit;
@@ -4240,8 +4241,7 @@ HighsStatus Highs::callSolveLp(HighsLp& lp, const std::string& message) {
   // Check that the model is column-wise
   assert(lp.a_matrix_.isColwise());
 
-  HighsLpSolverObject solver_object(lp, basis_, solution_,
-				    info_, ekk_instance_,
+  HighsLpSolverObject solver_object(lp, basis_, solution_, info_, ekk_instance_,
                                     callback_, options_, timer_);
   solver_object.setProfiling(this->profiling_);
 
@@ -4255,8 +4255,6 @@ HighsStatus Highs::callSolveLp(HighsLp& lp, const std::string& message) {
 
 // The method below runs calls solveMip for the given MIP
 HighsStatus Highs::callSolveMip(HighsLp& lp, const std::string& message) {
-
-  return callSolveMip();
   // Need to call invalidateSolverData() - why? - so save any valid
   // previous solution
   HighsSolution previous_solution;
@@ -4272,14 +4270,15 @@ HighsStatus Highs::callSolveMip(HighsLp& lp, const std::string& message) {
     solution_.col_value = std::move(previous_solution.col_value);
     solution_.row_value = std::move(previous_solution.row_value);
   }
-  
+
   HighsStatus return_status = HighsStatus::kOk;
 
   // Check that the model is column-wise
   assert(lp.a_matrix_.isColwise());
 
-  HighsMipSolverObject solver_object(lp, solution_, saved_objective_and_solution_, info_, 
-				     callback_, options_, timer_);
+  HighsMipSolverObject solver_object(lp, solution_,
+                                     saved_objective_and_solution_, info_,
+                                     callback_, options_, timer_);
   solver_object.setProfiling(this->profiling_);
 
   // Solve the MIP
@@ -4297,144 +4296,14 @@ HighsStatus Highs::callSolveQp(HighsModel& model, const std::string& message) {
   // Check that the model is column-wise
   assert(model.lp_.a_matrix_.isColwise());
 
-  HighsQpSolverObject solver_object(model, basis_, solution_, info_, 
-				    callback_, options_, timer_);
+  HighsQpSolverObject solver_object(model, basis_, solution_, info_, callback_,
+                                    options_, timer_);
   solver_object.setProfiling(this->profiling_);
 
   // Solve the QP
   return_status = solveQp(solver_object, message);
   // Extract the model status
   model_status_ = solver_object.model_status_;
-  return return_status;
-}
-
-HighsStatus Highs::callSolveMip() {
-  // Record whether there is a valid primal solution on entry
-  const bool user_solution = solution_.value_valid;
-  std::vector<double> user_solution_col_value;
-  std::vector<double> user_solution_row_value;
-  if (user_solution) {
-    // Save the col and row values
-    user_solution_col_value = std::move(solution_.col_value);
-    user_solution_row_value = std::move(solution_.row_value);
-  }
-  // Ensure that any solver data for users in Highs class members are
-  // cleared
-  invalidateSolverData();
-  if (user_solution) {
-    // Recover the col and row values
-    solution_.col_value = std::move(user_solution_col_value);
-    solution_.row_value = std::move(user_solution_row_value);
-    solution_.value_valid = true;
-  }
-  // Run the MIP solver
-  HighsInt log_dev_level = options_.log_dev_level;
-  //  options_.log_dev_level = kHighsLogDevLevelInfo;
-  // Check that the model isn't row-wise
-  assert(model_.lp_.a_matrix_.format_ != MatrixFormat::kRowwise);
-  const bool has_semi_variables = model_.lp_.hasSemiVariables();
-  HighsLp use_lp;
-  if (has_semi_variables) {
-    // Replace any semi-variables by a continuous/integer variable and
-    // a (temporary) binary. Any initial solution must accommodate this.
-    use_lp = withoutSemiVariables(model_.lp_, solution_,
-                                  options_.primal_feasibility_tolerance);
-  }
-  HighsLp& lp = has_semi_variables ? use_lp : model_.lp_;
-  HighsMipSolver solver(callback_, options_, lp, solution_);
-  solver.setProfiling(this->profiling_);
-  profiling_->start(kSubSolverMip);
-  try {
-    solver.run();
-  } catch (const std::exception& exception) {
-    highsLogDev(options_.log_options, HighsLogType::kError,
-                "Exception %s in MIP solver\n", exception.what());
-    solver.modelstatus_ = HighsModelStatus::kSolveError;
-  }
-
-  profiling_->stop(kSubSolverMip);
-  options_.log_dev_level = log_dev_level;
-  // Set the return_status, model status and, for completeness, scaled
-  // model status
-  HighsStatus return_status =
-      highsStatusFromHighsModelStatus(solver.modelstatus_);
-  model_status_ = solver.modelstatus_;
-  // Extract the solution
-  if (solver.solution_objective_ != kHighsInf) {
-    // There is a primal solution
-    //
-    // If the original model has semi-variables, its solution is
-    // (still) given by the first model_.lp_.num_col_ entries of the
-    // solution from the MIP solver
-    //
-    // #2547 This resize is unnecessary
-    //
-    // solution_.col_value.resize(model_.lp_.num_col_);
-    solution_.col_value = solver.solution_;
-    this->saved_objective_and_solution_ = solver.saved_objective_and_solution_;
-    model_.lp_.a_matrix_.productQuad(solution_.row_value, solution_.col_value);
-    solution_.value_valid = true;
-  } else {
-    // There is no primal solution: should be so by default
-    assert(!solution_.value_valid);
-  }
-  // Check that no modified upper bounds for semi-variables are active
-  if (solution_.value_valid &&
-      activeModifiedUpperBounds(options_, model_.lp_, solution_.col_value)) {
-    solution_.value_valid = false;
-    model_status_ = HighsModelStatus::kSolveError;
-    return_status = HighsStatus::kError;
-  }
-  // There is no dual solution: should be so by default
-  assert(!solution_.dual_valid);
-  // There is no basis: should be so by default
-  assert(!basis_.valid);
-  // Get the objective and any KKT failures
-  info_.objective_function_value = solver.solution_objective_;
-  // Remember to judge primal feasibility according to
-  // mip_feasibility_tolerance, so take a copy of the original
-  // value...
-  double primal_feasibility_tolerance = options_.primal_feasibility_tolerance;
-  options_.primal_feasibility_tolerance = options_.mip_feasibility_tolerance;
-  // NB getKktFailures sets the primal and dual solution status
-  getKktFailures(options_, model_, solution_, basis_, info_);
-  // Set the MIP-specific values of info_
-  info_.mip_node_count = solver.node_count_;
-  info_.mip_dual_bound = solver.dual_bound_;
-  info_.mip_gap = solver.gap_;
-  info_.primal_dual_integral = solver.primal_dual_integral_;
-  // Get the number of LP iterations, avoiding overflow if the int64_t
-  // value is too large
-  int64_t mip_total_lp_iterations = solver.total_lp_iterations_;
-  info_.simplex_iteration_count = mip_total_lp_iterations > kHighsIInf
-                                      ? -1
-                                      : HighsInt(mip_total_lp_iterations);
-  info_.valid = true;
-  if (model_status_ == HighsModelStatus::kOptimal)
-    return_status = checkOptimalityDeprecated("MIP");
-  // Overwrite max infeasibility to include integrality if there is a solution
-  if (solver.solution_objective_ != kHighsInf) {
-    const double mip_max_bound_violation =
-        std::max(solver.row_violation_, solver.bound_violation_);
-    const double delta_max_bound_violation =
-        std::abs(mip_max_bound_violation - info_.max_primal_infeasibility);
-    // Possibly report a mis-match between the max bound violation
-    // returned by the MIP solver, and the value obtained from the
-    // solution
-    if (delta_max_bound_violation > 1e-12)
-      highsLogDev(options_.log_options, HighsLogType::kWarning,
-                  "Inconsistent max bound violation: MIP solver (%10.4g); LP "
-                  "(%10.4g); Difference of %10.4g\n",
-                  mip_max_bound_violation, info_.max_primal_infeasibility,
-                  delta_max_bound_violation);
-    info_.max_integrality_violation = solver.integrality_violation_;
-    if (info_.max_integrality_violation > options_.mip_feasibility_tolerance) {
-      info_.primal_solution_status = kSolutionStatusInfeasible;
-      assert(model_status_ == HighsModelStatus::kInfeasible);
-    }
-  }
-  // ... and remember to recover the primal feasibility tolerance
-  options_.primal_feasibility_tolerance = primal_feasibility_tolerance;
   return return_status;
 }
 

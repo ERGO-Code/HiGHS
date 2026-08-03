@@ -956,17 +956,16 @@ HighsStatus solveQp(HighsQpSolverObject& solver_object, const string message) {
         options.primal_feasibility_tolerance;
 
     // Define the QP model status logging function
-    settings.qp_model_status_log.subscribe(
-        [&](QpModelStatus& qp_model_status) {
-          if (qp_model_status == QpModelStatus::kUndetermined ||
-              qp_model_status == QpModelStatus::kLargeNullspace ||
-              qp_model_status == QpModelStatus::kNonConvex ||
-              qp_model_status == QpModelStatus::kError ||
-              qp_model_status == QpModelStatus::kNotset)
-            highsLogUser(options.log_options, HighsLogType::kInfo,
-                         "QP solver model status: %s\n",
-                         qpModelStatusToString(qp_model_status).c_str());
-        });
+    settings.qp_model_status_log.subscribe([&](QpModelStatus& qp_model_status) {
+      if (qp_model_status == QpModelStatus::kUndetermined ||
+          qp_model_status == QpModelStatus::kLargeNullspace ||
+          qp_model_status == QpModelStatus::kNonConvex ||
+          qp_model_status == QpModelStatus::kError ||
+          qp_model_status == QpModelStatus::kNotset)
+        highsLogUser(options.log_options, HighsLogType::kInfo,
+                     "QP solver model status: %s\n",
+                     qpModelStatusToString(qp_model_status).c_str());
+    });
 
     // Define the QP solver iteration logging function
     settings.iteration_log_header.subscribe([&](HighsInt& null) {
@@ -1022,8 +1021,8 @@ HighsStatus solveQp(HighsQpSolverObject& solver_object, const string message) {
         settings.pricing = PricingStrategy::Devex;
     }
 
-    QpAsmStatus status = solveqp(instance, settings, stats, model_status,
-                                 basis, solution, timer);
+    QpAsmStatus status = solveqp(instance, settings, stats, model_status, basis,
+                                 solution, timer);
     if (profiling) profiling->stop(kSubSolverQpAsm);
 
     // QP solver can fail, so should return something other than
@@ -1043,14 +1042,14 @@ HighsStatus solveQp(HighsQpSolverObject& solver_object, const string message) {
   info.objective_function_value = model_.objectiveValue(solution.col_value);
   getKktFailures(options, model_, solution, basis, info);
   info.valid = true;
-  if (model_status == HighsModelStatus::kOptimal) return checkOptimality("QP", options, info, model_status);
+  if (model_status == HighsModelStatus::kOptimal)
+    return checkOptimality("QP", options, info, model_status);
   return return_status;
 }
 
 HighsStatus checkOptimality(const std::string& solver_type,
-			    const HighsOptions& options,
-			    const HighsInfo& info,
-			    HighsModelStatus& model_status) {
+                            const HighsOptions& options, const HighsInfo& info,
+                            HighsModelStatus& model_status) {
   // Check for infeasibility measures incompatible with optimality
   assert(model_status == HighsModelStatus::kOptimal);
   // Cannot expect to have no dual_infeasibilities since the QP solver
@@ -1064,8 +1063,7 @@ HighsStatus checkOptimality(const std::string& solver_type,
                    "semi-variable infeasibilities: consider solving with "
                    "smaller mip_feasibility_tolerance\n",
                    solver_type.c_str(), int(info.num_semi_infeasibilities),
-                   info.max_semi_infeasibility,
-                   info.sum_semi_infeasibilities);
+                   info.max_semi_infeasibility, info.sum_semi_infeasibilities);
       model_status = HighsModelStatus::kSolveError;
       highsLogUser(options.log_options, HighsLogType::kError,
                    "Setting model status to %s\n",
@@ -1096,10 +1094,12 @@ HighsStatus checkOptimality(const std::string& solver_type,
   return HighsStatus::kError;
 }
 
-HighsStatus solveMip(HighsMipSolverObject& solver_object, const string message) {
+HighsStatus solveMip(HighsMipSolverObject& solver_object,
+                     const string message) {
   HighsLp& lp = solver_object.lp_;
   HighsSolution& solution = solver_object.solution_;
-  std::vector<HighsObjectiveSolution>& saved_objective_and_solution = solver_object.saved_objective_and_solution_;
+  std::vector<HighsObjectiveSolution>& saved_objective_and_solution =
+      solver_object.saved_objective_and_solution_;
   HighsInfo& info = solver_object.highs_info_;
   HighsCallback& callback = solver_object.callback_;
   HighsOptions& options = solver_object.options_;
@@ -1185,8 +1185,8 @@ HighsStatus solveMip(HighsMipSolverObject& solver_object, const string message) 
   // value is too large
   int64_t mip_total_lp_iterations = solver.total_lp_iterations_;
   info.simplex_iteration_count = mip_total_lp_iterations > kHighsIInf
-                                      ? -1
-                                      : HighsInt(mip_total_lp_iterations);
+                                     ? -1
+                                     : HighsInt(mip_total_lp_iterations);
   info.valid = true;
   if (model_status == HighsModelStatus::kOptimal)
     return_status = checkOptimality("MIP", options, info, model_status);
@@ -1215,4 +1215,3 @@ HighsStatus solveMip(HighsMipSolverObject& solver_object, const string message) 
   options.primal_feasibility_tolerance = primal_feasibility_tolerance;
   return return_status;
 }
-

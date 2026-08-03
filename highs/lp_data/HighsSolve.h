@@ -15,9 +15,12 @@
 #include "lp_data/HighsModelUtils.h"
 #include "lp_data/HighsQpSolverObject.h"
 
-HighsStatus solveLp(HighsLpSolverObject& solver_object, const std::string message);
-HighsStatus solveMip(HighsMipSolverObject& solver_object, const std::string message);
-HighsStatus solveQp(HighsQpSolverObject& solver_object, const std::string message);
+HighsStatus solveLp(HighsLpSolverObject& solver_object,
+                    const std::string message);
+HighsStatus solveMip(HighsMipSolverObject& solver_object,
+                     const std::string message);
+HighsStatus solveQp(HighsQpSolverObject& solver_object,
+                    const std::string message);
 
 HighsStatus solveUnconstrainedLp(HighsLpSolverObject& solver_object);
 HighsStatus solveUnconstrainedLp(const HighsOptions& options, const HighsLp& lp,
@@ -34,7 +37,7 @@ bool useHipo(const HighsOptions& options,
              const bool logging = false);
 
 HighsStatus checkOptimality(const std::string& solver_type,
-			    const HighsOptions& options_,
-			    const HighsInfo& info_,
-			    HighsModelStatus& model_status_);
+                            const HighsOptions& options_,
+                            const HighsInfo& info_,
+                            HighsModelStatus& model_status_);
 #endif  // LP_DATA_HIGHSSOLVE_H_

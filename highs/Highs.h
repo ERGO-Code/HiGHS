@@ -1676,7 +1676,6 @@ class Highs {
   HighsStatus completeSolutionFromDiscreteAssignment();
 
   HighsStatus callSolveLp(HighsLp& lp, const std::string& message);
-  HighsStatus callSolveMip();
   HighsStatus callSolveMip(HighsLp& lp, const std::string& message);
   HighsStatus callSolveQp(HighsModel& model, const std::string& message);
 
@@ -1873,7 +1872,6 @@ class Highs {
   bool aFormatOk(const HighsInt num_nz, const HighsInt format);
   bool qFormatOk(const HighsInt num_nz, const HighsInt format);
   void clearZeroHessian();
-  HighsStatus checkOptimalityDeprecated(const std::string& solver_type);
   void callLpKktCheck(const HighsLp& lp, const std::string& message = "");
   HighsStatus invertRequirementError(std::string method_name) const;
 

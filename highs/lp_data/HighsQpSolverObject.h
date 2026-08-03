@@ -16,11 +16,10 @@
 
 class HighsQpSolverObject {
  public:
-  HighsQpSolverObject(HighsModel& model,
-		      HighsBasis& basis, HighsSolution& solution,
-		      HighsInfo& highs_info, 
-		      HighsCallback& callback, HighsOptions& options,
-		      HighsTimer& timer)
+  HighsQpSolverObject(HighsModel& model, HighsBasis& basis,
+                      HighsSolution& solution, HighsInfo& highs_info,
+                      HighsCallback& callback, HighsOptions& options,
+                      HighsTimer& timer)
       : model_(model),
         basis_(basis),
         solution_(solution),

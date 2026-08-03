@@ -16,11 +16,11 @@
 
 class HighsMipSolverObject {
  public:
-  HighsMipSolverObject(HighsLp& lp, HighsSolution& solution,
-		       std::vector<HighsObjectiveSolution>& saved_objective_and_solution,
-		       HighsInfo& highs_info, 
-		       HighsCallback& callback, HighsOptions& options,
-		       HighsTimer& timer)
+  HighsMipSolverObject(
+      HighsLp& lp, HighsSolution& solution,
+      std::vector<HighsObjectiveSolution>& saved_objective_and_solution,
+      HighsInfo& highs_info, HighsCallback& callback, HighsOptions& options,
+      HighsTimer& timer)
       : lp_(lp),
         solution_(solution),
         saved_objective_and_solution_(saved_objective_and_solution),

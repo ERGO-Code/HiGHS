@@ -14,7 +14,7 @@
 #include "Highs.h"
 #include "lp_data/HighsLpUtils.h"
 #include "lp_data/HighsModelUtils.h"
-#include "lp_data/HighsSolve.h" // QY
+#include "lp_data/HighsSolve.h"  // QY
 #include "mip/HighsMipSolver.h"  // QY For getGapString
 #include "mip/MipTimer.h"
 #include "model/HighsHessianUtils.h"
@@ -2899,10 +2899,6 @@ void Highs::clearZeroHessian() {
       hessian.clear();
     }
   }
-}
-
-HighsStatus Highs::checkOptimalityDeprecated(const std::string& solver_type) {
-  return checkOptimality(solver_type, options_, info_, model_status_);
 }
 
 void Highs::callLpKktCheck(const HighsLp& lp, const std::string& message) {
