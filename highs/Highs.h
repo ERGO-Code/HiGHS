@@ -1874,7 +1874,7 @@ class Highs {
   bool aFormatOk(const HighsInt num_nz, const HighsInt format);
   bool qFormatOk(const HighsInt num_nz, const HighsInt format);
   void clearZeroHessian();
-  HighsStatus checkOptimality(const std::string& solver_type);
+  HighsStatus checkOptimalityDeprecated(const std::string& solver_type);
   void callLpKktCheck(const HighsLp& lp, const std::string& message = "");
   HighsStatus invertRequirementError(std::string method_name) const;
 

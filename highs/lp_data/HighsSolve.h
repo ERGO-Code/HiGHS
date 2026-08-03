@@ -32,4 +32,6 @@ bool usePdlp(const std::string& solver);
 bool useHipo(const HighsOptions& options,
              const std::string& specific_solver_option, const HighsLp& lp,
              const bool logging = false);
+
+HighsStatus checkOptimality(const std::string& solver_type, const HighsOptions& options_, const HighsInfo& info_, HighsModelStatus model_status_);
 #endif  // LP_DATA_HIGHSSOLVE_H_
