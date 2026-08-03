@@ -15,6 +15,7 @@
 #include "pdlp/CupdlpWrapper.h"
 #include "pdlp/HiPdlpWrapper.h"
 #include "simplex/HApp.h"
+#include "util/HighsSolverSelect.h"
 
 // The method below runs the simplex, IPX, HiPO or PDLP solver on the LP
 HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
@@ -164,8 +165,69 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
       // clang-format on
     }
   } else {
-    // Use Simplex
-    return_status = simplexSolve();
+    // Use Simplex X
+    // Automatic solver select!
+    HighsSolverSelect selected_solver = selectSolver(solver_object.lp_);
+
+    switch(selected_solver) {
+      case HighsSolverSelect::kPrimalSimplex:
+        // ...
+
+        break;
+      case HighsSolverSelect::kDualSimplex:
+        return_status = simplexSolve();
+        break;
+      case HighsSolverSelect::kHipo:
+        // Use HIPO to solve the LP
+        try {
+          call_status = solveLpHipo(solver_object);
+        } catch (const std::exception& exception) {
+          highsLogDev(options.log_options, HighsLogType::kError,
+                      "Exception %s in solveLpHipo\n", exception.what());
+          call_status = HighsStatus::kError;
+        }
+        return_status = interpretCallStatus(options.log_options, call_status,
+                                            return_status, "solveLpHipo");
+        break;
+      case HighsSolverSelect::kIpx:
+        try {
+          call_status = solveLpIpx(solver_object);
+        } catch (const std::exception& exception) {
+          highsLogDev(options.log_options, HighsLogType::kError,
+                      "Exception %s in solveLpIpx\n", exception.what());
+          call_status = HighsStatus::kError;
+        }
+        return_status = interpretCallStatus(options.log_options, call_status,
+                                            return_status, "solveLpIpx");
+        break;
+      case HighsSolverSelect::kCupdlp:
+        profiling->start(kSubSolverPdlp);
+        try {
+          call_status = solveLpCupdlp(solver_object);
+        } catch (const std::exception& exception) {
+          highsLogDev(options.log_options, HighsLogType::kError,
+                      "Exception %s in solveLpCupdlp\n", exception.what());
+          call_status = HighsStatus::kError;
+        }
+        profiling->stop(kSubSolverPdlp);
+        return_status = interpretCallStatus(options.log_options, call_status,
+                                            return_status, "solveLp-Pdlp");
+        break;
+      case HighsSolverSelect::kHipdlp:
+        profiling->start(kSubSolverPdlp);
+        try {
+          call_status = solveLpHiPdlp(solver_object);
+        } catch (const std::exception& exception) {
+          highsLogDev(options.log_options, HighsLogType::kError,
+                      "Exception %s in solveHiPdlp\n", exception.what());
+          call_status = HighsStatus::kError;
+        }
+        profiling->stop(kSubSolverPdlp);
+        return_status = interpretCallStatus(options.log_options, call_status,
+                                            return_status, "solveLp-Pdlp");
+        break;
+    }
+
     if (return_status == HighsStatus::kError) return return_status;
   }
   // Analyse the HiGHS (basic) solution
