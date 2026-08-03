@@ -5,8 +5,8 @@
 namespace hipo {
 
 KktMatrix::KktMatrix(const Model& m, const Regularisation& r, Info& i,
-                     const Logger& l)
-    : model{m}, regul{r}, info{i}, logger{l} {}
+                     const Logger& l, const Options& o)
+    : model{m}, regul{r}, info{i}, logger{l}, options{o} {}
 
 Int KktMatrix::buildASstructure() {
   // Build lower triangular structure of the augmented system.
@@ -194,10 +194,14 @@ Int KktMatrix::buildNEstructure() {
                         nz_per_row > kParallelNEnzPerRowThresh;
   const bool is_large = model.A().num_row_ > kParallelNEsizeThresh ||
                         model.A().num_col_ > kParallelNEsizeThresh;
-  const bool parallel =
+  const bool parallel_default =
       is_dense && is_large && highs::parallel::num_threads() > 1;
+  const bool parallel =
+      options.chooseParallel(kParallelNEStruct, parallel_default);
+  info.parallel_used[kParallelNEStruct] = 0;
 
   if (parallel) {
+    info.parallel_used[kParallelNEStruct] = 1;
     logger.printInfo("NE structure in parallel\n");
     std::vector<std::vector<Int>> rowsNE_local(m);
 
@@ -301,9 +305,13 @@ Int KktMatrix::buildNEvalues(const std::vector<double>& scaling) {
   // computing the values in parallel only if matrix A is large
   const bool is_large = model.A().num_row_ > kParallelNEsizeThresh ||
                         model.A().num_col_ > kParallelNEsizeThresh;
-  const bool parallel = is_large && highs::parallel::num_threads() > 1;
+  const bool parallel_default = is_large && highs::parallel::num_threads() > 1;
+  const bool parallel =
+      options.chooseParallel(kParallelNEValues, parallel_default);
+  info.parallel_used[kParallelNEValues] = 0;
 
   if (parallel) {
+    info.parallel_used[kParallelNEValues] = 1;
     highs::parallel::for_each(
         0, m,
         [&](Int start, Int end) {

@@ -20,6 +20,48 @@ Int Solver::load(const HighsLp& lp, const HighsHessian& Q) {
   return kOk;
 }
 
+std::vector<Int> Solver::chooseAllowedParallelism(
+    const HighsOptions& options) const {
+  std::vector<Int> type(kParallelCount, kChoose);
+
+  // set default based on option `parallel`
+  type[kParallelAnalyse] = kOn;
+  type[kParallelOrderNE] = kOn;
+  type[kParallelOrderAS] = kOn;
+  if (options.parallel == kHighsOffString) {
+    type[kParallelTree] = kOff;
+    type[kParallelNode] = kOff;
+    type[kParallelForwardSolve] = kOff;
+    type[kParallelDiagonalSolve] = kOff;
+    type[kParallelBackwardSolve] = kOff;
+  }
+
+  // override with option `hipo_parallel_type`
+  if (options.parallel == kHighsOnString) {
+    if (options.hipo_parallel_type == kHipoTreeString) {
+      type[kParallelTree] = kOn;
+      type[kParallelNode] = kOff;
+    } else if (options.hipo_parallel_type == kHipoNodeString) {
+      type[kParallelTree] = kOff;
+      type[kParallelNode] = kOn;
+    } else {
+      type[kParallelTree] = kOn;
+      type[kParallelNode] = kOn;
+    }
+  }
+
+  // override with option `hipo_parallel_force` or `hipo_parallel_forbid`
+  for (Int i = 0; i < kParallelCount; ++i) {
+    bool force = testParallelBit(options.hipo_parallel_force, i);
+    bool forbid = testParallelBit(options.hipo_parallel_forbid, i);
+    if (force && forbid) continue;
+    if (force) type[i] = kOn;
+    if (forbid) type[i] = kOff;
+  }
+
+  return type;
+}
+
 void Solver::setOptions(const HighsOptions& highs_options) {
   options_.display = true;
   if (!highs_options.output_flag | !highs_options.log_to_console)
@@ -48,13 +90,12 @@ void Solver::setOptions(const HighsOptions& highs_options) {
 
   options_.max_iter = highs_options.ipm_iteration_limit;
   options_.crossover = highs_options.run_crossover;
-  options_.parallel = highs_options.parallel;
-  options_.parallel_type = highs_options.hipo_parallel_type;
   options_.nla = highs_options.hipo_system;
   options_.ordering = highs_options.hipo_ordering;
   options_.factor = highs_options.hipo_factor;
   options_.block_size = highs_options.hipo_block_size;
   options_.random_seed = highs_options.random_seed + 42;
+  options_.parallel_type = chooseAllowedParallelism(highs_options);
 
   options_orig_ = options_;
   Hoptions_ = highs_options;
@@ -147,7 +188,7 @@ isFailure Solver::initialise() {
 
   start_time_ = control_.elapsed();
 
-  kkt_.reset(new KktMatrix(model_, regul_, info_, logger_));
+  kkt_.reset(new KktMatrix(model_, regul_, info_, logger_, options_));
   if (!kkt_) {
     info_.error = kErrorFailedAllocation;
     return true;
@@ -306,8 +347,8 @@ void Solver::refineWithIpx() {
 }
 
 void Solver::crossoverWithIpx() {
-  // at the moment this is almost identical to refineWithIpx, but in the future
-  // it will use ipx_lps_.CrossoverFromStartingPoint
+  // at the moment this is almost identical to refineWithIpx, but in the
+  // future it will use ipx_lps_.CrossoverFromStartingPoint
   if (prepareIpx()) return;
   if (prepareIpxStartingPoint()) return;
   ipx_lps_.Solve();
@@ -982,8 +1023,8 @@ void Solver::bestWeight(const NewtonDir& delta, const NewtonDir& corrector,
                         double& alpha_d) const {
   // Find the best primal and dual weights for the corrector in the interval
   // [alpha_p_old * alpha_d_old, 1].
-  // Upon return, wp and wd are the optimal weights, alpha_p and alpha_d are the
-  // corresponding stepsizes.
+  // Upon return, wp and wd are the optimal weights, alpha_p and alpha_d are
+  // the corresponding stepsizes.
 
   // keep track of best stepsizes
   alpha_p = 0.0;
@@ -1090,7 +1131,8 @@ shouldTerminate Solver::checkBadIter() {
         } else {
           if (checkTerminationKkt()) {
             logger_.printw(
-                "HiPO stagnated but HiGHS considers the solution acceptable\n");
+                "HiPO stagnated but HiGHS considers the solution "
+                "acceptable\n");
             logger_.print("=== Primal-dual feasible point found\n");
             setStatus1(kStatusOptimal);
           } else {
@@ -1266,7 +1308,8 @@ void Solver::printHeader() const {
     if (!options_.timeless_log) logger_.print("    time");
     if (logger_.debug(1)) {
       logger_.print(
-          "     alpha p/d   sigma af/co   cor  solv  fact    static reg p/d    "
+          "     alpha p/d   sigma af/co   cor  solv  fact    static reg p/d  "
+          "  "
           " minT     maxT  (xj * zj / mu)_range_&_num   max_res");
     }
     logger_.print("\n");
@@ -1345,6 +1388,19 @@ void Solver::printSummary() const {
                  << sci(info_.times[kSolveTime] / info_.solve_number, 0, 2)
                  << '\n';
     }
+
+    log_stream << textline("Parallelism:")
+               << (info_.parallel_used[kParallelAnalyse] ? "A" : "_")
+               << (info_.parallel_used[kParallelOrderNE] ? "O" : "_")
+               << (info_.parallel_used[kParallelOrderAS] ? "O" : "_") << "|"
+               << (info_.parallel_used[kParallelNEStruct] ? "S" : "_")
+               << (info_.parallel_used[kParallelNEValues] ? "V" : "_") << "|"
+               << (info_.parallel_used[kParallelTree] ? "T" : "_")
+               << (info_.parallel_used[kParallelNode] ? "N" : "_") << "|"
+               << (info_.parallel_used[kParallelForwardSolve] ? "F" : "_")
+               << (info_.parallel_used[kParallelDiagonalSolve] ? "D" : "_")
+               << (info_.parallel_used[kParallelBackwardSolve] ? "B" : "_")
+               << '\n';
   }
   logger_.print(log_stream.str().c_str());
 
@@ -1425,16 +1481,16 @@ void Solver::chooseNumberOfCorrectors() {
     // because there are two sweeps through L (forward and backward).
     double solv_effort = 2.0 * LS_->nz();
 
-    // The factorise phase uses BLAS-3 and can be parallelised, the solve phase
-    // uses BLAS-2 and cannot be parallelised. To account for this, the
+    // The factorise phase uses BLAS-3 and can be parallelised, the solve
+    // phase uses BLAS-2 and cannot be parallelised. To account for this, the
     // factorisation effort is multiplied by a coefficient < 1, estimated
     // empirically.
     double alpha = 1.0 / 112.0;
 
     double ratio = alpha * fact_effort / solv_effort;
 
-    // At each ipm iteration, there are up to (1+k) directions computed, where k
-    // is the number of correctors. Each direction requires up (1+f) solves,
+    // At each ipm iteration, there are up to (1+k) directions computed, where
+    // k is the number of correctors. Each direction requires up (1+f) solves,
     // where f is the number of refinement steps. So, up to (1+k)(1+f) solves
     // are performed per iteration. However, not all refinement steps are used
     // all the time, so use f/2.

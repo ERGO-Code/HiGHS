@@ -271,10 +271,18 @@ Int FactorHighsSolver::chooseNla() {
   // In parallel, run AS analyse and build NE structure. NE analyse runs only
   // after AS analyse is finished, so that it can be skipped based on the number
   // of nz of NE matrix and AS factor.
-  highs::parallel::TaskGroup tg;
-  tg.spawn([&]() { run_analyse_AS(); });
-  tg.spawn([&]() { run_structure_NE(); });
-  tg.taskWait();
+  const bool parallel_analyse = options_.chooseParallel(kParallelAnalyse, true);
+  info_.parallel_used[kParallelAnalyse] = 0;
+  if (parallel_analyse) {
+    info_.parallel_used[kParallelAnalyse] = 1;
+    highs::parallel::TaskGroup tg;
+    tg.spawn([&]() { run_analyse_AS(); });
+    tg.spawn([&]() { run_structure_NE(); });
+    tg.taskWait();
+  } else {
+    run_analyse_AS();
+    run_structure_NE();
+  }
 
   // if NE was skipped but AS failed, use NE
   if (skip_NE && failure_AS) {
@@ -435,8 +443,25 @@ Int FactorHighsSolver::chooseOrdering(const std::vector<Int>& rows,
     }
   };
 
-  highs::parallel::for_each(
-      0, k, [&](Int start, Int end) { run_ordering_and_analyse(start); }, 1);
+  const bool parallel_ordering =
+      nla == "NE" ? options_.chooseParallel(kParallelOrderNE, true)
+                  : options_.chooseParallel(kParallelOrderAS, true);
+  if (nla == "NE")
+    info_.parallel_used[kParallelOrderNE] = 0;
+  else
+    info_.parallel_used[kParallelOrderAS] = 0;
+
+  if (parallel_ordering) {
+    if (nla == "NE")
+      info_.parallel_used[kParallelOrderNE] = 1;
+    else
+      info_.parallel_used[kParallelOrderAS] = 1;
+
+    highs::parallel::for_each(
+        0, k, [&](Int start, Int end) { run_ordering_and_analyse(start); }, 1);
+  } else {
+    for (Int i = 0; i < k; ++i) run_ordering_and_analyse(i);
+  }
 
   Int num_success = 0;
   for (bool b : failure) {
@@ -557,80 +582,51 @@ void FactorHighsSolver::setParallel() {
   bool parallel_tree = false;
   bool parallel_node = false;
 
-  std::stringstream log_stream;
-  log_stream << textline("Parallelism:");
+  if (highs::parallel::num_threads() == 1) {
+    parallel_node = false;
+    parallel_tree = false;
+  } else if (usingAppleBlas()) {
+    // Blas on Apple do not work well with parallel_node, but parallel_tree
+    // seems to always be beneficial.
+    parallel_node = false;
+    parallel_tree = true;
+  } else {
+    // Otherwise, parallel_node is active because it is triggered only if the
+    // frontal matrix is large enough anyway.
+    parallel_node = true;
 
-  if (options_.parallel == kHighsOffString) {
-    log_stream << "None requested\n";
-  } else if (options_.parallel == kHighsOnString) {
-    if (options_.parallel_type == kHipoBothString) {
+    // parallel_tree instead is chosen with a heuristic
+
+    double tree_speedup = kkt_.S.flops() / kkt_.S.critops();
+    double sn_size = (double)kkt_.S.size() / kkt_.S.sn();
+
+    bool enough_sn = kkt_.S.sn() > kParallelMinNumberSn;
+    bool enough_flops = kkt_.S.flops() > kParallelLargeFlopsThresh;
+    bool speedup_is_large = tree_speedup > kParallelLargeSpeedupThresh;
+    bool sn_are_large = sn_size > kParallelLargeSnThresh;
+    bool sn_are_not_small = sn_size > kParallelSmallSnThresh;
+
+    // parallel_tree is active if the supernodes are large, or if there is a
+    // large expected speedup and the supernodes are not too small, provided
+    // that the number of flops and supernodes is not too small.
+    if (enough_sn && enough_flops &&
+        (sn_are_large || (speedup_is_large && sn_are_not_small))) {
       parallel_tree = true;
-      parallel_node = true;
-      log_stream << "Full requested\n";
-    } else if (options_.parallel_type == kHipoTreeString) {
-      parallel_tree = true;
-      log_stream << "Tree requested\n";
-    } else if (options_.parallel_type == kHipoNodeString) {
-      parallel_node = true;
-      log_stream << "Node requested\n";
-    } else
-      assert(1 == 0);
-
-  } else if (options_.parallel == kHighsChooseString) {
-    if (highs::parallel::num_threads() == 1) {
-      parallel_node = false;
-      parallel_tree = false;
-    } else if (usingAppleBlas()) {
-      // Blas on Apple do not work well with parallel_node, but parallel_tree
-      // seems to always be beneficial.
-      parallel_node = false;
-      parallel_tree = true;
-    } else {
-      // Otherwise, parallel_node is active because it is triggered only if the
-      // frontal matrix is large enough anyway.
-      parallel_node = true;
-
-      // parallel_tree instead is chosen with a heuristic
-
-      double tree_speedup = kkt_.S.flops() / kkt_.S.critops();
-      double sn_size = (double)kkt_.S.size() / kkt_.S.sn();
-
-      bool enough_sn = kkt_.S.sn() > kParallelMinNumberSn;
-      bool enough_flops = kkt_.S.flops() > kParallelLargeFlopsThresh;
-      bool speedup_is_large = tree_speedup > kParallelLargeSpeedupThresh;
-      bool sn_are_large = sn_size > kParallelLargeSnThresh;
-      bool sn_are_not_small = sn_size > kParallelSmallSnThresh;
-
-      // parallel_tree is active if the supernodes are large, or if there is a
-      // large expected speedup and the supernodes are not too small, provided
-      // that the number of flops and supernodes is not too small.
-      if (enough_sn && enough_flops &&
-          (sn_are_large || (speedup_is_large && sn_are_not_small))) {
-        parallel_tree = true;
-      }
     }
+  }
 
-    // If serial memory is too large, switch off tree parallelism to avoid
-    // running out of memory
-    double num_GB = kkt_.S.storage() / 1024 / 1024 / 1024;
-    if (num_GB > kParallelLargeStorageGB) {
-      parallel_tree = false;
-    }
+  // If serial memory is too large, switch off tree parallelism to avoid
+  // running out of memory
+  double num_GB = kkt_.S.storage() / 1024 / 1024 / 1024;
+  if (num_GB > kParallelLargeStorageGB) {
+    parallel_tree = false;
+  }
 
-    // switch off tree parallelism if depth of recursion is too large
-    if (kkt_.S.depth() > kParallelMaxTreeDepth) parallel_tree = false;
+  // switch off tree parallelism if depth of recursion is too large
+  if (kkt_.S.depth() > kParallelMaxTreeDepth) parallel_tree = false;
 
-    if (parallel_tree && parallel_node)
-      log_stream << "Full preferred\n";
-    else if (parallel_tree && !parallel_node)
-      log_stream << "Tree preferred\n";
-    else if (!parallel_tree && parallel_node)
-      log_stream << "Node preferred\n";
-    else
-      log_stream << "None preferred\n";
-
-  } else
-    assert(1 == 0);
+  parallel_tree = options_.chooseParallel(kParallelTree, parallel_tree);
+  parallel_node = options_.chooseParallel(kParallelNode, parallel_node);
 
   FH_.setParallel(parallel_tree, parallel_node);
 
@@ -638,31 +634,35 @@ void FactorHighsSolver::setParallel() {
   bool parallel_forward = false;
   bool parallel_backward = false;
   bool parallel_diag = false;
+  if (kkt_.S.size() > kParallelSolveMinSize) {
+    parallel_diag = true;
 
-  if (options_.parallel == kHighsChooseString ||
-      options_.parallel == kHighsOnString) {
-    if (kkt_.S.size() > kParallelSolveMinSize) {
-      parallel_diag = true;
+    if (kkt_.S.solveTreeSpeedup() > kParallelForwardMinSpeedup)
+      parallel_forward = true;
 
-      if (kkt_.S.solveTreeSpeedup() > kParallelForwardMinSpeedup)
-        parallel_forward = true;
-
-      if (kkt_.S.solveTreeSpeedup() > kParallelBackwardMinSpeedup)
-        parallel_backward = true;
-    }
+    if (kkt_.S.solveTreeSpeedup() > kParallelBackwardMinSpeedup)
+      parallel_backward = true;
   }
+
+  parallel_forward =
+      options_.chooseParallel(kParallelForwardSolve, parallel_forward);
+  parallel_backward =
+      options_.chooseParallel(kParallelBackwardSolve, parallel_backward);
+  parallel_diag =
+      options_.chooseParallel(kParallelDiagonalSolve, parallel_diag);
 
   FH_.setParallelSolve(parallel_forward, parallel_backward, parallel_diag);
 
-  if (logger_.debug(1)) {
-    log_stream << textline("Parallel solve:");
-    log_stream << (parallel_forward ? "F" : " ");
-    log_stream << (parallel_backward ? "B" : " ");
-    log_stream << (parallel_diag ? "D" : " ");
-    log_stream << "\n";
-  }
-
-  logger_.print(log_stream.str().c_str());
+  info_.parallel_used[kParallelTree] = 0;
+  info_.parallel_used[kParallelNode] = 0;
+  info_.parallel_used[kParallelForwardSolve] = 0;
+  info_.parallel_used[kParallelBackwardSolve] = 0;
+  info_.parallel_used[kParallelDiagonalSolve] = 0;
+  if (parallel_tree) info_.parallel_used[kParallelTree] = 1;
+  if (parallel_node) info_.parallel_used[kParallelNode] = 1;
+  if (parallel_forward) info_.parallel_used[kParallelForwardSolve] = 1;
+  if (parallel_backward) info_.parallel_used[kParallelBackwardSolve] = 1;
+  if (parallel_diag) info_.parallel_used[kParallelDiagonalSolve] = 1;
 }
 
 // =========================================================================

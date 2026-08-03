@@ -327,6 +327,9 @@ class Solver {
 
   isFailure initialiseLinearSolver();
   isSuccess switchToMultifrontal();
+
+  std::vector<Int> chooseAllowedParallelism(
+      const HighsOptions& highs_options) const;
 };
 
 }  // namespace hipo

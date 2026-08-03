@@ -29,9 +29,10 @@ struct KktMatrix {
   const Regularisation& regul;
   Info& info;
   const Logger& logger;
+  const Options& options;
 
   KktMatrix(const Model& model, const Regularisation& regul, Info& info,
-            const Logger& logger);
+            const Logger& logger, const Options& options);
 
   Int buildASstructure();
   Int buildASvalues(const std::vector<double>& scaling);
