@@ -3045,7 +3045,8 @@ void HPresolve::substitute(HighsInt row, HighsInt col, double rhs) {
 
   // substitute column in the objective function
   if (model->col_cost_[col] != 0.0) {
-    HighsCDouble objscale = model->col_cost_[col] * substrowscale;
+    HighsCDouble objscale =
+        static_cast<HighsCDouble>(model->col_cost_[col]) * substrowscale;
     model->offset_ = static_cast<double>(model->offset_ - objscale * rhs);
     assert(std::isfinite(model->offset_));
     for (HighsInt rowiter : rowpositions) {
@@ -3060,7 +3061,7 @@ void HPresolve::substitute(HighsInt row, HighsInt col, double rhs) {
     }
     assert(std::abs(model->col_cost_[col]) <=
            std::max(options->dual_feasibility_tolerance,
-                    kHighsTiny * std::abs(static_cast<double>(objscale))));
+                    static_cast<double>(kHighsTiny * abs(objscale))));
     model->col_cost_[col] = 0.0;
   }
 
@@ -8074,10 +8075,12 @@ HPresolve::Result HPresolve::strengthenInequalities(
       double ub = model->col_upper_[col] - model->col_lower_[col];
       if (weight > 0) {
         comp = 1;
-        maxviolation += model->col_upper_[col] * weight;
+        maxviolation +=
+            static_cast<HighsCDouble>(model->col_upper_[col]) * weight;
       } else {
         comp = -1;
-        maxviolation += model->col_lower_[col] * weight;
+        maxviolation +=
+            static_cast<HighsCDouble>(model->col_lower_[col]) * weight;
         weight = -weight;
       }
 
@@ -8197,16 +8200,15 @@ HPresolve::Result HPresolve::strengthenInequalities(
                               HighsInt direction) {
       for (HighsInt i : indices) {
         assert(Arow[positions[i]] == row);
-        double coefdelta =
-            direction * static_cast<double>(reducedcost[i] - maxviolation);
+        HighsCDouble coefdelta = direction * (reducedcost[i] - maxviolation);
         HighsInt col = Acol[positions[i]];
 
         if (complementation[i] == -1) {
           rhs += coefdelta * model->col_lower_[col];
-          addToMatrix(row, col, coefdelta);
+          addToMatrix(row, col, static_cast<double>(coefdelta));
         } else {
           rhs -= coefdelta * model->col_upper_[col];
-          addToMatrix(row, col, -coefdelta);
+          addToMatrix(row, col, static_cast<double>(-coefdelta));
         }
       }
     };

@@ -44,7 +44,7 @@ double HighsSearch::checkSol(const std::vector<double>& sol,
   HighsCDouble objval = 0.0;
   integerfeasible = true;
   for (HighsInt i = 0; i != mipsolver.numCol(); ++i) {
-    objval += sol[i] * mipsolver.colCost(i);
+    objval += static_cast<HighsCDouble>(sol[i]) * mipsolver.colCost(i);
     assert(std::isfinite(sol[i]));
 
     if (!integerfeasible || !mipsolver.isColInteger(i)) continue;

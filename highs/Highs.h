@@ -163,6 +163,19 @@ class Highs {
                           const HighsInt format, const HighsInt* start,
                           const HighsInt* index, const double* value);
   /**
+   * @brief Pass a Hessian oracle for the incumbent model
+   */
+  HighsStatus passHessian(const HighsInt dim,
+                          HighsHessianFunctionType oracleCall,
+                          void* oracle_data,
+                          HighsCHessianFunctionType c_oracleCall = nullptr);
+
+  /**
+   * @brief Checks any incumbent Hessian oracle
+   */
+  HighsStatus checkHessianOracle(const bool exit_on_first_error = false) const;
+
+  /**
    * @brief Pass multiple linear objectives for the incumbent model
    */
   HighsStatus passLinearObjectives(
@@ -1318,6 +1331,7 @@ class Highs {
   /**
    * @brief Interpret common qualifiers to string values
    */
+  std::string highsStatusToString(const HighsStatus status) const;
   std::string presolveStatusToString(
       const HighsPresolveStatus presolve_status) const;
   std::string modelStatusToString(const HighsModelStatus model_status) const;

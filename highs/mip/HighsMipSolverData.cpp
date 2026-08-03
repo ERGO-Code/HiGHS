@@ -11,6 +11,7 @@
 #include <sstream>
 
 #include "../extern/pdqsort/pdqsort.h"
+#include "lp_data/HighsLpUtils.h"
 #include "lp_data/HighsModelUtils.h"
 #include "mip/HighsPseudocost.h"
 #include "mip/HighsRedcostFixing.h"
@@ -226,7 +227,7 @@ bool HighsMipSolverData::trySolution(const std::vector<double>& solution,
     if (mipsolver.isColInteger(i) && fractionality(solution[i]) > feastol)
       return false;
 
-    obj += mipsolver.colCost(i) * solution[i];
+    obj += static_cast<HighsCDouble>(mipsolver.colCost(i)) * solution[i];
   }
 
   for (HighsInt i = 0; i != mipsolver.numRow(); ++i) {
@@ -389,8 +390,9 @@ HighsModelStatus HighsMipSolverData::trivialHeuristics() {
 
     HighsCDouble cdouble_obj = 0.0;
     for (HighsInt iCol = 0; iCol < mipsolver.numCol(); iCol++)
-      cdouble_obj += mipsolver.colCost(iCol) * solution[iCol];
-    double obj = double(cdouble_obj);
+      cdouble_obj +=
+          static_cast<HighsCDouble>(mipsolver.colCost(iCol)) * solution[iCol];
+    double obj = static_cast<double>(cdouble_obj);
     const double save_upper_bound = upper_bound;
     const bool new_incumbent =
         addIncumbent(solution, obj, heuristic_source[try_heuristic]);
@@ -1112,7 +1114,7 @@ void HighsMipSolverData::runSetup() {
         num_implied_integer, num_continuous, num_domain_fixed,
         mipsolver.numNonzero(), mipsolver.numNonzero() == 1 ? "" : "s",
         HighsInt{highs::parallel::num_threads()},
-        HighsInt{static_cast<int>(std::thread::hardware_concurrency())},
+        HighsInt{static_cast<int>(highs::parallel::available_core_count())},
         mipsolver.getMaxNumWorkers(),
         mipsolver.getMaxNumWorkers() > 1 ? "on" : "off");
   } else {
@@ -1145,8 +1147,8 @@ void HighsMipSolverData::runSetup() {
     debugSolution.debugSolObjective = 0;
     HighsCDouble debugsolobj = 0.0;
     for (HighsInt i = 0; i != mipsolver.numCol(); ++i)
-      debugsolobj +=
-          mipsolver.colCost(i) * HighsCDouble(debugSolution.debugSolution[i]);
+      debugsolobj += static_cast<HighsCDouble>(mipsolver.colCost(i)) *
+                     debugSolution.debugSolution[i];
     debugSolution.debugSolObjective = static_cast<double>(debugsolobj);
     debugSolution.registerDomain(getDomain());
     assert(checkSolution(debugSolution.debugSolution));
@@ -1238,11 +1240,18 @@ try_again:
     // HiPO or IPX to solve an LP without a basis, use simplex
     tmpSolver.setOptionValue("solver", kSimplexString);
     tmpSolver.optimizeLp();
+    if (use_presolve &&
+        tmpSolver.getModelStatus() == HighsModelStatus::kSolveError) {
+      tmpSolver.setOptionValue("presolve", kHighsOffString);
+      tmpSolver.optimizeLp();
+    }
     this->total_repair_lp_iterations +=
         tmpSolver.getInfo().simplex_iteration_count;
     if (tmpSolver.getInfo().primal_solution_status == kSolutionStatusFeasible) {
       this->total_repair_lp_feasible++;
       solution = tmpSolver.getSolution();
+      calculateRowValuesQuad(*mipsolver.orig_model_, solution.col_value,
+                             solution.row_value);
       allow_try_again = false;
       goto try_again;
     }

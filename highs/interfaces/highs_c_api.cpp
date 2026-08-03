@@ -287,6 +287,19 @@ HighsInt Highs_passHessian(void* highs, const HighsInt dim,
       ->passHessian(dim, num_nz, format, start, index, value);
 }
 
+HighsInt Highs_passHessianOracle(void* highs, const HighsInt dim,
+                                 HighsCHessianFunctionType oracleCall,
+                                 void* oracle_data) {
+  auto status =
+      static_cast<Highs*>(highs)->passHessian(dim, oracleCall, oracle_data);
+  return static_cast<HighsInt>(status);
+}
+
+HighsInt Highs_checkHessianOracle(void* highs) {
+  auto status = static_cast<Highs*>(highs)->checkHessianOracle();
+  return static_cast<HighsInt>(status);
+}
+
 HighsInt Highs_passLinearObjectives(const void* highs,
                                     const HighsInt num_linear_objective,
                                     const double* weight, const double* offset,
@@ -744,7 +757,7 @@ HighsInt Highs_setCallback(void* highs, HighsCCallbackType user_callback,
                            void* user_callback_data) {
   auto status = static_cast<Highs*>(highs)->setCallback(user_callback,
                                                         user_callback_data);
-  return static_cast<int>(status);
+  return static_cast<HighsInt>(status);
 }
 
 HighsInt Highs_startCallback(void* highs, const HighsInt callback_type) {
