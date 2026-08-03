@@ -21,17 +21,24 @@ bool HighsMachineSchedSeparator::findSingleMachineScheduleClique(
     std::vector<std::vector<HighsInt>>& inds, std::vector<double>& rhss,
     const HighsDomain& globaldom, const HighsMipSolver& mipsolver) {
   enum class ArcType {
-    kIfBinOne,
-    kIfBinZero,
+    kImplicationWhenOne,
+    kImplicationWhenZero,
   };
   HighsInt largestDegree = 0;
   HighsInt largestDegreeCol = -1;
   std::vector<HighsInt> degrees(mipsolver.numCol());
   const HighsInt maxRows = std::min(HighsInt{50000}, 2 * mipsolver.numRow());
+  // keys are (j,i) to values (p_ji, y_ji, implication-when-one-or-zero)
+  // entries map: y_ji = val -> s_i >= s_j + p_ji - M * val
   HighsHashTable<std::pair<HighsInt, HighsInt>,
                  std::tuple<double, HighsInt, ArcType>>
       adjacency(maxRows + 2);
+  // Used to track binaries that imply the same order in both directions
   HighsHashTable<std::pair<HighsInt, HighsInt>, std::vector<HighsInt>> arcToBin;
+  // The keys in this map are triples of column indices representing the arc
+  // endpoints (continuous variables) i, j and the binary variable y.
+  // The values are bit-fields representing which values of y imply
+  // which dependency relationships between i and j, as follows:
   // 1 -> (i,j) y = 0, 2 -> (i,j) y = 1, 4 -> (j,i) y = 0, 8 -> (j,i) y = 1
   HighsHashTable<std::tuple<HighsInt, HighsInt, HighsInt>, uint8_t> jobOrder;
 
@@ -47,7 +54,7 @@ bool HighsMachineSchedSeparator::findSingleMachineScheduleClique(
         adjacency[{negCol, posCol}] = std::make_tuple(p, binCol, t);
       }
     } else {
-      degrees[posCol]++;
+      ++degrees[posCol];
       if (degrees[posCol] > largestDegree ||
           (degrees[posCol] == largestDegree && posCol < largestDegreeCol)) {
         largestDegreeCol = posCol;
@@ -65,9 +72,11 @@ bool HighsMachineSchedSeparator::findSingleMachineScheduleClique(
     }
     if (negCol < posCol) {
       arcToBin[{negCol, posCol}].emplace_back(binCol);
-      jobOrder[{negCol, posCol, binCol}] |= t == ArcType::kIfBinOne ? 2 : 1;
+      jobOrder[{negCol, posCol, binCol}] |=
+          t == ArcType::kImplicationWhenOne ? 2 : 1;
     } else {
-      jobOrder[{posCol, negCol, binCol}] |= t == ArcType::kIfBinOne ? 8 : 4;
+      jobOrder[{posCol, negCol, binCol}] |=
+          t == ArcType::kImplicationWhenOne ? 8 : 4;
     }
   };
 
@@ -98,8 +107,16 @@ bool HighsMachineSchedSeparator::findSingleMachineScheduleClique(
         binCol = col;
         binCoef = mipsolver.mipdata_->ARvalue_[i];
       } else if (mipsolver.mipdata_->ARvalue_[i] == -1) {
+        if (negContCol != -1) {
+          machineSchedRow = false;
+          break;
+        }
         negContCol = col;
       } else if (mipsolver.mipdata_->ARvalue_[i] == 1) {
+        if (posContCol != -1) {
+          machineSchedRow = false;
+          break;
+        }
         posContCol = col;
       } else {
         machineSchedRow = false;
@@ -107,41 +124,45 @@ bool HighsMachineSchedSeparator::findSingleMachineScheduleClique(
       }
     }
     if (!machineSchedRow || binCol == -1 || negContCol == -1 ||
-        posContCol == -1 || posContCol == negContCol)
+        posContCol == -1)
       continue;
     // We want to put the row into form:
-    // Mx_ji + s_i - s_j >= p_ji, p_ji >= 0
-    // x_ji = 1 -> s_i >= s_j + p_ij - M
+    // My_ji + s_i - s_j >= p_ji, p_ji >= 0
+    // y_ji = 1 -> s_i >= s_j + p_ji - M
     if (rowUpper != kHighsInf) {
       // Given My_ij + s_i - s_j <= d
       // The row becomes (after multiplying by -1):
       // -My_ij + s_j - s_i >= -d
       // Add implication s_j >= s_i + p_ij + M, p_ij + M > 0 when binCol = 1
-      // Add implication s_j >= s_i + p_ij, p, p_ij > 0 when binCol = 0
+      // Add implication s_j >= s_i + p_ij, p_ij > 0 when binCol = 0
       const double rhs_0 = -rowUpper;
       const double rhs_1 = -rowUpper + binCoef;
       if (rhs_0 > 0 || rhs_1 > 0) {
         if (rhs_0 > rhs_1) {
-          addEntry(negContCol, posContCol, binCol, rhs_0, ArcType::kIfBinZero);
+          addEntry(negContCol, posContCol, binCol, rhs_0,
+                   ArcType::kImplicationWhenZero);
         } else {
-          addEntry(negContCol, posContCol, binCol, rhs_1, ArcType::kIfBinOne);
+          addEntry(negContCol, posContCol, binCol, rhs_1,
+                   ArcType::kImplicationWhenOne);
         }
-        numRows++;
+        ++numRows;
       }
     }
     if (rowLower != -kHighsInf) {
-      // Given Mx_ij + s_i - s_j >= d
-      // Add implication s_i >= s_j + pji - M, p_ji - M > 0 when binCol = 1
-      // Add implication s_i >= s_j + pji, p_ji > 0 when binCol = 0
+      // Given My_ij + s_i - s_j >= d
+      // Add implication s_i >= s_j + p_ji - M, p_ji - M > 0 when binCol = 1
+      // Add implication s_i >= s_j + p_ji, p_ji > 0 when binCol = 0
       const double rhs_0 = rowLower;
       const double rhs_1 = rowLower - binCoef;
       if (rhs_0 > 0 || rhs_1 > 0) {
         if (rhs_0 > rhs_1) {
-          addEntry(posContCol, negContCol, binCol, rhs_0, ArcType::kIfBinZero);
+          addEntry(posContCol, negContCol, binCol, rhs_0,
+                   ArcType::kImplicationWhenZero);
         } else {
-          addEntry(posContCol, negContCol, binCol, rhs_1, ArcType::kIfBinOne);
+          addEntry(posContCol, negContCol, binCol, rhs_1,
+                   ArcType::kImplicationWhenOne);
         }
-        numRows++;
+        ++numRows;
       }
     }
     if (numRows >= maxRows) break;
@@ -153,26 +174,28 @@ bool HighsMachineSchedSeparator::findSingleMachineScheduleClique(
     for (const auto& entry : arcToBin) {
       std::pair<HighsInt, HighsInt> arc = entry.key();
       HighsInt baseBinCol = -1;
-      bool baseForward = false;
+      bool baseArcImplicationWhenOne = false;
       for (const HighsInt& binCol : entry.value()) {
-        bool forward = false;
+        bool arcImplicationWhenOne = false;
         bool impliesOrder = false;
         if ((jobOrder[{arc.first, arc.second, binCol}] & 9) == 9) {
           impliesOrder = true;
         } else if ((jobOrder[{arc.first, arc.second, binCol}] & 6) == 6) {
           impliesOrder = true;
-          forward = true;
+          arcImplicationWhenOne = true;
         }
         if (!impliesOrder || binCol == baseBinCol) continue;
         if (baseBinCol == -1) {
           baseBinCol = binCol;
-          baseForward = forward;
+          baseArcImplicationWhenOne = arcImplicationWhenOne;
           continue;
         }
+        // Add cliques x1 + ~x2 <= 1 and ~x1 + x2 <= 1 which together imply x1
+        // == x2 (depending on signs may also have x1 == ~x2)
         HighsCliqueTable::CliqueVar stayCliqueVar =
-            HighsCliqueTable::CliqueVar(baseBinCol, baseForward);
+            HighsCliqueTable::CliqueVar(baseBinCol, baseArcImplicationWhenOne);
         HighsCliqueTable::CliqueVar substCliqueVar =
-            HighsCliqueTable::CliqueVar(binCol, forward);
+            HighsCliqueTable::CliqueVar(binCol, arcImplicationWhenOne);
         clique[0] = stayCliqueVar;
         clique[1] = substCliqueVar.complement();
         mipsolver.mipdata_->cliquetable.addClique(mipsolver, clique.data(), 2);
@@ -184,7 +207,7 @@ bool HighsMachineSchedSeparator::findSingleMachineScheduleClique(
     }
   }
 
-  // A clique of size 3 needs at least 6 arcs
+  // Skip any clique smaller than size 3
   if (numRows <= 5) return false;
 
   // Greedily search neighbours of largest degree column for a double-sided
@@ -207,9 +230,9 @@ bool HighsMachineSchedSeparator::findSingleMachineScheduleClique(
   neighbours.reserve(largestDegree + 1);
   neighbours.emplace_back(largestDegreeCol);
   double releaseDate = globaldom.col_lower_[largestDegreeCol];
-  std::vector<double> processingTimes;
-  processingTimes.resize(largestDegree + 1, kHighsInf);
+  std::vector<double> processingTimes(largestDegree + 1, kHighsInf);
   // Iterate over potential neighbours and check validity
+  // Greedily add neighbours if they're valid
   for (HighsInt col : potentialNeighbours) {
     bool valid_neighbour = true;
     for (HighsInt neighbour : neighbours) {
@@ -224,44 +247,46 @@ bool HighsMachineSchedSeparator::findSingleMachineScheduleClique(
       }
     }
     if (!valid_neighbour) continue;
-    const size_t newNeighbourIndex = neighbours.size();
+    double minProcessingTime = kHighsInf;
     // Extract the processing times from the arcs
+    // Turn pair-wise dependent times p_ji into p_j = min{p_ji : i \in N / j}
     for (size_t i = 0; i != neighbours.size(); ++i) {
       HighsInt neighbour = neighbours[i];
       const auto fromArc = adjacency.find({col, neighbour});
       const auto toArc = adjacency.find({neighbour, col});
-      processingTimes[newNeighbourIndex] =
-          std::min(processingTimes[newNeighbourIndex], std::get<0>(*fromArc));
+      minProcessingTime = std::min(minProcessingTime, std::get<0>(*fromArc));
       processingTimes[i] = std::min(processingTimes[i], std::get<0>(*toArc));
     }
     releaseDate = std::min(globaldom.col_lower_[col], releaseDate);
+    processingTimes[neighbours.size()] = minProcessingTime;
     neighbours.emplace_back(col);
   }
   if (neighbours.size() < 3) return false;
 
   // Now populate the actual inequalities
-  vals.resize(neighbours.size(), std::vector<double>(neighbours.size()));
-  inds.resize(neighbours.size(), std::vector<HighsInt>(neighbours.size()));
+  vals.resize(neighbours.size());
+  inds.resize(neighbours.size());
   rhss.resize(neighbours.size());
   for (size_t i = 0; i != neighbours.size(); ++i) {
+    vals[i].reserve(neighbours.size());
+    inds[i].reserve(neighbours.size());
     rhss[i] -= releaseDate;
     HighsInt col = neighbours[i];
     for (size_t j = 0; j != neighbours.size(); ++j) {
-      size_t jj = j >= i ? j + 1 : j;
-      if (jj >= neighbours.size()) continue;
-      HighsInt neighbour = neighbours[jj];
+      if (i == j) continue;
+      HighsInt neighbour = neighbours[j];
       const auto toArc = adjacency.find({neighbour, col});
       assert(toArc != nullptr);
-      inds[i][j] = std::get<1>(*toArc);
-      vals[i][j] = processingTimes[jj];
-      if (std::get<2>(*toArc) == ArcType::kIfBinZero) {
-        rhss[i] -= vals[i][j];
-        vals[i][j] *= -1;
+      inds[i].emplace_back(std::get<1>(*toArc));
+      vals[i].emplace_back(processingTimes[j]);
+      if (std::get<2>(*toArc) == ArcType::kImplicationWhenZero) {
+        rhss[i] -= vals[i].back();
+        vals[i].back() *= -1;
       }
     }
     // Put the job start time on the LHS
-    inds[i].back() = col;
-    vals[i].back() = -1;
+    inds[i].emplace_back(col);
+    vals[i].emplace_back(-1);
   }
 
   return true;
@@ -270,8 +295,8 @@ bool HighsMachineSchedSeparator::findSingleMachineScheduleClique(
 void HighsMachineSchedSeparator::separateLpSolution(
     HighsLpRelaxation& lpRelaxation, HighsLpAggregator& lpAggregator,
     HighsTransformedLp& transLp, HighsCutPool& cutpool) {
-  // Only separate once
-  if (separated) return;
+  // Only try to separate once
+  if (already_tried) return;
   const HighsMipSolver& mip = lpRelaxation.getMipSolver();
   std::vector<std::vector<double>> vals;
   std::vector<std::vector<HighsInt>> inds;
@@ -279,7 +304,7 @@ void HighsMachineSchedSeparator::separateLpSolution(
   has_single_machine_schedule = findSingleMachineScheduleClique(
       vals, inds, rhss, transLp.getGlobaldom(), mip);
   if (!has_single_machine_schedule) {
-    separated = true;
+    already_tried = true;
     return;
   }
 
@@ -294,5 +319,5 @@ void HighsMachineSchedSeparator::separateLpSolution(
       cutpool.addCut(mip, inds[i].data(), vals[i].data(),
                      static_cast<HighsInt>(inds[i].size()), rhss[i]);
   }
-  separated = true;
+  already_tried = true;
 }
