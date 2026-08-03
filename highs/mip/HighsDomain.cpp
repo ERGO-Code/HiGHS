@@ -3043,8 +3043,10 @@ bool HighsDomain::ConflictSet::resolveLinearGeq(HighsCDouble M, double Mupper,
             M -= reasonDomchg.delta;
             // ++numDropped;
           } else {
-            while (relaxLb <= localdom.prevboundval_[locdomchg.pos].first)
+            while (locdomchg.pos != -1 &&
+                   relaxLb <= localdom.prevboundval_[locdomchg.pos].first)
               locdomchg.pos = localdom.prevboundval_[locdomchg.pos].second;
+            if (locdomchg.pos == -1) return false;
 
             // bound can be relaxed
             M += vals[i] * (static_cast<HighsCDouble>(relaxLb) - lb);
@@ -3078,8 +3080,10 @@ bool HighsDomain::ConflictSet::resolveLinearGeq(HighsCDouble M, double Mupper,
             // ++numDropped;
           } else {
             // bound can be relaxed
-            while (relaxUb >= localdom.prevboundval_[locdomchg.pos].first)
+            while (locdomchg.pos != -1 &&
+                   relaxUb >= localdom.prevboundval_[locdomchg.pos].first)
               locdomchg.pos = localdom.prevboundval_[locdomchg.pos].second;
+            if (locdomchg.pos == -1) return false;
 
             M += vals[i] * (static_cast<HighsCDouble>(relaxUb) - ub);
             // ++numRelaxed;
@@ -3163,8 +3167,10 @@ bool HighsDomain::ConflictSet::resolveLinearLeq(HighsCDouble M, double Mlower,
             // ++numDropped;
           } else {
             // bound can be relaxed
-            while (relaxLb <= localdom.prevboundval_[locdomchg.pos].first)
+            while (locdomchg.pos != -1 &&
+                   relaxLb <= localdom.prevboundval_[locdomchg.pos].first)
               locdomchg.pos = localdom.prevboundval_[locdomchg.pos].second;
+            if (locdomchg.pos == -1) return false;
 
             M += vals[i] * (static_cast<HighsCDouble>(relaxLb) - lb);
             // ++numRelaxed;
@@ -3197,8 +3203,10 @@ bool HighsDomain::ConflictSet::resolveLinearLeq(HighsCDouble M, double Mlower,
             // ++numDropped;
           } else {
             // bound can be relaxed
-            while (relaxUb >= localdom.prevboundval_[locdomchg.pos].first)
+            while (locdomchg.pos != -1 &&
+                   relaxUb >= localdom.prevboundval_[locdomchg.pos].first)
               locdomchg.pos = localdom.prevboundval_[locdomchg.pos].second;
+            if (locdomchg.pos == -1) return false;
 
             M += vals[i] * (static_cast<HighsCDouble>(relaxUb) - ub);
             // ++numRelaxed;
