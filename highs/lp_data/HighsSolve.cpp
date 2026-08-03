@@ -16,8 +16,9 @@
 #include "model/HighsHessianUtils.h"
 #include "pdlp/CupdlpWrapper.h"
 #include "pdlp/HiPdlpWrapper.h"
-#include "qpsolver/a_quass.hpp"
-#include "qpsolver/runtime.hpp"
+#include "qpsolver/QpAsmWrapper.h"
+#include "qpsolver/a_quass.hpp" // Qy
+#include "qpsolver/runtime.hpp" // Qy
 #include "simplex/HApp.h"
 
 // The method below runs the simplex, IPX, HiPO or PDLP solver on the LP
@@ -734,7 +735,7 @@ bool useHipo(const HighsOptions& options,
   return use_hipo;
 }
 
-HighsHessianFunctionType testOracleCallSquareHessian =
+HighsHessianFunctionType testOracleCallSquareHessianDeprecated =
     [](const HighsInt call_type, const HighsInt* x_num_entries,
        const HighsInt* x_index, const double* x_value,
        HighsInt* q_x_num_entries, HighsInt* q_x_index, double* q_x_value,
@@ -860,8 +861,7 @@ HighsStatus solveQp(HighsQpSolverObject& solver_object, const string message) {
     }
     assert(!hessian.isOracle());
     if (profiling) profiling->start(kSubSolverHipo);
-    return_status = solveHipo(options, timer, lp, hessian, basis, solution,
-                              model_status, info, callback);
+    return_status = solveQpHipo(solver_object);
     if (profiling) profiling->stop(kSubSolverHipo);
     // Restore any oracle call;
     hessian.oracle_.call_ = oracle_call;
@@ -897,7 +897,7 @@ HighsStatus solveQp(HighsQpSolverObject& solver_object, const string message) {
         // Test the Hessian oracle by using the incumbent Hessian as data for it
         oracle_hessian = hessian.toSquare();
         instance.Q.mat.oracle_.dim_ = hessian.dim_;
-        instance.Q.mat.oracle_.call_ = testOracleCallSquareHessian;
+        instance.Q.mat.oracle_.call_ = testOracleCallSquareHessianDeprecated;
         instance.Q.mat.oracle_.data_ = &oracle_hessian;
       } else {
         assert(instance.Q.mat.oracle_.call_ == nullptr);
