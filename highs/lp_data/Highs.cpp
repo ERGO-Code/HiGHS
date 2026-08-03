@@ -26,7 +26,7 @@
 #include "lp_data/HighsInfoDebug.h"
 #include "lp_data/HighsLpSolverObject.h"
 #include "lp_data/HighsSolve.h"
-#include "mip/HighsMipSolver.h"
+#include "mip/HighsMipSolver.h" //QY
 #include "model/HighsHessianUtils.h" // QY
 #include "parallel/HighsParallel.h"
 #include "presolve/ICrashX.h"
@@ -1458,7 +1458,7 @@ HighsStatus Highs::calledOptimizeModel() {
       // Solve model as a MIP
       if (!solverValidForMip(options_.solver))
         warnSolverInvalid(options_, "MIP");
-      call_status = callSolveMip();
+      call_status = callSolveMip(model_.lp_, "Solve incumbent MIP");
       return_status = interpretCallStatus(options_.log_options, call_status,
                                           return_status, "callSolveMip");
       return returnFromOptimizeModel(return_status, undo_mods);
@@ -4255,12 +4255,13 @@ HighsStatus Highs::callSolveLp(HighsLp& lp, const std::string& message) {
 
 // The method below runs calls solveMip for the given MIP
 HighsStatus Highs::callSolveMip(HighsLp& lp, const std::string& message) {
+  return callSolveMip();
   HighsStatus return_status = HighsStatus::kOk;
 
   // Check that the model is column-wise
   assert(lp.a_matrix_.isColwise());
 
-  HighsMipSolverObject solver_object(lp, solution_, info_, 
+  HighsMipSolverObject solver_object(lp, solution_, saved_objective_and_solution_, info_, 
 				     callback_, options_, timer_);
   solver_object.setProfiling(this->profiling_);
 

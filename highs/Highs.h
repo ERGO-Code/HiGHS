@@ -1678,7 +1678,6 @@ class Highs {
   HighsStatus callSolveLp(HighsLp& lp, const std::string& message);
   HighsStatus callSolveMip();
   HighsStatus callSolveMip(HighsLp& lp, const std::string& message);
-  HighsStatus callSolveQp();
   HighsStatus callSolveQp(HighsModel& model, const std::string& message);
 
   HighsStatus callRunPostsolve(const HighsSolution& solution,
