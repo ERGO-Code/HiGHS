@@ -4255,7 +4255,23 @@ HighsStatus Highs::callSolveLp(HighsLp& lp, const std::string& message) {
 
 // The method below runs calls solveMip for the given MIP
 HighsStatus Highs::callSolveMip(HighsLp& lp, const std::string& message) {
-  return callSolveMip();
+
+  // Need to call invalidateSolverData() - why? - so save any valid
+  // previous solution
+  HighsSolution previous_solution;
+  if (this->solution_.value_valid) {
+    previous_solution.value_valid = true;
+    previous_solution.col_value = std::move(this->solution_.col_value);
+    previous_solution.row_value = std::move(this->solution_.row_value);
+  }
+  invalidateSolverData();
+  // Recover any valid previous solution
+  if (previous_solution.value_valid) {
+    solution_.value_valid = true;
+    solution_.col_value = std::move(previous_solution.col_value);
+    solution_.row_value = std::move(previous_solution.row_value);
+  }
+  
   HighsStatus return_status = HighsStatus::kOk;
 
   // Check that the model is column-wise
