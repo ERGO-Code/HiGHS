@@ -4256,6 +4256,7 @@ HighsStatus Highs::callSolveLp(HighsLp& lp, const std::string& message) {
 // The method below runs calls solveMip for the given MIP
 HighsStatus Highs::callSolveMip(HighsLp& lp, const std::string& message) {
 
+  return callSolveMip();
   // Need to call invalidateSolverData() - why? - so save any valid
   // previous solution
   HighsSolution previous_solution;
