@@ -17,12 +17,10 @@
 #include "pdlp/CupdlpWrapper.h"
 #include "pdlp/HiPdlpWrapper.h"
 #include "qpsolver/QpAsmWrapper.h"
-#include "qpsolver/a_quass.hpp" // Qy
-#include "qpsolver/runtime.hpp" // Qy
 #include "simplex/HApp.h"
 
 // The method below runs the simplex, IPX, HiPO or PDLP solver on the LP
-HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
+HighsStatus solveLp(HighsLpSolverObject& solver_object, const std::string& message) {
   HighsStatus return_status = HighsStatus::kOk;
   HighsStatus call_status;
   HighsOptions& options = solver_object.options_;
@@ -809,7 +807,7 @@ HighsHessianFunctionType testOracleCallSquareHessianDeprecated =
       return 0;
     };
 
-HighsStatus solveQp(HighsQpSolverObject& solver_object, const string message) {
+HighsStatus solveQp(HighsQpSolverObject& solver_object, const std::string& message) {
   HighsModel& model_ = solver_object.model_;
   HighsBasis& basis = solver_object.basis_;
   HighsSolution& solution = solver_object.solution_;
@@ -860,6 +858,7 @@ HighsStatus solveQp(HighsQpSolverObject& solver_object, const string message) {
       hessian.oracle_.call_ = nullptr;
     }
     assert(!hessian.isOracle());
+    // Run HiPO
     if (profiling) profiling->start(kSubSolverHipo);
     return_status = solveQpHipo(solver_object);
     if (profiling) profiling->stop(kSubSolverHipo);
@@ -868,174 +867,10 @@ HighsStatus solveQp(HighsQpSolverObject& solver_object, const string message) {
     assert(hessian.isOracle() == was_oracle);
     if (return_status == HighsStatus::kError) return return_status;
   } else {
-    //
-    // Run the QP solver
+    // Run the active set QP solver
     if (profiling) profiling->start(kSubSolverQpAsm);
-
-    Instance instance(lp.num_col_, lp.num_row_);
-
-    instance.sense = HighsInt(lp.sense_);
-    instance.num_con = lp.num_row_;
-    instance.num_var = lp.num_col_;
-
-    instance.A.mat.num_col = lp.num_col_;
-    instance.A.mat.num_row = lp.num_row_;
-    instance.A.mat.start = lp.a_matrix_.start_;
-    instance.A.mat.index = lp.a_matrix_.index_;
-    instance.A.mat.value = lp.a_matrix_.value_;
-    instance.c.value = lp.col_cost_;
-    instance.offset = lp.offset_;
-    instance.con_lo = lp.row_lower_;
-    instance.con_up = lp.row_upper_;
-    instance.var_lo = lp.col_lower_;
-    instance.var_up = lp.col_upper_;
-    // Clear the instance Hessian data
-    instance.Q.mat.clear();
-    HighsHessian oracle_hessian;
-    if (hessian.dim_ > 0) {
-      if (options.test_qp_oracle) {
-        // Test the Hessian oracle by using the incumbent Hessian as data for it
-        oracle_hessian = hessian.toSquare();
-        instance.Q.mat.oracle_.dim_ = hessian.dim_;
-        instance.Q.mat.oracle_.call_ = testOracleCallSquareHessianDeprecated;
-        instance.Q.mat.oracle_.data_ = &oracle_hessian;
-      } else {
-        assert(instance.Q.mat.oracle_.call_ == nullptr);
-      }
-      // Generate the explicit Hessian data to use if not testing the
-      // oracle, and to cross-check the oracle results
-      instance.Q.mat.num_col = lp.num_col_;
-      instance.Q.mat.num_row = lp.num_col_;
-      triangularToSquareHessian(hessian, instance.Q.mat.start,
-                                instance.Q.mat.index, instance.Q.mat.value);
-    } else {
-      assert(hessian.isOracle());
-      instance.Q.mat.oracle_ = hessian.oracle_;
-    }
-
-    for (HighsInt i = 0; i < (HighsInt)instance.c.value.size(); i++) {
-      if (instance.c.value[i] != 0.0) {
-        instance.c.index[instance.c.num_nz++] = i;
-      }
-    }
-
-    if (lp.sense_ == ObjSense::kMaximize) {
-      // Negate the vector and Hessian
-      for (double& i : instance.c.value) i *= -1.0;
-      if (instance.Q.mat.num_col > 0) {
-        for (double& i : instance.Q.mat.value) i *= -1.0;
-      }
-      if (instance.Q.mat.isOracle()) instance.Q.mat.oracle_.multiplier_ = -1;
-    }
-
-    Settings settings;
-    Statistics stats;
-
-    settings.reportingfequency = 100;
-    if (options.qp_iteration_limit <= 10) {
-      settings.reportingfequency = 1;
-    } else if (options.qp_iteration_limit <= 100) {
-      settings.reportingfequency = 10;
-    }
-    // Setting qp_update_limit = 10 leads to error with lpHighs3
-    const HighsInt qp_update_limit = 1000;  // 1000; // default
-    if (qp_update_limit != settings.reinvertfrequency) {
-      highsLogUser(options.log_options, HighsLogType::kInfo,
-                   "Changing QP reinversion frequency from %d to %d\n",
-                   int(settings.reinvertfrequency), int(qp_update_limit));
-      settings.reinvertfrequency = qp_update_limit;
-    }
-
-    settings.allow_hot_start = options.qp_allow_hot_start;
-    settings.iteration_limit = options.qp_iteration_limit;
-    settings.nullspace_limit = options.qp_nullspace_limit;
-    assert(settings.hessian_regularization_value ==
-           kHessianRegularizationValue);
-    settings.hessian_regularization_value = options.qp_regularization_value;
-    settings.primal_feasibility_tolerance =
-        options.primal_feasibility_tolerance;
-
-    // Define the QP model status logging function
-    settings.qp_model_status_log.subscribe([&](QpModelStatus& qp_model_status) {
-      if (qp_model_status == QpModelStatus::kUndetermined ||
-          qp_model_status == QpModelStatus::kLargeNullspace ||
-          qp_model_status == QpModelStatus::kNonConvex ||
-          qp_model_status == QpModelStatus::kError ||
-          qp_model_status == QpModelStatus::kNotset)
-        highsLogUser(options.log_options, HighsLogType::kInfo,
-                     "QP solver model status: %s\n",
-                     qpModelStatusToString(qp_model_status).c_str());
-    });
-
-    // Define the QP solver iteration logging function
-    settings.iteration_log_header.subscribe([&](HighsInt& null) {
-      highsLogUser(options.log_options, HighsLogType::kInfo,
-                   "  Iteration        Objective     NullspaceDim\n");
-    });
-
-    // Define the QP solver iteration logging function
-    settings.iteration_log.subscribe([&](Statistics& stats) {
-      int rep = stats.iteration.size() - 1;
-      std::string time_string =
-          options.timeless_log
-              ? ""
-              : highsFormatToString(" %9.2fs", stats.time[rep]);
-      highsLogUser(options.log_options, HighsLogType::kInfo,
-                   "%11d  %15.8g           %6d%s\n", int(stats.iteration[rep]),
-                   stats.objval[rep], int(stats.nullspacedimension[rep]),
-                   time_string.c_str());
-    });
-
-    // Define the QP nullspace limit logging function
-    settings.nullspace_limit_log.subscribe([&](HighsInt& nullspace_limit) {
-      highsLogUser(options.log_options, HighsLogType::kError,
-                   "QP solver has exceeded nullspace limit of %d\n",
-                   int(nullspace_limit));
-    });
-
-    // Define the degeneracy failure logging function
-    settings.degeneracy_fail_log.subscribe(
-        [&](std::pair<HighsInt, double>& degeneracy_fail_data) {
-          highsLogUser(options.log_options, HighsLogType::kError,
-                       "QP solver has failed due to degeneracy: "
-                       "cannot find non-active constraint to leave basis."
-                       " max: log(d[%d]) = %lf\n",
-                       int(degeneracy_fail_data.first),
-                       degeneracy_fail_data.second);
-        });
-
-    settings.time_limit = options.time_limit;
-    settings.lambda_zero_threshold = options.dual_feasibility_tolerance;
-
-    switch (options.simplex_primal_edge_weight_strategy) {
-      case 0:
-        settings.pricing = PricingStrategy::DantzigWolfe;
-        break;
-      case 1:
-        settings.pricing = PricingStrategy::Devex;
-        break;
-      case 2:
-        settings.pricing = PricingStrategy::SteepestEdge;
-        break;
-      default:
-        settings.pricing = PricingStrategy::Devex;
-    }
-
-    QpAsmStatus status = solveqp(instance, settings, stats, model_status, basis,
-                                 solution, timer);
+    return_status = solveQpAsm(solver_object);
     if (profiling) profiling->stop(kSubSolverQpAsm);
-
-    // QP solver can fail, so should return something other than
-    // QpAsmStatus::kOk
-    if (status == QpAsmStatus::kError) return HighsStatus::kError;
-
-    assert(status == QpAsmStatus::kOk || status == QpAsmStatus::kWarning);
-    return_status = status == QpAsmStatus::kWarning ? HighsStatus::kWarning
-                                                    : HighsStatus::kOk;
-
-    // Set the QP-specific values of info
-    info.simplex_iteration_count += stats.phase1_iterations;
-    info.qp_iteration_count += stats.num_iterations;
   }
 
   // Get the objective and any KKT failures
@@ -1095,7 +930,7 @@ HighsStatus checkOptimality(const std::string& solver_type,
 }
 
 HighsStatus solveMip(HighsMipSolverObject& solver_object,
-                     const string message) {
+                     const string& message) {
   HighsLp& lp = solver_object.lp_;
   HighsSolution& solution = solver_object.solution_;
   std::vector<HighsObjectiveSolution>& saved_objective_and_solution =

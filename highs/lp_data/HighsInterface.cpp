@@ -14,8 +14,6 @@
 #include "Highs.h"
 #include "lp_data/HighsLpUtils.h"
 #include "lp_data/HighsModelUtils.h"
-#include "lp_data/HighsSolve.h"  // QY
-#include "mip/HighsMipSolver.h"  // QY For getGapString
 #include "mip/MipTimer.h"
 #include "model/HighsHessianUtils.h"
 #include "parallel/HighsParallel.h"
