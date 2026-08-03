@@ -5,22 +5,22 @@
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-/**@file lp_data/HighsModelSolverObject.h
- * @brief Collection of class instances required to solve an MODEL
+/**@file lp_data/HighsQpSolverObject.h
+ * @brief Collection of class instances required to solve a QP
  */
-#ifndef LP_DATA_HIGHS_MODEL_SOLVER_OBJECT_H_
-#define LP_DATA_HIGHS_MODEL_SOLVER_OBJECT_H_
+#ifndef LP_DATA_HIGHS_QP_SOLVER_OBJECT_H_
+#define LP_DATA_HIGHS_QP_SOLVER_OBJECT_H_
 
 #include "lp_data/HighsInfo.h"
 #include "lp_data/HighsOptions.h"
 
-class HighsModelSolverObject {
+class HighsQpSolverObject {
  public:
-  HighsModelSolverObject(HighsModel& model,
-			 HighsBasis& basis, HighsSolution& solution,
-			 HighsInfo& highs_info, 
-			 HighsCallback& callback, HighsOptions& options,
-			 HighsTimer& timer)
+  HighsQpSolverObject(HighsModel& model,
+		      HighsBasis& basis, HighsSolution& solution,
+		      HighsInfo& highs_info, 
+		      HighsCallback& callback, HighsOptions& options,
+		      HighsTimer& timer)
       : model_(model),
         basis_(basis),
         solution_(solution),
@@ -44,4 +44,4 @@ class HighsModelSolverObject {
   }
 };
 
-#endif  // LP_DATA_HIGHS_MODEL_SOLVER_OBJECT_H_
+#endif  // LP_DATA_HIGHS_QP_SOLVER_OBJECT_H_

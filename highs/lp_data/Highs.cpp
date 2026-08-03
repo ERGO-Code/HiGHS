@@ -1435,7 +1435,7 @@ HighsStatus Highs::calledOptimizeModel() {
     }
     if (!solverValidForQp(options_.solver)) warnSolverInvalid(options_, "QP");
     try {
-      call_status = callSolveQp();
+      call_status = callSolveQp(this->model_, "Solve incumbent QP");
     } catch (const std::exception& exception) {
       highsLogDev(options_.log_options, HighsLogType::kError,
                   "Exception %s in callSolveQp\n", exception.what());
@@ -1564,7 +1564,7 @@ HighsStatus Highs::calledOptimizeModel() {
   }
 
   // lambda for Lp solving
-  auto solveLp = [&](HighsLp& lp, const std::string& lpSolveDescription,
+  auto timedSolveLp = [&](HighsLp& lp, const std::string& lpSolveDescription,
                      double& time) {
     time = -timer_.read(timer_.solve_clock);
     if (possibly_use_log_dev_level_2) {
@@ -1572,6 +1572,7 @@ HighsStatus Highs::calledOptimizeModel() {
       options_.output_flag = use_output_flag;
     }
     timer_.start(timer_.solve_clock);
+    const bool as_mip = false;
     call_status = callSolveLp(lp, lpSolveDescription);
     timer_.stop(timer_.solve_clock);
     if (possibly_use_log_dev_level_2) {
@@ -1621,7 +1622,7 @@ HighsStatus Highs::calledOptimizeModel() {
     // If there is a valid HiGHS basis, refine any status values that
     // are simply HighsBasisStatus::kNonbasic
     if (basis_.useful) refineBasis(incumbent_lp, solution_, basis_);
-    solveLp(incumbent_lp, lp_solve, this_solve_original_lp_time);
+    timedSolveLp(incumbent_lp, lp_solve, this_solve_original_lp_time);
     return_status = interpretCallStatus(options_.log_options, call_status,
                                         return_status, "callSolveLp");
     if (return_status == HighsStatus::kError)
@@ -1678,7 +1679,7 @@ HighsStatus Highs::calledOptimizeModel() {
     switch (model_presolve_status_) {
       case HighsPresolveStatus::kNotPresolved: {
         ekk_instance_.lp_name_ = "Original LP";
-        solveLp(incumbent_lp, "Not presolved: solving the LP",
+        timedSolveLp(incumbent_lp, "Not presolved: solving the LP",
                 this_solve_original_lp_time);
         return_status = interpretCallStatus(options_.log_options, call_status,
                                             return_status, "callSolveLp");
@@ -1689,7 +1690,7 @@ HighsStatus Highs::calledOptimizeModel() {
       case HighsPresolveStatus::kNotReduced: {
         ekk_instance_.lp_name_ = "Unreduced LP";
         // Log the presolve reductions
-        solveLp(incumbent_lp, "Problem not reduced by presolve: solving the LP",
+        timedSolveLp(incumbent_lp, "Problem not reduced by presolve: solving the LP",
                 this_solve_original_lp_time);
         return_status = interpretCallStatus(options_.log_options, call_status,
                                             return_status, "callSolveLp");
@@ -1736,7 +1737,7 @@ HighsStatus Highs::calledOptimizeModel() {
         // objective values aren't correct
         const double save_objective_bound = options_.objective_bound;
         options_.objective_bound = kHighsInf;
-        solveLp(reduced_lp, "Solving the presolved LP",
+        timedSolveLp(reduced_lp, "Solving the presolved LP",
                 this_solve_presolved_lp_time);
         this->run_data_.solve_time = this_solve_presolved_lp_time;
         if (ekk_instance_.status_.initialised_for_solve) {
@@ -1810,7 +1811,7 @@ HighsStatus Highs::calledOptimizeModel() {
         HighsOptions save_options = options_;
         options_.solver = "simplex";
         options_.simplex_strategy = kSimplexStrategyPrimal;
-        solveLp(incumbent_lp,
+        timedSolveLp(incumbent_lp,
                 "Solving the original LP with primal simplex "
                 "to determine infeasible or unbounded",
                 this_solve_original_lp_time);
@@ -1977,7 +1978,7 @@ HighsStatus Highs::calledOptimizeModel() {
           // adding the corresponding values after callSolveLp gives
           // difference
           postsolve_iteration_count = -info_.simplex_iteration_count;
-          solveLp(incumbent_lp,
+          timedSolveLp(incumbent_lp,
                   "Solving the original LP from the solution after postsolve",
                   this_solve_original_lp_time);
           // Determine the iteration count
@@ -2037,7 +2038,7 @@ HighsStatus Highs::calledOptimizeModel() {
             options_.kkt_tolerance, int(pdlp_cleanup_iteration_limit));
         options_.solver = kPdlpString;
         options_.pdlp_iteration_limit = pdlp_cleanup_iteration_limit;
-        solveLp(incumbent_lp,
+        timedSolveLp(incumbent_lp,
                 "Using PDLP to solve the original LP from the solution after "
                 "postsolve",
                 this_solve_original_lp_time);
@@ -4236,15 +4237,55 @@ HighsStatus Highs::completeSolutionFromDiscreteAssignment() {
 HighsStatus Highs::callSolveLp(HighsLp& lp, const std::string& message) {
   HighsStatus return_status = HighsStatus::kOk;
 
-  HighsLpSolverObject solver_object(lp, basis_, solution_, info_, ekk_instance_,
+  // Check that the model is column-wise
+  assert(lp.a_matrix_.isColwise());
+
+  HighsLpSolverObject solver_object(lp, basis_, solution_,
+				    info_, ekk_instance_,
                                     callback_, options_, timer_);
   solver_object.setProfiling(this->profiling_);
 
-  // Check that the model is column-wise
-  assert(model_.lp_.a_matrix_.isColwise());
-
   // Solve the LP
   return_status = solveLp(solver_object, message);
+  // Extract the model status
+  model_status_ = solver_object.model_status_;
+
+  return return_status;
+}
+
+// The method below runs calls solveMip for the given MIP
+HighsStatus Highs::callSolveMip(HighsLp& lp, const std::string& message) {
+  HighsStatus return_status = HighsStatus::kOk;
+
+  // Check that the model is column-wise
+  assert(lp.a_matrix_.isColwise());
+
+  HighsMipSolverObject solver_object(lp, solution_, info_, 
+				     callback_, options_, timer_);
+  solver_object.setProfiling(this->profiling_);
+
+  // Solve the MIP
+  return_status = solveMip(solver_object, message);
+  // Extract the model status
+  model_status_ = solver_object.model_status_;
+
+  return return_status;
+}
+
+// The method below runs calls solveQp for the given QP
+HighsStatus Highs::callSolveQp(HighsModel& model, const std::string& message) {
+  return this->callSolveQp();
+  HighsStatus return_status = HighsStatus::kOk;
+
+  // Check that the model is column-wise
+  assert(model.lp_.a_matrix_.isColwise());
+
+  HighsQpSolverObject solver_object(model, basis_, solution_, info_, 
+				    callback_, options_, timer_);
+  solver_object.setProfiling(this->profiling_);
+
+  // Solve the QP
+  return_status = solveQp(solver_object, message);
   // Extract the model status
   model_status_ = solver_object.model_status_;
   return return_status;

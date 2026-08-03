@@ -11,8 +11,14 @@
 #ifndef LP_DATA_HIGHSSOLVE_H_
 #define LP_DATA_HIGHSSOLVE_H_
 
+#include "lp_data/HighsMipSolverObject.h"
 #include "lp_data/HighsModelUtils.h"
-HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message);
+#include "lp_data/HighsQpSolverObject.h"
+
+HighsStatus solveLp(HighsLpSolverObject& solver_object, const std::string message);
+HighsStatus solveMip(HighsMipSolverObject& solver_object, const std::string message);
+HighsStatus solveQp(HighsQpSolverObject& solver_object, const std::string message);
+
 HighsStatus solveUnconstrainedLp(HighsLpSolverObject& solver_object);
 HighsStatus solveUnconstrainedLp(const HighsOptions& options, const HighsLp& lp,
                                  HighsModelStatus& model_status,

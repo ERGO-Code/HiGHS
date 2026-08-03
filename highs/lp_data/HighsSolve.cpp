@@ -729,3 +729,11 @@ bool useHipo(const HighsOptions& options,
   // Later decide between simplex, HiPO and IPX based on LP properties
   return use_hipo;
 }
+
+HighsStatus solveMip(HighsMipSolverObject& solver_object, const string message) {
+  return HighsStatus::kError;
+}
+
+HighsStatus solveQp(HighsQpSolverObject& solver_object, const string message) {
+  return HighsStatus::kError;
+}
