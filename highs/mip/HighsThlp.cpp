@@ -2384,7 +2384,7 @@ void fullSolution(const THLPData& data,
   HighsInt num_var = n*n*(n+2);
   full_solution.assign(num_var, 0);
 
-  const bool log_construction = false;
+  const bool log_construction = true;
 
   struct treeRecord {
     HighsInt from_node;
@@ -2449,6 +2449,10 @@ void fullSolution(const THLPData& data,
     const bool i_is_hub = my_hub == i;
     const bool processing_root = num_coloured == num_to_colour;
     assert(isHub(node));
+    const bool from_node_ok = isHub(from_node) || processing_root;
+    if (!from_node_ok) {
+      printf("from_node %d is not OK\n", from_node);
+    }
     assert(isHub(from_node) || processing_root);
     if (log_construction) printf("\nProcessing leaf %d\n", node);
     // Assign flows for the non-hubs assigned to node and determine
@@ -2478,6 +2482,7 @@ void fullSolution(const THLPData& data,
     }
   };
 
+  const bool use_lambda = true;
   for (HighsInt i = 0; i < n; i++) {
     my_tree.clear();
     coloured.assign(n, 0);
@@ -2518,10 +2523,13 @@ void fullSolution(const THLPData& data,
 	  // New leaf, so add it and its arc (from_node, node) to the
 	  // tree - unless it's an arc to the artificial node from the
 	  // self-hub
+	  coloured[node] = 1;
+	  num_coloured++;
 	  if (from_node[node] >= 0) {
 	    treeRecord entry;
 	    entry.from_node = from_node[node];
 	    entry.node = node;
+	    if (use_lambda) processArcToLeaf(i, from_node[node], node);
 	    my_tree.push_back(entry);
 	    if (i == 0) {
 	      // On the first pass, define define y_km 
@@ -2536,8 +2544,6 @@ void fullSolution(const THLPData& data,
 	      }
 	    }
 	  }
-	  coloured[node] = 1;
-	  num_coloured++;
 	  if (num_coloured == num_to_colour) {
 	    // The last node to be coloured should be my_hub
 	    assert(node == my_hub);
@@ -2547,52 +2553,54 @@ void fullSolution(const THLPData& data,
       }
       if (num_coloured == num_to_colour) break;
     }
-    HighsInt num_tree_arc = static_cast<HighsInt>(my_tree.size());
-    assert(num_tree_arc == i_is_hub ? p-1 : p);
-    // Now process tree from leaves
-    if (log_construction) printf("\n\nFor node i = %d\n", int(i));
-    printMyTree();
-    for (HighsInt iArc = 0; iArc < num_tree_arc; iArc++) {
-      if (log_construction) {
-	printf("\nOutflows:\n");
-	for (HighsInt iHub = 0; iHub < p; iHub++) {
-	  HighsInt hub = hubs[iHub];
-	  printf("  Hub %2d outflow is %.0f\n", int(hub), node_outflow[hub]);
+    if (!use_lambda) {
+      HighsInt num_tree_arc = static_cast<HighsInt>(my_tree.size());
+      assert(num_tree_arc == i_is_hub ? p-1 : p);
+      // Now process tree from leaves
+      if (log_construction) printf("\n\nFor node i = %d\n", int(i));
+      printMyTree();
+      for (HighsInt iArc = 0; iArc < num_tree_arc; iArc++) {
+	if (log_construction) {
+	  printf("\nOutflows:\n");
+	  for (HighsInt iHub = 0; iHub < p; iHub++) {
+	    HighsInt hub = hubs[iHub];
+	    printf("  Hub %2d outflow is %.0f\n", int(hub), node_outflow[hub]);
+	  }
 	}
-      }
-      // Arc (from_node, node) is the arc into node from lower in the
-      // tree: flows from the (hub) node to non-hubs are known
-      // immediately
-      HighsInt node = my_tree[iArc].node;
-      HighsInt from_node = my_tree[iArc].from_node;
-      assert(isHub(node));
-      assert(isHub(from_node) || iArc == num_tree_arc-1);
-      if (log_construction) printf("\nProcessing leaf %d\n", node);
-      // Assign flows for the non-hubs assigned to node and determine
-      // the flow in the arc (from_node, node)
-      double flow = node_outflow[node] + data.W[i][node];
-      assignHubNonhubFlows(i, node, flow);
-      if (isHub(from_node)) {
-	// Assign the flow in the arc between hubs (from_node, node)
-	assignXikm(i, from_node, node, flow);
-      }
-      node_outflow[from_node] += flow;
-      // If this is the last arc and from_node is the root, process it now
-      const bool processing_root = iArc == num_tree_arc-1 && from_node == i;
-      if (processing_root) {
-	// Check that the outflow from the root matches the total
-	// supply at the root
-	double outflow = node_outflow[i];
-	if (i_is_hub) {
-	  // If the root is a hub, have to assign the flows to its
-	  // associated non-hubs, and add them in to get the total
-	  // flow out of the root
-	  if (log_construction)
-	    printf("\nProcessing root %d (which is hub) with current outflow %.0f\n", int(i), outflow);
-	  assignHubNonhubFlows(i, i, outflow);
+	// Arc (from_node, node) is the arc into node from lower in the
+	// tree: flows from the (hub) node to non-hubs are known
+	// immediately
+	HighsInt node = my_tree[iArc].node;
+	HighsInt from_node = my_tree[iArc].from_node;
+	assert(isHub(node));
+	assert(isHub(from_node) || iArc == num_tree_arc-1);
+	if (log_construction) printf("\nProcessing leaf %d\n", node);
+	// Assign flows for the non-hubs assigned to node and determine
+	// the flow in the arc (from_node, node)
+	double flow = node_outflow[node] + data.W[i][node];
+	assignHubNonhubFlows(i, node, flow);
+	if (isHub(from_node)) {
+	  // Assign the flow in the arc between hubs (from_node, node)
+	  assignXikm(i, from_node, node, flow);
 	}
-	if (log_construction) printf("For root node i = %d; outflow = %.0f; O_{%2d} = %.0f\n", int(i), outflow, int(i), data.O[i]);
-	assert(outflow == data.O[i]);
+	node_outflow[from_node] += flow;
+	// If this is the last arc and from_node is the root, process it now
+	const bool processing_root = iArc == num_tree_arc-1 && from_node == i;
+	if (processing_root) {
+	  // Check that the outflow from the root matches the total
+	  // supply at the root
+	  double outflow = node_outflow[i];
+	  if (i_is_hub) {
+	    // If the root is a hub, have to assign the flows to its
+	    // associated non-hubs, and add them in to get the total
+	    // flow out of the root
+	    if (log_construction)
+	      printf("\nProcessing root %d (which is hub) with current outflow %.0f\n", int(i), outflow);
+	    assignHubNonhubFlows(i, i, outflow);
+	  }
+	  if (log_construction) printf("For root node i = %d; outflow = %.0f; O_{%2d} = %.0f\n", int(i), outflow, int(i), data.O[i]);
+	  assert(outflow == data.O[i]);
+	}
       }
     }
   }
