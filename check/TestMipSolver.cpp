@@ -1646,7 +1646,7 @@ TEST_CASE("rko-knapsack", "[highs_test_mip_solver]") {
 }
 
 TEST_CASE("rko-thlp", "[highs_test_mip_solver]") {
-  std::string model = "cab15"; // "cab10"; //"cab25"; // 
+  std::string model = "cab10"; //"cab25"; //  "cab15"; // 
   std::string filename = std::string(HIGHS_DIR) + "/check/instances/" + model + ".txt";
   HighsLp lp;
   const bool thlp_ok = lp.getThlp(filename);

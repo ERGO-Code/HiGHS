@@ -2437,31 +2437,70 @@ void fullSolution(const THLPData& data,
 
   auto isHub = [&] (const HighsInt node) { return node == assignment[node]; };
 
-  for (HighsInt i = 0; i < n; i++) {
+  std::vector<double>node_outflow(n, 0);
+  std::vector<HighsInt> coloured(n, 0);
+  std::vector<HighsInt> arc_count(n, 0);
+  std::vector<HighsInt> from_node(n, 0);
+
+  const HighsInt num_to_colour = p;
+  HighsInt num_coloured = 0;
+  auto processArcToLeaf = [&] (const HighsInt i, const HighsInt from_node, const HighsInt node) {
     HighsInt my_hub = assignment[i];
+    const bool i_is_hub = my_hub == i;
+    const bool processing_root = num_coloured == num_to_colour;
+    assert(isHub(node));
+    assert(isHub(from_node) || processing_root);
+    if (log_construction) printf("\nProcessing leaf %d\n", node);
+    // Assign flows for the non-hubs assigned to node and determine
+    // the flow in the arc (from_node, node)
+    double flow = node_outflow[node] + data.W[i][node];
+    assignHubNonhubFlows(i, node, flow);
+    if (isHub(from_node)) {
+      // Assign the flow in the arc between hubs (from_node, node)
+      assignXikm(i, from_node, node, flow);
+    }
+    node_outflow[from_node] += flow;
+    // If this is the last arc and from_node is the root, process it now
+    if (processing_root) {
+      // Check that the outflow from the root matches the total
+      // supply at the root
+      double outflow = node_outflow[i];
+      if (i_is_hub) {
+	// If the root is a hub, have to assign the flows to its
+	// associated non-hubs, and add them in to get the total
+	// flow out of the root
+	if (log_construction)
+	  printf("\nProcessing root %d (which is hub) with current outflow %.0f\n", int(i), outflow);
+	assignHubNonhubFlows(i, i, outflow);
+      }
+      if (log_construction) printf("For root node i = %d; outflow = %.0f; O_{%2d} = %.0f\n", int(i), outflow, int(i), data.O[i]);
+      assert(outflow == data.O[i]);
+    }
+  };
+
+  for (HighsInt i = 0; i < n; i++) {
     my_tree.clear();
+    coloured.assign(n, 0);
+    node_outflow.assign(n, 0);
+    HighsInt my_hub = assignment[i];
     const bool i_is_hub = my_hub == i;
     // Explore the tree containing the hubs and i (if it is not a hub)
     // - ie with p+1 or p nodes if i is a hub.
     //
     // Identify the leaves of the tree according to the hub_tree arcs,
-    // and colour the leaves
-    HighsInt num_coloured = 0;
-    const HighsInt num_to_colour = p;//i_is_hub ? p-1 : p;
-    std::vector<HighsInt> coloured(n, 0);
+    // and, once each leaf has been processed, colour it so that it's
+    // not considered in the next pass through the tree arcs
+    num_coloured = 0;
     for (HighsInt pass = 0; pass < num_to_colour; pass++) {
-      std::vector<HighsInt> arc_count(n, 0);
-      std::vector<HighsInt> from_node(n, 0);
-      if (i_is_hub) {
-	// The self-hub i has an arc from artificial node -1 so that
-	// tree is rooted at i
-	from_node[my_hub] = -1;
-	arc_count[my_hub] = 1;
-      } else {
-	// The hub of i has the arc from i
-	from_node[my_hub] = i;
-	arc_count[my_hub] = 1;
-      }
+      arc_count.assign(n, 0);
+      from_node.assign(n, 0);
+      // The self-hub i has an arc from artificial node -1 so that the
+      // tree is rooted at i
+      from_node[my_hub] = i_is_hub ? -1 : i;
+      arc_count[my_hub] = 1;
+      // Work through each arc in the tree to find, for each
+      // uncoloured each node, an uncoloured node with an arc to that
+      // node, and increase by 1 the arc_count for both nodes
       for (HighsInt h = 0; h < p-1; h++) {
 	HighsInt node1 = hub_tree[h].first;
 	HighsInt node2 = hub_tree[h].second;
@@ -2471,6 +2510,8 @@ void fullSolution(const THLPData& data,
 	arc_count[node1]++;
 	arc_count[node2]++;
       }
+      // Now look through the hubs to find the leaves after the arcs
+      // to/from coloured nodes have been ignored
       for (HighsInt h = 0; h < p; h++) {
 	HighsInt node = hubs[h];
 	if (arc_count[node] == 1) {
@@ -2498,9 +2539,8 @@ void fullSolution(const THLPData& data,
 	  coloured[node] = 1;
 	  num_coloured++;
 	  if (num_coloured == num_to_colour) {
-	    // The last node to be coloured should be i if it is a
-	    // hub, otherwise my_hub
-	    assert(node == i_is_hub ? i : my_hub);
+	    // The last node to be coloured should be my_hub
+	    assert(node == my_hub);
 	    break;
 	  }
 	}
@@ -2511,7 +2551,6 @@ void fullSolution(const THLPData& data,
     assert(num_tree_arc == i_is_hub ? p-1 : p);
     // Now process tree from leaves
     if (log_construction) printf("\n\nFor node i = %d\n", int(i));
-    std::vector<double>node_outflow(n, 0);
     printMyTree();
     for (HighsInt iArc = 0; iArc < num_tree_arc; iArc++) {
       if (log_construction) {
