@@ -2384,24 +2384,7 @@ void fullSolution(const THLPData& data,
   HighsInt num_var = n*n*(n+2);
   full_solution.assign(num_var, 0);
 
-  const bool log_construction = true;
-
-  struct treeRecord {
-    HighsInt from_node;
-    HighsInt node;
-  };
-  std::vector<treeRecord> my_tree;
-
-  auto printMyTree = [&] () {
-    if (!log_construction) return;
-    printf("Initial tree\n");
-    HighsInt num_tree_arc = static_cast<HighsInt>(my_tree.size());
-    for (HighsInt iArc = 0; iArc < num_tree_arc; iArc++) {
-      printf("   arc(%2d, %2d)\n",
-	     int(my_tree[iArc].from_node),
-	     int(my_tree[iArc].node));
-    }
-  };
+  const bool log_construction = false;
 
   auto assignXikm = [&] (const HighsInt i, const HighsInt k, const HighsInt m, const double flow) {
     HighsInt iCol = data.x[i][k][m];
@@ -2425,7 +2408,7 @@ void fullSolution(const THLPData& data,
     if (log_construction) printf("Assign z[%2d][%2d] = 1\n", int(i), int(k));
   };
 
-  auto assignHubNonhubFlows = [&] (const HighsInt i, const HighsInt node, double& outflow) {
+  auto updateFlowWithHubNonhubFlows = [&] (const HighsInt i, const HighsInt node, double& outflow) {
     for (HighsInt m = 0; m < n; m++) {
       HighsInt k = assignment[m];
       if (k != m && k == node && m != i) {
@@ -2437,32 +2420,27 @@ void fullSolution(const THLPData& data,
 
   auto isHub = [&] (const HighsInt node) { return node == assignment[node]; };
 
-  std::vector<double>node_outflow(n, 0);
+  std::vector<double> node_outflow(n, 0);
   std::vector<HighsInt> coloured(n, 0);
   std::vector<HighsInt> arc_count(n, 0);
   std::vector<HighsInt> from_node(n, 0);
 
-  const HighsInt num_to_colour = p;
   HighsInt num_coloured = 0;
   auto processArcToLeaf = [&] (const HighsInt i, const HighsInt from_node, const HighsInt node) {
     HighsInt my_hub = assignment[i];
     const bool i_is_hub = my_hub == i;
-    const bool processing_root = num_coloured == num_to_colour;
+    assert(i_is_hub == isHub(i));
+    const bool processing_root = num_coloured == p;
     assert(isHub(node));
-    const bool from_node_ok = isHub(from_node) || processing_root;
-    if (!from_node_ok) {
-      printf("from_node %d is not OK\n", from_node);
-    }
     assert(isHub(from_node) || processing_root);
     if (log_construction) printf("\nProcessing leaf %d\n", node);
-    // Assign flows for the non-hubs assigned to node and determine
-    // the flow in the arc (from_node, node)
+    // Determine the flow in the arc (from_node, node)
     double flow = node_outflow[node] + data.W[i][node];
-    assignHubNonhubFlows(i, node, flow);
-    if (isHub(from_node)) {
-      // Assign the flow in the arc between hubs (from_node, node)
+    updateFlowWithHubNonhubFlows(i, node, flow);
+    // If from_node is a hub, assign the flow in the arc between hubs
+    // (from_node, node)
+    if (isHub(from_node)) 
       assignXikm(i, from_node, node, flow);
-    }
     node_outflow[from_node] += flow;
     // If this is the last arc and from_node is the root, process it now
     if (processing_root) {
@@ -2470,21 +2448,20 @@ void fullSolution(const THLPData& data,
       // supply at the root
       double outflow = node_outflow[i];
       if (i_is_hub) {
-	// If the root is a hub, have to assign the flows to its
-	// associated non-hubs, and add them in to get the total
-	// flow out of the root
+	// If the root is a hub, have to add the flows to its
+	// associated non-hubs to get the total flow out of the root
 	if (log_construction)
 	  printf("\nProcessing root %d (which is hub) with current outflow %.0f\n", int(i), outflow);
-	assignHubNonhubFlows(i, i, outflow);
+	updateFlowWithHubNonhubFlows(i, i, outflow);
       }
-      if (log_construction) printf("For root node i = %d; outflow = %.0f; O_{%2d} = %.0f\n", int(i), outflow, int(i), data.O[i]);
+      if (log_construction)
+	printf("For root node i = %d; outflow = %.0f; O_{%2d} = %.0f\n",
+	       int(i), outflow, int(i), data.O[i]);
       assert(outflow == data.O[i]);
     }
   };
 
-  const bool use_lambda = true;
   for (HighsInt i = 0; i < n; i++) {
-    my_tree.clear();
     coloured.assign(n, 0);
     node_outflow.assign(n, 0);
     HighsInt my_hub = assignment[i];
@@ -2496,7 +2473,7 @@ void fullSolution(const THLPData& data,
     // and, once each leaf has been processed, colour it so that it's
     // not considered in the next pass through the tree arcs
     num_coloured = 0;
-    for (HighsInt pass = 0; pass < num_to_colour; pass++) {
+    for (HighsInt pass = 0; pass < p; pass++) {
       arc_count.assign(n, 0);
       from_node.assign(n, 0);
       // The self-hub i has an arc from artificial node -1 so that the
@@ -2504,8 +2481,8 @@ void fullSolution(const THLPData& data,
       from_node[my_hub] = i_is_hub ? -1 : i;
       arc_count[my_hub] = 1;
       // Work through each arc in the tree to find, for each
-      // uncoloured each node, an uncoloured node with an arc to that
-      // node, and increase by 1 the arc_count for both nodes
+      // uncoloured node, an uncoloured node with an arc to that node,
+      // and increase by 1 the arc count for both nodes
       for (HighsInt h = 0; h < p-1; h++) {
 	HighsInt node1 = hub_tree[h].first;
 	HighsInt node2 = hub_tree[h].second;
@@ -2526,11 +2503,7 @@ void fullSolution(const THLPData& data,
 	  coloured[node] = 1;
 	  num_coloured++;
 	  if (from_node[node] >= 0) {
-	    treeRecord entry;
-	    entry.from_node = from_node[node];
-	    entry.node = node;
-	    if (use_lambda) processArcToLeaf(i, from_node[node], node);
-	    my_tree.push_back(entry);
+	    processArcToLeaf(i, from_node[node], node);
 	    if (i == 0) {
 	      // On the first pass, define define y_km 
 	      if (isHub(from_node[node])) {
@@ -2544,64 +2517,14 @@ void fullSolution(const THLPData& data,
 	      }
 	    }
 	  }
-	  if (num_coloured == num_to_colour) {
+	  if (num_coloured == p) {
 	    // The last node to be coloured should be my_hub
 	    assert(node == my_hub);
 	    break;
 	  }
 	}
       }
-      if (num_coloured == num_to_colour) break;
-    }
-    if (!use_lambda) {
-      HighsInt num_tree_arc = static_cast<HighsInt>(my_tree.size());
-      assert(num_tree_arc == i_is_hub ? p-1 : p);
-      // Now process tree from leaves
-      if (log_construction) printf("\n\nFor node i = %d\n", int(i));
-      printMyTree();
-      for (HighsInt iArc = 0; iArc < num_tree_arc; iArc++) {
-	if (log_construction) {
-	  printf("\nOutflows:\n");
-	  for (HighsInt iHub = 0; iHub < p; iHub++) {
-	    HighsInt hub = hubs[iHub];
-	    printf("  Hub %2d outflow is %.0f\n", int(hub), node_outflow[hub]);
-	  }
-	}
-	// Arc (from_node, node) is the arc into node from lower in the
-	// tree: flows from the (hub) node to non-hubs are known
-	// immediately
-	HighsInt node = my_tree[iArc].node;
-	HighsInt from_node = my_tree[iArc].from_node;
-	assert(isHub(node));
-	assert(isHub(from_node) || iArc == num_tree_arc-1);
-	if (log_construction) printf("\nProcessing leaf %d\n", node);
-	// Assign flows for the non-hubs assigned to node and determine
-	// the flow in the arc (from_node, node)
-	double flow = node_outflow[node] + data.W[i][node];
-	assignHubNonhubFlows(i, node, flow);
-	if (isHub(from_node)) {
-	  // Assign the flow in the arc between hubs (from_node, node)
-	  assignXikm(i, from_node, node, flow);
-	}
-	node_outflow[from_node] += flow;
-	// If this is the last arc and from_node is the root, process it now
-	const bool processing_root = iArc == num_tree_arc-1 && from_node == i;
-	if (processing_root) {
-	  // Check that the outflow from the root matches the total
-	  // supply at the root
-	  double outflow = node_outflow[i];
-	  if (i_is_hub) {
-	    // If the root is a hub, have to assign the flows to its
-	    // associated non-hubs, and add them in to get the total
-	    // flow out of the root
-	    if (log_construction)
-	      printf("\nProcessing root %d (which is hub) with current outflow %.0f\n", int(i), outflow);
-	    assignHubNonhubFlows(i, i, outflow);
-	  }
-	  if (log_construction) printf("For root node i = %d; outflow = %.0f; O_{%2d} = %.0f\n", int(i), outflow, int(i), data.O[i]);
-	  assert(outflow == data.O[i]);
-	}
-      }
+      if (num_coloured == p) break;
     }
   }
   for (HighsInt i = 0; i < n; i++) { assignZik(i, assignment[i]); }
