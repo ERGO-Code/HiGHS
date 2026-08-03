@@ -36,6 +36,7 @@ Int64 Symbolic::cliqueSize(Int sn) const {
   return clique_block_start_[sn].back();
 }
 Int64 Symbolic::maxStackSize() const { return max_stack_size_; }
+Int Symbolic::largestFront() const { return largest_front_; }
 bool Symbolic::parTree() const { return parallel_tree_; }
 bool Symbolic::parNode() const { return parallel_node_; }
 double Symbolic::storage() const { return serial_storage_; }

@@ -26,17 +26,18 @@ HighsStatus assessMatrix(const HighsLogOptions& log_options,
                          vector<double>& matrix_value,
                          const double small_matrix_value,
                          const double large_matrix_value,
-                         const bool sum_duplicates = false);
+                         const bool sum_duplicates,
+                         const std::string* col_names = nullptr,
+                         const std::string* row_names = nullptr);
 
-HighsStatus assessMatrix(const HighsLogOptions& log_options,
-                         const std::string& matrix_name, const HighsInt vec_dim,
-                         const HighsInt num_vec, vector<HighsInt>& matrix_start,
-                         vector<HighsInt>& matrix_p_end,
-                         vector<HighsInt>& matrix_index,
-                         vector<double>& matrix_value,
-                         const double small_matrix_value,
-                         const double large_matrix_value,
-                         const bool sum_duplicates = false);
+HighsStatus assessMatrix(
+    const HighsLogOptions& log_options, const std::string& matrix_name,
+    const HighsInt vec_dim, const HighsInt num_vec,
+    vector<HighsInt>& matrix_start, vector<HighsInt>& matrix_p_end,
+    vector<HighsInt>& matrix_index, vector<double>& matrix_value,
+    const double small_matrix_value, const double large_matrix_value,
+    const bool sum_duplicates, const std::string* col_names = nullptr,
+    const std::string* row_names = nullptr);
 
 HighsStatus assessMatrix(
     const HighsLogOptions& log_options, const std::string& matrix_name,
@@ -44,7 +45,8 @@ HighsStatus assessMatrix(
     vector<HighsInt>& matrix_start, vector<HighsInt>& matrix_p_end,
     vector<HighsInt>& matrix_index, vector<double>& matrix_value,
     const double small_matrix_value, const double large_matrix_value,
-    const bool sum_duplicates = false);
+    const bool sum_duplicates, const std::string* col_names = nullptr,
+    const std::string* row_names = nullptr);
 
 HighsStatus assessMatrixDimensions(const HighsLogOptions& log_options,
                                    const HighsInt num_vec,
