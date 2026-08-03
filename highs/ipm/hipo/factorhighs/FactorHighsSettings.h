@@ -9,11 +9,6 @@
 // SWITCHES
 // ===========================================================================
 
-// Switch on/off pivoting. It uses a static variation of Bunch-Kaufman pivoting,
-// with potential dynamic regularisation. If pivoting is switched off, only
-// static regularisation is applied.
-#define HIPO_PIVOTING
-
 // Collect data during regularisation, e.g. number of regularised pivots, 2x2
 // pivots, pivot swaps, pivots with wrong sign, min and max entry of L and D.
 // This can be quite expensive and should only be used for debugging.
@@ -32,6 +27,8 @@
 
 namespace hipo {
 
+const Int kBlockSize = 128;
+
 // supernode amalgamation
 const Int kStartThreshRelax = 256;
 const double kUpperRatioRelax = 0.02;
@@ -49,9 +46,6 @@ const Int kMinConsecutiveSums = 1;
 
 // regularisation
 const double kDynamicDiagCoeff = 1e-24;
-
-// metis
-const Int kMetisSeed = 42;
 
 struct Regul {
   double primal{};

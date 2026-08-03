@@ -129,4 +129,4 @@ jobs:
         env:
           HIGHS_SOURCE: ${{ github.workspace }}
         run: |
-          conan create /tmp/conan-highs --version 1.15.0 --build=missing
+          conan create /tmp/conan-highs --version 1.15.1 --build=missing

@@ -36,7 +36,7 @@ double HighsModel::objectiveValue(const std::vector<double>& solution) const {
 
 void HighsModel::objectiveGradient(const std::vector<double>& solution,
                                    std::vector<double>& gradient) const {
-  if (this->hessian_.dim_ > 0) {
+  if (this->isQp()) {
     this->hessian_.product(solution, gradient);
   } else {
     gradient.assign(this->lp_.num_col_, 0);

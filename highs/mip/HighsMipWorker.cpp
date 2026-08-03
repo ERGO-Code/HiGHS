@@ -27,6 +27,7 @@ HighsMipWorker::HighsMipWorker(const HighsMipSolver& mipsolver,
   upper_limit = mipdata_.upper_limit;
   optimality_limit = mipdata_.optimality_limit;
   heuristics_allowed = true;
+  early_termination = false;
   search_ptr_ =
       std::unique_ptr<HighsSearch>(new HighsSearch(*this, getPseudocost()));
   sepa_ptr_ = std::unique_ptr<HighsSeparation>(new HighsSeparation(*this));
@@ -126,7 +127,7 @@ bool HighsMipWorker::trySolution(const std::vector<double>& solution,
         fractionality(solution[i]) > mipdata_.feastol)
       return false;
 
-    obj += mipsolver_.colCost(i) * solution[i];
+    obj += static_cast<HighsCDouble>(mipsolver_.colCost(i)) * solution[i];
   }
 
   for (HighsInt i = 0; i != mipsolver_.model_->num_row_; ++i) {
@@ -143,6 +144,14 @@ bool HighsMipWorker::trySolution(const std::vector<double>& solution,
   }
 
   return addIncumbent(solution, static_cast<double>(obj), solution_source);
+}
+
+double HighsMipWorker::getOptimalityLimit() const {
+  if (!mipdata_.parallelLockActive()) {
+    return mipdata_.optimality_limit;
+  } else {
+    return optimality_limit;
+  }
 }
 
 void HighsMipWorker::resetSepaStats() {

@@ -20,6 +20,7 @@
 using std::fabs;
 
 HighsStatus assessHessian(HighsHessian& hessian, const HighsOptions& options) {
+  if (hessian.isOracle()) return HighsStatus::kOk;
   HighsStatus return_status = HighsStatus::kOk;
   HighsStatus call_status;
 
@@ -46,7 +47,7 @@ HighsStatus assessHessian(HighsHessian& hessian, const HighsOptions& options) {
   }
   // Assess Q, summing duplicates, but deferring the assessment of
   // values (other than those which are identically zero)
-  const bool sum_duplicates = true;
+  bool sum_duplicates = true;
   call_status = assessMatrix(options.log_options, "Hessian", hessian.dim_,
                              hessian.dim_, hessian.start_, hessian.index_,
                              hessian.value_, 0, kHighsInf, sum_duplicates);
@@ -59,10 +60,11 @@ HighsStatus assessHessian(HighsHessian& hessian, const HighsOptions& options) {
                                       return_status, "normaliseHessian");
   if (return_status == HighsStatus::kError) return return_status;
   // Assess values in Q
-  call_status =
-      assessMatrix(options.log_options, "Hessian", hessian.dim_, hessian.dim_,
-                   hessian.start_, hessian.index_, hessian.value_,
-                   options.small_matrix_value, options.large_matrix_value);
+  sum_duplicates = false;
+  call_status = assessMatrix(options.log_options, "Hessian", hessian.dim_,
+                             hessian.dim_, hessian.start_, hessian.index_,
+                             hessian.value_, options.small_matrix_value,
+                             options.large_matrix_value, sum_duplicates);
   return_status = interpretCallStatus(options.log_options, call_status,
                                       return_status, "assessMatrix");
   if (return_status == HighsStatus::kError) return return_status;
@@ -91,6 +93,8 @@ HighsStatus assessHessian(HighsHessian& hessian, const HighsOptions& options) {
 
 HighsStatus assessHessianDimensions(const HighsOptions& options,
                                     HighsHessian& hessian) {
+  assert(!hessian.isOracle());
+
   if (hessian.dim_ == 0) return HighsStatus::kOk;
 
   // Assess the Hessian dimensions and vector sizes
@@ -103,6 +107,7 @@ HighsStatus assessHessianDimensions(const HighsOptions& options,
 
 void completeHessianDiagonal(const HighsOptions& options,
                              HighsHessian& hessian) {
+  assert(!hessian.isOracle());
   // Count the number of missing diagonal entries
   HighsInt num_missing_diagonal_entries = 0;
   const HighsInt dim = hessian.dim_;
@@ -172,16 +177,11 @@ bool okHessianDiagonal(const HighsOptions& options, HighsHessian& hessian,
                        const ObjSense sense) {
   double min_diagonal_value = kHighsInf;
   double max_diagonal_value = -kHighsInf;
-  const HighsInt dim = hessian.dim_;
+  const HighsInt dim = hessian.isOracle() ? hessian.oracle_.dim_ : hessian.dim_;
   const HighsInt sense_sign = (HighsInt)sense;
   HighsInt num_illegal_diagonal_value = 0;
   for (HighsInt iCol = 0; iCol < dim; iCol++) {
-    double diagonal_value = 0;
-    // Assumes that the diagonal entry is always first, possibly with explicit
-    // zero value
-    HighsInt iEl = hessian.start_[iCol];
-    assert(hessian.index_[iEl] == iCol);
-    diagonal_value = sense_sign * hessian.value_[iEl];
+    double diagonal_value = sense_sign * hessian.diag(iCol);
     min_diagonal_value = std::min(diagonal_value, min_diagonal_value);
     max_diagonal_value = std::max(diagonal_value, max_diagonal_value);
     // Diagonal entries signed by sense must be non-negative
@@ -210,6 +210,8 @@ bool okHessianDiagonal(const HighsOptions& options, HighsHessian& hessian,
 
 HighsStatus extractTriangularHessian(const HighsOptions& options,
                                      HighsHessian& hessian) {
+  assert(!hessian.isOracle());
+  if (hessian.isOracle()) return HighsStatus::kError;
   // Viewing the Hessian column-wise, remove any entries in the strict
   // upper triangle
   HighsStatus return_status = HighsStatus::kOk;
@@ -254,6 +256,8 @@ HighsStatus extractTriangularHessian(const HighsOptions& options,
 void triangularToSquareHessian(const HighsHessian& hessian,
                                vector<HighsInt>& start, vector<HighsInt>& index,
                                vector<double>& value) {
+  assert(!hessian.isOracle());
+  if (hessian.isOracle()) return;
   const HighsInt dim = hessian.dim_;
   if (dim <= 0) {
     start.assign(1, 0);
@@ -319,6 +323,8 @@ void triangularToSquareHessian(const HighsHessian& hessian,
 
 HighsStatus normaliseHessian(const HighsOptions& options,
                              HighsHessian& hessian) {
+  assert(!hessian.isOracle());
+  if (hessian.isOracle()) return HighsStatus::kError;
   HighsInt dim = hessian.dim_;
   const bool triangular = hessian.format_ == HessianFormat::kTriangular;
   const bool square = !triangular;
@@ -406,7 +412,6 @@ HighsStatus normaliseHessian(const HighsOptions& options,
   HighsInt num_summation = 0;
   HighsInt num_upper_triangle = 0;
   HighsInt num_hessian_el = 0;
-  const double kSquareHessianAsymmetryTolerance = 1e-10;
   HighsInt num_illegal_asymmetry = 0;
   double min_illegal_asymmetry = kHighsInf;
   double max_illegal_asymmetry = 0;
@@ -435,7 +440,7 @@ HighsStatus normaliseHessian(const HighsOptions& options,
       if (square) {
         // When square, ensure that the upper triangular value matches
         // the corresponding lower triangular value to within the
-        // tolaernace used by JuMP
+        // toleranace used by JuMP
         const double asymmetry =
             std::fabs(upper_off_diagonal[iRow] - lower_on_below_diagonal[iRow]);
         if (asymmetry > kSquareHessianAsymmetryTolerance) {
@@ -566,6 +571,8 @@ HighsStatus normaliseHessian(const HighsOptions& options,
 }
 
 void completeHessian(const HighsInt full_dim, HighsHessian& hessian) {
+  assert(!hessian.isOracle());
+  if (hessian.isOracle()) return;
   // Ensure that any non-zero Hessian of dimension less than the
   // number of columns in the model is completed with explicit zero
   // diagonal entries
@@ -605,6 +612,8 @@ void reportHessian(const HighsLogOptions& log_options, const HighsInt dim,
 
 void userScaleHessian(HighsHessian& hessian, HighsUserScaleData& data,
                       const bool apply) {
+  assert(!hessian.isOracle());
+  if (hessian.isOracle()) return;
   data.num_infinite_hessian_values = 0;
   if (!hessian.dim_) return;
   const HighsInt user_objective_scale = data.user_objective_scale;
