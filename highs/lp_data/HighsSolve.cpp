@@ -1050,7 +1050,7 @@ HighsStatus solveQp(HighsQpSolverObject& solver_object, const string message) {
 HighsStatus checkOptimality(const std::string& solver_type,
 			    const HighsOptions& options,
 			    const HighsInfo& info,
-			    HighsModelStatus model_status) {
+			    HighsModelStatus& model_status) {
   // Check for infeasibility measures incompatible with optimality
   assert(model_status == HighsModelStatus::kOptimal);
   // Cannot expect to have no dual_infeasibilities since the QP solver
