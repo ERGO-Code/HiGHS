@@ -20,14 +20,14 @@ Int Solver::load(const HighsLp& lp, const HighsHessian& Q) {
   return kOk;
 }
 
-void Solver::chooseAllowedParallelism(const HighsOptions& options) {
+void Solver::chooseAllowedParallelism(const HighsOptions& Hoptions) {
   for (Int i = 0; i < kParallelCount; ++i) options_.parallel[i] = kChoose;
 
   // set default based on option `parallel`
   options_.parallel[kParallelAnalyse] = kOn;
   options_.parallel[kParallelOrderNE] = kOn;
   options_.parallel[kParallelOrderAS] = kOn;
-  if (options.parallel == kHighsOffString) {
+  if (Hoptions.parallel == kHighsOffString) {
     options_.parallel[kParallelTree] = kOff;
     options_.parallel[kParallelNode] = kOff;
     options_.parallel[kParallelForwardSolve] = kOff;
@@ -36,11 +36,11 @@ void Solver::chooseAllowedParallelism(const HighsOptions& options) {
   }
 
   // override with option `hipo_parallel_type`
-  if (options.parallel == kHighsOnString) {
-    if (options.hipo_parallel_type == kHipoTreeString) {
+  if (Hoptions.parallel == kHighsOnString) {
+    if (Hoptions.hipo_parallel_type == kHipoTreeString) {
       options_.parallel[kParallelTree] = kOn;
       options_.parallel[kParallelNode] = kOff;
-    } else if (options.hipo_parallel_type == kHipoNodeString) {
+    } else if (Hoptions.hipo_parallel_type == kHipoNodeString) {
       options_.parallel[kParallelTree] = kOff;
       options_.parallel[kParallelNode] = kOn;
     } else {
@@ -56,8 +56,8 @@ void Solver::chooseAllowedParallelism(const HighsOptions& options) {
 
   // override with option `hipo_parallel_force` or `hipo_parallel_forbid`
   for (Int i = 0; i < kParallelCount; ++i) {
-    bool force = testParallelBit(options.hipo_parallel_force, i);
-    bool forbid = testParallelBit(options.hipo_parallel_forbid, i);
+    bool force = testParallelBit(Hoptions.hipo_parallel_force, i);
+    bool forbid = testParallelBit(Hoptions.hipo_parallel_forbid, i);
     if (force && forbid) continue;
     if (force) options_.parallel[i] = kOn;
     if (forbid) options_.parallel[i] = kOff;
