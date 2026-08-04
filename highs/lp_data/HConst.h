@@ -472,8 +472,8 @@ enum class ParallelTechnique {
   kForwardSolve,
   kDiagonalSolve,
   kBackwardSolve,
-  kMax = kBackwardSolve,
-  kMaxSum = (1 << kMax) - 1
+  kCount,
+  kMaxSum = (1 << kCount) - 1
 };
 }
 

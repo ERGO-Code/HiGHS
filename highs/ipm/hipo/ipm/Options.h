@@ -26,7 +26,7 @@ struct Options {
   double time_limit = -1.0;
   Int block_size = 0;
   Int random_seed = 0;
-  ParallelType parallel[static_cast<Int>(ParallelTechnique::kMax)];
+  ParallelType parallel[static_cast<Int>(ParallelTechnique::kCount)];
 
   // Logging
   bool display = true;

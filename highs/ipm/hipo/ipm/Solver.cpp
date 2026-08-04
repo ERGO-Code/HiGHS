@@ -21,7 +21,7 @@ Int Solver::load(const HighsLp& lp, const HighsHessian& Q) {
 }
 
 void Solver::chooseAllowedParallelism(const HighsOptions& Hoptions) {
-  for (Int i = 0; i < static_cast<Int>(ParallelTechnique::kMax); ++i)
+  for (Int i = 0; i < static_cast<Int>(ParallelTechnique::kCount); ++i)
     options_.parallel[i] = ParallelType::kChoose;
 
   // set default based on option `parallel`
@@ -52,12 +52,12 @@ void Solver::chooseAllowedParallelism(const HighsOptions& Hoptions) {
 
   // override if threads is 1
   if (highs::parallel::num_threads() == 1) {
-    for (Int i = 0; i < static_cast<Int>(ParallelTechnique::kMax); ++i)
+    for (Int i = 0; i < static_cast<Int>(ParallelTechnique::kCount); ++i)
       options_.parallel[i] = ParallelType::kOff;
   }
 
   // override with option `hipo_parallel_force` or `hipo_parallel_forbid`
-  for (Int i = 0; i < static_cast<Int>(ParallelTechnique::kMax); ++i) {
+  for (Int i = 0; i < static_cast<Int>(ParallelTechnique::kCount); ++i) {
     bool force = testParallelBit(Hoptions.hipo_parallel_force, i);
     bool forbid = testParallelBit(Hoptions.hipo_parallel_forbid, i);
     if (force && forbid) continue;

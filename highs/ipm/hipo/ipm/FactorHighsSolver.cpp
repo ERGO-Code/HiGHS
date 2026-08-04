@@ -662,7 +662,7 @@ void FactorHighsSolver::setParallelAfterSymbolic() {
   options_.chooseParallel(ParallelTechnique::kBackwardSolve, parallel_backward);
   options_.chooseParallel(ParallelTechnique::kDiagonalSolve, parallel_diag);
 
-  for (Int i = 0; i < static_cast<Int>(ParallelTechnique::kMax); ++i)
+  for (Int i = 0; i < static_cast<Int>(ParallelTechnique::kCount); ++i)
     assert(options_.parallel[i] == ParallelType::kOn ||
            options_.parallel[i] == ParallelType::kOff);
 
