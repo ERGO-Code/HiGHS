@@ -15,20 +15,16 @@
 namespace hipo {
 
 class FactorHighsSolver : public LinearSolver {
-  // object to perform factorisation
   FHsolver FH_;
-
-  // symbolic factorisation
-  Symbolic S_;
-
   KktMatrix& kkt_;
-
   const Regularisation& regul_;
   Info& info_;
   IpmData& data_;
   const Logger& logger_;
   const Model& model_;
   Options& options_;
+
+  std::vector<double> as_buffer_;
 
   std::string ordering_AS_ = "none";
   std::string ordering_NE_ = "none";
@@ -47,7 +43,6 @@ class FactorHighsSolver : public LinearSolver {
                     const Regularisation& regul, Info& info, IpmData& record,
                     const Logger& logger);
 
-  // Override functions
   Int factorAS(const std::vector<double>& scaling) override;
   Int factorNE(const std::vector<double>& scaling) override;
   Int solveNE(const std::vector<double>& rhs,
@@ -61,6 +56,7 @@ class FactorHighsSolver : public LinearSolver {
   double spops() const override;
   double nz() const override;
   void getReg(std::vector<double>& reg) override;
+  LinearSolverType type() const override { return kFactorHighsType; }
 };
 
 }  // namespace hipo
