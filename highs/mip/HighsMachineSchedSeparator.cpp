@@ -26,6 +26,7 @@ bool HighsMachineSchedSeparator::findSingleMachineScheduleClique(
   };
   HighsInt largestDegree = 0;
   HighsInt largestDegreeCol = -1;
+  HighsInt numRows = 0;
   std::vector<HighsInt> degrees(mipsolver.numCol());
   const HighsInt maxRows = std::min(HighsInt{50000}, 2 * mipsolver.numRow());
   // keys are (j,i) to values (p_ji, y_ji, implication-when-one-or-zero)
@@ -80,7 +81,19 @@ bool HighsMachineSchedSeparator::findSingleMachineScheduleClique(
     }
   };
 
-  HighsInt numRows = 0;
+  auto tryAddArc = [&](const HighsInt posCol, const HighsInt negCol,
+                       const HighsInt binCol, const double rhs_0,
+                       const double rhs_1) {
+    if (rhs_0 > 0 || rhs_1 > 0) {
+      if (rhs_0 > rhs_1) {
+        addEntry(posCol, negCol, binCol, rhs_0, ArcType::kImplicationWhenZero);
+      } else {
+        addEntry(posCol, negCol, binCol, rhs_1, ArcType::kImplicationWhenOne);
+      }
+      ++numRows;
+    }
+  };
+
   for (HighsInt row = 0; row != mipsolver.numRow(); row++) {
     const double rowLower = mipsolver.model_->row_lower_[row];
     const double rowUpper = mipsolver.model_->row_upper_[row];
@@ -135,35 +148,13 @@ bool HighsMachineSchedSeparator::findSingleMachineScheduleClique(
       // -My_ij + s_j - s_i >= -d
       // Add implication s_j >= s_i + p_ij + M, p_ij + M > 0 when binCol = 1
       // Add implication s_j >= s_i + p_ij, p_ij > 0 when binCol = 0
-      const double rhs_0 = -rowUpper;
-      const double rhs_1 = -rowUpper + binCoef;
-      if (rhs_0 > 0 || rhs_1 > 0) {
-        if (rhs_0 > rhs_1) {
-          addEntry(negContCol, posContCol, binCol, rhs_0,
-                   ArcType::kImplicationWhenZero);
-        } else {
-          addEntry(negContCol, posContCol, binCol, rhs_1,
-                   ArcType::kImplicationWhenOne);
-        }
-        ++numRows;
-      }
+      tryAddArc(negContCol, posContCol, binCol, -rowUpper, -rowUpper + binCoef);
     }
     if (rowLower != -kHighsInf) {
       // Given My_ij + s_i - s_j >= d
       // Add implication s_i >= s_j + p_ji - M, p_ji - M > 0 when binCol = 1
       // Add implication s_i >= s_j + p_ji, p_ji > 0 when binCol = 0
-      const double rhs_0 = rowLower;
-      const double rhs_1 = rowLower - binCoef;
-      if (rhs_0 > 0 || rhs_1 > 0) {
-        if (rhs_0 > rhs_1) {
-          addEntry(posContCol, negContCol, binCol, rhs_0,
-                   ArcType::kImplicationWhenZero);
-        } else {
-          addEntry(posContCol, negContCol, binCol, rhs_1,
-                   ArcType::kImplicationWhenOne);
-        }
-        ++numRows;
-      }
+      tryAddArc(posContCol, negContCol, binCol, rowLower, rowLower - binCoef);
     }
     if (numRows >= maxRows) break;
   }
