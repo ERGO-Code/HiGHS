@@ -1197,7 +1197,7 @@ HighsStatus Highs::optimizeLp() {
   assert(!this->model_.isQp());
   assert(!this->model_.lp_.hasSemiVariables());
   assert(!this->multi_linear_objective_.size());
-  return this->optimizeModelCatchFpe();
+  return this->optimizeModelTryCatch();
 }
 
 HighsStatus Highs::optimizeModel() {
@@ -1209,7 +1209,7 @@ HighsStatus Highs::optimizeModel() {
   const bool already_profiling = this->profiling_;
   HighsProfiling profiling;
   if (!already_profiling) this->initializeProfiling(&profiling);
-  status = this->optimizeModelCatchFpe();
+  status = this->optimizeModelTryCatch();
   if (!already_profiling) {
     this->reportProfiling();
     this->clearProfiling();
@@ -1217,19 +1217,26 @@ HighsStatus Highs::optimizeModel() {
   return status;
 }
 
-HighsStatus Highs::optimizeModelCatchFpe() {
+HighsStatus Highs::optimizeModelTryCatch() {
   // Wrap the call to Highs::calledOptimizeModel() in a try-catch
   // block
   HighsStatus status;
+  auto handleCatch = [&]() {
+    // Clear all solver data, since there may be nothing useful
+    this->clearSolver();
+    model_status_ = HighsModelStatus::kSolveError;
+    status = HighsStatus::kError;
+  };
   try {
     status = calledOptimizeModel();
   } catch (const std::exception& exception) {
     highsLogDev(options_.log_options, HighsLogType::kError,
                 "Exception %s in calledOptimizeModel\n", exception.what());
-    // Clear all solver data, since there may be nothing useful
-    this->clearSolver();
-    model_status_ = HighsModelStatus::kSolveError;
-    status = HighsStatus::kError;
+    handleCatch();
+  } catch (const HighsTask::Interrupt&) {
+    highsLogDev(options_.log_options, HighsLogType::kError,
+                "HighsTask interrupt in calledOptimizeModel\n");
+    handleCatch();
   }
   return status;
 }

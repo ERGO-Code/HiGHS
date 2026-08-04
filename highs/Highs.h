@@ -1395,7 +1395,7 @@ class Highs {
   // Used in MIP solver as minimal LP solve
   HighsStatus optimizeLp();
   HighsStatus optimizeModel();
-  HighsStatus optimizeModelCatchFpe();
+  HighsStatus optimizeModelTryCatch();
   HighsStatus calledOptimizeModel();
 
   const HighsSimplexStats& getSimplexStats() const {
