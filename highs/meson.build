@@ -271,6 +271,7 @@ _srcs = [
     'mip/HighsImplications.cpp',
     'mip/HighsLpAggregator.cpp',
     'mip/HighsLpRelaxation.cpp',
+    'mip/HighsMachineSchedSeparator.cpp',
     'mip/HighsMipSolver.cpp',
     'mip/HighsMipSolverData.cpp',
     'mip/HighsMipWorker.cpp',
