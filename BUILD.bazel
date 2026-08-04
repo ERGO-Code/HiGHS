@@ -17,6 +17,11 @@ bool_flag(
 )
 
 config_setting(
+    name = "cupdlp_gpu_requested",
+    flag_values = {":cupdlp_gpu": "True"},
+)
+
+config_setting(
     name = "cupdlp_gpu_enabled",
     flag_values = {
         "@rules_cuda//cuda:enable": "True",
@@ -41,7 +46,10 @@ cuda_library(
         "highs/pdlp/cupdlp/cuda/*.cuh",
     ]),
     defines = ["CUPDLP_GPU"],
-    target_compatible_with = requires_cuda(),
+    target_compatible_with = requires_cuda() + select({
+        ":cupdlp_gpu_requested": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
     deps = [
         "@local_cuda//:cublas",
         "@local_cuda//:cusparse",
