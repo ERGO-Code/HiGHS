@@ -3,24 +3,12 @@
 
 #include "Parameters.h"
 #include "io/HighsIO.h"
+#include "lp_data/HConst.h"
 #include "lp_data/HighsOptions.h"
 
 namespace hipo {
 
 enum class ParallelType { kOff, kChoose, kOn };
-enum class ParallelTechnique {
-  kAnalyse,
-  kOrderNE,
-  kOrderAS,
-  kNEStruct,
-  kNEValues,
-  kTree,
-  kNode,
-  kForwardSolve,
-  kDiagonalSolve,
-  kBackwardSolve,
-  kCount,
-};
 
 struct Options {
   // Solver options
@@ -38,7 +26,7 @@ struct Options {
   double time_limit = -1.0;
   Int block_size = 0;
   Int random_seed = 0;
-  ParallelType parallel[static_cast<Int>(ParallelTechnique::kCount)];
+  ParallelType parallel[static_cast<Int>(ParallelTechnique::kMax)];
 
   // Logging
   bool display = true;

@@ -1357,13 +1357,15 @@ class HighsOptions : public HighsOptionsStruct {
 
     record_int = new OptionRecordInt(
         "hipo_parallel_force", "Bit mask to force parallel techniques in HiPO",
-        advanced, &hipo_parallel_force, 0, 0, kHighsIInf);
+        advanced, &hipo_parallel_force, 0, 0,
+        static_cast<int>(hipo::ParallelTechnique::kMaxSum));
     records.push_back(record_int);
 
     record_int =
         new OptionRecordInt("hipo_parallel_forbid",
                             "Bit mask to forbid parallel techniques in HiPO",
-                            advanced, &hipo_parallel_forbid, 0, 0, kHighsIInf);
+                            advanced, &hipo_parallel_forbid, 0, 0,
+                            static_cast<int>(hipo::ParallelTechnique::kMaxSum));
     records.push_back(record_int);
 
     record_int = new OptionRecordInt(
