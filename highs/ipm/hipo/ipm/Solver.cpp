@@ -49,6 +49,11 @@ void Solver::chooseAllowedParallelism(const HighsOptions& options) {
     }
   }
 
+  // override if threads is 1
+  if (highs::parallel::num_threads() == 1) {
+    for (Int i = 0; i < kParallelCount; ++i) options_.parallel[i] = kOff;
+  }
+
   // override with option `hipo_parallel_force` or `hipo_parallel_forbid`
   for (Int i = 0; i < kParallelCount; ++i) {
     bool force = testParallelBit(options.hipo_parallel_force, i);

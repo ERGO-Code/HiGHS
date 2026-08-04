@@ -564,10 +564,6 @@ Int FactorHighsSolver::setNla() {
   return kOk;
 }
 
-static bool usingAppleBlas() {
-  return strstr(HighsExtras::blas::getInfo()->provider, "Apple") != nullptr;
-}
-
 void FactorHighsSolver::setParallelBeforeSymbolic() {
   const bool parallel_analyse_default = true;
   options_.chooseParallel(kParallelAnalyse, parallel_analyse_default);
@@ -585,23 +581,22 @@ void FactorHighsSolver::setParallelBeforeSymbolic() {
   const bool A_is_large = model_.A().num_row_ > kParallelNEsizeThresh ||
                           model_.A().num_col_ > kParallelNEsizeThresh;
 
-  const bool parallel_NE_struct_default =
-      A_is_dense && A_is_large && highs::parallel::num_threads() > 1;
+  const bool parallel_NE_struct_default = A_is_dense && A_is_large;
   options_.chooseParallel(kParallelNEStruct, parallel_NE_struct_default);
 
-  const bool parallel_NE_values_default =
-      A_is_large && highs::parallel::num_threads() > 1;
+  const bool parallel_NE_values_default = A_is_large;
   options_.chooseParallel(kParallelNEValues, parallel_NE_values_default);
+}
+
+static bool usingAppleBlas() {
+  return strstr(HighsExtras::blas::getInfo()->provider, "Apple") != nullptr;
 }
 
 void FactorHighsSolver::setParallelAfterSymbolic() {
   bool parallel_tree = false;
   bool parallel_node = false;
 
-  if (highs::parallel::num_threads() == 1) {
-    parallel_node = false;
-    parallel_tree = false;
-  } else if (usingAppleBlas()) {
+  if (usingAppleBlas()) {
     // Blas on Apple do not work well with parallel_node, but parallel_tree
     // seems to always be beneficial.
     parallel_node = false;
