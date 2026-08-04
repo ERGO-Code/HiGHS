@@ -44,7 +44,7 @@ void Solver::chooseAllowedParallelism(const HighsOptions& Hoptions) {
     } else if (Hoptions.hipo_parallel_type == kHipoNodeString) {
       options_.setParallel(ParallelTechnique::kTree, ParallelType::kOff);
       options_.setParallel(ParallelTechnique::kNode, ParallelType::kOn);
-    } else {
+    } else if (Hoptions.hipo_parallel_type == kHipoBothString) {
       options_.setParallel(ParallelTechnique::kTree, ParallelType::kOn);
       options_.setParallel(ParallelTechnique::kNode, ParallelType::kOn);
     }

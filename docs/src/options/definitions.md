@@ -440,9 +440,9 @@
 - Default: "choose"
 
 ## [hipo\_parallel\_type](@id option-hipo-parallel-type)
-- HiPO parallelism: "tree", "node" or "both"
+- HiPO parallelism: "tree", "node", "both" or "choose"
 - Type: string
-- Default: "both"
+- Default: "choose"
 
 ## [hipo\_ordering](@id option-hipo-ordering)
 - HiPO matrix reordering: "choose", "metis", "amd" or "rcm"

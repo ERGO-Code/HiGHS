@@ -1331,18 +1331,16 @@ class HighsOptions : public HighsOptionsStruct {
         advanced, &hipo_system, kHighsChooseString);
     records.push_back(record_string);
 
-    record_string =
-        new OptionRecordString(kHipoParallelString,
-                               "HiPO parallelism: \"tree\", "
-                               "\"node\" or \"both\"",
-                               advanced, &hipo_parallel_type, kHipoBothString);
+    record_string = new OptionRecordString(
+        kHipoParallelString,
+        "HiPO parallelism: \"tree\", \"node\", \"both\" or \"choose\"",
+        advanced, &hipo_parallel_type, kHighsChooseString);
     records.push_back(record_string);
 
-    record_string =
-        new OptionRecordString(kHipoOrderingString,
-                               "HiPO matrix reordering: \"choose\", \"metis\", "
-                               "\"amd\" or \"rcm\"",
-                               advanced, &hipo_ordering, kHighsChooseString);
+    record_string = new OptionRecordString(
+        kHipoOrderingString,
+        "HiPO matrix reordering: \"choose\", \"metis\", \"amd\" or \"rcm\"",
+        advanced, &hipo_ordering, kHighsChooseString);
     records.push_back(record_string);
 
     record_string = new OptionRecordString(
