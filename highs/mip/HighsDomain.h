@@ -527,6 +527,19 @@ class HighsDomain {
     return prevboundval_;
   }
 
+  // Walk the prevboundval_ chain until we find a position where the bound
+  // value is strictly past the target (in the given direction).
+  // direction = +1: walk while value >= target (lower bound relaxation)
+  // direction = -1: walk while value <= target (upper bound relaxation)
+  // Returns false if the chain is exhausted (pos becomes -1).
+  bool walkBoundChain(HighsInt& pos, double target, HighsInt direction) const {
+    while (pos != -1 &&
+           direction * prevboundval_[pos].first >= direction * target) {
+      pos = prevboundval_[pos].second;
+    }
+    return pos != -1;
+  }
+
   const std::vector<HighsDomainChange>& getDomainChangeStack() const {
     return domchgstack_;
   }
