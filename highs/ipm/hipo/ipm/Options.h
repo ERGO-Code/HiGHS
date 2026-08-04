@@ -7,19 +7,19 @@
 
 namespace hipo {
 
-enum ParallelType { kOff, kChoose, kOn };
-enum ParallelTechnique {
-  kParallelAnalyse,
-  kParallelOrderNE,
-  kParallelOrderAS,
-  kParallelNEStruct,
-  kParallelNEValues,
-  kParallelTree,
-  kParallelNode,
-  kParallelForwardSolve,
-  kParallelDiagonalSolve,
-  kParallelBackwardSolve,
-  kParallelCount,
+enum class ParallelType { kOff, kChoose, kOn };
+enum class ParallelTechnique {
+  kAnalyse,
+  kOrderNE,
+  kOrderAS,
+  kNEStruct,
+  kNEValues,
+  kTree,
+  kNode,
+  kForwardSolve,
+  kDiagonalSolve,
+  kBackwardSolve,
+  kCount,
 };
 
 struct Options {
@@ -38,16 +38,24 @@ struct Options {
   double time_limit = -1.0;
   Int block_size = 0;
   Int random_seed = 0;
-  Int parallel[kParallelCount];
+  ParallelType parallel[static_cast<Int>(ParallelTechnique::kCount)];
 
   // Logging
   bool display = true;
   bool timeless_log = false;
   const HighsLogOptions* log_options = nullptr;
 
-  inline void chooseParallel(Int bit, bool is_on) {
-    Int type_default = is_on ? kOn : kOff;
-    if (parallel[bit] == kChoose) parallel[bit] = type_default;
+  inline bool getParallel(ParallelTechnique bit) const {
+    return static_cast<bool>(parallel[static_cast<Int>(bit)]);
+  }
+  inline void setParallel(ParallelTechnique bit, ParallelType type) {
+    parallel[static_cast<Int>(bit)] = type;
+  }
+  inline void chooseParallel(ParallelTechnique bit, bool default_behaviour) {
+    ParallelType type_default =
+        default_behaviour ? ParallelType::kOn : ParallelType::kOff;
+    if (parallel[static_cast<Int>(bit)] == ParallelType::kChoose)
+      setParallel(bit, type_default);
   }
 };
 

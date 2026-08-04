@@ -273,7 +273,7 @@ Int FactorHighsSolver::chooseNla() {
   // In parallel, run AS analyse and build NE structure. NE analyse runs only
   // after AS analyse is finished, so that it can be skipped based on the number
   // of nz of NE matrix and AS factor.
-  if (options_.parallel[kParallelAnalyse]) {
+  if (options_.getParallel(ParallelTechnique::kAnalyse)) {
     highs::parallel::TaskGroup tg;
     tg.spawn([&]() { run_analyse_AS(); });
     tg.spawn([&]() { run_structure_NE(); });
@@ -442,9 +442,9 @@ Int FactorHighsSolver::chooseOrdering(const std::vector<Int>& rows,
     }
   };
 
-  const bool parallel_ordering = nla == "NE"
-                                     ? options_.parallel[kParallelOrderNE]
-                                     : options_.parallel[kParallelOrderAS];
+  const bool parallel_ordering =
+      nla == "NE" ? options_.getParallel(ParallelTechnique::kOrderNE)
+                  : options_.getParallel(ParallelTechnique::kOrderAS);
 
   if (parallel_ordering) {
     highs::parallel::for_each(
@@ -566,13 +566,16 @@ Int FactorHighsSolver::setNla() {
 
 void FactorHighsSolver::setParallelBeforeSymbolic() {
   const bool parallel_analyse_default = true;
-  options_.chooseParallel(kParallelAnalyse, parallel_analyse_default);
+  options_.chooseParallel(ParallelTechnique::kAnalyse,
+                          parallel_analyse_default);
 
   const bool parallel_order_NE_default = true;
-  options_.chooseParallel(kParallelOrderNE, parallel_order_NE_default);
+  options_.chooseParallel(ParallelTechnique::kOrderNE,
+                          parallel_order_NE_default);
 
   const bool parallel_order_AS_default = true;
-  options_.chooseParallel(kParallelOrderNE, parallel_order_AS_default);
+  options_.chooseParallel(ParallelTechnique::kOrderNE,
+                          parallel_order_AS_default);
 
   const double A_nz_per_col = (double)model_.A().numNz() / model_.A().num_col_;
   const double A_nz_per_row = (double)model_.A().numNz() / model_.A().num_row_;
@@ -582,10 +585,12 @@ void FactorHighsSolver::setParallelBeforeSymbolic() {
                           model_.A().num_col_ > kParallelNEsizeThresh;
 
   const bool parallel_NE_struct_default = A_is_dense && A_is_large;
-  options_.chooseParallel(kParallelNEStruct, parallel_NE_struct_default);
+  options_.chooseParallel(ParallelTechnique::kNEStruct,
+                          parallel_NE_struct_default);
 
   const bool parallel_NE_values_default = A_is_large;
-  options_.chooseParallel(kParallelNEValues, parallel_NE_values_default);
+  options_.chooseParallel(ParallelTechnique::kNEValues,
+                          parallel_NE_values_default);
 }
 
 static bool usingAppleBlas() {
@@ -636,11 +641,8 @@ void FactorHighsSolver::setParallelAfterSymbolic() {
   // switch off tree parallelism if depth of recursion is too large
   if (kkt_.S.depth() > kParallelMaxTreeDepth) parallel_tree = false;
 
-  options_.chooseParallel(kParallelTree, parallel_tree);
-  options_.chooseParallel(kParallelNode, parallel_node);
-
-  FH_.setParallel(options_.parallel[kParallelTree],
-                  options_.parallel[kParallelNode]);
+  options_.chooseParallel(ParallelTechnique::kTree, parallel_tree);
+  options_.chooseParallel(ParallelTechnique::kNode, parallel_node);
 
   // choose parallelism for solve phase
   bool parallel_forward = false;
@@ -656,29 +658,37 @@ void FactorHighsSolver::setParallelAfterSymbolic() {
       parallel_backward = true;
   }
 
-  options_.chooseParallel(kParallelForwardSolve, parallel_forward);
-  options_.chooseParallel(kParallelBackwardSolve, parallel_backward);
-  options_.chooseParallel(kParallelDiagonalSolve, parallel_diag);
+  options_.chooseParallel(ParallelTechnique::kForwardSolve, parallel_forward);
+  options_.chooseParallel(ParallelTechnique::kBackwardSolve, parallel_backward);
+  options_.chooseParallel(ParallelTechnique::kDiagonalSolve, parallel_diag);
 
-  FH_.setParallelSolve(options_.parallel[kParallelForwardSolve],
-                       options_.parallel[kParallelBackwardSolve],
-                       options_.parallel[kParallelDiagonalSolve]);
+  for (Int i = 0; i < static_cast<Int>(ParallelTechnique::kCount); ++i)
+    assert(options_.parallel[i] == ParallelType::kOn ||
+           options_.parallel[i] == ParallelType::kOff);
+
+  FH_.setParallel(options_.getParallel(ParallelTechnique::kTree),
+                  options_.getParallel(ParallelTechnique::kNode));
+
+  FH_.setParallelSolve(options_.getParallel(ParallelTechnique::kForwardSolve),
+                       options_.getParallel(ParallelTechnique::kBackwardSolve),
+                       options_.getParallel(ParallelTechnique::kDiagonalSolve));
 }
 
 void FactorHighsSolver::printParallel() const {
   std::stringstream log_stream;
-  log_stream << textline("Parallelism:")
-             << (options_.parallel[kParallelAnalyse] == kOn ? "A" : "_")
-             << (options_.parallel[kParallelOrderNE] == kOn ? "O" : "_")
-             << (options_.parallel[kParallelOrderAS] == kOn ? "O" : "_") << "|"
-             << (options_.parallel[kParallelNEStruct] == kOn ? "S" : "_")
-             << (options_.parallel[kParallelNEValues] == kOn ? "V" : "_") << "|"
-             << (options_.parallel[kParallelTree] == kOn ? "T" : "_")
-             << (options_.parallel[kParallelNode] == kOn ? "N" : "_") << "|"
-             << (options_.parallel[kParallelForwardSolve] == kOn ? "F" : "_")
-             << (options_.parallel[kParallelDiagonalSolve] == kOn ? "D" : "_")
-             << (options_.parallel[kParallelBackwardSolve] == kOn ? "B" : "_")
-             << '\n';
+  log_stream
+      << textline("Parallelism:")
+      << (options_.getParallel(ParallelTechnique::kAnalyse) ? "A" : "_")
+      << (options_.getParallel(ParallelTechnique::kOrderNE) ? "O" : "_")
+      << (options_.getParallel(ParallelTechnique::kOrderAS) ? "O" : "_") << "|"
+      << (options_.getParallel(ParallelTechnique::kNEStruct) ? "S" : "_")
+      << (options_.getParallel(ParallelTechnique::kNEValues) ? "V" : "_") << "|"
+      << (options_.getParallel(ParallelTechnique::kTree) ? "T" : "_")
+      << (options_.getParallel(ParallelTechnique::kNode) ? "N" : "_") << "|"
+      << (options_.getParallel(ParallelTechnique::kForwardSolve) ? "F" : "_")
+      << (options_.getParallel(ParallelTechnique::kDiagonalSolve) ? "D" : "_")
+      << (options_.getParallel(ParallelTechnique::kBackwardSolve) ? "B" : "_")
+      << '\n';
   logger_.printInfo(log_stream.str().c_str());
 }
 

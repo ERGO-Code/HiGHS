@@ -21,46 +21,48 @@ Int Solver::load(const HighsLp& lp, const HighsHessian& Q) {
 }
 
 void Solver::chooseAllowedParallelism(const HighsOptions& Hoptions) {
-  for (Int i = 0; i < kParallelCount; ++i) options_.parallel[i] = kChoose;
+  for (Int i = 0; i < static_cast<Int>(ParallelTechnique::kCount); ++i)
+    options_.parallel[i] = ParallelType::kChoose;
 
   // set default based on option `parallel`
-  options_.parallel[kParallelAnalyse] = kOn;
-  options_.parallel[kParallelOrderNE] = kOn;
-  options_.parallel[kParallelOrderAS] = kOn;
+  options_.setParallel(ParallelTechnique::kAnalyse, ParallelType::kOn);
+  options_.setParallel(ParallelTechnique::kOrderNE, ParallelType::kOn);
+  options_.setParallel(ParallelTechnique::kOrderAS, ParallelType::kOn);
   if (Hoptions.parallel == kHighsOffString) {
-    options_.parallel[kParallelTree] = kOff;
-    options_.parallel[kParallelNode] = kOff;
-    options_.parallel[kParallelForwardSolve] = kOff;
-    options_.parallel[kParallelDiagonalSolve] = kOff;
-    options_.parallel[kParallelBackwardSolve] = kOff;
+    options_.setParallel(ParallelTechnique::kTree, ParallelType::kOff);
+    options_.setParallel(ParallelTechnique::kNode, ParallelType::kOff);
+    options_.setParallel(ParallelTechnique::kForwardSolve, ParallelType::kOff);
+    options_.setParallel(ParallelTechnique::kDiagonalSolve, ParallelType::kOff);
+    options_.setParallel(ParallelTechnique::kBackwardSolve, ParallelType::kOff);
   }
 
   // override with option `hipo_parallel_type`
   if (Hoptions.parallel == kHighsOnString) {
     if (Hoptions.hipo_parallel_type == kHipoTreeString) {
-      options_.parallel[kParallelTree] = kOn;
-      options_.parallel[kParallelNode] = kOff;
+      options_.setParallel(ParallelTechnique::kTree, ParallelType::kOn);
+      options_.setParallel(ParallelTechnique::kNode, ParallelType::kOff);
     } else if (Hoptions.hipo_parallel_type == kHipoNodeString) {
-      options_.parallel[kParallelTree] = kOff;
-      options_.parallel[kParallelNode] = kOn;
+      options_.setParallel(ParallelTechnique::kTree, ParallelType::kOff);
+      options_.setParallel(ParallelTechnique::kNode, ParallelType::kOn);
     } else {
-      options_.parallel[kParallelTree] = kOn;
-      options_.parallel[kParallelNode] = kOn;
+      options_.setParallel(ParallelTechnique::kTree, ParallelType::kOn);
+      options_.setParallel(ParallelTechnique::kNode, ParallelType::kOn);
     }
   }
 
   // override if threads is 1
   if (highs::parallel::num_threads() == 1) {
-    for (Int i = 0; i < kParallelCount; ++i) options_.parallel[i] = kOff;
+    for (Int i = 0; i < static_cast<Int>(ParallelTechnique::kCount); ++i)
+      options_.parallel[i] = ParallelType::kOff;
   }
 
   // override with option `hipo_parallel_force` or `hipo_parallel_forbid`
-  for (Int i = 0; i < kParallelCount; ++i) {
+  for (Int i = 0; i < static_cast<Int>(ParallelTechnique::kCount); ++i) {
     bool force = testParallelBit(Hoptions.hipo_parallel_force, i);
     bool forbid = testParallelBit(Hoptions.hipo_parallel_forbid, i);
     if (force && forbid) continue;
-    if (force) options_.parallel[i] = kOn;
-    if (forbid) options_.parallel[i] = kOff;
+    if (force) options_.parallel[i] = ParallelType::kOn;
+    if (forbid) options_.parallel[i] = ParallelType::kOff;
   }
 }
 

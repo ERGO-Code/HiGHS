@@ -187,7 +187,7 @@ Int KktMatrix::buildNEstructure() {
     }
   };
 
-  if (options.parallel[kParallelNEStruct]) {
+  if (options.getParallel(ParallelTechnique::kNEStruct)) {
     std::vector<std::vector<Int>> rowsNE_local(m);
 
     highs::parallel::for_each(
@@ -286,7 +286,7 @@ Int KktMatrix::buildNEvalues(const std::vector<double>& scaling) {
     }
   };
 
-  if (options.parallel[kParallelNEValues]) {
+  if (options.getParallel(ParallelTechnique::kNEValues)) {
     highs::parallel::for_each(
         0, m,
         [&](Int start, Int end) {
