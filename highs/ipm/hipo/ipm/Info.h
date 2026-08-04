@@ -69,8 +69,6 @@ struct Info {
   Int factor_number{};
   Int solve_number{};
 
-  char parallel_used[kParallelCount];
-
   double times[KTimeProfileItemCount];
 };
 

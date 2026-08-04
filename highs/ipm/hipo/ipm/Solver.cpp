@@ -20,33 +20,32 @@ Int Solver::load(const HighsLp& lp, const HighsHessian& Q) {
   return kOk;
 }
 
-std::vector<Int> Solver::chooseAllowedParallelism(
-    const HighsOptions& options) const {
-  std::vector<Int> type(kParallelCount, kChoose);
+void Solver::chooseAllowedParallelism(const HighsOptions& options) {
+  for (Int i = 0; i < kParallelCount; ++i) options_.parallel[i] = kChoose;
 
   // set default based on option `parallel`
-  type[kParallelAnalyse] = kOn;
-  type[kParallelOrderNE] = kOn;
-  type[kParallelOrderAS] = kOn;
+  options_.parallel[kParallelAnalyse] = kOn;
+  options_.parallel[kParallelOrderNE] = kOn;
+  options_.parallel[kParallelOrderAS] = kOn;
   if (options.parallel == kHighsOffString) {
-    type[kParallelTree] = kOff;
-    type[kParallelNode] = kOff;
-    type[kParallelForwardSolve] = kOff;
-    type[kParallelDiagonalSolve] = kOff;
-    type[kParallelBackwardSolve] = kOff;
+    options_.parallel[kParallelTree] = kOff;
+    options_.parallel[kParallelNode] = kOff;
+    options_.parallel[kParallelForwardSolve] = kOff;
+    options_.parallel[kParallelDiagonalSolve] = kOff;
+    options_.parallel[kParallelBackwardSolve] = kOff;
   }
 
   // override with option `hipo_parallel_type`
   if (options.parallel == kHighsOnString) {
     if (options.hipo_parallel_type == kHipoTreeString) {
-      type[kParallelTree] = kOn;
-      type[kParallelNode] = kOff;
+      options_.parallel[kParallelTree] = kOn;
+      options_.parallel[kParallelNode] = kOff;
     } else if (options.hipo_parallel_type == kHipoNodeString) {
-      type[kParallelTree] = kOff;
-      type[kParallelNode] = kOn;
+      options_.parallel[kParallelTree] = kOff;
+      options_.parallel[kParallelNode] = kOn;
     } else {
-      type[kParallelTree] = kOn;
-      type[kParallelNode] = kOn;
+      options_.parallel[kParallelTree] = kOn;
+      options_.parallel[kParallelNode] = kOn;
     }
   }
 
@@ -55,11 +54,9 @@ std::vector<Int> Solver::chooseAllowedParallelism(
     bool force = testParallelBit(options.hipo_parallel_force, i);
     bool forbid = testParallelBit(options.hipo_parallel_forbid, i);
     if (force && forbid) continue;
-    if (force) type[i] = kOn;
-    if (forbid) type[i] = kOff;
+    if (force) options_.parallel[i] = kOn;
+    if (forbid) options_.parallel[i] = kOff;
   }
-
-  return type;
 }
 
 void Solver::setOptions(const HighsOptions& highs_options) {
@@ -95,7 +92,7 @@ void Solver::setOptions(const HighsOptions& highs_options) {
   options_.factor = highs_options.hipo_factor;
   options_.block_size = highs_options.hipo_block_size;
   options_.random_seed = highs_options.random_seed + 42;
-  options_.parallel_type = chooseAllowedParallelism(highs_options);
+  chooseAllowedParallelism(highs_options);
 
   options_orig_ = options_;
   Hoptions_ = highs_options;
@@ -1388,19 +1385,6 @@ void Solver::printSummary() const {
                  << sci(info_.times[kSolveTime] / info_.solve_number, 0, 2)
                  << '\n';
     }
-
-    log_stream << textline("Parallelism:")
-               << (info_.parallel_used[kParallelAnalyse] ? "A" : "_")
-               << (info_.parallel_used[kParallelOrderNE] ? "O" : "_")
-               << (info_.parallel_used[kParallelOrderAS] ? "O" : "_") << "|"
-               << (info_.parallel_used[kParallelNEStruct] ? "S" : "_")
-               << (info_.parallel_used[kParallelNEValues] ? "V" : "_") << "|"
-               << (info_.parallel_used[kParallelTree] ? "T" : "_")
-               << (info_.parallel_used[kParallelNode] ? "N" : "_") << "|"
-               << (info_.parallel_used[kParallelForwardSolve] ? "F" : "_")
-               << (info_.parallel_used[kParallelDiagonalSolve] ? "D" : "_")
-               << (info_.parallel_used[kParallelBackwardSolve] ? "B" : "_")
-               << '\n';
   }
   logger_.print(log_stream.str().c_str());
 

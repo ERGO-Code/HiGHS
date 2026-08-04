@@ -179,8 +179,10 @@ Int FactorHighsSolver::solveNE(const std::vector<double>& rhs,
 Int FactorHighsSolver::setup() {
   if (kkt_.S.empty()) {
     Clock clock;
+    setParallelBeforeSymbolic();
     if (Int status = setNla()) return status;
-    setParallel();
+    setParallelAfterSymbolic();
+    printParallel();
     info_.times[kAnalyseTime] += clock.stop();
 
     if (!options_.timeless_log) {
@@ -271,10 +273,7 @@ Int FactorHighsSolver::chooseNla() {
   // In parallel, run AS analyse and build NE structure. NE analyse runs only
   // after AS analyse is finished, so that it can be skipped based on the number
   // of nz of NE matrix and AS factor.
-  const bool parallel_analyse = options_.chooseParallel(kParallelAnalyse, true);
-  info_.parallel_used[kParallelAnalyse] = 0;
-  if (parallel_analyse) {
-    info_.parallel_used[kParallelAnalyse] = 1;
+  if (options_.parallel[kParallelAnalyse]) {
     highs::parallel::TaskGroup tg;
     tg.spawn([&]() { run_analyse_AS(); });
     tg.spawn([&]() { run_structure_NE(); });
@@ -443,20 +442,11 @@ Int FactorHighsSolver::chooseOrdering(const std::vector<Int>& rows,
     }
   };
 
-  const bool parallel_ordering =
-      nla == "NE" ? options_.chooseParallel(kParallelOrderNE, true)
-                  : options_.chooseParallel(kParallelOrderAS, true);
-  if (nla == "NE")
-    info_.parallel_used[kParallelOrderNE] = 0;
-  else
-    info_.parallel_used[kParallelOrderAS] = 0;
+  const bool parallel_ordering = nla == "NE"
+                                     ? options_.parallel[kParallelOrderNE]
+                                     : options_.parallel[kParallelOrderAS];
 
   if (parallel_ordering) {
-    if (nla == "NE")
-      info_.parallel_used[kParallelOrderNE] = 1;
-    else
-      info_.parallel_used[kParallelOrderAS] = 1;
-
     highs::parallel::for_each(
         0, k, [&](Int start, Int end) { run_ordering_and_analyse(start); }, 1);
   } else {
@@ -578,7 +568,33 @@ static bool usingAppleBlas() {
   return strstr(HighsExtras::blas::getInfo()->provider, "Apple") != nullptr;
 }
 
-void FactorHighsSolver::setParallel() {
+void FactorHighsSolver::setParallelBeforeSymbolic() {
+  const bool parallel_analyse_default = true;
+  options_.chooseParallel(kParallelAnalyse, parallel_analyse_default);
+
+  const bool parallel_order_NE_default = true;
+  options_.chooseParallel(kParallelOrderNE, parallel_order_NE_default);
+
+  const bool parallel_order_AS_default = true;
+  options_.chooseParallel(kParallelOrderNE, parallel_order_AS_default);
+
+  const double A_nz_per_col = (double)model_.A().numNz() / model_.A().num_col_;
+  const double A_nz_per_row = (double)model_.A().numNz() / model_.A().num_row_;
+  const bool A_is_dense = A_nz_per_col > kParallelNEnzPerColThresh ||
+                          A_nz_per_row > kParallelNEnzPerRowThresh;
+  const bool A_is_large = model_.A().num_row_ > kParallelNEsizeThresh ||
+                          model_.A().num_col_ > kParallelNEsizeThresh;
+
+  const bool parallel_NE_struct_default =
+      A_is_dense && A_is_large && highs::parallel::num_threads() > 1;
+  options_.chooseParallel(kParallelNEStruct, parallel_NE_struct_default);
+
+  const bool parallel_NE_values_default =
+      A_is_large && highs::parallel::num_threads() > 1;
+  options_.chooseParallel(kParallelNEValues, parallel_NE_values_default);
+}
+
+void FactorHighsSolver::setParallelAfterSymbolic() {
   bool parallel_tree = false;
   bool parallel_node = false;
 
@@ -625,10 +641,11 @@ void FactorHighsSolver::setParallel() {
   // switch off tree parallelism if depth of recursion is too large
   if (kkt_.S.depth() > kParallelMaxTreeDepth) parallel_tree = false;
 
-  parallel_tree = options_.chooseParallel(kParallelTree, parallel_tree);
-  parallel_node = options_.chooseParallel(kParallelNode, parallel_node);
+  options_.chooseParallel(kParallelTree, parallel_tree);
+  options_.chooseParallel(kParallelNode, parallel_node);
 
-  FH_.setParallel(parallel_tree, parallel_node);
+  FH_.setParallel(options_.parallel[kParallelTree],
+                  options_.parallel[kParallelNode]);
 
   // choose parallelism for solve phase
   bool parallel_forward = false;
@@ -644,25 +661,30 @@ void FactorHighsSolver::setParallel() {
       parallel_backward = true;
   }
 
-  parallel_forward =
-      options_.chooseParallel(kParallelForwardSolve, parallel_forward);
-  parallel_backward =
-      options_.chooseParallel(kParallelBackwardSolve, parallel_backward);
-  parallel_diag =
-      options_.chooseParallel(kParallelDiagonalSolve, parallel_diag);
+  options_.chooseParallel(kParallelForwardSolve, parallel_forward);
+  options_.chooseParallel(kParallelBackwardSolve, parallel_backward);
+  options_.chooseParallel(kParallelDiagonalSolve, parallel_diag);
 
-  FH_.setParallelSolve(parallel_forward, parallel_backward, parallel_diag);
+  FH_.setParallelSolve(options_.parallel[kParallelForwardSolve],
+                       options_.parallel[kParallelBackwardSolve],
+                       options_.parallel[kParallelDiagonalSolve]);
+}
 
-  info_.parallel_used[kParallelTree] = 0;
-  info_.parallel_used[kParallelNode] = 0;
-  info_.parallel_used[kParallelForwardSolve] = 0;
-  info_.parallel_used[kParallelBackwardSolve] = 0;
-  info_.parallel_used[kParallelDiagonalSolve] = 0;
-  if (parallel_tree) info_.parallel_used[kParallelTree] = 1;
-  if (parallel_node) info_.parallel_used[kParallelNode] = 1;
-  if (parallel_forward) info_.parallel_used[kParallelForwardSolve] = 1;
-  if (parallel_backward) info_.parallel_used[kParallelBackwardSolve] = 1;
-  if (parallel_diag) info_.parallel_used[kParallelDiagonalSolve] = 1;
+void FactorHighsSolver::printParallel() const {
+  std::stringstream log_stream;
+  log_stream << textline("Parallelism:")
+             << (options_.parallel[kParallelAnalyse] == kOn ? "A" : "_")
+             << (options_.parallel[kParallelOrderNE] == kOn ? "O" : "_")
+             << (options_.parallel[kParallelOrderAS] == kOn ? "O" : "_") << "|"
+             << (options_.parallel[kParallelNEStruct] == kOn ? "S" : "_")
+             << (options_.parallel[kParallelNEValues] == kOn ? "V" : "_") << "|"
+             << (options_.parallel[kParallelTree] == kOn ? "T" : "_")
+             << (options_.parallel[kParallelNode] == kOn ? "N" : "_") << "|"
+             << (options_.parallel[kParallelForwardSolve] == kOn ? "F" : "_")
+             << (options_.parallel[kParallelDiagonalSolve] == kOn ? "D" : "_")
+             << (options_.parallel[kParallelBackwardSolve] == kOn ? "B" : "_")
+             << '\n';
+  logger_.printInfo(log_stream.str().c_str());
 }
 
 // =========================================================================

@@ -187,22 +187,7 @@ Int KktMatrix::buildNEstructure() {
     }
   };
 
-  // computing the structure in parallel only if matrix A is dense and large
-  const double nz_per_col = (double)model.A().numNz() / model.A().num_col_;
-  const double nz_per_row = (double)model.A().numNz() / model.A().num_row_;
-  const bool is_dense = nz_per_col > kParallelNEnzPerColThresh ||
-                        nz_per_row > kParallelNEnzPerRowThresh;
-  const bool is_large = model.A().num_row_ > kParallelNEsizeThresh ||
-                        model.A().num_col_ > kParallelNEsizeThresh;
-  const bool parallel_default =
-      is_dense && is_large && highs::parallel::num_threads() > 1;
-  const bool parallel =
-      options.chooseParallel(kParallelNEStruct, parallel_default);
-  info.parallel_used[kParallelNEStruct] = 0;
-
-  if (parallel) {
-    info.parallel_used[kParallelNEStruct] = 1;
-    logger.printInfo("NE structure in parallel\n");
+  if (options.parallel[kParallelNEStruct]) {
     std::vector<std::vector<Int>> rowsNE_local(m);
 
     highs::parallel::for_each(
@@ -231,7 +216,6 @@ Int KktMatrix::buildNEstructure() {
       rowsNE.insert(rowsNE.end(), v.begin(), v.end());
 
   } else {
-    logger.printInfo("NE structure in serial\n");
     rowsNE.reserve(model.nzNElb());
     std::vector<char> is_nz(m, false);
     std::vector<Int> temp_index(m);
@@ -302,16 +286,7 @@ Int KktMatrix::buildNEvalues(const std::vector<double>& scaling) {
     }
   };
 
-  // computing the values in parallel only if matrix A is large
-  const bool is_large = model.A().num_row_ > kParallelNEsizeThresh ||
-                        model.A().num_col_ > kParallelNEsizeThresh;
-  const bool parallel_default = is_large && highs::parallel::num_threads() > 1;
-  const bool parallel =
-      options.chooseParallel(kParallelNEValues, parallel_default);
-  info.parallel_used[kParallelNEValues] = 0;
-
-  if (parallel) {
-    info.parallel_used[kParallelNEValues] = 1;
+  if (options.parallel[kParallelNEValues]) {
     highs::parallel::for_each(
         0, m,
         [&](Int start, Int end) {
