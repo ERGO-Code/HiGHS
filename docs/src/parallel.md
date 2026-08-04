@@ -70,7 +70,8 @@ in the factorisation can be refined using the
 tree level only, "node" for node level only, "both" for both levels, or "choose" to 
 leave the selection to the solver.
 
-The options hipo\_parallel\_force and hipo\_parallel\_forbid can be used to override the 
+The options [hipo\_parallel\_force](@ref option-hipo-parallel-force) and 
+[hipo\_parallel\_forbid](@ref option-hipo-parallel-forbid) can be used to override the 
 default parallelism settings. They are bit maps in which the various parallel phases are 
 controlled by the following values:
 -   1: analyse phase
@@ -83,11 +84,12 @@ controlled by the following values:
 - 128: forward solve with factorisation
 - 256: diagonal solve with factorisation
 - 512: backward solve with factorisation
-Setting hipo\_parallel\_force (resp. hipo\_parallel\_forbid) to one of these values, 
+
+Setting `hipo\_parallel\_force` (resp. `hipo\_parallel\_forbid`) to one of these values, 
 or a sum of values, forces (resp. forbids) the use of parallelism in the corresponding 
 phases. These options override any other behaviour enforced by other options. If a given 
 phase is both forced and forbidden, the default behaviour is used instead. 
-For instance, setting hipo\_parallel\_force to 81 = 1+16+64 and hipo\_parallel\_forbid 
+For instance, setting `hipo\_parallel\_force` to 81 = 1+16+64 and `hipo\_parallel\_forbid` 
 to 68 = 4+64  forces the use of parallelism in the analyse phase and for building the 
 normal equations structure, and forbids it for the reordering of augmented system. 
 

@@ -444,6 +444,18 @@
 - Type: string
 - Default: "choose"
 
+## [hipo\_parallel\_force](@id option-hipo-parallel-force)
+- Bit map to force the use of parallel techniques in HiPO
+- Type: integer
+- Range: {0, 1023}
+- Default: 0
+
+## [hipo\_parallel\_forbid](@id option-hipo-parallel-forbid)
+- Bit map to forbid the use of parallel techniques in HiPO
+- Type: integer
+- Range: {0, 1023}
+- Default: 0
+
 ## [hipo\_ordering](@id option-hipo-ordering)
 - HiPO matrix reordering: "choose", "metis", "amd" or "rcm"
 - Type: string
