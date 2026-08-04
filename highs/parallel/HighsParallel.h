@@ -17,12 +17,16 @@ namespace parallel {
 
 using mutex = HighsMutex;
 
+// Returns the number of physical cores available to this process,
+// respecting the OS affinity mask.
+unsigned int available_core_count();
+
 inline void initialize_scheduler(int numThreads = 0) {
   if (numThreads == 0) {
 #ifdef HIGHS_NO_DEFAULT_THREADS
     numThreads = 1;
 #else
-    numThreads = (std::thread::hardware_concurrency() + 1) / 2;
+    numThreads = available_core_count();
 #endif
   }
   HighsTaskExecutor::initialize(numThreads);
@@ -95,9 +99,20 @@ class TaskGroup {
       workerDeque->cancelTask(i);
   }
 
-  ~TaskGroup() {
+  ~TaskGroup() noexcept(false) {
     cancel();
+
+    // Setting the rootTask to null ensures that taskWait does not throw
+    // exceptions, so that all tasks can be successfully completed before
+    // destroying the object.
+    HighsTask* prevRoot = workerDeque->setRootTask(nullptr);
+
     taskWait();
+
+    // Reinstate the original rootTask and potentially throw exception.
+    // dtor needs to be noexcept(false) for this to work.
+    workerDeque->setRootTask(prevRoot);
+    workerDeque->checkInterrupt();
   }
 };
 

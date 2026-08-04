@@ -13,11 +13,11 @@ void Solver::refine(NewtonDir& delta) {
   // compute the residuals of the linear system in it_->ires
   clock.start();
   it_->residuals6x6(delta);
-  info_.residual_time += clock.stop();
+  info_.times[kRefinementResTime] += clock.stop();
 
   clock.start();
   double omega = computeOmega(delta);
-  info_.omega_time += clock.stop();
+  info_.times[kRefinementOmegaTime] += clock.stop();
 
   double old_omega{};
 
@@ -32,13 +32,13 @@ void Solver::refine(NewtonDir& delta) {
 
     clock.start();
     it_->residuals6x6(temp);
-    info_.residual_time += clock.stop();
+    info_.times[kRefinementResTime] += clock.stop();
 
     old_omega = omega;
 
     clock.start();
     omega = computeOmega(temp);
-    info_.omega_time += clock.stop();
+    info_.times[kRefinementOmegaTime] += clock.stop();
 
     if (omega < old_omega) {
       delta = temp;

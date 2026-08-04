@@ -144,6 +144,8 @@ bool optionHipoSystemOk(const HighsLogOptions& report_log_options,
                         const string& value);
 bool optionHipoOrderingOk(const HighsLogOptions& report_log_options,
                           const string& value);
+bool optionHipoFactorOk(const HighsLogOptions& report_log_options,
+                        const string& value);
 
 bool boolFromString(std::string value, bool& bool_value);
 
@@ -210,6 +212,8 @@ OptionStatus setLocalOptionValue(const HighsLogOptions& report_log_options,
 OptionStatus setLocalOptionValue(const HighsLogOptions& report_log_options,
                                  OptionRecordString& option,
                                  const std::string& value);
+
+void possibleLowerCaseOptionValue(const std::string& name, std::string& value);
 
 OptionStatus passLocalOptions(const HighsLogOptions& report_log_options,
                               const HighsOptions& from_options,
@@ -288,6 +292,7 @@ const string kWriteBasisFileString = "write_basis_file";
 const string kPresolveString = "presolve";
 const string kSolverString = "solver";
 const string kParallelString = "parallel";
+const string kThreadsString = "threads";
 const string kRunCrossoverString = "run_crossover";
 const string kTimeLimitString = "time_limit";
 const string kOptionsFileString = "options_file";
@@ -302,6 +307,12 @@ const string kReadSolutionFileString = "read_solution_file";
 
 // String for HiGHS log file option
 const string kLogFileString = "log_file";
+
+// String for other file names
+#ifdef HIGHS_DEBUGSOL
+const string kMipDebugSolutionFileString = "mip_debug_solution_file";
+#endif
+const string kMipImprovingSolutionFileString = "mip_improving_solution_file";
 
 // Strings for HiPO system option
 const string kHipoSystemString = "hipo_system";
@@ -323,11 +334,16 @@ const string kHipoMetisString = "metis";
 const string kHipoAmdString = "amd";
 const string kHipoRcmString = "rcm";
 
+const string kHipoFactorString = "hipo_factor";
+const string kHipoFactorMultifrontal = "multifrontal";
+const string kHipoFactorUplooking = "uplooking";
+
 struct HighsOptionsStruct {
   // Run-time options read from the command line
   std::string presolve;
   std::string solver;
   std::string parallel;
+  HighsInt threads;
   std::string run_crossover;
   double time_limit;
   std::string read_solution_file;
@@ -351,7 +367,6 @@ struct HighsOptionsStruct {
   double optimality_tolerance;
   double objective_bound;
   double objective_target;
-  HighsInt threads;
   HighsInt user_objective_scale;
   HighsInt user_bound_scale;
   HighsInt highs_debug_level;
@@ -388,6 +403,7 @@ struct HighsOptionsStruct {
   std::string hipo_system;
   std::string hipo_parallel_type;
   std::string hipo_ordering;
+  std::string hipo_factor;
   HighsInt hipo_block_size;
 
   // Options for PDLP solver
@@ -401,6 +417,7 @@ struct HighsOptionsStruct {
   double pdlp_optimality_tolerance;
 
   // Options for QP solver
+  bool test_qp_oracle;
   bool qp_allow_hot_start;
   HighsInt qp_iteration_limit;
   HighsInt qp_nullspace_limit;
@@ -517,6 +534,7 @@ struct HighsOptionsStruct {
       : presolve(""),
         solver(""),
         parallel(""),
+        threads(0),
         run_crossover(""),
         time_limit(0.0),
         read_solution_file(""),
@@ -538,7 +556,6 @@ struct HighsOptionsStruct {
         optimality_tolerance(0.0),
         objective_bound(0.0),
         objective_target(0.0),
-        threads(0),
         user_objective_scale(0),
         user_bound_scale(0),
         highs_debug_level(0),
@@ -568,6 +585,7 @@ struct HighsOptionsStruct {
         hipo_system(""),
         hipo_parallel_type(""),
         hipo_ordering(""),
+        hipo_factor(""),
         hipo_block_size(0),
         pdlp_features_off(0),
         pdlp_iteration_limit(0),
@@ -577,6 +595,7 @@ struct HighsOptionsStruct {
         pdlp_cupdlpc_restart_method(0),
         pdlp_step_size_strategy(0),
         pdlp_optimality_tolerance(0.0),
+        test_qp_oracle(false),
         qp_allow_hot_start(false),
         qp_iteration_limit(0),
         qp_nullspace_limit(0),
@@ -753,6 +772,12 @@ class HighsOptions : public HighsOptionsStruct {
         &parallel, kHighsChooseString);
     records.push_back(record_string);
 
+    record_int = new OptionRecordInt(
+        kThreadsString,
+        "Maximum number of threads used by HiGHS (0: automatic)", advanced,
+        &threads, 0, 0, kHighsIInf);
+    records.push_back(record_int);
+
     record_string = new OptionRecordString(
         kRunCrossoverString, "Run IPM crossover: \"off\", \"choose\" or \"on\"",
         advanced, &run_crossover, kHighsOnString);
@@ -854,11 +879,6 @@ class HighsOptions : public HighsOptionsStruct {
     record_int =
         new OptionRecordInt(kRandomSeedString, "Random seed used in HiGHS",
                             advanced, &random_seed, 0, 0, kHighsIInf);
-    records.push_back(record_int);
-
-    record_int = new OptionRecordInt(
-        "threads", "Number of threads used by HiGHS (0: automatic)", advanced,
-        &threads, 0, 0, kHighsIInf);
     records.push_back(record_int);
 
     record_int = new OptionRecordInt(
@@ -1114,7 +1134,7 @@ class HighsOptions : public HighsOptionsStruct {
 
 #ifdef HIGHS_DEBUGSOL
     record_string = new OptionRecordString(
-        "mip_debug_solution_file",
+        kMipDebugSolutionFileString,
         "Solution file for debug solution of the MIP solver", advanced,
         &mip_debug_solution_file, kHighsFilenameDefault);
     records.push_back(record_string);
@@ -1133,7 +1153,7 @@ class HighsOptions : public HighsOptionsStruct {
     records.push_back(record_bool);
 
     record_string = new OptionRecordString(
-        "mip_improving_solution_file",
+        kMipImprovingSolutionFileString,
         "File for reporting improving MIP solutions: not reported for an empty "
         "string \\\"\\\"",
         advanced, &mip_improving_solution_file, kHighsFilenameDefault);
@@ -1321,6 +1341,13 @@ class HighsOptions : public HighsOptionsStruct {
                                advanced, &hipo_ordering, kHighsChooseString);
     records.push_back(record_string);
 
+    record_string = new OptionRecordString(
+        kHipoFactorString,
+        "HiPO matrix factorisation: \"choose\", \"multifrontal\" "
+        "or \"uplooking\"",
+        advanced, &hipo_factor, kHighsChooseString);
+    records.push_back(record_string);
+
     record_int = new OptionRecordInt(
         "hipo_block_size", "Block size for dense linear algebra within HiPO",
         advanced, &hipo_block_size, 0, 128, kHighsIInf);
@@ -1373,6 +1400,11 @@ class HighsOptions : public HighsOptionsStruct {
         &pdlp_optimality_tolerance, kMinimumKktTolerance, kDefaultKktTolerance,
         kHighsInf);
     records.push_back(record_double);
+
+    record_bool = new OptionRecordBool("test_qp_oracle",
+                                       "Use an oracle for the QP Hessian",
+                                       advanced, &test_qp_oracle, false);
+    records.push_back(record_bool);
 
     record_bool = new OptionRecordBool(
         "qp_allow_hot_start", "Allow the active set QP solver to hot start",

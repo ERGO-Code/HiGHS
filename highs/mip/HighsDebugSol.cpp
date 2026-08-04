@@ -68,10 +68,12 @@ void HighsDebugSol::activate() {
 
       HighsCDouble debugsolobj = 0.0;
       for (HighsInt i = 0; i != mipsolver->orig_model_->num_col_; ++i)
-        debugsolobj += mipsolver->orig_model_->col_cost_[i] *
-                       HighsCDouble(debugOrigSolution[i]);
+        debugsolobj +=
+            static_cast<HighsCDouble>(mipsolver->orig_model_->col_cost_[i]) *
+            debugOrigSolution[i];
 
-      debugSolObjective = double(debugsolobj + mipsolver->orig_model_->offset_);
+      debugSolObjective =
+          static_cast<double>(debugsolobj + mipsolver->orig_model_->offset_);
       debugSolActive = true;
       printf("debug sol active\n");
       registerDomain(mipsolver->mipdata_->getDomain());
@@ -101,9 +103,10 @@ void HighsDebugSol::shrink(const std::vector<HighsInt>& newColIndex) {
   debugSolution.resize(mipsolver->model_->num_col_);
   HighsCDouble debugsolobj = 0.0;
   for (HighsInt i = 0; i != mipsolver->model_->num_col_; ++i)
-    debugsolobj += mipsolver->model_->col_cost_[i] * debugSolution[i];
+    debugsolobj += static_cast<HighsCDouble>(mipsolver->model_->col_cost_[i]) *
+                   debugSolution[i];
 
-  debugSolObjective = double(debugsolobj);
+  debugSolObjective = static_cast<double>(debugsolobj);
 
   conflictingBounds.clear();
 }

@@ -96,6 +96,16 @@ class Highs {
   HighsStatus clearSolverDualData();
 
   /**
+   * @brief Release all retained memory back to the allocator
+   *
+   * Clears all solver state and shrinks internal vectors to free
+   * unused capacity. Useful in long-running services that reuse a
+   * Highs instance across multiple solves to prevent unbounded RSS
+   * growth from heap fragmentation.
+   */
+  HighsStatus releaseMemory();
+
+  /**
    * Methods for model input
    */
 
@@ -152,6 +162,19 @@ class Highs {
   HighsStatus passHessian(const HighsInt dim, const HighsInt num_nz,
                           const HighsInt format, const HighsInt* start,
                           const HighsInt* index, const double* value);
+  /**
+   * @brief Pass a Hessian oracle for the incumbent model
+   */
+  HighsStatus passHessian(const HighsInt dim,
+                          HighsHessianFunctionType oracleCall,
+                          void* oracle_data,
+                          HighsCHessianFunctionType c_oracleCall = nullptr);
+
+  /**
+   * @brief Checks any incumbent Hessian oracle
+   */
+  HighsStatus checkHessianOracle(const bool exit_on_first_error = false) const;
+
   /**
    * @brief Pass multiple linear objectives for the incumbent model
    */
@@ -256,8 +279,11 @@ class Highs {
 
   /**
    * @brief Assess the validity, integrality and feasibility of the
-   * current primal solution. Of value after calling
-   * Highs::readSolution
+   * current primal solution. Row values are computed and checked
+   * against what's in Highs::solution_.row_value and, if the
+   * differences exceed a tolerance, valid returns false.  If any of
+   * valid, integral or feasible is false, then assessPrimalSolution
+   * returns HighsStatus::kWarning.
    */
   HighsStatus assessPrimalSolution(bool& valid, bool& integral,
                                    bool& feasible) const;
@@ -1235,7 +1261,15 @@ class Highs {
   HighsStatus setSolution(const HighsSolution& solution);
 
   /**
-   * @brief Pass a sparse primal solution
+   * @brief Pass a primal solution. If index is not a null pointer,
+   * then it is assumed that value contains num_entries of packed
+   * values, with index defing the corresponding primal solution
+   * components. If index is a null pointer, then value is assumed to
+   * be a full primal solution.
+   *
+   * It allows a full primal solution to be passed (for MIPs) without
+   * requiring either a HighsSolution that contains (empty vectors of)
+   * spurious dual information, or a full list of indices
    */
   HighsStatus setSolution(const HighsInt num_entries, const HighsInt* index,
                           const double* value);
@@ -1297,6 +1331,7 @@ class Highs {
   /**
    * @brief Interpret common qualifiers to string values
    */
+  std::string highsStatusToString(const HighsStatus status) const;
   std::string presolveStatusToString(
       const HighsPresolveStatus presolve_status) const;
   std::string modelStatusToString(const HighsModelStatus model_status) const;
