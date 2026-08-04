@@ -1461,7 +1461,7 @@ HPresolve::Result HPresolve::stronglyConnectedComponents() {
 
   const HighsInt numNodes = 2 * model->num_col_;
   std::vector<HighsInt> stronglyConnectedComponents(numNodes, -1);
-  std::vector<bool> infeasibleNodes(numNodes);
+  std::vector<uint8_t> infeasibleNodes(numNodes);
   bool infeasible = false;
   cliquetable.tarjan(stronglyConnectedComponents, infeasibleNodes, infeasible);
 

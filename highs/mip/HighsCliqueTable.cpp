@@ -2242,9 +2242,9 @@ void HighsCliqueTable::buildFrom(const HighsLp* origModel,
 }
 
 void HighsCliqueTable::strongConnect(
-    const HighsInt startNode, HighsInt& startPos, std::vector<bool>& onStack,
+    const HighsInt startNode, HighsInt& startPos, std::vector<uint8_t>& onStack,
     std::vector<HighsInt>& index, std::vector<HighsInt>& lowLink,
-    std::vector<bool>& infeasibleNodes, std::vector<HighsInt>& stack,
+    std::vector<uint8_t>& infeasibleNodes, std::vector<HighsInt>& stack,
     std::vector<HighsInt>& predStack, std::vector<HighsInt>& stackNextClique,
     std::vector<HighsInt>& stackNextCliqueVar,
     const std::vector<HighsInt>& cliqueStart,
@@ -2442,7 +2442,7 @@ void HighsCliqueTable::strongConnect(
 
 void HighsCliqueTable::tarjan(
     std::vector<HighsInt>& stronglyConnectedComponents,
-    std::vector<bool>& infeasibleNodes, bool& infeasible) const {
+    std::vector<uint8_t>& infeasibleNodes, bool& infeasible) const {
   // Run an iterative version of tarjan's algorithm to detect strongly connected
   // components (directed cycles) in the clique table and infeasible
   // literal assignments.
@@ -2520,7 +2520,7 @@ void HighsCliqueTable::tarjan(
   // "actual" entries (starting now at 1).
   std::vector<HighsInt> cliqueFirstEntry(cliques.size(), 0);
   std::vector<HighsInt> cliqueCurrExit(cliques.size(), 0);
-  std::vector<bool> onStack(n, false);
+  std::vector<uint8_t> onStack(n, false);
 
   HighsInt startPos = 0;
 

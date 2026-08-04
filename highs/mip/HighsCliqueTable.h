@@ -324,23 +324,21 @@ class HighsCliqueTable {
 
   void buildFrom(const HighsLp* origModel, const HighsCliqueTable& init);
 
-  void strongConnect(HighsInt startNode, HighsInt& startPos,
-                     std::vector<bool>& onStack, std::vector<HighsInt>& index,
-                     std::vector<HighsInt>& lowLink,
-                     std::vector<bool>& infeasibleNodes,
-                     std::vector<HighsInt>& stack,
-                     std::vector<HighsInt>& predStack,
-                     std::vector<HighsInt>& stackNextClique,
-                     std::vector<HighsInt>& stackNextCliqueVar,
-                     const std::vector<HighsInt>& cliqueStart,
-                     const std::vector<HighsInt>& cliqueIndex,
-                     std::vector<HighsInt>& cliqueFirstEntry,
-                     std::vector<HighsInt>& cliqueCurrExit,
-                     std::vector<HighsInt>& stronglyConnectedComponents,
-                     bool& infeasible) const;
+  void strongConnect(
+      HighsInt startNode, HighsInt& startPos, std::vector<uint8_t>& onStack,
+      std::vector<HighsInt>& index, std::vector<HighsInt>& lowLink,
+      std::vector<uint8_t>& infeasibleNodes, std::vector<HighsInt>& stack,
+      std::vector<HighsInt>& predStack, std::vector<HighsInt>& stackNextClique,
+      std::vector<HighsInt>& stackNextCliqueVar,
+      const std::vector<HighsInt>& cliqueStart,
+      const std::vector<HighsInt>& cliqueIndex,
+      std::vector<HighsInt>& cliqueFirstEntry,
+      std::vector<HighsInt>& cliqueCurrExit,
+      std::vector<HighsInt>& stronglyConnectedComponents,
+      bool& infeasible) const;
 
   void tarjan(std::vector<HighsInt>& stronglyConnectedComponents,
-              std::vector<bool>& infeasibleNodes, bool& infeasible) const;
+              std::vector<uint8_t>& infeasibleNodes, bool& infeasible) const;
 
   HighsInt numCliques() const { return cliques.size() - freeslots.size(); }
 
