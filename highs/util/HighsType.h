@@ -14,6 +14,8 @@
 
 #include "util/HighsInt.h"
 
+// vector<bool> is not thread-safe, so HiGHS uses vector<HighsBool>
+
 typedef uint8_t HighsBool;
 
 #endif
