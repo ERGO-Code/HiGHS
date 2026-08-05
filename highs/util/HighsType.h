@@ -5,12 +5,12 @@
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-/**@file HighsInt.h
- * @brief The definition for the integer type to use
+/**@file HighsType.h
+ * @brief The definition for basic types to use
  */
 
-#ifndef UTIL_HIGHS_INT_H_
-#define UTIL_HIGHS_INT_H_
+#ifndef UTIL_HIGHS_TYPE_H_
+#define UTIL_HIGHS_TYPE_H_
 
 #include <stdint.h>
 

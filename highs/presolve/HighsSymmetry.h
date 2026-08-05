@@ -20,7 +20,7 @@
 #include "lp_data/HighsLp.h"
 #include "util/HighsDisjointSets.h"
 #include "util/HighsHash.h"
-#include "util/HighsInt.h"
+#include "util/HighsType.h"
 
 /// class that is responsible for assigning distinct colors for each distinct
 /// double value

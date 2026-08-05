@@ -12,7 +12,7 @@
 #include <utility>
 #include <vector>
 
-#include "util/HighsInt.h"
+#include "util/HighsType.h"
 
 class HighsDynamicRowMatrix {
  private:

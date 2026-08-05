@@ -13,7 +13,7 @@
 
 #include <vector>
 
-#include "util/HighsInt.h"
+#include "util/HighsType.h"
 
 // using std::map;
 using std::vector;
