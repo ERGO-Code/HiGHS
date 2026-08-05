@@ -91,7 +91,7 @@ phases. These options override any other behaviour enforced by other options. If
 phase is both forced and forbidden, the default behaviour is used instead. 
 For instance, setting `hipo\_parallel\_force` to 81 = 1+16+64 and `hipo\_parallel\_forbid` 
 to 68 = 4+64  forces the use of parallelism in the analyse phase and for building the 
-normal equations structure, and forbids it for the reordering of augmented system. 
+normal equations values, and forbids it for the reordering of augmented system. 
 
 The extent to which parallelism is used in HiPO depends on the value of the
 [threads](@ref option-threads) option (see above).
