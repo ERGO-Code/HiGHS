@@ -1372,12 +1372,12 @@ void HighsMipSolverData::performRestart() {
 
     HighsInt numCol = basis.col_status.size();
     for (HighsInt i = 0; i < numCol; ++i)
-      root_basis.col_status[postSolveStack.getOrigColIndex()[i]] =
+      root_basis.col_status[postSolveStack.getOrigColIndex(i)] =
           basis.col_status[i];
 
     HighsInt numRow = basis.row_status.size();
     for (HighsInt i = 0; i < numRow; ++i)
-      root_basis.row_status[postSolveStack.getOrigRowIndex()[i]] =
+      root_basis.row_status[postSolveStack.getOrigRowIndex(i)] =
           basis.row_status[i];
 
     mipsolver.rootbasis = &root_basis;
@@ -1501,7 +1501,7 @@ void HighsMipSolverData::basisTransfer() {
          ++i) {
       if (!postSolveStack.isOrigRow(i)) break;
       HighsBasisStatus status =
-          mipsolver.rootbasis->row_status[postSolveStack.getOrigRowIndex()[i]];
+          mipsolver.rootbasis->row_status[postSolveStack.getOrigRowIndex(i)];
       firstrootbasis.row_status[i] = status;
     }
 
@@ -1510,7 +1510,7 @@ void HighsMipSolverData::basisTransfer() {
          ++i) {
       if (!postSolveStack.isOrigCol(i)) break;
       HighsBasisStatus status =
-          mipsolver.rootbasis->col_status[postSolveStack.getOrigColIndex()[i]];
+          mipsolver.rootbasis->col_status[postSolveStack.getOrigColIndex(i)];
       firstrootbasis.col_status[i] = status;
     }
   }

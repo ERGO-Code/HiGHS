@@ -48,7 +48,7 @@ namespace presolve {
 void HPresolve::debugPrintRow(HighsPostsolveStack& postsolve_stack,
                               HighsInt row) {
   printf("(row %" HIGHSINT_FORMAT ") %.15g (impl: %.15g) <= ",
-         postsolve_stack.getOrigRowIndex()[row], model->row_lower_[row],
+         postsolve_stack.getOrigRowIndex(row), model->row_lower_[row],
          impliedRowBounds.getSumLower(row));
 
   for (const HighsSliceNonzero& nonzero : getSortedRowVector(row)) {
@@ -59,7 +59,7 @@ void HPresolve::debugPrintRow(HighsPostsolveStack& postsolve_stack,
                                                                        : 'x';
     char signchar = nonzero.value() < 0 ? '-' : '+';
     printf("%c%g %c%" HIGHSINT_FORMAT " ", signchar, std::abs(nonzero.value()),
-           colchar, postsolve_stack.getOrigColIndex()[nonzero.index()]);
+           colchar, postsolve_stack.getOrigColIndex(nonzero.index()));
   }
 
   printf("<= %.15g (impl: %.15g)\n", model->row_upper_[row],
@@ -9214,16 +9214,16 @@ void HPresolve::debug(const HighsLp& lp, const HighsOptions& options) {
     temp_sol.col_dual.resize(model.num_col_);
     temp_sol.col_value.resize(model.num_col_);
     for (HighsInt i = 0; i != model.num_col_; ++i) {
-      temp_sol.col_dual[i] = sol.col_dual[tmp.getOrigColIndex()[i]];
-      temp_sol.col_value[i] = sol.col_value[tmp.getOrigColIndex()[i]];
-      temp_basis.col_status[i] = basis.col_status[tmp.getOrigColIndex()[i]];
+      temp_sol.col_dual[i] = sol.col_dual[tmp.getOrigColIndex(i)];
+      temp_sol.col_value[i] = sol.col_value[tmp.getOrigColIndex(i)];
+      temp_basis.col_status[i] = basis.col_status[tmp.getOrigColIndex(i)];
     }
 
     temp_basis.row_status.resize(model.num_row_);
     temp_sol.row_dual.resize(model.num_row_);
     for (HighsInt i = 0; i != model.num_row_; ++i) {
-      temp_sol.row_dual[i] = sol.row_dual[tmp.getOrigRowIndex()[i]];
-      temp_basis.row_status[i] = basis.row_status[tmp.getOrigRowIndex()[i]];
+      temp_sol.row_dual[i] = sol.row_dual[tmp.getOrigRowIndex(i)];
+      temp_basis.row_status[i] = basis.row_status[tmp.getOrigRowIndex(i)];
     }
     temp_sol.row_value.resize(model.num_row_);
     calculateRowValuesQuad(model, sol);
