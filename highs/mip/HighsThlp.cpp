@@ -67,7 +67,30 @@ void THLPData::init(int size) {
   O.assign(n, 0.0);
   D.assign(n, 0.0);
   node_names.resize(n);
+  
+  x.clear();
+  y.clear();
+  z.clear();
+  
+  x.resize(n);
+  for (int i = 0; i < n; i++) {
+    x[i].resize(n);
+    for (int k = 0; k < n; k++) {
+      x[i][k].resize(n, -1);
+    }
+  }
+  
+  y.resize(n);
+  for (int i = 0; i < n; i++) {
+    y[i].resize(n, -1);
+  }
+  
+  z.resize(n);
+  for (int i = 0; i < n; i++) {
+    z[i].resize(n, -1);
+  }
 }
+
 
 void THLPData::precompute() {
   for (int i = 0; i < n; i++) {
@@ -356,7 +379,7 @@ THLPSolution THLPDecoder::decode(const std::vector<double>& rk,
   }
   solution.feasible = (count == p);
 
-    if (solution.feasible) {
+  if (solution.feasible) {
     solution.total_cost = calculateCost(solution);
   } else {
     solution.total_cost = 1e9;
@@ -545,7 +568,6 @@ for (int k = 0; k < p; k++) {
     }
 }   
   }
-  
   binary_solution = solution.full_solution;
 
   return solution;
@@ -2057,7 +2079,6 @@ void RKOOptimizer::printSummary() const {
 // ============================================================================
 // 21. CAB PARSER
 // ============================================================================
-
 bool THLPData::parseCABFile(const std::string& filename, int p_,
                             double alpha_) {
   std::ifstream file(filename);
@@ -2169,7 +2190,7 @@ bool THLPData::parseAPFile(const std::string& filename, int p_,
 }
 
 // ============================================================================
-// 23. mlp model
+// 23. LP FORMULATION
 // ============================================================================
 bool THLPData::formLp(
     HighsInt& num_col, HighsInt& num_row, std::vector<double>& col_cost,
@@ -2182,6 +2203,10 @@ bool THLPData::formLp(
   //
   // The start, index and value vectors define the sparse constraint
   // matrix row-by-row
+
+  x.clear();
+  y.clear();
+  z.clear();
 
   num_col = 0;
   HighsInt num_integer_var = 0;
