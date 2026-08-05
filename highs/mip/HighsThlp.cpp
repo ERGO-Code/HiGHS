@@ -1908,8 +1908,6 @@ bool RKOOptimizer::solveTHLP(const THLPData& data,
 
       if (sol.ofv < best_rk_solution_.ofv) {
         best_rk_solution_ = sol;
-        best_binary_solution_ = binary_sol;
-        best_solution_ = decoder_->decode(sol.rk, best_binary_solution_);
       }
 
       updateElitePool(sol);
@@ -1932,8 +1930,6 @@ bool RKOOptimizer::solveTHLP(const THLPData& data,
 
     if (!elite_pool_.empty() && elite_pool_[0].ofv < best_rk_solution_.ofv) {
       best_rk_solution_ = elite_pool_[0];
-      best_solution_ =
-          decoder_->decode(best_rk_solution_.rk, best_binary_solution_);
     }
     printf("  Elite pool best: %.2f\n", elite_pool_[0].ofv);
   }
