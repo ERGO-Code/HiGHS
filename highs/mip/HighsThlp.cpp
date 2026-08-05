@@ -362,23 +362,35 @@ THLPSolution THLPDecoder::decode(const std::vector<double>& rk,
     solution.total_cost = 1e9;
   }
 
+  // ============================================================
   // Build full LP solution: x_ikm + y_km + z_ik
+  // ============================================================
   solution.full_solution.clear();
-  
-  // x_ikm: n*n*n
+  int total_vars = n*n*n + n*n + n*n;
+  solution.full_solution.resize(total_vars, 0.0);
+
+  // ============================================================
+  // 1. z_ik: assignment decisions
+  // ============================================================
   for (int i = 0; i < n; i++) {
     for (int k = 0; k < n; k++) {
-      for (int m = 0; m < n; m++) {
-        double x_val = 0.0;
-        if (solution.assignment[i] == k && m == k) x_val = 1.0;
-        solution.full_solution.push_back(x_val);
-      }
+      double z_val = 0.0;
+      if (solution.assignment[i] == k) z_val = 1.0;
+      solution.full_solution[data_.z[i][k]] = z_val;
     }
   }
-  
-  // y_km: n*n
+
+  // ============================================================
+  // 2. y_km: hub tree edges - only for m > k
+  // ============================================================
   for (int k = 0; k < n; k++) {
     for (int m = 0; m < n; m++) {
+      if (m <= k) {
+        // Invalid variable, keep as 0
+        solution.full_solution[data_.y[k][m]] = 0.0;
+        continue;
+      }
+      
       double y_val = 0.0;
       bool k_is_hub = false, m_is_hub = false;
       for (int h = 0; h < p; h++) {
@@ -386,31 +398,158 @@ THLPSolution THLPDecoder::decode(const std::vector<double>& rk,
         if (solution.hubs[h] == m) m_is_hub = true;
       }
       if (k_is_hub && m_is_hub) {
-        for (size_t e = 0; e < solution.hub_tree.size(); e++) {
-          if ((solution.hub_tree[e].first == k && solution.hub_tree[e].second == m) ||
-              (solution.hub_tree[e].first == m && solution.hub_tree[e].second == k)) {
+        for (auto& edge : solution.hub_tree) {
+          if ((edge.first == k && edge.second == m) ||
+              (edge.first == m && edge.second == k)) {
             y_val = 1.0;
             break;
           }
         }
       }
-      solution.full_solution.push_back(y_val);
+      solution.full_solution[data_.y[k][m]] = y_val;
     }
   }
-  
-  // z_ik: n*n
+
+   // ============================================================
+  // 3. x_ikm: flow computation - directly constructed from flow conservation
+  // ============================================================
   for (int i = 0; i < n; i++) {
-    for (int k = 0; k < n; k++) {
-      double z_val = 0.0;
-      if (solution.assignment[i] == k) z_val = 1.0;
-      solution.full_solution.push_back(z_val);
+    int hub_i = solution.assignment[i];
+    if (hub_i < 0) continue;
+    
+    // Find the hub index for source node i
+    int root_idx = -1;
+    for (int h = 0; h < p; h++) {
+      if (solution.hubs[h] == hub_i) {
+        root_idx = h;
+        break;
+      }
     }
+    if (root_idx < 0) continue;
+    
+    // ============================================================
+    // Step 1: Build hub tree adjacency list (hub nodes only)
+    // ============================================================
+    std::vector<std::vector<int>> hub_adj(p);
+    for (auto& edge : solution.hub_tree) {
+      int u = -1, v = -1;
+      for (int h = 0; h < p; h++) {
+        if (solution.hubs[h] == edge.first) u = h;
+        if (solution.hubs[h] == edge.second) v = h;
+      }
+      if (u >= 0 && v >= 0) {
+        hub_adj[u].push_back(v);
+        hub_adj[v].push_back(u);
+      }
+    }
+    
+    // ============================================================
+    // Step 2: Compute net flow R_k for each hub
+    // R_k = O[i] * z[i][k] - sum W[i][m] * z[m][k]
+    // ============================================================
+    std::vector<double> R(p, 0.0);
+    
+    for (int k = 0; k < p; k++) {
+      int hub_k = solution.hubs[k];
+      
+      // First term: O[i] * z[i][k]
+      R[k] = data_.O[i] * solution.full_solution[data_.z[i][hub_k]];
+      
+      // Second term: sum W[i][m] * z[m][k]
+      for (int m = 0; m < n; m++) {
+        if (m == i) continue;
+        if (data_.W[i][m] == 0) continue;
+        if (solution.assignment[m] == hub_k) {
+          R[k] -= data_.W[i][m];
+        }
+      }
+    }
+    
+    // ============================================================
+    // Step 3: Propagate flow on the hub tree
+    // ============================================================
+    
+    // 3.1 Root the tree at root_idx
+    std::vector<int> parent(p, -1);
+    std::vector<std::vector<int>> children(p);
+    std::queue<int> bfs_queue;
+    bfs_queue.push(root_idx);
+    parent[root_idx] = root_idx;
+    
+    while (!bfs_queue.empty()) {
+      int u = bfs_queue.front();
+      bfs_queue.pop();
+      for (int v : hub_adj[u]) {
+        if (parent[v] == -1) {
+          parent[v] = u;
+          children[u].push_back(v);
+          bfs_queue.push(v);
+        }
+      }
+    }
+    
+    // 3.2 Compute subtree net flow sum from leaves to root
+    std::vector<double> subtree_sum(p, 0.0);
+    for (int k = 0; k < p; k++) {
+      subtree_sum[k] = R[k];
+    }
+
+    // Find all leaves
+    std::queue<int> leaf_queue;
+    for (int k = 0; k < p; k++) {
+      if (children[k].empty() && k != root_idx) {
+        leaf_queue.push(k);
+      }
+    }
+    
+    // Accumulate from leaves to root
+    while (!leaf_queue.empty()) {
+      int leaf = leaf_queue.front();
+      leaf_queue.pop();
+      
+      if (parent[leaf] == -1 || parent[leaf] == leaf) continue;
+      
+      int par = parent[leaf];
+      subtree_sum[par] += subtree_sum[leaf];
+      
+      auto& siblings = children[par];
+      siblings.erase(std::remove(siblings.begin(), siblings.end(), leaf), siblings.end());
+      
+      if (children[par].empty() && par != root_idx) {
+        leaf_queue.push(par);
+      }
+    }
+    
+   // ============================================================
+// Step 4: Assign x_ikm based on subtree net flow
+// ============================================================
+for (int k = 0; k < p; k++) {
+    if (parent[k] != -1 && parent[k] != k) {
+        int par = parent[k];
+        double flow = subtree_sum[k];
+        
+        if (fabs(flow) < 1e-10) continue;
+        
+        int hub_par = solution.hubs[par];
+        int hub_k = solution.hubs[k];
+        
+        if (flow > 0) {
+            // Child k has net outflow, flow goes from k to par
+            int idx = data_.x[i][hub_k][hub_par];
+            solution.full_solution[idx] += flow;
+        } else {
+            // Child k has net inflow, flow goes from par to k
+            int idx = data_.x[i][hub_par][hub_k];
+            solution.full_solution[idx] += (-flow);
+        }
+    }
+}   
   }
   
   binary_solution = solution.full_solution;
 
   return solution;
-}
+} 
 
 double THLPDecoder::evaluate(RkoSolution& sol,
                              std::vector<double>& binary_solution) {
@@ -1667,9 +1806,6 @@ bool RKOOptimizer::runSingleAlgorithm(
 void RKOOptimizer::updateBest(const RkoSolution& sol) {
   if (sol.ofv < best_rk_solution_.ofv) {
     best_rk_solution_ = sol;
-    if (decoder_ != NULL) {
-      best_solution_ = decoder_->decode(sol.rk, best_binary_solution_);
-    }
   }
 }
 
@@ -1739,9 +1875,9 @@ bool RKOOptimizer::solveTHLP(const THLPData& data,
       THLPSolution check = decoder_->decode(sol.rk, temp_bin);
       if (check.feasible) {
         feasible_runs++;
-        printf(" → %.2f (%.2fs)\n", sol.ofv, elapsed);
+        printf(" -> %.2f (%.2fs)\n", sol.ofv, elapsed);
       } else {
-        printf(" → infeasible (%.2fs)\n", elapsed);
+        printf(" -> infeasible (%.2fs)\n", elapsed);
       }
 
       if (sol.ofv < best_for_algo) {
@@ -1780,6 +1916,98 @@ bool RKOOptimizer::solveTHLP(const THLPData& data,
     printf("  Elite pool best: %.2f\n", elite_pool_[0].ofv);
   }
 
+   if (best_rk_solution_.ofv < std::numeric_limits<double>::infinity()) {
+    best_solution_ = decoder_->decode(best_rk_solution_.rk, best_binary_solution_);
+  }
+  
+  // Print statistics of the optimal solution's full_solution
+int non_zero_x = 0, non_zero_y = 0, non_zero_z = 0;
+int n = data.n;
+for (int i = 0; i < n; i++) {
+    for (int k = 0; k < n; k++) {
+        for (int m = 0; m < n; m++) {
+            if (best_solution_.full_solution[data.x[i][k][m]] > 1e-10) non_zero_x++;
+        }
+    }
+}
+for (int k = 0; k < n; k++) {
+    for (int m = 0; m < n; m++) {
+        if (best_solution_.full_solution[data.y[k][m]] > 1e-10) non_zero_y++;
+    }
+}
+for (int i = 0; i < n; i++) {
+    for (int k = 0; k < n; k++) {
+        if (best_solution_.full_solution[data.z[i][k]] > 1e-10) non_zero_z++;
+    }
+}
+printf("Optimal solution: x nonzeros=%d, y nonzeros=%d, z nonzeros=%d\n", 
+       non_zero_x, non_zero_y, non_zero_z);
+printf("full_solution size = %zu\n", best_solution_.full_solution.size());
+
+printf("\n=== Validating RKO solution against formLp constraints ===\n");
+bool valid = true;
+
+// 1. Check z_ik
+for (int i = 0; i < n; i++) {
+    int sum_z = 0;
+    for (int k = 0; k < n; k++) {
+        if (best_solution_.full_solution[data.z[i][k]] > 0.5) sum_z++;
+    }
+    if (sum_z != 1) {
+        printf("  CONSTRAINT VIOLATION: Node %d has %d hubs (should be 1)\n", i, sum_z);
+        valid = false;
+    }
+}
+
+// 2. Check y_km
+int y_sum = 0;
+for (int k = 0; k < n; k++) {
+    for (int m = k+1; m < n; m++) {
+        if (best_solution_.full_solution[data.y[k][m]] > 0.5) y_sum++;
+    }
+}
+if (y_sum != data.p - 1) {
+    printf("  CONSTRAINT VIOLATION: y has %d edges (should be %d)\n", y_sum, data.p - 1);
+    valid = false;
+}
+
+// 3. Check flow conservation
+for (int i = 0; i < n; i++) {
+    for (int k = 0; k < n; k++) {
+        if (i == k) continue;
+        
+        // lhs = sum x_ikm - sum x_imk (outflow - inflow)
+        double lhs = 0.0;
+        for (int m = 0; m < n; m++) {
+            if (m == k) continue;
+            lhs += best_solution_.full_solution[data.x[i][k][m]];
+        }
+        for (int m = 0; m < n; m++) {
+            if (m == k) continue;
+            lhs -= best_solution_.full_solution[data.x[i][m][k]];
+        }
+        
+        // rhs = O[i] * z[i][k] - sum W[i][m] * z[m][k]
+        double rhs = data.O[i] * best_solution_.full_solution[data.z[i][k]];
+        for (int m = 0; m < n; m++) {
+            rhs -= data.W[i][m] * best_solution_.full_solution[data.z[m][k]];
+        }
+        
+        if (fabs(lhs - rhs) > 1e-6) {
+            printf("  CONSTRAINT VIOLATION: Flow conservation failed for i=%d, k=%d: diff=%f\n", 
+                   i, k, fabs(lhs-rhs));
+            valid = false;
+        }
+    }
+}
+
+if (valid) {
+    printf("  ✅ RKO solution is a VALID feasible solution for formLp!\n");
+} else {
+    printf("  ❌ RKO solution is NOT a valid feasible solution for formLp.\n");
+}
+
+// ============================================================
   // Sort results
   std::sort(results.begin(), results.end(),
             [](const std::pair<std::string, double>& a,

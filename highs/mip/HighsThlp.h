@@ -27,10 +27,9 @@ struct THLPData {
   std::vector<double> O;
   std::vector<double> D;
   std::vector<std::string> node_names;
-
-  std::vector<std::vector<std::vector<HighsInt>>>x;
-  std::vector<std::vector<HighsInt>>y;
-  std::vector<std::vector<HighsInt>>z;
+  std::vector<std::vector<std::vector<HighsInt>>> x;
+  std::vector<std::vector<HighsInt>> y;
+  std::vector<std::vector<HighsInt>> z;
 
   void init(int size);
   void precompute();
