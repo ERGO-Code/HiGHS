@@ -1646,7 +1646,7 @@ TEST_CASE("rko-knapsack", "[highs_test_mip_solver]") {
 }
 
 TEST_CASE("rko-thlp", "[highs_test_mip_solver]") {
-  std::string model =  "cab15"; //"cab25"; //  "cab10"; //
+  std::string model =  "cab25"; //  "cab10"; //"cab15"; //
   std::string filename = std::string(HIGHS_DIR) + "/check/instances/" + model + ".txt";
 
   HighsLp lp;
@@ -1656,6 +1656,9 @@ TEST_CASE("rko-thlp", "[highs_test_mip_solver]") {
   h.setOptionValue(kPresolveString, kHighsOffString);
   h.setOptionValue(kParallelString, kHighsOnString);
   REQUIRE(h.passModel(lp) == HighsStatus::kOk);
+  if (dev_run)
+    h.writeModel(model + ".mps");
+  
   h.run();
 
   h.resetGlobalScheduler(true);
