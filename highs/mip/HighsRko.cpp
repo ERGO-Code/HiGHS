@@ -29,7 +29,7 @@ bool rkoHeuristic(const HighsLp* lp, std::vector<double>& solution) {
     printf("Calling the RKO heuristic for a THLP problem with n = %d\n",
            int(lp->thlp_data_.n));
     RKOConfig config;
-    const bool dev_run = true;
+    const bool dev_run = false;
     if (dev_run) {
       config.num_algorithms = 1;
       config.num_runs = 1;

@@ -2119,22 +2119,26 @@ bool THLPData::parseCABFile(const std::string& filename, int p_,
     return false;
   }
 
+  // Find the maximum node index
   int maxNode = 0;
-  for (std::vector<std::tuple<int, int, double, double> >::const_iterator it =
-           entries.begin();
-       it != entries.end(); ++it) {
-    maxNode = std::max(maxNode, std::max(std::get<0>(*it), std::get<1>(*it)));
+  for (auto& entry : entries) {
+    int u = std::get<0>(entry);
+    int v = std::get<1>(entry);
+    if (u > maxNode) maxNode = u;
+    if (v > maxNode) maxNode = v;
   }
+
+  // Set n to maxNode + 1 (nodes are indexed from 0 to maxNode)
   this->n = maxNode + 1;
   this->init(this->n);
 
-  for (std::vector<std::tuple<int, int, double, double> >::const_iterator it =
-           entries.begin();
-       it != entries.end(); ++it) {
-    int i = std::get<0>(*it);
-    int j = std::get<1>(*it);
-    this->W[i][j] = std::get<2>(*it);
-    this->C[i][j] = std::get<3>(*it) * 1e-4;
+  // Fill W and C matrices with the parsed data
+  for (auto& entry : entries) {
+    int i = std::get<0>(entry);
+    int j = std::get<1>(entry);
+    if (i >= this->n || j >= this->n) continue;
+    this->W[i][j] = std::get<2>(entry);
+    this->C[i][j] = std::get<3>(entry) * 1e-4;
   }
 
   this->precompute();

@@ -1654,6 +1654,7 @@ TEST_CASE("rko-thlp", "[highs_test_mip_solver]") {
   REQUIRE(thlp_ok);
   Highs h;
   h.setOptionValue(kPresolveString, kHighsOffString);
+  h.setOptionValue(kParallelString, kHighsOnString);
   REQUIRE(h.passModel(lp) == HighsStatus::kOk);
   h.run();
 
