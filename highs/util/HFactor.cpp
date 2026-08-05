@@ -281,7 +281,7 @@ void HFactor::setupGeneral(
   mr_count_before.resize(num_row);
   mr_index.resize(basis_matrix_limit_size * kMRExtraEntriesMultiplier);
 
-  mwz_column_mark.assign(num_row, 0);
+  mwz_column_mark.assign(num_row, false);
   mwz_column_index.resize(num_row);
   mwz_column_array.assign(num_row, 0);
 
@@ -1117,7 +1117,7 @@ HighsInt HFactor::buildKernel() {
       const double value = mc_value[k] / pivot_multiplier;
       mwz_column_index[mwz_column_count++] = iRow;
       mwz_column_array[iRow] = value;
-      mwz_column_mark[iRow] = 1;
+      mwz_column_mark[iRow] = true;
       l_index.push_back(iRow);
       l_value.push_back(value);
       mr_count_before[iRow] = mr_count[iRow];
@@ -1157,7 +1157,7 @@ HighsInt HFactor::buildKernel() {
         HighsInt iRow = mc_index[my_k];
         double value = mc_value[my_k];
         if (mwz_column_mark[iRow]) {
-          mwz_column_mark[iRow] = 0;
+          mwz_column_mark[iRow] = false;
           nFillin--;
           value -= my_pivot * mwz_column_array[iRow];
           if (fabs(value) < kHighsTiny) {
@@ -1231,7 +1231,7 @@ HighsInt HFactor::buildKernel() {
 
       // 2.4.5. Reset pivot column mark
       for (HighsInt i = 0; i < mwz_column_count; i++)
-        mwz_column_mark[mwz_column_index[i]] = 1;
+        mwz_column_mark[mwz_column_index[i]] = true;
 
       // 2.4.6. Fix max value and link list
       colFixMax(iCol);
@@ -1243,7 +1243,7 @@ HighsInt HFactor::buildKernel() {
 
     // 2.5. Clear pivot column buffer
     for (HighsInt i = 0; i < mwz_column_count; i++)
-      mwz_column_mark[mwz_column_index[i]] = 0;
+      mwz_column_mark[mwz_column_index[i]] = false;
 
     // 2.6. Correct row links for the remain active part
     for (HighsInt i = start_A; i < end_A; i++) {

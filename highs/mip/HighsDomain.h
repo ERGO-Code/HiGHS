@@ -162,7 +162,7 @@ class HighsDomain {
     HighsCutPool* cutpool;
     std::vector<HighsCDouble> activitycuts_;
     std::vector<HighsInt> activitycutsinf_;
-    std::vector<HighsBool> propagatecutflags_;
+    std::vector<uint8_t> propagatecutflags_;
     std::vector<HighsInt> propagatecutinds_;
     std::vector<double> capacityThreshold_;
 
@@ -198,7 +198,7 @@ class HighsDomain {
     HighsConflictPool* conflictpool_;
     std::vector<HighsInt> colLowerWatched_;
     std::vector<HighsInt> colUpperWatched_;
-    std::vector<HighsBool> conflictFlag_;
+    std::vector<uint8_t> conflictFlag_;
     std::vector<HighsInt> propagateConflictInds_;
 
     struct WatchedLiteral {
@@ -467,7 +467,7 @@ class HighsDomain {
     changedcols_.resize(start);
   }
 
-  bool isChangedCol(HighsInt col) const { return changedcolsflags_[col] != 0; }
+  bool isChangedCol(HighsInt col) const { return changedcolsflags_[col]; }
 
   void markPropagate(HighsInt row);
 

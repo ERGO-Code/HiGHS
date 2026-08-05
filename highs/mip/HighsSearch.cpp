@@ -264,8 +264,8 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters,
   upbound.resize(numfrac, getCurrentLowerBound());
   downbound.resize(numfrac, getCurrentLowerBound());
 
-  upscorereliable.resize(numfrac, 0);
-  downscorereliable.resize(numfrac, 0);
+  upscorereliable.resize(numfrac, false);
+  downscorereliable.resize(numfrac, false);
 
   // initialize up and down scores of variables that have a
   // reliable pseudocost so that they do not get evaluated

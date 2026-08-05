@@ -116,8 +116,8 @@ class HEkkDualRHS {
                        //!< infeasibilities
   HighsInt workCount;  //!< Number of rows in list with greatest primal
                        //!< infeasibilities
-  std::vector<char> workMark;  //!< Flag set if row is in list of those with
-                               //!< greatest primal infeasibilities
+  std::vector<HighsBool> workMark;  //!< Flag set if row is in list of those
+                                   //!< with greatest primal infeasibilities
   std::vector<HighsInt>
       workIndex;  //!< List of rows with greatest primal infeasibilities
   std::vector<double> work_infeasibility;

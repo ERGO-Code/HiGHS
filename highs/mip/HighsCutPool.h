@@ -159,7 +159,7 @@ class HighsCutPool {
 
   void separateLpCutsAfterRestart(HighsCutSet& cutset);
 
-  bool cutIsIntegral(HighsInt cut) const { return (rowintegral[cut] != 0); }
+  bool cutIsIntegral(HighsInt cut) const { return rowintegral[cut]; }
 
   HighsInt getNumCuts() const {
     return matrix_.getNumRows() - matrix_.getNumDelRows();

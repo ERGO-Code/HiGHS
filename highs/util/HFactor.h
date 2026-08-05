@@ -408,7 +408,7 @@ class HFactor {
 
   // Kernel column buffer
   vector<HighsInt> mwz_column_index;
-  vector<char> mwz_column_mark;
+  vector<HighsBool> mwz_column_mark;
   vector<double> mwz_column_array;
 
   // Count link list

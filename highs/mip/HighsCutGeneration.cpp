@@ -1209,7 +1209,7 @@ bool HighsCutGeneration::generateConflict(const HighsDomain& localdomain,
   lpRelaxation.getMipSolver().mipdata_->debugSolution.checkCut(
       inds, vals, rowlen, proofrhs);
 
-  complementation.assign(rowlen, 0);
+  complementation.assign(rowlen, false);
 
   upper.resize(rowlen);
   solval.resize(rowlen);

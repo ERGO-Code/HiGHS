@@ -49,9 +49,7 @@ class HighsDynamicRowMatrix {
  public:
   HighsDynamicRowMatrix(HighsInt ncols);
 
-  bool columnsLinked(HighsInt rowindex) const {
-    return (colsLinked[rowindex] != 0);
-  }
+  bool columnsLinked(HighsInt rowindex) const { return colsLinked[rowindex]; }
 
   void unlinkColumns(HighsInt rowindex);
 
