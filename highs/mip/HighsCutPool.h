@@ -58,11 +58,11 @@ class HighsCutPool {
   std::vector<int16_t> ages_;
   std::deque<std::atomic<int16_t>> numLps_;
   std::deque<std::atomic<uint8_t>>
-      ageResetWhileLocked_;         // Was the cut propagated?
-  std::vector<uint8_t> hasSynced_;  // Has the cut been globally synced?
+      ageResetWhileLocked_;           // Was the cut propagated?
+  std::vector<HighsBool> hasSynced_;  // Has the cut been globally synced?
   std::vector<double> rownormalization_;
   std::vector<double> maxabscoef_;
-  std::vector<uint8_t> rowintegral;
+  std::vector<HighsBool> rowintegral;
   std::unordered_multimap<uint64_t, HighsInt> hashToCutMap;
   std::vector<HighsDomain::CutpoolPropagation*> propagationDomains;
   std::set<std::pair<HighsInt, HighsInt>> propRows;

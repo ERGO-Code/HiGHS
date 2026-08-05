@@ -196,7 +196,7 @@ HighsStatus HighsCallbackInput::setSolution(HighsInt num_entries,
 
   HighsStatus return_status = HighsStatus::kOk;
   HighsInt num_duplicates = 0;
-  std::vector<uint8_t> is_set(lp.num_col_, false);
+  std::vector<HighsBool> is_set(lp.num_col_, false);
 
   for (HighsInt iX = 0; iX < num_entries; iX++) {
     HighsInt iCol = index[iX];

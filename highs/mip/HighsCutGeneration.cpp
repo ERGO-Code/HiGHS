@@ -221,12 +221,12 @@ bool HighsCutGeneration::separateLiftedMixedBinaryCover() {
   HighsInt coversize = cover.size();
   std::vector<double> S;
   S.resize(coversize);
-  std::vector<uint8_t> coverflag;
+  std::vector<HighsBool> coverflag;
   coverflag.resize(rowlen);
 
   if (coversize == 0) return false;
 
-  for (HighsInt i = 0; i != coversize; ++i) coverflag[cover[i]] = 1;
+  for (HighsInt i = 0; i != coversize; ++i) coverflag[cover[i]] = true;
 
   pdqsort_branchless(cover.begin(), cover.end(),
                      [&](HighsInt a, HighsInt b) { return vals[a] > vals[b]; });
@@ -286,9 +286,9 @@ bool HighsCutGeneration::separateLiftedMixedIntegerCover() {
 
   HighsInt l = -1;
 
-  std::vector<uint8_t> coverflag;
+  std::vector<HighsBool> coverflag;
   coverflag.resize(rowlen);
-  for (HighsInt i : cover) coverflag[i] = 1;
+  for (HighsInt i : cover) coverflag[i] = true;
 
   auto comp = [&](HighsInt a, HighsInt b) { return vals[a] > vals[b]; };
   pdqsort_branchless(cover.begin(), cover.end(), comp);
@@ -1227,12 +1227,12 @@ bool HighsCutGeneration::generateConflict(const HighsDomain& localdomain,
     if (vals[i] < 0 && globaldom.col_upper_[col] != kHighsInf) {
       rhs -= globaldom.col_upper_[col] * vals[i];
       vals[i] = -vals[i];
-      complementation[i] = 1;
+      complementation[i] = true;
 
       solval[i] = globaldom.col_upper_[col] - solval[i];
     } else {
       rhs -= globaldom.col_lower_[col] * vals[i];
-      complementation[i] = 0;
+      complementation[i] = false;
       solval[i] = solval[i] - globaldom.col_lower_[col];
     }
 
@@ -1353,7 +1353,7 @@ void HighsCutGeneration::flipComplementation(HighsInt index) {
   assert(upper[index] != kHighsInf);
 
   // flip complementation
-  complementation[index] = 1 - complementation[index];
+  complementation[index] = !complementation[index];
   solval[index] = upper[index] - solval[index];
   rhs -= upper[index] * vals[index];
   vals[index] = -vals[index];

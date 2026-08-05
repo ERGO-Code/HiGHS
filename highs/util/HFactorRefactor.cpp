@@ -40,7 +40,7 @@ HighsInt HFactor::rebuild(HighsTimerClock* factor_timer_clock_pointer) {
   basis_matrix_num_el = 0;
   HighsInt stage = num_row;
   HighsInt rank_deficiency = 0;
-  std::vector<uint8_t> has_pivot;
+  std::vector<HighsBool> has_pivot;
   has_pivot.assign(num_row, false);
   const bool report_unit = false;
   const bool report_singletons = false;
@@ -209,7 +209,7 @@ HighsInt HFactor::rebuild(HighsTimerClock* factor_timer_clock_pointer) {
     // Need to know whether to consider matrix entries for FtranL
     // operation. Initially these correspond to all the rows without
     // pivots
-    std::vector<uint8_t> not_in_bump = has_pivot;
+    std::vector<HighsBool> not_in_bump = has_pivot;
     // Monitor density of FtranL result to possibly switch from exploiting
     // hyper-sparsity
     double expected_density = 0.0;

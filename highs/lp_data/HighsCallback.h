@@ -92,7 +92,7 @@ struct HighsCallback {
   HighsCCallbackType c_callback = nullptr;
   void* user_callback_data = nullptr;
   Highs* highs = nullptr;
-  std::vector<uint8_t> active;
+  std::vector<HighsBool> active;
   HighsCallbackOutput data_out;
   HighsCallbackInput data_in;
   bool callbackActive(const int callback_type);

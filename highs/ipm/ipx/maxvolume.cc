@@ -97,7 +97,7 @@ struct Maxvolume::Slice {
         lhs(m), row(n+m), work(m) {}
     Vector colscale;
     Vector invscale_basic;
-    std::vector<uint8_t> tblrow_used;
+    std::vector<HighsBool> tblrow_used;
     Vector colweights;
     IndexedVector lhs, row;
     Vector work;
@@ -209,7 +209,7 @@ Int Maxvolume::Driver(Basis& basis, Slice& slice) {
 
     Vector& colscale = slice.colscale;
     Vector& invscale_basic = slice.invscale_basic;
-    const std::vector<uint8_t>& tblrow_used = slice.tblrow_used;
+    const std::vector<HighsBool>& tblrow_used = slice.tblrow_used;
     Vector& colweights = slice.colweights;
     IndexedVector& lhs = slice.lhs;
     IndexedVector& row = slice.row;

@@ -182,7 +182,7 @@ class HighsSymmetryDetection {
   std::vector<HighsInt> orbitSize;
 
   std::vector<HighsInt> cellCreationStack;
-  std::vector<std::uint8_t> cellInRefinementQueue;
+  std::vector<HighsBool> cellInRefinementQueue;
   std::vector<HighsInt> refinementQueue;
   std::vector<HighsInt*> distinguishCands;
   std::vector<HighsInt> automorphisms;

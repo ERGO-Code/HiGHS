@@ -33,4 +33,6 @@ typedef unsigned int HighsUInt;
 #define HIGHSINT_FORMAT "d"
 #endif
 
+typedef uint8_t HighsBool;
+
 #endif

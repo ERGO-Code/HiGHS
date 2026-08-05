@@ -249,7 +249,7 @@ class HighsPostsolveStack {
   std::vector<std::pair<ReductionType, size_t>> reductions;
   std::vector<HighsInt> origColIndex;
   std::vector<HighsInt> origRowIndex;
-  std::vector<uint8_t> linearlyTransformable;
+  std::vector<HighsBool> linearlyTransformable;
 
   std::vector<Nonzero> rowValues;
   std::vector<Nonzero> colValues;

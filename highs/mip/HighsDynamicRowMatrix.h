@@ -35,7 +35,7 @@ class HighsDynamicRowMatrix {
   std::vector<HighsInt> AheadPos_;
   std::vector<HighsInt> AheadNeg_;
 
-  std::vector<uint8_t> colsLinked;
+  std::vector<HighsBool> colsLinked;
 
   /// vector of column sizes
 

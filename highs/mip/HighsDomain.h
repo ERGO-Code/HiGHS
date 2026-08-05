@@ -162,7 +162,7 @@ class HighsDomain {
     HighsCutPool* cutpool;
     std::vector<HighsCDouble> activitycuts_;
     std::vector<HighsInt> activitycutsinf_;
-    std::vector<uint8_t> propagatecutflags_;
+    std::vector<HighsBool> propagatecutflags_;
     std::vector<HighsInt> propagatecutinds_;
     std::vector<double> capacityThreshold_;
 
@@ -198,7 +198,7 @@ class HighsDomain {
     HighsConflictPool* conflictpool_;
     std::vector<HighsInt> colLowerWatched_;
     std::vector<HighsInt> colUpperWatched_;
-    std::vector<uint8_t> conflictFlag_;
+    std::vector<HighsBool> conflictFlag_;
     std::vector<HighsInt> propagateConflictInds_;
 
     struct WatchedLiteral {
@@ -297,7 +297,7 @@ class HighsDomain {
     void recomputeCapacityThreshold();
   };
 
-  std::vector<uint8_t> changedcolsflags_;
+  std::vector<HighsBool> changedcolsflags_;
   std::vector<HighsInt> changedcols_;
 
   std::vector<std::pair<HighsInt, HighsInt>> propRowNumChangedBounds_;
@@ -311,7 +311,7 @@ class HighsDomain {
   std::vector<HighsInt> activitymininf_;
   std::vector<HighsInt> activitymaxinf_;
   std::vector<double> capacityThreshold_;
-  std::vector<uint8_t> propagateflags_;
+  std::vector<HighsBool> propagateflags_;
   std::vector<HighsInt> propagateinds_;
   ObjectivePropagation objProp_;
 
@@ -446,7 +446,7 @@ class HighsDomain {
   void addConflictPool(HighsConflictPool& conflictPool);
 
   void clearChangedCols() {
-    for (HighsInt i : changedcols_) changedcolsflags_[i] = 0;
+    for (HighsInt i : changedcols_) changedcolsflags_[i] = false;
     changedcols_.clear();
   }
 
@@ -462,7 +462,7 @@ class HighsDomain {
 
   void clearChangedCols(size_t start) {
     for (size_t i = start; i != changedcols_.size(); ++i)
-      changedcolsflags_[changedcols_[i]] = 0;
+      changedcolsflags_[changedcols_[i]] = false;
 
     changedcols_.resize(start);
   }

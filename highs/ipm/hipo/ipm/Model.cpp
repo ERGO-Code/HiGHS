@@ -44,7 +44,7 @@ Int Model::init(const HighsLp& lp, const HighsHessian& Q) {
 void Model::nzBounds() {
   // compute lower and upper bounds for the number of nonzeros in normal
   // equations.
-  std::vector<uint8_t> mark(m_, false);
+  std::vector<HighsBool> mark(m_, false);
   NE_nz_lb_ = A_.num_row_;
   NE_nz_ub_ = A_.num_row_;
   for (Int col = 0; col < A_.num_col_; ++col) {
