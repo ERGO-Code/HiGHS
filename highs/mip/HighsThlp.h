@@ -18,6 +18,8 @@
 // #include "util/HighsInt.h"
 typedef int HighsInt;
 
+const bool kUseFullSolution = false;
+
 struct THLPData {
   int n = 0;
   int p = 0;

@@ -2031,7 +2031,10 @@ if (valid) {
   }
 
   solution = best_binary_solution_;
-  fullSolution(data, best_solution_, solution);
+  // Possibly over-write using full solution determined in
+  // fullSolution
+  if (kUseFullSolution) 
+    fullSolution(data, best_solution_, solution);
   return best_solution_.feasible;
 }
 

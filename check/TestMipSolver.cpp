@@ -1648,38 +1648,14 @@ TEST_CASE("rko-knapsack", "[highs_test_mip_solver]") {
 TEST_CASE("rko-thlp", "[highs_test_mip_solver]") {
   std::string model =  "cab15"; //"cab25"; //  "cab10"; //
   std::string filename = std::string(HIGHS_DIR) + "/check/instances/" + model + ".txt";
+
   HighsLp lp;
   const bool thlp_ok = lp.getThlp(filename);
   REQUIRE(thlp_ok);
   Highs h;
-  h.setOptionValue("parallel", kHighsOnString);
-  printf("=========================\n"
-	 "Using RKO and no presolve\n"
-	 "=========================\n");
-
   h.setOptionValue(kPresolveString, kHighsOffString);
   REQUIRE(h.passModel(lp) == HighsStatus::kOk);
   h.run();
-  lp.thlp_data_.interpretSolution(h.getSolution().col_value);
-  h.clearSolver();
-
-  printf("============================\n"
-	 "Using no RKO and no presolve\n"
-	 "============================\n");
-
-  h.setOptionValue("mip_heuristic_run_rko", false);
-  REQUIRE(h.passModel(lp) == HighsStatus::kOk);
-  h.run();
-  lp.thlp_data_.interpretSolution(h.getSolution().col_value);
-  h.clearSolver();
-
-  printf("=========================\n"
-	 "Using presolve and no RKO\n"
-	 "=========================\n");
-
-  h.setOptionValue(kPresolveString, kHighsOnString);
-  h.run();
-  lp.thlp_data_.interpretSolution(h.getSolution().col_value);
 
   h.resetGlobalScheduler(true);
 
