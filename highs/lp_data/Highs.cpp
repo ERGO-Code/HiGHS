@@ -1990,7 +1990,7 @@ HighsStatus Highs::calledOptimizeModel() {
               incumbent_lp,
               "Solving the original LP from the solution after postsolve",
               this_solve_original_lp_time);
-	  this->run_data_.postsolve_time += this_solve_original_lp_time;
+          this->run_data_.postsolve_time += this_solve_original_lp_time;
           // Determine the iteration count
           postsolve_iteration_count += info_.simplex_iteration_count;
           //
