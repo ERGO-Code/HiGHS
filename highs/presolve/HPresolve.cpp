@@ -7092,6 +7092,8 @@ HPresolve::Result HPresolve::fourierMotzkin(
     if (col == model->fme_obj_col_) return false;
     if (model->integrality_[col] != HighsVarType::kContinuous) return false;
     if (!acceptCoef(model->col_cost_[col])) return false;
+    if (options->presolve_fm_level < 1 && model->col_cost_[col] != 0.0)
+      return false;
     for (const auto& nz : getColumnVector(col))
       if (isEquation(nz.index()) || !acceptCoef(nz.value())) return false;
     return true;
@@ -7494,10 +7496,11 @@ HPresolve::Result HPresolve::fourierMotzkin(
   auto printLog = [&](HighsInt colsRemoved, HighsInt rowsRemoved,
                       HighsInt rowsAdded) {
     highsLogDev(options->log_options, HighsLogType::kInfo,
-                "Fourier-Motzkin added %" HIGHSINT_FORMAT
-                " rows and eliminated %" HIGHSINT_FORMAT
+                "Fourier-Motzkin (%s objective reformulation) added "
+                "%" HIGHSINT_FORMAT " rows and eliminated %" HIGHSINT_FORMAT
                 " rows and %" HIGHSINT_FORMAT " columns\n",
-                rowsAdded, rowsRemoved, colsRemoved);
+                options->presolve_fm_level >= 1 ? "with" : "without", rowsAdded,
+                rowsRemoved, colsRemoved);
   };
 
   // workspace vectors
