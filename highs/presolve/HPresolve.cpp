@@ -1844,8 +1844,6 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postsolve_stack) {
       }
     }
 
-    if (options->presolve_gdf)
-      domain.getDfProbingPropagation().finalRoundGDF();
     // finalise probing
     HighsInt numVarsFixed = 0;
     HighsInt numBndsTightened = 0;

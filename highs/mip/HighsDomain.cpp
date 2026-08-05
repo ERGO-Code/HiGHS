@@ -655,9 +655,7 @@ HighsDomain::DualfixingProbingPropagation::DualfixingProbingPropagation(const Du
     gdfLbReachable0_(other.gdfLbReachable0_),
     gdfLbReachable1_(other.gdfLbReachable1_),
     gdfUbReachable0_(other.gdfUbReachable0_),
-    gdfUbReachable1_(other.gdfUbReachable1_),
-    gdfLbReachable_(other.gdfLbReachable_),
-    gdfUbReachable_(other.gdfUbReachable_) {;}
+    gdfUbReachable1_(other.gdfUbReachable1_) {;}
 
 void HighsDomain::DualfixingProbingPropagation::recomputeLocks() {
   mipsolver = domain->mipsolver;
@@ -684,12 +682,10 @@ void HighsDomain::DualfixingProbingPropagation::recomputeLocks() {
   gdfCandidatesVec_.reserve(mipsolver->numCol());
   gdfCandidatesFlag_.assign(mipsolver->numCol(), false);
 
-  gdfLbReachable0_.clear();
-  gdfLbReachable1_.clear();
-  gdfUbReachable0_.clear();
-  gdfUbReachable1_.clear();
-  gdfLbReachable_.clear();
-  gdfUbReachable_.clear();
+  gdfLbReachable0_.assign(mipsolver->numCol(), 0);
+  gdfLbReachable1_.assign(mipsolver->numCol(), 0);
+  gdfUbReachable0_.assign(mipsolver->numCol(), 0);
+  gdfUbReachable1_.assign(mipsolver->numCol(), 0);
 
   const auto model = mipsolver->model_;
   for (HighsInt iCol = 0; iCol < model->a_matrix_.num_col_; iCol ++) {
@@ -1060,13 +1056,15 @@ void HighsDomain::DualfixingProbingPropagation::updateGDFInfo(HighsInt probing_v
           if (upper_bound_reachable) {
             considered = true;
             // printf("Probing on x-%d = %d, for non-zero (%d, %d) = %f, rhs = %f, demonstrate ub reachable.\n", probing_variable, val, iRow, iCol, iValue, mipsolver->model_->row_upper_[iRow]);
-            if (iCol == probing_variable && val == 0)
-              gdfUbReachable_[iCol].insert(iRow);
+            if (iCol == probing_variable && val == 0) {
+              gdfUbReachable0_[iCol]++;
+              gdfUbReachable1_[iCol]++;
+            }
             else {
               if (val == 0)
-                gdfUbReachable0_[iCol].insert(iRow);
+                gdfUbReachable0_[iCol]++;
               if (val == 1)
-                gdfUbReachable1_[iCol].insert(iRow);
+                gdfUbReachable1_[iCol]++;
             }
           }
         }
@@ -1080,13 +1078,15 @@ void HighsDomain::DualfixingProbingPropagation::updateGDFInfo(HighsInt probing_v
           if (lower_bound_reachable) {
             considered = true;
             // printf("Probing on x-%d = %d, for non-zero (%d, %d) = %f, lhs = %f, demonstrate lb reachable.\n", probing_variable, val, iRow, iCol, iValue, mipsolver->model_->row_lower_[iRow]);
-            if (iCol == probing_variable && val == 1)
-              gdfLbReachable_[iCol].insert(iRow);
+            if (iCol == probing_variable && val == 1) {
+              gdfLbReachable0_[iCol]++;
+              gdfLbReachable1_[iCol]++;
+            }
             else {
               if (val == 0)
-                gdfLbReachable0_[iCol].insert(iRow);
+                gdfLbReachable0_[iCol]++;
               if (val == 1)
-                gdfLbReachable1_[iCol].insert(iRow);
+                gdfLbReachable1_[iCol]++;
             }
           }
         }
@@ -1103,13 +1103,15 @@ void HighsDomain::DualfixingProbingPropagation::updateGDFInfo(HighsInt probing_v
           if (lower_bound_reachable) {
             considered = true;
             // printf("Probing on x-%d = %d, for non-zero (%d, %d) = %f, rhs = %f, demonstrate lb reachable.\n", probing_variable, val, iRow, iCol, iValue, mipsolver->model_->row_upper_[iRow]);
-            if (iCol == probing_variable && val == 1)
-              gdfLbReachable_[iCol].insert(iRow);
+            if (iCol == probing_variable && val == 1) {
+              gdfLbReachable0_[iCol]++;
+              gdfLbReachable1_[iCol]++;
+            }
             else {
               if (val == 0)
-                gdfLbReachable0_[iCol].insert(iRow);
+                gdfLbReachable0_[iCol]++;
               if (val == 1)
-                gdfLbReachable1_[iCol].insert(iRow);
+                gdfLbReachable1_[iCol]++;
             }
           }
         }
@@ -1123,13 +1125,15 @@ void HighsDomain::DualfixingProbingPropagation::updateGDFInfo(HighsInt probing_v
           if (upper_bound_reachable) {
             considered = true;
             // printf("Probing on x-%d = %d, for non-zero (%d, %d) = %f, lhs = %f, demonstrate ub reachable.\n", probing_variable, val, iRow, iCol, iValue, mipsolver->model_->row_lower_[iRow]);
-            if (iCol == probing_variable && val == 0)
-              gdfUbReachable_[iCol].insert(iRow);
+            if (iCol == probing_variable && val == 0) {
+              gdfUbReachable0_[iCol]++;
+              gdfUbReachable1_[iCol]++;
+            }
             else {
               if (val == 0)
-                gdfUbReachable0_[iCol].insert(iRow);
+                gdfUbReachable0_[iCol]++;
               if (val == 1)
-                gdfUbReachable1_[iCol].insert(iRow);
+                gdfUbReachable1_[iCol]++;
             }
           }
         }
@@ -1142,39 +1146,14 @@ void HighsDomain::DualfixingProbingPropagation::updateGDFInfo(HighsInt probing_v
 }
 
 HighsInt HighsDomain::DualfixingProbingPropagation::processGDFFixing() {
-  // extract reachable information
-  auto getIntersection = [&](const std::unordered_set<HighsInt>& vec0,
-    const std::unordered_set<HighsInt>& vec1,
-    std::unordered_set<HighsInt>& vReachable) {
-    if (vec0.empty() || vec1.empty())
-      return;
-
-    // always loop in the smaller vector, and search in the larger vector
-    if (vec0.size() < vec1.size()) {
-      for (auto it1 = vec0.begin(); it1 != vec0.end(); it1 ++) {
-        auto it2 = vec1.find(*it1);
-        if (it2 != vec1.end())
-          vReachable.insert(*it1);
-      }
-    }
-    else {
-      for (auto it1 = vec1.begin(); it1 != vec1.end(); it1 ++) {
-        auto it2 = vec0.find(*it1);
-        if (it2 != vec0.end())
-          vReachable.insert(*it1);
-      }
-    }
-  };
-  
   std::vector<HighsDomainChange*> gdfFixingStack_;
 
   for (const auto iCol : gdfCandidatesVec_) {
-    // lower bound reachable
-    getIntersection(gdfLbReachable0_[iCol], gdfLbReachable1_[iCol], gdfLbReachable_[iCol]);
-    // upper bound reachable
-    getIntersection(gdfUbReachable0_[iCol], gdfUbReachable1_[iCol], gdfUbReachable_[iCol]);
-    // extract fixings
-    if (ableToFixToLb(iCol) && (HighsInt)gdfLbReachable_[iCol].size() == colLowerLockOriginal_[iCol]) {
+    const HighsInt lowerLock = colLowerLockOriginal_[iCol];
+    const HighsInt upperLock = colUpperLockOriginal_[iCol];
+    if (ableToFixToLb(iCol) && lowerLock > 0 &&
+        gdfLbReachable0_[iCol] == lowerLock &&
+        gdfLbReachable1_[iCol] == lowerLock) {
       HighsDomainChange* thisbchg = new HighsDomainChange;
       thisbchg->column = iCol;
       thisbchg->boundtype = HighsBoundType::kUpper;
@@ -1182,7 +1161,9 @@ HighsInt HighsDomain::DualfixingProbingPropagation::processGDFFixing() {
       gdfFixingStack_.push_back(thisbchg);
     }
     // a variable cannot be fixed to lb and ub simultaneously
-    else if (ableToFixToUb(iCol) && (HighsInt)gdfUbReachable_[iCol].size() == colUpperLockOriginal_[iCol]) {
+    else if (ableToFixToUb(iCol) && upperLock > 0 &&
+             gdfUbReachable0_[iCol] == upperLock &&
+             gdfUbReachable1_[iCol] == upperLock) {
       HighsDomainChange* thisbchg = new HighsDomainChange;
       thisbchg->column = iCol;
       thisbchg->boundtype = HighsBoundType::kLower;
@@ -1211,18 +1192,18 @@ HighsInt HighsDomain::DualfixingProbingPropagation::processGDFFixing() {
 }
 
 void HighsDomain::DualfixingProbingPropagation::clearGDFInfo() {
-  for (const auto x : gdfCandidatesVec_)
+  // Reset the per-column count vectors for every column that received at
+  // least one increment this round. The touched set is exactly
+  // gdfCandidatesVec_ (every counted column is also a candidate), so we
+  // reset both with one fused loop.
+  for (const auto x : gdfCandidatesVec_) {
+    gdfLbReachable0_[x] = 0;
+    gdfLbReachable1_[x] = 0;
+    gdfUbReachable0_[x] = 0;
+    gdfUbReachable1_[x] = 0;
     gdfCandidatesFlag_[x] = false;
+  }
   gdfCandidatesVec_.clear();
-  
-  gdfLbReachable0_.clear();
-  gdfUbReachable0_.clear();
-  gdfLbReachable1_.clear();
-  gdfUbReachable1_.clear();
-}
-
-HighsInt HighsDomain::DualfixingProbingPropagation::finalRoundGDF() {
-  ;
 }
 
 namespace highs {

@@ -266,12 +266,22 @@ class HighsDomain {
 
     std::vector<HighsInt> gdfCandidatesVec_;
     std::vector<char> gdfCandidatesFlag_;
-    std::unordered_map<HighsInt, std::unordered_set<HighsInt>> gdfLbReachable0_;
-    std::unordered_map<HighsInt, std::unordered_set<HighsInt>> gdfLbReachable1_;
-    std::unordered_map<HighsInt, std::unordered_set<HighsInt>> gdfUbReachable0_;
-    std::unordered_map<HighsInt, std::unordered_set<HighsInt>> gdfUbReachable1_;
-    std::unordered_map<HighsInt, std::unordered_set<HighsInt>> gdfLbReachable_;
-    std::unordered_map<HighsInt, std::unordered_set<HighsInt>> gdfUbReachable_;
+    // GDF reachable-row counts, indexed directly by column id. For each
+    // column touched during GDF, we only need to know how many redundant
+    // rows make the column's lower/upper bound reachable under probing
+    // x_probing=0 / x_probing=1. The actual row indices are not needed:
+    // (a) within a single (map, column) the row ids are unique (each
+    // redundant row visits each column at most once), so the set of rows
+    // is fully described by its size; (b) the original intersection check
+    // |set0 ∩ set1| == |locking rows| is equivalent to
+    // |set0| == |locking rows| AND |set1| == |locking rows| because both
+    // sets are subsets of the locking rows. processGDFFixing therefore
+    // does no intersection at all. Indexed by column id (dense) so a
+    // flat vector beats an unordered_map here.
+    std::vector<HighsInt> gdfLbReachable0_;
+    std::vector<HighsInt> gdfLbReachable1_;
+    std::vector<HighsInt> gdfUbReachable0_;
+    std::vector<HighsInt> gdfUbReachable1_;
 
     void enablePropagator() {
       enabled_ = true;
@@ -354,7 +364,6 @@ class HighsDomain {
 
     void updateGDFInfo(HighsInt probing_variable, bool val);
     HighsInt processGDFFixing();
-    HighsInt finalRoundGDF();
     void clearGDFInfo();
   };
 
