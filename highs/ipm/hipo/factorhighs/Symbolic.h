@@ -10,6 +10,8 @@ namespace hipo {
 
 // Symbolic factorisation object
 class Symbolic {
+  bool empty_ = true;
+
   // Options for parallelism
   bool parallel_tree_ = false;
   bool parallel_node_ = false;
@@ -102,6 +104,7 @@ class Symbolic {
   void setParallel(bool par_tree, bool par_node);
 
   // provide const access to symbolic factorisation
+  bool empty() const { return empty_; }
   Int64 nz() const;
   double flops() const;
   double spops() const;
@@ -119,6 +122,7 @@ class Symbolic {
   Int64 cliqueBlockStart(Int sn, Int bl) const;
   Int64 cliqueSize(Int sn) const;
   Int64 maxStackSize() const;
+  Int largestFront() const;
   Int depth() const;
   bool parTree() const;
   bool parNode() const;

@@ -14,6 +14,7 @@ struct Options {
   std::string parallel = kHighsChooseString;
   std::string parallel_type = kHipoBothString;
   std::string ordering = kHighsChooseString;
+  std::string factor = kHighsChooseString;
 
   // Ipm parameters
   Int max_iter = kMaxIterDefault;
@@ -23,6 +24,7 @@ struct Options {
   bool refine_with_ipx = true;
   double time_limit = -1.0;
   Int block_size = 0;
+  Int random_seed = 0;
 
   // Logging
   bool display = true;

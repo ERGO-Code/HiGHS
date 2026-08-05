@@ -47,7 +47,7 @@ HighsStatus assessHessian(HighsHessian& hessian, const HighsOptions& options) {
   }
   // Assess Q, summing duplicates, but deferring the assessment of
   // values (other than those which are identically zero)
-  const bool sum_duplicates = true;
+  bool sum_duplicates = true;
   call_status = assessMatrix(options.log_options, "Hessian", hessian.dim_,
                              hessian.dim_, hessian.start_, hessian.index_,
                              hessian.value_, 0, kHighsInf, sum_duplicates);
@@ -60,10 +60,11 @@ HighsStatus assessHessian(HighsHessian& hessian, const HighsOptions& options) {
                                       return_status, "normaliseHessian");
   if (return_status == HighsStatus::kError) return return_status;
   // Assess values in Q
-  call_status =
-      assessMatrix(options.log_options, "Hessian", hessian.dim_, hessian.dim_,
-                   hessian.start_, hessian.index_, hessian.value_,
-                   options.small_matrix_value, options.large_matrix_value);
+  sum_duplicates = false;
+  call_status = assessMatrix(options.log_options, "Hessian", hessian.dim_,
+                             hessian.dim_, hessian.start_, hessian.index_,
+                             hessian.value_, options.small_matrix_value,
+                             options.large_matrix_value, sum_duplicates);
   return_status = interpretCallStatus(options.log_options, call_status,
                                       return_status, "assessMatrix");
   if (return_status == HighsStatus::kError) return return_status;

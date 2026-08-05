@@ -144,6 +144,8 @@ bool optionHipoSystemOk(const HighsLogOptions& report_log_options,
                         const string& value);
 bool optionHipoOrderingOk(const HighsLogOptions& report_log_options,
                           const string& value);
+bool optionHipoFactorOk(const HighsLogOptions& report_log_options,
+                        const string& value);
 
 bool boolFromString(std::string value, bool& bool_value);
 
@@ -332,6 +334,10 @@ const string kHipoMetisString = "metis";
 const string kHipoAmdString = "amd";
 const string kHipoRcmString = "rcm";
 
+const string kHipoFactorString = "hipo_factor";
+const string kHipoFactorMultifrontal = "multifrontal";
+const string kHipoFactorUplooking = "uplooking";
+
 struct HighsOptionsStruct {
   // Run-time options read from the command line
   std::string presolve;
@@ -397,6 +403,7 @@ struct HighsOptionsStruct {
   std::string hipo_system;
   std::string hipo_parallel_type;
   std::string hipo_ordering;
+  std::string hipo_factor;
   HighsInt hipo_block_size;
 
   // Options for PDLP solver
@@ -580,6 +587,7 @@ struct HighsOptionsStruct {
         hipo_system(""),
         hipo_parallel_type(""),
         hipo_ordering(""),
+        hipo_factor(""),
         hipo_block_size(0),
         pdlp_features_off(0),
         pdlp_iteration_limit(0),
@@ -1333,6 +1341,13 @@ class HighsOptions : public HighsOptionsStruct {
                                "HiPO matrix reordering: \"choose\", \"metis\", "
                                "\"amd\" or \"rcm\"",
                                advanced, &hipo_ordering, kHighsChooseString);
+    records.push_back(record_string);
+
+    record_string = new OptionRecordString(
+        kHipoFactorString,
+        "HiPO matrix factorisation: \"choose\", \"multifrontal\" "
+        "or \"uplooking\"",
+        advanced, &hipo_factor, kHighsChooseString);
     records.push_back(record_string);
 
     record_int = new OptionRecordInt(

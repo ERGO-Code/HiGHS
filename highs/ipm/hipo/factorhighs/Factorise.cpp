@@ -189,6 +189,8 @@ void Factorise::processSupernode(Int sn) {
 
       if (flag_stop_.load(std::memory_order_relaxed)) return;
 
+      TSAN_ANNOTATE_HAPPENS_AFTER(&schur_contribution_[child_sn]);
+
       child_clique = schur_contribution_[child_sn].data();
 
       if (!child_clique) {
@@ -290,6 +292,8 @@ void Factorise::processSupernode(Int sn) {
 
   if (serial) stack_->pushWork(sn);
 
+  TSAN_ANNOTATE_HAPPENS_BEFORE(&schur_contribution_[sn]);
+
   HIPO_CLOCK_STOP(2, data_, kTimeFactoriseTerminate);
 }
 
@@ -344,6 +348,8 @@ bool Factorise::run(Numeric& num) {
   num.pivot_2x2_ = std::move(pivot_2x2_);
   num.data_ = &data_;
   num.options_ = &FH_opt_;
+
+  if (num.prepare()) return true;
 
   HIPO_CLOCK_STOP(1, data_, kTimeFactorise);
 

@@ -52,12 +52,13 @@ HighsStatus assessCosts(const HighsOptions& options, const HighsInt ml_col_os,
                         vector<double>& cost, bool& has_infinite_cost,
                         const double infinite_cost);
 
-HighsStatus assessBounds(const HighsOptions& options, const char* type,
+HighsStatus assessBounds(const HighsOptions& options, const std::string& type,
                          const HighsInt ml_ix_os,
                          const HighsIndexCollection& index_collection,
                          vector<double>& lower, vector<double>& upper,
                          const double infinite_bound,
-                         const HighsVarType* integrality = nullptr);
+                         const HighsVarType* integrality,
+                         const std::string* names = nullptr);
 
 HighsStatus cleanBounds(const HighsOptions& options, HighsLp& lp);
 
@@ -67,7 +68,7 @@ HighsStatus userScaleLp(HighsLp& lp, HighsUserScaleData& data,
 void userScaleLp(HighsLp& lp, HighsUserScaleData& data,
                  const bool apply = true);
 
-void userScaleCosts(const vector<HighsVarType>& integrality,
+void userScaleCosts(const vector<HighsVarType>& integrality, double& offset,
                     vector<double>& cost, HighsUserScaleData& data,
                     const bool apply = true);
 

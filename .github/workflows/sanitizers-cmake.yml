@@ -7,12 +7,13 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  gcc_relwithdebinfo:
+  gcc:
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest]
+        config: [Debug, RelWithDebInfo]
         sanitizer: [Address, Thread, Leak]
     steps:
       - uses: actions/checkout@v6
@@ -24,7 +25,7 @@ jobs:
         shell: bash
         working-directory: ${{github.workspace}}/build
         run: |
-          cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=RelWithDebInfo -DDEBUG_MEMORY=${{ matrix.sanitizer }} -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++
+          cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=${{ matrix.config }} -DDEBUG_MEMORY=${{ matrix.sanitizer }} -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++
           cmake --build . -j2
 
       - name: Run
@@ -32,13 +33,14 @@ jobs:
         shell: bash
         run: ./bin/highs $GITHUB_WORKSPACE/check/instances/afiro.mps
 
-  gcc_debug:
+  clang:
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         # os: [ubuntu-latest, macos-latest]
         os: [ubuntu-latest]
+        config: [Debug, RelWithDebInfo]
         sanitizer: [Address, Thread, Leak]
     steps:
       - uses: actions/checkout@v6
@@ -50,7 +52,7 @@ jobs:
         shell: bash
         working-directory: ${{github.workspace}}/build
         run: |
-          cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=Debug -DDEBUG_MEMORY=${{ matrix.sanitizer }} -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++
+          cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=${{ matrix.config }} -DDEBUG_MEMORY=${{ matrix.sanitizer }} -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++
           cmake --build . -j2
 
       - name: Run
@@ -58,14 +60,14 @@ jobs:
         shell: bash
         run: ./bin/highs $GITHUB_WORKSPACE/check/instances/afiro.mps
 
-  clang_relwithdebinfo:
+  no_hipo_macos:
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        # os: [ubuntu-latest, macos-latest]
-        os: [ubuntu-latest]
-        sanitizer: [Address, Thread, Leak]
+        os: [macos-latest]
+        config: [Debug, RelWithDebInfo]
+        sanitizer: [Address, Thread]
     steps:
       - uses: actions/checkout@v6
 
@@ -76,34 +78,8 @@ jobs:
         shell: bash
         working-directory: ${{github.workspace}}/build
         run: |
-          cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=RelWithDebInfo -DDEBUG_MEMORY=${{ matrix.sanitizer }} -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++
-          cmake --build . -j2
-
-      - name: Run
-        working-directory: ${{github.workspace}}/build
-        shell: bash
-        run: ./bin/highs $GITHUB_WORKSPACE/check/instances/afiro.mps
-
-  clang_debug:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        # os: [ubuntu-latest, macos-latest]
-        os: [ubuntu-latest]
-        sanitizer: [Address, Thread, Leak]
-    steps:
-      - uses: actions/checkout@v6
-
-      - name: Create Build Environment
-        run: cmake -E make_directory ${{github.workspace}}/build
-
-      - name: Configure CMake and Build
-        shell: bash
-        working-directory: ${{github.workspace}}/build
-        run: |
-          cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=Debug -DDEBUG_MEMORY=${{ matrix.sanitizer }} -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++
-          cmake --build . -j2
+          cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=${{ matrix.config }} -DDEBUG_MEMORY=${{ matrix.sanitizer }}
+          cmake --build . -j3
 
       - name: Run
         working-directory: ${{github.workspace}}/build
@@ -117,7 +93,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest]
-        config: [Debug]
+        config: [Debug, RelWithDebInfo]
         all_tests: [ON]
         sanitizer: [Address, Thread, Leak]
 
@@ -135,13 +111,52 @@ jobs:
             -DCMAKE_BUILD_TYPE=${{ matrix.config }} \
             -DDEBUG_MEMORY=${{ matrix.sanitizer }} \
             -DNO_AVX512=ON \
-            -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=OFF
+            -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=OFF \
+            -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++
 
 
       - name: Build
         working-directory: ${{github.workspace}}/build
         run: |
           cmake --build . -j2
+
+      - name: Test executable
+        working-directory: ${{github.workspace}}/build
+        run: ./bin/highs --solver=hipo $GITHUB_WORKSPACE/check/instances/afiro.mps
+
+      - name: Test hipo
+        working-directory: ${{github.workspace}}/build
+        run: |
+          ./bin/unit_tests [highs_hipo]
+
+  hipo_macos:
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest]
+        config: [Debug, RelWithDebInfo]
+        sanitizer: [Address, Thread]
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Create Build Environment
+        run: cmake -E make_directory ${{github.workspace}}/build
+
+      - name: Configure CMake
+        working-directory: ${{github.workspace}}/build
+        run: |
+          cmake $GITHUB_WORKSPACE -DHIPO=ON \
+            -DCMAKE_BUILD_TYPE=${{ matrix.config }} \
+            -DDEBUG_MEMORY=${{ matrix.sanitizer }} \
+            -DALL_TESTS=ON
+
+      - name: Build
+        working-directory: ${{github.workspace}}/build
+        run: |
+          cmake --build . -j3
 
       - name: Test executable
         working-directory: ${{github.workspace}}/build

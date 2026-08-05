@@ -25,7 +25,7 @@ Int KktMatrix::buildASstructure() {
   const Int nzBlock11 = model.qp() ? nzQ : n;
 
   // AS matrix must fit into HighsInt
-  if ((Int64)nzBlock11 + m + nzA >= kHighsIInf) return kStatusOverflow;
+  if ((Int64)nzBlock11 + m + nzA >= kHighsIInf) return kErrorOverflow;
 
   ptrAS.resize(n + m + 1);
   rowsAS.resize(nzBlock11 + nzA + m);
@@ -65,9 +65,9 @@ Int KktMatrix::buildASstructure() {
     ptrAS[n + i + 1] = ptrAS[n + i] + 1;
   }
 
-  info.AS_structure_time = clock.stop();
+  info.times[kMatrixStructureTime_AS] = clock.stop();
 
-  return kStatusOk;
+  return kOk;
 }
 
 Int KktMatrix::buildASvalues(const std::vector<double>& scaling) {
@@ -84,9 +84,9 @@ Int KktMatrix::buildASvalues(const std::vector<double>& scaling) {
     if (model.qp()) valAS[ptrAS[i]] -= model.sense() * model.Q().diag(i);
   }
 
-  info.matrix_time += clock.stop();
+  info.times[kMatrixValuesTime] += clock.stop();
 
-  return kStatusOk;
+  return kOk;
 }
 
 Int KktMatrix::buildNEstructure() {
@@ -130,18 +130,17 @@ Int KktMatrix::buildNEstructure() {
   ptrNE.clear();
   rowsNE.clear();
 
-  // ptr is allocated its exact size
-  ptrNE.resize(m + 1, 0);
+  std::vector<Int> work(m);
+  std::atomic<Int> current_nz{0};
+  std::atomic<bool> overflow{false};
 
-  // keep track if given entry is nonzero, in column considered
-  std::vector<bool> is_nz(m, false);
-
-  // temporary storage of indices
-  std::vector<Int> temp_index(m);
-
-  for (Int row = 0; row < m; ++row) {
+  auto process_row = [&](Int row, std::vector<char>& is_nz,
+                         std::vector<Int>& temp_index,
+                         std::vector<Int>& row_space) {
     // go along the entries of the row, and then down each column.
     // this builds the lower triangular part of the row-th column of AAt.
+
+    if (overflow.load(std::memory_order_relaxed)) return;
 
     Int nz_in_col = 0;
 
@@ -149,8 +148,8 @@ Int KktMatrix::buildNEstructure() {
       Int col = idxA_rw[el];
       Int corr = corr_A[el];
 
-      // for each nonzero in the row, go down corresponding column, starting
-      // from current position
+      // for each nonzero in the row, go down corresponding column,
+      // starting from current position
       for (Int colEl = corr; colEl < A.start_[col + 1]; ++colEl) {
         Int row2 = A.index_[colEl];
 
@@ -168,24 +167,85 @@ Int KktMatrix::buildNEstructure() {
     // intersection of row with rows below finished.
 
     // if the total number of nonzeros exceeds the maximum, return error.
-    if ((Int64)ptrNE[row] + nz_in_col >=
-        NE_nz_limit.load(std::memory_order_relaxed))
-      return kStatusOverflow;
+    if (current_nz.load(std::memory_order_relaxed) + nz_in_col >=
+        NE_nz_limit.load(std::memory_order_relaxed)) {
+      overflow.store(true, std::memory_order_relaxed);
+      return;
+    }
+    current_nz.fetch_add(nz_in_col, std::memory_order_relaxed);
 
-    // update pointers
-    ptrNE[row + 1] = ptrNE[row] + nz_in_col;
+    // keep track of column counts
+    work[row] = nz_in_col;
 
     // now assign indices
     for (Int i = 0; i < nz_in_col; ++i) {
       Int index = temp_index[i];
-      // push_back is better then reserve, because the final length is not known
-      rowsNE.push_back(index);
+      // push_back is better then reserve, because the final length is not
+      // known
+      row_space.push_back(index);
       is_nz[index] = false;
     }
+  };
+
+  // computing the structure in parallel only if matrix A is dense and large
+  const double nz_per_col = (double)model.A().numNz() / model.A().num_col_;
+  const double nz_per_row = (double)model.A().numNz() / model.A().num_row_;
+  const bool is_dense = nz_per_col > kParallelNEnzPerColThresh ||
+                        nz_per_row > kParallelNEnzPerRowThresh;
+  const bool is_large = model.A().num_row_ > kParallelNEsizeThresh ||
+                        model.A().num_col_ > kParallelNEsizeThresh;
+  const bool parallel =
+      is_dense && is_large && highs::parallel::num_threads() > 1;
+
+  if (parallel) {
+    logger.printInfo("NE structure in parallel\n");
+    std::vector<std::vector<Int>> rowsNE_local(m);
+
+    highs::parallel::for_each(
+        0, m,
+        [&](Int start, Int end) {
+          std::vector<char> is_nz(m, false);
+          std::vector<Int> temp_index(m);
+          for (Int row = start; row < end; ++row) {
+            process_row(row, is_nz, temp_index, rowsNE_local[row]);
+          }
+        },
+        // choose grainsize so that the number of tasks in the for_each loop
+        // that execute the function is roughly kParallelNEStructTasks
+        std::ceil((double)m / kParallelNEStructTasks));
+
+    if (overflow) {
+      info.times[kMatrixStructureTime_NE] = clock.stop();
+      return kErrorOverflow;
+    }
+
+    ptrNE.resize(m + 1, 0);
+    counts2Ptr(m, ptrNE.data(), work.data());
+
+    rowsNE.reserve(ptrNE.back());
+    for (const auto& v : rowsNE_local)
+      rowsNE.insert(rowsNE.end(), v.begin(), v.end());
+
+  } else {
+    logger.printInfo("NE structure in serial\n");
+    rowsNE.reserve(model.nzNElb());
+    std::vector<char> is_nz(m, false);
+    std::vector<Int> temp_index(m);
+    for (Int row = 0; row < m; ++row) {
+      process_row(row, is_nz, temp_index, rowsNE);
+    }
+
+    if (overflow) {
+      info.times[kMatrixStructureTime_NE] = clock.stop();
+      return kErrorOverflow;
+    }
+
+    ptrNE.resize(m + 1, 0);
+    counts2Ptr(m, ptrNE.data(), work.data());
   }
 
-  info.NE_structure_time = clock.stop();
-  return kStatusOk;
+  info.times[kMatrixStructureTime_NE] = clock.stop();
+  return kOk;
 }
 
 Int KktMatrix::buildNEvalues(const std::vector<double>& scaling) {
@@ -200,9 +260,7 @@ Int KktMatrix::buildNEvalues(const std::vector<double>& scaling) {
 
   valNE.resize(rowsNE.size());
 
-  std::vector<double> work(m, 0.0);
-
-  for (Int row = 0; row < m; ++row) {
+  auto process_row = [&](Int row, std::vector<double>& work) {
     // go along the entries of the row, and then down each column.
     // this builds the lower triangular part of the row-th column of AAt.
 
@@ -217,8 +275,8 @@ Int KktMatrix::buildNEvalues(const std::vector<double>& scaling) {
       const double mult = 1.0 / denom;
       const double row_value = mult * A.value_[corr];
 
-      // for each nonzero in the row, go down corresponding column, starting
-      // from current position
+      // for each nonzero in the row, go down corresponding column,
+      // starting from current position
       for (Int colEl = corr; colEl < A.start_[col + 1]; ++colEl) {
         Int row2 = A.index_[colEl];
 
@@ -238,11 +296,32 @@ Int KktMatrix::buildNEvalues(const std::vector<double>& scaling) {
       valNE[el] = work[index];
       work[index] = 0.0;
     }
+  };
+
+  // computing the values in parallel only if matrix A is large
+  const bool is_large = model.A().num_row_ > kParallelNEsizeThresh ||
+                        model.A().num_col_ > kParallelNEsizeThresh;
+  const bool parallel = is_large && highs::parallel::num_threads() > 1;
+
+  if (parallel) {
+    highs::parallel::for_each(
+        0, m,
+        [&](Int start, Int end) {
+          std::vector<double> work(m, 0.0);
+          for (Int row = start; row < end; ++row) process_row(row, work);
+        },
+        // choose grainsize so that the number of tasks in the for_each loop
+        // that execute the function is roughly kParallelNEValuesTasks
+        std::ceil((double)m / kParallelNEValuesTasks));
+
+  } else {
+    std::vector<double> work(m, 0.0);
+    for (Int row = 0; row < m; ++row) process_row(row, work);
   }
 
-  info.matrix_time += clock.stop();
+  info.times[kMatrixValuesTime] += clock.stop();
 
-  return kStatusOk;
+  return kOk;
 }
 
 void KktMatrix::freeASmemory() {
@@ -263,19 +342,24 @@ void KktMatrix::freeNEmemory() {
 }
 
 Int KktMatrix::n() const {
-  if (nla() == kHipoNormalEqString) return ptrNE.size() - 1;
-  if (nla() == kHipoAugmentedString) return ptrAS.size() - 1;
+  if (isNE()) return ptrNE.size() - 1;
+  if (isAS()) return ptrAS.size() - 1;
   return -1;
 }
 Int KktMatrix::nz() const {
-  if (nla() == kHipoNormalEqString) return rowsNE.size();
-  if (nla() == kHipoAugmentedString) return rowsAS.size();
+  if (isNE()) return rowsNE.size();
+  if (isAS()) return rowsAS.size();
   return -1;
 }
 std::string KktMatrix::nla() const {
-  if (!ptrNE.empty()) return kHipoNormalEqString;
-  if (!ptrAS.empty()) return kHipoAugmentedString;
+  if (isNE()) return kHipoNormalEqString;
+  if (isAS()) return kHipoAugmentedString;
   return "empty";
 }
+
+bool KktMatrix::isAS() const { return !ptrAS.empty(); }
+bool KktMatrix::isNE() const { return !ptrNE.empty(); }
+
+const std::vector<Int>& KktMatrix::iperm() const { return S.iperm(); }
 
 }  // namespace hipo

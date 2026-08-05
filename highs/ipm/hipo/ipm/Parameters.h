@@ -39,6 +39,13 @@ const double kMaxTreeDepth = 1000;
 // parameters for choice of ordering
 const double kFlopsOrderingThresh = 1.2;
 
+// parameters for choice of factorisation
+const double kUplookFlopsThresh = 1e6;
+const double kUplookNzPerColLower = 10;
+const double kUplookNzPerColUpper = 25;
+const double kUplookSpopsRatioLower = 20;
+const double kUplookSpopsRatioUpper = 100;
+
 // parameters for skipping AS or NE
 const double kNzBoundsRatio = 50.0;
 
@@ -54,6 +61,12 @@ const double kSmallBoundDiff = 1e-3;
 // parameters for free variables
 const double kFreeVarsInitialBound = 1e4;
 const double kFreeVarsCloseRatio = 0.5;
+
+const Int kParallelNEStructTasks = 50;   // 32 < . <= 64
+const Int kParallelNEValuesTasks = 100;  // 64 < . <= 128
+const Int kParallelNEnzPerColThresh = 10;
+const Int kParallelNEnzPerRowThresh = 30;
+const Int kParallelNEsizeThresh = 1e4;
 
 // static regularisation
 struct Regularisation {

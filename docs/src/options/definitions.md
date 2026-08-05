@@ -449,6 +449,11 @@
 - Type: string
 - Default: "choose"
 
+## [hipo\_fatcor](@id option-hipo-factor)
+- HiPO matrix factorisation: "choose", "multifrontal", or "uplooking"
+- Type: string
+- Default: "choose"
+
 ## [hipo\_block\_size](@id option-hipo-block-size)
 - Block size for dense linear algebra within HiPO
 - Type: integer

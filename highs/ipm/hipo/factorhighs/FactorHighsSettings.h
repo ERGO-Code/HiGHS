@@ -47,9 +47,6 @@ const Int kMinConsecutiveSums = 1;
 // regularisation
 const double kDynamicDiagCoeff = 1e-24;
 
-// metis
-const Int kMetisSeed = 42;
-
 struct Regul {
   double primal{};
   double dual{};
