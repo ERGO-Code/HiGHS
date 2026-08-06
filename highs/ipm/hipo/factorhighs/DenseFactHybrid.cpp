@@ -27,7 +27,6 @@ Int denseFactFH(Int n, Int k, double* A, double* B, const Int* pivot_sign,
   //    * Pj is the portion of R being used, before being solved with the pivots
   //    * Qj is the block of columns being updated
   //   so that the update is Qj -= Rj * Pj^T
-  //
   // ===========================================================================
 
   HIPO_CLOCK_CREATE;
@@ -125,8 +124,40 @@ Int denseFactFH(Int n, Int k, double* A, double* B, const Int* pivot_sign,
       // ===========================================================================
       // UPDATE FRONTAL
       // ===========================================================================
-      Int64 R_offset{};
+      highs::parallel::TaskGroup tg;
 
+      auto split_gemm = [=, &data](Int num_row, Int num_col, const double* Rj,
+                                   const double* Pj, double* Qj) {
+        // Qj -= Rj * Pj^T
+
+        Int Rj_offset{};
+        Int Qj_offset{};
+        Int row_start = 0;
+        while (row_start < num_row) {
+          const double* Rj_block = &Rj[Rj_offset];
+          double* Qj_block = &Qj[Qj_offset];
+          const Int rows_in_block = std::min(nb, num_row - row_start);
+
+          auto do_gemm = [=, &data]() {
+            callAndTime_dgemm('T', 'N', num_col, rows_in_block, jb, -1.0, Pj,
+                              jb, Rj_block, jb, 1.0, Qj_block, num_col, data);
+          };
+
+          const bool do_parallelise =
+              parallel && num_col > nb / 2 && jb > nb / 2;
+
+          if (do_parallelise)
+            tg.spawn(std::move(do_gemm));
+          else
+            do_gemm();
+
+          Rj_offset += jb * nb;
+          Qj_offset += num_col * nb;
+          row_start += nb;
+        }
+      };
+
+      Int64 R_offset{};
       for (Int j = block_id + 1; j < blocks_in_A; ++j) {
         const Int col_block_j = std::min(nb, k - nb * j);
         const Int row_block_j = n - nb * j;
@@ -135,13 +166,7 @@ Int denseFactFH(Int n, Int k, double* A, double* B, const Int* pivot_sign,
         double* Qj = &A[blocks_diag_start[j]];
         const double* Rj = &R[R_offset];
 
-        // Qj -= Rj * Pj^T
-        if (parallel)
-          dgemmParallel(Pj, Rj, Qj, col_block_j, jb, row_block_j, nb, 1.0,
-                        data);
-        else
-          callAndTime_dgemm('T', 'N', col_block_j, row_block_j, jb, -1.0, Pj,
-                            jb, Rj, jb, 1.0, Qj, col_block_j, data);
+        split_gemm(row_block_j, col_block_j, Rj, Pj, Qj);
 
         R_offset += jb * col_block_j;
       }
@@ -162,18 +187,14 @@ Int denseFactFH(Int n, Int k, double* A, double* B, const Int* pivot_sign,
           double* Qj = &B[B_offset];
           const double* Rj = &R[R_offset];
 
-          // Qj -= Rj * Pj^T
-          if (parallel)
-            dgemmParallel(Pj, Rj, Qj, col_block_j, jb, row_block_j, nb, 1.0,
-                          data);
-          else
-            callAndTime_dgemm('T', 'N', col_block_j, row_block_j, jb, -1.0, Pj,
-                              jb, Rj, jb, 1.0, Qj, col_block_j, data);
+          split_gemm(row_block_j, col_block_j, Rj, Pj, Qj);
 
           B_offset += row_block_j * col_block_j;
           R_offset += jb * col_block_j;
         }
       }
+
+      tg.taskWait();
       HIPO_CLOCK_STOP(2, data, kTimeDenseFact_schur);
     }
   }
