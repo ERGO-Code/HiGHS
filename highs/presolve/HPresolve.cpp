@@ -4297,7 +4297,7 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
         direction * impliedRowBound == kHighsInf ||
         abs(static_cast<HighsCDouble>(rowSide) -
             static_cast<HighsCDouble>(impliedRowBound)) >
-            primal_feastol / dynamism)
+            std::max(double(primal_feastol / dynamism), 1e-15))
       return Result::kOk;
 
     // get stored row
@@ -4584,7 +4584,7 @@ HPresolve::Result HPresolve::detectDominatedCol(
                                   : -impliedDualRowBounds.getSumLowerOrig(
                                         col, -model->col_cost_[col]);
       if (std::abs(boundOnColDual) <=
-          options->dual_feasibility_tolerance / dynamism) {
+          std::max(double(options->dual_feasibility_tolerance / dynamism), 1e-15)) {
         // 1. column dual's upper bound is zero (since the column's lower bound
         // is infinite) and column dual's lower bound is zero as well
         // (direction = 1) or
