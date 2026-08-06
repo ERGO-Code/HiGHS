@@ -425,6 +425,7 @@ set(highs_sources
     qpsolver/a_asm.cpp
     qpsolver/a_quass.cpp
     qpsolver/basis.cpp
+    qpsolver/QpAsmWrapper.cpp
     qpsolver/quass.cpp
     qpsolver/ratiotest.cpp
     qpsolver/scaling.cpp
@@ -496,8 +497,10 @@ set(highs_headers
     lp_data/HighsLp.h
     lp_data/HighsLpSolverObject.h
     lp_data/HighsLpUtils.h
+    lp_data/HighsMipSolverObject.h
     lp_data/HighsModelUtils.h
     lp_data/HighsOptions.h
+    lp_data/HighsQpSolverObject.h
     lp_data/HighsRanging.h
     lp_data/HighsRunData.h
     lp_data/HighsSolution.h
@@ -580,6 +583,7 @@ set(highs_headers
     qpsolver/instance.hpp
     qpsolver/matrix.hpp
     qpsolver/pricing.hpp
+    qpsolver/QpAsmWrapper.h
     qpsolver/qpconst.hpp
     qpsolver/qpvector.hpp
     qpsolver/quass.hpp

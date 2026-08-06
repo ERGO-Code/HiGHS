@@ -412,6 +412,14 @@ HighsStatus solveLpHipo(HighsLpSolverObject& solver_object) {
                    solver_object.highs_info_, solver_object.callback_);
 }
 
+HighsStatus solveQpHipo(HighsQpSolverObject& solver_object) {
+  return solveHipo(solver_object.options_, solver_object.timer_,
+                   solver_object.model_.lp_, solver_object.model_.hessian_,
+                   solver_object.basis_, solver_object.solution_,
+                   solver_object.model_status_, solver_object.highs_info_,
+                   solver_object.callback_);
+}
+
 HighsStatus solveHipo(const HighsOptions& options, HighsTimer& timer,
                       const HighsLp& lp, const HighsHessian& Q,
                       HighsBasis& highs_basis, HighsSolution& highs_solution,

@@ -14,7 +14,6 @@
 #include "Highs.h"
 #include "lp_data/HighsLpUtils.h"
 #include "lp_data/HighsModelUtils.h"
-#include "mip/HighsMipSolver.h"  // For getGapString
 #include "mip/MipTimer.h"
 #include "model/HighsHessianUtils.h"
 #include "parallel/HighsParallel.h"
@@ -2902,52 +2901,6 @@ void Highs::clearZeroHessian() {
       hessian.clear();
     }
   }
-}
-
-HighsStatus Highs::checkOptimality(const std::string& solver_type) {
-  // Check for infeasibility measures incompatible with optimality
-  assert(model_status_ == HighsModelStatus::kOptimal);
-  // Cannot expect to have no dual_infeasibilities since the QP solver
-  // (and, of course, the MIP solver) give no dual information
-  if (info_.num_primal_infeasibilities == 0 &&
-      info_.num_dual_infeasibilities <= 0) {
-    // Consider semi-continuous infeasibilities
-    if (info_.num_semi_infeasibilities > 0) {
-      highsLogUser(options_.log_options, HighsLogType::kError,
-                   "%s solver claims optimality, but with num/max/sum %d/%g/%g "
-                   "semi-variable infeasibilities: consider solving with "
-                   "smaller mip_feasibility_tolerance\n",
-                   solver_type.c_str(), int(info_.num_semi_infeasibilities),
-                   info_.max_semi_infeasibility,
-                   info_.sum_semi_infeasibilities);
-      model_status_ = HighsModelStatus::kSolveError;
-      highsLogUser(options_.log_options, HighsLogType::kError,
-                   "Setting model status to %s\n",
-                   modelStatusToString(model_status_).c_str());
-      return HighsStatus::kError;
-    }
-    return HighsStatus::kOk;
-  }
-  model_status_ = HighsModelStatus::kSolveError;
-  std::stringstream ss;
-  ss.str(std::string());
-  ss << highsFormatToString(
-      "%s solver claims optimality, but with num/max/sum "
-      "primal(%d/%g/%g)",
-      solver_type.c_str(), int(info_.num_primal_infeasibilities),
-      info_.max_primal_infeasibility, info_.sum_primal_infeasibilities);
-  if (info_.num_dual_infeasibilities > 0)
-    ss << highsFormatToString(
-        "and dual(%d/%g/%g)", int(info_.num_dual_infeasibilities),
-        info_.max_dual_infeasibility, info_.sum_dual_infeasibilities);
-  ss << " infeasibilities\n";
-  const std::string report_string = ss.str();
-  highsLogUser(options_.log_options, HighsLogType::kError, "%s",
-               report_string.c_str());
-  highsLogUser(options_.log_options, HighsLogType::kError,
-               "Setting model status to %s\n",
-               modelStatusToString(model_status_).c_str());
-  return HighsStatus::kError;
 }
 
 void Highs::callLpKktCheck(const HighsLp& lp, const std::string& message) {
