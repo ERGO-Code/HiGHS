@@ -10,15 +10,13 @@ namespace hipo {
 
 // Factorisation with "hybrid formats".
 
-Int denseFactFH(char format, Int n, Int k, double* A, double* B,
-                const Int* pivot_sign, double thresh, double* totalreg,
-                Int* swaps, double* pivot_2x2, bool parnode,
-                DataCollector& data, const FHoptions& options) {
+Int denseFactFH(Int n, Int k, double* A, double* B, const Int* pivot_sign,
+                double thresh, double* totalreg, Int* swaps, double* pivot_2x2,
+                bool parnode, DataCollector& data, const FHoptions& options) {
   // ===========================================================================
   // Partial blocked factorisation
   // Matrix A is in format FH
-  // Matrix B is in format FP, if format == 'P'
-  //                       FH, if format == 'H'
+  // Matrix B is in format FH
   // BLAS calls: dcopy, dscal, daxpy, dgemm, dtrsm
   // ===========================================================================
 
@@ -51,10 +49,6 @@ Int denseFactFH(char format, Int n, Int k, double* A, double* B,
 
   // number of blocks in Schur complement
   const Int s_blocks = (ns - 1) / nb + 1;
-
-  // buffer for full-format of block of columns of Schur complement
-  std::vector<double> schur_buf;
-  if (format == 'P') schur_buf.resize(ns * nb);
 
   // ===========================================================================
   // LOOP OVER BLOCKS
@@ -201,11 +195,10 @@ Int denseFactFH(char format, Int n, Int k, double* A, double* B,
           const Int ncol = std::min(nb, nrow);
 
           const double* P = &T[offset];
-          double* Q = format == 'P' ? schur_buf.data() : &B[B_offset];
+          double* Q = &B[B_offset];
           const double* Rjj = &R[offset];
 
-          // beta is 0 to avoid initialising schur_buf if format=='P'
-          double beta = format == 'P' ? 0.0 : 1.0;
+          const double beta = 1.0;
 
           // perform gemm (potentially) in parallel
           if (parnode)
@@ -213,17 +206,6 @@ Int denseFactFH(char format, Int n, Int k, double* A, double* B,
           else
             callAndTime_dgemm('T', 'N', ncol, nrow, jb, -1.0, P, jb, Rjj, jb,
                               beta, Q, ncol, data);
-
-          if (format == 'P') {
-            // schur_buf contains Schur complement in hybrid format (with full
-            // diagonal blocks). Store it by columns in B (with full diagonal
-            // blocks).
-            for (Int buf_row = 0; buf_row < nrow; ++buf_row) {
-              const Int N = ncol;
-              callAndTime_daxpy(N, 1.0, &schur_buf[buf_row * ncol], 1,
-                                &B[B_offset + buf_row], nrow, data);
-            }
-          }
 
           B_offset += nrow * ncol;
           offset += jb * ncol;
