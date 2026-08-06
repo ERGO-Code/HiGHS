@@ -85,11 +85,11 @@ controlled by the following values:
 - 256: diagonal solve with factorisation
 - 512: backward solve with factorisation
 
-Setting `hipo\_parallel\_force` (resp. `hipo\_parallel\_forbid`) to one of these values, 
+Setting `hipo_parallel_force` (resp. `hipo_parallel_forbid`) to one of these values, 
 or a sum of values, forces (resp. forbids) the use of parallelism in the corresponding 
 phases. These options override any other behaviour enforced by other options. If a given 
 phase is both forced and forbidden, the default behaviour is used instead. 
-For instance, setting `hipo\_parallel\_force` to 81 = 1+16+64 and `hipo\_parallel\_forbid` 
+For instance, setting `hipo_parallel_force` to 81 = 1+16+64 and `hipo_parallel_forbid` 
 to 68 = 4+64  forces the use of parallelism in the analyse phase and for building the 
 normal equations values, and forbids it for the reordering of augmented system. 
 
