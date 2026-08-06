@@ -3270,7 +3270,7 @@ HPresolve::Result HPresolve::singletonRow(HighsPostsolveStack& postsolve_stack,
 
   // use either the primal feasibility tolerance for the bound constraint or
   // for the singleton row including scaling, whichever is tighter.
-  const double boundTol = primal_feastol / std::max(1.0, std::fabs(val));
+  const double boundTol = std::max(primal_feastol / std::max(1.0, std::fabs(val)), 1e-15);
   const bool isIntegral = model->integrality_[col] != HighsVarType::kContinuous;
 
   bool lowerTightened = newColLower > model->col_lower_[col] + boundTol;
