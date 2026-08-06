@@ -12,113 +12,91 @@ namespace hipo {
 
 Int denseFactFH(Int n, Int k, double* A, double* B, const Int* pivot_sign,
                 double thresh, double* totalreg, Int* swaps, double* pivot_2x2,
-                bool parnode, DataCollector& data, const FHoptions& options) {
+                bool parallel, DataCollector& data, const FHoptions& options) {
   // ===========================================================================
   // Partial blocked factorisation
   // Matrix A is in format FH
   // Matrix B is in format FH
   // BLAS calls: dcopy, dscal, daxpy, dgemm, dtrsm
   // ===========================================================================
+  // While processing a block of columns:
+  // - D is the diagonal block
+  // - R is the collection of blocks below D
+  // - while using R to perform a right-looking update to a later block:
+  //    * Rj is the portion of R being used
+  //    * Pj is the portion of R being used, before being solved with the pivots
+  //    * Qj is the block of columns being updated
+  //   so that the update is Qj -= Rj * Pj^T
+  //
+  // ===========================================================================
 
   HIPO_CLOCK_CREATE;
 
-  // check input
   if (n < 0 || k < 0 || !A || (k < n && !B)) return kRetInvalidInput;
-
-  // quick return
   if (n == 0) return kRetOk;
 
   const Int nb = options.nb;
+  const Int blocks_in_A = (k - 1) / nb + 1;
 
-  // number of blocks of columns
-  const Int n_blocks = (k - 1) / nb + 1;
+  std::vector<Int64> blocks_diag_start(blocks_in_A);
+  getDiagStart(n, k, nb, blocks_in_A, blocks_diag_start);
 
-  // start of diagonal blocks
-  std::vector<Int64> diag_start(n_blocks);
-  getDiagStart(n, k, nb, n_blocks, diag_start);
+  std::vector<double> buffer(n * nb);
 
-  // size of blocks
-  const Int diag_size = nb * nb;
-  const Int full_size = nb * nb;
-
-  // buffer for copy of block column
-  std::vector<double> T(n * nb);
-
-  // number of rows/columns in the Schur complement
-  const Int ns = n - k;
-
-  // number of blocks in Schur complement
-  const Int s_blocks = (ns - 1) / nb + 1;
+  const Int B_size = n - k;
+  const Int blocks_in_B = (B_size - 1) / nb + 1;
 
   // ===========================================================================
   // LOOP OVER BLOCKS
   // ===========================================================================
-  for (Int j = 0; j < n_blocks; ++j) {
-    // j is the index of the block column
-
+  for (Int block_id = 0; block_id < blocks_in_A; ++block_id) {
     HIPO_CLOCK_START(2);
 
-    // jb is the number of columns
-    const Int jb = std::min(nb, k - nb * j);
+    const Int this_block_col = std::min(nb, k - nb * block_id);
+    const Int jb = this_block_col;
 
-    // size of current block could be smaller than diag_size and full_size
-    const Int this_diag_size = jb * jb;
-    const Int this_full_size = nb * jb;
+    const Int diag_block_entries = jb * jb;
+    const Int rows_below = n - nb * block_id - jb;
 
-    // diagonal block j
-    double* D = &A[diag_start[j]];
-
-    // number of rows left below block j
-    const Int M = n - nb * j - jb;
-
-    // block of columns below diagonal block j
-    const Int64 R_pos = diag_start[j] + this_diag_size;
-    double* R = &A[R_pos];
+    double* D = &A[blocks_diag_start[block_id]];
+    double* R = &A[blocks_diag_start[block_id] + diag_block_entries];
 
     // ===========================================================================
     // FACTORISE DIAGONAL BLOCK
     // ===========================================================================
-    double max_in_R = -1.0;
-    if (jb == 1) {
-      for (Int64 i = 0; i < M * jb; ++i)
-        max_in_R = std::max(max_in_R, std::abs(R[i]));
-    }
-
-    double* regul_current = &totalreg[j * nb];
-    std::vector<Int> pivot_sign_current(&pivot_sign[j * nb],
-                                        &pivot_sign[j * nb] + jb);
-    Int* swaps_current = &swaps[j * nb];
-    double* pivot_2x2_current = &pivot_2x2[j * nb];
-    Int info = denseFactK('U', jb, D, jb, pivot_sign_current.data(), thresh,
-                          regul_current, swaps_current, pivot_2x2_current, data,
-                          options);
-    if (info != 0) return info;
+    double* this_block_regularisation = &totalreg[block_id * nb];
+    std::vector<Int> this_block_pivot_sign(&pivot_sign[block_id * nb],
+                                           &pivot_sign[block_id * nb] + jb);
+    Int* this_block_swaps = &swaps[block_id * nb];
+    double* this_block_pivot_2x2 = &pivot_2x2[block_id * nb];
+    Int status = denseFactK('U', jb, D, jb, this_block_pivot_sign.data(),
+                            thresh, this_block_regularisation, this_block_swaps,
+                            this_block_pivot_2x2, data, options);
+    if (status != 0) return status;
 
     if (options.pivoting) {
-      // swap columns in R
-      applySwaps(swaps_current, M, jb, R, data);
-
-      // unswap regularisation, to keep it with original ordering
-      permuteWithSwaps(regul_current, swaps_current, jb, true);
+      applySwaps(this_block_swaps, rows_below, jb, R, data);
+      permuteWithSwaps(this_block_regularisation, this_block_swaps, jb, true);
     }
 
-    if (M > 0) {
+    if (rows_below > 0) {
       // ===========================================================================
       // SOLVE COLUMNS
       // ===========================================================================
       // solve block R with D
-      callAndTime_dtrsm('L', 'U', 'T', 'U', jb, M, 1.0, D, jb, R, jb, data);
+      callAndTime_dtrsm('L', 'U', 'T', 'U', jb, rows_below, 1.0, D, jb, R, jb,
+                        data);
 
       // make copy of partially solved columns
-      callAndTime_dcopy(jb * M, R, 1, T.data(), 1, data);
+      callAndTime_dcopy(jb * rows_below, R, 1, buffer.data(), 1, data);
 
       // solve block R with pivots
       Int step = 1;
       for (Int col = 0; col < jb; col += step) {
-        if (pivot_2x2_current[col] == 0.0) {
+        if (this_block_pivot_2x2[col] == 0.0) {
           // 1x1 pivots
           step = 1;
-          callAndTime_dscal(M, D[col + jb * col], &R[col], jb, data);
+          callAndTime_dscal(rows_below, D[col + jb * col], &R[col], jb, data);
         } else {
           // 2x2 pivots
           step = 2;
@@ -130,52 +108,42 @@ Int denseFactFH(Int n, Int k, double* A, double* B, const Int* pivot_sign,
           // inverse of 2x2 pivot
           double i_d1 = D[col + jb * col];
           double i_d2 = D[col + 1 + jb * (col + 1)];
-          double i_off = pivot_2x2_current[col];
+          double i_off = this_block_pivot_2x2[col];
 
           // copy of original col1
-          std::vector<double> c1_temp(M);
-          callAndTime_dcopy(M, c1, jb, c1_temp.data(), 1, data);
+          std::vector<double> c1_temp(rows_below);
+          callAndTime_dcopy(rows_below, c1, jb, c1_temp.data(), 1, data);
 
           // solve col and col+1
-          callAndTime_dscal(M, i_d1, c1, jb, data);
-          callAndTime_daxpy(M, i_off, c2, jb, c1, jb, data);
-          callAndTime_dscal(M, i_d2, c2, jb, data);
-          callAndTime_daxpy(M, i_off, c1_temp.data(), 1, c2, jb, data);
+          callAndTime_dscal(rows_below, i_d1, c1, jb, data);
+          callAndTime_daxpy(rows_below, i_off, c2, jb, c1, jb, data);
+          callAndTime_dscal(rows_below, i_d2, c2, jb, data);
+          callAndTime_daxpy(rows_below, i_off, c1_temp.data(), 1, c2, jb, data);
         }
       }
-
-      // check entries of L
-      /*double max_in_R = -1.0;
-      for (Int64 i = 0; i < M * jb; ++i) {
-        max_in_R = std::max(max_in_R, std::abs(R[i]));
-      }
-      if (max_in_R > 1e8) printf("%.1e, %5d %5d\n", max_in_R, jb, M);*/
 
       // ===========================================================================
       // UPDATE FRONTAL
       // ===========================================================================
-      Int64 offset{};
+      Int64 R_offset{};
 
-      // go through remaining blocks of columns
-      for (Int jj = j + 1; jj < n_blocks; ++jj) {
-        // number of columns in block jj
-        const Int col_jj = std::min(nb, k - nb * jj);
+      for (Int j = block_id + 1; j < blocks_in_A; ++j) {
+        const Int col_block_j = std::min(nb, k - nb * j);
+        const Int row_block_j = n - nb * j;
 
-        // number of rows in block jj
-        const Int row_jj = n - nb * jj;
+        const double* Pj = &buffer[R_offset];
+        double* Qj = &A[blocks_diag_start[j]];
+        const double* Rj = &R[R_offset];
 
-        const double* P = &T[offset];
-        double* Q = &A[diag_start[jj]];
-        const double* Rjj = &R[offset];
-
-        // perform gemm (potentially) in parallel
-        if (parnode)
-          dgemmParallel(P, Rjj, Q, col_jj, jb, row_jj, nb, 1.0, data);
+        // Qj -= Rj * Pj^T
+        if (parallel)
+          dgemmParallel(Pj, Rj, Qj, col_block_j, jb, row_block_j, nb, 1.0,
+                        data);
         else
-          callAndTime_dgemm('T', 'N', col_jj, row_jj, jb, -1.0, P, jb, Rjj, jb,
-                            1.0, Q, col_jj, data);
+          callAndTime_dgemm('T', 'N', col_block_j, row_block_j, jb, -1.0, Pj,
+                            jb, Rj, jb, 1.0, Qj, col_block_j, data);
 
-        offset += jb * col_jj;
+        R_offset += jb * col_block_j;
       }
       HIPO_CLOCK_STOP(2, data, kTimeDenseFact_main);
 
@@ -186,29 +154,24 @@ Int denseFactFH(Int n, Int k, double* A, double* B, const Int* pivot_sign,
       if (k < n) {
         Int64 B_offset{};
 
-        // go through blocks of columns of the Schur complement
-        for (Int sb = 0; sb < s_blocks; ++sb) {
-          // number of rows of the block
-          const Int nrow = ns - nb * sb;
+        for (Int j = 0; j < blocks_in_B; ++j) {
+          const Int row_block_j = B_size - nb * j;
+          const Int col_block_j = std::min(nb, row_block_j);
 
-          // number of columns of the block
-          const Int ncol = std::min(nb, nrow);
+          const double* Pj = &buffer[R_offset];
+          double* Qj = &B[B_offset];
+          const double* Rj = &R[R_offset];
 
-          const double* P = &T[offset];
-          double* Q = &B[B_offset];
-          const double* Rjj = &R[offset];
-
-          const double beta = 1.0;
-
-          // perform gemm (potentially) in parallel
-          if (parnode)
-            dgemmParallel(P, Rjj, Q, ncol, jb, nrow, nb, beta, data);
+          // Qj -= Rj * Pj^T
+          if (parallel)
+            dgemmParallel(Pj, Rj, Qj, col_block_j, jb, row_block_j, nb, 1.0,
+                          data);
           else
-            callAndTime_dgemm('T', 'N', ncol, nrow, jb, -1.0, P, jb, Rjj, jb,
-                              beta, Q, ncol, data);
+            callAndTime_dgemm('T', 'N', col_block_j, row_block_j, jb, -1.0, Pj,
+                              jb, Rj, jb, 1.0, Qj, col_block_j, data);
 
-          B_offset += nrow * ncol;
-          offset += jb * ncol;
+          B_offset += row_block_j * col_block_j;
+          R_offset += jb * col_block_j;
         }
       }
       HIPO_CLOCK_STOP(2, data, kTimeDenseFact_schur);
@@ -228,29 +191,26 @@ Int denseFactFP2FH(double* A, Int nrow, Int ncol, Int nb, DataCollector& data) {
 
   HIPO_CLOCK_CREATE;
 
-  std::vector<double> buf(nrow * nb);
+  std::vector<double> buffer(nrow * nb);
 
-  Int64 startAtoBuf = 0;
-  Int64 startBuftoA = 0;
+  Int64 offset_for_read = 0;
+  Int64 offset_for_write = 0;
 
   for (Int k = 0; k <= (ncol - 1) / nb; ++k) {
-    // Number of columns in the block. Can be smaller than nb for last block.
-    const Int block_size = std::min(nb, ncol - k * nb);
+    const Int this_block_col = std::min(nb, ncol - k * nb);
+    const Int this_block_row = nrow - k * nb;
 
-    // Number of rows in the block
-    const Int row_size = nrow - k * nb;
-
-    // Copy block into buf
-    callAndTime_dcopy(row_size * block_size, &A[startAtoBuf], 1, buf.data(), 1,
-                      data);
-    startAtoBuf += row_size * block_size;
+    // Copy block into buffer
+    callAndTime_dcopy(this_block_row * this_block_col, &A[offset_for_read], 1,
+                      buffer.data(), 1, data);
+    offset_for_read += this_block_row * this_block_col;
 
     // Copy columns back into A, row by row.
     // One call of dcopy_ for each row of the block of columns.
-    for (Int i = 0; i < row_size; ++i) {
-      const Int N = block_size;
-      callAndTime_dcopy(N, &buf[i], row_size, &A[startBuftoA], 1, data);
-      startBuftoA += N;
+    for (Int i = 0; i < this_block_row; ++i) {
+      callAndTime_dcopy(this_block_col, &buffer[i], this_block_row,
+                        &A[offset_for_write], 1, data);
+      offset_for_write += this_block_col;
     }
   }
 
