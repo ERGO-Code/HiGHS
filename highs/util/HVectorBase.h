@@ -45,7 +45,7 @@ class HVectorBase {
   double synthetic_tick;  //!< Synthetic clock for operations with this vector
 
   // For update
-  vector<char> cwork;       //!< char working buffer for UPDATE
+  vector<HighsBool> cwork;  //!< Working buffer for UPDATE
   vector<HighsInt> iwork;   //!< integer working buffer for UPDATE
   HVectorBase<Real>* next;  //!< Allows vectors to be linked for PAMI
 

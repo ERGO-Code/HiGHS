@@ -70,7 +70,7 @@ static void solveHyper(const HighsInt h_size, const HighsInt* h_lookup,
   // Take count
 
   // Build list
-  char* list_mark = rhs->cwork.data();
+  HighsBool* list_mark = rhs->cwork.data();
   HighsInt* list_index = rhs->iwork.data();
   HighsInt* list_stack = &rhs->iwork[h_size];
   HighsInt list_count = 0;
@@ -89,13 +89,13 @@ static void solveHyper(const HighsInt h_size, const HighsInt* h_lookup,
     HighsInt Hk = h_start[Hi];  // H matrix non zero position
     HighsInt n_stack = -1;      // Usage of the stack (-1 not used)
 
-    list_mark[Hi] = 1;  // Mark this as touched
+    list_mark[Hi] = true;  // Mark this as touched
 
     for (;;) {
       if (Hk < h_end[Hi]) {
         HighsInt Hi_sub = h_lookup[h_index[Hk++]];
-        if (list_mark[Hi_sub] == 0) {  // Go to a child
-          list_mark[Hi_sub] = 1;       // Mark as touched
+        if (!list_mark[Hi_sub]) {      // Go to a child
+          list_mark[Hi_sub] = true;    // Mark as touched
           list_stack[++n_stack] = Hi;  // Store current into stack
           list_stack[++n_stack] = Hk;
           Hi = Hi_sub;  // Replace current with child
@@ -122,7 +122,7 @@ static void solveHyper(const HighsInt h_size, const HighsInt* h_lookup,
     rhs_count = 0;
     for (HighsInt iList = list_count - 1; iList >= 0; iList--) {
       HighsInt i = list_index[iList];
-      list_mark[i] = 0;
+      list_mark[i] = false;
       HighsInt pivotRow = h_pivot_index[i];
       double pivot_multiplier = rhs_array[pivotRow];
       if (fabs(pivot_multiplier) > kHighsTiny) {
@@ -139,7 +139,7 @@ static void solveHyper(const HighsInt h_size, const HighsInt* h_lookup,
     rhs_count = 0;
     for (HighsInt iList = list_count - 1; iList >= 0; iList--) {
       HighsInt i = list_index[iList];
-      list_mark[i] = 0;
+      list_mark[i] = false;
       HighsInt pivotRow = h_pivot_index[i];
       double pivot_multiplier = rhs_array[pivotRow];
       if (fabs(pivot_multiplier) > kHighsTiny) {
