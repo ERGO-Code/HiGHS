@@ -93,6 +93,11 @@ For instance, setting `hipo_parallel_force` to 81 = 1+16+64 and `hipo_parallel_f
 to 68 = 4+64  forces the use of parallelism in the analyse phase and for building the 
 normal equations values, and forbids it for the reordering of augmented system. 
 
+By default, `hipo_parallel_type` is set to `choose`, `hipo_parallel_force` and 
+`hipo_parallel_forbid` are set to 0, meaning that the choice of parallelism is left 
+completely to the internal heuristics. These heuristics are very much likely to be 
+correct, but the options provide ways of overriding them.
+
 The extent to which parallelism is used in HiPO depends on the value of the
 [threads](@ref option-threads) option (see above).
 
