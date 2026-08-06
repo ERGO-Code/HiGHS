@@ -169,7 +169,6 @@ Int denseFactFH(Int n, Int k, double* A, double* B, const Int* pivot_sign,
 
         R_offset += jb * col_block_j;
       }
-      HIPO_CLOCK_STOP(2, data, kTimeDenseFact_main);
 
       // ===========================================================================
       // UPDATE SCHUR COMPLEMENT
@@ -194,7 +193,7 @@ Int denseFactFH(Int n, Int k, double* A, double* B, const Int* pivot_sign,
       }
 
       tg.taskWait();
-      HIPO_CLOCK_STOP(2, data, kTimeDenseFact_schur);
+      HIPO_CLOCK_STOP(2, data, kTimeDenseFact_update);
     }
   }
 

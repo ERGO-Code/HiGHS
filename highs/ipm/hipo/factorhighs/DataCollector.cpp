@@ -177,10 +177,8 @@ void DataCollector::printTimes(const Logger& logger) const {
                     4, 1)
              << "%)\n";
 
-  log_stream << "\t\tmain:           " << fix(times_[kTimeDenseFact_main], 8, 4)
-             << "\n";
-  log_stream << "\t\tSchur:          "
-             << fix(times_[kTimeDenseFact_schur], 8, 4) << "\n";
+  log_stream << "\t\tupdate:         "
+             << fix(times_[kTimeDenseFact_update], 8, 4) << "\n";
   log_stream << "\t\tkernel:         "
              << fix(times_[kTimeDenseFact_kernel], 8, 4) << "\n";
   log_stream << "\t\tconvert:        "

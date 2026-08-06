@@ -19,8 +19,7 @@ enum TimeItems {
   kTimeFactoriseAssembleChildrenFrontal,  // TIMING_LEVEL 2
   kTimeFactoriseAssembleChildrenClique,   // TIMING_LEVEL 2
   kTimeFactoriseDenseFact,                // TIMING_LEVEL 2
-  kTimeDenseFact_main,                    // TIMING_LEVEL 2
-  kTimeDenseFact_schur,                   // TIMING_LEVEL 2
+  kTimeDenseFact_update,                  // TIMING_LEVEL 2
   kTimeDenseFact_kernel,                  // TIMING_LEVEL 2
   kTimeDenseFact_convert,                 // TIMING_LEVEL 2
   kTimeDenseFact_pivoting,                // TIMING_LEVEL 2
