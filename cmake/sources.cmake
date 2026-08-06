@@ -293,7 +293,6 @@ set(factor_highs_sources
     ipm/hipo/factorhighs/DataCollector.cpp
     ipm/hipo/factorhighs/DenseFactHybrid.cpp
     ipm/hipo/factorhighs/DenseFactKernel.cpp
-    ipm/hipo/factorhighs/DgemmParallel.cpp
     ipm/hipo/factorhighs/FactorHighs_c_api.cpp
     ipm/hipo/factorhighs/FactorHighs.cpp
     ipm/hipo/factorhighs/Factorise.cpp
@@ -312,7 +311,6 @@ set(factor_highs_headers
     ipm/hipo/factorhighs/CliqueStack.h
     ipm/hipo/factorhighs/DataCollector.h
     ipm/hipo/factorhighs/DenseFact.h
-    ipm/hipo/factorhighs/DgemmParallel.h
     ipm/hipo/factorhighs/FactorHighs_c_api.h
     ipm/hipo/factorhighs/FactorHighs.h
     ipm/hipo/factorhighs/FactorHighsOptions.h

@@ -209,7 +209,6 @@ _hipo_srcs = [
     'ipm/hipo/factorhighs/DataCollector.cpp',
     'ipm/hipo/factorhighs/DenseFactHybrid.cpp',
     'ipm/hipo/factorhighs/DenseFactKernel.cpp',
-    'ipm/hipo/factorhighs/DgemmParallel.cpp',
     'ipm/hipo/factorhighs/FactorHighs_c_api.cpp',
     'ipm/hipo/factorhighs/FactorHighs.cpp',
     'ipm/hipo/factorhighs/Factorise.cpp',
