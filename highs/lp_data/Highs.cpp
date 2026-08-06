@@ -1686,6 +1686,7 @@ HighsStatus Highs::calledOptimizeModel() {
         ekk_instance_.lp_name_ = "Original LP";
         timedSolveLp(incumbent_lp, "Not presolved: solving the LP",
                      this_solve_original_lp_time);
+        this->run_data_.solve_time = this_solve_original_lp_time;
         return_status = interpretCallStatus(options_.log_options, call_status,
                                             return_status, "callSolveLp");
         if (return_status == HighsStatus::kError)
@@ -1698,6 +1699,7 @@ HighsStatus Highs::calledOptimizeModel() {
         timedSolveLp(incumbent_lp,
                      "Problem not reduced by presolve: solving the LP",
                      this_solve_original_lp_time);
+        this->run_data_.solve_time = this_solve_original_lp_time;
         return_status = interpretCallStatus(options_.log_options, call_status,
                                             return_status, "callSolveLp");
         if (return_status == HighsStatus::kError)
@@ -1988,6 +1990,7 @@ HighsStatus Highs::calledOptimizeModel() {
               incumbent_lp,
               "Solving the original LP from the solution after postsolve",
               this_solve_original_lp_time);
+          this->run_data_.postsolve_time += this_solve_original_lp_time;
           // Determine the iteration count
           postsolve_iteration_count += info_.simplex_iteration_count;
           //
