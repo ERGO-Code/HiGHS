@@ -1489,7 +1489,7 @@ HighsPostsolveStack::popFourierMotzkinBlock(HighsDataStack& stack) {
 void HighsPostsolveStack::undoFourierMotzkinBlock(
     const std::vector<FmeStepData>& steps, const HighsOptions& options,
     HighsSolution& solution, HighsBasis& basis) {
-  const double tol = options.mip_feasibility_tolerance;
+  const double tol = options.primal_feasibility_tolerance;
   const double dual_tol = options.dual_feasibility_tolerance;
 
   HighsInt numSteps = static_cast<HighsInt>(steps.size());
