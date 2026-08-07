@@ -7518,7 +7518,7 @@ HPresolve::Result HPresolve::fourierMotzkin(
   // used to simulate the objective constraint in checkRows before
   // reformulation actually happens
   std::vector<HighsInt> objRowCols;
-  if (model->fme_obj_col_ == -1) {
+  if (model->fme_obj_col_ == -1 && options->presolve_fm_level >= 1) {
     for (HighsInt j = 0; j < model->num_col_; ++j) {
       if (!colDeleted[j] && model->col_cost_[j] != 0.0) objRowCols.push_back(j);
     }
