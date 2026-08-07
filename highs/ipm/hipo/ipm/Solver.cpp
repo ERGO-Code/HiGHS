@@ -20,6 +20,52 @@ Int Solver::load(const HighsLp& lp, const HighsHessian& Q) {
   return kOk;
 }
 
+void Solver::chooseAllowedParallelism(const HighsOptions& Hoptions) {
+  for (Int i = 0; i < static_cast<Int>(ParallelTechnique::kCount); ++i)
+    options_.parallel[i] = ParallelType::kChoose;
+
+  // set default based on option `parallel`
+  options_.setParallel(ParallelTechnique::kAnalyse, ParallelType::kOn);
+  options_.setParallel(ParallelTechnique::kOrderNE, ParallelType::kOn);
+  options_.setParallel(ParallelTechnique::kOrderAS, ParallelType::kOn);
+  if (Hoptions.parallel == kHighsOffString) {
+    options_.setParallel(ParallelTechnique::kTree, ParallelType::kOff);
+    options_.setParallel(ParallelTechnique::kNode, ParallelType::kOff);
+    options_.setParallel(ParallelTechnique::kForwardSolve, ParallelType::kOff);
+    options_.setParallel(ParallelTechnique::kDiagonalSolve, ParallelType::kOff);
+    options_.setParallel(ParallelTechnique::kBackwardSolve, ParallelType::kOff);
+  }
+
+  // override with option `hipo_parallel_type`
+  if (Hoptions.parallel == kHighsOnString) {
+    if (Hoptions.hipo_parallel_type == kHipoTreeString) {
+      options_.setParallel(ParallelTechnique::kTree, ParallelType::kOn);
+      options_.setParallel(ParallelTechnique::kNode, ParallelType::kOff);
+    } else if (Hoptions.hipo_parallel_type == kHipoNodeString) {
+      options_.setParallel(ParallelTechnique::kTree, ParallelType::kOff);
+      options_.setParallel(ParallelTechnique::kNode, ParallelType::kOn);
+    } else if (Hoptions.hipo_parallel_type == kHipoBothString) {
+      options_.setParallel(ParallelTechnique::kTree, ParallelType::kOn);
+      options_.setParallel(ParallelTechnique::kNode, ParallelType::kOn);
+    }
+  }
+
+  // override if threads is 1
+  if (highs::parallel::num_threads() == 1) {
+    for (Int i = 0; i < static_cast<Int>(ParallelTechnique::kCount); ++i)
+      options_.parallel[i] = ParallelType::kOff;
+  }
+
+  // override with option `hipo_parallel_force` or `hipo_parallel_forbid`
+  for (Int i = 0; i < static_cast<Int>(ParallelTechnique::kCount); ++i) {
+    bool force = testParallelBit(Hoptions.hipo_parallel_force, i);
+    bool forbid = testParallelBit(Hoptions.hipo_parallel_forbid, i);
+    if (force && forbid) continue;
+    if (force) options_.parallel[i] = ParallelType::kOn;
+    if (forbid) options_.parallel[i] = ParallelType::kOff;
+  }
+}
+
 void Solver::setOptions(const HighsOptions& highs_options) {
   options_.display = true;
   if (!highs_options.output_flag | !highs_options.log_to_console)
@@ -48,12 +94,12 @@ void Solver::setOptions(const HighsOptions& highs_options) {
 
   options_.max_iter = highs_options.ipm_iteration_limit;
   options_.crossover = highs_options.run_crossover;
-  options_.parallel = highs_options.parallel;
-  options_.parallel_type = highs_options.hipo_parallel_type;
   options_.nla = highs_options.hipo_system;
   options_.ordering = highs_options.hipo_ordering;
   options_.factor = highs_options.hipo_factor;
   options_.block_size = highs_options.hipo_block_size;
+  options_.random_seed = highs_options.random_seed + 42;
+  chooseAllowedParallelism(highs_options);
 
   options_orig_ = options_;
   Hoptions_ = highs_options;
@@ -146,7 +192,7 @@ isFailure Solver::initialise() {
 
   start_time_ = control_.elapsed();
 
-  kkt_.reset(new KktMatrix(model_, regul_, info_, logger_));
+  kkt_.reset(new KktMatrix(model_, regul_, info_, logger_, options_));
   if (!kkt_) {
     info_.error = kErrorFailedAllocation;
     return true;
@@ -305,8 +351,8 @@ void Solver::refineWithIpx() {
 }
 
 void Solver::crossoverWithIpx() {
-  // at the moment this is almost identical to refineWithIpx, but in the future
-  // it will use ipx_lps_.CrossoverFromStartingPoint
+  // at the moment this is almost identical to refineWithIpx, but in the
+  // future it will use ipx_lps_.CrossoverFromStartingPoint
   if (prepareIpx()) return;
   if (prepareIpxStartingPoint()) return;
   ipx_lps_.Solve();
@@ -981,8 +1027,8 @@ void Solver::bestWeight(const NewtonDir& delta, const NewtonDir& corrector,
                         double& alpha_d) const {
   // Find the best primal and dual weights for the corrector in the interval
   // [alpha_p_old * alpha_d_old, 1].
-  // Upon return, wp and wd are the optimal weights, alpha_p and alpha_d are the
-  // corresponding stepsizes.
+  // Upon return, wp and wd are the optimal weights, alpha_p and alpha_d are
+  // the corresponding stepsizes.
 
   // keep track of best stepsizes
   alpha_p = 0.0;
@@ -1089,7 +1135,8 @@ shouldTerminate Solver::checkBadIter() {
         } else {
           if (checkTerminationKkt()) {
             logger_.printw(
-                "HiPO stagnated but HiGHS considers the solution acceptable\n");
+                "HiPO stagnated but HiGHS considers the solution "
+                "acceptable\n");
             logger_.print("=== Primal-dual feasible point found\n");
             setStatus1(kStatusOptimal);
           } else {
@@ -1265,7 +1312,8 @@ void Solver::printHeader() const {
     if (!options_.timeless_log) logger_.print("    time");
     if (logger_.debug(1)) {
       logger_.print(
-          "     alpha p/d   sigma af/co   cor  solv  fact    static reg p/d    "
+          "     alpha p/d   sigma af/co   cor  solv  fact    static reg p/d  "
+          "  "
           " minT     maxT  (xj * zj / mu)_range_&_num   max_res");
     }
     logger_.print("\n");
@@ -1304,13 +1352,7 @@ void Solver::printOutput(bool reset) const {
 void Solver::printInfo() const {
   std::stringstream log_stream;
   log_stream << "\nRunning HiPO\n";
-
-  if (options_.parallel == kHighsOffString)
-    log_stream << textline("Threads:") << 1 << '\n';
-  else
-    log_stream << textline("Threads:") << highs::parallel::num_threads()
-               << '\n';
-
+  log_stream << textline("Threads:") << highs::parallel::num_threads() << '\n';
   logger_.print(log_stream.str().c_str());
 
   model_.print(logger_);
@@ -1430,22 +1472,22 @@ void Solver::chooseNumberOfCorrectors() {
     // because there are two sweeps through L (forward and backward).
     double solv_effort = 2.0 * LS_->nz();
 
-    // The factorise phase uses BLAS-3 and can be parallelised, the solve phase
-    // uses BLAS-2 and cannot be parallelised. To account for this, the
+    // The factorise phase uses BLAS-3 and can be parallelised, the solve
+    // phase uses BLAS-2 and cannot be parallelised. To account for this, the
     // factorisation effort is multiplied by a coefficient < 1, estimated
     // empirically.
     double alpha = 1.0 / 112.0;
 
     double ratio = alpha * fact_effort / solv_effort;
 
-    // At each ipm iteration, there are up to (1+k) directions computed, where k
-    // is the number of correctors. Each direction requires up (1+f) solves,
+    // At each ipm iteration, there are up to (1+k) directions computed, where
+    // k is the number of correctors. Each direction requires up (1+f) solves,
     // where f is the number of refinement steps. So, up to (1+k)(1+f) solves
     // are performed per iteration. However, not all refinement steps are used
     // all the time, so use f/2.
     // Therefore, we want (1+k)(1+f/2) < ratio.
 
-    double thresh = ratio / (1.0 + kMaxIterRefine / 2.0) - 1;
+    double thresh = ratio / (1.0 + kRefineMaxIter / 2.0) - 1;
 
     info_.correctors = std::floor(thresh);
     info_.correctors = std::max(info_.correctors, (Int)1);

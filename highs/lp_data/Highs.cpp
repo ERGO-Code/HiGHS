@@ -30,8 +30,6 @@
 #include "model/HighsHessianUtils.h"
 #include "parallel/HighsParallel.h"
 #include "presolve/ICrashX.h"
-#include "qpsolver/a_quass.hpp"
-#include "qpsolver/runtime.hpp"
 #include "simplex/HSimplex.h"
 #include "simplex/HSimplexDebug.h"
 #include "util/HighsMatrixPic.h"
@@ -1199,7 +1197,7 @@ HighsStatus Highs::optimizeLp() {
   assert(!this->model_.isQp());
   assert(!this->model_.lp_.hasSemiVariables());
   assert(!this->multi_linear_objective_.size());
-  return this->calledOptimizeModel();
+  return this->optimizeModelTryCatch();
 }
 
 HighsStatus Highs::optimizeModel() {
@@ -1211,10 +1209,34 @@ HighsStatus Highs::optimizeModel() {
   const bool already_profiling = this->profiling_;
   HighsProfiling profiling;
   if (!already_profiling) this->initializeProfiling(&profiling);
-  status = this->calledOptimizeModel();
+  status = this->optimizeModelTryCatch();
   if (!already_profiling) {
     this->reportProfiling();
     this->clearProfiling();
+  }
+  return status;
+}
+
+HighsStatus Highs::optimizeModelTryCatch() {
+  // Wrap the call to Highs::calledOptimizeModel() in a try-catch
+  // block
+  HighsStatus status;
+  auto handleCatch = [&]() {
+    // Clear all solver data, since there may be nothing useful
+    this->clearSolver();
+    model_status_ = HighsModelStatus::kSolveError;
+    status = HighsStatus::kError;
+  };
+  try {
+    status = calledOptimizeModel();
+  } catch (const std::exception& exception) {
+    highsLogDev(options_.log_options, HighsLogType::kError,
+                "Exception %s in calledOptimizeModel\n", exception.what());
+    handleCatch();
+  } catch (const HighsTask::Interrupt&) {
+    highsLogDev(options_.log_options, HighsLogType::kError,
+                "HighsTask interrupt in calledOptimizeModel\n");
+    handleCatch();
   }
   return status;
 }
@@ -1417,8 +1439,14 @@ HighsStatus Highs::calledOptimizeModel() {
       return returnFromOptimizeModel(HighsStatus::kError, undo_mods);
     }
     if (!solverValidForQp(options_.solver)) warnSolverInvalid(options_, "QP");
-
-    call_status = callSolveQp();
+    try {
+      call_status = callSolveQp(this->model_, "Solve incumbent QP");
+    } catch (const std::exception& exception) {
+      highsLogDev(options_.log_options, HighsLogType::kError,
+                  "Exception %s in callSolveQp\n", exception.what());
+      model_status_ = HighsModelStatus::kSolveError;
+      call_status = HighsStatus::kError;
+    }
     return_status = interpretCallStatus(options_.log_options, call_status,
                                         return_status, "callSolveQp");
     return returnFromOptimizeModel(return_status, undo_mods);
@@ -1435,7 +1463,7 @@ HighsStatus Highs::calledOptimizeModel() {
       // Solve model as a MIP
       if (!solverValidForMip(options_.solver))
         warnSolverInvalid(options_, "MIP");
-      call_status = callSolveMip();
+      call_status = callSolveMip(model_.lp_, "Solve incumbent MIP");
       return_status = interpretCallStatus(options_.log_options, call_status,
                                           return_status, "callSolveMip");
       return returnFromOptimizeModel(return_status, undo_mods);
@@ -1541,14 +1569,15 @@ HighsStatus Highs::calledOptimizeModel() {
   }
 
   // lambda for Lp solving
-  auto solveLp = [&](HighsLp& lp, const std::string& lpSolveDescription,
-                     double& time) {
+  auto timedSolveLp = [&](HighsLp& lp, const std::string& lpSolveDescription,
+                          double& time) {
     time = -timer_.read(timer_.solve_clock);
     if (possibly_use_log_dev_level_2) {
       options_.log_dev_level = use_log_dev_level;
       options_.output_flag = use_output_flag;
     }
     timer_.start(timer_.solve_clock);
+    const bool as_mip = false;
     call_status = callSolveLp(lp, lpSolveDescription);
     timer_.stop(timer_.solve_clock);
     if (possibly_use_log_dev_level_2) {
@@ -1598,7 +1627,7 @@ HighsStatus Highs::calledOptimizeModel() {
     // If there is a valid HiGHS basis, refine any status values that
     // are simply HighsBasisStatus::kNonbasic
     if (basis_.useful) refineBasis(incumbent_lp, solution_, basis_);
-    solveLp(incumbent_lp, lp_solve, this_solve_original_lp_time);
+    timedSolveLp(incumbent_lp, lp_solve, this_solve_original_lp_time);
     return_status = interpretCallStatus(options_.log_options, call_status,
                                         return_status, "callSolveLp");
     if (return_status == HighsStatus::kError)
@@ -1655,8 +1684,9 @@ HighsStatus Highs::calledOptimizeModel() {
     switch (model_presolve_status_) {
       case HighsPresolveStatus::kNotPresolved: {
         ekk_instance_.lp_name_ = "Original LP";
-        solveLp(incumbent_lp, "Not presolved: solving the LP",
-                this_solve_original_lp_time);
+        timedSolveLp(incumbent_lp, "Not presolved: solving the LP",
+                     this_solve_original_lp_time);
+        this->run_data_.solve_time = this_solve_original_lp_time;
         return_status = interpretCallStatus(options_.log_options, call_status,
                                             return_status, "callSolveLp");
         if (return_status == HighsStatus::kError)
@@ -1666,8 +1696,10 @@ HighsStatus Highs::calledOptimizeModel() {
       case HighsPresolveStatus::kNotReduced: {
         ekk_instance_.lp_name_ = "Unreduced LP";
         // Log the presolve reductions
-        solveLp(incumbent_lp, "Problem not reduced by presolve: solving the LP",
-                this_solve_original_lp_time);
+        timedSolveLp(incumbent_lp,
+                     "Problem not reduced by presolve: solving the LP",
+                     this_solve_original_lp_time);
+        this->run_data_.solve_time = this_solve_original_lp_time;
         return_status = interpretCallStatus(options_.log_options, call_status,
                                             return_status, "callSolveLp");
         if (return_status == HighsStatus::kError)
@@ -1713,8 +1745,8 @@ HighsStatus Highs::calledOptimizeModel() {
         // objective values aren't correct
         const double save_objective_bound = options_.objective_bound;
         options_.objective_bound = kHighsInf;
-        solveLp(reduced_lp, "Solving the presolved LP",
-                this_solve_presolved_lp_time);
+        timedSolveLp(reduced_lp, "Solving the presolved LP",
+                     this_solve_presolved_lp_time);
         this->run_data_.solve_time = this_solve_presolved_lp_time;
         if (ekk_instance_.status_.initialised_for_solve) {
           // Record the pivot threshold resulting from solving the presolved LP
@@ -1787,10 +1819,10 @@ HighsStatus Highs::calledOptimizeModel() {
         HighsOptions save_options = options_;
         options_.solver = "simplex";
         options_.simplex_strategy = kSimplexStrategyPrimal;
-        solveLp(incumbent_lp,
-                "Solving the original LP with primal simplex "
-                "to determine infeasible or unbounded",
-                this_solve_original_lp_time);
+        timedSolveLp(incumbent_lp,
+                     "Solving the original LP with primal simplex "
+                     "to determine infeasible or unbounded",
+                     this_solve_original_lp_time);
         // Recover the options
         options_ = save_options;
         if (return_status == HighsStatus::kError)
@@ -1954,9 +1986,11 @@ HighsStatus Highs::calledOptimizeModel() {
           // adding the corresponding values after callSolveLp gives
           // difference
           postsolve_iteration_count = -info_.simplex_iteration_count;
-          solveLp(incumbent_lp,
-                  "Solving the original LP from the solution after postsolve",
-                  this_solve_original_lp_time);
+          timedSolveLp(
+              incumbent_lp,
+              "Solving the original LP from the solution after postsolve",
+              this_solve_original_lp_time);
+          this->run_data_.postsolve_time += this_solve_original_lp_time;
           // Determine the iteration count
           postsolve_iteration_count += info_.simplex_iteration_count;
           //
@@ -2014,10 +2048,11 @@ HighsStatus Highs::calledOptimizeModel() {
             options_.kkt_tolerance, int(pdlp_cleanup_iteration_limit));
         options_.solver = kPdlpString;
         options_.pdlp_iteration_limit = pdlp_cleanup_iteration_limit;
-        solveLp(incumbent_lp,
-                "Using PDLP to solve the original LP from the solution after "
-                "postsolve",
-                this_solve_original_lp_time);
+        timedSolveLp(
+            incumbent_lp,
+            "Using PDLP to solve the original LP from the solution after "
+            "postsolve",
+            this_solve_original_lp_time);
         // Recover solver and time limit option values
         options_.solver = solver;
         options_.pdlp_iteration_limit = pdlp_iteration_limit;
@@ -4214,443 +4249,72 @@ HighsStatus Highs::completeSolutionFromDiscreteAssignment() {
 HighsStatus Highs::callSolveLp(HighsLp& lp, const std::string& message) {
   HighsStatus return_status = HighsStatus::kOk;
 
+  // Check that the model is column-wise
+  assert(lp.a_matrix_.isColwise());
+
   HighsLpSolverObject solver_object(lp, basis_, solution_, info_, ekk_instance_,
                                     callback_, options_, timer_);
   solver_object.setProfiling(this->profiling_);
-
-  // Check that the model is column-wise
-  assert(model_.lp_.a_matrix_.isColwise());
 
   // Solve the LP
   return_status = solveLp(solver_object, message);
   // Extract the model status
   model_status_ = solver_object.model_status_;
+
   return return_status;
 }
 
-HighsHessianFunctionType testOracleCallSquareHessian =
-    [](const HighsInt call_type, const HighsInt* x_num_entries,
-       const HighsInt* x_index, const double* x_value,
-       HighsInt* q_x_num_entries, HighsInt* q_x_index, double* q_x_value,
-       void* hessian_p) {
-      assert(kHessianOracleCallTypeMin <= call_type &&
-             call_type <= kHessianOracleCallTypeMax);
-
-      HighsHessian hessian = *(static_cast<HighsHessian*>(hessian_p));
-      assert(hessian.format_ == HessianFormat::kSquare);
-
-      // Lambda for adding multiple of Hessian column into q_x_value
-      auto addScaledQcol = [&](const HighsInt iCol, const double x_value) {
-        for (HighsInt iEl = hessian.start_[iCol];
-             iEl < hessian.start_[iCol + 1]; iEl++) {
-          HighsInt iRow = hessian.index_[iEl];
-          q_x_value[iRow] += hessian.value_[iEl] * x_value;
-        }
-      };
-
-      if (call_type == kHessianOracleCallTypeEntry) {
-        assert(x_num_entries == nullptr);
-        assert(x_value == nullptr);
-        assert(x_index != nullptr);
-        assert(q_x_num_entries == nullptr);
-        assert(q_x_index != nullptr);
-        assert(q_x_value != nullptr);
-        HighsInt iCol = x_index[0];
-        HighsInt iRow = q_x_index[0];
-        // Zero Qx value in case the Hessian entry requested is zero
-        q_x_value[0] = 0;
-        for (HighsInt iEl = hessian.start_[iCol];
-             iEl < hessian.start_[iCol + 1]; iEl++) {
-          if (hessian.index_[iEl] == iRow) {
-            q_x_value[0] = hessian.value_[iEl];
-            return 0;
-          }
-        }
-      } else if (call_type == kHessianOracleCallTypeColumn) {
-        // Get the entries in column iCol
-        assert(x_num_entries == nullptr);
-        assert(x_value == nullptr);
-        assert(x_index != nullptr);
-        assert(q_x_num_entries != nullptr);
-        assert(q_x_index != nullptr);
-        assert(q_x_value != nullptr);
-        (*q_x_num_entries) = 0;
-        HighsInt iCol = x_index[0];
-        for (HighsInt iEl = hessian.start_[iCol];
-             iEl < hessian.start_[iCol + 1]; iEl++) {
-          q_x_index[*q_x_num_entries] = hessian.index_[iEl];
-          q_x_value[*q_x_num_entries] = hessian.value_[iEl];
-          (*q_x_num_entries)++;
-        }
-      } else {
-        assert(x_index == nullptr || *x_num_entries >= 0);
-        assert(q_x_num_entries == nullptr);
-        assert(q_x_index == nullptr);
-        assert(q_x_value != nullptr);
-        if (x_index == nullptr) {
-          // Simple product with full vector x, full vector q_x
-          for (HighsInt iCol = 0; iCol < hessian.dim_; iCol++)
-            addScaledQcol(iCol, x_value[iCol]);
-        } else {
-          // x is scattered with x_num_entries entries in rows x_index
-          for (HighsInt iX = 0; iX < *x_num_entries; iX++) {
-            HighsInt iCol = x_index[iX];
-            addScaledQcol(iCol, x_value[iCol]);
-          }
-        }
-      }
-      return 0;
-    };
-
-HighsStatus Highs::callSolveQp() {
-  // Check that the model is column-wise
-  HighsLp& lp = model_.lp_;
-  assert(model_.lp_.a_matrix_.isColwise());
-  HighsHessian& hessian = model_.hessian_;
-  HighsInt dim = hessian.dim_;
-  if (dim > 0) {
-    assert(hessian.format_ == HessianFormat::kTriangular);
-    assert(!hessian.isOracle());
-  } else {
-    assert(hessian.isOracle());
-    assert(hessian.oracle_.isValid());
-    dim = hessian.oracle_.dim_;
+// The method below runs calls solveMip for the given MIP
+HighsStatus Highs::callSolveMip(HighsLp& lp, const std::string& message) {
+  // Need to call invalidateSolverData() - why? - so save any valid
+  // previous solution
+  HighsSolution previous_solution;
+  if (this->solution_.value_valid) {
+    previous_solution.value_valid = true;
+    previous_solution.col_value = std::move(this->solution_.col_value);
+    previous_solution.row_value = std::move(this->solution_.row_value);
   }
-  if (dim != lp.num_col_) {
-    highsLogDev(
-        options_.log_options, HighsLogType::kError,
-        "Hessian dimension = %d is incompatible with matrix dimension = %d\n",
-        int(dim), int(lp.num_col_));
-    model_status_ = HighsModelStatus::kModelError;
-    solution_.value_valid = false;
-    solution_.dual_valid = false;
-    return HighsStatus::kError;
-  }
-
-  HighsStatus return_status;
-
-  // Choose solver
-  bool use_hipo =
-      (options_.solver == kHipoString || options_.solver == kIpmString) &&
-      HighsExternalApi::isAvailable<HighsExtras::hipo>();
-
-  if (use_hipo) {
-    // Need to convert oracle to an explicit Hessian without an oracle
-    const bool was_oracle = hessian.isOracle();
-    auto oracle_call = hessian.oracle_.call_;
-    if (was_oracle) {
-      hessian.formFromOracle();
-      hessian.oracle_.call_ = nullptr;
-    }
-    assert(!hessian.isOracle());
-    if (this->profiling_) this->profiling_->start(kSubSolverHipo);
-    return_status = solveHipo(options_, timer_, lp, hessian, basis_, solution_,
-                              model_status_, info_, callback_);
-    if (this->profiling_) this->profiling_->stop(kSubSolverHipo);
-    // Restore any oracle call;
-    hessian.oracle_.call_ = oracle_call;
-    assert(hessian.isOracle() == was_oracle);
-    if (return_status == HighsStatus::kError) return return_status;
-  } else {
-    //
-    // Run the QP solver
-    if (this->profiling_) this->profiling_->start(kSubSolverQpAsm);
-
-    Instance instance(lp.num_col_, lp.num_row_);
-
-    instance.sense = HighsInt(lp.sense_);
-    instance.num_con = lp.num_row_;
-    instance.num_var = lp.num_col_;
-
-    instance.A.mat.num_col = lp.num_col_;
-    instance.A.mat.num_row = lp.num_row_;
-    instance.A.mat.start = lp.a_matrix_.start_;
-    instance.A.mat.index = lp.a_matrix_.index_;
-    instance.A.mat.value = lp.a_matrix_.value_;
-    instance.c.value = lp.col_cost_;
-    instance.offset = lp.offset_;
-    instance.con_lo = lp.row_lower_;
-    instance.con_up = lp.row_upper_;
-    instance.var_lo = lp.col_lower_;
-    instance.var_up = lp.col_upper_;
-    // Clear the instance Hessian data
-    instance.Q.mat.clear();
-    HighsHessian oracle_hessian;
-    if (hessian.dim_ > 0) {
-      if (options_.test_qp_oracle) {
-        // Test the Hessian oracle by using the incumbent Hessian as data for it
-        oracle_hessian = hessian.toSquare();
-        instance.Q.mat.oracle_.dim_ = hessian.dim_;
-        instance.Q.mat.oracle_.call_ = testOracleCallSquareHessian;
-        instance.Q.mat.oracle_.data_ = &oracle_hessian;
-      } else {
-        assert(instance.Q.mat.oracle_.call_ == nullptr);
-      }
-      // Generate the explicit Hessian data to use if not testing the
-      // oracle, and to cross-check the oracle results
-      instance.Q.mat.num_col = lp.num_col_;
-      instance.Q.mat.num_row = lp.num_col_;
-      triangularToSquareHessian(hessian, instance.Q.mat.start,
-                                instance.Q.mat.index, instance.Q.mat.value);
-    } else {
-      assert(hessian.isOracle());
-      instance.Q.mat.oracle_ = hessian.oracle_;
-    }
-
-    for (HighsInt i = 0; i < (HighsInt)instance.c.value.size(); i++) {
-      if (instance.c.value[i] != 0.0) {
-        instance.c.index[instance.c.num_nz++] = i;
-      }
-    }
-
-    if (lp.sense_ == ObjSense::kMaximize) {
-      // Negate the vector and Hessian
-      for (double& i : instance.c.value) i *= -1.0;
-      if (instance.Q.mat.num_col > 0) {
-        for (double& i : instance.Q.mat.value) i *= -1.0;
-      }
-      if (instance.Q.mat.isOracle()) instance.Q.mat.oracle_.multiplier_ = -1;
-    }
-
-    Settings settings;
-    Statistics stats;
-
-    settings.reportingfequency = 100;
-    if (options_.qp_iteration_limit <= 10) {
-      settings.reportingfequency = 1;
-    } else if (options_.qp_iteration_limit <= 100) {
-      settings.reportingfequency = 10;
-    }
-    // Setting qp_update_limit = 10 leads to error with lpHighs3
-    const HighsInt qp_update_limit = 1000;  // 1000; // default
-    if (qp_update_limit != settings.reinvertfrequency) {
-      highsLogUser(options_.log_options, HighsLogType::kInfo,
-                   "Changing QP reinversion frequency from %d to %d\n",
-                   int(settings.reinvertfrequency), int(qp_update_limit));
-      settings.reinvertfrequency = qp_update_limit;
-    }
-
-    settings.allow_hot_start = options_.qp_allow_hot_start;
-    settings.iteration_limit = options_.qp_iteration_limit;
-    settings.nullspace_limit = options_.qp_nullspace_limit;
-    assert(settings.hessian_regularization_value ==
-           kHessianRegularizationValue);
-    settings.hessian_regularization_value = options_.qp_regularization_value;
-    settings.primal_feasibility_tolerance =
-        options_.primal_feasibility_tolerance;
-
-    // Define the QP model status logging function
-    settings.qp_model_status_log.subscribe(
-        [this](QpModelStatus& qp_model_status) {
-          if (qp_model_status == QpModelStatus::kUndetermined ||
-              qp_model_status == QpModelStatus::kLargeNullspace ||
-              qp_model_status == QpModelStatus::kNonConvex ||
-              qp_model_status == QpModelStatus::kError ||
-              qp_model_status == QpModelStatus::kNotset)
-            highsLogUser(options_.log_options, HighsLogType::kInfo,
-                         "QP solver model status: %s\n",
-                         qpModelStatusToString(qp_model_status).c_str());
-        });
-
-    // Define the QP solver iteration logging function
-    settings.iteration_log_header.subscribe([this](HighsInt& null) {
-      highsLogUser(options_.log_options, HighsLogType::kInfo,
-                   "  Iteration        Objective     NullspaceDim\n");
-    });
-
-    // Define the QP solver iteration logging function
-    settings.iteration_log.subscribe([this](Statistics& stats) {
-      int rep = stats.iteration.size() - 1;
-      std::string time_string =
-          options_.timeless_log
-              ? ""
-              : highsFormatToString(" %9.2fs", stats.time[rep]);
-      highsLogUser(options_.log_options, HighsLogType::kInfo,
-                   "%11d  %15.8g           %6d%s\n", int(stats.iteration[rep]),
-                   stats.objval[rep], int(stats.nullspacedimension[rep]),
-                   time_string.c_str());
-    });
-
-    // Define the QP nullspace limit logging function
-    settings.nullspace_limit_log.subscribe([this](HighsInt& nullspace_limit) {
-      highsLogUser(options_.log_options, HighsLogType::kError,
-                   "QP solver has exceeded nullspace limit of %d\n",
-                   int(nullspace_limit));
-    });
-
-    // Define the degeneracy failure logging function
-    settings.degeneracy_fail_log.subscribe(
-        [this](std::pair<HighsInt, double>& degeneracy_fail_data) {
-          highsLogUser(options_.log_options, HighsLogType::kError,
-                       "QP solver has failed due to degeneracy: "
-                       "cannot find non-active constraint to leave basis."
-                       " max: log(d[%d]) = %lf\n",
-                       int(degeneracy_fail_data.first),
-                       degeneracy_fail_data.second);
-        });
-
-    settings.time_limit = options_.time_limit;
-    settings.lambda_zero_threshold = options_.dual_feasibility_tolerance;
-
-    switch (options_.simplex_primal_edge_weight_strategy) {
-      case 0:
-        settings.pricing = PricingStrategy::DantzigWolfe;
-        break;
-      case 1:
-        settings.pricing = PricingStrategy::Devex;
-        break;
-      case 2:
-        settings.pricing = PricingStrategy::SteepestEdge;
-        break;
-      default:
-        settings.pricing = PricingStrategy::Devex;
-    }
-
-    QpAsmStatus status = solveqp(instance, settings, stats, model_status_,
-                                 basis_, solution_, timer_);
-    if (this->profiling_) this->profiling_->stop(kSubSolverQpAsm);
-
-    // QP solver can fail, so should return something other than
-    // QpAsmStatus::kOk
-    if (status == QpAsmStatus::kError) return HighsStatus::kError;
-
-    assert(status == QpAsmStatus::kOk || status == QpAsmStatus::kWarning);
-    return_status = status == QpAsmStatus::kWarning ? HighsStatus::kWarning
-                                                    : HighsStatus::kOk;
-
-    // Set the QP-specific values of info_
-    info_.simplex_iteration_count += stats.phase1_iterations;
-    info_.qp_iteration_count += stats.num_iterations;
-  }
-
-  // Get the objective and any KKT failures
-  info_.objective_function_value = model_.objectiveValue(solution_.col_value);
-  getKktFailures(options_, model_, solution_, basis_, info_);
-  info_.valid = true;
-  if (model_status_ == HighsModelStatus::kOptimal) return checkOptimality("QP");
-  return return_status;
-}
-
-HighsStatus Highs::callSolveMip() {
-  // Record whether there is a valid primal solution on entry
-  const bool user_solution = solution_.value_valid;
-  std::vector<double> user_solution_col_value;
-  std::vector<double> user_solution_row_value;
-  if (user_solution) {
-    // Save the col and row values
-    user_solution_col_value = std::move(solution_.col_value);
-    user_solution_row_value = std::move(solution_.row_value);
-  }
-  // Ensure that any solver data for users in Highs class members are
-  // cleared
   invalidateSolverData();
-  if (user_solution) {
-    // Recover the col and row values
-    solution_.col_value = std::move(user_solution_col_value);
-    solution_.row_value = std::move(user_solution_row_value);
+  // Recover any valid previous solution
+  if (previous_solution.value_valid) {
     solution_.value_valid = true;
+    solution_.col_value = std::move(previous_solution.col_value);
+    solution_.row_value = std::move(previous_solution.row_value);
   }
-  // Run the MIP solver
-  HighsInt log_dev_level = options_.log_dev_level;
-  //  options_.log_dev_level = kHighsLogDevLevelInfo;
-  // Check that the model isn't row-wise
-  assert(model_.lp_.a_matrix_.format_ != MatrixFormat::kRowwise);
-  const bool has_semi_variables = model_.lp_.hasSemiVariables();
-  HighsLp use_lp;
-  if (has_semi_variables) {
-    // Replace any semi-variables by a continuous/integer variable and
-    // a (temporary) binary. Any initial solution must accommodate this.
-    use_lp = withoutSemiVariables(model_.lp_, solution_,
-                                  options_.primal_feasibility_tolerance);
-  }
-  HighsLp& lp = has_semi_variables ? use_lp : model_.lp_;
-  HighsMipSolver solver(callback_, options_, lp, solution_);
-  solver.setProfiling(this->profiling_);
-  profiling_->start(kSubSolverMip);
-  solver.run();
-  profiling_->stop(kSubSolverMip);
-  options_.log_dev_level = log_dev_level;
-  // Set the return_status, model status and, for completeness, scaled
-  // model status
-  HighsStatus return_status =
-      highsStatusFromHighsModelStatus(solver.modelstatus_);
-  model_status_ = solver.modelstatus_;
-  // Extract the solution
-  if (solver.solution_objective_ != kHighsInf) {
-    // There is a primal solution
-    //
-    // If the original model has semi-variables, its solution is
-    // (still) given by the first model_.lp_.num_col_ entries of the
-    // solution from the MIP solver
-    //
-    // #2547 This resize is unnecessary
-    //
-    // solution_.col_value.resize(model_.lp_.num_col_);
-    solution_.col_value = solver.solution_;
-    this->saved_objective_and_solution_ = solver.saved_objective_and_solution_;
-    model_.lp_.a_matrix_.productQuad(solution_.row_value, solution_.col_value);
-    solution_.value_valid = true;
-  } else {
-    // There is no primal solution: should be so by default
-    assert(!solution_.value_valid);
-  }
-  // Check that no modified upper bounds for semi-variables are active
-  if (solution_.value_valid &&
-      activeModifiedUpperBounds(options_, model_.lp_, solution_.col_value)) {
-    solution_.value_valid = false;
-    model_status_ = HighsModelStatus::kSolveError;
-    return_status = HighsStatus::kError;
-  }
-  // There is no dual solution: should be so by default
-  assert(!solution_.dual_valid);
-  // There is no basis: should be so by default
-  assert(!basis_.valid);
-  // Get the objective and any KKT failures
-  info_.objective_function_value = solver.solution_objective_;
-  // Remember to judge primal feasibility according to
-  // mip_feasibility_tolerance, so take a copy of the original
-  // value...
-  double primal_feasibility_tolerance = options_.primal_feasibility_tolerance;
-  options_.primal_feasibility_tolerance = options_.mip_feasibility_tolerance;
-  // NB getKktFailures sets the primal and dual solution status
-  getKktFailures(options_, model_, solution_, basis_, info_);
-  // Set the MIP-specific values of info_
-  info_.mip_node_count = solver.node_count_;
-  info_.mip_dual_bound = solver.dual_bound_;
-  info_.mip_gap = solver.gap_;
-  info_.primal_dual_integral = solver.primal_dual_integral_;
-  // Get the number of LP iterations, avoiding overflow if the int64_t
-  // value is too large
-  int64_t mip_total_lp_iterations = solver.total_lp_iterations_;
-  info_.simplex_iteration_count = mip_total_lp_iterations > kHighsIInf
-                                      ? -1
-                                      : HighsInt(mip_total_lp_iterations);
-  info_.valid = true;
-  if (model_status_ == HighsModelStatus::kOptimal)
-    return_status = checkOptimality("MIP");
-  // Overwrite max infeasibility to include integrality if there is a solution
-  if (solver.solution_objective_ != kHighsInf) {
-    const double mip_max_bound_violation =
-        std::max(solver.row_violation_, solver.bound_violation_);
-    const double delta_max_bound_violation =
-        std::abs(mip_max_bound_violation - info_.max_primal_infeasibility);
-    // Possibly report a mis-match between the max bound violation
-    // returned by the MIP solver, and the value obtained from the
-    // solution
-    if (delta_max_bound_violation > 1e-12)
-      highsLogDev(options_.log_options, HighsLogType::kWarning,
-                  "Inconsistent max bound violation: MIP solver (%10.4g); LP "
-                  "(%10.4g); Difference of %10.4g\n",
-                  mip_max_bound_violation, info_.max_primal_infeasibility,
-                  delta_max_bound_violation);
-    info_.max_integrality_violation = solver.integrality_violation_;
-    if (info_.max_integrality_violation > options_.mip_feasibility_tolerance) {
-      info_.primal_solution_status = kSolutionStatusInfeasible;
-      assert(model_status_ == HighsModelStatus::kInfeasible);
-    }
-  }
-  // ... and remember to recover the primal feasibility tolerance
-  options_.primal_feasibility_tolerance = primal_feasibility_tolerance;
+
+  HighsStatus return_status = HighsStatus::kOk;
+
+  // Check that the model is column-wise
+  assert(lp.a_matrix_.isColwise());
+
+  HighsMipSolverObject solver_object(lp, solution_,
+                                     saved_objective_and_solution_, info_,
+                                     callback_, options_, timer_);
+  solver_object.setProfiling(this->profiling_);
+
+  // Solve the MIP
+  return_status = solveMip(solver_object, message);
+  // Extract the model status
+  model_status_ = solver_object.model_status_;
+
+  return return_status;
+}
+
+// The method below runs calls solveQp for the given QP
+HighsStatus Highs::callSolveQp(HighsModel& model, const std::string& message) {
+  HighsStatus return_status = HighsStatus::kOk;
+
+  // Check that the model is column-wise
+  assert(model.lp_.a_matrix_.isColwise());
+
+  HighsQpSolverObject solver_object(model, basis_, solution_, info_, callback_,
+                                    options_, timer_);
+  solver_object.setProfiling(this->profiling_);
+
+  // Solve the QP
+  return_status = solveQp(solver_object, message);
+  // Extract the model status
+  model_status_ = solver_object.model_status_;
   return return_status;
 }
 
@@ -5323,6 +4987,18 @@ HighsStatus Highs::initializeMultiThreading() {
   highs::parallel::initialize_scheduler(this->options_.threads);
   this->max_threads_ = highs::parallel::num_threads();
   HighsLogOptions& log_options = this->options_.log_options;
+  unsigned int available_cores = highs::parallel::available_core_count();
+  highsLogDev(log_options, HighsLogType::kInfo,
+              "Scheduler initialized: %d threads (physical cores: %d)\n",
+              static_cast<int>(this->max_threads_),
+              static_cast<int>(available_cores));
+  if (this->max_threads_ > static_cast<int>(available_cores))
+    highsLogDev(
+        log_options, HighsLogType::kWarning,
+        "Thread count (%d) exceeds physical cores (%d); consider reducing "
+        "threads or calling Highs::resetGlobalScheduler()\n",
+        static_cast<int>(this->max_threads_),
+        static_cast<int>(available_cores));
   if (this->options_.threads != 0 &&
       this->max_threads_ != this->options_.threads) {
     highsLogUser(

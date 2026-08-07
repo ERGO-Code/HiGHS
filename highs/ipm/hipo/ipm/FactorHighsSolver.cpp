@@ -179,8 +179,10 @@ Int FactorHighsSolver::solveNE(const std::vector<double>& rhs,
 Int FactorHighsSolver::setup() {
   if (kkt_.S.empty()) {
     Clock clock;
+    setParallelBeforeSymbolic();
     if (Int status = setNla()) return status;
-    setParallel();
+    setParallelAfterSymbolic();
+    printParallel();
     info_.times[kAnalyseTime] += clock.stop();
 
     if (!options_.timeless_log) {
@@ -192,7 +194,7 @@ Int FactorHighsSolver::setup() {
 
     kkt_.S.print(logger_, logger_.debug(1));
 
-    if (kkt_.S.storage() > kLargeStorageGB * 1024 * 1024 * 1024) {
+    if (kkt_.S.storage() > kParallelLargeStorageGB * 1024 * 1024 * 1024) {
       logger_.printw("Large amount of memory required\n");
     }
 
@@ -214,9 +216,9 @@ Int FactorHighsSolver::chooseNla() {
   const bool NE_possible = !(model_.nonSeparableQp() || model_.m() == 0);
 
   const bool expect_AS_much_cheaper =
-      model_.nzNElb() > model_.nzAS() * kNzBoundsRatio;
+      model_.nzNElb() > model_.nzAS() * kSkipSystemNzBoundsRatio;
   const bool expect_NE_much_cheaper =
-      model_.nzAS() > model_.nzNEub() * kNzBoundsRatio;
+      model_.nzAS() > model_.nzNEub() * kSkipSystemNzBoundsRatio;
 
   const bool skip_AS = NE_possible && expect_NE_much_cheaper;
   const bool skip_NE = AS_possible && expect_AS_much_cheaper;
@@ -262,7 +264,7 @@ Int FactorHighsSolver::chooseNla() {
 
       // If NE has more nonzeros than the factor of AS, then it's likely that AS
       // will be preferred, so stop computation of NE.
-      Int64 NE_nz_limit = symb_AS.nz() * kSymbNzMult;
+      Int64 NE_nz_limit = symb_AS.nz() * kSystemSymbNzMult;
       if (failure_AS || NE_nz_limit > kHighsIInf) NE_nz_limit = kHighsIInf;
       kkt_.NE_nz_limit.store(NE_nz_limit, std::memory_order_relaxed);
     }
@@ -271,14 +273,14 @@ Int FactorHighsSolver::chooseNla() {
   // In parallel, run AS analyse and build NE structure. NE analyse runs only
   // after AS analyse is finished, so that it can be skipped based on the number
   // of nz of NE matrix and AS factor.
-  if (options_.parallel == kHighsOffString) {
-    run_analyse_AS();
-    run_structure_NE();
-  } else {
+  if (options_.getParallel(ParallelTechnique::kAnalyse)) {
     highs::parallel::TaskGroup tg;
     tg.spawn([&]() { run_analyse_AS(); });
     tg.spawn([&]() { run_structure_NE(); });
     tg.taskWait();
+  } else {
+    run_analyse_AS();
+    run_structure_NE();
   }
 
   // if NE was skipped but AS failed, use NE
@@ -315,8 +317,8 @@ Int FactorHighsSolver::chooseNla() {
   } else {
     // Total number of operations, given by dense flops and sparse indexing
     // operations, weighted with an empirical factor
-    double ops_NE = symb_NE.flops() + symb_NE.spops() * kSpopsWeight;
-    double ops_AS = symb_AS.flops() + symb_AS.spops() * kSpopsWeight;
+    double ops_NE = symb_NE.flops() + symb_NE.spops() * kSystemSpopsWeight;
+    double ops_AS = symb_AS.flops() + symb_AS.spops() * kSystemSpopsWeight;
 
     double sn_size_NE = (double)symb_NE.size() / symb_NE.sn();
     double sn_size_AS = (double)symb_AS.size() / symb_AS.sn();
@@ -324,9 +326,9 @@ Int FactorHighsSolver::chooseNla() {
     double ratio_ops = ops_NE / ops_AS;
     double ratio_sn = sn_size_AS / sn_size_NE;
 
-    bool NE_much_more_expensive = ratio_ops > kRatioOpsThresh;
-    bool AS_not_too_expensive = ratio_ops > 1.0 / kRatioOpsThresh;
-    bool sn_AS_larger_than_NE = ratio_sn > kRatioSnThresh;
+    bool NE_much_more_expensive = ratio_ops > kSystemRatioOpsThresh;
+    bool AS_not_too_expensive = ratio_ops > 1.0 / kSystemRatioOpsThresh;
+    bool sn_AS_larger_than_NE = ratio_sn > kSystemRatioSnThresh;
 
     if (NE_much_more_expensive ||
         (sn_AS_larger_than_NE && AS_not_too_expensive)) {
@@ -372,8 +374,10 @@ Int FactorHighsSolver::chooseOrdering(const std::vector<Int>& rows,
     // rcm is much worse in general, so no point in trying for now
   }
 
+  const Int k = orderings_to_try.size();
+
   // vector<bool> is not thread-safe
-  std::vector<char> failure(orderings_to_try.size(), 0);
+  std::vector<char> failure(k, 0);
 
   if (nla == "NE") {
     if (ptr.back() >= kkt_.NE_nz_limit.load(std::memory_order_relaxed)) {
@@ -389,10 +393,9 @@ Int FactorHighsSolver::chooseOrdering(const std::vector<Int>& rows,
   Int n = full_ptr.size() - 1;
   std::vector<Int> perm(n), iperm(n);
 
-  std::vector<std::vector<Int>> permutations(orderings_to_try.size(),
-                                             std::vector<Int>(n));
+  std::vector<std::vector<Int>> permutations(k, std::vector<Int>(n));
 
-  std::vector<Symbolic> symbolics(orderings_to_try.size(), S);
+  std::vector<Symbolic> symbolics(k, S);
 
   auto run_ordering_and_analyse = [&](Int i) {
     logger_.printInfo("Running %s for %s\n", orderings_to_try[i].c_str(),
@@ -401,7 +404,7 @@ Int FactorHighsSolver::chooseOrdering(const std::vector<Int>& rows,
     if (orderings_to_try[i] == kHipoMetisString) {
       Int status =
           FH_.reorderMetis(n, rows.size(), full_rows.data(), full_ptr.data(),
-                           permutations[i].data(), true);
+                           permutations[i].data(), true, options_.random_seed);
       if (status) failure[i] = true;
 
     } else if (orderings_to_try[i] == kHipoAmdString) {
@@ -439,13 +442,16 @@ Int FactorHighsSolver::chooseOrdering(const std::vector<Int>& rows,
     }
   };
 
-  if (options_.parallel == kHighsOffString) {
-    for (Int i = 0; i < static_cast<Int>(orderings_to_try.size()); ++i)
-      run_ordering_and_analyse(i);
-  } else
+  const bool parallel_ordering =
+      nla == "NE" ? options_.getParallel(ParallelTechnique::kOrderNE)
+                  : options_.getParallel(ParallelTechnique::kOrderAS);
+
+  if (parallel_ordering) {
     highs::parallel::for_each(
-        0, orderings_to_try.size(),
-        [&](Int start, Int end) { run_ordering_and_analyse(start); }, 1);
+        0, k, [&](Int start, Int end) { run_ordering_and_analyse(start); }, 1);
+  } else {
+    for (Int i = 0; i < k; ++i) run_ordering_and_analyse(i);
+  }
 
   Int num_success = 0;
   for (bool b : failure) {
@@ -453,7 +459,7 @@ Int FactorHighsSolver::chooseOrdering(const std::vector<Int>& rows,
   }
 
   if (num_success > 0) {
-    for (Int i = 0; i < static_cast<Int>(orderings_to_try.size()); ++i) {
+    for (Int i = 0; i < k; ++i) {
       if (!failure[i])
         logger_.printInfo(
             "%20s for %s: %.2e %.2f\n", orderings_to_try[i].c_str(),
@@ -463,17 +469,17 @@ Int FactorHighsSolver::chooseOrdering(const std::vector<Int>& rows,
 
     // find the ordering with best flops
     double best_flops = kHighsInf;
-    for (Int i = 0; i < static_cast<Int>(orderings_to_try.size()); ++i) {
+    for (Int i = 0; i < k; ++i) {
       if (!failure[i] && symbolics[i].flops() < best_flops) {
         best_flops = symbolics[i].flops();
       }
     }
 
-    // find orderings with flops within kFlopsOrderingThresh of the best
+    // find orderings with flops within kOrderingFlopsThresh of the best
     std::vector<Int> consider;
-    for (Int i = 0; i < static_cast<Int>(orderings_to_try.size()); ++i) {
+    for (Int i = 0; i < k; ++i) {
       if (!failure[i] &&
-          symbolics[i].flops() <= kFlopsOrderingThresh * best_flops) {
+          symbolics[i].flops() <= kOrderingFlopsThresh * best_flops) {
         consider.push_back(i);
       }
     }
@@ -491,17 +497,17 @@ Int FactorHighsSolver::chooseOrdering(const std::vector<Int>& rows,
     }
 
     // fix selection if one or more require too much memory
-    const double bytes_thresh = kLargeStorageGB * 1024 * 1024 * 1024;
+    const double bytes_thresh = kParallelLargeStorageGB * 1024 * 1024 * 1024;
     double best_memory = kHighsInf;
     Int ind_best_memory = -1;
-    for (Int i = 0; i < static_cast<Int>(orderings_to_try.size()); ++i) {
+    for (Int i = 0; i < k; ++i) {
       if (symbolics[i].storage() < best_memory) {
         best_memory = symbolics[i].storage();
         ind_best_memory = i;
       }
     }
 
-    assert(chosen >= 0 && chosen < static_cast<Int>(orderings_to_try.size()));
+    assert(chosen >= 0 && chosen < k);
 
     S = std::move(symbolics[chosen]);
     ordering = orderings_to_try[chosen];
@@ -558,88 +564,132 @@ Int FactorHighsSolver::setNla() {
   return kOk;
 }
 
+void FactorHighsSolver::setParallelBeforeSymbolic() {
+  const bool parallel_analyse_default = true;
+  options_.chooseParallel(ParallelTechnique::kAnalyse,
+                          parallel_analyse_default);
+
+  const bool parallel_order_NE_default = true;
+  options_.chooseParallel(ParallelTechnique::kOrderNE,
+                          parallel_order_NE_default);
+
+  const bool parallel_order_AS_default = true;
+  options_.chooseParallel(ParallelTechnique::kOrderNE,
+                          parallel_order_AS_default);
+
+  const double A_nz_per_col = (double)model_.A().numNz() / model_.A().num_col_;
+  const double A_nz_per_row = (double)model_.A().numNz() / model_.A().num_row_;
+  const bool A_is_dense = A_nz_per_col > kParallelNEnzPerColThresh ||
+                          A_nz_per_row > kParallelNEnzPerRowThresh;
+  const bool A_is_large = model_.A().num_row_ > kParallelNEsizeThresh ||
+                          model_.A().num_col_ > kParallelNEsizeThresh;
+
+  const bool parallel_NE_struct_default = A_is_dense && A_is_large;
+  options_.chooseParallel(ParallelTechnique::kNEStruct,
+                          parallel_NE_struct_default);
+
+  const bool parallel_NE_values_default = A_is_large;
+  options_.chooseParallel(ParallelTechnique::kNEValues,
+                          parallel_NE_values_default);
+}
+
 static bool usingAppleBlas() {
   return strstr(HighsExtras::blas::getInfo()->provider, "Apple") != nullptr;
 }
 
-void FactorHighsSolver::setParallel() {
+void FactorHighsSolver::setParallelAfterSymbolic() {
   bool parallel_tree = false;
   bool parallel_node = false;
 
+  if (usingAppleBlas()) {
+    // Blas on Apple do not work well with parallel_node, but parallel_tree
+    // seems to always be beneficial.
+    parallel_node = false;
+    parallel_tree = true;
+  } else {
+    // Otherwise, parallel_node is active because it is triggered only if the
+    // frontal matrix is large enough anyway.
+    parallel_node = true;
+
+    // parallel_tree instead is chosen with a heuristic
+
+    double tree_speedup = kkt_.S.flops() / kkt_.S.critops();
+    double sn_size = (double)kkt_.S.size() / kkt_.S.sn();
+
+    bool enough_sn = kkt_.S.sn() > kParallelMinNumberSn;
+    bool enough_flops = kkt_.S.flops() > kParallelLargeFlopsThresh;
+    bool speedup_is_large = tree_speedup > kParallelLargeSpeedupThresh;
+    bool sn_are_large = sn_size > kParallelLargeSnThresh;
+    bool sn_are_not_small = sn_size > kParallelSmallSnThresh;
+
+    // parallel_tree is active if the supernodes are large, or if there is a
+    // large expected speedup and the supernodes are not too small, provided
+    // that the number of flops and supernodes is not too small.
+    if (enough_sn && enough_flops &&
+        (sn_are_large || (speedup_is_large && sn_are_not_small))) {
+      parallel_tree = true;
+    }
+  }
+
+  // If serial memory is too large, switch off tree parallelism to avoid
+  // running out of memory
+  double num_GB = kkt_.S.storage() / 1024 / 1024 / 1024;
+  if (num_GB > kParallelLargeStorageGB) {
+    parallel_tree = false;
+  }
+
+  // switch off tree parallelism if depth of recursion is too large
+  if (kkt_.S.depth() > kParallelMaxTreeDepth) parallel_tree = false;
+
+  options_.chooseParallel(ParallelTechnique::kTree, parallel_tree);
+  options_.chooseParallel(ParallelTechnique::kNode, parallel_node);
+
+  // choose parallelism for solve phase
+  bool parallel_forward = false;
+  bool parallel_backward = false;
+  bool parallel_diag = false;
+  if (kkt_.S.size() > kParallelSolveMinSize) {
+    parallel_diag = true;
+
+    if (kkt_.S.solveTreeSpeedup() > kParallelForwardMinSpeedup)
+      parallel_forward = true;
+
+    if (kkt_.S.solveTreeSpeedup() > kParallelBackwardMinSpeedup)
+      parallel_backward = true;
+  }
+
+  options_.chooseParallel(ParallelTechnique::kForwardSolve, parallel_forward);
+  options_.chooseParallel(ParallelTechnique::kBackwardSolve, parallel_backward);
+  options_.chooseParallel(ParallelTechnique::kDiagonalSolve, parallel_diag);
+
+  for (Int i = 0; i < static_cast<Int>(ParallelTechnique::kCount); ++i)
+    assert(options_.parallel[i] == ParallelType::kOn ||
+           options_.parallel[i] == ParallelType::kOff);
+
+  FH_.setParallel(options_.getParallel(ParallelTechnique::kTree),
+                  options_.getParallel(ParallelTechnique::kNode));
+
+  FH_.setParallelSolve(options_.getParallel(ParallelTechnique::kForwardSolve),
+                       options_.getParallel(ParallelTechnique::kBackwardSolve),
+                       options_.getParallel(ParallelTechnique::kDiagonalSolve));
+}
+
+void FactorHighsSolver::printParallel() const {
   std::stringstream log_stream;
-  log_stream << textline("Parallelism:");
-
-  if (options_.parallel == kHighsOffString) {
-    log_stream << "None requested\n";
-  } else if (options_.parallel == kHighsOnString) {
-    if (options_.parallel_type == kHipoBothString) {
-      parallel_tree = true;
-      parallel_node = true;
-      log_stream << "Full requested\n";
-    } else if (options_.parallel_type == kHipoTreeString) {
-      parallel_tree = true;
-      log_stream << "Tree requested\n";
-    } else if (options_.parallel_type == kHipoNodeString) {
-      parallel_node = true;
-      log_stream << "Node requested\n";
-    } else
-      assert(1 == 0);
-
-  } else if (options_.parallel == kHighsChooseString) {
-    if (usingAppleBlas()) {
-      // Blas on Apple do not work well with parallel_node, but parallel_tree
-      // seems to always be beneficial.
-      parallel_node = false;
-      parallel_tree = true;
-    } else {
-      // Otherwise, parallel_node is active because it is triggered only if the
-      // frontal matrix is large enough anyway.
-      parallel_node = true;
-
-      // parallel_tree instead is chosen with a heuristic
-
-      double tree_speedup = kkt_.S.flops() / kkt_.S.critops();
-      double sn_size = (double)kkt_.S.size() / kkt_.S.sn();
-
-      bool enough_sn = kkt_.S.sn() > kMinNumberSn;
-      bool enough_flops = kkt_.S.flops() > kLargeFlopsThresh;
-      bool speedup_is_large = tree_speedup > kLargeSpeedupThresh;
-      bool sn_are_large = sn_size > kLargeSnThresh;
-      bool sn_are_not_small = sn_size > kSmallSnThresh;
-
-      // parallel_tree is active if the supernodes are large, or if there is a
-      // large expected speedup and the supernodes are not too small, provided
-      // that the number of flops and supernodes is not too small.
-      if (enough_sn && enough_flops &&
-          (sn_are_large || (speedup_is_large && sn_are_not_small))) {
-        parallel_tree = true;
-      }
-    }
-
-    // If serial memory is too large, switch off tree parallelism to avoid
-    // running out of memory
-    double num_GB = kkt_.S.storage() / 1024 / 1024 / 1024;
-    if (num_GB > kLargeStorageGB) {
-      parallel_tree = false;
-    }
-
-    // switch off tree parallelism if depth of recursion is too large
-    if (kkt_.S.depth() > kMaxTreeDepth) parallel_tree = false;
-
-    if (parallel_tree && parallel_node)
-      log_stream << "Full preferred\n";
-    else if (parallel_tree && !parallel_node)
-      log_stream << "Tree preferred\n";
-    else if (!parallel_tree && parallel_node)
-      log_stream << "Node preferred\n";
-    else
-      log_stream << "None preferred\n";
-
-  } else
-    assert(1 == 0);
-
-  logger_.print(log_stream.str().c_str());
-  kkt_.S.setParallel(parallel_tree, parallel_node);
+  log_stream
+      << textline("Parallelism:")
+      << (options_.getParallel(ParallelTechnique::kAnalyse) ? "A" : "_")
+      << (options_.getParallel(ParallelTechnique::kOrderNE) ? "O" : "_")
+      << (options_.getParallel(ParallelTechnique::kOrderAS) ? "O" : "_") << "|"
+      << (options_.getParallel(ParallelTechnique::kNEStruct) ? "S" : "_")
+      << (options_.getParallel(ParallelTechnique::kNEValues) ? "V" : "_") << "|"
+      << (options_.getParallel(ParallelTechnique::kTree) ? "T" : "_")
+      << (options_.getParallel(ParallelTechnique::kNode) ? "N" : "_") << "|"
+      << (options_.getParallel(ParallelTechnique::kForwardSolve) ? "F" : "_")
+      << (options_.getParallel(ParallelTechnique::kDiagonalSolve) ? "D" : "_")
+      << (options_.getParallel(ParallelTechnique::kBackwardSolve) ? "B" : "_")
+      << '\n';
+  logger_.printInfo(log_stream.str().c_str());
 }
 
 // =========================================================================

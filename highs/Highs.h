@@ -1392,10 +1392,11 @@ class Highs {
   //
   // See highs/HighsRun.md
   HighsStatus optimizeHighs();
-  HighsStatus optimizeModel();
-  HighsStatus calledOptimizeModel();
   // Used in MIP solver as minimal LP solve
   HighsStatus optimizeLp();
+  HighsStatus optimizeModel();
+  HighsStatus optimizeModelTryCatch();
+  HighsStatus calledOptimizeModel();
 
   const HighsSimplexStats& getSimplexStats() const {
     return ekk_instance_.getSimplexStats();
@@ -1675,8 +1676,9 @@ class Highs {
   HighsStatus completeSolutionFromDiscreteAssignment();
 
   HighsStatus callSolveLp(HighsLp& lp, const std::string& message);
-  HighsStatus callSolveQp();
-  HighsStatus callSolveMip();
+  HighsStatus callSolveMip(HighsLp& lp, const std::string& message);
+  HighsStatus callSolveQp(HighsModel& model, const std::string& message);
+
   HighsStatus callRunPostsolve(const HighsSolution& solution,
                                const HighsBasis& basis);
 
@@ -1870,7 +1872,6 @@ class Highs {
   bool aFormatOk(const HighsInt num_nz, const HighsInt format);
   bool qFormatOk(const HighsInt num_nz, const HighsInt format);
   void clearZeroHessian();
-  HighsStatus checkOptimality(const std::string& solver_type);
   void callLpKktCheck(const HighsLp& lp, const std::string& message = "");
   HighsStatus invertRequirementError(std::string method_name) const;
 
