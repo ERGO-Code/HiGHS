@@ -121,7 +121,7 @@ Int denseFactFH(Int n, Int k, double* A, double* B, const Int* pivot_sign,
       }
 
       // ===========================================================================
-      // UPDATE FRONTAL
+      // UPDATE
       // ===========================================================================
       highs::parallel::TaskGroup tg;
 
@@ -129,33 +129,44 @@ Int denseFactFH(Int n, Int k, double* A, double* B, const Int* pivot_sign,
                                    const double* Pj, double* Qj) {
         // Qj -= Rj * Pj^T
 
-        Int Rj_offset{};
-        Int Qj_offset{};
-        Int row_start = 0;
-        while (row_start < num_row) {
-          const double* Rj_block = &Rj[Rj_offset];
-          double* Qj_block = &Qj[Qj_offset];
-          const Int rows_in_block = std::min(nb, num_row - row_start);
+        const bool do_split = parallel && num_col > nb / 2 && jb > nb / 2 &&
+                              num_row >= kBlockParallelThreshold * nb;
 
-          auto do_gemm = [=, &data]() {
-            callAndTime_dgemm('T', 'N', num_col, rows_in_block, jb, -1.0, Pj,
-                              jb, Rj_block, jb, 1.0, Qj_block, num_col, data);
+        if (do_split) {
+          Int Rj_offset{};
+          Int Qj_offset{};
+          Int row_start = 0;
+          while (row_start < num_row) {
+            const double* Rj_block = &Rj[Rj_offset];
+            double* Qj_block = &Qj[Qj_offset];
+            const Int rows_in_block = std::min(nb, num_row - row_start);
+
+            auto do_gemm_split = [=, &data]() {
+              callAndTime_dgemm('T', 'N', num_col, rows_in_block, jb, -1.0, Pj,
+                                jb, Rj_block, jb, 1.0, Qj_block, num_col, data);
+            };
+            tg.spawn(std::move(do_gemm_split));
+
+            Rj_offset += jb * nb;
+            Qj_offset += num_col * nb;
+            row_start += nb;
+          }
+        } else {
+          auto do_gemm_full = [=, &data]() {
+            callAndTime_dgemm('T', 'N', num_col, num_row, jb, -1.0, Pj, jb, Rj,
+                              jb, 1.0, Qj, num_col, data);
           };
 
-          const bool do_parallelise =
-              parallel && num_col > nb / 2 && jb > nb / 2;
-
-          if (do_parallelise)
-            tg.spawn(std::move(do_gemm));
+          if (parallel)
+            tg.spawn([=]() { do_gemm_full(); });
           else
-            do_gemm();
-
-          Rj_offset += jb * nb;
-          Qj_offset += num_col * nb;
-          row_start += nb;
+            do_gemm_full();
         }
       };
 
+      // ===========================================================================
+      // UPDATE FRONTAL
+      // ===========================================================================
       Int64 R_offset{};
       for (Int j = block_id + 1; j < blocks_in_A; ++j) {
         const Int col_block_j = std::min(nb, k - nb * j);
