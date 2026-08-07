@@ -5,36 +5,34 @@
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-/**@file lp_data/HighsLpSolverObject.h
- * @brief Collection of class instances required to solve an LP
+/**@file lp_data/HighsQpSolverObject.h
+ * @brief Collection of class instances required to solve a QP
  */
-#ifndef LP_DATA_HIGHS_LP_SOLVER_OBJECT_H_
-#define LP_DATA_HIGHS_LP_SOLVER_OBJECT_H_
+#ifndef LP_DATA_HIGHS_QP_SOLVER_OBJECT_H_
+#define LP_DATA_HIGHS_QP_SOLVER_OBJECT_H_
 
 #include "lp_data/HighsInfo.h"
 #include "lp_data/HighsOptions.h"
-#include "simplex/HEkk.h"
+#include "model/HighsModel.h"
 
-class HighsLpSolverObject {
+class HighsQpSolverObject {
  public:
-  HighsLpSolverObject(HighsLp& lp, HighsBasis& basis, HighsSolution& solution,
-                      HighsInfo& highs_info, HEkk& ekk_instance,
+  HighsQpSolverObject(HighsModel& model, HighsBasis& basis,
+                      HighsSolution& solution, HighsInfo& highs_info,
                       HighsCallback& callback, HighsOptions& options,
                       HighsTimer& timer)
-      : lp_(lp),
+      : model_(model),
         basis_(basis),
         solution_(solution),
         highs_info_(highs_info),
-        ekk_instance_(ekk_instance),
         callback_(callback),
         options_(options),
         timer_(timer) {}
 
-  HighsLp& lp_;
+  HighsModel& model_;
   HighsBasis& basis_;
   HighsSolution& solution_;
   HighsInfo& highs_info_;
-  HEkk& ekk_instance_;
   HighsCallback& callback_;
   HighsOptions& options_;
   HighsTimer& timer_;
@@ -46,4 +44,4 @@ class HighsLpSolverObject {
   }
 };
 
-#endif  // LP_DATA_HIGHS_LP_SOLVER_OBJECT_H_
+#endif  // LP_DATA_HIGHS_QP_SOLVER_OBJECT_H_

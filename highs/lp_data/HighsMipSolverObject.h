@@ -5,36 +5,34 @@
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-/**@file lp_data/HighsLpSolverObject.h
- * @brief Collection of class instances required to solve an LP
+/**@file lp_data/HighsMipSolverObject.h
+ * @brief Collection of class instances required to solve a MIP
  */
-#ifndef LP_DATA_HIGHS_LP_SOLVER_OBJECT_H_
-#define LP_DATA_HIGHS_LP_SOLVER_OBJECT_H_
+#ifndef LP_DATA_HIGHS_MIP_SOLVER_OBJECT_H_
+#define LP_DATA_HIGHS_MIP_SOLVER_OBJECT_H_
 
 #include "lp_data/HighsInfo.h"
 #include "lp_data/HighsOptions.h"
-#include "simplex/HEkk.h"
 
-class HighsLpSolverObject {
+class HighsMipSolverObject {
  public:
-  HighsLpSolverObject(HighsLp& lp, HighsBasis& basis, HighsSolution& solution,
-                      HighsInfo& highs_info, HEkk& ekk_instance,
-                      HighsCallback& callback, HighsOptions& options,
-                      HighsTimer& timer)
+  HighsMipSolverObject(
+      HighsLp& lp, HighsSolution& solution,
+      std::vector<HighsObjectiveSolution>& saved_objective_and_solution,
+      HighsInfo& highs_info, HighsCallback& callback, HighsOptions& options,
+      HighsTimer& timer)
       : lp_(lp),
-        basis_(basis),
         solution_(solution),
+        saved_objective_and_solution_(saved_objective_and_solution),
         highs_info_(highs_info),
-        ekk_instance_(ekk_instance),
         callback_(callback),
         options_(options),
         timer_(timer) {}
 
   HighsLp& lp_;
-  HighsBasis& basis_;
   HighsSolution& solution_;
+  std::vector<HighsObjectiveSolution>& saved_objective_and_solution_;
   HighsInfo& highs_info_;
-  HEkk& ekk_instance_;
   HighsCallback& callback_;
   HighsOptions& options_;
   HighsTimer& timer_;
@@ -46,4 +44,4 @@ class HighsLpSolverObject {
   }
 };
 
-#endif  // LP_DATA_HIGHS_LP_SOLVER_OBJECT_H_
+#endif  // LP_DATA_HIGHS_MIP_SOLVER_OBJECT_H_
