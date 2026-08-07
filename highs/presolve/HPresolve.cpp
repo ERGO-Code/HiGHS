@@ -7576,6 +7576,7 @@ HPresolve::Result HPresolve::fourierMotzkin(
         printLog(numColsEliminatedBlock, numRowsEliminated, numRowsAdded);
         blockSteps.clear();
         rowAncestry.clear();
+        rowOriginals.clear();
         numColsEliminatedBlock = 0;
         numRowsEliminated = 0;
         numRowsAdded = 0;
