@@ -81,13 +81,13 @@ TEST_CASE("test-col-stuffing", "[highs_test_presolve_rules]") {
 
 TEST_CASE("test-fourier-motzkin", "[highs_test_presolve_rules]") {
   Highs h;
-  //  h.setOptionValue("output_flag", dev_run);
+  h.setOptionValue("output_flag", dev_run);
   h.setOptionValue("presolve_rule_test", kPresolveRuleFourierMotzkin);
   h.setOptionValue("presolve_rule_logging", true);
   h.setOptionValue("log_dev_level", 1);
 
   const bool lp0 = true;
-  const bool lp1 = true;   // Makes eliminations marginal, and leaves x2=0
+  const bool lp1 = true;  // Makes eliminations marginal, and leaves x2=0
   const bool lp2 = true;
 
   // From "A novel linear optimization presolve technique based on
