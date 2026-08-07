@@ -11,7 +11,7 @@ namespace hipo {
 
 Int denseFactFH(Int n, Int k, double* A, double* B, const Int* pivot_sign,
                 double thresh, double* totalreg, Int* swaps, double* pivot_2x2,
-                bool parallel, DataCollector& data, const FHoptions& options) {
+                DataCollector& data, const FHoptions& options) {
   // ===========================================================================
   // Partial blocked factorisation
   // Matrix A is in format FH
@@ -125,11 +125,13 @@ Int denseFactFH(Int n, Int k, double* A, double* B, const Int* pivot_sign,
       // ===========================================================================
       highs::parallel::TaskGroup tg;
 
-      auto split_gemm = [=, &data](Int num_row, Int num_col, const double* Rj,
-                                   const double* Pj, double* Qj) {
+      auto split_gemm = [=, &data, &options](Int num_row, Int num_col,
+                                             const double* Rj, const double* Pj,
+                                             double* Qj) {
         // Qj -= Rj * Pj^T
 
-        const bool do_split = parallel && num_col > nb / 2 && jb > nb / 2 &&
+        const bool do_split = options.parallel_node && num_col > nb / 2 &&
+                              jb > nb / 2 &&
                               num_row >= kBlockParallelThreshold * nb;
 
         if (do_split) {
@@ -157,7 +159,7 @@ Int denseFactFH(Int n, Int k, double* A, double* B, const Int* pivot_sign,
                               jb, 1.0, Qj, num_col, data);
           };
 
-          if (parallel)
+          if (options.parallel_node)
             tg.spawn([=]() { do_gemm_full(); });
           else
             do_gemm_full();

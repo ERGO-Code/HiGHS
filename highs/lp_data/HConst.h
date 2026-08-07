@@ -459,4 +459,22 @@ enum PdlpRestartStrategy {
   kPdlpRestartStrategyMax = kPdlpRestartStrategyHalpern
 };
 
+namespace hipo {
+enum class ParallelTechnique {
+  kMin = 0,
+  kAnalyse = kMin,
+  kOrderNE,
+  kOrderAS,
+  kNEStruct,
+  kNEValues,
+  kTree,
+  kNode,
+  kForwardSolve,
+  kDiagonalSolve,
+  kBackwardSolve,
+  kCount,
+  kMaxSum = (1 << kCount) - 1
+};
+}
+
 #endif /* LP_DATA_HCONST_H_ */
