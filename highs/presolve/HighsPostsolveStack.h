@@ -679,14 +679,14 @@ class HighsPostsolveStack {
                            HighsBasisStatus::kNonbasic);
     }
 
+    /*
     // Initialise to illegal values so that initial values are logged
     double report_col_value = kHighsInf;
     double report_col_dual = kHighsInf;
     HighsBasisStatus report_col_status = HighsBasisStatus::kNonbasic;
-    size_t check_reduction = -35044;
+    size_t check_reduction = -kHighsIinf;
 
     auto solutionLogging = [&](const std::string& message) {
-      return;
       printf("\n%s\n", message.c_str());
       for (HighsInt iCol = 0; iCol < origNumCol; iCol++)
         printf("Col %9d value = %11.4g; dual = %11.4g; status = %s\n",
@@ -728,15 +728,18 @@ class HighsPostsolveStack {
       report_col_dual = col_dual;
       report_col_status = col_status;
     };
-    // now undo the changes
     if (report_col >= 0) reportColLogging(-1);
     if (reductions.size() == check_reduction)
       solutionLogging("After solving presolved LP");
+    */
+    // now undo the changes
     for (size_t i = reductions.size(); i > 0; --i) {
+      /*
       if (i - 1 == check_reduction) {
         printf("Checking reduction %d\n", int(check_reduction));
         solutionLogging("In reductions loop");
       }
+      */
       switch (reductions[i - 1].first) {
         case ReductionType::kLinearTransform: {
           LinearTransform reduction;
@@ -838,9 +841,9 @@ class HighsPostsolveStack {
                  int(reductions[i - 1].first));
           if (kAllowDeveloperAssert) assert(1 == 0);
       }
-      if (report_col >= 0) reportColLogging(i - 1);
+      //      if (report_col >= 0) reportColLogging(i - 1);
     }
-    if (report_col >= 0) reportColLogging(-2);
+    //    if (report_col >= 0) reportColLogging(-2);
 
 #ifdef DEBUG_EXTRA
     // solution should not contain NaN or Inf

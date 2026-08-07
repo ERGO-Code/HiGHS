@@ -186,7 +186,7 @@ class HPresolve {
 
   void markChangedCol(HighsInt col);
 
-  double getMaxAbsColVal(HighsInt col, const bool initial_sweep = false) const;
+  double getMaxAbsColVal(HighsInt col) const;
 
   double getMaxAbsRowVal(HighsInt row) const;
 
@@ -297,9 +297,9 @@ class HPresolve {
 
   HighsTripletTreeSliceInOrder getSortedRowVector(HighsInt row) const;
 
-  void markRowDeleted(HighsInt row, const bool initial_sweep = false);
+  void markRowDeleted(HighsInt row);
 
-  void markColDeleted(HighsInt col, const bool initial_sweep = false);
+  void markColDeleted(HighsInt col);
 
   Result fixColToLower(HighsPostsolveStack& postsolve_stack, HighsInt col);
 
@@ -414,8 +414,7 @@ class HPresolve {
                      HighsPostsolveStack::RowType rowType);
 
   Result singletonRow(HighsPostsolveStack& postsolve_stack, HighsInt row,
-                      const HighsInt col_ = -1, const double val_ = 0,
-                      const bool initial_sweep = false);
+                      const HighsInt col_ = -1, const double val_ = 0);
 
   Result emptyCol(HighsPostsolveStack& postsolve_stack, HighsInt col);
 
@@ -477,10 +476,9 @@ class HPresolve {
   void substitute(HighsInt substcol, HighsInt staycol, double offset,
                   double scale);
 
-  void removeFixedCol(HighsInt col, const bool initial_sweep = false);
+  void removeFixedCol(HighsInt col);
 
-  void removeFixedCol(HighsInt col, double fixval,
-                      const bool initial_sweep = false);
+  void removeFixedCol(HighsInt col, double fixval);
 
   void removeRow(HighsInt row);
 

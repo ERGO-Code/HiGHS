@@ -38,8 +38,6 @@
 
 #define ENABLE_SPARSIFY_FOR_LP 0
 
-const bool initial_sweep = true;  // false;  //
-
 #define HPRESOLVE_CHECKED_CALL(presolveCall)            \
   do {                                                  \
     HPresolve::Result __result = presolveCall;          \
@@ -653,11 +651,10 @@ void HPresolve::markChangedCol(HighsInt col) {
   }
 }
 
-double HPresolve::getMaxAbsColVal(HighsInt col,
-                                  const bool initial_sweep) const {
+double HPresolve::getMaxAbsColVal(HighsInt col) const {
   double maxVal = 0.0;
 
-  if (initial_sweep) {
+  if (this->in_initial_sweep_) {
     for (HighsInt iEl = model->a_matrix_.start_[col];
          iEl < model->a_matrix_.start_[col + 1]; iEl++) {
       double value = model->a_matrix_.value_[iEl];
@@ -2278,8 +2275,8 @@ HighsTripletTreeSliceInOrder HPresolve::getSortedRowVector(HighsInt row) const {
                                       ARright.data(), rowroot[row]);
 }
 
-void HPresolve::markRowDeleted(HighsInt row, const bool initial_sweep) {
-  if (!initial_sweep) {
+void HPresolve::markRowDeleted(HighsInt row) {
+  if (!this->in_initial_sweep_) {
     assert(!rowDeleted[row]);
 
     // remove equations from set of equations
@@ -2295,8 +2292,8 @@ void HPresolve::markRowDeleted(HighsInt row, const bool initial_sweep) {
   ++numDeletedRows;
 }
 
-void HPresolve::markColDeleted(HighsInt col, const bool initial_sweep) {
-  if (!initial_sweep) {
+void HPresolve::markColDeleted(HighsInt col) {
+  if (!this->in_initial_sweep_) {
     assert(!colDeleted[col]);
 
     // prevents col from being added to change vector
@@ -3363,16 +3360,15 @@ HPresolve::Result HPresolve::doubletonEq(HighsPostsolveStack& postsolve_stack,
 
 HPresolve::Result HPresolve::singletonRow(HighsPostsolveStack& postsolve_stack,
                                           HighsInt row, const HighsInt col_,
-                                          const double val_,
-                                          const bool initial_sweep) {
-  // Default values are col_ = -1; val_ = 0; initial_sweep = false
+                                          const double val_) {
+  // Default values are col_ = -1; val_ = 0
   //
-  // When initial_sweep is true, the column and value of the singleton
+  // When this->in_initial_sweep_ is true, the column and value of the singleton
   // are passed as col_ and val_. Since the presolve data structures
   // are not set up, there is vastly less housekeeping to do
   const bool logging_on = analysis_.logging_on_;
   HighsInt nzPos = -1;
-  if (!initial_sweep) {
+  if (!this->in_initial_sweep_) {
     if (logging_on) analysis_.startPresolveRuleLog(kPresolveRuleSingletonRow);
     assert(!rowDeleted[row]);
     assert(rowsize[row] == 1);
@@ -3386,15 +3382,15 @@ HPresolve::Result HPresolve::singletonRow(HighsPostsolveStack& postsolve_stack,
     assert(ARleft[nzPos] == -1);
     assert(ARright[nzPos] == -1);
   }
-  HighsInt col = initial_sweep ? col_ : Acol[nzPos];
-  double val = initial_sweep ? val_ : Avalue[nzPos];
+  HighsInt col = this->in_initial_sweep_ ? col_ : Acol[nzPos];
+  double val = this->in_initial_sweep_ ? val_ : Avalue[nzPos];
 
   // printf("singleton row\n");
   // debugPrintRow(row);
   // delete row singleton nonzero directly, we have all information that we
   // need in local variables
-  markRowDeleted(row, initial_sweep);
-  if (!initial_sweep) unlink(nzPos);
+  markRowDeleted(row);
+  if (!this->in_initial_sweep_) unlink(nzPos);
 
   // check for simple
   if (val > 0) {
@@ -3403,7 +3399,7 @@ HPresolve::Result HPresolve::singletonRow(HighsPostsolveStack& postsolve_stack,
         model->col_lower_[col] * val >=
             model->row_lower_[row] - primal_feastol) {
       postsolve_stack.redundantRow(row);
-      if (!initial_sweep) {
+      if (!this->in_initial_sweep_) {
         analysis_.logging_on_ = logging_on;
         if (logging_on)
           analysis_.stopPresolveRuleLog(kPresolveRuleSingletonRow);
@@ -3416,7 +3412,7 @@ HPresolve::Result HPresolve::singletonRow(HighsPostsolveStack& postsolve_stack,
         model->col_upper_[col] * val >=
             model->row_lower_[row] - primal_feastol) {
       postsolve_stack.redundantRow(row);
-      if (!initial_sweep) {
+      if (!this->in_initial_sweep_) {
         analysis_.logging_on_ = logging_on;
         if (logging_on)
           analysis_.stopPresolveRuleLog(kPresolveRuleSingletonRow);
@@ -3477,10 +3473,9 @@ HPresolve::Result HPresolve::singletonRow(HighsPostsolveStack& postsolve_stack,
     // errors we choose the bound that was not tightened, or the midpoint if
     // both where tightened.
     //
-    if (ub < lb ||
-        (ub > lb && (ub - lb) * std::max(std::fabs(val),
-                                         getMaxAbsColVal(col, initial_sweep)) <=
-                        primal_feastol)) {
+    if (ub < lb || (ub > lb && (ub - lb) * std::max(std::fabs(val),
+                                                    getMaxAbsColVal(col)) <=
+                                   primal_feastol)) {
       if (lowerTightened && upperTightened) {
         ub = 0.5 * (ub + lb);
         lb = ub;
@@ -3502,7 +3497,7 @@ HPresolve::Result HPresolve::singletonRow(HighsPostsolveStack& postsolve_stack,
 
   // Got as far as possible for HPresolve::singletonRow with initial
   // sweep
-  if (initial_sweep) {
+  if (this->in_initial_sweep_) {
     model->col_lower_[col] = lb;
     model->col_upper_[col] = ub;
     return checkLimits(postsolve_stack);
@@ -4682,8 +4677,7 @@ HPresolve::Result HPresolve::modelEmptyCol(HighsPostsolveStack& postsolve_stack,
   assert(fixval != kHighsInf);
   postsolve_stack.removedModelFixedCol(col, fixval, cost, col_nnz, nullptr,
                                        nullptr);
-  const bool initial_sweep = true;
-  markColDeleted(col, initial_sweep);
+  markColDeleted(col);
 
   return checkLimits(postsolve_stack);
 }
@@ -6052,7 +6046,7 @@ double HPresolve::computeWorstCaseUpperBound(HighsInt col, HighsInt boundCol,
 
 HPresolve::Result HPresolve::initialSweep(
     HighsPostsolveStack& postsolve_stack) {
-  assert(initial_sweep);
+  assert(this->in_initial_sweep_);
   const bool logging_on = analysis_.logging_on_;
   if (logging_on) analysis_.startPresolveRuleLog(kPresolveRuleInitialSweep);
   HighsInt num_fixed_col = 0;
@@ -6093,7 +6087,7 @@ HPresolve::Result HPresolve::initialSweep(
       postsolve_stack.removedModelFixedCol(
           iCol, model->col_lower_[iCol], model->col_cost_[iCol], col_nnz,
           &model->a_matrix_.index_[iEl], &model->a_matrix_.value_[iEl]);
-      removeFixedCol(iCol, initial_sweep);
+      removeFixedCol(iCol);
     } else {
       newColIndex[iCol] = num_col;
       model->col_cost_[num_col] = model->col_cost_[iCol];
@@ -6166,20 +6160,19 @@ HPresolve::Result HPresolve::initialSweep(
         if (row_count[iRow] == 0) {
           // Empty row
           HPRESOLVE_CHECKED_CALL(emptyRow(postsolve_stack, iRow));
-          markRowDeleted(iRow, initial_sweep);
+          markRowDeleted(iRow);
         } else {
           // Singleton row
           has_singleton_row[col_of_row[iRow]] = true;
           assert(val_of_row[iRow]);
-          HPRESOLVE_CHECKED_CALL(singletonRow(postsolve_stack, iRow,
-                                              col_of_row[iRow],
-                                              val_of_row[iRow], initial_sweep));
+          HPRESOLVE_CHECKED_CALL(singletonRow(
+              postsolve_stack, iRow, col_of_row[iRow], val_of_row[iRow]));
         }
       } else {
         if (localIsRedundant(iRow)) {
           postsolve_stack.redundantRow(iRow);
           newRowIndex[iRow] = -1;
-          markRowDeleted(iRow, initial_sweep);
+          markRowDeleted(iRow);
           continue;
         }
         newRowIndex[iRow] = num_row;
@@ -6444,8 +6437,7 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
                  time_str.c_str());
   }
 
-  if (options->presolve != kHighsOffString && mipsolver == nullptr &&
-      initial_sweep) {
+  if (options->presolve != kHighsOffString && mipsolver == nullptr) {
     // Zero numDeletedCols and numDeletedRows since they are used to
     // identify reductions due to this presovle rule
     numDeletedCols = 0;
@@ -6453,7 +6445,13 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
     // Perform initial sweep to remove fixed columns before forming the
     // dynamic constraint matrix data structure
     analysis_.presolveTimerStart(kPresolveClockInitialSweep);
+    // Indicate that initial sweep is running, so that reductions
+    // operate on the model rather than the dynamic data structure set
+    // up in okSetupPresolveDataStructures
+    this->in_initial_sweep_ = true;
     HPRESOLVE_CHECKED_CALL(initialSweep(postsolve_stack));
+    // Indicate that initial sweep is not running
+    this->in_initial_sweep_ = false;
     analysis_.presolveTimerStop(kPresolveClockInitialSweep);
   }
 
@@ -7641,21 +7639,20 @@ void HPresolve::removeRow(HighsInt row) {
   }
 }
 
-void HPresolve::removeFixedCol(HighsInt col, const bool initial_sweep) {
+void HPresolve::removeFixedCol(HighsInt col) {
   const bool logging_on = analysis_.logging_on_;
   if (logging_on) analysis_.startPresolveRuleLog(kPresolveRuleFixedCol);
-  removeFixedCol(col, model->col_lower_[col], initial_sweep);
+  removeFixedCol(col, model->col_lower_[col]);
   analysis_.logging_on_ = logging_on;
   if (logging_on) analysis_.stopPresolveRuleLog(kPresolveRuleFixedCol);
 }
 
-void HPresolve::removeFixedCol(HighsInt col, double fixval,
-                               const bool initial_sweep) {
+void HPresolve::removeFixedCol(HighsInt col, double fixval) {
   // mark the column as deleted first so that it is not registered as singleton
   // column upon removing its non-zeros
-  markColDeleted(col, initial_sweep);
+  markColDeleted(col);
 
-  if (initial_sweep) {
+  if (this->in_initial_sweep_) {
     for (HighsInt iEl = model->a_matrix_.start_[col];
          iEl < model->a_matrix_.start_[col + 1]; iEl++) {
       HighsInt colrow = model->a_matrix_.index_[iEl];

@@ -50,9 +50,9 @@ void HighsPostsolveStack::compressColIndexMap(
 
 void HighsPostsolveStack::compressIndexMap(
     const std::vector<HighsInt>& newIndex, std::vector<HighsInt>& origIndex) {
-  // loop over entries, decrease entry counter for deleted entriess
-  // (marked with -1), store original index at new index position
-  // otherwise
+  // loop over entries, decrease entry counter for deleted entries
+  // (marked with -1), otherwise store original index at new index
+  // position
   HighsInt numEn = origIndex.size();
   for (size_t i = 0; i != newIndex.size(); ++i) {
     if (newIndex[i] == -1)
