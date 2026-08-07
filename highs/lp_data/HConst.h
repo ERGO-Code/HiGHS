@@ -88,12 +88,14 @@ enum HighsAnalysisLevel {
   kHighsAnalysisLevelNlaTime = 32,
   kHighsAnalysisLevelMipData = 64,
   kHighsAnalysisLevelMipTime = 128,
+  kHighsAnalysisLevelPresolveTime = 256,
   kHighsAnalysisLevelMin = kHighsAnalysisLevelNone,
   kHighsAnalysisLevelMax =
       kHighsAnalysisLevelModelData + kHighsAnalysisLevelSolverSummaryData +
       kHighsAnalysisLevelSolverRuntimeData + kHighsAnalysisLevelSolverTime +
       kHighsAnalysisLevelNlaData + kHighsAnalysisLevelNlaTime +
-      kHighsAnalysisLevelMipData + kHighsAnalysisLevelMipTime
+      kHighsAnalysisLevelMipData + kHighsAnalysisLevelMipTime +
+      kHighsAnalysisLevelPresolveTime
 };
 
 enum class HighsVarType : uint8_t {
@@ -107,6 +109,8 @@ enum class HighsVarType : uint8_t {
 enum class HighsOptionType { kBool = 0, kInt, kDouble, kString };
 
 enum class HighsInfoType { kInt64 = -1, kInt = 1, kDouble };
+
+enum class HighsRunDataType { kInt64 = -1, kInt = 1, kDouble };
 
 enum OptionOffChooseOn {
   kHighsOptionOff = -1,
@@ -275,7 +279,10 @@ enum PresolveRuleType : int {
   kPresolveRuleSparsify,
   kPresolveRuleProbing,
   kPresolveRuleEnumeration,
-  kPresolveRuleMax = kPresolveRuleEnumeration,
+  kPresolveRuleDualFixing,
+  kPresolveRuleColStuffing,
+  kPresolveRuleInitialSweep,
+  kPresolveRuleMax = kPresolveRuleInitialSweep,
   kPresolveRuleLastAllowOff = kPresolveRuleMax,
   kPresolveRuleCount
 };
@@ -302,8 +309,30 @@ enum IisStatus : int {
   kIisStatusMax = kIisStatusInConflict
 };
 
+enum HessianOracleCallType : int {
+  kHessianOracleCallTypeMin = 0,
+  kHessianOracleCallTypeEntry = kHessianOracleCallTypeMin,
+  kHessianOracleCallTypeColumn,
+  kHessianOracleCallTypeProduct,
+  kHessianOracleCallTypeMax = kHessianOracleCallTypeProduct
+};
+
+enum MipChooseSubMipRecord : int {
+  kMipRecord = -1,
+  kChooseRecord,
+  kSubMipRecord
+};
+
+enum PresolveSolvePostsolveIndex : int {
+  kPresolveTime = 0,
+  kSolveTime,
+  kPostsolveTime,
+  kToPresolveSolvePostsolve
+};
+
 enum SubSolverIndex : int {
-  kSubSolverMip = 0,
+  kFromSubSolver = kToPresolveSolvePostsolve,
+  kSubSolverMip = kFromSubSolver,
   kSubSolverDuSimplexBasis,
   kSubSolverDuSimplexNoBasis,
   kSubSolverPrSimplexBasis,
@@ -315,7 +344,8 @@ enum SubSolverIndex : int {
   kSubSolverPdlp,
   kSubSolverQpAsm,
   kSubSolverSubMip,
-  kSubSolverCount
+  kLastSubSolver = kSubSolverSubMip,
+  kToSubSolver = kLastSubSolver + 1
 };
 
 // Minimum and default KKT tolerance
@@ -356,6 +386,12 @@ const HighsInt kHighsIllegalErrorIndex = -1;
 // values aren't known
 const double kHighsIllegalComplementarityViolation = kHighsInf;
 const HighsInt kHighsIllegalComplementarityCount = -1;
+
+const double kHighsIllegalDoubleMeasure = -kHighsInf;
+const HighsInt kHighsIllegalIntMeasure = -1;
+
+// Tolerance on asymmetry in square Hessians
+const double kSquareHessianAsymmetryTolerance = 1e-10;
 
 // Maximum upper bound on semi-variables
 const double kMaxSemiVariableUpper = 1e5;
@@ -422,5 +458,23 @@ enum PdlpRestartStrategy {
   kPdlpRestartStrategyHalpern,
   kPdlpRestartStrategyMax = kPdlpRestartStrategyHalpern
 };
+
+namespace hipo {
+enum class ParallelTechnique {
+  kMin = 0,
+  kAnalyse = kMin,
+  kOrderNE,
+  kOrderAS,
+  kNEStruct,
+  kNEValues,
+  kTree,
+  kNode,
+  kForwardSolve,
+  kDiagonalSolve,
+  kBackwardSolve,
+  kCount,
+  kMaxSum = (1 << kCount) - 1
+};
+}
 
 #endif /* LP_DATA_HCONST_H_ */

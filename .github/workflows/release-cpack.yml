@@ -2,8 +2,8 @@ name: release-cpack
 
 on:
   push:
-    tags:
-      - 'v*'
+    # tags:
+    #   - 'v*'
   pull_request:
 
 concurrency:
@@ -24,6 +24,9 @@ jobs:
             -DCMAKE_EXE_LINKER_FLAGS="-static -static-libgcc -static-libstdc++"
           cmake --build build -j2
           cd build && cpack
+
+      - name: Test
+        run: ./build/bin/highs --solver=hipo $GITHUB_WORKSPACE/check/instances/afiro.mps
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v7
@@ -54,6 +57,9 @@ jobs:
           cmake --build build -j2
           cd build && cpack
 
+      - name: Test
+        run: ./build/bin/highs --solver=hipo $GITHUB_WORKSPACE/check/instances/afiro.mps
+
       - name: Upload artifacts
         uses: actions/upload-artifact@v7
         with:
@@ -77,11 +83,16 @@ jobs:
       - uses: actions/checkout@v6
       - name: Build
         run: |
-          cmake -B build -G "Visual Studio 17 2022" -A ${{ matrix.arch }} `
+          cmake -B build -G "Visual Studio 18 2026" -A ${{ matrix.arch }} `
               -DHIPO=ON -DBUILD_OPENBLAS=ON -DBUILD_STATIC_EXE=ON
           cmake --build build --config Release --parallel
           cd build
           cpack -C Release
+
+      - name: Test
+        run: |
+          & ".\build\Release\bin\highs.exe" --solver=hipo `
+          "$env:GITHUB_WORKSPACE/check/instances/afiro.mps"
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v7
@@ -107,11 +118,16 @@ jobs:
       - uses: actions/checkout@v6
       - name: Build
         run: |
-          cmake -B build -G "Visual Studio 17 2022" -A ${{ matrix.arch }} `
+          cmake -B build -G "Visual Studio 18 2026" -A ${{ matrix.arch }} `
               -DHIPO=ON -DBUILD_OPENBLAS=ON -DBUILD_STATIC_EXE=ON
           cmake --build build --config Release --parallel
           cd build
           cpack -C Release
+
+      - name: Test
+        run: |
+          & ".\build\Release\bin\highs.exe" --solver=hipo `
+          "$env:GITHUB_WORKSPACE/check/instances/afiro.mps"
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v7
@@ -133,6 +149,11 @@ jobs:
           cmake --build build --config Release --parallel
           cd build
           cpack -C Release
+
+      - name: Test
+        run: |
+          & ".\build\Release\bin\highs.exe" --solver=hipo `
+          "$env:GITHUB_WORKSPACE/check/instances/afiro.mps"
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v7
@@ -158,6 +179,9 @@ jobs:
               -DHIPO=ON -DBUILD_STATIC_EXE=ON
           cmake --build build --parallel
           cd build && cpack
+
+      - name: Test
+        run: ./build/bin/highs --solver=hipo $GITHUB_WORKSPACE/check/instances/afiro.mps
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v7
@@ -185,6 +209,9 @@ jobs:
           cmake -B build -DBUILD_STATIC_EXE=ON
           cmake --build build -j2
           cd build && cpack
+
+      - name: Test
+        run: ./build/bin/highs $GITHUB_WORKSPACE/check/instances/afiro.mps
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v7
@@ -214,6 +241,9 @@ jobs:
           cmake --build build -j2
           cd build && cpack
 
+      - name: Test
+        run: ./build/bin/highs $GITHUB_WORKSPACE/check/instances/afiro.mps
+
       - name: Upload artifacts
         uses: actions/upload-artifact@v7
         with:
@@ -237,11 +267,16 @@ jobs:
       - uses: actions/checkout@v6
       - name: Build
         run: |
-          cmake -B build -G "Visual Studio 17 2022" -A ${{ matrix.arch }} `
+          cmake -B build -G "Visual Studio 18 2026" -A ${{ matrix.arch }} `
               -DBUILD_STATIC_EXE=ON
           cmake --build build --config Release --parallel
           cd build
           cpack -C Release
+
+      - name: Test
+        run: |
+          & ".\build\Release\bin\highs.exe" `
+          "$env:GITHUB_WORKSPACE/check/instances/afiro.mps"
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v7
@@ -266,11 +301,16 @@ jobs:
       - uses: actions/checkout@v6
       - name: Build
         run: |
-          cmake -B build -G "Visual Studio 17 2022" -A ${{ matrix.arch }} `
+          cmake -B build -G "Visual Studio 18 2026" -A ${{ matrix.arch }} `
             -DBUILD_SHARED_LIBS=ON
           cmake --build build --config Release --parallel
           cd build
           cpack -C Release
+
+      - name: Test
+        run: |
+          & ".\build\Release\bin\highs.exe" `
+          "$env:GITHUB_WORKSPACE/check/instances/afiro.mps"
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v7
@@ -296,11 +336,16 @@ jobs:
       - uses: actions/checkout@v6
       - name: Build
         run: |
-          cmake -B build -G "Visual Studio 17 2022" -A ${{ matrix.arch }} `
+          cmake -B build -G "Visual Studio 18 2026" -A ${{ matrix.arch }} `
               -DBUILD_STATIC_EXE=ON
           cmake --build build --config Release --parallel
           cd build
           cpack -C Release
+
+      - name: Test
+        run: |
+          & ".\build\Release\bin\highs.exe" `
+          "$env:GITHUB_WORKSPACE/check/instances/afiro.mps"
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v7
@@ -322,6 +367,11 @@ jobs:
           cmake --build build --config Release --parallel
           cd build
           cpack -C Release
+
+      - name: Test
+        run: |
+          & ".\build\Release\bin\highs.exe" `
+          "$env:GITHUB_WORKSPACE/check/instances/afiro.mps"
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v7
@@ -347,6 +397,9 @@ jobs:
               -DBUILD_STATIC_EXE=ON
           cmake --build build --parallel
           cd build && cpack
+
+      - name: Test
+        run: ./build/bin/highs $GITHUB_WORKSPACE/check/instances/afiro.mps
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v7

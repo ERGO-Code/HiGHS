@@ -12,17 +12,38 @@
 #include "HighsExternalApi.h"
 #include "ipm/IpxWrapper.h"
 #include "lp_data/HighsSolutionDebug.h"
+#include "mip/HighsMipSolver.h"
+#include "model/HighsHessianUtils.h"
 #include "pdlp/CupdlpWrapper.h"
 #include "pdlp/HiPdlpWrapper.h"
+#include "qpsolver/QpAsmWrapper.h"
 #include "simplex/HApp.h"
 
+#define SOLVE_CATCH_CALL(Solve, SolveString)                                  \
+  do {                                                                        \
+    try {                                                                     \
+      call_status = Solve;                                                    \
+    } catch (const std::exception& exception) {                               \
+      highsLogDev(options.log_options, HighsLogType::kError,                  \
+                  "Exception %s when solving with %s\n", exception.what(),    \
+                  SolveString);                                               \
+      solver_object.model_status_ = HighsModelStatus::kSolveError;            \
+      call_status = HighsStatus::kError;                                      \
+    } catch (const HighsTask::Interrupt&) {                                   \
+      highsLogDev(options.log_options, HighsLogType::kError,                  \
+                  "HighsTask interrupt when solving with %s\n", SolveString); \
+      solver_object.model_status_ = HighsModelStatus::kSolveError;            \
+      call_status = HighsStatus::kError;                                      \
+    }                                                                         \
+  } while (0)
+
 // The method below runs the simplex, IPX, HiPO or PDLP solver on the LP
-HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
+HighsStatus solveLp(HighsLpSolverObject& solver_object,
+                    const std::string& message) {
   HighsStatus return_status = HighsStatus::kOk;
   HighsStatus call_status;
   HighsOptions& options = solver_object.options_;
-  HighsSubSolverCallTime& sub_solver_call_time =
-      solver_object.sub_solver_call_time_;
+  HighsProfiling* profiling = solver_object.profiling_;
   // Reset unscaled model status and solution params - except for
   // iteration counts
   resetModelStatusAndHighsInfo(solver_object);
@@ -48,7 +69,7 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
   // lambda for solving LP by simplex
   auto simplexSolve = [&]() -> HighsStatus {
     return_status = HighsStatus::kOk;
-    call_status = solveLpSimplex(solver_object);
+    SOLVE_CATCH_CALL(solveLpSimplex(solver_object), "Simplex");
     return_status = interpretCallStatus(options.log_options, call_status,
                                         return_status, "solveLpSimplex");
     if (return_status == HighsStatus::kError) return return_status;
@@ -71,61 +92,26 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
     if (use_only_ipm) {
       // Use IPM to solve the LP
       if (use_hipo) {
-        // Use HIPO to solve the LP
-        sub_solver_call_time.num_call[kSubSolverHipo]++;
-        sub_solver_call_time.run_time[kSubSolverHipo] =
-            -solver_object.timer_.read();
-        try {
-          call_status = solveLpHipo(solver_object);
-        } catch (const std::exception& exception) {
-          highsLogDev(options.log_options, HighsLogType::kError,
-                      "Exception %s in solveLpHipo\n", exception.what());
-          call_status = HighsStatus::kError;
-        }
-        sub_solver_call_time.run_time[kSubSolverHipo] +=
-            solver_object.timer_.read();
+        // Use HiPO to solve the LP
+        SOLVE_CATCH_CALL(solveLpHipo(solver_object), "HiPO(LP)");
         return_status = interpretCallStatus(options.log_options, call_status,
                                             return_status, "solveLpHipo");
       } else if (use_ipx) {
-        sub_solver_call_time.num_call[kSubSolverIpx]++;
-        sub_solver_call_time.run_time[kSubSolverIpx] =
-            -solver_object.timer_.read();
-        try {
-          call_status = solveLpIpx(solver_object);
-        } catch (const std::exception& exception) {
-          highsLogDev(options.log_options, HighsLogType::kError,
-                      "Exception %s in solveLpIpx\n", exception.what());
-          call_status = HighsStatus::kError;
-        }
-        sub_solver_call_time.run_time[kSubSolverIpx] +=
-            solver_object.timer_.read();
+        // Use IPX to solve the LP
+        SOLVE_CATCH_CALL(solveLpIpx(solver_object), "IPX");
         return_status = interpretCallStatus(options.log_options, call_status,
                                             return_status, "solveLpIpx");
       }
     } else {
       // Use cuPDLP-C or HiPDLP to solve the LP
-      sub_solver_call_time.num_call[kSubSolverPdlp]++;
-      sub_solver_call_time.run_time[kSubSolverPdlp] =
-          -solver_object.timer_.read();
+      profiling->start(kSubSolverPdlp);
       if (options.solver == kPdlpString) {
-        try {
-          call_status = solveLpCupdlp(solver_object);
-        } catch (const std::exception& exception) {
-          highsLogDev(options.log_options, HighsLogType::kError,
-                      "Exception %s in solveLpCupdlp\n", exception.what());
-          call_status = HighsStatus::kError;
-        }
+        SOLVE_CATCH_CALL(solveLpCupdlp(solver_object), "cuPDLP-C");
       } else {
-        try {
-          call_status = solveLpHiPdlp(solver_object);
-        } catch (const std::exception& exception) {
-          highsLogDev(options.log_options, HighsLogType::kError,
-                      "Exception %s in solveHiPdlp\n", exception.what());
-          call_status = HighsStatus::kError;
-        }
+        SOLVE_CATCH_CALL(solveLpHiPdlp(solver_object), "HiPDLP");
+        ;
       }
-      sub_solver_call_time.run_time[kSubSolverPdlp] +=
-          solver_object.timer_.read();
+      profiling->stop(kSubSolverPdlp);
       return_status = interpretCallStatus(options.log_options, call_status,
                                           return_status, "solveLp-Pdlp");
     }
@@ -731,4 +717,251 @@ bool useHipo(const HighsOptions& options,
   if (specific_solver_option == kMipIpmSolverString) return use_hipo;
   // Later decide between simplex, HiPO and IPX based on LP properties
   return use_hipo;
+}
+
+HighsStatus solveQp(HighsQpSolverObject& solver_object,
+                    const std::string& message) {
+  HighsModel& model_ = solver_object.model_;
+  HighsBasis& basis = solver_object.basis_;
+  HighsSolution& solution = solver_object.solution_;
+  HighsInfo& info = solver_object.highs_info_;
+  HighsOptions& options = solver_object.options_;
+  HighsProfiling* profiling = solver_object.profiling_;
+  HighsModelStatus& model_status = solver_object.model_status_;
+
+  // Check that the model is column-wise
+  HighsLp& lp = model_.lp_;
+  assert(model_.lp_.a_matrix_.isColwise());
+  HighsHessian& hessian = model_.hessian_;
+  HighsInt dim = hessian.dim_;
+  if (dim > 0) {
+    assert(hessian.format_ == HessianFormat::kTriangular);
+    assert(!hessian.isOracle());
+  } else {
+    assert(hessian.isOracle());
+    assert(hessian.oracle_.isValid());
+    dim = hessian.oracle_.dim_;
+  }
+  if (dim != lp.num_col_) {
+    highsLogDev(
+        options.log_options, HighsLogType::kError,
+        "Hessian dimension = %d is incompatible with matrix dimension = %d\n",
+        int(dim), int(lp.num_col_));
+    model_status = HighsModelStatus::kModelError;
+    solution.value_valid = false;
+    solution.dual_valid = false;
+    return HighsStatus::kError;
+  }
+
+  HighsStatus call_status;
+
+  // Choose solver
+  bool use_hipo =
+      (options.solver == kHipoString || options.solver == kIpmString) &&
+      HighsExternalApi::isAvailable<HighsExtras::hipo>();
+
+  if (use_hipo) {
+    // Need to convert oracle to an explicit Hessian without an oracle
+    const bool was_oracle = hessian.isOracle();
+    auto oracle_call = hessian.oracle_.call_;
+    if (was_oracle) {
+      hessian.formFromOracle();
+      hessian.oracle_.call_ = nullptr;
+    }
+    assert(!hessian.isOracle());
+    // Run HiPO
+    if (profiling) profiling->start(kSubSolverHipo);
+    SOLVE_CATCH_CALL(solveQpHipo(solver_object), "HiPO(QP)");
+    if (profiling) profiling->stop(kSubSolverHipo);
+    // Restore any oracle call;
+    hessian.oracle_.call_ = oracle_call;
+    assert(hessian.isOracle() == was_oracle);
+  } else {
+    // Run the active set QP solver
+    if (profiling) profiling->start(kSubSolverQpAsm);
+    SOLVE_CATCH_CALL(solveQpAsm(solver_object), "active set QP solver");
+    if (profiling) profiling->stop(kSubSolverQpAsm);
+  }
+  HighsStatus return_status = call_status;
+  if (return_status == HighsStatus::kError) return return_status;
+
+  // Get the objective and any KKT failures
+  info.objective_function_value = model_.objectiveValue(solution.col_value);
+  getKktFailures(options, model_, solution, basis, info);
+  info.valid = true;
+  if (model_status == HighsModelStatus::kOptimal)
+    return checkOptimality("QP", options, info, model_status);
+  return return_status;
+}
+
+HighsStatus checkOptimality(const std::string& solver_type,
+                            const HighsOptions& options, const HighsInfo& info,
+                            HighsModelStatus& model_status) {
+  // Check for infeasibility measures incompatible with optimality
+  assert(model_status == HighsModelStatus::kOptimal);
+  // Cannot expect to have no dual_infeasibilities since the QP solver
+  // (and, of course, the MIP solver) give no dual information
+  if (info.num_primal_infeasibilities == 0 &&
+      info.num_dual_infeasibilities <= 0) {
+    // Consider semi-continuous infeasibilities
+    if (info.num_semi_infeasibilities > 0) {
+      highsLogUser(options.log_options, HighsLogType::kError,
+                   "%s solver claims optimality, but with num/max/sum %d/%g/%g "
+                   "semi-variable infeasibilities: consider solving with "
+                   "smaller mip_feasibility_tolerance\n",
+                   solver_type.c_str(), int(info.num_semi_infeasibilities),
+                   info.max_semi_infeasibility, info.sum_semi_infeasibilities);
+      model_status = HighsModelStatus::kSolveError;
+      highsLogUser(options.log_options, HighsLogType::kError,
+                   "Setting model status to %s\n",
+                   utilModelStatusToString(model_status).c_str());
+      return HighsStatus::kError;
+    }
+    return HighsStatus::kOk;
+  }
+  model_status = HighsModelStatus::kSolveError;
+  std::stringstream ss;
+  ss.str(std::string());
+  ss << highsFormatToString(
+      "%s solver claims optimality, but with num/max/sum "
+      "primal(%d/%g/%g)",
+      solver_type.c_str(), int(info.num_primal_infeasibilities),
+      info.max_primal_infeasibility, info.sum_primal_infeasibilities);
+  if (info.num_dual_infeasibilities > 0)
+    ss << highsFormatToString(
+        "and dual(%d/%g/%g)", int(info.num_dual_infeasibilities),
+        info.max_dual_infeasibility, info.sum_dual_infeasibilities);
+  ss << " infeasibilities\n";
+  const std::string report_string = ss.str();
+  highsLogUser(options.log_options, HighsLogType::kError, "%s",
+               report_string.c_str());
+  highsLogUser(options.log_options, HighsLogType::kError,
+               "Setting model status to %s\n",
+               utilModelStatusToString(model_status).c_str());
+  return HighsStatus::kError;
+}
+
+HighsStatus solveMip(HighsMipSolverObject& solver_object,
+                     const string& message) {
+  HighsLp& lp = solver_object.lp_;
+  HighsSolution& solution = solver_object.solution_;
+  std::vector<HighsObjectiveSolution>& saved_objective_and_solution =
+      solver_object.saved_objective_and_solution_;
+  HighsInfo& info = solver_object.highs_info_;
+  HighsCallback& callback = solver_object.callback_;
+  HighsOptions& options = solver_object.options_;
+  HighsProfiling* profiling = solver_object.profiling_;
+  HighsModelStatus& model_status = solver_object.model_status_;
+
+  // Run the MIP solver
+  HighsInt log_dev_level = options.log_dev_level;
+  //  options.log_dev_level = kHighsLogDevLevelInfo;
+  // Check that the model isn't row-wise
+  assert(lp.a_matrix_.format_ != MatrixFormat::kRowwise);
+  const bool has_semi_variables = lp.hasSemiVariables();
+  HighsLp use_lp;
+  if (has_semi_variables) {
+    // Replace any semi-variables by a continuous/integer variable and
+    // a (temporary) binary. Any initial solution must accommodate this.
+    use_lp = withoutSemiVariables(lp, solution,
+                                  options.primal_feasibility_tolerance);
+  }
+  HighsLp& mip = has_semi_variables ? use_lp : lp;
+  HighsMipSolver solver(callback, options, mip, solution);
+  solver.setProfiling(profiling);
+  profiling->start(kSubSolverMip);
+  try {
+    solver.run();
+  } catch (const std::exception& exception) {
+    highsLogDev(options.log_options, HighsLogType::kError,
+                "Exception %s in MIP solver\n", exception.what());
+    solver.modelstatus_ = HighsModelStatus::kSolveError;
+  } catch (const HighsTask::Interrupt&) {
+    highsLogDev(options.log_options, HighsLogType::kError,
+                "HighsTask interrupt when solving with MIP solver\n");
+    solver.modelstatus_ = HighsModelStatus::kSolveError;
+  }
+  profiling->stop(kSubSolverMip);
+  options.log_dev_level = log_dev_level;
+  // Set the return_status, model status and, for completeness, scaled
+  // model status
+  HighsStatus return_status =
+      highsStatusFromHighsModelStatus(solver.modelstatus_);
+  model_status = solver.modelstatus_;
+  // Extract the solution
+  if (solver.solution_objective_ != kHighsInf) {
+    // There is a primal solution
+    //
+    // If the original model has semi-variables, its solution is
+    // (still) given by the first lp.num_col_ entries of the
+    // solution from the MIP solver
+    //
+    // #2547 This resize is unnecessary
+    //
+    // solution.col_value.resize(lp.num_col_);
+    solution.col_value = solver.solution_;
+    saved_objective_and_solution = solver.saved_objective_and_solution_;
+    lp.a_matrix_.productQuad(solution.row_value, solution.col_value);
+    solution.value_valid = true;
+  } else {
+    // There is no primal solution: should be so by default
+    assert(!solution.value_valid);
+  }
+  // Check that no modified upper bounds for semi-variables are active
+  if (solution.value_valid &&
+      activeModifiedUpperBounds(options, lp, solution.col_value)) {
+    solution.value_valid = false;
+    model_status = HighsModelStatus::kSolveError;
+    return_status = HighsStatus::kError;
+  }
+  // There is no dual solution: should be so by default
+  assert(!solution.dual_valid);
+  HighsBasis basis;
+  // Get the objective and any KKT failures
+  info.objective_function_value = solver.solution_objective_;
+  // Remember to judge primal feasibility according to
+  // mip_feasibility_tolerance, so take a copy of the original
+  // value...
+  double primal_feasibility_tolerance = options.primal_feasibility_tolerance;
+  options.primal_feasibility_tolerance = options.mip_feasibility_tolerance;
+  // NB getKktFailures sets the primal and dual solution status
+  getLpKktFailures(options, lp, solution, basis, info);
+  // Set the MIP-specific values of info
+  info.mip_node_count = solver.node_count_;
+  info.mip_dual_bound = solver.dual_bound_;
+  info.mip_gap = solver.gap_;
+  info.primal_dual_integral = solver.primal_dual_integral_;
+  // Get the number of LP iterations, avoiding overflow if the int64_t
+  // value is too large
+  int64_t mip_total_lp_iterations = solver.total_lp_iterations_;
+  info.simplex_iteration_count = mip_total_lp_iterations > kHighsIInf
+                                     ? -1
+                                     : HighsInt(mip_total_lp_iterations);
+  info.valid = true;
+  if (model_status == HighsModelStatus::kOptimal)
+    return_status = checkOptimality("MIP", options, info, model_status);
+  // Overwrite max infeasibility to include integrality if there is a solution
+  if (solver.solution_objective_ != kHighsInf) {
+    const double mip_max_bound_violation =
+        std::max(solver.row_violation_, solver.bound_violation_);
+    const double delta_max_bound_violation =
+        std::abs(mip_max_bound_violation - info.max_primal_infeasibility);
+    // Possibly report a mis-match between the max bound violation
+    // returned by the MIP solver, and the value obtained from the
+    // solution
+    if (delta_max_bound_violation > 1e-12)
+      highsLogDev(options.log_options, HighsLogType::kWarning,
+                  "Inconsistent max bound violation: MIP solver (%10.4g); LP "
+                  "(%10.4g); Difference of %10.4g\n",
+                  mip_max_bound_violation, info.max_primal_infeasibility,
+                  delta_max_bound_violation);
+    info.max_integrality_violation = solver.integrality_violation_;
+    if (info.max_integrality_violation > options.mip_feasibility_tolerance) {
+      info.primal_solution_status = kSolutionStatusInfeasible;
+      assert(model_status == HighsModelStatus::kInfeasible);
+    }
+  }
+  // ... and remember to recover the primal feasibility tolerance
+  options.primal_feasibility_tolerance = primal_feasibility_tolerance;
+  return return_status;
 }

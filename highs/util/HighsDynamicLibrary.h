@@ -42,8 +42,8 @@ class HighsDynamicLibrary {
 
   // resolve and call a function directly (throws on failure)
   template <typename FuncType, typename... Args>
-  typename std::result_of<FuncType(Args...)>::type call(const char* name,
-                                                        Args... args) const {
+  auto call(const char* name, Args... args) const
+      -> decltype(std::declval<FuncType>()(std::declval<Args>()...)) {
     FuncType func;
     if (!resolve(func, name)) {
       throw std::runtime_error(std::string("Failed to resolve symbol: ") +

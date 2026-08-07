@@ -13,6 +13,8 @@
 #include <cassert>
 #include <cstdio>
 
+#include "util/HighsRandom.h"
+
 void HighsHessian::clear() {
   this->dim_ = 0;
   this->start_.clear();
@@ -20,6 +22,7 @@ void HighsHessian::clear() {
   this->value_.clear();
   this->format_ = HessianFormat::kTriangular;
   this->start_.assign(1, 0);
+  this->oracle_.clear();
 }
 
 void HighsHessian::exactResize() {
@@ -28,13 +31,13 @@ void HighsHessian::exactResize() {
     HighsInt num_nz = this->start_[this->dim_];
     this->index_.resize(num_nz);
     this->value_.resize(num_nz);
-  } else {
+  } else if (!this->isOracle()) {
     this->clear();
   }
 }
 
 void HighsHessian::deleteCols(const HighsIndexCollection& index_collection) {
-  if (this->dim_ == 0) return;
+  if (this->dim_ == 0 || this->isOracle()) return;
   // Can't handle non-triangular matrices yet
   assert(this->format_ == HessianFormat::kTriangular);
   assert(ok(index_collection));
@@ -128,6 +131,8 @@ bool HighsHessian::scaleOk(const HighsInt hessian_scale,
                            const double small_matrix_value,
                            const double large_matrix_value) const {
   if (!this->dim_) return true;
+  assert(!this->isOracle());
+  if (this->isOracle()) return false;
   double hessian_scale_value = std::pow(2, hessian_scale);
   for (HighsInt iEl = 0; iEl < this->start_[this->dim_]; iEl++) {
     double abs_new_value = std::abs(this->value_[iEl] * hessian_scale_value);
@@ -137,13 +142,22 @@ bool HighsHessian::scaleOk(const HighsInt hessian_scale,
   return true;
 }
 
+HighsInt HighsHessian::dim() const {
+  return this->isOracle() ? this->oracle_.dim_ : this->dim_;
+}
+
 HighsInt HighsHessian::numNz() const {
+  if (this->isOracle()) return 0;
   assert(this->formatOk());
   assert((HighsInt)this->start_.size() >= this->dim_ + 1);
   return this->start_[this->dim_];
 }
 
 void HighsHessian::print(const std::string& message) const {
+  if (this->isOracle()) {
+    printf("Hessian is represented via an oracle\n");
+    return;
+  }
   HighsInt num_nz = this->numNz();
   printf("%s Hessian of dimension %" HIGHSINT_FORMAT " and %" HIGHSINT_FORMAT
          " entries: %s\n",
@@ -179,12 +193,54 @@ bool HighsHessian::operator==(const HighsHessian& hessian) const {
   return equal;
 }
 
+void HighsHessian::formFromOracle() {
+  assert(this->isOracle());
+  assert(this->oracle_.isValid());
+  this->start_.clear();
+  this->index_.clear();
+  this->value_.clear();
+  HighsInt col_nnz;
+  HighsInt dim = this->oracle_.dim_;
+  std::vector<HighsInt> index(dim, 0);
+  std::vector<double> value(dim, 0);
+  HighsInt hessian_nnz = 0;
+  this->dim_ = dim;
+  this->format_ = HessianFormat::kTriangular;
+  this->start_.push_back(hessian_nnz);
+  for (HighsInt iCol = 0; iCol < dim; iCol++) {
+    this->oracle_.getPackedColumn(iCol, col_nnz, index.data(), value.data());
+    // Set the iagonal value to zero in case it's not set to a nonzero
+    // value by passing through the packed values
+    HighsInt diag_el = hessian_nnz++;
+    this->index_.push_back(iCol);
+    this->value_.push_back(0.0);
+    for (HighsInt iX = 0; iX < col_nnz; iX++) {
+      HighsInt iRow = index[iX];
+      double entry = value[iX];
+      value[iX] = 0;
+      if (iRow == iCol) {
+        this->value_[diag_el] = entry;
+      } else if (iRow > iCol) {
+        this->index_.push_back(iRow);
+        this->value_.push_back(entry);
+        hessian_nnz++;
+      }
+    }
+    this->start_.push_back(hessian_nnz);
+  }
+}
+
 void HighsHessian::product(const std::vector<double>& solution,
                            std::vector<double>& product) const {
-  if (this->dim_ <= 0) return;
-  product.assign(this->dim_, 0);
+  HighsInt dim = this->dim();
+  if (dim <= 0) return;
+  product.assign(dim, 0);
+  if (this->isOracle()) {
+    this->oracle_.product(solution, product);
+    return;
+  }
   const bool triangular = this->format_ == HessianFormat::kTriangular;
-  for (HighsInt iCol = 0; iCol < this->dim_; iCol++) {
+  for (HighsInt iCol = 0; iCol < dim; iCol++) {
     for (HighsInt iEl = this->start_[iCol]; iEl < this->start_[iCol + 1];
          iEl++) {
       const HighsInt iRow = this->index_[iEl];
@@ -198,6 +254,18 @@ void HighsHessian::product(const std::vector<double>& solution,
 void HighsHessian::alphaProductPlusY(const double alpha,
                                      const std::vector<double>& x,
                                      std::vector<double>& y) const {
+  assert(!this->isOracle());
+  /*
+    HighsInt dim = this->oracle_.dim_;
+    assert(static_cast<size_t>(dim) == y.size());
+    assert(static_cast<size_t>(dim) == x.size());
+    std::vector<double> q_x(dim, 0);
+    this->oracle_.product(x, q_x);
+    for (HighsInt iCol = 0; iCol < dim; iCol++) y[iCol] += alpha * q_x[iCol];
+    assert(111 == 888);
+    return;
+  }
+  */
   if (this->dim_ <= 0) return;
 
   const bool triangular = this->format_ == HessianFormat::kTriangular;
@@ -213,23 +281,22 @@ void HighsHessian::alphaProductPlusY(const double alpha,
 }
 
 double HighsHessian::objectiveValue(const std::vector<double>& solution) const {
+  HighsInt dim = this->dim();
+  std::vector<double> q_solution(dim, 0);
+  this->product(solution, q_solution);
   double objective_function_value = 0;
-  for (HighsInt iCol = 0; iCol < this->dim_; iCol++) {
-    HighsInt iEl = this->start_[iCol];
-    // Assumes Hessian format is triangular
-    assert(this->index_[iEl] == iCol);
-    objective_function_value +=
-        0.5 * solution[iCol] * this->value_[iEl] * solution[iCol];
-    for (HighsInt iEl = this->start_[iCol] + 1; iEl < this->start_[iCol + 1];
-         iEl++)
-      objective_function_value +=
-          solution[iCol] * this->value_[iEl] * solution[this->index_[iEl]];
-  }
+  for (HighsInt iCol = 0; iCol < dim; iCol++)
+    objective_function_value += solution[iCol] * q_solution[iCol];
+  objective_function_value *= 0.5;
   return objective_function_value;
 }
 
 HighsCDouble HighsHessian::objectiveCDoubleValue(
     const std::vector<double>& solution) const {
+  if (this->isOracle()) {
+    assert(111 == 888);
+    return static_cast<HighsCDouble>(this->objectiveValue(solution));
+  }
   HighsCDouble objective_function_value = HighsCDouble(0);
   for (HighsInt iCol = 0; iCol < this->dim_; iCol++) {
     HighsInt iEl = this->start_[iCol];
@@ -245,8 +312,17 @@ HighsCDouble HighsHessian::objectiveCDoubleValue(
   return objective_function_value;
 }
 
-bool HighsHessian::empty() const { return dim_ <= 0; }
+bool HighsHessian::empty() const {
+  if (dim_ <= 0) return true;
+  if (this->isOracle() && this->oracle_.dim_ <= 0) return true;
+  return false;
+}
+
 bool HighsHessian::isDiagonal() const {
+  if (this->isOracle()) {
+    assert(111 == 888);
+    return false;
+  }
   for (HighsInt iCol = 0; iCol < this->dim_; iCol++) {
     for (HighsInt iEl = this->start_[iCol]; iEl < this->start_[iCol + 1];
          iEl++) {
@@ -257,13 +333,21 @@ bool HighsHessian::isDiagonal() const {
   return true;
 }
 
-double HighsHessian::diag(HighsInt i) const {
+double HighsHessian::diag(HighsInt i) const { return this->diagonal(i); }
+double HighsHessian::diagonal(HighsInt i) const {
+  if (this->isOracle()) return this->oracle_.diagonal(i);
+  // Assumes that the diagonal entry is always first, possibly with explicit
+  // zero value
   assert(i < dim_);
   assert(index_[start_[i]] == i);
   return value_[start_[i]];
 }
 
 HighsHessian HighsHessian::toSquare() const {
+  if (this->isOracle()) {
+    assert(111 == 888);
+    return *this;
+  }
   if (this->format_ == HessianFormat::kSquare) return *this;
   assert(this->format_ == HessianFormat::kTriangular);
   std::vector<HighsInt> iwork(this->dim_, 0);
@@ -316,4 +400,387 @@ HighsHessian HighsHessian::toSquare() const {
     }
   }
   return square_hessian;
+}
+
+HighsStatus HighsHessian::checkOracle(const HighsLogOptions& log_options,
+                                      const bool exit_on_first_error) const {
+  if (!this->isOracle()) {
+    highsLogUser(log_options, HighsLogType::kError,
+                 "Hessian oracle is not defined\n");
+    return HighsStatus::kError;
+  }
+  const HessianOracle& oracle = this->oracle_;
+  HighsInt dim = oracle.dim_;
+
+  HighsInt num_nz;
+  std::vector<HighsInt> index(dim, 0);
+  std::vector<double> value(dim, 0);
+  std::vector<double> oracle_value(dim, 0);
+
+  num_nz = 0;
+  // A Hessian oracle product call is necessary
+  if (!oracle.hasProductCall()) {
+    highsLogUser(log_options, HighsLogType::kError,
+                 "Hessian oracle has no product call\n");
+    return HighsStatus::kError;
+  }
+
+  bool warning_found = false;
+  bool error_found = false;
+  // Set up a square Hessian corresponding to the oracle (naturally)
+  // assuming that oracle.entry is implemented correctly
+  HighsHessian hessian;
+  hessian.dim_ = dim;
+  hessian.format_ = HessianFormat::kSquare;
+  for (HighsInt iCol = 0; iCol < dim; iCol++) {
+    for (HighsInt iRow = 0; iRow < dim; iRow++) {
+      double value = oracle.entry(iCol, iRow);
+      if (value) {
+        hessian.index_.push_back(iRow);
+        hessian.value_.push_back(value);
+      }
+    }
+    hessian.start_.push_back(static_cast<HighsInt>(hessian.index_.size()));
+  }
+
+  // Check for symmetry
+  double asymmetry;
+  HighsInt num_illegal_asymmetry = 0;
+  double min_illegal_asymmetry = kHighsInf;
+  double max_illegal_asymmetry = 0;
+  HighsInt num_ok_asymmetry = 0;
+  double min_ok_asymmetry = kHighsInf;
+  double max_ok_asymmetry = 0;
+
+  auto asymmetryCheck = [&]() {
+    if (asymmetry > kSquareHessianAsymmetryTolerance) {
+      num_illegal_asymmetry++;
+      min_illegal_asymmetry = std::min(asymmetry, min_illegal_asymmetry);
+      max_illegal_asymmetry = std::max(asymmetry, max_illegal_asymmetry);
+    } else if (asymmetry) {
+      num_ok_asymmetry++;
+      min_ok_asymmetry = std::min(asymmetry, min_ok_asymmetry);
+      max_ok_asymmetry = std::max(asymmetry, max_ok_asymmetry);
+    }
+  };
+
+  auto columnValuesEqual = [&](const HighsInt iCol, const HighsInt iRow,
+                               const double oracle_v, const double true_v) {
+    if (oracle_v == true_v) return true;
+    highsLogUser(log_options, HighsLogType::kError,
+                 "Hessian oracle yields column %d value %d of %g, not %g\n",
+                 int(iCol), int(iRow), oracle_v, true_v);
+    return false;
+  };
+
+  auto productValuesClose = [&](const HighsInt iCol, const HighsInt iRow,
+                                const double oracle_v, const double true_v,
+                                const double tolerance = 0.0) {
+    double delta = std::fabs(oracle_v - true_v) / (1.0 + std::fabs(true_v));
+    if (delta <= tolerance) return true;
+    highsLogUser(log_options, HighsLogType::kError,
+                 "Hessian oracle product %d yields value %d of %g, not %g, a "
+                 "relative difference of %g\n",
+                 int(iCol), int(iRow), oracle_v, true_v, delta);
+    return false;
+  };
+
+  std::vector<double> column;
+  column.assign(dim, 0);
+  for (HighsInt iCol = 0; iCol < dim; iCol++) {
+    // Scatter the entries below the diagonal
+    for (HighsInt iEl = hessian.start_[iCol]; iEl < hessian.start_[iCol + 1];
+         iEl++) {
+      HighsInt iRow = hessian.index_[iEl];
+      if (iRow > iCol) column[iRow] = hessian.value_[iEl];
+    }
+    // Inspect the entries above the diagonal in the row corresponding
+    // to this column
+    for (HighsInt iX = iCol + 1; iX < dim; iX++) {
+      for (HighsInt iEl = hessian.start_[iX]; iEl < hessian.start_[iX + 1];
+           iEl++) {
+        HighsInt iRow = hessian.index_[iEl];
+        if (iRow == iCol) {
+          // Found an entry above the diagonal in the row
+          // corresponding to this column
+          asymmetry = std::fabs(column[iX] - hessian.value_[iEl]);
+          asymmetryCheck();
+          column[iX] = 0;
+          break;
+        }
+      }
+    }
+    // Check for missing values in the row corresponding to this column
+    for (HighsInt iEl = hessian.start_[iCol]; iEl < hessian.start_[iCol + 1];
+         iEl++) {
+      HighsInt iRow = hessian.index_[iEl];
+      if (iRow <= iCol) continue;
+      asymmetry = std::fabs(column[iRow]);
+      asymmetryCheck();
+    }
+  }
+  if (num_ok_asymmetry) {
+    highsLogUser(log_options, HighsLogType::kWarning,
+                 "Hessian oracle contains %d non-symmetr%s in [%.2g, %.2g] "
+                 "within tolerance of %.1g\n",
+                 int(num_ok_asymmetry), num_ok_asymmetry == 1 ? "y" : "ies",
+                 min_ok_asymmetry, max_ok_asymmetry,
+                 kSquareHessianAsymmetryTolerance);
+    warning_found = true;
+  }
+  if (num_illegal_asymmetry) {
+    highsLogUser(log_options, HighsLogType::kError,
+                 "Hessian oracle contains %d non-symmetr%s in [%.2g, %.2g] "
+                 "exceeding tolerance of %.1g\n",
+                 int(num_illegal_asymmetry),
+                 num_illegal_asymmetry == 1 ? "y" : "ies",
+                 min_illegal_asymmetry, max_illegal_asymmetry,
+                 kSquareHessianAsymmetryTolerance);
+    if (exit_on_first_error) return HighsStatus::kError;
+    error_found = true;
+  }
+
+  // Test column extraction, then use the column to check product
+  HighsInt oracle_num_el;
+  std::vector<HighsInt> oracle_index(dim, 0);
+  std::vector<double> check(dim, 0);
+  HighsRandom random;
+  for (HighsInt iCol = 0; iCol < dim; iCol++) {
+    bool column_error_found = false;
+    // Get the scattered column from the local Hessian and the oracle
+    num_nz = 0;
+    for (HighsInt iEl = hessian.start_[iCol]; iEl < hessian.start_[iCol + 1];
+         iEl++) {
+      HighsInt iRow = hessian.index_[iEl];
+      index[num_nz] = iRow;
+      value[iRow] = hessian.value_[iEl];
+      num_nz++;
+    }
+    oracle.getScatteredColumn(iCol, oracle_num_el, oracle_index.data(),
+                              oracle_value.data());
+    // NB Oracle may return explicit zeros, so cannot expect
+    // oracle_num_el to equal num_nz
+    //
+    // Check oracle values are the same as column values (ie oracle
+    // hasn't inserted any values)
+    for (HighsInt iX = 0; iX < oracle_num_el; iX++) {
+      HighsInt iRow = oracle_index[iX];
+      if (!columnValuesEqual(iCol, iRow, oracle_value[iRow], value[iRow])) {
+        if (exit_on_first_error) return HighsStatus::kError;
+        error_found = true;
+        column_error_found = true;
+      }
+    }
+    // Check column values are the same as oracle values (ie oracle
+    // hasn't missed any values), zeroing oracle_value
+    for (HighsInt iX = 0; iX < num_nz; iX++) {
+      HighsInt iRow = index[iX];
+      if (!columnValuesEqual(iCol, iRow, oracle_value[iRow], value[iRow])) {
+        if (exit_on_first_error) return HighsStatus::kError;
+        error_found = true;
+        column_error_found = true;
+      }
+      oracle_value[iRow] = 0;
+    }
+    // Check remaining oracle values are zero
+    for (HighsInt iRow = 0; iRow < dim; iRow++) {
+      if (!columnValuesEqual(iCol, iRow, oracle_value[iRow], 0.0)) {
+        if (exit_on_first_error) return HighsStatus::kError;
+        error_found = true;
+        column_error_found = true;
+      }
+    }
+    // Reinstate oracle nonzeros, scaling with a random number for
+    // product experiement and zero value
+    for (HighsInt iX = 0; iX < num_nz; iX++) {
+      HighsInt iRow = index[iX];
+      oracle_value[iRow] = value[iRow] * random.fraction();
+      value[iRow] = 0;
+    }
+    if (!column_error_found) {
+      // Compute the product in check directly,
+      for (HighsInt iX = 0; iX < num_nz; iX++) {
+        HighsInt iCol1 = index[iX];
+        for (HighsInt iEl = hessian.start_[iCol1];
+             iEl < hessian.start_[iCol1 + 1]; iEl++)
+          check[hessian.index_[iEl]] +=
+              hessian.value_[iEl] * oracle_value[iCol1];
+      }
+      // Compute the product in value using the oracle
+      oracle.product(oracle_num_el, oracle_index.data(), oracle_value.data(),
+                     value.data());
+      // Check results are close
+      for (HighsInt iRow = 0; iRow < dim; iRow++) {
+        if (!productValuesClose(iCol, iRow, value[iRow], check[iRow], 1e-12)) {
+          if (exit_on_first_error) return HighsStatus::kError;
+          error_found = true;
+        }
+      }
+      // Zero value and check
+      for (HighsInt iRow = 0; iRow < dim; iRow++) {
+        value[iRow] = 0;
+        check[iRow] = 0;
+      }
+    }
+    // Zero oracle entries
+    for (HighsInt iX = 0; iX < num_nz; iX++) oracle_value[index[iX]] = 0;
+  }
+
+  if (error_found) return HighsStatus::kError;
+  if (warning_found) return HighsStatus::kWarning;
+  return HighsStatus::kOk;
+}
+
+void HessianOracle::clear() {
+  this->dim_ = 0;
+  this->multiplier_ = 1;
+  this->shift_ = 0;
+  this->call_ = nullptr;
+  this->data_ = nullptr;
+}
+
+bool HessianOracle::hasProductCall() const {
+  assert(this->call_);
+  if (!this->call_) return false;
+  // A Hessian oracle is valid if it has product call
+  HighsInt num_nz = 0;
+  HighsInt index;
+  double value;
+  return this->call_(kHessianOracleCallTypeProduct, &num_nz, &index, &value,
+                     nullptr, nullptr, &value, this->data_) == 0;
+}
+
+double HessianOracle::diagonal(const HighsInt i) const { return entry(i, i); }
+
+double HessianOracle::entry(const HighsInt i, const HighsInt j) const {
+  assert(this->call_);
+  double entry;
+  HighsInt q_x_index = j;
+  HighsInt status =
+      this->call_(kHessianOracleCallTypeEntry, nullptr, &i, nullptr, nullptr,
+                  &q_x_index, &entry, this->data_);
+  if (status) {
+    HighsInt num_entries;
+    std::vector<HighsInt> index(this->dim_, 0);
+    std::vector<double> value(this->dim_, 0);
+    this->getScatteredColumn(i, num_entries, index.data(), value.data());
+    entry = value[j];
+  }
+  entry *= this->multiplier_;
+  if (i == j) entry += this->shift_;
+  return entry;
+}
+
+void HessianOracle::getPackedColumn(const HighsInt col,
+                                    HighsInt& col_num_entries,
+                                    HighsInt* col_index,
+                                    double* col_value) const {
+  assert(col >= 0 && col < this->dim_);
+  HighsInt status =
+      this->call_(kHessianOracleCallTypeColumn, nullptr, &col, nullptr,
+                  &col_num_entries, col_index, col_value, this->data_);
+  if (status) {
+    std::vector<double> x_value(this->dim_, 0);
+    x_value[col] = 1.0;
+    this->product(1, &col, x_value.data(), col_value);
+    col_num_entries = 0;
+    for (HighsInt iRow = 0; iRow < this->dim_; iRow++) {
+      if (!col_value[iRow]) continue;
+      col_value[col_num_entries] = col_value[iRow];
+      col_index[col_num_entries] = iRow;
+      col_num_entries++;
+    }
+  }
+  if (this->multiplier_ != 1.0) {
+    for (HighsInt iX = 0; iX < col_num_entries; iX++)
+      col_value[iX] *= this->multiplier_;
+  }
+  if (this->shift_) {
+    bool found = false;
+    for (HighsInt iX = 0; iX < col_num_entries; iX++) {
+      if (col_index[iX] == col) {
+        col_value[iX] += this->shift_;  // Exploits value = 1
+        found = true;
+        break;
+      }
+    }
+    if (!found) {
+      col_index[col_num_entries] = col;
+      col_value[col_num_entries] = this->shift_;
+      col_num_entries++;
+    }
+  }
+}
+
+void HessianOracle::getScatteredColumn(const HighsInt col,
+                                       HighsInt& col_num_entries,
+                                       HighsInt* col_index,
+                                       double* col_value) const {
+  // Get the packed column values using col_value to avoid allocating
+  // a full vector
+  this->getPackedColumn(col, col_num_entries, col_index, col_value);
+  // Copy col_value into col_packed and zero col_value
+  std::vector<double> col_packed(col_num_entries);
+  for (HighsInt iEl = 0; iEl < col_num_entries; iEl++) {
+    col_packed[iEl] = col_value[iEl];
+    col_value[iEl] = 0;
+  }
+  // Now scatter into col_value
+  for (HighsInt iEl = 0; iEl < col_num_entries; iEl++) {
+    HighsInt iRow = col_index[iEl];
+    col_value[iRow] = col_packed[iEl];
+  }
+}
+
+void HessianOracle::product(const std::vector<double>& x_value,
+                            std::vector<double>& q_x_value) const {
+  HighsInt dim = this->dim_;
+  assert(static_cast<size_t>(dim) == x_value.size());
+  assert(static_cast<size_t>(dim) == q_x_value.size());
+  this->product(x_value.data(), q_x_value.data());
+}
+
+// For full x
+void HessianOracle::product(const double* x_value, double* q_x_value) const {
+  assert(this->call_);
+  this->call_(kHessianOracleCallTypeProduct, nullptr, nullptr, x_value, nullptr,
+              nullptr, q_x_value, this->data_);
+  this->scaleAndShift(nullptr, nullptr, x_value, q_x_value);
+}
+
+// For scattered, sparse, x
+void HessianOracle::product(const HighsInt x_num_entries,
+                            const HighsInt* x_index, const double* x_value,
+                            double* q_x_value) const {
+  assert(this->call_);
+  if (x_num_entries == 0) return;
+  // Must have positive number of indices
+  assert(x_index != nullptr && x_num_entries > 0);
+  this->call_(kHessianOracleCallTypeProduct, &x_num_entries, x_index, x_value,
+              nullptr, nullptr, q_x_value, this->data_);
+  this->scaleAndShift(&x_num_entries, x_index, x_value, q_x_value);
+}
+
+void HessianOracle::scaleAndShift(const HighsInt* x_num_entries,
+                                  const HighsInt* x_index,
+                                  const double* x_value,
+                                  double* q_x_value) const {
+  // Compute multiplier_*Qx + scale_*x
+  if (this->multiplier_ != 1.0) {
+    for (HighsInt iRow = 0; iRow < this->dim_; iRow++)
+      q_x_value[iRow] *= this->multiplier_;
+  }
+  if (this->shift_ != 0.0) {
+    if (x_index != nullptr) {
+      assert(x_num_entries != nullptr);
+      assert(*x_num_entries > 0);
+      for (HighsInt iX = 0; iX < *x_num_entries; iX++) {
+        HighsInt iRow = x_index[iX];
+        q_x_value[iRow] += this->shift_ * x_value[iRow];
+      }
+    } else {
+      for (HighsInt iRow = 0; iRow < this->dim_; iRow++)
+        q_x_value[iRow] += this->shift_ * x_value[iRow];
+    }
+  }
 }

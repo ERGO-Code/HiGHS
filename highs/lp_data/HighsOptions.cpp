@@ -101,7 +101,7 @@ bool optionSolverOk(const HighsLogOptions& report_log_options,
                  "%s\"%s\", \"%s\", \"%s\", \"%s\" or \"%s\"\n",
                  value.c_str(), kSolverString.c_str(),
                  HighsExternalApi::isAvailable<HighsExtras::hipo>()
-                     ? (kHipoString + "\", \"").c_str()
+                     ? ("\"" + kHipoString + "\", ").c_str()
                      : "",
                  kHighsChooseString.c_str(), kSimplexString.c_str(),
                  kIpmString.c_str(), kIpxString.c_str(), kPdlpString.c_str(),
@@ -131,7 +131,7 @@ bool optionMipLpSolverOk(const HighsLogOptions& report_log_options,
                  "%s\"%s\", \"%s\", \"%s\" or \"%s\"\n",
                  value.c_str(), kMipLpSolverString.c_str(),
                  HighsExternalApi::isAvailable<HighsExtras::hipo>()
-                     ? (kHipoString + "\", \"").c_str()
+                     ? ("\"" + kHipoString + "\", ").c_str()
                      : "",
                  kHighsChooseString.c_str(), kSimplexString.c_str(),
                  kIpmString.c_str(), kIpxString.c_str());
@@ -160,7 +160,7 @@ bool optionMipIpmSolverOk(const HighsLogOptions& report_log_options,
         "%s\"%s\", \"%s\" or \"%s\"\n",
         value.c_str(), kMipIpmSolverString.c_str(),
         HighsExternalApi::isAvailable<HighsExtras::hipo>()
-            ? (kHipoString + "\", \"").c_str()
+            ? ("\"" + kHipoString + "\", ").c_str()
             : "",
         kHighsChooseString.c_str(), kIpmString.c_str(), kIpxString.c_str());
     return false;
@@ -170,13 +170,14 @@ bool optionMipIpmSolverOk(const HighsLogOptions& report_log_options,
 bool optionHipoParallelTypeOk(const HighsLogOptions& report_log_options,
                               const string& value) {
   if (value == kHipoNodeString || value == kHipoTreeString ||
-      value == kHipoBothString)
+      value == kHipoBothString || value == kHighsChooseString)
     return true;
-  highsLogUser(
-      report_log_options, HighsLogType::kError,
-      "Value \"%s\" for %s option is not one of \"%s\", \"%s\" or \"%s\"\n",
-      value.c_str(), kHipoParallelString.c_str(), kHipoTreeString.c_str(),
-      kHipoNodeString.c_str(), kHipoBothString.c_str());
+  highsLogUser(report_log_options, HighsLogType::kError,
+               "Value \"%s\" for %s option is not one of \"%s\", \"%s\", "
+               "\"%s\" or \"%s\"\n",
+               value.c_str(), kHipoParallelString.c_str(),
+               kHipoTreeString.c_str(), kHipoNodeString.c_str(),
+               kHipoBothString.c_str(), kHighsChooseString.c_str());
   return false;
 }
 
@@ -204,6 +205,19 @@ bool optionHipoOrderingOk(const HighsLogOptions& report_log_options,
                value.c_str(), kHipoOrderingString.c_str(),
                kHipoAmdString.c_str(), kHipoMetisString.c_str(),
                kHipoRcmString.c_str(), kHighsChooseString.c_str());
+  return false;
+}
+
+bool optionHipoFactorOk(const HighsLogOptions& report_log_options,
+                        const string& value) {
+  if (value == kHipoFactorMultifrontal || value == kHipoFactorUplooking ||
+      value == kHighsChooseString)
+    return true;
+  highsLogUser(
+      report_log_options, HighsLogType::kError,
+      "Value \"%s\" for %s option is not one of \"%s\", \"%s\" or \"%s\"\n",
+      value.c_str(), kHipoFactorString.c_str(), kHipoFactorMultifrontal.c_str(),
+      kHipoFactorUplooking.c_str(), kHighsChooseString.c_str());
   return false;
 }
 
@@ -494,6 +508,9 @@ OptionStatus checkOptionValue(const HighsLogOptions& report_log_options,
   } else if (option.name == kHipoOrderingString) {
     if (!optionHipoOrderingOk(report_log_options, value))
       return OptionStatus::kIllegalValue;
+  } else if (option.name == kHipoFactorString) {
+    if (!optionHipoFactorOk(report_log_options, value))
+      return OptionStatus::kIllegalValue;
   }
   return OptionStatus::kOk;
 }
@@ -707,11 +724,34 @@ OptionStatus setLocalOptionValue(const HighsLogOptions& report_log_options,
 OptionStatus setLocalOptionValue(const HighsLogOptions& report_log_options,
                                  OptionRecordString& option,
                                  const std::string& value) {
+  std::string possible_lower_case_value = value;
+  // Trim any leading and trailing spaces
+  trim(possible_lower_case_value, " ");
+  // Possibly convert to lower case - not done for file names
+  possibleLowerCaseOptionValue(option.name, possible_lower_case_value);
   OptionStatus return_status =
-      checkOptionValue(report_log_options, option, value);
+      checkOptionValue(report_log_options, option, possible_lower_case_value);
   if (return_status != OptionStatus::kOk) return return_status;
-  option.assignvalue(value);
+  option.assignvalue(possible_lower_case_value);
   return OptionStatus::kOk;
+}
+
+void possibleLowerCaseOptionValue(const std::string& name, std::string& value) {
+  // Don't convert values for file name options to lower case
+  if (name == kModelFileString || name == kReadBasisFileString ||
+      name == kWriteBasisFileString || name == kOptionsFileString ||
+      name == kWriteSolutionFileString || name == kWriteModelFileString ||
+      name == kWritePresolvedModelFileString ||
+      name == kWriteIisModelFileString || name == kReadSolutionFileString ||
+      name == kLogFileString ||
+#ifdef HIGHS_DEBUGSOL
+      name == kMipDebugSolutionFileString ||
+#endif
+      name == kMipImprovingSolutionFileString)
+    return;
+  // Transform other options to lower case
+  std::transform(value.begin(), value.end(), value.begin(),
+                 [](unsigned char c) { return std::tolower(c); });
 }
 
 OptionStatus passLocalOptions(const HighsLogOptions& report_log_options,

@@ -63,6 +63,14 @@ HiGHS has two interior point (IPM) solvers:
   use the augmented system, "normaleq" for normal equations, or
   "choose" to leave the choice to the solver.
 
+  The [__hipo\_factor__](@ref option-hipo-factor) option can be used to
+  select the factorisation to use: select "multifrontal" to force the use
+  of the parallel multifrontal factorisation (ideal for large and structured 
+  problems); select "uplooking" to force the use of the serial up-looking
+  factorisation (ideal for small and very sparse problems); select "choose" 
+  to leave the choice to the solver (recommended, as the solver can switch 
+  between the two factorisations during the iterations if needed).
+
   The option [__hipo\_ordering__](@ref option-hipo-ordering) can be used
   to select the fill-reducing heuristic to use during the
   factorisation:

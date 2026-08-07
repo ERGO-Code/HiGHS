@@ -15,13 +15,11 @@
 #include "Highs.h"
 #include "lp_data/HighsAnalysis.h"
 #include "qpsolver/basis.hpp"
-#include "qpsolver/crashsolution.hpp"
 #include "qpsolver/dantzigpricing.hpp"
 #include "qpsolver/devexpricing.hpp"
 #include "qpsolver/factor.hpp"
 #include "qpsolver/gradient.hpp"
 #include "qpsolver/instance.hpp"
-#include "qpsolver/perturbation.hpp"
 #include "qpsolver/ratiotest.hpp"
 #include "qpsolver/reducedcosts.hpp"
 #include "qpsolver/reducedgradient.hpp"
@@ -147,7 +145,7 @@ static double computemaxsteplength(Runtime& runtime, const QpVector& p,
     }
   } else {
     zcd = true;
-    return std::numeric_limits<double>::infinity();
+    return kHighsInf;
   }
 }
 
@@ -349,6 +347,8 @@ void Quass::solve(const QpVector& x0, const QpVector& ra, Basis& b0,
 
   const HighsInt current_num_active = basis.getnumactive();
   bool atfsep = current_num_active == runtime.instance.num_var;
+  HighsInt null = 0;
+  runtime.settings.iteration_log_header.fire(null);
   while (true) {
     // check iteration limit
     if (runtime.statistics.num_iterations >= runtime.settings.iteration_limit) {
@@ -370,12 +370,14 @@ void Quass::solve(const QpVector& x0, const QpVector& ra, Basis& b0,
     }
 
     // LOGGING
+    const bool force_logging = false;
     double run_time = timer.read();
-    if ((runtime.statistics.num_iterations %
-                 runtime.settings.reportingfequency ==
-             0 ||
-         run_time - last_logging_time > logging_time_interval) &&
-        runtime.statistics.num_iterations > last_logging_iteration) {
+    if (force_logging ||
+        ((runtime.statistics.num_iterations %
+                  runtime.settings.reportingfequency ==
+              0 ||
+          run_time - last_logging_time > logging_time_interval) &&
+         runtime.statistics.num_iterations > last_logging_iteration)) {
       bool log_report = true;
       if (runtime.statistics.num_iterations >
           10 * runtime.settings.reportingfequency) {
@@ -383,7 +385,7 @@ void Quass::solve(const QpVector& x0, const QpVector& ra, Basis& b0,
         log_report = false;
       }
       if (run_time > 10 * logging_time_interval) logging_time_interval *= 2.0;
-      if (log_report) {
+      if (force_logging || log_report) {
         last_logging_time = run_time;
         last_logging_iteration = runtime.statistics.num_iterations;
         loginformation(runtime, basis, factor, timer);
@@ -432,7 +434,7 @@ void Quass::solve(const QpVector& x0, const QpVector& ra, Basis& b0,
       basis.deactivate(minidx);
       computerowmove(runtime, basis, p, rowmove);
       tidyup(p, rowmove, basis, runtime);
-      maxsteplength = std::numeric_limits<double>::infinity();
+      maxsteplength = kHighsInf;
       // if (runtime.instance.Q.mat.value.size() > 0) {
       maxsteplength = computemaxsteplength(runtime, p, gradient, buffer_Qp,
                                            zero_curvature_direction);
@@ -507,7 +509,7 @@ void Quass::solve(const QpVector& x0, const QpVector& ra, Basis& b0,
           atfsep = false;
         }
       } else {
-        if (stepres.alpha == std::numeric_limits<double>::infinity()) {
+        if (stepres.alpha == kHighsInf) {
           // unbounded
           runtime.status = QpModelStatus::kUnbounded;
           return;

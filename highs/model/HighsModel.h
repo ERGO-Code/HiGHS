@@ -24,7 +24,9 @@ class HighsModel {
   HighsHessian hessian_;
   bool operator==(const HighsModel& model) const;
   bool equalButForNames(const HighsModel& model) const;
-  bool isQp() const { return (this->hessian_.dim_ != 0); }
+  bool isQp() const {
+    return (this->hessian_.dim_ != 0 || this->hessian_.isOracle());
+  }
   bool isMip() const { return this->lp_.isMip(); }
   bool isEmpty() const {
     return (this->lp_.num_col_ == 0 && this->lp_.num_row_ == 0);

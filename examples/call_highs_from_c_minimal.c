@@ -655,5 +655,6 @@ int main() {
   minimal_api();
   minimal_api_qp();
   full_api();
+  Highs_resetGlobalScheduler(1);
   return 0;
 }
