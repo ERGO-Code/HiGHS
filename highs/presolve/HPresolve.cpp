@@ -87,21 +87,22 @@ void HPresolve::setInput(HighsLp& model_, const HighsOptions& options_,
   analysis_.presolveTimerStart(kPresolveClockPresolve);
 
   if (mipsolver == nullptr) {
-    primal_feastol = options->primal_feasibility_tolerance;
+    this->primal_feastol = options->primal_feasibility_tolerance;
     model->integrality_.assign(model->num_col_, HighsVarType::kContinuous);
   } else
-    primal_feastol = options->mip_feasibility_tolerance;
+    this->primal_feastol = options->mip_feasibility_tolerance;
 
   // Take value passed in as reduction limit, allowing different
   // values to be used for initial presolve, and after restart
-  reductionLimit =
+  this->reductionLimit =
       presolve_reduction_limit < 0 ? kHighsSize_tInf : presolve_reduction_limit;
   if (options->presolve != kHighsOffString &&
       reductionLimit < kHighsSize_tInf) {
     highsLogDev(options->log_options, HighsLogType::kInfo,
                 "HPresolve::setInput reductionLimit = %d\n",
-                static_cast<int>(reductionLimit));
+                static_cast<int>(this->reductionLimit));
   }
+  this->in_initial_sweep_ = false;
 }
 
 // for MIP presolve

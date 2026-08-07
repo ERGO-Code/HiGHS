@@ -109,6 +109,7 @@ class HPresolve {
 
   bool shrinkProblemEnabled;
   size_t reductionLimit;
+  bool in_initial_sweep_;
 
   // vectors storing singleton rows and columns
   std::vector<HighsInt> singletonRows;
