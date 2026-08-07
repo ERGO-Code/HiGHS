@@ -170,13 +170,14 @@ bool optionMipIpmSolverOk(const HighsLogOptions& report_log_options,
 bool optionHipoParallelTypeOk(const HighsLogOptions& report_log_options,
                               const string& value) {
   if (value == kHipoNodeString || value == kHipoTreeString ||
-      value == kHipoBothString)
+      value == kHipoBothString || value == kHighsChooseString)
     return true;
-  highsLogUser(
-      report_log_options, HighsLogType::kError,
-      "Value \"%s\" for %s option is not one of \"%s\", \"%s\" or \"%s\"\n",
-      value.c_str(), kHipoParallelString.c_str(), kHipoTreeString.c_str(),
-      kHipoNodeString.c_str(), kHipoBothString.c_str());
+  highsLogUser(report_log_options, HighsLogType::kError,
+               "Value \"%s\" for %s option is not one of \"%s\", \"%s\", "
+               "\"%s\" or \"%s\"\n",
+               value.c_str(), kHipoParallelString.c_str(),
+               kHipoTreeString.c_str(), kHipoNodeString.c_str(),
+               kHipoBothString.c_str(), kHighsChooseString.c_str());
   return false;
 }
 

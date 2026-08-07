@@ -405,6 +405,8 @@ struct HighsOptionsStruct {
   std::string hipo_ordering;
   std::string hipo_factor;
   HighsInt hipo_block_size;
+  HighsInt hipo_parallel_force;
+  HighsInt hipo_parallel_forbid;
 
   // Options for PDLP solver
   HighsInt pdlp_features_off;
@@ -587,6 +589,8 @@ struct HighsOptionsStruct {
         hipo_ordering(""),
         hipo_factor(""),
         hipo_block_size(0),
+        hipo_parallel_force(0),
+        hipo_parallel_forbid(0),
         pdlp_features_off(0),
         pdlp_iteration_limit(0),
         pdlp_scaling_mode(0),
@@ -1327,18 +1331,16 @@ class HighsOptions : public HighsOptionsStruct {
         advanced, &hipo_system, kHighsChooseString);
     records.push_back(record_string);
 
-    record_string =
-        new OptionRecordString(kHipoParallelString,
-                               "HiPO parallelism: \"tree\", "
-                               "\"node\" or \"both\"",
-                               advanced, &hipo_parallel_type, kHipoBothString);
+    record_string = new OptionRecordString(
+        kHipoParallelString,
+        "HiPO parallelism: \"tree\", \"node\", \"both\" or \"choose\"",
+        advanced, &hipo_parallel_type, kHighsChooseString);
     records.push_back(record_string);
 
-    record_string =
-        new OptionRecordString(kHipoOrderingString,
-                               "HiPO matrix reordering: \"choose\", \"metis\", "
-                               "\"amd\" or \"rcm\"",
-                               advanced, &hipo_ordering, kHighsChooseString);
+    record_string = new OptionRecordString(
+        kHipoOrderingString,
+        "HiPO matrix reordering: \"choose\", \"metis\", \"amd\" or \"rcm\"",
+        advanced, &hipo_ordering, kHighsChooseString);
     records.push_back(record_string);
 
     record_string = new OptionRecordString(
@@ -1351,6 +1353,19 @@ class HighsOptions : public HighsOptionsStruct {
     record_int = new OptionRecordInt(
         "hipo_block_size", "Block size for dense linear algebra within HiPO",
         advanced, &hipo_block_size, 0, 128, kHighsIInf);
+    records.push_back(record_int);
+
+    record_int = new OptionRecordInt(
+        "hipo_parallel_force", "Bit mask to force parallel techniques in HiPO",
+        advanced, &hipo_parallel_force, 0, 0,
+        static_cast<int>(hipo::ParallelTechnique::kMaxSum));
+    records.push_back(record_int);
+
+    record_int =
+        new OptionRecordInt("hipo_parallel_forbid",
+                            "Bit mask to forbid parallel techniques in HiPO",
+                            advanced, &hipo_parallel_forbid, 0, 0,
+                            static_cast<int>(hipo::ParallelTechnique::kMaxSum));
     records.push_back(record_int);
 
     record_int = new OptionRecordInt(

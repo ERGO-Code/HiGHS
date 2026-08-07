@@ -138,6 +138,9 @@ class FHsolver {
   // regularisation is applied.
   void setPivoting(bool pivoting);
 
+  void setParallel(bool tree, bool node);
+  void setParallelSolve(bool forward, bool backward, bool diag);
+
   // Pass the Logger object to be used for logging. Alternatively, printf can be
   // used for logging, by passing a nullptr and setting use_printf to true.
   // By default, logging is off.
