@@ -71,16 +71,6 @@ TEST_CASE("highs-run-data-presolve", "[highs_run_data]") {
     REQUIRE(h.readModel(filename) == HighsStatus::kOk);
     const bool irreducible = true;
     for (auto& solver : solvers) {
-      //  h.setOptionValue("run_crossover", kHighsChooseString);
-
-      //  h.presolve();
-      //  HighsLp presolved_lp = h.getPresolvedLp();
-      //
-      //  h.passModel(presolved_lp);
-      //  
-      //  h.setOptionValue("solve_relaxation", solve_relaxation);
-      //  h.setOptionValue(kPresolveString, kHighsOffString);
-
       h.setOptionValue("solver", solver);
       //      if (dev_run)
       printf("\n!>>>>%s-%s<<<<\n", model.c_str(), solver.c_str());
