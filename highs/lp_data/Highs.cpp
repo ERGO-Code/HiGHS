@@ -1630,6 +1630,7 @@ HighsStatus Highs::calledOptimizeModel() {
     timedSolveLp(incumbent_lp, lp_solve, this_solve_original_lp_time);
     return_status = interpretCallStatus(options_.log_options, call_status,
                                         return_status, "callSolveLp");
+    this->run_data_.solve_time = this_solve_original_lp_time;
     if (return_status == HighsStatus::kError)
       return returnFromOptimizeModel(return_status, undo_mods);
   } else {
