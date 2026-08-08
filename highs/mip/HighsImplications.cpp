@@ -320,6 +320,7 @@ bool HighsImplications::runProbing(HighsInt col, HighsInt& numReductions) {
     // analyze implications
     auto analyseImplications = [&](const HighsInt implcol,
                                    const Implication& downImplication) {
+      if (colsubstituted[implcol] || globaldomain.isFixed(implcol)) return;
       Implication* upImplication = implications[2 * col + 1].find(implcol);
       if (upImplication) {
         const double lbDown =
@@ -331,8 +332,7 @@ bool HighsImplications::runProbing(HighsInt col, HighsInt& numReductions) {
         const double ubUp =
             std::min(globaldomain.col_upper_[implcol], upImplication->ub);
 
-        if (!colsubstituted[implcol] && !globaldomain.isFixed(implcol) &&
-            lbDown == ubDown && lbUp == ubUp &&
+        if (lbDown == ubDown && lbUp == ubUp &&
             std::abs(lbDown - lbUp) > mipsolver.mipdata_->feastol) {
           HighsSubstitution substitution;
           substitution.substcol = implcol;
