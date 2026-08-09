@@ -1587,7 +1587,7 @@ HighsStatus Highs::calledOptimizeModel() {
     time += timer_.read(timer_.solve_clock);
   };
 
-  const bool unconstrained_lp = incumbent_lp.a_matrix_.numNz() == 0;
+  const bool unconstrained_lp = incumbent_lp.numNz() == 0;
   assert(incumbent_lp.num_row_ || unconstrained_lp);
   const bool has_basis = basis_.useful;
   if (has_basis) {
@@ -3968,8 +3968,8 @@ HighsPresolveStatus Highs::runPresolve(const bool force_lp_presolve,
           original_lp.num_col_ - reduced_lp.num_col_;
       presolve_.info_.n_rows_removed =
           original_lp.num_row_ - reduced_lp.num_row_;
-      presolve_.info_.n_nnz_removed = (HighsInt)original_lp.a_matrix_.numNz() -
-                                      (HighsInt)reduced_lp.a_matrix_.numNz();
+      presolve_.info_.n_nnz_removed =
+          (HighsInt)original_lp.numNz() - (HighsInt)reduced_lp.numNz();
       // Clear any scaling information inherited by the reduced LP
       reduced_lp.clearScale();
       assert(lpDimensionsOk("RunPresolve: reduced_lp", reduced_lp,
@@ -3979,7 +3979,7 @@ HighsPresolveStatus Highs::runPresolve(const bool force_lp_presolve,
     case HighsPresolveStatus::kReducedToEmpty: {
       presolve_.info_.n_cols_removed = original_lp.num_col_;
       presolve_.info_.n_rows_removed = original_lp.num_row_;
-      presolve_.info_.n_nnz_removed = (HighsInt)original_lp.a_matrix_.numNz();
+      presolve_.info_.n_nnz_removed = (HighsInt)original_lp.numNz();
       break;
     }
     default:
@@ -4000,9 +4000,10 @@ HighsPostsolveStatus Highs::runPostsolve() {
     return HighsPostsolveStatus::kNoPrimalSolutionError;
   const bool have_dual_solution =
       presolve_.data_.recovered_solution_.dual_valid;
-  presolve_.data_.postSolveStack.undo(options_,
-                                      presolve_.data_.recovered_solution_,
-                                      presolve_.data_.recovered_basis_);
+  const HighsInt report_3040_col = -21792;
+  presolve_.data_.postSolveStack.undo(
+      options_, presolve_.data_.recovered_solution_,
+      presolve_.data_.recovered_basis_, report_3040_col);
   // Compute the row activities
   assert(model_.lp_.a_matrix_.isColwise());
   calculateRowValuesQuad(model_.lp_, presolve_.data_.recovered_solution_);
