@@ -2686,7 +2686,7 @@ HighsStatus Highs::setSolution(const HighsInt num_entries,
   if (model_.lp_.num_col_ == 0) return return_status;
   // Warn about duplicates in index
   HighsInt num_duplicates = 0;
-  std::vector<bool> is_set;
+  std::vector<HighsBool> is_set;
   is_set.assign(model_.lp_.num_col_, false);
   const HighsInt to_ix = packed ? num_entries : model_.lp_.num_col_;
   for (HighsInt iX = 0; iX < to_ix; iX++) {

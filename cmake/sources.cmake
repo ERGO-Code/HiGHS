@@ -622,6 +622,7 @@ set(highs_headers
     util/HighsHash.h
     util/HighsHashTree.h
     util/HighsInt.h
+    util/HighsType.h
     util/HighsIntegers.h
     util/HighsLinearSumBounds.h
     util/HighsMatrixPic.h

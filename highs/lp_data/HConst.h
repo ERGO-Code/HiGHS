@@ -15,7 +15,7 @@
 #include <limits>
 #include <string>
 
-#include "util/HighsInt.h"
+#include "util/HighsType.h"
 
 const std::string kHighsCopyrightStatement =
     "Copyright (c) 2026 under MIT licence terms";

@@ -5,28 +5,17 @@
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-/**@file ipm/IpxSolution.h
- * @brief
+/**@file HighsType.h
+ * @brief The definition for basic types to use
  */
-#ifndef IPM_IPX_SOLUTION_H_
-#define IPM_IPX_SOLUTION_H_
 
-#include <stdint.h>
+#ifndef UTIL_HIGHS_TYPE_H_
+#define UTIL_HIGHS_TYPE_H_
 
-#include <vector>
+#include "util/HighsInt.h"
 
-#include "util/HighsType.h"
-typedef HighsInt ipxint;
+// vector<bool> is not thread-safe, so HiGHS uses vector<HighsBool>
 
-struct IpxSolution {
-  ipxint num_col;
-  ipxint num_row;
-  std::vector<double> ipx_col_value;
-  std::vector<double> ipx_row_value;
-  std::vector<double> ipx_col_dual;
-  std::vector<double> ipx_row_dual;
-  std::vector<ipxint> ipx_col_status;
-  std::vector<ipxint> ipx_row_status;
-};
+typedef uint8_t HighsBool;
 
 #endif

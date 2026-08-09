@@ -92,7 +92,7 @@ void UpLookingSolver::factor(const std::vector<Int>& ptr,
   // A must be upper triangular.
   // L is computed as lower triangular. The diagonal of L is used to store D^-1.
 
-  std::vector<bool> mark(n_, false);
+  std::vector<HighsBool> mark(n_, false);
   std::vector<Int> stack(n_);
   Int top = 0;
   std::vector<Int> revpattern(n_);

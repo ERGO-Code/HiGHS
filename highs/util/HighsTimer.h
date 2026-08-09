@@ -19,7 +19,7 @@
 #include <string>
 #include <vector>
 
-#include "util/HighsInt.h"
+#include "util/HighsType.h"
 
 const HighsInt check_clock = -46;
 const HighsInt simplex_no_basis_clock = 8;

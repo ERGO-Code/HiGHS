@@ -23,7 +23,7 @@ class HPresolveAnalysis {
   HighsInt original_num_row_;
 
  public:
-  std::vector<bool> allow_rule_;
+  std::vector<HighsBool> allow_rule_;
 
   bool allow_logging_;
   bool logging_on_;
