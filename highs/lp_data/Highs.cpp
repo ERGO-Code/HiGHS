@@ -1599,12 +1599,10 @@ HighsStatus Highs::calledOptimizeModel() {
   if (basis_.valid) assert(basis_.useful);
 
   const bool without_presolve = options_.presolve == kHighsOffString;
-  if ((unconstrained_lp || has_basis || without_presolve) &&
-      solver_will_use_basis) {
-    // There is a valid basis for the problem, presolve is off, or LP
-    // has no constraint matrix, and the solver will use the basis
-    // (otherwise it's better to use presolve, if it's not switched
-    // off)
+  if ((has_basis && solver_will_use_basis) || without_presolve ||
+      unconstrained_lp) {
+    // There is a valid basis for the problem and the solver will use
+    // it, or presolve is off, or LP has no constraint matrix
     //
     // Determine a coherent message about how the LP is being solved
     std::stringstream lp_solve_ss;
@@ -1630,6 +1628,7 @@ HighsStatus Highs::calledOptimizeModel() {
     timedSolveLp(incumbent_lp, lp_solve, this_solve_original_lp_time);
     return_status = interpretCallStatus(options_.log_options, call_status,
                                         return_status, "callSolveLp");
+    this->run_data_.solve_time = this_solve_original_lp_time;
     if (return_status == HighsStatus::kError)
       return returnFromOptimizeModel(return_status, undo_mods);
   } else {
