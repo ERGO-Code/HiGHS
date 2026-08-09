@@ -729,7 +729,7 @@ HighsInt HighsOrbitopeMatrix::orbitalFixingForFullOrbitope(
 
 HighsInt HighsOrbitopeMatrix::orbitalFixing(HighsDomain& domain) const {
   std::vector<HighsInt> rows;
-  std::vector<uint8_t> rowUsed(numRows);
+  std::vector<HighsBool> rowUsed(numRows);
 
   rows.reserve(numRows);
 

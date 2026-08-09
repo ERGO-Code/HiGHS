@@ -102,7 +102,7 @@ struct HighsMipSolverData {
   std::vector<HighsInt> ARindex_;
   std::vector<double> ARvalue_;
   std::vector<double> maxAbsRowCoef;
-  std::vector<uint8_t> rowintegral;
+  std::vector<HighsBool> rowintegral;
   std::vector<HighsInt> uplocks;
   std::vector<HighsInt> downlocks;
   std::vector<HighsInt> integer_cols;

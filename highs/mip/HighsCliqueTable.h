@@ -83,8 +83,8 @@ class HighsCliqueTable {
   std::vector<Substitution> substitutions;
   std::vector<HighsInt> deletedrows;
   std::vector<std::pair<HighsInt, CliqueVar>> cliqueextensions;
-  std::vector<uint8_t> iscandidate;
-  std::vector<uint8_t> colDeleted;
+  std::vector<HighsBool> iscandidate;
+  std::vector<HighsBool> colDeleted;
   std::vector<uint32_t> cliquehits;
   std::vector<HighsInt> cliquehitinds;
 

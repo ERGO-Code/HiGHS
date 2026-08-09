@@ -70,7 +70,7 @@ static void solveHyper(const HighsInt h_size, const HighsInt* h_lookup,
   // Take count
 
   // Build list
-  char* list_mark = rhs->cwork.data();
+  HighsBool* list_mark = rhs->cwork.data();
   HighsInt* list_index = rhs->iwork.data();
   HighsInt* list_stack = &rhs->iwork[h_size];
   HighsInt list_count = 0;
@@ -89,13 +89,13 @@ static void solveHyper(const HighsInt h_size, const HighsInt* h_lookup,
     HighsInt Hk = h_start[Hi];  // H matrix non zero position
     HighsInt n_stack = -1;      // Usage of the stack (-1 not used)
 
-    list_mark[Hi] = 1;  // Mark this as touched
+    list_mark[Hi] = true;  // Mark this as touched
 
     for (;;) {
       if (Hk < h_end[Hi]) {
         HighsInt Hi_sub = h_lookup[h_index[Hk++]];
-        if (list_mark[Hi_sub] == 0) {  // Go to a child
-          list_mark[Hi_sub] = 1;       // Mark as touched
+        if (!list_mark[Hi_sub]) {      // Go to a child
+          list_mark[Hi_sub] = true;    // Mark as touched
           list_stack[++n_stack] = Hi;  // Store current into stack
           list_stack[++n_stack] = Hk;
           Hi = Hi_sub;  // Replace current with child
@@ -122,7 +122,7 @@ static void solveHyper(const HighsInt h_size, const HighsInt* h_lookup,
     rhs_count = 0;
     for (HighsInt iList = list_count - 1; iList >= 0; iList--) {
       HighsInt i = list_index[iList];
-      list_mark[i] = 0;
+      list_mark[i] = false;
       HighsInt pivotRow = h_pivot_index[i];
       double pivot_multiplier = rhs_array[pivotRow];
       if (fabs(pivot_multiplier) > kHighsTiny) {
@@ -139,7 +139,7 @@ static void solveHyper(const HighsInt h_size, const HighsInt* h_lookup,
     rhs_count = 0;
     for (HighsInt iList = list_count - 1; iList >= 0; iList--) {
       HighsInt i = list_index[iList];
-      list_mark[i] = 0;
+      list_mark[i] = false;
       HighsInt pivotRow = h_pivot_index[i];
       double pivot_multiplier = rhs_array[pivotRow];
       if (fabs(pivot_multiplier) > kHighsTiny) {
@@ -281,7 +281,7 @@ void HFactor::setupGeneral(
   mr_count_before.resize(num_row);
   mr_index.resize(basis_matrix_limit_size * kMRExtraEntriesMultiplier);
 
-  mwz_column_mark.assign(num_row, 0);
+  mwz_column_mark.assign(num_row, false);
   mwz_column_index.resize(num_row);
   mwz_column_array.assign(num_row, 0);
 
@@ -1217,7 +1217,7 @@ HighsInt HFactor::buildKernel() {
       const double value = mc_value[k] / pivot_multiplier;
       mwz_column_index[mwz_column_count++] = iRow;
       mwz_column_array[iRow] = value;
-      mwz_column_mark[iRow] = 1;
+      mwz_column_mark[iRow] = true;
       l_index.push_back(iRow);
       l_value.push_back(value);
       mr_count_before[iRow] = mr_count[iRow];
@@ -1261,7 +1261,7 @@ HighsInt HFactor::buildKernel() {
         HighsInt iRow = mc_index[my_k];
         double value = mc_value[my_k];
         if (mwz_column_mark[iRow]) {
-          mwz_column_mark[iRow] = 0;
+          mwz_column_mark[iRow] = false;
           nFillin--;
           value -= my_pivot * mwz_column_array[iRow];
           if (fabs(value) < kHighsTiny) {
@@ -1340,7 +1340,7 @@ HighsInt HFactor::buildKernel() {
 
       // 2.4.5. Reset pivot column mark
       for (HighsInt i = 0; i < mwz_column_count; i++)
-        mwz_column_mark[mwz_column_index[i]] = 1;
+        mwz_column_mark[mwz_column_index[i]] = true;
 
       // 2.4.6. Fix max value and link list
       colFixMax(iCol);
@@ -1352,7 +1352,7 @@ HighsInt HFactor::buildKernel() {
 
     // 2.5. Clear pivot column buffer
     for (HighsInt i = 0; i < mwz_column_count; i++)
-      mwz_column_mark[mwz_column_index[i]] = 0;
+      mwz_column_mark[mwz_column_index[i]] = false;
 
     // 2.6. Correct row links for the remain active part
     for (HighsInt i = start_A; i < end_A; i++) {

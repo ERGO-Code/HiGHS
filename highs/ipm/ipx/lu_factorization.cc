@@ -15,7 +15,7 @@ static SparseMatrix PermutedMatrix(const Int* Bbegin, const Int* Bend,
                                    const std::vector<Int>& dependent_cols) {
     Int dim = rowperm.size();
     std::vector<Int> permuted_row = InversePerm(rowperm);
-    std::vector<bool> dependent(dim, false);
+    std::vector<HighsBool> dependent(dim, false);
     for (Int k : dependent_cols)
         dependent[k] = true;
 

@@ -91,9 +91,9 @@ class HPresolve {
   HighsLinearSumBounds impliedDualRowBounds;
 
   std::vector<HighsInt> changedRowIndices;
-  std::vector<uint8_t> changedRowFlag;
+  std::vector<HighsBool> changedRowFlag;
   std::vector<HighsInt> changedColIndices;
-  std::vector<uint8_t> changedColFlag;
+  std::vector<HighsBool> changedColFlag;
 
   std::vector<std::pair<HighsInt, HighsInt>> substitutionOpportunities;
 
@@ -116,12 +116,12 @@ class HPresolve {
   std::vector<HighsInt> singletonColumns;
 
   // flags to mark rows/columns as deleted
-  std::vector<uint8_t> rowDeleted;
-  std::vector<uint8_t> colDeleted;
+  std::vector<HighsBool> rowDeleted;
+  std::vector<HighsBool> colDeleted;
 
   // flags to skip repeated single-equation handling (dual fixing) on unchanged
   // rows
-  std::vector<uint8_t> singleEquationChecked;
+  std::vector<HighsBool> singleEquationChecked;
 
   std::vector<uint16_t> numProbes;
 

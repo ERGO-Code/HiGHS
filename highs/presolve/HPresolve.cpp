@@ -7160,10 +7160,8 @@ void HPresolve::computeIntermediateMatrix(std::vector<HighsInt>& flagRow,
   toCSC(model->a_matrix_.value_, model->a_matrix_.index_,
         model->a_matrix_.start_);
 
-  for (HighsInt i = 0; i != model->num_row_; ++i)
-    flagRow[i] = 1 - rowDeleted[i];
-  for (HighsInt i = 0; i != model->num_col_; ++i)
-    flagCol[i] = 1 - colDeleted[i];
+  for (HighsInt i = 0; i != model->num_row_; ++i) flagRow[i] = !rowDeleted[i];
+  for (HighsInt i = 0; i != model->num_col_; ++i) flagCol[i] = !colDeleted[i];
 }
 
 HPresolve::Result HPresolve::removeDependentEquations(

@@ -1835,7 +1835,7 @@ HighsStatus Highs::getRangingInterface() {
 
 HighsStatus Highs::getIisInterfaceReturn(
     const HighsStatus return_status, const HighsOptions& original_options,
-    const std::vector<bool>& original_callback_active) {
+    const std::vector<HighsBool>& original_callback_active) {
   // Restore options and callbacks
   this->options_ = original_options;
   for (int i = kCallbackMin; i <= kCallbackMax; i++) {
@@ -1978,7 +1978,7 @@ HighsStatus Highs::getIisInterface() {
   HighsOptions original_options = this->options_;
   // Save original active callbacks and disable all except for
   // kCallbackLogging and kCallbackSimplexInterrupt
-  std::vector<bool> original_callback_active = callback_.active;
+  std::vector<HighsBool> original_callback_active = callback_.active;
   for (int i = kCallbackMin; i <= kCallbackMax; i++) {
     if (i != kCallbackLogging && i != kCallbackSimplexInterrupt &&
         callback_.active[i])
@@ -2264,8 +2264,8 @@ HighsStatus Highs::elasticityFilter(const double global_lower_penalty,
   // bound_of_row_of_ecol_is_lower so that the results can be interpreted
   std::vector<HighsInt> col_of_ecol;
   std::vector<HighsInt> row_of_ecol;
-  std::vector<bool> bound_of_row_of_ecol_is_lower;
-  std::vector<bool> bound_of_col_of_ecol_is_lower;
+  std::vector<HighsBool> bound_of_row_of_ecol_is_lower;
+  std::vector<HighsBool> bound_of_col_of_ecol_is_lower;
   std::vector<double> erow_lower;
   std::vector<double> erow_upper;
   std::vector<HighsInt> erow_start;
@@ -2773,7 +2773,7 @@ HighsStatus Highs::elasticityFilter(const double global_lower_penalty,
     in_row_index[iis.row_index_[iX]] = iX;
 
   // Determine the columns with nonzeros in the row subset
-  std::vector<bool> nonzero_in_row_index(original_num_col, false);
+  std::vector<HighsBool> nonzero_in_row_index(original_num_col, false);
   if (lp.a_matrix_.isColwise()) {
     for (HighsInt iCol = 0; iCol < original_num_col; iCol++) {
       for (HighsInt iEl = lp.a_matrix_.start_[iCol];
@@ -4485,8 +4485,8 @@ void Highs::reportProfiling() const {
   }
   const double num_threads_used = used_thread.size();
   std::stringstream ss;
-  std::vector<bool> mip_used_sub_solver(kToSubSolver, false);
-  std::vector<bool> submip_used_sub_solver(kToSubSolver, false);
+  std::vector<HighsBool> mip_used_sub_solver(kToSubSolver, false);
+  std::vector<HighsBool> submip_used_sub_solver(kToSubSolver, false);
   const HighsInt to_k = max_sumip_time > 0 ? 2 : 1;
   const std::vector<std::string>& name = this->profiling_->name;
   double sum_sum_mip_sub_solve_time = 0;
@@ -4509,7 +4509,7 @@ void Highs::reportProfiling() const {
       if (ideal_time <= 0) continue;
       const std::vector<HighsProfilingRecord>& record =
           k == 0 ? this->profiling_->record : this->profiling_->submip_record;
-      std::vector<bool>& used_sub_solver =
+      std::vector<HighsBool>& used_sub_solver =
           k == 0 ? mip_used_sub_solver : submip_used_sub_solver;
       const std::vector<HighsInt>& num_call = record[thread_num].num_call;
       const std::vector<double>& run_time = record[thread_num].run_time;
@@ -4579,7 +4579,7 @@ void Highs::reportProfiling() const {
     }
     highsLogUser(options_.log_options, HighsLogType::kInfo, "%s\n",
                  ss.str().c_str());
-    std::vector<bool>& used_sub_solver =
+    std::vector<HighsBool>& used_sub_solver =
         k == 0 ? mip_used_sub_solver : submip_used_sub_solver;
     const std::vector<HighsProfilingRecord>& record =
         k == 0 ? this->profiling_->record : this->profiling_->submip_record;
