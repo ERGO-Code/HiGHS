@@ -1599,7 +1599,8 @@ HighsStatus Highs::calledOptimizeModel() {
   if (basis_.valid) assert(basis_.useful);
 
   const bool without_presolve = options_.presolve == kHighsOffString;
-  if ((has_basis && solver_will_use_basis) || without_presolve || unconstrained_lp) {
+  if ((has_basis && solver_will_use_basis) || without_presolve ||
+      unconstrained_lp) {
     // There is a valid basis for the problem and the solver will use
     // it, or presolve is off, or LP has no constraint matrix
     //
