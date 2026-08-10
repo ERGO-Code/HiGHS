@@ -19,8 +19,6 @@ void HPresolveAnalysis::setup(const HighsLp* model_,
   numDeletedRows = &numDeletedRows_;
   numDeletedCols = &numDeletedCols_;
 
-  this->allow_rule_.assign(kPresolveRuleCount, true);
-
   timer_ = timer;
   const bool lp_presolve = !model_->isMip() || options->solve_relaxation;
   analyse_presolve_time_ =

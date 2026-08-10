@@ -7664,7 +7664,7 @@ HPresolve::Result HPresolve::aggregator(HighsPostsolveStack& postsolve_stack) {
 
 HPresolve::Result HPresolve::fourierMotzkin(
     HighsPostsolveStack& postsolve_stack, HighsInt& numColsEliminated) {
-  assert(analysis_.allow_rule_[kPresolveRuleFourierMotzkin]);
+  assert(this->allow_rule_[kPresolveRuleFourierMotzkin]);
   const bool logging_on = analysis_.logging_on_;
   if (logging_on) analysis_.startPresolveRuleLog(kPresolveRuleFourierMotzkin);
 
