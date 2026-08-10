@@ -996,8 +996,8 @@ void HighsDomain::DualfixingProbingPropagation::propagate() {
   }
 
   // clear the remaining domain changes if infeasible
-  assert(domain->infeasible_);
   for (j ++; j < domainchangeDFProbing.size(); ++ j) {
+    assert(domain->infeasible_);
     delete domainchangeDFProbing[j];
   }
 
