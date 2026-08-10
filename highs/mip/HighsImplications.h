@@ -137,8 +137,7 @@ class HighsImplications {
               double collowerbound, bool colisinteger);
 
   void columnTransformed(HighsInt col, double scale, double constant) {
-    // Remove all implications
-    // TODO: Can a binary column ever be transformed? Kill implications if so
+    // Update implications affected by transformation
     auto changeImplications = [&](HighsInt binCol, bool) {
       for (HighsInt val = 0; val != 2; val++) {
         Implication* implic = implications[2 * binCol + val].find(col);

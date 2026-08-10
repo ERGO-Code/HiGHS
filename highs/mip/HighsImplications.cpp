@@ -593,7 +593,6 @@ void HighsImplications::buildFrom(const HighsImplications& init) {
       addVLB(i, vlbCol, vlb.coef, vlb.constant);
     });
 
-    // TODO: Should we even do this for sub-mips?
     if (mipsolver.mipdata_->getDomain().isBinary(i)) {
       for (HighsInt val = 0; val != 2; val++) {
         init.implications[2 * i + val].for_each(
