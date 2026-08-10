@@ -25,7 +25,7 @@ class HighsImplications {
 
   struct Implics {
     std::vector<HighsDomainChange> implics;
-    /* the "tentative" implications.
+    /* The "tentative" implications:
       A implication of type x_j \ge (\ell^1_j - \ell^0_j) x_k + \ell^0_j is called "tentative", if
       (1) c_j = 0
       (2) x_j is fixed by applying dual fixing in probing
@@ -66,14 +66,14 @@ class HighsImplications {
   std::vector<HighsSubstitution> substitutions;
   std::vector<HighsBool> colsubstituted;
 
-  // if a binary variable x_j is: (1) c_j = 0 (2) x_j is fixed by applying dual fixing in probing
+  // vector used to derive global reductions from dfprobing
   std::vector<HighsInt> binaryInvolvedInds_;
   enum binaryFixType {
-    kNoReduction = 0b0000,
-    kGlobalLower = 0b1010,
-    kGlobalUpper = 0b0101,
+    kNoReduction          = 0b0000,
+    kGlobalLower          = 0b1010,
+    kGlobalUpper          = 0b0101,
     kSubstituteComplement = 0b1001,
-    kSubstituteEqual = 0b0110,
+    kSubstituteEqual      = 0b0110,
   };
   /*
       Possible values for binaryInvolvedFlags_
@@ -153,7 +153,6 @@ class HighsImplications {
     return implications[loc].implics;
   }
 
-  // get the "tentative implications" w.r.t non-binary variables
   const std::vector<HighsDomainChange>& getImplications_tentative(HighsInt col, bool val) {
     HighsInt loc = 2 * col + val;
     return implications[loc].implics_tentative;
@@ -257,7 +256,7 @@ class HighsImplications {
         }
       }
     }
-    else {
+    else { // probing x_k = 1
       if (bchg.boundtype == HighsBoundType::kLower) { // fixed to 1
         if (!isFixedTo1(val, iCol)) {
           if (binaryInvolvedFlags_[iCol] == 0)

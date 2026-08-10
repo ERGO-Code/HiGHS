@@ -1863,6 +1863,7 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postsolve_stack) {
       }
     };
 
+    // setup for dfprobing and gdf
     if (options->presolve_dfprobing || options->presolve_gdf)
       domain.getDfProbingPropagation().recomputeLocks();
 

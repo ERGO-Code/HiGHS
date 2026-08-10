@@ -239,10 +239,12 @@ class HighsDomain {
   struct DualfixingProbingPropagation {
     HighsDomain* domain;
     HighsMipSolver* mipsolver;
+    
     // row lower and upper, length = 2 * rownum
     std::vector<HighsBool> redundantPropagateFlag_;
     std::vector<HighsInt> redundantPropagateVec_;
-
+    
+    // For zero-cost variables, we need to know which direction we can fix them to.
     enum DFPROBING_FIX_DIRECTION {
       FIXDIRECTION_NOT_DECIDED = 0,
       FIXDIRECTION_LOWER_BOUND,
@@ -250,34 +252,32 @@ class HighsDomain {
     };
     std::vector<DFPROBING_FIX_DIRECTION> zeroCostVarsDirection_;
     std::vector<std::pair<HighsInt, bool>> zeroCostFixedVariables_;
+    
+    // Flag and position in the domchgstack of the first zero-cost variable that can be fixed to its lower or upper bound.
     bool startZeroCostFixing_;
     size_t zeroCostStartPos_;
 
     bool enabled_ = false;
     size_t previousSize_;
 
+    // Original lower and upper locks, and the reduced locks after propagation.
     std::vector<HighsInt> colLowerLockOriginal_;
     std::vector<HighsInt> colUpperLockOriginal_;
     std::vector<HighsInt> colLowerLockReduced_;
     std::vector<HighsInt> colUpperLockReduced_;
+
+    // temporary buffers for DFProbing
     std::vector<HighsInt> candidatesVec_;
     std::vector<HighsBool> candidatesFlag_;
     std::unordered_set<HighsInt> lockNeedClear_;
 
+    // temporary buffers for GDF
     std::vector<HighsInt> gdfCandidatesVec_;
     std::vector<HighsBool> gdfCandidatesFlag_;
-    // GDF reachable-row counts, indexed directly by column id. For each
-    // column touched during GDF, we only need to know how many redundant
-    // rows make the column's lower/upper bound reachable under probing
-    // x_probing=0 / x_probing=1. The actual row indices are not needed:
-    // (a) within a single (map, column) the row ids are unique (each
-    // redundant row visits each column at most once), so the set of rows
-    // is fully described by its size; (b) the original intersection check
-    // |set0 ∩ set1| == |locking rows| is equivalent to
-    // |set0| == |locking rows| AND |set1| == |locking rows| because both
-    // sets are subsets of the locking rows. processGDFFixing therefore
-    // does no intersection at all. Indexed by column id (dense) so a
-    // flat vector beats an unordered_map here.
+
+    // GDF reachable-row counts, indexed by column id. For each
+    // variable touched during probing, we only need to know how many
+    // rows make this variable lower/upper bound reachable.
     std::vector<HighsInt> gdfLbReachable0_;
     std::vector<HighsInt> gdfLbReachable1_;
     std::vector<HighsInt> gdfUbReachable0_;
@@ -295,10 +295,12 @@ class HighsDomain {
       return enabled_;
     }
 
+    // active only when new redundant rows are found.
     bool isActive() {
       return enabled_ && redundantPropagateVec_.size() > previousSize_;
     }
 
+    // mark the position when the first zero-cost variable can be fixed to its lower or upper bound.
     void setZeroCostFixingPosition(HighsInt v) {
       zeroCostStartPos_ = v;
     }
@@ -329,7 +331,7 @@ class HighsDomain {
         && mipsolver->model_->col_upper_[col] < kHighsInf;
     }
 
-
+    // remove redundant information
     void clearRedundantInfo() {
       previousSize_ = 0;
       if (!redundantPropagateVec_.empty()) { // clear buffers
@@ -361,7 +363,8 @@ class HighsDomain {
     void updateRhsRedundant(HighsInt row);
     void updateLhsRedundant(HighsInt row);
     void propagate();
-
+    
+    // functionalities for GDF
     void updateGDFInfo(HighsInt probing_variable, bool val);
     HighsInt processGDFFixing();
     void clearGDFInfo();

@@ -27,8 +27,10 @@ bool HighsImplications::computeImplications(HighsInt col, bool val) {
   const auto& domchgreason = globaldomain.getDomainChangeReason();
   size_t changedend = globaldomain.getChangedCols().size();
 
+  // get two flags
   const bool useDFProbing = globaldomain.inProbing_ && mipsolver.options_mip_->presolve_dfprobing;
   const bool useGDF = globaldomain.inProbing_ && mipsolver.options_mip_->presolve_gdf;
+  // record redundant rows if any of the two flags is true
   if (useDFProbing || useGDF) {
     globaldomain.getDfProbingPropagation().clearRedundantInfo();
     globaldomain.getDfProbingPropagation().enablePropagator();
@@ -100,7 +102,7 @@ bool HighsImplications::computeImplications(HighsInt col, bool val) {
         ((domchgreason[i].index >> 1) == col || numEntries >= maxEntries))
       continue;
     
-    if (i >= tentativeStart) // cache tentative implications
+    if (i >= tentativeStart) // record tentative implications
         continue;
 
     implics.push_back(domchgstack[i]);
@@ -122,7 +124,7 @@ bool HighsImplications::computeImplications(HighsInt col, bool val) {
                                   [&](const HighsDomainChange& a) {
                                     return !globaldomain.isBinary(a.column);
                                   });
-    // Store the tentative bound changes (fixing) of binary variables separately 
+    // store the tentative bound changes of binary variables separately 
     for (auto i = binstart_tmp; i != implics_tentative.end(); ++ i)
       recordTentativeCliques(val, *i);
     implics_tentative.erase(binstart_tmp, implics_tentative.end());
@@ -374,11 +376,11 @@ bool HighsImplications::runProbing(HighsInt col, HighsInt& numReductions) {
         // Skip non-binary variables (being fixed now) or those can be substituted by other binary variables
         if (!globaldomain.isBinary(k) || colsubstituted[k])
           continue;
-        // Return if the whole problem is infeasible
+        // Return if infeasible
         if (globaldomain.infeasible())
           return true;
         // Get the information how x[k] is fixed in probing on x[col] = 0 and x[col] = 1
-        // For the meaning of ``data'', please see lines 71-82 in HighsImplications.h
+        // For the meaning of ``data'', please see lines 71-89 in HighsImplications.h
         uint8_t data = binaryInvolvedFlags_[k];
         if (data == 0) // flag for no reduction
           continue;
@@ -503,6 +505,7 @@ bool HighsImplications::runProbing(HighsInt col, HighsInt& numReductions) {
       }
     }
 
+    // clear tentative implications
     if (haveTentativeImplics_zero)
       implications[2 * col].implics_tentative.clear();
     if (haveTentativeImplics_one)
@@ -511,6 +514,7 @@ bool HighsImplications::runProbing(HighsInt col, HighsInt& numReductions) {
     if (useGDF) {
       // fix variables using generalized dual fixing
       HighsInt nfix = globaldomain.getDfProbingPropagation().processGDFFixing();
+      // propagate if necessary
       if (nfix > 0)
         globaldomain.propagate();
     }
