@@ -254,7 +254,7 @@ class HighsDomain {
     std::vector<std::pair<HighsInt, bool>> zeroCostFixedVariables_;
     
     // Flag and position in the domchgstack of the first zero-cost variable that can be fixed to its lower or upper bound.
-    bool startZeroCostFixing_;
+    bool startZeroCostFixing_ = false;
     size_t zeroCostStartPos_;
 
     bool enabled_ = false;

@@ -677,8 +677,10 @@ void HighsDomain::DualfixingProbingPropagation::recomputeLocks() {
   candidatesVec_.clear();
   candidatesVec_.reserve(mipsolver->numCol());
   candidatesFlag_.assign(mipsolver->numCol(), false);
+  lockNeedClear_.clear();
   lockNeedClear_.reserve(mipsolver->numCol());
 
+  gdfCandidatesVec_.clear();
   gdfCandidatesVec_.reserve(mipsolver->numCol());
   gdfCandidatesFlag_.assign(mipsolver->numCol(), false);
 
@@ -2105,8 +2107,9 @@ void HighsDomain::updateActivityLbChange(HighsInt col, double oldbound,
         assert(tmpinf == activitymininf_[mip->a_matrix_.index_[i]]);
       }
 #endif
-
-      if (recordRedundantRows_ &&
+      // If dfprobingPropagation.isZeroObjFixingEnabled() is true, 
+      // then we cannot record redundant rows for lifting, as this bound change could disregarded.
+      if (recordRedundantRows_ && !dfprobingPropagation.isZeroObjFixingEnabled() &&
           mip->row_lower_[mip->a_matrix_.index_[i]] != -kHighsInf &&
           mip->row_upper_[mip->a_matrix_.index_[i]] == kHighsInf)
         updateRedundantRows(mip->a_matrix_.index_[i]);
@@ -2157,8 +2160,9 @@ void HighsDomain::updateActivityLbChange(HighsInt col, double oldbound,
         assert(tmpinf == activitymaxinf_[mip->a_matrix_.index_[i]]);
       }
 #endif
-
-      if (recordRedundantRows_ &&
+      // If dfprobingPropagation.isZeroObjFixingEnabled() is true, 
+      // then we cannot record redundant rows for lifting, as this bound change could disregarded.
+      if (recordRedundantRows_ && !dfprobingPropagation.isZeroObjFixingEnabled() &&
           mip->row_lower_[mip->a_matrix_.index_[i]] == -kHighsInf &&
           mip->row_upper_[mip->a_matrix_.index_[i]] != kHighsInf)
         updateRedundantRows(mip->a_matrix_.index_[i]);
@@ -2278,8 +2282,9 @@ void HighsDomain::updateActivityUbChange(HighsInt col, double oldbound,
         assert(tmpinf == activitymaxinf_[mip->a_matrix_.index_[i]]);
       }
 #endif
-
-      if (recordRedundantRows_ &&
+      // If dfprobingPropagation.isZeroObjFixingEnabled() is true, 
+      // then we cannot record redundant rows for lifting, as this bound change could disregarded.
+      if (recordRedundantRows_ && !dfprobingPropagation.isZeroObjFixingEnabled() &&
           mip->row_lower_[mip->a_matrix_.index_[i]] == -kHighsInf &&
           mip->row_upper_[mip->a_matrix_.index_[i]] != kHighsInf)
         updateRedundantRows(mip->a_matrix_.index_[i]);
@@ -2333,8 +2338,9 @@ void HighsDomain::updateActivityUbChange(HighsInt col, double oldbound,
         assert(tmpinf == activitymininf_[mip->a_matrix_.index_[i]]);
       }
 #endif
-
-      if (recordRedundantRows_ &&
+      // If dfprobingPropagation.isZeroObjFixingEnabled() is true, 
+      // then we cannot record redundant rows for lifting, as this bound change could disregarded.
+      if (recordRedundantRows_ && !dfprobingPropagation.isZeroObjFixingEnabled() &&
           mip->row_lower_[mip->a_matrix_.index_[i]] != -kHighsInf &&
           mip->row_upper_[mip->a_matrix_.index_[i]] == kHighsInf)
         updateRedundantRows(mip->a_matrix_.index_[i]);
