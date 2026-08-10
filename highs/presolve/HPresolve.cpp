@@ -6116,7 +6116,7 @@ HPresolve::Result HPresolve::initialSweep(
         double row_lower_bnd =
             value > 0 ? model->col_lower_[num_col] : model->col_upper_[num_col];
         double row_upper_bnd =
-            value < 0 ? model->col_lower_[num_col] : model->col_upper_[num_col];
+            value > 0 ? model->col_upper_[num_col] : model->col_lower_[num_col];
         implied_row_lower_finite[iRow] =
             static_cast<bool>(implied_row_lower_finite[iRow]) &&
             (std::abs(row_lower_bnd) != kHighsInf);
