@@ -495,6 +495,7 @@ void HPresolve::chooseRules() {
     presolve_light_rule_off[kPresolveRuleEnumeration] = true;
     presolve_light_rule_off[kPresolveRuleDualFixing] = true;
     presolve_light_rule_off[kPresolveRuleColStuffing] = true;
+    presolve_light_rule_off[kPresolveRuleFourierMotzkin] = true;
   }
 
   if (!silent && options->log_dev_level) {
