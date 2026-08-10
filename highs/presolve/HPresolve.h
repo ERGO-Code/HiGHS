@@ -41,7 +41,7 @@ class HPresolve {
   HighsTimer* timer;
   HighsMipSolver* mipsolver = nullptr;
   double primal_feastol;
-  std::vector<bool> allow_rule_;
+  std::vector<HighsBool> allow_rule_;
 
   // triplet storage
   std::vector<double> Avalue;
@@ -226,6 +226,8 @@ class HPresolve {
   bool isEquation(HighsInt row) const;
 
   bool isRanged(HighsInt row) const;
+
+  bool isRedundant(HighsInt row, double sumLower, double sumUpper) const;
 
   bool isRedundant(HighsInt row) const;
 
