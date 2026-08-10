@@ -6119,10 +6119,10 @@ HPresolve::Result HPresolve::initialSweep(
             value < 0 ? model->col_lower_[num_col] : model->col_upper_[num_col];
         implied_row_lower_finite[iRow] =
             static_cast<bool>(implied_row_lower_finite[iRow]) &&
-            std::abs(row_lower_bnd) != kHighsInf;
+            (std::abs(row_lower_bnd) != kHighsInf);
         implied_row_upper_finite[iRow] =
             static_cast<bool>(implied_row_upper_finite[iRow]) &&
-            std::abs(row_upper_bnd) != kHighsInf;
+            (std::abs(row_upper_bnd) != kHighsInf);
         if (implied_row_lower_finite[iRow])
           implied_row_lower[iRow] +=
               static_cast<HighsCDouble>(value) * row_lower_bnd;
