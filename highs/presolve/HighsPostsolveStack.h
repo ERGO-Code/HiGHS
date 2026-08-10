@@ -458,7 +458,7 @@ class HighsPostsolveStack {
   template <typename T>
   void compressIndexMap(const std::vector<HighsInt>& newIndex,
                         std::vector<T>& origIndex) {
-    HighsInt numEn = origIndex.size();
+    size_t numEn = origIndex.size();
     for (size_t i = 0; i != newIndex.size(); ++i) {
       if (newIndex[i] == -1)
         --numEn;
