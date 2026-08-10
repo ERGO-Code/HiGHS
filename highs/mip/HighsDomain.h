@@ -240,7 +240,7 @@ class HighsDomain {
     HighsDomain* domain;
     HighsMipSolver* mipsolver;
     // row lower and upper, length = 2 * rownum
-    std::vector<char> redundantPropagateFlag_;
+    std::vector<HighsBool> redundantPropagateFlag_;
     std::vector<HighsInt> redundantPropagateVec_;
 
     enum DFPROBING_FIX_DIRECTION {
@@ -261,11 +261,11 @@ class HighsDomain {
     std::vector<HighsInt> colLowerLockReduced_;
     std::vector<HighsInt> colUpperLockReduced_;
     std::vector<HighsInt> candidatesVec_;
-    std::vector<char> candidatesFlag_;
+    std::vector<HighsBool> candidatesFlag_;
     std::unordered_set<HighsInt> lockNeedClear_;
 
     std::vector<HighsInt> gdfCandidatesVec_;
-    std::vector<char> gdfCandidatesFlag_;
+    std::vector<HighsBool> gdfCandidatesFlag_;
     // GDF reachable-row counts, indexed directly by column id. For each
     // column touched during GDF, we only need to know how many redundant
     // rows make the column's lower/upper bound reachable under probing
