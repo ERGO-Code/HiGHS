@@ -310,6 +310,7 @@ _srcs = [
     'qpsolver/a_asm.cpp',
     'qpsolver/a_quass.cpp',
     'qpsolver/basis.cpp',
+    'qpsolver/QpAsmWrapper.cpp',
     'qpsolver/quass.cpp',
     'qpsolver/ratiotest.cpp',
     'qpsolver/scaling.cpp',

@@ -64,7 +64,7 @@ class HighsImplications {
  public:
   const HighsMipSolver& mipsolver;
   std::vector<HighsSubstitution> substitutions;
-  std::vector<uint8_t> colsubstituted;
+  std::vector<HighsBool> colsubstituted;
 
   // if a binary variable x_j is: (1) c_j = 0 (2) x_j is fixed by applying dual fixing in probing
   std::vector<HighsInt> binaryInvolvedInds_;

@@ -2527,7 +2527,7 @@ void HighsDomain::markPropagate(HighsInt row) {
 
     if (proplower || propupper) {
       propagateinds_.push_back(row);
-      propagateflags_[row] = 1;
+      propagateflags_[row] = true;
     }
   }
 }
@@ -2574,7 +2574,7 @@ double HighsDomain::doChangeBound(const HighsDomainChange& boundchg) {
         updateActivityLbChange(boundchg.column, oldbound, boundchg.boundval);
 
       if (!isChangedCol(boundchg.column)) {
-        changedcolsflags_[boundchg.column] = 1;
+        changedcolsflags_[boundchg.column] = true;
         changedcols_.push_back(boundchg.column);
       }
     }
@@ -2586,7 +2586,7 @@ double HighsDomain::doChangeBound(const HighsDomainChange& boundchg) {
         updateActivityUbChange(boundchg.column, oldbound, boundchg.boundval);
 
       if (!isChangedCol(boundchg.column)) {
-        changedcolsflags_[boundchg.column] = 1;
+        changedcolsflags_[boundchg.column] = true;
         changedcols_.push_back(boundchg.column);
       }
     }
@@ -2994,7 +2994,7 @@ bool HighsDomain::propagate() {
       HighsInt numproprows = static_cast<HighsInt>(propagateinds.size());
       for (HighsInt i = 0; i != numproprows; ++i) {
         HighsInt row = propagateinds[i];
-        propagateflags_[row] = 0;
+        propagateflags_[row] = false;
       }
 
       if (!infeasible_) {

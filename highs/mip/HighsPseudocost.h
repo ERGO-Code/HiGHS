@@ -15,7 +15,7 @@
 #include <limits>
 #include <vector>
 
-#include "util/HighsInt.h"
+#include "util/HighsType.h"
 
 class HighsMipSolver;
 namespace presolve {
