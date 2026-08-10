@@ -453,7 +453,7 @@ HighsStatus HEkk::dualize() {
   assert(lp_.a_matrix_.isColwise());
   original_num_col_ = lp_.num_col_;
   original_num_row_ = lp_.num_row_;
-  original_num_nz_ = lp_.a_matrix_.numNz();
+  original_num_nz_ = lp_.numNz();
   original_offset_ = lp_.offset_;
   original_col_cost_ = lp_.col_cost_;
   original_col_lower_ = lp_.col_lower_;
@@ -959,7 +959,7 @@ HighsStatus HEkk::undualize() {
   // Some sanity checks
   assert(lp_.num_col_ == original_num_col_);
   assert(lp_.num_row_ == original_num_row_);
-  assert(lp_.a_matrix_.numNz() == original_num_nz_);
+  assert(lp_.numNz() == original_num_nz_);
   HighsInt num_basic_variables = primal_basic_index.size();
   bool num_basic_variables_ok = num_basic_variables == original_num_row_;
   if (!num_basic_variables_ok)

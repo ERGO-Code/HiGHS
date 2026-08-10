@@ -41,6 +41,7 @@ class HPresolve {
   HighsTimer* timer;
   HighsMipSolver* mipsolver = nullptr;
   double primal_feastol;
+  std::vector<bool> allow_rule_;
 
   // triplet storage
   std::vector<double> Avalue;
@@ -90,9 +91,9 @@ class HPresolve {
   HighsLinearSumBounds impliedDualRowBounds;
 
   std::vector<HighsInt> changedRowIndices;
-  std::vector<uint8_t> changedRowFlag;
+  std::vector<HighsBool> changedRowFlag;
   std::vector<HighsInt> changedColIndices;
-  std::vector<uint8_t> changedColFlag;
+  std::vector<HighsBool> changedColFlag;
 
   std::vector<std::pair<HighsInt, HighsInt>> substitutionOpportunities;
 
@@ -108,18 +109,19 @@ class HPresolve {
 
   bool shrinkProblemEnabled;
   size_t reductionLimit;
+  bool in_initial_sweep_;
 
   // vectors storing singleton rows and columns
   std::vector<HighsInt> singletonRows;
   std::vector<HighsInt> singletonColumns;
 
   // flags to mark rows/columns as deleted
-  std::vector<uint8_t> rowDeleted;
-  std::vector<uint8_t> colDeleted;
+  std::vector<HighsBool> rowDeleted;
+  std::vector<HighsBool> colDeleted;
 
   // flags to skip repeated single-equation handling (dual fixing) on unchanged
   // rows
-  std::vector<uint8_t> singleEquationChecked;
+  std::vector<HighsBool> singleEquationChecked;
 
   std::vector<uint16_t> numProbes;
 
@@ -142,6 +144,7 @@ class HPresolve {
     kPrimalInfeasible,
     kDualInfeasible,
     kStopped,
+    kOutOfMemory
   };
 
   struct StatusResult {
@@ -170,6 +173,15 @@ class HPresolve {
 
   // private functions for different shared functionality and matrix
   // modification
+
+  bool reducedToEmpty() const {
+    return numDeletedCols == model->num_col_ &&
+           numDeletedRows == model->num_row_;
+  }
+
+  bool hasPresolveDataStructures() const { return colDeleted.size() > 0; }
+
+  void chooseRules();
 
   void link(HighsInt pos);
 
@@ -317,6 +329,8 @@ class HPresolve {
 
   Result checkColBounds(HighsInt col, bool* isFixed = nullptr);
 
+  Result checkModelColBounds(HighsInt col, bool& isFixed);
+
   void changeRowDualUpper(HighsInt row, double newUpper);
 
   void changeRowDualLower(HighsInt row, double newLower);
@@ -365,17 +379,20 @@ class HPresolve {
 
  public:
   // for LP presolve
-  bool okSetInput(HighsLp& model_, const HighsOptions& options_,
-                  const HighsInt presolve_reduction_limit,
-                  HighsTimer* timer = nullptr);
+  void setInput(HighsLp& model_, const HighsOptions& options_,
+                const HighsInt presolve_reduction_limit,
+                HighsTimer* timer = nullptr);
 
   // for MIP presolve
-  bool okSetInput(HighsMipSolver& mipsolver,
-                  const HighsInt presolve_reduction_limit);
+  void setInput(HighsMipSolver& mipsolver,
+                const HighsInt presolve_reduction_limit);
 
   void setReductionLimit(size_t reductionLimit) {
     this->reductionLimit = reductionLimit;
   }
+
+  bool okSetupPresolveDataStructures();
+  void setupSubstitutionOpportunities();
 
   HighsInt numNonzeros() const { return int(Avalue.size() - freeslots.size()); }
 
@@ -409,18 +426,25 @@ class HPresolve {
   Result doubletonEq(HighsPostsolveStack& postsolve_stack, HighsInt row,
                      HighsPostsolveStack::RowType rowType);
 
-  Result singletonRow(HighsPostsolveStack& postsolve_stack, HighsInt row);
+  Result singletonRow(HighsPostsolveStack& postsolve_stack, HighsInt row,
+                      const HighsInt col_ = -1, const double val_ = 0);
 
   Result emptyCol(HighsPostsolveStack& postsolve_stack, HighsInt col);
 
-  Result singletonCol(HighsPostsolveStack& postsolve_stack, HighsInt col);
+  Result modelEmptyCol(HighsPostsolveStack& postsolve_stack, HighsInt col);
+
+  Result singletonCol(HighsPostsolveStack& postsolve_stack, HighsInt col,
+                      const bool timing = false);
 
   void substituteFreeCol(HighsPostsolveStack& postsolve_stack, HighsInt row,
                          HighsInt col, bool relaxRowDualBounds = false);
 
+  Result emptyRow(HighsPostsolveStack& postsolve_stack, HighsInt row);
+
   Result rowPresolve(HighsPostsolveStack& postsolve_stack, HighsInt row);
 
-  Result colPresolve(HighsPostsolveStack& postsolve_stack, HighsInt col);
+  Result colPresolve(HighsPostsolveStack& postsolve_stack, HighsInt col,
+                     const bool timing = false);
 
   Result detectDominatedCol(HighsPostsolveStack& postsolve_stack, HighsInt col,
                             bool handleSingletonRows = true);
@@ -451,6 +475,8 @@ class HPresolve {
   double computeWorstCaseUpperBound(HighsInt col, HighsInt boundCol = -1,
                                     double boundColValue = kHighsInf,
                                     HighsInt boundColCoeffPattern = 0);
+
+  Result initialSweep(HighsPostsolveStack& postsolve_stack);
 
   Result initialRowAndColPresolve(HighsPostsolveStack& postsolve_stack);
 

@@ -56,7 +56,7 @@ class HighsImplications {
  public:
   const HighsMipSolver& mipsolver;
   std::vector<HighsSubstitution> substitutions;
-  std::vector<uint8_t> colsubstituted;
+  std::vector<HighsBool> colsubstituted;
   HighsImplications(const HighsMipSolver& mipsolver) : mipsolver(mipsolver) {
     nextCleanupCall = mipsolver.numNonzero();
     numImplications = 0;

@@ -5,8 +5,8 @@
 namespace hipo {
 
 KktMatrix::KktMatrix(const Model& m, const Regularisation& r, Info& i,
-                     const Logger& l)
-    : model{m}, regul{r}, info{i}, logger{l} {}
+                     const Logger& l, const Options& o)
+    : model{m}, regul{r}, info{i}, logger{l}, options{o} {}
 
 Int KktMatrix::buildASstructure() {
   // Build lower triangular structure of the augmented system.
@@ -187,18 +187,7 @@ Int KktMatrix::buildNEstructure() {
     }
   };
 
-  // computing the structure in parallel only if matrix A is dense and large
-  const double nz_per_col = (double)model.A().numNz() / model.A().num_col_;
-  const double nz_per_row = (double)model.A().numNz() / model.A().num_row_;
-  const bool is_dense = nz_per_col > kParallelNEnzPerColThresh ||
-                        nz_per_row > kParallelNEnzPerRowThresh;
-  const bool is_large = model.A().num_row_ > kParallelNEsizeThresh ||
-                        model.A().num_col_ > kParallelNEsizeThresh;
-  const bool parallel =
-      is_dense && is_large && highs::parallel::num_threads() > 1;
-
-  if (parallel) {
-    logger.printInfo("NE structure in parallel\n");
+  if (options.getParallel(ParallelTechnique::kNEStruct)) {
     std::vector<std::vector<Int>> rowsNE_local(m);
 
     highs::parallel::for_each(
@@ -227,7 +216,6 @@ Int KktMatrix::buildNEstructure() {
       rowsNE.insert(rowsNE.end(), v.begin(), v.end());
 
   } else {
-    logger.printInfo("NE structure in serial\n");
     rowsNE.reserve(model.nzNElb());
     std::vector<char> is_nz(m, false);
     std::vector<Int> temp_index(m);
@@ -298,12 +286,7 @@ Int KktMatrix::buildNEvalues(const std::vector<double>& scaling) {
     }
   };
 
-  // computing the values in parallel only if matrix A is large
-  const bool is_large = model.A().num_row_ > kParallelNEsizeThresh ||
-                        model.A().num_col_ > kParallelNEsizeThresh;
-  const bool parallel = is_large && highs::parallel::num_threads() > 1;
-
-  if (parallel) {
+  if (options.getParallel(ParallelTechnique::kNEValues)) {
     highs::parallel::for_each(
         0, m,
         [&](Int start, Int end) {

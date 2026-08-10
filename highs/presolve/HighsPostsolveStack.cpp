@@ -38,30 +38,19 @@ void HighsPostsolveStack::initializeIndexMaps(HighsInt numRow,
 void HighsPostsolveStack::compressIndexMaps(
     const std::vector<HighsInt>& newRowIndex,
     const std::vector<HighsInt>& newColIndex) {
-  // loop over rows, decrease row counter for deleted rows (marked with -1),
-  // store original index at new index position otherwise
-  HighsInt numRow = origRowIndex.size();
-  for (size_t i = 0; i != newRowIndex.size(); ++i) {
-    if (newRowIndex[i] == -1)
-      --numRow;
-    else {
-      origRowIndex[newRowIndex[i]] = origRowIndex[i];
-      origRowType[newRowIndex[i]] = origRowType[i];
-    }
-  }
-  // resize original index array to new size
-  origRowIndex.resize(numRow);
-  origRowType.resize(numRow);
+  compressColIndexMap(newColIndex);
+  compressRowIndexMap(newRowIndex);
+}
 
-  // now compress the column array
-  HighsInt numCol = origColIndex.size();
-  for (size_t i = 0; i != newColIndex.size(); ++i) {
-    if (newColIndex[i] == -1)
-      --numCol;
-    else
-      origColIndex[newColIndex[i]] = origColIndex[i];
-  }
-  origColIndex.resize(numCol);
+void HighsPostsolveStack::compressRowIndexMap(
+    const std::vector<HighsInt>& newRowIndex) {
+  compressIndexMap(newRowIndex, this->origRowIndex);
+  compressIndexMap(newRowIndex, this->origRowType);
+}
+
+void HighsPostsolveStack::compressColIndexMap(
+    const std::vector<HighsInt>& newColIndex) {
+  compressIndexMap(newColIndex, this->origColIndex);
 }
 
 void HighsPostsolveStack::LinearTransform::undo(const HighsOptions& options,
@@ -390,8 +379,8 @@ void HighsPostsolveStack::ForcingColumnRemovedRow::undo(
 void HighsPostsolveStack::SingletonRow::undo(
     const HighsPostsolveStack& postsolveStack, const HighsOptions& options,
     HighsSolution& solution, HighsBasis& basis) const {
-  // nothing to do if the rows dual value is zero in the dual solution or
-  // there is no dual solution
+  // nothing to do if the row's dual value is zero in the dual
+  // solution or there is no dual solution
   if (!solution.dual_valid) return;
 
   const HighsBasisStatus colStatus =

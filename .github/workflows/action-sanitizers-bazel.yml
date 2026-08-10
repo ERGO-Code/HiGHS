@@ -58,6 +58,7 @@ jobs:
         run: bazel test -c dbg --config=tsan --runs_per_test 5 //...
 
       - name: Upload bazel-testlogs
+        if: failure()
         uses: actions/upload-artifact@v7
         with:
           name: bazel-testlogs-tsan

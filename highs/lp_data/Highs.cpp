@@ -1587,7 +1587,7 @@ HighsStatus Highs::calledOptimizeModel() {
     time += timer_.read(timer_.solve_clock);
   };
 
-  const bool unconstrained_lp = incumbent_lp.a_matrix_.numNz() == 0;
+  const bool unconstrained_lp = incumbent_lp.numNz() == 0;
   assert(incumbent_lp.num_row_ || unconstrained_lp);
   const bool has_basis = basis_.useful;
   if (has_basis) {
@@ -1599,12 +1599,10 @@ HighsStatus Highs::calledOptimizeModel() {
   if (basis_.valid) assert(basis_.useful);
 
   const bool without_presolve = options_.presolve == kHighsOffString;
-  if ((unconstrained_lp || has_basis || without_presolve) &&
-      solver_will_use_basis) {
-    // There is a valid basis for the problem, presolve is off, or LP
-    // has no constraint matrix, and the solver will use the basis
-    // (otherwise it's better to use presolve, if it's not switched
-    // off)
+  if ((has_basis && solver_will_use_basis) || without_presolve ||
+      unconstrained_lp) {
+    // There is a valid basis for the problem and the solver will use
+    // it, or presolve is off, or LP has no constraint matrix
     //
     // Determine a coherent message about how the LP is being solved
     std::stringstream lp_solve_ss;
@@ -1630,6 +1628,7 @@ HighsStatus Highs::calledOptimizeModel() {
     timedSolveLp(incumbent_lp, lp_solve, this_solve_original_lp_time);
     return_status = interpretCallStatus(options_.log_options, call_status,
                                         return_status, "callSolveLp");
+    this->run_data_.solve_time = this_solve_original_lp_time;
     if (return_status == HighsStatus::kError)
       return returnFromOptimizeModel(return_status, undo_mods);
   } else {
@@ -2686,7 +2685,7 @@ HighsStatus Highs::setSolution(const HighsInt num_entries,
   if (model_.lp_.num_col_ == 0) return return_status;
   // Warn about duplicates in index
   HighsInt num_duplicates = 0;
-  std::vector<bool> is_set;
+  std::vector<HighsBool> is_set;
   is_set.assign(model_.lp_.num_col_, false);
   const HighsInt to_ix = packed ? num_entries : model_.lp_.num_col_;
   for (HighsInt iX = 0; iX < to_ix; iX++) {
@@ -3968,8 +3967,8 @@ HighsPresolveStatus Highs::runPresolve(const bool force_lp_presolve,
           original_lp.num_col_ - reduced_lp.num_col_;
       presolve_.info_.n_rows_removed =
           original_lp.num_row_ - reduced_lp.num_row_;
-      presolve_.info_.n_nnz_removed = (HighsInt)original_lp.a_matrix_.numNz() -
-                                      (HighsInt)reduced_lp.a_matrix_.numNz();
+      presolve_.info_.n_nnz_removed =
+          (HighsInt)original_lp.numNz() - (HighsInt)reduced_lp.numNz();
       // Clear any scaling information inherited by the reduced LP
       reduced_lp.clearScale();
       assert(lpDimensionsOk("RunPresolve: reduced_lp", reduced_lp,
@@ -3979,7 +3978,7 @@ HighsPresolveStatus Highs::runPresolve(const bool force_lp_presolve,
     case HighsPresolveStatus::kReducedToEmpty: {
       presolve_.info_.n_cols_removed = original_lp.num_col_;
       presolve_.info_.n_rows_removed = original_lp.num_row_;
-      presolve_.info_.n_nnz_removed = (HighsInt)original_lp.a_matrix_.numNz();
+      presolve_.info_.n_nnz_removed = (HighsInt)original_lp.numNz();
       break;
     }
     default:
@@ -4000,9 +3999,10 @@ HighsPostsolveStatus Highs::runPostsolve() {
     return HighsPostsolveStatus::kNoPrimalSolutionError;
   const bool have_dual_solution =
       presolve_.data_.recovered_solution_.dual_valid;
-  presolve_.data_.postSolveStack.undo(options_,
-                                      presolve_.data_.recovered_solution_,
-                                      presolve_.data_.recovered_basis_);
+  const HighsInt report_3040_col = -21792;
+  presolve_.data_.postSolveStack.undo(
+      options_, presolve_.data_.recovered_solution_,
+      presolve_.data_.recovered_basis_, report_3040_col);
   // Compute the row activities
   assert(model_.lp_.a_matrix_.isColwise());
   calculateRowValuesQuad(model_.lp_, presolve_.data_.recovered_solution_);

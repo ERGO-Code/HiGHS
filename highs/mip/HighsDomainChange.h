@@ -9,7 +9,7 @@
 #ifndef HIGHS_DOMAIN_CHANGE_H_
 #define HIGHS_DOMAIN_CHANGE_H_
 
-#include "util/HighsInt.h"
+#include "util/HighsType.h"
 
 enum class HighsBoundType { kLower, kUpper };
 

@@ -914,6 +914,158 @@ TEST_CASE("presolve-issue-2874", "[highs_test_presolve]") {
   highs.readModel(model_file);
   REQUIRE(highs.presolve() == HighsStatus::kOk);
   REQUIRE(highs.getModelPresolveStatus() == HighsPresolveStatus::kInfeasible);
+
+  highs.resetGlobalScheduler(true);
+}
+
+TEST_CASE("presolve-light", "[highs_test_presolve]") {
+  std::string model_file =
+      std::string(HIGHS_DIR) + "/check/instances/afiro.mps";
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  highs.readModel(model_file);
+  HighsInt presolved_num_col;
+  HighsInt presolved_num_row;
+  HighsInt presolved_num_nz;
+  for (HighsInt k = 0; k < 2; k++) {
+    REQUIRE(highs.presolve() == HighsStatus::kOk);
+    REQUIRE(highs.getModelPresolveStatus() == HighsPresolveStatus::kReduced);
+    const HighsLp& presolved_lp = highs.getPresolvedLp();
+    if (k == 1) {
+      REQUIRE(presolved_lp.num_col_ > presolved_num_col);
+      REQUIRE(presolved_lp.num_row_ > presolved_num_row);
+      REQUIRE(presolved_lp.numNz() > presolved_num_nz);
+    }
+    presolved_num_col = presolved_lp.num_col_;
+    presolved_num_row = presolved_lp.num_row_;
+    presolved_num_nz = presolved_lp.numNz();
+
+    if (dev_run)
+      printf("%s presolved LP has %d columns; %d rows and %d nonzeros\n",
+             k == 0 ? "Fully" : "Lightly", int(presolved_num_col),
+             int(presolved_num_row), int(presolved_num_nz));
+    highs.setOptionValue("presolve_light", kHighsOnString);
+  }
+
+  highs.resetGlobalScheduler(true);
+}
+
+TEST_CASE("presolve-initial-sweep-postsolve", "[highs_test_presolve]") {
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  if (dev_run) {
+    highs.setOptionValue("log_dev_level", 1);
+    highs.setOptionValue("presolve_rule_logging", true);
+  }
+  HighsLp lp;
+  lp.num_col_ = 3;
+  lp.num_row_ = 1;
+  lp.col_cost_ = {0, 1, 2};
+  lp.col_lower_ = {1, 2, 0};
+  lp.col_upper_ = {1, kHighsInf, kHighsInf};
+  lp.row_lower_ = {-kHighsInf};
+  lp.row_upper_ = {5};
+  lp.a_matrix_.start_ = {0, 1, 2, 3};
+  lp.a_matrix_.index_ = {0, 0, 0};
+  lp.a_matrix_.value_ = {3, 2, -1};
+  highs.passModel(lp);
+  // Presolved to empty, so no simplex iterations if postsolve is correct
+  highs.run();
+  REQUIRE(highs.getInfo().simplex_iteration_count == 0);
+  if (dev_run) highs.writeSolution("", 1);
+
+  highs.resetGlobalScheduler(true);
+}
+
+TEST_CASE("presolve-initial-sweep", "[highs_test_presolve]") {
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  if (dev_run) {
+    highs.setOptionValue("log_dev_level", 1);
+    highs.setOptionValue("presolve_rule_logging", true);
+  }
+  HighsLp lp;
+  lp.num_col_ = 2;
+  lp.num_row_ = 1;
+  lp.col_cost_ = {-1, 1};
+  lp.col_lower_ = {1, 0};
+  lp.col_upper_ = {1, kHighsInf};
+  lp.row_lower_ = {-kHighsInf};
+  lp.row_upper_ = {5};
+  lp.a_matrix_.start_ = {0, 1, 1};
+  lp.a_matrix_.index_ = {0};
+  lp.a_matrix_.value_ = {3};
+  HighsStatus pass_model_status = HighsStatus::kOk;
+  for (HighsInt k = 0; k < 4; k++) {
+    if (dev_run) printf("\nPass k = %d\n==========\n", int(k));
+    REQUIRE(highs.passModel(lp) == pass_model_status);
+    highs.run();
+    if (k == 0) {
+      // Remove the empty column
+      lp.num_col_ = 1;
+      lp.col_cost_ = {-1};
+      lp.col_lower_ = {1};
+      lp.col_upper_ = {1};
+      lp.a_matrix_.start_ = {0, 1};
+    } else if (k == 1) {
+      REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
+      lp.col_upper_ = {0};
+      pass_model_status = HighsStatus::kWarning;
+      // Can infeasible column bounds even reach presolve?
+    } else if (k == 2) {
+      REQUIRE(highs.getModelStatus() == HighsModelStatus::kInfeasible);
+      lp.col_lower_ = {1e+20};
+      lp.col_upper_ = {kHighsInf};
+      lp.row_upper_ = {kHighsInf};
+      pass_model_status = HighsStatus::kError;
+      // Why is this model accepted when error returns?
+    } else {
+      REQUIRE(highs.getModelStatus() == HighsModelStatus::kUnbounded);
+    }
+    if (dev_run) highs.writeSolution("", 1);
+  }
+  highs.resetGlobalScheduler(true);
+}
+
+TEST_CASE("presolve-initial-sweep-all", "[highs_test_presolve]") {
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  highs.setOptionValue("presolve_light", kHighsOnString);
+  if (dev_run) {
+    highs.setOptionValue("log_dev_level", 1);
+    highs.setOptionValue("presolve_rule_logging", true);
+  }
+  HighsLp lp;
+  lp.num_col_ = 7;
+  lp.num_row_ = 4;
+  lp.col_cost_ = {1, 1, 1, 1, 1, 1, 1};
+  lp.col_lower_ = {0, 1, 0, 1, 1, -kHighsInf, 0};
+  lp.col_upper_ = {1, 1, kHighsInf, 3, 1, 1, 1};
+  lp.row_lower_ = {2, 8, 10, 13};
+  lp.row_upper_ = {4, 9, 16, 26};
+  lp.a_matrix_.start_ = {0, 1, 5, 6, 6, 10, 12, 13};
+  lp.a_matrix_.index_ = {2, 0, 1, 2, 3, 0, 0, 1, 2, 3, 2, 3, 2};
+  lp.a_matrix_.value_ = {6, 1, 4, 7, 11, 2, 3, 5, 8, 12, 9, 13, 10};
+  // Cols 1 and 4 fixed at 1; col 3 empty (fixed at LB = 1) then
+  //
+  // Rows 0 and 3 singletons; row 1 empty
+  REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
+
+  highs.run();
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
+  if (dev_run) highs.writeSolution("", 1);
+
+  // Add a redundant row
+  std::vector<HighsInt> index = {0, 5, 6};
+  std::vector<double> value = {1, 1, 1};
+  highs.addRow(-kHighsInf, 4, 3, index.data(), value.data());
+
+  highs.setOptionValue("use_warm_start", false);
+  highs.run();
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
+  if (dev_run) highs.writeSolution("", 1);
+
+  highs.resetGlobalScheduler(true);
 }
 
 TEST_CASE("bound_implied", "[highs_test_presolve]") {

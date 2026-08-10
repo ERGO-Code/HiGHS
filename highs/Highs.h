@@ -781,7 +781,7 @@ class Highs {
    * @brief Get the number of (constraint matrix) nonzeros in the incumbent
    * model
    */
-  HighsInt getNumNz() const { return model_.lp_.a_matrix_.numNz(); }
+  HighsInt getNumNz() const { return model_.lp_.numNz(); }
 
   /**
    * @brief Get the number of Hessian matrix nonzeros in the incumbent model
@@ -1844,7 +1844,7 @@ class Highs {
   HighsStatus getIisInterface();
   HighsStatus getIisInterfaceReturn(
       const HighsStatus return_status, const HighsOptions& original_options,
-      const std::vector<bool>& original_callbacks);
+      const std::vector<HighsBool>& original_callbacks);
 
   HighsStatus elasticityFilterReturn(
       const HighsStatus return_status, const std::string& original_model_name,

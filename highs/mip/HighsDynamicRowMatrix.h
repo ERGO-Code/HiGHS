@@ -12,7 +12,7 @@
 #include <utility>
 #include <vector>
 
-#include "util/HighsInt.h"
+#include "util/HighsType.h"
 
 class HighsDynamicRowMatrix {
  private:
@@ -35,7 +35,7 @@ class HighsDynamicRowMatrix {
   std::vector<HighsInt> AheadPos_;
   std::vector<HighsInt> AheadNeg_;
 
-  std::vector<uint8_t> colsLinked;
+  std::vector<HighsBool> colsLinked;
 
   /// vector of column sizes
 
@@ -49,9 +49,7 @@ class HighsDynamicRowMatrix {
  public:
   HighsDynamicRowMatrix(HighsInt ncols);
 
-  bool columnsLinked(HighsInt rowindex) const {
-    return (colsLinked[rowindex] != 0);
-  }
+  bool columnsLinked(HighsInt rowindex) const { return colsLinked[rowindex]; }
 
   void unlinkColumns(HighsInt rowindex);
 
