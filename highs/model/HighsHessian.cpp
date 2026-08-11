@@ -741,7 +741,8 @@ void HessianOracle::product(const std::vector<double>& x_value,
 }
 
 // For full x
-void HessianOracle::product(const double* x_value, double* hessian_x_value) const {
+void HessianOracle::product(const double* x_value,
+                            double* hessian_x_value) const {
   assert(this->call_);
   this->call_(kHessianOracleCallTypeProduct, nullptr, nullptr, x_value, nullptr,
               nullptr, hessian_x_value, this->data_);

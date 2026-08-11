@@ -26,8 +26,8 @@ HighsStatus solveQpAsm(HighsQpSolverObject& solver_object) {
 HighsHessianFunctionType testOracleCallSquareHessian =
     [](const HighsInt call_type, const HighsInt* x_num_entries,
        const HighsInt* x_index, const double* x_value,
-       HighsInt* hessian_x_num_entries, HighsInt* hessian_x_index, double* hessian_x_value,
-       void* hessian_p) {
+       HighsInt* hessian_x_num_entries, HighsInt* hessian_x_index,
+       double* hessian_x_value, void* hessian_p) {
       assert(kHessianOracleCallTypeMin <= call_type &&
              call_type <= kHessianOracleCallTypeMax);
 

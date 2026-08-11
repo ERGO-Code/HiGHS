@@ -117,6 +117,8 @@ static const char* const kHighsCallbackDataOutIpmIterationCountName =
     "ipm_iteration_count";
 static const char* const kHighsCallbackDataOutPdlpIterationCountName =
     "pdlp_iteration_count";
+static const char* const kHighsCallbackDataOutQpasmIterationCountName =
+    "qpasm_iteration_count";
 static const char* const kHighsCallbackDataOutObjectiveFunctionValueName =
     "objective_function_value";
 static const char* const kHighsCallbackDataOutMipNodeCountName =
@@ -145,6 +147,7 @@ static const char* const kHighsCallbackDataOutCutpoolLowerName =
     "cutpool_lower";
 static const char* const kHighsCallbackDataOutCutpoolUpperName =
     "cutpool_upper";
+static const char* const kHighsCallbackDataOutQpSolutionName = "qp_solution";
 
 const HighsInt kHighsIisStrategyLight = 0;
 // Forces full IIS calculation as before - ie with the

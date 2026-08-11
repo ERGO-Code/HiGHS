@@ -36,9 +36,9 @@ void testOracleSolve(const HighsModel& model);
 //
 // kHessianOracleCallTypeColumn
 //
-// Set *hessian_x_num_entries, *hessian_x_index and *hessian_x_value as Hessian column
-// *x_index, where *hessian_x_index contains the *hessian_x_num_entries indices of
-// the column nonzeros, and their values are assumed to be scattered
+// Set *hessian_x_num_entries, *hessian_x_index and *hessian_x_value as Hessian
+// column *x_index, where *hessian_x_index contains the *hessian_x_num_entries
+// indices of the column nonzeros, and their values are assumed to be scattered
 // in *hessian_x_value
 //
 // Return 0 if the Hessian column is available, otherwise, return a nonzero
@@ -59,8 +59,8 @@ void testOracleSolve(const HighsModel& model);
 HighsHessianFunctionType oracleCallSquareHessian =
     [](const HighsInt call_type, const HighsInt* x_num_entries,
        const HighsInt* x_index, const double* x_value,
-       HighsInt* hessian_x_num_entries, HighsInt* hessian_x_index, double* hessian_x_value,
-       void* hessian_p) {
+       HighsInt* hessian_x_num_entries, HighsInt* hessian_x_index,
+       double* hessian_x_value, void* hessian_p) {
       assert(kHessianOracleCallTypeMin <= call_type &&
              call_type <= kHessianOracleCallTypeMax);
 
@@ -261,8 +261,8 @@ TEST_CASE("hessian-oracle-check", "[qp-oracle]") {
   HighsHessianFunctionType oracleCallSquareHessianCustomised =
       [&](const HighsInt call_type, const HighsInt* x_num_entries,
           const HighsInt* x_index, const double* x_value,
-          HighsInt* hessian_x_num_entries, HighsInt* hessian_x_index, double* hessian_x_value,
-          void* hessian_p) {
+          HighsInt* hessian_x_num_entries, HighsInt* hessian_x_index,
+          double* hessian_x_value, void* hessian_p) {
         assert(kHessianOracleCallTypeMin <= call_type &&
                call_type <= kHessianOracleCallTypeMax);
 

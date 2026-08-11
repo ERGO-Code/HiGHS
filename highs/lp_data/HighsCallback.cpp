@@ -140,8 +140,9 @@ HighsCallbackOutput::operator HighsCallbackDataOut() const {
                            : const_cast<double*>(cutpool_upper.data());
 
   data.qp_solution_size = qp_solution.size();
-  data.qp_solution = qp_solution.empty() ? nullptr : const_cast<double*>(qp_solution.data());
-  
+  data.qp_solution =
+      qp_solution.empty() ? nullptr : const_cast<double*>(qp_solution.data());
+
   data.external_solution_query_origin =
       static_cast<HighsInt>(external_solution_query_origin);
 
