@@ -106,6 +106,8 @@ static const HighsInt kHighsCallbackMipInterrupt = 6;
 static const HighsInt kHighsCallbackMipGetCutPool = 7;
 static const HighsInt kHighsCallbackMipDefineLazyConstraints = 8;
 static const HighsInt kHighsCallbackCallbackMipUserSolution = 9;
+static const HighsInt kHighsCallbackQpFirstFeasiblePoint = 10;
+static const HighsInt kHighsCallbackQpInterrupt = 11;
 
 static const char* const kHighsCallbackDataOutLogTypeName = "log_type";
 static const char* const kHighsCallbackDataOutRunningTimeName = "running_time";

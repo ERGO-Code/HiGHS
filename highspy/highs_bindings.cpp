@@ -1822,6 +1822,10 @@ PYBIND11_MODULE(_core, m, py::mod_gil_not_used()) {
              HighsCallbackType::kCallbackMipDefineLazyConstraints)
       .value("kCallbackMipUserSolution",
              HighsCallbackType::kCallbackMipUserSolution)
+      .value("kHighsCallbackQpFirstFeasiblePoint",
+             HighsCallbackType::kHighsCallbackQpFirstFeasiblePoint)
+      .value("kHighsCallbackQpInterrupt",
+             HighsCallbackType::kHighsCallbackQpInterrupt)
       .value("kCallbackMax", HighsCallbackType::kCallbackMax)
       .value("kNumCallbackType", HighsCallbackType::kNumCallbackType)
       .export_values();
