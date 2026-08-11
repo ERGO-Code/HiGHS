@@ -30,7 +30,7 @@ void testOracleSolve(const HighsModel& model);
 //
 // kHessianOracleCallTypeEntry
 //
-// Set *q_x_value as Hessian entry (*x_index, *q_x_index) in
+// Set *q_x_value as Hessian entry (*x_index, *q_x_index)
 //
 // Return 0 if the Hessian entry is available, otherwise, return a nonzero value
 //
