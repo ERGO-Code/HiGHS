@@ -13,6 +13,7 @@
 #include <vector>
 
 #include "lp_data/HConst.h"
+#include "mip/HighsDomainChange.h"
 #include "util/HighsHash.h"
 #include "util/HighsHashTree.h"
 #include "util/HighsRandom.h"
@@ -306,6 +307,10 @@ class HighsCliqueTable {
   void cleanupFixed(HighsDomain& globaldom);
 
   void addImplications(HighsDomain& domain, HighsInt col, HighsInt val);
+
+  void getImplications(HighsInt col, HighsInt val,
+                       std::vector<HighsDomainChange>& domChgs,
+                       const std::vector<uint8_t>& colDeleted);
 
   HighsInt getNumImplications(HighsInt col) const;
 

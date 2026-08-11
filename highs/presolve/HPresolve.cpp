@@ -6854,6 +6854,9 @@ HPresolve::Result HPresolve::fixColToLower(HighsPostsolveStack& postsolve_stack,
   if (fixval == -kHighsInf) return Result::kDualInfeasible;
 
   // printf("fixing column %" HIGHSINT_FORMAT " to %.15g\n", col, fixval);
+  bool isBin = mipsolver != nullptr && fixval == 0.0 &&
+               model->col_upper_[col] == 1.0 &&
+               model->integrality_[col] == HighsVarType::kInteger;
 
   const bool logging_on = analysis_.logging_on_;
   if (logging_on) analysis_.startPresolveRuleLog(kPresolveRuleFixedCol);
@@ -6862,6 +6865,22 @@ HPresolve::Result HPresolve::fixColToLower(HighsPostsolveStack& postsolve_stack,
   removeFixedCol(col, fixval);
   analysis_.logging_on_ = logging_on;
   if (logging_on) analysis_.stopPresolveRuleLog(kPresolveRuleFixedCol);
+
+  if (isBin) {
+    std::vector<HighsDomainChange> domChgs;
+    mipsolver->mipdata_->cliquetable.getImplications(col, 0, domChgs,
+                                                     colDeleted);
+    for (HighsDomainChange& domChg : domChgs) {
+      if (!colDeleted[domChg.column]) {
+        if (domChg.boundtype == HighsBoundType::kUpper) {
+            HPRESOLVE_CHECKED_CALL(fixColToLower(postsolve_stack, domChg.column));
+        } else {
+            HPRESOLVE_CHECKED_CALL(fixColToUpper(postsolve_stack, domChg.column));
+        }
+      }
+    }
+  }
+
   return Result::kOk;
 }
 
@@ -6871,6 +6890,9 @@ HPresolve::Result HPresolve::fixColToUpper(HighsPostsolveStack& postsolve_stack,
   if (fixval == kHighsInf) return Result::kDualInfeasible;
 
   // printf("fixing column %" HIGHSINT_FORMAT " to %.15g\n", col, fixval);
+  bool isBin = mipsolver != nullptr && fixval == 1.0 &&
+               model->col_lower_[col] == 0.0 &&
+               model->integrality_[col] == HighsVarType::kInteger;
 
   const bool logging_on = analysis_.logging_on_;
   if (logging_on) analysis_.startPresolveRuleLog(kPresolveRuleFixedCol);
@@ -6879,6 +6901,22 @@ HPresolve::Result HPresolve::fixColToUpper(HighsPostsolveStack& postsolve_stack,
   removeFixedCol(col, fixval);
   analysis_.logging_on_ = logging_on;
   if (logging_on) analysis_.stopPresolveRuleLog(kPresolveRuleFixedCol);
+
+  if (isBin) {
+    std::vector<HighsDomainChange> domChgs;
+    mipsolver->mipdata_->cliquetable.getImplications(col, 1, domChgs,
+                                                     colDeleted);
+    for (HighsDomainChange& domChg : domChgs) {
+      if (!colDeleted[domChg.column]) {
+        if (domChg.boundtype == HighsBoundType::kUpper) {
+          HPRESOLVE_CHECKED_CALL(fixColToLower(postsolve_stack, domChg.column));
+        } else {
+          HPRESOLVE_CHECKED_CALL(fixColToUpper(postsolve_stack, domChg.column));
+        }
+      }
+    }
+  }
+
   return Result::kOk;
 }
 

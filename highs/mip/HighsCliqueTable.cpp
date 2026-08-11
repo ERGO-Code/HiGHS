@@ -1826,6 +1826,46 @@ void HighsCliqueTable::addImplications(HighsDomain& domain, HighsInt col,
   invertedHashListSizeTwo[v.index()].for_each(doFixings);
 }
 
+void HighsCliqueTable::getImplications(HighsInt col, HighsInt val,
+                                       std::vector<HighsDomainChange>& domChgs,
+                                       const std::vector<uint8_t>& colDeleted) {
+  CliqueVar v(col, val);
+
+  while (colsubstituted[v.col]) {
+    assert(static_cast<HighsInt>(substitutions.size()) >
+           colsubstituted[v.col] - 1);
+    Substitution subst = substitutions[colsubstituted[v.col] - 1];
+    v = v.val == 1 ? subst.replace : subst.replace.complement();
+    if (colDeleted[v.col]) continue;
+    if (v.val == 1) {
+      domChgs.emplace_back(HighsDomainChange{1.0, static_cast<HighsInt>(v.col),
+                                             HighsBoundType::kLower});
+    } else {
+      domChgs.emplace_back(HighsDomainChange{0.0, static_cast<HighsInt>(v.col),
+                                             HighsBoundType::kUpper});
+    }
+  }
+
+  auto doFixings = [&](HighsInt cliqueid) {
+    HighsInt start = cliques[cliqueid].start;
+    HighsInt end = cliques[cliqueid].end;
+
+    for (HighsInt i = start; i != end; ++i) {
+      if (cliqueentries[i].col == v.col || colDeleted[cliqueentries[i].col]) continue;
+      if (cliqueentries[i].val == 1) {
+        domChgs.emplace_back(HighsDomainChange{
+            0.0, static_cast<HighsInt>(cliqueentries[i].col), HighsBoundType::kUpper});
+      } else {
+        domChgs.emplace_back(HighsDomainChange{
+            1.0, static_cast<HighsInt>(cliqueentries[i].col), HighsBoundType::kLower});
+      }
+    }
+  };
+
+  invertedHashList[v.index()].for_each(doFixings);
+  invertedHashListSizeTwo[v.index()].for_each(doFixings);
+}
+
 void HighsCliqueTable::cleanupFixed(HighsDomain& globaldom) {
   HighsInt numcol = globaldom.col_upper_.size();
   HighsInt oldnfixings = nfixings;
