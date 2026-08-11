@@ -16,6 +16,8 @@ const double egout_objective_target = 610;
 const HighsInt adlittle_ipm_iteration_limit = 5;
 const HighsInt adlittle_simplex_iteration_limit = 30;
 
+const HighsInt primal1_qp_iteration_limit = 5;
+
 const HighsInt kLogBufferSize = kIoBufferSize;
 const HighsInt kUserCallbackNoData = -1;
 const HighsInt kUserCallbackData = 99;
@@ -266,6 +268,41 @@ HighsCallbackFunctionType userkMipUserSetPartialSolution =
 
         data_in->setSolution(index.size(), index.data(), value.data());
         data_in->repairSolution();
+      }
+    };
+
+HighsCallbackFunctionType userQpCallback =
+    [](int callback_type, const std::string& message,
+       const HighsCallbackOutput* data_out, HighsCallbackInput* data_in,
+       void* user_callback_data) {
+      // Extract local_callback_data from user_callback_data unless it
+      // is nullptr
+      if (callback_type == kCallbackQpFirstFeasiblePoint) {
+        // Use local_callback_data to maintain the objective value from
+        // the previous callback
+        assert(user_callback_data);
+        // Extract the double value pointed to from void* user_callback_data
+        const double local_callback_data = *(double*)user_callback_data;
+        if (dev_run)
+          printf(
+              "userQpCallback(type %2d; data %11.4g): %s with solution[0] = %g\n",
+              callback_type, local_callback_data, message.c_str(),
+              data_out->qp_solution[0]);
+      } else if (callback_type == kCallbackQpInterrupt) {
+        const int local_callback_data =
+            user_callback_data ? static_cast<int>(reinterpret_cast<intptr_t>(
+                                     user_callback_data))
+                               : kUserCallbackNoData;
+	REQUIRE(local_callback_data == kUserCallbackData);
+	if (dev_run)
+	  printf(
+		 "userInterruptCallback(type %2d; data %2d): %s with iteration "
+		 "count = "
+		 "%d\n",
+		 callback_type, local_callback_data, message.c_str(),
+		 int(data_out->qpasm_iteration_count));
+	data_in->user_interrupt =
+	  data_out->qpasm_iteration_count > primal1_qp_iteration_limit;
       }
     };
 
@@ -608,3 +645,19 @@ TEST_CASE("highs-callback-mip-user-solution-c", "[highs-callback]") {
   highs.run();
   highs.resetGlobalScheduler(true);
 }
+
+TEST_CASE("highs-callback-qpasm", "[highs_callback]") {
+  std::string filename = std::string(HIGHS_DIR) + "/check/instances/primal1.mps";
+  Highs highs;
+  //  highs.setOptionValue("output_flag", dev_run);
+  highs.readModel(filename);
+  void* p_user_callback_data = nullptr;
+
+  highs.setCallback(userQpCallback, p_user_callback_data);
+  highs.startCallback(kCallbackQpFirstFeasiblePoint);
+  highs.startCallback(kCallbackQpInterrupt);
+  highs.run();
+
+  highs.resetGlobalScheduler(true);
+}
+
