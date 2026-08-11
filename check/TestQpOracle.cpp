@@ -30,23 +30,23 @@ void testOracleSolve(const HighsModel& model);
 //
 // kHessianOracleCallTypeEntry
 //
-// Set *q_x_value as Hessian entry (*x_index, *q_x_index)
+// Set *hessian_x_value as Hessian entry (*x_index, *hessian_x_index)
 //
 // Return 0 if the Hessian entry is available, otherwise, return a nonzero value
 //
 // kHessianOracleCallTypeColumn
 //
-// Set *q_x_num_entries, *q_x_index and *q_x_value as Hessian column
-// *x_index, where *q_x_index contains the *q_x_num_entries indices of
+// Set *hessian_x_num_entries, *hessian_x_index and *hessian_x_value as Hessian column
+// *x_index, where *hessian_x_index contains the *hessian_x_num_entries indices of
 // the column nonzeros, and their values are assumed to be scattered
-// in *q_x_value
+// in *hessian_x_value
 //
 // Return 0 if the Hessian column is available, otherwise, return a nonzero
 // value
 //
 // kHessianOracleCallTypeProduct
 //
-// Set *q_x_value as the values of the product between the Hessian and
+// Set *hessian_x_value as the values of the product between the Hessian and
 // vector which is either
 //
 // * a full vector *x_value (if x_index is nullptr)
@@ -59,7 +59,7 @@ void testOracleSolve(const HighsModel& model);
 HighsHessianFunctionType oracleCallSquareHessian =
     [](const HighsInt call_type, const HighsInt* x_num_entries,
        const HighsInt* x_index, const double* x_value,
-       HighsInt* q_x_num_entries, HighsInt* q_x_index, double* q_x_value,
+       HighsInt* hessian_x_num_entries, HighsInt* hessian_x_index, double* hessian_x_value,
        void* hessian_p) {
       assert(kHessianOracleCallTypeMin <= call_type &&
              call_type <= kHessianOracleCallTypeMax);
@@ -67,12 +67,12 @@ HighsHessianFunctionType oracleCallSquareHessian =
       HighsHessian hessian = *(static_cast<HighsHessian*>(hessian_p));
       assert(hessian.format_ == HessianFormat::kSquare);
 
-      // Lambda for adding multiple of Hessian column into q_x_value
+      // Lambda for adding multiple of Hessian column into hessian_x_value
       auto addScaledQcol = [&](const HighsInt iCol, const double x_value) {
         for (HighsInt iEl = hessian.start_[iCol];
              iEl < hessian.start_[iCol + 1]; iEl++) {
           HighsInt iRow = hessian.index_[iEl];
-          q_x_value[iRow] += hessian.value_[iEl] * x_value;
+          hessian_x_value[iRow] += hessian.value_[iEl] * x_value;
         }
       };
 
@@ -80,17 +80,17 @@ HighsHessianFunctionType oracleCallSquareHessian =
         assert(x_num_entries == nullptr);
         assert(x_value == nullptr);
         assert(x_index != nullptr);
-        assert(q_x_num_entries == nullptr);
-        assert(q_x_index != nullptr);
-        assert(q_x_value != nullptr);
+        assert(hessian_x_num_entries == nullptr);
+        assert(hessian_x_index != nullptr);
+        assert(hessian_x_value != nullptr);
         HighsInt iCol = x_index[0];
-        HighsInt iRow = q_x_index[0];
+        HighsInt iRow = hessian_x_index[0];
         // Zero Qx value in case the Hessian entry requested is zero
-        q_x_value[0] = 0;
+        hessian_x_value[0] = 0;
         for (HighsInt iEl = hessian.start_[iCol];
              iEl < hessian.start_[iCol + 1]; iEl++) {
           if (hessian.index_[iEl] == iRow) {
-            q_x_value[0] = hessian.value_[iEl];
+            hessian_x_value[0] = hessian.value_[iEl];
             return 0;
           }
         }
@@ -99,21 +99,21 @@ HighsHessianFunctionType oracleCallSquareHessian =
         assert(x_num_entries == nullptr);
         assert(x_value == nullptr);
         assert(x_index != nullptr);
-        assert(q_x_num_entries != nullptr);
-        assert(q_x_index != nullptr);
-        assert(q_x_value != nullptr);
-        (*q_x_num_entries) = 0;
+        assert(hessian_x_num_entries != nullptr);
+        assert(hessian_x_index != nullptr);
+        assert(hessian_x_value != nullptr);
+        (*hessian_x_num_entries) = 0;
         HighsInt iCol = x_index[0];
         for (HighsInt iEl = hessian.start_[iCol];
              iEl < hessian.start_[iCol + 1]; iEl++) {
-          q_x_index[*q_x_num_entries] = hessian.index_[iEl];
-          q_x_value[*q_x_num_entries] = hessian.value_[iEl];
-          (*q_x_num_entries)++;
+          hessian_x_index[*hessian_x_num_entries] = hessian.index_[iEl];
+          hessian_x_value[*hessian_x_num_entries] = hessian.value_[iEl];
+          (*hessian_x_num_entries)++;
         }
       } else {
         assert(x_index == nullptr || *x_num_entries >= 0);
-        assert(q_x_index == nullptr);
-        assert(q_x_value != nullptr);
+        assert(hessian_x_index == nullptr);
+        assert(hessian_x_value != nullptr);
         if (x_index == nullptr) {
           // Simple product with full vector x, full vector q_x
           for (HighsInt iCol = 0; iCol < hessian.dim_; iCol++)
@@ -261,7 +261,7 @@ TEST_CASE("hessian-oracle-check", "[qp-oracle]") {
   HighsHessianFunctionType oracleCallSquareHessianCustomised =
       [&](const HighsInt call_type, const HighsInt* x_num_entries,
           const HighsInt* x_index, const double* x_value,
-          HighsInt* q_x_num_entries, HighsInt* q_x_index, double* q_x_value,
+          HighsInt* hessian_x_num_entries, HighsInt* hessian_x_index, double* hessian_x_value,
           void* hessian_p) {
         assert(kHessianOracleCallTypeMin <= call_type &&
                call_type <= kHessianOracleCallTypeMax);
@@ -269,12 +269,12 @@ TEST_CASE("hessian-oracle-check", "[qp-oracle]") {
         HighsHessian hessian = *(static_cast<HighsHessian*>(hessian_p));
         assert(hessian.format_ == HessianFormat::kSquare);
 
-        // Lambda for adding multiple of Hessian column into q_x_value
+        // Lambda for adding multiple of Hessian column into hessian_x_value
         auto addScaledQcol = [&](const HighsInt iCol, const double x_value) {
           for (HighsInt iEl = hessian.start_[iCol];
                iEl < hessian.start_[iCol + 1]; iEl++) {
             HighsInt iRow = hessian.index_[iEl];
-            q_x_value[iRow] += hessian.value_[iEl] * x_value;
+            hessian_x_value[iRow] += hessian.value_[iEl] * x_value;
           }
         };
 
@@ -282,21 +282,21 @@ TEST_CASE("hessian-oracle-check", "[qp-oracle]") {
           assert(x_num_entries == nullptr);
           assert(x_value == nullptr);
           assert(x_index != nullptr);
-          assert(q_x_num_entries == nullptr);
-          assert(q_x_index != nullptr);
-          assert(q_x_value != nullptr);
+          assert(hessian_x_num_entries == nullptr);
+          assert(hessian_x_index != nullptr);
+          assert(hessian_x_value != nullptr);
           if (no_entry_call) {
-            q_x_value[0] = 0;
+            hessian_x_value[0] = 0;
             return -1;
           }
           HighsInt iCol = x_index[0];
-          HighsInt iRow = q_x_index[0];
+          HighsInt iRow = hessian_x_index[0];
           // Zero Qx value in case the Hessian entry requested is zero
-          q_x_value[0] = 0;
+          hessian_x_value[0] = 0;
           for (HighsInt iEl = hessian.start_[iCol];
                iEl < hessian.start_[iCol + 1]; iEl++) {
             if (hessian.index_[iEl] == iRow) {
-              q_x_value[0] = hessian.value_[iEl];
+              hessian_x_value[0] = hessian.value_[iEl];
               return 0;
             }
           }
@@ -305,23 +305,23 @@ TEST_CASE("hessian-oracle-check", "[qp-oracle]") {
           assert(x_num_entries == nullptr);
           assert(x_value == nullptr);
           assert(x_index != nullptr);
-          assert(q_x_num_entries != nullptr);
-          assert(q_x_index != nullptr);
-          assert(q_x_value != nullptr);
+          assert(hessian_x_num_entries != nullptr);
+          assert(hessian_x_index != nullptr);
+          assert(hessian_x_value != nullptr);
           if (no_column_call) return -1;
-          (*q_x_num_entries) = 0;
+          (*hessian_x_num_entries) = 0;
           HighsInt iCol = x_index[0];
           if (column_error && iCol == 1) return 0;
           for (HighsInt iEl = hessian.start_[iCol];
                iEl < hessian.start_[iCol + 1]; iEl++) {
-            q_x_index[*q_x_num_entries] = hessian.index_[iEl];
-            q_x_value[*q_x_num_entries] = hessian.value_[iEl];
-            (*q_x_num_entries)++;
+            hessian_x_index[*hessian_x_num_entries] = hessian.index_[iEl];
+            hessian_x_value[*hessian_x_num_entries] = hessian.value_[iEl];
+            (*hessian_x_num_entries)++;
           }
         } else {
           assert(x_index == nullptr || *x_num_entries >= 0);
-          assert(q_x_index == nullptr);
-          assert(q_x_value != nullptr);
+          assert(hessian_x_index == nullptr);
+          assert(hessian_x_value != nullptr);
           if (no_product_call) return -1;
           if (product_error && *x_num_entries == 4) return 0;
           if (x_index == nullptr) {
