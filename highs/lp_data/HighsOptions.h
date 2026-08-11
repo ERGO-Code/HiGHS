@@ -1765,18 +1765,16 @@ class HighsOptions : public HighsOptionsStruct {
         advanced, &centring_ratio_tolerance, 0, 100, kHighsInf);
     records.push_back(record_double);
 
-    record_bool =
-        new OptionRecordBool("presolve_dfprobing",
-                             "Use the dual fixing aumgented probing technique in presolve", advanced,
-                             &presolve_dfprobing, true);
+    record_bool = new OptionRecordBool(
+        "presolve_dfprobing",
+        "Use the dual fixing aumgented probing technique in presolve", advanced,
+        &presolve_dfprobing, true);
     records.push_back(record_bool);
 
-    record_bool =
-        new OptionRecordBool("presolve_gdf",
-                             "Use the generalized dual fixing technique in presolve", advanced,
-                             &presolve_gdf, true);
+    record_bool = new OptionRecordBool(
+        "presolve_gdf", "Use the generalized dual fixing technique in presolve",
+        advanced, &presolve_gdf, true);
     records.push_back(record_bool);
-
 
     // Set up the log_options aliases
     log_options.clear();

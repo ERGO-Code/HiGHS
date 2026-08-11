@@ -26,11 +26,10 @@ class HighsImplications {
   struct Implics {
     std::vector<HighsDomainChange> implics;
     /* The "tentative" implications:
-      A implication of type x_j \ge (\ell^1_j - \ell^0_j) x_k + \ell^0_j is called "tentative", if
-      (1) c_j = 0
-      (2) x_j is fixed by applying dual fixing in probing
-      These implications can only be used to perform globally valid reductions.
-      Therefore, special treatment is required.
+      A implication of type x_j \ge (\ell^1_j - \ell^0_j) x_k + \ell^0_j is
+      called "tentative", if (1) c_j = 0 (2) x_j is fixed by applying dual
+      fixing in probing These implications can only be used to perform globally
+      valid reductions. Therefore, special treatment is required.
     */
     std::vector<HighsDomainChange> implics_tentative;
     bool computed = false;
@@ -69,11 +68,11 @@ class HighsImplications {
   // vector used to derive global reductions from dfprobing
   std::vector<HighsInt> binaryInvolvedInds_;
   enum binaryFixType {
-    kNoReduction          = 0b0000,
-    kGlobalLower          = 0b1010,
-    kGlobalUpper          = 0b0101,
+    kNoReduction = 0b0000,
+    kGlobalLower = 0b1010,
+    kGlobalUpper = 0b0101,
     kSubstituteComplement = 0b1001,
-    kSubstituteEqual      = 0b0110,
+    kSubstituteEqual = 0b0110,
   };
   /*
       Possible values for binaryInvolvedFlags_
@@ -129,7 +128,6 @@ class HighsImplications {
     nextCleanupCall = mipsolver.numNonzero();
     binaryInvolvedInds_.reserve(numcol);
     binaryInvolvedFlags_.assign(numcol, 0b0000);
-
   }
 
   constexpr static int64_t calcMaxVarBounds(HighsInt numcol) {
@@ -153,11 +151,11 @@ class HighsImplications {
     return implications[loc].implics;
   }
 
-  const std::vector<HighsDomainChange>& getImplications_tentative(HighsInt col, bool val) {
+  const std::vector<HighsDomainChange>& getImplications_tentative(HighsInt col,
+                                                                  bool val) {
     HighsInt loc = 2 * col + val;
     return implications[loc].implics_tentative;
   }
-
 
   bool implicationsCached(HighsInt col, bool val) {
     HighsInt loc = 2 * col + val;
@@ -240,35 +238,32 @@ class HighsImplications {
   // collect tentative binary implications
   void recordTentativeCliques(bool val, const HighsDomainChange& bchg) {
     const int iCol = bchg.column;
-    if (val == 0) { // probing x_k = 0
-      if (bchg.boundtype == HighsBoundType::kLower) { // fixed to 1
+    if (val == 0) {                                    // probing x_k = 0
+      if (bchg.boundtype == HighsBoundType::kLower) {  // fixed to 1
         if (!isFixedTo1(val, iCol)) {
           if (binaryInvolvedFlags_[iCol] == 0)
             binaryInvolvedInds_.push_back(iCol);
-          binaryInvolvedFlags_[iCol] += 0b0001; // 0001
+          binaryInvolvedFlags_[iCol] += 0b0001;  // 0001
         }
-      }
-      else { // fixed to 0
+      } else {  // fixed to 0
         if (!isFixedTo0(val, iCol)) {
           if (binaryInvolvedFlags_[iCol] == 0)
             binaryInvolvedInds_.push_back(iCol);
-          binaryInvolvedFlags_[iCol] += 0b0010; // 0010
+          binaryInvolvedFlags_[iCol] += 0b0010;  // 0010
         }
       }
-    }
-    else { // probing x_k = 1
-      if (bchg.boundtype == HighsBoundType::kLower) { // fixed to 1
+    } else {                                           // probing x_k = 1
+      if (bchg.boundtype == HighsBoundType::kLower) {  // fixed to 1
         if (!isFixedTo1(val, iCol)) {
           if (binaryInvolvedFlags_[iCol] == 0)
             binaryInvolvedInds_.push_back(iCol);
-          binaryInvolvedFlags_[iCol] += 0b0100; // 0100
+          binaryInvolvedFlags_[iCol] += 0b0100;  // 0100
         }
-      }
-      else { // fixed to 0
+      } else {  // fixed to 0
         if (!isFixedTo0(val, iCol)) {
           if (binaryInvolvedFlags_[iCol] == 0)
             binaryInvolvedInds_.push_back(iCol);
-          binaryInvolvedFlags_[iCol] += 0b1000; // 1000
+          binaryInvolvedFlags_[iCol] += 0b1000;  // 1000
         }
       }
     }
@@ -281,35 +276,30 @@ class HighsImplications {
   }
   // tools for recordTentativeCliques
   bool isFixedTo0(bool val, HighsInt iCol) {
-    if (binaryInvolvedFlags_[iCol] == 0)
-      return false;
+    if (binaryInvolvedFlags_[iCol] == 0) return false;
 
     uint8_t mask;
-    if (val == 0) { // probing at x = 0, last two digits
+    if (val == 0) {  // probing at x = 0, last two digits
       mask = 1 << (1);
       return (binaryInvolvedFlags_[iCol] & mask) != 0;
-    }
-    else { // probing at x = 1, first two digits
+    } else {  // probing at x = 1, first two digits
       mask = 1 << (3);
       return (binaryInvolvedFlags_[iCol] & mask) != 0;
     }
   }
   // tools for recordTentativeCliques
   bool isFixedTo1(bool val, HighsInt iCol) {
-    if (binaryInvolvedFlags_[iCol] == 0)
-      return false;
+    if (binaryInvolvedFlags_[iCol] == 0) return false;
 
     uint8_t mask;
-    if (val == 0) { // probing at x = 0, last two digits
+    if (val == 0) {  // probing at x = 0, last two digits
       mask = 1;
       return (binaryInvolvedFlags_[iCol] & mask) != 0;
-    }
-    else { // probint at x = 1, first two digits
+    } else {  // probint at x = 1, first two digits
       mask = 1 << (2);
       return (binaryInvolvedFlags_[iCol] & mask) != 0;
     }
   }
-
 };
 
 #endif
