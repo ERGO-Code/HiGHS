@@ -11,9 +11,9 @@
 #include "util/HighsCDouble.h"
 
 QpAsmStatus solveqpActual(Instance& instance, Settings& settings,
-			  QpHotstartInformation& startinfo, Statistics& stats,
-			  QpModelStatus& status, QpSolution& solution,
-			  HighsTimer& qp_timer, HighsCallback& callback) {
+                          QpHotstartInformation& startinfo, Statistics& stats,
+                          QpModelStatus& status, QpSolution& solution,
+                          HighsTimer& qp_timer, HighsCallback& callback) {
   Runtime rt(instance, stats);
   rt.settings = settings;
   Quass quass(rt);

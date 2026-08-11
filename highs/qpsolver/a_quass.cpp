@@ -197,17 +197,29 @@ QpAsmStatus solveqp(Instance& instance, Settings& settings, Statistics& stats,
                          highs_solution);
     }
   }
-  if (callback.user_callback &&
-      callback.active[kCallbackQpFirstFeasiblePoint]) {
-    callback.clearHighsCallbackOutput();
-    callback.data_out.qp_solution = startinfo.primal.value;
-    const bool interrupt = callback.callbackAction(kCallbackQpFirstFeasiblePoint, "First feasible solution");
-    assert(!interrupt);
-    (void)interrupt;
+  if (callback.user_callback) {
+    if (callback.active[kCallbackQpFirstFeasiblePoint]) {
+      callback.clearHighsCallbackOutput();
+      callback.data_out.qp_solution = startinfo.primal.value;
+      const bool interrupt = callback.callbackAction(
+          kCallbackQpFirstFeasiblePoint, "QP: first feasible solution");
+      assert(!interrupt);
+      (void)interrupt;
+    }
+    if (callback.active[kCallbackQpInterrupt]) {
+      callback.clearHighsCallbackOutput();
+      callback.data_out.qpasm_iteration_count = 0;
+      callback.data_out.objective_function_value =
+          instance.objval(startinfo.primal);
+      if (callback.callbackAction(kCallbackQpInterrupt, "QP: interrupt")) {
+        highs_model_status = HighsModelStatus::kInterrupt;
+        return QpAsmStatus::kOk;
+      }
+    }
   }
   // solve
   solveqpActual(instance, settings, startinfo, stats, qp_model_status,
-		qp_solution, qp_timer, callback);
+                qp_solution, qp_timer, callback);
 
   // undo perturbation and resolve
 

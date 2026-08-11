@@ -71,8 +71,8 @@ void assessQpPrimalFeasibility(
     double& max_con_residual, double& sum_con_residuals);
 
 QpAsmStatus solveqpActual(Instance& instance, Settings& settings,
-			  QpHotstartInformation& startinfo, Statistics& stats,
-			  QpModelStatus& status, QpSolution& solution,
-			  HighsTimer& qp_timer, HighsCallback& callback);
+                          QpHotstartInformation& startinfo, Statistics& stats,
+                          QpModelStatus& status, QpSolution& solution,
+                          HighsTimer& qp_timer, HighsCallback& callback);
 
 #endif

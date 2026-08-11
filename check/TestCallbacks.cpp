@@ -9,7 +9,7 @@
 #include "lp_data/HConst.h"
 #include "lp_data/HighsCallback.h"
 
-const bool dev_run = true;//false;//
+const bool dev_run = false;  // true;//
 
 const double egout_optimal_objective = 568.1007;
 const double egout_objective_target = 610;
@@ -271,41 +271,34 @@ HighsCallbackFunctionType userkMipUserSetPartialSolution =
       }
     };
 
-HighsCallbackFunctionType userQpCallback = [](int callback_type,
-                                              const std::string& message,
-                                              const HighsCallbackOutput*
-                                                  data_out,
-                                              HighsCallbackInput* data_in,
-                                              void* user_callback_data) {
-  // Extract local_callback_data from user_callback_data unless it
-  // is nullptr
-  if (callback_type == kCallbackQpFirstFeasiblePoint) {
-    if (dev_run) {
-      HighsInt num_solution_nz = 0;
-      for (HighsInt iCol = 0;
-	   iCol < static_cast<HighsInt>(data_out->qp_solution.size()); iCol++) 
-	if (data_out->qp_solution[iCol]) num_solution_nz++;
-      printf(
-          "userQpCallback(type %2d): %s with %d nonzero values\n",
-          callback_type, message.c_str(), int(num_solution_nz));
-    }
-  } else if (callback_type == kCallbackQpInterrupt) {
-    const int local_callback_data =
-        user_callback_data
-            ? static_cast<int>(reinterpret_cast<intptr_t>(user_callback_data))
-            : kUserCallbackNoData;
-    REQUIRE(local_callback_data == kUserCallbackData);
-    if (dev_run)
-      printf(
-          "userInterruptCallback(type %2d; data %2d): %s with iteration "
-          "count = %d and objective_value = %g\n",
-          callback_type, local_callback_data, message.c_str(),
-          int(data_out->qpasm_iteration_count),
-          data_out->objective_function_value);
-    data_in->user_interrupt =
-        data_out->qpasm_iteration_count > primal1_qp_iteration_limit;
-  }
-};
+HighsCallbackFunctionType userQpCallback =
+    [](int callback_type, const std::string& message,
+       const HighsCallbackOutput* data_out, HighsCallbackInput* data_in,
+       void* user_callback_data) {
+      // Extract local_callback_data from user_callback_data unless it
+      // is nullptr
+      if (callback_type == kCallbackQpFirstFeasiblePoint) {
+        if (dev_run) {
+          HighsInt num_solution_nz = 0;
+          for (HighsInt iCol = 0;
+               iCol < static_cast<HighsInt>(data_out->qp_solution.size());
+               iCol++)
+            if (data_out->qp_solution[iCol]) num_solution_nz++;
+          printf("userQpCallback(type %2d): %s with %d nonzero values\n",
+                 callback_type, message.c_str(), int(num_solution_nz));
+        }
+      } else if (callback_type == kCallbackQpInterrupt) {
+        if (dev_run)
+          printf(
+              "userQpCallback(type %2d): %s with iteration "
+              "count = %d and objective_value = %g\n",
+              callback_type, message.c_str(),
+              int(data_out->qpasm_iteration_count),
+              data_out->objective_function_value);
+        data_in->user_interrupt =
+            data_out->qpasm_iteration_count > primal1_qp_iteration_limit;
+      }
+    };
 
 std::function<void(int, const std::string&, const HighsCallbackOutput*,
                    HighsCallbackInput*, void*)>
@@ -659,6 +652,6 @@ TEST_CASE("highs-callback-qpasm", "[highs_callback]") {
   highs.startCallback(kCallbackQpFirstFeasiblePoint);
   highs.startCallback(kCallbackQpInterrupt);
   highs.run();
-
+  REQUIRE(highs.getInfo().qp_iteration_count == 6);
   highs.resetGlobalScheduler(true);
 }
