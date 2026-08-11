@@ -9,7 +9,7 @@
 #include "lp_data/HConst.h"
 #include "lp_data/HighsCallback.h"
 
-const bool dev_run = false;
+const bool dev_run = true;//false;//
 
 const double egout_optimal_objective = 568.1007;
 const double egout_objective_target = 610;
@@ -280,16 +280,15 @@ HighsCallbackFunctionType userQpCallback = [](int callback_type,
   // Extract local_callback_data from user_callback_data unless it
   // is nullptr
   if (callback_type == kCallbackQpFirstFeasiblePoint) {
-    // Use local_callback_data to maintain the objective value from
-    // the previous callback
-    assert(user_callback_data);
-    // Extract the double value pointed to from void* user_callback_data
-    const double local_callback_data = *(double*)user_callback_data;
-    if (dev_run)
+    if (dev_run) {
+      HighsInt num_solution_nz = 0;
+      for (HighsInt iCol = 0;
+	   iCol < static_cast<HighsInt>(data_out->qp_solution.size()); iCol++) 
+	if (data_out->qp_solution[iCol]) num_solution_nz++;
       printf(
-          "userQpCallback(type %2d; data %11.4g): %s with solution[0] = %g\n",
-          callback_type, local_callback_data, message.c_str(),
-          data_out->qp_solution[0]);
+          "userQpCallback(type %2d): %s with %d nonzero values\n",
+          callback_type, message.c_str(), int(num_solution_nz));
+    }
   } else if (callback_type == kCallbackQpInterrupt) {
     const int local_callback_data =
         user_callback_data
@@ -652,7 +651,7 @@ TEST_CASE("highs-callback-qpasm", "[highs_callback]") {
   std::string filename =
       std::string(HIGHS_DIR) + "/check/instances/primal1.mps";
   Highs highs;
-  //  highs.setOptionValue("output_flag", dev_run);
+  highs.setOptionValue("output_flag", dev_run);
   highs.readModel(filename);
   void* p_user_callback_data = nullptr;
 

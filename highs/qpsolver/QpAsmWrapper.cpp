@@ -249,7 +249,7 @@ HighsStatus solveQpAsm(const HighsOptions& options, HighsTimer& timer,
   }
 
   QpAsmStatus status =
-      solveqp(instance, settings, stats, model_status, basis, solution, timer);
+    solveqp(instance, settings, stats, model_status, basis, solution, timer, callback);
 
   // QP solver can fail, so should return something other than
   // QpAsmStatus::kOk

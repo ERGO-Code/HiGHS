@@ -306,7 +306,7 @@ static QpSolverStatus reinvert(Basis& basis, CholeskyFactor& factor,
 }
 
 void Quass::solve(const QpVector& x0, const QpVector& ra, Basis& b0,
-                  HighsTimer& timer) {
+                  HighsTimer& timer, HighsCallback& callback) {
   // feenableexcept(FE_ALL_EXCEPT & ~FE_INEXACT & ~FE_UNDERFLOW);
 
   runtime.statistics.time_start = std::chrono::high_resolution_clock::now();
