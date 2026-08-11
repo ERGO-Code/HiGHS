@@ -2388,13 +2388,12 @@ void HPresolve::markColDeleted(HighsInt col) {
   if (!this->in_initial_sweep_) {
     assert(!colDeleted[col]);
 
-    if (col == model->fme_obj_col_) model->fme_obj_col_ = -1;
-
     // prevents col from being added to change vector
     changedColFlag[col] = true;
     colDeleted[col] = true;
   }
   ++numDeletedCols;
+  if (col == model->fme_obj_col_) model->fme_obj_col_ = -1;
 }
 
 HPresolve::Result HPresolve::changeColUpper(HighsInt col, double newUpper) {
@@ -6224,6 +6223,8 @@ HPresolve::Result HPresolve::initialSweep(
   model->a_matrix_.start_.resize(num_col + 1);
   model->a_matrix_.index_.resize(nnz);
   model->a_matrix_.value_.resize(nnz);
+  if (model->fme_obj_col_ >= 0)
+    model->fme_obj_col_ = newColIndex[model->fme_obj_col_];
   postsolve_stack.compressColIndexMap(newColIndex);
   HPRESOLVE_CHECKED_CALL(checkLimits(postsolve_stack));
 
