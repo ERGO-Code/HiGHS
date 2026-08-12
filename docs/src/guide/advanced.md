@@ -65,22 +65,23 @@ Hence, by just setting the 2-bit, an IS is formed reliably, and at no great expe
 
 ## [Hessian oracle](@id highs-hessian-oracle)
 
-Rather than provide an explicit Hessian matrix, users can provide an
-"oracle" callback that provides the necessary data associated with the
-Hessian. At a minimum the oracle must be able to perform products with
-the Hessian, but it may be advantageous if it can supply a Hessian
-column or specific entry. The oracle callback can be given any name
-and, below, is called `userOracle`. Its definition relates to its use
-to form the vector ``Qx`` from a vector ``x``.
+Rather than provide an explicit Hessian matrix ``Q``, users can
+provide an "oracle" callback that provides the necessary data
+associated with the Hessian. At a minimum the oracle must be able to
+perform products with the Hessian, but it may be advantageous if it
+can supply a Hessian column or specific entry. The oracle callback can
+be given any name and, below, is called `userOracle`. Its definition
+relates to its use to form the vector ``Qx`` from a vector ``x``.
+
 
 ```cpp
 int userOracle(const HighsInt call_type,
                const HighsInt* x_num_entries,
                const HighsInt* x_index, 
                const double* x_value,
-               HighsInt* q_x_num_entries, 
-               HighsInt* q_x_index, 
-               double* q_x_value,
+               HighsInt* hessian_x_num_entries, 
+               HighsInt* hessian_x_index, 
+               double* hessian_x_value,
                void* user_hessian_data);
 ```
 
@@ -90,9 +91,9 @@ where
 * `x_num_entries` is the number of entries in the vector ``x``
 * `x_index,` contains the indices of entries in the vector ``x``
 * `x_value` contains the values of entries in the vector ``x`` 
-* `q_x_num_entries,` is the number of entries in the vector ``Qx``
-* `q_x_index,` contains the indices of entries in the vector ``Qx``
-* `q_x_value` contains the values of entries in the vector ``Qx``  
+* `hessian_x_num_entries,` is the number of entries in the vector ``Qx``
+* `hessian_x_index,` contains the indices of entries in the vector ``Qx``
+* `hessian_x_value` contains the values of entries in the vector ``Qx``  
 * `user_hessian_data` allows the user to pass data to the oracle
 
 The oracle call type is a cast of the relevant member of the C++ enum
@@ -101,21 +102,21 @@ are three possible call types
 
 ### kHessianOracleCallTypeEntry ###
 
-For this call type, set `*q_x_value` as Hessian entry (`*x_index`,
-`*q_x_index`). Return 0 if the Hessian entry is available, otherwise,
+For this call type, set `*hessian_x_value` as Hessian entry (`*x_index`,
+`*hessian_x_index`). Return 0 if the Hessian entry is available, otherwise,
 return a nonzero value.
 
 ### kHessianOracleCallTypeColumn ###
 
-For this call type, set `*q_x_num_entries`, `*q_x_index` and
-`*q_x_value` as Hessian column `*x_index`, where `*q_x_index` contains
-the `*q_x_num_entries` indices of the column nonzeros, and their
-values are assumed to be scattered in `*q_x_value`. Return 0 if the
+For this call type, set `*hessian_x_num_entries`, `*hessian_x_index` and
+`*hessian_x_value` as Hessian column `*x_index`, where `*hessian_x_index` contains
+the `*hessian_x_num_entries` indices of the column nonzeros, and their
+values are assumed to be scattered in `*hessian_x_value`. Return 0 if the
 Hessian column is available, otherwise, return a nonzero value.
 
 ### kHessianOracleCallTypeProduct ###
 
-For this call type, set `*q_x_value` as the values of the product
+For this call type, set `*hessian_x_value` as the values of the product
  between the Hessian and vector which is either
 
  * a full vector `*x_value` (if `x_index` is nullptr)
@@ -123,7 +124,7 @@ For this call type, set `*q_x_value` as the values of the product
  * a scattered vector `*x_value` with `*x_num_entries` of nonzeros in `*x_index`
 
 Return 0 if the Hessian product is available, otherwise, return a
-nonzero value - in which case the oracle is not valid.
+nonzero value (in which case the oracle is not valid).
 
 The user's oracle is communicated to HiGHS via the method that in the HiGHS C++ class is
 ```cpp
