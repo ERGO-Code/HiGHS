@@ -540,11 +540,32 @@ HighsStatus HighsHessian::checkOracle(const HighsLogOptions& log_options,
     error_found = true;
   }
 
+  std::vector<double> check(dim, 0);
+  HighsRandom random;
+  /*
+  // Test a full matrix-vector product
+  for (HighsInt iCol = 0; iCol < dim; iCol++) {
+    //    index[iCol] = iCol;
+    value[iCol] = random.fraction();
+    for (HighsInt iEl = hessian.start_[iCol];
+         iEl < hessian.start_[iCol + 1]; iEl++)
+      check[hessian.index_[iEl]] +=
+        hessian.value_[iEl] * value[iCol];
+  }
+  oracle.product(dim, nullptr, value.data(), oracle_value.data());
+  for (HighsInt iCol = 0; iCol < dim; iCol++) {
+    if (!productValuesClose(-1, iCol, oracle_value[iCol], check[iCol])) {
+      if (exit_on_first_error) return HighsStatus::kError;
+      error_found = true;
+    }
+    check[iCol] = 0;
+    value[iCol] = 0;
+    oracle_value[iCol] = 0;
+  }
+  */
   // Test column extraction, then use the column to check product
   HighsInt oracle_num_el;
   std::vector<HighsInt> oracle_index(dim, 0);
-  std::vector<double> check(dim, 0);
-  HighsRandom random;
   for (HighsInt iCol = 0; iCol < dim; iCol++) {
     bool column_error_found = false;
     // Get the scattered column from the local Hessian and the oracle

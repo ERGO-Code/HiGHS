@@ -111,6 +111,9 @@ HighsHessianFunctionType oracleCallSquareHessian =
           (*hessian_x_num_entries)++;
         }
       } else {
+        //	printf("x_index == nullptr = %s\n", x_index == nullptr ? "T" :
+        //"F"); 	printf("*x_num_entries = %d: *x_num_entries >= 0 = %s \n",
+        //int(*x_num_entries), *x_num_entries >= 0 ? "T" : "F");
         assert(x_index == nullptr || *x_num_entries >= 0);
         assert(hessian_x_index == nullptr);
         assert(hessian_x_value != nullptr);
