@@ -542,17 +542,25 @@ HighsStatus HighsHessian::checkOracle(const HighsLogOptions& log_options,
 
   std::vector<double> check(dim, 0);
   HighsRandom random;
-  /*
   // Test a full matrix-vector product
   for (HighsInt iCol = 0; iCol < dim; iCol++) {
     //    index[iCol] = iCol;
     value[iCol] = random.fraction();
-    for (HighsInt iEl = hessian.start_[iCol];
-         iEl < hessian.start_[iCol + 1]; iEl++)
-      check[hessian.index_[iEl]] +=
-        hessian.value_[iEl] * value[iCol];
+    for (HighsInt iEl = hessian.start_[iCol]; iEl < hessian.start_[iCol + 1];
+         iEl++)
+      check[hessian.index_[iEl]] += hessian.value_[iEl] * value[iCol];
   }
+  // Firstly in one sensible call
   oracle.product(dim, nullptr, value.data(), oracle_value.data());
+  for (HighsInt iCol = 0; iCol < dim; iCol++) {
+    if (!productValuesClose(-1, iCol, oracle_value[iCol], check[iCol])) {
+      if (exit_on_first_error) return HighsStatus::kError;
+      error_found = true;
+    }
+    oracle_value[iCol] = 0;
+  }
+  // Secondly in another sensible call
+  oracle.product(value.data(), oracle_value.data());
   for (HighsInt iCol = 0; iCol < dim; iCol++) {
     if (!productValuesClose(-1, iCol, oracle_value[iCol], check[iCol])) {
       if (exit_on_first_error) return HighsStatus::kError;
@@ -562,7 +570,6 @@ HighsStatus HighsHessian::checkOracle(const HighsLogOptions& log_options,
     value[iCol] = 0;
     oracle_value[iCol] = 0;
   }
-  */
   // Test column extraction, then use the column to check product
   HighsInt oracle_num_el;
   std::vector<HighsInt> oracle_index(dim, 0);
@@ -770,16 +777,22 @@ void HessianOracle::product(const double* x_value,
   this->scaleAndShift(nullptr, nullptr, x_value, hessian_x_value);
 }
 
-// For scattered, sparse, x
+// For scattered, sparse, x. Also reasonable to call this with x_index
+// as null pointer for full x
 void HessianOracle::product(const HighsInt x_num_entries,
                             const HighsInt* x_index, const double* x_value,
                             double* hessian_x_value) const {
   assert(this->call_);
   if (x_num_entries == 0) return;
-  // Must have positive number of indices
-  assert(x_index != nullptr && x_num_entries > 0);
-  this->call_(kHessianOracleCallTypeProduct, &x_num_entries, x_index, x_value,
-              nullptr, nullptr, hessian_x_value, this->data_);
+  if (x_index) {
+    // Scattered, sparse, x
+    assert(x_num_entries > 0);
+    this->call_(kHessianOracleCallTypeProduct, &x_num_entries, x_index, x_value,
+                nullptr, nullptr, hessian_x_value, this->data_);
+  } else {
+    // Passed x_index as null pointer, so assume full x
+    this->product(x_value, hessian_x_value);
+  }
   this->scaleAndShift(&x_num_entries, x_index, x_value, hessian_x_value);
 }
 

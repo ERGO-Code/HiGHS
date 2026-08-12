@@ -111,9 +111,6 @@ HighsHessianFunctionType oracleCallSquareHessian =
           (*hessian_x_num_entries)++;
         }
       } else {
-        //	printf("x_index == nullptr = %s\n", x_index == nullptr ? "T" :
-        //"F"); 	printf("*x_num_entries = %d: *x_num_entries >= 0 = %s \n",
-        //int(*x_num_entries), *x_num_entries >= 0 ? "T" : "F");
         assert(x_index == nullptr || *x_num_entries >= 0);
         assert(hessian_x_index == nullptr);
         assert(hessian_x_value != nullptr);
@@ -326,7 +323,7 @@ TEST_CASE("hessian-oracle-check", "[qp-oracle]") {
           assert(hessian_x_index == nullptr);
           assert(hessian_x_value != nullptr);
           if (no_product_call) return -1;
-          if (product_error && *x_num_entries == 4) return 0;
+          if (product_error && x_num_entries && *x_num_entries == 4) return 0;
           if (x_index == nullptr) {
             // Simple product with full vector x, full vector q_x
             for (HighsInt iCol = 0; iCol < hessian.dim_; iCol++)
