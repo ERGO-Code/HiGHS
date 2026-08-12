@@ -118,8 +118,7 @@ struct HighsOrbitopeMatrix {
   HighsInt orbitalFixingForPackingOrbitope(const std::vector<HighsInt>& rows,
                                            HighsDomain& domain) const;
 
-  void detectSetPackingRows(HighsCliqueTable& cliquetable, HighsInt cliqueVal,
-                            RowPackingStatus resultStatus);
+  void detectSetPackingRows(HighsCliqueTable& cliquetable, HighsInt cliqueVal);
 };
 
 struct HighsSymmetries {

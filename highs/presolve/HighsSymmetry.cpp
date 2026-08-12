@@ -324,8 +324,9 @@ bool StabilizerOrbits::isStabilized(HighsInt col) const {
 }
 
 void HighsOrbitopeMatrix::detectSetPackingRows(HighsCliqueTable& cliquetable,
-                                               HighsInt cliqueVal,
-                                               RowPackingStatus resultStatus) {
+                                               HighsInt cliqueVal) {
+  RowPackingStatus resultStatus =
+      (cliqueVal == 1) ? kRowPacking : kRowPackingNegated;
   HighsInt skipVal = 1 - cliqueVal;
 
   for (HighsInt j = 1; j < rowLength; ++j) {
@@ -377,7 +378,7 @@ void HighsOrbitopeMatrix::determineOrbitopeType(HighsCliqueTable& cliquetable) {
   rowIsSetPacking.assign(numRows, kRowUndetermined);
   numSetPackingRows = 0;
 
-  detectSetPackingRows(cliquetable, 1, kRowPacking);
+  detectSetPackingRows(cliquetable, HighsInt{1});
 
   if (numSetPackingRows == numRows) return;
 
@@ -389,7 +390,7 @@ void HighsOrbitopeMatrix::determineOrbitopeType(HighsCliqueTable& cliquetable) {
       rowIsSetPacking[i] = kRowUndetermined;
   }
 
-  detectSetPackingRows(cliquetable, 0, kRowPackingNegated);
+  detectSetPackingRows(cliquetable, HighsInt{0});
 }
 
 HighsInt HighsOrbitopeMatrix::getBranchingColumn(
