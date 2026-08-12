@@ -327,7 +327,6 @@ void HighsOrbitopeMatrix::detectSetPackingRows(HighsCliqueTable& cliquetable,
                                                HighsInt cliqueVal) {
   RowPackingStatus resultStatus =
       (cliqueVal == 1) ? kRowPacking : kRowPackingNegated;
-  HighsInt skipVal = 1 - cliqueVal;
 
   for (HighsInt j = 1; j < rowLength; ++j) {
     HighsInt* colj1 = &entry(0, j);
@@ -352,7 +351,7 @@ void HighsOrbitopeMatrix::detectSetPackingRows(HighsCliqueTable& cliquetable,
         HighsInt overlap = 0;
 
         for (HighsInt k = 0; k < commonClique.second; ++k) {
-          if (commonClique.first[k].val == skipVal) continue;
+          if (commonClique.first[k].val == 1 - cliqueVal) continue;
 
           HighsInt* cliqueColRow = columnToRow.find(commonClique.first[k].col);
           if (cliqueColRow && *cliqueColRow == i) ++overlap;
