@@ -781,7 +781,7 @@ class Highs {
    * @brief Get the number of (constraint matrix) nonzeros in the incumbent
    * model
    */
-  HighsInt getNumNz() const { return model_.lp_.a_matrix_.numNz(); }
+  HighsInt getNumNz() const { return model_.lp_.numNz(); }
 
   /**
    * @brief Get the number of Hessian matrix nonzeros in the incumbent model
@@ -1392,10 +1392,11 @@ class Highs {
   //
   // See highs/HighsRun.md
   HighsStatus optimizeHighs();
-  HighsStatus optimizeModel();
-  HighsStatus calledOptimizeModel();
   // Used in MIP solver as minimal LP solve
   HighsStatus optimizeLp();
+  HighsStatus optimizeModel();
+  HighsStatus optimizeModelTryCatch();
+  HighsStatus calledOptimizeModel();
 
   const HighsSimplexStats& getSimplexStats() const {
     return ekk_instance_.getSimplexStats();
@@ -1675,8 +1676,9 @@ class Highs {
   HighsStatus completeSolutionFromDiscreteAssignment();
 
   HighsStatus callSolveLp(HighsLp& lp, const std::string& message);
-  HighsStatus callSolveQp();
-  HighsStatus callSolveMip();
+  HighsStatus callSolveMip(HighsLp& lp, const std::string& message);
+  HighsStatus callSolveQp(HighsModel& model, const std::string& message);
+
   HighsStatus callRunPostsolve(const HighsSolution& solution,
                                const HighsBasis& basis);
 
@@ -1842,7 +1844,7 @@ class Highs {
   HighsStatus getIisInterface();
   HighsStatus getIisInterfaceReturn(
       const HighsStatus return_status, const HighsOptions& original_options,
-      const std::vector<bool>& original_callbacks);
+      const std::vector<HighsBool>& original_callbacks);
 
   HighsStatus elasticityFilterReturn(
       const HighsStatus return_status, const std::string& original_model_name,
@@ -1870,7 +1872,6 @@ class Highs {
   bool aFormatOk(const HighsInt num_nz, const HighsInt format);
   bool qFormatOk(const HighsInt num_nz, const HighsInt format);
   void clearZeroHessian();
-  HighsStatus checkOptimality(const std::string& solver_type);
   void callLpKktCheck(const HighsLp& lp, const std::string& message = "");
   HighsStatus invertRequirementError(std::string method_name) const;
 

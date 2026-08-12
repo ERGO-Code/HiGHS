@@ -1946,7 +1946,7 @@ void HighsDomain::markPropagate(HighsInt row) {
 
     if (proplower || propupper) {
       propagateinds_.push_back(row);
-      propagateflags_[row] = 1;
+      propagateflags_[row] = true;
     }
   }
 }
@@ -1993,7 +1993,7 @@ double HighsDomain::doChangeBound(const HighsDomainChange& boundchg) {
         updateActivityLbChange(boundchg.column, oldbound, boundchg.boundval);
 
       if (!isChangedCol(boundchg.column)) {
-        changedcolsflags_[boundchg.column] = 1;
+        changedcolsflags_[boundchg.column] = true;
         changedcols_.push_back(boundchg.column);
       }
     }
@@ -2005,7 +2005,7 @@ double HighsDomain::doChangeBound(const HighsDomainChange& boundchg) {
         updateActivityUbChange(boundchg.column, oldbound, boundchg.boundval);
 
       if (!isChangedCol(boundchg.column)) {
-        changedcolsflags_[boundchg.column] = 1;
+        changedcolsflags_[boundchg.column] = true;
         changedcols_.push_back(boundchg.column);
       }
     }
@@ -2410,7 +2410,7 @@ bool HighsDomain::propagate() {
       HighsInt numproprows = static_cast<HighsInt>(propagateinds.size());
       for (HighsInt i = 0; i != numproprows; ++i) {
         HighsInt row = propagateinds[i];
-        propagateflags_[row] = 0;
+        propagateflags_[row] = false;
       }
 
       if (!infeasible_) {
@@ -3043,8 +3043,8 @@ bool HighsDomain::ConflictSet::resolveLinearGeq(HighsCDouble M, double Mupper,
             M -= reasonDomchg.delta;
             // ++numDropped;
           } else {
-            while (relaxLb <= localdom.prevboundval_[locdomchg.pos].first)
-              locdomchg.pos = localdom.prevboundval_[locdomchg.pos].second;
+            if (!localdom.walkBoundChain(locdomchg.pos, relaxLb, HighsInt{1}))
+              return false;
 
             // bound can be relaxed
             M += vals[i] * (static_cast<HighsCDouble>(relaxLb) - lb);
@@ -3078,8 +3078,8 @@ bool HighsDomain::ConflictSet::resolveLinearGeq(HighsCDouble M, double Mupper,
             // ++numDropped;
           } else {
             // bound can be relaxed
-            while (relaxUb >= localdom.prevboundval_[locdomchg.pos].first)
-              locdomchg.pos = localdom.prevboundval_[locdomchg.pos].second;
+            if (!localdom.walkBoundChain(locdomchg.pos, relaxUb, HighsInt{-1}))
+              return false;
 
             M += vals[i] * (static_cast<HighsCDouble>(relaxUb) - ub);
             // ++numRelaxed;
@@ -3163,8 +3163,8 @@ bool HighsDomain::ConflictSet::resolveLinearLeq(HighsCDouble M, double Mlower,
             // ++numDropped;
           } else {
             // bound can be relaxed
-            while (relaxLb <= localdom.prevboundval_[locdomchg.pos].first)
-              locdomchg.pos = localdom.prevboundval_[locdomchg.pos].second;
+            if (!localdom.walkBoundChain(locdomchg.pos, relaxLb, HighsInt{1}))
+              return false;
 
             M += vals[i] * (static_cast<HighsCDouble>(relaxLb) - lb);
             // ++numRelaxed;
@@ -3197,8 +3197,8 @@ bool HighsDomain::ConflictSet::resolveLinearLeq(HighsCDouble M, double Mlower,
             // ++numDropped;
           } else {
             // bound can be relaxed
-            while (relaxUb >= localdom.prevboundval_[locdomchg.pos].first)
-              locdomchg.pos = localdom.prevboundval_[locdomchg.pos].second;
+            if (!localdom.walkBoundChain(locdomchg.pos, relaxUb, HighsInt{-1}))
+              return false;
 
             M += vals[i] * (static_cast<HighsCDouble>(relaxUb) - ub);
             // ++numRelaxed;
@@ -3365,25 +3365,15 @@ bool HighsDomain::ConflictSet::explainInfeasibilityConflict(
                                           localdom.infeasible_pos, pos);
       if (pos == -1 || lb < conflict[i].boundval) return false;
 
-      while (localdom.prevboundval_[pos].first >= conflict[i].boundval) {
-        pos = localdom.prevboundval_[pos].second;
-        // since we checked that the bound value is not active globally and is
-        // active for the local domain at pos
-        // pos should never become -1
-        assert(pos != -1);
-      }
+      if (!localdom.walkBoundChain(pos, conflict[i].boundval, HighsInt{1}))
+        return false;
     } else {
       double ub = localdom.getColUpperPos(conflict[i].column,
                                           localdom.infeasible_pos, pos);
       if (pos == -1 || ub > conflict[i].boundval) return false;
 
-      while (localdom.prevboundval_[pos].first <= conflict[i].boundval) {
-        pos = localdom.prevboundval_[pos].second;
-        // since we checked that the bound value is not active globally and is
-        // active for the local domain at pos
-        // pos should never become -1
-        assert(pos != -1);
-      }
+      if (!localdom.walkBoundChain(pos, conflict[i].boundval, HighsInt{-1}))
+        return false;
     }
 
     resolvedDomainChanges.push_back(LocalDomChg{pos, conflict[i]});
@@ -3646,26 +3636,16 @@ bool HighsDomain::ConflictSet::explainBoundChangeConflict(
 
       if (pos == -1 || lb < conflict[i].boundval) return false;
 
-      while (localdom.prevboundval_[pos].first >= conflict[i].boundval) {
-        pos = localdom.prevboundval_[pos].second;
-        // since we checked that the bound value is not active globally and is
-        // active for the local domain at pos
-        // pos should never become -1
-        assert(pos != -1);
-      }
+      if (!localdom.walkBoundChain(pos, conflict[i].boundval, HighsInt{1}))
+        return false;
     } else {
       double ub =
           localdom.getColUpperPos(conflict[i].column, locdomchg.pos - 1, pos);
 
       if (pos == -1 || ub > conflict[i].boundval) return false;
 
-      while (localdom.prevboundval_[pos].first <= conflict[i].boundval) {
-        pos = localdom.prevboundval_[pos].second;
-        // since we checked that the bound value is not active globally and is
-        // active for the local domain at pos
-        // pos should never become -1
-        assert(pos != -1);
-      }
+      if (!localdom.walkBoundChain(pos, conflict[i].boundval, HighsInt{-1}))
+        return false;
     }
 
     resolvedDomainChanges.push_back(

@@ -7,64 +7,33 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 #include "lp_data/HighsModelUtils.h"
 #include "presolve/HPresolve.h"
+#include "presolve/PresolveTimer.h"
 
 void HPresolveAnalysis::setup(const HighsLp* model_,
                               const HighsOptions* options_,
                               const HighsInt& numDeletedRows_,
                               const HighsInt& numDeletedCols_,
-                              const bool silent) {
+                              HighsTimer* timer) {
   model = model_;
   options = options_;
   numDeletedRows = &numDeletedRows_;
   numDeletedCols = &numDeletedCols_;
 
-  this->allow_rule_.assign(kPresolveRuleCount, true);
-
-  if (options->presolve_rule_off || options_->log_dev_level) {
-    // Some presolve rules are off
-    //
-    // Transform options->presolve_rule_off into logical settings in
-    // allow_rule_[*], commenting on the rules switched off
-    if (!silent) {
-      if (options->presolve_rule_off) {
-        highsLogUser(options->log_options, HighsLogType::kInfo,
-                     "Presolve rules not allowed:\n");
-      } else {
-        highsLogUser(options->log_options, HighsLogType::kInfo,
-                     "Permitted suppression of presolve rules via "
-                     "presolve_rule_off option:\n");
-      }
-    }
-    HighsInt bit = 1;
-    for (HighsInt rule_type = kPresolveRuleMin; rule_type < kPresolveRuleCount;
-         rule_type++) {
-      // Identify whether this rule is allowed
-      const bool allow = !(options->presolve_rule_off & bit);
-      if (rule_type >= kPresolveRuleFirstAllowOff) {
-        // This is a rule that can be switched off, so comment
-        // positively if it is off
-        allow_rule_[rule_type] = allow;
-        if (!silent)
-          if (!allow ||
-              (!options->presolve_rule_off && options_->log_dev_level))
-            highsLogUser(options->log_options, HighsLogType::kInfo,
-                         "   Rule %2d (set bit %2d = %5d): %s\n",
-                         int(rule_type), int(rule_type), int(bit),
-                         utilPresolveRuleTypeToString(rule_type).c_str());
-      } else if (!allow && !silent) {
-        // This is a rule that cannot be switched off so, if an
-        // attempt is made, don't allow it to be off and comment
-        // negatively
-        highsLogUser(options->log_options, HighsLogType::kWarning,
-                     "Cannot disallow rule %2d (bit %2d = %5d): %s\n",
-                     int(rule_type), int(rule_type), int(bit),
-                     utilPresolveRuleTypeToString(rule_type).c_str());
-      }
-      bit *= 2;
-    }
+  timer_ = timer;
+  const bool lp_presolve = !model_->isMip() || options->solve_relaxation;
+  analyse_presolve_time_ =
+      kHighsAnalysisLevelPresolveTime & options->highs_analysis_level &&
+      lp_presolve;
+  if (analyse_presolve_time_) {
+    HighsTimerClock clock;
+    clock.timer_pointer_ = timer_;
+    PresolveTimer presolve_timer;
+    presolve_timer.initialisePresolveClocks(clock);
+    presolve_clocks_ = clock;
   }
-  // Allow logging if option is set and model is not a MIP
-  allow_logging_ = options_->presolve_rule_logging && !model_->isMip();
+
+  // Allow logging if option is set and LP presolve is being used
+  allow_logging_ = options_->presolve_rule_logging && lp_presolve;
   logging_on_ = allow_logging_;
   log_rule_type_ = kPresolveRuleIllegal;
   resetNumDeleted();
@@ -91,7 +60,6 @@ void HPresolveAnalysis::startPresolveRuleLog(const HighsInt rule_type) {
   const bool debug_print = false;
   assert(logging_on_);
   assert(rule_type >= kPresolveRuleMin && rule_type <= kPresolveRuleMax);
-  assert(allow_rule_[rule_type]);
   // Prevent any future calls to "start" until logging is on again
   logging_on_ = false;
   const HighsInt check_rule = kPresolveRuleIllegal;
@@ -123,13 +91,6 @@ void HPresolveAnalysis::startPresolveRuleLog(const HighsInt rule_type) {
   assert(num_deleted_cols0_ == *numDeletedCols);
   num_deleted_rows0_ = *numDeletedRows;
   num_deleted_cols0_ = *numDeletedCols;
-  const int check_num_deleted_rows0_ = -255;
-  const int check_num_deleted_cols0_ = -688;
-  if (num_deleted_rows0_ == check_num_deleted_rows0_ &&
-      num_deleted_cols0_ == check_num_deleted_cols0_) {
-    printf("num_deleted (%d, %d)\n", int(num_deleted_rows0_),
-           int(num_deleted_cols0_));
-  }
 }
 
 void HPresolveAnalysis::stopPresolveRuleLog(const HighsInt rule_type) {
@@ -193,8 +154,12 @@ bool HPresolveAnalysis::analysePresolveRuleLog(const bool report) {
                  "%-25s      Rows      Cols     Calls\n",
                  "Presolve rule removed");
     highsLogUser(log_options, HighsLogType::kInfo, "%s\n", rule.c_str());
-    for (HighsInt rule_type = kPresolveRuleMin; rule_type < kPresolveRuleCount;
-         rule_type++)
+    for (HighsInt k = kPresolveRuleMin; k < kPresolveRuleCount; k++) {
+      HighsInt rule_type = k;
+      // Hack so that initial logging is of initial sweep
+      if (kPresolveRuleInitialSweep > 0) {
+        rule_type = k == 0 ? kPresolveRuleInitialSweep : k - 1;
+      }
       if (presolve_log_.rule[rule_type].call ||
           presolve_log_.rule[rule_type].row_removed ||
           presolve_log_.rule[rule_type].col_removed)
@@ -203,6 +168,7 @@ bool HPresolveAnalysis::analysePresolveRuleLog(const bool report) {
                      (int)presolve_log_.rule[rule_type].row_removed,
                      (int)presolve_log_.rule[rule_type].col_removed,
                      (int)presolve_log_.rule[rule_type].call);
+    }
     highsLogUser(log_options, HighsLogType::kInfo, "%s\n", rule.c_str());
     highsLogUser(log_options, HighsLogType::kInfo, "%-25s %9d %9d\n",
                  "Total reductions", (int)sum_removed_row,
@@ -236,4 +202,27 @@ bool HPresolveAnalysis::analysePresolveRuleLog(const bool report) {
     }
   }
   return true;
+}
+
+void HPresolveAnalysis::presolveTimerStart(
+    const HighsInt presolve_clock) const {
+  if (!analyse_presolve_time_) return;
+  HighsInt highs_timer_clock = presolve_clocks_.clock_[presolve_clock];
+  presolve_clocks_.timer_pointer_->start(highs_timer_clock);
+}
+
+void HPresolveAnalysis::presolveTimerStop(const HighsInt presolve_clock) const {
+  if (!analyse_presolve_time_) return;
+  HighsInt highs_timer_clock = presolve_clocks_.clock_[presolve_clock];
+  presolve_clocks_.timer_pointer_->stop(highs_timer_clock);
+}
+
+void HPresolveAnalysis::reportPresolveTimer() {
+  if (!analyse_presolve_time_) return;
+  PresolveTimer presolve_timer;
+  presolve_timer.reportPresolveCoreClock(model->model_name_, presolve_clocks_);
+  presolve_timer.reportPresolveInitialColPresolveClock(model->model_name_,
+                                                       presolve_clocks_);
+  presolve_timer.reportPresolveSingletonColPresolveClock(model->model_name_,
+                                                         presolve_clocks_);
 }

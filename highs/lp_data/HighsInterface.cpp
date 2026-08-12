@@ -14,7 +14,6 @@
 #include "Highs.h"
 #include "lp_data/HighsLpUtils.h"
 #include "lp_data/HighsModelUtils.h"
-#include "mip/HighsMipSolver.h"  // For getGapString
 #include "mip/MipTimer.h"
 #include "model/HighsHessianUtils.h"
 #include "parallel/HighsParallel.h"
@@ -67,14 +66,12 @@ void Highs::reportModelStats() const {
   const HighsInt a_num_nz = lp.a_matrix_.numNz();
   const HighsInt q_num_nz = hessian.dim_ > 0 ? hessian.numNz() : 0;
   if (*log_options.log_dev_level) {
-    highsLogDev(log_options, HighsLogType::kInfo, "%4s      : %s\n",
+    highsLogDev(log_options, HighsLogType::kInfo, "%-4s      : %s\n",
                 problem_type.c_str(), lp.model_name_.c_str());
     highsLogDev(log_options, HighsLogType::kInfo,
-                "Row%s      : %" HIGHSINT_FORMAT "\n",
-                lp.num_row_ == 1 ? "" : "s", lp.num_row_);
+                "Rows      : %" HIGHSINT_FORMAT "\n", lp.num_row_);
     highsLogDev(log_options, HighsLogType::kInfo,
-                "Col%s      : %" HIGHSINT_FORMAT "\n",
-                lp.num_col_ == 1 ? "" : "s", lp.num_col_);
+                "Cols      : %" HIGHSINT_FORMAT "\n", lp.num_col_);
     if (q_num_nz) {
       highsLogDev(log_options, HighsLogType::kInfo,
                   "Matrix Nz : %" HIGHSINT_FORMAT "\n", a_num_nz);
@@ -82,8 +79,7 @@ void Highs::reportModelStats() const {
                   "Hessian Nz: %" HIGHSINT_FORMAT "\n", q_num_nz);
     } else {
       highsLogDev(log_options, HighsLogType::kInfo,
-                  "Nonzero%s  : %" HIGHSINT_FORMAT "\n",
-                  a_num_nz == 1 ? "" : "s", a_num_nz);
+                  "Nonzeros  : %" HIGHSINT_FORMAT "\n", a_num_nz);
     }
     if (num_integer)
       highsLogDev(log_options, HighsLogType::kInfo,
@@ -101,26 +97,28 @@ void Highs::reportModelStats() const {
     stats_line << problem_type;
     if (lp.model_name_.length()) stats_line << " " << lp.model_name_;
     stats_line << " has " << lp.num_row_ << " row"
-               << (lp.num_row_ == 1 ? "" : "s") << "; " << lp.num_col_ << " col"
-               << (lp.num_col_ == 1 ? "" : "s");
+               << highsIntToPlural(lp.num_row_) << "; " << lp.num_col_ << " col"
+               << highsIntToPlural(lp.num_col_);
     if (q_num_nz) {
       stats_line << "; " << a_num_nz << " matrix nonzero"
-                 << (a_num_nz == 1 ? "" : "s");
+                 << highsIntToPlural(a_num_nz);
       stats_line << "; " << q_num_nz << " Hessian nonzero"
-                 << (q_num_nz == 1 ? "" : "s");
+                 << highsIntToPlural(q_num_nz);
     } else {
       stats_line << "; " << a_num_nz << " nonzero"
-                 << (a_num_nz == 1 ? "" : "s");
+                 << highsIntToPlural(a_num_nz);
     }
     if (hessian.isOracle()) stats_line << "; Hessian as oracle";
     if (num_integer)
       stats_line << "; " << num_integer << " integer variable"
-                 << (a_num_nz == 1 ? "" : "s") << " (" << num_binary
+                 << highsIntToPlural(num_integer) << " (" << num_binary
                  << " binary)";
     if (num_semi_continuous)
-      stats_line << "; " << num_semi_continuous << " semi-continuous variables";
+      stats_line << "; " << num_semi_continuous << " semi-continuous variable"
+                 << highsIntToPlural(num_semi_continuous);
     if (num_semi_integer)
-      stats_line << "; " << num_semi_integer << " semi-integer variables";
+      stats_line << "; " << num_semi_integer << " semi-integer variable"
+                 << highsIntToPlural(num_semi_integer);
     highsLogUser(log_options, HighsLogType::kInfo, "%s\n",
                  stats_line.str().c_str());
   }
@@ -1837,7 +1835,7 @@ HighsStatus Highs::getRangingInterface() {
 
 HighsStatus Highs::getIisInterfaceReturn(
     const HighsStatus return_status, const HighsOptions& original_options,
-    const std::vector<bool>& original_callback_active) {
+    const std::vector<HighsBool>& original_callback_active) {
   // Restore options and callbacks
   this->options_ = original_options;
   for (int i = kCallbackMin; i <= kCallbackMax; i++) {
@@ -1980,7 +1978,7 @@ HighsStatus Highs::getIisInterface() {
   HighsOptions original_options = this->options_;
   // Save original active callbacks and disable all except for
   // kCallbackLogging and kCallbackSimplexInterrupt
-  std::vector<bool> original_callback_active = callback_.active;
+  std::vector<HighsBool> original_callback_active = callback_.active;
   for (int i = kCallbackMin; i <= kCallbackMax; i++) {
     if (i != kCallbackLogging && i != kCallbackSimplexInterrupt &&
         callback_.active[i])
@@ -2266,8 +2264,8 @@ HighsStatus Highs::elasticityFilter(const double global_lower_penalty,
   // bound_of_row_of_ecol_is_lower so that the results can be interpreted
   std::vector<HighsInt> col_of_ecol;
   std::vector<HighsInt> row_of_ecol;
-  std::vector<bool> bound_of_row_of_ecol_is_lower;
-  std::vector<bool> bound_of_col_of_ecol_is_lower;
+  std::vector<HighsBool> bound_of_row_of_ecol_is_lower;
+  std::vector<HighsBool> bound_of_col_of_ecol_is_lower;
   std::vector<double> erow_lower;
   std::vector<double> erow_upper;
   std::vector<HighsInt> erow_start;
@@ -2775,7 +2773,7 @@ HighsStatus Highs::elasticityFilter(const double global_lower_penalty,
     in_row_index[iis.row_index_[iX]] = iX;
 
   // Determine the columns with nonzeros in the row subset
-  std::vector<bool> nonzero_in_row_index(original_num_col, false);
+  std::vector<HighsBool> nonzero_in_row_index(original_num_col, false);
   if (lp.a_matrix_.isColwise()) {
     for (HighsInt iCol = 0; iCol < original_num_col; iCol++) {
       for (HighsInt iEl = lp.a_matrix_.start_[iCol];
@@ -2902,52 +2900,6 @@ void Highs::clearZeroHessian() {
       hessian.clear();
     }
   }
-}
-
-HighsStatus Highs::checkOptimality(const std::string& solver_type) {
-  // Check for infeasibility measures incompatible with optimality
-  assert(model_status_ == HighsModelStatus::kOptimal);
-  // Cannot expect to have no dual_infeasibilities since the QP solver
-  // (and, of course, the MIP solver) give no dual information
-  if (info_.num_primal_infeasibilities == 0 &&
-      info_.num_dual_infeasibilities <= 0) {
-    // Consider semi-continuous infeasibilities
-    if (info_.num_semi_infeasibilities > 0) {
-      highsLogUser(options_.log_options, HighsLogType::kError,
-                   "%s solver claims optimality, but with num/max/sum %d/%g/%g "
-                   "semi-variable infeasibilities: consider solving with "
-                   "smaller mip_feasibility_tolerance\n",
-                   solver_type.c_str(), int(info_.num_semi_infeasibilities),
-                   info_.max_semi_infeasibility,
-                   info_.sum_semi_infeasibilities);
-      model_status_ = HighsModelStatus::kSolveError;
-      highsLogUser(options_.log_options, HighsLogType::kError,
-                   "Setting model status to %s\n",
-                   modelStatusToString(model_status_).c_str());
-      return HighsStatus::kError;
-    }
-    return HighsStatus::kOk;
-  }
-  model_status_ = HighsModelStatus::kSolveError;
-  std::stringstream ss;
-  ss.str(std::string());
-  ss << highsFormatToString(
-      "%s solver claims optimality, but with num/max/sum "
-      "primal(%d/%g/%g)",
-      solver_type.c_str(), int(info_.num_primal_infeasibilities),
-      info_.max_primal_infeasibility, info_.sum_primal_infeasibilities);
-  if (info_.num_dual_infeasibilities > 0)
-    ss << highsFormatToString(
-        "and dual(%d/%g/%g)", int(info_.num_dual_infeasibilities),
-        info_.max_dual_infeasibility, info_.sum_dual_infeasibilities);
-  ss << " infeasibilities\n";
-  const std::string report_string = ss.str();
-  highsLogUser(options_.log_options, HighsLogType::kError, "%s",
-               report_string.c_str());
-  highsLogUser(options_.log_options, HighsLogType::kError,
-               "Setting model status to %s\n",
-               modelStatusToString(model_status_).c_str());
-  return HighsStatus::kError;
 }
 
 void Highs::callLpKktCheck(const HighsLp& lp, const std::string& message) {
@@ -4533,8 +4485,8 @@ void Highs::reportProfiling() const {
   }
   const double num_threads_used = used_thread.size();
   std::stringstream ss;
-  std::vector<bool> mip_used_sub_solver(kToSubSolver, false);
-  std::vector<bool> submip_used_sub_solver(kToSubSolver, false);
+  std::vector<HighsBool> mip_used_sub_solver(kToSubSolver, false);
+  std::vector<HighsBool> submip_used_sub_solver(kToSubSolver, false);
   const HighsInt to_k = max_sumip_time > 0 ? 2 : 1;
   const std::vector<std::string>& name = this->profiling_->name;
   double sum_sum_mip_sub_solve_time = 0;
@@ -4557,7 +4509,7 @@ void Highs::reportProfiling() const {
       if (ideal_time <= 0) continue;
       const std::vector<HighsProfilingRecord>& record =
           k == 0 ? this->profiling_->record : this->profiling_->submip_record;
-      std::vector<bool>& used_sub_solver =
+      std::vector<HighsBool>& used_sub_solver =
           k == 0 ? mip_used_sub_solver : submip_used_sub_solver;
       const std::vector<HighsInt>& num_call = record[thread_num].num_call;
       const std::vector<double>& run_time = record[thread_num].run_time;
@@ -4627,7 +4579,7 @@ void Highs::reportProfiling() const {
     }
     highsLogUser(options_.log_options, HighsLogType::kInfo, "%s\n",
                  ss.str().c_str());
-    std::vector<bool>& used_sub_solver =
+    std::vector<HighsBool>& used_sub_solver =
         k == 0 ? mip_used_sub_solver : submip_used_sub_solver;
     const std::vector<HighsProfilingRecord>& record =
         k == 0 ? this->profiling_->record : this->profiling_->submip_record;

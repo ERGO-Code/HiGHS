@@ -12,7 +12,7 @@
 #include <cassert>
 #include <vector>
 
-#include "util/HighsInt.h"
+#include "util/HighsType.h"
 
 class HighsCliqueTable;
 class HighsDomain;

@@ -280,6 +280,7 @@ lu_int lu_singletons(
         if (qinv[j] < 0)
             qinv[j] = -1;
 
+    if (luTime() - this->basiclu_time_start > this->basiclu_time_limit) return BASICLU_WARNING_timeout;
     this->matrix_nz = Bnz;
     this->rank = rank;
     return BASICLU_OK;

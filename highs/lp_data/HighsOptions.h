@@ -144,6 +144,8 @@ bool optionHipoSystemOk(const HighsLogOptions& report_log_options,
                         const string& value);
 bool optionHipoOrderingOk(const HighsLogOptions& report_log_options,
                           const string& value);
+bool optionHipoFactorOk(const HighsLogOptions& report_log_options,
+                        const string& value);
 
 bool boolFromString(std::string value, bool& bool_value);
 
@@ -288,6 +290,7 @@ const string kModelFileString = "model_file";
 const string kReadBasisFileString = "read_basis_file";
 const string kWriteBasisFileString = "write_basis_file";
 const string kPresolveString = "presolve";
+const string kPresolveLightString = "presolve_light";
 const string kSolverString = "solver";
 const string kParallelString = "parallel";
 const string kThreadsString = "threads";
@@ -331,6 +334,10 @@ const string kHipoOrderingString = "hipo_ordering";
 const string kHipoMetisString = "metis";
 const string kHipoAmdString = "amd";
 const string kHipoRcmString = "rcm";
+
+const string kHipoFactorString = "hipo_factor";
+const string kHipoFactorMultifrontal = "multifrontal";
+const string kHipoFactorUplooking = "uplooking";
 
 struct HighsOptionsStruct {
   // Run-time options read from the command line
@@ -397,7 +404,10 @@ struct HighsOptionsStruct {
   std::string hipo_system;
   std::string hipo_parallel_type;
   std::string hipo_ordering;
+  std::string hipo_factor;
   HighsInt hipo_block_size;
+  HighsInt hipo_parallel_force;
+  HighsInt hipo_parallel_forbid;
 
   // Options for PDLP solver
   HighsInt pdlp_features_off;
@@ -432,6 +442,7 @@ struct HighsOptionsStruct {
   bool lp_presolve_requires_basis_postsolve;
   bool mps_parser_type_free;
   bool use_warm_start;
+  std::string presolve_light;
   bool write_matrix_image;
   bool write_hessian_image;
   HighsInt keep_n_rows;
@@ -578,7 +589,10 @@ struct HighsOptionsStruct {
         hipo_system(""),
         hipo_parallel_type(""),
         hipo_ordering(""),
+        hipo_factor(""),
         hipo_block_size(0),
+        hipo_parallel_force(0),
+        hipo_parallel_forbid(0),
         pdlp_features_off(0),
         pdlp_iteration_limit(0),
         pdlp_scaling_mode(0),
@@ -603,6 +617,7 @@ struct HighsOptionsStruct {
         lp_presolve_requires_basis_postsolve(false),
         mps_parser_type_free(false),
         use_warm_start(true),
+        presolve_light(""),
         write_matrix_image(false),
         write_hessian_image(false),
         keep_n_rows(0),
@@ -1319,23 +1334,41 @@ class HighsOptions : public HighsOptionsStruct {
         advanced, &hipo_system, kHighsChooseString);
     records.push_back(record_string);
 
-    record_string =
-        new OptionRecordString(kHipoParallelString,
-                               "HiPO parallelism: \"tree\", "
-                               "\"node\" or \"both\"",
-                               advanced, &hipo_parallel_type, kHipoBothString);
+    record_string = new OptionRecordString(
+        kHipoParallelString,
+        "HiPO parallelism: \"tree\", \"node\", \"both\" or \"choose\"",
+        advanced, &hipo_parallel_type, kHighsChooseString);
     records.push_back(record_string);
 
-    record_string =
-        new OptionRecordString(kHipoOrderingString,
-                               "HiPO matrix reordering: \"choose\", \"metis\", "
-                               "\"amd\" or \"rcm\"",
-                               advanced, &hipo_ordering, kHighsChooseString);
+    record_string = new OptionRecordString(
+        kHipoOrderingString,
+        "HiPO matrix reordering: \"choose\", \"metis\", \"amd\" or \"rcm\"",
+        advanced, &hipo_ordering, kHighsChooseString);
+    records.push_back(record_string);
+
+    record_string = new OptionRecordString(
+        kHipoFactorString,
+        "HiPO matrix factorisation: \"choose\", \"multifrontal\" "
+        "or \"uplooking\"",
+        advanced, &hipo_factor, kHighsChooseString);
     records.push_back(record_string);
 
     record_int = new OptionRecordInt(
         "hipo_block_size", "Block size for dense linear algebra within HiPO",
         advanced, &hipo_block_size, 0, 128, kHighsIInf);
+    records.push_back(record_int);
+
+    record_int = new OptionRecordInt(
+        "hipo_parallel_force", "Bit mask to force parallel techniques in HiPO",
+        advanced, &hipo_parallel_force, 0, 0,
+        static_cast<int>(hipo::ParallelTechnique::kMaxSum));
+    records.push_back(record_int);
+
+    record_int =
+        new OptionRecordInt("hipo_parallel_forbid",
+                            "Bit mask to forbid parallel techniques in HiPO",
+                            advanced, &hipo_parallel_forbid, 0, 0,
+                            static_cast<int>(hipo::ParallelTechnique::kMaxSum));
     records.push_back(record_int);
 
     record_int = new OptionRecordInt(
@@ -1485,6 +1518,12 @@ class HighsOptions : public HighsOptionsStruct {
                                        "Use any warm start that is available",
                                        advanced, &use_warm_start, true);
     records.push_back(record_bool);
+
+    record_string = new OptionRecordString(
+        kPresolveLightString,
+        "Use only low-cost presolve rules: \"off\", \"choose\" or \"on\"",
+        advanced, &presolve_light, kHighsChooseString);
+    records.push_back(record_string);
 
     record_bool = new OptionRecordBool(
         "write_matrix_image",

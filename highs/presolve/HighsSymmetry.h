@@ -20,7 +20,7 @@
 #include "lp_data/HighsLp.h"
 #include "util/HighsDisjointSets.h"
 #include "util/HighsHash.h"
-#include "util/HighsInt.h"
+#include "util/HighsType.h"
 
 /// class that is responsible for assigning distinct colors for each distinct
 /// double value
@@ -182,7 +182,7 @@ class HighsSymmetryDetection {
   std::vector<HighsInt> orbitSize;
 
   std::vector<HighsInt> cellCreationStack;
-  std::vector<std::uint8_t> cellInRefinementQueue;
+  std::vector<HighsBool> cellInRefinementQueue;
   std::vector<HighsInt> refinementQueue;
   std::vector<HighsInt*> distinguishCands;
   std::vector<HighsInt> automorphisms;
