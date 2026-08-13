@@ -435,13 +435,35 @@ HighsInt HighsOrbitopeMatrix::orbitalFixingForPackingOrbitope(
 
   HighsInt j = 0;
   HighsInt numFixed = 0;
+
+  // Fix all rows in [0, kEnd) at column col_j to zero.
+  // Returns true if the domain becomes infeasible.
+  auto fixColumnsToZero = [&](HighsInt kEnd, HighsInt col_j) {
+    for (HighsInt k = 0; k < kEnd; ++k) {
+      assert(firstOneInRow[k] < j);
+      HighsInt col_kj = entry(rows[k], col_j);
+      bool negate_k = rowIsSetPacking[rows[k]] == kRowPackingNegated;
+      if (negate_k) {
+        if (domain.col_lower_[col_kj] > 0.5) continue;
+        domain.changeBound(HighsBoundType::kLower, col_kj, 1.0,
+                           HighsDomain::Reason::unspecified());
+      } else {
+        if (domain.col_upper_[col_kj] < 0.5) continue;
+        domain.changeBound(HighsBoundType::kUpper, col_kj, 0.0,
+                           HighsDomain::Reason::unspecified());
+      }
+      ++numFixed;
+      if (domain.infeasible()) return true;
+    }
+    return false;
+  };
+
   for (HighsInt i = 0; i < numDynamicRows; ++i) {
     // at this position we know that the last possible position
     // of a 1-entry in this row is j. If we have a 1 behind j
     // the face of the orbitope intersecting the set of initial fixings is empty
     if (firstOneInRow[i] > j) {
       domain.markInfeasible();
-      // printf("packing orbitope propagation found infeasibility\n");
       return numFixed;
     }
     HighsInt col_ij = entry(rows[i], j);
@@ -472,10 +494,7 @@ HighsInt HighsOrbitopeMatrix::orbitalFixingForPackingOrbitope(
                                HighsDomain::Reason::unspecified());
 
           ++numFixed;
-          if (domain.infeasible()) {
-            // printf("packing orbitope propagation found infeasibility\n");
-            return numFixed;
-          }
+          if (domain.infeasible()) return numFixed;
           break;
         }
 
@@ -493,67 +512,13 @@ HighsInt HighsOrbitopeMatrix::orbitalFixingForPackingOrbitope(
       ++j;
       if (j == rowLength) break;
 
-      for (HighsInt k = 0; k <= i; ++k) {
-        // we should have checked this row at the frontier position
-        assert(firstOneInRow[k] < j);
-
-        HighsInt col_kj = entry(rows[k], j);
-        bool negate_k = rowIsSetPacking[rows[k]] == kRowPackingNegated;
-
-        if (negate_k) {
-          if (domain.col_lower_[col_kj] > 0.5) continue;
-
-          domain.changeBound(HighsBoundType::kLower, col_kj, 1.0,
-                             HighsDomain::Reason::unspecified());
-        } else {
-          if (domain.col_upper_[col_kj] < 0.5) continue;
-
-          domain.changeBound(HighsBoundType::kUpper, col_kj, 0.0,
-                             HighsDomain::Reason::unspecified());
-        }
-
-        ++numFixed;
-        if (domain.infeasible()) {
-          // this can happen due to deductions from earlier fixings
-          // otherwise it would have been caught by the infeasibility
-          // check within the next loop that goes over i
-          // printf("packing orbitope propagation found infeasibility\n");
-          return numFixed;
-        }
-      }
+      if (fixColumnsToZero(i + 1, j)) return numFixed;
     }
   }
 
   // check if there are more columns that can be completely fixed to zero
   while (++j < rowLength) {
-    for (HighsInt k = 0; k < numDynamicRows; ++k) {
-      // we should have checked this row at the frontier position
-      assert(firstOneInRow[k] < j);
-
-      HighsInt col_kj = entry(rows[k], j);
-      bool negate_k = rowIsSetPacking[rows[k]] == kRowPackingNegated;
-
-      if (negate_k) {
-        if (domain.col_lower_[col_kj] > 0.5) continue;
-
-        domain.changeBound(HighsBoundType::kLower, col_kj, 1.0,
-                           HighsDomain::Reason::unspecified());
-      } else {
-        if (domain.col_upper_[col_kj] < 0.5) continue;
-
-        domain.changeBound(HighsBoundType::kUpper, col_kj, 0.0,
-                           HighsDomain::Reason::unspecified());
-      }
-      // printf("new fixed\n");
-      ++numFixed;
-      if (domain.infeasible()) {
-        // this can happen due to deductions from earlier fixings
-        // otherwise it would have been caught by the infeasibility
-        // check within the next loop that goes over i
-        // printf("packing orbitope propagation found infeasibility\n");
-        return numFixed;
-      }
-    }
+    if (fixColumnsToZero(numDynamicRows, j)) return numFixed;
   }
 
   if (!domain.infeasible() && numFixed) domain.propagate();

@@ -1,7 +1,10 @@
 #include "HCheckConfig.h"
+#include "Highs.h"
 #include "catch.hpp"
 #include "lp_data/HighsLp.h"
 #include "mip/HighsCliqueTable.h"
+#include "mip/HighsMipSolver.h"
+#include "mip/HighsMipSolverData.h"
 #include "parallel/HighsTaskExecutor.h"
 #include "presolve/HighsSymmetry.h"
 
@@ -72,6 +75,85 @@ TEST_CASE("symmetry-orbitope-detection", "[highs_test_symmetry]") {
 
   // All 3 rows should be detected as set packing
   REQUIRE(symmetries.orbitopes[0].numSetPackingRows == 3);
+
+  HighsTaskExecutor::shutdown();
+}
+
+TEST_CASE("symmetry-orbital-fixing", "[highs_test_symmetry]") {
+  // Unit test for orbitalFixing (which dispatches to
+  // orbitalFixingForPackingOrbitope when all rows are set-packing).
+  // Use a Highs object to set up the MIP solver infrastructure, then
+  // call orbital fixing directly on the detected orbitope.
+  HighsLp lp;
+  lp.num_col_ = 12;
+  lp.num_row_ = 7;
+  lp.col_cost_ = {1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3};
+  lp.col_lower_.assign(12, 0.0);
+  lp.col_upper_.assign(12, 1.0);
+  lp.integrality_.assign(12, HighsVarType::kInteger);
+  lp.row_lower_ = {1, 1, 1, -kHighsInf, -kHighsInf, -kHighsInf, -kHighsInf};
+  lp.row_upper_.assign(7, 1.0);
+  lp.a_matrix_.start_ = {0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24};
+  lp.a_matrix_.index_ = {0, 3, 0, 4, 0, 5, 0, 6, 1, 3, 1, 4,
+                         1, 5, 1, 6, 2, 3, 2, 4, 2, 5, 2, 6};
+  lp.a_matrix_.value_.assign(24, 1.0);
+
+  // Use Highs to get MIP solver infrastructure
+  Highs highs;
+  highs.setOptionValue("output_flag", false);
+  highs.passModel(lp);
+
+  HighsCallback callback(&highs);
+  const HighsOptions& options = highs.getOptions();
+  HighsSolution solution;
+  HighsMipSolver mipsolver(callback, options, lp, solution);
+  mipsolver.mipdata_ =
+      std::unique_ptr<HighsMipSolverData>(new HighsMipSolverData(mipsolver));
+  mipsolver.mipdata_->feastol = 1e-6;
+  mipsolver.mipdata_->setupDomainPropagation();
+
+  HighsTaskExecutor::initialize(1);
+
+  // Detect symmetry
+  HighsSymmetryDetection detection;
+  detection.loadModelAsGraph(lp, 1e-8);
+  REQUIRE(detection.initializeDetection());
+
+  HighsSymmetries symmetries;
+  detection.run(symmetries);
+  REQUIRE(symmetries.orbitopes.size() == 1);
+
+  // Set up orbitope as packing
+  HighsCliqueTable::CliqueVar clique0[] = {{0, 1}, {1, 1}, {2, 1}, {3, 1}};
+  HighsCliqueTable::CliqueVar clique1[] = {{4, 1}, {5, 1}, {6, 1}, {7, 1}};
+  HighsCliqueTable::CliqueVar clique2[] = {{8, 1}, {9, 1}, {10, 1}, {11, 1}};
+  mipsolver.mipdata_->cliquetable.doAddClique(clique0, 4, true);
+  mipsolver.mipdata_->cliquetable.doAddClique(clique1, 4, true);
+  mipsolver.mipdata_->cliquetable.doAddClique(clique2, 4, true);
+  symmetries.orbitopes[0].determineOrbitopeType(
+      mipsolver.mipdata_->cliquetable);
+  REQUIRE(symmetries.orbitopes[0].numSetPackingRows == 3);
+
+  const auto& orb = symmetries.orbitopes[0];
+
+  // Branch on columns in two different rows of the orbitope.
+  // Row 0 at column position 0, row 1 at column position 1.
+  // This creates a scenario where orbital fixing can deduce cross-row fixings.
+  HighsDomain& domain = mipsolver.mipdata_->getDomain();
+  domain.changeBound(HighsBoundType::kLower, orb(0, 0), 1.0,
+                     HighsDomain::Reason::branching());
+  domain.changeBound(HighsBoundType::kLower, orb(1, 1), 1.0,
+                     HighsDomain::Reason::branching());
+
+  // Call the public orbitalFixing method
+  HighsInt numFixed = orb.orbitalFixing(domain);
+
+  if (dev_run) {
+    printf("numFixed = %d\n", static_cast<int>(numFixed));
+  }
+
+  // Orbital fixing should deduce additional fixings from the orbitope structure
+  REQUIRE(numFixed > 0);
 
   HighsTaskExecutor::shutdown();
 }
