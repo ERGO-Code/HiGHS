@@ -76,6 +76,22 @@ TEST_CASE("symmetry-orbitope-detection", "[highs_test_symmetry]") {
   // All 3 rows should be detected as set packing
   REQUIRE(symmetries.orbitopes[0].numSetPackingRows == 3);
 
+  // Exercise getBranchingColumn: if we ask to branch on a column that is not
+  // the leftmost unfixed in its orbitope row, it should return the leftmost.
+  const auto& orb = symmetries.orbitopes[0];
+  std::vector<double> colLower(12, 0.0);
+  std::vector<double> colUpper(12, 1.0);
+
+  // With all columns unfixed, branching on orb(0,1) should redirect to orb(0,0)
+  HighsInt redirected = orb.getBranchingColumn(colLower, colUpper, orb(0, 1));
+  REQUIRE(redirected == orb(0, 0));
+
+  // If orb(0,0) is already fixed, branching on orb(0,1) should stay at orb(0,1)
+  colLower[orb(0, 0)] = 1.0;
+  HighsInt notRedirected =
+      orb.getBranchingColumn(colLower, colUpper, orb(0, 1));
+  REQUIRE(notRedirected == orb(0, 1));
+
   HighsTaskExecutor::shutdown();
 }
 
