@@ -436,7 +436,7 @@ HighsInt HighsOrbitopeMatrix::orbitalFixingForPackingOrbitope(
   HighsInt j = 0;
   HighsInt numFixed = 0;
 
-  // Fix all rows in [0, kEnd) at column col_j to zero.
+  // Fix row entries from 0 to kEnd - 1 at orbitope column to zero.
   // Returns true if the domain becomes infeasible.
   auto fixColumnsToZero = [&](HighsInt kEnd, HighsInt col_j) {
     for (HighsInt k = 0; k < kEnd; ++k) {
