@@ -570,58 +570,49 @@ HighsInt HighsOrbitopeMatrix::orbitalFixingForFullOrbitope(
     return HighsInt{-1};
   };
 
-  for (HighsInt j = rowLength - 2; j >= 0; --j) {
-    int8_t* colj0 = Mminimal.data() + j * numDynamicRows;
-    int8_t* colj1 = colj0 + numDynamicRows;
-    HighsInt i_f = i_fixed(colj0, colj1);
+  // Propagate lexicographic bounds column by column.
+  // direction = -1: compute minimal matrix (right to left)
+  // direction = +1: compute maximal matrix (left to right)
+  auto propagateColumns = [&](int8_t* M, HighsInt jStart, HighsInt jEnd,
+                              HighsInt direction, int8_t fixedVal,
+                              int8_t fillAbove) {
+    for (HighsInt j = jStart; j != jEnd; j += direction) {
+      int8_t* colj0 = M + j * numDynamicRows;
+      int8_t* colj1 = colj0 - direction * numDynamicRows;
 
-    if (i_f == numDynamicRows) {
-      for (HighsInt k = 0; k < numDynamicRows; ++k) {
-        int8_t isFree = (colj0[k] == -1);
-        colj0[k] += (isFree & colj1[k]) + isFree;
-      }
-    } else {
-      HighsInt i_d = i_discr(colj0, colj1, i_f);
-      if (i_d == -1) {
-        domain.markInfeasible();
-        return 0;
-      }
+      const int8_t* first = (direction < 0) ? colj0 : colj1;
+      const int8_t* second = (direction < 0) ? colj1 : colj0;
+      HighsInt i_f = i_fixed(first, second);
 
-      for (HighsInt k = 0; k < i_d; ++k) {
-        int8_t isFree = (colj0[k] == -1);
-        colj0[k] += (isFree & colj1[k]) + isFree;
+      if (i_f == numDynamicRows) {
+        for (HighsInt k = 0; k < numDynamicRows; ++k) {
+          int8_t isFree = (colj0[k] == -1);
+          colj0[k] += (isFree & colj1[k]) + isFree;
+        }
+      } else {
+        HighsInt i_d = i_discr(first, second, i_f);
+        if (i_d == -1) {
+          domain.markInfeasible();
+          return;
+        }
+        for (HighsInt k = 0; k < i_d; ++k) {
+          int8_t isFree = (colj0[k] == -1);
+          colj0[k] += (isFree & colj1[k]) + isFree;
+        }
+        colj0[i_d] = fixedVal;
+        for (HighsInt k = i_d + 1; k < numDynamicRows; ++k)
+          colj0[k] += fillAbove * (colj0[k] == -1);
       }
-      colj0[i_d] = 1;
-      for (HighsInt k = i_d + 1; k < numDynamicRows; ++k)
-        colj0[k] += (colj0[k] == -1);
     }
-  }
+  };
 
-  for (HighsInt j = 1; j < rowLength; ++j) {
-    int8_t* colj0 = Mmaximal.data() + j * numDynamicRows;
-    int8_t* colj1 = colj0 - numDynamicRows;
-    HighsInt i_f = i_fixed(colj1, colj0);
+  propagateColumns(Mminimal.data(), rowLength - 2, HighsInt{-1}, HighsInt{-1},
+                   int8_t{1}, int8_t{1});
+  if (domain.infeasible()) return 0;
 
-    if (i_f == numDynamicRows) {
-      for (HighsInt k = 0; k < numDynamicRows; ++k) {
-        int8_t isFree = (colj0[k] == -1);
-        colj0[k] += (isFree & colj1[k]) + isFree;
-      }
-    } else {
-      HighsInt i_d = i_discr(colj1, colj0, i_f);
-      if (i_d == -1) {
-        domain.markInfeasible();
-        return 0;
-      }
-      for (HighsInt k = 0; k < i_d; ++k) {
-        int8_t isFree = (colj0[k] == -1);
-        colj0[k] += (isFree & colj1[k]) + isFree;
-      }
-      colj0[i_d] = 0;
-      for (HighsInt k = i_d + 1; k < numDynamicRows; ++k)
-        colj0[k] += 2 * (colj0[k] == -1);
-    }
-  }
+  propagateColumns(Mmaximal.data(), HighsInt{1}, rowLength, HighsInt{1},
+                   int8_t{0}, int8_t{2});
+  if (domain.infeasible()) return 0;
 
   HighsInt numFixed = 0;
 
