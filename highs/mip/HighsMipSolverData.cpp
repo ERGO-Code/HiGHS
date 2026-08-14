@@ -1372,8 +1372,8 @@ void HighsMipSolverData::performRestart() {
       root_basis.col_status[postSolveStack.getOrigColIndex(i)] =
           basis.col_status[i];
 
-    HighsInt numRow = basis.row_status.size();
-    for (HighsInt i = 0; i < numRow; ++i)
+    for (HighsInt i = 0; i < static_cast<HighsInt>(basis.row_status.size());
+         ++i)
       root_basis.row_status[postSolveStack.getOrigRowIndex(i)] =
           basis.row_status[i];
 
