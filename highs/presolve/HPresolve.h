@@ -503,9 +503,6 @@ class HPresolve {
 
   Result aggregator(HighsPostsolveStack& postsolve_stack);
 
-  Result fourierMotzkin(HighsPostsolveStack& postsolve_stack,
-                        HighsInt& numColsEliminated);
-
   Result removeRowSingletons(HighsPostsolveStack& postsolve_stack);
 
   Result presolveColSingletons(HighsPostsolveStack& postsolve_stack);
@@ -547,7 +544,6 @@ class HPresolve {
 
   Result presolveRuleTest(HighsPostsolveStack& postsolve_stack);
   Result presolveRuleTestColStuffing(HighsPostsolveStack& postsolve_stack);
-  Result presolveRuleTestFourierMotzkin(HighsPostsolveStack& postsolve_stack);
 
   // Not currently called
   static void debug(const HighsLp& lp, const HighsOptions& options);

@@ -71,8 +71,6 @@ TEST_CASE("postsolve-no-basis", "[highs_test_presolve]") {
           "Col      Primal  Col      Primal\n");
     for (HighsInt iCol = 0; iCol < presolved_lp.num_col_; iCol++) {
       HighsInt original_iCol = original_col_indices[iCol];
-      // Skip columns added by presolve (e.g. FME objective reformulation)
-      if (original_iCol >= highs.getNumCol()) continue;
       if (dev_run)
         printf("%3d %11.5g  %3d %11.5g\n", int(iCol), solution.col_value[iCol],
                int(original_iCol), postsolve_solution.col_value[original_iCol]);
@@ -138,14 +136,11 @@ TEST_CASE("presolve", "[highs_test_presolve]") {
   // Have to set matrix dimensions to match presolved_model.lp_
   lp.setMatrixDimensions();
   highs.passModel(lp);
-  // Disable Fourier-Motzkin so this LP is not reduced
-  highs.setOptionValue("presolve_rule_off", 1 << kPresolveRuleFourierMotzkin);
   REQUIRE(highs.presolve() == HighsStatus::kOk);
   REQUIRE(lp.equalButForNames(presolved_model.lp_));
   REQUIRE(highs.getModelPresolveStatus() == HighsPresolveStatus::kNotReduced);
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kNotset);
   REQUIRE(!presolved_model.isEmpty());
-  highs.setOptionValue("presolve_rule_off", 0);
 
   special_lps.primalDualInfeasible1Lp(lp, require_model_status);
   highs.passModel(lp);
