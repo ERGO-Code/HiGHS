@@ -18,7 +18,6 @@
 #include <cmath>
 #include <numeric>
 #include <tuple>
-#include <unordered_map>
 #include <vector>
 
 #include "lp_data/HConst.h"
