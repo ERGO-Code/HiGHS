@@ -1367,8 +1367,8 @@ void HighsMipSolverData::performRestart() {
     root_basis.valid = true;
     root_basis.useful = true;
 
-    HighsInt numCol = basis.col_status.size();
-    for (HighsInt i = 0; i < numCol; ++i)
+    for (HighsInt i = 0; i < static_cast<HighsInt>(basis.col_status.size());
+         ++i)
       root_basis.col_status[postSolveStack.getOrigColIndex(i)] =
           basis.col_status[i];
 
