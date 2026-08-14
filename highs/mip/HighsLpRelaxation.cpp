@@ -990,11 +990,6 @@ void HighsLpRelaxation::storeDualInfProof() {
   for (HighsInt i : row_ap.getNonzeros()) {
     double val = row_ap.getValue(i);
 
-    if (std::fabs(val) <= mipsolver.mipdata_->epsilon &&
-        ((val < 0 && globaldomain.col_upper_[i] <= 0) ||
-         (val > 0 && globaldomain.col_lower_[i] >= 0)))
-      continue;
-
     bool removeValue = std::abs(val) <= mipsolver.mipdata_->feastol;
 
     if (!removeValue &&
