@@ -35,13 +35,21 @@ struct HighsTerminator {
 
 struct MipViolation {
   double bound_violation;
-  double row_violation;
   double integrality_violation;
+  double row_violation;
+  HighsInt num_bound_violations;
+  HighsInt num_integrality_violations;
+  HighsInt num_row_violations;
+  HighsInt col_of_max_bound_violation;
+  HighsInt col_of_max_integrality_violation;
+  HighsInt row_of_max_row_violation;
   void clear();
   void copy(double& bound_violation_,
-	    double& row_violation_,
-	    double& integrality_violation_) const;
-  void log(const HighsLogOptions& log_options) const;
+	    double& integrality_violation_,
+	    double& row_violation_) const;
+  void log(const HighsLogOptions& log_options,
+	   const double objective_value,
+	   const std::string& source) const;
 };
 
 class HighsMipSolver {

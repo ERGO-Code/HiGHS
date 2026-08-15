@@ -1186,10 +1186,10 @@ try_again:
       mipsolver.orig_model_, solution.col_value, &solution.row_value,
       violation,
       mipsolver_quad_objective_value);
-  double bound_violation_;
-  double row_violation_;
-  double integrality_violation_;
-  violation.copy(bound_violation_, row_violation_, integrality_violation_);
+  double bound_violation_ = 0;
+  double integrality_violation_ = 0;
+  double row_violation_ = 0;
+  violation.copy(bound_violation_, integrality_violation_, row_violation_);
   double mipsolver_objective_value = double(mipsolver_quad_objective_value);
   if (!feasible && allow_try_again) {
     // printf(
@@ -1299,11 +1299,8 @@ try_again:
               mipsolver.options_mip_->mip_feasibility_tolerance &&
           mipsolver.row_violation_ <=
               mipsolver.options_mip_->mip_feasibility_tolerance;
-      highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kWarning,
-                   "Solution with objective %g has untransformed violations: "
-                   "bound = %.4g; integrality = %.4g; row = %.4g\n",
-                   mipsolver_objective_value, bound_violation_,
-                   integrality_violation_, row_violation_);
+      violation.log(mipsolver.options_mip_->log_options,
+		    mipsolver_objective_value, "Solution");
       if (!currentFeasible) {
         // if the current incumbent is non existent or also not feasible we
         // still store the new one
@@ -2806,19 +2803,14 @@ void HighsMipSolverData::queryExternalSolution(
       const bool feasible = mipsolver.solutionFeasible(
           mipsolver.orig_model_, user_solution, nullptr, violation,
           user_solution_quad_objective_value);
-      double bound_violation_;
-      double row_violation_;
-      double integrality_violation_;
-      violation.copy(bound_violation_, row_violation_, integrality_violation_);
+      double bound_violation_ = 0;
+      double integrality_violation_ = 0;
+      double row_violation_ = 0;
+      violation.copy(bound_violation_, integrality_violation_, row_violation_);
       double user_solution_objective_value =
           double(user_solution_quad_objective_value);
       if (!feasible) {
-        highsLogUser(
-            mipsolver.options_mip_->log_options, HighsLogType::kWarning,
-            "User-supplied solution has with objective %g has violations: "
-            "bound = %.4g; integrality = %.4g; row = %.4g\n",
-            user_solution_objective_value, bound_violation_,
-            integrality_violation_, row_violation_);
+	violation.log(mipsolver.options_mip_->log_options, user_solution_objective_value, "User-supplied solution");
         return;
       }
       std::vector<double> reduced_user_solution;

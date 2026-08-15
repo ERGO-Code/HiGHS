@@ -98,10 +98,10 @@ std::pair<bool, double> HighsMipWorker::transformNewIntegerFeasibleSolution(
       mipsolver_.orig_model_, solution.col_value, &solution.row_value,
       violation,
       mipsolver_quad_objective_value);
-  double bound_violation_;
-  double row_violation_;
-  double integrality_violation_;
-  violation.copy(bound_violation_, row_violation_, integrality_violation_);
+  double bound_violation_ = 0;
+  double integrality_violation_ = 0;
+  double row_violation_ = 0;
+  violation.copy(bound_violation_, integrality_violation_, row_violation_);
   const double transformed_solobj = static_cast<double>(
       static_cast<HighsInt>(mipsolver_.orig_model_->sense_) *
           mipsolver_quad_objective_value -

@@ -64,7 +64,7 @@ HighsMipSolver::HighsMipSolver(HighsCallback& callback,
     HighsCDouble quad_solution_objective_;
     solutionFeasible(orig_model_, solution.col_value, &solution.row_value,
                      violation, quad_solution_objective_);
-    violation.copy(bound_violation_, row_violation_, integrality_violation_);
+    violation.copy(bound_violation_, integrality_violation_, row_violation_);
     solution_objective_ = double(quad_solution_objective_);
     solution_ = solution.col_value;
   }
@@ -1466,8 +1466,14 @@ void HighsMipSolver::setProfiling(HighsProfiling* profiling) {
 
 void MipViolation::clear() {
   this->bound_violation = 0;
-  this->row_violation = 0;
   this->integrality_violation = 0; 
+  this->row_violation = 0;
+  this->num_bound_violations = 0;
+  this->num_integrality_violations = 0;
+  this->num_row_violations = 0;
+  this->col_of_max_bound_violation = 0;
+  this->col_of_max_integrality_violation = 0;
+  this->row_of_max_row_violation = 0;
 }
 
 void MipViolation::copy(double& bound_violation_,
@@ -1478,6 +1484,35 @@ void MipViolation::copy(double& bound_violation_,
   integrality_violation_ = this->integrality_violation;
 }
 
-void MipViolation::log(const HighsLogOptions& log_options) const {
+void MipViolation::log(const HighsLogOptions& log_options,
+		       const double objective_value,
+		       const std::string& source) const {
+  if (*(log_options.log_dev_level) > 0) {
+    highsLogDev(log_options, HighsLogType::kWarning,
+		"%s with objective %g has untransformed violations:\n",
+		source.c_str(), objective_value);
+    highsLogDev(log_options, HighsLogType::kWarning,
+		"   bound       (%d) with max of %.4g in column %d\n",
+		int(this->num_bound_violations),
+		this->bound_violation,
+		int(this->col_of_max_bound_violation));
+    highsLogDev(log_options, HighsLogType::kWarning,
+		"   integrality (%d) with max of %.4g in column %d\n",
+		int(this->num_integrality_violations),
+		this->integrality_violation,
+		int(this->col_of_max_integrality_violation));
+    highsLogDev(log_options, HighsLogType::kWarning,
+		"   row         (%d) with max of %.4g in row %d\n",
+		int(this->num_row_violations),
+		this->row_violation,
+		int(this->row_of_max_row_violation));
+  } else {      
+    highsLogUser(log_options, HighsLogType::kWarning,
+		 "%s with objective %g has untransformed violations: "
+		 "bound = %.4g; integrality = %.4g; row = %.4g\n",
+		 source.c_str(),
+		 objective_value, this->bound_violation,
+		 this->integrality_violation, this->row_violation);
+  }
 }
 
