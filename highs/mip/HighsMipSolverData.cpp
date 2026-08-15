@@ -1181,15 +1181,15 @@ try_again:
 
   // compute the objective value in the original space
   MipViolation violation;
-  violation.clear();
-  double bound_violation_ = 0;
-  double row_violation_ = 0;
-  double integrality_violation_ = 0;
   HighsCDouble mipsolver_quad_objective_value = 0;
   bool feasible = mipsolver.solutionFeasible(
       mipsolver.orig_model_, solution.col_value, &solution.row_value,
-      bound_violation_, row_violation_, integrality_violation_,
+      violation,
       mipsolver_quad_objective_value);
+  double bound_violation_;
+  double row_violation_;
+  double integrality_violation_;
+  violation.copy(bound_violation_, row_violation_, integrality_violation_);
   double mipsolver_objective_value = double(mipsolver_quad_objective_value);
   if (!feasible && allow_try_again) {
     // printf(
@@ -2801,14 +2801,15 @@ void HighsMipSolverData::queryExternalSolution(
       // (reduced_c)^T(reduced_x) = original_sense*[original_offset +
       // (original_c)^T(original_x) - reduced_offset]
       const auto& user_solution = callback->data_in.user_solution;
-      double bound_violation_ = 0;
-      double row_violation_ = 0;
-      double integrality_violation_ = 0;
+      MipViolation violation;
       HighsCDouble user_solution_quad_objective_value = 0;
       const bool feasible = mipsolver.solutionFeasible(
-          mipsolver.orig_model_, user_solution, nullptr, bound_violation_,
-          row_violation_, integrality_violation_,
+          mipsolver.orig_model_, user_solution, nullptr, violation,
           user_solution_quad_objective_value);
+      double bound_violation_;
+      double row_violation_;
+      double integrality_violation_;
+      violation.copy(bound_violation_, row_violation_, integrality_violation_);
       double user_solution_objective_value =
           double(user_solution_quad_objective_value);
       if (!feasible) {

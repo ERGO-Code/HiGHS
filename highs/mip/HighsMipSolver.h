@@ -38,6 +38,10 @@ struct MipViolation {
   double row_violation;
   double integrality_violation;
   void clear();
+  void copy(double& bound_violation_,
+	    double& row_violation_,
+	    double& integrality_violation_) const;
+  void log(const HighsLogOptions& log_options) const;
 };
 
 class HighsMipSolver {
@@ -148,8 +152,7 @@ class HighsMipSolver {
   void callbackGetCutPool() const;
   bool solutionFeasible(const HighsLp* lp, const std::vector<double>& col_value,
                         const std::vector<double>* pass_row_value,
-                        double& bound_violation, double& row_violation,
-                        double& integrality_violation, HighsCDouble& obj) const;
+                        MipViolation& violation, HighsCDouble& obj) const;
 
   std::vector<HighsModelStatus> initialiseTerminatorRecord(
       HighsInt num_instance) const;

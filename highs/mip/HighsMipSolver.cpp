@@ -60,10 +60,11 @@ HighsMipSolver::HighsMipSolver(HighsCallback& callback,
 #endif
     // Initial solution can be infeasible, but need to set values for violation
     // and objective
+    MipViolation violation;
     HighsCDouble quad_solution_objective_;
     solutionFeasible(orig_model_, solution.col_value, &solution.row_value,
-                     bound_violation_, row_violation_, integrality_violation_,
-                     quad_solution_objective_);
+                     violation, quad_solution_objective_);
+    violation.copy(bound_violation_, row_violation_, integrality_violation_);
     solution_objective_ = double(quad_solution_objective_);
     solution_ = solution.col_value;
   }
@@ -1349,13 +1350,15 @@ std::array<char, 128> getGapString(const double gap_,
 bool HighsMipSolver::solutionFeasible(const HighsLp* lp,
                                       const std::vector<double>& col_value,
                                       const std::vector<double>* pass_row_value,
-                                      double& bound_violation,
-                                      double& row_violation,
-                                      double& integrality_violation,
+				      MipViolation& violation,
                                       HighsCDouble& obj) const {
-  bound_violation = 0;
-  row_violation = 0;
-  integrality_violation = 0;
+  violation.clear();
+  double& bound_violation = violation.bound_violation;
+  double& row_violation = violation.row_violation;
+  double& integrality_violation = violation.integrality_violation;
+  assert(bound_violation == 0);
+  assert(row_violation == 0);
+  assert(integrality_violation == 0);
   const double mip_feasibility_tolerance =
       options_mip_->mip_feasibility_tolerance;
 
@@ -1466,3 +1469,15 @@ void MipViolation::clear() {
   this->row_violation = 0;
   this->integrality_violation = 0; 
 }
+
+void MipViolation::copy(double& bound_violation_,
+			double& row_violation_,
+			double& integrality_violation_) const {
+  bound_violation_ = this->bound_violation;
+  row_violation_ = this->row_violation;
+  integrality_violation_ = this->integrality_violation;
+}
+
+void MipViolation::log(const HighsLogOptions& log_options) const {
+}
+
