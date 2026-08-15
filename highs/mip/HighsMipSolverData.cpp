@@ -1180,6 +1180,8 @@ double HighsMipSolverData::transformNewIntegerFeasibleSolution(
 try_again:
 
   // compute the objective value in the original space
+  MipViolation violation;
+  violation.clear();
   double bound_violation_ = 0;
   double row_violation_ = 0;
   double integrality_violation_ = 0;

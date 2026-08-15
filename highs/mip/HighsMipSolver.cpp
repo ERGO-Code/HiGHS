@@ -1460,3 +1460,9 @@ void HighsMipSolver::setProfiling(HighsProfiling* profiling) {
   assert(profiling);
   this->profiling_ = profiling;
 }
+
+void MipViolation::clear() {
+  this->bound_violation = 0;
+  this->row_violation = 0;
+  this->integrality_violation = 0; 
+}

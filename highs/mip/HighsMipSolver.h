@@ -33,6 +33,13 @@ struct HighsTerminator {
   void report(const HighsLogOptions log_options) const;
 };
 
+struct MipViolation {
+  double bound_violation;
+  double row_violation;
+  double integrality_violation;
+  void clear();
+};
+
 class HighsMipSolver {
  public:
   HighsCallback* callback_;
