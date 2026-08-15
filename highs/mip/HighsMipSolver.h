@@ -44,12 +44,10 @@ struct MipViolation {
   HighsInt col_of_max_integrality_violation;
   HighsInt row_of_max_row_violation;
   void clear();
-  void copy(double& bound_violation_,
-	    double& integrality_violation_,
-	    double& row_violation_) const;
-  void log(const HighsLogOptions& log_options,
-	   const double objective_value,
-	   const std::string& source) const;
+  void copy(double& bound_violation_, double& integrality_violation_,
+            double& row_violation_) const;
+  void log(const HighsLogOptions& log_options, const double objective_value,
+           const std::string& source) const;
 };
 
 class HighsMipSolver {

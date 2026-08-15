@@ -1183,8 +1183,7 @@ try_again:
   MipViolation violation;
   HighsCDouble mipsolver_quad_objective_value = 0;
   bool feasible = mipsolver.solutionFeasible(
-      mipsolver.orig_model_, solution.col_value, &solution.row_value,
-      violation,
+      mipsolver.orig_model_, solution.col_value, &solution.row_value, violation,
       mipsolver_quad_objective_value);
   double bound_violation_ = 0;
   double integrality_violation_ = 0;
@@ -1300,7 +1299,7 @@ try_again:
           mipsolver.row_violation_ <=
               mipsolver.options_mip_->mip_feasibility_tolerance;
       violation.log(mipsolver.options_mip_->log_options,
-		    mipsolver_objective_value, "Solution");
+                    mipsolver_objective_value, "Solution");
       if (!currentFeasible) {
         // if the current incumbent is non existent or also not feasible we
         // still store the new one
@@ -2810,7 +2809,8 @@ void HighsMipSolverData::queryExternalSolution(
       double user_solution_objective_value =
           double(user_solution_quad_objective_value);
       if (!feasible) {
-	violation.log(mipsolver.options_mip_->log_options, user_solution_objective_value, "User-supplied solution");
+        violation.log(mipsolver.options_mip_->log_options,
+                      user_solution_objective_value, "User-supplied solution");
         return;
       }
       std::vector<double> reduced_user_solution;

@@ -75,8 +75,7 @@ TEST_CASE("highs-run-data-presolve", "[highs_run_data]") {
     const bool reduces_to_empty = false;
     for (auto& solver : solvers) {
       h.setOptionValue("solver", solver);
-      if (dev_run)
-	printf("\n!>>>>%s-%s<<<<\n", model.c_str(), solver.c_str());
+      if (dev_run) printf("\n!>>>>%s-%s<<<<\n", model.c_str(), solver.c_str());
 
       REQUIRE(h.presolve() == HighsStatus::kOk);
       HighsLp presolved_lp = h.getPresolvedLp();
@@ -93,7 +92,6 @@ TEST_CASE("highs-run-data-presolve", "[highs_run_data]") {
 
 void testRunData(Highs& h, const bool irreducible, const bool reduces_to_empty,
                  const std::string& run_data_file) {
-  
   assert(!(irreducible && reduces_to_empty));
   const HighsRunData& run_data = h.getRunData();
   const HighsLp& lp = h.getLp();

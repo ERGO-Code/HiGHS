@@ -1350,15 +1350,28 @@ std::array<char, 128> getGapString(const double gap_,
 bool HighsMipSolver::solutionFeasible(const HighsLp* lp,
                                       const std::vector<double>& col_value,
                                       const std::vector<double>* pass_row_value,
-				      MipViolation& violation,
+                                      MipViolation& violation,
                                       HighsCDouble& obj) const {
   violation.clear();
   double& bound_violation = violation.bound_violation;
-  double& row_violation = violation.row_violation;
   double& integrality_violation = violation.integrality_violation;
+  double& row_violation = violation.row_violation;
+  HighsInt& num_bound_violations = violation.num_bound_violations;
+  HighsInt& num_integrality_violations = violation.num_integrality_violations;
+  HighsInt& num_row_violations = violation.num_row_violations;
+  HighsInt& col_of_max_bound_violation = violation.col_of_max_bound_violation;
+  HighsInt& col_of_max_integrality_violation =
+      violation.col_of_max_integrality_violation;
+  HighsInt& row_of_max_row_violation = violation.row_of_max_row_violation;
   assert(bound_violation == 0);
-  assert(row_violation == 0);
   assert(integrality_violation == 0);
+  assert(row_violation == 0);
+  assert(num_bound_violations == 0);
+  assert(num_integrality_violations == 0);
+  assert(num_row_violations == 0);
+  assert(col_of_max_bound_violation == -1);
+  assert(col_of_max_integrality_violation == -1);
+  assert(row_of_max_row_violation == -1);
   const double mip_feasibility_tolerance =
       options_mip_->mip_feasibility_tolerance;
 
@@ -1371,8 +1384,14 @@ bool HighsMipSolver::solutionFeasible(const HighsLp* lp,
     obj += static_cast<HighsCDouble>(lp->col_cost_[i]) * value;
 
     if (lp->integrality_[i] == HighsVarType::kInteger) {
-      integrality_violation =
-          std::max(fractionality(value), integrality_violation);
+      double violation = fractionality(value);
+      if (violation) {
+        if (violation > mip_feasibility_tolerance) num_integrality_violations++;
+        if (violation > integrality_violation) {
+          integrality_violation = violation;
+          col_of_max_integrality_violation = i;
+        }
+      }
     }
 
     const double lower = lp->col_lower_[i];
@@ -1385,7 +1404,14 @@ bool HighsMipSolver::solutionFeasible(const HighsLp* lp,
     } else
       continue;
 
-    bound_violation = std::max(bound_violation, primal_infeasibility);
+    if (primal_infeasibility) {
+      if (primal_infeasibility > mip_feasibility_tolerance)
+        num_bound_violations++;
+      if (primal_infeasibility > bound_violation) {
+        bound_violation = primal_infeasibility;
+        col_of_max_bound_violation = i;
+      }
+    }
   }
 
   // Check row feasibility if there are a positive number of rows.
@@ -1417,7 +1443,14 @@ bool HighsMipSolver::solutionFeasible(const HighsLp* lp,
       } else
         continue;
 
-      row_violation = std::max(row_violation, primal_infeasibility);
+      if (primal_infeasibility) {
+        if (primal_infeasibility > mip_feasibility_tolerance)
+          num_row_violations++;
+        if (primal_infeasibility > row_violation) {
+          row_violation = primal_infeasibility;
+          row_of_max_row_violation = i;
+        }
+      }
     }
   }
 
@@ -1466,53 +1499,51 @@ void HighsMipSolver::setProfiling(HighsProfiling* profiling) {
 
 void MipViolation::clear() {
   this->bound_violation = 0;
-  this->integrality_violation = 0; 
+  this->integrality_violation = 0;
   this->row_violation = 0;
   this->num_bound_violations = 0;
   this->num_integrality_violations = 0;
   this->num_row_violations = 0;
-  this->col_of_max_bound_violation = 0;
-  this->col_of_max_integrality_violation = 0;
-  this->row_of_max_row_violation = 0;
+  this->col_of_max_bound_violation = -1;
+  this->col_of_max_integrality_violation = -1;
+  this->row_of_max_row_violation = -1;
 }
 
-void MipViolation::copy(double& bound_violation_,
-			double& row_violation_,
-			double& integrality_violation_) const {
+void MipViolation::copy(double& bound_violation_, double& row_violation_,
+                        double& integrality_violation_) const {
   bound_violation_ = this->bound_violation;
   row_violation_ = this->row_violation;
   integrality_violation_ = this->integrality_violation;
 }
 
 void MipViolation::log(const HighsLogOptions& log_options,
-		       const double objective_value,
-		       const std::string& source) const {
+                       const double objective_value,
+                       const std::string& source) const {
   if (*(log_options.log_dev_level) > 0) {
     highsLogDev(log_options, HighsLogType::kWarning,
-		"%s with objective %g has untransformed violations:\n",
-		source.c_str(), objective_value);
-    highsLogDev(log_options, HighsLogType::kWarning,
-		"   bound       (%d) with max of %.4g in column %d\n",
-		int(this->num_bound_violations),
-		this->bound_violation,
-		int(this->col_of_max_bound_violation));
-    highsLogDev(log_options, HighsLogType::kWarning,
-		"   integrality (%d) with max of %.4g in column %d\n",
-		int(this->num_integrality_violations),
-		this->integrality_violation,
-		int(this->col_of_max_integrality_violation));
-    highsLogDev(log_options, HighsLogType::kWarning,
-		"   row         (%d) with max of %.4g in row %d\n",
-		int(this->num_row_violations),
-		this->row_violation,
-		int(this->row_of_max_row_violation));
-  } else {      
+                "%s with objective %g has untransformed violations:\n",
+                source.c_str(), objective_value);
+    if (this->num_bound_violations)
+      highsLogDev(log_options, HighsLogType::kWarning,
+                  "   bound       (%d) with max of %.4g in column %d\n",
+                  int(this->num_bound_violations), this->bound_violation,
+                  int(this->col_of_max_bound_violation));
+    if (this->num_integrality_violations)
+      highsLogDev(log_options, HighsLogType::kWarning,
+                  "   integrality (%d) with max of %.4g in column %d\n",
+                  int(this->num_integrality_violations),
+                  this->integrality_violation,
+                  int(this->col_of_max_integrality_violation));
+    if (this->num_row_violations)
+      highsLogDev(log_options, HighsLogType::kWarning,
+                  "   row         (%d) with max of %.4g in row %d\n",
+                  int(this->num_row_violations), this->row_violation,
+                  int(this->row_of_max_row_violation));
+  } else {
     highsLogUser(log_options, HighsLogType::kWarning,
-		 "%s with objective %g has untransformed violations: "
-		 "bound = %.4g; integrality = %.4g; row = %.4g\n",
-		 source.c_str(),
-		 objective_value, this->bound_violation,
-		 this->integrality_violation, this->row_violation);
+                 "%s with objective %g has untransformed violations: "
+                 "bound = %.4g; integrality = %.4g; row = %.4g\n",
+                 source.c_str(), objective_value, this->bound_violation,
+                 this->integrality_violation, this->row_violation);
   }
 }
-

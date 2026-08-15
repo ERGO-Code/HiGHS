@@ -96,8 +96,7 @@ std::pair<bool, double> HighsMipWorker::transformNewIntegerFeasibleSolution(
   HighsCDouble mipsolver_quad_objective_value = 0;
   bool feasible = mipsolver_.solutionFeasible(
       mipsolver_.orig_model_, solution.col_value, &solution.row_value,
-      violation,
-      mipsolver_quad_objective_value);
+      violation, mipsolver_quad_objective_value);
   double bound_violation_ = 0;
   double integrality_violation_ = 0;
   double row_violation_ = 0;
