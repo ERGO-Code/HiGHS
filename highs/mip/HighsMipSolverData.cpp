@@ -1170,7 +1170,10 @@ double HighsMipSolverData::transformNewIntegerFeasibleSolution(
   solution.col_value = sol;
   solution.value_valid = true;
   // Perform primal postsolve to get the original column values
-  postSolveStack.undoPrimal(*mipsolver.options_mip_, solution);
+  // For #3216 report column 2404 (or possibly 578) for 3216.lp
+  const HighsInt report_3216_col = -2404;//578;
+  this->reportOriginalPresolvedCol(report_3216_col, sol);
+  postSolveStack.undoPrimal(*mipsolver.options_mip_, solution, report_3216_col);
   // Determine the row values, as they aren't computed in primal
   // postsolve
   HighsStatus return_status =
@@ -2847,6 +2850,32 @@ bool HighsMipSolverData::terminatorTerminated() const {
 void HighsMipSolverData::terminatorReport() const {
   if (this->terminatorActive())
     mipsolver.terminator_.report(mipsolver.options_mip_->log_options);
+}
+
+void HighsMipSolverData::reportOriginalPresolvedCol(const HighsInt original_col,
+						    const std::vector<double>presolved_solution) {
+  if (original_col < 0 || original_col >= mipsolver.orig_model_->num_col_) return;
+  // Find this column in the presolved model
+  HighsInt presolved_col = postSolveStack.getPresolvedColumnIndex(original_col);
+  printf("Original col = %d (%s) [%g, %g] %s",
+	 int(original_col),
+	 mipsolver.orig_model_->col_names_[original_col].c_str(),
+	 mipsolver.orig_model_->col_lower_[original_col],
+	 mipsolver.orig_model_->col_upper_[original_col],
+	 mipsolver.orig_model_->integrality_[original_col] ==
+	 HighsVarType::kContinuous ? "Continuous" : "Discrete");
+  if (presolved_col > 0) {
+    printf("; Presolved col = %d (%s) [%g, %g] %s has value %g\n",
+	   int(presolved_col),
+	   mipsolver.model_->col_names_[presolved_col].c_str(),
+	   mipsolver.model_->col_lower_[presolved_col],
+	   mipsolver.model_->col_upper_[presolved_col],
+	   mipsolver.model_->integrality_[presolved_col] ==
+	   HighsVarType::kContinuous ? "Continuous" : "Discrete",
+	   presolved_solution[presolved_col]);
+  } else {
+    printf("; Not in presolved model\n");
+  }
 }
 
 static double possInfRelDiff(const double v0, const double v1,
