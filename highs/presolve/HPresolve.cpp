@@ -101,6 +101,7 @@ void HPresolve::setInput(HighsLp& model_, const HighsOptions& options_,
                 static_cast<int>(this->reductionLimit));
   }
   this->in_initial_sweep_ = false;
+  this->last_reduction_ = -kHighsIInf;
 }
 
 // for MIP presolve
@@ -6827,7 +6828,13 @@ HPresolve::Result HPresolve::checkLimits(HighsPostsolveStack& postsolve_stack) {
 
   if ((numreductions & 1023u) == 0) HPRESOLVE_CHECKED_CALL(checkTimeLimit());
 
-  return numreductions >= reductionLimit ? Result::kStopped : Result::kOk;
+  if (numreductions >= this->reductionLimit - 1 &&
+      numreductions > this->last_reduction_) {
+    printf("HPresolve::checkLimits Performed %d reductions (limit = %d)\n",
+           int(numreductions), int(reductionLimit));
+  }
+  this->last_reduction_ = numreductions;
+  return numreductions >= this->reductionLimit ? Result::kStopped : Result::kOk;
 }
 
 void HPresolve::storeCurrentProblemSize() {
@@ -7733,6 +7740,9 @@ HPresolve::Result HPresolve::presolveChangedRows(
   changedRows.swap(changedRowIndices);
   for (HighsInt row : changedRows) {
     if (rowDeleted[row]) continue;
+    if (this->last_reduction_ == reductionLimit - 1) {
+      printf("HPresolve::presolveChangedRows Row %d\n", int(row));
+    }
     HPRESOLVE_CHECKED_CALL(rowPresolve(postsolve_stack, row));
     changedRowFlag[row] = rowDeleted[row];
   }

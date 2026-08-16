@@ -265,50 +265,50 @@ class HighsPostsolveStack {
 
   std::string presolveTypeToString(const ReductionType& type) const {
     switch (type) {
-    case ReductionType::kLinearTransform: {
-      return "Linear transform";
-    }
-    case ReductionType::kFreeColSubstitution: {
-      return "Free col substitution";
-    }
-    case ReductionType::kDoubletonEquation: {
-      return "Doubleton equation";
-    }
-    case ReductionType::kEqualityRowAddition: {
-      return "Equality row addition";
-    }
-    case ReductionType::kEqualityRowAdditions: {
-      return "Equality row additions";
-    }
-    case ReductionType::kSingletonRow: {
-      return "Singleton row";
-    }
-    case ReductionType::kFixedCol: {
-      return "Fixed col";
-    }
-    case ReductionType::kRedundantRow: {
-      return "Redundant Row";
-    }
-    case ReductionType::kForcingRow: {
-      return "Forcing row";
-    }
-    case ReductionType::kForcingColumn: {
-      return "Forcing column";
-    }
-    case ReductionType::kForcingColumnRemovedRow: {
-      return "Forcing column removed row";
-    }
-    case ReductionType::kDuplicateRow: {
-      return "Duplicate row";
-    }
-    case ReductionType::kDuplicateColumn: {
-      return "Duplicate column";
-    }
-    case ReductionType::kSlackColSubstitution: {
-      return "Slack col substitution";
-    }
-    default:
-      return "Unknown";
+      case ReductionType::kLinearTransform: {
+        return "Linear transform";
+      }
+      case ReductionType::kFreeColSubstitution: {
+        return "Free col substitution";
+      }
+      case ReductionType::kDoubletonEquation: {
+        return "Doubleton equation";
+      }
+      case ReductionType::kEqualityRowAddition: {
+        return "Equality row addition";
+      }
+      case ReductionType::kEqualityRowAdditions: {
+        return "Equality row additions";
+      }
+      case ReductionType::kSingletonRow: {
+        return "Singleton row";
+      }
+      case ReductionType::kFixedCol: {
+        return "Fixed col";
+      }
+      case ReductionType::kRedundantRow: {
+        return "Redundant Row";
+      }
+      case ReductionType::kForcingRow: {
+        return "Forcing row";
+      }
+      case ReductionType::kForcingColumn: {
+        return "Forcing column";
+      }
+      case ReductionType::kForcingColumnRemovedRow: {
+        return "Forcing column removed row";
+      }
+      case ReductionType::kDuplicateRow: {
+        return "Duplicate row";
+      }
+      case ReductionType::kDuplicateColumn: {
+        return "Duplicate column";
+      }
+      case ReductionType::kSlackColSubstitution: {
+        return "Slack col substitution";
+      }
+      default:
+        return "Unknown";
     }
   }
 
@@ -327,8 +327,11 @@ class HighsPostsolveStack {
     return origColIndex[col];
   }
 
-  HighsInt getPresolvedIndex(const HighsInt original_index, const std::vector<HighsInt>& original_indices) const {
-    auto it = std::find(original_indices.begin(), original_indices.end(), original_index);
+  HighsInt getPresolvedIndex(
+      const HighsInt original_index,
+      const std::vector<HighsInt>& original_indices) const {
+    auto it = std::find(original_indices.begin(), original_indices.end(),
+                        original_index);
     // If found, calculate the index by subtracting the base iterator
     if (it != original_indices.end()) {
       HighsInt presolved_index = it - original_indices.begin();
@@ -753,24 +756,26 @@ class HighsPostsolveStack {
     auto solutionLogging = [&](const std::string& message) {
       printf("\n%s\n", message.c_str());
       for (HighsInt iCol = 0; iCol < origNumCol; iCol++) {
-	ss.str(std::string());
-	ss << highsFormatToString("Col %9d value = %11.4g",
-               int(iCol), solution.col_value[iCol]);
-	if (perform_dual_postsolve)
-	  ss << highsFormatToString("; dual = %11.4g;", solution.col_dual[iCol]);
-	if (perform_basis_postsolve)
-	  ss << highsFormatToString("; status = %s",
-				    utilBasisStatusToString(basis.col_status[iCol]).c_str());
-	printf("%s\n", ss.str().c_str());
-	/*	
+        ss.str(std::string());
+        ss << highsFormatToString("Col %9d value = %11.4g", int(iCol),
+                                  solution.col_value[iCol]);
+        if (perform_dual_postsolve)
+          ss << highsFormatToString("; dual = %11.4g;",
+                                    solution.col_dual[iCol]);
+        if (perform_basis_postsolve)
+          ss << highsFormatToString(
+              "; status = %s",
+              utilBasisStatusToString(basis.col_status[iCol]).c_str());
+        printf("%s\n", ss.str().c_str());
+        /*
       for (HighsInt iRow = 0; iRow < origNumRow; iRow++)
         printf("Row %9d value = %11.4g; dual = %11.4g; status = %s\n",
                int(iRow), solution.row_value[iRow], solution.row_dual[iRow],
                utilBasisStatusToString(basis.row_status[iRow]).c_str());
-	       highsFprintfString(file, log_options, ss.str());
-	*/
+               highsFprintfString(file, log_options, ss.str());
+        */
       }
-   };
+    };
 
     // Initialise to illegal values so that initial values are logged
     size_t check_reduction = -kHighsIInf;
@@ -780,7 +785,7 @@ class HighsPostsolveStack {
 
     auto reportColLogging = [&](const HighsInt reduction) {
       assert(report_col >= 0);
-      if (static_cast<size_t>(report_col) >=  solution.col_value.size()) return;
+      if (static_cast<size_t>(report_col) >= solution.col_value.size()) return;
       double col_value = solution.col_value[report_col];
       double col_dual = solution.dual_valid ? solution.col_dual[report_col] : 0;
       HighsBasisStatus col_status = basis.valid ? basis.col_status[report_col]
@@ -789,9 +794,10 @@ class HighsPostsolveStack {
       if (solution.dual_valid) report = report || col_dual != report_col_dual;
       if (basis.valid) report = report || col_status != report_col_status;
       if (reduction >= 0) {
-	ReductionType type = reductions[reduction].first;
+        ReductionType type = reductions[reduction].first;
         if (report)
-          printf("After reduction %9d (type %s):", int(reduction), presolveTypeToString(type).c_str());
+          printf("After reduction %9d (type %s):", int(reduction),
+                 presolveTypeToString(type).c_str());
       } else if (reduction == -1) {
         report = true;
         printf("Before undo:                        ");
