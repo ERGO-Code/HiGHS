@@ -1115,6 +1115,7 @@ HighsSearch::NodeResult HighsSearch::branch() {
           100000 + ((getTotalLpIterations() - getHeuristicLpIterations() -
                      getStrongBranchingLpIterations()) >>
                     1);
+      if (mipsolver.mipdata_->numRestarts <= 2) sbmaxiters = sbmaxiters >> 2;
       if (sbiters > sbmaxiters) {
         pseudocost.setMinReliable(0);
       } else if (sbiters > (sbmaxiters >> 1)) {
