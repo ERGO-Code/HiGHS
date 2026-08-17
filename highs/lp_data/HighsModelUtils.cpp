@@ -1519,6 +1519,8 @@ std::string utilPresolveRuleTypeToString(const HighsInt rule_type) {
     return "Dual fixing";
   } else if (rule_type == kPresolveRuleColStuffing) {
     return "Col stuffing";
+  } else if (rule_type == kPresolveRuleDfprobing) {
+    return "Dual-fixing probing";
   } else if (rule_type == kPresolveRuleInitialSweep) {
     return "Initial sweep";
   }

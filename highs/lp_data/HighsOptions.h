@@ -477,8 +477,6 @@ struct HighsOptionsStruct {
   bool less_infeasible_DSE_check;
   bool less_infeasible_DSE_choose_row;
   bool use_original_HFactor_logic;
-  bool presolve_dfprobing;
-  bool presolve_gdf;
   //  bool allow_pdlp_cleanup;
   bool run_centring;
   HighsInt max_centring_steps;
@@ -1764,17 +1762,6 @@ class HighsOptions : public HighsOptionsStruct {
         "this tolerance (default = 100)",
         advanced, &centring_ratio_tolerance, 0, 100, kHighsInf);
     records.push_back(record_double);
-
-    record_bool = new OptionRecordBool(
-        "presolve_dfprobing",
-        "Use the dual fixing aumgented probing technique in presolve", advanced,
-        &presolve_dfprobing, true);
-    records.push_back(record_bool);
-
-    record_bool = new OptionRecordBool(
-        "presolve_gdf", "Use the generalized dual fixing technique in presolve",
-        advanced, &presolve_gdf, true);
-    records.push_back(record_bool);
 
     // Set up the log_options aliases
     log_options.clear();

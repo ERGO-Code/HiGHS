@@ -1863,9 +1863,10 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postsolve_stack) {
       }
     };
 
-    // setup for dfprobing and gdf
-    if (options->presolve_dfprobing || options->presolve_gdf)
+    const bool enableDfprobing = allow_rule_[kPresolveRuleDfprobing];
+    if (enableDfprobing) {
       domain.getDfProbingPropagation().recomputeLocks();
+    }
 
     for (const auto& binvar : binaries) {
       // Count the binaries considered
@@ -1932,9 +1933,9 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postsolve_stack) {
 
       HighsInt numBoundChgs = 0;
       HighsInt numNewCliques = -cliquetable.numCliques();
-      domain.inProbing_ = true;
+      domain.setInPresolveProbing(enableDfprobing);
       const bool probing_result = implications.runProbing(i, numBoundChgs);
-      domain.inProbing_ = false;
+      domain.setInPresolveProbing(false);
       if (!probing_result) continue;
       probingContingent += numBoundChgs;
       numNewCliques += cliquetable.numCliques();

@@ -27,13 +27,8 @@ bool HighsImplications::computeImplications(HighsInt col, bool val) {
   const auto& domchgreason = globaldomain.getDomainChangeReason();
   size_t changedend = globaldomain.getChangedCols().size();
 
-  // get two flags
-  const bool useDFProbing =
-      globaldomain.inProbing_ && mipsolver.options_mip_->presolve_dfprobing;
-  const bool useGDF =
-      globaldomain.inProbing_ && mipsolver.options_mip_->presolve_gdf;
-  // record redundant rows if any of the two flags is true
-  if (useDFProbing || useGDF) {
+  bool dfprobingEnabled = globaldomain.getInPresolveProbing();
+  if (dfprobingEnabled) {
     globaldomain.getDfProbingPropagation().clearRedundantInfo();
     globaldomain.getDfProbingPropagation().enablePropagator();
   }
@@ -64,8 +59,9 @@ bool HighsImplications::computeImplications(HighsInt col, bool val) {
 
   auto isInfeasible = [&](HighsInt col, bool val) {
     if (!globaldomain.infeasible()) return false;
-    if (globaldomain.inProbing_)
+    if (dfprobingEnabled) {
       globaldomain.getDfProbingPropagation().disablePropagator();
+    }
     storeLiftingOpportunities(col, val);
     doBacktrack(changedend);
     cliquetable.vertexInfeasible(globaldomain, col, val);
@@ -75,8 +71,9 @@ bool HighsImplications::computeImplications(HighsInt col, bool val) {
   if (isInfeasible(col, val)) return true;
 
   globaldomain.propagate();
-  if (useDFProbing || useGDF)
+  if (dfprobingEnabled) {
     globaldomain.getDfProbingPropagation().disablePropagator();
+  }
 
   if (isInfeasible(col, val)) return true;
 
@@ -89,26 +86,27 @@ bool HighsImplications::computeImplications(HighsInt col, bool val) {
   implics.reserve(numImplications);
 
   // data structure to cache implications for non-binary variables
-  std::vector<HighsDomainChange> implics_tentative;
-  implics_tentative.reserve(numImplications);
+  std::vector<HighsDomainChange> tentativeImplics;
+  tentativeImplics.reserve(numImplications);
 
   HighsInt numEntries = mipsolver.mipdata_->cliquetable.getNumEntries();
   HighsInt maxEntries = 100000 + mipsolver.numNonzero();
 
   const HighsInt tentativeStart =
-      useDFProbing
+      dfprobingEnabled
           ? globaldomain.getDfProbingPropagation().getZeroCostFixingPosition()
           : kHighsIInf32;
-  if (useDFProbing)
-    implics_tentative.assign(domchgstack.begin() + stackimplicstart,
+  if (dfprobingEnabled) {
+    tentativeImplics.assign(domchgstack.begin() + stackimplicstart,
                              domchgstack.begin() + stackimplicend);
+  }
 
   for (HighsInt i = stackimplicstart; i < stackimplicend; ++i) {
     if (domchgreason[i].type == HighsDomain::Reason::kCliqueTable &&
         ((domchgreason[i].index >> 1) == col || numEntries >= maxEntries))
       continue;
 
-    if (i >= tentativeStart)  // record tentative implications
+    if (i >= tentativeStart)
       continue;
 
     implics.push_back(domchgstack[i]);
@@ -117,23 +115,20 @@ bool HighsImplications::computeImplications(HighsInt col, bool val) {
   // inform caller about lifting opportunities
   storeLiftingOpportunities(col, val);
 
-  // update information to derive generalized dual fixings
-  if (useGDF) globaldomain.getDfProbingPropagation().updateGDFInfo(col, val);
-
   // backtrack
   doBacktrack(changedend);
 
-  if (!implics_tentative.empty()) {
+  if (!tentativeImplics.empty()) {
     // add the implications of binary variables to the clique table
     auto binstart_tmp =
-        std::partition(implics_tentative.begin(), implics_tentative.end(),
+        std::partition(tentativeImplics.begin(), tentativeImplics.end(),
                        [&](const HighsDomainChange& a) {
                          return !globaldomain.isBinary(a.column);
                        });
     // store the tentative bound changes of binary variables separately
-    for (auto i = binstart_tmp; i != implics_tentative.end(); ++i)
+    for (auto i = binstart_tmp; i != tentativeImplics.end(); ++i)
       recordTentativeCliques(val, *i);
-    implics_tentative.erase(binstart_tmp, implics_tentative.end());
+    tentativeImplics.erase(binstart_tmp, tentativeImplics.end());
   }
 
   // add the implications of binary variables to the clique table
@@ -193,9 +188,9 @@ bool HighsImplications::computeImplications(HighsInt col, bool val) {
     implications[loc].implics = std::move(implics);
     this->numImplications += implications[loc].implics.size();
   }
-  if (!implics_tentative.empty()) {
-    pdqsort(implics_tentative.begin(), implics_tentative.end());
-    implications[loc].implics_tentative = std::move(implics_tentative);
+  if (!tentativeImplics.empty()) {
+    pdqsort(tentativeImplics.begin(), tentativeImplics.end());
+    implications[loc].tentativeImplics = std::move(tentativeImplics);
   }
 
   return false;
@@ -350,17 +345,13 @@ bool HighsImplications::runProbing(HighsInt col, HighsInt& numReductions) {
   if (globaldomain.isBinary(col) && !implicationsCached(col, 1) &&
       !implicationsCached(col, 0) &&
       mipsolver.mipdata_->cliquetable.getSubstitution(col) == nullptr) {
-    const bool useDFProbing =
-        globaldomain.inProbing_ && mipsolver.options_mip_->presolve_dfprobing;
-    const bool useGDF =
-        globaldomain.inProbing_ && mipsolver.options_mip_->presolve_gdf;
-    // setup for dfprobingPropagation
-    if (useDFProbing) {
+
+    const bool enableDfprobing = globaldomain.getInPresolveProbing();
+    if (enableDfprobing) {
       clearTentativeClique();
       globaldomain.getDfProbingPropagation().setZeroCostFixingPosition(
           kHighsIInf32);
     }
-    if (useGDF) globaldomain.getDfProbingPropagation().clearGDFInfo();
 
     bool infeasible = computeImplications(col, 1);
     if (globaldomain.infeasible()) return true;
@@ -374,97 +365,65 @@ bool HighsImplications::runProbing(HighsInt col, HighsInt& numReductions) {
     if (mipsolver.mipdata_->cliquetable.getSubstitution(col) != nullptr)
       return true;
 
-    if (useDFProbing && !binaryInvolvedInds_.empty()) {
+    if (enableDfprobing && !binaryInvolvedInds_.empty()) {
       HighsCliqueTable& cliquetable = mipsolver.mipdata_->cliquetable;
       HighsCliqueTable::CliqueVar clique[2];
-      // Loop over binary variables that are tighened at least once
-      for (auto k : binaryInvolvedInds_) {
-        // Skip non-binary variables (being fixed now) or those can be
-        // substituted by other binary variables
+      for (HighsInt k : binaryInvolvedInds_) {
         if (!globaldomain.isBinary(k) || colsubstituted[k]) continue;
-        // Return if infeasible
         if (globaldomain.infeasible()) return true;
-        // Get the information how x[k] is fixed in probing on x[col] = 0 and
-        // x[col] = 1 For the meaning of ``data'', please see lines 71-89 in
-        // HighsImplications.h
-        uint8_t data = binaryInvolvedFlags_[k];
-        if (data == 0)  // flag for no reduction
+        uint8_t mask = binaryInvolvedFlags_[k];
+        if (mask == 0)
           continue;
 
-        if (data ==
-            binaryFixType::kGlobalLower) {  // x[k] is fixed at 0 under both
-                                            // x[col] = 0 and x[col] = 1
-          // fix x[k] = 0 by adding two cliques (i.e., these two cliques should
-          // be added in computeImplications() to derive global reductions)
+        if (mask == 10) {
           clique[0] = HighsCliqueTable::CliqueVar(col, 0);
           clique[1] = HighsCliqueTable::CliqueVar(k, 1);
           cliquetable.addClique(mipsolver, &clique[0], 2);
           clique[0] = HighsCliqueTable::CliqueVar(col, 1);
           clique[1] = HighsCliqueTable::CliqueVar(k, 1);
           cliquetable.addClique(mipsolver, &clique[0], 2);
-          data = 0;
-        } else if (data == binaryFixType::kGlobalUpper) {  // x[k] is fixed at 1
-                                                           // under both x[col]
-                                                           // = 0 and x[col] = 1
-          // fix x[k] = 1 by adding two cliques (i.e., these two cliques should
-          // be added in computeImplications() to derive global reductions)
+          mask = 0;
+        } else if (mask == 5) {
           clique[0] = HighsCliqueTable::CliqueVar(col, 0);
           clique[1] = HighsCliqueTable::CliqueVar(k, 0);
           cliquetable.addClique(mipsolver, &clique[0], 2);
           clique[0] = HighsCliqueTable::CliqueVar(col, 1);
           clique[1] = HighsCliqueTable::CliqueVar(k, 0);
           cliquetable.addClique(mipsolver, &clique[0], 2);
-          data = 0;
-        } else if (data ==
-                   binaryFixType::
-                       kSubstituteComplement) {  // x[k] is fixed at 0 under
-                                                 // x[col] = 1, and is fixed at
-                                                 // 1 under x[col] = 0; this
-                                                 // makes x[col] + x[k] = 1
-          // Adding two cliques (i.e., these two cliques should be added in
-          // computeImplications() to derive global reductions)
+          mask = 0;
+        } else if (mask == 9) {
           clique[0] = HighsCliqueTable::CliqueVar(col, 1);
           clique[1] = HighsCliqueTable::CliqueVar(k, 1);
           cliquetable.addClique(mipsolver, &clique[0], 2);
           clique[0] = HighsCliqueTable::CliqueVar(col, 0);
           clique[1] = HighsCliqueTable::CliqueVar(k, 0);
           cliquetable.addClique(mipsolver, &clique[0], 2);
-          data = 0;
-        } else if (data ==
-                   binaryFixType::
-                       kSubstituteEqual) {  // x[k] is fixed at 0 under x[col] =
-                                            // 0, and is fixed at 1 under x[col]
-                                            // = 1; this makes x[col] = x[k]
-          // Adding two cliques (i.e., these two cliques should be added in
-          // computeImplications() to derive global reductions)
+          mask = 0;
+        } else if (mask == 6) {
           clique[0] = HighsCliqueTable::CliqueVar(col, 1);
           clique[1] = HighsCliqueTable::CliqueVar(k, 0);
           cliquetable.addClique(mipsolver, &clique[0], 2);
           clique[0] = HighsCliqueTable::CliqueVar(col, 0);
           clique[1] = HighsCliqueTable::CliqueVar(k, 1);
           cliquetable.addClique(mipsolver, &clique[0], 2);
-          data = 0;
+          mask = 0;
         }
       }
 
-      // clear the tentative bound changes for binary variables obtained from
-      // probing on x[col]
       clearTentativeClique();
     }
 
     // analyze implications
-    // also include the bound changes of non-binary variables here, to derive
-    // tighter global bounds and variable substitutions
-    const bool haveTentativeImplics_zero =
-        !implications[2 * col].implics_tentative.empty();
-    const bool haveTentativeImplics_one =
-        !implications[2 * col + 1].implics_tentative.empty();
+    const bool haveTentativeImplicsZeroProbe =
+        !implications[2 * col].tentativeImplics.empty();
+    const bool haveTentativeImplicsOneProbe =
+        !implications[2 * col + 1].tentativeImplics.empty();
 
     const std::vector<HighsDomainChange>& implicsdown =
-        haveTentativeImplics_zero ? getImplications_tentative(col, 0)
+        haveTentativeImplicsZeroProbe ? getTentativeImplications(col, 0)
                                   : getImplications(col, 0, infeasible);
     const std::vector<HighsDomainChange>& implicsup =
-        haveTentativeImplics_one ? getImplications_tentative(col, 1)
+        haveTentativeImplicsOneProbe ? getTentativeImplications(col, 1)
                                  : getImplications(col, 1, infeasible);
     HighsInt nimplicsdown = implicsdown.size();
     HighsInt nimplicsup = implicsup.size();
@@ -532,17 +491,10 @@ bool HighsImplications::runProbing(HighsInt col, HighsInt& numReductions) {
     }
 
     // clear tentative implications
-    if (haveTentativeImplics_zero)
-      implications[2 * col].implics_tentative.clear();
-    if (haveTentativeImplics_one)
-      implications[2 * col + 1].implics_tentative.clear();
-
-    if (useGDF) {
-      // fix variables using generalized dual fixing
-      HighsInt nfix = globaldomain.getDfProbingPropagation().processGDFFixing();
-      // propagate if necessary
-      if (nfix > 0) globaldomain.propagate();
-    }
+    if (haveTentativeImplicsZeroProbe)
+      implications[2 * col].tentativeImplics.clear();
+    if (haveTentativeImplicsOneProbe)
+      implications[2 * col + 1].tentativeImplics.clear();
 
     return true;
   }

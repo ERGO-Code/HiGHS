@@ -240,17 +240,17 @@ class HighsDomain {
     HighsDomain* domain;
     HighsMipSolver* mipsolver;
 
-    // row lower and upper, length = 2 * rownum
-    std::vector<HighsBool> redundantPropagateFlag_;
-    std::vector<HighsInt> redundantPropagateVec_;
+    // store row lower and row upper at 2i and 2i + 1
+    std::vector<HighsBool> redundantPropagateFlags_;
+    std::vector<HighsInt> redundantPropagateInds_;
 
-    // For zero-cost variables, we need to know which direction we can fix them
-    enum DFPROBING_FIX_DIRECTION {
-      FIXDIRECTION_NOT_DECIDED = 0,
-      FIXDIRECTION_LOWER_BOUND,
-      FIXDIRECTION_UPPER_BOUND,
+    // Track direction of zero fixings so we don't store disagreeing results
+    enum DfprobingFixDirection {
+      FixUnDecided,
+      FixLowerBound,
+      FixUpperBound,
     };
-    std::vector<DFPROBING_FIX_DIRECTION> zeroCostVarsDirection_;
+    std::vector<DfprobingFixDirection> zeroCostDirections_;
     std::vector<std::pair<HighsInt, bool>> zeroCostFixedVariables_;
 
     // Flag and position in the domchgstack of the first zero-cost variable that
@@ -272,64 +272,52 @@ class HighsDomain {
     std::vector<HighsBool> candidatesFlag_;
     std::unordered_set<HighsInt> lockNeedClear_;
 
-    // temporary buffers for GDF
-    std::vector<HighsInt> gdfCandidatesVec_;
-    std::vector<HighsBool> gdfCandidatesFlag_;
-
-    // GDF reachable-row counts, indexed by column id. For each
-    // variable touched during probing, we only need to know how many
-    // rows make this variable lower/upper bound reachable.
-    std::vector<HighsInt> gdfLbReachable0_;
-    std::vector<HighsInt> gdfLbReachable1_;
-    std::vector<HighsInt> gdfUbReachable0_;
-    std::vector<HighsInt> gdfUbReachable1_;
-
     void enablePropagator() { enabled_ = true; }
 
     void disablePropagator() { enabled_ = false; }
 
-    bool isEnabled() { return enabled_; }
+    bool isEnabled() const { return enabled_; }
 
     // active only when new redundant rows are found.
-    bool isActive() {
-      return enabled_ && redundantPropagateVec_.size() > previousSize_;
+    bool isActive() const {
+      return enabled_ && redundantPropagateInds_.size() > previousSize_;
     }
 
     // mark the position when the first zero-cost variable can be fixed to its
     // lower or upper bound.
     void setZeroCostFixingPosition(HighsInt v) { zeroCostStartPos_ = v; }
 
-    size_t getZeroCostFixingPosition() { return zeroCostStartPos_; }
+    size_t getZeroCostFixingPosition() const { return zeroCostStartPos_; }
 
     void enableZeroObjFixing() { startZeroCostFixing_ = true; }
 
     void disableZeroObjFixing() { startZeroCostFixing_ = false; }
 
-    bool isZeroObjFixingEnabled() { return startZeroCostFixing_; }
+    bool isZeroObjFixingEnabled() const { return startZeroCostFixing_; }
 
-    bool ableToFixToLb(int col) {
+    bool ableToFixToLb(const HighsInt col) const {
       return mipsolver->model_->col_cost_[col] >=
                  -mipsolver->options_mip_->dual_feasibility_tolerance &&
-             mipsolver->model_->col_lower_[col] > -kHighsInf;
+             mipsolver->model_->col_lower_[col] != -kHighsInf;
     }
 
-    bool ableToFixToUb(int col) {
+    bool ableToFixToUb(const HighsInt col) const {
       return mipsolver->model_->col_cost_[col] <=
                  mipsolver->options_mip_->dual_feasibility_tolerance &&
-             mipsolver->model_->col_upper_[col] < kHighsInf;
+             mipsolver->model_->col_upper_[col] != kHighsInf;
     }
 
     // remove redundant information
     void clearRedundantInfo() {
       previousSize_ = 0;
-      if (!redundantPropagateVec_.empty()) {  // clear buffers
-        for (const auto x : redundantPropagateVec_)
-          redundantPropagateFlag_[x] = false;
+      if (!redundantPropagateInds_.empty()) {  // clear buffers
+        for (const auto x : redundantPropagateInds_)
+          redundantPropagateFlags_[x] = false;
 
-        redundantPropagateVec_.clear();
+        redundantPropagateInds_.clear();
       }
 
-      for (size_t i = 0; i < redundantPropagateFlag_.size(); ++i)
+      for (size_t i = 0; i < redundantPropagateFlags_.size(); ++i)
         assert(!redundantPropagateFlag_[i]);
 
       zeroCostFixedVariables_.clear();
@@ -351,11 +339,6 @@ class HighsDomain {
     void updateRhsRedundant(HighsInt row);
     void updateLhsRedundant(HighsInt row);
     void propagate();
-
-    // functionalities for GDF
-    void updateGDFInfo(HighsInt probing_variable, bool val);
-    HighsInt processGDFFixing();
-    void clearGDFInfo();
   };
 
  private:
@@ -470,12 +453,11 @@ class HighsDomain {
   std::vector<HighsInt> branchPos_;
   HighsHashTable<HighsInt> redundantRows_;
   bool recordRedundantRows_ = false;
+  bool inPresolveProbing_ = false;
 
  public:
   std::vector<double> col_lower_;
   std::vector<double> col_upper_;
-
-  bool inProbing_ = false;
 
   HighsDomain(HighsMipSolver& mipsolver);
 
@@ -819,6 +801,10 @@ class HighsDomain {
   DualfixingProbingPropagation& getDfProbingPropagation() {
     return dfprobingPropagation;
   }
+
+  void setInPresolveProbing(bool val) { inPresolveProbing_ = val; }
+
+  bool getInPresolveProbing() const { return inPresolveProbing_; }
 };
 
 #endif
