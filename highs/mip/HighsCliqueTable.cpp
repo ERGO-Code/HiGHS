@@ -1108,8 +1108,8 @@ void HighsCliqueTable::extractCliquesFromCut(const HighsMipSolver& mipsolver,
     if (mipsolver.isColContinuous(inds[i])) continue;
 
     HighsCDouble impliedBound = (rhs - minact) / vals[i];
-    const double boundTol = std::max(
-        globaldom.feastol(), mipsolver.mipdata_->epsilon / std::abs(vals[i]));
+    const double boundTol =
+        std::max(globaldom.feastol(), 1e-10 / std::abs(vals[i]));
     if (vals[i] > 0) {
       const double boundVal = std::floor(static_cast<double>(
           impliedBound + globaldom.col_lower_[inds[i]] + boundTol));
