@@ -767,19 +767,19 @@ class HighsPostsolveStack {
                                     solution.col_dual[iCol]);
         if (perform_basis_postsolve)
           ss << highsFormatToString("; status = %s",
-				    utilBasisStatusToString(basis.col_status[iCol]).c_str());
+                                    utilBasisStatusToString(basis.col_status[iCol]).c_str());
         printf("%s\n", ss.str().c_str());
       }
       for (HighsInt iRow = 0; iRow < origNumRow; iRow++) {
         ss.str(std::string());
-	ss << highsFormatToString("Row %9d value = %11.4g", int(iRow),
-				  solution.row_value[iRow]);
-	if (perform_dual_postsolve)
-	  ss << highsFormatToString("; dual = %11.4g;",
-				    solution.row_dual[iRow]);
-	if (perform_basis_postsolve)
-	  ss << highsFormatToString("; status = %s",
-				    utilBasisStatusToString(basis.row_status[iRow]).c_str());
+        ss << highsFormatToString("Row %9d value = %11.4g", int(iRow),
+                                  solution.row_value[iRow]);
+        if (perform_dual_postsolve)
+          ss << highsFormatToString("; dual = %11.4g;",
+                                    solution.row_dual[iRow]);
+        if (perform_basis_postsolve)
+          ss << highsFormatToString("; status = %s",
+                                    utilBasisStatusToString(basis.row_status[iRow]).c_str());
         printf("%s\n", ss.str().c_str());
       }
     };
@@ -787,8 +787,8 @@ class HighsPostsolveStack {
     // Initialise to illegal values so that initial values are logged
     double report_col_value = kHighsInf;
 
-    // Lambda for logging the solution for a specific column whenever its value changes
-    auto reportColLogging = [&](const HighsInt reduction) {
+    // Lambda for logging the solution for a specific column whenever its value
+    changes auto reportColLogging = [&](const HighsInt reduction) {
       assert(report_col >= 0);
       if (static_cast<size_t>(report_col) >= solution.col_value.size()) return;
       double col_value = solution.col_value[report_col];
@@ -808,13 +808,13 @@ class HighsPostsolveStack {
       if (!report) return;
       ss.str(std::string());
       ss << highsFormatToString(" Col %7d value = %11.4g",
-				int(report_col), col_value);
+                                int(report_col), col_value);
       if (perform_dual_postsolve)
-	ss << highsFormatToString(", dual = %11.4g",
-				  solution.col_dual[report_col]);
+        ss << highsFormatToString(", dual = %11.4g",
+                                  solution.col_dual[report_col]);
       if (perform_basis_postsolve)
-	ss << highsFormatToString(" status = %s",
-				  utilBasisStatusToString(basis.col_status[report_col]).c_str());
+        ss << highsFormatToString(" status = %s",
+                                  utilBasisStatusToString(basis.col_status[report_col]).c_str());
       printf("%s\n", ss.str().c_str());
       report_col_value = col_value;
     };
@@ -825,7 +825,7 @@ class HighsPostsolveStack {
     if (reductions.size() == check_reduction)
       solutionLogging("After solving presolved LP");
     */
-    
+
     // now undo the changes
     for (size_t i = reductions.size(); i > 0; --i) {
       /*
