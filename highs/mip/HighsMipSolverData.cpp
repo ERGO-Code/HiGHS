@@ -1170,10 +1170,9 @@ double HighsMipSolverData::transformNewIntegerFeasibleSolution(
   solution.col_value = sol;
   solution.value_valid = true;
   // Perform primal postsolve to get the original column values
-  // For #3216 report column 2404 (or possibly 578) for 3216.lp
-  const HighsInt report_3216_col = -2404;  // 578;
-  this->reportOriginalPresolvedCol(report_3216_col, sol);
-  postSolveStack.undoPrimal(*mipsolver.options_mip_, solution, report_3216_col);
+  const HighsInt report_col = -kHighsIInf;
+  this->reportOriginalPresolvedCol(report_col, sol);
+  postSolveStack.undoPrimal(*mipsolver.options_mip_, solution, report_col);
   // Determine the row values, as they aren't computed in primal
   // postsolve
   HighsStatus return_status =

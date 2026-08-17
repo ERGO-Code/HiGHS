@@ -751,8 +751,11 @@ class HighsPostsolveStack {
                            HighsBasisStatus::kNonbasic);
     }
 
+    /*
+    // Code for logging when debugging
     std::stringstream ss;
 
+    // Lambda for logging the whole solution
     auto solutionLogging = [&](const std::string& message) {
       printf("\n%s\n", message.c_str());
       for (HighsInt iCol = 0; iCol < origNumCol; iCol++) {
@@ -763,36 +766,33 @@ class HighsPostsolveStack {
           ss << highsFormatToString("; dual = %11.4g;",
                                     solution.col_dual[iCol]);
         if (perform_basis_postsolve)
-          ss << highsFormatToString(
-              "; status = %s",
-              utilBasisStatusToString(basis.col_status[iCol]).c_str());
+          ss << highsFormatToString("; status = %s",
+				    utilBasisStatusToString(basis.col_status[iCol]).c_str());
         printf("%s\n", ss.str().c_str());
-        /*
-      for (HighsInt iRow = 0; iRow < origNumRow; iRow++)
-        printf("Row %9d value = %11.4g; dual = %11.4g; status = %s\n",
-               int(iRow), solution.row_value[iRow], solution.row_dual[iRow],
-               utilBasisStatusToString(basis.row_status[iRow]).c_str());
-               highsFprintfString(file, log_options, ss.str());
-        */
+      }
+      for (HighsInt iRow = 0; iRow < origNumRow; iRow++) {
+        ss.str(std::string());
+	ss << highsFormatToString("Row %9d value = %11.4g", int(iRow),
+				  solution.row_value[iRow]);
+	if (perform_dual_postsolve)
+	  ss << highsFormatToString("; dual = %11.4g;",
+				    solution.row_dual[iRow]);
+	if (perform_basis_postsolve)
+	  ss << highsFormatToString("; status = %s",
+				    utilBasisStatusToString(basis.row_status[iRow]).c_str());
+        printf("%s\n", ss.str().c_str());
       }
     };
 
     // Initialise to illegal values so that initial values are logged
-    size_t check_reduction = -kHighsIInf;
     double report_col_value = kHighsInf;
-    double report_col_dual = kHighsInf;
-    HighsBasisStatus report_col_status = HighsBasisStatus::kNonbasic;
 
+    // Lambda for logging the solution for a specific column whenever its value changes
     auto reportColLogging = [&](const HighsInt reduction) {
       assert(report_col >= 0);
       if (static_cast<size_t>(report_col) >= solution.col_value.size()) return;
       double col_value = solution.col_value[report_col];
-      double col_dual = solution.dual_valid ? solution.col_dual[report_col] : 0;
-      HighsBasisStatus col_status = basis.valid ? basis.col_status[report_col]
-                                                : HighsBasisStatus::kNonbasic;
       bool report = col_value != report_col_value;
-      if (solution.dual_valid) report = report || col_dual != report_col_dual;
-      if (basis.valid) report = report || col_status != report_col_status;
       if (reduction >= 0) {
         ReductionType type = reductions[reduction].first;
         if (report)
@@ -806,19 +806,26 @@ class HighsPostsolveStack {
         printf("After last reduction:               ");
       }
       if (!report) return;
-      printf(" Col %7d value = %11.4g", int(report_col), col_value);
-      if (solution.dual_valid) printf(", dual = %11.4g", col_dual);
-      if (basis.valid)
-        printf(" status = %s", utilBasisStatusToString(col_status).c_str());
-      printf("\n");
+      ss.str(std::string());
+      ss << highsFormatToString(" Col %7d value = %11.4g",
+				int(report_col), col_value);
+      if (perform_dual_postsolve)
+	ss << highsFormatToString(", dual = %11.4g",
+				  solution.col_dual[report_col]);
+      if (perform_basis_postsolve)
+	ss << highsFormatToString(" status = %s",
+				  utilBasisStatusToString(basis.col_status[report_col]).c_str());
+      printf("%s\n", ss.str().c_str());
       report_col_value = col_value;
-      report_col_dual = col_dual;
-      report_col_status = col_status;
     };
+
     if (report_col >= 0) reportColLogging(-1);
+
+    size_t check_reduction = -kHighsIInf;
     if (reductions.size() == check_reduction)
       solutionLogging("After solving presolved LP");
-
+    */
+    
     // now undo the changes
     for (size_t i = reductions.size(); i > 0; --i) {
       /*
@@ -928,9 +935,9 @@ class HighsPostsolveStack {
                  int(reductions[i - 1].first));
           if (kAllowDeveloperAssert) assert(1 == 0);
       }
-      if (report_col >= 0) reportColLogging(i - 1);
+      //      if (report_col >= 0) reportColLogging(i - 1);
     }
-    if (report_col >= 0) reportColLogging(-2);
+    //    if (report_col >= 0) reportColLogging(-2);
 
 #ifdef DEBUG_EXTRA
     // solution should not contain NaN or Inf
@@ -954,19 +961,6 @@ class HighsPostsolveStack {
     solution.dual_valid = false;
     undo(options, solution, basis, report_col, thread_safe);
   }
-
-  /*
-    // Not used
-  /// undo presolve steps for primal and dual solution
-  void undoPrimalDual(const HighsOptions& options, HighsSolution& solution) {
-    reductionValues.resetPosition();
-    HighsBasis basis;
-    basis.valid = false;
-    assert(solution.value_valid);
-    assert(solution.dual_valid);
-    undo(options, solution, basis);
-  }
-  */
 
   // Only used for debugging
   void undoUntil(const HighsOptions& options, HighsSolution& solution,
