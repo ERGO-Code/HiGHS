@@ -163,11 +163,6 @@ class HPresolve {
     explicit operator Result() const { return my_result; };
   };
 
-  struct row_entry {
-    HighsInt col;
-    double val;
-  };
-
   HighsPresolveStatus presolve_status_;
   HPresolveAnalysis analysis_;
 
@@ -405,10 +400,12 @@ class HPresolve {
   bool addToMatrix(HighsPostsolveStack& postsolve_stack,
                    const std::vector<double>& row_lower,
                    const std::vector<double>& row_upper,
-                   const std::vector<std::vector<row_entry>>& row_entries);
+                   const std::vector<std::vector<HighsInt>>& row_indices,
+                   const std::vector<std::vector<double>>& row_values);
 
   bool addToMatrix(HighsPostsolveStack& postsolve_stack, double row_lower,
-                   double row_upper, std::vector<row_entry> row_entries);
+                   double row_upper, const std::vector<HighsInt>& row_indices,
+                   const std::vector<double>& row_values);
 
   Result prepareProbing(HighsPostsolveStack& postsolve_stack, bool& firstCall);
 

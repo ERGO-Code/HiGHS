@@ -2261,9 +2261,10 @@ void HPresolve::addToMatrix(const HighsInt row, const HighsInt col,
 bool HPresolve::addToMatrix(
     HighsPostsolveStack& postsolve_stack, const std::vector<double>& row_lower,
     const std::vector<double>& row_upper,
-    const std::vector<std::vector<row_entry>>& row_entries) {
+    const std::vector<std::vector<HighsInt>>& row_indices,
+    const std::vector<std::vector<double>>& row_values) {
   // update number of rows
-  HighsInt num_rows = static_cast<HighsInt>(row_entries.size());
+  HighsInt num_rows = static_cast<HighsInt>(row_indices.size());
   if (num_rows == 0) return true;
   HighsInt oldNumRows = model->num_row_;
   model->num_row_ += num_rows;
@@ -2329,8 +2330,8 @@ bool HPresolve::addToMatrix(
     HighsInt row = oldNumRows + i;
 
     // add non-zeros
-    for (const auto& entry : row_entries[i])
-      addToMatrix(row, entry.col, entry.val);
+    for (size_t j = 0; j < row_indices[i].size(); j++)
+      addToMatrix(row, row_indices[i][j], row_values[i][j]);
 
     // add row singleton
     if (rowsize[row] == 1) singletonRows.push_back(row);
@@ -2345,12 +2346,12 @@ bool HPresolve::addToMatrix(
 
 bool HPresolve::addToMatrix(HighsPostsolveStack& postsolve_stack,
                             double row_lower, double row_upper,
-                            std::vector<row_entry> row_entries) {
-  std::vector<double> rl = {row_lower};
-  std::vector<double> ru = {row_upper};
-  std::vector<std::vector<row_entry>> re;
-  re.push_back(std::move(row_entries));
-  return addToMatrix(postsolve_stack, rl, ru, re);
+                            const std::vector<HighsInt>& row_indices,
+                            const std::vector<double>& row_values) {
+  return addToMatrix(postsolve_stack, std::vector<double>{row_lower},
+                     std::vector<double>{row_upper},
+                     std::vector<std::vector<HighsInt>>{row_indices},
+                     std::vector<std::vector<double>>{row_values});
 }
 
 HighsTripletListSlice HPresolve::getColumnVector(HighsInt col) const {
