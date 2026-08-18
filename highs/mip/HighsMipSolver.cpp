@@ -1379,21 +1379,46 @@ bool HighsMipSolver::solutionFeasible(const HighsLp* lp,
 
   if (kAllowDeveloperAssert)
     assert(col_value.size() == static_cast<size_t>(lp->num_col_));
+
+  // Lambda to update violation record
+  auto updateViolation = [&](double v, HighsInt index, HighsInt& num, double& max_v, HighsInt& max_index) {
+      if (v <= 0) return;
+      if (v > mip_feasibility_tolerance) num++;
+      if (v > max_v) { max_v = v; max_index = index; }
+  };
+
+  auto updatePrimalViolation = [&](double value, HighsInt index, bool is_column) {
+    const double lower = is_column ? lp->col_lower_[index] : lp->row_lower_[index];
+    const double upper = is_column ? lp->col_upper_[index] : lp->row_upper_[index];
+    double primal_infeasibility;
+    if (value < lower - mip_feasibility_tolerance) {
+      primal_infeasibility = lower - value;
+    } else if (value > upper + mip_feasibility_tolerance) {
+      primal_infeasibility = value - upper;
+    } else {
+      return;
+    }
+    if (is_column) {
+      updateViolation(primal_infeasibility, index,
+		      num_bound_violations,
+		      bound_violation,
+		      col_of_max_bound_violation);
+    } else {
+      updateViolation(primal_infeasibility, index,
+		      num_row_violations,
+		      row_violation,
+		      row_of_max_row_violation);
+    }    
+  };
+  
   for (HighsInt i = 0; i != lp->num_col_; ++i) {
     const double value = col_value[i];
     obj += static_cast<HighsCDouble>(lp->col_cost_[i]) * value;
-
-    if (lp->integrality_[i] == HighsVarType::kInteger) {
-      double violation = fractionality(value);
-      if (violation) {
-        if (violation > mip_feasibility_tolerance) num_integrality_violations++;
-        if (violation > integrality_violation) {
-          integrality_violation = violation;
-          col_of_max_integrality_violation = i;
-        }
-      }
-    }
-
+    if (lp->integrality_[i] == HighsVarType::kInteger)
+      updateViolation(fractionality(value), i,
+		      num_integrality_violations,
+		      integrality_violation,
+		      col_of_max_integrality_violation);
     const double lower = lp->col_lower_[i];
     const double upper = lp->col_upper_[i];
     double primal_infeasibility;
@@ -1401,17 +1426,13 @@ bool HighsMipSolver::solutionFeasible(const HighsLp* lp,
       primal_infeasibility = lower - value;
     } else if (value > upper + mip_feasibility_tolerance) {
       primal_infeasibility = value - upper;
-    } else
+    } else {
       continue;
-
-    if (primal_infeasibility) {
-      if (primal_infeasibility > mip_feasibility_tolerance)
-        num_bound_violations++;
-      if (primal_infeasibility > bound_violation) {
-        bound_violation = primal_infeasibility;
-        col_of_max_bound_violation = i;
-      }
     }
+    updateViolation(primal_infeasibility, i,
+		    num_bound_violations,
+		    bound_violation,
+		    col_of_max_bound_violation);
   }
 
   // Check row feasibility if there are a positive number of rows.
@@ -1440,17 +1461,13 @@ bool HighsMipSolver::solutionFeasible(const HighsLp* lp,
         primal_infeasibility = lower - value;
       } else if (value > upper + mip_feasibility_tolerance) {
         primal_infeasibility = value - upper;
-      } else
+      } else {
         continue;
-
-      if (primal_infeasibility) {
-        if (primal_infeasibility > mip_feasibility_tolerance)
-          num_row_violations++;
-        if (primal_infeasibility > row_violation) {
-          row_violation = primal_infeasibility;
-          row_of_max_row_violation = i;
-        }
       }
+      updateViolation(primal_infeasibility, i,
+		      num_row_violations,
+		      row_violation,
+		      row_of_max_row_violation);
     }
   }
 
