@@ -250,8 +250,14 @@ class HighsDomain {
       FixLowerBound,
       FixUpperBound,
     };
+
+    struct fixedZeroCostColumn {
+      HighsInt col;
+      DfprobingFixDirection direction;
+    };
+
     std::vector<DfprobingFixDirection> zeroCostDirections_;
-    std::vector<std::pair<HighsInt, bool>> zeroCostFixedVariables_;
+    std::vector<fixedZeroCostColumn> fixedZeroCostColumns_;
 
     // Flag and position in the domchgstack of the first zero-cost variable that
     // can be fixed to its lower or upper bound.
@@ -287,12 +293,6 @@ class HighsDomain {
 
     size_t getZeroCostFixingPosition() const { return zeroCostStartPos_; }
 
-    void enableZeroObjFixing() { startZeroCostFixing_ = true; }
-
-    void disableZeroObjFixing() { startZeroCostFixing_ = false; }
-
-    bool isZeroObjFixingEnabled() const { return startZeroCostFixing_; }
-
     bool ableToFixToLb(const HighsInt col) const {
       return mipsolver->model_->col_cost_[col] >=
                  -mipsolver->options_mip_->dual_feasibility_tolerance &&
@@ -317,7 +317,7 @@ class HighsDomain {
       for (size_t i = 0; i < redundantPropagateFlags_.size(); ++i)
         assert(!redundantPropagateFlag_[i]);
 
-      zeroCostFixedVariables_.clear();
+      fixedZeroCostColumns_.clear();
       zeroCostStartPos_ = kHighsIInf;
       startZeroCostFixing_ = false;
       setEnabled(true);
@@ -329,7 +329,7 @@ class HighsDomain {
 
     void endProbing() {
       setEnabled(false);
-      zeroCostFixedVariables_.clear();
+      fixedZeroCostColumns_.clear();
       startZeroCostFixing_ = false;
     }
 
@@ -345,6 +345,7 @@ class HighsDomain {
     void updateRhsRedundant(HighsInt row);
     void updateLhsRedundant(HighsInt row);
     void propagate();
+    void propagateZeroCosts();
   };
 
  private:

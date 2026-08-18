@@ -643,7 +643,7 @@ HighsDomain::DualfixingProbingPropagation::DualfixingProbingPropagation(
     : redundantPropagateFlags_(other.redundantPropagateFlags_),
       redundantPropagateInds_(other.redundantPropagateInds_),
       zeroCostDirections_(other.zeroCostDirections_),
-      zeroCostFixedVariables_(other.zeroCostFixedVariables_),
+      fixedZeroCostColumns_(other.fixedZeroCostColumns_),
       colLowerLockOriginal_(other.colLowerLockOriginal_),
       colUpperLockOriginal_(other.colUpperLockOriginal_),
       colLowerLockReduced_(other.colLowerLockReduced_),
@@ -659,9 +659,9 @@ void HighsDomain::DualfixingProbingPropagation::recomputeLocks() {
   redundantPropagateFlags_.assign(2 * mipsolver->numRow(), false);
   redundantPropagateInds_.clear();
   redundantPropagateInds_.reserve(2 * mipsolver->numRow());
-  zeroCostDirections_.assign(2 * mipsolver->numCol(), FixUnDecided);
-  zeroCostFixedVariables_.clear();
-  zeroCostFixedVariables_.reserve(2 * mipsolver->numCol());
+  zeroCostDirections_.assign(mipsolver->numCol(), FixUnDecided);
+  fixedZeroCostColumns_.clear();
+  fixedZeroCostColumns_.reserve(mipsolver->numCol());
 
   startZeroCostFixing_ = false;
   previousSize_ = 0;
@@ -823,11 +823,11 @@ void HighsDomain::DualfixingProbingPropagation::propagate() {
   // only record - we do not actually fix them now as their objective
   // coefficients are zero
   auto collectFixLower = [&](int iCol) {
-    zeroCostFixedVariables_.emplace_back(iCol, FixLowerBound);
+    fixedZeroCostColumns_.emplace_back(fixedZeroCostColumn{iCol, FixLowerBound});
   };
 
   auto collectFixUpper = [&](int iCol) {
-    zeroCostFixedVariables_.emplace_back(iCol, FixUpperBound);
+    fixedZeroCostColumns_.emplace_back(fixedZeroCostColumn{iCol, FixUpperBound});
   };
 
   // exit if no new redundant constraints are found
@@ -890,7 +890,7 @@ void HighsDomain::DualfixingProbingPropagation::propagate() {
                              colUpperLockOriginal_[iCol];
 
         if (iValue < 0 &&
-            cost >= mipsolver->options_mip_->dual_feasibility_tolerance) {
+            cost >= -mipsolver->options_mip_->dual_feasibility_tolerance) {
           lockNeedClear_.insert(iCol);
           colLowerLockReduced_[iCol]++;
           lowerNoInsert =
@@ -988,7 +988,7 @@ void HighsDomain::DualfixingProbingPropagation::propagate() {
     }
 
     if (mipsolver->model_->col_cost_[iCol] >=
-        mipsolver->options_mip_->dual_feasibility_tolerance) {
+        -mipsolver->options_mip_->dual_feasibility_tolerance) {
       if (canBeFixedToLower) {
         // checkVariableLowerLock(iCol);
         addFixLower(iCol);
@@ -1028,6 +1028,25 @@ void HighsDomain::DualfixingProbingPropagation::propagate() {
   // record the current number of redundant constraints
   previousSize_ = redundantPropagateInds_.size();
 }
+
+void HighsDomain::DualfixingProbingPropagation::propagateZeroCosts() {
+  if (fixedZeroCostColumns_.empty()) return;
+
+  zeroCostStartPos_ = domain->getDomainChangeStack().size();
+
+  for (const fixedZeroCostColumn& fixing : fixedZeroCostColumns_) {
+    if (domain->isFixed(fixing.col)) continue;
+    if (fixing.direction == FixLowerBound) {
+      domain->changeBound(HighsBoundType::kUpper, fixing.col, domain->col_lower_[fixing.col], Reason::unspecified());
+    } else {
+      domain->changeBound(HighsBoundType::kLower, fixing.col, domain->col_upper_[fixing.col], Reason::unspecified());
+    }
+    if (domain->infeasible()) break;
+  }
+
+  fixedZeroCostColumns_.clear();
+}
+
 
 namespace highs {
 template <>
@@ -2968,11 +2987,8 @@ bool HighsDomain::propagate() {
 
     if (!infeasible_ && dfprobingPropagation.isActive()) {
       dfprobingPropagation.propagate();
-      if (!havePropagationRows() &&
-          !dfprobingPropagation.isZeroObjFixingEnabled()) {
-        dfprobingPropagation.enableZeroObjFixing();
-        dfprobingPropagation.setZeroCostFixingPosition(domchgstack_.size());
-        dfprobingPropagation.propagate();
+      if (!infeasible_ && !havePropagationRows()) {
+        dfprobingPropagation.propagateZeroCosts();
       }
     }
   }
