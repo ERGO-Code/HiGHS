@@ -103,7 +103,7 @@ void HPresolve::setInput(HighsLp& model_, const HighsOptions& options_,
   this->in_initial_sweep_ = false;
   // last_reduction_ is used to identify when HPresolve::checkLimits
   // is called for the first time following a reduction
-  this->last_reduction_ = -kHighsIInf;
+  this->last_reduction_ = 0;
 }
 
 // for MIP presolve
