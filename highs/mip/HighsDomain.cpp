@@ -856,7 +856,7 @@ void HighsDomain::DualfixingProbingPropagation::propagate() {
                              colUpperLockOriginal_[iCol];
 
         if (iValue > 0 &&
-            cost >= mipsolver->options_mip_->dual_feasibility_tolerance) {
+            cost >= -mipsolver->options_mip_->dual_feasibility_tolerance) {
           lockNeedClear_.insert(iCol);
           colLowerLockReduced_[iCol]++;
           lowerNoInsert =

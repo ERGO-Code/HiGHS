@@ -29,8 +29,7 @@ bool HighsImplications::computeImplications(HighsInt col, bool val) {
 
   bool dfprobingEnabled = globaldomain.getInPresolveProbing();
   if (dfprobingEnabled) {
-    globaldomain.getDfProbingPropagation().clearRedundantInfo();
-    globaldomain.getDfProbingPropagation().enablePropagator();
+    globaldomain.getDfProbingPropagation().beginProbing();
   }
 
   HighsInt stackimplicstart = domchgstack.size() + 1;
@@ -60,7 +59,7 @@ bool HighsImplications::computeImplications(HighsInt col, bool val) {
   auto isInfeasible = [&](HighsInt col, bool val) {
     if (!globaldomain.infeasible()) return false;
     if (dfprobingEnabled) {
-      globaldomain.getDfProbingPropagation().disablePropagator();
+      globaldomain.getDfProbingPropagation().endProbing();
     }
     storeLiftingOpportunities(col, val);
     doBacktrack(changedend);
@@ -72,7 +71,7 @@ bool HighsImplications::computeImplications(HighsInt col, bool val) {
 
   globaldomain.propagate();
   if (dfprobingEnabled) {
-    globaldomain.getDfProbingPropagation().disablePropagator();
+    globaldomain.getDfProbingPropagation().endProbing();
   }
 
   if (isInfeasible(col, val)) return true;

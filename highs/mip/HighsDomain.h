@@ -272,9 +272,7 @@ class HighsDomain {
     std::vector<HighsBool> candidatesFlag_;
     std::unordered_set<HighsInt> lockNeedClear_;
 
-    void enablePropagator() { enabled_ = true; }
-
-    void disablePropagator() { enabled_ = false; }
+    void setEnabled(const bool val) { enabled_ = val; }
 
     bool isEnabled() const { return enabled_; }
 
@@ -307,8 +305,7 @@ class HighsDomain {
              mipsolver->model_->col_upper_[col] != kHighsInf;
     }
 
-    // remove redundant information
-    void clearRedundantInfo() {
+    void beginProbing() {
       previousSize_ = 0;
       if (!redundantPropagateInds_.empty()) {  // clear buffers
         for (const auto x : redundantPropagateInds_)
@@ -321,10 +318,19 @@ class HighsDomain {
         assert(!redundantPropagateFlag_[i]);
 
       zeroCostFixedVariables_.clear();
+      zeroCostStartPos_ = kHighsIInf;
+      startZeroCostFixing_ = false;
+      setEnabled(true);
 
       for (const auto x : lockNeedClear_)
         colLowerLockReduced_[x] = colUpperLockReduced_[x] = 0;
       lockNeedClear_.clear();
+    }
+
+    void endProbing() {
+      setEnabled(false);
+      zeroCostFixedVariables_.clear();
+      startZeroCostFixing_ = false;
     }
 
     DualfixingProbingPropagation() { ; };
