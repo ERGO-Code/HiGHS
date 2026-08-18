@@ -101,6 +101,9 @@ void HPresolve::setInput(HighsLp& model_, const HighsOptions& options_,
                 static_cast<int>(this->reductionLimit));
   }
   this->in_initial_sweep_ = false;
+  // last_reduction_ is used to identify when HPresolve::checkLimits
+  // is called for the first time following a reduction
+  this->last_reduction_ = 0;
 }
 
 // for MIP presolve
@@ -6913,7 +6916,10 @@ HPresolve::Result HPresolve::checkLimits(HighsPostsolveStack& postsolve_stack) {
 
   if ((numreductions & 1023u) == 0) HPRESOLVE_CHECKED_CALL(checkTimeLimit());
 
-  return numreductions >= reductionLimit ? Result::kStopped : Result::kOk;
+  // Record the value of numreductions so that the next call with an
+  // increase in numreductions can be identified
+  this->last_reduction_ = numreductions;
+  return numreductions >= this->reductionLimit ? Result::kStopped : Result::kOk;
 }
 
 void HPresolve::storeCurrentProblemSize() {

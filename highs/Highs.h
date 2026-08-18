@@ -192,7 +192,7 @@ class Highs {
    * @brief Get number of linear objectives from the incumbent model
    */
   HighsInt getNumLinearObjectives() const {
-    return multi_linear_objective_.size();
+    return static_cast<HighsInt>(multi_linear_objective_.size());
   }
 
   /**

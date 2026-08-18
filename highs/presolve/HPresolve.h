@@ -109,6 +109,7 @@ class HPresolve {
 
   bool shrinkProblemEnabled;
   size_t reductionLimit;
+  size_t last_reduction_;
   bool in_initial_sweep_;
 
   // vectors storing singleton rows and columns
