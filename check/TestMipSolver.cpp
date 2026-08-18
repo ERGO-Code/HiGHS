@@ -1605,3 +1605,39 @@ TEST_CASE("issue-3118a", "[highs_test_mip_solver]") {
 
   highs.resetGlobalScheduler(true);
 }
+
+TEST_CASE("issue-3173", "[highs_test_mip_solver]") {
+  // HPresolve::checkColBounds() treats a column as fixed when its bounds are
+  // equal only within the feasibility tolerance. The condition bounds the
+  // resulting perturbation of the row activities, but not of the objective, so
+  // a column that is nearly fixed in the constraints but has a large cost can
+  // be pinned at the wrong end of its range, losing |cost| * (ub - lb).
+  //
+  // On this model the column has bounds differing by 3.4e-8 and a cost of
+  // -7.3e10, so pinning it at the lower bound costs 2496.5. Presolve reduces
+  // the model to empty and reports that value as optimal, with default options
+  // and no branch-and-bound nodes.
+  //
+  // The optimal objective was verified independently of the MIP solver by
+  // enumerating all 2^8 binary assignments and solving the resulting LP for
+  // each.
+  const std::string filename =
+      std::string(HIGHS_DIR) + "/check/instances/3173-1.mps";
+  const double optimal_objective = -39829.5816585168;
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  REQUIRE(highs.readModel(filename) == HighsStatus::kOk);
+  REQUIRE(highs.run() == HighsStatus::kOk);
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
+  // The column is still pinned within the feasibility tolerance, so allow a
+  // small relative error - but nothing like the 6.3% the defect produces.
+  const double relative_error =
+      std::fabs(highs.getInfo().objective_function_value - optimal_objective) /
+      std::max(1.0, std::fabs(optimal_objective));
+  if (dev_run)
+    printf("issue-3173: objective %g, require %g, relative error %g\n",
+           highs.getInfo().objective_function_value, optimal_objective,
+           relative_error);
+  REQUIRE(relative_error < 1e-6);
+  highs.resetGlobalScheduler(true);
+}

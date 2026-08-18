@@ -2363,9 +2363,20 @@ HPresolve::Result HPresolve::checkColBounds(HighsInt col, bool* isFixed) {
   assert(!colDeleted[col]);
   double boundDiff = model->col_upper_[col] - model->col_lower_[col];
   if (isFixed != nullptr) *isFixed = false;
+  // The bounds are only equal to within the feasibility tolerance, so fixing
+  // the column perturbs the row activities by at most
+  // getMaxAbsColVal(col) * boundDiff and the objective by at most
+  // |cost| * boundDiff. Both have to be negligible: a column can be nearly
+  // fixed in the constraints while still being worth a great deal in the
+  // objective, and fixing it at the wrong end of its range then loses that
+  // amount. Note that for an empty column the row activity term is zero
+  // whatever boundDiff is, so without the objective term such a column would
+  // always be treated as fixed here, pre-empting emptyCol() which fixes it at
+  // the bound that is best for the objective.
   if (boundDiff <= primal_feastol &&
       (boundDiff <= options->small_matrix_value ||
-       getMaxAbsColVal(col) * boundDiff <= primal_feastol)) {
+       (getMaxAbsColVal(col) * boundDiff <= primal_feastol &&
+        std::fabs(model->col_cost_[col]) * boundDiff <= primal_feastol))) {
     // check for primal infeasibility
     if (boundDiff < -primal_feastol) return Result::kPrimalInfeasible;
     // check for unboundedness
