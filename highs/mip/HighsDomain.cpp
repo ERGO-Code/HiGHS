@@ -663,7 +663,7 @@ void HighsDomain::DualfixingProbingPropagation::recomputeLocks() {
   fixedZeroCostColumns_.clear();
   fixedZeroCostColumns_.reserve(mipsolver->numCol());
 
-  startZeroCostFixing_ = false;
+  applyingZeroCostFixings_ = false;
   previousSize_ = 0;
 
   colLowerLockOriginal_.assign(mipsolver->numCol(), 0);
@@ -913,16 +913,16 @@ void HighsDomain::DualfixingProbingPropagation::propagate() {
 
   for (auto iCol : candidatesVec_) {
     if (domain->isFixed(iCol)) continue;
-    const bool canBeFixedToLower =
+    const bool canBeFixedToLower = ableToFixToLb(iCol) &&
         colLowerLockReduced_[iCol] == colLowerLockOriginal_[iCol];
-    const bool canBeFixedToUpper =
+    const bool canBeFixedToUpper = ableToFixToUb(iCol) &&
         colUpperLockReduced_[iCol] == colUpperLockOriginal_[iCol];
     if (!canBeFixedToLower && !canBeFixedToUpper) continue;
 
     if (fabs(mipsolver->model_->col_cost_[iCol]) <=
         mipsolver->options_mip_->dual_feasibility_tolerance) {
-      if (startZeroCostFixing_) {
-        // not fixed before
+      if (applyingZeroCostFixings_) {
+        // not fixed beforei
         if (zeroCostDirections_[iCol] == FixUnDecided) {
           // both directions are ok - depending on cost (no tolerance)
           if (canBeFixedToLower && canBeFixedToUpper) {
@@ -1032,6 +1032,7 @@ void HighsDomain::DualfixingProbingPropagation::propagate() {
 void HighsDomain::DualfixingProbingPropagation::propagateZeroCosts() {
   if (fixedZeroCostColumns_.empty()) return;
 
+  applyingZeroCostFixings_ = true;
   zeroCostStartPos_ = domain->getDomainChangeStack().size();
 
   for (const fixedZeroCostColumn& fixing : fixedZeroCostColumns_) {
@@ -1043,6 +1044,7 @@ void HighsDomain::DualfixingProbingPropagation::propagateZeroCosts() {
     }
     if (domain->infeasible()) break;
   }
+  applyingZeroCostFixings_ = false;
 
   fixedZeroCostColumns_.clear();
 }
@@ -1969,7 +1971,7 @@ void HighsDomain::updateActivityLbChange(HighsInt col, double oldbound,
       // then we cannot record redundant rows for lifting, as this bound change
       // could disregarded.
       if (recordRedundantRows_ &&
-          !dfprobingPropagation.isZeroObjFixingEnabled() &&
+          !dfprobingPropagation.isZeroCostFixingActive() &&
           mip->row_lower_[mip->a_matrix_.index_[i]] != -kHighsInf &&
           mip->row_upper_[mip->a_matrix_.index_[i]] == kHighsInf)
         updateRedundantRows(mip->a_matrix_.index_[i]);
@@ -2024,7 +2026,7 @@ void HighsDomain::updateActivityLbChange(HighsInt col, double oldbound,
       // then we cannot record redundant rows for lifting, as this bound change
       // could disregarded.
       if (recordRedundantRows_ &&
-          !dfprobingPropagation.isZeroObjFixingEnabled() &&
+          !dfprobingPropagation.isZeroCostFixingActive() &&
           mip->row_lower_[mip->a_matrix_.index_[i]] == -kHighsInf &&
           mip->row_upper_[mip->a_matrix_.index_[i]] != kHighsInf)
         updateRedundantRows(mip->a_matrix_.index_[i]);
@@ -2148,7 +2150,7 @@ void HighsDomain::updateActivityUbChange(HighsInt col, double oldbound,
       // then we cannot record redundant rows for lifting, as this bound change
       // could disregarded.
       if (recordRedundantRows_ &&
-          !dfprobingPropagation.isZeroObjFixingEnabled() &&
+          !dfprobingPropagation.isZeroCostFixingActive() &&
           mip->row_lower_[mip->a_matrix_.index_[i]] == -kHighsInf &&
           mip->row_upper_[mip->a_matrix_.index_[i]] != kHighsInf)
         updateRedundantRows(mip->a_matrix_.index_[i]);
@@ -2206,7 +2208,7 @@ void HighsDomain::updateActivityUbChange(HighsInt col, double oldbound,
       // then we cannot record redundant rows for lifting, as this bound change
       // could disregarded.
       if (recordRedundantRows_ &&
-          !dfprobingPropagation.isZeroObjFixingEnabled() &&
+          !dfprobingPropagation.isZeroCostFixingActive() &&
           mip->row_lower_[mip->a_matrix_.index_[i]] != -kHighsInf &&
           mip->row_upper_[mip->a_matrix_.index_[i]] == kHighsInf)
         updateRedundantRows(mip->a_matrix_.index_[i]);

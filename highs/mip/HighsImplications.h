@@ -69,7 +69,7 @@ class HighsImplications {
   // (0101) : Fixed to upper in both sides. Fix to upper.
   // (1001) : Conclude that x1 + x2 = 1
   // (0110) : Conclude that x1 = x2
-  std::vector<HighsBool> binaryInvolvedFlags_;
+  std::vector<uint8_t> binaryInvolvedFlags_;
 
   HighsImplications(const HighsMipSolver& mipsolver) : mipsolver(mipsolver) {
     HighsInt numcol = mipsolver.numCol();

@@ -364,7 +364,7 @@ bool HighsImplications::runProbing(HighsInt col, HighsInt& numReductions) {
     if (mipsolver.mipdata_->cliquetable.getSubstitution(col) != nullptr)
       return true;
 
-    if (enableDfprobing && !binaryInvolvedInds_.empty()) {
+    if (enableDfprobing && !binaryInvolvedInds_.empty() && mipsolver.mipdata_->cliquetable.isFull()) {
       HighsCliqueTable& cliquetable = mipsolver.mipdata_->cliquetable;
       HighsCliqueTable::CliqueVar clique[2];
       for (HighsInt k : binaryInvolvedInds_) {
@@ -407,6 +407,7 @@ bool HighsImplications::runProbing(HighsInt col, HighsInt& numReductions) {
           cliquetable.addClique(mipsolver, &clique[0], 2);
           mask = 0;
         }
+        if (globaldomain.infeasible()) return true;
       }
 
       clearTentativeClique();

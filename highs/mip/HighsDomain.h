@@ -259,9 +259,7 @@ class HighsDomain {
     std::vector<DfprobingFixDirection> zeroCostDirections_;
     std::vector<fixedZeroCostColumn> fixedZeroCostColumns_;
 
-    // Flag and position in the domchgstack of the first zero-cost variable that
-    // can be fixed to its lower or upper bound.
-    bool startZeroCostFixing_ = false;
+    bool applyingZeroCostFixings_ = false;
     size_t zeroCostStartPos_;
 
     bool enabled_ = false;
@@ -286,6 +284,8 @@ class HighsDomain {
     bool isActive() const {
       return enabled_ && redundantPropagateInds_.size() > previousSize_;
     }
+
+    bool isZeroCostFixingActive() const { return applyingZeroCostFixings_; }
 
     // mark the position when the first zero-cost variable can be fixed to its
     // lower or upper bound.
@@ -315,11 +315,11 @@ class HighsDomain {
       }
 
       for (size_t i = 0; i < redundantPropagateFlags_.size(); ++i)
-        assert(!redundantPropagateFlag_[i]);
+        assert(!redundantPropagateFlags_[i]);
 
       fixedZeroCostColumns_.clear();
       zeroCostStartPos_ = kHighsIInf;
-      startZeroCostFixing_ = false;
+      applyingZeroCostFixings_ = false;
       setEnabled(true);
 
       for (const auto x : lockNeedClear_)
@@ -330,7 +330,7 @@ class HighsDomain {
     void endProbing() {
       setEnabled(false);
       fixedZeroCostColumns_.clear();
-      startZeroCostFixing_ = false;
+      applyingZeroCostFixings_ = false;
     }
 
     DualfixingProbingPropagation() { ; };
