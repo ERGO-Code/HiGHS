@@ -332,12 +332,9 @@ class HighsPostsolveStack {
       const std::vector<HighsInt>& original_indices) const {
     auto it = std::find(original_indices.begin(), original_indices.end(),
                         original_index);
-    // If found, calculate the index by subtracting the base iterator
-    if (it != original_indices.end()) {
-      HighsInt presolved_index = it - original_indices.begin();
-      assert(original_indices[presolved_index] == original_index);
-      return presolved_index;
-    }
+    // If found, return the index after subtracting the base iterator
+    if (it != original_indices.end())
+      return static_cast<HighsInt>(it - original_indices.begin());
     return -1;
   }
 
@@ -788,7 +785,9 @@ class HighsPostsolveStack {
     double report_col_value = kHighsInf;
 
     // Lambda for logging the solution for a specific column whenever its value
-    changes auto reportColLogging = [&](const HighsInt reduction) {
+    changes
+
+    auto reportColLogging = [&](const HighsInt reduction) {
       assert(report_col >= 0);
       if (static_cast<size_t>(report_col) >= solution.col_value.size()) return;
       double col_value = solution.col_value[report_col];
@@ -821,7 +820,7 @@ class HighsPostsolveStack {
 
     if (report_col >= 0) reportColLogging(-1);
 
-    size_t check_reduction = -kHighsIInf;
+    size_t check_reduction = kHighsSize_tInf;
     if (reductions.size() == check_reduction)
       solutionLogging("After solving presolved LP");
     */
