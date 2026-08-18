@@ -1415,14 +1415,13 @@ bool HighsMipSolver::solutionFeasible(const HighsLp* lp,
   };
 
   // Check column integrality and feasibility
-  bool is_column = true;
   for (HighsInt i = 0; i != lp->num_col_; ++i) {
     const double value = col_value[i];
     obj += static_cast<HighsCDouble>(lp->col_cost_[i]) * value;
     if (lp->integrality_[i] == HighsVarType::kInteger)
       updateViolation(fractionality(value), i, num_integrality_violations,
                       integrality_violation, col_of_max_integrality_violation);
-    updatePrimalViolation(value, i, is_column);
+    updatePrimalViolation(value, i, true);
   }
 
   // Check row feasibility if there is a positive number of rows
@@ -1441,9 +1440,8 @@ bool HighsMipSolver::solutionFeasible(const HighsLp* lp,
         pass_row_value ? (*pass_row_value).data() : row_value.data();
     assert(row_value_p);
 
-    bool is_column = false;
     for (HighsInt i = 0; i != lp->num_row_; ++i)
-      updatePrimalViolation(row_value_p[i], i, is_column);
+      updatePrimalViolation(row_value_p[i], i, false);
   }
 
   const bool feasible = bound_violation <= mip_feasibility_tolerance &&
