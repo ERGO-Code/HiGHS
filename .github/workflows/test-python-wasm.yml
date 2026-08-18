@@ -1,0 +1,32 @@
+name: test-python-wasm
+
+on: [push, pull_request]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Functional smoke test for the pyodide/wasm32 wheel: builds it with the
+  # same cibuildwheel config as build_wheel_wasm in build-python-package.yml,
+  # but runs a real LP + MIP solve (see .github/scripts/wasm_smoke_test.py)
+  # instead of the unit test suite, to check solver correctness under wasm
+  # rather than just "the build didn't fail". WASM support is still
+  # experimental, so this job is allowed to fail without blocking other CI.
+  smoke_test_wasm:
+    runs-on: ubuntu-24.04
+    continue-on-error: true
+    env:
+      CIBW_TEST_COMMAND_PYODIDE: "python {project}/.github/scripts/wasm_smoke_test.py"
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install correct python version
+        uses: actions/setup-python@v6
+        with:
+          python-version: 3.14
+
+      - name: Build wheel and run wasm smoke test
+        run: |
+          python3 -m pip install cibuildwheel
+          python3 -m cibuildwheel --only cp314-pyodide_wasm32

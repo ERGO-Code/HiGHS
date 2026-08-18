@@ -129,3 +129,19 @@ repair-wheel-command = """
     -e libunwind \
     -w {dest_dir} -v {wheel}
 """
+
+[tool.cibuildwheel.pyodide]
+# Statically link the extras plugin instead of dlopen()-ing it (not viable in
+# a wasm wheel), and hard-disable the parallel task scheduler at compile time.
+# HIPO_PYTHON still forces HIPO=ON regardless (see CMakeLists.txt), so HiPO's
+# parallel numeric code stays compiled in; it relies on the scheduler already
+# being a no-op single-threaded build to be wasm-safe.
+config-settings = { "cmake.define.BUILD_SHARED_EXTRAS_LIB" = "OFF", "cmake.define.HIGHS_NO_DEFAULT_THREADS" = "ON" }
+test-requires = ["pytest"]
+test-command = "python -m pytest -k \"not test_user_interrupts and not test_with_context_manager\" {project}/highspy/tests -x"
+repair-wheel-command = """
+rm -rf /tmp/wheel_repair && mkdir -p /tmp/wheel_repair && \
+python -m zipfile -e {wheel} /tmp/wheel_repair && \
+LIBDIR=$(dirname $(find /tmp/wheel_repair -name 'libhighs.so' | head -n1)) && \
+pyodide auditwheel repair --libdir "$LIBDIR" --output-dir {dest_dir} {wheel}
+"""
