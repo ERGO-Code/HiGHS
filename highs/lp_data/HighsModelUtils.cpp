@@ -1379,21 +1379,27 @@ std::string utilSolutionStatusToString(const HighsInt solution_status) {
 }
 
 // Return a string representation of HighsBasisStatus
-std::string utilBasisStatusToString(const HighsBasisStatus basis_status) {
+std::string utilBasisStatusToString(const HighsBasisStatus basis_status,
+                                    const bool s2) {
   switch (basis_status) {
     case HighsBasisStatus::kLower:
+      if (s2) return "LO";
       return "At lower/fixed bound";
       break;
     case HighsBasisStatus::kBasic:
+      if (s2) return "BS";
       return "Basic";
       break;
     case HighsBasisStatus::kUpper:
+      if (s2) return "UP";
       return "At upper bound";
       break;
     case HighsBasisStatus::kZero:
+      if (s2) return "ZE";
       return "Free at zero";
       break;
     case HighsBasisStatus::kNonbasic:
+      if (s2) return "NB";
       return "Nonbasic";
       break;
     default:
@@ -1517,6 +1523,8 @@ std::string utilPresolveRuleTypeToString(const HighsInt rule_type) {
     return "Enumeration";
   } else if (rule_type == kPresolveRuleDualFixing) {
     return "Dual fixing";
+  } else if (rule_type == kPresolveRuleZeroCostSingleton) {
+    return "Zero cost singleton";
   } else if (rule_type == kPresolveRuleColStuffing) {
     return "Col stuffing";
   } else if (rule_type == kPresolveRuleInitialSweep) {
