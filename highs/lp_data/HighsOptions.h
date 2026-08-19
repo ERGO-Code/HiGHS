@@ -290,6 +290,7 @@ const string kModelFileString = "model_file";
 const string kReadBasisFileString = "read_basis_file";
 const string kWriteBasisFileString = "write_basis_file";
 const string kPresolveString = "presolve";
+const string kPresolveLightString = "presolve_light";
 const string kSolverString = "solver";
 const string kParallelString = "parallel";
 const string kThreadsString = "threads";
@@ -441,6 +442,7 @@ struct HighsOptionsStruct {
   bool lp_presolve_requires_basis_postsolve;
   bool mps_parser_type_free;
   bool use_warm_start;
+  std::string presolve_light;
   bool write_matrix_image;
   bool write_hessian_image;
   HighsInt keep_n_rows;
@@ -615,6 +617,7 @@ struct HighsOptionsStruct {
         lp_presolve_requires_basis_postsolve(false),
         mps_parser_type_free(false),
         use_warm_start(true),
+        presolve_light(""),
         write_matrix_image(false),
         write_hessian_image(false),
         keep_n_rows(0),
@@ -1515,6 +1518,12 @@ class HighsOptions : public HighsOptionsStruct {
                                        "Use any warm start that is available",
                                        advanced, &use_warm_start, true);
     records.push_back(record_bool);
+
+    record_string = new OptionRecordString(
+        kPresolveLightString,
+        "Use only low-cost presolve rules: \"off\", \"choose\" or \"on\"",
+        advanced, &presolve_light, kHighsChooseString);
+    records.push_back(record_string);
 
     record_bool = new OptionRecordBool(
         "write_matrix_image",

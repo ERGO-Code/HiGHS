@@ -289,7 +289,7 @@ TEST_CASE("check-set-mip-solution", "[highs_check_solution]") {
 
     index.clear();
     value.clear();
-    std::vector<bool> is_set;
+    std::vector<HighsBool> is_set;
     is_set.assign(lp.num_col_, false);
     HighsInt num_to_set = 2;
     assert(num_to_set > 0);

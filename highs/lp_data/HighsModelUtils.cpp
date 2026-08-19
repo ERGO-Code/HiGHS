@@ -598,10 +598,10 @@ void writeGlpsolSolution(FILE* file, const HighsOptions& options,
   assert(lp.row_names_.size() == static_cast<size_t>(lp.num_row_));
   // Determine number of nonzeros including the objective function
   // and, hence, determine whether there is an objective function
-  HighsInt num_nz = lp.a_matrix_.numNz();
+  HighsInt num_nz = lp.numNz();
   for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++)
     if (lp.col_cost_[iCol]) num_nz++;
-  const bool empty_cost_row = num_nz == lp.a_matrix_.numNz();
+  const bool empty_cost_row = num_nz == lp.numNz();
   const bool has_objective = !empty_cost_row || model.hessian_.dim_;
   // Writes the solution using the GLPK raw style (defined in
   // api/wrsol.c) or pretty style (defined in api/prsol.c)
@@ -702,7 +702,7 @@ void writeGlpsolSolution(FILE* file, const HighsOptions& options,
   const HighsInt glpsol_num_row = num_row + delta_num_row;
   // If the cost row isn't reported, then the number of nonzeros is
   // just the number in the constraint matrix
-  if (cost_row_location <= 0) num_nz = lp.a_matrix_.numNz();
+  if (cost_row_location <= 0) num_nz = lp.numNz();
   // Record the discrete nature of the model
   HighsInt num_integer = 0;
   HighsInt num_binary = 0;

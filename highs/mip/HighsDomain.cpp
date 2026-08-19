@@ -17,29 +17,29 @@
 #include "mip/HighsCutPool.h"
 #include "mip/HighsMipSolverData.h"
 
-static double activityContributionMin(double coef, const double& lb,
-                                      const double& ub) {
+static HighsCDouble activityContributionMin(double coef, const double& lb,
+                                            const double& ub) {
   if (coef < 0) {
     if (ub == kHighsInf) return -kHighsInf;
 
-    return coef * ub;
+    return coef * static_cast<HighsCDouble>(ub);
   } else {
     if (lb == -kHighsInf) return -kHighsInf;
 
-    return coef * lb;
+    return coef * static_cast<HighsCDouble>(lb);
   }
 }
 
-static double activityContributionMax(double coef, const double& lb,
-                                      const double& ub) {
+static HighsCDouble activityContributionMax(double coef, const double& lb,
+                                            const double& ub) {
   if (coef < 0) {
     if (lb == -kHighsInf) return kHighsInf;
 
-    return coef * lb;
+    return coef * static_cast<HighsCDouble>(lb);
   } else {
     if (ub == kHighsInf) return kHighsInf;
 
-    return coef * ub;
+    return coef * static_cast<HighsCDouble>(ub);
   }
 }
 
@@ -1276,7 +1276,7 @@ void HighsDomain::computeMinActivity(HighsInt start, HighsInt end,
       HighsInt tmp;
       double lb = getColLowerPos(col, infeasible_pos - 1, tmp);
       double ub = getColUpperPos(col, infeasible_pos - 1, tmp);
-      double contributionmin = activityContributionMin(val, lb, ub);
+      HighsCDouble contributionmin = activityContributionMin(val, lb, ub);
 
       if (contributionmin == -kHighsInf)
         ++ninfmin;
@@ -1293,7 +1293,7 @@ void HighsDomain::computeMinActivity(HighsInt start, HighsInt end,
 
       assert(col < static_cast<HighsInt>(col_lower_.size()));
 
-      double contributionmin =
+      HighsCDouble contributionmin =
           activityContributionMin(val, col_lower_[col], col_upper_[col]);
 
       if (contributionmin == -kHighsInf)
@@ -1321,7 +1321,7 @@ void HighsDomain::computeMaxActivity(HighsInt start, HighsInt end,
       HighsInt tmp;
       double lb = getColLowerPos(col, infeasible_pos - 1, tmp);
       double ub = getColUpperPos(col, infeasible_pos - 1, tmp);
-      double contributionmin = activityContributionMax(val, lb, ub);
+      HighsCDouble contributionmin = activityContributionMax(val, lb, ub);
 
       if (contributionmin == kHighsInf)
         ++ninfmax;
@@ -1337,7 +1337,7 @@ void HighsDomain::computeMaxActivity(HighsInt start, HighsInt end,
 
       assert(col < static_cast<HighsInt>(col_lower_.size()));
 
-      double contributionmin =
+      HighsCDouble contributionmin =
           activityContributionMax(val, col_lower_[col], col_upper_[col]);
 
       if (contributionmin == kHighsInf)
@@ -1420,7 +1420,7 @@ HighsInt HighsDomain::propagateRowUpper(const HighsInt* Rindex,
   HighsInt numchgs = 0;
   for (HighsInt i = 0; i != Rlen; ++i) {
     HighsCDouble minresact;
-    double actcontribution = activityContributionMin(
+    HighsCDouble actcontribution = activityContributionMin(
         Rvalue[i], col_lower_[Rindex[i]], col_upper_[Rindex[i]]);
     if (ninfmin == 1) {
       if (actcontribution != -kHighsInf) continue;
@@ -1463,7 +1463,7 @@ HighsInt HighsDomain::propagateRowLower(const HighsInt* Rindex,
   HighsInt numchgs = 0;
   for (HighsInt i = 0; i != Rlen; ++i) {
     HighsCDouble maxresact;
-    double actcontribution = activityContributionMax(
+    HighsCDouble actcontribution = activityContributionMax(
         Rvalue[i], col_lower_[Rindex[i]], col_upper_[Rindex[i]]);
     if (ninfmax == 1) {
       if (actcontribution != kHighsInf) continue;
@@ -1946,7 +1946,7 @@ void HighsDomain::markPropagate(HighsInt row) {
 
     if (proplower || propupper) {
       propagateinds_.push_back(row);
-      propagateflags_[row] = 1;
+      propagateflags_[row] = true;
     }
   }
 }
@@ -1993,7 +1993,7 @@ double HighsDomain::doChangeBound(const HighsDomainChange& boundchg) {
         updateActivityLbChange(boundchg.column, oldbound, boundchg.boundval);
 
       if (!isChangedCol(boundchg.column)) {
-        changedcolsflags_[boundchg.column] = 1;
+        changedcolsflags_[boundchg.column] = true;
         changedcols_.push_back(boundchg.column);
       }
     }
@@ -2005,7 +2005,7 @@ double HighsDomain::doChangeBound(const HighsDomainChange& boundchg) {
         updateActivityUbChange(boundchg.column, oldbound, boundchg.boundval);
 
       if (!isChangedCol(boundchg.column)) {
-        changedcolsflags_[boundchg.column] = 1;
+        changedcolsflags_[boundchg.column] = true;
         changedcols_.push_back(boundchg.column);
       }
     }
@@ -2410,7 +2410,7 @@ bool HighsDomain::propagate() {
       HighsInt numproprows = static_cast<HighsInt>(propagateinds.size());
       for (HighsInt i = 0; i != numproprows; ++i) {
         HighsInt row = propagateinds[i];
-        propagateflags_[row] = 0;
+        propagateflags_[row] = false;
       }
 
       if (!infeasible_) {

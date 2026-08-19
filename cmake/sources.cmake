@@ -570,6 +570,7 @@ set(highs_headers
     presolve/ICrashUtil.h
     presolve/ICrashX.h
     presolve/PresolveComponent.h
+    presolve/PresolveTimer.h
     qpsolver/a_asm.hpp
     qpsolver/a_quass.hpp
     qpsolver/basis.hpp
@@ -622,6 +623,7 @@ set(highs_headers
     util/HighsHash.h
     util/HighsHashTree.h
     util/HighsInt.h
+    util/HighsType.h
     util/HighsIntegers.h
     util/HighsLinearSumBounds.h
     util/HighsMatrixPic.h

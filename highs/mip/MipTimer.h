@@ -119,7 +119,7 @@ enum iClockMip : int {
 
 const HighsInt kNumThreadMipClock = kLastMipClock;
 
-const double tolerance_percent_report = 0.1;
+static const double kMipClockTolerancePercentReport = 0.1;
 
 inline void initialiseMipProfilingNames(std::vector<std::string>& name) {
   assert(name.size() == static_cast<size_t>(kToMipClock));
@@ -467,7 +467,7 @@ class MipTimer {
                                                kMipClockSearch,
                                                kMipClockPostsolve};
     reportMipClockList("MipLevl1", mip_clock_list, mip_timer_clock,
-                       kMipClockTotal, tolerance_percent_report);
+                       kMipClockTotal, kMipClockTolerancePercentReport);
   };
 
   void reportMipSolveLpClock(const HighsTimerClock& mip_timer_clock) {
@@ -481,20 +481,20 @@ class MipTimer {
         kMipClockHipoSolveLp,
         kMipClockIpxSolveLp};
     reportMipClockList("MipSlvLp", mip_clock_list, mip_timer_clock,
-                       kMipClockTotal);  //, tolerance_percent_report);
+                       kMipClockTotal);  //, kMipClockTolerancePercentReport);
   };
 
   void reportMipSubMipSolveClock(const HighsTimerClock& mip_timer_clock) {
     const std::vector<HighsInt> mip_clock_list{kMipClockSubMipSolve};
     reportMipClockList("MipSlvLp", mip_clock_list, mip_timer_clock,
-                       kMipClockTotal);  //, tolerance_percent_report);
+                       kMipClockTotal);  //, kMipClockTolerancePercentReport);
   };
 
   void reportMipPresolveClock(const HighsTimerClock& mip_timer_clock) {
     const std::vector<HighsInt> mip_clock_list{kMipClockProbingPresolve,
                                                kMipClockEnumerationPresolve};
     reportMipClockList("MipPrslv", mip_clock_list, mip_timer_clock,
-                       kMipClockRunPresolve, tolerance_percent_report);
+                       kMipClockRunPresolve, kMipClockTolerancePercentReport);
   };
 
   void reportAltEvaluateRootNodeClock(const HighsTimerClock& mip_timer_clock) {
@@ -503,7 +503,7 @@ class MipTimer {
                                                kMipClockEvaluateRootNode2};
     reportMipClockList(
         "AltEvaluateRootNode", mip_clock_list, mip_timer_clock,
-        kMipClockEvaluateRootNode);  //, tolerance_percent_report);
+        kMipClockEvaluateRootNode);  //, kMipClockTolerancePercentReport);
   };
 
   void reportMipEvaluateRootNodeClock(const HighsTimerClock& mip_timer_clock) {
@@ -529,7 +529,7 @@ class MipTimer {
     };
     reportMipClockList(
         "MipEvaluateRootNode", mip_clock_list, mip_timer_clock,
-        kMipClockEvaluateRootNode);  //, tolerance_percent_report);
+        kMipClockEvaluateRootNode);  //, kMipClockTolerancePercentReport);
   };
 
   void reportMipRootSeparationClock(const HighsTimerClock& mip_timer_clock) {
@@ -538,8 +538,9 @@ class MipTimer {
         kMipClockRootSeparationFinishAnalyticCentreComputation,
         kMipClockRootSeparationCentralRounding,
         kMipClockRootSeparationEvaluateRootLp};
-    reportMipClockList("MipRootSeparation", mip_clock_list, mip_timer_clock,
-                       kMipClockRootSeparation);  //, tolerance_percent_report);
+    reportMipClockList(
+        "MipRootSeparation", mip_clock_list, mip_timer_clock,
+        kMipClockRootSeparation);  //, kMipClockTolerancePercentReport);
   };
 
   void reportMipSearchClock(const HighsTimerClock& mip_timer_clock) {
@@ -551,7 +552,7 @@ class MipTimer {
         //	kMipClock@
     };
     reportMipClockList("MipSerch", mip_clock_list, mip_timer_clock,
-                       kMipClockSearch, tolerance_percent_report);
+                       kMipClockSearch, kMipClockTolerancePercentReport);
   };
 
   void reportMipDiveClock(const HighsTimerClock& mip_timer_clock) {
@@ -559,7 +560,7 @@ class MipTimer {
         kMipClockDiveEvaluateNode, kMipClockDivePrimalHeuristics,
         kMipClockTheDive, kMipClockBacktrackPlunge, kMipClockPerformAging2};
     reportMipClockList("MipDive_", mip_clock_list, mip_timer_clock,
-                       kMipClockDive, tolerance_percent_report);
+                       kMipClockDive, kMipClockTolerancePercentReport);
   };
 
   void reportMipDivePrimalHeuristicsClock(
@@ -568,7 +569,7 @@ class MipTimer {
         kMipClockDiveRandomizedRounding, kMipClockDiveRens, kMipClockDiveRins};
     reportMipClockList("MipDivePrimalHeuristics", mip_clock_list,
                        mip_timer_clock, kMipClockDivePrimalHeuristics,
-                       tolerance_percent_report);
+                       kMipClockTolerancePercentReport);
   };
 
   void reportMipNodeSearchClock(const HighsTimerClock& mip_timer_clock) {
@@ -577,8 +578,9 @@ class MipTimer {
         //      kMipClockSearchBacktrack,
         kMipClockOpenNodesToQueue1, kMipClockEvaluateNode1,
         kMipClockNodeSearchSeparation};  //, kMipClockStoreBasis};
-    reportMipClockList("MipNodeSearch", mip_clock_list, mip_timer_clock,
-                       kMipClockNodeSearch);  //, tolerance_percent_report);
+    reportMipClockList(
+        "MipNodeSearch", mip_clock_list, mip_timer_clock,
+        kMipClockNodeSearch);  //, kMipClockTolerancePercentReport);
   };
 
   void reportMipSeparationClock(const HighsTimerClock& mip_timer_clock) {
@@ -586,7 +588,7 @@ class MipTimer {
         kMipClockImplboundSepa, kMipClockCliqueSepa, kMipClockTableauSepa,
         kMipClockPathAggrSepa,  kMipClockModKSepa,   kMipClockMachineSchedSepa};
     reportMipClockList("MipSeparation", mip_clock_list, mip_timer_clock,
-                       kMipClockTotal);  //, tolerance_percent_report);
+                       kMipClockTotal);  //, kMipClockTolerancePercentReport);
   };
 
   void csvMipClock(const std::string model_name,

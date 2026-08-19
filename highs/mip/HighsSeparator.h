@@ -15,7 +15,7 @@
 
 #include <string>
 
-#include "util/HighsInt.h"
+#include "util/HighsType.h"
 
 const std::string kImplboundSepaString = "Separation: Implied bounds";
 const std::string kCliqueSepaString = "Separation: Clique";

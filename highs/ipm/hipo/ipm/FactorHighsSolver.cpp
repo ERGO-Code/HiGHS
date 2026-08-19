@@ -376,8 +376,7 @@ Int FactorHighsSolver::chooseOrdering(const std::vector<Int>& rows,
 
   const Int k = orderings_to_try.size();
 
-  // vector<bool> is not thread-safe
-  std::vector<char> failure(k, 0);
+  std::vector<HighsBool> failure(k, false);
 
   if (nla == "NE") {
     if (ptr.back() >= kkt_.NE_nz_limit.load(std::memory_order_relaxed)) {
