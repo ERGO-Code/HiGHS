@@ -15,7 +15,6 @@
 #define BASICLU_FTCOLUMN_OUT 258
 #define BASICLU_PIVOT_ROW 259
 #define BASICLU_PIVOT_COL 260
-#define BASICLU_RANKDEF 261
 #define BASICLU_MIN_COLNZ 262
 #define BASICLU_MIN_ROWNZ 263
 #define BASICLU_MARKER 266
@@ -61,6 +60,8 @@ lu_int lu_load(
     this->compress_thres        = xstore[BASICLU_COMPRESSION_THRESHOLD];
     this->sparse_thres          = xstore[BASICLU_SPARSE_THRESHOLD];
     this->search_rows           = xstore[BASICLU_SEARCH_ROWS] != 0;
+    this->basiclu_time_start    = xstore[BASICLU_TIME_START];
+    this->basiclu_time_limit    = xstore[BASICLU_TIME_LIMIT];
 
     /* user readable */
     this->m = m                 = xstore[BASICLU_DIM];
@@ -350,3 +351,8 @@ void lu_reset(struct lu *this)
     memset(this->iwork0, 0, this->m * sizeof(lu_int));
     memset(this->work0, 0, this->m * sizeof(lu_int));
 }
+
+double luTime() {
+  return basiclu_wallclock();
+}
+

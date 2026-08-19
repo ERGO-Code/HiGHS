@@ -11,10 +11,12 @@
 #ifndef LP_DATA_HSTRUCT_H_
 #define LP_DATA_HSTRUCT_H_
 
+#include <functional>
 #include <unordered_map>
 #include <vector>
 
 #include "lp_data/HConst.h"
+#include "util/HighsTimer.h"
 
 struct HighsSolution {
   bool value_valid = false;
@@ -165,13 +167,45 @@ struct HighsLinearObjective {
   void clear();
 };
 
-struct HighsSubSolverCallTime {
-  std::vector<std::string> name;
+struct HighsProfilingRecord {
   std::vector<HighsInt> num_call;
   std::vector<double> run_time;
-  void initialise();
-  void add(const HighsSubSolverCallTime& sub_solver_call_time,
-           const bool analytic_centre = false);
+  std::vector<double> start_time;
+};
+
+struct HighsProfiling {
+  HighsTimer* timer = nullptr;
+  bool multi_threaded = true;
+  std::string model_name_ = "";
+  bool sub_solver_ = false;
+  bool mip_ = false;
+  HighsInt num_profiling_clock_ = -1;
+  std::vector<std::string> name;
+  // These vectors are over threads
+  std::vector<HighsBool> submip;
+  std::vector<HighsProfilingRecord> record;
+  std::vector<HighsProfilingRecord> submip_record;
+  bool initialized = false;
+
+  void initialize(HighsTimer& timer_, const bool subsolver_profiling,
+                  const bool mip_profiling = false);
+  void clear();
+  HighsInt numThread();
+  HighsInt myThread();
+  void setSubMip(const bool submip);
+  bool isSubMip();
+  HighsProfilingRecord* getHighsProfilingRecord(
+      const HighsInt record_type = kChooseRecord);
+  void start(const HighsInt profiling_clock, const bool restart = false);
+  void stop(const HighsInt profiling_clock);
+  double read(const HighsInt profiling_clock,
+              const HighsInt record_type = kChooseRecord);
+  bool running(const HighsInt profiling_clock,
+               const HighsInt record_type = kChooseRecord);
+  HighsInt numCall(const HighsInt profiling_clock,
+                   const HighsInt record_type = kChooseRecord);
+  void solveCall(const std::string& model, const bool submip);
+  //  HighsInt getSepaClockIndex(const std::string& name);
 };
 
 struct HighsSimplexStats {
@@ -211,6 +245,40 @@ struct HighsUserScaleData {
                   const double& large_matrix_value_);
   bool scaleError(std::string& message) const;
   bool scaleWarning(std::string& message) const;
+};
+
+using HighsHessianFunctionType = std::function<HighsInt(
+    const HighsInt call_type, const HighsInt* x_num_entries,
+    const HighsInt* x_index, const double* x_value, HighsInt* q_x_num_entries,
+    HighsInt* q_x_index, double* q_x_value, void*)>;
+
+struct HessianOracle {
+  // Oracle to obtain values of Q' = multiplier_*Q + shift_*I and form
+  // products with Q', by calling a user-supplied function (call_) to
+  // form products with Q and then apply any non-trivial multiplier_
+  // or shift_
+  HighsInt dim_ = 0;
+  double multiplier_ = 1.0;  // Minimize
+  double shift_ = 0.0;       // No regularization
+  HighsHessianFunctionType call_ = nullptr;
+  void* data_ = nullptr;
+  void clear();
+  bool isValid() const { return hasProductCall(); }
+  bool hasProductCall() const;
+  void formFromOracle();
+  double diagonal(const HighsInt i) const;
+  double entry(const HighsInt i, const HighsInt j) const;
+  void getPackedColumn(const HighsInt col, HighsInt& col_num_entries,
+                       HighsInt* col_index, double* col_value) const;
+  void getScatteredColumn(const HighsInt col, HighsInt& col_num_entries,
+                          HighsInt* col_index, double* col_value) const;
+  void product(const std::vector<double>& x_value,
+               std::vector<double>& q_x_value) const;
+  void product(const double* x_value, double* q_x_value) const;
+  void product(const HighsInt x_num_entries, const HighsInt* x_index,
+               const double* x_value, double* q_x_value) const;
+  void scaleAndShift(const HighsInt* x_num_entries, const HighsInt* x_index,
+                     const double* x_value, double* q_x_value) const;
 };
 
 #endif /* LP_DATA_HSTRUCT_H_ */

@@ -21,8 +21,8 @@
 #include "parallel/HighsCacheAlign.h"
 #include "parallel/HighsSpinMutex.h"
 #include "parallel/HighsTask.h"
-#include "util/HighsInt.h"
 #include "util/HighsRandom.h"
+#include "util/HighsType.h"
 
 #ifdef __has_feature
 #if __has_feature(thread_sanitizer)
@@ -289,14 +289,22 @@ class HighsSplitDeque {
   }
 
   void checkInterrupt() {
-    if (ownerData.rootTask && ownerData.rootTask->isCancelled())
+    if (ownerData.rootTask && ownerData.rootTask->isCancelled()) {
+      ownerData.rootTask = nullptr;
       throw HighsTask::Interrupt();
+    }
   }
 
   void cancelTask(HighsInt taskIndex) {
     assert(taskIndex < (HighsInt)ownerData.head);
     assert(taskIndex >= 0);
     taskArray[taskIndex].cancel();
+  }
+
+  HighsTask* setRootTask(HighsTask* newRoot) {
+    HighsTask* prevRoot = ownerData.rootTask;
+    ownerData.rootTask = newRoot;
+    return prevRoot;
   }
 
   template <typename F>

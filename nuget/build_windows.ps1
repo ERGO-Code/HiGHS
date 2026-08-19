@@ -17,6 +17,7 @@ try {
 	# $flags = "/arch:AVX512 /Ox /Ot /Oi /O2" - Intel stopped supporting AVX-512 on some CPUs, me might run into compatibility issues
 	$flags = "/Ox /Ot /Oi /O2"
 	$arguments += "-DCMAKE_CXX_FLAGS='$flags'"
+	$arguments += "-DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded"
 		
 	# Pass the argument list to cmake
 	& cmake $arguments ../.. 

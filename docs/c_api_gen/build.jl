@@ -16,7 +16,7 @@ libhighs_filename = joinpath(@__DIR__, "libhighs.jl")
 
 Generators.build!(
     Generators.create_context(
-        [c_api, joinpath(highs_src, "util", "HighsInt.h")],
+        [c_api, joinpath(highs_src, "util", "HighsType.h")],
         [Generators.get_default_args(); "-I$highs_src"; "-I$(@__DIR__)"],
         Dict{String,Any}(
             "general" => Dict{String,Any}(

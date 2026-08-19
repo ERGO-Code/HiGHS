@@ -126,6 +126,9 @@ class PDLPSolver {
 
   // --- Convergence & Math Helpers ---
   double powerMethod();
+#ifdef CUPDLP_GPU
+  double powerMethodGpu();
+#endif
   void initializeStepSizes();
 
   // Convergence checks
@@ -208,7 +211,7 @@ class PDLPSolver {
   HighsInt sense_origin_ = 1;
   double unscaled_rhs_norm_ = 0.0;
   double unscaled_c_norm_ = 0.0;
-  std::vector<bool> is_equality_row_;
+  std::vector<HighsBool> is_equality_row_;
   std::vector<HighsInt> constraint_new_idx_;
   std::vector<ConstraintType> constraint_types_;
 

@@ -51,7 +51,7 @@ print(highspy_extras.get_library_version())
 
 ## Requirements
 
-- Python >= 3.8
+- Python >= 3.9
 
 - BLAS library
 The highspy-extras wheels on PyPI and conda-forge ship with a bundled OpenBLAS.

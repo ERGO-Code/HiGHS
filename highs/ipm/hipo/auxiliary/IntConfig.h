@@ -2,7 +2,7 @@
 #define HIPO_INT_CONFIG_H
 
 #include "lp_data/HConst.h"
-#include "util/HighsInt.h"
+#include "util/HighsType.h"
 
 namespace hipo {
 

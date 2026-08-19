@@ -56,7 +56,7 @@ class HighsImplications {
  public:
   const HighsMipSolver& mipsolver;
   std::vector<HighsSubstitution> substitutions;
-  std::vector<uint8_t> colsubstituted;
+  std::vector<HighsBool> colsubstituted;
   HighsImplications(const HighsMipSolver& mipsolver) : mipsolver(mipsolver) {
     HighsInt numcol = mipsolver.numCol();
     implications.resize(2 * static_cast<size_t>(numcol));
@@ -161,11 +161,13 @@ class HighsImplications {
 
   std::pair<HighsInt, VarBound> getBestVub(HighsInt col,
                                            const HighsSolution& lpSolution,
-                                           double& bestUb) const;
+                                           double& bestUb,
+                                           const HighsDomain& globaldom) const;
 
   std::pair<HighsInt, VarBound> getBestVlb(HighsInt col,
                                            const HighsSolution& lpSolution,
-                                           double& bestLb) const;
+                                           double& bestLb,
+                                           const HighsDomain& globaldom) const;
 
   bool runProbing(HighsInt col, HighsInt& numReductions);
 
@@ -176,7 +178,8 @@ class HighsImplications {
 
   void separateImpliedBounds(const HighsLpRelaxation& lpRelaxation,
                              const std::vector<double>& sol,
-                             HighsCutPool& cutpool, double feastol);
+                             HighsCutPool& cutpool, double feastol,
+                             HighsDomain& globaldom, bool thread_safe);
 
   void cleanupVarbounds(HighsInt col);
 

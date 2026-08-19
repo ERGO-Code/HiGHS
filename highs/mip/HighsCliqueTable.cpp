@@ -484,7 +484,8 @@ void HighsCliqueTable::queryNeighbourhood(
 
   if (numCliques(v) == 0) return;
 
-  if (numEntries - sizeTwoCliques.size() * 2 < minEntriesForParallelism) {
+  if (!allowParallel ||
+      numEntries - sizeTwoCliques.size() * 2 < minEntriesForParallelism) {
     for (HighsInt i = 0; i < N; ++i) {
       if (haveCommonClique(numQueries, v, q[i])) neighbourhoodInds.push_back(i);
     }
@@ -647,7 +648,7 @@ bool HighsCliqueTable::processNewEdge(HighsDomain& globaldom, CliqueVar v1,
 void HighsCliqueTable::addClique(const HighsMipSolver& mipsolver,
                                  CliqueVar* cliquevars, HighsInt numcliquevars,
                                  bool equality, HighsInt origin) {
-  HighsDomain& globaldom = mipsolver.mipdata_->domain;
+  HighsDomain& globaldom = mipsolver.mipdata_->getDomain();
   mipsolver.mipdata_->debugSolution.checkClique(cliquevars, numcliquevars);
   const HighsInt maxNumCliqueVars = 100;
 
@@ -835,13 +836,24 @@ void HighsCliqueTable::removeClique(HighsInt cliqueid) {
   numEntries -= len;
 }
 
+void HighsCliqueTable::fixLastActiveAndRemove(HighsDomain& globaldom,
+                                              HighsInt cliqueid) {
+  if (cliques[cliqueid].equality && cliques[cliqueid].numActive() == 1)
+    for (HighsInt i = cliques[cliqueid].start; i != cliques[cliqueid].end; ++i)
+      if (!globaldom.isFixed(cliqueentries[i].col)) {
+        fixCol(globaldom, cliqueentries[i].complement(), false);
+        break;
+      }
+  removeClique(cliqueid);
+}
+
 void HighsCliqueTable::extractCliques(
     const HighsMipSolver& mipsolver, std::vector<HighsInt>& inds,
     std::vector<double>& vals, std::vector<int8_t>& complementation, double rhs,
     HighsInt nbin, std::vector<HighsInt>& perm, std::vector<CliqueVar>& clique,
     double feastol) {
   HighsImplications& implics = mipsolver.mipdata_->implications;
-  HighsDomain& globaldom = mipsolver.mipdata_->domain;
+  HighsDomain& globaldom = mipsolver.mipdata_->getDomain();
 
   perm.resize(inds.size());
   std::iota(perm.begin(), perm.end(), 0);
@@ -1081,7 +1093,7 @@ void HighsCliqueTable::extractCliquesFromCut(const HighsMipSolver& mipsolver,
   if (isFull()) return;
 
   HighsImplications& implics = mipsolver.mipdata_->implications;
-  HighsDomain& globaldom = mipsolver.mipdata_->domain;
+  HighsDomain& globaldom = mipsolver.mipdata_->getDomain();
 
   const double feastol = mipsolver.mipdata_->feastol;
 
@@ -1276,7 +1288,7 @@ void HighsCliqueTable::extractCliques(HighsMipSolver& mipsolver,
 
   double rhs;
 
-  HighsDomain& globaldom = mipsolver.mipdata_->domain;
+  HighsDomain& globaldom = mipsolver.mipdata_->getDomain();
 
   for (HighsInt i = 0; i != mipsolver.numRow(); ++i) {
     HighsInt start = mipsolver.mipdata_->ARstart_[i];
@@ -1380,7 +1392,7 @@ void HighsCliqueTable::extractObjCliques(HighsMipSolver& mipsolver) {
   HighsInt nbin =
       mipsolver.mipdata_->objectiveFunction.getNumBinariesInObjective();
   if (nbin <= 1) return;
-  HighsDomain& globaldom = mipsolver.mipdata_->domain;
+  HighsDomain& globaldom = mipsolver.mipdata_->getDomain();
   if (globaldom.getObjectiveLowerBound() == -kHighsInf) return;
 
   const double* vals;
@@ -1518,7 +1530,8 @@ void HighsCliqueTable::processInfeasibleVertices(HighsDomain& globaldom) {
       // may be found by probing and will be deleted upon rebuild anyways
       vHashLists.for_each([&](HighsInt cliqueid) {
         cliques[cliqueid].numZeroFixed += 1;
-        if (cliques[cliqueid].numActive() <= 1) removeClique(cliqueid);
+        if (cliques[cliqueid].numActive() <= 1)
+          fixLastActiveAndRemove(globaldom, cliqueid);
       });
       continue;
     }
@@ -1533,7 +1546,7 @@ void HighsCliqueTable::processInfeasibleVertices(HighsDomain& globaldom) {
 
       cliques[cliqueid].numZeroFixed += 1;
       if (cliques[cliqueid].numActive() <= 1) {
-        removeClique(cliqueid);
+        fixLastActiveAndRemove(globaldom, cliqueid);
       } else if (cliques[cliqueid].numZeroFixed >=
                  std::max(
                      HighsInt{10},
@@ -1603,7 +1616,9 @@ void HighsCliqueTable::vertexInfeasible(HighsDomain& globaldom, HighsInt col,
 
 void HighsCliqueTable::separateCliques(const HighsMipSolver& mipsolver,
                                        const std::vector<double>& sol,
-                                       HighsCutPool& cutpool, double feastol) {
+                                       HighsCutPool& cutpool, double feastol,
+                                       HighsRandom& randgen,
+                                       int64_t& localNumNeighbourhoodQueries) {
   BronKerboschData data(sol);
   data.feastol = feastol;
   data.maxNeighbourhoodQueries = 1000000 +
@@ -1611,7 +1626,7 @@ void HighsCliqueTable::separateCliques(const HighsMipSolver& mipsolver,
                                  mipsolver.mipdata_->total_lp_iterations * 1000;
   if (numNeighbourhoodQueries > data.maxNeighbourhoodQueries) return;
   data.maxNeighbourhoodQueries -= numNeighbourhoodQueries;
-  const HighsDomain& globaldom = mipsolver.mipdata_->domain;
+  const HighsDomain& globaldom = mipsolver.mipdata_->getDomain();
 
   for (HighsInt i : mipsolver.mipdata_->integral_cols) {
     if (colsubstituted[i] || colDeleted[i]) continue;
@@ -1698,9 +1713,9 @@ void HighsCliqueTable::separateCliques(const HighsMipSolver& mipsolver,
                    false, false);
   }
 
-  numNeighbourhoodQueries += data.numNeighbourhoodQueries;
+  localNumNeighbourhoodQueries += data.numNeighbourhoodQueries;
 
-  if (runcliquesubsumption) {
+  if (runcliquesubsumption && &randgen == &this->randgen) {
     for (std::vector<CliqueVar>& clique : data.cliques) {
       HighsInt nremoved = runCliqueSubsumption(globaldom, clique);
 
@@ -1841,7 +1856,7 @@ void HighsCliqueTable::cleanupFixed(HighsDomain& globaldom) {
   if (nfixings != oldnfixings) propagateAndCleanup(globaldom);
 }
 
-HighsInt HighsCliqueTable::getNumImplications(HighsInt col) {
+HighsInt HighsCliqueTable::getNumImplications(HighsInt col) const {
   // first count all cliques as one implication, so that cliques of size two
   // are accounted for already
   HighsInt i0 = CliqueVar(col, 0).index();
@@ -1860,7 +1875,7 @@ HighsInt HighsCliqueTable::getNumImplications(HighsInt col) {
   return numimplics;
 }
 
-HighsInt HighsCliqueTable::getNumImplications(HighsInt col, bool val) {
+HighsInt HighsCliqueTable::getNumImplications(HighsInt col, bool val) const {
   HighsInt iVal = CliqueVar(col, val).index();
 
   // each size two clique is one implication
@@ -2196,6 +2211,7 @@ void HighsCliqueTable::rebuild(
         numvars != oldnumvars ? false : cliques[i].equality, origin);
   }
 
+  newCliqueTable.setAllowParallel(allowParallel);
   *this = std::move(newCliqueTable);
 }
 
@@ -2232,5 +2248,7 @@ void HighsCliqueTable::buildFrom(const HighsLp* origModel,
 
   newCliqueTable.colsubstituted = init.colsubstituted;
   newCliqueTable.substitutions = init.substitutions;
+  // Currently assume buildFrom is always used for sub-mips
+  newCliqueTable.setAllowParallel(false);
   *this = std::move(newCliqueTable);
 }

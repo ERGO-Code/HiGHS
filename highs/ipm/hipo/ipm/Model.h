@@ -67,15 +67,15 @@ class Model {
 
   std::vector<Int> free_variables_;
 
+  std::vector<double> best_lower_, best_upper_;
+
   void preprocess();
   Int checkData() const;
   void computeNorms();
 
  public:
-  // Initialise the model
   Int init(const HighsLp& lp, const HighsHessian& Q);
 
-  // Print information of model
   void print(const Logger& logger) const;
 
   void printDense() const;
@@ -95,7 +95,9 @@ class Model {
   void adjustFreeVars(std::vector<double>& x, std::vector<double>& xl,
                       std::vector<double>& xu, const Logger& logger);
 
-  // Check if variable has finite lower/upper bound
+  void saveBounds();
+  void resetBounds();
+
   bool hasLb(Int j) const { return std::isfinite(lower_[j]); }
   bool hasUb(Int j) const { return std::isfinite(upper_[j]); }
 

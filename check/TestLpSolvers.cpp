@@ -553,3 +553,32 @@ TEST_CASE("choose-lp-solver", "[highs_lp_solver]") {
 
   h.resetGlobalScheduler(true);
 }
+
+TEST_CASE("releaseMemory", "[highs_lp_solver]") {
+  std::string model_file =
+      std::string(HIGHS_DIR) + "/check/instances/avgas.mps";
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+
+  // First solve
+  REQUIRE(h.readModel(model_file) == HighsStatus::kOk);
+  REQUIRE(h.run() == HighsStatus::kOk);
+  REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
+  double first_objective = h.getInfo().objective_function_value;
+
+  // Release memory and verify we can solve again
+  REQUIRE(h.releaseMemory() == HighsStatus::kOk);
+
+  // Second solve on a different model
+  std::string model_file2 =
+      std::string(HIGHS_DIR) + "/check/instances/adlittle.mps";
+  REQUIRE(h.readModel(model_file2) == HighsStatus::kOk);
+  REQUIRE(h.run() == HighsStatus::kOk);
+  REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
+  double second_objective = h.getInfo().objective_function_value;
+
+  // Verify objectives are different (different problems)
+  REQUIRE(first_objective != second_objective);
+
+  h.resetGlobalScheduler(true);
+}

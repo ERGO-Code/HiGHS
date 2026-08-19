@@ -22,15 +22,21 @@ HighsPseudocost::HighsPseudocost(const HighsMipSolver& mipsolver)
       ncutoffsdown(mipsolver.numCol()),
       conflictscoreup(mipsolver.numCol()),
       conflictscoredown(mipsolver.numCol()),
+      changedpos(mipsolver.numCol(), -1),
       conflict_weight(1.0),
       conflict_avg_score(0.0),
       cost_total(0),
       inferences_total(0),
+      delta_cost_sum(0.0),
+      delta_inferences_sum(0.0),
       nsamplestotal(0),
       ninferencestotal(0),
       ncutoffstotal(0),
+      delta_nsamplestotal(0),
+      delta_ninferencestotal(0),
       minreliable(mipsolver.options_mip_->mip_pscost_minreliable),
       degeneracyFactor(1.0) {
+  deltas.reserve(std::min(HighsInt{256}, mipsolver.numCol()));
   if (mipsolver.pscostinit != nullptr) {
     cost_total = mipsolver.pscostinit->cost_total;
     inferences_total = mipsolver.pscostinit->inferences_total;

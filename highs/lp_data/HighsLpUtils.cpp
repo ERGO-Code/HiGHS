@@ -54,7 +54,8 @@ HighsStatus assessLp(HighsLp& lp, const HighsOptions& options) {
     // Assess the LP column bounds
     call_status = assessBounds(
         options, "Col", 0, index_collection, lp.col_lower_, lp.col_upper_,
-        options.infinite_bound, lp.isMip() ? lp.integrality_.data() : nullptr);
+        options.infinite_bound, lp.isMip() ? lp.integrality_.data() : nullptr,
+        lp.col_names_.data());
     return_status = interpretCallStatus(options.log_options, call_status,
                                         return_status, "assessBounds");
     if (return_status == HighsStatus::kError) return return_status;
@@ -66,9 +67,9 @@ HighsStatus assessLp(HighsLp& lp, const HighsOptions& options) {
     index_collection.is_interval_ = true;
     index_collection.from_ = 0;
     index_collection.to_ = lp.num_row_ - 1;
-    call_status =
-        assessBounds(options, "Row", 0, index_collection, lp.row_lower_,
-                     lp.row_upper_, options.infinite_bound);
+    call_status = assessBounds(
+        options, "Row", 0, index_collection, lp.row_lower_, lp.row_upper_,
+        options.infinite_bound, nullptr, lp.row_names_.data());
     return_status = interpretCallStatus(options.log_options, call_status,
                                         return_status, "assessBounds");
     if (return_status == HighsStatus::kError) return return_status;
@@ -76,7 +77,7 @@ HighsStatus assessLp(HighsLp& lp, const HighsOptions& options) {
   // If the LP has no columns the matrix must be empty and there is
   // nothing left to test
   if (lp.num_col_ == 0) {
-    assert(!lp.a_matrix_.numNz());
+    assert(!lp.numNz());
     return HighsStatus::kOk;
   }
   // From here, any LP has lp.num_col_ > 0 and lp.a_matrix_.start_[lp.num_col_]
@@ -84,15 +85,17 @@ HighsStatus assessLp(HighsLp& lp, const HighsOptions& options) {
   assert(lp.num_col_ > 0);
 
   // Assess the LP matrix - even if there are no rows!
+  const bool sum_duplicates = false;
   call_status =
       lp.a_matrix_.assess(options.log_options, "LP", options.small_matrix_value,
-                          options.large_matrix_value);
+                          options.large_matrix_value, sum_duplicates,
+                          lp.col_names_.data(), lp.row_names_.data());
   return_status = interpretCallStatus(options.log_options, call_status,
                                       return_status, "assessMatrix");
   if (return_status == HighsStatus::kError) return return_status;
   // If entries have been removed from the matrix, resize the index
   // and value vectors to prevent bug in presolve
-  HighsInt lp_num_nz = lp.a_matrix_.numNz();
+  HighsInt lp_num_nz = lp.numNz();
   if ((HighsInt)lp.a_matrix_.index_.size() > lp_num_nz)
     lp.a_matrix_.index_.resize(lp_num_nz);
   if ((HighsInt)lp.a_matrix_.value_.size() > lp_num_nz)
@@ -300,6 +303,7 @@ HighsStatus assessCosts(const HighsOptions& options, const HighsInt ml_col_os,
   // [0...num_new_col) which must be offset by the current number of
   // columns in the model.
   //
+
   HighsInt local_col;
   HighsInt usr_col = -1;
   HighsInt num_infinite_cost = 0;
@@ -335,12 +339,13 @@ HighsStatus assessCosts(const HighsOptions& options, const HighsInt ml_col_os,
   return return_status;
 }
 
-HighsStatus assessBounds(const HighsOptions& options, const char* type,
+HighsStatus assessBounds(const HighsOptions& options, const std::string& type,
                          const HighsInt ml_ix_os,
                          const HighsIndexCollection& index_collection,
                          vector<double>& lower, vector<double>& upper,
                          const double infinite_bound,
-                         const HighsVarType* integrality) {
+                         const HighsVarType* integrality,
+                         const std::string* names) {
   HighsStatus return_status = HighsStatus::kOk;
   assert(ok(index_collection));
   HighsInt from_k;
@@ -373,6 +378,12 @@ HighsStatus assessBounds(const HighsOptions& options, const char* type,
   // [0...num_new_row/col) which must be offset by the current number
   // of rows/columns (generically indices) in the model.
   //
+  auto possible_name = [&](const HighsInt ix) {
+    std::string name = "";
+    if (names) name = " (" + type + " " + names[ix] + ")";
+    return name;
+  };
+
   HighsInt num_infinite_lower_bound = 0;
   HighsInt num_infinite_upper_bound = 0;
   HighsInt local_ix;
@@ -421,8 +432,9 @@ HighsStatus assessBounds(const HighsOptions& options, const char* type,
       // Leave inconsistent bounds to be used to deduce infeasibility
       highsLogUser(options.log_options, HighsLogType::kWarning,
                    "%3s  %12" HIGHSINT_FORMAT
-                   " has inconsistent bounds [%12g, %12g]\n",
-                   type, ml_ix, lower[usr_ix], upper[usr_ix]);
+                   "%s has inconsistent bounds [%12g, %12g]\n",
+                   type.c_str(), ml_ix, possible_name(ml_ix).c_str(),
+                   lower[usr_ix], upper[usr_ix]);
       warning_found = true;
     }
     // Check that the lower bound is not as much as +Infinity
@@ -430,8 +442,9 @@ HighsStatus assessBounds(const HighsOptions& options, const char* type,
     if (!legalLowerBound) {
       highsLogUser(options.log_options, HighsLogType::kError,
                    "%3s  %12" HIGHSINT_FORMAT
-                   " has lower bound of %12g >= %12g\n",
-                   type, ml_ix, lower[usr_ix], infinite_bound);
+                   "%s  has lower bound of %12g >= %12g\n",
+                   type.c_str(), ml_ix, possible_name(ml_ix).c_str(),
+                   lower[usr_ix], infinite_bound);
       error_found = true;
     }
     // Check that the upper bound is not as little as -Infinity
@@ -439,8 +452,9 @@ HighsStatus assessBounds(const HighsOptions& options, const char* type,
     if (!legalUpperBound) {
       highsLogUser(options.log_options, HighsLogType::kError,
                    "%3s  %12" HIGHSINT_FORMAT
-                   " has upper bound of %12g <= %12g\n",
-                   type, ml_ix, upper[usr_ix], -infinite_bound);
+                   "%s  has upper bound of %12g <= %12g\n",
+                   type.c_str(), ml_ix, possible_name(ml_ix).c_str(),
+                   upper[usr_ix], -infinite_bound);
       error_found = true;
     }
   }
@@ -449,14 +463,14 @@ HighsStatus assessBounds(const HighsOptions& options, const char* type,
                  "%3ss:%12" HIGHSINT_FORMAT
                  " lower bounds    less than or equal to %12g are treated as "
                  "-Infinity\n",
-                 type, num_infinite_lower_bound, -infinite_bound);
+                 type.c_str(), num_infinite_lower_bound, -infinite_bound);
   }
   if (num_infinite_upper_bound) {
     highsLogUser(options.log_options, HighsLogType::kInfo,
                  "%3ss:%12" HIGHSINT_FORMAT
                  " upper bounds greater than or equal to %12g are treated as "
                  "+Infinity\n",
-                 type, num_infinite_upper_bound, infinite_bound);
+                 type.c_str(), num_infinite_upper_bound, infinite_bound);
   }
 
   if (error_found)
@@ -779,14 +793,14 @@ HighsStatus userScaleLp(HighsLp& lp, HighsUserScaleData& data,
 }
 
 void userScaleLp(HighsLp& lp, HighsUserScaleData& data, const bool apply) {
-  userScaleCosts(lp.integrality_, lp.col_cost_, data, apply);
+  userScaleCosts(lp.integrality_, lp.offset_, lp.col_cost_, data, apply);
   userScaleColBounds(lp.integrality_, lp.col_lower_, lp.col_upper_, data,
                      apply);
   userScaleMatrix(lp.integrality_, lp.a_matrix_, data, apply);
   userScaleRowBounds(lp.row_lower_, lp.row_upper_, data, apply);
 }
 
-void userScaleCosts(const vector<HighsVarType>& integrality,
+void userScaleCosts(const vector<HighsVarType>& integrality, double& offset,
                     vector<double>& cost, HighsUserScaleData& data,
                     const bool apply) {
   data.num_infinite_costs = 0;
@@ -808,6 +822,7 @@ void userScaleCosts(const vector<HighsVarType>& integrality,
     if (std::abs(value) > data.infinite_cost) data.num_infinite_costs++;
     if (apply) cost[iCol] = value;
   }
+  if (apply) offset *= (bound_scale_value * objective_scale_value);
 }
 
 void userScaleColBounds(const vector<HighsVarType>& integrality,
@@ -1922,8 +1937,10 @@ void reportLp(const HighsLogOptions& log_options, const HighsLp& lp,
   if ((HighsInt)report_level >= (HighsInt)HighsLogType::kDetailed) {
     reportLpColVectors(log_options, lp);
     reportLpRowVectors(log_options, lp);
-    if ((HighsInt)report_level >= (HighsInt)HighsLogType::kVerbose)
+    if ((HighsInt)report_level >= (HighsInt)HighsLogType::kVerbose) {
+      assert(lp.a_matrix_.isColwise());
       reportLpColMatrix(log_options, lp);
+    }
   }
 }
 
@@ -2602,6 +2619,9 @@ void assessColPrimalSolution(const HighsOptions& options, const double primal,
   integer_infeasibility = 0;
   if (type == HighsVarType::kInteger || type == HighsVarType::kSemiInteger) {
     integer_infeasibility = fractionality(primal);
+    assert(integer_infeasibility >= 0);
+    if (integer_infeasibility <= options.mip_feasibility_tolerance)
+      integer_infeasibility = 0;
   }
   if (col_infeasibility > 0 && (type == HighsVarType::kSemiContinuous ||
                                 type == HighsVarType::kSemiInteger)) {
@@ -2645,12 +2665,26 @@ HighsStatus assessLpPrimalSolution(const std::string& message,
   const double kPrimalFeasibilityTolerance =
       lp.isMip() ? options.mip_feasibility_tolerance
                  : options.primal_feasibility_tolerance;
-  highsLogUser(options.log_options, HighsLogType::kInfo,
-               "%sAssessing feasibility of %s tolerance of %11.4g\n",
-               message.c_str(),
-               lp.isMip() ? "MIP using primal feasibility and integrality"
-                          : "LP using primal feasibility",
-               kPrimalFeasibilityTolerance);
+  // Warning logging is done if an infeasibility or row residual
+  // exceeding the tolerance is found.  Ultimately, if no warnings
+  // have been issued, warning is set to false, and a one-line OK
+  // logging message is issued.
+  bool warning = true;
+  bool logged_header = false;
+
+  auto logHeader = [&]() {
+    if (logged_header) return;
+    highsLogUser(
+        options.log_options,
+        warning ? HighsLogType::kWarning : HighsLogType::kInfo,
+        "%sAssessing feasibility of %s of %.4g%s\n", message.c_str(),
+        lp.isMip()
+            ? "MIP solution using primal feasibility and integrality tolerances"
+            : "LP solution using primal feasibility tolerance",
+        kPrimalFeasibilityTolerance, feasible ? ": feasible" : "");
+    logged_header = true;
+  };
+
   vector<double> row_value;
   row_value.assign(lp.num_row_, 0);
   const bool have_integrality = (lp.integrality_.size() != 0);
@@ -2673,12 +2707,14 @@ HighsStatus assessLpPrimalSolution(const std::string& message,
                             col_infeasibility, integer_infeasibility);
     if (col_infeasibility > 0) {
       if (col_infeasibility > kPrimalFeasibilityTolerance) {
-        if (col_infeasibility > 2 * max_col_infeasibility)
+        if (col_infeasibility > 2 * max_col_infeasibility) {
+          logHeader();
           highsLogUser(options.log_options, HighsLogType::kWarning,
                        "Col %6d%s has         infeasibility of %11.4g from "
                        "[lower, value, upper] = [%15.8g; %15.8g; %15.8g]\n",
                        int(iCol), name_string.c_str(), col_infeasibility, lower,
                        primal, upper);
+        }
         num_col_infeasibilities++;
       }
       max_col_infeasibility =
@@ -2687,10 +2723,12 @@ HighsStatus assessLpPrimalSolution(const std::string& message,
     }
     if (integer_infeasibility > 0) {
       if (integer_infeasibility > options.mip_feasibility_tolerance) {
-        if (integer_infeasibility > 2 * max_integer_infeasibility)
+        if (integer_infeasibility > 2 * max_integer_infeasibility) {
+          logHeader();
           highsLogUser(options.log_options, HighsLogType::kWarning,
                        "Col %6d%s has integer infeasibility of %11.4g\n",
                        (int)iCol, name_string.c_str(), integer_infeasibility);
+        }
         num_integer_infeasibilities++;
       }
       max_integer_infeasibility =
@@ -2718,12 +2756,14 @@ HighsStatus assessLpPrimalSolution(const std::string& message,
     }
     if (row_infeasibility > 0) {
       if (row_infeasibility > kPrimalFeasibilityTolerance) {
-        if (row_infeasibility > 2 * max_row_infeasibility)
+        if (row_infeasibility > 2 * max_row_infeasibility) {
+          logHeader();
           highsLogUser(options.log_options, HighsLogType::kWarning,
                        "Row %6d%s has         infeasibility of %11.4g from "
                        "[lower, value, upper] = [%15.8g; %15.8g; %15.8g]\n",
-                       (int)iRow, name_string.c_str(), row_infeasibility, lower,
+                       int(iRow), name_string.c_str(), row_infeasibility, lower,
                        primal, upper);
+        }
         num_row_infeasibilities++;
       }
       max_row_infeasibility =
@@ -2733,39 +2773,51 @@ HighsStatus assessLpPrimalSolution(const std::string& message,
     double row_residual = fabs(primal - row_value[iRow]);
     if (row_residual > kRowResidualTolerance) {
       if (row_residual > 2 * max_row_residual) {
+        logHeader();
         highsLogUser(options.log_options, HighsLogType::kWarning,
                      "Row %6d%s has         residual      of %11.4g\n",
-                     (int)iRow, name_string.c_str(), row_residual);
+                     int(iRow), name_string.c_str(), row_residual);
       }
       num_row_residuals++;
+    } else {
+      row_residual = 0;
     }
     max_row_residual = std::max(row_residual, max_row_residual);
     sum_row_residuals += row_residual;
   }
-  highsLogUser(options.log_options, HighsLogType::kInfo,
-               "Solution has               num          max          sum\n");
-  highsLogUser(options.log_options, HighsLogType::kInfo,
-               "Col     infeasibilities %6d  %11.4g  %11.4g\n",
-               (int)num_col_infeasibilities, max_col_infeasibility,
-               sum_col_infeasibilities);
-  if (lp.isMip())
-    highsLogUser(options.log_options, HighsLogType::kInfo,
-                 "Integer infeasibilities %6d  %11.4g  %11.4g\n",
-                 (int)num_integer_infeasibilities, max_integer_infeasibility,
-                 sum_integer_infeasibilities);
-  highsLogUser(options.log_options, HighsLogType::kInfo,
-               "Row     infeasibilities %6d  %11.4g  %11.4g\n",
-               (int)num_row_infeasibilities, max_row_infeasibility,
-               sum_row_infeasibilities);
-  highsLogUser(options.log_options, HighsLogType::kInfo,
-               "Row     residuals       %6d  %11.4g  %11.4g\n",
-               (int)num_row_residuals, max_row_residual, sum_row_residuals);
   valid = num_row_residuals == 0;
   integral = valid && num_integer_infeasibilities == 0;
   feasible = valid && num_col_infeasibilities == 0 &&
              num_integer_infeasibilities == 0 && num_row_infeasibilities == 0;
-  if (!(integral && feasible)) return HighsStatus::kWarning;
-  return HighsStatus::kOk;
+  warning = !(integral && feasible);
+  if (!warning) {
+    // Issue the "OK" logging message
+    logHeader();
+    return HighsStatus::kOk;
+  }
+  assert(logged_header);
+  highsLogUser(options.log_options, HighsLogType::kWarning,
+               "Solution has               num          max          sum\n");
+  if (num_col_infeasibilities > 0)
+    highsLogUser(options.log_options, HighsLogType::kWarning,
+                 "Col     infeasibilities %6d  %11.4g  %11.4g\n",
+                 int(num_col_infeasibilities), max_col_infeasibility,
+                 sum_col_infeasibilities);
+  if (lp.isMip() && num_integer_infeasibilities > 0)
+    highsLogUser(options.log_options, HighsLogType::kWarning,
+                 "Integer infeasibilities %6d  %11.4g  %11.4g\n",
+                 int(num_integer_infeasibilities), max_integer_infeasibility,
+                 sum_integer_infeasibilities);
+  if (num_row_infeasibilities > 0)
+    highsLogUser(options.log_options, HighsLogType::kWarning,
+                 "Row     infeasibilities %6d  %11.4g  %11.4g\n",
+                 int(num_row_infeasibilities), max_row_infeasibility,
+                 sum_row_infeasibilities);
+  if (num_row_residuals > 0)
+    highsLogUser(options.log_options, HighsLogType::kWarning,
+                 "Row     residuals       %6d  %11.4g  %11.4g\n",
+                 int(num_row_residuals), max_row_residual, sum_row_residuals);
+  return HighsStatus::kWarning;
 }
 
 void writeBasisFile(FILE*& file, const HighsOptions& options, const HighsLp& lp,
@@ -3102,7 +3154,7 @@ void reportPresolveReductions(const HighsLogOptions& log_options,
                               const HighsLp& lp, const HighsLp& presolved_lp) {
   const HighsInt num_col_from = lp.num_col_;
   const HighsInt num_row_from = lp.num_row_;
-  const HighsInt num_nz_from = lp.a_matrix_.numNz();
+  const HighsInt num_nz_from = lp.numNz();
   HighsInt num_col_to = 0;
   HighsInt num_row_to = 0;
   HighsInt num_nz_to = 0;
@@ -3124,7 +3176,7 @@ void reportPresolveReductions(const HighsLogOptions& log_options,
     case HighsPresolveStatus::kTimeout: {
       num_col_to = presolved_lp.num_col_;
       num_row_to = presolved_lp.num_row_;
-      num_nz_to = presolved_lp.a_matrix_.numNz();
+      num_nz_to = presolved_lp.numNz();
       message =
           presolve_status == HighsPresolveStatus::kTimeout ? "- Timeout" : "";
       break;
@@ -3465,7 +3517,7 @@ void removeRowsOfCountOne(const HighsLogOptions& log_options, HighsLp& lp) {
   assert(original_num_row - lp.num_row_ == num_row_count_1);
   assert(original_num_nz - num_nz == num_row_count_1);
   highsLogUser(log_options, HighsLogType::kWarning,
-               "Removed %d rows of count 1\n", (int)num_row_count_1);
+               "Removed %d rows of count 1\n", int(num_row_count_1));
 }
 
 void getSubVectors(const HighsIndexCollection& index_collection,

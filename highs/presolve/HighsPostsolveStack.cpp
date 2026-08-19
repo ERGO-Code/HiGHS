@@ -34,27 +34,34 @@ void HighsPostsolveStack::initializeIndexMaps(HighsInt numRow,
 void HighsPostsolveStack::compressIndexMaps(
     const std::vector<HighsInt>& newRowIndex,
     const std::vector<HighsInt>& newColIndex) {
-  // loop over rows, decrease row counter for deleted rows (marked with -1),
-  // store original index at new index position otherwise
-  HighsInt numRow = origRowIndex.size();
-  for (size_t i = 0; i != newRowIndex.size(); ++i) {
-    if (newRowIndex[i] == -1)
-      --numRow;
+  compressColIndexMap(newColIndex);
+  compressRowIndexMap(newRowIndex);
+}
+
+void HighsPostsolveStack::compressRowIndexMap(
+    const std::vector<HighsInt>& newRowIndex) {
+  compressIndexMap(newRowIndex, this->origRowIndex);
+}
+
+void HighsPostsolveStack::compressColIndexMap(
+    const std::vector<HighsInt>& newColIndex) {
+  compressIndexMap(newColIndex, this->origColIndex);
+}
+
+void HighsPostsolveStack::compressIndexMap(
+    const std::vector<HighsInt>& newIndex, std::vector<HighsInt>& origIndex) {
+  // loop over entries, decrease entry counter for deleted entries
+  // (marked with -1), otherwise store original index at new index
+  // position
+  HighsInt numEn = origIndex.size();
+  for (size_t i = 0; i != newIndex.size(); ++i) {
+    if (newIndex[i] == -1)
+      --numEn;
     else
-      origRowIndex[newRowIndex[i]] = origRowIndex[i];
+      origIndex[newIndex[i]] = origIndex[i];
   }
   // resize original index array to new size
-  origRowIndex.resize(numRow);
-
-  // now compress the column array
-  HighsInt numCol = origColIndex.size();
-  for (size_t i = 0; i != newColIndex.size(); ++i) {
-    if (newColIndex[i] == -1)
-      --numCol;
-    else
-      origColIndex[newColIndex[i]] = origColIndex[i];
-  }
-  origColIndex.resize(numCol);
+  origIndex.resize(numEn);
 }
 
 void HighsPostsolveStack::LinearTransform::undo(const HighsOptions& options,
@@ -358,8 +365,8 @@ void HighsPostsolveStack::ForcingColumnRemovedRow::undo(
 void HighsPostsolveStack::SingletonRow::undo(const HighsOptions& options,
                                              HighsSolution& solution,
                                              HighsBasis& basis) const {
-  // nothing to do if the rows dual value is zero in the dual solution or
-  // there is no dual solution
+  // nothing to do if the row's dual value is zero in the dual
+  // solution or there is no dual solution
   if (!solution.dual_valid) return;
 
   const HighsBasisStatus colStatus =
@@ -402,10 +409,10 @@ void HighsPostsolveStack::SingletonRow::undo(const HighsOptions& options,
         break;
       case HighsBasisStatus::kUpper:
         if (coef > 0)
-          // tightened upper bound comes from row lower bound
+          // tightened upper bound comes from row upper bound
           basis.row_status[row] = HighsBasisStatus::kUpper;
         else
-          // tightened lower bound comes from row upper bound
+          // tightened upper bound comes from row lower bound
           basis.row_status[row] = HighsBasisStatus::kLower;
         break;
       default:

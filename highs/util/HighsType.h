@@ -5,16 +5,17 @@
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#ifndef __SRC_LIB_CRASHSOLUTION_HPP__
-#define __SRC_LIB_CRASHSOLUTION_HPP__
+/**@file HighsType.h
+ * @brief The definition for basic types to use
+ */
 
-#include <cstdlib>
+#ifndef UTIL_HIGHS_TYPE_H_
+#define UTIL_HIGHS_TYPE_H_
 
-#include "runtime.hpp"
+#include "util/HighsInt.h"
 
-inline bool isfreevar(Instance& instance, HighsInt idx) {
-  return instance.var_lo[idx] == -std::numeric_limits<double>::infinity() &&
-         instance.var_up[idx] == std::numeric_limits<double>::infinity();
-}
+// vector<bool> is not thread-safe, so HiGHS uses vector<HighsBool>
+
+typedef uint8_t HighsBool;
 
 #endif

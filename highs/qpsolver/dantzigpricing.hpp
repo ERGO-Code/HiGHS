@@ -28,22 +28,20 @@ class DantzigPricing : public Pricing {
     HighsInt minidx = -1;
     double maxabslambda = 0.0;
     for (size_t i = 0; i < active_constraint_index.size(); i++) {
-      HighsInt indexinbasis =
-          constraintindexinbasisfactor[active_constraint_index[i]];
+      HighsInt iVar = active_constraint_index[i];
+      HighsInt indexinbasis = constraintindexinbasisfactor[iVar];
       if (indexinbasis == -1) {
         printf("error\n");
       }
       assert(indexinbasis != -1);
-
-      if (basis.getstatus(active_constraint_index[i]) ==
-              BasisStatus::kActiveAtLower &&
+      if (runtime.instance.isEquality(iVar)) continue;
+      if (basis.getstatus(iVar) == BasisStatus::kActiveAtLower &&
           -lambda.value[indexinbasis] > maxabslambda) {
-        minidx = active_constraint_index[i];
+        minidx = iVar;
         maxabslambda = -lambda.value[indexinbasis];
-      } else if (basis.getstatus(active_constraint_index[i]) ==
-                     BasisStatus::kActiveAtUpper &&
+      } else if (basis.getstatus(iVar) == BasisStatus::kActiveAtUpper &&
                  lambda.value[indexinbasis] > maxabslambda) {
-        minidx = active_constraint_index[i];
+        minidx = iVar;
         maxabslambda = lambda.value[indexinbasis];
       } else {
         // TODO

@@ -194,5 +194,6 @@ lu_int lu_setup_bump(
     this->bump_size = m-rank;
     this->min_colnz = min_colnz;
     this->min_rownz = min_rownz;
+    if (luTime() - this->basiclu_time_start > this->basiclu_time_limit) return BASICLU_WARNING_timeout;
     return BASICLU_OK;
 }

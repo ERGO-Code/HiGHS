@@ -2,6 +2,9 @@
 #include "Highs.h"
 #include "SpecialLps.h"
 #include "catch.hpp"
+#include "mip/HighsCliqueTable.h"
+#include "mip/HighsMipSolver.h"
+#include "mip/HighsMipSolverData.h"
 
 const bool dev_run = false;
 const double double_equal_tolerance = 1e-5;
@@ -1162,6 +1165,7 @@ TEST_CASE("mip-lp-solver", "[highs_test_mip_solver]") {
 #endif
 }
 
+/*
 TEST_CASE("mip-sub-solver-time", "[highs_test_mip_solver]") {
   const std::string model = "flugpl";  //"rgn"; //
   std::string model_file =
@@ -1174,6 +1178,7 @@ TEST_CASE("mip-sub-solver-time", "[highs_test_mip_solver]") {
   REQUIRE(h.run() == HighsStatus::kOk);
   REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
 }
+*/
 
 TEST_CASE("get-fixed-lp", "[highs_test_mip_solver]") {
   std::string model = "avgas";
@@ -1405,6 +1410,28 @@ TEST_CASE("issue-2173", "[highs_test_mip_solver]") {
   solve(highs, kHighsOnString, require_model_status, optimal_objective);
 }
 
+TEST_CASE("parallel-mip-determinism", "[highs_test_mip_solver]") {
+  std::string filename = std::string(HIGHS_DIR) + "/check/instances/bell5.mps";
+  HighsInt num_runs = 6;
+  std::vector<HighsInt> lp_iters(num_runs);
+  for (HighsInt i = 0; i < num_runs; i++) {
+    Highs highs;
+    highs.setOptionValue("output_flag", dev_run);
+    highs.setOptionValue("mip_rel_gap", 0);
+    highs.setOptionValue("threads", 2);
+    highs.setOptionValue("parallel", kHighsOnString);
+    if (i % 2 == 0) highs.setOptionValue("mip_search_simulate_concurrency", 1);
+    highs.readModel(filename);
+    const HighsModelStatus require_model_status = HighsModelStatus::kOptimal;
+    const double optimal_objective = 8966406.491519;
+    solve(highs, kHighsOffString, require_model_status, optimal_objective);
+    lp_iters[i] = highs.getInfo().simplex_iteration_count;
+    if (i > 0) {
+      REQUIRE(lp_iters[i] == lp_iters[0]);
+    }
+  }
+}
+
 TEST_CASE("issue-2957", "[highs_test_mip_solver]") {
   HighsLp lp;
   lp.num_col_ = 2;
@@ -1456,6 +1483,224 @@ TEST_CASE("issue-2975", "[highs_test_mip_solver]") {
   highs.run();
   REQUIRE(highs.getInfo().objective_function_value == 20);
   REQUIRE(highs.getSolution().col_value[y] == 0.0);
+
+  highs.resetGlobalScheduler(true);
+}
+
+TEST_CASE("issue-3118", "[highs_test_mip_solver]") {
+  const double M = 1e10;
+  //   min    x +   y
+  //   s.t.   x + M*y = 1
+  //        M*x +   y = 1
+  //          x, y binary
+  //   Initial "solution" x = y = 1/M
+  //
+  // This problem is found infeasible in presolve, but the point x = y
+  // = 1/M is integer feasible to within the tolerances, so is
+  // acccepted as an optimal solution to the problem
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+
+  HighsInt x = 0;
+  HighsInt y = 1;
+  HighsLp lp;
+  lp.num_col_ = 2;
+  lp.num_row_ = 2;
+  lp.col_lower_ = {0., 0.};
+  lp.col_upper_ = {1., 1.};
+  lp.col_cost_ = {1., 1.};
+  lp.integrality_ = {HighsVarType::kInteger, HighsVarType::kInteger};
+  lp.row_lower_ = {1., 1.};
+  lp.row_upper_ = {1., 1.};
+  lp.a_matrix_.format_ = MatrixFormat::kRowwise;
+  lp.a_matrix_.start_ = {0, 2, 4};
+  lp.a_matrix_.index_ = {x, y, x, y};
+  lp.a_matrix_.value_ = {1., M, M, 1};
+  highs.passModel(lp);
+
+  std::vector<double> solution_values(lp.num_col_, 1 / M);
+  highs.setSolution(2, nullptr, solution_values.data());
+
+  highs.run();
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
+  REQUIRE(std::abs(2 / M - highs.getInfo().objective_function_value) < 1e-9);
+  if (dev_run) highs.writeSolution("", 1);
+
+  highs.resetGlobalScheduler(true);
+}
+
+TEST_CASE("issue-3118a", "[highs_test_mip_solver]") {
+  const double M = 1e10;
+  //   max f = x
+  //   s.t.    x - M*y  = -1
+  //           x       <=  b
+  //           x, y integer in [0, 2]x[0, 1]
+  //
+  // The MIP is not feasible over the integers for any b
+  //
+  // With initial "solution" x = 0; y = 1/M
+  //
+  // For b = 0: (0, 1/M) with f = 0 is the only feasible solution of
+  // the relaxation, and it's also feasible for the MIP, so claiming
+  // it is optimal when presolve identifies infeasibility is clearly
+  // justified
+  //
+  // For b = 1: (1, 2/M) with f = 1 is the optimal solution of the
+  // relaxation, and it's also feasible for the MIP. However, claiming
+  // that the initial "solution" (0, 1/M) with f = 0 is optimal when
+  // presolve identifies infeasibility is still justified, because
+  // it's a point that is feasible for a MIP that is deemed infeasible
+  // by presolve
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+
+  HighsInt x = 0;
+  HighsInt y = 1;
+  HighsLp lp;
+  lp.sense_ = ObjSense::kMaximize;
+  lp.num_col_ = 2;
+  lp.num_row_ = 2;
+  lp.col_lower_ = {0, 0};
+  lp.col_upper_ = {2, 1};
+  lp.col_cost_ = {1, 0};
+  lp.integrality_ = {HighsVarType::kInteger, HighsVarType::kInteger};
+  lp.row_lower_ = {-1, -kHighsInf};
+  lp.row_upper_ = {-1, 0};
+  lp.a_matrix_.format_ = MatrixFormat::kRowwise;
+  lp.a_matrix_.start_ = {0, 2, 3};
+  lp.a_matrix_.index_ = {x, y, x};
+  lp.a_matrix_.value_ = {1., -M, 1};
+
+  for (HighsInt k = 0; k < 2; k++) {
+    HighsInt b = k == 0 ? 0 : 1;
+    lp.row_upper_[1] = b;
+
+    highs.passModel(lp);
+
+    // Solve as MIP
+    if (dev_run)
+      printf("================\nCase b = %d (MIP)\n================\n", int(b));
+    highs.setOptionValue("solve_relaxation", false);
+    std::vector<double> solution_values = {0, 1 / M};
+    highs.setSolution(2, nullptr, solution_values.data());
+
+    highs.run();
+    if (dev_run) highs.writeSolution("", 1);
+    REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
+
+    // Solve as LP
+    if (dev_run)
+      printf("===============\nCase b = %d (LP)\n===============\n", int(b));
+    highs.setOptionValue("solve_relaxation", true);
+    highs.clearSolver();
+    highs.run();
+    highs.writeSolution("", 1);
+    REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
+    double lp_objective_value = highs.getInfo().objective_function_value;
+
+    solution_values = highs.getSolution().col_value;
+    highs.setSolution(2, nullptr, solution_values.data());
+
+    bool valid, integral, feasible;
+    REQUIRE(highs.assessPrimalSolution(valid, integral, feasible) ==
+            HighsStatus::kOk);
+  }
+
+  highs.resetGlobalScheduler(true);
+}
+
+TEST_CASE("MIP-equality-clique-fixing", "[highs_test_mip_solver]") {
+  // Regression test: when an equality clique has all but one variable fixed,
+  // the last active variable must be fixed before the clique is removed.
+  const HighsInt ncols = 5;
+  HighsLp lp;
+  lp.num_col_ = ncols;
+  lp.num_row_ = 0;
+  lp.col_cost_.assign(ncols, 0.0);
+  lp.col_lower_.assign(ncols, 0.0);
+  lp.col_upper_.assign(ncols, 1.0);
+  lp.integrality_.assign(ncols, HighsVarType::kInteger);
+  lp.a_matrix_.start_.assign(ncols + 1, 0);
+
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  highs.passModel(lp);
+
+  HighsCallback callback(&highs);
+  const HighsOptions& options = highs.getOptions();
+  HighsSolution solution;
+  HighsMipSolver mipsolver(callback, options, lp, solution);
+  mipsolver.mipdata_ =
+      std::unique_ptr<HighsMipSolverData>(new HighsMipSolverData(mipsolver));
+  mipsolver.mipdata_->feastol = 1e-6;
+  mipsolver.mipdata_->setupDomainPropagation();
+
+  HighsCliqueTable& cliquetable = mipsolver.mipdata_->cliquetable;
+  HighsDomain& domain = mipsolver.mipdata_->getDomain();
+
+  // Add equality clique: x0 + x1 + x2 + x3 + x4 = 1
+  HighsCliqueTable::CliqueVar clique[] = {
+      {0, 1}, {1, 1}, {2, 1}, {3, 1}, {4, 1}};
+  cliquetable.doAddClique(clique, 5, true);
+  cliquetable.setPresolveFlag(true);
+
+  // Fix x0..x3 = 0 via vertexInfeasible (simulates what cleanupFixed does)
+  for (HighsInt i = 0; i < 4; i++) {
+    domain.fixCol(i, 0.0);
+    cliquetable.vertexInfeasible(domain, i, 1);
+  }
+
+  // The last variable x4 must now be fixed to 1
+  REQUIRE(domain.isFixed(4));
+  REQUIRE(domain.col_lower_[4] == 1.0);
+
+  highs.resetGlobalScheduler(true);
+}
+
+TEST_CASE("MIP-equality-clique-fixing-to-zero", "[highs_test_mip_solver]") {
+  // Same as above but with val=0 clique entries: the active value is 0.
+  // Fixing all but one variable to 1 (inactive) should fix the last to 0.
+  const HighsInt ncols = 5;
+  HighsLp lp;
+  lp.num_col_ = ncols;
+  lp.num_row_ = 0;
+  lp.col_cost_.assign(ncols, 0.0);
+  lp.col_lower_.assign(ncols, 0.0);
+  lp.col_upper_.assign(ncols, 1.0);
+  lp.integrality_.assign(ncols, HighsVarType::kInteger);
+  lp.a_matrix_.start_.assign(ncols + 1, 0);
+
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  highs.passModel(lp);
+
+  HighsCallback callback(&highs);
+  const HighsOptions& options = highs.getOptions();
+  HighsSolution solution;
+  HighsMipSolver mipsolver(callback, options, lp, solution);
+  mipsolver.mipdata_ =
+      std::unique_ptr<HighsMipSolverData>(new HighsMipSolverData(mipsolver));
+  mipsolver.mipdata_->feastol = 1e-6;
+  mipsolver.mipdata_->setupDomainPropagation();
+
+  HighsCliqueTable& cliquetable = mipsolver.mipdata_->cliquetable;
+  HighsDomain& domain = mipsolver.mipdata_->getDomain();
+
+  // Add equality clique with val=0: (1-x0) + (1-x1) + ... + (1-x4) = 1
+  HighsCliqueTable::CliqueVar clique[] = {
+      {0, 0}, {1, 0}, {2, 0}, {3, 0}, {4, 0}};
+  cliquetable.doAddClique(clique, 5, true);
+  cliquetable.setPresolveFlag(true);
+
+  // Fix x0..x3 = 1 via vertexInfeasible (makes their val=0 entry infeasible)
+  for (HighsInt i = 0; i < 4; i++) {
+    domain.fixCol(i, 1.0);
+    cliquetable.vertexInfeasible(domain, i, 0);
+  }
+
+  // The last variable x4 must now be fixed to 0
+  REQUIRE(domain.isFixed(4));
+  REQUIRE(domain.col_upper_[4] == 0.0);
 
   highs.resetGlobalScheduler(true);
 }

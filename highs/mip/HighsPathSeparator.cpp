@@ -400,7 +400,7 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
         std::vector<HighsInt> inds;
         std::vector<double> solval;
         std::vector<double> upper;
-        std::vector<uint8_t> isIntegral;
+        std::vector<HighsBool> isIntegral;
         inds.reserve(lp.num_col_ + lp.num_row_);
         solval.reserve(lp.num_col_ + lp.num_row_);
         upper.reserve(lp.num_col_ + lp.num_row_);
@@ -530,7 +530,8 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
                 inds.resize(numInds);
 
                 if (transLp.untransform(cutVals, inds, rhs))
-                  success |= cutGen.finalizeAndAddCut(inds, cutVals, rhs);
+                  success |= cutGen.finalizeAndAddCut(transLp.getGlobaldom(),
+                                                      inds, cutVals, rhs);
 
                 // printf("cut is violated for k = %d\n", k);
                 break;

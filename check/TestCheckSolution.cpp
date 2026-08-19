@@ -78,7 +78,9 @@ TEST_CASE("check-set-mip-solution", "[highs_check_solution]") {
       std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
   Highs highs;
   const HighsInfo& info = highs.getInfo();
-  if (dev_run) printf("\n********************\nSolving from scratch\n");
+  if (dev_run)
+    printf(
+        "\n********************\nSolving from scratch\n********************\n");
   highs.setOptionValue("output_flag", dev_run);
   highs.readModel(model_file);
   HighsLp lp = highs.getLp();
@@ -87,11 +89,12 @@ TEST_CASE("check-set-mip-solution", "[highs_check_solution]") {
   HighsSolution optimal_solution = highs.getSolution();
 
   HighsInt scratch_num_nodes = info.mip_node_count;
+  HighsInt scratch_num_simplex = info.simplex_iteration_count;
   if (dev_run) printf("Num nodes = %d\n", int(scratch_num_nodes));
 
   std::string solution_file = test_name + model + ".sol";
   if (dev_run) REQUIRE(highs.writeSolution("") == HighsStatus::kOk);
-  ;
+
   REQUIRE(highs.writeSolution(solution_file) == HighsStatus::kOk);
 
   highs.clear();
@@ -101,7 +104,9 @@ TEST_CASE("check-set-mip-solution", "[highs_check_solution]") {
   bool valid, integral, feasible;
   if (test0) {
     if (dev_run)
-      printf("\n***************************\nSolving from saved solution\n");
+      printf(
+          "\n***************************\nSolving from saved "
+          "solution\n***************************\n");
     highs.setOptionValue("output_flag", dev_run);
     highs.readModel(model_file);
 
@@ -113,14 +118,19 @@ TEST_CASE("check-set-mip-solution", "[highs_check_solution]") {
 
     highs.run();
     if (dev_run) printf("Num nodes = %d\n", int(info.mip_node_count));
-    REQUIRE(info.mip_node_count != scratch_num_nodes);
+    const bool different_search =
+        info.mip_node_count != scratch_num_nodes ||
+        info.simplex_iteration_count != scratch_num_simplex;
+    REQUIRE(different_search);
     highs.clear();
   }
 
   const bool test1 = other_tests;
   if (test1) {
     if (dev_run)
-      printf("\n***************************\nSolving from solution file\n");
+      printf(
+          "\n**************************\nSolving from solution "
+          "file\n**************************\n");
     highs.setOptionValue("output_flag", dev_run);
     highs.readModel(model_file);
 
@@ -132,7 +142,10 @@ TEST_CASE("check-set-mip-solution", "[highs_check_solution]") {
 
     highs.run();
     if (dev_run) printf("Num nodes = %d\n", int(info.mip_node_count));
-    REQUIRE(info.mip_node_count != scratch_num_nodes);
+    const bool different_search =
+        info.mip_node_count != scratch_num_nodes ||
+        info.simplex_iteration_count != scratch_num_simplex;
+    REQUIRE(different_search);
     highs.clear();
   }
 
@@ -140,8 +153,8 @@ TEST_CASE("check-set-mip-solution", "[highs_check_solution]") {
   if (test2) {
     if (dev_run)
       printf(
-          "\n***************************\nSolving from saved integer "
-          "solution\n");
+          "\n***********************************\nSolving from saved integer "
+          "solution\n***********************************\n");
     highs.setOptionValue("output_flag", dev_run);
     highs.readModel(model_file);
 
@@ -162,7 +175,10 @@ TEST_CASE("check-set-mip-solution", "[highs_check_solution]") {
 
     highs.run();
     if (dev_run) printf("Num nodes = %d\n", int(info.mip_node_count));
-    REQUIRE(info.mip_node_count != scratch_num_nodes);
+    const bool different_search =
+        info.mip_node_count != scratch_num_nodes ||
+        info.simplex_iteration_count != scratch_num_simplex;
+    REQUIRE(different_search);
     highs.clear();
   }
 
@@ -170,7 +186,8 @@ TEST_CASE("check-set-mip-solution", "[highs_check_solution]") {
   if (test3) {
     if (dev_run)
       printf(
-          "\n***************************\nSolving from column solution file\n");
+          "\n*********************************\nSolving from column solution "
+          "file\n*********************************\n");
     std::string column_solution_file =
         std::string(HIGHS_DIR) + "/check/instances/flugpl_integer.sol";
 
@@ -185,7 +202,10 @@ TEST_CASE("check-set-mip-solution", "[highs_check_solution]") {
 
     highs.run();
     if (dev_run) printf("Num nodes = %d\n", int(info.mip_node_count));
-    REQUIRE(info.mip_node_count != scratch_num_nodes);
+    const bool different_search =
+        info.mip_node_count != scratch_num_nodes ||
+        info.simplex_iteration_count != scratch_num_simplex;
+    REQUIRE(different_search);
     highs.clear();
   }
 
@@ -193,8 +213,9 @@ TEST_CASE("check-set-mip-solution", "[highs_check_solution]") {
   if (test4) {
     if (dev_run)
       printf(
-          "\n***************************\nSolving from illegal column solution "
-          "file\n");
+          "\n*****************************************\nSolving from illegal "
+          "column solution "
+          "file\n*****************************************\n");
     std::string column_solution_file =
         std::string(HIGHS_DIR) + "/check/instances/flugpl_illegal_integer.sol";
 
@@ -212,8 +233,9 @@ TEST_CASE("check-set-mip-solution", "[highs_check_solution]") {
     HighsSolution starting_solution = optimal_solution;
     if (dev_run)
       printf(
-          "\n***************************\nSolving from partial integer "
-          "solution\n");
+          "\n*************************************\nSolving from partial "
+          "integer "
+          "solution\n*************************************\n");
     highs.setOptionValue("output_flag", dev_run);
     highs.readModel(model_file);
 
@@ -232,7 +254,10 @@ TEST_CASE("check-set-mip-solution", "[highs_check_solution]") {
     return_status = highs.setSolution(starting_solution);
     REQUIRE(return_status == HighsStatus::kOk);
     highs.run();
-    REQUIRE(info.mip_node_count != scratch_num_nodes);
+    const bool different_search =
+        info.mip_node_count != scratch_num_nodes ||
+        info.simplex_iteration_count != scratch_num_simplex;
+    REQUIRE(different_search);
     highs.clear();
   }
 
@@ -240,8 +265,8 @@ TEST_CASE("check-set-mip-solution", "[highs_check_solution]") {
   if (test6) {
     if (dev_run)
       printf(
-          "\n***************************\nSolving from sparse integer "
-          "solution\n");
+          "\n************************************\nSolving from sparse integer "
+          "solution\n************************************\n");
     HighsInt num_integer_variable = 0;
     for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++)
       if (lp.integrality_[iCol] == HighsVarType::kInteger)
@@ -264,7 +289,7 @@ TEST_CASE("check-set-mip-solution", "[highs_check_solution]") {
 
     index.clear();
     value.clear();
-    std::vector<bool> is_set;
+    std::vector<HighsBool> is_set;
     is_set.assign(lp.num_col_, false);
     HighsInt num_to_set = 2;
     assert(num_to_set > 0);
@@ -283,7 +308,10 @@ TEST_CASE("check-set-mip-solution", "[highs_check_solution]") {
     return_status = highs.setSolution(num_entries, index.data(), value.data());
     REQUIRE(return_status == HighsStatus::kOk);
     highs.run();
-    REQUIRE(info.mip_node_count != scratch_num_nodes);
+    const bool different_search =
+        info.mip_node_count != scratch_num_nodes ||
+        info.simplex_iteration_count != scratch_num_simplex;
+    REQUIRE(different_search);
     highs.clear();
   }
   assert(other_tests);

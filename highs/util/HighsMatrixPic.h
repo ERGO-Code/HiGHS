@@ -17,10 +17,15 @@
 #include "HConfig.h"
 #include "lp_data/HighsLp.h"
 #include "lp_data/HighsOptions.h"
+#include "model/HighsHessian.h"
 
 HighsStatus writeLpMatrixPicToFile(const HighsOptions& options,
                                    const std::string& fileprefix,
                                    const HighsLp& lp);
+
+HighsStatus writeHessianPicToFile(const HighsOptions& options,
+                                  const std::string& fileprefix,
+                                  const HighsHessian& hessian);
 
 HighsStatus writeMatrixPicToFile(const HighsOptions& options,
                                  const std::string& fileprefix,

@@ -15,13 +15,15 @@
 
 #include <string>
 
-#include "util/HighsInt.h"
+#include "util/HighsType.h"
 
 const std::string kImplboundSepaString = "Separation: Implied bounds";
 const std::string kCliqueSepaString = "Separation: Clique";
 const std::string kTableauSepaString = "Separation: Tableau";
 const std::string kPathAggrSepaString = "Separation: Path aggregation";
 const std::string kModKSepaString = "Separation: Mod-k";
+const std::string kMachineSchedSepaString =
+    "Separation: Single Machine Scheduling";
 
 class HighsLpRelaxation;
 class HighsTransformedLp;

@@ -11,7 +11,7 @@
 #include "Highs.h"
 #include "lp_data/HighsCallback.h"
 #include "lp_data/HighsOptions.h"
-#include "mip/HighsMipAnalysis.h"
+#include "parallel/HighsParallel.h"
 
 struct HighsMipSolverData;
 class HighsCutPool;
@@ -31,6 +31,23 @@ struct HighsTerminator {
   bool terminated() const;
   HighsModelStatus terminationStatus() const;
   void report(const HighsLogOptions log_options) const;
+};
+
+struct MipViolation {
+  double bound_violation;
+  double integrality_violation;
+  double row_violation;
+  HighsInt num_bound_violations;
+  HighsInt num_integrality_violations;
+  HighsInt num_row_violations;
+  HighsInt col_of_max_bound_violation;
+  HighsInt col_of_max_integrality_violation;
+  HighsInt row_of_max_row_violation;
+  void clear();
+  void copy(double& bound_violation_, double& integrality_violation_,
+            double& row_violation_) const;
+  void log(const HighsLogOptions& log_options, const double objective_value,
+           const std::string& source) const;
 };
 
 class HighsMipSolver {
@@ -66,8 +83,6 @@ class HighsMipSolver {
   const HighsImplications* implicinit;
 
   std::unique_ptr<HighsMipSolverData> mipdata_;
-
-  HighsMipAnalysis analysis_;
 
   HighsModelStatus termination_status_;
   HighsTerminator terminator_;
@@ -118,15 +133,22 @@ class HighsMipSolver {
 
   ~HighsMipSolver();
 
+  template <class F>
+  void runTask(F&& f, highs::parallel::TaskGroup& tg, bool parallel_lock,
+               bool force_serial,
+               const std::vector<HighsInt>& indices = std::vector<HighsInt>(1,
+                                                                            0));
+
   void setModel(const HighsLp& model) {
     model_ = &model;
     solution_objective_ = kHighsInf;
   }
 
   mutable HighsTimer timer_;
-  mutable HighsSubSolverCallTime sub_solver_call_time_;
+  HighsProfiling* profiling_ = nullptr;
 
   void cleanupSolve();
+  void solvingReport(const std::string& solutionstatus) const;
 
   void runMipPresolve(const HighsInt presolve_reduction_limit);
   const HighsLp& getPresolvedModel() const;
@@ -136,8 +158,7 @@ class HighsMipSolver {
   void callbackGetCutPool() const;
   bool solutionFeasible(const HighsLp* lp, const std::vector<double>& col_value,
                         const std::vector<double>* pass_row_value,
-                        double& bound_violation, double& row_violation,
-                        double& integrality_violation, HighsCDouble& obj) const;
+                        MipViolation& violation, HighsCDouble& obj) const;
 
   std::vector<HighsModelStatus> initialiseTerminatorRecord(
       HighsInt num_instance) const;
@@ -150,6 +171,16 @@ class HighsMipSolver {
   }
   HighsModelStatus terminationStatus() const {
     return this->termination_status_;
+  }
+  void setParallelLock(bool lock) const;
+  void setProfiling(HighsProfiling* profiling);
+  HighsInt getMaxNumWorkers() const {
+    if (highs::parallel::num_threads() == 1 ||
+        options_mip_->parallel != kHighsOnString || submip) {
+      return 1;
+    }
+    return static_cast<HighsInt>(
+        std::ceil(1.7 * highs::parallel::num_threads()));
   }
 };
 

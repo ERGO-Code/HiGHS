@@ -26,6 +26,7 @@ TEST_CASE("semi-variable-model", "[highs_test_semi_variables]") {
   const double semi_col_lower = lp.col_lower_[semi_col];
   const double semi_col_upper = lp.col_upper_[semi_col];
   lp.col_cost_[semi_col] = semi_col_cost;
+  lp.model_name_ = "semi-variable-model";
   optimal_objective_function_value = 6.83333;
   // Legal to have infinte upper bounds on semi-variables
   lp.col_upper_[semi_col] = inf;

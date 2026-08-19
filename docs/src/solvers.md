@@ -63,6 +63,14 @@ HiGHS has two interior point (IPM) solvers:
   use the augmented system, "normaleq" for normal equations, or
   "choose" to leave the choice to the solver.
 
+  The [__hipo\_factor__](@ref option-hipo-factor) option can be used to
+  select the factorisation to use: select "multifrontal" to force the use
+  of the parallel multifrontal factorisation (ideal for large and structured 
+  problems); select "uplooking" to force the use of the serial up-looking
+  factorisation (ideal for small and very sparse problems); select "choose" 
+  to leave the choice to the solver (recommended, as the solver can switch 
+  between the two factorisations during the iterations if needed).
+
   The option [__hipo\_ordering__](@ref option-hipo-ordering) can be used
   to select the fill-reducing heuristic to use during the
   factorisation:
@@ -103,7 +111,7 @@ a procedure known as "crossover". This can occasionally be very
 expensive so if users require only a solution to the LP, and not a
 basic solution, crossover can be suppressed. This is done by setting
 the [run\_crossover](@ref option-run-crossover) option to
-"off". However, if the IPM solver terminates without satsifying the
+"off". However, if the IPM solver terminates without satisfying the
 [feasibility and optimality](@ref kkt) conditions, HiGHS will not
 claim optimality. Hence it is better to set the __run\_crossover__
 option to "choose", in which case crossover will be run if the IPM
@@ -125,6 +133,24 @@ its dimension is determined by the option
 [__qp\_nullspace\_limit__](@ref option-qp-nullspace-limit). The
 interior point solver is HiPO, so see [above](@ref solvers-lp-ipm) for
 the key algorithmic options.
+
+When a QP problem is read from a data file, or when a Hessian matrix
+is passed to HiGHS, the QP is not checked for convexity (since it is
+possible later to change the sense of the optimization so that the QP
+is convex). When a QP is solved, there is an initial convexity check
+using the diagonal entries. If the optimization sense is minimization
+(maximization) then the diagonal entries are checked for being
+non-negative (non-positive), and the solve returns an error if the
+test fails. However, this is only a sufficient condition for
+non-convexity of a Hessian. If the diagonal test passes, then
+non-convexity may be identified by the chosen QP solver, in which case
+this is logged and the solver will terminate. However, it is possible
+that the QP solver will give an anomalous result if non-convexity is
+not identified. Since a QP whose objective is defined by an indefinite
+Hessian may still be convex (due to its objective being convex on the
+feasible region) it is not possible to offer a simple and robust test
+of QP convexity. However, in a future version of HiGHS we expect to
+add a test of Hessian convexity.
 
 ## MIP
 

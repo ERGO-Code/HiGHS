@@ -48,10 +48,10 @@ static void scale_rows(Runtime& rt) {
 
   for (HighsInt row = 0; row < rt.scaled.num_con; row++) {
     double factor = largestpoweroftwo(maxabscoefperrow[row]);
-    if (rt.scaled.con_lo[row] > -std::numeric_limits<double>::infinity()) {
+    if (rt.scaled.con_lo[row] > -kHighsInf) {
       rt.scaled.con_lo[row] /= factor;
     }
-    if (rt.scaled.con_up[row] < std::numeric_limits<double>::infinity()) {
+    if (rt.scaled.con_up[row] < kHighsInf) {
       rt.scaled.con_up[row] /= factor;
     }
   }
