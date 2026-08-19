@@ -1705,7 +1705,10 @@ HPresolve::Result HPresolve::finaliseProbing(
       if (newLowerBnd) numBndsTightened++;
       if (newUpperBnd) numBndsTightened++;
     }
-    HPRESOLVE_CHECKED_CALL(checkLimits(postsolve_stack));
+    // Do not check limits here: rows have already been deleted by the
+    // clique table above without postsolve entries, relying on all
+    // column fixings being applied to justify their redundancy.
+    // HPRESOLVE_CHECKED_CALL(checkLimits(postsolve_stack));
   }
 
   // finally apply substitutions
