@@ -94,9 +94,9 @@ bool HighsImplications::computeImplications(HighsInt col, bool val) {
   const HighsInt tentativeStart =
       dfprobingEnabled ? globaldomain.getDualFixProbingPropagation()
                              .getZeroCostFixingPosition()
-                       : kHighsIInf32;
-  if (dfprobingEnabled) {
-    tentativeImplics.assign(domchgstack.begin() + stackimplicstart,
+                       : kHighsIInf;
+  if (dfprobingEnabled && tentativeStart != kHighsIInf) {
+    tentativeImplics.assign(domchgstack.begin() + tentativeStart,
                             domchgstack.begin() + stackimplicend);
   }
 
@@ -118,15 +118,15 @@ bool HighsImplications::computeImplications(HighsInt col, bool val) {
 
   if (!tentativeImplics.empty()) {
     // add the implications of binary variables to the clique table
-    auto binstart_tmp =
+    auto binstart =
         std::partition(tentativeImplics.begin(), tentativeImplics.end(),
                        [&](const HighsDomainChange& a) {
                          return !globaldomain.isBinary(a.column);
                        });
     // store the tentative bound changes of binary variables separately
-    for (auto i = binstart_tmp; i != tentativeImplics.end(); ++i)
+    for (auto i = binstart; i != tentativeImplics.end(); ++i)
       recordTentativeCliques(val, *i);
-    tentativeImplics.erase(binstart_tmp, tentativeImplics.end());
+    tentativeImplics.erase(binstart, tentativeImplics.end());
   }
 
   // add the implications of binary variables to the clique table
@@ -347,7 +347,7 @@ bool HighsImplications::runProbing(HighsInt col, HighsInt& numReductions) {
     if (enableDfprobing) {
       clearTentativeClique();
       globaldomain.getDualFixProbingPropagation().setZeroCostFixingPosition(
-          kHighsIInf32);
+          kHighsIInf);
     }
 
     bool infeasible = computeImplications(col, 1);
@@ -373,12 +373,7 @@ bool HighsImplications::runProbing(HighsInt col, HighsInt& numReductions) {
         if (mask == 0) continue;
 
         if (mask == 10) {
-          clique[0] = HighsCliqueTable::CliqueVar(col, 0);
-          clique[1] = HighsCliqueTable::CliqueVar(k, 1);
-          cliquetable.addClique(mipsolver, &clique[0], 2);
-          clique[0] = HighsCliqueTable::CliqueVar(col, 1);
-          clique[1] = HighsCliqueTable::CliqueVar(k, 1);
-          cliquetable.addClique(mipsolver, &clique[0], 2);
+          globaldomain.fixCol(k, globaldomain.col_lower_[k]);
           mask = 0;
         } else if (mask == 5) {
           clique[0] = HighsCliqueTable::CliqueVar(col, 0);
@@ -397,12 +392,7 @@ bool HighsImplications::runProbing(HighsInt col, HighsInt& numReductions) {
           cliquetable.addClique(mipsolver, &clique[0], 2);
           mask = 0;
         } else if (mask == 6) {
-          clique[0] = HighsCliqueTable::CliqueVar(col, 1);
-          clique[1] = HighsCliqueTable::CliqueVar(k, 0);
-          cliquetable.addClique(mipsolver, &clique[0], 2);
-          clique[0] = HighsCliqueTable::CliqueVar(col, 0);
-          clique[1] = HighsCliqueTable::CliqueVar(k, 1);
-          cliquetable.addClique(mipsolver, &clique[0], 2);
+          globaldomain.fixCol(k, globaldomain.col_upper_[k]);
           mask = 0;
         }
         if (globaldomain.infeasible()) return true;

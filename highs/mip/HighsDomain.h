@@ -243,6 +243,7 @@ class HighsDomain {
     // store row lower and row upper at 2i and 2i + 1
     std::vector<HighsBool> redundantRowFlags_;
     std::vector<HighsInt> redundantRowInds_;
+    HighsInt previousRedundantRowSize;
 
     // Track direction of zero fixings so we don't store disagreeing results
     enum DualFixProbingFixDirection {
@@ -263,18 +264,16 @@ class HighsDomain {
     HighsInt zeroCostStartPos_;
 
     bool enabled_ = false;
-    size_t previousSize_;
 
     // Original lower and upper locks, and the reduced locks after propagation.
-    std::vector<HighsInt> colLowerLockOriginal_;
-    std::vector<HighsInt> colUpperLockOriginal_;
-    std::vector<HighsInt> colLowerLockReduced_;
-    std::vector<HighsInt> colUpperLockReduced_;
+    std::vector<HighsInt> colLowerLocksOriginal_;
+    std::vector<HighsInt> colUpperLocksOriginal_;
+    std::vector<HighsInt> colLowerReducedNumLocks_;
+    std::vector<HighsInt> colUpperReducedNumLocks_;
+    std::unordered_set<HighsInt> clearColNumReducedLocks_;
 
-    // temporary buffers for DFProbing
-    std::vector<HighsInt> candidatesVec_;
-    std::vector<HighsBool> candidatesFlag_;
-    std::unordered_set<HighsInt> lockNeedClear_;
+    std::vector<HighsInt> candidateFixedCols_;
+    std::vector<HighsBool> candidateColFixedFlags_;
 
     void setEnabled(const bool val) { enabled_ = val; }
 
@@ -282,7 +281,7 @@ class HighsDomain {
 
     // active only when new redundant rows are found.
     bool isActive() const {
-      return enabled_ && redundantRowInds_.size() > previousSize_;
+      return enabled_ && redundantRowInds_.size() > previousRedundantRowSize;
     }
 
     bool isZeroCostFixingActive() const { return applyingZeroCostFixings_; }
@@ -291,7 +290,7 @@ class HighsDomain {
     // lower or upper bound.
     void setZeroCostFixingPosition(HighsInt v) { zeroCostStartPos_ = v; }
 
-    size_t getZeroCostFixingPosition() const { return zeroCostStartPos_; }
+    HighsInt getZeroCostFixingPosition() const { return zeroCostStartPos_; }
 
     bool ableToFixToLb(const HighsInt col) const {
       return mipsolver->model_->col_cost_[col] >=
@@ -306,7 +305,7 @@ class HighsDomain {
     }
 
     void beginProbing() {
-      previousSize_ = 0;
+      previousRedundantRowSize = 0;
       if (!redundantRowInds_.empty()) {
         for (const auto x : redundantRowInds_) redundantRowFlags_[x] = false;
 
@@ -321,9 +320,9 @@ class HighsDomain {
       applyingZeroCostFixings_ = false;
       setEnabled(true);
 
-      for (const auto x : lockNeedClear_)
-        colLowerLockReduced_[x] = colUpperLockReduced_[x] = 0;
-      lockNeedClear_.clear();
+      for (const auto x : clearColNumReducedLocks_)
+        colLowerReducedNumLocks_[x] = colUpperReducedNumLocks_[x] = 0;
+      clearColNumReducedLocks_.clear();
     }
 
     void endProbing() {
