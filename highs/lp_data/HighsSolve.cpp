@@ -164,9 +164,17 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object,
       }  // unwelcome_ipx_status
       // clang-format on
     }
+  } else if (options.solver == "simplex") {
+    // Use Simplex
+    return_status = simplexSolve();
+    if (return_status == HighsStatus::kError) return return_status;
   } else {
-    // Use Simplex X
-    // Automatic solver select!
+    // options.solver == "choose"
+    assert(options.solver == "choose");
+
+    // choose
+    // Automatic solver select.
+    // todo: ensure lp_ is the presolved LP
     HighsSolverSelect selected_solver = selectSolver(solver_object.lp_);
 
     switch(selected_solver) {

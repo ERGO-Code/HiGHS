@@ -1155,9 +1155,16 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
       // Later still, pass mip_lp_solver and take action on failure in
       // solveLp
       use_solver = use_hipo ? kHipoString : kIpxString;
+    } else if (mip_lp_solver == "simplex") {
+      use_solver = kSimplexString;
     } else {
+      // mip_lp_solver == "choose"
+      assert(mip_lp_solver == "choose");
+      // use_solver = "choose";
+      // choose from simplex, IPM, HIPO
       use_solver = kSimplexString;
     }
+
   }
   HighsStatus callstatus;
   // Now allowing the use of IPM at the root node
@@ -1170,6 +1177,7 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
     if (ipm_logging) {
       std::string presolve;
       lpsolver.getOptionValue("presolve", presolve);
+      std::cout << "IG LOG presolve = " << presolve << std::endl;
       printf(
           "HighsLpRelaxation::run Solving the root node with IPM, using "
           "presolve = %s\n",
