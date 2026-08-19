@@ -1162,6 +1162,7 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
       assert(mip_lp_solver == "choose");
       // use_solver = "choose";
       // choose from simplex, IPM, HIPO
+      // todo: get presolved LP from relaxation and pass to solver select
       use_solver = kSimplexString;
     }
 
