@@ -12,8 +12,8 @@ namespace hipo {
 
 Int denseFactFH(char format, Int n, Int k, double* A, double* B,
                 const Int* pivot_sign, double thresh, double* totalreg,
-                Int* swaps, double* pivot_2x2, bool parnode,
-                DataCollector& data, const FHoptions& options) {
+                Int* swaps, double* pivot_2x2, DataCollector& data,
+                const FHoptions& options) {
   // ===========================================================================
   // Partial blocked factorisation
   // Matrix A is in format FH
@@ -175,7 +175,7 @@ Int denseFactFH(char format, Int n, Int k, double* A, double* B,
         const double* Rjj = &R[offset];
 
         // perform gemm (potentially) in parallel
-        if (parnode)
+        if (options.parallel_node)
           dgemmParallel(P, Rjj, Q, col_jj, jb, row_jj, nb, 1.0, data);
         else
           callAndTime_dgemm('T', 'N', col_jj, row_jj, jb, -1.0, P, jb, Rjj, jb,
@@ -208,7 +208,7 @@ Int denseFactFH(char format, Int n, Int k, double* A, double* B,
           double beta = format == 'P' ? 0.0 : 1.0;
 
           // perform gemm (potentially) in parallel
-          if (parnode)
+          if (options.parallel_node)
             dgemmParallel(P, Rjj, Q, ncol, jb, nrow, nb, beta, data);
           else
             callAndTime_dgemm('T', 'N', ncol, nrow, jb, -1.0, P, jb, Rjj, jb,

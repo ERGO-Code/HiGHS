@@ -91,7 +91,7 @@ void FactorHighs_setOneIndexing(void* FH, HighsInt one_indexing) {
 HighsInt FactorHighs_reorderMetis(void* FH, HighsInt n, HighsInt nz,
                                   const HighsInt* rows, const HighsInt* ptr,
                                   HighsInt* perm) {
-  return ((hipo::FHsolver*)FH)->reorderMetis(n, nz, rows, ptr, perm, 0);
+  return ((hipo::FHsolver*)FH)->reorderMetis(n, nz, rows, ptr, perm, 0, 0);
 }
 HighsInt FactorHighs_reorderAmd(void* FH, HighsInt n, HighsInt nz,
                                 const HighsInt* rows, const HighsInt* ptr,

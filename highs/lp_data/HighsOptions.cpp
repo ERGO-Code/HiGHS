@@ -170,13 +170,14 @@ bool optionMipIpmSolverOk(const HighsLogOptions& report_log_options,
 bool optionHipoParallelTypeOk(const HighsLogOptions& report_log_options,
                               const string& value) {
   if (value == kHipoNodeString || value == kHipoTreeString ||
-      value == kHipoBothString)
+      value == kHipoBothString || value == kHighsChooseString)
     return true;
-  highsLogUser(
-      report_log_options, HighsLogType::kError,
-      "Value \"%s\" for %s option is not one of \"%s\", \"%s\" or \"%s\"\n",
-      value.c_str(), kHipoParallelString.c_str(), kHipoTreeString.c_str(),
-      kHipoNodeString.c_str(), kHipoBothString.c_str());
+  highsLogUser(report_log_options, HighsLogType::kError,
+               "Value \"%s\" for %s option is not one of \"%s\", \"%s\", "
+               "\"%s\" or \"%s\"\n",
+               value.c_str(), kHipoParallelString.c_str(),
+               kHipoTreeString.c_str(), kHipoNodeString.c_str(),
+               kHipoBothString.c_str(), kHighsChooseString.c_str());
   return false;
 }
 
@@ -204,6 +205,19 @@ bool optionHipoOrderingOk(const HighsLogOptions& report_log_options,
                value.c_str(), kHipoOrderingString.c_str(),
                kHipoAmdString.c_str(), kHipoMetisString.c_str(),
                kHipoRcmString.c_str(), kHighsChooseString.c_str());
+  return false;
+}
+
+bool optionHipoFactorOk(const HighsLogOptions& report_log_options,
+                        const string& value) {
+  if (value == kHipoFactorMultifrontal || value == kHipoFactorUplooking ||
+      value == kHighsChooseString)
+    return true;
+  highsLogUser(
+      report_log_options, HighsLogType::kError,
+      "Value \"%s\" for %s option is not one of \"%s\", \"%s\" or \"%s\"\n",
+      value.c_str(), kHipoFactorString.c_str(), kHipoFactorMultifrontal.c_str(),
+      kHipoFactorUplooking.c_str(), kHighsChooseString.c_str());
   return false;
 }
 
@@ -493,6 +507,12 @@ OptionStatus checkOptionValue(const HighsLogOptions& report_log_options,
       return OptionStatus::kIllegalValue;
   } else if (option.name == kHipoOrderingString) {
     if (!optionHipoOrderingOk(report_log_options, value))
+      return OptionStatus::kIllegalValue;
+  } else if (option.name == kHipoFactorString) {
+    if (!optionHipoFactorOk(report_log_options, value))
+      return OptionStatus::kIllegalValue;
+  } else if (option.name == kPresolveLightString) {
+    if (!optionOffChooseOnOk(report_log_options, option.name, value))
       return OptionStatus::kIllegalValue;
   }
   return OptionStatus::kOk;

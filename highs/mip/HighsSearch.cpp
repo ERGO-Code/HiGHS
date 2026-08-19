@@ -252,8 +252,8 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters,
 
   std::vector<double> upscore;
   std::vector<double> downscore;
-  std::vector<uint8_t> upscorereliable;
-  std::vector<uint8_t> downscorereliable;
+  std::vector<HighsBool> upscorereliable;
+  std::vector<HighsBool> downscorereliable;
   std::vector<double> upbound;
   std::vector<double> downbound;
 
@@ -265,8 +265,8 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters,
   upbound.resize(numfrac, getCurrentLowerBound());
   downbound.resize(numfrac, getCurrentLowerBound());
 
-  upscorereliable.resize(numfrac, 0);
-  downscorereliable.resize(numfrac, 0);
+  upscorereliable.resize(numfrac, false);
+  downscorereliable.resize(numfrac, false);
 
   // initialize up and down scores of variables that have a
   // reliable pseudocost so that they do not get evaluated
@@ -681,8 +681,8 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters,
         // avoid choosing it as branching candidate if possible
         downscore[candidate] = 0.0;
         upscore[candidate] = 0.0;
-        downscorereliable[candidate] = 1;
-        upscorereliable[candidate] = 1;
+        downscorereliable[candidate] = true;
+        upscorereliable[candidate] = true;
         markBranchingVarUpReliableAtNode(col);
         markBranchingVarDownReliableAtNode(col);
       }
@@ -1120,6 +1120,7 @@ HighsSearch::NodeResult HighsSearch::branch() {
           100000 + ((getTotalLpIterations() - getHeuristicLpIterations() -
                      getStrongBranchingLpIterations()) >>
                     1);
+      if (mipsolver.mipdata_->numRestarts <= 2) sbmaxiters = sbmaxiters >> 2;
       if (sbiters > sbmaxiters) {
         pseudocost.setMinReliable(0);
       } else if (sbiters > (sbmaxiters >> 1)) {

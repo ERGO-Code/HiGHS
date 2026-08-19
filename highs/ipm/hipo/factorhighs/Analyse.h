@@ -85,6 +85,12 @@ class Analyse {
   const Logger* logger_;
   DataCollector& data_;
 
+  TreeSchedule schedule_solve_;
+
+  double ops_solve_;
+  double critical_ops_solve_;
+  std::vector<double> task_ops_solve_;
+
   // Functions to perform analyse phase
   void permute(const std::vector<Int>& iperm);
   void eTree();
@@ -103,8 +109,10 @@ class Analyse {
   void computeStorage(Int fr, Int sz, Int64& fr_entries,
                       Int64& cl_entries) const;
   void computeCriticalPath();
+  void computeCriticalPathSolve();
   void computeBlockStart();
   void computeStackSize();
+  void computeTreeScheduleSolve();
   Int checkOverflow() const;
 
  public:

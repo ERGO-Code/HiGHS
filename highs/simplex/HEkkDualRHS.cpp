@@ -386,10 +386,10 @@ void HEkkDualRHS::updateInfeasList(HVector* column) {
     // The regular sparse way
     for (HighsInt i = 0; i < columnCount; i++) {
       HighsInt iRow = variable_index[i];
-      if (workMark[iRow] == 0) {
+      if (!workMark[iRow]) {
         if (work_infeasibility[iRow]) {
           workIndex[workCount++] = iRow;
-          workMark[iRow] = 1;
+          workMark[iRow] = true;
         }
       }
     }
@@ -397,10 +397,10 @@ void HEkkDualRHS::updateInfeasList(HVector* column) {
     // The hyper sparse way
     for (HighsInt i = 0; i < columnCount; i++) {
       HighsInt iRow = variable_index[i];
-      if (workMark[iRow] == 0) {
+      if (!workMark[iRow]) {
         if (work_infeasibility[iRow] > edge_weight[iRow] * workCutoff) {
           workIndex[workCount++] = iRow;
-          workMark[iRow] = 1;
+          workMark[iRow] = true;
         }
       }
     }
@@ -438,12 +438,12 @@ void HEkkDualRHS::createInfeasList(double columnDensity) {
   double* dwork = ekk_instance_.scattered_dual_edge_weight_.data();
 
   // 1. Build the full list
-  fill_n(workMark.data(), numRow, 0);
+  fill_n(workMark.data(), numRow, false);
   workCount = 0;
   workCutoff = 0;
   for (HighsInt iRow = 0; iRow < numRow; iRow++) {
     if (work_infeasibility[iRow]) {
-      workMark[iRow] = 1;
+      workMark[iRow] = true;
       workIndex[workCount++] = iRow;
     }
   }
@@ -465,12 +465,12 @@ void HEkkDualRHS::createInfeasList(double columnDensity) {
     workCutoff = min(maxMerit * 0.99999, cutMerit * 1.00001);
 
     // Create again
-    fill_n(workMark.data(), numRow, 0);
+    fill_n(workMark.data(), numRow, false);
     workCount = 0;
     for (HighsInt iRow = 0; iRow < numRow; iRow++) {
       if (work_infeasibility[iRow] >= edge_weight[iRow] * workCutoff) {
         workIndex[workCount++] = iRow;
-        workMark[iRow] = 1;
+        workMark[iRow] = true;
       }
     }
 
@@ -484,7 +484,7 @@ void HEkkDualRHS::createInfeasList(double columnDensity) {
         if (work_infeasibility[iRow] > edge_weight[iRow] * cutMerit) {
           workIndex[workCount++] = iRow;
         } else {
-          workMark[iRow] = 0;
+          workMark[iRow] = false;
         }
       }
     }
