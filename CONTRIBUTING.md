@@ -10,7 +10,7 @@ This project and everyone participating in it is governed by the [HiGHS Code of 
 
 HiGHS is open source for distribution rather than contribution. This applies particularly to the core C++ code of the solvers. However, there is definitely scope for external contribution to interfaces and documentation. If you want to contribute in this way, please open an issue before making a pull request, since pull requests to the HiGHS solvers will not normally be accepted.
 
-Please note that any pull requests to HiGHS must be made to the `latest` branch, so that full testing can take place before updating `master`. This ensures that `master` is always good to be downloaded by users. As a consequence, any changes should be developed as a branch of `latest` to reduce the chance of merge conflicts.
+Please note that any pull requests to HiGHS must be made to the `latest` branch, so that full testing can take place befor updating `master`. This ensures that `master` is always good to be downloaded by users. As a consequence, any changes should be developed as a branch of `latest` to reduce the chance of merge conflicts.
 
 Note that, under the terms of the MIT license, by contributing to HiGHS you assign away your rights to the content of your contribution.
 
