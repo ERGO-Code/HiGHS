@@ -241,8 +241,8 @@ class HighsDomain {
     HighsMipSolver* mipsolver;
 
     // store row lower and row upper at 2i and 2i + 1
-    std::vector<HighsBool> redundantPropagateFlags_;
-    std::vector<HighsInt> redundantPropagateInds_;
+    std::vector<HighsBool> redundantRowFlags_;
+    std::vector<HighsInt> redundantRowInds_;
 
     // Track direction of zero fixings so we don't store disagreeing results
     enum DualFixProbingFixDirection {
@@ -260,7 +260,7 @@ class HighsDomain {
     std::vector<FixedZeroCostColumn> fixedZeroCostColumns_;
 
     bool applyingZeroCostFixings_ = false;
-    size_t zeroCostStartPos_;
+    HighsInt zeroCostStartPos_;
 
     bool enabled_ = false;
     size_t previousSize_;
@@ -282,7 +282,7 @@ class HighsDomain {
 
     // active only when new redundant rows are found.
     bool isActive() const {
-      return enabled_ && redundantPropagateInds_.size() > previousSize_;
+      return enabled_ && redundantRowInds_.size() > previousSize_;
     }
 
     bool isZeroCostFixingActive() const { return applyingZeroCostFixings_; }
@@ -307,15 +307,14 @@ class HighsDomain {
 
     void beginProbing() {
       previousSize_ = 0;
-      if (!redundantPropagateInds_.empty()) {  // clear buffers
-        for (const auto x : redundantPropagateInds_)
-          redundantPropagateFlags_[x] = false;
+      if (!redundantRowInds_.empty()) {
+        for (const auto x : redundantRowInds_) redundantRowFlags_[x] = false;
 
-        redundantPropagateInds_.clear();
+        redundantRowInds_.clear();
       }
 
-      for (size_t i = 0; i < redundantPropagateFlags_.size(); ++i)
-        assert(!redundantPropagateFlags_[i]);
+      for (size_t i = 0; i < redundantRowFlags_.size(); ++i)
+        assert(!redundantRowFlags_[i]);
 
       fixedZeroCostColumns_.clear();
       zeroCostStartPos_ = kHighsIInf;
@@ -433,7 +432,7 @@ class HighsDomain {
  private:
   std::deque<CutpoolPropagation> cutpoolpropagation;
   std::deque<ConflictPoolPropagation> conflictPoolPropagation;
-  DualFixProbingPropagation dfprobingPropagation;
+  DualFixProbingPropagation dualFixProbingPropagation;
 
   bool infeasible_ = false;
   Reason infeasible_reason;
@@ -460,7 +459,7 @@ class HighsDomain {
   std::vector<HighsInt> branchPos_;
   HighsHashTable<HighsInt> redundantRows_;
   bool recordRedundantRows_ = false;
-  bool inPresolveProbing_ = false;
+  bool dualFixProbingActive_ = false;
 
  public:
   std::vector<double> col_lower_;
@@ -485,7 +484,7 @@ class HighsDomain {
         mipsolver(other.mipsolver),
         cutpoolpropagation(other.cutpoolpropagation),
         conflictPoolPropagation(other.conflictPoolPropagation),
-        dfprobingPropagation(other.dfprobingPropagation),
+        dualFixProbingPropagation(other.dualFixProbingPropagation),
         infeasible_(other.infeasible_),
         infeasible_reason(other.infeasible_reason),
         infeasible_pos(other.infeasible_pos),
@@ -499,7 +498,7 @@ class HighsDomain {
     for (ConflictPoolPropagation& conflictprop : conflictPoolPropagation)
       conflictprop.domain = this;
     if (objProp_.domain) objProp_.domain = this;
-    dfprobingPropagation.domain = this;
+    dualFixProbingPropagation.domain = this;
   }
 
   HighsDomain& operator=(const HighsDomain& other) {
@@ -531,7 +530,7 @@ class HighsDomain {
     for (ConflictPoolPropagation& conflictprop : conflictPoolPropagation)
       conflictprop.domain = this;
     if (objProp_.domain) objProp_.domain = this;
-    dfprobingPropagation.domain = this;
+    dualFixProbingPropagation.domain = this;
     return *this;
   }
 
@@ -806,12 +805,12 @@ class HighsDomain {
   bool isRedundantRow(HighsInt row) const;
 
   DualFixProbingPropagation& getDualFixProbingPropagation() {
-    return dfprobingPropagation;
+    return dualFixProbingPropagation;
   }
 
-  void setInPresolveProbing(bool val) { inPresolveProbing_ = val; }
+  void setDualFixProbingActive(const bool val) { dualFixProbingActive_ = val; }
 
-  bool getInPresolveProbing() const { return inPresolveProbing_; }
+  bool getDualFixProbingActive() const { return dualFixProbingActive_; }
 };
 
 #endif

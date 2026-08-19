@@ -25,10 +25,10 @@ class HighsImplications {
 
   struct Implics {
     std::vector<HighsDomainChange> implics;
-    std::vector<HighsDomainChange> tentativeImplics;
     bool computed = false;
   };
   std::vector<Implics> implications;
+  std::vector<std::vector<HighsDomainChange>> tentativeImplications;
   int64_t numImplications;
   int64_t numVarBounds;
   int64_t maxVarBounds;
@@ -59,6 +59,7 @@ class HighsImplications {
   std::vector<HighsSubstitution> substitutions;
   std::vector<HighsBool> colsubstituted;
 
+  // TODO: Rename these!!!
   std::vector<HighsInt> binaryInvolvedInds_;
   // (0000) : Not involved
   // (0010) : Fixed to lower in zero-side probing
@@ -137,7 +138,7 @@ class HighsImplications {
   const std::vector<HighsDomainChange>& getTentativeImplications(HighsInt col,
                                                                  bool val) {
     HighsInt loc = 2 * col + val;
-    return implications[loc].tentativeImplics;
+    return tentativeImplications[loc];
   }
 
   bool implicationsCached(HighsInt col, bool val) {

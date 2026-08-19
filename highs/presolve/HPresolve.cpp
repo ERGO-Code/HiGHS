@@ -1863,8 +1863,8 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postsolve_stack) {
       }
     };
 
-    const bool enableDfprobing = allow_rule_[kPresolveRuleDualFixProbing];
-    if (enableDfprobing) {
+    const bool dualFixProbingEnabled = allow_rule_[kPresolveRuleDualFixProbing];
+    if (dualFixProbingEnabled) {
       domain.getDualFixProbingPropagation().recomputeLocks();
     }
 
@@ -1933,9 +1933,9 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postsolve_stack) {
 
       HighsInt numBoundChgs = 0;
       HighsInt numNewCliques = -cliquetable.numCliques();
-      domain.setInPresolveProbing(enableDfprobing);
+      domain.setDualFixProbingActive(dualFixProbingEnabled);
       const bool probing_result = implications.runProbing(i, numBoundChgs);
-      domain.setInPresolveProbing(false);
+      domain.setDualFixProbingActive(false);
       if (!probing_result) continue;
       probingContingent += numBoundChgs;
       numNewCliques += cliquetable.numCliques();

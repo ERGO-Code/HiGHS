@@ -27,7 +27,7 @@ bool HighsImplications::computeImplications(HighsInt col, bool val) {
   const auto& domchgreason = globaldomain.getDomainChangeReason();
   size_t changedend = globaldomain.getChangedCols().size();
 
-  bool dfprobingEnabled = globaldomain.getInPresolveProbing();
+  bool dfprobingEnabled = globaldomain.getDualFixProbingActive();
   if (dfprobingEnabled) {
     globaldomain.getDualFixProbingPropagation().beginProbing();
   }
@@ -92,12 +92,12 @@ bool HighsImplications::computeImplications(HighsInt col, bool val) {
   HighsInt maxEntries = 100000 + mipsolver.numNonzero();
 
   const HighsInt tentativeStart =
-      dfprobingEnabled
-          ? globaldomain.getDualFixProbingPropagation().getZeroCostFixingPosition()
-          : kHighsIInf32;
+      dfprobingEnabled ? globaldomain.getDualFixProbingPropagation()
+                             .getZeroCostFixingPosition()
+                       : kHighsIInf32;
   if (dfprobingEnabled) {
     tentativeImplics.assign(domchgstack.begin() + stackimplicstart,
-                             domchgstack.begin() + stackimplicend);
+                            domchgstack.begin() + stackimplicend);
   }
 
   for (HighsInt i = stackimplicstart; i < stackimplicend; ++i) {
@@ -105,8 +105,7 @@ bool HighsImplications::computeImplications(HighsInt col, bool val) {
         ((domchgreason[i].index >> 1) == col || numEntries >= maxEntries))
       continue;
 
-    if (i >= tentativeStart)
-      continue;
+    if (i >= tentativeStart) continue;
 
     implics.push_back(domchgstack[i]);
   }
@@ -189,7 +188,7 @@ bool HighsImplications::computeImplications(HighsInt col, bool val) {
   }
   if (!tentativeImplics.empty()) {
     pdqsort(tentativeImplics.begin(), tentativeImplics.end());
-    implications[loc].tentativeImplics = std::move(tentativeImplics);
+    tentativeImplications[loc] = std::move(tentativeImplics);
   }
 
   return false;
@@ -344,8 +343,7 @@ bool HighsImplications::runProbing(HighsInt col, HighsInt& numReductions) {
   if (globaldomain.isBinary(col) && !implicationsCached(col, 1) &&
       !implicationsCached(col, 0) &&
       mipsolver.mipdata_->cliquetable.getSubstitution(col) == nullptr) {
-
-    const bool enableDfprobing = globaldomain.getInPresolveProbing();
+    const bool enableDfprobing = globaldomain.getDualFixProbingActive();
     if (enableDfprobing) {
       clearTentativeClique();
       globaldomain.getDualFixProbingPropagation().setZeroCostFixingPosition(
@@ -364,15 +362,15 @@ bool HighsImplications::runProbing(HighsInt col, HighsInt& numReductions) {
     if (mipsolver.mipdata_->cliquetable.getSubstitution(col) != nullptr)
       return true;
 
-    if (enableDfprobing && !binaryInvolvedInds_.empty() && mipsolver.mipdata_->cliquetable.isFull()) {
+    if (enableDfprobing && !binaryInvolvedInds_.empty() &&
+        mipsolver.mipdata_->cliquetable.isFull()) {
       HighsCliqueTable& cliquetable = mipsolver.mipdata_->cliquetable;
       HighsCliqueTable::CliqueVar clique[2];
       for (HighsInt k : binaryInvolvedInds_) {
         if (!globaldomain.isBinary(k) || colsubstituted[k]) continue;
         if (globaldomain.infeasible()) return true;
         uint8_t mask = binaryInvolvedFlags_[k];
-        if (mask == 0)
-          continue;
+        if (mask == 0) continue;
 
         if (mask == 10) {
           clique[0] = HighsCliqueTable::CliqueVar(col, 0);
@@ -415,16 +413,16 @@ bool HighsImplications::runProbing(HighsInt col, HighsInt& numReductions) {
 
     // analyze implications
     const bool haveTentativeImplicsZeroProbe =
-        !implications[2 * col].tentativeImplics.empty();
+        !tentativeImplications[2 * col].empty();
     const bool haveTentativeImplicsOneProbe =
-        !implications[2 * col + 1].tentativeImplics.empty();
+        !tentativeImplications[2 * col + 1].empty();
 
     const std::vector<HighsDomainChange>& implicsdown =
         haveTentativeImplicsZeroProbe ? getTentativeImplications(col, 0)
-                                  : getImplications(col, 0, infeasible);
+                                      : getImplications(col, 0, infeasible);
     const std::vector<HighsDomainChange>& implicsup =
         haveTentativeImplicsOneProbe ? getTentativeImplications(col, 1)
-                                 : getImplications(col, 1, infeasible);
+                                     : getImplications(col, 1, infeasible);
     HighsInt nimplicsdown = implicsdown.size();
     HighsInt nimplicsup = implicsup.size();
     HighsInt u = 0;
@@ -491,10 +489,9 @@ bool HighsImplications::runProbing(HighsInt col, HighsInt& numReductions) {
     }
 
     // clear tentative implications
-    if (haveTentativeImplicsZeroProbe)
-      implications[2 * col].tentativeImplics.clear();
+    if (haveTentativeImplicsZeroProbe) tentativeImplications[2 * col].clear();
     if (haveTentativeImplicsOneProbe)
-      implications[2 * col + 1].tentativeImplics.clear();
+      tentativeImplications[2 * col + 1].clear();
 
     return true;
   }
