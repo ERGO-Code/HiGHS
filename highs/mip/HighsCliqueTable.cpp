@@ -836,6 +836,17 @@ void HighsCliqueTable::removeClique(HighsInt cliqueid) {
   numEntries -= len;
 }
 
+void HighsCliqueTable::fixLastActiveAndRemove(HighsDomain& globaldom,
+                                              HighsInt cliqueid) {
+  if (cliques[cliqueid].equality && cliques[cliqueid].numActive() == 1)
+    for (HighsInt i = cliques[cliqueid].start; i != cliques[cliqueid].end; ++i)
+      if (!globaldom.isFixed(cliqueentries[i].col)) {
+        fixCol(globaldom, cliqueentries[i].complement(), false);
+        break;
+      }
+  removeClique(cliqueid);
+}
+
 void HighsCliqueTable::extractCliques(
     const HighsMipSolver& mipsolver, std::vector<HighsInt>& inds,
     std::vector<double>& vals, std::vector<int8_t>& complementation, double rhs,
@@ -1519,7 +1530,8 @@ void HighsCliqueTable::processInfeasibleVertices(HighsDomain& globaldom) {
       // may be found by probing and will be deleted upon rebuild anyways
       vHashLists.for_each([&](HighsInt cliqueid) {
         cliques[cliqueid].numZeroFixed += 1;
-        if (cliques[cliqueid].numActive() <= 1) removeClique(cliqueid);
+        if (cliques[cliqueid].numActive() <= 1)
+          fixLastActiveAndRemove(globaldom, cliqueid);
       });
       continue;
     }
@@ -1534,7 +1546,7 @@ void HighsCliqueTable::processInfeasibleVertices(HighsDomain& globaldom) {
 
       cliques[cliqueid].numZeroFixed += 1;
       if (cliques[cliqueid].numActive() <= 1) {
-        removeClique(cliqueid);
+        fixLastActiveAndRemove(globaldom, cliqueid);
       } else if (cliques[cliqueid].numZeroFixed >=
                  std::max(
                      HighsInt{10},
