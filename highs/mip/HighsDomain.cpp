@@ -638,8 +638,8 @@ void HighsDomain::CutpoolPropagation::updateActivityUbChange(
   }
 }
 
-HighsDomain::DualfixingProbingPropagation::DualfixingProbingPropagation(
-    const DualfixingProbingPropagation& other)
+HighsDomain::DualFixProbingPropagation::DualFixProbingPropagation(
+    const DualFixProbingPropagation& other)
     : redundantPropagateFlags_(other.redundantPropagateFlags_),
       redundantPropagateInds_(other.redundantPropagateInds_),
       zeroCostDirections_(other.zeroCostDirections_),
@@ -654,12 +654,12 @@ HighsDomain::DualfixingProbingPropagation::DualfixingProbingPropagation(
   ;
 }
 
-void HighsDomain::DualfixingProbingPropagation::recomputeLocks() {
+void HighsDomain::DualFixProbingPropagation::recomputeLocks() {
   mipsolver = domain->mipsolver;
   redundantPropagateFlags_.assign(2 * mipsolver->numRow(), false);
   redundantPropagateInds_.clear();
   redundantPropagateInds_.reserve(2 * mipsolver->numRow());
-  zeroCostDirections_.assign(mipsolver->numCol(), FixUnDecided);
+  zeroCostDirections_.assign(mipsolver->numCol(), FixUndecided);
   fixedZeroCostColumns_.clear();
   fixedZeroCostColumns_.reserve(mipsolver->numCol());
 
@@ -678,22 +678,23 @@ void HighsDomain::DualfixingProbingPropagation::recomputeLocks() {
   lockNeedClear_.reserve(mipsolver->numCol());
 
   // compute the original locks for each variable
-  const auto model = mipsolver->model_;
-  for (HighsInt iCol = 0; iCol < model->a_matrix_.num_col_; iCol++) {
-    for (HighsInt k = model->a_matrix_.start_[iCol];
-         k < model->a_matrix_.start_[iCol + 1]; k++) {
-      const HighsInt iRow = model->a_matrix_.index_[k];
-      const double iValue = model->a_matrix_.value_[k];
-      const double lhs = model->row_lower_[iRow], rhs = model->row_upper_[iRow];
-      if ((iValue > 0 && rhs != kHighsInf) || (iValue < 0 && lhs != -kHighsInf))
-        colUpperLockOriginal_[iCol]++;
-      if ((iValue > 0 && lhs != -kHighsInf) || (iValue < 0 && rhs != kHighsInf))
-        colLowerLockOriginal_[iCol]++;
+  const HighsLp* model = mipsolver->model_;
+  for (HighsInt col = 0; col < model->a_matrix_.num_col_; col++) {
+    for (HighsInt k = model->a_matrix_.start_[col];
+         k < model->a_matrix_.start_[col + 1]; k++) {
+      const HighsInt row = model->a_matrix_.index_[k];
+      const double val = model->a_matrix_.value_[k];
+      const double lhs = model->row_lower_[row];
+      const double rhs = model->row_upper_[row];
+      if ((val > 0 && rhs != kHighsInf) || (val < 0 && lhs != -kHighsInf))
+        colUpperLockOriginal_[col]++;
+      if ((val > 0 && lhs != -kHighsInf) || (val < 0 && rhs != kHighsInf))
+        colLowerLockOriginal_[col]++;
     }
   }
 }
 
-void HighsDomain::DualfixingProbingPropagation::updateRhsRedundant(
+void HighsDomain::DualFixProbingPropagation::updateRhsRedundant(
     HighsInt row) {
   if (!isEnabled()) return;
 
@@ -709,7 +710,7 @@ void HighsDomain::DualfixingProbingPropagation::updateRhsRedundant(
   }
 }
 
-void HighsDomain::DualfixingProbingPropagation::updateLhsRedundant(
+void HighsDomain::DualFixProbingPropagation::updateLhsRedundant(
     HighsInt row) {
   if (!isEnabled()) return;
 
@@ -724,7 +725,7 @@ void HighsDomain::DualfixingProbingPropagation::updateLhsRedundant(
   }
 }
 
-void HighsDomain::DualfixingProbingPropagation::propagate() {
+void HighsDomain::DualFixProbingPropagation::propagate() {
   // The boolean variable ``startZeroCostFixing_'' is used to flag if we allow
   // variables with zero cost can be fixed in domain propagation. The process of
   // domain propagtion in probing is executed in two phases:
@@ -823,11 +824,11 @@ void HighsDomain::DualfixingProbingPropagation::propagate() {
   // only record - we do not actually fix them now as their objective
   // coefficients are zero
   auto collectFixLower = [&](int iCol) {
-    fixedZeroCostColumns_.emplace_back(fixedZeroCostColumn{iCol, FixLowerBound});
+    fixedZeroCostColumns_.emplace_back(FixedZeroCostColumn{iCol, FixLowerBound});
   };
 
   auto collectFixUpper = [&](int iCol) {
-    fixedZeroCostColumns_.emplace_back(fixedZeroCostColumn{iCol, FixUpperBound});
+    fixedZeroCostColumns_.emplace_back(FixedZeroCostColumn{iCol, FixUpperBound});
   };
 
   // exit if no new redundant constraints are found
@@ -923,7 +924,7 @@ void HighsDomain::DualfixingProbingPropagation::propagate() {
         mipsolver->options_mip_->dual_feasibility_tolerance) {
       if (applyingZeroCostFixings_) {
         // not fixed beforei
-        if (zeroCostDirections_[iCol] == FixUnDecided) {
+        if (zeroCostDirections_[iCol] == FixUndecided) {
           // both directions are ok - depending on cost (no tolerance)
           if (canBeFixedToLower && canBeFixedToUpper) {
             if (mipsolver->model_->col_cost_[iCol] >= 0) {
@@ -958,7 +959,7 @@ void HighsDomain::DualfixingProbingPropagation::propagate() {
       // directions
       else {
         // not fixed before
-        if (zeroCostDirections_[iCol] == FixUnDecided) {
+        if (zeroCostDirections_[iCol] == FixUndecided) {
           // both directions are ok - depending on cost (no tolerance)
           if (canBeFixedToLower && canBeFixedToUpper) {
             if (mipsolver->model_->col_cost_[iCol] >= 0) {
@@ -1029,13 +1030,13 @@ void HighsDomain::DualfixingProbingPropagation::propagate() {
   previousSize_ = redundantPropagateInds_.size();
 }
 
-void HighsDomain::DualfixingProbingPropagation::propagateZeroCosts() {
+void HighsDomain::DualFixProbingPropagation::propagateZeroCosts() {
   if (fixedZeroCostColumns_.empty()) return;
 
   applyingZeroCostFixings_ = true;
   zeroCostStartPos_ = domain->getDomainChangeStack().size();
 
-  for (const fixedZeroCostColumn& fixing : fixedZeroCostColumns_) {
+  for (const FixedZeroCostColumn& fixing : fixedZeroCostColumns_) {
     if (domain->isFixed(fixing.col)) continue;
     if (fixing.direction == FixLowerBound) {
       domain->changeBound(HighsBoundType::kUpper, fixing.col, domain->col_lower_[fixing.col], Reason::unspecified());

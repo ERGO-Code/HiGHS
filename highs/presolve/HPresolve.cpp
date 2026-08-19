@@ -1863,9 +1863,9 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postsolve_stack) {
       }
     };
 
-    const bool enableDfprobing = allow_rule_[kPresolveRuleDfprobing];
+    const bool enableDfprobing = allow_rule_[kPresolveRuleDualFixProbing];
     if (enableDfprobing) {
-      domain.getDfProbingPropagation().recomputeLocks();
+      domain.getDualFixProbingPropagation().recomputeLocks();
     }
 
     for (const auto& binvar : binaries) {

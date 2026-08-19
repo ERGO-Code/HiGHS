@@ -29,7 +29,7 @@ bool HighsImplications::computeImplications(HighsInt col, bool val) {
 
   bool dfprobingEnabled = globaldomain.getInPresolveProbing();
   if (dfprobingEnabled) {
-    globaldomain.getDfProbingPropagation().beginProbing();
+    globaldomain.getDualFixProbingPropagation().beginProbing();
   }
 
   HighsInt stackimplicstart = domchgstack.size() + 1;
@@ -59,7 +59,7 @@ bool HighsImplications::computeImplications(HighsInt col, bool val) {
   auto isInfeasible = [&](HighsInt col, bool val) {
     if (!globaldomain.infeasible()) return false;
     if (dfprobingEnabled) {
-      globaldomain.getDfProbingPropagation().endProbing();
+      globaldomain.getDualFixProbingPropagation().endProbing();
     }
     storeLiftingOpportunities(col, val);
     doBacktrack(changedend);
@@ -71,7 +71,7 @@ bool HighsImplications::computeImplications(HighsInt col, bool val) {
 
   globaldomain.propagate();
   if (dfprobingEnabled) {
-    globaldomain.getDfProbingPropagation().endProbing();
+    globaldomain.getDualFixProbingPropagation().endProbing();
   }
 
   if (isInfeasible(col, val)) return true;
@@ -93,7 +93,7 @@ bool HighsImplications::computeImplications(HighsInt col, bool val) {
 
   const HighsInt tentativeStart =
       dfprobingEnabled
-          ? globaldomain.getDfProbingPropagation().getZeroCostFixingPosition()
+          ? globaldomain.getDualFixProbingPropagation().getZeroCostFixingPosition()
           : kHighsIInf32;
   if (dfprobingEnabled) {
     tentativeImplics.assign(domchgstack.begin() + stackimplicstart,
@@ -348,7 +348,7 @@ bool HighsImplications::runProbing(HighsInt col, HighsInt& numReductions) {
     const bool enableDfprobing = globaldomain.getInPresolveProbing();
     if (enableDfprobing) {
       clearTentativeClique();
-      globaldomain.getDfProbingPropagation().setZeroCostFixingPosition(
+      globaldomain.getDualFixProbingPropagation().setZeroCostFixingPosition(
           kHighsIInf32);
     }
 

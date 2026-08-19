@@ -236,7 +236,7 @@ class HighsDomain {
     void propagateConflict(HighsInt conflict);
   };
 
-  struct DualfixingProbingPropagation {
+  struct DualFixProbingPropagation {
     HighsDomain* domain;
     HighsMipSolver* mipsolver;
 
@@ -245,19 +245,19 @@ class HighsDomain {
     std::vector<HighsInt> redundantPropagateInds_;
 
     // Track direction of zero fixings so we don't store disagreeing results
-    enum DfprobingFixDirection {
-      FixUnDecided,
+    enum DualFixProbingFixDirection {
+      FixUndecided,
       FixLowerBound,
       FixUpperBound,
     };
 
-    struct fixedZeroCostColumn {
+    struct FixedZeroCostColumn {
       HighsInt col;
-      DfprobingFixDirection direction;
+      DualFixProbingFixDirection direction;
     };
 
-    std::vector<DfprobingFixDirection> zeroCostDirections_;
-    std::vector<fixedZeroCostColumn> fixedZeroCostColumns_;
+    std::vector<DualFixProbingFixDirection> zeroCostDirections_;
+    std::vector<FixedZeroCostColumn> fixedZeroCostColumns_;
 
     bool applyingZeroCostFixings_ = false;
     size_t zeroCostStartPos_;
@@ -333,13 +333,13 @@ class HighsDomain {
       applyingZeroCostFixings_ = false;
     }
 
-    DualfixingProbingPropagation() { ; };
+    DualFixProbingPropagation() { ; };
 
-    DualfixingProbingPropagation(HighsDomain* domain) : domain(domain) {};
+    DualFixProbingPropagation(HighsDomain* domain) : domain(domain) {};
 
-    DualfixingProbingPropagation(const DualfixingProbingPropagation& other);
+    DualFixProbingPropagation(const DualFixProbingPropagation& other);
 
-    ~DualfixingProbingPropagation() { ; };
+    ~DualFixProbingPropagation() { ; };
 
     void recomputeLocks();
     void updateRhsRedundant(HighsInt row);
@@ -433,7 +433,7 @@ class HighsDomain {
  private:
   std::deque<CutpoolPropagation> cutpoolpropagation;
   std::deque<ConflictPoolPropagation> conflictPoolPropagation;
-  DualfixingProbingPropagation dfprobingPropagation;
+  DualFixProbingPropagation dfprobingPropagation;
 
   bool infeasible_ = false;
   Reason infeasible_reason;
@@ -805,7 +805,7 @@ class HighsDomain {
 
   bool isRedundantRow(HighsInt row) const;
 
-  DualfixingProbingPropagation& getDfProbingPropagation() {
+  DualFixProbingPropagation& getDualFixProbingPropagation() {
     return dfprobingPropagation;
   }
 
