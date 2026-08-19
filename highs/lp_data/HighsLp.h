@@ -64,6 +64,7 @@ class HighsLp {
   bool equalNames(const HighsLp& lp) const;
   bool equalScaling(const HighsLp& lp) const;
   bool isMip() const;
+  HighsInt numNz() const { return this->a_matrix_.numNz(); }
   bool hasSemiVariables() const;
   bool hasInfiniteCost(const double infinite_cost) const;
   bool hasMods() const;

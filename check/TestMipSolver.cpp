@@ -2,6 +2,9 @@
 #include "Highs.h"
 #include "SpecialLps.h"
 #include "catch.hpp"
+#include "mip/HighsCliqueTable.h"
+#include "mip/HighsMipSolver.h"
+#include "mip/HighsMipSolverData.h"
 
 const bool dev_run = false;
 const double double_equal_tolerance = 1e-5;
@@ -1602,6 +1605,102 @@ TEST_CASE("issue-3118a", "[highs_test_mip_solver]") {
     REQUIRE(highs.assessPrimalSolution(valid, integral, feasible) ==
             HighsStatus::kOk);
   }
+
+  highs.resetGlobalScheduler(true);
+}
+
+TEST_CASE("MIP-equality-clique-fixing", "[highs_test_mip_solver]") {
+  // Regression test: when an equality clique has all but one variable fixed,
+  // the last active variable must be fixed before the clique is removed.
+  const HighsInt ncols = 5;
+  HighsLp lp;
+  lp.num_col_ = ncols;
+  lp.num_row_ = 0;
+  lp.col_cost_.assign(ncols, 0.0);
+  lp.col_lower_.assign(ncols, 0.0);
+  lp.col_upper_.assign(ncols, 1.0);
+  lp.integrality_.assign(ncols, HighsVarType::kInteger);
+  lp.a_matrix_.start_.assign(ncols + 1, 0);
+
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  highs.passModel(lp);
+
+  HighsCallback callback(&highs);
+  const HighsOptions& options = highs.getOptions();
+  HighsSolution solution;
+  HighsMipSolver mipsolver(callback, options, lp, solution);
+  mipsolver.mipdata_ =
+      std::unique_ptr<HighsMipSolverData>(new HighsMipSolverData(mipsolver));
+  mipsolver.mipdata_->feastol = 1e-6;
+  mipsolver.mipdata_->setupDomainPropagation();
+
+  HighsCliqueTable& cliquetable = mipsolver.mipdata_->cliquetable;
+  HighsDomain& domain = mipsolver.mipdata_->getDomain();
+
+  // Add equality clique: x0 + x1 + x2 + x3 + x4 = 1
+  HighsCliqueTable::CliqueVar clique[] = {
+      {0, 1}, {1, 1}, {2, 1}, {3, 1}, {4, 1}};
+  cliquetable.doAddClique(clique, 5, true);
+  cliquetable.setPresolveFlag(true);
+
+  // Fix x0..x3 = 0 via vertexInfeasible (simulates what cleanupFixed does)
+  for (HighsInt i = 0; i < 4; i++) {
+    domain.fixCol(i, 0.0);
+    cliquetable.vertexInfeasible(domain, i, 1);
+  }
+
+  // The last variable x4 must now be fixed to 1
+  REQUIRE(domain.isFixed(4));
+  REQUIRE(domain.col_lower_[4] == 1.0);
+
+  highs.resetGlobalScheduler(true);
+}
+
+TEST_CASE("MIP-equality-clique-fixing-to-zero", "[highs_test_mip_solver]") {
+  // Same as above but with val=0 clique entries: the active value is 0.
+  // Fixing all but one variable to 1 (inactive) should fix the last to 0.
+  const HighsInt ncols = 5;
+  HighsLp lp;
+  lp.num_col_ = ncols;
+  lp.num_row_ = 0;
+  lp.col_cost_.assign(ncols, 0.0);
+  lp.col_lower_.assign(ncols, 0.0);
+  lp.col_upper_.assign(ncols, 1.0);
+  lp.integrality_.assign(ncols, HighsVarType::kInteger);
+  lp.a_matrix_.start_.assign(ncols + 1, 0);
+
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  highs.passModel(lp);
+
+  HighsCallback callback(&highs);
+  const HighsOptions& options = highs.getOptions();
+  HighsSolution solution;
+  HighsMipSolver mipsolver(callback, options, lp, solution);
+  mipsolver.mipdata_ =
+      std::unique_ptr<HighsMipSolverData>(new HighsMipSolverData(mipsolver));
+  mipsolver.mipdata_->feastol = 1e-6;
+  mipsolver.mipdata_->setupDomainPropagation();
+
+  HighsCliqueTable& cliquetable = mipsolver.mipdata_->cliquetable;
+  HighsDomain& domain = mipsolver.mipdata_->getDomain();
+
+  // Add equality clique with val=0: (1-x0) + (1-x1) + ... + (1-x4) = 1
+  HighsCliqueTable::CliqueVar clique[] = {
+      {0, 0}, {1, 0}, {2, 0}, {3, 0}, {4, 0}};
+  cliquetable.doAddClique(clique, 5, true);
+  cliquetable.setPresolveFlag(true);
+
+  // Fix x0..x3 = 1 via vertexInfeasible (makes their val=0 entry infeasible)
+  for (HighsInt i = 0; i < 4; i++) {
+    domain.fixCol(i, 1.0);
+    cliquetable.vertexInfeasible(domain, i, 0);
+  }
+
+  // The last variable x4 must now be fixed to 0
+  REQUIRE(domain.isFixed(4));
+  REQUIRE(domain.col_upper_[4] == 0.0);
 
   highs.resetGlobalScheduler(true);
 }

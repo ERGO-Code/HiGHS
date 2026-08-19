@@ -66,8 +66,9 @@ class Factorise {
 
   CliqueStack* stack_;
 
- public:
   void permute(const std::vector<Int>& iperm);
+  void processTreeSerial();
+  void processTreeParallel();
   void processSupernode(Int sn);
 
  public:

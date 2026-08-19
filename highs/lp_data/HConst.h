@@ -15,7 +15,7 @@
 #include <limits>
 #include <string>
 
-#include "util/HighsInt.h"
+#include "util/HighsType.h"
 
 const std::string kHighsCopyrightStatement =
     "Copyright (c) 2026 under MIT licence terms";
@@ -458,5 +458,23 @@ enum PdlpRestartStrategy {
   kPdlpRestartStrategyHalpern,
   kPdlpRestartStrategyMax = kPdlpRestartStrategyHalpern
 };
+
+namespace hipo {
+enum class ParallelTechnique {
+  kMin = 0,
+  kAnalyse = kMin,
+  kOrderNE,
+  kOrderAS,
+  kNEStruct,
+  kNEValues,
+  kTree,
+  kNode,
+  kForwardSolve,
+  kDiagonalSolve,
+  kBackwardSolve,
+  kCount,
+  kMaxSum = (1 << kCount) - 1
+};
+}
 
 #endif /* LP_DATA_HCONST_H_ */

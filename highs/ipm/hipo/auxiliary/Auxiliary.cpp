@@ -357,4 +357,9 @@ double Clock::stop() const {
   return d.count();
 }
 
+TempTimer::TempTimer(const char* s) : name{s} {}
+void TempTimer::start() { clock.start(); }
+void TempTimer::stop() { time += clock.stop(); }
+TempTimer::~TempTimer() { printf("Measured %10s: %e\n", name.c_str(), time); }
+
 }  // namespace hipo

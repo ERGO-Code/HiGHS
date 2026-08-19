@@ -102,7 +102,7 @@ struct HighsMipSolverData {
   std::vector<HighsInt> ARindex_;
   std::vector<double> ARvalue_;
   std::vector<double> maxAbsRowCoef;
-  std::vector<uint8_t> rowintegral;
+  std::vector<HighsBool> rowintegral;
   std::vector<HighsInt> uplocks;
   std::vector<HighsInt> downlocks;
   std::vector<HighsInt> integer_cols;
@@ -288,6 +288,8 @@ struct HighsMipSolverData {
   const HighsCutPool& getCutPool() const { return cutpools[0]; }
   const HighsLpRelaxation& getLp() const { return lps[0]; }
   const HighsPseudocost& getPseudoCost() const { return pseudocosts[0]; }
+  void reportOriginalPresolvedCol(const HighsInt original_col,
+                                  const std::vector<double> presolved_solution);
 };
 
 #endif

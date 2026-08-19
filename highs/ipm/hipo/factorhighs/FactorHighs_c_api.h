@@ -1,7 +1,7 @@
 #ifndef FACTOR_HIGHS_C_API_H
 #define FACTOR_HIGHS_C_API_H
 
-#include "util/HighsInt.h"
+#include "util/HighsType.h"
 
 /*  C API to HiPO linear solver
     It is meant to be used outside of HiGHS as a standalone linear solver.

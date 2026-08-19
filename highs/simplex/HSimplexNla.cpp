@@ -478,7 +478,7 @@ HighsDebugStatus HSimplexNla::debugCheckData(const std::string message) const {
     assert(!error_found);
     return HighsDebugStatus::kLogicalError;
   }
-  HighsInt nnz = check_lp.a_matrix_.numNz();
+  HighsInt nnz = check_lp.numNz();
   HighsInt error_el = -1;
   for (HighsInt iEl = 0; iEl < nnz; iEl++) {
     if (check_lp.a_matrix_.index_[iEl] != factor_Aindex[iEl]) {
