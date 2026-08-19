@@ -971,10 +971,10 @@ void HighsLpRelaxation::storeDualInfProof() {
       continue;
     else if (weight > 0) {
       if (lp.row_upper_[iRow] == kHighsInf) continue;
-      upper += weight * lp.row_upper_[iRow];
+      upper += static_cast<HighsCDouble>(weight) * lp.row_upper_[iRow];
     } else {
       if (lp.row_lower_[iRow] == -kHighsInf) continue;
-      upper += weight * lp.row_lower_[iRow];
+      upper += static_cast<HighsCDouble>(weight) * lp.row_lower_[iRow];
     }
 
     HighsInt len;
@@ -982,7 +982,8 @@ void HighsLpRelaxation::storeDualInfProof() {
     const double* vals;
     getRow(iRow, len, inds, vals);
 
-    for (HighsInt j = 0; j < len; ++j) row_ap.add(inds[j], weight * vals[j]);
+    for (HighsInt j = 0; j < len; ++j)
+      row_ap.add(inds[j], static_cast<HighsCDouble>(weight) * vals[j]);
   }
 
   const HighsDomain& globaldomain =
