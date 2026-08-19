@@ -1,6 +1,6 @@
 ---
 name: Bug report
-about: Report unexpected behavior or a crash
+about: Report unexpected behaviour or a crash
 ---
 
 Please provide the following information where possible/relevant and check out [CONTRIBUTING.md](https://github.com/ERGO-Code/HiGHS/blob/master/CONTRIBUTING.md).
@@ -14,7 +14,7 @@ Language: C++/C/Python/C#/Fortran/Julia/Rust
 **What operating system (Linux, Windows, ...) and version?**
 
 **What did you do?**
-Steps to reproduce the behavior:
+Steps to reproduce the behaviour:
 
 **What did you expect to see**
 
