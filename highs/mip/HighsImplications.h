@@ -23,11 +23,14 @@ class HighsLpRelaxation;
 class HighsImplications {
   HighsInt nextCleanupCall;
 
-  struct Implics {
-    std::vector<HighsDomainChange> implics;
-    bool computed = false;
+  struct Implication {
+    double lb = -kHighsInf;
+    double ub = kHighsInf;
   };
-  std::vector<Implics> implications;
+
+  std::vector<HighsHashTree<HighsInt, Implication>> implications;
+  std::vector<HighsHashTree<HighsInt, bool>> reverseImplications;
+  std::vector<uint8_t> hasProbed;
   int64_t numImplications;
   int64_t numVarBounds;
   int64_t maxVarBounds;
@@ -60,6 +63,8 @@ class HighsImplications {
   HighsImplications(const HighsMipSolver& mipsolver) : mipsolver(mipsolver) {
     HighsInt numcol = mipsolver.numCol();
     implications.resize(2 * static_cast<size_t>(numcol));
+    hasProbed.resize(2 * static_cast<size_t>(numcol));
+    reverseImplications.resize(numcol);
     colsubstituted.resize(numcol);
     vubs.resize(numcol);
     vlbs.resize(numcol);
@@ -77,9 +82,15 @@ class HighsImplications {
     colsubstituted.shrink_to_fit();
     implications.clear();
     implications.shrink_to_fit();
+    hasProbed.clear();
+    hasProbed.shrink_to_fit();
+    reverseImplications.clear();
+    reverseImplications.shrink_to_fit();
 
     HighsInt numcol = mipsolver.numCol();
     implications.resize(2 * static_cast<size_t>(numcol));
+    hasProbed.resize(2 * static_cast<size_t>(numcol));
+    reverseImplications.resize(numcol);
     colsubstituted.resize(numcol);
     numImplications = 0;
     vubs.clear();
@@ -102,23 +113,12 @@ class HighsImplications {
     return static_cast<HighsInt>(numImplications);
   }
 
-  const std::vector<HighsDomainChange>& getImplications(HighsInt col, bool val,
-                                                        bool& infeasible) {
-    HighsInt loc = 2 * col + val;
-    if (!implications[loc].computed)
-      infeasible = computeImplications(col, val);
-    else
-      infeasible = false;
-
-    assert(implications[loc].computed);
-
-    return implications[loc].implics;
+  bool probedBefore(const HighsInt col, const bool val) const {
+    const HighsInt loc = 2 * col + val;
+    return hasProbed[loc];
   }
 
-  bool implicationsCached(HighsInt col, bool val) {
-    HighsInt loc = 2 * col + val;
-    return implications[loc].computed;
-  }
+  void addImplication(HighsInt binCol, HighsInt implCol, Implication implic);
 
   bool tooManyVarBounds() const { return numVarBounds >= maxVarBounds; }
 
@@ -137,6 +137,21 @@ class HighsImplications {
               double collowerbound, bool colisinteger);
 
   void columnTransformed(HighsInt col, double scale, double constant) {
+    // Update implications affected by transformation
+    auto changeImplications = [&](HighsInt binCol, bool) {
+      for (HighsInt val = 0; val != 2; val++) {
+        Implication* implic = implications[2 * binCol + val].find(col);
+        if (implic) {
+          if (scale < 0) std::swap(implic->lb, implic->ub);
+          implic->lb -= constant;
+          implic->lb /= scale;
+          implic->ub -= constant;
+          implic->ub /= scale;
+        }
+      }
+    };
+    reverseImplications[col].for_each(changeImplications);
+
     // Update variable bounds affected by transformation
     if (scale < 0) std::swap(vubs[col], vlbs[col]);
 
