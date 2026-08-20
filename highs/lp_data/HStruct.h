@@ -249,8 +249,9 @@ struct HighsUserScaleData {
 
 using HighsHessianFunctionType = std::function<HighsInt(
     const HighsInt call_type, const HighsInt* x_num_entries,
-    const HighsInt* x_index, const double* x_value, HighsInt* q_x_num_entries,
-    HighsInt* q_x_index, double* q_x_value, void*)>;
+    const HighsInt* x_index, const double* x_value,
+    HighsInt* hessian_x_num_entries, HighsInt* hessian_x_index,
+    double* hessian_x_value, void*)>;
 
 struct HessianOracle {
   // Oracle to obtain values of Q' = multiplier_*Q + shift_*I and form
@@ -273,12 +274,12 @@ struct HessianOracle {
   void getScatteredColumn(const HighsInt col, HighsInt& col_num_entries,
                           HighsInt* col_index, double* col_value) const;
   void product(const std::vector<double>& x_value,
-               std::vector<double>& q_x_value) const;
-  void product(const double* x_value, double* q_x_value) const;
+               std::vector<double>& hessian_x_value) const;
+  void product(const double* x_value, double* hessian_x_value) const;
   void product(const HighsInt x_num_entries, const HighsInt* x_index,
-               const double* x_value, double* q_x_value) const;
+               const double* x_value, double* hessian_x_value) const;
   void scaleAndShift(const HighsInt* x_num_entries, const HighsInt* x_index,
-                     const double* x_value, double* q_x_value) const;
+                     const double* x_value, double* hessian_x_value) const;
 };
 
 #endif /* LP_DATA_HSTRUCT_H_ */
