@@ -789,12 +789,16 @@ void HighsDomain::DualFixProbingPropagation::propagate() {
     if (!canBeFixedToLower && !canBeFixedToUpper) continue;
     const double cost = mipsolver->model_->col_cost_[col];
     if (std::abs(cost) <= dualTol) {
-      if (zeroCostDirections_[col] == FixUndecided) {
-        if (canBeFixedToLower && (!canBeFixedToUpper || cost > 0)) {
-          collectZeroCostFixing(col, FixLowerBound);
-        } else {
-          collectZeroCostFixing(col, FixUpperBound);
-        }
+      DualFixProbingFixDirection direction = zeroCostDirections_[col];
+      if (direction == FixUndecided) {
+        direction = canBeFixedToLower && (!canBeFixedToUpper || cost >= 0)
+                        ? FixLowerBound
+                        : FixUpperBound;
+      }
+      if (direction == FixLowerBound && canBeFixedToLower) {
+        collectZeroCostFixing(col, FixLowerBound);
+      } else if (direction == FixUpperBound && canBeFixedToUpper) {
+        collectZeroCostFixing(col, FixUpperBound);
       }
     } else {
       if (canBeFixedToLower) {

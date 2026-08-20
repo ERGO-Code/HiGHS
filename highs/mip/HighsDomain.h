@@ -261,7 +261,7 @@ class HighsDomain {
     std::vector<FixedZeroCostColumn> fixedZeroCostColumns_;
 
     bool applyingZeroCostFixings_ = false;
-    HighsInt zeroCostStartPos_;
+    HighsInt zeroCostStartPos_ = kHighsIInf;
 
     bool enabled_ = false;
 

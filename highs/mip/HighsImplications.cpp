@@ -88,16 +88,23 @@ bool HighsImplications::computeImplications(HighsInt col, bool val) {
   HighsInt maxEntries = 100000 + mipsolver.numNonzero();
 
   HighsInt unsafeDualFixesStart =
-      dualFixProbingActive ? globaldomain.getDualFixProbingPropagation()
-                                 .getZeroCostFixingPosition()
-                           : static_cast<HighsInt>(implics.size());
+      globaldomain.getDualFixProbingPropagation().getZeroCostFixingPosition();
+  bool foundDualFixPos = true;
 
   for (HighsInt i = stackimplicstart; i < stackimplicend; ++i) {
+    if (foundDualFixPos && i == unsafeDualFixesStart) {
+      unsafeDualFixesStart = static_cast<HighsInt>(implics.size());
+      foundDualFixPos = false;
+    }
     if (domchgreason[i].type == HighsDomain::Reason::kCliqueTable &&
         ((domchgreason[i].index >> 1) == col || numEntries >= maxEntries))
       continue;
 
     implics.push_back(domchgstack[i]);
+  }
+
+  if (foundDualFixPos) {
+    unsafeDualFixesStart = static_cast<HighsInt>(implics.size());
   }
 
   // inform caller about lifting opportunities
@@ -129,7 +136,7 @@ bool HighsImplications::computeImplications(HighsInt col, bool val) {
   std::array<HighsCliqueTable::CliqueVar, 2> clique;
   clique[0] = HighsCliqueTable::CliqueVar(col, val);
 
-  for (auto i = binstart; i != implics.end(); ++i) {
+  for (auto i = binstart; i != implics.begin() + unsafeDualFixesStart; ++i) {
     if (i->boundtype == HighsBoundType::kLower)
       clique[1] = HighsCliqueTable::CliqueVar(i->column, 0);
     else
@@ -140,7 +147,7 @@ bool HighsImplications::computeImplications(HighsInt col, bool val) {
   }
 
   HighsInt numErasedBinaries =
-      static_cast<HighsInt>(binstart - implics.begin());
+      static_cast<HighsInt>(implics.begin() + unsafeDualFixesStart - binstart);
   implics.erase(binstart, implics.begin() + unsafeDualFixesStart);
   unsafeDualFixesStart -= numErasedBinaries;
 
@@ -355,7 +362,7 @@ bool HighsImplications::runProbing(HighsInt col, HighsInt& numReductions) {
       return true;
 
     if (enableDfprobing && !binaryInvolvedInds_.empty() &&
-        mipsolver.mipdata_->cliquetable.isFull()) {
+        !mipsolver.mipdata_->cliquetable.isFull()) {
       HighsCliqueTable& cliquetable = mipsolver.mipdata_->cliquetable;
       HighsCliqueTable::CliqueVar clique[2];
       for (HighsInt k : binaryInvolvedInds_) {
@@ -368,12 +375,7 @@ bool HighsImplications::runProbing(HighsInt col, HighsInt& numReductions) {
           globaldomain.fixCol(k, globaldomain.col_lower_[k]);
           mask = 0;
         } else if (mask == 5) {
-          clique[0] = HighsCliqueTable::CliqueVar(col, 0);
-          clique[1] = HighsCliqueTable::CliqueVar(k, 0);
-          cliquetable.addClique(mipsolver, &clique[0], 2);
-          clique[0] = HighsCliqueTable::CliqueVar(col, 1);
-          clique[1] = HighsCliqueTable::CliqueVar(k, 0);
-          cliquetable.addClique(mipsolver, &clique[0], 2);
+          globaldomain.fixCol(k, globaldomain.col_upper_[k]);
           mask = 0;
         } else if (mask == 9) {
           clique[0] = HighsCliqueTable::CliqueVar(col, 1);
@@ -384,7 +386,12 @@ bool HighsImplications::runProbing(HighsInt col, HighsInt& numReductions) {
           cliquetable.addClique(mipsolver, &clique[0], 2);
           mask = 0;
         } else if (mask == 6) {
-          globaldomain.fixCol(k, globaldomain.col_upper_[k]);
+          clique[0] = HighsCliqueTable::CliqueVar(col, 1);
+          clique[1] = HighsCliqueTable::CliqueVar(k, 0);
+          cliquetable.addClique(mipsolver, &clique[0], 2);
+          clique[0] = HighsCliqueTable::CliqueVar(col, 0);
+          clique[1] = HighsCliqueTable::CliqueVar(k, 1);
+          cliquetable.addClique(mipsolver, &clique[0], 2);
           mask = 0;
         }
         if (globaldomain.infeasible()) return true;
@@ -393,8 +400,10 @@ bool HighsImplications::runProbing(HighsInt col, HighsInt& numReductions) {
       clearTentativeClique();
     }
 
-    const std::vector<HighsDomainChange>& implicsdown = getImplications(col, 0, infeasible);
-    const std::vector<HighsDomainChange>& implicsup = getImplications(col, 1, infeasible);
+    const std::vector<HighsDomainChange>& implicsdown =
+        getImplications(col, 0, infeasible);
+    const std::vector<HighsDomainChange>& implicsup =
+        getImplications(col, 1, infeasible);
     HighsInt nimplicsdown = implicsdown.size();
     HighsInt nimplicsup = implicsup.size();
     HighsInt u = 0;
