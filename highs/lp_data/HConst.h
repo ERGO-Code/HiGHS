@@ -15,7 +15,7 @@
 #include <limits>
 #include <string>
 
-#include "util/HighsInt.h"
+#include "util/HighsType.h"
 
 const std::string kHighsCopyrightStatement =
     "Copyright (c) 2026 under MIT licence terms";
@@ -309,6 +309,14 @@ enum IisStatus : int {
   kIisStatusMax = kIisStatusInConflict
 };
 
+enum HessianOracleCallType : int {
+  kHessianOracleCallTypeMin = 0,
+  kHessianOracleCallTypeEntry = kHessianOracleCallTypeMin,
+  kHessianOracleCallTypeColumn,
+  kHessianOracleCallTypeProduct,
+  kHessianOracleCallTypeMax = kHessianOracleCallTypeProduct
+};
+
 enum MipChooseSubMipRecord : int {
   kMipRecord = -1,
   kChooseRecord,
@@ -382,6 +390,9 @@ const HighsInt kHighsIllegalComplementarityCount = -1;
 const double kHighsIllegalDoubleMeasure = -kHighsInf;
 const HighsInt kHighsIllegalIntMeasure = -1;
 
+// Tolerance on asymmetry in square Hessians
+const double kSquareHessianAsymmetryTolerance = 1e-10;
+
 // Maximum upper bound on semi-variables
 const double kMaxSemiVariableUpper = 1e5;
 
@@ -447,5 +458,23 @@ enum PdlpRestartStrategy {
   kPdlpRestartStrategyHalpern,
   kPdlpRestartStrategyMax = kPdlpRestartStrategyHalpern
 };
+
+namespace hipo {
+enum class ParallelTechnique {
+  kMin = 0,
+  kAnalyse = kMin,
+  kOrderNE,
+  kOrderAS,
+  kNEStruct,
+  kNEValues,
+  kTree,
+  kNode,
+  kForwardSolve,
+  kDiagonalSolve,
+  kBackwardSolve,
+  kCount,
+  kMaxSum = (1 << kCount) - 1
+};
+}
 
 #endif /* LP_DATA_HCONST_H_ */

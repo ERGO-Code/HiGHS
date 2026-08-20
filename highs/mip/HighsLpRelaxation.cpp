@@ -118,7 +118,7 @@ bool HighsLpRelaxation::LpRow::isIntegral(
     case kCutPool:
       return mipsolver.mipdata_->cutpools[cutpoolindex].cutIsIntegral(index);
     case kModel:
-      return (mipsolver.mipdata_->rowintegral[index] != 0);
+      return mipsolver.mipdata_->rowintegral[index];
   };
 
   assert(false);
@@ -446,7 +446,7 @@ double HighsLpRelaxation::computeBestEstimate(const HighsPseudocost& ps) const {
     estimate += double(increase);
   }
 
-  return double(estimate);
+  return static_cast<double>(estimate);
 }
 
 double HighsLpRelaxation::computeLPDegneracy(
@@ -1612,7 +1612,8 @@ HighsLpRelaxation::Status HighsLpRelaxation::resolveLp(HighsDomain* domain) {
           }
 
           for (HighsInt i = 0; i != mipsolver.numCol(); ++i)
-            objsum += roundsol[i] * mipsolver.colCost(i);
+            objsum +=
+                static_cast<HighsCDouble>(roundsol[i]) * mipsolver.colCost(i);
 
           if (!mipsolver.mipdata_->parallelLockActive() || !worker_) {
             mipsolver.mipdata_->addIncumbent(
@@ -1625,7 +1626,8 @@ HighsLpRelaxation::Status HighsLpRelaxation::resolveLp(HighsDomain* domain) {
         }
 
         for (HighsInt i = 0; i != mipsolver.numCol(); ++i)
-          objsum += sol.col_value[i] * mipsolver.colCost(i);
+          objsum += static_cast<HighsCDouble>(sol.col_value[i]) *
+                    mipsolver.colCost(i);
 
         if (fractionalints.empty() && !unscaledPrimalFeasible(status)) {
           std::vector<double> fixSol = sol.col_value;
@@ -1647,7 +1649,7 @@ HighsLpRelaxation::Status HighsLpRelaxation::resolveLp(HighsDomain* domain) {
           }
         }
 
-        objective = double(objsum);
+        objective = static_cast<double>(objsum);
         break;
       }
       case Status::kInfeasible:

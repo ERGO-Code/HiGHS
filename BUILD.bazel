@@ -118,6 +118,10 @@ cc_library(
     ],
     linkopts = select({
         "@rules_cc//cc/compiler:msvc-cl": ["-DEFAULTLIB:shell32.lib"],
+        "@platforms//os:linux": [
+          "-Wl,--no-as-needed -ldl",
+          "-pthread",
+        ],
         "//conditions:default": ["-lpthread"],
     }),
     visibility = ["//visibility:public"],
@@ -226,6 +230,7 @@ TEST_NAMES = [
     "TestMipSolver",
     "TestPresolve",
     "TestPresolveRules",
+    "TestQpOracle",
     "TestQpSolver",
     "TestRanging",
     "TestRunData",

@@ -13,7 +13,7 @@
 #include <vector>
 
 #include "mip/HighsDomain.h"
-#include "util/HighsInt.h"
+#include "util/HighsType.h"
 
 class HighsConflictPool {
  private:

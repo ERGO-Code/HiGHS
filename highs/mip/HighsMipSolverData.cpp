@@ -11,6 +11,7 @@
 #include <sstream>
 
 #include "../extern/pdqsort/pdqsort.h"
+#include "lp_data/HighsLpUtils.h"
 #include "lp_data/HighsModelUtils.h"
 #include "mip/HighsPseudocost.h"
 #include "mip/HighsRedcostFixing.h"
@@ -82,6 +83,8 @@ HighsMipSolverData::HighsMipSolverData(HighsMipSolver& mipsolver)
   getDomain().addCutpool(getCutPool());
   getDomain().addConflictPool(getConflictPool());
   cliquetable.setAllowParallel(!mipsolver.submip);
+  worker_lp_iterations_stop.store(std::numeric_limits<int64_t>::max(),
+                                  std::memory_order_relaxed);
 }
 
 std::string HighsMipSolverData::solutionSourceToString(
@@ -224,7 +227,7 @@ bool HighsMipSolverData::trySolution(const std::vector<double>& solution,
     if (mipsolver.isColInteger(i) && fractionality(solution[i]) > feastol)
       return false;
 
-    obj += mipsolver.colCost(i) * solution[i];
+    obj += static_cast<HighsCDouble>(mipsolver.colCost(i)) * solution[i];
   }
 
   for (HighsInt i = 0; i != mipsolver.numRow(); ++i) {
@@ -387,8 +390,9 @@ HighsModelStatus HighsMipSolverData::trivialHeuristics() {
 
     HighsCDouble cdouble_obj = 0.0;
     for (HighsInt iCol = 0; iCol < mipsolver.numCol(); iCol++)
-      cdouble_obj += mipsolver.colCost(iCol) * solution[iCol];
-    double obj = double(cdouble_obj);
+      cdouble_obj +=
+          static_cast<HighsCDouble>(mipsolver.colCost(iCol)) * solution[iCol];
+    double obj = static_cast<double>(cdouble_obj);
     const double save_upper_bound = upper_bound;
     const bool new_incumbent =
         addIncumbent(solution, obj, heuristic_source[try_heuristic]);
@@ -798,6 +802,8 @@ void HighsMipSolverData::init() {
   upper_bound = kHighsInf;
   upper_limit = mipsolver.options_mip_->objective_bound;
   optimality_limit = mipsolver.options_mip_->objective_bound;
+  worker_lp_iterations_stop.store(std::numeric_limits<int64_t>::max(),
+                                  std::memory_order_relaxed);
   primal_dual_integral.initialise();
 
   if (mipsolver.options_mip_->mip_report_level == 0)
@@ -812,15 +818,12 @@ void HighsMipSolverData::runMipPresolve(
     const HighsInt presolve_reduction_limit) {
   mipsolver.timer_.start(mipsolver.timer_.presolve_clock);
   presolve::HPresolve presolve;
-  if (!presolve.okSetInput(mipsolver, presolve_reduction_limit)) {
-    mipsolver.modelstatus_ = HighsModelStatus::kMemoryLimit;
-    presolve_status = HighsPresolveStatus::kOutOfMemory;
-  } else {
-    mipsolver.modelstatus_ = presolve.run(postSolveStack);
-    presolve_status = presolve.getPresolveStatus();
-  }
+  presolve.setInput(mipsolver, presolve_reduction_limit);
+  mipsolver.modelstatus_ = presolve.run(postSolveStack);
+  presolve_status = presolve.getPresolveStatus();
   mipsolver.timer_.stop(mipsolver.timer_.presolve_clock);
 
+  if (presolve_status == HighsPresolveStatus::kOutOfMemory) return;
   // Report the final presolve reductions unless this is a restart
   if (mipsolver.options_mip_->presolve != kHighsOffString && numRestarts == 0)
     reportPresolveReductions(mipsolver.options_mip_->log_options,
@@ -828,26 +831,7 @@ void HighsMipSolverData::runMipPresolve(
                              *mipsolver.model_);
 }
 
-void HighsMipSolverData::runSetup() {
-  const HighsLp& model = *mipsolver.model_;
-
-  // Indicate that the first LP has not been solved
-  this->getLp().setSolvedFirstLp(false);
-
-  last_disptime = -kHighsInf;
-  disptime = 0;
-
-  // Transform the reference of the objective limit and lower/upper
-  // bounds from the original model to the current model, undoing the
-  // transformation done before restart so that the offset change due
-  // to presolve is incorporated. Bound changes are transitory, so no
-  // real gap change, and no update to P-D integral is necessary
-  upper_limit -= mipsolver.model_->offset_;
-  optimality_limit -= mipsolver.model_->offset_;
-
-  lower_bound -= mipsolver.model_->offset_;
-  upper_bound -= mipsolver.model_->offset_;
-
+void HighsMipSolverData::checkAddSolution() {
   if (mipsolver.solution_objective_ != kHighsInf) {
     // Assigning new incumbent
     incumbent = postSolveStack.getReducedPrimalSolution(mipsolver.solution_);
@@ -899,6 +883,29 @@ void HighsMipSolverData::runSetup() {
       assert(!interrupt);
     }
   }
+}
+
+void HighsMipSolverData::runSetup() {
+  const HighsLp& model = *mipsolver.model_;
+
+  // Indicate that the first LP has not been solved
+  this->getLp().setSolvedFirstLp(false);
+
+  last_disptime = -kHighsInf;
+  disptime = 0;
+
+  // Transform the reference of the objective limit and lower/upper
+  // bounds from the original model to the current model, undoing the
+  // transformation done before restart so that the offset change due
+  // to presolve is incorporated. Bound changes are transitory, so no
+  // real gap change, and no update to P-D integral is necessary
+  upper_limit -= mipsolver.model_->offset_;
+  optimality_limit -= mipsolver.model_->offset_;
+
+  lower_bound -= mipsolver.model_->offset_;
+  upper_bound -= mipsolver.model_->offset_;
+
+  checkAddSolution();
 
   if (mipsolver.numCol() == 0)
     addIncumbent(std::vector<double>(), 0, kSolutionSourceEmptyMip);
@@ -1104,7 +1111,7 @@ void HighsMipSolverData::runSetup() {
         num_implied_integer, num_continuous, num_domain_fixed,
         mipsolver.numNonzero(), mipsolver.numNonzero() == 1 ? "" : "s",
         HighsInt{highs::parallel::num_threads()},
-        HighsInt{static_cast<int>(std::thread::hardware_concurrency())},
+        HighsInt{static_cast<int>(highs::parallel::available_core_count())},
         mipsolver.getMaxNumWorkers(),
         mipsolver.getMaxNumWorkers() > 1 ? "on" : "off");
   } else {
@@ -1137,8 +1144,8 @@ void HighsMipSolverData::runSetup() {
     debugSolution.debugSolObjective = 0;
     HighsCDouble debugsolobj = 0.0;
     for (HighsInt i = 0; i != mipsolver.numCol(); ++i)
-      debugsolobj +=
-          mipsolver.colCost(i) * HighsCDouble(debugSolution.debugSolution[i]);
+      debugsolobj += static_cast<HighsCDouble>(mipsolver.colCost(i)) *
+                     debugSolution.debugSolution[i];
     debugSolution.debugSolObjective = static_cast<double>(debugsolobj);
     debugSolution.registerDomain(getDomain());
     assert(checkSolution(debugSolution.debugSolution));
@@ -1163,7 +1170,9 @@ double HighsMipSolverData::transformNewIntegerFeasibleSolution(
   solution.col_value = sol;
   solution.value_valid = true;
   // Perform primal postsolve to get the original column values
-  postSolveStack.undoPrimal(*mipsolver.options_mip_, solution);
+  const HighsInt report_col = -kHighsIInf;
+  this->reportOriginalPresolvedCol(report_col, sol);
+  postSolveStack.undoPrimal(*mipsolver.options_mip_, solution, report_col);
   // Determine the row values, as they aren't computed in primal
   // postsolve
   HighsStatus return_status =
@@ -1173,14 +1182,15 @@ double HighsMipSolverData::transformNewIntegerFeasibleSolution(
 try_again:
 
   // compute the objective value in the original space
-  double bound_violation_ = 0;
-  double row_violation_ = 0;
-  double integrality_violation_ = 0;
+  MipViolation violation;
   HighsCDouble mipsolver_quad_objective_value = 0;
   bool feasible = mipsolver.solutionFeasible(
-      mipsolver.orig_model_, solution.col_value, &solution.row_value,
-      bound_violation_, row_violation_, integrality_violation_,
+      mipsolver.orig_model_, solution.col_value, &solution.row_value, violation,
       mipsolver_quad_objective_value);
+  double bound_violation_ = 0;
+  double integrality_violation_ = 0;
+  double row_violation_ = 0;
+  violation.copy(bound_violation_, integrality_violation_, row_violation_);
   double mipsolver_objective_value = double(mipsolver_quad_objective_value);
   if (!feasible && allow_try_again) {
     // printf(
@@ -1230,11 +1240,18 @@ try_again:
     // HiPO or IPX to solve an LP without a basis, use simplex
     tmpSolver.setOptionValue("solver", kSimplexString);
     tmpSolver.optimizeLp();
+    if (use_presolve &&
+        tmpSolver.getModelStatus() == HighsModelStatus::kSolveError) {
+      tmpSolver.setOptionValue("presolve", kHighsOffString);
+      tmpSolver.optimizeLp();
+    }
     this->total_repair_lp_iterations +=
         tmpSolver.getInfo().simplex_iteration_count;
     if (tmpSolver.getInfo().primal_solution_status == kSolutionStatusFeasible) {
       this->total_repair_lp_feasible++;
       solution = tmpSolver.getSolution();
+      calculateRowValuesQuad(*mipsolver.orig_model_, solution.col_value,
+                             solution.row_value);
       allow_try_again = false;
       goto try_again;
     }
@@ -1283,11 +1300,8 @@ try_again:
               mipsolver.options_mip_->mip_feasibility_tolerance &&
           mipsolver.row_violation_ <=
               mipsolver.options_mip_->mip_feasibility_tolerance;
-      highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kWarning,
-                   "Solution with objective %g has untransformed violations: "
-                   "bound = %.4g; integrality = %.4g; row = %.4g\n",
-                   mipsolver_objective_value, bound_violation_,
-                   integrality_violation_, row_violation_);
+      violation.log(mipsolver.options_mip_->log_options,
+                    mipsolver_objective_value, "Solution");
       if (!currentFeasible) {
         // if the current incumbent is non existent or also not feasible we
         // still store the new one
@@ -2785,23 +2799,20 @@ void HighsMipSolverData::queryExternalSolution(
       // (reduced_c)^T(reduced_x) = original_sense*[original_offset +
       // (original_c)^T(original_x) - reduced_offset]
       const auto& user_solution = callback->data_in.user_solution;
-      double bound_violation_ = 0;
-      double row_violation_ = 0;
-      double integrality_violation_ = 0;
+      MipViolation violation;
       HighsCDouble user_solution_quad_objective_value = 0;
       const bool feasible = mipsolver.solutionFeasible(
-          mipsolver.orig_model_, user_solution, nullptr, bound_violation_,
-          row_violation_, integrality_violation_,
+          mipsolver.orig_model_, user_solution, nullptr, violation,
           user_solution_quad_objective_value);
+      double bound_violation_ = 0;
+      double integrality_violation_ = 0;
+      double row_violation_ = 0;
+      violation.copy(bound_violation_, integrality_violation_, row_violation_);
       double user_solution_objective_value =
           double(user_solution_quad_objective_value);
       if (!feasible) {
-        highsLogUser(
-            mipsolver.options_mip_->log_options, HighsLogType::kWarning,
-            "User-supplied solution has with objective %g has violations: "
-            "bound = %.4g; integrality = %.4g; row = %.4g\n",
-            user_solution_objective_value, bound_violation_,
-            integrality_violation_, row_violation_);
+        violation.log(mipsolver.options_mip_->log_options,
+                      user_solution_objective_value, "User-supplied solution");
         return;
       }
       std::vector<double> reduced_user_solution;
@@ -2838,6 +2849,36 @@ bool HighsMipSolverData::terminatorTerminated() const {
 void HighsMipSolverData::terminatorReport() const {
   if (this->terminatorActive())
     mipsolver.terminator_.report(mipsolver.options_mip_->log_options);
+}
+
+void HighsMipSolverData::reportOriginalPresolvedCol(
+    const HighsInt original_col, const std::vector<double> presolved_solution) {
+  if (original_col < 0 || original_col >= mipsolver.orig_model_->num_col_)
+    return;
+  // Find this column in the presolved model
+  HighsInt presolved_col = postSolveStack.getPresolvedColumnIndex(original_col);
+  printf("Original col = %d (%s) [%g, %g] %s", int(original_col),
+         mipsolver.orig_model_->col_names_[original_col].c_str(),
+         mipsolver.orig_model_->col_lower_[original_col],
+         mipsolver.orig_model_->col_upper_[original_col],
+         mipsolver.orig_model_->integrality_[original_col] ==
+                 HighsVarType::kContinuous
+             ? "Continuous"
+             : "Discrete");
+  if (presolved_col > 0) {
+    printf("; Presolved col = %d (%s) [%g, %g] %s has value %g\n",
+           int(presolved_col),
+           mipsolver.model_->col_names_[presolved_col].c_str(),
+           mipsolver.model_->col_lower_[presolved_col],
+           mipsolver.model_->col_upper_[presolved_col],
+           mipsolver.model_->integrality_[presolved_col] ==
+                   HighsVarType::kContinuous
+               ? "Continuous"
+               : "Discrete",
+           presolved_solution[presolved_col]);
+  } else {
+    printf("; Not in presolved model\n");
+  }
 }
 
 static double possInfRelDiff(const double v0, const double v1,

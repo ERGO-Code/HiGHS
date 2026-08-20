@@ -147,7 +147,6 @@ class HighsRunData : public HighsRunDataStruct {
   }
 
   void initRecords() {
-    RunDataRecordInt64* record_int64;
     RunDataRecordInt* record_int;
     RunDataRecordDouble* record_double;
     const bool advanced = false;  // Not used
