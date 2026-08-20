@@ -66,8 +66,7 @@ static inline double boundRange(double upper_bound, double lower_bound,
                       : tolerance);
 }
 
-bool HighsDomain::termIsZero(double val, double lb, double ub,
-                                    double epsilon) {
+bool HighsDomain::termIsZero(double val, double lb, double ub, double epsilon) {
   const double absVal = std::abs(val);
   if (absVal <= std::numeric_limits<double>::min()) return true;
   return absVal <= epsilon &&
