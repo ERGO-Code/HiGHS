@@ -281,7 +281,8 @@ class HighsDomain {
 
     // active only when new redundant rows are found.
     bool isActive() const {
-      return enabled_ && redundantRowInds_.size() > previousRedundantRowSize;
+      return enabled_ && static_cast<HighsInt>(redundantRowInds_.size()) >
+                             previousRedundantRowSize;
     }
 
     bool isZeroCostFixingActive() const { return applyingZeroCostFixings_; }
@@ -316,7 +317,7 @@ class HighsDomain {
         assert(!redundantRowFlags_[i]);
 
       fixedZeroCostColumns_.clear();
-      zeroCostStartPos_ = kHighsIInf;
+      setZeroCostFixingPosition(kHighsIInf);
       applyingZeroCostFixings_ = false;
       setEnabled(true);
 

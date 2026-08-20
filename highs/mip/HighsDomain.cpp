@@ -728,7 +728,7 @@ void HighsDomain::DualFixProbingPropagation::propagate() {
       previousRedundantRowSize;
   if (!isEnabled() || numNewRedundantRows <= 0) return;
 
-  assert(candidatesVec_.empty());
+  assert(candidateFixedCols_.empty());
 
   auto addCandidateFixing = [&](HighsInt col) {
     if (!candidateColFixedFlags_[col]) {
@@ -821,8 +821,8 @@ void HighsDomain::DualFixProbingPropagation::propagateZeroCosts() {
 
   applyingZeroCostFixings_ = true;
   if (zeroCostStartPos_ == kHighsIInf)
-    zeroCostStartPos_ =
-        static_cast<HighsInt>(domain->getDomainChangeStack().size());
+    setZeroCostFixingPosition(
+        static_cast<HighsInt>(domain->getDomainChangeStack().size()));
 
   for (const FixedZeroCostColumn& fixing : fixedZeroCostColumns_) {
     if (domain->isFixed(fixing.col)) continue;
