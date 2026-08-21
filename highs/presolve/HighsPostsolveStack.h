@@ -19,7 +19,6 @@
 #include <numeric>
 #include <sstream>
 #include <tuple>
-#include <unordered_map>
 #include <vector>
 
 #include "lp_data/HConst.h"
@@ -129,17 +128,6 @@ class HighsPostsolveStack {
     void undo(const HighsOptions& options, HighsSolution& solution) const;
 
     void transformToPresolvedSpace(std::vector<double>& primalSol) const;
-  };
-
-  struct FourierMotzkinObjCol {
-    double offset;
-    HighsInt col;
-
-    void transformToPresolvedSpace(const std::vector<Nonzero>& costEntries,
-                                   std::vector<double>& primalSol) const;
-
-    void undo(const std::vector<Nonzero>& costEntries,
-              HighsSolution& solution) const;
   };
 
   struct FreeColSubstitution {
@@ -317,8 +305,6 @@ class HighsPostsolveStack {
     kDuplicateRow,
     kDuplicateColumn,
     kSlackColSubstitution,
-    kFourierMotzkinBlock,
-    kFourierMotzkinObjCol,
   };
 
   struct FmeStepData {
@@ -920,15 +906,6 @@ class HighsPostsolveStack {
           LinearTransform linearTransform;
           reductionValues.pop(linearTransform);
           linearTransform.transformToPresolvedSpace(reducedSolution);
-          break;
-        }
-        case ReductionType::kFourierMotzkinObjCol: {
-          reductionValues.setPosition(primalColTransformation.second);
-          std::vector<Nonzero> costEntries;
-          reductionValues.pop(costEntries);
-          FourierMotzkinObjCol fmObjCol;
-          reductionValues.pop(fmObjCol);
-          fmObjCol.transformToPresolvedSpace(costEntries, reducedSolution);
           break;
         }
         default:

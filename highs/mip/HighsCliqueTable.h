@@ -214,6 +214,8 @@ class HighsCliqueTable {
 
   void removeClique(HighsInt cliqueid);
 
+  void fixLastActiveAndRemove(HighsDomain& globaldom, HighsInt cliqueid);
+
   void resolveSubstitution(CliqueVar& v) const;
 
   void resolveSubstitution(HighsInt& col, double& val, double& rhs) const;

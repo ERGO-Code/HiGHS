@@ -502,7 +502,6 @@ void HPresolve::chooseRules() {
     presolve_light_rule_off[kPresolveRuleEnumeration] = true;
     presolve_light_rule_off[kPresolveRuleDualFixing] = true;
     presolve_light_rule_off[kPresolveRuleColStuffing] = true;
-    presolve_light_rule_off[kPresolveRuleFourierMotzkin] = true;
   }
 
   if (!silent && options->log_dev_level) {
@@ -996,8 +995,6 @@ void HPresolve::shrinkProblem(HighsPostsolveStack& postsolve_stack) {
       }
     }
   }
-  if (model->fme_obj_col_ >= 0)
-    model->fme_obj_col_ = newColIndex[model->fme_obj_col_];
   colDeleted.assign(model->num_col_, false);
   model->col_cost_.resize(model->num_col_);
   model->col_lower_.resize(model->num_col_);
@@ -1708,7 +1705,10 @@ HPresolve::Result HPresolve::finaliseProbing(
       if (newLowerBnd) numBndsTightened++;
       if (newUpperBnd) numBndsTightened++;
     }
-    HPRESOLVE_CHECKED_CALL(checkLimits(postsolve_stack));
+    // Do not check limits here: rows have already been deleted by the
+    // clique table above without postsolve entries, relying on all
+    // column fixings being applied to justify their redundancy.
+    // HPRESOLVE_CHECKED_CALL(checkLimits(postsolve_stack));
   }
 
   // finally apply substitutions
@@ -2401,7 +2401,6 @@ void HPresolve::markColDeleted(HighsInt col) {
     colDeleted[col] = true;
   }
   ++numDeletedCols;
-  if (col == model->fme_obj_col_) model->fme_obj_col_ = -1;
 }
 
 HPresolve::Result HPresolve::changeColUpper(HighsInt col, double newUpper) {
@@ -6239,8 +6238,6 @@ HPresolve::Result HPresolve::initialSweep(
   model->a_matrix_.start_.resize(num_col + 1);
   model->a_matrix_.index_.resize(nnz);
   model->a_matrix_.value_.resize(nnz);
-  if (model->fme_obj_col_ >= 0)
-    model->fme_obj_col_ = newColIndex[model->fme_obj_col_];
   postsolve_stack.compressColIndexMap(newColIndex);
   HPRESOLVE_CHECKED_CALL(checkLimits(postsolve_stack));
 
@@ -6626,8 +6623,6 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
         mipsolver != nullptr || !options->lp_presolve_requires_basis_postsolve;
 #endif
     bool tryProbing = mipsolver != nullptr;
-    bool tryFourierMotzkin = true;
-
     HighsInt numCliquesBeforeProbing = -1;
     bool domcolAfterProbingCalled = false;
     bool dependentEquationsCalled = mipsolver != nullptr;
@@ -6664,11 +6659,6 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
             applyConflictGraphSubstitutions(postsolve_stack, numDelCol));
       }
 
-      HighsInt numColsEliminatedFourierMotzkin = 0;
-      if (tryFourierMotzkin && this->allow_rule_[kPresolveRuleFourierMotzkin])
-        HPRESOLVE_CHECKED_CALL(
-            fourierMotzkin(postsolve_stack, numColsEliminatedFourierMotzkin));
-
       if (reducedToEmpty()) break;
 
       if (this->allow_rule_[kPresolveRuleAggregator]) {
@@ -6677,10 +6667,7 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
         analysis_.presolveTimerStop(kPresolveClockAggregator);
       }
 
-      // check if there were reductions
-      bool haveReductions = problemSizeReduction() > 0.05;
-      tryFourierMotzkin = haveReductions || numColsEliminatedFourierMotzkin > 0;
-      if (haveReductions) continue;
+      if (problemSizeReduction() > 0.05) continue;
 
       if (trySparsify && this->allow_rule_[kPresolveRuleSparsify]) {
         HighsInt numNz = numNonzeros();

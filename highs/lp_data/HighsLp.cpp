@@ -226,7 +226,6 @@ void HighsLp::clear() {
   this->is_moved_ = false;
   this->cost_row_location_ = -1;
   this->has_infinite_cost_ = false;
-  this->fme_obj_col_ = -1;
   this->mods_.clear();
 }
 

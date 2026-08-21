@@ -726,17 +726,17 @@ void testNames() {
       printf("Row    %" HIGHSINT_FORMAT " has name %s\n", iRow, name);
   }
 
-  // Check extraction of names for the presolved LP
+  // Check extraction of names for the presolved LP, in which the
+  // first row is removed
   Highs_presolve(highs);
   if (dev_run) Highs_writePresolvedModel(highs, "");
 
   HighsInt presolved_num_col = Highs_getPresolvedNumCol(highs);
   HighsInt presolved_num_row = Highs_getPresolvedNumRow(highs);
-  // Fourier-Motzkin presolve reduction may add columns/rows
-  //assert(presolved_num_col == num_col);
-  //assert(presolved_num_row == num_row-1);
+  assert(presolved_num_col == num_col);
+  assert(presolved_num_row == num_row - 1);
 
-  char presolved_name[512];
+  char presolved_name[5];
 
   return_status = Highs_getPresolvedColName(highs, -1, presolved_name);
   assert(return_status == kHighsStatusError);
@@ -1510,11 +1510,10 @@ void passPresolveGetLp() {
         (double*)malloc(sizeof(double) * presolved_num_row);
     double* presolved_row_upper =
         (double*)malloc(sizeof(double) * presolved_num_row);
-    HighsInt* presolved_a_start =
-        (HighsInt*)malloc(sizeof(HighsInt) *
-                          (presolved_a_format == kHighsMatrixFormatColwise
-                               ? presolved_num_col + 1
-                               : presolved_num_row + 1));
+    HighsInt* presolved_a_start = (HighsInt*)malloc(
+        sizeof(HighsInt) * (presolved_a_format == kHighsMatrixFormatColwise
+                                ? presolved_num_col + 1
+                                : presolved_num_row + 1));
     HighsInt* presolved_a_index =
         (HighsInt*)malloc(sizeof(HighsInt) * presolved_num_nz);
     double* presolved_a_value =
