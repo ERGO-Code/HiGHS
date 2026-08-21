@@ -145,6 +145,8 @@ class HighsSearch {
 
   bool orbitsValidInChildNode(const HighsDomainChange& branchChg) const;
 
+  void stashNodeToProcessed(double lb, double estimate, HighsInt depth);
+
  public:
   HighsSearch(HighsMipWorker& mipworker, HighsPseudocost& pseudocost);
 

@@ -457,7 +457,10 @@ restart:
       master_worker.search_ptr_->getLocalDomain());
 
   profiling_->start(kMipClockSearch);
-  HighsInt maxNodesPerWorkerLim = max_num_workers > 1 ? 100 : kHighsIInf;
+  // Maximum node processing budget for each worker in a batch during parallel
+  constexpr HighsInt kMaxNodesPerWorker = 100;
+  HighsInt maxNodesPerWorkerLim =
+      max_num_workers > 1 ? kMaxNodesPerWorker : kHighsIInf;
   int64_t numStallNodes = 0;
   int64_t lastLbLeave = 0;
   int64_t numQueueLeaves = 0;
@@ -614,7 +617,7 @@ restart:
     }
   };
 
-  auto prepareNodes = [&](std::vector<HighsInt>& indices) {
+  auto prepareNodes = [&](const std::vector<HighsInt>& indices) {
     const HighsInt numNodesPerWorker =
         indices.size() > 1 &&
                 static_cast<size_t>(mipdata_->nodequeue.numActiveNodes()) >=
@@ -670,6 +673,7 @@ restart:
   };
 
   auto pruneNode = [&](const HighsInt i, bool& infeasible) -> bool {
+    assert(infeasible == false);
     if (!mipdata_->parallelLockActive())
       profiling_->start(kMipClockNodePrunedLoop);
     bool pruned = false;
@@ -827,7 +831,7 @@ restart:
                           std::vector<HighsInt>& stallNodes,
                           const bool skip_separation, const HighsInt nodeLim,
                           const HighsInt plungeLimit, double avgiter) {
-    auto processNode = [&](const HighsInt i) {
+    auto processWorkerNodes = [&](const HighsInt i) {
       HighsMipWorker& worker = mipdata_->workers[i];
       worker.prepNodeIdx = 0;
       int64_t total_nodes_explored = 0;
@@ -861,8 +865,9 @@ restart:
         }
         worker.getConflictPool().performAging();
         HighsInt iterlimit = 10 * std::max(avgiter, mipdata_->avgrootlpiters);
-        iterlimit = std::max({HighsInt{10000}, iterlimit,
-                              HighsInt((3 * mipdata_->firstrootlpiters) / 2)});
+        iterlimit = std::max(
+            {HighsInt{10000}, iterlimit,
+             static_cast<HighsInt>((3 * mipdata_->firstrootlpiters) / 2)});
         worker.getLpRelaxation().setIterationLimit(iterlimit);
         while (true) {
           if (considerHeuristics &&
@@ -930,7 +935,7 @@ restart:
         restarts[i] = checkRestart(worker, 1, currTreeWeight);
       }
     };
-    runTask(processNode, tg, true, false, indices);
+    runTask(processWorkerNodes, tg, true, false, indices);
   };
 
   auto syncSepaStats = [&](HighsMipWorker& worker) {

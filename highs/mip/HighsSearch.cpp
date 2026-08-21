@@ -717,6 +717,17 @@ const HighsSearch::NodeData* HighsSearch::getParentNodeData() const {
   return &nodestack[nodestack.size() - 2];
 }
 
+void HighsSearch::stashNodeToProcessed(double lb, double estimate,
+                                       HighsInt depth) {
+  std::vector<HighsInt> branchPositions;
+  auto domchgStack = localdom.getReducedDomainChangeStack(branchPositions);
+  mipworker.processedNodes.emplace_back(
+      std::piecewise_construct,
+      std::forward_as_tuple(std::move(domchgStack), std::move(branchPositions),
+                            lb, estimate, depth),
+      std::forward_as_tuple(countTreeWeight));
+}
+
 void HighsSearch::stashCurrentNode() {
   auto oldchangedcols = localdom.getChangedCols().size();
   bool prune = nodestack.back().lower_bound > getCutoffBound();
@@ -729,16 +740,9 @@ void HighsSearch::stashCurrentNode() {
                                 pseudocost);
   }
   if (!prune) {
-    std::vector<HighsInt> branchPositions;
-    auto domchgStack = localdom.getReducedDomainChangeStack(branchPositions);
-    mipworker.processedNodes.emplace_back(
-        std::piecewise_construct,
-        std::forward_as_tuple(std::move(domchgStack),
-                              std::move(branchPositions),
-                              std::max(nodestack.back().lower_bound,
-                                       localdom.getObjectiveLowerBound()),
-                              nodestack.back().estimate, getCurrentDepth()),
-        std::forward_as_tuple(countTreeWeight));
+    stashNodeToProcessed(std::max(nodestack.back().lower_bound,
+                                  localdom.getObjectiveLowerBound()),
+                         nodestack.back().estimate, getCurrentDepth());
   } else {
     mipsolver.mipdata_->debugSolution.nodePruned(localdom);
     if (countTreeWeight) treeweight += std::ldexp(1.0, 1 - getCurrentDepth());
@@ -772,16 +776,9 @@ void HighsSearch::stashOpenNodes() {
                                   mipworker.getGlobalDomain(), pseudocost);
     }
     if (!prune) {
-      std::vector<HighsInt> branchPositions;
-      auto domchgStack = localdom.getReducedDomainChangeStack(branchPositions);
-      mipworker.processedNodes.emplace_back(
-          std::piecewise_construct,
-          std::forward_as_tuple(std::move(domchgStack),
-                                std::move(branchPositions),
-                                std::max(nodestack.back().lower_bound,
-                                         localdom.getObjectiveLowerBound()),
-                                nodestack.back().estimate, getCurrentDepth()),
-          std::forward_as_tuple(countTreeWeight));
+      stashNodeToProcessed(std::max(nodestack.back().lower_bound,
+                                    localdom.getObjectiveLowerBound()),
+                           nodestack.back().estimate, getCurrentDepth());
     } else {
       mipsolver.mipdata_->debugSolution.nodePruned(localdom);
       if (countTreeWeight) treeweight += std::ldexp(1.0, 1 - getCurrentDepth());
@@ -1739,14 +1736,8 @@ bool HighsSearch::backtrackPlunge() {
 
     if (nodeToQueue) {
       // if (!mipsolver.submip) printf("node goes to queue\n");
-      std::vector<HighsInt> branchPositions;
-      auto domchgStack = localdom.getReducedDomainChangeStack(branchPositions);
-      mipworker.processedNodes.emplace_back(
-          std::piecewise_construct,
-          std::forward_as_tuple(
-              std::move(domchgStack), std::move(branchPositions), nodelb,
-              nodestack.back().estimate, getCurrentDepth() + 1),
-          std::forward_as_tuple(countTreeWeight));
+      stashNodeToProcessed(nodelb, nodestack.back().estimate,
+                           getCurrentDepth() + 1);
       localdom.backtrack();
       localdom.clearChangedCols(numChangedCols);
       continue;
