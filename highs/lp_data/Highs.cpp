@@ -1661,6 +1661,13 @@ HighsStatus Highs::calledOptimizeModel() {
         // objective values aren't correct
         const double save_objective_bound = options_.objective_bound;
         options_.objective_bound = kHighsInf;
+
+        // Write out presolved LP.
+        std::string filename_string ="C:\\Users\\galab\\dev\\" + reduced_lp.model_name_ + "_presolved.mps";
+        std::cout << filename_string << std::endl;
+        writeModel(filename_string);
+        exit(0);
+
         solveLp(reduced_lp, "Solving the presolved LP",
                 this_solve_presolved_lp_time);
         this->run_data_.solve_time = this_solve_presolved_lp_time;
