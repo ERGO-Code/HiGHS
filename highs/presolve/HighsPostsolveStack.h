@@ -130,6 +130,17 @@ class HighsPostsolveStack {
     void transformToPresolvedSpace(std::vector<double>& primalSol) const;
   };
 
+  struct FourierMotzkinObjCol {
+    double offset;
+    HighsInt col;
+
+    void transformToPresolvedSpace(const std::vector<Nonzero>& costEntries,
+                                   std::vector<double>& primalSol) const;
+
+    void undo(const std::vector<Nonzero>& costEntries,
+              HighsSolution& solution) const;
+  };
+
   struct FreeColSubstitution {
     double rhs;
     double colCost;
@@ -305,6 +316,8 @@ class HighsPostsolveStack {
     kDuplicateRow,
     kDuplicateColumn,
     kSlackColSubstitution,
+    kFourierMotzkinBlock,
+    kFourierMotzkinObjCol,
   };
 
   struct FmeStepData {
