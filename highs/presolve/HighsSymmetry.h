@@ -117,6 +117,8 @@ struct HighsOrbitopeMatrix {
 
   HighsInt orbitalFixingForPackingOrbitope(const std::vector<HighsInt>& rows,
                                            HighsDomain& domain) const;
+
+  void detectSetPackingRows(HighsCliqueTable& cliquetable, HighsInt cliqueVal);
 };
 
 struct HighsSymmetries {
@@ -239,6 +241,7 @@ class HighsSymmetryDetection {
   HighsInt getOrbit(HighsInt vertex);
 
   void initializeHashValues();
+  void clearRefinementState();
   bool isomorphicToFirstLeave();
   bool partitionRefinement();
   bool checkStoredAutomorphism(HighsInt vertex) const;
@@ -294,6 +297,10 @@ class HighsSymmetryDetection {
 
   bool isFullOrbitope(const ComponentData& componentData, HighsInt component,
                       HighsSymmetries& symmetries);
+
+  bool recordAutomorphism(const std::vector<HighsInt>& leavePartition,
+                          HighsSymmetries& symmetries, HighsInt maxPerms,
+                          HighsInt pathDepth, HighsInt& backtrackDepth);
 
  public:
   void loadModelAsGraph(const HighsLp& model, double epsilon);

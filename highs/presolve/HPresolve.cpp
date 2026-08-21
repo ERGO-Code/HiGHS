@@ -101,6 +101,9 @@ void HPresolve::setInput(HighsLp& model_, const HighsOptions& options_,
                 static_cast<int>(this->reductionLimit));
   }
   this->in_initial_sweep_ = false;
+  // last_reduction_ is used to identify when HPresolve::checkLimits
+  // is called for the first time following a reduction
+  this->last_reduction_ = 0;
 }
 
 // for MIP presolve
@@ -2264,9 +2267,10 @@ void HPresolve::addToMatrix(const HighsInt row, const HighsInt col,
 bool HPresolve::addToMatrix(
     HighsPostsolveStack& postsolve_stack, const std::vector<double>& row_lower,
     const std::vector<double>& row_upper,
-    const std::vector<std::vector<row_entry>>& row_entries) {
+    const std::vector<std::vector<HighsInt>>& row_indices,
+    const std::vector<std::vector<double>>& row_values) {
   // update number of rows
-  HighsInt num_rows = static_cast<HighsInt>(row_entries.size());
+  HighsInt num_rows = static_cast<HighsInt>(row_indices.size());
   if (num_rows == 0) return true;
   HighsInt oldNumRows = model->num_row_;
   model->num_row_ += num_rows;
@@ -2332,8 +2336,8 @@ bool HPresolve::addToMatrix(
     HighsInt row = oldNumRows + i;
 
     // add non-zeros
-    for (const auto& entry : row_entries[i])
-      addToMatrix(row, entry.col, entry.val);
+    for (size_t j = 0; j < row_indices[i].size(); j++)
+      addToMatrix(row, row_indices[i][j], row_values[i][j]);
 
     // add row singleton
     if (rowsize[row] == 1) singletonRows.push_back(row);
@@ -2348,12 +2352,12 @@ bool HPresolve::addToMatrix(
 
 bool HPresolve::addToMatrix(HighsPostsolveStack& postsolve_stack,
                             double row_lower, double row_upper,
-                            std::vector<row_entry> row_entries) {
-  std::vector<double> rl = {row_lower};
-  std::vector<double> ru = {row_upper};
-  std::vector<std::vector<row_entry>> re;
-  re.push_back(std::move(row_entries));
-  return addToMatrix(postsolve_stack, rl, ru, re);
+                            const std::vector<HighsInt>& row_indices,
+                            const std::vector<double>& row_values) {
+  return addToMatrix(postsolve_stack, std::vector<double>{row_lower},
+                     std::vector<double>{row_upper},
+                     std::vector<std::vector<HighsInt>>{row_indices},
+                     std::vector<std::vector<double>>{row_values});
 }
 
 HighsTripletListSlice HPresolve::getColumnVector(HighsInt col) const {
@@ -6928,7 +6932,10 @@ HPresolve::Result HPresolve::checkLimits(HighsPostsolveStack& postsolve_stack) {
 
   if ((numreductions & 1023u) == 0) HPRESOLVE_CHECKED_CALL(checkTimeLimit());
 
-  return numreductions >= reductionLimit ? Result::kStopped : Result::kOk;
+  // Record the value of numreductions so that the next call with an
+  // increase in numreductions can be identified
+  this->last_reduction_ = numreductions;
+  return numreductions >= this->reductionLimit ? Result::kStopped : Result::kOk;
 }
 
 void HPresolve::storeCurrentProblemSize() {
@@ -8131,24 +8138,28 @@ HPresolve::Result HPresolve::fourierMotzkin(
 
     // build the objective constraint row: c^T x - z <= -offset
     double offset = model->offset_;
-    std::vector<row_entry> objRow;
+    std::vector<HighsInt> objIndices;
+    std::vector<double> objValues;
     for (HighsInt j = 0; j < zCol; ++j) {
-      if (!colDeleted[j] && model->col_cost_[j] != 0.0)
-        objRow.push_back({j, model->col_cost_[j]});
+      if (!colDeleted[j] && model->col_cost_[j] != 0.0) {
+        objIndices.push_back(j);
+        objValues.push_back(model->col_cost_[j]);
+      }
     }
-    objRow.push_back({zCol, -1.0});
+    objIndices.push_back(zCol);
+    objValues.push_back(-1.0);
 
     // zero out original costs and offset
     for (HighsInt j = 0; j < zCol; ++j) model->col_cost_[j] = 0.0;
     model->offset_ = 0.0;
 
     // add the constraint row to the matrix
-    addToMatrix(postsolve_stack, -kHighsInf, -offset, objRow);
+    addToMatrix(postsolve_stack, -kHighsInf, -offset, objIndices, objValues);
 
     // register reduction so getReducedPrimalSolution can compute z
     std::vector<HighsPostsolveStack::Nonzero> costEntries;
-    for (const auto& entry : objRow)
-      costEntries.emplace_back(entry.col, entry.val);
+    for (size_t k = 0; k < objIndices.size(); k++)
+      costEntries.emplace_back(objIndices[k], objValues[k]);
     postsolve_stack.fourierMotzkinObjCol(zCol, offset, costEntries);
 
     model->fme_obj_col_ = zCol;
@@ -8277,7 +8288,8 @@ HPresolve::Result HPresolve::fourierMotzkin(
   // workspace for filtering new rows
   std::vector<double> rowLower;
   std::vector<double> rowUpper;
-  std::vector<std::vector<row_entry>> rowEntries;
+  std::vector<std::vector<HighsInt>> rowIndices;
+  std::vector<std::vector<double>> rowValues;
   std::vector<NewRowOrigin> newRowOrigins;
 
   // vector for saving affected candidates
@@ -8393,7 +8405,8 @@ HPresolve::Result HPresolve::fourierMotzkin(
     // add new rows, filtering out redundant ones
     rowLower.clear();
     rowUpper.clear();
-    rowEntries.clear();
+    rowIndices.clear();
+    rowValues.clear();
     newRowOrigins.clear();
 
     for (const auto& nr : newRows) {
@@ -8406,13 +8419,18 @@ HPresolve::Result HPresolve::fourierMotzkin(
                             nr.minusIndex, col, numColsEliminated))
         continue;
 
-      std::vector<row_entry> entries;
-      entries.reserve(nr.entries.size());
-      for (const auto& e : nr.entries)
-        entries.push_back({e.col, static_cast<double>(e.val)});
+      std::vector<HighsInt> indices;
+      std::vector<double> values;
+      indices.reserve(nr.entries.size());
+      values.reserve(nr.entries.size());
+      for (const auto& e : nr.entries) {
+        indices.push_back(e.col);
+        values.push_back(static_cast<double>(e.val));
+      }
       rowLower.push_back(nr.lower);
       rowUpper.push_back(nr.upper);
-      rowEntries.push_back(std::move(entries));
+      rowIndices.push_back(std::move(indices));
+      rowValues.push_back(std::move(values));
       newRowOrigins.push_back(
           {nr.plusIndex, nr.minusIndex, nr.plusScale, nr.minusScale});
     }
@@ -8435,9 +8453,10 @@ HPresolve::Result HPresolve::fourierMotzkin(
 
     // add new rows to matrix
     HighsInt firstNewRow = model->num_row_;
-    if (!addToMatrix(postsolve_stack, rowLower, rowUpper, rowEntries))
+    if (!addToMatrix(postsolve_stack, rowLower, rowUpper, rowIndices,
+                     rowValues))
       return finalise();
-    numRowsAdded += static_cast<HighsInt>(rowEntries.size());
+    numRowsAdded += static_cast<HighsInt>(rowIndices.size());
 
     // build FmeNewRow data and ancestry for this step
     auto& stepNewRows = blockSteps.back().newRows;
