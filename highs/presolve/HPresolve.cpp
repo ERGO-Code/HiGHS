@@ -502,6 +502,7 @@ void HPresolve::chooseRules() {
     presolve_light_rule_off[kPresolveRuleEnumeration] = true;
     presolve_light_rule_off[kPresolveRuleDualFixing] = true;
     presolve_light_rule_off[kPresolveRuleColStuffing] = true;
+    presolve_light_rule_off[kPresolveRuleFourierMotzkin] = true;
   }
 
   if (!silent && options->log_dev_level) {
@@ -995,6 +996,8 @@ void HPresolve::shrinkProblem(HighsPostsolveStack& postsolve_stack) {
       }
     }
   }
+  if (model->fme_obj_col_ >= 0)
+    model->fme_obj_col_ = newColIndex[model->fme_obj_col_];
   colDeleted.assign(model->num_col_, false);
   model->col_cost_.resize(model->num_col_);
   model->col_lower_.resize(model->num_col_);
@@ -2401,6 +2404,7 @@ void HPresolve::markColDeleted(HighsInt col) {
     colDeleted[col] = true;
   }
   ++numDeletedCols;
+  if (col == model->fme_obj_col_) model->fme_obj_col_ = -1;
 }
 
 HPresolve::Result HPresolve::changeColUpper(HighsInt col, double newUpper) {
@@ -6238,6 +6242,8 @@ HPresolve::Result HPresolve::initialSweep(
   model->a_matrix_.start_.resize(num_col + 1);
   model->a_matrix_.index_.resize(nnz);
   model->a_matrix_.value_.resize(nnz);
+  if (model->fme_obj_col_ >= 0)
+    model->fme_obj_col_ = newColIndex[model->fme_obj_col_];
   postsolve_stack.compressColIndexMap(newColIndex);
   HPRESOLVE_CHECKED_CALL(checkLimits(postsolve_stack));
 
@@ -6623,6 +6629,7 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
         mipsolver != nullptr || !options->lp_presolve_requires_basis_postsolve;
 #endif
     bool tryProbing = mipsolver != nullptr;
+    bool tryFourierMotzkin = true;
     HighsInt numCliquesBeforeProbing = -1;
     bool domcolAfterProbingCalled = false;
     bool dependentEquationsCalled = mipsolver != nullptr;
@@ -6657,6 +6664,13 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
         HighsInt numDelCol = 0;
         HPRESOLVE_CHECKED_CALL(
             applyConflictGraphSubstitutions(postsolve_stack, numDelCol));
+      }
+
+      HighsInt numColsEliminatedFourierMotzkin = 0;
+      if (tryFourierMotzkin && this->allow_rule_[kPresolveRuleFourierMotzkin]) {
+        HPRESOLVE_CHECKED_CALL(
+            fourierMotzkin(postsolve_stack, numColsEliminatedFourierMotzkin));
+        tryFourierMotzkin = false;
       }
 
       if (reducedToEmpty()) break;
