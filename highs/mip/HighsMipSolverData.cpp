@@ -1345,7 +1345,7 @@ void HighsMipSolverData::performRestart() {
   HighsInt numLpRows = getLp().getLp().num_row_;
   HighsInt numModelRows = mipsolver.numRow();
   HighsInt numCuts = numLpRows - numModelRows;
-  if (numCuts > 0) postSolveStack.appendCutsToModel(numCuts);
+  postSolveStack.appendCutsToModel(numCuts);
   auto integrality = std::move(presolvedModel.integrality_);
   double offset = presolvedModel.offset_;
   presolvedModel = getLp().getLp();
@@ -1361,18 +1361,19 @@ void HighsMipSolverData::performRestart() {
     // if we have a basis after solving the root LP, we expand it to the
     // original space so that it can be used for constructing a starting basis
     // for the presolved model after the restart
-    root_basis.col_status.resize(postSolveStack.getOrigNumCol());
-    root_basis.row_status.resize(postSolveStack.getOrigNumRow(),
+    root_basis.col_status.resize(postSolveStack.getNextColIndex());
+    root_basis.row_status.resize(postSolveStack.getNextRowIndex(),
                                  HighsBasisStatus::kBasic);
     root_basis.valid = true;
     root_basis.useful = true;
 
-    for (HighsInt i = 0; i < mipsolver.numCol(); ++i)
+    for (HighsInt i = 0; i < static_cast<HighsInt>(basis.col_status.size());
+         ++i)
       root_basis.col_status[postSolveStack.getOrigColIndex(i)] =
           basis.col_status[i];
 
-    HighsInt numRow = basis.row_status.size();
-    for (HighsInt i = 0; i < numRow; ++i)
+    for (HighsInt i = 0; i < static_cast<HighsInt>(basis.row_status.size());
+         ++i)
       root_basis.row_status[postSolveStack.getOrigRowIndex(i)] =
           basis.row_status[i];
 
@@ -1492,13 +1493,19 @@ void HighsMipSolverData::basisTransfer() {
     firstrootbasis.alien = true;
     firstrootbasis.useful = true;
 
-    for (HighsInt i = 0; i < numRow; ++i) {
+    for (HighsInt i = 0;
+         i < static_cast<HighsInt>(postSolveStack.getOrigRowIndex().size());
+         ++i) {
+      if (!postSolveStack.isOrigRow(i)) break;
       HighsBasisStatus status =
           mipsolver.rootbasis->row_status[postSolveStack.getOrigRowIndex(i)];
       firstrootbasis.row_status[i] = status;
     }
 
-    for (HighsInt i = 0; i < numCol; ++i) {
+    for (HighsInt i = 0;
+         i < static_cast<HighsInt>(postSolveStack.getOrigColIndex().size());
+         ++i) {
+      if (!postSolveStack.isOrigCol(i)) break;
       HighsBasisStatus status =
           mipsolver.rootbasis->col_status[postSolveStack.getOrigColIndex(i)];
       firstrootbasis.col_status[i] = status;
