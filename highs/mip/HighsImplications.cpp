@@ -87,24 +87,17 @@ bool HighsImplications::computeImplications(HighsInt col, bool val) {
   HighsInt numEntries = mipsolver.mipdata_->cliquetable.getNumEntries();
   HighsInt maxEntries = 100000 + mipsolver.numNonzero();
 
-  HighsInt unsafeDualFixesStart =
+  HighsInt unsafeStackStart =
       globaldomain.getDualFixProbingPropagation().getZeroCostFixingPosition();
-  bool foundDualFixPos = true;
+  HighsInt safeImplicsEnd = 0;
 
   for (HighsInt i = stackimplicstart; i < stackimplicend; ++i) {
-    if (foundDualFixPos && i == unsafeDualFixesStart) {
-      unsafeDualFixesStart = static_cast<HighsInt>(implics.size());
-      foundDualFixPos = false;
-    }
     if (domchgreason[i].type == HighsDomain::Reason::kCliqueTable &&
         ((domchgreason[i].index >> 1) == col || numEntries >= maxEntries))
       continue;
 
     implics.push_back(domchgstack[i]);
-  }
-
-  if (foundDualFixPos) {
-    unsafeDualFixesStart = static_cast<HighsInt>(implics.size());
+    if (i < unsafeStackStart) safeImplicsEnd++;
   }
 
   // inform caller about lifting opportunities
@@ -113,10 +106,10 @@ bool HighsImplications::computeImplications(HighsInt col, bool val) {
   // backtrack
   doBacktrack(changedend);
 
-  if (unsafeDualFixesStart < static_cast<HighsInt>(implics.size())) {
+  if (safeImplicsEnd < static_cast<HighsInt>(implics.size())) {
     // add the dualFix implications of binaries to the clique table
     auto binstart =
-        std::partition(implics.begin() + unsafeDualFixesStart, implics.end(),
+        std::partition(implics.begin() + safeImplicsEnd, implics.end(),
                        [&](const HighsDomainChange& a) {
                          return !globaldomain.isBinary(a.column);
                        });
@@ -128,7 +121,7 @@ bool HighsImplications::computeImplications(HighsInt col, bool val) {
 
   // add the implications of binary variables to the clique table
   auto binstart =
-      std::partition(implics.begin(), implics.begin() + unsafeDualFixesStart,
+      std::partition(implics.begin(), implics.begin() + safeImplicsEnd,
                      [&](const HighsDomainChange& a) {
                        return !globaldomain.isBinary(a.column);
                      });
@@ -136,7 +129,7 @@ bool HighsImplications::computeImplications(HighsInt col, bool val) {
   std::array<HighsCliqueTable::CliqueVar, 2> clique;
   clique[0] = HighsCliqueTable::CliqueVar(col, val);
 
-  for (auto i = binstart; i != implics.begin() + unsafeDualFixesStart; ++i) {
+  for (auto i = binstart; i != implics.begin() + safeImplicsEnd; ++i) {
     if (i->boundtype == HighsBoundType::kLower)
       clique[1] = HighsCliqueTable::CliqueVar(i->column, 0);
     else
@@ -147,13 +140,12 @@ bool HighsImplications::computeImplications(HighsInt col, bool val) {
   }
 
   HighsInt numErasedBinaries =
-      static_cast<HighsInt>(implics.begin() + unsafeDualFixesStart - binstart);
-  implics.erase(binstart, implics.begin() + unsafeDualFixesStart);
-  unsafeDualFixesStart -= numErasedBinaries;
+      static_cast<HighsInt>(implics.begin() + safeImplicsEnd - binstart);
+  implics.erase(binstart, implics.begin() + safeImplicsEnd);
+  safeImplicsEnd -= numErasedBinaries;
 
   // store variable bounds derived from implications
-  for (auto i = implics.begin(); i != implics.begin() + unsafeDualFixesStart;
-       ++i) {
+  for (auto i = implics.begin(); i != implics.begin() + safeImplicsEnd; ++i) {
     if (i->boundtype == HighsBoundType::kLower) {
       if (val == 1) {
         if (globaldomain.col_lower_[i->column] != -kHighsInf)
