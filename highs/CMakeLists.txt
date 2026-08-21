@@ -194,69 +194,89 @@ else()
 
   target_sources(highs PRIVATE ${sources} ${headers} ${win_version_file})
 
-  # Optional Cuda
-  if (CUPDLP_GPU)
+  # Optional GPU (CUDA or HIP)
+  if (CUPDLP_GPU OR HIPDLP_GPU)
 
-    target_include_directories(highs PUBLIC "$<BUILD_INTERFACE:${CMAKE_CUDA_PATH}/include>")
+    if (HIPDLP_HIP)
+      # HIP backend — pdhg.cu is compiled as HIP source.
+      # HIPDLP_GPU activates GPU code in HiPDLP headers.
+      # CUPDLP_CPU keeps cuPDLP-C in CPU mode so it doesn't pull CUDA headers.
+      target_compile_definitions(highs PRIVATE HIPDLP_GPU USE_HIP CUPDLP_CPU)
 
-    if (HIGHS_GPU_LIB)
-      # like in cuda CMakeLists
-      enable_language(CXX CUDA)
+      set_source_files_properties(pdlp/hipdlp/pdhg.cu PROPERTIES LANGUAGE HIP)
 
-      # Remove /MP flag from CUDA targets (nvcc doesn't support it)
-      if(MSVC)
-        string(REPLACE "/MP" "" CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS}")
-        string(REPLACE "/bigobj" "" CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS}")
-
-        foreach(flag_var
-          CMAKE_CUDA_FLAGS_DEBUG
-          CMAKE_CUDA_FLAGS_RELEASE
-          CMAKE_CUDA_FLAGS_RELWITHDEBINFO
-          CMAKE_CUDA_FLAGS_MINSIZEREL)
-          string(REPLACE "/MP" "" ${flag_var} "${${flag_var}}")
-          string(REPLACE "/bigobj" "" ${flag_var} "${${flag_var}}")
-        endforeach()
-      endif()
-
-      target_sources(highs PRIVATE
-        pdlp/cupdlp/cuda/cupdlp_cuda_kernels.cu
-        pdlp/cupdlp/cuda/cupdlp_cuda_kernels.cuh
-        pdlp/cupdlp/cuda/cupdlp_cudalinalg.cuh
-        pdlp/cupdlp/cuda/cupdlp_cudalinalg.cu
-        pdlp/cupdlp/cupdlp_cs.c
-        pdlp/hipdlp/pdhg.cu)
+      target_sources(highs PRIVATE pdlp/hipdlp/pdhg.cu)
 
       set_target_properties(highs PROPERTIES
-        CUDA_SEPARABLE_COMPILATION ON
-        #CUDA_ARCHITECTURES "60;70;75;80;86" )
-        #Deleted 60;70 due to errors
-        #nvcc fatal   : Unsupported gpu architecture 'compute_60'
-        #nvcc fatal   : Unsupported gpu architecture 'compute_70'
-        CUDA_ARCHITECTURES "75;80;86" )
-
-      # set_target_properties(cudalin PROPERTIES CUDA_ARCHITECTURES native)
-
-      target_include_directories(highs PUBLIC "$<BUILD_INTERFACE:${CMAKE_CUDA_PATH}/include>")
+        HIP_SEPARABLE_COMPILATION ON)
 
       if (WIN32)
-        target_link_libraries(highs PRIVATE ${CUDA_LIBRARY})  # linking happens here
-      else() # linux
-        target_link_libraries(highs PRIVATE ${CUDA_LIBRARY} m)
+        target_link_libraries(highs PRIVATE ${GPU_LIBRARY})
+      else()
+        target_link_libraries(highs PRIVATE ${GPU_LIBRARY} m)
       endif()
 
     else()
+      # CUDA backend
+      target_include_directories(highs PUBLIC "$<BUILD_INTERFACE:${CMAKE_CUDA_PATH}/include>")
+
+      if (HIGHS_GPU_LIB)
+        # like in cuda CMakeLists
+        enable_language(CXX CUDA)
+
+        # Remove /MP flag from CUDA targets (nvcc doesn't support it)
+        if(MSVC)
+          string(REPLACE "/MP" "" CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS}")
+          string(REPLACE "/bigobj" "" CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS}")
+
+          foreach(flag_var
+            CMAKE_CUDA_FLAGS_DEBUG
+            CMAKE_CUDA_FLAGS_RELEASE
+            CMAKE_CUDA_FLAGS_RELWITHDEBINFO
+            CMAKE_CUDA_FLAGS_MINSIZEREL)
+            string(REPLACE "/MP" "" ${flag_var} "${${flag_var}}")
+            string(REPLACE "/bigobj" "" ${flag_var} "${${flag_var}}")
+          endforeach()
+        endif()
+
+        target_sources(highs PRIVATE
+          pdlp/cupdlp/cuda/cupdlp_cuda_kernels.cu
+          pdlp/cupdlp/cuda/cupdlp_cuda_kernels.cuh
+          pdlp/cupdlp/cuda/cupdlp_cudalinalg.cuh
+          pdlp/cupdlp/cuda/cupdlp_cudalinalg.cu
+          pdlp/cupdlp/cupdlp_cs.c
+          pdlp/hipdlp/pdhg.cu)
+
+        set_target_properties(highs PROPERTIES
+          CUDA_SEPARABLE_COMPILATION ON
+          #CUDA_ARCHITECTURES "60;70;75;80;86" )
+          #Deleted 60;70 due to errors
+          #nvcc fatal   : Unsupported gpu architecture 'compute_60'
+          #nvcc fatal   : Unsupported gpu architecture 'compute_70'
+          CUDA_ARCHITECTURES "75;80;86" )
+
+        target_include_directories(highs PUBLIC "$<BUILD_INTERFACE:${CMAKE_CUDA_PATH}/include>")
+
+        if (WIN32)
+          target_link_libraries(highs PRIVATE ${GPU_LIBRARY})
+        else()
+          target_link_libraries(highs PRIVATE ${GPU_LIBRARY} m)
+        endif()
+
+      else()
         set(CUPDLP_INCLUDE_DIR "${PROJECT_SOURCE_DIR}/highs/pdlp/cupdlp/")
         add_subdirectory(pdlp/cupdlp/cuda)
 
         if (WIN32)
-            target_link_libraries(highs PRIVATE cudalin ${CUDA_LIBRARY})
-          else()
-            target_link_libraries(highs PRIVATE cudalin ${CUDA_LIBRARY} m)
-          endif()
+          target_link_libraries(highs PRIVATE cudalin ${GPU_LIBRARY})
+        else()
+          target_link_libraries(highs PRIVATE cudalin ${GPU_LIBRARY} m)
+        endif()
 
-          set_target_properties(highs PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
+        set_target_properties(highs PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
       endif()
     endif()
+  endif()
 
   target_include_directories(highs PRIVATE ${include_dirs})
 
