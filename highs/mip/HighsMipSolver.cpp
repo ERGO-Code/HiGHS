@@ -1391,12 +1391,9 @@ bool HighsMipSolver::solutionFeasible(const HighsLp* lp,
     }
   };
 
-  auto updatePrimalViolation = [&](double value, HighsInt index,
-                                   bool is_column) {
-    const double lower =
-        is_column ? lp->col_lower_[index] : lp->row_lower_[index];
-    const double upper =
-        is_column ? lp->col_upper_[index] : lp->row_upper_[index];
+  auto updatePrimalViolation = [&](double value, double lower, double upper,
+                                   HighsInt index, HighsInt& num, double& max_v,
+                                   HighsInt& max_index) {
     double primal_infeasibility;
     if (value < lower - mip_feasibility_tolerance) {
       primal_infeasibility = lower - value;
@@ -1405,24 +1402,29 @@ bool HighsMipSolver::solutionFeasible(const HighsLp* lp,
     } else {
       return;
     }
-    if (is_column) {
-      updateViolation(primal_infeasibility, index, num_bound_violations,
-                      bound_violation, col_of_max_bound_violation);
-    } else {
-      updateViolation(primal_infeasibility, index, num_row_violations,
-                      row_violation, row_of_max_row_violation);
-    }
+    updateViolation(primal_infeasibility, index, num, max_v, max_index);
+  };
+
+  auto updatePrimalViolationCol = [&](double value, HighsInt index) {
+    updatePrimalViolation(value, lp->col_lower_[index], lp->col_upper_[index],
+                          index, num_bound_violations, bound_violation,
+                          col_of_max_bound_violation);
+  };
+
+  auto updatePrimalViolationRow = [&](double value, HighsInt index) {
+    updatePrimalViolation(value, lp->row_lower_[index], lp->row_upper_[index],
+                          index, num_row_violations, row_violation,
+                          row_of_max_row_violation);
   };
 
   // Check column integrality and feasibility
-  bool is_column = true;
   for (HighsInt i = 0; i != lp->num_col_; ++i) {
     const double value = col_value[i];
     obj += static_cast<HighsCDouble>(lp->col_cost_[i]) * value;
     if (lp->integrality_[i] == HighsVarType::kInteger)
       updateViolation(fractionality(value), i, num_integrality_violations,
                       integrality_violation, col_of_max_integrality_violation);
-    updatePrimalViolation(value, i, is_column);
+    updatePrimalViolationCol(value, i);
   }
 
   // Check row feasibility if there is a positive number of rows
@@ -1441,9 +1443,8 @@ bool HighsMipSolver::solutionFeasible(const HighsLp* lp,
         pass_row_value ? (*pass_row_value).data() : row_value.data();
     assert(row_value_p);
 
-    bool is_column = false;
     for (HighsInt i = 0; i != lp->num_row_; ++i)
-      updatePrimalViolation(row_value_p[i], i, is_column);
+      updatePrimalViolationRow(row_value_p[i], i);
   }
 
   const bool feasible = bound_violation <= mip_feasibility_tolerance &&

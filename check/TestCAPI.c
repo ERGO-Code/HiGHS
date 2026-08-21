@@ -1510,8 +1510,10 @@ void passPresolveGetLp() {
         (double*)malloc(sizeof(double) * presolved_num_row);
     double* presolved_row_upper =
         (double*)malloc(sizeof(double) * presolved_num_row);
-    HighsInt* presolved_a_start =
-        (HighsInt*)malloc(sizeof(HighsInt) * (presolved_num_col + 1));
+    HighsInt* presolved_a_start = (HighsInt*)malloc(
+        sizeof(HighsInt) * (presolved_a_format == kHighsMatrixFormatColwise
+                                ? presolved_num_col + 1
+                                : presolved_num_row + 1));
     HighsInt* presolved_a_index =
         (HighsInt*)malloc(sizeof(HighsInt) * presolved_num_nz);
     double* presolved_a_value =
@@ -1538,9 +1540,9 @@ void passPresolveGetLp() {
     assert(return_status == kHighsStatusOk);
     return_status = Highs_run(local_highs);
 
-    double* col_value = (double*)malloc(sizeof(double) * num_col);
-    double* col_dual = (double*)malloc(sizeof(double) * num_col);
-    double* row_dual = (double*)malloc(sizeof(double) * num_row);
+    double* col_value = (double*)malloc(sizeof(double) * presolved_num_col);
+    double* col_dual = (double*)malloc(sizeof(double) * presolved_num_col);
+    double* row_dual = (double*)malloc(sizeof(double) * presolved_num_row);
 
     return_status =
         Highs_getSolution(local_highs, col_value, col_dual, NULL, row_dual);
