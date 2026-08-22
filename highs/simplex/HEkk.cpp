@@ -2452,53 +2452,45 @@ void HEkk::initialiseCost(const SimplexAlgorithm algorithm,
   // Dual simplex costs are either from the LP or perturbed
   if (!perturb || info_.dual_simplex_cost_perturbation_multiplier == 0) return;
   // Perturb the original costs, scale down if is too big
-  const bool report_cost_perturbation =
-      options_->output_flag;  // && analysis_.analyse_simplex_runtime_data;
   HighsInt num_original_nonzero_cost = 0;
-  if (report_cost_perturbation)
-    highsLogDev(options_->log_options, HighsLogType::kInfo,
-                "Cost perturbation for %s\n", lp_.model_name_.c_str());
+  highsLogDev(options_->log_options, HighsLogType::kInfo,
+              "Cost perturbation for %s\n", lp_.model_name_.c_str());
+  // Of the following, min_abs_cost and sum_abs_cost are only used for
+  // logging; only max_abs_cost determines perturbation
   double min_abs_cost = kHighsInf;
   double max_abs_cost = 0;
   double sum_abs_cost = 0;
   for (HighsInt i = 0; i < lp_.num_col_; i++) {
     const double abs_cost = fabs(info_.workCost_[i]);
-    if (report_cost_perturbation) {
-      if (abs_cost) {
-        num_original_nonzero_cost++;
-        min_abs_cost = min(min_abs_cost, abs_cost);
-      }
-      sum_abs_cost += abs_cost;
+    if (abs_cost) {
+      num_original_nonzero_cost++;
+      min_abs_cost = min(min_abs_cost, abs_cost);
     }
+    sum_abs_cost += abs_cost;
     max_abs_cost = max(max_abs_cost, abs_cost);
   }
   const HighsInt pct0 = (100 * num_original_nonzero_cost) / lp_.num_col_;
-  double average_abs_cost = 0;
-  if (report_cost_perturbation) {
+
+  highsLogDev(options_->log_options, HighsLogType::kInfo,
+              "   Initially have %" HIGHSINT_FORMAT
+              " nonzero costs (%3" HIGHSINT_FORMAT "%%)",
+              num_original_nonzero_cost, pct0);
+  if (num_original_nonzero_cost) {
     highsLogDev(options_->log_options, HighsLogType::kInfo,
-                "   Initially have %" HIGHSINT_FORMAT
-                " nonzero costs (%3" HIGHSINT_FORMAT "%%)",
-                num_original_nonzero_cost, pct0);
-    if (num_original_nonzero_cost) {
-      average_abs_cost = sum_abs_cost / num_original_nonzero_cost;
-      highsLogDev(options_->log_options, HighsLogType::kInfo,
-                  " with min / average / max = %g / %g / %g\n", min_abs_cost,
-                  average_abs_cost, max_abs_cost);
-    } else {
-      min_abs_cost = 1.0;
-      max_abs_cost = 1.0;
-      average_abs_cost = 1.0;
-      highsLogDev(options_->log_options, HighsLogType::kInfo,
-                  " but perturb as if max cost was 1\n");
-    }
+                " with min / average / max = %g / %g / %g\n", min_abs_cost,
+                sum_abs_cost / num_original_nonzero_cost, max_abs_cost);
+  } else {
+    max_abs_cost = 1.0;
+    highsLogDev(options_->log_options, HighsLogType::kInfo,
+                " but perturb as if max cost was 1\n");
   }
+
   if (max_abs_cost > 100) {
     max_abs_cost = sqrt(sqrt(max_abs_cost));
-    if (report_cost_perturbation)
-      highsLogDev(
-          options_->log_options, HighsLogType::kInfo,
-          "   Large so set max_abs_cost = sqrt(sqrt(max_abs_cost)) = %g\n",
-          max_abs_cost);
+    highsLogDev(
+        options_->log_options, HighsLogType::kInfo,
+        "   Large so set max_abs_cost = sqrt(sqrt(max_abs_cost)) = %g\n",
+        max_abs_cost);
   }
 
   // If there are few boxed variables, we will just use simple perturbation
@@ -2509,20 +2501,18 @@ void HEkk::initialiseCost(const SimplexAlgorithm algorithm,
   boxedRate /= num_tot;
   if (boxedRate < 0.01) {
     max_abs_cost = min(max_abs_cost, 1.0);
-    if (report_cost_perturbation)
-      highsLogDev(options_->log_options, HighsLogType::kInfo,
-                  "   Small boxedRate (%g) so set max_abs_cost = "
-                  "min(max_abs_cost, 1.0) = "
-                  "%g\n",
-                  boxedRate, max_abs_cost);
+    highsLogDev(options_->log_options, HighsLogType::kInfo,
+                "   Small boxedRate (%g) so set max_abs_cost = "
+                "min(max_abs_cost, 1.0) = "
+                "%g\n",
+                boxedRate, max_abs_cost);
   }
   // Determine the perturbation base
   cost_perturbation_max_abs_cost_ = max_abs_cost;
   cost_perturbation_base_ =
       info_.dual_simplex_cost_perturbation_multiplier * 5e-7 * max_abs_cost;
-  if (report_cost_perturbation)
-    highsLogDev(options_->log_options, HighsLogType::kInfo,
-                "   Perturbation column base = %g\n", cost_perturbation_base_);
+  highsLogDev(options_->log_options, HighsLogType::kInfo,
+              "   Perturbation column base = %g\n", cost_perturbation_base_);
 
   // Now do the perturbation
   for (HighsInt i = 0; i < lp_.num_col_; i++) {
@@ -2542,28 +2532,16 @@ void HEkk::initialiseCost(const SimplexAlgorithm algorithm,
     } else {
       // Fixed - no perturb
     }
-    //    if (report_cost_perturbation) {
-    //      const double perturbation1 = fabs(info_.workCost_[i] -
-    //      previous_cost); if (perturbation1)
-    //        updateValueDistribution(perturbation1,
-    //                                analysis_.cost_perturbation1_distribution);
-    //    }
   }
   const double row_cost_perturbation_base_ =
       info_.dual_simplex_cost_perturbation_multiplier * 1e-12;
-  if (report_cost_perturbation)
-    highsLogDev(options_->log_options, HighsLogType::kInfo,
-                "   Perturbation row    base = %g\n",
-                row_cost_perturbation_base_);
+  highsLogDev(options_->log_options, HighsLogType::kInfo,
+              "   Perturbation row    base = %g\n",
+              row_cost_perturbation_base_);
   for (HighsInt i = lp_.num_col_; i < num_tot; i++) {
     double perturbation2 =
         (0.5 - info_.numTotRandomValue_[i]) * row_cost_perturbation_base_;
     info_.workCost_[i] += perturbation2;
-    //    if (report_cost_perturbation) {
-    //      perturbation2 = fabs(perturbation2);
-    //      updateValueDistribution(perturbation2,
-    //                              analysis_.cost_perturbation2_distribution);
-    //    }
   }
   info_.costs_perturbed = true;
 }
