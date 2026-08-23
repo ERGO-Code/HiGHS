@@ -398,6 +398,16 @@ class HPresolve {
 
   void addToMatrix(const HighsInt row, const HighsInt col, const double val);
 
+  bool addToMatrix(HighsPostsolveStack& postsolve_stack,
+                   const std::vector<double>& row_lower,
+                   const std::vector<double>& row_upper,
+                   const std::vector<std::vector<HighsInt>>& row_indices,
+                   const std::vector<std::vector<double>>& row_values);
+
+  bool addToMatrix(HighsPostsolveStack& postsolve_stack, double row_lower,
+                   double row_upper, const std::vector<HighsInt>& row_indices,
+                   const std::vector<double>& row_values);
+
   Result prepareProbing(HighsPostsolveStack& postsolve_stack, bool& firstCall);
 
   Result finaliseProbing(HighsPostsolveStack& postsolve_stack, bool firstCall,
