@@ -35,6 +35,16 @@ class HighsImplications {
   int64_t numVarBounds;
   int64_t maxVarBounds;
 
+  struct ImplIdx {
+    HighsInt col;
+    HighsInt val;
+    operator size_t() const {
+      assert(col >= 0);
+      assert(val == 0 || val == 1);
+      return 2 * col + val;
+    }
+  };
+
   bool computeImplications(HighsInt col, bool val);
 
  public:
@@ -108,11 +118,10 @@ class HighsImplications {
   }
 
   bool probedBefore(const HighsInt col, const bool val) const {
-    const HighsInt loc = 2 * col + val;
-    return hasProbed[loc];
+    return hasProbed[ImplIdx{col, val}];
   }
 
-  void addImplication(HighsInt binCol, HighsInt implCol, Implication implic);
+  void addImplication(ImplIdx idx, HighsInt implCol, Implication implic);
 
   bool tooManyVarBounds() const { return numVarBounds >= maxVarBounds; }
 
@@ -134,7 +143,7 @@ class HighsImplications {
     // Update implications affected by transformation
     auto changeImplications = [&](HighsInt binCol, bool) {
       for (HighsInt val = 0; val != 2; val++) {
-        Implication* implic = implications[2 * binCol + val].find(col);
+        Implication* implic = implications[ImplIdx{binCol, val}].find(col);
         if (implic) {
           if (scale < 0) std::swap(implic->lb, implic->ub);
           implic->lb -= constant;
