@@ -38,7 +38,11 @@ class HighsImplications {
   struct ImplIdx {
     HighsInt col;
     HighsInt val;
-    operator size_t() const { return 2 * col + val; }
+    operator size_t() const {
+      assert(col >= 0);
+      assert(val == 0 || val == 1);
+      return 2 * col + val;
+    }
   };
 
   bool computeImplications(HighsInt col, bool val);
