@@ -319,8 +319,9 @@ bool HighsImplications::runProbing(HighsInt col, HighsInt& numReductions) {
 
     // analyze implications
     auto analyseImplications = [&](const HighsInt implcol,
-                                   const Implication& downImplication) {
-      if (colsubstituted[implcol] || globaldomain.isFixed(implcol)) return;
+                                   const Implication& downImplication) -> bool {
+      if (colsubstituted[implcol] || globaldomain.isFixed(implcol))
+        return false;
       Implication* upImplication = implications[ImplIdx{col, 1}].find(implcol);
       if (upImplication) {
         const double lbDown =
@@ -359,6 +360,7 @@ bool HighsImplications::runProbing(HighsInt col, HighsInt& numReductions) {
           }
         }
       }
+      return globaldomain.infeasible();
     };
 
     implications[ImplIdx{col, 0}].for_each(analyseImplications);
