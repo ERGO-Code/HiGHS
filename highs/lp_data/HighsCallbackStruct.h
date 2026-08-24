@@ -11,7 +11,7 @@
 #ifndef LP_DATA_HIGHSCALLBACKSTRUCT_H_
 #define LP_DATA_HIGHSCALLBACKSTRUCT_H_
 
-#include "util/HighsInt.h"
+#include "util/HighsType.h"
 
 #ifdef __cplusplus
 extern "C" {

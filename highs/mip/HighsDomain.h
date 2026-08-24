@@ -297,7 +297,7 @@ class HighsDomain {
     void recomputeCapacityThreshold();
   };
 
-  std::vector<uint8_t> changedcolsflags_;
+  std::vector<HighsBool> changedcolsflags_;
   std::vector<HighsInt> changedcols_;
 
   std::vector<std::pair<HighsInt, HighsInt>> propRowNumChangedBounds_;
@@ -311,7 +311,7 @@ class HighsDomain {
   std::vector<HighsInt> activitymininf_;
   std::vector<HighsInt> activitymaxinf_;
   std::vector<double> capacityThreshold_;
-  std::vector<uint8_t> propagateflags_;
+  std::vector<HighsBool> propagateflags_;
   std::vector<HighsInt> propagateinds_;
   ObjectivePropagation objProp_;
 
@@ -446,7 +446,7 @@ class HighsDomain {
   void addConflictPool(HighsConflictPool& conflictPool);
 
   void clearChangedCols() {
-    for (HighsInt i : changedcols_) changedcolsflags_[i] = 0;
+    for (HighsInt i : changedcols_) changedcolsflags_[i] = false;
     changedcols_.clear();
   }
 
@@ -462,12 +462,12 @@ class HighsDomain {
 
   void clearChangedCols(size_t start) {
     for (size_t i = start; i != changedcols_.size(); ++i)
-      changedcolsflags_[changedcols_[i]] = 0;
+      changedcolsflags_[changedcols_[i]] = false;
 
     changedcols_.resize(start);
   }
 
-  bool isChangedCol(HighsInt col) const { return changedcolsflags_[col] != 0; }
+  bool isChangedCol(HighsInt col) const { return changedcolsflags_[col]; }
 
   void markPropagate(HighsInt row);
 
@@ -525,6 +525,19 @@ class HighsDomain {
 
   const std::vector<std::pair<double, HighsInt>>& getPreviousBounds() const {
     return prevboundval_;
+  }
+
+  // Walk the prevboundval_ chain until we find a position where the bound
+  // value is strictly past the target (in the given direction).
+  // direction = +1: walk while value >= target (lower bound relaxation)
+  // direction = -1: walk while value <= target (upper bound relaxation)
+  // Returns false if the chain is exhausted (pos becomes -1).
+  bool walkBoundChain(HighsInt& pos, double target, HighsInt direction) const {
+    while (pos != -1 &&
+           direction * prevboundval_[pos].first >= direction * target) {
+      pos = prevboundval_[pos].second;
+    }
+    return pos != -1;
   }
 
   const std::vector<HighsDomainChange>& getDomainChangeStack() const {

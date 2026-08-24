@@ -7,6 +7,7 @@
 #include "Info.h"
 #include "Model.h"
 #include "ipm/hipo/auxiliary/IntConfig.h"
+#include "ipm/hipo/factorhighs/Symbolic.h"
 
 namespace hipo {
 
@@ -22,15 +23,16 @@ struct KktMatrix {
   std::vector<Int> rowsAS;
   std::vector<double> valAS;
 
-  std::vector<Int> iperm;
+  Symbolic S;
 
   const Model& model;
   const Regularisation& regul;
   Info& info;
   const Logger& logger;
+  const Options& options;
 
   KktMatrix(const Model& model, const Regularisation& regul, Info& info,
-            const Logger& logger);
+            const Logger& logger, const Options& options);
 
   Int buildASstructure();
   Int buildASvalues(const std::vector<double>& scaling);
@@ -43,6 +45,9 @@ struct KktMatrix {
   Int n() const;
   Int nz() const;
   std::string nla() const;
+  bool isNE() const;
+  bool isAS() const;
+  const std::vector<Int>& iperm() const;
 };
 
 }  // namespace hipo

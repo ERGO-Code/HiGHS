@@ -30,9 +30,6 @@ struct HighsSolution {
   void clear();
   void print(const std::string& prefix = "",
              const std::string& message = "") const;
-  bool isModelRow(HighsInt row) const {
-    return static_cast<size_t>(row) < row_value.size();
-  }
 };
 
 struct HighsObjectiveSolution {
@@ -182,7 +179,7 @@ struct HighsProfiling {
   HighsInt num_profiling_clock_ = -1;
   std::vector<std::string> name;
   // These vectors are over threads
-  std::vector<uint8_t> submip;
+  std::vector<HighsBool> submip;
   std::vector<HighsProfilingRecord> record;
   std::vector<HighsProfilingRecord> submip_record;
   bool initialized = false;
