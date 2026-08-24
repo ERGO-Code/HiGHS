@@ -136,7 +136,7 @@ jobs:
           path: build/*.zip
 
   build-windows-arm:
-    runs-on: windows-11-arm
+    runs-on: windows-11-vs2026-arm
     strategy:
       matrix:
         arch: [ARM64]
@@ -354,7 +354,7 @@ jobs:
           path: build/*.zip
 
   build-windows-arm-mit:
-    runs-on: windows-11-arm
+    runs-on: windows-11-vs2026-arm
     strategy:
       matrix:
         arch: [ARM64]
