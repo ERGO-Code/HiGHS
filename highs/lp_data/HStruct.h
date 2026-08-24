@@ -284,5 +284,4 @@ struct StatusString {
   std::string s2_;
 };
 
-
 #endif /* LP_DATA_HSTRUCT_H_ */
