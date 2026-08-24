@@ -725,10 +725,12 @@ HighsStatus Highs::passHessian(const HighsInt dim,
     oracle.call_ = [c_oracleCall](
                        const HighsInt type, const HighsInt* x_num_entries,
                        const HighsInt* x_index, const double* x_value,
-                       HighsInt* q_x_num_entries, HighsInt* q_x_index,
-                       double* q_x_value, void* data) {
+                       HighsInt* hessian_x_num_entries,
+                       HighsInt* hessian_x_index, double* hessian_x_value,
+                       void* data) {
       return c_oracleCall(type, x_num_entries, x_index, x_value,
-                          q_x_num_entries, q_x_index, q_x_value, data);
+                          hessian_x_num_entries, hessian_x_index,
+                          hessian_x_value, data);
     };
   } else {
     oracle.call_ = oracleCall;
@@ -4002,7 +4004,7 @@ HighsPostsolveStatus Highs::runPostsolve() {
   const HighsInt report_3040_col = -578;
   presolve_.data_.postSolveStack.undo(
       options_, presolve_.data_.recovered_solution_,
-      presolve_.data_.recovered_basis_, report_3040_col);
+      presolve_.data_.recovered_basis_, 0, report_3040_col);
   // Compute the row activities
   assert(model_.lp_.a_matrix_.isColwise());
   calculateRowValuesQuad(model_.lp_, presolve_.data_.recovered_solution_);

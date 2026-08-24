@@ -47,6 +47,8 @@ class HighsPostsolveStack {
   // the constructor call, and should restore primal/dual solution values, as
   // well as the basis status as appropriate.
  public:
+  enum class OrigRowType : uint8_t { kOriginal, kCut, kAppended };
+
   enum class RowType {
     kGeq,
     kLeq,
@@ -159,6 +161,14 @@ class HighsPostsolveStack {
               HighsBasis& basis) const;
   };
 
+  struct ImpliedEquation {
+    HighsInt row;
+    bool atLower;
+
+    void undo(const std::vector<Nonzero>& rowValues,
+              HighsSolution& solution) const;
+  };
+
   struct ForcingRow {
     double side;
     HighsInt row;
@@ -239,6 +249,7 @@ class HighsPostsolveStack {
     kSingletonRow,
     kFixedCol,
     kRedundantRow,
+    kImpliedEquation,
     kForcingRow,
     kForcingColumn,
     kForcingColumnRemovedRow,
@@ -251,12 +262,16 @@ class HighsPostsolveStack {
   std::vector<std::pair<ReductionType, size_t>> reductions;
   std::vector<HighsInt> origColIndex;
   std::vector<HighsInt> origRowIndex;
+  std::vector<OrigRowType> origRowType;
   std::vector<HighsBool> linearlyTransformable;
 
   std::vector<Nonzero> rowValues;
   std::vector<Nonzero> colValues;
   HighsInt origNumCol = -1;
   HighsInt origNumRow = -1;
+  HighsInt numAppendedRows = 0;
+  HighsInt nextRowIndex = -1;
+  HighsInt nextColIndex = -1;
 
   void reductionAdded(ReductionType type) {
     size_t position = reductionValues.getCurrentDataSize();
@@ -313,18 +328,38 @@ class HighsPostsolveStack {
   }
 
  public:
-  const HighsInt* getOrigRowsIndex() const { return origRowIndex.data(); }
+  const std::vector<HighsInt>& getOrigColIndex() const { return origColIndex; }
+  HighsInt getOrigColIndex(HighsInt col) const { return origColIndex[col]; }
 
-  const HighsInt* getOrigColsIndex() const { return origColIndex.data(); }
+  const std::vector<HighsInt>& getOrigRowIndex() const { return origRowIndex; }
+  HighsInt getOrigRowIndex(HighsInt row) const { return origRowIndex[row]; }
 
-  HighsInt getOrigRowIndex(HighsInt row) const {
-    assert(static_cast<size_t>(row) < origRowIndex.size());
-    return origRowIndex[row];
+  bool isOrigCol(HighsInt col) const { return origColIndex[col] < origNumCol; }
+
+  bool isOrigRow(HighsInt row) const {
+    return origRowType[row] == OrigRowType::kOriginal;
   }
 
-  HighsInt getOrigColIndex(HighsInt col) const {
-    assert(static_cast<size_t>(col) < origColIndex.size());
-    return origColIndex[col];
+  bool isAppendedRow(HighsInt row) const {
+    return origRowType[row] == OrigRowType::kAppended;
+  }
+
+  bool isCutRow(HighsInt row) const {
+    return origRowType[row] == OrigRowType::kCut;
+  }
+
+  bool hasAppendedRows() const { return numAppendedRows > 0; }
+
+  void appendToModel(HighsInt& numRows, HighsInt numRowsToAppend,
+                     OrigRowType rowType) {
+    if (numRowsToAppend <= 0) return;
+    size_t currNumRow = origRowIndex.size();
+    size_t newNumRow = currNumRow + numRowsToAppend;
+    origRowIndex.resize(newNumRow);
+    origRowType.resize(newNumRow, rowType);
+    for (size_t i = currNumRow; i != newNumRow; ++i)
+      origRowIndex[i] = nextRowIndex++;
+    numRows += numRowsToAppend;
   }
 
   HighsInt getPresolvedIndex(
@@ -347,28 +382,42 @@ class HighsPostsolveStack {
   }
 
   void appendCutsToModel(HighsInt numCuts) {
-    size_t currNumRow = origRowIndex.size();
-    size_t newNumRow = currNumRow + numCuts;
-    origRowIndex.resize(newNumRow);
-    for (size_t i = currNumRow; i != newNumRow; ++i)
-      origRowIndex[i] = origNumRow++;
+    appendToModel(origNumRow, numCuts, OrigRowType::kCut);
+  }
+
+  void appendRowsToModel(HighsInt numRows) {
+    appendToModel(numAppendedRows, numRows, OrigRowType::kAppended);
   }
 
   void removeCutsFromModel(HighsInt numCuts) {
+    if (numCuts <= 0) return;
     origNumRow -= numCuts;
-
-    size_t origRowIndexSize = origRowIndex.size();
-    for (size_t i = origRowIndex.size(); i > 0; --i) {
-      if (origRowIndex[i - 1] < origNumRow) break;
-      --origRowIndexSize;
+    size_t newSize = 0;
+    for (size_t i = 0; i < origRowIndex.size(); ++i) {
+      if (origRowType[i] != OrigRowType::kCut) {
+        if (i != newSize) {
+          origRowIndex[newSize] = origRowIndex[i];
+          origRowType[newSize] = origRowType[i];
+        }
+        ++newSize;
+      }
     }
-
-    origRowIndex.resize(origRowIndexSize);
+    origRowIndex.resize(newSize);
+    origRowType.resize(newSize);
   }
 
   HighsInt getOrigNumRow() const { return origNumRow; }
 
   HighsInt getOrigNumCol() const { return origNumCol; }
+
+  HighsInt getNextRowIndex() const { return nextRowIndex; }
+
+  HighsInt getNextColIndex() const { return nextColIndex; }
+
+  void appendColToModel() {
+    origColIndex.push_back(nextColIndex++);
+    linearlyTransformable.push_back(false);
+  }
 
   void initializeIndexMaps(HighsInt numRow, HighsInt numCol);
 
@@ -377,8 +426,19 @@ class HighsPostsolveStack {
 
   void compressRowIndexMap(const std::vector<HighsInt>& newRowIndex);
   void compressColIndexMap(const std::vector<HighsInt>& newColIndex);
+
+  template <typename T>
   void compressIndexMap(const std::vector<HighsInt>& newIndex,
-                        std::vector<HighsInt>& origIndex);
+                        std::vector<T>& origIndex) {
+    size_t numEn = origIndex.size();
+    for (size_t i = 0; i != newIndex.size(); ++i) {
+      if (newIndex[i] == -1)
+        --numEn;
+      else
+        origIndex[newIndex[i]] = origIndex[i];
+    }
+    origIndex.resize(numEn);
+  }
 
   /// transform a column x by a linear mapping with a new column x'.
   /// I.e. substitute x = scale * x' + constant
@@ -548,6 +608,17 @@ class HighsPostsolveStack {
   }
 
   template <typename RowStorageFormat>
+  void impliedEquation(HighsInt row, bool atLower,
+                       const HighsMatrixSlice<RowStorageFormat>& rowVec) {
+    rowValues.clear();
+    for (const HighsSliceNonzero& rowVal : rowVec)
+      rowValues.emplace_back(origColIndex[rowVal.index()], rowVal.value());
+    reductionValues.push(ImpliedEquation{origRowIndex[row], atLower});
+    reductionValues.push(rowValues);
+    reductionAdded(ReductionType::kImpliedEquation);
+  }
+
+  template <typename RowStorageFormat>
   void forcingRow(HighsInt row,
                   const HighsMatrixSlice<RowStorageFormat>& rowVec, double side,
                   RowType rowType) {
@@ -629,6 +700,7 @@ class HighsPostsolveStack {
   std::vector<double> getReducedPrimalSolution(
       const std::vector<double>& origPrimalSolution) {
     std::vector<double> reducedSolution = origPrimalSolution;
+    reducedSolution.resize(nextColIndex, 0.0);
 
     for (const std::pair<ReductionType, size_t>& primalColTransformation :
          reductions) {
@@ -686,6 +758,7 @@ class HighsPostsolveStack {
     for (size_t i = index.size(); i > 0; --i) {
       size_t to_i = static_cast<size_t>(index[i - 1]);
       assert(to_i >= i - 1);
+      assert(to_i < static_cast<size_t>(origSize));
       values[to_i] = values[i - 1];
       if (to_i > i - 1) values[i - 1] = zero;
     }
@@ -701,8 +774,8 @@ class HighsPostsolveStack {
 
   /// undo presolve steps for primal dual solution and basis
   void undo(const HighsOptions& options, HighsSolution& solution,
-            HighsBasis& basis, const HighsInt report_col = -1,
-            const bool thread_safe = false) {
+            HighsBasis& basis, size_t numReductions = 0,
+            const HighsInt report_col = -1, const bool thread_safe = false) {
     HighsDataStack reductionValuesCopy;
     std::vector<Nonzero> colValuesCopy;
     std::vector<Nonzero> rowValuesCopy;
@@ -725,26 +798,26 @@ class HighsPostsolveStack {
     bool perform_basis_postsolve = basis.valid;
 
     // expand solution to original index space
-    assert(origNumCol > 0);
-    undoIterateBackwards(solution.col_value, origColIndex, origNumCol, 0.0);
+    assert(nextColIndex > 0);
+    undoIterateBackwards(solution.col_value, origColIndex, nextColIndex, 0.0);
 
-    assert(origNumRow >= 0);
-    undoIterateBackwards(solution.row_value, origRowIndex, origNumRow, 0.0);
+    assert(nextRowIndex >= 0);
+    undoIterateBackwards(solution.row_value, origRowIndex, nextRowIndex, 0.0);
 
     if (perform_dual_postsolve) {
       // if dual solution is given, expand dual solution and basis to original
       // index space
-      undoIterateBackwards(solution.col_dual, origColIndex, origNumCol, 0.0);
+      undoIterateBackwards(solution.col_dual, origColIndex, nextColIndex, 0.0);
 
-      undoIterateBackwards(solution.row_dual, origRowIndex, origNumRow, 0.0);
+      undoIterateBackwards(solution.row_dual, origRowIndex, nextRowIndex, 0.0);
     }
 
     if (perform_basis_postsolve) {
       // if basis is given, expand basis status values to original index space
-      undoIterateBackwards(basis.col_status, origColIndex, origNumCol,
+      undoIterateBackwards(basis.col_status, origColIndex, nextColIndex,
                            HighsBasisStatus::kNonbasic);
 
-      undoIterateBackwards(basis.row_status, origRowIndex, origNumRow,
+      undoIterateBackwards(basis.row_status, origRowIndex, nextRowIndex,
                            HighsBasisStatus::kNonbasic);
     }
 
@@ -826,7 +899,11 @@ class HighsPostsolveStack {
     */
 
     // now undo the changes
-    for (size_t i = reductions.size(); i > 0; --i) {
+    for (size_t i = reductions.size(); i > numReductions; --i) {
+      if (report_col >= 0)
+        printf("Before  reduction %2d (type %2d): col_value[%2d] = %g\n",
+               int(i - 1), int(reductions[i - 1].first), int(report_col),
+               solution.col_value[report_col]);
       /*
       if (i - 1 == check_reduction) {
         printf("Checking reduction %d\n", int(check_reduction));
@@ -889,6 +966,13 @@ class HighsPostsolveStack {
           reduction.undo(options, solution, basis);
           break;
         }
+        case ReductionType::kImpliedEquation: {
+          ImpliedEquation reduction;
+          reductionValues_.pop(rowValues_);
+          reductionValues_.pop(reduction);
+          reduction.undo(rowValues_, solution);
+          break;
+        }
         case ReductionType::kForcingRow: {
           ForcingRow reduction;
           reductionValues_.pop(rowValues_);
@@ -938,6 +1022,14 @@ class HighsPostsolveStack {
     }
     //    if (report_col >= 0) reportColLogging(-2);
 
+    solution.col_value.resize(origNumCol);
+    if (perform_dual_postsolve) solution.col_dual.resize(origNumCol);
+    if (perform_basis_postsolve) basis.col_status.resize(origNumCol);
+
+    solution.row_value.resize(origNumRow);
+    if (perform_dual_postsolve) solution.row_dual.resize(origNumRow);
+    if (perform_basis_postsolve) basis.row_status.resize(origNumRow);
+
 #ifdef DEBUG_EXTRA
     // solution should not contain NaN or Inf
     assert(!containsNanOrInf(solution.col_value));
@@ -958,160 +1050,21 @@ class HighsPostsolveStack {
     HighsBasis basis;
     basis.valid = false;
     solution.dual_valid = false;
-    undo(options, solution, basis, report_col, thread_safe);
+    undo(options, solution, basis, 0, report_col, thread_safe);
   }
 
-  // Only used for debugging
-  void undoUntil(const HighsOptions& options, HighsSolution& solution,
-                 HighsBasis& basis, size_t numReductions) {
+  /*
+    // Not used
+  /// undo presolve steps for primal and dual solution
+  void undoPrimalDual(const HighsOptions& options, HighsSolution& solution) {
     reductionValues.resetPosition();
-
-    // Do these returns ever happen? How is it known that undo has not
-    // been performed?
-    assert(solution.col_value.size() == origColIndex.size());
-    assert(solution.row_value.size() == origRowIndex.size());
-    // This should be a better measure of whether undo can be
-    // performed
+    HighsBasis basis;
+    basis.valid = false;
     assert(solution.value_valid);
-    if (solution.col_value.size() != origColIndex.size()) return;
-    if (solution.row_value.size() != origRowIndex.size()) return;
-
-    bool perform_dual_postsolve = solution.dual_valid;
-    assert((solution.col_dual.size() == solution.col_value.size()) ==
-           perform_dual_postsolve);
-    bool perform_basis_postsolve = basis.valid;
-
-    // expand solution to original index space
-    undoIterateBackwards(solution.col_value, origColIndex, origNumCol, 0.0);
-
-    undoIterateBackwards(solution.row_value, origRowIndex, origNumRow, 0.0);
-
-    if (perform_dual_postsolve) {
-      // if dual solution is given, expand dual solution and basis to original
-      // index space
-      undoIterateBackwards(solution.col_dual, origColIndex, origNumCol, 0.0);
-
-      undoIterateBackwards(solution.row_dual, origRowIndex, origNumRow, 0.0);
-    }
-
-    if (perform_basis_postsolve) {
-      // if basis is given, expand basis status values to original index space
-      undoIterateBackwards(basis.col_status, origColIndex, origNumCol,
-                           HighsBasisStatus::kNonbasic);
-
-      undoIterateBackwards(basis.row_status, origRowIndex, origNumRow,
-                           HighsBasisStatus::kNonbasic);
-    }
-
-    // now undo the changes
-    for (size_t i = reductions.size(); i > numReductions; --i) {
-      switch (reductions[i - 1].first) {
-        case ReductionType::kLinearTransform: {
-          LinearTransform reduction;
-          reductionValues.pop(reduction);
-          reduction.undo(options, solution);
-          break;
-        }
-        case ReductionType::kFreeColSubstitution: {
-          FreeColSubstitution reduction;
-          reductionValues.pop(colValues);
-          reductionValues.pop(rowValues);
-          reductionValues.pop(reduction);
-          reduction.undo(options, rowValues, colValues, solution, basis);
-          break;
-        }
-        case ReductionType::kDoubletonEquation: {
-          DoubletonEquation reduction;
-          reductionValues.pop(colValues);
-          reductionValues.pop(reduction);
-          reduction.undo(options, colValues, solution, basis);
-          break;
-        }
-        case ReductionType::kEqualityRowAddition: {
-          EqualityRowAddition reduction;
-          reductionValues.pop(rowValues);
-          reductionValues.pop(reduction);
-          reduction.undo(options, rowValues, solution, basis);
-          break;
-        }
-        case ReductionType::kEqualityRowAdditions: {
-          EqualityRowAdditions reduction;
-          reductionValues.pop(colValues);
-          reductionValues.pop(rowValues);
-          reductionValues.pop(reduction);
-          reduction.undo(options, rowValues, colValues, solution, basis);
-          break;
-        }
-        case ReductionType::kSingletonRow: {
-          SingletonRow reduction;
-          reductionValues.pop(reduction);
-          reduction.undo(options, solution, basis);
-          break;
-        }
-        case ReductionType::kFixedCol: {
-          FixedCol reduction;
-          reductionValues.pop(colValues);
-          reductionValues.pop(reduction);
-          reduction.undo(options, colValues, solution, basis);
-          break;
-        }
-        case ReductionType::kRedundantRow: {
-          RedundantRow reduction;
-          reductionValues.pop(reduction);
-          reduction.undo(options, solution, basis);
-          break;
-        }
-        case ReductionType::kForcingRow: {
-          ForcingRow reduction;
-          reductionValues.pop(rowValues);
-          reductionValues.pop(reduction);
-          reduction.undo(options, rowValues, solution, basis);
-          break;
-        }
-        case ReductionType::kForcingColumn: {
-          ForcingColumn reduction;
-          reductionValues.pop(colValues);
-          reductionValues.pop(reduction);
-          reduction.undo(options, colValues, solution, basis);
-          break;
-        }
-        case ReductionType::kForcingColumnRemovedRow: {
-          ForcingColumnRemovedRow reduction;
-          reductionValues.pop(rowValues);
-          reductionValues.pop(reduction);
-          reduction.undo(options, rowValues, solution, basis);
-          break;
-        }
-        case ReductionType::kDuplicateRow: {
-          DuplicateRow reduction;
-          reductionValues.pop(reduction);
-          reduction.undo(options, solution, basis);
-          break;
-        }
-        case ReductionType::kDuplicateColumn: {
-          DuplicateColumn reduction;
-          reductionValues.pop(reduction);
-          reduction.undo(options, solution, basis);
-          break;
-        }
-        case ReductionType::kSlackColSubstitution: {
-          SlackColSubstitution reduction;
-          reductionValues.pop(rowValues);
-          reductionValues.pop(reduction);
-          reduction.undo(options, rowValues, solution, basis);
-          break;
-        }
-      }
-    }
-#ifdef DEBUG_EXTRA
-    // solution should not contain NaN or Inf
-    assert(!containsNanOrInf(solution.col_value));
-    // row values are not determined by postsolve
-    // assert(!containsNanOrInf(solution.row_value));
-    assert(!containsNanOrInf(solution.col_dual));
-    assert(!containsNanOrInf(solution.row_dual));
-#endif
+    assert(solution.dual_valid);
+    undo(options, solution, basis);
   }
+  */
 
   size_t numReductions() const { return reductions.size(); }
 };
