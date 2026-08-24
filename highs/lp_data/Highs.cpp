@@ -725,10 +725,12 @@ HighsStatus Highs::passHessian(const HighsInt dim,
     oracle.call_ = [c_oracleCall](
                        const HighsInt type, const HighsInt* x_num_entries,
                        const HighsInt* x_index, const double* x_value,
-                       HighsInt* q_x_num_entries, HighsInt* q_x_index,
-                       double* q_x_value, void* data) {
+                       HighsInt* hessian_x_num_entries,
+                       HighsInt* hessian_x_index, double* hessian_x_value,
+                       void* data) {
       return c_oracleCall(type, x_num_entries, x_index, x_value,
-                          q_x_num_entries, q_x_index, q_x_value, data);
+                          hessian_x_num_entries, hessian_x_index,
+                          hessian_x_value, data);
     };
   } else {
     oracle.call_ = oracleCall;

@@ -3540,7 +3540,9 @@ HPresolve::Result HPresolve::singletonRow(HighsPostsolveStack& postsolve_stack,
 
   // use either the primal feasibility tolerance for the bound constraint or
   // for the singleton row including scaling, whichever is tighter.
-  const double boundTol = primal_feastol / std::max(1.0, std::fabs(val));
+  const double boundTol =
+      std::max(primal_feastol / std::max(1.0, std::fabs(val)),
+               std::numeric_limits<double>::epsilon());
   const bool isIntegral = model->integrality_[col] != HighsVarType::kContinuous;
 
   bool lowerTightened = newColLower > model->col_lower_[col] + boundTol;
@@ -4636,7 +4638,8 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
         direction * impliedRowBound == kHighsInf ||
         abs(static_cast<HighsCDouble>(rowSide) -
             static_cast<HighsCDouble>(impliedRowBound)) >
-            primal_feastol / dynamism)
+            std::max(static_cast<double>(primal_feastol / dynamism),
+                     std::numeric_limits<double>::epsilon()))
       return Result::kOk;
 
     // get stored row
@@ -4996,7 +4999,9 @@ HPresolve::Result HPresolve::detectDominatedCol(
                                   : -impliedDualRowBounds.getSumLowerOrig(
                                         col, -model->col_cost_[col]);
       if (std::abs(boundOnColDual) <=
-          options->dual_feasibility_tolerance / dynamism) {
+          std::max(static_cast<double>(options->dual_feasibility_tolerance /
+                                       dynamism),
+                   std::numeric_limits<double>::epsilon())) {
         // 1. column dual's upper bound is zero (since the column's lower bound
         // is infinite) and column dual's lower bound is zero as well
         // (direction = 1) or
