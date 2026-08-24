@@ -140,8 +140,8 @@ bool HighsImplications::computeImplications(HighsInt col, bool val) {
     }
   }
 
-  HighsInt loc = 2 * col + val;
-  hasProbed[loc] = true;
+  ImplIdx idx{col, val};
+  hasProbed[idx] = true;
   implics.erase(binstart, implics.end());
   for (HighsDomainChange& implic : implics) {
     Implication implication;
@@ -150,7 +150,7 @@ bool HighsImplications::computeImplications(HighsInt col, bool val) {
     } else {
       implication.ub = implic.boundval;
     }
-    addImplication(loc, implic.column, implication);
+    addImplication(idx, implic.column, implication);
   }
 
   return false;
@@ -321,7 +321,7 @@ bool HighsImplications::runProbing(HighsInt col, HighsInt& numReductions) {
     auto analyseImplications = [&](const HighsInt implcol,
                                    const Implication& downImplication) {
       if (colsubstituted[implcol] || globaldomain.isFixed(implcol)) return;
-      Implication* upImplication = implications[2 * col + 1].find(implcol);
+      Implication* upImplication = implications[ImplIdx{col, 1}].find(implcol);
       if (upImplication) {
         const double lbDown =
             std::max(globaldomain.col_lower_[implcol], downImplication.lb);
@@ -361,9 +361,9 @@ bool HighsImplications::runProbing(HighsInt col, HighsInt& numReductions) {
       }
     };
 
-    implications[2 * col].for_each(analyseImplications);
-    hasProbed[2 * col] = true;
-    hasProbed[2 * col + 1] = true;
+    implications[ImplIdx{col, 0}].for_each(analyseImplications);
+    hasProbed[ImplIdx{col, 0}] = true;
+    hasProbed[ImplIdx{col, 1}] = true;
 
     return true;
   }
@@ -371,9 +371,9 @@ bool HighsImplications::runProbing(HighsInt col, HighsInt& numReductions) {
   return false;
 }
 
-void HighsImplications::addImplication(HighsInt loc, HighsInt implCol,
+void HighsImplications::addImplication(ImplIdx idx, HighsInt implCol,
                                        Implication implic) {
-  auto insertresult = implications[loc].insert_or_get(implCol, implic);
+  auto insertresult = implications[idx].insert_or_get(implCol, implic);
 
   if (!insertresult.second) {
     if (insertresult.first->lb == -kHighsInf && implic.lb != -kHighsInf)
@@ -387,7 +387,7 @@ void HighsImplications::addImplication(HighsInt loc, HighsInt implCol,
     if (implic.ub != kHighsInf) ++numImplications;
   }
 
-  reverseImplications[implCol].insert_or_get(std::floor(loc / 2));
+  reverseImplications[implCol].insert_or_get(idx.col);
 }
 
 void HighsImplications::strengthenVarBound(VarBound& vbnd,
@@ -569,14 +569,14 @@ void HighsImplications::rebuild(HighsInt ncols,
 
     if (mipsolver.mipdata_->getDomain().isBinary(newi)) {
       for (HighsInt val = 0; val != 2; val++) {
-        oldimplications[2 * i + val].for_each([&](HighsInt implCol,
-                                                  Implication impl) {
+        oldimplications[ImplIdx{i, val}].for_each([&](HighsInt implCol,
+                                                      Implication impl) {
           HighsInt newImplCol = orig2reducedcol[implCol];
           if (newImplCol == -1 ||
               !mipsolver.mipdata_->postSolveStack.isColLinearlyTransformable(
                   newImplCol))
             return;
-          addImplication(2 * newi + val, newImplCol, impl);
+          addImplication(ImplIdx{newi, val}, newImplCol, impl);
         });
       }
     }
@@ -600,9 +600,9 @@ void HighsImplications::buildFrom(const HighsImplications& init) {
 
     if (mipsolver.mipdata_->getDomain().isBinary(i)) {
       for (HighsInt val = 0; val != 2; val++) {
-        init.implications[2 * i + val].for_each(
+        init.implications[ImplIdx{i, val}].for_each(
             [&](HighsInt implCol, Implication implic) {
-              addImplication(2 * i + val, implCol, implic);
+              addImplication(ImplIdx{i, val}, implCol, implic);
             });
       }
     }
@@ -685,7 +685,7 @@ void HighsImplications::separateImpliedBounds(
       continue;
 
     for (HighsInt val = 0; val != 2; val++) {
-      implications[2 * col + val].for_each(
+      implications[ImplIdx{col, val}].for_each(
           [&](HighsInt implCol, Implication implic) {
             if (val == 1) {
               if (implic.ub + feastol < globaldom.col_upper_[implCol]) {
@@ -880,6 +880,5 @@ void HighsImplications::applyImplications(HighsDomain& domain,
     return domain.infeasible();
   };
 
-  HighsInt loc = 2 * col + val;
-  implications[loc].for_each(checkImplication);
+  implications[ImplIdx{col, val}].for_each(checkImplication);
 }
