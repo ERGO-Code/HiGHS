@@ -87,10 +87,7 @@ class HighsMipWorker {
                  HighsDomain* domain, HighsCutPool* cutpool,
                  HighsConflictPool* conflictpool, HighsPseudocost* pseudocost);
 
-  ~HighsMipWorker() {
-    search_ptr_.reset();
-    sepa_ptr_.reset();
-  }
+  ~HighsMipWorker();
 
   void resetSearch();
 
