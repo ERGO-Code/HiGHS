@@ -412,6 +412,14 @@ HighsStatus solveLpHipo(HighsLpSolverObject& solver_object) {
                    solver_object.highs_info_, solver_object.callback_);
 }
 
+HighsStatus solveQpHipo(HighsQpSolverObject& solver_object) {
+  return solveHipo(solver_object.options_, solver_object.timer_,
+                   solver_object.model_.lp_, solver_object.model_.hessian_,
+                   solver_object.basis_, solver_object.solution_,
+                   solver_object.model_status_, solver_object.highs_info_,
+                   solver_object.callback_);
+}
+
 HighsStatus solveHipo(const HighsOptions& options, HighsTimer& timer,
                       const HighsLp& lp, const HighsHessian& Q,
                       HighsBasis& highs_basis, HighsSolution& highs_solution,
@@ -491,15 +499,8 @@ HighsStatus solveHipo(const HighsOptions& options, HighsTimer& timer,
   // const bool report_solve_data =
   //    kHighsAnalysisLevelSolverSummaryData & options.highs_analysis_level;
 
-  // Differently from IPX, HiPO returns a single status. So, dealing with
-  // statuses is a bit different.
   // hipo.solved(), hipo.stopped(), hipo.failed() can be used to query if the
   // status belongs to the solved, stopped or failed group.
-  // If primal-dual feasible solution is found (non-vertex solution), then the
-  // status is kStatusPDfeas.
-  // If crossover is successful, then the status is kStatusBasic.
-  // Otherwise, the specific crossover status can be accessed through the
-  // ipx_info stored in hipo_info.
 
   // Get solver and solution information.
   const hipo::Info hipo_info = hipo.getInfo();
@@ -584,8 +585,7 @@ HighsStatus solveHipo(const HighsOptions& options, HighsTimer& timer,
   }
 
   // Status should be optimal or imprecise
-  if (ipxStatusError(solve_status != hipo::kStatusPDFeas &&
-                         solve_status != hipo::kStatusBasic &&
+  if (ipxStatusError(solve_status != hipo::kStatusOptimal &&
                          solve_status != hipo::kStatusImprecise,
                      options, "Hipo",
                      "status should be optimal or imprecise but value is",
@@ -593,7 +593,6 @@ HighsStatus solveHipo(const HighsOptions& options, HighsTimer& timer,
     return HighsStatus::kError;
 
   const bool have_basic_solution =
-      hipo_info.ipx_used &&
       hipo_info.ipx_info.status_crossover != IPX_STATUS_not_run;
 
   const bool imprecise_solution =
@@ -1397,51 +1396,15 @@ HighsStatus reportHipoStatus(const HighsOptions& options,
     return HighsStatus::kOk;
   }
 
-  // these are warnings
-  else if (status == hipo::kStatusTimeLimit) {
-    highsLogUser(options.log_options, HighsLogType::kWarning,
-                 "Hipo: Time limit\n");
-    return HighsStatus::kWarning;
-  } else if (status == hipo::kStatusUserInterrupt) {
-    highsLogUser(options.log_options, HighsLogType::kWarning,
-                 "Hipo: User interrupt\n");
-    return HighsStatus::kWarning;
-  } else if (status == hipo::kStatusMaxIter) {
-    highsLogUser(options.log_options, HighsLogType::kWarning,
-                 "Hipo: Reached maximum iterations\n");
-    return HighsStatus::kWarning;
-  } else if (status == hipo::kStatusNoProgress) {
-    highsLogUser(options.log_options, HighsLogType::kWarning,
-                 "Hipo: No progress\n");
-    return HighsStatus::kWarning;
-  } else if (status == hipo::kStatusImprecise) {
-    highsLogUser(options.log_options, HighsLogType::kWarning,
-                 "Hipo: Imprecise solution\n");
+  else if (hipo.stopped()) {
+    highsLogUser(options.log_options, HighsLogType::kWarning, "Hipo: %s\n",
+                 hipo::statusString((hipo::Status)status).c_str());
     return HighsStatus::kWarning;
   }
 
-  // these are errors
-  else if (status == hipo::kStatusError) {
-    highsLogUser(options.log_options, HighsLogType::kError,
-                 "Hipo: Internal error\n");
-  } else if (status == hipo::kStatusOverflow) {
-    highsLogUser(options.log_options, HighsLogType::kError,
-                 "Hipo: Integer overflow\n");
-  } else if (status == hipo::kStatusErrorAnalyse) {
-    highsLogUser(options.log_options, HighsLogType::kError,
-                 "Hipo: Error in analyse phase\n");
-  } else if (status == hipo::kStatusErrorFactorise) {
-    highsLogUser(options.log_options, HighsLogType::kError,
-                 "Hipo: Error in factorise phase\n");
-  } else if (status == hipo::kStatusErrorSolve) {
-    highsLogUser(options.log_options, HighsLogType::kError,
-                 "Hipo: Error in solve phase\n");
-  } else if (status == hipo::kStatusBadModel) {
-    highsLogUser(options.log_options, HighsLogType::kError,
-                 "Hipo: Invalid model\n");
-  } else {
-    highsLogUser(options.log_options, HighsLogType::kError,
-                 "Hipo: Unrecognized status\n");
+  else if (hipo.failed()) {
+    highsLogUser(options.log_options, HighsLogType::kError, "Hipo: %s\n",
+                 hipo::statusString((hipo::Status)status).c_str());
   }
   return HighsStatus::kError;
 }
