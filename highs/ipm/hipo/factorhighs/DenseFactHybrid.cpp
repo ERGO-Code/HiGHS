@@ -125,9 +125,9 @@ Int denseFactFH(Int n, Int k, double* A, double* B, const Int* pivot_sign,
       // ===========================================================================
       highs::parallel::TaskGroup tg;
 
-      auto split_gemm = [=, &data, &options](Int num_row, Int num_col,
-                                             const double* Rj, const double* Pj,
-                                             double* Qj) {
+      auto split_gemm = [=, &data, &options, &tg](
+                            Int num_row, Int num_col, const double* Rj,
+                            const double* Pj, double* Qj) {
         // Qj -= Rj * Pj^T
 
         const bool do_split = options.parallel_node && num_col > nb / 2 &&
@@ -158,11 +158,7 @@ Int denseFactFH(Int n, Int k, double* A, double* B, const Int* pivot_sign,
             callAndTime_dgemm('T', 'N', num_col, num_row, jb, -1.0, Pj, jb, Rj,
                               jb, 1.0, Qj, num_col, data);
           };
-
-          if (options.parallel_node)
-            tg.spawn([=]() { do_gemm_full(); });
-          else
-            do_gemm_full();
+          do_gemm_full();
         }
       };
 
