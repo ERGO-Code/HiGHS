@@ -844,6 +844,9 @@ bool HighsSymmetryDetection::partitionRefinement() {
     HighsInt cellEnd = currentPartitionLinks[cellStart];
     assert(cellEnd >= cellStart);
 
+    const size_t startCreationStackSize = cellCreationStack.size();
+    const size_t startCertificateSize = currNodeCertificate.size();
+
     // first check which vertices do have updated hash values and put them to
     // the end of the partition
     HighsInt refineStart =
@@ -914,6 +917,15 @@ bool HighsSymmetryDetection::partitionRefinement() {
       // undo possibly incomplete changes done to the cells
       for (--i; i >= refineStart; --i)
         updateCellMembership(i, firstCellStart, false);
+
+      cellCreationStack.resize(startCreationStackSize);
+      currNodeCertificate.resize(startCertificateSize);
+      if (!firstLeaveCertificate.empty()) {
+        firstLeavePrefixLen = std::min(
+            firstLeavePrefixLen, static_cast<HighsInt>(startCertificateSize));
+        bestLeavePrefixLen = std::min(
+            bestLeavePrefixLen, static_cast<HighsInt>(startCertificateSize));
+      }
 
       return false;
     }
