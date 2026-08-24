@@ -306,7 +306,7 @@ static QpSolverStatus reinvert(Basis& basis, CholeskyFactor& factor,
 }
 
 void Quass::solve(const QpVector& x0, const QpVector& ra, Basis& b0,
-                  HighsTimer& timer) {
+                  HighsTimer& timer, HighsCallback& callback) {
   // feenableexcept(FE_ALL_EXCEPT & ~FE_INEXACT & ~FE_UNDERFLOW);
 
   runtime.statistics.time_start = std::chrono::high_resolution_clock::now();
@@ -361,7 +361,19 @@ void Quass::solve(const QpVector& x0, const QpVector& ra, Basis& b0,
       runtime.status = QpModelStatus::kTimeLimit;
       break;
     }
-
+    // Check interrupt
+    if (callback.active[kCallbackQpInterrupt]) {
+      callback.clearHighsCallbackOutput();
+      callback.data_out.qpasm_iteration_count =
+          runtime.statistics.num_iterations;
+      callback.data_out.objective_function_value =
+          runtime.instance.objval(runtime.primal);
+      if (callback.callbackAction(kCallbackQpInterrupt, "QP: interrupt")) {
+        runtime.status = QpModelStatus::kInterrupt;
+        return;
+      }
+    }
+    // Check null space limit
     if (basis.getnuminactive() > runtime.settings.nullspace_limit) {
       runtime.settings.nullspace_limit_log.fire(
           runtime.settings.nullspace_limit);
