@@ -1335,9 +1335,9 @@ void HighsPostsolveStack::SlackColSubstitution::undo(
     printf(
         "HighsPostsolveStack::SlackColSubstitution::undo OgRowStatus = %s; "
         "RowStatus = %s; ColStatus = %s\n",
-        utilBasisStatusToString(save_row_basis_status).c_str(),
-        utilBasisStatusToString(basis.row_status[row]).c_str(),
-        utilBasisStatusToString(basis.col_status[col]).c_str());
+        utilBasisStatusToString(save_row_basis_status).full_.c_str(),
+        utilBasisStatusToString(basis.row_status[row]).full_.c_str(),
+        utilBasisStatusToString(basis.col_status[col]).full_.c_str());
   if (basis.col_status[col] == HighsBasisStatus::kLower) {
     assert(solution.col_dual[col] > -options.dual_feasibility_tolerance);
   } else if (basis.col_status[col] == HighsBasisStatus::kUpper) {

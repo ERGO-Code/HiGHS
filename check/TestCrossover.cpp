@@ -103,7 +103,7 @@ void report(const std::string message, const HighsLp& lp,
   for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
     const double value = solution.col_value[iCol];
     const std::string status =
-        basis.valid ? utilBasisStatusToString(basis.col_status[iCol]) : "";
+        basis.valid ? utilBasisStatusToString(basis.col_status[iCol]).full_ : "";
     objective += value * lp.col_cost_[iCol];
     printf("%4d %11.4g   %s\n", (int)iCol, value, status.c_str());
   }

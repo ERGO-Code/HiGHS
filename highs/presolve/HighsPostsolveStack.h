@@ -870,7 +870,7 @@ class HighsPostsolveStack {
                                     solution.col_dual[iCol]);
         if (perform_basis_postsolve)
           ss << highsFormatToString("; status = %s",
-                                    utilBasisStatusToString(basis.col_status[iCol]).c_str());
+                                    utilBasisStatusToString(basis.col_status[iCol]).full_.c_str());
         printf("%s\n", ss.str().c_str());
       }
       for (HighsInt iRow = 0; iRow < origNumRow; iRow++) {
@@ -882,7 +882,7 @@ class HighsPostsolveStack {
                                     solution.row_dual[iRow]);
         if (perform_basis_postsolve)
           ss << highsFormatToString("; status = %s",
-                                    utilBasisStatusToString(basis.row_status[iRow]).c_str());
+                                    utilBasisStatusToString(basis.row_status[iRow]).full_.c_str());
         printf("%s\n", ss.str().c_str());
       }
     };
@@ -919,7 +919,7 @@ class HighsPostsolveStack {
                                   solution.col_dual[report_col]);
       if (perform_basis_postsolve)
         ss << highsFormatToString(" status = %s",
-                                  utilBasisStatusToString(basis.col_status[report_col]).c_str());
+                                  utilBasisStatusToString(basis.col_status[report_col]).full_.c_str());
       printf("%s\n", ss.str().c_str());
       report_col_value = col_value;
     };
