@@ -21,7 +21,7 @@
 
 #include "lp_data/HConst.h"
 #include "test_kkt/DevKkt.h"
-#include "util/HighsInt.h"
+#include "util/HighsType.h"
 
 namespace presolve {
 

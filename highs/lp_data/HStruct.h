@@ -11,6 +11,7 @@
 #ifndef LP_DATA_HSTRUCT_H_
 #define LP_DATA_HSTRUCT_H_
 
+#include <functional>
 #include <unordered_map>
 #include <vector>
 
@@ -29,9 +30,6 @@ struct HighsSolution {
   void clear();
   void print(const std::string& prefix = "",
              const std::string& message = "") const;
-  bool isModelRow(HighsInt row) const {
-    return static_cast<size_t>(row) < row_value.size();
-  }
 };
 
 struct HighsObjectiveSolution {
@@ -181,7 +179,7 @@ struct HighsProfiling {
   HighsInt num_profiling_clock_ = -1;
   std::vector<std::string> name;
   // These vectors are over threads
-  std::vector<uint8_t> submip;
+  std::vector<HighsBool> submip;
   std::vector<HighsProfilingRecord> record;
   std::vector<HighsProfilingRecord> submip_record;
   bool initialized = false;
@@ -244,6 +242,40 @@ struct HighsUserScaleData {
                   const double& large_matrix_value_);
   bool scaleError(std::string& message) const;
   bool scaleWarning(std::string& message) const;
+};
+
+using HighsHessianFunctionType = std::function<HighsInt(
+    const HighsInt call_type, const HighsInt* x_num_entries,
+    const HighsInt* x_index, const double* x_value, HighsInt* q_x_num_entries,
+    HighsInt* q_x_index, double* q_x_value, void*)>;
+
+struct HessianOracle {
+  // Oracle to obtain values of Q' = multiplier_*Q + shift_*I and form
+  // products with Q', by calling a user-supplied function (call_) to
+  // form products with Q and then apply any non-trivial multiplier_
+  // or shift_
+  HighsInt dim_ = 0;
+  double multiplier_ = 1.0;  // Minimize
+  double shift_ = 0.0;       // No regularization
+  HighsHessianFunctionType call_ = nullptr;
+  void* data_ = nullptr;
+  void clear();
+  bool isValid() const { return hasProductCall(); }
+  bool hasProductCall() const;
+  void formFromOracle();
+  double diagonal(const HighsInt i) const;
+  double entry(const HighsInt i, const HighsInt j) const;
+  void getPackedColumn(const HighsInt col, HighsInt& col_num_entries,
+                       HighsInt* col_index, double* col_value) const;
+  void getScatteredColumn(const HighsInt col, HighsInt& col_num_entries,
+                          HighsInt* col_index, double* col_value) const;
+  void product(const std::vector<double>& x_value,
+               std::vector<double>& q_x_value) const;
+  void product(const double* x_value, double* q_x_value) const;
+  void product(const HighsInt x_num_entries, const HighsInt* x_index,
+               const double* x_value, double* q_x_value) const;
+  void scaleAndShift(const HighsInt* x_num_entries, const HighsInt* x_index,
+                     const double* x_value, double* q_x_value) const;
 };
 
 #endif /* LP_DATA_HSTRUCT_H_ */

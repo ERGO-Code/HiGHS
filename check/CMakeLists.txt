@@ -72,6 +72,7 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
       TestPdlpHi.cpp
       TestPresolve.cpp
       TestPresolveRules.cpp
+      TestQpOracle.cpp
       TestQpSolver.cpp
       TestRanging.cpp
       TestRays.cpp
@@ -80,6 +81,7 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
       TestSetup.cpp
       TestSort.cpp
       TestSpecialLps.cpp
+      TestSymmetry.cpp
       TestThrow.cpp
       TestTspSolver.cpp
       TestUserScale.cpp

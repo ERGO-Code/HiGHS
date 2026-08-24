@@ -21,8 +21,8 @@
 #include "parallel/HighsCacheAlign.h"
 #include "parallel/HighsSpinMutex.h"
 #include "parallel/HighsTask.h"
-#include "util/HighsInt.h"
 #include "util/HighsRandom.h"
+#include "util/HighsType.h"
 
 #ifdef __has_feature
 #if __has_feature(thread_sanitizer)

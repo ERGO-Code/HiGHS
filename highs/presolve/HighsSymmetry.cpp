@@ -323,6 +323,50 @@ bool StabilizerOrbits::isStabilized(HighsInt col) const {
          std::binary_search(stabilizedCols.begin(), stabilizedCols.end(), col);
 }
 
+void HighsOrbitopeMatrix::detectSetPackingRows(HighsCliqueTable& cliquetable,
+                                               HighsInt cliqueVal) {
+  RowPackingStatus resultStatus =
+      (cliqueVal == 1) ? kRowPacking : kRowPackingNegated;
+
+  for (HighsInt j = 1; j < rowLength; ++j) {
+    HighsInt* colj1 = &entry(0, j);
+
+    for (HighsInt j0 = 0; j0 < j; ++j0) {
+      HighsInt* colj0 = &entry(0, j0);
+
+      for (HighsInt i = 0; i < numRows; ++i) {
+        if (rowIsSetPacking[i] != kRowUndetermined) continue;
+
+        HighsInt xj0 = colj0[i];
+        HighsInt xj1 = colj1[i];
+
+        auto commonClique =
+            cliquetable.findCommonClique({xj0, cliqueVal}, {xj1, cliqueVal});
+
+        if (commonClique.first == nullptr) {
+          rowIsSetPacking[i] = kRowNotPacking;
+          continue;
+        }
+
+        HighsInt overlap = 0;
+
+        for (HighsInt k = 0; k < commonClique.second; ++k) {
+          if (commonClique.first[k].val == 1 - cliqueVal) continue;
+
+          HighsInt* cliqueColRow = columnToRow.find(commonClique.first[k].col);
+          if (cliqueColRow && *cliqueColRow == i) ++overlap;
+        }
+
+        if (overlap == rowLength) {
+          rowIsSetPacking[i] = resultStatus;
+          ++numSetPackingRows;
+          if (numSetPackingRows == numRows) return;
+        }
+      }
+    }
+  }
+}
+
 void HighsOrbitopeMatrix::determineOrbitopeType(HighsCliqueTable& cliquetable) {
   for (HighsInt j = 0; j < rowLength; ++j) {
     for (HighsInt i = 0; i < numRows; ++i) {
@@ -333,46 +377,9 @@ void HighsOrbitopeMatrix::determineOrbitopeType(HighsCliqueTable& cliquetable) {
   rowIsSetPacking.assign(numRows, kRowUndetermined);
   numSetPackingRows = 0;
 
-  for (HighsInt j = 1; j < rowLength; ++j) {
-    HighsInt* colj1 = &entry(0, j);
+  detectSetPackingRows(cliquetable, HighsInt{1});
 
-    for (HighsInt j0 = 0; j0 < j; ++j0) {
-      HighsInt* colj0 = &entry(0, j0);
-
-      for (HighsInt i = 0; i < numRows; ++i) {
-        if (rowIsSetPacking[i] != kRowUndetermined) continue;
-
-        HighsInt xj0 = colj0[i];
-        HighsInt xj1 = colj1[i];
-
-        auto commonClique = cliquetable.findCommonClique({xj0, 1}, {xj1, 1});
-
-        if (commonClique.first == nullptr) {
-          rowIsSetPacking[i] = kRowNotPacking;
-          continue;
-        }
-
-        HighsInt overlap = 0;
-
-        for (HighsInt k = 0; k < commonClique.second; ++k) {
-          if (commonClique.first[k].val == 0) continue;
-
-          HighsInt* cliqueColRow = columnToRow.find(commonClique.first[k].col);
-          if (cliqueColRow && *cliqueColRow == i) ++overlap;
-        }
-
-        if (overlap == rowLength) {
-          rowIsSetPacking[i] = kRowPacking;
-          ++numSetPackingRows;
-          if (numSetPackingRows == numRows) break;
-        }
-      }
-
-      if (numSetPackingRows == numRows) break;
-    }
-
-    if (numSetPackingRows == numRows) break;
-  }
+  if (numSetPackingRows == numRows) return;
 
   // now for the rows that do not have a set packing structure check
   // if we have such structure when all columns in the row are negated
@@ -382,50 +389,7 @@ void HighsOrbitopeMatrix::determineOrbitopeType(HighsCliqueTable& cliquetable) {
       rowIsSetPacking[i] = kRowUndetermined;
   }
 
-  for (HighsInt j = 1; j < rowLength; ++j) {
-    HighsInt* colj1 = &entry(0, j);
-
-    for (HighsInt j0 = 0; j0 < j; ++j0) {
-      HighsInt* colj0 = &entry(0, j0);
-
-      for (HighsInt i = 0; i < numRows; ++i) {
-        if (rowIsSetPacking[i] != kRowUndetermined) continue;
-
-        HighsInt xj0 = colj0[i];
-        HighsInt xj1 = colj1[i];
-
-        // now look for cliques with value 0
-        auto commonClique = cliquetable.findCommonClique({xj0, 0}, {xj1, 0});
-
-        if (commonClique.first == nullptr) {
-          rowIsSetPacking[i] = kRowNotPacking;
-          continue;
-        }
-
-        HighsInt overlap = 0;
-
-        for (HighsInt k = 0; k < commonClique.second; ++k) {
-          // skip clique variables with values of 1
-          if (commonClique.first[k].val == 1) continue;
-
-          HighsInt* cliqueColRow = columnToRow.find(commonClique.first[k].col);
-          if (cliqueColRow && *cliqueColRow == i) ++overlap;
-        }
-
-        if (overlap == rowLength) {
-          // mark with value 2, for negated set packing row with at most one
-          // zero
-          rowIsSetPacking[i] = kRowPackingNegated;
-          ++numSetPackingRows;
-          if (numSetPackingRows == numRows) break;
-        }
-      }
-
-      if (numSetPackingRows == numRows) break;
-    }
-
-    if (numSetPackingRows == numRows) break;
-  }
+  detectSetPackingRows(cliquetable, HighsInt{0});
 }
 
 HighsInt HighsOrbitopeMatrix::getBranchingColumn(
@@ -471,13 +435,35 @@ HighsInt HighsOrbitopeMatrix::orbitalFixingForPackingOrbitope(
 
   HighsInt j = 0;
   HighsInt numFixed = 0;
+
+  // Fix row entries from 0 to kEnd - 1 at orbitope column to zero.
+  // Returns true if the domain becomes infeasible.
+  auto fixColumnsToZero = [&](HighsInt kEnd, HighsInt col_j) {
+    for (HighsInt k = 0; k < kEnd; ++k) {
+      assert(firstOneInRow[k] < j);
+      HighsInt col_kj = entry(rows[k], col_j);
+      bool negate_k = rowIsSetPacking[rows[k]] == kRowPackingNegated;
+      if (negate_k) {
+        if (domain.col_lower_[col_kj] > 0.5) continue;
+        domain.changeBound(HighsBoundType::kLower, col_kj, 1.0,
+                           HighsDomain::Reason::unspecified());
+      } else {
+        if (domain.col_upper_[col_kj] < 0.5) continue;
+        domain.changeBound(HighsBoundType::kUpper, col_kj, 0.0,
+                           HighsDomain::Reason::unspecified());
+      }
+      ++numFixed;
+      if (domain.infeasible()) return true;
+    }
+    return false;
+  };
+
   for (HighsInt i = 0; i < numDynamicRows; ++i) {
     // at this position we know that the last possible position
     // of a 1-entry in this row is j. If we have a 1 behind j
     // the face of the orbitope intersecting the set of initial fixings is empty
     if (firstOneInRow[i] > j) {
       domain.markInfeasible();
-      // printf("packing orbitope propagation found infeasibility\n");
       return numFixed;
     }
     HighsInt col_ij = entry(rows[i], j);
@@ -508,10 +494,7 @@ HighsInt HighsOrbitopeMatrix::orbitalFixingForPackingOrbitope(
                                HighsDomain::Reason::unspecified());
 
           ++numFixed;
-          if (domain.infeasible()) {
-            // printf("packing orbitope propagation found infeasibility\n");
-            return numFixed;
-          }
+          if (domain.infeasible()) return numFixed;
           break;
         }
 
@@ -529,67 +512,13 @@ HighsInt HighsOrbitopeMatrix::orbitalFixingForPackingOrbitope(
       ++j;
       if (j == rowLength) break;
 
-      for (HighsInt k = 0; k <= i; ++k) {
-        // we should have checked this row at the frontier position
-        assert(firstOneInRow[k] < j);
-
-        HighsInt col_kj = entry(rows[k], j);
-        bool negate_k = rowIsSetPacking[rows[k]] == kRowPackingNegated;
-
-        if (negate_k) {
-          if (domain.col_lower_[col_kj] > 0.5) continue;
-
-          domain.changeBound(HighsBoundType::kLower, col_kj, 1.0,
-                             HighsDomain::Reason::unspecified());
-        } else {
-          if (domain.col_upper_[col_kj] < 0.5) continue;
-
-          domain.changeBound(HighsBoundType::kUpper, col_kj, 0.0,
-                             HighsDomain::Reason::unspecified());
-        }
-
-        ++numFixed;
-        if (domain.infeasible()) {
-          // this can happen due to deductions from earlier fixings
-          // otherwise it would have been caught by the infeasibility
-          // check within the next loop that goes over i
-          // printf("packing orbitope propagation found infeasibility\n");
-          return numFixed;
-        }
-      }
+      if (fixColumnsToZero(i + 1, j)) return numFixed;
     }
   }
 
   // check if there are more columns that can be completely fixed to zero
   while (++j < rowLength) {
-    for (HighsInt k = 0; k < numDynamicRows; ++k) {
-      // we should have checked this row at the frontier position
-      assert(firstOneInRow[k] < j);
-
-      HighsInt col_kj = entry(rows[k], j);
-      bool negate_k = rowIsSetPacking[rows[k]] == kRowPackingNegated;
-
-      if (negate_k) {
-        if (domain.col_lower_[col_kj] > 0.5) continue;
-
-        domain.changeBound(HighsBoundType::kLower, col_kj, 1.0,
-                           HighsDomain::Reason::unspecified());
-      } else {
-        if (domain.col_upper_[col_kj] < 0.5) continue;
-
-        domain.changeBound(HighsBoundType::kUpper, col_kj, 0.0,
-                           HighsDomain::Reason::unspecified());
-      }
-      // printf("new fixed\n");
-      ++numFixed;
-      if (domain.infeasible()) {
-        // this can happen due to deductions from earlier fixings
-        // otherwise it would have been caught by the infeasibility
-        // check within the next loop that goes over i
-        // printf("packing orbitope propagation found infeasibility\n");
-        return numFixed;
-      }
-    }
+    if (fixColumnsToZero(numDynamicRows, j)) return numFixed;
   }
 
   if (!domain.infeasible() && numFixed) domain.propagate();
@@ -641,58 +570,49 @@ HighsInt HighsOrbitopeMatrix::orbitalFixingForFullOrbitope(
     return HighsInt{-1};
   };
 
-  for (HighsInt j = rowLength - 2; j >= 0; --j) {
-    int8_t* colj0 = Mminimal.data() + j * numDynamicRows;
-    int8_t* colj1 = colj0 + numDynamicRows;
-    HighsInt i_f = i_fixed(colj0, colj1);
+  // Propagate lexicographic bounds column by column.
+  // direction = -1: compute minimal matrix (right to left)
+  // direction = +1: compute maximal matrix (left to right)
+  auto propagateColumns = [&](int8_t* M, HighsInt jStart, HighsInt jEnd,
+                              HighsInt direction, int8_t fixedVal,
+                              int8_t fillAbove) {
+    for (HighsInt j = jStart; j != jEnd; j += direction) {
+      int8_t* colj0 = M + j * numDynamicRows;
+      int8_t* colj1 = colj0 - direction * numDynamicRows;
 
-    if (i_f == numDynamicRows) {
-      for (HighsInt k = 0; k < numDynamicRows; ++k) {
-        int8_t isFree = (colj0[k] == -1);
-        colj0[k] += (isFree & colj1[k]) + isFree;
-      }
-    } else {
-      HighsInt i_d = i_discr(colj0, colj1, i_f);
-      if (i_d == -1) {
-        domain.markInfeasible();
-        return 0;
-      }
+      const int8_t* first = (direction < 0) ? colj0 : colj1;
+      const int8_t* second = (direction < 0) ? colj1 : colj0;
+      HighsInt i_f = i_fixed(first, second);
 
-      for (HighsInt k = 0; k < i_d; ++k) {
-        int8_t isFree = (colj0[k] == -1);
-        colj0[k] += (isFree & colj1[k]) + isFree;
+      if (i_f == numDynamicRows) {
+        for (HighsInt k = 0; k < numDynamicRows; ++k) {
+          int8_t isFree = (colj0[k] == -1);
+          colj0[k] += (isFree & colj1[k]) + isFree;
+        }
+      } else {
+        HighsInt i_d = i_discr(first, second, i_f);
+        if (i_d == -1) {
+          domain.markInfeasible();
+          return;
+        }
+        for (HighsInt k = 0; k < i_d; ++k) {
+          int8_t isFree = (colj0[k] == -1);
+          colj0[k] += (isFree & colj1[k]) + isFree;
+        }
+        colj0[i_d] = fixedVal;
+        for (HighsInt k = i_d + 1; k < numDynamicRows; ++k)
+          colj0[k] += fillAbove * (colj0[k] == -1);
       }
-      colj0[i_d] = 1;
-      for (HighsInt k = i_d + 1; k < numDynamicRows; ++k)
-        colj0[k] += (colj0[k] == -1);
     }
-  }
+  };
 
-  for (HighsInt j = 1; j < rowLength; ++j) {
-    int8_t* colj0 = Mmaximal.data() + j * numDynamicRows;
-    int8_t* colj1 = colj0 - numDynamicRows;
-    HighsInt i_f = i_fixed(colj1, colj0);
+  propagateColumns(Mminimal.data(), rowLength - 2, HighsInt{-1}, HighsInt{-1},
+                   int8_t{1}, int8_t{1});
+  if (domain.infeasible()) return 0;
 
-    if (i_f == numDynamicRows) {
-      for (HighsInt k = 0; k < numDynamicRows; ++k) {
-        int8_t isFree = (colj0[k] == -1);
-        colj0[k] += (isFree & colj1[k]) + isFree;
-      }
-    } else {
-      HighsInt i_d = i_discr(colj1, colj0, i_f);
-      if (i_d == -1) {
-        domain.markInfeasible();
-        return 0;
-      }
-      for (HighsInt k = 0; k < i_d; ++k) {
-        int8_t isFree = (colj0[k] == -1);
-        colj0[k] += (isFree & colj1[k]) + isFree;
-      }
-      colj0[i_d] = 0;
-      for (HighsInt k = i_d + 1; k < numDynamicRows; ++k)
-        colj0[k] += 2 * (colj0[k] == -1);
-    }
-  }
+  propagateColumns(Mmaximal.data(), HighsInt{1}, rowLength, HighsInt{1},
+                   int8_t{0}, int8_t{2});
+  if (domain.infeasible()) return 0;
 
   HighsInt numFixed = 0;
 
@@ -729,7 +649,7 @@ HighsInt HighsOrbitopeMatrix::orbitalFixingForFullOrbitope(
 
 HighsInt HighsOrbitopeMatrix::orbitalFixing(HighsDomain& domain) const {
   std::vector<HighsInt> rows;
-  std::vector<uint8_t> rowUsed(numRows);
+  std::vector<HighsBool> rowUsed(numRows);
 
   rows.reserve(numRows);
 
@@ -858,18 +778,23 @@ bool HighsSymmetryDetection::splitCell(HighsInt cell, HighsInt splitPoint) {
   // employ prefix pruning scheme as in bliss
   if (!firstLeaveCertificate.empty()) {
     firstLeavePrefixLen +=
-        (firstLeavePrefixLen == (HighsInt)currNodeCertificate.size()) *
+        (firstLeavePrefixLen ==
+         static_cast<HighsInt>(currNodeCertificate.size())) *
         (certificateVal == firstLeaveCertificate[currNodeCertificate.size()]);
     bestLeavePrefixLen +=
-        (bestLeavePrefixLen == (HighsInt)currNodeCertificate.size()) *
+        (bestLeavePrefixLen ==
+         static_cast<HighsInt>(currNodeCertificate.size())) *
         (certificateVal == bestLeaveCertificate[currNodeCertificate.size()]);
 
     // if the node certificate is not a prefix of the first leave's certificate
     // and it comes lexicographically after the certificate value of the
     // lexicographically smallest leave certificate we prune the node
-    if (firstLeavePrefixLen <= (HighsInt)currNodeCertificate.size() &&
-        bestLeavePrefixLen <= (HighsInt)currNodeCertificate.size()) {
-      u32 diffVal = bestLeavePrefixLen == (HighsInt)currNodeCertificate.size()
+    if (firstLeavePrefixLen <=
+            static_cast<HighsInt>(currNodeCertificate.size()) &&
+        bestLeavePrefixLen <=
+            static_cast<HighsInt>(currNodeCertificate.size())) {
+      u32 diffVal = bestLeavePrefixLen ==
+                            static_cast<HighsInt>(currNodeCertificate.size())
                         ? certificateVal
                         : currNodeCertificate[bestLeavePrefixLen];
       if (diffVal > bestLeaveCertificate[bestLeavePrefixLen]) return false;
@@ -891,6 +816,12 @@ void HighsSymmetryDetection::markCellForRefinement(HighsInt cell) {
   refinementQueue.push_back(cell);
   std::push_heap(refinementQueue.begin(), refinementQueue.end(),
                  std::greater<HighsInt>());
+}
+
+void HighsSymmetryDetection::clearRefinementState() {
+  for (HighsInt c : refinementQueue) cellInRefinementQueue[c] = false;
+  refinementQueue.clear();
+  vertexHash.clear();
 }
 
 HighsSymmetryDetection::u32 HighsSymmetryDetection::getVertexHash(HighsInt v) {
@@ -939,9 +870,7 @@ bool HighsSymmetryDetection::partitionRefinement() {
       if (!splitCell(cellStart, refineStart)) {
         // node can be pruned, make sure hash values are cleared and queue is
         // empty
-        for (HighsInt c : refinementQueue) cellInRefinementQueue[c] = false;
-        refinementQueue.clear();
-        vertexHash.clear();
+        clearRefinementState();
         return false;
       }
       cellStart = refineStart;
@@ -979,9 +908,7 @@ bool HighsSymmetryDetection::partitionRefinement() {
     if (prune) {
       // node can be pruned, make sure hash values are cleared and queue is
       // empty
-      for (HighsInt c : refinementQueue) cellInRefinementQueue[c] = false;
-      refinementQueue.clear();
-      vertexHash.clear();
+      clearRefinementState();
       currentPartitionLinks[firstCellStart] = cellEnd;
 
       // undo possibly incomplete changes done to the cells
@@ -1697,6 +1624,33 @@ bool HighsSymmetryDetection::initializeDetection() {
   return true;
 }
 
+bool HighsSymmetryDetection::recordAutomorphism(
+    const std::vector<HighsInt>& leavePartition, HighsSymmetries& symmetries,
+    HighsInt maxPerms, HighsInt pathDepth, HighsInt& backtrackDepth) {
+  HighsInt k = (numAutomorphisms++) & 63;
+  HighsInt* permutation = automorphisms.data() + k * numVertices;
+  for (HighsInt i = 0; i < numVertices; ++i)
+    permutation[vertexPosition[currentPartition[i]]] = leavePartition[i];
+
+  bool report = false;
+  for (HighsInt i = 0; i < numVertices; ++i) {
+    if (mergeOrbits(permutation[i], vertexGroundSet[i]) && i < numActiveCols) {
+      assert(permutation[i] < numCol);
+      report = true;
+    }
+  }
+
+  if (report) {
+    symmetries.permutations.insert(symmetries.permutations.end(), permutation,
+                                   permutation + numActiveCols);
+    ++symmetries.numPerms;
+    if (symmetries.numPerms == maxPerms) return true;
+  }
+
+  backtrackDepth = std::min(backtrackDepth, pathDepth);
+  return false;
+}
+
 void HighsSymmetryDetection::run(HighsSymmetries& symmetries) {
   assert(numActiveCols != 0);
   initializeGroundSet();
@@ -1727,65 +1681,25 @@ void HighsSymmetryDetection::run(HighsSymmetries& symmetries) {
         HighsInt wrongCell = -1;
         HighsInt backtrackDepth = nodeStack.size() - 1;
         assert(currNodeCertificate.size() == firstLeaveCertificate.size());
-        if (firstLeavePrefixLen == (HighsInt)currNodeCertificate.size() ||
-            bestLeavePrefixLen == (HighsInt)currNodeCertificate.size()) {
-          if (firstLeavePrefixLen == (HighsInt)currNodeCertificate.size() &&
+        if (firstLeavePrefixLen ==
+                static_cast<HighsInt>(currNodeCertificate.size()) ||
+            bestLeavePrefixLen ==
+                static_cast<HighsInt>(currNodeCertificate.size())) {
+          if (firstLeavePrefixLen ==
+                  static_cast<HighsInt>(currNodeCertificate.size()) &&
               compareCurrentGraph(firstLeaveGraph, wrongCell)) {
-            HighsInt k = (numAutomorphisms++) & 63;
-            HighsInt* permutation = automorphisms.data() + k * numVertices;
-            for (HighsInt i = 0; i < numVertices; ++i) {
-              HighsInt firstLeaveCol = firstLeavePartition[i];
-              permutation[vertexPosition[currentPartition[i]]] = firstLeaveCol;
-            }
-
-            bool report = false;
-            for (HighsInt i = 0; i < numVertices; ++i) {
-              if (mergeOrbits(permutation[i], vertexGroundSet[i]) &&
-                  i < numActiveCols) {
-                assert(permutation[i] < numCol);
-                report = true;
-              }
-            }
-
-            if (report) {
-              symmetries.permutations.insert(symmetries.permutations.end(),
-                                             permutation,
-                                             permutation + numActiveCols);
-              ++symmetries.numPerms;
-              if (symmetries.numPerms == maxPerms) break;
-            }
-            backtrackDepth = std::min(backtrackDepth, firstPathDepth);
+            if (recordAutomorphism(firstLeavePartition, symmetries, maxPerms,
+                                   firstPathDepth, backtrackDepth))
+              break;
           } else if (!bestLeavePartition.empty() &&
                      bestLeavePrefixLen ==
-                         (HighsInt)currNodeCertificate.size() &&
+                         static_cast<HighsInt>(currNodeCertificate.size()) &&
                      compareCurrentGraph(bestLeaveGraph, wrongCell)) {
-            HighsInt k = (numAutomorphisms++) & 63;
-            HighsInt* permutation = automorphisms.data() + k * numVertices;
-            for (HighsInt i = 0; i < numVertices; ++i) {
-              HighsInt bestLeaveCol = bestLeavePartition[i];
-              permutation[vertexPosition[currentPartition[i]]] = bestLeaveCol;
-            }
-
-            bool report = false;
-            for (HighsInt i = 0; i < numVertices; ++i) {
-              if (mergeOrbits(permutation[i], vertexGroundSet[i]) &&
-                  i < numActiveCols) {
-                assert(permutation[i] < numCol);
-                report = true;
-              }
-            }
-
-            if (report) {
-              symmetries.permutations.insert(symmetries.permutations.end(),
-                                             permutation,
-                                             permutation + numActiveCols);
-              ++symmetries.numPerms;
-              if (symmetries.numPerms == maxPerms) break;
-            }
-
-            backtrackDepth = std::min(backtrackDepth, bestPathDepth);
+            if (recordAutomorphism(bestLeavePartition, symmetries, maxPerms,
+                                   bestPathDepth, backtrackDepth))
+              break;
           } else if (bestLeavePrefixLen <
-                         (HighsInt)currNodeCertificate.size() &&
+                         static_cast<HighsInt>(currNodeCertificate.size()) &&
                      currNodeCertificate[bestLeavePrefixLen] >
                          bestLeaveCertificate[bestLeavePrefixLen]) {
             // certificate value is lexicographically above the smallest one

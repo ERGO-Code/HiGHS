@@ -1,6 +1,10 @@
 #include "Logger.h"
 
+#include <stdarg.h>
+
 namespace hipo {
+
+Logger::Logger(bool use_printf) : use_printf_{use_printf} {}
 
 void Logger::setOptions(const HighsLogOptions* log_options) {
   log_options_ = log_options;
@@ -37,6 +41,13 @@ std::string integer(Int i, Int width) {
   s.width(width);
   s << i;
   return s.str();
+}
+
+void logger_printf(const char* format, ...) {
+  va_list argptr;
+  va_start(argptr, format);
+  vprintf(format, argptr);
+  va_end(argptr);
 }
 
 }  // namespace hipo

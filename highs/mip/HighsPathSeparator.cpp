@@ -400,7 +400,7 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
         std::vector<HighsInt> inds;
         std::vector<double> solval;
         std::vector<double> upper;
-        std::vector<uint8_t> isIntegral;
+        std::vector<HighsBool> isIntegral;
         inds.reserve(lp.num_col_ + lp.num_row_);
         solval.reserve(lp.num_col_ + lp.num_row_);
         upper.reserve(lp.num_col_ + lp.num_row_);

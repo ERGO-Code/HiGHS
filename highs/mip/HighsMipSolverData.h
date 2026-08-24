@@ -9,6 +9,7 @@
 #ifndef HIGHS_MIP_SOLVER_DATA_H_
 #define HIGHS_MIP_SOLVER_DATA_H_
 
+#include <atomic>
 #include <vector>
 
 #include "mip/HighsCliqueTable.h"
@@ -77,6 +78,7 @@ struct HighsMipSolverData {
   std::deque<HighsPseudocost> pseudocosts;
   std::deque<HighsMipWorker> workers;
   bool parallel_lock;
+  std::atomic<int64_t> worker_lp_iterations_stop;
 
   HighsPrimalHeuristics heuristics;
   HighsCliqueTable cliquetable;
@@ -100,7 +102,7 @@ struct HighsMipSolverData {
   std::vector<HighsInt> ARindex_;
   std::vector<double> ARvalue_;
   std::vector<double> maxAbsRowCoef;
-  std::vector<uint8_t> rowintegral;
+  std::vector<HighsBool> rowintegral;
   std::vector<HighsInt> uplocks;
   std::vector<HighsInt> downlocks;
   std::vector<HighsInt> integer_cols;
@@ -200,6 +202,7 @@ struct HighsMipSolverData {
   void runMipPresolve(const HighsInt presolve_reduction_limit);
   void setupDomainPropagation();
   void saveReportMipSolution(const double new_upper_limit = -kHighsInf);
+  void checkAddSolution();
   void runSetup();
   double transformNewIntegerFeasibleSolution(
       const std::vector<double>& sol,
@@ -262,6 +265,17 @@ struct HighsMipSolverData {
     return (parallel_lock && hasMultipleWorkers());
   }
 
+  void updateWorkerEarlyTermination(HighsMipWorker& worker) {
+    int64_t current = worker_lp_iterations_stop.load(std::memory_order_relaxed);
+    const int64_t candidate = worker.search_ptr_->lpiterations;
+    while (candidate < current &&
+           !worker_lp_iterations_stop.compare_exchange_weak(
+               current, candidate, std::memory_order_relaxed,
+               std::memory_order_relaxed)) {
+    }
+    worker.early_termination = true;
+  }
+
   bool hasMultipleWorkers() const { return workers.size() > 1; }
 
   HighsDomain& getDomain() { return domains[0]; }
@@ -274,6 +288,8 @@ struct HighsMipSolverData {
   const HighsCutPool& getCutPool() const { return cutpools[0]; }
   const HighsLpRelaxation& getLp() const { return lps[0]; }
   const HighsPseudocost& getPseudoCost() const { return pseudocosts[0]; }
+  void reportOriginalPresolvedCol(const HighsInt original_col,
+                                  const std::vector<double> presolved_solution);
 };
 
 #endif

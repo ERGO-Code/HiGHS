@@ -75,6 +75,7 @@ class HighsMipWorker {
   double upper_bound;
   double upper_limit;
   double optimality_limit;
+  bool early_termination;
 
   std::vector<std::tuple<std::vector<double>, double, int>> solutions_;
 
@@ -128,6 +129,8 @@ class HighsMipWorker {
   void setAllowHeuristics(const bool allowed) { heuristics_allowed = allowed; }
 
   bool getAllowHeuristics() const { return heuristics_allowed; }
+
+  double getOptimalityLimit() const;
 
   int64_t& getNumNeighbourhoodQueries() {
     return sepa_stats.numNeighbourhoodQueries;

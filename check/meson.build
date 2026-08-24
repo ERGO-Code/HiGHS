@@ -56,6 +56,7 @@ test_array = [
   ['test_TestPdlp', 'TestPdlp.cpp'],
   ['test_TestPresolve', 'TestPresolve.cpp'],
   ['test_TestPresolveRules', 'TestPresolveRules.cpp'],
+  ['test_TestQpOracle', 'TestQpOracle.cpp'],
   ['test_TestQpSolver', 'TestQpSolver.cpp'],
   ['test_TestRanging', 'TestRanging.cpp'],
   ['test_TestRays', 'TestRays.cpp'],

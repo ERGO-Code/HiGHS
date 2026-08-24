@@ -8,14 +8,25 @@
 
 namespace hipo {
 
+// Object to manage the parallel schedule of supernodes for tree parallelism
+struct TreeSchedule {
+  bool valid = false;
+
+  // sn_per_task[i] contains the supernodes to process as part of task i. They
+  // are numbered in increasing order and must be processed in the given order,
+  // to guarantee that dependencies are satisfied.
+  std::vector<std::vector<Int>> sn_per_task;
+
+  // task elimination tree, giving the tree of dependencies among tasks
+  std::vector<Int> task_parent;
+
+  void clear();
+  Int count() const { return task_parent.size(); }
+};
+
 // Symbolic factorisation object
 class Symbolic {
-  // Options for parallelism
-  bool parallel_tree_ = false;
-  bool parallel_node_ = false;
-
-  // Size of blocks for dense factorisation
-  Int block_size_;
+  bool empty_ = true;
 
   // Statistics about symbolic factorisation
   Int n_{};
@@ -33,6 +44,9 @@ class Symbolic {
   Int sn_size_1_{};
   Int sn_size_10_{};
   Int sn_size_100_{};
+
+  double ops_solve_{};
+  double critops_solve_{};
 
   // Inverse permutation
   std::vector<Int> iperm_{};
@@ -98,18 +112,17 @@ class Symbolic {
   Int64 max_stack_size_{};
   Int tree_depth_{};
 
+  TreeSchedule schedule_solve_;
+
   friend class Analyse;
 
  public:
-  Symbolic();
-  void setParallel(bool par_tree, bool par_node);
-
   // provide const access to symbolic factorisation
+  bool empty() const { return empty_; }
   Int64 nz() const;
   double flops() const;
   double spops() const;
   double critops() const;
-  Int blockSize() const;
   Int size() const;
   Int sn() const;
   double fillin() const;
@@ -123,15 +136,16 @@ class Symbolic {
   Int64 cliqueBlockStart(Int sn, Int bl) const;
   Int64 cliqueSize(Int sn) const;
   Int64 maxStackSize() const;
+  Int largestFront() const;
   Int depth() const;
-  bool parTree() const;
-  bool parNode() const;
+  double solveTreeSpeedup() const;
   double storage() const;
   const std::vector<Int64>& ptr() const;
   const std::vector<Int>& iperm() const;
   const std::vector<Int>& snParent() const;
   const std::vector<Int>& snStart() const;
   const std::vector<Int>& pivotSign() const;
+  const TreeSchedule& schedule() const;
 
   void print(const Logger& logger, bool verbose = false) const;
 };
