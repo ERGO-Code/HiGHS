@@ -5344,18 +5344,91 @@ HPresolve::Result HPresolve::dualFixing(HighsPostsolveStack& postsolve_stack,
   // compute locks
   computeLocks(col, true, lockCallback);
 
+  // lambda for fixing zero cost column
+  auto fixZeroCostCol = [&](double& to_value) {
+    if (0 < model->col_lower_[col]) {
+      // Fix to lower
+      to_value = model->col_lower_[col];
+      return fixColToLower(postsolve_stack, col);
+    } else if (0 <= model->col_upper_[col]) {
+      // Fix to 0
+      to_value = 0;
+      fixColToZero(postsolve_stack, col);
+      return Result::kOk;
+    } 
+    // Fix to upper
+    assert(model->col_upper_[col] < 0);
+    to_value = model->col_upper_[col];
+    return fixColToUpper(postsolve_stack, col);
+  };
+
   // Check if variable is fixed: only possible if there are no up
   // (down) locks, and the cost forces it up (down) to its bound
   if (numDownLocks == 0 || numUpLocks == 0) {
-    // fix variable if cost is driving it to its bound
-    if (numDownLocks == 0 &&
-        model->col_cost_[col] <= options->dual_feasibility_tolerance &&
-        model->col_lower_[col] > -kHighsInf) {
-      HPRESOLVE_CHECKED_CALL(fixColToLower(postsolve_stack, col));
-    } else if (numUpLocks == 0 &&
-               model->col_cost_[col] >= -options->dual_feasibility_tolerance &&
-               model->col_upper_[col] < kHighsInf) {
-      HPRESOLVE_CHECKED_CALL(fixColToUpper(postsolve_stack, col));
+    double to_value = 0;
+    // fix variable
+    if (numDownLocks == 0) {
+      // Original fwesselm logic
+      bool fix = true;
+      //
+      // jajhall logic
+      // 
+      // fix = model->col_cost_[col] <=
+      // options->dual_feasibility_tolerance && model->col_lower_[col]
+      // > -kHighsInf;
+      //
+      // Updated fwesselm logic
+      // 
+      // fix = model->col_cost_[col] > 0 || model->col_lower_[col] !=
+      // -kHighsInf;
+      //
+      if (model->col_cost_[col] > options->dual_feasibility_tolerance) {
+	// Fix to lower bound if it's not dual feasible to be above
+	// the lower bound, possibly leading to deduction of
+	// infeasible or unbounded
+	to_value = model->col_lower_[col];
+	HPRESOLVE_CHECKED_CALL(fixColToLower(postsolve_stack, col));
+      } else {
+	// numDownLocks = 0 => cost >= 0, so cost is in [0, dual_feasibility_tolerance]
+	//
+	// Hence value of column is not uniquely defined
+	//
+	// Fix column, ideally to zero
+	HPRESOLVE_CHECKED_CALL(fixZeroCostCol(to_value));
+      }	
+      printf("HPresolve::dualFixing numDownLocks = 0; col %7d is (lo; co; up) = (%11.4g; %11.4g; %11.4g): Fix to value = %11.4g\n",
+	     int(col), model->col_lower_[col], model->col_cost_[col], model->col_upper_[col], to_value);
+    } else if (numUpLocks == 0) {
+      // Original fwesselm logic
+      bool fix = true;
+      //
+      // jajhall logic
+      // 
+      // fix = model->col_cost_[col] >=
+      // -options->dual_feasibility_tolerance &&
+      // model->col_upper_[col] < kHighsInf;
+      //
+      // Updated fwesselm logic
+      //
+      // fix = model->col_cost_[col] < 0 || model->col_upper_[col] !=
+      // kHighsInf;
+      //
+      if (model->col_cost_[col] < -options->dual_feasibility_tolerance) {
+	// Fix to upper bound if it's not dual feasible to be below
+	// the upper bound, possibly leading to deduction of
+	// infeasible or unbounded
+	to_value = model->col_upper_[col];
+	HPRESOLVE_CHECKED_CALL(fixColToUpper(postsolve_stack, col));
+      } else {
+	// numUpLocks = 0 => cost <= 0, so cost is in [-dual_feasibility_tolerance, 0]
+	//
+	// Hence value of column is not uniquely defined
+	//
+	// Fix column, ideally to zero
+	HPRESOLVE_CHECKED_CALL(fixZeroCostCol(to_value));
+      }	
+      printf("HPresolve::dualFixing   numUpLocks = 0; col %7d is (lo; co; up) = (%11.4g; %11.4g; %11.4g): Fix to value = %11.4g\n",
+	     int(col), model->col_lower_[col], model->col_cost_[col], model->col_upper_[col], to_value);
     }
   } else {
     bool hasSingleDownLock = numDownLocks == 1 && downLockRow != -1;
