@@ -648,9 +648,9 @@ HighsDomain::DualFixProbingPropagation::DualFixProbingPropagation(
       colUpperLocksOriginal_(other.colUpperLocksOriginal_),
       colLowerReducedNumLocks_(other.colLowerReducedNumLocks_),
       colUpperReducedNumLocks_(other.colUpperReducedNumLocks_),
+      clearColNumReducedLocks_(other.clearColNumReducedLocks_),
       candidateFixedCols_(other.candidateFixedCols_),
-      candidateColFixedFlags_(other.candidateColFixedFlags_),
-      clearColNumReducedLocks_(other.clearColNumReducedLocks_) {
+      candidateColFixedFlags_(other.candidateColFixedFlags_) {
   ;
 }
 

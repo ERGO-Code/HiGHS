@@ -237,13 +237,13 @@ class HighsDomain {
   };
 
   struct DualFixProbingPropagation {
-    HighsDomain* domain;
-    HighsMipSolver* mipsolver;
+    HighsDomain* domain = nullptr;
+    HighsMipSolver* mipsolver = nullptr;
 
     // store row lower and row upper at 2i and 2i + 1
     std::vector<HighsBool> redundantRowFlags_;
     std::vector<HighsInt> redundantRowInds_;
-    HighsInt previousRedundantRowSize;
+    HighsInt previousRedundantRowSize = 0;
 
     // Track direction of zero fixings so we don't store disagreeing results
     enum DualFixProbingFixDirection {
@@ -332,13 +332,9 @@ class HighsDomain {
       applyingZeroCostFixings_ = false;
     }
 
-    DualFixProbingPropagation() { ; };
-
-    DualFixProbingPropagation(HighsDomain* domain) : domain(domain) {};
+    DualFixProbingPropagation() = default;
 
     DualFixProbingPropagation(const DualFixProbingPropagation& other);
-
-    ~DualFixProbingPropagation() { ; };
 
     void recomputeLocks();
     void updateRhsRedundant(HighsInt row);
