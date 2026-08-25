@@ -1490,7 +1490,7 @@ void HighsPostsolveStack::undoFourierMotzkinBlock(
 
     // col_dual = -Σ a_{ij} * row_dual[i] (cost is zero after reformulation)
     HighsCDouble colDual = 0.0;
-    std::vector<uint8_t> visited(solution.row_dual.size(), false);
+    std::vector<HighsBool> visited(solution.row_dual.size(), false);
     for (HighsInt r = 0; r < numPlus; ++r) {
       HighsInt row = step.plusHeaders[r].row;
       colDual -=
@@ -1610,8 +1610,8 @@ void HighsPostsolveStack::undoFourierMotzkinBlock(
     // non-basic propagation: if a generated row is non-basic (with nonzero
     // dual), both its parents are forced non-basic. mark them so the greedy
     // passes skip them. only force if the parent doesn't must-be-basic.
-    std::vector<uint8_t> forcedNonBasicPlus(numPlus, false);
-    std::vector<uint8_t> forcedNonBasicMinus(numMinus, false);
+    std::vector<HighsBool> forcedNonBasicPlus(numPlus, false);
+    std::vector<HighsBool> forcedNonBasicMinus(numMinus, false);
     for (const auto& nr : step.newRows) {
       // get indices of parent rows
       HighsInt p = nr.plusParentIdx;
@@ -1630,7 +1630,7 @@ void HighsPostsolveStack::undoFourierMotzkinBlock(
     }
 
     // mark ranged rows (appearing in both plus and minus sets)
-    std::vector<uint8_t> isMinusRowRanged(numMinus, false);
+    std::vector<HighsBool> isMinusRowRanged(numMinus, false);
     HighsInt numRanged = 0;
     for (HighsInt m = 0; m < numMinus; ++m)
       for (HighsInt p = 0; p < numPlus; ++p)
