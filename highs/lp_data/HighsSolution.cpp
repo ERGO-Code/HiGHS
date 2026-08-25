@@ -2051,8 +2051,8 @@ bool reportKktFailures(const HighsLp& lp, const HighsOptions& options,
   double primal_residual_tolerance = options.primal_residual_tolerance;
   double dual_residual_tolerance = options.dual_residual_tolerance;
   double optimality_tolerance = options.optimality_tolerance;
-  const bool is_mip = lp.isMip();
-  if (is_mip) {
+  const bool solved_as_mip = lp.isMip() && !options.solve_relaxation;
+  if (solved_as_mip) {
     primal_feasibility_tolerance = mip_feasibility_tolerance;
   } else if (options.kkt_tolerance != kDefaultKktTolerance) {
     mip_feasibility_tolerance = options.kkt_tolerance;
@@ -2065,9 +2065,10 @@ bool reportKktFailures(const HighsLp& lp, const HighsOptions& options,
 
   const bool force_report = options.log_dev_level >= kHighsLogDevLevelInfo;
   const bool complementarity_error =
-      !is_mip && info.primal_dual_objective_error > optimality_tolerance;
+      !solved_as_mip && info.primal_dual_objective_error > optimality_tolerance;
   const bool integrality_error =
-      is_mip && info.max_integrality_violation >= mip_feasibility_tolerance;
+      solved_as_mip &&
+      info.max_integrality_violation >= mip_feasibility_tolerance;
   const bool has_kkt_failures =
       integrality_error || info.num_primal_infeasibilities > 0 ||
       info.num_dual_infeasibilities > 0 ||
@@ -2080,7 +2081,7 @@ bool reportKktFailures(const HighsLp& lp, const HighsOptions& options,
 
   highsLogUser(log_options, log_type, "Solution optimality conditions%s%s\n",
                message == "" ? "" : ": ", message == "" ? "" : message.c_str());
-  if (is_mip && info.max_integrality_violation >= 0)
+  if (solved_as_mip && info.max_integrality_violation >= 0)
     highsLogUser(log_options, HighsLogType::kInfo,
                  "    max      %8.3g                                  "
                  "integrality violations"
