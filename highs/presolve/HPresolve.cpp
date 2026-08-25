@@ -5356,28 +5356,14 @@ HPresolve::Result HPresolve::dualFixing(HighsPostsolveStack& postsolve_stack,
   // bound is finite
   if (numDownLocks == 0 || numUpLocks == 0) {
     if (numDownLocks == 0) {
-      bool fix =
-	model->col_cost_[col] > options->dual_feasibility_tolerance ||
-	model->col_lower_[col] > -kHighsInf;
-      if (fix)
+      if (model->col_cost_[col] > options->dual_feasibility_tolerance ||
+          model->col_lower_[col] > -kHighsInf)
         HPRESOLVE_CHECKED_CALL(fixColToLower(postsolve_stack, col));
-      printf(
-          "HPresolve::dualFixing numDownLocks = 0; col %7d is (lo; co; up) = "
-          "(%11.4g; %11.4g; %11.4g): Fix to lower = %s\n",
-          int(col), model->col_lower_[col], model->col_cost_[col],
-          model->col_upper_[col], fix ? "T" : "F");
     } else {
       assert(numUpLocks == 0);
-      bool fix =
-	model->col_cost_[col] < -options->dual_feasibility_tolerance ||
-	model->col_upper_[col] < kHighsInf;
-      if (fix)
+      if (model->col_cost_[col] < -options->dual_feasibility_tolerance ||
+          model->col_upper_[col] < kHighsInf)
         HPRESOLVE_CHECKED_CALL(fixColToUpper(postsolve_stack, col));
-      printf(
-          "HPresolve::dualFixing   numUpLocks = 0; col %7d is (lo; co; up) = "
-          "(%11.4g; %11.4g; %11.4g): Fix to upper = %s\n",
-          int(col), model->col_lower_[col], model->col_cost_[col],
-          model->col_upper_[col], fix ? "T" : "F");
     }
   } else {
     bool hasSingleDownLock = numDownLocks == 1 && downLockRow != -1;
