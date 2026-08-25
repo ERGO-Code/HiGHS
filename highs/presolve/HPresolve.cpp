@@ -3658,7 +3658,7 @@ HPresolve::Result HPresolve::singletonCol(HighsPostsolveStack& postsolve_stack,
   }
 
   auto localZeroCostSingleton = [&](HighsInt col, HighsInt row, double val,
-                               HighsInt direction) {
+                                    HighsInt direction) {
     // try to relax constraint by fixing zero-cost singleton to a bound
     if (model->col_cost_[col] != 0.0 || isRanged(row)) return Result::kOk;
     if (direction * val > 0 && model->col_lower_[col] != -kHighsInf)
@@ -3766,15 +3766,11 @@ HPresolve::Result HPresolve::singletonCol(HighsPostsolveStack& postsolve_stack,
   if (timing)
     analysis_.presolveTimerStop(kPresolveClockSingletonColDualImpliedFree);
 
-  /*<<<<<<< HEAD
-=======
   if (this->allow_rule_[kPresolveRuleZeroCostSingleton]) {
     // Remove if col is double-sided finite slack
     HPRESOLVE_CHECKED_CALL(zeroCostSingleton(postsolve_stack, col));
   }
 
->>>>>>> latest
-  */
   return Result::kOk;
 }
 
