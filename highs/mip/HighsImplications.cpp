@@ -87,8 +87,10 @@ bool HighsImplications::computeImplications(HighsInt col, bool val) {
   HighsInt numEntries = mipsolver.mipdata_->cliquetable.getNumEntries();
   HighsInt maxEntries = 100000 + mipsolver.numNonzero();
 
-  HighsInt unsafeStackStart =
-      globaldomain.getDualFixProbingPropagation().getZeroCostFixingPosition();
+  HighsInt unsafeStackStart = dualFixProbingActive
+                                  ? globaldomain.getDualFixProbingPropagation()
+                                        .getZeroCostFixingPosition()
+                                  : stackimplicend;
   HighsInt safeImplicsEnd = 0;
 
   for (HighsInt i = stackimplicstart; i < stackimplicend; ++i) {
@@ -424,31 +426,39 @@ bool HighsImplications::runProbing(HighsInt col, HighsInt& numReductions) {
         HighsInt implcol = implicationsUp[u].domchg.column;
         double lbDown = globaldomain.col_lower_[implcol];
         double ubDown = globaldomain.col_upper_[implcol];
+        bool safeDown = implicationsDown[d].dualSafe;
         double lbUp = lbDown;
         double ubUp = ubDown;
+        bool safeUp = implicationsUp[u].dualSafe;
 
         do {
-          if (implicationsDown[d].domchg.boundtype == HighsBoundType::kLower)
+          if (implicationsDown[d].domchg.boundtype == HighsBoundType::kLower) {
             lbDown = std::max(lbDown, implicationsDown[d].domchg.boundval);
-          else
+            safeDown &= implicationsDown[d].dualSafe;
+          } else {
             ubDown = std::min(ubDown, implicationsDown[d].domchg.boundval);
+            safeDown &= implicationsDown[d].dualSafe;
+          }
           ++d;
         } while (d < nimplicsdown &&
                  implicationsDown[d].domchg.column == implcol);
 
         do {
-          if (implicationsUp[u].domchg.boundtype == HighsBoundType::kLower)
+          if (implicationsUp[u].domchg.boundtype == HighsBoundType::kLower) {
             lbUp = std::max(lbUp, implicationsUp[u].domchg.boundval);
-          else
+            safeUp &= implicationsUp[u].dualSafe;
+          } else {
             ubUp = std::min(ubUp, implicationsUp[u].domchg.boundval);
+            safeUp &= implicationsUp[u].dualSafe;
+          }
           ++u;
         } while (u < nimplicsup && implicationsUp[u].domchg.column == implcol);
 
         if (colsubstituted[implcol] || globaldomain.isFixed(implcol)) continue;
 
         if (lbDown == ubDown && lbUp == ubUp &&
-            std::abs(lbDown - lbUp) > mipsolver.mipdata_->feastol &&
-            implicationsUp[u].dualSafe && implicationsDown[d].dualSafe) {
+            std::abs(lbDown - lbUp) > mipsolver.mipdata_->feastol && safeUp &&
+            safeDown) {
           HighsSubstitution substitution;
           substitution.substcol = implcol;
           substitution.staycol = col;
@@ -465,21 +475,21 @@ bool HighsImplications::runProbing(HighsInt col, HighsInt& numReductions) {
             globaldomain.changeBound(HighsBoundType::kLower, implcol, lb,
                                      HighsDomain::Reason::unspecified());
             ++numReductions;
+            if (globaldomain.infeasible()) return true;
           }
 
           if (ub < globaldomain.col_upper_[implcol]) {
             globaldomain.changeBound(HighsBoundType::kUpper, implcol, ub,
                                      HighsDomain::Reason::unspecified());
             ++numReductions;
+            if (globaldomain.infeasible()) return true;
           }
         }
       }
-      return globaldomain.infeasible();
-    };
+    }
 
     hasProbed[ImplIdx{col, 0}] = true;
     hasProbed[ImplIdx{col, 1}] = true;
-
     return true;
   }
 

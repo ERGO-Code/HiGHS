@@ -2772,9 +2772,10 @@ bool HighsDomain::propagate() {
 
     if (!infeasible_ && dualFixProbingPropagation.isActive()) {
       dualFixProbingPropagation.propagate();
-      if (!infeasible_ && !havePropagationRows()) {
-        dualFixProbingPropagation.propagateZeroCosts();
-      }
+    }
+    if (!infeasible_ && dualFixProbingPropagation.isEnabled() &&
+        !havePropagationRows()) {
+      dualFixProbingPropagation.propagateZeroCosts();
     }
   }
 
