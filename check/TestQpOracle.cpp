@@ -474,7 +474,7 @@ TEST_CASE("hessian-oracle-primal1", "[qp-oracle]") {
                               solution.data()));
     }
   }
-  //  std::remove(write_model_filename.c_str());
+  std::remove(write_model_filename.c_str());
 
   h.resetGlobalScheduler(true);
 }
