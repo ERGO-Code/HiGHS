@@ -125,8 +125,7 @@ Int denseFactFH(Int n, Int k, double* A, double* B, const Int* pivot_sign,
       // ===========================================================================
       highs::parallel::TaskGroup tg;
 
-      auto split_gemm = [=, &data, &options, &tg](
-                            Int num_row, Int num_col, const double* Rj,
+      auto split_gemm = [&](Int num_row, Int num_col, const double* Rj,
                             const double* Pj, double* Qj) {
         // Qj -= Rj * Pj^T
 
@@ -137,7 +136,7 @@ Int denseFactFH(Int n, Int k, double* A, double* B, const Int* pivot_sign,
         if (do_split) {
           Int Rj_offset{};
           Int Qj_offset{};
-          Int row_start = 0;
+          Int row_start{};
           while (row_start < num_row) {
             const double* Rj_block = &Rj[Rj_offset];
             double* Qj_block = &Qj[Qj_offset];
