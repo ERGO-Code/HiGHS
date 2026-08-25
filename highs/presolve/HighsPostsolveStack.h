@@ -299,6 +299,22 @@ class HighsPostsolveStack {
               HighsBasis& basis);
   };
 
+  struct ZeroObjSingletonContinuousCol {
+    double origRowLower;
+    double origRowUpper;
+    double new_row_lb;
+    double new_row_ub;
+    double lb;
+    double ub;
+    double coef;
+    HighsInt col;
+    HighsInt row;
+
+    void undo(const HighsOptions& options,
+              const std::vector<Nonzero>& rowValues, HighsSolution& solution,
+              HighsBasis& basis);
+  };
+
   /// tags for reduction
   enum class ReductionType : uint8_t {
     kLinearTransform,
@@ -316,6 +332,7 @@ class HighsPostsolveStack {
     kDuplicateRow,
     kDuplicateColumn,
     kSlackColSubstitution,
+    kZeroObjSingletonContinuousCol,
     kFourierMotzkinBlock,
     kFourierMotzkinObjCol,
   };
@@ -565,6 +582,22 @@ class HighsPostsolveStack {
         SlackColSubstitution{rhs, origRowIndex[row], origColIndex[col]});
     reductionValues.push(rowValues);
     reductionAdded(ReductionType::kSlackColSubstitution);
+  }
+
+  template <typename RowStorageFormat>
+  void zeroCostSingleton(HighsInt row, HighsInt col, double origRowLower,
+                         double origRowUpper, double new_row_lb,
+                         double new_row_ub, double lb, double ub, double coef,
+                         const HighsMatrixSlice<RowStorageFormat>& rowVec) {
+    rowValues.clear();
+    for (const HighsSliceNonzero& rowVal : rowVec)
+      rowValues.emplace_back(origColIndex[rowVal.index()], rowVal.value());
+
+    reductionValues.push(ZeroObjSingletonContinuousCol{
+        origRowLower, origRowUpper, new_row_lb, new_row_ub, lb, ub, coef,
+        origColIndex[col], origRowIndex[row]});
+    reductionValues.push(rowValues);
+    reductionAdded(ReductionType::kZeroObjSingletonContinuousCol);
   }
 
   template <typename RowStorageFormat>
@@ -1039,7 +1072,7 @@ class HighsPostsolveStack {
                                     solution.col_dual[iCol]);
         if (perform_basis_postsolve)
           ss << highsFormatToString("; status = %s",
-                                    utilBasisStatusToString(basis.col_status[iCol]).c_str());
+                                    utilBasisStatusToString(basis.col_status[iCol]).full_.c_str());
         printf("%s\n", ss.str().c_str());
       }
       for (HighsInt iRow = 0; iRow < origNumRow; iRow++) {
@@ -1051,7 +1084,7 @@ class HighsPostsolveStack {
                                     solution.row_dual[iRow]);
         if (perform_basis_postsolve)
           ss << highsFormatToString("; status = %s",
-                                    utilBasisStatusToString(basis.row_status[iRow]).c_str());
+                                    utilBasisStatusToString(basis.row_status[iRow]).full_.c_str());
         printf("%s\n", ss.str().c_str());
       }
     };
@@ -1088,7 +1121,7 @@ class HighsPostsolveStack {
                                   solution.col_dual[report_col]);
       if (perform_basis_postsolve)
         ss << highsFormatToString(" status = %s",
-                                  utilBasisStatusToString(basis.col_status[report_col]).c_str());
+                                  utilBasisStatusToString(basis.col_status[report_col]).full_.c_str());
       printf("%s\n", ss.str().c_str());
       report_col_value = col_value;
     };
@@ -1215,6 +1248,13 @@ class HighsPostsolveStack {
           reduction.undo(options, rowValues_, solution, basis);
           break;
         }
+        case ReductionType::kZeroObjSingletonContinuousCol: {
+          ZeroObjSingletonContinuousCol reduction;
+          reductionValues.pop(rowValues);
+          reductionValues.pop(reduction);
+          reduction.undo(options, rowValues, solution, basis);
+          break;
+        }
         case ReductionType::kFourierMotzkinBlock: {
           auto steps = popFourierMotzkinBlock(reductionValues_);
           undoFourierMotzkinBlock(steps, options, solution, basis);
@@ -1267,19 +1307,6 @@ class HighsPostsolveStack {
     solution.dual_valid = false;
     undo(options, solution, basis, 0, report_col, thread_safe);
   }
-
-  /*
-    // Not used
-  /// undo presolve steps for primal and dual solution
-  void undoPrimalDual(const HighsOptions& options, HighsSolution& solution) {
-    reductionValues.resetPosition();
-    HighsBasis basis;
-    basis.valid = false;
-    assert(solution.value_valid);
-    assert(solution.dual_valid);
-    undo(options, solution, basis);
-  }
-  */
 
   size_t numReductions() const { return reductions.size(); }
 };

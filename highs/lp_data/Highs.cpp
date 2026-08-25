@@ -3846,7 +3846,7 @@ std::string Highs::solutionStatusToString(
 
 std::string Highs::basisStatusToString(
     const HighsBasisStatus basis_status) const {
-  return utilBasisStatusToString(basis_status);
+  return utilBasisStatusToString(basis_status).full_;
 }
 
 std::string Highs::basisValidityToString(const HighsInt basis_validity) const {

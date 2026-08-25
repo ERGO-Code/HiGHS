@@ -282,6 +282,7 @@ enum PresolveRuleType : int {
   kPresolveRuleProbing,
   kPresolveRuleEnumeration,
   kPresolveRuleDualFixing,
+  kPresolveRuleZeroCostSingleton,
   kPresolveRuleColStuffing,
   kPresolveRuleInitialSweep,
   kPresolveRuleFourierMotzkin,
