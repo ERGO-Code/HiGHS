@@ -41,7 +41,7 @@ class HPresolve {
   HighsTimer* timer;
   HighsMipSolver* mipsolver = nullptr;
   double primal_feastol;
-  std::vector<bool> allow_rule_;
+  std::vector<HighsBool> allow_rule_;
 
   // triplet storage
   std::vector<double> Avalue;
@@ -109,6 +109,7 @@ class HPresolve {
 
   bool shrinkProblemEnabled;
   size_t reductionLimit;
+  size_t last_reduction_;
   bool in_initial_sweep_;
 
   // vectors storing singleton rows and columns
@@ -226,6 +227,8 @@ class HPresolve {
   bool isEquation(HighsInt row) const;
 
   bool isRanged(HighsInt row) const;
+
+  bool isRedundant(HighsInt row, double sumLower, double sumUpper) const;
 
   bool isRedundant(HighsInt row) const;
 
@@ -394,6 +397,16 @@ class HPresolve {
   void shrinkProblem(HighsPostsolveStack& postsolve_stack);
 
   void addToMatrix(const HighsInt row, const HighsInt col, const double val);
+
+  bool addToMatrix(HighsPostsolveStack& postsolve_stack,
+                   const std::vector<double>& row_lower,
+                   const std::vector<double>& row_upper,
+                   const std::vector<std::vector<HighsInt>>& row_indices,
+                   const std::vector<std::vector<double>>& row_values);
+
+  bool addToMatrix(HighsPostsolveStack& postsolve_stack, double row_lower,
+                   double row_upper, const std::vector<HighsInt>& row_indices,
+                   const std::vector<double>& row_values);
 
   Result prepareProbing(HighsPostsolveStack& postsolve_stack, bool& firstCall);
 

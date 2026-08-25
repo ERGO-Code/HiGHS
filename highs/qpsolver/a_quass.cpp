@@ -134,7 +134,7 @@ static QpAsmStatus quass2highs(Instance& instance, Settings& settings,
 QpAsmStatus solveqp(Instance& instance, Settings& settings, Statistics& stats,
                     HighsModelStatus& highs_model_status,
                     HighsBasis& highs_basis, HighsSolution& highs_solution,
-                    HighsTimer& qp_timer) {
+                    HighsTimer& qp_timer, HighsCallback& callback) {
   QpModelStatus qp_model_status = QpModelStatus::kUndetermined;
 
   QpSolution qp_solution(instance);
@@ -197,10 +197,29 @@ QpAsmStatus solveqp(Instance& instance, Settings& settings, Statistics& stats,
                          highs_solution);
     }
   }
-
+  if (callback.user_callback) {
+    if (callback.active[kCallbackQpFirstFeasiblePoint]) {
+      callback.clearHighsCallbackOutput();
+      callback.data_out.qp_solution = startinfo.primal.value;
+      const bool interrupt = callback.callbackAction(
+          kCallbackQpFirstFeasiblePoint, "QP: first feasible solution");
+      assert(!interrupt);
+      (void)interrupt;
+    }
+    if (callback.active[kCallbackQpInterrupt]) {
+      callback.clearHighsCallbackOutput();
+      callback.data_out.qpasm_iteration_count = 0;
+      callback.data_out.objective_function_value =
+          instance.objval(startinfo.primal);
+      if (callback.callbackAction(kCallbackQpInterrupt, "QP: interrupt")) {
+        highs_model_status = HighsModelStatus::kInterrupt;
+        return QpAsmStatus::kOk;
+      }
+    }
+  }
   // solve
-  solveqp_actual(instance, settings, startinfo, stats, qp_model_status,
-                 qp_solution, qp_timer);
+  solveqpActual(instance, settings, startinfo, stats, qp_model_status,
+                qp_solution, qp_timer, callback);
 
   // undo perturbation and resolve
 

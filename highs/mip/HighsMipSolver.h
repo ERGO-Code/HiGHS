@@ -33,6 +33,23 @@ struct HighsTerminator {
   void report(const HighsLogOptions log_options) const;
 };
 
+struct MipViolation {
+  double bound_violation;
+  double integrality_violation;
+  double row_violation;
+  HighsInt num_bound_violations;
+  HighsInt num_integrality_violations;
+  HighsInt num_row_violations;
+  HighsInt col_of_max_bound_violation;
+  HighsInt col_of_max_integrality_violation;
+  HighsInt row_of_max_row_violation;
+  void clear();
+  void copy(double& bound_violation_, double& integrality_violation_,
+            double& row_violation_) const;
+  void log(const HighsLogOptions& log_options, const double objective_value,
+           const std::string& source) const;
+};
+
 class HighsMipSolver {
  public:
   HighsCallback* callback_;
@@ -141,8 +158,7 @@ class HighsMipSolver {
   void callbackGetCutPool() const;
   bool solutionFeasible(const HighsLp* lp, const std::vector<double>& col_value,
                         const std::vector<double>* pass_row_value,
-                        double& bound_violation, double& row_violation,
-                        double& integrality_violation, HighsCDouble& obj) const;
+                        MipViolation& violation, HighsCDouble& obj) const;
 
   std::vector<HighsModelStatus> initialiseTerminatorRecord(
       HighsInt num_instance) const;
@@ -159,12 +175,10 @@ class HighsMipSolver {
   void setParallelLock(bool lock) const;
   void setProfiling(HighsProfiling* profiling);
   HighsInt getMaxNumWorkers() const {
-    if (highs::parallel::num_threads() == 1 ||
-        options_mip_->parallel != kHighsOnString || submip) {
+    if (options_mip_->parallel != kHighsOnString || submip) {
       return 1;
     }
-    return static_cast<HighsInt>(
-        std::ceil(1.7 * highs::parallel::num_threads()));
+    return highs::parallel::num_threads();
   }
 };
 

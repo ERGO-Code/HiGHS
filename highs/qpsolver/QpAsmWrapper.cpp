@@ -26,20 +26,20 @@ HighsStatus solveQpAsm(HighsQpSolverObject& solver_object) {
 HighsHessianFunctionType testOracleCallSquareHessian =
     [](const HighsInt call_type, const HighsInt* x_num_entries,
        const HighsInt* x_index, const double* x_value,
-       HighsInt* q_x_num_entries, HighsInt* q_x_index, double* q_x_value,
-       void* hessian_p) {
+       HighsInt* hessian_x_num_entries, HighsInt* hessian_x_index,
+       double* hessian_x_value, void* hessian_p) {
       assert(kHessianOracleCallTypeMin <= call_type &&
              call_type <= kHessianOracleCallTypeMax);
 
       HighsHessian hessian = *(static_cast<HighsHessian*>(hessian_p));
       assert(hessian.format_ == HessianFormat::kSquare);
 
-      // Lambda for adding multiple of Hessian column into q_x_value
+      // Lambda for adding multiple of Hessian column into hessian_x_value
       auto addScaledQcol = [&](const HighsInt iCol, const double x_value) {
         for (HighsInt iEl = hessian.start_[iCol];
              iEl < hessian.start_[iCol + 1]; iEl++) {
           HighsInt iRow = hessian.index_[iEl];
-          q_x_value[iRow] += hessian.value_[iEl] * x_value;
+          hessian_x_value[iRow] += hessian.value_[iEl] * x_value;
         }
       };
 
@@ -47,17 +47,17 @@ HighsHessianFunctionType testOracleCallSquareHessian =
         assert(x_num_entries == nullptr);
         assert(x_value == nullptr);
         assert(x_index != nullptr);
-        assert(q_x_num_entries == nullptr);
-        assert(q_x_index != nullptr);
-        assert(q_x_value != nullptr);
+        assert(hessian_x_num_entries == nullptr);
+        assert(hessian_x_index != nullptr);
+        assert(hessian_x_value != nullptr);
         HighsInt iCol = x_index[0];
-        HighsInt iRow = q_x_index[0];
+        HighsInt iRow = hessian_x_index[0];
         // Zero Qx value in case the Hessian entry requested is zero
-        q_x_value[0] = 0;
+        hessian_x_value[0] = 0;
         for (HighsInt iEl = hessian.start_[iCol];
              iEl < hessian.start_[iCol + 1]; iEl++) {
           if (hessian.index_[iEl] == iRow) {
-            q_x_value[0] = hessian.value_[iEl];
+            hessian_x_value[0] = hessian.value_[iEl];
             return 0;
           }
         }
@@ -66,22 +66,22 @@ HighsHessianFunctionType testOracleCallSquareHessian =
         assert(x_num_entries == nullptr);
         assert(x_value == nullptr);
         assert(x_index != nullptr);
-        assert(q_x_num_entries != nullptr);
-        assert(q_x_index != nullptr);
-        assert(q_x_value != nullptr);
-        (*q_x_num_entries) = 0;
+        assert(hessian_x_num_entries != nullptr);
+        assert(hessian_x_index != nullptr);
+        assert(hessian_x_value != nullptr);
+        (*hessian_x_num_entries) = 0;
         HighsInt iCol = x_index[0];
         for (HighsInt iEl = hessian.start_[iCol];
              iEl < hessian.start_[iCol + 1]; iEl++) {
-          q_x_index[*q_x_num_entries] = hessian.index_[iEl];
-          q_x_value[*q_x_num_entries] = hessian.value_[iEl];
-          (*q_x_num_entries)++;
+          hessian_x_index[*hessian_x_num_entries] = hessian.index_[iEl];
+          hessian_x_value[*hessian_x_num_entries] = hessian.value_[iEl];
+          (*hessian_x_num_entries)++;
         }
       } else {
         assert(x_index == nullptr || *x_num_entries >= 0);
-        assert(q_x_num_entries == nullptr);
-        assert(q_x_index == nullptr);
-        assert(q_x_value != nullptr);
+        assert(hessian_x_num_entries == nullptr);
+        assert(hessian_x_index == nullptr);
+        assert(hessian_x_value != nullptr);
         if (x_index == nullptr) {
           // Simple product with full vector x, full vector q_x
           for (HighsInt iCol = 0; iCol < hessian.dim_; iCol++)
@@ -248,8 +248,8 @@ HighsStatus solveQpAsm(const HighsOptions& options, HighsTimer& timer,
       settings.pricing = PricingStrategy::Devex;
   }
 
-  QpAsmStatus status =
-      solveqp(instance, settings, stats, model_status, basis, solution, timer);
+  QpAsmStatus status = solveqp(instance, settings, stats, model_status, basis,
+                               solution, timer, callback);
 
   // QP solver can fail, so should return something other than
   // QpAsmStatus::kOk

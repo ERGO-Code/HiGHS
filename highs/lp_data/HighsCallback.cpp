@@ -24,6 +24,7 @@ void HighsCallback::clearHighsCallbackOutput() {
   this->data_out.simplex_iteration_count = -1;
   this->data_out.ipm_iteration_count = -1;
   this->data_out.pdlp_iteration_count = -1;
+  this->data_out.qpasm_iteration_count = -1;
   this->data_out.objective_function_value = -kHighsInf;
   this->data_out.mip_node_count = -1;
   this->data_out.mip_primal_bound = kHighsInf;
@@ -35,6 +36,7 @@ void HighsCallback::clearHighsCallbackOutput() {
   this->data_out.cutpool_value.clear();
   this->data_out.cutpool_lower.clear();
   this->data_out.cutpool_upper.clear();
+  this->data_out.qp_solution.clear();
   this->data_out.external_solution_query_origin =
       ExternalMipSolutionQueryOrigin::kExternalMipSolutionQueryOriginAfterSetup;
 }
@@ -88,14 +90,16 @@ bool HighsCallback::callbackAction(const int callback_type,
       callback_type == kCallbackMipLogging ||
       callback_type == kCallbackMipGetCutPool ||
       callback_type == kCallbackMipDefineLazyConstraints ||
-      callback_type == kCallbackMipUserSolution)
+      callback_type == kCallbackMipUserSolution ||
+      callback_type == kCallbackQpFirstFeasiblePoint)
     assert(!action);
   return action;
 }
 
 // Conversions for C API
 
-// Convert HighsCallbackDataOut to HighsCCallbackDataOut
+// Return HighsCallbackDataOut (ie pointer-based) data structure from
+// HighsCallbackOutput
 HighsCallbackOutput::operator HighsCallbackDataOut() const {
   HighsCallbackDataOut data;
   data.cbdata = static_cast<void*>(const_cast<HighsCallbackOutput*>(this));
@@ -104,6 +108,7 @@ HighsCallbackOutput::operator HighsCallbackDataOut() const {
   data.simplex_iteration_count = simplex_iteration_count;
   data.ipm_iteration_count = ipm_iteration_count;
   data.pdlp_iteration_count = pdlp_iteration_count;
+  data.qpasm_iteration_count = qpasm_iteration_count;
   data.objective_function_value = objective_function_value;
 
   data.mip_node_count = mip_node_count;
@@ -134,8 +139,13 @@ HighsCallbackOutput::operator HighsCallbackDataOut() const {
                            ? nullptr
                            : const_cast<double*>(cutpool_upper.data());
 
+  data.qp_solution_size = qp_solution.size();
+  data.qp_solution =
+      qp_solution.empty() ? nullptr : const_cast<double*>(qp_solution.data());
+
   data.external_solution_query_origin =
       static_cast<HighsInt>(external_solution_query_origin);
+
   return data;
 }
 

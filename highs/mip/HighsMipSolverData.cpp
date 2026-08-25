@@ -1170,7 +1170,9 @@ double HighsMipSolverData::transformNewIntegerFeasibleSolution(
   solution.col_value = sol;
   solution.value_valid = true;
   // Perform primal postsolve to get the original column values
-  postSolveStack.undoPrimal(*mipsolver.options_mip_, solution);
+  const HighsInt report_col = -kHighsIInf;
+  this->reportOriginalPresolvedCol(report_col, sol);
+  postSolveStack.undoPrimal(*mipsolver.options_mip_, solution, report_col);
   // Determine the row values, as they aren't computed in primal
   // postsolve
   HighsStatus return_status =
@@ -1180,14 +1182,15 @@ double HighsMipSolverData::transformNewIntegerFeasibleSolution(
 try_again:
 
   // compute the objective value in the original space
-  double bound_violation_ = 0;
-  double row_violation_ = 0;
-  double integrality_violation_ = 0;
+  MipViolation violation;
   HighsCDouble mipsolver_quad_objective_value = 0;
   bool feasible = mipsolver.solutionFeasible(
-      mipsolver.orig_model_, solution.col_value, &solution.row_value,
-      bound_violation_, row_violation_, integrality_violation_,
+      mipsolver.orig_model_, solution.col_value, &solution.row_value, violation,
       mipsolver_quad_objective_value);
+  double bound_violation_ = 0;
+  double integrality_violation_ = 0;
+  double row_violation_ = 0;
+  violation.copy(bound_violation_, integrality_violation_, row_violation_);
   double mipsolver_objective_value = double(mipsolver_quad_objective_value);
   if (!feasible && allow_try_again) {
     // printf(
@@ -1297,11 +1300,8 @@ try_again:
               mipsolver.options_mip_->mip_feasibility_tolerance &&
           mipsolver.row_violation_ <=
               mipsolver.options_mip_->mip_feasibility_tolerance;
-      highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kWarning,
-                   "Solution with objective %g has untransformed violations: "
-                   "bound = %.4g; integrality = %.4g; row = %.4g\n",
-                   mipsolver_objective_value, bound_violation_,
-                   integrality_violation_, row_violation_);
+      violation.log(mipsolver.options_mip_->log_options,
+                    mipsolver_objective_value, "Solution");
       if (!currentFeasible) {
         // if the current incumbent is non existent or also not feasible we
         // still store the new one
@@ -1345,7 +1345,7 @@ void HighsMipSolverData::performRestart() {
   HighsInt numLpRows = getLp().getLp().num_row_;
   HighsInt numModelRows = mipsolver.numRow();
   HighsInt numCuts = numLpRows - numModelRows;
-  if (numCuts > 0) postSolveStack.appendCutsToModel(numCuts);
+  postSolveStack.appendCutsToModel(numCuts);
   auto integrality = std::move(presolvedModel.integrality_);
   double offset = presolvedModel.offset_;
   presolvedModel = getLp().getLp();
@@ -1361,18 +1361,19 @@ void HighsMipSolverData::performRestart() {
     // if we have a basis after solving the root LP, we expand it to the
     // original space so that it can be used for constructing a starting basis
     // for the presolved model after the restart
-    root_basis.col_status.resize(postSolveStack.getOrigNumCol());
-    root_basis.row_status.resize(postSolveStack.getOrigNumRow(),
+    root_basis.col_status.resize(postSolveStack.getNextColIndex());
+    root_basis.row_status.resize(postSolveStack.getNextRowIndex(),
                                  HighsBasisStatus::kBasic);
     root_basis.valid = true;
     root_basis.useful = true;
 
-    for (HighsInt i = 0; i < mipsolver.numCol(); ++i)
+    for (HighsInt i = 0; i < static_cast<HighsInt>(basis.col_status.size());
+         ++i)
       root_basis.col_status[postSolveStack.getOrigColIndex(i)] =
           basis.col_status[i];
 
-    HighsInt numRow = basis.row_status.size();
-    for (HighsInt i = 0; i < numRow; ++i)
+    for (HighsInt i = 0; i < static_cast<HighsInt>(basis.row_status.size());
+         ++i)
       root_basis.row_status[postSolveStack.getOrigRowIndex(i)] =
           basis.row_status[i];
 
@@ -1492,13 +1493,19 @@ void HighsMipSolverData::basisTransfer() {
     firstrootbasis.alien = true;
     firstrootbasis.useful = true;
 
-    for (HighsInt i = 0; i < numRow; ++i) {
+    for (HighsInt i = 0;
+         i < static_cast<HighsInt>(postSolveStack.getOrigRowIndex().size());
+         ++i) {
+      if (!postSolveStack.isOrigRow(i)) break;
       HighsBasisStatus status =
           mipsolver.rootbasis->row_status[postSolveStack.getOrigRowIndex(i)];
       firstrootbasis.row_status[i] = status;
     }
 
-    for (HighsInt i = 0; i < numCol; ++i) {
+    for (HighsInt i = 0;
+         i < static_cast<HighsInt>(postSolveStack.getOrigColIndex().size());
+         ++i) {
+      if (!postSolveStack.isOrigCol(i)) break;
       HighsBasisStatus status =
           mipsolver.rootbasis->col_status[postSolveStack.getOrigColIndex(i)];
       firstrootbasis.col_status[i] = status;
@@ -2799,23 +2806,20 @@ void HighsMipSolverData::queryExternalSolution(
       // (reduced_c)^T(reduced_x) = original_sense*[original_offset +
       // (original_c)^T(original_x) - reduced_offset]
       const auto& user_solution = callback->data_in.user_solution;
-      double bound_violation_ = 0;
-      double row_violation_ = 0;
-      double integrality_violation_ = 0;
+      MipViolation violation;
       HighsCDouble user_solution_quad_objective_value = 0;
       const bool feasible = mipsolver.solutionFeasible(
-          mipsolver.orig_model_, user_solution, nullptr, bound_violation_,
-          row_violation_, integrality_violation_,
+          mipsolver.orig_model_, user_solution, nullptr, violation,
           user_solution_quad_objective_value);
+      double bound_violation_ = 0;
+      double integrality_violation_ = 0;
+      double row_violation_ = 0;
+      violation.copy(bound_violation_, integrality_violation_, row_violation_);
       double user_solution_objective_value =
           double(user_solution_quad_objective_value);
       if (!feasible) {
-        highsLogUser(
-            mipsolver.options_mip_->log_options, HighsLogType::kWarning,
-            "User-supplied solution has with objective %g has violations: "
-            "bound = %.4g; integrality = %.4g; row = %.4g\n",
-            user_solution_objective_value, bound_violation_,
-            integrality_violation_, row_violation_);
+        violation.log(mipsolver.options_mip_->log_options,
+                      user_solution_objective_value, "User-supplied solution");
         return;
       }
       std::vector<double> reduced_user_solution;
@@ -2852,6 +2856,36 @@ bool HighsMipSolverData::terminatorTerminated() const {
 void HighsMipSolverData::terminatorReport() const {
   if (this->terminatorActive())
     mipsolver.terminator_.report(mipsolver.options_mip_->log_options);
+}
+
+void HighsMipSolverData::reportOriginalPresolvedCol(
+    const HighsInt original_col, const std::vector<double> presolved_solution) {
+  if (original_col < 0 || original_col >= mipsolver.orig_model_->num_col_)
+    return;
+  // Find this column in the presolved model
+  HighsInt presolved_col = postSolveStack.getPresolvedColumnIndex(original_col);
+  printf("Original col = %d (%s) [%g, %g] %s", int(original_col),
+         mipsolver.orig_model_->col_names_[original_col].c_str(),
+         mipsolver.orig_model_->col_lower_[original_col],
+         mipsolver.orig_model_->col_upper_[original_col],
+         mipsolver.orig_model_->integrality_[original_col] ==
+                 HighsVarType::kContinuous
+             ? "Continuous"
+             : "Discrete");
+  if (presolved_col > 0) {
+    printf("; Presolved col = %d (%s) [%g, %g] %s has value %g\n",
+           int(presolved_col),
+           mipsolver.model_->col_names_[presolved_col].c_str(),
+           mipsolver.model_->col_lower_[presolved_col],
+           mipsolver.model_->col_upper_[presolved_col],
+           mipsolver.model_->integrality_[presolved_col] ==
+                   HighsVarType::kContinuous
+               ? "Continuous"
+               : "Discrete",
+           presolved_solution[presolved_col]);
+  } else {
+    printf("; Not in presolved model\n");
+  }
 }
 
 static double possInfRelDiff(const double v0, const double v1,

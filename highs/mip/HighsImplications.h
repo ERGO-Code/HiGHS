@@ -23,15 +23,34 @@ class HighsLpRelaxation;
 class HighsImplications {
   HighsInt nextCleanupCall;
 
-  struct Implics {
-    std::vector<HighsDomainChange> implics;
-    bool computed = false;
+  struct Implication {
+    double lb = -kHighsInf;
+    double ub = kHighsInf;
   };
-  std::vector<Implics> implications;
-  std::vector<std::vector<HighsDomainChange>> tentativeImplications;
+
+  struct tentativeImplication {
+    HighsDomainChange domchg;
+    bool dualSafe;
+  };
+
+  std::vector<tentativeImplication> implicationsDown;
+  std::vector<tentativeImplication> implicationsUp;
+  std::vector<HighsHashTree<HighsInt, Implication>> implications;
+  std::vector<HighsHashTree<HighsInt, bool>> reverseImplications;
+  std::vector<uint8_t> hasProbed;
   int64_t numImplications;
   int64_t numVarBounds;
   int64_t maxVarBounds;
+
+  struct ImplIdx {
+    HighsInt col;
+    HighsInt val;
+    operator size_t() const {
+      assert(col >= 0);
+      assert(val == 0 || val == 1);
+      return 2 * col + val;
+    }
+  };
 
   bool computeImplications(HighsInt col, bool val);
 
@@ -59,8 +78,7 @@ class HighsImplications {
   std::vector<HighsSubstitution> substitutions;
   std::vector<HighsBool> colsubstituted;
 
-  // TODO: Rename these!!!
-  std::vector<HighsInt> binaryInvolvedInds_;
+  std::vector<HighsInt> dualFixProbingBinInds_;
   // (0000) : Not involved
   // (0010) : Fixed to lower in zero-side probing
   // (0001) : Fixed to upper in zero-side probing
@@ -70,21 +88,13 @@ class HighsImplications {
   // (0101) : Fixed to upper in both sides. Fix to upper.
   // (1001) : Conclude that x1 + x2 = 1
   // (0110) : Conclude that x1 = x2
-  std::vector<uint8_t> binaryInvolvedFlags_;
+  std::vector<uint8_t> dualFixProbingBinFlags_;
 
   HighsImplications(const HighsMipSolver& mipsolver) : mipsolver(mipsolver) {
-    HighsInt numcol = mipsolver.numCol();
-    implications.resize(2 * static_cast<size_t>(numcol));
-    colsubstituted.resize(numcol);
-    vubs.resize(numcol);
-    vlbs.resize(numcol);
     nextCleanupCall = mipsolver.numNonzero();
     numImplications = 0;
     numVarBounds = 0;
-    maxVarBounds = calcMaxVarBounds(numcol);
-
-    binaryInvolvedInds_.reserve(numcol);
-    binaryInvolvedFlags_.assign(numcol, 0);
+    resize(mipsolver.numCol());
   }
 
   std::function<void(HighsInt, HighsInt, HighsInt, double)>
@@ -95,23 +105,30 @@ class HighsImplications {
     colsubstituted.shrink_to_fit();
     implications.clear();
     implications.shrink_to_fit();
-
-    HighsInt numcol = mipsolver.numCol();
-    implications.resize(2 * static_cast<size_t>(numcol));
-    colsubstituted.resize(numcol);
+    hasProbed.clear();
+    hasProbed.shrink_to_fit();
+    reverseImplications.clear();
+    reverseImplications.shrink_to_fit();
     numImplications = 0;
     vubs.clear();
     vubs.shrink_to_fit();
-    vubs.resize(numcol);
     vlbs.clear();
     vlbs.shrink_to_fit();
-    vlbs.resize(numcol);
+    resize(mipsolver.numCol());
     numVarBounds = 0;
-    maxVarBounds = calcMaxVarBounds(numcol);
-
     nextCleanupCall = mipsolver.numNonzero();
-    binaryInvolvedInds_.reserve(numcol);
-    binaryInvolvedFlags_.assign(numcol, 0);
+  }
+
+  void resize(HighsInt ncols) {
+    implications.resize(2 * static_cast<size_t>(ncols));
+    hasProbed.resize(2 * static_cast<size_t>(ncols));
+    reverseImplications.resize(ncols);
+    colsubstituted.resize(ncols);
+    vubs.resize(ncols);
+    vlbs.resize(ncols);
+    maxVarBounds = calcMaxVarBounds(ncols);
+    dualFixProbingBinInds_.reserve(ncols);
+    dualFixProbingBinFlags_.assign(ncols, 0);
   }
 
   constexpr static int64_t calcMaxVarBounds(HighsInt numcol) {
@@ -122,29 +139,11 @@ class HighsImplications {
     return static_cast<HighsInt>(numImplications);
   }
 
-  const std::vector<HighsDomainChange>& getImplications(HighsInt col, bool val,
-                                                        bool& infeasible) {
-    HighsInt loc = 2 * col + val;
-    if (!implications[loc].computed)
-      infeasible = computeImplications(col, val);
-    else
-      infeasible = false;
-
-    assert(implications[loc].computed);
-
-    return implications[loc].implics;
+  bool probedBefore(const HighsInt col, const bool val) const {
+    return hasProbed[ImplIdx{col, val}];
   }
 
-  const std::vector<HighsDomainChange>& getTentativeImplications(HighsInt col,
-                                                                 bool val) {
-    HighsInt loc = 2 * col + val;
-    return tentativeImplications[loc];
-  }
-
-  bool implicationsCached(HighsInt col, bool val) {
-    HighsInt loc = 2 * col + val;
-    return implications[loc].computed;
-  }
+  void addImplication(ImplIdx idx, HighsInt implCol, Implication implic);
 
   bool tooManyVarBounds() const { return numVarBounds >= maxVarBounds; }
 
@@ -163,6 +162,21 @@ class HighsImplications {
               double collowerbound, bool colisinteger);
 
   void columnTransformed(HighsInt col, double scale, double constant) {
+    // Update implications affected by transformation
+    auto changeImplications = [&](HighsInt binCol, bool) {
+      for (HighsInt val = 0; val != 2; val++) {
+        Implication* implic = implications[ImplIdx{binCol, val}].find(col);
+        if (implic) {
+          if (scale < 0) std::swap(implic->lb, implic->ub);
+          implic->lb -= constant;
+          implic->lb /= scale;
+          implic->ub -= constant;
+          implic->ub /= scale;
+        }
+      }
+    };
+    reverseImplications[col].for_each(changeImplications);
+
     // Update variable bounds affected by transformation
     if (scale < 0) std::swap(vubs[col], vlbs[col]);
 
@@ -225,16 +239,18 @@ class HighsImplications {
     const uint8_t mask =
         1 << (2 * val + (domchg.boundtype != HighsBoundType::kLower));
 
-    if ((binaryInvolvedFlags_[col] & mask) == 0) {
-      if (binaryInvolvedFlags_[col] == 0) binaryInvolvedInds_.push_back(col);
+    if ((dualFixProbingBinFlags_[col] & mask) == 0) {
+      if (dualFixProbingBinFlags_[col] == 0)
+        dualFixProbingBinInds_.push_back(col);
 
-      binaryInvolvedFlags_[col] |= mask;
+      dualFixProbingBinFlags_[col] |= mask;
     }
   }
 
   void clearTentativeClique() {
-    for (HighsInt col : binaryInvolvedInds_) binaryInvolvedFlags_[col] = 0;
-    binaryInvolvedInds_.clear();
+    for (HighsInt col : dualFixProbingBinInds_)
+      dualFixProbingBinFlags_[col] = 0;
+    dualFixProbingBinInds_.clear();
   }
 };
 

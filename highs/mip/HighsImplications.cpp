@@ -81,7 +81,7 @@ bool HighsImplications::computeImplications(HighsInt col, bool val) {
   mipsolver.mipdata_->getPseudoCost().addInferenceObservation(
       col, numImplications, val);
 
-  std::vector<HighsDomainChange> implics;
+  std::vector<tentativeImplication> implics;
   implics.reserve(numImplications);
 
   HighsInt numEntries = mipsolver.mipdata_->cliquetable.getNumEntries();
@@ -96,7 +96,7 @@ bool HighsImplications::computeImplications(HighsInt col, bool val) {
         ((domchgreason[i].index >> 1) == col || numEntries >= maxEntries))
       continue;
 
-    implics.push_back(domchgstack[i]);
+    implics.push_back({domchgstack[i], i < unsafeStackStart});
     if (i < unsafeStackStart) safeImplicsEnd++;
   }
 
@@ -110,30 +110,30 @@ bool HighsImplications::computeImplications(HighsInt col, bool val) {
     // add the dualFix implications of binaries to the clique table
     auto binstart =
         std::partition(implics.begin() + safeImplicsEnd, implics.end(),
-                       [&](const HighsDomainChange& a) {
-                         return !globaldomain.isBinary(a.column);
+                       [&](const tentativeImplication& a) {
+                         return !globaldomain.isBinary(a.domchg.column);
                        });
     // store the tentative bound changes of binaries separately
     for (auto i = binstart; i != implics.end(); ++i)
-      recordTentativeCliques(val, *i);
+      recordTentativeCliques(val, i->domchg);
     implics.erase(binstart, implics.end());
   }
 
   // add the implications of binary variables to the clique table
   auto binstart =
       std::partition(implics.begin(), implics.begin() + safeImplicsEnd,
-                     [&](const HighsDomainChange& a) {
-                       return !globaldomain.isBinary(a.column);
+                     [&](const tentativeImplication& a) {
+                       return !globaldomain.isBinary(a.domchg.column);
                      });
 
   std::array<HighsCliqueTable::CliqueVar, 2> clique;
   clique[0] = HighsCliqueTable::CliqueVar(col, val);
 
   for (auto i = binstart; i != implics.begin() + safeImplicsEnd; ++i) {
-    if (i->boundtype == HighsBoundType::kLower)
-      clique[1] = HighsCliqueTable::CliqueVar(i->column, 0);
+    if (i->domchg.boundtype == HighsBoundType::kLower)
+      clique[1] = HighsCliqueTable::CliqueVar(i->domchg.column, 0);
     else
-      clique[1] = HighsCliqueTable::CliqueVar(i->column, 1);
+      clique[1] = HighsCliqueTable::CliqueVar(i->domchg.column, 1);
 
     cliquetable.addClique(mipsolver, clique.data(), 2);
     if (globaldomain.infeasible() || globaldomain.isFixed(col)) return true;
@@ -146,40 +146,55 @@ bool HighsImplications::computeImplications(HighsInt col, bool val) {
 
   // store variable bounds derived from implications
   for (auto i = implics.begin(); i != implics.begin() + safeImplicsEnd; ++i) {
-    if (i->boundtype == HighsBoundType::kLower) {
+    if (i->domchg.boundtype == HighsBoundType::kLower) {
       if (val == 1) {
-        if (globaldomain.col_lower_[i->column] != -kHighsInf)
-          addVLB(i->column, col,
-                 i->boundval - globaldomain.col_lower_[i->column],
-                 globaldomain.col_lower_[i->column]);
+        if (globaldomain.col_lower_[i->domchg.column] != -kHighsInf)
+          addVLB(i->domchg.column, col,
+                 i->domchg.boundval - globaldomain.col_lower_[i->domchg.column],
+                 globaldomain.col_lower_[i->domchg.column]);
       } else
-        addVLB(i->column,
+        addVLB(i->domchg.column,
                col,  // in case the lower bound is infinite the varbound can
                      // still be tightened as soon as a finite upper bound is
                      // known because the offset is finite
-               globaldomain.col_lower_[i->column] - i->boundval, i->boundval);
+               globaldomain.col_lower_[i->domchg.column] - i->domchg.boundval,
+               i->domchg.boundval);
     } else {
       if (val == 1) {
-        if (globaldomain.col_upper_[i->column] != kHighsInf)
-          addVUB(i->column, col,
-                 i->boundval - globaldomain.col_upper_[i->column],
-                 globaldomain.col_upper_[i->column]);
+        if (globaldomain.col_upper_[i->domchg.column] != kHighsInf)
+          addVUB(i->domchg.column, col,
+                 i->domchg.boundval - globaldomain.col_upper_[i->domchg.column],
+                 globaldomain.col_upper_[i->domchg.column]);
       } else
-        addVUB(i->column,
+        addVUB(i->domchg.column,
                col,  // in case the upper bound is infinite the varbound can
                      // still be tightened as soon as a finite upper bound is
                      // known because the offset is finite
-               globaldomain.col_upper_[i->column] - i->boundval, i->boundval);
+               globaldomain.col_upper_[i->domchg.column] - i->domchg.boundval,
+               i->domchg.boundval);
     }
   }
 
-  pdqsort(implics.begin(), implics.end());
+  ImplIdx idx{col, val};
+  hasProbed[idx] = true;
+  for (auto i = implics.begin(); i != implics.begin() + safeImplicsEnd; ++i) {
+    Implication implication;
+    if (i->domchg.boundtype == HighsBoundType::kLower) {
+      implication.lb = i->domchg.boundval;
+    } else {
+      implication.ub = i->domchg.boundval;
+    }
+    addImplication(idx, i->domchg.column, implication);
+  }
 
-  HighsInt loc = 2 * col + val;
-  implications[loc].computed = true;
-  if (!implics.empty()) {
-    implications[loc].implics = std::move(implics);
-    this->numImplications += implications[loc].implics.size();
+  pdqsort(implics.begin(), implics.end(),
+          [](const tentativeImplication& a, const tentativeImplication& b) {
+            return a.domchg.column < b.domchg.column;
+          });
+  if (val) {
+    implicationsUp = std::move(implics);
+  } else {
+    implicationsDown = std::move(implics);
   }
 
   return false;
@@ -331,8 +346,8 @@ std::pair<HighsInt, HighsImplications::VarBound> HighsImplications::getBestVlb(
 
 bool HighsImplications::runProbing(HighsInt col, HighsInt& numReductions) {
   HighsDomain& globaldomain = mipsolver.mipdata_->getDomain();
-  if (globaldomain.isBinary(col) && !implicationsCached(col, 1) &&
-      !implicationsCached(col, 0) &&
+  if (globaldomain.isBinary(col) && !probedBefore(col, 1) &&
+      !probedBefore(col, 0) &&
       mipsolver.mipdata_->cliquetable.getSubstitution(col) == nullptr) {
     const bool enableDfprobing = globaldomain.getDualFixProbingActive();
     if (enableDfprobing) {
@@ -353,14 +368,14 @@ bool HighsImplications::runProbing(HighsInt col, HighsInt& numReductions) {
     if (mipsolver.mipdata_->cliquetable.getSubstitution(col) != nullptr)
       return true;
 
-    if (enableDfprobing && !binaryInvolvedInds_.empty() &&
+    if (enableDfprobing && !dualFixProbingBinInds_.empty() &&
         !mipsolver.mipdata_->cliquetable.isFull()) {
       HighsCliqueTable& cliquetable = mipsolver.mipdata_->cliquetable;
       HighsCliqueTable::CliqueVar clique[2];
-      for (HighsInt k : binaryInvolvedInds_) {
+      for (HighsInt k : dualFixProbingBinInds_) {
         if (!globaldomain.isBinary(k) || colsubstituted[k]) continue;
         if (globaldomain.infeasible()) return true;
-        uint8_t mask = binaryInvolvedFlags_[k];
+        uint8_t mask = dualFixProbingBinFlags_[k];
         if (mask == 0) continue;
 
         if (mask == 10) {
@@ -392,48 +407,48 @@ bool HighsImplications::runProbing(HighsInt col, HighsInt& numReductions) {
       clearTentativeClique();
     }
 
-    const std::vector<HighsDomainChange>& implicsdown =
-        getImplications(col, 0, infeasible);
-    const std::vector<HighsDomainChange>& implicsup =
-        getImplications(col, 1, infeasible);
-    HighsInt nimplicsdown = implicsdown.size();
-    HighsInt nimplicsup = implicsup.size();
+    HighsInt nimplicsdown = implicationsDown.size();
+    HighsInt nimplicsup = implicationsUp.size();
     HighsInt u = 0;
     HighsInt d = 0;
 
     while (u < nimplicsup && d < nimplicsdown) {
-      if (implicsup[u].column < implicsdown[d].column)
+      if (implicationsUp[u].domchg.column < implicationsDown[d].domchg.column)
         ++u;
-      else if (implicsdown[d].column < implicsup[u].column)
+      else if (implicationsDown[d].domchg.column <
+               implicationsUp[u].domchg.column)
         ++d;
       else {
-        assert(implicsup[u].column == implicsdown[d].column);
-        HighsInt implcol = implicsup[u].column;
+        assert(implicationsUp[u].domchg.column ==
+               implicationsDown[d].domchg.column);
+        HighsInt implcol = implicationsUp[u].domchg.column;
         double lbDown = globaldomain.col_lower_[implcol];
         double ubDown = globaldomain.col_upper_[implcol];
         double lbUp = lbDown;
         double ubUp = ubDown;
 
         do {
-          if (implicsdown[d].boundtype == HighsBoundType::kLower)
-            lbDown = std::max(lbDown, implicsdown[d].boundval);
+          if (implicationsDown[d].domchg.boundtype == HighsBoundType::kLower)
+            lbDown = std::max(lbDown, implicationsDown[d].domchg.boundval);
           else
-            ubDown = std::min(ubDown, implicsdown[d].boundval);
+            ubDown = std::min(ubDown, implicationsDown[d].domchg.boundval);
           ++d;
-        } while (d < nimplicsdown && implicsdown[d].column == implcol);
+        } while (d < nimplicsdown &&
+                 implicationsDown[d].domchg.column == implcol);
 
         do {
-          if (implicsup[u].boundtype == HighsBoundType::kLower)
-            lbUp = std::max(lbUp, implicsup[u].boundval);
+          if (implicationsUp[u].domchg.boundtype == HighsBoundType::kLower)
+            lbUp = std::max(lbUp, implicationsUp[u].domchg.boundval);
           else
-            ubUp = std::min(ubUp, implicsup[u].boundval);
+            ubUp = std::min(ubUp, implicationsUp[u].domchg.boundval);
           ++u;
-        } while (u < nimplicsup && implicsup[u].column == implcol);
+        } while (u < nimplicsup && implicationsUp[u].domchg.column == implcol);
 
         if (colsubstituted[implcol] || globaldomain.isFixed(implcol)) continue;
 
         if (lbDown == ubDown && lbUp == ubUp &&
-            std::abs(lbDown - lbUp) > mipsolver.mipdata_->feastol) {
+            std::abs(lbDown - lbUp) > mipsolver.mipdata_->feastol &&
+            implicationsUp[u].dualSafe && implicationsDown[d].dualSafe) {
           HighsSubstitution substitution;
           substitution.substcol = implcol;
           substitution.staycol = col;
@@ -459,12 +474,35 @@ bool HighsImplications::runProbing(HighsInt col, HighsInt& numReductions) {
           }
         }
       }
-    }
+      return globaldomain.infeasible();
+    };
+
+    hasProbed[ImplIdx{col, 0}] = true;
+    hasProbed[ImplIdx{col, 1}] = true;
 
     return true;
   }
 
   return false;
+}
+
+void HighsImplications::addImplication(ImplIdx idx, HighsInt implCol,
+                                       Implication implic) {
+  auto insertresult = implications[idx].insert_or_get(implCol, implic);
+
+  if (!insertresult.second) {
+    if (insertresult.first->lb == -kHighsInf && implic.lb != -kHighsInf)
+      ++numImplications;
+    if (insertresult.first->ub == kHighsInf && implic.ub != kHighsInf)
+      ++numImplications;
+    insertresult.first->lb = std::max(implic.lb, insertresult.first->lb);
+    insertresult.first->ub = std::min(implic.ub, insertresult.first->ub);
+  } else {
+    if (implic.lb != -kHighsInf) ++numImplications;
+    if (implic.ub != kHighsInf) ++numImplications;
+  }
+
+  reverseImplications[implCol].insert_or_get(idx.col);
 }
 
 void HighsImplications::strengthenVarBound(VarBound& vbnd,
@@ -579,12 +617,21 @@ void HighsImplications::rebuild(HighsInt ncols,
   oldvlbs.swap(vlbs);
   oldvubs.swap(vubs);
 
+  std::vector<HighsHashTree<HighsInt, Implication>> oldimplications;
+  oldimplications.swap(implications);
+
   colsubstituted.clear();
   colsubstituted.shrink_to_fit();
   implications.clear();
   implications.shrink_to_fit();
+  hasProbed.clear();
+  hasProbed.shrink_to_fit();
+  reverseImplications.clear();
+  reverseImplications.shrink_to_fit();
 
   implications.resize(2 * ncols);
+  hasProbed.resize(2 * ncols);
+  reverseImplications.resize(ncols);
   colsubstituted.resize(ncols);
   substitutions.clear();
   vubs.clear();
@@ -635,10 +682,19 @@ void HighsImplications::rebuild(HighsInt ncols,
       addVLB(newi, newVlbCol, vlb.coef, vlb.constant);
     });
 
-    // todo also add old implications once implications can be added
-    // incrementally for now we discard the old implications as they might be
-    // weaker then newly computed ones and adding them would block computation
-    // of new implications
+    if (mipsolver.mipdata_->getDomain().isBinary(newi)) {
+      for (HighsInt val = 0; val != 2; val++) {
+        oldimplications[ImplIdx{i, val}].for_each([&](HighsInt implCol,
+                                                      Implication impl) {
+          HighsInt newImplCol = orig2reducedcol[implCol];
+          if (newImplCol == -1 ||
+              !mipsolver.mipdata_->postSolveStack.isColLinearlyTransformable(
+                  newImplCol))
+            return;
+          addImplication(ImplIdx{newi, val}, newImplCol, impl);
+        });
+      }
+    }
   }
 }
 
@@ -657,10 +713,14 @@ void HighsImplications::buildFrom(const HighsImplications& init) {
       addVLB(i, vlbCol, vlb.coef, vlb.constant);
     });
 
-    // todo also add old implications once implications can be added
-    // incrementally for now we discard the old implications as they might be
-    // weaker then newly computed ones and adding them would block computation
-    // of new implications
+    if (mipsolver.mipdata_->getDomain().isBinary(i)) {
+      for (HighsInt val = 0; val != 2; val++) {
+        init.implications[ImplIdx{i, val}].for_each(
+            [&](HighsInt implCol, Implication implic) {
+              addImplication(ImplIdx{i, val}, implCol, implic);
+            });
+      }
+    }
   }
 }
 
@@ -685,7 +745,7 @@ void HighsImplications::separateImpliedBounds(
       HighsInt col = fracint.first;
       if (globaldom.col_lower_[col] != 0.0 ||
           globaldom.col_upper_[col] != 1.0 ||
-          (implicationsCached(col, 0) && implicationsCached(col, 1)))
+          (probedBefore(col, 0) && probedBefore(col, 1)))
         continue;
 
       mipsolver.profiling_->start(kMipClockProbingImplications);
@@ -724,6 +784,14 @@ void HighsImplications::separateImpliedBounds(
       mipsolver.mipdata_->cliquetable.numNeighbourhoodQueries = oldNumQueries;
   }
 
+  auto tryAddCut = [&](HighsInt implCol) {
+    double viol = sol[inds[0]] * vals[0] + sol[inds[1]] * vals[1] - rhs;
+    if (viol > feastol) {
+      cutpool.addCut(mipsolver, inds.data(), vals.data(), 2, rhs,
+                     !mipsolver.isColContinuous(implCol), false, false, false);
+    }
+  };
+
   for (std::pair<HighsInt, double> fracint :
        lpRelaxation.getFractionalIntegers()) {
     HighsInt col = fracint.first;
@@ -731,106 +799,45 @@ void HighsImplications::separateImpliedBounds(
     if (globaldom.col_lower_[col] != 0.0 || globaldom.col_upper_[col] != 1.0)
       continue;
 
-    bool infeas;
-    if (implicationsCached(col, 1)) {
-      const std::vector<HighsDomainChange>& implics =
-          getImplications(col, 1, infeas);
-      if (globaldom.infeasible()) return;
-
-      if (infeas) {
-        vals[0] = 1.0;
-        inds[0] = col;
-        cutpool.addCut(mipsolver, inds.data(), vals.data(), 1, 0.0, false, true,
-                       false);
-        continue;
-      }
-
-      HighsInt nimplics = implics.size();
-      for (HighsInt i = 0; i < nimplics; ++i) {
-        if (implics[i].boundtype == HighsBoundType::kUpper) {
-          if (implics[i].boundval + feastol >=
-              globaldom.col_upper_[implics[i].column])
-            continue;
-
-          vals[0] = 1.0;
-          inds[0] = implics[i].column;
-          vals[1] =
-              globaldom.col_upper_[implics[i].column] - implics[i].boundval;
-          inds[1] = col;
-          rhs = globaldom.col_upper_[implics[i].column];
-
-        } else {
-          if (implics[i].boundval - feastol <=
-              globaldom.col_lower_[implics[i].column])
-            continue;
-
-          vals[0] = -1.0;
-          inds[0] = implics[i].column;
-          vals[1] =
-              implics[i].boundval - globaldom.col_lower_[implics[i].column];
-          inds[1] = col;
-          rhs = -globaldom.col_lower_[implics[i].column];
-        }
-
-        double viol = sol[inds[0]] * vals[0] + sol[inds[1]] * vals[1] - rhs;
-
-        if (viol > feastol) {
-          // printf("added implied bound cut to pool\n");
-          cutpool.addCut(mipsolver, inds.data(), vals.data(), 2, rhs,
-                         !mipsolver.isColContinuous(implics[i].column), false,
-                         false, false);
-        }
-      }
-    }
-
-    if (implicationsCached(col, 0)) {
-      const std::vector<HighsDomainChange>& implics =
-          getImplications(col, 0, infeas);
-      if (globaldom.infeasible()) return;
-
-      if (infeas) {
-        vals[0] = -1.0;
-        inds[0] = col;
-        cutpool.addCut(mipsolver, inds.data(), vals.data(), 1, -1.0, false,
-                       true, false);
-        continue;
-      }
-
-      HighsInt nimplics = implics.size();
-      for (HighsInt i = 0; i < nimplics; ++i) {
-        if (implics[i].boundtype == HighsBoundType::kUpper) {
-          if (implics[i].boundval + feastol >=
-              globaldom.col_upper_[implics[i].column])
-            continue;
-
-          vals[0] = 1.0;
-          inds[0] = implics[i].column;
-          vals[1] =
-              implics[i].boundval - globaldom.col_upper_[implics[i].column];
-          inds[1] = col;
-          rhs = implics[i].boundval;
-        } else {
-          if (implics[i].boundval - feastol <=
-              globaldom.col_lower_[implics[i].column])
-            continue;
-
-          vals[0] = -1.0;
-          inds[0] = implics[i].column;
-          vals[1] =
-              globaldom.col_lower_[implics[i].column] - implics[i].boundval;
-          inds[1] = col;
-          rhs = -implics[i].boundval;
-        }
-
-        double viol = sol[inds[0]] * vals[0] + sol[inds[1]] * vals[1] - rhs;
-
-        if (viol > feastol) {
-          // printf("added implied bound cut to pool\n");
-          cutpool.addCut(mipsolver, inds.data(), vals.data(), 2, rhs,
-                         !mipsolver.isColContinuous(implics[i].column), false,
-                         false, false);
-        }
-      }
+    for (HighsInt val = 0; val != 2; val++) {
+      implications[ImplIdx{col, val}].for_each(
+          [&](HighsInt implCol, Implication implic) {
+            if (val == 1) {
+              if (implic.ub + feastol < globaldom.col_upper_[implCol]) {
+                vals[0] = 1.0;
+                inds[0] = implCol;
+                vals[1] = globaldom.col_upper_[implCol] - implic.ub;
+                inds[1] = col;
+                rhs = globaldom.col_upper_[implCol];
+                tryAddCut(implCol);
+              }
+              if (implic.lb - feastol > globaldom.col_lower_[implCol]) {
+                vals[0] = -1.0;
+                inds[0] = implCol;
+                vals[1] = implic.lb - globaldom.col_lower_[implCol];
+                inds[1] = col;
+                rhs = -globaldom.col_lower_[implCol];
+                tryAddCut(implCol);
+              }
+            } else {
+              if (implic.ub + feastol < globaldom.col_upper_[implCol]) {
+                vals[0] = 1.0;
+                inds[0] = implCol;
+                vals[1] = implic.ub - globaldom.col_upper_[implCol];
+                inds[1] = col;
+                rhs = implic.ub;
+                tryAddCut(implCol);
+              }
+              if (implic.lb - feastol > globaldom.col_lower_[implCol]) {
+                vals[0] = -1.0;
+                inds[0] = implCol;
+                vals[1] = globaldom.col_lower_[implCol] - implic.lb;
+                inds[1] = col;
+                rhs = -implic.lb;
+                tryAddCut(implCol);
+              }
+            }
+          });
     }
   }
 }
@@ -963,38 +970,30 @@ void HighsImplications::applyImplications(HighsDomain& domain,
                                           const HighsInt val) {
   assert(domain.isFixed(col));
 
-  auto checkImplication = [&](const HighsDomainChange& domchg) -> bool {
+  auto checkImplication = [&](const HighsInt implcol,
+                              const Implication& implic) -> bool {
     assert(!domain.infeasible());
-    if (domain.isFixed(domchg.column)) return false;
+    if (domain.isFixed(implcol)) return false;
     const bool isint =
-        domain.variableType(domchg.column) != HighsVarType::kContinuous;
+        domain.variableType(implcol) != HighsVarType::kContinuous;
     // Directly change bounds on all integer columns. Only change continuous
     // columns that fix the column, as changing their domains risks
     // suppressing further bound changes found in propagation, e.g.,
     // change [0, 100] -> [0, 50], propagation could tighten to [0, 48], but
     // such a tightening would not be applied due to min boundRange improvement.
-    if (domchg.boundtype == HighsBoundType::kLower) {
-      if ((!isint && domchg.boundval >
-                         domain.col_upper_[domchg.column] - domain.feastol()) ||
-          (isint && domchg.boundval >
-                        domain.col_lower_[domchg.column] + domain.feastol())) {
-        domain.changeBound(domchg, HighsDomain::Reason::cliqueTable(col, val));
-      }
-    } else {
-      if ((!isint && domchg.boundval <
-                         domain.col_lower_[domchg.column] + domain.feastol()) ||
-          (isint && domchg.boundval <
-                        domain.col_upper_[domchg.column] - domain.feastol())) {
-        domain.changeBound(domchg, HighsDomain::Reason::cliqueTable(col, val));
-      }
+    if ((!isint && implic.lb > domain.col_upper_[implcol] - domain.feastol()) ||
+        (isint && implic.lb > domain.col_lower_[implcol] + domain.feastol())) {
+      domain.changeBound(HighsBoundType::kLower, implcol, implic.lb,
+                         HighsDomain::Reason::cliqueTable(col, val));
+      if (domain.infeasible()) return true;
+    }
+    if ((!isint && implic.ub < domain.col_lower_[implcol] + domain.feastol()) ||
+        (isint && implic.ub < domain.col_upper_[implcol] - domain.feastol())) {
+      domain.changeBound(HighsBoundType::kUpper, implcol, implic.ub,
+                         HighsDomain::Reason::cliqueTable(col, val));
     }
     return domain.infeasible();
   };
 
-  HighsInt loc = 2 * col + val;
-  if (implications[loc].computed) {
-    for (HighsDomainChange& domchg : implications[loc].implics) {
-      if (checkImplication(domchg)) break;
-    }
-  }
+  implications[ImplIdx{col, val}].for_each(checkImplication);
 }
