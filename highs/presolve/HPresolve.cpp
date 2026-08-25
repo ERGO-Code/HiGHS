@@ -2376,6 +2376,9 @@ HighsTripletTreeSliceInOrder HPresolve::getSortedRowVector(HighsInt row) const {
 }
 
 void HPresolve::markRowDeleted(HighsInt row) {
+  // Next line was in zero-obj-singleton-double-sided-row, but removed
+  // in latest
+  assert(!analysis_.logging_on_);
   if (!this->in_initial_sweep_) {
     assert(!rowDeleted[row]);
 
@@ -2393,6 +2396,9 @@ void HPresolve::markRowDeleted(HighsInt row) {
 }
 
 void HPresolve::markColDeleted(HighsInt col) {
+  // Next line added so markColDeleted has same check as
+  // markRowDeleted
+  assert(!analysis_.logging_on_);
   if (!this->in_initial_sweep_) {
     assert(!colDeleted[col]);
 
@@ -3651,7 +3657,7 @@ HPresolve::Result HPresolve::singletonCol(HighsPostsolveStack& postsolve_stack,
     return Result::kOk;
   }
 
-  auto zeroCostSingleton = [&](HighsInt col, HighsInt row, double val,
+  auto localZeroCostSingleton = [&](HighsInt col, HighsInt row, double val,
                                HighsInt direction) {
     // try to relax constraint by fixing zero-cost singleton to a bound
     if (model->col_cost_[col] != 0.0 || isRanged(row)) return Result::kOk;
@@ -3663,7 +3669,7 @@ HPresolve::Result HPresolve::singletonCol(HighsPostsolveStack& postsolve_stack,
   };
 
   // handle zero-cost singleton
-  HPRESOLVE_CHECKED_CALL(zeroCostSingleton(
+  HPRESOLVE_CHECKED_CALL(localZeroCostSingleton(
       col, row, colCoef,
       model->row_upper_[row] != kHighsInf ? HighsInt{1} : HighsInt{-1}));
   if (colDeleted[col]) return Result::kOk;
@@ -3760,6 +3766,15 @@ HPresolve::Result HPresolve::singletonCol(HighsPostsolveStack& postsolve_stack,
   if (timing)
     analysis_.presolveTimerStop(kPresolveClockSingletonColDualImpliedFree);
 
+  /*<<<<<<< HEAD
+=======
+  if (this->allow_rule_[kPresolveRuleZeroCostSingleton]) {
+    // Remove if col is double-sided finite slack
+    HPRESOLVE_CHECKED_CALL(zeroCostSingleton(postsolve_stack, col));
+  }
+
+>>>>>>> latest
+  */
   return Result::kOk;
 }
 
@@ -5350,16 +5365,25 @@ HPresolve::Result HPresolve::dualFixing(HighsPostsolveStack& postsolve_stack,
   // compute locks
   computeLocks(col, true, lockCallback);
 
-  // check if variable can be fixed
+  // If there are no up (down) locks, the variable must/can be fixed
+  // at its upper (lower) bound. Note that if there are no up (down)
+  // locks, then cost <= 0 (>= 0).
+  //
+  // If |cost| > dual_feasibility_tolerance then fixing is forced, and
+  // may identify unboundedness
+  //
+  // If |cost| <= dual_feasibility_tolerance, then the variable is
+  // dual feasible at any value, so only fix if the corresponding
+  // bound is finite
   if (numDownLocks == 0 || numUpLocks == 0) {
-    // fix variable
     if (numDownLocks == 0) {
-      // avoid fixing zero-cost column to an infinite bound
-      if (model->col_cost_[col] != 0.0 || model->col_lower_[col] != -kHighsInf)
+      if (model->col_cost_[col] > options->dual_feasibility_tolerance ||
+          model->col_lower_[col] > -kHighsInf)
         HPRESOLVE_CHECKED_CALL(fixColToLower(postsolve_stack, col));
     } else {
-      // avoid fixing zero-cost column to an infinite bound
-      if (model->col_cost_[col] != 0.0 || model->col_upper_[col] != kHighsInf)
+      assert(numUpLocks == 0);
+      if (model->col_cost_[col] < -options->dual_feasibility_tolerance ||
+          model->col_upper_[col] < kHighsInf)
         HPRESOLVE_CHECKED_CALL(fixColToUpper(postsolve_stack, col));
     }
   } else {
@@ -5654,6 +5678,68 @@ HPresolve::Result HPresolve::singletonColStuffing(
     highsLogDev(options->log_options, HighsLogType::kDetailed,
                 "Singleton column stuffing fixed %d columns\n",
                 static_cast<int>(numFixedCols));
+
+  return Result::kOk;
+}
+
+HPresolve::Result HPresolve::zeroCostSingleton(
+    HighsPostsolveStack& postsolve_stack, HighsInt col) {
+  assert(this->allow_rule_[kPresolveRuleZeroCostSingleton]);
+  // For a double-sided row b_0 <= a^Tx + cs <= b_1,
+  // where s is a singleton continuous column with 0 cost,
+  // relax s out as its value can be determined in postsolve.
+  // The row may now admit additional reductions afterwards.
+  // Dual fixing already handles single-sided row case with fixings.
+  if (model->integrality_[col] != HighsVarType::kContinuous ||
+      model->col_cost_[col] != 0.0 || colsize[col] != 1) {
+    return Result::kOk;
+  }
+  assert(!colDeleted[col]);
+
+  HighsInt nzPos = colhead[col];
+  HighsInt row = Arow[nzPos];
+  assert(!rowDeleted[row]);
+  // Row must be ranged, but why can't it be an equation?
+  const bool was_equation = isEquation(row);
+  if (!isRanged(row)) return Result::kOk;
+
+  double coef = Avalue[nzPos];
+
+  if (std::abs(coef) == kHighsInf) return Result::kOk;
+
+  const bool logging_on = analysis_.logging_on_;
+  if (logging_on)
+    analysis_.startPresolveRuleLog(kPresolveRuleZeroCostSingleton);
+  storeRow(row);
+
+  double lb = model->col_lower_[col];
+  double ub = model->col_upper_[col];
+  double change_from_col_lb = coef * lb;
+  double change_from_col_ub = coef * ub;
+
+  double newRowLower =
+      model->row_lower_[row] - std::max(change_from_col_lb, change_from_col_ub);
+  double newRowUpper =
+      model->row_upper_[row] - std::min(change_from_col_lb, change_from_col_ub);
+
+  postsolve_stack.zeroCostSingleton(row, col, model->row_lower_[row],
+                                    model->row_upper_[row], newRowLower,
+                                    newRowUpper, lb, ub, coef, getStoredRow());
+
+  model->row_lower_[row] = newRowLower;
+  model->row_upper_[row] = newRowUpper;
+  if (was_equation && newRowLower != newRowUpper &&
+      eqiters[row] != equations.end()) {
+    equations.erase(eqiters[row]);
+    eqiters[row] = equations.end();
+  }
+
+  // Delete the singleton column
+  markColDeleted(col);
+  unlink(nzPos);
+
+  analysis_.logging_on_ = logging_on;
+  if (logging_on) analysis_.stopPresolveRuleLog(kPresolveRuleZeroCostSingleton);
 
   return Result::kOk;
 }

@@ -37,6 +37,8 @@ class HighsConflictPool {
 
   std::vector<HighsDomain::ConflictPoolPropagation*> propagationDomains;
 
+  std::pair<HighsInt, HighsInt> allocateConflict(HighsInt conflictLen);
+
  public:
   HighsConflictPool(HighsInt agelim, HighsInt softlimit)
       : agelim_(agelim),
