@@ -459,7 +459,7 @@ TEST_CASE("hessian-oracle-primal1", "[qp-oracle]") {
   REQUIRE(h.passModel(lp) == HighsStatus::kOk);
   REQUIRE(h.passHessian(lp.num_col_, oracleCallSquareHessian,
                         &square_hessian) == HighsStatus::kOk);
-  double optimal_obective_value;
+  double optimal_obective_value = kHighsInf;
   std::vector<double> solution;
   for (auto& solver : solvers) {
     h.setOptionValue("solver", solver);
