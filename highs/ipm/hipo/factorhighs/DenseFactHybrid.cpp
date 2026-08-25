@@ -144,14 +144,11 @@ Int denseFactFH(Int n, Int k, double* A, double* B, const Int* pivot_sign,
             callAndTime_dgemm('T', 'N', num_col, row_count, jb, -1.0, Pj, jb,
                               Rj_block, jb, 1.0, Qj_block, num_col, data);
           };
-
           highs::parallel::for_each(0, num_row, do_gemm_block_rows, nb);
+
         } else {
-          auto do_gemm_full = [=, &data]() {
-            callAndTime_dgemm('T', 'N', num_col, num_row, jb, -1.0, Pj, jb, Rj,
-                              jb, 1.0, Qj, num_col, data);
-          };
-          do_gemm_full();
+          callAndTime_dgemm('T', 'N', num_col, num_row, jb, -1.0, Pj, jb, Rj,
+                            jb, 1.0, Qj, num_col, data);
         }
       };
 
