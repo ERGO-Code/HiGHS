@@ -8072,7 +8072,8 @@ HPresolve::Result HPresolve::strengthenInequalities(
       // activity.
       int8_t comp;
       double weight = Avalue[pos] * scale;
-      double ub = model->col_upper_[col] - model->col_lower_[col];
+      HighsCDouble ub = static_cast<HighsCDouble>(model->col_upper_[col]) -
+                        static_cast<HighsCDouble>(model->col_lower_[col]);
       if (weight > 0) {
         comp = 1;
         maxviolation +=
