@@ -12,6 +12,7 @@
 #ifndef HIGHS_REDCOST_FIXING_H_
 #define HIGHS_REDCOST_FIXING_H_
 
+#include <cstdint>
 #include <map>
 #include <vector>
 
@@ -23,8 +24,8 @@ class HighsMipSolver;
 class HighsLpRelaxation;
 
 class HighsRedcostFixing {
-  std::vector<std::multimap<double, HighsInt>> lurkingColUpper;
-  std::vector<std::multimap<double, HighsInt>> lurkingColLower;
+  std::vector<std::multimap<double, int64_t>> lurkingColUpper;
+  std::vector<std::multimap<double, int64_t>> lurkingColLower;
 
  public:
   std::vector<std::pair<double, HighsDomainChange>> getLurkingBounds(
