@@ -146,6 +146,7 @@ class HighsPostsolveStack {
   struct FixedCol {
     double fixValue;
     double colCost;
+    double other_bound; // Needed to check dual feasibility
     HighsInt col;
     HighsBasisStatus fixType;
 
@@ -568,28 +569,28 @@ class HighsPostsolveStack {
   }
 
   template <typename ColStorageFormat>
-  void fixedColAtLower(HighsInt col, double fixValue, double colCost,
+  void fixedColAtLower(HighsInt col, double fixValue, double colCost, double other_bound,
                        const HighsMatrixSlice<ColStorageFormat>& colVec) {
     assert(std::isfinite(fixValue));
     colValues.clear();
     for (const HighsSliceNonzero& colVal : colVec)
       colValues.emplace_back(origRowIndex[colVal.index()], colVal.value());
 
-    reductionValues.push(FixedCol{fixValue, colCost, origColIndex[col],
+    reductionValues.push(FixedCol{fixValue, colCost, other_bound, origColIndex[col],
                                   HighsBasisStatus::kLower});
     reductionValues.push(colValues);
     reductionAdded(ReductionType::kFixedCol);
   }
 
   template <typename ColStorageFormat>
-  void fixedColAtUpper(HighsInt col, double fixValue, double colCost,
+  void fixedColAtUpper(HighsInt col, double fixValue, double colCost, double other_bound,
                        const HighsMatrixSlice<ColStorageFormat>& colVec) {
     assert(std::isfinite(fixValue));
     colValues.clear();
     for (const HighsSliceNonzero& colVal : colVec)
       colValues.emplace_back(origRowIndex[colVal.index()], colVal.value());
 
-    reductionValues.push(FixedCol{fixValue, colCost, origColIndex[col],
+    reductionValues.push(FixedCol{fixValue, colCost, other_bound, origColIndex[col],
                                   HighsBasisStatus::kUpper});
     reductionValues.push(colValues);
     reductionAdded(ReductionType::kFixedCol);
@@ -603,7 +604,7 @@ class HighsPostsolveStack {
       colValues.emplace_back(origRowIndex[colVal.index()], colVal.value());
 
     reductionValues.push(
-        FixedCol{0.0, colCost, origColIndex[col], HighsBasisStatus::kZero});
+        FixedCol{0.0, colCost, 0.0, origColIndex[col], HighsBasisStatus::kZero});
     reductionValues.push(colValues);
     reductionAdded(ReductionType::kFixedCol);
   }
@@ -616,7 +617,7 @@ class HighsPostsolveStack {
     for (const HighsSliceNonzero& colVal : colVec)
       colValues.emplace_back(origRowIndex[colVal.index()], colVal.value());
 
-    reductionValues.push(FixedCol{fixValue, colCost, origColIndex[col],
+    reductionValues.push(FixedCol{fixValue, colCost, fixValue, origColIndex[col],
                                   HighsBasisStatus::kNonbasic});
     reductionValues.push(colValues);
     reductionAdded(ReductionType::kFixedCol);
@@ -629,7 +630,7 @@ class HighsPostsolveStack {
     for (HighsInt iEl = 0; iEl < col_nnz; iEl++)
       colValues.emplace_back(origRowIndex[index[iEl]], value[iEl]);
 
-    reductionValues.push(FixedCol{fixValue, colCost, origColIndex[col],
+    reductionValues.push(FixedCol{fixValue, colCost, fixValue, origColIndex[col],
                                   HighsBasisStatus::kNonbasic});
     reductionValues.push(colValues);
     reductionAdded(ReductionType::kFixedCol);

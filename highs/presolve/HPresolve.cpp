@@ -7812,6 +7812,7 @@ HPresolve::Result HPresolve::fixColToLower(HighsPostsolveStack& postsolve_stack,
   const bool logging_on = analysis_.logging_on_;
   if (logging_on) analysis_.startPresolveRuleLog(kPresolveRuleFixedCol);
   postsolve_stack.fixedColAtLower(col, fixval, model->col_cost_[col],
+				  model->col_upper_[col],
                                   getColumnVector(col));
   removeFixedCol(col, fixval);
   analysis_.logging_on_ = logging_on;
@@ -7829,6 +7830,7 @@ HPresolve::Result HPresolve::fixColToUpper(HighsPostsolveStack& postsolve_stack,
   const bool logging_on = analysis_.logging_on_;
   if (logging_on) analysis_.startPresolveRuleLog(kPresolveRuleFixedCol);
   postsolve_stack.fixedColAtUpper(col, fixval, model->col_cost_[col],
+				  model->col_lower_[col],
                                   getColumnVector(col));
   removeFixedCol(col, fixval);
   analysis_.logging_on_ = logging_on;
