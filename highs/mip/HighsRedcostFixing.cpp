@@ -301,7 +301,7 @@ void HighsRedcostFixing::addRootRedcost(const HighsMipSolver& mipsolver,
               mipsolver.mipdata_->getDomain().col_lower_[col]),
           static_cast<HighsInt>(
               mipsolver.mipdata_->getDomain().col_upper_[col]),
-          mipsolver.mipdata_->getDomain().col_upper_[col] != kHighsInf,
+          mipsolver.mipdata_->getDomain().col_upper_[col] < kHighsIInf,
           lpobjective, lpredcost[col], maxNumSteps, maxNumStepsExp,
           lurkingColUpper[col], lurkingColLower[col]);
     } else if (lpredcost[col] < -mipsolver.mipdata_->feastol) {
@@ -316,7 +316,7 @@ void HighsRedcostFixing::addRootRedcost(const HighsMipSolver& mipsolver,
               mipsolver.mipdata_->getDomain().col_upper_[col]),
           static_cast<HighsInt>(
               mipsolver.mipdata_->getDomain().col_lower_[col]),
-          mipsolver.mipdata_->getDomain().col_lower_[col] != -kHighsInf,
+          mipsolver.mipdata_->getDomain().col_lower_[col] > -kHighsIInf,
           lpobjective, lpredcost[col], maxNumSteps, maxNumStepsExp,
           lurkingColLower[col], lurkingColUpper[col]);
     }
