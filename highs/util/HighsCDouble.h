@@ -318,6 +318,14 @@ class HighsCDouble {
   friend HighsCDouble ldexp(const HighsCDouble& v, int exp) {
     return HighsCDouble(std::ldexp(v.hi, exp), std::ldexp(v.lo, exp));
   }
+
+  friend const HighsCDouble& min(const HighsCDouble& a, const HighsCDouble& b) {
+    return a < b ? a : b;
+  }
+
+  friend const HighsCDouble& max(const HighsCDouble& a, const HighsCDouble& b) {
+    return a > b ? a : b;
+  }
 };
 
 #endif
