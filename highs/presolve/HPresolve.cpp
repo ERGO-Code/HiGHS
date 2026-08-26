@@ -8088,7 +8088,7 @@ HPresolve::Result HPresolve::strengthenInequalities(
       if (ub <= primal_feastol || weight <= primal_feastol) continue;
 
       if (model->integrality_[col] == HighsVarType::kContinuous) {
-        continuouscontribution += static_cast<HighsCDouble>(weight) * ub;
+        continuouscontribution += weight * ub;
         continue;
       }
 
