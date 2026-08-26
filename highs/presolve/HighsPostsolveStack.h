@@ -854,7 +854,6 @@ class HighsPostsolveStack {
                            HighsBasisStatus::kNonbasic);
     }
 
-    /*
     // Code for logging when debugging
     std::stringstream ss;
 
@@ -890,25 +889,30 @@ class HighsPostsolveStack {
     // Initialise to illegal values so that initial values are logged
     double report_col_value = kHighsInf;
 
-    // Lambda for logging the solution for a specific column whenever its value
-    changes
+    // Lambda for logging the solution for a specific column whenever its value changes
 
-    auto reportColLogging = [&](const HighsInt reduction) {
+    auto reportColLogging = [&](const HighsInt reduction,
+				const std::string& context = "",
+				const bool forced = false) {
       assert(report_col >= 0);
       if (static_cast<size_t>(report_col) >= solution.col_value.size()) return;
       double col_value = solution.col_value[report_col];
-      bool report = col_value != report_col_value;
+      bool report = col_value != report_col_value || forced;
+
+      std::string type = "";
+
       if (reduction >= 0) {
-        ReductionType type = reductions[reduction].first;
         if (report)
-          printf("After reduction %9d (type %s):", int(reduction),
-                 presolveTypeToString(type).c_str());
+          printf("%-6s reduction %9d:",
+		 context.c_str(),
+		 int(reduction));
+	type = ": " + presolveTypeToString(reductions[reduction].first);
       } else if (reduction == -1) {
         report = true;
-        printf("Before undo:                        ");
+        printf("Before undo:               ");
       } else {
         report = true;
-        printf("After last reduction:               ");
+        printf("After last reduction:      ");
       }
       if (!report) return;
       ss.str(std::string());
@@ -918,9 +922,9 @@ class HighsPostsolveStack {
         ss << highsFormatToString(", dual = %11.4g",
                                   solution.col_dual[report_col]);
       if (perform_basis_postsolve)
-        ss << highsFormatToString(" status = %s",
-                                  utilBasisStatusToString(basis.col_status[report_col]).full_.c_str());
-      printf("%s\n", ss.str().c_str());
+        ss << highsFormatToString(" status = %2s",
+                                  utilBasisStatusToString(basis.col_status[report_col]).s2_.c_str());
+      printf("%s%s\n", ss.str().c_str(), type.c_str());
       report_col_value = col_value;
     };
 
@@ -929,14 +933,10 @@ class HighsPostsolveStack {
     size_t check_reduction = kHighsSize_tInf;
     if (reductions.size() == check_reduction)
       solutionLogging("After solving presolved LP");
-    */
 
     // now undo the changes
     for (size_t i = reductions.size(); i > numReductions; --i) {
-      if (report_col >= 0)
-        printf("Before  reduction %2d (type %2d): col_value[%2d] = %g\n",
-               int(i - 1), int(reductions[i - 1].first), int(report_col),
-               solution.col_value[report_col]);
+      //      if (report_col >= 0) reportColLogging(i-1, "Before", true);
       /*
       if (i - 1 == check_reduction) {
         printf("Checking reduction %d\n", int(check_reduction));
@@ -1058,9 +1058,9 @@ class HighsPostsolveStack {
                  int(reductions[i - 1].first));
           if (kAllowDeveloperAssert) assert(1 == 0);
       }
-      //      if (report_col >= 0) reportColLogging(i - 1);
+      if (report_col >= 0) reportColLogging(i - 1, "After");
     }
-    //    if (report_col >= 0) reportColLogging(-2);
+        if (report_col >= 0) reportColLogging(-2);
 
     solution.col_value.resize(origNumCol);
     if (perform_dual_postsolve) solution.col_dual.resize(origNumCol);

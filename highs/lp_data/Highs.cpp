@@ -4001,10 +4001,10 @@ HighsPostsolveStatus Highs::runPostsolve() {
     return HighsPostsolveStatus::kNoPrimalSolutionError;
   const bool have_dual_solution =
       presolve_.data_.recovered_solution_.dual_valid;
-  const HighsInt report_3040_col = -578;
+  const HighsInt report_postsolve_col = -kHighsIInf;
   presolve_.data_.postSolveStack.undo(
       options_, presolve_.data_.recovered_solution_,
-      presolve_.data_.recovered_basis_, 0, report_3040_col);
+      presolve_.data_.recovered_basis_, 0, report_postsolve_col);
   // Compute the row activities
   assert(model_.lp_.a_matrix_.isColwise());
   calculateRowValuesQuad(model_.lp_, presolve_.data_.recovered_solution_);

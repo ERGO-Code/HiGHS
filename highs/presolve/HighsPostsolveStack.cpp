@@ -411,6 +411,8 @@ void HighsPostsolveStack::FixedCol::undo(const HighsOptions& options,
       basis.col_status[col] = solution.col_dual[col] >= 0
                                   ? HighsBasisStatus::kLower
                                   : HighsBasisStatus::kUpper;
+    // Check dual feasibility: cause of iterations after postsolve for
+    // seymour
   }
 }
 
