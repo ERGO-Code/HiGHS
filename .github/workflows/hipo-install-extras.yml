@@ -1,0 +1,243 @@
+name: hipo-install-extras
+
+on:
+  push:
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  hipo-install-extras:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        extras: ["ON", "OFF"]
+    steps:
+      - name: Checkout HiGHS
+        uses: actions/checkout@v4
+
+      - name: Install OpenBLAS (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libopenblas-dev
+
+      - name: Install OpenBLAS (macOS)
+        if: runner.os == 'macOS'
+        run: brew install openblas
+
+      - name: Install OpenBLAS (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: vcpkg install openblas[threads]:x64-windows-static
+
+      - name: Configure, build and install (Linux/macOS)
+        if: runner.os != 'Windows'
+        run: |
+          cmake -S . -B build \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DHIPO=ON \
+            -DFAST_BUILD=ON \
+            -DALL_TESTS=OFF \
+            -DBUILD_SHARED_EXTRAS_LIB=${{ matrix.extras }} \
+            -DCMAKE_INSTALL_PREFIX=${{ github.workspace }}/install
+          cmake --build build --parallel
+          cmake --install build
+
+      - name: Configure, build and install (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          cmake -S . -B build `
+            -DCMAKE_TOOLCHAIN_FILE="C:/vcpkg/scripts/buildsystems/vcpkg.cmake" `
+            -DHIPO=ON `
+            -DFAST_BUILD=ON `
+            -DALL_TESTS=OFF `
+            -DBUILD_SHARED_EXTRAS_LIB=${{ matrix.extras }} `
+            -DCMAKE_INSTALL_PREFIX=${{ github.workspace }}/install
+          cmake --build build --parallel --config Release
+          cmake --install build --config Release
+
+      - name: Verify highs_extras was installed (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          if [ "${{ matrix.extras }}" = "ON" ]; then
+            pattern="libhighs_extras.so*"
+          else
+            pattern="libhighs_extras.a"
+          fi
+          found=$(find ${{ github.workspace }}/install/lib -name "$pattern")
+          echo "Found: $found"
+          [ -n "$found" ] || { echo "::error::$pattern not found under install/lib (BUILD_SHARED_EXTRAS_LIB=${{ matrix.extras }})"; exit 1; }
+
+      - name: Verify highs_extras was installed (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          if [ "${{ matrix.extras }}" = "ON" ]; then
+            pattern="libhighs_extras*.dylib"
+          else
+            pattern="libhighs_extras.a"
+          fi
+          found=$(find ${{ github.workspace }}/install/lib -name "$pattern")
+          echo "Found: $found"
+          [ -n "$found" ] || { echo "::error::$pattern not found under install/lib (BUILD_SHARED_EXTRAS_LIB=${{ matrix.extras }})"; exit 1; }
+
+      - name: Verify highs_extras was installed (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          if ("${{ matrix.extras }}" -eq "ON") {
+            $found = Get-ChildItem -Path "${{ github.workspace }}/install/bin" -Filter "highs_extras.dll" -ErrorAction SilentlyContinue
+          } else {
+            $found = Get-ChildItem -Path "${{ github.workspace }}/install/lib" -Filter "highs_extras.lib" -ErrorAction SilentlyContinue
+          }
+          if (-not $found) {
+            Write-Host "::error::highs_extras artifact not found in install tree (BUILD_SHARED_EXTRAS_LIB=${{ matrix.extras }})"
+            exit 1
+          }
+          Write-Host "Found: $($found.FullName)"
+
+      # Installing the artifact is necessary but not sufficient - also run
+      # the installed CLI (not the build tree) to confirm HiPO actually
+      # works from where a real consumer would use it.
+      - name: Run installed executable with --solver=hipo (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          export LD_LIBRARY_PATH="${{ github.workspace }}/install/lib:$LD_LIBRARY_PATH"
+          out=$(${{ github.workspace }}/install/bin/highs --solver=hipo check/instances/afiro.mps)
+          echo "$out"
+          echo "$out" | grep -Eq "Model status\s*:\s*Optimal" || { echo "::error::installed executable did not report an Optimal HiPO solve"; exit 1; }
+
+      - name: Run installed executable with --solver=hipo (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          export DYLD_LIBRARY_PATH="${{ github.workspace }}/install/lib:$DYLD_LIBRARY_PATH"
+          out=$(${{ github.workspace }}/install/bin/highs --solver=hipo check/instances/afiro.mps)
+          echo "$out"
+          echo "$out" | grep -Eq "Model status\s*:\s*Optimal" || { echo "::error::installed executable did not report an Optimal HiPO solve"; exit 1; }
+
+      - name: Run installed executable with --solver=hipo (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $out = & "${{ github.workspace }}/install/bin/highs.exe" --solver=hipo check/instances/afiro.mps
+          $out | ForEach-Object { Write-Host $_ }
+          if (-not ($out -match "Model status\s*:\s*Optimal")) {
+            Write-Host "::error::installed executable did not report an Optimal HiPO solve"
+            exit 1
+          }
+
+  # Same install + solve check as the matrix job above, but macOS only and
+  # deliberately *not* installing/pointing at any alternative BLAS, so the
+  # default vendor-guessing path in FindHipoDeps.cmake picks Apple Accelerate
+  # (see cmake/FindHipoDeps.cmake's highs_configure_blas()). This is the
+  # counterpart to blas-override.yml's macOS job, which asserts Accelerate is
+  # NOT linked when the user overrides BLA_VENDOR; this job asserts it IS
+  # linked (and still works end-to-end) when the user does not.
+  hipo-install-extras-accelerate:
+    runs-on: macos-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        extras: ["ON", "OFF"]
+    steps:
+      - name: Checkout HiGHS
+        uses: actions/checkout@v4
+
+      - name: Configure, build and install (default BLAS -> Apple Accelerate)
+        run: |
+          cmake -S . -B build \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DHIPO=ON \
+            -DFAST_BUILD=ON \
+            -DALL_TESTS=OFF \
+            -DBUILD_SHARED_EXTRAS_LIB=${{ matrix.extras }} \
+            -DCMAKE_INSTALL_PREFIX=${{ github.workspace }}/install
+          cmake --build build --parallel
+          cmake --install build
+
+      - name: Verify Apple Accelerate was linked
+        run: |
+          if [ "${{ matrix.extras }}" = "ON" ]; then
+            lib=$(find ${{ github.workspace }}/install/lib -name "libhighs_extras*.dylib" | head -n1)
+          else
+            # Accelerate is linked into libhighs_extras.a's *consumer* (the
+            # highs library/executable), not into the static archive itself.
+            lib=$(find ${{ github.workspace }}/install/lib ${{ github.workspace }}/install/bin -name "libhighs*.dylib" -o -name "highs" | head -n1)
+          fi
+          [ -n "$lib" ] || { echo "::error::no installed binary found to inspect"; exit 1; }
+          echo "Checking linked libraries for $lib"
+          otool -L "$lib"
+          otool -L "$lib" | grep -q "/Accelerate.framework/" || { echo "::error::$lib did not link Apple Accelerate by default"; exit 1; }
+
+      - name: Run installed executable with --solver=hipo
+        run: |
+          export DYLD_LIBRARY_PATH="${{ github.workspace }}/install/lib:$DYLD_LIBRARY_PATH"
+          out=$(${{ github.workspace }}/install/bin/highs --solver=hipo check/instances/afiro.mps)
+          echo "$out"
+          echo "$out" | grep -Eq "Model status\s*:\s*Optimal" || { echo "::error::installed executable did not report an Optimal HiPO solve"; exit 1; }
+
+  # Regression test for the numerical-correctness concern raised in
+  # https://github.com/ERGO-Code/HiGHS/issues/3160 by @amontoison: linking
+  # bare "-framework Accelerate" without ACCELERATE_NEW_LAPACK resolves
+  # cblas_*/LAPACK calls to Accelerate's legacy implementation (frozen at
+  # LAPACK 3.2.1), not the modern Netlib-aligned one Apple ships on macOS
+  # >= 13.3. extern/blas/mycblas.h now includes Apple's own
+  # <Accelerate/Accelerate.h> with ACCELERATE_NEW_LAPACK defined whenever
+  # HIPO_USES_APPLE_BLAS is set, which routes those calls through
+  # asm-label-renamed symbols tagged "$NEWLAPACK" instead of the plain
+  # legacy symbol names. This job checks those tagged symbols actually show
+  # up in the built binary when the SDK on the runner supports them.
+  hipo-accelerate-new-lapack:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout HiGHS
+        uses: actions/checkout@v4
+
+      - name: Check whether this SDK supports the new Accelerate LAPACK interface
+        id: accel
+        run: |
+          ver=$(sw_vers -productVersion)
+          echo "macOS version: $ver"
+          major=$(echo "$ver" | cut -d. -f1)
+          minor=$(echo "$ver" | cut -d. -f2)
+          if [ "$major" -gt 13 ] || { [ "$major" -eq 13 ] && [ "$minor" -ge 3 ]; }; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "available=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Configure, build and install (default BLAS -> Apple Accelerate)
+        run: |
+          cmake -S . -B build \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DHIPO=ON \
+            -DFAST_BUILD=ON \
+            -DALL_TESTS=OFF \
+            -DBUILD_SHARED_EXTRAS_LIB=ON \
+            -DCMAKE_INSTALL_PREFIX=${{ github.workspace }}/install
+          cmake --build build --parallel
+          cmake --install build
+
+      - name: Verify the modern (ACCELERATE_NEW_LAPACK) interface was linked in
+        run: |
+          lib="${{ github.workspace }}/install/lib/libhighs_extras.dylib"
+          echo "Inspecting $lib"
+          symbols=$(nm -m "$lib" 2>/dev/null | grep -i "NEWLAPACK" || true)
+          echo "${symbols:-<no \$NEWLAPACK-tagged symbols found>}"
+          if [ "${{ steps.accel.outputs.available }}" = "true" ]; then
+            [ -n "$symbols" ] || { echo "::error::no \$NEWLAPACK-tagged symbols found in $lib; the legacy Accelerate interface may have been linked instead of the modern one"; exit 1; }
+          else
+            echo "This SDK predates the new Accelerate LAPACK interface (macOS 13.3); skipping strict check."
+          fi
+
+      - name: Run installed executable with --solver=hipo
+        run: |
+          export DYLD_LIBRARY_PATH="${{ github.workspace }}/install/lib:$DYLD_LIBRARY_PATH"
+          out=$(${{ github.workspace }}/install/bin/highs --solver=hipo check/instances/afiro.mps)
+          echo "$out"
+          echo "$out" | grep -Eq "Model status\s*:\s*Optimal" || { echo "::error::installed executable did not report an Optimal HiPO solve"; exit 1; }

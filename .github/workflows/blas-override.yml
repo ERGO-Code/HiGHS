@@ -80,6 +80,10 @@ jobs:
         if: runner.os == 'macOS'
         run: |
           lib=$(find ${{ github.workspace }}/highs-install/lib -name "libhighs_extras*.dylib" | head -n1)
+          if [ -z "$lib" ]; then
+            echo "::error::libhighs_extras*.dylib not found under highs-install/lib"
+            exit 1
+          fi
           echo "Checking linked libraries for $lib"
           otool -L "$lib"
           if otool -L "$lib" | grep -q "/Accelerate.framework/"; then
