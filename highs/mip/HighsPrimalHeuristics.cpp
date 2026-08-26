@@ -41,7 +41,7 @@ HighsPrimalHeuristics::HighsPrimalHeuristics(HighsMipSolver& mipsolver)
       randgen(mipsolver.options_mip_->random_seed) {}
 
 bool HighsPrimalHeuristics::subMipShouldRetry(HighsMipWorker& worker,
-                                              HighsSearch& heur,
+                                              const HighsSearch& heur,
                                               double fixingrate,
                                               double& maxfixingrate,
                                               HighsInt& targetdepth) {

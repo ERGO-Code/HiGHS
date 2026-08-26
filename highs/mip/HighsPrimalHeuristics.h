@@ -30,7 +30,7 @@ class HighsPrimalHeuristics {
 
   HighsRandom randgen;
 
-  bool subMipShouldRetry(HighsMipWorker& worker, HighsSearch& heur,
+  bool subMipShouldRetry(HighsMipWorker& worker, const HighsSearch& heur,
                          double fixingrate, double& maxfixingrate,
                          HighsInt& targetdepth);
 
