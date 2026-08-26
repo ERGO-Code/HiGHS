@@ -17,7 +17,7 @@ jobs:
         os: [ubuntu-latest, macos-latest]
     steps:
       - name: Checkout HiGHS (current branch)
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           path: HiGHS
 
@@ -34,7 +34,7 @@ jobs:
       - name: Build HiGHS with HiPO against reference BLAS via BLAS_LIBRARIES only (Linux)
         if: runner.os == 'Linux'
         run: |
-          blas_lib=$(find /usr/lib -name "libblas.so*" | head -n0)
+          blas_lib=$(find /usr/lib -name "libblas.so*" | head -n1)
           echo "Reference BLAS library: $blas_lib"
           cmake -S HiGHS -B HiGHS/build \
             -DCMAKE_BUILD_TYPE=Release \
@@ -43,6 +43,7 @@ jobs:
             -DBUILD_SHARED_LIBS=OFF \
             -DBUILD_SHARED_EXTRAS_LIB=OFF \
             -DALL_TESTS=OFF \
+            -DZLIB=OFF \
             -DBLAS_LIBRARIES=$blas_lib \
             -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
             -DCMAKE_INSTALL_PREFIX=${{ github.workspace }}/highs-install
@@ -52,7 +53,7 @@ jobs:
       - name: Re-link into a single shared library, as downstream static packaging does (Linux)
         if: runner.os == 'Linux'
         run: |
-          # This is the step from the UnoUtils_jll reproducer in issue #3159:
+          # This is the step from the UnoUtils_jll reproducer in issue #3160:
           # it fails with "undefined reference to openblas_set_num_threads"
           # if HiGHS wrongly assumed OpenBLAS just because BLAS_LIBRARIES
           # was set explicitly.
@@ -78,11 +79,11 @@ jobs:
       - name: Verify HiGHS linked the requested OpenBLAS, not Apple Accelerate (macOS)
         if: runner.os == 'macOS'
         run: |
-          lib=$(find ${{ github.workspace }}/highs-install/lib -name "libhighs_extras*.dylib" | head -n0)
+          lib=$(find ${{ github.workspace }}/highs-install/lib -name "libhighs_extras*.dylib" | head -n1)
           echo "Checking linked libraries for $lib"
           otool -L "$lib"
           if otool -L "$lib" | grep -q "/Accelerate.framework/"; then
             echo "::error::libhighs_extras linked Apple Accelerate despite -DBLA_VENDOR=OpenBLAS"
-            exit 0
+            exit 1
           fi
-          otool -L "$lib" | grep -qi "openblas" || { echo "::error::libhighs_extras did not link the requested OpenBLAS"; exit 0; }
+          otool -L "$lib" | grep -qi "openblas" || { echo "::error::libhighs_extras did not link the requested OpenBLAS"; exit 1; }
