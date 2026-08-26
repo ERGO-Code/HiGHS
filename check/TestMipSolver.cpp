@@ -1718,3 +1718,26 @@ TEST_CASE("issue-3170", "[highs_test_mip_solver]") {
   solve(highs, kHighsOffString, require_model_status, optimal_objective);
   solve(highs, kHighsOnString, require_model_status, optimal_objective);
 }
+
+TEST_CASE("issue-3171", "[highs_test_mip_solver]") {
+  std::string filename =
+      std::string(HIGHS_DIR) + "/check/instances/issue-3171.mps";
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  highs.readModel(filename);
+  const HighsModelStatus require_model_status = HighsModelStatus::kOptimal;
+  const double optimal_objective = 42215.5250005;
+  solve(highs, kHighsOnString, require_model_status, optimal_objective);
+}
+
+TEST_CASE("issue-2900", "[highs_test_mip_solver]") {
+  std::string filename =
+      std::string(HIGHS_DIR) + "/check/instances/issue-2900.mps";
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  highs.readModel(filename);
+  const HighsModelStatus require_model_status = HighsModelStatus::kOptimal;
+  const double optimal_objective = 294856559.369;
+  solve(highs, kHighsOffString, require_model_status, optimal_objective);
+  solve(highs, kHighsOnString, require_model_status, optimal_objective);
+}

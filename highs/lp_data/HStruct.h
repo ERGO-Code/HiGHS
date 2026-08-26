@@ -279,4 +279,9 @@ struct HessianOracle {
                      const double* x_value, double* hessian_x_value) const;
 };
 
+struct StatusString {
+  std::string full_;
+  std::string s2_;
+};
+
 #endif /* LP_DATA_HSTRUCT_H_ */

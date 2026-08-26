@@ -137,6 +137,16 @@ void HighsSearch::setMinReliable(HighsInt minreliable) {
 
 void HighsSearch::branchDownwards(HighsInt col, double newub,
                                   double branchpoint) {
+  openChildNode(col, newub, branchpoint, HighsBoundType::kUpper);
+}
+
+void HighsSearch::branchUpwards(HighsInt col, double newlb,
+                                double branchpoint) {
+  openChildNode(col, newlb, branchpoint, HighsBoundType::kLower);
+}
+
+void HighsSearch::openChildNode(HighsInt col, double boundval,
+                                double branchpoint, HighsBoundType boundtype) {
   NodeData& currnode = nodestack.back();
 
   assert(currnode.opensubtrees == 2);
@@ -145,8 +155,8 @@ void HighsSearch::branchDownwards(HighsInt col, double newub,
   currnode.opensubtrees = 1;
   currnode.branching_point = branchpoint;
   currnode.branchingdecision.column = col;
-  currnode.branchingdecision.boundval = newub;
-  currnode.branchingdecision.boundtype = HighsBoundType::kUpper;
+  currnode.branchingdecision.boundval = boundval;
+  currnode.branchingdecision.boundtype = boundtype;
 
   HighsInt domchgPos = localdom.getDomainChangeStack().size();
   bool passStabilizerToChildNode =
@@ -158,27 +168,21 @@ void HighsSearch::branchDownwards(HighsInt col, double newub,
   nodestack.back().domgchgStackPos = domchgPos;
 }
 
-void HighsSearch::branchUpwards(HighsInt col, double newlb,
-                                double branchpoint) {
-  NodeData& currnode = nodestack.back();
+void HighsSearch::flipBranchingDecision(NodeData& currnode) {
+  bool fallbackbranch =
+      currnode.branchingdecision.boundval == currnode.branching_point;
+  if (currnode.branchingdecision.boundtype == HighsBoundType::kLower) {
+    currnode.branchingdecision.boundtype = HighsBoundType::kUpper;
+    currnode.branchingdecision.boundval =
+        std::floor(currnode.branchingdecision.boundval - 0.5);
+  } else {
+    currnode.branchingdecision.boundtype = HighsBoundType::kLower;
+    currnode.branchingdecision.boundval =
+        std::ceil(currnode.branchingdecision.boundval + 0.5);
+  }
 
-  assert(currnode.opensubtrees == 2);
-  assert(mipsolver.isColIntegral(col));
-
-  currnode.opensubtrees = 1;
-  currnode.branching_point = branchpoint;
-  currnode.branchingdecision.column = col;
-  currnode.branchingdecision.boundval = newlb;
-  currnode.branchingdecision.boundtype = HighsBoundType::kLower;
-
-  HighsInt domchgPos = localdom.getDomainChangeStack().size();
-  bool passStabilizerToChildNode =
-      orbitsValidInChildNode(currnode.branchingdecision);
-  localdom.changeBound(currnode.branchingdecision);
-  nodestack.emplace_back(
-      currnode.lower_bound, currnode.estimate, currnode.nodeBasis,
-      passStabilizerToChildNode ? currnode.stabilizerOrbits : nullptr);
-  nodestack.back().domgchgStackPos = domchgPos;
+  if (fallbackbranch)
+    currnode.branching_point = currnode.branchingdecision.boundval;
 }
 
 void HighsSearch::addBoundExceedingConflict() {
@@ -1562,21 +1566,8 @@ bool HighsSearch::backtrack(bool recoverBasis) {
 
     assert(currnode.opensubtrees == 1);
     currnode.opensubtrees = 0;
-    bool fallbackbranch =
-        currnode.branchingdecision.boundval == currnode.branching_point;
+    flipBranchingDecision(currnode);
     HighsInt domchgPos = localdom.getDomainChangeStack().size();
-    if (currnode.branchingdecision.boundtype == HighsBoundType::kLower) {
-      currnode.branchingdecision.boundtype = HighsBoundType::kUpper;
-      currnode.branchingdecision.boundval =
-          std::floor(currnode.branchingdecision.boundval - 0.5);
-    } else {
-      currnode.branchingdecision.boundtype = HighsBoundType::kLower;
-      currnode.branchingdecision.boundval =
-          std::ceil(currnode.branchingdecision.boundval + 0.5);
-    }
-
-    if (fallbackbranch)
-      currnode.branching_point = currnode.branchingdecision.boundval;
 
     size_t numChangedCols = localdom.getChangedCols().size();
     bool passStabilizerToChildNode =
@@ -1687,20 +1678,7 @@ bool HighsSearch::backtrackPlunge() {
 
     assert(currnode.opensubtrees == 1);
     currnode.opensubtrees = 0;
-    bool fallbackbranch =
-        currnode.branchingdecision.boundval == currnode.branching_point;
-    if (currnode.branchingdecision.boundtype == HighsBoundType::kLower) {
-      currnode.branchingdecision.boundtype = HighsBoundType::kUpper;
-      currnode.branchingdecision.boundval =
-          std::floor(currnode.branchingdecision.boundval - 0.5);
-    } else {
-      currnode.branchingdecision.boundtype = HighsBoundType::kLower;
-      currnode.branchingdecision.boundval =
-          std::ceil(currnode.branchingdecision.boundval + 0.5);
-    }
-
-    if (fallbackbranch)
-      currnode.branching_point = currnode.branchingdecision.boundval;
+    flipBranchingDecision(currnode);
 
     HighsInt domchgPos = domchgstack.size();
     size_t numChangedCols = localdom.getChangedCols().size();
@@ -1790,20 +1768,7 @@ bool HighsSearch::backtrackUntilDepth(HighsInt targetDepth) {
   NodeData& currnode = nodestack.back();
   assert(currnode.opensubtrees == 1);
   currnode.opensubtrees = 0;
-  bool fallbackbranch =
-      currnode.branchingdecision.boundval == currnode.branching_point;
-  if (currnode.branchingdecision.boundtype == HighsBoundType::kLower) {
-    currnode.branchingdecision.boundtype = HighsBoundType::kUpper;
-    currnode.branchingdecision.boundval =
-        std::floor(currnode.branchingdecision.boundval - 0.5);
-  } else {
-    currnode.branchingdecision.boundtype = HighsBoundType::kLower;
-    currnode.branchingdecision.boundval =
-        std::ceil(currnode.branchingdecision.boundval + 0.5);
-  }
-
-  if (fallbackbranch)
-    currnode.branching_point = currnode.branchingdecision.boundval;
+  flipBranchingDecision(currnode);
 
   HighsInt domchgPos = localdom.getDomainChangeStack().size();
   bool passStabilizerToChildNode =

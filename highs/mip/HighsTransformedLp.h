@@ -39,6 +39,7 @@ class HighsTransformedLp {
   std::vector<double> ubDist;
   std::vector<double> boundDist;
   enum class BoundType : uint8_t {
+    kUnused,
     kSimpleUb,
     kSimpleLb,
     kVariableUb,
@@ -56,12 +57,17 @@ class HighsTransformedLp {
 
   bool transform(std::vector<double>& vals, std::vector<double>& upper,
                  std::vector<double>& solval, std::vector<HighsInt>& inds,
-                 double& rhs, bool& integralPositive, bool preferVbds = false);
+                 double& rhs, bool& integralPositive, bool preferVbds = false,
+                 bool enforceSameBds = false);
 
   bool untransform(std::vector<double>& vals, std::vector<HighsInt>& inds,
                    double& rhs, bool integral = false);
 
   const HighsDomain& getGlobaldom() const { return globaldom_; }
+
+  void initMultiRowTransform() {
+    boundTypes.assign(boundTypes.size(), BoundType::kUnused);
+  }
 };
 
 #endif

@@ -656,6 +656,8 @@ void HPresolve::markChangedCol(HighsInt col) {
     changedColIndices.push_back(col);
     changedColFlag[col] = true;
   }
+  for (const auto& nz : getColumnVector(col))
+    singleEquationChecked[nz.index()] = false;
 }
 
 double HPresolve::getMaxAbsColVal(HighsInt col) const {
@@ -2376,6 +2378,9 @@ HighsTripletTreeSliceInOrder HPresolve::getSortedRowVector(HighsInt row) const {
 }
 
 void HPresolve::markRowDeleted(HighsInt row) {
+  // Next line was in zero-obj-singleton-double-sided-row, but removed
+  // in latest
+  assert(!analysis_.logging_on_);
   if (!this->in_initial_sweep_) {
     assert(!rowDeleted[row]);
 
@@ -2393,6 +2398,9 @@ void HPresolve::markRowDeleted(HighsInt row) {
 }
 
 void HPresolve::markColDeleted(HighsInt col) {
+  // Next line added so markColDeleted has same check as
+  // markRowDeleted
+  assert(!analysis_.logging_on_);
   if (!this->in_initial_sweep_) {
     assert(!colDeleted[col]);
 
@@ -3743,7 +3751,11 @@ HPresolve::Result HPresolve::singletonCol(HighsPostsolveStack& postsolve_stack,
   if (timing)
     analysis_.presolveTimerStop(kPresolveClockSingletonColDualImpliedFree);
 
-  // todo: check for zero cost singleton and remove
+  if (this->allow_rule_[kPresolveRuleZeroCostSingleton]) {
+    // Remove if col is double-sided finite slack
+    HPRESOLVE_CHECKED_CALL(zeroCostSingleton(postsolve_stack, col));
+  }
+
   return Result::kOk;
 }
 
@@ -5334,13 +5346,27 @@ HPresolve::Result HPresolve::dualFixing(HighsPostsolveStack& postsolve_stack,
   // compute locks
   computeLocks(col, true, lockCallback);
 
-  // check if variable can be fixed
+  // If there are no up (down) locks, the variable must/can be fixed
+  // at its upper (lower) bound. Note that if there are no up (down)
+  // locks, then cost <= 0 (>= 0).
+  //
+  // If |cost| > dual_feasibility_tolerance then fixing is forced, and
+  // may identify unboundedness
+  //
+  // If |cost| <= dual_feasibility_tolerance, then the variable is
+  // dual feasible at any value, so only fix if the corresponding
+  // bound is finite
   if (numDownLocks == 0 || numUpLocks == 0) {
-    // fix variable
-    if (numDownLocks == 0)
-      HPRESOLVE_CHECKED_CALL(fixColToLower(postsolve_stack, col));
-    else
-      HPRESOLVE_CHECKED_CALL(fixColToUpper(postsolve_stack, col));
+    if (numDownLocks == 0) {
+      if (model->col_cost_[col] > options->dual_feasibility_tolerance ||
+          model->col_lower_[col] > -kHighsInf)
+        HPRESOLVE_CHECKED_CALL(fixColToLower(postsolve_stack, col));
+    } else {
+      assert(numUpLocks == 0);
+      if (model->col_cost_[col] < -options->dual_feasibility_tolerance ||
+          model->col_upper_[col] < kHighsInf)
+        HPRESOLVE_CHECKED_CALL(fixColToUpper(postsolve_stack, col));
+    }
   } else {
     bool hasSingleDownLock = numDownLocks == 1 && downLockRow != -1;
     bool hasSingleUpLock = numUpLocks == 1 && upLockRow != -1;
@@ -5633,6 +5659,68 @@ HPresolve::Result HPresolve::singletonColStuffing(
     highsLogDev(options->log_options, HighsLogType::kDetailed,
                 "Singleton column stuffing fixed %d columns\n",
                 static_cast<int>(numFixedCols));
+
+  return Result::kOk;
+}
+
+HPresolve::Result HPresolve::zeroCostSingleton(
+    HighsPostsolveStack& postsolve_stack, HighsInt col) {
+  assert(this->allow_rule_[kPresolveRuleZeroCostSingleton]);
+  // For a double-sided row b_0 <= a^Tx + cs <= b_1,
+  // where s is a singleton continuous column with 0 cost,
+  // relax s out as its value can be determined in postsolve.
+  // The row may now admit additional reductions afterwards.
+  // Dual fixing already handles single-sided row case with fixings.
+  if (model->integrality_[col] != HighsVarType::kContinuous ||
+      model->col_cost_[col] != 0.0 || colsize[col] != 1) {
+    return Result::kOk;
+  }
+  assert(!colDeleted[col]);
+
+  HighsInt nzPos = colhead[col];
+  HighsInt row = Arow[nzPos];
+  assert(!rowDeleted[row]);
+  // Row must be ranged, but why can't it be an equation?
+  const bool was_equation = isEquation(row);
+  if (!isRanged(row)) return Result::kOk;
+
+  double coef = Avalue[nzPos];
+
+  if (std::abs(coef) == kHighsInf) return Result::kOk;
+
+  const bool logging_on = analysis_.logging_on_;
+  if (logging_on)
+    analysis_.startPresolveRuleLog(kPresolveRuleZeroCostSingleton);
+  storeRow(row);
+
+  double lb = model->col_lower_[col];
+  double ub = model->col_upper_[col];
+  double change_from_col_lb = coef * lb;
+  double change_from_col_ub = coef * ub;
+
+  double newRowLower =
+      model->row_lower_[row] - std::max(change_from_col_lb, change_from_col_ub);
+  double newRowUpper =
+      model->row_upper_[row] - std::min(change_from_col_lb, change_from_col_ub);
+
+  postsolve_stack.zeroCostSingleton(row, col, model->row_lower_[row],
+                                    model->row_upper_[row], newRowLower,
+                                    newRowUpper, lb, ub, coef, getStoredRow());
+
+  model->row_lower_[row] = newRowLower;
+  model->row_upper_[row] = newRowUpper;
+  if (was_equation && newRowLower != newRowUpper &&
+      eqiters[row] != equations.end()) {
+    equations.erase(eqiters[row]);
+    eqiters[row] = equations.end();
+  }
+
+  // Delete the singleton column
+  markColDeleted(col);
+  unlink(nzPos);
+
+  analysis_.logging_on_ = logging_on;
+  if (logging_on) analysis_.stopPresolveRuleLog(kPresolveRuleZeroCostSingleton);
 
   return Result::kOk;
 }
@@ -7906,8 +7994,8 @@ HPresolve::Result HPresolve::removeDoubletonEquations(
 HPresolve::Result HPresolve::strengthenInequalities(
     HighsPostsolveStack& postsolve_stack, HighsInt& num_strengthened) {
   std::vector<int8_t> complementation;
-  std::vector<double> reducedcost;
-  std::vector<double> upper;
+  std::vector<HighsCDouble> reducedcost;
+  std::vector<HighsCDouble> upper;
   std::vector<HighsInt> indices;
   std::vector<HighsInt> positions;
   std::vector<HighsInt> stack;
@@ -7984,7 +8072,8 @@ HPresolve::Result HPresolve::strengthenInequalities(
       // activity.
       int8_t comp;
       double weight = Avalue[pos] * scale;
-      double ub = model->col_upper_[col] - model->col_lower_[col];
+      HighsCDouble ub = static_cast<HighsCDouble>(model->col_upper_[col]) -
+                        static_cast<HighsCDouble>(model->col_lower_[col]);
       if (weight > 0) {
         comp = 1;
         maxviolation +=
@@ -8047,7 +8136,7 @@ HPresolve::Result HPresolve::strengthenInequalities(
 
       for (size_t i = indices.size(); i > 0; --i) {
         HighsInt index = indices[i - 1];
-        double delta = upper[index] * reducedcost[index];
+        HighsCDouble delta = upper[index] * reducedcost[index];
 
         if (upper[index] <= 1000.0 && reducedcost[index] > smallVal &&
             lambda - delta <= smallVal)
@@ -8065,26 +8154,25 @@ HPresolve::Result HPresolve::strengthenInequalities(
             return reducedcost[i1] < reducedcost[i2];
           });
 
-      double al = reducedcost[alpos];
+      HighsCDouble al = reducedcost[alpos];
       coefs.resize(cover.size());
-      double coverrhs = std::max(
-          std::ceil(static_cast<double>(lambda / al - primal_feastol)), 1.0);
+      HighsCDouble coverrhs = max(ceil(lambda / al - primal_feastol), 1.0);
       HighsCDouble slackupper = -coverrhs;
 
-      double step = kHighsInf;
+      HighsCDouble step = kHighsInf;
       for (size_t i = 0; i != cover.size(); ++i) {
-        coefs[i] = std::ceil(
-            std::min(reducedcost[cover[i]], static_cast<double>(lambda)) / al -
-            options->small_matrix_value);
+        coefs[i] =
+            static_cast<double>(ceil(min(reducedcost[cover[i]], lambda) / al -
+                                     options->small_matrix_value));
         slackupper += upper[cover[i]] * coefs[i];
-        step = std::min(step, reducedcost[cover[i]] / coefs[i]);
+        step = min(step, reducedcost[cover[i]] / coefs[i]);
       }
-      step = std::min(step, static_cast<double>(maxviolation / coverrhs));
+      step = min(step, maxviolation / coverrhs);
       maxviolation -= step * coverrhs;
 
       HighsInt slackind = reducedcost.size();
       reducedcost.push_back(step);
-      upper.push_back(static_cast<double>(slackupper));
+      upper.push_back(slackupper);
 
       for (size_t i = 0; i != cover.size(); ++i)
         reducedcost[cover[i]] -= step * coefs[i];
@@ -8103,7 +8191,7 @@ HPresolve::Result HPresolve::strengthenInequalities(
                                  [&](HighsInt i) {
                                    return static_cast<size_t>(i) >=
                                               positions.size() ||
-                                          std::abs(reducedcost[i]) <= threshold;
+                                          abs(reducedcost[i]) <= threshold;
                                  }),
                   indices.end());
     if (indices.empty()) continue;

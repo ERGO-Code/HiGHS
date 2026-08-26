@@ -193,11 +193,13 @@ void presolveSolvePostsolve(const std::string& model_file,
     if (dev_run)
       printf("Presolve timeout: return status = %d\n", (int)return_status);
   }
+  REQUIRE(model_presolve_status != HighsPresolveStatus::kUnboundedOrInfeasible);
   HighsLp lp = highs0.getPresolvedLp();
   highs1.passModel(lp);
   highs1.setOptionValue("solve_relaxation", solve_relaxation);
   highs1.setOptionValue("presolve", kHighsOffString);
   highs1.run();
+  REQUIRE(highs1.getModelStatus() == HighsModelStatus::kOptimal);
   HighsSolution solution = highs1.getSolution();
   const double objective_value = highs1.getInfo().objective_function_value;
   if (lp.isMip() && !solve_relaxation) {
@@ -1074,6 +1076,23 @@ TEST_CASE("bound_implied", "[highs_test_presolve]") {
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
 }
 
+TEST_CASE("issue-2962", "[highs_test_presolve]") {
+  // Model that exposes the case where zeroCostSingleton in postsolve
+  // requires the column to inherit the basic status of the row
+  std::string model_file =
+      std::string(HIGHS_DIR) + "/check/instances/p0548.mps";
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  h.setOptionValue("solve_relaxation", true);
+  h.setOptionValue("log_dev_level", 1);
+  h.setOptionValue("presolve_rule_logging", true);
+
+  h.readModel(model_file);
+  REQUIRE(h.run() == HighsStatus::kOk);
+
+  h.resetGlobalScheduler(true);
+}
+
 TEST_CASE("add-to-matrix", "[highs_test_presolve]") {
   // Build a simple LP: min x0 + x1 s.t. x0 + x1 >= 2, 0 <= x0,x1 <= 3
   HighsLp lp;
@@ -1133,4 +1152,28 @@ TEST_CASE("add-to-matrix", "[highs_test_presolve]") {
   REQUIRE(h.getInfo().objective_function_value == 2.0);
 
   h.resetGlobalScheduler(true);
+}
+
+TEST_CASE("issue-3140", "[highs_test_presolve]") {
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  HighsLp lp;
+  lp.num_col_ = 9;
+  lp.num_row_ = 5;
+  lp.col_cost_ = {4, 0, 0, -3, -1, 4, -4, 1, -4};
+  lp.col_lower_ = {0, 1, 0, 0, 0, 0, 0, 0, 0};
+  lp.col_upper_ = {10, 9, 0, 8, 9, 6, 5, 7, 7};
+  lp.row_lower_ = {8, -kHighsInf, -1, 1, -kHighsInf};
+  lp.row_upper_ = {8, -3, -1, kHighsInf, 3};
+  lp.a_matrix_.format_ = MatrixFormat::kColwise;
+  lp.a_matrix_.start_ = {0, 2, 3, 3, 5, 7, 9, 11, 13, 15};
+  lp.a_matrix_.index_ = {1, 2, 0, 0, 3, 3, 4, 0, 3, 2, 3, 2, 4, 0, 1};
+  lp.a_matrix_.value_ = {-3, -2, 1, 2, 1, -3, 2, 1, -3, -1, 1, 1, 3, -3, -2};
+
+  REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
+  REQUIRE(highs.presolve() == HighsStatus::kOk);
+  REQUIRE(highs.getModelPresolveStatus() ==
+          HighsPresolveStatus::kReducedToEmpty);
+
+  highs.resetGlobalScheduler(true);
 }
