@@ -657,6 +657,8 @@ void HPresolve::markChangedCol(HighsInt col) {
     changedColIndices.push_back(col);
     changedColFlag[col] = true;
   }
+  for (const auto& nz : getColumnVector(col))
+    singleEquationChecked[nz.index()] = false;
 }
 
 double HPresolve::getMaxAbsColVal(HighsInt col) const {

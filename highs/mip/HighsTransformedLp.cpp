@@ -133,7 +133,8 @@ bool HighsTransformedLp::transform(std::vector<double>& vals,
                                    std::vector<double>& upper,
                                    std::vector<double>& solval,
                                    std::vector<HighsInt>& inds, double& rhs,
-                                   bool& integersPositive, bool preferVbds) {
+                                   bool& integersPositive, bool preferVbds,
+                                   bool enforceSameBds) {
   // vector sum should be empty
   assert(vectorsum.getNonzeros().empty());
 
@@ -233,7 +234,25 @@ bool HighsTransformedLp::transform(std::vector<double>& vals,
     // column.
     BoundType oldBoundType = boundTypes[col];
 
-    if (lprelaxation.isColIntegral(col)) {
+    if (enforceSameBds && oldBoundType != BoundType::kUnused) {
+      // Don't allow different bound types to be used in stacked
+      // transformations unless they're going to be relaxed out
+      // This ensures that a single call to untransform remains valid
+      if (lprelaxation.isColIntegral(col) &&
+          (ub - lb <= 1.5 || boundDist[col] != 0.0 || simpleLbDist[col] == 0 ||
+           simpleUbDist[col] == 0)) {
+        i++;
+        continue;
+      }
+      if (oldBoundType == BoundType::kSimpleLb ||
+          oldBoundType == BoundType::kSimpleUb) {
+        if (lbDist[col] < ubDist[col] && vals[i] > 0) {
+          boundTypes[col] = BoundType::kSimpleLb;
+        } else if (ubDist[col] < lbDist[col] && vals[i] < 0) {
+          boundTypes[col] = BoundType::kSimpleUb;
+        }
+      }
+    } else if (lprelaxation.isColIntegral(col)) {
       if (ub - lb <= 1.5 || boundDist[col] != 0.0 || simpleLbDist[col] == 0 ||
           simpleUbDist[col] == 0) {
         // since we skip the handling of variable bound constraints for all
@@ -338,6 +357,11 @@ bool HighsTransformedLp::transform(std::vector<double>& vals,
           remove(i);
           continue;
         }
+        break;
+      case BoundType::kUnused:
+        assert(false);
+        vectorsum.clear();
+        return false;
     }
     // move to next element
     i++;
@@ -375,6 +399,8 @@ bool HighsTransformedLp::transform(std::vector<double>& vals,
   for (HighsInt j = 0; j != numNz; ++j) {
     HighsInt col = inds[j];
 
+    if (enforceSameBds && boundTypes[col] != BoundType::kUnused) continue;
+
     // get bounds
     double lb = getLb(col);
     double ub = getUb(col);
@@ -383,7 +409,9 @@ bool HighsTransformedLp::transform(std::vector<double>& vals,
     assert(lb != -kHighsInf || ub != kHighsInf);
 
     // set bound type for previously unprocessed integer-constrained variables
-    if (!lprelaxation.isColIntegral(col)) continue;
+    if (!lprelaxation.isColIntegral(col) &&
+        boundTypes[col] != BoundType::kUnused)
+      continue;
 
     // do not overwrite bound type for integral slacks from vlb / vub
     // constraints
@@ -441,6 +469,10 @@ bool HighsTransformedLp::transform(std::vector<double>& vals,
       case BoundType::kVariableUb: {
         solval[j] = ubDist[col];
         break;
+      }
+      case BoundType::kUnused: {
+        assert(false);
+        return false;
       }
     }
 
@@ -517,6 +549,12 @@ bool HighsTransformedLp::untransform(std::vector<double>& vals,
           for (HighsInt j = 0; j != rowlen; ++j)
             vectorsum.add(rowinds[j], vals[i] * rowvals[j]);
         }
+        break;
+      }
+      case BoundType::kUnused: {
+        assert(false);
+        vectorsum.clear();
+        return false;
       }
     }
   }
