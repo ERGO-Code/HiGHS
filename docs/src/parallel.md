@@ -2,9 +2,9 @@
 
 ## Generally
 
-HiGHS currently has limited opportunities for exploiting parallel
+HiGHS has increasing opportunities for exploiting parallel
 computing. When using a CPU, these are currently restricted to the
-dual simplex solver for LP, the factorisation-based interior point solver,
+dual simplex solver for LP, the factorisation-based interior point solver (HiPO),
 and the MIP solver. Details of these and future plans are set out below.
 HiGHS has an implementation of a first order method (PDLP) for solving LPs
 that can exploit the availability of a [GPU](@ref gpu).
@@ -24,10 +24,9 @@ concurrent Highs instances must use the same value of `threads`.
 
 By default, the HiGHS dual simplex solver runs in serial. However, it
 has a variant allowing concurrent processing. This variant is used
-when the [parallel](@ref option-parallel) option is set "on", by
-specifying `--parallel` when running the [executable](@ref executable)
-via the command line, or by setting it via a library call in an
-application.
+when the [parallel](@ref option-parallel) option is set to "on" and
+[simplex\_strategy](@ref option-simplex-strategy) is set to
+`kSimplexStrategyDualTasks` (2) or `kSimplexStrategyDualMulti` (3).
 
 The concurrency used will be the value of
 [simplex\_max\_concurrency](@ref option-simplex-max-concurrency). If
