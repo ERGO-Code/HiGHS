@@ -7994,8 +7994,8 @@ HPresolve::Result HPresolve::removeDoubletonEquations(
 HPresolve::Result HPresolve::strengthenInequalities(
     HighsPostsolveStack& postsolve_stack, HighsInt& num_strengthened) {
   std::vector<int8_t> complementation;
-  std::vector<double> reducedcost;
-  std::vector<double> upper;
+  std::vector<HighsCDouble> reducedcost;
+  std::vector<HighsCDouble> upper;
   std::vector<HighsInt> indices;
   std::vector<HighsInt> positions;
   std::vector<HighsInt> stack;
@@ -8087,7 +8087,7 @@ HPresolve::Result HPresolve::strengthenInequalities(
       if (ub <= primal_feastol || weight <= primal_feastol) continue;
 
       if (model->integrality_[col] == HighsVarType::kContinuous) {
-        continuouscontribution += weight * ub;
+        continuouscontribution += static_cast<HighsCDouble>(weight) * ub;
         continue;
       }
 
@@ -8135,7 +8135,7 @@ HPresolve::Result HPresolve::strengthenInequalities(
 
       for (size_t i = indices.size(); i > 0; --i) {
         HighsInt index = indices[i - 1];
-        double delta = upper[index] * reducedcost[index];
+        HighsCDouble delta = upper[index] * reducedcost[index];
 
         if (upper[index] <= 1000.0 && reducedcost[index] > smallVal &&
             lambda - delta <= smallVal)
@@ -8153,26 +8153,25 @@ HPresolve::Result HPresolve::strengthenInequalities(
             return reducedcost[i1] < reducedcost[i2];
           });
 
-      double al = reducedcost[alpos];
+      HighsCDouble al = reducedcost[alpos];
       coefs.resize(cover.size());
-      double coverrhs = std::max(
-          std::ceil(static_cast<double>(lambda / al - primal_feastol)), 1.0);
+      HighsCDouble coverrhs = max(ceil(lambda / al - primal_feastol), 1.0);
       HighsCDouble slackupper = -coverrhs;
 
-      double step = kHighsInf;
+      HighsCDouble step = kHighsInf;
       for (size_t i = 0; i != cover.size(); ++i) {
-        coefs[i] = std::ceil(
-            std::min(reducedcost[cover[i]], static_cast<double>(lambda)) / al -
-            options->small_matrix_value);
+        coefs[i] =
+            static_cast<double>(ceil(min(reducedcost[cover[i]], lambda) / al -
+                                     options->small_matrix_value));
         slackupper += upper[cover[i]] * coefs[i];
-        step = std::min(step, reducedcost[cover[i]] / coefs[i]);
+        step = min(step, reducedcost[cover[i]] / coefs[i]);
       }
-      step = std::min(step, static_cast<double>(maxviolation / coverrhs));
+      step = min(step, maxviolation / coverrhs);
       maxviolation -= step * coverrhs;
 
       HighsInt slackind = reducedcost.size();
       reducedcost.push_back(step);
-      upper.push_back(static_cast<double>(slackupper));
+      upper.push_back(slackupper);
 
       for (size_t i = 0; i != cover.size(); ++i)
         reducedcost[cover[i]] -= step * coefs[i];
@@ -8191,7 +8190,7 @@ HPresolve::Result HPresolve::strengthenInequalities(
                                  [&](HighsInt i) {
                                    return static_cast<size_t>(i) >=
                                               positions.size() ||
-                                          std::abs(reducedcost[i]) <= threshold;
+                                          abs(reducedcost[i]) <= threshold;
                                  }),
                   indices.end());
     if (indices.empty()) continue;
