@@ -35,6 +35,11 @@ HighsMipWorker::HighsMipWorker(const HighsMipSolver& mipsolver,
   sepa_ptr_->setLpRelaxation(lp_);
 }
 
+HighsMipWorker::~HighsMipWorker() {
+  search_ptr_.reset();
+  sepa_ptr_.reset();
+}
+
 const HighsMipSolver& HighsMipWorker::getMipSolver() const {
   return mipsolver_;
 }
