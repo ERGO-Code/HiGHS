@@ -49,11 +49,17 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
       TestHighsRbTree.cpp
       TestHighsSparseMatrix.cpp
       TestHighsVersion.cpp
+    TestHiPdlpAveraging.cpp
+    TestHiPdlpBackend.cpp
+        TestHiPdlpConvergence.cpp
+                TestHiPdlpRestart.cpp
+        TestHiPdlpTrace.cpp
       TestHSet.cpp
       TestICrash.cpp
       TestIis.cpp
       TestInfo.cpp
       TestIO.cpp
+    TestHiPdlpModel.cpp
       TestIpm.cpp
       TestIpx.cpp
       TestLogging.cpp
@@ -109,6 +115,10 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
   endif()
 
   add_executable(unit_tests ${TEST_SOURCES})
+
+    if(HIGHS_HIPDLP_CUDA_DETECTED)
+        target_compile_definitions(unit_tests PRIVATE HIGHS_HIPDLP_TESTING)
+    endif()
 
   set_target_properties(unit_tests PROPERTIES UNITY_BUILD OFF)
 

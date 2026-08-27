@@ -23,6 +23,16 @@ if(NOT FAST_BUILD)
   add_library(libhighs ${sources} ${headers} ${win_version_file})
   target_include_directories(libhighs PRIVATE ${include_dirs})
 
+  if(HIGHS_HIPDLP_CUDA_DETECTED)
+    set_target_properties(libhighs PROPERTIES
+      CUDA_STANDARD 11
+      CUDA_STANDARD_REQUIRED ON)
+    target_link_libraries(libhighs ${HIGHS_HIPDLP_CUDA_LIBRARIES})
+    if(BUILD_TESTING)
+      target_compile_definitions(libhighs PRIVATE HIGHS_HIPDLP_TESTING)
+    endif()
+  endif()
+
   if(APPLE)
     # linker was taking ~1 hour, unity build reduces it to ~1 minute
     set_target_properties(libhighs PROPERTIES
@@ -193,6 +203,16 @@ else()
   endif()
 
   target_sources(highs PRIVATE ${sources} ${headers} ${win_version_file})
+
+  if(HIGHS_HIPDLP_CUDA_DETECTED)
+    set_target_properties(highs PROPERTIES
+      CUDA_STANDARD 11
+      CUDA_STANDARD_REQUIRED ON)
+    target_link_libraries(highs PRIVATE ${HIGHS_HIPDLP_CUDA_LIBRARIES})
+    if(BUILD_TESTING)
+      target_compile_definitions(highs PRIVATE HIGHS_HIPDLP_TESTING)
+    endif()
+  endif()
 
   # Optional Cuda
   if (CUPDLP_GPU)

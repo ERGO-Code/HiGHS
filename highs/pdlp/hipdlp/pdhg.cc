@@ -1176,6 +1176,49 @@ void PDLPSolver::initialize() {
   halpern_dual_slack_next_valid_ = false;
 }
 
+void PDLPSolver::runFixedTraceForTesting(
+    const double primal_step, const double dual_step,
+    const HighsInt iteration_count,
+    std::vector<std::vector<double>>& primal_trace,
+    std::vector<std::vector<double>>& dual_trace,
+    std::vector<std::vector<double>>& ax_trace,
+    std::vector<std::vector<double>>& aty_trace) {
+  assert(std::isfinite(primal_step) && primal_step > 0.0);
+  assert(std::isfinite(dual_step) && dual_step > 0.0);
+  assert(iteration_count >= 0);
+
+  initialize();
+  stepsize_.primal_step = primal_step;
+  stepsize_.dual_step = dual_step;
+  linalg::projectBounds(lp_, x_current_);
+  x_anchor_ = x_current_;
+  y_anchor_ = y_current_;
+  halpern_iteration_ = 0;
+  linalg::ax(lp_, x_current_, Ax_cache_);
+  linalg::aTy(lp_, y_current_, ATy_cache_);
+
+  const std::size_t point_count =
+      static_cast<std::size_t>(iteration_count) + 1;
+  primal_trace.assign(point_count,
+                      std::vector<double>(lp_.num_col_, 0.0));
+  dual_trace.assign(point_count, std::vector<double>(lp_.num_row_, 0.0));
+  ax_trace.assign(point_count, std::vector<double>(lp_.num_row_, 0.0));
+  aty_trace.assign(point_count, std::vector<double>(lp_.num_col_, 0.0));
+
+  const auto record = [&](const HighsInt point) {
+    primal_trace[point] = x_current_;
+    dual_trace[point] = y_current_;
+    ax_trace[point] = Ax_cache_;
+    aty_trace[point] = ATy_cache_;
+  };
+  record(0);
+  for (HighsInt iteration = 1; iteration <= iteration_count; ++iteration) {
+    performHalpernPdhgStep(true, iteration);
+    linalg::ax(lp_, x_current_, Ax_cache_);
+    record(iteration);
+  }
+}
+
 // Update primal weight
 void PDLPSolver::computeStepSizeRatio(PrimalDualParams& working_params) {
   // 1. Calculate the L2 norm of the difference between current and last-restart

@@ -166,6 +166,25 @@ option(EMSCRIPTEN_HTML "Emscripten HTML output" OFF)
 option(CUPDLP_GPU "Build pdlp with GPU" OFF)
 message(STATUS "Build pdlp with GPU: ${CUPDLP_GPU}")
 
+option(HIGHS_HIPDLP_CUDA
+  "Detect CUDA compiler support for the HiPDLP rewrite" OFF)
+set(HIGHS_HIPDLP_CUDA_DETECTED OFF)
+if (HIGHS_HIPDLP_CUDA)
+  include(CheckLanguage)
+  check_language(CUDA)
+  if (NOT CMAKE_CUDA_COMPILER)
+    message(FATAL_ERROR
+      "HIGHS_HIPDLP_CUDA=ON requires a detectable CUDA compiler")
+  endif()
+  enable_language(CUDA)
+  find_package(CUDAToolkit REQUIRED)
+  set(HIGHS_HIPDLP_CUDA_LIBRARIES
+    CUDA::cudart CUDA::cublas CUDA::cusparse)
+  set(HIGHS_HIPDLP_CUDA_DETECTED ON)
+endif()
+message(STATUS
+  "HiPDLP rewrite CUDA compiler detected: ${HIGHS_HIPDLP_CUDA_DETECTED}")
+
 option(CUPDLP_FIND_CUDA "Build pdlp with GPU" OFF)
 message(STATUS "Use FindCUDAConf: ${CUPDLP_FIND_CUDA}")
 

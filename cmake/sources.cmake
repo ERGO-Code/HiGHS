@@ -408,11 +408,30 @@ set(highs_sources
     parallel/HighsTaskExecutor.cpp
     pdlp/CupdlpWrapper.cpp
     pdlp/HiPdlpWrapper.cpp
+    pdlp/hipdlp/algorithm/averaging_policy.cc
+    pdlp/hipdlp/algorithm/convergence.cc
+    pdlp/hipdlp/algorithm/fixed_trace.cc
+    pdlp/hipdlp/algorithm/halpern_pdhg_step.cc
+    pdlp/hipdlp/algorithm/restart_policy.cc
+    pdlp/hipdlp/algorithm/solver.cc
+    pdlp/hipdlp/api/options.cc
+    pdlp/hipdlp/api/solver.cc
+    pdlp/hipdlp/api/status.cc
+    pdlp/hipdlp/backend/command_buffer.cc
+    pdlp/hipdlp/backend/backend_factory.cc
+    pdlp/hipdlp/backend/cpu/cpu_backend.cc
+    pdlp/hipdlp/backend/cpu/sparse_kernels.cc
+    pdlp/hipdlp/backend/cpu/vector_kernels.cc
+    pdlp/hipdlp/backend/types.cc
     pdlp/hipdlp/linalg.cc
+    pdlp/hipdlp/legacy/legacy_solver_adapter.cc
     pdlp/hipdlp/logger.cc
+    pdlp/hipdlp/model/problem.cc
+    pdlp/hipdlp/model/scaling.cc
     pdlp/hipdlp/pdhg.cc
     pdlp/hipdlp/restart.cc
     pdlp/hipdlp/scaling.cc
+    pdlp/hipdlp/verification/kkt_verifier.cc
     presolve/HighsPostsolveStack.cpp
     presolve/HighsSymmetry.cpp
     presolve/HPresolve.cpp
@@ -466,6 +485,12 @@ set(highs_sources
     util/stringutil.cpp
     HighsExternalApi.cpp
     HighsExternalDeps.cpp)
+
+if (HIGHS_HIPDLP_CUDA_DETECTED)
+  list(APPEND highs_sources
+    pdlp/hipdlp/backend/cuda/cuda_backend.cu
+    pdlp/hipdlp/backend/cuda/cuda_kernels.cu)
+endif()
 
 # add catch header?
 set(highs_headers
@@ -555,13 +580,33 @@ set(highs_headers
     pdlp/CupdlpWrapper.h
     pdlp/HiPdlpTimer.h
     pdlp/HiPdlpWrapper.h
+    pdlp/hipdlp/algorithm/averaging_policy.hpp
+    pdlp/hipdlp/algorithm/convergence.hpp
+    pdlp/hipdlp/algorithm/fixed_trace.hpp
+    pdlp/hipdlp/algorithm/halpern_pdhg_step.hpp
+    pdlp/hipdlp/algorithm/restart_policy.hpp
+    pdlp/hipdlp/algorithm/solver.hpp
+    pdlp/hipdlp/api/options.hpp
+    pdlp/hipdlp/api/solver.hpp
+    pdlp/hipdlp/api/status.hpp
+    pdlp/hipdlp/backend/backend.hpp
+    pdlp/hipdlp/backend/backend_factory.hpp
+    pdlp/hipdlp/backend/command_buffer.hpp
+    pdlp/hipdlp/backend/cpu/cpu_backend.hpp
+    pdlp/hipdlp/backend/cpu/sparse_kernels.hpp
+    pdlp/hipdlp/backend/cpu/vector_kernels.hpp
+    pdlp/hipdlp/backend/types.hpp
     pdlp/hipdlp/defs.hpp
     pdlp/hipdlp/linalg.hpp
+    pdlp/hipdlp/legacy/legacy_solver_adapter.hpp
     pdlp/hipdlp/logger.hpp
+    pdlp/hipdlp/model/problem.hpp
+    pdlp/hipdlp/model/scaling.hpp
     pdlp/hipdlp/pdhg.hpp
     pdlp/hipdlp/restart.hpp
     pdlp/hipdlp/scaling.hpp
     pdlp/hipdlp/solver_results.hpp
+    pdlp/hipdlp/verification/kkt_verifier.hpp
     presolve/HighsPostsolveStack.h
     presolve/HighsSymmetry.h
     presolve/HPresolve.h

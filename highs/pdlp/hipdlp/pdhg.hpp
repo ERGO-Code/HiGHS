@@ -96,6 +96,12 @@ class PDLPSolver {
   HighsInt getIterationCount() const { return final_iter_count_; }
   HighsInt getNumCol() const { return lp_.num_col_; }
   HighsInt getNumRow() const { return lp_.num_row_; }
+  void runFixedTraceForTesting(
+      double primal_step, double dual_step, HighsInt iteration_count,
+      std::vector<std::vector<double>>& primal_trace,
+      std::vector<std::vector<double>>& dual_trace,
+      std::vector<std::vector<double>>& ax_trace,
+      std::vector<std::vector<double>>& aty_trace);
 
 #if PDLP_DEBUG_LOG
   FILE* debug_pdlp_log_file_ = nullptr;
