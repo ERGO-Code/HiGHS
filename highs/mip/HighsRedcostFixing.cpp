@@ -289,38 +289,31 @@ void HighsRedcostFixing::addRootRedcost(const HighsMipSolver& mipsolver,
       };
 
   for (HighsInt col : mipsolver.mipdata_->integral_cols) {
-    if (lpredcost[col] > mipsolver.mipdata_->feastol &&
-        mipsolver.mipdata_->getDomain().col_lower_[col] > -kHighsIInf) {
+    double lb = mipsolver.mipdata_->getDomain().col_lower_[col];
+    double ub = mipsolver.mipdata_->getDomain().col_upper_[col];
+
+    if (lpredcost[col] > mipsolver.mipdata_->feastol && lb > -kHighsIInf) {
       // col <= (cutoffbound - lpobj)/redcost + lb
       // so for lurkub = lb to ub - 1 we can compute the necessary cutoff
       // bound to reach this bound which is:
       //  lurkub = (cutoffbound - lpobj)/redcost + lb
       //  cutoffbound = (lurkub - lb) * redcost + lpobj
-      findLurkingBounds(
-          col, HighsInt{1},
-          static_cast<HighsInt>(
-              mipsolver.mipdata_->getDomain().col_lower_[col]),
-          static_cast<HighsInt>(
-              mipsolver.mipdata_->getDomain().col_upper_[col]),
-          mipsolver.mipdata_->getDomain().col_upper_[col] < kHighsIInf,
-          lpobjective, lpredcost[col], maxNumSteps, maxNumStepsExp,
-          lurkingColUpper[col], lurkingColLower[col]);
+      findLurkingBounds(col, HighsInt{1}, static_cast<HighsInt>(lb),
+                        static_cast<HighsInt>(ub), ub < kHighsIInf, lpobjective,
+                        lpredcost[col], maxNumSteps, maxNumStepsExp,
+                        lurkingColUpper[col], lurkingColLower[col]);
     } else if (lpredcost[col] < -mipsolver.mipdata_->feastol &&
-               mipsolver.mipdata_->getDomain().col_upper_[col] < kHighsIInf) {
+               ub < kHighsIInf) {
       // col >= (cutoffbound - lpobj)/redcost + ub
       // so for lurklb = lb + 1 to ub we can compute the necessary cutoff
       // bound to reach this bound which is:
       //  lurklb = (cutoffbound - lpobj)/redcost + ub
       //  cutoffbound = (lurklb - ub) * redcost + lpobj
-      findLurkingBounds(
-          col, HighsInt{-1},
-          static_cast<HighsInt>(
-              mipsolver.mipdata_->getDomain().col_upper_[col]),
-          static_cast<HighsInt>(
-              mipsolver.mipdata_->getDomain().col_lower_[col]),
-          mipsolver.mipdata_->getDomain().col_lower_[col] > -kHighsIInf,
-          lpobjective, lpredcost[col], maxNumSteps, maxNumStepsExp,
-          lurkingColLower[col], lurkingColUpper[col]);
+      findLurkingBounds(col, HighsInt{-1}, static_cast<HighsInt>(ub),
+                        static_cast<HighsInt>(lb), lb > -kHighsIInf,
+                        lpobjective, lpredcost[col], maxNumSteps,
+                        maxNumStepsExp, lurkingColLower[col],
+                        lurkingColUpper[col]);
     }
   }
 }
