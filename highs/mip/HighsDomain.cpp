@@ -638,22 +638,6 @@ void HighsDomain::CutpoolPropagation::updateActivityUbChange(
   }
 }
 
-HighsDomain::DualFixProbingPropagation::DualFixProbingPropagation(
-    const DualFixProbingPropagation& other)
-    : redundantRowFlags_(other.redundantRowFlags_),
-      redundantRowInds_(other.redundantRowInds_),
-      zeroCostDirections_(other.zeroCostDirections_),
-      fixedZeroCostColumns_(other.fixedZeroCostColumns_),
-      colLowerLocksOriginal_(other.colLowerLocksOriginal_),
-      colUpperLocksOriginal_(other.colUpperLocksOriginal_),
-      colLowerReducedNumLocks_(other.colLowerReducedNumLocks_),
-      colUpperReducedNumLocks_(other.colUpperReducedNumLocks_),
-      clearColNumReducedLocks_(other.clearColNumReducedLocks_),
-      candidateFixedCols_(other.candidateFixedCols_),
-      candidateColFixedFlags_(other.candidateColFixedFlags_) {
-  ;
-}
-
 void HighsDomain::DualFixProbingPropagation::recomputeLocks() {
   mipsolver = domain->mipsolver;
   redundantRowFlags_.assign(2 * mipsolver->numRow(), false);
@@ -762,13 +746,19 @@ void HighsDomain::DualFixProbingPropagation::propagate() {
         // if RHS: Negative val removes a lower lock, positive an upper
         const bool reducesLowerLock = (val > 0) == isLhs;
         if (reducesLowerLock && cost >= -dualTol) {
-          clearColNumReducedLocks_.insert(col);
+          if (colLowerReducedNumLocks_[col] == 0 &&
+              colUpperReducedNumLocks_[col] == 0) {
+            clearColNumReducedLocks_.push_back(col);
+          }
           ++colLowerReducedNumLocks_[col];
           if (colLowerReducedNumLocks_[col] == colLowerLocksOriginal_[col]) {
             addCandidateFixing(col);
           }
         } else if (!reducesLowerLock && cost <= dualTol) {
-          clearColNumReducedLocks_.insert(col);
+          if (colLowerReducedNumLocks_[col] == 0 &&
+              colUpperReducedNumLocks_[col] == 0) {
+            clearColNumReducedLocks_.push_back(col);
+          }
           ++colUpperReducedNumLocks_[col];
           if (colUpperReducedNumLocks_[col] == colUpperLocksOriginal_[col]) {
             addCandidateFixing(col);
@@ -1741,6 +1731,10 @@ void HighsDomain::updateActivityLbChange(HighsInt col, double oldbound,
     if (infeasible_) return;
   }
 
+  const bool trackRedundancy =
+      newbound >= oldbound + mipsolver->mipdata_->feastol &&
+      dualFixProbingPropagation.isEnabled();
+
   for (HighsInt i = start; i != end; ++i) {
     if (mip->a_matrix_.value_[i] > 0) {
       HighsCDouble deltamin =
@@ -1768,7 +1762,7 @@ void HighsDomain::updateActivityLbChange(HighsInt col, double oldbound,
           mip->row_upper_[mip->a_matrix_.index_[i]] == kHighsInf)
         updateRedundantRows(mip->a_matrix_.index_[i]);
 
-      if (newbound >= oldbound + mipsolver->mipdata_->feastol)
+      if (trackRedundancy)
         dualFixProbingPropagation.updateLhsRedundant(mip->a_matrix_.index_[i]);
 
       if (deltamin <= 0) {
@@ -1820,7 +1814,7 @@ void HighsDomain::updateActivityLbChange(HighsInt col, double oldbound,
           mip->row_upper_[mip->a_matrix_.index_[i]] != kHighsInf)
         updateRedundantRows(mip->a_matrix_.index_[i]);
 
-      if (newbound >= oldbound + mipsolver->mipdata_->feastol)
+      if (trackRedundancy)
         dualFixProbingPropagation.updateRhsRedundant(mip->a_matrix_.index_[i]);
 
       if (deltamax >= 0) {
@@ -1914,6 +1908,10 @@ void HighsDomain::updateActivityUbChange(HighsInt col, double oldbound,
     if (infeasible_) return;
   }
 
+  const bool trackRedundancy =
+      newbound <= oldbound - mipsolver->mipdata_->feastol &&
+      dualFixProbingPropagation.isEnabled();
+
   for (HighsInt i = start; i != end; ++i) {
     if (mip->a_matrix_.value_[i] > 0) {
       HighsCDouble deltamax =
@@ -1941,7 +1939,7 @@ void HighsDomain::updateActivityUbChange(HighsInt col, double oldbound,
           mip->row_upper_[mip->a_matrix_.index_[i]] != kHighsInf)
         updateRedundantRows(mip->a_matrix_.index_[i]);
 
-      if (newbound <= oldbound - mipsolver->mipdata_->feastol)
+      if (trackRedundancy)
         dualFixProbingPropagation.updateRhsRedundant(mip->a_matrix_.index_[i]);
 
       if (deltamax >= 0) {
@@ -1996,7 +1994,7 @@ void HighsDomain::updateActivityUbChange(HighsInt col, double oldbound,
           mip->row_upper_[mip->a_matrix_.index_[i]] == kHighsInf)
         updateRedundantRows(mip->a_matrix_.index_[i]);
 
-      if (newbound <= oldbound - mipsolver->mipdata_->feastol)
+      if (trackRedundancy)
         dualFixProbingPropagation.updateLhsRedundant(mip->a_matrix_.index_[i]);
 
       if (deltamin <= 0) {

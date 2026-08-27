@@ -81,7 +81,9 @@ bool HighsImplications::computeImplications(HighsInt col, bool val) {
   mipsolver.mipdata_->getPseudoCost().addInferenceObservation(
       col, numImplications, val);
 
-  std::vector<tentativeImplication> implics;
+  std::vector<TentativeImplication>& implics =
+      val ? implicationsUp : implicationsDown;
+  implics.clear();
   implics.reserve(numImplications);
 
   HighsInt numEntries = mipsolver.mipdata_->cliquetable.getNumEntries();
@@ -112,7 +114,7 @@ bool HighsImplications::computeImplications(HighsInt col, bool val) {
     // add the dualFix implications of binaries to the clique table
     auto binstart =
         std::partition(implics.begin() + safeImplicsEnd, implics.end(),
-                       [&](const tentativeImplication& a) {
+                       [&](const TentativeImplication& a) {
                          return !globaldomain.isBinary(a.domchg.column);
                        });
     // store the tentative bound changes of binaries separately
@@ -124,7 +126,7 @@ bool HighsImplications::computeImplications(HighsInt col, bool val) {
   // add the implications of binary variables to the clique table
   auto binstart =
       std::partition(implics.begin(), implics.begin() + safeImplicsEnd,
-                     [&](const tentativeImplication& a) {
+                     [&](const TentativeImplication& a) {
                        return !globaldomain.isBinary(a.domchg.column);
                      });
 
@@ -190,14 +192,9 @@ bool HighsImplications::computeImplications(HighsInt col, bool val) {
   }
 
   pdqsort(implics.begin(), implics.end(),
-          [](const tentativeImplication& a, const tentativeImplication& b) {
+          [](const TentativeImplication& a, const TentativeImplication& b) {
             return a.domchg.column < b.domchg.column;
           });
-  if (val) {
-    implicationsUp = std::move(implics);
-  } else {
-    implicationsDown = std::move(implics);
-  }
 
   return false;
 }
@@ -351,9 +348,9 @@ bool HighsImplications::runProbing(HighsInt col, HighsInt& numReductions) {
   if (globaldomain.isBinary(col) && !probedBefore(col, 1) &&
       !probedBefore(col, 0) &&
       mipsolver.mipdata_->cliquetable.getSubstitution(col) == nullptr) {
-    const bool enableDfprobing = globaldomain.getDualFixProbingActive();
-    if (enableDfprobing) {
-      clearTentativeClique();
+    const bool dualFixProbingActive = globaldomain.getDualFixProbingActive();
+    if (dualFixProbingActive) {
+      clearTentativeCliques();
       globaldomain.getDualFixProbingPropagation().setZeroCostFixingPosition(
           kHighsIInf);
     }
@@ -370,7 +367,7 @@ bool HighsImplications::runProbing(HighsInt col, HighsInt& numReductions) {
     if (mipsolver.mipdata_->cliquetable.getSubstitution(col) != nullptr)
       return true;
 
-    if (enableDfprobing && !dualFixProbingBinInds_.empty() &&
+    if (dualFixProbingActive && !dualFixProbingBinInds_.empty() &&
         !mipsolver.mipdata_->cliquetable.isFull()) {
       HighsCliqueTable& cliquetable = mipsolver.mipdata_->cliquetable;
       HighsCliqueTable::CliqueVar clique[2];
@@ -406,7 +403,7 @@ bool HighsImplications::runProbing(HighsInt col, HighsInt& numReductions) {
         if (globaldomain.infeasible()) return true;
       }
 
-      clearTentativeClique();
+      clearTentativeCliques();
     }
 
     HighsInt nimplicsdown = implicationsDown.size();
@@ -650,6 +647,9 @@ void HighsImplications::rebuild(HighsInt ncols,
   vlbs.clear();
   vlbs.shrink_to_fit();
   vlbs.resize(ncols);
+  dualFixProbingBinInds_.clear();
+  dualFixProbingBinInds_.reserve(ncols);
+  dualFixProbingBinFlags_.assign(ncols, 0);
   numImplications = 0;
   numVarBounds = 0;
   HighsInt oldncols = oldvubs.size();

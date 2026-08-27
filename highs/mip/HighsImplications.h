@@ -28,13 +28,13 @@ class HighsImplications {
     double ub = kHighsInf;
   };
 
-  struct tentativeImplication {
+  struct TentativeImplication {
     HighsDomainChange domchg;
     bool dualSafe;
   };
 
-  std::vector<tentativeImplication> implicationsDown;
-  std::vector<tentativeImplication> implicationsUp;
+  std::vector<TentativeImplication> implicationsDown;
+  std::vector<TentativeImplication> implicationsUp;
   std::vector<HighsHashTree<HighsInt, Implication>> implications;
   std::vector<HighsHashTree<HighsInt, bool>> reverseImplications;
   std::vector<uint8_t> hasProbed;
@@ -72,12 +72,6 @@ class HighsImplications {
  private:
   std::vector<HighsHashTree<HighsInt, VarBound>> vubs;
   std::vector<HighsHashTree<HighsInt, VarBound>> vlbs;
-
- public:
-  const HighsMipSolver& mipsolver;
-  std::vector<HighsSubstitution> substitutions;
-  std::vector<HighsBool> colsubstituted;
-
   std::vector<HighsInt> dualFixProbingBinInds_;
   // (0000) : Not involved
   // (0010) : Fixed to lower in zero-side probing
@@ -89,6 +83,11 @@ class HighsImplications {
   // (1001) : Conclude that x1 + x2 = 1
   // (0110) : Conclude that x1 = x2
   std::vector<uint8_t> dualFixProbingBinFlags_;
+
+ public:
+  const HighsMipSolver& mipsolver;
+  std::vector<HighsSubstitution> substitutions;
+  std::vector<HighsBool> colsubstituted;
 
   HighsImplications(const HighsMipSolver& mipsolver) : mipsolver(mipsolver) {
     nextCleanupCall = mipsolver.numNonzero();
@@ -114,6 +113,7 @@ class HighsImplications {
     vubs.shrink_to_fit();
     vlbs.clear();
     vlbs.shrink_to_fit();
+    dualFixProbingBinInds_.clear();
     resize(mipsolver.numCol());
     numVarBounds = 0;
     nextCleanupCall = mipsolver.numNonzero();
@@ -247,8 +247,8 @@ class HighsImplications {
     }
   }
 
-  void clearTentativeClique() {
-    for (HighsInt col : dualFixProbingBinInds_)
+  void clearTentativeCliques() {
+    for (const HighsInt col : dualFixProbingBinInds_)
       dualFixProbingBinFlags_[col] = 0;
     dualFixProbingBinInds_.clear();
   }

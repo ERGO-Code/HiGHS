@@ -12,7 +12,6 @@
 #include <deque>
 #include <memory>
 #include <set>
-#include <unordered_set>
 #include <vector>
 
 #include "HighsPseudocost.h"
@@ -270,7 +269,7 @@ class HighsDomain {
     std::vector<HighsInt> colUpperLocksOriginal_;
     std::vector<HighsInt> colLowerReducedNumLocks_;
     std::vector<HighsInt> colUpperReducedNumLocks_;
-    std::unordered_set<HighsInt> clearColNumReducedLocks_;
+    std::vector<HighsInt> clearColNumReducedLocks_;
 
     std::vector<HighsInt> candidateFixedCols_;
     std::vector<HighsBool> candidateColFixedFlags_;
@@ -321,8 +320,10 @@ class HighsDomain {
       applyingZeroCostFixings_ = false;
       setEnabled(true);
 
-      for (const auto x : clearColNumReducedLocks_)
-        colLowerReducedNumLocks_[x] = colUpperReducedNumLocks_[x] = 0;
+      for (const auto col : clearColNumReducedLocks_) {
+        colLowerReducedNumLocks_[col] = 0;
+        colUpperReducedNumLocks_[col] = 0;
+      }
       clearColNumReducedLocks_.clear();
     }
 
@@ -334,7 +335,10 @@ class HighsDomain {
 
     DualFixProbingPropagation() = default;
 
-    DualFixProbingPropagation(const DualFixProbingPropagation& other);
+    DualFixProbingPropagation(const DualFixProbingPropagation& other) = delete;
+
+    DualFixProbingPropagation& operator=(
+        const DualFixProbingPropagation& other) = delete;
 
     void recomputeLocks();
     void updateRhsRedundant(HighsInt row);
@@ -480,7 +484,6 @@ class HighsDomain {
         mipsolver(other.mipsolver),
         cutpoolpropagation(other.cutpoolpropagation),
         conflictPoolPropagation(other.conflictPoolPropagation),
-        dualFixProbingPropagation(other.dualFixProbingPropagation),
         infeasible_(other.infeasible_),
         infeasible_reason(other.infeasible_reason),
         infeasible_pos(other.infeasible_pos),
@@ -495,9 +498,11 @@ class HighsDomain {
       conflictprop.domain = this;
     if (objProp_.domain) objProp_.domain = this;
     dualFixProbingPropagation.domain = this;
+    dualFixProbingPropagation.mipsolver = mipsolver;
   }
 
   HighsDomain& operator=(const HighsDomain& other) {
+    if (this == &other) return *this;
     changedcolsflags_ = other.changedcolsflags_;
     changedcols_ = other.changedcols_;
     domchgstack_ = other.domchgstack_;
@@ -527,6 +532,9 @@ class HighsDomain {
       conflictprop.domain = this;
     if (objProp_.domain) objProp_.domain = this;
     dualFixProbingPropagation.domain = this;
+    dualFixProbingActive_ = false;
+    dualFixProbingPropagation.mipsolver = mipsolver;
+    dualFixProbingPropagation.endProbing();
     return *this;
   }
 
