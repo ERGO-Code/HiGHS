@@ -264,7 +264,7 @@ class HighsDomain {
 
     bool enabled_ = false;
 
-    // Original lower and upper locks, and the reduced locks after propagation.
+    // Original lower / upper locks + number of removed locks after propagation.
     std::vector<HighsInt> colLowerLocksOriginal_;
     std::vector<HighsInt> colUpperLocksOriginal_;
     std::vector<HighsInt> colLowerReducedNumLocks_;

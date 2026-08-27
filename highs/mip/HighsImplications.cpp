@@ -111,7 +111,6 @@ bool HighsImplications::computeImplications(HighsInt col, bool val) {
   doBacktrack(changedend);
 
   if (safeImplicsEnd < static_cast<HighsInt>(implics.size())) {
-    // add the dualFix implications of binaries to the clique table
     auto binstart =
         std::partition(implics.begin() + safeImplicsEnd, implics.end(),
                        [&](const TentativeImplication& a) {
