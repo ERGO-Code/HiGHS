@@ -1095,6 +1095,7 @@ class HighsPostsolveStack {
   }
 
   size_t numReductions() const { return reductions.size(); }
+
 };
 
 }  // namespace presolve
