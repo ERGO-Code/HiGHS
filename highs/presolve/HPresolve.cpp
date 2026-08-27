@@ -1816,6 +1816,7 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postsolve_stack) {
       // store lifting opportunities
       implications.storeLiftingOpportunity = [&](HighsInt row, HighsInt col,
                                                  HighsInt val, double coef) {
+        if (coef == 0.0) return;
         // find lifting opportunities for row
         auto& htree = liftingOpportunities[row];
         // add element
