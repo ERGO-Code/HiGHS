@@ -1096,8 +1096,6 @@ HighsStatus HEkk::solve(const bool force_phase2) {
       highsLogUser(options_->log_options, HighsLogType::kInfo, "%s\n",
                    ss.str().c_str());
 
-      printf("HEkk::solve simplex strategy = %d; parallel = %s\n",
-             int(simplex_strategy), options_->parallel.c_str());
       highsLogUser(options_->log_options, HighsLogType::kInfo, "Using %s\n",
                    simplexStrategyToString(kSimplexStrategyDual).c_str());
     }
