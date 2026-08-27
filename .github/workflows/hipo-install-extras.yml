@@ -52,8 +52,15 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
+          # VCPKG_TARGET_TRIPLET must be pinned: `vcpkg install
+          # openblas[threads]:x64-windows-static` also builds the dynamic
+          # x64-windows OpenBLAS as a host build-tool dependency, and without
+          # this the toolchain's default triplet (x64-windows) silently picks
+          # that dynamic one - producing a highs_extras.dll that depends on
+          # openblas.dll at runtime, which never gets installed alongside it.
           cmake -S . -B build `
             -DCMAKE_TOOLCHAIN_FILE="C:/vcpkg/scripts/buildsystems/vcpkg.cmake" `
+            -DVCPKG_TARGET_TRIPLET=x64-windows-static `
             -DHIPO=ON `
             -DFAST_BUILD=ON `
             -DALL_TESTS=OFF `
