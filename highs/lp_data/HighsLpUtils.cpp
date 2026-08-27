@@ -386,9 +386,15 @@ HighsStatus assessBounds(const HighsOptions& options, const std::string& type,
 
   HighsInt num_infinite_lower_bound = 0;
   HighsInt num_infinite_upper_bound = 0;
+  HighsInt num_infinite_integer_lower_bound = 0;
+  HighsInt num_infinite_integer_upper_bound = 0;
   HighsInt local_ix;
   HighsInt ml_ix;
   HighsInt usr_ix = -1;
+  // Any bounds on integer or semi-integer variables that are not less
+  // than infinite_integer_bound are set to kHighsInf
+  const double infinite_integer_bound =
+      1e9;  // Approx static_cast<double>(kHighsIInf/2);
   for (HighsInt k = from_k; k < to_k + 1; k++) {
     if (index_collection.is_interval_ || index_collection.is_mask_) {
       local_ix = k;
@@ -404,20 +410,33 @@ HighsStatus assessBounds(const HighsOptions& options, const std::string& type,
     if (index_collection.is_mask_ && !index_collection.mask_[local_ix])
       continue;
 
+    // Record whether the continuous or integer infinite bound
+    // criterion should be used for this variable
+    const bool integer_for_bounds =
+        integrality && (integrality[usr_ix] == HighsVarType::kInteger ||
+                        integrality[usr_ix] == HighsVarType::kSemiInteger);
+    const double local_infinite_bound =
+        integer_for_bounds ? infinite_integer_bound : infinite_bound;
     if (!highs_isInfinity(-lower[usr_ix])) {
       // Check whether a finite lower bound will be treated as -Infinity
-      bool infinite_lower_bound = lower[usr_ix] <= -infinite_bound;
+      bool infinite_lower_bound = lower[usr_ix] <= -local_infinite_bound;
       if (infinite_lower_bound) {
         lower[usr_ix] = -kHighsInf;
-        num_infinite_lower_bound++;
+        if (integer_for_bounds)
+          num_infinite_integer_lower_bound++;
+        else
+          num_infinite_lower_bound++;
       }
     }
     if (!highs_isInfinity(upper[usr_ix])) {
       // Check whether a finite upper bound will be treated as Infinity
-      bool infinite_upper_bound = upper[usr_ix] >= infinite_bound;
+      bool infinite_upper_bound = upper[usr_ix] >= local_infinite_bound;
       if (infinite_upper_bound) {
         upper[usr_ix] = kHighsInf;
-        num_infinite_upper_bound++;
+        if (integer_for_bounds)
+          num_infinite_integer_upper_bound++;
+        else
+          num_infinite_upper_bound++;
       }
     }
     // Check that the lower bound does not exceed the upper bound
@@ -438,39 +457,63 @@ HighsStatus assessBounds(const HighsOptions& options, const std::string& type,
       warning_found = true;
     }
     // Check that the lower bound is not as much as +Infinity
-    bool legalLowerBound = lower[usr_ix] < infinite_bound;
+    bool legalLowerBound = lower[usr_ix] < local_infinite_bound;
     if (!legalLowerBound) {
       highsLogUser(options.log_options, HighsLogType::kError,
                    "%3s  %12" HIGHSINT_FORMAT
                    "%s  has lower bound of %12g >= %12g\n",
                    type.c_str(), ml_ix, possible_name(ml_ix).c_str(),
-                   lower[usr_ix], infinite_bound);
+                   lower[usr_ix], local_infinite_bound);
       error_found = true;
     }
     // Check that the upper bound is not as little as -Infinity
-    bool legalUpperBound = upper[usr_ix] > -infinite_bound;
+    bool legalUpperBound = upper[usr_ix] > -local_infinite_bound;
     if (!legalUpperBound) {
       highsLogUser(options.log_options, HighsLogType::kError,
                    "%3s  %12" HIGHSINT_FORMAT
                    "%s  has upper bound of %12g <= %12g\n",
                    type.c_str(), ml_ix, possible_name(ml_ix).c_str(),
-                   upper[usr_ix], -infinite_bound);
+                   upper[usr_ix], -local_infinite_bound);
       error_found = true;
     }
   }
   if (num_infinite_lower_bound) {
     highsLogUser(options.log_options, HighsLogType::kInfo,
                  "%3ss:%12" HIGHSINT_FORMAT
-                 " lower bounds    less than or equal to %12g are treated as "
+                 " lower bound%s    less than or equal to %12g are treated as "
                  "-Infinity\n",
-                 type.c_str(), num_infinite_lower_bound, -infinite_bound);
+                 type.c_str(), num_infinite_lower_bound,
+                 highsIntToPlural(num_infinite_lower_bound).c_str(),
+                 -infinite_bound);
   }
   if (num_infinite_upper_bound) {
     highsLogUser(options.log_options, HighsLogType::kInfo,
                  "%3ss:%12" HIGHSINT_FORMAT
-                 " upper bounds greater than or equal to %12g are treated as "
+                 " upper bound%s greater than or equal to %12g are treated as "
                  "+Infinity\n",
-                 type.c_str(), num_infinite_upper_bound, infinite_bound);
+                 type.c_str(), num_infinite_upper_bound,
+                 highsIntToPlural(num_infinite_upper_bound).c_str(),
+                 infinite_bound);
+  }
+  if (num_infinite_integer_lower_bound) {
+    highsLogUser(options.log_options, HighsLogType::kInfo,
+                 "%3ss:%12" HIGHSINT_FORMAT
+                 " lower bound%s    less than or equal to %12g on integer "
+                 "variables are treated as "
+                 "-Infinity\n",
+                 type.c_str(), num_infinite_integer_lower_bound,
+                 highsIntToPlural(num_infinite_integer_lower_bound).c_str(),
+                 -infinite_integer_bound);
+  }
+  if (num_infinite_integer_upper_bound) {
+    highsLogUser(options.log_options, HighsLogType::kInfo,
+                 "%3ss:%12" HIGHSINT_FORMAT
+                 " upper bound%s greater than or equal to %12g on integer "
+                 "variables are treated as "
+                 "+Infinity\n",
+                 type.c_str(), num_infinite_integer_upper_bound,
+                 highsIntToPlural(num_infinite_integer_upper_bound).c_str(),
+                 infinite_integer_bound);
   }
 
   if (error_found)
