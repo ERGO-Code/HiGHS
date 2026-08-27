@@ -87,6 +87,8 @@ TEST_CASE("highs-run-data-presolve", "[highs_run_data]") {
     }
   }
 
+  std::remove(run_data_file.c_str());
+
   h.resetGlobalScheduler(true);
 }
 
