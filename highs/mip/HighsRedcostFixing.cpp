@@ -239,20 +239,20 @@ void HighsRedcostFixing::addRootRedcost(const HighsMipSolver& mipsolver,
           return;
         }
 
-        HighsInt lastBound;
+        int64_t lastBound;
         if (!isOtherBoundFinite)
-          lastBound = bound + direction * maxNumSteps;
+          lastBound = static_cast<int64_t>(bound) + direction * maxNumSteps;
         else
-          lastBound = otherBound - direction;
+          lastBound = static_cast<int64_t>(otherBound) - direction;
 
-        HighsInt step = 1;
-        HighsInt range = direction * (lastBound - bound);
+        int64_t step = 1;
+        int64_t range = direction * (lastBound - static_cast<int64_t>(bound));
         if (range > maxNumSteps)
           step = (range + maxNumSteps - 1) >> maxNumStepsExp;
         double shift = direction * (1 - 10 * mipsolver.mipdata_->feastol);
         step *= direction;
 
-        for (HighsInt lurkingBound = bound;
+        for (int64_t lurkingBound = bound;
              direction * lurkingBound <= direction * lastBound;
              lurkingBound += step) {
           double fracBound = lurkingBound - bound + shift;
