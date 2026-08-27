@@ -104,18 +104,16 @@ if(BUILD_SHARED_EXTRAS_LIB)
   endif()
 endif()
 
-# Skipped for HIPO_PYTHON
-# See highspy-extras/CMakeLists.txt, already does
-# install(TARGETS highs_extras ...) for the wheel.
-if(NOT HIPO_PYTHON)
-  install(TARGETS highs_extras
-      EXPORT highs-targets
-      INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
-      ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-      LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-      RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-      COMPONENT libs)
+# This CMake file is only inlcluded if not (HIPO_PYTHON)
+install(TARGETS highs_extras
+    EXPORT highs-targets
+    INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+    COMPONENT libs)
 
+if(DEFINED HIGHS_BINARY_DIR)
   export(TARGETS highs_extras
     APPEND FILE "${HIGHS_BINARY_DIR}/highs-targets.cmake")
 endif()
