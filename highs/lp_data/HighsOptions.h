@@ -1688,7 +1688,7 @@ class HighsOptions : public HighsOptionsStruct {
 
     record_int =
         new OptionRecordInt("presolve_fm_level", "Fourier-Motzkin level",
-                            advanced, &presolve_fm_level, 0, 1, 1);
+                            advanced, &presolve_fm_level, 0, 0, 1);
     records.push_back(record_int);
 
     record_bool = new OptionRecordBool(

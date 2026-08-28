@@ -128,6 +128,8 @@ TEST_CASE("test-fourier-motzkin", "[highs_test_presolve_rules]") {
   REQUIRE(h.passModel(lp) == HighsStatus::kOk);
 
   if (lp2) {
+    // Objective reformulation is needed since all costs are nonzero
+    h.setOptionValue("presolve_fm_level", 1);
     HighsInt require_presolved_model_num_col = 1;
     HighsInt require_presolved_model_num_row = 6;
     HighsInt require_presolved_model_num_nz = 6;
