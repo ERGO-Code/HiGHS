@@ -420,12 +420,16 @@ void HighsPostsolveStack::SingletonRow::undo(const HighsOptions& options,
           : computeStatus(solution.col_dual[col], basis.col_status[col],
                           options.dual_feasibility_tolerance);
 
+  double lower = 0;
+  double upper = 0;
   if ((!colLowerTightened || colStatus != HighsBasisStatus::kLower) &&
       (!colUpperTightened || colStatus != HighsBasisStatus::kUpper)) {
     // the tightened bound is not used in the basic solution
     // hence we simply make the row basic and give it a dual multiplier of 0
     if (basis.valid) basis.row_status[row] = HighsBasisStatus::kBasic;
     solution.row_dual[row] = 0;
+    const bool feasibility_ok =
+    colFeasibilityOk("SingletonRow::undo ", col, lower, upper, options, solution, basis);
     return;
   }
 
@@ -461,6 +465,7 @@ void HighsPostsolveStack::SingletonRow::undo(const HighsOptions& options,
 
   // column becomes basic
   basis.col_status[col] = HighsBasisStatus::kBasic;
+  colFeasibilityOk("SingletonRow::undo ", col, lower, upper, options, solution, basis);
 }
 
 // column fixed to lower or upper bound
@@ -503,44 +508,13 @@ void HighsPostsolveStack::FixedCol::undo(const HighsOptions& options,
     }
     // Check dual feasibility: cause of iterations after postsolve for
     // seymour
+
+    const bool feasibility_ok = colFeasibilityOk("FixedCol::undo ", col, lower, upper, options, solution, basis);
     
-    if (!colFeasibilityOk("FixedCol::undo ", col, lower, upper, options, solution, basis)) {
+    if (!feasibility_ok) {
       printf("dualFeasibilityOk fail\n");
-    };
-    const bool fixed = fixValue == other_bound;
-    if (basis.col_status[col] == HighsBasisStatus::kLower) {
-      if (!fixed) {
-	// Ensure that primal value is lower bound and dual is
-	// non-negative
-	bool primal_ok = std::fabs(solution.col_value[col] - lower) <= options.primal_feasibility_tolerance;
-	bool dual_ok = solution.col_dual[col] >= -options.dual_feasibility_tolerance;
-	if (!(primal_ok && dual_ok)) {
-	  printf("FixedCol::undo nonbasic at lower with primal %s and dual %s:"
-		 " lower = %g; value = %g; upper = %g; dual = %g\n",
-		 primal_ok ? "OK" : "error",
-		 dual_ok ? "OK" : "error",
-		 lower, solution.col_value[col], upper,
-		 solution.col_dual[col]);
-	}
-	assert(primal_ok && dual_ok);
-      }
-    } else if (basis.col_status[col] == HighsBasisStatus::kUpper) {
-      if (!fixed) {
-	// Ensure that primal value is upper bound and dual is
-	// non-negative
-	bool primal_ok = std::fabs(solution.col_value[col] - upper) <= options.primal_feasibility_tolerance;
-	bool dual_ok = solution.col_dual[col] <= options.dual_feasibility_tolerance;
-	if (!(primal_ok && dual_ok)) {
-	  printf("FixedCol::undo nonbasic at upper with primal %s and dual %s:"
-		 " lower = %g; value = %g; upper = %g; dual = %g\n",
-		 primal_ok ? "OK" : "error",
-		 dual_ok ? "OK" : "error",
-		 lower, solution.col_value[col], upper,
-		 solution.col_dual[col]);
-	}
-	assert(primal_ok && dual_ok);
-      }
     }
+    assert(feasibility_ok);
   }
 }
 

@@ -98,7 +98,7 @@ TEST_CASE("test-weakly-dominated-col-upper", "[highs_test_presolve_rules]") {
   lp.num_row_ = 2;
   lp.sense_ = ObjSense::kMaximize;
   lp.col_cost_ = {0, 1};
-  lp.col_lower_ = {0, -kHighsInf};
+  lp.col_lower_ = {-kHighsInf, -kHighsInf};
   lp.col_upper_ = {1,  kHighsInf};
   lp.row_lower_ = {-kHighsInf,         1};
   lp.row_upper_ = {         0, kHighsInf};
