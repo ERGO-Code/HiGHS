@@ -6,10 +6,17 @@
 
 const bool dev_run = false;
 
+void solveAndCheck(const std::string& message, const HighsLp& lp, Highs& h,
+                   const std::string& solver, bool use_presolve,
+                   const HighsInt require_presolved_model_num_col = -1,
+                   const HighsInt require_presolved_model_num_row = -1,
+                   const HighsInt require_presolved_model_num_nz = -1);
+
 void presolveOffOn(const std::string& message, const HighsLp& lp, Highs& h,
-                   const HighsInt require_presolved_model_num_col = 0,
-                   const HighsInt require_presolved_model_num_row = 0,
-                   const HighsInt require_presolved_model_num_nz = 0);
+                   const std::vector<std::string>& solvers,
+                   const HighsInt require_presolved_model_num_col = -1,
+                   const HighsInt require_presolved_model_num_row = -1,
+                   const HighsInt require_presolved_model_num_nz = -1);
 
 TEST_CASE("test-col-stuffing", "[highs_test_presolve_rules]") {
   HighsLp lp;
@@ -59,20 +66,22 @@ TEST_CASE("test-col-stuffing", "[highs_test_presolve_rules]") {
   lp.a_matrix_.start_ = {0, lp.num_col_};
   lp.a_matrix_.index_.resize(lp.num_col_);
   std::iota(lp.a_matrix_.index_.begin(), lp.a_matrix_.index_.end(), 0);
+  const std::vector<std::string> solvers = {kSimplexString, kIpmString,
+                                            kHiPdlpString};
   if (lp1) {
     lp.col_cost_.assign(lp.num_col_, 1);
     lp.a_matrix_.value_.assign(lp.num_col_, 1);
-    presolveOffOn("Capturing neos-787933 issue", lp, h);
+    presolveOffOn("Capturing neos-787933 issue", lp, h, solvers);
   }
   if (lp1a) {
     lp.col_cost_ = {2, 1};
     lp.a_matrix_.value_.assign(lp.num_col_, 1);
-    presolveOffOn("Variant A neos-787933 issue", lp, h);
+    presolveOffOn("Variant A neos-787933 issue", lp, h, solvers);
   }
   if (lp1b) {
     lp.col_cost_ = {-2, -1};
     lp.a_matrix_.value_.assign(lp.num_col_, 1);
-    presolveOffOn("Variant B neos-787933 issue", lp, h);
+    presolveOffOn("Variant B neos-787933 issue", lp, h, solvers);
   }
   lp.clear();
 
@@ -89,6 +98,9 @@ TEST_CASE("test-fourier-motzkin", "[highs_test_presolve_rules]") {
   const bool lp0 = true;
   const bool lp1 = true;  // Makes eliminations marginal, and leaves x2=0
   const bool lp2 = true;
+
+  // No PDLP due to numerical issues with FM postsolve
+  const std::vector<std::string> solvers = {kSimplexString, kIpmString};
 
   // From "A novel linear optimization presolve technique based on
   // Fourier-Motzkin elimination", Zhang, Ploskas and Sahinidis,
@@ -112,7 +124,7 @@ TEST_CASE("test-fourier-motzkin", "[highs_test_presolve_rules]") {
 
   if (lp0) {
     REQUIRE(h.passModel(lp) == HighsStatus::kOk);
-    presolveOffOn("FM example from paper", lp, h);
+    presolveOffOn("FM example from paper", lp, h, solvers);
   }
 
   lp.col_upper_[0] = 5.0;
@@ -120,7 +132,7 @@ TEST_CASE("test-fourier-motzkin", "[highs_test_presolve_rules]") {
 
   if (lp1) {
     REQUIRE(h.passModel(lp) == HighsStatus::kOk);
-    presolveOffOn("FM example from paper - tightened", lp, h);
+    presolveOffOn("FM example from paper - tightened", lp, h, solvers);
   }
 
   lp.col_cost_ = {1, 2, 3, 4};
@@ -130,78 +142,74 @@ TEST_CASE("test-fourier-motzkin", "[highs_test_presolve_rules]") {
   if (lp2) {
     // Objective reformulation is needed since all costs are nonzero
     h.setOptionValue("presolve_fm_level", 1);
-    HighsInt require_presolved_model_num_col = 1;
-    HighsInt require_presolved_model_num_row = 6;
-    HighsInt require_presolved_model_num_nz = 6;
     presolveOffOn("FM example from paper - tightened and with costs", lp, h,
-                  require_presolved_model_num_col,
-                  require_presolved_model_num_row,
-                  require_presolved_model_num_nz);
+                  solvers, 1, 6, 6);
   }
 
   h.resetGlobalScheduler(true);
 }
 
-void presolveOffOn(const std::string& message, const HighsLp& lp, Highs& h,
+void solveAndCheck(const std::string& message, const HighsLp& lp, Highs& h,
+                   const std::string& solver, bool use_presolve,
                    const HighsInt require_presolved_model_num_col,
                    const HighsInt require_presolved_model_num_row,
                    const HighsInt require_presolved_model_num_nz) {
   const HighsRunData& run_data = h.getRunData();
-  bool presolve_on = false;
-  // If the model reduces to empty, then the output from different
-  // solvers cannot be tested
-  const bool reduce_to_empty = require_presolved_model_num_col == 0 &&
-                               require_presolved_model_num_row == 0;
-  const HighsInt to_k = reduce_to_empty ? 2 : 4;
-  for (int k = 0; k < to_k; k++) {
-    std::string solver = kSimplexString;
-    std::string run_crossover = kHighsOnString;
-    bool basis_postsolve = true;
-    if (k == 0) {
-      // Presolve off - to get the optimal solution to debug
-      // presolve
-      presolve_on = false;
-    } else {
-      presolve_on = true;
-      if (k == 1) {
-        solver = kSimplexString;
-      } else if (k == 2) {
-        solver = kIpmString;
-      } else if (k == 3) {
-        solver = kIpmString;
-        run_crossover = kHighsOffString;
-        basis_postsolve = false;
-      }
-    }
-    std::string presolve = presolve_on ? kHighsOnString : kHighsOffString;
-    h.setOptionValue(kPresolveString, presolve);
-    h.setOptionValue(kRunCrossoverString, run_crossover);
-    h.setOptionValue(kSolverString, solver);
-    if (dev_run)
-      printf(
-          "\n============\n%s: presolve = %s; solver = %s%s\n============\n\n",
-          message.c_str(), presolve.c_str(), solver.c_str(),
-          solver == kIpmString ? ("; run_crossover = " + run_crossover).c_str()
-                               : "");
-    REQUIRE(h.passModel(lp) == HighsStatus::kOk);
-    h.run();
-    if (dev_run) h.writeSolution("", 1);
-    if (presolve_on) {
-      // Ensure that the model is reduced to empty
+  std::string run_crossover = kHighsOnString;
+  bool basis_postsolve = true;
+  if (solver == kIpmString) {
+    run_crossover = kHighsOffString;
+    basis_postsolve = false;
+  } else if (solver == kHiPdlpString) {
+    basis_postsolve = false;
+  }
+  std::string presolve = use_presolve ? kHighsOnString : kHighsOffString;
+  h.setOptionValue(kPresolveString, presolve);
+  h.setOptionValue(kRunCrossoverString, run_crossover);
+  h.setOptionValue(kSolverString, solver);
+  if (dev_run)
+    printf("\n============\n%s: presolve = %s; solver = %s%s\n============\n\n",
+           message.c_str(), presolve.c_str(), solver.c_str(),
+           solver == kIpmString ? ("; run_crossover = " + run_crossover).c_str()
+                                : "");
+  REQUIRE(h.passModel(lp) == HighsStatus::kOk);
+  h.run();
+  if (dev_run) h.writeSolution("", 1);
+  if (use_presolve) {
+    // Ensure that the model is reduced as expected
+    if (require_presolved_model_num_col >= 0)
       REQUIRE(run_data.presolved_model_num_col ==
               require_presolved_model_num_col);
+    if (require_presolved_model_num_row >= 0)
       REQUIRE(run_data.presolved_model_num_row ==
               require_presolved_model_num_row);
+    if (require_presolved_model_num_nz >= 0)
       REQUIRE(run_data.presolved_model_num_nz ==
               require_presolved_model_num_nz);
-      // Ensure that dual postsolve is correct
-      REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
-      REQUIRE(h.getInfo().num_primal_infeasibilities == 0);
-      REQUIRE(h.getInfo().num_dual_infeasibilities == 0);
-      if (reduce_to_empty) REQUIRE(h.getInfo().simplex_iteration_count == 0);
-      // Ensure that any basis postsolve is correct
-      if (basis_postsolve)
-        REQUIRE(run_data.num_simplex_iterations_after_postsolve == 0);
-    }
+    // Ensure that dual postsolve is correct
+    REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
+    REQUIRE(h.getInfo().num_primal_infeasibilities == 0);
+    REQUIRE(h.getInfo().num_dual_infeasibilities == 0);
+    if (require_presolved_model_num_col == 0 &&
+        require_presolved_model_num_row == 0)
+      REQUIRE(h.getInfo().simplex_iteration_count == 0);
+    // Ensure that any basis postsolve is correct
+    if (basis_postsolve)
+      REQUIRE(run_data.num_simplex_iterations_after_postsolve == 0);
+  }
+}
+
+void presolveOffOn(const std::string& message, const HighsLp& lp, Highs& h,
+                   const std::vector<std::string>& solvers,
+                   const HighsInt require_presolved_model_num_col,
+                   const HighsInt require_presolved_model_num_row,
+                   const HighsInt require_presolved_model_num_nz) {
+  // Presolve off - to get the optimal solution to debug presolve
+  solveAndCheck(message, lp, h, kSimplexString, false);
+  // Presolve on with each solver
+  for (const std::string& solver : solvers) {
+    solveAndCheck(message, lp, h, solver, true, require_presolved_model_num_col,
+                  require_presolved_model_num_row,
+                  require_presolved_model_num_nz);
   }
 }
