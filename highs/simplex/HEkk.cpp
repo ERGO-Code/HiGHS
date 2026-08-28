@@ -1077,6 +1077,25 @@ HighsStatus HEkk::solve(const bool force_phase2) {
                    simplexStrategyToString(kSimplexStrategyDualMulti).c_str(),
                    int(info_.num_concurrency));
     } else {
+      std::stringstream ss;
+      ss.str(std::string());
+      assert(simplex_strategy == kSimplexStrategyChoose ||
+             simplex_strategy == kSimplexStrategyDual);
+      ss << highsFormatToString(
+          "Choosing to use %s%s",
+          options_->parallel == kHighsOnString ? "serial " : "",
+          simplexStrategyToString(kSimplexStrategyDual).c_str());
+      if (options_->parallel == kHighsOnString) {
+        ss << highsFormatToString(" despite setting parallel = on\n");
+        ss << highsFormatToString(
+            "To force parallel dual simplex, set simplex_strategy to "
+            "kSimplexStrategyDualTasks = %d or (preferably) "
+            "kSimplexStrategyDualMulti = %d\n",
+            kSimplexStrategyDualTasks, kSimplexStrategyDualMulti);
+      }
+      highsLogUser(options_->log_options, HighsLogType::kInfo, "%s\n",
+                   ss.str().c_str());
+
       highsLogUser(options_->log_options, HighsLogType::kInfo, "Using %s\n",
                    simplexStrategyToString(kSimplexStrategyDual).c_str());
     }

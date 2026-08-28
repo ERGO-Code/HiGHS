@@ -7486,10 +7486,10 @@ HPresolve::Result HPresolve::removeDependentEquations(
   factor.setTimeLimit(time_limit);
   // Determine rank deficiency of the equations
   if (!silent)
-    highsLogUser(options->log_options, HighsLogType::kInfo,
-                 "Dependent equations search running with time "
-                 "limit of %.2fs\n",
-                 time_limit);
+    highsLogDev(options->log_options, HighsLogType::kInfo,
+                "   Dependent equations search running with time "
+                "limit of %.2fs\n",
+                time_limit);
   double time_taken = -this->timer->read();
   HighsInt build_return = factor.build();
   time_taken += this->timer->read();
@@ -7508,21 +7508,23 @@ HPresolve::Result HPresolve::removeDependentEquations(
             static_cast<int>(num_variables), static_cast<int>(model->num_col_),
             static_cast<int>(num_nz), static_cast<int>(num_removed_row),
             static_cast<int>(num_removed_nz), time_taken);
-      highsLogUser(options->log_options, HighsLogType::kInfo,
-                   "Dependent equations search terminated after %.3gs due to "
-                   "expected time exceeding limit\n",
-                   time_taken);
+      highsLogUser(
+          options->log_options, HighsLogType::kInfo,
+          "   Dependent equations search terminated after %.3gs due to "
+          "expected time exceeding limit\n",
+          time_taken);
     }
     return returnOk();
   } else {
     double pct_off_timeout =
         1e2 * std::fabs(time_taken - time_limit) / time_limit;
     if (!silent && pct_off_timeout < 1.0)
-      highsLogUser(options->log_options, HighsLogType::kWarning,
-                   "Dependent equations search finished within %.2f%% of limit "
-                   "of %.2fs: "
-                   "risk of non-deterministic behaviour if solve is repeated\n",
-                   pct_off_timeout, time_limit);
+      highsLogUser(
+          options->log_options, HighsLogType::kWarning,
+          "   Dependent equations search finished within %.2f%% of limit "
+          "of %.2fs: "
+          "risk of non-deterministic behaviour if solve is repeated\n",
+          pct_off_timeout, time_limit);
   }
   // build_return as rank_deficiency must be valid
   assert(build_return >= 0);
@@ -7539,26 +7541,35 @@ HPresolve::Result HPresolve::removeDependentEquations(
     }
   }
   if (!silent) {
-    highsLogUser(
-        options->log_options, HighsLogType::kInfo,
-        "Search of %d equation%s with %d / %d variable%s and %d nonzero%s "
-        "removed %d dependent equation%s and %d nonzero%s "
-        "in %.2fs with bounds in (%.2fs, %.2fs) and limit = %.2fs",
-        // clang-format off
-        static_cast<int>(num_equations), highsIntToPlural(num_equations).c_str(),
-        static_cast<int>(num_variables),
-	static_cast<int>(model->num_col_), highsIntToPlural(num_variables).c_str(),
-	static_cast<int>(num_nz), highsIntToPlural(num_nz).c_str(),
-	static_cast<int>(num_removed_row), highsIntToPlural(num_removed_row).c_str(),
-        static_cast<int>(num_removed_nz), highsIntToPlural(num_removed_nz).c_str(),
-        // clang-format on
-        time_taken, factor.min_time_bound_, factor.max_time_bound_, time_limit);
-    if (num_fictitious_rows_skipped)
-      highsLogDev(options->log_options, HighsLogType::kInfo,
-                  ", avoiding %d fictitious row%s",
-                  static_cast<int>(num_fictitious_rows_skipped),
-                  highsIntToPlural(num_fictitious_rows_skipped).c_str());
-    highsLogUser(options->log_options, HighsLogType::kInfo, "\n");
+    std::stringstream ss;
+    ss.str(std::string());
+    ss << highsFormatToString("Dependent equations search");
+    if (options->log_dev_level > 0)
+      ss << highsFormatToString(
+          " with %d / %d variable%s and %d nonzero%s",
+          static_cast<int>(num_variables), static_cast<int>(model->num_col_),
+          highsIntToPlural(num_variables).c_str(), static_cast<int>(num_nz),
+          highsIntToPlural(num_nz).c_str());
+    ss << highsFormatToString(" removed %d equation%s and %d nonzero%s",
+                              static_cast<int>(num_removed_row),
+                              highsIntToPlural(num_removed_row).c_str(),
+                              static_cast<int>(num_removed_nz),
+                              highsIntToPlural(num_removed_nz).c_str());
+    if (options->log_dev_level > 0) {
+      ss << highsFormatToString(" in %.2fs with bounds in (%.2f, %.2f)s",
+                                time_taken, factor.min_time_bound_,
+                                factor.max_time_bound_);
+      if (num_fictitious_rows_skipped)
+        ss << highsFormatToString(
+            ", avoiding %d fictitious row%s",
+            static_cast<int>(num_fictitious_rows_skipped),
+            highsIntToPlural(num_fictitious_rows_skipped).c_str());
+      highsLogDev(options->log_options, HighsLogType::kInfo, "%s\n",
+                  ss.str().c_str());
+    } else {
+      highsLogUser(options->log_options, HighsLogType::kInfo, "%s\n",
+                   ss.str().c_str());
+    }
   }
   return returnOk();
 }
