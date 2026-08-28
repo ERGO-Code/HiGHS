@@ -133,6 +133,8 @@ class HighsPostsolveStack {
   };
   struct SingletonRow {
     double coef;
+    double col_previous_lower;
+    double col_previous_upper;
     HighsInt row;
     HighsInt col;
     bool colLowerTightened;
@@ -561,8 +563,10 @@ class HighsPostsolveStack {
   }
 
   void singletonRow(HighsInt row, HighsInt col, double coef,
+		    double col_previous_lower,
+		    double col_previous_upper,
                     bool tightenedColLower, bool tightenedColUpper) {
-    reductionValues.push(SingletonRow{coef, origRowIndex[row],
+    reductionValues.push(SingletonRow{coef, col_previous_lower, col_previous_upper, origRowIndex[row],
                                       origColIndex[col], tightenedColLower,
                                       tightenedColUpper});
     reductionAdded(ReductionType::kSingletonRow);

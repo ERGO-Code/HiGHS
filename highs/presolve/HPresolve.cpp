@@ -3603,7 +3603,7 @@ HPresolve::Result HPresolve::singletonRow(HighsPostsolveStack& postsolve_stack,
 
   // printf("final bounds: [%.15g,%.15g]\n", lb, ub);
 
-  postsolve_stack.singletonRow(row, col, val, lowerTightened, upperTightened);
+  postsolve_stack.singletonRow(row, col, val, model->col_lower_[col], model->col_upper_[col], lowerTightened, upperTightened);
 
   // Got as far as possible for HPresolve::singletonRow with initial
   // sweep

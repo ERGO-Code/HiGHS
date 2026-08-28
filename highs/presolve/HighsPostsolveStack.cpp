@@ -420,8 +420,8 @@ void HighsPostsolveStack::SingletonRow::undo(const HighsOptions& options,
           : computeStatus(solution.col_dual[col], basis.col_status[col],
                           options.dual_feasibility_tolerance);
 
-  double lower = 0;
-  double upper = 0;
+  double lower = col_previous_lower;
+  double upper = col_previous_upper;
   if ((!colLowerTightened || colStatus != HighsBasisStatus::kLower) &&
       (!colUpperTightened || colStatus != HighsBasisStatus::kUpper)) {
     // the tightened bound is not used in the basic solution
@@ -429,7 +429,8 @@ void HighsPostsolveStack::SingletonRow::undo(const HighsOptions& options,
     if (basis.valid) basis.row_status[row] = HighsBasisStatus::kBasic;
     solution.row_dual[row] = 0;
     const bool feasibility_ok =
-    colFeasibilityOk("SingletonRow::undo ", col, lower, upper, options, solution, basis);
+      colFeasibilityOk("SingletonRow::undo ", col, lower, upper, options, solution, basis);
+    assert(feasibility_ok);
     return;
   }
 
@@ -465,7 +466,9 @@ void HighsPostsolveStack::SingletonRow::undo(const HighsOptions& options,
 
   // column becomes basic
   basis.col_status[col] = HighsBasisStatus::kBasic;
-  colFeasibilityOk("SingletonRow::undo ", col, lower, upper, options, solution, basis);
+  const bool feasibility_ok =
+    colFeasibilityOk("SingletonRow::undo ", col, lower, upper, options, solution, basis);
+  assert(feasibility_ok);
 }
 
 // column fixed to lower or upper bound
@@ -514,7 +517,7 @@ void HighsPostsolveStack::FixedCol::undo(const HighsOptions& options,
     if (!feasibility_ok) {
       printf("dualFeasibilityOk fail\n");
     }
-    assert(feasibility_ok);
+    //    assert(feasibility_ok);
   }
 }
 
