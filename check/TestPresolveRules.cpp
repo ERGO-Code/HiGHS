@@ -2,9 +2,10 @@
 
 #include "HCheckConfig.h"
 #include "Highs.h"
+#include "presolve/HPresolve.h"
 #include "catch.hpp"
 
-const bool dev_run = false;
+const bool dev_run = true;// false;
 
 void presolveOffOn(const std::string& message, const HighsLp& lp, Highs& h,
                    const HighsInt require_presolved_model_num_col = 0,
@@ -17,6 +18,9 @@ TEST_CASE("test-col-stuffing", "[highs_test_presolve_rules]") {
   Highs h;
   h.setOptionValue("output_flag", dev_run);
   h.setOptionValue("presolve_rule_test", kPresolveRuleColStuffing);
+  REQUIRE(h.setOptionValue("presolve_rule_logging", true) == HighsStatus::kOk);
+  // Initial sweep doesn't yield reductions, but switch it off for clarity
+  REQUIRE(h.setOptionValue("presolve_rule_off", 1 << kPresolveRuleInitialSweep) == HighsStatus::kOk);
   const bool lp0 = true;
   const bool lp1 = true;
   const bool lp1a = true;
@@ -78,6 +82,40 @@ TEST_CASE("test-col-stuffing", "[highs_test_presolve_rules]") {
 
   h.resetGlobalScheduler(true);
 }
+
+TEST_CASE("test-weakly-dominated-col-upper", "[highs_test_presolve_rules]") {
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  REQUIRE(h.setOptionValue("presolve_rule_logging", true) == HighsStatus::kOk);
+  REQUIRE(h.setOptionValue("presolve_rule_test", kPresolveRuleWeaklyDominatedColUpper) == HighsStatus::kOk);
+  // LP is
+  //
+  // max y, subject to x+y <= 0, x >= 0; 0 <= x <= 1, y free
+  //
+  // Optimal solution is x = 1; y = -1, with x nonbasic with dual -1, and 
+  HighsLp lp;
+  lp.num_col_ = 2;
+  lp.num_row_ = 2;
+  lp.sense_ = ObjSense::kMaximize;
+  lp.col_cost_ = {0, 1};
+  lp.col_lower_ = {0, -kHighsInf};
+  lp.col_upper_ = {1,  kHighsInf};
+  lp.row_lower_ = {-kHighsInf,         1};
+  lp.row_upper_ = {         0, kHighsInf};
+  lp.a_matrix_.format_ = MatrixFormat::kRowwise;
+  lp.a_matrix_.start_ = {0, 2, 3};
+  lp.a_matrix_.index_ = {0, 1, 0};
+  lp.a_matrix_.value_ = {1, 1, 1};
+
+  presolveOffOn("initial-sweep+test-weakly-dominated-col-upper", lp, h, 1, 1, 1);
+
+  REQUIRE(h.setOptionValue("presolve_rule_off", 1 << kPresolveRuleInitialSweep) == HighsStatus::kOk);
+
+  presolveOffOn("test-weakly-dominated-col-upper", lp, h, 1, 1, 1);
+
+  h.resetGlobalScheduler(true);
+}
+
 
 void presolveOffOn(const std::string& message, const HighsLp& lp, Highs& h,
                    const HighsInt require_presolved_model_num_col,
@@ -145,3 +183,4 @@ void presolveOffOn(const std::string& message, const HighsLp& lp, Highs& h,
     }
   }
 }
+

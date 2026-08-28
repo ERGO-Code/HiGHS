@@ -6635,13 +6635,15 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
                  time_str.c_str());
   }
 
-  if (options->presolve != kHighsOffString && mipsolver == nullptr) {
+  if (options->presolve != kHighsOffString && mipsolver == nullptr &&
+      this->allow_rule_[kPresolveRuleInitialSweep]) {
     // Zero numDeletedCols and numDeletedRows since they are used to
     // identify reductions due to this presovle rule
     numDeletedCols = 0;
     numDeletedRows = 0;
-    // Perform initial sweep to remove fixed columns before forming the
-    // dynamic constraint matrix data structure
+    // Perform initial sweep to remove empty/fixed columns, and
+    // empty/singleton/redundant rows before forming the dynamic
+    // constraint matrix data structure
     analysis_.presolveTimerStart(kPresolveClockInitialSweep);
     // Indicate that initial sweep is running, so that reductions
     // operate on the model rather than the dynamic data structure set

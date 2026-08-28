@@ -1681,7 +1681,7 @@ class HighsOptions : public HighsOptionsStruct {
 
     record_int = new OptionRecordInt(
         "presolve_rule_test", "Presolve rule to test - DEV only!", advanced,
-        &presolve_rule_test, 0, 0, kPresolveRuleMax);
+        &presolve_rule_test, 0, 0, kHighsIInf);
     records.push_back(record_int);
 
     record_bool = new OptionRecordBool(

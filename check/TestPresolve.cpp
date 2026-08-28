@@ -888,9 +888,7 @@ TEST_CASE("presolve-rule-off", "[highs_test_presolve]") {
                int(full_presolve_num_col), int(full_presolve_num_row));
       HighsPresolveLog presolve_log = h.getPresolveLog();
       REQUIRE(presolve_log.rule[kPresolveRuleAggregator].col_removed > 0);
-      HighsInt presolve_rule_off =
-          std::pow(int(2), int(kPresolveRuleAggregator));
-      h.setOptionValue("presolve_rule_off", presolve_rule_off);
+      h.setOptionValue("presolve_rule_off", 1 << kPresolveRuleAggregator);
     } else if (k > 0) {
       HighsInt presolve_num_col = h.getPresolvedLp().num_col_;
       HighsInt presolve_num_row = h.getPresolvedLp().num_row_;
