@@ -420,6 +420,12 @@ class HighsPostsolveStack {
       case ReductionType::kSlackColSubstitution: {
         return "Slack col substitution";
       }
+      case ReductionType::kImpliedEquation: {
+        return "Implied equation";
+      }
+      case ReductionType::kZeroObjSingletonContinuousCol: {
+        return "Zero obj singleton continuous col";
+      }
       case ReductionType::kFourierMotzkinBlock: {
         return "Fourier-Motzkin block";
       }

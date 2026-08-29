@@ -1741,3 +1741,44 @@ TEST_CASE("issue-2900", "[highs_test_mip_solver]") {
   solve(highs, kHighsOffString, require_model_status, optimal_objective);
   solve(highs, kHighsOnString, require_model_status, optimal_objective);
 }
+
+TEST_CASE("redcost-fixing-large-bounds", "[highs_test_mip_solver]") {
+  // Regression: addRootRedcost must not stall when an integer variable
+  // has a finite bound exceeding kHighsIInf (e.g. 1e19 > 9.2e18).
+  HighsLp lp;
+  lp.num_col_ = 1;
+  lp.num_row_ = 0;
+  lp.sense_ = ObjSense::kMinimize;
+  lp.offset_ = 0;
+  lp.col_cost_ = {1.0};
+  lp.col_lower_ = {0.0};
+  lp.col_upper_ = {1e19};
+  lp.integrality_ = {HighsVarType::kInteger};
+  lp.a_matrix_.format_ = MatrixFormat::kColwise;
+  lp.a_matrix_.start_ = {0, 0};
+
+  Highs highs;
+  highs.setOptionValue("output_flag", false);
+  highs.passModel(lp);
+
+  HighsCallback callback(&highs);
+  const HighsOptions& options = highs.getOptions();
+  HighsSolution solution;
+  HighsMipSolver mipsolver(callback, options, lp, solution);
+  mipsolver.mipdata_ =
+      std::unique_ptr<HighsMipSolverData>(new HighsMipSolverData(mipsolver));
+  mipsolver.mipdata_->feastol = 1e-6;
+  mipsolver.mipdata_->lower_bound = 0.0;
+  mipsolver.mipdata_->setupDomainPropagation();
+  mipsolver.mipdata_->integral_cols.push_back(0);
+
+  std::vector<double> lpredcost = {1.0};
+  double lpobjective = 0.0;
+
+  mipsolver.mipdata_->redcostfixing.addRootRedcost(mipsolver, lpredcost,
+                                                   lpobjective);
+
+  auto lurkingBounds = mipsolver.mipdata_->redcostfixing.getLurkingBounds(
+      mipsolver, mipsolver.mipdata_->getDomain());
+  REQUIRE(!lurkingBounds.empty());
+}
