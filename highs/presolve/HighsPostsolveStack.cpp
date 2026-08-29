@@ -506,10 +506,13 @@ void HighsPostsolveStack::FixedCol::undo(const HighsOptions& options,
     if (lower == upper) {
       // See whether this happens naturally
       if (fixType != HighsBasisStatus::kNonbasic) {
-	printf("FixedCol::undo col %d has [%g, %g] and fix type = %s\n",
-	       int(col), lower, upper, utilBasisStatusToString(fixType).full_.c_str());
+	printf("!!!!!!!!!!!!!!!!!!!!\n"
+	       "FixedCol::undo col %d has [%g, %g] and fix type = %s: SETTING status to NB!\n"
+	       "!!!!!!!!!!!!!!!!!!!!\n",
+	       int(col), lower, upper, utilBasisStatusToString(fixType).s2_.c_str());
       }
     //      assert(fixType == HighsBasisStatus::kNonbasic);
+      //
       // When column has fixed bounds, make sure that the basis status
       // is set consistent with the dual value
       basis.col_status[col] = HighsBasisStatus::kNonbasic;
