@@ -87,7 +87,6 @@ TEST_CASE("test-weakly-dominated-col-upper", "[highs_test_presolve_rules]") {
   Highs h;
   h.setOptionValue("output_flag", dev_run);
   REQUIRE(h.setOptionValue("presolve_rule_logging", true) == HighsStatus::kOk);
-  REQUIRE(h.setOptionValue("presolve_rule_test", kPresolveRuleWeaklyDominatedColUpper) == HighsStatus::kOk);
   // LP is
   //
   // max y, subject to x+y <= 0, x >= 0; 0 <= x <= 1, y free
@@ -106,6 +105,10 @@ TEST_CASE("test-weakly-dominated-col-upper", "[highs_test_presolve_rules]") {
   lp.a_matrix_.start_ = {0, 2, 3};
   lp.a_matrix_.index_ = {0, 1, 0};
   lp.a_matrix_.value_ = {1, 1, 1};
+
+  //  presolveOffOn("vanilla-presolve", lp, h);
+
+  REQUIRE(h.setOptionValue("presolve_rule_test", kPresolveRuleWeaklyDominatedColUpper) == HighsStatus::kOk);
 
   presolveOffOn("initial-sweep+test-weakly-dominated-col-upper", lp, h, 1, 1, 1);
 
@@ -176,7 +179,8 @@ void presolveOffOn(const std::string& message, const HighsLp& lp, Highs& h,
       REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
       REQUIRE(h.getInfo().num_primal_infeasibilities == 0);
       REQUIRE(h.getInfo().num_dual_infeasibilities == 0);
-      REQUIRE(h.getInfo().simplex_iteration_count == 0);
+      if (reduce_to_empty) 
+	REQUIRE(h.getInfo().simplex_iteration_count == 0);
       // Ensure that any basis postsolve is correct
       if (basis_postsolve)
         REQUIRE(run_data.num_simplex_iterations_after_postsolve == 0);

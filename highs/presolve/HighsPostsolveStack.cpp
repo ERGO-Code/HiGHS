@@ -121,21 +121,29 @@ static bool colFeasibilityOk(const std::string& message,
     assert(!(atLower() || atUpper()));
     // If between bounds, the dual must be sufficiently small and
     // any basis status is false
-    dual_ok = std::fabs(solution.col_dual[col]) <= options.dual_feasibility_tolerance;
+    dual_ok = std::fabs(dual) <= options.dual_feasibility_tolerance;
     basis_ok = !has_basis;
   };
 
   
   if (lower == upper) {
-    // Any dual value is valid unless the column is basic
-    if (has_basis && status == HighsBasisStatus::kBasic) dual_ok = dual == 0;
+    if (has_basis && status == HighsBasisStatus::kBasic) {
+      // Basic, so dual must be zero
+      dual_ok = dual == 0;
+    } else if (dual > options.dual_feasibility_tolerance) {
+      // Positive dual so require angy basis status to be at lower
+      basis_ok = has_basis && status == HighsBasisStatus::kLower;
+    } else if (dual < -options.dual_feasibility_tolerance) {
+      // Negative dual so require angy basis status to be at upper
+      basis_ok = has_basis && status == HighsBasisStatus::kUpper;
+    }
   } else if (has_basis && status == HighsBasisStatus::kBasic) {
     // If basic, then primal is OK, and any dual value must be zero
     dual_ok = dual == 0;
   } else if (has_basis && status == HighsBasisStatus::kZero) {
     // Fixed at zero so primal must be zero and any dual sufficiently small
     primal_ok = primal == 0;
-    dual_ok = std::fabs(solution.col_dual[col]) <= options.dual_feasibility_tolerance;
+    dual_ok = std::fabs(dual) <= options.dual_feasibility_tolerance;
   } else {
     // Any basis status must not be basic
     assert(!(has_basis && status == HighsBasisStatus::kBasic));
@@ -149,7 +157,7 @@ static bool colFeasibilityOk(const std::string& message,
 	   primal, primal_ok ? "OK" : "Error",
 	   dual, dual_ok ? "OK" : "Error",
 	   has_basis ? (": status " + utilBasisStatusToString(status).s2_).c_str() : "",
-	   has_basis ? (basis_ok ? " (OK)" : "(Error)") : "");
+	   has_basis ? (basis_ok ? " (OK)" : " (Error)") : "");
     return false;
   }
   return true;
@@ -495,6 +503,17 @@ void HighsPostsolveStack::FixedCol::undo(const HighsOptions& options,
   // set basis status
   if (basis.valid) {
     basis.col_status[col] = fixType;
+    if (lower == upper) {
+      // See whether this happens naturally
+      if (fixType != HighsBasisStatus::kNonbasic) {
+	printf("FixedCol::undo col %d has [%g, %g] and fix type = %s\n",
+	       int(col), lower, upper, utilBasisStatusToString(fixType).full_.c_str());
+      }
+    //      assert(fixType == HighsBasisStatus::kNonbasic);
+      // When column has fixed bounds, make sure that the basis status
+      // is set consistent with the dual value
+      basis.col_status[col] = HighsBasisStatus::kNonbasic;
+    }
     if (basis.col_status[col] == HighsBasisStatus::kNonbasic) {
       // Should correspond to case where a variable is fixed
       // explicitly by its bounds, so fixValue == other_bound, so
@@ -517,7 +536,7 @@ void HighsPostsolveStack::FixedCol::undo(const HighsOptions& options,
     if (!feasibility_ok) {
       printf("dualFeasibilityOk fail\n");
     }
-    //    assert(feasibility_ok);
+    assert(feasibility_ok);
   }
 }
 
