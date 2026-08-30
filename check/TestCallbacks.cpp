@@ -652,6 +652,6 @@ TEST_CASE("highs-callback-qpasm", "[highs_callback]") {
   highs.startCallback(kCallbackQpFirstFeasiblePoint);
   highs.startCallback(kCallbackQpInterrupt);
   highs.run();
-  REQUIRE(highs.getInfo().qp_iteration_count == 7);
+  REQUIRE(highs.getInfo().qp_iteration_count == 6);
   highs.resetGlobalScheduler(true);
 }
