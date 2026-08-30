@@ -52,7 +52,10 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
     TestHiPdlpAveraging.cpp
     TestHiPdlpBackend.cpp
         TestHiPdlpConvergence.cpp
+            TestHiPdlpFixedPointError.cpp
+            TestHiPdlpOperatorNorm.cpp
                 TestHiPdlpRestart.cpp
+                TestHiPdlpStepSize.cpp
         TestHiPdlpTrace.cpp
       TestHSet.cpp
       TestICrash.cpp

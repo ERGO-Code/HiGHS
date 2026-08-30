@@ -18,11 +18,22 @@ namespace {
 
 const double kDefaultFixedTraceTolerance = 1e-4;
 
+// Recorded traces enqueue this many iterations per command buffer.
+const HighsInt kRecordedBlockIterations = 2;
+
 struct TraceHandles {
   backend::VectorHandle primal;
   backend::VectorHandle dual;
   backend::VectorHandle ax;
   backend::VectorHandle aty;
+};
+
+// The retired next-iterate slots, which alternate as the Halpern step swaps.
+struct IterateSlots {
+  backend::VectorHandle* current_primal;
+  backend::VectorHandle* current_dual;
+  backend::VectorHandle* next_primal;
+  backend::VectorHandle* next_dual;
 };
 
 bool finiteVector(const std::vector<double>& values) {
@@ -171,13 +182,11 @@ api::Error computeRawMetrics(const model::Problem& problem,
   return api::Error();
 }
 
-api::Error observeConvergence(const model::Problem& problem,
-                              const FixedTraceOptions& options,
-                              const std::vector<double>& primal,
-                              const std::vector<double>& dual,
-                              const std::vector<double>& ax,
-                              const std::vector<double>& aty,
-                              FixedTraceConvergenceObservation& observation) {
+api::Error observeConvergence(
+    const model::Problem& problem, const FixedTraceOptions& options,
+    const std::vector<double>& primal, const std::vector<double>& dual,
+    const std::vector<double>& ax, const std::vector<double>& aty,
+    const HighsInt iteration, FixedTraceConvergenceObservation& observation) {
   RawConvergenceMetrics raw;
   const api::Error error =
       computeRawMetrics(problem, primal, dual, ax, aty, raw);
@@ -185,7 +194,7 @@ api::Error observeConvergence(const model::Problem& problem,
   StoppingInput input;
   input.raw = raw;
   input.tolerances = options.convergence_tolerances;
-  input.iteration = options.iteration_count;
+  input.iteration = iteration;
   const StoppingResult stopping = evaluateStopping(input);
   if (!stopping.ok()) return stopping.error;
   observation.observed = true;
@@ -194,14 +203,197 @@ api::Error observeConvergence(const model::Problem& problem,
   return api::Error();
 }
 
+bool periodicConvergenceCheck(const FixedTraceOptions& options,
+                              const HighsInt iteration) {
+  if (!options.convergence.periodic_enabled || iteration <= 0) return false;
+  if (iteration == options.iteration_count) return true;
+  const HighsInt cadence = options.convergence.check_cadence;
+  return cadence > 0 && iteration % cadence == 0;
+}
+
+api::Error downloadConvergenceVector(backend::Backend& backend,
+                                     const backend::VectorHandle& vector,
+                                     std::vector<double>& values,
+                                     FixedTraceDiagnostics& diagnostics) {
+  const api::Error error = backend.downloadVector(vector, values);
+  ++diagnostics.transfer_calls_during_iterations;
+  return error;
+}
+
+api::Error appendConvergenceCheck(
+    backend::Backend& backend, const model::Problem& problem,
+    const FixedTraceOptions& options, const HalpernPdhgState& state,
+    backend::VectorHandle& candidate_ax, backend::VectorHandle& candidate_aty,
+    const HighsInt iteration, FixedTraceDiagnostics& diagnostics,
+    std::vector<FixedTraceConvergenceCheck>& checks) {
+  api::Error error =
+      backend.multiply(*state.problem, *state.primal_candidate, candidate_ax);
+  if (!error.ok()) return error;
+  error = backend.multiplyTranspose(*state.problem, *state.dual_candidate,
+                                    candidate_aty);
+  if (!error.ok()) return error;
+
+  std::vector<double> primal;
+  std::vector<double> dual;
+  std::vector<double> ax;
+  std::vector<double> aty;
+  error = downloadConvergenceVector(backend, *state.primal_candidate, primal,
+                                    diagnostics);
+  if (!error.ok()) return error;
+  error = downloadConvergenceVector(backend, *state.dual_candidate, dual,
+                                    diagnostics);
+  if (!error.ok()) return error;
+  error = downloadConvergenceVector(backend, candidate_ax, ax, diagnostics);
+  if (!error.ok()) return error;
+  error = downloadConvergenceVector(backend, candidate_aty, aty, diagnostics);
+  if (!error.ok()) return error;
+
+  FixedTraceConvergenceObservation observation;
+  error = observeConvergence(problem, options, primal, dual, ax, aty, iteration,
+                             observation);
+  if (!error.ok()) return error;
+  FixedTraceConvergenceCheck check;
+  check.iteration = iteration;
+  check.raw = observation.raw;
+  check.stopping = observation.stopping;
+  checks.push_back(check);
+  return api::Error();
+}
+
+bool intermediateFixedPointCheck(const FixedTraceOptions& options,
+                                 const HighsInt iteration) {
+  const HighsInt cadence = options.fixed_point_restart.check_cadence;
+  return options.fixed_point_restart.enabled && cadence > 0 && iteration > 0 &&
+         iteration < options.iteration_count && iteration % cadence == 0;
+}
+
+FixedPointRestartState chainedFixedPointRestartState(
+    const std::vector<FixedTraceFixedPointRestartCheck>& checks,
+    const FixedPointRestartState& initial) {
+  if (checks.empty()) return initial;
+  const FixedTraceFixedPointRestartCheck& last = checks.back();
+  if (last.evaluation.decision == RestartDecision::kRestart)
+    return resetFixedPointRestart(last.error.fixed_point_error);
+  return last.evaluation.next;
+}
+
+api::Error appendFixedPointRestartCheck(
+    backend::Backend& backend, const FixedTraceOptions& options,
+    const HalpernPdhgState& state, const IterateSlots& slots,
+    backend::VectorHandle& aty_delta_scratch, const HighsInt iteration,
+    std::vector<FixedTraceFixedPointRestartCheck>& checks) {
+  FixedPointErrorInput error_input;
+  error_input.next_primal = state.primal_candidate;
+  error_input.next_dual = state.dual_candidate;
+  error_input.reflected_primal = state.reflected_primal;
+  error_input.reflected_dual = state.reflected_dual;
+  error_input.omega = options.fixed_point_error.omega;
+  error_input.eta = options.fixed_point_error.eta;
+  error_input.delta_primal = slots.next_primal;
+  error_input.delta_dual = slots.next_dual;
+  error_input.aty_delta = &aty_delta_scratch;
+  const FixedPointErrorResult error =
+      evaluateFixedPointError(backend, *state.problem, error_input);
+  if (!error.ok()) return error.error;
+
+  FixedPointRestartInput restart_input;
+  restart_input.previous = chainedFixedPointRestartState(
+      checks, options.fixed_point_restart.previous);
+  restart_input.current_error = error.fixed_point_error;
+  // HalpernPdhgState::iteration is the resettable age; the trace owns the
+  // monotone total separately.
+  restart_input.halpern_iterations = state.iteration;
+  restart_input.total_iterations = iteration;
+  restart_input.parameters = options.fixed_point_restart.parameters;
+  const FixedPointRestartResult evaluation =
+      evaluateFixedPointRestart(restart_input);
+  if (!evaluation.ok()) return evaluation.error;
+
+  FixedTraceFixedPointRestartCheck check;
+  check.iteration = iteration;
+  check.error = error;
+  check.evaluation = evaluation;
+  checks.push_back(check);
+  return api::Error();
+}
+
+// Models the legacy PDLPSolver::solve() restart body: both anchors and the
+// current iterate take the projected candidates and the cached products are
+// rebuilt, without touching either step size or the primal weight.
+api::Error applyFixedPointRestart(backend::Backend& backend,
+                                  HalpernPdhgState& state,
+                                  backend::VectorHandle& primal_sum,
+                                  backend::VectorHandle& dual_sum,
+                                  AveragingState& averaging,
+                                  double& average_normalization,
+                                  TraceHandles& point) {
+  api::Error error =
+      backend.copy(*state.primal_candidate, *state.current_primal);
+  if (!error.ok()) return error;
+  error = backend.copy(*state.dual_candidate, *state.current_dual);
+  if (!error.ok()) return error;
+  error = backend.copy(*state.primal_candidate, *state.primal_anchor);
+  if (!error.ok()) return error;
+  error = backend.copy(*state.dual_candidate, *state.dual_anchor);
+  if (!error.ok()) return error;
+  error = backend.multiply(*state.problem, *state.current_primal,
+                           *state.current_ax);
+  if (!error.ok()) return error;
+  error = backend.multiplyTranspose(*state.problem, *state.current_dual,
+                                    *state.current_aty);
+  if (!error.ok()) return error;
+  error = backend.fill(primal_sum, 0.0);
+  if (!error.ok()) return error;
+  error = backend.fill(dual_sum, 0.0);
+  if (!error.ok()) return error;
+  state.iteration = 0;
+  averaging = resetAveraging();
+  average_normalization = 0.0;
+  // The boundary point becomes the state that continues into the next step.
+  return recordPoint(backend, *state.current_primal, *state.current_dual,
+                     *state.current_ax, *state.current_aty, point);
+}
+
+// The check is evaluated and stored before any iterate, anchor, age, average,
+// or sum is mutated.
+api::Error observeAndApplyFixedPointRestart(
+    backend::Backend& backend, const FixedTraceOptions& options,
+    HalpernPdhgState& state, backend::VectorHandle& aty_delta_scratch,
+    backend::VectorHandle& primal_sum, backend::VectorHandle& dual_sum,
+    AveragingState& averaging, double& average_normalization,
+    const HighsInt iteration, TraceHandles& point,
+    std::vector<FixedTraceFixedPointRestartCheck>& checks) {
+  const IterateSlots slots = {state.current_primal, state.current_dual,
+                              state.next_primal, state.next_dual};
+  const api::Error error = appendFixedPointRestartCheck(
+      backend, options, state, slots, aty_delta_scratch, iteration, checks);
+  if (!error.ok()) return error;
+  if (checks.back().evaluation.decision != RestartDecision::kRestart)
+    return api::Error();
+  return applyFixedPointRestart(backend, state, primal_sum, dual_sum, averaging,
+                                average_normalization, point);
+}
+
 }  // namespace
+
+FixedTraceConvergenceOptions::FixedTraceConvergenceOptions()
+    : periodic_enabled(false), check_cadence(0) {}
+
+FixedTraceFixedPointErrorOptions::FixedTraceFixedPointErrorOptions()
+    : enabled(false),
+      omega(std::numeric_limits<double>::quiet_NaN()),
+      eta(std::numeric_limits<double>::quiet_NaN()) {}
+
+FixedTraceFixedPointRestartOptions::FixedTraceFixedPointRestartOptions()
+    : enabled(false), check_cadence(0) {}
 
 FixedTraceOptions::FixedTraceOptions()
     : backend(backend::Kind::kCpu),
       execution_mode(FixedTraceExecutionMode::kDirect),
       primal_step_size(std::numeric_limits<double>::quiet_NaN()),
       dual_step_size(std::numeric_limits<double>::quiet_NaN()),
-      iteration_count(-1) {
+      iteration_count(-1),
+      convergence() {
   convergence_tolerances.primal = kDefaultFixedTraceTolerance;
   convergence_tolerances.dual = kDefaultFixedTraceTolerance;
   convergence_tolerances.gap = kDefaultFixedTraceTolerance;
@@ -209,6 +401,17 @@ FixedTraceOptions::FixedTraceOptions()
 
 FixedTraceConvergenceObservation::FixedTraceConvergenceObservation()
     : observed(false) {}
+
+FixedTraceConvergenceCheck::FixedTraceConvergenceCheck() : iteration(0) {}
+
+FixedTraceFixedPointErrorObservation::FixedTraceFixedPointErrorObservation()
+    : observed(false) {}
+
+FixedTraceFixedPointRestartObservation::FixedTraceFixedPointRestartObservation()
+    : observed(false) {}
+
+FixedTraceFixedPointRestartCheck::FixedTraceFixedPointRestartCheck()
+    : iteration(0) {}
 
 FixedTraceDiagnostics::FixedTraceDiagnostics()
     : resource_creation_calls_before_iterations(0),
@@ -226,6 +429,61 @@ FixedTraceResult runFixedTrace(const model::OriginalModel& original_model,
       options.execution_mode != FixedTraceExecutionMode::kRecorded) {
     return failure(api::Error(api::ErrorCode::kInvalidArgument,
                               "fixed trace execution mode is invalid"),
+                   diagnostics);
+  }
+  if (options.convergence.periodic_enabled &&
+      options.convergence.check_cadence < 0) {
+    return failure(api::Error(api::ErrorCode::kInvalidOption,
+                              "fixed trace convergence check cadence must be "
+                              "nonnegative"),
+                   diagnostics);
+  }
+  if (options.convergence.periodic_enabled &&
+      options.execution_mode == FixedTraceExecutionMode::kRecorded &&
+      options.convergence.check_cadence > 0 &&
+      options.convergence.check_cadence < options.iteration_count &&
+      options.convergence.check_cadence % kRecordedBlockIterations != 0) {
+    return failure(
+        api::Error(api::ErrorCode::kInvalidOption,
+                   "fixed trace convergence check cadence must align with "
+                   "recorded iteration blocks"),
+        diagnostics);
+  }
+  if (options.fixed_point_error.enabled &&
+      (!std::isfinite(options.fixed_point_error.omega) ||
+       options.fixed_point_error.omega <= 0.0 ||
+       !std::isfinite(options.fixed_point_error.eta) ||
+       options.fixed_point_error.eta <= 0.0)) {
+    return failure(api::Error(api::ErrorCode::kInvalidArgument,
+                              "fixed trace fixed-point-error omega and eta "
+                              "must be finite and positive"),
+                   diagnostics);
+  }
+  if (options.fixed_point_restart.enabled &&
+      !options.fixed_point_error.enabled) {
+    return failure(api::Error(api::ErrorCode::kInvalidOption,
+                              "fixed trace fixed-point restart trigger "
+                              "requires the fixed-point-error observation"),
+                   diagnostics);
+  }
+  if (options.fixed_point_restart.enabled &&
+      options.fixed_point_restart.check_cadence < 0) {
+    return failure(api::Error(api::ErrorCode::kInvalidOption,
+                              "fixed trace fixed-point restart check cadence "
+                              "must be nonnegative"),
+                   diagnostics);
+  }
+  // Recorded blocks are never split, so a cadence that is not a multiple of the
+  // block size would demand a check inside a block.
+  if (options.fixed_point_restart.enabled &&
+      options.execution_mode == FixedTraceExecutionMode::kRecorded &&
+      options.fixed_point_restart.check_cadence > 0 &&
+      options.fixed_point_restart.check_cadence < options.iteration_count &&
+      options.fixed_point_restart.check_cadence % kRecordedBlockIterations !=
+          0) {
+    return failure(api::Error(api::ErrorCode::kInvalidOption,
+                              "fixed trace fixed-point restart check cadence "
+                              "must align with recorded iteration blocks"),
                    diagnostics);
   }
   const bool uses_step_sequences =
@@ -323,6 +581,10 @@ FixedTraceResult runFixedTrace(const model::OriginalModel& original_model,
     }
     error = requireTraceCapabilities(*backend);
     if (!error.ok()) return failure(error, diagnostics);
+    if (options.fixed_point_error.enabled && options.iteration_count > 0) {
+      error = backend->requireCapability(backend::Capability::kReductions);
+      if (!error.ok()) return failure(error, diagnostics);
+    }
     if (options.execution_mode == FixedTraceExecutionMode::kRecorded) {
       error = backend->requireCapability(backend::Capability::kCommandBuffer);
       if (!error.ok()) return failure(error, diagnostics);
@@ -354,6 +616,8 @@ FixedTraceResult runFixedTrace(const model::OriginalModel& original_model,
     backend::VectorHandle dual_sum;
     backend::VectorHandle averaged_ax;
     backend::VectorHandle averaged_aty;
+    backend::VectorHandle candidate_ax;
+    backend::VectorHandle candidate_aty;
     backend::VectorHandle* col_vectors[] = {
         &current_primal,   &next_primal, &primal_anchor, &primal_candidate,
         &reflected_primal, &current_aty, &primal_sum,    &averaged_aty};
@@ -385,6 +649,12 @@ FixedTraceResult runFixedTrace(const model::OriginalModel& original_model,
       if (!error.ok()) return failure(error, diagnostics);
       error = createVector(*backend, num_cols, trace_handles[point].aty,
                            diagnostics);
+      if (!error.ok()) return failure(error, diagnostics);
+    }
+    if (options.convergence.periodic_enabled) {
+      error = createVector(*backend, num_rows, candidate_ax, diagnostics);
+      if (!error.ok()) return failure(error, diagnostics);
+      error = createVector(*backend, num_cols, candidate_aty, diagnostics);
       if (!error.ok()) return failure(error, diagnostics);
     }
 
@@ -437,16 +707,30 @@ FixedTraceResult runFixedTrace(const model::OriginalModel& original_model,
 
     AveragingState averaging;
     double average_normalization = 0.0;
+    // The monotone total is independent of the resettable Halpern age in
+    // HalpernPdhgState::iteration.
+    HighsInt total_iterations = 0;
+    std::vector<FixedTraceConvergenceCheck> convergence_checks;
+    if (options.convergence.periodic_enabled && options.iteration_count > 0) {
+      const HighsInt cadence = options.convergence.check_cadence;
+      const HighsInt check_count =
+          cadence == 0 ? 1
+                       : options.iteration_count / cadence +
+                             (options.iteration_count % cadence == 0 ? 0 : 1);
+      convergence_checks.reserve(static_cast<std::size_t>(check_count));
+    }
+    std::vector<FixedTraceFixedPointRestartCheck> restart_checks;
     if (options.execution_mode == FixedTraceExecutionMode::kDirect) {
-      while (state.iteration < options.iteration_count) {
+      while (total_iterations < options.iteration_count) {
         if (uses_step_sequences) {
           const std::size_t iteration =
-              static_cast<std::size_t>(state.iteration);
+              static_cast<std::size_t>(total_iterations);
           state.primal_step_size = options.primal_step_sizes[iteration];
           state.dual_step_size = options.dual_step_sizes[iteration];
         }
         error = enqueueHalpernPdhgStep(*backend, state);
         if (!error.ok()) return failure(error, diagnostics);
+        ++total_iterations;
         AveragingInput averaging_input;
         averaging_input.previous = averaging;
         averaging_input.primal_step_size = state.primal_step_size;
@@ -462,11 +746,25 @@ FixedTraceResult runFixedTrace(const model::OriginalModel& original_model,
         if (!error.ok()) return failure(error, diagnostics);
         averaging = averaging_result.next;
         average_normalization = averaging_result.normalization;
-        error = recordPoint(
-            *backend, *state.current_primal, *state.current_dual,
-            *state.current_ax, *state.current_aty,
-            trace_handles[static_cast<std::size_t>(state.iteration)]);
+        TraceHandles& point =
+            trace_handles[static_cast<std::size_t>(total_iterations)];
+        error =
+            recordPoint(*backend, *state.current_primal, *state.current_dual,
+                        *state.current_ax, *state.current_aty, point);
         if (!error.ok()) return failure(error, diagnostics);
+        if (periodicConvergenceCheck(options, total_iterations)) {
+          error = appendConvergenceCheck(
+              *backend, built.problem, options, state, candidate_ax,
+              candidate_aty, total_iterations, diagnostics, convergence_checks);
+          if (!error.ok()) return failure(error, diagnostics);
+        }
+        if (intermediateFixedPointCheck(options, total_iterations)) {
+          error = observeAndApplyFixedPointRestart(
+              *backend, options, state, averaged_aty, primal_sum, dual_sum,
+              averaging, average_normalization, total_iterations, point,
+              restart_checks);
+          if (!error.ok()) return failure(error, diagnostics);
+        }
       }
     } else {
       backend::CommandBufferRecorder* recorder =
@@ -480,15 +778,19 @@ FixedTraceResult runFixedTrace(const model::OriginalModel& original_model,
       std::vector<backend::CommandBufferHandle> command_buffers;
       command_buffers.reserve(
           static_cast<std::size_t>((options.iteration_count + 1) / 2));
-      while (state.iteration < options.iteration_count) {
+      // Each block is replayed, and its restart decision applied, before the
+      // next block is captured, because a captured anchor weight bakes in the
+      // Halpern age this block's decision may reset.
+      while (total_iterations < options.iteration_count) {
         error = recorder->beginRecording();
         if (!error.ok()) return failure(error, diagnostics);
         const HighsInt block_end =
-            std::min(options.iteration_count, state.iteration + 2);
-        while (state.iteration < block_end) {
+            std::min(options.iteration_count,
+                     total_iterations + kRecordedBlockIterations);
+        while (total_iterations < block_end) {
           if (uses_step_sequences) {
             const std::size_t iteration =
-                static_cast<std::size_t>(state.iteration);
+                static_cast<std::size_t>(total_iterations);
             state.primal_step_size = options.primal_step_sizes[iteration];
             state.dual_step_size = options.dual_step_sizes[iteration];
           }
@@ -497,6 +799,7 @@ FixedTraceResult runFixedTrace(const model::OriginalModel& original_model,
             recorder->cancelRecording();
             return failure(error, diagnostics);
           }
+          ++total_iterations;
           AveragingInput averaging_input;
           averaging_input.previous = averaging;
           averaging_input.primal_step_size = state.primal_step_size;
@@ -520,7 +823,7 @@ FixedTraceResult runFixedTrace(const model::OriginalModel& original_model,
           error = recordPoint(
               *backend, *state.current_primal, *state.current_dual,
               *state.current_ax, *state.current_aty,
-              trace_handles[static_cast<std::size_t>(state.iteration)]);
+              trace_handles[static_cast<std::size_t>(total_iterations)]);
           if (!error.ok()) {
             recorder->cancelRecording();
             return failure(error, diagnostics);
@@ -531,13 +834,57 @@ FixedTraceResult runFixedTrace(const model::OriginalModel& original_model,
         if (!error.ok()) return failure(error, diagnostics);
         ++diagnostics.resource_creation_calls_before_iterations;
         command_buffers.push_back(std::move(command_buffer));
-      }
-      for (std::size_t block = 0; block < command_buffers.size(); ++block) {
         backend::CommandBufferStatistics block_statistics;
-        error = recorder->replay(command_buffers[block], block_statistics);
+        error = recorder->replay(command_buffers.back(), block_statistics);
         backend::addCommandBufferStatistics(block_statistics,
                                             diagnostics.command_buffer);
         if (!error.ok()) return failure(error, diagnostics);
+        if (periodicConvergenceCheck(options, total_iterations)) {
+          error = appendConvergenceCheck(
+              *backend, built.problem, options, state, candidate_ax,
+              candidate_aty, total_iterations, diagnostics, convergence_checks);
+          if (!error.ok()) return failure(error, diagnostics);
+        }
+        if (intermediateFixedPointCheck(options, total_iterations)) {
+          error = observeAndApplyFixedPointRestart(
+              *backend, options, state, averaged_aty, primal_sum, dual_sum,
+              averaging, average_normalization, total_iterations,
+              trace_handles[static_cast<std::size_t>(total_iterations)],
+              restart_checks);
+          if (!error.ok()) return failure(error, diagnostics);
+        }
+      }
+    }
+
+    FixedTraceFixedPointErrorObservation fixed_point_error;
+    FixedTraceFixedPointRestartObservation fixed_point_restart;
+    if (options.fixed_point_error.enabled && options.iteration_count > 0) {
+      if (options.fixed_point_restart.enabled) {
+        error = observeAndApplyFixedPointRestart(
+            *backend, options, state, averaged_aty, primal_sum, dual_sum,
+            averaging, average_normalization, total_iterations,
+            trace_handles[point_count - 1], restart_checks);
+        if (!error.ok()) return failure(error, diagnostics);
+        fixed_point_error.observed = true;
+        fixed_point_error.evaluation = restart_checks.back().error;
+        fixed_point_restart.observed = true;
+        fixed_point_restart.evaluation = restart_checks.back().evaluation;
+      } else {
+        FixedPointErrorInput input;
+        input.next_primal = state.primal_candidate;
+        input.next_dual = state.dual_candidate;
+        input.reflected_primal = state.reflected_primal;
+        input.reflected_dual = state.reflected_dual;
+        input.omega = options.fixed_point_error.omega;
+        input.eta = options.fixed_point_error.eta;
+        input.delta_primal = state.next_primal;
+        input.delta_dual = state.next_dual;
+        input.aty_delta = &averaged_aty;
+        const FixedPointErrorResult evaluation =
+            evaluateFixedPointError(*backend, problem, input);
+        if (!evaluation.ok()) return failure(evaluation.error, diagnostics);
+        fixed_point_error.observed = true;
+        fixed_point_error.evaluation = evaluation;
       }
     }
 
@@ -575,18 +922,24 @@ FixedTraceResult runFixedTrace(const model::OriginalModel& original_model,
       error = backend->downloadVector(averaged_aty, averaged_aty_values);
       ++diagnostics.transfer_calls_after_iterations;
       if (!error.ok()) return failure(error, diagnostics);
-      error = observeConvergence(
-          built.problem, options, result.averaged_primal, result.averaged_dual,
-          averaged_ax_values, averaged_aty_values, result.averaged_convergence);
+      error = observeConvergence(built.problem, options, result.averaged_primal,
+                                 result.averaged_dual, averaged_ax_values,
+                                 averaged_aty_values, options.iteration_count,
+                                 result.averaged_convergence);
       if (!error.ok()) return failure(error, diagnostics);
     }
     const FixedTracePoint& final_point = host_trace[point_count - 1];
-    error = observeConvergence(built.problem, options, final_point.primal,
-                               final_point.dual, final_point.ax,
-                               final_point.aty, result.current_convergence);
+    error =
+        observeConvergence(built.problem, options, final_point.primal,
+                           final_point.dual, final_point.ax, final_point.aty,
+                           options.iteration_count, result.current_convergence);
     if (!error.ok()) return failure(error, diagnostics);
     result.points.swap(host_trace);
     result.averaging = averaging;
+    result.convergence_checks.swap(convergence_checks);
+    result.fixed_point_error = fixed_point_error;
+    result.fixed_point_restart = fixed_point_restart;
+    result.fixed_point_restart_checks.swap(restart_checks);
     result.diagnostics = diagnostics;
     result.scaling = built.problem.scaling();
     return result;

@@ -6,6 +6,8 @@
 
 #include "pdlp/hipdlp/algorithm/averaging_policy.hpp"
 #include "pdlp/hipdlp/algorithm/convergence.hpp"
+#include "pdlp/hipdlp/algorithm/fixed_point_error.hpp"
+#include "pdlp/hipdlp/algorithm/restart_policy.hpp"
 #include "pdlp/hipdlp/api/status.hpp"
 #include "pdlp/hipdlp/backend/command_buffer.hpp"
 #include "pdlp/hipdlp/backend/types.hpp"
@@ -16,6 +18,32 @@ namespace hipdlp {
 namespace algorithm {
 
 enum class FixedTraceExecutionMode { kDirect, kRecorded };
+
+struct FixedTraceConvergenceOptions {
+  bool periodic_enabled;
+  HighsInt check_cadence;
+
+  FixedTraceConvergenceOptions();
+};
+
+struct FixedTraceFixedPointErrorOptions {
+  bool enabled;
+  double omega;
+  double eta;
+
+  FixedTraceFixedPointErrorOptions();
+};
+
+struct FixedTraceFixedPointRestartOptions {
+  bool enabled;
+  // 0 observes only the final iteration; a positive cadence also observes every
+  // multiple of it.
+  HighsInt check_cadence;
+  FixedPointRestartState previous;
+  FixedPointRestartParameters parameters;
+
+  FixedTraceFixedPointRestartOptions();
+};
 
 struct FixedTraceOptions {
   backend::Kind backend;
@@ -28,7 +56,10 @@ struct FixedTraceOptions {
   HighsInt iteration_count;
   std::vector<double> scaled_primal_start;
   std::vector<double> scaled_dual_start;
+  FixedTraceConvergenceOptions convergence;
   ConvergenceTolerances convergence_tolerances;
+  FixedTraceFixedPointErrorOptions fixed_point_error;
+  FixedTraceFixedPointRestartOptions fixed_point_restart;
 
   FixedTraceOptions();
 };
@@ -39,6 +70,38 @@ struct FixedTraceConvergenceObservation {
   StoppingResult stopping;
 
   FixedTraceConvergenceObservation();
+};
+
+struct FixedTraceConvergenceCheck {
+  HighsInt iteration;
+  RawConvergenceMetrics raw;
+  StoppingResult stopping;
+
+  FixedTraceConvergenceCheck();
+};
+
+struct FixedTraceFixedPointErrorObservation {
+  bool observed;
+  FixedPointErrorResult evaluation;
+
+  FixedTraceFixedPointErrorObservation();
+};
+
+struct FixedTraceFixedPointRestartObservation {
+  bool observed;
+  FixedPointRestartResult evaluation;
+
+  FixedTraceFixedPointRestartObservation();
+};
+
+// A kRestart decision carries resetFixedPointRestart(error.fixed_point_error)
+// into the following check, so the reset is recoverable from this record.
+struct FixedTraceFixedPointRestartCheck {
+  HighsInt iteration;
+  FixedPointErrorResult error;
+  FixedPointRestartResult evaluation;
+
+  FixedTraceFixedPointRestartCheck();
 };
 
 struct FixedTracePoint {
@@ -67,6 +130,10 @@ struct FixedTraceResult {
   AveragingState averaging;
   FixedTraceConvergenceObservation current_convergence;
   FixedTraceConvergenceObservation averaged_convergence;
+  std::vector<FixedTraceConvergenceCheck> convergence_checks;
+  FixedTraceFixedPointErrorObservation fixed_point_error;
+  FixedTraceFixedPointRestartObservation fixed_point_restart;
+  std::vector<FixedTraceFixedPointRestartCheck> fixed_point_restart_checks;
   FixedTraceDiagnostics diagnostics;
   model::ScalingMetadata scaling;
 

@@ -1259,6 +1259,409 @@ GCC CPU-only builds. The policy remains unintegrated, public `solver="hipdlp"`
 still uses legacy, `algorithm::solve` still returns structured `kNotReady`, and
 Phase 7 cross-solver validation has not begun.
 
+### Tier A4 prerequisite to Phase 7: scalar step-size initialization
+
+`algorithm/step_size_policy.{hpp,cc}` owns only initialization from an
+already-computed squared operator norm, reproducing the legacy fixed/PID
+formulas: `primal_weight = (1 + unscaled_cost_norm) / (1 + unscaled_rhs_norm)`,
+`base_step = safety_factor / sqrt(operator_norm_squared)` with a default
+safety factor of `0.998`, `primal_step = base_step / primal_weight`, and
+`dual_step = base_step * primal_weight`. It consumes the operator norm as a
+scalar, so power iteration was not required and the Backend contract, CUDA
+code, and execution path are unchanged. Invalid inputs and every non-finite,
+overflowed, underflowed, or non-positive derived step fail transactionally with
+zero-initialized step sizes. The focused test was first confirmed to fail at
+the missing header; final `[phase7d]` passes 165 assertions in four cases in
+Clang CPU, Clang CUDA, and GCC CPU-only builds. Step-size initialization and
+restart remain unintegrated, public `solver="hipdlp"` still uses legacy,
+`algorithm::solve` still returns structured `kNotReady`, and Phase 7
+cross-solver validation has not begun.
+
+### Tier A5 prerequisite to Phase 7: bounded operator-norm estimate
+
+`algorithm/operator_norm.{hpp,cc}` owns only a deterministic, bounded AA'
+power iteration over the existing Backend primitives. It starts from an
+all-ones row vector, preallocates all three vectors, reports two scalar
+readbacks per completed iteration, and returns the squared norm, iteration
+count, final relative change, tolerance status, and an explicit empty-matrix
+outcome. It remains unintegrated; no Backend contract, backend implementation,
+fixed trace, step-size initialization, restart path, solver loop, or public
+routing changed. `[phase7e]` passes 208 assertions in Clang and GCC CPU builds
+and 220 assertions in the Clang CUDA build, including CPU/CUDA agreement.
+
+Phase 7 triage must reconcile the unchanged legacy `powerMethod()` and
+`powerMethodGpu()` divergence: all-ones versus `mt19937(12345)` starts, 20
+versus 5000 iterations, and no convergence check versus a `1e-4` residual.
+`pdhg.cc` remains unchanged, and Phase 7 cross-solver validation has not begun.
+
+### Tier A6 prerequisite to Phase 7: scalar PID primal-weight update
+
+`algorithm/step_size_policy.{hpp,cc}` gained `updatePrimalWeight()` and
+`resetPrimalWeight()`, a backend-neutral scalar model of the active legacy
+`updatePrimalWeightAtRestart()`. It consumes only the current step sizes, the
+PID state, the primal/dual anchor distances, and the relative primal/dual
+residuals; it owns no vector, Backend handle, allocation, reduction,
+synchronization, convergence cadence, or restart decision. Defaults are
+`k_p=0.99`, `k_i=0.01`, `k_d=0.0`, and `integral_smoothing=0.3`, and the guard
+windows are the strict legacy ones: distances in `(1e-16, 1e12)` and a residual
+ratio in `(1e-8, 1e8)`, with an undefined ratio represented by the legacy
+`1e300` sentinel. Inside the windows the update is
+`error = log(dual_distance) - log(primal_distance) - log(primal_weight)`,
+`error_sum = integral_smoothing * previous_error_sum + error`,
+`delta_error = error - previous_error`, and
+`primal_weight *= exp(k_p*error + k_i*error_sum + k_d*delta_error)`. Finite
+values outside a window succeed as the legacy fallback, restoring
+`best_primal_weight` and zeroing the PID history; the result reports
+`kPidUpdate` or `kFallback` explicitly. Best residual balance is tracked with
+`abs(log10(relative_dual / relative_primal))` behind an explicit
+`best_gap_valid` flag rather than an infinity sentinel, and only a finite gap
+from positive residuals can improve it. The geometric mean `eta` of the current
+steps is preserved before returning `eta/primal_weight` and
+`eta*primal_weight`. Every state, parameter, input, logarithm, exponential,
+product, division, weight, and derived step is validated, and any non-finite,
+overflowed, underflowed, or non-positive required value fails transactionally
+with zero-initialized output.
+
+The update is deliberately unintegrated: `restart_policy`, `fixed_trace`,
+`halpern_pdhg_step`, `algorithm::solve`, option translation, and every backend
+are unchanged. The TDD falsifier was the missing update API, and `[phase7f]`
+then passed 1,088 assertions in five cases in the Clang CPU, Clang CUDA, and
+GCC CPU-only builds, with CUDA graph launch counts unchanged at 0/1/1/2/3.
+
+Recorded for Phase 7, not fixed here: `pdhg.cc` maps unsupported adaptive and
+Malitsky-Pock `pdlp_step_size_strategy` values onto PID, and its
+`performPdhgStep()` PID branch holds a dead `assert(111 == 999)` because the
+function is never called and the active Halpern path changes the primal weight
+only at restart. `pdhg.cc` and option translation remain unchanged, and Phase 7
+cross-solver validation has not begun.
+
+### Tier A7 prerequisite to Phase 7: scalar fixed-point restart trigger
+
+`algorithm/restart_policy.{hpp,cc}` gained `evaluateFixedPointRestart()` and
+`resetFixedPointRestart()`, a backend-neutral scalar model of the active legacy
+`PDLPSolver::checkRestartCriteria()` in `pdhg.cc`. It consumes only the current
+fixed-point error, the reference error for the current restart cycle, the
+previous trial error and its validity, the Halpern iterations since the last
+restart, and the total iteration count. It owns no vector, Backend handle,
+allocation, reduction, synchronization, norm computation, or primal-weight
+update. Defaults are `sufficient_decay=0.2`, `necessary_decay=0.8`,
+`artificial_threshold=0.36`, and `check_interval=40`.
+
+The rule reproduces the legacy order and comparison strictness:
+`total == check_interval` restarts unconditionally;
+above the interval, `current <= sufficient_decay * reference`,
+then `current <= necessary_decay * reference` with a valid previous trial and
+`current > previous_trial`, then
+`halpern >= artificial_threshold * total`; otherwise continue. The legacy
+inclusive `<=` decay comparisons and strict `>` non-improvement comparison are
+preserved, and a necessary-decay window that fails non-improvement still falls
+through to the artificial check. The legacy `last_trial_fpe = infinity`
+sentinel is replaced by an explicit `previous_trial_valid` flag, so an invalid
+previous trial can never satisfy the necessary-decay branch.
+`FixedPointRestartCondition` reports which condition fired, including
+`kFirstCheckInterval`. A restart returns an invalid reference and previous
+trial, so the caller must supply a freshly computed reference through
+`resetFixedPointRestart()`; a continue carries the reference and records the
+current error as the next previous trial. `artificial_threshold` is
+deliberately uncapped so the threshold product stays a reachable guard. Every
+parameter, state, input, counter, and product is validated, and any non-finite,
+negative, inconsistent, or overflowed value fails transactionally with a
+zero-initialized decision, condition, and state.
+
+The trigger is deliberately unintegrated: `fixed_trace`, `halpern_pdhg_step`,
+`algorithm::solve`, option translation, `evaluateRestart()`/`RestartState`,
+every backend, `pdhg.cc`, and `restart.cc` are unchanged. The TDD falsifier was
+the missing trigger API; the first build failed at compile time on the absent
+`FixedPointRestart*` names. `[phase7g]` then passed 304 assertions in five
+cases in the Clang CPU, Clang CUDA, and GCC CPU-only builds, and the CUDA graph
+launch counts remain 0/1/1/2/3 for 0/1/2/4/5 iterations.
+
+Recorded for Phase 7, not fixed here: the Tier A3 `evaluateRestart()` models
+`RestartScheme::checkRestart()` in `restart.cc`, which the active Halpern loop
+never calls; the two rules differ in metric, comparison strictness, and
+reference point. `RestartScheme::updateBeta(primal_weight^2)` ties that
+inactive scheme to the legacy primal-weight update. The legacy first restart is
+unconditional at `final_iter_count == PDHG_CHECK_INTERVAL`, and
+`PDHG_CHECK_INTERVAL` is a compile-time constant rather than an option.
+
+### Tier A8 prerequisite to Phase 7: fixed-point error evaluator
+
+`algorithm/fixed_point_error.{hpp,cc}` now evaluates the active legacy Halpern
+fixed-point error through only `copy`, `axpy`, `multiplyTranspose`, `norm2`, and
+`dot`. It consumes the current `omega`, the stored `eta`, four immutable
+iterate handles, and three distinct caller-owned scratch handles. It allocates
+nothing, reports exactly three scalar readbacks on success, and returns a
+zero-initialized error value and readback count on any validation or backend
+failure. The TDD build first failed on the missing module; final `[phase7h]`
+passes 692 assertions in six Clang/GCC CPU cases and 762 assertions in seven
+Clang CUDA cases. CPU/CUDA agreement uses the established `5e-13` margin, and
+CUDA graph launch counts remain 0/1/1/2/3.
+
+Recorded, not fixed: legacy PID restarts update `params_.omega` without
+refreshing `params_.eta`; legacy checks allocate three temporary vectors; and
+CPU/GPU reduction order permits tolerant rather than bitwise cross-backend
+agreement. The evaluator and Tier A7 trigger remain unintegrated, public
+`solver="hipdlp"` still uses legacy, `algorithm::solve` still returns structured
+`kNotReady`, and Phase 7 cross-solver validation has not begun.
+
+### Tier A9 prerequisite to Phase 7: final fixed-point-error observation
+
+`algorithm/fixed_trace.{hpp,cc}` now optionally calls the Tier A8 evaluator
+exactly once after a positive completed trace and after all recorded replays.
+It forwards the supplied `omega` and `eta`, reuses the retired next-iterate
+handles and primal candidate as scratch, allocates no vector, and publishes the
+three scalar readbacks only on success. The default is disabled with invalid
+scalar sentinels; enabled zero-iteration traces validate those scalars but stay
+unobserved with no readback. Any evaluator failure discards the trace,
+averages, convergence observations, fixed-point observation, and partial
+scalar diagnostics. `[phase7i]` passes in Clang CPU/CUDA and GCC CPU, with
+CPU/CUDA agreement and unchanged recorded launches 0/1/1/2/3.
+
+Recorded, not fixed: legacy `initial_fpe_` starts at zero and the first
+iteration-40 check restarts before a later major step refreshes the reference;
+legacy convergence precedes the restart trigger. Tier A9 owns no reference
+error or precedence, does not invoke Tier A7, and leaves restart execution,
+PID updates, cadence, final selection, public routing, and Phase 7 validation
+deferred.
+
+### Tier A10 prerequisite to Phase 7: final fixed-point restart observation
+
+`algorithm/fixed_trace.{hpp,cc}` now composes the Tier A9 fixed-point-error
+observation with the Tier A7 scalar trigger exactly once, as an opt-in
+observation reported as data. `FixedTraceOptions::fixed_point_restart` carries
+an `enabled` flag, the caller-owned previous `FixedPointRestartState`, and the
+`FixedPointRestartParameters`; `FixedTraceResult::fixed_point_restart` exposes
+the unchanged `FixedPointRestartResult`, including its next state, decision,
+and condition. The default is disabled, and enabling the trigger without the
+fixed-point-error observation is rejected with `kInvalidOption` before any
+backend resource is created.
+
+For a positive trace the trigger runs only after the final convergence
+observations succeed. It forwards the Tier A9 error unchanged as
+`current_error`, passes the completed iteration count as both
+`halpern_iterations` and `total_iterations`, and forwards `previous` and
+`parameters` exactly as supplied. The trace neither applies the reported next
+state nor synthesizes, refreshes, or retains reference-error state, and it does
+not call `resetFixedPointRestart()`. A zero-iteration trace has no
+fixed-point-error observation and therefore no trigger observation. A
+`kRestart` decision is still a successful trace that publishes the normal
+points, averages, and convergence observations; an optimal convergence
+decision and a restart decision are exposed independently without choosing
+between them. Any trigger failure preserves the first Tier A7 error code and
+message and discards the entire trace, including the successful Tier A9
+observation.
+
+The trigger is scalar-only: relative to an otherwise identical Tier A9 trace it
+adds no allocation, descriptor, backend operation, transfer, scalar readback,
+synchronization, recording, or graph launch. No production module, test
+executable, backend capability, or build registration was added, and no
+restart execution, `updatePrimalWeight()`, KKT verifier, postsolve, logging, or
+legacy call was introduced. The TDD falsifier was the absent
+`FixedTraceFixedPointRestart*` API; the first build failed at compile time.
+`[phase7j]` then passed 569 assertions in seven cases in the Clang CPU and GCC
+CPU builds and 1801 assertions in nine cases in the Clang CUDA build, with
+serial CPU, direct CUDA, and recorded CUDA agreeing, identical CUDA resource
+audits between the Tier A9-only and Tier A10 runs, and recorded launches still
+0/1/1/2/3 for 0/1/2/4/5 iterations.
+
+Recorded, not fixed: the two-iteration fixed-point error of the one-step
+fixture is exactly `sqrt(289/576) = 17/24` in exact arithmetic but lands one
+unit in the last place below it in FP64, because the Halpern anchor weight
+`1 - 1/3` is not the correctly rounded `2/3`. Restart execution, reset, PID
+updates, reference ownership, periodic cadence, final iterate selection,
+operator-norm and step-size initialization, public routing, and Phase 7
+cross-solver validation remain unimplemented.
+
+### Tier A11 prerequisite to Phase 7: periodic fixed-point restart observation
+
+`algorithm/fixed_trace.{hpp,cc}` now observes the Tier A7 trigger on a
+caller-controlled cadence instead of only once.
+`FixedTraceFixedPointRestartOptions::check_cadence` defaults to `0`, which keeps
+the Tier A10 final-only check; a positive cadence adds a check at every multiple
+of it below the final iteration. `FixedTraceResult` exposes an ordered
+`fixed_point_restart_checks` of `FixedTraceFixedPointRestartCheck{iteration,
+error, evaluation}`, and `fixed_point_error` and `fixed_point_restart` remain
+the last check, so Tier A9 and Tier A10 outputs are unchanged. A negative
+cadence is rejected with `kInvalidOption`, as is a cadence that is not a
+multiple of the recorded block length while blocks would still be pending,
+because recorded blocks are never split, resized, or reordered and no
+conditional recorded node was added.
+
+Each check evaluates the Tier A8 error exactly once, reusing only the scratch
+handles Tier A9 already reuses: the retired next-iterate slots and the primal
+candidate. All three are pure outputs of the Halpern step, so a mid-loop check
+cannot perturb a later iteration. Direct traces check at an iteration boundary
+after the point is recorded; recorded traces check between block replays using
+the handle assignment snapshotted when that block was recorded. Reference state
+is chained explicitly and derived from the recorded checks alone: `kContinue`
+carries `result.next`, `kRestart` carries `resetFixedPointRestart()` of the
+error at that same check, `halpern_iterations` measures the distance to the last
+`kRestart` check, and `total_iterations` is the completed iteration count. No
+vector, anchor, average, step size, primal weight, counter, or trace result is
+altered, and no restart execution, `updatePrimalWeight()`, KKT verifier,
+postsolve, logging, or legacy call was introduced. A failure at any check
+preserves the first error code and message and discards the whole trace,
+including earlier successful checks.
+
+No production module, test executable, backend capability, or build
+registration was added. The TDD falsifier was the absent cadence API; the first
+build failed at compile time on `check_cadence`,
+`FixedTraceFixedPointRestartCheck`, and `fixed_point_restart_checks`.
+`[phase7k]` then passed 609 assertions in six cases in the Clang CPU and GCC CPU
+builds and 2194 assertions in seven cases in the Clang CUDA build. Cadence `0`
+reproduces Tier A10 bitwise, including diagnostics and identical CUDA resource
+audits; serial CPU, direct CUDA, and recorded CUDA agree on every decision and
+condition; recorded launches remain 0/1/1/2/3 for 0/1/2/4/5 iterations; repeated
+runs are bitwise deterministic per backend; and the CUDA audit delta per extra
+check is exactly six device-to-host events and three synchronizations, with no
+extra allocation, descriptor, host-to-device transfer, graph creation, or graph
+launch.
+
+Recorded, not fixed: the cadence is a pure observation sequence with no
+consumer. Restart execution, anchor and averaging reset, the full solve loop,
+final iterate selection, PID primal-weight invocation, operator-norm and
+step-size initialization, adaptive line search, Malitsky-Pock behavior,
+certificates, postsolve, status mapping, public rewrite routing, and Phase 7
+cross-solver validation all remain unimplemented.
+
+### Tier A12 prerequisite to Phase 7: scalar restart primal-weight update
+
+`algorithm/step_size_policy.{hpp,cc}` now exposes
+`updatePrimalWeightAtRestart()` as a pure scalar extension of the existing Tier
+A6 policy. The active legacy body reads `params_.i_smooth`, `params_.k_p`,
+`params_.k_i`, and `params_.k_d`; the current and best weights, PID sum and last
+error, best residual gap, and incoming primal/dual steps. Its admissibility
+order is the strict distance window `(1e-16, 1e12)` followed by the strict
+relative-infeasibility-ratio window `(1e-8, 1e8)`. A zero relative primal
+residual selects the legacy `1e300` sentinel, which always fails the upper
+bound and therefore reverts. The controlled PID evaluation order, fallback to
+the best weight with both accumulators zeroed, strict post-branch best-gap
+tracking, and incoming `sqrt(primal_step * dual_step)` eta invariant are
+preserved.
+
+Every input scalar and intermediate is checked for FP64 range; any failure
+returns the first error with `kNone`, zero state, and zero step sizes. Unlike
+the legacy tail, this routine does not write beta or omega and does not call
+the inactive `RestartScheme::updateBeta()`. It owns no vector, Backend,
+reduction, allocation, logging, or legacy dependency, and only `[phase7l]`
+tests call it. The requested TDD compile failure was observed before adding the
+API. Final Tier A aggregates pass 5,656 assertions in 77 cases in Clang CPU
+and GCC CPU, and 10,053 assertions in 85 cases in Clang CUDA; all requested
+`[phase3c]`, `[phase5g]`, `[hipdlp]`, and `[pdlp]` Clang filters also pass.
+Restart execution, reset application, solve-loop integration, public routing,
+and Phase 7 cross-solver validation remain unimplemented.
+
+### Tier A13 correction: candidate-based fixed-trace error observation
+
+`algorithm/fixed_trace.cc` now passes the projected primal and dual candidates,
+rather than the post-Halpern current iterate, to every Tier A8 fixed-point-error
+evaluation. Reflected handles remain immutable inputs, the retired iterate
+slots remain delta scratch, and the already allocated `averaged_aty` handle is
+reused as distinct transpose-product scratch before its later overwrite. This
+adds no resource, transfer, synchronization, readback, capability, or graph
+operation; each evaluation still reports exactly three scalar readbacks.
+
+The `[phase7m]` TDD fixture first observed `17/24` instead of the independently
+derived candidate value `11/16` at iteration two. It now passes 226 assertions
+in four Clang/GCC CPU cases and 904 assertions in five Clang CUDA cases,
+covering exact one- and multi-step arithmetic, cadence boundaries, direct and
+recorded agreement, audit and graph-launch invariants, determinism, and
+transactional failure. Affected Tier A10-A11 expected values now follow the
+legacy candidate formula. Restart decisions remain observations only: no
+restart, anchor or average reset, primal-weight update, solve loop, final
+iterate selection, postsolve/status handling, or public routing is consumed or
+changed.
+
+### Tier A14 prerequisite to Phase 7: fixed-trace restart state transition
+
+`algorithm/fixed_trace.cc` now consumes the Tier A11 decisions instead of only
+recording them. On `kRestart` the trace copies the projected primal and dual
+candidates into both the current iterate and both anchors, recomputes the
+cached `Ax` and `A^T y`, resets the Halpern age, resets `AveragingState`, and
+clears both weighted sums, exactly as the active legacy
+`PDLPSolver::solve()` restart body does. It calls neither
+`updatePrimalWeightAtRestart()` nor any step-size update.
+
+Each check is evaluated and pushed before any iterate, anchor, age, average, or
+sum is touched, so the record keeps the pre-reset candidate error and decision
+while the boundary trace point is rewritten to the post-decision state that
+continues into the next iteration. The same transition runs at a final
+restart, which leaves no post-restart sample and therefore no valid average or
+averaged convergence observation. `HalpernPdhgState::iteration` is now used
+only as the resettable Halpern age; the trace owns a separate monotone
+`total_iterations` that drives the loop bound, trace indices, cadence
+boundaries, step-sequence indices, recorded check iterations, and the trigger's
+`total_iterations` input, so no header or shared-step API changed.
+
+Recorded mode now records, finalizes, and replays each existing one- or
+two-step block before capturing the next one, because a captured anchor weight
+bakes in the Halpern age that the block's own decision may reset. Blocks are
+neither split nor reordered, no conditional graph node was added, and the
+mid-block-cadence rejection is unchanged; command-buffer, graph-capture,
+instantiation, and launch counts stay at 0/1/1/2/3 for 0/1/2/4/5 iterations.
+An executed restart adds only device-to-device copies and direct kernel
+enqueues: no allocation, host-to-device transfer, download, scalar readback,
+explicit synchronization, capability, module, executable, or build
+registration. Every fixed-point-error evaluation still reports exactly three
+scalar readbacks, and disabled or never-triggering restart traces stay bitwise
+identical to fixed-point-error-only traces with identical diagnostics and CUDA
+audits.
+
+The `[phase7n]` TDD fixture failed first against the observing implementation:
+at a restart on iteration two it saw the Halpern blend `7/6` and the follow-on
+`29/16` instead of the candidate `9/8` and the post-restart `57/32`, and the
+third error `25/48` instead of `35/64`. `[phase7n]` now passes 423 assertions
+in nine cases in Clang CPU and GCC CPU and 2,065 assertions in eleven cases in
+Clang CUDA, covering exact restart-at-two arithmetic and the following step,
+candidate-to-current and candidate-to-anchor adoption, divergent total and
+Halpern counters, averaging reset with only later samples, mixed periodic
+decisions, final-boundary semantics, direct CPU, direct CUDA and recorded CUDA
+agreement, resource and graph-launch invariants, determinism, and transactional
+failure including injected CUDA failures. Affected Tier A9-A11 expectations
+now follow the executed trajectory. Final Clang totals are `[hipdlp]`
+9,424/127 and `[pdlp]` 9,454/135 on CPU and 24,159/159 and 24,189/167 on CUDA,
+with `[phase3c]` and `[phase5g]` unchanged.
+
+Recorded, not fixed: restart primal-weight updates stay unconsumed. Operator
+norm and step-size initialization, convergence cadence and early stopping,
+final iterate selection, the solve loop, postsolve and status handling, public
+rewrite routing, and Phase 7 cross-solver validation all remain unimplemented.
+
+### Tier A15 prerequisite to Phase 7: fixed-trace convergence cadence
+
+`algorithm/fixed_trace.{hpp,cc}` now optionally records Tier A1 convergence
+checks from the projected primal and dual candidates at a caller-selected
+cadence. The two candidate products are preallocated only when enabled; each
+check recomputes both products, downloads exactly the four candidate vectors,
+passes the monotone boundary total to `evaluateStopping()`, and is stored
+immediately before the restart check. Recorded mode observes only after the
+same block has replayed. Decisions are diagnostic only: even `kOptimal` does
+not stop or shorten the fixed trace, and Tier A14 restart transitions remain
+unchanged.
+
+The one-column equality fixture gives raw
+`(primal, dual, gap, primal objective, dual objective)` values
+`(3/2, 0, 3/2, -1/2, -2)` at iteration one and
+`(7/8, 0, 7/8, -9/8, -2)` at iteration two, normalized to
+`(1/2, 0, 3/7)` and `(7/24, 0, 7/33)`. The first Halpern point is
+algebraically the candidate; at iteration two its metrics instead use
+`(5/6, 0, 5/6, -7/6, -2)` and normalize to `(5/18, 0, 1/5)`. A restart at
+the shared boundary leaves the recorded candidate metrics unchanged while
+adopting that candidate as the Tier A14 boundary point and resetting the later
+trajectory.
+
+TDD first failed to compile because the periodic API and ordered history did
+not exist. Final `[phase7o]` passes 771 assertions in five Clang/GCC CPU cases
+and 1,988 assertions in seven Clang CUDA cases. Enabled runs add exactly two
+pre-loop resources and four diagnostic transfers per check; CUDA adds eight
+device-to-host events and four synchronizations per check, with unchanged
+command-buffer and graph-launch counts. All 53 requested post-edit filters
+pass separately, including `[phase7a]` through `[phase7o]`, `[phase3c]`,
+`[phase5g]`, `[hipdlp]`, and `[pdlp]` in both Clang builds and all Tier A
+filters in GCC. Early stopping, restart primal-weight updates, initialization,
+final selection, the solve loop, postsolve/status handling, public routing,
+and Phase 7 remain unconsumed.
+
 ### Phase 7: Full cross-solver validation
 
 - Run rewritten CPU and CUDA against legacy HiPDLP, in-tree cuPDLP, external

@@ -66,6 +66,62 @@ struct RestartResult {
 RestartResult evaluateRestart(const RestartInput& input);
 RestartState resetRestart();
 
+enum class FixedPointRestartCondition {
+  kNone,
+  kNotTriggered,
+  kFirstCheckInterval,
+  kSufficientDecay,
+  kNecessaryDecay,
+  kArtificialThreshold
+};
+
+struct FixedPointRestartParameters {
+  double sufficient_decay;
+  double necessary_decay;
+  // Deliberately uncapped so the artificial threshold product stays guarded.
+  double artificial_threshold;
+  HighsInt check_interval;
+
+  FixedPointRestartParameters();
+};
+
+struct FixedPointRestartState {
+  double reference_error;
+  double previous_trial_error;
+  bool reference_valid;
+  bool previous_trial_valid;
+  bool history_valid;
+
+  FixedPointRestartState();
+};
+
+// Consumes only precomputed scalars; it owns no vector, backend, or reduction.
+struct FixedPointRestartInput {
+  FixedPointRestartState previous;
+  double current_error;
+  HighsInt halpern_iterations;
+  HighsInt total_iterations;
+  FixedPointRestartParameters parameters;
+
+  FixedPointRestartInput();
+};
+
+struct FixedPointRestartResult {
+  api::Error error;
+  FixedPointRestartState next;
+  RestartDecision decision;
+  FixedPointRestartCondition condition;
+
+  FixedPointRestartResult();
+
+  bool ok() const;
+};
+
+// Scalar model of the active legacy PDLPSolver::checkRestartCriteria().
+FixedPointRestartResult evaluateFixedPointRestart(
+    const FixedPointRestartInput& input);
+FixedPointRestartState resetFixedPointRestart(double reference_error);
+
 }  // namespace algorithm
 }  // namespace hipdlp
 

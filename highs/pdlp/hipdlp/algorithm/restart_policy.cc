@@ -71,6 +71,36 @@ RestartResult failure(const api::ErrorCode code, const char* message) {
   return result;
 }
 
+bool validOptionalError(const double value, const bool valid) {
+  if (!valid) return value == 0.0 && !std::signbit(value);
+  return std::isfinite(value) && value >= 0.0;
+}
+
+bool validFixedPointRestartState(const FixedPointRestartState& state) {
+  return state.history_valid &&
+         validOptionalError(state.reference_error, state.reference_valid) &&
+         validOptionalError(state.previous_trial_error,
+                            state.previous_trial_valid);
+}
+
+bool validFixedPointRestartParameters(
+    const FixedPointRestartParameters& parameters) {
+  return std::isfinite(parameters.sufficient_decay) &&
+         parameters.sufficient_decay > 0.0 &&
+         std::isfinite(parameters.necessary_decay) &&
+         parameters.necessary_decay > parameters.sufficient_decay &&
+         parameters.necessary_decay < 1.0 &&
+         std::isfinite(parameters.artificial_threshold) &&
+         parameters.artificial_threshold > 0.0 && parameters.check_interval > 0;
+}
+
+FixedPointRestartResult fixedPointFailure(const api::ErrorCode code,
+                                          const char* message) {
+  FixedPointRestartResult result;
+  result.error = api::Error(code, message);
+  return result;
+}
+
 }  // namespace
 
 RestartParameters::RestartParameters()
@@ -204,6 +234,111 @@ RestartResult evaluateRestart(const RestartInput& input) {
 }
 
 RestartState resetRestart() { return RestartState(); }
+
+FixedPointRestartParameters::FixedPointRestartParameters()
+    : sufficient_decay(0.2),
+      necessary_decay(0.8),
+      artificial_threshold(0.36),
+      check_interval(40) {}
+
+FixedPointRestartState::FixedPointRestartState()
+    : reference_error(0.0),
+      previous_trial_error(0.0),
+      reference_valid(false),
+      previous_trial_valid(false),
+      history_valid(true) {}
+
+FixedPointRestartInput::FixedPointRestartInput()
+    : current_error(std::numeric_limits<double>::quiet_NaN()),
+      halpern_iterations(0),
+      total_iterations(0) {}
+
+FixedPointRestartResult::FixedPointRestartResult()
+    : decision(RestartDecision::kNone),
+      condition(FixedPointRestartCondition::kNone) {
+  next.history_valid = false;
+}
+
+bool FixedPointRestartResult::ok() const {
+  return error.ok() && decision != RestartDecision::kNone &&
+         condition != FixedPointRestartCondition::kNone &&
+         validFixedPointRestartState(next);
+}
+
+FixedPointRestartResult evaluateFixedPointRestart(
+    const FixedPointRestartInput& input) {
+  if (!validFixedPointRestartParameters(input.parameters))
+    return fixedPointFailure(
+        api::ErrorCode::kInvalidOption,
+        "HiPDLP fixed-point restart parameters are invalid");
+  if (!validFixedPointRestartState(input.previous) ||
+      !input.previous.reference_valid)
+    return fixedPointFailure(
+        api::ErrorCode::kInvalidArgument,
+        "HiPDLP fixed-point restart history is invalid or has no reference "
+        "error");
+  if (!std::isfinite(input.current_error) || input.current_error < 0.0)
+    return fixedPointFailure(
+        api::ErrorCode::kInvalidArgument,
+        "HiPDLP current fixed-point error must be finite and nonnegative");
+  if (input.total_iterations < 0 || input.halpern_iterations < 0 ||
+      input.halpern_iterations > input.total_iterations)
+    return fixedPointFailure(
+        api::ErrorCode::kInvalidArgument,
+        "HiPDLP fixed-point restart iteration counters are invalid");
+
+  const double sufficient_boundary =
+      input.parameters.sufficient_decay * input.previous.reference_error;
+  const double necessary_boundary =
+      input.parameters.necessary_decay * input.previous.reference_error;
+  const double artificial_boundary =
+      input.parameters.artificial_threshold *
+      static_cast<double>(input.total_iterations);
+  if (!std::isfinite(sufficient_boundary) ||
+      !std::isfinite(necessary_boundary) || !std::isfinite(artificial_boundary))
+    return fixedPointFailure(
+        api::ErrorCode::kInvalidArgument,
+        "HiPDLP fixed-point restart thresholds are outside FP64 range");
+
+  FixedPointRestartCondition condition =
+      FixedPointRestartCondition::kNotTriggered;
+  if (input.total_iterations == input.parameters.check_interval) {
+    condition = FixedPointRestartCondition::kFirstCheckInterval;
+  } else if (input.total_iterations > input.parameters.check_interval) {
+    if (input.current_error <= sufficient_boundary) {
+      condition = FixedPointRestartCondition::kSufficientDecay;
+    } else if (input.current_error <= necessary_boundary &&
+               input.previous.previous_trial_valid &&
+               input.current_error > input.previous.previous_trial_error) {
+      condition = FixedPointRestartCondition::kNecessaryDecay;
+    } else if (static_cast<double>(input.halpern_iterations) >=
+               artificial_boundary) {
+      condition = FixedPointRestartCondition::kArtificialThreshold;
+    }
+  }
+
+  const bool restart = condition != FixedPointRestartCondition::kNotTriggered;
+
+  FixedPointRestartResult result;
+  result.decision =
+      restart ? RestartDecision::kRestart : RestartDecision::kContinue;
+  result.condition = condition;
+  result.next.history_valid = true;
+  if (!restart) {
+    result.next.reference_error = input.previous.reference_error;
+    result.next.reference_valid = true;
+    result.next.previous_trial_error = input.current_error;
+    result.next.previous_trial_valid = true;
+  }
+  return result;
+}
+
+FixedPointRestartState resetFixedPointRestart(const double reference_error) {
+  FixedPointRestartState state;
+  state.reference_error = reference_error;
+  state.reference_valid = true;
+  return state;
+}
 
 }  // namespace algorithm
 }  // namespace hipdlp

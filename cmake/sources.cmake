@@ -410,10 +410,13 @@ set(highs_sources
     pdlp/HiPdlpWrapper.cpp
     pdlp/hipdlp/algorithm/averaging_policy.cc
     pdlp/hipdlp/algorithm/convergence.cc
+    pdlp/hipdlp/algorithm/fixed_point_error.cc
     pdlp/hipdlp/algorithm/fixed_trace.cc
     pdlp/hipdlp/algorithm/halpern_pdhg_step.cc
+    pdlp/hipdlp/algorithm/operator_norm.cc
     pdlp/hipdlp/algorithm/restart_policy.cc
     pdlp/hipdlp/algorithm/solver.cc
+    pdlp/hipdlp/algorithm/step_size_policy.cc
     pdlp/hipdlp/api/options.cc
     pdlp/hipdlp/api/solver.cc
     pdlp/hipdlp/api/status.cc
@@ -582,10 +585,13 @@ set(highs_headers
     pdlp/HiPdlpWrapper.h
     pdlp/hipdlp/algorithm/averaging_policy.hpp
     pdlp/hipdlp/algorithm/convergence.hpp
+    pdlp/hipdlp/algorithm/fixed_point_error.hpp
     pdlp/hipdlp/algorithm/fixed_trace.hpp
     pdlp/hipdlp/algorithm/halpern_pdhg_step.hpp
+    pdlp/hipdlp/algorithm/operator_norm.hpp
     pdlp/hipdlp/algorithm/restart_policy.hpp
     pdlp/hipdlp/algorithm/solver.hpp
+    pdlp/hipdlp/algorithm/step_size_policy.hpp
     pdlp/hipdlp/api/options.hpp
     pdlp/hipdlp/api/solver.hpp
     pdlp/hipdlp/api/status.hpp
