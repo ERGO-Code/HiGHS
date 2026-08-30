@@ -6,7 +6,7 @@ name: build-hip
 # the HIP backend (-DHIPDLP_HIP=ON). It does NOT execute any GPU code: the
 # GitHub-hosted runners have no AMD GPU. Its purpose is to catch HIP build
 # regressions (wrong hip* API names, desynchronised #ifdef guards, signature
-# mismatches) that are invisible to the CPU/CUDA builds.
+# mismatches) that are invisible to the CPU / CUDA builds.
 #
 # Running the GPU code (numerical validation) requires a self-hosted runner
 # with an AMD GPU and is intentionally out of scope here.
@@ -33,8 +33,8 @@ jobs:
   hip-compile:
     runs-on: ubuntu-latest
     container:
-      # 24.04 + ROCm 7.x; the "-complete" image bundles hipBLAS/hipSPARSE.
-      image: rocm/dev-ubuntu-24.04:7.2.4-complete
+      # 24.04 + ROCm 10.x; the "-full" image bundles hipBLAS / hipSPARSE
+      image: rocm/dev-ubuntu-24.04:10.0.0-full
 
     steps:
       - uses: actions/checkout@v6
@@ -56,11 +56,15 @@ jobs:
           cmake -S . -B build_hip \
             -DHIPDLP_HIP=ON \
             -DBUILD_TESTING=OFF \
-            -DBUILD_EXAMPLES=OFF \
+            -DBUILD_EXAMPLES=ON \
             -DCMAKE_BUILD_TYPE=Release
 
       - name: Build (compile + link, no GPU execution)
         shell: bash
         run: |
           export PATH=/opt/rocm/bin:$PATH
-          cmake --build build_hip --target highs --parallel
+          # Build the library and the HiPDLP example. The example only compiles
+          # and links against the HIP-enabled library; it is not executed here
+          # (the GitHub-hosted runners have no AMD GPU). BUILD_TESTING=OFF keeps
+          # it from being registered as a ctest.
+          cmake --build build_hip --target highs call_highs_hipdlp --parallel

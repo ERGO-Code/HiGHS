@@ -6,6 +6,9 @@ NVIDIA GPU under Linux and Windows. However, to achieve this, CUDA
 utilities must be installed and HiGHS must be built locally using
 CMake, as described below.
 
+The native HiPDLP solver additionally supports AMD GPUs through
+[ROCm](https://rocm.docs.amd.com/) / HIP.
+
 ### PDLP: A health warning
 
 First order solvers for LP are still very much "work in
@@ -55,4 +58,10 @@ nvcc --version
 
 ### Build HiGHS with GPU support
 
-See [Building HiGHS with NVidia GPU support](@ref gpu-build).
+For NVIDIA GPUs, see [Building HiGHS with NVidia GPU support](@ref
+gpu-build).
+
+For AMD GPUs, see [Building HiGHS with AMD GPU support](@ref
+gpu-build-amd).
+This uses ROCm / HIP and its hipBLAS and hipSPARSE libraries
+instead of CUDA.

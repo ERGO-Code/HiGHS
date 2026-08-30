@@ -117,7 +117,7 @@ cmake --build build --parallel
 
 to build HiGHS.
 
-### Bazel build with Cuda
+### Bazel build with CUDA
 
 Alternatively, for Bazel run
 
@@ -130,3 +130,40 @@ It may be necessary to also specify the architecture, e.g.
 ```
 bazel build //... --//:cupdlp_gpu --@rules_cuda//cuda:archs=sm_89
 ```
+
+## [Building HiGHS with AMD GPU support](@id gpu-build-amd)
+
+The native HiPDLP solver can also run on an AMD GPU using
+[ROCm](https://rocm.docs.amd.com/) / HIP. This requires a ROCm
+installation providing the HIP compiler and the hipBLAS and hipSPARSE
+libraries. Make sure the HIP compiler is available by running
+
+```
+hipcc --version
+```
+
+Then build HiGHS, from the root directory, with
+
+```
+cmake -S. -Bbuild -DHIPDLP_HIP=ON
+cmake --build build --parallel
+```
+
+CMake must be able to find ROCm. If it is not installed in the default
+location, point it there, for example
+
+```
+export PATH=/opt/rocm/bin:$PATH
+export CMAKE_PREFIX_PATH=/opt/rocm
+```
+
+The HIP backend compiles the same HiPDLP source as the CUDA backend,
+selecting the AMD implementation at build time. Once built, the solver
+is selected at run time by setting the [__solver__](@ref
+option-solver) option to "hipdlp".
+
+To check the ROCm/  HIP backend on the local machine, run the example
+`call_highs_hipdlp` (also registered as the ctest
+`cxx_examples_call_highs_hipdlp`), which solves a small LP with
+`solver = "hipdlp"` and verifies the result. A successful run is a
+quick end-to-end sanity check of the GPU backend.
