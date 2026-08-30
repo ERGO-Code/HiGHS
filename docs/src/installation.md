@@ -142,6 +142,11 @@ libraries. Make sure the HIP compiler is available by running
 hipcc --version
 ```
 
+ROCm 10.0 or newer is recommended (this is the version the HIP backend
+is tested against). On such a ROCm, the supported GPU architectures are
+`gfx908` and newer (e.g. `gfx908`/MI100, `gfx90a`/MI200,
+`gfx942`/MI300, and recent RDNA cards).
+
 Then build HiGHS, from the root directory, with
 
 ```
@@ -156,6 +161,20 @@ location, point it there, for example
 export PATH=/opt/rocm/bin:$PATH
 export CMAKE_PREFIX_PATH=/opt/rocm
 ```
+
+By default the HIP device code is compiled for a generic set of GPU
+architectures. To target the specific GPU on the build machine (which
+also speeds up compilation and linking), set `CMAKE_HIP_ARCHITECTURES`
+to its `gfx` target, for example
+
+```
+cmake -S. -Bbuild -DHIPDLP_HIP=ON -DCMAKE_HIP_ARCHITECTURES=gfx90a
+```
+
+You can find the `gfx` identifier of the installed GPU with `rocminfo`
+(look for the `gfx` name, e.g. `gfx90a` for MI200-class cards or
+`gfx942` for MI300). Multiple architectures may be given as a
+semicolon-separated list, e.g. `-DCMAKE_HIP_ARCHITECTURES="gfx90a;gfx942"`.
 
 The HIP backend compiles the same HiPDLP source as the CUDA backend,
 selecting the AMD implementation at build time. Once built, the solver

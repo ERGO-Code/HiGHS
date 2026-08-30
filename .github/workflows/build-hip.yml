@@ -57,6 +57,7 @@ jobs:
             -DHIPDLP_HIP=ON \
             -DBUILD_TESTING=OFF \
             -DBUILD_EXAMPLES=ON \
+            -DCMAKE_HIP_ARCHITECTURES=gfx90a \
             -DCMAKE_BUILD_TYPE=Release
 
       - name: Build (compile + link, no GPU execution)
