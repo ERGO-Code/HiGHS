@@ -162,7 +162,7 @@ selecting the AMD implementation at build time. Once built, the solver
 is selected at run time by setting the [__solver__](@ref
 option-solver) option to "hipdlp".
 
-To check the ROCm/  HIP backend on the local machine, run the example
+To check the ROCm / HIP backend on the local machine, run the example
 `call_highs_hipdlp` (also registered as the ctest
 `cxx_examples_call_highs_hipdlp`), which solves a small LP with
 `solver = "hipdlp"` and verifies the result. A successful run is a
