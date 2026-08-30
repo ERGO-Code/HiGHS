@@ -57,7 +57,9 @@ jobs:
             -DHIPDLP_HIP=ON \
             -DBUILD_TESTING=OFF \
             -DBUILD_EXAMPLES=ON \
-            -DCMAKE_HIP_ARCHITECTURES=gfx90a \
+            -DCMAKE_C_COMPILER=amdclang \
+            -DCMAKE_CXX_COMPILER=amdclang++ \
+            -DCMAKE_SHARED_LINKER_FLAGS="-fuse-ld=lld" \
             -DCMAKE_BUILD_TYPE=Release
 
       - name: Build (compile + link, no GPU execution)
