@@ -95,8 +95,6 @@ TEST_CASE("test-weakly-dominated-col-upper", "[highs_test_presolve_rules]") {
   HighsLp lp;
   lp.num_col_ = 2;
   lp.num_row_ = 2;
-  lp.sense_ = ObjSense::kMinimize;
-  lp.col_cost_ = {0, -1};
   lp.col_lower_ = {-kHighsInf, -kHighsInf};
   lp.col_upper_ = {1,  kHighsInf};
   lp.row_lower_ = {-kHighsInf,         1};
@@ -105,12 +103,23 @@ TEST_CASE("test-weakly-dominated-col-upper", "[highs_test_presolve_rules]") {
   lp.a_matrix_.start_ = {0, 2, 3};
   lp.a_matrix_.index_ = {0, 1, 0};
   lp.a_matrix_.value_ = {1, 1, 1};
-  std::string sense_string = "minimize";
+
+  const bool maximize_first = true;
+  std::string sense_string = "";
   std::string test_string = "";
   
   for (HighsInt k = 0; k < 2; k++) {
-    // First pass is minimize c^Tx; second maximize -c^Tx
-
+    // Passes are minimize c^Tx and maximize -c^Tx according to
+    // maximize_first
+    if (maximize_first) {
+      lp.sense_ = ObjSense::kMaximize;
+      sense_string = "maximize";
+      lp.col_cost_ = {0, 1};
+    } else {
+      lp.sense_ = ObjSense::kMinimize;
+      sense_string = "minimize";
+      lp.col_cost_ = {0, -1};
+    }
     //  REQUIRE(h.setOptionValue("presolve_rule_test", 0) == HighsStatus::kOk);
     //  test_string = "vanilla-presolve-" + sense_string;
     //  presolveOffOn(test_string, lp, h);
@@ -122,9 +131,6 @@ TEST_CASE("test-weakly-dominated-col-upper", "[highs_test_presolve_rules]") {
     //  REQUIRE(h.setOptionValue("presolve_rule_off", 1 << kPresolveRuleInitialSweep) == HighsStatus::kOk);
     //  test_string = "test-weakly-dominated-col-upper-" + sense_string;
     //  presolveOffOn(test_string, lp, h, 1, 1, 1);
-    lp.sense_ = ObjSense::kMaximize;
-    lp.col_cost_ = {0, 1};
-    sense_string = "maximize";
   }
   h.resetGlobalScheduler(true);
 }
@@ -155,10 +161,12 @@ void presolveOffOn(const std::string& message, const HighsLp& lp, Highs& h,
         solver = kSimplexString;
       } else if (k == 2) {
         solver = kIpmString;
-      } else if (k == 3) {
-        solver = kIpmString;
         run_crossover = kHighsOffString;
         basis_postsolve = false;
+      } else if (k == 3) {
+        solver = kIpmString;
+        run_crossover = kHighsOnString;
+        basis_postsolve = true;
       } else {
         solver = kHiPdlpString;
         basis_postsolve = false;

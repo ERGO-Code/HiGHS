@@ -1175,3 +1175,58 @@ TEST_CASE("issue-3140", "[highs_test_presolve]") {
 
   highs.resetGlobalScheduler(true);
 }
+
+TEST_CASE("no-crossover-postsolve", "[highs_test_presolve]") {
+  Highs h;
+  //  h.setOptionValue("output_flag", dev_run);
+
+  // LP is
+  //
+  // min -y, subject to x+y <= 0, x >= 0; 0 <= x <= 1, y free
+  //
+  // Optimal solution is x = 1; y = -1, with x nonbasic with dual -1, and 
+  HighsLp lp;
+  lp.num_col_ = 2;
+  lp.num_row_ = 2;
+  lp.sense_ = ObjSense::kMinimize;
+  lp.col_cost_ = {0, -1};
+  lp.col_lower_ = {-kHighsInf, -kHighsInf};
+  lp.col_upper_ = {1,  kHighsInf};
+  lp.row_lower_ = {-kHighsInf,         1};
+  lp.row_upper_ = {         0, kHighsInf};
+  lp.a_matrix_.format_ = MatrixFormat::kRowwise;
+  lp.a_matrix_.start_ = {0, 2, 3};
+  lp.a_matrix_.index_ = {0, 1, 0};
+  lp.a_matrix_.value_ = {1, 1, 1};
+
+  const bool use_mps = true;
+  if (use_mps) {
+    const std::string model = "adlittle";
+    std::string filename = std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
+    h.readModel(filename);
+    lp = h.getLp();
+  }  
+  REQUIRE(h.setOptionValue("solver", kHipoString) == HighsStatus::kOk);
+  REQUIRE(h.setOptionValue("run_crossover", kHighsOffString) == HighsStatus::kOk);
+  REQUIRE(h.setOptionValue("presolve_reduction_limit", 7) == HighsStatus::kOk);
+  REQUIRE(h.setOptionValue("presolve_rule_logging", true) == HighsStatus::kOk);
+  REQUIRE(h.setOptionValue("log_dev_level", 1) == HighsStatus::kOk);
+  
+  for (HighsInt k = 0; k < 2; k++) {
+    // First pass is minimize c^Tx; second maximize -c^Tx
+
+    printf("========================================\n"
+	   "Solving with sense %s\n"
+	   "========================================\n", k == 0 ? "Minimize" : "Maximize");
+    h.passModel(lp);
+    h.run();
+    
+    REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
+
+    lp.sense_ = ObjSense::kMaximize;
+    for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++)
+      lp.col_cost_[iCol] *= -1;
+  }
+  h.resetGlobalScheduler(true);
+}
+

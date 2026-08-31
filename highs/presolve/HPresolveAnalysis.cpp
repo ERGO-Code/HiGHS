@@ -51,6 +51,7 @@ void HPresolveAnalysis::setup(const HighsLp* model_,
   // calls to markRowDeleted and markColDeleted
 
   logging_on_ = allow_logging_;
+  called_analyse_presolve_rule_log_ = false;
   log_rule_type_ = kPresolveRuleIllegal;
   resetNumDeleted();
   presolve_log_.clear();
@@ -110,15 +111,26 @@ void HPresolveAnalysis::startPresolveRuleLog(const HighsInt rule_type) {
 }
 
 void HPresolveAnalysis::stopPresolveRuleLog(const HighsInt rule_type) {
-  const bool debug_print = false;
+  if (rule_type < 0) {
+    // Calling from HPRESOLVE_CHECKED_CALL, so return if no logging is
+    // currently being performed (indicated by log_rule_type_ ==
+    // kPresolveRuleIllegal)
+    if (log_rule_type_ == kPresolveRuleIllegal) return;
+    assert(!logging_on_);
+    // The trick of setting logging_on_ to be true before calling
+    // stopPresolveRuleLog (so that start/stop calls are paired in a
+    // method) won't have been done, so do it here
+    logging_on_ = true;
+  }
   assert(logging_on_);
-  assert(rule_type == log_rule_type_);
+  const int use_rule_type = rule_type >= 0 ? rule_type : log_rule_type_;
+  const bool debug_print = false;
   if (debug_print)
     printf("    stopPresolveRuleLog [%6d, %6d] for (%2d) %s\n",
-           int(*numDeletedRows), int(*numDeletedCols), int(rule_type),
-           utilPresolveRuleTypeToString(rule_type).c_str());
+           int(*numDeletedRows), int(*numDeletedCols), int(use_rule_type),
+           utilPresolveRuleTypeToString(use_rule_type).c_str());
   const int check_rule = kPresolveRuleIllegal;
-  if (rule_type == check_rule) {
+  if (use_rule_type == check_rule) {
     printf(">>  stopPresolveRuleLog [%6d, %6d] for (%2d) %s\n", int(check_rule),
            int(*numDeletedRows), int(*numDeletedCols),
            utilPresolveRuleTypeToString(check_rule).c_str());
@@ -127,8 +139,8 @@ void HPresolveAnalysis::stopPresolveRuleLog(const HighsInt rule_type) {
   const HighsInt num_removed_col = *numDeletedCols - num_deleted_cols0_;
   assert(num_removed_row >= 0);
   assert(num_removed_col >= 0);
-  presolve_log_.rule[rule_type].col_removed += num_removed_col;
-  presolve_log_.rule[rule_type].row_removed += num_removed_row;
+  presolve_log_.rule[use_rule_type].col_removed += num_removed_col;
+  presolve_log_.rule[use_rule_type].row_removed += num_removed_row;
 
   // Set the rule type to be illegal to indicate that stop has been
   // called, and update the record of num_deleted_rows/cols
@@ -139,10 +151,10 @@ void HPresolveAnalysis::stopPresolveRuleLog(const HighsInt rule_type) {
   const bool report = false;
   if (report)
     printf("%-25s Call %9d: (%3d, %3d) (%3d, %3d)\n",
-           utilPresolveRuleTypeToString(rule_type).c_str(),
-           (int)presolve_log_.rule[rule_type].call, (int)num_removed_col,
-           (int)num_removed_row, (int)presolve_log_.rule[rule_type].col_removed,
-           (int)presolve_log_.rule[rule_type].row_removed);
+           utilPresolveRuleTypeToString(use_rule_type).c_str(),
+           (int)presolve_log_.rule[use_rule_type].call, (int)num_removed_col,
+           (int)num_removed_row, (int)presolve_log_.rule[use_rule_type].col_removed,
+           (int)presolve_log_.rule[use_rule_type].row_removed);
   const int check_num_deleted_rows0_ = -212;
   const int check_num_deleted_cols0_ = -637;
   if (num_deleted_rows0_ == check_num_deleted_rows0_ &&
@@ -154,6 +166,8 @@ void HPresolveAnalysis::stopPresolveRuleLog(const HighsInt rule_type) {
 
 bool HPresolveAnalysis::analysePresolveRuleLog(const bool report) {
   if (!allow_logging_) return true;
+  if (called_analyse_presolve_rule_log_) return true;
+  if (report) called_analyse_presolve_rule_log_ = true;
   const HighsLogOptions& log_options = options->log_options;
   HighsInt sum_removed_row = 0;
   HighsInt sum_removed_col = 0;
