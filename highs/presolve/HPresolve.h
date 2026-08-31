@@ -343,6 +343,8 @@ class HPresolve {
   void changeImplRowDualLower(HighsInt row, double newLower,
                               HighsInt originCol);
 
+  void moveCutsToPool(HighsPostsolveStack& postsolve_stack);
+
   Result scaleMIP(HighsPostsolveStack& postsolve_stack);
 
   Result applyConflictGraphSubstitutions(HighsPostsolveStack& postsolve_stack,

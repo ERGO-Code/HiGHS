@@ -7195,6 +7195,68 @@ bool HPresolve::silentLog() const {
   return mipsolver && mipsolver->mipdata_->numRestarts > 0;
 }
 
+void HPresolve::moveCutsToPool(HighsPostsolveStack& postsolve_stack) {
+  if (mipsolver == nullptr) return;
+  std::vector<HighsInt> cutinds;
+  std::vector<double> cutvals;
+  cutinds.reserve(model->num_col_);
+  cutvals.reserve(model->num_col_);
+  HighsInt numcuts = 0;
+  for (HighsInt i : postsolve_stack.getCutRows()) {
+    ++numcuts;
+    storeRow(i);
+    cutinds.clear();
+    cutvals.clear();
+    for (HighsInt j : rowpositions) {
+      cutinds.push_back(Acol[j]);
+      cutvals.push_back(Avalue[j]);
+    }
+
+    if (mipsolver != nullptr) {
+      mipsolver->mipdata_->getCutPool().addCut(
+          *mipsolver, cutinds.data(), cutvals.data(), cutinds.size(),
+          model->row_upper_[i],
+          rowsizeInteger[i] + rowsizeImplInt[i] == rowsize[i] &&
+              rowCoefficientsIntegral(i, 1.0),
+          true, false, false);
+    }
+
+    markRowDeleted(i);
+    for (HighsInt j : rowpositions) unlink(j);
+  }
+
+  if (numcuts == 0) return;
+
+  // Compact deleted cut rows. shrinkProblem must not be used here
+  // because it replaces the cutpool with a new empty one, destroying
+  // the cuts that were just added above.
+  HighsInt oldNumRow = model->num_row_;
+  std::vector<HighsInt> newRowIndex(oldNumRow);
+  HighsInt newNumRow = 0;
+  for (HighsInt i = 0; i < oldNumRow; ++i) {
+    if (rowDeleted[i])
+      newRowIndex[i] = -1;
+    else
+      newRowIndex[i] = newNumRow++;
+  }
+  model->num_row_ = newNumRow;
+
+  for (HighsInt i = 0; i < oldNumRow; ++i) {
+    if (newRowIndex[i] == -1 || newRowIndex[i] == i) continue;
+    model->row_lower_[newRowIndex[i]] = model->row_lower_[i];
+    model->row_upper_[newRowIndex[i]] = model->row_upper_[i];
+  }
+  model->row_lower_.resize(model->num_row_);
+  model->row_upper_.resize(model->num_row_);
+  model->row_names_.resize(model->num_row_);
+
+  for (size_t i = 0; i < Avalue.size(); ++i) {
+    if (Avalue[i] == 0) continue;
+    assert(newRowIndex[Arow[i]] != -1);
+    Arow[i] = newRowIndex[Arow[i]];
+  }
+}
+
 HighsModelStatus HPresolve::run(HighsPostsolveStack& postsolve_stack) {
   presolve_status_ = HighsPresolveStatus::kNotSet;
   shrinkProblemEnabled = true;
@@ -7258,66 +7320,7 @@ HighsModelStatus HPresolve::run(HighsPostsolveStack& postsolve_stack) {
     mipsolver->mipdata_->getDomain().addConflictPool(
         mipsolver->mipdata_->getConflictPool());
 
-    if (mipsolver->mipdata_->numRestarts != 0) {
-      std::vector<HighsInt> cutinds;
-      std::vector<double> cutvals;
-      cutinds.reserve(model->num_col_);
-      cutvals.reserve(model->num_col_);
-      HighsInt numcuts = 0;
-      for (HighsInt i : postsolve_stack.getCutRows()) {
-        // row is a cut, remove it from matrix but add to cutpool
-        ++numcuts;
-        storeRow(i);
-        cutinds.clear();
-        cutvals.clear();
-        for (HighsInt j : rowpositions) {
-          cutinds.push_back(Acol[j]);
-          cutvals.push_back(Avalue[j]);
-        }
-
-        mipsolver->mipdata_->getCutPool().addCut(
-            *mipsolver, cutinds.data(), cutvals.data(), cutinds.size(),
-            model->row_upper_[i],
-            rowsizeInteger[i] + rowsizeImplInt[i] == rowsize[i] &&
-                rowCoefficientsIntegral(i, 1.0),
-            true, false, false);
-
-        markRowDeleted(i);
-        for (HighsInt j : rowpositions) unlink(j);
-      }
-
-      // Compact deleted cut rows. shrinkProblem must not be used here
-      // because it replaces the cutpool with a new empty one, destroying
-      // the cuts that were just added above.
-      auto compactDeletedRows = [&]() {
-        HighsInt oldNumRow = model->num_row_;
-        std::vector<HighsInt> newRowIndex(oldNumRow);
-        HighsInt newNumRow = 0;
-        for (HighsInt i = 0; i < oldNumRow; ++i) {
-          if (rowDeleted[i])
-            newRowIndex[i] = -1;
-          else
-            newRowIndex[i] = newNumRow++;
-        }
-        model->num_row_ = newNumRow;
-
-        for (HighsInt i = 0; i < oldNumRow; ++i) {
-          if (newRowIndex[i] == -1 || newRowIndex[i] == i) continue;
-          model->row_lower_[newRowIndex[i]] = model->row_lower_[i];
-          model->row_upper_[newRowIndex[i]] = model->row_upper_[i];
-        }
-        model->row_lower_.resize(model->num_row_);
-        model->row_upper_.resize(model->num_row_);
-        model->row_names_.resize(model->num_row_);
-
-        for (size_t i = 0; i < Avalue.size(); ++i) {
-          if (Avalue[i] == 0) continue;
-          assert(newRowIndex[Arow[i]] != -1);
-          Arow[i] = newRowIndex[Arow[i]];
-        }
-      };
-      compactDeletedRows();
-    }
+    if (mipsolver->mipdata_->numRestarts != 0) moveCutsToPool(postsolve_stack);
   }
 
   // Possibly populate the model matrix from the presolve matrix data
