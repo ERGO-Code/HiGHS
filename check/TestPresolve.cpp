@@ -1156,9 +1156,9 @@ TEST_CASE("add-to-matrix", "[highs_test_presolve]") {
 
 TEST_CASE("max-lp-dual-postsolve", "[highs_test_presolve]") {
   Highs h;
-  //  h.setOptionValue("output_flag", dev_run);
+  h.setOptionValue("output_flag", dev_run);
 
-  // Use blending problem
+  // Start with blending problem
   HighsLp lp;
   lp.model_name_ = "blending";
   lp.num_col_ = 2;
@@ -1177,16 +1177,13 @@ TEST_CASE("max-lp-dual-postsolve", "[highs_test_presolve]") {
   h.passModel(lp);
 
   REQUIRE(h.setOptionValue("solver", kHipoString) == HighsStatus::kOk);
-  REQUIRE(h.setOptionValue("run_crossover", kHighsOffString) == HighsStatus::kOk);
-  //  REQUIRE(h.setOptionValue("presolve_reduction_limit", 7) == HighsStatus::kOk);
-  //  REQUIRE(h.setOptionValue("presolve_rule_logging", true) == HighsStatus::kOk);
-  //  REQUIRE(h.setOptionValue("log_dev_level", 1) == HighsStatus::kOk);
+  REQUIRE(h.setOptionValue("run_crossover", kHighsOffString) ==
+          HighsStatus::kOk);
 
   h.run();
-  //  if (dev_run)
-  h.writeSolution("", kSolutionStylePretty);
+  if (dev_run) h.writeSolution("", kSolutionStylePretty);
   REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
-  
+
   double optimal_objective = h.getObjectiveValue();
   HighsSolution solution = h.getSolution();
 
@@ -1194,19 +1191,23 @@ TEST_CASE("max-lp-dual-postsolve", "[highs_test_presolve]") {
   // postsolve must be performed
   std::vector<HighsInt> index = {0, 1};
   std::vector<double> value = {1, 1};
-  REQUIRE(h.addRow(-inf, 1000, 2, index.data(), value.data()) == HighsStatus::kOk);
+  REQUIRE(h.addRow(-inf, 1000, 2, index.data(), value.data()) ==
+          HighsStatus::kOk);
   h.clearSolver();
 
   h.run();
-  //  if (dev_run)
-    h.writeSolution("", kSolutionStylePretty);
+  if (dev_run) h.writeSolution("", kSolutionStylePretty);
   REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
 
-  REQUIRE(doubleEqual(optimal_objective,  h.getObjectiveValue()));
+  REQUIRE(doubleEqual(optimal_objective, h.getObjectiveValue()));
+  // Check that the dual values are unchanged for the original problem
   for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++)
-    REQUIRE(doubleEqual(solution.col_dual[iCol],  h.getSolution().col_dual[iCol]));
+    REQUIRE(
+        doubleEqual(solution.col_dual[iCol], h.getSolution().col_dual[iCol]));
   for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++)
-    REQUIRE(doubleEqual(solution.row_dual[iRow],  h.getSolution().row_dual[iRow]));
+    REQUIRE(
+        doubleEqual(solution.row_dual[iRow], h.getSolution().row_dual[iRow]));
+
   REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
 
   h.resetGlobalScheduler(true);

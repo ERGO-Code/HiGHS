@@ -4009,8 +4009,13 @@ HighsPostsolveStatus Highs::runPostsolve() {
   assert(model_.lp_.a_matrix_.isColwise());
   calculateRowValuesQuad(model_.lp_, presolve_.data_.recovered_solution_);
 
-  if (have_dual_solution && model_.lp_.sense_ == ObjSense::kMaximize)
-    presolve_.negateReducedLpColDuals();
+  if (have_dual_solution && model_.lp_.sense_ == ObjSense::kMaximize) {
+    // Negate the dual values since the incumbent LP is a maximization
+    for (HighsInt iCol = 0; iCol < model_.lp_.num_col_; iCol++)
+      presolve_.data_.recovered_solution_.col_dual[iCol] *= -1;
+    for (HighsInt iRow = 0; iRow < model_.lp_.num_row_; iRow++)
+      presolve_.data_.recovered_solution_.row_dual[iRow] *= -1;
+  }
 
   // Ensure that the postsolve status is used to set
   // presolve_.postsolve_status_, as well as being returned

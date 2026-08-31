@@ -75,8 +75,6 @@ class PresolveComponent : public HighsComponent {
   HighsLp& getReducedProblem() { return data_.reduced_lp_; }
   HighsPresolveLog& getPresolveLog() { return data_.presolve_log_; }
 
-  void negateReducedLpColDuals();
-
   PresolveComponentInfo info_;
   PresolveComponentData data_;
   const HighsOptions* options_;
