@@ -114,6 +114,9 @@ void solveAndCheck(const std::string& message, const HighsLp& lp, Highs& h,
   REQUIRE(h.passModel(lp) == HighsStatus::kOk);
   h.run();
   if (dev_run) h.writeSolution("", 1);
+  REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
+  REQUIRE(h.getInfo().num_primal_infeasibilities == 0);
+  REQUIRE(h.getInfo().num_dual_infeasibilities == 0);
   if (use_presolve) {
     // Ensure that the model is reduced as expected
     if (require_presolved_model_num_col >= 0)
@@ -125,10 +128,6 @@ void solveAndCheck(const std::string& message, const HighsLp& lp, Highs& h,
     if (require_presolved_model_num_nz >= 0)
       REQUIRE(run_data.presolved_model_num_nz ==
               require_presolved_model_num_nz);
-    // Ensure that dual postsolve is correct
-    REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
-    REQUIRE(h.getInfo().num_primal_infeasibilities == 0);
-    REQUIRE(h.getInfo().num_dual_infeasibilities == 0);
     if (require_presolved_model_num_col == 0 &&
         require_presolved_model_num_row == 0)
       REQUIRE(h.getInfo().simplex_iteration_count == 0);
