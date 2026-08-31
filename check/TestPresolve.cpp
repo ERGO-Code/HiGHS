@@ -1154,6 +1154,64 @@ TEST_CASE("add-to-matrix", "[highs_test_presolve]") {
   h.resetGlobalScheduler(true);
 }
 
+TEST_CASE("max-lp-dual-postsolve", "[highs_test_presolve]") {
+  Highs h;
+  //  h.setOptionValue("output_flag", dev_run);
+
+  // Use blending problem
+  HighsLp lp;
+  lp.model_name_ = "blending";
+  lp.num_col_ = 2;
+  lp.num_row_ = 2;
+  lp.col_cost_ = {8, 10};
+  lp.col_lower_ = {0, 0};
+  lp.col_upper_ = {inf, inf};
+  lp.row_lower_ = {-inf, -inf};
+  lp.row_upper_ = {120, 210};
+  lp.a_matrix_.format_ = MatrixFormat::kColwise;
+  lp.a_matrix_.start_ = {0, 2, 4};
+  lp.a_matrix_.index_ = {0, 1, 0, 1};
+  lp.a_matrix_.value_ = {0.3, 0.7, 0.5, 0.5};
+  lp.sense_ = ObjSense::kMaximize;
+  lp.offset_ = 0;
+  h.passModel(lp);
+
+  REQUIRE(h.setOptionValue("solver", kHipoString) == HighsStatus::kOk);
+  REQUIRE(h.setOptionValue("run_crossover", kHighsOffString) == HighsStatus::kOk);
+  //  REQUIRE(h.setOptionValue("presolve_reduction_limit", 7) == HighsStatus::kOk);
+  //  REQUIRE(h.setOptionValue("presolve_rule_logging", true) == HighsStatus::kOk);
+  //  REQUIRE(h.setOptionValue("log_dev_level", 1) == HighsStatus::kOk);
+
+  h.run();
+  //  if (dev_run)
+  h.writeSolution("", kSolutionStylePretty);
+  REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
+  
+  double optimal_objective = h.getObjectiveValue();
+  HighsSolution solution = h.getSolution();
+
+  // Add a redundant constraint that's removed in presolve so that
+  // postsolve must be performed
+  std::vector<HighsInt> index = {0, 1};
+  std::vector<double> value = {1, 1};
+  REQUIRE(h.addRow(-inf, 1000, 2, index.data(), value.data()) == HighsStatus::kOk);
+  h.clearSolver();
+
+  h.run();
+  //  if (dev_run)
+    h.writeSolution("", kSolutionStylePretty);
+  REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
+
+  REQUIRE(doubleEqual(optimal_objective,  h.getObjectiveValue()));
+  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++)
+    REQUIRE(doubleEqual(solution.col_dual[iCol],  h.getSolution().col_dual[iCol]));
+  for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++)
+    REQUIRE(doubleEqual(solution.row_dual[iRow],  h.getSolution().row_dual[iRow]));
+  REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
+
+  h.resetGlobalScheduler(true);
+}
+
 TEST_CASE("issue-3140", "[highs_test_presolve]") {
   Highs highs;
   highs.setOptionValue("output_flag", dev_run);
