@@ -359,6 +359,7 @@ class HighsPostsolveStack {
 
   bool isOrigCol(HighsInt col) const { return origColIndex[col] < origNumCol; }
 
+  // Returns presolved-space indices of columns from the original model
   std::vector<HighsInt> getOrigCols() const {
     std::vector<HighsInt> cols;
     for (HighsInt i = 0; i < static_cast<HighsInt>(origColIndex.size()); ++i)
@@ -380,6 +381,7 @@ class HighsPostsolveStack {
 
   bool hasAppendedRows() const { return numAppendedRows > 0; }
 
+  // Returns presolved-space indices of rows from the original model
   std::vector<HighsInt> getOrigRows() const {
     std::vector<HighsInt> rows;
     for (HighsInt i = 0; i < static_cast<HighsInt>(origRowType.size()); ++i)
@@ -387,6 +389,7 @@ class HighsPostsolveStack {
     return rows;
   }
 
+  // Returns presolved-space indices of rows that are cuts
   std::vector<HighsInt> getCutRows() const {
     std::vector<HighsInt> rows;
     for (HighsInt i = 0; i < static_cast<HighsInt>(origRowType.size()); ++i)
@@ -394,6 +397,8 @@ class HighsPostsolveStack {
     return rows;
   }
 
+  // Returns presolved-space indices of rows that are not cuts (original +
+  // appended)
   std::vector<HighsInt> getNonCutRows() const {
     std::vector<HighsInt> rows;
     for (HighsInt i = 0; i < static_cast<HighsInt>(origRowType.size()); ++i)
