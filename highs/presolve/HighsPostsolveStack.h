@@ -359,6 +359,13 @@ class HighsPostsolveStack {
 
   bool isOrigCol(HighsInt col) const { return origColIndex[col] < origNumCol; }
 
+  std::vector<HighsInt> getOrigCols() const {
+    std::vector<HighsInt> cols;
+    for (HighsInt i = 0; i < static_cast<HighsInt>(origColIndex.size()); ++i)
+      if (isOrigCol(i)) cols.push_back(i);
+    return cols;
+  }
+
   bool isOrigRow(HighsInt row) const {
     return origRowType[row] == OrigRowType::kOriginal;
   }
@@ -372,6 +379,27 @@ class HighsPostsolveStack {
   }
 
   bool hasAppendedRows() const { return numAppendedRows > 0; }
+
+  std::vector<HighsInt> getOrigRows() const {
+    std::vector<HighsInt> rows;
+    for (HighsInt i = 0; i < static_cast<HighsInt>(origRowType.size()); ++i)
+      if (origRowType[i] == OrigRowType::kOriginal) rows.push_back(i);
+    return rows;
+  }
+
+  std::vector<HighsInt> getCutRows() const {
+    std::vector<HighsInt> rows;
+    for (HighsInt i = 0; i < static_cast<HighsInt>(origRowType.size()); ++i)
+      if (origRowType[i] == OrigRowType::kCut) rows.push_back(i);
+    return rows;
+  }
+
+  std::vector<HighsInt> getNonCutRows() const {
+    std::vector<HighsInt> rows;
+    for (HighsInt i = 0; i < static_cast<HighsInt>(origRowType.size()); ++i)
+      if (origRowType[i] != OrigRowType::kCut) rows.push_back(i);
+    return rows;
+  }
 
   void appendToModel(HighsInt& numRows, HighsInt numRowsToAppend,
                      OrigRowType rowType) {

@@ -7264,10 +7264,7 @@ HighsModelStatus HPresolve::run(HighsPostsolveStack& postsolve_stack) {
       cutinds.reserve(model->num_col_);
       cutvals.reserve(model->num_col_);
       HighsInt numcuts = 0;
-      for (HighsInt i = model->num_row_ - 1; i >= 0; --i) {
-        if (postsolve_stack.isOrigRow(i)) break;
-        if (!postsolve_stack.isCutRow(i)) continue;
-
+      for (HighsInt i : postsolve_stack.getCutRows()) {
         // row is a cut, remove it from matrix but add to cutpool
         ++numcuts;
         storeRow(i);
