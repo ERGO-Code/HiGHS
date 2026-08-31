@@ -735,6 +735,13 @@ class HighsPostsolveStack {
   void duplicateRow(HighsInt row, bool rowUpperTightened,
                     bool rowLowerTightened, HighsInt duplicateRow,
                     double duplicateRowScale) {
+    // When a non-cut row is deleted as a duplicate of a cut, the cut
+    // becomes the sole enforcer of the constraint. Reclassify it so
+    // it is kept in the model and not moved to the cut pool, since
+    // otherwise the constraint is lost and postsolve may produce an
+    // infeasible solution.
+    if (isCutRow(row) && !isCutRow(duplicateRow))
+      origRowType[row] = OrigRowType::kAppended;
     reductionValues.push(
         DuplicateRow{duplicateRowScale, origRowIndex[duplicateRow],
                      origRowIndex[row], rowLowerTightened, rowUpperTightened});
