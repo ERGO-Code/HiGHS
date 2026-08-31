@@ -445,9 +445,10 @@ class HighsPostsolveStack {
     appendToModel(numAppendedRows, numRows, OrigRowType::kAppended);
   }
 
-  void removeCutsFromModel() {
+  void removeCutsFromModel(HighsInt numCuts) {
+    if (numCuts <= 0) return;
+    origNumRow -= numCuts;
     size_t newSize = 0;
-    HighsInt numRemoved = 0;
     for (size_t i = 0; i < origRowIndex.size(); ++i) {
       if (origRowType[i] != OrigRowType::kCut) {
         if (i != newSize) {
@@ -455,11 +456,8 @@ class HighsPostsolveStack {
           origRowType[newSize] = origRowType[i];
         }
         ++newSize;
-      } else {
-        ++numRemoved;
       }
     }
-    origNumRow -= numRemoved;
     origRowIndex.resize(newSize);
     origRowType.resize(newSize);
   }
