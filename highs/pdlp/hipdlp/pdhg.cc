@@ -2515,49 +2515,37 @@ void PDLPSolver::setupGpu() {
   GPU_CHECK(gpuMemcpy(d_is_equality_row_, temp_equality.data(),
                         a_num_rows_ * sizeof(uint8_t), gpuMemcpyHostToDevice));
 
-  // 6. Preallocate buffer for cuSPARSE SpMV
-  // Buffer for ax
+  // 6. Preallocate the SpMV buffers and run the one-time preprocess() analysis
+  // for the main-loop algorithm. bufferSize, preprocess and the per-iteration
+  // SpMV all reuse the persistent vec_*_desc_ descriptors created above (the
+  // buffer size and analysis depend only on the matrix and the vector
+  // dimensions, not on the vector values, which are overwritten below).
   double alpha = 1.0;
   double beta = 0.0;
-  gpuDnVecDescr_t vec_x, vec_ax;
-  GPU_SPARSE_CHECK(
-      gpuSparseCreateDnVec(&vec_x, a_num_cols_, d_x_current_, GPU_R_64F));
-  GPU_SPARSE_CHECK(
-      gpuSparseCreateDnVec(&vec_ax, a_num_rows_, d_ax_current_, GPU_R_64F));
 
+  // Buffer for ax
   GPU_SPARSE_CHECK(gpuSparseSpMV_bufferSize(
       cusparse_handle_, GPU_OPERATION_NON_TRANSPOSE, &alpha, mat_a_csr_,
-      vec_x, &beta, vec_ax, GPU_R_64F, GPU_SPMV_ALG_DEFAULT,
+      vec_x_desc_, &beta, vec_ax_desc_, GPU_R_64F, GPU_SPMV_ALG_MAIN,
       &spmv_buffer_size_ax_));
   GPU_CHECK(gpuMalloc(&d_spmv_buffer_ax_, spmv_buffer_size_ax_));
 
   GPU_SPARSE_CHECK(gpuSparseSpMV_preprocess(
       cusparse_handle_, GPU_OPERATION_NON_TRANSPOSE, &alpha, mat_a_csr_,
-      vec_x_desc_, &beta, vec_ax_desc_, GPU_R_64F, GPU_SPMV_ALG_DEFAULT,
+      vec_x_desc_, &beta, vec_ax_desc_, GPU_R_64F, GPU_SPMV_ALG_MAIN,
       d_spmv_buffer_ax_));
 
-  GPU_SPARSE_CHECK(gpuSparseDestroyDnVec(vec_x));
-  GPU_SPARSE_CHECK(gpuSparseDestroyDnVec(vec_ax));
-
   // Buffer for aTy
-  gpuDnVecDescr_t vec_y, vec_aty;
-  GPU_SPARSE_CHECK(
-      gpuSparseCreateDnVec(&vec_y, a_num_rows_, d_y_current_, GPU_R_64F));
-  GPU_SPARSE_CHECK(
-      gpuSparseCreateDnVec(&vec_aty, a_num_cols_, d_aty_current_, GPU_R_64F));
   GPU_SPARSE_CHECK(gpuSparseSpMV_bufferSize(
       cusparse_handle_, GPU_OPERATION_NON_TRANSPOSE, &alpha, mat_a_T_csr_,
-      vec_y, &beta, vec_aty, GPU_R_64F, GPU_SPMV_ALG_DEFAULT,
+      vec_y_desc_, &beta, vec_aty_desc_, GPU_R_64F, GPU_SPMV_ALG_MAIN,
       &spmv_buffer_size_aty_));
   GPU_CHECK(gpuMalloc(&d_spmv_buffer_aty_, spmv_buffer_size_aty_));
 
   GPU_SPARSE_CHECK(gpuSparseSpMV_preprocess(
       cusparse_handle_, GPU_OPERATION_NON_TRANSPOSE, &alpha, mat_a_T_csr_,
-      vec_y_desc_, &beta, vec_aty_desc_, GPU_R_64F, GPU_SPMV_ALG_DEFAULT,
+      vec_y_desc_, &beta, vec_aty_desc_, GPU_R_64F, GPU_SPMV_ALG_MAIN,
       d_spmv_buffer_aty_));
-
-  GPU_SPARSE_CHECK(gpuSparseDestroyDnVec(vec_y));
-  GPU_SPARSE_CHECK(gpuSparseDestroyDnVec(vec_aty));
 
   GPU_CHECK(gpuMemset(d_x_current_, 0, a_num_cols_ * sizeof(double)));
   GPU_CHECK(gpuMemset(d_y_current_, 0, a_num_rows_ * sizeof(double)));
@@ -2665,7 +2653,7 @@ void PDLPSolver::linalgGpuAx(const double* d_x_in, double* d_ax_out) {
   if (spmv_buffer_size_ax_ == 0) {
     GPU_SPARSE_CHECK(gpuSparseSpMV_bufferSize(
         cusparse_handle_, GPU_OPERATION_NON_TRANSPOSE, &alpha, mat_a_csr_,
-        vec_x_desc_, &beta, vec_ax_desc_, GPU_R_64F, GPU_SPMV_ALG_DEFAULT,
+        vec_x_desc_, &beta, vec_ax_desc_, GPU_R_64F, GPU_SPMV_ALG_MAIN,
         &spmv_buffer_size_ax_));
     GPU_CHECK(gpuMalloc(&d_spmv_buffer_ax_, spmv_buffer_size_ax_));
   }
@@ -2673,7 +2661,7 @@ void PDLPSolver::linalgGpuAx(const double* d_x_in, double* d_ax_out) {
   GPU_SPARSE_CHECK(
       gpuSparseSpMV(cusparse_handle_, GPU_OPERATION_NON_TRANSPOSE, &alpha,
                    mat_a_csr_, vec_x_desc_, &beta, vec_ax_desc_, GPU_R_64F,
-                   GPU_SPMV_ALG_DEFAULT, d_spmv_buffer_ax_));
+                   GPU_SPMV_ALG_MAIN, d_spmv_buffer_ax_));
 }
 
 void PDLPSolver::linalgGpuATy(const double* d_y_in, double* d_aty_out) {
@@ -2687,13 +2675,13 @@ void PDLPSolver::linalgGpuATy(const double* d_y_in, double* d_aty_out) {
     GPU_SPARSE_CHECK(gpuSparseSpMV_bufferSize(
         cusparse_handle_, GPU_OPERATION_NON_TRANSPOSE, &alpha,
         mat_a_T_csr_, vec_y_desc_, &beta, vec_aty_desc_, GPU_R_64F,
-        GPU_SPMV_ALG_DEFAULT, &spmv_buffer_size_aty_));
+        GPU_SPMV_ALG_MAIN, &spmv_buffer_size_aty_));
     GPU_CHECK(gpuMalloc(&d_spmv_buffer_aty_, spmv_buffer_size_aty_));
   }
   GPU_SPARSE_CHECK(
       gpuSparseSpMV(cusparse_handle_, GPU_OPERATION_NON_TRANSPOSE, &alpha,
                    mat_a_T_csr_, vec_y_desc_, &beta, vec_aty_desc_, GPU_R_64F,
-                   GPU_SPMV_ALG_DEFAULT, d_spmv_buffer_aty_));
+                   GPU_SPMV_ALG_MAIN, d_spmv_buffer_aty_));
 }
 
 void PDLPSolver::launchKernelUpdateX(double primal_step) {

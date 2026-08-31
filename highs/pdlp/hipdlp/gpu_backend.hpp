@@ -72,6 +72,7 @@ using gpuSparseStatus_t  = hipsparseStatus_t;
 #define GPU_R_64F                    HIP_R_64F
 #define GPU_SPMV_ALG_DEFAULT         HIPSPARSE_SPMV_ALG_DEFAULT
 #define GPU_SPMV_CSR_ALG2            HIPSPARSE_SPMV_CSR_ALG2
+#define GPU_SPMV_ALG_MAIN            HIPSPARSE_SPMV_CSR_ALG1
 
 // Device info
 #define gpuGetDeviceCount(n)         hipGetDeviceCount(n)
@@ -161,6 +162,7 @@ using gpuSparseStatus_t  = cusparseStatus_t;
 #define GPU_R_64F                    CUDA_R_64F
 #define GPU_SPMV_ALG_DEFAULT         CUSPARSE_SPMV_ALG_DEFAULT
 #define GPU_SPMV_CSR_ALG2            CUSPARSE_SPMV_CSR_ALG2
+#define GPU_SPMV_ALG_MAIN            CUSPARSE_SPMV_ALG_DEFAULT
 
 // Device info
 #define gpuGetDeviceCount(n)         cudaGetDeviceCount(n)
