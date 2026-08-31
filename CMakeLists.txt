@@ -241,6 +241,19 @@ if (CUPDLP_GPU OR HIPDLP_GPU)
     find_package(hipblas REQUIRED)
     find_package(hipsparse REQUIRED)
 
+    # The default bfd linker is slow and memory-hungry with the ROCm toolchain
+    # and can stall on memory-constrained machines.
+    # The ROCm clang bundles lld and we use it if it is available.
+    find_program(HIGHS_LLD_LINKER NAMES ld.lld lld
+      HINTS ENV ROCM_PATH /opt/rocm
+      PATH_SUFFIXES lib/llvm/bin bin llvm/bin)
+    if (HIGHS_LLD_LINKER)
+      set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -fuse-ld=lld")
+      message(STATUS "HIP: linking with lld (${HIGHS_LLD_LINKER})")
+    else()
+      message(STATUS "HIP: lld not found; using the default linker")
+    endif()
+
     set(GPU_LIBRARY roc::hipblas roc::hipsparse)
     set(GPU_COMPILE_DEFINITIONS USE_HIP)
 

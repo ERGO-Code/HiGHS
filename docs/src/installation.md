@@ -176,6 +176,16 @@ You can find the `gfx` identifier of the installed GPU with `rocminfo`
 `gfx942` for MI300). Multiple architectures may be given as a
 semicolon-separated list, e.g. `-DCMAKE_HIP_ARCHITECTURES="gfx90a;gfx942"`.
 
+By default the host C/C++ sources are compiled with the system compiler
+(e.g. GCC) and only the HIP device code with ROCm's compiler. To build
+the whole of HiGHS with the ROCm toolchain instead, for a uniform
+Clang-based build, point CMake at `amdclang` / `amdclang++`
+
+```
+cmake -S. -Bbuild -DHIPDLP_HIP=ON \
+  -DCMAKE_C_COMPILER=amdclang -DCMAKE_CXX_COMPILER=amdclang++
+```
+
 The HIP backend compiles the same HiPDLP source as the CUDA backend,
 selecting the AMD implementation at build time. Once built, the solver
 is selected at run time by setting the [__solver__](@ref
@@ -186,3 +196,7 @@ To check the ROCm / HIP backend on the local machine, run the example
 `cxx_examples_call_highs_hipdlp`), which solves a small LP with
 `solver = "hipdlp"` and verifies the result. A successful run is a
 quick end-to-end sanity check of the GPU backend.
+
+To confirm the work is actually running on the GPU, watch `rocm-smi`
+(for example `watch -n 0.1 rocm-smi`) while the solve runs and check
+that GPU utilisation and memory usage rise.
