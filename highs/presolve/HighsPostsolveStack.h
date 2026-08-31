@@ -379,8 +379,6 @@ class HighsPostsolveStack {
     return origRowType[row] == OrigRowType::kCut;
   }
 
-  bool hasAppendedRows() const { return numAppendedRows > 0; }
-
   // Returns presolved-space indices of rows from the original model
   std::vector<HighsInt> getOrigRows() const {
     std::vector<HighsInt> rows;
