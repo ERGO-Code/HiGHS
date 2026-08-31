@@ -261,6 +261,7 @@ class HighsDomain {
 
     bool applyingZeroCostFixings_ = false;
     HighsInt zeroCostStartPos_ = kHighsIInf;
+    std::function<void()> storeLiftingOpportunity;
 
     bool enabled_ = false;
 
@@ -331,6 +332,7 @@ class HighsDomain {
       setEnabled(false);
       fixedZeroCostColumns_.clear();
       applyingZeroCostFixings_ = false;
+      storeLiftingOpportunity = nullptr;
     }
 
     DualFixProbingPropagation() = default;

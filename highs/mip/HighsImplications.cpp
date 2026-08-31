@@ -51,6 +51,11 @@ bool HighsImplications::computeImplications(HighsInt col, bool val) {
     }
   };
 
+  if (dualFixProbingActive && storeLiftingOpportunity != nullptr) {
+    globaldomain.getDualFixProbingPropagation().storeLiftingOpportunity =
+        [&]() { storeLiftingOpportunities(col, val); };
+  }
+
   auto doBacktrack = [&](size_t changedend) {
     globaldomain.backtrack();
     globaldomain.clearChangedCols(changedend);

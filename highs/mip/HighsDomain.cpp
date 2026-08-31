@@ -813,6 +813,11 @@ void HighsDomain::DualFixProbingPropagation::propagate() {
 void HighsDomain::DualFixProbingPropagation::propagateZeroCosts() {
   if (fixedZeroCostColumns_.empty()) return;
 
+  if (storeLiftingOpportunity != nullptr) {
+    storeLiftingOpportunity();
+    storeLiftingOpportunity = nullptr;
+  }
+
   applyingZeroCostFixings_ = true;
   if (zeroCostStartPos_ == kHighsIInf)
     setZeroCostFixingPosition(
