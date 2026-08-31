@@ -1176,7 +1176,7 @@ TEST_CASE("max-lp-dual-postsolve", "[highs_test_presolve]") {
   lp.offset_ = 0;
   h.passModel(lp);
 
-  REQUIRE(h.setOptionValue("solver", kHipoString) == HighsStatus::kOk);
+  REQUIRE(h.setOptionValue("solver", kIpxString) == HighsStatus::kOk);
   REQUIRE(h.setOptionValue("run_crossover", kHighsOffString) ==
           HighsStatus::kOk);
 
