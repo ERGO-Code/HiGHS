@@ -116,14 +116,16 @@ bool HighsImplications::computeImplications(HighsInt col, bool val) {
   doBacktrack(changedend);
 
   if (safeImplicsEnd < static_cast<HighsInt>(implics.size())) {
+    for (const HighsDomainChange& implic : implics) {
+      if (globaldomain.isBinary(implic.column)) {
+        recordTentativeCliques(val, implic);
+      }
+    }
     auto binstart =
         std::partition(implics.begin() + safeImplicsEnd, implics.end(),
                        [&](const HighsDomainChange& a) {
                          return !globaldomain.isBinary(a.column);
                        });
-    // store the tentative bound changes of binaries separately
-    for (auto i = binstart; i != implics.end(); ++i)
-      recordTentativeCliques(val, *i);
     implics.erase(binstart, implics.end());
   }
 
