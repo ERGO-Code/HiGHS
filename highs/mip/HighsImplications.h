@@ -28,13 +28,8 @@ class HighsImplications {
     double ub = kHighsInf;
   };
 
-  struct TentativeImplication {
-    HighsDomainChange domchg;
-    bool dualSafe;
-  };
-
-  std::vector<TentativeImplication> implicationsDown;
-  std::vector<TentativeImplication> implicationsUp;
+  std::vector<HighsDomainChange> implicationsDown;
+  std::vector<HighsDomainChange> implicationsUp;
   std::vector<HighsHashTree<HighsInt, Implication>> implications;
   std::vector<HighsHashTree<HighsInt, bool>> reverseImplications;
   std::vector<uint8_t> hasProbed;
