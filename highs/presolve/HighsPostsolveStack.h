@@ -385,7 +385,7 @@ class HighsPostsolveStack {
   std::vector<HighsInt> getOrigRows() const {
     std::vector<HighsInt> rows;
     for (HighsInt i = 0; i < static_cast<HighsInt>(origRowType.size()); ++i)
-      if (origRowType[i] == OrigRowType::kOriginal) rows.push_back(i);
+      if (isOrigRow(i)) rows.push_back(i);
     return rows;
   }
 
@@ -393,7 +393,7 @@ class HighsPostsolveStack {
   std::vector<HighsInt> getCutRows() const {
     std::vector<HighsInt> rows;
     for (HighsInt i = 0; i < static_cast<HighsInt>(origRowType.size()); ++i)
-      if (origRowType[i] == OrigRowType::kCut) rows.push_back(i);
+      if (isCutRow(i)) rows.push_back(i);
     return rows;
   }
 
@@ -402,7 +402,7 @@ class HighsPostsolveStack {
   std::vector<HighsInt> getNonCutRows() const {
     std::vector<HighsInt> rows;
     for (HighsInt i = 0; i < static_cast<HighsInt>(origRowType.size()); ++i)
-      if (origRowType[i] != OrigRowType::kCut) rows.push_back(i);
+      if (!isCutRow(i)) rows.push_back(i);
     return rows;
   }
 
