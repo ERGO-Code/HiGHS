@@ -724,7 +724,6 @@ void HighsDomain::DualFixProbingPropagation::propagate() {
   auto collectZeroCostFixing = [&](const HighsInt col,
                                    const DualFixProbingFixDirection direction) {
     fixedZeroCostColumns_.emplace_back(FixedZeroCostColumn{col, direction});
-    zeroCostDirections_[col] = direction;
   };
 
   const double dualTol = mipsolver->options_mip_->dual_feasibility_tolerance;
@@ -825,6 +824,8 @@ void HighsDomain::DualFixProbingPropagation::propagateZeroCosts() {
 
   for (const FixedZeroCostColumn& fixing : fixedZeroCostColumns_) {
     if (domain->isFixed(fixing.col)) continue;
+    assert(zeroCostDirections_[fixing.col] == FixUndecided ||
+           zeroCostDirections_[fixing.col] == fixing.direction);
     if (fixing.direction == FixLowerBound) {
       domain->changeBound(HighsBoundType::kUpper, fixing.col,
                           domain->col_lower_[fixing.col],
@@ -834,7 +835,11 @@ void HighsDomain::DualFixProbingPropagation::propagateZeroCosts() {
                           domain->col_upper_[fixing.col],
                           Reason::unspecified());
     }
-    if (domain->infeasible()) break;
+    if (!domain->infeasible()) {
+      zeroCostDirections_[fixing.col] = fixing.direction;
+    } else {
+      break;
+    }
   }
 
   fixedZeroCostColumns_.clear();

@@ -86,6 +86,12 @@ bool HighsImplications::computeImplications(HighsInt col, bool val) {
   mipsolver.mipdata_->getPseudoCost().addInferenceObservation(
       col, numImplications, val);
 
+  std::vector<HighsDomainChange> origStackCopy;
+  if (dualFixProbingActive) {
+    origStackCopy.assign(domchgstack.begin() + stackimplicstart,
+                         domchgstack.begin() + stackimplicend);
+  }
+
   std::vector<HighsDomainChange>& implics =
       val ? implicationsUp : implicationsDown;
   implics.clear();
@@ -115,12 +121,13 @@ bool HighsImplications::computeImplications(HighsInt col, bool val) {
   // backtrack
   doBacktrack(changedend);
 
-  if (safeImplicsEnd < static_cast<HighsInt>(implics.size())) {
-    for (const HighsDomainChange& implic : implics) {
-      if (globaldomain.isBinary(implic.column)) {
-        recordTentativeCliques(val, implic);
-      }
+  for (const HighsDomainChange& implic : origStackCopy) {
+    if (globaldomain.isBinary(implic.column)) {
+      recordTentativeCliques(val, implic);
     }
+  }
+
+  if (safeImplicsEnd < static_cast<HighsInt>(implics.size())) {
     auto binstart =
         std::partition(implics.begin() + safeImplicsEnd, implics.end(),
                        [&](const HighsDomainChange& a) {
