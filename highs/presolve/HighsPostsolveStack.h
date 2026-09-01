@@ -379,8 +379,6 @@ class HighsPostsolveStack {
     return origRowType[row] == OrigRowType::kCut;
   }
 
-  void setRowType(HighsInt row, OrigRowType type) { origRowType[row] = type; }
-
   // Returns presolved-space indices of rows from the original model
   std::vector<HighsInt> getOrigRows() const {
     std::vector<HighsInt> rows;
@@ -735,13 +733,10 @@ class HighsPostsolveStack {
   void duplicateRow(HighsInt row, bool rowUpperTightened,
                     bool rowLowerTightened, HighsInt duplicateRow,
                     double duplicateRowScale) {
-    // When a non-cut row is deleted as a duplicate of a cut, the cut
-    // becomes the sole enforcer of the constraint. Reclassify it so
-    // it is kept in the model and not moved to the cut pool, since
-    // otherwise the constraint is lost and postsolve may produce an
-    // infeasible solution.
-    if (isCutRow(row) && !isCutRow(duplicateRow))
-      setRowType(row, OrigRowType::kAppended);
+    // The surviving row must not be a cut absorbing a non-cut
+    // constraint. detectParallelRowsAndCols ensures this by
+    // iterating non-cut rows before cut rows.
+    assert(!isCutRow(row) || isCutRow(duplicateRow));
     reductionValues.push(
         DuplicateRow{duplicateRowScale, origRowIndex[duplicateRow],
                      origRowIndex[row], rowLowerTightened, rowUpperTightened});

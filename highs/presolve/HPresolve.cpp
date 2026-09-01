@@ -8572,9 +8572,8 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
         parallel = duplicateColRowPos != -1;
         if (!parallel) break;
 
-        parallel = std::abs(static_cast<double>(
-                       Avalue[duplicateColRowPos] -
-                       static_cast<HighsCDouble>(colScale) * colNz.value())) <=
+        parallel = abs(Avalue[duplicateColRowPos] -
+                       static_cast<HighsCDouble>(colScale) * colNz.value()) <=
                    options->small_matrix_value;
         if (!parallel) break;
       }
@@ -8723,7 +8722,19 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
 
   buckets.clear();
 
-  for (HighsInt i = 0; i != model->num_row_; ++i) {
+  // Iterate non-cut rows before cut rows so that when a cut is
+  // parallel to a non-cut, the non-cut is already in the bucket as
+  // the surviving row and the cut is removed. This prevents a cut
+  // from absorbing a non-cut constraint which would cause the
+  // constraint to be lost when moveCutsToPool removes it.
+  std::vector<HighsInt> rowOrder(model->num_row_);
+  std::iota(rowOrder.begin(), rowOrder.end(), 0);
+  pdqsort(rowOrder.begin(), rowOrder.end(), [&](HighsInt a, HighsInt b) {
+    return !postsolve_stack.isCutRow(a) && postsolve_stack.isCutRow(b);
+  });
+
+  for (HighsInt rowIndex = 0; rowIndex != model->num_row_; ++rowIndex) {
+    HighsInt i = rowOrder[rowIndex];
     if (rowDeleted[i]) continue;
     if (rowsize[i] <= 1 || (rowsize[i] == 2 && isEquation(i))) {
       HPRESOLVE_CHECKED_CALL(rowPresolve(postsolve_stack, i));
@@ -8790,9 +8801,8 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
         parallel = nzPos != -1;
         if (!parallel) break;
 
-        parallel = std::abs(static_cast<double>(
-                       Avalue[nzPos] -
-                       static_cast<HighsCDouble>(rowScale) * rowNz.value())) <=
+        parallel = abs(Avalue[nzPos] -
+                       static_cast<HighsCDouble>(rowScale) * rowNz.value()) <=
                    options->small_matrix_value;
         if (!parallel) break;
       }
