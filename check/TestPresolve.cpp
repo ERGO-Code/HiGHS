@@ -1258,7 +1258,7 @@ TEST_CASE("no-crossover-postsolve", "[highs_test_presolve]") {
   lp.a_matrix_.index_ = {0, 1, 0};
   lp.a_matrix_.value_ = {1, 1, 1};
 
-  const bool use_mps = true;
+  const bool use_mps = false;
   if (use_mps) {
     const std::string model = "adlittle";
     std::string filename = std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";

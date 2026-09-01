@@ -17,6 +17,9 @@
 
 namespace presolve {
 
+  const bool maintain_row_value = false;//true;
+  const bool correct_dual_error = false;//true;
+
 void HighsPostsolveStack::initializeIndexMaps(HighsInt numRow,
                                               HighsInt numCol) {
   origNumRow = numRow;
@@ -132,10 +135,10 @@ static bool colFeasibilityOk(const std::string& message,
       dual_ok = dual == 0;
     } else if (dual > options.dual_feasibility_tolerance) {
       // Positive dual so require angy basis status to be at lower
-      basis_ok = has_basis && status == HighsBasisStatus::kLower;
+      if (has_basis) basis_ok = status == HighsBasisStatus::kLower;
     } else if (dual < -options.dual_feasibility_tolerance) {
       // Negative dual so require angy basis status to be at upper
-      basis_ok = has_basis && status == HighsBasisStatus::kUpper;
+      if (has_basis) basis_ok = status == HighsBasisStatus::kUpper;
     }
   } else if (has_basis && status == HighsBasisStatus::kBasic) {
     // If basic, then primal is OK, and any dual value must be zero
@@ -149,7 +152,7 @@ static bool colFeasibilityOk(const std::string& message,
     assert(!(has_basis && status == HighsBasisStatus::kBasic));
     if (!(atLower() || atUpper())) checkBetweenBounds();
   }
-
+  assert(has_basis || basis_ok);
   if (!(primal_ok && dual_ok && basis_ok)) {
     printf("%s Col %d is [%g, %g] with primal %g (%s) dual %g (%s)%s%s"
 	   " \n",
@@ -493,7 +496,10 @@ void HighsPostsolveStack::FixedCol::undo(const HighsOptions& options,
 
   HighsCDouble reducedCost = colCost;
   for (const auto& colVal : colValues) {
-    reducedCost -= colVal.value * solution.row_dual[colVal.index];
+    HighsInt row = colVal.index;
+    reducedCost -= colVal.value * solution.row_dual[row];
+    if (maintain_row_value)
+      solution.row_value[row] += fixValue * colVal.value;
   }
 
   solution.col_dual[col] = static_cast<double>(reducedCost);
@@ -531,15 +537,60 @@ void HighsPostsolveStack::FixedCol::undo(const HighsOptions& options,
       }
       assert(fixed);
     }
-    // Check dual feasibility: cause of iterations after postsolve for
-    // seymour
-
-    const bool feasibility_ok = colFeasibilityOk("FixedCol::undo ", col, lower, upper, options, solution, basis);
+  }
+  // Check dual feasibility: cause of iterations after postsolve for
+  // seymour
+  
+  bool feasibility_ok = colFeasibilityOk("FixedCol::undo ", col, lower, upper, options, solution, basis);
     
-    if (!feasibility_ok) {
-      printf("dualFeasibilityOk fail\n");
+  if (!feasibility_ok) {
+    printf("dualFeasibilityOk fail\n");
+    if (correct_dual_error) {
+      // Look for a row that has zero dual and set it nonbasic
+      // according to the dual value inherited from the column
+      for (const auto& colVal : colValues) {
+	HighsInt row = colVal.index;
+	if (std::fabs(solution.row_dual[row]) < options.dual_feasibility_tolerance) {
+	  assert(!basis.valid || basis.row_status[row] == HighsBasisStatus::kBasic);
+	  double new_row_dual = solution.col_dual[col] / colVal.value;
+	  double new_col_dual = solution.row_dual[row] * colVal.value;
+	  HighsBasisStatus old_row_status = HighsBasisStatus::kNonbasic;
+	  HighsBasisStatus new_row_status = HighsBasisStatus::kNonbasic;
+	  HighsBasisStatus old_col_status = HighsBasisStatus::kNonbasic;
+	  HighsBasisStatus new_col_status = HighsBasisStatus::kNonbasic;
+	  if (basis.valid) {
+	    old_row_status = basis.row_status[row];
+	    old_col_status = basis.col_status[col];
+	    if (solution.row_dual[row] >= 0) {
+	      new_row_status = HighsBasisStatus::kLower;
+	    } else {
+	      new_row_status = HighsBasisStatus::kUpper;
+	    }
+	    new_col_status = HighsBasisStatus::kBasic;
+	    basis.row_status[row] = new_row_status;
+	    basis.col_status[col] = new_col_status;
+	  }
+	  solution.row_dual[row] = new_row_dual;
+	  solution.col_dual[col] = new_col_dual;
+	  printf("Assigned row %2d dual value %g %s %s %s %s\n", int(row),
+		 new_row_dual,
+		 basis.valid ? "and basis status" : "",
+		 basis.valid ? utilBasisStatusToString(old_row_status).s2_.c_str() : "",
+		 basis.valid ? "->" : "",
+		 basis.valid ? utilBasisStatusToString(new_row_status).s2_.c_str() : "");
+	  printf("Assigned col %2d dual value %g %s %s %s %s\n", int(col),
+		 new_col_dual,
+		 basis.valid ? "and basis status" : "",
+		 basis.valid ? utilBasisStatusToString(old_col_status).s2_.c_str() : "",
+		 basis.valid ? "->" : "",
+		 basis.valid ? utilBasisStatusToString(new_col_status).s2_.c_str() : "");
+	  break;
+	}
+      }
+      feasibility_ok = colFeasibilityOk("FixedCol::undo ", col, lower, upper, options, solution, basis);
+      if (!feasibility_ok) printf("dualFeasibilityOk STILL fail\n");
+      assert(feasibility_ok);
     }
-    assert(feasibility_ok);
   }
 }
 

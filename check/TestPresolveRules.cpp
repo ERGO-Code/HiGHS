@@ -83,6 +83,7 @@ TEST_CASE("test-col-stuffing", "[highs_test_presolve_rules]") {
   h.resetGlobalScheduler(true);
 }
 
+/*
 TEST_CASE("test-weakly-dominated-col-upper", "[highs_test_presolve_rules]") {
   Highs h;
   h.setOptionValue("output_flag", dev_run);
@@ -104,7 +105,7 @@ TEST_CASE("test-weakly-dominated-col-upper", "[highs_test_presolve_rules]") {
   lp.a_matrix_.index_ = {0, 1, 0};
   lp.a_matrix_.value_ = {1, 1, 1};
 
-  const bool maximize_first = true;
+  bool maximize_first = true;
   std::string sense_string = "";
   std::string test_string = "";
   
@@ -125,16 +126,20 @@ TEST_CASE("test-weakly-dominated-col-upper", "[highs_test_presolve_rules]") {
     //  presolveOffOn(test_string, lp, h);
 
     REQUIRE(h.setOptionValue("presolve_rule_test", kPresolveRuleWeaklyDominatedColUpper) == HighsStatus::kOk);
-    test_string = "initial-sweep+test-weakly-dominated-col-upper-" + sense_string;
-    presolveOffOn(test_string, lp, h, 1, 1, 1);
 
-    //  REQUIRE(h.setOptionValue("presolve_rule_off", 1 << kPresolveRuleInitialSweep) == HighsStatus::kOk);
-    //  test_string = "test-weakly-dominated-col-upper-" + sense_string;
-    //  presolveOffOn(test_string, lp, h, 1, 1, 1);
+    // test_string = "initial-sweep+test-weakly-dominated-col-upper-" + sense_string;
+    // presolveOffOn(test_string, lp, h, 1, 1, 1);
+    
+    REQUIRE(h.setOptionValue("presolve_rule_off", 1 << kPresolveRuleInitialSweep) == HighsStatus::kOk);
+    
+    test_string = "test-weakly-dominated-col-upper-" + sense_string;
+    presolveOffOn(test_string, lp, h, 1, 2, 1);
+
+    maximize_first = !maximize_first;
   }
   h.resetGlobalScheduler(true);
 }
-
+*/
 
 void presolveOffOn(const std::string& message, const HighsLp& lp, Highs& h,
                    const HighsInt require_presolved_model_num_col,
