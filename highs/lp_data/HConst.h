@@ -39,6 +39,7 @@ const double kExcessivelySmallObjectiveCoefficient = 1e-4;
 const double kExcessivelyLargeObjectiveCoefficient = 1e6;
 const double kExcessivelySmallBoundValue = 1e-4;
 const double kExcessivelyLargeBoundValue = 1e6;
+const double kExcessivelyLargeIntegerBoundValue = 1e4;
 
 const HighsInt kNoThreadInstance = -1;
 const bool kAllowDeveloperAssert = false;
