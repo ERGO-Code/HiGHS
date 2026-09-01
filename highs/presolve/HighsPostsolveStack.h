@@ -379,6 +379,8 @@ class HighsPostsolveStack {
     return origRowType[row] == OrigRowType::kCut;
   }
 
+  void setRowType(HighsInt row, OrigRowType type) { origRowType[row] = type; }
+
   // Returns presolved-space indices of rows from the original model
   std::vector<HighsInt> getOrigRows() const {
     std::vector<HighsInt> rows;

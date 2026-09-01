@@ -3,6 +3,8 @@
 #include "HCheckConfig.h"
 #include "Highs.h"
 #include "catch.hpp"
+#include "presolve/HPresolve.h"
+#include "presolve/HighsPostsolveStack.h"
 
 const bool dev_run = false;
 
@@ -86,6 +88,52 @@ TEST_CASE("test-col-stuffing", "[highs_test_presolve_rules]") {
   lp.clear();
 
   h.resetGlobalScheduler(true);
+}
+
+TEST_CASE("test-parallel-rows-cut-ordering", "[highs_test_presolve_rules]") {
+  // Rows 0 and 1 are parallel (both [1, 1]). Row 0 is marked as a
+  // cut. detectParallelRowsAndCols must remove the cut row (0) and
+  // keep the non-cut row (1), not the other way around.
+  // Row 2 involves only col 0, breaking column parallelism.
+  HighsLp lp;
+  lp.num_col_ = 2;
+  lp.num_row_ = 3;
+  lp.sense_ = ObjSense::kMinimize;
+  lp.col_cost_ = {1, 2};
+  lp.col_lower_ = {0, 0};
+  lp.col_upper_ = {10, 10};
+  lp.row_lower_ = {-kHighsInf, -kHighsInf, -kHighsInf};
+  lp.row_upper_ = {5, 5, 3};
+  lp.a_matrix_.num_col_ = lp.num_col_;
+  lp.a_matrix_.num_row_ = lp.num_row_;
+  lp.a_matrix_.format_ = MatrixFormat::kColwise;
+  lp.a_matrix_.start_ = {0, 3, 5};
+  lp.a_matrix_.index_ = {0, 1, 2, 0, 1};
+  lp.a_matrix_.value_ = {1, 1, 1, 1, 1};
+
+  HighsOptions options;
+  options.presolve_rule_test = kPresolveRuleParallelRowsAndCols;
+
+  HighsTimer timer;
+  timer.start();
+
+  presolve::HighsPostsolveStack postsolve_stack;
+  postsolve_stack.initializeIndexMaps(lp.num_row_, lp.num_col_);
+  // Mark parallel row 0 as a cut
+  postsolve_stack.setRowType(0,
+                             presolve::HighsPostsolveStack::OrigRowType::kCut);
+
+  presolve::HPresolve presolve;
+  presolve.setInput(lp, options, -1, &timer);
+  REQUIRE(presolve.okSetupPresolveDataStructures());
+  HighsModelStatus status = presolve.run(postsolve_stack);
+  timer.stop();
+  REQUIRE(status == HighsModelStatus::kNotset);
+  // One row must have been removed
+  REQUIRE(lp.num_row_ == 1);
+  // The surviving row must be original row 1 (non-cut), not row 0 (cut)
+  REQUIRE(postsolve_stack.getOrigRowIndex(0) == 1);
+  REQUIRE(!postsolve_stack.isCutRow(0));
 }
 
 void solveAndCheck(const std::string& message, const HighsLp& lp, Highs& h,
