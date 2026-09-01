@@ -392,7 +392,9 @@ class HighsPostsolveStack {
   // Returns presolved-space indices of rows that are cuts
   std::vector<HighsInt> getCutRows() const {
     std::vector<HighsInt> rows;
-    for (HighsInt i = 0; i < static_cast<HighsInt>(origRowType.size()); ++i)
+    // keep reverse loop to avoid behavior changes
+    for (HighsInt i = static_cast<HighsInt>(origRowType.size()) - 1; i >= 0;
+         --i)
       if (isCutRow(i)) rows.push_back(i);
     return rows;
   }
