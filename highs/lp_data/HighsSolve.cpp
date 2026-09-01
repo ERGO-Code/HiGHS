@@ -527,7 +527,7 @@ void assessExcessiveObjectiveBoundScaling(const HighsLogOptions log_options,
   // max_col_cost = 0
   assert(max_col_cost >= 0);
   // LPs with no columns or no finite nonzero bounds will have
-  // max_continuous_col_bound = 0 and max_noncontinuous_col_bound
+  // max_continuous_col_bound = 0 and max_noncontinuous_col_bound = 0
   assert(max_continuous_col_bound >= 0);
   assert(max_noncontinuous_col_bound >= 0);
   // LPs with no rows or no finite nonzero bounds will have
@@ -554,11 +554,11 @@ void assessExcessiveObjectiveBoundScaling(const HighsLogOptions log_options,
   if (0 < min_continuous_col_bound && min_continuous_col_bound < small_bound)
     highsLogUser(log_options, HighsLogType::kWarning,
                  "%s has some excessively small bounds on%s variables\n",
-                 problem.c_str(), is_mip ? " continous" : "");
+                 problem.c_str(), is_mip ? " continuous" : "");
   if (max_continuous_col_bound > large_bound)
     highsLogUser(log_options, HighsLogType::kWarning,
                  "%s has some excessively large bounds on%s variables\n",
-                 problem.c_str(), is_mip ? " continous" : "");
+                 problem.c_str(), is_mip ? " continuous" : "");
   if (0 < min_noncontinuous_col_bound &&
       min_noncontinuous_col_bound < small_bound)
     highsLogUser(
@@ -711,7 +711,7 @@ void assessExcessiveObjectiveBoundScaling(const HighsLogOptions log_options,
   if (warning_issued)
     highsLogUser(log_options, HighsLogType::kWarning,
                  "%s is badly scaled, which may compromise the speed, accuracy "
-                 "and reliablilty of solvers in HiGHS\n",
+                 "and reliability of solvers in HiGHS\n",
                  problem.c_str());
 }
 
