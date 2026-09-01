@@ -8731,7 +8731,9 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
   std::vector<HighsInt> rowOrder(model->num_row_);
   std::iota(rowOrder.begin(), rowOrder.end(), 0);
   pdqsort(rowOrder.begin(), rowOrder.end(), [&](HighsInt a, HighsInt b) {
-    return !postsolve_stack.isCutRow(a) && postsolve_stack.isCutRow(b);
+    if (postsolve_stack.isCutRow(a) != postsolve_stack.isCutRow(b))
+      return !postsolve_stack.isCutRow(a);
+    return a < b;
   });
 
   for (HighsInt rowIndex = 0; rowIndex != model->num_row_; ++rowIndex) {
