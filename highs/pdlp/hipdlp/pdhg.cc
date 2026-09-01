@@ -2648,16 +2648,10 @@ void PDLPSolver::linalgGpuAx(const double* d_x_in, double* d_ax_out) {
   double alpha = 1.0;
   double beta = 0.0;
 
+  // The buffer is sized and allocated once in setupGpu(): allocating here
+  // would be illegal inside the graph capture of the main loop.
   GPU_SPARSE_CHECK(gpuSparseSetDnVecValues(vec_x_desc_, (void*)d_x_in));
   GPU_SPARSE_CHECK(gpuSparseSetDnVecValues(vec_ax_desc_, (void*)d_ax_out));
-  if (spmv_buffer_size_ax_ == 0) {
-    GPU_SPARSE_CHECK(gpuSparseSpMV_bufferSize(
-        cusparse_handle_, GPU_OPERATION_NON_TRANSPOSE, &alpha, mat_a_csr_,
-        vec_x_desc_, &beta, vec_ax_desc_, GPU_R_64F, GPU_SPMV_ALG_MAIN,
-        &spmv_buffer_size_ax_));
-    GPU_CHECK(gpuMalloc(&d_spmv_buffer_ax_, spmv_buffer_size_ax_));
-  }
-
   GPU_SPARSE_CHECK(
       gpuSparseSpMV(cusparse_handle_, GPU_OPERATION_NON_TRANSPOSE, &alpha,
                    mat_a_csr_, vec_x_desc_, &beta, vec_ax_desc_, GPU_R_64F,
@@ -2669,15 +2663,9 @@ void PDLPSolver::linalgGpuATy(const double* d_y_in, double* d_aty_out) {
   double alpha = 1.0;
   double beta = 0.0;
 
+  // Same as linalgGpuAx: the buffer comes from setupGpu().
   GPU_SPARSE_CHECK(gpuSparseSetDnVecValues(vec_y_desc_, (void*)d_y_in));
   GPU_SPARSE_CHECK(gpuSparseSetDnVecValues(vec_aty_desc_, (void*)d_aty_out));
-  if (spmv_buffer_size_aty_ == 0) {
-    GPU_SPARSE_CHECK(gpuSparseSpMV_bufferSize(
-        cusparse_handle_, GPU_OPERATION_NON_TRANSPOSE, &alpha,
-        mat_a_T_csr_, vec_y_desc_, &beta, vec_aty_desc_, GPU_R_64F,
-        GPU_SPMV_ALG_MAIN, &spmv_buffer_size_aty_));
-    GPU_CHECK(gpuMalloc(&d_spmv_buffer_aty_, spmv_buffer_size_aty_));
-  }
   GPU_SPARSE_CHECK(
       gpuSparseSpMV(cusparse_handle_, GPU_OPERATION_NON_TRANSPOSE, &alpha,
                    mat_a_T_csr_, vec_y_desc_, &beta, vec_aty_desc_, GPU_R_64F,
