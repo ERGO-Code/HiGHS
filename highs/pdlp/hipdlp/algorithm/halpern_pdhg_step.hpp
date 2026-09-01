@@ -31,6 +31,8 @@ struct HalpernPdhgState {
 
 api::Error enqueueHalpernPdhgStep(backend::Backend& backend,
                                   HalpernPdhgState& state);
+api::Error restartHalpernPdhgStateFromCandidate(backend::Backend& backend,
+                                                HalpernPdhgState& state);
 
 }  // namespace algorithm
 }  // namespace hipdlp

@@ -104,92 +104,14 @@ api::Error requireTraceCapabilities(backend::Backend& backend) {
   return api::Error();
 }
 
-void updateScaledSumOfSquares(const double value, double& scale,
-                              double& sum_of_squares) {
-  const double magnitude = std::fabs(value);
-  if (magnitude == 0.0) return;
-  if (scale < magnitude) {
-    const double ratio = scale / magnitude;
-    sum_of_squares = 1.0 + sum_of_squares * ratio * ratio;
-    scale = magnitude;
-  } else {
-    const double ratio = magnitude / scale;
-    sum_of_squares += ratio * ratio;
-  }
-}
-
-double scaledNorm(const double scale, const double sum_of_squares) {
-  return scale == 0.0 ? 0.0 : scale * std::sqrt(sum_of_squares);
-}
-
-// Raw metrics stay in the transformed problem's unscaled units, which is the
-// space measured by Problem::unscaledNorms().
-api::Error computeRawMetrics(const model::Problem& problem,
-                             const std::vector<double>& primal,
-                             const std::vector<double>& dual,
-                             const std::vector<double>& ax,
-                             const std::vector<double>& aty,
-                             RawConvergenceMetrics& raw) {
-  const model::ScalingMetadata& scaling = problem.scaling();
-  const std::vector<double>& row_lower = problem.rowLower();
-  const std::vector<double>& col_lower = problem.colLower();
-  const std::vector<double>& col_upper = problem.colUpper();
-  const std::vector<double>& costs = problem.costs();
-  const std::vector<HighsBool>& equality_rows = problem.equalityRows();
-
-  double primal_objective = problem.objectiveOffset();
-  double dual_objective = problem.objectiveOffset();
-  double primal_scale = 0.0;
-  double primal_sum_of_squares = 1.0;
-  for (HighsInt row = 0; row < problem.numRows(); ++row) {
-    double violation = ax[row] - row_lower[row];
-    if (!equality_rows[row]) violation = std::min(0.0, violation);
-    updateScaledSumOfSquares(violation / scaling.row_scale[row], primal_scale,
-                             primal_sum_of_squares);
-    dual_objective += row_lower[row] * dual[row];
-  }
-
-  double dual_scale = 0.0;
-  double dual_sum_of_squares = 1.0;
-  for (HighsInt col = 0; col < problem.numCols(); ++col) {
-    const double reduced_cost = costs[col] - aty[col];
-    const bool has_lower = col_lower[col] > -kHighsInf;
-    const bool has_upper = col_upper[col] < kHighsInf;
-    const double lower_slack = has_lower ? std::max(0.0, reduced_cost) : 0.0;
-    const double upper_slack = has_upper ? std::max(0.0, -reduced_cost) : 0.0;
-    updateScaledSumOfSquares(
-        (reduced_cost - lower_slack + upper_slack) / scaling.col_scale[col],
-        dual_scale, dual_sum_of_squares);
-    primal_objective += costs[col] * primal[col];
-    if (has_lower) dual_objective += col_lower[col] * lower_slack;
-    if (has_upper) dual_objective -= col_upper[col] * upper_slack;
-  }
-
-  raw.primal_residual = scaledNorm(primal_scale, primal_sum_of_squares);
-  raw.dual_residual = scaledNorm(dual_scale, dual_sum_of_squares);
-  raw.primal_objective = primal_objective;
-  raw.dual_objective = dual_objective;
-  raw.objective_gap = std::fabs(primal_objective - dual_objective);
-  raw.unscaled_rhs_norm = problem.unscaledNorms().row_bounds_l2;
-  raw.unscaled_cost_norm = problem.unscaledNorms().objective_l2;
-  if (!std::isfinite(raw.primal_residual) ||
-      !std::isfinite(raw.dual_residual) ||
-      !std::isfinite(raw.primal_objective) ||
-      !std::isfinite(raw.dual_objective) || !std::isfinite(raw.objective_gap)) {
-    return api::Error(api::ErrorCode::kInvalidArgument,
-                      "fixed trace convergence metrics are non-finite");
-  }
-  return api::Error();
-}
-
 api::Error observeConvergence(
     const model::Problem& problem, const FixedTraceOptions& options,
     const std::vector<double>& primal, const std::vector<double>& dual,
     const std::vector<double>& ax, const std::vector<double>& aty,
     const HighsInt iteration, FixedTraceConvergenceObservation& observation) {
   RawConvergenceMetrics raw;
-  const api::Error error =
-      computeRawMetrics(problem, primal, dual, ax, aty, raw);
+    const api::Error error = computeRawConvergenceMetrics(
+      problem, primal, dual, ax, aty, raw);
   if (!error.ok()) return error;
   StoppingInput input;
   input.raw = raw;
@@ -317,6 +239,55 @@ api::Error appendFixedPointRestartCheck(
   return api::Error();
 }
 
+// The Tier A16 policy consumes only scalars the shared boundary already owns.
+struct PrimalWeightTracker {
+  bool enabled;
+  PrimalWeightState state;
+  PrimalWeightParameters parameters;
+  std::vector<FixedTracePrimalWeightUpdate> updates;
+
+  PrimalWeightTracker() : enabled(false) {}
+};
+
+// Both distances are measured before the Tier A14 transition overwrites either
+// anchor, and the returned steps are installed for later iterations only.
+api::Error updateRestartPrimalWeight(
+    backend::Backend& backend, HalpernPdhgState& state,
+    const NormalizedConvergenceMetrics& metrics, const HighsInt iteration,
+    PrimalWeightTracker& primal_weight) {
+  double primal_distance = 0.0;
+  api::Error error = backend.differenceNorm2(
+      *state.primal_candidate, *state.primal_anchor, primal_distance);
+  if (!error.ok()) return error;
+  double dual_distance = 0.0;
+  error = backend.differenceNorm2(*state.dual_candidate, *state.dual_anchor,
+                                  dual_distance);
+  if (!error.ok()) return error;
+
+  PrimalWeightUpdateInput input;
+  input.previous = primal_weight.state;
+  input.primal_anchor_distance = primal_distance;
+  input.dual_anchor_distance = dual_distance;
+  input.relative_primal_residual = metrics.relative_primal;
+  input.relative_dual_residual = metrics.relative_dual;
+  input.primal_step_size = state.primal_step_size;
+  input.dual_step_size = state.dual_step_size;
+  input.parameters = primal_weight.parameters;
+  const PrimalWeightUpdateResult result = updatePrimalWeightAtRestart(input);
+  if (!result.error.ok()) return result.error;
+
+  FixedTracePrimalWeightUpdate update;
+  update.iteration = iteration;
+  update.primal_anchor_distance = primal_distance;
+  update.dual_anchor_distance = dual_distance;
+  update.result = result;
+  primal_weight.updates.push_back(update);
+  primal_weight.state = result.next;
+  state.primal_step_size = result.step_sizes.primal_step;
+  state.dual_step_size = result.step_sizes.dual_step;
+  return api::Error();
+}
+
 // Models the legacy PDLPSolver::solve() restart body: both anchors and the
 // current iterate take the projected candidates and the cached products are
 // rebuilt, without touching either step size or the primal weight.
@@ -327,26 +298,12 @@ api::Error applyFixedPointRestart(backend::Backend& backend,
                                   AveragingState& averaging,
                                   double& average_normalization,
                                   TraceHandles& point) {
-  api::Error error =
-      backend.copy(*state.primal_candidate, *state.current_primal);
-  if (!error.ok()) return error;
-  error = backend.copy(*state.dual_candidate, *state.current_dual);
-  if (!error.ok()) return error;
-  error = backend.copy(*state.primal_candidate, *state.primal_anchor);
-  if (!error.ok()) return error;
-  error = backend.copy(*state.dual_candidate, *state.dual_anchor);
-  if (!error.ok()) return error;
-  error = backend.multiply(*state.problem, *state.current_primal,
-                           *state.current_ax);
-  if (!error.ok()) return error;
-  error = backend.multiplyTranspose(*state.problem, *state.current_dual,
-                                    *state.current_aty);
+  api::Error error = restartHalpernPdhgStateFromCandidate(backend, state);
   if (!error.ok()) return error;
   error = backend.fill(primal_sum, 0.0);
   if (!error.ok()) return error;
   error = backend.fill(dual_sum, 0.0);
   if (!error.ok()) return error;
-  state.iteration = 0;
   averaging = resetAveraging();
   average_normalization = 0.0;
   // The boundary point becomes the state that continues into the next step.
@@ -362,14 +319,23 @@ api::Error observeAndApplyFixedPointRestart(
     backend::VectorHandle& primal_sum, backend::VectorHandle& dual_sum,
     AveragingState& averaging, double& average_normalization,
     const HighsInt iteration, TraceHandles& point,
+    const std::vector<FixedTraceConvergenceCheck>& convergence_checks,
+    PrimalWeightTracker& primal_weight,
     std::vector<FixedTraceFixedPointRestartCheck>& checks) {
   const IterateSlots slots = {state.current_primal, state.current_dual,
                               state.next_primal, state.next_dual};
-  const api::Error error = appendFixedPointRestartCheck(
+  api::Error error = appendFixedPointRestartCheck(
       backend, options, state, slots, aty_delta_scratch, iteration, checks);
   if (!error.ok()) return error;
   if (checks.back().evaluation.decision != RestartDecision::kRestart)
     return api::Error();
+  if (primal_weight.enabled) {
+    // Validation guarantees this boundary already observed convergence.
+    error = updateRestartPrimalWeight(
+        backend, state, convergence_checks.back().stopping.metrics, iteration,
+        primal_weight);
+    if (!error.ok()) return error;
+  }
   return applyFixedPointRestart(backend, state, primal_sum, dual_sum, averaging,
                                 average_normalization, point);
 }
@@ -386,6 +352,9 @@ FixedTraceFixedPointErrorOptions::FixedTraceFixedPointErrorOptions()
 
 FixedTraceFixedPointRestartOptions::FixedTraceFixedPointRestartOptions()
     : enabled(false), check_cadence(0) {}
+
+FixedTracePrimalWeightOptions::FixedTracePrimalWeightOptions()
+    : enabled(false) {}
 
 FixedTraceOptions::FixedTraceOptions()
     : backend(backend::Kind::kCpu),
@@ -412,6 +381,9 @@ FixedTraceFixedPointRestartObservation::FixedTraceFixedPointRestartObservation()
 
 FixedTraceFixedPointRestartCheck::FixedTraceFixedPointRestartCheck()
     : iteration(0) {}
+
+FixedTracePrimalWeightUpdate::FixedTracePrimalWeightUpdate()
+    : iteration(0), primal_anchor_distance(0.0), dual_anchor_distance(0.0) {}
 
 FixedTraceDiagnostics::FixedTraceDiagnostics()
     : resource_creation_calls_before_iterations(0),
@@ -486,8 +458,39 @@ FixedTraceResult runFixedTrace(const model::OriginalModel& original_model,
                               "must align with recorded iteration blocks"),
                    diagnostics);
   }
+  if (options.primal_weight.enabled && !options.fixed_point_restart.enabled) {
+    return failure(api::Error(api::ErrorCode::kInvalidOption,
+                              "fixed trace primal-weight updates require the "
+                              "fixed-point restart trigger"),
+                   diagnostics);
+  }
+  // Every boundary that may decide kRestart must already carry the Tier A15
+  // candidate observation the policy consumes.
+  if (options.primal_weight.enabled && options.iteration_count > 0) {
+    const HighsInt restart_cadence = options.fixed_point_restart.check_cadence;
+    const HighsInt convergence_cadence = options.convergence.check_cadence;
+    const bool intermediate_boundaries =
+        restart_cadence > 0 && restart_cadence < options.iteration_count;
+    if (!options.convergence.periodic_enabled ||
+        (intermediate_boundaries &&
+         (convergence_cadence <= 0 ||
+          restart_cadence % convergence_cadence != 0))) {
+      return failure(
+          api::Error(api::ErrorCode::kInvalidOption,
+                     "fixed trace primal-weight updates require a convergence "
+                     "observation at every restart boundary"),
+          diagnostics);
+    }
+  }
   const bool uses_step_sequences =
       !options.primal_step_sizes.empty() || !options.dual_step_sizes.empty();
+  if (options.primal_weight.enabled && uses_step_sequences) {
+    return failure(api::Error(api::ErrorCode::kInvalidOption,
+                              "fixed trace primal-weight updates cannot "
+                              "combine with caller-provided step-size "
+                              "sequences"),
+                   diagnostics);
+  }
   if (!uses_step_sequences && (!std::isfinite(options.primal_step_size) ||
                                options.primal_step_size <= 0.0 ||
                                !std::isfinite(options.dual_step_size) ||
@@ -720,6 +723,10 @@ FixedTraceResult runFixedTrace(const model::OriginalModel& original_model,
       convergence_checks.reserve(static_cast<std::size_t>(check_count));
     }
     std::vector<FixedTraceFixedPointRestartCheck> restart_checks;
+    PrimalWeightTracker primal_weight;
+    primal_weight.enabled = options.primal_weight.enabled;
+    primal_weight.state = options.primal_weight.previous;
+    primal_weight.parameters = options.primal_weight.parameters;
     if (options.execution_mode == FixedTraceExecutionMode::kDirect) {
       while (total_iterations < options.iteration_count) {
         if (uses_step_sequences) {
@@ -762,7 +769,7 @@ FixedTraceResult runFixedTrace(const model::OriginalModel& original_model,
           error = observeAndApplyFixedPointRestart(
               *backend, options, state, averaged_aty, primal_sum, dual_sum,
               averaging, average_normalization, total_iterations, point,
-              restart_checks);
+              convergence_checks, primal_weight, restart_checks);
           if (!error.ok()) return failure(error, diagnostics);
         }
       }
@@ -850,7 +857,7 @@ FixedTraceResult runFixedTrace(const model::OriginalModel& original_model,
               *backend, options, state, averaged_aty, primal_sum, dual_sum,
               averaging, average_normalization, total_iterations,
               trace_handles[static_cast<std::size_t>(total_iterations)],
-              restart_checks);
+              convergence_checks, primal_weight, restart_checks);
           if (!error.ok()) return failure(error, diagnostics);
         }
       }
@@ -863,7 +870,8 @@ FixedTraceResult runFixedTrace(const model::OriginalModel& original_model,
         error = observeAndApplyFixedPointRestart(
             *backend, options, state, averaged_aty, primal_sum, dual_sum,
             averaging, average_normalization, total_iterations,
-            trace_handles[point_count - 1], restart_checks);
+            trace_handles[point_count - 1], convergence_checks, primal_weight,
+            restart_checks);
         if (!error.ok()) return failure(error, diagnostics);
         fixed_point_error.observed = true;
         fixed_point_error.evaluation = restart_checks.back().error;
@@ -940,6 +948,7 @@ FixedTraceResult runFixedTrace(const model::OriginalModel& original_model,
     result.fixed_point_error = fixed_point_error;
     result.fixed_point_restart = fixed_point_restart;
     result.fixed_point_restart_checks.swap(restart_checks);
+    result.primal_weight_updates.swap(primal_weight.updates);
     result.diagnostics = diagnostics;
     result.scaling = built.problem.scaling();
     return result;

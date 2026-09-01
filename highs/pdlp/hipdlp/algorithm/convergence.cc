@@ -1,7 +1,10 @@
 #include "pdlp/hipdlp/algorithm/convergence.hpp"
 
+#include <algorithm>
 #include <cmath>
 #include <limits>
+
+#include "pdlp/hipdlp/model/problem.hpp"
 
 namespace hipdlp {
 namespace algorithm {
@@ -19,6 +22,24 @@ StoppingResult failure(const api::ErrorCode code, const char* message) {
   StoppingResult result;
   result.error = api::Error(code, message);
   return result;
+}
+
+void updateScaledSumOfSquares(const double value, double& scale,
+                              double& sum_of_squares) {
+  const double magnitude = std::fabs(value);
+  if (magnitude == 0.0) return;
+  if (scale < magnitude) {
+    const double ratio = scale / magnitude;
+    sum_of_squares = 1.0 + sum_of_squares * ratio * ratio;
+    scale = magnitude;
+  } else {
+    const double ratio = magnitude / scale;
+    sum_of_squares += ratio * ratio;
+  }
+}
+
+double scaledNorm(const double scale, const double sum_of_squares) {
+  return scale == 0.0 ? 0.0 : scale * std::sqrt(sum_of_squares);
 }
 
 }  // namespace
@@ -50,6 +71,62 @@ StoppingResult::StoppingResult()
 bool StoppingResult::ok() const {
   return error.ok() && metrics_valid &&
          decision != StoppingDecision::kNumericalError;
+}
+
+api::Error computeRawConvergenceMetrics(
+    const model::Problem& problem, const std::vector<double>& primal,
+    const std::vector<double>& dual, const std::vector<double>& ax,
+    const std::vector<double>& aty, RawConvergenceMetrics& raw) {
+  const model::ScalingMetadata& scaling = problem.scaling();
+  const std::vector<double>& row_lower = problem.rowLower();
+  const std::vector<double>& col_lower = problem.colLower();
+  const std::vector<double>& col_upper = problem.colUpper();
+  const std::vector<double>& costs = problem.costs();
+  const std::vector<HighsBool>& equality_rows = problem.equalityRows();
+
+  double primal_objective = problem.objectiveOffset();
+  double dual_objective = problem.objectiveOffset();
+  double primal_scale = 0.0;
+  double primal_sum_of_squares = 1.0;
+  for (HighsInt row = 0; row < problem.numRows(); ++row) {
+    double violation = ax[row] - row_lower[row];
+    if (!equality_rows[row]) violation = std::min(0.0, violation);
+    updateScaledSumOfSquares(violation / scaling.row_scale[row], primal_scale,
+                             primal_sum_of_squares);
+    dual_objective += row_lower[row] * dual[row];
+  }
+
+  double dual_scale = 0.0;
+  double dual_sum_of_squares = 1.0;
+  for (HighsInt col = 0; col < problem.numCols(); ++col) {
+    const double reduced_cost = costs[col] - aty[col];
+    const bool has_lower = col_lower[col] > -kHighsInf;
+    const bool has_upper = col_upper[col] < kHighsInf;
+    const double lower_slack = has_lower ? std::max(0.0, reduced_cost) : 0.0;
+    const double upper_slack = has_upper ? std::max(0.0, -reduced_cost) : 0.0;
+    updateScaledSumOfSquares(
+        (reduced_cost - lower_slack + upper_slack) / scaling.col_scale[col],
+        dual_scale, dual_sum_of_squares);
+    primal_objective += costs[col] * primal[col];
+    if (has_lower) dual_objective += col_lower[col] * lower_slack;
+    if (has_upper) dual_objective -= col_upper[col] * upper_slack;
+  }
+
+  raw.primal_residual = scaledNorm(primal_scale, primal_sum_of_squares);
+  raw.dual_residual = scaledNorm(dual_scale, dual_sum_of_squares);
+  raw.primal_objective = primal_objective;
+  raw.dual_objective = dual_objective;
+  raw.objective_gap = std::fabs(primal_objective - dual_objective);
+  raw.unscaled_rhs_norm = problem.unscaledNorms().row_bounds_l2;
+  raw.unscaled_cost_norm = problem.unscaledNorms().objective_l2;
+  if (!std::isfinite(raw.primal_residual) ||
+      !std::isfinite(raw.dual_residual) ||
+      !std::isfinite(raw.primal_objective) ||
+      !std::isfinite(raw.dual_objective) || !std::isfinite(raw.objective_gap)) {
+    return api::Error(api::ErrorCode::kInvalidArgument,
+                      "fixed trace convergence metrics are non-finite");
+  }
+  return api::Error();
 }
 
 StoppingResult evaluateStopping(const StoppingInput& input) {

@@ -221,6 +221,38 @@ bool optionHipoFactorOk(const HighsLogOptions& report_log_options,
   return false;
 }
 
+bool optionHiPdlpBackendOk(const HighsLogOptions& report_log_options,
+                           const string& value) {
+  if (value == kHiPdlpAutoString || value == kHiPdlpBackendCpuString ||
+      value == kHiPdlpBackendCudaString ||
+      value == kHiPdlpBackendOpenmpString || value == kHiPdlpBackendRocmString)
+    return true;
+  highsLogUser(
+      report_log_options, HighsLogType::kError,
+      "Value \"%s\" for %s option is not one of \"%s\", \"%s\", "
+      "\"%s\", \"%s\" or \"%s\"\n",
+      value.c_str(), kHiPdlpBackendString.c_str(), kHiPdlpAutoString.c_str(),
+      kHiPdlpBackendCpuString.c_str(), kHiPdlpBackendCudaString.c_str(),
+      kHiPdlpBackendOpenmpString.c_str(), kHiPdlpBackendRocmString.c_str());
+  return false;
+}
+
+bool optionHiPdlpScalingOk(const HighsLogOptions& report_log_options,
+                           const string& value) {
+  if (value == kHiPdlpAutoString || value == kHighsOffString ||
+      value == kHiPdlpScalingCurtisReidString ||
+      value == kHiPdlpScalingLegacyString)
+    return true;
+  highsLogUser(report_log_options, HighsLogType::kError,
+               "Value \"%s\" for %s option is not one of \"%s\", \"%s\", "
+               "\"%s\" or \"%s\"\n",
+               value.c_str(), kHiPdlpScalingString.c_str(),
+               kHiPdlpAutoString.c_str(), kHighsOffString.c_str(),
+               kHiPdlpScalingCurtisReidString.c_str(),
+               kHiPdlpScalingLegacyString.c_str());
+  return false;
+}
+
 bool boolFromString(std::string value, bool& bool_value) {
   std::transform(value.begin(), value.end(), value.begin(),
                  [](unsigned char c) { return std::tolower(c); });
@@ -510,6 +542,12 @@ OptionStatus checkOptionValue(const HighsLogOptions& report_log_options,
       return OptionStatus::kIllegalValue;
   } else if (option.name == kHipoFactorString) {
     if (!optionHipoFactorOk(report_log_options, value))
+      return OptionStatus::kIllegalValue;
+  } else if (option.name == kHiPdlpBackendString) {
+    if (!optionHiPdlpBackendOk(report_log_options, value))
+      return OptionStatus::kIllegalValue;
+  } else if (option.name == kHiPdlpScalingString) {
+    if (!optionHiPdlpScalingOk(report_log_options, value))
       return OptionStatus::kIllegalValue;
   } else if (option.name == kPresolveLightString) {
     if (!optionOffChooseOnOk(report_log_options, option.name, value))

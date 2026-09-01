@@ -1662,6 +1662,148 @@ filters in GCC. Early stopping, restart primal-weight updates, initialization,
 final selection, the solve loop, postsolve/status handling, public routing,
 and Phase 7 remain unconsumed.
 
+### Tier A16 prerequisite to Phase 7: restart primal-weight consumption
+
+`algorithm/fixed_trace.{hpp,cc}` now consumes the Tier A12
+`updatePrimalWeightAtRestart()` policy, but only where the Tier A11 decision at
+a shared boundary is `kRestart`. The boundary order is the Tier A15 candidate
+convergence observation, the Tier A11 evaluation and record, the two
+candidate-to-anchor distances taken through `backend::differenceNorm2()` before
+either anchor is overwritten, the policy call, installation of the returned
+primal and dual steps for later iterations only, and finally the unchanged Tier
+A14 transition. No iterate is downloaded and no vector is added; recorded mode
+performs the reductions and the policy evaluation after the block has replayed
+and before the next block is captured. A disabled-by-default option carries the
+initial `PrimalWeightState` and `PrimalWeightParameters`, and an ordered history
+records the iteration, both distances, and the `PrimalWeightUpdateResult`. A
+`kContinue` boundary updates nothing, and a final-boundary restart records its
+update even though no later iteration consumes the returned steps.
+
+Enabled updates are rejected before any backend resource when the fixed-point
+restart trigger is off, when a possible restart boundary would lack a Tier A15
+observation, or when caller-provided step-size sequences are present. The
+boundary convergence and restart records, the Tier A14 candidate adoption and
+averaging reset, the fixed-point-error values with exactly three scalar
+readbacks per evaluation, trace point count and cadence indexing, disabled-mode
+bitwise identity, and command-buffer and graph-launch counts are all preserved.
+Each executed update costs exactly two difference-norm reductions: two direct
+kernel enqueues, four device-to-host events, and two synchronizations, with no
+allocation, vector creation, host-to-device transfer, or captured primitive.
+
+TDD first failed to compile because the option, the history, and the policy
+include did not exist. On the restart-at-two fixture the pre-reset distances are
+exactly `9/8` and `5/16`; the bounded column has relative residuals
+`(7/24, 0)`, whose undefined ratio reverts to the best weight, while a free
+column gives `(7/24, 21/32)` and ratio `9/4`, which drives the controlled PID
+branch. Both keep `eta = sqrt(tau * sigma)`. An independent oracle that replays
+the installed steps as a caller sequence reproduces the enabled trace bitwise.
+`[phase7p]` passes 949 assertions in nine Clang and GCC CPU cases and 2,174
+assertions in eleven Clang CUDA cases. All requested post-edit filters pass:
+Clang CPU `[hipdlp]` 11,209/141 and `[pdlp]` 11,239/149; Clang CUDA
+`[hipdlp]` 28,428/177 and `[pdlp]` 28,458/185; `[phase3c]` and `[phase5g]`
+unchanged in behavior.
+
+Recorded, not fixed: operator-norm and initial step-size wiring, trace
+termination or truncation, final iterate selection, the solve loop,
+postsolve and status handling, public rewrite routing, and Phase 7
+cross-solver validation all remain unimplemented.
+
+### Cutover readiness: public options, CPU solve completeness, CUDA and auto
+
+Three sequential checkpoints made the rewrite usable from ordinary HiGHS-style
+options on CPU, direct CUDA, and auto, while `solver = "hipdlp"` still routes to
+legacy by default. Nothing about the public default routing changed and no
+legacy file was moved or removed.
+
+Checkpoint 1 added the public options `hipdlp_backend`
+(`auto`/`cpu`/`cuda`/`openmp`/`rocm`, default `auto`), `hipdlp_scaling`
+(`auto`/`off`/`curtis_reid`/`legacy`, default `auto`), and
+`hipdlp_curtis_reid_iterations` (positive integer, default 20), each with a
+field, an option record, string validation, and a documentation entry. Option
+translation now produces a strongly typed `EffectivePolicy`, and
+`SolverOptions` no longer carries raw `HighsInt` restart or step-size
+strategies. The requested-to-effective mapping is: `fixed` to fixed; `PID` to
+PID; `adaptive`, including the HiGHS default, to fixed with one explicit
+warning and never to PID as the legacy solver does; `Malitsky-Pock` to a
+structured `kInvalidOption` error; every restart request and the restart-off
+feature bit to Halpern with one warning, matching the legacy public message.
+The policy resolution is applied only to the rewrite selector, so the legacy
+public path keeps its own semantics. A non-`auto` `MigrationOptions` backend
+remains the test and migration override; otherwise the public option decides.
+TDD RED was observed against the not-yet-rebuilt binaries: `bin/highs` rejected
+an options file containing `hipdlp_backend` with `getOptionIndex: Option
+"hipdlp_backend" is unknown` and exit code 255, and only one `[phase7][options]`
+test existed. GREEN: `[phase7][options]` 165 assertions in three cases and
+`[migration]` 193 in two, with `[phase7][solver]` unchanged at 98 in eight.
+
+Checkpoint 2 completed the CPU production loop inside the single
+`algorithm::solve()` control loop. An iteration-0 convergence evaluation now
+runs on the initialized current iterate, and an initial point that passes it
+still has to survive postsolve and the independent KKT verifier before it is
+reported optimal. Remaining time is checked immediately before and after the
+operator-norm power iteration; no stop predicate was added inside the power
+iteration, so a time limit can still be observed only at those boundaries.
+`updatePrimalWeightAtRestart()` is consumed only when the fixed-point restart
+decision is `kRestart` and the effective policy is PID: both candidate-to-anchor
+distances are reduced before any anchor moves, the normalized primal and dual
+residuals already computed at that boundary are reused, the returned steps are
+installed for later iterations only, and a policy failure returns the first
+`api::Error` before any state is mutated. The fixed-point error now uses the
+current omega with the unchanged initialized base step. `api::solve()` passes
+the rewrite only what is left of the global budget, `time_limit - timer.read()`
+clamped at zero, and preserves the infinite sentinel. A small
+`algorithm::SolveContext` carries an injectable log sink and self-audit
+diagnostics; the HiGHS adapter reports backend, requested and effective
+step/restart/scaling, and the final status, iteration count, elapsed time and
+relative KKT metrics exactly once, and emits nothing when `output_flag` is
+false. Zero-operator LPs keep the explicit `kInvalidModel` precondition, and
+tests confirm the public `Highs` path routes no-row and zero-matrix models to
+`solveUnconstrainedLp` without entering PDHG.
+
+Checkpoint 3 removed the CPU-only restriction without adding a backend branch.
+`algorithm::solve()` validates only that the kind is valid and hands it to the
+factory, so explicit CPU always uses CPU, explicit CUDA runs the same direct
+loop when built and probed, explicit CUDA returns `kBackendUnavailable` with no
+fallback otherwise, `auto` prefers CUDA and otherwise uses CPU, and OpenMP and
+ROCm stay structurally unavailable. Backend names for logging come from the
+factory registry, so the algorithm layer still contains no CUDA or ROCm symbol.
+No CUDA Graph or command-buffer path is used. The Phase 5H and Phase 6
+structural source scans were narrowed so that `api/options.cc`, `api/options.hpp`
+and `HighsOptions.h` may name the reserved public backend strings while the bans
+on CUDA and HIP headers, types, graph symbols and implementation names remain in
+force for those files and unchanged everywhere else.
+
+Verification used the existing builds. Clang CPU
+`/home/yanyu/builds/hipdlp2-m7b-cpu-20260826`: `[phase7][options]` 185/4,
+`[phase7][solver]` 253/17, `[migration]` 193/2, `[phase7]` 406/19,
+`[phase7a]` 569/11, `[phase7f]` 1088/5, `[phase7p]` 949/9, `[phase5h]` 180/1,
+`[phase6]` 1301/4, `[hipdlp]` 11651/160, `[pdlp]` 11681/168. Clang CUDA
+`/home/yanyu/builds/hipdlp2-m7b-cuda-20260826`: `[phase7][solver][cuda]` 61/1,
+`[phase7][solver]` 280/17, `[phase7]` 433/19, `[phase7a]` 1348/12,
+`[phase7p]` 2174/11, `[phase5h]` 377/2, `[phase6]` 1301/4, `[hipdlp]`
+28897/196, `[pdlp]` 28927/204. With `CUDA_VISIBLE_DEVICES` empty the same CUDA
+binary passes `[phase7][solver]` 253/17 and `[phase7][solver][cuda]` 34/1,
+taking the unavailable and CPU-selected branches. The existing CUDA
+ownership/lifecycle regression under Compute Sanitizer passes 29/1 with zero
+errors and zero leaked bytes; no CUDA backend resource code was changed, so no
+new sanitizer coverage was added. GCC CPU
+`/home/yanyu/builds/hipdlp2-tier-a-gcc-cpu-20260827` matches Clang CPU on every
+focused filter; its only `[hipdlp]`/`[pdlp]` failure is the known
+compiler-sensitive legacy `hi-pdlp-scrs8-legacy-characterization` trajectory
+difference, which is reported and not modified.
+
+Not executed: Bazel, Bazelisk, Meson and buildifier are unavailable, so their
+registrations were only checked statically; this task added no source or test
+file, so no registration changed.
+
+Recorded, not fixed: `defaultMigrationOptions()` still selects legacy and
+`solver = "hipdlp"` still routes to legacy; infeasibility and unboundedness
+certificates, the adaptive and Malitsky-Pock algorithms, averaged-iterate final
+selection, trivial zero-operator solving inside the rewrite, CUDA Graph solving,
+OpenMP and ROCm, performance tuning, mixed precision, multistart, Phase 7
+cross-solver validation and the performance gates, and legacy deletion all
+remain unimplemented. No performance claim is made.
+
 ### Phase 7: Full cross-solver validation
 
 - Run rewritten CPU and CUDA against legacy HiPDLP, in-tree cuPDLP, external

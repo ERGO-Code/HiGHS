@@ -118,22 +118,40 @@ TEST_CASE("hi-pdlp-migration-boundary", "[pdlp][hipdlp][migration][phase4]") {
   CHECK(translated.options.scaling.features_off ==
         highs.getOptions().pdlp_features_off);
 
-  SECTION("rewrite returns a structured not-ready result") {
+  SECTION("rewrite solves through the algorithm boundary") {
     const HighsLp lp =
         makeOneRowLp(ObjSense::kMinimize, 0.0, kHighsInf, 1.0, kHighsInf);
     const hipdlp::model::OriginalModel original_model(lp);
     hipdlp::api::SolverOptions rewrite_options = translated.options;
     rewrite_options.implementation =
         hipdlp::api::SolverImplementation::kRewrite;
+    rewrite_options.backend = hipdlp::backend::Kind::kCpu;
+    rewrite_options.policy.step_size = hipdlp::api::StepSizePolicy::kFixed;
     const hipdlp::api::SolveResult result =
         hipdlp::algorithm::solve(rewrite_options, original_model);
-    CHECK_FALSE(result.ok());
-    CHECK(result.status == hipdlp::api::SolverStatus::kError);
-    CHECK(result.error.code == hipdlp::api::ErrorCode::kNotReady);
-    CHECK_FALSE(result.has_solution);
+    INFO(result.error.message);
+    REQUIRE(result.ok());
+    CHECK(result.status == hipdlp::api::SolverStatus::kOptimal);
+    REQUIRE(result.has_solution);
+    REQUIRE(result.solution.value_valid);
+    REQUIRE(result.solution.dual_valid);
+    const hipdlp::verification::KktVerificationResult verification =
+        hipdlp::verification::verifyKkt(lp, result.solution,
+                                        rewrite_options.kkt_tolerance);
+    INFO(verification.error);
+    CHECK(verification.pass);
   }
 
-  SECTION("rewrite maps to a solve error and clears any prior solution") {
+  SECTION("rewrite maps a solution through the internal API") {
+    REQUIRE(highs.setOptionValue("pdlp_step_size_strategy",
+                                 kPdlpStepSizeStrategyFixed) ==
+            HighsStatus::kOk);
+    REQUIRE(highs.setOptionValue("pdlp_iteration_limit", 10000) ==
+            HighsStatus::kOk);
+    REQUIRE(highs.setOptionValue("pdlp_optimality_tolerance", kkt_tolerance) ==
+            HighsStatus::kOk);
+    REQUIRE(highs.setOptionValue("kkt_tolerance", kkt_tolerance) ==
+            HighsStatus::kOk);
     HighsTimer timer;
     HighsBasis basis;
     basis.valid = true;
@@ -146,18 +164,20 @@ TEST_CASE("hi-pdlp-migration-boundary", "[pdlp][hipdlp][migration][phase4]") {
         makeOneRowLp(ObjSense::kMinimize, 0.0, kHighsInf, 1.0, kHighsInf);
     const hipdlp::api::MigrationOptions rewrite(
         hipdlp::api::SolverImplementation::kRewrite,
-        hipdlp::backend::Kind::kAuto);
+        hipdlp::backend::Kind::kCpu);
 
-    CHECK(hipdlp::api::solve(highs.getOptions(), timer, lp, basis, solution,
-                             model_status, info, callback,
-                             rewrite) == HighsStatus::kError);
-    CHECK(model_status == HighsModelStatus::kSolveError);
-    CHECK(info.pdlp_iteration_count == 0);
+    REQUIRE(hipdlp::api::solve(highs.getOptions(), timer, lp, basis, solution,
+                               model_status, info, callback,
+                               rewrite) == HighsStatus::kOk);
+    CHECK(model_status == HighsModelStatus::kOptimal);
+    CHECK(info.pdlp_iteration_count > 0);
     CHECK_FALSE(basis.valid);
-    CHECK_FALSE(solution.value_valid);
-    CHECK_FALSE(solution.dual_valid);
-    CHECK(solution.col_value.empty());
-    CHECK(solution.row_dual.empty());
+    REQUIRE(solution.value_valid);
+    REQUIRE(solution.dual_valid);
+    const hipdlp::verification::KktVerificationResult verification =
+        hipdlp::verification::verifyKkt(lp, solution, kkt_tolerance);
+    INFO(verification.error);
+    CHECK(verification.pass);
   }
 
   SECTION("invalid internal selectors are rejected") {

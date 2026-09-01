@@ -1,5 +1,9 @@
 #include "pdlp/hipdlp/api/solver.hpp"
 
+#include <algorithm>
+#include <cmath>
+#include <string>
+
 #include "io/HighsIO.h"
 #include "pdlp/hipdlp/algorithm/solver.hpp"
 #include "pdlp/hipdlp/legacy/legacy_solver_adapter.hpp"
@@ -8,6 +12,29 @@ namespace hipdlp {
 namespace api {
 
 namespace {
+
+class HighsSolveLogSink : public algorithm::SolveLogSink {
+ public:
+  explicit HighsSolveLogSink(const HighsLogOptions& log_options)
+      : log_options_(log_options) {}
+
+  void info(const std::string& message) override {
+    highsLogUser(log_options_, HighsLogType::kInfo, "%s\n", message.c_str());
+  }
+
+  void warning(const std::string& message) override {
+    highsLogUser(log_options_, HighsLogType::kWarning, "%s\n", message.c_str());
+  }
+
+ private:
+  const HighsLogOptions& log_options_;
+};
+
+// The rewrite is given what is left of the global budget, never a second copy.
+double remainingTimeLimit(const double time_limit, HighsTimer& timer) {
+  if (time_limit == kHighsInf || !std::isfinite(time_limit)) return kHighsInf;
+  return std::max(0.0, time_limit - timer.read());
+}
 
 HighsStatus applyRewriteResult(const HighsOptions& options,
                                const SolveResult& result,
@@ -44,9 +71,17 @@ HighsStatus solve(const HighsOptions& options, HighsTimer& timer,
                          model_status, highs_info, callback);
   }
 
+  SolverOptions rewrite_options = translation.options;
+  rewrite_options.time_limit =
+      remainingTimeLimit(translation.options.time_limit, timer);
+
+  HighsSolveLogSink log_sink(options.log_options);
+  algorithm::SolveContext context;
+  context.log = &log_sink;
+
   const model::OriginalModel original_model(lp);
   return applyRewriteResult(
-      options, algorithm::solve(translation.options, original_model),
+      options, algorithm::solve(rewrite_options, original_model, context),
       highs_basis, highs_solution, model_status, highs_info);
 }
 

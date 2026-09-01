@@ -41,6 +41,7 @@ test_array = [
   ['test_TestHiPdlpModel', 'TestHiPdlpModel.cpp'],
   ['test_TestHiPdlpOperatorNorm', 'TestHiPdlpOperatorNorm.cpp'],
   ['test_TestHiPdlpRestart', 'TestHiPdlpRestart.cpp'],
+  ['test_TestHiPdlpSolver', 'TestHiPdlpSolver.cpp'],
   ['test_TestHiPdlpStepSize', 'TestHiPdlpStepSize.cpp'],
   ['test_TestHiPdlpTrace', 'TestHiPdlpTrace.cpp'],
   ['test_TestHSet', 'TestHSet.cpp'],

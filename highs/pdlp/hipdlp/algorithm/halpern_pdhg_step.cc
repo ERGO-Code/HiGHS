@@ -88,5 +88,35 @@ api::Error enqueueHalpernPdhgStep(backend::Backend& backend,
   return api::Error();
 }
 
+api::Error restartHalpernPdhgStateFromCandidate(backend::Backend& backend,
+                                                                                                HalpernPdhgState& state) {
+    if (state.problem == nullptr || state.current_primal == nullptr ||
+            state.current_dual == nullptr || state.primal_anchor == nullptr ||
+            state.dual_anchor == nullptr || state.primal_candidate == nullptr ||
+            state.dual_candidate == nullptr || state.current_ax == nullptr ||
+            state.current_aty == nullptr) {
+        return api::Error(api::ErrorCode::kInvalidArgument,
+                                            "Halpern-PDHG restart state is invalid");
+    }
+
+    api::Error error =
+            backend.copy(*state.primal_candidate, *state.current_primal);
+    if (!error.ok()) return error;
+    error = backend.copy(*state.dual_candidate, *state.current_dual);
+    if (!error.ok()) return error;
+    error = backend.copy(*state.primal_candidate, *state.primal_anchor);
+    if (!error.ok()) return error;
+    error = backend.copy(*state.dual_candidate, *state.dual_anchor);
+    if (!error.ok()) return error;
+    error = backend.multiply(*state.problem, *state.current_primal,
+                                                     *state.current_ax);
+    if (!error.ok()) return error;
+    error = backend.multiplyTranspose(*state.problem, *state.current_dual,
+                                                                        *state.current_aty);
+    if (!error.ok()) return error;
+    state.iteration = 0;
+    return api::Error();
+}
+
 }  // namespace algorithm
 }  // namespace hipdlp

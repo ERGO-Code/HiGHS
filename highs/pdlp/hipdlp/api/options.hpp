@@ -1,6 +1,8 @@
 #ifndef PDLP_HIPDLP_API_OPTIONS_HPP_
 #define PDLP_HIPDLP_API_OPTIONS_HPP_
 
+#include <string>
+
 #include "lp_data/HighsOptions.h"
 #include "pdlp/hipdlp/api/status.hpp"
 #include "pdlp/hipdlp/backend/types.hpp"
@@ -10,6 +12,21 @@ namespace hipdlp {
 namespace api {
 
 enum class SolverImplementation { kLegacy, kRewrite };
+
+// The only step-size and restart behaviours the rewrite actually implements.
+enum class StepSizePolicy { kFixed, kPid };
+enum class RestartPolicy { kHalpern };
+
+struct EffectivePolicy {
+  StepSizePolicy step_size;
+  RestartPolicy restart;
+  HighsInt requested_step_size_strategy;
+  HighsInt requested_restart_strategy;
+  bool step_size_substituted;
+  bool restart_substituted;
+
+  EffectivePolicy();
+};
 
 struct MigrationOptions {
   SolverImplementation implementation;
@@ -27,8 +44,7 @@ struct SolverOptions {
   HighsInt features_off;
   HighsInt iteration_limit;
   model::ScalingOptions scaling;
-  HighsInt restart_strategy;
-  HighsInt step_size_strategy;
+  EffectivePolicy policy;
   double optimality_tolerance;
 
   SolverOptions();
@@ -43,6 +59,8 @@ struct OptionTranslationResult {
 
 MigrationOptions defaultMigrationOptions();
 bool isValidImplementation(SolverImplementation implementation);
+bool backendKindFromString(const std::string& value, backend::Kind& kind);
+bool scalingModeFromString(const std::string& value, model::ScalingMode& mode);
 OptionTranslationResult translateOptions(const HighsOptions& highs_options,
                                          const MigrationOptions& migration);
 

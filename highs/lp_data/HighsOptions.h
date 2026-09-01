@@ -339,6 +339,23 @@ const string kHipoFactorString = "hipo_factor";
 const string kHipoFactorMultifrontal = "multifrontal";
 const string kHipoFactorUplooking = "uplooking";
 
+// Strings for the HiPDLP backend option
+const string kHiPdlpBackendString = "hipdlp_backend";
+const string kHiPdlpAutoString = "auto";
+const string kHiPdlpBackendCpuString = "cpu";
+const string kHiPdlpBackendCudaString = "cuda";
+const string kHiPdlpBackendOpenmpString = "openmp";
+const string kHiPdlpBackendRocmString = "rocm";
+
+// Strings for the HiPDLP scaling option
+const string kHiPdlpScalingString = "hipdlp_scaling";
+const string kHiPdlpScalingCurtisReidString = "curtis_reid";
+const string kHiPdlpScalingLegacyString = "legacy";
+
+const string kHiPdlpCurtisReidIterationsString =
+    "hipdlp_curtis_reid_iterations";
+const HighsInt kHiPdlpDefaultCurtisReidIterations = 20;
+
 struct HighsOptionsStruct {
   // Run-time options read from the command line
   std::string presolve;
@@ -418,6 +435,11 @@ struct HighsOptionsStruct {
   HighsInt pdlp_cupdlpc_restart_method;
   HighsInt pdlp_step_size_strategy;
   double pdlp_optimality_tolerance;
+
+  // Options for the HiPDLP rewrite
+  std::string hipdlp_backend;
+  std::string hipdlp_scaling;
+  HighsInt hipdlp_curtis_reid_iterations;
 
   // Options for QP solver
   bool test_qp_oracle;
@@ -601,6 +623,9 @@ struct HighsOptionsStruct {
         pdlp_cupdlpc_restart_method(0),
         pdlp_step_size_strategy(0),
         pdlp_optimality_tolerance(0.0),
+        hipdlp_backend(""),
+        hipdlp_scaling(""),
+        hipdlp_curtis_reid_iterations(0),
         test_qp_oracle(false),
         qp_allow_hot_start(false),
         qp_iteration_limit(0),
@@ -1418,6 +1443,27 @@ class HighsOptions : public HighsOptionsStruct {
         &pdlp_optimality_tolerance, kMinimumKktTolerance, kDefaultKktTolerance,
         kHighsInf);
     records.push_back(record_double);
+
+    record_string = new OptionRecordString(
+        kHiPdlpBackendString,
+        "HiPDLP execution backend: \"auto\", \"cpu\", \"cuda\", \"openmp\" "
+        "or \"rocm\"",
+        advanced, &hipdlp_backend, kHiPdlpAutoString);
+    records.push_back(record_string);
+
+    record_string = new OptionRecordString(
+        kHiPdlpScalingString,
+        "HiPDLP scaling pipeline: \"auto\", \"off\", \"curtis_reid\" or "
+        "\"legacy\"",
+        advanced, &hipdlp_scaling, kHiPdlpAutoString);
+    records.push_back(record_string);
+
+    record_int =
+        new OptionRecordInt(kHiPdlpCurtisReidIterationsString,
+                            "Number of Curtis-Reid scaling sweeps for HiPDLP",
+                            advanced, &hipdlp_curtis_reid_iterations, 1,
+                            kHiPdlpDefaultCurtisReidIterations, kHighsIInf);
+    records.push_back(record_int);
 
     record_bool = new OptionRecordBool("test_qp_oracle",
                                        "Use an oracle for the QP Hessian",

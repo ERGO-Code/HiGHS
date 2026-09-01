@@ -8,6 +8,7 @@
 #include "pdlp/hipdlp/algorithm/convergence.hpp"
 #include "pdlp/hipdlp/algorithm/fixed_point_error.hpp"
 #include "pdlp/hipdlp/algorithm/restart_policy.hpp"
+#include "pdlp/hipdlp/algorithm/step_size_policy.hpp"
 #include "pdlp/hipdlp/api/status.hpp"
 #include "pdlp/hipdlp/backend/command_buffer.hpp"
 #include "pdlp/hipdlp/backend/types.hpp"
@@ -45,6 +46,14 @@ struct FixedTraceFixedPointRestartOptions {
   FixedTraceFixedPointRestartOptions();
 };
 
+struct FixedTracePrimalWeightOptions {
+  bool enabled;
+  PrimalWeightState previous;
+  PrimalWeightParameters parameters;
+
+  FixedTracePrimalWeightOptions();
+};
+
 struct FixedTraceOptions {
   backend::Kind backend;
   FixedTraceExecutionMode execution_mode;
@@ -60,6 +69,7 @@ struct FixedTraceOptions {
   ConvergenceTolerances convergence_tolerances;
   FixedTraceFixedPointErrorOptions fixed_point_error;
   FixedTraceFixedPointRestartOptions fixed_point_restart;
+  FixedTracePrimalWeightOptions primal_weight;
 
   FixedTraceOptions();
 };
@@ -111,6 +121,16 @@ struct FixedTracePoint {
   std::vector<double> aty;
 };
 
+// Recorded only where the shared boundary decided kRestart; the distances are
+// measured before either anchor is overwritten.
+struct FixedTracePrimalWeightUpdate {
+  HighsInt iteration;
+  double primal_anchor_distance;
+  double dual_anchor_distance;
+  PrimalWeightUpdateResult result;
+
+  FixedTracePrimalWeightUpdate();
+};
 struct FixedTraceDiagnostics {
   std::size_t resource_creation_calls_before_iterations;
   std::size_t resource_creation_calls_during_iterations;
@@ -134,6 +154,7 @@ struct FixedTraceResult {
   FixedTraceFixedPointErrorObservation fixed_point_error;
   FixedTraceFixedPointRestartObservation fixed_point_restart;
   std::vector<FixedTraceFixedPointRestartCheck> fixed_point_restart_checks;
+  std::vector<FixedTracePrimalWeightUpdate> primal_weight_updates;
   FixedTraceDiagnostics diagnostics;
   model::ScalingMetadata scaling;
 

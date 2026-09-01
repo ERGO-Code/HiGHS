@@ -39,6 +39,15 @@ HighsLp makeOneStepLp() {
   return lp;
 }
 
+// The same iterates as makeOneStepLp while the two free bounds expose a
+// nonzero normalized dual residual.
+HighsLp makeFreeStepLp() {
+  HighsLp lp = makeOneStepLp();
+  lp.col_lower_ = {-kHighsInf};
+  lp.col_upper_ = {kHighsInf};
+  return lp;
+}
+
 HighsLp makeProjectionLp() {
   HighsLp lp;
   lp.num_col_ = 1;
@@ -216,6 +225,10 @@ void checkNoFixedPointRestart(
   CHECK(result.fixed_point_restart_checks.empty());
 }
 
+void checkNoPrimalWeight(const hipdlp::algorithm::FixedTraceResult& result) {
+  CHECK(result.primal_weight_updates.empty());
+}
+
 void checkTransactionalFailure(
     const hipdlp::algorithm::FixedTraceResult& result) {
   CHECK_FALSE(result.ok());
@@ -226,6 +239,7 @@ void checkTransactionalFailure(
   checkNoConvergence(result);
   checkNoFixedPointError(result);
   checkNoFixedPointRestart(result);
+  checkNoPrimalWeight(result);
 }
 
 void enableFixedPointError(hipdlp::algorithm::FixedTraceOptions& options,
@@ -273,6 +287,13 @@ void enablePeriodicConvergence(hipdlp::algorithm::FixedTraceOptions& options,
                                const HighsInt check_cadence) {
   options.convergence.periodic_enabled = true;
   options.convergence.check_cadence = check_cadence;
+}
+
+void enablePrimalWeight(hipdlp::algorithm::FixedTraceOptions& options,
+                        const double primal_weight) {
+  options.primal_weight.enabled = true;
+  options.primal_weight.previous =
+      hipdlp::algorithm::resetPrimalWeight(primal_weight);
 }
 
 bool bitwiseEqual(const double left, const double right) {
@@ -428,6 +449,48 @@ void checkBitwiseEqualConvergenceChecks(
   }
 }
 
+void checkBitwiseEqualPrimalWeightResult(
+    const hipdlp::algorithm::PrimalWeightUpdateResult& left,
+    const hipdlp::algorithm::PrimalWeightUpdateResult& right) {
+  CHECK(left.error.code == right.error.code);
+  CHECK(left.error.message == right.error.message);
+  CHECK(left.kind == right.kind);
+  CHECK(left.next.best_gap_valid == right.next.best_gap_valid);
+  CHECK(left.next.history_valid == right.next.history_valid);
+  const double left_values[] = {
+      left.next.primal_weight,     left.next.error_sum,
+      left.next.previous_error,    left.next.best_primal_weight,
+      left.next.best_residual_gap, left.step_sizes.primal_weight,
+      left.step_sizes.base_step,   left.step_sizes.primal_step,
+      left.step_sizes.dual_step};
+  const double right_values[] = {
+      right.next.primal_weight,     right.next.error_sum,
+      right.next.previous_error,    right.next.best_primal_weight,
+      right.next.best_residual_gap, right.step_sizes.primal_weight,
+      right.step_sizes.base_step,   right.step_sizes.primal_step,
+      right.step_sizes.dual_step};
+  for (std::size_t value = 0; value < 9; ++value) {
+    CAPTURE(value);
+    CHECK(bitwiseEqual(left_values[value], right_values[value]));
+  }
+}
+
+void checkBitwiseEqualPrimalWeightUpdates(
+    const std::vector<hipdlp::algorithm::FixedTracePrimalWeightUpdate>& left,
+    const std::vector<hipdlp::algorithm::FixedTracePrimalWeightUpdate>& right) {
+  REQUIRE(left.size() == right.size());
+  for (std::size_t update = 0; update < left.size(); ++update) {
+    CAPTURE(update);
+    CHECK(left[update].iteration == right[update].iteration);
+    CHECK(bitwiseEqual(left[update].primal_anchor_distance,
+                       right[update].primal_anchor_distance));
+    CHECK(bitwiseEqual(left[update].dual_anchor_distance,
+                       right[update].dual_anchor_distance));
+    checkBitwiseEqualPrimalWeightResult(left[update].result,
+                                        right[update].result);
+  }
+}
+
 void checkBitwiseEqual(const hipdlp::algorithm::FixedTraceResult& left,
                        const hipdlp::algorithm::FixedTraceResult& right) {
   checkBitwiseEqualTraceOutputs(left, right);
@@ -437,6 +500,8 @@ void checkBitwiseEqual(const hipdlp::algorithm::FixedTraceResult& left,
                                      right.fixed_point_restart);
   checkBitwiseEqualFixedPointRestartChecks(left.fixed_point_restart_checks,
                                            right.fixed_point_restart_checks);
+  checkBitwiseEqualPrimalWeightUpdates(left.primal_weight_updates,
+                                       right.primal_weight_updates);
 }
 
 void checkSameRestartDecisions(
@@ -864,6 +929,80 @@ void checkRestartTransitionAuditDelta(
   CHECK(restarted.direct_primitive_enqueue_calls >
         base.direct_primitive_enqueue_calls);
 }
+
+void checkApproxPrimalWeightUpdates(
+    const std::vector<hipdlp::algorithm::FixedTracePrimalWeightUpdate>& actual,
+    const std::vector<hipdlp::algorithm::FixedTracePrimalWeightUpdate>&
+        expected,
+    const double margin) {
+  REQUIRE(actual.size() == expected.size());
+  for (std::size_t update = 0; update < actual.size(); ++update) {
+    CAPTURE(update);
+    CHECK(actual[update].iteration == expected[update].iteration);
+    CHECK(actual[update].result.error.code ==
+          expected[update].result.error.code);
+    CHECK(actual[update].result.kind == expected[update].result.kind);
+    const double actual_values[] = {
+        actual[update].primal_anchor_distance,
+        actual[update].dual_anchor_distance,
+        actual[update].result.next.primal_weight,
+        actual[update].result.next.error_sum,
+        actual[update].result.step_sizes.base_step,
+        actual[update].result.step_sizes.primal_step,
+        actual[update].result.step_sizes.dual_step};
+    const double expected_values[] = {
+        expected[update].primal_anchor_distance,
+        expected[update].dual_anchor_distance,
+        expected[update].result.next.primal_weight,
+        expected[update].result.next.error_sum,
+        expected[update].result.step_sizes.base_step,
+        expected[update].result.step_sizes.primal_step,
+        expected[update].result.step_sizes.dual_step};
+    for (std::size_t value = 0; value < 7; ++value) {
+      CAPTURE(value);
+      CHECK(actual_values[value] ==
+            Approx(expected_values[value]).margin(margin));
+    }
+  }
+}
+
+// Each executed Tier A16 update adds exactly two difference-norm reductions:
+// two kernel enqueues, four device-to-host events, and two synchronizations.
+void checkPrimalWeightAuditDelta(
+    const hipdlp::backend::cuda::testing::ResourceAudit& disabled,
+    const hipdlp::backend::cuda::testing::ResourceAudit& enabled,
+    const std::size_t updates) {
+  CHECK(enabled.stream_creations == disabled.stream_creations);
+  CHECK(enabled.stream_destructions == disabled.stream_destructions);
+  CHECK(enabled.cublas_creations == disabled.cublas_creations);
+  CHECK(enabled.cublas_destructions == disabled.cublas_destructions);
+  CHECK(enabled.cusparse_creations == disabled.cusparse_creations);
+  CHECK(enabled.cusparse_destructions == disabled.cusparse_destructions);
+  CHECK(enabled.allocation_calls == disabled.allocation_calls);
+  CHECK(enabled.free_calls == disabled.free_calls);
+  CHECK(enabled.descriptor_creations == disabled.descriptor_creations);
+  CHECK(enabled.descriptor_destructions == disabled.descriptor_destructions);
+  CHECK(enabled.host_to_device_transfers == disabled.host_to_device_transfers);
+  CHECK(enabled.device_to_host_transfers ==
+        disabled.device_to_host_transfers + 4 * updates);
+  CHECK(enabled.device_to_device_transfers ==
+        disabled.device_to_device_transfers);
+  CHECK(enabled.graph_capture_calls == disabled.graph_capture_calls);
+  CHECK(enabled.graph_creations == disabled.graph_creations);
+  CHECK(enabled.graph_destructions == disabled.graph_destructions);
+  CHECK(enabled.graph_instantiation_calls ==
+        disabled.graph_instantiation_calls);
+  CHECK(enabled.graph_exec_creations == disabled.graph_exec_creations);
+  CHECK(enabled.graph_exec_destructions == disabled.graph_exec_destructions);
+  CHECK(enabled.graph_launch_calls == disabled.graph_launch_calls);
+  CHECK(enabled.graph_update_calls == disabled.graph_update_calls);
+  CHECK(enabled.graph_capture_primitive_enqueue_calls ==
+        disabled.graph_capture_primitive_enqueue_calls);
+  CHECK(enabled.direct_primitive_enqueue_calls ==
+        disabled.direct_primitive_enqueue_calls + 2 * updates);
+  CHECK(enabled.synchronization_calls ==
+        disabled.synchronization_calls + 2 * updates);
+}
 #endif
 
 // Exact restart-at-two fixture: makeOneStepLp with tau = 1/2, sigma = 1/4,
@@ -900,6 +1039,56 @@ std::vector<RestartExecutionSelection> restartExecutionSelections() {
                         hipdlp::algorithm::FixedTraceExecutionMode::kRecorded});
 #endif
   return selections;
+}
+
+// Both anchors still hold the zero start when the restart at two is decided,
+// so the candidate-to-anchor distances are the candidate magnitudes.
+const double kAnchorPrimalDistanceAtTwo = 9.0 / 8.0;
+const double kAnchorDualDistanceAtTwo = 5.0 / 16.0;
+const double kRelativePrimalAtTwo = 7.0 / 24.0;
+const double kBoundedRelativeDualAtTwo = 0.0;
+const double kFreeRelativeDualAtTwo = 21.0 / 32.0;
+
+hipdlp::algorithm::FixedTraceOptions makePrimalWeightOptions(
+    const HighsInt iteration_count) {
+  hipdlp::algorithm::FixedTraceOptions options =
+      makeRestartAtTwoOptions(iteration_count);
+  enablePeriodicConvergence(options, 2);
+  enablePrimalWeight(options, 1.0);
+  return options;
+}
+
+// Independent oracle: the Tier A12 policy called directly on the scalars the
+// shared boundary is required to forward.
+hipdlp::algorithm::PrimalWeightUpdateResult expectedRestartPrimalWeightAtTwo(
+    const double initial_weight, const double relative_dual) {
+  hipdlp::algorithm::PrimalWeightUpdateInput input;
+  input.previous = hipdlp::algorithm::resetPrimalWeight(initial_weight);
+  input.primal_anchor_distance = kAnchorPrimalDistanceAtTwo;
+  input.dual_anchor_distance = kAnchorDualDistanceAtTwo;
+  input.relative_primal_residual = kRelativePrimalAtTwo;
+  input.relative_dual_residual = relative_dual;
+  input.primal_step_size = 0.5;
+  input.dual_step_size = 0.25;
+  return hipdlp::algorithm::updatePrimalWeightAtRestart(input);
+}
+
+void checkPrimalWeightUpdatesFollowRestarts(
+    const hipdlp::algorithm::FixedTraceResult& result) {
+  std::size_t update = 0;
+  for (std::size_t check = 0; check < result.fixed_point_restart_checks.size();
+       ++check) {
+    if (result.fixed_point_restart_checks[check].evaluation.decision !=
+        hipdlp::algorithm::RestartDecision::kRestart)
+      continue;
+    CAPTURE(check);
+    REQUIRE(update < result.primal_weight_updates.size());
+    CHECK(result.primal_weight_updates[update].iteration ==
+          result.fixed_point_restart_checks[check].iteration);
+    CHECK(result.primal_weight_updates[update].result.ok());
+    ++update;
+  }
+  CHECK(update == result.primal_weight_updates.size());
 }
 
 hipdlp::algorithm::FixedTraceResult runTrace(
@@ -3429,6 +3618,557 @@ TEST_CASE("hi-pdlp-recorded-periodic-convergence-failure-is-transactional",
   INFO(recovered.error.message);
   REQUIRE(recovered.ok());
   REQUIRE(recovered.convergence_checks.size() == 2);
+}
+#endif
+
+TEST_CASE("hi-pdlp-fixed-trace-restart-primal-weight-uses-anchor-distances",
+          "[pdlp][hipdlp][phase7p][restart][primal-weight][exact]") {
+  const hipdlp::algorithm::FixedTraceResult result =
+      runTrace(makeOneStepLp(), makePrimalWeightOptions(3));
+  INFO(result.error.message);
+  REQUIRE(result.ok());
+  REQUIRE(result.points.size() == 4);
+  REQUIRE(result.convergence_checks.size() == 2);
+  REQUIRE(result.fixed_point_restart_checks.size() == 2);
+  REQUIRE(result.primal_weight_updates.size() == 1);
+  checkPrimalWeightUpdatesFollowRestarts(result);
+
+  const hipdlp::algorithm::FixedTracePrimalWeightUpdate& update =
+      result.primal_weight_updates[0];
+  CHECK(update.iteration == 2);
+  CHECK(update.primal_anchor_distance == kAnchorPrimalDistanceAtTwo);
+  CHECK(update.dual_anchor_distance == kAnchorDualDistanceAtTwo);
+  // The transition then makes both anchors the candidate, so the same
+  // distances measured afterwards would be zero.
+  checkExactPoint(result.points[2], {kCandidatePrimalAtTwo},
+                  {kCandidateDualAtTwo}, {kCandidatePrimalAtTwo},
+                  {kCandidateDualAtTwo});
+  CHECK(update.primal_anchor_distance != 0.0);
+  CHECK(update.dual_anchor_distance != 0.0);
+
+  // The shared boundary records are the ones the policy consumed.
+  CHECK(result.convergence_checks[0].iteration == 2);
+  CHECK(result.convergence_checks[0].stopping.metrics.relative_primal ==
+        kRelativePrimalAtTwo);
+  CHECK(result.convergence_checks[0].stopping.metrics.relative_dual ==
+        kBoundedRelativeDualAtTwo);
+  CHECK(result.fixed_point_restart_checks[0].iteration == 2);
+  CHECK(result.fixed_point_restart_checks[0].error.fixed_point_error ==
+        kErrorAtTwo);
+  CHECK(result.fixed_point_restart_checks[0]
+            .error.diagnostics.device_to_host_scalar_readbacks == 3);
+  CHECK(result.fixed_point_restart_checks[0].evaluation.decision ==
+        hipdlp::algorithm::RestartDecision::kRestart);
+  CHECK(result.fixed_point_restart_checks[1].iteration == 3);
+  CHECK(result.fixed_point_restart_checks[1].evaluation.decision ==
+        hipdlp::algorithm::RestartDecision::kContinue);
+
+  const hipdlp::algorithm::PrimalWeightUpdateResult expected =
+      expectedRestartPrimalWeightAtTwo(1.0, kBoundedRelativeDualAtTwo);
+  REQUIRE(expected.ok());
+  REQUIRE(update.result.ok());
+  checkBitwiseEqualPrimalWeightResult(update.result, expected);
+}
+
+TEST_CASE("hi-pdlp-fixed-trace-restart-primal-weight-controls-and-falls-back",
+          "[pdlp][hipdlp][phase7p][restart][primal-weight][policy][exact]") {
+  const hipdlp::algorithm::FixedTraceResult bounded =
+      runTrace(makeOneStepLp(), makePrimalWeightOptions(3));
+  const hipdlp::algorithm::FixedTraceResult free_column =
+      runTrace(makeFreeStepLp(), makePrimalWeightOptions(3));
+  INFO(bounded.error.message);
+  INFO(free_column.error.message);
+  REQUIRE(bounded.ok());
+  REQUIRE(free_column.ok());
+  REQUIRE(bounded.primal_weight_updates.size() == 1);
+  REQUIRE(free_column.primal_weight_updates.size() == 1);
+  REQUIRE(bounded.convergence_checks.size() == 2);
+  REQUIRE(free_column.convergence_checks.size() == 2);
+
+  // Both fixtures share the boundary candidate, so both share the distances.
+  CHECK(free_column.primal_weight_updates[0].primal_anchor_distance ==
+        kAnchorPrimalDistanceAtTwo);
+  CHECK(free_column.primal_weight_updates[0].dual_anchor_distance ==
+        kAnchorDualDistanceAtTwo);
+  CHECK(free_column.fixed_point_restart_checks[0].error.fixed_point_error ==
+        kErrorAtTwo);
+
+  // A zero relative dual residual makes the ratio inadmissible and reverts to
+  // the best weight; the free column keeps the ratio inside its window.
+  CHECK(bounded.convergence_checks[0].stopping.metrics.relative_dual ==
+        kBoundedRelativeDualAtTwo);
+  CHECK(bounded.primal_weight_updates[0].result.kind ==
+        hipdlp::algorithm::PrimalWeightUpdateKind::kRevertedToBest);
+  CHECK(bounded.primal_weight_updates[0].result.next.primal_weight == 1.0);
+  CHECK(bounded.primal_weight_updates[0].result.next.error_sum == 0.0);
+
+  CHECK(free_column.convergence_checks[0].raw.dual_residual == 21.0 / 16.0);
+  CHECK(free_column.convergence_checks[0].stopping.metrics.relative_primal ==
+        kRelativePrimalAtTwo);
+  CHECK(free_column.convergence_checks[0].stopping.metrics.relative_dual ==
+        kFreeRelativeDualAtTwo);
+  CHECK(free_column.primal_weight_updates[0].result.kind ==
+        hipdlp::algorithm::PrimalWeightUpdateKind::kControlled);
+  CHECK(free_column.primal_weight_updates[0].result.next.primal_weight != 1.0);
+
+  checkBitwiseEqualPrimalWeightResult(
+      bounded.primal_weight_updates[0].result,
+      expectedRestartPrimalWeightAtTwo(1.0, kBoundedRelativeDualAtTwo));
+  checkBitwiseEqualPrimalWeightResult(
+      free_column.primal_weight_updates[0].result,
+      expectedRestartPrimalWeightAtTwo(1.0, kFreeRelativeDualAtTwo));
+}
+
+TEST_CASE("hi-pdlp-fixed-trace-restart-primal-weight-preserves-eta",
+          "[pdlp][hipdlp][phase7p][restart][primal-weight][eta]") {
+  const HighsLp fixtures[] = {makeOneStepLp(), makeFreeStepLp()};
+  for (std::size_t selection = 0; selection < 2; ++selection) {
+    CAPTURE(selection);
+    hipdlp::algorithm::FixedTraceOptions options = makePrimalWeightOptions(3);
+    const hipdlp::algorithm::FixedTraceResult result =
+        runTrace(fixtures[selection], options);
+    INFO(result.error.message);
+    REQUIRE(result.ok());
+    REQUIRE(result.primal_weight_updates.size() == 1);
+    const hipdlp::algorithm::InitialStepSizes& steps =
+        result.primal_weight_updates[0].result.step_sizes;
+    const double eta =
+        std::sqrt(options.primal_step_size * options.dual_step_size);
+    CHECK(steps.base_step == eta);
+    CHECK(std::sqrt(steps.primal_step * steps.dual_step) ==
+          Approx(eta).margin(1e-15));
+    CHECK(steps.primal_step == Approx(eta / steps.primal_weight).margin(1e-15));
+    CHECK(steps.dual_step == Approx(eta * steps.primal_weight).margin(1e-15));
+  }
+}
+
+TEST_CASE("hi-pdlp-fixed-trace-restart-primal-weight-installs-later-steps",
+          "[pdlp][hipdlp][phase7p][restart][primal-weight][steps]") {
+  hipdlp::algorithm::FixedTraceOptions options = makePrimalWeightOptions(4);
+  options.fixed_point_restart.parameters.artificial_threshold = 0.6;
+  const hipdlp::algorithm::FixedTraceResult result =
+      runTrace(makeOneStepLp(), options);
+  INFO(result.error.message);
+  REQUIRE(result.ok());
+  REQUIRE(result.points.size() == 5);
+  REQUIRE(result.primal_weight_updates.size() == 1);
+  checkPrimalWeightUpdatesFollowRestarts(result);
+  CHECK(result.primal_weight_updates[0].iteration == 2);
+  const hipdlp::algorithm::InitialStepSizes installed =
+      result.primal_weight_updates[0].result.step_sizes;
+  CHECK(installed.primal_step != options.primal_step_size);
+  CHECK(installed.dual_step != options.dual_step_size);
+
+  // Independent oracle: the same run with the installed steps supplied as a
+  // caller sequence that starts only after the boundary.
+  hipdlp::algorithm::FixedTraceOptions oracle_options = options;
+  oracle_options.primal_weight.enabled = false;
+  oracle_options.primal_step_sizes.assign(2, options.primal_step_size);
+  oracle_options.primal_step_sizes.resize(4, installed.primal_step);
+  oracle_options.dual_step_sizes.assign(2, options.dual_step_size);
+  oracle_options.dual_step_sizes.resize(4, installed.dual_step);
+  const hipdlp::algorithm::FixedTraceResult oracle =
+      runTrace(makeOneStepLp(), oracle_options);
+  INFO(oracle.error.message);
+  REQUIRE(oracle.ok());
+  CHECK(oracle.primal_weight_updates.empty());
+  checkBitwiseEqualTraceOutputs(result, oracle);
+  checkBitwiseEqualFixedPointError(result.fixed_point_error,
+                                   oracle.fixed_point_error);
+  checkBitwiseEqualFixedPointRestartChecks(result.fixed_point_restart_checks,
+                                           oracle.fixed_point_restart_checks);
+  checkBitwiseEqualConvergenceChecks(result.convergence_checks,
+                                     oracle.convergence_checks);
+
+  // Only iterations after the boundary move.
+  hipdlp::algorithm::FixedTraceOptions disabled_options = options;
+  disabled_options.primal_weight.enabled = false;
+  const hipdlp::algorithm::FixedTraceResult disabled =
+      runTrace(makeOneStepLp(), disabled_options);
+  INFO(disabled.error.message);
+  REQUIRE(disabled.ok());
+  REQUIRE(disabled.convergence_checks.size() == 2);
+  REQUIRE(disabled.fixed_point_restart_checks.size() == 2);
+  for (std::size_t point = 0; point <= 2; ++point) {
+    CAPTURE(point);
+    CHECK(bitwiseEqual(disabled.points[point].primal,
+                       result.points[point].primal));
+    CHECK(bitwiseEqual(disabled.points[point].dual, result.points[point].dual));
+  }
+  CHECK_FALSE(bitwiseEqual(disabled.points[3].primal, result.points[3].primal));
+  CHECK_FALSE(bitwiseEqual(disabled.points[4].primal, result.points[4].primal));
+  CHECK(bitwiseEqual(disabled.convergence_checks[0].raw.primal_residual,
+                     result.convergence_checks[0].raw.primal_residual));
+  CHECK(bitwiseEqual(
+      disabled.fixed_point_restart_checks[0].error.fixed_point_error,
+      result.fixed_point_restart_checks[0].error.fixed_point_error));
+  CHECK(result.convergence_checks[1].iteration == 4);
+  CHECK(result.fixed_point_restart_checks[1].iteration == 4);
+  checkSameDiagnostics(disabled, result);
+}
+
+TEST_CASE("hi-pdlp-fixed-trace-restart-primal-weight-records-final-boundary",
+          "[pdlp][hipdlp][phase7p][restart][primal-weight][final]") {
+  hipdlp::algorithm::FixedTraceOptions options = makePrimalWeightOptions(2);
+  const hipdlp::algorithm::FixedTraceResult result =
+      runTrace(makeOneStepLp(), options);
+  hipdlp::algorithm::FixedTraceOptions disabled_options = options;
+  disabled_options.primal_weight.enabled = false;
+  const hipdlp::algorithm::FixedTraceResult disabled =
+      runTrace(makeOneStepLp(), disabled_options);
+  INFO(result.error.message);
+  INFO(disabled.error.message);
+  REQUIRE(result.ok());
+  REQUIRE(disabled.ok());
+  REQUIRE(result.fixed_point_restart_checks.size() == 1);
+  CHECK(result.fixed_point_restart_checks[0].iteration == 2);
+  CHECK(result.fixed_point_restart_checks[0].evaluation.decision ==
+        hipdlp::algorithm::RestartDecision::kRestart);
+  REQUIRE(result.primal_weight_updates.size() == 1);
+  CHECK(result.primal_weight_updates[0].iteration == 2);
+  CHECK(result.primal_weight_updates[0].primal_anchor_distance ==
+        kAnchorPrimalDistanceAtTwo);
+  CHECK(result.primal_weight_updates[0].dual_anchor_distance ==
+        kAnchorDualDistanceAtTwo);
+  REQUIRE(result.primal_weight_updates[0].result.ok());
+
+  // No later iteration consumes the returned steps, so nothing else moves.
+  CHECK(disabled.primal_weight_updates.empty());
+  checkBitwiseEqualTraceOutputs(result, disabled);
+  checkBitwiseEqualFixedPointError(result.fixed_point_error,
+                                   disabled.fixed_point_error);
+  checkBitwiseEqualFixedPointRestart(result.fixed_point_restart,
+                                     disabled.fixed_point_restart);
+  checkBitwiseEqualFixedPointRestartChecks(result.fixed_point_restart_checks,
+                                           disabled.fixed_point_restart_checks);
+  checkBitwiseEqualConvergenceChecks(result.convergence_checks,
+                                     disabled.convergence_checks);
+  checkSameDiagnostics(result, disabled);
+}
+
+TEST_CASE("hi-pdlp-fixed-trace-restart-primal-weight-skips-continue",
+          "[pdlp][hipdlp][phase7p][restart][primal-weight][disabled]"
+          "[bitwise]") {
+  const std::vector<RestartExecutionSelection> selections =
+      restartExecutionSelections();
+  for (const RestartExecutionSelection& selection : selections) {
+    CAPTURE(static_cast<int>(selection.backend),
+            static_cast<int>(selection.mode));
+    hipdlp::algorithm::FixedTraceOptions disabled_options =
+        makePrimalWeightOptions(4);
+    disabled_options.backend = selection.backend;
+    disabled_options.execution_mode = selection.mode;
+    disabled_options.primal_weight.enabled = false;
+    disabled_options.fixed_point_restart.parameters.check_interval = 100;
+    disabled_options.fixed_point_restart.parameters.artificial_threshold =
+        100.0;
+#ifdef HIGHS_HIPDLP_CUDA_DETECTED
+    hipdlp::backend::cuda::testing::resetResourceAudit();
+#endif
+    const hipdlp::algorithm::FixedTraceResult disabled =
+        runTrace(makeOneStepLp(), disabled_options);
+#ifdef HIGHS_HIPDLP_CUDA_DETECTED
+    const hipdlp::backend::cuda::testing::ResourceAudit disabled_audit =
+        hipdlp::backend::cuda::testing::resourceAudit();
+#endif
+
+    hipdlp::algorithm::FixedTraceOptions enabled_options = disabled_options;
+    enablePrimalWeight(enabled_options, 1.0);
+#ifdef HIGHS_HIPDLP_CUDA_DETECTED
+    hipdlp::backend::cuda::testing::resetResourceAudit();
+#endif
+    const hipdlp::algorithm::FixedTraceResult enabled =
+        runTrace(makeOneStepLp(), enabled_options);
+#ifdef HIGHS_HIPDLP_CUDA_DETECTED
+    const hipdlp::backend::cuda::testing::ResourceAudit enabled_audit =
+        hipdlp::backend::cuda::testing::resourceAudit();
+#endif
+
+    INFO(disabled.error.message);
+    INFO(enabled.error.message);
+    REQUIRE(disabled.ok());
+    REQUIRE(enabled.ok());
+    REQUIRE(enabled.fixed_point_restart_checks.size() == 2);
+    for (std::size_t check = 0; check < 2; ++check) {
+      CAPTURE(check);
+      CHECK(enabled.fixed_point_restart_checks[check].evaluation.decision ==
+            hipdlp::algorithm::RestartDecision::kContinue);
+    }
+    CHECK(enabled.primal_weight_updates.empty());
+    checkBitwiseEqual(disabled, enabled);
+    checkBitwiseEqualConvergenceChecks(disabled.convergence_checks,
+                                       enabled.convergence_checks);
+    checkSameDiagnostics(disabled, enabled);
+#ifdef HIGHS_HIPDLP_CUDA_DETECTED
+    if (selection.backend == hipdlp::backend::Kind::kCuda)
+      checkPrimalWeightAuditDelta(disabled_audit, enabled_audit, 0);
+#endif
+  }
+}
+
+TEST_CASE("hi-pdlp-fixed-trace-restart-primal-weight-is-deterministic",
+          "[pdlp][hipdlp][phase7p][restart][primal-weight][determinism]") {
+  const std::vector<RestartExecutionSelection> selections =
+      restartExecutionSelections();
+  for (const RestartExecutionSelection& selection : selections) {
+    CAPTURE(static_cast<int>(selection.backend),
+            static_cast<int>(selection.mode));
+    hipdlp::algorithm::FixedTraceOptions options = makePrimalWeightOptions(4);
+    options.backend = selection.backend;
+    options.execution_mode = selection.mode;
+    options.fixed_point_restart.parameters.artificial_threshold = 0.6;
+    const hipdlp::algorithm::FixedTraceResult first =
+        runTrace(makeFreeStepLp(), options);
+    const hipdlp::algorithm::FixedTraceResult second =
+        runTrace(makeFreeStepLp(), options);
+    INFO(first.error.message);
+    INFO(second.error.message);
+    REQUIRE(first.ok());
+    REQUIRE(second.ok());
+    REQUIRE(first.primal_weight_updates.size() == 1);
+    checkPrimalWeightUpdatesFollowRestarts(first);
+    checkBitwiseEqual(first, second);
+    checkBitwiseEqualConvergenceChecks(first.convergence_checks,
+                                       second.convergence_checks);
+    checkSameDiagnostics(first, second);
+  }
+}
+
+TEST_CASE("hi-pdlp-fixed-trace-restart-primal-weight-validation",
+          "[pdlp][hipdlp][phase7p][restart][primal-weight][errors]") {
+  SECTION("updates without the fixed-point restart trigger are rejected") {
+    hipdlp::algorithm::FixedTraceOptions options = makeOptions(4);
+    enablePeriodicConvergence(options, 2);
+    enablePrimalWeight(options, 1.0);
+    const hipdlp::algorithm::FixedTraceResult result =
+        runTrace(makeOneStepLp(), options);
+    checkTransactionalFailure(result);
+    CHECK(result.error.code == hipdlp::api::ErrorCode::kInvalidOption);
+    CHECK(result.error.message ==
+          "fixed trace primal-weight updates require the fixed-point restart "
+          "trigger");
+    CHECK(result.diagnostics.resource_creation_calls_before_iterations == 0);
+    CHECK(result.diagnostics.transfer_calls_before_iterations == 0);
+  }
+
+  SECTION("an unobserved restart boundary is rejected") {
+    const HighsInt convergence_cadences[] = {-1, 0, 4};
+    const HighsInt iteration_counts[] = {4, 4, 8};
+    const bool periodic_enabled[] = {false, true, true};
+    for (std::size_t selection = 0; selection < 3; ++selection) {
+      CAPTURE(selection);
+      hipdlp::algorithm::FixedTraceOptions options =
+          makeRestartAtTwoOptions(iteration_counts[selection]);
+      if (periodic_enabled[selection])
+        enablePeriodicConvergence(options, convergence_cadences[selection]);
+      enablePrimalWeight(options, 1.0);
+      const hipdlp::algorithm::FixedTraceResult result =
+          runTrace(makeOneStepLp(), options);
+      checkTransactionalFailure(result);
+      CHECK(result.error.code == hipdlp::api::ErrorCode::kInvalidOption);
+      CHECK(result.error.message ==
+            "fixed trace primal-weight updates require a convergence "
+            "observation at every restart boundary");
+      CHECK(result.diagnostics.resource_creation_calls_before_iterations == 0);
+      CHECK(result.diagnostics.transfer_calls_before_iterations == 0);
+    }
+  }
+
+  SECTION("caller-provided step-size sequences are rejected") {
+    hipdlp::algorithm::FixedTraceOptions options = makePrimalWeightOptions(4);
+    options.primal_step_sizes.assign(4, options.primal_step_size);
+    options.dual_step_sizes.assign(4, options.dual_step_size);
+    const hipdlp::algorithm::FixedTraceResult result =
+        runTrace(makeOneStepLp(), options);
+    checkTransactionalFailure(result);
+    CHECK(result.error.code == hipdlp::api::ErrorCode::kInvalidOption);
+    CHECK(result.error.message ==
+          "fixed trace primal-weight updates cannot combine with "
+          "caller-provided step-size sequences");
+    CHECK(result.diagnostics.resource_creation_calls_before_iterations == 0);
+    CHECK(result.diagnostics.transfer_calls_before_iterations == 0);
+  }
+}
+
+TEST_CASE("hi-pdlp-fixed-trace-restart-primal-weight-is-transactional",
+          "[pdlp][hipdlp][phase7p][restart][primal-weight][errors]"
+          "[transactional]") {
+  SECTION("an invalid initial state fails at the boundary") {
+    hipdlp::algorithm::FixedTraceOptions options = makePrimalWeightOptions(3);
+    options.primal_weight.previous = hipdlp::algorithm::PrimalWeightState();
+    const hipdlp::algorithm::FixedTraceResult result =
+        runTrace(makeOneStepLp(), options);
+    checkTransactionalFailure(result);
+    CHECK(result.error.code == hipdlp::api::ErrorCode::kInvalidArgument);
+    CHECK(result.error.message == "HiPDLP primal-weight state is invalid");
+    CHECK(result.diagnostics.transfer_calls_after_iterations == 0);
+  }
+
+  SECTION("invalid PID parameters fail at the boundary") {
+    hipdlp::algorithm::FixedTraceOptions options = makePrimalWeightOptions(3);
+    options.primal_weight.parameters.k_p = -1.0;
+    const hipdlp::algorithm::FixedTraceResult result =
+        runTrace(makeOneStepLp(), options);
+    checkTransactionalFailure(result);
+    CHECK(result.error.code == hipdlp::api::ErrorCode::kInvalidOption);
+    CHECK(result.error.message ==
+          "HiPDLP primal-weight PID parameters are invalid");
+    CHECK(result.diagnostics.transfer_calls_after_iterations == 0);
+  }
+
+#ifdef HIGHS_HIPDLP_CUDA_DETECTED
+  SECTION("injected backend failures expose no partial result") {
+    hipdlp::backend::FactoryResult cuda_probe =
+        hipdlp::backend::createBackend(hipdlp::backend::Kind::kCuda);
+    if (!cuda_probe.ok()) {
+      CHECK(cuda_probe.error.code ==
+            hipdlp::api::ErrorCode::kBackendUnavailable);
+      return;
+    }
+    cuda_probe.backend.reset();
+
+    hipdlp::algorithm::FixedTraceOptions options = makePrimalWeightOptions(4);
+    options.backend = hipdlp::backend::Kind::kCuda;
+    options.execution_mode =
+        hipdlp::algorithm::FixedTraceExecutionMode::kRecorded;
+    options.fixed_point_restart.parameters.artificial_threshold = 0.6;
+    hipdlp::backend::cuda::testing::resetResourceAudit();
+    hipdlp::backend::cuda::testing::setFailurePoint(
+        hipdlp::backend::cuda::testing::FailurePoint::
+            kGraphAsynchronousExecution);
+    const hipdlp::algorithm::FixedTraceResult failed =
+        runTrace(makeOneStepLp(), options);
+    hipdlp::backend::cuda::testing::setFailurePoint(
+        hipdlp::backend::cuda::testing::FailurePoint::kNone);
+    checkTransactionalFailure(failed);
+    CHECK(failed.error.code == hipdlp::api::ErrorCode::kBackendFailure);
+    const hipdlp::backend::cuda::testing::ResourceAudit audit =
+        hipdlp::backend::cuda::testing::resourceAudit();
+    CHECK(audit.allocation_calls == audit.free_calls);
+    CHECK(audit.descriptor_creations == audit.descriptor_destructions);
+    CHECK(audit.graph_creations == audit.graph_destructions);
+    CHECK(audit.graph_exec_creations == audit.graph_exec_destructions);
+
+    const hipdlp::algorithm::FixedTraceResult recovered =
+        runTrace(makeOneStepLp(), options);
+    INFO(recovered.error.message);
+    REQUIRE(recovered.ok());
+    REQUIRE(recovered.primal_weight_updates.size() == 1);
+  }
+#endif
+}
+
+#ifdef HIGHS_HIPDLP_CUDA_DETECTED
+TEST_CASE("hi-pdlp-fixed-trace-restart-primal-weight-backend-agreement",
+          "[pdlp][hipdlp][phase7p][restart][primal-weight][cuda][graph]"
+          "[replay][parity]") {
+  hipdlp::backend::FactoryResult cuda_probe =
+      hipdlp::backend::createBackend(hipdlp::backend::Kind::kCuda);
+  if (!cuda_probe.ok()) {
+    CHECK(cuda_probe.error.code == hipdlp::api::ErrorCode::kBackendUnavailable);
+    CHECK_FALSE(cuda_probe.error.message.empty());
+    return;
+  }
+  cuda_probe.backend.reset();
+
+  const HighsInt iteration_counts[] = {2, 4};
+  const std::size_t expected_launches[] = {1, 2};
+  for (std::size_t selection = 0; selection < 2; ++selection) {
+    CAPTURE(iteration_counts[selection]);
+    hipdlp::algorithm::FixedTraceOptions cpu_options =
+        makePrimalWeightOptions(iteration_counts[selection]);
+    cpu_options.fixed_point_restart.parameters.artificial_threshold = 0.6;
+    const hipdlp::algorithm::FixedTraceResult cpu =
+        runTrace(makeFreeStepLp(), cpu_options);
+    INFO(cpu.error.message);
+    REQUIRE(cpu.ok());
+    REQUIRE(cpu.primal_weight_updates.size() == 1);
+
+    hipdlp::algorithm::FixedTraceOptions direct_options = cpu_options;
+    direct_options.backend = hipdlp::backend::Kind::kCuda;
+    const hipdlp::algorithm::FixedTraceResult direct =
+        runTrace(makeFreeStepLp(), direct_options);
+
+    hipdlp::algorithm::FixedTraceOptions recorded_options = direct_options;
+    recorded_options.execution_mode =
+        hipdlp::algorithm::FixedTraceExecutionMode::kRecorded;
+    hipdlp::backend::cuda::testing::resetResourceAudit();
+    const hipdlp::algorithm::FixedTraceResult recorded =
+        runTrace(makeFreeStepLp(), recorded_options);
+    const hipdlp::backend::cuda::testing::ResourceAudit recorded_audit =
+        hipdlp::backend::cuda::testing::resourceAudit();
+
+    INFO(direct.error.message);
+    INFO(recorded.error.message);
+    REQUIRE(direct.ok());
+    REQUIRE(recorded.ok());
+    checkSameRestartDecisions(cpu, direct);
+    checkSameRestartDecisions(cpu, recorded);
+    checkPrimalWeightUpdatesFollowRestarts(direct);
+    checkPrimalWeightUpdatesFollowRestarts(recorded);
+    checkApproxPrimalWeightUpdates(direct.primal_weight_updates,
+                                   cpu.primal_weight_updates, 5e-13);
+    checkApproxPrimalWeightUpdates(recorded.primal_weight_updates,
+                                   cpu.primal_weight_updates, 5e-13);
+    checkApproxTrace(direct, cpu, 5e-13);
+    checkApproxTrace(recorded, cpu, 5e-13);
+    checkApproxConvergenceChecks(recorded.convergence_checks,
+                                 cpu.convergence_checks, 5e-13);
+    CHECK(recorded.diagnostics.command_buffer.replay_calls ==
+          expected_launches[selection]);
+    CHECK(recorded_audit.graph_launch_calls == expected_launches[selection]);
+  }
+}
+
+TEST_CASE("hi-pdlp-fixed-trace-restart-primal-weight-adds-only-two-reductions",
+          "[pdlp][hipdlp][phase7p][restart][primal-weight][cuda][resources]") {
+  hipdlp::backend::FactoryResult cuda_probe =
+      hipdlp::backend::createBackend(hipdlp::backend::Kind::kCuda);
+  if (!cuda_probe.ok()) {
+    CHECK(cuda_probe.error.code == hipdlp::api::ErrorCode::kBackendUnavailable);
+    CHECK_FALSE(cuda_probe.error.message.empty());
+    return;
+  }
+  cuda_probe.backend.reset();
+
+  const hipdlp::algorithm::FixedTraceExecutionMode modes[] = {
+      hipdlp::algorithm::FixedTraceExecutionMode::kDirect,
+      hipdlp::algorithm::FixedTraceExecutionMode::kRecorded};
+  for (std::size_t selection = 0; selection < 2; ++selection) {
+    CAPTURE(selection);
+    // A final-boundary restart has no later iteration, so the enabled and
+    // disabled runs differ only by the two reductions.
+    hipdlp::algorithm::FixedTraceOptions disabled_options =
+        makePrimalWeightOptions(2);
+    disabled_options.backend = hipdlp::backend::Kind::kCuda;
+    disabled_options.execution_mode = modes[selection];
+    disabled_options.primal_weight.enabled = false;
+    hipdlp::backend::cuda::testing::resetResourceAudit();
+    const hipdlp::algorithm::FixedTraceResult disabled =
+        runTrace(makeFreeStepLp(), disabled_options);
+    const hipdlp::backend::cuda::testing::ResourceAudit disabled_audit =
+        hipdlp::backend::cuda::testing::resourceAudit();
+
+    hipdlp::algorithm::FixedTraceOptions enabled_options = disabled_options;
+    enablePrimalWeight(enabled_options, 1.0);
+    hipdlp::backend::cuda::testing::resetResourceAudit();
+    const hipdlp::algorithm::FixedTraceResult enabled =
+        runTrace(makeFreeStepLp(), enabled_options);
+    const hipdlp::backend::cuda::testing::ResourceAudit enabled_audit =
+        hipdlp::backend::cuda::testing::resourceAudit();
+
+    INFO(disabled.error.message);
+    INFO(enabled.error.message);
+    REQUIRE(disabled.ok());
+    REQUIRE(enabled.ok());
+    CHECK(disabled.primal_weight_updates.empty());
+    REQUIRE(enabled.primal_weight_updates.size() == 1);
+    CHECK(enabled.primal_weight_updates[0].result.kind ==
+          hipdlp::algorithm::PrimalWeightUpdateKind::kControlled);
+    checkBitwiseEqualTraceOutputs(disabled, enabled);
+    checkSameDiagnostics(disabled, enabled);
+    checkPrimalWeightAuditDelta(disabled_audit, enabled_audit, 1);
+  }
 }
 #endif
 

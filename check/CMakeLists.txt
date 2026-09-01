@@ -56,6 +56,7 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
             TestHiPdlpOperatorNorm.cpp
                 TestHiPdlpRestart.cpp
                 TestHiPdlpStepSize.cpp
+            TestHiPdlpSolver.cpp
         TestHiPdlpTrace.cpp
       TestHSet.cpp
       TestICrash.cpp

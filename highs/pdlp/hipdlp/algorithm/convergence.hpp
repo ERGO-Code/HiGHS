@@ -1,10 +1,15 @@
 #ifndef PDLP_HIPDLP_ALGORITHM_CONVERGENCE_HPP_
 #define PDLP_HIPDLP_ALGORITHM_CONVERGENCE_HPP_
 
+#include <vector>
+
 #include "lp_data/HConst.h"
 #include "pdlp/hipdlp/api/status.hpp"
 
 namespace hipdlp {
+namespace model {
+class Problem;
+}
 namespace algorithm {
 
 enum class StoppingDecision {
@@ -70,6 +75,11 @@ struct StoppingResult {
 
   bool ok() const;
 };
+
+api::Error computeRawConvergenceMetrics(
+  const model::Problem& problem, const std::vector<double>& primal,
+  const std::vector<double>& dual, const std::vector<double>& ax,
+  const std::vector<double>& aty, RawConvergenceMetrics& raw);
 
 StoppingResult evaluateStopping(const StoppingInput& input);
 

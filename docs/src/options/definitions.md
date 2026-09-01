@@ -514,6 +514,22 @@
 - Range: [1e-10, inf]
 - Default: 1e-07
 
+## [hipdlp\_backend](@id option-hipdlp-backend)
+- HiPDLP execution backend: "auto", "cpu", "cuda", "openmp" or "rocm"
+- Type: string
+- Default: "auto"
+
+## [hipdlp\_scaling](@id option-hipdlp-scaling)
+- HiPDLP scaling pipeline: "auto", "off", "curtis\_reid" or "legacy"
+- Type: string
+- Default: "auto"
+
+## [hipdlp\_curtis\_reid\_iterations](@id option-hipdlp-curtis-reid-iterations)
+- Number of Curtis-Reid scaling sweeps for HiPDLP
+- Type: integer
+- Range: {1, 2147483647}
+- Default: 20
+
 ## [qp\_allow\_hot\_start](@id option-qp-allow-hot-start)
 - Allow the active set QP solver to hot start
 - Type: boolean

@@ -486,8 +486,6 @@ TEST_CASE("hi-pdlp-rocm-reservation-has-no-implementation-surface",
       "highs/pdlp/hipdlp/algorithm/halpern_pdhg_step.hpp",
       "highs/pdlp/hipdlp/algorithm/solver.cc",
       "highs/pdlp/hipdlp/algorithm/solver.hpp",
-      "highs/pdlp/hipdlp/api/options.cc",
-      "highs/pdlp/hipdlp/api/options.hpp",
       "highs/pdlp/hipdlp/api/solver.cc",
       "highs/pdlp/hipdlp/api/solver.hpp",
       "highs/pdlp/hipdlp/api/status.cc",
@@ -534,6 +532,26 @@ TEST_CASE("hi-pdlp-rocm-reservation-has-no-implementation-surface",
       CHECK(contents.find(symbol) == std::string::npos);
     }
   }
+
+  // Option translation maps the reserved public name and nothing else.
+  const char* rocm_name_mapping_files[] = {"highs/pdlp/hipdlp/api/options.cc",
+                                           "highs/pdlp/hipdlp/api/options.hpp"};
+  const char* rocm_implementation_symbols[] = {
+      "RocmBackend",   "rocm_backend", "namespace rocm", "ROCm",
+      "rocblas",       "rocsparse",    "hip_runtime",    "hipblas",
+      "hipsparse",     "hipStream_t",  "hipEvent_t",     "hipError_t",
+      "hipDevice",     "hipMalloc",    "hipFree",        "hipMemcpy",
+      "#include <hip/"};
+  for (const char* path : rocm_name_mapping_files) {
+    CAPTURE(path);
+    const std::string contents = readSourceFile(path);
+    for (const char* symbol : rocm_implementation_symbols) {
+      CAPTURE(symbol);
+      CHECK(contents.find(symbol) == std::string::npos);
+    }
+  }
+  CHECK(countText(readSourceFile("highs/pdlp/hipdlp/api/options.cc"),
+                  "kRocm") == 1);
 
   const char* build_files[] = {"CMakeLists.txt",
                                "cmake/sources.cmake",
@@ -654,8 +672,6 @@ TEST_CASE("hi-pdlp-phase5h-shared-step-ownership-boundary",
       "highs/pdlp/hipdlp/algorithm/halpern_pdhg_step.hpp",
       "highs/pdlp/hipdlp/algorithm/solver.cc",
       "highs/pdlp/hipdlp/algorithm/solver.hpp",
-      "highs/pdlp/hipdlp/api/options.cc",
-      "highs/pdlp/hipdlp/api/options.hpp",
       "highs/pdlp/hipdlp/api/solver.cc",
       "highs/pdlp/hipdlp/api/solver.hpp",
       "highs/pdlp/hipdlp/api/status.cc",
@@ -676,7 +692,23 @@ TEST_CASE("hi-pdlp-phase5h-shared-step-ownership-boundary",
   }
   const std::string public_options =
       readSourceFile("highs/lp_data/HighsOptions.h");
-  CHECK(public_options.find("cuda") == std::string::npos);
+  // The public backend option names cuda without importing any CUDA surface.
+  const char* option_name_mapping_files[] = {
+      "highs/pdlp/hipdlp/api/options.cc", "highs/pdlp/hipdlp/api/options.hpp",
+      "highs/lp_data/HighsOptions.h"};
+  const char* cuda_surface_symbols[] = {
+      "cuda_runtime",  "cublas",      "cusparse",       "cudaStream",
+      "cudaError",     "cudaMalloc",  "cudaFree",       "cudaMemcpy",
+      "cudaGraph",     "CudaBackend", "namespace cuda", "#include <cuda",
+      "command_buffer"};
+  for (const char* path : option_name_mapping_files) {
+    CAPTURE(path);
+    const std::string contents = readSourceFile(path);
+    for (const char* symbol : cuda_surface_symbols) {
+      CAPTURE(symbol);
+      CHECK(contents.find(symbol) == std::string::npos);
+    }
+  }
   CHECK(public_options.find("CUDA") == std::string::npos);
   CHECK(public_options.find("cudaGraph") == std::string::npos);
   CHECK(public_options.find("command_buffer") == std::string::npos);
