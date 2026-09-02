@@ -148,7 +148,7 @@ class HighsPostsolveStack {
   struct FixedCol {
     double fixValue;
     double colCost;
-    double other_bound; // Needed to check dual feasibility
+    double other_bound;  // Needed to check dual feasibility
     HighsInt col;
     HighsBasisStatus fixType;
 
@@ -604,39 +604,40 @@ class HighsPostsolveStack {
   }
 
   void singletonRow(HighsInt row, HighsInt col, double coef,
-		    double col_previous_lower,
-		    double col_previous_upper,
+                    double col_previous_lower, double col_previous_upper,
                     bool tightenedColLower, bool tightenedColUpper) {
-    reductionValues.push(SingletonRow{coef, col_previous_lower, col_previous_upper, origRowIndex[row],
-                                      origColIndex[col], tightenedColLower,
-                                      tightenedColUpper});
+    reductionValues.push(SingletonRow{
+        coef, col_previous_lower, col_previous_upper, origRowIndex[row],
+        origColIndex[col], tightenedColLower, tightenedColUpper});
     reductionAdded(ReductionType::kSingletonRow);
   }
 
   template <typename ColStorageFormat>
-  void fixedColAtLower(HighsInt col, double fixValue, double colCost, double other_bound,
+  void fixedColAtLower(HighsInt col, double fixValue, double colCost,
+                       double other_bound,
                        const HighsMatrixSlice<ColStorageFormat>& colVec) {
     assert(std::isfinite(fixValue));
     colValues.clear();
     for (const HighsSliceNonzero& colVal : colVec)
       colValues.emplace_back(origRowIndex[colVal.index()], colVal.value());
 
-    reductionValues.push(FixedCol{fixValue, colCost, other_bound, origColIndex[col],
-                                  HighsBasisStatus::kLower});
+    reductionValues.push(FixedCol{fixValue, colCost, other_bound,
+                                  origColIndex[col], HighsBasisStatus::kLower});
     reductionValues.push(colValues);
     reductionAdded(ReductionType::kFixedCol);
   }
 
   template <typename ColStorageFormat>
-  void fixedColAtUpper(HighsInt col, double fixValue, double colCost, double other_bound,
+  void fixedColAtUpper(HighsInt col, double fixValue, double colCost,
+                       double other_bound,
                        const HighsMatrixSlice<ColStorageFormat>& colVec) {
     assert(std::isfinite(fixValue));
     colValues.clear();
     for (const HighsSliceNonzero& colVal : colVec)
       colValues.emplace_back(origRowIndex[colVal.index()], colVal.value());
 
-    reductionValues.push(FixedCol{fixValue, colCost, other_bound, origColIndex[col],
-                                  HighsBasisStatus::kUpper});
+    reductionValues.push(FixedCol{fixValue, colCost, other_bound,
+                                  origColIndex[col], HighsBasisStatus::kUpper});
     reductionValues.push(colValues);
     reductionAdded(ReductionType::kFixedCol);
   }
@@ -648,8 +649,8 @@ class HighsPostsolveStack {
     for (const HighsSliceNonzero& colVal : colVec)
       colValues.emplace_back(origRowIndex[colVal.index()], colVal.value());
 
-    reductionValues.push(
-        FixedCol{0.0, colCost, 0.0, origColIndex[col], HighsBasisStatus::kZero});
+    reductionValues.push(FixedCol{0.0, colCost, 0.0, origColIndex[col],
+                                  HighsBasisStatus::kZero});
     reductionValues.push(colValues);
     reductionAdded(ReductionType::kFixedCol);
   }
@@ -662,7 +663,8 @@ class HighsPostsolveStack {
     for (const HighsSliceNonzero& colVal : colVec)
       colValues.emplace_back(origRowIndex[colVal.index()], colVal.value());
 
-    reductionValues.push(FixedCol{fixValue, colCost, fixValue, origColIndex[col],
+    reductionValues.push(FixedCol{fixValue, colCost, fixValue,
+                                  origColIndex[col],
                                   HighsBasisStatus::kNonbasic});
     reductionValues.push(colValues);
     reductionAdded(ReductionType::kFixedCol);
@@ -675,7 +677,8 @@ class HighsPostsolveStack {
     for (HighsInt iEl = 0; iEl < col_nnz; iEl++)
       colValues.emplace_back(origRowIndex[index[iEl]], value[iEl]);
 
-    reductionValues.push(FixedCol{fixValue, colCost, fixValue, origColIndex[col],
+    reductionValues.push(FixedCol{fixValue, colCost, fixValue,
+                                  origColIndex[col],
                                   HighsBasisStatus::kNonbasic});
     reductionValues.push(colValues);
     reductionAdded(ReductionType::kFixedCol);
@@ -918,8 +921,9 @@ class HighsPostsolveStack {
           ss << highsFormatToString("; dual = %11.4g;",
                                     solution.col_dual[iCol]);
         if (perform_basis_postsolve)
-          ss << highsFormatToString("; status = %s",
-                                    utilBasisStatusToString(basis.col_status[iCol]).full_.c_str());
+          ss << highsFormatToString(
+              "; status = %s",
+              utilBasisStatusToString(basis.col_status[iCol]).full_.c_str());
         printf("%s\n", ss.str().c_str());
       }
       for (HighsInt iRow = 0; iRow < origNumRow; iRow++) {
@@ -930,8 +934,9 @@ class HighsPostsolveStack {
           ss << highsFormatToString("; dual = %11.4g;",
                                     solution.row_dual[iRow]);
         if (perform_basis_postsolve)
-          ss << highsFormatToString("; status = %s",
-                                    utilBasisStatusToString(basis.row_status[iRow]).full_.c_str());
+          ss << highsFormatToString(
+              "; status = %s",
+              utilBasisStatusToString(basis.row_status[iRow]).full_.c_str());
         printf("%s\n", ss.str().c_str());
       }
     };
@@ -939,11 +944,12 @@ class HighsPostsolveStack {
     // Initialise to illegal values so that initial values are logged
     double report_col_value = kHighsInf;
 
-    // Lambda for logging the solution for a specific column whenever its value changes
+    // Lambda for logging the solution for a specific column whenever its value
+    // changes
 
     auto reportColLogging = [&](const HighsInt reduction,
-				const std::string& context = "",
-				const bool forced = false) {
+                                const std::string& context = "",
+                                const bool forced = false) {
       assert(report_col >= 0);
       if (static_cast<size_t>(report_col) >= solution.col_value.size()) return;
       double col_value = solution.col_value[report_col];
@@ -953,10 +959,8 @@ class HighsPostsolveStack {
 
       if (reduction >= 0) {
         if (report)
-          printf("%-6s reduction %9d:",
-		 context.c_str(),
-		 int(reduction));
-	type = ": " + presolveTypeToString(reductions[reduction].first);
+          printf("%-6s reduction %9d:", context.c_str(), int(reduction));
+        type = ": " + presolveTypeToString(reductions[reduction].first);
       } else if (reduction == -1) {
         report = true;
         printf("Before undo:               ");
@@ -966,14 +970,15 @@ class HighsPostsolveStack {
       }
       if (!report) return;
       ss.str(std::string());
-      ss << highsFormatToString(" Col %7d value = %11.4g",
-                                int(report_col), col_value);
+      ss << highsFormatToString(" Col %7d value = %11.4g", int(report_col),
+                                col_value);
       if (perform_dual_postsolve)
         ss << highsFormatToString(", dual = %11.4g",
                                   solution.col_dual[report_col]);
       if (perform_basis_postsolve)
-        ss << highsFormatToString(" status = %2s",
-                                  utilBasisStatusToString(basis.col_status[report_col]).s2_.c_str());
+        ss << highsFormatToString(
+            " status = %2s",
+            utilBasisStatusToString(basis.col_status[report_col]).s2_.c_str());
       printf("%s%s\n", ss.str().c_str(), type.c_str());
       report_col_value = col_value;
     };
@@ -1110,7 +1115,7 @@ class HighsPostsolveStack {
       }
       if (report_col >= 0) reportColLogging(i - 1, "After");
     }
-        if (report_col >= 0) reportColLogging(-2);
+    if (report_col >= 0) reportColLogging(-2);
 
     solution.col_value.resize(origNumCol);
     if (perform_dual_postsolve) solution.col_dual.resize(origNumCol);
@@ -1144,7 +1149,6 @@ class HighsPostsolveStack {
   }
 
   size_t numReductions() const { return reductions.size(); }
-
 };
 
 }  // namespace presolve

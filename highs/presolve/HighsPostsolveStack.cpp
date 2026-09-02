@@ -17,8 +17,8 @@
 
 namespace presolve {
 
-  const bool maintain_row_value = false;//true;
-  const bool correct_dual_error = false;//true;
+const bool maintain_row_value = false;  // true;
+const bool correct_dual_error = false;  // true;
 
 void HighsPostsolveStack::initializeIndexMaps(HighsInt numRow,
                                               HighsInt numCol) {
@@ -80,18 +80,18 @@ static HighsBasisStatus computeRowStatus(double dual,
     return HighsBasisStatus::kUpper;
 }
 
-static bool colFeasibilityOk(const std::string& message,
-			     const HighsInt col,
-			     const double lower, const double upper,
-			     const HighsOptions& options,
-			     const HighsSolution& solution,
-			     const HighsBasis& basis) {
+static bool colFeasibilityOk(const std::string& message, const HighsInt col,
+                             const double lower, const double upper,
+                             const HighsOptions& options,
+                             const HighsSolution& solution,
+                             const HighsBasis& basis) {
   const bool fixed = lower == upper;
   const bool has_dual = solution.dual_valid;
   const bool has_basis = basis.valid;
   const double primal = solution.col_value[col];
   const double dual = has_dual ? solution.col_dual[col] : 0.0;
-  const HighsBasisStatus status = has_basis ? basis.col_status[col] : HighsBasisStatus::kNonbasic;
+  const HighsBasisStatus status =
+      has_basis ? basis.col_status[col] : HighsBasisStatus::kNonbasic;
 
   // @primal_infeasibility calculation
   double primal_infeasibility = 0;
@@ -105,7 +105,8 @@ static bool colFeasibilityOk(const std::string& message,
   bool basis_ok = true;
 
   auto atLower = [&]() {
-    if (std::fabs(lower - primal) > options.primal_feasibility_tolerance) return false;
+    if (std::fabs(lower - primal) > options.primal_feasibility_tolerance)
+      return false;
     // At lower bound so any dual must be non-negative
     if (has_dual) dual_ok = dual >= -options.dual_feasibility_tolerance;
     if (has_basis) basis_ok = status == HighsBasisStatus::kLower;
@@ -113,7 +114,8 @@ static bool colFeasibilityOk(const std::string& message,
   };
 
   auto atUpper = [&]() {
-    if (std::fabs(upper - primal) > options.primal_feasibility_tolerance) return false;
+    if (std::fabs(upper - primal) > options.primal_feasibility_tolerance)
+      return false;
     // At upper bound so any dual must be non-positive
     if (has_dual) dual_ok = dual <= options.dual_feasibility_tolerance;
     if (has_basis) basis_ok = status == HighsBasisStatus::kUpper;
@@ -128,7 +130,6 @@ static bool colFeasibilityOk(const std::string& message,
     basis_ok = !has_basis;
   };
 
-  
   if (lower == upper) {
     if (has_basis && status == HighsBasisStatus::kBasic) {
       // Basic, so dual must be zero
@@ -154,13 +155,14 @@ static bool colFeasibilityOk(const std::string& message,
   }
   assert(has_basis || basis_ok);
   if (!(primal_ok && dual_ok && basis_ok)) {
-    printf("%s Col %d is [%g, %g] with primal %g (%s) dual %g (%s)%s%s"
-	   " \n",
-	   message.c_str(), int(col), lower, upper,
-	   primal, primal_ok ? "OK" : "Error",
-	   dual, dual_ok ? "OK" : "Error",
-	   has_basis ? (": status " + utilBasisStatusToString(status).s2_).c_str() : "",
-	   has_basis ? (basis_ok ? " (OK)" : " (Error)") : "");
+    printf(
+        "%s Col %d is [%g, %g] with primal %g (%s) dual %g (%s)%s%s"
+        " \n",
+        message.c_str(), int(col), lower, upper, primal,
+        primal_ok ? "OK" : "Error", dual, dual_ok ? "OK" : "Error",
+        has_basis ? (": status " + utilBasisStatusToString(status).s2_).c_str()
+                  : "",
+        has_basis ? (basis_ok ? " (OK)" : " (Error)") : "");
     return false;
   }
   return true;
@@ -439,8 +441,8 @@ void HighsPostsolveStack::SingletonRow::undo(const HighsOptions& options,
     // hence we simply make the row basic and give it a dual multiplier of 0
     if (basis.valid) basis.row_status[row] = HighsBasisStatus::kBasic;
     solution.row_dual[row] = 0;
-    const bool feasibility_ok =
-      colFeasibilityOk("SingletonRow::undo ", col, lower, upper, options, solution, basis);
+    const bool feasibility_ok = colFeasibilityOk(
+        "SingletonRow::undo ", col, lower, upper, options, solution, basis);
     assert(feasibility_ok);
     return;
   }
@@ -477,8 +479,8 @@ void HighsPostsolveStack::SingletonRow::undo(const HighsOptions& options,
 
   // column becomes basic
   basis.col_status[col] = HighsBasisStatus::kBasic;
-  const bool feasibility_ok =
-    colFeasibilityOk("SingletonRow::undo ", col, lower, upper, options, solution, basis);
+  const bool feasibility_ok = colFeasibilityOk(
+      "SingletonRow::undo ", col, lower, upper, options, solution, basis);
   assert(feasibility_ok);
 }
 
@@ -498,8 +500,7 @@ void HighsPostsolveStack::FixedCol::undo(const HighsOptions& options,
   for (const auto& colVal : colValues) {
     HighsInt row = colVal.index;
     reducedCost -= colVal.value * solution.row_dual[row];
-    if (maintain_row_value)
-      solution.row_value[row] += fixValue * colVal.value;
+    if (maintain_row_value) solution.row_value[row] += fixValue * colVal.value;
   }
 
   solution.col_dual[col] = static_cast<double>(reducedCost);
@@ -512,12 +513,15 @@ void HighsPostsolveStack::FixedCol::undo(const HighsOptions& options,
     if (lower == upper) {
       // See whether this happens naturally
       if (fixType != HighsBasisStatus::kNonbasic) {
-	printf("!!!!!!!!!!!!!!!!!!!!\n"
-	       "FixedCol::undo col %d has [%g, %g] and fix type = %s: SETTING status to NB!\n"
-	       "!!!!!!!!!!!!!!!!!!!!\n",
-	       int(col), lower, upper, utilBasisStatusToString(fixType).s2_.c_str());
+        printf(
+            "!!!!!!!!!!!!!!!!!!!!\n"
+            "FixedCol::undo col %d has [%g, %g] and fix type = %s: SETTING "
+            "status to NB!\n"
+            "!!!!!!!!!!!!!!!!!!!!\n",
+            int(col), lower, upper,
+            utilBasisStatusToString(fixType).s2_.c_str());
       }
-    //      assert(fixType == HighsBasisStatus::kNonbasic);
+      //      assert(fixType == HighsBasisStatus::kNonbasic);
       //
       // When column has fixed bounds, make sure that the basis status
       // is set consistent with the dual value
@@ -532,62 +536,72 @@ void HighsPostsolveStack::FixedCol::undo(const HighsOptions& options,
                                   : HighsBasisStatus::kUpper;
       const bool fixed = fixValue == other_bound;
       if (!fixed) {
-	printf("FixedCol::undo has fixType = HighsBasisStatus::kNonbasic but bounds are [%g, %g]\n",
-	       lower, upper);
+        printf(
+            "FixedCol::undo has fixType = HighsBasisStatus::kNonbasic but "
+            "bounds are [%g, %g]\n",
+            lower, upper);
       }
       assert(fixed);
     }
   }
   // Check dual feasibility: cause of iterations after postsolve for
   // seymour
-  
-  bool feasibility_ok = colFeasibilityOk("FixedCol::undo ", col, lower, upper, options, solution, basis);
-    
+
+  bool feasibility_ok = colFeasibilityOk("FixedCol::undo ", col, lower, upper,
+                                         options, solution, basis);
+
   if (!feasibility_ok) {
     printf("dualFeasibilityOk fail\n");
     if (correct_dual_error) {
       // Look for a row that has zero dual and set it nonbasic
       // according to the dual value inherited from the column
       for (const auto& colVal : colValues) {
-	HighsInt row = colVal.index;
-	if (std::fabs(solution.row_dual[row]) < options.dual_feasibility_tolerance) {
-	  assert(!basis.valid || basis.row_status[row] == HighsBasisStatus::kBasic);
-	  double new_row_dual = solution.col_dual[col] / colVal.value;
-	  double new_col_dual = solution.row_dual[row] * colVal.value;
-	  HighsBasisStatus old_row_status = HighsBasisStatus::kNonbasic;
-	  HighsBasisStatus new_row_status = HighsBasisStatus::kNonbasic;
-	  HighsBasisStatus old_col_status = HighsBasisStatus::kNonbasic;
-	  HighsBasisStatus new_col_status = HighsBasisStatus::kNonbasic;
-	  if (basis.valid) {
-	    old_row_status = basis.row_status[row];
-	    old_col_status = basis.col_status[col];
-	    if (solution.row_dual[row] >= 0) {
-	      new_row_status = HighsBasisStatus::kLower;
-	    } else {
-	      new_row_status = HighsBasisStatus::kUpper;
-	    }
-	    new_col_status = HighsBasisStatus::kBasic;
-	    basis.row_status[row] = new_row_status;
-	    basis.col_status[col] = new_col_status;
-	  }
-	  solution.row_dual[row] = new_row_dual;
-	  solution.col_dual[col] = new_col_dual;
-	  printf("Assigned row %2d dual value %g %s %s %s %s\n", int(row),
-		 new_row_dual,
-		 basis.valid ? "and basis status" : "",
-		 basis.valid ? utilBasisStatusToString(old_row_status).s2_.c_str() : "",
-		 basis.valid ? "->" : "",
-		 basis.valid ? utilBasisStatusToString(new_row_status).s2_.c_str() : "");
-	  printf("Assigned col %2d dual value %g %s %s %s %s\n", int(col),
-		 new_col_dual,
-		 basis.valid ? "and basis status" : "",
-		 basis.valid ? utilBasisStatusToString(old_col_status).s2_.c_str() : "",
-		 basis.valid ? "->" : "",
-		 basis.valid ? utilBasisStatusToString(new_col_status).s2_.c_str() : "");
-	  break;
-	}
+        HighsInt row = colVal.index;
+        if (std::fabs(solution.row_dual[row]) <
+            options.dual_feasibility_tolerance) {
+          assert(!basis.valid ||
+                 basis.row_status[row] == HighsBasisStatus::kBasic);
+          double new_row_dual = solution.col_dual[col] / colVal.value;
+          double new_col_dual = solution.row_dual[row] * colVal.value;
+          HighsBasisStatus old_row_status = HighsBasisStatus::kNonbasic;
+          HighsBasisStatus new_row_status = HighsBasisStatus::kNonbasic;
+          HighsBasisStatus old_col_status = HighsBasisStatus::kNonbasic;
+          HighsBasisStatus new_col_status = HighsBasisStatus::kNonbasic;
+          if (basis.valid) {
+            old_row_status = basis.row_status[row];
+            old_col_status = basis.col_status[col];
+            if (solution.row_dual[row] >= 0) {
+              new_row_status = HighsBasisStatus::kLower;
+            } else {
+              new_row_status = HighsBasisStatus::kUpper;
+            }
+            new_col_status = HighsBasisStatus::kBasic;
+            basis.row_status[row] = new_row_status;
+            basis.col_status[col] = new_col_status;
+          }
+          solution.row_dual[row] = new_row_dual;
+          solution.col_dual[col] = new_col_dual;
+          printf(
+              "Assigned row %2d dual value %g %s %s %s %s\n", int(row),
+              new_row_dual, basis.valid ? "and basis status" : "",
+              basis.valid ? utilBasisStatusToString(old_row_status).s2_.c_str()
+                          : "",
+              basis.valid ? "->" : "",
+              basis.valid ? utilBasisStatusToString(new_row_status).s2_.c_str()
+                          : "");
+          printf(
+              "Assigned col %2d dual value %g %s %s %s %s\n", int(col),
+              new_col_dual, basis.valid ? "and basis status" : "",
+              basis.valid ? utilBasisStatusToString(old_col_status).s2_.c_str()
+                          : "",
+              basis.valid ? "->" : "",
+              basis.valid ? utilBasisStatusToString(new_col_status).s2_.c_str()
+                          : "");
+          break;
+        }
       }
-      feasibility_ok = colFeasibilityOk("FixedCol::undo ", col, lower, upper, options, solution, basis);
+      feasibility_ok = colFeasibilityOk("FixedCol::undo ", col, lower, upper,
+                                        options, solution, basis);
       if (!feasibility_ok) printf("dualFeasibilityOk STILL fail\n");
       assert(feasibility_ok);
     }

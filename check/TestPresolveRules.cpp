@@ -28,7 +28,8 @@ TEST_CASE("test-col-stuffing", "[highs_test_presolve_rules]") {
   h.setOptionValue("presolve_rule_test", kPresolveRuleColStuffing);
   REQUIRE(h.setOptionValue("presolve_rule_logging", true) == HighsStatus::kOk);
   // Initial sweep doesn't yield reductions, but switch it off for clarity
-  REQUIRE(h.setOptionValue("presolve_rule_off", 1 << kPresolveRuleInitialSweep) == HighsStatus::kOk);
+  REQUIRE(h.setOptionValue("presolve_rule_off",
+                           1 << kPresolveRuleInitialSweep) == HighsStatus::kOk);
   const bool lp0 = true;
   const bool lp1 = true;
   const bool lp1a = true;
@@ -102,7 +103,7 @@ TEST_CASE("test-weakly-dominated-col-upper", "[highs_test_presolve_rules]") {
   //
   // min -y, subject to x+y <= 0, x >= 0; 0 <= x <= 1, y free
   //
-  // Optimal solution is x = 1; y = -1, with x nonbasic with dual -1, and 
+  // Optimal solution is x = 1; y = -1, with x nonbasic with dual -1, and
   HighsLp lp;
   lp.num_col_ = 2;
   lp.num_row_ = 2;
@@ -118,7 +119,7 @@ TEST_CASE("test-weakly-dominated-col-upper", "[highs_test_presolve_rules]") {
   bool maximize_first = true;
   std::string sense_string = "";
   std::string test_string = "";
-  
+
   for (HighsInt k = 0; k < 2; k++) {
     // Passes are minimize c^Tx and maximize -c^Tx according to
     // maximize_first
@@ -135,13 +136,16 @@ TEST_CASE("test-weakly-dominated-col-upper", "[highs_test_presolve_rules]") {
     //  test_string = "vanilla-presolve-" + sense_string;
     //  presolveOffOn(test_string, lp, h);
 
-    REQUIRE(h.setOptionValue("presolve_rule_test", kPresolveRuleWeaklyDominatedColUpper) == HighsStatus::kOk);
+    REQUIRE(h.setOptionValue("presolve_rule_test",
+kPresolveRuleWeaklyDominatedColUpper) == HighsStatus::kOk);
 
-    // test_string = "initial-sweep+test-weakly-dominated-col-upper-" + sense_string;
+    // test_string = "initial-sweep+test-weakly-dominated-col-upper-" +
+sense_string;
     // presolveOffOn(test_string, lp, h, 1, 1, 1);
-    
-    REQUIRE(h.setOptionValue("presolve_rule_off", 1 << kPresolveRuleInitialSweep) == HighsStatus::kOk);
-    
+
+    REQUIRE(h.setOptionValue("presolve_rule_off", 1 <<
+kPresolveRuleInitialSweep) == HighsStatus::kOk);
+
     test_string = "test-weakly-dominated-col-upper-" + sense_string;
     presolveOffOn(test_string, lp, h, 1, 2, 1);
 

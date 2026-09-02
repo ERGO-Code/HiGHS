@@ -153,7 +153,8 @@ void HPresolveAnalysis::stopPresolveRuleLog(const HighsInt rule_type) {
     printf("%-25s Call %9d: (%3d, %3d) (%3d, %3d)\n",
            utilPresolveRuleTypeToString(use_rule_type).c_str(),
            (int)presolve_log_.rule[use_rule_type].call, (int)num_removed_col,
-           (int)num_removed_row, (int)presolve_log_.rule[use_rule_type].col_removed,
+           (int)num_removed_row,
+           (int)presolve_log_.rule[use_rule_type].col_removed,
            (int)presolve_log_.rule[use_rule_type].row_removed);
   const int check_num_deleted_rows0_ = -212;
   const int check_num_deleted_cols0_ = -637;

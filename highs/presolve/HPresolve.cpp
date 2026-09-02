@@ -3603,7 +3603,9 @@ HPresolve::Result HPresolve::singletonRow(HighsPostsolveStack& postsolve_stack,
 
   // printf("final bounds: [%.15g,%.15g]\n", lb, ub);
 
-  postsolve_stack.singletonRow(row, col, val, model->col_lower_[col], model->col_upper_[col], lowerTightened, upperTightened);
+  postsolve_stack.singletonRow(row, col, val, model->col_lower_[col],
+                               model->col_upper_[col], lowerTightened,
+                               upperTightened);
 
   // Got as far as possible for HPresolve::singletonRow with initial
   // sweep
@@ -7018,7 +7020,8 @@ HPresolve::Result HPresolve::checkLimits(HighsPostsolveStack& postsolve_stack) {
   // increase in numreductions can be identified
   this->last_reduction_ = numreductions;
   if (numreductions >= this->reductionLimit) {
-    printf("Reached reduction %d / %d\n", int(this->reductionLimit), int(this->reductionLimit));
+    printf("Reached reduction %d / %d\n", int(this->reductionLimit),
+           int(this->reductionLimit));
   }
   return numreductions >= this->reductionLimit ? Result::kStopped : Result::kOk;
 }
@@ -7833,8 +7836,7 @@ HPresolve::Result HPresolve::fixColToLower(HighsPostsolveStack& postsolve_stack,
   const bool logging_on = analysis_.logging_on_;
   if (logging_on) analysis_.startPresolveRuleLog(kPresolveRuleFixedCol);
   postsolve_stack.fixedColAtLower(col, fixval, model->col_cost_[col],
-				  model->col_upper_[col],
-                                  getColumnVector(col));
+                                  model->col_upper_[col], getColumnVector(col));
   removeFixedCol(col, fixval);
   analysis_.logging_on_ = logging_on;
   if (logging_on) analysis_.stopPresolveRuleLog(kPresolveRuleFixedCol);
@@ -7851,8 +7853,7 @@ HPresolve::Result HPresolve::fixColToUpper(HighsPostsolveStack& postsolve_stack,
   const bool logging_on = analysis_.logging_on_;
   if (logging_on) analysis_.startPresolveRuleLog(kPresolveRuleFixedCol);
   postsolve_stack.fixedColAtUpper(col, fixval, model->col_cost_[col],
-				  model->col_lower_[col],
-                                  getColumnVector(col));
+                                  model->col_lower_[col], getColumnVector(col));
   removeFixedCol(col, fixval);
   analysis_.logging_on_ = logging_on;
   if (logging_on) analysis_.stopPresolveRuleLog(kPresolveRuleFixedCol);

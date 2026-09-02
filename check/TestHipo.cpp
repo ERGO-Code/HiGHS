@@ -12,7 +12,7 @@
 #include "lp_data/HighsCallback.h"
 #include "parallel/HighsParallel.h"
 
-const bool dev_run = true;//false;
+const bool dev_run = true;  // false;
 
 void runHipoTest(
     Highs& highs, const std::string& model, const double expected_obj,
