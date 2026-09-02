@@ -62,6 +62,55 @@ class HighsPostsolveStack {
     Nonzero() = default;
   };
 
+  template <typename RowStorageFormat>
+  struct FmeRowData {
+    HighsInt row;
+    double rowLower;
+    double rowUpper;
+    HighsMatrixSlice<RowStorageFormat> rowVec;
+  };
+
+  struct FmeRowHeader {
+    HighsInt row;
+    double rowLower;
+    double rowUpper;
+  };
+
+  struct FmeStepHeader {
+    double colLower;
+    double colUpper;
+    HighsInt col;
+    HighsInt numPlus;
+    HighsInt numMinus;
+  };
+
+  struct FmeDescendant {
+    HighsInt row;
+    double scaleFactor;
+  };
+
+  struct FmeNewRow {
+    HighsInt row;
+    HighsInt plusParentIdx;
+    HighsInt minusParentIdx;
+  };
+
+  struct FmeAncestryEntry {
+    HighsInt step;
+    HighsInt parentRowIndex;
+    double scale;
+    bool isMinus;
+  };
+
+  struct FmeBlockStep {
+    HighsInt col;
+    double colLower;
+    double colUpper;
+    HighsInt numPlus;
+    HighsInt numMinus;
+    std::vector<FmeNewRow> newRows;
+  };
+
   size_t debug_prev_numreductions = 0;
   double debug_prev_col_lower = 0;
   double debug_prev_col_upper = 0;
@@ -79,6 +128,17 @@ class HighsPostsolveStack {
     void undo(const HighsOptions& options, HighsSolution& solution) const;
 
     void transformToPresolvedSpace(std::vector<double>& primalSol) const;
+  };
+
+  struct FourierMotzkinObjCol {
+    double offset;
+    HighsInt col;
+
+    void transformToPresolvedSpace(const std::vector<Nonzero>& costEntries,
+                                   std::vector<double>& primalSol) const;
+
+    void undo(const std::vector<Nonzero>& costEntries,
+              HighsSolution& solution) const;
   };
 
   struct FreeColSubstitution {
@@ -273,7 +333,28 @@ class HighsPostsolveStack {
     kDuplicateColumn,
     kSlackColSubstitution,
     kZeroObjSingletonContinuousCol,
+    kFourierMotzkinBlock,
+    kFourierMotzkinObjCol,
   };
+
+  struct FmeStepData {
+    FmeStepHeader header;
+    std::vector<FmeRowHeader> plusHeaders;
+    std::vector<double> plusCoefs;
+    std::vector<std::vector<Nonzero>> plusEntries;
+    std::vector<std::vector<FmeDescendant>> plusDescendants;
+    std::vector<FmeRowHeader> minusHeaders;
+    std::vector<double> minusCoefs;
+    std::vector<std::vector<Nonzero>> minusEntries;
+    std::vector<std::vector<FmeDescendant>> minusDescendants;
+    std::vector<FmeNewRow> newRows;
+  };
+
+  static std::vector<FmeStepData> popFourierMotzkinBlock(HighsDataStack& stack);
+  static void undoFourierMotzkinBlock(const std::vector<FmeStepData>& steps,
+                                      const HighsOptions& options,
+                                      HighsSolution& solution,
+                                      HighsBasis& basis);
 
   HighsDataStack reductionValues;
   std::vector<std::pair<ReductionType, size_t>> reductions;
@@ -344,6 +425,12 @@ class HighsPostsolveStack {
       }
       case ReductionType::kZeroObjSingletonContinuousCol: {
         return "Zero obj singleton continuous col";
+      }
+      case ReductionType::kFourierMotzkinBlock: {
+        return "Fourier-Motzkin block";
+      }
+      case ReductionType::kFourierMotzkinObjCol: {
+        return "Fourier-Motzkin obj col";
       }
       default:
         return "Unknown";
@@ -552,6 +639,121 @@ class HighsPostsolveStack {
         origColIndex[col], origRowIndex[row]});
     reductionValues.push(rowValues);
     reductionAdded(ReductionType::kZeroObjSingletonContinuousCol);
+  }
+
+  template <typename RowStorageFormat>
+  void fourierMotzkinBlockPushStep(
+      HighsInt col, const std::vector<FmeRowData<RowStorageFormat>>& plusRows,
+      const std::vector<FmeRowData<RowStorageFormat>>& minusRows) {
+    std::vector<FmeRowHeader> plusHeaders;
+    std::vector<double> plusCoefs;
+    plusHeaders.reserve(plusRows.size());
+    plusCoefs.reserve(plusRows.size());
+    for (const auto& rd : plusRows) {
+      std::vector<Nonzero> translated;
+      double coef = 0.0;
+      for (const HighsSliceNonzero& nz : rd.rowVec) {
+        if (nz.index() == col)
+          coef = nz.value();
+        else
+          translated.push_back({origColIndex[nz.index()], nz.value()});
+      }
+      reductionValues.push(translated);
+      plusCoefs.push_back(coef);
+      plusHeaders.push_back({origRowIndex[rd.row], rd.rowLower, rd.rowUpper});
+    }
+    reductionValues.push(plusCoefs);
+    reductionValues.push(plusHeaders);
+
+    std::vector<FmeRowHeader> minusHeaders;
+    std::vector<double> minusCoefs;
+    minusHeaders.reserve(minusRows.size());
+    minusCoefs.reserve(minusRows.size());
+    for (const auto& rd : minusRows) {
+      std::vector<Nonzero> translated;
+      double coef = 0.0;
+      for (const HighsSliceNonzero& nz : rd.rowVec) {
+        if (nz.index() == col)
+          coef = nz.value();
+        else
+          translated.push_back({origColIndex[nz.index()], nz.value()});
+      }
+      reductionValues.push(translated);
+      minusCoefs.push_back(coef);
+      minusHeaders.push_back({origRowIndex[rd.row], rd.rowLower, rd.rowUpper});
+    }
+    reductionValues.push(minusCoefs);
+    reductionValues.push(minusHeaders);
+  }
+
+  void fourierMotzkinBlockFinalise(
+      const std::vector<FmeBlockStep>& blockSteps,
+      const std::unordered_map<HighsInt, std::vector<FmeAncestryEntry>>&
+          rowAncestry) {
+    HighsInt numSteps = static_cast<HighsInt>(blockSteps.size());
+
+    std::vector<std::vector<std::vector<FmeDescendant>>> plusDescendantsAll(
+        numSteps);
+    std::vector<std::vector<std::vector<FmeDescendant>>> minusDescendantsAll(
+        numSteps);
+    for (HighsInt s = 0; s < numSteps; ++s) {
+      plusDescendantsAll[s].resize(blockSteps[s].numPlus);
+      minusDescendantsAll[s].resize(blockSteps[s].numMinus);
+    }
+    for (const auto& entry : rowAncestry) {
+      HighsInt row = entry.first;
+      HighsInt origRow = origRowIndex[row];
+      for (const auto& a : entry.second) {
+        if (a.isMinus)
+          minusDescendantsAll[a.step][a.parentRowIndex].push_back(
+              {origRow, a.scale});
+        else
+          plusDescendantsAll[a.step][a.parentRowIndex].push_back(
+              {origRow, a.scale});
+      }
+    }
+
+    for (HighsInt s = 0; s < numSteps; ++s) {
+      assert(static_cast<HighsInt>(plusDescendantsAll[s].size()) ==
+             blockSteps[s].numPlus);
+      for (HighsInt p = 0; p < blockSteps[s].numPlus; ++p)
+        reductionValues.push(plusDescendantsAll[s][p]);
+      assert(static_cast<HighsInt>(minusDescendantsAll[s].size()) ==
+             blockSteps[s].numMinus);
+      for (HighsInt m = 0; m < blockSteps[s].numMinus; ++m)
+        reductionValues.push(minusDescendantsAll[s][m]);
+    }
+
+    for (HighsInt s = 0; s < numSteps; ++s) {
+      std::vector<FmeNewRow> translated;
+      translated.reserve(blockSteps[s].newRows.size());
+      for (const auto& nr : blockSteps[s].newRows)
+        translated.push_back(
+            {origRowIndex[nr.row], nr.plusParentIdx, nr.minusParentIdx});
+      reductionValues.push(translated);
+    }
+
+    for (HighsInt s = 0; s < numSteps; ++s) {
+      FmeStepHeader header{blockSteps[s].colLower, blockSteps[s].colUpper,
+                           origColIndex[blockSteps[s].col],
+                           blockSteps[s].numPlus, blockSteps[s].numMinus};
+      reductionValues.push(header);
+    }
+
+    reductionValues.push(numSteps);
+    reductionAdded(ReductionType::kFourierMotzkinBlock);
+  }
+
+  void fourierMotzkinObjCol(HighsInt col, double offset,
+                            const std::vector<Nonzero>& costEntries) {
+    reductionValues.push(FourierMotzkinObjCol{offset, origColIndex[col]});
+    std::vector<Nonzero> translatedEntries;
+    translatedEntries.reserve(costEntries.size());
+    for (const Nonzero& entry : costEntries)
+      if (entry.index != col)
+        translatedEntries.emplace_back(origColIndex[entry.index], entry.value);
+    reductionValues.push(translatedEntries);
+    reductionAdded(ReductionType::kFourierMotzkinObjCol);
   }
 
   template <typename ColStorageFormat>
@@ -1096,6 +1298,19 @@ class HighsPostsolveStack {
           reductionValues.pop(rowValues);
           reductionValues.pop(reduction);
           reduction.undo(options, rowValues, solution, basis);
+          break;
+        }
+        case ReductionType::kFourierMotzkinBlock: {
+          auto steps = popFourierMotzkinBlock(reductionValues_);
+          undoFourierMotzkinBlock(steps, options, solution, basis);
+          break;
+        }
+        case ReductionType::kFourierMotzkinObjCol: {
+          std::vector<Nonzero> costEntries;
+          reductionValues_.pop(costEntries);
+          FourierMotzkinObjCol reduction;
+          reductionValues_.pop(reduction);
+          reduction.undo(costEntries, solution);
           break;
         }
         default:

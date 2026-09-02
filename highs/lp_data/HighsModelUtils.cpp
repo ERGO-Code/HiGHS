@@ -1531,6 +1531,8 @@ std::string utilPresolveRuleTypeToString(const HighsInt rule_type) {
     return "Col stuffing";
   } else if (rule_type == kPresolveRuleInitialSweep) {
     return "Initial sweep";
+  } else if (rule_type == kPresolveRuleFourierMotzkin) {
+    return "Fourier-Motzkin";
   }
   assert(1 == 0);
   return "????";
