@@ -174,6 +174,8 @@ TEST_CASE("test-parallel-rows-cut-ordering", "[highs_test_presolve_rules]") {
 
   HighsOptions options;
   options.presolve_rule_test = kPresolveRuleParallelRowsAndCols;
+  options.presolve_rule_off = 1 << kPresolveRuleInitialSweep;
+  options.output_flag = dev_run;
 
   HighsTimer timer;
   timer.start();

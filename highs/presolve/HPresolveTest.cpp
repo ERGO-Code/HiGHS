@@ -16,6 +16,8 @@ HPresolve::Result HPresolve::presolveRuleTest(
     return presolveRuleTestColStuffing(postsolve_stack);
   } else if (options->presolve_rule_test == kPresolveRuleWeaklyDominatedColUpper) {
     return presolveRuleTestWeaklyDominatedColUpper(postsolve_stack);
+  } else if (options->presolve_rule_test == kPresolveRuleParallelRowsAndCols) {
+    return presolveRuleTestParallelRowsAndCols(postsolve_stack);
   }
   return Result::kOk;
 }
@@ -51,6 +53,14 @@ HPresolve::Result HPresolve::presolveRuleTestWeaklyDominatedColUpper(HighsPostso
     col = 0;
     //    result = emptyCol(postsolve_stack, col);
     return result;
+}
+
+HPresolve::Result HPresolve::presolveRuleTestParallelRowsAndCols(
+    HighsPostsolveStack& postsolve_stack) {
+  assert(options->presolve_rule_test == kPresolveRuleParallelRowsAndCols);
+  highsLogUser(options->log_options, HighsLogType::kInfo,
+               "HPresolve::presolveRuleTestParallelRowsAndCols\n");
+  return detectParallelRowsAndCols(postsolve_stack);
 }
 
 }  // namespace presolve
