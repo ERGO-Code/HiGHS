@@ -343,6 +343,8 @@ class HPresolve {
   void changeImplRowDualLower(HighsInt row, double newLower,
                               HighsInt originCol);
 
+  void moveCutsToPool(HighsPostsolveStack& postsolve_stack);
+
   Result scaleMIP(HighsPostsolveStack& postsolve_stack);
 
   Result applyConflictGraphSubstitutions(HighsPostsolveStack& postsolve_stack,
@@ -547,6 +549,8 @@ class HPresolve {
 
   Result presolveRuleTest(HighsPostsolveStack& postsolve_stack);
   Result presolveRuleTestColStuffing(HighsPostsolveStack& postsolve_stack);
+  Result presolveRuleTestParallelRowsAndCols(
+      HighsPostsolveStack& postsolve_stack);
   Result presolveRuleTestFourierMotzkin(HighsPostsolveStack& postsolve_stack);
 
   // Not currently called

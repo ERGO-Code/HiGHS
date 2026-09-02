@@ -44,7 +44,7 @@
 - Default: 1e+20
 
 ## [infinite\_bound](@id option-infinite-bound)
-- Limit on |constraint bound|: values greater than or equal to this will be treated as infinite
+- Limit on |variable/constraint bound|: values greater than or equal to this will be treated as infinite
 - Type: double
 - Range: [1e+15, inf]
 - Default: 1e+20

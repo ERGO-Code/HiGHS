@@ -461,16 +461,20 @@ HighsStatus assessBounds(const HighsOptions& options, const std::string& type,
   if (num_infinite_lower_bound) {
     highsLogUser(options.log_options, HighsLogType::kInfo,
                  "%3ss:%12" HIGHSINT_FORMAT
-                 " lower bounds    less than or equal to %12g are treated as "
+                 " lower bound%s    less than or equal to %12g are treated as "
                  "-Infinity\n",
-                 type.c_str(), num_infinite_lower_bound, -infinite_bound);
+                 type.c_str(), num_infinite_lower_bound,
+                 highsIntToPlural(num_infinite_lower_bound).c_str(),
+                 -infinite_bound);
   }
   if (num_infinite_upper_bound) {
     highsLogUser(options.log_options, HighsLogType::kInfo,
                  "%3ss:%12" HIGHSINT_FORMAT
-                 " upper bounds greater than or equal to %12g are treated as "
+                 " upper bound%s greater than or equal to %12g are treated as "
                  "+Infinity\n",
-                 type.c_str(), num_infinite_upper_bound, infinite_bound);
+                 type.c_str(), num_infinite_upper_bound,
+                 highsIntToPlural(num_infinite_upper_bound).c_str(),
+                 infinite_bound);
   }
 
   if (error_found)
