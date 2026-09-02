@@ -6635,7 +6635,8 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
                  time_str.c_str());
   }
 
-  if (options->presolve != kHighsOffString && mipsolver == nullptr) {
+  if (options->presolve != kHighsOffString && mipsolver == nullptr &&
+      !options->presolve_rule_test) {
     // Zero numDeletedCols and numDeletedRows since they are used to
     // identify reductions due to this presovle rule
     numDeletedCols = 0;
@@ -7195,6 +7196,68 @@ bool HPresolve::silentLog() const {
   return mipsolver && mipsolver->mipdata_->numRestarts > 0;
 }
 
+void HPresolve::moveCutsToPool(HighsPostsolveStack& postsolve_stack) {
+  if (mipsolver == nullptr) return;
+  std::vector<HighsInt> cutinds;
+  std::vector<double> cutvals;
+  cutinds.reserve(model->num_col_);
+  cutvals.reserve(model->num_col_);
+  HighsInt numcuts = 0;
+  for (HighsInt i : postsolve_stack.getCutRows()) {
+    ++numcuts;
+    storeRow(i);
+    cutinds.clear();
+    cutvals.clear();
+    for (HighsInt j : rowpositions) {
+      cutinds.push_back(Acol[j]);
+      cutvals.push_back(Avalue[j]);
+    }
+
+    if (mipsolver != nullptr) {
+      mipsolver->mipdata_->getCutPool().addCut(
+          *mipsolver, cutinds.data(), cutvals.data(), cutinds.size(),
+          model->row_upper_[i],
+          rowsizeInteger[i] + rowsizeImplInt[i] == rowsize[i] &&
+              rowCoefficientsIntegral(i, 1.0),
+          true, false, false);
+    }
+
+    markRowDeleted(i);
+    for (HighsInt j : rowpositions) unlink(j);
+  }
+
+  if (numcuts == 0) return;
+
+  // Compact deleted cut rows. shrinkProblem must not be used here
+  // because it replaces the cutpool with a new empty one, destroying
+  // the cuts that were just added above.
+  HighsInt oldNumRow = model->num_row_;
+  std::vector<HighsInt> newRowIndex(oldNumRow);
+  HighsInt newNumRow = 0;
+  for (HighsInt i = 0; i < oldNumRow; ++i) {
+    if (rowDeleted[i])
+      newRowIndex[i] = -1;
+    else
+      newRowIndex[i] = newNumRow++;
+  }
+  model->num_row_ = newNumRow;
+
+  for (HighsInt i = 0; i < oldNumRow; ++i) {
+    if (newRowIndex[i] == -1 || newRowIndex[i] == i) continue;
+    model->row_lower_[newRowIndex[i]] = model->row_lower_[i];
+    model->row_upper_[newRowIndex[i]] = model->row_upper_[i];
+  }
+  model->row_lower_.resize(model->num_row_);
+  model->row_upper_.resize(model->num_row_);
+  model->row_names_.resize(model->num_row_);
+
+  for (size_t i = 0; i < Avalue.size(); ++i) {
+    if (Avalue[i] == 0) continue;
+    assert(newRowIndex[Arow[i]] != -1);
+    Arow[i] = newRowIndex[Arow[i]];
+  }
+}
+
 HighsModelStatus HPresolve::run(HighsPostsolveStack& postsolve_stack) {
   presolve_status_ = HighsPresolveStatus::kNotSet;
   shrinkProblemEnabled = true;
@@ -7258,69 +7321,7 @@ HighsModelStatus HPresolve::run(HighsPostsolveStack& postsolve_stack) {
     mipsolver->mipdata_->getDomain().addConflictPool(
         mipsolver->mipdata_->getConflictPool());
 
-    if (mipsolver->mipdata_->numRestarts != 0) {
-      std::vector<HighsInt> cutinds;
-      std::vector<double> cutvals;
-      cutinds.reserve(model->num_col_);
-      cutvals.reserve(model->num_col_);
-      HighsInt numcuts = 0;
-      for (HighsInt i = model->num_row_ - 1; i >= 0; --i) {
-        if (postsolve_stack.isOrigRow(i)) break;
-        if (!postsolve_stack.isCutRow(i)) continue;
-
-        // row is a cut, remove it from matrix but add to cutpool
-        ++numcuts;
-        storeRow(i);
-        cutinds.clear();
-        cutvals.clear();
-        for (HighsInt j : rowpositions) {
-          cutinds.push_back(Acol[j]);
-          cutvals.push_back(Avalue[j]);
-        }
-
-        mipsolver->mipdata_->getCutPool().addCut(
-            *mipsolver, cutinds.data(), cutvals.data(), cutinds.size(),
-            model->row_upper_[i],
-            rowsizeInteger[i] + rowsizeImplInt[i] == rowsize[i] &&
-                rowCoefficientsIntegral(i, 1.0),
-            true, false, false);
-
-        markRowDeleted(i);
-        for (HighsInt j : rowpositions) unlink(j);
-      }
-
-      // Compact deleted cut rows. shrinkProblem must not be used here
-      // because it replaces the cutpool with a new empty one, destroying
-      // the cuts that were just added above.
-      auto compactDeletedRows = [&]() {
-        HighsInt oldNumRow = model->num_row_;
-        std::vector<HighsInt> newRowIndex(oldNumRow);
-        HighsInt newNumRow = 0;
-        for (HighsInt i = 0; i < oldNumRow; ++i) {
-          if (rowDeleted[i])
-            newRowIndex[i] = -1;
-          else
-            newRowIndex[i] = newNumRow++;
-        }
-        model->num_row_ = newNumRow;
-
-        for (HighsInt i = 0; i < oldNumRow; ++i) {
-          if (newRowIndex[i] == -1 || newRowIndex[i] == i) continue;
-          model->row_lower_[newRowIndex[i]] = model->row_lower_[i];
-          model->row_upper_[newRowIndex[i]] = model->row_upper_[i];
-        }
-        model->row_lower_.resize(model->num_row_);
-        model->row_upper_.resize(model->num_row_);
-        model->row_names_.resize(model->num_row_);
-
-        for (size_t i = 0; i < Avalue.size(); ++i) {
-          if (Avalue[i] == 0) continue;
-          assert(newRowIndex[Arow[i]] != -1);
-          Arow[i] = newRowIndex[Arow[i]];
-        }
-      };
-      compactDeletedRows();
-    }
+    if (mipsolver->mipdata_->numRestarts != 0) moveCutsToPool(postsolve_stack);
   }
 
   // Possibly populate the model matrix from the presolve matrix data
@@ -8572,9 +8573,8 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
         parallel = duplicateColRowPos != -1;
         if (!parallel) break;
 
-        parallel = std::abs(static_cast<double>(
-                       Avalue[duplicateColRowPos] -
-                       static_cast<HighsCDouble>(colScale) * colNz.value())) <=
+        parallel = abs(Avalue[duplicateColRowPos] -
+                       static_cast<HighsCDouble>(colScale) * colNz.value()) <=
                    options->small_matrix_value;
         if (!parallel) break;
       }
@@ -8723,7 +8723,21 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
 
   buckets.clear();
 
-  for (HighsInt i = 0; i != model->num_row_; ++i) {
+  // Iterate non-cut rows before cut rows so that when a cut is
+  // parallel to a non-cut, the non-cut is already in the bucket as
+  // the surviving row and the cut is removed. This prevents a cut
+  // from absorbing a non-cut constraint which would cause the
+  // constraint to be lost when moveCutsToPool removes it.
+  std::vector<HighsInt> rowOrder(model->num_row_);
+  std::iota(rowOrder.begin(), rowOrder.end(), 0);
+  pdqsort(rowOrder.begin(), rowOrder.end(), [&](HighsInt a, HighsInt b) {
+    if (postsolve_stack.isCutRow(a) != postsolve_stack.isCutRow(b))
+      return !postsolve_stack.isCutRow(a);
+    return a < b;
+  });
+
+  for (HighsInt rowIndex = 0; rowIndex != model->num_row_; ++rowIndex) {
+    HighsInt i = rowOrder[rowIndex];
     if (rowDeleted[i]) continue;
     if (rowsize[i] <= 1 || (rowsize[i] == 2 && isEquation(i))) {
       HPRESOLVE_CHECKED_CALL(rowPresolve(postsolve_stack, i));
@@ -8790,9 +8804,8 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
         parallel = nzPos != -1;
         if (!parallel) break;
 
-        parallel = std::abs(static_cast<double>(
-                       Avalue[nzPos] -
-                       static_cast<HighsCDouble>(rowScale) * rowNz.value())) <=
+        parallel = abs(Avalue[nzPos] -
+                       static_cast<HighsCDouble>(rowScale) * rowNz.value()) <=
                    options->small_matrix_value;
         if (!parallel) break;
       }
