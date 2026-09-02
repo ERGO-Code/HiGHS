@@ -2021,7 +2021,7 @@ class highs_cons(object):
 # Note: we only allow LHS/RHS to be set once via comparisons (>=,==,<=), otherwise it gets confusing!
 # e.g, for (0 <= x <= 1) <= 2, should this be:
 #     0 <= x <= 1 (i.e., tighter bound, x <= 1 and x <= 2 implies x <= 1),
-# or, 0 <= x <= 2 (i.e., last comparision overrides previous)?
+# or, 0 <= x <= 2 (i.e., last comparison overrides previous)?
 #
 # Throwing an error makes it obvious to the user. Note we can still set via addition,
 # e.g., (x <= 1) + (y <= 5) to get x + y <= 6

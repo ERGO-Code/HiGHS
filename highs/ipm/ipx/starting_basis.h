@@ -30,7 +30,7 @@ namespace ipx {
 // The method calls ConstructBasisFromWeights() using the interior point
 // scaling factors as column weights. If a variable gets status BASIC_FREE or
 // NONBASIC_FIXED, then its state in @iterate is changed accordingly to free or
-// fixed. On return info->errflag is nonzero if an error occured.
+// fixed. On return info->errflag is nonzero if an error occurred.
 //
 void StartingBasis(Iterate* iterate, Basis* basis, Info* info);
 
