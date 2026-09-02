@@ -53,8 +53,8 @@ returning from `Highs::run()`.
 
 The `HighsLp` class contains data values and structures that cannot be handled explicitly by the solvers.
 
-- If a variable has an excessivly large objective cost, this is
-  interpreted as being infinte, and handled in
+- If a variable has an excessively large objective cost, this is
+  interpreted as being infinite, and handled in
   `Highs::handleInfCost()` by fixing the variable at its lower or
   upper bound (when finite) according to the sign of the cost and the
   sense of the optimization, and zeroing the cost. After solving the
