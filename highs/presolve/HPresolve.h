@@ -516,7 +516,7 @@ class HPresolve {
   Result removeDoubletonEquations(HighsPostsolveStack& postsolve_stack);
 
   Result strengthenInequalities(HighsPostsolveStack& postsolve_stack,
-                                HighsInt& num_strenghtened);
+                                HighsInt& num_strengthened);
 
   Result detectImpliedIntegers();
 

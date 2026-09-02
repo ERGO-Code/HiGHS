@@ -28,7 +28,7 @@ TEST_CASE("semi-variable-model", "[highs_test_semi_variables]") {
   lp.col_cost_[semi_col] = semi_col_cost;
   lp.model_name_ = "semi-variable-model";
   optimal_objective_function_value = 6.83333;
-  // Legal to have infinte upper bounds on semi-variables
+  // Legal to have infinite upper bounds on semi-variables
   lp.col_upper_[semi_col] = inf;
   return_status = highs.passModel(model);
   REQUIRE(return_status == HighsStatus::kOk);
