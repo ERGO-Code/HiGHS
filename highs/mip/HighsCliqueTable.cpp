@@ -2229,11 +2229,9 @@ bool HighsCliqueTable::presolveFixCol(HighsInt col, bool val,
       ++clique.numZeroFixed;
       const HighsInt actualSize = clique.end - clique.start;
       const HighsInt activeSize = clique.numActive();
-      shortenedClique.clear();
-      shortenedClique.reserve(activeSize);
       if (activeSize <= 1) {
         if (equality) {
-          if (actualSize == 0) return false;
+          if (activeSize == 0) return false;
           for (HighsInt i = clique.start; i != clique.end; ++i) {
             if (presolveColStates[cliqueentries[i].col] ==
                 PresolveColState::kActive) {
@@ -2247,6 +2245,8 @@ bool HighsCliqueTable::presolveFixCol(HighsInt col, bool val,
       }
       if (activeSize == 2 ||
           clique.numZeroFixed >= std::max(HighsInt{10}, actualSize >> 1)) {
+        shortenedClique.clear();
+        shortenedClique.reserve(activeSize);
         for (HighsInt i = clique.start; i != clique.end; ++i) {
           if (!colDeleted[cliqueentries[i].col])
             shortenedClique.push_back(cliqueentries[i]);
