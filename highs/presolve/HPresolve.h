@@ -531,6 +531,9 @@ class HPresolve {
 
   Result updateCliqueTableFixedCol(HighsInt col, double val);
 
+  Result updateCliqueTableSubstituteCol(HighsInt substCol, HighsInt stayCol,
+                                        double offset, double scale);
+
   Result sparsify(HighsPostsolveStack& postsolve_stack);
 
   void setRelaxedImpliedBounds();

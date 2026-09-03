@@ -1642,7 +1642,6 @@ TEST_CASE("MIP-equality-clique-fixing", "[highs_test_mip_solver]") {
   HighsCliqueTable::CliqueVar clique[] = {
       {0, 1}, {1, 1}, {2, 1}, {3, 1}, {4, 1}};
   cliquetable.doAddClique(clique, 5, true);
-  cliquetable.setPresolveFlag(true);
 
   // Fix x0..x3 = 0 via vertexInfeasible (simulates what cleanupFixed does)
   for (HighsInt i = 0; i < 4; i++) {
@@ -1690,7 +1689,6 @@ TEST_CASE("MIP-equality-clique-fixing-to-zero", "[highs_test_mip_solver]") {
   HighsCliqueTable::CliqueVar clique[] = {
       {0, 0}, {1, 0}, {2, 0}, {3, 0}, {4, 0}};
   cliquetable.doAddClique(clique, 5, true);
-  cliquetable.setPresolveFlag(true);
 
   // Fix x0..x3 = 1 via vertexInfeasible (makes their val=0 entry infeasible)
   for (HighsInt i = 0; i < 4; i++) {

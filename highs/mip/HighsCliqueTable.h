@@ -98,7 +98,6 @@ class HighsCliqueTable {
   HighsInt numEntries;
   HighsInt maxEntries;
   HighsInt minEntriesForParallelism;
-  bool inPresolve;
   bool allowParallel;
 
   void unlink(HighsInt pos, HighsInt cliqueid);
@@ -163,6 +162,10 @@ class HighsCliqueTable {
                           int64_t& numNeighbourhoodqueries, CliqueVar v,
                           CliqueVar* q, HighsInt N) const;
 
+  void recordSubstitution(Substitution substitution);
+
+  void replaceLiteral(CliqueVar substitutedVar, CliqueVar replacementVar);
+
  public:
   int64_t numNeighbourhoodQueries;
 
@@ -173,7 +176,6 @@ class HighsCliqueTable {
     numEntries = 0;
     maxEntries = kHighsIInf;
     minEntriesForParallelism = kHighsIInf;
-    inPresolve = false;
     allowParallel = true;
   }
 
@@ -183,11 +185,8 @@ class HighsCliqueTable {
     numcliquesvar.resize(2 * ncols, 0);
     colsubstituted.resize(ncols);
     colDeleted.resize(ncols, false);
+    presolveColStates.resize(ncols, PresolveColState::kActive);
   }
-
-  void setPresolveFlag(bool inPresolve) { this->inPresolve = inPresolve; }
-
-  bool getPresolveFlag() const { return inPresolve; }
 
   HighsInt getNumEntries() const { return numEntries; }
 
@@ -326,9 +325,12 @@ class HighsCliqueTable {
                         std::vector<CliqueVar>& clique, bool equation = false);
 
   bool presolveFixCol(HighsInt col, bool val,
-                            std::vector<CliqueVar>& impliedFixings);
+                      std::vector<CliqueVar>& impliedFixings);
 
   void presolveEliminateCol(HighsInt col);
+
+  bool presolveSubstituteCol(HighsInt substCol, CliqueVar replacement,
+                             std::vector<CliqueVar>& impliedFixings);
 
   void rebuild(HighsInt ncols,
                const presolve::HighsPostsolveStack& postSolveStack,

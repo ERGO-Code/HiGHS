@@ -595,54 +595,59 @@ bool HighsCliqueTable::processNewEdge(HighsDomain& globaldom, CliqueVar v1,
       substitution.replace = v1;
     }
 
-    substitutions.push_back(substitution);
-    colsubstituted[substitution.substcol] = substitutions.size();
-
-    auto replace = [&](CliqueVar substitutedVar, CliqueVar replacementVar) {
-      HighsHashTree<HighsInt, HighsInt>& substList =
-          invertedHashList[substitutedVar.index()];
-      HighsHashTree<HighsInt, HighsInt>& replaceList =
-          invertedHashList[replacementVar.index()];
-      numcliquesvar[replacementVar.index()] +=
-          numcliquesvar[substitutedVar.index()];
-      numcliquesvar[substitutedVar.index()] = 0;
-
-      substList.for_each([&](HighsInt cliqueid, HighsInt location) {
-        replaceList.insert(cliqueid, location);
-        cliqueentries[location] = replacementVar;
-      });
-
-      substList.clear();
-
-      HighsHashTree<HighsInt>& substListSizeTwo =
-          invertedHashListSizeTwo[substitutedVar.index()];
-      HighsHashTree<HighsInt>& replaceListSizeTwo =
-          invertedHashListSizeTwo[replacementVar.index()];
-
-      substListSizeTwo.for_each([&](HighsInt cliqueid) {
-        HighsInt pos = cliques[cliqueid].start;
-        HighsInt otherPos = pos + 1;
-
-        if (cliqueentries[otherPos] == substitutedVar) std::swap(pos, otherPos);
-
-        replaceListSizeTwo.insert(cliqueid);
-        cliqueentries[pos] = replacementVar;
-
-        sizeTwoCliques.erase(
-            sortedEdge(substitutedVar, cliqueentries[otherPos]));
-        sizeTwoCliques.insert(
-            sortedEdge(replacementVar, cliqueentries[otherPos]), cliqueid);
-      });
-
-      substListSizeTwo.clear();
-    };
-
-    replace(CliqueVar(substitution.substcol, 1), substitution.replace);
-    replace(CliqueVar(substitution.substcol, 0),
-            substitution.replace.complement());
+    recordSubstitution(substitution);
 
     return true;
   }
+}
+
+void HighsCliqueTable::replaceLiteral(const CliqueVar substitutedVar,
+                                      const CliqueVar replacementVar) {
+  HighsHashTree<HighsInt, HighsInt>& substList =
+      invertedHashList[substitutedVar.index()];
+  HighsHashTree<HighsInt, HighsInt>& replaceList =
+      invertedHashList[replacementVar.index()];
+  numcliquesvar[replacementVar.index()] +=
+      numcliquesvar[substitutedVar.index()];
+  numcliquesvar[substitutedVar.index()] = 0;
+
+  substList.for_each([&](HighsInt cliqueid, HighsInt location) {
+    replaceList.insert(cliqueid, location);
+    cliqueentries[location] = replacementVar;
+  });
+
+  substList.clear();
+
+  HighsHashTree<HighsInt>& substListSizeTwo =
+      invertedHashListSizeTwo[substitutedVar.index()];
+  HighsHashTree<HighsInt>& replaceListSizeTwo =
+      invertedHashListSizeTwo[replacementVar.index()];
+
+  substListSizeTwo.for_each([&](HighsInt cliqueid) {
+    HighsInt pos = cliques[cliqueid].start;
+    HighsInt otherPos = pos + 1;
+
+    if (cliqueentries[otherPos] == substitutedVar) std::swap(pos, otherPos);
+
+    replaceListSizeTwo.insert(cliqueid);
+    cliqueentries[pos] = replacementVar;
+
+    sizeTwoCliques.erase(sortedEdge(substitutedVar, cliqueentries[otherPos]));
+    sizeTwoCliques.insert(sortedEdge(replacementVar, cliqueentries[otherPos]),
+                          cliqueid);
+  });
+
+  substListSizeTwo.clear();
+}
+
+void HighsCliqueTable::recordSubstitution(Substitution substitution) {
+  substitutions.push_back(substitution);
+  colsubstituted[substitution.substcol] =
+      static_cast<HighsInt>(substitutions.size());
+
+  replaceLiteral(CliqueVar(substitution.substcol, 1), substitution.replace);
+  replaceLiteral(CliqueVar(substitution.substcol, 0),
+                 substitution.replace.complement());
 }
 
 void HighsCliqueTable::addClique(const HighsMipSolver& mipsolver,
@@ -1520,19 +1525,6 @@ void HighsCliqueTable::processInfeasibleVertices(HighsDomain& globaldom) {
     vHashListsSizeTwo =
         std::move(invertedHashListSizeTwo[v.complement().index()]);
 
-    if (inPresolve) {
-      // during presolve we only count the number of zeros within each clique
-      // and only remove fully redundant cliques that are larger than two
-      // in the process since during presolve a lot of cliques of size two
-      // may be found by probing and will be deleted upon rebuild anyways
-      vHashLists.for_each([&](HighsInt cliqueid) {
-        cliques[cliqueid].numZeroFixed += 1;
-        if (cliques[cliqueid].numActive() <= 1)
-          fixLastActiveAndRemove(globaldom, cliqueid);
-      });
-      continue;
-    }
-
     vHashListsSizeTwo.for_each(
         [&](HighsInt cliqueid) { removeClique(cliqueid); });
 
@@ -2220,7 +2212,6 @@ bool HighsCliqueTable::presolveFixCol(HighsInt col, bool val,
     for (const HighsInt cliqueId : cliqueIds) {
       if (cliques[cliqueId].start == -1) continue;
       const bool equality = cliques[cliqueId].equality;
-      const HighsInt origin = cliques[cliqueId].origin;
       shortenedClique.clear();
       shortenedClique.reserve(cliques[cliqueId].end - cliques[cliqueId].start);
       for (HighsInt i = cliques[cliqueId].start; i != cliques[cliqueId].start;
@@ -2236,14 +2227,14 @@ bool HighsCliqueTable::presolveFixCol(HighsInt col, bool val,
           shortenedClique.push_back(v2);
         }
       }
-      removeClique(cliqueId);
+      removeClique(cliqueId, false);
       if (shortenedClique.size() >= 2) {
         doAddClique(shortenedClique.data(),
                     static_cast<HighsInt>(shortenedClique.size()), equality,
-                    origin);
+                    -1);
       } else if (equality) {
         if (shortenedClique.empty()) return false;
-        fixings.push_back(shortenedClique.front());
+        fixings.push_back(shortenedClique[0]);
       }
     }
   }
@@ -2289,13 +2280,119 @@ void HighsCliqueTable::presolveEliminateCol(const HighsInt col) {
   }
 }
 
+bool HighsCliqueTable::presolveSubstituteCol(
+    const HighsInt substCol, const CliqueVar replacement,
+    std::vector<CliqueVar>& impliedFixings) {
+  if (presolveColStates[substCol] != PresolveColState::kActive) return true;
+  std::vector<HighsInt> cliqueIds;
+  auto collectIncidentCliques = [&](const CliqueVar v) {
+    invertedHashList[v.index()].for_each(
+        [&](const HighsInt cliqueId, HighsInt) {
+          cliqueIds.push_back(cliqueId);
+        });
+    invertedHashListSizeTwo[v.index()].for_each(
+        [&](const HighsInt cliqueId) { cliqueIds.push_back(cliqueId); });
+  };
+  collectIncidentCliques(CliqueVar(substCol, 0));
+  collectIncidentCliques(CliqueVar(substCol, 1));
+  pdqsort(cliqueIds.begin(), cliqueIds.end());
+
+  std::vector<CliqueVar> potentialFixings;
+  std::vector<CliqueVar> shortenedClique;
+
+  for (HighsInt cliqueId : cliqueIds) {
+    if (cliques[cliqueId].start == -1) continue;
+    HighsInt substPos = -1;
+    HighsInt replacePos = -1;
+    for (HighsInt i = cliques[cliqueId].start; i != cliques[cliqueId].end;
+         ++i) {
+      if (cliqueentries[i].col == substCol) {
+        substPos = i;
+      } else if (cliqueentries[i].col == replacement.col) {
+        replacePos = i;
+      }
+    }
+    assert(substPos != -1);
+    if (replacePos == -1) continue;
+    cliques[cliqueId].origin = -1;
+    const bool equality = cliques[cliqueId].equality;
+
+    const CliqueVar substVar =
+        cliqueentries[substPos].val ? replacement : replacement.complement();
+    const CliqueVar replacementVar = cliqueentries[replacePos];
+
+    // If both replacement and its complement will exist in new clique
+    // then clique is automatically fulfilled. Set all other literals to 0
+    if (substVar.val != replacementVar.val) {
+      for (HighsInt i = cliques[cliqueId].start; i != cliques[cliqueId].end;
+           ++i) {
+        if (i != substPos && i != replacePos) {
+          potentialFixings.push_back(cliqueentries[i].complement());
+        }
+      }
+      removeClique(cliqueId, false);
+      continue;
+    }
+
+    // If replacement will exist twice in new clique then the literal
+    // has to take value 0
+    potentialFixings.push_back(cliqueentries[substPos].complement());
+    shortenedClique.clear();
+    shortenedClique.reserve(cliques[cliqueId].end - cliques[cliqueId].start);
+    for (HighsInt i = cliques[cliqueId].start; i != cliques[cliqueId].end;
+         ++i) {
+      if (i != substPos && i != replacePos) {
+        shortenedClique.push_back(cliqueentries[i]);
+      }
+    }
+    removeClique(cliqueId, false);
+
+    if (shortenedClique.size() >= 2) {
+      doAddClique(shortenedClique.data(),
+                  static_cast<HighsInt>(shortenedClique.size()), equality, -1);
+    } else if (equality) {
+      if (shortenedClique.empty()) return false;
+      potentialFixings.push_back(shortenedClique[0]);
+    }
+  }
+
+  // Now substitute all entries
+  replaceLiteral(CliqueVar(substCol, 1), replacement);
+  replaceLiteral(CliqueVar(substCol, 0), replacement.complement());
+  presolveColStates[substCol] = PresolveColState::kEliminated;
+  colDeleted[substCol] = true;
+
+  std::vector<CliqueVar> transitiveFixings;
+  for (CliqueVar v : potentialFixings) {
+    const PresolveColState state = presolveColStates[v.col];
+    if ((v.val && state == PresolveColState::kFixedOne) ||
+        (!v.val && state == PresolveColState::kFixedZero) ||
+        state == PresolveColState::kEliminated) {
+      continue;
+    }
+    if (state == PresolveColState::kFixedZero ||
+        state == PresolveColState::kFixedOne) {
+      return false;
+    }
+    impliedFixings.push_back(v);
+    transitiveFixings.clear();
+    if (!presolveFixCol(static_cast<HighsInt>(v.col), v.val,
+                        transitiveFixings)) {
+      return false;
+    }
+    impliedFixings.insert(impliedFixings.end(), transitiveFixings.begin(),
+                          transitiveFixings.end());
+  }
+
+  return true;
+}
+
 void HighsCliqueTable::rebuild(
     HighsInt ncols, const presolve::HighsPostsolveStack& postSolveStack,
     const HighsDomain& globaldomain,
     const std::vector<HighsInt>& orig2reducedcol,
     const std::vector<HighsInt>& orig2reducedrow) {
   HighsCliqueTable newCliqueTable(ncols);
-  newCliqueTable.setPresolveFlag(inPresolve);
   newCliqueTable.setMinEntriesForParallelism(minEntriesForParallelism);
   for (size_t i = 0; i != cliques.size(); ++i) {
     if (cliques[i].start == -1) continue;
@@ -2337,7 +2434,6 @@ void HighsCliqueTable::buildFrom(const HighsLp* origModel,
   assert(init.colsubstituted.size() == colsubstituted.size());
   HighsInt ncols = init.colsubstituted.size();
   HighsCliqueTable newCliqueTable(ncols);
-  newCliqueTable.setPresolveFlag(inPresolve);
   newCliqueTable.setMinEntriesForParallelism(minEntriesForParallelism);
   HighsInt ncliques = init.cliques.size();
   std::vector<CliqueVar> clqBuffer;
