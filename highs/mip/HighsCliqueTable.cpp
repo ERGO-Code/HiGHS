@@ -2270,14 +2270,18 @@ void HighsCliqueTable::presolveEliminateCol(const HighsInt col) {
   invertedHashList[2 * col].for_each([&](const HighsInt cliqueId, HighsInt) {
     cliqueIds.push_back(cliqueId);
   });
+  invertedHashList[2 * col].clear();
   invertedHashListSizeTwo[2 * col].for_each(
       [&](const HighsInt cliqueId) { cliqueIds.push_back(cliqueId); });
+  invertedHashListSizeTwo[2 * col].clear();
   invertedHashList[2 * col + 1].for_each(
       [&](const HighsInt cliqueId, HighsInt) {
         cliqueIds.push_back(cliqueId);
       });
+  invertedHashList[2 * col + 1].clear();
   invertedHashListSizeTwo[2 * col + 1].for_each(
       [&](const HighsInt cliqueId) { cliqueIds.push_back(cliqueId); });
+  invertedHashListSizeTwo[2 * col + 1].clear();
 
   pdqsort(cliqueIds.begin(), cliqueIds.end());
   std::vector<CliqueVar> shortenedClique;
@@ -2286,10 +2290,12 @@ void HighsCliqueTable::presolveEliminateCol(const HighsInt col) {
     Clique& clique = cliques[cliqueId];
     if (clique.start == -1) continue;
     ++clique.numZeroFixed;
+    clique.origin = -1;
+    clique.equality = false;
     const HighsInt actualSize = clique.end - clique.start;
     const HighsInt activeSize = clique.numActive();
     if (activeSize <= 1) {
-      removeClique(cliqueId);
+      removeClique(cliqueId, false);
       continue;
     }
     if (activeSize == 2 ||
