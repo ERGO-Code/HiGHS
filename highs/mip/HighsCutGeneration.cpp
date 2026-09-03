@@ -499,10 +499,66 @@ bool HighsCutGeneration::separateLiftedMixedIntegerCover() {
   return true;
 }
 
+static double fast_ceil(double x) { return (int64_t)x + (x > (int64_t)x); }
+
 static double fast_floor(double x) { return (int64_t)x - (x < (int64_t)x); }
 
+template <typename T>
+static T strongCgLl1(const T& scalaj, const T& f0, const T& oneoveroneminusf0,
+                     const double& k, const double& tol) {
+  T downaj = floor(scalaj + kHighsTiny);
+  T fj = scalaj - downaj;
+  T aj = downaj;
+
+  if (fj > f0 + 0.1 * tol) {
+    T pj = ceil(k * (fj - f0) * oneoveroneminusf0 - tol);
+    aj += pj / (k + 1);
+  }
+
+  return aj;
+}
+
+void HighsCutGeneration::tryStrongCg(const double delta, bool& strongCg,
+                                     double& bestefficacy) {
+  // ll1 is the standard strongCG from "Strengthening Chvatal–Gomory cuts and
+  // Gomory fractional cuts", 2002, A. Letchford et.al.
+  const double scale = 1.0 / delta;
+  const double scalrhs = static_cast<double>(rhs) * scale;
+  const double downrhs = fast_floor(scalrhs);
+  const double f0 = scalrhs - downrhs;
+  const double oneoveroneminusf0 = 1.0 / (1.0 - f0);
+  // Skip numerically troublesome cuts
+  if (fractionality(1 / f0) < 1e-3) {
+    strongCg = false;
+    return;
+  }
+  // All coefficients of continuous variables are 0 in strong CG cut
+  double k = fast_ceil(1 / f0) - 1;
+  double sqrnorm = 0;
+  double viol = -downrhs;
+
+  for (const HighsInt j : integerinds) {
+    const double scalaj = vals[j] * scale;
+    const double aj = strongCgLl1(scalaj, f0, oneoveroneminusf0, k, feastol);
+    updateViolationAndNorm(j, aj, viol, sqrnorm);
+  }
+
+  if (sqrnorm <= kHighsTiny) {
+    strongCg = false;
+    return;
+  }
+
+  const double efficacy = viol / sqrt(sqrnorm);
+  if (efficacy < bestefficacy + epsilon) {
+    strongCg = false;
+    return;
+  }
+  bestefficacy = efficacy;
+}
+
 bool HighsCutGeneration::cmirCutGenerationHeuristic(double minEfficacy,
-                                                    bool onlyInitialCMIRScale) {
+                                                    bool onlyInitialCMIRScale,
+                                                    bool strongCg) {
   using std::abs;
   using std::floor;
   using std::max;
@@ -541,9 +597,12 @@ bool HighsCutGeneration::cmirCutGenerationHeuristic(double minEfficacy,
         maxabsdelta = max(maxabsdelta, delta);
         deltas.push_back(delta);
       }
-    } else {
+    } else if (vals[i] < 0) {
+      // Positive coefficient values later set to 0 so have no contribution
       updateViolationAndNorm(i, vals[i], continuouscontribution,
                              continuoussqrnorm);
+      // StrongCG cannot be computed when negative coefficients for cont exist
+      strongCg = false;
     }
   }
 
@@ -687,12 +746,20 @@ bool HighsCutGeneration::cmirCutGenerationHeuristic(double minEfficacy,
     }
   }
 
+  // Calc StrongCG cut as potential alternative to CMIR
+  if (bestefficacy <= 0 || rowlen == 0) {
+    strongCg = false;
+  }
+  if (strongCg) tryStrongCg(bestdelta, strongCg, bestefficacy);
+
   HighsCDouble scale = 1.0 / HighsCDouble(bestdelta);
   HighsCDouble scalrhs = rhs * scale;
   double downrhs = floor(double(scalrhs));
 
   HighsCDouble f0 = scalrhs - downrhs;
   HighsCDouble oneoveroneminusf0 = 1.0 / (1.0 - f0);
+
+  double k = ceil(static_cast<double>(1 / f0)) - 1;
 
   rhs = downrhs * bestdelta;
   integralSupport = true;
@@ -707,30 +774,40 @@ bool HighsCutGeneration::cmirCutGenerationHeuristic(double minEfficacy,
         integralSupport = false;
       }
     } else {
-      HighsCDouble scalaj = scale * vals[j];
-      double downaj = floor(double(scalaj + kHighsTiny));
-      HighsCDouble fj = scalaj - downaj;
-      HighsCDouble aj = downaj;
-      if (fj > f0) aj += (fj - f0) * oneoveroneminusf0;
-
-      vals[j] = double(aj * bestdelta);
+      if (strongCg) {
+        HighsCDouble aj =
+            strongCgLl1(scale * vals[j], f0, oneoveroneminusf0, k, feastol);
+        vals[j] = static_cast<double>(aj * bestdelta);
+      } else {
+        HighsCDouble scalaj = scale * vals[j];
+        double downaj = floor(static_cast<double>(scalaj + kHighsTiny));
+        HighsCDouble fj = scalaj - downaj;
+        HighsCDouble aj = downaj;
+        if (fj > f0) {
+          aj += (fj - f0) * oneoveroneminusf0;
+        }
+        vals[j] = static_cast<double>(aj * bestdelta);
+      }
     }
   }
 
 #ifndef NDEBUG
   // Check if the computed cut has the correct efficacy
+  // Due to rounding strongCg cuts in higher precision can differ
   {
-    double checkviol = -downrhs * bestdelta;
-    double checknorm = 0.0;
-    for (HighsInt j = 0; j != rowlen; ++j) {
-      if (vals[j] == 0.0) continue;
-      updateViolationAndNorm(j, vals[j], checkviol, checknorm);
-    }
-    if (checknorm != 0.0) {
-      double checkefficacy = checkviol / sqrt(checknorm);
-      // the efficacy can become infinite if the cut 0 <= -1 is derived
-      assert(fabs(checkefficacy - bestefficacy) < 0.001 ||
-             fabs(checkefficacy) >= 1e30);
+    if (!strongCg) {
+      double checkviol = -downrhs * bestdelta;
+      double checknorm = 0.0;
+      for (HighsInt j = 0; j != rowlen; ++j) {
+        if (vals[j] == 0.0) continue;
+        updateViolationAndNorm(j, vals[j], checkviol, checknorm);
+      }
+      if (checknorm != 0.0) {
+        double checkefficacy = checkviol / sqrt(checknorm);
+        // the efficacy can become infinite if the cut 0 <= -1 is derived
+        assert(fabs(checkefficacy - bestefficacy) < 0.001 ||
+               fabs(checkefficacy) >= 1e30);
+      }
     }
   }
 #endif
@@ -1137,7 +1214,7 @@ bool HighsCutGeneration::generateCut(HighsTransformedLp& transLp,
 
   // try to generate a cut
   if (!tryGenerateCut(inds_, vals_, hasUnboundedInts, hasGeneralInts,
-                      hasContinuous, 10 * feastol, onlyInitialCMIRScale))
+                      hasContinuous, 10 * feastol, onlyInitialCMIRScale, true))
     return false;
 
   // remove the complementation if exists
@@ -1254,7 +1331,7 @@ bool HighsCutGeneration::generateConflict(const HighsDomain& localdomain,
 
   // try to generate a cut
   if (!tryGenerateCut(proofinds, proofvals, hasUnboundedInts, hasGeneralInts,
-                      hasContinuous, feastol, false, false, false))
+                      hasContinuous, feastol, false, false, false, false))
     return false;
 
   // remove the complementation
@@ -1379,16 +1456,15 @@ void HighsCutGeneration::updateViolationAndNorm(HighsInt index, double aj,
   norm += aj * aj;
 }
 
-bool HighsCutGeneration::tryGenerateCut(std::vector<HighsInt>& inds_,
-                                        std::vector<double>& vals_,
-                                        bool hasUnboundedInts,
-                                        bool hasGeneralInts, bool hasContinuous,
-                                        double minEfficacy,
-                                        bool onlyInitialCMIRScale,
-                                        bool allowRejectCut, bool lpSol) {
+bool HighsCutGeneration::tryGenerateCut(
+    std::vector<HighsInt>& inds_, std::vector<double>& vals_,
+    bool hasUnboundedInts, bool hasGeneralInts, bool hasContinuous,
+    double minEfficacy, bool onlyInitialCMIRScale, bool strongCg,
+    bool allowRejectCut, bool lpSol) {
   // use cmir if there are unbounded integer variables
   if (hasUnboundedInts)
-    return cmirCutGenerationHeuristic(minEfficacy, onlyInitialCMIRScale);
+    return cmirCutGenerationHeuristic(minEfficacy, onlyInitialCMIRScale,
+                                      strongCg);
 
   // 0. Save data before determining cover and applying lifting functions
   tmpVals.assign(vals, vals + rowlen);
@@ -1454,7 +1530,8 @@ bool HighsCutGeneration::tryGenerateCut(std::vector<HighsInt>& inds_,
   inds = tmpInds.data();
   vals = tmpVals.data();
 
-  if (cmirCutGenerationHeuristic(minMirEfficacy, onlyInitialCMIRScale)) {
+  if (cmirCutGenerationHeuristic(minMirEfficacy, onlyInitialCMIRScale,
+                                 strongCg)) {
     // take the cmir cut as it is better
     inds_.swap(tmpInds);
     vals_.swap(tmpVals);
