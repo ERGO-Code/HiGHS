@@ -811,8 +811,9 @@ void HighsCliqueTable::addClique(const HighsMipSolver& mipsolver,
   processInfeasibleVertices(globaldom);
 }
 
-void HighsCliqueTable::removeClique(HighsInt cliqueid) {
-  if (cliques[cliqueid].origin != kHighsIInf && cliques[cliqueid].origin != -1)
+void HighsCliqueTable::removeClique(HighsInt cliqueid, bool recordDeletedRow) {
+  if (recordDeletedRow && cliques[cliqueid].origin != kHighsIInf &&
+      cliques[cliqueid].origin != -1)
     deletedrows.push_back(cliques[cliqueid].origin);
 
   HighsInt start = cliques[cliqueid].start;
@@ -2164,6 +2165,126 @@ void HighsCliqueTable::runCliqueMerging(HighsDomain& globaldomain) {
       if (extensionvars.size() > 1)
         doAddClique(extensionvars.data(),
                     static_cast<HighsInt>(extensionvars.size()));
+    }
+  }
+}
+
+bool HighsCliqueTable::presolveFixCol(HighsInt col, bool val,
+                                      std::vector<CliqueVar>& impliedFixings) {
+  std::vector<CliqueVar> fixings;
+  fixings.emplace_back(col, val);
+  size_t nextFixing = 0;
+
+  std::vector<HighsInt> cliqueIds;
+  std::vector<CliqueVar> shortenedClique;
+
+  auto collectIncidentCliques = [&](const CliqueVar v) {
+    cliqueIds.clear();
+    invertedHashList[v.index()].for_each(
+        [&](const HighsInt cliqueId, HighsInt) {
+          cliqueIds.push_back(cliqueId);
+        });
+    invertedHashListSizeTwo[v.index()].for_each(
+        [&](const HighsInt cliqueId) { cliqueIds.push_back(cliqueId); });
+  };
+
+  while (nextFixing != fixings.size()) {
+    CliqueVar v = fixings[nextFixing++];
+    const PresolveColState state = presolveColStates[v.col];
+    if (state != PresolveColState::kActive) continue;
+    colDeleted[v.col] = true;
+    if (!(v.col == col && v.val == val)) impliedFixings.emplace_back(v);
+
+    // Fix all other literals in incident cliques to be inactive
+    collectIncidentCliques(v);
+    for (const HighsInt cliqueId : cliqueIds) {
+      if (cliques[cliqueId].start == -1) continue;
+      for (HighsInt i = cliques[cliqueId].start; i != cliques[cliqueId].start;
+           ++i) {
+        CliqueVar v2 = cliqueentries[i];
+        if (v.col == v2.col) continue;
+        const PresolveColState otherState = presolveColStates[v2.col];
+        if ((v2.val == 1 && otherState == PresolveColState::kFixedOne) ||
+            (v2.val == 0 && otherState == PresolveColState::kFixedZero)) {
+          return false;
+        }
+        if (otherState == PresolveColState::kActive) {
+          fixings.emplace_back(static_cast<HighsUInt>(v2.col), 1 - v2.val);
+        }
+      }
+      removeClique(cliqueId);
+    }
+
+    // Remove complement-literal from cliques
+    collectIncidentCliques(v.complement());
+    for (const HighsInt cliqueId : cliqueIds) {
+      if (cliques[cliqueId].start == -1) continue;
+      const bool equality = cliques[cliqueId].equality;
+      const HighsInt origin = cliques[cliqueId].origin;
+      shortenedClique.clear();
+      shortenedClique.reserve(cliques[cliqueId].end - cliques[cliqueId].start);
+      for (HighsInt i = cliques[cliqueId].start; i != cliques[cliqueId].start;
+           ++i) {
+        CliqueVar v2 = cliqueentries[i];
+        if (v.col == v2.col) continue;
+        const PresolveColState otherState = presolveColStates[v2.col];
+        if ((v2.val == 1 && otherState == PresolveColState::kFixedOne) ||
+            (v2.val == 0 && otherState == PresolveColState::kFixedZero)) {
+          return false;
+        }
+        if (otherState == PresolveColState::kActive) {
+          shortenedClique.push_back(v2);
+        }
+      }
+      removeClique(cliqueId);
+      if (shortenedClique.size() >= 2) {
+        doAddClique(shortenedClique.data(),
+                    static_cast<HighsInt>(shortenedClique.size()), equality,
+                    origin);
+      } else if (equality) {
+        if (shortenedClique.empty()) return false;
+        fixings.push_back(shortenedClique.front());
+      }
+    }
+  }
+  return true;
+}
+
+void HighsCliqueTable::presolveEliminateCol(const HighsInt col) {
+  if (presolveColStates[col] != PresolveColState::kActive) return;
+  presolveColStates[col] = PresolveColState::kEliminated;
+  colDeleted[col] = true;
+
+  std::vector<HighsInt> cliqueIds;
+  invertedHashList[2 * col].for_each([&](const HighsInt cliqueId, HighsInt) {
+    cliqueIds.push_back(cliqueId);
+  });
+  invertedHashListSizeTwo[2 * col].for_each(
+      [&](const HighsInt cliqueId) { cliqueIds.push_back(cliqueId); });
+  invertedHashList[2 * col + 1].for_each(
+      [&](const HighsInt cliqueId, HighsInt) {
+        cliqueIds.push_back(cliqueId);
+      });
+  invertedHashListSizeTwo[2 * col + 1].for_each(
+      [&](const HighsInt cliqueId) { cliqueIds.push_back(cliqueId); });
+
+  pdqsort(cliqueIds.begin(), cliqueIds.end());
+
+  std::vector<CliqueVar> shortenedClique;
+  for (HighsInt cliqueId : cliqueIds) {
+    if (cliques[cliqueId].start == -1) continue;
+    shortenedClique.clear();
+    shortenedClique.reserve(cliques[cliqueId].end - cliques[cliqueId].start);
+    for (HighsInt i = cliques[cliqueId].start; i != cliques[cliqueId].end;
+         ++i) {
+      if (cliqueentries[i].col != col) {
+        shortenedClique.push_back(cliqueentries[i]);
+      }
+    }
+    removeClique(cliqueId, false);
+    if (shortenedClique.size() >= 2) {
+      doAddClique(shortenedClique.data(),
+                  static_cast<HighsInt>(shortenedClique.size()), false, -1);
     }
   }
 }

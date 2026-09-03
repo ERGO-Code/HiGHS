@@ -66,6 +66,8 @@ class HighsCliqueTable {
     CliqueVar replace;
   };
 
+  enum class PresolveColState { kActive, kFixedZero, kFixedOne, kEliminated };
+
  private:
   std::vector<CliqueVar> cliqueentries;
 
@@ -85,6 +87,7 @@ class HighsCliqueTable {
   std::vector<std::pair<HighsInt, CliqueVar>> cliqueextensions;
   std::vector<HighsBool> iscandidate;
   std::vector<HighsBool> colDeleted;
+  std::vector<PresolveColState> presolveColStates;
   std::vector<uint32_t> cliquehits;
   std::vector<HighsInt> cliquehitinds;
 
@@ -212,7 +215,7 @@ class HighsCliqueTable {
                  HighsInt numcliquevars, bool equality = false,
                  HighsInt origin = kHighsIInf);
 
-  void removeClique(HighsInt cliqueid);
+  void removeClique(HighsInt cliqueid, bool recordDeletedRow = true);
 
   void fixLastActiveAndRemove(HighsDomain& globaldom, HighsInt cliqueid);
 
@@ -321,6 +324,11 @@ class HighsCliqueTable {
 
   void runCliqueMerging(HighsDomain& globaldomain,
                         std::vector<CliqueVar>& clique, bool equation = false);
+
+  bool presolveFixCol(HighsInt col, bool val,
+                            std::vector<CliqueVar>& impliedFixings);
+
+  void presolveEliminateCol(HighsInt col);
 
   void rebuild(HighsInt ncols,
                const presolve::HighsPostsolveStack& postSolveStack,

@@ -308,7 +308,7 @@ class HPresolve {
 
   Result fixColToUpper(HighsPostsolveStack& postsolve_stack, HighsInt col);
 
-  void fixColToZero(HighsPostsolveStack& postsolve_stack, HighsInt col);
+  Result fixColToZero(HighsPostsolveStack& postsolve_stack, HighsInt col);
 
   Result transformColumn(HighsPostsolveStack& postsolve_stack, HighsInt col,
                          double scale, double constant);
@@ -493,9 +493,9 @@ class HPresolve {
   void substitute(HighsInt substcol, HighsInt staycol, double offset,
                   double scale);
 
-  void removeFixedCol(HighsInt col);
+  Result removeFixedCol(HighsInt col);
 
-  void removeFixedCol(HighsInt col, double fixval);
+  Result removeFixedCol(HighsInt col, double fixval);
 
   void removeRow(HighsInt row);
 
@@ -528,6 +528,8 @@ class HPresolve {
                              const HighsMatrixSlice<RowStorageFormat>& vector);
 
   void extractVarBounds(HighsInt row);
+
+  Result updateCliqueTableFixedCol(HighsInt col, double val);
 
   Result sparsify(HighsPostsolveStack& postsolve_stack);
 
