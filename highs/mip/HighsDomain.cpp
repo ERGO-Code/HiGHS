@@ -75,6 +75,7 @@ HighsDomain::HighsDomain(HighsMipSolver& mipsolver) : mipsolver(&mipsolver) {
   changedcols_.reserve(mipsolver.numCol());
   infeasible_reason = Reason::unspecified();
   infeasible_ = false;
+  dualFixProbingPropagation.domain = this;
 }
 
 void HighsDomain::addCutpool(HighsCutPool& cutpool) {
@@ -635,6 +636,213 @@ void HighsDomain::CutpoolPropagation::updateActivityUbChange(
           return true;
         });
   }
+}
+
+void HighsDomain::DualFixProbingPropagation::recomputeLocks() {
+  mipsolver = domain->mipsolver;
+  redundantRowFlags_.assign(2 * mipsolver->numRow(), false);
+  redundantRowInds_.clear();
+  redundantRowInds_.reserve(2 * mipsolver->numRow());
+  zeroCostDirections_.assign(mipsolver->numCol(), FixUndecided);
+  fixedZeroCostColumns_.clear();
+  fixedZeroCostColumns_.reserve(mipsolver->numCol());
+
+  applyingZeroCostFixings_ = false;
+  previousRedundantRowSize = 0;
+
+  colLowerLocksOriginal_.assign(mipsolver->numCol(), 0);
+  colUpperLocksOriginal_.assign(mipsolver->numCol(), 0);
+  colLowerReducedNumLocks_.assign(mipsolver->numCol(), 0);
+  colUpperReducedNumLocks_.assign(mipsolver->numCol(), 0);
+
+  candidateFixedCols_.clear();
+  candidateFixedCols_.reserve(mipsolver->numCol());
+  candidateColFixedFlags_.assign(mipsolver->numCol(), false);
+  clearColNumReducedLocks_.clear();
+  clearColNumReducedLocks_.reserve(mipsolver->numCol());
+
+  // compute the locks for each variable
+  const HighsLp* model = mipsolver->model_;
+  for (HighsInt col = 0; col < model->a_matrix_.num_col_; col++) {
+    for (HighsInt k = model->a_matrix_.start_[col];
+         k < model->a_matrix_.start_[col + 1]; k++) {
+      const HighsInt row = model->a_matrix_.index_[k];
+      const double val = model->a_matrix_.value_[k];
+      const double lhs = model->row_lower_[row];
+      const double rhs = model->row_upper_[row];
+      if ((val > 0 && rhs != kHighsInf) || (val < 0 && lhs != -kHighsInf))
+        colUpperLocksOriginal_[col]++;
+      if ((val > 0 && lhs != -kHighsInf) || (val < 0 && rhs != kHighsInf))
+        colLowerLocksOriginal_[col]++;
+    }
+  }
+}
+
+void HighsDomain::DualFixProbingPropagation::updateRhsRedundant(HighsInt row) {
+  if (!isEnabled()) return;
+
+  if (domain->activitymaxinf_[row] != 0 || redundantRowFlags_[2 * row + 1] ||
+      mipsolver->model_->row_upper_[row] == kHighsInf)
+    return;
+
+  if (domain->getMaxActivity(row) <=
+      mipsolver->model_->row_upper_[row] + mipsolver->mipdata_->feastol) {
+    redundantRowInds_.push_back(2 * row + 1);
+    redundantRowFlags_[2 * row + 1] = 1;
+  }
+}
+
+void HighsDomain::DualFixProbingPropagation::updateLhsRedundant(HighsInt row) {
+  if (!isEnabled()) return;
+
+  if (domain->activitymininf_[row] != 0 || redundantRowFlags_[2 * row] ||
+      mipsolver->model_->row_lower_[row] == -kHighsInf)
+    return;
+
+  if (domain->getMinActivity(row) >=
+      mipsolver->model_->row_lower_[row] - mipsolver->mipdata_->feastol) {
+    redundantRowInds_.push_back(2 * row);
+    redundantRowFlags_[2 * row] = 1;
+  }
+}
+
+void HighsDomain::DualFixProbingPropagation::propagate() {
+  HighsInt numNewRedundantRows =
+      static_cast<HighsInt>(redundantRowInds_.size()) -
+      previousRedundantRowSize;
+  if (!isEnabled() || numNewRedundantRows <= 0) return;
+
+  assert(candidateFixedCols_.empty());
+
+  auto addCandidateFixing = [&](HighsInt col) {
+    if (!candidateColFixedFlags_[col]) {
+      candidateFixedCols_.push_back(col);
+      candidateColFixedFlags_[col] = true;
+    }
+  };
+
+  auto collectZeroCostFixing = [&](const HighsInt col,
+                                   const DualFixProbingFixDirection direction) {
+    fixedZeroCostColumns_.emplace_back(FixedZeroCostColumn{col, direction});
+  };
+
+  const double dualTol = mipsolver->options_mip_->dual_feasibility_tolerance;
+
+  for (HighsInt i = previousRedundantRowSize;
+       i != static_cast<HighsInt>(redundantRowInds_.size()); ++i) {
+    const HighsInt loc = redundantRowInds_[i];
+    const HighsInt row = loc / 2;
+    const bool isLhs = (loc % 2) == 0;
+    const HighsInt start = mipsolver->mipdata_->ARstart_[row];
+    const HighsInt end = mipsolver->mipdata_->ARstart_[row + 1];
+    for (HighsInt j = start; j < end; ++j) {
+      const HighsInt col = mipsolver->mipdata_->ARindex_[j];
+      if (domain->isFixed(col)) continue;
+      const double val = mipsolver->mipdata_->ARvalue_[j];
+      const double cost = mipsolver->model_->col_cost_[col];
+      if (val != 0.0) {
+        // if LHS: Positive val removes a lower lock, negative an upper
+        // if RHS: Negative val removes a lower lock, positive an upper
+        const bool reducesLowerLock = (val > 0) == isLhs;
+        if (reducesLowerLock && cost >= -dualTol) {
+          if (colLowerReducedNumLocks_[col] == 0 &&
+              colUpperReducedNumLocks_[col] == 0) {
+            clearColNumReducedLocks_.push_back(col);
+          }
+          ++colLowerReducedNumLocks_[col];
+          if (colLowerReducedNumLocks_[col] == colLowerLocksOriginal_[col]) {
+            addCandidateFixing(col);
+          }
+        } else if (!reducesLowerLock && cost <= dualTol) {
+          if (colLowerReducedNumLocks_[col] == 0 &&
+              colUpperReducedNumLocks_[col] == 0) {
+            clearColNumReducedLocks_.push_back(col);
+          }
+          ++colUpperReducedNumLocks_[col];
+          if (colUpperReducedNumLocks_[col] == colUpperLocksOriginal_[col]) {
+            addCandidateFixing(col);
+          }
+        }
+      }
+    }
+  }
+
+  for (const HighsInt col : candidateFixedCols_) {
+    if (domain->isFixed(col)) continue;
+    const bool canBeFixedToLower =
+        ableToFixToLb(col) &&
+        colLowerReducedNumLocks_[col] == colLowerLocksOriginal_[col];
+    const bool canBeFixedToUpper =
+        ableToFixToUb(col) &&
+        colUpperReducedNumLocks_[col] == colUpperLocksOriginal_[col];
+    if (!canBeFixedToLower && !canBeFixedToUpper) continue;
+    const double cost = mipsolver->model_->col_cost_[col];
+    if (std::abs(cost) <= dualTol) {
+      DualFixProbingFixDirection direction = zeroCostDirections_[col];
+      if (direction == FixUndecided) {
+        direction = canBeFixedToLower && (!canBeFixedToUpper || cost >= 0)
+                        ? FixLowerBound
+                        : FixUpperBound;
+      }
+      if (direction == FixLowerBound && canBeFixedToLower) {
+        collectZeroCostFixing(col, FixLowerBound);
+      } else if (direction == FixUpperBound && canBeFixedToUpper) {
+        collectZeroCostFixing(col, FixUpperBound);
+      }
+    } else {
+      if (canBeFixedToLower) {
+        domain->changeBound(HighsBoundType::kUpper, col,
+                            domain->col_lower_[col], Reason::unspecified());
+      } else if (canBeFixedToUpper) {
+        domain->changeBound(HighsBoundType::kLower, col,
+                            domain->col_upper_[col], Reason::unspecified());
+      }
+      if (domain->infeasible()) break;
+    }
+  }
+
+  for (const auto x : candidateFixedCols_) {
+    candidateColFixedFlags_[x] = false;
+  }
+  candidateFixedCols_.clear();
+
+  previousRedundantRowSize = static_cast<HighsInt>(redundantRowInds_.size());
+}
+
+void HighsDomain::DualFixProbingPropagation::propagateZeroCosts() {
+  if (fixedZeroCostColumns_.empty()) return;
+
+  if (storeLiftingOpportunity != nullptr) {
+    storeLiftingOpportunity();
+    storeLiftingOpportunity = nullptr;
+  }
+
+  applyingZeroCostFixings_ = true;
+  if (zeroCostStartPos_ == kHighsIInf)
+    setZeroCostFixingPosition(
+        static_cast<HighsInt>(domain->getDomainChangeStack().size()));
+
+  for (const FixedZeroCostColumn& fixing : fixedZeroCostColumns_) {
+    if (domain->isFixed(fixing.col)) continue;
+    assert(zeroCostDirections_[fixing.col] == FixUndecided ||
+           zeroCostDirections_[fixing.col] == fixing.direction);
+    if (fixing.direction == FixLowerBound) {
+      domain->changeBound(HighsBoundType::kUpper, fixing.col,
+                          domain->col_lower_[fixing.col],
+                          Reason::unspecified());
+    } else {
+      domain->changeBound(HighsBoundType::kLower, fixing.col,
+                          domain->col_upper_[fixing.col],
+                          Reason::unspecified());
+    }
+    if (!domain->infeasible()) {
+      zeroCostDirections_[fixing.col] = fixing.direction;
+    } else {
+      break;
+    }
+  }
+
+  fixedZeroCostColumns_.clear();
 }
 
 namespace highs {
@@ -1533,6 +1741,10 @@ void HighsDomain::updateActivityLbChange(HighsInt col, double oldbound,
     if (infeasible_) return;
   }
 
+  const bool trackRedundancy =
+      newbound >= oldbound + mipsolver->mipdata_->feastol &&
+      dualFixProbingPropagation.isEnabled();
+
   for (HighsInt i = start; i != end; ++i) {
     if (mip->a_matrix_.value_[i] > 0) {
       HighsCDouble deltamin =
@@ -1554,11 +1766,14 @@ void HighsDomain::updateActivityLbChange(HighsInt col, double oldbound,
         assert(tmpinf == activitymininf_[mip->a_matrix_.index_[i]]);
       }
 #endif
-
       if (recordRedundantRows_ &&
+          !dualFixProbingPropagation.isZeroCostFixingActive() &&
           mip->row_lower_[mip->a_matrix_.index_[i]] != -kHighsInf &&
           mip->row_upper_[mip->a_matrix_.index_[i]] == kHighsInf)
         updateRedundantRows(mip->a_matrix_.index_[i]);
+
+      if (trackRedundancy)
+        dualFixProbingPropagation.updateLhsRedundant(mip->a_matrix_.index_[i]);
 
       if (deltamin <= 0) {
         updateThresholdLbChange(col, newbound, mip->a_matrix_.value_[i],
@@ -1603,11 +1818,14 @@ void HighsDomain::updateActivityLbChange(HighsInt col, double oldbound,
         assert(tmpinf == activitymaxinf_[mip->a_matrix_.index_[i]]);
       }
 #endif
-
       if (recordRedundantRows_ &&
+          !dualFixProbingPropagation.isZeroCostFixingActive() &&
           mip->row_lower_[mip->a_matrix_.index_[i]] == -kHighsInf &&
           mip->row_upper_[mip->a_matrix_.index_[i]] != kHighsInf)
         updateRedundantRows(mip->a_matrix_.index_[i]);
+
+      if (trackRedundancy)
+        dualFixProbingPropagation.updateRhsRedundant(mip->a_matrix_.index_[i]);
 
       if (deltamax >= 0) {
         updateThresholdLbChange(col, newbound, mip->a_matrix_.value_[i],
@@ -1700,6 +1918,10 @@ void HighsDomain::updateActivityUbChange(HighsInt col, double oldbound,
     if (infeasible_) return;
   }
 
+  const bool trackRedundancy =
+      newbound <= oldbound - mipsolver->mipdata_->feastol &&
+      dualFixProbingPropagation.isEnabled();
+
   for (HighsInt i = start; i != end; ++i) {
     if (mip->a_matrix_.value_[i] > 0) {
       HighsCDouble deltamax =
@@ -1721,11 +1943,14 @@ void HighsDomain::updateActivityUbChange(HighsInt col, double oldbound,
         assert(tmpinf == activitymaxinf_[mip->a_matrix_.index_[i]]);
       }
 #endif
-
       if (recordRedundantRows_ &&
+          !dualFixProbingPropagation.isZeroCostFixingActive() &&
           mip->row_lower_[mip->a_matrix_.index_[i]] == -kHighsInf &&
           mip->row_upper_[mip->a_matrix_.index_[i]] != kHighsInf)
         updateRedundantRows(mip->a_matrix_.index_[i]);
+
+      if (trackRedundancy)
+        dualFixProbingPropagation.updateRhsRedundant(mip->a_matrix_.index_[i]);
 
       if (deltamax >= 0) {
         updateThresholdUbChange(col, newbound, mip->a_matrix_.value_[i],
@@ -1773,11 +1998,14 @@ void HighsDomain::updateActivityUbChange(HighsInt col, double oldbound,
         assert(tmpinf == activitymininf_[mip->a_matrix_.index_[i]]);
       }
 #endif
-
       if (recordRedundantRows_ &&
+          !dualFixProbingPropagation.isZeroCostFixingActive() &&
           mip->row_lower_[mip->a_matrix_.index_[i]] != -kHighsInf &&
           mip->row_upper_[mip->a_matrix_.index_[i]] == kHighsInf)
         updateRedundantRows(mip->a_matrix_.index_[i]);
+
+      if (trackRedundancy)
+        dualFixProbingPropagation.updateLhsRedundant(mip->a_matrix_.index_[i]);
 
       if (deltamin <= 0) {
         updateThresholdUbChange(col, newbound, mip->a_matrix_.value_[i],
@@ -2372,6 +2600,8 @@ bool HighsDomain::propagate() {
       if (!conflictprop.propagateConflictInds_.empty()) return true;
     }
 
+    if (!infeasible_ && dualFixProbingPropagation.isActive()) return true;
+
     return false;
   };
 
@@ -2546,6 +2776,14 @@ bool HighsDomain::propagate() {
 
         propagateinds.clear();
       }
+    }
+
+    if (!infeasible_ && dualFixProbingPropagation.isActive()) {
+      dualFixProbingPropagation.propagate();
+    }
+    if (!infeasible_ && dualFixProbingPropagation.isEnabled() &&
+        !havePropagationRows()) {
+      dualFixProbingPropagation.propagateZeroCosts();
     }
   }
 

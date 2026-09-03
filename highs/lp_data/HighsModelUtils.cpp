@@ -1529,6 +1529,8 @@ std::string utilPresolveRuleTypeToString(const HighsInt rule_type) {
     return "Zero cost singleton";
   } else if (rule_type == kPresolveRuleColStuffing) {
     return "Col stuffing";
+  } else if (rule_type == kPresolveRuleDualFixProbing) {
+    return "Dual-fixing probing";
   } else if (rule_type == kPresolveRuleInitialSweep) {
     return "Initial sweep";
   }

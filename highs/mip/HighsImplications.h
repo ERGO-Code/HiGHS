@@ -28,6 +28,8 @@ class HighsImplications {
     double ub = kHighsInf;
   };
 
+  std::vector<HighsDomainChange> implicationsDown;
+  std::vector<HighsDomainChange> implicationsUp;
   std::vector<HighsHashTree<HighsInt, Implication>> implications;
   std::vector<HighsHashTree<HighsInt, bool>> reverseImplications;
   std::vector<uint8_t> hasProbed;
@@ -65,11 +67,23 @@ class HighsImplications {
  private:
   std::vector<HighsHashTree<HighsInt, VarBound>> vubs;
   std::vector<HighsHashTree<HighsInt, VarBound>> vlbs;
+  std::vector<HighsInt> dualFixProbingBinInds_;
+  // (0000) : Not involved
+  // (0010) : Fixed to lower in zero-side probing
+  // (0001) : Fixed to upper in zero-side probing
+  // (1000) : Fixed to lower in one-side probing
+  // (0100) : Fixed to upper in one-side probing
+  // (1010) : Fixed to lower in both sides. Fix to lower.
+  // (0101) : Fixed to upper in both sides. Fix to upper.
+  // (1001) : Conclude that x1 + x2 = 1
+  // (0110) : Conclude that x1 = x2
+  std::vector<uint8_t> dualFixProbingBinFlags_;
 
  public:
   const HighsMipSolver& mipsolver;
   std::vector<HighsSubstitution> substitutions;
   std::vector<HighsBool> colsubstituted;
+
   HighsImplications(const HighsMipSolver& mipsolver) : mipsolver(mipsolver) {
     nextCleanupCall = mipsolver.numNonzero();
     numImplications = 0;
@@ -94,6 +108,7 @@ class HighsImplications {
     vubs.shrink_to_fit();
     vlbs.clear();
     vlbs.shrink_to_fit();
+    dualFixProbingBinInds_.clear();
     resize(mipsolver.numCol());
     numVarBounds = 0;
     nextCleanupCall = mipsolver.numNonzero();
@@ -107,6 +122,8 @@ class HighsImplications {
     vubs.resize(ncols);
     vlbs.resize(ncols);
     maxVarBounds = calcMaxVarBounds(ncols);
+    dualFixProbingBinInds_.reserve(ncols);
+    dualFixProbingBinFlags_.assign(ncols, 0);
   }
 
   constexpr static int64_t calcMaxVarBounds(HighsInt numcol) {
@@ -210,6 +227,26 @@ class HighsImplications {
                   bool& infeasible, bool allowBoundChanges = true) const;
 
   void applyImplications(HighsDomain& domain, HighsInt col, HighsInt val);
+
+  void recordTentativeCliques(const HighsInt val,
+                              const HighsDomainChange& domchg) {
+    const HighsInt col = domchg.column;
+    const uint8_t mask =
+        1 << (2 * val + (domchg.boundtype != HighsBoundType::kLower));
+
+    if ((dualFixProbingBinFlags_[col] & mask) == 0) {
+      if (dualFixProbingBinFlags_[col] == 0)
+        dualFixProbingBinInds_.push_back(col);
+
+      dualFixProbingBinFlags_[col] |= mask;
+    }
+  }
+
+  void clearTentativeCliques() {
+    for (const HighsInt col : dualFixProbingBinInds_)
+      dualFixProbingBinFlags_[col] = 0;
+    dualFixProbingBinInds_.clear();
+  }
 };
 
 #endif
