@@ -1080,7 +1080,9 @@ bool HighsCliqueTable::foundCover(HighsDomain& globaldom, CliqueVar v1,
     HighsInt end = cliques[commonclique].end;
 
     for (HighsInt i = start; i != end; ++i) {
-      if (cliqueentries[i] == v1 || cliqueentries[i] == v2) continue;
+      if (cliqueentries[i] == v1 || cliqueentries[i] == v2 ||
+          colDeleted[cliqueentries[i].col])
+        continue;
       if (!fixCol(globaldom, cliqueentries[i])) return true;
     }
 
@@ -1496,7 +1498,8 @@ void HighsCliqueTable::processInfeasibleVertices(HighsDomain& globaldom) {
       HighsInt end = cliques[cliqueid].end;
 
       for (HighsInt i = start; i != end; ++i) {
-        if (cliqueentries[i].col == v.col) continue;
+        if (cliqueentries[i].col == v.col || colDeleted[cliqueentries[i].col])
+          continue;
         if (!fixCol(globaldom, cliqueentries[i])) return true;
       }
 
@@ -1511,7 +1514,8 @@ void HighsCliqueTable::processInfeasibleVertices(HighsDomain& globaldom) {
       HighsInt end = cliques[cliqueid].end;
 
       for (HighsInt i = start; i != end; ++i) {
-        if (cliqueentries[i].col == v.col) continue;
+        if (cliqueentries[i].col == v.col || colDeleted[cliqueentries[i].col])
+          continue;
         if (!fixCol(globaldom, cliqueentries[i])) return true;
       }
 
@@ -1800,7 +1804,8 @@ void HighsCliqueTable::addImplications(HighsDomain& domain, HighsInt col,
     HighsInt end = cliques[cliqueid].end;
 
     for (HighsInt i = start; i != end; ++i) {
-      if (cliqueentries[i].col == v.col) continue;
+      if (cliqueentries[i].col == v.col || colDeleted[cliqueentries[i].col])
+        continue;
 
       if (cliqueentries[i].val == 1) {
         if (domain.col_upper_[cliqueentries[i].col] == 0.0) continue;
@@ -2479,13 +2484,14 @@ void HighsCliqueTable::buildFrom(const HighsLp* origModel,
 
     clqBuffer.assign(init.cliqueentries.begin() + init.cliques[i].start,
                      init.cliqueentries.begin() + init.cliques[i].end);
-    clqBuffer.erase(std::remove_if(clqBuffer.begin(), clqBuffer.end(),
-                                   [origModel](CliqueVar v) {
-                                     return origModel->col_lower_[v.col] !=
-                                                0.0 ||
-                                            origModel->col_upper_[v.col] != 1.0;
-                                   }),
-                    clqBuffer.end());
+    clqBuffer.erase(
+        std::remove_if(clqBuffer.begin(), clqBuffer.end(),
+                       [origModel, &init](CliqueVar v) {
+                         return origModel->col_lower_[v.col] != 0.0 ||
+                                origModel->col_upper_[v.col] != 1.0 ||
+                                init.colDeleted[v.col];
+                       }),
+        clqBuffer.end());
     if (clqBuffer.size() <= 1) continue;
 
     HighsInt origin = init.cliques[i].origin != kHighsIInf ? -1 : kHighsIInf;
