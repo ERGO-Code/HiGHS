@@ -172,9 +172,16 @@ message(STATUS "Use FindCUDAConf: ${CUPDLP_FIND_CUDA}")
 option(HIGHS_GPU_LIB "Build highs GPU as a single lib" OFF)
 message(STATUS "Build GPU with delayed loading: ${HIGHS_GPU_LIB}")
 
+option(HIPDLP_HIP "Build HiPDLP with AMD HIP (ROCm)" OFF)
+message(STATUS "Build HiPDLP with HIP: ${HIPDLP_HIP}")
+
 # For now
 if (HIGHS_GPU_LIB)
   set(CUPDLP_GPU ON)
+endif()
+
+if (HIPDLP_HIP)
+  set(HIPDLP_GPU ON)
 endif()
 
 if(CUPDLP_GPU AND CMAKE_VERSION VERSION_LESS "3.25.0")
@@ -208,30 +215,72 @@ if (HIPO AND NOT FAST_BUILD)
   message(ERROR "HIPO is only available with FAST_BUILD=ON.")
 endif()
 
-if (CUPDLP_GPU)
+if (CUPDLP_GPU OR HIPDLP_GPU)
   if (WIN32)
     set(BUILD_SHARED_LIBS ON)
   endif()
 
-  set (CUPDLP_CPU OFF)
-  message(NOTICE "Set build cuPDLP with CUDA")
+  set(CUPDLP_CPU OFF)
 
-  if (CUPDLP_FIND_CUDA)
-    # With FindCUDAConf.cmake
-    # Need to have the CUDA_HOME environment variable set.
-    include(FindCUDAConf)
+  if (HIPDLP_HIP)
+    message(NOTICE "Set build HiPDLP with HIP (AMD ROCm)")
+
+    # ROCm/HIP requires CMake 3.21+
+    if(CMAKE_VERSION VERSION_LESS "3.21.0")
+      message(FATAL_ERROR "HIP support requires CMake >= 3.21")
+    endif()
+
+    # Allow the user to point to a non-standard ROCm install
+    if(DEFINED ENV{ROCM_PATH})
+      set(CMAKE_PREFIX_PATH "$ENV{ROCM_PATH}" ${CMAKE_PREFIX_PATH})
+    elseif(EXISTS "/opt/rocm")
+      set(CMAKE_PREFIX_PATH "/opt/rocm" ${CMAKE_PREFIX_PATH})
+    endif()
+
+    enable_language(HIP)
+    find_package(hipblas REQUIRED)
+    find_package(hipsparse REQUIRED)
+
+    # The default bfd linker is slow and memory-hungry with the ROCm toolchain
+    # and can stall on memory-constrained machines.
+    # The ROCm clang bundles lld and we use it if it is available.
+    find_program(HIGHS_LLD_LINKER NAMES ld.lld lld
+      HINTS ENV ROCM_PATH /opt/rocm
+      PATH_SUFFIXES lib/llvm/bin bin llvm/bin)
+    if (HIGHS_LLD_LINKER)
+      set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -fuse-ld=lld")
+      message(STATUS "HIP: linking with lld (${HIGHS_LLD_LINKER})")
+    else()
+      message(STATUS "HIP: lld not found; using the default linker")
+    endif()
+
+    set(GPU_LIBRARY roc::hipblas roc::hipsparse)
+    set(GPU_COMPILE_DEFINITIONS USE_HIP)
+
   else()
-    # Without FindCUDAConf.cmake
-    enable_language(CUDA)
-    find_package(CUDAToolkit REQUIRED)
+    message(NOTICE "Set build cuPDLP with CUDA")
 
-    set(CUDA_LIBRARY-NOTFOUND, OFF)
-    set(CUDA_LIBRARY CUDA::cudart CUDA::cublas CUDA::cusparse)
+    if (CUPDLP_FIND_CUDA)
+      # With FindCUDAConf.cmake
+      # Need to have the CUDA_HOME environment variable set.
+      include(FindCUDAConf)
+    else()
+      # Without FindCUDAConf.cmake
+      enable_language(CUDA)
+      find_package(CUDAToolkit REQUIRED)
+
+      set(CUDA_LIBRARY-NOTFOUND, OFF)
+      set(CUDA_LIBRARY CUDA::cudart CUDA::cublas CUDA::cusparse)
+    endif()
+
+    set(GPU_LIBRARY ${CUDA_LIBRARY})
+    set(GPU_COMPILE_DEFINITIONS "")
   endif()
 
 else()
-  set (CUPDLP_CPU ON)
-    set(CUDA_LIBRARY-NOTFOUND true)
+  set(CUPDLP_CPU ON)
+  set(CUDA_LIBRARY-NOTFOUND true)
+  set(HIPDLP_GPU OFF)
 endif()
 
 if(BUILD_STATIC_EXE)
@@ -413,7 +462,7 @@ if (BUILD_CXX)
       message(STATUS "IPO / LTO: enabled")
     endif()
   endif()
-  if (CUPDLP_GPU AND CMAKE_INTERPROCEDURAL_OPTIMIZATION)
+  if ((CUPDLP_GPU OR HIPDLP_HIP) AND CMAKE_INTERPROCEDURAL_OPTIMIZATION)
       set(CMAKE_INTERPROCEDURAL_OPTIMIZATION FALSE)
       message(STATUS "IPO / LTO is not supported at the moment when PDLP is using GPU: LTO disabled.")
   endif()
