@@ -2280,20 +2280,27 @@ void HighsCliqueTable::presolveEliminateCol(const HighsInt col) {
       [&](const HighsInt cliqueId) { cliqueIds.push_back(cliqueId); });
 
   pdqsort(cliqueIds.begin(), cliqueIds.end());
-
   std::vector<CliqueVar> shortenedClique;
-  for (HighsInt cliqueId : cliqueIds) {
-    if (cliques[cliqueId].start == -1) continue;
-    shortenedClique.clear();
-    shortenedClique.reserve(cliques[cliqueId].end - cliques[cliqueId].start);
-    for (HighsInt i = cliques[cliqueId].start; i != cliques[cliqueId].end;
-         ++i) {
-      if (cliqueentries[i].col != col && !colDeleted[cliqueentries[i].col]) {
-        shortenedClique.push_back(cliqueentries[i]);
-      }
+
+  for (const HighsInt cliqueId : cliqueIds) {
+    Clique& clique = cliques[cliqueId];
+    if (clique.start == -1) continue;
+    ++clique.numZeroFixed;
+    const HighsInt actualSize = clique.end - clique.start;
+    const HighsInt activeSize = clique.numActive();
+    if (activeSize <= 1) {
+      removeClique(cliqueId);
+      continue;
     }
-    removeClique(cliqueId, false);
-    if (shortenedClique.size() >= 2) {
+    if (activeSize == 2 ||
+        clique.numZeroFixed >= std::max(HighsInt{10}, actualSize >> 1)) {
+      shortenedClique.clear();
+      shortenedClique.reserve(activeSize);
+      for (HighsInt i = clique.start; i != clique.end; ++i) {
+        if (!colDeleted[cliqueentries[i].col])
+          shortenedClique.push_back(cliqueentries[i]);
+      }
+      removeClique(cliqueId, false);
       doAddClique(shortenedClique.data(),
                   static_cast<HighsInt>(shortenedClique.size()), false, -1);
     }
