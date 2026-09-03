@@ -1855,7 +1855,7 @@ HighsInt HighsCliqueTable::getNumImplications(HighsInt col) const {
   // now loop over cliques larger than size two and add the cliquelength - 1 as
   // additional implications
   auto countImplics = [&](HighsInt cliqueid) {
-    HighsInt nimplics = cliques[cliqueid].end - cliques[cliqueid].start - 1;
+    HighsInt nimplics = cliques[cliqueid].numActive() - 1;
     nimplics *= (1 + cliques[cliqueid].equality);
     numimplics += nimplics - 1;
   };
@@ -1873,7 +1873,7 @@ HighsInt HighsCliqueTable::getNumImplications(HighsInt col, bool val) const {
   // now loop over cliques larger than size two and add the cliquelength - 1 as
   // additional implications
   invertedHashList[iVal].for_each([&](HighsInt cliqueid) {
-    HighsInt nimplics = cliques[cliqueid].end - cliques[cliqueid].start - 1;
+    HighsInt nimplics = cliques[cliqueid].numActive() - 1;
     nimplics *= (1 + cliques[cliqueid].equality);
     numimplics += nimplics - 1;
   });
@@ -2183,7 +2183,17 @@ bool HighsCliqueTable::presolveFixCol(HighsInt col, bool val,
   while (nextFixing != fixings.size()) {
     CliqueVar v = fixings[nextFixing++];
     const PresolveColState state = presolveColStates[v.col];
-    if (state != PresolveColState::kActive) continue;
+    if (state == PresolveColState::kEliminated) continue;
+    if ((v.val == 1 && state == PresolveColState::kFixedOne) ||
+        (v.val == 0 && state == PresolveColState::kFixedZero)) {
+      continue;
+    }
+    if (state == PresolveColState::kFixedOne ||
+        state == PresolveColState::kFixedZero) {
+      return false;
+    }
+    presolveColStates[v.col] =
+        v.val ? PresolveColState::kFixedOne : PresolveColState::kFixedZero;
     colDeleted[v.col] = true;
     if (!(v.col == col && v.val == val)) impliedFixings.emplace_back(v);
 
@@ -2191,7 +2201,7 @@ bool HighsCliqueTable::presolveFixCol(HighsInt col, bool val,
     collectIncidentCliques(v);
     for (const HighsInt cliqueId : cliqueIds) {
       if (cliques[cliqueId].start == -1) continue;
-      for (HighsInt i = cliques[cliqueId].start; i != cliques[cliqueId].start;
+      for (HighsInt i = cliques[cliqueId].start; i != cliques[cliqueId].end;
            ++i) {
         CliqueVar v2 = cliqueentries[i];
         if (v.col == v2.col) continue;
@@ -2214,7 +2224,7 @@ bool HighsCliqueTable::presolveFixCol(HighsInt col, bool val,
       const bool equality = cliques[cliqueId].equality;
       shortenedClique.clear();
       shortenedClique.reserve(cliques[cliqueId].end - cliques[cliqueId].start);
-      for (HighsInt i = cliques[cliqueId].start; i != cliques[cliqueId].start;
+      for (HighsInt i = cliques[cliqueId].start; i != cliques[cliqueId].end;
            ++i) {
         CliqueVar v2 = cliqueentries[i];
         if (v.col == v2.col) continue;
@@ -2268,7 +2278,7 @@ void HighsCliqueTable::presolveEliminateCol(const HighsInt col) {
     shortenedClique.reserve(cliques[cliqueId].end - cliques[cliqueId].start);
     for (HighsInt i = cliques[cliqueId].start; i != cliques[cliqueId].end;
          ++i) {
-      if (cliqueentries[i].col != col) {
+      if (cliqueentries[i].col != col && !colDeleted[cliqueentries[i].col]) {
         shortenedClique.push_back(cliqueentries[i]);
       }
     }
@@ -2336,7 +2346,7 @@ bool HighsCliqueTable::presolveSubstituteCol(
 
     // If replacement will exist twice in new clique then the literal
     // has to take value 0
-    potentialFixings.push_back(cliqueentries[substPos].complement());
+    potentialFixings.push_back(substVar.complement());
     shortenedClique.clear();
     shortenedClique.reserve(cliques[cliqueId].end - cliques[cliqueId].start);
     for (HighsInt i = cliques[cliqueId].start; i != cliques[cliqueId].end;
