@@ -2127,7 +2127,7 @@ class highs_linear_expression:
             self.idxs = [other.index]
             self.vals = [1.0]
 
-        elif isinstance(other, HighspyScalarTypes):
+        elif isinstance(other, (float, int)):
             self.idxs = []
             self.vals = []
             self.constant = float(other)
