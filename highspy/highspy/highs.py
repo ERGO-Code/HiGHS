@@ -1705,7 +1705,7 @@ class HighsCallback:
     __slots__ = ["callback_type", "callbacks", "highs", "user_callback_data"]
 
     def __init__(self, callback_type: cb.HighsCallbackType, highs: Highs):
-        self.callbacks: set[Callable[[HighsCallbackEvent], None]] = set()
+        self.callbacks: list[Callable[[HighsCallbackEvent], None]] = []
         self.user_callback_data: dict[Callable[[HighsCallbackEvent], None], Any] = {}
         self.callback_type = callback_type
         self.highs = proxy(highs)  # to avoid circular reference
@@ -1728,8 +1728,10 @@ class HighsCallback:
             if status != HighsStatus.kOk:
                 raise HighsStatusError("startCallback", status)
 
-        self.callbacks.add(callback)
-        self.user_callback_data[callback] = user_data
+        if callback not in self.user_callback_data:
+            self.callbacks.append(callback)
+            self.user_callback_data[callback] = user_data
+
         return self
 
     def unsubscribe(self, callback: Callable[[HighsCallbackEvent], None]):
@@ -1740,8 +1742,8 @@ class HighsCallback:
             callback: The callback function to be removed.
         """
         try:
-            self.callbacks.remove(callback)
             del self.user_callback_data[callback]
+            self.callbacks.remove(callback)
 
             if len(self.callbacks) == 0:
                 self.highs.stopCallback(self.callback_type)
@@ -1779,7 +1781,7 @@ class HighsCallback:
         """
         Unsubscribes all callbacks from the event.
         """
-        self.callbacks = set()
+        self.callbacks = []
         self.user_callback_data = {}
         self.highs.stopCallback(self.callback_type)
 
