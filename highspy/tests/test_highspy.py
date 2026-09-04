@@ -1,10 +1,14 @@
-import tempfile
-import unittest
-import highspy
-from highspy.highs import highs_linear_expression, qsum
-import numpy as np
-from sys import platform
 import signal
+import tempfile
+import threading
+import unittest
+from sys import platform
+
+import numpy as np
+from highspy.highs import HighsError, HighsStatusError, highs_linear_expression, qsum
+
+import highspy
+
 
 class TestHighsPy(unittest.TestCase):
     def assertArrayEqual(self, first, second, msg=None):
@@ -254,20 +258,20 @@ class TestHighsPy(unittest.TestCase):
         #
         # Extract column 0
         iCol = 0
-        [status, cost, lower, upper, get_num_nz] = h.getCol(iCol)
+        [_status, cost, lower, upper, get_num_nz] = h.getCol(iCol)
         self.assertEqual(cost, lp.col_cost_[iCol])
         self.assertEqual(lower, lp.col_lower_[iCol])
         self.assertEqual(upper, lp.col_upper_[iCol])
         index = np.empty(get_num_nz)
         value = np.empty(get_num_nz, dtype=np.double)
-        [status, index, value] = h.getColEntries(iCol)
+        [_status, index, value] = h.getColEntries(iCol)
         for iEl in range(get_num_nz):
             self.assertEqual(index[iEl], lp.a_matrix_.index_[iEl])
             self.assertEqual(value[iEl], lp.a_matrix_.value_[iEl])
         #
         # Extract columns 0 and 1
         indices = np.array([0, 1])
-        [status, get_num_col, cost, lower, upper, get_num_nz] = h.getCols(2, indices)
+        [_status, get_num_col, cost, lower, upper, get_num_nz] = h.getCols(2, indices)
         for get_col in range(get_num_col):
             iCol = indices[get_col]
             self.assertEqual(cost[get_col], lp.col_cost_[iCol])
@@ -276,7 +280,7 @@ class TestHighsPy(unittest.TestCase):
         start = np.empty(get_num_col)
         index = np.empty(get_num_nz)
         value = np.empty(get_num_nz, dtype=np.double)
-        [status, start, index, value] = h.getColsEntries(2, indices)
+        [_status, start, index, value] = h.getColsEntries(2, indices)
         for iCol in range(lp.num_col_):
             self.assertEqual(start[iCol], lp.a_matrix_.start_[iCol])
         for iEl in range(get_num_nz):
@@ -285,16 +289,16 @@ class TestHighsPy(unittest.TestCase):
         #
         # Extract row 1
         iRow = 1
-        [status, lower, upper, get_num_nz] = h.getRow(iRow)
+        [_status, lower, upper, get_num_nz] = h.getRow(iRow)
         self.assertEqual(lower, lp.row_lower_[iRow])
         self.assertEqual(upper, lp.row_upper_[iRow])
         index = np.empty(get_num_nz)
         value = np.empty(get_num_nz, dtype=np.double)
-        [status, index, value] = h.getRowEntries(iRow)
+        [_status, index, value] = h.getRowEntries(iRow)
         #
         # Extract rows 0 and 2
         indices = np.array([0, 2])
-        [status, get_num_row, lower, upper, get_num_nz] = h.getRows(2, indices)
+        [_status, get_num_row, lower, upper, get_num_nz] = h.getRows(2, indices)
         for get_row in range(get_num_row):
             iRow = indices[get_row]
             self.assertEqual(lower[get_row], lp.row_lower_[iRow])
@@ -302,17 +306,17 @@ class TestHighsPy(unittest.TestCase):
         start = np.empty(get_num_row)
         index = np.empty(get_num_nz)
         value = np.empty(get_num_nz, dtype=np.double)
-        [status, start, index, value] = h.getRowsEntries(2, indices)
+        [_status, start, index, value] = h.getRowsEntries(2, indices)
 
     def test_options(self):
         h = highspy.Highs()
 
         # test vanilla get option value method
 
-        [status, output_flag] = h.getOptionValue("output_flag")
-        [status, solver] = h.getOptionValue("solver")
-        [status, primal_feasibility_tolerance] = h.getOptionValue("primal_feasibility_tolerance")
-        [status, simplex_update_limit] = h.getOptionValue("simplex_update_limit")
+        [_status, output_flag] = h.getOptionValue("output_flag")
+        [_status, solver] = h.getOptionValue("solver")
+        [_status, primal_feasibility_tolerance] = h.getOptionValue("primal_feasibility_tolerance")
+        [_status, simplex_update_limit] = h.getOptionValue("simplex_update_limit")
         self.assertEqual(output_flag, True)
         self.assertEqual(solver, "choose")
         self.assertEqual(primal_feasibility_tolerance, 1e-7)
@@ -322,44 +326,44 @@ class TestHighsPy(unittest.TestCase):
         self.assertEqual(option_value[0], highspy.HighsStatus.kError)
 
         # test bool option
-        [status, type] = h.getOptionType("output_flag")
+        [_status, type] = h.getOptionType("output_flag")
         self.assertEqual(type, highspy.HighsOptionType.kBool)
 
         h.setOptionValue("output_flag", True)
-        [status, value] = h.getOptionValue("output_flag")
+        [_status, value] = h.getOptionValue("output_flag")
         self.assertTrue(value)
         h.setOptionValue("output_flag", False)
-        [status, value] = h.getOptionValue("output_flag")
+        [_status, value] = h.getOptionValue("output_flag")
         self.assertFalse(value)
 
         # test string option
-        [status, type] = h.getOptionType("presolve")
+        [_status, type] = h.getOptionType("presolve")
         self.assertEqual(type, highspy.HighsOptionType.kString)
         h.setOptionValue("presolve", "off")
-        [status, value] = h.getOptionValue("presolve")
+        [_status, value] = h.getOptionValue("presolve")
         self.assertEqual(value, "off")
         h.setOptionValue("presolve", "on")
-        [status, value] = h.getOptionValue("presolve")
+        [_status, value] = h.getOptionValue("presolve")
         self.assertEqual(value, "on")
 
         # test int option
-        [status, type] = h.getOptionType("threads")
+        [_status, type] = h.getOptionType("threads")
         self.assertEqual(type, highspy.HighsOptionType.kInt)
         h.setOptionValue("threads", 1)
-        [status, value] = h.getOptionValue("threads")
+        [_status, value] = h.getOptionValue("threads")
         self.assertEqual(value, 1)
         h.setOptionValue("threads", 2)
-        [status, value] = h.getOptionValue("threads")
+        [_status, value] = h.getOptionValue("threads")
         self.assertEqual(value, 2)
 
         # test double option
-        [status, type] = h.getOptionType("time_limit")
+        [_status, type] = h.getOptionType("time_limit")
         self.assertEqual(type, highspy.HighsOptionType.kDouble)
         h.setOptionValue("time_limit", 1.7)
-        [status, value] = h.getOptionValue("time_limit")
+        [_status, value] = h.getOptionValue("time_limit")
         self.assertAlmostEqual(float(value), 1.7)
         h.setOptionValue("time_limit", 2.7)
-        [status, value] = h.getOptionValue("time_limit")
+        [_status, value] = h.getOptionValue("time_limit")
         self.assertAlmostEqual(float(value), 2.7)
 
     def test_clear(self):
@@ -368,27 +372,27 @@ class TestHighsPy(unittest.TestCase):
         self.assertEqual(h.getNumRow(), 2)
         self.assertEqual(h.getNumNz(), 4)
 
-        [status, orig_feas_tol] = h.getOptionValue("primal_feasibility_tolerance")
+        [_status, orig_feas_tol] = h.getOptionValue("primal_feasibility_tolerance")
         new_feas_tol = float(orig_feas_tol) + 1
         h.setOptionValue("primal_feasibility_tolerance", new_feas_tol)
-        [status, value] = h.getOptionValue("primal_feasibility_tolerance")
+        [_status, value] = h.getOptionValue("primal_feasibility_tolerance")
         self.assertAlmostEqual(float(value), new_feas_tol)
         h.clear()
         self.assertEqual(h.getNumCol(), 0)
         self.assertEqual(h.getNumRow(), 0)
         self.assertEqual(h.getNumNz(), 0)
-        [status, value] = h.getOptionValue("primal_feasibility_tolerance")
+        [_status, value] = h.getOptionValue("primal_feasibility_tolerance")
         self.assertAlmostEqual(float(value), float(orig_feas_tol))
 
         h = self.get_basic_model()
         h.setOptionValue("primal_feasibility_tolerance", new_feas_tol)
-        [status, value] = h.getOptionValue("primal_feasibility_tolerance")
+        [_status, value] = h.getOptionValue("primal_feasibility_tolerance")
         self.assertAlmostEqual(float(value), new_feas_tol)
         h.clearModel()
         self.assertEqual(h.getNumCol(), 0)
         self.assertEqual(h.getNumRow(), 0)
         self.assertEqual(h.getNumNz(), 0)
-        [status, value] = h.getOptionValue("primal_feasibility_tolerance")
+        [_status, value] = h.getOptionValue("primal_feasibility_tolerance")
         self.assertAlmostEqual(float(value), new_feas_tol)
 
         h = self.get_basic_model()
@@ -405,13 +409,13 @@ class TestHighsPy(unittest.TestCase):
         self.assertFalse(sol.dual_valid)
 
         h = self.get_basic_model()
-        [status, orig_feas_tol] = h.getOptionValue("primal_feasibility_tolerance")
+        [_status, orig_feas_tol] = h.getOptionValue("primal_feasibility_tolerance")
         new_feas_tol = float(orig_feas_tol) + 1
         h.setOptionValue("primal_feasibility_tolerance", new_feas_tol)
-        [status, value] = h.getOptionValue("primal_feasibility_tolerance")
+        [_status, value] = h.getOptionValue("primal_feasibility_tolerance")
         self.assertAlmostEqual(float(value), new_feas_tol)
         h.resetOptions()
-        [status, value] = h.getOptionValue("primal_feasibility_tolerance")
+        [_status, value] = h.getOptionValue("primal_feasibility_tolerance")
         self.assertAlmostEqual(float(value), float(orig_feas_tol))
 
     def test_ranging(self):
@@ -429,7 +433,7 @@ class TestHighsPy(unittest.TestCase):
         # r0 -inf -inf inf inf
         # r1 -inf -inf inf inf
         h.run()
-        [status, ranging] = h.getRanging()
+        [_status, ranging] = h.getRanging()
         self.assertEqual(ranging.col_cost_dn.objective_[0], 2)
         self.assertEqual(ranging.col_cost_dn.value_[0], -1)
         self.assertEqual(ranging.col_cost_up.value_[0], 1)
@@ -438,7 +442,7 @@ class TestHighsPy(unittest.TestCase):
         self.assertEqual(ranging.col_cost_dn.value_[1], 0)
         self.assertEqual(ranging.col_cost_up.value_[1], inf)
         self.assertEqual(ranging.col_cost_up.objective_[1], inf)
-        #
+
         self.assertEqual(ranging.col_bound_dn.objective_[0], 1)
         self.assertEqual(ranging.col_bound_dn.value_[0], -inf)
         self.assertEqual(ranging.col_bound_up.value_[0], inf)
@@ -447,7 +451,7 @@ class TestHighsPy(unittest.TestCase):
         self.assertEqual(ranging.col_bound_dn.value_[1], 1)
         self.assertEqual(ranging.col_bound_up.value_[1], inf)
         self.assertEqual(ranging.col_bound_up.objective_[1], 1)
-        #
+
         self.assertEqual(ranging.row_bound_dn.objective_[0], -inf)
         self.assertEqual(ranging.row_bound_dn.value_[0], -inf)
         self.assertEqual(ranging.row_bound_up.value_[0], inf)
@@ -657,8 +661,8 @@ class TestHighsPy(unittest.TestCase):
         self.assertEqual(h.numVariables, 1)
 
         # exception
-        self.assertRaises(Exception, lambda: h.addVariable(lb=h.inf))
-        self.assertRaises(Exception, lambda: h.addVariables(2, lb=h.inf))
+        self.assertRaises(HighsStatusError, lambda: h.addVariable(lb=h.inf))
+        self.assertRaises(HighsStatusError, lambda: h.addVariables(2, lb=h.inf))
 
     def test_addConstr(self):
         h = highspy.Highs()
@@ -693,7 +697,7 @@ class TestHighsPy(unittest.TestCase):
         h.removeConstr(c)
         self.assertEqual(h.numVariables, 2)
         self.assertEqual(h.numConstrs, 0)
-        self.assertRaises(Exception, lambda: c.name)
+        self.assertRaises(HighsStatusError, lambda: c.name)
 
     def test_val(self):
         h = highspy.Highs()
@@ -741,14 +745,14 @@ class TestHighsPy(unittest.TestCase):
         self.assertEqual(h.getLp().col_names_[0], "a")
         self.assertEqual(x.name, "a")
         self.assertEqual(h.variableName(x), "a")
-        self.assertRaises(Exception, lambda: h.variableName(1))
+        self.assertRaises(HighsStatusError, lambda: h.variableName(1))
         self.assertEqual(h.variableNames([x]), ["a"])
         self.assertEqual(h.variableNames({"key": x}), {"key": "a"})
         self.assertEqual(h.allVariableNames(), ["a"])
 
         y = h.addVariable()
         h.deleteVariable(y)
-        self.assertRaises(Exception, lambda: y.name)
+        self.assertRaises(HighsStatusError, lambda: y.name)
 
     def test_binary(self):
         h = highspy.Highs()
@@ -810,8 +814,8 @@ class TestHighsPy(unittest.TestCase):
         x = [h.addVariable(), h.addVariable()]
         h.addConstr(2 * x[0] + 3 * x[1] <= 10)
 
-        self.assertRaises(Exception, h.maximize, x[0] + x[1] <= 3)
-        self.assertRaises(Exception, h.minimize, x[0] + x[1] <= 3)
+        self.assertRaises(HighsError, h.maximize, x[0] + x[1] <= 3)
+        self.assertRaises(HighsError, h.minimize, x[0] + x[1] <= 3)
 
     def test_constraint_builder(self):
         h = highspy.Highs()
@@ -830,44 +834,44 @@ class TestHighsPy(unittest.TestCase):
         self.assertEqualExpr(c1, [x, y, x], [2, 3, -2], None, [-highspy.kHighsInf, 0])
 
         # failure add constraint without inequality
-        self.assertRaises(Exception, lambda: h.addConstr(x + 3 * y))
-        self.assertRaises(Exception, lambda: h.addConstrs(x == 1, x + 3 * y))
-        self.assertRaises(Exception, lambda: h.addConstrs({"a": x == 1, "b": x + 3 * y}))
+        self.assertRaises(HighsError, lambda: h.addConstr(x + 3 * y))
+        self.assertRaises(HighsError, lambda: h.addConstrs(x == 1, x + 3 * y))
+        self.assertRaises(HighsError, lambda: h.addConstrs({"a": x == 1, "b": x + 3 * y}))
 
         # ensure model is rolled back on error
         self.assertEqual(h.numConstrs, 0)
-        self.assertRaises(Exception, lambda: h.addConstrs([x == 1] * 100 + [x + 3 * y]))
+        self.assertRaises(HighsError, lambda: h.addConstrs([x == 1] * 100 + [x + 3 * y]))
         self.assertEqual(h.numConstrs, 0)
 
         # failure - bounds already set
-        self.assertRaises(Exception, lambda: 1 <= (4 <= 2 * x + 3 * y))
-        self.assertRaises(Exception, lambda: 2 >= (4 >= 2 * x + 3 * y))
-        self.assertRaises(Exception, lambda: (2 * x + 3 * y <= 2) <= 4)
-        self.assertRaises(Exception, lambda: (1 <= 2 * x + 3 * y) <= 5)
-        self.assertRaises(Exception, lambda: 1 <= (2 * x + 3 * y <= 5))
-        self.assertRaises(Exception, lambda: 1 <= (5 >= 2 * x + 3 * y))
-        self.assertRaises(Exception, lambda: (5 >= 2 * x + 3 * y) >= 1)
-        self.assertRaises(Exception, lambda: 5 >= (2 * x + 3 * y >= 1))
+        self.assertRaises(HighsError, lambda: 1 <= (4 <= 2 * x + 3 * y))
+        self.assertRaises(HighsError, lambda: 2 >= (4 >= 2 * x + 3 * y))
+        self.assertRaises(HighsError, lambda: (2 * x + 3 * y <= 2) <= 4)
+        self.assertRaises(HighsError, lambda: (1 <= 2 * x + 3 * y) <= 5)
+        self.assertRaises(HighsError, lambda: 1 <= (2 * x + 3 * y <= 5))
+        self.assertRaises(HighsError, lambda: 1 <= (5 >= 2 * x + 3 * y))
+        self.assertRaises(HighsError, lambda: (5 >= 2 * x + 3 * y) >= 1)
+        self.assertRaises(HighsError, lambda: 5 >= (2 * x + 3 * y >= 1))
 
-        c1 = 2 * x + 3 * y <= (2 <= 4)  # 2x + 3y <= float(True)
+        c1 = 2 * x + 3 * y <= (2 <= 4)  # 2x + 3y <= float(True)  # noqa: PLR0133
         self.assertEqualExpr(c1, [x, y], [2, 3], None, [-highspy.kHighsInf, 1])
 
         # failure, non-linear terms
-        self.assertRaises(Exception, lambda: 2 * x * 3 * y)
+        self.assertRaises(HighsError, lambda: 2 * x * 3 * y)
 
         # failure, order matters when having variables on both sides of inequality
-        self.assertRaises(Exception, lambda: (4 * x <= 2 * x + 3 * y) <= 5)
-        self.assertRaises(Exception, lambda: 4 * x <= (2 * x + 3 * y <= 5))
-        self.assertRaises(Exception, lambda: (4 * x <= 2 * x + 3 * y) <= 5 * x)
+        self.assertRaises(HighsError, lambda: (4 * x <= 2 * x + 3 * y) <= 5)
+        self.assertRaises(HighsError, lambda: 4 * x <= (2 * x + 3 * y <= 5))
+        self.assertRaises(HighsError, lambda: (4 * x <= 2 * x + 3 * y) <= 5 * x)
 
         c1 = 5 * x <= 2 * x + 3 * y <= 5 * x
         self.assertEqualExpr(c1, [x, y, x], [2, 3, -5], None, [0, 0])
 
         # test various combinations with different inequalities
-        self.assertRaises(Exception, lambda: (2 * x + 3 * y == 3 * y) == 3)
-        self.assertRaises(Exception, lambda: 2 * x + 3 * y == (3 * y == 3))
-        self.assertRaises(Exception, lambda: 2 * x + 3 * y == (3 * y <= 3))
-        self.assertRaises(Exception, lambda: 2 * x + 3 * y == (3 * y >= 3))
+        self.assertRaises(HighsError, lambda: (2 * x + 3 * y == 3 * y) == 3)
+        self.assertRaises(HighsError, lambda: 2 * x + 3 * y == (3 * y == 3))
+        self.assertRaises(HighsError, lambda: 2 * x + 3 * y == (3 * y <= 3))
+        self.assertRaises(HighsError, lambda: 2 * x + 3 * y == (3 * y >= 3))
 
         c1 = 2 * x + 3 * y == x
         self.assertEqualExpr(c1, [x, y, x], [2, 3, -1], None, [0, 0])
@@ -932,7 +936,7 @@ class TestHighsPy(unittest.TestCase):
         h.addVariables(["a", "b", "c", "d"])  # 'a', 'b', 'c', 'd'
         N += 4
         self.assertEqual(h.numVariables, N)
-    
+
         h.addVariables("abc")  # 'a', 'b', 'c'
         N += 3
         self.assertEqual(h.numVariables, N)
@@ -944,8 +948,8 @@ class TestHighsPy(unittest.TestCase):
         x5 = h.addVariables("ab", "b", "c", "d")  # ('a', 'b', 'c', 'd'), ('b', 'b', 'c', 'd')
         N += 2
         self.assertEqual(h.numVariables, N)
-        self.assertTrue(("a", "b", "c", "d") in x5.keys())
-        self.assertTrue(("b", "b", "c", "d") in x5.keys())
+        self.assertTrue(("a", "b", "c", "d") in x5)
+        self.assertTrue(("b", "b", "c", "d") in x5)
 
         h.addVariables(5, "a", 2, "b", "c")  # range(5), 'a', range(2), 'b', 'c'
         N += 5 * 2
@@ -981,7 +985,7 @@ class TestHighsPy(unittest.TestCase):
         # test list comprehension constraints
         h = highspy.Highs()
         x = h.addVariables(5)
-        h.addConstr(sum(x) == 1) # type: ignore # sum does not preserve typing, but want to test anyhow
+        h.addConstr(sum(x) == 1)  # type: ignore # sum does not preserve typing, but want to test anyhow
         self.assertEqual(h.numConstrs, 1)
 
         h.addConstrs(x[i] + x[j] <= 1 for i in range(5) for j in range(5))
@@ -989,11 +993,11 @@ class TestHighsPy(unittest.TestCase):
 
         # test names and sequence types (list, tuple, nothing)
         h = highspy.Highs()
-        (x1, x2, x3) = h.addVariables(3)
+        (x1, x2, _x3) = h.addVariables(3)
 
         h.addConstrs((x2 - x1 >= 2), name_prefix="a")
         self.assertEqual(h.numConstrs, 1)
-        h.addConstrs((x2 - x1 >= 2))
+        h.addConstrs(x2 - x1 >= 2)
         self.assertEqual(h.numConstrs, 2)
 
         h.addConstrs(x2 - x1 >= 2, name_prefix="b")
@@ -1076,10 +1080,10 @@ class TestHighsPy(unittest.TestCase):
         self.assertEqual(h.val(x), 0)
         self.assertEqual(h.val(y), 1)
 
-        self.assertRaises(Exception, h.minimize, x - y <= 5)
-        self.assertRaises(Exception, h.minimize, 0 <= x - y <= 5)
-        self.assertRaises(Exception, h.minimize, 4 <= x - y)
-        self.assertRaises(Exception, h.minimize, 4)
+        self.assertRaises(HighsError, h.minimize, x - y <= 5)
+        self.assertRaises(HighsError, h.minimize, 0 <= x - y <= 5)
+        self.assertRaises(HighsError, h.minimize, 4 <= x - y)
+        h.minimize(4)
 
     def test_maximize(self):
         """Test the maximize method with and without an objective."""
@@ -1099,10 +1103,10 @@ class TestHighsPy(unittest.TestCase):
         self.assertEqual(h.val(x), 0)
         self.assertEqual(h.val(y), 1)
 
-        self.assertRaises(Exception, h.maximize, x - y <= 5)
-        self.assertRaises(Exception, h.maximize, 0 <= x - y <= 5)
-        self.assertRaises(Exception, h.maximize, 4 <= x - y)
-        self.assertRaises(Exception, h.maximize, 4)
+        self.assertRaises(HighsError, h.maximize, x - y <= 5)
+        self.assertRaises(HighsError, h.maximize, 0 <= x - y <= 5)
+        self.assertRaises(HighsError, h.maximize, 4 <= x - y)
+        h.maximize(4)
 
     def test_get_expr(self):
         h = self.get_basic_model()
@@ -1117,7 +1121,7 @@ class TestHighsPy(unittest.TestCase):
         self.assertEqualExpr(c[0].expr(), [0, 1], [-1, 1], None, [2, highspy.kHighsInf])
         self.assertEqualExpr(c[1].expr(), [0, 1], [1, 1], None, [0, highspy.kHighsInf])
 
-        self.assertRaises(Exception, lambda: h.getExpr(2))
+        self.assertRaises(HighsStatusError, lambda: h.getExpr(2))
 
     def test_add_variables(self):
         """Test adding multiple variables to the model."""
@@ -1137,14 +1141,14 @@ class TestHighsPy(unittest.TestCase):
         self.assertEqual(list(map(int, h.getVariables())), [0, 1, 2])
 
         # provided len(parameters) != len(indices)
-        self.assertRaises(Exception, lambda: h.addVariables(5, type=[highspy.HighsVarType.kContinuous, highspy.HighsVarType.kInteger]))
-        self.assertRaises(Exception, lambda: h.addVariables(5, name=["a", "b"]))
+        self.assertRaises(HighsError, lambda: h.addVariables(5, type=[highspy.HighsVarType.kContinuous, highspy.HighsVarType.kInteger]))
+        self.assertRaises(HighsError, lambda: h.addVariables(5, name=["a", "b"]))
 
         # some parameters not valid
-        self.assertRaises(Exception, lambda: h.addVariables(5, type=[highspy.HighsVarType.kContinuous, None]))
-        self.assertRaises(Exception, lambda: h.addVariables(5, name=["a", None]))
-        self.assertRaises(Exception, lambda: h.addVariables(5, out_array=["a"]))  # type: ignore[call-overload]
-        self.assertRaises(Exception, lambda: h.addVariables(5, name_prefix=["a"]))
+        self.assertRaises(HighsError, lambda: h.addVariables(5, type=[highspy.HighsVarType.kContinuous, None]))
+        self.assertRaises(HighsError, lambda: h.addVariables(5, name=["a", None]))
+        self.assertRaises(TypeError, lambda: h.addVariables(5, out_array=["a"]))  # type: ignore[call-overload]
+        self.assertRaises(HighsError, lambda: h.addVariables(5, name_prefix=["a"]))
 
         # correct usage
         y = h.addVariables(5, type=[highspy.HighsVarType.kContinuous] * 5)
@@ -1187,7 +1191,6 @@ class TestHighsPy(unittest.TestCase):
         self.assertEqualExpr(1 == h.getVariables()[0] >= 5, [0], [1], None, [5, h.inf])
         self.assertEqualExpr(5 <= h.getVariables()[0] == 1, [0], [1], None, [1, 1])
 
-
     def test_delete_variable(self):
         h = highspy.Highs()
 
@@ -1227,10 +1230,10 @@ class TestHighsPy(unittest.TestCase):
         X = h.addVariables(5)
 
         c1 = h.addConstr(D["a"] + D["b"] + D["c"] == 1)
-        cX = h.addConstrs((x >= 1 for x in X))
+        cX = h.addConstrs(x >= 1 for x in X)
         c2 = h.addConstr(qsum(X) == 1)
         c3 = h.addConstr(qsum(D.values()) == 1)
-        hash_test = {c1: "c1", c2: "c2", c3: "c3"}
+        _hash_test = {c1: "c1", c2: "c2", c3: "c3"}
 
         self.assertEqual(h.numConstrs, 8)
         self.assertEqual([int(c1)] + list(map(int, cX)) + [int(c2), int(c3)], [0, 1, 2, 3, 4, 5, 6, 7])
@@ -1275,7 +1278,7 @@ class TestHighsPy(unittest.TestCase):
         self.assertEqual({k: int(c) for k, c in cD.items()}, {"a": 10, "b": -1, "c": 11})
 
         # delete non-existent constraint
-        self.assertRaises(Exception, lambda: h.removeConstr(cD["b"], c1, cX, c2, c3, cM, cD))
+        self.assertRaises(HighsStatusError, lambda: h.removeConstr(cD["b"], c1, cX, c2, c3, cM, cD))
 
     def test_qsum(self):
         """Test summation."""
@@ -1286,17 +1289,17 @@ class TestHighsPy(unittest.TestCase):
         expr = qsum(X)
         self.assertEqualExpr(expr, X, [1] * 10)
 
-        expr = qsum((2 * x for x in X))
+        expr = qsum(2 * x for x in X)
         self.assertEqualExpr(expr, X, [2] * 10)
 
-        expr = qsum((qsum(X) for k in range(11))).simplify()
+        expr = qsum(qsum(X) for k in range(11)).simplify()
         self.assertEqualExpr(expr, X, [11] * 10)
 
         # sum
         expr = sum(X)
         self.assertEqualExpr(expr, X, [1] * 10, 0)
 
-        expr = sum((2 * x for x in X))
+        expr = sum(2 * x for x in X)
         self.assertEqualExpr(expr, X, [2] * 10, 0)
 
         # init sum with empty expression
@@ -1317,15 +1320,28 @@ class TestHighsPy(unittest.TestCase):
         x = h.addBinaries(N, N)
         y = np.fliplr(x)
 
-        h.addConstrs(x.sum(axis = 0) == 1)  # each col has exactly one queen
-        h.addConstrs(x.sum(axis = 1) == 1)  # each row has exactly one queen
+        h.addConstrs(x.sum(axis=0) == 1)  # each col has exactly one queen
+        h.addConstrs(x.sum(axis=1) == 1)  # each row has exactly one queen
 
         h.addConstrs(x.diagonal(k).sum() <= 1 for k in range(-N + 1, N))  # each diagonal has at most one queen
         h.addConstrs(y.diagonal(k).sum() <= 1 for k in range(-N + 1, N))  # each 'reverse' diagonal has at most one queen
 
+        entered = threading.Event()  # solver thread reached the callback
+        release = threading.Event()  # test tells solver it may continue
+
+        def hold(e):
+            entered.set()
+            release.wait(timeout=30)  # bounded delay, don't hang CI
+
         h.HandleUserInterrupt = True
+        h.cbMipInterrupt.subscribe(hold)
+
         h.startSolve()
-        self.assertRaises(Exception, lambda: h.startSolve())
+        self.assertTrue(entered.wait(timeout=30), "solver never reached callback")
+        self.assertTrue(h.is_solver_running())  # solver is still inside hold()
+        self.assertRaises(HighsError, lambda: h.startSolve())  # we do not allow new solve while already running
+        release.set()  # solver can exit hold()
+
         h.cancelSolve()
         h.wait()
 
@@ -1405,7 +1421,7 @@ class TestHighsPy(unittest.TestCase):
         self.assertEqual(len(check_solution), 0)
 
         h.disableCallbacks()
-        self.assertRaises(Exception, lambda: h.cbLogging.subscribe(do_nothing))
+        self.assertRaises(HighsStatusError, lambda: h.cbLogging.subscribe(do_nothing))
         h.enableCallbacks()
 
         h.cbLogging += chk_callback
@@ -1457,23 +1473,23 @@ class TestHighsPy(unittest.TestCase):
         h.cbLogging.unsubscribe_by_data("test")
         self.assertEqual(len(h.cbLogging.callbacks), 0)
 
+        # only add unique callbacks
         h.cbLogging += do_nothing
         h.cbLogging += do_nothing
         h.cbLogging += do_nothing
-        self.assertEqual(len(h.cbLogging.callbacks), 3)
+        self.assertEqual(len(h.cbLogging.callbacks), 1)
         h.cbLogging.clear()
         self.assertEqual(len(h.cbLogging.callbacks), 0)
 
-        self.assertRaises(Exception, lambda: h.__setattr__("cbLogging", None))
-        self.assertRaises(Exception, lambda: h.__setattr__("cbSimplexInterrupt", None))
-        self.assertRaises(Exception, lambda: h.__setattr__("cbIpmInterrupt", None))
-        self.assertRaises(Exception, lambda: h.__setattr__("cbMipSolution", None))
-        self.assertRaises(Exception, lambda: h.__setattr__("cbMipImprovingSolution", None))
-        self.assertRaises(Exception, lambda: h.__setattr__("cbMipLogging", None))
-        self.assertRaises(Exception, lambda: h.__setattr__("cbMipInterrupt", None))
-        self.assertRaises(Exception, lambda: h.__setattr__("cbMipGetCutPool", None))
-        self.assertRaises(Exception, lambda: h.__setattr__("cbMipDefineLazyConstraints", None))
-
+        self.assertRaises(HighsError, lambda: h.__setattr__("cbLogging", None))
+        self.assertRaises(HighsError, lambda: h.__setattr__("cbSimplexInterrupt", None))
+        self.assertRaises(HighsError, lambda: h.__setattr__("cbIpmInterrupt", None))
+        self.assertRaises(HighsError, lambda: h.__setattr__("cbMipSolution", None))
+        self.assertRaises(HighsError, lambda: h.__setattr__("cbMipImprovingSolution", None))
+        self.assertRaises(HighsError, lambda: h.__setattr__("cbMipLogging", None))
+        self.assertRaises(HighsError, lambda: h.__setattr__("cbMipInterrupt", None))
+        self.assertRaises(HighsError, lambda: h.__setattr__("cbMipGetCutPool", None))
+        self.assertRaises(HighsError, lambda: h.__setattr__("cbMipDefineLazyConstraints", None))
 
     def test_usercallbacks(self):
         N = 8
@@ -1507,18 +1523,13 @@ class TestHighsPy(unittest.TestCase):
 
         def partial_solution(e):
             # different sizes
-            self.assertEqual(e.data_in.setSolution(range(N*N), sol[::2]), highspy.HighsStatus.kError)
+            self.assertEqual(e.data_in.setSolution(range(N * N), sol[::2]), highspy.HighsStatus.kError)
 
             # get every 2nd element from 2d numpy sol array
             self.assertEqual(e.data_in.setSolution(x[:, ::2], sol[:, ::2]), highspy.HighsStatus.kOk)
-            self.assertEqual(list(e.data_in.user_solution[0:4]), [sol[0,0],highspy.kHighsUndefined,sol[0,2],highspy.kHighsUndefined])
+            self.assertEqual(list(e.data_in.user_solution[0:4]), [sol[0, 0], highspy.kHighsUndefined, sol[0, 2], highspy.kHighsUndefined])
             self.assertEqual(e.data_in.repairSolution(), highspy.HighsStatus.kOk)
-            self.assertEqual(list(e.data_in.user_solution[0:8]), list(sol[0,0:8]))
-
-            def try_change_ptr(e):
-                e.data_in.user_solution = [0] * (N*N)
-
-            self.assertRaises(Exception, lambda: try_change_ptr(e))
+            self.assertEqual(list(e.data_in.user_solution[0:8]), list(sol[0, 0:8]))
 
             # modify directly
             e.data_in.user_solution[:] = highspy.kHighsUndefined
@@ -1527,13 +1538,13 @@ class TestHighsPy(unittest.TestCase):
 
             # set subset partial without index
             # note: we're setting a sub-optimal feasible solution here
-            self.assertEqual(e.data_in.setSolution([0., 0., 0., 0., 0., 0., highspy.kHighsUndefined, 0.]), highspy.HighsStatus.kOk)
+            self.assertEqual(e.data_in.setSolution([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, highspy.kHighsUndefined, 0.0]), highspy.HighsStatus.kOk)
             self.assertEqual(e.data_in.repairSolution(), highspy.HighsStatus.kOk)
-            self.assertEqual(list(e.data_in.user_solution[0:8]), [0., 0., 0., 0., 0., 0., 1., 0.])
+            self.assertEqual(list(e.data_in.user_solution[0:8]), [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0])
             self.assertEqual(e.data_in.user_has_solution, True)
 
             # set partial solution with fractional value
-            self.assertEqual(e.data_in.setSolution([0., 0.5]), highspy.HighsStatus.kOk)
+            self.assertEqual(e.data_in.setSolution([0.0, 0.5]), highspy.HighsStatus.kOk)
             self.assertEqual(e.data_in.repairSolution(), highspy.HighsStatus.kError)
 
         # verify partial solution
@@ -1565,11 +1576,12 @@ class TestHighsPy(unittest.TestCase):
 
         # Verify objectives are different (different problems)
         self.assertNotEqual(first_objective, second_objective)
+
     def test_addVars_invalid_parameter(self):
         """ensure_real raises on invalid parameter"""
         h = highspy.Highs()
         h.silent()
-        self.assertRaises(Exception, lambda: h.addVariables(3, lb="invalid"))
+        self.assertRaises(HighsError, lambda: h.addVariables(3, lb="invalid"))
 
     def test_delete_variable_with_list(self):
         """deleteVariable with list"""
@@ -1656,8 +1668,9 @@ class TestHighsPy(unittest.TestCase):
     def test_array_sum_no_highs(self):
         """HighspyArray.sum() without Highs raises"""
         from highspy.highs import HighspyArray
+
         arr = HighspyArray(np.array([1, 2, 3], dtype=object), None)
-        self.assertRaises(Exception, lambda: arr.sum())
+        self.assertRaises(HighsError, lambda: arr.sum())
 
     def test_index_protocol(self):
         """vars/cons be used as indices"""
@@ -1675,7 +1688,7 @@ class TestHighsPy(unittest.TestCase):
         x = h.addVariable()
         self.assertTrue(x.__eq__(None))
         self.assertTrue(x.__ne__(None))
-        self.assertRaises(Exception, lambda: x.__ne__(5))
+        self.assertRaises(HighsError, lambda: x.__ne__(5))
 
     def test_with_context_manager(self):
         with highspy.Highs() as h:
@@ -1684,7 +1697,7 @@ class TestHighsPy(unittest.TestCase):
             self.assertEqual(h.val(x), 0.0)
 
         # manually call enter/exit to test threading, e.g.,
-        # 
+        #
         # with Highs() as h:
         #    ...
         #    h.startSolve()
@@ -1697,16 +1710,27 @@ class TestHighsPy(unittest.TestCase):
         x = h.addBinaries(N, N)
         y = np.fliplr(x)
 
-        h.addConstrs(x.sum(axis = 0) == 1)
-        h.addConstrs(x.sum(axis = 1) == 1),
-        h.addConstrs(x.diagonal(k).sum() <= 1 for k in range(-N + 1, N)) 
+        h.addConstrs(x.sum(axis=0) == 1)
+        h.addConstrs(x.sum(axis=1) == 1)
+        h.addConstrs(x.diagonal(k).sum() <= 1 for k in range(-N + 1, N))
         h.addConstrs(y.diagonal(k).sum() <= 1 for k in range(-N + 1, N))
 
-        h.HandleUserInterrupt = True
-        h.startSolve()
-        self.assertEqual(h.is_solver_running(), True)
+        entered = threading.Event()  # solver thread reached the callback
+        release = threading.Event()  # test tells solver it may continue
 
+        def hold(e):
+            entered.set()
+            release.wait(timeout=30)  # bounded delay, don't hang CI
+
+        h.HandleUserInterrupt = True
+        h.cbMipInterrupt.subscribe(hold)
+
+        h.startSolve()
+        self.assertTrue(entered.wait(timeout=30), "solver never reached callback")
+        self.assertTrue(h.is_solver_running())  # solver is still inside hold()
+        release.set()  # solver can exit hold()
         h.__exit__(None, None, None)
+
         self.assertEqual(h.is_solver_running(), False)
 
 
@@ -1730,8 +1754,8 @@ class TestHighsLinearExpressionPy(unittest.TestCase):
 
         expr = self.h.expr()
         self.assertEqualExpr(expr, [], [])
-        self.assertRaises(Exception, lambda: self.h.expr([]))  # type: ignore[arg-type]
-        self.assertRaises(Exception, lambda: self.h.expr(self.h))  # type: ignore[arg-type]
+        self.assertRaises(HighsError, lambda: self.h.expr([]))  # type: ignore[arg-type]
+        self.assertRaises(HighsError, lambda: self.h.expr(self.h))  # type: ignore[arg-type]
 
     def test_init_var(self):
         # Test initialization with a highs_var
@@ -1787,9 +1811,9 @@ class TestHighsLinearExpressionPy(unittest.TestCase):
         e2 = 2 * y
 
         # addition
-        self.assertRaises(Exception, lambda: e1 + (e2 + 3))  # cannot add if one has bounds and the other has constant
-        self.assertRaises(Exception, lambda: e1 + 5)  # cannot add constant to expr with bounds
-        self.assertRaises(Exception, lambda: e1 + [])  # type: ignore[operator]  # unknown type
+        self.assertRaises(HighsError, lambda: e1 + (e2 + 3))  # cannot add if one has bounds and the other has constant
+        self.assertRaises(HighsError, lambda: e1 + 5)  # cannot add constant to expr with bounds
+        self.assertRaises(HighsError, lambda: e1 + [])  # type: ignore[operator]  # unknown type
 
         expr = e1 + (1 <= (e2 + 4) <= 2)
         self.assertEqualExpr(expr, [x, z, y], [1, 1, 2], None, [-self.h.inf, 1])
@@ -1799,9 +1823,9 @@ class TestHighsLinearExpressionPy(unittest.TestCase):
         self.assertEqualExpr(expr, [y, x, z], [2, 1, 1], None, [-self.h.inf, 3])
 
         # subtract
-        self.assertRaises(Exception, lambda: e1 - (e2 + 3))  # cannot add if one has bounds and the other has constant
-        self.assertRaises(Exception, lambda: e1 - 5)  # cannot add constant to expr with bounds
-        self.assertRaises(Exception, lambda: e1 - [])  # type: ignore[operator]  # unknown type
+        self.assertRaises(HighsError, lambda: e1 - (e2 + 3))  # cannot add if one has bounds and the other has constant
+        self.assertRaises(HighsError, lambda: e1 - 5)  # cannot add constant to expr with bounds
+        self.assertRaises(HighsError, lambda: e1 - [])  # type: ignore[operator]  # unknown type
 
         expr = e1 - (1 <= (e2 + 4) <= 2)  # (-inf <= x + z <= 3) + (2 <= -2y <= 3)
         self.assertEqualExpr(expr, [x, z, y], [1, 1, -2], None, [-self.h.inf, 6])
@@ -1861,11 +1885,11 @@ class TestHighsLinearExpressionPy(unittest.TestCase):
 
         expr = x + y == [1, 2]
         self.assertEqualExpr(expr, [x, y], [1, 1], None, [1, 2])
-        self.assertRaises(Exception, lambda: x == [x, y])
-        self.assertRaises(Exception, lambda: x == self.h)
-        self.assertRaises(Exception, lambda: x != self.h)
-        self.assertRaises(Exception, lambda: x + y != y)
-        self.assertRaises(Exception, lambda: x + 5 != self.h)
+        self.assertRaises(HighsError, lambda: x == [x, y])
+        self.assertRaises(HighsError, lambda: x == self.h)
+        self.assertRaises(HighsError, lambda: x != self.h)
+        self.assertRaises(HighsError, lambda: x + y != y)
+        self.assertRaises(HighsError, lambda: x + 5 != self.h)
 
     def test_le_inequality(self):
         x, y = self.x[0:2]
@@ -1873,7 +1897,7 @@ class TestHighsLinearExpressionPy(unittest.TestCase):
         # Test inequality of two highs_linear_expressions
         expr = x <= y
         self.assertEqualExpr(expr, [x, y], [1, -1], None, [-self.h.inf, 0])
-        self.assertRaises(Exception, lambda: x <= self.h)  # type: ignore[operator]
+        self.assertRaises(HighsError, lambda: x <= self.h)  # type: ignore[operator]
 
     def test_ge_inequality(self):
         x, y = self.x[0:2]
@@ -1881,12 +1905,12 @@ class TestHighsLinearExpressionPy(unittest.TestCase):
         # Test inequality of two highs_linear_expressions
         expr = x >= y  # y - x <= 0
         self.assertEqualExpr(expr, [y, x], [1, -1], None, [-self.h.inf, 0])
-        self.assertRaises(Exception, lambda: x >= self.h)  # type: ignore[operator]
-        self.assertRaises(Exception, lambda: x + 4 >= self.h)  # type: ignore[operator]
-        self.assertRaises(Exception, lambda: x + 4 >= (y <= 2))
+        self.assertRaises(HighsError, lambda: x >= self.h)  # type: ignore[operator]
+        self.assertRaises(HighsError, lambda: x + 4 >= self.h)  # type: ignore[operator]
+        self.assertRaises(HighsError, lambda: x + 4 >= (y <= 2))
 
     def test_chain_inequality(self):
-        x, y, z = self.x[0:3]
+        x, y, _z = self.x[0:3]
 
         # test basic chain inequality
         expr = 2 <= x + y <= 6
@@ -2023,11 +2047,11 @@ class TestHighsLinearExpressionPy(unittest.TestCase):
         t3 = (qsum(self.x) == 1 + qsum(self.x)).simplify()  # [] == 1
         self.assertEqualExpr(t3, vx, [0] * len(vx), None, [1, 1])
 
-        self.assertRaises(Exception, lambda: x <= y <= 1)
-        self.assertRaises(Exception, lambda: (qsum(self.x) + 5 >= y) >= qsum(self.x) + 2)
-        self.assertRaises(Exception, lambda: qsum(self.x) + 2 <= (y <= qsum(self.x) + 5))
-        self.assertRaises(Exception, lambda: qsum(self.x) + 2 <= y <= 5)
-        self.assertRaises(Exception, lambda: 2 <= y <= 5 + qsum(self.x))
+        self.assertRaises(HighsError, lambda: x <= y <= 1)
+        self.assertRaises(HighsError, lambda: (qsum(self.x) + 5 >= y) >= qsum(self.x) + 2)
+        self.assertRaises(HighsError, lambda: qsum(self.x) + 2 <= (y <= qsum(self.x) + 5))
+        self.assertRaises(HighsError, lambda: qsum(self.x) + 2 <= y <= 5)
+        self.assertRaises(HighsError, lambda: 2 <= y <= 5 + qsum(self.x))
 
     def test_order_priority(self):
         x, y, z = self.x[:3]
@@ -2110,19 +2134,19 @@ class TestHighsLinearExpressionPy(unittest.TestCase):
 
     def test_bounds_already_set(self):
         x, y = self.x[0:2]
-        self.assertRaises(Exception, lambda: (1 <= 2 * x + 3 * y) <= 5)
-        self.assertRaises(Exception, lambda: (x <= 4) <= 5)
-        self.assertRaises(Exception, lambda: 2 <= (x <= 4) <= 5)
-        self.assertRaises(Exception, lambda: 2 <= (4 <= x))
-        self.assertRaises(Exception, lambda: 2 <= (x <= 4))
-        self.assertRaises(Exception, lambda: 4 >= (x >= 2))
+        self.assertRaises(HighsError, lambda: (1 <= 2 * x + 3 * y) <= 5)
+        self.assertRaises(HighsError, lambda: (x <= 4) <= 5)
+        self.assertRaises(HighsError, lambda: 2 <= (x <= 4) <= 5)
+        self.assertRaises(HighsError, lambda: 2 <= (4 <= x))
+        self.assertRaises(HighsError, lambda: 2 <= (x <= 4))
+        self.assertRaises(HighsError, lambda: 4 >= (x >= 2))
 
         # Cannot a constant if bounds already exist
-        self.assertRaises(Exception, lambda: (x + y <= 3) + 5)
+        self.assertRaises(HighsError, lambda: (x + y <= 3) + 5)
         self.assertEqualExpr((x + y <= 3) + (self.h.expr() == 5), [x, y], [1, 1], None, [-self.h.inf, 8])
 
         # Cannot a expr with constant if bounds already exist
-        self.assertRaises(Exception, lambda: (x + y <= 3) + (x + 5))
+        self.assertRaises(HighsError, lambda: (x + y <= 3) + (x + 5))
         self.assertEqualExpr((x + y <= 3) + (x == -5), [x, y, x], [1, 1, 1], None, [-self.h.inf, -2])
 
     def test_addition(self):
@@ -2208,9 +2232,9 @@ class TestHighsLinearExpressionPy(unittest.TestCase):
         e2 = highs_linear_expression(-1) * e1
         self.assertEqualExpr(e2, [x, y], [-3, 3])
 
-        self.assertRaises(Exception, lambda: e1 * x)
-        self.assertRaises(Exception, lambda: e1 * highs_linear_expression(x))
-        self.assertRaises(Exception, lambda: e1 * highs_linear_expression(x - x))
+        self.assertRaises(HighsError, lambda: e1 * x)
+        self.assertRaises(HighsError, lambda: e1 * highs_linear_expression(x))
+        self.assertRaises(HighsError, lambda: e1 * highs_linear_expression(x - x))
 
         # Test with constant
         e1 = x - y + 4
@@ -2285,10 +2309,10 @@ class TestHighsLinearExpressionPy(unittest.TestCase):
         expr /= -2
         self.assertEqualExpr(expr, [x, y], [-0.5, -1], None, [-4, -2])
 
-        self.assertRaises(Exception, lambda: x / y)
-        self.assertRaises(Exception, lambda: (x + y) / (x + 1))
-        self.assertRaises(Exception, lambda: 2 / x)
-        self.assertRaises(Exception, lambda: 2 / (x + y))
+        self.assertRaises(HighsError, lambda: x / y)  # type: ignore
+        self.assertRaises(HighsError, lambda: (x + y) / (x + 1))
+        self.assertRaises(HighsError, lambda: 2 / x)
+        self.assertRaises(HighsError, lambda: 2 / (x + y))
         self.assertRaises(ZeroDivisionError, lambda: x / 0)
         self.assertRaises(ZeroDivisionError, lambda: (x + y) / highs_linear_expression(0))
 
@@ -2399,9 +2423,9 @@ class TestHighsLinearExpressionPy(unittest.TestCase):
         obj1.rel_tolerance = 0.1
         obj1.abs_tolerance = 0.2
         obj2 = highspy.HighsLinearObjective()
-        obj2.offset=0
-        obj2.coefficients=[3, 4]
-        obj2.priority=1
+        obj2.offset = 0
+        obj2.coefficients = [3, 4]
+        obj2.priority = 1
         model.addLinearObjective(obj1)
         model.addLinearObjective(obj2)
         model.addRow(0.0, 20.0, num_vars, np.arange(num_vars), np.array([5.0, 4.0]))
@@ -2504,7 +2528,7 @@ class TestHighsLinearExpressionPy(unittest.TestCase):
 
     def test_get_iis(self):
         h = highspy.Highs()
-#        h.silent()
+        #        h.silent()
         # Build an infeasible LP problem
         # Problem: minimize x + y
         # Subject to: x + y <= 0.5 and x + y >= 2.0 (contradictory constraints)
@@ -2542,7 +2566,7 @@ class TestHighsLinearExpressionPy(unittest.TestCase):
         self.assertEqual(model_status, highspy.HighsModelStatus.kInfeasible)
 
         h.setOptionValue("iis_strategy", highspy.IisStrategy.kIisStrategyIrreducible)
-        [status, iis] = h.getIis()
+        [_status, iis] = h.getIis()
 
         self.assertEqual(iis.valid_, True)
         self.assertEqual(iis.col_index_[0], 0)
@@ -2562,7 +2586,7 @@ class TestHighsLinearExpressionPy(unittest.TestCase):
         x = self.x[0]
         expr = x + 1
         self.assertTrue(expr.__ne__(None))
-        self.assertRaises(Exception, lambda: expr.__ne__(5))
+        self.assertRaises(HighsError, lambda: expr.__ne__(5))
         self.assertRaises(TypeError, lambda: int(expr))
 
     def test_constant_expr_mul_var(self):
@@ -2571,4 +2595,4 @@ class TestHighsLinearExpressionPy(unittest.TestCase):
         expr = highs_linear_expression(5)
         result = expr * x
         self.assertEqualExpr(result, [x], [5.0])
-        self.assertRaises(Exception, lambda: expr * "bad") # type: ignore
+        self.assertRaises(HighsError, lambda: expr * "bad")  # type: ignore
