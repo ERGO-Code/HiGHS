@@ -846,8 +846,13 @@ void HighsCliqueTable::fixLastActiveAndRemove(HighsDomain& globaldom,
                                               HighsInt cliqueid) {
   if (cliques[cliqueid].equality && cliques[cliqueid].numActive() == 1)
     for (HighsInt i = cliques[cliqueid].start; i != cliques[cliqueid].end; ++i)
-      if (!globaldom.isFixed(cliqueentries[i].col)) {
-        fixCol(globaldom, cliqueentries[i].complement(), false);
+      if (!colDeleted[cliqueentries[i].col]) {
+        if (!globaldom.isFixed(static_cast<HighsInt>(cliqueentries[i].col))) {
+          fixCol(globaldom, cliqueentries[i].complement(), false);
+        } else if (globaldom.col_lower_[cliqueentries[i].col] !=
+                   cliqueentries[i].val) {
+          globaldom.markInfeasible();
+        }
         break;
       }
   removeClique(cliqueid);
@@ -1529,8 +1534,10 @@ void HighsCliqueTable::processInfeasibleVertices(HighsDomain& globaldom) {
     vHashListsSizeTwo =
         std::move(invertedHashListSizeTwo[v.complement().index()]);
 
-    vHashListsSizeTwo.for_each(
-        [&](HighsInt cliqueid) { removeClique(cliqueid); });
+    vHashListsSizeTwo.for_each([&](HighsInt cliqueid) {
+      ++cliques[cliqueid].numZeroFixed;
+      fixLastActiveAndRemove(globaldom, cliqueid);
+    });
 
     assert(cliquehitinds.empty());
     std::vector<CliqueVar> clq;
@@ -1544,6 +1551,8 @@ void HighsCliqueTable::processInfeasibleVertices(HighsDomain& globaldom) {
                  std::max(
                      HighsInt{10},
                      (cliques[cliqueid].end - cliques[cliqueid].start) >> 1)) {
+        const bool equality = cliques[cliqueid].equality;
+        const HighsInt origin = cliques[cliqueid].origin;
         clq.assign(cliqueentries.begin() + cliques[cliqueid].start,
                    cliqueentries.begin() + cliques[cliqueid].end);
 
@@ -1555,15 +1564,27 @@ void HighsCliqueTable::processInfeasibleVertices(HighsDomain& globaldom) {
 
         assert(computeNumDeleted(clq) == cliques[cliqueid].numZeroFixed);
 
-        removeClique(cliqueid);
-        clq.erase(std::remove_if(clq.begin(), clq.end(),
-                                 [&](CliqueVar x) {
-                                   return globaldom.isFixed(x.col) &&
-                                          globaldom.col_lower_[x.col] ==
-                                              1 - x.val;
-                                 }),
-                  clq.end());
-        if (clq.size() > 1) doAddClique(clq.data(), clq.size());
+        removeClique(cliqueid, false);
+        clq.erase(
+            std::remove_if(
+                clq.begin(), clq.end(),
+                [&](CliqueVar x) {
+                  return (globaldom.isFixed(static_cast<HighsInt>(x.col)) &&
+                          globaldom.col_lower_[x.col] == 1 - x.val) ||
+                         colDeleted[x.col];
+                }),
+            clq.end());
+        if (clq.size() > 1) {
+          doAddClique(clq.data(), clq.size(), equality, origin);
+        } else if (equality) {
+          if (clq.empty() ||
+              (globaldom.isFixed(static_cast<HighsInt>(clq[0].col)) &&
+               globaldom.col_lower_[clq[0].col] != clq[0].val)) {
+            globaldom.markInfeasible();
+          } else if (!globaldom.isFixed(static_cast<HighsInt>(clq[0].col))) {
+            fixCol(globaldom, clq[0].complement(), false);
+          }
+        }
       }
     });
   }
