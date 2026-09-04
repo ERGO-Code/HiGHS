@@ -434,6 +434,7 @@ set(highs_sources
     pdlp/hipdlp/pdhg.cc
     pdlp/hipdlp/restart.cc
     pdlp/hipdlp/scaling.cc
+    pdlp/hipdlp/verification/certificate_verifier.cc
     pdlp/hipdlp/verification/kkt_verifier.cc
     presolve/HighsPostsolveStack.cpp
     presolve/HighsSymmetry.cpp
@@ -612,6 +613,7 @@ set(highs_headers
     pdlp/hipdlp/restart.hpp
     pdlp/hipdlp/scaling.hpp
     pdlp/hipdlp/solver_results.hpp
+    pdlp/hipdlp/verification/certificate_verifier.hpp
     pdlp/hipdlp/verification/kkt_verifier.hpp
     presolve/HighsPostsolveStack.h
     presolve/HighsSymmetry.h

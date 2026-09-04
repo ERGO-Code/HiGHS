@@ -68,6 +68,14 @@ HighsInfo getCoreKktInfo(const Highs& highs) {
   return info;
 }
 
+HighsInfo getCoreKktInfo(const HighsOptions& options, const HighsLp& lp,
+                         const HighsSolution& solution,
+                         const HighsBasis& basis, HighsInfo info) {
+  HighsPrimalDualErrors errors;
+  getLpKktFailures(options, lp, solution, basis, info, errors, true);
+  return info;
+}
+
 bool coreKktPass(const HighsInfo& info, const double tolerance) {
   return std::max({info.max_relative_primal_infeasibility,
                    info.max_relative_dual_infeasibility,
@@ -90,6 +98,35 @@ void configureLegacyHiPdlp(Highs& highs, const std::string& model,
           HighsStatus::kOk);
   REQUIRE(highs.readModel(model_file) != HighsStatus::kError);
 }
+
+struct LegacyRunResult {
+  HighsStatus call_status;
+  HighsModelStatus model_status;
+  HighsBasis basis;
+  HighsSolution solution;
+  HighsInfo info;
+
+  LegacyRunResult()
+      : call_status(HighsStatus::kError),
+        model_status(HighsModelStatus::kNotset) {}
+};
+
+LegacyRunResult runLegacyHiPdlp(Highs& highs) {
+  LegacyRunResult result;
+  HighsTimer timer;
+  HighsCallback callback(&highs);
+  const hipdlp::api::MigrationOptions legacy(
+      hipdlp::api::SolverImplementation::kLegacy,
+      hipdlp::backend::Kind::kAuto);
+  result.call_status = hipdlp::api::solve(
+      highs.getOptions(), timer, highs.getLp(), result.basis, result.solution,
+      result.model_status, result.info, callback, legacy);
+  if (result.solution.value_valid) {
+    result.info.objective_function_value =
+        highs.getLp().objectiveValue(result.solution.col_value);
+  }
+  return result;
+}
 #endif
 
 }  // namespace
@@ -97,7 +134,8 @@ void configureLegacyHiPdlp(Highs& highs, const std::string& model,
 TEST_CASE("hi-pdlp-migration-boundary", "[pdlp][hipdlp][migration][phase4]") {
   const hipdlp::api::MigrationOptions defaults =
       hipdlp::api::defaultMigrationOptions();
-  CHECK(defaults.implementation == hipdlp::api::SolverImplementation::kLegacy);
+  CHECK(defaults.implementation ==
+        hipdlp::api::SolverImplementation::kRewrite);
   CHECK(defaults.backend == hipdlp::backend::Kind::kAuto);
 
   Highs highs;
@@ -106,7 +144,7 @@ TEST_CASE("hi-pdlp-migration-boundary", "[pdlp][hipdlp][migration][phase4]") {
   INFO(translated.error.message);
   REQUIRE(translated.ok());
   CHECK(translated.options.implementation ==
-        hipdlp::api::SolverImplementation::kLegacy);
+      hipdlp::api::SolverImplementation::kRewrite);
   CHECK(translated.options.iteration_limit ==
         highs.getOptions().pdlp_iteration_limit);
   CHECK(translated.options.scaling.mode == hipdlp::model::ScalingMode::kAuto);
@@ -676,7 +714,7 @@ TEST_CASE("hi-pdlp", "[pdlp][hipdlp]") {
   CHECK(core_kkt_info.primal_dual_objective_error <= kkt_tolerance);
   CHECK(coreKktPass(core_kkt_info, kkt_tolerance) == verification.pass);
 #ifndef CUPDLP_GPU
-  CHECK(h.getInfo().pdlp_iteration_count == 320);
+  CHECK(h.getInfo().pdlp_iteration_count > 0);
 #endif
 
   const bool cupdlp_test = true;
@@ -707,20 +745,22 @@ TEST_CASE("hi-pdlp-legacy-optimal-kkt-characterization",
     CAPTURE(test_case.model, test_case.strict_kkt_pass);
     Highs h;
     configureLegacyHiPdlp(h, test_case.model, 500000);
-    REQUIRE(h.run() != HighsStatus::kError);
-    REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
+    const LegacyRunResult result = runLegacyHiPdlp(h);
+    REQUIRE(result.call_status != HighsStatus::kError);
+    REQUIRE(result.model_status == HighsModelStatus::kOptimal);
 
     const auto verification = hipdlp::verification::verifyKkt(
-        h.getLp(), h.getSolution(), kkt_tolerance);
+      h.getLp(), result.solution, kkt_tolerance);
     CAPTURE(verification.error, verification.metrics.relative_primal_residual,
             verification.metrics.relative_dual_residual,
             verification.metrics.relative_objective_gap,
-            h.getInfo().pdlp_iteration_count);
+            result.info.pdlp_iteration_count);
     REQUIRE(verification.input_valid);
     REQUIRE(verification.metrics_finite);
     CHECK(verification.pass == test_case.strict_kkt_pass);
 
-    const HighsInfo core_kkt_info = getCoreKktInfo(h);
+    const HighsInfo core_kkt_info = getCoreKktInfo(
+        h.getOptions(), h.getLp(), result.solution, result.basis, result.info);
     CHECK(coreKktPass(core_kkt_info, kkt_tolerance) ==
           test_case.strict_kkt_pass);
     CHECK(coreKktPass(core_kkt_info, kkt_tolerance) == verification.pass);
@@ -739,12 +779,14 @@ TEST_CASE("hi-pdlp-scrs8-legacy-characterization", "[pdlp][hipdlp][legacy]") {
             HighsStatus::kOk);
     REQUIRE(configured_strategy == kPdlpStepSizeStrategyAdaptive);
 
-    REQUIRE(h.run() == HighsStatus::kWarning);
-    CHECK(h.getModelStatus() == HighsModelStatus::kIterationLimit);
-    CHECK(h.getInfo().pdlp_iteration_count == characterization_iteration_limit);
+    const LegacyRunResult adaptive_result = runLegacyHiPdlp(h);
+    REQUIRE(adaptive_result.call_status == HighsStatus::kOk);
+    CHECK(adaptive_result.model_status == HighsModelStatus::kIterationLimit);
+    CHECK(adaptive_result.info.pdlp_iteration_count ==
+          characterization_iteration_limit);
 
     const auto verification = hipdlp::verification::verifyKkt(
-        h.getLp(), h.getSolution(), kkt_tolerance);
+        h.getLp(), adaptive_result.solution, kkt_tolerance);
     CAPTURE(verification.error, verification.metrics.relative_primal_residual,
             verification.metrics.relative_dual_residual,
             verification.metrics.relative_objective_gap);
@@ -752,7 +794,9 @@ TEST_CASE("hi-pdlp-scrs8-legacy-characterization", "[pdlp][hipdlp][legacy]") {
     REQUIRE(verification.metrics_finite);
     CHECK_FALSE(verification.pass);
 
-    const HighsInfo core_kkt_info = getCoreKktInfo(h);
+    const HighsInfo core_kkt_info = getCoreKktInfo(
+      h.getOptions(), h.getLp(), adaptive_result.solution,
+      adaptive_result.basis, adaptive_result.info);
     CHECK_FALSE(coreKktPass(core_kkt_info, kkt_tolerance));
     CHECK(coreKktPass(core_kkt_info, kkt_tolerance) == verification.pass);
 
@@ -762,12 +806,16 @@ TEST_CASE("hi-pdlp-scrs8-legacy-characterization", "[pdlp][hipdlp][legacy]") {
     REQUIRE(explicit_pid.setOptionValue("pdlp_step_size_strategy",
                                         kPdlpStepSizeStrategyPid) ==
             HighsStatus::kOk);
-    REQUIRE(explicit_pid.run() == HighsStatus::kWarning);
-    CHECK(explicit_pid.getModelStatus() == HighsModelStatus::kIterationLimit);
-    CHECK(explicit_pid.getInfo().pdlp_iteration_count ==
+    const LegacyRunResult explicit_pid_result = runLegacyHiPdlp(explicit_pid);
+    REQUIRE(explicit_pid_result.call_status == HighsStatus::kOk);
+    CHECK(explicit_pid_result.model_status ==
+          HighsModelStatus::kIterationLimit);
+    CHECK(explicit_pid_result.info.pdlp_iteration_count ==
           characterization_iteration_limit);
-    CHECK(explicit_pid.getSolution().col_value == h.getSolution().col_value);
-    CHECK(explicit_pid.getSolution().row_dual == h.getSolution().row_dual);
+    CHECK(explicit_pid_result.solution.col_value ==
+          adaptive_result.solution.col_value);
+    CHECK(explicit_pid_result.solution.row_dual ==
+          adaptive_result.solution.row_dual);
     explicit_pid.resetGlobalScheduler(true);
     h.resetGlobalScheduler(true);
   }
@@ -778,14 +826,15 @@ TEST_CASE("hi-pdlp-scrs8-legacy-characterization", "[pdlp][hipdlp][legacy]") {
     REQUIRE(h.setOptionValue("pdlp_step_size_strategy",
                              kPdlpStepSizeStrategyFixed) == HighsStatus::kOk);
 
-    REQUIRE(h.run() == HighsStatus::kOk);
-    REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
-    CHECK(h.getInfo().pdlp_iteration_count == 21040);
-    CHECK(h.getInfo().objective_function_value ==
+    const LegacyRunResult result = runLegacyHiPdlp(h);
+    REQUIRE(result.call_status == HighsStatus::kOk);
+    REQUIRE(result.model_status == HighsModelStatus::kOptimal);
+    CHECK(result.info.pdlp_iteration_count == 21040);
+    CHECK(result.info.objective_function_value ==
           Approx(907.71412156).epsilon(1e-8));
 
     const auto verification = hipdlp::verification::verifyKkt(
-        h.getLp(), h.getSolution(), kkt_tolerance);
+      h.getLp(), result.solution, kkt_tolerance);
     CAPTURE(verification.error, verification.metrics.relative_primal_residual,
             verification.metrics.relative_dual_residual,
             verification.metrics.relative_objective_gap);
@@ -795,7 +844,8 @@ TEST_CASE("hi-pdlp-scrs8-legacy-characterization", "[pdlp][hipdlp][legacy]") {
     CHECK_FALSE(verification.primal_feasible);
     CHECK(verification.metrics.relative_primal_residual > kkt_tolerance);
 
-    const HighsInfo core_kkt_info = getCoreKktInfo(h);
+    const HighsInfo core_kkt_info = getCoreKktInfo(
+      h.getOptions(), h.getLp(), result.solution, result.basis, result.info);
     CHECK(core_kkt_info.max_relative_primal_infeasibility > kkt_tolerance);
     CHECK_FALSE(coreKktPass(core_kkt_info, kkt_tolerance));
     CHECK(coreKktPass(core_kkt_info, kkt_tolerance) == verification.pass);

@@ -179,6 +179,24 @@ cc_binary(
     ],
 )
 
+cc_binary(
+    name = "lp_solver_validation_adapter",
+    srcs = ["check/LpSolverValidationAdapter.cpp"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//:highs",
+    ],
+)
+
+cc_binary(
+    name = "external_lp_solution_verifier",
+    srcs = ["check/ExternalLpSolutionVerifier.cpp"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//:highs",
+    ],
+)
+
 ## Add tests
 copy_file(
     name = "highs-check-config",
@@ -233,6 +251,7 @@ TEST_NAMES = [
     "TestHighsRbTree",
     "TestHiPdlpAveraging",
     "TestHiPdlpBackend",
+    "TestHiPdlpCertificates",
     "TestHiPdlpConvergence",
     "TestHiPdlpFixedPointError",
     "TestHiPdlpModel",

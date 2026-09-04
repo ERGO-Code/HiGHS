@@ -56,7 +56,8 @@ HighsStatus solve(const HighsOptions& options, HighsTimer& timer,
                   const HighsLp& lp, HighsBasis& highs_basis,
                   HighsSolution& highs_solution, HighsModelStatus& model_status,
                   HighsInfo& highs_info, HighsCallback& callback,
-                  const MigrationOptions& migration_options) {
+                  const MigrationOptions& migration_options,
+                  SolveResult* rewrite_result) {
   const OptionTranslationResult translation =
       translateOptions(options, migration_options);
   if (!translation.ok()) {
@@ -80,9 +81,11 @@ HighsStatus solve(const HighsOptions& options, HighsTimer& timer,
   context.log = &log_sink;
 
   const model::OriginalModel original_model(lp);
-  return applyRewriteResult(
-      options, algorithm::solve(rewrite_options, original_model, context),
-      highs_basis, highs_solution, model_status, highs_info);
+  const SolveResult result =
+      algorithm::solve(rewrite_options, original_model, context);
+  if (rewrite_result != nullptr) *rewrite_result = result;
+  return applyRewriteResult(options, result, highs_basis, highs_solution,
+                            model_status, highs_info);
 }
 
 }  // namespace api

@@ -1,9 +1,11 @@
 #include <cstdio>
 #include <fstream>
 #include <iterator>
+#include <limits>
 #include <string>
 #include <vector>
 
+#include "HCheckConfig.h"
 #include "Highs.h"
 #include "catch.hpp"
 #include "lp_data/HConst.h"
@@ -213,6 +215,38 @@ TEST_CASE("hi-pdlp-rewrite-solver-postsolves-scaled-solution",
 
   const hipdlp::verification::KktVerificationResult verification =
       hipdlp::verification::verifyKkt(lp, result.solution, kSolverTolerance);
+  INFO(verification.error);
+  CHECK(verification.pass);
+}
+
+TEST_CASE("hi-pdlp-rewrite-scaling-stages-solve-paired-inequalities",
+          "[pdlp][hipdlp][phase7][solver][scaling][sctest]") {
+  Highs highs;
+  REQUIRE(highs.readModel(std::string(HIGHS_DIR) +
+                          "/check/instances/sctest.mps") ==
+          HighsStatus::kOk);
+  const HighsLp lp = highs.getLp();
+  hipdlp::api::SolverOptions options = makeCpuFixedOptions();
+  options.iteration_limit = 100000;
+  options.policy.step_size = hipdlp::api::StepSizePolicy::kPid;
+  options.scaling.mode = hipdlp::model::ScalingMode::kLegacy;
+
+  SECTION("Ruiz") {
+    options.scaling.legacy_scaling_mode = kPdlpScalingRuiz;
+  }
+  SECTION("Pock-Chambolle") {
+    options.scaling.legacy_scaling_mode = kPdlpScalingPC;
+  }
+
+  const hipdlp::api::SolveResult result = hipdlp::algorithm::solve(
+      options, hipdlp::model::OriginalModel(lp));
+  INFO(result.error.message);
+  REQUIRE(result.ok());
+  REQUIRE(result.status == hipdlp::api::SolverStatus::kOptimal);
+  REQUIRE(result.iteration_count < options.iteration_limit);
+  const hipdlp::verification::KktVerificationResult verification =
+      hipdlp::verification::verifyKkt(lp, result.solution,
+                                      options.kkt_tolerance);
   INFO(verification.error);
   CHECK(verification.pass);
 }
@@ -467,18 +501,18 @@ TEST_CASE("hi-pdlp-effective-policy-translation",
       hipdlp::api::SolverImplementation::kRewrite,
       hipdlp::backend::Kind::kAuto);
 
-  SECTION("the public default migration still selects legacy") {
+  SECTION("the public default migration selects rewrite") {
     const hipdlp::api::MigrationOptions defaults =
         hipdlp::api::defaultMigrationOptions();
     CHECK(defaults.implementation ==
-          hipdlp::api::SolverImplementation::kLegacy);
+          hipdlp::api::SolverImplementation::kRewrite);
     CHECK(defaults.backend == hipdlp::backend::Kind::kAuto);
     const hipdlp::api::OptionTranslationResult translated =
         hipdlp::api::translateOptions(highs.getOptions(), defaults);
     INFO(translated.error.message);
     REQUIRE(translated.ok());
     CHECK(translated.options.implementation ==
-          hipdlp::api::SolverImplementation::kLegacy);
+          hipdlp::api::SolverImplementation::kRewrite);
   }
 
   SECTION("default HiGHS options translate for the rewrite selector") {
@@ -540,10 +574,12 @@ TEST_CASE("hi-pdlp-effective-policy-translation",
     CHECK(translated.error.code == hipdlp::api::ErrorCode::kInvalidOption);
     CHECK(translated.error.message.find("Malitsky-Pock") != std::string::npos);
 
-    // The legacy public path keeps its own semantics for the same value.
+    // The retained internal legacy selector keeps its own semantics.
+    const hipdlp::api::MigrationOptions legacy_selector(
+        hipdlp::api::SolverImplementation::kLegacy,
+        hipdlp::backend::Kind::kAuto);
     const hipdlp::api::OptionTranslationResult legacy =
-        hipdlp::api::translateOptions(highs.getOptions(),
-                                      hipdlp::api::defaultMigrationOptions());
+        hipdlp::api::translateOptions(highs.getOptions(), legacy_selector);
     INFO(legacy.error.message);
     CHECK(legacy.ok());
   }
@@ -647,6 +683,50 @@ TEST_CASE("hi-pdlp-rewrite-solves-with-default-style-highs-options",
   CHECK(sink.countContaining("HiPDLP rewrite restart") == 1);
   CHECK(sink.countContaining("HiPDLP rewrite scaling") == 1);
   CHECK(sink.countContaining("HiPDLP rewrite finished") == 1);
+}
+
+TEST_CASE("hi-pdlp-rewrite-logs-only-every-fortieth-convergence-boundary",
+          "[pdlp][hipdlp][phase7][solver][diagnostics]") {
+  Highs highs;
+  REQUIRE(highs.readModel(std::string(HIGHS_DIR) +
+                          "/check/instances/sctest.mps") ==
+          HighsStatus::kOk);
+  const HighsLp lp = highs.getLp();
+  hipdlp::api::SolverOptions options = makeCpuFixedOptions();
+  options.iteration_limit = 1601;
+  options.optimality_tolerance = std::numeric_limits<double>::denorm_min();
+  options.kkt_tolerance = std::numeric_limits<double>::denorm_min();
+  options.policy.step_size = hipdlp::api::StepSizePolicy::kPid;
+  options.scaling.mode = hipdlp::model::ScalingMode::kAuto;
+  RecordingLogSink sink;
+  hipdlp::algorithm::SolveContext context;
+  context.log = &sink;
+
+  const hipdlp::api::SolveResult result = hipdlp::algorithm::solve(
+      options, hipdlp::model::OriginalModel(lp), context);
+
+  INFO(result.error.message);
+  REQUIRE(result.ok());
+  REQUIRE(result.status == hipdlp::api::SolverStatus::kIterationLimit);
+  REQUIRE(result.iteration_count == 1601);
+  REQUIRE(sink.countContaining("HiPDLP rewrite boundary") == 1);
+  std::string boundary;
+  for (std::size_t index = 0; index < sink.messages.size(); ++index) {
+    if (sink.messages[index].find("HiPDLP rewrite boundary") !=
+        std::string::npos) {
+      boundary = sink.messages[index];
+    }
+  }
+  CHECK(boundary.find("iteration 1600") != std::string::npos);
+  CHECK(boundary.find("relative primal ") != std::string::npos);
+  CHECK(boundary.find("dual ") != std::string::npos);
+  CHECK(boundary.find("gap ") != std::string::npos);
+  CHECK(boundary.find("tau ") != std::string::npos);
+  CHECK(boundary.find("sigma ") != std::string::npos);
+  CHECK(boundary.find("omega ") != std::string::npos);
+  CHECK(boundary.find("eta ") != std::string::npos);
+  CHECK(boundary.find("restart condition ") != std::string::npos);
+  CHECK(boundary.find("PID outcome ") != std::string::npos);
 }
 
 TEST_CASE("hi-pdlp-rewrite-accepts-an-already-optimal-starting-point",
@@ -925,6 +1005,69 @@ TEST_CASE("hi-pdlp-public-path-never-enters-pdhg-for-a-zero-operator-lp",
     CHECK(highs.getModelStatus() == HighsModelStatus::kOptimal);
     CHECK(highs.getInfo().pdlp_iteration_count == 0);
   }
+}
+
+TEST_CASE("hi-pdlp-public-path-routes-explicit-cuda-pid-to-rewrite",
+          "[pdlp][hipdlp][phase7][solver][public][cuda][pid]") {
+  const char* log_file = "hipdlp-public-cuda-pid.log";
+  std::remove(log_file);
+  Highs highs;
+  REQUIRE(highs.setOptionValue("log_to_console", false) == HighsStatus::kOk);
+  REQUIRE(highs.setOptionValue(kLogFileString, log_file) == HighsStatus::kOk);
+  REQUIRE(highs.setOptionValue("output_flag", true) == HighsStatus::kOk);
+  REQUIRE(highs.setOptionValue("solver", kHiPdlpString) == HighsStatus::kOk);
+  REQUIRE(highs.setOptionValue("presolve", "off") == HighsStatus::kOk);
+  REQUIRE(highs.setOptionValue("hipdlp_backend", "cuda") ==
+          HighsStatus::kOk);
+  REQUIRE(highs.setOptionValue("hipdlp_scaling", "auto") ==
+          HighsStatus::kOk);
+  REQUIRE(highs.setOptionValue("pdlp_step_size_strategy",
+                               kPdlpStepSizeStrategyPid) == HighsStatus::kOk);
+  REQUIRE(highs.setOptionValue("pdlp_optimality_tolerance", kSolverTolerance) ==
+          HighsStatus::kOk);
+  REQUIRE(highs.setOptionValue("kkt_tolerance", kSolverTolerance) ==
+          HighsStatus::kOk);
+  REQUIRE(highs.setOptionValue("time_limit", 60.0) == HighsStatus::kOk);
+  REQUIRE(highs.readModel(std::string(HIGHS_DIR) +
+                          "/check/instances/sctest.mps") ==
+          HighsStatus::kOk);
+
+  const bool cuda_usable = cudaBackendUsable();
+  const HighsStatus run_status = highs.run();
+  REQUIRE(highs.setOptionValue(kLogFileString, "") == HighsStatus::kOk);
+  std::ifstream stream(log_file);
+  const std::string contents((std::istreambuf_iterator<char>(stream)),
+                             std::istreambuf_iterator<char>());
+  stream.close();
+  std::remove(log_file);
+
+  if (!cuda_usable) {
+    CHECK(run_status == HighsStatus::kError);
+    CHECK(highs.getModelStatus() == HighsModelStatus::kSolveError);
+    CHECK(contents.find("requested HiPDLP backend is unavailable") !=
+          std::string::npos);
+    CHECK(contents.find("effective cpu") == std::string::npos);
+    return;
+  }
+
+  REQUIRE(run_status == HighsStatus::kOk);
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
+  const HighsLp& lp = highs.getLp();
+  const HighsSolution& solution = highs.getSolution();
+  REQUIRE(solution.value_valid);
+  REQUIRE(solution.dual_valid);
+  CHECK(solution.col_value.size() == static_cast<std::size_t>(lp.num_col_));
+  CHECK(solution.row_value.size() == static_cast<std::size_t>(lp.num_row_));
+  CHECK(solution.col_dual.size() == static_cast<std::size_t>(lp.num_col_));
+  CHECK(solution.row_dual.size() == static_cast<std::size_t>(lp.num_row_));
+  const hipdlp::verification::KktVerificationResult verification =
+      hipdlp::verification::verifyKkt(lp, solution, kSolverTolerance);
+  INFO(verification.error);
+  CHECK(verification.pass);
+  CHECK(contents.find(
+            "HiPDLP rewrite backend: requested cuda, effective cuda") !=
+        std::string::npos);
+  CHECK(contents.find("effective PID") != std::string::npos);
 }
 
 TEST_CASE("hi-pdlp-rewrite-runs-one-control-loop-on-every-backend",

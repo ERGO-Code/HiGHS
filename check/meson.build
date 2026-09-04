@@ -36,6 +36,7 @@ test_array = [
   # ['test_TestHipo', 'TestHipo.cpp'],
   ['test_TestHiPdlpAveraging', 'TestHiPdlpAveraging.cpp'],
   ['test_TestHiPdlpBackend', 'TestHiPdlpBackend.cpp'],
+  ['test_TestHiPdlpCertificates', 'TestHiPdlpCertificates.cpp'],
   ['test_TestHiPdlpConvergence', 'TestHiPdlpConvergence.cpp'],
   ['test_TestHiPdlpFixedPointError', 'TestHiPdlpFixedPointError.cpp'],
   ['test_TestHiPdlpModel', 'TestHiPdlpModel.cpp'],
@@ -95,6 +96,22 @@ foreach test : test_array
        timeout: 300,
       )
 endforeach
+
+executable('lp_solver_validation_adapter',
+     sources: ['LpSolverValidationAdapter.cpp', highs_conf_file],
+     dependencies: _deps,
+     link_with: highslib,
+     cpp_args: _args,
+     include_directories: _incdirs,
+    )
+
+executable('external_lp_solution_verifier',
+           sources: ['ExternalLpSolutionVerifier.cpp', highs_conf_file],
+           dependencies: _deps,
+           link_with: highslib,
+           cpp_args: _args,
+           include_directories: _incdirs,
+          )
 
 
 test('test_capi',

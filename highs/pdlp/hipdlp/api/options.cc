@@ -32,7 +32,10 @@ SolverOptions::SolverOptions()
 
 bool OptionTranslationResult::ok() const { return error.ok(); }
 
-MigrationOptions defaultMigrationOptions() { return MigrationOptions(); }
+MigrationOptions defaultMigrationOptions() {
+  return MigrationOptions(SolverImplementation::kRewrite,
+                          backend::Kind::kAuto);
+}
 
 bool isValidImplementation(const SolverImplementation implementation) {
   return implementation == SolverImplementation::kLegacy ||

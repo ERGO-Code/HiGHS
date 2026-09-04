@@ -2,6 +2,7 @@
 #define PDLP_HIPDLP_API_STATUS_HPP_
 
 #include <string>
+#include <vector>
 
 #include "lp_data/HighsSolution.h"
 
@@ -36,9 +37,43 @@ enum class SolverStatus {
   kOptimal,
   kInfeasible,
   kUnbounded,
+  kUnboundedOrInfeasible,
   kIterationLimit,
   kTimeLimit,
   kError
+};
+
+// What a verified direction proves about the original LP. This is solver
+// neutral: it never reaches HighsSolution and never reaches simplex ray state.
+enum class CertificateKind {
+  kNone,
+  kPrimalInfeasibility,
+  kPrimalUnboundedness,
+  kAmbiguous
+};
+
+// Summary of what the independent verifier measured on the recovered
+// direction. Residual is the stationarity residual of a Farkas certificate and
+// stays zero for a primal ray.
+struct CertificateMetrics {
+  double direction_norm;
+  double max_normalized_violation;
+  double max_normalized_residual;
+  double margin;
+  HighsInt worst_row;
+  HighsInt worst_col;
+
+  CertificateMetrics();
+};
+
+struct Certificate {
+  CertificateKind kind;
+  bool valid;
+  std::vector<double> column_direction;
+  std::vector<double> row_direction;
+  CertificateMetrics metrics;
+
+  Certificate();
 };
 
 struct SolveResult {
@@ -47,6 +82,7 @@ struct SolveResult {
   HighsInt iteration_count;
   bool has_solution;
   HighsSolution solution;
+  Certificate certificate;
 
   SolveResult();
 

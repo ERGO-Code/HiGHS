@@ -1008,3 +1008,175 @@ TEST_CASE("Rays-2415-primal", "[highs_test_rays]") {
     if (dev_run) printf("\nFor unbounded MIP\n");
   }
 }
+
+// HiPDLP has no HEkk invert or ray record, so a ray request must be served by
+// a fully saved-and-restored auxiliary simplex solve.
+TEST_CASE("Rays-hipdlp-dual-ray", "[highs_test_rays][hipdlp][pdlp][phase8]") {
+  HighsLp lp;
+  lp.num_col_ = 2;
+  lp.num_row_ = 1;
+  lp.col_cost_ = {-1, -2};
+  lp.col_lower_ = {0, 0};
+  lp.col_upper_ = {kHighsInf, kHighsInf};
+  lp.row_lower_ = {-kHighsInf};
+  lp.row_upper_ = {-1};
+  lp.a_matrix_.start_ = {0, 1, 2};
+  lp.a_matrix_.index_ = {0, 0};
+  lp.a_matrix_.value_ = {1, 1};
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
+  REQUIRE(highs.setOptionValue("solver", kHiPdlpString) == HighsStatus::kOk);
+  REQUIRE(highs.setOptionValue("presolve", kHighsOffString) ==
+          HighsStatus::kOk);
+  REQUIRE(highs.setOptionValue("allow_unbounded_or_infeasible", true) ==
+          HighsStatus::kOk);
+  // Bound the PDLP solve: the ray request must work whatever it terminates on.
+  REQUIRE(highs.setOptionValue("pdlp_iteration_limit", 200) ==
+          HighsStatus::kOk);
+  REQUIRE(highs.run() != HighsStatus::kError);
+
+  bool has_dual_ray = false;
+  std::vector<double> dual_ray_value(lp.num_row_);
+  REQUIRE(highs.getDualRay(has_dual_ray, dual_ray_value.data()) ==
+          HighsStatus::kOk);
+  REQUIRE(has_dual_ray);
+  REQUIRE(checkDualRayValue(highs, dual_ray_value));
+
+  std::string solver;
+  std::string presolve;
+  bool solve_relaxation = true;
+  bool allow_unbounded_or_infeasible = false;
+  highs.getOptionValue("solver", solver);
+  highs.getOptionValue("presolve", presolve);
+  highs.getOptionValue("solve_relaxation", solve_relaxation);
+  highs.getOptionValue("allow_unbounded_or_infeasible",
+                       allow_unbounded_or_infeasible);
+  REQUIRE(solver == kHiPdlpString);
+  REQUIRE(presolve == kHighsOffString);
+  REQUIRE_FALSE(solve_relaxation);
+  REQUIRE(allow_unbounded_or_infeasible);
+  REQUIRE(highs.getLp().col_cost_[0] == -1);
+  REQUIRE(highs.getLp().col_cost_[1] == -2);
+
+  highs.resetGlobalScheduler(true);
+}
+
+TEST_CASE("Rays-hipdlp-primal-ray", "[highs_test_rays][hipdlp][pdlp][phase8]") {
+  HighsLp lp;
+  lp.num_col_ = 2;
+  lp.num_row_ = 1;
+  lp.col_cost_ = {-1, -2};
+  lp.col_lower_ = {0, 0};
+  lp.col_upper_ = {kHighsInf, kHighsInf};
+  lp.row_lower_ = {1};
+  lp.row_upper_ = {kHighsInf};
+  lp.a_matrix_.start_ = {0, 1, 2};
+  lp.a_matrix_.index_ = {0, 0};
+  lp.a_matrix_.value_ = {1, 1};
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
+  REQUIRE(highs.setOptionValue("solver", kHiPdlpString) == HighsStatus::kOk);
+  REQUIRE(highs.setOptionValue("presolve", kHighsOffString) ==
+          HighsStatus::kOk);
+  REQUIRE(highs.setOptionValue("pdlp_iteration_limit", 200) ==
+          HighsStatus::kOk);
+  REQUIRE(highs.run() != HighsStatus::kError);
+
+  bool has_primal_ray = false;
+  std::vector<double> primal_ray_value(lp.num_col_);
+  REQUIRE(highs.getPrimalRay(has_primal_ray, primal_ray_value.data()) ==
+          HighsStatus::kOk);
+  REQUIRE(has_primal_ray);
+  REQUIRE(checkPrimalRayValue(highs, primal_ray_value));
+
+  std::string solver;
+  std::string presolve;
+  bool solve_relaxation = true;
+  bool allow_unbounded_or_infeasible = true;
+  highs.getOptionValue("solver", solver);
+  highs.getOptionValue("presolve", presolve);
+  highs.getOptionValue("solve_relaxation", solve_relaxation);
+  highs.getOptionValue("allow_unbounded_or_infeasible",
+                       allow_unbounded_or_infeasible);
+  REQUIRE(solver == kHiPdlpString);
+  REQUIRE(presolve == kHighsOffString);
+  REQUIRE_FALSE(solve_relaxation);
+  REQUIRE_FALSE(allow_unbounded_or_infeasible);
+
+  highs.resetGlobalScheduler(true);
+}
+
+TEST_CASE("Rays-hipdlp-optimal-has-no-ray",
+          "[highs_test_rays][hipdlp][pdlp][phase8]") {
+  HighsLp lp;
+  lp.num_col_ = 1;
+  lp.num_row_ = 1;
+  lp.col_cost_ = {1};
+  lp.col_lower_ = {0};
+  lp.col_upper_ = {kHighsInf};
+  lp.row_lower_ = {1};
+  lp.row_upper_ = {1};
+  lp.a_matrix_.start_ = {0, 1};
+  lp.a_matrix_.index_ = {0};
+  lp.a_matrix_.value_ = {1};
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
+  REQUIRE(highs.setOptionValue("solver", kHiPdlpString) == HighsStatus::kOk);
+  REQUIRE(highs.setOptionValue("presolve", kHighsOffString) ==
+          HighsStatus::kOk);
+  REQUIRE(highs.setOptionValue("kkt_tolerance", 1e-4) == HighsStatus::kOk);
+  REQUIRE(highs.run() == HighsStatus::kOk);
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
+
+  bool has_dual_ray = true;
+  bool has_primal_ray = true;
+  std::vector<double> dual_ray_value(lp.num_row_);
+  std::vector<double> primal_ray_value(lp.num_col_);
+  REQUIRE(highs.getDualRay(has_dual_ray, dual_ray_value.data()) ==
+          HighsStatus::kOk);
+  REQUIRE_FALSE(has_dual_ray);
+  REQUIRE(highs.getPrimalRay(has_primal_ray, primal_ray_value.data()) ==
+          HighsStatus::kOk);
+  REQUIRE_FALSE(has_primal_ray);
+
+  std::string solver;
+  highs.getOptionValue("solver", solver);
+  REQUIRE(solver == kHiPdlpString);
+
+  highs.resetGlobalScheduler(true);
+}
+
+// A light-weight query must not trigger the auxiliary solve at all.
+TEST_CASE("Rays-hipdlp-query-without-values-is-light",
+          "[highs_test_rays][hipdlp][pdlp][phase8]") {
+  HighsLp lp;
+  lp.num_col_ = 2;
+  lp.num_row_ = 1;
+  lp.col_cost_ = {-1, -2};
+  lp.col_lower_ = {0, 0};
+  lp.col_upper_ = {kHighsInf, kHighsInf};
+  lp.row_lower_ = {-kHighsInf};
+  lp.row_upper_ = {-1};
+  lp.a_matrix_.start_ = {0, 1, 2};
+  lp.a_matrix_.index_ = {0, 0};
+  lp.a_matrix_.value_ = {1, 1};
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
+  REQUIRE(highs.setOptionValue("solver", kHiPdlpString) == HighsStatus::kOk);
+  REQUIRE(highs.setOptionValue("presolve", kHighsOffString) ==
+          HighsStatus::kOk);
+  REQUIRE(highs.setOptionValue("pdlp_iteration_limit", 200) ==
+          HighsStatus::kOk);
+  REQUIRE(highs.run() != HighsStatus::kError);
+  const HighsInt simplex_iterations = highs.getInfo().simplex_iteration_count;
+  bool has_dual_ray = true;
+  REQUIRE(highs.getDualRay(has_dual_ray, nullptr) == HighsStatus::kOk);
+  REQUIRE_FALSE(has_dual_ray);
+  REQUIRE(highs.getInfo().simplex_iteration_count == simplex_iterations);
+
+  highs.resetGlobalScheduler(true);
+}

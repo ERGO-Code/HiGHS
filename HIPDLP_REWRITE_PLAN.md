@@ -447,9 +447,12 @@ or status disagreements, and the discrepancy is retained as an artifact.
 - Freeze external cuPDLPx at
   `/home/yanyu/github/cuPDLPx/build-baseline/cupdlpx`, recording executable
   hash, source revision, build cache, CUDA version, and command.
-- Obtain cuOpt from `https://github.com/NVIDIA/cuopt`, pin a commit or release,
-  and record whether the comparison uses its CLI, C API, Python package, or
-  container. Do not benchmark an unpinned `main`.
+- Use the pinned cuOpt 26.08 installation at `/home/yanyu/github/cuopt`
+  (tag `v26.08.00`, commit
+  `400863c1a92914bd47f5d68245f9a00e2d0d2df4`) through
+  `/home/yanyu/github/cuopt-26.08-env`. Phase 7 uses the installed
+  `cuopt_cli` with `--method 1 --pdlp-precision double`; it does not use an
+  unpinned `main`, a server, or a container.
 - Pin in-tree cuPDLP and legacy HiPDLP to the same repository commit used to
   begin the rewrite.
 - Pin the HPR-LP and HPR-LP-C revisions listed in Section 4.3.1 as
@@ -1806,6 +1809,8 @@ remain unimplemented. No performance claim is made.
 
 ### Phase 7: Full cross-solver validation
 
+Execute this phase through `HIPDLP_PHASE7_IMPLEMENTATION_PLAN.md`.
+
 - Run rewritten CPU and CUDA against legacy HiPDLP, in-tree cuPDLP, external
   cuPDLPx, pinned cuOpt, and HiGHS reference solvers.
 - Verify every claimed optimal result independently.
@@ -1815,6 +1820,18 @@ remain unimplemented. No performance claim is made.
 
 **Exit criteria:** no unexplained incorrect status, non-finite result, or KKT
 failure remains in the supported suite.
+
+**Interim audit (2026-09-03):** Phase 7 is incomplete. Provenance-stable
+rewrite smoke passes CPU and CUDA 13/13. The 103-instance Netlib regression
+accepts rewrite CPU on 97 and CUDA on 96; every rewrite `OPTIMAL` passes the
+independent original-LP KKT gate, and the only terminal CPU/CUDA difference is
+an explained `pilot4` time-limit/cadence effect. Full Netlib exists only for
+rewrite CPU (111/114 accepted), and no energy regression or full-energy matrix
+has run. The canonical summary, disagreement classifications, directory audit,
+and human report are under the Phase 7 result root and
+`docs/hipdlp-phase7-cross-solver-report.md`. Phase 8 must not proceed until the
+missing full Netlib and energy scopes are executed and triaged. No legacy CUDA
+comparison is claimed.
 
 ### Phase 8: Cut over and remove legacy code
 
@@ -1941,3 +1958,124 @@ The rewrite is complete when:
 - low-precision SpMV and multistart can be added through the defined precision
   and batch capabilities without changing the core solve loop.
 
+
+## 14. Phase 4 certificates and Phase 5 cutover evaluation (2026-09-01)
+
+### 14.1 Phase 4 — implemented and verified
+
+Certificate mathematics live in `highs/pdlp/hipdlp/verification/certificate_verifier.{hpp,cc}`,
+separate from `kkt_verifier`, which still only validates complete primal-dual
+iterates. For the HiGHS form `l_x <= x <= u_x`, `l_r <= A x <= u_r`:
+
+- a primal ray `d` must lie in the recession cone of both bound systems and give
+  `sigma * c^T d < 0`, with `sigma = +1` for minimize and `-1` for maximize;
+- a Farkas certificate `(y, z)` must satisfy `z = -A^T y`, the row and column
+  multiplier sign conditions, and a strictly positive bound objective
+  `sum_i y_i b_i(y_i) + sum_j z_j g_j(z_j)`.
+
+The verifier recomputes `A^T y` itself and reports the stationarity residual, so
+a caller cannot certify infeasibility by supplying a self-consistent pair.
+Violations, residuals and margins are reported raw and normalized by the
+direction norm, together with the worst row and column.
+
+`api::SolverStatus` gained `kUnboundedOrInfeasible`, and solver-neutral
+`CertificateKind`/`CertificateMetrics`/`Certificate` were added to
+`api::SolveResult`. `HighsSolution` was not changed and no rewrite certificate
+is written to `HEkk` ray state. `model::Problem` gained explicit
+`recoverPrimalDirection`, `recoverDualDirection` and
+`recoverReducedCostDirection`; these are not the solution postsolve, because a
+direction must not carry the objective offset and must not carry the
+maximization sign flip that `recoverOriginalDual` applies.
+
+Detection runs on the single `algorithm::solve()` convergence boundary for both
+CPU and CUDA, using only the host candidate already downloaded there. Precedence
+is numerical error, then verified optimal, then verified certificate, then
+iteration/time limit, then continue. A rejected candidate never terminates the
+solve. Certificate statuses still return the last complete postsolved iterate
+and log the certificate kind, residual and margin instead of optimality metrics.
+
+`Highs::getDualRay`/`getPrimalRay` now save the caller's `solver`, `presolve`,
+`solve_relaxation`, `allow_unbounded_or_infeasible` and objective, force
+`solver = simplex` for the auxiliary solve so no first-order solver is re-entered,
+and restore everything afterwards; an early return that skipped restoration was
+removed.
+
+Verified: Clang CPU full suite 1,271,637 assertions / 545 cases; Clang CUDA
+`[hipdlp]` 29,257/228 and `[pdlp]` 29,287/236; GCC CPU focused matrix; CUDA
+hidden-device filters; Compute Sanitizer lifecycle 29/1 with zero errors and
+zero leaked bytes; Bazel `//:highs` plus `TestHiPdlpCertificates`,
+`TestHiPdlpSolver`, `TestRays`; Meson CPU library and app build.
+
+### 14.2 Phase 5 — cutover not performed in the 2026-09-01 checkpoint
+
+`defaultMigrationOptions()` still selects `kLegacy`.
+
+A non-installed migration/benchmark adapter was added
+(`check/HiPdlpMigrationAdapter.cpp`, target `hipdlp_migration_adapter`). It reads
+one MPS, starts the solver timer after the read, selects legacy or rewrite
+through the internal `MigrationOptions`, and emits stable JSON. No public
+`hipdlp_implementation` option was added. Legacy only accepts the `auto` backend
+selector, so the adapter records both the requested and effective backend.
+
+Smoke correctness on the existing 13-instance set (CPU, `presolve=off`,
+`kkt_tolerance=1e-4`, `time_limit=60`) is stored under
+`/home/yanyu/benchmark-results/lp/hipdlp-rewrite/m8-smoke-cpu-*`. The rewrite
+reaches independently KKT-verified `OPTIMAL` on 11 of 13 instances, including
+`scrs8`, where legacy does not terminate at all. Two instances fail:
+
+- `e226`: rewrite hits the 60 s limit after about 1.1e7 iterations while legacy
+  returns optimal in 0.067 s and 15,880 iterations;
+- `sctest`: rewrite hits the 60 s limit with a relative primal residual of about
+  1.0, so it does not converge.
+
+Legacy `adlittle` and `avgas` report `OPTIMAL` but fail the independent `1e-4`
+KKT gate, which is recorded as a legacy defect rather than a rewrite one.
+
+The first failing cutover gate is therefore Checkpoint 5B smoke correctness.
+Independently, the cutover is also blocked because cuOpt is not installed and
+cannot be pinned here, so the full cross-solver suite cannot run; because there
+is no frozen legacy CUDA performance baseline; and because no paired
+five-repetition timing study was run, so
+`geomean(rewrite / legacy) <= 1.05` is not established. Meson test targets could
+not be configured because `catch2` is not available.
+
+Still open: legacy deletion, the adaptive and Malitsky-Pock step sizes, CUDA
+Graph production solve, OpenMP/ROCm, and the Tier B research items.
+
+### 14.3 Cutover and cuOpt follow-up (2026-09-02)
+
+The current working tree supersedes the cutover conclusion in Section 14.2:
+
+- `defaultMigrationOptions()` now selects the rewrite with backend `auto`, so
+  the public `solver = "hipdlp"` path enters the rewrite. The internal legacy
+  selector remains available for Phase 7 comparisons and stabilization.
+- The migration adapter accepts `--step-size fixed|pid` and forwards the
+  selected strategy through the normal option translation path.
+- On the CUDA build at
+  `/home/yanyu/builds/hipdlp2-m7b-cuda-20260826`, explicit rewrite CUDA PID
+  runs with `presolve=off`, `hipdlp_scaling=auto`, a 60-second limit, and
+  `kkt_tolerance=1e-4` solve both former blockers. `e226` reports `OPTIMAL` in
+  8,440 iterations and 1.18 seconds; its relative primal, dual, and gap metrics
+  are `4.34e-7`, `1.16e-9`, and `3.06e-8`. `sctest` reports `OPTIMAL` in 480
+  iterations and 0.27 seconds; its metrics are `1.19e-7`, `8.94e-8`, and
+  `1.12e-8`. Both pass the independent KKT verifier.
+- NVIDIA cuOpt 26.08 is installed without root privileges. The source checkout
+  is `/home/yanyu/github/cuopt` at tag `v26.08.00` and commit
+  `400863c1a92914bd47f5d68245f9a00e2d0d2df4`; the micromamba environment is
+  `/home/yanyu/github/cuopt-26.08-env`. It contains Python 3.12.14,
+  `cuopt=26.08.00`, `libcuopt=26.08.00`, and `cuda-version=13.0` for
+  `linux-aarch64`. The environment stores `PYTHONNOUSERSITE=1` so packages in
+  `~/.local` cannot override its dependencies.
+- A forced FP64 GPU PDLP run of cuOpt's `afiro_original.mps` with
+  `--method 1`, `--pdlp-precision double`, `presolve=0`, and `1e-4` absolute
+  and relative tolerances reports `Optimal` in 460 iterations and 0.192
+  seconds on the NVIDIA GB10. The relative primal, dual, and gap metrics are
+  `4.27e-6`, `1.60e-5`, and `8.26e-5`. The documented Python LP smoke test also
+  reports `Optimal` with objective and primal value 10.
+
+Phase 7 may now start. This follow-up did not rerun the complete 13-instance
+rewrite smoke suite, and it did not run any cross-solver matrix. Those are the
+first tasks in the Phase 7 implementation plan. The cutover changes are also
+still uncommitted in the current working tree, so Phase 7 results must record
+the exact working-tree state rather than treating `HEAD` alone as the tested
+source.

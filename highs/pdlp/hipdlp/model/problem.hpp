@@ -132,6 +132,21 @@ class Problem {
       const std::vector<double>& transformed_reduced_costs,
       std::vector<double>& original_reduced_costs) const;
 
+  // Direction recovery. Unlike the solution recovery above these map a scaled
+  // *direction* back to the original space: they undo the diagonal scaling and
+  // the row permutation/negation, drop synthetic slack columns, and never
+  // apply the objective offset or the maximization sign flip, because a
+  // recession or Farkas direction has no affine part and no objective sense.
+  api::Error recoverPrimalDirection(
+      const std::vector<double>& scaled_direction,
+      std::vector<double>& original_direction) const;
+  api::Error recoverDualDirection(
+      const std::vector<double>& scaled_direction,
+      std::vector<double>& original_direction) const;
+  api::Error recoverReducedCostDirection(
+      const std::vector<double>& scaled_direction,
+      std::vector<double>& original_direction) const;
+
  private:
   struct Data;
   std::unique_ptr<Data> data_;

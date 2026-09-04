@@ -1,9 +1,12 @@
 #include "pdlp/hipdlp/algorithm/operator_norm.hpp"
 
 #include <cmath>
+#include <limits>
+#include <vector>
 
 #include "lp_data/HConst.h"
 #include "pdlp/hipdlp/backend/backend.hpp"
+#include "pdlp/hipdlp/model/problem.hpp"
 
 namespace hipdlp {
 namespace algorithm {
@@ -72,6 +75,72 @@ bool OperatorNormResult::ok() const {
            final_relative_change == 0.0 && !tolerance_met;
   return finitePositive(operator_norm_squared) && performed_iterations > 0 &&
          finiteNonnegative(final_relative_change);
+}
+
+api::Error computeOperatorNormSquaredUpperBound(
+    const model::SparseMatrix& matrix, double& upper_bound_squared) {
+  upper_bound_squared = 0.0;
+  if (matrix.num_rows < 0 || matrix.num_cols < 0 || matrix.starts.empty() ||
+      matrix.starts.size() != static_cast<std::size_t>(matrix.num_rows) + 1 ||
+      matrix.starts[0] != 0) {
+    return api::Error(api::ErrorCode::kInvalidArgument,
+                      "HiPDLP operator-norm bound matrix is malformed");
+  }
+  std::vector<long double> column_sums(matrix.num_cols, 0.0L);
+  long double maximum_row_sum = 0.0L;
+  for (HighsInt row = 0; row < matrix.num_rows; ++row) {
+    if (matrix.starts[row] < 0 ||
+        matrix.starts[row] > matrix.starts[row + 1]) {
+      return api::Error(api::ErrorCode::kInvalidArgument,
+                        "HiPDLP operator-norm bound starts are malformed");
+    }
+    long double row_sum = 0.0L;
+    for (HighsInt entry = matrix.starts[row];
+         entry < matrix.starts[row + 1]; ++entry) {
+      if (entry < 0 ||
+          static_cast<std::size_t>(entry) >= matrix.indices.size() ||
+          static_cast<std::size_t>(entry) >= matrix.values.size()) {
+        return api::Error(api::ErrorCode::kInvalidArgument,
+                          "HiPDLP operator-norm bound entries are malformed");
+      }
+      const HighsInt col = matrix.indices[entry];
+      const double value = matrix.values[entry];
+      if (col < 0 || col >= matrix.num_cols || !std::isfinite(value)) {
+        return api::Error(api::ErrorCode::kInvalidArgument,
+                          "HiPDLP operator-norm bound entry is invalid");
+      }
+      const long double magnitude = std::fabs(static_cast<long double>(value));
+      row_sum += magnitude;
+      column_sums[col] += magnitude;
+      if (!std::isfinite(row_sum) || !std::isfinite(column_sums[col])) {
+        return api::Error(api::ErrorCode::kInvalidArgument,
+                          "HiPDLP operator-norm bound sum overflowed");
+      }
+    }
+    if (row_sum > maximum_row_sum) maximum_row_sum = row_sum;
+  }
+  if (matrix.starts[matrix.num_rows] < 0 ||
+      static_cast<std::size_t>(matrix.starts[matrix.num_rows]) !=
+          matrix.indices.size() ||
+      matrix.indices.size() != matrix.values.size()) {
+    return api::Error(api::ErrorCode::kInvalidArgument,
+                      "HiPDLP operator-norm bound arrays are malformed");
+  }
+  long double maximum_column_sum = 0.0L;
+  for (HighsInt col = 0; col < matrix.num_cols; ++col) {
+    if (column_sums[col] > maximum_column_sum)
+      maximum_column_sum = column_sums[col];
+  }
+  const long double bound = maximum_row_sum * maximum_column_sum;
+  if (!std::isfinite(bound) ||
+      bound > static_cast<long double>(std::numeric_limits<double>::max())) {
+    return api::Error(api::ErrorCode::kInvalidArgument,
+                      "HiPDLP operator-norm bound is outside FP64 range");
+  }
+  if (bound == 0.0L) return api::Error();
+  upper_bound_squared = std::nextafter(
+      static_cast<double>(bound), std::numeric_limits<double>::infinity());
+  return api::Error();
 }
 
 OperatorNormResult estimateOperatorNormSquared(

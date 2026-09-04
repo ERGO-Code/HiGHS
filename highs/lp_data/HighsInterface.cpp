@@ -1588,7 +1588,9 @@ HighsStatus Highs::getDualRayInterface(bool& has_dual_ray,
   std::vector<double> col_cost;
   HighsHessian hessian;
   bool solve_relaxation;
+  bool allow_unbounded_or_infeasible;
   std::string presolve;
+  std::string solver;
   bool solve_feasibility_problem = false;
   const bool is_qp = model_.isQp();
 
@@ -1612,6 +1614,9 @@ HighsStatus Highs::getDualRayInterface(bool& has_dual_ray,
       if (is_qp) hessian = model_.hessian_;
       this->getOptionValue("presolve", presolve);
       this->getOptionValue("solve_relaxation", solve_relaxation);
+      this->getOptionValue("solver", solver);
+      this->getOptionValue("allow_unbounded_or_infeasible",
+                           allow_unbounded_or_infeasible);
       solve_feasibility_problem = true;
       // Zero the costs, integrality and Hessian
       std::vector<double> zero_costs;
@@ -1631,6 +1636,11 @@ HighsStatus Highs::getDualRayInterface(bool& has_dual_ray,
       }
       this->setOptionValue("presolve", kHighsOffString);
       this->setOptionValue("solve_relaxation", true);
+      // Only simplex maintains the ray record and the invertible
+      // representation this needs, so never recurse into an interior-point or
+      // first-order solver here.
+      this->setOptionValue("solver", kSimplexString);
+      this->setOptionValue("allow_unbounded_or_infeasible", false);
       HighsStatus call_status = this->run();
       if (call_status != HighsStatus::kOk) return_status = call_status;
       has_dual_ray = ekk_instance_.dual_ray_record_.index != kNoRayIndex;
@@ -1680,6 +1690,9 @@ HighsStatus Highs::getDualRayInterface(bool& has_dual_ray,
     if (is_qp) model_.hessian_ = hessian;
     this->setOptionValue("presolve", presolve);
     this->setOptionValue("solve_relaxation", solve_relaxation);
+    this->setOptionValue("solver", solver);
+    this->setOptionValue("allow_unbounded_or_infeasible",
+                         allow_unbounded_or_infeasible);
     // The relaxation for an infeasible MIP may be feasible - so no
     // ray is generated - so make sure (#2415) that the primal
     // solution status is reset
@@ -1720,6 +1733,7 @@ HighsStatus Highs::getPrimalRayInterface(bool& has_primal_ray,
   has_primal_ray = ekk_instance_.primal_ray_record_.index != kNoRayIndex;
 
   std::string presolve;
+  std::string solver;
   bool solve_relaxation;
   bool allow_unbounded_or_infeasible;
   bool solve_unboundedness_problem = false;
@@ -1741,11 +1755,16 @@ HighsStatus Highs::getPrimalRayInterface(bool& has_primal_ray,
                    "Solving LP to try to compute primal ray\n");
       this->getOptionValue("presolve", presolve);
       this->getOptionValue("solve_relaxation", solve_relaxation);
+      this->getOptionValue("solver", solver);
       this->getOptionValue("allow_unbounded_or_infeasible",
                            allow_unbounded_or_infeasible);
       solve_unboundedness_problem = true;
       this->setOptionValue("presolve", kHighsOffString);
       this->setOptionValue("solve_relaxation", true);
+      // Only simplex maintains the ray record and the invertible
+      // representation this needs, so never recurse into an interior-point or
+      // first-order solver here.
+      this->setOptionValue("solver", kSimplexString);
       this->setOptionValue("allow_unbounded_or_infeasible", false);
       HighsStatus call_status = this->run();
       if (call_status != HighsStatus::kOk) return_status = call_status;
@@ -1760,7 +1779,6 @@ HighsStatus Highs::getPrimalRayInterface(bool& has_primal_ray,
                      "Copying known primal ray\n");
         for (HighsInt iCol = 0; iCol < num_col; iCol++)
           primal_ray_value[iCol] = ekk_instance_.primal_ray_record_.value[iCol];
-        return return_status;
       } else if (has_invert) {
         // Primal ray is known and can be calculated
         highsLogUser(options_.log_options, HighsLogType::kInfo,
@@ -1815,6 +1833,7 @@ HighsStatus Highs::getPrimalRayInterface(bool& has_primal_ray,
     // Restore the option values
     this->setOptionValue("presolve", presolve);
     this->setOptionValue("solve_relaxation", solve_relaxation);
+    this->setOptionValue("solver", solver);
     this->setOptionValue("allow_unbounded_or_infeasible",
                          allow_unbounded_or_infeasible);
     if (has_primal_ray) {

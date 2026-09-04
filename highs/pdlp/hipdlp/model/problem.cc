@@ -542,8 +542,74 @@ api::Error Problem::recoverOriginalReducedCosts(
   return api::Error();
 }
 
-ProblemBuildResult::ProblemBuildResult() {}
+api::Error Problem::recoverPrimalDirection(
+    const std::vector<double>& scaled_direction,
+    std::vector<double>& original_direction) const {
+  if (!initialized()) return invalidModel("HiPDLP problem is not initialized");
+  api::Error error = validateFiniteInput(scaled_direction, data_->num_cols,
+                                         "scaled primal direction");
+  if (!error.ok()) return error;
+  if (data_->scaling.col_scale.size() !=
+      static_cast<std::size_t>(data_->num_cols))
+    return invalidModel("HiPDLP direction recovery scale is invalid");
+  const HighsInt original_num_cols =
+      data_->transformation.original_num_cols;
+  original_direction.assign(original_num_cols, 0.0);
+  for (HighsInt col = 0; col < original_num_cols; ++col) {
+    if (!scaleProduct(scaled_direction[col], data_->scaling.col_scale[col], 1.0,
+                      original_direction[col]))
+      return invalidModel("HiPDLP primal direction unscaling is unsafe");
+  }
+  return api::Error();
+}
 
+api::Error Problem::recoverDualDirection(
+    const std::vector<double>& scaled_direction,
+    std::vector<double>& original_direction) const {
+  if (!initialized()) return invalidModel("HiPDLP problem is not initialized");
+  api::Error error = validateFiniteInput(scaled_direction, data_->num_rows,
+                                         "scaled dual direction");
+  if (!error.ok()) return error;
+  if (data_->scaling.row_scale.size() !=
+      static_cast<std::size_t>(data_->num_rows))
+    return invalidModel("HiPDLP direction recovery scale is invalid");
+  const TransformationMetadata& transform = data_->transformation;
+  original_direction.assign(transform.original_num_rows, 0.0);
+  for (HighsInt row = 0; row < transform.original_num_rows; ++row) {
+    const HighsInt transformed = transform.original_to_transformed_row[row];
+    double unscaled = 0.0;
+    if (!scaleProduct(scaled_direction[transformed],
+                      data_->scaling.row_scale[transformed], 1.0, unscaled))
+      return invalidModel("HiPDLP dual direction unscaling is unsafe");
+    original_direction[row] = transform.original_row_sign[row] * unscaled;
+    if (!std::isfinite(original_direction[row]))
+      return invalidModel("HiPDLP recovered dual direction is non-finite");
+  }
+  return api::Error();
+}
+
+api::Error Problem::recoverReducedCostDirection(
+    const std::vector<double>& scaled_direction,
+    std::vector<double>& original_direction) const {
+  if (!initialized()) return invalidModel("HiPDLP problem is not initialized");
+  api::Error error = validateFiniteInput(scaled_direction, data_->num_cols,
+                                         "scaled reduced-cost direction");
+  if (!error.ok()) return error;
+  if (data_->scaling.col_scale.size() !=
+      static_cast<std::size_t>(data_->num_cols))
+    return invalidModel("HiPDLP direction recovery scale is invalid");
+  const HighsInt original_num_cols =
+      data_->transformation.original_num_cols;
+  original_direction.assign(original_num_cols, 0.0);
+  for (HighsInt col = 0; col < original_num_cols; ++col) {
+    if (!divideValue(scaled_direction[col], data_->scaling.col_scale[col],
+                     original_direction[col]))
+      return invalidModel("HiPDLP reduced-cost direction unscaling is unsafe");
+  }
+  return api::Error();
+}
+
+ProblemBuildResult::ProblemBuildResult() {}
 ProblemBuildResult::ProblemBuildResult(ProblemBuildResult&& other)
     : error(std::move(other.error)), problem(std::move(other.problem)) {}
 

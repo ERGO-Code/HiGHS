@@ -10,6 +10,16 @@ Error::Error(const ErrorCode code, const std::string& message)
 
 bool Error::ok() const { return code == ErrorCode::kNone; }
 
+CertificateMetrics::CertificateMetrics()
+    : direction_norm(0.0),
+      max_normalized_violation(0.0),
+      max_normalized_residual(0.0),
+      margin(0.0),
+      worst_row(-1),
+      worst_col(-1) {}
+
+Certificate::Certificate() : kind(CertificateKind::kNone), valid(false) {}
+
 SolveResult::SolveResult()
     : status(SolverStatus::kNotSet), iteration_count(0), has_solution(false) {}
 
@@ -60,6 +70,9 @@ HighsStatus applySolveResult(const SolveResult& result, HighsBasis& highs_basis,
       break;
     case SolverStatus::kUnbounded:
       model_status = HighsModelStatus::kUnbounded;
+      break;
+    case SolverStatus::kUnboundedOrInfeasible:
+      model_status = HighsModelStatus::kUnboundedOrInfeasible;
       break;
     case SolverStatus::kIterationLimit:
       model_status = HighsModelStatus::kIterationLimit;

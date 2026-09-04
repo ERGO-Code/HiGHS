@@ -51,6 +51,7 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
       TestHighsVersion.cpp
     TestHiPdlpAveraging.cpp
     TestHiPdlpBackend.cpp
+            TestHiPdlpCertificates.cpp
         TestHiPdlpConvergence.cpp
             TestHiPdlpFixedPointError.cpp
             TestHiPdlpOperatorNorm.cpp
@@ -167,9 +168,32 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
   endif()
 
 
+  # Migration/benchmark adapter. Deliberately not installed and not part of any
+  # public interface: it only exists to compare the legacy and rewrite HiPDLP
+  # implementations through one entry point and one timer boundary.
+  add_executable(hipdlp_migration_adapter HiPdlpMigrationAdapter.cpp)
+  if (FAST_BUILD)
+    target_link_libraries(hipdlp_migration_adapter highs)
+  else()
+    target_link_libraries(hipdlp_migration_adapter libhighs)
+  endif()
+
+  add_executable(lp_solver_validation_adapter LpSolverValidationAdapter.cpp)
+  if (FAST_BUILD)
+    target_link_libraries(lp_solver_validation_adapter highs)
+  else()
+    target_link_libraries(lp_solver_validation_adapter libhighs)
+  endif()
+
+  add_executable(external_lp_solution_verifier ExternalLpSolutionVerifier.cpp)
+  if (FAST_BUILD)
+    target_link_libraries(external_lp_solution_verifier highs)
+  else()
+    target_link_libraries(external_lp_solution_verifier libhighs)
+  endif()
+
   # check the C API
   add_executable(capi_unit_tests TestCAPI.c)
-
   if (FAST_BUILD)
     target_link_libraries(capi_unit_tests highs)
   else()

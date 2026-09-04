@@ -319,6 +319,7 @@ _srcs = [
     'pdlp/hipdlp/pdhg.cc',
     'pdlp/hipdlp/restart.cc',
     'pdlp/hipdlp/scaling.cc',
+    'pdlp/hipdlp/verification/certificate_verifier.cc',
     'pdlp/hipdlp/verification/kkt_verifier.cc',
     'presolve/HPresolve.cpp',
     'presolve/HPresolveAnalysis.cpp',

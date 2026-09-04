@@ -41,6 +41,11 @@ HighsLp makeConvergingLp() {
   return makeEqualityLp(2, 2, {0, 1, 2}, {0, 1}, {2.0, 1.0});
 }
 
+HighsLp makeOrthogonalDominantDirectionLp() {
+    return makeEqualityLp(2, 2, {0, 2, 4}, {0, 1, 0, 1},
+                                                {2.0, -2.0, 1.0, 1.0});
+}
+
 hipdlp::algorithm::OperatorNormResult runEstimate(
     const hipdlp::backend::Kind kind, const HighsLp& lp,
     const hipdlp::algorithm::OperatorNormParameters& parameters =
@@ -113,6 +118,26 @@ TEST_CASE("hi-pdlp-operator-norm-is-exact-on-a-closed-form-fixture",
   CHECK(result.diagnostics.device_to_host_scalar_readbacks_per_iteration == 2);
   CHECK(result.diagnostics.device_to_host_scalar_readbacks_during_iterations ==
         4);
+}
+
+TEST_CASE("hi-pdlp-operator-norm-upper-bound-covers-an-orthogonal-start",
+          "[pdlp][hipdlp][phase7e][operator-norm][upper-bound]") {
+  hipdlp::model::ProblemBuildResult built =
+      hipdlp::model::buildProblem(makeOrthogonalDominantDirectionLp());
+  REQUIRE(built.ok());
+  double upper_bound_squared = 0.0;
+  const hipdlp::api::Error bound_error =
+      hipdlp::algorithm::computeOperatorNormSquaredUpperBound(
+          built.problem.matrix(), upper_bound_squared);
+  INFO(bound_error.message);
+  REQUIRE(bound_error.ok());
+  CHECK(upper_bound_squared >= 8.0);
+
+  const hipdlp::algorithm::OperatorNormResult estimate = runEstimate(
+      hipdlp::backend::Kind::kCpu, makeOrthogonalDominantDirectionLp());
+  REQUIRE(estimate.ok());
+  CHECK(estimate.operator_norm_squared == Approx(2.0));
+  CHECK(upper_bound_squared > estimate.operator_norm_squared);
 }
 
 #ifdef HIGHS_HIPDLP_CUDA_DETECTED

@@ -21,6 +21,7 @@
 #include "pdlp/hipdlp/backend/backend.hpp"
 #include "pdlp/hipdlp/backend/backend_factory.hpp"
 #include "pdlp/hipdlp/model/scaling.hpp"
+#include "pdlp/hipdlp/verification/certificate_verifier.hpp"
 #include "pdlp/hipdlp/verification/kkt_verifier.hpp"
 
 namespace hipdlp {
@@ -56,6 +57,24 @@ struct HostIterate {
   std::vector<double> ax;
   std::vector<double> aty;
   std::vector<double> reduced_costs;
+};
+
+// Reused across boundaries so certificate detection allocates nothing new
+// once the loop is running.
+struct CertificateBuffers {
+  std::vector<double> scaled_column_multiplier;
+  std::vector<double> primal_direction;
+  std::vector<double> dual_direction;
+  std::vector<double> column_multiplier;
+};
+
+struct CertificateOutcome {
+  bool available;
+  api::SolverStatus status;
+  api::Certificate certificate;
+
+  CertificateOutcome()
+      : available(false), status(api::SolverStatus::kNotSet) {}
 };
 
 api::SolveResult failure(const api::Error& error) {
@@ -228,6 +247,129 @@ api::Error invalidKktResult(
   return api::Error(api::ErrorCode::kInvalidModel, detail);
 }
 
+double euclideanNorm(const std::vector<double>& values) {
+  double norm = 0.0;
+  for (std::size_t index = 0; index < values.size(); ++index)
+    norm = std::hypot(norm, values[index]);
+  return norm;
+}
+
+bool normalizeInPlace(std::vector<double>& values, const double norm) {
+  if (!std::isfinite(norm) || norm <= 0.0) return false;
+  for (std::size_t index = 0; index < values.size(); ++index) {
+    values[index] /= norm;
+    if (!std::isfinite(values[index])) return false;
+  }
+  return true;
+}
+
+double largest(const double left, const double right) {
+  return left > right ? left : right;
+}
+
+// Turns the host candidate into normalized original-space directions and asks
+// the independent verifier what, if anything, they prove. A recovery or
+// normalization failure yields no certificate at all rather than a partial
+// one, so the loop simply keeps iterating.
+CertificateOutcome detectCertificate(const model::Problem& problem,
+                                     const HighsLp& lp,
+                                     const HostIterate& host,
+                                     const double tolerance,
+                                     CertificateBuffers& buffers) {
+  CertificateOutcome outcome;
+  if (lp.num_col_ == 0 && lp.num_row_ == 0) return outcome;
+
+  bool ray_available = false;
+  verification::PrimalRayVerificationResult ray;
+  if (problem.recoverPrimalDirection(host.primal, buffers.primal_direction)
+          .ok()) {
+    const double norm = euclideanNorm(buffers.primal_direction);
+    if (normalizeInPlace(buffers.primal_direction, norm)) {
+      ray = verification::verifyPrimalRay(lp, buffers.primal_direction,
+                                          tolerance);
+      ray.metrics.direction_norm = norm;
+      ray_available = ray.pass;
+    }
+  }
+
+  bool farkas_available = false;
+  verification::FarkasVerificationResult farkas;
+  buffers.scaled_column_multiplier.resize(host.aty.size());
+  for (std::size_t col = 0; col < host.aty.size(); ++col)
+    buffers.scaled_column_multiplier[col] = -host.aty[col];
+  if (problem.recoverDualDirection(host.dual, buffers.dual_direction).ok() &&
+      problem
+          .recoverReducedCostDirection(buffers.scaled_column_multiplier,
+                                       buffers.column_multiplier)
+          .ok()) {
+    const double norm = std::hypot(euclideanNorm(buffers.dual_direction),
+                                   euclideanNorm(buffers.column_multiplier));
+    if (normalizeInPlace(buffers.dual_direction, norm) &&
+        normalizeInPlace(buffers.column_multiplier, norm)) {
+      farkas = verification::verifyFarkasCertificate(
+          lp, buffers.dual_direction, buffers.column_multiplier, tolerance);
+      farkas.metrics.direction_norm = norm;
+      farkas_available = farkas.pass;
+    }
+  }
+
+  if (!ray_available && !farkas_available) return outcome;
+  outcome.available = true;
+  outcome.certificate.valid = true;
+  if (ray_available && farkas_available) {
+    // Both conclusions hold, so the two cannot be told apart. The stored pair
+    // is the Farkas certificate and the margin is the weaker of the two.
+    outcome.status = api::SolverStatus::kUnboundedOrInfeasible;
+    outcome.certificate.kind = api::CertificateKind::kAmbiguous;
+    outcome.certificate.row_direction = buffers.dual_direction;
+    outcome.certificate.column_direction = buffers.column_multiplier;
+    outcome.certificate.metrics.direction_norm =
+        farkas.metrics.direction_norm;
+    outcome.certificate.metrics.max_normalized_violation = largest(
+        largest(farkas.metrics.max_normalized_row_sign_violation,
+                farkas.metrics.max_normalized_column_sign_violation),
+        largest(ray.metrics.max_normalized_column_violation,
+                ray.metrics.max_normalized_row_violation));
+    outcome.certificate.metrics.max_normalized_residual =
+        farkas.metrics.max_normalized_stationarity_residual;
+    outcome.certificate.metrics.margin =
+        farkas.metrics.certificate_margin < ray.metrics.objective_margin
+            ? farkas.metrics.certificate_margin
+            : ray.metrics.objective_margin;
+    outcome.certificate.metrics.worst_row = farkas.metrics.worst_row;
+    outcome.certificate.metrics.worst_col = farkas.metrics.worst_col;
+  } else if (farkas_available) {
+    outcome.status = api::SolverStatus::kInfeasible;
+    outcome.certificate.kind = api::CertificateKind::kPrimalInfeasibility;
+    outcome.certificate.row_direction = buffers.dual_direction;
+    outcome.certificate.column_direction = buffers.column_multiplier;
+    outcome.certificate.metrics.direction_norm =
+        farkas.metrics.direction_norm;
+    outcome.certificate.metrics.max_normalized_violation =
+        largest(farkas.metrics.max_normalized_row_sign_violation,
+                farkas.metrics.max_normalized_column_sign_violation);
+    outcome.certificate.metrics.max_normalized_residual =
+        farkas.metrics.max_normalized_stationarity_residual;
+    outcome.certificate.metrics.margin = farkas.metrics.certificate_margin;
+    outcome.certificate.metrics.worst_row = farkas.metrics.worst_row;
+    outcome.certificate.metrics.worst_col = farkas.metrics.worst_col;
+  } else {
+    outcome.status = api::SolverStatus::kUnbounded;
+    outcome.certificate.kind = api::CertificateKind::kPrimalUnboundedness;
+    outcome.certificate.column_direction = buffers.primal_direction;
+    outcome.certificate.row_direction.assign(
+        static_cast<std::size_t>(lp.num_row_), 0.0);
+    outcome.certificate.metrics.direction_norm = ray.metrics.direction_norm;
+    outcome.certificate.metrics.max_normalized_violation =
+        largest(ray.metrics.max_normalized_column_violation,
+                ray.metrics.max_normalized_row_violation);
+    outcome.certificate.metrics.margin = ray.metrics.objective_margin;
+    outcome.certificate.metrics.worst_row = ray.metrics.worst_row;
+    outcome.certificate.metrics.worst_col = ray.metrics.worst_col;
+  }
+  return outcome;
+}
+
 // The registry owns backend names; the control loop never branches on kinds.
 const char* requestedBackendName(const backend::Kind kind) {
   const backend::Descriptor* registration = backend::findRegistration(kind);
@@ -256,6 +398,8 @@ const char* statusName(const api::SolverStatus status) {
       return "infeasible";
     case api::SolverStatus::kUnbounded:
       return "unbounded";
+    case api::SolverStatus::kUnboundedOrInfeasible:
+      return "unbounded or infeasible";
     case api::SolverStatus::kIterationLimit:
       return "iteration limit";
     case api::SolverStatus::kTimeLimit:
@@ -268,6 +412,20 @@ const char* statusName(const api::SolverStatus status) {
   return "unknown";
 }
 
+const char* certificateKindName(const api::CertificateKind kind) {
+  switch (kind) {
+    case api::CertificateKind::kNone:
+      return "none";
+    case api::CertificateKind::kPrimalInfeasibility:
+      return "primal infeasibility (Farkas)";
+    case api::CertificateKind::kPrimalUnboundedness:
+      return "primal unboundedness (recession ray)";
+    case api::CertificateKind::kAmbiguous:
+      return "ambiguous";
+  }
+  return "unknown";
+}
+
 std::string formatted(const char* format, ...) {
   char buffer[512];
   va_list arguments;
@@ -275,6 +433,56 @@ std::string formatted(const char* format, ...) {
   vsnprintf(buffer, sizeof(buffer), format, arguments);
   va_end(arguments);
   return std::string(buffer);
+}
+
+const char* restartConditionName(const FixedPointRestartCondition condition) {
+  switch (condition) {
+    case FixedPointRestartCondition::kNone:
+      return "none";
+    case FixedPointRestartCondition::kNotTriggered:
+      return "not-triggered";
+    case FixedPointRestartCondition::kFirstCheckInterval:
+      return "first-check-interval";
+    case FixedPointRestartCondition::kSufficientDecay:
+      return "sufficient-decay";
+    case FixedPointRestartCondition::kNecessaryDecay:
+      return "necessary-decay";
+    case FixedPointRestartCondition::kArtificialThreshold:
+      return "artificial-threshold";
+  }
+  return "unknown";
+}
+
+const char* pidOutcomeName(const bool use_pid,
+                           const PrimalWeightUpdateKind kind) {
+  if (!use_pid) return "disabled";
+  switch (kind) {
+    case PrimalWeightUpdateKind::kNone:
+      return "not-run";
+    case PrimalWeightUpdateKind::kControlled:
+      return "controlled";
+    case PrimalWeightUpdateKind::kRevertedToBest:
+      return "reverted-to-best";
+  }
+  return "unknown";
+}
+
+void logBoundary(const SolveContext& context, const HighsInt iteration,
+                 const NormalizedConvergenceMetrics& metrics,
+                 const InitialStepSizes& steps,
+                 const FixedPointRestartCondition restart_condition,
+                 const bool use_pid,
+                 const PrimalWeightUpdateKind pid_outcome) {
+  if (context.log == nullptr) return;
+  context.log->info(formatted(
+      "HiPDLP rewrite boundary: iteration %lld, relative primal %.17g, dual "
+      "%.17g, gap %.17g, tau %.17g, sigma %.17g, omega %.17g, eta %.17g, "
+      "restart condition %s, PID outcome %s",
+      static_cast<long long>(iteration), metrics.relative_primal,
+      metrics.relative_dual, metrics.relative_gap, steps.primal_step,
+      steps.dual_step, steps.primal_weight, steps.base_step,
+      restartConditionName(restart_condition),
+      pidOutcomeName(use_pid, pid_outcome)));
 }
 
 // Reports the requested and effective policies exactly once per solve.
@@ -329,6 +537,35 @@ void logCompletion(const SolveContext& context, const HighsLp& lp,
       verification.metrics.relative_primal_residual,
       verification.metrics.relative_dual_residual,
       verification.metrics.relative_objective_gap));
+}
+
+// A certificate status never reports optimality metrics it did not establish.
+void logCertificateCompletion(const SolveContext& context,
+                              const api::SolverStatus status,
+                              const api::Certificate& certificate,
+                              const HighsInt iteration_count,
+                              const double elapsed) {
+  if (context.log == nullptr) return;
+  context.log->info(formatted(
+      "HiPDLP rewrite finished: status %s, %d iterations, %.4gs, certificate "
+      "%s, normalized violation %.3e, residual %.3e, margin %.3e, worst row "
+      "%d, worst column %d",
+      statusName(status), static_cast<int>(iteration_count), elapsed,
+      certificateKindName(certificate.kind),
+      certificate.metrics.max_normalized_violation,
+      certificate.metrics.max_normalized_residual, certificate.metrics.margin,
+      static_cast<int>(certificate.metrics.worst_row),
+      static_cast<int>(certificate.metrics.worst_col)));
+}
+
+api::SolveResult certifiedResult(const api::SolverStatus status,
+                                 const HighsSolution& solution,
+                                 const HighsInt iteration_count,
+                                 const api::Certificate& certificate) {
+  api::SolveResult result =
+      api::SolveResult::success(status, solution, iteration_count);
+  result.certificate = certificate;
+  return result;
 }
 
 }  // namespace
@@ -415,6 +652,7 @@ api::SolveResult solve(const api::SolverOptions& options,
 
     HostIterate host;
     HighsSolution solution;
+    CertificateBuffers certificate_buffers;
     NormalizedConvergenceMetrics boundary_metrics;
     bool boundary_metrics_valid = false;
 
@@ -462,6 +700,16 @@ api::SolveResult solve(const api::SolverOptions& options,
           error = postsolveIterate(built.problem, host, solution);
           if (!error.ok()) return failure(error);
         }
+        const CertificateOutcome outcome = detectCertificate(
+            built.problem, original_model.lp(), host, options.kkt_tolerance,
+            certificate_buffers);
+        if (outcome.available) {
+          logCertificateCompletion(context, outcome.status,
+                                   outcome.certificate, 0,
+                                   elapsedSeconds(start));
+          return certifiedResult(outcome.status, solution, 0,
+                                 outcome.certificate);
+        }
         const api::SolverStatus status =
             stopping.decision == StoppingDecision::kIterationLimit
                 ? api::SolverStatus::kIterationLimit
@@ -469,6 +717,22 @@ api::SolveResult solve(const api::SolverOptions& options,
         logCompletion(context, original_model.lp(), status, solution, 0,
                       elapsedSeconds(start), options.kkt_tolerance);
         return api::SolveResult::success(status, solution, 0);
+      }
+
+      // Iteration 0 is a convergence boundary too, so it gets the same
+      // certificate treatment as every later candidate.
+      const CertificateOutcome outcome = detectCertificate(
+          built.problem, original_model.lp(), host, options.kkt_tolerance,
+          certificate_buffers);
+      if (outcome.available) {
+        if (!postsolved) {
+          error = postsolveIterate(built.problem, host, solution);
+          if (!error.ok()) return failure(error);
+        }
+        logCertificateCompletion(context, outcome.status, outcome.certificate,
+                                 0, elapsedSeconds(start));
+        return certifiedResult(outcome.status, solution, 0,
+                               outcome.certificate);
       }
     }
 
@@ -502,7 +766,22 @@ api::SolveResult solve(const api::SolverOptions& options,
     }
 
     StepSizeInitializationInput step_input;
-    step_input.operator_norm_squared = operator_norm.operator_norm_squared;
+    double operator_norm_upper_bound_squared = 0.0;
+    const std::vector<model::ScalingStage>& scaling_stages =
+        built.problem.scaling().stages;
+    if (!scaling_stages.empty() &&
+        scaling_stages.back() == model::ScalingStage::kPockChambolle) {
+      // Pock-Chambolle row/column sums give the Schur bound ||A||_2 <= 1.
+      operator_norm_upper_bound_squared = 1.0;
+    } else {
+      error = computeOperatorNormSquaredUpperBound(
+          built.problem.matrix(), operator_norm_upper_bound_squared);
+      if (!error.ok()) return failure(error);
+    }
+    step_input.operator_norm_squared =
+        operator_norm.operator_norm_squared > operator_norm_upper_bound_squared
+            ? operator_norm.operator_norm_squared
+            : operator_norm_upper_bound_squared;
     step_input.unscaled_rhs_norm = built.problem.unscaledNorms().row_bounds_l2;
     step_input.unscaled_cost_norm = built.problem.unscaledNorms().objective_l2;
     const StepSizeInitializationResult initialized_steps =
@@ -552,6 +831,16 @@ api::SolveResult solve(const api::SolverOptions& options,
         if (!error.ok()) return failure(error);
         error = postsolveIterate(built.problem, host, solution);
         if (!error.ok()) return failure(error);
+        const CertificateOutcome outcome = detectCertificate(
+            built.problem, original_model.lp(), host, options.kkt_tolerance,
+            certificate_buffers);
+        if (outcome.available) {
+          logCertificateCompletion(context, outcome.status,
+                                   outcome.certificate, total_iterations,
+                                   elapsedSeconds(start));
+          return certifiedResult(outcome.status, solution, total_iterations,
+                                 outcome.certificate);
+        }
         logCompletion(context, original_model.lp(),
                       api::SolverStatus::kTimeLimit, solution, total_iterations,
                       elapsedSeconds(start), options.kkt_tolerance);
@@ -619,6 +908,16 @@ api::SolveResult solve(const api::SolverOptions& options,
             error = postsolveIterate(built.problem, host, solution);
             if (!error.ok()) return failure(error);
           }
+          const CertificateOutcome outcome = detectCertificate(
+              built.problem, original_model.lp(), host, options.kkt_tolerance,
+              certificate_buffers);
+          if (outcome.available) {
+            logCertificateCompletion(context, outcome.status,
+                                     outcome.certificate, total_iterations,
+                                     elapsedSeconds(start));
+            return certifiedResult(outcome.status, solution, total_iterations,
+                                   outcome.certificate);
+          }
           logCompletion(context, original_model.lp(),
                         api::SolverStatus::kIterationLimit, solution,
                         total_iterations, elapsedSeconds(start),
@@ -632,12 +931,41 @@ api::SolveResult solve(const api::SolverOptions& options,
             error = postsolveIterate(built.problem, host, solution);
             if (!error.ok()) return failure(error);
           }
+          const CertificateOutcome outcome = detectCertificate(
+              built.problem, original_model.lp(), host, options.kkt_tolerance,
+              certificate_buffers);
+          if (outcome.available) {
+            logCertificateCompletion(context, outcome.status,
+                                     outcome.certificate, total_iterations,
+                                     elapsedSeconds(start));
+            return certifiedResult(outcome.status, solution, total_iterations,
+                                   outcome.certificate);
+          }
           logCompletion(context, original_model.lp(),
                         api::SolverStatus::kTimeLimit, solution,
                         total_iterations, elapsedSeconds(start),
                         options.kkt_tolerance);
           return api::SolveResult::success(api::SolverStatus::kTimeLimit,
                                            solution, total_iterations);
+        }
+
+        // A verified certificate outranks continuing, but never outranks a
+        // verified optimal iterate or a numerical error.
+        {
+          const CertificateOutcome outcome = detectCertificate(
+              built.problem, original_model.lp(), host, options.kkt_tolerance,
+              certificate_buffers);
+          if (outcome.available) {
+            if (!postsolved) {
+              error = postsolveIterate(built.problem, host, solution);
+              if (!error.ok()) return failure(error);
+            }
+            logCertificateCompletion(context, outcome.status,
+                                     outcome.certificate, total_iterations,
+                                     elapsedSeconds(start));
+            return certifiedResult(outcome.status, solution, total_iterations,
+                                   outcome.certificate);
+          }
         }
       }
 
@@ -666,6 +994,7 @@ api::SolveResult solve(const api::SolverOptions& options,
         const FixedPointRestartResult restart =
             evaluateFixedPointRestart(restart_input);
         if (!restart.ok()) return failure(restart.error);
+        PrimalWeightUpdateKind pid_outcome = PrimalWeightUpdateKind::kNone;
         if (restart.decision == RestartDecision::kRestart) {
           PrimalWeightUpdateResult primal_weight_update;
           bool install_steps = false;
@@ -700,6 +1029,7 @@ api::SolveResult solve(const api::SolverOptions& options,
             primal_weight_update = updatePrimalWeightAtRestart(weight_input);
             if (!primal_weight_update.ok())
               return failure(primal_weight_update.error);
+            pid_outcome = primal_weight_update.kind;
             install_steps = true;
           }
 
@@ -719,6 +1049,12 @@ api::SolveResult solve(const api::SolverOptions& options,
           restart_reference_pending = true;
         } else {
           restart_state = restart.next;
+        }
+        const HighsInt convergence_boundary =
+            total_iterations / kConvergenceCadence;
+        if (convergence_boundary % 40 == 0) {
+          logBoundary(context, total_iterations, boundary_metrics,
+                      current_steps, restart.condition, use_pid, pid_outcome);
         }
       }
     }

@@ -10,6 +10,9 @@ namespace hipdlp {
 namespace backend {
 class Backend;
 }
+namespace model {
+struct SparseMatrix;
+}
 namespace algorithm {
 
 struct OperatorNormParameters {
@@ -41,6 +44,9 @@ struct OperatorNormResult {
 
   bool ok() const;
 };
+
+api::Error computeOperatorNormSquaredUpperBound(
+    const model::SparseMatrix& matrix, double& upper_bound_squared);
 
 OperatorNormResult estimateOperatorNormSquared(
     backend::Backend& backend, const backend::ProblemHandle& problem,
