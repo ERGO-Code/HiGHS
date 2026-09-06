@@ -385,7 +385,7 @@ endif
 
 do_install = get_option('do_install')
 
-if not get_option('with_pybind11')
+if not get_option('with_nanobind')
 highslib = library('highs',
                    highslib_srcs + highs_conf_file,
                    dependencies: _deps,
@@ -440,7 +440,7 @@ highspy_cpp = files([
   '../highspy/highs_bindings.cpp'
 ])
 
-if get_option('with_pybind11')
+if get_option('with_nanobind')
   py = import('python').find_installation(pure: false)
 
   highslib = library('highs',
@@ -459,13 +459,13 @@ if get_option('with_pybind11')
                                  include_directories: _incdirs,
                                 )
   _deps += highs_dep
-  pyb11_dep = [
+  nb_dep = [
     # py_dep is auto-added for Python >= 3.9, so it can be dropped here when
     # that is the minimum supported Python version
     py.dependency(),
-    dependency('pybind11')
+    dependency('nanobind')
   ]
-  _deps += pyb11_dep
+  _deps += nb_dep
 
   highspy_cpp = files([
     'highs_bindings.cpp'
@@ -474,7 +474,7 @@ if get_option('with_pybind11')
   py.extension_module(
     '_core',
     sources : highspy_cpp,
-    dependencies: [pyb11_dep, highs_dep],
+    dependencies: [nb_dep, highs_dep],
     cpp_args: _args,
     install: do_install,
     subdir: 'highspy',

@@ -23,7 +23,7 @@ option('with_stdcall',
 option('with_tests',
       type: 'boolean',
       value: false)
-option('with_pybind11',
+option('with_nanobind',
        type : 'boolean',
        value : false)
 option('do_install',
