@@ -630,15 +630,7 @@ void HPresolve::unlink(HighsInt pos) {
     impliedRowBounds.remove(Arow[pos], Acol[pos], Avalue[pos]);
   }
 
-  // remove implied bounds on row duals that where implied by this column's dual
-  // constraint
-  resetRowDualImpliedBoundsDerivedFromCol(Acol[pos]);
-
-  // remove implied bounds on columns that where implied by this row
-  resetColImpliedBoundsDerivedFromRow(Arow[pos]);
-
-  // modifications to row invalidate lifting opportunities
-  clearLiftingOpportunities(Arow[pos]);
+  matrixNonZeroChanged(Arow[pos], Acol[pos]);
 
   // remove non-zero
   Avalue[pos] = 0;
@@ -933,6 +925,21 @@ void HPresolve::resetRowDualImpliedBoundsDerivedFromCol(HighsInt col) {
     // given column
     resetRowDualImpliedBounds(row, col);
   }
+}
+
+void HPresolve::matrixNonZeroChanged(HighsInt row, HighsInt col) {
+  // remove implied bounds on row duals that were implied by this column's
+  // dual constraint
+  resetRowDualImpliedBoundsDerivedFromCol(col);
+
+  // remove implied bounds on columns that were implied by this row
+  resetColImpliedBoundsDerivedFromRow(row);
+
+  // modifications to row invalidate lifting opportunities
+  clearLiftingOpportunities(row);
+
+  // inform implication table about row modification
+  if (mipsolver != nullptr) mipsolver->mipdata_->implications.rowModified(row);
 }
 
 HighsInt HPresolve::findNonzero(HighsInt row, HighsInt col) {
@@ -1720,6 +1727,9 @@ HPresolve::Result HPresolve::finaliseProbing(
   HPRESOLVE_CHECKED_CALL(
       applyConflictGraphSubstitutions(postsolve_stack, numVarsSubstituted));
 
+  // aggregate variable bounds now that the clique table is populated
+  for (HighsInt i = 0; i != model->num_col_; ++i) aggregateVarBounds(i);
+
   return checkLimits(postsolve_stack);
 }
 
@@ -2211,8 +2221,6 @@ void HPresolve::addToMatrix(const HighsInt row, const HighsInt col,
   markChangedRow(row);
   markChangedCol(col);
 
-  if (mipsolver != nullptr) mipsolver->mipdata_->implications.rowModified(row);
-
   if (pos == -1) {
     if (freeslots.empty()) {
       pos = static_cast<HighsInt>(Avalue.size());
@@ -2234,36 +2242,22 @@ void HPresolve::addToMatrix(const HighsInt row, const HighsInt col,
 
     link(pos);
 
-    // remove implied bounds on row duals that where implied by this column's
-    // dual constraint
-    resetRowDualImpliedBoundsDerivedFromCol(col);
-
-    // remove implied bounds on columns that where implied by this row
-    resetColImpliedBoundsDerivedFromRow(row);
-
-    // modifications to row invalidate lifting opportunities
-    clearLiftingOpportunities(row);
+    matrixNonZeroChanged(row, col);
 
   } else {
     double sum = Avalue[pos] + val;
     if (std::abs(sum) <= options->small_matrix_value) {
       unlink(pos);
     } else {
-      // remove implied bounds on row duals that where implied by this column's
-      // dual constraint
-      resetRowDualImpliedBoundsDerivedFromCol(col);
-
-      // remove implied bounds on columns that where implied by this row
-      resetColImpliedBoundsDerivedFromRow(row);
-
-      // modifications to row invalidate lifting opportunities
-      clearLiftingOpportunities(row);
+      matrixNonZeroChanged(row, col);
 
       // remove the locks and contribution to implied (dual) row bounds, then
       // add then again
       impliedRowBounds.remove(row, col, Avalue[pos]);
       impliedDualRowBounds.remove(col, row, Avalue[pos]);
+
       Avalue[pos] = sum;
+
       // value not zero, add new contributions and locks with opposite sign
       impliedRowBounds.add(row, col, Avalue[pos]);
       impliedDualRowBounds.add(col, row, Avalue[pos]);
@@ -4944,9 +4938,6 @@ HPresolve::Result HPresolve::colPresolve(HighsPostsolveStack& postsolve_stack,
   if (model->integrality_[col] != HighsVarType::kInteger)
     updateRowDualImpliedBounds(col);
 
-  // aggregate variable bounds
-  aggregateVarBounds(col);
-
   return Result::kOk;
 }
 
@@ -5721,6 +5712,8 @@ HPresolve::Result HPresolve::zeroCostSingleton(
 
   model->row_lower_[row] = newRowLower;
   model->row_upper_[row] = newRowUpper;
+  if (newRowLower == -kHighsInf) changeRowDualUpper(row, 0.0);
+  if (newRowUpper == kHighsInf) changeRowDualLower(row, 0.0);
   if (was_equation && newRowLower != newRowUpper &&
       eqiters[row] != equations.end()) {
     equations.erase(eqiters[row]);
@@ -7990,11 +7983,6 @@ HPresolve::Result HPresolve::presolveChangedCols(
   changedCols.swap(changedColIndices);
   for (HighsInt col : changedCols) {
     if (colDeleted[col]) continue;
-    size_t num_reductions = postsolve_stack.numReductions();
-    if (num_reductions == 35044) {
-      printf("HPresolve::presolveChangedCols reductions = %d\n",
-             int(num_reductions));
-    }
     HPRESOLVE_CHECKED_CALL(colPresolve(postsolve_stack, col));
     changedColFlag[col] = colDeleted[col];
   }
@@ -9271,12 +9259,18 @@ void HPresolve::aggregateVarBounds(HighsInt col) {
             }
           }
 
+          // update row dual bounds to match the new row type,
+          // as the original row may have been <= or >=
           if (direction > 0) {
             model->row_lower_[row] = static_cast<double>(rowBound);
             model->row_upper_[row] = kHighsInf;
+            changeRowDualLower(row, 0.0);
+            changeRowDualUpper(row, kHighsInf);
           } else {
             model->row_lower_[row] = -kHighsInf;
             model->row_upper_[row] = static_cast<double>(rowBound);
+            changeRowDualLower(row, -kHighsInf);
+            changeRowDualUpper(row, 0.0);
           }
         }
       };
@@ -9285,11 +9279,12 @@ void HPresolve::aggregateVarBounds(HighsInt col) {
   if (ub < kHighsInf) mergeCliques(vubsCover, vubsFromRow, ub, HighsInt{-1});
 
   if (numRowsRemoved > 0 || numRowsModified > 0)
-    printf(
-        "aggregateVarBounds col %d: %d rows removed, %d rows modified, %d vars "
-        "lifted\n",
-        (int)col, (int)numRowsRemoved, (int)numRowsModified,
-        (int)numVarsLifted);
+    highsLogDev(
+        options->log_options, HighsLogType::kInfo,
+        "Implied variable bound aggregation for column %" HIGHSINT_FORMAT
+        ": %" HIGHSINT_FORMAT " rows removed, %" HIGHSINT_FORMAT
+        " rows modified, %" HIGHSINT_FORMAT " vars lifted\n",
+        col, numRowsRemoved, numRowsModified, numVarsLifted);
 }
 
 // Not currently called
