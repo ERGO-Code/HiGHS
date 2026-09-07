@@ -1916,3 +1916,55 @@ TEST_CASE("clique-extract-origin-unequal-coeff", "[highs_test_mip_solver]") {
 
   highs.resetGlobalScheduler(true);
 }
+
+TEST_CASE("clique-no-delete-ranged-row", "[highs_test_mip_solver]") {
+  // Negative test: ranged rows must not be deleted by clique merging because
+  // the extracted clique is a relaxation (only captures one side).
+  //   row 0: x0 + x1 + x2 <= 1       (set packing, 3-clique)
+  //   row 1: 0 <= -x0 + x3 <= 1      (ranged)
+  //   row 2: 0 <= -x1 + x3 <= 1      (ranged)
+  //   row 3: 0 <= -x2 + x3 <= 1      (ranged)
+  const HighsInt ncols = 4;
+  const HighsInt nrows = 4;
+  HighsLp lp;
+  lp.num_col_ = ncols;
+  lp.num_row_ = nrows;
+  lp.sense_ = ObjSense::kMinimize;
+  lp.offset_ = 0;
+  lp.col_cost_ = {1.0, 1.0, 1.0, 1.0};
+  lp.col_lower_ = {0.0, 0.0, 0.0, 0.0};
+  lp.col_upper_ = {1.0, 1.0, 1.0, 1.0};
+  lp.integrality_ = {HighsVarType::kInteger, HighsVarType::kInteger,
+                     HighsVarType::kInteger, HighsVarType::kInteger};
+  lp.row_lower_ = {-kHighsInf, 0.0, 0.0, 0.0};
+  lp.row_upper_ = {1.0, 1.0, 1.0, 1.0};
+  lp.a_matrix_.format_ = MatrixFormat::kColwise;
+  lp.a_matrix_.start_ = {0, 2, 4, 6, 9};
+  lp.a_matrix_.index_ = {0, 1, 0, 2, 0, 3, 1, 2, 3};
+  lp.a_matrix_.value_ = {1.0, -1.0, 1.0, -1.0, 1.0, -1.0, 1.0, 1.0, 1.0};
+
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  highs.passModel(lp);
+
+  HighsCallback callback(&highs);
+  const HighsOptions& options = highs.getOptions();
+  HighsSolution solution;
+  HighsMipSolver mipsolver(callback, options, lp, solution);
+  mipsolver.mipdata_ =
+      std::unique_ptr<HighsMipSolverData>(new HighsMipSolverData(mipsolver));
+  mipsolver.mipdata_->feastol = 1e-6;
+  mipsolver.mipdata_->postSolveStack.initializeIndexMaps(nrows, ncols);
+  mipsolver.mipdata_->setupDomainPropagation();
+
+  HighsCliqueTable& cliquetable = mipsolver.mipdata_->cliquetable;
+  HighsDomain& domain = mipsolver.mipdata_->getDomain();
+
+  cliquetable.extractCliques(mipsolver);
+  cliquetable.runCliqueMerging(domain);
+
+  const std::vector<HighsInt>& deleted = cliquetable.getDeletedRows();
+  REQUIRE(deleted.empty());
+
+  highs.resetGlobalScheduler(true);
+}
