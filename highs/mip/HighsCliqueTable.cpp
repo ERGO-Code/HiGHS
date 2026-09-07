@@ -980,7 +980,9 @@ void HighsCliqueTable::extractCliques(
       // if (clique.size() > 2) runCliqueSubsumption(globaldom, clique);
       // runCliqueMerging(globaldom, clique);
       // if (clique.size() >= 2) {
-      addClique(mipsolver, clique.data(), static_cast<HighsInt>(clique.size()));
+      addClique(
+          mipsolver, clique.data(), static_cast<HighsInt>(clique.size()), false,
+          static_cast<HighsInt>(clique.size()) == ntotal ? origin : kHighsIInf);
       if (globaldom.infeasible()) return;
       //}
     }
