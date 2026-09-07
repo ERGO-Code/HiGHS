@@ -980,6 +980,8 @@ void HighsCliqueTable::extractCliques(
       // if (clique.size() > 2) runCliqueSubsumption(globaldom, clique);
       // runCliqueMerging(globaldom, clique);
       // if (clique.size() >= 2) {
+      // if all variables are binary and form one clique, pass row origin
+      // so clique merging can delete the subsumed row
       addClique(
           mipsolver, clique.data(), static_cast<HighsInt>(clique.size()), false,
           static_cast<HighsInt>(clique.size()) == ntotal ? origin : kHighsIInf);
