@@ -4044,6 +4044,10 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
             // skip binary column
             if (col == binCol) continue;
 
+            if (mipsolver != nullptr && mipsolver->mipdata_->cliquesExtracted) {
+              mipsolver->mipdata_->cliquetable.presolveEliminateCol(col);
+            }
+
             // get column lower and upper bounds used to compute bounds on row
             // activities
             double col_lower = impliedRowBounds.getImplVarLower(row, col);
@@ -4068,8 +4072,6 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
                   -1, col, binCol, 1.0, -scale, offset, lower, upper, 0.0,
                   false, false, HighsPostsolveStack::RowType::kEq,
                   HighsEmptySlice());
-              HPRESOLVE_CHECKED_CALL(
-                  updateCliqueTableSubstituteCol(col, binCol, offset, scale));
               substitute(col, binCol, offset, scale);
               return Result::kOk;
             };
