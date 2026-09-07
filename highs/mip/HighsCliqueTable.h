@@ -98,6 +98,7 @@ class HighsCliqueTable {
   HighsInt numEntries;
   HighsInt maxEntries;
   HighsInt minEntriesForParallelism;
+  bool inPresolveProbing;
   bool allowParallel;
 
   void unlink(HighsInt pos, HighsInt cliqueid);
@@ -176,6 +177,7 @@ class HighsCliqueTable {
     numEntries = 0;
     maxEntries = kHighsIInf;
     minEntriesForParallelism = kHighsIInf;
+    inPresolveProbing = false;
     allowParallel = true;
   }
 
@@ -186,6 +188,10 @@ class HighsCliqueTable {
     colsubstituted.resize(ncols);
     colDeleted.resize(ncols, false);
     presolveColStates.resize(ncols, PresolveColState::kActive);
+  }
+
+  void setinPresolveProbingFlag(const bool inPresolveProbing) {
+    this->inPresolveProbing = inPresolveProbing;
   }
 
   HighsInt getNumEntries() const { return numEntries; }

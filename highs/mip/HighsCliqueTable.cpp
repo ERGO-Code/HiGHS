@@ -1547,10 +1547,11 @@ void HighsCliqueTable::processInfeasibleVertices(HighsDomain& globaldom) {
       cliques[cliqueid].numZeroFixed += 1;
       if (cliques[cliqueid].numActive() <= 1) {
         fixLastActiveAndRemove(globaldom, cliqueid);
-      } else if (cliques[cliqueid].numZeroFixed >=
-                 std::max(
-                     HighsInt{10},
-                     (cliques[cliqueid].end - cliques[cliqueid].start) >> 1)) {
+      } else if (!inPresolveProbing &&
+                 cliques[cliqueid].numZeroFixed >=
+                     std::max(HighsInt{10}, (cliques[cliqueid].end -
+                                             cliques[cliqueid].start) >>
+                                                1)) {
         const bool equality = cliques[cliqueid].equality;
         const HighsInt origin = cliques[cliqueid].origin;
         clq.assign(cliqueentries.begin() + cliques[cliqueid].start,
@@ -2269,8 +2270,10 @@ bool HighsCliqueTable::presolveFixCol(HighsInt col, bool val,
         removeClique(cliqueId);
         continue;
       }
-      if (activeSize == 2 ||
-          clique.numZeroFixed >= std::max(HighsInt{10}, actualSize >> 1)) {
+
+      if (!inPresolveProbing &&
+          (activeSize == 2 ||
+           clique.numZeroFixed >= std::max(HighsInt{10}, actualSize >> 1))) {
         shortenedClique.clear();
         shortenedClique.reserve(activeSize);
         for (HighsInt i = clique.start; i != clique.end; ++i) {
@@ -2324,8 +2327,9 @@ void HighsCliqueTable::presolveEliminateCol(const HighsInt col) {
       removeClique(cliqueId, false);
       continue;
     }
-    if (activeSize == 2 ||
-        clique.numZeroFixed >= std::max(HighsInt{10}, actualSize >> 1)) {
+    if (!inPresolveProbing &&
+        (activeSize == 2 ||
+         clique.numZeroFixed >= std::max(HighsInt{10}, actualSize >> 1))) {
       shortenedClique.clear();
       shortenedClique.reserve(activeSize);
       for (HighsInt i = clique.start; i != clique.end; ++i) {
@@ -2454,6 +2458,7 @@ void HighsCliqueTable::rebuild(
     const std::vector<HighsInt>& orig2reducedcol,
     const std::vector<HighsInt>& orig2reducedrow) {
   HighsCliqueTable newCliqueTable(ncols);
+  newCliqueTable.setinPresolveProbingFlag(inPresolveProbing);
   newCliqueTable.setMinEntriesForParallelism(minEntriesForParallelism);
   for (size_t i = 0; i != cliques.size(); ++i) {
     if (cliques[i].start == -1) continue;
@@ -2495,6 +2500,7 @@ void HighsCliqueTable::buildFrom(const HighsLp* origModel,
   assert(init.colsubstituted.size() == colsubstituted.size());
   HighsInt ncols = init.colsubstituted.size();
   HighsCliqueTable newCliqueTable(ncols);
+  newCliqueTable.setinPresolveProbingFlag(inPresolveProbing);
   newCliqueTable.setMinEntriesForParallelism(minEntriesForParallelism);
   HighsInt ncliques = init.cliques.size();
   std::vector<CliqueVar> clqBuffer;

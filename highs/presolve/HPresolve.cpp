@@ -1740,9 +1740,11 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postsolve_stack) {
 
   // prepare probing
   bool firstCall = false;
+  mipsolver->mipdata_->cliquetable.setinPresolveProbingFlag(true);
   Result prepareResult = prepareProbing(postsolve_stack, firstCall);
   if (prepareResult != Result::kOk) {
     mipsolver->profiling_->stop(kMipClockProbingPresolve);
+    mipsolver->mipdata_->cliquetable.setinPresolveProbingFlag(false);
     return prepareResult;
   }
 
@@ -1970,6 +1972,7 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postsolve_stack) {
 
       if (domain.infeasible()) {
         mipsolver->profiling_->stop(kMipClockProbingPresolve);
+        mipsolver->mipdata_->cliquetable.setinPresolveProbingFlag(false);
         return Result::kPrimalInfeasible;
       }
     }
@@ -1979,9 +1982,15 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postsolve_stack) {
     HighsInt numBndsTightened = 0;
     HighsInt numVarsSubstituted = 0;
     HighsInt liftedNonzeros = 0;
-    HPRESOLVE_CHECKED_CALL(finaliseProbing(postsolve_stack, firstCall,
-                                           numVarsFixed, numBndsTightened,
-                                           numVarsSubstituted, liftedNonzeros));
+    Result finaliseResult =
+        finaliseProbing(postsolve_stack, firstCall, numVarsFixed,
+                        numBndsTightened, numVarsSubstituted, liftedNonzeros);
+    if (finaliseResult != Result::kOk) {
+      mipsolver->profiling_->stop(kMipClockProbingPresolve);
+      mipsolver->mipdata_->cliquetable.setinPresolveProbingFlag(false);
+      return finaliseResult;
+    }
+
     probingNumDelCol += numVarsSubstituted;
 
     highsLogDev(options->log_options, HighsLogType::kInfo,
@@ -2004,6 +2013,7 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postsolve_stack) {
   }
 
   mipsolver->profiling_->stop(kMipClockProbingPresolve);
+  mipsolver->mipdata_->cliquetable.setinPresolveProbingFlag(false);
   return checkLimits(postsolve_stack);
 }
 
@@ -5759,9 +5769,11 @@ HPresolve::Result HPresolve::enumerateSolutions(
 
   // prepare probing
   bool firstCall = false;
+  mipsolver->mipdata_->cliquetable.setinPresolveProbingFlag(true);
   Result prepareResult = prepareProbing(postsolve_stack, firstCall);
   if (prepareResult != Result::kOk) {
     mipsolver->profiling_->stop(kMipClockEnumerationPresolve);
+    mipsolver->mipdata_->cliquetable.setinPresolveProbingFlag(false);
     return prepareResult;
   }
 
@@ -6011,6 +6023,7 @@ HPresolve::Result HPresolve::enumerateSolutions(
   auto handleInfeasibility = [&](bool infeasible) {
     if (infeasible) {
       mipsolver->profiling_->stop(kMipClockEnumerationPresolve);
+      mipsolver->mipdata_->cliquetable.setinPresolveProbingFlag(false);
       return Result::kPrimalInfeasible;
     }
     return Result::kOk;
@@ -6209,9 +6222,14 @@ HPresolve::Result HPresolve::enumerateSolutions(
   HighsInt numBndsTightened = 0;
   HighsInt numVarsSubstituted = 0;
   HighsInt liftedNonzeros = 0;
-  HPRESOLVE_CHECKED_CALL(finaliseProbing(postsolve_stack, firstCall,
-                                         numVarsFixed, numBndsTightened,
-                                         numVarsSubstituted, liftedNonzeros));
+  Result finaliseResult =
+      finaliseProbing(postsolve_stack, firstCall, numVarsFixed,
+                      numBndsTightened, numVarsSubstituted, liftedNonzeros);
+  if (finaliseResult != Result::kOk) {
+    mipsolver->profiling_->stop(kMipClockEnumerationPresolve);
+    mipsolver->mipdata_->cliquetable.setinPresolveProbingFlag(false);
+    return finaliseResult;
+  }
 
   if (numVarsFixed > 0 || numBndsTightened > 0 || numVarsSubstituted > 0)
     highsLogDev(options->log_options, HighsLogType::kInfo,
@@ -6222,6 +6240,7 @@ HPresolve::Result HPresolve::enumerateSolutions(
                 static_cast<int>(numVarsSubstituted));
 
   mipsolver->profiling_->stop(kMipClockEnumerationPresolve);
+  mipsolver->mipdata_->cliquetable.setinPresolveProbingFlag(false);
 
   return checkLimits(postsolve_stack);
 }
@@ -8690,6 +8709,11 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
                          colScale * model->col_upper_[duplicateCol];
             mergeUpper = model->col_upper_[col] +
                          colScale * model->col_lower_[duplicateCol];
+          }
+
+          if (mipsolver != nullptr && mipsolver->mipdata_->cliquesExtracted) {
+            mipsolver->mipdata_->cliquetable.presolveEliminateCol(col);
+            mipsolver->mipdata_->cliquetable.presolveEliminateCol(duplicateCol);
           }
 
           // change bounds
