@@ -1384,8 +1384,13 @@ void HighsCliqueTable::extractCliques(HighsMipSolver& mipsolver,
       }
     };
 
-    checkRow(i, mipsolver.rowUpper(i), HighsInt{1});
-    checkRow(i, mipsolver.rowLower(i), HighsInt{-1});
+    // only pass row origin for one-sided inequalities; a clique is a
+    // relaxation of a ranged row so it cannot be deleted
+    bool isRanged = mipsolver.rowUpper(i) != kHighsInf &&
+                    mipsolver.rowLower(i) != -kHighsInf;
+    HighsInt rowOrigin = isRanged ? kHighsIInf : i;
+    checkRow(rowOrigin, mipsolver.rowUpper(i), HighsInt{1});
+    checkRow(rowOrigin, mipsolver.rowLower(i), HighsInt{-1});
 
     entries.clear();
   }
