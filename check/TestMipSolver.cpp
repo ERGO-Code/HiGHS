@@ -1782,3 +1782,73 @@ TEST_CASE("redcost-fixing-large-bounds", "[highs_test_mip_solver]") {
       mipsolver, mipsolver.mipdata_->getDomain());
   REQUIRE(!lurkingBounds.empty());
 }
+
+TEST_CASE("clique-extract-origin", "[highs_test_mip_solver]") {
+  // extractCliques must pass the row origin so that
+  // runCliqueMerging can delete subsumed rows.
+  // Model: 4 binary variables, 4 rows:
+  //   row 0: x0 + x1 + x2 <= 1       (set packing, 3-clique)
+  //   row 1: -x0 + x3 >= 0           (x3 >= x0, implication)
+  //   row 2: -x1 + x3 >= 0           (x3 >= x1, implication)
+  //   row 3: -x2 + x3 >= 0           (x3 >= x2, implication)
+  // Rows 1-3 transform into size-2 cliques. Clique merging extends the
+  // 3-clique from row 0 with (x3,0) and subsumes the size-2 cliques,
+  // deleting their origin rows.
+  const HighsInt ncols = 4;
+  const HighsInt nrows = 4;
+  HighsLp lp;
+  lp.num_col_ = ncols;
+  lp.num_row_ = nrows;
+  lp.sense_ = ObjSense::kMinimize;
+  lp.offset_ = 0;
+  lp.col_cost_ = {1.0, 1.0, 1.0, 1.0};
+  lp.col_lower_ = {0.0, 0.0, 0.0, 0.0};
+  lp.col_upper_ = {1.0, 1.0, 1.0, 1.0};
+  lp.integrality_ = {HighsVarType::kInteger, HighsVarType::kInteger,
+                     HighsVarType::kInteger, HighsVarType::kInteger};
+  lp.row_lower_ = {-kHighsInf, 0.0, 0.0, 0.0};
+  lp.row_upper_ = {1.0, kHighsInf, kHighsInf, kHighsInf};
+  // CSC matrix:
+  //        row0  row1  row2  row3
+  // x0:      1    -1     0     0
+  // x1:      1     0    -1     0
+  // x2:      1     0     0    -1
+  // x3:      0     1     1     1
+  lp.a_matrix_.format_ = MatrixFormat::kColwise;
+  lp.a_matrix_.start_ = {0, 2, 4, 6, 9};
+  lp.a_matrix_.index_ = {0, 1, 0, 2, 0, 3, 1, 2, 3};
+  lp.a_matrix_.value_ = {1.0, -1.0, 1.0, -1.0, 1.0, -1.0, 1.0, 1.0, 1.0};
+
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  highs.passModel(lp);
+
+  HighsCallback callback(&highs);
+  const HighsOptions& options = highs.getOptions();
+  HighsSolution solution;
+  HighsMipSolver mipsolver(callback, options, lp, solution);
+  mipsolver.mipdata_ =
+      std::unique_ptr<HighsMipSolverData>(new HighsMipSolverData(mipsolver));
+  mipsolver.mipdata_->feastol = 1e-6;
+  mipsolver.mipdata_->postSolveStack.initializeIndexMaps(nrows, ncols);
+  mipsolver.mipdata_->setupDomainPropagation();
+
+  HighsCliqueTable& cliquetable = mipsolver.mipdata_->cliquetable;
+  HighsDomain& domain = mipsolver.mipdata_->getDomain();
+
+  cliquetable.extractCliques(mipsolver);
+  cliquetable.runCliqueMerging(domain);
+
+  std::vector<HighsInt> deleted = cliquetable.getDeletedRows();
+  std::sort(deleted.begin(), deleted.end());
+  // rows 1, 2, 3 should be deleted (subsumed by the merged 4-clique)
+  // row 0 is kept as the origin of the merged clique
+  REQUIRE(deleted == std::vector<HighsInt>{1, 2, 3});
+
+  // the 3-clique from row 0 should have been extended with (x3, 0)
+  REQUIRE(cliquetable.haveCommonClique({0, 1}, {3, 0}));
+  REQUIRE(cliquetable.haveCommonClique({1, 1}, {3, 0}));
+  REQUIRE(cliquetable.haveCommonClique({2, 1}, {3, 0}));
+
+  highs.resetGlobalScheduler(true);
+}
