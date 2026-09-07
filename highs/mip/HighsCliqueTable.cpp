@@ -851,7 +851,7 @@ void HighsCliqueTable::extractCliques(
     const HighsMipSolver& mipsolver, std::vector<HighsInt>& inds,
     std::vector<double>& vals, std::vector<int8_t>& complementation, double rhs,
     HighsInt nbin, std::vector<HighsInt>& perm, std::vector<CliqueVar>& clique,
-    double feastol) {
+    double feastol, HighsInt origin) {
   HighsImplications& implics = mipsolver.mipdata_->implications;
   HighsDomain& globaldom = mipsolver.mipdata_->getDomain();
 
@@ -939,7 +939,8 @@ void HighsCliqueTable::extractCliques(
         clique.emplace_back(inds[pos], 1);
     }
 
-    addClique(mipsolver, clique.data(), nbin);
+    addClique(mipsolver, clique.data(), nbin, false,
+              nbin == ntotal ? origin : kHighsIInf);
     if (globaldom.infeasible()) return;
     // printf("extracted this clique:\n");
     // printClique(clique);
@@ -1334,7 +1335,7 @@ void HighsCliqueTable::extractCliques(HighsMipSolver& mipsolver,
       entries[col] += val;
     }
 
-    auto checkRow = [&](double rhs, HighsInt direction) {
+    auto checkRow = [&](HighsInt row, double rhs, HighsInt direction) {
       if (direction * rhs == kHighsInf) return;
       rhs = direction * (rhs - offset);
       inds.clear();
@@ -1372,13 +1373,13 @@ void HighsCliqueTable::extractCliques(HighsMipSolver& mipsolver,
 
       if (!freevar && nbin != 0) {
         extractCliques(mipsolver, inds, vals, complementation, rhs, nbin, perm,
-                       clique, mipsolver.mipdata_->feastol);
+                       clique, mipsolver.mipdata_->feastol, row);
         if (globaldom.infeasible()) return;
       }
     };
 
-    checkRow(mipsolver.rowUpper(i), HighsInt{1});
-    checkRow(mipsolver.rowLower(i), HighsInt{-1});
+    checkRow(i, mipsolver.rowUpper(i), HighsInt{1});
+    checkRow(i, mipsolver.rowLower(i), HighsInt{-1});
 
     entries.clear();
   }
