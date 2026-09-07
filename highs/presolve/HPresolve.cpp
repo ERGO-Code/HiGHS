@@ -9218,72 +9218,78 @@ void HPresolve::aggregateVarBounds(HighsInt col) {
     vubsClique.emplace_back(binaryCol, val);
   });
 
-  // clique partitioning
-  std::vector<HighsInt> vlbsCliquePartitionStart;
-  std::vector<HighsInt> vubsCliquePartitionStart;
-  cliquetable.cliquePartition(vlbsClique, vlbsCliquePartitionStart);
-  cliquetable.cliquePartition(vubsClique, vubsCliquePartitionStart);
+  // clique cover
+  std::vector<std::vector<HighsCliqueTable::CliqueVar>> vlbsCover;
+  std::vector<std::vector<HighsCliqueTable::CliqueVar>> vubsCover;
+  cliquetable.cliqueCover(vlbsClique, vlbsCover);
+  cliquetable.cliqueCover(vubsClique, vubsCover);
 
   HighsInt numRowsRemoved = 0;
   HighsInt numRowsModified = 0;
   HighsInt numVarsLifted = 0;
 
-  auto mergeCliques = [&](std::vector<HighsCliqueTable::CliqueVar>& clqVars,
-                          std::vector<HighsInt>& partitionStart,
-                          HighsHashTree<HighsInt, colImpliedBounds>& boundsMap,
-                          double baseBound, HighsInt direction) {
-    HighsInt numCliques = static_cast<HighsInt>(partitionStart.size()) - 1;
+  auto mergeCliques =
+      [&](std::vector<std::vector<HighsCliqueTable::CliqueVar>>& cover,
+          HighsHashTree<HighsInt, colImpliedBounds>& boundsMap,
+          double baseBound, HighsInt direction) {
+        std::set<HighsInt> consumedRows;
 
-    for (HighsInt i = 0; i < numCliques; ++i) {
-      HighsInt cliqueStart = partitionStart[i];
-      HighsInt cliqueEnd = partitionStart[i + 1];
-      if (cliqueEnd - cliqueStart < 2) continue;
+        for (const auto& clique : cover) {
+          if (clique.size() < 2) continue;
 
-      HighsInt row = -1;
-      HighsCDouble rowBound = baseBound;
+          // find an unconsumed row to reuse and remove the rest
+          HighsInt row = -1;
+          for (const auto& var : clique) {
+            const auto* bounds = boundsMap.find(var.col);
+            HighsInt currentrow = bounds->originalBound.origin_row;
+            if (consumedRows.insert(currentrow).second) {
+              if (row == -1)
+                row = currentrow;
+              else {
+                removeRow(currentrow);
+                numRowsRemoved++;
+              }
+            }
+          }
+          if (row == -1) continue;
 
-      for (HighsInt j = cliqueStart; j < cliqueEnd; ++j) {
-        HighsInt binCol = clqVars[j].col;
-        HighsInt val = clqVars[j].val;
-        const auto* bounds = boundsMap.find(binCol);
-        double a = bounds->standardBound.coef;
-        HighsInt currentrow = bounds->originalBound.origin_row;
-
-        if (row == -1) {
-          row = currentrow;
+          // rewrite the reused row with the aggregated constraint
           unlinkRow(row);
           addToMatrix(row, col, 1.0);
           numRowsModified++;
-        } else {
-          removeRow(currentrow);
-          numRowsRemoved++;
+
+          HighsCDouble rowBound = baseBound;
+          for (const auto& var : clique) {
+            const auto* bounds = boundsMap.find(var.col);
+            double a = bounds->standardBound.coef;
+            numVarsLifted++;
+            if (var.val == 1) {
+              addToMatrix(row, var.col, -direction * a);
+            } else {
+              addToMatrix(row, var.col, direction * a);
+              rowBound -= direction * a;
+            }
+          }
+
+          if (direction > 0) {
+            model->row_lower_[row] = static_cast<double>(rowBound);
+            model->row_upper_[row] = kHighsInf;
+          } else {
+            model->row_lower_[row] = -kHighsInf;
+            model->row_upper_[row] = static_cast<double>(rowBound);
+          }
         }
+      };
 
-        numVarsLifted++;
+  if (lb > -kHighsInf) mergeCliques(vlbsCover, vlbsFromRow, lb, HighsInt{1});
+  if (ub < kHighsInf) mergeCliques(vubsCover, vubsFromRow, ub, HighsInt{-1});
 
-        if (val == 1) {
-          addToMatrix(row, binCol, -direction * a);
-        } else {
-          addToMatrix(row, binCol, direction * a);
-          rowBound -= direction * a;
-        }
-      }
-      if (direction > 0) {
-        model->row_lower_[row] = static_cast<double>(rowBound);
-        model->row_upper_[row] = kHighsInf;
-      } else {
-        model->row_lower_[row] = -kHighsInf;
-        model->row_upper_[row] = static_cast<double>(rowBound);
-      }
-    }
-  };
-
-  if (lb > -kHighsInf)
-    mergeCliques(vlbsClique, vlbsCliquePartitionStart, vlbsFromRow, lb,
-                 HighsInt{1});
-  if (ub < kHighsInf)
-    mergeCliques(vubsClique, vubsCliquePartitionStart, vubsFromRow, ub,
-                 HighsInt{-1});
+  if (numRowsRemoved > 0 || numRowsModified > 0)
+    printf(
+        "aggregateVarBounds col %d: %d rows removed, %d rows modified, %d vars "
+        "lifted\n",
+        (int)col, (int)numRowsRemoved, (int)numRowsModified,
+        (int)numVarsLifted);
 }
 
 // Not currently called
