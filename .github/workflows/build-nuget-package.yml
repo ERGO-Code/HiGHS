@@ -4,9 +4,9 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Package version (e.g. 1.15.1-preview.1)'
+        description: 'Package version (e.g. 1.15.2-preview.1)'
         required: true
-        default: '1.15.1-preview.1'
+        default: '1.15.2-preview.1'
       push_package:
         description: 'Push package to NuGet.org'
         type: boolean
