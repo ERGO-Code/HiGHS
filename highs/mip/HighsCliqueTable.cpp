@@ -939,6 +939,8 @@ void HighsCliqueTable::extractCliques(
         clique.emplace_back(inds[pos], 1);
     }
 
+    // if all variables are binary, pass row origin so clique merging
+    // can delete the subsumed row
     addClique(mipsolver, clique.data(), nbin, false,
               nbin == ntotal ? origin : kHighsIInf);
     if (globaldom.infeasible()) return;
