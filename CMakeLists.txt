@@ -178,7 +178,7 @@ if (HIGHS_GPU_LIB)
 endif()
 
 if(CUPDLP_GPU AND CMAKE_VERSION VERSION_LESS "3.25.0")
-    message("CUPDLP FindCUDAConf requires CMake version minumum 3.24. Please use a higher version of CMake.")
+    message("CUPDLP FindCUDAConf requires CMake version minimum 3.24. Please use a higher version of CMake.")
 endif()
 
 # if (NOT LINUX)

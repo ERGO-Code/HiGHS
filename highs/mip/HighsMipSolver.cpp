@@ -1096,11 +1096,11 @@ restart:
     assert(!nodesInstalled());
 
     // Sync global information
-    profiling_->start(kMipClockDomainPropgate);
+    profiling_->start(kMipClockDomainPropagate);
     syncPools(search_indices);
     syncGlobalDomain(search_indices);
     mipdata_->getDomain().propagate();
-    profiling_->stop(kMipClockDomainPropgate);
+    profiling_->stop(kMipClockDomainPropagate);
 
     profiling_->start(kMipClockPruneInfeasibleNodes);
     mipdata_->pruned_treeweight += mipdata_->nodequeue.pruneInfeasibleNodes(
