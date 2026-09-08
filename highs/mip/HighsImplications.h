@@ -54,12 +54,16 @@ class HighsImplications {
     HighsInt origin;
 
     double minValue() const {
-      return static_cast<double>(static_cast<HighsCDouble>(constant) +
-                                 std::min(coef, 0.0));
+      double m = std::min(coef, 0.0);
+      if (std::abs(constant) >= kHighsInf || std::abs(m) >= kHighsInf)
+        return constant + m;
+      return static_cast<double>(static_cast<HighsCDouble>(constant) + m);
     }
     double maxValue() const {
-      return static_cast<double>(static_cast<HighsCDouble>(constant) +
-                                 std::max(coef, 0.0));
+      double m = std::max(coef, 0.0);
+      if (std::abs(constant) >= kHighsInf || std::abs(m) >= kHighsInf)
+        return constant + m;
+      return static_cast<double>(static_cast<HighsCDouble>(constant) + m);
     }
   };
 
