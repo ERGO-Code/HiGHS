@@ -9170,24 +9170,30 @@ void HPresolve::aggregateVarBounds(HighsInt col) {
   if (lb > -kHighsInf) {
     implications.getVlbs(col).for_each(
         [&](HighsInt binaryCol, const HighsImplications::VarBound& vlb) {
-          HighsCDouble newCoef = vlb.constant - static_cast<HighsCDouble>(lb);
-          if (vlb.coef > 0) newCoef += vlb.coef;
+          if (implications.redundantVlb(vlb, lb)) return;
+          HighsImplications::VarBound v = vlb;
+          implications.tightenVlb(v, lb);
+          HighsCDouble newCoef = v.constant - static_cast<HighsCDouble>(lb);
+          if (v.coef > 0) newCoef += v.coef;
           vlbs.insert(binaryCol,
-                      colImpliedBounds{vlb, HighsImplications::VarBound{
-                                                static_cast<double>(newCoef),
-                                                lb, vlb.origin}});
+                      colImpliedBounds{
+                          v, HighsImplications::VarBound{
+                                 static_cast<double>(newCoef), lb, v.origin}});
         });
   }
   // collect VUBs (standardization needs finite ub)
   if (ub < kHighsInf) {
     implications.getVubs(col).for_each(
         [&](HighsInt binaryCol, const HighsImplications::VarBound& vub) {
-          HighsCDouble newCoef = static_cast<HighsCDouble>(ub) - vub.constant;
-          if (vub.coef < 0) newCoef -= vub.coef;
+          if (implications.redundantVub(vub, ub)) return;
+          HighsImplications::VarBound v = vub;
+          implications.tightenVub(v, ub);
+          HighsCDouble newCoef = static_cast<HighsCDouble>(ub) - v.constant;
+          if (v.coef < 0) newCoef -= v.coef;
           vubs.insert(binaryCol,
-                      colImpliedBounds{vub, HighsImplications::VarBound{
-                                                static_cast<double>(newCoef),
-                                                ub, vub.origin}});
+                      colImpliedBounds{
+                          v, HighsImplications::VarBound{
+                                 static_cast<double>(newCoef), ub, v.origin}});
         });
   }
 

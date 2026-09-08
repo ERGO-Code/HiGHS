@@ -220,6 +220,11 @@ class HighsImplications {
 
   void cleanupVarbounds(HighsInt col);
 
+  bool redundantVlb(const VarBound& vlb, double lb) const;
+  bool redundantVub(const VarBound& vub, double ub) const;
+  bool tightenVlb(VarBound& vlb, double lb) const;
+  bool tightenVub(VarBound& vub, double ub) const;
+
   void cleanupVlb(HighsInt col, HighsInt vlbCol,
                   HighsImplications::VarBound& vlb, double lb, bool& redundant,
                   bool& infeasible, bool allowBoundChanges = true) const;
