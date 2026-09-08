@@ -685,21 +685,12 @@ std::vector<double> getEffectiveCosts(const HighsLp& lp,
   std::vector<HighsInt> col_count;
   std::vector<HighsInt> row_id(lp.num_row_, kFree);
   std::vector<HighsInt> row_of_id;
-  std::vector<HighsInt> row_count_of_id;
   std::vector<HighsInt> col_of_id;
   std::vector<double> row_mu_of_id;
-  HighsInt num_free_column_singleton = 0;
 
-  double effective_costs_nz0 = 0;
-  double effective_costs_norm0 = 0;
-  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
+  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++)
     col_count.push_back(lp.a_matrix_.start_[iCol + 1] -
                         lp.a_matrix_.start_[iCol]);
-    if (effective_costs[iCol]) {
-      effective_costs_nz0++;
-      effective_costs_norm0 += std::abs(effective_costs[iCol]);
-    }
-  }
   for (HighsInt pass_n = 0;; pass_n++) {
     col_of_id.clear();
     row_of_id.clear();
@@ -725,39 +716,47 @@ std::vector<double> getEffectiveCosts(const HighsLp& lp,
           break;
         }
       }
+      if (iRow < 0) continue;
       assert(iRow == lp.a_matrix_.index_[iEl]);
-      // Found a free column singleton
-      //      col_count[iCol] = 0;
-      double value = lp.a_matrix_.value_[iEl];
+      // Found a free column singleton, so can zero its column cost,
+      // as its effective cost is zero after substitution, so the
+      // elimination need not be done
+      col_count[iCol] = 0;
+      // Retain the index of the free column singleton, its
+      // corresponding row, the multiplier for the elimination, and
+      // row_id[iRow]: this is both a marker to indicate that the row
+      // cannot be chosen for a subsequent free column singleton, and
+      // the position in col_of_id/row_of_id/row_mu_of_id so that
+      // these values can be extracted when passing through the matrix
       col_of_id.push_back(iCol);
       row_of_id.push_back(iRow);
-      row_mu_of_id.push_back(effective_costs[iCol] / value);
+      row_mu_of_id.push_back(effective_costs[iCol] / lp.a_matrix_.value_[iEl]);
       row_id[iRow] = num_id;
       num_id++;
     }
     if (num_id == 0) break;
-    row_count_of_id.resize(num_id, 0);
-    num_free_column_singleton += num_id;
     // Now pass through the matrix, adding multiples of selected rows
-    // into the objective - except for the column itself, as we know
-    // the resulting cost value is zero
+    // into the objective
     for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
       if (col_count[iCol] == 0) continue;
       for (HighsInt iEl = lp.a_matrix_.start_[iCol];
            iEl < lp.a_matrix_.start_[iCol + 1]; iEl++) {
         HighsInt id = row_id[lp.a_matrix_.index_[iEl]];
         if (id < 0) continue;
+        // Entry in a row to be added into effective_costs: get the
+        // multiplier, reducve the column's count and update its
+        // effective cost
         double row_mu = row_mu_of_id[id];
         col_count[iCol]--;
-        row_count_of_id[id]++;
         effective_costs[iCol] -= row_mu * lp.a_matrix_.value_[iEl];
       }
     }
+    // Update row_id so that these rows cannot be chosen again, and
+    // zero the effective cost for the free column singletons
     for (HighsInt id = 0; id < num_id; id++) {
       HighsInt iCol = col_of_id[id];
       HighsInt iRow = row_of_id[id];
       row_id[iRow] = kUsed;
-      assert(std::fabs(effective_costs[iCol]) < 1e-10);
       effective_costs[iCol] = 0;
     }
   }

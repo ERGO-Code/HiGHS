@@ -1273,7 +1273,7 @@ TEST_CASE("presolve-light-no-crossover", "[highs_test_presolve]") {
 
   REQUIRE(h.setOptionValue("presolve_light", kHighsOnString) ==
           HighsStatus::kOk);
-  const std::string solver = kHipoString;  // kIpxString
+  const std::string solver = kIpxString;  // kHipoString;  //
   REQUIRE(h.setOptionValue("solver", solver) == HighsStatus::kOk);
   REQUIRE(h.setOptionValue("run_crossover", kHighsOffString) ==
           HighsStatus::kOk);
