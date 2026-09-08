@@ -51,7 +51,7 @@ class HighsImplications {
   struct VarBound {
     double coef;
     double constant;
-    HighsInt origin_row;
+    HighsInt origin;
 
     double minValue() const {
       return static_cast<double>(static_cast<HighsCDouble>(constant) +
@@ -134,18 +134,16 @@ class HighsImplications {
   void strengthenVarBound(VarBound& vbnd, HighsInt multiplier) const;
 
   void addVUB(HighsInt col, HighsInt vubcol, double vubcoef, double vubconstant,
-              HighsInt origin_row = -1);
+              HighsInt origin = -1);
 
   void addVUB(HighsInt col, HighsInt vubcol, double vubcoef, double vubconstant,
-              double colupperbound, bool colisinteger,
-              HighsInt origin_row = -1);
+              double colupperbound, bool colisinteger, HighsInt origin = -1);
 
   void addVLB(HighsInt col, HighsInt vlbcol, double vlbcoef, double vlbconstant,
-              HighsInt origin_row = -1);
+              HighsInt origin = -1);
 
   void addVLB(HighsInt col, HighsInt vlbcol, double vlbcoef, double vlbconstant,
-              double collowerbound, bool colisinteger,
-              HighsInt origin_row = -1);
+              double collowerbound, bool colisinteger, HighsInt origin = -1);
 
   void columnTransformed(HighsInt col, double scale, double constant) {
     // Update implications affected by transformation

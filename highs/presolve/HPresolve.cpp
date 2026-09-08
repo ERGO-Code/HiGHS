@@ -9119,13 +9119,16 @@ void HPresolve::extractVarBounds(HighsInt row) {
     // compute coefficient for binary variable
     double vbCoef = -binCoef / nonzero.value();
 
+    // only record origin for size-2 one-sided rows that can be safely rewritten
+    HighsInt origin = rowsize[row] == 2 && !isRanged(row) ? row : -1;
+
     // add VLB
     if (vlbConstant != -kHighsInf)
       mipsolver->mipdata_->implications.addVLB(
           nonzero.index(), binCol, vbCoef, vlbConstant,
           model->col_lower_[nonzero.index()],
           model->integrality_[nonzero.index()] != HighsVarType::kContinuous,
-          row);
+          origin);
 
     // add VUB
     if (vubConstant != kHighsInf)
@@ -9133,7 +9136,7 @@ void HPresolve::extractVarBounds(HighsInt row) {
           nonzero.index(), binCol, vbCoef, vubConstant,
           model->col_upper_[nonzero.index()],
           model->integrality_[nonzero.index()] != HighsVarType::kContinuous,
-          row);
+          origin);
 
     // stop if no additional variable bounds can be found
     if (!useLhs && !useRhs) break;
@@ -9160,8 +9163,8 @@ void HPresolve::aggregateVarBounds(HighsInt col) {
     HighsImplications::VarBound standardBound;
   };
 
-  HighsHashTree<HighsInt, colImpliedBounds> vlbsFromRow;
-  HighsHashTree<HighsInt, colImpliedBounds> vubsFromRow;
+  HighsHashTree<HighsInt, colImpliedBounds> vlbs;
+  HighsHashTree<HighsInt, colImpliedBounds> vubs;
 
   // collect VLBs (standardization needs finite lb)
   if (lb > -kHighsInf) {
@@ -9169,10 +9172,10 @@ void HPresolve::aggregateVarBounds(HighsInt col) {
         [&](HighsInt binaryCol, const HighsImplications::VarBound& vlb) {
           HighsCDouble newCoef = vlb.constant - static_cast<HighsCDouble>(lb);
           if (vlb.coef > 0) newCoef += vlb.coef;
-          vlbsFromRow.insert(
-              binaryCol, colImpliedBounds{vlb, HighsImplications::VarBound{
-                                                   static_cast<double>(newCoef),
-                                                   lb, vlb.origin_row}});
+          vlbs.insert(binaryCol,
+                      colImpliedBounds{vlb, HighsImplications::VarBound{
+                                                static_cast<double>(newCoef),
+                                                lb, vlb.origin}});
         });
   }
   // collect VUBs (standardization needs finite ub)
@@ -9181,21 +9184,21 @@ void HPresolve::aggregateVarBounds(HighsInt col) {
         [&](HighsInt binaryCol, const HighsImplications::VarBound& vub) {
           HighsCDouble newCoef = static_cast<HighsCDouble>(ub) - vub.constant;
           if (vub.coef < 0) newCoef -= vub.coef;
-          vubsFromRow.insert(
-              binaryCol, colImpliedBounds{vub, HighsImplications::VarBound{
-                                                   static_cast<double>(newCoef),
-                                                   ub, vub.origin_row}});
+          vubs.insert(binaryCol,
+                      colImpliedBounds{vub, HighsImplications::VarBound{
+                                                static_cast<double>(newCoef),
+                                                ub, vub.origin}});
         });
   }
 
   // set up cliques
   std::vector<HighsCliqueTable::CliqueVar> vlbsClique;
   std::vector<HighsCliqueTable::CliqueVar> vubsClique;
-  vlbsFromRow.for_each([&](HighsInt binaryCol, colImpliedBounds& bounds) {
+  vlbs.for_each([&](HighsInt binaryCol, colImpliedBounds& bounds) {
     HighsInt val = bounds.originalBound.coef > 0 ? 1 : 0;
     vlbsClique.emplace_back(binaryCol, val);
   });
-  vubsFromRow.for_each([&](HighsInt binaryCol, colImpliedBounds& bounds) {
+  vubs.for_each([&](HighsInt binaryCol, colImpliedBounds& bounds) {
     HighsInt val = bounds.originalBound.coef < 0 ? 1 : 0;
     vubsClique.emplace_back(binaryCol, val);
   });
@@ -9223,7 +9226,7 @@ void HPresolve::aggregateVarBounds(HighsInt col) {
           HighsInt row = -1;
           for (const auto& var : clique) {
             const auto* bounds = boundsMap.find(var.col);
-            HighsInt currentrow = bounds->originalBound.origin_row;
+            HighsInt currentrow = bounds->originalBound.origin;
             if (currentrow < 0) continue;
             if (consumedRows.insert(currentrow).second) {
               if (row == -1)
@@ -9250,7 +9253,7 @@ void HPresolve::aggregateVarBounds(HighsInt col) {
               addToMatrix(row, var.col, -direction * a);
             } else {
               addToMatrix(row, var.col, direction * a);
-              rowBound -= direction * a;
+              rowBound += direction * a;
             }
           }
 
@@ -9270,8 +9273,8 @@ void HPresolve::aggregateVarBounds(HighsInt col) {
         }
       };
 
-  if (lb > -kHighsInf) mergeCliques(vlbsCover, vlbsFromRow, lb, HighsInt{1});
-  if (ub < kHighsInf) mergeCliques(vubsCover, vubsFromRow, ub, HighsInt{-1});
+  if (lb > -kHighsInf) mergeCliques(vlbsCover, vlbs, lb, HighsInt{1});
+  if (ub < kHighsInf) mergeCliques(vubsCover, vubs, ub, HighsInt{-1});
 
   if (numRowsRemoved > 0 || numRowsModified > 0)
     highsLogDev(
