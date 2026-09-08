@@ -211,7 +211,14 @@ TEST_CASE("test-effective-costs", "[highs_test_presolve]") {
   // substitutes all free column singletons into the objective to get
   // the "effective costs".
   Highs h;
-  h.setOptionValue("output_flag", dev_run);
+  //  h.setOptionValue("output_flag", dev_run);
+  bool test_all = true;
+  bool test_lp0 = test_all;
+  bool test_lp1 = test_all;
+  bool test_lp2 = test_all;
+
+  if (test_lp0) {
+    HighsLp lp;
   // First LP is
   //
   // min 4z
@@ -245,7 +252,6 @@ TEST_CASE("test-effective-costs", "[highs_test_presolve]") {
   // the only nonbasic column means that there are no active costs, so
   // active_cost_norm is zero (hence absolute and relative dual
   // infeasibility measures are identical).
-  HighsLp lp;
   lp.num_col_ = 3;
   lp.num_row_ = 2;
   lp.col_cost_ = {0, 0, 4};
@@ -262,7 +268,11 @@ TEST_CASE("test-effective-costs", "[highs_test_presolve]") {
   h.setOptionValue("presolve_rule_logging", kHighsOnString);
   h.run();
   REQUIRE(h.getInfo().active_cost_norm == 0);
-
+  printf("LP0: active_cost_norm = %g\n", h.getInfo().active_cost_norm);
+  }
+  
+  if (test_lp1) {
+  HighsLp lp;
   // Here's a simpler example that reflects the behaviour observed
   // with germanrr, where the cost row of the matrix introduced many
   // large costs. Hence the presolved model had a large value for
@@ -286,7 +296,24 @@ TEST_CASE("test-effective-costs", "[highs_test_presolve]") {
 
   h.run();
   REQUIRE(h.getInfo().active_cost_norm == cost);
+  printf("LP1: active_cost_norm = %g\n", h.getInfo().active_cost_norm);
+  }
+  test_lp2 = true;
+  if (test_lp2) {
+  // Finally gas11 has 61 free column singletons
+  h.setOptionValue("output_flag", true);
+  const std::string model = "gas11";
+   std::string model_file =
+      std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
+  h.readModel(model_file);
+  REQUIRE(h.setOptionValue(kPresolveString, kHighsOffString) == HighsStatus::kOk);
 
+  HighsStatus return_status = h.run();
+  REQUIRE(return_status == HighsStatus::kOk);
+
+  printf("LP2: active_cost_norm = %g\n", h.getInfo().active_cost_norm);
+  
+  }
   h.resetGlobalScheduler(true);
 }
 
