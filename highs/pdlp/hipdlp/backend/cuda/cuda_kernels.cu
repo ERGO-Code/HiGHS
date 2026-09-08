@@ -1,3 +1,4 @@
+#include <cfloat>
 #include <cmath>
 
 #include "pdlp/hipdlp/backend/cuda/cuda_kernels.cuh"
@@ -176,6 +177,566 @@ __global__ void differenceNormKernel(const HighsInt size, const double* left,
   recordNonFinite(value, error_flag);
 }
 
+const int kMaximumCheckBlocks = 1024;
+
+enum CheckNormIndex {
+  kCheckPrimalResidual,
+  kCheckDualResidual,
+  kCheckPrimalDelta,
+  kCheckDualDelta,
+  kCheckPrimalAnchor,
+  kCheckDualAnchor
+};
+
+enum CheckSumIndex { kCheckPrimalObjective, kCheckDualObjective, kCheckDeltaDot };
+
+__device__ void addCheckNorm(CheckNormState& norm, const double value,
+                             CheckPartial& partial, const bool optional = false) {
+  if (!isfinite(value)) {
+    (optional ? partial.optional_invalid : partial.requires_host_oracle) = 1;
+    return;
+  }
+  const double magnitude = fabs(value);
+  if (magnitude == 0.0) return;
+  if (norm.scale < magnitude) {
+    const double ratio = __ddiv_rn(norm.scale, magnitude);
+    norm.sum_of_squares = __dadd_rn(
+        1.0, __dmul_rn(__dmul_rn(norm.sum_of_squares, ratio), ratio));
+    norm.scale = magnitude;
+  } else {
+    const double ratio = __ddiv_rn(magnitude, norm.scale);
+    norm.sum_of_squares =
+        __dadd_rn(norm.sum_of_squares, __dmul_rn(ratio, ratio));
+  }
+}
+
+__device__ void mergeCheckNorm(CheckNormState& left,
+                               const CheckNormState& right) {
+  if (right.scale == 0.0) return;
+  if (left.scale < right.scale) {
+    const double ratio = __ddiv_rn(left.scale, right.scale);
+    left.sum_of_squares = __dadd_rn(
+        right.sum_of_squares,
+        __dmul_rn(__dmul_rn(left.sum_of_squares, ratio), ratio));
+    left.scale = right.scale;
+  } else {
+    const double ratio = __ddiv_rn(right.scale, left.scale);
+    left.sum_of_squares = __dadd_rn(
+        left.sum_of_squares,
+        __dmul_rn(__dmul_rn(right.sum_of_squares, ratio), ratio));
+  }
+}
+
+__device__ void addCheckSum(CheckSumState& sum, const double value,
+                            CheckPartial& partial, const bool optional = false) {
+  if (!isfinite(value)) {
+    (optional ? partial.optional_invalid : partial.requires_host_oracle) = 1;
+    return;
+  }
+  const double magnitude = fabs(value);
+  if (magnitude > 0.0 &&
+      (sum.minimum_nonzero == 0.0 || magnitude < sum.minimum_nonzero))
+    sum.minimum_nonzero = magnitude;
+  const double combined = __dadd_rn(sum.value, value);
+  const double absolute = __dadd_rn(sum.absolute_sum, fabs(value));
+  if (!isfinite(combined) || !isfinite(absolute))
+    (optional ? partial.optional_invalid : partial.requires_host_oracle) = 1;
+  sum.value = isfinite(combined) ? combined : 0.0;
+  sum.absolute_sum = isfinite(absolute) ? absolute : 0.0;
+}
+
+__device__ void mergeCheckPartial(CheckPartial& left,
+                                  const CheckPartial& right) {
+  left.numerical_error |= right.numerical_error;
+  left.optional_invalid |= right.optional_invalid;
+  left.requires_host_oracle |= right.requires_host_oracle;
+  for (int index = 0; index < 6; ++index)
+    mergeCheckNorm(left.norms[index], right.norms[index]);
+  for (int index = 0; index < 3; ++index) {
+    const double minimum = right.sums[index].minimum_nonzero;
+    if (minimum > 0.0 && (left.sums[index].minimum_nonzero == 0.0 ||
+                          minimum < left.sums[index].minimum_nonzero))
+      left.sums[index].minimum_nonzero = minimum;
+    const double combined = __dadd_rn(left.sums[index].value, right.sums[index].value);
+    const double absolute = __dadd_rn(left.sums[index].absolute_sum,
+                                     right.sums[index].absolute_sum);
+    if (!isfinite(combined) || !isfinite(absolute))
+      (index == kCheckDeltaDot ? left.optional_invalid
+                              : left.requires_host_oracle) = 1;
+    left.sums[index].value = isfinite(combined) ? combined : 0.0;
+    left.sums[index].absolute_sum = isfinite(absolute) ? absolute : 0.0;
+  }
+}
+
+__device__ double finishCheckNorm(const CheckNormState& norm,
+                                 CheckPartial& partial,
+                                 const bool optional = false) {
+  const double value = norm.scale == 0.0
+                           ? 0.0
+                           : __dmul_rn(norm.scale, __dsqrt_rn(norm.sum_of_squares));
+  if (!isfinite(value))
+    (optional ? partial.optional_invalid : partial.requires_host_oracle) = 1;
+  return value;
+}
+
+__device__ double finishCheckSum(CheckSumState& sum, const double offset,
+                                const double count, CheckPartial& partial,
+                                const bool optional = false) {
+  addCheckSum(sum, offset, partial, optional);
+  const double cancellation_limit =
+      __dmul_rn(__dmul_rn(64.0 * DBL_EPSILON, count + 1.0), sum.absolute_sum);
+  if (sum.absolute_sum > DBL_MAX / 4.0 ||
+      (sum.absolute_sum > 0.0 && fabs(sum.value) <= cancellation_limit) ||
+      (sum.minimum_nonzero > 0.0 &&
+       sum.minimum_nonzero <= __dmul_rn(DBL_EPSILON, sum.absolute_sum)))
+    (optional ? partial.optional_invalid : partial.requires_host_oracle) = 1;
+  return sum.value;
+}
+
+  __device__ certificate::Interval checkRoundingInterval(
+    const double value, const double magnitude, const double relative_error,
+    const double absolute_error) {
+    const double error = certificate::addUp(
+      certificate::multiplyUp(relative_error, magnitude), absolute_error);
+    return {certificate::addDown(value, -error), certificate::addUp(value, error)};
+  }
+
+  __device__ certificate::Interval checkNormInterval(
+    const CheckNormState& norm, const double value, const double relative_error,
+    const double scaled_floor, const double absolute_floor) {
+    if (norm.scale == 0.0) return {0.0, 0.0};
+    const double absolute_error = certificate::addUp(
+      certificate::multiplyUp(norm.scale, scaled_floor), absolute_floor);
+    certificate::Interval interval =
+      checkRoundingInterval(value, value, relative_error, absolute_error);
+    interval.lower = certificate::maximum(0.0, interval.lower);
+    return interval;
+  }
+
+  __device__ bool checkThresholdUncertain(const certificate::Interval value,
+                       const double tolerance) {
+    return !certificate::finite(value) ||
+       (value.lower <= tolerance && value.upper > tolerance);
+  }
+
+  __device__ void guardCheckStopping(const DeviceCheckProblem& problem,
+                     const DeviceCheckInput& input,
+                     const CheckPacket& packet,
+                     CheckPartial& total) {
+    using namespace certificate;
+    if (total.requires_host_oracle || total.numerical_error ||
+      (input.primal_tolerance == 0.0 && input.dual_tolerance == 0.0 &&
+       input.gap_tolerance == 0.0))
+    return;
+    const double dimension = addUp(
+      addUp(static_cast<double>(problem.num_rows),
+        static_cast<double>(problem.num_cols)), 1.0);
+    // Five rounding factors per scaled merge, plus sqrt/product; eight per
+    // component also bounds products, offset and serial/tree objective additions.
+    const double operations = multiplyUp(8.0, dimension);
+    const double gamma = errorGamma(operations);
+    const double relative_error = errorGamma(multiplyUp(2.0, operations));
+    if (!finiteValue(relative_error) || relative_error >= 1.0) {
+    total.requires_host_oracle = 1;
+    return;
+    }
+    const double floor_amplification = divideUp(2.0, addDown(1.0, -gamma));
+    // At most 12*dimension denorm_min absolute error per rescaled merge;
+    // there are fewer than dimension nontrivial merges, in either ordering.
+    const double scaled_floor = multiplyUp(
+      floor_amplification,
+      subnormalError(multiplyUp(12.0, multiplyUp(dimension, dimension)), gamma));
+    const double norm_floor =
+      multiplyUp(floor_amplification, subnormalError(2.0, gamma));
+    if (input.primal_tolerance > 0.0) {
+    const Interval residual = checkNormInterval(
+      total.norms[kCheckPrimalResidual], packet.primal_residual,
+      relative_error, scaled_floor, norm_floor);
+    const Interval denominator =
+      add({1.0, 1.0}, {packet.unscaled_rhs_norm, packet.unscaled_rhs_norm});
+    if (checkThresholdUncertain(divide(residual, denominator),
+                  input.primal_tolerance))
+      total.requires_host_oracle = 1;
+    }
+    if (input.dual_tolerance > 0.0) {
+    const Interval residual = checkNormInterval(
+      total.norms[kCheckDualResidual], packet.dual_residual,
+      relative_error, scaled_floor, norm_floor);
+    const Interval denominator =
+      add({1.0, 1.0}, {packet.unscaled_cost_norm, packet.unscaled_cost_norm});
+    if (checkThresholdUncertain(divide(residual, denominator),
+                  input.dual_tolerance))
+      total.requires_host_oracle = 1;
+    }
+    if (input.gap_tolerance > 0.0) {
+    const double objective_floor =
+      multiplyUp(floor_amplification, subnormalError(operations, gamma));
+    const Interval primal = checkRoundingInterval(
+      packet.primal_objective,
+      total.sums[kCheckPrimalObjective].absolute_sum,
+      relative_error, objective_floor);
+    const Interval dual = checkRoundingInterval(
+      packet.dual_objective, total.sums[kCheckDualObjective].absolute_sum,
+      relative_error, objective_floor);
+    const Interval difference = add(primal, multiply(dual, -1.0));
+    const Interval gap = {absoluteLower(difference), absoluteUpper(difference)};
+    const Interval denominator =
+      add(add({1.0, 1.0}, {absoluteLower(primal), absoluteUpper(primal)}),
+        {absoluteLower(dual), absoluteUpper(dual)});
+    if (checkThresholdUncertain(divide(gap, denominator), input.gap_tolerance))
+      total.requires_host_oracle = 1;
+    }
+  }
+
+__global__ void checkPartialsKernel(const DeviceCheckProblem problem,
+                                    const DeviceCheckInput input,
+                                    CheckPartial* partials) {
+  CheckPartial partial = {};
+  const HighsInt size = problem.num_rows > problem.num_cols
+                            ? problem.num_rows : problem.num_cols;
+  const HighsInt stride = static_cast<HighsInt>(blockDim.x) * gridDim.x;
+  for (HighsInt index = static_cast<HighsInt>(blockIdx.x) * blockDim.x + threadIdx.x;
+       index < size; index += stride) {
+    if (index < problem.num_rows) {
+      const double dual = input.dual[index];
+      const double ax = input.ax[index];
+      if (!isfinite(dual) || !isfinite(ax)) partial.numerical_error = 1;
+      double violation = __dsub_rn(ax, problem.row_lower[index]);
+      if (!problem.equality_rows[index] && violation > 0.0) violation = 0.0;
+      addCheckNorm(partial.norms[kCheckPrimalResidual],
+                   __ddiv_rn(violation, problem.row_scale[index]), partial);
+      addCheckSum(partial.sums[kCheckDualObjective],
+                  __dmul_rn(problem.row_lower[index], dual), partial);
+      if (input.fixed_point)
+        addCheckNorm(partial.norms[kCheckDualDelta], input.delta_dual[index],
+                     partial, true);
+      if (input.anchor_distances) {
+        const double anchor = input.dual_anchor[index];
+        if (!isfinite(anchor)) partial.optional_invalid = 1;
+        addCheckNorm(partial.norms[kCheckDualAnchor], __dsub_rn(dual, anchor),
+                     partial, true);
+      }
+    }
+    if (index < problem.num_cols) {
+      const double primal = input.primal[index];
+      const double aty = input.aty[index];
+      if (!isfinite(primal) || !isfinite(aty)) partial.numerical_error = 1;
+      const double reduced_cost = __dsub_rn(problem.costs[index], aty);
+      if (!isfinite(reduced_cost)) partial.requires_host_oracle = 1;
+      const bool has_lower = isfinite(problem.col_lower[index]);
+      const bool has_upper = isfinite(problem.col_upper[index]);
+      const double lower_slack = has_lower && reduced_cost > 0.0 ? reduced_cost : 0.0;
+      const double upper_slack = has_upper && reduced_cost < 0.0 ? -reduced_cost : 0.0;
+      const double residual =
+          __dadd_rn(__dsub_rn(reduced_cost, lower_slack), upper_slack);
+      addCheckNorm(partial.norms[kCheckDualResidual],
+                   __ddiv_rn(residual, problem.col_scale[index]), partial);
+      addCheckSum(partial.sums[kCheckPrimalObjective],
+                  __dmul_rn(problem.costs[index], primal), partial);
+      if (has_lower)
+        addCheckSum(partial.sums[kCheckDualObjective],
+                    __dmul_rn(problem.col_lower[index], lower_slack), partial);
+      if (has_upper)
+        addCheckSum(partial.sums[kCheckDualObjective],
+                    -__dmul_rn(problem.col_upper[index], upper_slack), partial);
+      if (input.fixed_point) {
+        const double delta = input.delta_primal[index];
+        const double product = input.aty_delta[index];
+        if (!isfinite(product)) partial.optional_invalid = 1;
+        addCheckNorm(partial.norms[kCheckPrimalDelta], delta, partial, true);
+        addCheckSum(partial.sums[kCheckDeltaDot], __dmul_rn(delta, product),
+                    partial, true);
+      }
+      if (input.anchor_distances) {
+        const double anchor = input.primal_anchor[index];
+        if (!isfinite(anchor)) partial.optional_invalid = 1;
+        addCheckNorm(partial.norms[kCheckPrimalAnchor], __dsub_rn(primal, anchor),
+                     partial, true);
+      }
+    }
+  }
+
+  __shared__ CheckPartial shared[kBlockSize];
+  shared[threadIdx.x] = partial;
+  __syncthreads();
+  for (int distance = kBlockSize / 2; distance > 0; distance /= 2) {
+    if (threadIdx.x < distance)
+      mergeCheckPartial(shared[threadIdx.x], shared[threadIdx.x + distance]);
+    __syncthreads();
+  }
+  if (threadIdx.x == 0) partials[blockIdx.x] = shared[0];
+}
+
+__global__ void checkPacketKernel(const DeviceCheckProblem problem,
+                                  const DeviceCheckInput input,
+                                  const int count, const CheckPartial* partials,
+                                  CheckPacket* output, int* error_flag) {
+  CheckPartial partial = {};
+  for (int index = threadIdx.x; index < count; index += blockDim.x)
+    mergeCheckPartial(partial, partials[index]);
+  __shared__ CheckPartial shared[kBlockSize];
+  shared[threadIdx.x] = partial;
+  __syncthreads();
+  for (int distance = kBlockSize / 2; distance > 0; distance /= 2) {
+    if (threadIdx.x < distance)
+      mergeCheckPartial(shared[threadIdx.x], shared[threadIdx.x + distance]);
+    __syncthreads();
+  }
+  if (threadIdx.x != 0) return;
+  CheckPartial& total = shared[0];
+  CheckPacket packet = {};
+  packet.primal_residual = finishCheckNorm(total.norms[kCheckPrimalResidual], total);
+  packet.dual_residual = finishCheckNorm(total.norms[kCheckDualResidual], total);
+  packet.primal_objective = finishCheckSum(
+      total.sums[kCheckPrimalObjective], problem.objective_offset,
+      static_cast<double>(problem.num_cols), total);
+  packet.dual_objective = finishCheckSum(
+      total.sums[kCheckDualObjective], problem.objective_offset,
+      static_cast<double>(problem.num_rows) + 2.0 * problem.num_cols, total);
+  packet.objective_gap = fabs(__dsub_rn(packet.primal_objective, packet.dual_objective));
+  if (!isfinite(packet.objective_gap)) total.requires_host_oracle = 1;
+  packet.unscaled_rhs_norm = problem.unscaled_rhs_norm;
+  packet.unscaled_cost_norm = problem.unscaled_cost_norm;
+  guardCheckStopping(problem, input, packet, total);
+  if (input.fixed_point) {
+    packet.primal_delta_norm =
+      finishCheckNorm(total.norms[kCheckPrimalDelta], total, true);
+    packet.dual_delta_norm =
+      finishCheckNorm(total.norms[kCheckDualDelta], total, true);
+    packet.delta_dot = finishCheckSum(total.sums[kCheckDeltaDot], 0.0,
+                      static_cast<double>(problem.num_cols), total,
+                      true);
+  }
+  if (input.anchor_distances) {
+    packet.primal_anchor_distance =
+      finishCheckNorm(total.norms[kCheckPrimalAnchor], total, true);
+    packet.dual_anchor_distance =
+      finishCheckNorm(total.norms[kCheckDualAnchor], total, true);
+  }
+  if (*error_flag == 0 && total.numerical_error != 0) *error_flag = 1;
+  packet.error_flag = *error_flag;
+    packet.requires_host_oracle =
+      total.requires_host_oracle || total.optional_invalid ||
+      (input.fixed_point && *input.optional_error != 0);
+  packet.primal_ray_possible = 1;
+  packet.farkas_possible = 1;
+  *output = packet;
+}
+
+__device__ void mergeCertificateNorm(CertificateNormPartial& left,
+                                     const CertificateNormPartial& right) {
+  certificate::mergeNorm(left.primal, right.primal);
+  certificate::mergeNorm(left.dual, right.dual);
+  left.unsafe |= right.unsafe;
+}
+
+__global__ void certificateRecoveryKernel(
+    const DeviceCertificateProblem problem, const DeviceCheckInput input,
+    certificate::Interval* primal, certificate::Interval* dual,
+    certificate::Interval* column, CertificateNormPartial* partials) {
+  CertificateNormPartial partial = {};
+  const HighsInt size =
+      problem.num_rows > problem.num_cols ? problem.num_rows : problem.num_cols;
+  const HighsInt stride = static_cast<HighsInt>(blockDim.x) * gridDim.x;
+  for (HighsInt index =
+           static_cast<HighsInt>(blockIdx.x) * blockDim.x + threadIdx.x;
+       index < size; index += stride) {
+    if (index < problem.num_cols) {
+      primal[index] = certificate::recoverProduct(input.primal[index],
+                                                  problem.col_scale[index]);
+      column[index] = certificate::recoverQuotient(-input.aty[index],
+                                                   problem.col_scale[index]);
+      partial.unsafe |=
+          !certificate::safeRecovery(primal[index], input.primal[index]) ||
+          !certificate::safeRecovery(column[index], -input.aty[index]);
+      certificate::addNorm(partial.primal, primal[index]);
+      certificate::addNorm(partial.dual, column[index]);
+    }
+    if (index < problem.num_rows) {
+      const HighsInt transformed = problem.row_map[index];
+      dual[index] = certificate::multiply(
+          certificate::recoverProduct(input.dual[transformed],
+                                      problem.row_scale[transformed]),
+          problem.row_sign[index]);
+      partial.unsafe |=
+          !certificate::safeRecovery(dual[index], input.dual[transformed]);
+      certificate::addNorm(partial.dual, dual[index]);
+    }
+  }
+  __shared__ CertificateNormPartial shared[kBlockSize];
+  shared[threadIdx.x] = partial;
+  __syncthreads();
+  for (int distance = kBlockSize / 2; distance > 0; distance /= 2) {
+    if (threadIdx.x < distance)
+      mergeCertificateNorm(shared[threadIdx.x], shared[threadIdx.x + distance]);
+    __syncthreads();
+  }
+  if (threadIdx.x == 0) partials[blockIdx.x] = shared[0];
+}
+
+__global__ void certificateNormKernel(const DeviceCertificateProblem problem,
+                                      const int count,
+                                      const CertificateNormPartial* partials,
+                                      const bool verifier,
+                                      CertificateState* state) {
+  CertificateNormPartial partial = {};
+  for (int index = threadIdx.x; index < count; index += blockDim.x)
+    mergeCertificateNorm(partial, partials[index]);
+  __shared__ CertificateNormPartial shared[kBlockSize];
+  shared[threadIdx.x] = partial;
+  __syncthreads();
+  for (int distance = kBlockSize / 2; distance > 0; distance /= 2) {
+    if (threadIdx.x < distance)
+      mergeCertificateNorm(shared[threadIdx.x], shared[threadIdx.x + distance]);
+    __syncthreads();
+  }
+  if (threadIdx.x != 0) return;
+  const certificate::Interval primal = certificate::hostNormBounds(
+      shared[0].primal, static_cast<double>(problem.num_cols));
+  const certificate::Interval dual = certificate::hostNormBounds(
+      shared[0].dual,
+      static_cast<double>(problem.num_rows) + problem.num_cols + 1.0);
+  const int unsafe = shared[0].unsafe || !certificate::positiveFinite(primal) ||
+                     !certificate::positiveFinite(dual);
+  if (verifier) {
+    state->primal_verifier_norm = primal;
+    state->dual_verifier_norm = dual;
+    state->unsafe |= unsafe;
+  } else {
+    state->primal_normalization = primal;
+    state->dual_normalization = dual;
+    state->unsafe = unsafe;
+  }
+}
+
+__global__ void certificateNormalizeKernel(
+    const DeviceCertificateProblem problem, const CertificateState* state,
+    certificate::Interval* primal, certificate::Interval* dual,
+    certificate::Interval* column, CertificateNormPartial* partials) {
+  CertificateNormPartial partial = {};
+  partial.unsafe = state->unsafe;
+  const HighsInt size =
+      problem.num_rows > problem.num_cols ? problem.num_rows : problem.num_cols;
+  const HighsInt stride = static_cast<HighsInt>(blockDim.x) * gridDim.x;
+  if (!state->unsafe) {
+    for (HighsInt index =
+             static_cast<HighsInt>(blockIdx.x) * blockDim.x + threadIdx.x;
+         index < size; index += stride) {
+      if (index < problem.num_cols) {
+        primal[index] =
+            certificate::divide(primal[index], state->primal_normalization);
+        column[index] =
+            certificate::divide(column[index], state->dual_normalization);
+        partial.unsafe |= !certificate::finite(primal[index]) ||
+                          !certificate::finite(column[index]);
+        certificate::addNorm(partial.primal, primal[index]);
+        certificate::addNorm(partial.dual, column[index]);
+      }
+      if (index < problem.num_rows) {
+        dual[index] =
+            certificate::divide(dual[index], state->dual_normalization);
+        partial.unsafe |= !certificate::finite(dual[index]);
+        certificate::addNorm(partial.dual, dual[index]);
+      }
+    }
+  }
+  __shared__ CertificateNormPartial shared[kBlockSize];
+  shared[threadIdx.x] = partial;
+  __syncthreads();
+  for (int distance = kBlockSize / 2; distance > 0; distance /= 2) {
+    if (threadIdx.x < distance)
+      mergeCertificateNorm(shared[threadIdx.x], shared[threadIdx.x + distance]);
+    __syncthreads();
+  }
+  if (threadIdx.x == 0) partials[blockIdx.x] = shared[0];
+}
+
+__global__ void certificateConditionsKernel(
+    const DeviceCertificateProblem problem, const CertificateState* state,
+    const certificate::Interval* primal, const certificate::Interval* dual,
+    const certificate::Interval* column, certificate::ScreenPartial* partials) {
+  using namespace certificate;
+  ScreenPartial partial = {};
+  partial.unsafe = state->unsafe;
+  const HighsInt size =
+      problem.num_rows > problem.num_cols ? problem.num_rows : problem.num_cols;
+  const HighsInt stride = static_cast<HighsInt>(blockDim.x) * gridDim.x;
+  if (!state->unsafe) {
+    for (HighsInt index =
+             static_cast<HighsInt>(blockIdx.x) * blockDim.x + threadIdx.x;
+         index < size; index += stride) {
+      if (index < problem.num_cols) {
+        partial.primal_violation =
+            maximum(partial.primal_violation,
+                    violationLower(primal[index], problem.col_lower[index],
+                                   problem.col_upper[index], false));
+        partial.farkas_violation =
+            maximum(partial.farkas_violation,
+                    violationLower(column[index], problem.col_lower[index],
+                                   problem.col_upper[index], true));
+        addSum(partial.objective,
+               multiply(primal[index], problem.costs[index]));
+      }
+      if (index < problem.num_rows) {
+        Interval activity = {0.0, 0.0};
+        for (HighsInt entry = problem.row_starts[index];
+             entry < problem.row_starts[index + 1]; ++entry)
+          activity =
+              add(activity, multiply(primal[problem.column_indices[entry]],
+                                     problem.matrix_values[entry]));
+        partial.primal_violation =
+            maximum(partial.primal_violation,
+                    violationLower(activity, problem.row_lower[index],
+                                   problem.row_upper[index], false));
+        partial.farkas_violation =
+            maximum(partial.farkas_violation,
+                    violationLower(dual[index], problem.row_lower[index],
+                                   problem.row_upper[index], true));
+        if (problem.column_bounds_straddle_zero)
+          addSum(partial.row_support,
+                 rowSupport(dual[index], problem.row_lower[index],
+                            problem.row_upper[index]));
+      }
+    }
+  }
+  __shared__ ScreenPartial shared[kBlockSize];
+  shared[threadIdx.x] = partial;
+  __syncthreads();
+  for (int distance = kBlockSize / 2; distance > 0; distance /= 2) {
+    if (threadIdx.x < distance)
+      mergeScreen(shared[threadIdx.x], shared[threadIdx.x + distance]);
+    __syncthreads();
+  }
+  if (threadIdx.x == 0) partials[blockIdx.x] = shared[0];
+}
+
+__global__ void certificateFlagsKernel(
+    const DeviceCertificateProblem problem, const DeviceCheckInput input,
+    const int count, const CertificateState* state,
+    const certificate::ScreenPartial* partials, CheckPacket* packet) {
+  certificate::ScreenPartial partial = {};
+  for (int index = threadIdx.x; index < count; index += blockDim.x)
+    certificate::mergeScreen(partial, partials[index]);
+  __shared__ certificate::ScreenPartial shared[kBlockSize];
+  shared[threadIdx.x] = partial;
+  __syncthreads();
+  for (int distance = kBlockSize / 2; distance > 0; distance /= 2) {
+    if (threadIdx.x < distance)
+      certificate::mergeScreen(shared[threadIdx.x],
+                               shared[threadIdx.x + distance]);
+    __syncthreads();
+  }
+  if (threadIdx.x != 0) return;
+  const certificate::ScreenFlags flags = certificate::finishScreen(
+      shared[0], state->primal_verifier_norm, state->dual_verifier_norm,
+      static_cast<double>(problem.num_cols),
+      static_cast<double>(problem.num_rows), problem.sense_sign,
+      problem.column_bounds_straddle_zero,
+      state->unsafe || packet->error_flag != 0, input.certificate_tolerance);
+  packet->primal_ray_possible = flags.primal_ray_possible;
+  packet->farkas_possible = flags.farkas_possible;
+}
+
 #ifdef HIGHS_HIPDLP_TESTING
 __global__ void injectedFailureKernel(int* error_flag) {
   if (blockIdx.x != 0 || threadIdx.x != 0) return;
@@ -184,6 +745,99 @@ __global__ void injectedFailureKernel(int* error_flag) {
 #endif
 
 }  // namespace
+
+cudaError_t preloadKernels() {
+  const void* const kernels[] = {
+      reinterpret_cast<const void*>(fillKernel),
+      reinterpret_cast<const void*>(scaleKernel),
+      reinterpret_cast<const void*>(axpyKernel),
+      reinterpret_cast<const void*>(projectedPrimalKernel),
+      reinterpret_cast<const void*>(projectedDualKernel),
+      reinterpret_cast<const void*>(vectorBlendKernel),
+      reinterpret_cast<const void*>(averageKernel),
+      reinterpret_cast<const void*>(finiteCheckKernel),
+      reinterpret_cast<const void*>(dotKernel),
+      reinterpret_cast<const void*>(normKernel),
+      reinterpret_cast<const void*>(differenceNormKernel),
+      reinterpret_cast<const void*>(checkPartialsKernel),
+      reinterpret_cast<const void*>(checkPacketKernel),
+      reinterpret_cast<const void*>(certificateRecoveryKernel),
+      reinterpret_cast<const void*>(certificateNormKernel),
+      reinterpret_cast<const void*>(certificateNormalizeKernel),
+      reinterpret_cast<const void*>(certificateConditionsKernel),
+      reinterpret_cast<const void*>(certificateFlagsKernel),
+#ifdef HIGHS_HIPDLP_TESTING
+      reinterpret_cast<const void*>(injectedFailureKernel),
+#endif
+  };
+  for (const void* kernel : kernels) {
+    cudaFuncAttributes attributes;
+    const cudaError_t status = cudaFuncGetAttributes(&attributes, kernel);
+    if (status != cudaSuccess) return status;
+  }
+  return cudaSuccess;
+}
+
+std::size_t checkPartialCount(const HighsInt rows, const HighsInt cols) {
+  const HighsInt size = rows > cols ? rows : cols;
+  if (size == 0) return 1;
+  const HighsInt count = 1 + (size - 1) / kBlockSize;
+  return static_cast<std::size_t>(count < kMaximumCheckBlocks
+                                      ? count : kMaximumCheckBlocks);
+}
+
+cudaError_t launchCheckPartials(const cudaStream_t stream,
+                                const DeviceCheckProblem& problem,
+                                const DeviceCheckInput& input,
+                                CheckPartial* partials) {
+  const int blocks = static_cast<int>(checkPartialCount(problem.num_rows, problem.num_cols));
+  checkPartialsKernel<<<blocks, kBlockSize, 0, stream>>>(problem, input, partials);
+  return cudaPeekAtLastError();
+}
+
+cudaError_t launchCheckPacket(const cudaStream_t stream,
+                              const DeviceCheckProblem& problem,
+                              const DeviceCheckInput& input,
+                              const CheckPartial* partials, CheckPacket* packet,
+                              int* error_flag) {
+  const int count = static_cast<int>(checkPartialCount(problem.num_rows, problem.num_cols));
+  checkPacketKernel<<<1, kBlockSize, 0, stream>>>(problem, input, count, partials,
+                                               packet, error_flag);
+  return cudaPeekAtLastError();
+}
+
+cudaError_t launchCertificateScreen(
+    const cudaStream_t stream, const DeviceCertificateProblem& problem,
+    const DeviceCheckInput& input, certificate::Interval* primal,
+    certificate::Interval* dual, certificate::Interval* column,
+    CertificateNormPartial* norm_partials, CertificateState* state,
+    certificate::ScreenPartial* partials, CheckPacket* packet) {
+  const int blocks =
+      static_cast<int>(checkPartialCount(problem.num_rows, problem.num_cols));
+  certificateRecoveryKernel<<<blocks, kBlockSize, 0, stream>>>(
+      problem, input, primal, dual, column, norm_partials);
+  cudaError_t status = cudaPeekAtLastError();
+  if (status != cudaSuccess) return status;
+  certificateNormKernel<<<1, kBlockSize, 0, stream>>>(
+      problem, blocks, norm_partials, false, state);
+  status = cudaPeekAtLastError();
+  if (status != cudaSuccess) return status;
+  certificateNormalizeKernel<<<blocks, kBlockSize, 0, stream>>>(
+      problem, state, primal, dual, column, norm_partials);
+  status = cudaPeekAtLastError();
+  if (status != cudaSuccess) return status;
+  certificateNormKernel<<<1, kBlockSize, 0, stream>>>(
+      problem, blocks, norm_partials, true, state);
+  status = cudaPeekAtLastError();
+  if (status != cudaSuccess) return status;
+  certificateConditionsKernel<<<blocks, kBlockSize, 0, stream>>>(
+      problem, state, primal, dual, column, partials);
+  status = cudaPeekAtLastError();
+  if (status != cudaSuccess) return status;
+  certificateFlagsKernel<<<1, kBlockSize, 0, stream>>>(problem, input, blocks,
+                                                       state, partials, packet);
+  return cudaPeekAtLastError();
+}
 
 cudaError_t launchFill(const cudaStream_t stream, const HighsInt size,
                        const double value, double* output) {

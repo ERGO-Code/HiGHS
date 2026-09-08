@@ -62,36 +62,40 @@ FixedPointErrorInput::FixedPointErrorInput()
 FixedPointErrorDiagnostics::FixedPointErrorDiagnostics()
     : device_to_host_scalar_readbacks(0) {}
 
-FixedPointErrorResult::FixedPointErrorResult() : fixed_point_error(0.0) {}
+FixedPointErrorResult::FixedPointErrorResult()
+    : computed(false), fixed_point_error(0.0) {}
 
 bool FixedPointErrorResult::ok() const {
-  return error.ok() && finiteNonnegative(fixed_point_error) &&
-         diagnostics.device_to_host_scalar_readbacks ==
-             kScalarReadbacksPerEvaluation;
+  return error.ok() && computed && finiteNonnegative(fixed_point_error);
+}
+
+api::Error prepareFixedPointError(
+    backend::Backend& backend, const backend::ProblemHandle& problem,
+    const FixedPointErrorInput& input) {
+  if (!problem.valid() || !validDistinctHandles(input)) {
+    return invalidArgument(
+        "HiPDLP fixed-point error handles must be valid and distinct");
+  }
+  if (!finitePositive(input.omega) || !finitePositive(input.eta)) {
+    return invalidArgument(
+        "HiPDLP fixed-point error omega and eta must be finite and positive");
+  }
+
+  api::Error error = backend.copy(*input.next_primal, *input.delta_primal);
+  if (!error.ok()) return error;
+  error = backend.axpy(-1.0, *input.reflected_primal, *input.delta_primal);
+  if (!error.ok()) return error;
+  error = backend.copy(*input.next_dual, *input.delta_dual);
+  if (!error.ok()) return error;
+  error = backend.axpy(-1.0, *input.reflected_dual, *input.delta_dual);
+  if (!error.ok()) return error;
+  return backend.multiplyTranspose(problem, *input.delta_dual, *input.aty_delta);
 }
 
 FixedPointErrorResult evaluateFixedPointError(
     backend::Backend& backend, const backend::ProblemHandle& problem,
     const FixedPointErrorInput& input) {
-  if (!problem.valid() || !validDistinctHandles(input)) {
-    return failure(invalidArgument(
-        "HiPDLP fixed-point error handles must be valid and distinct"));
-  }
-  if (!finitePositive(input.omega) || !finitePositive(input.eta)) {
-    return failure(invalidArgument(
-        "HiPDLP fixed-point error omega and eta must be finite and positive"));
-  }
-
-  api::Error error = backend.copy(*input.next_primal, *input.delta_primal);
-  if (!error.ok()) return failure(error);
-  error = backend.axpy(-1.0, *input.reflected_primal, *input.delta_primal);
-  if (!error.ok()) return failure(error);
-  error = backend.copy(*input.next_dual, *input.delta_dual);
-  if (!error.ok()) return failure(error);
-  error = backend.axpy(-1.0, *input.reflected_dual, *input.delta_dual);
-  if (!error.ok()) return failure(error);
-  error =
-      backend.multiplyTranspose(problem, *input.delta_dual, *input.aty_delta);
+  api::Error error = prepareFixedPointError(backend, problem, input);
   if (!error.ok()) return failure(error);
 
   double primal_norm = 0.0;
@@ -113,6 +117,29 @@ FixedPointErrorResult evaluateFixedPointError(
   double cross_term = 0.0;
   error = backend.dot(*input.delta_primal, *input.aty_delta, cross_term);
   if (!error.ok()) return failure(error);
+  FixedPointErrorResult result = computeFixedPointError(
+      primal_norm, dual_norm, cross_term, input.omega, input.eta);
+  if (!result.ok()) return result;
+  result.diagnostics.device_to_host_scalar_readbacks =
+      kScalarReadbacksPerEvaluation;
+  return result;
+}
+
+FixedPointErrorResult computeFixedPointError(
+    const double primal_norm, const double dual_norm, const double cross_term,
+    const double omega, const double eta) {
+  if (!finitePositive(omega) || !finitePositive(eta)) {
+    return failure(invalidArgument(
+        "HiPDLP fixed-point error omega and eta must be finite and positive"));
+  }
+  if (!finiteNonnegative(primal_norm)) {
+    return failure(invalidArgument(
+        "HiPDLP fixed-point primal displacement norm is invalid"));
+  }
+  if (!finiteNonnegative(dual_norm)) {
+    return failure(invalidArgument(
+        "HiPDLP fixed-point dual displacement norm is invalid"));
+  }
   if (!std::isfinite(cross_term)) {
     return failure(
         invalidArgument("HiPDLP fixed-point interaction dot is invalid"));
@@ -126,8 +153,8 @@ FixedPointErrorResult evaluateFixedPointError(
         "HiPDLP fixed-point displacement norm square is outside FP64 range"));
   }
 
-  const double weighted_primal = primal_norm_squared * input.omega;
-  const double weighted_dual = dual_norm_squared / input.omega;
+  const double weighted_primal = primal_norm_squared * omega;
+  const double weighted_dual = dual_norm_squared / omega;
   if (!finiteNonnegative(weighted_primal) ||
       !finiteNonnegative(weighted_dual)) {
     return failure(invalidArgument(
@@ -139,7 +166,7 @@ FixedPointErrorResult evaluateFixedPointError(
         invalidArgument("HiPDLP fixed-point movement is outside FP64 range"));
   }
 
-  const double twice_eta = 2.0 * input.eta;
+  const double twice_eta = 2.0 * eta;
   if (!finitePositive(twice_eta)) {
     return failure(invalidArgument(
         "HiPDLP fixed-point interaction factor is outside FP64 range"));
@@ -167,9 +194,8 @@ FixedPointErrorResult evaluateFixedPointError(
   }
 
   FixedPointErrorResult result;
+  result.computed = true;
   result.fixed_point_error = fixed_point_error;
-  result.diagnostics.device_to_host_scalar_readbacks =
-      kScalarReadbacksPerEvaluation;
   return result;
 }
 

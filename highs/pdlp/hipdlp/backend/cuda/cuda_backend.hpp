@@ -19,6 +19,11 @@ class CudaBackend : public Backend, public CommandBufferRecorder {
  public:
   ~CudaBackend() override;
 
+  bool timingUsesEvents() const override;
+  api::Error prepareTiming() override;
+  api::Error beginTiming() override;
+  api::Error endTiming(double& seconds) override;
+
   Descriptor descriptor() const override;
   api::Error queryDevice(DeviceInfo& device) const override;
   api::Error requireCapability(Capability capability) const override;
@@ -26,6 +31,18 @@ class CudaBackend : public Backend, public CommandBufferRecorder {
                          ProblemHandle& handle) override;
   api::Error createWorkspace(const ProblemHandle& problem,
                              WorkspaceHandle& workspace) override;
+  api::Error prepareCheckWorkspace(const model::Problem& problem,
+                                   const HighsLp& original_lp,
+                                   WorkspaceHandle& workspace) override;
+  api::Error prepareCheckFixedPoint(
+      const ProblemHandle& problem, WorkspaceHandle& workspace,
+      const VectorHandle& primal, const VectorHandle& dual,
+      const VectorHandle& reflected_primal, const VectorHandle& reflected_dual,
+      VectorHandle& delta_primal, VectorHandle& delta_dual,
+      VectorHandle& aty_delta) override;
+  api::Error evaluateCheck(const model::Problem& problem,
+                           WorkspaceHandle& workspace, const CheckInput& input,
+                           CheckResult& result) override;
   api::Error createVector(HighsInt size, VectorHandle& vector) override;
   api::Error createBatchedVector(HighsInt size, HighsInt batch_size,
                                  VectorHandle& vector) override;
@@ -87,6 +104,10 @@ class CudaBackend : public Backend, public CommandBufferRecorder {
   api::Error replay(const CommandBufferHandle& command_buffer,
                     CommandBufferStatistics& statistics) override;
   api::Error synchronize() override;
+    api::Error prepareVectorDownloads(const VectorDownload* downloads,
+                                                                        std::size_t count) override;
+    api::Error downloadVectors(const VectorDownload* downloads,
+                                                         std::size_t count) override;
   api::Error downloadVector(const VectorHandle& vector,
                             std::vector<double>& values) override;
   api::Error downloadSolution(const VectorHandle& primal,
@@ -106,6 +127,8 @@ class CudaBackend : public Backend, public CommandBufferRecorder {
   CudaWorkspaceResource* workspaceResource(WorkspaceHandle& handle) const;
   const CudaCommandBufferResource* commandBufferResource(
       const CommandBufferHandle& handle) const;
+    api::Error prepareDownloadBuffers(const VectorDownload* downloads,
+                                                                        std::size_t count);
 
   std::unique_ptr<Impl> impl_;
 

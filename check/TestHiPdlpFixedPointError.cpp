@@ -153,6 +153,26 @@ hipdlp::algorithm::FixedPointErrorResult evaluate(EvaluationFixture& fixture,
       makeInput(fixtureHandles(fixture), omega, eta));
 }
 
+TEST_CASE("hi-pdlp-fixed-point-validity-is-independent-of-readback-count",
+          "[hipdlp][phase8][fixed-point-error]") {
+  hipdlp::algorithm::FixedPointErrorResult uncomputed;
+  uncomputed.diagnostics.device_to_host_scalar_readbacks = 3;
+  CHECK_FALSE(uncomputed.ok());
+
+  auto fixture = makeFixture(hipdlp::backend::Kind::kCpu, makeScalarLp(1.0),
+                             {1.0}, {2.0}, {0.0}, {0.0});
+  auto result = evaluate(*fixture, 1.0, 1.0);
+  REQUIRE(result.ok());
+  CHECK(result.fixed_point_error == 3.0);
+  for (const std::size_t readbacks : {0u, 1u, 7u}) {
+    result.diagnostics.device_to_host_scalar_readbacks = readbacks;
+    CHECK(result.ok());
+  }
+  result.error = hipdlp::api::Error(hipdlp::api::ErrorCode::kBackendFailure,
+                                   "failed result must remain invalid");
+  CHECK_FALSE(result.ok());
+}
+
 double hostFixedPointError(const HighsLp& lp,
                            const std::vector<double>& next_primal,
                            const std::vector<double>& next_dual,
@@ -246,6 +266,54 @@ class ScriptedReductionBackend : public hipdlp::backend::cpu::CpuBackend {
 };
 
 }  // namespace
+
+TEST_CASE("hi-pdlp-fixed-point-scalar-finalizer-without-readbacks",
+      "[pdlp][hipdlp][phase8][fixed-point-error]") {
+  const hipdlp::algorithm::FixedPointErrorResult result =
+    hipdlp::algorithm::computeFixedPointError(1.0, 2.0, 2.0, 1.0, 1.0);
+  INFO(result.error.message);
+  REQUIRE(result.ok());
+  CHECK(result.computed);
+  CHECK(result.fixed_point_error == 3.0);
+  CHECK(result.diagnostics.device_to_host_scalar_readbacks == 0);
+  const hipdlp::algorithm::FixedPointErrorResult clamped =
+    hipdlp::algorithm::computeFixedPointError(2.0, 1.0, -6.0, 1.0, 1.0);
+  REQUIRE(clamped.ok());
+  CHECK(clamped.fixed_point_error == 0.0);
+  const hipdlp::algorithm::FixedPointErrorResult zero =
+    hipdlp::algorithm::computeFixedPointError(0.0, 0.0, 0.0, 7.0, 0.25);
+  REQUIRE(zero.ok());
+  CHECK(zero.fixed_point_error == 0.0);
+}
+
+TEST_CASE("hi-pdlp-fixed-point-scalar-finalizer-failures-are-uncomputed",
+      "[pdlp][hipdlp][phase8][fixed-point-error][errors]") {
+  const double infinity = std::numeric_limits<double>::infinity();
+  const double nan = std::numeric_limits<double>::quiet_NaN();
+  const double maximum = std::numeric_limits<double>::max();
+  const std::array<std::array<double, 5>, 13> invalid = {{
+    {{-1.0, 1.0, 0.0, 1.0, 1.0}},
+    {{nan, 1.0, 0.0, 1.0, 1.0}},
+    {{1.0, -1.0, 0.0, 1.0, 1.0}},
+    {{1.0, infinity, 0.0, 1.0, 1.0}},
+    {{1.0, 1.0, infinity, 1.0, 1.0}},
+    {{1.0, 1.0, 0.0, 0.0, 1.0}},
+    {{1.0, 1.0, 0.0, 1.0, nan}},
+    {{1e200, 0.0, 0.0, 1.0, 1.0}},
+    {{1e154, 0.0, 0.0, 2.0, 1.0}},
+    {{1e154, 1e154, 0.0, 1.0, 1.0}},
+    {{0.0, 0.0, 0.0, 1.0, maximum}},
+    {{1.0, 1.0, 1e308, 1.0, 1.0}},
+    {{1.0, 1.0, 5e307, 1e308, 1.0}},
+  }};
+  for (const std::array<double, 5>& values : invalid) {
+  const hipdlp::algorithm::FixedPointErrorResult result =
+    hipdlp::algorithm::computeFixedPointError(
+      values[0], values[1], values[2], values[3], values[4]);
+  checkZeroFailure(result, hipdlp::api::ErrorCode::kInvalidArgument);
+  CHECK_FALSE(result.computed);
+  }
+}
 
 TEST_CASE("hi-pdlp-fixed-point-error-matches-the-legacy-formula",
           "[pdlp][hipdlp][phase7h][fixed-point-error][exact]") {

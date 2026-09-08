@@ -16,6 +16,7 @@ enum class FailurePoint {
   kNone,
   kBackendInitialization,
   kDeviceAllocation,
+  kPinnedAllocation,
   kGraphCapture,
   kGraphInstantiation,
   kGraphLaunch,
@@ -30,12 +31,23 @@ struct ResourceAudit {
   std::size_t cusparse_creations;
   std::size_t cusparse_destructions;
   std::size_t allocation_calls;
+  std::size_t allocation_bytes;
+  std::size_t max_allocation_bytes;
   std::size_t free_calls;
+  std::size_t free_bytes;
+  std::size_t pinned_allocation_calls;
+  std::size_t pinned_allocation_bytes;
+  std::size_t max_pinned_allocation_bytes;
+  std::size_t pinned_free_calls;
+  std::size_t pinned_free_bytes;
   std::size_t descriptor_creations;
   std::size_t descriptor_destructions;
   std::size_t host_to_device_transfers;
+  std::size_t host_to_device_bytes;
   std::size_t device_to_host_transfers;
+  std::size_t device_to_host_bytes;
   std::size_t device_to_device_transfers;
+  std::size_t device_to_device_bytes;
   std::size_t graph_capture_calls;
   std::size_t graph_creations;
   std::size_t graph_destructions;

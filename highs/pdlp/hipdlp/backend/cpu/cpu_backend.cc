@@ -67,6 +67,7 @@ bool finiteAxpyResult(const std::vector<double>& input,
 }  // namespace
 
 struct CpuProblemResource : Resource {
+  const CpuBackend* owner;
   HighsInt num_rows;
   HighsInt num_cols;
   model::IndexWidth index_width;
@@ -78,8 +79,9 @@ struct CpuProblemResource : Resource {
   model::SparseMatrix matrix;
   model::SparseMatrix transpose;
 
-  explicit CpuProblemResource(const model::Problem& problem)
-      : num_rows(problem.numRows()),
+  CpuProblemResource(const CpuBackend* backend, const model::Problem& problem)
+      : owner(backend),
+        num_rows(problem.numRows()),
         num_cols(problem.numCols()),
         index_width(problem.indexWidth()),
         costs(problem.costs()),
@@ -92,45 +94,62 @@ struct CpuProblemResource : Resource {
 };
 
 struct CpuVectorResource : Resource {
+  const CpuBackend* owner;
   std::vector<double> values;
 
-  explicit CpuVectorResource(const HighsInt size) : values(size, 0.0) {}
+  CpuVectorResource(const CpuBackend* backend, const HighsInt size)
+      : owner(backend), values(size, 0.0) {}
 };
 
 struct CpuWorkspaceResource : Resource {
+  const CpuBackend* owner;
+  const model::Problem* check_problem;
   HighsInt num_rows;
   HighsInt num_cols;
   std::vector<double> row_scratch;
   std::vector<double> col_scratch;
 
-  CpuWorkspaceResource(const HighsInt rows, const HighsInt cols)
-      : num_rows(rows),
+  CpuWorkspaceResource(const CpuBackend* backend, const HighsInt rows,
+                       const HighsInt cols)
+      : owner(backend),
+        check_problem(nullptr),
+        num_rows(rows),
         num_cols(cols),
         row_scratch(rows, 0.0),
         col_scratch(cols, 0.0) {}
 };
 
 CpuProblemResource* CpuBackend::problemResource(ProblemHandle& handle) const {
-  return dynamic_cast<CpuProblemResource*>(handle.resource_.get());
+  CpuProblemResource* resource =
+      dynamic_cast<CpuProblemResource*>(handle.resource_.get());
+  return resource != nullptr && resource->owner == this ? resource : nullptr;
 }
 
 const CpuProblemResource* CpuBackend::problemResource(
     const ProblemHandle& handle) const {
-  return dynamic_cast<const CpuProblemResource*>(handle.resource_.get());
+  const CpuProblemResource* resource =
+      dynamic_cast<const CpuProblemResource*>(handle.resource_.get());
+  return resource != nullptr && resource->owner == this ? resource : nullptr;
 }
 
 CpuVectorResource* CpuBackend::vectorResource(VectorHandle& handle) const {
-  return dynamic_cast<CpuVectorResource*>(handle.resource_.get());
+  CpuVectorResource* resource =
+      dynamic_cast<CpuVectorResource*>(handle.resource_.get());
+  return resource != nullptr && resource->owner == this ? resource : nullptr;
 }
 
 const CpuVectorResource* CpuBackend::vectorResource(
     const VectorHandle& handle) const {
-  return dynamic_cast<const CpuVectorResource*>(handle.resource_.get());
+  const CpuVectorResource* resource =
+      dynamic_cast<const CpuVectorResource*>(handle.resource_.get());
+  return resource != nullptr && resource->owner == this ? resource : nullptr;
 }
 
 CpuWorkspaceResource* CpuBackend::workspaceResource(
     WorkspaceHandle& handle) const {
-  return dynamic_cast<CpuWorkspaceResource*>(handle.resource_.get());
+  CpuWorkspaceResource* resource =
+      dynamic_cast<CpuWorkspaceResource*>(handle.resource_.get());
+  return resource != nullptr && resource->owner == this ? resource : nullptr;
 }
 
 Descriptor CpuBackend::descriptor() const {
@@ -164,7 +183,7 @@ api::Error CpuBackend::bindProblem(const model::Problem& problem,
     return invalidArgument("cannot bind an uninitialized HiPDLP problem");
   try {
     handle = ProblemHandle(
-        std::unique_ptr<Resource>(new CpuProblemResource(problem)));
+      std::unique_ptr<Resource>(new CpuProblemResource(this, problem)));
   } catch (const std::bad_alloc&) {
     return allocationFailure("binding a problem");
   }
@@ -179,10 +198,90 @@ api::Error CpuBackend::createWorkspace(const ProblemHandle& problem,
   try {
     workspace =
         WorkspaceHandle(std::unique_ptr<Resource>(new CpuWorkspaceResource(
-            cpu_problem->num_rows, cpu_problem->num_cols)));
+          this, cpu_problem->num_rows, cpu_problem->num_cols)));
   } catch (const std::bad_alloc&) {
     return allocationFailure("creating a workspace");
   }
+  return api::Error();
+}
+
+api::Error CpuBackend::prepareCheckWorkspace(const model::Problem& problem,
+                                            const HighsLp& original_lp,
+                                            WorkspaceHandle& workspace) {
+  (void)original_lp;
+  CpuWorkspaceResource* cpu_workspace = workspaceResource(workspace);
+  if (cpu_workspace == nullptr)
+    return invalidArgument("serial CPU check workspace is invalid");
+  cpu_workspace->check_problem = nullptr;
+  if (!problem.initialized() || cpu_workspace->num_rows != problem.numRows() ||
+      cpu_workspace->num_cols != problem.numCols())
+    return invalidArgument("serial CPU check problem dimensions are invalid");
+  cpu_workspace->check_problem = &problem;
+  return api::Error();
+}
+
+api::Error CpuBackend::evaluateCheck(const model::Problem& problem,
+                                    WorkspaceHandle& workspace,
+                                    const CheckInput& input,
+                                    CheckResult& result) {
+  result = CheckResult();
+  if (!input.validTolerances())
+    return invalidArgument("HiPDLP check tolerances must be finite and nonnegative");
+  const CpuWorkspaceResource* cpu_workspace = workspaceResource(workspace);
+  if (cpu_workspace == nullptr || cpu_workspace->check_problem != &problem ||
+      !problem.initialized() || cpu_workspace->num_rows != problem.numRows() ||
+      cpu_workspace->num_cols != problem.numCols())
+    return invalidArgument("serial CPU check workspace is not prepared");
+
+  const VectorHandle* handles[] = {
+      input.primal, input.dual, input.ax, input.aty, input.delta_primal,
+      input.delta_dual, input.aty_delta, input.primal_anchor, input.dual_anchor};
+  const HighsInt sizes[] = {
+      problem.numCols(), problem.numRows(), problem.numRows(),
+      problem.numCols(), problem.numCols(), problem.numRows(),
+      problem.numCols(), problem.numCols(), problem.numRows()};
+  const CpuVectorResource* vectors[9] = {};
+  for (std::size_t index = 0; index < 9; ++index) {
+    const bool required = index < 4 ||
+                          (index < 7 ? input.fixed_point : input.anchor_distances);
+    if (!required) continue;
+    vectors[index] = handles[index] == nullptr ? nullptr : vectorResource(*handles[index]);
+    if (vectors[index] == nullptr || vectors[index]->values.size() !=
+                                         static_cast<std::size_t>(sizes[index]))
+      return invalidArgument("serial CPU check vector dimensions or owner are invalid");
+    if (!finiteVector(vectors[index]->values))
+      return backendFailure("serial CPU check input contains a non-finite value");
+  }
+
+  CheckResult computed;
+  api::Error error = algorithm::computeRawConvergenceMetrics(
+      problem, vectors[0]->values, vectors[1]->values, vectors[2]->values,
+      vectors[3]->values, computed.raw);
+  if (!error.ok()) return error;
+  if (!std::isfinite(computed.raw.unscaled_rhs_norm) ||
+      !std::isfinite(computed.raw.unscaled_cost_norm))
+    return backendFailure("serial CPU check model norms are non-finite");
+  if (input.fixed_point) {
+    computed.primal_delta_norm = norm2Vector(vectors[4]->values);
+    computed.dual_delta_norm = norm2Vector(vectors[5]->values);
+    computed.delta_dot = dotVector(vectors[4]->values, vectors[6]->values);
+  }
+  if (input.anchor_distances) {
+    computed.primal_anchor_distance =
+        differenceNorm2Vector(vectors[0]->values, vectors[7]->values);
+    computed.dual_anchor_distance =
+        differenceNorm2Vector(vectors[1]->values, vectors[8]->values);
+  }
+  if (!std::isfinite(computed.primal_delta_norm) ||
+      !std::isfinite(computed.dual_delta_norm) ||
+      !std::isfinite(computed.delta_dot) ||
+      !std::isfinite(computed.primal_anchor_distance) ||
+      !std::isfinite(computed.dual_anchor_distance))
+    return backendFailure("serial CPU check reduction produced a non-finite value");
+  computed.scalar_count = 7 + (input.fixed_point ? 3 : 0) +
+                         (input.anchor_distances ? 2 : 0);
+  computed.valid = true;
+  result = computed;
   return api::Error();
 }
 
@@ -190,7 +289,7 @@ api::Error CpuBackend::createVector(const HighsInt size, VectorHandle& vector) {
   if (size < 0) return invalidArgument("vector size must be nonnegative");
   try {
     vector =
-        VectorHandle(std::unique_ptr<Resource>(new CpuVectorResource(size)));
+      VectorHandle(std::unique_ptr<Resource>(new CpuVectorResource(this, size)));
   } catch (const std::bad_alloc&) {
     return allocationFailure("creating a vector");
   }
@@ -501,22 +600,49 @@ api::Error CpuBackend::reduceConvergenceMetrics(
 
 api::Error CpuBackend::synchronize() { return api::Error(); }
 
+api::Error CpuBackend::prepareVectorDownloads(const VectorDownload* downloads,
+                                              const std::size_t count) {
+  api::Error error = validateVectorDownloads(downloads, count);
+  if (!error.ok()) return error;
+  for (std::size_t index = 0; index < count; ++index) {
+    if (vectorResource(*downloads[index].vector) == nullptr)
+      return invalidArgument("serial CPU download vector is invalid");
+  }
+  DownloadOutputs outputs(downloads, count);
+  for (std::size_t index = 0; index < count; ++index) {
+    error = outputs.reserve(
+        index, vectorResource(*downloads[index].vector)->values.size());
+    if (!error.ok()) return error;
+  }
+  outputs.publishReservations();
+  return api::Error();
+}
+
+api::Error CpuBackend::downloadVectors(const VectorDownload* downloads,
+                                       const std::size_t count) {
+  const api::Error error = prepareVectorDownloads(downloads, count);
+  if (!error.ok()) return error;
+  for (std::size_t index = 0; index < count; ++index) {
+    const std::vector<double>& source =
+        vectorResource(*downloads[index].vector)->values;
+    downloads[index].values->assign(source.begin(), source.end());
+  }
+  return api::Error();
+}
+
 api::Error CpuBackend::downloadVector(const VectorHandle& vector,
                                       std::vector<double>& values) {
-  const CpuVectorResource* cpu_vector = vectorResource(vector);
-  if (cpu_vector == nullptr)
-    return invalidArgument("serial CPU download vector is invalid");
-  values = cpu_vector->values;
-  return api::Error();
+  const VectorDownload download = {&vector, &values};
+  return downloadVectors(&download, 1);
 }
 
 api::Error CpuBackend::downloadSolution(const VectorHandle& primal,
                                         const VectorHandle& dual,
                                         std::vector<double>& primal_values,
                                         std::vector<double>& dual_values) {
-  api::Error error = downloadVector(primal, primal_values);
-  if (!error.ok()) return error;
-  return downloadVector(dual, dual_values);
+  const VectorDownload downloads[] = {{&primal, &primal_values},
+                                       {&dual, &dual_values}};
+  return downloadVectors(downloads, 2);
 }
 
 std::unique_ptr<Backend> createCpuBackend() {

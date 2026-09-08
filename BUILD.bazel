@@ -85,6 +85,7 @@ cc_library(
     ]),
     hdrs = [
         "highs/mip/feasibilityjump.hh",
+        "highs/pdlp/hipdlp/backend/cuda/certificate_screen.hpp",
     ] + glob([
         "**/*.h",
         "highs/pdlp/hipdlp/*.hpp",

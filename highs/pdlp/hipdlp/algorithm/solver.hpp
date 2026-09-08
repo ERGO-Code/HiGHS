@@ -17,6 +17,31 @@ struct SolveDiagnostics {
   std::size_t resource_creation_calls_during_iterations;
   std::size_t primal_weight_updates;
   std::size_t restarts;
+  std::size_t check_boundaries;
+  std::size_t resident_check_calls;
+  std::size_t ordinary_check_boundaries;
+  std::size_t ordinary_check_d2h_bytes;
+  std::size_t ordinary_check_transfers;
+  std::size_t ordinary_check_synchronizations;
+  std::size_t candidate_downloads;
+  std::size_t host_oracle_checks;
+  std::size_t certificate_checks;
+  std::size_t restart_reference_checks;
+  std::size_t fixed_point_evaluations;
+
+  double total_wall_seconds;
+  double preprocessing_seconds;
+  double backend_setup_seconds;
+  double operator_norm_seconds;
+  double iterations_seconds;
+  double iteration_block_seconds;
+  double step_seconds;
+  double boundary_seconds;
+  double download_seconds;
+  double host_preparation_seconds;
+  double host_verification_seconds;
+  double reference_fixed_point_seconds;
+  double fixed_point_fallback_seconds;
 
   SolveDiagnostics();
 };
@@ -30,9 +55,40 @@ class SolveLogSink {
   virtual void warning(const std::string& message) = 0;
 };
 
+enum class SolvePhase {
+  kSolve,
+  kPreprocessing,
+  kBackendSetup,
+  kOperatorNorm,
+  kIterations,
+  kIterationBlock,
+  kStep,
+  kBoundary,
+  kDownload,
+  kHostPreparation,
+  kHostVerification,
+  kReferenceFixedPoint,
+  kFixedPointFallback,
+  kCount
+};
+
+struct SolveObservation {
+  SolvePhase phase;
+  bool begin;
+  HighsInt iteration;
+  bool continued;
+};
+
+class SolveObserver {
+ public:
+  virtual ~SolveObserver() {}
+  virtual void onEvent(const SolveObservation& observation) noexcept = 0;
+};
+
 struct SolveContext {
   SolveLogSink* log;
   SolveDiagnostics* diagnostics;
+  SolveObserver* observer;
 
   SolveContext();
 };

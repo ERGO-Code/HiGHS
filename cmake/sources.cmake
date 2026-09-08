@@ -598,6 +598,7 @@ set(highs_headers
     pdlp/hipdlp/api/status.hpp
     pdlp/hipdlp/backend/backend.hpp
     pdlp/hipdlp/backend/backend_factory.hpp
+    pdlp/hipdlp/backend/check.hpp
     pdlp/hipdlp/backend/command_buffer.hpp
     pdlp/hipdlp/backend/cpu/cpu_backend.hpp
     pdlp/hipdlp/backend/cpu/sparse_kernels.hpp

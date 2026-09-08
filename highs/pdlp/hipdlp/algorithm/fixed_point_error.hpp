@@ -34,6 +34,7 @@ struct FixedPointErrorDiagnostics {
 
 struct FixedPointErrorResult {
   api::Error error;
+  bool computed;
   double fixed_point_error;
   FixedPointErrorDiagnostics diagnostics;
 
@@ -41,6 +42,15 @@ struct FixedPointErrorResult {
 
   bool ok() const;
 };
+
+  api::Error prepareFixedPointError(
+    backend::Backend& backend, const backend::ProblemHandle& problem,
+    const FixedPointErrorInput& input);
+
+  FixedPointErrorResult computeFixedPointError(double primal_norm,
+                        double dual_norm,
+                        double cross_term, double omega,
+                        double eta);
 
 FixedPointErrorResult evaluateFixedPointError(
     backend::Backend& backend, const backend::ProblemHandle& problem,

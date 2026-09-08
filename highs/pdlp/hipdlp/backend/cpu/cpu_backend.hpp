@@ -22,6 +22,12 @@ class CpuBackend : public Backend {
                          ProblemHandle& handle) override;
   api::Error createWorkspace(const ProblemHandle& problem,
                              WorkspaceHandle& workspace) override;
+  api::Error prepareCheckWorkspace(const model::Problem& problem,
+                                   const HighsLp& original_lp,
+                                   WorkspaceHandle& workspace) override;
+  api::Error evaluateCheck(const model::Problem& problem,
+                           WorkspaceHandle& workspace, const CheckInput& input,
+                           CheckResult& result) override;
   api::Error createVector(HighsInt size, VectorHandle& vector) override;
   api::Error createBatchedVector(HighsInt size, HighsInt batch_size,
                                  VectorHandle& vector) override;
@@ -78,6 +84,10 @@ class CpuBackend : public Backend {
                                       double dual_objective,
                                       ConvergenceMetrics& metrics) override;
   api::Error synchronize() override;
+  api::Error prepareVectorDownloads(const VectorDownload* downloads,
+                                    std::size_t count) override;
+  api::Error downloadVectors(const VectorDownload* downloads,
+                             std::size_t count) override;
   api::Error downloadVector(const VectorHandle& vector,
                             std::vector<double>& values) override;
   api::Error downloadSolution(const VectorHandle& primal,
