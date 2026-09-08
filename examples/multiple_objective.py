@@ -98,7 +98,7 @@ linear_objective0.abs_tolerance = -1
 h.clearLinearObjectives()
 h.addLinearObjective(linear_objective0)
 h.addLinearObjective(linear_objective1)
-# Objectives as before, but absolute tolerence for f0 now -1 (negative
+# Objectives as before, but absolute tolerance for f0 now -1 (negative
 # => ignored) so relative tolerance of 0.05 is used
 #
 # Lexicographically: HiGHS 
