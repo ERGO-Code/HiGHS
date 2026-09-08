@@ -9166,30 +9166,47 @@ void HPresolve::aggregateVarBounds(HighsInt col) {
   HighsHashTree<HighsInt, colImpliedBounds> vlbs;
   HighsHashTree<HighsInt, colImpliedBounds> vubs;
 
-  // collect VLBs (standardization needs finite lb)
+  // compute range
+  double range = kHighsInf;
+  if (lb > -kHighsInf && ub < kHighsInf)
+    range = static_cast<double>(static_cast<HighsCDouble>(ub) - lb);
+
+  // collect VLBs: y >= coef * x + constant
+  // standardized form: y >= a * x + lb, where a > 0
   if (lb > -kHighsInf) {
     implications.getVlbs(col).for_each(
         [&](HighsInt binaryCol, const HighsImplications::VarBound& vlb) {
+          // skip if the VLB is dominated by the global lower bound
           if (implications.redundantVlb(vlb, lb)) return;
+          // tighten so that minValue() >= lb
           HighsImplications::VarBound v = vlb;
           implications.tightenVlb(v, lb);
+          // standardize: a = maxValue() - lb
           HighsCDouble newCoef = v.constant - static_cast<HighsCDouble>(lb);
           if (v.coef > 0) newCoef += v.coef;
+          // skip if the standardized coefficient exceeds the variable range
+          if (newCoef > range + mipsolver->mipdata_->feastol) return;
           vlbs.insert(binaryCol,
                       colImpliedBounds{
                           v, HighsImplications::VarBound{
                                  static_cast<double>(newCoef), lb, v.origin}});
         });
   }
-  // collect VUBs (standardization needs finite ub)
+  // collect VUBs: y <= coef * x + constant
+  // standardized form: y <= ub - a * x, where a > 0
   if (ub < kHighsInf) {
     implications.getVubs(col).for_each(
         [&](HighsInt binaryCol, const HighsImplications::VarBound& vub) {
+          // skip if the VUB is dominated by the global upper bound
           if (implications.redundantVub(vub, ub)) return;
+          // tighten so that maxValue() <= ub
           HighsImplications::VarBound v = vub;
           implications.tightenVub(v, ub);
+          // standardize: a = ub - minValue()
           HighsCDouble newCoef = static_cast<HighsCDouble>(ub) - v.constant;
           if (v.coef < 0) newCoef -= v.coef;
+          // skip if the standardized coefficient exceeds the variable range
+          if (newCoef > range + mipsolver->mipdata_->feastol) return;
           vubs.insert(binaryCol,
                       colImpliedBounds{
                           v, HighsImplications::VarBound{
