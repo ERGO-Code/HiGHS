@@ -211,7 +211,7 @@ TEST_CASE("test-effective-costs", "[highs_test_presolve]") {
   // substitutes all free column singletons into the objective to get
   // the "effective costs".
   Highs h;
-  //  h.setOptionValue("output_flag", dev_run);
+  h.setOptionValue("output_flag", dev_run);
   bool test_all = true;
   bool test_lp0 = test_all;
   bool test_lp1 = test_all;
@@ -219,100 +219,98 @@ TEST_CASE("test-effective-costs", "[highs_test_presolve]") {
 
   if (test_lp0) {
     HighsLp lp;
-  // First LP is
-  //
-  // min 4z
-  //
-  // -1 <=    x + y - 2z <= 1
-  //
-  // -1 <= 201x + y      <= 1
-  //
-  // 0 <= x <= 1, y, z free
-  //
-  // where the bounds on the two constraints and non-unit coefficients
-  // of z in the objective and first contraint give code coverage
-  //
-  // Aiming to minimize 4z, and bound is given by 2z >= x + y - 1, so
-  // substitute z = (x+y-1)/2 into the objective to give
-  //
-  // min 2x + 2y - 2
-  //
-  // y is then minimized with bound is given by y >= -201x - 1, so
-  // substitute y = -201x - 1 into the objective to give
-  //
-  // min 2x +(-402x-2) - 2 = -400x - 4
-  //
-  // This function is minimized when x = 1 to give y = -202 and z =
-  // -101 with objective -404
-  //
-  // The optimal dual values are -400 for x, -2 for row 0 and 2 for
-  // row 1. However, although this example tests code coverage on
-  // identifying free column singletons and a double free column
-  // singleton identified in getEffectiveCosts, the dual of -400 for
-  // the only nonbasic column means that there are no active costs, so
-  // active_cost_norm is zero (hence absolute and relative dual
-  // infeasibility measures are identical).
-  lp.num_col_ = 3;
-  lp.num_row_ = 2;
-  lp.col_cost_ = {0, 0, 4};
-  lp.col_lower_ = {0, -kHighsInf, -kHighsInf};
-  lp.col_upper_ = {1, kHighsInf, kHighsInf};
-  lp.a_matrix_.format_ = MatrixFormat::kRowwise;
-  lp.a_matrix_.start_ = {0, 3, 5};
-  lp.a_matrix_.index_ = {0, 1, 2, 0, 1};
-  lp.a_matrix_.value_ = {1, 1, -2, 201, 1};
-  lp.row_lower_ = {-1, -1};
-  lp.row_upper_ = {1, 1};
-  h.passModel(lp);
-  h.setOptionValue("log_dev_level", 1);
-  h.setOptionValue("presolve_rule_logging", kHighsOnString);
-  h.run();
-  REQUIRE(h.getInfo().active_cost_norm == 0);
-  printf("LP0: active_cost_norm = %g\n", h.getInfo().active_cost_norm);
+    // First LP is
+    //
+    // min 4z
+    //
+    // -1 <=    x + y - 2z <= 1
+    //
+    // -1 <= 201x + y      <= 1
+    //
+    // 0 <= x <= 1, y, z free
+    //
+    // where the bounds on the two constraints and non-unit
+    // coefficients of z in the objective and first contraint give
+    // code coverage
+    //
+    // Aiming to minimize 4z, and bound is given by 2z >= x + y - 1,
+    // so substitute z = (x+y-1)/2 into the objective to give
+    //
+    // min 2x + 2y - 2
+    //
+    // y is then minimized with bound is given by y >= -201x - 1, so
+    // substitute y = -201x - 1 into the objective to give
+    //
+    // min 2x +(-402x-2) - 2 = -400x - 4
+    //
+    // This function is minimized when x = 1 to give y = -202 and z =
+    // -101 with objective -404
+    //
+    // The optimal dual values are -400 for x, -2 for row 0 and 2 for
+    // row 1. However, although this example tests code coverage on
+    // identifying free column singletons and a double free column
+    // singleton identified in getEffectiveCosts, the dual of -400 for
+    // the only nonbasic column means that there are no active costs,
+    // so active_cost_norm is zero (hence absolute and relative dual
+    // infeasibility measures are identical).
+    lp.model_name_ = "LP0";
+    lp.num_col_ = 3;
+    lp.num_row_ = 2;
+    lp.col_cost_ = {0, 0, 4};
+    lp.col_lower_ = {0, -kHighsInf, -kHighsInf};
+    lp.col_upper_ = {1, kHighsInf, kHighsInf};
+    lp.a_matrix_.format_ = MatrixFormat::kRowwise;
+    lp.a_matrix_.start_ = {0, 3, 5};
+    lp.a_matrix_.index_ = {0, 1, 2, 0, 1};
+    lp.a_matrix_.value_ = {1, 1, -2, 201, 1};
+    lp.row_lower_ = {-1, -1};
+    lp.row_upper_ = {1, 1};
+    h.passModel(lp);
+    h.setOptionValue("log_dev_level", 1);
+    h.setOptionValue("presolve_rule_logging", kHighsOnString);
+    h.run();
+    REQUIRE(h.getInfo().active_cost_norm == 0);
   }
-  
   if (test_lp1) {
-  HighsLp lp;
-  // Here's a simpler example that reflects the behaviour observed
-  // with germanrr, where the cost row of the matrix introduced many
-  // large costs. Hence the presolved model had a large value for
-  // active_cost_norm but, after postsolve, the model had
-  // active_cost_norm = 1.
+    HighsLp lp;
+    // Here's a simpler example that reflects the behaviour observed
+    // with germanrr, where the cost row of the matrix introduced many
+    // large costs. Hence the presolved model had a large value for
+    // active_cost_norm but, after postsolve, the model had
+    // active_cost_norm = 1.
 
-  double cost = 1e5;
-  double eps = 1e-4;
-  lp.num_col_ = 3;
-  lp.num_row_ = 2;
-  lp.col_cost_ = {0, 0, 1};
-  lp.col_lower_ = {0, 0, -kHighsInf};
-  lp.col_upper_ = {1, 1, kHighsInf};
-  lp.a_matrix_.format_ = MatrixFormat::kRowwise;
-  lp.a_matrix_.start_ = {0, 3, 5};
-  lp.a_matrix_.index_ = {0, 1, 2, 0, 1};
-  lp.a_matrix_.value_ = {cost, cost - eps, 1, 1, 1, 1};
-  lp.row_lower_ = {0, 1};
-  lp.row_upper_ = {0, 1};
-  h.passModel(lp);
+    double cost = 1e5;
+    double eps = 1e-4;
+    lp.model_name_ = "LP1";
+    lp.num_col_ = 3;
+    lp.num_row_ = 2;
+    lp.col_cost_ = {0, 0, 1};
+    lp.col_lower_ = {0, 0, -kHighsInf};
+    lp.col_upper_ = {1, 1, kHighsInf};
+    lp.a_matrix_.format_ = MatrixFormat::kRowwise;
+    lp.a_matrix_.start_ = {0, 3, 5};
+    lp.a_matrix_.index_ = {0, 1, 2, 0, 1};
+    lp.a_matrix_.value_ = {cost, cost - eps, 1, 1, 1, 1};
+    lp.row_lower_ = {0, 1};
+    lp.row_upper_ = {0, 1};
+    h.passModel(lp);
 
-  h.run();
-  REQUIRE(h.getInfo().active_cost_norm == cost);
-  printf("LP1: active_cost_norm = %g\n", h.getInfo().active_cost_norm);
+    h.run();
+    REQUIRE(h.getInfo().active_cost_norm == cost);
   }
-  test_lp2 = true;
   if (test_lp2) {
-  // Finally gas11 has 61 free column singletons
-  h.setOptionValue("output_flag", true);
-  const std::string model = "gas11";
-   std::string model_file =
-      std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
-  h.readModel(model_file);
-  REQUIRE(h.setOptionValue(kPresolveString, kHighsOffString) == HighsStatus::kOk);
-
-  HighsStatus return_status = h.run();
-  REQUIRE(return_status == HighsStatus::kOk);
-
-  printf("LP2: active_cost_norm = %g\n", h.getInfo().active_cost_norm);
-  
+    // Finally gas11 has 61 free column singletons: 55 in the first
+    // pass, and 6 in the second.
+    const std::string model = "gas11";
+    std::string model_file =
+        std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
+    REQUIRE(h.readModel(model_file) == HighsStatus::kWarning);
+    REQUIRE(h.setOptionValue(kPresolveString, kHighsOffString) ==
+            HighsStatus::kOk);
+    HighsStatus return_status = h.run();
+    REQUIRE(return_status == HighsStatus::kOk);
+    double active_cost_norm = 2.000000001e+7;
+    REQUIRE(std::fabs(h.getInfo().active_cost_norm - active_cost_norm) <= 1e-8);
   }
   h.resetGlobalScheduler(true);
 }

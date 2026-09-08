@@ -675,61 +675,92 @@ void getVariableKktFailures(const double primal_feasibility_tolerance,
 
 std::vector<double> getEffectiveCosts(const HighsLp& lp,
                                       const HighsOptions& options) {
+  // Constants to distinguis row status: kMaybe (row may contain a
+  // free column singleton); kYes (row contains a free column
+  // singleton to be added into costs); kNo (row contains a free
+  // column singleton already added into costs);
+  const HighsInt kUsed = -2;
+  const HighsInt kFree = -1;
   std::vector<double> effective_costs = lp.col_cost_;
-  std::vector<HighsInt> column_count;
-  std::vector<HighsBool> row_used(lp.num_row_, false);
+  std::vector<HighsInt> col_count;
+  std::vector<HighsInt> row_id(lp.num_row_, kFree);
+  std::vector<HighsInt> row_of_id;
+  std::vector<HighsInt> row_count_of_id;
+  std::vector<HighsInt> col_of_id;
+  std::vector<double> row_mu_of_id;
   HighsInt num_free_column_singleton = 0;
-  HighsInt prev_num_free_column_singleton = -kHighsIInf;
-  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++)
-    column_count.push_back(lp.a_matrix_.start_[iCol + 1] -
-                           lp.a_matrix_.start_[iCol]);
-  for (;;) {
-    prev_num_free_column_singleton = num_free_column_singleton;
-    for (HighsInt iFree = 0; iFree < lp.num_col_; iFree++) {
-      if (column_count[iFree] == 1 && lp.col_lower_[iFree] == -kHighsInf &&
-          lp.col_upper_[iFree] == kHighsInf && effective_costs[iFree]) {
-        // Free column singleton
-        num_free_column_singleton++;
-        double free_c = 0;
-        double free_a = 0;
-        HighsInt iRow = -kHighsIInf;
-        for (HighsInt iFreeEl = lp.a_matrix_.start_[iFree];
-             iFreeEl < lp.a_matrix_.start_[iFree + 1]; iFreeEl++) {
-          iRow = lp.a_matrix_.index_[iFreeEl];
-          if (!row_used[iRow]) {
-            free_c = effective_costs[iFree];
-            free_a = lp.a_matrix_.value_[iFreeEl];
-            break;
-          }
+
+  double effective_costs_nz0 = 0;
+  double effective_costs_norm0 = 0;
+  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
+    col_count.push_back(lp.a_matrix_.start_[iCol + 1] -
+                        lp.a_matrix_.start_[iCol]);
+    if (effective_costs[iCol]) {
+      effective_costs_nz0++;
+      effective_costs_norm0 += std::abs(effective_costs[iCol]);
+    }
+  }
+  for (HighsInt pass_n = 0;; pass_n++) {
+    col_of_id.clear();
+    row_of_id.clear();
+    row_mu_of_id.clear();
+    HighsInt num_id = 0;
+    for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
+      bool free_column_singleton =
+          col_count[iCol] == 1 && lp.col_lower_[iCol] == -kHighsInf &&
+          lp.col_upper_[iCol] == kHighsInf && effective_costs[iCol];
+      if (!free_column_singleton) continue;
+      // Potential free column singleton - so long as the row has not
+      // already been selected for substituted into the objective
+      //
+      // Find the row in the column (which may originally have had
+      // more than one entry)
+      HighsInt iEl = -1;
+      HighsInt iRow = -1;
+      for (iEl = lp.a_matrix_.start_[iCol]; iEl < lp.a_matrix_.start_[iCol + 1];
+           iEl++) {
+        HighsInt this_row = lp.a_matrix_.index_[iEl];
+        if (row_id[this_row] == kFree) {
+          iRow = this_row;
+          break;
         }
-        if (options.output_flag)
-          printf(
-              "getEffectiveCosts: found free column singleton %d in row %d\n",
-              int(iFree), int(iRow));
-        row_used[iRow] = true;
-        const double c_upon_a = free_c / free_a;
-        for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
-          for (HighsInt iEl = lp.a_matrix_.start_[iCol];
-               iEl < lp.a_matrix_.start_[iCol + 1]; iEl++) {
-            if (lp.a_matrix_.index_[iEl] == iRow) {
-              column_count[iCol]--;
-              effective_costs[iCol] -= c_upon_a * lp.a_matrix_.value_[iEl];
-              break;
-            }
-          }
-        }
-        assert(std::fabs(effective_costs[iFree]) < 1e-10);
-        break;
+      }
+      assert(iRow == lp.a_matrix_.index_[iEl]);
+      // Found a free column singleton
+      //      col_count[iCol] = 0;
+      double value = lp.a_matrix_.value_[iEl];
+      col_of_id.push_back(iCol);
+      row_of_id.push_back(iRow);
+      row_mu_of_id.push_back(effective_costs[iCol] / value);
+      row_id[iRow] = num_id;
+      num_id++;
+    }
+    if (num_id == 0) break;
+    row_count_of_id.resize(num_id, 0);
+    num_free_column_singleton += num_id;
+    // Now pass through the matrix, adding multiples of selected rows
+    // into the objective - except for the column itself, as we know
+    // the resulting cost value is zero
+    for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
+      if (col_count[iCol] == 0) continue;
+      for (HighsInt iEl = lp.a_matrix_.start_[iCol];
+           iEl < lp.a_matrix_.start_[iCol + 1]; iEl++) {
+        HighsInt id = row_id[lp.a_matrix_.index_[iEl]];
+        if (id < 0) continue;
+        double row_mu = row_mu_of_id[id];
+        col_count[iCol]--;
+        row_count_of_id[id]++;
+        effective_costs[iCol] -= row_mu * lp.a_matrix_.value_[iEl];
       }
     }
-    // Stop when no more is found
-    if (num_free_column_singleton == prev_num_free_column_singleton) break;
+    for (HighsInt id = 0; id < num_id; id++) {
+      HighsInt iCol = col_of_id[id];
+      HighsInt iRow = row_of_id[id];
+      row_id[iRow] = kUsed;
+      assert(std::fabs(effective_costs[iCol]) < 1e-10);
+      effective_costs[iCol] = 0;
+    }
   }
-  if (options.output_flag && num_free_column_singleton > 0)
-    printf(
-        "getEffectiveCosts added in %d row(s) corresponding to free column "
-        "singleton(s) into the objective\n",
-        int(num_free_column_singleton));
   return effective_costs;
 }
 

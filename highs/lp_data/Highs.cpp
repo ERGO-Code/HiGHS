@@ -4948,7 +4948,7 @@ void Highs::reportSolvedLpQpStats() {
                  "Objective value     : %17.10e\n",
                  info_.objective_function_value);
   }
-  if (solution_.dual_valid)
+  if (solution_.dual_valid && info_.primal_dual_objective_error < kHighsInf)
     highsLogUser(log_options, HighsLogType::kInfo,
                  "P-D objective error : %17.10e\n",
                  info_.primal_dual_objective_error);
