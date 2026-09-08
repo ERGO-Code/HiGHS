@@ -9167,30 +9167,24 @@ void HPresolve::aggregateVarBounds(HighsInt col) {
   if (lb > -kHighsInf) {
     implications.getVlbs(col).for_each(
         [&](HighsInt binaryCol, const HighsImplications::VarBound& vlb) {
-          if (vlb.origin_row >= 0) {
-            HighsCDouble newCoef = vlb.constant - static_cast<HighsCDouble>(lb);
-            if (vlb.coef > 0) newCoef += vlb.coef;
-            vlbsFromRow.insert(
-                binaryCol,
-                colImpliedBounds{vlb, HighsImplications::VarBound{
-                                          static_cast<double>(newCoef), lb,
-                                          vlb.origin_row}});
-          }
+          HighsCDouble newCoef = vlb.constant - static_cast<HighsCDouble>(lb);
+          if (vlb.coef > 0) newCoef += vlb.coef;
+          vlbsFromRow.insert(
+              binaryCol, colImpliedBounds{vlb, HighsImplications::VarBound{
+                                                   static_cast<double>(newCoef),
+                                                   lb, vlb.origin_row}});
         });
   }
   // collect VUBs (standardization needs finite ub)
   if (ub < kHighsInf) {
     implications.getVubs(col).for_each(
         [&](HighsInt binaryCol, const HighsImplications::VarBound& vub) {
-          if (vub.origin_row >= 0) {
-            HighsCDouble newCoef = static_cast<HighsCDouble>(ub) - vub.constant;
-            if (vub.coef < 0) newCoef -= vub.coef;
-            vubsFromRow.insert(
-                binaryCol,
-                colImpliedBounds{vub, HighsImplications::VarBound{
-                                          static_cast<double>(newCoef), ub,
-                                          vub.origin_row}});
-          }
+          HighsCDouble newCoef = static_cast<HighsCDouble>(ub) - vub.constant;
+          if (vub.coef < 0) newCoef -= vub.coef;
+          vubsFromRow.insert(
+              binaryCol, colImpliedBounds{vub, HighsImplications::VarBound{
+                                                   static_cast<double>(newCoef),
+                                                   ub, vub.origin_row}});
         });
   }
 
@@ -9230,6 +9224,7 @@ void HPresolve::aggregateVarBounds(HighsInt col) {
           for (const auto& var : clique) {
             const auto* bounds = boundsMap.find(var.col);
             HighsInt currentrow = bounds->originalBound.origin_row;
+            if (currentrow < 0) continue;
             if (consumedRows.insert(currentrow).second) {
               if (row == -1)
                 row = currentrow;
