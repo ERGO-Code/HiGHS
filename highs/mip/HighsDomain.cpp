@@ -2769,8 +2769,7 @@ bool HighsDomain::ConflictSet::explainBoundChangeGeq(
     const HighsInt* inds, const double* vals, HighsInt len, double rhs,
     double maxAct) {
   if (maxAct == kHighsInf ||
-      std::abs(maxAct) * std::numeric_limits<double>::epsilon() >
-          localdom.feastol())
+      std::abs(maxAct) > 1 / std::numeric_limits<double>::epsilon())
     return false;
 
   // get the coefficient value of the column for which we want to explain
@@ -2884,8 +2883,7 @@ bool HighsDomain::ConflictSet::explainBoundChangeLeq(
     const HighsInt* inds, const double* vals, HighsInt len, double rhs,
     double minAct) {
   if (minAct == -kHighsInf ||
-      std::abs(minAct) * std::numeric_limits<double>::epsilon() >
-          localdom.feastol())
+      std::abs(minAct) > 1 / std::numeric_limits<double>::epsilon())
     return false;
   // get the coefficient value of the column for which we want to explain
   // the bound change
@@ -3394,8 +3392,7 @@ bool HighsDomain::ConflictSet::explainInfeasibilityGeq(const HighsInt* inds,
                                                        HighsInt len, double rhs,
                                                        double maxAct) {
   if (maxAct == kHighsInf ||
-      std::abs(maxAct) * std::numeric_limits<double>::epsilon() >
-          localdom.feastol())
+      std::abs(maxAct) > 1 / std::numeric_limits<double>::epsilon())
     return false;
 
   HighsInt infeasible_pos = kHighsIInf;
@@ -3443,8 +3440,7 @@ bool HighsDomain::ConflictSet::explainInfeasibilityLeq(const HighsInt* inds,
                                                        HighsInt len, double rhs,
                                                        double minAct) {
   if (minAct == -kHighsInf ||
-      std::abs(minAct) * std::numeric_limits<double>::epsilon() >
-          localdom.feastol())
+      std::abs(minAct) > 1 / std::numeric_limits<double>::epsilon())
     return false;
 
   HighsInt infeasible_pos = kHighsIInf;

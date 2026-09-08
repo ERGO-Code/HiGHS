@@ -964,9 +964,9 @@ bool HighsCutGeneration::preprocessBaseInequality(bool& hasUnboundedInts,
     } else {
       if (upper[i] != kHighsInf &&
           std::abs(vals[i] * upper[i]) >
-              feastol / std::numeric_limits<double>::epsilon())
+              1 / std::numeric_limits<double>::epsilon())
         return false;
-      if (upper[i] == kHighsInf) {
+      if (upper[i] >= kHighsIInf) {
         hasUnboundedInts = true;
         hasGeneralInts = true;
       } else if (upper[i] != 1.0) {
