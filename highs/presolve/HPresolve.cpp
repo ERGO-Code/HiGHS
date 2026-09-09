@@ -4582,12 +4582,14 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
           HighsInt col = Acol[rowiter];
           double val = direction * Avalue[rowiter];
 
-          // get lower and upper bounds
-          double col_lower = impliedRowBounds.getImplVarLower(row, col);
-          double col_upper = impliedRowBounds.getImplVarUpper(row, col);
-
           // skip continuous variables
           if (model->integrality_[col] == HighsVarType::kContinuous) continue;
+
+          // get lower and upper bounds
+          double col_lower = std::ceil(
+              impliedRowBounds.getImplVarLower(row, col) - primal_feastol);
+          double col_upper = std::floor(
+              impliedRowBounds.getImplVarUpper(row, col) + primal_feastol);
 
           if (val > maxAbsCoefValue + primal_feastol) {
             assert(col_upper != kHighsInf);
