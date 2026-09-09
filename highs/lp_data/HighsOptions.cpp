@@ -81,73 +81,68 @@ bool optionOffOnOk(const HighsLogOptions& report_log_options,
 
 bool optionSolverOk(const HighsLogOptions& report_log_options,
                     const string& value) {
+  const bool hipo_available =
+      HighsExternalApi::isAvailable<HighsExtras::hipo>();
   if (value == kHighsChooseString || value == kSimplexString ||
-      value == kIpmString ||
-      (value == kHipoString &&
-       HighsExternalApi::isAvailable<HighsExtras::hipo>()) ||
+      value == kIpmString || (value == kHipoString && hipo_available) ||
       value == kIpxString || value == kPdlpString || value == kQpAsmString ||
       value == kHiPdlpString)
     return true;
-  else if (value == kHipoString &&
-           !HighsExternalApi::isAvailable<HighsExtras::hipo>()) {
+  else if (value == kHipoString && !hipo_available) {
     HighsExternalApi::logUnavailable<HighsExtras::hipo>(
         report_log_options, HighsLogType::kError,
         "The HiPO solver was requested via the \"%s\" option.",
         kSolverString.c_str());
     return false;
   } else {
-    highsLogUser(report_log_options, HighsLogType::kWarning,
-                 "Value \"%s\" for LP solver option (\"%s\") is not one of "
-                 "%s\"%s\", \"%s\", \"%s\", \"%s\" or \"%s\"\n",
+    highsLogUser(report_log_options, HighsLogType::kError,
+                 "Value \"%s\" for LP/QP solver option (\"%s\") is not one of "
+                 "\"%s\", \"%s\", \"%s\", %s\"%s\", \"%s\", \"%s\" or \"%s\"\n",
                  value.c_str(), kSolverString.c_str(),
-                 HighsExternalApi::isAvailable<HighsExtras::hipo>()
-                     ? ("\"" + kHipoString + "\", ").c_str()
-                     : "",
                  kHighsChooseString.c_str(), kSimplexString.c_str(),
-                 kIpmString.c_str(), kIpxString.c_str(), kPdlpString.c_str(),
-                 kQpAsmString.c_str(), kHiPdlpString.c_str());
+                 kIpmString.c_str(),
+                 hipo_available ? ("\"" + kHipoString + "\", ").c_str() : "",
+                 kIpxString.c_str(), kPdlpString.c_str(), kHiPdlpString.c_str(),
+                 kQpAsmString.c_str());
     return false;
   }
 }
 
 bool optionMipLpSolverOk(const HighsLogOptions& report_log_options,
                          const string& value) {
+  const bool hipo_available =
+      HighsExternalApi::isAvailable<HighsExtras::hipo>();
   if (value == kHighsChooseString || value == kSimplexString ||
-      value == kIpmString ||
-      (value == kHipoString &&
-       HighsExternalApi::isAvailable<HighsExtras::hipo>()) ||
+      value == kIpmString || (value == kHipoString && hipo_available) ||
       value == kIpxString)
     return true;
-  else if (value == kHipoString &&
-           !HighsExternalApi::isAvailable<HighsExtras::hipo>()) {
+  else if (value == kHipoString && !hipo_available) {
     HighsExternalApi::logUnavailable<HighsExtras::hipo>(
         report_log_options, HighsLogType::kError,
         "The HiPO solver was requested via the \"%s\" option.",
         kMipLpSolverString.c_str());
     return false;
   } else {
-    highsLogUser(report_log_options, HighsLogType::kError,
-                 "Value \"%s\" for MIP LP solver option (\"%s\") is not one of "
-                 "%s\"%s\", \"%s\", \"%s\" or \"%s\"\n",
-                 value.c_str(), kMipLpSolverString.c_str(),
-                 HighsExternalApi::isAvailable<HighsExtras::hipo>()
-                     ? ("\"" + kHipoString + "\", ").c_str()
-                     : "",
-                 kHighsChooseString.c_str(), kSimplexString.c_str(),
-                 kIpmString.c_str(), kIpxString.c_str());
+    highsLogUser(
+        report_log_options, HighsLogType::kError,
+        "Value \"%s\" for MIP LP solver option (\"%s\") is not one of "
+        "\"%s\", \"%s\", \"%s\"%s\"%s\"\n",
+        value.c_str(), kMipLpSolverString.c_str(), kHighsChooseString.c_str(),
+        kSimplexString.c_str(), kIpmString.c_str(),
+        hipo_available ? (", \"" + kHipoString + "\" or ").c_str() : " or ",
+        kIpxString.c_str());
     return false;
   }
 }
 
 bool optionMipIpmSolverOk(const HighsLogOptions& report_log_options,
                           const string& value) {
+  const bool hipo_available =
+      HighsExternalApi::isAvailable<HighsExtras::hipo>();
   if (value == kHighsChooseString || value == kIpmString ||
-      (value == kHipoString &&
-       HighsExternalApi::isAvailable<HighsExtras::hipo>()) ||
-      value == kIpxString)
+      (value == kHipoString && hipo_available) || value == kIpxString)
     return true;
-  else if (value == kHipoString &&
-           !HighsExternalApi::isAvailable<HighsExtras::hipo>()) {
+  else if (value == kHipoString && !hipo_available) {
     HighsExternalApi::logUnavailable<HighsExtras::hipo>(
         report_log_options, HighsLogType::kError,
         "The HiPO solver was requested via the \"%s\" option.",
@@ -156,13 +151,12 @@ bool optionMipIpmSolverOk(const HighsLogOptions& report_log_options,
   } else {
     highsLogUser(
         report_log_options, HighsLogType::kError,
-        "Value \"%s\" for MIP IPM solver (\"%s\") option is not one of "
-        "%s\"%s\", \"%s\" or \"%s\"\n",
-        value.c_str(), kMipIpmSolverString.c_str(),
-        HighsExternalApi::isAvailable<HighsExtras::hipo>()
-            ? ("\"" + kHipoString + "\", ").c_str()
-            : "",
-        kHighsChooseString.c_str(), kIpmString.c_str(), kIpxString.c_str());
+        "Value \"%s\" for MIP IPM solver option (\"%s\") is not one of "
+        "\"%s\", \"%s\", \"%s\"%s\"%s\"\n",
+        value.c_str(), kMipIpmSolverString.c_str(), kHighsChooseString.c_str(),
+        kSimplexString.c_str(), kIpmString.c_str(),
+        hipo_available ? (", \"" + kHipoString + "\" or ").c_str() : " or ",
+        kIpxString.c_str());
     return false;
   }
 }

@@ -21,13 +21,6 @@ HighsStatus PresolveComponent::init(const HighsLp& lp, HighsTimer& timer,
   return HighsStatus::kOk;
 }
 
-void PresolveComponent::negateReducedLpColDuals() {
-  for (HighsInt col = 0; col < data_.reduced_lp_.num_col_; col++)
-    data_.recovered_solution_.col_dual[col] =
-        -data_.recovered_solution_.col_dual[col];
-  return;
-}
-
 HighsPresolveStatus PresolveComponent::run() {
   presolve::HPresolve presolve;
   presolve.setInput(data_.reduced_lp_, *options_,

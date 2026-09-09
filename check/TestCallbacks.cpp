@@ -9,12 +9,14 @@
 #include "lp_data/HConst.h"
 #include "lp_data/HighsCallback.h"
 
-const bool dev_run = false;
+const bool dev_run = false;  // true;//
 
 const double egout_optimal_objective = 568.1007;
 const double egout_objective_target = 610;
 const HighsInt adlittle_ipm_iteration_limit = 5;
 const HighsInt adlittle_simplex_iteration_limit = 30;
+
+const HighsInt primal1_qp_iteration_limit = 5;
 
 const HighsInt kLogBufferSize = kIoBufferSize;
 const HighsInt kUserCallbackNoData = -1;
@@ -266,6 +268,35 @@ HighsCallbackFunctionType userkMipUserSetPartialSolution =
 
         data_in->setSolution(index.size(), index.data(), value.data());
         data_in->repairSolution();
+      }
+    };
+
+HighsCallbackFunctionType userQpCallback =
+    [](int callback_type, const std::string& message,
+       const HighsCallbackOutput* data_out, HighsCallbackInput* data_in,
+       void* user_callback_data) {
+      // Extract local_callback_data from user_callback_data unless it
+      // is nullptr
+      if (callback_type == kCallbackQpFirstFeasiblePoint) {
+        if (dev_run) {
+          HighsInt num_solution_nz = 0;
+          for (HighsInt iCol = 0;
+               iCol < static_cast<HighsInt>(data_out->qp_solution.size());
+               iCol++)
+            if (data_out->qp_solution[iCol]) num_solution_nz++;
+          printf("userQpCallback(type %2d): %s with %d nonzero values\n",
+                 callback_type, message.c_str(), int(num_solution_nz));
+        }
+      } else if (callback_type == kCallbackQpInterrupt) {
+        if (dev_run)
+          printf(
+              "userQpCallback(type %2d): %s with iteration "
+              "count = %d and objective_value = %g\n",
+              callback_type, message.c_str(),
+              int(data_out->qpasm_iteration_count),
+              data_out->objective_function_value);
+        data_in->user_interrupt =
+            data_out->qpasm_iteration_count > primal1_qp_iteration_limit;
       }
     };
 
@@ -606,5 +637,21 @@ TEST_CASE("highs-callback-mip-user-solution-c", "[highs-callback]") {
   highs.startCallback(kCallbackMipSolution);
 
   highs.run();
+  highs.resetGlobalScheduler(true);
+}
+
+TEST_CASE("highs-callback-qpasm", "[highs_callback]") {
+  std::string filename =
+      std::string(HIGHS_DIR) + "/check/instances/primal1.mps";
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  highs.readModel(filename);
+  void* p_user_callback_data = nullptr;
+
+  highs.setCallback(userQpCallback, p_user_callback_data);
+  highs.startCallback(kCallbackQpFirstFeasiblePoint);
+  highs.startCallback(kCallbackQpInterrupt);
+  highs.run();
+  REQUIRE(highs.getInfo().qp_iteration_count == 6);
   highs.resetGlobalScheduler(true);
 }

@@ -1566,6 +1566,8 @@ const void* Highs_getCallbackDataOutItem(const HighsCallbackDataOut* data_out,
     return (void*)(&data_out->ipm_iteration_count);
   } else if (!strcmp(item_name, kHighsCallbackDataOutPdlpIterationCountName)) {
     return (void*)(&data_out->pdlp_iteration_count);
+  } else if (!strcmp(item_name, kHighsCallbackDataOutQpasmIterationCountName)) {
+    return (void*)(&data_out->qpasm_iteration_count);
   } else if (!strcmp(item_name,
                      kHighsCallbackDataOutObjectiveFunctionValueName)) {
     return (void*)(&data_out->objective_function_value);
@@ -1598,6 +1600,8 @@ const void* Highs_getCallbackDataOutItem(const HighsCallbackDataOut* data_out,
     return (void*)(data_out->cutpool_lower);
   } else if (!strcmp(item_name, kHighsCallbackDataOutCutpoolUpperName)) {
     return (void*)(data_out->cutpool_upper);
+  } else if (!strcmp(item_name, kHighsCallbackDataOutQpSolutionName)) {
+    return (void*)(data_out->qp_solution);
   }
   return nullptr;
 }

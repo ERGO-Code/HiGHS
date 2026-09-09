@@ -175,12 +175,10 @@ class HighsMipSolver {
   void setParallelLock(bool lock) const;
   void setProfiling(HighsProfiling* profiling);
   HighsInt getMaxNumWorkers() const {
-    if (highs::parallel::num_threads() == 1 ||
-        options_mip_->parallel != kHighsOnString || submip) {
+    if (options_mip_->parallel != kHighsOnString || submip) {
       return 1;
     }
-    return static_cast<HighsInt>(
-        std::ceil(1.7 * highs::parallel::num_threads()));
+    return highs::parallel::num_threads();
   }
 };
 

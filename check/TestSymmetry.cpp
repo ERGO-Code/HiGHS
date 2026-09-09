@@ -307,3 +307,29 @@ TEST_CASE("symmetry-propagate-orbitopes", "[highs_test_symmetry]") {
 
   HighsTaskExecutor::shutdown();
 }
+
+TEST_CASE("issue-3166", "[highs_test_symmetry]") {
+  std::string filename =
+      std::string(HIGHS_DIR) + "/check/instances/issue-3166.mps";
+
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  highs.readModel(filename);
+
+  const HighsLp& lp = highs.getLp();
+
+  HighsTaskExecutor::initialize(1);
+
+  HighsSymmetryDetection detection;
+  detection.loadModelAsGraph(lp, 1e-8);
+
+  bool initialized = detection.initializeDetection();
+  REQUIRE(initialized);
+
+  HighsSymmetries symmetries;
+  detection.run(symmetries);
+
+  REQUIRE(symmetries.numGenerators >= 0);
+
+  HighsTaskExecutor::shutdown();
+}

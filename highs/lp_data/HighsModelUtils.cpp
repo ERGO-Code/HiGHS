@@ -1379,27 +1379,35 @@ std::string utilSolutionStatusToString(const HighsInt solution_status) {
 }
 
 // Return a string representation of HighsBasisStatus
-std::string utilBasisStatusToString(const HighsBasisStatus basis_status) {
+StatusString utilBasisStatusToString(const HighsBasisStatus basis_status) {
+  StatusString status;
   switch (basis_status) {
     case HighsBasisStatus::kLower:
-      return "At lower/fixed bound";
+      status.full_ = "At lower/fixed bound";
+      status.s2_ = "LO";
       break;
     case HighsBasisStatus::kBasic:
-      return "Basic";
+      status.full_ = "Basic";
+      status.s2_ = "BS";
       break;
     case HighsBasisStatus::kUpper:
-      return "At upper bound";
+      status.full_ = "At upper bound";
+      status.s2_ = "UP";
       break;
     case HighsBasisStatus::kZero:
-      return "Free at zero";
+      status.full_ = "Free at zero";
+      status.s2_ = "ZE";
       break;
     case HighsBasisStatus::kNonbasic:
-      return "Nonbasic";
+      status.full_ = "Nonbasic";
+      status.s2_ = "NB";
       break;
     default:
       assert(1 == 0);
-      return "Unrecognised solution status";
+      status.full_ = "Unrecognised solution status";
+      status.s2_ = "??";
   }
+  return status;
 }
 
 // Return a string representation of basis validity
@@ -1517,6 +1525,8 @@ std::string utilPresolveRuleTypeToString(const HighsInt rule_type) {
     return "Enumeration";
   } else if (rule_type == kPresolveRuleDualFixing) {
     return "Dual fixing";
+  } else if (rule_type == kPresolveRuleZeroCostSingleton) {
+    return "Zero cost singleton";
   } else if (rule_type == kPresolveRuleColStuffing) {
     return "Col stuffing";
   } else if (rule_type == kPresolveRuleInitialSweep) {

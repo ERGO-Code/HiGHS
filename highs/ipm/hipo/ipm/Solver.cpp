@@ -1213,7 +1213,7 @@ isSuccess Solver::checkTerminationKkt() {
                       highs_solution, Hoptions_, "During HiPO solve");
 
     if (model_status == HighsModelStatus::kOptimal) {
-      logger_.printInfo("Check successfull\n");
+      logger_.printInfo("Check successful\n");
       return true;
     } else
       logger_.printInfo("Check failed\n");
@@ -1282,7 +1282,7 @@ isFailure Solver::initialiseLinearSolver() {
 }
 
 isSuccess Solver::switchToMultifrontal() {
-  bool switch_successfull = false;
+  bool switch_successful = false;
 
   if (LS_->type() == kUpLookingType && options_.factor == kHighsChooseString) {
     LS_.reset(new FactorHighsSolver(*kkt_, options_, model_, regul_, info_,
@@ -1297,11 +1297,11 @@ isSuccess Solver::switchToMultifrontal() {
       it_->largest_dx_x_ = 0;
       it_->largest_dy_y_ = 0;
       info_.error = kOk;
-      switch_successfull = true;
+      switch_successful = true;
     }
   }
 
-  return switch_successfull;
+  return switch_successful;
 }
 
 void Solver::printHeader() const {

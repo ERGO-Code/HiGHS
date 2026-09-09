@@ -39,6 +39,7 @@ const double kExcessivelySmallObjectiveCoefficient = 1e-4;
 const double kExcessivelyLargeObjectiveCoefficient = 1e6;
 const double kExcessivelySmallBoundValue = 1e-4;
 const double kExcessivelyLargeBoundValue = 1e6;
+const double kExcessivelyLargeIntegerBoundValue = 1e5;
 
 const HighsInt kNoThreadInstance = -1;
 const bool kAllowDeveloperAssert = false;
@@ -241,7 +242,9 @@ enum HighsCallbackType : int {
   kCallbackMipGetCutPool,             // 7
   kCallbackMipDefineLazyConstraints,  // 8
   kCallbackMipUserSolution,           // 9
-  kCallbackMax = kCallbackMipUserSolution,
+  kCallbackQpFirstFeasiblePoint,      // 10
+  kCallbackQpInterrupt,               // 11
+  kCallbackMax = kCallbackQpInterrupt,
   kNumCallbackType
 };
 
@@ -280,6 +283,7 @@ enum PresolveRuleType : int {
   kPresolveRuleProbing,
   kPresolveRuleEnumeration,
   kPresolveRuleDualFixing,
+  kPresolveRuleZeroCostSingleton,
   kPresolveRuleColStuffing,
   kPresolveRuleInitialSweep,
   kPresolveRuleMax = kPresolveRuleInitialSweep,

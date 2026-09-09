@@ -343,6 +343,8 @@ class HPresolve {
   void changeImplRowDualLower(HighsInt row, double newLower,
                               HighsInt originCol);
 
+  void moveCutsToPool(HighsPostsolveStack& postsolve_stack);
+
   Result scaleMIP(HighsPostsolveStack& postsolve_stack);
 
   Result applyConflictGraphSubstitutions(HighsPostsolveStack& postsolve_stack,
@@ -458,6 +460,8 @@ class HPresolve {
   Result singletonColStuffing(HighsPostsolveStack& postsolve_stack,
                               HighsInt col);
 
+  Result zeroCostSingleton(HighsPostsolveStack& postsolve_stack, HighsInt col);
+
   Result enumerateSolutions(HighsPostsolveStack& postsolve_stack);
 
   double computeImpliedLowerBound(HighsInt col, HighsInt boundCol = -1,
@@ -512,7 +516,7 @@ class HPresolve {
   Result removeDoubletonEquations(HighsPostsolveStack& postsolve_stack);
 
   Result strengthenInequalities(HighsPostsolveStack& postsolve_stack,
-                                HighsInt& num_strenghtened);
+                                HighsInt& num_strengthened);
 
   Result detectImpliedIntegers();
 
@@ -542,6 +546,8 @@ class HPresolve {
 
   Result presolveRuleTest(HighsPostsolveStack& postsolve_stack);
   Result presolveRuleTestColStuffing(HighsPostsolveStack& postsolve_stack);
+  Result presolveRuleTestParallelRowsAndCols(
+      HighsPostsolveStack& postsolve_stack);
 
   // Not currently called
   static void debug(const HighsLp& lp, const HighsOptions& options);

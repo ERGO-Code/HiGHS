@@ -239,6 +239,22 @@ class HighsPostsolveStack {
               HighsBasis& basis);
   };
 
+  struct ZeroObjSingletonContinuousCol {
+    double origRowLower;
+    double origRowUpper;
+    double new_row_lb;
+    double new_row_ub;
+    double lb;
+    double ub;
+    double coef;
+    HighsInt col;
+    HighsInt row;
+
+    void undo(const HighsOptions& options,
+              const std::vector<Nonzero>& rowValues, HighsSolution& solution,
+              HighsBasis& basis);
+  };
+
   /// tags for reduction
   enum class ReductionType : uint8_t {
     kLinearTransform,
@@ -256,6 +272,7 @@ class HighsPostsolveStack {
     kDuplicateRow,
     kDuplicateColumn,
     kSlackColSubstitution,
+    kZeroObjSingletonContinuousCol,
   };
 
   HighsDataStack reductionValues;
@@ -322,6 +339,12 @@ class HighsPostsolveStack {
       case ReductionType::kSlackColSubstitution: {
         return "Slack col substitution";
       }
+      case ReductionType::kImpliedEquation: {
+        return "Implied equation";
+      }
+      case ReductionType::kZeroObjSingletonContinuousCol: {
+        return "Zero obj singleton continuous col";
+      }
       default:
         return "Unknown";
     }
@@ -336,6 +359,14 @@ class HighsPostsolveStack {
 
   bool isOrigCol(HighsInt col) const { return origColIndex[col] < origNumCol; }
 
+  // Returns presolved-space indices of columns from the original model
+  std::vector<HighsInt> getOrigCols() const {
+    std::vector<HighsInt> cols;
+    for (HighsInt i = 0; i < static_cast<HighsInt>(origColIndex.size()); ++i)
+      if (isOrigCol(i)) cols.push_back(i);
+    return cols;
+  }
+
   bool isOrigRow(HighsInt row) const {
     return origRowType[row] == OrigRowType::kOriginal;
   }
@@ -348,7 +379,34 @@ class HighsPostsolveStack {
     return origRowType[row] == OrigRowType::kCut;
   }
 
-  bool hasAppendedRows() const { return numAppendedRows > 0; }
+  void setRowType(HighsInt row, OrigRowType type) { origRowType[row] = type; }
+
+  // Returns presolved-space indices of rows from the original model
+  std::vector<HighsInt> getOrigRows() const {
+    std::vector<HighsInt> rows;
+    for (HighsInt i = 0; i < static_cast<HighsInt>(origRowType.size()); ++i)
+      if (isOrigRow(i)) rows.push_back(i);
+    return rows;
+  }
+
+  // Returns presolved-space indices of rows that are cuts
+  std::vector<HighsInt> getCutRows() const {
+    std::vector<HighsInt> rows;
+    // keep reverse loop to avoid behavior changes
+    for (HighsInt i = static_cast<HighsInt>(origRowType.size()) - 1; i >= 0;
+         --i)
+      if (isCutRow(i)) rows.push_back(i);
+    return rows;
+  }
+
+  // Returns presolved-space indices of rows that are not cuts (original +
+  // appended)
+  std::vector<HighsInt> getNonCutRows() const {
+    std::vector<HighsInt> rows;
+    for (HighsInt i = 0; i < static_cast<HighsInt>(origRowType.size()); ++i)
+      if (!isCutRow(i)) rows.push_back(i);
+    return rows;
+  }
 
   void appendToModel(HighsInt& numRows, HighsInt numRowsToAppend,
                      OrigRowType rowType) {
@@ -478,6 +536,22 @@ class HighsPostsolveStack {
         SlackColSubstitution{rhs, origRowIndex[row], origColIndex[col]});
     reductionValues.push(rowValues);
     reductionAdded(ReductionType::kSlackColSubstitution);
+  }
+
+  template <typename RowStorageFormat>
+  void zeroCostSingleton(HighsInt row, HighsInt col, double origRowLower,
+                         double origRowUpper, double new_row_lb,
+                         double new_row_ub, double lb, double ub, double coef,
+                         const HighsMatrixSlice<RowStorageFormat>& rowVec) {
+    rowValues.clear();
+    for (const HighsSliceNonzero& rowVal : rowVec)
+      rowValues.emplace_back(origColIndex[rowVal.index()], rowVal.value());
+
+    reductionValues.push(ZeroObjSingletonContinuousCol{
+        origRowLower, origRowUpper, new_row_lb, new_row_ub, lb, ub, coef,
+        origColIndex[col], origRowIndex[row]});
+    reductionValues.push(rowValues);
+    reductionAdded(ReductionType::kZeroObjSingletonContinuousCol);
   }
 
   template <typename ColStorageFormat>
@@ -663,6 +737,10 @@ class HighsPostsolveStack {
   void duplicateRow(HighsInt row, bool rowUpperTightened,
                     bool rowLowerTightened, HighsInt duplicateRow,
                     double duplicateRowScale) {
+    // The surviving row must not be a cut absorbing a non-cut
+    // constraint. detectParallelRowsAndCols ensures this by
+    // iterating non-cut rows before cut rows.
+    assert(!isCutRow(row) || isCutRow(duplicateRow));
     reductionValues.push(
         DuplicateRow{duplicateRowScale, origRowIndex[duplicateRow],
                      origRowIndex[row], rowLowerTightened, rowUpperTightened});
@@ -837,7 +915,7 @@ class HighsPostsolveStack {
                                     solution.col_dual[iCol]);
         if (perform_basis_postsolve)
           ss << highsFormatToString("; status = %s",
-                                    utilBasisStatusToString(basis.col_status[iCol]).c_str());
+                                    utilBasisStatusToString(basis.col_status[iCol]).full_.c_str());
         printf("%s\n", ss.str().c_str());
       }
       for (HighsInt iRow = 0; iRow < origNumRow; iRow++) {
@@ -849,7 +927,7 @@ class HighsPostsolveStack {
                                     solution.row_dual[iRow]);
         if (perform_basis_postsolve)
           ss << highsFormatToString("; status = %s",
-                                    utilBasisStatusToString(basis.row_status[iRow]).c_str());
+                                    utilBasisStatusToString(basis.row_status[iRow]).full_.c_str());
         printf("%s\n", ss.str().c_str());
       }
     };
@@ -886,7 +964,7 @@ class HighsPostsolveStack {
                                   solution.col_dual[report_col]);
       if (perform_basis_postsolve)
         ss << highsFormatToString(" status = %s",
-                                  utilBasisStatusToString(basis.col_status[report_col]).c_str());
+                                  utilBasisStatusToString(basis.col_status[report_col]).full_.c_str());
       printf("%s\n", ss.str().c_str());
       report_col_value = col_value;
     };
@@ -1013,6 +1091,13 @@ class HighsPostsolveStack {
           reduction.undo(options, rowValues_, solution, basis);
           break;
         }
+        case ReductionType::kZeroObjSingletonContinuousCol: {
+          ZeroObjSingletonContinuousCol reduction;
+          reductionValues.pop(rowValues);
+          reductionValues.pop(reduction);
+          reduction.undo(options, rowValues, solution, basis);
+          break;
+        }
         default:
           printf("Reduction case %d not handled\n",
                  int(reductions[i - 1].first));
@@ -1052,19 +1137,6 @@ class HighsPostsolveStack {
     solution.dual_valid = false;
     undo(options, solution, basis, 0, report_col, thread_safe);
   }
-
-  /*
-    // Not used
-  /// undo presolve steps for primal and dual solution
-  void undoPrimalDual(const HighsOptions& options, HighsSolution& solution) {
-    reductionValues.resetPosition();
-    HighsBasis basis;
-    basis.valid = false;
-    assert(solution.value_valid);
-    assert(solution.dual_valid);
-    undo(options, solution, basis);
-  }
-  */
 
   size_t numReductions() const { return reductions.size(); }
 };

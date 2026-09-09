@@ -28,6 +28,7 @@ typedef struct HighsCallbackDataOut {
   HighsInt simplex_iteration_count;
   HighsInt ipm_iteration_count;
   HighsInt pdlp_iteration_count;
+  HighsInt qpasm_iteration_count;
   double objective_function_value;
   int64_t mip_node_count;
   int64_t mip_total_lp_iterations;
@@ -44,6 +45,8 @@ typedef struct HighsCallbackDataOut {
   double* cutpool_value;
   double* cutpool_lower;
   double* cutpool_upper;
+  double* qp_solution;
+  HighsInt qp_solution_size;
   HighsInt external_solution_query_origin;
 } HighsCallbackDataOut;
 

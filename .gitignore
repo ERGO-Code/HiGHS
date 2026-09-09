@@ -220,6 +220,7 @@ $RECYCLE.BIN/
 dist/
 build/
 build_release*/
+install/
 eggs/
 parts/
 var/

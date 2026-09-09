@@ -40,6 +40,7 @@ struct HighsCallbackOutput {
   HighsInt simplex_iteration_count;
   HighsInt ipm_iteration_count;
   HighsInt pdlp_iteration_count;
+  HighsInt qpasm_iteration_count;
   double objective_function_value;
   int64_t mip_node_count;
   int64_t mip_total_lp_iterations;
@@ -54,6 +55,7 @@ struct HighsCallbackOutput {
   std::vector<double> cutpool_value;
   std::vector<double> cutpool_lower;
   std::vector<double> cutpool_upper;
+  std::vector<double> qp_solution;
   ExternalMipSolutionQueryOrigin external_solution_query_origin;
 
   operator HighsCallbackDataOut() const;
