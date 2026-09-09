@@ -1596,27 +1596,27 @@ HPresolve::Result HPresolve::normaliseAllBinaryCliqueRows() {
                                    HighsCDouble& rhs, HighsInt direction) {
     nzs.clear();
     rhs *= direction;
+    bool isSetPpc = true;
 
-    storeRow(row);
     for (HighsInt rowiter : rowpositions) {
       HighsInt col = Acol[rowiter];
       double val = direction * Avalue[rowiter];
-
-      if (val < 0) {
-        nzs.push_back(nonZero{col, -val, -1, rowiter});
-        rhs -= static_cast<HighsCDouble>(val) * model->col_upper_[col];
-      } else {
-        nzs.push_back(nonZero{col, val, 1, rowiter});
-        rhs -= static_cast<HighsCDouble>(val) * model->col_lower_[col];
-      }
+      nzs.push_back(nonZero{col, std::abs(val),
+                            val < 0 ? int8_t{-1} : int8_t{1}, rowiter});
+      rhs -= static_cast<HighsCDouble>(val) *
+             (val < 0 ? model->col_upper_[col] : model->col_lower_[col]);
+      isSetPpc = isSetPpc && nzs.back().value == 1.0;
     }
+    isSetPpc = isSetPpc && rhs == 1.0;
+    return !isSetPpc;
   };
 
   std::vector<nonZero> nzs;
 
   for (HighsInt row = 0; row < model->num_row_; row++) {
     // skip deleted and ranged rows
-    if (rowDeleted[row] || (isRanged(row) && !isEquation(row))) continue;
+    bool equation = isEquation(row);
+    if (rowDeleted[row] || (isRanged(row) && !equation)) continue;
 
     // skip rows that are not all-binary
     bool allBinary = true;
@@ -1631,6 +1631,8 @@ HPresolve::Result HPresolve::normaliseAllBinaryCliqueRows() {
     }
     if (!allBinary || isSetPpc) continue;
 
+    storeRow(row);
+
     // transform row
     HighsInt direction =
         model->row_upper_[row] < kHighsInf ? HighsInt{1} : HighsInt{-1};
@@ -1638,7 +1640,7 @@ HPresolve::Result HPresolve::normaliseAllBinaryCliqueRows() {
         direction > 0 ? model->row_upper_[row] : model->row_lower_[row];
 
     // transform the row
-    transformAllBinaryRow(row, nzs, rhs, direction);
+    if (!transformAllBinaryRow(row, nzs, rhs, direction)) continue;
 
     HighsInt n = static_cast<HighsInt>(nzs.size());
     if (n < 2) continue;
@@ -1669,6 +1671,16 @@ HPresolve::Result HPresolve::normaliseAllBinaryCliqueRows() {
         nzs[perm[n - 2]].value + nzs[perm[n - 1]].value <= rhs + primal_feastol)
       continue;
 
+    // log original row
+    highsLogDev(options->log_options, HighsLogType::kInfo,
+                "normalise row %d: [%g, %g]", static_cast<int>(row),
+                model->row_lower_[row], model->row_upper_[row]);
+    for (HighsInt j = start; j < n; ++j)
+      highsLogDev(options->log_options, HighsLogType::kInfo, " %+g x%d",
+                  Avalue[nzs[perm[j]].position],
+                  static_cast<int>(nzs[perm[j]].index));
+    highsLogDev(options->log_options, HighsLogType::kInfo, "\n");
+
     // normalize remaining coefficients to ±1
     HighsInt numNeg = 0;
     for (HighsInt j = start; j < n; ++j) {
@@ -1681,15 +1693,25 @@ HPresolve::Result HPresolve::normaliseAllBinaryCliqueRows() {
 
     // update row bounds
     model->row_upper_[row] = 1.0 - numNeg;
-    if (isEquation(row))
+    if (equation)
       model->row_lower_[row] = 1.0 - numNeg;
     else {
       model->row_lower_[row] = -kHighsInf;
       if (direction == -1) {
-        changeRowDualLower(row, -kHighsInf);
-        changeRowDualUpper(row, 0);
+        changeRowDualLower(row, 0);
+        changeRowDualUpper(row, kHighsInf);
       }
     }
+
+    // log transformed row
+    highsLogDev(options->log_options, HighsLogType::kInfo,
+                "      =>  row %d: [%g, %g]", static_cast<int>(row),
+                model->row_lower_[row], model->row_upper_[row]);
+    for (HighsInt j = start; j < n; ++j)
+      highsLogDev(options->log_options, HighsLogType::kInfo, " %+g x%d",
+                  Avalue[nzs[perm[j]].position],
+                  static_cast<int>(nzs[perm[j]].index));
+    highsLogDev(options->log_options, HighsLogType::kInfo, "\n");
   }
   return Result::kOk;
 }
