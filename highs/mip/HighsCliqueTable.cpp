@@ -940,7 +940,10 @@ void HighsCliqueTable::extractCliques(
     }
 
     // if all variables are binary, pass row origin so clique merging
-    // can delete the subsumed row
+    // can delete the subsumed row; the row must have been normalized
+    // to set packing form so that lifting with coefficient 1 is valid
+    assert(nbin != ntotal || origin == kHighsIInf ||
+           (std::abs(vals[perm[0]] - 1.0) <= feastol && rhs < 1.0 + feastol));
     addClique(mipsolver, clique.data(), nbin, false,
               nbin == ntotal ? origin : kHighsIInf);
     if (globaldom.infeasible()) return;
@@ -981,7 +984,12 @@ void HighsCliqueTable::extractCliques(
       // runCliqueMerging(globaldom, clique);
       // if (clique.size() >= 2) {
       // if all variables are binary and form one clique, pass row origin
-      // so clique merging can delete the subsumed row
+      // so clique merging can delete the subsumed row; the row must have
+      // been normalized so that lifting with coefficient 1 is valid
+      assert(static_cast<HighsInt>(clique.size()) != ntotal ||
+             origin == kHighsIInf ||
+             (std::abs(vals[perm[0]] - 1.0) <= feastol &&
+              std::abs(vals[perm[k]] - 1.0) <= feastol && rhs < 1.0 + feastol));
       addClique(
           mipsolver, clique.data(), static_cast<HighsInt>(clique.size()), false,
           static_cast<HighsInt>(clique.size()) == ntotal ? origin : kHighsIInf);
