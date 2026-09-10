@@ -240,6 +240,11 @@ bool HPresolve::isUpperStrictlyImplied(HighsInt col, double* tolerance) const {
                   (tolerance != nullptr ? *tolerance : primal_feastol));
 }
 
+bool HPresolve::isBinary(HighsInt col) const {
+  return model->integrality_[col] == HighsVarType::kInteger &&
+         model->col_lower_[col] == 0.0 && model->col_upper_[col] == 1.0;
+}
+
 bool HPresolve::isImpliedFree(HighsInt col) const {
   return isLowerImplied(col) && isUpperImplied(col);
 }
@@ -1201,11 +1206,6 @@ HPresolve::Result HPresolve::dominatedColumns(
   size_t numDomChecks = 0;
   size_t numDomChecksPredBndAnalysis = 0;
 
-  auto isBinary = [&](HighsInt i) {
-    return model->integrality_[i] == HighsVarType::kInteger &&
-           model->col_lower_[i] == 0.0 && model->col_upper_[i] == 1.0;
-  };
-
   auto addSignature = [&](HighsInt row, HighsInt col, uint32_t rowLowerFinite,
                           uint32_t rowUpperFinite) {
     HighsInt rowHashedPos = (HighsHashHelpers::hash(row) >> 59);
@@ -1728,7 +1728,7 @@ HPresolve::Result HPresolve::finaliseProbing(
       applyConflictGraphSubstitutions(postsolve_stack, numVarsSubstituted));
 
   // aggregate variable bounds now that the clique table is populated
-  for (HighsInt i = 0; i != model->num_col_; ++i) aggregateVarBounds(i);
+  aggregateVarBounds();
 
   return checkLimits(postsolve_stack);
 }
@@ -9143,17 +9143,8 @@ void HPresolve::extractVarBounds(HighsInt row) {
   }
 }
 
-void HPresolve::aggregateVarBounds(HighsInt col) {
-  if (mipsolver == nullptr || colDeleted[col]) return;
-
-  // get lower bound and upper bound
-  double lb = model->col_lower_[col];
-  double ub = model->col_upper_[col];
-
-  // skip binary columns — we aggregate VLBs/VUBs on non-binary columns
-  if (model->integrality_[col] == HighsVarType::kInteger && lb == 0.0 &&
-      ub == 1.0)
-    return;
+void HPresolve::aggregateVarBounds() {
+  if (mipsolver == nullptr) return;
 
   HighsImplications& implications = mipsolver->mipdata_->implications;
   HighsCliqueTable& cliquetable = mipsolver->mipdata_->cliquetable;
@@ -9165,147 +9156,163 @@ void HPresolve::aggregateVarBounds(HighsInt col) {
 
   HighsHashTree<HighsInt, colImpliedBounds> vlbs;
   HighsHashTree<HighsInt, colImpliedBounds> vubs;
-
-  // compute range
-  double range = kHighsInf;
-  if (lb > -kHighsInf && ub < kHighsInf)
-    range = static_cast<double>(static_cast<HighsCDouble>(ub) - lb);
-
-  // collect VLBs: y >= coef * x + constant
-  // standardized form: y >= a * x + lb, where a > 0
-  if (lb > -kHighsInf) {
-    implications.getVlbs(col).for_each(
-        [&](HighsInt binaryCol, const HighsImplications::VarBound& vlb) {
-          // skip if the VLB is dominated by the global lower bound
-          if (implications.redundantVlb(vlb, lb)) return;
-          // tighten so that minValue() >= lb
-          HighsImplications::VarBound v = vlb;
-          implications.tightenVlb(v, lb);
-          // standardize: a = maxValue() - lb
-          HighsCDouble newCoef = v.constant - static_cast<HighsCDouble>(lb);
-          if (v.coef > 0) newCoef += v.coef;
-          // skip if the standardized coefficient exceeds the variable range
-          if (newCoef > range + mipsolver->mipdata_->feastol) return;
-          vlbs.insert(binaryCol,
-                      colImpliedBounds{
-                          v, HighsImplications::VarBound{
-                                 static_cast<double>(newCoef), lb, v.origin}});
-        });
-  }
-  // collect VUBs: y <= coef * x + constant
-  // standardized form: y <= ub - a * x, where a > 0
-  if (ub < kHighsInf) {
-    implications.getVubs(col).for_each(
-        [&](HighsInt binaryCol, const HighsImplications::VarBound& vub) {
-          // skip if the VUB is dominated by the global upper bound
-          if (implications.redundantVub(vub, ub)) return;
-          // tighten so that maxValue() <= ub
-          HighsImplications::VarBound v = vub;
-          implications.tightenVub(v, ub);
-          // standardize: a = ub - minValue()
-          HighsCDouble newCoef = static_cast<HighsCDouble>(ub) - v.constant;
-          if (v.coef < 0) newCoef -= v.coef;
-          // skip if the standardized coefficient exceeds the variable range
-          if (newCoef > range + mipsolver->mipdata_->feastol) return;
-          vubs.insert(binaryCol,
-                      colImpliedBounds{
-                          v, HighsImplications::VarBound{
-                                 static_cast<double>(newCoef), ub, v.origin}});
-        });
-  }
-
-  // set up cliques
   std::vector<HighsCliqueTable::CliqueVar> vlbsClique;
   std::vector<HighsCliqueTable::CliqueVar> vubsClique;
-  vlbs.for_each([&](HighsInt binaryCol, colImpliedBounds& bounds) {
-    HighsInt val = bounds.originalBound.coef > 0 ? 1 : 0;
-    vlbsClique.emplace_back(binaryCol, val);
-  });
-  vubs.for_each([&](HighsInt binaryCol, colImpliedBounds& bounds) {
-    HighsInt val = bounds.originalBound.coef < 0 ? 1 : 0;
-    vubsClique.emplace_back(binaryCol, val);
-  });
-
-  // clique cover
   std::vector<std::vector<HighsCliqueTable::CliqueVar>> vlbsCover;
   std::vector<std::vector<HighsCliqueTable::CliqueVar>> vubsCover;
-  cliquetable.cliqueCover(vlbsClique, vlbsCover);
-  cliquetable.cliqueCover(vubsClique, vubsCover);
 
-  HighsInt numRowsRemoved = 0;
-  HighsInt numRowsModified = 0;
-  HighsInt numVarsLifted = 0;
+  for (HighsInt col = 0; col != model->num_col_; ++col) {
+    if (colDeleted[col]) continue;
 
-  auto mergeCliques =
-      [&](std::vector<std::vector<HighsCliqueTable::CliqueVar>>& cover,
-          HighsHashTree<HighsInt, colImpliedBounds>& boundsMap,
-          double baseBound, HighsInt direction) {
-        std::set<HighsInt> consumedRows;
+    // get lower bound and upper bound
+    double lb = model->col_lower_[col];
+    double ub = model->col_upper_[col];
 
-        for (const auto& clique : cover) {
-          if (clique.size() < 2) continue;
+    // skip binary columns — we aggregate VLBs/VUBs on non-binary columns
+    if (isBinary(col)) continue;
 
-          // find an unconsumed row to reuse and remove the rest
-          HighsInt row = -1;
-          for (const auto& var : clique) {
-            const auto* bounds = boundsMap.find(var.col);
-            HighsInt currentrow = bounds->originalBound.origin;
-            if (currentrow < 0) continue;
-            if (consumedRows.insert(currentrow).second) {
-              if (row == -1)
-                row = currentrow;
-              else {
-                removeRow(currentrow);
-                numRowsRemoved++;
+    vlbs.clear();
+    vubs.clear();
+    vlbsClique.clear();
+    vubsClique.clear();
+
+    // compute range
+    double range = kHighsInf;
+    if (lb > -kHighsInf && ub < kHighsInf)
+      range = static_cast<double>(static_cast<HighsCDouble>(ub) - lb);
+
+    // collect VLBs: y >= coef * x + constant
+    // standardized form: y >= a * x + lb, where a > 0
+    if (lb > -kHighsInf) {
+      implications.getVlbs(col).for_each(
+          [&](HighsInt binaryCol, const HighsImplications::VarBound& vlb) {
+            // skip if the VLB is dominated by the global lower bound
+            if (implications.redundantVlb(vlb, lb)) return;
+            // tighten so that minValue() >= lb
+            HighsImplications::VarBound v = vlb;
+            implications.tightenVlb(v, lb);
+            // standardize: a = maxValue() - lb
+            HighsCDouble newCoef = v.constant - static_cast<HighsCDouble>(lb);
+            if (v.coef > 0) newCoef += v.coef;
+            // skip if the standardized coefficient exceeds the variable range
+            if (newCoef > range + mipsolver->mipdata_->feastol) return;
+            vlbs.insert(binaryCol,
+                        colImpliedBounds{v, HighsImplications::VarBound{
+                                                static_cast<double>(newCoef),
+                                                lb, v.origin}});
+          });
+    }
+    // collect VUBs: y <= coef * x + constant
+    // standardized form: y <= ub - a * x, where a > 0
+    if (ub < kHighsInf) {
+      implications.getVubs(col).for_each(
+          [&](HighsInt binaryCol, const HighsImplications::VarBound& vub) {
+            // skip if the VUB is dominated by the global upper bound
+            if (implications.redundantVub(vub, ub)) return;
+            // tighten so that maxValue() <= ub
+            HighsImplications::VarBound v = vub;
+            implications.tightenVub(v, ub);
+            // standardize: a = ub - minValue()
+            HighsCDouble newCoef = static_cast<HighsCDouble>(ub) - v.constant;
+            if (v.coef < 0) newCoef -= v.coef;
+            // skip if the standardized coefficient exceeds the variable range
+            if (newCoef > range + mipsolver->mipdata_->feastol) return;
+            vubs.insert(binaryCol,
+                        colImpliedBounds{v, HighsImplications::VarBound{
+                                                static_cast<double>(newCoef),
+                                                ub, v.origin}});
+          });
+    }
+
+    // set up cliques
+    vlbs.for_each([&](HighsInt binaryCol, colImpliedBounds& bounds) {
+      HighsInt val = bounds.originalBound.coef > 0 ? 1 : 0;
+      vlbsClique.emplace_back(binaryCol, val);
+    });
+    vubs.for_each([&](HighsInt binaryCol, colImpliedBounds& bounds) {
+      HighsInt val = bounds.originalBound.coef < 0 ? 1 : 0;
+      vubsClique.emplace_back(binaryCol, val);
+    });
+
+    // clique cover
+    cliquetable.cliqueCover(vlbsClique, vlbsCover);
+    cliquetable.cliqueCover(vubsClique, vubsCover);
+
+    HighsInt numRowsRemoved = 0;
+    HighsInt numRowsModified = 0;
+    HighsInt numVarsLifted = 0;
+
+    auto mergeCliques =
+        [&](std::vector<std::vector<HighsCliqueTable::CliqueVar>>& cover,
+            HighsHashTree<HighsInt, colImpliedBounds>& boundsMap,
+            double baseBound, HighsInt direction) {
+          std::set<HighsInt> consumedRows;
+
+          for (const auto& clique : cover) {
+            if (clique.size() < 2) continue;
+
+            // find an unconsumed row to reuse and remove the rest
+            HighsInt row = -1;
+            for (const auto& var : clique) {
+              const auto* bounds = boundsMap.find(var.col);
+              HighsInt currentrow = bounds->originalBound.origin;
+              if (currentrow < 0) continue;
+              if (consumedRows.insert(currentrow).second) {
+                if (row == -1)
+                  row = currentrow;
+                else {
+                  removeRow(currentrow);
+                  numRowsRemoved++;
+                }
               }
             }
-          }
-          if (row == -1) continue;
+            if (row == -1) continue;
 
-          // rewrite the reused row with the aggregated constraint
-          unlinkRow(row);
-          addToMatrix(row, col, 1.0);
-          numRowsModified++;
+            // rewrite the reused row with the aggregated constraint
+            unlinkRow(row);
+            addToMatrix(row, col, 1.0);
+            numRowsModified++;
 
-          HighsCDouble rowBound = baseBound;
-          for (const auto& var : clique) {
-            const auto* bounds = boundsMap.find(var.col);
-            double a = bounds->standardBound.coef;
-            numVarsLifted++;
-            if (var.val == 1) {
-              addToMatrix(row, var.col, -direction * a);
+            HighsCDouble rowBound = baseBound;
+            for (const auto& var : clique) {
+              const auto* bounds = boundsMap.find(var.col);
+              double a = bounds->standardBound.coef;
+              numVarsLifted++;
+              if (var.val == 1) {
+                addToMatrix(row, var.col, -direction * a);
+              } else {
+                addToMatrix(row, var.col, direction * a);
+                rowBound += direction * a;
+              }
+            }
+
+            // update row dual bounds to match the new row type,
+            // as the original row may have been <= or >=
+            if (direction > 0) {
+              model->row_lower_[row] = static_cast<double>(rowBound);
+              model->row_upper_[row] = kHighsInf;
+              changeRowDualLower(row, 0.0);
+              changeRowDualUpper(row, kHighsInf);
             } else {
-              addToMatrix(row, var.col, direction * a);
-              rowBound += direction * a;
+              model->row_lower_[row] = -kHighsInf;
+              model->row_upper_[row] = static_cast<double>(rowBound);
+              changeRowDualLower(row, -kHighsInf);
+              changeRowDualUpper(row, 0.0);
             }
           }
+        };
 
-          // update row dual bounds to match the new row type,
-          // as the original row may have been <= or >=
-          if (direction > 0) {
-            model->row_lower_[row] = static_cast<double>(rowBound);
-            model->row_upper_[row] = kHighsInf;
-            changeRowDualLower(row, 0.0);
-            changeRowDualUpper(row, kHighsInf);
-          } else {
-            model->row_lower_[row] = -kHighsInf;
-            model->row_upper_[row] = static_cast<double>(rowBound);
-            changeRowDualLower(row, -kHighsInf);
-            changeRowDualUpper(row, 0.0);
-          }
-        }
-      };
+    if (lb > -kHighsInf) mergeCliques(vlbsCover, vlbs, lb, HighsInt{1});
+    if (ub < kHighsInf) mergeCliques(vubsCover, vubs, ub, HighsInt{-1});
 
-  if (lb > -kHighsInf) mergeCliques(vlbsCover, vlbs, lb, HighsInt{1});
-  if (ub < kHighsInf) mergeCliques(vubsCover, vubs, ub, HighsInt{-1});
-
-  if (numRowsRemoved > 0 || numRowsModified > 0)
-    highsLogDev(
-        options->log_options, HighsLogType::kInfo,
-        "Implied variable bound aggregation for column %" HIGHSINT_FORMAT
-        ": %" HIGHSINT_FORMAT " rows removed, %" HIGHSINT_FORMAT
-        " rows modified, %" HIGHSINT_FORMAT " vars lifted\n",
-        col, numRowsRemoved, numRowsModified, numVarsLifted);
+    if (numRowsRemoved > 0 || numRowsModified > 0)
+      highsLogDev(
+          options->log_options, HighsLogType::kInfo,
+          "Implied variable bound aggregation for column %" HIGHSINT_FORMAT
+          ": %" HIGHSINT_FORMAT " rows removed, %" HIGHSINT_FORMAT
+          " rows modified, %" HIGHSINT_FORMAT " vars lifted\n",
+          col, numRowsRemoved, numRowsModified, numVarsLifted);
+  }
 }
 
 // Not currently called
