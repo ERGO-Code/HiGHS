@@ -987,13 +987,12 @@ void HighsCliqueTable::extractCliques(
   }
 }
 
+template <bool Sort, typename Comparator>
 HighsInt HighsCliqueTable::extendClique(
     std::vector<HighsInt>& neighbourhoodInds, std::vector<CliqueVar>& clqVars,
-    HighsInt seedPos, HighsInt extensionEnd,
-    const std::function<bool(const CliqueVar&, const CliqueVar&)>&
-        candidateOrder) {
+    HighsInt seedPos, HighsInt extensionEnd, const Comparator& candidateOrder) {
   for (HighsInt i = seedPos; i < extensionEnd; ++i) {
-    if (candidateOrder)
+    if (Sort)
       pdqsort_branchless(clqVars.begin() + i, clqVars.begin() + extensionEnd,
                          candidateOrder);
     CliqueVar v = clqVars[i];

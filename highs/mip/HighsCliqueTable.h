@@ -160,11 +160,19 @@ class HighsCliqueTable {
                           int64_t& numNeighbourhoodqueries, CliqueVar v,
                           CliqueVar* q, HighsInt N) const;
 
-  HighsInt extendClique(
-      std::vector<HighsInt>& neighbourhoodInds, std::vector<CliqueVar>& clqVars,
-      HighsInt seedPos, HighsInt extensionEnd,
-      const std::function<bool(const CliqueVar&, const CliqueVar&)>&
-          candidateOrder = nullptr);
+  template <bool Sort = true, typename Comparator>
+  HighsInt extendClique(std::vector<HighsInt>& neighbourhoodInds,
+                        std::vector<CliqueVar>& clqVars, HighsInt seedPos,
+                        HighsInt extensionEnd,
+                        const Comparator& candidateOrder);
+
+  HighsInt extendClique(std::vector<HighsInt>& neighbourhoodInds,
+                        std::vector<CliqueVar>& clqVars, HighsInt seedPos,
+                        HighsInt extensionEnd) {
+    auto noop = [](const CliqueVar&, const CliqueVar&) { return false; };
+    return extendClique<false>(neighbourhoodInds, clqVars, seedPos,
+                               extensionEnd, noop);
+  }
 
  public:
   int64_t numNeighbourhoodQueries;
