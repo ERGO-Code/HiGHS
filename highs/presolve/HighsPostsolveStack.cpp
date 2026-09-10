@@ -1379,32 +1379,42 @@ HighsPostsolveStack::popFourierMotzkinBlock(HighsDataStack& stack) {
   // descendants
   for (HighsInt s = numSteps - 1; s >= 0; --s) {
     HighsInt numMinus = steps[s].header.numMinus;
-    steps[s].minusDescendants.resize(numMinus);
+    steps[s].minusRows.resize(numMinus);
     for (HighsInt m = numMinus - 1; m >= 0; --m)
-      stack.pop(steps[s].minusDescendants[m]);
+      stack.pop(steps[s].minusRows[m].descendants);
     HighsInt numPlus = steps[s].header.numPlus;
-    steps[s].plusDescendants.resize(numPlus);
+    steps[s].plusRows.resize(numPlus);
     for (HighsInt p = numPlus - 1; p >= 0; --p)
-      stack.pop(steps[s].plusDescendants[p]);
+      stack.pop(steps[s].plusRows[p].descendants);
   }
 
   // row data
   for (HighsInt s = numSteps - 1; s >= 0; --s) {
     // minus row data
-    stack.pop(steps[s].minusHeaders);
-    stack.pop(steps[s].minusCoefs);
-    HighsInt numMinus = static_cast<HighsInt>(steps[s].minusCoefs.size());
-    steps[s].minusEntries.resize(numMinus);
+    std::vector<FmeRowHeader> minusHeaders;
+    std::vector<double> minusCoefs;
+    stack.pop(minusHeaders);
+    stack.pop(minusCoefs);
+    HighsInt numMinus = static_cast<HighsInt>(minusCoefs.size());
+    for (HighsInt r = 0; r < numMinus; ++r) {
+      steps[s].minusRows[r].header = minusHeaders[r];
+      steps[s].minusRows[r].coef = minusCoefs[r];
+    }
     for (HighsInt r = numMinus - 1; r >= 0; --r)
-      stack.pop(steps[s].minusEntries[r]);
+      stack.pop(steps[s].minusRows[r].entries);
 
     // plus row data
-    stack.pop(steps[s].plusHeaders);
-    stack.pop(steps[s].plusCoefs);
-    HighsInt numPlus = static_cast<HighsInt>(steps[s].plusCoefs.size());
-    steps[s].plusEntries.resize(numPlus);
+    std::vector<FmeRowHeader> plusHeaders;
+    std::vector<double> plusCoefs;
+    stack.pop(plusHeaders);
+    stack.pop(plusCoefs);
+    HighsInt numPlus = static_cast<HighsInt>(plusCoefs.size());
+    for (HighsInt r = 0; r < numPlus; ++r) {
+      steps[s].plusRows[r].header = plusHeaders[r];
+      steps[s].plusRows[r].coef = plusCoefs[r];
+    }
     for (HighsInt r = numPlus - 1; r >= 0; --r)
-      stack.pop(steps[s].plusEntries[r]);
+      stack.pop(steps[s].plusRows[r].entries);
   }
 
   return steps;
@@ -1425,21 +1435,19 @@ void HighsPostsolveStack::undoFourierMotzkinBlock(
     double lower = step.header.colLower;
     double upper = step.header.colUpper;
 
-    auto tightenBounds = [&](const std::vector<FmeRowHeader>& headers,
-                             const std::vector<double>& coefs,
-                             const std::vector<std::vector<Nonzero>>& entries,
+    auto tightenBounds = [&](const std::vector<FmeParentRow>& rows,
                              double& lowerBound, double& upperBound) {
-      for (size_t r = 0; r < headers.size(); ++r) {
-        double aij = coefs[r];
+      for (const auto& row : rows) {
+        double aij = row.coef;
         HighsCDouble sum = 0.0;
-        for (const auto& nz : entries[r])
+        for (const auto& nz : row.entries)
           sum += static_cast<HighsCDouble>(nz.value) *
                  solution.col_value[nz.index];
         HighsInt direction = aij > 0 ? HighsInt{1} : HighsInt{-1};
         double rhs_upper =
-            direction > 0 ? headers[r].rowUpper : headers[r].rowLower;
+            direction > 0 ? row.header.rowUpper : row.header.rowLower;
         double rhs_lower =
-            direction > 0 ? headers[r].rowLower : headers[r].rowUpper;
+            direction > 0 ? row.header.rowLower : row.header.rowUpper;
         if (direction * rhs_upper != kHighsInf) {
           double bound = static_cast<double>((rhs_upper - sum) / aij);
           upperBound = std::min(upperBound, bound);
@@ -1451,10 +1459,8 @@ void HighsPostsolveStack::undoFourierMotzkinBlock(
       }
     };
 
-    tightenBounds(step.plusHeaders, step.plusCoefs, step.plusEntries, lower,
-                  upper);
-    tightenBounds(step.minusHeaders, step.minusCoefs, step.minusEntries, lower,
-                  upper);
+    tightenBounds(step.plusRows, lower, upper);
+    tightenBounds(step.minusRows, lower, upper);
 
     if (lower <= tol && upper >= -tol)
       solution.col_value[col] = 0.0;
@@ -1474,34 +1480,30 @@ void HighsPostsolveStack::undoFourierMotzkinBlock(
     HighsInt numMinus = step.header.numMinus;
 
     // u_i = Σ_{k ∈ K^j_i} λ_k * scaleFactor
-    auto recoverDual =
-        [&](const std::vector<FmeRowHeader>& headers,
-            const std::vector<std::vector<FmeDescendant>>& descendants) {
-          for (size_t r = 0; r < headers.size(); ++r) {
-            HighsCDouble dual = 0.0;
-            for (const auto& desc : descendants[r])
-              dual += static_cast<HighsCDouble>(solution.row_dual[desc.row]) *
-                      desc.scaleFactor;
-            solution.row_dual[headers[r].row] += static_cast<double>(dual);
-          }
-        };
-    recoverDual(step.plusHeaders, step.plusDescendants);
-    recoverDual(step.minusHeaders, step.minusDescendants);
+    auto recoverDual = [&](const std::vector<FmeParentRow>& rows) {
+      for (const auto& row : rows) {
+        HighsCDouble dual = 0.0;
+        for (const auto& desc : row.descendants)
+          dual += static_cast<HighsCDouble>(solution.row_dual[desc.row]) *
+                  desc.scaleFactor;
+        solution.row_dual[row.header.row] += static_cast<double>(dual);
+      }
+    };
+    recoverDual(step.plusRows);
+    recoverDual(step.minusRows);
 
     // col_dual = -Σ a_{ij} * row_dual[i] (cost is zero after reformulation)
     HighsCDouble colDual = 0.0;
     std::vector<HighsBool> visited(solution.row_dual.size(), false);
-    for (HighsInt r = 0; r < numPlus; ++r) {
-      HighsInt row = step.plusHeaders[r].row;
-      colDual -=
-          static_cast<HighsCDouble>(step.plusCoefs[r]) * solution.row_dual[row];
-      visited[row] = true;
+    for (const auto& row : step.plusRows) {
+      colDual -= static_cast<HighsCDouble>(row.coef) *
+                 solution.row_dual[row.header.row];
+      visited[row.header.row] = true;
     }
-    for (HighsInt r = 0; r < numMinus; ++r) {
-      HighsInt row = step.minusHeaders[r].row;
-      if (visited[row]) continue;
-      colDual -= static_cast<HighsCDouble>(step.minusCoefs[r]) *
-                 solution.row_dual[row];
+    for (const auto& row : step.minusRows) {
+      if (visited[row.header.row]) continue;
+      colDual -= static_cast<HighsCDouble>(row.coef) *
+                 solution.row_dual[row.header.row];
     }
     solution.col_dual[col] = static_cast<double>(colDual);
   }
@@ -1510,29 +1512,27 @@ void HighsPostsolveStack::undoFourierMotzkinBlock(
   if (!basis.valid) return;
 
   // pre-compute lower and upper slacks for each row
-  auto computeSlacks =
-      [&](HighsInt col, const std::vector<FmeRowHeader>& headers,
-          const std::vector<double>& coefs,
-          const std::vector<std::vector<Nonzero>>& entries,
-          std::vector<double>& lowerSlacks, std::vector<double>& upperSlacks) {
-        HighsInt n = static_cast<HighsInt>(headers.size());
-        lowerSlacks.resize(n);
-        upperSlacks.resize(n);
-        for (HighsInt r = 0; r < n; ++r) {
-          HighsCDouble activity =
-              static_cast<HighsCDouble>(coefs[r]) * solution.col_value[col];
-          for (const auto& nz : entries[r])
-            activity += static_cast<HighsCDouble>(nz.value) *
-                        solution.col_value[nz.index];
-          double act = static_cast<double>(activity);
-          lowerSlacks[r] = headers[r].rowLower != -kHighsInf
-                               ? act - headers[r].rowLower
-                               : kHighsInf;
-          upperSlacks[r] = headers[r].rowUpper != kHighsInf
-                               ? headers[r].rowUpper - act
-                               : kHighsInf;
-        }
-      };
+  auto computeSlacks = [&](HighsInt col, const std::vector<FmeParentRow>& rows,
+                           std::vector<double>& lowerSlacks,
+                           std::vector<double>& upperSlacks) {
+    HighsInt n = static_cast<HighsInt>(rows.size());
+    lowerSlacks.resize(n);
+    upperSlacks.resize(n);
+    for (HighsInt r = 0; r < n; ++r) {
+      HighsCDouble activity =
+          static_cast<HighsCDouble>(rows[r].coef) * solution.col_value[col];
+      for (const auto& nz : rows[r].entries)
+        activity +=
+            static_cast<HighsCDouble>(nz.value) * solution.col_value[nz.index];
+      double act = static_cast<double>(activity);
+      lowerSlacks[r] = rows[r].header.rowLower != -kHighsInf
+                           ? act - rows[r].header.rowLower
+                           : kHighsInf;
+      upperSlacks[r] = rows[r].header.rowUpper != kHighsInf
+                           ? rows[r].header.rowUpper - act
+                           : kHighsInf;
+    }
+  };
 
   // row must be basic if it has zero dual and activity strictly
   // between bounds (complementary slackness)
@@ -1602,10 +1602,8 @@ void HighsPostsolveStack::undoFourierMotzkinBlock(
     std::vector<double> plusUpperSlack;
     std::vector<double> minusLowerSlack;
     std::vector<double> minusUpperSlack;
-    computeSlacks(col, step.plusHeaders, step.plusCoefs, step.plusEntries,
-                  plusLowerSlack, plusUpperSlack);
-    computeSlacks(col, step.minusHeaders, step.minusCoefs, step.minusEntries,
-                  minusLowerSlack, minusUpperSlack);
+    computeSlacks(col, step.plusRows, plusLowerSlack, plusUpperSlack);
+    computeSlacks(col, step.minusRows, minusLowerSlack, minusUpperSlack);
 
     // non-basic propagation: if a generated row is non-basic (with nonzero
     // dual), both its parents are forced non-basic. mark them so the greedy
@@ -1621,10 +1619,10 @@ void HighsPostsolveStack::undoFourierMotzkinBlock(
       if (p < 0 || m < 0 || std::abs(solution.row_dual[nr.row]) <= dual_tol)
         continue;
       // mark rows that do not have to be basic
-      if (!rowMustBeBasic(step.plusHeaders[p].row, plusLowerSlack[p],
+      if (!rowMustBeBasic(step.plusRows[p].header.row, plusLowerSlack[p],
                           plusUpperSlack[p]))
         forcedNonBasicPlus[p] = true;
-      if (!rowMustBeBasic(step.minusHeaders[m].row, minusLowerSlack[m],
+      if (!rowMustBeBasic(step.minusRows[m].header.row, minusLowerSlack[m],
                           minusUpperSlack[m]))
         forcedNonBasicMinus[m] = true;
     }
@@ -1634,7 +1632,7 @@ void HighsPostsolveStack::undoFourierMotzkinBlock(
     HighsInt numRanged = 0;
     for (HighsInt m = 0; m < numMinus; ++m)
       for (HighsInt p = 0; p < numPlus; ++p)
-        if (step.minusHeaders[m].row == step.plusHeaders[p].row) {
+        if (step.minusRows[m].header.row == step.plusRows[p].header.row) {
           isMinusRowRanged[m] = true;
           numRanged++;
           break;
@@ -1666,15 +1664,15 @@ void HighsPostsolveStack::undoFourierMotzkinBlock(
     }
     for (HighsInt p = 0; p < numPlus; ++p) {
       if (forcedNonBasicPlus[p]) continue;
-      if (rowMustBeBasic(step.plusHeaders[p].row, plusLowerSlack[p],
+      if (rowMustBeBasic(step.plusRows[p].header.row, plusLowerSlack[p],
                          plusUpperSlack[p]))
-        assignBasicRowStatus(step.plusHeaders[p].row, basicAssigned);
+        assignBasicRowStatus(step.plusRows[p].header.row, basicAssigned);
     }
     for (HighsInt m = 0; m < numMinus; ++m) {
       if (isMinusRowRanged[m] || forcedNonBasicMinus[m]) continue;
-      if (rowMustBeBasic(step.minusHeaders[m].row, minusLowerSlack[m],
+      if (rowMustBeBasic(step.minusRows[m].header.row, minusLowerSlack[m],
                          minusUpperSlack[m]))
-        assignBasicRowStatus(step.minusHeaders[m].row, basicAssigned);
+        assignBasicRowStatus(step.minusRows[m].header.row, basicAssigned);
     }
 
     // pass 2: assign can-be-basic col (if not already assigned)
@@ -1693,14 +1691,14 @@ void HighsPostsolveStack::undoFourierMotzkinBlock(
     // to reduce risk of rank deficiency in degenerate cases
     std::vector<std::tuple<HighsInt, HighsInt, bool>> candidates;
     for (HighsInt p = 0; p < numPlus; ++p)
-      collectCandidate(step.plusHeaders[p].row, forcedNonBasicPlus[p],
+      collectCandidate(step.plusRows[p].header.row, forcedNonBasicPlus[p],
                        plusLowerSlack[p], plusUpperSlack[p],
-                       step.plusEntries[p], p, false, candidates);
+                       step.plusRows[p].entries, p, false, candidates);
     for (HighsInt m = 0; m < numMinus; ++m) {
       if (isMinusRowRanged[m]) continue;
-      collectCandidate(step.minusHeaders[m].row, forcedNonBasicMinus[m],
+      collectCandidate(step.minusRows[m].header.row, forcedNonBasicMinus[m],
                        minusLowerSlack[m], minusUpperSlack[m],
-                       step.minusEntries[m], m, true, candidates);
+                       step.minusRows[m].entries, m, true, candidates);
     }
     // sort descending by non-basic support count
     std::sort(candidates.begin(), candidates.end(),
@@ -1711,12 +1709,12 @@ void HighsPostsolveStack::undoFourierMotzkinBlock(
     for (const auto& cand : candidates) {
       HighsInt parentIndex = std::get<1>(cand);
       if (std::get<2>(cand)) {
-        assignRowStatus(step.minusHeaders[parentIndex].row,
+        assignRowStatus(step.minusRows[parentIndex].header.row,
                         minusLowerSlack[parentIndex],
                         minusUpperSlack[parentIndex], basicAssigned,
                         basicAssigned >= basicNeeded);
       } else {
-        assignRowStatus(step.plusHeaders[parentIndex].row,
+        assignRowStatus(step.plusRows[parentIndex].header.row,
                         plusLowerSlack[parentIndex],
                         plusUpperSlack[parentIndex], basicAssigned,
                         basicAssigned >= basicNeeded);

@@ -8317,7 +8317,7 @@ HPresolve::Result HPresolve::fourierMotzkin(
   auto findRowIndex = [](HighsInt row,
                          const std::vector<FmeRow>& rows) -> HighsInt {
     for (HighsInt i = 0; i < static_cast<HighsInt>(rows.size()); ++i)
-      if (rows[i].row == row) return i;
+      if (rows[i].header.row == row) return i;
     return -1;
   };
 
@@ -8326,7 +8326,7 @@ HPresolve::Result HPresolve::fourierMotzkin(
     for (HighsInt r : rows) {
       if (r < 0) continue;
       result.push_back(
-          {r, model->row_lower_[r], model->row_upper_[r], getRowVector(r)});
+          {{r, model->row_lower_[r], model->row_upper_[r]}, getRowVector(r)});
     }
     return result;
   };
@@ -8550,11 +8550,9 @@ HPresolve::Result HPresolve::fourierMotzkin(
 
     // save block metadata
     assert(model->col_cost_[col] == 0.0);
-    blockSteps.push_back({col,
-                          model->col_lower_[col],
-                          model->col_upper_[col],
-                          static_cast<HighsInt>(plusRows.size()),
-                          static_cast<HighsInt>(minusRows.size()),
+    blockSteps.push_back({{model->col_lower_[col], model->col_upper_[col], col,
+                           static_cast<HighsInt>(plusRows.size()),
+                           static_cast<HighsInt>(minusRows.size())},
                           {}});
 
     // add new rows to matrix

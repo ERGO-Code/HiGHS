@@ -62,18 +62,16 @@ class HighsPostsolveStack {
     Nonzero() = default;
   };
 
-  template <typename RowStorageFormat>
-  struct FmeRowData {
-    HighsInt row;
-    double rowLower;
-    double rowUpper;
-    HighsMatrixSlice<RowStorageFormat> rowVec;
-  };
-
   struct FmeRowHeader {
     HighsInt row;
     double rowLower;
     double rowUpper;
+  };
+
+  template <typename RowStorageFormat>
+  struct FmeRowData {
+    FmeRowHeader header;
+    HighsMatrixSlice<RowStorageFormat> rowVec;
   };
 
   struct FmeStepHeader {
@@ -103,11 +101,7 @@ class HighsPostsolveStack {
   };
 
   struct FmeBlockStep {
-    HighsInt col;
-    double colLower;
-    double colUpper;
-    HighsInt numPlus;
-    HighsInt numMinus;
+    FmeStepHeader header;
     std::vector<FmeNewRow> newRows;
   };
 
@@ -337,16 +331,17 @@ class HighsPostsolveStack {
     kFourierMotzkinObjCol,
   };
 
+  struct FmeParentRow {
+    FmeRowHeader header;
+    double coef;
+    std::vector<Nonzero> entries;
+    std::vector<FmeDescendant> descendants;
+  };
+
   struct FmeStepData {
     FmeStepHeader header;
-    std::vector<FmeRowHeader> plusHeaders;
-    std::vector<double> plusCoefs;
-    std::vector<std::vector<Nonzero>> plusEntries;
-    std::vector<std::vector<FmeDescendant>> plusDescendants;
-    std::vector<FmeRowHeader> minusHeaders;
-    std::vector<double> minusCoefs;
-    std::vector<std::vector<Nonzero>> minusEntries;
-    std::vector<std::vector<FmeDescendant>> minusDescendants;
+    std::vector<FmeParentRow> plusRows;
+    std::vector<FmeParentRow> minusRows;
     std::vector<FmeNewRow> newRows;
   };
 
@@ -660,7 +655,8 @@ class HighsPostsolveStack {
       }
       reductionValues.push(translated);
       plusCoefs.push_back(coef);
-      plusHeaders.push_back({origRowIndex[rd.row], rd.rowLower, rd.rowUpper});
+      plusHeaders.push_back({origRowIndex[rd.header.row], rd.header.rowLower,
+                             rd.header.rowUpper});
     }
     reductionValues.push(plusCoefs);
     reductionValues.push(plusHeaders);
@@ -680,7 +676,8 @@ class HighsPostsolveStack {
       }
       reductionValues.push(translated);
       minusCoefs.push_back(coef);
-      minusHeaders.push_back({origRowIndex[rd.row], rd.rowLower, rd.rowUpper});
+      minusHeaders.push_back({origRowIndex[rd.header.row], rd.header.rowLower,
+                              rd.header.rowUpper});
     }
     reductionValues.push(minusCoefs);
     reductionValues.push(minusHeaders);
@@ -697,8 +694,8 @@ class HighsPostsolveStack {
     std::vector<std::vector<std::vector<FmeDescendant>>> minusDescendantsAll(
         numSteps);
     for (HighsInt s = 0; s < numSteps; ++s) {
-      plusDescendantsAll[s].resize(blockSteps[s].numPlus);
-      minusDescendantsAll[s].resize(blockSteps[s].numMinus);
+      plusDescendantsAll[s].resize(blockSteps[s].header.numPlus);
+      minusDescendantsAll[s].resize(blockSteps[s].header.numMinus);
     }
     for (const auto& entry : rowAncestry) {
       HighsInt row = entry.first;
@@ -715,12 +712,12 @@ class HighsPostsolveStack {
 
     for (HighsInt s = 0; s < numSteps; ++s) {
       assert(static_cast<HighsInt>(plusDescendantsAll[s].size()) ==
-             blockSteps[s].numPlus);
-      for (HighsInt p = 0; p < blockSteps[s].numPlus; ++p)
+             blockSteps[s].header.numPlus);
+      for (HighsInt p = 0; p < blockSteps[s].header.numPlus; ++p)
         reductionValues.push(plusDescendantsAll[s][p]);
       assert(static_cast<HighsInt>(minusDescendantsAll[s].size()) ==
-             blockSteps[s].numMinus);
-      for (HighsInt m = 0; m < blockSteps[s].numMinus; ++m)
+             blockSteps[s].header.numMinus);
+      for (HighsInt m = 0; m < blockSteps[s].header.numMinus; ++m)
         reductionValues.push(minusDescendantsAll[s][m]);
     }
 
@@ -734,9 +731,10 @@ class HighsPostsolveStack {
     }
 
     for (HighsInt s = 0; s < numSteps; ++s) {
-      FmeStepHeader header{blockSteps[s].colLower, blockSteps[s].colUpper,
-                           origColIndex[blockSteps[s].col],
-                           blockSteps[s].numPlus, blockSteps[s].numMinus};
+      FmeStepHeader header{
+          blockSteps[s].header.colLower, blockSteps[s].header.colUpper,
+          origColIndex[blockSteps[s].header.col], blockSteps[s].header.numPlus,
+          blockSteps[s].header.numMinus};
       reductionValues.push(header);
     }
 
