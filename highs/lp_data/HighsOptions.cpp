@@ -116,12 +116,12 @@ static bool optionSolverValueOk(const HighsLogOptions& report_log_options,
 bool optionSolverOk(const HighsLogOptions& report_log_options,
                     const string& value) {
   std::vector<std::string> valid = {
-      kHighsChooseString, kSimplexString, kIpmString,   kIpxString,
-      kPdlpString,        kQpAsmString,   kHiPdlpString};
+      kHighsChooseString, kSimplexString, kIpmString,  kIpxString,
+      kPdlpString,        kHiPdlpString,  kQpAsmString};
   if (HighsExternalApi::isAvailable<HighsExtras::hipo>())
-    valid.push_back(kHipoString);
+    valid.insert(valid.begin() + 3, kHipoString);
   return optionSolverValueOk(report_log_options, value, valid, kSolverString,
-                             "solver", HighsLogType::kWarning);
+                             "LP/QP solver", HighsLogType::kError);
 }
 
 bool optionMipLpSolverOk(const HighsLogOptions& report_log_options,
@@ -129,7 +129,7 @@ bool optionMipLpSolverOk(const HighsLogOptions& report_log_options,
   std::vector<std::string> valid = {kHighsChooseString, kSimplexString,
                                     kIpmString, kIpxString};
   if (HighsExternalApi::isAvailable<HighsExtras::hipo>())
-    valid.push_back(kHipoString);
+    valid.insert(valid.begin() + 3, kHipoString);
   return optionSolverValueOk(report_log_options, value, valid,
                              kMipLpSolverString, "MIP LP solver",
                              HighsLogType::kError);
@@ -139,7 +139,7 @@ bool optionMipIpmSolverOk(const HighsLogOptions& report_log_options,
                           const string& value) {
   std::vector<std::string> valid = {kHighsChooseString, kIpmString, kIpxString};
   if (HighsExternalApi::isAvailable<HighsExtras::hipo>())
-    valid.push_back(kHipoString);
+    valid.insert(valid.begin() + 2, kHipoString);
   return optionSolverValueOk(report_log_options, value, valid,
                              kMipIpmSolverString, "MIP IPM solver",
                              HighsLogType::kError);

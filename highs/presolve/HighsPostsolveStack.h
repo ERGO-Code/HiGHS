@@ -359,6 +359,14 @@ class HighsPostsolveStack {
 
   bool isOrigCol(HighsInt col) const { return origColIndex[col] < origNumCol; }
 
+  // Returns presolved-space indices of columns from the original model
+  std::vector<HighsInt> getOrigCols() const {
+    std::vector<HighsInt> cols;
+    for (HighsInt i = 0; i < static_cast<HighsInt>(origColIndex.size()); ++i)
+      if (isOrigCol(i)) cols.push_back(i);
+    return cols;
+  }
+
   bool isOrigRow(HighsInt row) const {
     return origRowType[row] == OrigRowType::kOriginal;
   }
@@ -371,7 +379,34 @@ class HighsPostsolveStack {
     return origRowType[row] == OrigRowType::kCut;
   }
 
-  bool hasAppendedRows() const { return numAppendedRows > 0; }
+  void setRowType(HighsInt row, OrigRowType type) { origRowType[row] = type; }
+
+  // Returns presolved-space indices of rows from the original model
+  std::vector<HighsInt> getOrigRows() const {
+    std::vector<HighsInt> rows;
+    for (HighsInt i = 0; i < static_cast<HighsInt>(origRowType.size()); ++i)
+      if (isOrigRow(i)) rows.push_back(i);
+    return rows;
+  }
+
+  // Returns presolved-space indices of rows that are cuts
+  std::vector<HighsInt> getCutRows() const {
+    std::vector<HighsInt> rows;
+    // keep reverse loop to avoid behavior changes
+    for (HighsInt i = static_cast<HighsInt>(origRowType.size()) - 1; i >= 0;
+         --i)
+      if (isCutRow(i)) rows.push_back(i);
+    return rows;
+  }
+
+  // Returns presolved-space indices of rows that are not cuts (original +
+  // appended)
+  std::vector<HighsInt> getNonCutRows() const {
+    std::vector<HighsInt> rows;
+    for (HighsInt i = 0; i < static_cast<HighsInt>(origRowType.size()); ++i)
+      if (!isCutRow(i)) rows.push_back(i);
+    return rows;
+  }
 
   void appendToModel(HighsInt& numRows, HighsInt numRowsToAppend,
                      OrigRowType rowType) {
@@ -702,6 +737,10 @@ class HighsPostsolveStack {
   void duplicateRow(HighsInt row, bool rowUpperTightened,
                     bool rowLowerTightened, HighsInt duplicateRow,
                     double duplicateRowScale) {
+    // The surviving row must not be a cut absorbing a non-cut
+    // constraint. detectParallelRowsAndCols ensures this by
+    // iterating non-cut rows before cut rows.
+    assert(!isCutRow(row) || isCutRow(duplicateRow));
     reductionValues.push(
         DuplicateRow{duplicateRowScale, origRowIndex[duplicateRow],
                      origRowIndex[row], rowLowerTightened, rowUpperTightened});

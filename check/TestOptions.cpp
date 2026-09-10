@@ -563,11 +563,12 @@ TEST_CASE("incomplete-options-file-line", "[highs_options]") {
 
 TEST_CASE("string-option-case-insensitivity", "[highs_options]") {
   Highs highs;
-  highs.setOptionValue("output_flag", dev_run);
-  REQUIRE(highs.setOptionValue("output_flag", "True") == HighsStatus::kOk);
-  REQUIRE(highs.setOptionValue("output_flag", "TRUE ") == HighsStatus::kOk);
   REQUIRE(highs.setOptionValue("output_flag", "FaLsE") == HighsStatus::kOk);
   REQUIRE(highs.setOptionValue("output_flag", " false") == HighsStatus::kOk);
+  REQUIRE(highs.setOptionValue("output_flag", "True") == HighsStatus::kOk);
+  REQUIRE(highs.setOptionValue("output_flag", "TRUE ") == HighsStatus::kOk);
+  // Now ensure that output_flag setting corresponds to dev_run
+  highs.setOptionValue("output_flag", dev_run);
   REQUIRE(highs.setOptionValue(kParallelString, "On") == HighsStatus::kOk);
   REQUIRE(highs.setOptionValue(kParallelString, "OFF ") == HighsStatus::kOk);
   REQUIRE(highs.setOptionValue(kSolverString, " Choose") == HighsStatus::kOk);
@@ -580,4 +581,10 @@ TEST_CASE("string-option-case-insensitivity", "[highs_options]") {
           HighsStatus::kOk);
   REQUIRE(highs.setOptionValue(kHipoSystemString, "NormalEQ") ==
           HighsStatus::kOk);
+  // Still doesn't mean that "anything goes"
+  REQUIRE(highs.setOptionValue(kSolverString, "ASM") == HighsStatus::kError);
+  REQUIRE(highs.setOptionValue(kMipLpSolverString, "ASM") ==
+          HighsStatus::kError);
+  REQUIRE(highs.setOptionValue(kMipIpmSolverString, "ASM") ==
+          HighsStatus::kError);
 }
