@@ -1782,3 +1782,14 @@ TEST_CASE("redcost-fixing-large-bounds", "[highs_test_mip_solver]") {
       mipsolver, mipsolver.mipdata_->getDomain());
   REQUIRE(!lurkingBounds.empty());
 }
+
+TEST_CASE("pr-3261", "[highs_test_mip_solver]") {
+  std::string filename =
+      std::string(HIGHS_DIR) + "/check/instances/pr-3261.mps";
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  highs.readModel(filename);
+  const HighsModelStatus require_model_status = HighsModelStatus::kOptimal;
+  const double optimal_objective = 7.0;
+  solve(highs, kHighsOnString, require_model_status, optimal_objective);
+}
