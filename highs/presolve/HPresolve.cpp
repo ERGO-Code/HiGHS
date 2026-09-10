@@ -7943,7 +7943,7 @@ HPresolve::Result HPresolve::fourierMotzkin(
     if (col == model->fme_obj_col_) return false;
     if (model->integrality_[col] != HighsVarType::kContinuous) return false;
     if (!acceptCoef(model->col_cost_[col])) return false;
-    if (options->presolve_fm_level < 1 && model->col_cost_[col] != 0.0)
+    if (!options->presolve_fm_obj_reformulation && model->col_cost_[col] != 0.0)
       return false;
     for (const auto& nz : getColumnVector(col))
       if (isEquation(nz.index()) || !acceptCoef(nz.value())) return false;
@@ -8354,8 +8354,8 @@ HPresolve::Result HPresolve::fourierMotzkin(
                 "Fourier-Motzkin (%s objective reformulation) added "
                 "%" HIGHSINT_FORMAT " rows and eliminated %" HIGHSINT_FORMAT
                 " rows and %" HIGHSINT_FORMAT " columns\n",
-                options->presolve_fm_level >= 1 ? "with" : "without", rowsAdded,
-                rowsRemoved, colsRemoved);
+                options->presolve_fm_obj_reformulation ? "with" : "without",
+                rowsAdded, rowsRemoved, colsRemoved);
   };
 
   // workspace vectors
@@ -8373,7 +8373,7 @@ HPresolve::Result HPresolve::fourierMotzkin(
   // used to simulate the objective constraint in checkRows before
   // reformulation actually happens
   std::vector<HighsInt> objRowCols;
-  if (model->fme_obj_col_ == -1 && options->presolve_fm_level >= 1) {
+  if (options->presolve_fm_obj_reformulation && model->fme_obj_col_ == -1) {
     for (HighsInt j = 0; j < model->num_col_; ++j) {
       if (!colDeleted[j] && model->col_cost_[j] != 0.0) objRowCols.push_back(j);
     }
