@@ -62,6 +62,15 @@ static std::string optionEntryTypeToString(const HighsOptionType type) {
   }
 }
 
+static std::string joinOptionValues(const std::vector<std::string>& values) {
+  std::string result;
+  for (size_t i = 0; i < values.size(); i++) {
+    if (i > 0) result += (i == values.size() - 1) ? " or " : ", ";
+    result += "\"" + values[i] + "\"";
+  }
+  return result;
+}
+
 bool optionOffChooseOnOk(const HighsLogOptions& report_log_options,
                          const string& name, const string& value) {
   if (value == kHighsOffString || value == kHighsChooseString ||
@@ -69,9 +78,10 @@ bool optionOffChooseOnOk(const HighsLogOptions& report_log_options,
     return true;
   highsLogUser(
       report_log_options, HighsLogType::kError,
-      "Value \"%s\" for %s option is not one of \"%s\", \"%s\" or \"%s\"\n",
-      value.c_str(), name.c_str(), kHighsOffString.c_str(),
-      kHighsChooseString.c_str(), kHighsOnString.c_str());
+      "Value \"%s\" for %s option is not one of %s\n", value.c_str(),
+      name.c_str(),
+      joinOptionValues({kHighsOffString, kHighsChooseString, kHighsOnString})
+          .c_str());
   return false;
 }
 
@@ -79,9 +89,9 @@ bool optionOffOnOk(const HighsLogOptions& report_log_options,
                    const string& name, const string& value) {
   if (value == kHighsOffString || value == kHighsOnString) return true;
   highsLogUser(report_log_options, HighsLogType::kError,
-               "Value \"%s\" for %s option is not one of \"%s\" or \"%s\"\n",
-               value.c_str(), name.c_str(), kHighsOffString.c_str(),
-               kHighsOnString.c_str());
+               "Value \"%s\" for %s option is not one of %s\n", value.c_str(),
+               name.c_str(),
+               joinOptionValues({kHighsOffString, kHighsOnString}).c_str());
   return false;
 }
 
@@ -101,15 +111,10 @@ static bool optionSolverValueOk(const HighsLogOptions& report_log_options,
         option_name.c_str());
     return false;
   }
-  std::string valid_list;
-  for (size_t i = 0; i < valid_solvers.size(); i++) {
-    if (i > 0) valid_list += (i == valid_solvers.size() - 1) ? " or " : ", ";
-    valid_list += "\"" + valid_solvers[i] + "\"";
-  }
   highsLogUser(report_log_options, log_type,
                "Value \"%s\" for %s option (\"%s\") is not one of %s\n",
                value.c_str(), option_description.c_str(), option_name.c_str(),
-               valid_list.c_str());
+               joinOptionValues(valid_solvers).c_str());
   return false;
 }
 
@@ -151,11 +156,11 @@ bool optionHipoParallelTypeOk(const HighsLogOptions& report_log_options,
       value == kHipoBothString || value == kHighsChooseString)
     return true;
   highsLogUser(report_log_options, HighsLogType::kError,
-               "Value \"%s\" for %s option is not one of \"%s\", \"%s\", "
-               "\"%s\" or \"%s\"\n",
-               value.c_str(), kHipoParallelString.c_str(),
-               kHipoTreeString.c_str(), kHipoNodeString.c_str(),
-               kHipoBothString.c_str(), kHighsChooseString.c_str());
+               "Value \"%s\" for %s option is not one of %s\n", value.c_str(),
+               kHipoParallelString.c_str(),
+               joinOptionValues({kHipoTreeString, kHipoNodeString,
+                                 kHipoBothString, kHighsChooseString})
+                   .c_str());
   return false;
 }
 
@@ -164,11 +169,12 @@ bool optionHipoSystemOk(const HighsLogOptions& report_log_options,
   if (value == kHipoNormalEqString || value == kHipoAugmentedString ||
       value == kHighsChooseString)
     return true;
-  highsLogUser(
-      report_log_options, HighsLogType::kError,
-      "Value \"%s\" for %s option is not one of \"%s\", \"%s\" or \"%s\"\n",
-      value.c_str(), kHipoSystemString.c_str(), kHipoNormalEqString.c_str(),
-      kHipoAugmentedString.c_str(), kHighsChooseString.c_str());
+  highsLogUser(report_log_options, HighsLogType::kError,
+               "Value \"%s\" for %s option is not one of %s\n", value.c_str(),
+               kHipoSystemString.c_str(),
+               joinOptionValues({kHipoNormalEqString, kHipoAugmentedString,
+                                 kHighsChooseString})
+                   .c_str());
   return false;
 }
 
@@ -178,11 +184,11 @@ bool optionHipoOrderingOk(const HighsLogOptions& report_log_options,
       value == kHipoRcmString || value == kHighsChooseString)
     return true;
   highsLogUser(report_log_options, HighsLogType::kError,
-               "Value \"%s\" for %s option is not one of \"%s\", \"%s\", "
-               "\"%s\" or \"%s\"\n",
-               value.c_str(), kHipoOrderingString.c_str(),
-               kHipoAmdString.c_str(), kHipoMetisString.c_str(),
-               kHipoRcmString.c_str(), kHighsChooseString.c_str());
+               "Value \"%s\" for %s option is not one of %s\n", value.c_str(),
+               kHipoOrderingString.c_str(),
+               joinOptionValues({kHipoAmdString, kHipoMetisString,
+                                 kHipoRcmString, kHighsChooseString})
+                   .c_str());
   return false;
 }
 
@@ -191,11 +197,12 @@ bool optionHipoFactorOk(const HighsLogOptions& report_log_options,
   if (value == kHipoFactorMultifrontal || value == kHipoFactorUplooking ||
       value == kHighsChooseString)
     return true;
-  highsLogUser(
-      report_log_options, HighsLogType::kError,
-      "Value \"%s\" for %s option is not one of \"%s\", \"%s\" or \"%s\"\n",
-      value.c_str(), kHipoFactorString.c_str(), kHipoFactorMultifrontal.c_str(),
-      kHipoFactorUplooking.c_str(), kHighsChooseString.c_str());
+  highsLogUser(report_log_options, HighsLogType::kError,
+               "Value \"%s\" for %s option is not one of %s\n", value.c_str(),
+               kHipoFactorString.c_str(),
+               joinOptionValues({kHipoFactorMultifrontal, kHipoFactorUplooking,
+                                 kHighsChooseString})
+                   .c_str());
   return false;
 }
 
