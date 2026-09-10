@@ -216,6 +216,8 @@ class HPresolve {
 
   bool rowCoefficientsIntegral(HighsInt row, double scale) const;
 
+  bool isBinary(HighsInt col) const;
+
   bool isImpliedFree(HighsInt col) const;
 
   bool isDualImpliedFree(HighsInt row) const;

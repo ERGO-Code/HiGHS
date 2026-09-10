@@ -237,6 +237,11 @@ bool HPresolve::isUpperStrictlyImplied(HighsInt col, double* tolerance) const {
                   (tolerance != nullptr ? *tolerance : primal_feastol));
 }
 
+bool HPresolve::isBinary(HighsInt col) const {
+  return model->integrality_[col] == HighsVarType::kInteger &&
+         model->col_lower_[col] == 0.0 && model->col_upper_[col] == 1.0;
+}
+
 bool HPresolve::isImpliedFree(HighsInt col) const {
   return isLowerImplied(col) && isUpperImplied(col);
 }
@@ -1191,11 +1196,6 @@ HPresolve::Result HPresolve::dominatedColumns(
   size_t numDomChecks = 0;
   size_t numDomChecksPredBndAnalysis = 0;
 
-  auto isBinary = [&](HighsInt i) {
-    return model->integrality_[i] == HighsVarType::kInteger &&
-           model->col_lower_[i] == 0.0 && model->col_upper_[i] == 1.0;
-  };
-
   auto addSignature = [&](HighsInt row, HighsInt col, uint32_t rowLowerFinite,
                           uint32_t rowUpperFinite) {
     HighsInt rowHashedPos = (HighsHashHelpers::hash(row) >> 59);
@@ -1597,6 +1597,7 @@ HPresolve::Result HPresolve::normaliseAllBinaryCliqueRows() {
     nzs.clear();
     rhs *= direction;
     bool isSetPpc = true;
+    storeRow(row);
 
     for (HighsInt rowiter : rowpositions) {
       HighsInt col = Acol[rowiter];
@@ -1620,18 +1621,11 @@ HPresolve::Result HPresolve::normaliseAllBinaryCliqueRows() {
 
     // skip rows that are not all-binary
     bool allBinary = true;
-    bool isSetPpc = model->row_upper_[row] == 1.0;
     for (const auto& nz : getRowVector(row)) {
-      allBinary = allBinary &&
-                  model->integrality_[nz.index()] == HighsVarType::kInteger &&
-                  model->col_lower_[nz.index()] == 0.0 &&
-                  model->col_upper_[nz.index()] == 1.0;
-      isSetPpc = isSetPpc && allBinary && nz.value() == 1.0;
+      allBinary = isBinary(nz.index());
       if (!allBinary) break;
     }
-    if (!allBinary || isSetPpc) continue;
-
-    storeRow(row);
+    if (!allBinary) continue;
 
     // transform row
     HighsInt direction =
@@ -1642,11 +1636,11 @@ HPresolve::Result HPresolve::normaliseAllBinaryCliqueRows() {
     // transform the row
     if (!transformAllBinaryRow(row, nzs, rhs, direction)) continue;
 
-    HighsInt n = static_cast<HighsInt>(nzs.size());
-    if (n < 2) continue;
+    HighsInt numBinVars = static_cast<HighsInt>(nzs.size());
+    if (numBinVars < 2) continue;
 
     // sort by descending coefficient value
-    std::vector<HighsInt> perm(n);
+    std::vector<HighsInt> perm(numBinVars);
     std::iota(perm.begin(), perm.end(), 0);
     pdqsort(perm.begin(), perm.end(), [&](HighsInt a, HighsInt b) {
       return nzs[a].value > nzs[b].value;
@@ -1655,7 +1649,7 @@ HPresolve::Result HPresolve::normaliseAllBinaryCliqueRows() {
     // trivial fixings: variables with coefficient > rhs must be zero
     // in the complemented space
     HighsInt start = 0;
-    for (HighsInt j = 0; j < n; ++j) {
+    for (HighsInt j = 0; j < numBinVars; ++j) {
       if (nzs[perm[j]].value <= rhs + primal_feastol) break;
       HighsInt col = nzs[perm[j]].index;
       if (nzs[perm[j]].complementation == -1)
@@ -1667,23 +1661,57 @@ HPresolve::Result HPresolve::normaliseAllBinaryCliqueRows() {
 
     // skip row if there are less than two remaining variables or two smallest
     // remaining coefficients do not form a clique
-    if (n - start < 2 ||
-        nzs[perm[n - 2]].value + nzs[perm[n - 1]].value <= rhs + primal_feastol)
+    if (numBinVars - start < 2 ||
+        static_cast<HighsCDouble>(nzs[perm[numBinVars - 2]].value) +
+                static_cast<HighsCDouble>(nzs[perm[numBinVars - 1]].value) <=
+            rhs + primal_feastol)
       continue;
 
-    // log original row
-    highsLogDev(options->log_options, HighsLogType::kInfo,
-                "normalise row %d: [%g, %g]", static_cast<int>(row),
-                model->row_lower_[row], model->row_upper_[row]);
-    for (HighsInt j = start; j < n; ++j)
-      highsLogDev(options->log_options, HighsLogType::kInfo, " %+g x%d",
-                  Avalue[nzs[perm[j]].position],
-                  static_cast<int>(nzs[perm[j]].index));
-    highsLogDev(options->log_options, HighsLogType::kInfo, "\n");
+    // 1. original row
+    printf("normalise row %d: [%g, %g]", static_cast<int>(row),
+           model->row_lower_[row], model->row_upper_[row]);
+    for (HighsInt j = start; j < numBinVars; ++j)
+      printf(" %+g x%d", Avalue[nzs[perm[j]].position],
+             static_cast<int>(nzs[perm[j]].index));
+    printf("\n");
+    // 2. complemented form
+    printf("  complemented:");
+    for (HighsInt j = start; j < numBinVars; ++j) {
+      printf(" +%g %s%d", nzs[perm[j]].value,
+             nzs[perm[j]].complementation == -1 ? "(1-x" : "x",
+             static_cast<int>(nzs[perm[j]].index));
+      if (nzs[perm[j]].complementation == -1) printf(")");
+    }
+    printf(" <= %g\n", static_cast<double>(rhs));
+    // 3. clique that will be derived (normalized <=1 form)
+    printf("  clique:");
+    for (HighsInt j = start; j < numBinVars; ++j) {
+      printf(" +%s%d",
+             nzs[perm[j]].complementation == -1 ? "(1-x" : "x",
+             static_cast<int>(nzs[perm[j]].index));
+      if (nzs[perm[j]].complementation == -1) printf(")");
+    }
+    printf(" <= 1\n");
+    // 4. validity check
+    bool allPairsClique = true;
+    for (HighsInt j = start; j < numBinVars && allPairsClique; ++j)
+      for (HighsInt k = j + 1; k < numBinVars; ++k)
+        if (nzs[perm[j]].value + nzs[perm[k]].value <=
+            static_cast<double>(rhs) + primal_feastol) {
+          printf("  INVALID: %g + %g = %g <= %g for x%d, x%d\n",
+                 nzs[perm[j]].value, nzs[perm[k]].value,
+                 nzs[perm[j]].value + nzs[perm[k]].value,
+                 static_cast<double>(rhs),
+                 static_cast<int>(nzs[perm[j]].index),
+                 static_cast<int>(nzs[perm[k]].index));
+          allPairsClique = false;
+          break;
+        }
+    if (allPairsClique) printf("  valid clique\n");
 
     // normalize remaining coefficients to ±1
     HighsInt numNeg = 0;
-    for (HighsInt j = start; j < n; ++j) {
+    for (HighsInt j = start; j < numBinVars; ++j) {
       HighsInt pos = nzs[perm[j]].position;
       double target = static_cast<double>(nzs[perm[j]].complementation);
       double delta = target - Avalue[pos];
@@ -1702,16 +1730,6 @@ HPresolve::Result HPresolve::normaliseAllBinaryCliqueRows() {
         changeRowDualUpper(row, kHighsInf);
       }
     }
-
-    // log transformed row
-    highsLogDev(options->log_options, HighsLogType::kInfo,
-                "      =>  row %d: [%g, %g]", static_cast<int>(row),
-                model->row_lower_[row], model->row_upper_[row]);
-    for (HighsInt j = start; j < n; ++j)
-      highsLogDev(options->log_options, HighsLogType::kInfo, " %+g x%d",
-                  Avalue[nzs[perm[j]].position],
-                  static_cast<int>(nzs[perm[j]].index));
-    highsLogDev(options->log_options, HighsLogType::kInfo, "\n");
   }
   return Result::kOk;
 }
@@ -1744,7 +1762,7 @@ HPresolve::Result HPresolve::prepareProbing(
       HPRESOLVE_CHECKED_CALL(changeColUpper(i, implColUpper[i]));
   }
 
-  HPRESOLVE_CHECKED_CALL(normaliseAllBinaryCliqueRows());
+  // HPRESOLVE_CHECKED_CALL(normaliseAllBinaryCliqueRows());
 
   // prepare for domain propagation
   mipsolver->mipdata_->setupDomainPropagation();

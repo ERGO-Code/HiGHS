@@ -855,6 +855,16 @@ void HighsCliqueTable::extractCliques(
   HighsImplications& implics = mipsolver.mipdata_->implications;
   HighsDomain& globaldom = mipsolver.mipdata_->getDomain();
 
+  // diagnostic: log input row
+  printf("extractCliques origin=%d, rhs=%g, nbin=%d:",
+         static_cast<int>(origin), rhs, static_cast<int>(nbin));
+  for (size_t i = 0; i < inds.size(); ++i)
+    printf(" +%g %s%d%s", vals[i],
+           complementation[i] == -1 ? "(1-x" : "x",
+           static_cast<int>(inds[i]),
+           complementation[i] == -1 ? ")" : "");
+  printf("\n");
+
   perm.resize(inds.size());
   std::iota(perm.begin(), perm.end(), 0);
 
@@ -944,11 +954,15 @@ void HighsCliqueTable::extractCliques(
     // to set packing form so that lifting with coefficient 1 is valid
     assert(nbin != ntotal || origin == kHighsIInf ||
            (std::abs(vals[perm[0]] - 1.0) <= feastol && rhs < 1.0 + feastol));
+    printf("  set-packing clique (origin=%d):",
+           static_cast<int>(nbin == ntotal ? origin : kHighsIInf));
+    for (HighsInt j = 0; j < nbin; ++j)
+      printf(" %sx%d", clique[j].val == 0 ? "~" : "",
+             static_cast<int>(clique[j].col));
+    printf("\n");
     addClique(mipsolver, clique.data(), nbin, false,
               nbin == ntotal ? origin : kHighsIInf);
     if (globaldom.infeasible()) return;
-    // printf("extracted this clique:\n");
-    // printClique(clique);
     return;
   }
 
@@ -980,12 +994,14 @@ void HighsCliqueTable::extractCliques(
     // printClique(clique);
 
     if (clique.size() >= 2) {
-      // if (clique.size() > 2) runCliqueSubsumption(globaldom, clique);
-      // runCliqueMerging(globaldom, clique);
-      // if (clique.size() >= 2) {
-      // if all variables are binary and form one clique, pass row origin
-      // so clique merging can delete the subsumed row; the row must have
-      // been normalized so that lifting with coefficient 1 is valid
+      printf("  partial clique (origin=%d):",
+             static_cast<int>(
+                 static_cast<HighsInt>(clique.size()) == ntotal ? origin
+                                                                : kHighsIInf));
+      for (size_t j = 0; j < clique.size(); ++j)
+        printf(" %sx%d", clique[j].val == 0 ? "~" : "",
+               static_cast<int>(clique[j].col));
+      printf("\n");
       assert(static_cast<HighsInt>(clique.size()) != ntotal ||
              origin == kHighsIInf ||
              (std::abs(vals[perm[0]] - 1.0) <= feastol &&

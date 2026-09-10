@@ -6,7 +6,7 @@
 #include "mip/HighsMipSolver.h"
 #include "mip/HighsMipSolverData.h"
 
-const bool dev_run = false;
+const bool dev_run = true;
 const double double_equal_tolerance = 1e-5;
 
 bool objectiveOk(const double optimal_objective,
