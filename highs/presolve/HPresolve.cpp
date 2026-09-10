@@ -9154,12 +9154,19 @@ void HPresolve::aggregateVarBounds() {
     HighsImplications::VarBound standardBound;
   };
 
+  // data structures
   HighsHashTree<HighsInt, colImpliedBounds> vlbs;
   HighsHashTree<HighsInt, colImpliedBounds> vubs;
   std::vector<HighsCliqueTable::CliqueVar> vlbsClique;
   std::vector<HighsCliqueTable::CliqueVar> vubsClique;
   std::vector<std::vector<HighsCliqueTable::CliqueVar>> vlbsCover;
   std::vector<std::vector<HighsCliqueTable::CliqueVar>> vubsCover;
+  std::vector<HighsBool> rowConsumed(model->num_row_, false);
+
+  // initialise counters
+  HighsInt numRowsRemoved = 0;
+  HighsInt numRowsModified = 0;
+  HighsInt numVarsLifted = 0;
 
   for (HighsInt col = 0; col != model->num_col_; ++col) {
     if (colDeleted[col]) continue;
@@ -9238,16 +9245,10 @@ void HPresolve::aggregateVarBounds() {
     cliquetable.cliqueCover(vlbsClique, vlbsCover);
     cliquetable.cliqueCover(vubsClique, vubsCover);
 
-    HighsInt numRowsRemoved = 0;
-    HighsInt numRowsModified = 0;
-    HighsInt numVarsLifted = 0;
-
     auto mergeCliques =
         [&](std::vector<std::vector<HighsCliqueTable::CliqueVar>>& cover,
             HighsHashTree<HighsInt, colImpliedBounds>& boundsMap,
             double baseBound, HighsInt direction) {
-          std::set<HighsInt> consumedRows;
-
           for (const auto& clique : cover) {
             if (clique.size() < 2) continue;
 
@@ -9257,7 +9258,8 @@ void HPresolve::aggregateVarBounds() {
               const auto* bounds = boundsMap.find(var.col);
               HighsInt currentrow = bounds->originalBound.origin;
               if (currentrow < 0) continue;
-              if (consumedRows.insert(currentrow).second) {
+              if (!rowConsumed[currentrow]) {
+                rowConsumed[currentrow] = true;
                 if (row == -1)
                   row = currentrow;
                 else {
@@ -9304,15 +9306,14 @@ void HPresolve::aggregateVarBounds() {
 
     if (lb > -kHighsInf) mergeCliques(vlbsCover, vlbs, lb, HighsInt{1});
     if (ub < kHighsInf) mergeCliques(vubsCover, vubs, ub, HighsInt{-1});
-
-    if (numRowsRemoved > 0 || numRowsModified > 0)
-      highsLogDev(
-          options->log_options, HighsLogType::kInfo,
-          "Implied variable bound aggregation for column %" HIGHSINT_FORMAT
-          ": %" HIGHSINT_FORMAT " rows removed, %" HIGHSINT_FORMAT
-          " rows modified, %" HIGHSINT_FORMAT " vars lifted\n",
-          col, numRowsRemoved, numRowsModified, numVarsLifted);
   }
+
+  if (numRowsRemoved > 0 || numRowsModified > 0)
+    highsLogDev(options->log_options, HighsLogType::kInfo,
+                "Implied variable bound aggregation: %" HIGHSINT_FORMAT
+                " rows removed, %" HIGHSINT_FORMAT
+                " rows modified, %" HIGHSINT_FORMAT " vars lifted\n",
+                numRowsRemoved, numRowsModified, numVarsLifted);
 }
 
 // Not currently called
