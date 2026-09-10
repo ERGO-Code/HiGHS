@@ -168,11 +168,7 @@ class HighsCliqueTable {
 
   HighsInt extendClique(std::vector<HighsInt>& neighbourhoodInds,
                         std::vector<CliqueVar>& clqVars, HighsInt seedPos,
-                        HighsInt extensionEnd) {
-    auto noop = [](const CliqueVar&, const CliqueVar&) { return false; };
-    return extendClique<false>(neighbourhoodInds, clqVars, seedPos,
-                               extensionEnd, noop);
-  }
+                        HighsInt extensionEnd);
 
  public:
   int64_t numNeighbourhoodQueries;

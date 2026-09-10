@@ -1006,6 +1006,14 @@ HighsInt HighsCliqueTable::extendClique(
   return extensionEnd;
 }
 
+HighsInt HighsCliqueTable::extendClique(
+    std::vector<HighsInt>& neighbourhoodInds, std::vector<CliqueVar>& clqVars,
+    HighsInt seedPos, HighsInt extensionEnd) {
+  auto noop = [](const CliqueVar&, const CliqueVar&) { return false; };
+  return extendClique<false>(neighbourhoodInds, clqVars, seedPos, extensionEnd,
+                             noop);
+}
+
 void HighsCliqueTable::cliquePartition(std::vector<CliqueVar>& clqVars,
                                        std::vector<HighsInt>& partitionStart) {
   randgen.shuffle(clqVars.data(), clqVars.size());
