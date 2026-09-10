@@ -6,7 +6,7 @@
 - Default: "choose"
 
 ## [solver](@id option-solver)
-- LP/QP solver: "choose", "simplex", "ipm", "ipx", "hipo", "pdlp", "qpasm" or "hipdlp", 
+- LP/QP solver: "choose", "simplex", "ipm", "ipx", "hipo", "pdlp", "hipdlp" or "qpasm"
 - Type: string
 - Default: "choose"
 
