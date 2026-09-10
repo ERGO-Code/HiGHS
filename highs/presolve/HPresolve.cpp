@@ -1584,7 +1584,7 @@ HPresolve::Result HPresolve::dominatedColumns(
   return Result::kOk;
 }
 
-HPresolve::Result HPresolve::normaliseAllBinaryCliqueRows() {
+HPresolve::Result HPresolve::normaliseBinaryCliqueRows() {
   struct nonZero {
     HighsInt index;
     double value;
@@ -1595,7 +1595,6 @@ HPresolve::Result HPresolve::normaliseAllBinaryCliqueRows() {
   auto transformAllBinaryRow = [&](HighsInt row, std::vector<nonZero>& nzs,
                                    HighsCDouble& rhs, HighsInt direction) {
     nzs.clear();
-    rhs *= direction;
     bool isSetPpc = true;
     storeRow(row);
 
@@ -1630,8 +1629,9 @@ HPresolve::Result HPresolve::normaliseAllBinaryCliqueRows() {
     // transform row
     HighsInt direction =
         model->row_upper_[row] < kHighsInf ? HighsInt{1} : HighsInt{-1};
-    HighsCDouble rhs =
-        direction > 0 ? model->row_upper_[row] : model->row_lower_[row];
+    HighsCDouble origRhs =
+        direction > 0 ? model->row_upper_[row] : -model->row_lower_[row];
+    HighsCDouble rhs = origRhs;
 
     // transform the row
     if (!transformAllBinaryRow(row, nzs, rhs, direction)) continue;
@@ -1659,6 +1659,29 @@ HPresolve::Result HPresolve::normaliseAllBinaryCliqueRows() {
       ++start;
     }
 
+    // skip if any variable's original coefficient exceeds origRhs: setting
+    // that variable to 1 (others to 0) is infeasible in the original row
+    // but feasible in the normalised clique form
+    bool canNormalise = true;
+    for (HighsInt j = start; j < numBinVars; ++j) {
+      if (nzs[perm[j]].complementation * nzs[perm[j]].value >
+          origRhs + primal_feastol) {
+        printf(
+            "normaliseBinaryCliqueRows: REJECTED row %d (coef=%.17g "
+            "origRhs=%.17g col=%d)\n",
+            static_cast<int>(row),
+            static_cast<double>(nzs[perm[j]].complementation *
+                                nzs[perm[j]].value),
+            static_cast<double>(origRhs), static_cast<int>(nzs[perm[j]].index));
+        canNormalise = false;
+        break;
+      }
+    }
+    if (!canNormalise) continue;
+
+    printf("normaliseBinaryCliqueRows: ACCEPTED row %d (origRhs=%.17g)\n",
+           static_cast<int>(row), static_cast<double>(origRhs));
+
     // skip row if there are less than two remaining variables or two smallest
     // remaining coefficients do not form a clique
     if (numBinVars - start < 2 ||
@@ -1666,48 +1689,6 @@ HPresolve::Result HPresolve::normaliseAllBinaryCliqueRows() {
                 static_cast<HighsCDouble>(nzs[perm[numBinVars - 1]].value) <=
             rhs + primal_feastol)
       continue;
-
-    // 1. original row
-    printf("normalise row %d: [%g, %g]", static_cast<int>(row),
-           model->row_lower_[row], model->row_upper_[row]);
-    for (HighsInt j = start; j < numBinVars; ++j)
-      printf(" %+g x%d", Avalue[nzs[perm[j]].position],
-             static_cast<int>(nzs[perm[j]].index));
-    printf("\n");
-    // 2. complemented form
-    printf("  complemented:");
-    for (HighsInt j = start; j < numBinVars; ++j) {
-      printf(" +%g %s%d", nzs[perm[j]].value,
-             nzs[perm[j]].complementation == -1 ? "(1-x" : "x",
-             static_cast<int>(nzs[perm[j]].index));
-      if (nzs[perm[j]].complementation == -1) printf(")");
-    }
-    printf(" <= %g\n", static_cast<double>(rhs));
-    // 3. clique that will be derived (normalized <=1 form)
-    printf("  clique:");
-    for (HighsInt j = start; j < numBinVars; ++j) {
-      printf(" +%s%d",
-             nzs[perm[j]].complementation == -1 ? "(1-x" : "x",
-             static_cast<int>(nzs[perm[j]].index));
-      if (nzs[perm[j]].complementation == -1) printf(")");
-    }
-    printf(" <= 1\n");
-    // 4. validity check
-    bool allPairsClique = true;
-    for (HighsInt j = start; j < numBinVars && allPairsClique; ++j)
-      for (HighsInt k = j + 1; k < numBinVars; ++k)
-        if (nzs[perm[j]].value + nzs[perm[k]].value <=
-            static_cast<double>(rhs) + primal_feastol) {
-          printf("  INVALID: %g + %g = %g <= %g for x%d, x%d\n",
-                 nzs[perm[j]].value, nzs[perm[k]].value,
-                 nzs[perm[j]].value + nzs[perm[k]].value,
-                 static_cast<double>(rhs),
-                 static_cast<int>(nzs[perm[j]].index),
-                 static_cast<int>(nzs[perm[k]].index));
-          allPairsClique = false;
-          break;
-        }
-    if (allPairsClique) printf("  valid clique\n");
 
     // normalize remaining coefficients to ±1
     HighsInt numNeg = 0;
@@ -1762,7 +1743,7 @@ HPresolve::Result HPresolve::prepareProbing(
       HPRESOLVE_CHECKED_CALL(changeColUpper(i, implColUpper[i]));
   }
 
-  // HPRESOLVE_CHECKED_CALL(normaliseAllBinaryCliqueRows());
+  HPRESOLVE_CHECKED_CALL(normaliseBinaryCliqueRows());
 
   // prepare for domain propagation
   mipsolver->mipdata_->setupDomainPropagation();
