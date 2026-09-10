@@ -189,7 +189,7 @@ TEST_CASE("test-fourier-motzkin", "[highs_test_presolve_rules]") {
 
   if (lp2) {
     // Objective reformulation is needed since all costs are nonzero
-    h.setOptionValue("presolve_fm_level", 1);
+    h.setOptionValue("presolve_fm_obj_reformulation", true);
     presolveOffOn("FM example from paper - tightened and with costs", lp, h,
                   solvers, 1, 6, 6);
   }
