@@ -417,6 +417,8 @@ class HighsDomain {
     return *this;
   }
 
+  static bool termIsZero(double val, double lb, double ub, double epsilon);
+
   void computeMinActivity(HighsInt start, HighsInt end, const HighsInt* ARindex,
                           const double* ARvalue, HighsInt& ninfmin,
                           HighsCDouble& activitymin) const;
