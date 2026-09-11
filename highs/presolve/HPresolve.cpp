@@ -1818,6 +1818,7 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postsolve_stack) {
       // store lifting opportunities
       implications.storeLiftingOpportunity = [&](HighsInt row, HighsInt col,
                                                  HighsInt val, double coef) {
+        if (coef == 0.0) return;
         // find lifting opportunities for row
         auto& htree = liftingOpportunities[row];
         // add element
@@ -1868,6 +1869,11 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postsolve_stack) {
         log_iBin_probed = iBin_probed;
       }
     };
+
+    const bool dualFixProbingEnabled = allow_rule_[kPresolveRuleDualFixProbing];
+    if (dualFixProbingEnabled) {
+      domain.getDualFixProbingPropagation().recomputeLocks();
+    }
 
     for (const auto& binvar : binaries) {
       // Count the binaries considered
@@ -1934,7 +1940,9 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postsolve_stack) {
 
       HighsInt numBoundChgs = 0;
       HighsInt numNewCliques = -cliquetable.numCliques();
+      domain.setDualFixProbingActive(dualFixProbingEnabled);
       const bool probing_result = implications.runProbing(i, numBoundChgs);
+      domain.setDualFixProbingActive(false);
       if (!probing_result) continue;
       probingContingent += numBoundChgs;
       numNewCliques += cliquetable.numCliques();

@@ -3,6 +3,7 @@
 #include "SpecialLps.h"
 #include "catch.hpp"
 #include "mip/HighsCliqueTable.h"
+#include "mip/HighsImplications.h"
 #include "mip/HighsMipSolver.h"
 #include "mip/HighsMipSolverData.h"
 
@@ -1825,4 +1826,272 @@ TEST_CASE("pr-3260", "[highs_test_mip_solver]") {
   const HighsModelStatus require_model_status = HighsModelStatus::kOptimal;
   const double optimal_objective = 0.0;
   solve(highs, kHighsOnString, require_model_status, optimal_objective);
+}
+
+TEST_CASE("dual-fix-probing-nonzero-cost", "[highs_test_mip_solver]") {
+  // Probing x=1 makes rows 0,1 redundant, removing all lower locks on y.
+  // Since y has positive cost, dual fix probing fixes y=0 during x=1 probe.
+  // Probing x=0 propagates y=2 from rows 0,1,2.  Merging gives y=2-2x
+  // substitution, incrementing numReductions.
+  //
+  // Rows:  x + y >= 1    (lower lock on y)
+  //       2x + y >= 2    (lower lock on y)
+  //      -2x + y <= 2    (upper lock on y)
+  HighsLp lp;
+  lp.num_col_ = 2;
+  lp.num_row_ = 3;
+  lp.sense_ = ObjSense::kMinimize;
+  lp.col_cost_ = {0.0, 1.0};
+  lp.col_lower_ = {0.0, 0.0};
+  lp.col_upper_ = {1.0, 10.0};
+  lp.row_lower_ = {1.0, 2.0, -kHighsInf};
+  lp.row_upper_ = {kHighsInf, kHighsInf, 2.0};
+  lp.integrality_ = {HighsVarType::kInteger, HighsVarType::kContinuous};
+  lp.a_matrix_.format_ = MatrixFormat::kColwise;
+  lp.a_matrix_.num_col_ = 2;
+  lp.a_matrix_.num_row_ = 3;
+  lp.a_matrix_.start_ = {0, 3, 6};
+  lp.a_matrix_.index_ = {0, 1, 2, 0, 1, 2};
+  lp.a_matrix_.value_ = {1.0, 2.0, -2.0, 1.0, 1.0, 1.0};
+
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  highs.passModel(lp);
+
+  HighsCallback callback(&highs);
+  const HighsOptions& options = highs.getOptions();
+  HighsSolution solution;
+  HighsMipSolver mipsolver(callback, options, lp, solution);
+  mipsolver.mipdata_ =
+      std::unique_ptr<HighsMipSolverData>(new HighsMipSolverData(mipsolver));
+  mipsolver.mipdata_->feastol = 1e-6;
+  mipsolver.mipdata_->setupDomainPropagation();
+
+  HighsDomain& domain = mipsolver.mipdata_->getDomain();
+  HighsImplications& implications = mipsolver.mipdata_->implications;
+
+  domain.getDualFixProbingPropagation().recomputeLocks();
+  domain.setDualFixProbingActive(true);
+
+  HighsInt numBoundChgs = 0;
+  implications.runProbing(0, numBoundChgs);
+
+  domain.setDualFixProbingActive(false);
+  domain.propagate();
+
+  REQUIRE(!domain.infeasible());
+  // Merging up/down implications yields substitution y = 2 - 2x
+  REQUIRE(numBoundChgs > 0);
+  REQUIRE(implications.substitutions.size() == 1);
+  REQUIRE(implications.substitutions[0].substcol == 1);
+  REQUIRE(implications.substitutions[0].staycol == 0);
+  REQUIRE(implications.substitutions[0].offset == 2.0);
+  REQUIRE(implications.substitutions[0].scale == -2.0);
+
+  highs.resetGlobalScheduler(true);
+}
+
+TEST_CASE("dual-fix-probing-tentative-global-fix", "[highs_test_mip_solver]") {
+  // Probing x in either direction forces k=0 via propagation.
+  // The tentative clique mechanism should detect this and globally fix k=0.
+  //
+  // Rows:  x + k + z <= 1   (x=1 forces k+z <= 0 => k=0)
+  //       -x + k + z <= 0   (x=0 forces k+z <= 0 => k=0)
+  HighsLp lp;
+  lp.num_col_ = 3;
+  lp.num_row_ = 2;
+  lp.sense_ = ObjSense::kMinimize;
+  lp.col_cost_ = {0.0, 0.0, 0.0};
+  lp.col_lower_ = {0.0, 0.0, 0.0};
+  lp.col_upper_ = {1.0, 1.0, 1.0};
+  lp.row_lower_ = {-kHighsInf, -kHighsInf};
+  lp.row_upper_ = {1.0, 0.0};
+  lp.integrality_ = {HighsVarType::kInteger, HighsVarType::kInteger,
+                     HighsVarType::kContinuous};
+  lp.a_matrix_.format_ = MatrixFormat::kColwise;
+  lp.a_matrix_.num_col_ = 3;
+  lp.a_matrix_.num_row_ = 2;
+  // col 0 (x): row 0 coeff 1, row 1 coeff -1
+  // col 1 (k): row 0 coeff 1, row 1 coeff 1
+  // col 2 (z): row 0 coeff 1, row 1 coeff 1
+  lp.a_matrix_.start_ = {0, 2, 4, 6};
+  lp.a_matrix_.index_ = {0, 1, 0, 1, 0, 1};
+  lp.a_matrix_.value_ = {1.0, -1.0, 1.0, 1.0, 1.0, 1.0};
+
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  highs.passModel(lp);
+
+  HighsCallback callback(&highs);
+  const HighsOptions& options = highs.getOptions();
+  HighsSolution solution;
+  HighsMipSolver mipsolver(callback, options, lp, solution);
+  mipsolver.mipdata_ =
+      std::unique_ptr<HighsMipSolverData>(new HighsMipSolverData(mipsolver));
+  mipsolver.mipdata_->feastol = 1e-6;
+  mipsolver.mipdata_->setupDomainPropagation();
+
+  HighsDomain& domain = mipsolver.mipdata_->getDomain();
+  HighsImplications& implications = mipsolver.mipdata_->implications;
+
+  domain.getDualFixProbingPropagation().recomputeLocks();
+  domain.setDualFixProbingActive(true);
+
+  HighsInt numBoundChgs = 0;
+  implications.runProbing(0, numBoundChgs);
+
+  domain.setDualFixProbingActive(false);
+  domain.propagate();
+
+  REQUIRE(!domain.infeasible());
+  // k (col 1) globally fixed to 0 by tentative clique mechanism
+  REQUIRE(domain.isFixed(1));
+  REQUIRE(domain.col_lower_[1] == 0.0);
+  REQUIRE(domain.col_upper_[1] == 0.0);
+
+  highs.resetGlobalScheduler(true);
+}
+
+TEST_CASE("dual-fix-probing-tentative-clique-complement",
+          "[highs_test_mip_solver]") {
+  // Complement case: x=1 fixes k=0 via propagation (safe implication),
+  // x=0 fixes k=1 via zero-cost lock removal (unsafe, only tentative).
+  // The tentative clique mechanism discovers x + k = 1.
+  //
+  // Cols: x binary (0), k binary (1, cost 0), y continuous [0,10] (2)
+  // Rows: x + k <= 1        (upper lock on k; propagation: x=1 => k=0)
+  //       k + y >= 0.5      (lower lock on k; not redundant before zero-cost
+  //       fix)
+  //
+  // x=1: propagation from R0 fixes k=0 (safe).
+  // x=0: R0 max activity = 0+1 = 1 <= 1 => RHS redundant, upper lock removed.
+  //      All upper locks gone, cost=0 => zero-cost fix k=1 (unsafe).
+  HighsLp lp;
+  lp.num_col_ = 3;
+  lp.num_row_ = 2;
+  lp.sense_ = ObjSense::kMinimize;
+  lp.col_cost_ = {0.0, 0.0, 0.0};
+  lp.col_lower_ = {0.0, 0.0, 0.0};
+  lp.col_upper_ = {1.0, 1.0, 10.0};
+  lp.row_lower_ = {-kHighsInf, 0.5};
+  lp.row_upper_ = {1.0, kHighsInf};
+  lp.integrality_ = {HighsVarType::kInteger, HighsVarType::kInteger,
+                     HighsVarType::kContinuous};
+  lp.a_matrix_.format_ = MatrixFormat::kColwise;
+  lp.a_matrix_.num_col_ = 3;
+  lp.a_matrix_.num_row_ = 2;
+  // col 0 (x): row 0 coeff 1
+  // col 1 (k): row 0 coeff 1, row 1 coeff 1
+  // col 2 (y): row 1 coeff 1
+  lp.a_matrix_.start_ = {0, 1, 3, 4};
+  lp.a_matrix_.index_ = {0, 0, 1, 1};
+  lp.a_matrix_.value_ = {1.0, 1.0, 1.0, 1.0};
+
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  highs.passModel(lp);
+
+  HighsCallback callback(&highs);
+  const HighsOptions& options = highs.getOptions();
+  HighsSolution solution;
+  HighsMipSolver mipsolver(callback, options, lp, solution);
+  mipsolver.mipdata_ =
+      std::unique_ptr<HighsMipSolverData>(new HighsMipSolverData(mipsolver));
+  mipsolver.mipdata_->feastol = 1e-6;
+  mipsolver.mipdata_->setupDomainPropagation();
+
+  HighsDomain& domain = mipsolver.mipdata_->getDomain();
+  HighsImplications& implications = mipsolver.mipdata_->implications;
+  HighsCliqueTable& cliquetable = mipsolver.mipdata_->cliquetable;
+
+  domain.getDualFixProbingPropagation().recomputeLocks();
+  domain.setDualFixProbingActive(true);
+
+  HighsInt numBoundChgs = 0;
+  implications.runProbing(0, numBoundChgs);
+
+  domain.setDualFixProbingActive(false);
+  domain.propagate();
+
+  REQUIRE(!domain.infeasible());
+  // k (col 1) substituted by complement of x: k = 1 - x
+  const auto* subst = cliquetable.getSubstitution(1);
+  REQUIRE(subst != nullptr);
+  REQUIRE(subst->substcol == 1);
+  REQUIRE(subst->replace.col == 0);
+  REQUIRE(subst->replace.val == 0);
+
+  highs.resetGlobalScheduler(true);
+}
+
+TEST_CASE("dual-fix-probing-tentative-clique-equivalence",
+          "[highs_test_mip_solver]") {
+  // Equivalence case: x=1 fixes k=1 via propagation (safe implication),
+  // x=0 fixes k=0 via zero-cost lock removal (unsafe, only tentative).
+  // The tentative clique mechanism discovers x = k.
+  //
+  // Cols: x binary (0), k binary (1, cost 0), y continuous [0,10] (2)
+  // Rows: -x + k >= 0       (lower lock on k; propagation: x=1 => k>=1 => k=1)
+  //        k + y <= 10.5    (upper lock on k; not redundant before zero-cost
+  //        fix)
+  //
+  // x=1: propagation from R0 fixes k=1 (safe).
+  // x=0: R0 min activity = 0+0 = 0 >= 0 => LHS redundant, lower lock removed.
+  //      All lower locks gone, cost=0 => zero-cost fix k=0 (unsafe).
+  HighsLp lp;
+  lp.num_col_ = 3;
+  lp.num_row_ = 2;
+  lp.sense_ = ObjSense::kMinimize;
+  lp.col_cost_ = {0.0, 0.0, 0.0};
+  lp.col_lower_ = {0.0, 0.0, 0.0};
+  lp.col_upper_ = {1.0, 1.0, 10.0};
+  lp.row_lower_ = {0.0, -kHighsInf};
+  lp.row_upper_ = {kHighsInf, 10.5};
+  lp.integrality_ = {HighsVarType::kInteger, HighsVarType::kInteger,
+                     HighsVarType::kContinuous};
+  lp.a_matrix_.format_ = MatrixFormat::kColwise;
+  lp.a_matrix_.num_col_ = 3;
+  lp.a_matrix_.num_row_ = 2;
+  // col 0 (x): row 0 coeff -1
+  // col 1 (k): row 0 coeff 1, row 1 coeff 1
+  // col 2 (y): row 1 coeff 1
+  lp.a_matrix_.start_ = {0, 1, 3, 4};
+  lp.a_matrix_.index_ = {0, 0, 1, 1};
+  lp.a_matrix_.value_ = {-1.0, 1.0, 1.0, 1.0};
+
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  highs.passModel(lp);
+
+  HighsCallback callback(&highs);
+  const HighsOptions& options = highs.getOptions();
+  HighsSolution solution;
+  HighsMipSolver mipsolver(callback, options, lp, solution);
+  mipsolver.mipdata_ =
+      std::unique_ptr<HighsMipSolverData>(new HighsMipSolverData(mipsolver));
+  mipsolver.mipdata_->feastol = 1e-6;
+  mipsolver.mipdata_->setupDomainPropagation();
+
+  HighsDomain& domain = mipsolver.mipdata_->getDomain();
+  HighsImplications& implications = mipsolver.mipdata_->implications;
+  HighsCliqueTable& cliquetable = mipsolver.mipdata_->cliquetable;
+
+  domain.getDualFixProbingPropagation().recomputeLocks();
+  domain.setDualFixProbingActive(true);
+
+  HighsInt numBoundChgs = 0;
+  implications.runProbing(0, numBoundChgs);
+
+  domain.setDualFixProbingActive(false);
+  domain.propagate();
+
+  REQUIRE(!domain.infeasible());
+  // k (col 1) substituted by x: k = x
+  const auto* subst = cliquetable.getSubstitution(1);
+  REQUIRE(subst != nullptr);
+  REQUIRE(subst->substcol == 1);
+  REQUIRE(subst->replace.col == 0);
+  REQUIRE(subst->replace.val == 1);
+
+  highs.resetGlobalScheduler(true);
 }
