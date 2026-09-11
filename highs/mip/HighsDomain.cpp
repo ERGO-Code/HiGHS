@@ -681,28 +681,30 @@ void HighsDomain::DualFixProbingPropagation::recomputeLocks() {
 void HighsDomain::DualFixProbingPropagation::updateRhsRedundant(HighsInt row) {
   if (!isEnabled()) return;
 
-  if (domain->activitymaxinf_[row] != 0 || redundantRowFlags_[2 * row + 1] ||
+  RowSide idx{row, true};
+  if (domain->activitymaxinf_[row] != 0 || redundantRowFlags_[idx] ||
       mipsolver->model_->row_upper_[row] == kHighsInf)
     return;
 
   if (domain->getMaxActivity(row) <=
       mipsolver->model_->row_upper_[row] + mipsolver->mipdata_->feastol) {
-    redundantRowInds_.push_back(2 * row + 1);
-    redundantRowFlags_[2 * row + 1] = 1;
+    redundantRowInds_.push_back(idx);
+    redundantRowFlags_[idx] = 1;
   }
 }
 
 void HighsDomain::DualFixProbingPropagation::updateLhsRedundant(HighsInt row) {
   if (!isEnabled()) return;
 
-  if (domain->activitymininf_[row] != 0 || redundantRowFlags_[2 * row] ||
+  RowSide idx{row, false};
+  if (domain->activitymininf_[row] != 0 || redundantRowFlags_[idx] ||
       mipsolver->model_->row_lower_[row] == -kHighsInf)
     return;
 
   if (domain->getMinActivity(row) >=
       mipsolver->model_->row_lower_[row] - mipsolver->mipdata_->feastol) {
-    redundantRowInds_.push_back(2 * row);
-    redundantRowFlags_[2 * row] = 1;
+    redundantRowInds_.push_back(idx);
+    redundantRowFlags_[idx] = 1;
   }
 }
 
@@ -730,9 +732,9 @@ void HighsDomain::DualFixProbingPropagation::propagate() {
 
   for (HighsInt i = previousRedundantRowSize;
        i != static_cast<HighsInt>(redundantRowInds_.size()); ++i) {
-    const HighsInt loc = redundantRowInds_[i];
-    const HighsInt row = loc / 2;
-    const bool isLhs = (loc % 2) == 0;
+    const RowSide& idx = redundantRowInds_[i];
+    const HighsInt row = idx.row;
+    const bool isLhs = !idx.isRhs;
     const HighsInt start = mipsolver->mipdata_->ARstart_[row];
     const HighsInt end = mipsolver->mipdata_->ARstart_[row + 1];
     for (HighsInt j = start; j < end; ++j) {

@@ -240,9 +240,14 @@ class HighsDomain {
     HighsDomain* domain = nullptr;
     HighsMipSolver* mipsolver = nullptr;
 
-    // store row lower and row upper at 2i and 2i + 1
+    struct RowSide {
+      HighsInt row;
+      bool isRhs;
+      operator size_t() const { return 2 * row + isRhs; }
+    };
+
     std::vector<HighsBool> redundantRowFlags_;
-    std::vector<HighsInt> redundantRowInds_;
+    std::vector<RowSide> redundantRowInds_;
     HighsInt previousRedundantRowSize = 0;
 
     // Track direction of zero fixings so we don't store disagreeing results
@@ -314,8 +319,7 @@ class HighsDomain {
         redundantRowInds_.clear();
       }
 
-      for (size_t i = 0; i < redundantRowFlags_.size(); ++i)
-        assert(!redundantRowFlags_[i]);
+      for (const auto& flag : redundantRowFlags_) assert(!flag);
 
       fixedZeroCostColumns_.clear();
       setZeroCostFixingPosition(kHighsIInf);

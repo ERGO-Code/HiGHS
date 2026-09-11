@@ -384,30 +384,32 @@ bool HighsImplications::runProbing(HighsInt col, HighsInt& numReductions) {
       for (HighsInt k : dualFixProbingBinInds_) {
         if (!globaldomain.isBinary(k) || colsubstituted[k]) continue;
         if (globaldomain.infeasible()) return true;
-        uint8_t mask = dualFixProbingBinFlags_[k];
-        if (mask == 0) continue;
-        if (mask == 10) {
+        const TentativeFixing& f = dualFixProbingBinFlags_[k];
+        if (f.isUndecided()) continue;
+        if (f.downProbe == TentativeFixing::FixLower &&
+            f.upProbe == TentativeFixing::FixLower) {
           globaldomain.fixCol(k, globaldomain.col_lower_[k]);
-          mask = 0;
-        } else if (mask == 5) {
+        } else if (f.downProbe == TentativeFixing::FixUpper &&
+                   f.upProbe == TentativeFixing::FixUpper) {
           globaldomain.fixCol(k, globaldomain.col_upper_[k]);
-          mask = 0;
-        } else if (mask == 9 && !mipsolver.mipdata_->cliquetable.isFull()) {
+        } else if (f.downProbe == TentativeFixing::FixLower &&
+                   f.upProbe == TentativeFixing::FixUpper &&
+                   !cliquetable.isFull()) {
           clique[0] = HighsCliqueTable::CliqueVar(col, 1);
           clique[1] = HighsCliqueTable::CliqueVar(k, 1);
           cliquetable.addClique(mipsolver, &clique[0], 2);
           clique[0] = HighsCliqueTable::CliqueVar(col, 0);
           clique[1] = HighsCliqueTable::CliqueVar(k, 0);
           cliquetable.addClique(mipsolver, &clique[0], 2);
-          mask = 0;
-        } else if (mask == 6 && !mipsolver.mipdata_->cliquetable.isFull()) {
+        } else if (f.downProbe == TentativeFixing::FixUpper &&
+                   f.upProbe == TentativeFixing::FixLower &&
+                   !cliquetable.isFull()) {
           clique[0] = HighsCliqueTable::CliqueVar(col, 1);
           clique[1] = HighsCliqueTable::CliqueVar(k, 0);
           cliquetable.addClique(mipsolver, &clique[0], 2);
           clique[0] = HighsCliqueTable::CliqueVar(col, 0);
           clique[1] = HighsCliqueTable::CliqueVar(k, 1);
           cliquetable.addClique(mipsolver, &clique[0], 2);
-          mask = 0;
         }
         if (globaldomain.infeasible()) return true;
       }
@@ -648,7 +650,7 @@ void HighsImplications::rebuild(HighsInt ncols,
   vlbs.resize(ncols);
   dualFixProbingBinInds_.clear();
   dualFixProbingBinInds_.reserve(ncols);
-  dualFixProbingBinFlags_.assign(ncols, 0);
+  dualFixProbingBinFlags_.assign(ncols, TentativeFixing{});
   numImplications = 0;
   numVarBounds = 0;
   HighsInt oldncols = oldvubs.size();
