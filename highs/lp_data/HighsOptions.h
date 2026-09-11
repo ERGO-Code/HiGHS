@@ -463,6 +463,7 @@ struct HighsOptionsStruct {
   HighsInt presolve_rule_test;
   bool presolve_rule_logging;
   bool presolve_remove_slacks;
+  bool presolve_fm_obj_reformulation;
   bool no_unnecessary_rebuild_refactor;
   double rebuild_refactor_solution_error_tolerance;
   double dual_steepest_edge_weight_error_tolerance;
@@ -638,6 +639,7 @@ struct HighsOptionsStruct {
         presolve_rule_test(0),
         presolve_rule_logging(false),
         presolve_remove_slacks(false),
+        presolve_fm_obj_reformulation(false),
         no_unnecessary_rebuild_refactor(false),
         rebuild_refactor_solution_error_tolerance(0.0),
         dual_steepest_edge_weight_error_tolerance(0.0),
@@ -1692,6 +1694,12 @@ class HighsOptions : public HighsOptionsStruct {
     record_bool = new OptionRecordBool("presolve_remove_slacks",
                                        "Remove slacks after presolve", advanced,
                                        &presolve_remove_slacks, false);
+    records.push_back(record_bool);
+
+    record_bool =
+        new OptionRecordBool("presolve_fm_obj_reformulation",
+                             "Fourier-Motzkin objective reformulation",
+                             advanced, &presolve_fm_obj_reformulation, false);
     records.push_back(record_bool);
 
     record_int = new OptionRecordInt(
