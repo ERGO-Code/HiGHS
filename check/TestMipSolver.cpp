@@ -1784,11 +1784,23 @@ TEST_CASE("redcost-fixing-large-bounds", "[highs_test_mip_solver]") {
 }
 
 TEST_CASE("pr-3261", "[highs_test_mip_solver]") {
-  std::string filename =
-      std::string(HIGHS_DIR) + "/check/instances/pr-3261.mps";
+  HighsLp lp;
+  lp.num_col_ = 2;
+  lp.num_row_ = 1;
+  lp.sense_ = ObjSense::kMaximize;
+  lp.col_cost_ = {2, 2};
+  lp.col_lower_ = {0, 2};
+  lp.col_upper_ = {1, 3};
+  lp.row_lower_ = {0};
+  lp.row_upper_ = {7};
+  lp.a_matrix_.start_ = {0, 1, 2};
+  lp.a_matrix_.index_ = {0, 0};
+  lp.a_matrix_.value_ = {2, 2};
+  lp.integrality_ = {HighsVarType::kInteger,
+                     HighsVarType::kSemiContinuous};
   Highs highs;
   highs.setOptionValue("output_flag", dev_run);
-  highs.readModel(filename);
+  REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
   const HighsModelStatus require_model_status = HighsModelStatus::kOptimal;
   const double optimal_objective = 7.0;
   solve(highs, kHighsOnString, require_model_status, optimal_objective);
