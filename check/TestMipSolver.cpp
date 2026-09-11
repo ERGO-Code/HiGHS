@@ -1796,12 +1796,33 @@ TEST_CASE("pr-3261", "[highs_test_mip_solver]") {
   lp.a_matrix_.start_ = {0, 1, 2};
   lp.a_matrix_.index_ = {0, 0};
   lp.a_matrix_.value_ = {2, 2};
-  lp.integrality_ = {HighsVarType::kInteger,
-                     HighsVarType::kSemiContinuous};
+  lp.integrality_ = {HighsVarType::kInteger, HighsVarType::kSemiContinuous};
   Highs highs;
   highs.setOptionValue("output_flag", dev_run);
   REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
   const HighsModelStatus require_model_status = HighsModelStatus::kOptimal;
   const double optimal_objective = 7.0;
+  solve(highs, kHighsOnString, require_model_status, optimal_objective);
+}
+
+TEST_CASE("pr-3260", "[highs_test_mip_solver]") {
+  HighsLp lp;
+  lp.num_col_ = 3;
+  lp.num_row_ = 2;
+  lp.col_cost_ = {0, 0, 0};
+  lp.col_lower_ = {0, 0, -3};
+  lp.col_upper_ = {0, 1, 0};
+  lp.row_lower_ = {-1, -1};
+  lp.row_upper_ = {-1, -1};
+  lp.a_matrix_.start_ = {0, 2, 4, 6};
+  lp.a_matrix_.index_ = {0, 1, 0, 1, 0, 1};
+  lp.a_matrix_.value_ = {1, 1, 1, 1, 1, 1};
+  lp.integrality_ = {HighsVarType::kInteger, HighsVarType::kInteger,
+                     HighsVarType::kContinuous};
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
+  const HighsModelStatus require_model_status = HighsModelStatus::kOptimal;
+  const double optimal_objective = 0.0;
   solve(highs, kHighsOnString, require_model_status, optimal_objective);
 }

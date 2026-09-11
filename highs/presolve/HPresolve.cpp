@@ -4001,12 +4001,24 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
           // printf("simple probing case on row of size %" HIGHSINT_FORMAT
           // "\n", rowsize[row]);
 
+          // Snapshot bounds as they may change when removing or substituting
+          // a column, which would make future substitutions invalid
+          std::vector<std::pair<double, double>> implVarSnapshot;
+          implVarSnapshot.reserve(rowpositions.size());
+          for (HighsInt rowiter : rowpositions) {
+            HighsInt col = Acol[rowiter];
+            implVarSnapshot.emplace_back(
+                impliedRowBounds.getImplVarLower(row, col),
+                impliedRowBounds.getImplVarUpper(row, col));
+          }
+
           // iterate over non-zero positions instead of iterating over the
           // HighsMatrixSlice (provided by HPresolve::getStoredRow) because the
           // latter contains pointers to Acol and Avalue that may be invalidated
           // if these vectors are reallocated (see std::vector::push_back
           // performed in HPresolve::addToMatrix).
-          for (HighsInt rowiter : rowpositions) {
+          for (size_t i = 0; i < rowpositions.size(); ++i) {
+            HighsInt rowiter = rowpositions[i];
             HighsInt col = Acol[rowiter];
             assert(Arow[rowiter] == row);
 
@@ -4015,8 +4027,8 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
 
             // get column lower and upper bounds used to compute bounds on row
             // activities
-            double col_lower = impliedRowBounds.getImplVarLower(row, col);
-            double col_upper = impliedRowBounds.getImplVarUpper(row, col);
+            double col_lower = implVarSnapshot[i].first;
+            double col_upper = implVarSnapshot[i].second;
             assert(col_lower != -kHighsInf);
             assert(col_upper != kHighsInf);
 
