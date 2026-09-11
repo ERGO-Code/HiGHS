@@ -214,7 +214,11 @@ class HPresolve {
 
   void resetRowDualImpliedBoundsDerivedFromCol(HighsInt col);
 
+  void matrixNonZeroChanged(HighsInt row, HighsInt col);
+
   bool rowCoefficientsIntegral(HighsInt row, double scale) const;
+
+  bool isBinary(HighsInt col) const;
 
   bool isImpliedFree(HighsInt col) const;
 
@@ -497,6 +501,8 @@ class HPresolve {
 
   void removeFixedCol(HighsInt col, double fixval);
 
+  void unlinkRow(HighsInt row);
+
   void removeRow(HighsInt row);
 
   Result removeDependentEquations(HighsPostsolveStack& postsolve_stack);
@@ -529,6 +535,8 @@ class HPresolve {
 
   void extractVarBounds(HighsInt row);
 
+  void aggregateVarBounds();
+
   Result sparsify(HighsPostsolveStack& postsolve_stack);
 
   void setRelaxedImpliedBounds();
@@ -548,6 +556,7 @@ class HPresolve {
   Result presolveRuleTestColStuffing(HighsPostsolveStack& postsolve_stack);
   Result presolveRuleTestParallelRowsAndCols(
       HighsPostsolveStack& postsolve_stack);
+  Result presolveRuleTestProbing(HighsPostsolveStack& postsolve_stack);
 
   // Not currently called
   static void debug(const HighsLp& lp, const HighsOptions& options);

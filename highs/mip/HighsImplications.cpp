@@ -163,7 +163,7 @@ std::pair<HighsInt, HighsImplications::VarBound> HighsImplications::getBestVub(
     HighsInt col, const HighsSolution& lpSolution, double& bestUb,
     const HighsDomain& globaldom) const {
   std::pair<HighsInt, VarBound> bestVub =
-      std::make_pair(-1, VarBound{0.0, kHighsInf});
+      std::make_pair(-1, VarBound{0.0, kHighsInf, -1});
   double minbestUb = bestUb;
   double bestUbDist = kHighsInf;
   int64_t bestvubnodes = 0;
@@ -236,7 +236,7 @@ std::pair<HighsInt, HighsImplications::VarBound> HighsImplications::getBestVlb(
     HighsInt col, const HighsSolution& lpSolution, double& bestLb,
     const HighsDomain& globaldom) const {
   std::pair<HighsInt, VarBound> bestVlb =
-      std::make_pair(-1, VarBound{0.0, -kHighsInf});
+      std::make_pair(-1, VarBound{0.0, -kHighsInf, -1});
   double maxbestlb = bestLb;
   double bestLbDist = kHighsInf;
   int64_t bestvlbnodes = 0;
@@ -412,22 +412,32 @@ void HighsImplications::strengthenVarBound(VarBound& vbnd,
   vbnd.coef = -multiplier * (downaj + std::max(fj - f0, 0.0) / (1.0 - f0));
 };
 
+void HighsImplications::rowModified(HighsInt row) {
+  rowToVarBounds[row].for_each([&](HighsInt col, HighsInt binaryCol) {
+    VarBound* vb = vlbs[col].find(binaryCol);
+    if (vb && vb->origin == row) vb->origin = -1;
+    vb = vubs[col].find(binaryCol);
+    if (vb && vb->origin == row) vb->origin = -1;
+  });
+  rowToVarBounds[row].clear();
+}
+
 void HighsImplications::addVUB(HighsInt col, HighsInt vubcol, double vubcoef,
-                               double vubconstant) {
+                               double vubconstant, HighsInt origin) {
   addVUB(col, vubcol, vubcoef, vubconstant,
          mipsolver.mipdata_->getDomain().col_upper_[col],
-         mipsolver.isColIntegral(col));
+         mipsolver.isColIntegral(col), origin);
 }
 
 void HighsImplications::addVUB(HighsInt col, HighsInt vubcol, double vubcoef,
                                double vubconstant, double colupperbound,
-                               bool colisintegral) {
+                               bool colisintegral, HighsInt origin) {
   // assume that VUBs do not have infinite coefficients and infinite constant
   // terms since such VUBs effectively evaluate to NaN.
   assert(std::abs(vubcoef) != kHighsInf || std::abs(vubconstant) != kHighsInf);
   if (tooManyVarBounds()) return;
 
-  VarBound vub{vubcoef, vubconstant};
+  VarBound vub{vubcoef, vubconstant, origin};
 
   if (colisintegral) {
     // try to strengthen VUB
@@ -448,27 +458,30 @@ void HighsImplications::addVUB(HighsInt col, HighsInt vubcol, double vubcoef,
     if (minBound < currentMinBound - mipsolver.mipdata_->feastol) {
       currentvub.coef = vub.coef;
       currentvub.constant = vub.constant;
+      currentvub.origin = vub.origin;
     }
   } else
     numVarBounds++;
+
+  if (origin >= 0) rowToVarBounds[origin].insert(col, vubcol);
 }
 
 void HighsImplications::addVLB(HighsInt col, HighsInt vlbcol, double vlbcoef,
-                               double vlbconstant) {
+                               double vlbconstant, HighsInt origin) {
   addVLB(col, vlbcol, vlbcoef, vlbconstant,
          mipsolver.mipdata_->getDomain().col_lower_[col],
-         mipsolver.isColIntegral(col));
+         mipsolver.isColIntegral(col), origin);
 }
 
 void HighsImplications::addVLB(HighsInt col, HighsInt vlbcol, double vlbcoef,
                                double vlbconstant, double colllowerbound,
-                               bool colisintegral) {
+                               bool colisintegral, HighsInt origin) {
   // assume that VLBs do not have infinite coefficients and infinite constant
   // terms since such VLBs effectively evaluate to NaN.
   assert(std::abs(vlbcoef) != kHighsInf || std::abs(vlbconstant) != kHighsInf);
   if (tooManyVarBounds()) return;
 
-  VarBound vlb{vlbcoef, vlbconstant};
+  VarBound vlb{vlbcoef, vlbconstant, origin};
 
   if (colisintegral) {
     // try to strengthen VLB
@@ -490,9 +503,12 @@ void HighsImplications::addVLB(HighsInt col, HighsInt vlbcol, double vlbcoef,
     if (maxBound > currentMaxBound + mipsolver.mipdata_->feastol) {
       currentvlb.coef = vlb.coef;
       currentvlb.constant = vlb.constant;
+      currentvlb.origin = vlb.origin;
     }
   } else
     numVarBounds++;
+
+  if (origin >= 0) rowToVarBounds[origin].insert(col, vlbcol);
 }
 
 void HighsImplications::rebuild(HighsInt ncols,
@@ -527,6 +543,9 @@ void HighsImplications::rebuild(HighsInt ncols,
   vlbs.clear();
   vlbs.shrink_to_fit();
   vlbs.resize(ncols);
+  rowToVarBounds.clear();
+  rowToVarBounds.shrink_to_fit();
+  rowToVarBounds.resize(mipsolver.numRow());
   numImplications = 0;
   numVarBounds = 0;
   HighsInt oldncols = oldvubs.size();
@@ -554,7 +573,8 @@ void HighsImplications::rebuild(HighsInt ncols,
               newVubCol))
         return;
 
-      addVUB(newi, newVubCol, vub.coef, vub.constant);
+      addVUB(newi, newVubCol, vub.coef, vub.constant,
+             vub.origin >= 0 ? orig2reducedrow[vub.origin] : -1);
     });
 
     oldvlbs[i].for_each([&](HighsInt vlbCol, VarBound vlb) {
@@ -566,7 +586,8 @@ void HighsImplications::rebuild(HighsInt ncols,
               newVlbCol))
         return;
 
-      addVLB(newi, newVlbCol, vlb.coef, vlb.constant);
+      addVLB(newi, newVlbCol, vlb.coef, vlb.constant,
+             vlb.origin >= 0 ? orig2reducedrow[vlb.origin] : -1);
     });
 
     if (mipsolver.mipdata_->getDomain().isBinary(newi)) {
@@ -592,12 +613,12 @@ void HighsImplications::buildFrom(const HighsImplications& init) {
   for (HighsInt i = 0; i != numcol; ++i) {
     init.vubs[i].for_each([&](HighsInt vubCol, VarBound vub) {
       if (!mipsolver.mipdata_->getDomain().isBinary(vubCol)) return;
-      addVUB(i, vubCol, vub.coef, vub.constant);
+      addVUB(i, vubCol, vub.coef, vub.constant, vub.origin);
     });
 
     init.vlbs[i].for_each([&](HighsInt vlbCol, VarBound vlb) {
       if (!mipsolver.mipdata_->getDomain().isBinary(vlbCol)) return;
-      addVLB(i, vlbCol, vlb.coef, vlb.constant);
+      addVLB(i, vlbCol, vlb.coef, vlb.constant, vlb.origin);
     });
 
     if (mipsolver.mipdata_->getDomain().isBinary(i)) {
@@ -770,6 +791,44 @@ void HighsImplications::cleanupVarbounds(HighsInt col) {
   numVarBounds -= delVbds.size();
 }
 
+bool HighsImplications::redundantVlb(const VarBound& vlb, double lb) const {
+  return vlb.maxValue() <= lb + mipsolver.mipdata_->feastol;
+}
+
+bool HighsImplications::redundantVub(const VarBound& vub, double ub) const {
+  return vub.minValue() >= ub - mipsolver.mipdata_->feastol;
+}
+
+bool HighsImplications::tightenVlb(VarBound& vlb, double lb) const {
+  if (redundantVlb(vlb, lb) ||
+      vlb.minValue() >= lb - mipsolver.mipdata_->epsilon)
+    return false;
+  double newcoef =
+      static_cast<double>(lb - static_cast<HighsCDouble>(vlb.maxValue()));
+  if (vlb.coef < 0)
+    vlb.coef = newcoef;
+  else {
+    vlb.constant = lb;
+    vlb.coef = -newcoef;
+  }
+  return true;
+}
+
+bool HighsImplications::tightenVub(VarBound& vub, double ub) const {
+  if (redundantVub(vub, ub) ||
+      vub.maxValue() <= ub + mipsolver.mipdata_->epsilon)
+    return false;
+  double newcoef =
+      static_cast<double>(ub - static_cast<HighsCDouble>(vub.minValue()));
+  if (vub.coef > 0)
+    vub.coef = newcoef;
+  else {
+    vub.constant = ub;
+    vub.coef = -newcoef;
+  }
+  return true;
+}
+
 void HighsImplications::cleanupVlb(HighsInt col, HighsInt vlbCol,
                                    HighsImplications::VarBound& vlb, double lb,
                                    bool& redundant, bool& infeasible,
@@ -785,27 +844,18 @@ void HighsImplications::cleanupVlb(HighsInt col, HighsInt vlbCol,
   mipsolver.mipdata_->debugSolution.checkVlb(col, vlbCol, vlb.coef,
                                              vlb.constant);
 
-  HighsCDouble maxlb = vlb.maxValue();
-  HighsCDouble minlb = vlb.minValue();
-
-  if (maxlb <= lb + mipsolver.mipdata_->feastol) {
+  if (redundantVlb(vlb, lb)) {
     // variable bound is redundant
     redundant = true;
-  } else if (minlb < lb - mipsolver.mipdata_->epsilon) {
+  } else if (tightenVlb(vlb, lb)) {
     // coefficient can be tightened
-    double newcoef = static_cast<double>(lb - maxlb);
-    if (vlb.coef < 0) {
-      vlb.coef = newcoef;
-    } else {
-      vlb.constant = lb;
-      vlb.coef = -newcoef;
-    }
     // check tightened variable lower bound
     mipsolver.mipdata_->debugSolution.checkVlb(col, vlbCol, vlb.coef,
                                                vlb.constant);
-  } else if (allowBoundChanges && minlb > lb + mipsolver.mipdata_->epsilon) {
+  } else if (allowBoundChanges &&
+             vlb.minValue() > lb + mipsolver.mipdata_->epsilon) {
     mipsolver.mipdata_->getDomain().changeBound(
-        HighsBoundType::kLower, col, static_cast<double>(minlb),
+        HighsBoundType::kLower, col, vlb.minValue(),
         HighsDomain::Reason::unspecified());
     infeasible = mipsolver.mipdata_->getDomain().infeasible();
   }
@@ -826,27 +876,18 @@ void HighsImplications::cleanupVub(HighsInt col, HighsInt vubCol,
   mipsolver.mipdata_->debugSolution.checkVub(col, vubCol, vub.coef,
                                              vub.constant);
 
-  HighsCDouble maxub = vub.maxValue();
-  HighsCDouble minub = vub.minValue();
-
-  if (minub >= ub - mipsolver.mipdata_->feastol) {
+  if (redundantVub(vub, ub)) {
     // variable bound is redundant
     redundant = true;
-  } else if (maxub > ub + mipsolver.mipdata_->epsilon) {
+  } else if (tightenVub(vub, ub)) {
     // coefficient can be tightened
-    double newcoef = static_cast<double>(ub - minub);
-    if (vub.coef > 0) {
-      vub.coef = newcoef;
-    } else {
-      vub.constant = ub;
-      vub.coef = -newcoef;
-    }
     // check tightened variable upper bound
     mipsolver.mipdata_->debugSolution.checkVub(col, vubCol, vub.coef,
                                                vub.constant);
-  } else if (allowBoundChanges && maxub < ub - mipsolver.mipdata_->epsilon) {
+  } else if (allowBoundChanges &&
+             vub.maxValue() < ub - mipsolver.mipdata_->epsilon) {
     mipsolver.mipdata_->getDomain().changeBound(
-        HighsBoundType::kUpper, col, static_cast<double>(maxub),
+        HighsBoundType::kUpper, col, vub.maxValue(),
         HighsDomain::Reason::unspecified());
     infeasible = mipsolver.mipdata_->getDomain().infeasible();
   }
