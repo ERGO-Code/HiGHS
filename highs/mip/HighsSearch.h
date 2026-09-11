@@ -145,6 +145,9 @@ class HighsSearch {
 
   bool orbitsValidInChildNode(const HighsDomainChange& branchChg) const;
 
+  void openChildNode(HighsInt col, double boundval, double branchpoint,
+                     HighsBoundType boundtype);
+
   void stashNodeToProcessed(double lb, double estimate, HighsInt depth);
 
  public:
@@ -168,6 +171,8 @@ class HighsSearch {
   void branchDownwards(HighsInt col, double newub, double branchpoint);
 
   void branchUpwards(HighsInt col, double newlb, double branchpoint);
+
+  void flipBranchingDecision(NodeData& node);
 
   void setMinReliable(HighsInt minreliable);
 
