@@ -392,8 +392,8 @@ bool HighsImplications::runProbing(HighsInt col, HighsInt& numReductions) {
         } else if (f.downProbe == TentativeFixing::FixUpper &&
                    f.upProbe == TentativeFixing::FixUpper) {
           globaldomain.fixCol(k, globaldomain.col_upper_[k]);
-        } else if (f.downProbe == TentativeFixing::FixLower &&
-                   f.upProbe == TentativeFixing::FixUpper &&
+        } else if (f.downProbe == TentativeFixing::FixUpper &&
+                   f.upProbe == TentativeFixing::FixLower &&
                    !cliquetable.isFull()) {
           clique[0] = HighsCliqueTable::CliqueVar(col, 1);
           clique[1] = HighsCliqueTable::CliqueVar(k, 1);
@@ -401,8 +401,8 @@ bool HighsImplications::runProbing(HighsInt col, HighsInt& numReductions) {
           clique[0] = HighsCliqueTable::CliqueVar(col, 0);
           clique[1] = HighsCliqueTable::CliqueVar(k, 0);
           cliquetable.addClique(mipsolver, &clique[0], 2);
-        } else if (f.downProbe == TentativeFixing::FixUpper &&
-                   f.upProbe == TentativeFixing::FixLower &&
+        } else if (f.downProbe == TentativeFixing::FixLower &&
+                   f.upProbe == TentativeFixing::FixUpper &&
                    !cliquetable.isFull()) {
           clique[0] = HighsCliqueTable::CliqueVar(col, 1);
           clique[1] = HighsCliqueTable::CliqueVar(k, 0);
