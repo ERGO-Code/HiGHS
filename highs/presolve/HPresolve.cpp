@@ -7911,7 +7911,6 @@ HPresolve::Result HPresolve::fourierMotzkin(
 
   struct newRow {
     std::vector<newRowEntry> entries;
-    double lower;
     double upper;
     HighsInt plusIndex;
     HighsInt minusIndex;
@@ -7977,12 +7976,7 @@ HPresolve::Result HPresolve::fourierMotzkin(
         iMinus.push_back(row);
         neMinus += rowsize[row];
       } else {
-        HighsInt direction;
-        if (model->row_lower_[row] == -kHighsInf &&
-            model->row_upper_[row] != kHighsInf)
-          direction = 1;
-        else
-          direction = -1;
+        HighsInt direction = model->row_upper_[row] != kHighsInf ? 1 : -1;
 
         if (direction * nz.value() > 0) {
           iPlus.push_back(row);
@@ -8118,12 +8112,10 @@ HPresolve::Result HPresolve::fourierMotzkin(
     double upper = upperFinite ? static_cast<double>(impliedUpper) : kHighsInf;
 
     // check for infeasibility
-    if (lower > nr.upper + primal_feastol || upper < nr.lower - primal_feastol)
-      return Result::kPrimalInfeasible;
+    if (lower > nr.upper + primal_feastol) return Result::kPrimalInfeasible;
 
     // check for redundancy
-    isRedundant = lower >= nr.lower - primal_feastol &&
-                  upper <= nr.upper + primal_feastol;
+    isRedundant = upper <= nr.upper + primal_feastol;
 
     return Result::kOk;
   };
@@ -8500,7 +8492,7 @@ HPresolve::Result HPresolve::fourierMotzkin(
         double new_upper =
             static_cast<double>(static_cast<HighsCDouble>(pScale) * pBound +
                                 static_cast<HighsCDouble>(mScale) * mBound);
-        newRows.push_back({newRowEntries, -kHighsInf, new_upper, pRow, mRow,
+        newRows.push_back({newRowEntries, new_upper, pRow, mRow,
                            pDirection * pScale, mDirection * mScale});
 
         // clear vector
@@ -8533,7 +8525,7 @@ HPresolve::Result HPresolve::fourierMotzkin(
         indices.push_back(e.col);
         values.push_back(static_cast<double>(e.val));
       }
-      rowLower.push_back(nr.lower);
+      rowLower.push_back(-kHighsInf);
       rowUpper.push_back(nr.upper);
       rowIndices.push_back(std::move(indices));
       rowValues.push_back(std::move(values));

@@ -9,6 +9,7 @@
 
 #include <numeric>
 
+#include "../extern/pdqsort/pdqsort.h"
 #include "lp_data/HConst.h"
 #include "lp_data/HighsModelUtils.h"  // For debugging #2001
 #include "lp_data/HighsOptions.h"
@@ -1701,11 +1702,11 @@ void HighsPostsolveStack::undoFourierMotzkinBlock(
                        step.minusRows[m].entries, m, true, candidates);
     }
     // sort descending by non-basic support count
-    std::sort(candidates.begin(), candidates.end(),
-              [](const std::tuple<HighsInt, HighsInt, bool>& a,
-                 const std::tuple<HighsInt, HighsInt, bool>& b) {
-                return std::get<0>(a) > std::get<0>(b);
-              });
+    pdqsort(candidates.begin(), candidates.end(),
+            [](const std::tuple<HighsInt, HighsInt, bool>& a,
+               const std::tuple<HighsInt, HighsInt, bool>& b) {
+              return std::get<0>(a) > std::get<0>(b);
+            });
     for (const auto& cand : candidates) {
       HighsInt parentIndex = std::get<1>(cand);
       if (std::get<2>(cand)) {
