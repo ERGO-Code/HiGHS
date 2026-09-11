@@ -8622,11 +8622,13 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
               model->integrality_[col] == HighsVarType::kInteger,
               model->integrality_[duplicateCol] == HighsVarType::kInteger,
               options->mip_feasibility_tolerance);
-          if (!ok_merge && debug_report) {
-            printf(
-                "HPresolve::detectParallelRowsAndCols Illegal merge "
-                "prevented\n");
-            break;
+          if (!ok_merge) {
+            if (debug_report) {
+              printf(
+                  "HPresolve::detectParallelRowsAndCols Illegal merge "
+                  "prevented\n");
+            }
+            continue;
           }
           // When merging a continuous variable into an integer
           // variable, the integer will become continuous - since any
