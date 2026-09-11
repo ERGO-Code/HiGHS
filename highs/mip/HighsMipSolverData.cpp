@@ -1190,7 +1190,7 @@ try_again:
   double bound_violation_ = 0;
   double integrality_violation_ = 0;
   double row_violation_ = 0;
-  violation.copy(bound_violation_, integrality_violation_, row_violation_);
+  violation.copy(bound_violation_, row_violation_, integrality_violation_);
   double mipsolver_objective_value = double(mipsolver_quad_objective_value);
   if (!feasible && allow_try_again) {
     // printf(
