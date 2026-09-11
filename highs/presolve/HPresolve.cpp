@@ -9169,19 +9169,19 @@ void HPresolve::aggregateVarBounds() {
   HighsInt numVarsLifted = 0;
 
   for (HighsInt col = 0; col != model->num_col_; ++col) {
-    if (colDeleted[col]) continue;
+    // skip deleted and binary columns (aggregate VLBs/VUBs on non-binary
+    // columns)
+    if (colDeleted[col] || isBinary(col)) continue;
 
-    // get lower bound and upper bound
-    double lb = model->col_lower_[col];
-    double ub = model->col_upper_[col];
-
-    // skip binary columns — we aggregate VLBs/VUBs on non-binary columns
-    if (isBinary(col)) continue;
-
+    // clear vectors
     vlbs.clear();
     vubs.clear();
     vlbsClique.clear();
     vubsClique.clear();
+
+    // get lower bound and upper bound
+    double lb = model->col_lower_[col];
+    double ub = model->col_upper_[col];
 
     // compute range
     double range = kHighsInf;
