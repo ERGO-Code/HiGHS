@@ -64,7 +64,7 @@ HighsMipSolver::HighsMipSolver(HighsCallback& callback,
     HighsCDouble quad_solution_objective_;
     solutionFeasible(orig_model_, solution.col_value, &solution.row_value,
                      violation, quad_solution_objective_);
-    violation.copy(bound_violation_, integrality_violation_, row_violation_);
+    violation.copy(bound_violation_, row_violation_, integrality_violation_);
     solution_objective_ = double(quad_solution_objective_);
     solution_ = solution.col_value;
   }
