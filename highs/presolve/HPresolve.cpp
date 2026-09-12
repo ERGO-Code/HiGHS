@@ -3920,7 +3920,18 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
 
   // Convert to equality constraint and record for dual postsolve
   if (!isEquation(row)) {
+    auto resetDependentDualImpliedBounds = [&]() {
+      for (const HighsSliceNonzero& nonzero : getRowVector(row)) {
+        auto& affectedRows = implRowDualSourceByCol[nonzero.index()];
+        for (auto it = affectedRows.begin(); it != affectedRows.end();) {
+          const HighsInt affectedRow = *it++;
+          if (affectedRow != row)
+            resetRowDualImpliedBounds(affectedRow, nonzero.index());
+        }
+      }
+    };
     if (isImpliedEquationAtLower(row)) {
+      if (rowDualLower[row] != -kHighsInf) resetDependentDualImpliedBounds();
       model->row_upper_[row] = model->row_lower_[row];
       postsolve_stack.impliedEquation(row, true, getRowVector(row));
       // Since row upper bound is now finite, lower bound on row dual is
@@ -3930,6 +3941,7 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
         HPRESOLVE_CHECKED_CALL(
             checkRedundantBounds(rowDualLowerSource[row], row));
     } else if (isImpliedEquationAtUpper(row)) {
+      if (rowDualUpper[row] != kHighsInf) resetDependentDualImpliedBounds();
       model->row_lower_[row] = model->row_upper_[row];
       postsolve_stack.impliedEquation(row, false, getRowVector(row));
       // Since row lower bound is now finite, upper bound on row dual is
