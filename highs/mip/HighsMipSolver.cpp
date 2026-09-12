@@ -146,10 +146,24 @@ void HighsMipSolver::run() {
                  "Presolve: %s\n",
                  utilModelStatusToString(presolveStatus).c_str());
     if (modelstatus_ == HighsModelStatus::kOptimal) {
+      // Model has been reduced to empty in presolve, so optimality
+      // has been deduced
       mipdata_->lower_bound = 0;
       mipdata_->upper_bound = 0;
-      mipdata_->transformNewIntegerFeasibleSolution(std::vector<double>());
-      mipdata_->saveReportMipSolution();
+      double solution_objective = 
+	mipdata_->transformNewIntegerFeasibleSolution(std::vector<double>());
+      if (solution_objective == kHighsInf) {
+	// Solution is not feasible (due to an error in presolve) so
+	// don't return a model status of HighsModelStatus::kOptimal!
+	modelstatus_ = HighsModelStatus::kSolveError;
+      } else {
+	// Set solution_objective = -kHighsInf, which ensures that the
+	// incumbent is viewed as an improving solution in
+	// saveReportMipSolution
+	solution_objective = -kHighsInf;
+      }
+      // Pass solution_objective as new_upper_limit
+      mipdata_->saveReportMipSolution(solution_objective);
     }
     cleanupSolve();
     return;
