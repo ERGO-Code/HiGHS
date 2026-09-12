@@ -7786,6 +7786,17 @@ HPresolve::Result HPresolve::aggregator(HighsPostsolveStack& postsolve_stack) {
 
 void HPresolve::substitute(HighsInt substcol, HighsInt staycol, double offset,
                            double scale) {
+  // Preserve explicit integrality, i.e., upgrade implied integral
+  // column if it is substituting an integral column
+  if (model->integrality_[substcol] == HighsVarType::kInteger &&
+      model->integrality_[staycol] == HighsVarType::kImplicitInteger) {
+    model->integrality_[staycol] = HighsVarType::kInteger;
+    for (const HighsSliceNonzero& nonzero : getColumnVector(staycol)) {
+      ++rowsizeInteger[nonzero.index()];
+      --rowsizeImplInt[nonzero.index()];
+    }
+  }
+
   // substitute the column in each row where it occurs
   for (HighsInt coliter = colhead[substcol]; coliter != -1;) {
     HighsInt colrow = Arow[coliter];
