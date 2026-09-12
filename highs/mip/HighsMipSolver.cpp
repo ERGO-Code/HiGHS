@@ -1280,16 +1280,19 @@ void HighsMipSolver::solvingReport(const std::string& solutionstatus) const {
                  "  Model             %s\n",
                  this->orig_model_->model_name_.c_str());
   highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
-               "  Status            %s\n"
-               "  Primal bound      %.12g\n"
-               "  Dual bound        %.12g\n"
-               "  Gap               %s\n",
-               utilModelStatusToString(modelstatus_).c_str(), primal_bound_,
-               dual_bound_, gapString.data());
-  if (!timeless_log)
+               "  Status            %s\n",
+               utilModelStatusToString(modelstatus_).c_str());
+  if (modelstatus_ != HighsModelStatus::kSolveError) {
     highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
-                 "  P-D integral      %.12g\n",
-                 mipdata_->primal_dual_integral.value);
+		 "  Primal bound      %.12g\n"
+		 "  Dual bound        %.12g\n"
+		 "  Gap               %s\n", primal_bound_,
+		 dual_bound_, gapString.data());
+    if (!timeless_log)
+      highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
+		   "  P-D integral      %.12g\n",
+		   mipdata_->primal_dual_integral.value);
+  }
   highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
                "  Solution status   %s\n", solutionstatus.c_str());
   if (solutionstatus != "-") {
