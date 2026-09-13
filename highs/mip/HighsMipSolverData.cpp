@@ -1194,8 +1194,9 @@ try_again:
   double mipsolver_objective_value = double(mipsolver_quad_objective_value);
   if (!feasible && allow_try_again) {
     // printf(
-    //     "trying to repair sol that is violated by %.12g bounds, %.12g rows, %.12g "integrality\n",
-    //     bound_violation_, row_violation_, integrality_violation_);
+    //     "trying to repair sol that is violated by %.12g bounds, %.12g rows,
+    //     %.12g "integrality\n", bound_violation_, row_violation_,
+    //     integrality_violation_);
     HighsLp fixedModel = *mipsolver.orig_model_;
     fixedModel.integrality_.clear();
     for (HighsInt i = 0; i != mipsolver.orig_model_->num_col_; ++i) {

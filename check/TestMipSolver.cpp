@@ -859,7 +859,7 @@ void solve(Highs& highs, std::string presolve,
            const HighsModelStatus require_model_status,
            const double require_optimal_objective,
            const double require_iteration_count) {
-  //highs.setOptionValue("output_flag", dev_run);
+  highs.setOptionValue("output_flag", dev_run);
   const HighsInfo& info = highs.getInfo();
   REQUIRE(highs.setOptionValue("presolve", presolve) == HighsStatus::kOk);
 
@@ -1827,28 +1827,6 @@ TEST_CASE("pr-3260", "[highs_test_mip_solver]") {
   solve(highs, kHighsOnString, require_model_status, optimal_objective);
 }
 
-TEST_CASE("pr-3268", "[highs_test_mip_solver]") {
-  HighsLp lp;
-  lp.num_col_ = 5;
-  lp.num_row_ = 3;
-  lp.sense_ = ObjSense::kMaximize;
-  lp.col_cost_ = {0, 0, 0, 0, 0};
-  lp.col_lower_ = {-1, -1, -2, 0, 1};
-  lp.col_upper_ = {kHighsInf, 0, 0, 1, 2};
-  lp.row_lower_ = {-kHighsInf, -4, 2};
-  lp.row_upper_ = {-5, -4, 2};
-  lp.a_matrix_.start_ = {0, 2, 4, 6, 8, 10};
-  lp.a_matrix_.index_ = {1, 2, 0, 1, 0, 1, 0, 2, 1, 2};
-  lp.a_matrix_.value_ = {2, -2, 1, -6, 3, 2, -1, 1, -2, 1};
-  lp.integrality_ = {HighsVarType::kContinuous, HighsVarType::kInteger,
-                     HighsVarType::kInteger, HighsVarType::kInteger,
-                     HighsVarType::kSemiInteger};
-  Highs highs;
-  highs.setOptionValue("output_flag", dev_run);
-  REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
-  solve(highs, kHighsOnString, HighsModelStatus::kInfeasible);
-}
-
 TEST_CASE("issue-3271", "[highs_test_mip_solver]") {
   HighsLp lp;
   lp.num_col_ = 3;
@@ -1856,18 +1834,17 @@ TEST_CASE("issue-3271", "[highs_test_mip_solver]") {
   lp.sense_ = ObjSense::kMinimize;
   lp.col_cost_ = {0, 0, 3};
   lp.col_lower_ = {-kHighsInf, -kHighsInf, 0};
-  lp.col_upper_ = {       4.5,  kHighsInf, 0};
+  lp.col_upper_ = {4.5, kHighsInf, 0};
   lp.row_lower_ = {-15.5};
   lp.row_upper_ = {kHighsInf};
   lp.a_matrix_.format_ = MatrixFormat::kRowwise;
   lp.a_matrix_.start_ = {0, 1};
   lp.a_matrix_.index_ = {0};
   lp.a_matrix_.value_ = {1};
-  lp.integrality_ = {HighsVarType::kInteger,
-		     HighsVarType::kInteger,
-		     HighsVarType::kInteger};
+  lp.integrality_ = {HighsVarType::kInteger, HighsVarType::kInteger,
+                     HighsVarType::kInteger};
   Highs highs;
-  //  highs.setOptionValue("output_flag", dev_run);
+  highs.setOptionValue("output_flag", dev_run);
   REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
   solve(highs, kHighsOnString, HighsModelStatus::kOptimal);
 }

@@ -150,17 +150,17 @@ void HighsMipSolver::run() {
       // has been deduced
       mipdata_->lower_bound = 0;
       mipdata_->upper_bound = 0;
-      double solution_objective = 
-	mipdata_->transformNewIntegerFeasibleSolution(std::vector<double>());
+      double solution_objective =
+          mipdata_->transformNewIntegerFeasibleSolution(std::vector<double>());
       if (solution_objective == kHighsInf) {
-	// Solution is not feasible (due to an error in presolve) so
-	// don't return a model status of HighsModelStatus::kOptimal!
-	modelstatus_ = HighsModelStatus::kSolveError;
+        // Solution is not feasible (due to an error in presolve) so
+        // don't return a model status of HighsModelStatus::kOptimal!
+        modelstatus_ = HighsModelStatus::kSolveError;
       } else {
-	// Set solution_objective = -kHighsInf, which ensures that the
-	// incumbent is viewed as an improving solution in
-	// saveReportMipSolution
-	solution_objective = -kHighsInf;
+        // Set solution_objective = -kHighsInf, which ensures that the
+        // incumbent is viewed as an improving solution in
+        // saveReportMipSolution
+        solution_objective = -kHighsInf;
       }
       // Pass solution_objective as new_upper_limit
       mipdata_->saveReportMipSolution(solution_objective);
@@ -1284,14 +1284,14 @@ void HighsMipSolver::solvingReport(const std::string& solutionstatus) const {
                utilModelStatusToString(modelstatus_).c_str());
   if (modelstatus_ != HighsModelStatus::kSolveError) {
     highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
-		 "  Primal bound      %.12g\n"
-		 "  Dual bound        %.12g\n"
-		 "  Gap               %s\n", primal_bound_,
-		 dual_bound_, gapString.data());
+                 "  Primal bound      %.12g\n"
+                 "  Dual bound        %.12g\n"
+                 "  Gap               %s\n",
+                 primal_bound_, dual_bound_, gapString.data());
     if (!timeless_log)
       highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
-		   "  P-D integral      %.12g\n",
-		   mipdata_->primal_dual_integral.value);
+                   "  P-D integral      %.12g\n",
+                   mipdata_->primal_dual_integral.value);
   }
   highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
                "  Solution status   %s\n", solutionstatus.c_str());
@@ -1301,16 +1301,16 @@ void HighsMipSolver::solvingReport(const std::string& solutionstatus) const {
                  solution_objective_);
     if (bound_violation_)
       highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
-		   "                    %.12g (variable bound violation)\n",
-		   bound_violation_);
+                   "                    %.12g (variable bound violation)\n",
+                   bound_violation_);
     if (row_violation_)
       highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
-		   "                    %.12g (constraint bound violation)\n",
-		   row_violation_);
+                   "                    %.12g (constraint bound violation)\n",
+                   row_violation_);
     if (integrality_violation_)
       highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
-		   "                    %.12g (integrality violation)\n",
-		   integrality_violation_);
+                   "                    %.12g (integrality violation)\n",
+                   integrality_violation_);
   }
   if (!timeless_log) {
     auto callRecord = [&](HighsInt clock) {
@@ -1630,10 +1630,11 @@ void MipViolation::log(const HighsLogOptions& log_options,
                   this->integrality_violation,
                   int(this->col_of_max_integrality_violation));
   } else {
-    highsLogUser(log_options, HighsLogType::kWarning,
-                 "%s with objective %g has untransformed violations: "
-                 "variable bound = %.4g; constraint bound = %.4g; integrality = %.4g\n",
-                 source.c_str(), objective_value, this->bound_violation,
-                 this->row_violation, this->integrality_violation);
+    highsLogUser(
+        log_options, HighsLogType::kWarning,
+        "%s with objective %g has untransformed violations: "
+        "variable bound = %.4g; constraint bound = %.4g; integrality = %.4g\n",
+        source.c_str(), objective_value, this->bound_violation,
+        this->row_violation, this->integrality_violation);
   }
 }

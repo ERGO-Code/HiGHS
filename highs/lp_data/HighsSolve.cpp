@@ -992,7 +992,7 @@ HighsStatus solveMip(HighsMipSolverObject& solver_object,
                   mip_max_bound_violation, info.max_primal_infeasibility,
                   delta_max_bound_violation);
     info.max_integrality_violation = solver.integrality_violation_;
-    if (info.max_integrality_violation > options.mip_feasibility_tolerance) 
+    if (info.max_integrality_violation > options.mip_feasibility_tolerance)
       info.primal_solution_status = kSolutionStatusInfeasible;
   }
   // ... and remember to recover the primal feasibility tolerance

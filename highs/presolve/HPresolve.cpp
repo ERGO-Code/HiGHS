@@ -6248,6 +6248,21 @@ double HPresolve::computeWorstCaseUpperBound(HighsInt col, HighsInt boundCol,
   return upperBound;
 }
 
+HPresolve::Result HPresolve::roundIntegerVariableBounds() {
+  if (mipsolver == nullptr) return Result::kOk;
+  assert(model->integrality_.size());
+  for (HighsInt iCol = 0; iCol < model->num_col_; iCol++) {
+    if (model->integrality_[iCol] == HighsVarType::kContinuous) continue;
+    model->col_lower_[iCol] =
+        std::ceil(model->col_lower_[iCol] - primal_feastol);
+    model->col_upper_[iCol] =
+        std::floor(model->col_upper_[iCol] + primal_feastol);
+    if (model->col_lower_[iCol] > model->col_upper_[iCol])
+      return Result::kPrimalInfeasible;
+  }
+  return Result::kOk;
+}
+
 HPresolve::Result HPresolve::initialSweep(
     HighsPostsolveStack& postsolve_stack) {
   assert(this->in_initial_sweep_);
@@ -6646,6 +6661,9 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
                  model->num_row_, model->num_col_, model->numNz(),
                  time_str.c_str());
   }
+
+  if (mipsolver != nullptr)
+    HPRESOLVE_CHECKED_CALL(roundIntegerVariableBounds());
 
   if (options->presolve != kHighsOffString && mipsolver == nullptr &&
       !options->presolve_rule_test) {
