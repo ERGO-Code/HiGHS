@@ -1296,12 +1296,9 @@ void HighsCliqueTable::extractCliques(HighsMipSolver& mipsolver,
     // of a clique without transformations and add those cliques with the rows
     // being recorded
     auto skipFixedVar = [&](HighsInt col, double val) {
-      HighsInt direction = val > 0 ? 1 : 0;
-      return (!globaldom.isBinary(col) && globaldom.col_upper_[col] == 0 &&
-              globaldom.col_lower_[col] == 0) ||
+      return (!globaldom.isBinary(col) && globaldom.isFixedToVal(col, 0)) ||
              (globaldom.isBinary(col) &&
-              globaldom.col_upper_[col] == 1 - direction &&
-              globaldom.col_lower_[col] == 1 - direction);
+              globaldom.isFixedToVal(col, 1 - (val > 0 ? 1 : 0)));
     };
 
     bool issetppc = true;
