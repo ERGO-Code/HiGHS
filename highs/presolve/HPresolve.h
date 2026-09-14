@@ -216,6 +216,8 @@ class HPresolve {
 
   bool rowCoefficientsIntegral(HighsInt row, double scale) const;
 
+  bool isBinary(HighsInt col) const;
+
   bool isImpliedFree(HighsInt col) const;
 
   bool isDualImpliedFree(HighsInt row) const;
@@ -518,7 +520,7 @@ class HPresolve {
   Result removeDoubletonEquations(HighsPostsolveStack& postsolve_stack);
 
   Result strengthenInequalities(HighsPostsolveStack& postsolve_stack,
-                                HighsInt& num_strenghtened);
+                                HighsInt& num_strengthened);
 
   Result detectImpliedIntegers();
 
