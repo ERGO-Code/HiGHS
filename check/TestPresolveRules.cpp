@@ -263,6 +263,66 @@ TEST_CASE("test-clique-extract-origin-unequal-coeff",
   HighsTaskExecutor::shutdown(true);
 }
 
+TEST_CASE("test-normalise-equation", "[highs_test_presolve_rules]") {
+  // 2x0 + 2x1 + 2x2 = 2 is a valid set partitioning constraint
+  // (coefficients == rhs). normaliseCliqueRows should normalise it
+  // and extractCliques should find a 3-clique with all pairs.
+  HighsLp lp;
+  lp.num_col_ = 3;
+  lp.num_row_ = 1;
+  lp.sense_ = ObjSense::kMinimize;
+  lp.col_cost_ = {1.0, 1.0, 1.0};
+  lp.col_lower_ = {0.0, 0.0, 0.0};
+  lp.col_upper_ = {1.0, 1.0, 1.0};
+  lp.integrality_ = {HighsVarType::kInteger, HighsVarType::kInteger,
+                     HighsVarType::kInteger};
+  lp.row_lower_ = {2.0};
+  lp.row_upper_ = {2.0};
+  lp.a_matrix_.format_ = MatrixFormat::kColwise;
+  lp.a_matrix_.num_col_ = 3;
+  lp.a_matrix_.num_row_ = 1;
+  lp.a_matrix_.start_ = {0, 1, 2, 3};
+  lp.a_matrix_.index_ = {0, 0, 0};
+  lp.a_matrix_.value_ = {2.0, 2.0, 2.0};
+
+  highs::parallel::initialize_scheduler(1);
+
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  highs.setOptionValue("presolve_rule_test", kPresolveRuleProbing);
+  highs.passModel(lp);
+
+  HighsCallback callback(&highs);
+  const HighsOptions& options = highs.getOptions();
+  HighsSolution solution;
+  HighsProfiling profiling;
+
+  HighsMipSolver mipsolver(callback, options, lp, solution);
+  mipsolver.timer_.start();
+  profiling.initialize(mipsolver.timer_, true, true);
+  mipsolver.setProfiling(&profiling);
+  mipsolver.mipdata_ =
+      std::unique_ptr<HighsMipSolverData>(new HighsMipSolverData(mipsolver));
+  mipsolver.mipdata_->init();
+  mipsolver.mipdata_->setupDomainPropagation();
+
+  presolve::HighsPostsolveStack& postsolve_stack =
+      mipsolver.mipdata_->postSolveStack;
+
+  presolve::HPresolve presolve;
+  presolve.setInput(mipsolver, -1);
+  REQUIRE(presolve.okSetupPresolveDataStructures());
+  HighsModelStatus status = presolve.run(postsolve_stack);
+  REQUIRE(status == HighsModelStatus::kNotset);
+
+  HighsCliqueTable& cliquetable = mipsolver.mipdata_->cliquetable;
+  REQUIRE(cliquetable.haveCommonClique({0, 1}, {1, 1}));
+  REQUIRE(cliquetable.haveCommonClique({0, 1}, {2, 1}));
+  REQUIRE(cliquetable.haveCommonClique({1, 1}, {2, 1}));
+
+  HighsTaskExecutor::shutdown(true);
+}
+
 TEST_CASE("test-clique-no-delete-ranged-row", "[highs_test_presolve_rules]") {
   // Negative test: ranged rows must not be deleted by clique merging because
   // the extracted clique is a relaxation (only captures one side).

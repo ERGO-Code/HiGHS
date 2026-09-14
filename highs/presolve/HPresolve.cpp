@@ -1630,9 +1630,7 @@ HPresolve::Result HPresolve::normaliseCliqueRows(
     bool allBinary = true;
     rowCoefsInt.clear();
     for (const auto& nz : getStoredRow()) {
-      allBinary = model->integrality_[nz.index()] == HighsVarType::kInteger &&
-                  model->col_lower_[nz.index()] == 0.0 &&
-                  model->col_upper_[nz.index()] == 1.0;
+      allBinary = isBinary(nz.index());
       if (!allBinary) break;
       rowCoefsInt.push_back(nz.value());
     }
@@ -1680,6 +1678,13 @@ HPresolve::Result HPresolve::normaliseCliqueRows(
     if (numBin - start < 2 ||
         nzs[perm[numBin - 2]].value + nzs[perm[numBin - 1]].value <=
             rhs + primal_feastol)
+      continue;
+
+    // for equations, normalisation to x1 + ... + xn = 1 is only valid
+    // for set partitioning rows where all coefficients equal rhs
+    if (isEquation(row) &&
+        (nzs[perm[start]].value != nzs[perm[numBin - 1]].value ||
+         nzs[perm[start]].value != rhs))
       continue;
 
     // normalize remaining coefficients to ±1
