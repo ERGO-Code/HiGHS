@@ -480,7 +480,7 @@ class HPresolve {
                                     double boundColValue = kHighsInf,
                                     HighsInt boundColCoeffPattern = 0);
 
-  Result roundIntegerVariableBounds();
+  Result roundIntegerColBounds();
 
   Result initialSweep(HighsPostsolveStack& postsolve_stack);
 
