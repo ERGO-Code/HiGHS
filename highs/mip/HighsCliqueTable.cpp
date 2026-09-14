@@ -1297,16 +1297,23 @@ void HighsCliqueTable::extractCliques(HighsMipSolver& mipsolver,
     // catch set packing and partitioning constraints that already have the form
     // of a clique without transformations and add those cliques with the rows
     // being recorded
+    auto skipFixedVar = [&](HighsInt col, double val) {
+      HighsInt direction = val > 0 ? 1 : 0;
+      return globaldom.col_upper_[col] == 1 - direction &&
+             globaldom.col_lower_[col] == 1 - direction;
+    };
+
     bool issetppc = true;
     HighsInt numComp = 0;
     for (HighsInt j = start; j != end; ++j) {
       HighsInt col = mipsolver.mipdata_->ARindex_[j];
       double val = mipsolver.mipdata_->ARvalue_[j];
-      if (globaldom.col_upper_[col] == 0.0 && globaldom.col_lower_[col] == 0.0)
-        continue;
 
       issetppc = globaldom.isBinary(col) && std::abs(val) == 1.0;
       if (!issetppc) break;
+
+      if (skipFixedVar(col, val)) continue;
+
       if (val < 0) numComp++;
     }
     if (!issetppc) continue;
@@ -1317,14 +1324,10 @@ void HighsCliqueTable::extractCliques(HighsMipSolver& mipsolver,
       for (HighsInt j = start; j != end; ++j) {
         HighsInt col = mipsolver.mipdata_->ARindex_[j];
         double val = mipsolver.mipdata_->ARvalue_[j];
-        if (globaldom.col_upper_[col] == 0.0 &&
-            globaldom.col_lower_[col] == 0.0)
-          continue;
 
-        if (val > 0)
-          clique.emplace_back(col, 1);
-        else
-          clique.emplace_back(col, 0);
+        if (skipFixedVar(col, val)) continue;
+
+        clique.emplace_back(col, val > 0 ? 1 : 0);
       }
 
       addClique(mipsolver, clique.data(), static_cast<HighsInt>(clique.size()),
