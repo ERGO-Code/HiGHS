@@ -6254,8 +6254,13 @@ double HPresolve::computeWorstCaseUpperBound(HighsInt col, HighsInt boundCol,
 }
 
 HPresolve::Result HPresolve::checkOriginalModelBounds() {
+  // Perform integer rounding of bounds on integer variables and check
+  // for trivial bound violations. Only called in HPresolve::presolve,
+  // and before the call to HPresolve::initialSweep and
+  // HPresolve::initialRowAndColPresolve
   const bool is_mip = mipsolver != nullptr;
   assert(!is_mip || model->integrality_.size());
+  assert(!this->in_initial_sweep_);
   for (HighsInt iCol = 0; iCol < model->num_col_; iCol++) {
     if (is_mip && model->integrality_[iCol] != HighsVarType::kContinuous) {
       // Perform integer rounding of bounds on integer variables
@@ -6678,7 +6683,8 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
   }
 
   // Perform integer rounding of bounds on integer variables and check
-  // for trivial bound violations - which yield Result
+  // for trivial bound violations - which yield
+  // Result::kPrimalInfeasible
   HPRESOLVE_CHECKED_CALL(checkOriginalModelBounds());
 
   if (options->presolve != kHighsOffString && mipsolver == nullptr &&
