@@ -49,6 +49,9 @@ extern "C" void AnnotateHappensAfter(const char* f, int l, void* addr);
 class HighsSplitDeque {
   using cache_aligned = highs::cache_aligned;
 
+  static constexpr size_t cacheLineSize =
+      HighsSchedulerConstants::kCacheLineSize;
+
  public:
   enum Constants {
     kTaskArraySize = 8192,
@@ -97,8 +100,8 @@ class HighsSplitDeque {
   struct WorkerBunk {
     static constexpr uint64_t kAbaTagShift = 20;
     static constexpr uint64_t kIndexMask = (uint64_t{1} << kAbaTagShift) - 1;
-    alignas(64) std::atomic<int> haveJobs;
-    alignas(64) std::atomic<uint64_t> sleeperStack;
+    alignas(cacheLineSize) std::atomic<int> haveJobs;
+    alignas(cacheLineSize) std::atomic<uint64_t> sleeperStack;
 
     WorkerBunk() : haveJobs{0}, sleeperStack(0) {}
 
@@ -191,18 +194,18 @@ class HighsSplitDeque {
   };
 
  private:
-  static_assert(sizeof(OwnerData) <= 64,
+  static_assert(sizeof(OwnerData) <= cacheLineSize,
                 "sizeof(OwnerData) exceeds cache line size");
-  static_assert(sizeof(StealerData) <= 64,
+  static_assert(sizeof(StealerData) <= cacheLineSize,
                 "sizeof(StealerData) exceeds cache line size");
-  static_assert(sizeof(WorkerBunkData) <= 64,
+  static_assert(sizeof(WorkerBunkData) <= cacheLineSize,
                 "sizeof(WorkerBunkData) exceeds cache line size");
 
-  alignas(64) OwnerData ownerData;
-  alignas(64) std::atomic<bool> splitRequest;
-  alignas(64) StealerData stealerData;
-  alignas(64) WorkerBunkData workerBunkData;
-  alignas(64) std::array<HighsTask, kTaskArraySize> taskArray;
+  alignas(cacheLineSize) OwnerData ownerData;
+  alignas(cacheLineSize) std::atomic<bool> splitRequest;
+  alignas(cacheLineSize) StealerData stealerData;
+  alignas(cacheLineSize) WorkerBunkData workerBunkData;
+  alignas(cacheLineSize) std::array<HighsTask, kTaskArraySize> taskArray;
 
   void growShared() {
     int haveJobs =
@@ -277,15 +280,16 @@ class HighsSplitDeque {
     ownerData.workerBunk = workerBunk;
     splitRequest.store(false, std::memory_order_relaxed);
 
-    assert((reinterpret_cast<uintptr_t>(this) & 63u) == 0);
-    static_assert(offsetof(HighsSplitDeque, splitRequest) == 64,
-                  "alignas failed to guarantee 64 byte alignment");
-    static_assert(offsetof(HighsSplitDeque, stealerData) == 128,
-                  "alignas failed to guarantee 64 byte alignment");
-    static_assert(offsetof(HighsSplitDeque, workerBunkData) == 192,
-                  "alignas failed to guarantee 64 byte alignment");
-    static_assert(offsetof(HighsSplitDeque, taskArray) == 256,
-                  "alignas failed to guarantee 64 byte alignment");
+    assert((reinterpret_cast<uintptr_t>(this) & (cacheLineSize - 1)) == 0);
+    static_assert(offsetof(HighsSplitDeque, splitRequest) == cacheLineSize,
+                  "alignas failed to guarantee alignment with cache line");
+    static_assert(offsetof(HighsSplitDeque, stealerData) == 2 * cacheLineSize,
+                  "alignas failed to guarantee alignment with cache line");
+    static_assert(
+        offsetof(HighsSplitDeque, workerBunkData) == 3 * cacheLineSize,
+        "alignas failed to guarantee alignment with cache line");
+    static_assert(offsetof(HighsSplitDeque, taskArray) == 4 * cacheLineSize,
+                  "alignas failed to guarantee alignment with cache line");
   }
 
   void checkInterrupt() {
