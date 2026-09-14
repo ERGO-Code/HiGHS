@@ -940,7 +940,8 @@ void HighsCliqueTable::extractCliques(
     }
 
     addClique(mipsolver, clique.data(), nbin);
-    if (globaldom.infeasible()) return;
+    // printf("extracted this clique:\n");
+    // printClique(clique);
     return;
   }
 
@@ -1385,8 +1386,6 @@ void HighsCliqueTable::extractCliques(HighsMipSolver& mipsolver,
       }
     };
 
-    // only pass row origin for one-sided inequalities; a clique is a
-    // relaxation of a ranged row so it cannot be deleted
     checkRow(mipsolver.rowUpper(i), HighsInt{1});
     checkRow(mipsolver.rowLower(i), HighsInt{-1});
 
