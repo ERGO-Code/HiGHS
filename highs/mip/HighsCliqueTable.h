@@ -150,8 +150,7 @@ class HighsCliqueTable {
                       std::vector<HighsInt>& inds, std::vector<double>& vals,
                       std::vector<int8_t>& complementation, double rhs,
                       HighsInt nbin, std::vector<HighsInt>& perm,
-                      std::vector<CliqueVar>& clique, double feastol,
-                      HighsInt origin = kHighsIInf);
+                      std::vector<CliqueVar>& clique, double feastol);
 
   void processInfeasibleVertices(HighsDomain& domain);
 

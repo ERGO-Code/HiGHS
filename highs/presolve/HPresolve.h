@@ -412,7 +412,7 @@ class HPresolve {
                    double row_upper, const std::vector<HighsInt>& row_indices,
                    const std::vector<double>& row_values);
 
-  Result normaliseBinaryCliqueRows();
+  Result normaliseCliqueRows(HighsPostsolveStack& postsolve_stack);
 
   Result prepareProbing(HighsPostsolveStack& postsolve_stack, bool& firstCall);
 
