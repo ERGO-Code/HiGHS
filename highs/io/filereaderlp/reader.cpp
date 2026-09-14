@@ -586,6 +586,15 @@ void Reader::processconsec() {
       default:
         lpassert(false);
     }
+  // Fixes a bug where constants on the LHS of a constraint (e.g., `x - 1 >= 2`) 
+  // were ignored. `parseexpression()` correctly parses the LHS constant into 
+  // `con->expr->offset`, but this offset was previously only applied to the objective 
+  // row. Without subtracting this offset from the bounds, `x - 1 >= 2` incorrectly 
+  // evaluated to `x >= 2` instead of `x >= 3`. This went unnoticed because most LP 
+  // writers automatically normalize constants to the RHS. Subtracting is safe 
+  // even for unbounded constraints, as infinity minus a finite offset remains infinity.
+    con->lowerbound -= con->expr->offset;
+    con->upperbound -= con->expr->offset;
     builder.model.constraints.push_back(con);
     ++begin;
   }

@@ -142,7 +142,13 @@ TEST_CASE("filereader-edge-cases", "[highs_filereader]") {
   run_status = highs.run();
   REQUIRE(run_status == HighsStatus::kOk);
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
-  REQUIRE(highs.getInfo().objective_function_value == 2);
+  // The model is min x s.t. x - 1 >= 2, x integer, i.e. x >= 3, so 3 is the
+  // true optimum. This used to read 2 because the LP reader's constraint
+  // parsing computed the row's constant offset (parseexpression() in
+  // filereaderlp/reader.cpp) but never subtracted it from the row bound --
+  // only the objective row's offset was wired up in FilereaderLp.cpp. Fixed
+  // in Reader::processconsec(); see its comment for the full explanation.
+  REQUIRE(highs.getInfo().objective_function_value == 3);
 
   highs.resetGlobalScheduler(true);
 }
