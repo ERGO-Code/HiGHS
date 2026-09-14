@@ -671,6 +671,7 @@ void HighsPostsolveStack::DuplicateColumn::undo(const HighsOptions& options,
       colScale);
 
   bool recomputeCol = false;
+  bool duplicateColAtUpper = false;
 
   // Set any basis status for duplicateCol to kNonbasic to check that
   // it is set
@@ -681,6 +682,7 @@ void HighsPostsolveStack::DuplicateColumn::undo(const HighsOptions& options,
     // upper bound and force recalculation of col_value[col]
     solution.col_value[duplicateCol] = duplicateColUpper;
     recomputeCol = true;
+    duplicateColAtUpper = true;
     if (basis.valid) basis.col_status[duplicateCol] = HighsBasisStatus::kUpper;
   } else if (solution.col_value[duplicateCol] < duplicateColLower) {
     // Prospective value exceeds the lower bound, so trim it to the
@@ -709,8 +711,12 @@ void HighsPostsolveStack::DuplicateColumn::undo(const HighsOptions& options,
       // If column is integral and duplicateCol is not we need to make sure
       // we split the values into an integral one for col
       assert(!basis.valid);
-      solution.col_value[col] = std::ceil(solution.col_value[col] -
-                                          options.mip_feasibility_tolerance);
+      solution.col_value[col] =
+          duplicateColAtUpper == (colScale > 0)
+              ? std::ceil(solution.col_value[col] -
+                          options.mip_feasibility_tolerance)
+              : std::floor(solution.col_value[col] +
+                           options.mip_feasibility_tolerance);
       solution.col_value[duplicateCol] = static_cast<double>(
           (static_cast<HighsCDouble>(mergeVal) - solution.col_value[col]) /
           colScale);

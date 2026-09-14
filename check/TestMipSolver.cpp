@@ -1826,3 +1826,27 @@ TEST_CASE("pr-3260", "[highs_test_mip_solver]") {
   const double optimal_objective = 0.0;
   solve(highs, kHighsOnString, require_model_status, optimal_objective);
 }
+
+TEST_CASE("presolve-free-integer-column", "[highs_test_mip_solver]") {
+  HighsLp lp;
+  lp.num_col_ = 6;
+  lp.num_row_ = 2;
+  lp.col_cost_ = {-50, 0, 0, -3, 5, 0};
+  lp.col_lower_ = {-kHighsInf, -kHighsInf, -kHighsInf, 0, 0, -3};
+  lp.col_upper_ = {9, kHighsInf, kHighsInf, 6, 1, 6};
+  lp.row_lower_ = {-kHighsInf, -2};
+  lp.row_upper_ = {-6, -2};
+  lp.a_matrix_.format_ = MatrixFormat::kColwise;
+  lp.a_matrix_.start_ = {0, 1, 3, 4, 5, 6, 7};
+  lp.a_matrix_.index_ = {1, 0, 1, 1, 1, 1, 0};
+  lp.a_matrix_.value_ = {-1, -1, -1, -3, 1, 4, -1};
+  lp.integrality_ = {HighsVarType::kContinuous, HighsVarType::kContinuous,
+                     HighsVarType::kInteger, HighsVarType::kInteger,
+                     HighsVarType::kInteger, HighsVarType::kInteger};
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
+  const HighsModelStatus require_model_status = HighsModelStatus::kOptimal;
+  const double optimal_objective = -468;
+  solve(highs, kHighsOnString, require_model_status, optimal_objective);
+}
