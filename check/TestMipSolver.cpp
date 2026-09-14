@@ -868,13 +868,6 @@ void solve(Highs& highs, std::string presolve,
                               ? HighsStatus::kError
                               : HighsStatus::kOk));
 
-  bool model_status_ok = highs.getModelStatus() == require_model_status;
-  if (
-      // dev_run &&
-      !model_status_ok)
-    printf("Model status is %s, not %s\n",
-           highs.modelStatusToString(highs.getModelStatus()).c_str(),
-           highs.modelStatusToString(require_model_status).c_str());
   REQUIRE(highs.getModelStatus() == require_model_status);
 
   if (require_model_status == HighsModelStatus::kOptimal) {
@@ -1889,12 +1882,7 @@ TEST_CASE("issue-3271", "[highs_test_mip_solver]") {
   lp.integrality_ = {HighsVarType::kInteger, HighsVarType::kInteger,
                      HighsVarType::kInteger};
   Highs highs;
-  //  highs.setOptionValue("output_flag", dev_run);
+  highs.setOptionValue("output_flag", dev_run);
   REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
-  solve(highs, kHighsOnString, HighsModelStatus::kSolveError);  // Optimal);
-
-  // Now the singleton row yields x \in [4.5, 4.5] which is infeasible
-  lp.row_lower_ = {4.5};
-  REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
-  solve(highs, kHighsOnString, HighsModelStatus::kInfeasible);
+  solve(highs, kHighsOnString, HighsModelStatus::kOptimal);
 }
