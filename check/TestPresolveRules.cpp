@@ -205,8 +205,7 @@ TEST_CASE("test-clique-extract-origin", "[highs_test_presolve_rules]") {
 TEST_CASE("test-clique-extract-origin-unequal-coeff",
           "[highs_test_presolve_rules]") {
   // Same as test-clique-extract-origin but row 0 has unequal coefficients,
-  // exercising the sub-clique extraction loop instead of the equal-
-  // coefficient path.
+  // exercising the normalisation path in normaliseCliqueRows.
   //   row 0: x0 + 2*x1 + 2*x2 <= 2  (unequal coeffs, clique covers all 3)
   //   row 1: -x0 + x3 >= 0
   //   row 2: -x1 + x3 >= 0

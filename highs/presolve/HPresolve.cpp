@@ -1638,7 +1638,7 @@ HPresolve::Result HPresolve::normaliseCliqueRows(
     }
     if (!allBinary) continue;
 
-    // skip row if dynamism if too large
+    // skip row if dynamism is too large
     if (computeDynamism(getStoredRow()) > maxDynamism) continue;
 
     // compute scaling factor that makes all coefficients integral
