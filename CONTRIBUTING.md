@@ -16,7 +16,7 @@ Note that, under the terms of the MIT license, by contributing to HiGHS you assi
 
 ## AI generated contributions
 
-Whilst AI may be valuable for generating and communicating suggestions for code and build system developments, the review of AI-generated pull requests (other than the most trivial) would require resources that we don't have, so will not be accepted. If the suggestions are good, they will be implemented by HiGHS developers without the use of AI.
+Whilst AI may be valuable for generating and communicating suggestions for code and build system developments, AI-generated pull requests (other than the most trivial) require review resources that we don't have and therefore will not be accepted. If the suggestions are good, they will be implemented by HiGHS developers without the use of AI.
 
 ## Contact the HiGHS team
 
