@@ -89,7 +89,7 @@ TEST_CASE("filereader-edge-cases", "[highs_filereader]") {
 
     if (test_garbage_lp) {
       // Since #2316, reading an LP file of garbage yields an empty
-      // model, since the absence of an objecive is (rightly) no
+      // model, since the absence of an objective is (rightly) no
       // longer an error. However the LP file reader should fail due
       // to the requirement that a LP format file must begin with a
       // keyword.
