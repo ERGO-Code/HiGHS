@@ -1298,8 +1298,11 @@ void HighsCliqueTable::extractCliques(HighsMipSolver& mipsolver,
     // being recorded
     auto skipFixedVar = [&](HighsInt col, double val) {
       HighsInt direction = val > 0 ? 1 : 0;
-      return globaldom.col_upper_[col] == 1 - direction &&
-             globaldom.col_lower_[col] == 1 - direction;
+      return (!globaldom.isBinary(col) && globaldom.col_upper_[col] == 0 &&
+              globaldom.col_lower_[col] == 0) ||
+             (globaldom.isBinary(col) &&
+              globaldom.col_upper_[col] == 1 - direction &&
+              globaldom.col_lower_[col] == 1 - direction);
     };
 
     bool issetppc = true;
@@ -1308,10 +1311,10 @@ void HighsCliqueTable::extractCliques(HighsMipSolver& mipsolver,
       HighsInt col = mipsolver.mipdata_->ARindex_[j];
       double val = mipsolver.mipdata_->ARvalue_[j];
 
+      if (skipFixedVar(col, val)) continue;
+
       issetppc = globaldom.isBinary(col) && std::abs(val) == 1.0;
       if (!issetppc) break;
-
-      if (skipFixedVar(col, val)) continue;
 
       if (val < 0) numComp++;
     }
