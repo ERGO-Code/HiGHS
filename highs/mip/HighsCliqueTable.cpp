@@ -1292,9 +1292,10 @@ void HighsCliqueTable::extractCliques(HighsMipSolver& mipsolver,
     HighsInt start = mipsolver.mipdata_->ARstart_[i];
     HighsInt end = mipsolver.mipdata_->ARstart_[i + 1];
 
-    // catch set packing and partitioning constraints that already have the form
-    // of a clique without transformations and add those cliques with the rows
-    // being recorded
+    // catch set packing and partitioning constraints that already have the
+    // form of a clique without transformations and add those cliques with
+    // the rows being recorded. only <= and = rows are checked because
+    // normaliseCliqueRows has already flipped >= rows to <= form.
     auto skipFixedVar = [&](HighsInt col, double val) {
       return (!globaldom.isBinary(col) && globaldom.isFixedToVal(col, 0)) ||
              (globaldom.isBinary(col) &&
