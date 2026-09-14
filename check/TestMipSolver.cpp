@@ -1730,6 +1730,33 @@ TEST_CASE("issue-3171", "[highs_test_mip_solver]") {
   solve(highs, kHighsOnString, require_model_status, optimal_objective);
 }
 
+TEST_CASE("issue-3262", "[highs_test_mip_solver]") {
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+
+  HighsLp lp;
+  lp.sense_ = ObjSense::kMinimize;
+  lp.num_col_ = 2;
+  lp.num_row_ = 3;
+  lp.col_lower_ = {-kHighsInf, -kHighsInf};
+  lp.col_upper_ = {kHighsInf, kHighsInf};
+  lp.col_cost_ = {0., 0.};
+  lp.integrality_ = {HighsVarType::kInteger, HighsVarType::kContinuous};
+  lp.row_lower_ = {1., -kHighsInf, 1.};
+  lp.row_upper_ = {kHighsInf, 307., kHighsInf};
+  lp.a_matrix_.format_ = MatrixFormat::kColwise;
+  lp.a_matrix_.start_ = {0, 2, 5};
+  lp.a_matrix_.index_ = {1, 2, 0, 1, 2};
+  lp.a_matrix_.value_ = {-100., 1., -1., 1., -1.};
+
+  highs.passModel(lp);
+  highs.setOptionValue("presolve", "off");
+
+  REQUIRE_NOTHROW(highs.run());
+
+  highs.resetGlobalScheduler(true);
+}
+
 TEST_CASE("issue-2900", "[highs_test_mip_solver]") {
   std::string filename =
       std::string(HIGHS_DIR) + "/check/instances/issue-2900.mps";
