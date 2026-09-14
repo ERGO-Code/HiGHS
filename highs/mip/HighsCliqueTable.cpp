@@ -662,8 +662,7 @@ void HighsCliqueTable::addClique(const HighsMipSolver& mipsolver,
   // lambda for analysing the clique to see if all variables can be fixed
   auto fixAllVarsInClique = [&](bool& hasNewEdge) {
     for (HighsInt i = 0; i != numcliquevars; ++i) {
-      if (!globaldom.isFixed(cliquevars[i].col) ||
-          cliquevars[i].val != globaldom.col_lower_[cliquevars[i].col])
+      if (!globaldom.isFixedToVal(cliquevars[i].col, cliquevars[i].val))
         continue;
       // column is fixed to 1, every other entry can be fixed to zero
       for (HighsInt k = 0; k != numcliquevars; ++k) {
@@ -1575,9 +1574,8 @@ void HighsCliqueTable::processInfeasibleVertices(HighsDomain& globaldom) {
         removeClique(cliqueid);
         clq.erase(std::remove_if(clq.begin(), clq.end(),
                                  [&](CliqueVar x) {
-                                   return globaldom.isFixed(x.col) &&
-                                          globaldom.col_lower_[x.col] ==
-                                              1 - x.val;
+                                   return globaldom.isFixedToVal(x.col,
+                                                                 1 - x.val);
                                  }),
                   clq.end());
         if (clq.size() > 1) doAddClique(clq.data(), clq.size());
@@ -1991,15 +1989,12 @@ void HighsCliqueTable::runCliqueMerging(HighsDomain& globaldomain,
     runCliqueSubsumption(globaldomain, clique);
 
     if (!clique.empty()) {
-      clique.erase(
-          std::remove_if(clique.begin(), clique.end(),
-                         [&](CliqueVar v) {
-                           return globaldomain.isFixed(v.col) &&
-                                  static_cast<int>(
-                                      globaldomain.col_lower_[v.col]) ==
-                                      static_cast<int>(1 - v.val);
-                         }),
-          clique.end());
+      clique.erase(std::remove_if(clique.begin(), clique.end(),
+                                  [&](CliqueVar v) {
+                                    return globaldomain.isFixedToVal(v.col,
+                                                                     1 - v.val);
+                                  }),
+                   clique.end());
     }
   }
 
@@ -2127,10 +2122,7 @@ void HighsCliqueTable::runCliqueMerging(HighsDomain& globaldomain) {
         extensionvars.erase(
             std::remove_if(extensionvars.begin(), extensionvars.end(),
                            [&](CliqueVar v) {
-                             return globaldomain.isFixed(v.col) &&
-                                    static_cast<int>(
-                                        globaldomain.col_lower_[v.col]) ==
-                                        static_cast<int>(1 - v.val);
+                             return globaldomain.isFixedToVal(v.col, 1 - v.val);
                            }),
             extensionvars.end());
 
