@@ -6248,7 +6248,7 @@ double HPresolve::computeWorstCaseUpperBound(HighsInt col, HighsInt boundCol,
   return upperBound;
 }
 
-HPresolve::Result HPresolve::roundIntegerVariableBounds() {
+HPresolve::Result HPresolve::roundIntegerColBounds() {
   if (mipsolver == nullptr) return Result::kOk;
   assert(model->integrality_.size());
   for (HighsInt iCol = 0; iCol < model->num_col_; iCol++) {
@@ -6663,7 +6663,7 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
   }
 
   if (mipsolver != nullptr)
-    HPRESOLVE_CHECKED_CALL(roundIntegerVariableBounds());
+    HPRESOLVE_CHECKED_CALL(roundIntegerColBounds());
 
   if (options->presolve != kHighsOffString && mipsolver == nullptr &&
       !options->presolve_rule_test) {
