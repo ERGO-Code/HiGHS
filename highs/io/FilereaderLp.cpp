@@ -124,6 +124,18 @@ FilereaderRetcode FilereaderLp::readModelFromFile(const HighsOptions& options,
     for (size_t i = 0; i < m.constraints.size(); i++) {
       std::shared_ptr<Constraint> con = m.constraints[i];
       lp.row_names_[i] = con->expr->name;
+
+      // Match commercial solver behaviour: constants on the LHS of LP
+      // constraints are ignored.
+      if (con->expr->offset != 0) {
+        highsLogUser(
+        options.log_options, HighsLogType::kWarning,
+        "Constraint %d (name \"%s\") has nonzero constant %g on its "
+        "left-hand side: it is ignored\n",
+        int(i), lp.row_names_[i].c_str(), con->expr->offset);
+         warning_issued = true;
+      }
+
       for (size_t j = 0; j < con->expr->linterms.size(); j++) {
         std::shared_ptr<LinTerm> lt = con->expr->linterms[j];
         if (consofvarmap_index.count(lt->var) == 0) {
@@ -270,7 +282,7 @@ FilereaderRetcode FilereaderLp::readModelFromFile(const HighsOptions& options,
       }
     }
     matrix.start_[lp.num_col_] = num_nz;
-    warning_issued = sum_num_duplicate > 0 || sum_num_zero > 0;
+    warning_issued |= sum_num_duplicate > 0 || sum_num_zero > 0;
     HighsInt num_report_skipped = num_report - max_num_report;
     if (num_report_skipped > 0)
       highsLogUser(options.log_options, HighsLogType::kInfo,
