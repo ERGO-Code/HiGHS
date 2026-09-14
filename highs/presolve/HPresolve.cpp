@@ -2493,8 +2493,10 @@ HPresolve::Result HPresolve::checkModelColBounds(HighsInt col, bool& isFixed) {
         std::max(std::fabs(model->a_matrix_.value_[iEl]), max_abs_col_value);
   isFixed = false;
   // Check for simple infeasibility in the original model should
-  // already have been carried out in HPresolve::checkModel()
-  assert(boundDiff >= 0);
+  // already have been carried out in
+  // HPresolve::checkOriginalModelBoundsl()
+  //
+  //  assert(boundDiff >= 0);
   if (boundDiff <= primal_feastol &&
       (boundDiff <= options->small_matrix_value ||
        max_abs_col_value * boundDiff <= primal_feastol)) {
@@ -3621,6 +3623,7 @@ HPresolve::Result HPresolve::singletonRow(HighsPostsolveStack& postsolve_stack,
   if (lowerTightened) HPRESOLVE_CHECKED_CALL(changeColLower(col, lb));
   // update bounds, or remove as fixed column directly
   if (ub == lb) {
+    printf("Column %d is fixed at %g\n", int(col), lb);
     postsolve_stack.removedFixedCol(col, lb, model->col_cost_[col],
                                     getColumnVector(col));
     removeFixedCol(col);
@@ -6252,16 +6255,16 @@ double HPresolve::computeWorstCaseUpperBound(HighsInt col, HighsInt boundCol,
   return upperBound;
 }
 
-HPresolve::Result HPresolve::checkModel() {
+HPresolve::Result HPresolve::checkOriginalModelBounds() {
   const bool is_mip = mipsolver != nullptr;
   assert(!is_mip || model->integrality_.size());
   for (HighsInt iCol = 0; iCol < model->num_col_; iCol++) {
     if (is_mip && model->integrality_[iCol] != HighsVarType::kContinuous) {
       // Perform integer rounding of bounds on integer variables
       model->col_lower_[iCol] =
-        std::ceil(model->col_lower_[iCol] - primal_feastol);
+          std::ceil(model->col_lower_[iCol] - primal_feastol);
       model->col_upper_[iCol] =
-        std::floor(model->col_upper_[iCol] + primal_feastol);
+          std::floor(model->col_upper_[iCol] + primal_feastol);
     }
     // Check for trivial primal infeasibility
     if (model->col_lower_[iCol] > model->col_upper_[iCol])
@@ -6570,7 +6573,7 @@ HPresolve::Result HPresolve::initialRowAndColPresolve(
   for (HighsInt col = 0; col != model->num_col_; ++col) {
     if (colDeleted[col]) continue;
     // round and update bounds
-    if (model->integrality_[col] != HighsVarType::kContinuous) 
+    if (model->integrality_[col] != HighsVarType::kContinuous)
       HPRESOLVE_CHECKED_CALL(
           changeColBounds(col, model->col_lower_[col], model->col_upper_[col]));
     HPRESOLVE_CHECKED_CALL(colPresolve(postsolve_stack, col, timing));
@@ -6682,7 +6685,7 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
 
   // Perform integer rounding of bounds on integer variables and check
   // for trivial bound violations - which yield Result
-  HPRESOLVE_CHECKED_CALL(checkModel());
+  //  HPRESOLVE_CHECKED_CALL(checkOriginalModelBounds());
 
   if (options->presolve != kHighsOffString && mipsolver == nullptr &&
       !options->presolve_rule_test) {

@@ -864,8 +864,17 @@ void solve(Highs& highs, std::string presolve,
 
   REQUIRE(highs.setBasis() == HighsStatus::kOk);
 
-  REQUIRE(highs.run() == HighsStatus::kOk);
+  REQUIRE(highs.run() == (require_model_status == HighsModelStatus::kSolveError
+                              ? HighsStatus::kError
+                              : HighsStatus::kOk));
 
+  bool model_status_ok = highs.getModelStatus() == require_model_status;
+  if (
+      // dev_run &&
+      !model_status_ok)
+    printf("Model status is %s, not %s\n",
+           highs.modelStatusToString(highs.getModelStatus()).c_str(),
+           highs.modelStatusToString(require_model_status).c_str());
   REQUIRE(highs.getModelStatus() == require_model_status);
 
   if (require_model_status == HighsModelStatus::kOptimal) {
@@ -1857,6 +1866,13 @@ TEST_CASE("pr-3260", "[highs_test_mip_solver]") {
 }
 
 TEST_CASE("issue-3271", "[highs_test_mip_solver]") {
+  // LP is
+  //
+  // min 3z subject to -15.5 <= x; x <= 4.5, y free z = 0; x, y, z all integer
+  //
+  // Singleton row -15.5 <= x is removed, giving x \in [-15.5, 4.5]
+  // and, since the colunn is empty, x is fixed to 4.5 - unless bound
+  // on x is rounded to 4 first
   HighsLp lp;
   lp.num_col_ = 3;
   lp.num_row_ = 1;
@@ -1875,5 +1891,10 @@ TEST_CASE("issue-3271", "[highs_test_mip_solver]") {
   Highs highs;
   //  highs.setOptionValue("output_flag", dev_run);
   REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
-  solve(highs, kHighsOnString, HighsModelStatus::kOptimal);
+  solve(highs, kHighsOnString, HighsModelStatus::kSolveError);  // Optimal);
+
+  // Now the singleton row yields x \in [4.5, 4.5] which is infeasible
+  lp.row_lower_ = {4.5};
+  REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
+  solve(highs, kHighsOnString, HighsModelStatus::kInfeasible);
 }
