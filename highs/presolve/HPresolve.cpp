@@ -481,9 +481,15 @@ HPresolve::StatusResult HPresolve::convertImpliedInteger(HighsInt col,
       ++rowsizeImplInt[nonzero.index()];
   }
 
+  // Potentially strengthen existing bound using implied bounds
+  double newLower = model->col_lower_[col];
+  double newUpper = model->col_upper_[col];
+  if (implColLower[col] > newLower + primal_feastol)
+    newLower = implColLower[col];
+  if (implColUpper[col] < newUpper - primal_feastol)
+    newUpper = implColUpper[col];
   // round and update bounds
-  return StatusResult(
-      changeColBounds(col, model->col_lower_[col], model->col_upper_[col]));
+  return StatusResult(changeColBounds(col, newLower, newUpper));
 }
 
 void HPresolve::chooseRules() {

@@ -1826,3 +1826,49 @@ TEST_CASE("pr-3260", "[highs_test_mip_solver]") {
   const double optimal_objective = 0.0;
   solve(highs, kHighsOnString, require_model_status, optimal_objective);
 }
+
+TEST_CASE("issue-3274-1", "[highs_test_mip_solver]") {
+  HighsLp lp;
+  lp.num_col_ = 4;
+  lp.num_row_ = 3;
+  lp.col_cost_ = {0, 1, 0, 0};
+  lp.col_lower_ = {-kHighsInf, -kHighsInf, 0, 0};
+  lp.col_upper_ = {kHighsInf, kHighsInf, kHighsInf, kHighsInf};
+  lp.row_lower_ = {0, 0, -12};
+  lp.row_upper_ = {kHighsInf, 0, kHighsInf};
+  lp.a_matrix_.start_ = {0, 1, 2, 5, 7};
+  lp.a_matrix_.index_ = {1, 0, 0, 1, 2, 1, 2};
+  lp.a_matrix_.value_ = {1, 1, -1, 1, -68, -1, -1};
+  lp.integrality_ = {HighsVarType::kInteger, HighsVarType::kInteger,
+                     HighsVarType::kContinuous, HighsVarType::kInteger};
+
+  for (const std::string& presolve : {kHighsOnString, kHighsOffString}) {
+    Highs highs;
+    highs.setOptionValue("output_flag", dev_run);
+    REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
+    solve(highs, presolve, HighsModelStatus::kOptimal, 0.0);
+  }
+}
+
+TEST_CASE("issue-3274-2", "[highs_test_mip_solver]") {
+  HighsLp lp;
+  lp.num_col_ = 3;
+  lp.num_row_ = 2;
+  lp.col_cost_ = {1, 0, 0};
+  lp.col_lower_ = {1, -kHighsInf, -kHighsInf};
+  lp.col_upper_ = {3, 1, kHighsInf};
+  lp.row_lower_ = {13, 0};
+  lp.row_upper_ = {kHighsInf, 0};
+  lp.a_matrix_.start_ = {0, 2, 4, 5};
+  lp.a_matrix_.index_ = {0, 1, 0, 1, 1};
+  lp.a_matrix_.value_ = {9, 1, 7, -1, -1};
+  lp.integrality_ = {HighsVarType::kSemiContinuous, HighsVarType::kInteger,
+                     HighsVarType::kInteger};
+
+  for (const std::string& presolve : {kHighsOnString, kHighsOffString}) {
+    Highs highs;
+    highs.setOptionValue("output_flag", dev_run);
+    REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
+    solve(highs, presolve, HighsModelStatus::kOptimal, 1.0);
+  }
+}
