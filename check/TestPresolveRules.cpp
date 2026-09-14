@@ -3,6 +3,10 @@
 #include "HCheckConfig.h"
 #include "Highs.h"
 #include "catch.hpp"
+#include "mip/HighsCliqueTable.h"
+#include "mip/HighsMipSolver.h"
+#include "mip/HighsMipSolverData.h"
+#include "parallel/HighsParallel.h"
 #include "presolve/HPresolve.h"
 #include "presolve/HighsPostsolveStack.h"
 
@@ -134,6 +138,181 @@ TEST_CASE("test-parallel-rows-cut-ordering", "[highs_test_presolve_rules]") {
   // The surviving row must be original row 1 (non-cut), not row 0 (cut)
   REQUIRE(postsolve_stack.getOrigRowIndex(0) == 1);
   REQUIRE(!postsolve_stack.isCutRow(0));
+}
+
+TEST_CASE("test-clique-extract-origin", "[highs_test_presolve_rules]") {
+  // normaliseCliqueRows flips >= rows to <= form so that extractCliques
+  // recognises them as set packing constraints with a row origin.
+  // Clique merging then extends the 3-clique from row 0 with (x3,0)
+  // and subsumes the size-2 cliques, deleting their origin rows.
+  //   row 0: x0 + x1 + x2 <= 1       (set packing, 3-clique)
+  //   row 1: -x0 + x3 >= 0           (x3 >= x0, implication)
+  //   row 2: -x1 + x3 >= 0           (x3 >= x1, implication)
+  //   row 3: -x2 + x3 >= 0           (x3 >= x2, implication)
+  HighsLp lp;
+  lp.num_col_ = 4;
+  lp.num_row_ = 4;
+  lp.sense_ = ObjSense::kMinimize;
+  lp.col_cost_ = {1.0, 1.0, 1.0, 1.0};
+  lp.col_lower_ = {0.0, 0.0, 0.0, 0.0};
+  lp.col_upper_ = {1.0, 1.0, 1.0, 1.0};
+  lp.integrality_ = {HighsVarType::kInteger, HighsVarType::kInteger,
+                     HighsVarType::kInteger, HighsVarType::kInteger};
+  lp.row_lower_ = {-kHighsInf, 0.0, 0.0, 0.0};
+  lp.row_upper_ = {1.0, kHighsInf, kHighsInf, kHighsInf};
+  lp.a_matrix_.format_ = MatrixFormat::kColwise;
+  lp.a_matrix_.num_col_ = 4;
+  lp.a_matrix_.num_row_ = 4;
+  lp.a_matrix_.start_ = {0, 2, 4, 6, 9};
+  lp.a_matrix_.index_ = {0, 1, 0, 2, 0, 3, 1, 2, 3};
+  lp.a_matrix_.value_ = {1.0, -1.0, 1.0, -1.0, 1.0, -1.0, 1.0, 1.0, 1.0};
+
+  highs::parallel::initialize_scheduler(1);
+
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  highs.setOptionValue("presolve_rule_test", kPresolveRuleProbing);
+  highs.passModel(lp);
+
+  HighsCallback callback(&highs);
+  const HighsOptions& options = highs.getOptions();
+  HighsSolution solution;
+  HighsProfiling profiling;
+
+  HighsMipSolver mipsolver(callback, options, lp, solution);
+  mipsolver.timer_.start();
+  profiling.initialize(mipsolver.timer_, true, true);
+  mipsolver.setProfiling(&profiling);
+  mipsolver.mipdata_ =
+      std::unique_ptr<HighsMipSolverData>(new HighsMipSolverData(mipsolver));
+  mipsolver.mipdata_->init();
+  mipsolver.mipdata_->setupDomainPropagation();
+
+  presolve::HighsPostsolveStack& postsolve_stack =
+      mipsolver.mipdata_->postSolveStack;
+
+  presolve::HPresolve presolve;
+  presolve.setInput(mipsolver, -1);
+  REQUIRE(presolve.okSetupPresolveDataStructures());
+  HighsModelStatus status = presolve.run(postsolve_stack);
+  REQUIRE(status == HighsModelStatus::kNotset);
+
+  REQUIRE(mipsolver.numRow() <= 1);
+
+  HighsTaskExecutor::shutdown(true);
+}
+
+TEST_CASE("test-clique-extract-origin-unequal-coeff",
+          "[highs_test_presolve_rules]") {
+  // Same as test-clique-extract-origin but row 0 has unequal coefficients,
+  // exercising the sub-clique extraction loop instead of the equal-
+  // coefficient path.
+  //   row 0: x0 + 2*x1 + 2*x2 <= 2  (unequal coeffs, clique covers all 3)
+  //   row 1: -x0 + x3 >= 0
+  //   row 2: -x1 + x3 >= 0
+  //   row 3: -x2 + x3 >= 0
+  HighsLp lp;
+  lp.num_col_ = 4;
+  lp.num_row_ = 4;
+  lp.sense_ = ObjSense::kMinimize;
+  lp.col_cost_ = {1.0, 1.0, 1.0, 1.0};
+  lp.col_lower_ = {0.0, 0.0, 0.0, 0.0};
+  lp.col_upper_ = {1.0, 1.0, 1.0, 1.0};
+  lp.integrality_ = {HighsVarType::kInteger, HighsVarType::kInteger,
+                     HighsVarType::kInteger, HighsVarType::kInteger};
+  lp.row_lower_ = {-kHighsInf, 0.0, 0.0, 0.0};
+  lp.row_upper_ = {2.0, kHighsInf, kHighsInf, kHighsInf};
+  lp.a_matrix_.format_ = MatrixFormat::kColwise;
+  lp.a_matrix_.num_col_ = 4;
+  lp.a_matrix_.num_row_ = 4;
+  lp.a_matrix_.start_ = {0, 2, 4, 6, 9};
+  lp.a_matrix_.index_ = {0, 1, 0, 2, 0, 3, 1, 2, 3};
+  lp.a_matrix_.value_ = {1.0, -1.0, 2.0, -1.0, 2.0, -1.0, 1.0, 1.0, 1.0};
+
+  highs::parallel::initialize_scheduler(1);
+
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  highs.setOptionValue("presolve_rule_test", kPresolveRuleProbing);
+  highs.passModel(lp);
+
+  HighsCallback callback(&highs);
+  const HighsOptions& options = highs.getOptions();
+  HighsSolution solution;
+  HighsProfiling profiling;
+
+  HighsMipSolver mipsolver(callback, options, lp, solution);
+  mipsolver.timer_.start();
+  profiling.initialize(mipsolver.timer_, true, true);
+  mipsolver.setProfiling(&profiling);
+  mipsolver.mipdata_ =
+      std::unique_ptr<HighsMipSolverData>(new HighsMipSolverData(mipsolver));
+  mipsolver.mipdata_->init();
+  mipsolver.mipdata_->setupDomainPropagation();
+
+  presolve::HighsPostsolveStack& postsolve_stack =
+      mipsolver.mipdata_->postSolveStack;
+
+  presolve::HPresolve presolve;
+  presolve.setInput(mipsolver, -1);
+  REQUIRE(presolve.okSetupPresolveDataStructures());
+  HighsModelStatus status = presolve.run(postsolve_stack);
+  REQUIRE(status == HighsModelStatus::kNotset);
+
+  REQUIRE(mipsolver.numRow() <= 1);
+
+  HighsTaskExecutor::shutdown(true);
+}
+
+TEST_CASE("test-clique-no-delete-ranged-row", "[highs_test_presolve_rules]") {
+  // Negative test: ranged rows must not be deleted by clique merging because
+  // the extracted clique is a relaxation (only captures one side).
+  //   row 0: x0 + x1 + x2 <= 1       (set packing, 3-clique)
+  //   row 1: 0 <= -x0 + x3 <= 1      (ranged)
+  //   row 2: 0 <= -x1 + x3 <= 1      (ranged)
+  //   row 3: 0 <= -x2 + x3 <= 1      (ranged)
+  HighsLp lp;
+  lp.num_col_ = 4;
+  lp.num_row_ = 4;
+  lp.sense_ = ObjSense::kMinimize;
+  lp.col_cost_ = {1.0, 1.0, 1.0, 1.0};
+  lp.col_lower_ = {0.0, 0.0, 0.0, 0.0};
+  lp.col_upper_ = {1.0, 1.0, 1.0, 1.0};
+  lp.integrality_ = {HighsVarType::kInteger, HighsVarType::kInteger,
+                     HighsVarType::kInteger, HighsVarType::kInteger};
+  lp.row_lower_ = {-kHighsInf, 0.0, 0.0, 0.0};
+  lp.row_upper_ = {1.0, 1.0, 1.0, 1.0};
+  lp.a_matrix_.format_ = MatrixFormat::kColwise;
+  lp.a_matrix_.num_col_ = 4;
+  lp.a_matrix_.num_row_ = 4;
+  lp.a_matrix_.start_ = {0, 2, 4, 6, 9};
+  lp.a_matrix_.index_ = {0, 1, 0, 2, 0, 3, 1, 2, 3};
+  lp.a_matrix_.value_ = {1.0, -1.0, 1.0, -1.0, 1.0, -1.0, 1.0, 1.0, 1.0};
+
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  highs.passModel(lp);
+
+  HighsCallback callback(&highs);
+  const HighsOptions& options = highs.getOptions();
+  HighsSolution solution;
+  HighsMipSolver mipsolver(callback, options, lp, solution);
+  mipsolver.mipdata_ =
+      std::unique_ptr<HighsMipSolverData>(new HighsMipSolverData(mipsolver));
+  mipsolver.mipdata_->feastol = 1e-6;
+  mipsolver.mipdata_->postSolveStack.initializeIndexMaps(4, 4);
+  mipsolver.mipdata_->setupDomainPropagation();
+
+  HighsCliqueTable& cliquetable = mipsolver.mipdata_->cliquetable;
+  HighsDomain& domain = mipsolver.mipdata_->getDomain();
+
+  cliquetable.extractCliques(mipsolver);
+  cliquetable.runCliqueMerging(domain);
+
+  const std::vector<HighsInt>& deleted = cliquetable.getDeletedRows();
+  REQUIRE(deleted.empty());
+
+  highs.resetGlobalScheduler(true);
 }
 
 void solveAndCheck(const std::string& message, const HighsLp& lp, Highs& h,

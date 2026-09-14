@@ -16,6 +16,8 @@ HPresolve::Result HPresolve::presolveRuleTest(
     return presolveRuleTestColStuffing(postsolve_stack);
   } else if (options->presolve_rule_test == kPresolveRuleParallelRowsAndCols) {
     return presolveRuleTestParallelRowsAndCols(postsolve_stack);
+  } else if (options->presolve_rule_test == kPresolveRuleProbing) {
+    return presolveRuleTestProbing(postsolve_stack);
   }
   return Result::kOk;
 }
@@ -44,5 +46,12 @@ HPresolve::Result HPresolve::presolveRuleTestParallelRowsAndCols(
   highsLogUser(options->log_options, HighsLogType::kInfo,
                "HPresolve::presolveRuleTestParallelRowsAndCols\n");
   return detectParallelRowsAndCols(postsolve_stack);
+}
+HPresolve::Result HPresolve::presolveRuleTestProbing(
+    HighsPostsolveStack& postsolve_stack) {
+  assert(options->presolve_rule_test == kPresolveRuleProbing);
+  highsLogUser(options->log_options, HighsLogType::kInfo,
+               "HPresolve::presolveRuleTestProbing\n");
+  return runProbing(postsolve_stack);
 }
 }  // namespace presolve
