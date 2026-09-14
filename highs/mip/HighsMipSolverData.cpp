@@ -1188,15 +1188,15 @@ try_again:
       mipsolver.orig_model_, solution.col_value, &solution.row_value, violation,
       mipsolver_quad_objective_value);
   double bound_violation_ = 0;
-  double integrality_violation_ = 0;
   double row_violation_ = 0;
-  violation.copy(bound_violation_, integrality_violation_, row_violation_);
+  double integrality_violation_ = 0;
+  violation.copy(bound_violation_, row_violation_, integrality_violation_);
   double mipsolver_objective_value = double(mipsolver_quad_objective_value);
   if (!feasible && allow_try_again) {
     // printf(
-    //     "trying to repair sol that is violated by %.12g bounds, %.12g "
-    //     "integrality, %.12g rows\n",
-    //     bound_violation_, integrality_violation_, row_violation_);
+    //     "trying to repair sol that is violated by %.12g bounds, %.12g rows,
+    //     %.12g "integrality\n", bound_violation_, row_violation_,
+    //     integrality_violation_);
     HighsLp fixedModel = *mipsolver.orig_model_;
     fixedModel.integrality_.clear();
     for (HighsInt i = 0; i != mipsolver.orig_model_->num_col_; ++i) {
@@ -2806,9 +2806,9 @@ void HighsMipSolverData::queryExternalSolution(
           mipsolver.orig_model_, user_solution, nullptr, violation,
           user_solution_quad_objective_value);
       double bound_violation_ = 0;
-      double integrality_violation_ = 0;
       double row_violation_ = 0;
-      violation.copy(bound_violation_, integrality_violation_, row_violation_);
+      double integrality_violation_ = 0;
+      violation.copy(bound_violation_, row_violation_, integrality_violation_);
       double user_solution_objective_value =
           double(user_solution_quad_objective_value);
       if (!feasible) {
