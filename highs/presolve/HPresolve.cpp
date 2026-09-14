@@ -1711,7 +1711,10 @@ HPresolve::Result HPresolve::prepareProbing(
 
   shrinkProblem(postsolve_stack);
 
-  HPRESOLVE_CHECKED_CALL(normaliseCliqueRows(postsolve_stack));
+  // first call?
+  firstCall = !mipsolver->mipdata_->cliquesExtracted;
+
+  if (firstCall) HPRESOLVE_CHECKED_CALL(normaliseCliqueRows(postsolve_stack));
 
   toCSC(model->a_matrix_.value_, model->a_matrix_.index_,
         model->a_matrix_.start_);
@@ -1736,9 +1739,6 @@ HPresolve::Result HPresolve::prepareProbing(
 
   // prepare for domain propagation
   mipsolver->mipdata_->setupDomainPropagation();
-
-  // first call?
-  firstCall = !mipsolver->mipdata_->cliquesExtracted;
 
   domain.propagate();
   if (domain.infeasible()) return Result::kPrimalInfeasible;
