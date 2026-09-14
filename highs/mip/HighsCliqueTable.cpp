@@ -851,7 +851,7 @@ void HighsCliqueTable::extractCliques(
     const HighsMipSolver& mipsolver, std::vector<HighsInt>& inds,
     std::vector<double>& vals, std::vector<int8_t>& complementation, double rhs,
     HighsInt nbin, std::vector<HighsInt>& perm, std::vector<CliqueVar>& clique,
-    double feastol, HighsInt origin) {
+    double feastol) {
   HighsImplications& implics = mipsolver.mipdata_->implications;
   HighsDomain& globaldom = mipsolver.mipdata_->getDomain();
 
@@ -939,10 +939,7 @@ void HighsCliqueTable::extractCliques(
         clique.emplace_back(inds[pos], 1);
     }
 
-    // if all variables are binary, pass row origin so clique merging
-    // can delete the subsumed row
-    addClique(mipsolver, clique.data(), nbin, false,
-              nbin == ntotal ? origin : kHighsIInf);
+    addClique(mipsolver, clique.data(), nbin);
     if (globaldom.infeasible()) return;
     // printf("extracted this clique:\n");
     // printClique(clique);
@@ -980,11 +977,7 @@ void HighsCliqueTable::extractCliques(
       // if (clique.size() > 2) runCliqueSubsumption(globaldom, clique);
       // runCliqueMerging(globaldom, clique);
       // if (clique.size() >= 2) {
-      // if all variables are binary and form one clique, pass row origin
-      // so clique merging can delete the subsumed row
-      addClique(
-          mipsolver, clique.data(), static_cast<HighsInt>(clique.size()), false,
-          static_cast<HighsInt>(clique.size()) == ntotal ? origin : kHighsIInf);
+      addClique(mipsolver, clique.data(), static_cast<HighsInt>(clique.size()));
       if (globaldom.infeasible()) return;
       //}
     }
@@ -1304,32 +1297,42 @@ void HighsCliqueTable::extractCliques(HighsMipSolver& mipsolver,
     // catch set packing and partitioning constraints that already have the form
     // of a clique without transformations and add those cliques with the rows
     // being recorded
-    if (mipsolver.rowUpper(i) == 1.0) {
-      bool issetppc = true;
+    bool issetppc = true;
+    HighsInt numComp = 0;
+    for (HighsInt j = start; j != end; ++j) {
+      HighsInt col = mipsolver.mipdata_->ARindex_[j];
+      double val = mipsolver.mipdata_->ARvalue_[j];
+      if (globaldom.col_upper_[col] == 0.0 && globaldom.col_lower_[col] == 0.0)
+        continue;
 
+      issetppc = globaldom.isBinary(col) && std::abs(val) == 1.0;
+      if (!issetppc) break;
+      if (val < 0) numComp++;
+    }
+    if (!issetppc) continue;
+
+    if (mipsolver.rowUpper(i) == 1.0 - numComp) {
       clique.clear();
 
       for (HighsInt j = start; j != end; ++j) {
         HighsInt col = mipsolver.mipdata_->ARindex_[j];
+        double val = mipsolver.mipdata_->ARvalue_[j];
         if (globaldom.col_upper_[col] == 0.0 &&
             globaldom.col_lower_[col] == 0.0)
           continue;
 
-        issetppc =
-            globaldom.isBinary(col) && mipsolver.mipdata_->ARvalue_[j] == 1.0;
-        if (!issetppc) break;
-
-        clique.emplace_back(col, 1);
+        if (val > 0)
+          clique.emplace_back(col, 1);
+        else
+          clique.emplace_back(col, 0);
       }
 
-      if (issetppc) {
-        addClique(mipsolver, clique.data(),
-                  static_cast<HighsInt>(clique.size()),
-                  mipsolver.rowLower(i) == 1.0, i);
-        if (globaldom.infeasible()) return;
-        continue;
-      }
+      addClique(mipsolver, clique.data(), static_cast<HighsInt>(clique.size()),
+                mipsolver.rowLower(i) == 1.0 - numComp, i);
+      if (globaldom.infeasible()) return;
+      continue;
     }
+
     if (!transformRows || isFull()) continue;
 
     offset = 0;
@@ -1341,7 +1344,7 @@ void HighsCliqueTable::extractCliques(HighsMipSolver& mipsolver,
       entries[col] += val;
     }
 
-    auto checkRow = [&](HighsInt row, double rhs, HighsInt direction) {
+    auto checkRow = [&](double rhs, HighsInt direction) {
       if (direction * rhs == kHighsInf) return;
       rhs = direction * (rhs - offset);
       inds.clear();
@@ -1379,18 +1382,15 @@ void HighsCliqueTable::extractCliques(HighsMipSolver& mipsolver,
 
       if (!freevar && nbin != 0) {
         extractCliques(mipsolver, inds, vals, complementation, rhs, nbin, perm,
-                       clique, mipsolver.mipdata_->feastol, row);
+                       clique, mipsolver.mipdata_->feastol);
         if (globaldom.infeasible()) return;
       }
     };
 
     // only pass row origin for one-sided inequalities; a clique is a
     // relaxation of a ranged row so it cannot be deleted
-    bool isRanged = mipsolver.rowUpper(i) != kHighsInf &&
-                    mipsolver.rowLower(i) != -kHighsInf;
-    HighsInt rowOrigin = isRanged ? kHighsIInf : i;
-    checkRow(rowOrigin, mipsolver.rowUpper(i), HighsInt{1});
-    checkRow(rowOrigin, mipsolver.rowLower(i), HighsInt{-1});
+    checkRow(mipsolver.rowUpper(i), HighsInt{1});
+    checkRow(mipsolver.rowLower(i), HighsInt{-1});
 
     entries.clear();
   }
