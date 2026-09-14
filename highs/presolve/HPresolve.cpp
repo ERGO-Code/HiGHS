@@ -1693,8 +1693,9 @@ HPresolve::Result HPresolve::normaliseCliqueRows(
     }
 
     // update row bounds
+    bool equation = isEquation(row);
     model->row_upper_[row] = 1.0 - numComp;
-    if (isEquation(row))
+    if (equation)
       model->row_lower_[row] = 1.0 - numComp;
     else {
       model->row_lower_[row] = -kHighsInf;

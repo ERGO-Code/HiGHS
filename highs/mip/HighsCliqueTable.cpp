@@ -1315,9 +1315,8 @@ void HighsCliqueTable::extractCliques(HighsMipSolver& mipsolver,
 
       if (val < 0) numComp++;
     }
-    if (!issetppc) continue;
 
-    if (mipsolver.rowUpper(i) == 1.0 - numComp) {
+    if (issetppc && mipsolver.rowUpper(i) == 1.0 - numComp) {
       clique.clear();
 
       for (HighsInt j = start; j != end; ++j) {
