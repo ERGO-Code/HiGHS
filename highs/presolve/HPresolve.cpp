@@ -1711,6 +1711,8 @@ HPresolve::Result HPresolve::prepareProbing(
 
   shrinkProblem(postsolve_stack);
 
+  HPRESOLVE_CHECKED_CALL(normaliseCliqueRows(postsolve_stack));
+
   toCSC(model->a_matrix_.value_, model->a_matrix_.index_,
         model->a_matrix_.start_);
   okFromCSC(model->a_matrix_.value_, model->a_matrix_.index_,
@@ -1731,8 +1733,6 @@ HPresolve::Result HPresolve::prepareProbing(
         implColUpper[i] < model->col_upper_[i])
       HPRESOLVE_CHECKED_CALL(changeColUpper(i, implColUpper[i]));
   }
-
-  HPRESOLVE_CHECKED_CALL(normaliseCliqueRows(postsolve_stack));
 
   // prepare for domain propagation
   mipsolver->mipdata_->setupDomainPropagation();
@@ -3266,7 +3266,9 @@ void HPresolve::scaleStoredRow(HighsInt row, double scale, bool integral) {
 
   impliedRowBounds.sumScaled(row, scale);
   if (scale < 0) {
-    std::swap(rowDualLower[row], rowDualUpper[row]);
+    double tmp = rowDualLower[row];
+    rowDualLower[row] = -rowDualUpper[row];
+    rowDualUpper[row] = -tmp;
     std::swap(implRowDualLower[row], implRowDualUpper[row]);
     std::swap(rowDualLowerSource[row], rowDualUpperSource[row]);
     std::swap(model->row_lower_[row], model->row_upper_[row]);
