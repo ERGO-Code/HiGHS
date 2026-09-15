@@ -1296,42 +1296,55 @@ void HighsCliqueTable::extractCliques(HighsMipSolver& mipsolver,
     // form of a clique without transformations and add those cliques with
     // the rows being recorded. only <= and = rows are checked because
     // normaliseCliqueRows has already flipped >= rows to <= form.
-    auto skipFixedVar = [&](HighsInt col, double val) {
-      return (!globaldom.isBinary(col) && globaldom.isFixedToVal(col, 0)) ||
-             (globaldom.isBinary(col) &&
-              globaldom.isFixedToVal(col, 1 - (val > 0 ? 1 : 0)));
-    };
-
-    bool issetppc = true;
-    HighsInt numComp = 0;
-    for (HighsInt j = start; j != end; ++j) {
-      HighsInt col = mipsolver.mipdata_->ARindex_[j];
-      double val = mipsolver.mipdata_->ARvalue_[j];
-
-      if (skipFixedVar(col, val)) continue;
-
-      issetppc = globaldom.isBinary(col) && std::abs(val) == 1.0;
-      if (!issetppc) break;
-
-      if (val < 0) numComp++;
-    }
-
-    if (issetppc && mipsolver.rowUpper(i) == 1.0 - numComp) {
-      clique.clear();
-
+    if (mipsolver.rowUpper(i) < kHighsInf) {
+      bool issetppc = true;
+      bool equation = mipsolver.rowUpper(i) == mipsolver.rowLower(i);
+      HighsCDouble rhs = mipsolver.rowUpper(i);
+      HighsInt numComp = 0;
       for (HighsInt j = start; j != end; ++j) {
         HighsInt col = mipsolver.mipdata_->ARindex_[j];
         double val = mipsolver.mipdata_->ARvalue_[j];
 
-        if (skipFixedVar(col, val)) continue;
+        // handle fixed non-binary variables
+        if (!globaldom.isBinary(col) && globaldom.isFixed(col)) {
+          rhs -= val * static_cast<HighsCDouble>(globaldom.col_upper_[col]);
+          continue;
+        }
 
-        clique.emplace_back(col, val > 0 ? 1 : 0);
+        // check if we have a set partitioning / packing row
+        issetppc = globaldom.isBinary(col) && std::abs(val) == 1.0;
+        if (!issetppc) break;
+
+        // count number of complemented binaries (with coefficient -1)
+        if (val < 0) numComp++;
       }
 
-      addClique(mipsolver, clique.data(), static_cast<HighsInt>(clique.size()),
-                mipsolver.rowLower(i) == 1.0 - numComp, i);
-      if (globaldom.infeasible()) return;
-      continue;
+      if (issetppc && rhs == 1.0 - numComp) {
+        clique.clear();
+
+        for (HighsInt j = start; j != end; ++j) {
+          HighsInt col = mipsolver.mipdata_->ARindex_[j];
+          double val = mipsolver.mipdata_->ARvalue_[j];
+
+          // skip non-binary variables (fixed, see previous loop) and binaries
+          // that are fixed to "inactive" values
+          if (!globaldom.isBinary(col) ||
+              (globaldom.isBinary(col) &&
+               globaldom.isFixedToVal(col, 1 - (val > 0 ? 1 : 0))))
+            continue;
+
+          // add to clique
+          clique.emplace_back(col, val > 0 ? 1 : 0);
+        }
+
+        // add clique to clique table
+        if (clique.size() >= 2) {
+          addClique(mipsolver, clique.data(),
+                    static_cast<HighsInt>(clique.size()), equation, i);
+          if (globaldom.infeasible()) return;
+        }
+        continue;
+      }
     }
 
     if (!transformRows || isFull()) continue;
