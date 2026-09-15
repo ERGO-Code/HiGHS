@@ -572,6 +572,7 @@ HighsInt Highs_getSolution(const void* highs, double* col_value,
 HighsInt Highs_getBasis(const void* highs, HighsInt* col_status,
                         HighsInt* row_status) {
   const HighsBasis& basis = ((Highs*)highs)->getBasis();
+  if (!basis.valid) return kHighsStatusError;
   for (size_t i = 0; i < basis.col_status.size(); i++) {
     col_status[i] = static_cast<HighsInt>(basis.col_status[i]);
   }

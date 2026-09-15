@@ -2226,6 +2226,11 @@ HighsStatus Highs::getFixedLp(HighsLp& lp) const {
   return HighsStatus::kOk;
 }
 
+const HighsBasis& Highs::getBasis() const {
+  assert(this->basis_.valid == (this->info_.basis_validity == kBasisValidityValid));
+  return this->basis_;
+}
+
 HighsStatus Highs::getDualRay(bool& has_dual_ray, double* dual_ray_value) {
   has_dual_ray = false;
   return getDualRayInterface(has_dual_ray, dual_ray_value);
