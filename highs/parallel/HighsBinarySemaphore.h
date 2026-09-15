@@ -22,7 +22,7 @@
 class HighsBinarySemaphore {
   struct Data {
     std::atomic<int> count;
-    alignas(64) std::mutex mutex;
+    alignas(HighsSchedulerConstants::kCacheLineSize) std::mutex mutex;
     std::condition_variable condvar;
 
     Data(int init) : count(init) {}

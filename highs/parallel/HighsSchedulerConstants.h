@@ -13,6 +13,7 @@ struct HighsSchedulerConstants {
     kNumTryFac = 16,
     kMicroSecsBeforeSleep = 5000,
     kMicroSecsBeforeGlobalSync = 1000,
+    kCacheLineSize = 64,
   };
 };
 
