@@ -40,7 +40,7 @@ const double kSpopsWeightSn = 50.0;
 // dense factorisation
 const double kAlphaBK = 0.01;  //(sqrt(17.0) + 1.0) / 8.0;
 const Int kBlockGrainSize = 1;
-const Int kBlockParallelThreshold = 5;
+const Int kBlockParallelThreshold = 1;
 
 const Int kMinConsecutiveSums = 1;
 

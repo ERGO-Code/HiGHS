@@ -123,6 +123,7 @@ Int denseFactFH(Int n, Int k, double* A, double* B, const Int* pivot_sign,
       // ===========================================================================
       // UPDATE
       // ===========================================================================
+      highs::parallel::TaskGroup tg;
 
       auto split_gemm = [&](Int num_row, Int num_col, const double* Rj,
                             const double* Pj, double* Qj) {
@@ -133,19 +134,23 @@ Int denseFactFH(Int n, Int k, double* A, double* B, const Int* pivot_sign,
                               num_row >= kBlockParallelThreshold * nb;
 
         if (do_split) {
-          auto do_gemm_block_rows = [=, &data](Int start_row, Int end_row) {
-            const Int Rj_offset = jb * start_row;
-            const Int Qj_offset = num_col * start_row;
-            const Int row_count = end_row - start_row;
-
+          Int Rj_offset{};
+          Int Qj_offset{};
+          Int row_start{};
+          while (row_start < num_row) {
             const double* Rj_block = &Rj[Rj_offset];
             double* Qj_block = &Qj[Qj_offset];
+            const Int rows_in_block = std::min(nb, num_row - row_start);
 
-            callAndTime_dgemm('T', 'N', num_col, row_count, jb, -1.0, Pj, jb,
-                              Rj_block, jb, 1.0, Qj_block, num_col, data);
-          };
-          highs::parallel::for_each(0, num_row, do_gemm_block_rows, nb);
+            tg.spawn([=, &data]() {
+              callAndTime_dgemm('T', 'N', num_col, rows_in_block, jb, -1.0, Pj,
+                                jb, Rj_block, jb, 1.0, Qj_block, num_col, data);
+            });
 
+            Rj_offset += jb * nb;
+            Qj_offset += num_col * nb;
+            row_start += nb;
+          }
         } else {
           callAndTime_dgemm('T', 'N', num_col, num_row, jb, -1.0, Pj, jb, Rj,
                             jb, 1.0, Qj, num_col, data);
@@ -191,6 +196,7 @@ Int denseFactFH(Int n, Int k, double* A, double* B, const Int* pivot_sign,
         }
       }
 
+      tg.taskWait();
       HIPO_CLOCK_STOP(2, data, kTimeDenseFact_update);
     }
   }
