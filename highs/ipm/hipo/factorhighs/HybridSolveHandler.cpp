@@ -223,7 +223,7 @@ void HybridSolveHandler::processForwardTask(Int task, double* x) const {
   // assembel contributions of children
   child = first_child_[task];
   while (child != -1) {
-    for (Int i = 0; i < task_rows_[child].size(); ++i) {
+    for (Int i = 0; i < static_cast<Int>(task_rows_[child].size()); ++i) {
       if (task_rows_[child][i] < end_col_in_task)
         x[task_rows_[child][i]] -= task_vals_[child][i];
       else {

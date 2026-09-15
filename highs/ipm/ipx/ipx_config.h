@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 
-#include "util/HighsInt.h"
+#include "util/HighsType.h"
 typedef HighsInt ipxint;
 
 #endif /* IPX_CONFIG_H_ */

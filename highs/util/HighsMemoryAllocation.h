@@ -14,7 +14,7 @@
 
 #include <vector>
 
-#include "util/HighsInt.h"
+#include "util/HighsType.h"
 
 template <typename T>
 bool okResize(std::vector<T>& use_vector, HighsInt dimension, T value = T{}) {

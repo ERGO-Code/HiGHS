@@ -12,7 +12,7 @@
 #include <cassert>
 #include <type_traits>
 
-#include "util/HighsInt.h"
+#include "util/HighsType.h"
 
 namespace highs {
 

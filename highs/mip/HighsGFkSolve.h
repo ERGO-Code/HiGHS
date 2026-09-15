@@ -88,7 +88,7 @@ class HighsGFkSolve {
   std::vector<HighsInt> factorColPerm;
   std::vector<HighsInt> factorRowPerm;
   std::vector<int8_t> colBasisStatus;
-  std::vector<int8_t> rowUsed;
+  std::vector<HighsBool> rowUsed;
 
   // working memory
   std::vector<HighsInt> iterstack;
@@ -198,7 +198,7 @@ class HighsGFkSolve {
     factorColPerm.reserve(maxPivot);
     factorRowPerm.reserve(maxPivot);
     colBasisStatus.assign(numCol, 0);
-    rowUsed.assign(numRow, 0);
+    rowUsed.assign(numRow, false);
     HighsInt numPivot = 0;
 
     while (!pqueue.empty()) {
@@ -285,7 +285,7 @@ class HighsGFkSolve {
       factorColPerm.push_back(pivotCol);
       factorRowPerm.push_back(pivotRow);
       colBasisStatus[pivotCol] = 1;
-      rowUsed[pivotRow] = 1;
+      rowUsed[pivotRow] = true;
       if (numPivot == maxPivot) break;
 
       for (HighsInt i = 0; i != pivotRowLen; ++i) {
@@ -321,7 +321,7 @@ class HighsGFkSolve {
       hasSolution[rhsIndex] = true;
       for (HighsInt i = 0; i != numRow; ++i) {
         // if the row was used it is linearly independent
-        if (rowUsed[i] == 1) continue;
+        if (rowUsed[i]) continue;
 
         // if the row is linearly dependent, the right hand side must be zero,
         // otherwise no solution exists

@@ -208,8 +208,9 @@ static void userCallback(const int callback_type, const char* message,
 static HighsInt cCallHessian(const HighsInt call_type,
                              const HighsInt* x_num_entries,
                              const HighsInt* x_index, const double* x_value,
-                             HighsInt* q_x_num_entries, HighsInt* q_x_index,
-                             double* q_x_value, void* hessian_p) {
+                             HighsInt* hessian_x_num_entries,
+                             HighsInt* hessian_x_index, double* hessian_x_value,
+                             void* hessian_p) {
   assert(kHighsHessianOracleCallTypeMin <= call_type &&
          call_type <= kHighsHessianOracleCallTypeMax);
   CHessian hessian = *(CHessian*)hessian_p;
@@ -220,15 +221,15 @@ static HighsInt cCallHessian(const HighsInt call_type,
     return -1;
   } else {
     assert(x_index == NULL || *x_num_entries >= 0);
-    assert(q_x_index == NULL);
-    assert(q_x_value != NULL);
+    assert(hessian_x_index == NULL);
+    assert(hessian_x_value != NULL);
     if (x_index == NULL) {
       // Simple product with full vector x, full vector q_x
       for (HighsInt iCol = 0; iCol < hessian.dim_; iCol++)
         for (HighsInt iEl = hessian.start_[iCol];
              iEl < hessian.start_[iCol + 1]; iEl++) {
           HighsInt iRow = hessian.index_[iEl];
-          q_x_value[iRow] += hessian.value_[iEl] * x_value[iCol];
+          hessian_x_value[iRow] += hessian.value_[iEl] * x_value[iCol];
         }
     } else {
       // x is scattered with x_num_entries entries in rows x_index
@@ -237,7 +238,7 @@ static HighsInt cCallHessian(const HighsInt call_type,
         for (HighsInt iEl = hessian.start_[iCol];
              iEl < hessian.start_[iCol + 1]; iEl++) {
           HighsInt iRow = hessian.index_[iEl];
-          q_x_value[iRow] += hessian.value_[iEl] * x_value[iCol];
+          hessian_x_value[iRow] += hessian.value_[iEl] * x_value[iCol];
         }
       }
     }
@@ -1510,8 +1511,10 @@ void passPresolveGetLp() {
         (double*)malloc(sizeof(double) * presolved_num_row);
     double* presolved_row_upper =
         (double*)malloc(sizeof(double) * presolved_num_row);
-    HighsInt* presolved_a_start =
-        (HighsInt*)malloc(sizeof(HighsInt) * (presolved_num_col + 1));
+    HighsInt* presolved_a_start = (HighsInt*)malloc(
+        sizeof(HighsInt) * (presolved_a_format == kHighsMatrixFormatColwise
+                                ? presolved_num_col + 1
+                                : presolved_num_row + 1));
     HighsInt* presolved_a_index =
         (HighsInt*)malloc(sizeof(HighsInt) * presolved_num_nz);
     double* presolved_a_value =
@@ -1538,9 +1541,9 @@ void passPresolveGetLp() {
     assert(return_status == kHighsStatusOk);
     return_status = Highs_run(local_highs);
 
-    double* col_value = (double*)malloc(sizeof(double) * num_col);
-    double* col_dual = (double*)malloc(sizeof(double) * num_col);
-    double* row_dual = (double*)malloc(sizeof(double) * num_row);
+    double* col_value = (double*)malloc(sizeof(double) * presolved_num_col);
+    double* col_dual = (double*)malloc(sizeof(double) * presolved_num_col);
+    double* row_dual = (double*)malloc(sizeof(double) * presolved_num_row);
 
     return_status =
         Highs_getSolution(local_highs, col_value, col_dual, NULL, row_dual);

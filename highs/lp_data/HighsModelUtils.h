@@ -109,7 +109,7 @@ std::string utilModelStatusToString(const HighsModelStatus model_status);
 
 std::string utilSolutionStatusToString(const HighsInt solution_status);
 
-std::string utilBasisStatusToString(const HighsBasisStatus basis_status);
+StatusString utilBasisStatusToString(const HighsBasisStatus basis_status);
 
 std::string utilBasisValidityToString(const HighsInt basis_validity);
 

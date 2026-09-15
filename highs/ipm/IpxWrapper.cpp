@@ -1470,5 +1470,4 @@ HighsStatus reportHipoCrossoverStatus(const HighsOptions& options,
                  "Hipo: Crossover unrecognised status\n");
     return HighsStatus::kError;
   }
-  return HighsStatus::kError;
 }

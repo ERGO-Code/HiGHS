@@ -10,17 +10,17 @@
 #include "qpsolver/quass.hpp"
 #include "util/HighsCDouble.h"
 
-QpAsmStatus solveqp_actual(Instance& instance, Settings& settings,
-                           QpHotstartInformation& startinfo, Statistics& stats,
-                           QpModelStatus& status, QpSolution& solution,
-                           HighsTimer& qp_timer) {
+QpAsmStatus solveqpActual(Instance& instance, Settings& settings,
+                          QpHotstartInformation& startinfo, Statistics& stats,
+                          QpModelStatus& status, QpSolution& solution,
+                          HighsTimer& qp_timer, HighsCallback& callback) {
   Runtime rt(instance, stats);
   rt.settings = settings;
   Quass quass(rt);
 
   Basis basis(rt, startinfo.active, startinfo.status, startinfo.inactive);
 
-  quass.solve(startinfo.primal, startinfo.rowact, basis, qp_timer);
+  quass.solve(startinfo.primal, startinfo.rowact, basis, qp_timer, callback);
 
   status = rt.status;
 

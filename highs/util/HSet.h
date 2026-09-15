@@ -17,7 +17,7 @@
 #include <cstdio>
 #include <vector>
 
-#include "util/HighsInt.h"
+#include "util/HighsType.h"
 
 // #include <iostream>
 

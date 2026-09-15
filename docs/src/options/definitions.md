@@ -6,7 +6,7 @@
 - Default: "choose"
 
 ## [solver](@id option-solver)
-- LP/QP solver: "choose", "simplex", "ipm", "ipx", "hipo", "pdlp", "qpasm" or "hipdlp", 
+- LP/QP solver: "choose", "simplex", "ipm", "ipx", "hipo", "pdlp", "hipdlp" or "qpasm"
 - Type: string
 - Default: "choose"
 
@@ -44,7 +44,7 @@
 - Default: 1e+20
 
 ## [infinite\_bound](@id option-infinite-bound)
-- Limit on |constraint bound|: values greater than or equal to this will be treated as infinite
+- Limit on |variable/constraint bound|: values greater than or equal to this will be treated as infinite
 - Type: double
 - Range: [1e+15, inf]
 - Default: 1e+20

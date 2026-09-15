@@ -17,6 +17,7 @@
 class HighsMipSolver;
 class HighsMipWorker;
 class HighsLpRelaxation;
+class HighsSearch;
 
 class HighsPrimalHeuristics {
  private:
@@ -28,6 +29,10 @@ class HighsPrimalHeuristics {
   HighsInt numInfeasObservations;
 
   HighsRandom randgen;
+
+  bool subMipShouldRetry(HighsMipWorker& worker, const HighsSearch& heur,
+                         double fixingrate, double& maxfixingrate,
+                         HighsInt& targetdepth);
 
  public:
   HighsPrimalHeuristics(HighsMipSolver& mipsolver);

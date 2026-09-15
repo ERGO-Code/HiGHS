@@ -15,7 +15,7 @@
 
 #include <vector>
 
-#include "util/HighsInt.h"
+#include "util/HighsType.h"
 
 const HighsInt avgas_num_col = 8;
 const HighsInt avgas_num_row = 10;

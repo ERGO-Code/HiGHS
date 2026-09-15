@@ -11,7 +11,7 @@
 #ifndef HFACTORCONST_H_
 #define HFACTORCONST_H_
 
-#include "util/HighsInt.h"
+#include "util/HighsType.h"
 
 enum UPDATE_METHOD {
   kUpdateMethodFt = 1,

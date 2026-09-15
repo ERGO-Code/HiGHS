@@ -1065,8 +1065,8 @@ class HighsHashTree {
     }
   }
 
-  static const ValueType* find_recurse(NodePtr node, uint64_t hash, int hashPos,
-                                       const K& key) {
+  static ValueType* find_recurse(NodePtr node, uint64_t hash, int hashPos,
+                                 const K& key) {
     int startPos = hashPos;
     switch (node.getType()) {
       case kEmpty:

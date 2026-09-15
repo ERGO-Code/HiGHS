@@ -14,7 +14,7 @@
 #include <vector>
 
 #include "util/HighsCDouble.h"
-#include "util/HighsInt.h"
+#include "util/HighsType.h"
 
 class HighsSparseVectorSum {
  public:

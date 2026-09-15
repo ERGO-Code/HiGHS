@@ -213,7 +213,7 @@ void Analyse::fundamentalSupernodes() {
   // Find fundamental supernodes.
 
   // isSN[i] is true if node i is the start of a fundamental supernode
-  std::vector<bool> is_sn(n_, false);
+  std::vector<HighsBool> is_sn(n_, false);
 
   std::vector<Int> prev_nonz(n_, -1);
 

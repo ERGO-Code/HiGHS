@@ -1189,7 +1189,7 @@ HighsInt Highs_getPresolvedNumRow(const void* highs) {
 }
 
 HighsInt Highs_getPresolvedNumNz(const void* highs) {
-  return ((Highs*)highs)->getPresolvedLp().a_matrix_.numNz();
+  return ((Highs*)highs)->getPresolvedLp().numNz();
 }
 
 // Gets pointers to all the public data members of HighsLp: avoids
@@ -1236,7 +1236,7 @@ static HighsInt Highs_getHighsLpData(const HighsLp& lp, const HighsInt a_format,
         (desired_a_format == MatrixFormat::kRowwise &&
          lp.a_matrix_.isRowwise())) {
       // Incumbent format is OK
-      *num_nz = lp.a_matrix_.numNz();
+      *num_nz = lp.numNz();
       if (a_start)
         memcpy(a_start, lp.a_matrix_.start_.data(),
                num_start_entries * sizeof(HighsInt));
@@ -1566,6 +1566,8 @@ const void* Highs_getCallbackDataOutItem(const HighsCallbackDataOut* data_out,
     return (void*)(&data_out->ipm_iteration_count);
   } else if (!strcmp(item_name, kHighsCallbackDataOutPdlpIterationCountName)) {
     return (void*)(&data_out->pdlp_iteration_count);
+  } else if (!strcmp(item_name, kHighsCallbackDataOutQpasmIterationCountName)) {
+    return (void*)(&data_out->qpasm_iteration_count);
   } else if (!strcmp(item_name,
                      kHighsCallbackDataOutObjectiveFunctionValueName)) {
     return (void*)(&data_out->objective_function_value);
@@ -1598,6 +1600,8 @@ const void* Highs_getCallbackDataOutItem(const HighsCallbackDataOut* data_out,
     return (void*)(data_out->cutpool_lower);
   } else if (!strcmp(item_name, kHighsCallbackDataOutCutpoolUpperName)) {
     return (void*)(data_out->cutpool_upper);
+  } else if (!strcmp(item_name, kHighsCallbackDataOutQpSolutionName)) {
+    return (void*)(data_out->qp_solution);
   }
   return nullptr;
 }

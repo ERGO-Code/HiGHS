@@ -87,8 +87,8 @@ void ProductFormUpdate::ftran(HVector& rhs) const {
   // list. If RHS fill-in occurs in a row, then we have to add it to
   // the list. We're not tracking cancellation, so we don't need to
   // know where a row appears in the list
-  vector<char>& in_index = rhs.cwork;
-  for (HighsInt iX = 0; iX < rhs.count; iX++) in_index[rhs.index[iX]] = 1;
+  vector<HighsBool>& in_index = rhs.cwork;
+  for (HighsInt iX = 0; iX < rhs.count; iX++) in_index[rhs.index[iX]] = true;
 
   for (HighsInt iX = 0; iX < update_count_; iX++) {
     const HighsInt pivot_index = pivot_index_[iX];
@@ -101,13 +101,13 @@ void ProductFormUpdate::ftran(HVector& rhs) const {
         HighsInt iRow = index_[iEl];
         rhs.array[iRow] -= pivot_value * value_[iEl];
         if (in_index[iRow]) continue;
-        in_index[iRow] = 1;
+        in_index[iRow] = true;
         rhs.index[rhs.count++] = iRow;
       }
     } else {
       rhs.array[pivot_index] = 0;
     }
   }
-  // Zero the in_index entries used to point into the index list
-  for (HighsInt iX = 0; iX < rhs.count; iX++) in_index[rhs.index[iX]] = 0;
+  // Reset the in_index entries used to point into the index list
+  for (HighsInt iX = 0; iX < rhs.count; iX++) in_index[rhs.index[iX]] = false;
 }

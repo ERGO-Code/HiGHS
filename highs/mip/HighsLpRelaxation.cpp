@@ -118,7 +118,7 @@ bool HighsLpRelaxation::LpRow::isIntegral(
     case kCutPool:
       return mipsolver.mipdata_->cutpools[cutpoolindex].cutIsIntegral(index);
     case kModel:
-      return (mipsolver.mipdata_->rowintegral[index] != 0);
+      return mipsolver.mipdata_->rowintegral[index];
   };
 
   assert(false);
