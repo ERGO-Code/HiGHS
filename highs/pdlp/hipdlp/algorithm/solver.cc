@@ -994,7 +994,6 @@ api::SolveResult solve(const api::SolverOptions& options,
     state.dual_candidate = &vectors.dual_candidate;
     state.reflected_primal = &vectors.reflected_primal;
     state.reflected_dual = &vectors.reflected_dual;
-    state.current_ax = &vectors.current_ax;
     state.current_aty = &vectors.current_aty;
     state.reflected_ax = &vectors.reflected_ax;
 
@@ -1040,7 +1039,7 @@ api::SolveResult solve(const api::SolverOptions& options,
                                  total_iterations);
         if (total_iterations == 0) {
           error = downloadIterate(*selected_backend, *state.current_primal,
-                                  *state.current_dual, *state.current_ax,
+                                  *state.current_dual, vectors.current_ax,
                                   *state.current_aty, host, context,
                                   total_iterations);
         } else {

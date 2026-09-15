@@ -473,6 +473,80 @@ api::Error CpuBackend::fusedProjectedDualUpdate(
   return api::Error();
 }
 
+api::Error CpuBackend::fusedProjectedPrimalUpdateAndReflect(
+    const ProblemHandle& problem, WorkspaceHandle& workspace,
+    const VectorHandle& current, const VectorHandle& product,
+    const double step_size, VectorHandle& candidate, VectorHandle& reflected) {
+  const api::Error handles = validateReflectionHandles(current, product,
+                                                       candidate, reflected);
+  if (!handles.ok()) return handles;
+  const CpuProblemResource* cpu_problem = problemResource(problem);
+  const CpuWorkspaceResource* cpu_workspace = workspaceResource(workspace);
+  const CpuVectorResource* cpu_current = vectorResource(current);
+  const CpuVectorResource* cpu_product = vectorResource(product);
+  CpuVectorResource* cpu_candidate = vectorResource(candidate);
+  CpuVectorResource* cpu_reflected = vectorResource(reflected);
+  if (!cpu_problem || !cpu_workspace || !cpu_current || !cpu_product ||
+      !cpu_candidate || !cpu_reflected || !std::isfinite(step_size) ||
+      step_size < 0.0 || cpu_workspace->num_cols != cpu_problem->num_cols ||
+      cpu_current->values.size() != static_cast<std::size_t>(cpu_problem->num_cols) ||
+      cpu_product->values.size() != cpu_current->values.size() ||
+      cpu_candidate->values.size() != cpu_current->values.size() ||
+      cpu_reflected->values.size() != cpu_current->values.size())
+    return invalidArgument("serial CPU primal projection/reflection arguments are invalid");
+  for (std::size_t col = 0; col < cpu_current->values.size(); ++col) {
+    const double projected = std::max(cpu_problem->col_lower[col],
+        std::min(cpu_current->values[col] - step_size *
+            (cpu_problem->costs[col] - cpu_product->values[col]),
+            cpu_problem->col_upper[col]));
+    const double doubled = 2.0 * projected;
+    const double reflection = doubled - cpu_current->values[col];
+    if (!std::isfinite(projected) || !std::isfinite(doubled) ||
+        !std::isfinite(reflection))
+      return backendFailure("serial CPU primal projection/reflection produced a non-finite value");
+    cpu_candidate->values[col] = projected;
+    cpu_reflected->values[col] = reflection;
+  }
+  return api::Error();
+}
+
+api::Error CpuBackend::fusedProjectedDualUpdateAndReflect(
+    const ProblemHandle& problem, WorkspaceHandle& workspace,
+    const VectorHandle& current, const VectorHandle& product,
+    const double step_size, VectorHandle& candidate, VectorHandle& reflected) {
+  const api::Error handles = validateReflectionHandles(current, product,
+                                                       candidate, reflected);
+  if (!handles.ok()) return handles;
+  const CpuProblemResource* cpu_problem = problemResource(problem);
+  const CpuWorkspaceResource* cpu_workspace = workspaceResource(workspace);
+  const CpuVectorResource* cpu_current = vectorResource(current);
+  const CpuVectorResource* cpu_product = vectorResource(product);
+  CpuVectorResource* cpu_candidate = vectorResource(candidate);
+  CpuVectorResource* cpu_reflected = vectorResource(reflected);
+  if (!cpu_problem || !cpu_workspace || !cpu_current || !cpu_product ||
+      !cpu_candidate || !cpu_reflected || !std::isfinite(step_size) ||
+      step_size < 0.0 || cpu_workspace->num_rows != cpu_problem->num_rows ||
+      cpu_current->values.size() != static_cast<std::size_t>(cpu_problem->num_rows) ||
+      cpu_product->values.size() != cpu_current->values.size() ||
+      cpu_candidate->values.size() != cpu_current->values.size() ||
+      cpu_reflected->values.size() != cpu_current->values.size())
+    return invalidArgument("serial CPU dual projection/reflection arguments are invalid");
+  for (std::size_t row = 0; row < cpu_current->values.size(); ++row) {
+    const double value = cpu_current->values[row] + step_size *
+        (cpu_problem->row_lower[row] - cpu_product->values[row]);
+    const double projected = cpu_problem->equality_rows[row]
+        ? value : std::max(0.0, value);
+    const double doubled = 2.0 * projected;
+    const double reflection = doubled - cpu_current->values[row];
+    if (!std::isfinite(projected) || !std::isfinite(doubled) ||
+        !std::isfinite(reflection))
+      return backendFailure("serial CPU dual projection/reflection produced a non-finite value");
+    cpu_candidate->values[row] = projected;
+    cpu_reflected->values[row] = reflection;
+  }
+  return api::Error();
+}
+
 api::Error CpuBackend::fusedVectorBlend(
     WorkspaceHandle& workspace, const VectorHandle& primal_left,
     const VectorHandle& dual_left, const VectorHandle& primal_right,

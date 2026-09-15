@@ -19,7 +19,6 @@ struct HalpernPdhgState {
   backend::VectorHandle* dual_candidate;
   backend::VectorHandle* reflected_primal;
   backend::VectorHandle* reflected_dual;
-  backend::VectorHandle* current_ax;
   backend::VectorHandle* current_aty;
   backend::VectorHandle* reflected_ax;
   double primal_step_size;

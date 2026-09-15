@@ -60,6 +60,14 @@ class CpuBackend : public Backend {
                                       const VectorHandle& extrapolated_product,
                                       double step_size,
                                       VectorHandle& next_dual) override;
+  api::Error fusedProjectedPrimalUpdateAndReflect(
+      const ProblemHandle& problem, WorkspaceHandle& workspace,
+      const VectorHandle& current, const VectorHandle& product,
+      double step_size, VectorHandle& candidate, VectorHandle& reflected) override;
+  api::Error fusedProjectedDualUpdateAndReflect(
+      const ProblemHandle& problem, WorkspaceHandle& workspace,
+      const VectorHandle& current, const VectorHandle& product,
+      double step_size, VectorHandle& candidate, VectorHandle& reflected) override;
   api::Error fusedVectorBlend(WorkspaceHandle& workspace,
                               const VectorHandle& primal_left,
                               const VectorHandle& dual_left,

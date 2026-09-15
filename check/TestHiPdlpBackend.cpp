@@ -15,6 +15,7 @@
 #include "HConfig.h"
 #include "catch.hpp"
 #include "lp_data/HConst.h"
+#include "pdlp/hipdlp/algorithm/halpern_pdhg_step.hpp"
 #include "pdlp/hipdlp/backend/backend_factory.hpp"
 #include "pdlp/hipdlp/backend/check.hpp"
 #include "pdlp/hipdlp/backend/command_buffer.hpp"
@@ -28,6 +29,105 @@
 #include "pdlp/hipdlp/verification/certificate_verifier.hpp"
 
 namespace {
+
+TEST_CASE("hi-pdlp-step-only-computes-update-products",
+          "[hipdlp][backend][step-fusion][cpu]") {
+  class CountingBackend : public hipdlp::backend::cpu::CpuBackend {
+   public:
+    int forward_products = 0;
+    int transpose_products = 0;
+    int reflection_passes = 0;
+
+    hipdlp::api::Error copy(const hipdlp::backend::VectorHandle& input,
+                           hipdlp::backend::VectorHandle& output) override {
+      ++reflection_passes;
+      return CpuBackend::copy(input, output);
+    }
+
+    hipdlp::api::Error scale(double factor,
+                            hipdlp::backend::VectorHandle& output) override {
+      ++reflection_passes;
+      return CpuBackend::scale(factor, output);
+    }
+
+    hipdlp::api::Error axpy(double factor,
+                           const hipdlp::backend::VectorHandle& input,
+                           hipdlp::backend::VectorHandle& output) override {
+      ++reflection_passes;
+      return CpuBackend::axpy(factor, input, output);
+    }
+
+    hipdlp::api::Error multiply(
+        const hipdlp::backend::ProblemHandle& problem,
+        const hipdlp::backend::VectorHandle& input,
+        hipdlp::backend::VectorHandle& output) override {
+      ++forward_products;
+      return CpuBackend::multiply(problem, input, output);
+    }
+
+    hipdlp::api::Error multiplyTranspose(
+        const hipdlp::backend::ProblemHandle& problem,
+        const hipdlp::backend::VectorHandle& input,
+        hipdlp::backend::VectorHandle& output) override {
+      ++transpose_products;
+      return CpuBackend::multiplyTranspose(problem, input, output);
+    }
+  } backend;
+  HighsLp lp;
+  lp.num_col_ = 1;
+  lp.num_row_ = 1;
+  lp.col_cost_ = {-2.0};
+  lp.col_lower_ = {0.0};
+  lp.col_upper_ = {2.0};
+  lp.row_lower_ = {1.0};
+  lp.row_upper_ = {kHighsInf};
+  lp.a_matrix_.format_ = MatrixFormat::kColwise;
+  lp.a_matrix_.num_col_ = 1;
+  lp.a_matrix_.num_row_ = 1;
+  lp.a_matrix_.start_ = {0, 1};
+  lp.a_matrix_.index_ = {0};
+  lp.a_matrix_.value_ = {1.0};
+  auto built = hipdlp::model::buildProblem(lp);
+  REQUIRE(built.ok());
+  hipdlp::backend::ProblemHandle problem;
+  hipdlp::backend::WorkspaceHandle workspace;
+  REQUIRE(backend.bindProblem(built.problem, problem).ok());
+  REQUIRE(backend.createWorkspace(problem, workspace).ok());
+  hipdlp::backend::VectorHandle vectors[12];
+  for (auto& vector : vectors) REQUIRE(backend.createVector(1, vector).ok());
+  hipdlp::algorithm::HalpernPdhgState state;
+  state.problem = &problem;
+  state.workspace = &workspace;
+  state.current_primal = &vectors[0];
+  state.current_dual = &vectors[1];
+  state.next_primal = &vectors[2];
+  state.next_dual = &vectors[3];
+  state.primal_anchor = &vectors[4];
+  state.dual_anchor = &vectors[5];
+  state.primal_candidate = &vectors[6];
+  state.dual_candidate = &vectors[7];
+  state.reflected_primal = &vectors[8];
+  state.reflected_dual = &vectors[9];
+  state.current_aty = &vectors[10];
+  state.reflected_ax = &vectors[11];
+  state.primal_step_size = 0.5;
+  state.dual_step_size = 0.25;
+  REQUIRE(hipdlp::algorithm::enqueueHalpernPdhgStep(backend, state).ok());
+  CHECK(backend.forward_products == 1);
+  CHECK(backend.transpose_products == 1);
+  CHECK(backend.reflection_passes == 0);
+  std::vector<double> values;
+  REQUIRE(backend.downloadVector(*state.primal_candidate, values).ok());
+  CHECK(values == std::vector<double>{1.0});
+  REQUIRE(backend.downloadVector(*state.reflected_primal, values).ok());
+  CHECK(values == std::vector<double>{2.0});
+  REQUIRE(backend.downloadVector(*state.current_primal, values).ok());
+  CHECK(values == std::vector<double>{1.0});
+  REQUIRE(backend.downloadVector(*state.dual_candidate, values).ok());
+  CHECK(values == std::vector<double>{0.0});
+  REQUIRE(backend.downloadVector(*state.current_dual, values).ok());
+  CHECK(values == std::vector<double>{0.0});
+}
 
 void checkBackendTiming(const hipdlp::backend::Kind kind) {
   hipdlp::backend::FactoryResult factory = hipdlp::backend::createBackend(kind);
@@ -3664,6 +3764,156 @@ TEST_CASE("hi-pdlp-cpu-vector-and-reduction-primitives",
   REQUIRE(backend->norm2(empty_left, reduced).ok());
   CHECK(reduced == 0.0);
 }
+
+void checkProjectionReflection(const hipdlp::backend::Kind kind) {
+  HighsLp lp = makeEqualityLp(2, 2, {0, 1, 2}, {0, 1}, {1.0, 1.0});
+  lp.col_cost_ = {1.0, -2.0};
+  lp.col_lower_ = {0.0, -kHighsInf};
+  lp.col_upper_ = {2.0, kHighsInf};
+  lp.row_lower_ = {1.0, 2.0};
+  lp.row_upper_ = {1.0, kHighsInf};
+  auto built = hipdlp::model::buildProblem(lp);
+  REQUIRE(built.ok());
+  auto factory = hipdlp::backend::createBackend(kind);
+  REQUIRE(factory.ok());
+  auto& backend = *factory.backend;
+  hipdlp::backend::ProblemHandle problem;
+  hipdlp::backend::WorkspaceHandle workspace;
+  REQUIRE(backend.bindProblem(built.problem, problem).ok());
+  REQUIRE(backend.createWorkspace(problem, workspace).ok());
+  hipdlp::backend::VectorHandle current, product, candidate, reflected;
+  for (auto* vector : {&current, &product, &candidate, &reflected})
+    REQUIRE(backend.createVector(2, *vector).ok());
+  REQUIRE(backend.uploadVector({1.0, 3.0}, current).ok());
+  REQUIRE(backend.uploadVector({4.0, -1.0}, product).ok());
+
+  SECTION("projected candidates and reflections") {
+    REQUIRE(backend.fusedProjectedPrimalUpdateAndReflect(
+        problem, workspace, current, product, 0.5, candidate, reflected).ok());
+    CHECK(download(backend, candidate) == std::vector<double>({2.0, 3.5}));
+    CHECK(download(backend, reflected) == std::vector<double>({3.0, 4.0}));
+    CHECK(download(backend, current) == std::vector<double>({1.0, 3.0}));
+    REQUIRE(backend.uploadVector({0.5, -1.0}, current).ok());
+    REQUIRE(backend.uploadVector({0.0, 3.0}, product).ok());
+    REQUIRE(backend.fusedProjectedDualUpdateAndReflect(
+        problem, workspace, current, product, 2.0, candidate, reflected).ok());
+    CHECK(download(backend, candidate) == std::vector<double>({2.5, 0.0}));
+    CHECK(download(backend, reflected) == std::vector<double>({4.5, 1.0}));
+  }
+
+  SECTION("invalid arguments preserve inputs and outputs") {
+    REQUIRE(backend.fill(candidate, 13.0).ok());
+    REQUIRE(backend.fill(reflected, 17.0).ok());
+    using hipdlp::api::ErrorCode;
+    for (const double step : {-1.0, kHighsInf,
+                             std::numeric_limits<double>::quiet_NaN()}) {
+      CHECK(backend.fusedProjectedPrimalUpdateAndReflect(
+          problem, workspace, current, product, step, candidate, reflected).code ==
+            ErrorCode::kInvalidArgument);
+      CHECK(backend.fusedProjectedDualUpdateAndReflect(
+          problem, workspace, current, product, step, candidate, reflected).code ==
+            ErrorCode::kInvalidArgument);
+    }
+    for (auto* aliased : {&current, &product, &candidate}) {
+      CHECK(backend.fusedProjectedPrimalUpdateAndReflect(
+          problem, workspace, current, product, 0.5, candidate, *aliased).code ==
+            ErrorCode::kInvalidArgument);
+    }
+    for (auto* aliased : {&current, &product, &reflected}) {
+      CHECK(backend.fusedProjectedDualUpdateAndReflect(
+          problem, workspace, current, product, 0.5, *aliased, reflected).code ==
+            ErrorCode::kInvalidArgument);
+    }
+    hipdlp::backend::VectorHandle short_output;
+    REQUIRE(backend.createVector(1, short_output).ok());
+    CHECK(backend.fusedProjectedPrimalUpdateAndReflect(
+        problem, workspace, current, product, 0.5, short_output, reflected).code ==
+          ErrorCode::kInvalidArgument);
+    CHECK(backend.fusedProjectedDualUpdateAndReflect(
+        problem, workspace, current, product, 0.5, short_output, reflected).code ==
+          ErrorCode::kInvalidArgument);
+    CHECK(download(backend, candidate) == std::vector<double>({13.0, 13.0}));
+    CHECK(download(backend, reflected) == std::vector<double>({17.0, 17.0}));
+    CHECK(download(backend, current) == std::vector<double>({1.0, 3.0}));
+    CHECK(download(backend, product) == std::vector<double>({4.0, -1.0}));
+  }
+
+  SECTION("primal intermediate doubling overflow is rejected") {
+    REQUIRE(backend.uploadVector({1.0, std::numeric_limits<double>::max()}, current).ok());
+    REQUIRE(backend.uploadVector({1.0, -2.0}, product).ok());
+    const auto error = backend.fusedProjectedPrimalUpdateAndReflect(
+        problem, workspace, current, product, 0.5, candidate, reflected);
+    CHECK((!error.ok() || !backend.synchronize().ok()));
+  }
+
+  SECTION("dual intermediate doubling overflow is rejected") {
+    REQUIRE(backend.uploadVector({std::numeric_limits<double>::max(), 0.0}, current).ok());
+    REQUIRE(backend.uploadVector({1.0, 2.0}, product).ok());
+    const auto error = backend.fusedProjectedDualUpdateAndReflect(
+        problem, workspace, current, product, 0.5, candidate, reflected);
+    CHECK((!error.ok() || !backend.synchronize().ok()));
+  }
+}
+
+TEST_CASE("hi-pdlp-cpu-projection-reflection-contract",
+          "[hipdlp][backend][step-fusion][cpu]") {
+  checkProjectionReflection(hipdlp::backend::Kind::kCpu);
+}
+
+TEST_CASE("hi-pdlp-cpu-projection-reflection-matches-composed-primitives",
+          "[hipdlp][backend][step-fusion][cpu]") {
+  for (const HighsInt size : {0, 1, 257}) {
+    CAPTURE(size);
+    std::vector<HighsInt> starts(size + 1), indices(size);
+    std::vector<double> values(size, 1.0), current(size), product(size);
+    for (HighsInt index = 0; index < size; ++index) {
+      starts[index] = index;
+      indices[index] = index;
+      current[index] = (index % 11 - 5) * 0.137;
+      product[index] = (index % 7 - 3) * 0.971;
+    }
+    starts[size] = size;
+    auto lp = makeEqualityLp(size, size, starts, indices, values);
+    auto built = hipdlp::model::buildProblem(lp);
+    REQUIRE(built.ok());
+    hipdlp::backend::cpu::CpuBackend backend;
+    hipdlp::backend::ProblemHandle problem;
+    hipdlp::backend::WorkspaceHandle workspace;
+    REQUIRE(backend.bindProblem(built.problem, problem).ok());
+    REQUIRE(backend.createWorkspace(problem, workspace).ok());
+    hipdlp::backend::VectorHandle input, matrix_product, projected, reflected,
+        reference_projected, reference_reflected;
+    for (auto* vector : {&input, &matrix_product, &projected, &reflected,
+                         &reference_projected, &reference_reflected})
+      REQUIRE(backend.createVector(size, *vector).ok());
+    REQUIRE(backend.uploadVector(current, input).ok());
+    REQUIRE(backend.uploadVector(product, matrix_product).ok());
+    for (const double step : {0.0, 0.5, 0.731}) {
+      CAPTURE(step);
+      REQUIRE(backend.fusedProjectedPrimalUpdateAndReflect(problem, workspace,
+          input, matrix_product, step, projected, reflected).ok());
+      REQUIRE(backend.Backend::fusedProjectedPrimalUpdateAndReflect(problem,
+          workspace, input, matrix_product, step, reference_projected,
+          reference_reflected).ok());
+      CHECK(download(backend, projected) == download(backend, reference_projected));
+      CHECK(download(backend, reflected) == download(backend, reference_reflected));
+      REQUIRE(backend.fusedProjectedDualUpdateAndReflect(problem, workspace,
+          input, matrix_product, step, projected, reflected).ok());
+      REQUIRE(backend.Backend::fusedProjectedDualUpdateAndReflect(problem,
+          workspace, input, matrix_product, step, reference_projected,
+          reference_reflected).ok());
+      CHECK(download(backend, projected) == download(backend, reference_projected));
+      CHECK(download(backend, reflected) == download(backend, reference_reflected));
+    }
+  }
+}
+
+#ifdef HIGHS_HIPDLP_CUDA_DETECTED
+TEST_CASE("hi-pdlp-cuda-projection-reflection-contract",
+          "[hipdlp][backend][step-fusion][cuda]") {
+  checkProjectionReflection(hipdlp::backend::Kind::kCuda);
+}
+#endif
 
 TEST_CASE("hi-pdlp-cpu-fused-primitives",
           "[pdlp][hipdlp][phase3][phase4][backend]") {

@@ -59,15 +59,15 @@ api::Error createVector(backend::Backend& backend, const HighsInt size,
 }
 
 api::Error recordPoint(backend::Backend& backend,
+                       const backend::ProblemHandle& problem,
                        const backend::VectorHandle& primal,
                        const backend::VectorHandle& dual,
-                       const backend::VectorHandle& ax,
                        const backend::VectorHandle& aty, TraceHandles& point) {
   api::Error error = backend.copy(primal, point.primal);
   if (!error.ok()) return error;
   error = backend.copy(dual, point.dual);
   if (!error.ok()) return error;
-  error = backend.copy(ax, point.ax);
+  error = backend.multiply(problem, primal, point.ax);
   if (!error.ok()) return error;
   return backend.copy(aty, point.aty);
 }
@@ -307,8 +307,8 @@ api::Error applyFixedPointRestart(backend::Backend& backend,
   averaging = resetAveraging();
   average_normalization = 0.0;
   // The boundary point becomes the state that continues into the next step.
-  return recordPoint(backend, *state.current_primal, *state.current_dual,
-                     *state.current_ax, *state.current_aty, point);
+  return recordPoint(backend, *state.problem, *state.current_primal,
+                     *state.current_dual, *state.current_aty, point);
 }
 
 // The check is evaluated and stored before any iterate, anchor, age, average,
@@ -612,7 +612,6 @@ FixedTraceResult runFixedTrace(const model::OriginalModel& original_model,
     backend::VectorHandle dual_candidate;
     backend::VectorHandle reflected_primal;
     backend::VectorHandle reflected_dual;
-    backend::VectorHandle current_ax;
     backend::VectorHandle current_aty;
     backend::VectorHandle reflected_ax;
     backend::VectorHandle primal_sum;
@@ -626,7 +625,7 @@ FixedTraceResult runFixedTrace(const model::OriginalModel& original_model,
         &reflected_primal, &current_aty, &primal_sum,    &averaged_aty};
     backend::VectorHandle* row_vectors[] = {
         &current_dual,   &next_dual,      &dual_anchor,
-        &dual_candidate, &reflected_dual, &current_ax,
+        &dual_candidate, &reflected_dual,
         &reflected_ax,   &dual_sum,       &averaged_ax};
     for (std::size_t index = 0;
          index < sizeof(col_vectors) / sizeof(col_vectors[0]); ++index) {
@@ -681,11 +680,9 @@ FixedTraceResult runFixedTrace(const model::OriginalModel& original_model,
     if (!error.ok()) return failure(error, diagnostics);
     error = backend->copy(current_dual, dual_anchor);
     if (!error.ok()) return failure(error, diagnostics);
-    error = backend->multiply(problem, current_primal, current_ax);
-    if (!error.ok()) return failure(error, diagnostics);
     error = backend->multiplyTranspose(problem, current_dual, current_aty);
     if (!error.ok()) return failure(error, diagnostics);
-    error = recordPoint(*backend, current_primal, current_dual, current_ax,
+    error = recordPoint(*backend, problem, current_primal, current_dual,
                         current_aty, trace_handles[0]);
     if (!error.ok()) return failure(error, diagnostics);
 
@@ -702,7 +699,6 @@ FixedTraceResult runFixedTrace(const model::OriginalModel& original_model,
     state.dual_candidate = &dual_candidate;
     state.reflected_primal = &reflected_primal;
     state.reflected_dual = &reflected_dual;
-    state.current_ax = &current_ax;
     state.current_aty = &current_aty;
     state.reflected_ax = &reflected_ax;
     state.primal_step_size = options.primal_step_size;
@@ -756,8 +752,8 @@ FixedTraceResult runFixedTrace(const model::OriginalModel& original_model,
         TraceHandles& point =
             trace_handles[static_cast<std::size_t>(total_iterations)];
         error =
-            recordPoint(*backend, *state.current_primal, *state.current_dual,
-                        *state.current_ax, *state.current_aty, point);
+            recordPoint(*backend, problem, *state.current_primal,
+                        *state.current_dual, *state.current_aty, point);
         if (!error.ok()) return failure(error, diagnostics);
         if (periodicConvergenceCheck(options, total_iterations)) {
           error = appendConvergenceCheck(
@@ -828,8 +824,8 @@ FixedTraceResult runFixedTrace(const model::OriginalModel& original_model,
           averaging = averaging_result.next;
           average_normalization = averaging_result.normalization;
           error = recordPoint(
-              *backend, *state.current_primal, *state.current_dual,
-              *state.current_ax, *state.current_aty,
+              *backend, problem, *state.current_primal, *state.current_dual,
+              *state.current_aty,
               trace_handles[static_cast<std::size_t>(total_iterations)]);
           if (!error.ok()) {
             recorder->cancelRecording();

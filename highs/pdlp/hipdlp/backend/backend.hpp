@@ -150,6 +150,38 @@ class Backend {
       const VectorHandle& current_dual,
       const VectorHandle& extrapolated_product, double step_size,
       VectorHandle& next_dual) = 0;
+    virtual api::Error fusedProjectedPrimalUpdateAndReflect(
+            const ProblemHandle& problem, WorkspaceHandle& workspace,
+            const VectorHandle& current, const VectorHandle& product,
+            double step_size, VectorHandle& candidate, VectorHandle& reflected) {
+        api::Error error = validateReflectionHandles(current, product, candidate,
+                                                                                                 reflected);
+        if (!error.ok()) return error;
+        error = fusedProjectedPrimalUpdate(problem, workspace, current, product,
+                                                                             step_size, candidate);
+        if (!error.ok()) return error;
+        error = copy(candidate, reflected);
+        if (!error.ok()) return error;
+        error = scale(2.0, reflected);
+        if (!error.ok()) return error;
+        return axpy(-1.0, current, reflected);
+    }
+    virtual api::Error fusedProjectedDualUpdateAndReflect(
+            const ProblemHandle& problem, WorkspaceHandle& workspace,
+            const VectorHandle& current, const VectorHandle& product,
+            double step_size, VectorHandle& candidate, VectorHandle& reflected) {
+        api::Error error = validateReflectionHandles(current, product, candidate,
+                                                                                                 reflected);
+        if (!error.ok()) return error;
+        error = fusedProjectedDualUpdate(problem, workspace, current, product,
+                                                                         step_size, candidate);
+        if (!error.ok()) return error;
+        error = copy(candidate, reflected);
+        if (!error.ok()) return error;
+        error = scale(2.0, reflected);
+        if (!error.ok()) return error;
+        return axpy(-1.0, current, reflected);
+    }
   virtual api::Error fusedVectorBlend(
       WorkspaceHandle& workspace, const VectorHandle& primal_left,
       const VectorHandle& dual_left, const VectorHandle& primal_right,
@@ -209,6 +241,18 @@ class Backend {
                                       std::vector<double>& dual_values) = 0;
 
  protected:
+    static api::Error validateReflectionHandles(
+            const VectorHandle& current, const VectorHandle& product,
+            const VectorHandle& candidate, const VectorHandle& reflected) {
+        if (!current.valid() || !product.valid() || !candidate.valid() ||
+                !reflected.valid() || &candidate == &reflected ||
+                &candidate == &current || &candidate == &product ||
+                &reflected == &current || &reflected == &product)
+            return api::Error(api::ErrorCode::kInvalidArgument,
+                                                "projection/reflection outputs must be valid and "
+                                                "distinct from inputs");
+        return api::Error();
+    }
     static api::Error validateVectorDownloads(const VectorDownload* downloads,
                                                                                         const std::size_t count) {
         if (count != 0 && downloads == nullptr)
