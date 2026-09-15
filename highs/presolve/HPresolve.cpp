@@ -482,6 +482,10 @@ HPresolve::StatusResult HPresolve::convertImpliedInteger(HighsInt col,
   }
 
   // Potentially strengthen existing bound using implied bounds
+  // If not done then there may be a stronger fractional
+  // implied bound for a non-continuous column, which causes
+  // errors in rules downstream that assume integrality.
+  // changeColBounds will perform rounding
   double newLower = model->col_lower_[col];
   double newUpper = model->col_upper_[col];
   if (implColLower[col] > newLower + primal_feastol)
