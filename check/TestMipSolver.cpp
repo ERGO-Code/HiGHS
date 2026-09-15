@@ -1935,3 +1935,32 @@ TEST_CASE("issue-3273", "[highs_test_mip_solver]") {
   highs.setOptionValue("output_flag", dev_run);
   solve(highs, kHighsOnString, require_model_status, optimal_objective);
 }
+
+TEST_CASE("dominated-column-double-fixing", "[highs_test_mip_solver]") {
+  HighsLp lp;
+  lp.num_col_ = 12;
+  lp.num_row_ = 10;
+  lp.col_names_ = {"c0", "c1", "c3",  "c4",  "c5", "c6",
+                   "c7", "c8", "c10", "c11", "c9", "c2"};
+  lp.col_cost_ = {-6, -4, 4, 8, 1, 5, -3, -3, -10, 4, 0, 0};
+  lp.col_lower_.assign(lp.num_col_, 0);
+  lp.col_upper_.assign(lp.num_col_, 1);
+  lp.integrality_.assign(lp.num_col_, HighsVarType::kInteger);
+  lp.row_lower_ = {-kHighsInf, -kHighsInf, -kHighsInf, -kHighsInf, -kHighsInf,
+                   -2,         -kHighsInf, -kHighsInf, -1,         -kHighsInf};
+  lp.row_upper_ = {3, -2, 3, 1, 4, -2, -1, 4, -1, 1};
+  lp.a_matrix_.format_ = MatrixFormat::kColwise;
+  lp.a_matrix_.start_ = {0, 2, 8, 11, 13, 14, 17, 20, 23, 27, 30, 33, 38};
+  lp.a_matrix_.index_ = {5, 9, 1, 3, 4, 5, 6, 8, 1, 4, 5, 5, 8,
+                         2, 1, 6, 7, 2, 7, 8, 1, 4, 8, 1, 3, 4,
+                         9, 4, 5, 6, 1, 8, 9, 4, 6, 7, 8, 9};
+  lp.a_matrix_.value_ = {-4, 1,  -1, -4, -3, 1,  -1, 3,  4,  1,  -4, -1, 1,
+                         -1, -2, 1,  -1, -2, -1, -4, -1, -4, -2, -3, 1,  -1,
+                         -1, 4,  4,  -1, 1,  4,  -1, -2, -1, 1,  3,  1};
+
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
+  solve(highs, kHighsOffString, HighsModelStatus::kInfeasible);
+  solve(highs, kHighsOnString, HighsModelStatus::kInfeasible);
+}
