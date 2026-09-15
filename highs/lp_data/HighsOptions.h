@@ -812,7 +812,7 @@ class HighsOptions : public HighsOptionsStruct {
 
     record_double = new OptionRecordDouble(
         "infinite_bound",
-        "Limit on |constraint bound|: values greater than or equal to "
+        "Limit on |variable/constraint bound|: values greater than or equal to "
         "this will be treated as infinite",
         advanced, &infinite_bound, 1e15, 1e20, kHighsInf);
     records.push_back(record_double);

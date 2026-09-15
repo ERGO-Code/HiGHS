@@ -33,7 +33,7 @@ enum iClockMip : int {
   kMipClockPerformAging1,
   kMipClockDive,
   kMipClockOpenNodesToQueue0,
-  kMipClockDomainPropgate,
+  kMipClockDomainPropagate,
   kMipClockPruneInfeasibleNodes,
   kMipClockUpdateLocalDomain,
   kMipClockNodeSearch,
@@ -182,7 +182,7 @@ inline void initialiseMipProfilingNames(std::vector<std::string>& name) {
   name[kMipClockPerformAging1] = "Perform aging 1";
   name[kMipClockDive] = "Dive";
   name[kMipClockOpenNodesToQueue0] = "Open nodes to queue 0";
-  name[kMipClockDomainPropgate] = "Domain propagate";
+  name[kMipClockDomainPropagate] = "Domain propagate";
   name[kMipClockPruneInfeasibleNodes] = "Prune infeasible nodes";
   name[kMipClockUpdateLocalDomain] = "Update local domain";
   name[kMipClockNodeSearch] = "Node search";
@@ -342,7 +342,7 @@ class MipTimer {
     clock[kMipClockDive] = timer_pointer->clock_def("Dive");
     clock[kMipClockOpenNodesToQueue0] =
         timer_pointer->clock_def("Open nodes to queue 0");
-    clock[kMipClockDomainPropgate] =
+    clock[kMipClockDomainPropagate] =
         timer_pointer->clock_def("Domain propagate");
     clock[kMipClockPruneInfeasibleNodes] =
         timer_pointer->clock_def("Prune infeasible nodes");
@@ -546,7 +546,7 @@ class MipTimer {
   void reportMipSearchClock(const HighsTimerClock& mip_timer_clock) {
     const std::vector<HighsInt> mip_clock_list{
         kMipClockPerformAging1,        kMipClockDive,
-        kMipClockOpenNodesToQueue0,    kMipClockDomainPropgate,
+        kMipClockOpenNodesToQueue0,    kMipClockDomainPropagate,
         kMipClockPruneInfeasibleNodes, kMipClockUpdateLocalDomain,
         kMipClockNodeSearch,
         //	kMipClock@
