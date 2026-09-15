@@ -3,6 +3,9 @@
 #include "HCheckConfig.h"
 #include "Highs.h"
 #include "catch.hpp"
+#include "mip/HighsMipSolver.h"
+#include "mip/HighsMipSolverData.h"
+#include "parallel/HighsParallel.h"
 #include "presolve/HPresolve.h"
 #include "presolve/HighsPostsolveStack.h"
 
@@ -88,6 +91,200 @@ TEST_CASE("test-col-stuffing", "[highs_test_presolve_rules]") {
   lp.clear();
 
   h.resetGlobalScheduler(true);
+}
+
+TEST_CASE("test-implied-bound-aggregation", "[highs_test_presolve_rules]") {
+  // Three VLB rows on a continuous variable z with binary variables
+  // x0, x1, x2 in a clique (from assignment equation). Probing should
+  // discover the clique and aggregation should merge the three VLBs
+  // into one stronger row.
+  //
+  // min z
+  // x0 + x1 + x2 = 1
+  // z >= 10*x0  (stored as -z + 10*x0 <= 0)
+  // z >= 20*x1  (stored as -z + 20*x1 <= 0)
+  // z >= 30*x2  (stored as -z + 30*x2 <= 0)
+  // z >= 0, x0,x1,x2 binary
+  HighsLp lp;
+  lp.num_col_ = 4;
+  lp.num_row_ = 4;
+  lp.sense_ = ObjSense::kMinimize;
+  lp.col_cost_ = {1, 0, 0, 0};
+  lp.col_lower_ = {0, 0, 0, 0};
+  lp.col_upper_ = {kHighsInf, 1, 1, 1};
+  lp.integrality_ = {HighsVarType::kContinuous, HighsVarType::kInteger,
+                     HighsVarType::kInteger, HighsVarType::kInteger};
+  lp.row_lower_ = {1, -kHighsInf, -kHighsInf, -kHighsInf};
+  lp.row_upper_ = {1, 0, 0, 0};
+  lp.a_matrix_.format_ = MatrixFormat::kColwise;
+  lp.a_matrix_.num_col_ = 4;
+  lp.a_matrix_.num_row_ = 4;
+  lp.a_matrix_.start_ = {0, 3, 5, 7, 9};
+  lp.a_matrix_.index_ = {1, 2, 3, 0, 1, 0, 2, 0, 3};
+  lp.a_matrix_.value_ = {-1, -1, -1, 1, 10, 1, 20, 1, 30};
+
+  highs::parallel::initialize_scheduler(1);
+
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  highs.setOptionValue("presolve_rule_test", kPresolveRuleProbing);
+  highs.passModel(lp);
+
+  HighsCallback callback(&highs);
+  const HighsOptions& options = highs.getOptions();
+  HighsSolution solution;
+  HighsProfiling profiling;
+
+  HighsMipSolver mipsolver(callback, options, lp, solution);
+  mipsolver.timer_.start();
+  profiling.initialize(mipsolver.timer_, true, true);
+  mipsolver.setProfiling(&profiling);
+  mipsolver.mipdata_ =
+      std::unique_ptr<HighsMipSolverData>(new HighsMipSolverData(mipsolver));
+  mipsolver.mipdata_->init();
+  mipsolver.mipdata_->setupDomainPropagation();
+
+  // Populate VLBs: z >= 10*x0 (row 1), z >= 20*x1 (row 2), z >= 30*x2 (row 3)
+  HighsImplications& implications = mipsolver.mipdata_->implications;
+  implications.addVLB(0, 1, 10.0, 0.0, 1);
+  implications.addVLB(0, 2, 20.0, 0.0, 2);
+  implications.addVLB(0, 3, 30.0, 0.0, 3);
+
+  presolve::HighsPostsolveStack& postsolve_stack =
+      mipsolver.mipdata_->postSolveStack;
+
+  presolve::HPresolve presolve;
+  presolve.setInput(mipsolver, -1);
+  REQUIRE(presolve.okSetupPresolveDataStructures());
+  HighsModelStatus status = presolve.run(postsolve_stack);
+  REQUIRE(status == HighsModelStatus::kNotset);
+
+  // The three VLBs form a clique, so aggregation merges them into one
+  // row: z - 10*x0 - 20*x1 - 30*x2 >= 0
+  const HighsLp& presolved = *mipsolver.model_;
+  HighsInt agg_row = -1;
+  for (HighsInt i = 0; i < mipsolver.numRow(); i++) {
+    if (postsolve_stack.getOrigRowIndex(i) == 0) continue;
+    REQUIRE(agg_row == -1);
+    agg_row = i;
+  }
+  REQUIRE(agg_row >= 0);
+  REQUIRE(presolved.row_lower_[agg_row] == 0.0);
+  REQUIRE(presolved.row_upper_[agg_row] == kHighsInf);
+
+  std::vector<double> coeffs(4, 0.0);
+  for (HighsInt j = 0; j < presolved.num_col_; j++) {
+    for (HighsInt p = presolved.a_matrix_.start_[j];
+         p < presolved.a_matrix_.start_[j + 1]; p++) {
+      if (presolved.a_matrix_.index_[p] != agg_row) continue;
+      coeffs[postsolve_stack.getOrigColIndex(j)] =
+          presolved.a_matrix_.value_[p];
+    }
+  }
+  REQUIRE(coeffs[0] == 1.0);
+  REQUIRE(coeffs[1] == -10.0);
+  REQUIRE(coeffs[2] == -20.0);
+  REQUIRE(coeffs[3] == -30.0);
+
+  HighsTaskExecutor::shutdown(true);
+}
+
+TEST_CASE("test-implied-bound-aggregation-vub", "[highs_test_presolve_rules]") {
+  // Three VUB rows on a continuous variable z with binary variables
+  // x0, x1, x2 where x0+x1+x2 = 2 (so at most one xi can be 0).
+  // The complement literals (1-x0), (1-x1), (1-x2) form a clique.
+  // VUBs have positive coefficients so the activating literal is x=0
+  // (val=0), exercising the complement offset path in mergeCliques.
+  //
+  // max z
+  // x0 + x1 + x2 = 2
+  // z <= 10*x0 + 20  (stored as z - 10*x0 <= 20)
+  // z <= 20*x1 + 10  (stored as z - 20*x1 <= 10)
+  // z <= 30*x2        (stored as z - 30*x2 <= 0)
+  // 0 <= z <= 30, x0,x1,x2 binary
+  HighsLp lp;
+  lp.num_col_ = 4;
+  lp.num_row_ = 4;
+  lp.sense_ = ObjSense::kMaximize;
+  lp.col_cost_ = {1, 0, 0, 0};
+  lp.col_lower_ = {0, 0, 0, 0};
+  lp.col_upper_ = {30, 1, 1, 1};
+  lp.integrality_ = {HighsVarType::kContinuous, HighsVarType::kInteger,
+                     HighsVarType::kInteger, HighsVarType::kInteger};
+  lp.row_lower_ = {2, -kHighsInf, -kHighsInf, -kHighsInf};
+  lp.row_upper_ = {2, 20, 10, 0};
+  lp.a_matrix_.format_ = MatrixFormat::kColwise;
+  lp.a_matrix_.num_col_ = 4;
+  lp.a_matrix_.num_row_ = 4;
+  lp.a_matrix_.start_ = {0, 3, 5, 7, 9};
+  lp.a_matrix_.index_ = {1, 2, 3, 0, 1, 0, 2, 0, 3};
+  lp.a_matrix_.value_ = {1, 1, 1, 1, -10, 1, -20, 1, -30};
+
+  highs::parallel::initialize_scheduler(1);
+
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  highs.setOptionValue("presolve_rule_test", kPresolveRuleProbing);
+  highs.passModel(lp);
+
+  HighsCallback callback(&highs);
+  const HighsOptions& options = highs.getOptions();
+  HighsSolution solution;
+  HighsProfiling profiling;
+
+  HighsMipSolver mipsolver(callback, options, lp, solution);
+  mipsolver.timer_.start();
+  profiling.initialize(mipsolver.timer_, true, true);
+  mipsolver.setProfiling(&profiling);
+  mipsolver.mipdata_ =
+      std::unique_ptr<HighsMipSolverData>(new HighsMipSolverData(mipsolver));
+  mipsolver.mipdata_->init();
+  mipsolver.mipdata_->setupDomainPropagation();
+
+  // Populate VUBs with positive coef (val=0 complement path):
+  // z <= 10*x0 + 20 (row 1), z <= 20*x1 + 10 (row 2), z <= 30*x2 (row 3)
+  HighsImplications& implications = mipsolver.mipdata_->implications;
+  implications.addVUB(0, 1, 10.0, 20.0, 30.0, false, 1);
+  implications.addVUB(0, 2, 20.0, 10.0, 30.0, false, 2);
+  implications.addVUB(0, 3, 30.0, 0.0, 30.0, false, 3);
+
+  presolve::HighsPostsolveStack& postsolve_stack =
+      mipsolver.mipdata_->postSolveStack;
+
+  presolve::HPresolve presolve;
+  presolve.setInput(mipsolver, -1);
+  REQUIRE(presolve.okSetupPresolveDataStructures());
+  HighsModelStatus status = presolve.run(postsolve_stack);
+  REQUIRE(status == HighsModelStatus::kNotset);
+
+  // The three VUBs form a clique, so aggregation merges them into one
+  // row: z - 10*x0 - 20*x1 - 30*x2 <= -30
+  const HighsLp& presolved = *mipsolver.model_;
+  HighsInt agg_row = -1;
+  for (HighsInt i = 0; i < mipsolver.numRow(); i++) {
+    if (postsolve_stack.getOrigRowIndex(i) == 0) continue;
+    REQUIRE(agg_row == -1);
+    agg_row = i;
+  }
+  REQUIRE(agg_row >= 0);
+  REQUIRE(presolved.row_lower_[agg_row] == -kHighsInf);
+  REQUIRE(presolved.row_upper_[agg_row] == -30.0);
+
+  std::vector<double> coeffs(4, 0.0);
+  for (HighsInt j = 0; j < presolved.num_col_; j++) {
+    for (HighsInt p = presolved.a_matrix_.start_[j];
+         p < presolved.a_matrix_.start_[j + 1]; p++) {
+      if (presolved.a_matrix_.index_[p] != agg_row) continue;
+      coeffs[postsolve_stack.getOrigColIndex(j)] =
+          presolved.a_matrix_.value_[p];
+    }
+  }
+  REQUIRE(coeffs[0] == 1.0);
+  REQUIRE(coeffs[1] == -10.0);
+  REQUIRE(coeffs[2] == -20.0);
+  REQUIRE(coeffs[3] == -30.0);
+
+  HighsTaskExecutor::shutdown(true);
 }
 
 TEST_CASE("test-parallel-rows-cut-ordering", "[highs_test_presolve_rules]") {

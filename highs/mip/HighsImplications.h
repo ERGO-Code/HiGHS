@@ -51,20 +51,27 @@ class HighsImplications {
   struct VarBound {
     double coef;
     double constant;
+    HighsInt origin;
 
     double minValue() const {
-      return static_cast<double>(static_cast<HighsCDouble>(constant) +
-                                 std::min(coef, 0.0));
+      double m = std::min(coef, 0.0);
+      if (std::abs(constant) >= kHighsInf || std::abs(m) >= kHighsInf)
+        return constant + m;
+      return static_cast<double>(static_cast<HighsCDouble>(constant) + m);
     }
     double maxValue() const {
-      return static_cast<double>(static_cast<HighsCDouble>(constant) +
-                                 std::max(coef, 0.0));
+      double m = std::max(coef, 0.0);
+      if (std::abs(constant) >= kHighsInf || std::abs(m) >= kHighsInf)
+        return constant + m;
+      return static_cast<double>(static_cast<HighsCDouble>(constant) + m);
     }
   };
 
  private:
   std::vector<HighsHashTree<HighsInt, VarBound>> vubs;
   std::vector<HighsHashTree<HighsInt, VarBound>> vlbs;
+
+  std::vector<HighsHashTree<HighsInt, HighsInt>> rowToVarBounds;
 
  public:
   const HighsMipSolver& mipsolver;
@@ -74,7 +81,7 @@ class HighsImplications {
     nextCleanupCall = mipsolver.numNonzero();
     numImplications = 0;
     numVarBounds = 0;
-    resize(mipsolver.numCol());
+    resize(mipsolver.numCol(), mipsolver.numRow());
   }
 
   std::function<void(HighsInt, HighsInt, HighsInt, double)>
@@ -94,18 +101,21 @@ class HighsImplications {
     vubs.shrink_to_fit();
     vlbs.clear();
     vlbs.shrink_to_fit();
-    resize(mipsolver.numCol());
+    rowToVarBounds.clear();
+    rowToVarBounds.shrink_to_fit();
+    resize(mipsolver.numCol(), mipsolver.numRow());
     numVarBounds = 0;
     nextCleanupCall = mipsolver.numNonzero();
   }
 
-  void resize(HighsInt ncols) {
+  void resize(HighsInt ncols, HighsInt nrows) {
     implications.resize(2 * static_cast<size_t>(ncols));
     hasProbed.resize(2 * static_cast<size_t>(ncols));
     reverseImplications.resize(ncols);
     colsubstituted.resize(ncols);
     vubs.resize(ncols);
     vlbs.resize(ncols);
+    rowToVarBounds.resize(nrows);
     maxVarBounds = calcMaxVarBounds(ncols);
   }
 
@@ -127,17 +137,17 @@ class HighsImplications {
 
   void strengthenVarBound(VarBound& vbnd, HighsInt multiplier) const;
 
-  void addVUB(HighsInt col, HighsInt vubcol, double vubcoef,
-              double vubconstant);
+  void addVUB(HighsInt col, HighsInt vubcol, double vubcoef, double vubconstant,
+              HighsInt origin = -1);
 
   void addVUB(HighsInt col, HighsInt vubcol, double vubcoef, double vubconstant,
-              double colupperbound, bool colisinteger);
-
-  void addVLB(HighsInt col, HighsInt vlbcol, double vlbcoef,
-              double vlbconstant);
+              double colupperbound, bool colisinteger, HighsInt origin = -1);
 
   void addVLB(HighsInt col, HighsInt vlbcol, double vlbcoef, double vlbconstant,
-              double collowerbound, bool colisinteger);
+              HighsInt origin = -1);
+
+  void addVLB(HighsInt col, HighsInt vlbcol, double vlbcoef, double vlbconstant,
+              double collowerbound, bool colisinteger, HighsInt origin = -1);
 
   void columnTransformed(HighsInt col, double scale, double constant) {
     // Update implications affected by transformation
@@ -177,6 +187,19 @@ class HighsImplications {
     }
   }
 
+  const HighsHashTree<HighsInt, VarBound>& getVlbs(HighsInt col) const {
+    return vlbs[col];
+  }
+  const HighsHashTree<HighsInt, VarBound>& getVubs(HighsInt col) const {
+    return vubs[col];
+  }
+
+  void rowModified(HighsInt row);
+
+  const HighsHashTree<HighsInt, HighsInt>& getRowVarBounds(HighsInt row) const {
+    return rowToVarBounds[row];
+  }
+
   std::pair<HighsInt, VarBound> getBestVub(HighsInt col,
                                            const HighsSolution& lpSolution,
                                            double& bestUb,
@@ -200,6 +223,11 @@ class HighsImplications {
                              HighsDomain& globaldom, bool thread_safe);
 
   void cleanupVarbounds(HighsInt col);
+
+  bool redundantVlb(const VarBound& vlb, double lb) const;
+  bool redundantVub(const VarBound& vub, double ub) const;
+  bool tightenVlb(VarBound& vlb, double lb) const;
+  bool tightenVub(VarBound& vub, double ub) const;
 
   void cleanupVlb(HighsInt col, HighsInt vlbCol,
                   HighsImplications::VarBound& vlb, double lb, bool& redundant,

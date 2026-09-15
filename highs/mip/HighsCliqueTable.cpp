@@ -987,6 +987,33 @@ void HighsCliqueTable::extractCliques(
   }
 }
 
+template <bool Sort, typename Comparator>
+HighsInt HighsCliqueTable::extendClique(
+    std::vector<HighsInt>& neighbourhoodInds, std::vector<CliqueVar>& clqVars,
+    HighsInt seedPos, HighsInt extensionEnd, const Comparator& candidateOrder) {
+  for (HighsInt i = seedPos; i < extensionEnd; ++i) {
+    if (Sort)
+      pdqsort_branchless(clqVars.begin() + i, clqVars.begin() + extensionEnd,
+                         candidateOrder);
+    CliqueVar v = clqVars[i];
+    HighsInt extensionStart = i + 1;
+    extensionEnd =
+        partitionNeighbourhood(neighbourhoodInds, numNeighbourhoodQueries, v,
+                               clqVars.data() + extensionStart,
+                               extensionEnd - extensionStart) +
+        extensionStart;
+  }
+  return extensionEnd;
+}
+
+HighsInt HighsCliqueTable::extendClique(
+    std::vector<HighsInt>& neighbourhoodInds, std::vector<CliqueVar>& clqVars,
+    HighsInt seedPos, HighsInt extensionEnd) {
+  auto noop = [](const CliqueVar&, const CliqueVar&) { return false; };
+  return extendClique<false>(neighbourhoodInds, clqVars, seedPos, extensionEnd,
+                             noop);
+}
+
 void HighsCliqueTable::cliquePartition(std::vector<CliqueVar>& clqVars,
                                        std::vector<HighsInt>& partitionStart) {
   randgen.shuffle(clqVars.data(), clqVars.size());
@@ -997,22 +1024,12 @@ void HighsCliqueTable::cliquePartition(std::vector<CliqueVar>& clqVars,
   HighsInt numClqVars = clqVars.size();
   partitionStart.clear();
   partitionStart.reserve(clqVars.size());
-  HighsInt extensionEnd = numClqVars;
-  partitionStart.push_back(0);
-  for (HighsInt i = 0; i < numClqVars; ++i) {
-    if (i == extensionEnd) {
-      partitionStart.push_back(i);
-      extensionEnd = numClqVars;
-    }
-    CliqueVar v = clqVars[i];
-    HighsInt extensionStart = i + 1;
-    extensionEnd =
-        partitionNeighbourhood(neighbourhoodInds, numNeighbourhoodQueries, v,
-                               clqVars.data() + extensionStart,
-                               extensionEnd - extensionStart) +
-        extensionStart;
-  }
 
+  HighsInt pos = 0;
+  while (pos < numClqVars) {
+    partitionStart.push_back(pos);
+    pos = extendClique(neighbourhoodInds, clqVars, pos, numClqVars);
+  }
   partitionStart.push_back(numClqVars);
 }
 
@@ -1062,6 +1079,60 @@ void HighsCliqueTable::cliquePartition(const std::vector<double>& objective,
   }
 
   partitionStart.push_back(numClqVars);
+}
+
+void HighsCliqueTable::cliqueCover(std::vector<CliqueVar>& clqVars,
+                                   std::vector<std::vector<CliqueVar>>& cover) {
+  cover.clear();
+  if (clqVars.empty()) return;
+
+  auto candidateOrder = [&](const CliqueVar& a, const CliqueVar& b) {
+    return numcliquesvar[a.index()] > numcliquesvar[b.index()];
+  };
+
+  std::vector<HighsInt> neighbourhoodInds;
+  neighbourhoodInds.reserve(clqVars.size());
+
+  HighsInt numClqVars = clqVars.size();
+  HighsInt pos = 0;
+
+  while (pos < numClqVars) {
+    HighsInt cliqueEnd = extendClique(neighbourhoodInds, clqVars, pos,
+                                      numClqVars, candidateOrder);
+
+    std::vector<CliqueVar> clique(clqVars.begin() + pos,
+                                  clqVars.begin() + cliqueEnd);
+
+    for (HighsInt i = 0; i < pos; ++i) {
+      if (std::all_of(clique.begin(), clique.end(),
+                      [&](const CliqueVar& clqvar) {
+                        return haveCommonClique(clqVars[i], clqvar);
+                      }))
+        clique.push_back(clqVars[i]);
+    }
+
+    cover.push_back(std::move(clique));
+    pos = cliqueEnd;
+  }
+
+  // count variable occurrences
+  HighsHashTable<HighsInt, HighsInt> count;
+  for (const auto& clique : cover)
+    for (const auto& var : clique) count[var.index()]++;
+
+  // remove cliques where every member appears in at least one other clique
+  size_t kept = 0;
+  for (auto& clique : cover) {
+    if (std::all_of(clique.begin(), clique.end(), [&](const CliqueVar& var) {
+          return count[var.index()] >= 2;
+        })) {
+      for (const auto& var : clique) count[var.index()]--;
+    } else {
+      std::swap(cover[kept], clique);
+      kept++;
+    }
+  }
+  cover.resize(kept);
 }
 
 bool HighsCliqueTable::foundCover(HighsDomain& globaldom, CliqueVar v1,
