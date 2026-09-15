@@ -1401,7 +1401,8 @@ HPresolve::Result HPresolve::dominatedColumns(
         }
       }
       // update bounds
-      if (lowerBound > model->col_lower_[col] + primal_feastol) {
+      if (lowerBound < kHighsInf &&
+          lowerBound > model->col_lower_[col] + primal_feastol) {
         if (model->integrality_[col] != HighsVarType::kContinuous)
           lowerBound = std::ceil(lowerBound - primal_feastol);
         if (lowerBound == model->col_upper_[col]) {
@@ -1412,7 +1413,8 @@ HPresolve::Result HPresolve::dominatedColumns(
           HPRESOLVE_CHECKED_CALL(changeColLower(col, lowerBound));
         }
       }
-      if (upperBound < model->col_upper_[col] - primal_feastol) {
+      if (upperBound > -kHighsInf &&
+          upperBound < model->col_upper_[col] - primal_feastol) {
         if (model->integrality_[col] != HighsVarType::kContinuous)
           upperBound = std::floor(upperBound + primal_feastol);
         if (upperBound == model->col_lower_[col]) {
