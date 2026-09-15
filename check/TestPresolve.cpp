@@ -1236,3 +1236,25 @@ TEST_CASE("issue-3140", "[highs_test_presolve]") {
 
   highs.resetGlobalScheduler(true);
 }
+
+TEST_CASE("dual-bound-relaxation-unbounded", "[highs_test_presolve]") {
+  HighsLp lp;
+  lp.num_col_ = 3;
+  lp.num_row_ = 2;
+  lp.col_cost_ = {0, -5, 0};
+  lp.col_lower_ = {0, 0, 0};
+  lp.col_upper_ = {kHighsInf, kHighsInf, 1};
+  lp.row_lower_ = {-kHighsInf, -kHighsInf};
+  lp.row_upper_ = {0, 1};
+  lp.a_matrix_.format_ = MatrixFormat::kColwise;
+  lp.a_matrix_.start_ = {0, 2, 4, 6};
+  lp.a_matrix_.index_ = {0, 1, 0, 1, 0, 1};
+  lp.a_matrix_.value_ = {1, -1, -1, 1, -1, 1};
+
+  // The feasible ray x0 = x1 = t, x2 = 0 has objective -5*t.
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
+  REQUIRE(highs.run() == HighsStatus::kOk);
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kUnbounded);
+}
