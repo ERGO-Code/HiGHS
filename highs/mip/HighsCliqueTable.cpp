@@ -1329,7 +1329,7 @@ void HighsCliqueTable::extractCliques(HighsMipSolver& mipsolver,
           // skip non-binary variables (fixed, see previous loop) and binaries
           // that are fixed to "inactive" values
           if (!globaldom.isBinary(col) ||
-              globaldom.isFixedToVal(col, 1 - (val > 0 ? 1 : 0)))
+              globaldom.isFixedToVal(col, val > 0 ? 0 : 1))
             continue;
 
           // add to clique
