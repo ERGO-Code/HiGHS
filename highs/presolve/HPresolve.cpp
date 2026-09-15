@@ -1353,7 +1353,20 @@ HPresolve::Result HPresolve::dominatedColumns(
       return Result::kOk;
     };
 
-    // lambda for tightening bounds
+    // Predictive bound analysis (Theorem 3 from Gamrath et al. 2015).
+    // The paper defines x_j ≻ x_k (j dominates k). The code checks
+    // (direction * x_col) ≻ (direction_k * x_otherCol):
+    //   direction = +1, multiplier = +1: x_j =  x_col,      x_k =  x_otherCol
+    //   direction = +1, multiplier = -1: x_j =  x_col,      x_k = -x_otherCol
+    //   direction = -1, multiplier = +1: x_j =  x_otherCol, x_k =  x_col
+    //   direction = -1, multiplier = -1: x_j = -x_col,      x_k =  x_otherCol
+    // col is the column being tightened, otherCol is the conditioning
+    // column (whose value otherColBound is substituted).
+    // colIsAtUpper = true : col = x_j, apply (i)/(iii)/(v)
+    // colIsAtUpper = false: col = x_k, apply (ii)/(iv)/(vi)
+    // otherColCoeffPattern: +1 = same-sign, -1 = opposite-sign coefficient
+    //                       filter (opposite signs from negated-column
+    //                       domination)
     auto tightenBounds = [&](HighsInt col, double colBound, bool colIsAtUpper,
                              HighsInt otherCol, double otherColBound,
                              HighsInt otherColCoeffPattern) {
@@ -1364,8 +1377,10 @@ HPresolve::Result HPresolve::dominatedColumns(
       // initialise bounds
       double lowerBound = -kHighsInf;
       double upperBound = kHighsInf;
-      // predictive bound analysis, see Theorem 3 from Gamrath et al.'s paper
       if (colIsAtUpper) {
+        // For negated-column domination the paper's x_k is negated,
+        // so (i)/(iii)/(v) below correspond to (ii)/(iv)/(vi) in the
+        // paper with negated bounds and cost.
         // (i) x_j <= MINL^k_j(otherColBound)
         upperBound = computeImpliedUpperBound(col, otherCol, otherColBound,
                                               otherColCoeffPattern);
@@ -1383,6 +1398,9 @@ HPresolve::Result HPresolve::dominatedColumns(
           lowerBound = std::max(lowerBound, std::min(colBound, worstCaseUpper));
         }
       } else {
+        // For negated-column domination the paper's x_j is negated,
+        // so (ii)/(iv)/(vi) below correspond to (i)/(iii)/(v) in the
+        // paper with negated bounds and cost.
         // (ii) x_k >= MAXL^j_k(otherColBound)
         lowerBound = computeImpliedLowerBound(col, otherCol, otherColBound,
                                               otherColCoeffPattern);
