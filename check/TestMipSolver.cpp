@@ -1710,7 +1710,7 @@ TEST_CASE("MIP-equality-clique-fixing-to-zero", "[highs_test_mip_solver]") {
 
 TEST_CASE("issue-3170", "[highs_test_mip_solver]") {
   std::string filename =
-      std::string(HIGHS_DIR) + "/check/instances/issue-3170-1.mps";
+      std::string(HIGHS_DIR) + "/check/instances/issue-3170.mps";
   Highs highs;
   highs.setOptionValue("output_flag", dev_run);
   highs.setOptionValue("mip_rel_gap", 0);
