@@ -219,7 +219,7 @@ class Highs(_Highs):
 
         if solver_thread is not None and interrupt_limit <= 0:
             try:
-                while not result[0]:
+                while result is None or not result[0]:
                     result = self.wait(0.1)
                 return result[1]
 
@@ -230,7 +230,7 @@ class Highs(_Highs):
         elif interrupt_limit > 0:
             for count in range(interrupt_limit):
                 try:
-                    while not result[0]:
+                    while result is None or not result[0]:
                         result = self.wait(0.1)
                     return result[1]
 
