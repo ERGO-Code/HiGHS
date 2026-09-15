@@ -595,7 +595,7 @@ class Highs {
   /**
    * @brief Return a const reference to the internal HighsBasis instance
    */
-  const HighsBasis& getBasis() const { return basis_; } 
+  const HighsBasis& getBasis() const { return basis_; }
 
   /**
    * @brief Return the status for the incumbent model.
