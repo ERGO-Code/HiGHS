@@ -541,6 +541,9 @@ HighsInt Highs_getInfoType(const void* highs, const char* info,
 HighsInt Highs_getSolution(const void* highs, double* col_value,
                            double* col_dual, double* row_value,
                            double* row_dual) {
+  if (((Highs*)highs)->getInfo().primal_solution_status == kSolutionStatusNone)
+    return kHighsStatusError;
+
   const HighsSolution& solution = ((Highs*)highs)->getSolution();
 
   if (col_value != nullptr) {

@@ -1172,8 +1172,18 @@ void fullApiMip() {
                     col_cost, col_lower, col_upper, row_lower, row_upper,
                     a_start, a_index, a_value, integrality);
   assert(return_status == kHighsStatusOk);
+
+  // Before solving the problem, Highs_getSolution should return error
+  return_status = Highs_getSolution(highs, NULL, NULL, NULL, NULL);
+  assert(return_status == kHighsStatusError);
+
   Highs_setStringOptionValue(highs, "presolve", "off");
   return_status = Highs_run(highs);
+
+  // Even after solving the problem, Highs_getBasis should return error
+  return_status = Highs_getBasis(highs, NULL, NULL);
+  assert(return_status == kHighsStatusError);
+
   // mip_node_count is always int64_t, so the following should be an
   // error depending on whether HIGHSINT64 is set
   HighsInt mip_node_count_int;

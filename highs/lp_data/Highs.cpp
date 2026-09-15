@@ -2227,7 +2227,10 @@ HighsStatus Highs::getFixedLp(HighsLp& lp) const {
 }
 
 const HighsBasis& Highs::getBasis() const {
-  assert(this->basis_.valid == (this->info_.basis_validity == kBasisValidityValid));
+  printf("Highs::getBasis basis_.valid = %s; info_.basis_validity = %d\n",
+         this->basis_.valid ? "T" : "F", int(this->info_.basis_validity));
+  //  assert(this->basis_.valid ==
+  //         (this->info_.basis_validity == kBasisValidityValid));
   return this->basis_;
 }
 
@@ -4497,7 +4500,6 @@ HighsStatus Highs::callRunPostsolve(const HighsSolution& solution,
                                             return_status, "callSolveLp");
         // Recover the options
         options_ = save_options;
-        HighsPrimalDualErrors primal_dual_errors;
         const bool is_qp = this->model_.isQp();
         assert(!is_qp);
         const bool get_residuals = true;

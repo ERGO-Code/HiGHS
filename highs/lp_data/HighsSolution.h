@@ -66,6 +66,9 @@ void getKktFailures(const HighsOptions& options, const HighsModel& model,
                     HighsPrimalDualErrors& primal_dual_errors,
                     const bool get_residuals = false);
 
+void getQpKktFailures(const HighsOptions& options, const HighsModel& model,
+                      const HighsSolution& solution, HighsInfo& highs_info);
+
 void getLpKktFailures(const HighsOptions& options, const HighsLp& lp,
                       const HighsSolution& solution, const HighsBasis& basis,
                       HighsInfo& highs_info);
