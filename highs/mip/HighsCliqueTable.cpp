@@ -2190,6 +2190,14 @@ void HighsCliqueTable::runCliqueMerging(HighsDomain& globaldomain) {
 
 bool HighsCliqueTable::presolveFixCol(HighsInt col, bool val,
                                       std::vector<CliqueVar>& impliedFixings) {
+  const PresolveColState state = presolveColStates[col];
+  if (state != PresolveColState::kActive) {
+    // Don't queue fixes for already eliminated or fixed cols
+    if (state == PresolveColState::kEliminated) return true;
+    return state ==
+           (val ? PresolveColState::kFixedOne : PresolveColState::kFixedZero);
+  }
+
   std::vector<CliqueVar> fixings;
   fixings.emplace_back(col, val);
   size_t nextFixing = 0;
@@ -2347,6 +2355,10 @@ bool HighsCliqueTable::presolveSubstituteCol(
     const HighsInt substCol, const CliqueVar replacement,
     std::vector<CliqueVar>& impliedFixings) {
   if (presolveColStates[substCol] != PresolveColState::kActive) return true;
+  if (presolveColStates[replacement.col] == PresolveColState::kEliminated) {
+    presolveEliminateCol(substCol);
+    return true;
+  }
   std::vector<HighsInt> cliqueIds;
   auto collectIncidentCliques = [&](const CliqueVar v) {
     invertedHashList[v.index()].for_each(
@@ -2462,12 +2474,13 @@ void HighsCliqueTable::rebuild(
   newCliqueTable.setMinEntriesForParallelism(minEntriesForParallelism);
   for (size_t i = 0; i != cliques.size(); ++i) {
     if (cliques[i].start == -1) continue;
-    HighsInt oldnumvars = cliques[i].end - cliques[i].start;
+    const HighsInt numActive = cliques[i].numActive();
 
     for (HighsInt k = cliques[i].start; k != cliques[i].end; ++k) {
       HighsInt col = orig2reducedcol[cliqueentries[k].col];
 
-      if (col == -1 || !globaldomain.isBinary(col) ||
+      if (colDeleted[cliqueentries[k].col] || col == -1 ||
+          !globaldomain.isBinary(col) ||
           !postSolveStack.isColLinearlyTransformable(col))
         cliqueentries[k].col = kHighsIInf;
       else
@@ -2480,15 +2493,13 @@ void HighsCliqueTable::rebuild(
                        [](CliqueVar v) { return v.col == kHighsIInf; });
     HighsInt numvars = static_cast<HighsInt>(
         newend - (cliqueentries.begin() + cliques[i].start));
-    // since we do not know how variables in the clique that have been deleted
-    // are replaced (i.e. are they fixed to 0 or 1, or substituted) we relax
-    // them out which means the equality status needs to be set to false
+    // Preserve equality if all active entries survive, else relax to <=.
     if (numvars <= 1) continue;
 
     HighsInt origin = cliques[i].origin != kHighsIInf ? -1 : kHighsIInf;
-    newCliqueTable.doAddClique(
-        &cliqueentries[cliques[i].start], numvars,
-        numvars != oldnumvars ? false : cliques[i].equality, origin);
+    newCliqueTable.doAddClique(&cliqueentries[cliques[i].start], numvars,
+                               numvars == numActive && cliques[i].equality,
+                               origin);
   }
 
   newCliqueTable.setAllowParallel(allowParallel);
