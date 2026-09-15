@@ -1325,15 +1325,15 @@ void HighsCliqueTable::extractCliques(HighsMipSolver& mipsolver,
         for (HighsInt j = start; j != end; ++j) {
           HighsInt col = mipsolver.mipdata_->ARindex_[j];
           double val = mipsolver.mipdata_->ARvalue_[j];
+          HighsInt dir = val > 0 ? 1 : 0;
 
           // skip non-binary variables (fixed, see previous loop) and binaries
           // that are fixed to "inactive" values
-          if (!globaldom.isBinary(col) ||
-              globaldom.isFixedToVal(col, val > 0 ? 0 : 1))
+          if (!globaldom.isBinary(col) || globaldom.isFixedToVal(col, 1 - dir))
             continue;
 
           // add to clique
-          clique.emplace_back(col, val > 0 ? 1 : 0);
+          clique.emplace_back(col, dir);
         }
 
         // add clique to clique table
