@@ -1427,7 +1427,7 @@ HPresolve::Result HPresolve::dominatedColumns(
           upperBound = std::floor(upperBound + primal_feastol);
         if (upperBound == model->col_lower_[col]) {
           numFixedColsPredBndAnalysis++;
-          HPRESOLVE_CHECKED_CALL(fixCol(col, HighsInt{-1}));
+          return fixCol(col, HighsInt{-1});
         } else if (model->integrality_[col] != HighsVarType::kContinuous) {
           numModifiedBndsPredBndAnalysis++;
           HPRESOLVE_CHECKED_CALL(changeColUpper(col, upperBound));
