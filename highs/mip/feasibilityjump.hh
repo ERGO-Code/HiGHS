@@ -549,6 +549,9 @@ class FeasibilityJumpSolver {
       if (problem.vars.size() == 0) break;
 
       uint32_t var = selectVariable();
+      if (var == UINT_MAX){
+        break;
+      }
       doVariableMove(var);
     }
 
@@ -603,7 +606,6 @@ class FeasibilityJumpSolver {
           bestVar = varIdx;
         }
       }
-      assert(bestVar != UINT_MAX);
       return bestVar;
     }
 

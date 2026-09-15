@@ -486,6 +486,8 @@ class HPresolve {
                                     double boundColValue = kHighsInf,
                                     HighsInt boundColCoeffPattern = 0);
 
+  Result checkOriginalModelBounds();
+
   Result initialSweep(HighsPostsolveStack& postsolve_stack);
 
   Result initialRowAndColPresolve(HighsPostsolveStack& postsolve_stack);
@@ -522,7 +524,7 @@ class HPresolve {
   Result removeDoubletonEquations(HighsPostsolveStack& postsolve_stack);
 
   Result strengthenInequalities(HighsPostsolveStack& postsolve_stack,
-                                HighsInt& num_strenghtened);
+                                HighsInt& num_strengthened);
 
   Result detectImpliedIntegers();
 

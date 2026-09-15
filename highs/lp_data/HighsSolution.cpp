@@ -27,49 +27,62 @@ const uint8_t kHighsSolutionUp = 1;
 
 const bool printf_kkt = false;  // true;  //
 
-void getKktFailures(const HighsOptions& options, const HighsModel& model,
-                    const HighsSolution& solution, const HighsBasis& basis,
-                    HighsInfo& highs_info) {
-  HighsPrimalDualErrors primal_dual_errors;
-  getKktFailures(options, model, solution, basis, highs_info,
-                 primal_dual_errors);
-}
-
+// getKktFailures determines at least the KKT data in HighsInfo, and
+// possibly data in HighsPrimalDualErrors for solution logging when
+// solving LPs.
+//
+// Need both a generic entry point and generic method to perform KKT
+// checking. The former is because we want to just pass a HighsModel
+// instance, its solution and basis, and the latter is to avoid code
+// duplication. Between the minimal entry point and the inner method,
+// there are specific entry points for LP and QP - because a
+// HighsModel may not exist at the calling point when solving an
+// LP/MIP - and because the basis is only used when computing
+// HighsPrimalDualErrors for LPs
+//
+// Generic entry point is getKktFailures, noting that there are
+// default values of nullptr for primal_dual_errors and false for
+// get_residuals, since their calculation is not always needed
+//
 void getKktFailures(const HighsOptions& options, const HighsModel& model,
                     const HighsSolution& solution, const HighsBasis& basis,
                     HighsInfo& highs_info,
-                    HighsPrimalDualErrors& primal_dual_errors,
+                    HighsPrimalDualErrors* primal_dual_errors,
                     const bool get_residuals) {
+  if (model.isQp()) {
+    getQpKktFailures(options, model, solution, highs_info);
+  } else {
+    getLpKktFailures(options, model.lp_, solution, basis, highs_info,
+                     primal_dual_errors, get_residuals);
+  }
+}
+
+// Entry point for QPs
+void getQpKktFailures(const HighsOptions& options, const HighsModel& model,
+                      const HighsSolution& solution, HighsInfo& highs_info) {
+  assert(model.isQp());
   vector<double> gradient;
   model.objectiveGradient(solution.col_value, gradient);
   const HighsLp& lp = model.lp_;
-  getKktFailures(options, model.isQp(), lp, gradient, solution, highs_info,
-                 get_residuals);
-  getPrimalDualBasisErrors(options, lp, solution, basis, primal_dual_errors);
-  getPrimalDualGlpsolErrors(options, lp, gradient, solution,
-                            primal_dual_errors);
+  getKktFailures(options, model.isQp(), lp, gradient, solution, highs_info);
 }
 
-void getLpKktFailures(const HighsOptions& options, const HighsLp& lp,
-                      const HighsSolution& solution, const HighsBasis& basis,
-                      HighsInfo& highs_info) {
-  HighsPrimalDualErrors primal_dual_errors;
-  getLpKktFailures(options, lp, solution, basis, highs_info,
-                   primal_dual_errors);
-}
-
+// Entry point for QPs
 void getLpKktFailures(const HighsOptions& options, const HighsLp& lp,
                       const HighsSolution& solution, const HighsBasis& basis,
                       HighsInfo& highs_info,
-                      HighsPrimalDualErrors& primal_dual_errors,
+                      HighsPrimalDualErrors* primal_dual_errors,
                       const bool get_residuals) {
   getKktFailures(options, false, lp, lp.col_cost_, solution, highs_info,
                  get_residuals);
-  getPrimalDualBasisErrors(options, lp, solution, basis, primal_dual_errors);
-  getPrimalDualGlpsolErrors(options, lp, lp.col_cost_, solution,
-                            primal_dual_errors);
+  if (primal_dual_errors != nullptr) {
+    getPrimalDualBasisErrors(options, lp, solution, basis, *primal_dual_errors);
+    getPrimalDualGlpsolErrors(options, lp, lp.col_cost_, solution,
+                              *primal_dual_errors);
+  }
 }
 
+// Inner method
 void getKktFailures(const HighsOptions& options, const bool is_qp,
                     const HighsLp& lp, const std::vector<double>& gradient,
                     const HighsSolution& solution, HighsInfo& highs_info,
@@ -1165,7 +1178,7 @@ void lpKktCheck(HighsModelStatus& model_status, HighsInfo& info,
   info.objective_function_value = lp.objectiveValue(solution.col_value);
   HighsPrimalDualErrors primal_dual_errors;
   const bool get_residuals = !basis.valid;
-  getLpKktFailures(options, lp, solution, basis, info, primal_dual_errors,
+  getLpKktFailures(options, lp, solution, basis, info, &primal_dual_errors,
                    get_residuals);
   if (model_status == HighsModelStatus::kOptimal)
     reportKktFailures(lp, options, info, message);
