@@ -202,8 +202,7 @@ TEST_CASE("test-clique-extract-origin", "[highs_test_presolve_rules]") {
   HighsTaskExecutor::shutdown(true);
 }
 
-TEST_CASE("test-clique-extract-origin-unequal-coeff",
-          "[highs_test_presolve_rules]") {
+TEST_CASE("test-normalise-unequal-coeff", "[highs_test_presolve_rules]") {
   // Same as test-clique-extract-origin but row 0 has unequal coefficients,
   // exercising the normalisation path in normaliseCliqueRows.
   //   row 0: x0 + 2*x1 + 2*x2 <= 2  (unequal coeffs, clique covers all 3)
@@ -319,6 +318,123 @@ TEST_CASE("test-normalise-equation", "[highs_test_presolve_rules]") {
   REQUIRE(cliquetable.haveCommonClique({0, 1}, {1, 1}));
   REQUIRE(cliquetable.haveCommonClique({0, 1}, {2, 1}));
   REQUIRE(cliquetable.haveCommonClique({1, 1}, {2, 1}));
+
+  HighsTaskExecutor::shutdown(true);
+}
+
+TEST_CASE("test-normalise-trivial-fixing", "[highs_test_presolve_rules]") {
+  // 3*x0 + x1 + x2 <= 2: coefficient of x0 exceeds rhs,
+  // so normaliseCliqueRows fixes x0 to lower bound.
+  HighsLp lp;
+  lp.num_col_ = 3;
+  lp.num_row_ = 1;
+  lp.sense_ = ObjSense::kMinimize;
+  lp.col_cost_ = {1.0, 1.0, 1.0};
+  lp.col_lower_ = {0.0, 0.0, 0.0};
+  lp.col_upper_ = {1.0, 1.0, 1.0};
+  lp.integrality_ = {HighsVarType::kInteger, HighsVarType::kInteger,
+                     HighsVarType::kInteger};
+  lp.row_lower_ = {-kHighsInf};
+  lp.row_upper_ = {2.0};
+  lp.a_matrix_.format_ = MatrixFormat::kColwise;
+  lp.a_matrix_.num_col_ = 3;
+  lp.a_matrix_.num_row_ = 1;
+  lp.a_matrix_.start_ = {0, 1, 2, 3};
+  lp.a_matrix_.index_ = {0, 0, 0};
+  lp.a_matrix_.value_ = {3.0, 1.0, 1.0};
+
+  highs::parallel::initialize_scheduler(1);
+
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  highs.passModel(lp);
+
+  HighsCallback callback(&highs);
+  const HighsOptions& options = highs.getOptions();
+  HighsSolution solution;
+  HighsProfiling profiling;
+
+  HighsMipSolver mipsolver(callback, options, lp, solution);
+  mipsolver.timer_.start();
+  profiling.initialize(mipsolver.timer_, true, true);
+  mipsolver.setProfiling(&profiling);
+  mipsolver.mipdata_ =
+      std::unique_ptr<HighsMipSolverData>(new HighsMipSolverData(mipsolver));
+  mipsolver.mipdata_->init();
+  mipsolver.mipdata_->setupDomainPropagation();
+
+  presolve::HighsPostsolveStack& postsolve_stack =
+      mipsolver.mipdata_->postSolveStack;
+
+  presolve::HPresolve presolve;
+  presolve.setInput(mipsolver, -1);
+  REQUIRE(presolve.okSetupPresolveDataStructures());
+  auto result = presolve.normaliseCliqueRows(postsolve_stack);
+  mipsolver.timer_.stop();
+  REQUIRE(static_cast<int>(result) == 0);
+  // x0 must have been fixed (recorded on the postsolve stack)
+  REQUIRE(postsolve_stack.numReductions() == 1);
+
+  HighsTaskExecutor::shutdown(true);
+}
+
+TEST_CASE("test-normalise-complemented", "[highs_test_presolve_rules]") {
+  // 3*x0 - x1 - x2 <= -1: after complementing x1, x2 the transformed
+  // row is 3*x0 + (1-x1) + (1-x2) <= rhs=1. x0 has coefficient 3 > 1,
+  // so it is trivially fixed to 0. remaining complemented variables are
+  // normalised to -1 coefficients with row_upper = 1 - 2 = -1.
+  HighsLp lp;
+  lp.num_col_ = 3;
+  lp.num_row_ = 1;
+  lp.sense_ = ObjSense::kMinimize;
+  lp.col_cost_ = {1.0, 1.0, 1.0};
+  lp.col_lower_ = {0.0, 0.0, 0.0};
+  lp.col_upper_ = {1.0, 1.0, 1.0};
+  lp.integrality_ = {HighsVarType::kInteger, HighsVarType::kInteger,
+                     HighsVarType::kInteger};
+  lp.row_lower_ = {-kHighsInf};
+  lp.row_upper_ = {-1.0};
+  lp.a_matrix_.format_ = MatrixFormat::kColwise;
+  lp.a_matrix_.num_col_ = 3;
+  lp.a_matrix_.num_row_ = 1;
+  lp.a_matrix_.start_ = {0, 1, 2, 3};
+  lp.a_matrix_.index_ = {0, 0, 0};
+  lp.a_matrix_.value_ = {3.0, -1.0, -1.0};
+
+  highs::parallel::initialize_scheduler(1);
+
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  highs.passModel(lp);
+
+  HighsCallback callback(&highs);
+  const HighsOptions& options = highs.getOptions();
+  HighsSolution solution;
+  HighsProfiling profiling;
+
+  HighsMipSolver mipsolver(callback, options, lp, solution);
+  mipsolver.timer_.start();
+  profiling.initialize(mipsolver.timer_, true, true);
+  mipsolver.setProfiling(&profiling);
+  mipsolver.mipdata_ =
+      std::unique_ptr<HighsMipSolverData>(new HighsMipSolverData(mipsolver));
+  mipsolver.mipdata_->init();
+  mipsolver.mipdata_->setupDomainPropagation();
+
+  presolve::HighsPostsolveStack& postsolve_stack =
+      mipsolver.mipdata_->postSolveStack;
+
+  presolve::HPresolve presolve;
+  presolve.setInput(mipsolver, -1);
+  REQUIRE(presolve.okSetupPresolveDataStructures());
+  auto result = presolve.normaliseCliqueRows(postsolve_stack);
+  mipsolver.timer_.stop();
+  REQUIRE(static_cast<int>(result) == 0);
+  // x0 must have been fixed (recorded on the postsolve stack)
+  REQUIRE(postsolve_stack.numReductions() == 1);
+  // row should be normalised to -x1 - x2 <= -1
+  REQUIRE(lp.row_upper_[0] == -1.0);
+  REQUIRE(lp.row_lower_[0] == -kHighsInf);
 
   HighsTaskExecutor::shutdown(true);
 }
