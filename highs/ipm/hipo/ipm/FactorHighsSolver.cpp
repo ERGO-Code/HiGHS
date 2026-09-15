@@ -1,5 +1,6 @@
 #include "FactorHighsSolver.h"
 
+#include <algorithm>
 #include <cstring>
 #include <limits>
 
@@ -593,7 +594,10 @@ void FactorHighsSolver::setParallelBeforeSymbolic() {
 }
 
 static bool usingAppleBlas() {
-  return strstr(HighsExtras::blas::getInfo()->provider, "Apple") != nullptr;
+  std::string provider = HighsExtras::blas::getInfo()->provider;
+  std::transform(provider.begin(), provider.end(), provider.begin(),
+                 [](unsigned char c) { return std::tolower(c); });
+  return strstr(provider.c_str(), "apple") != nullptr;
 }
 
 void FactorHighsSolver::setParallelAfterSymbolic() {

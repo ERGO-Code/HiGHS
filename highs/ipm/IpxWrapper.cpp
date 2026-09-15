@@ -421,7 +421,10 @@ HighsStatus solveQpHipo(HighsQpSolverObject& solver_object) {
 }
 
 static bool usingOpenBLAS() {
-  return strstr(HighsExtras::blas::getInfo()->provider, "OpenBLAS") != nullptr;
+  std::string provider = HighsExtras::blas::getInfo()->provider;
+  std::transform(provider.begin(), provider.end(), provider.begin(),
+                 [](unsigned char c) { return std::tolower(c); });
+  return strstr(provider.c_str(), "openblas") != nullptr;
 }
 
 static HighsInt prepareOpenBLAS(const HighsOptions& options) {
