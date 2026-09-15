@@ -2820,7 +2820,6 @@ void HighsDomain::conflictAnalysis(HighsConflictPool& conflictPool,
   if (&globaldom == this) return;
   if (globaldom.infeasible() || !infeasible_) return;
 
-  // Not sure how this should be modified for the workers.
   globaldom.propagate();
   if (globaldom.infeasible()) return;
 
@@ -3787,10 +3786,8 @@ bool HighsDomain::ConflictSet::explainBoundChange(
       HighsInt ninfmin;
       HighsCDouble minAct;
       globaldom.computeMinActivity(0, len, inds, vals, ninfmin, minAct);
-      assert(ninfmin <= 1);
-      // todo: treat case with a single infinite contribution that propagated a
-      // bound
-      if (ninfmin == 1) return false;
+      // todo: treat case with a single infinite contribution
+      if (ninfmin > 0) return false;
 
       return explainBoundChangeLeq(currentFrontier, domchg, inds, vals, len,
                                    rhs, static_cast<double>(minAct));
