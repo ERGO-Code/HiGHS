@@ -481,9 +481,19 @@ HPresolve::StatusResult HPresolve::convertImpliedInteger(HighsInt col,
       ++rowsizeImplInt[nonzero.index()];
   }
 
+  // Potentially strengthen existing bound using implied bounds
+  // If not done then there may be a stronger fractional
+  // implied bound for a non-continuous column, which causes
+  // errors in rules downstream that assume integrality.
+  // changeColBounds will perform rounding
+  double newLower = model->col_lower_[col];
+  double newUpper = model->col_upper_[col];
+  if (implColLower[col] > newLower + primal_feastol)
+    newLower = implColLower[col];
+  if (implColUpper[col] < newUpper - primal_feastol)
+    newUpper = implColUpper[col];
   // round and update bounds
-  return StatusResult(
-      changeColBounds(col, model->col_lower_[col], model->col_upper_[col]));
+  return StatusResult(changeColBounds(col, newLower, newUpper));
 }
 
 void HPresolve::chooseRules() {
@@ -1407,7 +1417,7 @@ HPresolve::Result HPresolve::dominatedColumns(
           lowerBound = std::ceil(lowerBound - primal_feastol);
         if (lowerBound == model->col_upper_[col]) {
           numFixedColsPredBndAnalysis++;
-          HPRESOLVE_CHECKED_CALL(fixCol(col, HighsInt{1}));
+          return fixCol(col, HighsInt{1});
         } else if (model->integrality_[col] != HighsVarType::kContinuous) {
           numModifiedBndsPredBndAnalysis++;
           HPRESOLVE_CHECKED_CALL(changeColLower(col, lowerBound));
@@ -1419,7 +1429,7 @@ HPresolve::Result HPresolve::dominatedColumns(
           upperBound = std::floor(upperBound + primal_feastol);
         if (upperBound == model->col_lower_[col]) {
           numFixedColsPredBndAnalysis++;
-          HPRESOLVE_CHECKED_CALL(fixCol(col, HighsInt{-1}));
+          return fixCol(col, HighsInt{-1});
         } else if (model->integrality_[col] != HighsVarType::kContinuous) {
           numModifiedBndsPredBndAnalysis++;
           HPRESOLVE_CHECKED_CALL(changeColUpper(col, upperBound));

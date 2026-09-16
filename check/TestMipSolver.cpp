@@ -1710,7 +1710,7 @@ TEST_CASE("MIP-equality-clique-fixing-to-zero", "[highs_test_mip_solver]") {
 
 TEST_CASE("issue-3170", "[highs_test_mip_solver]") {
   std::string filename =
-      std::string(HIGHS_DIR) + "/check/instances/issue-3170-1.mps";
+      std::string(HIGHS_DIR) + "/check/instances/issue-3170.mps";
   Highs highs;
   highs.setOptionValue("output_flag", dev_run);
   highs.setOptionValue("mip_rel_gap", 0);
@@ -1719,6 +1719,7 @@ TEST_CASE("issue-3170", "[highs_test_mip_solver]") {
   const HighsModelStatus require_model_status = HighsModelStatus::kOptimal;
   const double optimal_objective = -21446579.3647;
   solve(highs, kHighsOffString, require_model_status, optimal_objective);
+  highs.setOptionValue("output_flag", dev_run);
   solve(highs, kHighsOnString, require_model_status, optimal_objective);
 }
 
@@ -1882,6 +1883,52 @@ TEST_CASE("presolve-free-integer-column", "[highs_test_mip_solver]") {
   solve(highs, kHighsOnString, require_model_status, optimal_objective);
 }
 
+TEST_CASE("issue-3274-1", "[highs_test_mip_solver]") {
+  HighsLp lp;
+  lp.num_col_ = 4;
+  lp.num_row_ = 3;
+  lp.col_cost_ = {0, 1, 0, 0};
+  lp.col_lower_ = {-kHighsInf, -kHighsInf, 0, 0};
+  lp.col_upper_ = {kHighsInf, kHighsInf, kHighsInf, kHighsInf};
+  lp.row_lower_ = {0, 0, -12};
+  lp.row_upper_ = {kHighsInf, 0, kHighsInf};
+  lp.a_matrix_.start_ = {0, 1, 2, 5, 7};
+  lp.a_matrix_.index_ = {1, 0, 0, 1, 2, 1, 2};
+  lp.a_matrix_.value_ = {1, 1, -1, 1, -68, -1, -1};
+  lp.integrality_ = {HighsVarType::kInteger, HighsVarType::kInteger,
+                     HighsVarType::kContinuous, HighsVarType::kInteger};
+
+  for (const std::string& presolve : {kHighsOnString, kHighsOffString}) {
+    Highs highs;
+    highs.setOptionValue("output_flag", dev_run);
+    REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
+    solve(highs, presolve, HighsModelStatus::kOptimal, 0.0);
+  }
+}
+
+TEST_CASE("issue-3274-2", "[highs_test_mip_solver]") {
+  HighsLp lp;
+  lp.num_col_ = 3;
+  lp.num_row_ = 2;
+  lp.col_cost_ = {1, 0, 0};
+  lp.col_lower_ = {1, -kHighsInf, -kHighsInf};
+  lp.col_upper_ = {3, 1, kHighsInf};
+  lp.row_lower_ = {13, 0};
+  lp.row_upper_ = {kHighsInf, 0};
+  lp.a_matrix_.start_ = {0, 2, 4, 5};
+  lp.a_matrix_.index_ = {0, 1, 0, 1, 1};
+  lp.a_matrix_.value_ = {9, 1, 7, -1, -1};
+  lp.integrality_ = {HighsVarType::kSemiContinuous, HighsVarType::kInteger,
+                     HighsVarType::kInteger};
+
+  for (const std::string& presolve : {kHighsOnString, kHighsOffString}) {
+    Highs highs;
+    highs.setOptionValue("output_flag", dev_run);
+    REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
+    solve(highs, presolve, HighsModelStatus::kOptimal, 1.0);
+  }
+}
+
 TEST_CASE("pr-3268", "[highs_test_mip_solver]") {
   HighsLp lp;
   lp.num_col_ = 5;
@@ -1909,9 +1956,10 @@ TEST_CASE("issue-3271", "[highs_test_mip_solver]") {
   //
   // min 3z subject to -15.5 <= x; x <= 4.5, y free z = 0; x, y, z all integer
   //
-  // Singleton row -15.5 <= x is removed, giving x \in [-15.5, 4.5]
-  // and, since the colunn is empty, x is fixed to 4.5 - unless bound
-  // on x is rounded to 4 first
+  // During row pass of HPresolve::initialRowAndColPresolve, singleton
+  // row -15.5 <= x is removed, giving x \in [-15.5, 4.5] and, since
+  // the colunn is empty, x is fixed to 4.5 - unless bound on x is
+  // rounded to 4 first.
   HighsLp lp;
   lp.num_col_ = 3;
   lp.num_row_ = 1;
@@ -1957,4 +2005,33 @@ TEST_CASE("issue-3273", "[highs_test_mip_solver]") {
   solve(highs, kHighsOffString, require_model_status, optimal_objective);
   highs.setOptionValue("output_flag", dev_run);
   solve(highs, kHighsOnString, require_model_status, optimal_objective);
+}
+
+TEST_CASE("dominated-column-double-fixing", "[highs_test_mip_solver]") {
+  HighsLp lp;
+  lp.num_col_ = 12;
+  lp.num_row_ = 10;
+  lp.col_names_ = {"c0", "c1", "c3",  "c4",  "c5", "c6",
+                   "c7", "c8", "c10", "c11", "c9", "c2"};
+  lp.col_cost_ = {-6, -4, 4, 8, 1, 5, -3, -3, -10, 4, 0, 0};
+  lp.col_lower_.assign(lp.num_col_, 0);
+  lp.col_upper_.assign(lp.num_col_, 1);
+  lp.integrality_.assign(lp.num_col_, HighsVarType::kInteger);
+  lp.row_lower_ = {-kHighsInf, -kHighsInf, -kHighsInf, -kHighsInf, -kHighsInf,
+                   -2,         -kHighsInf, -kHighsInf, -1,         -kHighsInf};
+  lp.row_upper_ = {3, -2, 3, 1, 4, -2, -1, 4, -1, 1};
+  lp.a_matrix_.format_ = MatrixFormat::kColwise;
+  lp.a_matrix_.start_ = {0, 2, 8, 11, 13, 14, 17, 20, 23, 27, 30, 33, 38};
+  lp.a_matrix_.index_ = {5, 9, 1, 3, 4, 5, 6, 8, 1, 4, 5, 5, 8,
+                         2, 1, 6, 7, 2, 7, 8, 1, 4, 8, 1, 3, 4,
+                         9, 4, 5, 6, 1, 8, 9, 4, 6, 7, 8, 9};
+  lp.a_matrix_.value_ = {-4, 1,  -1, -4, -3, 1,  -1, 3,  4,  1,  -4, -1, 1,
+                         -1, -2, 1,  -1, -2, -1, -4, -1, -4, -2, -3, 1,  -1,
+                         -1, 4,  4,  -1, 1,  4,  -1, -2, -1, 1,  3,  1};
+
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
+  solve(highs, kHighsOffString, HighsModelStatus::kInfeasible);
+  solve(highs, kHighsOnString, HighsModelStatus::kInfeasible);
 }
