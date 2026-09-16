@@ -1192,6 +1192,16 @@ HPresolve::Result HPresolve::dominatedColumns(
   // in Mixed Integer Programming, INFORMS Journal on Computing 32(2):473-506.
   // See also Gamrath, G., Koch, T., Martin, A. et al., Progress in presolving
   // for mixed integer programming, Math. Prog. Comp. 7, 367–398 (2015).
+  //
+  // Given a domination relationship x_j ≻ x_k (Definition 1 in Gamrath
+  // et al.), there exists an optimal solution where x_j = u_j or x_k = l_k
+  // (Theorem 2). If this can be verified (e.g. via implied bounds or
+  // cliques), the dominated variable is fixed. Otherwise, predictive bound
+  // analysis (Theorem 3) derives tighter bounds on x_j and x_k by computing
+  // implied bounds conditional on the other variable being at its extreme.
+  // Worst-case bounds (MINU/MAXU) use the worst-case row activity (maximal
+  // for ≤-constraints, minimal for ≥-constraints) to obtain bounds that are
+  // feasible independent of other variables' values.
 
   // non-zero signatures for comparing columns
   std::vector<std::pair<uint32_t, uint32_t>> signatures(model->num_col_);
@@ -1363,7 +1373,20 @@ HPresolve::Result HPresolve::dominatedColumns(
       return Result::kOk;
     };
 
-    // lambda for tightening bounds
+    // Predictive bound analysis (Theorem 3 from Gamrath et al. 2015).
+    // The paper defines x_j ≻ x_k (j dominates k). The code checks
+    // (direction * x_col) ≻ (direction_k * x_otherCol):
+    //   direction = +1, multiplier = +1: x_j =  x_col,      x_k =  x_otherCol
+    //   direction = +1, multiplier = -1: x_j =  x_col,      x_k = -x_otherCol
+    //   direction = -1, multiplier = +1: x_j =  x_otherCol, x_k =  x_col
+    //   direction = -1, multiplier = -1: x_j = -x_col,      x_k =  x_otherCol
+    // col is the column being tightened, otherCol is the conditioning
+    // column (whose value otherColBound is substituted).
+    // colIsAtUpper = true : col = x_j, apply (i)/(iii)/(v)
+    // colIsAtUpper = false: col = x_k, apply (ii)/(iv)/(vi)
+    // otherColCoeffPattern: +1 = same-sign, -1 = opposite-sign coefficient
+    //                       filter (opposite signs from negated-column
+    //                       domination)
     auto tightenBounds = [&](HighsInt col, double colBound, bool colIsAtUpper,
                              HighsInt otherCol, double otherColBound,
                              HighsInt otherColCoeffPattern) {
@@ -1374,8 +1397,10 @@ HPresolve::Result HPresolve::dominatedColumns(
       // initialise bounds
       double lowerBound = -kHighsInf;
       double upperBound = kHighsInf;
-      // predictive bound analysis, see Theorem 3 from Gamrath et al.'s paper
       if (colIsAtUpper) {
+        // For negated-column domination the paper's x_k is negated,
+        // so (i)/(iii)/(v) below correspond to (ii)/(iv)/(vi) in the
+        // paper with negated bounds and cost.
         // (i) x_j <= MINL^k_j(otherColBound)
         upperBound = computeImpliedUpperBound(col, otherCol, otherColBound,
                                               otherColCoeffPattern);
@@ -1393,6 +1418,9 @@ HPresolve::Result HPresolve::dominatedColumns(
           lowerBound = std::max(lowerBound, std::min(colBound, worstCaseUpper));
         }
       } else {
+        // For negated-column domination the paper's x_j is negated,
+        // so (ii)/(iv)/(vi) below correspond to (i)/(iii)/(v) in the
+        // paper with negated bounds and cost.
         // (ii) x_k >= MAXL^j_k(otherColBound)
         lowerBound = computeImpliedLowerBound(col, otherCol, otherColBound,
                                               otherColCoeffPattern);
@@ -1411,7 +1439,8 @@ HPresolve::Result HPresolve::dominatedColumns(
         }
       }
       // update bounds
-      if (lowerBound > model->col_lower_[col] + primal_feastol) {
+      if (lowerBound < kHighsInf &&
+          lowerBound > model->col_lower_[col] + primal_feastol) {
         if (model->integrality_[col] != HighsVarType::kContinuous)
           lowerBound = std::ceil(lowerBound - primal_feastol);
         if (lowerBound == model->col_upper_[col]) {
@@ -1422,7 +1451,8 @@ HPresolve::Result HPresolve::dominatedColumns(
           HPRESOLVE_CHECKED_CALL(changeColLower(col, lowerBound));
         }
       }
-      if (upperBound < model->col_upper_[col] - primal_feastol) {
+      if (upperBound > -kHighsInf &&
+          upperBound < model->col_upper_[col] - primal_feastol) {
         if (model->integrality_[col] != HighsVarType::kContinuous)
           upperBound = std::floor(upperBound + primal_feastol);
         if (upperBound == model->col_lower_[col]) {
