@@ -166,6 +166,8 @@ TEST_CASE("test-parallel-cols-merge-lp", "[highs_test_presolve_rules]") {
   h.setOptionValue("output_flag", dev_run);
   REQUIRE(h.passModel(lp) == HighsStatus::kOk);
   h.setOptionValue("presolve_rule_test", kPresolveRuleParallelRowsAndCols);
+  h.presolve();
+  REQUIRE(h.getPresolvedLp().num_col_ == 2);
   h.run();
   REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
   REQUIRE(h.getInfo().num_primal_infeasibilities == 0);
@@ -206,6 +208,8 @@ TEST_CASE("test-parallel-cols-merge-ip", "[highs_test_presolve_rules]") {
   h.setOptionValue("output_flag", dev_run);
   REQUIRE(h.passModel(lp) == HighsStatus::kOk);
   h.setOptionValue("presolve_rule_test", kPresolveRuleParallelRowsAndCols);
+  h.presolve();
+  REQUIRE(h.getPresolvedLp().num_col_ == 2);
   h.run();
   REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
   REQUIRE(h.getInfo().num_primal_infeasibilities == 0);
