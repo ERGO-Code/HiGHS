@@ -126,12 +126,14 @@ Int denseFactFH(Int n, Int k, double* A, double* B, const Int* pivot_sign,
       highs::parallel::TaskGroup tg;
 
       auto split_gemm = [&](Int num_row, Int num_col, const double* Rj,
-                            const double* Pj, double* Qj) {
+                            const double* Pj, double* Qj) -> Int {
         // Qj -= Rj * Pj^T
 
         const bool do_split = options.parallel_node && num_col > nb / 2 &&
                               jb > nb / 2 &&
                               num_row >= kBlockParallelThreshold * nb;
+
+        Int tasks_spawned{};
 
         if (do_split) {
           Int Rj_offset{};
@@ -147,6 +149,8 @@ Int denseFactFH(Int n, Int k, double* A, double* B, const Int* pivot_sign,
                                 jb, Rj_block, jb, 1.0, Qj_block, num_col, data);
             });
 
+            ++tasks_spawned;
+
             Rj_offset += jb * nb;
             Qj_offset += num_col * nb;
             row_start += nb;
@@ -155,6 +159,8 @@ Int denseFactFH(Int n, Int k, double* A, double* B, const Int* pivot_sign,
           callAndTime_dgemm('T', 'N', num_col, num_row, jb, -1.0, Pj, jb, Rj,
                             jb, 1.0, Qj, num_col, data);
         }
+
+        return tasks_spawned;
       };
 
       // ===========================================================================
@@ -162,16 +168,19 @@ Int denseFactFH(Int n, Int k, double* A, double* B, const Int* pivot_sign,
       // ===========================================================================
       Int64 R_offset{};
       for (Int j = block_id + 1; j < blocks_in_A; ++j) {
-        const Int col_block_j = std::min(nb, k - nb * j);
-        const Int row_block_j = n - nb * j;
+        const Int num_col_block_j = std::min(nb, k - nb * j);
+        const Int num_row_block_j = n - nb * j;
 
         const double* Pj = &buffer[R_offset];
         double* Qj = &A[blocks_diag_start[j]];
         const double* Rj = &R[R_offset];
 
-        split_gemm(row_block_j, col_block_j, Rj, Pj, Qj);
+        const Int tasks_spawned =
+            split_gemm(num_row_block_j, num_col_block_j, Rj, Pj, Qj);
 
-        R_offset += jb * col_block_j;
+        if (tasks_spawned > kBlockTaskwaitThreshold) tg.taskWait();
+
+        R_offset += jb * num_col_block_j;
       }
 
       // ===========================================================================
@@ -182,17 +191,20 @@ Int denseFactFH(Int n, Int k, double* A, double* B, const Int* pivot_sign,
         Int64 B_offset{};
 
         for (Int j = 0; j < blocks_in_B; ++j) {
-          const Int row_block_j = B_size - nb * j;
-          const Int col_block_j = std::min(nb, row_block_j);
+          const Int num_row_block_j = B_size - nb * j;
+          const Int num_col_block_j = std::min(nb, num_row_block_j);
 
           const double* Pj = &buffer[R_offset];
           double* Qj = &B[B_offset];
           const double* Rj = &R[R_offset];
 
-          split_gemm(row_block_j, col_block_j, Rj, Pj, Qj);
+          const Int tasks_spawned =
+              split_gemm(num_row_block_j, num_col_block_j, Rj, Pj, Qj);
 
-          B_offset += row_block_j * col_block_j;
-          R_offset += jb * col_block_j;
+          if (tasks_spawned > kBlockTaskwaitThreshold) tg.taskWait();
+
+          B_offset += num_row_block_j * num_col_block_j;
+          R_offset += jb * num_col_block_j;
         }
       }
 
