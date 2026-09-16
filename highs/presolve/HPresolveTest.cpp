@@ -53,16 +53,7 @@ HPresolve::Result HPresolve::presolveRuleTestFourierMotzkin(
   assert(options->presolve_rule_test == kPresolveRuleFourierMotzkin);
   highsLogUser(options->log_options, HighsLogType::kInfo,
                "HPresolve::presolveRuleTestFourierMotzkin\n");
-
   HighsInt numColsEliminated;
-  HPresolve::Result result = fourierMotzkin(postsolve_stack, numColsEliminated);
-  if (result != Result::kOk) return result;
-
-  highsLogUser(options->log_options, HighsLogType::kInfo,
-               "HPresolve::presolveRuleTestFourierMotzkin: Removed %d "
-               "rows and %d columns\n",
-               static_cast<int>(numDeletedRows),
-               static_cast<int>(numDeletedCols));
-  return result;
+  return fourierMotzkin(postsolve_stack, numColsEliminated);
 }
 }  // namespace presolve
