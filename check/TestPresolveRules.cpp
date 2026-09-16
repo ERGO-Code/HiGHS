@@ -137,6 +137,83 @@ TEST_CASE("test-parallel-rows-cut-ordering", "[highs_test_presolve_rules]") {
   REQUIRE(!postsolve_stack.isCutRow(0));
 }
 
+TEST_CASE("test-parallel-cols-merge-lp", "[highs_test_presolve_rules]") {
+  // Example 8 (LP) from Gamrath et al. 2015: parallel column merge.
+  //
+  //   min  2x1 + 4x2 + x3
+  //   s.t. -x1 - 2x2 - x3 <= -10
+  //        0 <= x1 <= 3, 0 <= x2 <= 4, 0 <= x3 <= 5
+  //
+  // Columns 1 and 2 are parallel with lambda = 2, c2 = lambda*c1.
+  // Merge y := x1 + 2x2 in [0, 11], cost 2y.
+  // Presolved: min 2y + x3, -y - x3 <= -10, y in [0,11], x3 in [0,5].
+  // Optimal x* = (0, 2.5, 5), obj = 15.
+  HighsLp lp;
+  lp.num_col_ = 3;
+  lp.num_row_ = 1;
+  lp.sense_ = ObjSense::kMinimize;
+  lp.col_cost_ = {2, 4, 1};
+  lp.col_lower_ = {0, 0, 0};
+  lp.col_upper_ = {3, 4, 5};
+  lp.row_lower_ = {-kHighsInf};
+  lp.row_upper_ = {-10};
+  lp.a_matrix_.format_ = MatrixFormat::kRowwise;
+  lp.a_matrix_.start_ = {0, 3};
+  lp.a_matrix_.index_ = {0, 1, 2};
+  lp.a_matrix_.value_ = {-1, -2, -1};
+
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  REQUIRE(h.passModel(lp) == HighsStatus::kOk);
+  h.setOptionValue("presolve_rule_test", kPresolveRuleParallelRowsAndCols);
+  h.run();
+  REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
+  REQUIRE(h.getInfo().num_primal_infeasibilities == 0);
+  REQUIRE(std::abs(h.getObjectiveValue() - 15) < 1e-8);
+
+  h.resetGlobalScheduler(true);
+}
+
+TEST_CASE("test-parallel-cols-merge-ip", "[highs_test_presolve_rules]") {
+  // Example 8 (IP) from Gamrath et al. 2015: parallel column merge.
+  //
+  //   min  2x1 + 4x2 + x3
+  //   s.t. -x1 - 2x2 - x3 <= -10
+  //        0 <= x1 <= 3, 0 <= x2 <= 4, 0 <= x3 <= 5
+  //        x1, x2, x3 integer
+  //
+  // Columns 1 and 2 are parallel with lambda = 2, c2 = lambda*c1.
+  // Merge y := x1 + 2x2 in {0, ..., 11}, cost 2y.
+  // Presolved: min 2y + x3, -y - x3 <= -10, y in [0,11], x3 in [0,5].
+  // Optimal x* = (1, 2, 5), obj = 15.
+  HighsLp lp;
+  lp.num_col_ = 3;
+  lp.num_row_ = 1;
+  lp.sense_ = ObjSense::kMinimize;
+  lp.col_cost_ = {2, 4, 1};
+  lp.col_lower_ = {0, 0, 0};
+  lp.col_upper_ = {3, 4, 5};
+  lp.row_lower_ = {-kHighsInf};
+  lp.row_upper_ = {-10};
+  lp.a_matrix_.format_ = MatrixFormat::kRowwise;
+  lp.a_matrix_.start_ = {0, 3};
+  lp.a_matrix_.index_ = {0, 1, 2};
+  lp.a_matrix_.value_ = {-1, -2, -1};
+  lp.integrality_ = {HighsVarType::kInteger, HighsVarType::kInteger,
+                     HighsVarType::kInteger};
+
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  REQUIRE(h.passModel(lp) == HighsStatus::kOk);
+  h.setOptionValue("presolve_rule_test", kPresolveRuleParallelRowsAndCols);
+  h.run();
+  REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
+  REQUIRE(h.getInfo().num_primal_infeasibilities == 0);
+  REQUIRE(std::abs(h.getObjectiveValue() - 15) < 1e-8);
+
+  h.resetGlobalScheduler(true);
+}
+
 void solveAndCheck(const std::string& message, const HighsLp& lp, Highs& h,
                    const std::string& solver, bool use_presolve,
                    const HighsInt require_presolved_model_num_col,
