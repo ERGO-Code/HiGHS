@@ -8375,8 +8375,8 @@ HPresolve::Result HPresolve::fourierMotzkin(
         // inspect candidates (with limits)
         HighsInt numFails = 0;
         for (HighsInt col : candidates) {
-          int64_t neRed;
-          int64_t mrRed;
+          int64_t neRed = 0;
+          int64_t mrRed = 0;
           bool elimCandidate =
               checkNonZeros(col, objRowCols, iPlus, iMinus, pPlus, pMinus,
                             affectedCols, neRed, mrRed);
@@ -8534,8 +8534,8 @@ HPresolve::Result HPresolve::fourierMotzkin(
     }
 
     // compute affected columns
-    int64_t neRed;
-    int64_t mrRed;
+    int64_t neRed = 0;
+    int64_t mrRed = 0;
     bool elimCandidate = checkNonZeros(col, objRowCols, iPlus, iMinus, pPlus,
                                        pMinus, affectedCols, neRed, mrRed);
 
@@ -8694,7 +8694,8 @@ HPresolve::Result HPresolve::fourierMotzkin(
       // skip variable if it is not on the heap and no candidate
       if (!heap.contains(k) && !isCandidateCol) continue;
       // check column non-zeros
-      int64_t ne, mr;
+      int64_t ne = 0;
+      int64_t mr = 0;
       bool elimCandidate =
           isCandidateCol && checkNonZeros(k, objRowCols, iPlus, iMinus, pPlus,
                                           pMinus, affectedCols, ne, mr);
