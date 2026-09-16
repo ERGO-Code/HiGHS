@@ -1182,6 +1182,16 @@ HPresolve::Result HPresolve::dominatedColumns(
   // in Mixed Integer Programming, INFORMS Journal on Computing 32(2):473-506.
   // See also Gamrath, G., Koch, T., Martin, A. et al., Progress in presolving
   // for mixed integer programming, Math. Prog. Comp. 7, 367–398 (2015).
+  //
+  // Given a domination relationship x_j ≻ x_k (Definition 1 in Gamrath
+  // et al.), there exists an optimal solution where x_j = u_j or x_k = l_k
+  // (Theorem 2). If this can be verified (e.g. via implied bounds or
+  // cliques), the dominated variable is fixed. Otherwise, predictive bound
+  // analysis (Theorem 3) derives tighter bounds on x_j and x_k by computing
+  // implied bounds conditional on the other variable being at its extreme.
+  // Worst-case bounds (MINU/MAXU) use the worst-case row activity (maximal
+  // for ≤-constraints, minimal for ≥-constraints) to obtain bounds that are
+  // feasible independent of other variables' values.
 
   // non-zero signatures for comparing columns
   std::vector<std::pair<uint32_t, uint32_t>> signatures(model->num_col_);
