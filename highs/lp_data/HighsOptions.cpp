@@ -17,6 +17,11 @@
 #include "HighsExternalApi.h"
 #include "util/stringutil.h"
 
+template <typename RecordType>
+static RecordType& getOptionRecord(OptionRecord* record) {
+  return *static_cast<RecordType*>(record);
+}
+
 void highsOpenLogFile(HighsLogOptions& log_options,
                       std::vector<OptionRecord*>& option_records,
                       const std::string& log_file) {
@@ -40,7 +45,8 @@ void highsOpenLogFile(HighsLogOptions& log_options,
   // writing or nullptr
   if (log_file.compare(""))
     log_options.log_stream = fopen(log_file.c_str(), "a");
-  OptionRecordString& option = *(OptionRecordString*)option_records[index];
+  OptionRecordString& option =
+      getOptionRecord<OptionRecordString>(option_records[index]);
   option.assignvalue(log_file);
 }
 
@@ -56,6 +62,15 @@ static std::string optionEntryTypeToString(const HighsOptionType type) {
   }
 }
 
+static std::string joinOptionValues(const std::vector<std::string>& values) {
+  std::string result;
+  for (size_t i = 0; i < values.size(); i++) {
+    if (i > 0) result += (i == values.size() - 1) ? " or " : ", ";
+    result += "\"" + values[i] + "\"";
+  }
+  return result;
+}
+
 bool optionOffChooseOnOk(const HighsLogOptions& report_log_options,
                          const string& name, const string& value) {
   if (value == kHighsOffString || value == kHighsChooseString ||
@@ -63,9 +78,10 @@ bool optionOffChooseOnOk(const HighsLogOptions& report_log_options,
     return true;
   highsLogUser(
       report_log_options, HighsLogType::kError,
-      "Value \"%s\" for %s option is not one of \"%s\", \"%s\" or \"%s\"\n",
-      value.c_str(), name.c_str(), kHighsOffString.c_str(),
-      kHighsChooseString.c_str(), kHighsOnString.c_str());
+      "Value \"%s\" for %s option is not one of %s\n", value.c_str(),
+      name.c_str(),
+      joinOptionValues({kHighsOffString, kHighsChooseString, kHighsOnString})
+          .c_str());
   return false;
 }
 
@@ -73,92 +89,65 @@ bool optionOffOnOk(const HighsLogOptions& report_log_options,
                    const string& name, const string& value) {
   if (value == kHighsOffString || value == kHighsOnString) return true;
   highsLogUser(report_log_options, HighsLogType::kError,
-               "Value \"%s\" for %s option is not one of \"%s\" or \"%s\"\n",
-               value.c_str(), name.c_str(), kHighsOffString.c_str(),
-               kHighsOnString.c_str());
+               "Value \"%s\" for %s option is not one of %s\n", value.c_str(),
+               name.c_str(),
+               joinOptionValues({kHighsOffString, kHighsOnString}).c_str());
+  return false;
+}
+
+static bool optionSolverValueOk(const HighsLogOptions& report_log_options,
+                                const string& value,
+                                const std::vector<std::string>& valid_solvers,
+                                const string& option_name,
+                                const string& option_description,
+                                HighsLogType log_type) {
+  for (const auto& solver : valid_solvers)
+    if (value == solver) return true;
+  if (value == kHipoString &&
+      !HighsExternalApi::isAvailable<HighsExtras::hipo>()) {
+    HighsExternalApi::logUnavailable<HighsExtras::hipo>(
+        report_log_options, HighsLogType::kError,
+        "The HiPO solver was requested via the \"%s\" option.",
+        option_name.c_str());
+    return false;
+  }
+  highsLogUser(report_log_options, log_type,
+               "Value \"%s\" for %s option (\"%s\") is not one of %s\n",
+               value.c_str(), option_description.c_str(), option_name.c_str(),
+               joinOptionValues(valid_solvers).c_str());
   return false;
 }
 
 bool optionSolverOk(const HighsLogOptions& report_log_options,
                     const string& value) {
-  const bool hipo_available =
-      HighsExternalApi::isAvailable<HighsExtras::hipo>();
-  if (value == kHighsChooseString || value == kSimplexString ||
-      value == kIpmString || (value == kHipoString && hipo_available) ||
-      value == kIpxString || value == kPdlpString || value == kQpAsmString ||
-      value == kHiPdlpString)
-    return true;
-  else if (value == kHipoString && !hipo_available) {
-    HighsExternalApi::logUnavailable<HighsExtras::hipo>(
-        report_log_options, HighsLogType::kError,
-        "The HiPO solver was requested via the \"%s\" option.",
-        kSolverString.c_str());
-    return false;
-  } else {
-    highsLogUser(report_log_options, HighsLogType::kError,
-                 "Value \"%s\" for LP/QP solver option (\"%s\") is not one of "
-                 "\"%s\", \"%s\", \"%s\", %s\"%s\", \"%s\", \"%s\" or \"%s\"\n",
-                 value.c_str(), kSolverString.c_str(),
-                 kHighsChooseString.c_str(), kSimplexString.c_str(),
-                 kIpmString.c_str(),
-                 hipo_available ? ("\"" + kHipoString + "\", ").c_str() : "",
-                 kIpxString.c_str(), kPdlpString.c_str(), kHiPdlpString.c_str(),
-                 kQpAsmString.c_str());
-    return false;
-  }
+  std::vector<std::string> valid = {
+      kHighsChooseString, kSimplexString, kIpmString,  kIpxString,
+      kPdlpString,        kHiPdlpString,  kQpAsmString};
+  if (HighsExternalApi::isAvailable<HighsExtras::hipo>())
+    valid.insert(valid.begin() + 3, kHipoString);
+  return optionSolverValueOk(report_log_options, value, valid, kSolverString,
+                             "LP/QP solver", HighsLogType::kError);
 }
 
 bool optionMipLpSolverOk(const HighsLogOptions& report_log_options,
                          const string& value) {
-  const bool hipo_available =
-      HighsExternalApi::isAvailable<HighsExtras::hipo>();
-  if (value == kHighsChooseString || value == kSimplexString ||
-      value == kIpmString || (value == kHipoString && hipo_available) ||
-      value == kIpxString)
-    return true;
-  else if (value == kHipoString && !hipo_available) {
-    HighsExternalApi::logUnavailable<HighsExtras::hipo>(
-        report_log_options, HighsLogType::kError,
-        "The HiPO solver was requested via the \"%s\" option.",
-        kMipLpSolverString.c_str());
-    return false;
-  } else {
-    highsLogUser(
-        report_log_options, HighsLogType::kError,
-        "Value \"%s\" for MIP LP solver option (\"%s\") is not one of "
-        "\"%s\", \"%s\", \"%s\"%s\"%s\"\n",
-        value.c_str(), kMipLpSolverString.c_str(), kHighsChooseString.c_str(),
-        kSimplexString.c_str(), kIpmString.c_str(),
-        hipo_available ? (", \"" + kHipoString + "\" or ").c_str() : " or ",
-        kIpxString.c_str());
-    return false;
-  }
+  std::vector<std::string> valid = {kHighsChooseString, kSimplexString,
+                                    kIpmString, kIpxString};
+  if (HighsExternalApi::isAvailable<HighsExtras::hipo>())
+    valid.insert(valid.begin() + 3, kHipoString);
+  return optionSolverValueOk(report_log_options, value, valid,
+                             kMipLpSolverString, "MIP LP solver",
+                             HighsLogType::kError);
 }
 
 bool optionMipIpmSolverOk(const HighsLogOptions& report_log_options,
                           const string& value) {
-  const bool hipo_available =
-      HighsExternalApi::isAvailable<HighsExtras::hipo>();
-  if (value == kHighsChooseString || value == kIpmString ||
-      (value == kHipoString && hipo_available) || value == kIpxString)
-    return true;
-  else if (value == kHipoString && !hipo_available) {
-    HighsExternalApi::logUnavailable<HighsExtras::hipo>(
-        report_log_options, HighsLogType::kError,
-        "The HiPO solver was requested via the \"%s\" option.",
-        kMipIpmSolverString.c_str());
-    return false;
-  } else {
-    highsLogUser(
-        report_log_options, HighsLogType::kError,
-        "Value \"%s\" for MIP IPM solver option (\"%s\") is not one of "
-        "\"%s\", \"%s\", \"%s\"%s\"%s\"\n",
-        value.c_str(), kMipIpmSolverString.c_str(), kHighsChooseString.c_str(),
-        kSimplexString.c_str(), kIpmString.c_str(),
-        hipo_available ? (", \"" + kHipoString + "\" or ").c_str() : " or ",
-        kIpxString.c_str());
-    return false;
-  }
+  std::vector<std::string> valid = {kHighsChooseString, kIpmString, kIpxString};
+  if (HighsExternalApi::isAvailable<HighsExtras::hipo>())
+    valid.insert(valid.begin() + 2, kHipoString);
+  return optionSolverValueOk(report_log_options, value, valid,
+                             kMipIpmSolverString, "MIP IPM solver",
+                             HighsLogType::kError);
 }
 
 bool optionHipoParallelTypeOk(const HighsLogOptions& report_log_options,
@@ -167,11 +156,11 @@ bool optionHipoParallelTypeOk(const HighsLogOptions& report_log_options,
       value == kHipoBothString || value == kHighsChooseString)
     return true;
   highsLogUser(report_log_options, HighsLogType::kError,
-               "Value \"%s\" for %s option is not one of \"%s\", \"%s\", "
-               "\"%s\" or \"%s\"\n",
-               value.c_str(), kHipoParallelString.c_str(),
-               kHipoTreeString.c_str(), kHipoNodeString.c_str(),
-               kHipoBothString.c_str(), kHighsChooseString.c_str());
+               "Value \"%s\" for %s option is not one of %s\n", value.c_str(),
+               kHipoParallelString.c_str(),
+               joinOptionValues({kHipoTreeString, kHipoNodeString,
+                                 kHipoBothString, kHighsChooseString})
+                   .c_str());
   return false;
 }
 
@@ -180,11 +169,12 @@ bool optionHipoSystemOk(const HighsLogOptions& report_log_options,
   if (value == kHipoNormalEqString || value == kHipoAugmentedString ||
       value == kHighsChooseString)
     return true;
-  highsLogUser(
-      report_log_options, HighsLogType::kError,
-      "Value \"%s\" for %s option is not one of \"%s\", \"%s\" or \"%s\"\n",
-      value.c_str(), kHipoSystemString.c_str(), kHipoNormalEqString.c_str(),
-      kHipoAugmentedString.c_str(), kHighsChooseString.c_str());
+  highsLogUser(report_log_options, HighsLogType::kError,
+               "Value \"%s\" for %s option is not one of %s\n", value.c_str(),
+               kHipoSystemString.c_str(),
+               joinOptionValues({kHipoNormalEqString, kHipoAugmentedString,
+                                 kHighsChooseString})
+                   .c_str());
   return false;
 }
 
@@ -194,11 +184,11 @@ bool optionHipoOrderingOk(const HighsLogOptions& report_log_options,
       value == kHipoRcmString || value == kHighsChooseString)
     return true;
   highsLogUser(report_log_options, HighsLogType::kError,
-               "Value \"%s\" for %s option is not one of \"%s\", \"%s\", "
-               "\"%s\" or \"%s\"\n",
-               value.c_str(), kHipoOrderingString.c_str(),
-               kHipoAmdString.c_str(), kHipoMetisString.c_str(),
-               kHipoRcmString.c_str(), kHighsChooseString.c_str());
+               "Value \"%s\" for %s option is not one of %s\n", value.c_str(),
+               kHipoOrderingString.c_str(),
+               joinOptionValues({kHipoAmdString, kHipoMetisString,
+                                 kHipoRcmString, kHighsChooseString})
+                   .c_str());
   return false;
 }
 
@@ -207,11 +197,12 @@ bool optionHipoFactorOk(const HighsLogOptions& report_log_options,
   if (value == kHipoFactorMultifrontal || value == kHipoFactorUplooking ||
       value == kHighsChooseString)
     return true;
-  highsLogUser(
-      report_log_options, HighsLogType::kError,
-      "Value \"%s\" for %s option is not one of \"%s\", \"%s\" or \"%s\"\n",
-      value.c_str(), kHipoFactorString.c_str(), kHipoFactorMultifrontal.c_str(),
-      kHipoFactorUplooking.c_str(), kHighsChooseString.c_str());
+  highsLogUser(report_log_options, HighsLogType::kError,
+               "Value \"%s\" for %s option is not one of %s\n", value.c_str(),
+               kHipoFactorString.c_str(),
+               joinOptionValues({kHipoFactorMultifrontal, kHipoFactorUplooking,
+                                 kHighsChooseString})
+                   .c_str());
   return false;
 }
 
@@ -242,6 +233,31 @@ OptionStatus getOptionIndex(const HighsLogOptions& report_log_options,
   return OptionStatus::kUnknownOption;
 }
 
+template <typename RecordType>
+static bool hasDuplicateValuePointers(
+    const HighsLogOptions& report_log_options,
+    const std::vector<OptionRecord*>& option_records, HighsInt index) {
+  RecordType& option = getOptionRecord<RecordType>(option_records[index]);
+  for (HighsInt check_index = 0;
+       check_index < static_cast<HighsInt>(option_records.size());
+       check_index++) {
+    if (check_index == index) continue;
+    if (option_records[check_index]->type != option.type) continue;
+    RecordType& check_option =
+        getOptionRecord<RecordType>(option_records[check_index]);
+    if (check_option.value == option.value) {
+      highsLogUser(report_log_options, HighsLogType::kError,
+                   "checkOptions: Option %" HIGHSINT_FORMAT
+                   " (\"%s\") has the same "
+                   "value pointer as option %" HIGHSINT_FORMAT " (\"%s\")\n",
+                   index, option.name.c_str(), check_index,
+                   check_option.name.c_str());
+      return true;
+    }
+  }
+  return false;
+}
+
 OptionStatus checkOptions(const HighsLogOptions& report_log_options,
                           const std::vector<OptionRecord*>& option_records) {
   bool error_found = false;
@@ -264,98 +280,32 @@ OptionStatus checkOptions(const HighsLogOptions& report_log_options,
     }
     if (type == HighsOptionType::kBool) {
       // Check bool option
-      OptionRecordBool& option = ((OptionRecordBool*)option_records[index])[0];
-      // Check that there are no other options with the same value pointers
-      bool* value_pointer = option.value;
-      for (HighsInt check_index = 0; check_index < num_options; check_index++) {
-        if (check_index == index) continue;
-        if (option_records[check_index]->type == HighsOptionType::kBool) {
-          OptionRecordBool& check_option =
-              ((OptionRecordBool*)option_records[check_index])[0];
-          if (check_option.value == value_pointer) {
-            highsLogUser(report_log_options, HighsLogType::kError,
-                         "checkOptions: Option %" HIGHSINT_FORMAT
-                         " (\"%s\") has the same "
-                         "value pointer as option %" HIGHSINT_FORMAT
-                         " (\"%s\")\n",
-                         index, option.name.c_str(), check_index,
-                         check_option.name.c_str());
-            error_found = true;
-          }
-        }
-      }
+      if (hasDuplicateValuePointers<OptionRecordBool>(report_log_options,
+                                                      option_records, index))
+        error_found = true;
     } else if (type == HighsOptionType::kInt) {
       // Check HighsInt option
-      OptionRecordInt& option = ((OptionRecordInt*)option_records[index])[0];
+      OptionRecordInt& option =
+          getOptionRecord<OptionRecordInt>(option_records[index]);
       if (checkOption(report_log_options, option) != OptionStatus::kOk)
         error_found = true;
-      // Check that there are no other options with the same value pointers
-      HighsInt* value_pointer = option.value;
-      for (HighsInt check_index = 0; check_index < num_options; check_index++) {
-        if (check_index == index) continue;
-        if (option_records[check_index]->type == HighsOptionType::kInt) {
-          OptionRecordInt& check_option =
-              ((OptionRecordInt*)option_records[check_index])[0];
-          if (check_option.value == value_pointer) {
-            highsLogUser(report_log_options, HighsLogType::kError,
-                         "checkOptions: Option %" HIGHSINT_FORMAT
-                         " (\"%s\") has the same "
-                         "value pointer as option %" HIGHSINT_FORMAT
-                         " (\"%s\")\n",
-                         index, option.name.c_str(), check_index,
-                         check_option.name.c_str());
-            error_found = true;
-          }
-        }
-      }
+      if (hasDuplicateValuePointers<OptionRecordInt>(report_log_options,
+                                                     option_records, index))
+        error_found = true;
     } else if (type == HighsOptionType::kDouble) {
       // Check double option
       OptionRecordDouble& option =
-          ((OptionRecordDouble*)option_records[index])[0];
+          getOptionRecord<OptionRecordDouble>(option_records[index]);
       if (checkOption(report_log_options, option) != OptionStatus::kOk)
         error_found = true;
-      // Check that there are no other options with the same value pointers
-      double* value_pointer = option.value;
-      for (HighsInt check_index = 0; check_index < num_options; check_index++) {
-        if (check_index == index) continue;
-        if (option_records[check_index]->type == HighsOptionType::kDouble) {
-          OptionRecordDouble& check_option =
-              ((OptionRecordDouble*)option_records[check_index])[0];
-          if (check_option.value == value_pointer) {
-            highsLogUser(report_log_options, HighsLogType::kError,
-                         "checkOptions: Option %" HIGHSINT_FORMAT
-                         " (\"%s\") has the same "
-                         "value pointer as option %" HIGHSINT_FORMAT
-                         " (\"%s\")\n",
-                         index, option.name.c_str(), check_index,
-                         check_option.name.c_str());
-            error_found = true;
-          }
-        }
-      }
+      if (hasDuplicateValuePointers<OptionRecordDouble>(report_log_options,
+                                                        option_records, index))
+        error_found = true;
     } else if (type == HighsOptionType::kString) {
       // Check string option
-      OptionRecordString& option =
-          ((OptionRecordString*)option_records[index])[0];
-      // Check that there are no other options with the same value pointers
-      std::string* value_pointer = option.value;
-      for (HighsInt check_index = 0; check_index < num_options; check_index++) {
-        if (check_index == index) continue;
-        if (option_records[check_index]->type == HighsOptionType::kString) {
-          OptionRecordString& check_option =
-              ((OptionRecordString*)option_records[check_index])[0];
-          if (check_option.value == value_pointer) {
-            highsLogUser(report_log_options, HighsLogType::kError,
-                         "checkOptions: Option %" HIGHSINT_FORMAT
-                         " (\"%s\") has the same "
-                         "value pointer as option %" HIGHSINT_FORMAT
-                         " (\"%s\")\n",
-                         index, option.name.c_str(), check_index,
-                         check_option.name.c_str());
-            error_found = true;
-          }
-        }
-      }
+      if (hasDuplicateValuePointers<OptionRecordString>(report_log_options,
+                                                        option_records, index))
+        error_found = true;
     }
   }
   if (error_found) return OptionStatus::kIllegalValue;
@@ -528,8 +478,8 @@ OptionStatus setLocalOptionValue(const HighsLogOptions& report_log_options,
         name.c_str());
     return OptionStatus::kIllegalValue;
   }
-  return setLocalOptionValue(((OptionRecordBool*)option_records[index])[0],
-                             value);
+  return setLocalOptionValue(
+      getOptionRecord<OptionRecordBool>(option_records[index]), value);
 }
 
 OptionStatus setLocalOptionValue(const HighsLogOptions& report_log_options,
@@ -546,7 +496,8 @@ OptionStatus setLocalOptionValue(const HighsLogOptions& report_log_options,
       // Interpret integer as double
       double use_value = value;
       return setLocalOptionValue(
-          report_log_options, ((OptionRecordDouble*)option_records[index])[0],
+          report_log_options,
+          getOptionRecord<OptionRecordDouble>(option_records[index]),
           use_value);
     }
     highsLogUser(
@@ -556,7 +507,8 @@ OptionStatus setLocalOptionValue(const HighsLogOptions& report_log_options,
     return OptionStatus::kIllegalValue;
   }
   return setLocalOptionValue(
-      report_log_options, ((OptionRecordInt*)option_records[index])[0], value);
+      report_log_options,
+      getOptionRecord<OptionRecordInt>(option_records[index]), value);
 }
 
 OptionStatus setLocalOptionValue(const HighsLogOptions& report_log_options,
@@ -575,9 +527,9 @@ OptionStatus setLocalOptionValue(const HighsLogOptions& report_log_options,
         name.c_str());
     return OptionStatus::kIllegalValue;
   }
-  return setLocalOptionValue(report_log_options,
-                             ((OptionRecordDouble*)option_records[index])[0],
-                             value);
+  return setLocalOptionValue(
+      report_log_options,
+      getOptionRecord<OptionRecordDouble>(option_records[index]), value);
 }
 
 OptionStatus setLocalOptionValue(const HighsLogOptions& report_log_options,
@@ -603,8 +555,8 @@ OptionStatus setLocalOptionValue(const HighsLogOptions& report_log_options,
                    value_trim.c_str());
       return OptionStatus::kIllegalValue;
     }
-    return setLocalOptionValue(((OptionRecordBool*)option_records[index])[0],
-                               value_bool);
+    return setLocalOptionValue(
+        getOptionRecord<OptionRecordBool>(option_records[index]), value_bool);
   } else if (type == HighsOptionType::kInt) {
     // Check that the string only contains legitimate characters
     if (value_trim.find_first_not_of("+-0123456789eE") != std::string::npos)
@@ -627,9 +579,9 @@ OptionStatus setLocalOptionValue(const HighsLogOptions& report_log_options,
                   value_num_char);
       return OptionStatus::kIllegalValue;
     }
-    return setLocalOptionValue(report_log_options,
-                               ((OptionRecordInt*)option_records[index])[0],
-                               value_int);
+    return setLocalOptionValue(
+        report_log_options,
+        getOptionRecord<OptionRecordInt>(option_records[index]), value_int);
   } else if (type == HighsOptionType::kDouble) {
     // Check that the string only contains legitimate characters -
     // after handling +/- inf
@@ -655,13 +607,15 @@ OptionStatus setLocalOptionValue(const HighsLogOptions& report_log_options,
                     value_double);
       }
     }
-    return setLocalOptionValue(report_log_options,
-                               ((OptionRecordDouble*)option_records[index])[0],
-                               value_double);
+    return setLocalOptionValue(
+        report_log_options,
+        getOptionRecord<OptionRecordDouble>(option_records[index]),
+        value_double);
   } else {
     // Setting a string option value
     if (!name.compare(kLogFileString)) {
-      OptionRecordString& option = *(OptionRecordString*)option_records[index];
+      OptionRecordString& option =
+          getOptionRecord<OptionRecordString>(option_records[index]);
       std::string original_log_file = *(option.value);
       if (value_passed.compare(original_log_file)) {
         // Changing the name of the log file
@@ -676,7 +630,8 @@ OptionStatus setLocalOptionValue(const HighsLogOptions& report_log_options,
       return OptionStatus::kUnknownOption;
     } else {
       return setLocalOptionValue(
-          report_log_options, ((OptionRecordString*)option_records[index])[0],
+          report_log_options,
+          getOptionRecord<OptionRecordString>(option_records[index]),
           value_passed);
     }
   }
@@ -768,25 +723,29 @@ OptionStatus passLocalOptions(const HighsLogOptions& report_log_options,
   for (HighsInt index = 0; index < num_options; index++) {
     HighsOptionType type = to_options.records[index]->type;
     if (type == HighsOptionType::kInt) {
-      HighsInt value =
-          *(((OptionRecordInt*)from_options.records[index])[0].value);
+      HighsInt value = *(
+          getOptionRecord<OptionRecordInt>(from_options.records[index]).value);
       return_status = checkOptionValue(
-          report_log_options, ((OptionRecordInt*)to_options.records[index])[0],
-          value);
+          report_log_options,
+          getOptionRecord<OptionRecordInt>(to_options.records[index]), value);
       if (return_status != OptionStatus::kOk) return return_status;
     } else if (type == HighsOptionType::kDouble) {
       double value =
-          *(((OptionRecordDouble*)from_options.records[index])[0].value);
+          *(getOptionRecord<OptionRecordDouble>(from_options.records[index])
+                .value);
       return_status = checkOptionValue(
           report_log_options,
-          ((OptionRecordDouble*)to_options.records[index])[0], value);
+          getOptionRecord<OptionRecordDouble>(to_options.records[index]),
+          value);
       if (return_status != OptionStatus::kOk) return return_status;
     } else if (type == HighsOptionType::kString) {
       std::string value =
-          *(((OptionRecordString*)from_options.records[index])[0].value);
+          *(getOptionRecord<OptionRecordString>(from_options.records[index])
+                .value);
       return_status = checkOptionValue(
           report_log_options,
-          ((OptionRecordString*)to_options.records[index])[0], value);
+          getOptionRecord<OptionRecordString>(to_options.records[index]),
+          value);
       if (return_status != OptionStatus::kOk) return return_status;
     }
   }
@@ -794,30 +753,35 @@ OptionStatus passLocalOptions(const HighsLogOptions& report_log_options,
   for (HighsInt index = 0; index < num_options; index++) {
     HighsOptionType type = to_options.records[index]->type;
     if (type == HighsOptionType::kBool) {
-      bool value = *(((OptionRecordBool*)from_options.records[index])[0].value);
+      bool value = *(
+          getOptionRecord<OptionRecordBool>(from_options.records[index]).value);
       return_status = setLocalOptionValue(
-          ((OptionRecordBool*)to_options.records[index])[0], value);
+          getOptionRecord<OptionRecordBool>(to_options.records[index]), value);
       if (return_status != OptionStatus::kOk) return return_status;
     } else if (type == HighsOptionType::kInt) {
-      HighsInt value =
-          *(((OptionRecordInt*)from_options.records[index])[0].value);
+      HighsInt value = *(
+          getOptionRecord<OptionRecordInt>(from_options.records[index]).value);
       return_status = setLocalOptionValue(
-          report_log_options, ((OptionRecordInt*)to_options.records[index])[0],
-          value);
+          report_log_options,
+          getOptionRecord<OptionRecordInt>(to_options.records[index]), value);
       if (return_status != OptionStatus::kOk) return return_status;
     } else if (type == HighsOptionType::kDouble) {
       double value =
-          *(((OptionRecordDouble*)from_options.records[index])[0].value);
+          *(getOptionRecord<OptionRecordDouble>(from_options.records[index])
+                .value);
       return_status = setLocalOptionValue(
           report_log_options,
-          ((OptionRecordDouble*)to_options.records[index])[0], value);
+          getOptionRecord<OptionRecordDouble>(to_options.records[index]),
+          value);
       if (return_status != OptionStatus::kOk) return return_status;
     } else {
       std::string value =
-          *(((OptionRecordString*)from_options.records[index])[0].value);
+          *(getOptionRecord<OptionRecordString>(from_options.records[index])
+                .value);
       return_status = setLocalOptionValue(
           report_log_options,
-          ((OptionRecordString*)to_options.records[index])[0], value);
+          getOptionRecord<OptionRecordString>(to_options.records[index]),
+          value);
       if (return_status != OptionStatus::kOk) return return_status;
     }
   }
@@ -862,7 +826,7 @@ OptionStatus getLocalOptionValues(
     return OptionStatus::kIllegalValue;
   }
   OptionRecordBool& option_record =
-      ((OptionRecordBool*)option_records[index])[0];
+      getOptionRecord<OptionRecordBool>(option_records[index]);
   if (current_value) *current_value = *(option_record.value);
   if (default_value) *default_value = option_record.default_value;
   return OptionStatus::kOk;
@@ -884,7 +848,8 @@ OptionStatus getLocalOptionValues(
                  option.c_str(), optionEntryTypeToString(type).c_str());
     return OptionStatus::kIllegalValue;
   }
-  OptionRecordInt& option_record = ((OptionRecordInt*)option_records[index])[0];
+  OptionRecordInt& option_record =
+      getOptionRecord<OptionRecordInt>(option_records[index]);
   if (current_value) *current_value = *(option_record.value);
   if (min_value) *min_value = option_record.lower_bound;
   if (max_value) *max_value = option_record.upper_bound;
@@ -909,7 +874,7 @@ OptionStatus getLocalOptionValues(
     return OptionStatus::kIllegalValue;
   }
   OptionRecordDouble& option_record =
-      ((OptionRecordDouble*)option_records[index])[0];
+      getOptionRecord<OptionRecordDouble>(option_records[index]);
   if (current_value) *current_value = *(option_record.value);
   if (min_value) *min_value = option_record.lower_bound;
   if (max_value) *max_value = option_record.upper_bound;
@@ -934,7 +899,7 @@ OptionStatus getLocalOptionValues(
     return OptionStatus::kIllegalValue;
   }
   OptionRecordString& option_record =
-      ((OptionRecordString*)option_records[index])[0];
+      getOptionRecord<OptionRecordString>(option_records[index]);
   if (current_value) *current_value = *(option_record.value);
   if (default_value) *default_value = option_record.default_value;
   return OptionStatus::kOk;
@@ -956,18 +921,20 @@ void resetLocalOptions(std::vector<OptionRecord*>& option_records) {
   for (HighsInt index = 0; index < num_options; index++) {
     HighsOptionType type = option_records[index]->type;
     if (type == HighsOptionType::kBool) {
-      OptionRecordBool& option = ((OptionRecordBool*)option_records[index])[0];
+      OptionRecordBool& option =
+          getOptionRecord<OptionRecordBool>(option_records[index]);
       *(option.value) = option.default_value;
     } else if (type == HighsOptionType::kInt) {
-      OptionRecordInt& option = ((OptionRecordInt*)option_records[index])[0];
+      OptionRecordInt& option =
+          getOptionRecord<OptionRecordInt>(option_records[index]);
       *(option.value) = option.default_value;
     } else if (type == HighsOptionType::kDouble) {
       OptionRecordDouble& option =
-          ((OptionRecordDouble*)option_records[index])[0];
+          getOptionRecord<OptionRecordDouble>(option_records[index]);
       *(option.value) = option.default_value;
     } else {
       OptionRecordString& option =
-          ((OptionRecordString*)option_records[index])[0];
+          getOptionRecord<OptionRecordString>(option_records[index]);
       *(option.value) = option.default_value;
     }
   }
@@ -999,7 +966,7 @@ void reportOptions(FILE* file, const HighsLogOptions& log_options,
         // trigger opening the log file. However, it's unnecessary to
         // report the deviation to kLogFileString, which is the default
         // non-empty log file name in HighsRun.cpp
-        if (*((OptionRecordString*)option_records[index])[0].value ==
+        if (*getOptionRecord<OptionRecordString>(option_records[index]).value ==
             kHighsRunLogFile)
           continue;
       }
@@ -1011,19 +978,19 @@ void reportOptions(FILE* file, const HighsLogOptions& log_options,
     }
     if (type == HighsOptionType::kBool) {
       reportOption(file, log_options,
-                   ((OptionRecordBool*)option_records[index])[0],
+                   getOptionRecord<OptionRecordBool>(option_records[index]),
                    report_only_deviations, file_type);
     } else if (type == HighsOptionType::kInt) {
       reportOption(file, log_options,
-                   ((OptionRecordInt*)option_records[index])[0],
+                   getOptionRecord<OptionRecordInt>(option_records[index]),
                    report_only_deviations, file_type);
     } else if (type == HighsOptionType::kDouble) {
       reportOption(file, log_options,
-                   ((OptionRecordDouble*)option_records[index])[0],
+                   getOptionRecord<OptionRecordDouble>(option_records[index]),
                    report_only_deviations, file_type);
     } else {
       reportOption(file, log_options,
-                   ((OptionRecordString*)option_records[index])[0],
+                   getOptionRecord<OptionRecordString>(option_records[index]),
                    report_only_deviations, file_type);
     }
   }

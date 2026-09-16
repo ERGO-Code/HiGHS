@@ -4492,7 +4492,6 @@ HighsStatus Highs::callRunPostsolve(const HighsSolution& solution,
                                             return_status, "callSolveLp");
         // Recover the options
         options_ = save_options;
-        HighsPrimalDualErrors primal_dual_errors;
         const bool is_qp = this->model_.isQp();
         assert(!is_qp);
         const bool get_residuals = true;

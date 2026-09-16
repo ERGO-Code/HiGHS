@@ -481,9 +481,19 @@ HPresolve::StatusResult HPresolve::convertImpliedInteger(HighsInt col,
       ++rowsizeImplInt[nonzero.index()];
   }
 
+  // Potentially strengthen existing bound using implied bounds
+  // If not done then there may be a stronger fractional
+  // implied bound for a non-continuous column, which causes
+  // errors in rules downstream that assume integrality.
+  // changeColBounds will perform rounding
+  double newLower = model->col_lower_[col];
+  double newUpper = model->col_upper_[col];
+  if (implColLower[col] > newLower + primal_feastol)
+    newLower = implColLower[col];
+  if (implColUpper[col] < newUpper - primal_feastol)
+    newUpper = implColUpper[col];
   // round and update bounds
-  return StatusResult(
-      changeColBounds(col, model->col_lower_[col], model->col_upper_[col]));
+  return StatusResult(changeColBounds(col, newLower, newUpper));
 }
 
 void HPresolve::chooseRules() {
@@ -1185,6 +1195,16 @@ HPresolve::Result HPresolve::dominatedColumns(
   // in Mixed Integer Programming, INFORMS Journal on Computing 32(2):473-506.
   // See also Gamrath, G., Koch, T., Martin, A. et al., Progress in presolving
   // for mixed integer programming, Math. Prog. Comp. 7, 367–398 (2015).
+  //
+  // Given a domination relationship x_j ≻ x_k (Definition 1 in Gamrath
+  // et al.), there exists an optimal solution where x_j = u_j or x_k = l_k
+  // (Theorem 2). If this can be verified (e.g. via implied bounds or
+  // cliques), the dominated variable is fixed. Otherwise, predictive bound
+  // analysis (Theorem 3) derives tighter bounds on x_j and x_k by computing
+  // implied bounds conditional on the other variable being at its extreme.
+  // Worst-case bounds (MINU/MAXU) use the worst-case row activity (maximal
+  // for ≤-constraints, minimal for ≥-constraints) to obtain bounds that are
+  // feasible independent of other variables' values.
 
   // non-zero signatures for comparing columns
   std::vector<std::pair<uint32_t, uint32_t>> signatures(model->num_col_);
@@ -1356,7 +1376,20 @@ HPresolve::Result HPresolve::dominatedColumns(
       return Result::kOk;
     };
 
-    // lambda for tightening bounds
+    // Predictive bound analysis (Theorem 3 from Gamrath et al. 2015).
+    // The paper defines x_j ≻ x_k (j dominates k). The code checks
+    // (direction * x_col) ≻ (direction_k * x_otherCol):
+    //   direction = +1, multiplier = +1: x_j =  x_col,      x_k =  x_otherCol
+    //   direction = +1, multiplier = -1: x_j =  x_col,      x_k = -x_otherCol
+    //   direction = -1, multiplier = +1: x_j =  x_otherCol, x_k =  x_col
+    //   direction = -1, multiplier = -1: x_j = -x_col,      x_k =  x_otherCol
+    // col is the column being tightened, otherCol is the conditioning
+    // column (whose value otherColBound is substituted).
+    // colIsAtUpper = true : col = x_j, apply (i)/(iii)/(v)
+    // colIsAtUpper = false: col = x_k, apply (ii)/(iv)/(vi)
+    // otherColCoeffPattern: +1 = same-sign, -1 = opposite-sign coefficient
+    //                       filter (opposite signs from negated-column
+    //                       domination)
     auto tightenBounds = [&](HighsInt col, double colBound, bool colIsAtUpper,
                              HighsInt otherCol, double otherColBound,
                              HighsInt otherColCoeffPattern) {
@@ -1367,8 +1400,10 @@ HPresolve::Result HPresolve::dominatedColumns(
       // initialise bounds
       double lowerBound = -kHighsInf;
       double upperBound = kHighsInf;
-      // predictive bound analysis, see Theorem 3 from Gamrath et al.'s paper
       if (colIsAtUpper) {
+        // For negated-column domination the paper's x_k is negated,
+        // so (i)/(iii)/(v) below correspond to (ii)/(iv)/(vi) in the
+        // paper with negated bounds and cost.
         // (i) x_j <= MINL^k_j(otherColBound)
         upperBound = computeImpliedUpperBound(col, otherCol, otherColBound,
                                               otherColCoeffPattern);
@@ -1386,6 +1421,9 @@ HPresolve::Result HPresolve::dominatedColumns(
           lowerBound = std::max(lowerBound, std::min(colBound, worstCaseUpper));
         }
       } else {
+        // For negated-column domination the paper's x_j is negated,
+        // so (ii)/(iv)/(vi) below correspond to (i)/(iii)/(v) in the
+        // paper with negated bounds and cost.
         // (ii) x_k >= MAXL^j_k(otherColBound)
         lowerBound = computeImpliedLowerBound(col, otherCol, otherColBound,
                                               otherColCoeffPattern);
@@ -1404,23 +1442,25 @@ HPresolve::Result HPresolve::dominatedColumns(
         }
       }
       // update bounds
-      if (lowerBound > model->col_lower_[col] + primal_feastol) {
+      if (lowerBound < kHighsInf &&
+          lowerBound > model->col_lower_[col] + primal_feastol) {
         if (model->integrality_[col] != HighsVarType::kContinuous)
           lowerBound = std::ceil(lowerBound - primal_feastol);
         if (lowerBound == model->col_upper_[col]) {
           numFixedColsPredBndAnalysis++;
-          HPRESOLVE_CHECKED_CALL(fixCol(col, HighsInt{1}));
+          return fixCol(col, HighsInt{1});
         } else if (model->integrality_[col] != HighsVarType::kContinuous) {
           numModifiedBndsPredBndAnalysis++;
           HPRESOLVE_CHECKED_CALL(changeColLower(col, lowerBound));
         }
       }
-      if (upperBound < model->col_upper_[col] - primal_feastol) {
+      if (upperBound > -kHighsInf &&
+          upperBound < model->col_upper_[col] - primal_feastol) {
         if (model->integrality_[col] != HighsVarType::kContinuous)
           upperBound = std::floor(upperBound + primal_feastol);
         if (upperBound == model->col_lower_[col]) {
           numFixedColsPredBndAnalysis++;
-          HPRESOLVE_CHECKED_CALL(fixCol(col, HighsInt{-1}));
+          return fixCol(col, HighsInt{-1});
         } else if (model->integrality_[col] != HighsVarType::kContinuous) {
           numModifiedBndsPredBndAnalysis++;
           HPRESOLVE_CHECKED_CALL(changeColUpper(col, upperBound));
@@ -2486,6 +2526,9 @@ HPresolve::Result HPresolve::checkColBounds(HighsInt col, bool* isFixed) {
 }
 
 HPresolve::Result HPresolve::checkModelColBounds(HighsInt col, bool& isFixed) {
+  // Variant of HPresolve::checkColBounds called from
+  // HPresolve::initialSweep
+  assert(this->in_initial_sweep_);
   double boundDiff = model->col_upper_[col] - model->col_lower_[col];
   double max_abs_col_value = 0;
   for (HighsInt iEl = model->a_matrix_.start_[col];
@@ -2493,11 +2536,13 @@ HPresolve::Result HPresolve::checkModelColBounds(HighsInt col, bool& isFixed) {
     max_abs_col_value =
         std::max(std::fabs(model->a_matrix_.value_[iEl]), max_abs_col_value);
   isFixed = false;
+  // Check for simple infeasibility in the original model should
+  // already have been carried out in
+  // HPresolve::checkOriginalModelBoundsl()
+  assert(boundDiff >= 0);
   if (boundDiff <= primal_feastol &&
       (boundDiff <= options->small_matrix_value ||
        max_abs_col_value * boundDiff <= primal_feastol)) {
-    // check for primal infeasibility
-    if (boundDiff < -primal_feastol) return Result::kPrimalInfeasible;
     // check for unboundedness
     if (std::abs(model->col_lower_[col]) == kHighsInf)
       return Result::kDualInfeasible;
@@ -4005,12 +4050,24 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
           // printf("simple probing case on row of size %" HIGHSINT_FORMAT
           // "\n", rowsize[row]);
 
+          // Snapshot bounds as they may change when removing or substituting
+          // a column, which would make future substitutions invalid
+          std::vector<std::pair<double, double>> implVarSnapshot;
+          implVarSnapshot.reserve(rowpositions.size());
+          for (HighsInt rowiter : rowpositions) {
+            HighsInt col = Acol[rowiter];
+            implVarSnapshot.emplace_back(
+                impliedRowBounds.getImplVarLower(row, col),
+                impliedRowBounds.getImplVarUpper(row, col));
+          }
+
           // iterate over non-zero positions instead of iterating over the
           // HighsMatrixSlice (provided by HPresolve::getStoredRow) because the
           // latter contains pointers to Acol and Avalue that may be invalidated
           // if these vectors are reallocated (see std::vector::push_back
           // performed in HPresolve::addToMatrix).
-          for (HighsInt rowiter : rowpositions) {
+          for (size_t i = 0; i < rowpositions.size(); ++i) {
+            HighsInt rowiter = rowpositions[i];
             HighsInt col = Acol[rowiter];
             assert(Arow[rowiter] == row);
 
@@ -4019,8 +4076,8 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
 
             // get column lower and upper bounds used to compute bounds on row
             // activities
-            double col_lower = impliedRowBounds.getImplVarLower(row, col);
-            double col_upper = impliedRowBounds.getImplVarUpper(row, col);
+            double col_lower = implVarSnapshot[i].first;
+            double col_upper = implVarSnapshot[i].second;
             assert(col_lower != -kHighsInf);
             assert(col_upper != kHighsInf);
 
@@ -6240,6 +6297,34 @@ double HPresolve::computeWorstCaseUpperBound(HighsInt col, HighsInt boundCol,
   return upperBound;
 }
 
+HPresolve::Result HPresolve::checkOriginalModelBounds() {
+  // Perform integer rounding of bounds on integer variables and check
+  // for trivial bound violations. Only called in HPresolve::presolve,
+  // and before the call to HPresolve::initialSweep and
+  // HPresolve::initialRowAndColPresolve
+  const bool is_mip = mipsolver != nullptr;
+  assert(!is_mip || model->integrality_.size());
+  assert(!this->in_initial_sweep_);
+  for (HighsInt iCol = 0; iCol < model->num_col_; iCol++) {
+    if (is_mip && model->integrality_[iCol] != HighsVarType::kContinuous) {
+      // Perform integer rounding of bounds on integer variables
+      model->col_lower_[iCol] =
+          std::ceil(model->col_lower_[iCol] - primal_feastol);
+      model->col_upper_[iCol] =
+          std::floor(model->col_upper_[iCol] + primal_feastol);
+    }
+    // Check for trivial primal infeasibility
+    if (model->col_lower_[iCol] > model->col_upper_[iCol])
+      return Result::kPrimalInfeasible;
+  }
+  // Check for trivial primal infeasibility in rows
+  for (HighsInt iRow = 0; iRow < model->num_row_; iRow++) {
+    if (model->row_lower_[iRow] > model->row_upper_[iRow])
+      return Result::kPrimalInfeasible;
+  }
+  return Result::kOk;
+}
+
 HPresolve::Result HPresolve::initialSweep(
     HighsPostsolveStack& postsolve_stack) {
   assert(this->in_initial_sweep_);
@@ -6266,6 +6351,8 @@ HPresolve::Result HPresolve::initialSweep(
   // Compute the implied bounds on rows
   std::vector<HighsCDouble> implied_row_lower(model->num_row_, 0);
   std::vector<HighsCDouble> implied_row_upper(model->num_row_, 0);
+  // Pass through the columns, identifying any that are empty or
+  // fixed, so can be removed, updating the model in place.
   for (HighsInt iCol = 0; iCol < model->num_col_; iCol++) {
     HighsInt col_nnz =
         model->a_matrix_.start_[iCol + 1] - model->a_matrix_.start_[iCol];
@@ -6285,6 +6372,10 @@ HPresolve::Result HPresolve::initialSweep(
           &model->a_matrix_.index_[iEl], &model->a_matrix_.value_[iEl]);
       removeFixedCol(iCol);
     } else {
+      // Column is not empty or fixed, so is retained: update the
+      // model in place by shifting the cost, bounds, any names, and
+      // the matrix data. Also compute this column's contribution to
+      // the implied row bounds.
       newColIndex[iCol] = num_col;
       model->col_cost_[num_col] = model->col_cost_[iCol];
       model->col_lower_[num_col] = model->col_lower_[iCol];
@@ -6530,10 +6621,6 @@ HPresolve::Result HPresolve::initialRowAndColPresolve(
   const bool timing = analysis_.analyse_presolve_time_;
   for (HighsInt col = 0; col != model->num_col_; ++col) {
     if (colDeleted[col]) continue;
-    // round and update bounds
-    if (model->integrality_[col] != HighsVarType::kContinuous)
-      HPRESOLVE_CHECKED_CALL(
-          changeColBounds(col, model->col_lower_[col], model->col_upper_[col]));
     HPRESOLVE_CHECKED_CALL(colPresolve(postsolve_stack, col, timing));
     changedColFlag[col] = false;
   }
@@ -6640,6 +6727,11 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
                  model->num_row_, model->num_col_, model->numNz(),
                  time_str.c_str());
   }
+
+  // Perform integer rounding of bounds on integer variables and check
+  // for trivial bound violations - which yield
+  // Result::kPrimalInfeasible
+  HPRESOLVE_CHECKED_CALL(checkOriginalModelBounds());
 
   if (options->presolve != kHighsOffString && mipsolver == nullptr &&
       !options->presolve_rule_test) {
@@ -8636,6 +8728,17 @@ HPresolve::Result HPresolve::fourierMotzkin(
 
 void HPresolve::substitute(HighsInt substcol, HighsInt staycol, double offset,
                            double scale) {
+  // Preserve explicit integrality, i.e., upgrade implied integral
+  // column if it is substituting an integral column
+  if (model->integrality_[substcol] == HighsVarType::kInteger &&
+      model->integrality_[staycol] == HighsVarType::kImplicitInteger) {
+    model->integrality_[staycol] = HighsVarType::kInteger;
+    for (const HighsSliceNonzero& nonzero : getColumnVector(staycol)) {
+      ++rowsizeInteger[nonzero.index()];
+      --rowsizeImplInt[nonzero.index()];
+    }
+  }
+
   // substitute the column in each row where it occurs
   for (HighsInt coliter = colhead[substcol]; coliter != -1;) {
     HighsInt colrow = Arow[coliter];
@@ -9484,11 +9587,13 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
               model->integrality_[col] == HighsVarType::kInteger,
               model->integrality_[duplicateCol] == HighsVarType::kInteger,
               options->mip_feasibility_tolerance);
-          if (!ok_merge && debug_report) {
-            printf(
-                "HPresolve::detectParallelRowsAndCols Illegal merge "
-                "prevented\n");
-            break;
+          if (!ok_merge) {
+            if (debug_report) {
+              printf(
+                  "HPresolve::detectParallelRowsAndCols Illegal merge "
+                  "prevented\n");
+            }
+            continue;
           }
           // When merging a continuous variable into an integer
           // variable, the integer will become continuous - since any
