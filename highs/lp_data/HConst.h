@@ -286,7 +286,8 @@ enum PresolveRuleType : int {
   kPresolveRuleZeroCostSingleton,
   kPresolveRuleColStuffing,
   kPresolveRuleInitialSweep,
-  kPresolveRuleMax = kPresolveRuleInitialSweep,
+  kPresolveRuleFourierMotzkin,
+  kPresolveRuleMax = kPresolveRuleFourierMotzkin,
   kPresolveRuleLastAllowOff = kPresolveRuleMax,
   kPresolveRuleCount
 };

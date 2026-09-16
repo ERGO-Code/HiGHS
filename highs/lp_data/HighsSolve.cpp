@@ -823,7 +823,7 @@ HighsStatus solveQp(HighsQpSolverObject& solver_object,
 
   // Get the objective and any KKT failures
   info.objective_function_value = model_.objectiveValue(solution.col_value);
-  getKktFailures(options, model_, solution, basis, info);
+  getQpKktFailures(options, model_, solution, info);
   info.valid = true;
   if (model_status == HighsModelStatus::kOptimal)
     return checkOptimality("QP", options, info, model_status);
