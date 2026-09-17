@@ -9,12 +9,10 @@
 #define HIGHS_SCHEDULER_CONSTANTS_H_
 
 struct HighsSchedulerConstants {
-  enum Constants {
-    kNumTryFac = 16,
-    kMicroSecsBeforeSleep = 5000,
-    kMicroSecsBeforeGlobalSync = 1000,
-    kCacheLineSize = 64,
-  };
+  static constexpr int kNumTryFac = 16;
+  static constexpr int kMicroSecsBeforeSleep = 5000;
+  static constexpr int kMicroSecsBeforeGlobalSync = 1000;
+  static constexpr size_t kCacheLineSize = 64;
 };
 
 #endif
