@@ -100,6 +100,8 @@ void HPresolve::setInput(HighsLp& model_, const HighsOptions& options_,
                 "HPresolve::setInput reductionLimit = %d\n",
                 static_cast<int>(this->reductionLimit));
   }
+  // Use local time limit so that it can be suppressed during initial sweep
+  this->presolve_time_limit_ = options->time_limit;
   this->in_initial_sweep_ = false;
   // last_reduction_ is used to identify when HPresolve::checkLimits
   // is called for the first time following a reduction
@@ -6329,6 +6331,15 @@ HPresolve::Result HPresolve::checkOriginalModelBounds() {
 HPresolve::Result HPresolve::initialSweep(
     HighsPostsolveStack& postsolve_stack) {
   assert(this->in_initial_sweep_);
+  // If initial sweep is terminated by checkLimits, the current
+  // presolved model is typically corrupted, so the time and reduction
+  // limits are suppressed. Need a copy of the time and reduction
+  // limits so that they can be recovered.
+  size_t presolve_reduction_limit = this->reductionLimit;
+  double presolve_time_limit = this->presolve_time_limit_;
+  this->reductionLimit = kHighsSize_tInf;
+  this->presolve_time_limit_ = kHighsInf;
+
   const bool logging_on = analysis_.logging_on_;
   if (logging_on) analysis_.startPresolveRuleLog(kPresolveRuleInitialSweep);
   HighsInt num_fixed_col = 0;
@@ -6600,6 +6611,11 @@ HPresolve::Result HPresolve::initialSweep(
                  int(original_num_row));
   analysis_.logging_on_ = logging_on;
   if (logging_on) analysis_.stopPresolveRuleLog(kPresolveRuleInitialSweep);
+
+  // Recover the time and reduction limits
+  this->reductionLimit = presolve_reduction_limit;
+  this->presolve_time_limit_ = presolve_time_limit;
+
   return checkLimits(postsolve_stack);
 }
 
@@ -7071,7 +7087,7 @@ HPresolve::Result HPresolve::removeSlacks(
 
 HPresolve::Result HPresolve::checkTimeLimit() {
   assert(timer);
-  if (options->time_limit < kHighsInf && timer->read() >= options->time_limit)
+  if (this->presolve_time_limit_ < kHighsInf && timer->read() >= this->presolve_time_limit_)
     return Result::kStopped;
   return Result::kOk;
 }
