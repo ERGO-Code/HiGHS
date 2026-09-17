@@ -4010,23 +4010,6 @@ HighsPostsolveStatus Highs::runPostsolve() {
   presolve_.data_.postSolveStack.undo(
       options_, presolve_.data_.recovered_solution_,
       presolve_.data_.recovered_basis_, 0, report_3040_col);
-  const bool log_undo_count = true;
-  if (options_.output_flag) {
-    if (log_undo_count) {
-      presolve::HighsPostsolveStack& stack = presolve_.data_.postSolveStack;
-      HighsInt num_reduction_type = stack.numReductionType();
-      std::vector<HighsInt> undo_count;
-      stack.getUndoCount(undo_count);
-      printf("grepReductionTypeCount,%s", model_.lp_.model_name_.c_str());
-      for (HighsInt iType = 0; iType < num_reduction_type; iType++)
-        printf(",%s", stack.reductionTypeToString(iType).c_str());
-      printf("\n");
-      printf("grepReductionTypeCount,%s", model_.lp_.model_name_.c_str());
-      for (HighsInt iType = 0; iType < num_reduction_type; iType++)
-        printf(",%d", int(undo_count[iType]));
-      printf("\n");
-    }
-  }
   // Compute the row activities
   assert(model_.lp_.a_matrix_.isColwise());
   calculateRowValuesQuad(model_.lp_, presolve_.data_.recovered_solution_);
