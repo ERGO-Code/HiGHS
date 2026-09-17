@@ -12,6 +12,9 @@ struct HighsSchedulerConstants {
   static constexpr int kNumTryFac = 16;
   static constexpr int kMicroSecsBeforeSleep = 5000;
   static constexpr int kMicroSecsBeforeGlobalSync = 1000;
+  static constexpr int kNumSpinTries = 10;
+  static constexpr size_t kTaskArraySize = 8192;
+  static constexpr size_t kMaxTaskSize = 64;
   static constexpr size_t kCacheLineSize = 64;
 };
 

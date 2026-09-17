@@ -49,13 +49,7 @@ extern "C" void AnnotateHappensAfter(const char* f, int l, void* addr);
 class HighsSplitDeque {
   using cache_aligned = highs::cache_aligned;
 
-  static constexpr size_t cacheLineSize =
-      HighsSchedulerConstants::kCacheLineSize;
-
  public:
-  enum Constants {
-    kTaskArraySize = 8192,
-  };
   struct WorkerBunk;
 
  private:
@@ -100,8 +94,9 @@ class HighsSplitDeque {
   struct WorkerBunk {
     static constexpr uint64_t kAbaTagShift = 20;
     static constexpr uint64_t kIndexMask = (uint64_t{1} << kAbaTagShift) - 1;
-    alignas(cacheLineSize) std::atomic<int> haveJobs;
-    alignas(cacheLineSize) std::atomic<uint64_t> sleeperStack;
+    alignas(HighsSchedulerConstants::kCacheLineSize) std::atomic<int> haveJobs;
+    alignas(HighsSchedulerConstants::kCacheLineSize)
+        std::atomic<uint64_t> sleeperStack;
 
     WorkerBunk() : haveJobs{0}, sleeperStack(0) {}
 
@@ -194,18 +189,22 @@ class HighsSplitDeque {
   };
 
  private:
-  static_assert(sizeof(OwnerData) <= cacheLineSize,
+  static_assert(sizeof(OwnerData) <= HighsSchedulerConstants::kCacheLineSize,
                 "sizeof(OwnerData) exceeds cache line size");
-  static_assert(sizeof(StealerData) <= cacheLineSize,
+  static_assert(sizeof(StealerData) <= HighsSchedulerConstants::kCacheLineSize,
                 "sizeof(StealerData) exceeds cache line size");
-  static_assert(sizeof(WorkerBunkData) <= cacheLineSize,
+  static_assert(sizeof(WorkerBunkData) <=
+                    HighsSchedulerConstants::kCacheLineSize,
                 "sizeof(WorkerBunkData) exceeds cache line size");
 
-  alignas(cacheLineSize) OwnerData ownerData;
-  alignas(cacheLineSize) std::atomic<bool> splitRequest;
-  alignas(cacheLineSize) StealerData stealerData;
-  alignas(cacheLineSize) WorkerBunkData workerBunkData;
-  alignas(cacheLineSize) std::array<HighsTask, kTaskArraySize> taskArray;
+  alignas(HighsSchedulerConstants::kCacheLineSize) OwnerData ownerData;
+  alignas(
+      HighsSchedulerConstants::kCacheLineSize) std::atomic<bool> splitRequest;
+  alignas(HighsSchedulerConstants::kCacheLineSize) StealerData stealerData;
+  alignas(HighsSchedulerConstants::kCacheLineSize)
+      WorkerBunkData workerBunkData;
+  alignas(HighsSchedulerConstants::kCacheLineSize)
+      std::array<HighsTask, HighsSchedulerConstants::kTaskArraySize> taskArray;
 
   void growShared() {
     int haveJobs =
@@ -217,7 +216,8 @@ class HighsSplitDeque {
       if (!splitRq) return;
     }
 
-    newSplit = std::min(uint32_t{kTaskArraySize}, ownerData.head);
+    newSplit = std::min(uint32_t{HighsSchedulerConstants::kTaskArraySize},
+                        ownerData.head);
 
     assert(newSplit > ownerData.splitCopy);
 
@@ -280,15 +280,19 @@ class HighsSplitDeque {
     ownerData.workerBunk = workerBunk;
     splitRequest.store(false, std::memory_order_relaxed);
 
-    assert((reinterpret_cast<uintptr_t>(this) & (cacheLineSize - 1)) == 0);
-    static_assert(offsetof(HighsSplitDeque, splitRequest) == cacheLineSize,
+    assert((reinterpret_cast<uintptr_t>(this) &
+            (HighsSchedulerConstants::kCacheLineSize - 1)) == 0);
+    static_assert(offsetof(HighsSplitDeque, splitRequest) ==
+                      HighsSchedulerConstants::kCacheLineSize,
                   "alignas failed to guarantee alignment with cache line");
-    static_assert(offsetof(HighsSplitDeque, stealerData) == 2 * cacheLineSize,
+    static_assert(offsetof(HighsSplitDeque, stealerData) ==
+                      2 * HighsSchedulerConstants::kCacheLineSize,
                   "alignas failed to guarantee alignment with cache line");
-    static_assert(
-        offsetof(HighsSplitDeque, workerBunkData) == 3 * cacheLineSize,
-        "alignas failed to guarantee alignment with cache line");
-    static_assert(offsetof(HighsSplitDeque, taskArray) == 4 * cacheLineSize,
+    static_assert(offsetof(HighsSplitDeque, workerBunkData) ==
+                      3 * HighsSchedulerConstants::kCacheLineSize,
+                  "alignas failed to guarantee alignment with cache line");
+    static_assert(offsetof(HighsSplitDeque, taskArray) ==
+                      4 * HighsSchedulerConstants::kCacheLineSize,
                   "alignas failed to guarantee alignment with cache line");
   }
 
@@ -313,9 +317,10 @@ class HighsSplitDeque {
 
   template <typename F>
   void push(F&& f) {
-    if (ownerData.head >= kTaskArraySize) {
+    if (ownerData.head >= HighsSchedulerConstants::kTaskArraySize) {
       // task queue is full, execute task directly
-      if (ownerData.splitCopy < kTaskArraySize && !ownerData.allStolenCopy)
+      if (ownerData.splitCopy < HighsSchedulerConstants::kTaskArraySize &&
+          !ownerData.allStolenCopy)
         growShared();
 
       ownerData.head += 1;
@@ -352,7 +357,7 @@ class HighsSplitDeque {
   std::pair<Status, HighsTask*> pop() {
     if (ownerData.head == 0) return std::make_pair(Status::kEmpty, nullptr);
 
-    if (ownerData.head > kTaskArraySize) {
+    if (ownerData.head > HighsSchedulerConstants::kTaskArraySize) {
       // task queue was full and the overflown tasks have
       // been directly executed
       ownerData.head -= 1;
@@ -409,7 +414,8 @@ class HighsSplitDeque {
       }
     }
 
-    if (t < kTaskArraySize && !splitRequest.load(std::memory_order_relaxed))
+    if (t < HighsSchedulerConstants::kTaskArraySize &&
+        !splitRequest.load(std::memory_order_relaxed))
       splitRequest.store(true, std::memory_order_relaxed);
 
     return nullptr;
@@ -432,7 +438,8 @@ class HighsSplitDeque {
       s = split(ts);
     }
 
-    if (t < kTaskArraySize && !splitRequest.load(std::memory_order_relaxed))
+    if (t < HighsSchedulerConstants::kTaskArraySize &&
+        !splitRequest.load(std::memory_order_relaxed))
       splitRequest.store(true, std::memory_order_relaxed);
 
     return nullptr;
