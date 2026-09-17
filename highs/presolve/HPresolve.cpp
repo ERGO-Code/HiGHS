@@ -100,6 +100,8 @@ void HPresolve::setInput(HighsLp& model_, const HighsOptions& options_,
                 "HPresolve::setInput reductionLimit = %d\n",
                 static_cast<int>(this->reductionLimit));
   }
+  // Use local time limit so that it can be suppressed during initial sweep
+  this->presolve_time_limit_ = options->time_limit;
   this->in_initial_sweep_ = false;
   // last_reduction_ is used to identify when HPresolve::checkLimits
   // is called for the first time following a reduction
@@ -500,8 +502,9 @@ void HPresolve::chooseRules() {
   const bool silent = silentLog();
   this->allow_rule_.assign(kPresolveRuleCount, true);
   std::vector<HighsBool> presolve_light_rule_off(kPresolveRuleCount, false);
-  const bool presolve_light = options->presolve_light == kHighsOnString;
-  if (presolve_light) {
+  const bool presolve_light_on = options->presolve_light == kHighsOnString;
+  const bool presolve_light_off = options->presolve_light == kHighsOffString;
+  if (presolve_light_on) {
     // Define the rules not used in presolve_light mode
     presolve_light_rule_off[kPresolveRuleDependentEquations] = true;
     presolve_light_rule_off[kPresolveRuleDependentFreeCols] = true;
@@ -532,12 +535,12 @@ void HPresolve::chooseRules() {
       bit *= 2;
     }
   }
-  if (options->presolve_rule_off || presolve_light) {
+  if (options->presolve_rule_off || presolve_light_on) {
     // Some presolve rules are off or presolve_light mode is being used
     //
     // Transform options->presolve_rule_off into logical settings in
     // allow_rule_[*], commenting on the rules switched off
-    if (!presolve_light && !silent)
+    if (!presolve_light_on && !silent)
       highsLogUser(options->log_options, HighsLogType::kInfo,
                    "Presolve rules not allowed:\n");
     HighsInt bit = 1;
@@ -550,7 +553,7 @@ void HPresolve::chooseRules() {
         // This is a rule that can be switched off
         allow_rule_[rule_type] = !rule_off;
         // Possibly comment positively if it is off
-        if (rule_off && !presolve_light && !silent)
+        if (rule_off && !presolve_light_on && !silent)
           highsLogUser(options->log_options, HighsLogType::kInfo,
                        "   Rule %2d (set bit %2d = %6d): %s\n", int(rule_type),
                        int(rule_type), int(bit),
@@ -570,6 +573,9 @@ void HPresolve::chooseRules() {
       }
       bit *= 2;
     }
+  } else if (presolve_light_off) {
+    highsLogUser(options->log_options, HighsLogType::kInfo,
+                 "Presolve light only allows initial sweep\n");
   }
 }
 
@@ -1925,7 +1931,7 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postsolve_stack) {
 
       // Check for timeout
       tt = this->timer->read();
-      if (tt > options->time_limit) {
+      if (tt > this->presolve_time_limit_) {
         highsLogUser(
             options->log_options, HighsLogType::kInfo,
             "Time limit reached in probing: "
@@ -5783,7 +5789,7 @@ HPresolve::Result HPresolve::zeroCostSingleton(
   analysis_.logging_on_ = logging_on;
   if (logging_on) analysis_.stopPresolveRuleLog(kPresolveRuleZeroCostSingleton);
 
-  return Result::kOk;
+  return checkLimits(postsolve_stack);
 }
 
 HPresolve::Result HPresolve::enumerateSolutions(
@@ -6328,6 +6334,15 @@ HPresolve::Result HPresolve::checkOriginalModelBounds() {
 HPresolve::Result HPresolve::initialSweep(
     HighsPostsolveStack& postsolve_stack) {
   assert(this->in_initial_sweep_);
+  // If initial sweep is terminated by checkLimits, the current
+  // presolved model is typically corrupted, so the time and reduction
+  // limits are suppressed. Need a copy of the time and reduction
+  // limits so that they can be recovered.
+  size_t presolve_reduction_limit = this->reductionLimit;
+  double presolve_time_limit = this->presolve_time_limit_;
+  this->reductionLimit = kHighsSize_tInf;
+  this->presolve_time_limit_ = kHighsInf;
+
   const bool logging_on = analysis_.logging_on_;
   if (logging_on) analysis_.startPresolveRuleLog(kPresolveRuleInitialSweep);
   HighsInt num_fixed_col = 0;
@@ -6599,6 +6614,11 @@ HPresolve::Result HPresolve::initialSweep(
                  int(original_num_row));
   analysis_.logging_on_ = logging_on;
   if (logging_on) analysis_.stopPresolveRuleLog(kPresolveRuleInitialSweep);
+
+  // Recover the time and reduction limits
+  this->reductionLimit = presolve_reduction_limit;
+  this->presolve_time_limit_ = presolve_time_limit;
+
   return checkLimits(postsolve_stack);
 }
 
@@ -6734,13 +6754,14 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
   HPRESOLVE_CHECKED_CALL(checkOriginalModelBounds());
 
   if (options->presolve != kHighsOffString && mipsolver == nullptr &&
-      !options->presolve_rule_test) {
+      this->allow_rule_[kPresolveRuleInitialSweep]) {
     // Zero numDeletedCols and numDeletedRows since they are used to
     // identify reductions due to this presovle rule
     numDeletedCols = 0;
     numDeletedRows = 0;
-    // Perform initial sweep to remove fixed columns before forming the
-    // dynamic constraint matrix data structure
+    // Perform initial sweep to remove empty/fixed columns, and
+    // empty/singleton/redundant rows before forming the dynamic
+    // constraint matrix data structure
     analysis_.presolveTimerStart(kPresolveClockInitialSweep);
     // Indicate that initial sweep is running, so that reductions
     // operate on the model rather than the dynamic data structure set
@@ -6751,6 +6772,7 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
     this->in_initial_sweep_ = false;
     analysis_.presolveTimerStop(kPresolveClockInitialSweep);
   }
+  if (options->presolve_light == kHighsOffString) return presolveReturn();
 
   if (!okSetupPresolveDataStructures()) {
     highsLogUser(options->log_options, HighsLogType::kError,
@@ -7068,7 +7090,8 @@ HPresolve::Result HPresolve::removeSlacks(
 
 HPresolve::Result HPresolve::checkTimeLimit() {
   assert(timer);
-  if (options->time_limit < kHighsInf && timer->read() >= options->time_limit)
+  if (this->presolve_time_limit_ < kHighsInf &&
+      timer->read() >= this->presolve_time_limit_)
     return Result::kStopped;
   return Result::kOk;
 }
@@ -7396,11 +7419,18 @@ HighsModelStatus HPresolve::run(HighsPostsolveStack& postsolve_stack) {
   } catch (const std::exception& exception) {
     highsLogDev(options->log_options, HighsLogType::kError,
                 "Exception %s in Presolve::presolve\n", exception.what());
-    result = Result::kOutOfMemory;
+    result = handleExceptionIsOom(options->log_options, "presolve", exception)
+                 ? Result::kOutOfMemory
+                 : Result::kException;
   }
+  // Stop any presolve rule logging that is currently running, check
+  // the presolve rule logging for errors, and analyse it
+  analysis_.stopPresolveRuleLog();
+  assert(analysis_.analysePresolveRuleLog());
+  analysis_.analysePresolveRuleLog(true);
   switch (result) {
-    case Result::kStopped:
     case Result::kOk:
+    case Result::kStopped:
       break;
     case Result::kPrimalInfeasible:
       presolve_status_ = HighsPresolveStatus::kInfeasible;
@@ -7415,7 +7445,14 @@ HighsModelStatus HPresolve::run(HighsPostsolveStack& postsolve_stack) {
     case Result::kOutOfMemory:
       presolve_status_ = HighsPresolveStatus::kOutOfMemory;
       return HighsModelStatus::kMemoryLimit;
+    case Result::kException:
+      presolve_status_ = HighsPresolveStatus::kException;
+      return HighsModelStatus::kSolveError;
   }
+  assert(result == Result::kOk || result == Result::kStopped);
+  // Result::kStopped corresponds to reaching the time or reduction
+  // limit, in which case any reductions performed are retained, so
+  // complete presolve as if it had run to completion
   reportReductions();
   shrinkProblem(postsolve_stack);
 
@@ -7569,13 +7606,14 @@ HPresolve::Result HPresolve::removeDependentEquations(
   //
   // Allow no more than 1% of the time limit to be spent on removing
   // dependent equations, but ensure that there is some limit since
-  // options->time_limit is infinity by default
+  // this->presolve_time_limit_ is infinity by default
   //
   // ToDo: This is strictly non-deterministic, but so conservative
   // that it'll only reap the cases when factor.build never finishes
   const double kMaxDependentEquationsTime = 100;
   const double time_limit = std::max(
-      1.0, std::min(0.01 * options->time_limit, kMaxDependentEquationsTime));
+      1.0,
+      std::min(0.01 * this->presolve_time_limit_, kMaxDependentEquationsTime));
   factor.setTimeLimit(time_limit);
   // Determine rank deficiency of the equations
   if (!silent)
