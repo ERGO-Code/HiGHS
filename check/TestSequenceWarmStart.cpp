@@ -21,7 +21,8 @@ TEST_CASE("Factor-unit-diagonal-warm-start-sequence", "[highs_factor]") {
 
   std::ifstream ops_file(ops_path);
   if (!ops_file.is_open()) {
-    // Si les fichiers ne sont pas copiés dans check/instances, on passe avec succès conditionnel
+    // If the files are not found in check/instances the unit test
+    // passes conditionally
     WARN("Sequence files not found in check/instances, skipping sequence test.");
     return;
   }
@@ -97,6 +98,6 @@ TEST_CASE("Factor-unit-diagonal-warm-start-sequence", "[highs_factor]") {
   }
 
   REQUIRE(solve_count == 76);
-  // Vérification de la valeur d'objectif attendue
+  // Verification of the expected objective
   REQUIRE(std::fabs(final_obj - 298.2799078) < 1e-5);
 }
