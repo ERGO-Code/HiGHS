@@ -1241,3 +1241,56 @@ TEST_CASE("issue-3140", "[highs_test_presolve]") {
 
   highs.resetGlobalScheduler(true);
 }
+
+TEST_CASE("presolve-light-no-crossover", "[highs_test_presolve]") {
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  std::string source = "instances";  //"miplib2017";
+  std::string model = "adlittle";    //"germanrr";  //"neos-2746589-doon";//
+  std::string type = "mps";
+  std::string filename =
+      (source == "instances" ? std::string(HIGHS_DIR) + "/check/instances/"
+                             : "/srv/" + source) +
+      "/" + model + "." + type + (source == "instances" ? "" : ".gz");
+
+  REQUIRE(h.readModel(filename) == HighsStatus::kOk);
+  const HighsLp& lp = h.getLp();
+
+  REQUIRE(h.setOptionValue("presolve_light", kHighsOnString) ==
+          HighsStatus::kOk);
+  const std::string solver = kIpxString;  // kHipoString;  //
+  REQUIRE(h.setOptionValue("solver", solver) == HighsStatus::kOk);
+  REQUIRE(h.setOptionValue("run_crossover", kHighsOffString) ==
+          HighsStatus::kOk);
+  REQUIRE(h.setOptionValue("solve_relaxation", true) == HighsStatus::kOk);
+  h.run();
+
+  REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
+
+  h.resetGlobalScheduler(true);
+}
+
+/*
+TEST_CASE("test-fuzzing", "[highs_test_presolve]") {
+  Highs h;
+  //  h.setOptionValue("output_flag", dev_run);
+  h.setOptionValue("presolve_rule_logging", true);
+  h.setOptionValue("log_dev_level", 1);
+
+  const std::string model = "issue-008";
+  std::string model_file = std::string(HIGHS_DIR) + "/build/OscarFuzzing/" +
+                           model + "/" + model + ".mps";
+
+  REQUIRE(h.readModel(model_file) == HighsStatus::kOk);
+
+  std::string options_file =
+      std::string(HIGHS_DIR) + "/build/OscarFuzzing/" + model + "/options.txt";
+  REQUIRE(h.readOptions(options_file) == HighsStatus::kOk);
+
+  h.writeOptions("", true);
+
+  h.run();
+
+  h.resetGlobalScheduler(true);
+}
+*/

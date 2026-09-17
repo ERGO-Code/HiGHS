@@ -387,10 +387,6 @@ class HPresolve {
   void setInput(HighsMipSolver& mipsolver,
                 const HighsInt presolve_reduction_limit);
 
-  void setReductionLimit(size_t reductionLimit) {
-    this->reductionLimit = reductionLimit;
-  }
-
   bool okSetupPresolveDataStructures();
   void setupSubstitutionOpportunities();
 
@@ -488,10 +484,6 @@ class HPresolve {
 
   HighsModelStatus run(HighsPostsolveStack& postsolve_stack);
 
-  void computeIntermediateMatrix(std::vector<HighsInt>& flagRow,
-                                 std::vector<HighsInt>& flagCol,
-                                 size_t& numreductions);
-
   void substitute(HighsInt substcol, HighsInt staycol, double offset,
                   double scale);
 
@@ -555,8 +547,18 @@ class HPresolve {
       HighsPostsolveStack& postsolve_stack);
   Result presolveRuleTestFourierMotzkin(HighsPostsolveStack& postsolve_stack);
 
-  // Not currently called
+  /*
+  // Methods defined and used in HPresolveDebug, and only executed if
+  // HPresolve::debug is called. This hasn't been used for ages, and
+  // is retained in case it's useful in future
   static void debug(const HighsLp& lp, const HighsOptions& options);
+  void computeIntermediateMatrix(std::vector<HighsInt>& flagRow,
+                                 std::vector<HighsInt>& flagCol,
+                                 size_t& numreductions);
+  void setReductionLimit(size_t reductionLimit) {
+    this->reductionLimit = reductionLimit;
+  }
+  */
 };
 
 }  // namespace presolve
