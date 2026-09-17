@@ -1241,3 +1241,57 @@ TEST_CASE("issue-3140", "[highs_test_presolve]") {
 
   highs.resetGlobalScheduler(true);
 }
+
+
+TEST_CASE("test-non-stop-initial-sweep", "[highs_test_presolve]") {
+  Highs h;
+  //  h.setOptionValue("output_flag", dev_run);
+  h.setOptionValue("presolve_rule_logging", true);
+  h.setOptionValue("log_dev_level", 1);
+
+  HighsLp lp;
+  lp.num_col_ = 3;
+  lp.num_row_ = 1;
+  lp.col_cost_ = {0, 0, 0};
+  lp.col_lower_ = {-kHighsInf, -1, -kHighsInf};
+  lp.col_upper_ = {kHighsInf, -1, kHighsInf};
+  lp.row_lower_ = {0};
+  lp.row_upper_ = {0};
+  lp.a_matrix_.format_ = MatrixFormat::kRowwise;
+  lp.a_matrix_.start_ = {0, 2};
+  lp.a_matrix_.index_ = {0, 1};
+  lp.a_matrix_.value_ = {1, 1};
+  
+  REQUIRE(h.passModel(lp) == HighsStatus::kOk);
+
+  h.setOptionValue("presolve_reduction_limit", 0);
+
+  h.run();
+
+  h.resetGlobalScheduler(true);
+}
+
+/*
+TEST_CASE("test-fuzzing", "[highs_test_presolve]") {
+  Highs h;
+  //  h.setOptionValue("output_flag", dev_run);
+  h.setOptionValue("presolve_rule_logging", true);
+  h.setOptionValue("log_dev_level", 1);
+
+  const std::string model = "issue-008";
+  std::string model_file = std::string(HIGHS_DIR) + "/build/OscarFuzzing/" +
+                           model + "/" + model + ".mps";
+
+  REQUIRE(h.readModel(model_file) == HighsStatus::kOk);
+
+  std::string options_file =
+      std::string(HIGHS_DIR) + "/build/OscarFuzzing/" + model + "/options.txt";
+  REQUIRE(h.readOptions(options_file) == HighsStatus::kOk);
+
+  h.writeOptions("", true);
+
+  h.run();
+
+  h.resetGlobalScheduler(true);
+}
+*/
