@@ -152,7 +152,8 @@ class HPresolve {
     kPrimalInfeasible,
     kDualInfeasible,
     kStopped,
-    kOutOfMemory
+    kOutOfMemory,
+    kException
   };
 
   struct StatusResult {

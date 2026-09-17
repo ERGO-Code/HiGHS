@@ -1931,7 +1931,7 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postsolve_stack) {
 
       // Check for timeout
       tt = this->timer->read();
-      if (tt > options->time_limit) {
+      if (tt > this->presolve_time_limit_) {
         highsLogUser(
             options->log_options, HighsLogType::kInfo,
             "Time limit reached in probing: "
@@ -7416,7 +7416,9 @@ HighsModelStatus HPresolve::run(HighsPostsolveStack& postsolve_stack) {
   } catch (const std::exception& exception) {
     highsLogDev(options->log_options, HighsLogType::kError,
                 "Exception %s in Presolve::presolve\n", exception.what());
-    result = Result::kOutOfMemory;
+    result = handleException(options->log_options, "presolve", exception) ?
+      Result::kOutOfMemory :
+      Result::kException;
   }
   // Stop any presolve rule logging that is currently running, check
   // the presolve rule logging for errors, and analyse it
@@ -7424,8 +7426,8 @@ HighsModelStatus HPresolve::run(HighsPostsolveStack& postsolve_stack) {
   assert(analysis_.analysePresolveRuleLog());
   analysis_.analysePresolveRuleLog(true);
   switch (result) {
-    case Result::kStopped:
     case Result::kOk:
+    case Result::kStopped:
       break;
     case Result::kPrimalInfeasible:
       presolve_status_ = HighsPresolveStatus::kInfeasible;
@@ -7438,9 +7440,15 @@ HighsModelStatus HPresolve::run(HighsPostsolveStack& postsolve_stack) {
       reportProfiling();
       return HighsModelStatus::kUnboundedOrInfeasible;
     case Result::kOutOfMemory:
+    case Result::kException:
       presolve_status_ = HighsPresolveStatus::kOutOfMemory;
       return HighsModelStatus::kMemoryLimit;
   }
+  assert(result == Result::kOk ||
+	 result == Result::kStopped);
+  // Result::kStopped corresponds to reaching the time or reduction
+  // limit, in which case any reductions performed are retained, so
+  // complete presolve as if it had run to completion
   reportReductions();
   shrinkProblem(postsolve_stack);
 
@@ -7577,13 +7585,13 @@ HPresolve::Result HPresolve::removeDependentEquations(
   //
   // Allow no more than 1% of the time limit to be spent on removing
   // dependent equations, but ensure that there is some limit since
-  // options->time_limit is infinity by default
+  // this->presolve_time_limit_ is infinity by default
   //
   // ToDo: This is strictly non-deterministic, but so conservative
   // that it'll only reap the cases when factor.build never finishes
   const double kMaxDependentEquationsTime = 100;
   const double time_limit = std::max(
-      1.0, std::min(0.01 * options->time_limit, kMaxDependentEquationsTime));
+      1.0, std::min(0.01 * this->presolve_time_limit_, kMaxDependentEquationsTime));
   factor.setTimeLimit(time_limit);
   // Determine rank deficiency of the equations
   if (!silent)

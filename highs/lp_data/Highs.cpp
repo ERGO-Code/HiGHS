@@ -1232,8 +1232,7 @@ HighsStatus Highs::optimizeModelTryCatch() {
   try {
     status = calledOptimizeModel();
   } catch (const std::exception& exception) {
-    highsLogDev(options_.log_options, HighsLogType::kError,
-                "Exception %s in calledOptimizeModel\n", exception.what());
+    handleException(options_.log_options, "calledOptimizeModel", exception);
     handleCatch();
   } catch (const HighsTask::Interrupt&) {
     highsLogDev(options_.log_options, HighsLogType::kError,
@@ -1444,8 +1443,7 @@ HighsStatus Highs::calledOptimizeModel() {
     try {
       call_status = callSolveQp(this->model_, "Solve incumbent QP");
     } catch (const std::exception& exception) {
-      highsLogDev(options_.log_options, HighsLogType::kError,
-                  "Exception %s in callSolveQp\n", exception.what());
+      handleException(options_.log_options, "callSolveQp", exception);
       model_status_ = HighsModelStatus::kSolveError;
       call_status = HighsStatus::kError;
     }

@@ -19,22 +19,20 @@
 #include "qpsolver/QpAsmWrapper.h"
 #include "simplex/HApp.h"
 
-#define SOLVE_CATCH_CALL(Solve, SolveString)                                  \
-  do {                                                                        \
-    try {                                                                     \
-      call_status = Solve;                                                    \
-    } catch (const std::exception& exception) {                               \
-      highsLogDev(options.log_options, HighsLogType::kError,                  \
-                  "Exception %s when solving with %s\n", exception.what(),    \
-                  SolveString);                                               \
-      solver_object.model_status_ = HighsModelStatus::kSolveError;            \
-      call_status = HighsStatus::kError;                                      \
-    } catch (const HighsTask::Interrupt&) {                                   \
-      highsLogDev(options.log_options, HighsLogType::kError,                  \
+#define SOLVE_CATCH_CALL(Solve, SolveString)				\
+  do {									\
+    try {								\
+      call_status = Solve;						\
+    } catch (const std::exception& exception) {				\
+      handleException(options.log_options, SolveString, exception);	\
+      solver_object.model_status_ = HighsModelStatus::kSolveError;	\
+      call_status = HighsStatus::kError;				\
+    } catch (const HighsTask::Interrupt&) {				\
+      highsLogDev(options.log_options, HighsLogType::kError,		\
                   "HighsTask interrupt when solving with %s\n", SolveString); \
-      solver_object.model_status_ = HighsModelStatus::kSolveError;            \
-      call_status = HighsStatus::kError;                                      \
-    }                                                                         \
+      solver_object.model_status_ = HighsModelStatus::kSolveError;	\
+      call_status = HighsStatus::kError;				\
+    }									\
   } while (0)
 
 // The method below runs the simplex, IPX, HiPO or PDLP solver on the LP
@@ -909,8 +907,7 @@ HighsStatus solveMip(HighsMipSolverObject& solver_object,
   try {
     solver.run();
   } catch (const std::exception& exception) {
-    highsLogDev(options.log_options, HighsLogType::kError,
-                "Exception %s in MIP solver\n", exception.what());
+    handleException(options.log_options, "MIP solver", exception);
     solver.modelstatus_ = HighsModelStatus::kSolveError;
   } catch (const HighsTask::Interrupt&) {
     highsLogDev(options.log_options, HighsLogType::kError,
