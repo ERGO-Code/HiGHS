@@ -26,7 +26,7 @@ TEST_CASE("filereader-edge-cases", "[highs_filereader]") {
   const bool test_garbage_lp = true;
 
   Highs highs;
-  if (!dev_run) highs.setOptionValue("output_flag", false);
+  highs.setOptionValue("output_flag", dev_run);
   const HighsInfo& info = highs.getInfo();
 
   if (run_first_tests) {
@@ -133,16 +133,18 @@ TEST_CASE("filereader-edge-cases", "[highs_filereader]") {
   REQUIRE(read_status == HighsStatus::kError);
 
   model = "1451";
-  // Vanilla .lp file, but for constraint named "end" which tests code
-  // to permit keywords as constraint names
+  // Vanilla .lp file, but for a constraint named "end" which tests
+  // code to permit keywords as constraint names, and 10 (other)
+  // constraints with constant in LHS that is viewed as a numeric
+  // variable name and ignored as illegal. The 11 instances
   if (dev_run) printf("\n%s.lp\n", model.c_str());
   model_file = std::string(HIGHS_DIR) + "/check/instances/" + model + ".lp";
   read_status = highs.readModel(model_file);
-  REQUIRE(read_status == HighsStatus::kOk);
+  REQUIRE(read_status == HighsStatus::kWarning);
   run_status = highs.run();
   REQUIRE(run_status == HighsStatus::kOk);
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
-  REQUIRE(highs.getInfo().objective_function_value == 2);
+  REQUIRE(highs.getInfo().objective_function_value == 9);
 
   highs.resetGlobalScheduler(true);
 }
