@@ -430,15 +430,14 @@ static bool usingOpenBLAS() {
 static HighsInt prepareOpenBLAS(const HighsOptions& options) {
   // force openblas to run in serial, for determinism and better performance
   // no-op if openblas is not used
-  HighsExtras::blas::openblas_set_num_threads(1);
+  const int threads_used = HighsExtras::blas::openblas_set_num_threads(1);
 
   if (usingOpenBLAS()) {
-    const int num_threads = HighsExtras::blas::openblas_get_num_threads();
-    if (num_threads < 0) {
+    if (threads_used < 0) {
       highsLogUser(options.log_options, HighsLogType::kError,
                    "OpenBLAS compilation flag failed to be set correctly\n");
       return 1;
-    } else if (num_threads != 1) {
+    } else if (threads_used != 1) {
       highsLogUser(options.log_options, HighsLogType::kError,
                    "OpenBLAS failed to set the number of threads to 1\n");
       return 1;
