@@ -2033,5 +2033,6 @@ TEST_CASE("dominated-column-double-fixing", "[highs_test_mip_solver]") {
   highs.setOptionValue("output_flag", dev_run);
   REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
   solve(highs, kHighsOffString, HighsModelStatus::kInfeasible);
+  highs.setOptionValue("output_flag", dev_run);
   solve(highs, kHighsOnString, HighsModelStatus::kInfeasible);
 }

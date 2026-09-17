@@ -7416,9 +7416,9 @@ HighsModelStatus HPresolve::run(HighsPostsolveStack& postsolve_stack) {
   } catch (const std::exception& exception) {
     highsLogDev(options->log_options, HighsLogType::kError,
                 "Exception %s in Presolve::presolve\n", exception.what());
-    result = handleExceptionIsOom(options->log_options, "presolve", exception) ?
-      Result::kOutOfMemory :
-      Result::kException;
+    result = handleExceptionIsOom(options->log_options, "presolve", exception)
+                 ? Result::kOutOfMemory
+                 : Result::kException;
   }
   // Stop any presolve rule logging that is currently running, check
   // the presolve rule logging for errors, and analyse it
@@ -7446,8 +7446,7 @@ HighsModelStatus HPresolve::run(HighsPostsolveStack& postsolve_stack) {
       presolve_status_ = HighsPresolveStatus::kException;
       return HighsModelStatus::kSolveError;
   }
-  assert(result == Result::kOk ||
-	 result == Result::kStopped);
+  assert(result == Result::kOk || result == Result::kStopped);
   // Result::kStopped corresponds to reaching the time or reduction
   // limit, in which case any reductions performed are retained, so
   // complete presolve as if it had run to completion
@@ -7593,7 +7592,8 @@ HPresolve::Result HPresolve::removeDependentEquations(
   // that it'll only reap the cases when factor.build never finishes
   const double kMaxDependentEquationsTime = 100;
   const double time_limit = std::max(
-      1.0, std::min(0.01 * this->presolve_time_limit_, kMaxDependentEquationsTime));
+      1.0,
+      std::min(0.01 * this->presolve_time_limit_, kMaxDependentEquationsTime));
   factor.setTimeLimit(time_limit);
   // Determine rank deficiency of the equations
   if (!silent)

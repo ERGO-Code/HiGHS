@@ -434,10 +434,6 @@ void getKktFailures(const HighsOptions& options, const bool is_qp,
 
           if (dual_residual_error > dual_residual_tolerance) {
             num_dual_residual_error++;
-            if (options.output_flag)
-              printf("getKktFailures Col %3d Dual residual error %2d = %g\n",
-                     int(iCol), int(num_dual_residual_error),
-                     dual_residual_error);
           }
           if (max_dual_residual_error < dual_residual_error)
             max_dual_residual_error = dual_residual_error;

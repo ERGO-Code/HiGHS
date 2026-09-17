@@ -1119,7 +1119,7 @@ HighsStatus Highs::presolve() {
     }
     default: {
       assert(model_presolve_status_ == HighsPresolveStatus::kOutOfMemory ||
-	     model_presolve_status_ == HighsPresolveStatus::kException);
+             model_presolve_status_ == HighsPresolveStatus::kException);
       setHighsModelStatusAndClearSolutionAndBasis(
           HighsModelStatus::kPresolveError);
       return_status = HighsStatus::kError;
@@ -1229,8 +1229,10 @@ HighsStatus Highs::optimizeModelTryCatch() {
   try {
     status = calledOptimizeModel();
   } catch (const std::exception& exception) {
-    model_status_ = handleExceptionIsOom(options_.log_options, "calledOptimizeModel", exception) ?
-      HighsModelStatus::kMemoryLimit : HighsModelStatus::kSolveError;
+    model_status_ = handleExceptionIsOom(options_.log_options,
+                                         "calledOptimizeModel", exception)
+                        ? HighsModelStatus::kMemoryLimit
+                        : HighsModelStatus::kSolveError;
     handleCatch();
   } catch (const HighsTask::Interrupt&) {
     highsLogDev(options_.log_options, HighsLogType::kError,
@@ -1442,8 +1444,10 @@ HighsStatus Highs::calledOptimizeModel() {
     try {
       call_status = callSolveQp(this->model_, "Solve incumbent QP");
     } catch (const std::exception& exception) {
-      model_status_ = handleExceptionIsOom(options_.log_options, "callSolveQp", exception) ?
-	HighsModelStatus::kMemoryLimit : HighsModelStatus::kSolveError;
+      model_status_ =
+          handleExceptionIsOom(options_.log_options, "callSolveQp", exception)
+              ? HighsModelStatus::kMemoryLimit
+              : HighsModelStatus::kSolveError;
       call_status = HighsStatus::kError;
     }
     return_status = interpretCallStatus(options_.log_options, call_status,

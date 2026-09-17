@@ -19,21 +19,22 @@
 #include "qpsolver/QpAsmWrapper.h"
 #include "simplex/HApp.h"
 
-#define SOLVE_CATCH_CALL(Solve, SolveString)				\
-  do {									\
-    try {								\
-      call_status = Solve;						\
-    } catch (const std::exception& exception) {				\
-      solver_object.model_status_ =					\
-	handleExceptionIsOom(options.log_options, SolveString, exception) ? \
-	HighsModelStatus::kMemoryLimit : HighsModelStatus::kSolveError;	\
-      call_status = HighsStatus::kError;				\
-    } catch (const HighsTask::Interrupt&) {				\
-      highsLogDev(options.log_options, HighsLogType::kError,		\
+#define SOLVE_CATCH_CALL(Solve, SolveString)                                  \
+  do {                                                                        \
+    try {                                                                     \
+      call_status = Solve;                                                    \
+    } catch (const std::exception& exception) {                               \
+      solver_object.model_status_ =                                           \
+          handleExceptionIsOom(options.log_options, SolveString, exception)   \
+              ? HighsModelStatus::kMemoryLimit                                \
+              : HighsModelStatus::kSolveError;                                \
+      call_status = HighsStatus::kError;                                      \
+    } catch (const HighsTask::Interrupt&) {                                   \
+      highsLogDev(options.log_options, HighsLogType::kError,                  \
                   "HighsTask interrupt when solving with %s\n", SolveString); \
-      solver_object.model_status_ = HighsModelStatus::kSolveError;	\
-      call_status = HighsStatus::kError;				\
-    }									\
+      solver_object.model_status_ = HighsModelStatus::kSolveError;            \
+      call_status = HighsStatus::kError;                                      \
+    }                                                                         \
   } while (0)
 
 // The method below runs the simplex, IPX, HiPO or PDLP solver on the LP
@@ -909,8 +910,9 @@ HighsStatus solveMip(HighsMipSolverObject& solver_object,
     solver.run();
   } catch (const std::exception& exception) {
     solver.modelstatus_ =
-      handleExceptionIsOom(options.log_options, "MIP solver", exception) ?
-      HighsModelStatus::kMemoryLimit : HighsModelStatus::kSolveError;
+        handleExceptionIsOom(options.log_options, "MIP solver", exception)
+            ? HighsModelStatus::kMemoryLimit
+            : HighsModelStatus::kSolveError;
   } catch (const HighsTask::Interrupt&) {
     highsLogDev(options.log_options, HighsLogType::kError,
                 "HighsTask interrupt when solving with MIP solver\n");

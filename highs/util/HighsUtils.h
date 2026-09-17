@@ -271,6 +271,6 @@ inline std::pair<double, double> infeasibility(const double lower,
 }
 
 bool handleExceptionIsOom(const HighsLogOptions& log_options,
-			  const std::string& source,
-			  const std::exception& exception);
+                          const std::string& source,
+                          const std::exception& exception);
 #endif  // UTIL_HIGHSUTILS_H_

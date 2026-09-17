@@ -3194,7 +3194,7 @@ void reportPresolveReductions(const HighsLogOptions& log_options,
     }
     default: {
       assert(presolve_status == HighsPresolveStatus::kOutOfMemory ||
-	     presolve_status == HighsPresolveStatus::kException);
+             presolve_status == HighsPresolveStatus::kException);
       return;
     }
   }

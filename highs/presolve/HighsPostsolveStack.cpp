@@ -78,6 +78,7 @@ static HighsBasisStatus computeRowStatus(double dual,
     return HighsBasisStatus::kUpper;
 }
 
+  /*
 static bool colFeasibilityOk(const std::string& message, const HighsInt col,
                              const double lower, const double upper,
                              const HighsOptions& options,
@@ -153,19 +154,11 @@ static bool colFeasibilityOk(const std::string& message, const HighsInt col,
   }
   assert(has_basis || basis_ok);
   if (!(primal_ok && dual_ok && basis_ok)) {
-    printf(
-        "%s Col %d is [%g, %g] with primal %g (%s) dual %g (%s)%s%s"
-        " \n",
-        message.c_str(), int(col), lower, upper, primal,
-        primal_ok ? "OK" : "Error", dual, dual_ok ? "OK" : "Error",
-        has_basis ? (": status " + utilBasisStatusToString(status).s2_).c_str()
-                  : "",
-        has_basis ? (basis_ok ? " (OK)" : " (Error)") : "");
     return false;
   }
   return true;
 }
-
+  */
 void HighsPostsolveStack::FreeColSubstitution::undo(
     const HighsOptions& options, const std::vector<Nonzero>& rowValues,
     const std::vector<Nonzero>& colValues, HighsSolution& solution,
@@ -834,14 +827,6 @@ void HighsPostsolveStack::DuplicateColumn::undo(const HighsOptions& options,
       } else {
         assert(solution.col_value[col] == 0.0);
         basis.col_status[col] = HighsBasisStatus::kZero;
-        if (colUpper < kHighsInf) {
-          // Nonbasic at zero with bounds (-inf, colUpper)
-          printf(
-              "HighsPostsolveStack::DuplicateColumn::undo Col is nonbasic at "
-              "zero with upper bound of %g\n",
-              colUpper);
-          assert(111 == 679);
-        }
       }
       assert(basis.col_status[duplicateCol] == HighsBasisStatus::kBasic);
     }
@@ -1945,25 +1930,6 @@ void HighsPostsolveStack::ZeroObjSingletonContinuousCol::undo(
         // grows, but is preferable if |c| > 1 since infeasibility
         // decreases. Indeed, if |c| > delta/tol, then y* is feasible
 
-        if (options.output_flag) {
-          printf(
-              "ZeroObjSingletonContinuousCol::undo row_residual_at_lower = %g; "
-              "row_residual_at_upper = %g\n",
-              row_residual_at_lower, row_residual_at_upper);
-          printf(
-              "ZeroObjSingletonContinuousCol::undo act = %24.20g; act-32 = "
-              "%11.4g: "
-              "act_with_col_at_lower = %11.4g; act_with_col_at_upper = "
-              "%11.4g\n",
-              double(act), double(act - 32.0), act_with_col_at_lower,
-              act_with_col_at_upper);
-          printf(
-              "ZeroObjSingletonContinuousCol::undo row_residual = %11.4g; coef "
-              "= "
-              "%11.4g:"
-              "col_value_for_lower = %11.4g; col_value_for_upper = %11.4g\n",
-              row_residual, coef, col_value_for_lower, col_value_for_upper);
-        }
         if (std::fabs(coef) <= 1.0) {
           // Option 1
           if (row_residual_at_lower < row_residual_at_upper) {
@@ -1994,14 +1960,6 @@ void HighsPostsolveStack::ZeroObjSingletonContinuousCol::undo(
     double local_col_value = kHighsInf;
     if (col_at_lower || col_at_upper) {
       local_col_value = col_at_lower ? lb : ub;
-    }
-    if (options.output_flag) {
-      printf(
-          "ZeroObjSingletonContinuousCol::undo "
-          "Row%7d [%11.4g, %11.4g, %11.4g] and "
-          "column%7d [%11.4g, %11.4g, %11.4g]: nonbasic row between bounds??\n",
-          int(row), origRowLower, row_value, origRowUpper, int(col), lb,
-          local_col_value, ub);
     }
   }
   // Row dual cannot be changed, and that defines the column dual
@@ -2038,20 +1996,6 @@ void HighsPostsolveStack::ZeroObjSingletonContinuousCol::undo(
           rsdu = std::fabs(ub - col_value);
           basis.col_status[col] = HighsBasisStatus::kUpper;
         }
-        if (rsdu > primal_tol) {
-          if (options.output_flag) {
-            printf(
-                "ZeroObjSingletonContinuousCol::undo "
-                "Row%7d [%11.4g, %11.4g, %11.4g] is %s and "
-                "column%7d [%11.4g, %11.4g, %11.4g] is %s with residual "
-                "%11.4g\n",
-                int(row), origRowLower, row_value, origRowUpper,
-                utilBasisStatusToString(basis.row_status[row]).s2_.c_str(),
-                int(col), lb, col_value, ub,
-                utilBasisStatusToString(basis.col_status[col]).s2_.c_str(),
-                rsdu);
-          }
-        }
       }
     }
   }
@@ -2059,22 +2003,6 @@ void HighsPostsolveStack::ZeroObjSingletonContinuousCol::undo(
   assert(row_value != kHighsInf);
   solution.col_value[col] = col_value;
   solution.row_value[row] = row_value;
-  if (options.output_flag) {
-    printf("ZeroObjSingletonContinuousCol::undo\n");
-    printf("   Col%7d [%11.4g, %11.4g, %11.4g] dual %11.4g%s%s\n", int(col), lb,
-           col_value, ub, solution.dual_valid ? solution.col_dual[col] : 0.0,
-           basis.valid ? "; status " : "",
-           basis.valid
-               ? utilBasisStatusToString(basis.col_status[col]).s2_.c_str()
-               : "");
-    printf("   Row%7d [%11.4g, %11.4g, %11.4g] dual %11.4g%s%s\n\n", int(row),
-           origRowLower, row_value, origRowUpper,
-           solution.dual_valid ? solution.row_dual[row] : 0.0,
-           basis.valid ? "; status " : "",
-           basis.valid
-               ? utilBasisStatusToString(basis.row_status[row]).s2_.c_str()
-               : "");
-  }
 }
 
 }  // namespace presolve
