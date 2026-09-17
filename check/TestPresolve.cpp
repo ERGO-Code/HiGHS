@@ -1242,13 +1242,9 @@ TEST_CASE("issue-3140", "[highs_test_presolve]") {
   highs.resetGlobalScheduler(true);
 }
 
-
 TEST_CASE("test-non-stop-initial-sweep", "[highs_test_presolve]") {
   Highs h;
-  //  h.setOptionValue("output_flag", dev_run);
-  h.setOptionValue("presolve_rule_logging", true);
-  h.setOptionValue("log_dev_level", 1);
-
+  h.setOptionValue("output_flag", dev_run);
   HighsLp lp;
   lp.num_col_ = 3;
   lp.num_row_ = 1;
@@ -1261,12 +1257,15 @@ TEST_CASE("test-non-stop-initial-sweep", "[highs_test_presolve]") {
   lp.a_matrix_.start_ = {0, 2};
   lp.a_matrix_.index_ = {0, 1};
   lp.a_matrix_.value_ = {1, 1};
-  
+
   REQUIRE(h.passModel(lp) == HighsStatus::kOk);
 
   h.setOptionValue("presolve_reduction_limit", 0);
+  h.setOptionValue(kSolverString, kIpxString);
+  h.setOptionValue("run_crossover", kHighsOffString);
 
-  h.run();
+  REQUIRE(h.run() == HighsStatus::kOk);
+  REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
 
   h.resetGlobalScheduler(true);
 }
