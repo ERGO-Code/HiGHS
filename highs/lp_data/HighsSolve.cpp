@@ -24,8 +24,9 @@
     try {								\
       call_status = Solve;						\
     } catch (const std::exception& exception) {				\
-      handleException(options.log_options, SolveString, exception);	\
-      solver_object.model_status_ = HighsModelStatus::kSolveError;	\
+      solver_object.model_status_ =					\
+	handleExceptionIsOom(options.log_options, SolveString, exception) ? \
+	HighsModelStatus::kMemoryLimit : HighsModelStatus::kSolveError;	\
       call_status = HighsStatus::kError;				\
     } catch (const HighsTask::Interrupt&) {				\
       highsLogDev(options.log_options, HighsLogType::kError,		\
@@ -907,8 +908,9 @@ HighsStatus solveMip(HighsMipSolverObject& solver_object,
   try {
     solver.run();
   } catch (const std::exception& exception) {
-    handleException(options.log_options, "MIP solver", exception);
-    solver.modelstatus_ = HighsModelStatus::kSolveError;
+    solver.modelstatus_ =
+      handleExceptionIsOom(options.log_options, "MIP solver", exception) ?
+      HighsModelStatus::kMemoryLimit : HighsModelStatus::kSolveError;
   } catch (const HighsTask::Interrupt&) {
     highsLogDev(options.log_options, HighsLogType::kError,
                 "HighsTask interrupt when solving with MIP solver\n");

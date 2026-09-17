@@ -7416,7 +7416,7 @@ HighsModelStatus HPresolve::run(HighsPostsolveStack& postsolve_stack) {
   } catch (const std::exception& exception) {
     highsLogDev(options->log_options, HighsLogType::kError,
                 "Exception %s in Presolve::presolve\n", exception.what());
-    result = handleException(options->log_options, "presolve", exception) ?
+    result = handleExceptionIsOom(options->log_options, "presolve", exception) ?
       Result::kOutOfMemory :
       Result::kException;
   }
@@ -7440,9 +7440,11 @@ HighsModelStatus HPresolve::run(HighsPostsolveStack& postsolve_stack) {
       reportProfiling();
       return HighsModelStatus::kUnboundedOrInfeasible;
     case Result::kOutOfMemory:
-    case Result::kException:
       presolve_status_ = HighsPresolveStatus::kOutOfMemory;
       return HighsModelStatus::kMemoryLimit;
+    case Result::kException:
+      presolve_status_ = HighsPresolveStatus::kException;
+      return HighsModelStatus::kSolveError;
   }
   assert(result == Result::kOk ||
 	 result == Result::kStopped);
