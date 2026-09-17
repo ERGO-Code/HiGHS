@@ -1289,3 +1289,28 @@ TEST_CASE("presolve-light-no-crossover", "[highs_test_presolve]") {
 
   h.resetGlobalScheduler(true);
 }
+
+/*
+TEST_CASE("test-fuzzing", "[highs_test_presolve]") {
+
+  Highs h;
+  //  h.setOptionValue("output_flag", dev_run);
+  h.setOptionValue("presolve_rule_logging", true);
+  h.setOptionValue("log_dev_level", 1);
+  const std::string model = "issue-008";
+  std::string model_file =
+    std::string(HIGHS_DIR) + "/build/OscarFuzzing/" + model + "/" + model +
+".mps"; REQUIRE(h.readModel(model_file) == HighsStatus::kOk);
+
+  std::string options_file =
+    std::string(HIGHS_DIR) + "/build/OscarFuzzing/" + model + "/options.txt";
+  REQUIRE(h.readOptions(options_file) == HighsStatus::kOk);
+
+  h.writeOptions("", true);
+
+  h.run();
+
+  h.resetGlobalScheduler(true);
+
+}
+*/
