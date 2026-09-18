@@ -662,8 +662,7 @@ void HighsCliqueTable::addClique(const HighsMipSolver& mipsolver,
   // lambda for analysing the clique to see if all variables can be fixed
   auto fixAllVarsInClique = [&](bool& hasNewEdge) {
     for (HighsInt i = 0; i != numcliquevars; ++i) {
-      if (!globaldom.isFixed(cliquevars[i].col) ||
-          cliquevars[i].val != globaldom.col_lower_[cliquevars[i].col])
+      if (!globaldom.isFixedToVal(cliquevars[i].col, cliquevars[i].val))
         continue;
       // column is fixed to 1, every other entry can be fixed to zero
       for (HighsInt k = 0; k != numcliquevars; ++k) {
@@ -940,7 +939,6 @@ void HighsCliqueTable::extractCliques(
     }
 
     addClique(mipsolver, clique.data(), nbin);
-    if (globaldom.infeasible()) return;
     // printf("extracted this clique:\n");
     // printClique(clique);
     return;
@@ -1294,35 +1292,60 @@ void HighsCliqueTable::extractCliques(HighsMipSolver& mipsolver,
     HighsInt start = mipsolver.mipdata_->ARstart_[i];
     HighsInt end = mipsolver.mipdata_->ARstart_[i + 1];
 
-    // catch set packing and partitioning constraints that already have the form
-    // of a clique without transformations and add those cliques with the rows
-    // being recorded
-    if (mipsolver.rowUpper(i) == 1.0) {
+    // catch set packing and partitioning constraints that already have the
+    // form of a clique without transformations and add those cliques with
+    // the rows being recorded. only <= and = rows are checked because
+    // normaliseCliqueRows has already flipped >= rows to <= form.
+    if (mipsolver.rowUpper(i) < kHighsInf) {
       bool issetppc = true;
-
-      clique.clear();
-
+      bool equation = mipsolver.rowUpper(i) == mipsolver.rowLower(i);
+      HighsCDouble rhs = mipsolver.rowUpper(i);
+      HighsInt numComp = 0;
       for (HighsInt j = start; j != end; ++j) {
         HighsInt col = mipsolver.mipdata_->ARindex_[j];
-        if (globaldom.col_upper_[col] == 0.0 &&
-            globaldom.col_lower_[col] == 0.0)
-          continue;
+        double val = mipsolver.mipdata_->ARvalue_[j];
 
-        issetppc =
-            globaldom.isBinary(col) && mipsolver.mipdata_->ARvalue_[j] == 1.0;
+        // handle fixed non-binary variables
+        if (!globaldom.isBinary(col) && globaldom.isFixed(col)) {
+          rhs -= val * static_cast<HighsCDouble>(globaldom.col_upper_[col]);
+          continue;
+        }
+
+        // check if we have a set partitioning / packing row
+        issetppc = globaldom.isBinary(col) && std::abs(val) == 1.0;
         if (!issetppc) break;
 
-        clique.emplace_back(col, 1);
+        // count number of complemented binaries (with coefficient -1)
+        if (val < 0) numComp++;
       }
 
-      if (issetppc) {
-        addClique(mipsolver, clique.data(),
-                  static_cast<HighsInt>(clique.size()),
-                  mipsolver.rowLower(i) == 1.0, i);
-        if (globaldom.infeasible()) return;
+      if (issetppc && rhs == 1.0 - numComp) {
+        clique.clear();
+
+        for (HighsInt j = start; j != end; ++j) {
+          HighsInt col = mipsolver.mipdata_->ARindex_[j];
+          double val = mipsolver.mipdata_->ARvalue_[j];
+          HighsInt dir = val > 0 ? 1 : 0;
+
+          // skip non-binary variables (fixed, see previous loop) and binaries
+          // that are fixed to "inactive" values
+          if (!globaldom.isBinary(col) || globaldom.isFixedToVal(col, 1 - dir))
+            continue;
+
+          // add to clique
+          clique.emplace_back(col, dir);
+        }
+
+        // add clique to clique table
+        if (clique.size() >= 2) {
+          addClique(mipsolver, clique.data(),
+                    static_cast<HighsInt>(clique.size()), equation, i);
+          if (globaldom.infeasible()) return;
+        }
         continue;
       }
     }
+
     if (!transformRows || isFull()) continue;
 
     offset = 0;
@@ -1561,9 +1584,8 @@ void HighsCliqueTable::processInfeasibleVertices(HighsDomain& globaldom) {
         removeClique(cliqueid);
         clq.erase(std::remove_if(clq.begin(), clq.end(),
                                  [&](CliqueVar x) {
-                                   return globaldom.isFixed(x.col) &&
-                                          globaldom.col_lower_[x.col] ==
-                                              1 - x.val;
+                                   return globaldom.isFixedToVal(x.col,
+                                                                 1 - x.val);
                                  }),
                   clq.end());
         if (clq.size() > 1) doAddClique(clq.data(), clq.size());
@@ -1977,15 +1999,12 @@ void HighsCliqueTable::runCliqueMerging(HighsDomain& globaldomain,
     runCliqueSubsumption(globaldomain, clique);
 
     if (!clique.empty()) {
-      clique.erase(
-          std::remove_if(clique.begin(), clique.end(),
-                         [&](CliqueVar v) {
-                           return globaldomain.isFixed(v.col) &&
-                                  static_cast<int>(
-                                      globaldomain.col_lower_[v.col]) ==
-                                      static_cast<int>(1 - v.val);
-                         }),
-          clique.end());
+      clique.erase(std::remove_if(clique.begin(), clique.end(),
+                                  [&](CliqueVar v) {
+                                    return globaldomain.isFixedToVal(v.col,
+                                                                     1 - v.val);
+                                  }),
+                   clique.end());
     }
   }
 
@@ -2113,10 +2132,7 @@ void HighsCliqueTable::runCliqueMerging(HighsDomain& globaldomain) {
         extensionvars.erase(
             std::remove_if(extensionvars.begin(), extensionvars.end(),
                            [&](CliqueVar v) {
-                             return globaldomain.isFixed(v.col) &&
-                                    static_cast<int>(
-                                        globaldomain.col_lower_[v.col]) ==
-                                        static_cast<int>(1 - v.val);
+                             return globaldomain.isFixedToVal(v.col, 1 - v.val);
                            }),
             extensionvars.end());
 

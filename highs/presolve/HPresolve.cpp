@@ -240,6 +240,11 @@ bool HPresolve::isUpperStrictlyImplied(HighsInt col, double* tolerance) const {
                   (tolerance != nullptr ? *tolerance : primal_feastol));
 }
 
+bool HPresolve::isBinary(HighsInt col) const {
+  return model->integrality_[col] == HighsVarType::kInteger &&
+         model->col_lower_[col] == 0.0 && model->col_upper_[col] == 1.0;
+}
+
 bool HPresolve::isImpliedFree(HighsInt col) const {
   return isLowerImplied(col) && isUpperImplied(col);
 }
@@ -1207,11 +1212,6 @@ HPresolve::Result HPresolve::dominatedColumns(
   size_t numDomChecks = 0;
   size_t numDomChecksPredBndAnalysis = 0;
 
-  auto isBinary = [&](HighsInt i) {
-    return model->integrality_[i] == HighsVarType::kInteger &&
-           model->col_lower_[i] == 0.0 && model->col_upper_[i] == 1.0;
-  };
-
   auto addSignature = [&](HighsInt row, HighsInt col, uint32_t rowLowerFinite,
                           uint32_t rowUpperFinite) {
     HighsInt rowHashedPos = (HighsHashHelpers::hash(row) >> 59);
@@ -1620,12 +1620,144 @@ HPresolve::Result HPresolve::dominatedColumns(
   return Result::kOk;
 }
 
+HPresolve::Result HPresolve::normaliseCliqueRows(
+    HighsPostsolveStack& postsolve_stack) {
+  struct nonZero {
+    HighsInt index;
+    double value;
+    int8_t complementation;
+    HighsInt position;
+  };
+
+  auto transformRow = [&](HighsInt row, std::vector<nonZero>& nzs,
+                          HighsCDouble& rhs) {
+    nzs.clear();
+
+    for (HighsInt rowiter : rowpositions) {
+      HighsInt col = Acol[rowiter];
+      double val = Avalue[rowiter];
+
+      if (val < 0) {
+        nzs.push_back(nonZero{col, -val, -1, rowiter});
+        rhs -= static_cast<HighsCDouble>(val) * model->col_upper_[col];
+      } else {
+        nzs.push_back(nonZero{col, val, 1, rowiter});
+        rhs -= static_cast<HighsCDouble>(val) * model->col_lower_[col];
+      }
+    }
+  };
+
+  // maximum dynamism
+  const double maxDynamism = 1e5;
+
+  std::vector<nonZero> nzs;
+  std::vector<double> rowCoefsInt;
+
+  for (HighsInt row = 0; row < model->num_row_; row++) {
+    // skip deleted and ranged rows
+    if (rowDeleted[row] || (isRanged(row) && !isEquation(row)) ||
+        rowsize[row] <= 1)
+      continue;
+
+    // store row
+    storeRow(row);
+
+    // skip rows that are not all-binary
+    bool allBinary = true;
+    rowCoefsInt.clear();
+    for (const auto& nz : getStoredRow()) {
+      allBinary = isBinary(nz.index());
+      if (!allBinary) break;
+      rowCoefsInt.push_back(nz.value());
+    }
+    if (!allBinary) continue;
+
+    // skip row if dynamism is too large
+    if (computeDynamism(getStoredRow()) > maxDynamism) continue;
+
+    // compute scaling factor that makes all coefficients integral
+    double intScale = HighsIntegers::integralScale(
+        rowCoefsInt, options->small_matrix_value, options->small_matrix_value);
+    if (intScale == 0 || intScale > 1e3) continue;
+
+    // scale so that we have a <= inequality or equation
+    if (model->row_upper_[row] == kHighsInf) intScale = -intScale;
+    scaleStoredRow(row, intScale, true);
+
+    // transform the row
+    HighsCDouble rhs = model->row_upper_[row];
+    transformRow(row, nzs, rhs);
+
+    // sort by descending coefficient value
+    HighsInt numBin = static_cast<HighsInt>(nzs.size());
+    std::vector<HighsInt> perm(numBin);
+    std::iota(perm.begin(), perm.end(), 0);
+    pdqsort(perm.begin(), perm.end(), [&](HighsInt a, HighsInt b) {
+      return nzs[a].value > nzs[b].value;
+    });
+
+    // trivial fixings: variables with coefficient > rhs must be zero
+    // in the complemented space
+    HighsInt start = 0;
+    for (HighsInt j = 0; j < numBin; ++j) {
+      if (nzs[perm[j]].value <= rhs + primal_feastol) break;
+      HighsInt col = nzs[perm[j]].index;
+      if (nzs[perm[j]].complementation == -1)
+        HPRESOLVE_CHECKED_CALL(fixColToUpper(postsolve_stack, col));
+      else
+        HPRESOLVE_CHECKED_CALL(fixColToLower(postsolve_stack, col));
+      ++start;
+    }
+
+    // skip row if there are less than two remaining variables or two smallest
+    // remaining coefficients do not form a clique
+    if (numBin - start < 2 ||
+        nzs[perm[numBin - 2]].value + nzs[perm[numBin - 1]].value <=
+            rhs + primal_feastol)
+      continue;
+
+    // for equations, normalisation to x1 + ... + xn = 1 is only valid
+    // for set partitioning rows where all coefficients equal rhs
+    if (isEquation(row) &&
+        (nzs[perm[start]].value != nzs[perm[numBin - 1]].value ||
+         nzs[perm[start]].value != rhs))
+      continue;
+
+    // normalize remaining coefficients to ±1
+    HighsInt numComp = 0;
+    for (HighsInt j = start; j < numBin; ++j) {
+      HighsInt pos = nzs[perm[j]].position;
+      double delta =
+          static_cast<double>(nzs[perm[j]].complementation) - Avalue[pos];
+      if (delta != 0.0) addToMatrix(row, nzs[perm[j]].index, delta);
+      if (nzs[perm[j]].complementation == -1) numComp++;
+    }
+
+    // update row bounds
+    bool equation = isEquation(row);
+    model->row_upper_[row] = 1.0 - numComp;
+    if (equation)
+      model->row_lower_[row] = 1.0 - numComp;
+    else {
+      model->row_lower_[row] = -kHighsInf;
+    }
+  }
+  return Result::kOk;
+}
+
 HPresolve::Result HPresolve::prepareProbing(
     HighsPostsolveStack& postsolve_stack, bool& firstCall) {
   HighsDomain& domain = mipsolver->mipdata_->getDomain();
   HighsCliqueTable& cliquetable = mipsolver->mipdata_->cliquetable;
 
   shrinkProblem(postsolve_stack);
+
+  // first call?
+  firstCall = !mipsolver->mipdata_->cliquesExtracted;
+
+  // todo: rows that become setppc after domain propagation (below) are
+  // not normalised and thus cannot be deleted by clique merging
+  if (firstCall) HPRESOLVE_CHECKED_CALL(normaliseCliqueRows(postsolve_stack));
 
   toCSC(model->a_matrix_.value_, model->a_matrix_.index_,
         model->a_matrix_.start_);
@@ -1650,9 +1782,6 @@ HPresolve::Result HPresolve::prepareProbing(
 
   // prepare for domain propagation
   mipsolver->mipdata_->setupDomainPropagation();
-
-  // first call?
-  firstCall = !mipsolver->mipdata_->cliquesExtracted;
 
   domain.propagate();
   if (domain.infeasible()) return Result::kPrimalInfeasible;
@@ -3151,7 +3280,9 @@ void HPresolve::scaleStoredRow(HighsInt row, double scale, bool integral) {
 
   impliedRowBounds.sumScaled(row, scale);
   if (scale < 0) {
-    std::swap(rowDualLower[row], rowDualUpper[row]);
+    double tmp = rowDualLower[row];
+    rowDualLower[row] = -rowDualUpper[row];
+    rowDualUpper[row] = -tmp;
     std::swap(implRowDualLower[row], implRowDualUpper[row]);
     std::swap(rowDualLowerSource[row], rowDualUpperSource[row]);
     std::swap(model->row_lower_[row], model->row_upper_[row]);
