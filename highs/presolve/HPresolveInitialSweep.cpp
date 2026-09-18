@@ -171,12 +171,16 @@ HPresolveInitialSweep::Result HPresolveInitialSweep::run(
 
   std::vector<HighsInt> newColIndex(model_->num_col_);
   std::vector<HighsInt> row_count(model_->num_row_, 0);
+  // Col of row is used to identify the column containing each
+  // singleton row, and val_of_row the matrix entry of the singleton
   std::vector<HighsInt> col_of_row(model_->num_row_, -1);
   std::vector<double> val_of_row(model_->num_row_, 0);
+  // Compute the implied bounds on rows
   std::vector<HighsCDouble> implied_row_lower(model_->num_row_, 0);
   std::vector<HighsCDouble> implied_row_upper(model_->num_row_, 0);
 
-  // Column pass: remove empty and fixed columns, compress in place
+  // Pass through the columns, identifying any that are empty or
+  // fixed, so can be removed, updating the model in place.
   for (HighsInt iCol = 0; iCol < model_->num_col_; iCol++) {
     HighsInt col_nnz =
         model_->a_matrix_.start_[iCol + 1] - model_->a_matrix_.start_[iCol];
@@ -184,16 +188,22 @@ HPresolveInitialSweep::Result HPresolveInitialSweep::run(
     if (col_nnz == 0) {
       newColIndex[iCol] = -1;
       num_empty_col++;
+      // Remove empty column
       CHECKED_CALL(emptyCol(postsolve_stack, iCol));
     } else if (isFixed) {
       newColIndex[iCol] = -1;
       num_fixed_col++;
+      // Remove fixed column
       HighsInt iEl = model_->a_matrix_.start_[iCol];
       postsolve_stack.removedModelFixedCol(
           iCol, model_->col_lower_[iCol], model_->col_cost_[iCol], col_nnz,
           &model_->a_matrix_.index_[iEl], &model_->a_matrix_.value_[iEl]);
       removeFixedCol(iCol);
     } else {
+      // Column is not empty or fixed, so is retained: update the
+      // model in place by shifting the cost, bounds, any names, and
+      // the matrix data. Also compute this column's contribution to
+      // the implied row bounds.
       newColIndex[iCol] = num_col;
       model_->col_cost_[num_col] = model_->col_cost_[iCol];
       model_->col_lower_[num_col] = model_->col_lower_[iCol];
@@ -269,9 +279,11 @@ HPresolveInitialSweep::Result HPresolveInitialSweep::run(
       if (row_count[iRow] <= 1) {
         newRowIndex[iRow] = -1;
         if (row_count[iRow] == 0) {
+          // Empty row
           CHECKED_CALL(emptyRow(postsolve_stack, iRow));
           num_deleted_rows_++;
         } else {
+          // Singleton row
           has_singleton_row[col_of_row[iRow]] = true;
           assert(val_of_row[iRow]);
           CHECKED_CALL(singletonRow(postsolve_stack, iRow, col_of_row[iRow],
@@ -296,9 +308,11 @@ HPresolveInitialSweep::Result HPresolveInitialSweep::run(
     assert(num_row + num_removed_rows == model_->num_row_);
 
     if (num_redundant_row == 0) {
-      // Only removing singleton row entries — compress column-wise
+      // Only removing entries corresponding to singleton rows so
+      // there are few to remove and it can be done efficiently
       nnz = 0;
       HighsInt from_col = 0;
+      // Lambda for shifting column data and updating row indices
       auto shiftCols = [&](const HighsInt to_col) {
         for (HighsInt iCol = from_col; iCol < to_col; iCol++) {
           HighsInt from_os = model_->a_matrix_.start_[iCol];
@@ -318,6 +332,8 @@ HPresolveInitialSweep::Result HPresolveInitialSweep::run(
       };
       for (HighsInt iCol0 = 0; iCol0 < model_->num_col_; iCol0++) {
         if (!has_singleton_row[iCol0]) continue;
+        // Column iCol0 contains a row singleton, so update the matrix
+        // entries for the columns since the last with a row singleton
         shiftCols(iCol0);
         HighsInt from_os = model_->a_matrix_.start_[iCol0];
         HighsInt col_nnz = model_->a_matrix_.start_[iCol0 + 1] - from_os;
@@ -342,13 +358,17 @@ HPresolveInitialSweep::Result HPresolveInitialSweep::run(
         model_->a_matrix_.start_[iCol0] = new_col_start;
         from_col = iCol0 + 1;
       }
+      // Update the matrix entries for the columns since the last with a
+      // row singleton
       shiftCols(model_->num_col_);
       model_->a_matrix_.start_[num_col] = nnz;
     } else {
-      // Also removing redundant rows — convert to rowwise and compress
+      // Also removing redundant rows, so make the matrix rowwise and
+      // remove rows simply above
       nnz = 0;
       HighsInt from_row = 0;
       num_row = 0;
+      // Lambda for shifting row data and updating row indices
       auto shiftRows = [&](const HighsInt to_row) {
         for (HighsInt iRow = from_row; iRow < to_row; iRow++) {
           HighsInt new_row_start = nnz;
@@ -365,9 +385,12 @@ HPresolveInitialSweep::Result HPresolveInitialSweep::run(
       model_->a_matrix_.ensureRowwise();
       for (HighsInt iRow0 = 0; iRow0 < model_->num_row_; iRow0++) {
         if (newRowIndex[iRow0] >= 0) continue;
+        // Row iRow0 is removed, so update the matrix entries for the
+        // rows since the last removed
         shiftRows(iRow0);
         from_row = iRow0 + 1;
       }
+      // Update the matrix entries for the rows since the last removed
       shiftRows(model_->num_row_);
       assert(num_row + num_removed_rows == model_->num_row_);
       model_->a_matrix_.start_[num_row] = nnz;
@@ -383,6 +406,7 @@ HPresolveInitialSweep::Result HPresolveInitialSweep::run(
     model_->a_matrix_.value_.resize(nnz);
     postsolve_stack.compressRowIndexMap(newRowIndex);
   }
+  // Add doubleton equations, column singletons, variable locks
 
   if (num_fixed_col || num_empty_col)
     highsLogUser(

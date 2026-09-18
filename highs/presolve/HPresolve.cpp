@@ -504,7 +504,6 @@ void HPresolve::chooseRules() {
   this->allow_rule_.assign(kPresolveRuleCount, true);
   std::vector<HighsBool> presolve_light_rule_off(kPresolveRuleCount, false);
   const bool presolve_light_on = options->presolve_light == kHighsOnString;
-  const bool presolve_light_off = options->presolve_light == kHighsOffString;
   if (presolve_light_on) {
     // Define the rules not used in presolve_light mode
     presolve_light_rule_off[kPresolveRuleDependentEquations] = true;
@@ -574,9 +573,6 @@ void HPresolve::chooseRules() {
       }
       bit *= 2;
     }
-  } else if (presolve_light_off) {
-    highsLogUser(options->log_options, HighsLogType::kInfo,
-                 "Presolve light only allows initial sweep\n");
   }
 }
 
@@ -6281,6 +6277,7 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
   HPRESOLVE_CHECKED_CALL(checkOriginalModelBounds());
 
   if (options->presolve != kHighsOffString && mipsolver == nullptr &&
+      !options->presolve_rule_test &&
       this->allow_rule_[kPresolveRuleInitialSweep]) {
     numDeletedCols = 0;
     numDeletedRows = 0;
@@ -6299,8 +6296,6 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
     if (sweep_result == HPresolveInitialSweep::Result::kDualInfeasible)
       return Result::kDualInfeasible;
   }
-  if (options->presolve_light == kHighsOffString) return presolveReturn();
-
   if (!okSetupPresolveDataStructures()) {
     highsLogUser(options->log_options, HighsLogType::kError,
                  "Insufficient memory for presolve data structures\n");
