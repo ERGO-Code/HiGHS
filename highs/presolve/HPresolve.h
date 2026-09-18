@@ -108,10 +108,9 @@ class HPresolve {
   std::vector<std::set<std::pair<HighsInt, HighsInt>>::iterator> eqiters;
 
   bool shrinkProblemEnabled;
+  double presolve_time_limit_;
   size_t reductionLimit;
   size_t last_reduction_;
-  bool in_initial_sweep_;
-
   // vectors storing singleton rows and columns
   std::vector<HighsInt> singletonRows;
   std::vector<HighsInt> singletonColumns;
@@ -145,7 +144,8 @@ class HPresolve {
     kPrimalInfeasible,
     kDualInfeasible,
     kStopped,
-    kOutOfMemory
+    kOutOfMemory,
+    kException
   };
 
   struct StatusResult {
@@ -327,8 +327,6 @@ class HPresolve {
 
   Result checkColBounds(HighsInt col, bool* isFixed = nullptr);
 
-  Result checkModelColBounds(HighsInt col, bool& isFixed);
-
   void changeRowDualUpper(HighsInt row, double newUpper);
 
   void changeRowDualLower(HighsInt row, double newLower);
@@ -428,12 +426,9 @@ class HPresolve {
   Result doubletonEq(HighsPostsolveStack& postsolve_stack, HighsInt row,
                      HighsPostsolveStack::RowType rowType);
 
-  Result singletonRow(HighsPostsolveStack& postsolve_stack, HighsInt row,
-                      const HighsInt col_ = -1, const double val_ = 0);
+  Result singletonRow(HighsPostsolveStack& postsolve_stack, HighsInt row);
 
   Result emptyCol(HighsPostsolveStack& postsolve_stack, HighsInt col);
-
-  Result modelEmptyCol(HighsPostsolveStack& postsolve_stack, HighsInt col);
 
   Result singletonCol(HighsPostsolveStack& postsolve_stack, HighsInt col,
                       const bool timing = false);
@@ -481,8 +476,6 @@ class HPresolve {
                                     HighsInt boundColCoeffPattern = 0);
 
   Result checkOriginalModelBounds();
-
-  Result initialSweep(HighsPostsolveStack& postsolve_stack);
 
   Result initialRowAndColPresolve(HighsPostsolveStack& postsolve_stack);
 

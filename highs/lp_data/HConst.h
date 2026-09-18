@@ -190,6 +190,7 @@ enum class HighsPresolveStatus {
   kOptionsError,  // V2.0: Delete since it's not used!
   kNotSet,
   kOutOfMemory,  // V2.0: Move above kNotSet
+  kException     // V2.0: Move above kNotSet
 };
 
 enum class HighsPostsolveStatus {  // V2.0: Delete if not used!
