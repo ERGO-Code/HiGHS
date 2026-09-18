@@ -9,6 +9,7 @@
 
 #include <algorithm>
 #include <cassert>
+#include <limits>
 #include <numeric>
 #include <queue>
 
@@ -2766,7 +2767,9 @@ bool HighsDomain::ConflictSet::explainBoundChangeGeq(
     const std::set<LocalDomChg>& currentFrontier, const LocalDomChg& domchg,
     const HighsInt* inds, const double* vals, HighsInt len, double rhs,
     double maxAct) {
-  if (maxAct == kHighsInf) return false;
+  if (maxAct == kHighsInf ||
+      std::abs(maxAct) > 1 / std::numeric_limits<double>::epsilon())
+    return false;
 
   // get the coefficient value of the column for which we want to explain
   // the bound change
@@ -2878,7 +2881,9 @@ bool HighsDomain::ConflictSet::explainBoundChangeLeq(
     const std::set<LocalDomChg>& currentFrontier, const LocalDomChg& domchg,
     const HighsInt* inds, const double* vals, HighsInt len, double rhs,
     double minAct) {
-  if (minAct == -kHighsInf) return false;
+  if (minAct == -kHighsInf ||
+      std::abs(minAct) > 1 / std::numeric_limits<double>::epsilon())
+    return false;
   // get the coefficient value of the column for which we want to explain
   // the bound change
   double domchgVal = 0;
@@ -3385,7 +3390,9 @@ bool HighsDomain::ConflictSet::explainInfeasibilityGeq(const HighsInt* inds,
                                                        const double* vals,
                                                        HighsInt len, double rhs,
                                                        double maxAct) {
-  if (maxAct == kHighsInf) return false;
+  if (maxAct == kHighsInf ||
+      std::abs(maxAct) > 1 / std::numeric_limits<double>::epsilon())
+    return false;
 
   HighsInt infeasible_pos = kHighsIInf;
   if (localdom.infeasible_) infeasible_pos = localdom.infeasible_pos;
@@ -3431,7 +3438,9 @@ bool HighsDomain::ConflictSet::explainInfeasibilityLeq(const HighsInt* inds,
                                                        const double* vals,
                                                        HighsInt len, double rhs,
                                                        double minAct) {
-  if (minAct == -kHighsInf) return false;
+  if (minAct == -kHighsInf ||
+      std::abs(minAct) > 1 / std::numeric_limits<double>::epsilon())
+    return false;
 
   HighsInt infeasible_pos = kHighsIInf;
   if (localdom.infeasible_) infeasible_pos = localdom.infeasible_pos;
