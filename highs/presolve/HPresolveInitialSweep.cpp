@@ -13,6 +13,7 @@
 #include <limits>
 #include <vector>
 
+#include "presolve/HPresolveUtils.h"
 #include "presolve/HighsPostsolveStack.h"
 #include "util/HighsCDouble.h"
 
@@ -42,7 +43,7 @@ HPresolveInitialSweep::Result HPresolveInitialSweep::checkColBounds(
   for (HighsInt iEl = model_->a_matrix_.start_[col];
        iEl < model_->a_matrix_.start_[col + 1]; iEl++)
     max_abs_col_value =
-        std::max(std::fabs(model_->a_matrix_.value_[iEl]), max_abs_col_value);
+        std::max(std::abs(model_->a_matrix_.value_[iEl]), max_abs_col_value);
   isFixed = false;
   assert(boundDiff >= 0);
   if (boundDiff <= primal_feastol_ &&
@@ -134,83 +135,22 @@ HPresolveInitialSweep::Result HPresolveInitialSweep::singletonRow(
     double val) {
   num_deleted_rows_++;
 
-  if (val > 0) {
-    if (model_->col_upper_[col] * val <=
-            model_->row_upper_[row] + primal_feastol_ &&
-        model_->col_lower_[col] * val >=
-            model_->row_lower_[row] - primal_feastol_) {
-      postsolve_stack.redundantRow(row);
-      return Result::kOk;
-    }
-  } else {
-    if (model_->col_lower_[col] * val <=
-            model_->row_upper_[row] + primal_feastol_ &&
-        model_->col_upper_[col] * val >=
-            model_->row_lower_[row] - primal_feastol_) {
-      postsolve_stack.redundantRow(row);
-      return Result::kOk;
-    }
-  }
-
-  assert(std::fabs(val) > options_->small_matrix_value);
-
-  double newColUpper = kHighsInf;
-  double newColLower = -kHighsInf;
-  if (val > 0) {
-    if (model_->row_upper_[row] != kHighsInf)
-      newColUpper = model_->row_upper_[row] / val;
-    if (model_->row_lower_[row] != -kHighsInf)
-      newColLower = model_->row_lower_[row] / val;
-  } else {
-    if (model_->row_upper_[row] != kHighsInf)
-      newColLower = model_->row_upper_[row] / val;
-    if (model_->row_lower_[row] != -kHighsInf)
-      newColUpper = model_->row_lower_[row] / val;
-  }
-
-  const double boundTol =
-      std::max(primal_feastol_ / std::max(1.0, std::fabs(val)),
-               std::numeric_limits<double>::epsilon());
-  const bool isIntegral =
-      model_->integrality_[col] != HighsVarType::kContinuous;
-
-  bool lowerTightened = newColLower > model_->col_lower_[col] + boundTol;
-  bool upperTightened = newColUpper < model_->col_upper_[col] - boundTol;
+  assert(std::abs(val) > options_->small_matrix_value);
 
   double lb, ub;
-  if (lowerTightened) {
-    if (isIntegral) newColLower = std::ceil(newColLower - boundTol);
-    lb = newColLower;
-  } else {
-    lb = model_->col_lower_[col];
+  bool lowerTightened, upperTightened;
+  const bool isIntegral =
+      model_->integrality_[col] != HighsVarType::kContinuous;
+  SingletonRowResult sr = computeSingletonRowBounds(
+      val, model_->row_lower_[row], model_->row_upper_[row],
+      model_->col_lower_[col], model_->col_upper_[col], primal_feastol_,
+      getMaxAbsColVal(col), isIntegral, lb, ub, lowerTightened, upperTightened);
+  if (sr == SingletonRowResult::kRedundant) {
+    postsolve_stack.redundantRow(row);
+    return Result::kOk;
   }
-
-  if (upperTightened) {
-    if (isIntegral) newColUpper = std::floor(newColUpper + boundTol);
-    ub = newColUpper;
-  } else {
-    ub = model_->col_upper_[col];
-  }
-
-  if (ub <= lb + primal_feastol_) {
-    if (ub < lb - primal_feastol_) return Result::kPrimalInfeasible;
-    if (ub < lb || (ub > lb && (ub - lb) * std::max(std::fabs(val),
-                                                    getMaxAbsColVal(col)) <=
-                                   primal_feastol_)) {
-      if (lowerTightened && upperTightened) {
-        ub = 0.5 * (ub + lb);
-        lb = ub;
-        lowerTightened = lb > model_->col_lower_[col];
-        upperTightened = ub < model_->col_upper_[col];
-      } else if (lowerTightened) {
-        lb = ub;
-        lowerTightened = lb > model_->col_lower_[col];
-      } else {
-        ub = lb;
-        upperTightened = ub < model_->col_upper_[col];
-      }
-    }
-  }
+  if (sr == SingletonRowResult::kPrimalInfeasible)
+    return Result::kPrimalInfeasible;
 
   postsolve_stack.singletonRow(row, col, val, lowerTightened, upperTightened);
 

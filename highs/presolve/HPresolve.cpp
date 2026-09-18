@@ -26,6 +26,7 @@
 #include "mip/HighsObjectiveFunction.h"
 #include "mip/MipTimer.h"
 #include "presolve/HPresolveInitialSweep.h"
+#include "presolve/HPresolveUtils.h"
 #include "presolve/HighsPostsolveStack.h"
 #include "presolve/PresolveTimer.h"
 #include "test_kkt/DevKkt.h"
@@ -3499,102 +3500,26 @@ HPresolve::Result HPresolve::singletonRow(HighsPostsolveStack& postsolve_stack,
   markRowDeleted(row);
   unlink(nzPos);
 
-  // check for simple
-  if (val > 0) {
-    if (model->col_upper_[col] * val <=
-            model->row_upper_[row] + primal_feastol &&
-        model->col_lower_[col] * val >=
-            model->row_lower_[row] - primal_feastol) {
-      postsolve_stack.redundantRow(row);
-      analysis_.logging_on_ = logging_on;
-      if (logging_on) analysis_.stopPresolveRuleLog(kPresolveRuleSingletonRow);
-      return checkLimits(postsolve_stack);
-    }
-  } else {
-    if (model->col_lower_[col] * val <=
-            model->row_upper_[row] + primal_feastol &&
-        model->col_upper_[col] * val >=
-            model->row_lower_[row] - primal_feastol) {
-      postsolve_stack.redundantRow(row);
-      analysis_.logging_on_ = logging_on;
-      if (logging_on) analysis_.stopPresolveRuleLog(kPresolveRuleSingletonRow);
-      return checkLimits(postsolve_stack);
-    }
-  }
-
   // zeros should not be linked in the matrix
   assert(std::fabs(val) > options->small_matrix_value);
 
-  double newColUpper = kHighsInf;
-  double newColLower = -kHighsInf;
-  if (val > 0) {
-    if (model->row_upper_[row] != kHighsInf)
-      newColUpper = model->row_upper_[row] / val;
-    if (model->row_lower_[row] != -kHighsInf)
-      newColLower = model->row_lower_[row] / val;
-  } else {
-    if (model->row_upper_[row] != kHighsInf)
-      newColLower = model->row_upper_[row] / val;
-    if (model->row_lower_[row] != -kHighsInf)
-      newColUpper = model->row_lower_[row] / val;
-  }
-
-  // use either the primal feasibility tolerance for the bound constraint or
-  // for the singleton row including scaling, whichever is tighter.
-  const double boundTol =
-      std::max(primal_feastol / std::max(1.0, std::fabs(val)),
-               std::numeric_limits<double>::epsilon());
-  const bool isIntegral = model->integrality_[col] != HighsVarType::kContinuous;
-
-  bool lowerTightened = newColLower > model->col_lower_[col] + boundTol;
-  bool upperTightened = newColUpper < model->col_upper_[col] - boundTol;
-
+  // check for simple redundancy, compute tightened bounds, and check
+  // whether the bounds are equal in tolerances
   double lb, ub;
-  if (lowerTightened) {
-    if (isIntegral) newColLower = std::ceil(newColLower - boundTol);
-    lb = newColLower;
-  } else
-    lb = model->col_lower_[col];
-
-  if (upperTightened) {
-    if (isIntegral) newColUpper = std::floor(newColUpper + boundTol);
-    ub = newColUpper;
-  } else
-    ub = model->col_upper_[col];
-
-  // printf("old bounds [%.15g,%.15g], new bounds [%.15g,%.15g] ... ",
-  //        model->col_lower_[col], model->col_upper_[col], lb, ub);
-  // check whether the bounds are equal in tolerances
-  if (ub <= lb + primal_feastol) {
-    // bounds could be infeasible or equal in tolerances, first check infeasible
-    if (ub < lb - primal_feastol) return Result::kPrimalInfeasible;
-
-    // bounds are equal in tolerances, if they have a slight infeasibility below
-    // those tolerances or they have a slight numerical distance which changes
-    // the largest contribution below feasibility tolerance then we can safely
-    // set the bound to one of the values. To heuristically get rid of numerical
-    // errors we choose the bound that was not tightened, or the midpoint if
-    // both where tightened.
-    //
-    if (ub < lb || (ub > lb && (ub - lb) * std::max(std::fabs(val),
-                                                    getMaxAbsColVal(col)) <=
-                                   primal_feastol)) {
-      if (lowerTightened && upperTightened) {
-        ub = 0.5 * (ub + lb);
-        lb = ub;
-        lowerTightened = lb > model->col_lower_[col];
-        upperTightened = ub < model->col_upper_[col];
-      } else if (lowerTightened) {
-        lb = ub;
-        lowerTightened = lb > model->col_lower_[col];
-      } else {
-        ub = lb;
-        upperTightened = ub < model->col_upper_[col];
-      }
-    }
+  bool lowerTightened, upperTightened;
+  const bool isIntegral = model->integrality_[col] != HighsVarType::kContinuous;
+  SingletonRowResult sr = computeSingletonRowBounds(
+      val, model->row_lower_[row], model->row_upper_[row],
+      model->col_lower_[col], model->col_upper_[col], primal_feastol,
+      getMaxAbsColVal(col), isIntegral, lb, ub, lowerTightened, upperTightened);
+  if (sr == SingletonRowResult::kRedundant) {
+    postsolve_stack.redundantRow(row);
+    analysis_.logging_on_ = logging_on;
+    if (logging_on) analysis_.stopPresolveRuleLog(kPresolveRuleSingletonRow);
+    return checkLimits(postsolve_stack);
   }
-
-  // printf("final bounds: [%.15g,%.15g]\n", lb, ub);
+  if (sr == SingletonRowResult::kPrimalInfeasible)
+    return Result::kPrimalInfeasible;
 
   postsolve_stack.singletonRow(row, col, val, lowerTightened, upperTightened);
 
