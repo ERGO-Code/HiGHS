@@ -7,11 +7,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 #include "presolve/HPresolveUtils.h"
 
-#include <algorithm>
-#include <cassert>
-#include <cmath>
-#include <limits>
-
 namespace presolve {
 
 SingletonRowResult computeSingletonRowBounds(

@@ -7,12 +7,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 #include "presolve/HPresolveInitialSweep.h"
 
-#include <algorithm>
-#include <cassert>
-#include <cmath>
-#include <limits>
-#include <vector>
-
 #include "presolve/HPresolveUtils.h"
 #include "presolve/HighsPostsolveStack.h"
 #include "util/HighsCDouble.h"
