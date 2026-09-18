@@ -1265,6 +1265,29 @@ TEST_CASE("presolve-light-no-crossover", "[highs_test_presolve]") {
   REQUIRE(h.setOptionValue("solve_relaxation", true) == HighsStatus::kOk);
   h.run();
 
+TEST_CASE("test-non-stop-initial-sweep", "[highs_test_presolve]") {
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  HighsLp lp;
+  lp.num_col_ = 3;
+  lp.num_row_ = 1;
+  lp.col_cost_ = {0, 0, 0};
+  lp.col_lower_ = {-kHighsInf, -1, -kHighsInf};
+  lp.col_upper_ = {kHighsInf, -1, kHighsInf};
+  lp.row_lower_ = {0};
+  lp.row_upper_ = {0};
+  lp.a_matrix_.format_ = MatrixFormat::kRowwise;
+  lp.a_matrix_.start_ = {0, 2};
+  lp.a_matrix_.index_ = {0, 1};
+  lp.a_matrix_.value_ = {1, 1};
+
+  REQUIRE(h.passModel(lp) == HighsStatus::kOk);
+
+  h.setOptionValue("presolve_reduction_limit", 0);
+  h.setOptionValue(kSolverString, kIpxString);
+  h.setOptionValue("run_crossover", kHighsOffString);
+
+  REQUIRE(h.run() == HighsStatus::kOk);
   REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
 
   h.resetGlobalScheduler(true);

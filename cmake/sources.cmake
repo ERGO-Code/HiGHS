@@ -418,6 +418,8 @@ set(highs_sources
     presolve/HPresolve.cpp
     presolve/HPresolveAnalysis.cpp
     presolve/HPresolveDebug.cpp
+    presolve/HPresolveInitialSweep.cpp
+    presolve/HPresolveUtils.cpp
     presolve/HPresolveTest.cpp
     presolve/ICrash.cpp
     presolve/ICrashUtil.cpp
@@ -567,6 +569,8 @@ set(highs_headers
     presolve/HighsSymmetry.h
     presolve/HPresolve.h
     presolve/HPresolveAnalysis.h
+    presolve/HPresolveInitialSweep.h
+    presolve/HPresolveUtils.h
     presolve/ICrash.h
     presolve/ICrashUtil.h
     presolve/ICrashX.h
