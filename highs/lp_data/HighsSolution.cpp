@@ -684,10 +684,10 @@ void getVariableKktFailures(const double primal_feasibility_tolerance,
 
 std::vector<double> getEffectiveCosts(const HighsLp& lp,
                                       const HighsOptions& options) {
-  // Constants to distinguis row status: kMaybe (row may contain a
-  // free column singleton); kYes (row contains a free column
-  // singleton to be added into costs); kNo (row contains a free
-  // column singleton already added into costs);
+  // Constants to distinguish row status: kFree (row may contain a
+  // free column singleton); >0 (position in "ID" vectors to indicate
+  // that its singleton column is to be added into costs); kUsed (row
+  // contains a free column singleton already added into costs);
   const HighsInt kUsed = -2;
   const HighsInt kFree = -1;
   std::vector<double> effective_costs = lp.col_cost_;
@@ -753,7 +753,7 @@ std::vector<double> getEffectiveCosts(const HighsLp& lp,
         HighsInt id = row_id[lp.a_matrix_.index_[iEl]];
         if (id < 0) continue;
         // Entry in a row to be added into effective_costs: get the
-        // multiplier, reducve the column's count and update its
+        // multiplier, reduce the column's count and update its
         // effective cost
         double row_mu = row_mu_of_id[id];
         col_count[iCol]--;
