@@ -39,12 +39,17 @@ HPresolveInitialSweep::Result HPresolveInitialSweep::checkColBounds(
     max_abs_col_value =
         std::max(std::abs(model_->a_matrix_.value_[iEl]), max_abs_col_value);
   isFixed = false;
+  // Check for simple infeasibility in the original model should
+  // already have been carried out in
+  // HPresolve::checkOriginalModelBounds()
   assert(boundDiff >= 0);
   if (boundDiff <= primal_feastol_ &&
       (boundDiff <= options_->small_matrix_value ||
        max_abs_col_value * boundDiff <= primal_feastol_)) {
+    // check for unboundedness
     if (std::abs(model_->col_lower_[col]) == kHighsInf)
       return Result::kDualInfeasible;
+    // column is fixed
     isFixed = true;
   }
   return Result::kOk;
@@ -99,6 +104,9 @@ void HPresolveInitialSweep::removeFixedCol(HighsInt col) {
     if (model_->row_upper_[colrow] != kHighsInf)
       model_->row_upper_[colrow] -= colval * fixval;
   }
+  model_->offset_ += model_->col_cost_[col] * fixval;
+  assert(std::isfinite(model_->offset_));
+  model_->col_cost_[col] = 0;
 }
 
 HPresolveInitialSweep::Result HPresolveInitialSweep::emptyRow(
