@@ -2417,11 +2417,13 @@ void HPresolve::markRowDeleted(HighsInt row) {
   assert(!analysis_.logging_on_);
   assert(!rowDeleted[row]);
 
+  // remove equations from set of equations
   if (isEquation(row) && eqiters[row] != equations.end()) {
     equations.erase(eqiters[row]);
     eqiters[row] = equations.end();
   }
 
+  // prevents row from being added to change vector
   changedRowFlag[row] = true;
   rowDeleted[row] = true;
   ++numDeletedRows;
@@ -2431,6 +2433,7 @@ void HPresolve::markColDeleted(HighsInt col) {
   assert(!analysis_.logging_on_);
   assert(!colDeleted[col]);
 
+  // prevents col from being added to change vector
   changedColFlag[col] = true;
   colDeleted[col] = true;
   ++numDeletedCols;
