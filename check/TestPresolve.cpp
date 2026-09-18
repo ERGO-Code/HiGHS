@@ -1264,6 +1264,7 @@ TEST_CASE("presolve-light-no-crossover", "[highs_test_presolve]") {
           HighsStatus::kOk);
   REQUIRE(h.setOptionValue("solve_relaxation", true) == HighsStatus::kOk);
   h.run();
+}
 
 TEST_CASE("test-non-stop-initial-sweep", "[highs_test_presolve]") {
   Highs h;
