@@ -44,6 +44,7 @@ struct InvertibleRepresentation {
   std::vector<HighsInt> u_pivot_lookup;
   std::vector<HighsInt> u_pivot_index;
   std::vector<double> u_pivot_value;
+  std::vector<double> u_pivot_inv_value;
 
   //  HighsInt u_total_x;
   std::vector<HighsInt> u_start;
@@ -438,6 +439,7 @@ class HFactor {
   vector<HighsInt> u_pivot_lookup;
   vector<HighsInt> u_pivot_index;
   vector<double> u_pivot_value;
+  vector<double> u_pivot_inv_value;
 
   HighsInt u_merit_x;  // Only in PF and MPF
   HighsInt u_total_x;  // Only in PF and MPF

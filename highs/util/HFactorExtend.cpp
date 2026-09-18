@@ -165,6 +165,7 @@ void HFactor::addRows(const HighsSparseMatrix* ar_matrix) {
     u_pivot_lookup.push_back(u_pivot_lookup_offset + iRow);
     u_pivot_index.push_back(iRow);
     u_pivot_value.push_back(1);
+    u_pivot_inv_value.push_back(1);
     u_start.push_back(u_countX);
     u_last_p.push_back(u_countX);
   }
