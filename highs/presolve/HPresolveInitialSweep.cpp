@@ -133,12 +133,12 @@ HPresolveInitialSweep::Result HPresolveInitialSweep::singletonRow(
 
   double lb, ub;
   bool lowerTightened, upperTightened;
-  const bool isIntegral =
-      model_->integrality_[col] != HighsVarType::kContinuous;
   SingletonRowResult sr = computeSingletonRowBounds(
       val, model_->row_lower_[row], model_->row_upper_[row],
       model_->col_lower_[col], model_->col_upper_[col], primal_feastol_,
-      getMaxAbsColVal(col), isIntegral, lb, ub, lowerTightened, upperTightened);
+      getMaxAbsColVal(col),
+      model_->integrality_[col] != HighsVarType::kContinuous, lb, ub,
+      lowerTightened, upperTightened);
   if (sr == SingletonRowResult::kRedundant) {
     postsolve_stack.redundantRow(row);
     return Result::kOk;

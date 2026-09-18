@@ -3503,11 +3503,12 @@ HPresolve::Result HPresolve::singletonRow(HighsPostsolveStack& postsolve_stack,
   // whether the bounds are equal in tolerances
   double lb, ub;
   bool lowerTightened, upperTightened;
-  const bool isIntegral = model->integrality_[col] != HighsVarType::kContinuous;
   SingletonRowResult sr = computeSingletonRowBounds(
       val, model->row_lower_[row], model->row_upper_[row],
       model->col_lower_[col], model->col_upper_[col], primal_feastol,
-      getMaxAbsColVal(col), isIntegral, lb, ub, lowerTightened, upperTightened);
+      getMaxAbsColVal(col),
+      model->integrality_[col] != HighsVarType::kContinuous, lb, ub,
+      lowerTightened, upperTightened);
   if (sr == SingletonRowResult::kRedundant) {
     postsolve_stack.redundantRow(row);
     analysis_.logging_on_ = logging_on;
