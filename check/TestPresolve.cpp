@@ -1242,6 +1242,30 @@ TEST_CASE("issue-3140", "[highs_test_presolve]") {
   highs.resetGlobalScheduler(true);
 }
 
+TEST_CASE("presolve-light-no-crossover", "[highs_test_presolve]") {
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  std::string source = "instances";  //"miplib2017";
+  std::string model = "adlittle";    //"germanrr";  //"neos-2746589-doon";//
+  std::string type = "mps";
+  std::string filename =
+      (source == "instances" ? std::string(HIGHS_DIR) + "/check/instances/"
+                             : "/srv/" + source) +
+      "/" + model + "." + type + (source == "instances" ? "" : ".gz");
+
+  REQUIRE(h.readModel(filename) == HighsStatus::kOk);
+  const HighsLp& lp = h.getLp();
+
+  REQUIRE(h.setOptionValue("presolve_light", kHighsOnString) ==
+          HighsStatus::kOk);
+  const std::string solver = kIpxString;  // kHipoString;  //
+  REQUIRE(h.setOptionValue("solver", solver) == HighsStatus::kOk);
+  REQUIRE(h.setOptionValue("run_crossover", kHighsOffString) ==
+          HighsStatus::kOk);
+  REQUIRE(h.setOptionValue("solve_relaxation", true) == HighsStatus::kOk);
+  h.run();
+}
+
 TEST_CASE("test-non-stop-initial-sweep", "[highs_test_presolve]") {
   Highs h;
   h.setOptionValue("output_flag", dev_run);

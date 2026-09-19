@@ -417,6 +417,7 @@ set(highs_sources
     presolve/HighsSymmetry.cpp
     presolve/HPresolve.cpp
     presolve/HPresolveAnalysis.cpp
+    presolve/HPresolveDebug.cpp
     presolve/HPresolveInitialSweep.cpp
     presolve/HPresolveUtils.cpp
     presolve/HPresolveTest.cpp
