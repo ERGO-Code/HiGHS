@@ -58,9 +58,33 @@ static void solveMatrixT(const HighsInt X_Start, const HighsInt x_end,
   }
 }
 
+#if defined(_MSC_VER)
+#define HIGHS_RESTRICT __restrict
+#elif defined(__GNUC__) || defined(__clang__)
+#define HIGHS_RESTRICT __restrict__
+#else
+#define HIGHS_RESTRICT
+#endif
+
+static void invertPivots(const std::size_t n, const double* HIGHS_RESTRICT src,
+                         double* HIGHS_RESTRICT dst) {
+#if defined(__clang__)
+#pragma clang loop vectorize(enable)
+#elif defined(__GNUC__)
+#pragma GCC ivdep
+#elif defined(_MSC_VER)
+#pragma loop(ivdep)
+#elif defined(__INTEL_COMPILER) || defined(__INTEL_LLVM_COMPILER)
+#pragma ivdep
+#endif
+  for (std::size_t i = 0; i < n; ++i) {
+    dst[i] = 1.0 / src[i];
+  }
+}
+
 static void solveHyper(const HighsInt h_size, const HighsInt* h_lookup,
                        const HighsInt* h_pivot_index,
-                       const double* h_pivot_value, const HighsInt* h_start,
+                       const double* h_pivot_inv_value, const HighsInt* h_start,
                        const HighsInt* h_end, const HighsInt* h_index,
                        const double* h_value, HVector* rhs) {
   HighsInt rhs_count = rhs->count;
@@ -118,7 +142,7 @@ static void solveHyper(const HighsInt h_size, const HighsInt* h_lookup,
   rhs->synthetic_tick += count_pivot * 20 + count_entry * 10;
 
   // Solve with list
-  if (h_pivot_value == 0) {
+  if (h_pivot_inv_value == 0) {
     rhs_count = 0;
     for (HighsInt iList = list_count - 1; iList >= 0; iList--) {
       HighsInt i = list_index[iList];
@@ -143,7 +167,7 @@ static void solveHyper(const HighsInt h_size, const HighsInt* h_lookup,
       HighsInt pivotRow = h_pivot_index[i];
       double pivot_multiplier = rhs_array[pivotRow];
       if (fabs(pivot_multiplier) > kHighsTiny) {
-        pivot_multiplier /= h_pivot_value[i];
+        pivot_multiplier *= h_pivot_inv_value[i];
         rhs_array[pivotRow] = pivot_multiplier;
         rhs_index[rhs_count++] = pivotRow;
         const HighsInt start = h_start[i];
@@ -315,6 +339,7 @@ void HFactor::setupGeneral(
   u_pivot_lookup.resize(num_row);
   u_pivot_index.reserve(num_row + kUFactorExtraVectors);
   u_pivot_value.reserve(num_row + kUFactorExtraVectors);
+  u_pivot_inv_value.reserve(num_row + kUFactorExtraVectors);
 
   u_start.reserve(num_row + kUFactorExtraVectors + 1);
   u_last_p.reserve(num_row + kUFactorExtraVectors);
@@ -551,6 +576,7 @@ void HFactor::luClear() {
 
   u_pivot_index.clear();
   u_pivot_value.clear();
+  u_pivot_inv_value.clear();
   u_start.clear();
   u_start.push_back(0);
   u_index.clear();
@@ -1609,6 +1635,11 @@ void HFactor::buildFinish() {
     // Add cost of buildFinish to build_synthetic_tick
     build_synthetic_tick += num_row * 80 + (LcountX + u_countX) * 60;
   }
+
+  // Pre-inversion of diagonal pivots
+  u_pivot_inv_value.resize(u_pivot_value.size());
+  invertPivots(u_pivot_value.size(), u_pivot_value.data(),
+               u_pivot_inv_value.data());
 }
 
 void HFactor::zeroCol(const HighsInt jCol) {
@@ -1810,7 +1841,7 @@ void HFactor::ftranU(HVector& rhs, const double expected_density,
       const HighsInt pivotRow = u_pivot_index[i_logic];
       double pivot_multiplier = rhs_array[pivotRow];
       if (fabs(pivot_multiplier) > kHighsTiny) {
-        pivot_multiplier /= u_pivot_value[i_logic];
+        pivot_multiplier *= u_pivot_inv_value[i_logic];
         rhs_index[rhs_count++] = pivotRow;
         rhs_array[pivotRow] = pivot_multiplier;
         const HighsInt start = u_start[i_logic];
@@ -1853,7 +1884,7 @@ void HFactor::ftranU(HVector& rhs, const double expected_density,
     const HighsInt* u_index = this->u_index.data();
     const double* u_value = this->u_value.data();
     solveHyper(num_row, u_pivot_lookup.data(), u_pivot_index.data(),
-               u_pivot_value.data(), u_start.data(), u_last_p.data(),
+               u_pivot_inv_value.data(), u_start.data(), u_last_p.data(),
                &u_index[0], &u_value[0], &rhs);
     factor_timer.stop(use_clock, factor_timer_clock_pointer);
   }
@@ -1908,7 +1939,7 @@ void HFactor::btranU(HVector& rhs, const double expected_density,
       const HighsInt pivotRow = u_pivot_index[i_logic];
       double pivot_multiplier = rhs_array[pivotRow];
       if (fabs(pivot_multiplier) > kHighsTiny) {
-        pivot_multiplier /= u_pivot_value[i_logic];
+        pivot_multiplier *= u_pivot_inv_value[i_logic];
         rhs_index[rhs_count++] = pivotRow;
         rhs_array[pivotRow] = pivot_multiplier;
         const HighsInt start = ur_start[i_logic];
@@ -1929,7 +1960,7 @@ void HFactor::btranU(HVector& rhs, const double expected_density,
   } else {
     factor_timer.start(FactorBtranUpperHyper, factor_timer_clock_pointer);
     solveHyper(num_row, u_pivot_lookup.data(), u_pivot_index.data(),
-               u_pivot_value.data(), &ur_start[0], ur_lastp.data(),
+               u_pivot_inv_value.data(), &ur_start[0], ur_lastp.data(),
                &ur_index[0], &ur_value[0], &rhs);
     factor_timer.stop(FactorBtranUpperHyper, factor_timer_clock_pointer);
   }
@@ -2394,6 +2425,7 @@ void HFactor::updateCFT(HVector* aq, HVector* ep, HighsInt* iRow
     u_pivot_index[cLogic] = -1;
     u_pivot_index.push_back(cIndex);
     u_pivot_value.push_back(t_pivot[cp]);
+    u_pivot_inv_value.push_back(1.0 / t_pivot[cp]);
   }
 
   //    // See if we want refactor
@@ -2502,6 +2534,7 @@ void HFactor::updateFT(HVector* aq, HVector* ep, HighsInt iRow
   u_pivot_lookup[iRow] = u_pivot_index.size();
   u_pivot_index.push_back(iRow);
   u_pivot_value.push_back(pivot * alpha);
+  u_pivot_inv_value.push_back(1.0 / (pivot * alpha));
 
   // Store row_ep as R matrix
   for (HighsInt i = 0; i < ep->packCount; i++) {
@@ -2629,6 +2662,7 @@ InvertibleRepresentation HFactor::getInvert() const {
   invert.u_pivot_lookup = this->u_pivot_lookup;
   invert.u_pivot_index = this->u_pivot_index;
   invert.u_pivot_value = this->u_pivot_value;
+  invert.u_pivot_inv_value = this->u_pivot_inv_value;
   invert.u_start = this->u_start;
   invert.u_last_p = this->u_last_p;
   invert.u_index = this->u_index;
@@ -2660,6 +2694,7 @@ void HFactor::setInvert(const InvertibleRepresentation& invert) {
   this->u_pivot_lookup = invert.u_pivot_lookup;
   this->u_pivot_index = invert.u_pivot_index;
   this->u_pivot_value = invert.u_pivot_value;
+  this->u_pivot_inv_value = invert.u_pivot_inv_value;
   this->u_start = invert.u_start;
   this->u_last_p = invert.u_last_p;
   this->u_index = invert.u_index;
@@ -2690,6 +2725,7 @@ void InvertibleRepresentation::clear() {
   this->u_pivot_lookup.clear();
   this->u_pivot_index.clear();
   this->u_pivot_value.clear();
+  this->u_pivot_inv_value.clear();
   this->u_start.clear();
   this->u_last_p.clear();
   this->u_index.clear();
