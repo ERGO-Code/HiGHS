@@ -420,18 +420,12 @@ HighsStatus solveQpHipo(HighsQpSolverObject& solver_object) {
                    solver_object.callback_);
 }
 
-static bool usingOpenBLAS() {
-  std::string provider = HighsExtras::blas::getInfo()->provider;
-  std::transform(provider.begin(), provider.end(), provider.begin(),
-                 [](unsigned char c) { return std::tolower(c); });
-  return strstr(provider.c_str(), "openblas") != nullptr;
-}
-
 static HighsInt prepareOpenBLAS(const HighsOptions& options) {
   // force openblas to run in serial, for determinism and better performance
   // no-op if openblas is not used
   const int threads_used = HighsExtras::blas::openblas_set_num_threads(1);
-  if (usingOpenBLAS() && threads_used != 1) {
+  if (HighsExtras::blas::getInfo()->isProvider("openblas") &&
+      threads_used != 1) {
     highsLogUser(options.log_options, HighsLogType::kError,
                  "OpenBLAS failed to set the number of threads to 1\n");
     return 1;

@@ -146,4 +146,22 @@ bool is_end(std::string& str, size_t end,
 std::string first_word(std::string& str, size_t start);
 size_t first_word_end(std::string& str, size_t start);
 
+#if defined(_WIN32) || defined(_WIN64)
+#include <string.h>  // _strnicmp
+#else
+#include <strings.h>  // strcasestr
+#endif
+
+// check if rhs is a substring of lhs, case insensitive
+inline bool is_substring_case(const char* lhs, const char* rhs) {
+#if defined(_WIN32) || defined(_WIN64)
+  size_t len = strlen(rhs);
+  for (; *lhs != '\0'; ++lhs)
+    if (_strnicmp(lhs, rhs, len) == 0) return true;
+  return false;
+#else
+  return strcasestr(lhs, rhs) != nullptr;
+#endif
+}
+
 #endif
