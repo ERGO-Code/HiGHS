@@ -1,6 +1,5 @@
 #include "FactorHighsSolver.h"
 
-#include <cstring>
 #include <limits>
 
 #include "HighsExternalApi.h"
@@ -592,15 +591,11 @@ void FactorHighsSolver::setParallelBeforeSymbolic() {
                           parallel_NE_values_default);
 }
 
-static bool usingAppleBlas() {
-  return strstr(HighsExtras::blas::getInfo()->provider, "Apple") != nullptr;
-}
-
 void FactorHighsSolver::setParallelAfterSymbolic() {
   bool parallel_tree = false;
   bool parallel_node = false;
 
-  if (usingAppleBlas()) {
+  if (is_substring_case(HighsExtras::blas::getInfo()->provider, "apple")) {
     // Blas on Apple do not work well with parallel_node, but parallel_tree
     // seems to always be beneficial.
     parallel_node = false;

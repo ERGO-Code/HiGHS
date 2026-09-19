@@ -420,6 +420,19 @@ HighsStatus solveQpHipo(HighsQpSolverObject& solver_object) {
                    solver_object.callback_);
 }
 
+static HighsInt prepareOpenBLAS(const HighsOptions& options) {
+  // force openblas to run in serial, for determinism and better performance
+  // no-op if openblas is not used
+  const int threads_used = HighsExtras::blas::openblas_set_num_threads(1);
+  if (is_substring_case(HighsExtras::blas::getInfo()->provider, "openblas") &&
+      threads_used != 1) {
+    highsLogUser(options.log_options, HighsLogType::kError,
+                 "OpenBLAS failed to set the number of threads to 1\n");
+    return 1;
+  }
+  return 0;
+}
+
 HighsStatus solveHipo(const HighsOptions& options, HighsTimer& timer,
                       const HighsLp& lp, const HighsHessian& Q,
                       HighsBasis& highs_basis, HighsSolution& highs_solution,
@@ -457,9 +470,10 @@ HighsStatus solveHipo(const HighsOptions& options, HighsTimer& timer,
   // Indicate that no imprecise solution has (yet) been found
   resetModelStatusAndHighsInfo(model_status, highs_info);
 
-  // force openblas to run in serial, for determinism and better performance
-  // no-op if openblas is not used
-  HighsExtras::blas::openblas_set_num_threads(1);
+  if (prepareOpenBLAS(options)) {
+    model_status = HighsModelStatus::kSolveError;
+    return HighsStatus::kError;
+  }
 
   // Create solver instance
   hipo::Solver hipo{};

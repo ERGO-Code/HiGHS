@@ -15,7 +15,6 @@
 
 #include <tuple>
 
-
 // provide metadata info for each feature
 struct HighsExtrasFeatureInfo {
   HighsExtrasFeatureInfo(const char* provider_ = nullptr,
