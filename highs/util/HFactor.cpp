@@ -143,7 +143,14 @@ static void solveHyper(const HighsInt h_size, const HighsInt* h_lookup,
       HighsInt pivotRow = h_pivot_index[i];
       double pivot_multiplier = rhs_array[pivotRow];
       if (fabs(pivot_multiplier) > kHighsTiny) {
-        pivot_multiplier /= h_pivot_value[i];
+        const double pivot = h_pivot_value[i];
+        if (pivot == 1.0) {
+          // pass-through: zero arithmetic cycles
+        } else if (pivot == -1.0) {
+          pivot_multiplier = -pivot_multiplier;
+        } else {
+          pivot_multiplier /= pivot;
+        }
         rhs_array[pivotRow] = pivot_multiplier;
         rhs_index[rhs_count++] = pivotRow;
         const HighsInt start = h_start[i];
@@ -1810,7 +1817,14 @@ void HFactor::ftranU(HVector& rhs, const double expected_density,
       const HighsInt pivotRow = u_pivot_index[i_logic];
       double pivot_multiplier = rhs_array[pivotRow];
       if (fabs(pivot_multiplier) > kHighsTiny) {
-        pivot_multiplier /= u_pivot_value[i_logic];
+        const double pivot = u_pivot_value[i_logic];
+        if (pivot == 1.0) {
+          // pass-through: zero arithmetic cycles
+        } else if (pivot == -1.0) {
+          pivot_multiplier = -pivot_multiplier;
+        } else {
+          pivot_multiplier /= pivot;
+        }
         rhs_index[rhs_count++] = pivotRow;
         rhs_array[pivotRow] = pivot_multiplier;
         const HighsInt start = u_start[i_logic];
@@ -1908,7 +1922,14 @@ void HFactor::btranU(HVector& rhs, const double expected_density,
       const HighsInt pivotRow = u_pivot_index[i_logic];
       double pivot_multiplier = rhs_array[pivotRow];
       if (fabs(pivot_multiplier) > kHighsTiny) {
-        pivot_multiplier /= u_pivot_value[i_logic];
+        const double pivot = u_pivot_value[i_logic];
+        if (pivot == 1.0) {
+          // pass-through: zero arithmetic cycles
+        } else if (pivot == -1.0) {
+          pivot_multiplier = -pivot_multiplier;
+        } else {
+          pivot_multiplier /= pivot;
+        }
         rhs_index[rhs_count++] = pivotRow;
         rhs_array[pivotRow] = pivot_multiplier;
         const HighsInt start = ur_start[i_logic];
