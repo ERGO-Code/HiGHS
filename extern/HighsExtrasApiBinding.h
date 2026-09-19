@@ -15,8 +15,6 @@
 
 #include <tuple>
 
-#include "../highs/util/stringutil.h"
-
 // provide metadata info for each feature
 struct HighsExtrasFeatureInfo {
   HighsExtrasFeatureInfo(const char* provider_ = nullptr,
@@ -26,10 +24,6 @@ struct HighsExtrasFeatureInfo {
         version(version_),
         license(license_),
         enabled(enabled_) {}
-
-  bool isProvider(const char* check) const {
-    return is_substring_case(provider, check);
-  }
 
   const char* provider;
   const char* version;

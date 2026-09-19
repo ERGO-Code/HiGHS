@@ -424,7 +424,7 @@ static HighsInt prepareOpenBLAS(const HighsOptions& options) {
   // force openblas to run in serial, for determinism and better performance
   // no-op if openblas is not used
   const int threads_used = HighsExtras::blas::openblas_set_num_threads(1);
-  if (HighsExtras::blas::getInfo()->isProvider("openblas") &&
+  if (is_substring_case(HighsExtras::blas::getInfo()->provider, "openblas") &&
       threads_used != 1) {
     highsLogUser(options.log_options, HighsLogType::kError,
                  "OpenBLAS failed to set the number of threads to 1\n");
