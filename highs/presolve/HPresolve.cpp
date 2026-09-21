@@ -534,7 +534,7 @@ void HPresolve::chooseRules() {
          rule_type < kPresolveRuleCount; rule_type++) {
       // This is a rule that can be switched off
       highsLogUser(options->log_options, HighsLogType::kInfo,
-                   "   Rule %2d (set bit %2d = %6d): %s\n", int(rule_type),
+                   "   Rule %2d (set bit %2d = %7d): %s\n", int(rule_type),
                    int(rule_type), int(bit),
                    utilPresolveRuleTypeToString(rule_type).c_str());
       bit *= 2;
@@ -560,7 +560,7 @@ void HPresolve::chooseRules() {
         // Possibly comment positively if it is off
         if (rule_off && !presolve_light_on && !silent)
           highsLogUser(options->log_options, HighsLogType::kInfo,
-                       "   Rule %2d (set bit %2d = %6d): %s\n", int(rule_type),
+                       "   Rule %2d (set bit %2d = %7d): %s\n", int(rule_type),
                        int(rule_type), int(bit),
                        utilPresolveRuleTypeToString(rule_type).c_str());
       } else if (rule_off) {
