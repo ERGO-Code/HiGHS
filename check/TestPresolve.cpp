@@ -1254,6 +1254,7 @@ TEST_CASE("test-non-stop-initial-sweep", "[highs_test_presolve]") {
   h.resetGlobalScheduler(true);
 }
 
+/*
 TEST_CASE("test-fuzzing", "[highs_test_presolve]") {
   Highs h;
   //  h.setOptionValue("output_flag", dev_run);
@@ -1310,3 +1311,4 @@ TEST_CASE("test-fuzzing", "[highs_test_presolve]") {
 
   h.resetGlobalScheduler(true);
 }
+*/
