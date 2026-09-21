@@ -108,9 +108,9 @@ class HPresolve {
   std::vector<std::set<std::pair<HighsInt, HighsInt>>::iterator> eqiters;
 
   bool shrinkProblemEnabled;
-  double presolve_time_limit_;
   size_t reductionLimit;
   size_t last_reduction_;
+
   // vectors storing singleton rows and columns
   std::vector<HighsInt> singletonRows;
   std::vector<HighsInt> singletonColumns;
