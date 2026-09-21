@@ -350,7 +350,6 @@ class JumpMove {
       else {
         constraintBounds.emplace_back(-std::numeric_limits<double>::infinity(),
                                       constraint.rhs);
-        constraintBounds.emplace_back(constraint.rhs, constraint.rhs);
         constraintBounds.emplace_back(constraint.rhs,
                                       std::numeric_limits<double>::infinity());
       }
@@ -359,9 +358,17 @@ class JumpMove {
         double residualIncumbent =
             constraint.incumbentLhs - cell.coeff * varIncumbentValue;
 
+        double boundForValidLower, boundForValidUpper;
+        if (cell.coeff < 0.) {
+          boundForValidLower = bound.second;
+          boundForValidUpper = bound.first;
+        } else {
+          boundForValidLower = bound.first;
+          boundForValidUpper = bound.second;
+        }
         std::pair<double, double> validRange = {
-            ((1.0 / cell.coeff) * (bound.first - residualIncumbent)),
-            ((1.0 / cell.coeff) * (bound.second - residualIncumbent)),
+            ((1.0 / cell.coeff) * (boundForValidLower - residualIncumbent)),
+            ((1.0 / cell.coeff) * (boundForValidUpper - residualIncumbent)),
         };
 
         if (problem.vars[varIdx].vartype == VarType::Integer)
@@ -369,8 +376,6 @@ class JumpMove {
               std::ceil(validRange.first - equalityTolerance),
               std::floor(validRange.second + equalityTolerance),
           };
-
-        if (validRange.first > validRange.second) continue;
 
         if (validRange.first > currentValue) {
           currentSlope -= constraint.weight;
@@ -415,6 +420,9 @@ class JumpMove {
       if (eq(bestValue, varIncumbentValue, equalityTolerance) ||
           (!eq(currentValue, varIncumbentValue, equalityTolerance) &&
            currentScore < bestScore)) {
+        // Different to everywhere else (!)
+        // Here the score represents infeasibility (not improvement)
+        // Hence the minimization
         bestScore = currentScore;
         bestValue = currentValue;
       }
@@ -549,7 +557,7 @@ class FeasibilityJumpSolver {
       if (problem.vars.size() == 0) break;
 
       uint32_t var = selectVariable();
-      if (var == UINT_MAX){
+      if (var == UINT_MAX) {
         break;
       }
       doVariableMove(var);
@@ -653,7 +661,8 @@ class FeasibilityJumpSolver {
       dt += problem.vars.size();
       for (size_t varIdx = 0; varIdx < problem.vars.size(); varIdx += 1)
         forEachMove(varIdx, [&](Move& move) {
-          move.score += weightUpdateIncrement *
+          // -= to align objective minimization with score maximization
+          move.score -= weightUpdateIncrement *
                         problem.vars[varIdx].objectiveCoeff *
                         (move.value - problem.incumbentAssignment[varIdx]);
         });
@@ -754,7 +763,8 @@ class FeasibilityJumpSolver {
 
     forEachMove(varIdx, [&](Move& move) {
       move.score = 0.0;
-      move.score += objectiveWeight * problem.vars[varIdx].objectiveCoeff *
+      // -= to align objective minimization with score maximization
+      move.score -= objectiveWeight * problem.vars[varIdx].objectiveCoeff *
                     (move.value - problem.incumbentAssignment[varIdx]);
 
       for (auto& cell : problem.vars[varIdx].coeffs) {
