@@ -1,5 +1,6 @@
 #include "Fold.h"
 
+#include <algorithm>
 #include <stack>
 
 namespace hipo {
@@ -167,7 +168,6 @@ void test_folding() {
   printf("\n\n");
   for (Int c : colour) printf("%d", c);
   printf("\n");
-
 }
 
 }  // namespace hipo
