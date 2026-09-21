@@ -32,8 +32,11 @@ void HPresolveAnalysis::setup(const HighsLp* model_,
     presolve_clocks_ = clock;
   }
 
-  // Allow logging if option is set and LP presolve is being used
-  allow_logging_ = options_->presolve_rule_logging && lp_presolve;
+  // Allow logging if option is set and presolve_remove_slacks option
+  // is not set (since it's not and official pesolve rule with an
+  // entry in PresolveRuleType) and LP presolve is being used
+  allow_logging_ = options_->presolve_rule_logging &&
+                   !options->presolve_remove_slacks && lp_presolve;
   // NB logging_on_ is also used to determine whether logging has
   // started to prevent double-accounting. Specifically,
   //

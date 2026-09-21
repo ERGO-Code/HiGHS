@@ -1319,8 +1319,8 @@ void HighsPostsolveStack::SlackColSubstitution::undo(
   // If no dual values requested, return here
   if (!solution.dual_valid) return;
 
-  // Row retains its dual value, and column has this dual value scaled by coeff
-  solution.col_dual[col] = -solution.row_dual[row] / colCoef;
+  // Row retains its dual value, and column has this dual value
+  solution.col_dual[col] = -solution.row_dual[row] * colCoef;
 
   // Set basis status if necessary
   if (!basis.valid) return;

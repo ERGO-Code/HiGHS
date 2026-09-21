@@ -6569,6 +6569,10 @@ HPresolve::Result HPresolve::removeSlacks(
   for (HighsInt iCol = 0; iCol != model->num_col_; ++iCol) {
     if (colDeleted[iCol]) continue;
     if (colsize[iCol] != 1) continue;
+    // Only do this for pure slacks as cost coefficient changes lead
+    // to dual postsolve errors since the basic costs may well change,
+    // leading to changes in the row duals that cannot be determined
+    if (model->col_cost_[iCol]) continue;
     if (model->integrality_[iCol] == HighsVarType::kInteger) continue;
     HighsInt coliter = colhead[iCol];
     HighsInt iRow = Arow[coliter];
@@ -6577,7 +6581,6 @@ HPresolve::Result HPresolve::removeSlacks(
     if (!isEquation(iRow)) continue;
     double lower = model->col_lower_[iCol];
     double upper = model->col_upper_[iCol];
-    double cost = model->col_cost_[iCol];
     double rhs = model->row_lower_[iRow];
     double coeff = Avalue[coliter];
     assert(coeff);
@@ -6592,16 +6595,6 @@ HPresolve::Result HPresolve::removeSlacks(
         coeff > 0 ? rhs - coeff * upper : rhs - coeff * lower;
     model->row_upper_[iRow] =
         coeff > 0 ? rhs - coeff * lower : rhs - coeff * upper;
-    if (cost) {
-      // Cost is (cost * rhs / coeff) + (col_cost - (cost/coeff) row_values)^Tx
-      double multiplier = cost / coeff;
-      for (const HighsSliceNonzero& nonzero : getRowVector(iRow)) {
-        HighsInt local_iCol = nonzero.index();
-        double local_value = nonzero.value();
-        model->col_cost_[local_iCol] -= multiplier * local_value;
-      }
-      model->offset_ += multiplier * rhs;
-    }
     //
     postsolve_stack.slackColSubstitution(iRow, iCol, rhs, getRowVector(iRow));
 
