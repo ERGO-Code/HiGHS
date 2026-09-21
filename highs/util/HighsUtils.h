@@ -269,4 +269,8 @@ inline std::pair<double, double> infeasibility(const double lower,
   if (infeasibility == 0) residual = min(residual, tolerance);
   return std::make_pair(infeasibility, residual);
 }
+
+bool handleExceptionIsOom(const HighsLogOptions& log_options,
+                          const std::string& source,
+                          const std::exception& exception);
 #endif  // UTIL_HIGHSUTILS_H_

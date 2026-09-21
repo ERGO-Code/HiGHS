@@ -1118,10 +1118,8 @@ HighsStatus Highs::presolve() {
       break;
     }
     default: {
-      // case HighsPresolveStatus::kOutOfMemory
-      assert(model_presolve_status_ == HighsPresolveStatus::kOutOfMemory);
-      highsLogUser(log_options, HighsLogType::kError,
-                   "Presolve fails due to memory allocation error\n");
+      assert(model_presolve_status_ == HighsPresolveStatus::kOutOfMemory ||
+             model_presolve_status_ == HighsPresolveStatus::kException);
       setHighsModelStatusAndClearSolutionAndBasis(
           HighsModelStatus::kPresolveError);
       return_status = HighsStatus::kError;
@@ -1226,18 +1224,20 @@ HighsStatus Highs::optimizeModelTryCatch() {
   auto handleCatch = [&]() {
     // Clear all solver data, since there may be nothing useful
     this->clearSolver();
-    model_status_ = HighsModelStatus::kSolveError;
     status = HighsStatus::kError;
   };
   try {
     status = calledOptimizeModel();
   } catch (const std::exception& exception) {
-    highsLogDev(options_.log_options, HighsLogType::kError,
-                "Exception %s in calledOptimizeModel\n", exception.what());
+    model_status_ = handleExceptionIsOom(options_.log_options,
+                                         "calledOptimizeModel", exception)
+                        ? HighsModelStatus::kMemoryLimit
+                        : HighsModelStatus::kSolveError;
     handleCatch();
   } catch (const HighsTask::Interrupt&) {
     highsLogDev(options_.log_options, HighsLogType::kError,
                 "HighsTask interrupt in calledOptimizeModel\n");
+    model_status_ = HighsModelStatus::kSolveError;
     handleCatch();
   }
   return status;
@@ -1444,9 +1444,10 @@ HighsStatus Highs::calledOptimizeModel() {
     try {
       call_status = callSolveQp(this->model_, "Solve incumbent QP");
     } catch (const std::exception& exception) {
-      highsLogDev(options_.log_options, HighsLogType::kError,
-                  "Exception %s in callSolveQp\n", exception.what());
-      model_status_ = HighsModelStatus::kSolveError;
+      model_status_ =
+          handleExceptionIsOom(options_.log_options, "callSolveQp", exception)
+              ? HighsModelStatus::kMemoryLimit
+              : HighsModelStatus::kSolveError;
       call_status = HighsStatus::kError;
     }
     return_status = interpretCallStatus(options_.log_options, call_status,
@@ -1843,8 +1844,11 @@ HighsStatus Highs::calledOptimizeModel() {
       case HighsPresolveStatus::kOutOfMemory: {
         setHighsModelStatusAndClearSolutionAndBasis(
             HighsModelStatus::kMemoryLimit);
-        highsLogUser(options_.log_options, HighsLogType::kError,
-                     "Presolve fails due to memory allocation error\n");
+        return returnFromOptimizeModel(HighsStatus::kError, undo_mods);
+      }
+      case HighsPresolveStatus::kException: {
+        setHighsModelStatusAndClearSolutionAndBasis(
+            HighsModelStatus::kSolveError);
         return returnFromOptimizeModel(HighsStatus::kError, undo_mods);
       }
       default: {
@@ -3721,8 +3725,7 @@ HighsStatus Highs::postsolve(const HighsSolution& solution,
       model_presolve_status_ == HighsPresolveStatus::kNotReduced ||
       model_presolve_status_ == HighsPresolveStatus::kReduced ||
       model_presolve_status_ == HighsPresolveStatus::kReducedToEmpty ||
-      model_presolve_status_ == HighsPresolveStatus::kTimeout ||
-      model_presolve_status_ == HighsPresolveStatus::kOutOfMemory;
+      model_presolve_status_ == HighsPresolveStatus::kTimeout;
   if (!can_run_postsolve) {
     highsLogUser(options_.log_options, HighsLogType::kWarning,
                  "Cannot run postsolve with presolve status: %s\n",
@@ -3828,6 +3831,8 @@ std::string Highs::presolveStatusToString(
       return "Timeout";
     case HighsPresolveStatus::kOutOfMemory:
       return "Memory allocation error";
+    case HighsPresolveStatus::kException:
+      return "Exception error";
     default:
       assert(1 == 0);
       return "Unrecognised presolve status";
@@ -4492,7 +4497,6 @@ HighsStatus Highs::callRunPostsolve(const HighsSolution& solution,
                                             return_status, "callSolveLp");
         // Recover the options
         options_ = save_options;
-        HighsPrimalDualErrors primal_dual_errors;
         const bool is_qp = this->model_.isQp();
         assert(!is_qp);
         const bool get_residuals = true;
@@ -4931,7 +4935,7 @@ void Highs::reportSolvedLpQpStats() {
                  "Objective value     : %17.10e\n",
                  info_.objective_function_value);
   }
-  if (solution_.dual_valid)
+  if (solution_.dual_valid && info_.primal_dual_objective_error < kHighsInf)
     highsLogUser(log_options, HighsLogType::kInfo,
                  "P-D objective error : %17.10e\n",
                  info_.primal_dual_objective_error);
