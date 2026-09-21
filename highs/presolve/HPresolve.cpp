@@ -102,8 +102,6 @@ void HPresolve::setInput(HighsLp& model_, const HighsOptions& options_,
                 "HPresolve::setInput reductionLimit = %d\n",
                 static_cast<int>(this->reductionLimit));
   }
-  // Use local time limit so that it can be suppressed during initial sweep
-  this->presolve_time_limit_ = options->time_limit;
   // last_reduction_ is used to identify when HPresolve::checkLimits
   // is called for the first time following a reduction
   this->last_reduction_ = 0;
@@ -960,7 +958,7 @@ void HPresolve::shrinkProblem(HighsPostsolveStack& postsolve_stack) {
   HighsInt oldNumRow = model->num_row_;
   // If HPresolve::shrinkProblem has been called before setting up the
   // full presolve data structures - implying that presolve has
-  // terminated in HPresolve::initialSweep, when the model is
+  // terminated in HPresolveInitialSweep::run, when the model is
   // up-to-date, so no shrinkage is required
   if (!hasPresolveDataStructures()) return;
   assert(colDeleted.size() == static_cast<size_t>(oldNumCol));
@@ -1918,7 +1916,7 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postsolve_stack) {
 
       // Check for timeout
       tt = this->timer->read();
-      if (tt > this->presolve_time_limit_) {
+      if (tt > options->time_limit) {
         highsLogUser(
             options->log_options, HighsLogType::kInfo,
             "Time limit reached in probing: "
@@ -6616,8 +6614,7 @@ HPresolve::Result HPresolve::removeSlacks(
 
 HPresolve::Result HPresolve::checkTimeLimit() {
   assert(timer);
-  if (this->presolve_time_limit_ < kHighsInf &&
-      timer->read() >= this->presolve_time_limit_)
+  if (options->time_limit < kHighsInf && timer->read() >= options->time_limit)
     return Result::kStopped;
   return Result::kOk;
 }
@@ -7115,14 +7112,13 @@ HPresolve::Result HPresolve::removeDependentEquations(
   //
   // Allow no more than 1% of the time limit to be spent on removing
   // dependent equations, but ensure that there is some limit since
-  // this->presolve_time_limit_ is infinity by default
+  // options->time_limit is infinity by default
   //
   // ToDo: This is strictly non-deterministic, but so conservative
   // that it'll only reap the cases when factor.build never finishes
   const double kMaxDependentEquationsTime = 100;
   const double time_limit = std::max(
-      1.0,
-      std::min(0.01 * this->presolve_time_limit_, kMaxDependentEquationsTime));
+      1.0, std::min(0.01 * options->time_limit, kMaxDependentEquationsTime));
   factor.setTimeLimit(time_limit);
   // Determine rank deficiency of the equations
   if (!silent)
