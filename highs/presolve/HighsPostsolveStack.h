@@ -283,16 +283,6 @@ class HighsPostsolveStack {
     void transformToPresolvedSpace(std::vector<double>& primalSol) const;
   };
 
-  struct SlackColSubstitution {
-    double rhs;
-    HighsInt row;
-    HighsInt col;
-
-    void undo(const HighsOptions& options,
-              const std::vector<Nonzero>& rowValues, HighsSolution& solution,
-              HighsBasis& basis);
-  };
-
   struct ZeroObjSingletonContinuousCol {
     double origRowLower;
     double origRowUpper;
@@ -325,7 +315,6 @@ class HighsPostsolveStack {
     kForcingColumnRemovedRow,
     kDuplicateRow,
     kDuplicateColumn,
-    kSlackColSubstitution,
     kZeroObjSingletonContinuousCol,
     kFourierMotzkinBlock,
     kFourierMotzkinObjCol,
@@ -411,9 +400,6 @@ class HighsPostsolveStack {
       }
       case ReductionType::kDuplicateColumn: {
         return "Duplicate column";
-      }
-      case ReductionType::kSlackColSubstitution: {
-        return "Slack col substitution";
       }
       case ReductionType::kImpliedEquation: {
         return "Implied equation";
@@ -605,19 +591,6 @@ class HighsPostsolveStack {
     reductionValues.push(rowValues);
     reductionValues.push(colValues);
     reductionAdded(ReductionType::kFreeColSubstitution);
-  }
-
-  template <typename RowStorageFormat>
-  void slackColSubstitution(HighsInt row, HighsInt col, double rhs,
-                            const HighsMatrixSlice<RowStorageFormat>& rowVec) {
-    rowValues.clear();
-    for (const HighsSliceNonzero& rowVal : rowVec)
-      rowValues.emplace_back(origColIndex[rowVal.index()], rowVal.value());
-
-    reductionValues.push(
-        SlackColSubstitution{rhs, origRowIndex[row], origColIndex[col]});
-    reductionValues.push(rowValues);
-    reductionAdded(ReductionType::kSlackColSubstitution);
   }
 
   template <typename RowStorageFormat>
@@ -1282,13 +1255,6 @@ class HighsPostsolveStack {
           DuplicateColumn reduction;
           reductionValues_.pop(reduction);
           reduction.undo(options, solution, basis);
-          break;
-        }
-        case ReductionType::kSlackColSubstitution: {
-          SlackColSubstitution reduction;
-          reductionValues_.pop(rowValues_);
-          reductionValues_.pop(reduction);
-          reduction.undo(options, rowValues_, solution, basis);
           break;
         }
         case ReductionType::kZeroObjSingletonContinuousCol: {
