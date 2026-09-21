@@ -5,8 +5,8 @@
 #include <iostream>
 
 #include "UpLookingSolver.h"
-#include "ipm/hipo/auxiliary/CollectionLinkedLists.h"
 #include "ipm/IpxWrapper.h"
+#include "ipm/hipo/auxiliary/Fold.h"
 #include "ipm/hipo/auxiliary/Logger.h"
 #include "lp_data/HighsSolution.h"
 #include "parallel/HighsParallel.h"
@@ -142,8 +142,7 @@ void Solver::reset() {
 }
 
 void Solver::solve() {
-  CollectionLinkedLists cll;
-  cll.test();
+  test_folding();
 
   doSolve();
   info_.ipm_iter = iter_;
