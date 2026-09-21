@@ -108,10 +108,9 @@ class HPresolve {
   std::vector<std::set<std::pair<HighsInt, HighsInt>>::iterator> eqiters;
 
   bool shrinkProblemEnabled;
+  double presolve_time_limit_;
   size_t reductionLimit;
   size_t last_reduction_;
-  bool in_initial_sweep_;
-
   // vectors storing singleton rows and columns
   std::vector<HighsInt> singletonRows;
   std::vector<HighsInt> singletonColumns;
@@ -145,7 +144,8 @@ class HPresolve {
     kPrimalInfeasible,
     kDualInfeasible,
     kStopped,
-    kOutOfMemory
+    kOutOfMemory,
+    kException
   };
 
   struct StatusResult {
@@ -329,8 +329,6 @@ class HPresolve {
 
   Result checkColBounds(HighsInt col, bool* isFixed = nullptr);
 
-  Result checkModelColBounds(HighsInt col, bool& isFixed);
-
   void changeRowDualUpper(HighsInt row, double newUpper);
 
   void changeRowDualLower(HighsInt row, double newLower);
@@ -389,10 +387,6 @@ class HPresolve {
   void setInput(HighsMipSolver& mipsolver,
                 const HighsInt presolve_reduction_limit);
 
-  void setReductionLimit(size_t reductionLimit) {
-    this->reductionLimit = reductionLimit;
-  }
-
   bool okSetupPresolveDataStructures();
   void setupSubstitutionOpportunities();
 
@@ -432,12 +426,9 @@ class HPresolve {
   Result doubletonEq(HighsPostsolveStack& postsolve_stack, HighsInt row,
                      HighsPostsolveStack::RowType rowType);
 
-  Result singletonRow(HighsPostsolveStack& postsolve_stack, HighsInt row,
-                      const HighsInt col_ = -1, const double val_ = 0);
+  Result singletonRow(HighsPostsolveStack& postsolve_stack, HighsInt row);
 
   Result emptyCol(HighsPostsolveStack& postsolve_stack, HighsInt col);
-
-  Result modelEmptyCol(HighsPostsolveStack& postsolve_stack, HighsInt col);
 
   Result singletonCol(HighsPostsolveStack& postsolve_stack, HighsInt col,
                       const bool timing = false);
@@ -486,15 +477,9 @@ class HPresolve {
 
   Result checkOriginalModelBounds();
 
-  Result initialSweep(HighsPostsolveStack& postsolve_stack);
-
   Result initialRowAndColPresolve(HighsPostsolveStack& postsolve_stack);
 
   HighsModelStatus run(HighsPostsolveStack& postsolve_stack);
-
-  void computeIntermediateMatrix(std::vector<HighsInt>& flagRow,
-                                 std::vector<HighsInt>& flagCol,
-                                 size_t& numreductions);
 
   void substitute(HighsInt substcol, HighsInt staycol, double offset,
                   double scale);
@@ -560,8 +545,18 @@ class HPresolve {
   Result presolveRuleTestProbing(HighsPostsolveStack& postsolve_stack);
   Result presolveRuleTestFourierMotzkin(HighsPostsolveStack& postsolve_stack);
 
-  // Not currently called
+  /*
+  // Methods defined and used in HPresolveDebug, and only executed if
+  // HPresolve::debug is called. This hasn't been used for ages, and
+  // is retained in case it's useful in future
   static void debug(const HighsLp& lp, const HighsOptions& options);
+  void computeIntermediateMatrix(std::vector<HighsInt>& flagRow,
+                                 std::vector<HighsInt>& flagCol,
+                                 size_t& numreductions);
+  void setReductionLimit(size_t reductionLimit) {
+    this->reductionLimit = reductionLimit;
+  }
+  */
 };
 
 }  // namespace presolve

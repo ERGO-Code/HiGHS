@@ -147,6 +147,9 @@ void getKktFailures(const HighsOptions& options, const bool is_qp,
 
   double& primal_dual_objective_error = highs_info.primal_dual_objective_error;
 
+  double& active_cost_norm = highs_info.active_cost_norm;
+  double& active_bound_norm = highs_info.active_bound_norm;
+
   const bool& have_primal_solution = solution.value_valid;
   const bool& have_dual_solution = solution.dual_valid;
   const bool have_integrality = (lp.integrality_.size() != 0);
@@ -162,6 +165,8 @@ void getKktFailures(const HighsOptions& options, const bool is_qp,
 
   // Invalidate all the KKT measures
   highs_info.invalidateKkt();
+
+  std::vector<double> effective_costs = getEffectiveCosts(lp, options);
 
   if (have_primal_solution) {
     // There's a primal solution, so check its size and initialise the
@@ -222,6 +227,7 @@ void getKktFailures(const HighsOptions& options, const bool is_qp,
   double dual_infeasibility;
   double semi_infeasibility;
   double cost = 0.0;
+  double effective_cost = 0.0;
   double lower;
   double upper;
   double value;
@@ -248,13 +254,13 @@ void getKktFailures(const HighsOptions& options, const bool is_qp,
   // since they determine the RHS of the system solved for the values
   // of the basic variables values. That said, by computing the norm
   // as we do, we capture the active bounds of all the nonbasic variables
-  double highs_norm_bounds = 0.0;
+  active_bound_norm = 0.0;
   // Compute the infinity norm of all near-active column duals, since
   // they contribute to the magnitude of the row values, and dividing
   // their residual error by the norm gives a relative residual error:
   // don't consider large inactive bounds, since they don't affect the
   // model
-  double highs_norm_costs = 0.0;
+  active_cost_norm = 0.0;
 
   // Pass twice through this loop, once to determine the bound and
   // cost norms, and once to use them to assess relative
@@ -265,6 +271,7 @@ void getKktFailures(const HighsOptions& options, const bool is_qp,
       if (is_col) {
         HighsInt iCol = iVar;
         cost = gradient[iCol];
+        effective_cost = effective_costs[iCol];
         lower = lp.col_lower_[iCol];
         upper = lp.col_upper_[iCol];
         value = solution.col_value[iCol];
@@ -273,7 +280,8 @@ void getKktFailures(const HighsOptions& options, const bool is_qp,
         if (pass == 0) {
           if (dual * dual < dual_feasibility_tolerance) {
             // Dual close to zero
-            highs_norm_costs = std::max(std::fabs(cost), highs_norm_costs);
+            active_cost_norm =
+                std::max(std::fabs(effective_cost), active_cost_norm);
           }
           if (get_residuals && have_dual_solution) {
             // Subtract off the gradient value
@@ -298,7 +306,7 @@ void getKktFailures(const HighsOptions& options, const bool is_qp,
       // at_status: Indicates whether the variable is close to its
       // lower bound, upper bound or not at all. Use this as a proxy
       // for being non-basic, so the active bound contributes to
-      // highs_norm_bounds for calculating relative primal measures.
+      // active_bound_norm for calculating relative primal measures.
       //
       // mid_status: Indicates whether a variable with meaningful
       // bound interval length is below the midpoint of its bound
@@ -315,9 +323,9 @@ void getKktFailures(const HighsOptions& options, const bool is_qp,
         // If the primal value is close to a bound then include the bound
         // in the active bound norm
         if (at_status == kHighsSolutionLo) {
-          highs_norm_bounds = std::max(std::fabs(lower), highs_norm_bounds);
+          active_bound_norm = std::max(std::fabs(lower), active_bound_norm);
         } else if (at_status == kHighsSolutionUp) {
-          highs_norm_bounds = std::max(std::fabs(upper), highs_norm_bounds);
+          active_bound_norm = std::max(std::fabs(upper), active_bound_norm);
         }
       } else {
         if (primal_infeasibility > 0) {
@@ -329,12 +337,12 @@ void getKktFailures(const HighsOptions& options, const bool is_qp,
           sum_primal_infeasibility += primal_infeasibility;
           // Determine the denominator for the relative primal
           // infeasibility
-          double relative_bound_measure = highs_norm_bounds;
+          double relative_bound_measure = active_bound_norm;
           if (at_status == kHighsSolutionNo) {
             // Primal value is infeasible, but not close to a bound:
             // unusual, but possible if absolute primal infeasibilities
             // are not small. Bound has not been included in
-            // highs_norm_bounds, but should be used for local
+            // active_bound_norm, but should be used for local
             // relative infeasibility
             if (mid_status == kHighsSolutionNo ||
                 mid_status == kHighsSolutionLo) {
@@ -376,17 +384,17 @@ void getKktFailures(const HighsOptions& options, const bool is_qp,
 
             // Determine the denominator for the relative dual
             // infeasibility
-            double relative_cost_measure = highs_norm_costs;
+            double relative_cost_measure = active_cost_norm;
             if (is_col && cost && dual * dual >= dual_feasibility_tolerance) {
               // Dual value is infeasible, but not close to zero:
               // unusual, but possible if absolute dual infeasibilities
               // are not small. Hence the cost has not been included in
-              // highs_norm_costs, but should be used for local relative
+              // active_cost_norm, but should be used for local relative
               // infeasibility.
               //
               // updateRelativeMeasure(cost, relative_cost_measure);
               relative_cost_measure =
-                  std::max(std::fabs(cost), relative_cost_measure);
+                  std::max(std::fabs(effective_cost), relative_cost_measure);
             }
             double relative_dual_infeasibility =
                 dual_infeasibility / (1.0 + relative_cost_measure);
@@ -403,7 +411,7 @@ void getKktFailures(const HighsOptions& options, const bool is_qp,
           double primal_residual_error =
               std::fabs(primal_activity[iRow] - solution.row_value[iRow]);
           double relative_primal_residual_error =
-              primal_residual_error / (1.0 + highs_norm_bounds);
+              primal_residual_error / (1.0 + active_bound_norm);
 
           if (primal_residual_error > primal_residual_tolerance)
             num_primal_residual_error++;
@@ -422,10 +430,11 @@ void getKktFailures(const HighsOptions& options, const bool is_qp,
           double dual_residual_error =
               std::fabs(dual_activity[iCol] + solution.col_dual[iCol]);
           double relative_dual_residual_error =
-              dual_residual_error / (1.0 + highs_norm_costs);
+              dual_residual_error / (1.0 + active_cost_norm);
 
-          if (dual_residual_error > dual_residual_tolerance)
+          if (dual_residual_error > dual_residual_tolerance) {
             num_dual_residual_error++;
+          }
           if (max_dual_residual_error < dual_residual_error)
             max_dual_residual_error = dual_residual_error;
 
@@ -510,7 +519,7 @@ void getKktFailures(const HighsOptions& options, const bool is_qp,
   if (printf_kkt || options.log_dev_level > 0) {
     highsLogDev(options.log_options, HighsLogType::kInfo,
                 "getKktFailures:: cost norm = %8.3g; bound norm = %8.3g\n",
-                highs_norm_costs, highs_norm_bounds);
+                active_cost_norm, active_bound_norm);
     highsLogDev(options.log_options, HighsLogType::kInfo,
                 "getKktFailures:                      LP  (abs / rel)    "
                 "     Col (abs / rel)         Row (abs / rel)\n");
@@ -671,6 +680,96 @@ void getVariableKktFailures(const double primal_feasibility_tolerance,
         semi_infeasibility = 0;
     }
   }
+}
+
+std::vector<double> getEffectiveCosts(const HighsLp& lp,
+                                      const HighsOptions& options) {
+  // Constants to distinguish row status: kFree (row may contain a
+  // free column singleton); >0 (position in "ID" vectors to indicate
+  // that its singleton column is to be added into costs); kUsed (row
+  // contains a free column singleton already added into costs);
+  const HighsInt kUsed = -2;
+  const HighsInt kFree = -1;
+  std::vector<double> effective_costs = lp.col_cost_;
+  std::vector<HighsInt> col_count;
+  std::vector<HighsInt> row_id(lp.num_row_, kFree);
+  std::vector<HighsInt> row_of_id;
+  std::vector<HighsInt> col_of_id;
+  std::vector<double> row_mu_of_id;
+
+  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++)
+    col_count.push_back(lp.a_matrix_.start_[iCol + 1] -
+                        lp.a_matrix_.start_[iCol]);
+  for (HighsInt pass_n = 0;; pass_n++) {
+    col_of_id.clear();
+    row_of_id.clear();
+    row_mu_of_id.clear();
+    HighsInt num_id = 0;
+    for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
+      bool free_column_singleton =
+          col_count[iCol] == 1 && lp.col_lower_[iCol] == -kHighsInf &&
+          lp.col_upper_[iCol] == kHighsInf && effective_costs[iCol];
+      if (!free_column_singleton) continue;
+      // Potential free column singleton - so long as the row has not
+      // already been selected for substituted into the objective
+      //
+      // Find the row in the column (which may originally have had
+      // more than one entry)
+      HighsInt iEl = -1;
+      HighsInt iRow = -1;
+      for (iEl = lp.a_matrix_.start_[iCol]; iEl < lp.a_matrix_.start_[iCol + 1];
+           iEl++) {
+        HighsInt this_row = lp.a_matrix_.index_[iEl];
+        if (row_id[this_row] == kFree) {
+          iRow = this_row;
+          break;
+        }
+      }
+      if (iRow < 0) continue;
+      assert(iRow == lp.a_matrix_.index_[iEl]);
+      // Found a free column singleton, so can zero its column cost,
+      // as its effective cost is zero after substitution, so the
+      // elimination need not be done
+      col_count[iCol] = 0;
+      // Retain the index of the free column singleton, its
+      // corresponding row, the multiplier for the elimination, and
+      // row_id[iRow]: this is both a marker to indicate that the row
+      // cannot be chosen for a subsequent free column singleton, and
+      // the position in col_of_id/row_of_id/row_mu_of_id so that
+      // these values can be extracted when passing through the matrix
+      col_of_id.push_back(iCol);
+      row_of_id.push_back(iRow);
+      row_mu_of_id.push_back(effective_costs[iCol] / lp.a_matrix_.value_[iEl]);
+      row_id[iRow] = num_id;
+      num_id++;
+    }
+    if (num_id == 0) break;
+    // Now pass through the matrix, adding multiples of selected rows
+    // into the objective
+    for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
+      if (col_count[iCol] == 0) continue;
+      for (HighsInt iEl = lp.a_matrix_.start_[iCol];
+           iEl < lp.a_matrix_.start_[iCol + 1]; iEl++) {
+        HighsInt id = row_id[lp.a_matrix_.index_[iEl]];
+        if (id < 0) continue;
+        // Entry in a row to be added into effective_costs: get the
+        // multiplier, reduce the column's count and update its
+        // effective cost
+        double row_mu = row_mu_of_id[id];
+        col_count[iCol]--;
+        effective_costs[iCol] -= row_mu * lp.a_matrix_.value_[iEl];
+      }
+    }
+    // Update row_id so that these rows cannot be chosen again, and
+    // zero the effective cost for the free column singletons
+    for (HighsInt id = 0; id < num_id; id++) {
+      HighsInt iCol = col_of_id[id];
+      HighsInt iRow = row_of_id[id];
+      row_id[iRow] = kUsed;
+      effective_costs[iCol] = 0;
+    }
+  }
+  return effective_costs;
 }
 
 void getPrimalDualGlpsolErrors(const HighsOptions& options, const HighsLp& lp,
@@ -1321,6 +1420,10 @@ void lpKktCheck(HighsModelStatus& model_status, HighsInfo& info,
                    "Model status changed from \"Optimal\" to \"Unknown\""
                    " since relative violation of tolerances is %8.3g\n",
                    max_tolerance_relative_violation);
+      highsLogUser(log_options, HighsLogType::kInfo,
+                   "         Using active cost norm = %8.3g; active bound norm "
+                   "= %8.3g\n",
+                   info.active_cost_norm, info.active_bound_norm);
     } else if (max_allowed_tolerance_relative_violation > 1 &&
                max_tolerance_relative_violation > 1) {
       highsLogUser(log_options, HighsLogType::kInfo,
@@ -2094,6 +2197,9 @@ bool reportKktFailures(const HighsLp& lp, const HighsOptions& options,
 
   highsLogUser(log_options, log_type, "Solution optimality conditions%s%s\n",
                message == "" ? "" : ": ", message == "" ? "" : message.c_str());
+  highsLogUser(log_options, HighsLogType::kInfo,
+               "Using active cost norm = %8.3g; active bound norm = %8.3g\n",
+               info.active_cost_norm, info.active_bound_norm);
   if (solved_as_mip && info.max_integrality_violation >= 0)
     highsLogUser(log_options, HighsLogType::kInfo,
                  "    max      %8.3g                                  "

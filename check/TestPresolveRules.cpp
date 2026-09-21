@@ -30,6 +30,10 @@ TEST_CASE("test-col-stuffing", "[highs_test_presolve_rules]") {
   Highs h;
   h.setOptionValue("output_flag", dev_run);
   h.setOptionValue("presolve_rule_test", kPresolveRuleColStuffing);
+  REQUIRE(h.setOptionValue("presolve_rule_logging", true) == HighsStatus::kOk);
+  // Initial sweep doesn't yield reductions, but switch it off for clarity
+  REQUIRE(h.setOptionValue("presolve_rule_off",
+                           1 << kPresolveRuleInitialSweep) == HighsStatus::kOk);
   const bool lp0 = true;
   const bool lp1 = true;
   const bool lp1a = true;
@@ -94,6 +98,67 @@ TEST_CASE("test-col-stuffing", "[highs_test_presolve_rules]") {
   h.resetGlobalScheduler(true);
 }
 
+/*
+TEST_CASE("test-weakly-dominated-col-upper", "[highs_test_presolve_rules]") {
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  REQUIRE(h.setOptionValue("presolve_rule_logging", true) == HighsStatus::kOk);
+  // LP is
+  //
+  // min -y, subject to x+y <= 0, x >= 0; 0 <= x <= 1, y free
+  //
+  // Optimal solution is x = 1; y = -1, with x nonbasic with dual -1, and
+  HighsLp lp;
+  lp.num_col_ = 2;
+  lp.num_row_ = 2;
+  lp.col_lower_ = {-kHighsInf, -kHighsInf};
+  lp.col_upper_ = {1,  kHighsInf};
+  lp.row_lower_ = {-kHighsInf,         1};
+  lp.row_upper_ = {         0, kHighsInf};
+  lp.a_matrix_.format_ = MatrixFormat::kRowwise;
+  lp.a_matrix_.start_ = {0, 2, 3};
+  lp.a_matrix_.index_ = {0, 1, 0};
+  lp.a_matrix_.value_ = {1, 1, 1};
+
+  bool maximize_first = true;
+  std::string sense_string = "";
+  std::string test_string = "";
+
+  for (HighsInt k = 0; k < 2; k++) {
+    // Passes are minimize c^Tx and maximize -c^Tx according to
+    // maximize_first
+    if (maximize_first) {
+      lp.sense_ = ObjSense::kMaximize;
+      sense_string = "maximize";
+      lp.col_cost_ = {0, 1};
+    } else {
+      lp.sense_ = ObjSense::kMinimize;
+      sense_string = "minimize";
+      lp.col_cost_ = {0, -1};
+    }
+    //  REQUIRE(h.setOptionValue("presolve_rule_test", 0) == HighsStatus::kOk);
+    //  test_string = "vanilla-presolve-" + sense_string;
+    //  presolveOffOn(test_string, lp, h);
+
+    REQUIRE(h.setOptionValue("presolve_rule_test",
+kPresolveRuleWeaklyDominatedColUpper) == HighsStatus::kOk);
+
+    // test_string = "initial-sweep+test-weakly-dominated-col-upper-" +
+sense_string;
+    // presolveOffOn(test_string, lp, h, 1, 1, 1);
+
+    REQUIRE(h.setOptionValue("presolve_rule_off", 1 <<
+kPresolveRuleInitialSweep) == HighsStatus::kOk);
+
+    test_string = "test-weakly-dominated-col-upper-" + sense_string;
+    presolveOffOn(test_string, lp, h, 1, 2, 1);
+
+    maximize_first = !maximize_first;
+  }
+  h.resetGlobalScheduler(true);
+}
+*/
+
 TEST_CASE("test-parallel-rows-cut-ordering", "[highs_test_presolve_rules]") {
   // Rows 0 and 1 are parallel (both [1, 1]). Row 0 is marked as a
   // cut. detectParallelRowsAndCols must remove the cut row (0) and
@@ -117,6 +182,7 @@ TEST_CASE("test-parallel-rows-cut-ordering", "[highs_test_presolve_rules]") {
 
   HighsOptions options;
   options.presolve_rule_test = kPresolveRuleParallelRowsAndCols;
+  options.presolve_rule_off = 1 << kPresolveRuleInitialSweep;
   options.output_flag = dev_run;
 
   HighsTimer timer;
@@ -139,6 +205,117 @@ TEST_CASE("test-parallel-rows-cut-ordering", "[highs_test_presolve_rules]") {
   // The surviving row must be original row 1 (non-cut), not row 0 (cut)
   REQUIRE(postsolve_stack.getOrigRowIndex(0) == 1);
   REQUIRE(!postsolve_stack.isCutRow(0));
+}
+
+TEST_CASE("test-effective-costs", "[highs_test_presolve]") {
+  // Debugging ZeroObjSingletonContinuousCol for germanrr highlighted
+  // the deficiency in computing the active_cost_norm when the
+  // objective is f = z, with z = c^Tx and z free. In
+  // HighsSolution.cpp is the method getEffectiveCosts that
+  // substitutes all free column singletons into the objective to get
+  // the "effective costs".
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  bool test_all = true;
+  bool test_lp0 = test_all;
+  bool test_lp1 = test_all;
+  bool test_lp2 = test_all;
+
+  if (test_lp0) {
+    HighsLp lp;
+    // First LP is
+    //
+    // min 4z
+    //
+    // -1 <=    x + y - 2z <= 1
+    //
+    // -1 <= 201x + y      <= 1
+    //
+    // 0 <= x <= 1, y, z free
+    //
+    // where the bounds on the two constraints and non-unit
+    // coefficients of z in the objective and first contraint give
+    // code coverage
+    //
+    // Aiming to minimize 4z, and bound is given by 2z >= x + y - 1,
+    // so substitute z = (x+y-1)/2 into the objective to give
+    //
+    // min 2x + 2y - 2
+    //
+    // y is then minimized with bound is given by y >= -201x - 1, so
+    // substitute y = -201x - 1 into the objective to give
+    //
+    // min 2x +(-402x-2) - 2 = -400x - 4
+    //
+    // This function is minimized when x = 1 to give y = -202 and z =
+    // -101 with objective -404
+    //
+    // The optimal dual values are -400 for x, -2 for row 0 and 2 for
+    // row 1. However, although this example tests code coverage on
+    // identifying free column singletons and a double free column
+    // singleton identified in getEffectiveCosts, the dual of -400 for
+    // the only nonbasic column means that there are no active costs,
+    // so active_cost_norm is zero (hence absolute and relative dual
+    // infeasibility measures are identical).
+    lp.model_name_ = "LP0";
+    lp.num_col_ = 3;
+    lp.num_row_ = 2;
+    lp.col_cost_ = {0, 0, 4};
+    lp.col_lower_ = {0, -kHighsInf, -kHighsInf};
+    lp.col_upper_ = {1, kHighsInf, kHighsInf};
+    lp.a_matrix_.format_ = MatrixFormat::kRowwise;
+    lp.a_matrix_.start_ = {0, 3, 5};
+    lp.a_matrix_.index_ = {0, 1, 2, 0, 1};
+    lp.a_matrix_.value_ = {1, 1, -2, 201, 1};
+    lp.row_lower_ = {-1, -1};
+    lp.row_upper_ = {1, 1};
+    h.passModel(lp);
+    h.setOptionValue("log_dev_level", 1);
+    h.setOptionValue("presolve_rule_logging", kHighsOnString);
+    h.run();
+    REQUIRE(h.getInfo().active_cost_norm == 0);
+  }
+  if (test_lp1) {
+    HighsLp lp;
+    // Here's a simpler example that reflects the behaviour observed
+    // with germanrr, where the cost row of the matrix introduced many
+    // large costs. Hence the presolved model had a large value for
+    // active_cost_norm but, after postsolve, the model had
+    // active_cost_norm = 1.
+
+    double cost = 1e5;
+    double eps = 1e-4;
+    lp.model_name_ = "LP1";
+    lp.num_col_ = 3;
+    lp.num_row_ = 2;
+    lp.col_cost_ = {0, 0, 1};
+    lp.col_lower_ = {0, 0, -kHighsInf};
+    lp.col_upper_ = {1, 1, kHighsInf};
+    lp.a_matrix_.format_ = MatrixFormat::kRowwise;
+    lp.a_matrix_.start_ = {0, 3, 5};
+    lp.a_matrix_.index_ = {0, 1, 2, 0, 1};
+    lp.a_matrix_.value_ = {cost, cost - eps, 1, 1, 1, 1};
+    lp.row_lower_ = {0, 1};
+    lp.row_upper_ = {0, 1};
+    h.passModel(lp);
+
+    h.run();
+    REQUIRE(h.getInfo().active_cost_norm == cost);
+  }
+  if (test_lp2) {
+    // Finally gas11 has 61 free column singletons: 55 in the first
+    // pass, and 6 in the second.
+    const std::string model = "gas11";
+    std::string model_file =
+        std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
+    REQUIRE(h.readModel(model_file) == HighsStatus::kWarning);
+    REQUIRE(h.setOptionValue(kPresolveString, kHighsOffString) ==
+            HighsStatus::kOk);
+    HighsStatus return_status = h.run();
+    REQUIRE(return_status == HighsStatus::kOk);
+    double active_cost_norm = 2.000000001e+7;
+    REQUIRE(std::fabs(h.getInfo().active_cost_norm - active_cost_norm) <= 1e-8);
+  }
 }
 
 TEST_CASE("test-fourier-motzkin", "[highs_test_presolve_rules]") {
