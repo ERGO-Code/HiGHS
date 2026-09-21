@@ -216,6 +216,8 @@ class HPresolve {
 
   bool rowCoefficientsIntegral(HighsInt row, double scale) const;
 
+  bool isBinary(HighsInt col) const;
+
   bool isImpliedFree(HighsInt col) const;
 
   bool isDualImpliedFree(HighsInt row) const;
@@ -402,6 +404,8 @@ class HPresolve {
                    double row_upper, const std::vector<HighsInt>& row_indices,
                    const std::vector<double>& row_values);
 
+  Result normaliseCliqueRows(HighsPostsolveStack& postsolve_stack);
+
   Result prepareProbing(HighsPostsolveStack& postsolve_stack, bool& firstCall);
 
   Result finaliseProbing(HighsPostsolveStack& postsolve_stack, bool firstCall,
@@ -536,6 +540,7 @@ class HPresolve {
   Result presolveRuleTestColStuffing(HighsPostsolveStack& postsolve_stack);
   Result presolveRuleTestParallelRowsAndCols(
       HighsPostsolveStack& postsolve_stack);
+  Result presolveRuleTestProbing(HighsPostsolveStack& postsolve_stack);
   Result presolveRuleTestFourierMotzkin(HighsPostsolveStack& postsolve_stack);
 
   /*
