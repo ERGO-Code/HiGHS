@@ -1030,6 +1030,59 @@ TEST_CASE("test-clique-no-delete-ranged-row", "[highs_test_presolve_rules]") {
   highs.resetGlobalScheduler(true);
 }
 
+TEST_CASE("test-clique-implied-equality", "[highs_test_presolve_rules]") {
+  // 0.5 <= x0 + x1 <= 1: after rounding, lhs = ceil(0.5) = 1 and
+  // rhs = floor(1) = 1, so this is an equality clique (set partitioning).
+  // Without the fix, lhs was not computed and the clique was stored as
+  // non-equality (set packing), losing the lower bound if the row is deleted.
+  HighsLp lp;
+  lp.num_col_ = 2;
+  lp.num_row_ = 1;
+  lp.sense_ = ObjSense::kMinimize;
+  lp.col_cost_ = {1.0, 1.0};
+  lp.col_lower_ = {0.0, 0.0};
+  lp.col_upper_ = {1.0, 1.0};
+  lp.integrality_ = {HighsVarType::kInteger, HighsVarType::kInteger};
+  lp.row_lower_ = {0.5};
+  lp.row_upper_ = {1.0};
+  lp.a_matrix_.format_ = MatrixFormat::kColwise;
+  lp.a_matrix_.num_col_ = 2;
+  lp.a_matrix_.num_row_ = 1;
+  lp.a_matrix_.start_ = {0, 1, 2};
+  lp.a_matrix_.index_ = {0, 0};
+  lp.a_matrix_.value_ = {1.0, 1.0};
+
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  highs.passModel(lp);
+
+  HighsCallback callback(&highs);
+  const HighsOptions& options = highs.getOptions();
+  HighsSolution solution;
+  HighsMipSolver mipsolver(callback, options, lp, solution);
+  mipsolver.mipdata_ =
+      std::unique_ptr<HighsMipSolverData>(new HighsMipSolverData(mipsolver));
+  mipsolver.mipdata_->feastol = 1e-6;
+  mipsolver.mipdata_->postSolveStack.initializeIndexMaps(1, 2);
+  mipsolver.mipdata_->setupDomainPropagation();
+
+  HighsCliqueTable& cliquetable = mipsolver.mipdata_->cliquetable;
+  HighsDomain& domain = mipsolver.mipdata_->getDomain();
+
+  cliquetable.extractCliques(mipsolver);
+
+  // fix x0 = 0 and propagate; for an equality clique x0 + x1 = 1,
+  // this forces x1 = 1. For a non-equality clique x0 + x1 <= 1,
+  // fixing x0 = 0 does not constrain x1.
+  domain.fixCol(0, 0.0);
+  domain.propagate();
+  REQUIRE(!domain.infeasible());
+  REQUIRE(domain.isFixed(1));
+  REQUIRE(domain.col_lower_[1] == 1.0);
+
+  highs.resetGlobalScheduler(true);
+}
+
 void solveAndCheck(const std::string& message, const HighsLp& lp, Highs& h,
                    const std::string& solver, bool use_presolve,
                    const HighsInt require_presolved_model_num_col,

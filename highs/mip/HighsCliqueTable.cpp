@@ -1298,8 +1298,7 @@ void HighsCliqueTable::extractCliques(HighsMipSolver& mipsolver,
     // normaliseCliqueRows has already flipped >= rows to <= form.
     if (mipsolver.rowUpper(i) < kHighsInf) {
       bool issetppc = true;
-      bool equation = mipsolver.rowUpper(i) == mipsolver.rowLower(i);
-      HighsCDouble rhs = mipsolver.rowUpper(i);
+      HighsCDouble fixedTerm = 0.0;
       HighsInt numComp = 0;
       for (HighsInt j = start; j != end; ++j) {
         HighsInt col = mipsolver.mipdata_->ARindex_[j];
@@ -1307,7 +1306,8 @@ void HighsCliqueTable::extractCliques(HighsMipSolver& mipsolver,
 
         // handle fixed non-binary variables
         if (!globaldom.isBinary(col) && globaldom.isFixed(col)) {
-          rhs -= val * static_cast<HighsCDouble>(globaldom.col_upper_[col]);
+          fixedTerm +=
+              val * static_cast<HighsCDouble>(globaldom.col_upper_[col]);
           continue;
         }
 
@@ -1319,7 +1319,17 @@ void HighsCliqueTable::extractCliques(HighsMipSolver& mipsolver,
         if (val < 0) numComp++;
       }
 
+      // subtract fixed term and round right-hand side
+      double rhs = static_cast<double>(floor(mipsolver.rowUpper(i) - fixedTerm +
+                                             mipsolver.mipdata_->feastol));
+
       if (issetppc && rhs == 1.0 - numComp) {
+        // subtract fixed term and round left-hand side if finite
+        double lhs = mipsolver.rowLower(i);
+        if (lhs > -kHighsInf)
+          lhs = static_cast<double>(
+              ceil(lhs - fixedTerm - mipsolver.mipdata_->feastol));
+
         clique.clear();
 
         for (HighsInt j = start; j != end; ++j) {
@@ -1339,7 +1349,7 @@ void HighsCliqueTable::extractCliques(HighsMipSolver& mipsolver,
         // add clique to clique table
         if (clique.size() >= 2) {
           addClique(mipsolver, clique.data(),
-                    static_cast<HighsInt>(clique.size()), equation, i);
+                    static_cast<HighsInt>(clique.size()), rhs == lhs, i);
           if (globaldom.infeasible()) return;
         }
         continue;
