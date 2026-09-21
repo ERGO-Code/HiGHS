@@ -1030,7 +1030,8 @@ HighsInt Highs_getInfoType(const void* highs, const char* info, HighsInt* type);
  * @param row_dual   An array of length [num_row], to be filled with dual row
  *                   values.
  *
- * @returns A `kHighsStatus` constant indicating whether the call succeeded.
+ * @returns A `kHighsStatus` constant indicating whether a primal solution
+ * exists.
  */
 HighsInt Highs_getSolution(const void* highs, double* col_value,
                            double* col_dual, double* row_value,
@@ -1048,7 +1049,7 @@ HighsInt Highs_getSolution(const void* highs, double* col_value,
  *                    basis statuses in the form of a `kHighsBasisStatus`
  *                    constant.
  *
- * @returns A `kHighsStatus` constant indicating whether the call succeeded.
+ * @returns A `kHighsStatus` constant indicating whether the basis is valid.
  */
 HighsInt Highs_getBasis(const void* highs, HighsInt* col_status,
                         HighsInt* row_status);

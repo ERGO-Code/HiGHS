@@ -24,10 +24,10 @@
     try {                                                                     \
       call_status = Solve;                                                    \
     } catch (const std::exception& exception) {                               \
-      highsLogDev(options.log_options, HighsLogType::kError,                  \
-                  "Exception %s when solving with %s\n", exception.what(),    \
-                  SolveString);                                               \
-      solver_object.model_status_ = HighsModelStatus::kSolveError;            \
+      solver_object.model_status_ =                                           \
+          handleExceptionIsOom(options.log_options, SolveString, exception)   \
+              ? HighsModelStatus::kMemoryLimit                                \
+              : HighsModelStatus::kSolveError;                                \
       call_status = HighsStatus::kError;                                      \
     } catch (const HighsTask::Interrupt&) {                                   \
       highsLogDev(options.log_options, HighsLogType::kError,                  \
@@ -823,7 +823,7 @@ HighsStatus solveQp(HighsQpSolverObject& solver_object,
 
   // Get the objective and any KKT failures
   info.objective_function_value = model_.objectiveValue(solution.col_value);
-  getKktFailures(options, model_, solution, basis, info);
+  getQpKktFailures(options, model_, solution, info);
   info.valid = true;
   if (model_status == HighsModelStatus::kOptimal)
     return checkOptimality("QP", options, info, model_status);
@@ -909,9 +909,10 @@ HighsStatus solveMip(HighsMipSolverObject& solver_object,
   try {
     solver.run();
   } catch (const std::exception& exception) {
-    highsLogDev(options.log_options, HighsLogType::kError,
-                "Exception %s in MIP solver\n", exception.what());
-    solver.modelstatus_ = HighsModelStatus::kSolveError;
+    solver.modelstatus_ =
+        handleExceptionIsOom(options.log_options, "MIP solver", exception)
+            ? HighsModelStatus::kMemoryLimit
+            : HighsModelStatus::kSolveError;
   } catch (const HighsTask::Interrupt&) {
     highsLogDev(options.log_options, HighsLogType::kError,
                 "HighsTask interrupt when solving with MIP solver\n");
