@@ -1652,9 +1652,9 @@ HPresolve::Result HPresolve::normaliseCliqueRows(
   std::vector<double> rowCoefsInt;
 
   for (HighsInt row = 0; row < model->num_row_; row++) {
-    // skip deleted, ranged, and non-all-integer rows
-    if (rowDeleted[row] || (isRanged(row) && !isEquation(row)) ||
-        rowsize[row] <= 1 || rowsizeInteger[row] != rowsize[row])
+    // skip deleted and non-all-integer rows
+    if (rowDeleted[row] || rowsize[row] <= 1 ||
+        rowsizeInteger[row] != rowsize[row])
       continue;
 
     // store row
@@ -1681,6 +1681,10 @@ HPresolve::Result HPresolve::normaliseCliqueRows(
     // scale so that we have a <= inequality or equation
     if (model->row_upper_[row] == kHighsInf) intScale = -intScale;
     scaleStoredRow(row, intScale, true);
+
+    // after rounding, a ranged row may have become an equation; skip if still
+    // ranged and not an equation
+    if (isRanged(row) && !isEquation(row)) continue;
 
     // transform the row
     HighsCDouble rhs = model->row_upper_[row];
