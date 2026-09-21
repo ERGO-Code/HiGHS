@@ -1319,40 +1319,43 @@ void HighsCliqueTable::extractCliques(HighsMipSolver& mipsolver,
         if (val < 0) numComp++;
       }
 
-      // subtract fixed term and round right-hand side
-      double rhs = static_cast<double>(floor(mipsolver.rowUpper(i) - fixedTerm +
-                                             mipsolver.mipdata_->feastol));
+      if (issetppc) {
+        // subtract fixed term and round right-hand side
+        double rhs = static_cast<double>(floor(
+            mipsolver.rowUpper(i) - fixedTerm + mipsolver.mipdata_->feastol));
 
-      if (issetppc && rhs == 1.0 - numComp) {
-        // subtract fixed term and round left-hand side if finite
-        double lhs = mipsolver.rowLower(i);
-        if (lhs > -kHighsInf)
-          lhs = static_cast<double>(
-              ceil(lhs - fixedTerm - mipsolver.mipdata_->feastol));
+        if (rhs == 1.0 - numComp) {
+          // subtract fixed term and round left-hand side if finite
+          double lhs = mipsolver.rowLower(i);
+          if (lhs > -kHighsInf)
+            lhs = static_cast<double>(
+                ceil(lhs - fixedTerm - mipsolver.mipdata_->feastol));
 
-        clique.clear();
+          clique.clear();
 
-        for (HighsInt j = start; j != end; ++j) {
-          HighsInt col = mipsolver.mipdata_->ARindex_[j];
-          double val = mipsolver.mipdata_->ARvalue_[j];
-          HighsInt dir = val > 0 ? 1 : 0;
+          for (HighsInt j = start; j != end; ++j) {
+            HighsInt col = mipsolver.mipdata_->ARindex_[j];
+            double val = mipsolver.mipdata_->ARvalue_[j];
+            HighsInt dir = val > 0 ? 1 : 0;
 
-          // skip non-binary variables (fixed, see previous loop) and binaries
-          // that are fixed to "inactive" values
-          if (!globaldom.isBinary(col) || globaldom.isFixedToVal(col, 1 - dir))
-            continue;
+            // skip non-binary variables (fixed, see previous loop) and binaries
+            // that are fixed to "inactive" values
+            if (!globaldom.isBinary(col) ||
+                globaldom.isFixedToVal(col, 1 - dir))
+              continue;
 
-          // add to clique
-          clique.emplace_back(col, dir);
+            // add to clique
+            clique.emplace_back(col, dir);
+          }
+
+          // add clique to clique table
+          if (clique.size() >= 2) {
+            addClique(mipsolver, clique.data(),
+                      static_cast<HighsInt>(clique.size()), rhs == lhs, i);
+            if (globaldom.infeasible()) return;
+          }
+          continue;
         }
-
-        // add clique to clique table
-        if (clique.size() >= 2) {
-          addClique(mipsolver, clique.data(),
-                    static_cast<HighsInt>(clique.size()), rhs == lhs, i);
-          if (globaldom.infeasible()) return;
-        }
-        continue;
       }
     }
 
