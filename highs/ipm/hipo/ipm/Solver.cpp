@@ -5,6 +5,7 @@
 #include <iostream>
 
 #include "UpLookingSolver.h"
+#include "ipm/hipo/auxiliary/CollectionLinkedLists.h"
 #include "ipm/IpxWrapper.h"
 #include "ipm/hipo/auxiliary/Logger.h"
 #include "lp_data/HighsSolution.h"
@@ -141,6 +142,9 @@ void Solver::reset() {
 }
 
 void Solver::solve() {
+  CollectionLinkedLists cll;
+  cll.test();
+
   doSolve();
   info_.ipm_iter = iter_;
   finaliseStatus();
