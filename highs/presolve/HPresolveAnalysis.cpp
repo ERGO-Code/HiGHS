@@ -188,8 +188,13 @@ bool HPresolveAnalysis::analysePresolveRuleLog(const bool report) {
     for (HighsInt k = kPresolveRuleMin; k < kPresolveRuleCount; k++) {
       HighsInt rule_type = k;
       // Hack so that initial logging is of initial sweep
-      if (kPresolveRuleInitialSweep > 0) {
-        rule_type = k == 0 ? kPresolveRuleInitialSweep : k - 1;
+      if (k == 0) {
+	rule_type = kPresolveRuleInitialSweep;
+      } else if (k <= kPresolveRuleInitialSweep) {
+	rule_type = k-1;
+      } else {
+	assert(k > kPresolveRuleInitialSweep);
+	rule_type = k;
       }
       if (presolve_log_.rule[rule_type].call ||
           presolve_log_.rule[rule_type].row_removed ||

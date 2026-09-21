@@ -1294,27 +1294,60 @@ TEST_CASE("test-non-stop-initial-sweep", "[highs_test_presolve]") {
   h.resetGlobalScheduler(true);
 }
 
-/*
 TEST_CASE("test-fuzzing", "[highs_test_presolve]") {
   Highs h;
   //  h.setOptionValue("output_flag", dev_run);
-  h.setOptionValue("presolve_rule_logging", true);
-  h.setOptionValue("log_dev_level", 1);
+  //  if (dev_run) {
+  printf("\n====================\nWithout presolve\n====================\n");
 
-  const std::string model = "issue-008";
+  const std::string model = "issue-009";
   std::string model_file = std::string(HIGHS_DIR) + "/build/OscarFuzzing/" +
                            model + "/" + model + ".mps";
 
   REQUIRE(h.readModel(model_file) == HighsStatus::kOk);
 
+  h.setOptionValue(kPresolveString, kHighsOffString);
+
+  REQUIRE(h.run() == HighsStatus::kOk);
+  REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
+  h.writeModel("");
+  h.writeSolution("", 1);
+  //  }
+  h.clearSolver();
+
+  h.setOptionValue(kPresolveString, kHighsOnString);
+
   std::string options_file =
       std::string(HIGHS_DIR) + "/build/OscarFuzzing/" + model + "/options.txt";
   REQUIRE(h.readOptions(options_file) == HighsStatus::kOk);
+  //  REQUIRE(h.setOptionValue("presolve_rule_off", 1 << kPresolveRuleColStuffing) == HighsStatus::kOk);
+  HighsOptions options = h.getOptions();
 
+  printf("\n====================\nPresolved LP\n====================\n");
+  h.presolve();
+
+  HighsLp lp = h.getPresolvedLp();
+
+  h.clear();
+  h.passModel(lp);
+
+  h.setOptionValue(kPresolveString, kHighsOffString);
+  
+  h.run();
+  h.writeSolution("", 1);
+  h.clear();
+
+  printf(
+      "\n====================\nPresolve no crossover\n====================\n");
+  REQUIRE(h.readModel(model_file) == HighsStatus::kOk);
+  h.passOptions(options);
+
+  h.setOptionValue("presolve_rule_logging", true);
+  h.setOptionValue("log_dev_level", 1);
   h.writeOptions("", true);
 
   h.run();
+  h.writeSolution("", 1);
 
   h.resetGlobalScheduler(true);
 }
-*/
