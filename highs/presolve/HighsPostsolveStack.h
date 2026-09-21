@@ -1259,9 +1259,9 @@ class HighsPostsolveStack {
         }
         case ReductionType::kZeroObjSingletonContinuousCol: {
           ZeroObjSingletonContinuousCol reduction;
-          reductionValues.pop(rowValues);
-          reductionValues.pop(reduction);
-          reduction.undo(options, rowValues, solution, basis);
+          reductionValues_.pop(rowValues_);
+          reductionValues_.pop(reduction);
+          reduction.undo(options, rowValues_, solution, basis);
           break;
         }
         case ReductionType::kFourierMotzkinBlock: {
