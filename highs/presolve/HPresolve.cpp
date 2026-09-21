@@ -1654,9 +1654,9 @@ HPresolve::Result HPresolve::normaliseCliqueRows(
   std::vector<double> rowCoefsInt;
 
   for (HighsInt row = 0; row < model->num_row_; row++) {
-    // skip deleted and ranged rows
+    // skip deleted, ranged, and non-all-integer rows
     if (rowDeleted[row] || (isRanged(row) && !isEquation(row)) ||
-        rowsize[row] <= 1)
+        rowsize[row] <= 1 || rowsizeInteger[row] != rowsize[row])
       continue;
 
     // store row
@@ -3264,13 +3264,8 @@ void HPresolve::scaleStoredRow(HighsInt row, double scale, bool integral) {
   model->row_lower_[row] *= scale;
   implRowDualLower[row] /= scale;
   implRowDualUpper[row] /= scale;
-
-  if (integral) {
-    if (model->row_upper_[row] != kHighsInf)
-      model->row_upper_[row] = std::round(model->row_upper_[row]);
-    if (model->row_lower_[row] != -kHighsInf)
-      model->row_lower_[row] = std::round(model->row_lower_[row]);
-  }
+  rowDualLower[row] /= std::copysign(1.0, scale);
+  rowDualUpper[row] /= std::copysign(1.0, scale);
 
   for (size_t j = 0; j < rowpositions.size(); ++j) {
     Avalue[rowpositions[j]] *= scale;
@@ -3280,12 +3275,19 @@ void HPresolve::scaleStoredRow(HighsInt row, double scale, bool integral) {
 
   impliedRowBounds.sumScaled(row, scale);
   if (scale < 0) {
-    double tmp = rowDualLower[row];
-    rowDualLower[row] = -rowDualUpper[row];
-    rowDualUpper[row] = -tmp;
+    std::swap(rowDualLower[row], rowDualUpper[row]);
     std::swap(implRowDualLower[row], implRowDualUpper[row]);
     std::swap(rowDualLowerSource[row], rowDualUpperSource[row]);
     std::swap(model->row_lower_[row], model->row_upper_[row]);
+  }
+
+  if (integral) {
+    if (model->row_upper_[row] != kHighsInf)
+      model->row_upper_[row] =
+          std::floor(model->row_upper_[row] + primal_feastol);
+    if (model->row_lower_[row] != -kHighsInf)
+      model->row_lower_[row] =
+          std::ceil(model->row_lower_[row] - primal_feastol);
   }
 }
 

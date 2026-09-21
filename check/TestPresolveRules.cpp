@@ -922,6 +922,63 @@ TEST_CASE("test-normalise-fix-to-upper", "[highs_test_presolve_rules]") {
   HighsTaskExecutor::shutdown(true);
 }
 
+TEST_CASE("test-normalise-non-integral-rhs", "[highs_test_presolve_rules]") {
+  // 2*x0 + 2*x1 <= 3.7: integralScale = 0.5 gives x0 + x1 <= 1.85.
+  // floor(1.85) = 1, so the normalised row is x0 + x1 <= 1 (a clique).
+  // With std::round the rhs would become 2, losing the clique.
+  HighsLp lp;
+  lp.num_col_ = 2;
+  lp.num_row_ = 1;
+  lp.sense_ = ObjSense::kMinimize;
+  lp.col_cost_ = {1.0, 1.0};
+  lp.col_lower_ = {0.0, 0.0};
+  lp.col_upper_ = {1.0, 1.0};
+  lp.integrality_ = {HighsVarType::kInteger, HighsVarType::kInteger};
+  lp.row_lower_ = {-kHighsInf};
+  lp.row_upper_ = {3.7};
+  lp.a_matrix_.format_ = MatrixFormat::kColwise;
+  lp.a_matrix_.num_col_ = 2;
+  lp.a_matrix_.num_row_ = 1;
+  lp.a_matrix_.start_ = {0, 1, 2};
+  lp.a_matrix_.index_ = {0, 0};
+  lp.a_matrix_.value_ = {2.0, 2.0};
+
+  highs::parallel::initialize_scheduler(1);
+
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  highs.passModel(lp);
+
+  HighsCallback callback(&highs);
+  const HighsOptions& options = highs.getOptions();
+  HighsSolution solution;
+  HighsProfiling profiling;
+
+  HighsMipSolver mipsolver(callback, options, lp, solution);
+  mipsolver.timer_.start();
+  profiling.initialize(mipsolver.timer_, true, true);
+  mipsolver.setProfiling(&profiling);
+  mipsolver.mipdata_ =
+      std::unique_ptr<HighsMipSolverData>(new HighsMipSolverData(mipsolver));
+  mipsolver.mipdata_->init();
+  mipsolver.mipdata_->setupDomainPropagation();
+
+  presolve::HighsPostsolveStack& postsolve_stack =
+      mipsolver.mipdata_->postSolveStack;
+
+  presolve::HPresolve presolve;
+  presolve.setInput(mipsolver, -1);
+  REQUIRE(presolve.okSetupPresolveDataStructures());
+  auto result = presolve.normaliseCliqueRows(postsolve_stack);
+  mipsolver.timer_.stop();
+  REQUIRE(static_cast<int>(result) == 0);
+  // row should be normalised to x0 + x1 <= 1
+  REQUIRE(mipsolver.model_->row_upper_[0] == 1.0);
+  REQUIRE(mipsolver.model_->row_lower_[0] == -kHighsInf);
+
+  HighsTaskExecutor::shutdown(true);
+}
+
 TEST_CASE("test-clique-no-delete-ranged-row", "[highs_test_presolve_rules]") {
   // Negative test: ranged rows must not be deleted by clique merging because
   // the extracted clique is a relaxation (only captures one side).

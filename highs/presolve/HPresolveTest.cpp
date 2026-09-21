@@ -55,6 +55,7 @@ HPresolve::Result HPresolve::presolveRuleTestProbing(
   assert(options->presolve_rule_test == kPresolveRuleProbing);
   highsLogUser(options->log_options, HighsLogType::kInfo,
                "HPresolve::presolveRuleTestProbing\n");
+  if (mipsolver == nullptr) return Result::kStopped;
   return runProbing(postsolve_stack);
 }
 HPresolve::Result HPresolve::presolveRuleTestFourierMotzkin(
