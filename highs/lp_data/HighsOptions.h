@@ -1691,9 +1691,10 @@ class HighsOptions : public HighsOptionsStruct {
         advanced, &presolve_rule_logging, false);
     records.push_back(record_bool);
 
-    record_bool = new OptionRecordBool("presolve_remove_slacks",
-                                       "Remove slacks after presolve", advanced,
-                                       &presolve_remove_slacks, false);
+    record_bool =
+        new OptionRecordBool("presolve_remove_slacks",
+                             "Remove slacks after presolve: redundant option!",
+                             advanced, &presolve_remove_slacks, false);
     records.push_back(record_bool);
 
     record_bool =

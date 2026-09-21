@@ -6547,62 +6547,13 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
       break;
     }
 
-    if (!reducedToEmpty()) {
-      // Now consider removing slacks
-      if (options->presolve_remove_slacks)
-        HPRESOLVE_CHECKED_CALL(removeSlacks(postsolve_stack));
-
-      report();
-    }
+    if (!reducedToEmpty()) report();
   } else {
     highsLogUser(options->log_options, HighsLogType::kInfo,
                  "\nPresolve is switched off\n");
   }
 
   return presolveReturn();
-}
-
-HPresolve::Result HPresolve::removeSlacks(
-    HighsPostsolveStack& postsolve_stack) {
-  // SingletonColumns data structure appears not to be retained
-  // throughout presolve
-  for (HighsInt iCol = 0; iCol != model->num_col_; ++iCol) {
-    if (colDeleted[iCol]) continue;
-    if (colsize[iCol] != 1) continue;
-    // Only do this for pure slacks as cost coefficient changes lead
-    // to dual postsolve errors since the basic costs may well change,
-    // leading to changes in the row duals that cannot be determined
-    if (model->col_cost_[iCol]) continue;
-    if (model->integrality_[iCol] == HighsVarType::kInteger) continue;
-    HighsInt coliter = colhead[iCol];
-    HighsInt iRow = Arow[coliter];
-    assert(Acol[coliter] == iCol);
-    assert(!rowDeleted[iRow]);
-    if (!isEquation(iRow)) continue;
-    double lower = model->col_lower_[iCol];
-    double upper = model->col_upper_[iCol];
-    double rhs = model->row_lower_[iRow];
-    double coeff = Avalue[coliter];
-    assert(coeff);
-    // Slack is s = (rhs - a^Tx)/coeff
-    //
-    // Constraint bounds become:
-    //
-    // For coeff > 0 [rhs - coeff * upper, rhs - coeff * lower]
-    //
-    // For coeff < 0 [rhs - coeff * lower, rhs - coeff * upper]
-    model->row_lower_[iRow] =
-        coeff > 0 ? rhs - coeff * upper : rhs - coeff * lower;
-    model->row_upper_[iRow] =
-        coeff > 0 ? rhs - coeff * lower : rhs - coeff * upper;
-    //
-    postsolve_stack.slackColSubstitution(iRow, iCol, rhs, getRowVector(iRow));
-
-    markColDeleted(iCol);
-
-    unlink(coliter);
-  }
-  return Result::kOk;
 }
 
 HPresolve::Result HPresolve::checkTimeLimit() {
