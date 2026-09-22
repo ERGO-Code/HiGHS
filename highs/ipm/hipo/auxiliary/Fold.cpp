@@ -5,170 +5,177 @@
 
 namespace hipo {
 
-// pick a colour
-// compute colour degrees
-// compute colours that are split
-// split colours
+// Taken from "Tight Lower and Upper Bounds for the Complexity
+// of Canonical Colour Refinement", Berkholz, Bonsma, Grohe
 
-std::vector<Int> colourRefinement(const std::vector<Int> ptr,
-                                  const std::vector<Int> adj) {
-  // Taken from "Tight Lower and Upper Bounds for the Complexity
-  // of Canonical Colour Refinement", Berkholz, Bonsma, Grohe
+ColourRefinement::ColourRefinement(const std::vector<Int>& ptr,
+                                   const std::vector<Int>& adj)
+    : ptr_{ptr},
+      adj_{adj},
+      n_{static_cast<Int>(ptr_.size() - 1)},
+      colour_(n_, 0),
+      colour_degree_(n_, 0),
+      max_colour_degree_(n_, 0),
+      min_colour_degree_(n_, 0),
+      colours_touched_(n_, 0),
+      in_colours_touched_(n_, 0),
+      colours_split_(n_, 0),
+      in_stack_(n_, 0) {
+  colour_classes_.init(n_, n_);
+  colour_classes_touched_.init(n_, n_);
 
   // initial uniform colour 0
+  for (Int i = 0; i < n_; ++i) colour_classes_.append(i, 0);
+  stack_refine_.push(0);
+  in_stack_[0] = 1;
+}
 
-  const Int n = ptr.size() - 1;
+Int ColourRefinement::chooseRefiningColour() {
+  const Int refining_colour = stack_refine_.top();
+  stack_refine_.pop();
+  in_stack_[refining_colour] = 0;
 
-  std::vector<Int> colour(n, 0);
-  std::vector<Int> colour_degree(n, 0);
-  std::vector<Int> max_colour_degree(n, 0);
-  std::vector<Int> min_colour_degree(n, 0);
+  printf("\n");
+  for (Int c : colour_) printf("%d", c);
+  printf("\n");
+  printf("Refine with r = %d\n", refining_colour);
 
-  std::vector<Int> colours_touched(n, 0);
-  std::vector<HighsBool> in_colours_touched(n, 0);
-  Int top_touched = 0;
+  return refining_colour;
+}
 
-  std::vector<Int> colours_split(n, 0);
-  Int top_split = 0;
+void ColourRefinement::computeColourDegrees(const Int refining_colour) {
+  Int v = colour_classes_.head(refining_colour);
+  while (colour_classes_.cont(v)) {
+    for (Int el = ptr_[v]; el < ptr_[v + 1]; ++el) {
+      const Int w = adj_[el];
+      colour_degree_[w]++;
+      if (colour_degree_[w] == 1) colour_classes_touched_.append(w, colour_[w]);
 
-  CollectionLinkedLists colour_classes;
-  colour_classes.init(n, n);
-  for (Int i = 0; i < n; ++i) colour_classes.append(i, 0);
-
-  CollectionLinkedLists colour_classes_touched;
-  colour_classes_touched.init(n, n);
-
-  Int latest_colour = 0;
-
-  std::stack<Int> stack_refine;
-  std::vector<HighsBool> in_stack(n, 0);
-  stack_refine.push(0);
-  in_stack[0] = 1;
-
-  auto split_up_colour = [&](Int s) {
-    const Int maxcdegs = max_colour_degree[s];
-    std::vector<Int> numcdeg(maxcdegs + 1, 0);
-    numcdeg[0] = colour_classes.length(s) - colour_classes_touched.length(s);
-
-    Int v = colour_classes_touched.head(s);
-    while (colour_classes_touched.cont(v)) {
-      numcdeg[colour_degree[v]]++;
-      v = colour_classes_touched.next(v);
-    }
-
-    Int b = 0;
-    for (Int i = 1; i <= maxcdegs; ++i) {
-      if (numcdeg[i] > numcdeg[b]) b = i;
-    }
-
-    std::vector<Int> f(maxcdegs + 1, 0);
-    for (Int i = 0; i <= maxcdegs; ++i) {
-      if (numcdeg[i] >= 1) {
-        if (i == min_colour_degree[s]) {
-          f[i] = s;
-          if (!in_stack[s] && b != i) {
-            stack_refine.push(f[i]);
-            in_stack[f[i]] = 1;
-          }
-
-        } else {
-          latest_colour++;
-          f[i] = latest_colour;
-          if (in_stack[s] || i != b) {
-            stack_refine.push(f[i]);
-            in_stack[f[i]] = 1;
-          }
-        }
+      if (!in_colours_touched_[colour_[w]]) {
+        colours_touched_[top_touched_] = colour_[w];
+        top_touched_++;
+        in_colours_touched_[colour_[w]] = 1;
       }
+
+      if (colour_degree_[w] > max_colour_degree_[colour_[w]])
+        max_colour_degree_[colour_[w]] = colour_degree_[w];
     }
-
-    v = colour_classes_touched.head(s);
-    while (colour_classes_touched.cont(v)) {
-      if (f[colour_degree[v]] != s) {
-        colour_classes.remove(v, s);
-        colour_classes.append(v, f[colour_degree[v]]);
-        colour[v] = f[colour_degree[v]];
-      }
-      v = colour_classes_touched.next(v);
-    }
-  };
-
-  while (!stack_refine.empty()) {
-    printf("\n");
-    for (Int c : colour) printf("%d", c);
-    printf("\n");
-
-    const Int refining_colour = stack_refine.top();
-    stack_refine.pop();
-    in_stack[refining_colour] = 0;
-
-    printf("Refine with r = %d\n", refining_colour);
-
-    Int v = colour_classes.head(refining_colour);
-    while (colour_classes.cont(v)) {
-      for (Int el = ptr[v]; el < ptr[v + 1]; ++el) {
-        const Int w = adj[el];
-        colour_degree[w]++;
-        if (colour_degree[w] == 1) colour_classes_touched.append(w, colour[w]);
-
-        if (!in_colours_touched[colour[w]]) {
-          colours_touched[top_touched] = colour[w];
-          top_touched++;
-          in_colours_touched[colour[w]] = 1;
-        }
-
-        if (colour_degree[w] > max_colour_degree[colour[w]])
-          max_colour_degree[colour[w]] = colour_degree[w];
-      }
-      v = colour_classes.next(v);
-    }
-
-    for (Int el = 0; el < top_touched; ++el) {
-      const Int c = colours_touched[el];
-      if (colour_classes.length(c) != colour_classes_touched.length(c))
-        min_colour_degree[c] = 0;
-      else {
-        min_colour_degree[c] = max_colour_degree[c];
-        Int v = colour_classes_touched.head(c);
-        while (colour_classes_touched.cont(v)) {
-          if (colour_degree[v] < min_colour_degree[c])
-            min_colour_degree[c] = colour_degree[v];
-          v = colour_classes_touched.next(v);
-        }
-      }
-    }
-
-    top_split = 0;
-    for (Int el = 0; el < top_touched; ++el) {
-      const Int c = colours_touched[el];
-      if (min_colour_degree[c] < max_colour_degree[c]) {
-        colours_split[top_split] = c;
-        top_split++;
-      }
-    }
-    std::sort(colours_split.begin(), colours_split.begin() + top_split);
-    for (Int el = 0; el < top_split; ++el) {
-      const Int s = colours_split[el];
-      printf("\tSplit %d\n", s);
-      split_up_colour(s);
-    }
-
-    for (Int el = 0; el < top_touched; ++el) {
-      const Int c = colours_touched[el];
-      Int v = colour_classes_touched.head(c);
-      while (colour_classes_touched.cont(v)) {
-        colour_degree[v] = 0;
-        v = colour_classes_touched.next(v);
-      }
-      max_colour_degree[c] = 0;
-      colour_classes_touched.clear(c);
-      in_colours_touched[c] = 0;
-    }
-    top_touched = 0;
+    v = colour_classes_.next(v);
   }
 
-  return colour;
+  for (Int el = 0; el < top_touched_; ++el) {
+    const Int c = colours_touched_[el];
+    if (colour_classes_.length(c) != colour_classes_touched_.length(c))
+      min_colour_degree_[c] = 0;
+    else {
+      min_colour_degree_[c] = max_colour_degree_[c];
+      Int v = colour_classes_touched_.head(c);
+      while (colour_classes_touched_.cont(v)) {
+        if (colour_degree_[v] < min_colour_degree_[c])
+          min_colour_degree_[c] = colour_degree_[v];
+        v = colour_classes_touched_.next(v);
+      }
+    }
+  }
 }
+
+void ColourRefinement::findSplitColours() {
+  top_split_ = 0;
+  for (Int el = 0; el < top_touched_; ++el) {
+    const Int c = colours_touched_[el];
+    if (min_colour_degree_[c] < max_colour_degree_[c]) {
+      colours_split_[top_split_] = c;
+      top_split_++;
+    }
+  }
+  std::sort(colours_split_.begin(), colours_split_.begin() + top_split_);
+}
+
+void ColourRefinement::splitColours() {
+  for (Int el = 0; el < top_split_; ++el) {
+    const Int s = colours_split_[el];
+    splitColour(s);
+  }
+}
+
+void ColourRefinement::splitColour(const Int s) {
+  printf("\tSplit %d\n", s);
+
+  const Int max_degree = max_colour_degree_[s];
+  std::vector<Int> degree_count(max_degree + 1, 0);
+  degree_count[0] =
+      colour_classes_.length(s) - colour_classes_touched_.length(s);
+
+  Int v = colour_classes_touched_.head(s);
+  while (colour_classes_touched_.cont(v)) {
+    degree_count[colour_degree_[v]]++;
+    v = colour_classes_touched_.next(v);
+  }
+
+  Int max_degree_count_index = 0;
+  for (Int i = 1; i <= max_degree; ++i) {
+    if (degree_count[i] > degree_count[max_degree_count_index])
+      max_degree_count_index = i;
+  }
+
+  std::vector<Int> new_colour(max_degree + 1, 0);
+  for (Int i = 0; i <= max_degree; ++i) {
+    if (degree_count[i] >= 1) {
+      if (i == min_colour_degree_[s]) {
+        new_colour[i] = s;
+        if (!in_stack_[s] && max_degree_count_index != i) {
+          stack_refine_.push(new_colour[i]);
+          in_stack_[new_colour[i]] = 1;
+        }
+
+      } else {
+        latest_colour_++;
+        new_colour[i] = latest_colour_;
+        if (in_stack_[s] || i != max_degree_count_index) {
+          stack_refine_.push(new_colour[i]);
+          in_stack_[new_colour[i]] = 1;
+        }
+      }
+    }
+  }
+
+  v = colour_classes_touched_.head(s);
+  while (colour_classes_touched_.cont(v)) {
+    if (new_colour[colour_degree_[v]] != s) {
+      colour_classes_.remove(v, s);
+      colour_classes_.append(v, new_colour[colour_degree_[v]]);
+      colour_[v] = new_colour[colour_degree_[v]];
+    }
+    v = colour_classes_touched_.next(v);
+  }
+}
+
+void ColourRefinement::prepareNextIter() {
+  for (Int el = 0; el < top_touched_; ++el) {
+    const Int c = colours_touched_[el];
+    Int v = colour_classes_touched_.head(c);
+    while (colour_classes_touched_.cont(v)) {
+      colour_degree_[v] = 0;
+      v = colour_classes_touched_.next(v);
+    }
+    max_colour_degree_[c] = 0;
+    colour_classes_touched_.clear(c);
+    in_colours_touched_[c] = 0;
+  }
+  top_touched_ = 0;
+}
+
+void ColourRefinement::run() {
+  while (!stack_refine_.empty()) {
+    const Int refining_colour = chooseRefiningColour();
+    computeColourDegrees(refining_colour);
+    findSplitColours();
+    splitColours();
+    prepareNextIter();
+  }
+}
+
+const std::vector<Int>& ColourRefinement::getColour() const { return colour_; }
 
 void test_folding() {
   const std::vector<Int> ptr = {0,  3,  6,  9,  19, 22, 25,
@@ -177,7 +184,9 @@ void test_folding() {
                                 6, 7, 8, 9, 10, 3, 7, 9, 3, 6, 8,  3,  5,  8,
                                 3, 4, 9, 3, 5,  6, 3, 4, 7, 3, 11, 12, 10, 10};
 
-  const std::vector<Int> colour = colourRefinement(ptr, adj);
+  ColourRefinement CR(ptr, adj);
+  CR.run();
+  const std::vector<Int> colour = CR.getColour();
 
   printf("\n\n");
   for (Int c : colour) printf("%d", c);
