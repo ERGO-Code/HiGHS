@@ -1261,7 +1261,7 @@ TEST_CASE("test-fuzzing", "[highs_test_presolve]") {
   //  if (dev_run) {
   printf("\n====================\nWithout presolve\n====================\n");
 
-  const std::string model = "issue-009";
+  const std::string model = "issue-010";
   std::string model_file = std::string(HIGHS_DIR) + "/build/OscarFuzzing/" +
                            model + "/" + model + ".mps";
 
@@ -1281,9 +1281,10 @@ TEST_CASE("test-fuzzing", "[highs_test_presolve]") {
   std::string options_file =
       std::string(HIGHS_DIR) + "/build/OscarFuzzing/" + model + "/options.txt";
   REQUIRE(h.readOptions(options_file) == HighsStatus::kOk);
-  //  REQUIRE(h.setOptionValue("presolve_rule_off", 1 <<
-kPresolveRuleColStuffing) == HighsStatus::kOk); HighsOptions options =
-h.getOptions();
+
+  //  REQUIRE(h.setOptionValue("presolve_rule_off", 1 << kPresolveRuleColStuffing) == HighsStatus::kOk);
+
+  HighsOptions options = h.getOptions();
 
   printf("\n====================\nPresolved LP\n====================\n");
   h.presolve();

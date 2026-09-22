@@ -7114,9 +7114,6 @@ HighsModelStatus HPresolve::run(HighsPostsolveStack& postsolve_stack) {
     presolve_status_ = HighsPresolveStatus::kNotReduced;
   }
 
-  if (!mipsolver && options->use_implied_bounds_from_presolve)
-    setRelaxedImpliedBounds();
-
   assert(presolve_status_ != HighsPresolveStatus::kNotSet);
   return HighsModelStatus::kNotset;
 }
@@ -9576,43 +9573,6 @@ HPresolve::Result HPresolve::equalityRowAddition(
   // handle the cases
   HPRESOLVE_CHECKED_CALL(rowPresolve(postsolve_stack, removerow));
   return Result::kOk;
-}
-
-void HPresolve::setRelaxedImpliedBounds() {
-  double hugeBound = primal_feastol / kHighsTiny;
-  for (HighsInt i = 0; i != model->num_col_; ++i) {
-    if (model->col_lower_[i] >= implColLower[i] &&
-        model->col_upper_[i] <= implColUpper[i])
-      continue;
-
-    if (std::abs(implColLower[i]) <= hugeBound) {
-      // if the bound is derived from a small nonzero value
-      // then we want to increase the margin so that we make sure
-      // the row it was derived from is violated if the column sits
-      // at this relaxed bound in the final solution.
-      HighsInt nzPos = findNonzero(colLowerSource[i], i);
-
-      double boundRelax = std::max(1000.0, std::abs(implColLower[i])) *
-                          primal_feastol /
-                          std::min(1.0, std::abs(Avalue[nzPos]));
-
-      double newLb = implColLower[i] - boundRelax;
-      if (newLb > model->col_lower_[i] + boundRelax)
-        model->col_lower_[i] = newLb;
-    }
-
-    if (std::abs(implColUpper[i]) <= hugeBound) {
-      HighsInt nzPos = findNonzero(colUpperSource[i], i);
-
-      double boundRelax = std::max(1000.0, std::abs(implColUpper[i])) *
-                          primal_feastol /
-                          std::min(1.0, std::abs(Avalue[nzPos]));
-
-      double newUb = implColUpper[i] + boundRelax;
-      if (newUb < model->col_upper_[i] - boundRelax)
-        model->col_upper_[i] = newUb;
-    }
-  }
 }
 
 void HPresolve::extractVarBounds(HighsInt row) {
