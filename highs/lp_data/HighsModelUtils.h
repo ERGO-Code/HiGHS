@@ -92,7 +92,7 @@ void writeGlpsolCostRow(FILE* file, const HighsLogOptions& log_options,
                         const double objective_function_value);
 
 void writeGlpsolSolution(FILE* file, const HighsOptions& options,
-                         const HighsModel& model, const HighsBasis& basis,
+                         const HighsLp& lp, const HighsBasis& basis,
                          const HighsSolution& solution,
                          const HighsModelStatus model_status,
                          const HighsInfo& info, const bool raw);
