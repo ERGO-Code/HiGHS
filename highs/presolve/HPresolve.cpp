@@ -988,6 +988,17 @@ void HPresolve::changeRowUpper(HighsInt row, double newUpper,
   resetColImpliedBoundsDerivedFromRow(row);
   markChangedRow(row);
 }
+
+void HPresolve::addToRowLower(HighsInt row, const HighsCDouble& delta) {
+  if (model->row_lower_[row] == -kHighsInf) return;
+  changeRowLower(row, static_cast<double>(model->row_lower_[row] + delta));
+}
+
+void HPresolve::addToRowUpper(HighsInt row, const HighsCDouble& delta) {
+  if (model->row_upper_[row] == kHighsInf) return;
+  changeRowUpper(row, static_cast<double>(model->row_upper_[row] + delta));
+}
+
 HighsInt HPresolve::findNonzero(HighsInt row, HighsInt col) {
   if (rowroot[row] == -1) return -1;
 
@@ -1893,10 +1904,8 @@ HPresolve::Result HPresolve::finaliseProbing(
     }
     double val = 1.0;
     if (cliqueextension.second.val == 0) {
-      changeRowLower(cliqueextension.first,
-                     model->row_lower_[cliqueextension.first] - 1);
-      changeRowUpper(cliqueextension.first,
-                     model->row_upper_[cliqueextension.first] - 1);
+      addToRowLower(cliqueextension.first, HighsCDouble{-1});
+      addToRowUpper(cliqueextension.first, HighsCDouble{-1});
       val = -1.0;
     }
     addToMatrix(cliqueextension.first, cliqueextension.second.col, val);
@@ -2399,10 +2408,8 @@ HPresolve::Result HPresolve::liftingForProbing(
 
     // update left-hand / right-hand sides
     numrowsmodified++;
-    if (model->row_lower_[row] != -kHighsInf)
-      changeRowLower(row, static_cast<double>(model->row_lower_[row] + update));
-    if (model->row_upper_[row] != kHighsInf)
-      changeRowUpper(row, static_cast<double>(model->row_upper_[row] + update));
+    addToRowLower(row, update);
+    addToRowUpper(row, update);
   }
 
   highsLogDev(options->log_options, HighsLogType::kInfo,
@@ -3365,11 +3372,8 @@ void HPresolve::substitute(HighsInt row, HighsInt col, double rhs) {
     double scale = colval * substrowscale;
 
     // adjust the sides
-    if (model->row_lower_[colrow] != -kHighsInf)
-      changeRowLower(colrow, model->row_lower_[colrow] + scale * rhs);
-
-    if (model->row_upper_[colrow] != kHighsInf)
-      changeRowUpper(colrow, model->row_upper_[colrow] + scale * rhs);
+    addToRowLower(colrow, static_cast<HighsCDouble>(scale) * rhs);
+    addToRowUpper(colrow, static_cast<HighsCDouble>(scale) * rhs);
 
     for (HighsInt rowiter : rowpositions) {
       assert(Arow[rowiter] == row);
@@ -8407,11 +8411,8 @@ void HPresolve::substitute(HighsInt substcol, HighsInt staycol, double offset,
     unlink(colpos);
 
     // adjust the sides
-    if (model->row_lower_[colrow] != -kHighsInf)
-      changeRowLower(colrow, model->row_lower_[colrow] - colval * offset);
-
-    if (model->row_upper_[colrow] != kHighsInf)
-      changeRowUpper(colrow, model->row_upper_[colrow] - colval * offset);
+    addToRowLower(colrow, -static_cast<HighsCDouble>(colval) * offset);
+    addToRowUpper(colrow, -static_cast<HighsCDouble>(colval) * offset);
 
     addToMatrix(colrow, staycol, scale * colval);
     // printf("after substitution: ");
@@ -8513,11 +8514,8 @@ void HPresolve::removeFixedCol(HighsInt col, double fixval) {
     HighsInt colpos = coliter;
     coliter = Anext[coliter];
 
-    if (model->row_lower_[colrow] != -kHighsInf)
-      changeRowLower(colrow, model->row_lower_[colrow] - colval * fixval);
-
-    if (model->row_upper_[colrow] != kHighsInf)
-      changeRowUpper(colrow, model->row_upper_[colrow] - colval * fixval);
+    addToRowLower(colrow, -static_cast<HighsCDouble>(colval) * fixval);
+    addToRowUpper(colrow, -static_cast<HighsCDouble>(colval) * fixval);
 
     unlink(colpos);
 
@@ -9589,16 +9587,10 @@ HPresolve::Result HPresolve::equalityRowAddition(
       addToMatrix(removerow, Acol[rowiter], scale * Avalue[rowiter]);
   }
 
-  if (model->row_upper_[removerow] != kHighsInf)
-    changeRowUpper(removerow,
-                   static_cast<double>(model->row_upper_[removerow] +
-                                       static_cast<HighsCDouble>(scale) *
-                                           model->row_upper_[stayrow]));
-  if (model->row_lower_[removerow] != -kHighsInf)
-    changeRowLower(removerow,
-                   static_cast<double>(model->row_lower_[removerow] +
-                                       static_cast<HighsCDouble>(scale) *
-                                           model->row_upper_[stayrow]));
+  addToRowLower(removerow,
+                static_cast<HighsCDouble>(scale) * model->row_upper_[stayrow]);
+  addToRowUpper(removerow,
+                static_cast<HighsCDouble>(scale) * model->row_upper_[stayrow]);
 
   // row is now a singleton row, doubleton equation, or a row
   // that contains only singletons and we let the normal row presolve
@@ -9968,11 +9960,8 @@ HPresolve::Result HPresolve::sparsify(HighsPostsolveStack& postsolve_stack) {
       HighsInt row = sparsifyRow.index;
       double scale = sparsifyRow.value;
 
-      if (model->row_lower_[row] != -kHighsInf)
-        changeRowLower(row, model->row_lower_[row] + scale * rhs);
-
-      if (model->row_upper_[row] != kHighsInf)
-        changeRowUpper(row, model->row_upper_[row] + scale * rhs);
+      addToRowLower(row, static_cast<HighsCDouble>(scale) * rhs);
+      addToRowUpper(row, static_cast<HighsCDouble>(scale) * rhs);
 
       for (HighsInt pos : rowpositions)
         addToMatrix(row, Acol[pos], scale * Avalue[pos]);

@@ -221,6 +221,11 @@ class HPresolve {
 
   void changeRowUpper(HighsInt row, double newUpper,
                       bool skipRowDualUpdate = false);
+
+  void addToRowLower(HighsInt row, const HighsCDouble& delta);
+
+  void addToRowUpper(HighsInt row, const HighsCDouble& delta);
+
   bool rowCoefficientsIntegral(HighsInt row, double scale) const;
 
   bool isBinary(HighsInt col) const;
