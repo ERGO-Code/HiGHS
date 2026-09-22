@@ -35,6 +35,8 @@ ColourRefinement::ColourRefinement(const HighsSparseMatrix& A,
       in_colours_touched_(n_, 0),
       colours_split_(n_, 0),
       in_stack_(n_, 0) {
+  Clock clock;
+
   colour_classes_.init(n_, n_);
   colour_classes_touched_.init(n_, n_);
 
@@ -54,6 +56,8 @@ ColourRefinement::ColourRefinement(const HighsSparseMatrix& A,
   } else {
     assert(A_.num_row_ == A_.num_col_);
   }
+
+  time_setup_ = clock.stop();
 }
 
 void ColourRefinement::forEachNeighbour(Int v,
@@ -89,12 +93,18 @@ void ColourRefinement::forEachNeighbourBipartite(
 }
 
 void ColourRefinement::chooseRefiningColour() {
+  Clock clock;
+
   refining_colour_ = stack_refine_.top();
   stack_refine_.pop();
   in_stack_[refining_colour_] = 0;
+
+  time_choose_ += clock.stop();
 }
 
 void ColourRefinement::computeColourDegrees() {
+  Clock clock;
+
   Int v = colour_classes_.head(refining_colour_);
   while (colour_classes_.cont(v)) {
     forEachNeighbour(v, [this](Int w) {
@@ -128,9 +138,13 @@ void ColourRefinement::computeColourDegrees() {
       }
     }
   }
+
+  time_degrees_ += clock.stop();
 }
 
 void ColourRefinement::findSplitColours() {
+  Clock clock;
+
   top_split_ = 0;
   for (Int el = 0; el < top_touched_; ++el) {
     const Int c = colours_touched_[el];
@@ -140,13 +154,19 @@ void ColourRefinement::findSplitColours() {
     }
   }
   std::sort(colours_split_.begin(), colours_split_.begin() + top_split_);
+
+  time_find_split_ += clock.stop();
 }
 
 void ColourRefinement::splitColours() {
+  Clock clock;
+
   for (Int el = 0; el < top_split_; ++el) {
     const Int s = colours_split_[el];
     splitColour(s);
   }
+
+  time_split_ += clock.stop();
 }
 
 void ColourRefinement::splitColour(const Int s) {
@@ -200,6 +220,8 @@ void ColourRefinement::splitColour(const Int s) {
 }
 
 void ColourRefinement::prepareNextIter() {
+  Clock clock;
+
   for (Int el = 0; el < top_touched_; ++el) {
     const Int c = colours_touched_[el];
     Int v = colour_classes_touched_.head(c);
@@ -212,6 +234,8 @@ void ColourRefinement::prepareNextIter() {
     in_colours_touched_[c] = 0;
   }
   top_touched_ = 0;
+
+  time_prepare_ += clock.stop();
 }
 
 void ColourRefinement::run() {
@@ -225,7 +249,14 @@ void ColourRefinement::run() {
     prepareNextIter();
   }
 
-  printf("ColourRefinement took %f\n", clock.stop());
+  printf("ColourRefinement timers\n");
+  printf("Total     %f\n", clock.stop());
+  printf("  setup   %f\n", time_setup_);
+  printf("  choose  %f\n", time_choose_);
+  printf("  degrees %f\n", time_degrees_);
+  printf("  find    %f\n", time_find_split_);
+  printf("  split   %f\n", time_split_);
+  printf("  prepare %f\n", time_prepare_);
 }
 
 void test_folding() {

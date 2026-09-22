@@ -38,6 +38,13 @@ class ColourRefinement {
   std::stack<Int> stack_refine_;
   std::vector<HighsBool> in_stack_;
 
+  double time_setup_{};
+  double time_choose_{};
+  double time_degrees_{};
+  double time_find_split_{};
+  double time_split_{};
+  double time_prepare_{};
+
   void chooseRefiningColour();
   void computeColourDegrees();
   void findSplitColours();
