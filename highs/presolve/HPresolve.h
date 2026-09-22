@@ -214,6 +214,18 @@ class HPresolve {
 
   void resetRowDualImpliedBoundsDerivedFromCol(HighsInt col);
 
+  void matrixNonZeroChanged(HighsInt row, HighsInt col);
+
+  void changeRowLower(HighsInt row, double newLower,
+                      bool skipRowDualUpdate = false);
+
+  void changeRowUpper(HighsInt row, double newUpper,
+                      bool skipRowDualUpdate = false);
+
+  void addToRowLower(HighsInt row, const HighsCDouble& delta);
+
+  void addToRowUpper(HighsInt row, const HighsCDouble& delta);
+
   bool rowCoefficientsIntegral(HighsInt row, double scale) const;
 
   bool isBinary(HighsInt col) const;
