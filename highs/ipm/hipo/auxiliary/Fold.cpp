@@ -5,15 +5,21 @@
 
 namespace hipo {
 
-// Taken from "Tight Lower and Upper Bounds for the Complexity
-// of Canonical Colour Refinement", Berkholz, Bonsma, Grohe
+/*
+Taken from "Tight Lower and Upper Bounds for the Complexity
+of Canonical Colour Refinement", Berkholz, Bonsma, Grohe
+
+Pass a graph adjacency structure in CSC format (ptr,adj), and the initial
+colouring. The colouring must be formed of consecutive colours 0...k.
+*/
 
 ColourRefinement::ColourRefinement(const std::vector<Int>& ptr,
-                                   const std::vector<Int>& adj)
+                                   const std::vector<Int>& adj,
+                                   const std::vector<Int>& colour)
     : ptr_{ptr},
       adj_{adj},
       n_{static_cast<Int>(ptr_.size() - 1)},
-      colour_(n_, 0),
+      colour_{colour},
       colour_degree_(n_, 0),
       max_colour_degree_(n_, 0),
       min_colour_degree_(n_, 0),
@@ -24,10 +30,13 @@ ColourRefinement::ColourRefinement(const std::vector<Int>& ptr,
   colour_classes_.init(n_, n_);
   colour_classes_touched_.init(n_, n_);
 
-  // initial uniform colour 0
-  for (Int i = 0; i < n_; ++i) colour_classes_.append(i, 0);
-  stack_refine_.push(0);
-  in_stack_[0] = 1;
+  for (Int i = 0; i < n_; ++i) colour_classes_.append(i, colour_[i]);
+
+  latest_colour_ = *std::max_element(colour_.begin(), colour_.end());
+  for (Int i = 0; i <= latest_colour_; ++i) {
+    stack_refine_.push(i);
+    in_stack_[i] = 1;
+  }
 }
 
 void ColourRefinement::chooseRefiningColour() {
@@ -182,7 +191,10 @@ void test_folding() {
                                 6, 7, 8, 9, 10, 3, 7, 9, 3, 6, 8,  3,  5,  8,
                                 3, 4, 9, 3, 5,  6, 3, 4, 7, 3, 11, 12, 10, 10};
 
-  ColourRefinement CR(ptr, adj);
+  std::vector<Int> initial_colour(ptr.size() - 1, 0);
+  initial_colour = {1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 0, 0};
+
+  ColourRefinement CR(ptr, adj, initial_colour);
   CR.run();
   const std::vector<Int> colour = CR.getColour();
 

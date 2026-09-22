@@ -25,7 +25,7 @@ class ColourRefinement {
   CollectionLinkedLists colour_classes_;
   CollectionLinkedLists colour_classes_touched_;
 
-  Int latest_colour_{};
+  Int latest_colour_;
   Int refining_colour_;
 
   std::stack<Int> stack_refine_;
@@ -39,7 +39,8 @@ class ColourRefinement {
   void prepareNextIter();
 
  public:
-  ColourRefinement(const std::vector<Int>& ptr, const std::vector<Int>& adj);
+  ColourRefinement(const std::vector<Int>& ptr, const std::vector<Int>& adj,
+                   const std::vector<Int>& colour);
   void run();
   const std::vector<Int>& getColour() const;
 };
