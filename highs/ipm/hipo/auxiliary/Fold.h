@@ -1,14 +1,19 @@
 #ifndef HIPO_FOLDING_H
 #define HIPO_FOLDING_H
 
+#include <functional>
+
 #include "CollectionLinkedLists.h"
+#include "util/HighsSparseMatrix.h"
 
 namespace hipo {
 
 class ColourRefinement {
-  const std::vector<Int>& ptr_;
-  const std::vector<Int>& adj_;
   const Int n_;
+  const bool bipartite_ = false;
+
+  const HighsSparseMatrix& A_;
+  HighsSparseMatrix At_;
 
   std::vector<Int> colour_;
   std::vector<Int> colour_degree_;
@@ -38,9 +43,13 @@ class ColourRefinement {
   void splitColour(Int split_colour);
   void prepareNextIter();
 
+  void forEachNeighbour(Int v, const std::function<void(int)>& f);
+  void forEachNeighbourNonBipartite(Int v, const std::function<void(int)>& f);
+  void forEachNeighbourBipartite(Int v, const std::function<void(int)>& f);
+
  public:
-  ColourRefinement(const std::vector<Int>& ptr, const std::vector<Int>& adj,
-                   const std::vector<Int>& colour);
+  ColourRefinement(const HighsSparseMatrix& A, const std::vector<Int>& colour,
+                   bool bipartite);
   void run();
   const std::vector<Int>& getColour() const;
 };
