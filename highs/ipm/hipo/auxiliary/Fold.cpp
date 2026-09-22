@@ -93,11 +93,6 @@ void ColourRefinement::chooseRefiningColour() {
   refining_colour_ = stack_refine_.top();
   stack_refine_.pop();
   in_stack_[refining_colour_] = 0;
-
-  printf("\n");
-  for (Int c : colour_) printf("%d", c);
-  printf("\n");
-  printf("Refine with r = %d\n", refining_colour_);
 }
 
 void ColourRefinement::computeColourDegrees() {
@@ -156,8 +151,6 @@ void ColourRefinement::splitColours() {
 }
 
 void ColourRefinement::splitColour(const Int s) {
-  printf("\tSplit %d\n", s);
-
   const Int max_degree = max_colour_degree_[s];
   std::vector<Int> degree_count(max_degree + 1, 0);
   degree_count[0] =
@@ -236,9 +229,9 @@ const std::vector<Int>& ColourRefinement::getColour() const { return colour_; }
 
 void test_folding() {
   HighsSparseMatrix A1;
-  A1.start_ = {0, 4, 8, 9, 10, 11, 12, 13, 14, 15, 16, 20, 24, 28, 32};
-  A1.index_ = {10, 11, 12, 13, 10, 11, 12, 13, 10, 10, 11, 11, 12, 12, 13, 13,
-               0,  1,  2,  3,  0,  1,  4,  5,  0,  1,  6,  7,  0,  1,  8,  9};
+  A1.start_ = {0, 3, 7, 11, 15, 18, 21, 24, 27, 30};
+  A1.index_ = {4, 5, 6, 4, 5, 7, 8, 4, 6, 7, 8, 5, 6, 7, 8,
+               0, 1, 2, 0, 1, 3, 0, 2, 3, 1, 2, 3, 1, 2, 3};
   A1.value_.resize(A1.index_.size());
   A1.num_row_ = A1.start_.size() - 1;
   A1.num_col_ = A1.start_.size() - 1;
@@ -256,8 +249,8 @@ void test_folding() {
   // bipartite
 
   HighsSparseMatrix A2;
-  A2.start_ = {0, 4, 8, 12, 16};
-  A2.index_ = {0, 1, 2, 3, 0, 1, 4, 5, 0, 1, 6, 7, 0, 1, 8, 9};
+  A2.start_ = {0, 3, 6, 9, 12, 15};
+  A2.index_ = {0, 1, 2, 0, 1, 3, 0, 2, 3, 1, 2, 3, 1, 2, 3};
   A2.value_.resize(A2.index_.size());
   A2.num_row_ = *std::max_element(A2.index_.begin(), A2.index_.end()) + 1;
   A2.num_col_ = A2.start_.size() - 1;
