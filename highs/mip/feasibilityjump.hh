@@ -145,7 +145,7 @@ class Problem {
     // If we are relaxing continuous variables, an equality needs to be split
     // into Gte and Lte.
     if (relax_continuous > 0 && sense == RowType::Equal)
-      if (std::any_of(rowVarIdxs, rowVarIdxs + numCoeffs, [&](double varIdx) {
+      if (std::any_of(rowVarIdxs, rowVarIdxs + numCoeffs, [&](int varIdx) {
             return vars[varIdx].vartype == VarType::Continuous;
           })) {
         addConstraint(RowType::Gte, rhs, numCoeffs, rowVarIdxs, rowCoeffs,
