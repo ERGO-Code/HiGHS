@@ -2,6 +2,7 @@
 #define HIPO_FOLDING_H
 
 #include <functional>
+#include <stack>
 
 #include "CollectionLinkedLists.h"
 #include "util/HighsSparseMatrix.h"

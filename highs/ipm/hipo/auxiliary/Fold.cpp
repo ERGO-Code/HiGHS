@@ -1,7 +1,6 @@
 #include "Fold.h"
 
 #include <algorithm>
-#include <stack>
 
 #include "ipm/hipo/auxiliary/Auxiliary.h"
 #include "util/HighsSparseMatrix.h"
