@@ -959,6 +959,8 @@ void HPresolve::changeRowLower(HighsInt row, double newLower,
     }
   }
 
+  // tightening preserves validity of column implied bounds; only reset on
+  // loosening
   if (newLower < oldLower) resetColImpliedBoundsDerivedFromRow(row);
   markChangedRow(row);
 }
@@ -985,6 +987,8 @@ void HPresolve::changeRowUpper(HighsInt row, double newUpper,
     }
   }
 
+  // tightening preserves validity of column implied bounds; only reset on
+  // loosening
   if (newUpper > oldUpper) resetColImpliedBoundsDerivedFromRow(row);
   markChangedRow(row);
 }
