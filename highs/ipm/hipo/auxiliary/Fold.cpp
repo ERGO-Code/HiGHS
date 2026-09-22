@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <stack>
 
+#include "ipm/hipo/auxiliary/Auxiliary.h"
 #include "util/HighsSparseMatrix.h"
 
 namespace hipo {
@@ -23,8 +24,7 @@ the structure of the adjacency matrix (symmetric).
 */
 
 ColourRefinement::ColourRefinement(const HighsSparseMatrix& A,
-                                   const std::vector<Int>& colour,
-                                   bool bipartite)
+                                   std::vector<Int>& colour, bool bipartite)
     : n_{bipartite ? A.num_row_ + A.num_col_ : A.num_row_},
       bipartite_{bipartite},
       A_{A},
@@ -216,6 +216,8 @@ void ColourRefinement::prepareNextIter() {
 }
 
 void ColourRefinement::run() {
+  Clock clock;
+
   while (!stack_refine_.empty()) {
     chooseRefiningColour();
     computeColourDegrees();
@@ -223,9 +225,9 @@ void ColourRefinement::run() {
     splitColours();
     prepareNextIter();
   }
-}
 
-const std::vector<Int>& ColourRefinement::getColour() const { return colour_; }
+  printf("ColourRefinement took %f\n", clock.stop());
+}
 
 void test_folding() {
   HighsSparseMatrix A1;
@@ -235,11 +237,10 @@ void test_folding() {
   A1.value_.resize(A1.index_.size());
   A1.num_row_ = A1.start_.size() - 1;
   A1.num_col_ = A1.start_.size() - 1;
-  std::vector<Int> initial_colour1(A1.start_.size() - 1, 0);
+  std::vector<Int> colour1(A1.start_.size() - 1, 0);
 
-  ColourRefinement CR1(A1, initial_colour1, false);
+  ColourRefinement CR1(A1, colour1, false);
   CR1.run();
-  const std::vector<Int> colour1 = CR1.getColour();
 
   printf("\n\n");
   for (Int c : colour1) printf("%d", c);
@@ -254,16 +255,29 @@ void test_folding() {
   A2.value_.resize(A2.index_.size());
   A2.num_row_ = *std::max_element(A2.index_.begin(), A2.index_.end()) + 1;
   A2.num_col_ = A2.start_.size() - 1;
-  std::vector<Int> initial_colour2(A2.num_row_, 0);
-  initial_colour2.insert(initial_colour2.end(), A2.num_col_, 1);
+  std::vector<Int> colour2(A2.num_row_, 0);
+  colour2.insert(colour2.end(), A2.num_col_, 1);
 
-  ColourRefinement CR2(A2, initial_colour2, true);
+  ColourRefinement CR2(A2, colour2, true);
   CR2.run();
-  const std::vector<Int> colour2 = CR2.getColour();
 
   printf("\n\n");
   for (Int c : colour2) printf("%d", c);
   printf("\n");
+}
+
+void test_folding(const HighsSparseMatrix& A) {
+  std::vector<Int> colour(A.num_row_, 0);
+  colour.insert(colour.end(), A.num_col_, 1);
+  ColourRefinement CR(A, colour, true);
+  CR.run();
+
+  if (A.num_row_ + A.num_col_ < 200) {
+    printf("\n\n");
+    for (Int c : colour) printf("%d-", c);
+  }
+  printf("\nUsed %d colours for %d vertices\n\n", CR.coloursUsed(),
+         A.num_row_ + A.num_col_);
 }
 
 }  // namespace hipo

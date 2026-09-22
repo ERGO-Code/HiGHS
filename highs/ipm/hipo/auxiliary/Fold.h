@@ -15,7 +15,8 @@ class ColourRefinement {
   const HighsSparseMatrix& A_;
   HighsSparseMatrix At_;
 
-  std::vector<Int> colour_;
+  std::vector<Int>& colour_;
+
   std::vector<Int> colour_degree_;
   std::vector<Int> max_colour_degree_;
   std::vector<Int> min_colour_degree_;
@@ -48,13 +49,14 @@ class ColourRefinement {
   void forEachNeighbourBipartite(Int v, const std::function<void(int)>& f);
 
  public:
-  ColourRefinement(const HighsSparseMatrix& A, const std::vector<Int>& colour,
+  ColourRefinement(const HighsSparseMatrix& A, std::vector<Int>& colour,
                    bool bipartite);
   void run();
-  const std::vector<Int>& getColour() const;
+  Int coloursUsed() const { return latest_colour_; }
 };
 
 void test_folding();
+void test_folding(const HighsSparseMatrix& A);
 
 }  // namespace hipo
 

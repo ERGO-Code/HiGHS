@@ -142,8 +142,6 @@ void Solver::reset() {
 }
 
 void Solver::solve() {
-  test_folding();
-
   doSolve();
   info_.ipm_iter = iter_;
   finaliseStatus();
