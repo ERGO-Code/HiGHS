@@ -26,12 +26,13 @@ class ColourRefinement {
   CollectionLinkedLists colour_classes_touched_;
 
   Int latest_colour_{};
+  Int refining_colour_;
 
   std::stack<Int> stack_refine_;
   std::vector<HighsBool> in_stack_;
 
-  Int chooseRefiningColour();
-  void computeColourDegrees(Int refining_colour);
+  void chooseRefiningColour();
+  void computeColourDegrees();
   void findSplitColours();
   void splitColours();
   void splitColour(Int split_colour);

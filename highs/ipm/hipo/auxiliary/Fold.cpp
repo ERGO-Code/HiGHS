@@ -30,21 +30,19 @@ ColourRefinement::ColourRefinement(const std::vector<Int>& ptr,
   in_stack_[0] = 1;
 }
 
-Int ColourRefinement::chooseRefiningColour() {
-  const Int refining_colour = stack_refine_.top();
+void ColourRefinement::chooseRefiningColour() {
+  refining_colour_ = stack_refine_.top();
   stack_refine_.pop();
-  in_stack_[refining_colour] = 0;
+  in_stack_[refining_colour_] = 0;
 
   printf("\n");
   for (Int c : colour_) printf("%d", c);
   printf("\n");
-  printf("Refine with r = %d\n", refining_colour);
-
-  return refining_colour;
+  printf("Refine with r = %d\n", refining_colour_);
 }
 
-void ColourRefinement::computeColourDegrees(const Int refining_colour) {
-  Int v = colour_classes_.head(refining_colour);
+void ColourRefinement::computeColourDegrees() {
+  Int v = colour_classes_.head(refining_colour_);
   while (colour_classes_.cont(v)) {
     for (Int el = ptr_[v]; el < ptr_[v + 1]; ++el) {
       const Int w = adj_[el];
@@ -167,8 +165,8 @@ void ColourRefinement::prepareNextIter() {
 
 void ColourRefinement::run() {
   while (!stack_refine_.empty()) {
-    const Int refining_colour = chooseRefiningColour();
-    computeColourDegrees(refining_colour);
+    chooseRefiningColour();
+    computeColourDegrees();
     findSplitColours();
     splitColours();
     prepareNextIter();
