@@ -3999,17 +3999,19 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
   // Convert to equality constraint and record for dual postsolve
   if (!isEquation(row)) {
     if (isImpliedEquationAtLower(row)) {
+      // save source before changeRowUpper resets it
+      HighsInt dualLowerSourceCol = rowDualLowerSource[row];
       changeRowUpper(row, model->row_lower_[row]);
       postsolve_stack.impliedEquation(row, true, getRowVector(row));
       if (mipsolver == nullptr)
-        HPRESOLVE_CHECKED_CALL(
-            checkRedundantBounds(rowDualLowerSource[row], row));
+        HPRESOLVE_CHECKED_CALL(checkRedundantBounds(dualLowerSourceCol, row));
     } else if (isImpliedEquationAtUpper(row)) {
+      // save source before changeRowLower resets it
+      HighsInt dualUpperSourceCol = rowDualUpperSource[row];
       changeRowLower(row, model->row_upper_[row]);
       postsolve_stack.impliedEquation(row, false, getRowVector(row));
       if (mipsolver == nullptr)
-        HPRESOLVE_CHECKED_CALL(
-            checkRedundantBounds(rowDualUpperSource[row], row));
+        HPRESOLVE_CHECKED_CALL(checkRedundantBounds(dualUpperSourceCol, row));
     }
   }
 
