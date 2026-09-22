@@ -36,9 +36,28 @@ class CollectionLinkedLists {
   Int tail(Int list) const { return backward_[n_elem_ + list]; }
   Int prev(Int elem) const { return backward_[elem]; }
   Int length(Int list) const { return length_[list]; }
+  bool cont(Int v) const { return v < n_elem_; }
 
   void test();
 };
+
+/*
+To go through list i:
+
+Int v = head(i);
+while (cont(v)){
+  ...
+  v = next(v);
+}
+
+or reverse
+
+Int v = tail(i);
+while (cont(v)){
+  ...
+  v = prev(v);
+}
+*/
 
 }  // namespace hipo
 

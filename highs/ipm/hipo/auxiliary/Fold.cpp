@@ -41,7 +41,7 @@ std::vector<Int> colourRefinement(const std::vector<Int> ptr,
     numcdeg[0] = C.length(s) - A.length(s);
 
     Int v = A.head(s);
-    while (v < n) {
+    while (A.cont(v)) {
       numcdeg[cdeg[v]]++;
       v = A.next(v);
     }
@@ -73,7 +73,7 @@ std::vector<Int> colourRefinement(const std::vector<Int> ptr,
     }
 
     v = A.head(s);
-    while (v < n) {
+    while (A.cont(v)) {
       if (f[cdeg[v]] != s) {
         C.remove(v, s);
         C.append(v, f[cdeg[v]]);
@@ -95,7 +95,7 @@ std::vector<Int> colourRefinement(const std::vector<Int> ptr,
     printf("Refine with r = %d\n", r);
 
     Int v = C.head(r);
-    while (v < n) {
+    while (C.cont(v)) {
       for (Int el = ptr[v]; el < ptr[v + 1]; ++el) {
         const Int w = adj[el];
         cdeg[w]++;
@@ -119,7 +119,7 @@ std::vector<Int> colourRefinement(const std::vector<Int> ptr,
       else {
         mincdeg[c] = maxcdeg[c];
         Int v = A.head(c);
-        while (v < n) {
+        while (A.cont(v)) {
           if (cdeg[v] < mincdeg[c]) mincdeg[c] = cdeg[v];
           v = A.next(v);
         }
@@ -144,7 +144,7 @@ std::vector<Int> colourRefinement(const std::vector<Int> ptr,
     for (Int c_ind = 0; c_ind < colours_adj_top; ++c_ind) {
       const Int c = colours_adj[c_ind];
       Int v = A.head(c);
-      while (v < n) {
+      while (A.cont(v)) {
         cdeg[v] = 0;
         v = A.next(v);
       }
@@ -159,9 +159,11 @@ std::vector<Int> colourRefinement(const std::vector<Int> ptr,
 }
 
 void test_folding() {
-  const std::vector<Int> ptr = {0, 3, 5, 8, 10, 14, 16, 19, 21, 24};
-  const std::vector<Int> adj = {1, 2, 3, 0, 4, 0, 3, 4, 0, 2, 1, 2,
-                                5, 8, 4, 6, 5, 7, 8, 6, 8, 4, 6, 7};
+  const std::vector<Int> ptr = {0,  3,  6,  9,  19, 22, 25,
+                                28, 31, 34, 37, 40, 41, 42};
+  const std::vector<Int> adj = {1, 2, 3, 0, 2,  3, 0, 1, 3, 0, 1,  2,  4,  5,
+                                6, 7, 8, 9, 10, 3, 7, 9, 3, 6, 8,  3,  5,  8,
+                                3, 4, 9, 3, 5,  6, 3, 4, 7, 3, 11, 12, 10, 10};
 
   const std::vector<Int> colour = colourRefinement(ptr, adj);
 

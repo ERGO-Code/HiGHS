@@ -17,13 +17,15 @@ void CollectionLinkedLists::init(Int n_elem, Int n_lists) {
 }
 
 void CollectionLinkedLists::clear(Int list) {
-  Int current = forward_[n_elem_ + list];
+  /*Int current = forward_[n_elem_ + list];
   while (current < n_elem_) {
     const Int temp = forward_[current];
     forward_[current] = current;
     backward_[current] = current;
     current = temp;
   }
+  */
+
   forward_[n_elem_ + list] = n_elem_ + list;
   backward_[n_elem_ + list] = n_elem_ + list;
   length_[list] = 0;
