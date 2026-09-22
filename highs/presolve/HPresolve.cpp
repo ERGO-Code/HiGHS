@@ -959,7 +959,7 @@ void HPresolve::changeRowLower(HighsInt row, double newLower,
     }
   }
 
-  resetColImpliedBoundsDerivedFromRow(row);
+  if (newLower < oldLower) resetColImpliedBoundsDerivedFromRow(row);
   markChangedRow(row);
 }
 
@@ -985,7 +985,7 @@ void HPresolve::changeRowUpper(HighsInt row, double newUpper,
     }
   }
 
-  resetColImpliedBoundsDerivedFromRow(row);
+  if (newUpper > oldUpper) resetColImpliedBoundsDerivedFromRow(row);
   markChangedRow(row);
 }
 
