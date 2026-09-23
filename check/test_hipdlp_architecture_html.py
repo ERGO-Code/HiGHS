@@ -28,6 +28,9 @@ class ArchitecturePageParser(HTMLParser):
         self.data_chunks = []
         self.in_data = False
         self.elements = {}
+        self.lane_buttons = []
+        self.backend_lane_cards = []
+        self.shared_operation_cards = []
         self.style_chunks = []
         self.in_style = False
         self.current_node = None
@@ -46,6 +49,12 @@ class ArchitecturePageParser(HTMLParser):
         if tag == "article" and element_id in SYSTEM_NODE_IDS:
             self.current_node = element_id
         classes = set(attributes.get("class", "").split())
+        if tag == "button" and "data-lane" in attributes:
+            self.lane_buttons.append(attributes)
+        if tag == "div" and "lane-card" in classes:
+            self.backend_lane_cards.append(attributes)
+        if tag == "li" and "operation-card" in classes:
+            self.shared_operation_cards.append(attributes)
         if (
             tag == "details"
             and self.current_node is not None
@@ -323,6 +332,85 @@ class ArchitecturePageTests(unittest.TestCase):
         self.assertEqual(kernels["checkPacketKernel"]["blocks"], 1)
         self.assertEqual(kernels["cusparseSpMV"]["grid"], "vendor-controlled")
         self.assertEqual(kernels["checkPacketKernel"]["dynamicSharedBytes"], 0)
+
+    def test_replay_semantics_match_solver_scheduling(self):
+        self.assertEqual(
+            self.data["iteration"]["replaySemantics"],
+            {
+                "initialStep": "direct",
+                "firstPostRestartStep": "direct",
+                "shortTail": "direct",
+                "submittedBlockSteps": 39,
+                "hostTimeLimitChecks": "before-and-after-block",
+                "hostInterruptible": False,
+            },
+        )
+        for phrase in (
+            "The initial step and the first post-restart step execute directly.",
+            "Short tails with fewer than 39 remaining steps execute directly.",
+            "a submitted 39-step block cannot be interrupted by host "
+            "time-limit checks",
+        ):
+            with self.subTest(phrase=phrase):
+                self.assertIn(phrase, self.source)
+
+    def test_lane_controls_filter_only_backend_cards_and_default_to_compare(self):
+        self.assertEqual(
+            [
+                (button["data-lane"], button["aria-pressed"])
+                for button in self.parser.lane_buttons
+            ],
+            [("cpu", "false"), ("cuda", "false"), ("compare", "true")],
+        )
+        self.assertEqual(len(self.parser.backend_lane_cards), 10)
+        self.assertEqual(
+            {
+                card.get("data-backend")
+                for card in self.parser.backend_lane_cards
+            },
+            {"cpu", "cuda"},
+        )
+        self.assertTrue(
+            all("hidden" not in card for card in self.parser.backend_lane_cards)
+        )
+        self.assertEqual(len(self.parser.shared_operation_cards), 5)
+        self.assertTrue(
+            all(
+                "data-backend" not in card and "hidden" not in card
+                for card in self.parser.shared_operation_cards
+            )
+        )
+        for behavior in (
+            'function activateLane(lane)',
+            'document.querySelectorAll(".lane-card[data-backend]")',
+            'button.setAttribute("aria-pressed", String(isActive))',
+            'card.hidden = lane !== "compare" && card.dataset.backend !== lane',
+            'button.addEventListener("click", () => activateLane(',
+            'activateLane("compare")',
+        ):
+            with self.subTest(behavior=behavior):
+                self.assertIn(behavior, self.source)
+
+    def test_iteration_facts_stack_below_480px(self):
+        styles = self.normalized(self.parser.style_chunks)
+        self.assertIn(
+            "@media (max-width: 480px) { .field-groups, "
+            ".iteration-facts { grid-template-columns: 1fr; } }",
+            styles,
+        )
+        self.assertRegex(
+            styles,
+            r"\.resource-card \{[^}]*min-width: 0;"
+            r"[^}]*overflow-wrap: anywhere;",
+        )
+        self.assertRegex(
+            styles,
+            r"\.operation-card \{[^}]*min-width: 0;",
+        )
+        self.assertIn(
+            ".operation-card code { overflow-wrap: anywhere; }",
+            styles,
+        )
 
     def test_iteration_view_names_real_backend_and_kernel_symbols(self):
         for token in (

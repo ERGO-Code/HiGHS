@@ -280,6 +280,8 @@
       overflow-wrap: anywhere;
     }
     .resource-card {
+      min-width: 0;
+      overflow-wrap: anywhere;
       padding: 18px;
       border: 1px solid var(--line);
       border-top: 5px solid var(--host);
@@ -421,6 +423,7 @@
     }
     .operation-card {
       position: relative;
+      min-width: 0;
       padding: 17px 17px 17px 54px;
       border: 1px solid var(--line);
       border-left: 5px solid var(--control);
@@ -446,6 +449,7 @@
       font-weight: 700;
     }
     .operation-card h4 { margin: 0 0 4px; font-size: 17px; }
+    .operation-card code { overflow-wrap: anywhere; }
     .operation-card > p { margin: 4px 0 12px; color: var(--muted); }
     .operation-card.spmv-operation { border-left-color: var(--hotspot); }
     .lane-columns {
@@ -631,7 +635,8 @@
       .view { padding: 18px; }
     }
     @media (max-width: 480px) {
-      .field-groups { grid-template-columns: 1fr; }
+      .field-groups,
+      .iteration-facts { grid-template-columns: 1fr; }
     }
   </style>
 </head>
@@ -1215,11 +1220,11 @@
                 <h4><code>enqueueHalpernPdhgStep</code></h4>
                 <p>Host 控制器校验 14 个句柄、正步长、迭代计数与 scalar offset，并构造 primal step、dual step、anchor weight。</p>
                 <div class="lane-columns">
-                  <div class="lane-card cpu">
+                  <div class="lane-card cpu" data-backend="cpu">
                     <strong>CPU lane</strong>
                     同步调用 serial Backend；任一 <code>api::Error</code> 立即返回。
                   </div>
-                  <div class="lane-card cuda">
+                  <div class="lane-card cuda" data-backend="cuda">
                     <strong>CUDA lane</strong>
                     向 Backend stream 排队；录制时同样的调用成为 CUDA graph 节点。
                   </div>
@@ -1230,11 +1235,11 @@
                 <h4><code>fusedProjectedPrimalUpdateAndReflect</code></h4>
                 <p>从 <code>current_primal</code> 与 <code>current_aty</code> 计算投影后的 <code>primal_candidate</code>，并产生 <code>reflected_primal = 2*candidate-current</code>。</p>
                 <div class="lane-columns">
-                  <div class="lane-card cpu">
+                  <div class="lane-card cpu" data-backend="cpu">
                     <strong>CPU lane · column loop</strong>
                     serial <code>for col</code>：梯度更新、lower/upper clamp、反射与 finite check。
                   </div>
-                  <div class="lane-card cuda">
+                  <div class="lane-card cuda" data-backend="cuda">
                     <strong>CUDA lane · custom kernel</strong>
                     <code>projectedPrimalKernel&lt;true&gt;</code>，column-sized grid-stride launch。
                   </div>
@@ -1245,11 +1250,11 @@
                 <h4><code>multiplyAndProjectedDualUpdateAndReflect</code></h4>
                 <p>组合操作先计算 <code>A * reflected_primal → reflected_ax</code>，随后以 row bounds 更新、投影并反射 dual；forward product 不是一个额外的顶层算法调用。</p>
                 <div class="lane-columns">
-                  <div class="lane-card cpu">
+                  <div class="lane-card cpu" data-backend="cpu">
                     <strong>CPU lane · sparse loop + row loop</strong>
                     <code>multiplySparse(matrix, reflected_primal)</code>，再执行 projected dual / reflection loop。
                   </div>
-                  <div class="lane-card cuda">
+                  <div class="lane-card cuda" data-backend="cuda">
                     <strong>CUDA lane · vendor + custom</strong>
                     <code>executeSpmv → cusparseSpMV</code>，然后 <code>projectedDualKernel&lt;true&gt;</code>。
                   </div>
@@ -1261,11 +1266,11 @@
                 <h4><code>fusedVectorBlend</code></h4>
                 <p>用 <code>1/(next_iteration+1)</code> 同时混合 primal/dual anchor 与 reflected vectors，写入 <code>next_primal</code>、<code>next_dual</code>。</p>
                 <div class="lane-columns">
-                  <div class="lane-card cpu">
+                  <div class="lane-card cpu" data-backend="cpu">
                     <strong>CPU lane · two serial loops</strong>
                     分别遍历 columns 与 rows，检查 weight 和输出有限性。
                   </div>
-                  <div class="lane-card cuda">
+                  <div class="lane-card cuda" data-backend="cuda">
                     <strong>CUDA lane · paired kernel</strong>
                     单次 <code>vectorPairBlendKernel</code> 覆盖 <code>max(rows, cols)</code>。
                   </div>
@@ -1276,11 +1281,11 @@
                 <h4><code>multiplyTranspose</code>，然后 commit state</h4>
                 <p>计算 <code>A^T * next_dual → current_aty</code>；成功后 swap current/next 指针并增加 iteration。这里没有 <code>A * next_primal</code>。</p>
                 <div class="lane-columns">
-                  <div class="lane-card cpu">
+                  <div class="lane-card cpu" data-backend="cpu">
                     <strong>CPU lane · transpose sparse loop</strong>
                     <code>multiplySparse(transpose, next_dual)</code>；Host 完成 pointer swaps。
                   </div>
-                  <div class="lane-card cuda">
+                  <div class="lane-card cuda" data-backend="cuda">
                     <strong>CUDA lane · vendor SpMV</strong>
                     <code>executeSpmv → cusparseSpMV</code>；排队成功后 Host 完成 pointer swaps。
                   </div>
@@ -1298,6 +1303,8 @@
           <aside class="graph-note">
             <h3>CUDA graph：1 direct + 39 recorded steps</h3>
             <p>在 40-step cadence 中，<code>RecordedIterationBlock</code> 捕获 39 个 production steps。每步 3 个 scalars，共 <strong>39 × 3 = 117 doubles = 936 bytes</strong>；replay 前上传参数，随后调用 <code>cudaGraphLaunch</code>。</p>
+            <p><strong>Replay scheduling：</strong>The initial step and the first post-restart step execute directly. Short tails with fewer than 39 remaining steps execute directly.</p>
+            <p><strong>Time-limit granularity：</strong>Host checks the time limit before submitting replay and after it completes; a submitted 39-step block cannot be interrupted by host time-limit checks.</p>
             <p>Graph 保留资源的 weak lifetime dependencies，而不是拥有 problem/vector/workspace。捕获、实例化或 replay 的失败保持为 <code>api::Error</code>。</p>
           </aside>
 
@@ -1529,7 +1536,15 @@
       "recordedSteps": 39,
       "parameterDoubles": 117,
       "parameterBytes": 936,
-      "checkPacketBytes": 112
+      "checkPacketBytes": 112,
+      "replaySemantics": {
+        "initialStep": "direct",
+        "firstPostRestartStep": "direct",
+        "shortTail": "direct",
+        "submittedBlockSteps": 39,
+        "hostTimeLimitChecks": "before-and-after-block",
+        "hostInterruptible": false
+      }
     },
     "kernels": [
       {"name": "projectedPrimalKernel", "threads": 256, "maxBlocks": 65535, "dynamicSharedBytes": 0},
@@ -1540,6 +1555,29 @@
       {"name": "cusparseSpMV", "grid": "vendor-controlled"}
     ]
   }
+  </script>
+  <script id="lane-controls">
+    const laneButtons =
+      document.querySelectorAll(".segment [data-lane]");
+    const backendLaneCards =
+      document.querySelectorAll(".lane-card[data-backend]");
+
+    function activateLane(lane) {
+      laneButtons.forEach((button) => {
+        const isActive = button.dataset.lane === lane;
+        button.setAttribute("aria-pressed", String(isActive));
+      });
+      backendLaneCards.forEach((card) => {
+        card.hidden = lane !== "compare" && card.dataset.backend !== lane;
+      });
+    }
+
+    laneButtons.forEach((button) => {
+      button.addEventListener("click", () => activateLane(
+        button.dataset.lane
+      ));
+    });
+    activateLane("compare");
   </script>
 </body>
 </html>
