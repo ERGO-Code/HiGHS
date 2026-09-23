@@ -173,6 +173,23 @@ double HighsLinearSumBounds::getImplVarLower(
                                       : std::max(myImplVarLower, myVarLower));
 }
 
+bool HighsLinearSumBounds::impliedBoundsValidAfterCoefChange(HighsInt sum,
+                                                             HighsInt var,
+                                                             double oldCoef,
+                                                             double newCoef) {
+  HighsInt oldNumInfLower = numInfSumLower[sum];
+  HighsCDouble oldSumLower = sumLower[sum];
+  HighsInt oldNumInfUpper = numInfSumUpper[sum];
+  HighsCDouble oldSumUpper = sumUpper[sum];
+
+  if (oldCoef != 0.0) remove(sum, var, oldCoef);
+  if (newCoef != 0.0) add(sum, var, newCoef);
+
+  return numInfSumLower[sum] <= oldNumInfLower &&
+         sumLower[sum] >= oldSumLower &&
+         numInfSumUpper[sum] <= oldNumInfUpper && sumUpper[sum] <= oldSumUpper;
+}
+
 void HighsLinearSumBounds::update(HighsInt& numInfs, HighsCDouble& activity,
                                   HighsInt direction, double bound,
                                   double coefficient) const {
