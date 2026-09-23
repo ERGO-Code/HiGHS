@@ -1687,20 +1687,21 @@ HPresolve::Result HPresolve::normaliseCliqueRows(
     HighsInt position;
   };
 
-  auto transformRow = [&](HighsInt row, std::vector<nonZero>& nzs,
-                          HighsCDouble& rhs) {
+  auto transformRow = [&](HighsInt row, std::vector<nonZero>& nzs, double scale,
+                          HighsCDouble& update) {
     nzs.clear();
+    update = 0.0;
 
     for (HighsInt rowiter : rowpositions) {
       HighsInt col = Acol[rowiter];
-      double val = Avalue[rowiter];
+      double val = scale * Avalue[rowiter];
 
       if (val < 0) {
         nzs.push_back(nonZero{col, -val, -1, rowiter});
-        rhs -= static_cast<HighsCDouble>(val) * model->col_upper_[col];
+        update += static_cast<HighsCDouble>(val) * model->col_upper_[col];
       } else {
         nzs.push_back(nonZero{col, val, 1, rowiter});
-        rhs -= static_cast<HighsCDouble>(val) * model->col_lower_[col];
+        update += static_cast<HighsCDouble>(val) * model->col_lower_[col];
       }
     }
   };
@@ -1722,13 +1723,20 @@ HPresolve::Result HPresolve::normaliseCliqueRows(
 
     // skip rows that are not all-binary
     bool allBinary = true;
+    bool isSetPpc = true;
     rowCoefsInt.clear();
+    HighsInt nComp = 0;
     for (const auto& nz : getStoredRow()) {
       allBinary = isBinary(nz.index());
       if (!allBinary) break;
+      isSetPpc = isSetPpc && std::abs(nz.value()) == 1.0;
       rowCoefsInt.push_back(nz.value());
+      if (nz.value() < 0) nComp++;
     }
     if (!allBinary) continue;
+
+    // skip row if it is already setppc
+    if (isSetPpc && model->row_upper_[row] == 1.0 - nComp) continue;
 
     // skip row if dynamism is too large
     if (computeDynamism(getStoredRow()) > maxDynamism) continue;
@@ -1738,17 +1746,39 @@ HPresolve::Result HPresolve::normaliseCliqueRows(
         rowCoefsInt, options->small_matrix_value, options->small_matrix_value);
     if (intScale == 0 || intScale > 1e3) continue;
 
-    // scale so that we have a <= inequality or equation
-    if (model->row_upper_[row] == kHighsInf) intScale = -intScale;
-    scaleStoredRow(row, intScale, true);
+    // check if lhs / rhs are redundant
+    double lhs = -kHighsInf;
+    double rhs = kHighsInf;
+    if (impliedRowBounds.getSumLower(row) <
+        model->row_lower_[row] - primal_feastol)
+      lhs = model->row_lower_[row];
+    if (impliedRowBounds.getSumUpper(row) >
+        model->row_upper_[row] + primal_feastol)
+      rhs = model->row_upper_[row];
+
+    // skip free rows
+    if (lhs <= -kHighsInf && rhs >= kHighsInf) continue;
+
+    // transform row
+    HighsInt direction = rhs < kHighsInf ? HighsInt{1} : HighsInt{-1};
+    HighsCDouble update;
+    transformRow(row, nzs, direction * intScale, update);
+
+    // update lhs / rhs
+    lhs *= direction * intScale;
+    rhs *= direction * intScale;
+    if (direction < 0) std::swap(lhs, rhs);
+    if (lhs > -kHighsInf)
+      lhs = static_cast<double>(ceil(lhs - update - primal_feastol));
+    if (rhs < kHighsInf)
+      rhs = static_cast<double>(floor(rhs - update + primal_feastol));
+
+    // equation?
+    bool equation = rhs == lhs;
 
     // after rounding, a ranged row may have become an equation; skip if still
     // ranged and not an equation
-    if (isRanged(row) && !isEquation(row)) continue;
-
-    // transform the row
-    HighsCDouble rhs = model->row_upper_[row];
-    transformRow(row, nzs, rhs);
+    if (lhs > -kHighsInf && rhs < kHighsInf && !equation) continue;
 
     // sort by descending coefficient value
     HighsInt numBin = static_cast<HighsInt>(nzs.size());
@@ -1780,10 +1810,16 @@ HPresolve::Result HPresolve::normaliseCliqueRows(
 
     // for equations, normalisation to x1 + ... + xn = 1 is only valid
     // for set partitioning rows where all coefficients equal rhs
-    if (isEquation(row) &&
-        (nzs[perm[start]].value != nzs[perm[numBin - 1]].value ||
-         nzs[perm[start]].value != rhs))
+    if (equation && (nzs[perm[start]].value != nzs[perm[numBin - 1]].value ||
+                     nzs[perm[start]].value != rhs))
       continue;
+
+    // re-store row since trivial fixings may have removed nonzeros
+    storeRow(row);
+
+    // scale so that we have a <= inequality or equation
+    intScale *= direction;
+    scaleStoredRow(row, intScale, true);
 
     // normalize remaining coefficients to ±1
     HighsInt numComp = 0;
@@ -1796,10 +1832,10 @@ HPresolve::Result HPresolve::normaliseCliqueRows(
     }
 
     // update row bounds
-    bool equation = isEquation(row);
     changeRowUpper(row, 1.0 - numComp);
     if (equation) changeRowLower(row, 1.0 - numComp);
   }
+
   return Result::kOk;
 }
 
