@@ -925,26 +925,30 @@ void HPresolve::matrixNonZeroChanged(HighsInt row, HighsInt col, double oldCoef,
                                      double newCoef, bool rowIsDeleted,
                                      bool colIsDeleted) {
   if (!colIsDeleted) {
-    // update dual activity; reset all derived bounds if activity loosened
-    if (impliedDualRowBounds.coefficientChanged(col, row, oldCoef, newCoef))
+    // update dual activity; relaxed activity bound invalidates derived implied
+    // bounds
+    if (!impliedDualRowBounds.impliedBoundsValidAfterCoefChange(
+            col, row, oldCoef, newCoef))
       resetRowDualImpliedBoundsDerivedFromCol(col);
-    // activity did not loosen; only reset if sourced from this column
+    // not relaxed; only reset if sourced from this column
     else if (rowDualLowerSource[row] == col || rowDualUpperSource[row] == col)
       resetRowDualImpliedBounds(row, col);
   } else {
-    // col is deleted; unconditionally reset derived bounds
+    // col is deleted; unconditionally reset derived implied bounds
     resetRowDualImpliedBoundsDerivedFromCol(col);
   }
 
   if (!rowIsDeleted) {
-    // update primal activity; reset all derived bounds if activity loosened
-    if (impliedRowBounds.coefficientChanged(row, col, oldCoef, newCoef))
+    // update primal activity; relaxed activity bound invalidates derived
+    // implied bounds
+    if (!impliedRowBounds.impliedBoundsValidAfterCoefChange(row, col, oldCoef,
+                                                            newCoef))
       resetColImpliedBoundsDerivedFromRow(row);
-    // activity did not loosen; only reset if sourced from this row
+    // not relaxed; only reset if sourced from this row
     else if (colLowerSource[col] == row || colUpperSource[col] == row)
       resetColImpliedBounds(col, row);
   } else {
-    // row is deleted; unconditionally reset derived bounds
+    // row is deleted; unconditionally reset derived implied bounds
     resetColImpliedBoundsDerivedFromRow(row);
   }
 

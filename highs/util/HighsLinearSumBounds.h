@@ -160,8 +160,8 @@ class HighsLinearSumBounds {
 
   double getImplVarLower(HighsInt sum, HighsInt var) const;
 
-  bool coefficientChanged(HighsInt sum, HighsInt var, double oldCoef,
-                          double newCoef);
+  bool impliedBoundsValidAfterCoefChange(HighsInt sum, HighsInt var,
+                                         double oldCoef, double newCoef);
 
  private:
   double getImplVarUpper(HighsInt sum, double myVarUpper, double myImplVarUpper,
