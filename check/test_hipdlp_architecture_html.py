@@ -18,6 +18,51 @@ SYSTEM_NODE_IDS = {
     "node-postsolve",
     "node-kkt",
 }
+CUDA_LESSON_IDS = {
+    f"cuda-lesson-{index}" for index in range(1, 9)
+}
+ANSWER_LABELS = {
+    "结论",
+    "代码证据",
+    "Review 推理",
+    "静态边界",
+    "运行时工具",
+}
+INTEGRATED_EXERCISE_TOPICS = {
+    "primal-candidate-lifecycle",
+    "normal-check-d2h",
+    "grid-stride-coverage",
+    "graph-dependency-lifetime",
+}
+REVIEW_PASS_IDS = {
+    "interface-ownership",
+    "numerical-correctness",
+    "concurrency-cuda-semantics",
+    "performance",
+}
+APPROVED_GLOSSARY_TERMS = {
+    "CSR",
+    "SpMV",
+    "primal",
+    "dual",
+    "reflection",
+    "Halpern anchor",
+    "resident",
+    "H2D",
+    "D2H",
+    "pinned memory",
+    "stream",
+    "event",
+    "warp",
+    "occupancy",
+    "coalescing",
+    "divergence",
+    "graph capture",
+    "deterministic reduction",
+    "host oracle",
+    "postsolve",
+    "KKT",
+}
 VOID_ELEMENTS = {
     "area",
     "base",
@@ -58,9 +103,17 @@ class ArchitecturePageParser(HTMLParser):
         self.answers = 0
         self.lesson_question_counts = {}
         self.lesson_answer_counts = {}
+        self.lesson_part_counts = {}
         self.integrated_review_questions = 0
         self.integrated_answers = 0
+        self.integrated_exercises = {}
         self.answer_texts = []
+        self.answer_attributes = []
+        self.review_pass_count = 0
+        self.review_passes = {}
+        self.review_content_capture = None
+        self.glossary_entries = {}
+        self.glossary_label_capture = None
         self.element_stack = []
         self.answer_chunks = None
         self.current_node = None
@@ -81,6 +134,13 @@ class ArchitecturePageParser(HTMLParser):
         for item in reversed(self.element_stack):
             if "cuda-lesson" in item["classes"]:
                 return item["id"]
+        return None
+
+    def attribute_context(self, attribute):
+        for item in reversed(self.element_stack):
+            value = item["attributes"].get(attribute)
+            if value is not None:
+                return value
         return None
 
     def handle_starttag(self, tag, attrs):
@@ -104,29 +164,123 @@ class ArchitecturePageParser(HTMLParser):
             "integrated-exercises" in classes
             or self.has_context(class_name="integrated-exercises")
         )
+        in_cuda_course = (
+            "cuda-course-section" in classes
+            or self.has_context(class_name="cuda-course-section")
+        )
+        in_review_mode = (
+            "review-mode" in classes
+            or self.has_context(class_name="review-mode")
+        )
         lesson_id = self.lesson_context()
-        if "cuda-lesson" in classes and in_learning_view:
+        if (
+            "cuda-lesson" in classes
+            and in_learning_view
+            and in_cuda_course
+        ):
             self.cuda_lessons += 1
             lesson_id = element_id
             self.lesson_question_counts[lesson_id] = 0
             self.lesson_answer_counts[lesson_id] = 0
+            self.lesson_part_counts[lesson_id] = {
+                "visual": 0,
+                "code_example": 0,
+                "checklist": 0,
+            }
+        lesson_parts = {
+            "concept-visual": "visual",
+            "hipdlp-example": "code_example",
+            "lesson-checklist": "checklist",
+        }
+        if lesson_id in self.lesson_part_counts:
+            for class_name, part_name in lesson_parts.items():
+                if class_name in classes:
+                    self.lesson_part_counts[lesson_id][part_name] += 1
+        exercise_topic = self.attribute_context("data-topic")
+        if "integrated-exercise" in classes and in_integrated_exercises:
+            exercise_topic = attributes.get("data-topic")
+            if exercise_topic is not None:
+                self.integrated_exercises.setdefault(
+                    exercise_topic,
+                    {"count": 0, "questions": 0, "answers": 0},
+                )["count"] += 1
         if "review-question" in classes:
             self.total_review_questions += 1
             if in_learning_view:
                 self.review_questions += 1
-                if lesson_id is not None:
+                if lesson_id in self.lesson_question_counts:
                     self.lesson_question_counts[lesson_id] += 1
                 elif in_integrated_exercises:
                     self.integrated_review_questions += 1
+                    if exercise_topic in self.integrated_exercises:
+                        self.integrated_exercises[exercise_topic][
+                            "questions"
+                        ] += 1
             if in_kernel_card:
                 self.kernel_review_questions += 1
         if tag == "details" and "answer" in classes and in_learning_view:
             self.answers += 1
             self.answer_chunks = []
-            if lesson_id is not None:
+            self.answer_attributes.append(attributes)
+            if lesson_id in self.lesson_answer_counts:
                 self.lesson_answer_counts[lesson_id] += 1
             elif in_integrated_exercises:
                 self.integrated_answers += 1
+                if exercise_topic in self.integrated_exercises:
+                    self.integrated_exercises[exercise_topic]["answers"] += 1
+        if (
+            "review-pass" in classes
+            and in_learning_view
+            and in_review_mode
+        ):
+            self.review_pass_count += 1
+            review_pass = attributes.get("data-review-pass")
+            if review_pass is not None:
+                self.review_passes.setdefault(
+                    review_pass,
+                    {
+                        "count": 0,
+                        "good_signals": [],
+                        "danger_signals": [],
+                        "human_prompts": [],
+                        "ai_prompts": [],
+                    },
+                )["count"] += 1
+        review_pass = self.attribute_context("data-review-pass")
+        review_content_key = None
+        if review_pass in self.review_passes and in_review_mode:
+            if "good-signal" in classes:
+                review_content_key = "good_signals"
+            elif "danger-signal" in classes:
+                review_content_key = "danger_signals"
+            elif "review-prompt" in classes:
+                audience = attributes.get("data-audience")
+                if audience in {"human", "ai"}:
+                    review_content_key = f"{audience}_prompts"
+        if review_content_key is not None:
+            self.review_content_capture = {
+                "tag": tag,
+                "review_pass": review_pass,
+                "key": review_content_key,
+                "chunks": [],
+            }
+        in_glossary = (
+            "glossary" in classes
+            or self.has_context(class_name="glossary")
+        )
+        if "glossary-entry" in classes and in_glossary:
+            term = attributes.get("data-term")
+            if term is not None:
+                self.glossary_entries.setdefault(
+                    term,
+                    {"count": 0, "labels": []},
+                )["count"] += 1
+        glossary_term = self.attribute_context("data-term")
+        if tag == "dt" and glossary_term is not None and in_glossary:
+            self.glossary_label_capture = {
+                "term": glossary_term,
+                "chunks": [],
+            }
         if tag == "button" and "data-lane" in attributes:
             self.lane_buttons.append(attributes)
         if tag == "div" and "lane-card" in classes:
@@ -161,9 +315,30 @@ class ArchitecturePageParser(HTMLParser):
                 "tag": tag,
                 "id": element_id,
                 "classes": classes,
+                "attributes": attributes,
             })
 
     def handle_endtag(self, tag):
+        if (
+            self.review_content_capture is not None
+            and tag == self.review_content_capture["tag"]
+        ):
+            content = " ".join(
+                "".join(
+                    self.review_content_capture["chunks"]
+                ).split()
+            )
+            review_pass = self.review_content_capture["review_pass"]
+            key = self.review_content_capture["key"]
+            self.review_passes[review_pass][key].append(content)
+            self.review_content_capture = None
+        if tag == "dt" and self.glossary_label_capture is not None:
+            label = " ".join(
+                "".join(self.glossary_label_capture["chunks"]).split()
+            )
+            term = self.glossary_label_capture["term"]
+            self.glossary_entries[term]["labels"].append(label)
+            self.glossary_label_capture = None
         if tag == "details" and self.answer_chunks is not None:
             self.answer_texts.append(
                 " ".join("".join(self.answer_chunks).split())
@@ -191,6 +366,10 @@ class ArchitecturePageParser(HTMLParser):
             self.node_detail_text[self.detail_node].append(data)
         if self.answer_chunks is not None:
             self.answer_chunks.append(data)
+        if self.review_content_capture is not None:
+            self.review_content_capture["chunks"].append(data)
+        if self.glossary_label_capture is not None:
+            self.glossary_label_capture["chunks"].append(data)
 
 
 class ArchitecturePageTests(unittest.TestCase):
@@ -226,19 +405,33 @@ class ArchitecturePageTests(unittest.TestCase):
         self.assertTrue({"route-30", "route-cpp-90", "route-cuda"}
                         <= self.parser.ids)
         self.assertEqual(self.parser.cuda_lessons, 8)
+        self.assertEqual(
+            set(self.parser.lesson_part_counts),
+            CUDA_LESSON_IDS,
+        )
+        self.assertEqual(
+            self.parser.lesson_part_counts,
+            {
+                lesson_id: {
+                    "visual": 1,
+                    "code_example": 1,
+                    "checklist": 1,
+                }
+                for lesson_id in CUDA_LESSON_IDS
+            },
+        )
         self.assertEqual(self.parser.review_questions, 28)
         self.assertEqual(self.parser.answers, 28)
         self.assertEqual(
             self.parser.lesson_question_counts,
-            {f"cuda-lesson-{index}": 3 for index in range(1, 9)},
+            {lesson_id: 3 for lesson_id in CUDA_LESSON_IDS},
         )
         self.assertEqual(
             self.parser.lesson_answer_counts,
-            {f"cuda-lesson-{index}": 3 for index in range(1, 9)},
+            {lesson_id: 3 for lesson_id in CUDA_LESSON_IDS},
         )
         self.assertEqual(self.parser.integrated_review_questions, 4)
         self.assertEqual(self.parser.integrated_answers, 4)
-        self.assertNotIn('class="answer" open', self.source)
         for heading in (
             "执行模型",
             "内存模型",
@@ -260,8 +453,52 @@ class ArchitecturePageTests(unittest.TestCase):
         self.assertEqual(len(self.parser.answer_texts), 28)
         for index, answer_text in enumerate(self.parser.answer_texts, start=1):
             with self.subTest(answer=index):
-                self.assertIn("静态边界：", answer_text)
-                self.assertIn("运行时工具：", answer_text)
+                for label in ANSWER_LABELS:
+                    self.assertIn(f"{label}：", answer_text)
+        for index, attributes in enumerate(
+            self.parser.answer_attributes,
+            start=1,
+        ):
+            with self.subTest(answer=index):
+                self.assertNotIn("open", attributes)
+
+    def test_integrated_exercises_cover_each_required_topic_once(self):
+        self.assertEqual(
+            set(self.parser.integrated_exercises),
+            INTEGRATED_EXERCISE_TOPICS,
+        )
+        self.assertEqual(
+            self.parser.integrated_exercises,
+            {
+                topic: {"count": 1, "questions": 1, "answers": 1}
+                for topic in INTEGRATED_EXERCISE_TOPICS
+            },
+        )
+
+    def test_review_mode_has_four_complete_review_passes(self):
+        self.assertEqual(self.parser.review_pass_count, 4)
+        self.assertEqual(set(self.parser.review_passes), REVIEW_PASS_IDS)
+        for review_pass, content in self.parser.review_passes.items():
+            with self.subTest(review_pass=review_pass):
+                self.assertEqual(content["count"], 1)
+                for content_type in (
+                    "good_signals",
+                    "danger_signals",
+                    "human_prompts",
+                    "ai_prompts",
+                ):
+                    self.assertEqual(len(content[content_type]), 1)
+                    self.assertTrue(content[content_type][0].strip())
+
+    def test_glossary_marks_every_approved_term_contextually(self):
+        self.assertEqual(
+            set(self.parser.glossary_entries),
+            APPROVED_GLOSSARY_TERMS,
+        )
+        for term, entry in self.parser.glossary_entries.items():
+            with self.subTest(term=term):
+                self.assertEqual(entry["count"], 1)
+                self.assertEqual(entry["labels"], [term])
 
     def test_candidate_download_paths_distinguish_certificate_verification(self):
         self.assertNotIn(

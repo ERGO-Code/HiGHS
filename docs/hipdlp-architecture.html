@@ -2786,7 +2786,7 @@
         <h3 id="integrated-title">综合练习：跨文件建立证据链</h3>
         <p>这四题要求把课程概念重新接回真实 solve；先在源码中写出完整路径，再展开参考答案核对遗漏。</p>
         <div class="integrated-grid">
-          <div class="qa-pair">
+          <div class="qa-pair integrated-exercise" data-topic="primal-candidate-lifecycle">
             <p class="review-question"><strong>综合题 1：</strong>追踪 <code>primal_candidate</code>：从分配、kernel 写入、resident check、download 一直到 postsolve。</p>
             <details class="answer">
               <summary>展开参考答案</summary>
@@ -2797,7 +2797,7 @@
               <p><strong>Review 推理：</strong>逐边界检查 owner、尺寸、驻留与同步，才能避免把 device candidate、Host copy 和 original solution 当成同一对象。</p>
             </details>
           </div>
-          <div class="qa-pair">
+          <div class="qa-pair integrated-exercise" data-topic="normal-check-d2h">
             <p class="review-question"><strong>综合题 2：</strong>正常 cadence check 是否总是只需 112-byte packet？</p>
             <details class="answer">
               <summary>展开参考答案</summary>
@@ -2808,7 +2808,7 @@
               <p><strong>Review 推理：</strong>必须用 counters 和 Systems trace 核对每个 boundary 的实际 bytes；“API 能下载”不等于正常路径必须下载。</p>
             </details>
           </div>
-          <div class="qa-pair">
+          <div class="qa-pair integrated-exercise" data-topic="grid-stride-coverage">
             <p class="review-question"><strong>综合题 3：</strong>对显式使用 <code>GridIndex</code> 的 <code>differenceKernel</code> 和 <code>vectorPairBlendKernel</code>，证明当 <code>N &gt; 65535 × 256</code> 时仍覆盖每个索引。</p>
             <details class="answer">
               <summary>展开参考答案</summary>
@@ -2819,7 +2819,7 @@
               <p><strong>Review 推理：</strong>覆盖证明还需确认 grid 含所有 residue 起点、循环条件是 <code>index &lt; size</code>，且索引类型能表示 N 与后续加法。</p>
             </details>
           </div>
-          <div class="qa-pair">
+          <div class="qa-pair integrated-exercise" data-topic="graph-dependency-lifetime">
             <p class="review-question"><strong>综合题 4：</strong>如何检查 CUDA graph 捕获的 dependencies 是否可能过期？</p>
             <details class="answer">
               <summary>展开参考答案</summary>
@@ -2837,49 +2837,49 @@
         <h3 id="review-mode-title">四遍 Review 模式</h3>
         <p>不要在一遍里同时追所有问题。每一遍只接受与本目标相关的证据，并把 reusable prompt 复制到 human/AI review 中。</p>
         <div class="review-pass-grid">
-          <article class="review-pass">
+          <article class="review-pass" data-review-pass="interface-ownership">
             <h4>Pass 1 · Interface and ownership</h4>
             <h4>good signal</h4>
-            <p>move-only handles、单一 owner、构造失败自动清理、明确的借用边界与 structured errors。</p>
+            <p class="good-signal">move-only handles、单一 owner、构造失败自动清理、明确的借用边界与 structured errors。</p>
             <h4>danger signal</h4>
-            <p>裸 device pointer 越过 backend、隐式复制 handle、resource 比 graph/descriptor 更早销毁、失败后保留看似有效输出。</p>
+            <p class="danger-signal">裸 device pointer 越过 backend、隐式复制 handle、resource 比 graph/descriptor 更早销毁、失败后保留看似有效输出。</p>
             <h4>Human review prompt</h4>
-            <p class="review-prompt">“对每个跨函数对象标 owner、borrower、move、reset 和失败清理；指出任何无法唯一回答‘谁释放’的位置。”</p>
+            <p class="review-prompt" data-audience="human">“对每个跨函数对象标 owner、borrower、move、reset 和失败清理；指出任何无法唯一回答‘谁释放’的位置。”</p>
             <h4>AI review prompt</h4>
-            <p class="review-prompt">“只审接口与所有权。列出 handle/resource 生命周期、所有 move-only 约束、提前返回清理和错误传播；不要推断未展示的代码。”</p>
+            <p class="review-prompt" data-audience="ai">“只审接口与所有权。列出 handle/resource 生命周期、所有 move-only 约束、提前返回清理和错误传播；不要推断未展示的代码。”</p>
           </article>
-          <article class="review-pass">
+          <article class="review-pass" data-review-pass="numerical-correctness">
             <h4>Pass 2 · Numerical correctness</h4>
             <h4>good signal</h4>
-            <p>维度/alias/finite guards、明确 reduction 顺序、容差有尺度、Host oracle、postsolve 后原模型 KKT。</p>
+            <p class="good-signal">维度/alias/finite guards、明确 reduction 顺序、容差有尺度、Host oracle、postsolve 后原模型 KKT。</p>
             <h4>danger signal</h4>
-            <p>NaN 比较默认通过、只验证 transformed model、改变运算顺序却复用旧 tolerance、性能样本未核对迭代轨迹。</p>
+            <p class="danger-signal">NaN 比较默认通过、只验证 transformed model、改变运算顺序却复用旧 tolerance、性能样本未核对迭代轨迹。</p>
             <h4>Human review prompt</h4>
-            <p class="review-prompt">“从输入尺度到最终 KKT 追踪每次浮点变换、reduction 与容差；为 NaN/Inf、零尺度和边界值写反例。”</p>
+            <p class="review-prompt" data-audience="human">“从输入尺度到最终 KKT 追踪每次浮点变换、reduction 与容差；为 NaN/Inf、零尺度和边界值写反例。”</p>
             <h4>AI review prompt</h4>
-            <p class="review-prompt">“只审数值正确性。区分 bitwise determinism、稳定性与 tolerance acceptance；用源码证据指出 oracle 是否独立。”</p>
+            <p class="review-prompt" data-audience="ai">“只审数值正确性。区分 bitwise determinism、稳定性与 tolerance acceptance；用源码证据指出 oracle 是否独立。”</p>
           </article>
-          <article class="review-pass">
+          <article class="review-pass" data-review-pass="concurrency-cuda-semantics">
             <h4>Pass 3 · Concurrency and CUDA semantics</h4>
             <h4>good signal</h4>
-            <p>producer/consumer 同 stream、有目的的同步、async error 明确汇合、capture 内外边界清楚、replay 前验证依赖。</p>
+            <p class="good-signal">producer/consumer 同 stream、有目的的同步、async error 明确汇合、capture 内外边界清楚、replay 前验证依赖。</p>
             <h4>danger signal</h4>
-            <p>Host 在同步前读取 D2H、library handle 绑定不同 stream、launch success 被当执行 success、graph 捕获悬空地址。</p>
+            <p class="danger-signal">Host 在同步前读取 D2H、library handle 绑定不同 stream、launch success 被当执行 success、graph 捕获悬空地址。</p>
             <h4>Human review prompt</h4>
-            <p class="review-prompt">“画出 stream timeline，标每个 enqueue、数据依赖、event/sync、Host read 与错误观察点；寻找跨 stream 无 happens-before 的边。”</p>
+            <p class="review-prompt" data-audience="human">“画出 stream timeline，标每个 enqueue、数据依赖、event/sync、Host read 与错误观察点；寻找跨 stream 无 happens-before 的边。”</p>
             <h4>AI review prompt</h4>
-            <p class="review-prompt">“只审并发与 CUDA 语义。逐项证明顺序、可见性、同步和 graph resource lifetime；无法证明时标为待运行验证。”</p>
+            <p class="review-prompt" data-audience="ai">“只审并发与 CUDA 语义。逐项证明顺序、可见性、同步和 graph resource lifetime；无法证明时标为待运行验证。”</p>
           </article>
-          <article class="review-pass">
+          <article class="review-pass" data-review-pass="performance">
             <h4>Pass 4 · Performance</h4>
             <h4>good signal</h4>
-            <p>先用阶段 counters 定位，再用 Systems/Compute；同模型同选项比较；同时报告每步成本、迭代数和 correctness gate。</p>
+            <p class="good-signal">先用阶段 counters 定位，再用 Systems/Compute；同模型同选项比较；同时报告每步成本、迭代数和 correctness gate。</p>
             <h4>danger signal</h4>
-            <p>用 launch 数替代 wall time、从三个样本外推全部模型、只看成功子集、把 sanitizer clean 当成 speedup 证据。</p>
+            <p class="danger-signal">用 launch 数替代 wall time、从三个样本外推全部模型、只看成功子集、把 sanitizer clean 当成 speedup 证据。</p>
             <h4>Human review prompt</h4>
-            <p class="review-prompt">“写出瓶颈假设、可证伪指标、控制变量、正确性护栏和停止条件；先问优化是否命中端到端主导项。”</p>
+            <p class="review-prompt" data-audience="human">“写出瓶颈假设、可证伪指标、控制变量、正确性护栏和停止条件；先问优化是否命中端到端主导项。”</p>
             <h4>AI review prompt</h4>
-            <p class="review-prompt">“只审性能证据。区分已实现、已测量和待测假设；拒绝缺少 baseline、样本范围、迭代轨迹或 KKT 接受的加速结论。”</p>
+            <p class="review-prompt" data-audience="ai">“只审性能证据。区分已实现、已测量和待测假设；拒绝缺少 baseline、样本范围、迭代轨迹或 KKT 接受的加速结论。”</p>
           </article>
         </div>
       </section>
@@ -2887,27 +2887,27 @@
       <section class="glossary" aria-labelledby="glossary-title">
         <h3 id="glossary-title">术语表</h3>
         <dl class="glossary-grid">
-          <div><dt>CSR</dt><dd>Compressed Sparse Row；用 row offsets、column indices 和 values 表示稀疏矩阵。</dd></div>
-          <div><dt>SpMV</dt><dd>Sparse matrix-vector multiply；HiPDLP 每个生产 step 执行 forward 与 transpose 两次。</dd></div>
-          <div><dt>primal</dt><dd>原问题变量及其候选、anchor、reflection 等迭代向量。</dd></div>
-          <div><dt>dual</dt><dd>约束侧变量；与 primal 一起定义残差、目标和 KKT 条件。</dd></div>
-          <div><dt>reflection</dt><dd>围绕当前 candidate 的反射点；Halpern PDHG 下一次 SpMV 的输入之一。</dd></div>
-          <div><dt>Halpern anchor</dt><dd>Halpern 迭代固定或重启后的参考点，与 reflection 按权重混合。</dd></div>
-          <div><dt>resident</dt><dd>数据保持在当前 backend；resident check 在 Device 上计算指标而不先下载完整向量。</dd></div>
-          <div><dt>H2D</dt><dd>Host-to-Device transfer；模型、向量或 scalar parameter 的上传。</dd></div>
-          <div><dt>D2H</dt><dd>Device-to-Host transfer；check packet、error flag 或完整 candidate 的下载。</dd></div>
-          <div><dt>pinned memory</dt><dd>页锁定 Host memory；用于可复用、可异步的 CUDA transfer staging。</dd></div>
-          <div><dt>stream</dt><dd>有序的 CUDA 工作队列；同一 stream 中的操作保留提交顺序。</dd></div>
-          <div><dt>event</dt><dd>记录 Device timeline 的 CUDA 对象；适合 GPU 阶段计时和顺序标记。</dd></div>
-          <div><dt>warp</dt><dd>一起调度的一组 CUDA threads；分支路径不同时可能序列化。</dd></div>
-          <div><dt>occupancy</dt><dd>活跃 warps 相对硬件上限的比例；是延迟隐藏线索，不是性能结论。</dd></div>
-          <div><dt>coalescing</dt><dd>相邻 threads 的 memory access 合并为较少 transaction 的访问性质。</dd></div>
-          <div><dt>divergence</dt><dd>同一 warp 的 threads 选择不同分支，导致路径分批执行。</dd></div>
-          <div><dt>graph capture</dt><dd>把 stream 中提交的固定设备操作记录成 CUDA Graph，以 executable 重放。</dd></div>
-          <div><dt>deterministic reduction</dt><dd>固定 partial grouping 与合并树；其保证必须限定到具体 kernel 和环境。</dd></div>
-          <div><dt>host oracle</dt><dd>当紧凑 Device check 不足以裁决时，在 Host 上用完整数据重新计算的参考路径。</dd></div>
-          <div><dt>postsolve</dt><dd>撤销 scaling/transform，把求解空间 candidate 恢复成原模型 HighsSolution。</dd></div>
-          <div><dt>KKT</dt><dd>Karush-Kuhn-Tucker 条件；最终在原模型上检查 primal/dual feasibility 与 gap。</dd></div>
+          <div class="glossary-entry" data-term="CSR"><dt>CSR</dt><dd>Compressed Sparse Row；用 row offsets、column indices 和 values 表示稀疏矩阵。</dd></div>
+          <div class="glossary-entry" data-term="SpMV"><dt>SpMV</dt><dd>Sparse matrix-vector multiply；HiPDLP 每个生产 step 执行 forward 与 transpose 两次。</dd></div>
+          <div class="glossary-entry" data-term="primal"><dt>primal</dt><dd>原问题变量及其候选、anchor、reflection 等迭代向量。</dd></div>
+          <div class="glossary-entry" data-term="dual"><dt>dual</dt><dd>约束侧变量；与 primal 一起定义残差、目标和 KKT 条件。</dd></div>
+          <div class="glossary-entry" data-term="reflection"><dt>reflection</dt><dd>围绕当前 candidate 的反射点；Halpern PDHG 下一次 SpMV 的输入之一。</dd></div>
+          <div class="glossary-entry" data-term="Halpern anchor"><dt>Halpern anchor</dt><dd>Halpern 迭代固定或重启后的参考点，与 reflection 按权重混合。</dd></div>
+          <div class="glossary-entry" data-term="resident"><dt>resident</dt><dd>数据保持在当前 backend；resident check 在 Device 上计算指标而不先下载完整向量。</dd></div>
+          <div class="glossary-entry" data-term="H2D"><dt>H2D</dt><dd>Host-to-Device transfer；模型、向量或 scalar parameter 的上传。</dd></div>
+          <div class="glossary-entry" data-term="D2H"><dt>D2H</dt><dd>Device-to-Host transfer；check packet、error flag 或完整 candidate 的下载。</dd></div>
+          <div class="glossary-entry" data-term="pinned memory"><dt>pinned memory</dt><dd>页锁定 Host memory；用于可复用、可异步的 CUDA transfer staging。</dd></div>
+          <div class="glossary-entry" data-term="stream"><dt>stream</dt><dd>有序的 CUDA 工作队列；同一 stream 中的操作保留提交顺序。</dd></div>
+          <div class="glossary-entry" data-term="event"><dt>event</dt><dd>记录 Device timeline 的 CUDA 对象；适合 GPU 阶段计时和顺序标记。</dd></div>
+          <div class="glossary-entry" data-term="warp"><dt>warp</dt><dd>一起调度的一组 CUDA threads；分支路径不同时可能序列化。</dd></div>
+          <div class="glossary-entry" data-term="occupancy"><dt>occupancy</dt><dd>活跃 warps 相对硬件上限的比例；是延迟隐藏线索，不是性能结论。</dd></div>
+          <div class="glossary-entry" data-term="coalescing"><dt>coalescing</dt><dd>相邻 threads 的 memory access 合并为较少 transaction 的访问性质。</dd></div>
+          <div class="glossary-entry" data-term="divergence"><dt>divergence</dt><dd>同一 warp 的 threads 选择不同分支，导致路径分批执行。</dd></div>
+          <div class="glossary-entry" data-term="graph capture"><dt>graph capture</dt><dd>把 stream 中提交的固定设备操作记录成 CUDA Graph，以 executable 重放。</dd></div>
+          <div class="glossary-entry" data-term="deterministic reduction"><dt>deterministic reduction</dt><dd>固定 partial grouping 与合并树；其保证必须限定到具体 kernel 和环境。</dd></div>
+          <div class="glossary-entry" data-term="host oracle"><dt>host oracle</dt><dd>当紧凑 Device check 不足以裁决时，在 Host 上用完整数据重新计算的参考路径。</dd></div>
+          <div class="glossary-entry" data-term="postsolve"><dt>postsolve</dt><dd>撤销 scaling/transform，把求解空间 candidate 恢复成原模型 HighsSolution。</dd></div>
+          <div class="glossary-entry" data-term="KKT"><dt>KKT</dt><dd>Karush-Kuhn-Tucker 条件；最终在原模型上检查 primal/dual feasibility 与 gap。</dd></div>
           <div><dt>command buffer</dt><dd>HiPDLP 对可 replay 后端工作的抽象；CUDA 实现由 graph executable 支撑。</dd></div>
           <div><dt>structured error</dt><dd>带 ErrorCode 与消息的失败值；不得伪装成成功状态或静默 fallback。</dd></div>
         </dl>
