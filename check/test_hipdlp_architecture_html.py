@@ -69,6 +69,41 @@ class ArchitecturePageTests(unittest.TestCase):
             "workingTree": "dirty",
         })
 
+    def test_system_map_has_the_real_solve_boundaries(self):
+        expected = {
+            "node-wrapper",
+            "node-api",
+            "node-model",
+            "node-algorithm",
+            "node-backend",
+            "node-postsolve",
+            "node-kkt",
+        }
+        self.assertTrue(expected <= self.parser.ids)
+        for label in (
+            "solveLpHiPdlp",
+            "hipdlp::api::solve",
+            "model::buildProblem",
+            "algorithm::solve",
+            "backend::createBackend",
+            "model::postsolve",
+            "verification::verifyKkt",
+        ):
+            self.assertIn(label, self.source)
+
+    def test_all_local_source_links_resolve(self):
+        source_links = [
+            link for link in self.parser.links
+            if link.startswith("../highs/") or link.startswith("../check/")
+        ]
+        self.assertGreaterEqual(len(source_links), 7)
+        missing = []
+        for link in source_links:
+            path = unquote(urlsplit(link).path)
+            if not (PAGE.parent / path).resolve().is_file():
+                missing.append(link)
+        self.assertEqual(missing, [])
+
 
 if __name__ == "__main__":
     unittest.main()

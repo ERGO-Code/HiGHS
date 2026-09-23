@@ -36,6 +36,142 @@
     [role="tab"] { border: 0; border-bottom: 3px solid transparent; padding: 14px 16px; }
     [role="tab"][aria-selected="true"] { border-bottom-color: var(--host); }
     .view { margin: 24px 0; padding: 24px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+    .view-heading { max-width: 880px; }
+    .eyebrow {
+      margin: 0 0 4px;
+      color: var(--host);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+    .view-heading h2 { margin: 0; font-size: clamp(26px, 4vw, 40px); line-height: 1.2; }
+    .view-heading p:last-child { color: var(--muted); }
+    .reading-hint {
+      margin: 20px 0;
+      padding: 14px 16px;
+      border-left: 4px solid var(--host);
+      background: var(--host-soft);
+    }
+    .reading-hint ol {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px 22px;
+      margin: 8px 0 0;
+      padding-left: 22px;
+    }
+    .evidence-legend {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+      margin: 18px 0;
+    }
+    .legend-label { margin-right: 4px; font-weight: 700; }
+    .fact-tag {
+      display: inline-flex;
+      align-items: center;
+      width: max-content;
+      padding: 2px 8px;
+      border: 1px solid currentColor;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+      line-height: 1.6;
+    }
+    .fact { color: #1d5f92; background: #e9f3fb; }
+    .measured { color: #287257; background: #e8f5ef; }
+    .hypothesis { color: #8a5a0a; background: #fff5d8; }
+    .unavailable { color: #8a3340; background: #fae9ec; }
+    .flow-figure {
+      margin: 24px 0 30px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #fbfcfd;
+      overflow: hidden;
+    }
+    .flow-figure figcaption {
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--line);
+      font-weight: 700;
+    }
+    .flow-scroll { overflow-x: auto; }
+    .flow-map { display: block; width: 100%; min-width: 980px; height: auto; }
+    .lane { fill: #f6f9fc; stroke: var(--line); stroke-width: 1.5; }
+    .device-lane { fill: var(--device-soft); stroke: var(--device); stroke-dasharray: 6 5; }
+    .flow-box { stroke-width: 2; rx: 8; }
+    .host-fill { fill: var(--host-soft); stroke: var(--host); }
+    .device-fill { fill: var(--device-soft); stroke: var(--device); }
+    .neutral-fill { fill: #fff; stroke: var(--control); }
+    .decision-fill { fill: #fff7e8; stroke: var(--h2d); }
+    .flow-arrow {
+      fill: none;
+      stroke: var(--control);
+      stroke-width: 2.5;
+      marker-end: url("#arrow-head");
+    }
+    .flow-arrow.conditional { stroke-dasharray: 7 5; }
+    .flow-arrow.return { stroke: var(--d2h); }
+    .flow-title { fill: var(--ink); font-size: 15px; font-weight: 700; text-anchor: middle; }
+    .flow-subtitle { fill: var(--muted); font-size: 12px; text-anchor: middle; }
+    .flow-label { fill: var(--control); font-size: 12px; font-weight: 700; text-anchor: middle; }
+    .flow-note { fill: var(--ink); font-size: 12px; }
+    .lane-label { fill: var(--host); font-size: 13px; font-weight: 700; letter-spacing: .04em; }
+    .device-label { fill: var(--device); font-size: 12px; font-weight: 700; }
+    .component-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+    }
+    .node {
+      min-width: 0;
+      padding: 18px;
+      border: 1px solid var(--line);
+      border-top: 4px solid var(--host);
+      border-radius: var(--radius);
+      background: var(--surface);
+    }
+    .node-header {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+    }
+    .residency {
+      color: var(--host);
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .node h3 { margin: 12px 0 2px; font-size: 20px; line-height: 1.3; }
+    .node > code { color: var(--host); font-weight: 700; }
+    .node > p { color: var(--muted); }
+    .component-detail {
+      margin-top: 14px;
+      border-top: 1px solid var(--line);
+      padding-top: 12px;
+    }
+    .component-detail summary {
+      color: var(--host);
+      cursor: pointer;
+      font-weight: 700;
+    }
+    .component-detail dl { margin: 14px 0; }
+    .component-detail dl div {
+      display: grid;
+      grid-template-columns: 76px minmax(0, 1fr);
+      gap: 10px;
+      padding: 8px 0;
+      border-bottom: 1px solid #e7ebef;
+    }
+    .component-detail dt { font-weight: 700; }
+    .component-detail dd { margin: 0; overflow-wrap: anywhere; }
+    .component-detail a { color: var(--host); }
+    .component-detail p { margin-bottom: 0; }
+    @media (max-width: 760px) {
+      .component-grid { grid-template-columns: 1fr; }
+      .view { padding: 18px; }
+    }
   </style>
 </head>
 <body>
@@ -54,7 +190,284 @@
     <button role="tab" aria-selected="false" aria-controls="learning-review" data-view="learning-review">学习与 Review</button>
   </nav>
   <main class="shell">
-    <section class="view" id="system-map"><h2>系统地图</h2></section>
+    <section class="view" id="system-map">
+      <header class="view-heading">
+        <p class="eyebrow">End-to-end solve boundary</p>
+        <h2>系统地图：从 HiGHS 入口到原模型 KKT</h2>
+        <p>CPU 控制面负责路由、模型变换、停止判定与结果验证；迭代数据面由所选 CPU 或 CUDA 后端执行，最终回到 Host 恢复并验证原模型解。</p>
+      </header>
+
+      <aside class="reading-hint" aria-label="首次阅读顺序">
+        <strong>首次阅读：</strong>沿主路径确认每一次所有权与语义转换。
+        <ol>
+          <li>Wrapper</li>
+          <li>API</li>
+          <li>Model</li>
+          <li>Algorithm</li>
+          <li>Backend</li>
+          <li>Postsolve</li>
+          <li>KKT</li>
+        </ol>
+      </aside>
+
+      <div class="evidence-legend" aria-label="证据类别">
+        <span class="legend-label">证据类别</span>
+        <span class="fact-tag fact">已实现</span>
+        <span class="fact-tag measured">已测量</span>
+        <span class="fact-tag hypothesis">待测假设</span>
+        <span class="fact-tag unavailable">未实现后端</span>
+      </div>
+
+      <figure class="flow-figure">
+        <figcaption>控制流总览（箭头文字说明传递内容与分支语义）</figcaption>
+        <div class="flow-scroll">
+          <svg class="flow-map" viewBox="0 0 1260 640" role="img" aria-labelledby="flow-title flow-desc">
+            <title id="flow-title">HiPDLP 端到端求解控制流</title>
+            <desc id="flow-desc">Wrapper 进入 API，API 在 legacy 与 rewrite 之间决策。Rewrite 构建模型并进入算法，后端工厂分叉至 CPU 或 CUDA，候选解回到 CPU 依次 postsolve 和 KKT 验证后返回。</desc>
+            <defs>
+              <marker id="arrow-head" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+                <path d="M 0 0 L 10 5 L 0 10 z" fill="#667085"></path>
+              </marker>
+            </defs>
+
+            <rect class="lane" x="12" y="16" width="1236" height="608" rx="12"></rect>
+            <text class="lane-label" x="32" y="44">CPU / HOST 控制面</text>
+            <rect class="device-lane" x="990" y="320" width="230" height="132" rx="10"></rect>
+            <text class="device-label" x="1008" y="344">GPU 数据面（CUDA）</text>
+
+            <rect class="flow-box host-fill" x="35" y="78" width="150" height="82"></rect>
+            <text class="flow-title" x="110" y="110">Wrapper</text>
+            <text class="flow-subtitle" x="110" y="134">solveLpHiPdlp</text>
+
+            <rect class="flow-box decision-fill" x="230" y="78" width="160" height="82"></rect>
+            <text class="flow-title" x="310" y="106">API 路由</text>
+            <text class="flow-subtitle" x="310" y="130">legacy / rewrite？</text>
+
+            <rect class="flow-box host-fill" x="440" y="78" width="160" height="82"></rect>
+            <text class="flow-title" x="520" y="108">Model</text>
+            <text class="flow-subtitle" x="520" y="132">构建 · 变换 · 缩放</text>
+
+            <rect class="flow-box host-fill" x="650" y="78" width="160" height="82"></rect>
+            <text class="flow-title" x="730" y="108">Algorithm</text>
+            <text class="flow-subtitle" x="730" y="132">PDHG 编排与停止</text>
+
+            <rect class="flow-box host-fill" x="860" y="78" width="180" height="82"></rect>
+            <text class="flow-title" x="950" y="108">Backend Factory</text>
+            <text class="flow-subtitle" x="950" y="132">选择并创建后端</text>
+
+            <path class="flow-arrow" d="M185 119 H230"></path>
+            <text class="flow-label" x="208" y="105">LP + options</text>
+            <path class="flow-arrow" d="M390 119 H440"></path>
+            <text class="flow-label" x="415" y="105">rewrite</text>
+            <path class="flow-arrow" d="M600 119 H650"></path>
+            <text class="flow-label" x="625" y="105">Problem</text>
+            <path class="flow-arrow" d="M810 119 H860"></path>
+            <text class="flow-label" x="835" y="105">Kind</text>
+
+            <rect class="flow-box neutral-fill" x="230" y="224" width="160" height="58"></rect>
+            <text class="flow-title" x="310" y="250">legacy::solve</text>
+            <text class="flow-subtitle" x="310" y="270">旧实现独立路径</text>
+            <path class="flow-arrow conditional" d="M310 160 V224"></path>
+            <text class="flow-label" x="338" y="195">legacy</text>
+            <path class="flow-arrow conditional return" d="M230 253 H110 V160"></path>
+            <text class="flow-label" x="166" y="240">直接返回</text>
+
+            <path class="flow-arrow" d="M950 160 V214"></path>
+            <polygon class="flow-box decision-fill" points="950,214 1010,260 950,306 890,260"></polygon>
+            <text class="flow-title" x="950" y="257">backend?</text>
+            <text class="flow-subtitle" x="950" y="277">cpu / cuda / auto</text>
+
+            <text class="flow-note" x="610" y="316">auto：先尝试创建 CUDA；创建失败 → 选择 CPU</text>
+            <text class="flow-note" x="610" y="339">请求 CUDA：创建失败 → Error；不静默使用 CPU</text>
+
+            <rect class="flow-box host-fill" x="745" y="366" width="180" height="66"></rect>
+            <text class="flow-title" x="835" y="393">CPU Backend</text>
+            <text class="flow-subtitle" x="835" y="414">Host vectors · serial kernels</text>
+            <path class="flow-arrow" d="M907 293 L835 366"></path>
+            <text class="flow-label" x="847" y="326">cpu / auto fallback</text>
+
+            <rect class="flow-box device-fill" x="1012" y="366" width="188" height="66"></rect>
+            <text class="flow-title" x="1106" y="393">CUDA Backend</text>
+            <text class="flow-subtitle" x="1106" y="414">Device vectors · GPU kernels</text>
+            <path class="flow-arrow" d="M993 293 L1106 366"></path>
+            <text class="flow-label" x="1080" y="326">cuda / auto success</text>
+
+            <rect class="flow-box host-fill" x="780" y="492" width="180" height="70"></rect>
+            <text class="flow-title" x="870" y="520">Postsolve</text>
+            <text class="flow-subtitle" x="870" y="544">解缩放 · 恢复原模型</text>
+            <path class="flow-arrow return" d="M835 432 V492"></path>
+            <text class="flow-label" x="794" y="466">Host iterate</text>
+            <path class="flow-arrow return" d="M1106 432 V466 H960 V527"></path>
+            <text class="flow-label" x="1046" y="458">D2H 候选解</text>
+
+            <rect class="flow-box host-fill" x="1030" y="492" width="180" height="70"></rect>
+            <text class="flow-title" x="1120" y="520">KKT</text>
+            <text class="flow-subtitle" x="1120" y="544">对原 HighsLp 独立验证</text>
+            <path class="flow-arrow" d="M960 527 H1030"></path>
+            <text class="flow-label" x="995" y="514">HighsSolution</text>
+
+            <path class="flow-arrow return" d="M1120 562 V596 H110 V160"></path>
+            <text class="flow-label" x="600" y="588">SolveResult → HighsSolution / HighsInfo / status</text>
+          </svg>
+        </div>
+      </figure>
+
+      <div class="component-grid">
+        <article class="node host" id="node-wrapper">
+          <div class="node-header">
+            <span class="fact-tag fact">已实现</span>
+            <span class="residency">CPU / Host</span>
+          </div>
+          <h3>HiGHS 求解入口</h3>
+          <code>solveLpHiPdlp</code>
+          <p>借用求解器对象中的模型、选项与输出槽，并原样把调用边界交给 HiPDLP API。</p>
+          <details class="component-detail">
+            <summary>展开接口、所有权与 Review 要点</summary>
+            <dl>
+              <div><dt>所有权</dt><dd>借用 HighsLpSolverObject 字段；HighsSolution、HighsInfo 与状态由调用方拥有。</dd></div>
+              <div><dt>输入</dt><dd>HighsOptions、HighsTimer、HighsLp、HighsCallback</dd></div>
+              <div><dt>输出</dt><dd>HighsStatus，并就地更新 basis、solution、model status 与 info</dd></div>
+              <div><dt>执行位置</dt><dd>CPU / Host</dd></div>
+              <div><dt>失败</dt><dd>不改写错误语义，直接返回 API 产生的 HighsStatus。</dd></div>
+              <div><dt>源码</dt><dd><a href="../highs/pdlp/HiPdlpWrapper.cpp">打开源码</a></dd></div>
+            </dl>
+            <p><strong>Review：</strong>Wrapper 是否仍只负责透传，没有复制模型或重复翻译选项？</p>
+          </details>
+        </article>
+
+        <article class="node host" id="node-api">
+          <div class="node-header">
+            <span class="fact-tag fact">已实现</span>
+            <span class="residency">CPU / Host</span>
+          </div>
+          <h3>API 路由与选项翻译</h3>
+          <code>hipdlp::api::solve</code>
+          <p>翻译 HighsOptions，选择 legacy/rewrite，并把剩余全局时间预算交给 rewrite。</p>
+          <details class="component-detail">
+            <summary>展开接口、所有权与 Review 要点</summary>
+            <dl>
+              <div><dt>所有权</dt><dd>API 借用 HighsLp；SolveResult 拥有返回解。</dd></div>
+              <div><dt>输入</dt><dd>HighsOptions、HighsLp、MigrationOptions</dd></div>
+              <div><dt>输出</dt><dd>SolveResult → HighsSolution/HighsInfo/status</dd></div>
+              <div><dt>执行位置</dt><dd>CPU / Host</dd></div>
+              <div><dt>失败</dt><dd>选项翻译错误直接形成结构化失败结果。</dd></div>
+              <div><dt>源码</dt><dd><a href="../highs/pdlp/hipdlp/api/solver.cc">打开源码</a></dd></div>
+            </dl>
+            <p><strong>Review：</strong>剩余时间预算是否只扣除一次？</p>
+          </details>
+        </article>
+
+        <article class="node host" id="node-model">
+          <div class="node-header">
+            <span class="fact-tag fact">已实现</span>
+            <span class="residency">CPU / Host</span>
+          </div>
+          <h3>模型构建与变换</h3>
+          <code>model::buildProblem</code>
+          <p>校验 HighsLp，规范化边界并建立求解模型及可逆的缩放、行列变换元数据。</p>
+          <details class="component-detail">
+            <summary>展开接口、所有权与 Review 要点</summary>
+            <dl>
+              <div><dt>所有权</dt><dd>OriginalModel 借用 HighsLp；Problem 拥有规范化数组与恢复元数据。</dd></div>
+              <div><dt>输入</dt><dd>原始 HighsLp；随后应用 SolverOptions 中的 scaling pipeline</dd></div>
+              <div><dt>输出</dt><dd>ProblemBuildResult（Problem 或结构化 api::Error）</dd></div>
+              <div><dt>执行位置</dt><dd>CPU / Host</dd></div>
+              <div><dt>失败</dt><dd>维度、稀疏存储、边界或数值无效时停止，不把无效模型交给后端。</dd></div>
+              <div><dt>源码</dt><dd><a href="../highs/pdlp/hipdlp/model/problem.cc">打开源码</a></dd></div>
+            </dl>
+            <p><strong>Review：</strong>每个 presolve/scale 变换是否都保留了足够的逆映射？</p>
+          </details>
+        </article>
+
+        <article class="node host" id="node-algorithm">
+          <div class="node-header">
+            <span class="fact-tag fact">已实现</span>
+            <span class="residency">CPU 控制面 · CPU/GPU 数据面</span>
+          </div>
+          <h3>Rewrite 求解编排</h3>
+          <code>algorithm::solve</code>
+          <p>创建后端资源、运行 PDHG 迭代与停止判定，并协调候选解下载、证书、postsolve 和验证。</p>
+          <details class="component-detail">
+            <summary>展开接口、所有权与 Review 要点</summary>
+            <dl>
+              <div><dt>所有权</dt><dd>借用 OriginalModel 与 SolveContext；本次调用独占 Backend、ProblemHandle、Workspace 与迭代向量。</dd></div>
+              <div><dt>输入</dt><dd>SolverOptions、OriginalModel、SolveContext</dd></div>
+              <div><dt>输出</dt><dd>api::SolveResult（状态、原模型解、迭代数、耗时或 Error）</dd></div>
+              <div><dt>执行位置</dt><dd>控制流在 CPU；向量和 kernels 位于所选 CPU/CUDA 后端。</dd></div>
+              <div><dt>失败</dt><dd>选项、后端能力、资源创建、数值检查或时间边界失败均形成 api::Error。</dd></div>
+              <div><dt>源码</dt><dd><a href="../highs/pdlp/hipdlp/algorithm/solver.cc">打开源码</a></dd></div>
+            </dl>
+            <p><strong>Review：</strong>每个设备到 Host 的边界是否有明确目的，并避免在普通迭代内重复创建资源？</p>
+          </details>
+        </article>
+
+        <article class="node host" id="node-backend">
+          <div class="node-header">
+            <span class="fact-tag fact">已实现</span>
+            <span class="residency">CPU 工厂 · CPU/CUDA 执行</span>
+          </div>
+          <h3>后端工厂与设备选择</h3>
+          <code>backend::createBackend</code>
+          <p><code>auto</code> 先尝试创建 CUDA，失败才选择 CPU；显式请求 CUDA 失败时返回错误，绝不静默使用 CPU。</p>
+          <details class="component-detail">
+            <summary>展开接口、所有权与 Review 要点</summary>
+            <dl>
+              <div><dt>所有权</dt><dd>FactoryResult 通过 unique_ptr 独占创建出的 Backend。</dd></div>
+              <div><dt>输入</dt><dd>Kind：auto、cpu、cuda、openmp 或 rocm</dd></div>
+              <div><dt>输出</dt><dd>FactoryResult（Backend 或 Error）</dd></div>
+              <div><dt>执行位置</dt><dd>工厂在 CPU；CPU 后端驻留 Host，CUDA 后端驻留 Device。</dd></div>
+              <div><dt>失败</dt><dd>无效、未构建、未实现、分配失败或显式 CUDA 创建失败均原样返回。</dd></div>
+              <div><dt>源码</dt><dd><a href="../highs/pdlp/hipdlp/backend/backend_factory.cc">打开源码</a></dd></div>
+            </dl>
+            <p><strong>Review：</strong>显式 CUDA 的每条创建失败路径是否都保持失败，而不是进入 auto 的 CPU fallback？</p>
+          </details>
+        </article>
+
+        <article class="node host" id="node-postsolve">
+          <div class="node-header">
+            <span class="fact-tag fact">已实现</span>
+            <span class="residency">CPU / Host</span>
+          </div>
+          <h3>解缩放与原模型恢复</h3>
+          <code>model::postsolve</code>
+          <p>把 Host 上的缩放 primal、dual 与 reduced costs 恢复为原始行列空间中的完整 HighsSolution。</p>
+          <details class="component-detail">
+            <summary>展开接口、所有权与 Review 要点</summary>
+            <dl>
+              <div><dt>所有权</dt><dd>借用 Problem 与候选向量；PostsolveResult 拥有恢复后的 HighsSolution。</dd></div>
+              <div><dt>输入</dt><dd>Problem、scaled primal、scaled dual、scaled reduced costs</dd></div>
+              <div><dt>输出</dt><dd>PostsolveResult（HighsSolution、原目标值或 Error）</dd></div>
+              <div><dt>执行位置</dt><dd>CPU / Host；CUDA 候选解必须先 D2H。</dd></div>
+              <div><dt>失败</dt><dd>向量尺寸、非有限值、缩放元数据或恢复运算不安全时拒绝结果。</dd></div>
+              <div><dt>源码</dt><dd><a href="../highs/pdlp/hipdlp/model/problem.cc">打开源码</a></dd></div>
+            </dl>
+            <p><strong>Review：</strong>行列符号、比例与目标 offset 是否各恢复且仅恢复一次？</p>
+          </details>
+        </article>
+
+        <article class="node host" id="node-kkt">
+          <div class="node-header">
+            <span class="fact-tag fact">已实现</span>
+            <span class="residency">CPU / Host</span>
+          </div>
+          <h3>原模型独立 KKT 验证</h3>
+          <code>verification::verifyKkt</code>
+          <p>用原始 HighsLp 和恢复后的完整解独立重算 primal、dual、gap 与 complementarity 指标。</p>
+          <details class="component-detail">
+            <summary>展开接口、所有权与 Review 要点</summary>
+            <dl>
+              <div><dt>所有权</dt><dd>借用原 HighsLp 与 HighsSolution；KktVerificationResult 按值拥有指标与错误文本。</dd></div>
+              <div><dt>输入</dt><dd>原始 HighsLp、完整 primal-dual HighsSolution、KKT tolerance</dd></div>
+              <div><dt>输出</dt><dd>KktVerificationResult：input_valid、metrics_finite、pass 与 metrics</dd></div>
+              <div><dt>执行位置</dt><dd>CPU / Host</dd></div>
+              <div><dt>失败</dt><dd>维度不一致、解不完整、非有限值或 KKT 超差；求解器将无效验证转成失败结果。</dd></div>
+              <div><dt>源码</dt><dd><a href="../highs/pdlp/hipdlp/verification/kkt_verifier.cc">打开源码</a></dd></div>
+            </dl>
+            <p><strong>Review：</strong>验收是否始终针对原模型，而不是只验证缩放或变换后的 Problem？</p>
+          </details>
+        </article>
+      </div>
+    </section>
     <section class="view" id="data-residency"><h2>数据与驻留</h2></section>
     <section class="view" id="iteration-correctness"><h2>迭代与正确性</h2></section>
     <section class="view" id="bottlenecks"><h2>卡点与优化</h2></section>
