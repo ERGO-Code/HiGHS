@@ -610,13 +610,161 @@
       background: #fff;
       font-size: 12px;
     }
+    .workbench-scope {
+      margin: 18px 0 22px;
+      padding: 14px 16px;
+      border-left: 5px solid var(--hotspot);
+      background: #fff8e8;
+    }
+    .workbench-scope p { margin: 4px 0; }
+    .hotspot-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+      margin: 20px 0 30px;
+    }
+    .hotspot-card {
+      min-width: 0;
+      padding: 18px;
+      border: 1px solid var(--line);
+      border-top: 5px solid var(--hotspot);
+      border-radius: var(--radius);
+      background: #fffdf8;
+    }
+    .hotspot-card h3 { margin: 5px 0 14px; font-size: 20px; }
+    .hotspot-card h4 {
+      margin: 14px 0 3px;
+      color: #704b0e;
+      font-size: 13px;
+    }
+    .hotspot-card p { margin: 0; }
+    .hotspot-card code,
+    .report-evidence code { overflow-wrap: anywhere; }
+    .report-evidence {
+      margin-top: 10px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .estimator-panel,
+    .diagnostics-panel {
+      margin-top: 28px;
+      padding: 20px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #fbfcfd;
+    }
+    .estimator-panel { border-top: 5px solid var(--device); }
+    .diagnostics-panel { border-top: 5px solid var(--host); }
+    .estimator-panel h3,
+    .diagnostics-panel h3 { margin: 0 0 6px; font-size: 22px; }
+    .estimator-fields {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+      margin: 18px 0 14px;
+    }
+    .estimator-field {
+      display: grid;
+      gap: 5px;
+      min-width: 0;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .estimator-field input,
+    .estimator-field select {
+      width: 100%;
+      min-width: 0;
+      border: 1px solid var(--line);
+      border-radius: 5px;
+      padding: 9px 10px;
+      color: var(--ink);
+      background: var(--surface);
+      font: inherit;
+    }
+    .estimator-submit {
+      border: 1px solid var(--device);
+      border-radius: 5px;
+      padding: 8px 14px;
+      color: #075f43;
+      background: var(--device-soft);
+      font: inherit;
+      font-weight: 700;
+    }
+    .estimator-error {
+      margin: 12px 0;
+      padding: 10px 12px;
+      border: 1px solid var(--d2h);
+      border-radius: 5px;
+      color: #7b2633;
+      background: #fff1f3;
+      font-weight: 700;
+    }
+    .estimate-results {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+      margin: 16px 0;
+    }
+    .estimate-results div {
+      min-width: 0;
+      padding: 12px;
+      border: 1px solid #b9ded1;
+      border-radius: 6px;
+      background: var(--device-soft);
+    }
+    .estimate-results dt { color: #176849; font-size: 12px; font-weight: 700; }
+    .estimate-results dd { margin: 4px 0 0; }
+    .estimate-results output {
+      display: block;
+      overflow-wrap: anywhere;
+      color: #075f43;
+      font-size: 17px;
+      font-weight: 700;
+    }
+    .estimator-error[hidden],
+    .estimate-results[hidden] { display: none; }
+    .estimator-exclusions {
+      margin-bottom: 0;
+      columns: 2;
+    }
+    .table-wrap {
+      margin-top: 16px;
+      overflow-x: auto;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+    }
+    .diagnostics-table {
+      width: 100%;
+      min-width: 900px;
+      border-collapse: collapse;
+      background: var(--surface);
+    }
+    .diagnostics-table th,
+    .diagnostics-table td {
+      padding: 10px 12px;
+      border-top: 1px solid #e2e7ec;
+      text-align: left;
+      vertical-align: top;
+    }
+    .diagnostics-table thead th {
+      border-top: 0;
+      color: var(--muted);
+      background: #f4f7f9;
+      font-size: 12px;
+    }
+    .diagnostics-table tbody th { color: var(--host); }
+    .diagnostics-table code { overflow-wrap: anywhere; }
     @media (max-width: 760px) {
       .component-grid,
       .data-grid,
       .resource-columns,
       .transfer-grid,
       .iteration-layout,
-      .kernel-grid { grid-template-columns: 1fr; }
+      .kernel-grid,
+      .hotspot-grid,
+      .estimator-fields,
+      .estimate-results { grid-template-columns: 1fr; }
       .iteration-facts { grid-template-columns: repeat(3, minmax(90px, 1fr)); }
       .lane-columns { grid-template-columns: 1fr; }
       .correctness-flow { grid-template-columns: 1fr; gap: 10px; }
@@ -632,6 +780,7 @@
       .path-arrow { transform: rotate(90deg); }
       .error-rail { position: static; }
       .field-groups { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .estimator-exclusions { columns: 1; }
       .view { padding: 18px; }
     }
     @media (max-width: 480px) {
@@ -1463,7 +1612,229 @@
         </aside>
       </div>
     </section>
-    <section class="view" id="bottlenecks"><h2>卡点与优化</h2></section>
+    <section class="view" id="bottlenecks">
+      <header class="view-heading">
+        <p class="eyebrow">Evidence-bounded performance workflow</p>
+        <h2>性能工作台：从症状到可证伪实验</h2>
+        <p>先分离固定成本、每步成本、边界检查和收敛轨迹，再选择诊断或 profiler。每张卡都保留证据范围与不能破坏的正确性约束。</p>
+      </header>
+
+      <aside class="workbench-scope" aria-label="性能证据范围">
+        <strong>先读范围：</strong>
+        <p>2026-09-08 release gate 仍为 blocked；分母不完整，不能据此构造正式 geometric mean。2026-09-14 结果是工程比较，不是 release acceptance。</p>
+        <p>2026-09-22 CUDA 降幅只覆盖三个案例；large-instance screen 没有 fully accepted legacy/rewrite pair，不能声称总体 speedup。</p>
+      </aside>
+
+      <div class="hotspot-grid">
+        <article class="hotspot-card" id="hotspot-1">
+          <span class="fact-tag hypothesis">Host fixed cost</span>
+          <h3>Host 预处理与小模型固定成本</h3>
+          <h4>症状</h4>
+          <p>小模型端到端时间主要落在模型构建、变换、缩放、norm estimation 与 backend setup，而不是迭代本身。</p>
+          <h4>当前证据</h4>
+          <p>2026-09-08 gate 仍 blocked，且有效分母不完整；现有诊断只能定位阶段，不能推出 release 级结论。</p>
+          <p class="report-evidence">证据路径：<code>docs/hipdlp-phase8-cpu-diagnosis.md</code></p>
+          <h4>看什么指标</h4>
+          <p><code>preprocessing_seconds</code>、<code>backend_setup_seconds</code>、<code>operator_norm_seconds</code> 与首步前 wall time。</p>
+          <h4>下一步实验</h4>
+          <p>按模型规模分桶，分别记录冷启动与同进程重复运行，隔离解析、变换、norm 和 backend 创建。</p>
+          <h4>不能破坏</h4>
+          <p>保留 transformation metadata、缩放语义、原模型 postsolve 与 KKT gate；不能把固定成本隐藏在计时窗口外。</p>
+        </article>
+
+        <article class="hotspot-card" id="hotspot-2">
+          <span class="fact-tag measured">CPU scoped comparison</span>
+          <h3>Serial CPU SpMV 与 fused vector loops</h3>
+          <h4>症状</h4>
+          <p>每个 PDHG step 有两次 serial SpMV；稀疏访存与逐元素投影/混合循环可能共同限制吞吐。</p>
+          <h4>当前证据</h4>
+          <p>2026-09-14 two-SpMV/CPU fusion 只是工程比较，不是 release acceptance；必须同时报告每步成本和迭代数量，避免把轨迹变化误当作 kernel 加速。</p>
+          <p class="report-evidence">证据路径：<code>docs/hipdlp-phase8-step-fusion.md</code></p>
+          <h4>看什么指标</h4>
+          <p><code>step_seconds / recorded_iterations</code>、CPU cycles、cache misses、memory bandwidth，以及 forward/transpose SpMV 占比。</p>
+          <h4>下一步实验</h4>
+          <p>在固定模型、线程、编译选项与停止条件下，用 CPU profiler 对比两次 SpMV 和三个 fused loops。</p>
+          <h4>不能破坏</h4>
+          <p>保持两次 SpMV 的数据依赖、投影边界、finite checks、40-step cadence 和相同终止判定。</p>
+        </article>
+
+        <article class="hotspot-card" id="hotspot-3">
+          <span class="fact-tag hypothesis">CUDA setup</span>
+          <h3>CUDA setup、uploads、descriptors 与 graph capture</h3>
+          <h4>症状</h4>
+          <p>短求解可能被 stream/cuBLAS/cuSPARSE 创建、矩阵上传、descriptor、scratch 查询和 graph capture 的一次性成本主导。</p>
+          <h4>当前证据</h4>
+          <p>现有 GPU 报告把 setup 与 steady state 分开，但覆盖范围不足以证明这些固定成本已被所有规模摊薄。</p>
+          <p class="report-evidence">证据路径：<code>docs/hipdlp-phase8-gpu-performance-report.md</code></p>
+          <h4>看什么指标</h4>
+          <p><code>backend_setup_seconds</code>、H2D bytes、allocation/descriptor calls、capture/instantiate latency 与首个 replay 前时间。</p>
+          <h4>下一步实验</h4>
+          <p>用 Nsight Systems 比较 cold/warm solve，并按 upload、descriptor、scratch 和 graph construction 标注 ranges。</p>
+          <h4>不能破坏</h4>
+          <p>不能跨维度或已失效资源复用 descriptor/graph；所有 CUDA 创建失败仍必须作为 structured error 暴露。</p>
+        </article>
+
+        <article class="hotspot-card" id="hotspot-4">
+          <span class="fact-tag measured">CUDA scoped replay</span>
+          <h3>Steady-state CUDA SpMV、fused kernels 与 replay</h3>
+          <h4>症状</h4>
+          <p>稳定迭代可能受 cuSPARSE SpMV 带宽、custom kernel occupancy、launch gaps 或 graph replay 调度限制。</p>
+          <h4>当前证据</h4>
+          <p>2026-09-22 三案例 fusion-plus-replay 相对 scoped before 下降 41.5%–52.4%；样本很小，不能外推到全部模型。</p>
+          <p class="report-evidence">证据路径：<code>docs/hipdlp-phase8-step-fusion.md</code>；补充：<code>docs/hipdlp-phase8-gpu-performance-report.md</code></p>
+          <h4>看什么指标</h4>
+          <p><code>step_seconds</code>、<code>command_buffer_replays</code>、kernel gaps、SpMV duration、achieved bandwidth、occupancy 与 divergence。</p>
+          <h4>下一步实验</h4>
+          <p>先用 Nsight Systems 分离 replay/launch gaps，再按 matrix shape 和 nnz 分桶，用 Nsight Compute 深挖主导 kernel。</p>
+          <h4>不能破坏</h4>
+          <p>保留每步两次 SpMV、39-step recorded block、direct initial/restart/tail steps 与 non-finite error propagation。</p>
+        </article>
+
+        <article class="hotspot-card" id="hotspot-5">
+          <span class="fact-tag hypothesis">Cadence boundary</span>
+          <h3>Cadence boundary、fallback D2H 与 synchronization</h3>
+          <h4>症状</h4>
+          <p>正常 112-byte packet 很小，但 resident check、同步或 host oracle fallback 触发完整 candidate D2H 时会形成周期性尖峰。</p>
+          <h4>当前证据</h4>
+          <p>现有 counters 能区分 ordinary boundary 与 fallback；尚需 trace 证明 packet、同步和 candidate download 的实际时间线。</p>
+          <p class="report-evidence">证据路径：<code>docs/hipdlp-phase8-gpu-performance-report.md</code></p>
+          <h4>看什么指标</h4>
+          <p><code>boundary_seconds</code>、<code>download_seconds</code>、ordinary D2H bytes/transfers/synchronizations、<code>candidate_downloads</code> 与 host-oracle 次数。</p>
+          <h4>下一步实验</h4>
+          <p>分别采集无 fallback、certificate fallback 与 host oracle fallback，核对每次同步前后的 packet/full-candidate bytes。</p>
+          <h4>不能破坏</h4>
+          <p>不能跳过不确定性 fallback、finite/error_flag 同步、certificate screen 或最终候选下载；失败不能伪装成收敛。</p>
+        </article>
+
+        <article class="hotspot-card" id="hotspot-6">
+          <span class="fact-tag unavailable">No accepted pair</span>
+          <h3>Scaling、norm guard、PID、restart 与 KKT 轨迹</h3>
+          <h4>症状</h4>
+          <p>单步更快仍可能因 operator norm、primal weight、PID 或 restart 改变而增加迭代，甚至在 postsolve/KKT 被拒绝。</p>
+          <h4>当前证据</h4>
+          <p>2026-09-22 large20 screen 的 fully accepted legacy/rewrite pairs 为 0，因此不能建立 speedup 或 release acceptance。</p>
+          <p class="report-evidence">证据路径：<code>docs/hipdlp-phase8-large20-screen.md</code></p>
+          <h4>看什么指标</h4>
+          <p><code>recorded_iterations</code>、<code>restarts</code>、weight updates、residual trajectory、status、postsolve 和 original-model KKT。</p>
+          <h4>下一步实验</h4>
+          <p>固定模型、seed、options 与后端，逐项切换 scaling/norm/PID/restart，保存同 cadence 的 residual 与 KKT trace。</p>
+          <h4>不能破坏</h4>
+          <p>只有双方均通过状态、目标值、残差、postsolve 与原模型 KKT 后才能形成性能 pair；不得只比较成功子集。</p>
+        </article>
+      </div>
+
+      <section class="estimator-panel" aria-labelledby="estimator-title">
+        <h3 id="estimator-title">内存与传输下限估算器</h3>
+        <p>输入变换后问题维度。结果是核心结构的 labeled lower bounds，不是 allocator 或设备峰值承诺。</p>
+        <form id="memory-estimator" novalidate>
+          <div class="estimator-fields">
+            <label class="estimator-field" for="rows">
+              rows
+              <input id="rows" name="rows" type="number" min="0" step="1" value="1000" inputmode="numeric">
+            </label>
+            <label class="estimator-field" for="cols">
+              columns
+              <input id="cols" name="cols" type="number" min="0" step="1" value="500" inputmode="numeric">
+            </label>
+            <label class="estimator-field" for="nnz">
+              nonzeros
+              <input id="nnz" name="nnz" type="number" min="0" step="1" value="10000" inputmode="numeric">
+            </label>
+            <label class="estimator-field" for="index-bytes">
+              index width
+              <select id="index-bytes" name="indexBytes">
+                <option value="4">4 bytes</option>
+                <option value="8" selected>8 bytes</option>
+              </select>
+            </label>
+          </div>
+          <button class="estimator-submit" type="submit">更新下限</button>
+          <p id="estimator-error" class="estimator-error" role="alert" hidden></p>
+          <dl id="estimator-results" class="estimate-results" hidden>
+            <div>
+              <dt>A + Aᵀ compressed storage 下限</dt>
+              <dd><output id="matrix-bytes" for="rows cols nnz index-bytes"></output></dd>
+            </div>
+            <div>
+              <dt>8 column + 8 row vectors 下限</dt>
+              <dd><output id="vector-bytes" for="rows cols"></output></dd>
+            </div>
+            <div>
+              <dt>一次 full candidate D2H 下限</dt>
+              <dd><output id="candidate-bytes" for="rows cols"></output></dd>
+            </div>
+            <div>
+              <dt>正常 CUDA check packet 下限</dt>
+              <dd><output id="packet-bytes"></output></dd>
+            </div>
+          </dl>
+        </form>
+        <p><strong>公式范围：</strong>matrix = 两份 values/indices + 两份 row offsets；vectors = <code>8 * (rows + columns)</code> doubles；candidate = <code>2 * (rows + columns)</code> doubles；packet = 112 bytes。</p>
+        <h4>下限未计入</h4>
+        <ul class="estimator-exclusions">
+          <li>allocator overhead 与 alignment</li>
+          <li>matrix/vector descriptors</li>
+          <li>cuSPARSE workspaces</li>
+          <li>resident check/certificate duplicates</li>
+          <li>reduction scratch</li>
+          <li>pinned staging buffers</li>
+          <li>graph objects</li>
+          <li>vendor-internal allocations</li>
+        </ul>
+      </section>
+
+      <section class="diagnostics-panel" aria-labelledby="diagnostics-title">
+        <h3 id="diagnostics-title">SolveDiagnostics → profiling 工具地图</h3>
+        <p>先用 solver trace 找阶段和次数，再用相应 profiler 回答“时间在哪里”或“为什么慢”；Compute Sanitizer 用于正确性，不用于证明加速。</p>
+        <div class="table-wrap">
+          <table id="diagnostics-map" class="diagnostics-table">
+            <thead>
+              <tr>
+                <th scope="col">阶段 / 传输</th>
+                <th scope="col">SolveDiagnostics</th>
+                <th scope="col">首选工具</th>
+                <th scope="col">要回答的问题</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <th scope="row">Setup</th>
+                <td><code>preprocessing_seconds</code>, <code>backend_setup_seconds</code>, <code>operator_norm_seconds</code>, <code>resource_creation_calls_before_iterations</code></td>
+                <td>solver trace → CPU profiler；CUDA 创建与上传再看 Nsight Systems</td>
+                <td>固定成本来自 host preprocessing、norm、allocation、H2D、descriptor 还是 graph construction？</td>
+              </tr>
+              <tr>
+                <th scope="row">Iteration / step</th>
+                <td><code>iterations_seconds</code>, <code>iteration_block_seconds</code>, <code>step_seconds</code>, <code>recorded_iterations</code>, <code>command_buffer_replays</code></td>
+                <td>solver trace → CPU profiler 或 Nsight Systems；主导 GPU kernel 再看 Nsight Compute</td>
+                <td>成本来自 serial CPU loops、SpMV、custom kernels、launch gaps 还是 replay？</td>
+              </tr>
+              <tr>
+                <th scope="row">Boundary / resident check</th>
+                <td><code>boundary_seconds</code>, <code>check_boundaries</code>, <code>resident_check_calls</code>, <code>ordinary_check_boundaries</code></td>
+                <td>solver trace + Nsight Systems；kernel occupancy 用 Nsight Compute</td>
+                <td>40-step cadence 的 partial/packet kernels 与同步各占多少？</td>
+              </tr>
+              <tr>
+                <th scope="row">Download / synchronization</th>
+                <td><code>download_seconds</code>, <code>candidate_downloads</code>, <code>ordinary_check_d2h_bytes</code>, <code>ordinary_check_transfers</code>, <code>ordinary_check_synchronizations</code>, <code>host_oracle_checks</code></td>
+                <td>solver trace + Nsight Systems</td>
+                <td>是 112-byte packet、full candidate D2H、host oracle fallback，还是同步等待造成尖峰？</td>
+              </tr>
+              <tr>
+                <th scope="row">Trajectory / verification</th>
+                <td><code>host_preparation_seconds</code>, <code>host_verification_seconds</code>, <code>reference_fixed_point_seconds</code>, <code>fixed_point_fallback_seconds</code>, <code>restarts</code>, <code>primal_weight_updates</code></td>
+                <td>solver trace + CPU profiler；内存错误、race、非法访问用 Compute Sanitizer</td>
+                <td>慢来自轨迹变化、fallback、postsolve/KKT，还是 host verification；结果是否仍可信？</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="source-row">字段定义：
+          <a href="../highs/pdlp/hipdlp/algorithm/solver.hpp">algorithm/solver.hpp</a>
+        </p>
+      </section>
+    </section>
     <section class="view" id="learning-review"><h2>学习与 Review</h2></section>
   </main>
   <script id="architecture-data" type="application/json">
@@ -1473,6 +1844,19 @@
       "commit": "49b85f4f3",
       "generated": "2026-09-23",
       "workingTree": "dirty"
+    },
+    "evidence": [
+      {"id": "phase8-gate", "date": "2026-09-08", "releaseGate": true, "status": "blocked"},
+      {"id": "two-spmv-cpu", "date": "2026-09-14", "releaseGate": false},
+      {"id": "cuda-fusion-replay", "date": "2026-09-22", "releaseGate": false, "reductionPercent": [41.5, 52.4]},
+      {"id": "large20", "date": "2026-09-22", "releaseGate": false, "acceptedPairs": 0}
+    ],
+    "estimator": {
+      "doubleBytes": 8,
+      "columnVectors": 8,
+      "rowVectors": 8,
+      "matrixCopies": 2,
+      "checkPacketBytes": 112
     },
     "structures": [
       {"id": "highs-lp", "residency": "host", "owner": "HiGHS caller"},
@@ -1578,6 +1962,82 @@
       ));
     });
     activateLane("compare");
+  </script>
+  <script id="performance-workbench">
+    const estimatorForm = document.querySelector("#memory-estimator");
+    const estimatorError = document.querySelector("#estimator-error");
+    const estimatorResults = document.querySelector("#estimator-results");
+
+    function parseCount(input, label) {
+      const value = Number(input.value);
+      if (!Number.isSafeInteger(value) || value < 0) {
+        throw new Error(`${label} 必须是非负安全整数`);
+      }
+      return value;
+    }
+
+    function estimateMemory({ rows, cols, nnz, indexBytes }) {
+      const matrixBytes =
+        2 * nnz * (8 + indexBytes) +
+        ((rows + 1) + (cols + 1)) * indexBytes;
+      const vectorBytes = 8 * (rows + cols) * 8;
+      const candidateBytes = 2 * (rows + cols) * 8;
+      const packetBytes = 112;
+      for (const value of [matrixBytes, vectorBytes, candidateBytes]) {
+        if (!Number.isSafeInteger(value)) {
+          throw new Error("估算结果超过 JavaScript 安全整数范围");
+        }
+      }
+      return { matrixBytes, vectorBytes, candidateBytes, packetBytes };
+    }
+
+    function formatBytes(bytes) {
+      const units = ["B", "KiB", "MiB", "GiB", "TiB", "PiB"];
+      let value = bytes;
+      let unitIndex = 0;
+      while (value >= 1024 && unitIndex < units.length - 1) {
+        value /= 1024;
+        unitIndex += 1;
+      }
+      return `${value.toLocaleString("zh-CN", {
+        maximumFractionDigits: unitIndex === 0 ? 0 : 2
+      })} ${units[unitIndex]}`;
+    }
+
+    function updateEstimator() {
+      estimatorError.hidden = true;
+      estimatorError.textContent = "";
+      estimatorResults.hidden = true;
+      try {
+        const estimates = estimateMemory({
+          rows: parseCount(document.querySelector("#rows"), "rows"),
+          cols: parseCount(document.querySelector("#cols"), "columns"),
+          nnz: parseCount(document.querySelector("#nnz"), "nonzeros"),
+          indexBytes: parseCount(
+            document.querySelector("#index-bytes"), "index width"
+          )
+        });
+        document.querySelector("#matrix-bytes").textContent =
+          formatBytes(estimates.matrixBytes);
+        document.querySelector("#vector-bytes").textContent =
+          formatBytes(estimates.vectorBytes);
+        document.querySelector("#candidate-bytes").textContent =
+          formatBytes(estimates.candidateBytes);
+        document.querySelector("#packet-bytes").textContent =
+          formatBytes(estimates.packetBytes);
+        estimatorResults.hidden = false;
+      } catch (error) {
+        estimatorError.textContent = error.message;
+        estimatorError.hidden = false;
+      }
+    }
+
+    estimatorForm.addEventListener("input", updateEstimator);
+    estimatorForm.addEventListener("submit", (event) => {
+      event.preventDefault();
+      updateEstimator();
+    });
+    updateEstimator();
   </script>
 </body>
 </html>

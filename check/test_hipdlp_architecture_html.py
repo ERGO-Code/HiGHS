@@ -445,6 +445,159 @@ class ArchitecturePageTests(unittest.TestCase):
         ):
             self.assertIn(phrase, self.source)
 
+    def test_performance_evidence_retains_scope_and_limits(self):
+        evidence = {item["id"]: item for item in self.data["evidence"]}
+        self.assertEqual(evidence["phase8-gate"]["date"], "2026-09-08")
+        self.assertEqual(
+            evidence["cuda-fusion-replay"]["date"], "2026-09-22"
+        )
+        self.assertEqual(
+            evidence["cuda-fusion-replay"]["reductionPercent"],
+            [41.5, 52.4],
+        )
+        self.assertFalse(evidence["cuda-fusion-replay"]["releaseGate"])
+        self.assertEqual(evidence["large20"]["acceptedPairs"], 0)
+        for phrase in (
+            "不能外推到全部模型",
+            "不是 release acceptance",
+            "每步成本",
+            "迭代数量",
+            "host oracle fallback",
+        ):
+            self.assertIn(phrase, self.source)
+
+    def test_estimator_constants_and_reference_case(self):
+        estimator = self.data["estimator"]
+        self.assertEqual(estimator, {
+            "doubleBytes": 8,
+            "columnVectors": 8,
+            "rowVectors": 8,
+            "matrixCopies": 2,
+            "checkPacketBytes": 112,
+        })
+        rows, cols, nnz, index_bytes = 1000, 500, 10000, 8
+        matrix = (
+            2 * nnz * (8 + index_bytes)
+            + ((rows + 1) + (cols + 1)) * index_bytes
+        )
+        vectors = 8 * (rows + cols) * 8
+        candidate = 2 * (rows + cols) * 8
+        self.assertEqual(matrix, 332016)
+        self.assertEqual(vectors, 96000)
+        self.assertEqual(candidate, 24000)
+
+    def test_performance_workbench_has_scoped_hotspots_and_report_evidence(
+            self):
+        self.assertTrue(
+            {f"hotspot-{number}" for number in range(1, 7)}
+            <= self.parser.ids
+        )
+        for heading in (
+            "症状",
+            "当前证据",
+            "看什么指标",
+            "下一步实验",
+            "不能破坏",
+        ):
+            self.assertEqual(self.source.count(f"<h4>{heading}</h4>"), 6)
+
+        report_paths = (
+            "docs/hipdlp-phase8-cpu-diagnosis.md",
+            "docs/hipdlp-phase8-gpu-performance-report.md",
+            "docs/hipdlp-phase8-step-fusion.md",
+            "docs/hipdlp-phase8-large20-screen.md",
+        )
+        for path in report_paths:
+            with self.subTest(path=path):
+                self.assertIn(f"<code>{path}</code>", self.source)
+                self.assertNotIn(path, self.parser.links)
+
+    def test_estimator_interface_validates_and_hides_stale_success(self):
+        for element_id in (
+            "memory-estimator",
+            "rows",
+            "cols",
+            "nnz",
+            "index-bytes",
+            "estimator-error",
+            "estimator-results",
+            "matrix-bytes",
+            "vector-bytes",
+            "candidate-bytes",
+            "packet-bytes",
+        ):
+            with self.subTest(element_id=element_id):
+                self.assertIn(element_id, self.parser.elements)
+
+        self.assertEqual(
+            self.parser.elements["estimator-error"]["attributes"]["role"],
+            "alert",
+        )
+        self.assertIn(
+            "hidden",
+            self.parser.elements["estimator-error"]["attributes"],
+        )
+        self.assertIn(
+            "hidden",
+            self.parser.elements["estimator-results"]["attributes"],
+        )
+        self.assertIn('<option value="4">', self.source)
+        self.assertIn('<option value="8" selected>', self.source)
+
+        for behavior in (
+            "function parseCount(input, label)",
+            "Number.isSafeInteger(value) || value < 0",
+            "${label} 必须是非负安全整数",
+            "function estimateMemory({ rows, cols, nnz, indexBytes })",
+            "function formatBytes(bytes)",
+            "function updateEstimator()",
+            "估算结果超过 JavaScript 安全整数范围",
+        ):
+            with self.subTest(behavior=behavior):
+                self.assertIn(behavior, self.source)
+
+        update_start = self.source.index("function updateEstimator()")
+        update_end = self.source.index(
+            'estimatorForm.addEventListener("input"', update_start
+        )
+        update_source = self.source[update_start:update_end]
+        self.assertLess(
+            update_source.index("estimatorResults.hidden = true;"),
+            update_source.index("try {"),
+        )
+        self.assertIn("estimatorError.textContent = error.message;", update_source)
+        self.assertIn("estimatorError.hidden = false;", update_source)
+        self.assertIn("estimatorResults.hidden = false;", update_source)
+
+    def test_diagnostics_map_connects_solve_fields_to_profilers(self):
+        self.assertIn("diagnostics-map", self.parser.ids)
+        for field in (
+            "backend_setup_seconds",
+            "iterations_seconds",
+            "step_seconds",
+            "boundary_seconds",
+            "download_seconds",
+            "host_verification_seconds",
+            "candidate_downloads",
+            "ordinary_check_d2h_bytes",
+            "ordinary_check_transfers",
+            "ordinary_check_synchronizations",
+            "host_oracle_checks",
+            "restarts",
+            "command_buffer_replays",
+        ):
+            with self.subTest(field=field):
+                self.assertIn(field, self.source)
+        for tool in (
+            "solver trace",
+            "CPU profiler",
+            "Nsight Systems",
+            "Nsight Compute",
+            "Compute Sanitizer",
+        ):
+            with self.subTest(tool=tool):
+                self.assertIn(tool, self.source)
+
 
 if __name__ == "__main__":
     unittest.main()
