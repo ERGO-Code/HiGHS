@@ -214,7 +214,21 @@ class HPresolve {
 
   void resetRowDualImpliedBoundsDerivedFromCol(HighsInt col);
 
+  void matrixNonZeroChanged(HighsInt row, HighsInt col);
+
+  void changeRowLower(HighsInt row, double newLower,
+                      bool skipRowDualUpdate = false);
+
+  void changeRowUpper(HighsInt row, double newUpper,
+                      bool skipRowDualUpdate = false);
+
+  void addToRowLower(HighsInt row, const HighsCDouble& delta);
+
+  void addToRowUpper(HighsInt row, const HighsCDouble& delta);
+
   bool rowCoefficientsIntegral(HighsInt row, double scale) const;
+
+  bool isBinary(HighsInt col) const;
 
   bool isImpliedFree(HighsInt col) const;
 
@@ -352,8 +366,6 @@ class HPresolve {
 
   Result presolve(HighsPostsolveStack& postsolve_stack);
 
-  Result removeSlacks(HighsPostsolveStack& postsolve_stack);
-
   Result checkTimeLimit();
 
   Result checkLimits(HighsPostsolveStack& postsolve_stack);
@@ -403,6 +415,8 @@ class HPresolve {
   bool addToMatrix(HighsPostsolveStack& postsolve_stack, double row_lower,
                    double row_upper, const std::vector<HighsInt>& row_indices,
                    const std::vector<double>& row_values);
+
+  Result normaliseCliqueRows(HighsPostsolveStack& postsolve_stack);
 
   Result prepareProbing(HighsPostsolveStack& postsolve_stack, bool& firstCall);
 
@@ -526,8 +540,6 @@ class HPresolve {
 
   Result sparsify(HighsPostsolveStack& postsolve_stack);
 
-  void setRelaxedImpliedBounds();
-
   const HighsPresolveLog& getPresolveLog() const {
     return analysis_.presolve_log_;
   }
@@ -543,6 +555,7 @@ class HPresolve {
   Result presolveRuleTestColStuffing(HighsPostsolveStack& postsolve_stack);
   Result presolveRuleTestParallelRowsAndCols(
       HighsPostsolveStack& postsolve_stack);
+  Result presolveRuleTestProbing(HighsPostsolveStack& postsolve_stack);
   Result presolveRuleTestFourierMotzkin(HighsPostsolveStack& postsolve_stack);
 
   /*

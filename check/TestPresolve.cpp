@@ -638,46 +638,6 @@ TEST_CASE("write-presolved-model", "[highs_test_presolve]") {
   highs1.resetGlobalScheduler(true);
 }
 
-TEST_CASE("presolve-slacks", "[highs_test_presolve]") {
-  // This LP reduces to empty, because the equation is a doubleton
-  HighsLp lp;
-  lp.num_col_ = 2;
-  lp.num_row_ = 1;
-  lp.col_cost_ = {1, 0};
-  lp.col_lower_ = {0, 0};
-  lp.col_upper_ = {kHighsInf, kHighsInf};
-  lp.row_lower_ = {1};
-  lp.row_upper_ = {1};
-  lp.a_matrix_.start_ = {0, 1, 2};
-  lp.a_matrix_.index_ = {0, 0};
-  lp.a_matrix_.value_ = {1, 1};
-  Highs h;
-  h.setOptionValue("output_flag", dev_run);
-  REQUIRE(h.passModel(lp) == HighsStatus::kOk);
-  REQUIRE(h.presolve() == HighsStatus::kOk);
-  REQUIRE(h.getPresolvedLp().num_col_ == 0);
-  REQUIRE(h.getPresolvedLp().num_row_ == 0);
-
-  lp.num_col_ = 4;
-  lp.num_row_ = 2;
-  lp.col_cost_ = {-10, -25, 0, 0};
-  lp.col_lower_ = {0, 0, 0, 0};
-  lp.col_upper_ = {kHighsInf, kHighsInf, kHighsInf, kHighsInf};
-  lp.row_lower_ = {80, 120};
-  lp.row_upper_ = {80, 120};
-  lp.a_matrix_.start_ = {0, 2, 4, 5, 6};
-  lp.a_matrix_.index_ = {0, 1, 0, 1, 0, 1};
-  lp.a_matrix_.value_ = {1, 1, 2, 4, 1, 1};
-  REQUIRE(h.setOptionValue("presolve_remove_slacks", true) == HighsStatus::kOk);
-  REQUIRE(h.passModel(lp) == HighsStatus::kOk);
-  REQUIRE(h.run() == HighsStatus::kOk);
-  REQUIRE(h.presolve() == HighsStatus::kOk);
-  REQUIRE(h.getPresolvedLp().num_col_ == 2);
-  REQUIRE(h.getPresolvedLp().num_row_ == 2);
-
-  h.resetGlobalScheduler(true);
-}
-
 TEST_CASE("presolve-issue-2095", "[highs_test_presolve]") {
   std::string model_file =
       std::string(HIGHS_DIR) + "/check/instances/issue-2095.mps";
@@ -1242,6 +1202,28 @@ TEST_CASE("issue-3140", "[highs_test_presolve]") {
   highs.resetGlobalScheduler(true);
 }
 
+TEST_CASE("dual-bound-relaxation-unbounded", "[highs_test_presolve]") {
+  HighsLp lp;
+  lp.num_col_ = 3;
+  lp.num_row_ = 2;
+  lp.col_cost_ = {0, -5, 0};
+  lp.col_lower_ = {0, 0, 0};
+  lp.col_upper_ = {kHighsInf, kHighsInf, 1};
+  lp.row_lower_ = {-kHighsInf, -kHighsInf};
+  lp.row_upper_ = {0, 1};
+  lp.a_matrix_.format_ = MatrixFormat::kColwise;
+  lp.a_matrix_.start_ = {0, 2, 4, 6};
+  lp.a_matrix_.index_ = {0, 1, 0, 1, 0, 1};
+  lp.a_matrix_.value_ = {1, -1, -1, 1, -1, 1};
+
+  // The feasible ray x0 = x1 = t, x2 = 0 has objective -5*t.
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
+  REQUIRE(highs.run() == HighsStatus::kOk);
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kUnbounded);
+}
+
 TEST_CASE("presolve-light-no-crossover", "[highs_test_presolve]") {
   Highs h;
   h.setOptionValue("output_flag", dev_run);
@@ -1298,22 +1280,59 @@ TEST_CASE("test-non-stop-initial-sweep", "[highs_test_presolve]") {
 TEST_CASE("test-fuzzing", "[highs_test_presolve]") {
   Highs h;
   //  h.setOptionValue("output_flag", dev_run);
-  h.setOptionValue("presolve_rule_logging", true);
-  h.setOptionValue("log_dev_level", 1);
+  //  if (dev_run) {
+  printf("\n====================\nWithout presolve\n====================\n");
 
-  const std::string model = "issue-008";
+  const std::string model = "issue-010";
   std::string model_file = std::string(HIGHS_DIR) + "/build/OscarFuzzing/" +
                            model + "/" + model + ".mps";
 
   REQUIRE(h.readModel(model_file) == HighsStatus::kOk);
 
+  h.setOptionValue(kPresolveString, kHighsOffString);
+
+  REQUIRE(h.run() == HighsStatus::kOk);
+  REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
+  h.writeModel("");
+  h.writeSolution("", 1);
+  //  }
+  h.clearSolver();
+
+  h.setOptionValue(kPresolveString, kHighsOnString);
+
   std::string options_file =
       std::string(HIGHS_DIR) + "/build/OscarFuzzing/" + model + "/options.txt";
   REQUIRE(h.readOptions(options_file) == HighsStatus::kOk);
 
+  //  REQUIRE(h.setOptionValue("presolve_rule_off", 1 << kPresolveRuleColStuffing) == HighsStatus::kOk);
+
+  HighsOptions options = h.getOptions();
+
+  printf("\n====================\nPresolved LP\n====================\n");
+  h.presolve();
+
+  HighsLp lp = h.getPresolvedLp();
+
+  h.clear();
+  h.passModel(lp);
+
+  h.setOptionValue(kPresolveString, kHighsOffString);
+
+  h.run();
+  h.writeSolution("", 1);
+  h.clear();
+
+  printf(
+      "\n====================\nPresolve no crossover\n====================\n");
+  REQUIRE(h.readModel(model_file) == HighsStatus::kOk);
+  h.passOptions(options);
+
+  h.setOptionValue("presolve_rule_logging", true);
+  h.setOptionValue("log_dev_level", 1);
   h.writeOptions("", true);
 
   h.run();
+  h.writeSolution("", 1);
 
   h.resetGlobalScheduler(true);
 }

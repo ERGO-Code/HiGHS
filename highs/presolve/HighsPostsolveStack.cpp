@@ -1294,64 +1294,6 @@ void HighsPostsolveStack::DuplicateColumn::transformToPresolvedSpace(
   primalSol[col] = primalSol[col] + colScale * primalSol[duplicateCol];
 }
 
-void HighsPostsolveStack::SlackColSubstitution::undo(
-    const HighsOptions& options, const std::vector<Nonzero>& rowValues,
-    HighsSolution& solution, HighsBasis& basis) {
-  bool debug_print = false;
-
-  // compute primal values
-  double colCoef = 0;
-  HighsCDouble rowValue = 0;
-  for (const auto& rowVal : rowValues) {
-    if (rowVal.index == col)
-      colCoef = rowVal.value;
-    else
-      rowValue += rowVal.value * solution.col_value[rowVal.index];
-  }
-
-  assert(colCoef != 0);
-  // Row values aren't fully postsolved, so why do this?
-  solution.row_value[row] =
-      static_cast<double>(rowValue + colCoef * solution.col_value[col]);
-
-  solution.col_value[col] = static_cast<double>((rhs - rowValue) / colCoef);
-
-  // If no dual values requested, return here
-  if (!solution.dual_valid) return;
-
-  // Row retains its dual value, and column has this dual value scaled by coeff
-  solution.col_dual[col] = -solution.row_dual[row] / colCoef;
-
-  // Set basis status if necessary
-  if (!basis.valid) return;
-
-  // If row is basic, then slack is basic, otherwise row retains its status
-  HighsBasisStatus save_row_basis_status = basis.row_status[row];
-  if (basis.row_status[row] == HighsBasisStatus::kBasic) {
-    basis.col_status[col] = HighsBasisStatus::kBasic;
-    basis.row_status[row] =
-        computeRowStatus(solution.row_dual[row], RowType::kEq);
-  } else if (basis.row_status[row] == HighsBasisStatus::kLower) {
-    basis.col_status[col] =
-        colCoef > 0 ? HighsBasisStatus::kUpper : HighsBasisStatus::kLower;
-  } else {
-    basis.col_status[col] =
-        colCoef > 0 ? HighsBasisStatus::kLower : HighsBasisStatus::kUpper;
-  }
-  if (debug_print)
-    printf(
-        "HighsPostsolveStack::SlackColSubstitution::undo OgRowStatus = %s; "
-        "RowStatus = %s; ColStatus = %s\n",
-        utilBasisStatusToString(save_row_basis_status).full_.c_str(),
-        utilBasisStatusToString(basis.row_status[row]).full_.c_str(),
-        utilBasisStatusToString(basis.col_status[col]).full_.c_str());
-  if (basis.col_status[col] == HighsBasisStatus::kLower) {
-    assert(solution.col_dual[col] > -options.dual_feasibility_tolerance);
-  } else if (basis.col_status[col] == HighsBasisStatus::kUpper) {
-    assert(solution.col_dual[col] < options.dual_feasibility_tolerance);
-  }
-}
-
 void HighsPostsolveStack::FourierMotzkinObjCol::transformToPresolvedSpace(
     const std::vector<Nonzero>& costEntries,
     std::vector<double>& primalSol) const {
