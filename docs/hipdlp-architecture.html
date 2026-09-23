@@ -171,9 +171,206 @@
     .component-detail dd { margin: 0; overflow-wrap: anywhere; }
     .component-detail a { color: var(--host); }
     .component-detail p { margin-bottom: 0; }
+    .residency-legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px 18px;
+      margin: 18px 0;
+      padding: 12px 14px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #fbfcfd;
+    }
+    .residency-key {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      font-size: 13px;
+      font-weight: 700;
+    }
+    .residency-swatch {
+      width: 14px;
+      height: 14px;
+      border: 2px solid currentColor;
+      border-radius: 3px;
+    }
+    .host-key { color: var(--host); }
+    .device-key { color: var(--device); }
+    .neutral-key { color: var(--control); }
+    .transform-chain {
+      display: flex;
+      align-items: stretch;
+      gap: 8px;
+      margin: 22px 0 28px;
+      overflow-x: auto;
+      padding-bottom: 8px;
+    }
+    .transform-step {
+      flex: 1 0 160px;
+      min-width: 160px;
+      padding: 14px;
+      border: 1px solid var(--line);
+      border-top: 4px solid var(--host);
+      border-radius: var(--radius);
+      background: var(--host-soft);
+    }
+    .transform-step.device-step {
+      border-top-color: var(--device);
+      background: var(--device-soft);
+    }
+    .transform-step.neutral-step {
+      border-top-color: var(--control);
+      background: var(--control-soft);
+    }
+    .transform-step strong,
+    .transform-step code { display: block; }
+    .transform-step small { color: var(--muted); }
+    .chain-arrow {
+      align-self: center;
+      flex: 0 0 auto;
+      color: var(--control);
+      font-size: 22px;
+      font-weight: 700;
+    }
+    .data-grid,
+    .resource-columns,
+    .transfer-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+      margin: 18px 0;
+    }
+    .data-card {
+      min-width: 0;
+      padding: 18px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #fbfcfd;
+    }
+    .data-card h3,
+    .resource-card h3 { margin: 0 0 6px; }
+    .data-card p:last-child,
+    .resource-card p:last-child { margin-bottom: 0; }
+    .data-card a,
+    .resource-card a,
+    .source-row a { color: var(--host); }
+    .field-map { grid-column: 1 / -1; }
+    .field-map > summary {
+      color: var(--host);
+      cursor: pointer;
+      font-size: 18px;
+      font-weight: 700;
+    }
+    .field-groups {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 16px;
+    }
+    .field-group {
+      padding: 12px;
+      border: 1px solid #dfe5eb;
+      border-radius: 6px;
+      background: var(--surface);
+    }
+    .field-group h4 { margin: 0 0 8px; }
+    .field-group code {
+      display: block;
+      margin: 3px 0;
+      overflow-wrap: anywhere;
+    }
+    .resource-card {
+      padding: 18px;
+      border: 1px solid var(--line);
+      border-top: 5px solid var(--host);
+      border-radius: var(--radius);
+      background: var(--host-soft);
+    }
+    .resource-card.device-resource {
+      border-top-color: var(--device);
+      background: var(--device-soft);
+    }
+    .resource-card ul { padding-left: 20px; }
+    .ownership-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+      margin: 12px 0;
+    }
+    .ownership-pill {
+      display: inline-flex;
+      padding: 2px 8px;
+      border: 1px solid var(--control);
+      border-radius: 999px;
+      background: var(--surface);
+      color: var(--control);
+      font: 700 12px/1.6 ui-monospace, monospace;
+    }
+    .ownership-pill.owns { border-color: var(--host); color: var(--host); }
+    .ownership-pill.lifetime { border-color: var(--device); color: var(--device); }
+    .inventory-wrap {
+      margin: 18px 0;
+      overflow-x: auto;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+    }
+    .vector-inventory {
+      width: 100%;
+      min-width: 760px;
+      border-collapse: collapse;
+      background: var(--surface);
+    }
+    .vector-inventory caption {
+      padding: 14px 16px;
+      background: #fbfcfd;
+      font-weight: 700;
+      text-align: left;
+    }
+    .vector-inventory th,
+    .vector-inventory td {
+      padding: 9px 12px;
+      border-top: 1px solid #e2e7ec;
+      text-align: left;
+      vertical-align: top;
+    }
+    .vector-inventory th { color: var(--muted); font-size: 12px; }
+    .dimension-col { color: var(--host); font-weight: 700; }
+    .dimension-row { color: var(--device); font-weight: 700; }
+    .graph-card {
+      border-left: 5px solid var(--device);
+      background: var(--device-soft);
+    }
+    .transfer-item {
+      position: relative;
+      padding: 16px 16px 16px 54px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--surface);
+    }
+    .transfer-item::before {
+      position: absolute;
+      left: 16px;
+      top: 17px;
+      font-size: 23px;
+      font-weight: 700;
+    }
+    .transfer-item.h2d { border-left: 5px solid var(--h2d); }
+    .transfer-item.h2d::before { content: "→"; color: var(--h2d); }
+    .transfer-item.d2h { border-left: 5px solid var(--d2h); }
+    .transfer-item.d2h::before { content: "←"; color: var(--d2h); }
+    .transfer-item h4 { margin: 0 0 4px; }
+    .transfer-item p { margin: 0; color: var(--muted); }
+    .source-row { color: var(--muted); font-size: 13px; }
     @media (max-width: 760px) {
-      .component-grid { grid-template-columns: 1fr; }
+      .component-grid,
+      .data-grid,
+      .resource-columns,
+      .transfer-grid { grid-template-columns: 1fr; }
+      .field-groups { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .view { padding: 18px; }
+    }
+    @media (max-width: 480px) {
+      .field-groups { grid-template-columns: 1fr; }
     }
   </style>
 </head>
@@ -471,7 +668,250 @@
         </article>
       </div>
     </section>
-    <section class="view" id="data-residency"><h2>数据与驻留</h2></section>
+    <section class="view" id="data-residency">
+      <header class="view-heading">
+        <p class="eyebrow">Ownership · residency · lifetime</p>
+        <h2>数据与驻留：谁拥有，谁借用，数据在哪里</h2>
+        <p>同一求解实例同时保留原始 Host 模型、变换后的 Host 问题，以及由后端拥有的 Host 或 Device 资源。句柄屏蔽实现差异，但不改变底层驻留与传输成本。</p>
+      </header>
+
+      <div class="residency-legend" aria-label="Host 与 Device 驻留图例">
+        <span class="legend-label">驻留图例</span>
+        <span class="residency-key host-key"><span class="residency-swatch"></span>Host 内存</span>
+        <span class="residency-key device-key"><span class="residency-swatch"></span>CUDA Device 内存</span>
+        <span class="residency-key neutral-key"><span class="residency-swatch"></span>不透明句柄 / 控制对象</span>
+      </div>
+
+      <h3>从调用者模型到调用者结果</h3>
+      <div class="transform-chain" aria-label="HighsLp 到 HighsSolution 的变换链">
+        <div class="transform-step">
+          <strong>HighsLp</strong>
+          <code>HiGHS caller</code>
+          <small>Host · caller owns</small>
+        </div>
+        <span class="chain-arrow" aria-hidden="true">→</span>
+        <div class="transform-step">
+          <strong>OriginalModel</strong>
+          <code>const HighsLp&amp;</code>
+          <small>Host · borrows</small>
+        </div>
+        <span class="chain-arrow" aria-hidden="true">→</span>
+        <div class="transform-step">
+          <strong>Problem::Data</strong>
+          <code>build + scale</code>
+          <small>Host · Problem owns</small>
+        </div>
+        <span class="chain-arrow" aria-hidden="true">→</span>
+        <div class="transform-step neutral-step">
+          <strong>Backend handles</strong>
+          <code>Problem / Vector / Workspace</code>
+          <small>opaque move-only owners</small>
+        </div>
+        <span class="chain-arrow" aria-hidden="true">→</span>
+        <div class="transform-step">
+          <strong>HostIterate</strong>
+          <code>download + postsolve</code>
+          <small>Host · algorithm::solve owns</small>
+        </div>
+        <span class="chain-arrow" aria-hidden="true">→</span>
+        <div class="transform-step">
+          <strong>HighsSolution</strong>
+          <code>original model space</code>
+          <small>Host · returned to HiGHS</small>
+        </div>
+      </div>
+      <p class="source-row">链路证据：
+        <a href="../highs/pdlp/hipdlp/model/problem.hpp">model/problem.hpp</a> ·
+        <a href="../highs/pdlp/hipdlp/model/problem.cc">model/problem.cc</a> ·
+        <a href="../highs/pdlp/hipdlp/algorithm/solver.cc">algorithm/solver.cc</a>
+      </p>
+
+      <div class="data-grid">
+        <details class="data-card field-map" id="problem-data-field-map">
+          <summary>展开 Problem::Data 字段地图</summary>
+          <p><code>Problem</code> 通过 <code>std::unique_ptr&lt;Data&gt;</code> 独占规范化、变换并缩放后的求解问题；它与借用原始 <code>HighsLp</code> 的 <code>OriginalModel</code> 并存。</p>
+          <div class="field-groups">
+            <section class="field-group">
+              <h4>形状与语义</h4>
+              <code>num_rows</code>
+              <code>num_cols</code>
+              <code>objective_sense</code>
+              <code>objective_offset</code>
+              <code>index_width</code>
+            </section>
+            <section class="field-group">
+              <h4>向量数据</h4>
+              <code>costs</code>
+              <code>col_lower / col_upper</code>
+              <code>row_lower / row_upper</code>
+              <code>equality_rows</code>
+            </section>
+            <section class="field-group">
+              <h4>稀疏算子</h4>
+              <code>SparseMatrix matrix</code>
+              <code>SparseMatrix transpose</code>
+              <p>正向与转置 CSR 都由 Data 拥有。</p>
+            </section>
+            <section class="field-group">
+              <h4>恢复元数据</h4>
+              <code>ScalingMetadata</code>
+              <code>TransformationMetadata</code>
+              <code>UnscaledNorms</code>
+              <p>支持缩放、原空间恢复与归一化收敛指标。</p>
+            </section>
+          </div>
+          <p class="source-row">字段定义：
+            <a href="../highs/pdlp/hipdlp/model/problem.cc">Problem::Data</a>
+          </p>
+        </details>
+
+        <article class="data-card">
+          <h3>句柄层：统一所有权边界</h3>
+          <div class="ownership-row">
+            <span class="ownership-pill owns">owns</span>
+            <span class="ownership-pill">borrows</span>
+          </div>
+          <p><code>ProblemHandle</code>、<code>VectorHandle</code>、<code>WorkspaceHandle</code> 与 <code>CommandBufferHandle</code> 都是只可移动的类型擦除句柄；每个句柄通过 <code>unique_ptr&lt;Resource&gt;</code> <strong>owns</strong> 一个后端资源。</p>
+          <p>资源内部的 <code>owner</code> 指针只 <strong>borrows</strong> 创建它的 Backend，用于拒绝跨后端误用，并不延长 Backend 生命周期。</p>
+          <p class="source-row">接口：
+            <a href="../highs/pdlp/hipdlp/backend/types.hpp">backend/types.hpp</a>
+          </p>
+        </article>
+
+        <article class="data-card">
+          <h3>求解期 Host 缓冲</h3>
+          <div class="ownership-row">
+            <span class="ownership-pill owns">owns</span>
+            <span class="ownership-pill">borrows</span>
+          </div>
+          <p><code>algorithm::solve</code> <strong>owns</strong> <code>IterationVectors</code> 的 16 个句柄与 <code>HostIterate</code> 的 <code>primal</code>、<code>dual</code>、<code>ax</code>、<code>aty</code>、<code>reduced_costs</code>。</p>
+          <p>步进状态只 <strong>borrows</strong> 这些句柄；候选点下载到 HostIterate 后，postsolve 将变换空间数据恢复为原模型 <code>HighsSolution</code>。</p>
+          <p class="source-row">生命周期：
+            <a href="../highs/pdlp/hipdlp/algorithm/solver.cc">algorithm/solver.cc</a>
+          </p>
+        </article>
+      </div>
+
+      <h3>同一套句柄，两种资源驻留</h3>
+      <div class="resource-columns">
+        <article class="resource-card">
+          <div class="node-header">
+            <h3>CPU resource column</h3>
+            <span class="residency">CPU / Host</span>
+          </div>
+          <ul>
+            <li><code>CpuProblemResource</code> owns 问题数组、矩阵与转置的 Host 副本。</li>
+            <li><code>CpuVectorResource</code> owns 一个 <code>std::vector&lt;double&gt;</code>。</li>
+            <li><code>CpuWorkspaceResource</code> owns row/column scratch，并 borrows <code>check_problem</code>。</li>
+            <li>下载只是复制 Host vectors；没有 H2D / D2H 边界。</li>
+          </ul>
+          <p class="source-row">实现：
+            <a href="../highs/pdlp/hipdlp/backend/cpu/cpu_backend.cc">backend/cpu/cpu_backend.cc</a>
+          </p>
+        </article>
+
+        <article class="resource-card device-resource">
+          <div class="node-header">
+            <h3>CUDA resource column</h3>
+            <span class="residency" style="color: var(--device)">CUDA / Device</span>
+          </div>
+          <ul>
+            <li><code>CudaProblemResource</code> owns DeviceBuffer 问题数组、CSR/transpose 与 cuSPARSE 描述符。</li>
+            <li><code>CudaVectorResource</code> owns Device 向量、描述符和可复用 <code>PinnedDownloadBuffer</code>。</li>
+            <li><code>CudaWorkspaceResource</code> owns Device scratch 与 resident-check / certificate storage。</li>
+            <li><code>CudaCommandBufferResource</code> owns CUDA graph/executable，但只弱引用其数据依赖。</li>
+          </ul>
+          <div class="ownership-row">
+            <span class="ownership-pill owns">owns</span>
+            <span class="ownership-pill lifetime">shared lifetime token</span>
+          </div>
+          <p class="source-row">实现：
+            <a href="../highs/pdlp/hipdlp/backend/cuda/cuda_backend.cu">backend/cuda/cuda_backend.cu</a>
+          </p>
+        </article>
+      </div>
+
+      <h3>IterationVectors：16 个常驻后端向量</h3>
+      <div class="inventory-wrap">
+        <table class="vector-inventory">
+          <caption>8 个 column-sized + 8 个 row-sized；此外 Workspace 各有一个 column/row scratch。</caption>
+          <thead>
+            <tr>
+              <th>维度</th>
+              <th>向量</th>
+              <th>角色</th>
+              <th>后端资源</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td class="dimension-col">columns</td><td><code>current_primal</code></td><td>当前 primal</td><td>VectorHandle</td></tr>
+            <tr><td class="dimension-col">columns</td><td><code>next_primal</code></td><td>下一步 / delta</td><td>VectorHandle</td></tr>
+            <tr><td class="dimension-col">columns</td><td><code>primal_anchor</code></td><td>Halpern anchor</td><td>VectorHandle</td></tr>
+            <tr><td class="dimension-col">columns</td><td><code>primal_candidate</code></td><td>候选 primal</td><td>VectorHandle</td></tr>
+            <tr><td class="dimension-col">columns</td><td><code>reflected_primal</code></td><td>反射 primal</td><td>VectorHandle</td></tr>
+            <tr><td class="dimension-col">columns</td><td><code>current_aty</code></td><td>Aᵀy</td><td>VectorHandle</td></tr>
+            <tr><td class="dimension-col">columns</td><td><code>candidate_aty</code></td><td>候选 Aᵀy</td><td>VectorHandle</td></tr>
+            <tr><td class="dimension-col">columns</td><td><code>aty_delta</code></td><td>AᵀΔy</td><td>VectorHandle</td></tr>
+            <tr><td class="dimension-row">rows</td><td><code>current_dual</code></td><td>当前 dual</td><td>VectorHandle</td></tr>
+            <tr><td class="dimension-row">rows</td><td><code>next_dual</code></td><td>下一步 / delta</td><td>VectorHandle</td></tr>
+            <tr><td class="dimension-row">rows</td><td><code>dual_anchor</code></td><td>Halpern anchor</td><td>VectorHandle</td></tr>
+            <tr><td class="dimension-row">rows</td><td><code>dual_candidate</code></td><td>候选 dual</td><td>VectorHandle</td></tr>
+            <tr><td class="dimension-row">rows</td><td><code>reflected_dual</code></td><td>反射 dual</td><td>VectorHandle</td></tr>
+            <tr><td class="dimension-row">rows</td><td><code>current_ax</code></td><td>Ax</td><td>VectorHandle</td></tr>
+            <tr><td class="dimension-row">rows</td><td><code>reflected_ax</code></td><td>反射 Ax</td><td>VectorHandle</td></tr>
+            <tr><td class="dimension-row">rows</td><td><code>candidate_ax</code></td><td>候选 Ax</td><td>VectorHandle</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="source-row">清单证据：
+        <a href="../highs/pdlp/hipdlp/algorithm/solver.cc">IterationVectors / createIterationVectors</a>
+      </p>
+
+      <div class="data-grid">
+        <article class="data-card graph-card">
+          <h3>CUDA graph 的弱生命周期依赖</h3>
+          <div class="ownership-row">
+            <span class="ownership-pill lifetime">shared lifetime token</span>
+            <span class="ownership-pill">weak dependency</span>
+          </div>
+          <p>每个 CUDA problem/vector/workspace resource owns 一个 <code>shared lifetime token</code>。录制期间，操作把 token 记入依赖集；完成录制时，<code>CommandBufferHandle</code> 保存的是 <code>weak_ptr</code>，因此 graph <strong>不拥有</strong>被捕获的数据。</p>
+          <p>replay 前逐项检查弱依赖；任一资源句柄已经析构，就返回 “command buffer dependency has expired”，而不是访问悬空 Device 地址。</p>
+          <p class="source-row">实现：
+            <a href="../highs/pdlp/hipdlp/backend/cuda/cuda_backend.cu">recordDependency / replay</a>
+          </p>
+        </article>
+
+        <article class="data-card">
+          <h3>驻留结论</h3>
+          <p><strong>CPU：</strong>Problem、16 个向量与两个 workspace scratch 都在 Host；句柄调用不跨总线。</p>
+          <p><strong>CUDA：</strong>这些求解数据常驻 Device；Host 保留 Problem::Data、OriginalModel、HostIterate 与最终 HighsSolution。边界检查优先只下载 compact packet，需要 Host oracle / postsolve 时才下载候选向量。</p>
+        </article>
+      </div>
+
+      <h3>传输图例：哪些边界真正搬数据</h3>
+      <div class="transfer-grid" aria-label="Host Device 传输路径">
+        <article class="transfer-item h2d">
+          <h4>Setup H2D · Host → Device</h4>
+          <p><code>bindProblem</code> 上传 costs、bounds、row types、matrix 与 transpose；<code>prepareCheckWorkspace</code> 另上传 scaling、原模型 certificate 与 check 数据。它们在迭代前建立常驻 Device 副本。</p>
+        </article>
+        <article class="transfer-item d2h">
+          <h4>Candidate D2H · Device → Host</h4>
+          <p><code>prepareCandidate</code> 批量下载 primal、dual、candidate_ax、candidate_aty：共 <strong>2*(rows+cols)</strong> doubles（另有错误标志），供 Host oracle、postsolve 与原空间验证使用。</p>
+        </article>
+        <article class="transfer-item d2h">
+          <h4>Resident-check D2H · Device → Host</h4>
+          <p><code>evaluateCheck</code> 普通边界只下载 compact <code>CheckPacket</code> 并同步；包内 metrics 与 fallback flags 决定是否必须进入完整 Host oracle 路径。</p>
+        </article>
+        <article class="transfer-item h2d">
+          <h4>Vector upload H2D · Host → Device</h4>
+          <p><code>uploadVector</code> 是显式 Host 向量入口；普通零初始化和迭代更新留在 Device kernel 内，不应误记为逐迭代 H2D。</p>
+        </article>
+      </div>
+      <p class="source-row">传输证据：
+        <a href="../highs/pdlp/hipdlp/backend/cuda/cuda_backend.cu">CUDA upload / download paths</a> ·
+        <a href="../highs/pdlp/hipdlp/algorithm/solver.cc">candidate/check boundary</a>
+      </p>
+    </section>
     <section class="view" id="iteration-correctness"><h2>迭代与正确性</h2></section>
     <section class="view" id="bottlenecks"><h2>卡点与优化</h2></section>
     <section class="view" id="learning-review"><h2>学习与 Review</h2></section>
@@ -483,6 +923,23 @@
       "commit": "49b85f4f3",
       "generated": "2026-09-23",
       "workingTree": "dirty"
+    },
+    "structures": [
+      {"id": "highs-lp", "residency": "host", "owner": "HiGHS caller"},
+      {"id": "original-model", "residency": "host", "owner": "non-owning view"},
+      {"id": "problem-data", "residency": "host", "owner": "model::Problem"},
+      {"id": "handles", "residency": "neutral", "owner": "move-only opaque owners"},
+      {"id": "cpu-resources", "residency": "host", "owner": "CpuBackend resources"},
+      {"id": "cuda-resources", "residency": "device", "owner": "CudaBackend resources"},
+      {"id": "host-iterate", "residency": "host", "owner": "algorithm::solve"},
+      {"id": "highs-solution", "residency": "host", "owner": "HiGHS result"}
+    ],
+    "vectorInventory": {
+      "columnSized": 8,
+      "rowSized": 8,
+      "workspaceColumnSized": 1,
+      "workspaceRowSized": 1,
+      "candidateDownloadDoubles": "2*(rows+cols)"
     }
   }
   </script>

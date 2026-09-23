@@ -133,6 +133,34 @@ class ArchitecturePageTests(unittest.TestCase):
         ):
             self.assertIn(label, self.source)
 
+    def test_data_model_matches_current_problem_and_iteration_storage(self):
+        structures = {item["id"]: item for item in self.data["structures"]}
+        self.assertEqual(
+            set(structures),
+            {"highs-lp", "original-model", "problem-data", "handles",
+             "cpu-resources", "cuda-resources", "host-iterate",
+             "highs-solution"},
+        )
+        inventory = self.data["vectorInventory"]
+        self.assertEqual(inventory["columnSized"], 8)
+        self.assertEqual(inventory["rowSized"], 8)
+        self.assertEqual(inventory["workspaceColumnSized"], 1)
+        self.assertEqual(inventory["workspaceRowSized"], 1)
+        self.assertEqual(
+            inventory["candidateDownloadDoubles"], "2*(rows+cols)"
+        )
+        for token in (
+            "TransformationMetadata",
+            "ScalingMetadata",
+            "UnscaledNorms",
+            "ProblemHandle",
+            "VectorHandle",
+            "WorkspaceHandle",
+            "CommandBufferHandle",
+            "PinnedDownloadBuffer",
+        ):
+            self.assertIn(token, self.source)
+
     def test_backend_card_states_broad_auto_fallback_as_a_review_risk(self):
         card_text = self.normalized(self.parser.node_text["node-backend"])
         detail_text = self.normalized(
