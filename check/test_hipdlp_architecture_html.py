@@ -552,13 +552,15 @@ class ArchitecturePageTests(unittest.TestCase):
             "${label} 必须是非负安全整数",
             "function estimateMemory({ rows, cols, nnz, indexBytes })",
             "function formatBytes(bytes)",
-            "function updateEstimator()",
+            "function updateEstimator(root = document)",
             "估算结果超过 JavaScript 安全整数范围",
         ):
             with self.subTest(behavior=behavior):
                 self.assertIn(behavior, self.source)
 
-        update_start = self.source.index("function updateEstimator()")
+        update_start = self.source.index(
+            "function updateEstimator(root = document)"
+        )
         update_end = self.source.index(
             'estimatorForm.addEventListener("input"', update_start
         )
@@ -584,7 +586,9 @@ class ArchitecturePageTests(unittest.TestCase):
             parse_source.index("Number(input.value)"),
         )
 
-        update_start = self.source.index("function updateEstimator()")
+        update_start = self.source.index(
+            "function updateEstimator(root = document)"
+        )
         update_end = self.source.index(
             'estimatorForm.addEventListener("input"', update_start
         )
@@ -595,7 +599,9 @@ class ArchitecturePageTests(unittest.TestCase):
         )
 
     def test_estimator_restricts_index_width_before_estimating(self):
-        update_start = self.source.index("function updateEstimator()")
+        update_start = self.source.index(
+            "function updateEstimator(root = document)"
+        )
         update_end = self.source.index(
             'estimatorForm.addEventListener("input"', update_start
         )
@@ -616,6 +622,82 @@ class ArchitecturePageTests(unittest.TestCase):
         self.assertLess(
             update_source.index(width_guard),
             update_source.index(estimate_call),
+        )
+
+    def test_estimator_runs_detached_executable_contract_cases(self):
+        update_signature = "function updateEstimator(root = document)"
+        contract_signature = "function runEstimatorContractTests()"
+        self.assertIn(update_signature, self.source)
+        self.assertIn(contract_signature, self.source)
+
+        update_start = self.source.index(update_signature)
+        update_end = self.source.index(contract_signature, update_start)
+        update_source = self.source[update_start:update_end]
+        for element_id in (
+            "rows",
+            "cols",
+            "nnz",
+            "index-bytes",
+            "estimator-error",
+            "estimator-results",
+            "matrix-bytes",
+            "vector-bytes",
+            "candidate-bytes",
+            "packet-bytes",
+        ):
+            with self.subTest(root_selector=element_id):
+                self.assertIn(
+                    f'root.querySelector("#{element_id}")',
+                    update_source,
+                )
+
+        contract_start = self.source.index(contract_signature)
+        contract_end = self.source.index(
+            'const estimatorForm = document.querySelector("#memory-estimator")',
+            contract_start,
+        )
+        contract_source = self.source[contract_start:contract_end]
+        for behavior in (
+            'const fixture = document.createElement("div");',
+            "fixture.innerHTML = `",
+            "for (const testCase of cases)",
+            "updateEstimator(fixture);",
+            'name: "blank rows"',
+            'rows: ""',
+            'name: "4-byte indices"',
+            'indexBytes: "4"',
+            'matrix: "240.24 KiB"',
+            'name: "8-byte indices"',
+            'indexBytes: "8"',
+            'matrix: "324.23 KiB"',
+            'vector: "93.75 KiB"',
+            'candidate: "23.44 KiB"',
+            'packet: "112 B"',
+            'name: "16-byte indices"',
+            'indexBytes: "16"',
+            "resultsHidden: true",
+            "resultsHidden: false",
+            "errorHidden: true",
+            "errorHidden: false",
+            'errorText: "rows 不能为空"',
+            'errorText: "index width 必须是 4 或 8 bytes"',
+            "testCase.expected.resultsHidden",
+            "testCase.expected.errorHidden",
+            'document.documentElement.dataset.estimatorSelftest = "pass";',
+            'document.documentElement.dataset.estimatorSelftest = "fail";',
+            'console.error("Estimator self-test failed", error);',
+            "throw error;",
+        ):
+            with self.subTest(behavior=behavior):
+                self.assertIn(behavior, contract_source)
+
+        self.assertIn(
+            'estimatorForm.addEventListener("input", () => updateEstimator());',
+            self.source,
+        )
+        self.assertRegex(
+            self.source,
+            r"runEstimatorContractTests\(\);\s+updateEstimator\(\);",
         )
 
     def test_diagnostics_map_connects_solve_fields_to_profilers(self):

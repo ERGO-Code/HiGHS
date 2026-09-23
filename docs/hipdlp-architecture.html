@@ -1970,10 +1970,6 @@
     activateLane("compare");
   </script>
   <script id="performance-workbench">
-    const estimatorForm = document.querySelector("#memory-estimator");
-    const estimatorError = document.querySelector("#estimator-error");
-    const estimatorResults = document.querySelector("#estimator-results");
-
     function parseCount(input, label) {
       if (input.value.trim() === "") {
         throw new Error(`${label} 不能为空`);
@@ -2013,30 +2009,32 @@
       })} ${units[unitIndex]}`;
     }
 
-    function updateEstimator() {
+    function updateEstimator(root = document) {
+      const estimatorError = root.querySelector("#estimator-error");
+      const estimatorResults = root.querySelector("#estimator-results");
       estimatorError.hidden = true;
       estimatorError.textContent = "";
       estimatorResults.hidden = true;
       try {
         const indexBytes = parseCount(
-          document.querySelector("#index-bytes"), "index width"
+          root.querySelector("#index-bytes"), "index width"
         );
         if (indexBytes !== 4 && indexBytes !== 8) {
           throw new Error("index width 必须是 4 或 8 bytes");
         }
         const estimates = estimateMemory({
-          rows: parseCount(document.querySelector("#rows"), "rows"),
-          cols: parseCount(document.querySelector("#cols"), "columns"),
-          nnz: parseCount(document.querySelector("#nnz"), "nonzeros"),
+          rows: parseCount(root.querySelector("#rows"), "rows"),
+          cols: parseCount(root.querySelector("#cols"), "columns"),
+          nnz: parseCount(root.querySelector("#nnz"), "nonzeros"),
           indexBytes
         });
-        document.querySelector("#matrix-bytes").textContent =
+        root.querySelector("#matrix-bytes").textContent =
           formatBytes(estimates.matrixBytes);
-        document.querySelector("#vector-bytes").textContent =
+        root.querySelector("#vector-bytes").textContent =
           formatBytes(estimates.vectorBytes);
-        document.querySelector("#candidate-bytes").textContent =
+        root.querySelector("#candidate-bytes").textContent =
           formatBytes(estimates.candidateBytes);
-        document.querySelector("#packet-bytes").textContent =
+        root.querySelector("#packet-bytes").textContent =
           formatBytes(estimates.packetBytes);
         estimatorResults.hidden = false;
       } catch (error) {
@@ -2045,11 +2043,145 @@
       }
     }
 
-    estimatorForm.addEventListener("input", updateEstimator);
+    function runEstimatorContractTests() {
+      try {
+        const fixture = document.createElement("div");
+        fixture.innerHTML = `
+          <input id="rows">
+          <input id="cols">
+          <input id="nnz">
+          <select id="index-bytes">
+            <option value="4">4</option>
+            <option value="8">8</option>
+            <option value="16">16</option>
+          </select>
+          <p id="estimator-error" hidden></p>
+          <div id="estimator-results" hidden>
+            <output id="matrix-bytes"></output>
+            <output id="vector-bytes"></output>
+            <output id="candidate-bytes"></output>
+            <output id="packet-bytes"></output>
+          </div>
+        `;
+        const cases = [
+          {
+            name: "blank rows",
+            rows: "",
+            indexBytes: "8",
+            expected: {
+              resultsHidden: true,
+              errorHidden: false,
+              errorText: "rows 不能为空"
+            }
+          },
+          {
+            name: "4-byte indices",
+            rows: "1000",
+            indexBytes: "4",
+            expected: {
+              resultsHidden: false,
+              errorHidden: true,
+              errorText: "",
+              matrix: "240.24 KiB",
+              vector: "93.75 KiB",
+              candidate: "23.44 KiB",
+              packet: "112 B"
+            }
+          },
+          {
+            name: "8-byte indices",
+            rows: "1000",
+            indexBytes: "8",
+            expected: {
+              resultsHidden: false,
+              errorHidden: true,
+              errorText: "",
+              matrix: "324.23 KiB",
+              vector: "93.75 KiB",
+              candidate: "23.44 KiB",
+              packet: "112 B"
+            }
+          },
+          {
+            name: "16-byte indices",
+            rows: "1000",
+            indexBytes: "16",
+            expected: {
+              resultsHidden: true,
+              errorHidden: false,
+              errorText: "index width 必须是 4 或 8 bytes"
+            }
+          }
+        ];
+        const assertEqual = (actual, expected, label) => {
+          if (actual !== expected) {
+            throw new Error(
+              `${label}: expected ${JSON.stringify(expected)}, ` +
+              `got ${JSON.stringify(actual)}`
+            );
+          }
+        };
+        const rows = fixture.querySelector("#rows");
+        const cols = fixture.querySelector("#cols");
+        const nnz = fixture.querySelector("#nnz");
+        const indexBytes = fixture.querySelector("#index-bytes");
+        const estimatorError = fixture.querySelector("#estimator-error");
+        const estimatorResults = fixture.querySelector("#estimator-results");
+        const outputs = {
+          matrix: fixture.querySelector("#matrix-bytes"),
+          vector: fixture.querySelector("#vector-bytes"),
+          candidate: fixture.querySelector("#candidate-bytes"),
+          packet: fixture.querySelector("#packet-bytes")
+        };
+
+        for (const testCase of cases) {
+          rows.value = testCase.rows;
+          cols.value = "500";
+          nnz.value = "10000";
+          indexBytes.value = testCase.indexBytes;
+          updateEstimator(fixture);
+
+          const prefix = `Estimator ${testCase.name}`;
+          assertEqual(
+            estimatorResults.hidden,
+            testCase.expected.resultsHidden,
+            `${prefix} result visibility`
+          );
+          assertEqual(
+            estimatorError.hidden,
+            testCase.expected.errorHidden,
+            `${prefix} error visibility`
+          );
+          assertEqual(
+            estimatorError.textContent,
+            testCase.expected.errorText,
+            `${prefix} error text`
+          );
+          for (const [name, expected] of Object.entries(testCase.expected)) {
+            if (outputs[name]) {
+              assertEqual(
+                outputs[name].textContent,
+                expected,
+                `${prefix} ${name}`
+              );
+            }
+          }
+        }
+        document.documentElement.dataset.estimatorSelftest = "pass";
+      } catch (error) {
+        document.documentElement.dataset.estimatorSelftest = "fail";
+        console.error("Estimator self-test failed", error);
+        throw error;
+      }
+    }
+
+    const estimatorForm = document.querySelector("#memory-estimator");
+    estimatorForm.addEventListener("input", () => updateEstimator());
     estimatorForm.addEventListener("submit", (event) => {
       event.preventDefault();
       updateEstimator();
     });
+    runEstimatorContractTests();
     updateEstimator();
   </script>
 </body>
