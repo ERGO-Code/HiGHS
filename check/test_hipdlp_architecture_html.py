@@ -35,6 +35,9 @@ class ArchitecturePageParser(HTMLParser):
         self.shared_operation_cards = []
         self.style_chunks = []
         self.in_style = False
+        self.cuda_lessons = 0
+        self.review_questions = 0
+        self.answers = 0
         self.current_node = None
         self.detail_node = None
         self.node_text = {node_id: [] for node_id in SYSTEM_NODE_IDS}
@@ -51,6 +54,12 @@ class ArchitecturePageParser(HTMLParser):
         if tag == "article" and element_id in SYSTEM_NODE_IDS:
             self.current_node = element_id
         classes = set(attributes.get("class", "").split())
+        if "cuda-lesson" in classes:
+            self.cuda_lessons += 1
+        if "review-question" in classes:
+            self.review_questions += 1
+        if tag == "details" and "answer" in classes:
+            self.answers += 1
         if tag == "button" and "data-lane" in attributes:
             self.lane_buttons.append(attributes)
         if tag == "div" and "lane-card" in classes:
@@ -130,6 +139,25 @@ class ArchitecturePageTests(unittest.TestCase):
             "generated": "2026-09-23",
             "workingTree": "dirty",
         })
+
+    def test_learning_view_has_complete_routes_lessons_and_answers(self):
+        self.assertTrue({"route-30", "route-cpp-90", "route-cuda"}
+                        <= self.parser.ids)
+        self.assertEqual(self.parser.cuda_lessons, 8)
+        self.assertEqual(self.parser.review_questions, 28)
+        self.assertEqual(self.parser.answers, 28)
+        self.assertNotIn('class="answer" open', self.source)
+        for heading in (
+            "执行模型",
+            "内存模型",
+            "异步与 Stream",
+            "性能基础",
+            "cuSPARSE",
+            "CUDA Graph",
+            "数值与确定性",
+            "调试工具地图",
+        ):
+            self.assertIn(heading, self.source)
 
     def test_system_map_has_the_real_solve_boundaries(self):
         self.assertTrue(SYSTEM_NODE_IDS <= self.parser.ids)

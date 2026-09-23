@@ -567,7 +567,7 @@
     }
     .kernel-card dt { color: var(--muted); font-size: 12px; font-weight: 700; }
     .kernel-card dd { margin: 0; overflow-wrap: anywhere; }
-    .kernel-card .review-question {
+    .kernel-card .kernel-review-question {
       margin: 10px 0 0;
       padding-top: 9px;
       border-top: 1px dashed var(--line);
@@ -755,6 +755,208 @@
     }
     .diagnostics-table tbody th { color: var(--host); }
     .diagnostics-table code { overflow-wrap: anywhere; }
+    .learning-route,
+    .cuda-course-section,
+    .integrated-exercises,
+    .review-mode,
+    .glossary {
+      margin-top: 28px;
+      padding: 20px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #fbfcfd;
+    }
+    .learning-route { border-top: 5px solid var(--host); }
+    .cuda-course-section { border-top: 5px solid var(--device); }
+    .integrated-exercises { border-top: 5px solid var(--correctness); }
+    .review-mode { border-top: 5px solid var(--hotspot); }
+    .glossary { border-top: 5px solid var(--control); }
+    .learning-route > h3,
+    .cuda-course-section > h3,
+    .integrated-exercises > h3,
+    .review-mode > h3,
+    .glossary > h3 {
+      margin: 0 0 6px;
+      font-size: 24px;
+    }
+    .route-stops {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+      margin: 18px 0 0;
+      padding: 0;
+      list-style: none;
+      counter-reset: route-stop;
+    }
+    .route-stop {
+      min-width: 0;
+      padding: 16px;
+      border: 1px solid var(--line);
+      border-left: 5px solid var(--host);
+      border-radius: 6px;
+      background: var(--surface);
+      counter-increment: route-stop;
+    }
+    .route-stop h4 { margin: 0 0 8px; font-size: 18px; }
+    .route-stop h4::before {
+      content: counter(route-stop) ". ";
+      color: var(--host);
+    }
+    .route-stop p { margin: 7px 0; }
+    .route-stop .source-row { margin-top: 8px; }
+    .route-questions { margin: 7px 0; padding-left: 20px; }
+    .expected-outcome {
+      padding: 8px 10px;
+      border-radius: 5px;
+      color: #176849;
+      background: var(--device-soft);
+    }
+    .course-index {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 8px;
+      margin: 16px 0 22px;
+    }
+    .course-index a {
+      min-width: 0;
+      padding: 9px 10px;
+      border: 1px solid #b9ded1;
+      border-radius: 5px;
+      color: #075f43;
+      background: var(--surface);
+      font-weight: 700;
+      text-decoration: none;
+    }
+    .cuda-course { display: grid; gap: 18px; }
+    .cuda-lesson {
+      min-width: 0;
+      padding: 20px;
+      border: 1px solid var(--line);
+      border-top: 5px solid var(--device);
+      border-radius: var(--radius);
+      background: var(--surface);
+    }
+    .lesson-heading {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      gap: 8px 12px;
+    }
+    .lesson-heading h4 { margin: 0; font-size: 22px; }
+    .lesson-number {
+      color: var(--device);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+    .concept-visual {
+      display: flex;
+      align-items: stretch;
+      gap: 8px;
+      margin: 16px 0;
+      overflow-x: auto;
+      padding-bottom: 4px;
+    }
+    .concept-node {
+      flex: 1 0 140px;
+      min-width: 140px;
+      padding: 12px;
+      border: 1px solid #b9ded1;
+      border-radius: 6px;
+      background: var(--device-soft);
+      text-align: center;
+    }
+    .concept-node strong,
+    .concept-node span { display: block; }
+    .concept-node span { color: var(--muted); font-size: 12px; }
+    .concept-arrow {
+      align-self: center;
+      color: var(--control);
+      font-size: 22px;
+      font-weight: 700;
+    }
+    .hipdlp-example {
+      margin: 14px 0;
+      padding: 12px 14px;
+      border-left: 4px solid var(--device);
+      background: #f0faf6;
+    }
+    .hipdlp-example p { margin: 5px 0; }
+    .lesson-questions,
+    .integrated-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+      margin: 16px 0;
+    }
+    .integrated-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .qa-pair {
+      min-width: 0;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #fbfcfd;
+      overflow: hidden;
+    }
+    .qa-pair > .review-question {
+      margin: 0;
+      padding: 12px;
+      color: #704b0e;
+      background: #fff8e8;
+      font-weight: 700;
+    }
+    details.answer { border-top: 1px solid var(--line); }
+    details.answer summary {
+      padding: 10px 12px;
+      color: var(--host);
+      cursor: pointer;
+      font-weight: 700;
+    }
+    details.answer p { margin: 0; padding: 0 12px 10px; }
+    .lesson-checklist {
+      margin: 12px 0 0;
+      padding: 12px 14px 12px 34px;
+      border: 1px dashed #9bcdbb;
+      border-radius: 6px;
+      background: #f6fbf9;
+    }
+    .review-pass-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+      margin-top: 16px;
+    }
+    .review-pass {
+      min-width: 0;
+      padding: 16px;
+      border: 1px solid var(--line);
+      border-top: 4px solid var(--hotspot);
+      border-radius: 6px;
+      background: var(--surface);
+    }
+    .review-pass h4 { margin: 10px 0 3px; color: #704b0e; }
+    .review-pass h4:first-child { margin-top: 0; font-size: 18px; }
+    .review-prompt {
+      padding: 8px 10px;
+      border-radius: 5px;
+      background: #f4f7f9;
+      overflow-wrap: anywhere;
+    }
+    .glossary-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      margin: 16px 0 0;
+    }
+    .glossary-grid div {
+      min-width: 0;
+      padding: 10px 12px;
+      border: 1px solid var(--line);
+      border-radius: 5px;
+      background: var(--surface);
+    }
+    .glossary-grid dt { color: var(--host); font-weight: 700; }
+    .glossary-grid dd { margin: 3px 0 0; color: var(--muted); }
     @media (max-width: 760px) {
       .component-grid,
       .data-grid,
@@ -764,7 +966,13 @@
       .kernel-grid,
       .hotspot-grid,
       .estimator-fields,
-      .estimate-results { grid-template-columns: 1fr; }
+      .estimate-results,
+      .route-stops,
+      .lesson-questions,
+      .integrated-grid,
+      .review-pass-grid,
+      .glossary-grid { grid-template-columns: 1fr; }
+      .course-index { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .iteration-facts { grid-template-columns: repeat(3, minmax(90px, 1fr)); }
       .lane-columns { grid-template-columns: 1fr; }
       .correctness-flow { grid-template-columns: 1fr; gap: 10px; }
@@ -786,6 +994,9 @@
     @media (max-width: 480px) {
       .field-groups,
       .iteration-facts { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 480px) {
+      .course-index { grid-template-columns: 1fr; }
     }
   </style>
 </head>
@@ -1507,7 +1718,7 @@
                   <div><dt>graph</dt><dd>Yes—captured in each recorded production step.</dd></div>
                   <div><dt>performance</dt><dd>O(cols), bandwidth-heavy; clamp divergence and parameter indirection matter.</dd></div>
                 </dl>
-                <p class="review-question"><strong>Review：</strong>Do bound distributions make clamp divergence visible in profiler traces?</p>
+                <p class="kernel-review-question"><strong>Review：</strong>Do bound distributions make clamp divergence visible in profiler traces?</p>
               </article>
 
               <article class="kernel-card">
@@ -1521,7 +1732,7 @@
                   <div><dt>graph</dt><dd>Yes—follows the first cuSPARSE node in the captured step.</dd></div>
                   <div><dt>performance</dt><dd>O(rows), bandwidth-heavy; mixed row types can diverge.</dd></div>
                 </dl>
-                <p class="review-question"><strong>Review：</strong>Would grouping equality rows improve locality enough to justify remapping?</p>
+                <p class="kernel-review-question"><strong>Review：</strong>Would grouping equality rows improve locality enough to justify remapping?</p>
               </article>
 
               <article class="kernel-card">
@@ -1535,7 +1746,7 @@
                   <div><dt>graph</dt><dd>Yes—one paired graph node replaces two vector launches.</dd></div>
                   <div><dt>performance</dt><dd>O(max(rows, cols)); imbalance leaves one side of later iterations idle.</dd></div>
                 </dl>
-                <p class="review-question"><strong>Review：</strong>At extreme row/column imbalance, is one paired launch still cheaper than two right-sized launches?</p>
+                <p class="kernel-review-question"><strong>Review：</strong>At extreme row/column imbalance, is one paired launch still cheaper than two right-sized launches?</p>
               </article>
 
               <article class="kernel-card">
@@ -1549,7 +1760,7 @@
                   <div><dt>graph</dt><dd>No—runs at a cadence/limit/time boundary, outside the 39-step graph.</dd></div>
                   <div><dt>performance</dt><dd>O(max(rows, cols)) plus static-shared tree reduction; occupancy depends on the large partial type.</dd></div>
                 </dl>
-                <p class="review-question"><strong>Review：</strong>Does static shared storage constrain occupancy on every supported GPU?</p>
+                <p class="kernel-review-question"><strong>Review：</strong>Does static shared storage constrain occupancy on every supported GPU?</p>
               </article>
 
               <article class="kernel-card">
@@ -1563,7 +1774,7 @@
                   <div><dt>graph</dt><dd>No—boundary check only, followed by compact D2H and synchronization.</dd></div>
                   <div><dt>performance</dt><dd>O(partial_count ≤ 1024); launch and one-block reduction latency dominate small checks.</dd></div>
                 </dl>
-                <p class="review-question"><strong>Review：</strong>Does the compact packet save more transfer time than this second reduction launch costs?</p>
+                <p class="kernel-review-question"><strong>Review：</strong>Does the compact packet save more transfer time than this second reduction launch costs?</p>
               </article>
 
               <article class="kernel-card vendor">
@@ -1576,7 +1787,7 @@
                   <div><dt>graph</dt><dd>Yes for both production SpMVs; library calls are captured with the custom kernels.</dd></div>
                   <div><dt>performance</dt><dd>O(nnz), sparse bandwidth and matrix structure dominate; inspect actual kernels with Nsight Systems/Compute.</dd></div>
                 </dl>
-                <p class="review-question"><strong>Review：</strong>Do profiler-observed vendor kernels, scratch traffic or matrix ordering dominate the two-SpMV step?</p>
+                <p class="kernel-review-question"><strong>Review：</strong>Do profiler-observed vendor kernels, scratch traffic or matrix ordering dominate the two-SpMV step?</p>
               </article>
             </div>
             <p class="source-row">Launch证据：
@@ -1841,7 +2052,795 @@
         </p>
       </section>
     </section>
-    <section class="view" id="learning-review"><h2>学习与 Review</h2></section>
+    <section class="view" id="learning-review">
+      <header class="view-heading">
+        <p class="eyebrow">Read · predict · verify · review</p>
+        <h2>学习与 Review：从 C++ 所有权走到 CUDA 证据</h2>
+        <p>先沿真实调用链建立心智模型，再用八课拆解 CUDA 语义。每道参考答案都默认折叠，先写下判断，再用源码、运行时工具与独立验证逐层证伪。</p>
+      </header>
+
+      <aside class="reading-hint" aria-label="学习方式">
+        <strong>使用方式：</strong>每个 stop 先猜职责与所有权，再打开源码回答三个问题；CUDA 课程则先读概念图和 HiPDLP 实例，独立作答后再展开参考答案。
+      </aside>
+
+      <section class="learning-route" id="route-30" aria-labelledby="route-30-title">
+        <h3 id="route-30-title">30 分钟主路径：一次 solve 的七个边界</h3>
+        <p>目标不是读完实现，而是能把“输入在哪里变形、数据在哪里驻留、结果在哪里重新获得原模型语义”讲清楚。</p>
+        <ol class="route-stops">
+          <li class="route-stop">
+            <h4>HiPdlpWrapper.cpp：HiGHS 边界</h4>
+            <p><strong>先猜职责：</strong>它应只借用求解器对象并转交参数，不应重新实现求解或复制整个模型。</p>
+            <p class="source-row"><strong>打开源码：</strong><a href="../highs/pdlp/HiPdlpWrapper.cpp">HiPdlpWrapper.cpp</a></p>
+            <ol class="route-questions">
+              <li>哪些对象由调用方继续拥有？</li>
+              <li>状态、solution、info 分别在哪里被写回？</li>
+              <li>错误是否被包装成“成功但无解”？</li>
+            </ol>
+            <p class="expected-outcome"><strong>预期收获：</strong>能画出 HighsLpSolverObject 到 <code>hipdlp::api::solve</code> 的借用边界。</p>
+          </li>
+          <li class="route-stop">
+            <h4>api/options.cc + api/solver.cc：翻译与路由</h4>
+            <p><strong>先猜职责：</strong>把 HighsOptions 翻译成稳定的 HiPDLP 选项，选择 legacy/rewrite，并保留结构化失败。</p>
+            <p class="source-row"><strong>打开源码：</strong>
+              <a href="../highs/pdlp/hipdlp/api/options.cc">api/options.cc</a> ·
+              <a href="../highs/pdlp/hipdlp/api/solver.cc">api/solver.cc</a>
+            </p>
+            <ol class="route-questions">
+              <li>非法枚举或非有限容差在哪里被拒绝？</li>
+              <li>全局 time limit 如何变成 rewrite 的剩余预算？</li>
+              <li>legacy 与 rewrite 的结果如何回到同一个 Highs 接口？</li>
+            </ol>
+            <p class="expected-outcome"><strong>预期收获：</strong>能区分 API 适配、实现选择与算法本身。</p>
+          </li>
+          <li class="route-stop">
+            <h4>model/problem.cc：原模型到变换模型</h4>
+            <p><strong>先猜职责：</strong>校验稀疏结构与边界，建立规范化求解模型，并保存所有可逆映射。</p>
+            <p class="source-row"><strong>打开源码：</strong><a href="../highs/pdlp/hipdlp/model/problem.cc">model/problem.cc</a></p>
+            <ol class="route-questions">
+              <li>哪些数组属于变换后 <code>Problem::Data</code>？</li>
+              <li>行符号、slack column 与 scaling 元数据为何必须保留？</li>
+              <li>什么错误必须在创建 backend resource 前暴露？</li>
+            </ol>
+            <p class="expected-outcome"><strong>预期收获：</strong>能解释 original/transformed boundary，而不会把 solver vector 当作原模型 solution。</p>
+          </li>
+          <li class="route-stop">
+            <h4>algorithm/solver.cc：生命周期编排</h4>
+            <p><strong>先猜职责：</strong>拥有本次 solve 的 backend、handles、迭代状态、检查节奏与终止路径。</p>
+            <p class="source-row"><strong>打开源码：</strong><a href="../highs/pdlp/hipdlp/algorithm/solver.cc">algorithm/solver.cc</a></p>
+            <ol class="route-questions">
+              <li>资源创建为何发生在 iteration loop 之前？</li>
+              <li>direct step、39-step replay 与 40-step boundary 如何拼接？</li>
+              <li>哪些出口必须先下载、postsolve 或验证？</li>
+            </ol>
+            <p class="expected-outcome"><strong>预期收获：</strong>能把控制面阶段与 backend 数据面调用分开追踪。</p>
+          </li>
+          <li class="route-stop">
+            <h4>halpern_pdhg_step.cc：一步的契约</h4>
+            <p><strong>先猜职责：</strong>只表达有序数学操作，不关心向量在 Host 还是 Device。</p>
+            <p class="source-row"><strong>打开源码：</strong><a href="../highs/pdlp/hipdlp/algorithm/halpern_pdhg_step.cc">algorithm/halpern_pdhg_step.cc</a></p>
+            <ol class="route-questions">
+              <li>primal projection 读取什么、写出什么？</li>
+              <li>两次 SpMV 之间有哪些数据依赖？</li>
+              <li>candidate、reflection 与 next iterate 为什么不能随意 alias？</li>
+            </ol>
+            <p class="expected-outcome"><strong>预期收获：</strong>能用五个 backend 操作重述一次 Halpern PDHG step。</p>
+          </li>
+          <li class="route-stop">
+            <h4>backend implementation：同一语义的两条执行道</h4>
+            <p><strong>先猜职责：</strong>CPU 与 CUDA 必须兑现相同抽象契约，但可用不同资源、同步与 kernel 组合。</p>
+            <p class="source-row"><strong>打开源码：</strong>
+              <a href="../highs/pdlp/hipdlp/backend/backend.hpp">backend/backend.hpp</a> ·
+              <a href="../highs/pdlp/hipdlp/backend/cpu/cpu_backend.cc">cpu_backend.cc</a> ·
+              <a href="../highs/pdlp/hipdlp/backend/cuda/cuda_backend.cu">cuda_backend.cu</a>
+            </p>
+            <ol class="route-questions">
+              <li>同一个 handle 如何阻止跨 backend 误用？</li>
+              <li>CPU 立即执行与 CUDA enqueue 的错误可见时机有何不同？</li>
+              <li>哪些能力是默认实现，哪些必须由 backend 覆盖？</li>
+            </ol>
+            <p class="expected-outcome"><strong>预期收获：</strong>能 review 契约等价性，而不是逐行比较两份实现。</p>
+          </li>
+          <li class="route-stop">
+            <h4>postsolve + kkt_verifier.cc：恢复与独立裁决</h4>
+            <p><strong>先猜职责：</strong>先把变换空间候选恢复成原模型 solution，再由独立 verifier 对原 HighsLp 作最终检查。</p>
+            <p class="source-row"><strong>打开源码：</strong>
+              <a href="../highs/pdlp/hipdlp/model/problem.cc">model/problem.cc</a> ·
+              <a href="../highs/pdlp/hipdlp/verification/kkt_verifier.cc">kkt_verifier.cc</a>
+            </p>
+            <ol class="route-questions">
+              <li>unscale、row activity 与 reduced cost 在何处恢复？</li>
+              <li>为什么 transformed residual 不能替代 original-model KKT？</li>
+              <li>验证失败如何阻止错误的 OPTIMAL 状态？</li>
+            </ol>
+            <p class="expected-outcome"><strong>预期收获：</strong>能解释 solver 自报收敛与独立接受之间的最后一道门。</p>
+          </li>
+        </ol>
+      </section>
+
+      <section class="learning-route" id="route-cpp-90" aria-labelledby="route-cpp-90-title">
+        <h3 id="route-cpp-90-title">90 分钟 C++ Review：八个可复用切入点</h3>
+        <p>每个 stop 用同一动作：先猜职责，打开源码，以三个问题检查契约，再用预期收获校准是否真的理解。</p>
+        <ol class="route-stops">
+          <li class="route-stop">
+            <h4>Move-only opaque handles</h4>
+            <p><strong>先猜职责：</strong><code>Handle&lt;Tag&gt;</code> 应隐藏资源类型，并让资源只能移动、不能复制。</p>
+            <p class="source-row"><strong>打开源码：</strong><a href="../highs/pdlp/hipdlp/backend/types.hpp">backend/types.hpp</a></p>
+            <ol class="route-questions">
+              <li>为什么不同 Tag 能阻止把 VectorHandle 当 ProblemHandle？</li>
+              <li>删除 copy constructor 防止了哪类 double ownership？</li>
+              <li>friend backend 如何在不泄露 Resource 的情况下取回实现？</li>
+            </ol>
+            <p class="expected-outcome"><strong>预期收获：</strong>能从类型系统判断生命周期与后端封装，而不是靠注释猜所有权。</p>
+          </li>
+          <li class="route-stop">
+            <h4>Virtual backend contract</h4>
+            <p><strong>先猜职责：</strong>抽象层定义数学操作、维度与失败语义，具体后端只替换执行策略。</p>
+            <p class="source-row"><strong>打开源码：</strong><a href="../highs/pdlp/hipdlp/backend/backend.hpp">backend/backend.hpp</a></p>
+            <ol class="route-questions">
+              <li>哪些 pure virtual 方法构成 solve 的最小能力集合？</li>
+              <li>默认实现是否保留 alias、维度与 finite 约束？</li>
+              <li><code>requireCapability</code> 在调用前挡住什么错误？</li>
+            </ol>
+            <p class="expected-outcome"><strong>预期收获：</strong>能 review Liskov 替换条件与错误契约，而非只看函数名相同。</p>
+          </li>
+          <li class="route-stop">
+            <h4>unique_ptr 与资源所有权</h4>
+            <p><strong>先猜职责：</strong>factory、backend、resource 和 PIMPL 都应有唯一且可追踪的销毁路径。</p>
+            <p class="source-row"><strong>打开源码：</strong>
+              <a href="../highs/pdlp/hipdlp/backend/backend_factory.hpp">backend_factory.hpp</a> ·
+              <a href="../highs/pdlp/hipdlp/backend/cuda/cuda_backend.cu">cuda_backend.cu</a>
+            </p>
+            <ol class="route-questions">
+              <li><code>FactoryResult</code> move 后谁拥有 Backend？</li>
+              <li>构造中途失败时局部 unique_ptr 能否清理已创建 CUDA 资源？</li>
+              <li><code>release()</code> 转交给 Handle 前后是否存在悬空窗口？</li>
+            </ol>
+            <p class="expected-outcome"><strong>预期收获：</strong>能沿每次 <code>std::move</code> 或 <code>release</code> 指出唯一 owner。</p>
+          </li>
+          <li class="route-stop">
+            <h4>Phase-guard RAII</h4>
+            <p><strong>先猜职责：</strong><code>SolvePhaseGuard</code> 应让所有提前返回都结束计时，并避免一个阶段被累计两次。</p>
+            <p class="source-row"><strong>打开源码：</strong><a href="../highs/pdlp/hipdlp/algorithm/solver.cc">algorithm/solver.cc</a></p>
+            <ol class="route-questions">
+              <li>destructor 与显式 <code>finish()</code> 如何保持幂等？</li>
+              <li>移动或复制 guard 为何必须受限？</li>
+              <li>嵌套 boundary/download/verification 的时间是否会被误读为互斥阶段？</li>
+            </ol>
+            <p class="expected-outcome"><strong>预期收获：</strong>能检查所有 return 路径都有计时闭合，并正确解释诊断口径。</p>
+          </li>
+          <li class="route-stop">
+            <h4>Structured Error / SolveResult</h4>
+            <p><strong>先猜职责：</strong>失败必须携带类别与消息，求解结果必须区分状态、解、证书和错误。</p>
+            <p class="source-row"><strong>打开源码：</strong><a href="../highs/pdlp/hipdlp/api/status.hpp">api/status.hpp</a></p>
+            <ol class="route-questions">
+              <li><code>Error::ok()</code> 与 <code>SolveResult::ok()</code> 各回答什么？</li>
+              <li>iteration/time limit 为什么可以是成功返回但不是 optimal？</li>
+              <li>哪条路径可能把 backend failure 错映射成正常 model status？</li>
+            </ol>
+            <p class="expected-outcome"><strong>预期收获：</strong>能检查每个失败面是否保持“失败形状”，不被默认值吞掉。</p>
+          </li>
+          <li class="route-stop">
+            <h4>Original / transformed model boundary</h4>
+            <p><strong>先猜职责：</strong>变换问题服务迭代，原模型服务最终用户语义；二者之间只通过显式 metadata 往返。</p>
+            <p class="source-row"><strong>打开源码：</strong>
+              <a href="../highs/pdlp/hipdlp/model/problem.hpp">model/problem.hpp</a> ·
+              <a href="../highs/pdlp/hipdlp/model/problem.cc">model/problem.cc</a>
+            </p>
+            <ol class="route-questions">
+              <li>OriginalModel 是借用还是拥有 HighsLp？</li>
+              <li>每个删除、翻转、缩放或 slack 变换如何被逆转？</li>
+              <li>postsolve 维度不一致时是否明确失败？</li>
+            </ol>
+            <p class="expected-outcome"><strong>预期收获：</strong>能证明最终 solution 的每个分量来自可逆且被校验的映射。</p>
+          </li>
+          <li class="route-stop">
+            <h4>CPU / CUDA contract parity</h4>
+            <p><strong>先猜职责：</strong>同一操作在两后端应有相同数学结果、alias 规则、错误类别与同步后的可见状态。</p>
+            <p class="source-row"><strong>打开源码：</strong>
+              <a href="../highs/pdlp/hipdlp/backend/cpu/cpu_backend.cc">cpu_backend.cc</a> ·
+              <a href="../highs/pdlp/hipdlp/backend/cuda/cuda_backend.cu">cuda_backend.cu</a>
+            </p>
+            <ol class="route-questions">
+              <li>空向量、零 NNZ 和非有限值的处理是否一致？</li>
+              <li>CUDA 延迟错误在哪个 API 边界变成 <code>api::Error</code>？</li>
+              <li>fusion 是否保持未融合 CPU 操作的依赖顺序？</li>
+            </ol>
+            <p class="expected-outcome"><strong>预期收获：</strong>能构造后端无关的契约用例，并指出异步实现需要额外观察的位置。</p>
+          </li>
+          <li class="route-stop">
+            <h4>Independent verification</h4>
+            <p><strong>先猜职责：</strong>verifier 不信任迭代内部判定，而是用原始 LP 和恢复后的解重新计算接受条件。</p>
+            <p class="source-row"><strong>打开源码：</strong><a href="../highs/pdlp/hipdlp/verification/kkt_verifier.cc">verification/kkt_verifier.cc</a></p>
+            <ol class="route-questions">
+              <li>primal feasibility、dual feasibility 与 objective gap 如何归一化？</li>
+              <li>NaN/Inf 是否可能穿过比较表达式而被误判通过？</li>
+              <li>失败是否保留 worst row/column 等可定位证据？</li>
+            </ol>
+            <p class="expected-outcome"><strong>预期收获：</strong>能把“算法认为收敛”与“原模型证据可接受”作为两项独立结论。</p>
+          </li>
+        </ol>
+      </section>
+
+      <section class="cuda-course-section" id="route-cuda" aria-labelledby="route-cuda-title">
+        <h3 id="route-cuda-title">CUDA 八课：从线程索引到独立证据</h3>
+        <p>课程按执行、存储、调度、性能、library、graph、数值与调试递进。每课固定包含一个概念图、一个 HiPDLP 例子、三道题、三份折叠答案和一张 checklist。</p>
+        <nav class="course-index" aria-label="CUDA 课程目录">
+          <a href="#cuda-lesson-1">1 · 执行模型</a>
+          <a href="#cuda-lesson-2">2 · 内存模型</a>
+          <a href="#cuda-lesson-3">3 · 异步与 Stream</a>
+          <a href="#cuda-lesson-4">4 · 性能基础</a>
+          <a href="#cuda-lesson-5">5 · cuSPARSE</a>
+          <a href="#cuda-lesson-6">6 · CUDA Graph</a>
+          <a href="#cuda-lesson-7">7 · 数值与确定性</a>
+          <a href="#cuda-lesson-8">8 · 调试工具地图</a>
+        </nav>
+
+        <div class="cuda-course">
+          <article class="cuda-lesson" id="cuda-lesson-1">
+            <div class="lesson-heading">
+              <span class="lesson-number">Lesson 1</span>
+              <h4>执行模型</h4>
+            </div>
+            <div class="concept-visual" role="img" aria-label="grid 由 blocks 和 threads 组成，线程按 grid stride 处理后续索引">
+              <div class="concept-node"><strong>Grid</strong><span>最多 65535 blocks</span></div>
+              <span class="concept-arrow">→</span>
+              <div class="concept-node"><strong>Block</strong><span>256 threads</span></div>
+              <span class="concept-arrow">→</span>
+              <div class="concept-node"><strong>Thread index</strong><span>blockIdx.x × blockDim.x + threadIdx.x</span></div>
+              <span class="concept-arrow">↻</span>
+              <div class="concept-node"><strong>Grid stride</strong><span>index += blockDim.x × gridDim.x</span></div>
+            </div>
+            <div class="hipdlp-example">
+              <p><strong>HiPDLP 例子：</strong><code>projectedPrimalKernel&lt;true&gt;</code> 用 256 threads，blocks 为 <code>min(ceil(num_cols / 256), 65535)</code>，每个线程处理一个 column 起点并按整个 grid 的 stride 前进。</p>
+              <p class="source-row"><a href="../highs/pdlp/hipdlp/backend/cuda/cuda_kernels.cu">查看 cuda_kernels.cu</a></p>
+            </div>
+            <div class="lesson-questions">
+              <div class="qa-pair">
+                <p class="review-question"><strong>问题 1：</strong>一个线程如何覆盖不止一个 column？</p>
+                <details class="answer">
+                  <summary>展开参考答案</summary>
+                  <p><strong>结论：</strong>每个线程处理一个起始索引，并按整个 grid 的 stride 继续前进。</p>
+                  <p><strong>代码证据：</strong><code>index += blockDim.x * gridDim.x</code>。</p>
+                  <p><strong>Review 推理：</strong>静态代码能证明覆盖方式；实际吞吐和 occupancy 仍需 profiler。</p>
+                </details>
+              </div>
+              <div class="qa-pair">
+                <p class="review-question"><strong>问题 2：</strong>blocks 上限 65535 是否把可处理的向量长度也限制为 <code>65535 × 256</code>？</p>
+                <details class="answer">
+                  <summary>展开参考答案</summary>
+                  <p><strong>结论：</strong>不会；上限只限制并发起点数量，grid-stride loop 继续覆盖更大的 N。</p>
+                  <p><strong>代码证据：</strong><code>blockCount()</code> cap blocks，但 kernel 的 <code>for (...; index &lt; size; index += stride)</code> 不 cap <code>size</code>。</p>
+                  <p><strong>Review 推理：</strong>要同时审查循环和索引类型；只看 launch geometry 会错误地推断覆盖缺口。</p>
+                </details>
+              </div>
+              <div class="qa-pair">
+                <p class="review-question"><strong>问题 3：</strong>projection 分支和 <code>atomicExch(error_flag, 1)</code> 分别影响什么？</p>
+                <details class="answer">
+                  <summary>展开参考答案</summary>
+                  <p><strong>结论：</strong>上下界 clamp 可能造成 warp divergence；atomic 只把 non-finite 失败汇总为单向错误标志。</p>
+                  <p><strong>代码证据：</strong><code>if (value &lt; lower[index])</code>、<code>if (value &gt; upper[index])</code> 与 <code>recordNonFinite()</code>。</p>
+                  <p><strong>Review 推理：</strong>正确性可由分支和幂等标志判断；分支代价必须结合 bound 分布和 profiler 观察。</p>
+                </details>
+              </div>
+            </div>
+            <p><strong>Checklist：</strong></p>
+            <ul class="lesson-checklist">
+              <li>为每个 kernel 写出 global index、stride 与边界条件。</li>
+              <li>确认索引乘法不会在最大支持维度溢出。</li>
+              <li>区分覆盖正确性、分支正确性与 occupancy 证据。</li>
+            </ul>
+          </article>
+
+          <article class="cuda-lesson" id="cuda-lesson-2">
+            <div class="lesson-heading">
+              <span class="lesson-number">Lesson 2</span>
+              <h4>内存模型</h4>
+            </div>
+            <div class="concept-visual" role="img" aria-label="Host 模型上传到 Device 资源，普通检查只下载 pinned packet，必要时才下载完整候选">
+              <div class="concept-node"><strong>Host</strong><span>OriginalModel · options</span></div>
+              <span class="concept-arrow">H2D</span>
+              <div class="concept-node"><strong>Device</strong><span>ProblemHandle · vectors · workspace</span></div>
+              <span class="concept-arrow">D2H</span>
+              <div class="concept-node"><strong>Pinned staging</strong><span>CheckPacket 或完整 candidate</span></div>
+            </div>
+            <div class="hipdlp-example">
+              <p><strong>HiPDLP 例子：</strong>八个 column vectors 与八个 row vectors 在所选 backend 中创建；CUDA 普通检查把一个 <code>CheckPacket</code> 下载到 pinned Host memory，只有 fallback 或最终结果才下载完整候选。</p>
+              <p class="source-row"><a href="../highs/pdlp/hipdlp/backend/cuda/cuda_backend.cu">查看 cuda_backend.cu</a></p>
+            </div>
+            <div class="lesson-questions">
+              <div class="qa-pair">
+                <p class="review-question"><strong>问题 1：</strong><code>VectorHandle</code> 为什么不暴露 <code>double*</code>？</p>
+                <details class="answer">
+                  <summary>展开参考答案</summary>
+                  <p><strong>结论：</strong>opaque handle 把驻留位置和资源类型封装在 backend 内，阻止算法层直接解引用或跨 backend 混用。</p>
+                  <p><strong>代码证据：</strong><code>Handle&lt;Tag&gt;</code> 私有持有 <code>std::unique_ptr&lt;Resource&gt;</code>，只有 CPU/CUDA backend 是 friend。</p>
+                  <p><strong>Review 推理：</strong>类型封装能证明访问边界；owner、尺寸与 alias 仍必须由具体 backend 在每次操作中校验。</p>
+                </details>
+              </div>
+              <div class="qa-pair">
+                <p class="review-question"><strong>问题 2：</strong>为什么小型 check packet 仍使用 pinned memory？</p>
+                <details class="answer">
+                  <summary>展开参考答案</summary>
+                  <p><strong>结论：</strong>pinned Host buffer 支持可靠的异步 D2H staging，并可在多次 cadence boundary 复用。</p>
+                  <p><strong>代码证据：</strong><code>PinnedCheckPacket::allocate()</code> 调用 <code>cudaMallocHost(..., sizeof(CheckPacket))</code>。</p>
+                  <p><strong>Review 推理：</strong>复用和异步语义由代码可见；pinning 是否值得其固定成本需用边界频率与 timeline 衡量。</p>
+                </details>
+              </div>
+              <div class="qa-pair">
+                <p class="review-question"><strong>问题 3：</strong>连续 vector access 与 CSR SpMV 的访存证据为何不能混为一谈？</p>
+                <details class="answer">
+                  <summary>展开参考答案</summary>
+                  <p><strong>结论：</strong>vector kernel 可按连续 index 获得 coalescing，而 CSR 的 index/value 访问受矩阵结构和 vendor kernel 控制。</p>
+                  <p><strong>代码证据：</strong>custom kernel 直接访问 <code>current[index]</code>；SpMV 通过 CSR descriptor 进入 <code>cusparseSpMV</code>。</p>
+                  <p><strong>Review 推理：</strong>源码可分类访问模式，但 cache hit、transaction 和有效带宽必须由 Nsight Compute 证明。</p>
+                </details>
+              </div>
+            </div>
+            <p><strong>Checklist：</strong></p>
+            <ul class="lesson-checklist">
+              <li>标出每个数组的 owner、驻留位置、尺寸与释放点。</li>
+              <li>为每次 H2D/D2H 写明目的、字节数与同步点。</li>
+              <li>区分 device memory、static shared、dynamic shared 与 pinned Host memory。</li>
+            </ul>
+          </article>
+
+          <article class="cuda-lesson" id="cuda-lesson-3">
+            <div class="lesson-heading">
+              <span class="lesson-number">Lesson 3</span>
+              <h4>异步与 Stream</h4>
+            </div>
+            <div class="concept-visual" role="img" aria-label="Host 按顺序把 custom kernel、cuSPARSE 和 D2H 排入同一 stream，只在边界同步">
+              <div class="concept-node"><strong>Host enqueue</strong><span>立即返回不等于完成</span></div>
+              <span class="concept-arrow">→</span>
+              <div class="concept-node"><strong>One stream</strong><span>kernel → SpMV → kernel</span></div>
+              <span class="concept-arrow">→</span>
+              <div class="concept-node"><strong>Boundary</strong><span>D2H → synchronize → inspect</span></div>
+            </div>
+            <div class="hipdlp-example">
+              <p><strong>HiPDLP 例子：</strong>Backend 的 custom kernels、cuBLAS 与 cuSPARSE 都绑定到同一 stream；生产 step 依赖 stream 顺序，不在每个 kernel 后同步，boundary 才下载 packet/error 并等待。</p>
+              <p class="source-row"><a href="../highs/pdlp/hipdlp/backend/cuda/cuda_backend.cu">查看 stream 与 handle 绑定</a></p>
+            </div>
+            <div class="lesson-questions">
+              <div class="qa-pair">
+                <p class="review-question"><strong>问题 1：</strong>没有逐 kernel 同步，第二次 SpMV 如何等待前一个 kernel？</p>
+                <details class="answer">
+                  <summary>展开参考答案</summary>
+                  <p><strong>结论：</strong>同一 CUDA stream 内的操作按提交顺序执行，因此数据依赖不需要 Host 逐项等待。</p>
+                  <p><strong>代码证据：</strong>custom launches 使用 <code>impl_-&gt;stream.get()</code>，cuBLAS/cuSPARSE handles 也由 <code>*SetStream</code> 绑定它。</p>
+                  <p><strong>Review 推理：</strong>要证明顺序，必须追踪所有 producer/consumer 是否真的在同一 stream；仅看到异步 API 名称不够。</p>
+                </details>
+              </div>
+              <div class="qa-pair">
+                <p class="review-question"><strong>问题 2：</strong>异步 kernel 的 non-finite 错误何时变成 Host 上的 <code>api::Error</code>？</p>
+                <details class="answer">
+                  <summary>展开参考答案</summary>
+                  <p><strong>结论：</strong>kernel 先写 device <code>error_flag</code>，Host 在显式检查边界异步复制该 flag 并同步 stream 后形成 structured error。</p>
+                  <p><strong>代码证据：</strong><code>synchronizeAndCheck()</code> 执行 <code>cudaMemcpyAsync</code>、<code>cudaStreamSynchronize</code>，再检查 <code>host_error</code>。</p>
+                  <p><strong>Review 推理：</strong>launch status 只覆盖提交错误；异步执行错误必须在同步或后续 API 边界显式暴露。</p>
+                </details>
+              </div>
+              <div class="qa-pair">
+                <p class="review-question"><strong>问题 3：</strong>D2H 已 enqueue 后，Host 能否立刻读取目标 buffer？</p>
+                <details class="answer">
+                  <summary>展开参考答案</summary>
+                  <p><strong>结论：</strong>不能；必须等待该 stream 完成复制，之后 Host 读取才有定义且可见。</p>
+                  <p><strong>代码证据：</strong>download path 在 <code>cudaMemcpyAsync(..., cudaMemcpyDeviceToHost, stream)</code> 后调用 <code>cudaStreamSynchronize(stream)</code> 再 publish。</p>
+                  <p><strong>Review 推理：</strong>pinned memory 允许异步传输但不取消完成依赖；检查读取位置是否在同步之后。</p>
+                </details>
+              </div>
+            </div>
+            <p><strong>Checklist：</strong></p>
+            <ul class="lesson-checklist">
+              <li>为每个 producer/consumer 标出 stream 与提交顺序。</li>
+              <li>区分 enqueue 成功、device 执行成功和 Host 可见完成。</li>
+              <li>把每个 synchronize 关联到明确的正确性或计时目的。</li>
+            </ul>
+          </article>
+
+          <article class="cuda-lesson" id="cuda-lesson-4">
+            <div class="lesson-heading">
+              <span class="lesson-number">Lesson 4</span>
+              <h4>性能基础</h4>
+            </div>
+            <div class="concept-visual" role="img" aria-label="端到端时间拆成 setup、launch gaps、memory bandwidth、occupancy 和同步">
+              <div class="concept-node"><strong>Setup</strong><span>allocation · upload · descriptors</span></div>
+              <span class="concept-arrow">+</span>
+              <div class="concept-node"><strong>Steady state</strong><span>SpMV · fused kernels · replay</span></div>
+              <span class="concept-arrow">+</span>
+              <div class="concept-node"><strong>Boundaries</strong><span>packet · fallback · synchronization</span></div>
+            </div>
+            <div class="hipdlp-example">
+              <p><strong>HiPDLP 例子：</strong><code>vectorPairBlendKernel</code> 降低 launch 数，但 rows/cols 极不平衡时一侧线程会空转；<code>checkPartialsKernel</code> 的大型 static shared partial 还可能限制 occupancy。</p>
+              <p class="source-row"><a href="../highs/pdlp/hipdlp/backend/cuda/cuda_kernels.cu">查看 custom kernels</a></p>
+            </div>
+            <div class="lesson-questions">
+              <div class="qa-pair">
+                <p class="review-question"><strong>问题 1：</strong>看到 kernel 很短，先用 Nsight Systems 还是 Nsight Compute？</p>
+                <details class="answer">
+                  <summary>展开参考答案</summary>
+                  <p><strong>结论：</strong>先用 Systems 判断时间是否来自 launch gaps、同步或某个 kernel，再对主导 kernel 使用 Compute。</p>
+                  <p><strong>代码证据：</strong><code>SolveDiagnostics</code> 已分出 setup、step、boundary、download 与 replay counters，可先限定阶段。</p>
+                  <p><strong>Review 推理：</strong>Compute 的深度指标不能回答端到端调度占比；先定位再下钻可避免优化非瓶颈。</p>
+                </details>
+              </div>
+              <div class="qa-pair">
+                <p class="review-question"><strong>问题 2：</strong>低 occupancy 是否足以证明 kernel 是瓶颈？</p>
+                <details class="answer">
+                  <summary>展开参考答案</summary>
+                  <p><strong>结论：</strong>不足；低 occupancy 可能仍隐藏了足够延迟，也可能该 kernel 根本不占主要 wall time。</p>
+                  <p><strong>代码证据：</strong><code>checkPartialsKernel</code> 使用 <code>__shared__ CheckPartial shared[256]</code>，但只在 cadence boundary 运行。</p>
+                  <p><strong>Review 推理：</strong>必须联合 kernel duration、调用频率、带宽、stall 与端到端占比，单一指标只是线索。</p>
+                </details>
+              </div>
+              <div class="qa-pair">
+                <p class="review-question"><strong>问题 3：</strong>融合两次 vector launch 时，什么证据能防止“更少 launch = 更快”的误判？</p>
+                <details class="answer">
+                  <summary>展开参考答案</summary>
+                  <p><strong>结论：</strong>同时比较 launch gaps、kernel duration、有效线程比例、每步成本和总迭代数。</p>
+                  <p><strong>代码证据：</strong><code>vectorPairBlendKernel</code> 按 <code>max(num_cols, num_rows)</code> launch，并对 row/column 分别作 size guard。</p>
+                  <p><strong>Review 推理：</strong>融合减少固定成本却可能增加空转或寄存器压力；只有同工作量、同正确性轨迹的测量可裁决。</p>
+                </details>
+              </div>
+            </div>
+            <p><strong>Checklist：</strong></p>
+            <ul class="lesson-checklist">
+              <li>先分离 setup、steady state、boundary 与最终验证。</li>
+              <li>同时报告每步成本、调用次数、迭代数和接受状态。</li>
+              <li>把 occupancy、coalescing、divergence 与实际 wall-time 占比配对。</li>
+            </ul>
+          </article>
+
+          <article class="cuda-lesson" id="cuda-lesson-5">
+            <div class="lesson-heading">
+              <span class="lesson-number">Lesson 5</span>
+              <h4>cuSPARSE</h4>
+            </div>
+            <div class="concept-visual" role="img" aria-label="CSR descriptor、dense input、cuSPARSE workspace 进入 SpMV 并写 dense output">
+              <div class="concept-node"><strong>CSR descriptor</strong><span>starts · indices · values</span></div>
+              <span class="concept-arrow">+</span>
+              <div class="concept-node"><strong>Dense input</strong><span>x 或 y</span></div>
+              <span class="concept-arrow">→</span>
+              <div class="concept-node"><strong>cusparseSpMV</strong><span>DEFAULT algorithm · reusable scratch</span></div>
+              <span class="concept-arrow">→</span>
+              <div class="concept-node"><strong>Dense output</strong><span>Ax 或 Aᵀy</span></div>
+            </div>
+            <div class="hipdlp-example">
+              <p><strong>HiPDLP 例子：</strong>CUDA problem 同时保存 matrix 与 transpose descriptors，共用按两者最大需求分配的 <code>spmv_buffer</code>；每个 PDHG step 调用 forward 与 transpose SpMV。</p>
+              <p class="source-row"><a href="../highs/pdlp/hipdlp/backend/cuda/cuda_backend.cu">查看 cuSPARSE 路径</a></p>
+            </div>
+            <div class="lesson-questions">
+              <div class="qa-pair">
+                <p class="review-question"><strong>问题 1：</strong>为什么 scratch buffer 应在 bind/setup 阶段创建，而不是每次 SpMV 创建？</p>
+                <details class="answer">
+                  <summary>展开参考答案</summary>
+                  <p><strong>结论：</strong>workspace 尺寸由 descriptor 和算法决定，可按 matrix/transpose 最大值一次分配并在所有 step 复用。</p>
+                  <p><strong>代码证据：</strong><code>querySpmvBufferSize()</code> 填写两份 <code>spmv_buffer_size</code>，随后只分配一个最大尺寸的 <code>spmv_buffer</code>。</p>
+                  <p><strong>Review 推理：</strong>这能消除迭代内 allocation；仍需确认 descriptor 生命周期和尺寸变化不会让复用失效。</p>
+                </details>
+              </div>
+              <div class="qa-pair">
+                <p class="review-question"><strong>问题 2：</strong>零 NNZ 时为什么不直接调用 cuSPARSE？</p>
+                <details class="answer">
+                  <summary>展开参考答案</summary>
+                  <p><strong>结论：</strong>结果已知为零，专用 fill kernel 避免依赖空 CSR 的 vendor 行为并保持输出定义明确。</p>
+                  <p><strong>代码证据：</strong><code>executeSpmv</code> 在 <code>matrix.num_nonzeros == 0</code> 时调用 <code>launchFill(..., 0.0, output)</code>。</p>
+                  <p><strong>Review 推理：</strong>边界分支应与 CPU 语义一致，并仍经过后续需要的 finite/error 检查。</p>
+                </details>
+              </div>
+              <div class="qa-pair">
+                <p class="review-question"><strong>问题 3：</strong>源码中的 <code>CUSPARSE_SPMV_ALG_DEFAULT</code> 能否证明具体 grid 或性能？</p>
+                <details class="answer">
+                  <summary>展开参考答案</summary>
+                  <p><strong>结论：</strong>不能；HiPDLP 只选择 API、descriptor 与算法枚举，内部 kernel geometry 由 library/runtime 决定。</p>
+                  <p><strong>代码证据：</strong>调用点是 <code>cusparseSpMV(..., CUSPARSE_SPMV_ALG_DEFAULT, spmv_buffer)</code>，没有 HiPDLP launch dimensions。</p>
+                  <p><strong>Review 推理：</strong>实际 kernel、scratch traffic 和矩阵结构影响必须由 Systems/Compute trace 观察，不能从 wrapper 推断。</p>
+                </details>
+              </div>
+            </div>
+            <p><strong>Checklist：</strong></p>
+            <ul class="lesson-checklist">
+              <li>验证 CSR dimensions、index width、descriptor 和 dense vector 尺寸一致。</li>
+              <li>确认 scratch 查询、分配与复用生命周期覆盖 matrix 和 transpose。</li>
+              <li>把 library status 转成 structured error，并单独验证零 NNZ。</li>
+            </ul>
+          </article>
+
+          <article class="cuda-lesson" id="cuda-lesson-6">
+            <div class="lesson-heading">
+              <span class="lesson-number">Lesson 6</span>
+              <h4>CUDA Graph</h4>
+            </div>
+            <div class="concept-visual" role="img" aria-label="begin capture 记录 39 个 step，instantiate 后 replay，并在重放前验证依赖仍存活">
+              <div class="concept-node"><strong>Begin capture</strong><span>清空 dependency set</span></div>
+              <span class="concept-arrow">→</span>
+              <div class="concept-node"><strong>Record 39 steps</strong><span>kernels + two SpMVs per step</span></div>
+              <span class="concept-arrow">→</span>
+              <div class="concept-node"><strong>Instantiate</strong><span>graph executable + weak dependencies</span></div>
+              <span class="concept-arrow">↻</span>
+              <div class="concept-node"><strong>Replay</strong><span>check alive → cudaGraphLaunch</span></div>
+            </div>
+            <div class="hipdlp-example">
+              <p><strong>HiPDLP 例子：</strong>初始 step、restart 后第一步和短尾直接执行；稳定区间把 39 个生产 step 录成 command buffer，下一次第 40 步进入 cadence check。</p>
+              <p class="source-row">
+                <a href="../highs/pdlp/hipdlp/algorithm/solver.cc">查看调度</a> ·
+                <a href="../highs/pdlp/hipdlp/backend/cuda/cuda_backend.cu">查看 capture/replay</a>
+              </p>
+            </div>
+            <div class="lesson-questions">
+              <div class="qa-pair">
+                <p class="review-question"><strong>问题 1：</strong>Graph 捕获的是算法决策还是已排入 stream 的设备操作？</p>
+                <details class="answer">
+                  <summary>展开参考答案</summary>
+                  <p><strong>结论：</strong>捕获的是 recording 区间内提交到 stream 的 kernels/library calls；Host 的停止、时间与 restart 决策留在 graph 外。</p>
+                  <p><strong>代码证据：</strong><code>cudaStreamBeginCapture</code>/<code>cudaStreamEndCapture</code> 包住 repeated <code>enqueueHalpernPdhgStep</code>，boundary check 另行执行。</p>
+                  <p><strong>Review 推理：</strong>Graph 只能复用固定依赖图；把数据依赖的 Host 决策塞入 capture 会改变可观察语义。</p>
+                </details>
+              </div>
+              <div class="qa-pair">
+                <p class="review-question"><strong>问题 2：</strong>为什么是 39-step replay，而不是完整 40-step block？</p>
+                <details class="answer">
+                  <summary>展开参考答案</summary>
+                  <p><strong>结论：</strong>第 40 步后需要 Host 控制的 cadence boundary；录 39 步保持初始/重启后的 direct step 和 boundary 对齐。</p>
+                  <p><strong>代码证据：</strong><code>kConvergenceCadence == 40</code>、<code>kRecordedStepCount == 39</code>，replay 条件要求 <code>total_iterations % 40 == 1</code>。</p>
+                  <p><strong>Review 推理：</strong>检查 off-by-one 必须同时模拟初始、restart、iteration limit 与 short tail，而不能只看常态循环。</p>
+                </details>
+              </div>
+              <div class="qa-pair">
+                <p class="review-question"><strong>问题 3：</strong>Graph executable 存在时，为什么仍要检查依赖生命周期？</p>
+                <details class="answer">
+                  <summary>展开参考答案</summary>
+                  <p><strong>结论：</strong>graph nodes 捕获了资源地址；若 problem/workspace/vector 已释放，executable 仍非空但其指针已失效。</p>
+                  <p><strong>代码证据：</strong><code>CudaCommandBufferResource</code> 保存 <code>std::weak_ptr&lt;int&gt; dependencies</code>，<code>replay()</code> 先调用 <code>dependenciesAlive()</code>。</p>
+                  <p><strong>Review 推理：</strong>Graph object 的生命周期不等于被捕获资源的生命周期；重放前的显式 guard 防止 use-after-free。</p>
+                </details>
+              </div>
+            </div>
+            <p><strong>Checklist：</strong></p>
+            <ul class="lesson-checklist">
+              <li>列出 capture 内外的所有操作与 Host 决策。</li>
+              <li>证明参数地址、vector、workspace、problem 在每次 replay 时仍有效。</li>
+              <li>覆盖 capture、instantiate、launch、async execution 和 cleanup 失败。</li>
+            </ul>
+          </article>
+
+          <article class="cuda-lesson" id="cuda-lesson-7">
+            <div class="lesson-heading">
+              <span class="lesson-number">Lesson 7</span>
+              <h4>数值与确定性</h4>
+            </div>
+            <div class="concept-visual" role="img" aria-label="FP64 kernel 经过固定 reduction tree 形成 packet，不确定时回退 Host oracle，最终原模型 KKT">
+              <div class="concept-node"><strong>FP64 operations</strong><span>explicit round-to-nearest helpers</span></div>
+              <span class="concept-arrow">→</span>
+              <div class="concept-node"><strong>Fixed tree</strong><span>static shared reduction</span></div>
+              <span class="concept-arrow">→</span>
+              <div class="concept-node"><strong>CheckPacket</strong><span>metric + uncertainty flags</span></div>
+              <span class="concept-arrow">→</span>
+              <div class="concept-node"><strong>Host oracle / KKT</strong><span>independent acceptance</span></div>
+            </div>
+            <div class="hipdlp-example">
+              <p><strong>HiPDLP 例子：</strong>projection/reflection 使用 <code>__dmul_rn</code> 与 <code>__dsub_rn</code>；check kernels 以固定 block tree 合并 partials，不确定 packet 会触发 Host oracle，最终仍检查原模型 KKT。</p>
+              <p class="source-row">
+                <a href="../highs/pdlp/hipdlp/backend/cuda/cuda_kernels.cu">查看数值 kernels</a> ·
+                <a href="../highs/pdlp/hipdlp/verification/kkt_verifier.cc">查看 KKT verifier</a>
+              </p>
+            </div>
+            <div class="lesson-questions">
+              <div class="qa-pair">
+                <p class="review-question"><strong>问题 1：</strong><code>atomicExch(error_flag, 1)</code> 会不会引入 reduction 顺序的不确定性？</p>
+                <details class="answer">
+                  <summary>展开参考答案</summary>
+                  <p><strong>结论：</strong>不会改变数值 reduction；它只把多个失败写合并成同一个幂等布尔状态。</p>
+                  <p><strong>代码证据：</strong><code>recordNonFinite()</code> 仅执行 <code>atomicExch(error_flag, 1)</code>，数值 partials 在独立的 shared-memory tree 中合并。</p>
+                  <p><strong>Review 推理：</strong>要把错误汇总原子与浮点累加原子区分开；前者的写入顺序不改变最终 1。</p>
+                </details>
+              </div>
+              <div class="qa-pair">
+                <p class="review-question"><strong>问题 2：</strong>固定 reduction tree 是否足以保证所有 GPU、编译器与 library 版本 bitwise 相同？</p>
+                <details class="answer">
+                  <summary>展开参考答案</summary>
+                  <p><strong>结论：</strong>不足；它固定自有 kernel 的合并拓扑，但不能控制 cuSPARSE 内部顺序、编译选项或硬件差异。</p>
+                  <p><strong>代码证据：</strong>custom check 使用 <code>for (distance = 128; ...)</code>，而 SpMV 使用 vendor-controlled <code>CUSPARSE_SPMV_ALG_DEFAULT</code>。</p>
+                  <p><strong>Review 推理：</strong>确定性声明必须限定组件、平台与容差；跨环境要靠重复运行和数值接受测试验证。</p>
+                </details>
+              </div>
+              <div class="qa-pair">
+                <p class="review-question"><strong>问题 3：</strong>为什么 resident check 通过后仍需要 postsolve 和原模型 KKT？</p>
+                <details class="answer">
+                  <summary>展开参考答案</summary>
+                  <p><strong>结论：</strong>resident check 针对变换/缩放空间与紧凑指标；最终用户结论必须在恢复后的原 HighsLp 上独立验证。</p>
+                  <p><strong>代码证据：</strong>solver 先调用 <code>model::postsolve</code>，再调用 <code>verification::verifyKkt(original_model.lp(), solution, ...)</code>。</p>
+                  <p><strong>Review 推理：</strong>分层 oracle 能发现 transformation、download 或 backend 的共同错误，避免同源计算自证正确。</p>
+                </details>
+              </div>
+            </div>
+            <p><strong>Checklist：</strong></p>
+            <ul class="lesson-checklist">
+              <li>标出每个 reduction 的顺序、类型、容差和 non-finite 路径。</li>
+              <li>把 bitwise determinism、数值稳定性与接受容差分开陈述。</li>
+              <li>保留 Host oracle、postsolve 与原模型 KKT 的独立性。</li>
+            </ul>
+          </article>
+
+          <article class="cuda-lesson" id="cuda-lesson-8">
+            <div class="lesson-heading">
+              <span class="lesson-number">Lesson 8</span>
+              <h4>调试工具地图</h4>
+            </div>
+            <div class="concept-visual" role="img" aria-label="solver trace 定位阶段，Nsight Systems 定位时间线，Nsight Compute 分析 kernel，Compute Sanitizer 检查正确性">
+              <div class="concept-node"><strong>Solver trace</strong><span>阶段 · counters · acceptance</span></div>
+              <span class="concept-arrow">→</span>
+              <div class="concept-node"><strong>Nsight Systems</strong><span>streams · gaps · transfers · sync</span></div>
+              <span class="concept-arrow">→</span>
+              <div class="concept-node"><strong>Nsight Compute</strong><span>bandwidth · occupancy · divergence</span></div>
+              <span class="concept-arrow">+</span>
+              <div class="concept-node"><strong>Compute Sanitizer</strong><span>memory · race · API misuse</span></div>
+            </div>
+            <div class="hipdlp-example">
+              <p><strong>HiPDLP 例子：</strong>先用 <code>step_seconds</code>、<code>boundary_seconds</code>、<code>ordinary_check_d2h_bytes</code> 和 <code>command_buffer_replays</code> 限定问题，再选 timeline、kernel metrics 或 sanitizer。</p>
+              <p class="source-row"><a href="../highs/pdlp/hipdlp/algorithm/solver.hpp">查看 SolveDiagnostics 字段</a></p>
+            </div>
+            <div class="lesson-questions">
+              <div class="qa-pair">
+                <p class="review-question"><strong>问题 1：</strong>普通 boundary 偶发变慢，第一组证据应收集什么？</p>
+                <details class="answer">
+                  <summary>展开参考答案</summary>
+                  <p><strong>结论：</strong>先对齐 boundary/download counters 与 Nsight Systems timeline，判断是 packet、full candidate fallback 还是同步等待。</p>
+                  <p><strong>代码证据：</strong><code>ordinary_check_d2h_bytes</code>、<code>candidate_downloads</code>、<code>host_oracle_checks</code> 与 <code>boundary_seconds</code> 分开记录。</p>
+                  <p><strong>Review 推理：</strong>先分类事件才能选对深挖对象；直接看某个 kernel 容易漏掉 D2H 或 Host wait。</p>
+                </details>
+              </div>
+              <div class="qa-pair">
+                <p class="review-question"><strong>问题 2：</strong>Compute Sanitizer 报告无错误，能否证明性能改动正确且更快？</p>
+                <details class="answer">
+                  <summary>展开参考答案</summary>
+                  <p><strong>结论：</strong>不能；Sanitizer 主要发现内存、race 和 API 使用问题，不证明数值等价、KKT 接受或 speedup。</p>
+                  <p><strong>代码证据：</strong>HiPDLP 的接受链还包含 resident check、Host fallback、postsolve 与 <code>verifyKkt</code>，性能则由诊断和 profiler 衡量。</p>
+                  <p><strong>Review 推理：</strong>工具结论必须限制在其检测能力；正确性、数值与性能需要互补证据。</p>
+                </details>
+              </div>
+              <div class="qa-pair">
+                <p class="review-question"><strong>问题 3：</strong>一次 <code>cudaGraphLaunch</code> 返回成功，能否证明 graph 内异步执行也成功？</p>
+                <details class="answer">
+                  <summary>展开参考答案</summary>
+                  <p><strong>结论：</strong>不能；launch status 只证明提交成功，异步执行错误要在后续同步/检查边界观测。</p>
+                  <p><strong>代码证据：</strong><code>replay()</code> 检查 <code>cudaGraphLaunch</code>，后续 <code>synchronizeAndCheck()</code> 下载 error flag 并同步 stream。</p>
+                  <p><strong>Review 推理：</strong>调试时要同时保留 API status、device error state 和同步点，避免 success-shaped false negative。</p>
+                </details>
+              </div>
+            </div>
+            <p><strong>Checklist：</strong></p>
+            <ul class="lesson-checklist">
+              <li>先用 solver counters 把问题归入 setup、step、boundary、download 或 verification。</li>
+              <li>Systems 回答“何时/多久”，Compute 回答“kernel 为什么”，Sanitizer 回答“是否非法”。</li>
+              <li>任何性能结论都附带状态、残差、postsolve/KKT 与适用模型范围。</li>
+            </ul>
+          </article>
+        </div>
+      </section>
+
+      <section class="integrated-exercises" aria-labelledby="integrated-title">
+        <h3 id="integrated-title">综合练习：跨文件建立证据链</h3>
+        <p>这四题要求把课程概念重新接回真实 solve；先在源码中写出完整路径，再展开参考答案核对遗漏。</p>
+        <div class="integrated-grid">
+          <div class="qa-pair">
+            <p class="review-question"><strong>综合题 1：</strong>追踪 <code>primal_candidate</code>：从分配、kernel 写入、resident check、download 一直到 postsolve。</p>
+            <details class="answer">
+              <summary>展开参考答案</summary>
+              <p><strong>结论：</strong>它是 backend-owned column vector：setup 创建，primal kernel 写入，边界检查在 Device 上读取，必要时下载到 <code>HostIterate::primal</code>，最后由 postsolve 恢复原模型语义。</p>
+              <p><strong>代码证据：</strong><code>createIterationVectors()</code> 创建它；<code>fusedProjectedPrimalUpdateAndReflect(..., *state.primal_candidate, ...)</code> 写入；<code>check_input.primal = state.primal_candidate</code>；<code>downloadIterate()</code> 下载；<code>postsolveIterate()</code> 调用 <code>model::postsolve</code>。</p>
+              <p><strong>Review 推理：</strong>逐边界检查 owner、尺寸、驻留与同步，才能避免把 device candidate、Host copy 和 original solution 当成同一对象。</p>
+            </details>
+          </div>
+          <div class="qa-pair">
+            <p class="review-question"><strong>综合题 2：</strong>正常 cadence check 是否需要完整 candidate D2H？</p>
+            <details class="answer">
+              <summary>展开参考答案</summary>
+              <p><strong>结论：</strong>不需要；正常路径在 Device 上计算 resident check，只下载一个 112-byte packet。仅不确定/fallback、证书或最终输出需要更大下载。</p>
+              <p><strong>代码证据：</strong><code>checkPartialsKernel</code> 与 <code>checkPacketKernel</code> 生成 <code>CheckPacket</code>，普通路径记录 <code>ordinary_check_d2h_bytes</code>；完整候选经 <code>downloadIterate()</code> 单独计入 <code>candidate_downloads</code>。</p>
+              <p><strong>Review 推理：</strong>必须用 counters 和 Systems trace 核对每个 boundary 的实际 bytes；“API 能下载”不等于正常路径必须下载。</p>
+            </details>
+          </div>
+          <div class="qa-pair">
+            <p class="review-question"><strong>综合题 3：</strong>证明当 <code>N &gt; 65535 × 256</code> 时 grid-stride kernel 仍覆盖每个索引。</p>
+            <details class="answer">
+              <summary>展开参考答案</summary>
+              <p><strong>结论：</strong>满 grid 提供 stride 个起点 <code>0..stride-1</code>；任意 <code>i &lt; N</code> 都可唯一写成 <code>i = r + q × stride</code>，由起点 r 的线程在第 q 次循环访问。</p>
+              <p><strong>代码证据：</strong><code>stride = blockDim.x * gridDim.x</code>，循环执行 <code>index += stride</code>；宽索引 <code>GridIndex</code> 与 static_assert 防止支持范围内的 stride 加法溢出。</p>
+              <p><strong>Review 推理：</strong>覆盖证明还需确认 grid 含所有 residue 起点、循环条件是 <code>index &lt; size</code>，且索引类型能表示 N 与后续加法。</p>
+            </details>
+          </div>
+          <div class="qa-pair">
+            <p class="review-question"><strong>综合题 4：</strong>如何检查 CUDA graph 捕获的 dependencies 是否可能过期？</p>
+            <details class="answer">
+              <summary>展开参考答案</summary>
+              <p><strong>结论：</strong>每个参与 capture 的 problem/workspace/vector 提交其 lifetime token；command buffer 只保存 weak references，任何资源先销毁都会让 replay 明确失败。</p>
+              <p><strong>代码证据：</strong><code>recordDependency(shared_ptr)</code> 收集 token，<code>endRecording()</code> 移入 <code>dependencies</code>，<code>replay()</code> 在 <code>cudaGraphLaunch</code> 前执行 <code>dependenciesAlive()</code> 并返回 “dependency has expired”。</p>
+              <p><strong>Review 推理：</strong>检查必须覆盖每种被捕获资源的 record call，并测试销毁任一资源后 replay 失败，而非只检查 graph handle 非空。</p>
+            </details>
+          </div>
+        </div>
+      </section>
+
+      <section class="review-mode" aria-labelledby="review-mode-title">
+        <h3 id="review-mode-title">四遍 Review 模式</h3>
+        <p>不要在一遍里同时追所有问题。每一遍只接受与本目标相关的证据，并把 reusable prompt 复制到 human/AI review 中。</p>
+        <div class="review-pass-grid">
+          <article class="review-pass">
+            <h4>Pass 1 · Interface and ownership</h4>
+            <h4>good signal</h4>
+            <p>move-only handles、单一 owner、构造失败自动清理、明确的借用边界与 structured errors。</p>
+            <h4>danger signal</h4>
+            <p>裸 device pointer 越过 backend、隐式复制 handle、resource 比 graph/descriptor 更早销毁、失败后保留看似有效输出。</p>
+            <h4>Human review prompt</h4>
+            <p class="review-prompt">“对每个跨函数对象标 owner、borrower、move、reset 和失败清理；指出任何无法唯一回答‘谁释放’的位置。”</p>
+            <h4>AI review prompt</h4>
+            <p class="review-prompt">“只审接口与所有权。列出 handle/resource 生命周期、所有 move-only 约束、提前返回清理和错误传播；不要推断未展示的代码。”</p>
+          </article>
+          <article class="review-pass">
+            <h4>Pass 2 · Numerical correctness</h4>
+            <h4>good signal</h4>
+            <p>维度/alias/finite guards、明确 reduction 顺序、容差有尺度、Host oracle、postsolve 后原模型 KKT。</p>
+            <h4>danger signal</h4>
+            <p>NaN 比较默认通过、只验证 transformed model、改变运算顺序却复用旧 tolerance、性能样本未核对迭代轨迹。</p>
+            <h4>Human review prompt</h4>
+            <p class="review-prompt">“从输入尺度到最终 KKT 追踪每次浮点变换、reduction 与容差；为 NaN/Inf、零尺度和边界值写反例。”</p>
+            <h4>AI review prompt</h4>
+            <p class="review-prompt">“只审数值正确性。区分 bitwise determinism、稳定性与 tolerance acceptance；用源码证据指出 oracle 是否独立。”</p>
+          </article>
+          <article class="review-pass">
+            <h4>Pass 3 · Concurrency and CUDA semantics</h4>
+            <h4>good signal</h4>
+            <p>producer/consumer 同 stream、有目的的同步、async error 明确汇合、capture 内外边界清楚、replay 前验证依赖。</p>
+            <h4>danger signal</h4>
+            <p>Host 在同步前读取 D2H、library handle 绑定不同 stream、launch success 被当执行 success、graph 捕获悬空地址。</p>
+            <h4>Human review prompt</h4>
+            <p class="review-prompt">“画出 stream timeline，标每个 enqueue、数据依赖、event/sync、Host read 与错误观察点；寻找跨 stream 无 happens-before 的边。”</p>
+            <h4>AI review prompt</h4>
+            <p class="review-prompt">“只审并发与 CUDA 语义。逐项证明顺序、可见性、同步和 graph resource lifetime；无法证明时标为待运行验证。”</p>
+          </article>
+          <article class="review-pass">
+            <h4>Pass 4 · Performance</h4>
+            <h4>good signal</h4>
+            <p>先用阶段 counters 定位，再用 Systems/Compute；同模型同选项比较；同时报告每步成本、迭代数和 correctness gate。</p>
+            <h4>danger signal</h4>
+            <p>用 launch 数替代 wall time、从三个样本外推全部模型、只看成功子集、把 sanitizer clean 当成 speedup 证据。</p>
+            <h4>Human review prompt</h4>
+            <p class="review-prompt">“写出瓶颈假设、可证伪指标、控制变量、正确性护栏和停止条件；先问优化是否命中端到端主导项。”</p>
+            <h4>AI review prompt</h4>
+            <p class="review-prompt">“只审性能证据。区分已实现、已测量和待测假设；拒绝缺少 baseline、样本范围、迭代轨迹或 KKT 接受的加速结论。”</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="glossary" aria-labelledby="glossary-title">
+        <h3 id="glossary-title">术语表</h3>
+        <dl class="glossary-grid">
+          <div><dt>CSR</dt><dd>Compressed Sparse Row；用 row offsets、column indices 和 values 表示稀疏矩阵。</dd></div>
+          <div><dt>SpMV</dt><dd>Sparse matrix-vector multiply；HiPDLP 每个生产 step 执行 forward 与 transpose 两次。</dd></div>
+          <div><dt>primal</dt><dd>原问题变量及其候选、anchor、reflection 等迭代向量。</dd></div>
+          <div><dt>dual</dt><dd>约束侧变量；与 primal 一起定义残差、目标和 KKT 条件。</dd></div>
+          <div><dt>reflection</dt><dd>围绕当前 candidate 的反射点；Halpern PDHG 下一次 SpMV 的输入之一。</dd></div>
+          <div><dt>Halpern anchor</dt><dd>Halpern 迭代固定或重启后的参考点，与 reflection 按权重混合。</dd></div>
+          <div><dt>resident</dt><dd>数据保持在当前 backend；resident check 在 Device 上计算指标而不先下载完整向量。</dd></div>
+          <div><dt>H2D</dt><dd>Host-to-Device transfer；模型、向量或 scalar parameter 的上传。</dd></div>
+          <div><dt>D2H</dt><dd>Device-to-Host transfer；check packet、error flag 或完整 candidate 的下载。</dd></div>
+          <div><dt>pinned memory</dt><dd>页锁定 Host memory；用于可复用、可异步的 CUDA transfer staging。</dd></div>
+          <div><dt>stream</dt><dd>有序的 CUDA 工作队列；同一 stream 中的操作保留提交顺序。</dd></div>
+          <div><dt>event</dt><dd>记录 Device timeline 的 CUDA 对象；适合 GPU 阶段计时和顺序标记。</dd></div>
+          <div><dt>warp</dt><dd>一起调度的一组 CUDA threads；分支路径不同时可能序列化。</dd></div>
+          <div><dt>occupancy</dt><dd>活跃 warps 相对硬件上限的比例；是延迟隐藏线索，不是性能结论。</dd></div>
+          <div><dt>coalescing</dt><dd>相邻 threads 的 memory access 合并为较少 transaction 的访问性质。</dd></div>
+          <div><dt>divergence</dt><dd>同一 warp 的 threads 选择不同分支，导致路径分批执行。</dd></div>
+          <div><dt>graph capture</dt><dd>把 stream 中提交的固定设备操作记录成 CUDA Graph，以 executable 重放。</dd></div>
+          <div><dt>deterministic reduction</dt><dd>固定 partial grouping 与合并树；其保证必须限定到具体 kernel 和环境。</dd></div>
+          <div><dt>host oracle</dt><dd>当紧凑 Device check 不足以裁决时，在 Host 上用完整数据重新计算的参考路径。</dd></div>
+          <div><dt>postsolve</dt><dd>撤销 scaling/transform，把求解空间 candidate 恢复成原模型 HighsSolution。</dd></div>
+          <div><dt>KKT</dt><dd>Karush-Kuhn-Tucker 条件；最终在原模型上检查 primal/dual feasibility 与 gap。</dd></div>
+          <div><dt>command buffer</dt><dd>HiPDLP 对可 replay 后端工作的抽象；CUDA 实现由 graph executable 支撑。</dd></div>
+          <div><dt>structured error</dt><dd>带 ErrorCode 与消息的失败值；不得伪装成成功状态或静默 fallback。</dd></div>
+        </dl>
+      </section>
+    </section>
   </main>
   <script id="architecture-data" type="application/json">
   {
