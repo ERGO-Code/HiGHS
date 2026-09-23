@@ -589,8 +589,6 @@ void HPresolve::link(HighsInt pos) {
   highs_splay_link(pos, rowroot[Arow[pos]], get_row_left, get_row_right,
                    get_row_key);
 
-  impliedRowBounds.add(Arow[pos], Acol[pos], Avalue[pos]);
-  impliedDualRowBounds.add(Acol[pos], Arow[pos], Avalue[pos]);
   ++rowsize[Arow[pos]];
   if (model->integrality_[Acol[pos]] == HighsVarType::kInteger)
     ++rowsizeInteger[Arow[pos]];
@@ -616,7 +614,6 @@ void HPresolve::unlink(HighsInt pos) {
     else
       markChangedCol(Acol[pos]);
 
-    impliedDualRowBounds.remove(Acol[pos], Arow[pos], Avalue[pos]);
   }
 
   auto get_row_left = [&](HighsInt pos) -> HighsInt& { return ARleft[pos]; };
@@ -635,10 +632,31 @@ void HPresolve::unlink(HighsInt pos) {
       singletonRows.push_back(Arow[pos]);
     else
       markChangedRow(Arow[pos]);
-    impliedRowBounds.remove(Arow[pos], Acol[pos], Avalue[pos]);
   }
 
-  matrixNonZeroChanged(Arow[pos], Acol[pos]);
+  if (!colDeleted[Acol[pos]]) {
+    if (impliedDualRowBounds.coefficientChanged(Acol[pos], Arow[pos],
+                                                Avalue[pos], 0.0))
+      resetRowDualImpliedBoundsDerivedFromCol(Acol[pos]);
+    else if (rowDualLowerSource[Arow[pos]] == Acol[pos] ||
+             rowDualUpperSource[Arow[pos]] == Acol[pos])
+      resetRowDualImpliedBounds(Arow[pos], Acol[pos]);
+  } else {
+    resetRowDualImpliedBoundsDerivedFromCol(Acol[pos]);
+  }
+
+  if (!rowDeleted[Arow[pos]]) {
+    if (impliedRowBounds.coefficientChanged(Arow[pos], Acol[pos], Avalue[pos],
+                                            0.0))
+      resetColImpliedBoundsDerivedFromRow(Arow[pos]);
+    else if (colLowerSource[Acol[pos]] == Arow[pos] ||
+             colUpperSource[Acol[pos]] == Arow[pos])
+      resetColImpliedBounds(Acol[pos], Arow[pos]);
+  } else {
+    resetColImpliedBoundsDerivedFromRow(Arow[pos]);
+  }
+
+  clearLiftingOpportunities(Arow[pos]);
 
   // remove non-zero
   Avalue[pos] = 0;
@@ -2454,23 +2472,35 @@ void HPresolve::addToMatrix(const HighsInt row, const HighsInt col,
 
     link(pos);
 
-    matrixNonZeroChanged(row, col);
+    if (impliedDualRowBounds.coefficientChanged(col, row, 0.0, val))
+      resetRowDualImpliedBoundsDerivedFromCol(col);
+    else if (rowDualLowerSource[row] == col || rowDualUpperSource[row] == col)
+      resetRowDualImpliedBounds(row, col);
+
+    if (impliedRowBounds.coefficientChanged(row, col, 0.0, val))
+      resetColImpliedBoundsDerivedFromRow(row);
+    else if (colLowerSource[col] == row || colUpperSource[col] == row)
+      resetColImpliedBounds(col, row);
+
+    clearLiftingOpportunities(row);
 
   } else {
     double sum = Avalue[pos] + val;
     if (std::abs(sum) <= options->small_matrix_value) {
       unlink(pos);
     } else {
-      matrixNonZeroChanged(row, col);
+      if (impliedDualRowBounds.coefficientChanged(col, row, Avalue[pos], sum))
+        resetRowDualImpliedBoundsDerivedFromCol(col);
+      else if (rowDualLowerSource[row] == col || rowDualUpperSource[row] == col)
+        resetRowDualImpliedBounds(row, col);
 
-      // remove the locks and contribution to implied (dual) row bounds, then
-      // add then again
-      impliedRowBounds.remove(row, col, Avalue[pos]);
-      impliedDualRowBounds.remove(col, row, Avalue[pos]);
+      if (impliedRowBounds.coefficientChanged(row, col, Avalue[pos], sum))
+        resetColImpliedBoundsDerivedFromRow(row);
+      else if (colLowerSource[col] == row || colUpperSource[col] == row)
+        resetColImpliedBounds(col, row);
+
       Avalue[pos] = sum;
-      // value not zero, add new contributions and locks with opposite sign
-      impliedRowBounds.add(row, col, Avalue[pos]);
-      impliedDualRowBounds.add(col, row, Avalue[pos]);
+      clearLiftingOpportunities(row);
     }
   }
 }
@@ -3045,7 +3075,11 @@ bool HPresolve::okFromCSC(const std::vector<double>& Aval,
   if (!okResize(Aprev, nnz)) return false;
   if (!okResize(ARleft, nnz)) return false;
   if (!okResize(ARright, nnz)) return false;
-  for (HighsInt pos = 0; pos != nnz; ++pos) link(pos);
+  for (HighsInt pos = 0; pos != nnz; ++pos) {
+    link(pos);
+    impliedRowBounds.add(Arow[pos], Acol[pos], Avalue[pos]);
+    impliedDualRowBounds.add(Acol[pos], Arow[pos], Avalue[pos]);
+  }
 
   if (equations.empty()) {
     try {
@@ -3108,7 +3142,11 @@ bool HPresolve::okFromCSR(const std::vector<double>& ARval,
   if (!okResize(Aprev, nnz)) return false;
   if (!okResize(ARleft, nnz)) return false;
   if (!okResize(ARright, nnz)) return false;
-  for (HighsInt pos = 0; pos != nnz; ++pos) link(pos);
+  for (HighsInt pos = 0; pos != nnz; ++pos) {
+    link(pos);
+    impliedRowBounds.add(Arow[pos], Acol[pos], Avalue[pos]);
+    impliedDualRowBounds.add(Acol[pos], Arow[pos], Avalue[pos]);
+  }
 
   if (equations.empty()) {
     try {
