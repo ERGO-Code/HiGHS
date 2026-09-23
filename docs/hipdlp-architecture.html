@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <link rel="icon" href="data:,">
+  <title>HiPDLP Rewrite 架构与数据流</title>
+  <style>
+    :root {
+      --paper: #f4f6f8;
+      --surface: #ffffff;
+      --ink: #17212b;
+      --muted: #5d6875;
+      --line: #cbd3dc;
+      --host: #2563a6;
+      --host-soft: #e5f0fb;
+      --device: #138a63;
+      --device-soft: #e3f5ee;
+      --h2d: #c66a13;
+      --d2h: #c43d4b;
+      --control: #667085;
+      --correctness: #7251b5;
+      --hotspot: #b7791f;
+      --radius: 8px;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: var(--paper);
+      font: 15px/1.6 "Noto Sans CJK SC", "Microsoft YaHei", sans-serif;
+    }
+    .shell { width: min(1440px, calc(100% - 32px)); margin: 0 auto; }
+    .tablist { display: flex; overflow-x: auto; gap: 4px; }
+    [role="tab"] { border: 0; border-bottom: 3px solid transparent; padding: 14px 16px; }
+    [role="tab"][aria-selected="true"] { border-bottom-color: var(--host); }
+    .view { margin: 24px 0; padding: 24px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+  </style>
+</head>
+<body>
+  <header class="masthead">
+    <div class="shell">
+      <p>CODE ATLAS · 2026-09-23</p>
+      <h1>HiPDLP Rewrite 架构与数据流</h1>
+      <p>源码快照 feature/hipdlp-rewrite @ 49b85f4f3；工作区包含未提交证据文档。</p>
+    </div>
+  </header>
+  <nav class="shell tablist" role="tablist" aria-label="架构视图">
+    <button role="tab" aria-selected="true" aria-controls="system-map" data-view="system-map">系统地图</button>
+    <button role="tab" aria-selected="false" aria-controls="data-residency" data-view="data-residency">数据与驻留</button>
+    <button role="tab" aria-selected="false" aria-controls="iteration-correctness" data-view="iteration-correctness">迭代与正确性</button>
+    <button role="tab" aria-selected="false" aria-controls="bottlenecks" data-view="bottlenecks">卡点与优化</button>
+    <button role="tab" aria-selected="false" aria-controls="learning-review" data-view="learning-review">学习与 Review</button>
+  </nav>
+  <main class="shell">
+    <section class="view" id="system-map"><h2>系统地图</h2></section>
+    <section class="view" id="data-residency"><h2>数据与驻留</h2></section>
+    <section class="view" id="iteration-correctness"><h2>迭代与正确性</h2></section>
+    <section class="view" id="bottlenecks"><h2>卡点与优化</h2></section>
+    <section class="view" id="learning-review"><h2>学习与 Review</h2></section>
+  </main>
+  <script id="architecture-data" type="application/json">
+  {
+    "snapshot": {
+      "branch": "feature/hipdlp-rewrite",
+      "commit": "49b85f4f3",
+      "generated": "2026-09-23",
+      "workingTree": "dirty"
+    }
+  }
+  </script>
+</body>
+</html>
