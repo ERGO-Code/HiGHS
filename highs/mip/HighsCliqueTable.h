@@ -88,6 +88,9 @@ class HighsCliqueTable {
   std::vector<HighsBool> iscandidate;
   std::vector<HighsBool> colDeleted;
   std::vector<PresolveColState> presolveColStates;
+  std::vector<CliqueVar> presolveFixingQueue;
+  std::vector<HighsInt> presolveIncidentCliques;
+  std::vector<CliqueVar> presolveShortenedClique;
   std::vector<uint32_t> cliquehits;
   std::vector<HighsInt> cliquehitinds;
 
