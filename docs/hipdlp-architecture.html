@@ -1680,7 +1680,7 @@
           <h4>症状</h4>
           <p>稳定迭代可能受 cuSPARSE SpMV 带宽、custom kernel occupancy、launch gaps 或 graph replay 调度限制。</p>
           <h4>当前证据</h4>
-          <p>2026-09-22 三案例 fusion-plus-replay 相对 scoped before 下降 41.5%–52.4%；样本很小，不能外推到全部模型。</p>
+          <p>2026-09-22 三案例 fusion-plus-replay 相对 scoped before 下降 41.5%–52.4%；样本很小，不能外推到全部模型，也不是 release acceptance。</p>
           <p class="report-evidence">证据路径：<code>docs/hipdlp-phase8-step-fusion.md</code>；补充：<code>docs/hipdlp-phase8-gpu-performance-report.md</code></p>
           <h4>看什么指标</h4>
           <p><code>step_seconds</code>、<code>command_buffer_replays</code>、kernel gaps、SpMV duration、achieved bandwidth、occupancy 与 divergence。</p>
@@ -1798,6 +1798,12 @@
             </thead>
             <tbody>
               <tr>
+                <th scope="row">End-to-end envelope</th>
+                <td><code>total_wall_seconds</code></td>
+                <td>solver trace → CPU profiler 或 Nsight Systems</td>
+                <td>完整 solve wall time 与各阶段计时之和是否一致，未归因时间落在哪里？</td>
+              </tr>
+              <tr>
                 <th scope="row">Setup</th>
                 <td><code>preprocessing_seconds</code>, <code>backend_setup_seconds</code>, <code>operator_norm_seconds</code>, <code>resource_creation_calls_before_iterations</code></td>
                 <td>solver trace → CPU profiler；CUDA 创建与上传再看 Nsight Systems</td>
@@ -1805,7 +1811,7 @@
               </tr>
               <tr>
                 <th scope="row">Iteration / step</th>
-                <td><code>iterations_seconds</code>, <code>iteration_block_seconds</code>, <code>step_seconds</code>, <code>recorded_iterations</code>, <code>command_buffer_replays</code></td>
+                <td><code>iterations_seconds</code>, <code>iteration_block_seconds</code>, <code>step_seconds</code>, <code>recorded_iterations</code>, <code>command_buffer_replays</code>, <code>resource_creation_calls_during_iterations</code></td>
                 <td>solver trace → CPU profiler 或 Nsight Systems；主导 GPU kernel 再看 Nsight Compute</td>
                 <td>成本来自 serial CPU loops、SpMV、custom kernels、launch gaps 还是 replay？</td>
               </tr>
@@ -1817,13 +1823,13 @@
               </tr>
               <tr>
                 <th scope="row">Download / synchronization</th>
-                <td><code>download_seconds</code>, <code>candidate_downloads</code>, <code>ordinary_check_d2h_bytes</code>, <code>ordinary_check_transfers</code>, <code>ordinary_check_synchronizations</code>, <code>host_oracle_checks</code></td>
+                <td><code>download_seconds</code>, <code>candidate_downloads</code>, <code>ordinary_check_d2h_bytes</code>, <code>ordinary_check_transfers</code>, <code>ordinary_check_synchronizations</code>, <code>host_oracle_checks</code>, <code>certificate_checks</code></td>
                 <td>solver trace + Nsight Systems</td>
                 <td>是 112-byte packet、full candidate D2H、host oracle fallback，还是同步等待造成尖峰？</td>
               </tr>
               <tr>
                 <th scope="row">Trajectory / verification</th>
-                <td><code>host_preparation_seconds</code>, <code>host_verification_seconds</code>, <code>reference_fixed_point_seconds</code>, <code>fixed_point_fallback_seconds</code>, <code>restarts</code>, <code>primal_weight_updates</code></td>
+                <td><code>host_preparation_seconds</code>, <code>host_verification_seconds</code>, <code>reference_fixed_point_seconds</code>, <code>fixed_point_fallback_seconds</code>, <code>restarts</code>, <code>primal_weight_updates</code>, <code>restart_reference_checks</code>, <code>fixed_point_evaluations</code></td>
                 <td>solver trace + CPU profiler；内存错误、race、非法访问用 Compute Sanitizer</td>
                 <td>慢来自轨迹变化、fallback、postsolve/KKT，还是 host verification；结果是否仍可信？</td>
               </tr>
@@ -1969,6 +1975,9 @@
     const estimatorResults = document.querySelector("#estimator-results");
 
     function parseCount(input, label) {
+      if (input.value.trim() === "") {
+        throw new Error(`${label} 不能为空`);
+      }
       const value = Number(input.value);
       if (!Number.isSafeInteger(value) || value < 0) {
         throw new Error(`${label} 必须是非负安全整数`);
@@ -2009,13 +2018,17 @@
       estimatorError.textContent = "";
       estimatorResults.hidden = true;
       try {
+        const indexBytes = parseCount(
+          document.querySelector("#index-bytes"), "index width"
+        );
+        if (indexBytes !== 4 && indexBytes !== 8) {
+          throw new Error("index width 必须是 4 或 8 bytes");
+        }
         const estimates = estimateMemory({
           rows: parseCount(document.querySelector("#rows"), "rows"),
           cols: parseCount(document.querySelector("#cols"), "columns"),
           nnz: parseCount(document.querySelector("#nnz"), "nonzeros"),
-          indexBytes: parseCount(
-            document.querySelector("#index-bytes"), "index width"
-          )
+          indexBytes
         });
         document.querySelector("#matrix-bytes").textContent =
           formatBytes(estimates.matrixBytes);

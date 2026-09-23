@@ -1,12 +1,14 @@
 import json
 from html.parser import HTMLParser
 from pathlib import Path
+import re
 import unittest
 from urllib.parse import unquote, urlsplit
 
 
 ROOT = Path(__file__).resolve().parents[1]
 PAGE = ROOT / "docs" / "hipdlp-architecture.html"
+SOLVER_HEADER = ROOT / "highs" / "pdlp" / "hipdlp" / "algorithm" / "solver.hpp"
 SYSTEM_NODE_IDS = {
     "node-wrapper",
     "node-api",
@@ -569,6 +571,53 @@ class ArchitecturePageTests(unittest.TestCase):
         self.assertIn("estimatorError.hidden = false;", update_source)
         self.assertIn("estimatorResults.hidden = false;", update_source)
 
+    def test_estimator_rejects_blank_before_number_conversion(self):
+        parse_start = self.source.index("function parseCount(input, label)")
+        parse_end = self.source.index(
+            "function estimateMemory", parse_start
+        )
+        parse_source = self.source[parse_start:parse_end]
+        blank_guard = 'input.value.trim() === ""'
+        self.assertIn(blank_guard, parse_source)
+        self.assertLess(
+            parse_source.index(blank_guard),
+            parse_source.index("Number(input.value)"),
+        )
+
+        update_start = self.source.index("function updateEstimator()")
+        update_end = self.source.index(
+            'estimatorForm.addEventListener("input"', update_start
+        )
+        update_source = self.source[update_start:update_end]
+        self.assertLess(
+            update_source.index("estimatorResults.hidden = true;"),
+            update_source.index("try {"),
+        )
+
+    def test_estimator_restricts_index_width_before_estimating(self):
+        update_start = self.source.index("function updateEstimator()")
+        update_end = self.source.index(
+            'estimatorForm.addEventListener("input"', update_start
+        )
+        update_source = self.source[update_start:update_end]
+        parse_index = "const indexBytes = parseCount("
+        width_guard = "if (indexBytes !== 4 && indexBytes !== 8)"
+        estimate_call = "const estimates = estimateMemory({"
+        self.assertIn(parse_index, update_source)
+        self.assertIn(width_guard, update_source)
+        self.assertIn(
+            "index width 必须是 4 或 8 bytes",
+            update_source,
+        )
+        self.assertLess(
+            update_source.index(parse_index),
+            update_source.index(width_guard),
+        )
+        self.assertLess(
+            update_source.index(width_guard),
+            update_source.index(estimate_call),
+        )
+
     def test_diagnostics_map_connects_solve_fields_to_profilers(self):
         self.assertIn("diagnostics-map", self.parser.ids)
         for field in (
@@ -597,6 +646,42 @@ class ArchitecturePageTests(unittest.TestCase):
         ):
             with self.subTest(tool=tool):
                 self.assertIn(tool, self.source)
+
+    def test_diagnostics_map_covers_every_solver_field(self):
+        solver_source = SOLVER_HEADER.read_text(encoding="utf-8")
+        diagnostics = re.search(
+            r"struct SolveDiagnostics \{(?P<body>.*?)SolveDiagnostics\(\);",
+            solver_source,
+            re.DOTALL,
+        )
+        self.assertIsNotNone(diagnostics)
+        solver_fields = set(re.findall(
+            r"(?:std::size_t|double)\s+([a-z][a-z0-9_]*);",
+            diagnostics.group("body"),
+        ))
+
+        table = re.search(
+            r'<table id="diagnostics-map".*?</table>',
+            self.source,
+            re.DOTALL,
+        )
+        self.assertIsNotNone(table)
+        mapped_fields = set(re.findall(
+            r"<code>([a-z][a-z0-9_]*)</code>",
+            table.group(),
+        ))
+        self.assertEqual(mapped_fields, solver_fields)
+
+    def test_cuda_replay_card_states_release_acceptance_limit(self):
+        card = re.search(
+            r'<article class="hotspot-card" id="hotspot-4">'
+            r"(?P<body>.*?)</article>",
+            self.source,
+            re.DOTALL,
+        )
+        self.assertIsNotNone(card)
+        self.assertIn("不能外推到全部模型", card.group("body"))
+        self.assertIn("不是 release acceptance", card.group("body"))
 
 
 if __name__ == "__main__":
