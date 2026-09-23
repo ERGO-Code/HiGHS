@@ -613,7 +613,6 @@ void HPresolve::unlink(HighsInt pos) {
       singletonColumns.push_back(Acol[pos]);
     else
       markChangedCol(Acol[pos]);
-
   }
 
   auto get_row_left = [&](HighsInt pos) -> HighsInt& { return ARleft[pos]; };
@@ -634,29 +633,8 @@ void HPresolve::unlink(HighsInt pos) {
       markChangedRow(Arow[pos]);
   }
 
-  if (!colDeleted[Acol[pos]]) {
-    if (impliedDualRowBounds.coefficientChanged(Acol[pos], Arow[pos],
-                                                Avalue[pos], 0.0))
-      resetRowDualImpliedBoundsDerivedFromCol(Acol[pos]);
-    else if (rowDualLowerSource[Arow[pos]] == Acol[pos] ||
-             rowDualUpperSource[Arow[pos]] == Acol[pos])
-      resetRowDualImpliedBounds(Arow[pos], Acol[pos]);
-  } else {
-    resetRowDualImpliedBoundsDerivedFromCol(Acol[pos]);
-  }
-
-  if (!rowDeleted[Arow[pos]]) {
-    if (impliedRowBounds.coefficientChanged(Arow[pos], Acol[pos], Avalue[pos],
-                                            0.0))
-      resetColImpliedBoundsDerivedFromRow(Arow[pos]);
-    else if (colLowerSource[Acol[pos]] == Arow[pos] ||
-             colUpperSource[Acol[pos]] == Arow[pos])
-      resetColImpliedBounds(Acol[pos], Arow[pos]);
-  } else {
-    resetColImpliedBoundsDerivedFromRow(Arow[pos]);
-  }
-
-  clearLiftingOpportunities(Arow[pos]);
+  matrixNonZeroChanged(Arow[pos], Acol[pos], Avalue[pos], 0.0,
+                       rowDeleted[Arow[pos]], colDeleted[Acol[pos]]);
 
   // remove non-zero
   Avalue[pos] = 0;
@@ -943,13 +921,32 @@ void HPresolve::resetRowDualImpliedBoundsDerivedFromCol(HighsInt col) {
   }
 }
 
-void HPresolve::matrixNonZeroChanged(HighsInt row, HighsInt col) {
-  // remove implied bounds on row duals that were implied by this column's
-  // dual constraint
-  resetRowDualImpliedBoundsDerivedFromCol(col);
+void HPresolve::matrixNonZeroChanged(HighsInt row, HighsInt col, double oldCoef,
+                                     double newCoef, bool rowIsDeleted,
+                                     bool colIsDeleted) {
+  if (!colIsDeleted) {
+    // update dual activity; reset all derived bounds if activity loosened
+    if (impliedDualRowBounds.coefficientChanged(col, row, oldCoef, newCoef))
+      resetRowDualImpliedBoundsDerivedFromCol(col);
+    // activity did not loosen; only reset if sourced from this column
+    else if (rowDualLowerSource[row] == col || rowDualUpperSource[row] == col)
+      resetRowDualImpliedBounds(row, col);
+  } else {
+    // col is deleted; unconditionally reset derived bounds
+    resetRowDualImpliedBoundsDerivedFromCol(col);
+  }
 
-  // remove implied bounds on columns that were implied by this row
-  resetColImpliedBoundsDerivedFromRow(row);
+  if (!rowIsDeleted) {
+    // update primal activity; reset all derived bounds if activity loosened
+    if (impliedRowBounds.coefficientChanged(row, col, oldCoef, newCoef))
+      resetColImpliedBoundsDerivedFromRow(row);
+    // activity did not loosen; only reset if sourced from this row
+    else if (colLowerSource[col] == row || colUpperSource[col] == row)
+      resetColImpliedBounds(col, row);
+  } else {
+    // row is deleted; unconditionally reset derived bounds
+    resetColImpliedBoundsDerivedFromRow(row);
+  }
 
   // modifications to row invalidate lifting opportunities
   clearLiftingOpportunities(row);
@@ -2471,36 +2468,15 @@ void HPresolve::addToMatrix(const HighsInt row, const HighsInt col,
     }
 
     link(pos);
-
-    if (impliedDualRowBounds.coefficientChanged(col, row, 0.0, val))
-      resetRowDualImpliedBoundsDerivedFromCol(col);
-    else if (rowDualLowerSource[row] == col || rowDualUpperSource[row] == col)
-      resetRowDualImpliedBounds(row, col);
-
-    if (impliedRowBounds.coefficientChanged(row, col, 0.0, val))
-      resetColImpliedBoundsDerivedFromRow(row);
-    else if (colLowerSource[col] == row || colUpperSource[col] == row)
-      resetColImpliedBounds(col, row);
-
-    clearLiftingOpportunities(row);
+    matrixNonZeroChanged(row, col, 0.0, val, false, false);
 
   } else {
     double sum = Avalue[pos] + val;
     if (std::abs(sum) <= options->small_matrix_value) {
       unlink(pos);
     } else {
-      if (impliedDualRowBounds.coefficientChanged(col, row, Avalue[pos], sum))
-        resetRowDualImpliedBoundsDerivedFromCol(col);
-      else if (rowDualLowerSource[row] == col || rowDualUpperSource[row] == col)
-        resetRowDualImpliedBounds(row, col);
-
-      if (impliedRowBounds.coefficientChanged(row, col, Avalue[pos], sum))
-        resetColImpliedBoundsDerivedFromRow(row);
-      else if (colLowerSource[col] == row || colUpperSource[col] == row)
-        resetColImpliedBounds(col, row);
-
+      matrixNonZeroChanged(row, col, Avalue[pos], sum, false, false);
       Avalue[pos] = sum;
-      clearLiftingOpportunities(row);
     }
   }
 }
@@ -3075,6 +3051,9 @@ bool HPresolve::okFromCSC(const std::vector<double>& Aval,
   if (!okResize(Aprev, nnz)) return false;
   if (!okResize(ARleft, nnz)) return false;
   if (!okResize(ARright, nnz)) return false;
+  // matrixNonZeroChanged cannot be used here: after shrinkProblem,
+  // implied bound source sets are non-empty and resets would destroy
+  // preserved implied bounds
   for (HighsInt pos = 0; pos != nnz; ++pos) {
     link(pos);
     impliedRowBounds.add(Arow[pos], Acol[pos], Avalue[pos]);
@@ -3142,6 +3121,9 @@ bool HPresolve::okFromCSR(const std::vector<double>& ARval,
   if (!okResize(Aprev, nnz)) return false;
   if (!okResize(ARleft, nnz)) return false;
   if (!okResize(ARright, nnz)) return false;
+  // matrixNonZeroChanged cannot be used here: after shrinkProblem,
+  // implied bound source sets are non-empty and resets would destroy
+  // preserved implied bounds
   for (HighsInt pos = 0; pos != nnz; ++pos) {
     link(pos);
     impliedRowBounds.add(Arow[pos], Acol[pos], Avalue[pos]);
