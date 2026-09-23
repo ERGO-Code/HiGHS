@@ -535,8 +535,6 @@ class HPresolve {
 
   Result sparsify(HighsPostsolveStack& postsolve_stack);
 
-  void setRelaxedImpliedBounds();
-
   const HighsPresolveLog& getPresolveLog() const {
     return analysis_.presolve_log_;
   }
