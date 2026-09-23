@@ -757,7 +757,14 @@
               <code>ScalingMetadata</code>
               <code>TransformationMetadata</code>
               <code>UnscaledNorms</code>
-              <p>支持缩放、原空间恢复与归一化收敛指标。</p>
+              <p><code>TransformationMetadata</code> 保存原空间恢复所需的精确映射：</p>
+              <ul>
+                <li><code>original_to_transformed_row</code>：原 row 索引 → equality-first 变换 row 索引。</li>
+                <li><code>transformed_to_original_row</code>：变换 row 索引 → 原 row 索引，用于逆向恢复。</li>
+                <li><code>original_row_sign</code>：记录规范化 row 的 <code>+1/-1</code> 符号，恢复被取反的 upper row。</li>
+                <li><code>slack_col_for_original_row</code>：记录 boxed/free row 的合成 slack column；<code>-1</code> 表示没有 slack。</li>
+              </ul>
+              <p><code>ScalingMetadata</code> 撤销对角缩放；<code>UnscaledNorms</code> 保留归一化收敛指标。</p>
             </section>
           </div>
           <p class="source-row">字段定义：
@@ -816,10 +823,13 @@
             <span class="residency" style="color: var(--device)">CUDA / Device</span>
           </div>
           <ul>
-            <li><code>CudaProblemResource</code> owns DeviceBuffer 问题数组、CSR/transpose 与 cuSPARSE 描述符。</li>
+            <li><code>CudaProblemResource</code> owns DeviceBuffer 问题数组、CSR/transpose 与 cuSPARSE 描述符；<code>spmv_buffer</code> 是按正向/转置两者较大需求分配的可复用 Device SpMV scratch。</li>
             <li><code>CudaVectorResource</code> owns Device 向量、描述符和可复用 <code>PinnedDownloadBuffer</code>。</li>
             <li><code>CudaWorkspaceResource</code> owns Device scratch 与 resident-check / certificate storage。</li>
             <li><code>CudaCommandBufferResource</code> owns CUDA graph/executable，但只弱引用其数据依赖。</li>
+            <li><code>CudaBackend::Impl</code> owns 执行与 library handles：<code>stream</code>、绑定到该 stream 的 <code>cublas</code> 与 <code>cusparse</code>。</li>
+            <li><code>CudaBackend::Impl::timing_events</code> owns start/stop CUDA events，用于显式的 GPU elapsed-time 区间。</li>
+            <li><code>CudaBackend::Impl</code> owns Device <code>error_flag</code>（kernel 非有限值状态）、<code>reduction_result</code>（复用 reduction 输出）与按需扩容的 <code>difference_scratch</code>。</li>
           </ul>
           <div class="ownership-row">
             <span class="ownership-pill owns">owns</span>
@@ -939,7 +949,46 @@
       "rowSized": 8,
       "workspaceColumnSized": 1,
       "workspaceRowSized": 1,
-      "candidateDownloadDoubles": "2*(rows+cols)"
+      "candidateDownloadDoubles": "2*(rows+cols)",
+      "columnVectors": [
+        "current_primal",
+        "next_primal",
+        "primal_anchor",
+        "primal_candidate",
+        "reflected_primal",
+        "current_aty",
+        "candidate_aty",
+        "aty_delta"
+      ],
+      "rowVectors": [
+        "current_dual",
+        "next_dual",
+        "dual_anchor",
+        "dual_candidate",
+        "reflected_dual",
+        "current_ax",
+        "reflected_ax",
+        "candidate_ax"
+      ]
+    },
+    "problemData": {
+      "transformationMapFields": [
+        "original_to_transformed_row",
+        "transformed_to_original_row",
+        "original_row_sign",
+        "slack_col_for_original_row"
+      ]
+    },
+    "cudaResourceCategories": {
+      "CudaProblemResource": {
+        "spmvScratch": ["spmv_buffer"]
+      },
+      "CudaBackend::Impl": {
+        "executionHandles": ["stream", "cublas", "cusparse"],
+        "timing": ["timing_events"],
+        "errorState": ["error_flag"],
+        "reductionScratch": ["reduction_result", "difference_scratch"]
+      }
     }
   }
   </script>

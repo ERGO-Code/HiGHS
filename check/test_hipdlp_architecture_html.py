@@ -149,6 +149,52 @@ class ArchitecturePageTests(unittest.TestCase):
         self.assertEqual(
             inventory["candidateDownloadDoubles"], "2*(rows+cols)"
         )
+        self.assertEqual(inventory["columnVectors"], [
+            "current_primal",
+            "next_primal",
+            "primal_anchor",
+            "primal_candidate",
+            "reflected_primal",
+            "current_aty",
+            "candidate_aty",
+            "aty_delta",
+        ])
+        self.assertEqual(inventory["rowVectors"], [
+            "current_dual",
+            "next_dual",
+            "dual_anchor",
+            "dual_candidate",
+            "reflected_dual",
+            "current_ax",
+            "reflected_ax",
+            "candidate_ax",
+        ])
+        self.assertEqual(
+            self.data["problemData"]["transformationMapFields"],
+            [
+                "original_to_transformed_row",
+                "transformed_to_original_row",
+                "original_row_sign",
+                "slack_col_for_original_row",
+            ],
+        )
+        self.assertEqual(
+            self.data["cudaResourceCategories"],
+            {
+                "CudaProblemResource": {
+                    "spmvScratch": ["spmv_buffer"],
+                },
+                "CudaBackend::Impl": {
+                    "executionHandles": ["stream", "cublas", "cusparse"],
+                    "timing": ["timing_events"],
+                    "errorState": ["error_flag"],
+                    "reductionScratch": [
+                        "reduction_result",
+                        "difference_scratch",
+                    ],
+                },
+            },
+        )
         for token in (
             "TransformationMetadata",
             "ScalingMetadata",
