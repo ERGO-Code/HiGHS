@@ -306,6 +306,57 @@ class ArchitecturePageTests(unittest.TestCase):
                 missing.append(link)
         self.assertEqual(missing, [])
 
+    def test_iteration_and_cuda_constants_match_source(self):
+        iteration = self.data["iteration"]
+        self.assertEqual(iteration["spmvPerStep"], 2)
+        self.assertEqual(iteration["convergenceCadence"], 40)
+        self.assertEqual(iteration["recordedSteps"], 39)
+        self.assertEqual(iteration["parameterDoubles"], 117)
+        self.assertEqual(iteration["parameterBytes"], 936)
+        self.assertEqual(iteration["checkPacketBytes"], 112)
+
+        kernels = {item["name"]: item for item in self.data["kernels"]}
+        self.assertEqual(kernels["projectedPrimalKernel"]["threads"], 256)
+        self.assertEqual(kernels["projectedPrimalKernel"]["maxBlocks"], 65535)
+        self.assertEqual(kernels["checkPartialsKernel"]["threads"], 256)
+        self.assertEqual(kernels["checkPartialsKernel"]["maxBlocks"], 1024)
+        self.assertEqual(kernels["checkPacketKernel"]["blocks"], 1)
+        self.assertEqual(kernels["cusparseSpMV"]["grid"], "vendor-controlled")
+        self.assertEqual(kernels["checkPacketKernel"]["dynamicSharedBytes"], 0)
+
+    def test_iteration_view_names_real_backend_and_kernel_symbols(self):
+        for token in (
+            "enqueueHalpernPdhgStep",
+            "fusedProjectedPrimalUpdateAndReflect",
+            "multiplyAndProjectedDualUpdateAndReflect",
+            "fusedVectorBlend",
+            "multiplyTranspose",
+            "executeSpmv",
+            "cusparseSpMV",
+            "projectedPrimalKernel&lt;true&gt;",
+            "projectedDualKernel&lt;true&gt;",
+            "vectorPairBlendKernel",
+            "checkPartialsKernel",
+            "checkPacketKernel",
+            "cudaGraphLaunch",
+        ):
+            self.assertIn(token, self.source)
+
+    def test_error_rail_covers_explicit_failure_surfaces(self):
+        for phrase in (
+            "Invalid option / argument",
+            "Backend unavailable / not ready",
+            "Allocation failure",
+            "Invalid model",
+            "Dimension / alias violation",
+            "Non-finite arithmetic",
+            "CUDA / cuBLAS / cuSPARSE failure",
+            "Graph capture / instantiate / replay failure",
+            "Invalid resident check",
+            "Postsolve / original-model KKT failure",
+        ):
+            self.assertIn(phrase, self.source)
+
 
 if __name__ == "__main__":
     unittest.main()
