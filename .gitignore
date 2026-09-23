@@ -295,3 +295,6 @@ highs-problem-set
 Options.md
 
 build-latest
+
+# Local isolated worktrees
+.worktrees/
