@@ -28,6 +28,8 @@ struct SolveDiagnostics {
   std::size_t certificate_checks;
   std::size_t restart_reference_checks;
   std::size_t fixed_point_evaluations;
+  std::size_t command_buffer_replays;
+  std::size_t recorded_iterations;
 
   double total_wall_seconds;
   double preprocessing_seconds;
@@ -89,6 +91,7 @@ struct SolveContext {
   SolveLogSink* log;
   SolveDiagnostics* diagnostics;
   SolveObserver* observer;
+  bool use_command_buffers;
 
   SolveContext();
 };

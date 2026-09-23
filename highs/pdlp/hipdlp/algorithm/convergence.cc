@@ -73,6 +73,28 @@ bool StoppingResult::ok() const {
          decision != StoppingDecision::kNumericalError;
 }
 
+bool shouldVerifyOriginalKkt(const StoppingResult& stopping,
+                             const HighsInt iteration,
+                             const ConvergenceTolerances& tolerances,
+                             const double kkt_tolerance) {
+  if (!stopping.ok() || !finitePositive(kkt_tolerance) ||
+      !finitePositive(tolerances.primal) || !finitePositive(tolerances.dual) ||
+      !finitePositive(tolerances.gap))
+    return false;
+  if (stopping.decision == StoppingDecision::kOptimal) return true;
+  if (stopping.decision != StoppingDecision::kContinue || iteration <= 0 ||
+      iteration % 400 != 0 ||
+      kkt_tolerance > std::min({tolerances.primal, tolerances.dual,
+                                tolerances.gap}))
+    return false;
+  return finiteNonnegative(stopping.metrics.relative_primal) &&
+         finiteNonnegative(stopping.metrics.relative_dual) &&
+         finiteNonnegative(stopping.metrics.relative_gap) &&
+         stopping.metrics.relative_gap <= tolerances.gap &&
+         stopping.metrics.relative_primal <= std::sqrt(tolerances.primal) &&
+         stopping.metrics.relative_dual <= std::sqrt(tolerances.dual);
+}
+
 api::Error computeRawConvergenceMetrics(
     const model::Problem& problem, const std::vector<double>& primal,
     const std::vector<double>& dual, const std::vector<double>& ax,

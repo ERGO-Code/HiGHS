@@ -32,10 +32,23 @@ const bool available = false;
 thread_local bool enabled = false;
 thread_local std::size_t calls = 0;
 thread_local std::size_t bytes = 0;
+thread_local bool fail_captured_allocation = false;
+thread_local std::size_t injected_failures = 0;
 }
 
 #if defined(__linux__) && defined(__GLIBC__)
 void* operator new(const std::size_t size) {
+#if defined(HIGHS_HIPDLP_CUDA_DETECTED) && defined(HIGHS_HIPDLP_TESTING)
+  if (solve_allocation_testing::fail_captured_allocation) {
+    const auto audit = hipdlp::backend::cuda::testing::resourceAudit();
+    if (audit.graph_capture_primitive_enqueue_calls > 0 &&
+        audit.graph_instantiation_calls == 0) {
+      solve_allocation_testing::fail_captured_allocation = false;
+      ++solve_allocation_testing::injected_failures;
+      throw std::bad_alloc();
+    }
+  }
+#endif
   void* allocation = std::malloc(size == 0 ? 1 : size);
   if (allocation == nullptr) throw std::bad_alloc();
   if (solve_allocation_testing::enabled) {
@@ -184,6 +197,184 @@ hipdlp::api::SolverOptions makeCpuFixedOptions() {
   options.optimality_tolerance = kSolverTolerance;
   return options;
 }
+
+#if defined(HIGHS_HIPDLP_CUDA_DETECTED) && defined(HIGHS_HIPDLP_TESTING)
+TEST_CASE("hi-pdlp-production-command-buffer-matches-direct",
+      "[hipdlp][solver][cuda][production-command-buffer]") {
+  const HighsLp lp = makeResidentDiagonalLp(17, true);
+  for (const bool pid : {false, true}) {
+    for (const HighsInt limit : {0, 1, 39, 40, 41, 79, 80, 81, 121, 400}) {
+  CAPTURE(pid, limit);
+  auto options = makeCpuFixedOptions();
+  options.backend = hipdlp::backend::Kind::kCuda;
+  options.iteration_limit = limit;
+  options.optimality_tolerance = 1e-14;
+  options.kkt_tolerance = 1e-14;
+  if (pid) options.policy.step_size = hipdlp::api::StepSizePolicy::kPid;
+  hipdlp::algorithm::SolveDiagnostics direct_diagnostics;
+  hipdlp::algorithm::SolveContext direct_context;
+  direct_context.use_command_buffers = false;
+  direct_context.diagnostics = &direct_diagnostics;
+  const auto direct = hipdlp::algorithm::solve(
+      options, hipdlp::model::OriginalModel(lp), direct_context);
+  INFO(direct.error.message);
+  REQUIRE(direct.ok());
+  REQUIRE(direct.iteration_count == limit);
+  CHECK(direct_diagnostics.command_buffer_replays == 0);
+
+  hipdlp::algorithm::SolveDiagnostics recorded_diagnostics;
+  hipdlp::algorithm::SolveContext recorded_context;
+  recorded_context.diagnostics = &recorded_diagnostics;
+  hipdlp::backend::cuda::testing::resetResourceAudit();
+  const auto recorded = hipdlp::algorithm::solve(
+      options, hipdlp::model::OriginalModel(lp), recorded_context);
+  const auto audit = hipdlp::backend::cuda::testing::resourceAudit();
+  INFO(recorded.error.message);
+  REQUIRE(recorded.ok());
+  CHECK(recorded.status == direct.status);
+  CHECK(recorded.iteration_count == direct.iteration_count);
+  CHECK(recorded.solution.col_value == direct.solution.col_value);
+  CHECK(recorded.solution.row_value == direct.solution.row_value);
+  CHECK(recorded.solution.col_dual == direct.solution.col_dual);
+  CHECK(recorded.solution.row_dual == direct.solution.row_dual);
+  CHECK(recorded_diagnostics.restarts == direct_diagnostics.restarts);
+  CHECK(recorded_diagnostics.primal_weight_updates ==
+    direct_diagnostics.primal_weight_updates);
+  CHECK(recorded_diagnostics.restart_reference_checks ==
+    direct_diagnostics.restart_reference_checks);
+  CHECK(recorded_diagnostics.command_buffer_replays ==
+    static_cast<std::size_t>(limit / 40));
+  CHECK(recorded_diagnostics.recorded_iterations ==
+    static_cast<std::size_t>(39 * (limit / 40)));
+  CHECK(audit.graph_capture_calls == (limit >= 40 ? 1 : 0));
+  CHECK(audit.graph_instantiation_calls == (limit >= 40 ? 1 : 0));
+  CHECK(audit.graph_launch_calls == static_cast<std::size_t>(limit / 40));
+  CHECK(recorded_diagnostics.resource_creation_calls_during_iterations == 0);
+    }
+  }
+}
+
+TEST_CASE("hi-pdlp-production-command-buffer-zero-time-and-failures",
+          "[hipdlp][solver][cuda][production-command-buffer]") {
+  const HighsLp lp = makeResidentDiagonalLp(17, true);
+  auto options = makeCpuFixedOptions();
+  options.backend = hipdlp::backend::Kind::kCuda;
+  options.iteration_limit = 80;
+  options.optimality_tolerance = 1e-14;
+  options.kkt_tolerance = 1e-14;
+  SECTION("zero time never records or replays") {
+    options.time_limit = 0.0;
+    hipdlp::backend::cuda::testing::resetResourceAudit();
+    const auto result = hipdlp::algorithm::solve(
+        options, hipdlp::model::OriginalModel(lp));
+    REQUIRE(result.ok());
+    CHECK(result.status == hipdlp::api::SolverStatus::kTimeLimit);
+    CHECK(result.iteration_count == 0);
+    const auto audit = hipdlp::backend::cuda::testing::resourceAudit();
+    CHECK(audit.graph_capture_calls == 0);
+    CHECK(audit.graph_launch_calls == 0);
+  }
+  SECTION("capture finalization launch and asynchronous errors propagate") {
+    using hipdlp::backend::cuda::testing::FailurePoint;
+    for (const auto failure : {FailurePoint::kGraphCapture,
+                               FailurePoint::kGraphInstantiation,
+                               FailurePoint::kGraphLaunch,
+                               FailurePoint::kGraphAsynchronousExecution}) {
+      CAPTURE(static_cast<int>(failure));
+      hipdlp::backend::cuda::testing::resetResourceAudit();
+      hipdlp::backend::cuda::testing::setFailurePoint(failure);
+      const auto result = hipdlp::algorithm::solve(
+          options, hipdlp::model::OriginalModel(lp));
+      hipdlp::backend::cuda::testing::setFailurePoint(FailurePoint::kNone);
+      CHECK_FALSE(result.ok());
+      CHECK_FALSE(result.has_solution);
+      CHECK(result.error.code == hipdlp::api::ErrorCode::kBackendFailure);
+      const auto audit = hipdlp::backend::cuda::testing::resourceAudit();
+      CHECK(audit.allocation_calls == audit.free_calls);
+      CHECK(audit.pinned_allocation_calls == audit.pinned_free_calls);
+      CHECK(audit.graph_creations == audit.graph_destructions);
+      CHECK(audit.graph_exec_creations == audit.graph_exec_destructions);
+      const auto recovered = hipdlp::algorithm::solve(
+          options, hipdlp::model::OriginalModel(lp));
+      REQUIRE(recovered.ok());
+      CHECK(recovered.iteration_count == 80);
+    }
+  }
+  SECTION("host allocation failure during capture cancels before cleanup") {
+    if (!solve_allocation_testing::available) return;
+    hipdlp::backend::cuda::testing::resetResourceAudit();
+    solve_allocation_testing::injected_failures = 0;
+    solve_allocation_testing::fail_captured_allocation = true;
+    const auto failed = hipdlp::algorithm::solve(
+        options, hipdlp::model::OriginalModel(lp));
+    solve_allocation_testing::fail_captured_allocation = false;
+    CHECK(solve_allocation_testing::injected_failures == 1);
+    CHECK_FALSE(failed.ok());
+    CHECK(failed.error.code == hipdlp::api::ErrorCode::kAllocationFailure);
+    const auto audit = hipdlp::backend::cuda::testing::resourceAudit();
+    CHECK(audit.allocation_calls == audit.free_calls);
+    CHECK(audit.pinned_allocation_calls == audit.pinned_free_calls);
+    const auto recovered = hipdlp::algorithm::solve(
+        options, hipdlp::model::OriginalModel(lp));
+    INFO(recovered.error.message);
+    REQUIRE(recovered.ok());
+    CHECK(recovered.iteration_count == 80);
+  }
+}
+
+TEST_CASE("hi-pdlp-production-command-buffer-stops-on-expired-positive-budget",
+          "[hipdlp][solver][cuda][production-command-buffer]") {
+  class ExpiringBudget : public hipdlp::algorithm::SolveObserver {
+   public:
+    hipdlp::api::SolverOptions* options;
+    HighsInt stop_iteration;
+    bool expired = false;
+
+    void onEvent(const hipdlp::algorithm::SolveObservation& event) noexcept override {
+      if (event.phase == hipdlp::algorithm::SolvePhase::kStep && !event.begin &&
+          event.iteration == stop_iteration) {
+        options->time_limit = std::numeric_limits<double>::min();
+        expired = true;
+      }
+    }
+  } observer;
+  const HighsLp lp = makeResidentDiagonalLp(17, true);
+  for (const HighsInt stop_iteration : {1, 40}) {
+    CAPTURE(stop_iteration);
+    auto options = makeCpuFixedOptions();
+    options.backend = hipdlp::backend::Kind::kCuda;
+    options.iteration_limit = 400;
+    options.time_limit = 60.0;
+    options.optimality_tolerance = 1e-14;
+    options.kkt_tolerance = 1e-14;
+    observer.options = &options;
+    observer.stop_iteration = stop_iteration;
+    observer.expired = false;
+    hipdlp::algorithm::SolveContext context;
+    context.observer = &observer;
+    hipdlp::algorithm::SolveDiagnostics diagnostics;
+    context.diagnostics = &diagnostics;
+    const auto result = hipdlp::algorithm::solve(
+        options, hipdlp::model::OriginalModel(lp), context);
+    REQUIRE(observer.expired);
+    REQUIRE(result.ok());
+    CHECK(result.status == hipdlp::api::SolverStatus::kTimeLimit);
+    CHECK(result.iteration_count == stop_iteration);
+    CHECK(diagnostics.command_buffer_replays == (stop_iteration == 40 ? 1 : 0));
+    options.time_limit = kHighsInf;
+    options.iteration_limit = stop_iteration;
+    hipdlp::algorithm::SolveContext direct_context;
+    direct_context.use_command_buffers = false;
+    const auto direct = hipdlp::algorithm::solve(
+        options, hipdlp::model::OriginalModel(lp), direct_context);
+    REQUIRE(direct.ok());
+    CHECK(result.solution.col_value == direct.solution.col_value);
+    CHECK(result.solution.row_value == direct.solution.row_value);
+    CHECK(result.solution.col_dual == direct.solution.col_dual);
+    CHECK(result.solution.row_dual == direct.solution.row_dual);
+  }
+}
+#endif
 
 class HostPreparationObserver : public hipdlp::algorithm::SolveObserver {
  public:
@@ -373,6 +564,287 @@ class ProductionSolveObserver : public hipdlp::algorithm::SolveObserver {
 };
 
 }  // namespace
+
+TEST_CASE("hi-pdlp-early-kkt-option-is-explicitly-opt-in",
+    "[pdlp][hipdlp][solver][options][early-kkt-option][algorithm-study]") {
+  Highs highs;
+  highs.setOptionValue("output_flag", false);
+  bool enabled = true;
+  REQUIRE(highs.getOptionValue("hipdlp_early_kkt_check", enabled) ==
+    HighsStatus::kOk);
+  CHECK_FALSE(enabled);
+    const hipdlp::api::OptionTranslationResult defaults =
+        hipdlp::api::translateOptions(highs.getOptions(),
+              hipdlp::api::defaultMigrationOptions());
+    REQUIRE(defaults.ok());
+    CHECK_FALSE(defaults.options.early_kkt_check);
+  REQUIRE(highs.setOptionValue("hipdlp_early_kkt_check", true) ==
+    HighsStatus::kOk);
+  REQUIRE(highs.getOptionValue("hipdlp_early_kkt_check", enabled) ==
+    HighsStatus::kOk);
+  CHECK(enabled);
+    const hipdlp::api::OptionTranslationResult opted_in =
+        hipdlp::api::translateOptions(highs.getOptions(),
+              hipdlp::api::defaultMigrationOptions());
+    REQUIRE(opted_in.ok());
+    CHECK(opted_in.options.early_kkt_check);
+}
+
+TEST_CASE("hi-pdlp-periodic-kkt-probe-rejects-offset-hidden-defect",
+          "[pdlp][hipdlp][solver][periodic-kkt][algorithm-study]") {
+  HighsLp lp = makeTinyFeasibleLp();
+  lp.num_col_ = 3;
+  lp.num_row_ = 2;
+  lp.col_cost_ = {0.0, 0.0, 0.0};
+  lp.col_lower_ = {10000.0, 0.0, 0.0};
+  lp.col_upper_ = {10000.0, kHighsInf, kHighsInf};
+  lp.row_lower_ = {0.0, 1.0};
+  lp.row_upper_ = {0.0, 1.0};
+  lp.offset_ = 1e6;
+  lp.a_matrix_.num_col_ = 3;
+  lp.a_matrix_.num_row_ = 2;
+  lp.a_matrix_.start_ = {0, 0, 1, 2};
+  lp.a_matrix_.index_ = {0, 1};
+  lp.a_matrix_.value_ = {1.0, 0.03};
+  class ProbeObserver : public hipdlp::algorithm::SolveObserver {
+   public:
+    std::size_t preparations = 0;
+    void onEvent(const hipdlp::algorithm::SolveObservation& event) noexcept
+        override {
+      if (event.begin && event.iteration == 400 &&
+          event.phase == hipdlp::algorithm::SolvePhase::kHostPreparation)
+        ++preparations;
+    }
+  };
+  std::vector<hipdlp::backend::Kind> backends = {hipdlp::backend::Kind::kCpu};
+#ifdef HIGHS_HIPDLP_CUDA_DETECTED
+  if (cudaBackendUsable()) backends.push_back(hipdlp::backend::Kind::kCuda);
+#endif
+  for (const hipdlp::backend::Kind backend : backends) {
+    for (const double tolerance : {1e-4, 1e-10}) {
+      for (const bool enabled : {false, true}) {
+      CAPTURE(static_cast<int>(backend), tolerance, enabled);
+      hipdlp::api::SolverOptions options = makeCpuFixedOptions();
+      options.backend = backend;
+      options.early_kkt_check = enabled;
+      options.iteration_limit = 401;
+      options.kkt_tolerance = tolerance;
+      options.time_limit = 2.0;
+      ProbeObserver observer;
+      hipdlp::algorithm::SolveContext context;
+      context.observer = &observer;
+      const hipdlp::api::SolveResult result = hipdlp::algorithm::solve(
+          options, hipdlp::model::OriginalModel(lp), context);
+      INFO(result.error.message);
+      REQUIRE(result.ok());
+      CHECK(observer.preparations == (enabled ? 1 : 0));
+      CHECK(result.status == hipdlp::api::SolverStatus::kIterationLimit);
+      CHECK(result.iteration_count == 401);
+      REQUIRE(result.solution.col_value.size() == 3);
+      const double internal_primal =
+          std::abs(0.03 * result.solution.col_value[2] - 1.0) / 2.0;
+      CHECK(internal_primal > options.optimality_tolerance);
+      CHECK(internal_primal < 0.01);
+      const hipdlp::verification::KktVerificationResult checked =
+          hipdlp::verification::verifyKkt(lp, result.solution, tolerance);
+      REQUIRE(checked.input_valid);
+      REQUIRE(checked.metrics_finite);
+      CHECK_FALSE(checked.pass);
+      CHECK_FALSE(checked.objective_gap_ok);
+      HighsLp unshifted = lp;
+      unshifted.offset_ = 0.0;
+      const auto unshifted_check = hipdlp::verification::verifyKkt(
+          unshifted, result.solution, tolerance);
+      CHECK(unshifted_check.pass == checked.pass);
+      CHECK(unshifted_check.metrics.relative_objective_gap ==
+        checked.metrics.relative_objective_gap);
+      }
+    }
+  }
+}
+
+TEST_CASE("hi-pdlp-original-rejection-preserves-initial-limits",
+          "[pdlp][hipdlp][solver][original-stopping]") {
+  HighsLp lp = makeTinyFeasibleLp();
+  lp.col_cost_ = {-1e9};
+  lp.col_upper_ = {0.005};
+  lp.row_lower_ = {0.0};
+  lp.row_upper_ = {kHighsInf};
+  lp.offset_ = 1e12;
+  std::vector<hipdlp::backend::Kind> backends = {hipdlp::backend::Kind::kCpu};
+#ifdef HIGHS_HIPDLP_CUDA_DETECTED
+  if (cudaBackendUsable()) backends.push_back(hipdlp::backend::Kind::kCuda);
+#endif
+  for (const auto backend : backends) {
+    for (const HighsInt limit : {0, 1, 40}) {
+      CAPTURE(static_cast<int>(backend), limit);
+      auto options = makeCpuFixedOptions();
+      options.backend = backend;
+      options.iteration_limit = limit;
+      const auto result = hipdlp::algorithm::solve(
+          options, hipdlp::model::OriginalModel(lp));
+      INFO(result.error.message);
+      REQUIRE(result.ok());
+      REQUIRE(result.has_solution);
+      CHECK(result.iteration_count <= limit);
+      const auto checked = hipdlp::verification::verifyKkt(lp, result.solution, 1e-4);
+      REQUIRE(checked.input_valid);
+      REQUIRE(checked.metrics_finite);
+      if (limit == 0) {
+        CHECK(result.status == hipdlp::api::SolverStatus::kIterationLimit);
+        CHECK(result.iteration_count == 0);
+        CHECK_FALSE(checked.pass);
+      } else {
+        CHECK(result.status == hipdlp::api::SolverStatus::kOptimal);
+        CHECK(checked.pass);
+        CHECK(checked.complementarity_ok);
+        CHECK(result.solution.col_value == std::vector<double>{0.005});
+      }
+    }
+    auto options = makeCpuFixedOptions();
+    options.backend = backend;
+    options.time_limit = 0.0;
+    const auto result = hipdlp::algorithm::solve(
+        options, hipdlp::model::OriginalModel(lp));
+    REQUIRE(result.ok());
+    CHECK(result.status == hipdlp::api::SolverStatus::kTimeLimit);
+    CHECK(result.iteration_count == 0);
+    options.iteration_limit = 0;
+    const auto both_limits = hipdlp::algorithm::solve(
+      options, hipdlp::model::OriginalModel(lp));
+    REQUIRE(both_limits.ok());
+    CHECK(both_limits.status == hipdlp::api::SolverStatus::kIterationLimit);
+    CHECK(both_limits.iteration_count == 0);
+    const auto already_optimal = hipdlp::algorithm::solve(
+      options, hipdlp::model::OriginalModel(makeAlreadyOptimalLp()));
+    REQUIRE(already_optimal.ok());
+    CHECK(already_optimal.status == hipdlp::api::SolverStatus::kOptimal);
+    CHECK(already_optimal.iteration_count == 0);
+  }
+}
+
+TEST_CASE("hi-pdlp-solve-equivalent-lps-recover-original-kkt",
+          "[pdlp][hipdlp][solver][algorithm-study]") {
+  HighsLp original = makeTinyFeasibleLp();
+  original.num_col_ = 3;
+  original.num_row_ = 2;
+  original.col_cost_ = {1.0, 2.0, 3.0};
+  original.col_lower_ = {0.0, 0.0, 0.0};
+  original.col_upper_ = {kHighsInf, kHighsInf, 5.0};
+  original.row_lower_ = {3.0, 2.0};
+  original.row_upper_ = {3.0, 4.0};
+  original.offset_ = 7.0;
+  original.a_matrix_.num_col_ = 3;
+  original.a_matrix_.num_row_ = 2;
+  original.a_matrix_.start_ = {0, 1, 3, 4};
+  original.a_matrix_.index_ = {0, 0, 1, 1};
+  original.a_matrix_.value_ = {1.0, 1.0, 1.0, 1.0};
+
+  struct EquivalentCase {
+    bool row_scaling;
+    bool col_scaling;
+    bool permutation;
+    double objective_scale;
+  };
+  const EquivalentCase cases[] = {
+      {false, false, false, 1.0}, {true, false, false, 1.0},
+      {false, true, false, 1.0}, {false, false, true, 1.0},
+      {false, false, false, 8.0}, {true, true, true, 0.125}};
+  std::vector<hipdlp::backend::Kind> backends = {hipdlp::backend::Kind::kCpu};
+#ifdef HIGHS_HIPDLP_CUDA_DETECTED
+  if (cudaBackendUsable()) backends.push_back(hipdlp::backend::Kind::kCuda);
+#endif
+  for (const hipdlp::backend::Kind backend : backends) {
+    for (const EquivalentCase& test_case : cases) {
+      CAPTURE(static_cast<int>(backend), test_case.row_scaling,
+              test_case.col_scaling, test_case.permutation,
+              test_case.objective_scale);
+      const std::vector<double> row_scale = test_case.row_scaling
+          ? std::vector<double>{0.01, 100.0} : std::vector<double>{1.0, 1.0};
+      const std::vector<double> col_scale = test_case.col_scaling
+          ? std::vector<double>{10.0, 0.1, 2.0}
+          : std::vector<double>{1.0, 1.0, 1.0};
+      const std::vector<HighsInt> row_order = test_case.permutation
+          ? std::vector<HighsInt>{1, 0} : std::vector<HighsInt>{0, 1};
+      const std::vector<HighsInt> col_order = test_case.permutation
+          ? std::vector<HighsInt>{2, 0, 1} : std::vector<HighsInt>{0, 1, 2};
+      HighsLp equivalent = original;
+      equivalent.offset_ *= test_case.objective_scale;
+      equivalent.a_matrix_.start_.clear();
+      equivalent.a_matrix_.index_.clear();
+      equivalent.a_matrix_.value_.clear();
+      for (HighsInt row = 0; row < original.num_row_; ++row) {
+        const HighsInt source_row = row_order[row];
+        equivalent.row_lower_[row] =
+            row_scale[source_row] * original.row_lower_[source_row];
+        equivalent.row_upper_[row] =
+            row_scale[source_row] * original.row_upper_[source_row];
+      }
+      for (HighsInt col = 0; col < original.num_col_; ++col) {
+        const HighsInt source_col = col_order[col];
+        equivalent.col_cost_[col] = test_case.objective_scale *
+            col_scale[source_col] * original.col_cost_[source_col];
+        equivalent.col_lower_[col] =
+            original.col_lower_[source_col] / col_scale[source_col];
+        equivalent.col_upper_[col] =
+            original.col_upper_[source_col] / col_scale[source_col];
+        equivalent.a_matrix_.start_.push_back(
+            static_cast<HighsInt>(equivalent.a_matrix_.value_.size()));
+        for (HighsInt row = 0; row < original.num_row_; ++row) {
+          for (HighsInt entry = original.a_matrix_.start_[source_col];
+               entry < original.a_matrix_.start_[source_col + 1]; ++entry) {
+            if (original.a_matrix_.index_[entry] != row_order[row]) continue;
+            equivalent.a_matrix_.index_.push_back(row);
+            equivalent.a_matrix_.value_.push_back(
+                row_scale[row_order[row]] * original.a_matrix_.value_[entry] *
+                col_scale[source_col]);
+          }
+        }
+      }
+      equivalent.a_matrix_.start_.push_back(
+          static_cast<HighsInt>(equivalent.a_matrix_.value_.size()));
+      hipdlp::api::SolverOptions options = makeCpuFixedOptions();
+      options.backend = backend;
+      options.scaling.mode = hipdlp::model::ScalingMode::kLegacy;
+      options.early_kkt_check = true;
+      options.policy.step_size = hipdlp::api::StepSizePolicy::kPid;
+      options.kkt_tolerance = options.optimality_tolerance = 1e-8;
+      options.time_limit = 2.0;
+      const hipdlp::api::SolveResult result = hipdlp::algorithm::solve(
+          options, hipdlp::model::OriginalModel(equivalent));
+      INFO(result.error.message);
+      REQUIRE(result.ok());
+      REQUIRE(result.status == hipdlp::api::SolverStatus::kOptimal);
+      REQUIRE(hipdlp::verification::verifyKkt(equivalent, result.solution,
+                                             kSolverTolerance).pass);
+      HighsSolution recovered = result.solution;
+      for (HighsInt col = 0; col < original.num_col_; ++col) {
+        const HighsInt source_col = col_order[col];
+        recovered.col_value[source_col] =
+            col_scale[source_col] * result.solution.col_value[col];
+        recovered.col_dual[source_col] = result.solution.col_dual[col] /
+            (col_scale[source_col] * test_case.objective_scale);
+      }
+      for (HighsInt row = 0; row < original.num_row_; ++row) {
+        const HighsInt source_row = row_order[row];
+        recovered.row_value[source_row] =
+            result.solution.row_value[row] / row_scale[source_row];
+        recovered.row_dual[source_row] = row_scale[source_row] *
+            result.solution.row_dual[row] / test_case.objective_scale;
+      }
+      const hipdlp::verification::KktVerificationResult checked =
+          hipdlp::verification::verifyKkt(original, recovered, kSolverTolerance);
+      REQUIRE(checked.input_valid);
+      REQUIRE(checked.metrics_finite);
+      CHECK(checked.pass);
+      CHECK(recovered.col_value[0] == Approx(1.0).margin(kSolverTolerance));
+      CHECK(recovered.col_value[1] == Approx(2.0).margin(kSolverTolerance));
+      CHECK(recovered.col_value[2] == Approx(0.0).margin(kSolverTolerance));
+      CHECK(checked.metrics.primal_objective ==
+            Approx(12.0).margin(kSolverTolerance));
+    }
+  }
+}
 
 TEST_CASE("hi-pdlp-solve-preallocates-first-postsolve-work-buffer",
           "[pdlp][hipdlp][phase8][allocation-audit][cpu]") {
@@ -616,7 +1088,13 @@ TEST_CASE("hi-pdlp-solve-audits-each-ordinary-cuda-boundary",
               observer.terminal_boundaries + 1 == diagnostics.check_boundaries);
     const ObservedPhase& steps = observer.phase(SolvePhase::kStep);
           if (solve_allocation_testing::available) CHECK(steps.allocations == 0);
-    CHECK(noCudaResourcesOrUploads(steps.cuda_total));
+        CHECK(steps.cuda_total.allocation_calls == 0);
+        CHECK(steps.cuda_total.free_calls == 0);
+        CHECK(steps.cuda_total.pinned_allocation_calls == 0);
+        CHECK(steps.cuda_total.pinned_free_calls == 0);
+        CHECK(steps.cuda_total.host_to_device_transfers == diagnostics.command_buffer_replays);
+        CHECK(steps.cuda_total.host_to_device_bytes ==
+          diagnostics.command_buffer_replays * 117 * sizeof(double));
     CHECK(steps.cuda_total.device_to_host_transfers == 0);
     CHECK(steps.cuda_total.synchronization_calls == 0);
     CHECK(diagnostics.restarts > 0);

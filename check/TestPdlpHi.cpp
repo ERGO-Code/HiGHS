@@ -363,6 +363,216 @@ TEST_CASE("hi-pdlp-migration-boundary", "[pdlp][hipdlp][migration][phase4]") {
   }
 }
 
+TEST_CASE("hi-pdlp-original-kkt-cannot-hide-optimality-defects",
+          "[pdlp][hipdlp][verification][original-stopping]") {
+  HighsLp lp;
+  lp.num_row_ = 0;
+  lp.num_col_ = 1;
+  lp.col_cost_ = {1.0};
+  lp.col_lower_ = {0.0};
+  lp.col_upper_ = {1.0};
+  lp.a_matrix_.format_ = MatrixFormat::kColwise;
+  lp.a_matrix_.num_row_ = 0;
+  lp.a_matrix_.num_col_ = 1;
+  lp.a_matrix_.start_ = {0, 0};
+  HighsSolution solution;
+  solution.value_valid = true;
+  solution.dual_valid = true;
+  solution.col_value = {0.25};
+  solution.col_dual = {1.0};
+
+  SECTION("objective offsets cannot turn a nonoptimal iterate into a pass") {
+    for (const ObjSense sense : {ObjSense::kMinimize, ObjSense::kMaximize}) {
+      lp.sense_ = sense;
+      lp.col_cost_[0] = sense == ObjSense::kMinimize ? 1.0 : -1.0;
+      solution.col_dual = lp.col_cost_;
+      for (const double offset : {0.0, 1e12, -1e12, 1e300, -1e300}) {
+        CAPTURE(static_cast<int>(sense), offset);
+        lp.offset_ = offset;
+        solution.col_value[0] = 0.25;
+        const auto rejected = hipdlp::verification::verifyKkt(lp, solution, 1e-4);
+        REQUIRE(rejected.input_valid);
+        REQUIRE(rejected.metrics_finite);
+        CHECK(rejected.primal_feasible);
+        CHECK(rejected.dual_feasible);
+        CHECK_FALSE(rejected.pass);
+        CHECK_FALSE(rejected.objective_gap_ok);
+        CHECK(rejected.metrics.absolute_objective_gap == 0.25);
+        CHECK(rejected.metrics.relative_objective_gap == Approx(0.2));
+        solution.col_value[0] = 0.0;
+        const auto optimum = hipdlp::verification::verifyKkt(lp, solution, 1e-4);
+        REQUIRE(optimum.metrics_finite);
+        CHECK(optimum.pass);
+        CHECK(optimum.metrics.absolute_objective_gap == 0.0);
+      }
+    }
+  }
+
+  SECTION("small primal infeasibility cannot cancel a large complementarity defect") {
+    lp.num_col_ = 2;
+    lp.col_cost_ = {1.0, 131072.0};
+    lp.col_lower_ = {0.0, 0.0};
+    lp.col_upper_ = {kHighsInf, kHighsInf};
+    lp.a_matrix_.num_col_ = 2;
+    lp.a_matrix_.start_ = {0, 0, 0};
+    solution.col_value = {1.0, -1.0 / 131072.0};
+    solution.col_dual = lp.col_cost_;
+    const auto rejected = hipdlp::verification::verifyKkt(lp, solution, 1e-4);
+    REQUIRE(rejected.input_valid);
+    REQUIRE(rejected.metrics_finite);
+    CHECK(rejected.primal_feasible);
+    CHECK(rejected.dual_feasible);
+    CHECK(rejected.objective_gap_ok);
+    CHECK(rejected.metrics.max_complementarity == 1.0);
+    CHECK(rejected.metrics.absolute_complementarity == 2.0);
+    CHECK(rejected.metrics.relative_complementarity == 2.0);
+    CHECK_FALSE(rejected.complementarity_ok);
+    CHECK_FALSE(rejected.pass);
+  }
+
+  SECTION("row complementarity cannot cancel through small row infeasibility") {
+    lp.num_col_ = 2;
+    lp.num_row_ = 2;
+    lp.col_cost_ = {1.0, 131072.0};
+    lp.col_lower_ = {-kHighsInf, -kHighsInf};
+    lp.col_upper_ = {kHighsInf, kHighsInf};
+    lp.row_lower_ = {0.0, 0.0};
+    lp.row_upper_ = {kHighsInf, kHighsInf};
+    lp.a_matrix_.num_col_ = 2;
+    lp.a_matrix_.num_row_ = 2;
+    lp.a_matrix_.start_ = {0, 1, 2};
+    lp.a_matrix_.index_ = {0, 1};
+    lp.a_matrix_.value_ = {1.0, 1.0};
+    solution.col_value = {1.0, -1.0 / 131072.0};
+    solution.row_value = solution.col_value;
+    solution.col_dual = {0.0, 0.0};
+    for (const ObjSense sense : {ObjSense::kMinimize, ObjSense::kMaximize}) {
+      lp.sense_ = sense;
+      const double sign = sense == ObjSense::kMinimize ? 1.0 : -1.0;
+      lp.col_cost_ = {sign, sign * 131072.0};
+      solution.row_dual = lp.col_cost_;
+      const auto rejected = hipdlp::verification::verifyKkt(lp, solution, 1e-4);
+      REQUIRE(rejected.metrics_finite);
+      CHECK(rejected.primal_feasible);
+      CHECK(rejected.dual_feasible);
+      CHECK(rejected.objective_gap_ok);
+      CHECK(rejected.metrics.absolute_complementarity == 2.0);
+      CHECK(rejected.metrics.relative_complementarity == 2.0);
+      CHECK_FALSE(rejected.complementarity_ok);
+      CHECK_FALSE(rejected.pass);
+    }
+  }
+
+  SECTION("finite large objectives cannot overflow the gap denominator") {
+    lp.col_cost_ = {1e308};
+    lp.col_lower_ = {1.0};
+    lp.col_upper_ = {1.25};
+    solution.col_value = {1.0625};
+    solution.col_dual = lp.col_cost_;
+    const auto rejected = hipdlp::verification::verifyKkt(lp, solution, 1e-4);
+    REQUIRE(rejected.metrics_finite);
+    CHECK(rejected.primal_feasible);
+    CHECK(rejected.dual_feasible);
+    CHECK(rejected.metrics.relative_objective_gap == Approx(1.0 / 33.0));
+    CHECK(rejected.metrics.relative_complementarity == Approx(1.0 / 33.0));
+    CHECK_FALSE(rejected.pass);
+    solution.col_value = {1.0};
+    const auto optimum = hipdlp::verification::verifyKkt(lp, solution, 1e-4);
+    REQUIRE(optimum.metrics_finite);
+    CHECK(optimum.pass);
+  }
+
+  SECTION("finite objective sums survive intermediate overflow and cancellation") {
+    lp.num_col_ = 3;
+    lp.col_lower_ = {1.0, 1.0, 1.0};
+    lp.col_upper_ = lp.col_lower_;
+    lp.a_matrix_.num_col_ = 3;
+    lp.a_matrix_.start_ = {0, 0, 0, 0};
+    solution.col_value = lp.col_lower_;
+    for (const ObjSense sense : {ObjSense::kMinimize, ObjSense::kMaximize}) {
+      lp.sense_ = sense;
+      for (const std::vector<double>& costs : {
+               std::vector<double>{1e308, 1e308, -1e308},
+               std::vector<double>{1e308, -1e308, 1e308},
+               std::vector<double>{-1e308, 1e308, 1e308},
+               std::vector<double>{-1e308, -1e308, 1e308}}) {
+        lp.col_cost_ = costs;
+        solution.col_dual = costs;
+        lp.offset_ = costs[0] == costs[1] && costs[0] < 0.0 ? 1e308 : -1e308;
+        const auto checked = hipdlp::verification::verifyKkt(lp, solution, 1e-4);
+        INFO(checked.error);
+        REQUIRE(checked.metrics_finite);
+        CHECK(checked.pass);
+        CHECK(checked.metrics.primal_objective == 0.0);
+        CHECK(checked.metrics.dual_objective == 0.0);
+        CHECK(checked.metrics.absolute_objective_gap == 0.0);
+        CHECK(checked.metrics.absolute_complementarity == 0.0);
+      }
+    }
+    lp.offset_ = 0.0;
+    lp.col_cost_ = {1e308, 1e308, 1e308};
+    solution.col_dual = lp.col_cost_;
+    const auto overflowed = hipdlp::verification::verifyKkt(lp, solution, 1e-4);
+    CHECK_FALSE(overflowed.metrics_finite);
+    CHECK_FALSE(overflowed.pass);
+  }
+
+  SECTION("offset-free normalization is relative to the original linear objective") {
+    lp.col_lower_ = {1e8};
+    lp.col_upper_ = {kHighsInf};
+    solution.col_value = {1e8 + 1.0};
+    for (const double offset : {0.0, -1e8, 1e12}) {
+      lp.offset_ = offset;
+      const auto checked = hipdlp::verification::verifyKkt(lp, solution, 1e-4);
+      REQUIRE(checked.metrics_finite);
+      CHECK(checked.pass);
+      CHECK(checked.metrics.absolute_objective_gap == 1.0);
+      CHECK(checked.metrics.relative_objective_gap == Approx(1.0 / 200000002.0));
+      CHECK(checked.metrics.relative_complementarity == checked.metrics.relative_objective_gap);
+    }
+  }
+
+  SECTION("upper and ranged multipliers cannot hide cancelling defects") {
+    lp.num_col_ = 2;
+    lp.a_matrix_.num_col_ = 2;
+    lp.a_matrix_.start_ = {0, 0, 0};
+    lp.col_upper_ = {0.0, 0.0};
+    solution.col_value = {-1.0, 1.0 / 131072.0};
+    for (const double lower : {-kHighsInf, -2.0}) {
+      lp.col_lower_ = {lower, lower};
+      for (const ObjSense sense : {ObjSense::kMinimize, ObjSense::kMaximize}) {
+        lp.sense_ = sense;
+        const double sign = sense == ObjSense::kMinimize ? -1.0 : 1.0;
+        lp.col_cost_ = {sign, sign * 131072.0};
+        solution.col_dual = lp.col_cost_;
+        const auto checked = hipdlp::verification::verifyKkt(lp, solution, 1e-4);
+        REQUIRE(checked.metrics_finite);
+        CHECK(checked.primal_feasible);
+        CHECK(checked.dual_feasible);
+        CHECK(checked.objective_gap_ok);
+        CHECK(checked.metrics.absolute_complementarity == 2.0);
+        CHECK_FALSE(checked.complementarity_ok);
+        CHECK_FALSE(checked.pass);
+      }
+    }
+  }
+
+  SECTION("overflowed absolute complementarity fails closed") {
+    lp.num_col_ = 2;
+    lp.col_cost_ = {1e308, 1e308};
+    lp.col_lower_ = {0.0, 0.0};
+    lp.col_upper_ = {kHighsInf, kHighsInf};
+    lp.a_matrix_.num_col_ = 2;
+    lp.a_matrix_.start_ = {0, 0, 0};
+    solution.col_value = {1.0, -1.0};
+    solution.col_dual = lp.col_cost_;
+    const auto checked = hipdlp::verification::verifyKkt(lp, solution, 1e-4);
+    REQUIRE(checked.input_valid);
+    CHECK_FALSE(checked.metrics_finite);
+    CHECK_FALSE(checked.pass);
+  }
+}
+
 TEST_CASE("hi-pdlp-kkt-verifier", "[pdlp][hipdlp][verification]") {
   SECTION("minimization with offset and lower row") {
     const HighsLp lp =

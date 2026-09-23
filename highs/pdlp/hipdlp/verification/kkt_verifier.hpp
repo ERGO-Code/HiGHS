@@ -23,6 +23,8 @@ struct KktMetrics {
   double relative_primal_residual = 0.0;
   double relative_dual_residual = 0.0;
   double relative_objective_gap = 0.0;
+  double absolute_complementarity = 0.0;
+  double relative_complementarity = 0.0;
 };
 
 struct KktVerificationResult {
@@ -31,6 +33,7 @@ struct KktVerificationResult {
   bool primal_feasible = false;
   bool dual_feasible = false;
   bool objective_gap_ok = false;
+  bool complementarity_ok = false;
   bool pass = false;
   std::string error;
   KktMetrics metrics;

@@ -91,6 +91,13 @@ struct CheckSumState {
   double minimum_nonzero;
 };
 
+enum CheckFallbackFlags {
+  kCheckRawFallback = 1,
+  kCheckFixedPointFallback = 2,
+  kCheckAnchorFallback = 4,
+  kCheckUnpreparedProducts = 8
+};
+
 struct CheckPartial {
   CheckNormState norms[6];
   CheckSumState sums[3];
@@ -113,7 +120,7 @@ struct CheckPacket {
   double primal_anchor_distance;
   double dual_anchor_distance;
   int error_flag;
-  int requires_host_oracle;
+  int fallback_flags;
   int primal_ray_possible;
   int farkas_possible;
 };
@@ -147,6 +154,9 @@ cudaError_t launchScale(cudaStream_t stream, HighsInt size, double factor,
                         double* values, int* error_flag);
 cudaError_t launchAxpy(cudaStream_t stream, HighsInt size, double factor,
                        const double* input, double* output, int* error_flag);
+cudaError_t launchDifference(cudaStream_t stream, HighsInt size,
+                             const double* left, const double* right,
+                             double* output, int* error_flag);
 cudaError_t launchProjectedPrimalUpdate(
     cudaStream_t stream, HighsInt size, const double* current,
     const double* transpose_product, const double* costs, const double* lower,
@@ -158,10 +168,26 @@ cudaError_t launchProjectedDualUpdate(cudaStream_t stream, HighsInt size,
                                       const HighsBool* equality_rows,
                                       double step_size, double* output,
                                       int* error_flag);
+                    cudaError_t launchProjectedPrimalUpdateAndReflect(
+                      cudaStream_t stream, HighsInt size, const double* current,
+                      const double* transpose_product, const double* costs, const double* lower,
+                      const double* upper, double step_size, double* output, double* reflected,
+                      int* error_flag, const double* step_parameter = nullptr);
+                    cudaError_t launchProjectedDualUpdateAndReflect(
+                      cudaStream_t stream, HighsInt size, const double* current,
+                      const double* extrapolated_product, const double* row_lower,
+                      const HighsBool* equality_rows, double step_size, double* output,
+                      double* reflected, int* error_flag, const double* step_parameter = nullptr);
 cudaError_t launchVectorBlend(cudaStream_t stream, HighsInt size,
                               const double* left, const double* right,
                               double left_weight, double* output,
-                              int* error_flag);
+                              int* error_flag,
+                              const double* weight_parameter = nullptr);
+                cudaError_t launchVectorPairBlend(cudaStream_t stream, HighsInt primal_size,
+                  HighsInt dual_size, const double* primal_left, const double* primal_right,
+                  const double* dual_left, const double* dual_right, double left_weight,
+                  double* primal_output, double* dual_output, int* error_flag,
+                  const double* weight_parameter);
 cudaError_t launchAverageUpdate(cudaStream_t stream, HighsInt size,
                                 const double* current, double weight,
                                 double* sum, int* error_flag);

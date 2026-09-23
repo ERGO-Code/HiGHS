@@ -29,7 +29,9 @@ struct HalpernPdhgState {
 };
 
 api::Error enqueueHalpernPdhgStep(backend::Backend& backend,
-                                  HalpernPdhgState& state);
+                                  HalpernPdhgState& state,
+                                  const backend::VectorHandle* scalar_parameters = nullptr,
+                                  HighsInt scalar_offset = 0);
 api::Error restartHalpernPdhgStateFromCandidate(backend::Backend& backend,
                                                 HalpernPdhgState& state);
 

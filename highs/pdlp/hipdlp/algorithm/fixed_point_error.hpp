@@ -54,7 +54,7 @@ struct FixedPointErrorResult {
 
 FixedPointErrorResult evaluateFixedPointError(
     backend::Backend& backend, const backend::ProblemHandle& problem,
-    const FixedPointErrorInput& input);
+  const FixedPointErrorInput& input, bool products_prepared = false);
 
 }  // namespace algorithm
 }  // namespace hipdlp

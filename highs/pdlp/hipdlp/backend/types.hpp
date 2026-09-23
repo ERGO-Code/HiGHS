@@ -105,6 +105,16 @@ using VectorHandle = Handle<VectorHandleTag>;
 using WorkspaceHandle = Handle<WorkspaceHandleTag>;
 using CommandBufferHandle = Handle<CommandBufferHandleTag>;
 
+struct ScalarParameter {
+  double value;
+  const VectorHandle* vector;
+  HighsInt index;
+
+  explicit ScalarParameter(double literal, const VectorHandle* source = nullptr,
+                           HighsInt offset = 0)
+      : value(literal), vector(source), index(offset) {}
+};
+
 struct ConvergenceMetrics {
   double primal_residual;
   double dual_residual;

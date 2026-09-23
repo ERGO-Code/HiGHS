@@ -66,6 +66,71 @@ std::string readSourceFile(const char* relative_path) {
 
 }  // namespace
 
+TEST_CASE("hi-pdlp-original-kkt-probes-are-bounded-and-preserve-stopping",
+      "[pdlp][hipdlp][convergence][policy][algorithm-study]") {
+  struct ProbeCase {
+  HighsInt iteration;
+  double primal;
+  double dual;
+  double gap;
+  double tolerance;
+  double kkt_tolerance;
+  bool expected;
+  };
+  const ProbeCase cases[] = {
+    {400, 0.001, 0.0002, 0.00005, 1e-4, 1e-4, true},
+    {800, 0.01, 0.01, 1e-4, 1e-4, 1e-4, true},
+    {40, 0.001, 0.0002, 0.00005, 1e-4, 1e-4, false},
+    {0, 0.001, 0.0002, 0.00005, 1e-4, 1e-4, false},
+    {400, 0.01001, 0.0002, 0.00005, 1e-4, 1e-4, false},
+    {400, 0.001, 0.01001, 0.00005, 1e-4, 1e-4, false},
+    {400, 0.001, 0.0002, 0.00010001, 1e-4, 1e-4, false},
+    {400, 1e-5, 2e-7, 5e-8, 1e-7, 1e-4, false},
+    {400, 0.001, 0.0002, 0.00005, 1e-4, 1e-5, true},
+    {40, 0.0, 0.0, 0.0, 1e-4, 1e-4, true},
+    {400, 0.001, 0.0002, 0.00005, 1e-4, 0.0, false}};
+  for (const ProbeCase& test_case : cases) {
+  CAPTURE(test_case.iteration, test_case.primal, test_case.dual,
+      test_case.gap, test_case.tolerance, test_case.kkt_tolerance);
+  hipdlp::algorithm::StoppingInput input = makeValidInput();
+  input.iteration = test_case.iteration;
+  input.raw.primal_residual = test_case.primal;
+  input.raw.dual_residual = test_case.dual;
+  input.raw.objective_gap = test_case.gap;
+  input.tolerances.primal = input.tolerances.dual = input.tolerances.gap =
+    test_case.tolerance;
+  const hipdlp::algorithm::StoppingResult stopping =
+    hipdlp::algorithm::evaluateStopping(input);
+  REQUIRE(stopping.ok());
+  CHECK(hipdlp::algorithm::shouldVerifyOriginalKkt(
+        stopping, input.iteration, input.tolerances,
+        test_case.kkt_tolerance) == test_case.expected);
+  CHECK(stopping.decision ==
+      (test_case.primal == 0.0
+         ? hipdlp::algorithm::StoppingDecision::kOptimal
+         : hipdlp::algorithm::StoppingDecision::kContinue));
+  }
+
+  hipdlp::algorithm::StoppingInput limited = makeValidInput();
+  limited.iteration = 400;
+  limited.raw.primal_residual = 0.001;
+  limited.tolerances.primal = limited.tolerances.dual =
+    limited.tolerances.gap = 1e-4;
+  limited.limits.iteration = 400;
+  CHECK_FALSE(hipdlp::algorithm::shouldVerifyOriginalKkt(
+    hipdlp::algorithm::evaluateStopping(limited), limited.iteration,
+    limited.tolerances, 1e-4));
+  limited.limits.iteration = kHighsIInf;
+  limited.limits.time = 0.0;
+  CHECK_FALSE(hipdlp::algorithm::shouldVerifyOriginalKkt(
+    hipdlp::algorithm::evaluateStopping(limited), limited.iteration,
+    limited.tolerances, 1e-4));
+  limited.raw.primal_residual = std::numeric_limits<double>::infinity();
+  CHECK_FALSE(hipdlp::algorithm::shouldVerifyOriginalKkt(
+    hipdlp::algorithm::evaluateStopping(limited), limited.iteration,
+    limited.tolerances, 1e-4));
+}
+
 TEST_CASE("hi-pdlp-convergence-policy-normalizes-exact-scalars",
           "[pdlp][hipdlp][phase7a][convergence][policy][normalization]") {
   hipdlp::algorithm::StoppingInput input = makeNonOptimalInput();

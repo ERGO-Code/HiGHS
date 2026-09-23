@@ -55,6 +55,8 @@ class CudaBackend : public Backend, public CommandBufferRecorder {
   api::Error scale(double factor, VectorHandle& vector) override;
   api::Error axpy(double factor, const VectorHandle& input,
                   VectorHandle& output) override;
+  api::Error difference(const VectorHandle& left, const VectorHandle& right,
+                        VectorHandle& output) override;
   api::Error multiply(const ProblemHandle& problem, const VectorHandle& input,
                       VectorHandle& output) override;
   api::Error multiplyTranspose(const ProblemHandle& problem,
@@ -75,6 +77,14 @@ class CudaBackend : public Backend, public CommandBufferRecorder {
                                       const VectorHandle& extrapolated_product,
                                       double step_size,
                                       VectorHandle& next_dual) override;
+    api::Error fusedProjectedPrimalUpdateAndReflect(
+      const ProblemHandle& problem, WorkspaceHandle& workspace,
+      const VectorHandle& current, const VectorHandle& product,
+      double step_size, VectorHandle& candidate, VectorHandle& reflected) override;
+    api::Error fusedProjectedDualUpdateAndReflect(
+      const ProblemHandle& problem, WorkspaceHandle& workspace,
+      const VectorHandle& current, const VectorHandle& product,
+      double step_size, VectorHandle& candidate, VectorHandle& reflected) override;
   api::Error fusedVectorBlend(WorkspaceHandle& workspace,
                               const VectorHandle& primal_left,
                               const VectorHandle& dual_left,
@@ -82,17 +92,41 @@ class CudaBackend : public Backend, public CommandBufferRecorder {
                               const VectorHandle& dual_right,
                               double left_weight, VectorHandle& primal_output,
                               VectorHandle& dual_output) override;
+                  api::Error fusedProjectedPrimalUpdateAndReflect(
+                    const ProblemHandle& problem, WorkspaceHandle& workspace,
+                    const VectorHandle& current, const VectorHandle& product,
+                    const ScalarParameter& step, VectorHandle& candidate,
+                    VectorHandle& reflected) override;
+                  api::Error fusedProjectedDualUpdateAndReflect(
+                    const ProblemHandle& problem, WorkspaceHandle& workspace,
+                    const VectorHandle& current, const VectorHandle& product,
+                    const ScalarParameter& step, VectorHandle& candidate,
+                    VectorHandle& reflected) override;
+                  api::Error fusedVectorBlend(
+                    WorkspaceHandle& workspace, const VectorHandle& primal_left,
+                    const VectorHandle& dual_left, const VectorHandle& primal_right,
+                    const VectorHandle& dual_right, const ScalarParameter& weight,
+                    VectorHandle& primal_output, VectorHandle& dual_output) override;
   api::Error fusedAverageUpdate(WorkspaceHandle& workspace,
                                 const VectorHandle& primal,
                                 const VectorHandle& dual, double weight,
                                 VectorHandle& primal_sum,
                                 VectorHandle& dual_sum) override;
+  api::Error multiplyAndProjectedDualUpdateAndReflect(
+      const ProblemHandle& problem, WorkspaceHandle& workspace,
+      const VectorHandle& input, const VectorHandle& current,
+      const ScalarParameter& step, VectorHandle& product,
+      VectorHandle& candidate, VectorHandle& reflected) override;
   api::Error dot(const VectorHandle& left, const VectorHandle& right,
                  double& result) override;
   api::Error norm2(const VectorHandle& vector, double& result) override;
   api::Error differenceNorm2(const VectorHandle& left,
                              const VectorHandle& right,
                              double& result) override;
+  api::Error reduceFixedPointMetrics(
+      const VectorHandle& delta_primal, const VectorHandle& delta_dual,
+      const VectorHandle& aty_delta, double& primal_norm, double& dual_norm,
+      double& cross_term) override;
   api::Error reduceConvergenceMetrics(const VectorHandle& primal_residual,
                                       const VectorHandle& dual_residual,
                                       double primal_objective,
@@ -127,6 +161,8 @@ class CudaBackend : public Backend, public CommandBufferRecorder {
   CudaWorkspaceResource* workspaceResource(WorkspaceHandle& handle) const;
   const CudaCommandBufferResource* commandBufferResource(
       const CommandBufferHandle& handle) const;
+  api::Error scalarParameter(const ScalarParameter& parameter,
+                             const double*& device_value);
     api::Error prepareDownloadBuffers(const VectorDownload* downloads,
                                                                         std::size_t count);
 

@@ -440,6 +440,7 @@ struct HighsOptionsStruct {
   std::string hipdlp_backend;
   std::string hipdlp_scaling;
   HighsInt hipdlp_curtis_reid_iterations;
+    bool hipdlp_early_kkt_check;
 
   // Options for QP solver
   bool test_qp_oracle;
@@ -626,6 +627,7 @@ struct HighsOptionsStruct {
         hipdlp_backend(""),
         hipdlp_scaling(""),
         hipdlp_curtis_reid_iterations(0),
+        hipdlp_early_kkt_check(false),
         test_qp_oracle(false),
         qp_allow_hot_start(false),
         qp_iteration_limit(0),
@@ -1464,6 +1466,13 @@ class HighsOptions : public HighsOptionsStruct {
                             advanced, &hipdlp_curtis_reid_iterations, 1,
                             kHiPdlpDefaultCurtisReidIterations, kHighsIInf);
     records.push_back(record_int);
+
+    record_bool = new OptionRecordBool(
+        "hipdlp_early_kkt_check",
+        "Request original-model KKT checks every 400 iterations near "
+        "convergence, without relaxing the KKT tolerance",
+        advanced, &hipdlp_early_kkt_check, false);
+    records.push_back(record_bool);
 
     record_bool = new OptionRecordBool("test_qp_oracle",
                                        "Use an oracle for the QP Hessian",

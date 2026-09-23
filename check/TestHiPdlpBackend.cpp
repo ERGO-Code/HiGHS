@@ -20,6 +20,7 @@
 #include "pdlp/hipdlp/backend/check.hpp"
 #include "pdlp/hipdlp/backend/command_buffer.hpp"
 #include "pdlp/hipdlp/backend/cpu/cpu_backend.hpp"
+#include "pdlp/hipdlp/backend/cpu/sparse_kernels.hpp"
 #include "pdlp/hipdlp/backend/cuda/certificate_screen.hpp"
 #ifdef HIGHS_HIPDLP_CUDA_DETECTED
 #include "pdlp/hipdlp/backend/cuda/cuda_backend_testing.hpp"
@@ -29,6 +30,34 @@
 #include "pdlp/hipdlp/verification/certificate_verifier.hpp"
 
 namespace {
+
+TEST_CASE("hi-pdlp-cpu-spmv-overwrites-dirty-and-empty-rows",
+          "[hipdlp][backend][step-fusion][cpu]") {
+  hipdlp::model::SparseMatrix matrix;
+  matrix.num_rows = 4;
+  matrix.num_cols = 3;
+  matrix.starts = {0, 2, 2, 3, 3};
+  matrix.indices = {0, 2, 1};
+  matrix.values = {2.0, -1.0, 3.0};
+  std::vector<double> output(4, std::numeric_limits<double>::quiet_NaN());
+  hipdlp::backend::cpu::multiplySparse(matrix, {4.0, -2.0, 5.0}, output);
+  CHECK(output == std::vector<double>{3.0, 0.0, -6.0, 0.0});
+  hipdlp::backend::cpu::multiplySparse(matrix, {-1.0, 3.0, 2.0}, output);
+  CHECK(output == std::vector<double>{-4.0, 0.0, 9.0, 0.0});
+
+  matrix.starts = {0, 0, 0, 0, 0};
+  matrix.indices.clear();
+  matrix.values.clear();
+  hipdlp::backend::cpu::multiplySparse(matrix, {4.0, -2.0, 5.0}, output);
+  CHECK(output == std::vector<double>(4, 0.0));
+  for (const double value : output) CHECK_FALSE(std::signbit(value));
+
+  matrix.num_rows = 0;
+  matrix.starts = {0};
+  output.clear();
+  hipdlp::backend::cpu::multiplySparse(matrix, {4.0, -2.0, 5.0}, output);
+  CHECK(output.empty());
+}
 
 TEST_CASE("hi-pdlp-step-only-computes-update-products",
           "[hipdlp][backend][step-fusion][cpu]") {
@@ -2029,7 +2058,18 @@ void checkResidentNumericalFailures(const hipdlp::backend::Kind kind) {
     const hipdlp::api::Error error = fixture.backend->evaluateCheck(
         fixture.problem, fixture.workspace, fixture.input, result);
     CHECK(error.ok() == deferred);
-    checkEmptyPacket(result, deferred);
+    if (deferred && failure != 0) {
+      CHECK(result.valid);
+      CHECK_FALSE(result.requires_host_oracle);
+      CHECK_FALSE(result.fixed_point_valid);
+      CHECK_FALSE(result.anchor_distances_valid);
+      CHECK(result.scalar_count == 7);
+      CHECK(result.device_to_host_transfers == 1);
+      CHECK(result.device_to_host_bytes == 112);
+      CHECK(result.synchronizations == 1);
+    } else {
+      checkEmptyPacket(result, deferred);
+    }
     if (deferred) {
       std::vector<double> mandatory;
       REQUIRE(fixture.backend->downloadVector(fixture.primal, mandatory).ok());
@@ -2764,12 +2804,14 @@ TEST_CASE("hi-pdlp-cuda-check-optional-scratch-error-is-deferred",
   } else {
     INFO(error.message);
     CHECK(error.ok());
-    CHECK_FALSE(result.valid);
-    CHECK(result.requires_host_oracle);
+    CHECK(result.valid);
+    CHECK_FALSE(result.requires_host_oracle);
+    CHECK_FALSE(result.fixed_point_valid);
+    CHECK_FALSE(result.fixed_point_prepared);
     CHECK(result.primal_ray_possible);
     CHECK(result.farkas_possible);
-    CHECK(result.scalar_count == 0);
-    CHECK(result.raw.primal_residual == 0.0);
+    CHECK(result.scalar_count == 7);
+    CHECK(result.raw.primal_residual == maximum);
     CHECK(result.raw.dual_residual == 0.0);
     CHECK(result.raw.primal_objective == 0.0);
     CHECK(result.raw.dual_objective == 0.0);
@@ -2797,6 +2839,58 @@ TEST_CASE("hi-pdlp-cuda-check-optional-scratch-error-is-deferred",
     CHECK_FALSE(result.requires_host_oracle);
     CHECK(result.raw.primal_residual == maximum);
     CHECK(result.primal_delta_norm == 0.0);
+  }
+}
+
+TEST_CASE("hi-pdlp-cuda-check-validity-is-independent-per-result-group",
+          "[hipdlp][backend][cuda][check-optimization][check-packet]") {
+  for (const int scenario : {0, 1, 2}) {
+    CAPTURE(scenario);
+    HighsLp lp = makeEqualityLp(2, 2, {0, 1, 2}, {0, 1}, {1.0, 1.0});
+    lp.col_cost_ = {1.0, 1.0};
+    lp.col_lower_ = {0.0, 0.0};
+    lp.col_upper_ = {1.0, 1.0};
+    ResidentCheckFixture fixture(hipdlp::backend::Kind::kCuda, lp);
+    fixture.prepare(lp);
+    fixture.input.fixed_point = true;
+    fixture.input.anchor_distances = true;
+    fixture.input.delta_primal = &fixture.delta_primal;
+    fixture.input.delta_dual = &fixture.delta_dual;
+    fixture.input.aty_delta = &fixture.aty_delta;
+    fixture.input.primal_anchor = &fixture.primal_anchor;
+    fixture.input.dual_anchor = &fixture.dual_anchor;
+    REQUIRE(fixture.backend->uploadVector({3.0, 4.0}, fixture.delta_primal).ok());
+    REQUIRE(fixture.backend->uploadVector({0.0, 12.0}, fixture.delta_dual).ok());
+    REQUIRE(fixture.backend->uploadVector({0.0, 12.0}, fixture.aty_delta).ok());
+    if (scenario == 0) {
+      REQUIRE(fixture.backend->uploadVector({1e16, -1e16}, fixture.primal).ok());
+      REQUIRE(fixture.backend->uploadVector({1e16, -1e16}, fixture.ax).ok());
+      REQUIRE(fixture.backend->fill(fixture.dual, 1.0).ok());
+      REQUIRE(fixture.backend->fill(fixture.aty, 1.0).ok());
+    } else if (scenario == 1) {
+      REQUIRE(fixture.backend->fill(fixture.delta_primal,
+                                    std::numeric_limits<double>::max()).ok());
+    } else {
+      REQUIRE(fixture.backend->fill(fixture.primal_anchor,
+                                    std::numeric_limits<double>::max()).ok());
+    }
+    hipdlp::backend::CheckResult result;
+    REQUIRE(fixture.backend->evaluateCheck(fixture.problem, fixture.workspace,
+                                           fixture.input, result).ok());
+    CHECK(result.valid == (scenario != 0));
+    CHECK(result.requires_host_oracle == (scenario == 0));
+    CHECK(result.fixed_point_valid == (scenario != 1));
+    CHECK(result.anchor_distances_valid == (scenario != 2));
+    CHECK(result.fixed_point_prepared);
+    if (result.fixed_point_valid) {
+      CHECK(result.primal_delta_norm == 5.0);
+      CHECK(result.dual_delta_norm == 12.0);
+      CHECK(result.delta_dot == 48.0);
+    }
+    CHECK(result.device_to_host_bytes == 112);
+    CHECK(result.device_to_host_transfers == 1);
+    CHECK(result.synchronizations == 1);
+    REQUIRE(fixture.backend->synchronize().ok());
   }
 }
 
@@ -2841,7 +2935,24 @@ TEST_CASE("hi-pdlp-cuda-check-optional-reduction-overflow-is-deferred",
       const hipdlp::api::Error error = fixture.backend->evaluateCheck(
           fixture.problem, fixture.workspace, fixture.input, result);
       REQUIRE(error.ok());
-      checkEmptyPacket(result, true);
+      CHECK(result.valid == !mandatory_overflow);
+      CHECK(result.requires_host_oracle == mandatory_overflow);
+      CHECK(result.fixed_point_valid == (scenario >= 3));
+      CHECK(result.anchor_distances_valid == (scenario < 3));
+      CHECK(result.fixed_point_prepared);
+      CHECK(result.scalar_count == (mandatory_overflow ? 0 : 7) +
+                                       (scenario < 3 ? 2 : 3));
+      if (scenario < 3) {
+        CHECK(result.primal_delta_norm == 0.0);
+        CHECK(result.dual_delta_norm == 0.0);
+        CHECK(result.delta_dot == 0.0);
+      } else {
+        CHECK(result.primal_anchor_distance == 0.0);
+        CHECK(result.dual_anchor_distance == 0.0);
+      }
+      CHECK(result.device_to_host_transfers == 1);
+      CHECK(result.device_to_host_bytes == 112);
+      CHECK(result.synchronizations == 1);
       REQUIRE(fixture.backend->synchronize().ok());
       const auto primal = download(*fixture.backend, fixture.primal);
       const auto dual = download(*fixture.backend, fixture.dual);
@@ -2899,7 +3010,14 @@ TEST_CASE("hi-pdlp-cuda-check-optional-spmv-error-is-local-to-preparation",
   hipdlp::backend::CheckResult result;
   REQUIRE(fixture.backend->evaluateCheck(
               fixture.problem, fixture.workspace, fixture.input, result).ok());
-  checkEmptyPacket(result, true);
+  CHECK(result.valid);
+  CHECK_FALSE(result.requires_host_oracle);
+  CHECK_FALSE(result.fixed_point_valid);
+  CHECK_FALSE(result.fixed_point_prepared);
+  CHECK(result.scalar_count == 7);
+  CHECK(result.primal_delta_norm == 0.0);
+  CHECK(result.dual_delta_norm == 0.0);
+  CHECK(result.delta_dot == 0.0);
   CHECK(download(*fixture.backend, fixture.primal) == std::vector<double>{0.0});
   fixture.input.fixed_point = false;
   REQUIRE(fixture.backend->evaluateCheck(
@@ -3860,8 +3978,7 @@ TEST_CASE("hi-pdlp-cpu-projection-reflection-contract",
   checkProjectionReflection(hipdlp::backend::Kind::kCpu);
 }
 
-TEST_CASE("hi-pdlp-cpu-projection-reflection-matches-composed-primitives",
-          "[hipdlp][backend][step-fusion][cpu]") {
+void checkProjectionReflectionMatchesComposed(const hipdlp::backend::Kind kind) {
   for (const HighsInt size : {0, 1, 257}) {
     CAPTURE(size);
     std::vector<HighsInt> starts(size + 1), indices(size);
@@ -3876,7 +3993,9 @@ TEST_CASE("hi-pdlp-cpu-projection-reflection-matches-composed-primitives",
     auto lp = makeEqualityLp(size, size, starts, indices, values);
     auto built = hipdlp::model::buildProblem(lp);
     REQUIRE(built.ok());
-    hipdlp::backend::cpu::CpuBackend backend;
+    auto factory = hipdlp::backend::createBackend(kind);
+    REQUIRE(factory.ok());
+    auto& backend = *factory.backend;
     hipdlp::backend::ProblemHandle problem;
     hipdlp::backend::WorkspaceHandle workspace;
     REQUIRE(backend.bindProblem(built.problem, problem).ok());
@@ -3890,15 +4009,35 @@ TEST_CASE("hi-pdlp-cpu-projection-reflection-matches-composed-primitives",
     REQUIRE(backend.uploadVector(product, matrix_product).ok());
     for (const double step : {0.0, 0.5, 0.731}) {
       CAPTURE(step);
+    #ifdef HIGHS_HIPDLP_CUDA_DETECTED
+      hipdlp::backend::cuda::testing::resetResourceAudit();
+    #endif
       REQUIRE(backend.fusedProjectedPrimalUpdateAndReflect(problem, workspace,
           input, matrix_product, step, projected, reflected).ok());
+    #ifdef HIGHS_HIPDLP_CUDA_DETECTED
+      if (kind == hipdlp::backend::Kind::kCuda && size != 0) {
+        const auto audit = hipdlp::backend::cuda::testing::resourceAudit();
+        CHECK(audit.direct_primitive_enqueue_calls == 1);
+        CHECK(audit.device_to_device_transfers == 0);
+      }
+    #endif
       REQUIRE(backend.Backend::fusedProjectedPrimalUpdateAndReflect(problem,
           workspace, input, matrix_product, step, reference_projected,
           reference_reflected).ok());
       CHECK(download(backend, projected) == download(backend, reference_projected));
       CHECK(download(backend, reflected) == download(backend, reference_reflected));
+    #ifdef HIGHS_HIPDLP_CUDA_DETECTED
+      hipdlp::backend::cuda::testing::resetResourceAudit();
+    #endif
       REQUIRE(backend.fusedProjectedDualUpdateAndReflect(problem, workspace,
           input, matrix_product, step, projected, reflected).ok());
+    #ifdef HIGHS_HIPDLP_CUDA_DETECTED
+      if (kind == hipdlp::backend::Kind::kCuda && size != 0) {
+        const auto audit = hipdlp::backend::cuda::testing::resourceAudit();
+        CHECK(audit.direct_primitive_enqueue_calls == 1);
+        CHECK(audit.device_to_device_transfers == 0);
+      }
+    #endif
       REQUIRE(backend.Backend::fusedProjectedDualUpdateAndReflect(problem,
           workspace, input, matrix_product, step, reference_projected,
           reference_reflected).ok());
@@ -3908,10 +4047,110 @@ TEST_CASE("hi-pdlp-cpu-projection-reflection-matches-composed-primitives",
   }
 }
 
+TEST_CASE("hi-pdlp-cpu-projection-reflection-matches-composed-primitives",
+          "[hipdlp][backend][step-fusion][cpu]") {
+  checkProjectionReflectionMatchesComposed(hipdlp::backend::Kind::kCpu);
+}
+
 #ifdef HIGHS_HIPDLP_CUDA_DETECTED
 TEST_CASE("hi-pdlp-cuda-projection-reflection-contract",
           "[hipdlp][backend][step-fusion][cuda]") {
   checkProjectionReflection(hipdlp::backend::Kind::kCuda);
+}
+
+TEST_CASE("hi-pdlp-cuda-projection-reflection-matches-composed-primitives",
+          "[hipdlp][backend][step-fusion][cuda]") {
+  checkProjectionReflectionMatchesComposed(hipdlp::backend::Kind::kCuda);
+}
+
+TEST_CASE("hi-pdlp-cuda-recorded-scalars-update-and-validate",
+          "[hipdlp][backend][cuda][production-command-buffer]") {
+  for (const int operation : {0, 1, 2}) {
+    CAPTURE(operation);
+    auto lp = makeEqualityLp(2, 2, {0, 1, 2}, {0, 1}, {1.0, 1.0});
+    lp.col_cost_ = {1.0, -2.0};
+    lp.col_lower_ = {0.0, -kHighsInf};
+    lp.col_upper_ = {2.0, kHighsInf};
+    lp.row_lower_ = {1.0, 2.0};
+    lp.row_upper_ = {1.0, kHighsInf};
+    auto built = hipdlp::model::buildProblem(lp);
+    REQUIRE(built.ok());
+    auto backend = makeCudaBackend();
+    hipdlp::backend::ProblemHandle problem;
+    hipdlp::backend::WorkspaceHandle workspace;
+    REQUIRE(backend->bindProblem(built.problem, problem).ok());
+    REQUIRE(backend->createWorkspace(problem, workspace).ok());
+    hipdlp::backend::VectorHandle current, product, candidate, reflected, parameters;
+    for (auto* vector : {&current, &product, &candidate, &reflected})
+      REQUIRE(backend->createVector(2, *vector).ok());
+    REQUIRE(backend->createVector(3, parameters).ok());
+    REQUIRE(backend->uploadVector({1.0, 3.0}, current).ok());
+    REQUIRE(backend->uploadVector({4.0, -1.0}, product).ok());
+    REQUIRE(backend->uploadVector({0.5, 2.0, 0.25}, parameters).ok());
+    const auto enqueue = [&](const hipdlp::backend::ScalarParameter& scalar) {
+      if (operation == 0)
+        return backend->fusedProjectedPrimalUpdateAndReflect(
+            problem, workspace, current, product, scalar, candidate, reflected);
+      if (operation == 1)
+        return backend->fusedProjectedDualUpdateAndReflect(
+            problem, workspace, current, product, scalar, candidate, reflected);
+      return backend->fusedVectorBlend(workspace, current, product, product,
+                                       current, scalar, candidate, reflected);
+    };
+    if (operation == 2) {
+      hipdlp::backend::cuda::testing::resetResourceAudit();
+      REQUIRE(enqueue(hipdlp::backend::ScalarParameter(0.25)).ok());
+      CHECK(hipdlp::backend::cuda::testing::resourceAudit().direct_primitive_enqueue_calls == 1);
+      CHECK(download(*backend, candidate) == std::vector<double>({3.25, 0.0}));
+      CHECK(download(*backend, reflected) == std::vector<double>({1.75, 2.0}));
+    }
+    auto* recorder = hipdlp::backend::commandBufferRecorder(*backend);
+    REQUIRE(recorder != nullptr);
+    hipdlp::backend::CommandBufferHandle commands;
+    hipdlp::backend::CommandBufferStatistics statistics;
+    REQUIRE(recorder->beginRecording().ok());
+    REQUIRE(enqueue(hipdlp::backend::ScalarParameter(0.5, &parameters, operation)).ok());
+    REQUIRE(recorder->endRecording(commands).ok());
+
+    SECTION("replays read updated values without recapture") {
+      const std::vector<double> first_candidates[] = {{2.0, 3.5}, {-5.0, 9.0}, {3.25, 0.0}};
+      const std::vector<double> first_reflections[] = {{3.0, 4.0}, {-11.0, 15.0}, {1.75, 2.0}};
+      const std::vector<double> next_candidates[] = {{1.75, 3.25}, {-0.5, 4.5}, {1.75, 2.0}};
+      const std::vector<double> next_reflections[] = {{2.5, 3.5}, {-2.0, 6.0}, {3.25, 0.0}};
+      REQUIRE(recorder->replay(commands, statistics).ok());
+      CHECK(download(*backend, candidate) == first_candidates[operation]);
+      CHECK(download(*backend, reflected) == first_reflections[operation]);
+      REQUIRE(backend->uploadVector({0.25, 0.5, 0.75}, parameters).ok());
+      REQUIRE(recorder->replay(commands, statistics).ok());
+      CHECK(download(*backend, candidate) == next_candidates[operation]);
+      CHECK(download(*backend, reflected) == next_reflections[operation]);
+    }
+    SECTION("invalid bindings fail before enqueue") {
+      auto other = makeCudaBackend();
+      hipdlp::backend::VectorHandle foreign, empty;
+      REQUIRE(other->createVector(3, foreign).ok());
+      const hipdlp::backend::ScalarParameter invalid[] = {
+          hipdlp::backend::ScalarParameter(0.5, &parameters, -1),
+          hipdlp::backend::ScalarParameter(0.5, &parameters, 3),
+          hipdlp::backend::ScalarParameter(0.5, &foreign, 0),
+          hipdlp::backend::ScalarParameter(0.5, &empty, 0),
+          hipdlp::backend::ScalarParameter(0.5, &candidate, 0),
+          hipdlp::backend::ScalarParameter(0.5, &reflected, 0)};
+      for (const auto& scalar : invalid)
+        CHECK(enqueue(scalar).code == hipdlp::api::ErrorCode::kInvalidArgument);
+    }
+    SECTION("invalid dynamic values set the asynchronous error flag") {
+      REQUIRE(backend->uploadVector({-1.0, -1.0, 2.0}, parameters).ok());
+      REQUIRE(recorder->replay(commands, statistics).ok());
+      CHECK_FALSE(backend->synchronize().ok());
+    }
+    SECTION("expired scalar storage rejects replay") {
+      parameters.reset();
+      CHECK(recorder->replay(commands, statistics).code ==
+            hipdlp::api::ErrorCode::kInvalidArgument);
+      CHECK(statistics.replay_calls == 0);
+    }
+  }
 }
 #endif
 
@@ -4039,6 +4278,261 @@ TEST_CASE("hi-pdlp-cuda-vector-fused-and-reduction-differentials",
   checkApproxVector(cuda.halpern_dual, cpu.halpern_dual);
   checkApproxVector(cuda.average_primal, cpu.average_primal);
   checkApproxVector(cuda.average_dual, cpu.average_dual);
+}
+
+TEST_CASE("hi-pdlp-cuda-long-reductions-retain-small-contributions",
+          "[pdlp][hipdlp][cuda][reduction][parallel-reduction]") {
+  auto backend = makeCudaBackend();
+  const HighsInt size = 65537;
+  std::vector<double> values(size, std::ldexp(1.0, -30));
+  values[0] = 1.0;
+  hipdlp::backend::VectorHandle input;
+  REQUIRE(backend->createVector(size, input).ok());
+  REQUIRE(backend->uploadVector(values, input).ok());
+  const double expected_dot = 1.0 + std::ldexp(1.0, -44);
+  const double expected_norm = std::sqrt(expected_dot);
+  double first_dot = 0.0;
+  double first_norm = 0.0;
+  REQUIRE(backend->dot(input, input, first_dot).ok());
+  REQUIRE(backend->norm2(input, first_norm).ok());
+  CHECK(first_dot == Approx(expected_dot).epsilon(8 * std::numeric_limits<double>::epsilon()));
+  CHECK(first_norm == Approx(expected_norm).epsilon(8 * std::numeric_limits<double>::epsilon()));
+  hipdlp::backend::cuda::testing::resetResourceAudit();
+  for (int repeat = 0; repeat < 3; ++repeat) {
+    double dot = 0.0;
+    double norm = 0.0;
+    REQUIRE(backend->dot(input, input, dot).ok());
+    REQUIRE(backend->norm2(input, norm).ok());
+    CHECK(dot == first_dot);
+    CHECK(norm == first_norm);
+  }
+  const auto audit = hipdlp::backend::cuda::testing::resourceAudit();
+  CHECK(audit.allocation_calls == 0);
+  CHECK(audit.pinned_allocation_calls == 0);
+  CHECK(audit.host_to_device_transfers == 0);
+  CHECK(audit.device_to_host_transfers == 12);
+  CHECK(audit.synchronization_calls == 6);
+}
+
+TEST_CASE("hi-pdlp-cuda-forward-product-validation-is-fused-before-projection",
+          "[hipdlp][backend][cuda][check-optimization][step-fusion]") {
+  auto backend = makeCudaBackend();
+  HighsLp lp = makeEqualityLp(1, 1, {0, 1}, {0}, {2.0});
+  lp.row_upper_ = {kHighsInf};
+  auto built = hipdlp::model::buildProblem(lp);
+  REQUIRE(built.ok());
+  hipdlp::backend::ProblemHandle problem;
+  hipdlp::backend::WorkspaceHandle workspace;
+  REQUIRE(backend->bindProblem(built.problem, problem).ok());
+  REQUIRE(backend->createWorkspace(problem, workspace).ok());
+  hipdlp::backend::VectorHandle input, current, product, candidate, reflected;
+  for (auto* vector : {&input, &current, &product, &candidate, &reflected})
+    REQUIRE(backend->createVector(1, *vector).ok());
+  REQUIRE(backend->fill(input, 1.0).ok());
+  REQUIRE(backend->fill(current, 3.0).ok());
+  hipdlp::backend::cuda::testing::resetResourceAudit();
+  REQUIRE(backend->multiplyAndProjectedDualUpdateAndReflect(
+      problem, workspace, input, current, hipdlp::backend::ScalarParameter(0.5),
+      product, candidate, reflected).ok());
+  CHECK(hipdlp::backend::cuda::testing::resourceAudit().direct_primitive_enqueue_calls == 2);
+  CHECK(download(*backend, product) == std::vector<double>{2.0});
+  CHECK(download(*backend, candidate) == std::vector<double>{2.0});
+  CHECK(download(*backend, reflected) == std::vector<double>{1.0});
+  REQUIRE(backend->fill(input, std::numeric_limits<double>::max()).ok());
+  REQUIRE(backend->fill(current, 0.0).ok());
+  REQUIRE(backend->multiplyAndProjectedDualUpdateAndReflect(
+      problem, workspace, input, current, hipdlp::backend::ScalarParameter(1.0),
+      product, candidate, reflected).ok());
+  CHECK_FALSE(backend->synchronize().ok());
+  std::vector<double> untouched = {17.0};
+  CHECK_FALSE(backend->downloadVector(candidate, untouched).ok());
+  CHECK(untouched == std::vector<double>{17.0});
+}
+
+TEST_CASE("hi-pdlp-cuda-convergence-reductions-use-one-wait",
+          "[hipdlp][backend][cuda][parallel-reduction][check-optimization]") {
+  auto backend = makeCudaBackend();
+  hipdlp::backend::VectorHandle primal, dual;
+  REQUIRE(backend->createVector(2, primal).ok());
+  REQUIRE(backend->createVector(3, dual).ok());
+  REQUIRE(backend->uploadVector({3.0, 4.0}, primal).ok());
+  REQUIRE(backend->uploadVector({0.0, 0.0, 12.0}, dual).ok());
+  hipdlp::backend::ConvergenceMetrics metrics;
+  hipdlp::backend::cuda::testing::resetResourceAudit();
+  REQUIRE(backend->reduceConvergenceMetrics(primal, dual, 10.0, 7.0, metrics).ok());
+  CHECK(metrics.primal_residual == 5.0);
+  CHECK(metrics.dual_residual == 12.0);
+  CHECK(metrics.objective_gap == 3.0);
+  const auto audit = hipdlp::backend::cuda::testing::resourceAudit();
+  CHECK(audit.device_to_host_transfers == 2);
+  CHECK(audit.device_to_host_bytes == 2 * sizeof(double) + sizeof(int));
+  CHECK(audit.synchronization_calls == 1);
+  CHECK(audit.allocation_calls == 0);
+  REQUIRE(backend->fill(primal, std::numeric_limits<double>::max()).ok());
+  CHECK_FALSE(backend->reduceConvergenceMetrics(primal, dual, 10.0, 7.0, metrics).ok());
+  CHECK(metrics.primal_residual == 5.0);
+  CHECK(metrics.dual_residual == 12.0);
+  CHECK(metrics.objective_gap == 3.0);
+  CHECK_FALSE(backend->synchronize().ok());
+}
+
+TEST_CASE("hi-pdlp-cuda-fixed-point-reductions-use-one-wait",
+          "[hipdlp][backend][cuda][parallel-reduction][check-optimization]") {
+  auto backend = makeCudaBackend();
+  hipdlp::backend::VectorHandle primal, dual, product;
+  REQUIRE(backend->createVector(2, primal).ok());
+  REQUIRE(backend->createVector(3, dual).ok());
+  REQUIRE(backend->createVector(2, product).ok());
+  REQUIRE(backend->uploadVector({3.0, 4.0}, primal).ok());
+  REQUIRE(backend->uploadVector({0.0, 0.0, 12.0}, dual).ok());
+  REQUIRE(backend->uploadVector({2.0, -1.0}, product).ok());
+  double primal_norm = 17.0, dual_norm = 19.0, cross = 23.0;
+  REQUIRE(backend->reduceFixedPointMetrics(primal, dual, product,
+                                          primal_norm, dual_norm, cross).ok());
+  CHECK(primal_norm == 5.0);
+  CHECK(dual_norm == 12.0);
+  CHECK(cross == 2.0);
+  hipdlp::backend::cuda::testing::resetResourceAudit();
+  REQUIRE(backend->reduceFixedPointMetrics(primal, dual, product,
+                                          primal_norm, dual_norm, cross).ok());
+  const auto audit = hipdlp::backend::cuda::testing::resourceAudit();
+  CHECK(audit.allocation_calls == 0);
+  CHECK(audit.pinned_allocation_calls == 0);
+  CHECK(audit.device_to_host_transfers == 2);
+  CHECK(audit.device_to_host_bytes == 3 * sizeof(double) + sizeof(int));
+  CHECK(audit.synchronization_calls == 1);
+  REQUIRE(backend->fill(primal, 1e200).ok());
+  REQUIRE(backend->fill(product, 1e200).ok());
+  primal_norm = 17.0;
+  dual_norm = 19.0;
+  cross = 23.0;
+  CHECK_FALSE(backend->reduceFixedPointMetrics(primal, dual, product,
+                                              primal_norm, dual_norm, cross).ok());
+  CHECK(primal_norm == 17.0);
+  CHECK(dual_norm == 19.0);
+  CHECK(cross == 23.0);
+  CHECK_FALSE(backend->synchronize().ok());
+}
+
+TEST_CASE("hi-pdlp-cuda-difference-norm-is-parallel-and-preallocated",
+          "[hipdlp][backend][cuda][parallel-reduction][check-optimization]") {
+  auto backend = makeCudaBackend();
+  const HighsInt size = 65537;
+  std::vector<double> left(size, std::ldexp(1.0, -30));
+  left[0] = 1.0;
+  hipdlp::backend::VectorHandle first, second;
+  REQUIRE(backend->createVector(size, first).ok());
+  REQUIRE(backend->createVector(size, second).ok());
+  REQUIRE(backend->uploadVector(left, first).ok());
+  REQUIRE(backend->fill(second, 0.0).ok());
+  const double expected = std::sqrt(1.0 + std::ldexp(1.0, -44));
+  double value = 17.0;
+  REQUIRE(backend->differenceNorm2(first, second, value).ok());
+  CHECK(value == Approx(expected).epsilon(8 * std::numeric_limits<double>::epsilon()));
+  const double previous = value;
+  hipdlp::backend::cuda::testing::resetResourceAudit();
+  REQUIRE(backend->differenceNorm2(first, second, value).ok());
+  CHECK(value == previous);
+  const auto audit = hipdlp::backend::cuda::testing::resourceAudit();
+  CHECK(audit.allocation_calls == 0);
+  CHECK(audit.pinned_allocation_calls == 0);
+  CHECK(audit.device_to_host_transfers == 2);
+  CHECK(audit.synchronization_calls == 1);
+  CHECK(download(*backend, first) == left);
+  CHECK(download(*backend, second) == std::vector<double>(size, 0.0));
+
+  for (const double magnitude : {1e-200, 1e200}) {
+    REQUIRE(backend->fill(first, magnitude).ok());
+    REQUIRE(backend->fill(second, -magnitude).ok());
+    REQUIRE(backend->differenceNorm2(first, second, value).ok());
+    CHECK(value == Approx(2.0 * magnitude * std::sqrt(static_cast<double>(size))).epsilon(1e-13));
+  }
+  REQUIRE(backend->fill(first, std::numeric_limits<double>::max()).ok());
+  REQUIRE(backend->fill(second, -std::numeric_limits<double>::max()).ok());
+  value = 17.0;
+  CHECK_FALSE(backend->differenceNorm2(first, second, value).ok());
+  CHECK(value == 17.0);
+  CHECK_FALSE(backend->synchronize().ok());
+}
+
+TEST_CASE("hi-pdlp-cuda-reductions-cover-empty-extreme-and-error-results",
+          "[pdlp][hipdlp][cuda][reduction][parallel-reduction]") {
+  auto backend = makeCudaBackend();
+  hipdlp::backend::VectorHandle input;
+  SECTION("distinct mixed-sign operands preserve the cancellation result") {
+    const HighsInt size = 65537;
+    std::vector<double> left(size), right(size);
+    const double left_pattern[] = {2.0, -2.0, 0.5, -0.5};
+    const double right_pattern[] = {512.0, 512.0, 0.5, 0.25};
+    for (HighsInt index = 0; index < size - 1; ++index) {
+      left[index] = left_pattern[index % 4];
+      right[index] = right_pattern[index % 4];
+    }
+    left.back() = 1.0;
+    right.back() = 3.0;
+    hipdlp::backend::VectorHandle other;
+    REQUIRE(backend->createVector(size, input).ok());
+    REQUIRE(backend->createVector(size, other).ok());
+    REQUIRE(backend->uploadVector(left, input).ok());
+    REQUIRE(backend->uploadVector(right, other).ok());
+    double value = 0.0;
+    REQUIRE(backend->dot(input, other, value).ok());
+    CHECK(value == 2051.0);
+  }
+  SECTION("finite and empty reductions preserve a prior asynchronous error") {
+    for (const HighsInt size : {0, 4}) {
+      CAPTURE(size);
+      auto failed_backend = makeCudaBackend();
+      hipdlp::backend::VectorHandle finite_input, overflow_input;
+      REQUIRE(failed_backend->createVector(size, finite_input).ok());
+      REQUIRE(failed_backend->createVector(1, overflow_input).ok());
+      REQUIRE(failed_backend->fill(finite_input, 1.0).ok());
+      REQUIRE(failed_backend->uploadVector(
+          {std::numeric_limits<double>::max()}, overflow_input).ok());
+      REQUIRE(failed_backend->scale(2.0, overflow_input).ok());
+      double value = 17.0;
+      CHECK_FALSE(failed_backend->dot(finite_input, finite_input, value).ok());
+      CHECK(value == 17.0);
+      CHECK_FALSE(failed_backend->norm2(finite_input, value).ok());
+      CHECK(value == 17.0);
+      CHECK_FALSE(failed_backend->synchronize().ok());
+    }
+  }
+  SECTION("empty reductions are zero") {
+    REQUIRE(backend->createVector(0, input).ok());
+    double value = 17.0;
+    REQUIRE(backend->dot(input, input, value).ok());
+    CHECK(value == 0.0);
+    REQUIRE(backend->norm2(input, value).ok());
+    CHECK(value == 0.0);
+  }
+  SECTION("norm avoids intermediate overflow and underflow") {
+    REQUIRE(backend->createVector(4, input).ok());
+    for (const double magnitude : {1e-200, 1e200, std::numeric_limits<double>::max() / 2.0}) {
+      CAPTURE(magnitude);
+      REQUIRE(backend->uploadVector(std::vector<double>(4, magnitude), input).ok());
+      double value = 0.0;
+      REQUIRE(backend->norm2(input, value).ok());
+      CHECK(value == Approx(2.0 * magnitude).epsilon(1e-14));
+      CHECK(std::isfinite(value));
+    }
+  }
+  SECTION("true dot overflow preserves the output and is sticky") {
+    REQUIRE(backend->createVector(1, input).ok());
+    REQUIRE(backend->uploadVector({1e200}, input).ok());
+    double value = 17.0;
+    CHECK_FALSE(backend->dot(input, input, value).ok());
+    CHECK(value == 17.0);
+    CHECK_FALSE(backend->synchronize().ok());
+  }
+  SECTION("true norm overflow preserves the output and is sticky") {
+    REQUIRE(backend->createVector(4, input).ok());
+    REQUIRE(backend->uploadVector(std::vector<double>(4, std::numeric_limits<double>::max()), input).ok());
+    double value = 17.0;
+    CHECK_FALSE(backend->norm2(input, value).ok());
+    CHECK(value == 17.0);
+    CHECK_FALSE(backend->synchronize().ok());
+  }
 }
 
 TEST_CASE("hi-pdlp-cuda-unsupported-and-transactional-resources",

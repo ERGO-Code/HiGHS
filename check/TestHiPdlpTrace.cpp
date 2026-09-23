@@ -737,8 +737,8 @@ void checkFixedPointErrorAuditDelta(
   CHECK(enabled.descriptor_destructions == disabled.descriptor_destructions);
   CHECK(enabled.host_to_device_transfers == disabled.host_to_device_transfers);
   CHECK(enabled.device_to_host_transfers ==
-        disabled.device_to_host_transfers + 6);
-  CHECK(enabled.device_to_device_transfers >
+      disabled.device_to_host_transfers + 2);
+  CHECK(enabled.device_to_device_transfers ==
         disabled.device_to_device_transfers);
   CHECK(enabled.graph_capture_calls == disabled.graph_capture_calls);
   CHECK(enabled.graph_creations == disabled.graph_creations);
@@ -753,7 +753,7 @@ void checkFixedPointErrorAuditDelta(
         disabled.graph_capture_primitive_enqueue_calls);
   CHECK(enabled.direct_primitive_enqueue_calls >
         disabled.direct_primitive_enqueue_calls);
-  CHECK(enabled.synchronization_calls == disabled.synchronization_calls + 3);
+  CHECK(enabled.synchronization_calls == disabled.synchronization_calls + 1);
 }
 
 void checkSameResourceAudit(
@@ -824,8 +824,6 @@ void checkPeriodicConvergenceAuditDelta(
         disabled.synchronization_calls + 4 * evaluations);
 }
 
-// Each extra cadence check adds exactly one Tier A8 evaluation: six low-level
-// device-to-host events and three synchronizations.
 void checkFixedPointCheckAuditDelta(
     const hipdlp::backend::cuda::testing::ResourceAudit& base,
     const hipdlp::backend::cuda::testing::ResourceAudit& extended,
@@ -842,7 +840,7 @@ void checkFixedPointCheckAuditDelta(
   CHECK(extended.descriptor_destructions == base.descriptor_destructions);
   CHECK(extended.host_to_device_transfers == base.host_to_device_transfers);
   CHECK(extended.device_to_host_transfers ==
-        base.device_to_host_transfers + 6 * extra_checks);
+      base.device_to_host_transfers + 2 * extra_checks);
   CHECK(extended.graph_capture_calls == base.graph_capture_calls);
   CHECK(extended.graph_creations == base.graph_creations);
   CHECK(extended.graph_destructions == base.graph_destructions);
@@ -854,14 +852,14 @@ void checkFixedPointCheckAuditDelta(
   CHECK(extended.graph_capture_primitive_enqueue_calls ==
         base.graph_capture_primitive_enqueue_calls);
   CHECK(extended.synchronization_calls ==
-        base.synchronization_calls + 3 * extra_checks);
+      base.synchronization_calls + extra_checks);
   if (extra_checks == 0) {
     CHECK(extended.device_to_device_transfers ==
           base.device_to_device_transfers);
     CHECK(extended.direct_primitive_enqueue_calls ==
           base.direct_primitive_enqueue_calls);
   } else {
-    CHECK(extended.device_to_device_transfers >
+    CHECK(extended.device_to_device_transfers ==
           base.device_to_device_transfers);
     CHECK(extended.direct_primitive_enqueue_calls >
           base.direct_primitive_enqueue_calls);
@@ -966,8 +964,6 @@ void checkApproxPrimalWeightUpdates(
   }
 }
 
-// Each executed Tier A16 update adds exactly two difference-norm reductions:
-// two kernel enqueues, four device-to-host events, and two synchronizations.
 void checkPrimalWeightAuditDelta(
     const hipdlp::backend::cuda::testing::ResourceAudit& disabled,
     const hipdlp::backend::cuda::testing::ResourceAudit& enabled,
@@ -999,7 +995,7 @@ void checkPrimalWeightAuditDelta(
   CHECK(enabled.graph_capture_primitive_enqueue_calls ==
         disabled.graph_capture_primitive_enqueue_calls);
   CHECK(enabled.direct_primitive_enqueue_calls ==
-        disabled.direct_primitive_enqueue_calls + 2 * updates);
+      disabled.direct_primitive_enqueue_calls + 6 * updates);
   CHECK(enabled.synchronization_calls ==
         disabled.synchronization_calls + 2 * updates);
 }

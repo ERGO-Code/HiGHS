@@ -225,20 +225,6 @@ bool hasCompleteRawDualSection(const std::string& path,
   return true;
 }
 
-bool computeObjective(const HighsLp& lp, const HighsSolution& solution,
-                      double& objective) {
-  if (!solution.value_valid ||
-      solution.col_value.size() != static_cast<std::size_t>(lp.num_col_) ||
-      !finiteVector(solution.col_value))
-    return false;
-  objective = lp.offset_;
-  for (HighsInt column = 0; column < lp.num_col_; ++column) {
-    objective += lp.col_cost_[column] * solution.col_value[column];
-    if (!std::isfinite(objective)) return false;
-  }
-  return true;
-}
-
 bool deriveReducedCosts(const HighsLp& lp, const HighsSolution& solution,
                         std::vector<double>& reduced_costs) {
   if (!solution.dual_valid ||
@@ -331,13 +317,12 @@ int main(int argc, char** argv) {
 
   const hipdlp::verification::KktVerificationResult kkt =
       hipdlp::verification::verifyKkt(lp, solution, options.tolerance);
-  double primal_objective = 0.0;
-  const bool objective_available =
-      computeObjective(lp, solution, primal_objective);
 
   std::string json;
   json += "{\n";
   json += formatLine("  \"schema\": \"lp-cross-solver-result/1\",");
+  json += quotedField("kkt_contract", "hipdlp-original-kkt/2");
+  json += doubleField("kkt_tolerance", options.tolerance, true);
   json += quotedField("solver", options.solver);
   json += quotedField("instance", options.instance);
   json += quotedField("status", options.status);
@@ -345,8 +330,8 @@ int main(int argc, char** argv) {
   json += doubleField("solver_time_sec", options.solver_time, true);
   json += formatLine("  \"iterations\": %lld,",
                      static_cast<long long>(options.iterations));
-  json += doubleField("primal_objective", primal_objective,
-                      objective_available);
+  json += doubleField("primal_objective", kkt.metrics.primal_objective,
+                      kkt.metrics_finite);
   json += doubleField("relative_primal_residual",
                       kkt.metrics.relative_primal_residual,
                       kkt.metrics_finite);
@@ -354,7 +339,18 @@ int main(int argc, char** argv) {
                       kkt.metrics.relative_dual_residual, kkt.metrics_finite);
   json += doubleField("relative_objective_gap",
                       kkt.metrics.relative_objective_gap, kkt.metrics_finite);
+  json += doubleField("absolute_complementarity",
+                      kkt.metrics.absolute_complementarity, kkt.metrics_finite);
+  json += doubleField("relative_complementarity",
+                      kkt.metrics.relative_complementarity, kkt.metrics_finite);
+  json += doubleField("max_stationarity_residual",
+                      kkt.metrics.max_stationarity_residual, kkt.metrics_finite);
   json += boolField("kkt_input_valid", kkt.input_valid);
+  json += boolField("kkt_metrics_finite", kkt.metrics_finite);
+  json += boolField("kkt_primal_feasible", kkt.primal_feasible);
+  json += boolField("kkt_dual_feasible", kkt.dual_feasible);
+  json += boolField("kkt_objective_gap_ok", kkt.objective_gap_ok);
+  json += boolField("kkt_complementarity_ok", kkt.complementarity_ok);
   json += boolField("kkt_pass", kkt.pass);
   json += quotedField("reduced_cost_source",
                       options.derive_reduced_costs ? "derived_from_row_dual"

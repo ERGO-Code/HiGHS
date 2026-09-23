@@ -149,10 +149,31 @@ double complementarityResidual(const double lower, const double upper,
   return 0.0;
 }
 
+class ObjectiveSum {
+ public:
+  bool add(const double term) {
+    if (!std::isfinite(term)) return false;
+    double combined = sum_ + (exponent_ == 0 ? term : std::scalbn(term, -exponent_));
+    if (!std::isfinite(combined)) {
+      sum_ *= 0.5;
+      ++exponent_;
+      combined = sum_ + std::scalbn(term, -exponent_);
+    }
+    sum_ = combined;
+    return std::isfinite(sum_);
+  }
+
+  double value() const { return std::scalbn(sum_, exponent_); }
+
+ private:
+  double sum_ = 0.0;
+  int exponent_ = 0;
+};
+
 bool addDualObjectiveContribution(const double lower, const double upper,
                                   const double raw_dual,
                                   const double adjusted_dual,
-                                  double& dual_objective) {
+                                  ObjectiveSum& dual_objective) {
   const bool lower_finite = hasLower(lower);
   const bool upper_finite = hasUpper(upper);
   if (!lower_finite && !upper_finite) return true;
@@ -164,8 +185,7 @@ bool addDualObjectiveContribution(const double lower, const double upper,
   } else {
     bound = adjusted_dual >= 0.0 ? lower : upper;
   }
-  dual_objective += bound * raw_dual;
-  return std::isfinite(dual_objective);
+  return dual_objective.add(bound * raw_dual);
 }
 
 bool finiteMetrics(const KktMetrics& metrics) {
@@ -179,7 +199,9 @@ bool finiteMetrics(const KktMetrics& metrics) {
          std::isfinite(metrics.absolute_objective_gap) &&
          std::isfinite(metrics.relative_primal_residual) &&
          std::isfinite(metrics.relative_dual_residual) &&
-         std::isfinite(metrics.relative_objective_gap);
+         std::isfinite(metrics.relative_objective_gap) &&
+         std::isfinite(metrics.absolute_complementarity) &&
+         std::isfinite(metrics.relative_complementarity);
 }
 
 }  // namespace
@@ -338,6 +360,7 @@ KktVerificationResult verifyKkt(const HighsLp& lp,
     const double complementarity =
         complementarityResidual(lp.col_lower_[col], lp.col_upper_[col],
                                 solution.col_value[col], adjusted_dual);
+    result.metrics.absolute_complementarity += complementarity;
     updateMaximum(complementarity, col, max_col_complementarity,
                   result.worst_complementarity_col);
   }
@@ -355,6 +378,7 @@ KktVerificationResult verifyKkt(const HighsLp& lp,
     const double complementarity =
         complementarityResidual(lp.row_lower_[row], lp.row_upper_[row],
                                 row_activity[row], adjusted_dual);
+    result.metrics.absolute_complementarity += complementarity;
     updateMaximum(complementarity, row, max_row_complementarity,
                   result.worst_complementarity_row);
   }
@@ -373,35 +397,54 @@ KktVerificationResult verifyKkt(const HighsLp& lp,
           ? worst_col_sign_violation
           : worst_stationarity_col;
 
-  result.metrics.primal_objective = lp.offset_;
-  for (HighsInt col = 0; col < lp.num_col_; ++col)
-    result.metrics.primal_objective +=
-        lp.col_cost_[col] * solution.col_value[col];
+  ObjectiveSum primal_sum;
+  for (HighsInt col = 0; col < lp.num_col_; ++col) {
+    if (!primal_sum.add(lp.col_cost_[col] * solution.col_value[col])) {
+      result.error = "Primal objective calculation produced a non-finite value";
+      return result;
+    }
+  }
 
   bool dual_objective_valid = true;
-  result.metrics.dual_objective = lp.offset_;
+  ObjectiveSum dual_sum;
   for (HighsInt col = 0; col < lp.num_col_; ++col) {
     dual_objective_valid &= addDualObjectiveContribution(
         lp.col_lower_[col], lp.col_upper_[col], reduced_cost[col],
-        objective_sense * reduced_cost[col], result.metrics.dual_objective);
+        objective_sense * reduced_cost[col], dual_sum);
   }
   for (HighsInt row = 0; row < lp.num_row_; ++row) {
     dual_objective_valid &= addDualObjectiveContribution(
         lp.row_lower_[row], lp.row_upper_[row], solution.row_dual[row],
         objective_sense * solution.row_dual[row],
-        result.metrics.dual_objective);
+        dual_sum);
   }
   if (!dual_objective_valid) {
     result.error = "Dual objective calculation produced a non-finite value";
     return result;
   }
 
-  result.metrics.absolute_objective_gap = std::fabs(
-      result.metrics.primal_objective - result.metrics.dual_objective);
+  const double primal_objective = primal_sum.value();
+  const double dual_objective = dual_sum.value();
+  if (!std::isfinite(primal_objective) || !std::isfinite(dual_objective)) {
+    result.error = "Objective calculation exceeded FP64 range";
+    return result;
+  }
+
+    result.metrics.primal_objective = lp.offset_ + primal_objective;
+    result.metrics.dual_objective = lp.offset_ + dual_objective;
+    result.metrics.absolute_objective_gap =
+      std::fabs(primal_objective - dual_objective);
+    const double objective_scale =
+      std::max({1.0, std::fabs(primal_objective), std::fabs(dual_objective)});
+    const double objective_denominator =
+      1.0 / objective_scale + std::fabs(primal_objective) / objective_scale +
+      std::fabs(dual_objective) / objective_scale;
   result.metrics.relative_objective_gap =
-      result.metrics.absolute_objective_gap /
-      (1.0 + std::fabs(result.metrics.primal_objective) +
-       std::fabs(result.metrics.dual_objective));
+      (result.metrics.absolute_objective_gap / objective_scale) /
+      objective_denominator;
+    result.metrics.relative_complementarity =
+      (result.metrics.absolute_complementarity / objective_scale) /
+      objective_denominator;
   result.metrics_finite = finiteMetrics(result.metrics);
   if (!result.metrics_finite) {
     result.error = "KKT verification produced a non-finite metric";
@@ -411,8 +454,10 @@ KktVerificationResult verifyKkt(const HighsLp& lp,
   result.primal_feasible = result.metrics.relative_primal_residual <= tolerance;
   result.dual_feasible = result.metrics.relative_dual_residual <= tolerance;
   result.objective_gap_ok = result.metrics.relative_objective_gap <= tolerance;
+    result.complementarity_ok = result.metrics.relative_complementarity <= tolerance;
   result.pass =
-      result.primal_feasible && result.dual_feasible && result.objective_gap_ok;
+      result.primal_feasible && result.dual_feasible && result.objective_gap_ok &&
+      result.complementarity_ok;
   return result;
 }
 

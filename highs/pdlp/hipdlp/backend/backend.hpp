@@ -132,6 +132,16 @@ class Backend {
   virtual api::Error scale(double factor, VectorHandle& vector) = 0;
   virtual api::Error axpy(double factor, const VectorHandle& input,
                           VectorHandle& output) = 0;
+    virtual api::Error difference(const VectorHandle& left, const VectorHandle& right,
+                                                                VectorHandle& output) {
+        if (!left.valid() || !right.valid() || !output.valid() ||
+                &output == &left || &output == &right)
+            return api::Error(api::ErrorCode::kInvalidArgument,
+                                                "difference inputs and output must be valid and distinct");
+        api::Error error = copy(left, output);
+        if (!error.ok()) return error;
+        return axpy(-1.0, right, output);
+    }
   virtual api::Error multiply(const ProblemHandle& problem,
                               const VectorHandle& input,
                               VectorHandle& output) = 0;
@@ -187,6 +197,50 @@ class Backend {
       const VectorHandle& dual_left, const VectorHandle& primal_right,
       const VectorHandle& dual_right, double left_weight,
       VectorHandle& primal_output, VectorHandle& dual_output) = 0;
+    virtual api::Error fusedProjectedPrimalUpdateAndReflect(
+            const ProblemHandle& problem, WorkspaceHandle& workspace,
+            const VectorHandle& current, const VectorHandle& product,
+            const ScalarParameter& step, VectorHandle& candidate, VectorHandle& reflected) {
+        if (step.vector != nullptr)
+            return api::Error(api::ErrorCode::kUnsupportedCapability,
+                                                "backend does not support vector-backed scalars");
+        return fusedProjectedPrimalUpdateAndReflect(
+                problem, workspace, current, product, step.value, candidate, reflected);
+    }
+    virtual api::Error fusedProjectedDualUpdateAndReflect(
+            const ProblemHandle& problem, WorkspaceHandle& workspace,
+            const VectorHandle& current, const VectorHandle& product,
+            const ScalarParameter& step, VectorHandle& candidate, VectorHandle& reflected) {
+        if (step.vector != nullptr)
+            return api::Error(api::ErrorCode::kUnsupportedCapability,
+                                                "backend does not support vector-backed scalars");
+        return fusedProjectedDualUpdateAndReflect(
+                problem, workspace, current, product, step.value, candidate, reflected);
+    }
+    virtual api::Error fusedVectorBlend(
+            WorkspaceHandle& workspace, const VectorHandle& primal_left,
+            const VectorHandle& dual_left, const VectorHandle& primal_right,
+            const VectorHandle& dual_right, const ScalarParameter& weight,
+            VectorHandle& primal_output, VectorHandle& dual_output) {
+        if (weight.vector != nullptr)
+            return api::Error(api::ErrorCode::kUnsupportedCapability,
+                                                "backend does not support vector-backed scalars");
+        return fusedVectorBlend(workspace, primal_left, dual_left, primal_right,
+                                                        dual_right, weight.value, primal_output, dual_output);
+    }
+  virtual api::Error multiplyAndProjectedDualUpdateAndReflect(
+      const ProblemHandle& problem, WorkspaceHandle& workspace,
+      const VectorHandle& input, const VectorHandle& current,
+      const ScalarParameter& step, VectorHandle& product,
+      VectorHandle& candidate, VectorHandle& reflected) {
+    api::Error error = multiply(problem, input, product);
+    if (!error.ok()) return error;
+    return step.vector != nullptr
+        ? fusedProjectedDualUpdateAndReflect(problem, workspace, current,
+            product, step, candidate, reflected)
+        : fusedProjectedDualUpdateAndReflect(problem, workspace, current,
+            product, step.value, candidate, reflected);
+  }
   virtual api::Error fusedAverageUpdate(WorkspaceHandle& workspace,
                                         const VectorHandle& primal,
                                         const VectorHandle& dual, double weight,
@@ -198,6 +252,22 @@ class Backend {
   virtual api::Error differenceNorm2(const VectorHandle& left,
                                      const VectorHandle& right,
                                      double& result) = 0;
+    virtual api::Error reduceFixedPointMetrics(
+            const VectorHandle& delta_primal, const VectorHandle& delta_dual,
+            const VectorHandle& aty_delta, double& primal_norm, double& dual_norm,
+            double& cross_term) {
+        double primal = 0.0, dual = 0.0, cross = 0.0;
+        api::Error error = norm2(delta_primal, primal);
+        if (!error.ok()) return error;
+        error = norm2(delta_dual, dual);
+        if (!error.ok()) return error;
+        error = dot(delta_primal, aty_delta, cross);
+        if (!error.ok()) return error;
+        primal_norm = primal;
+        dual_norm = dual;
+        cross_term = cross;
+        return api::Error();
+    }
   virtual api::Error reduceConvergenceMetrics(
       const VectorHandle& primal_residual, const VectorHandle& dual_residual,
       double primal_objective, double dual_objective,

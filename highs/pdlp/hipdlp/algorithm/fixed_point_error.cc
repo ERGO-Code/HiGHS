@@ -81,42 +81,43 @@ api::Error prepareFixedPointError(
         "HiPDLP fixed-point error omega and eta must be finite and positive");
   }
 
-  api::Error error = backend.copy(*input.next_primal, *input.delta_primal);
+  api::Error error = backend.difference(*input.next_primal, *input.reflected_primal,
+                                       *input.delta_primal);
   if (!error.ok()) return error;
-  error = backend.axpy(-1.0, *input.reflected_primal, *input.delta_primal);
-  if (!error.ok()) return error;
-  error = backend.copy(*input.next_dual, *input.delta_dual);
-  if (!error.ok()) return error;
-  error = backend.axpy(-1.0, *input.reflected_dual, *input.delta_dual);
+  error = backend.difference(*input.next_dual, *input.reflected_dual, *input.delta_dual);
   if (!error.ok()) return error;
   return backend.multiplyTranspose(problem, *input.delta_dual, *input.aty_delta);
 }
 
 FixedPointErrorResult evaluateFixedPointError(
     backend::Backend& backend, const backend::ProblemHandle& problem,
-    const FixedPointErrorInput& input) {
-  api::Error error = prepareFixedPointError(backend, problem, input);
-  if (!error.ok()) return failure(error);
+    const FixedPointErrorInput& input, const bool products_prepared) {
+  if (!problem.valid() || !validDistinctHandles(input) ||
+      !finitePositive(input.omega) || !finitePositive(input.eta))
+    return failure(invalidArgument("HiPDLP fixed-point inputs are invalid"));
+  api::Error error;
+  if (!products_prepared) {
+    error = prepareFixedPointError(backend, problem, input);
+    if (!error.ok()) return failure(error);
+  }
 
   double primal_norm = 0.0;
-  error = backend.norm2(*input.delta_primal, primal_norm);
+  double dual_norm = 0.0;
+  double cross_term = 0.0;
+  error = backend.reduceFixedPointMetrics(*input.delta_primal, *input.delta_dual,
+                                          *input.aty_delta, primal_norm,
+                                          dual_norm, cross_term);
   if (!error.ok()) return failure(error);
   if (!finiteNonnegative(primal_norm)) {
     return failure(invalidArgument(
         "HiPDLP fixed-point primal displacement norm is invalid"));
   }
 
-  double dual_norm = 0.0;
-  error = backend.norm2(*input.delta_dual, dual_norm);
-  if (!error.ok()) return failure(error);
   if (!finiteNonnegative(dual_norm)) {
     return failure(invalidArgument(
         "HiPDLP fixed-point dual displacement norm is invalid"));
   }
 
-  double cross_term = 0.0;
-  error = backend.dot(*input.delta_primal, *input.aty_delta, cross_term);
-  if (!error.ok()) return failure(error);
   FixedPointErrorResult result = computeFixedPointError(
       primal_norm, dual_norm, cross_term, input.omega, input.eta);
   if (!result.ok()) return result;

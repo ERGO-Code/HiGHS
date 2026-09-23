@@ -46,6 +46,7 @@ struct SolverOptions {
   model::ScalingOptions scaling;
   EffectivePolicy policy;
   double optimality_tolerance;
+  bool early_kkt_check;
 
   SolverOptions();
 };

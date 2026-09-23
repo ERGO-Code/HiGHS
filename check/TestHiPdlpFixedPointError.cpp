@@ -153,6 +153,32 @@ hipdlp::algorithm::FixedPointErrorResult evaluate(EvaluationFixture& fixture,
       makeInput(fixtureHandles(fixture), omega, eta));
 }
 
+#ifdef HIGHS_HIPDLP_CUDA_DETECTED
+TEST_CASE("hi-pdlp-cuda-fixed-point-reuses-prepared-products",
+      "[hipdlp][cuda][fixed-point-error][check-optimization]") {
+  auto fixture = makeFixture(hipdlp::backend::Kind::kCuda, makeScalarLp(1.0),
+               {1.0}, {2.0}, {0.0}, {0.0});
+  const auto input = makeInput(fixtureHandles(*fixture), 1.0, 1.0);
+  hipdlp::backend::cuda::testing::resetResourceAudit();
+  REQUIRE(hipdlp::algorithm::prepareFixedPointError(
+    *fixture->backend, fixture->problem, input).ok());
+  const auto preparation = hipdlp::backend::cuda::testing::resourceAudit();
+  CHECK(preparation.device_to_device_transfers == 0);
+  CHECK(preparation.direct_primitive_enqueue_calls == 4);
+  hipdlp::backend::cuda::testing::resetResourceAudit();
+  const auto result = hipdlp::algorithm::evaluateFixedPointError(
+    *fixture->backend, fixture->problem, input, true);
+  REQUIRE(result.ok());
+  CHECK(result.fixed_point_error == 3.0);
+  const auto audit = hipdlp::backend::cuda::testing::resourceAudit();
+  CHECK(audit.direct_primitive_enqueue_calls == 4);
+  CHECK(audit.device_to_device_transfers == 0);
+  CHECK(audit.device_to_host_transfers == 2);
+  CHECK(audit.synchronization_calls == 1);
+  CHECK(audit.allocation_calls == 0);
+}
+#endif
+
 TEST_CASE("hi-pdlp-fixed-point-validity-is-independent-of-readback-count",
           "[hipdlp][phase8][fixed-point-error]") {
   hipdlp::algorithm::FixedPointErrorResult uncomputed;
@@ -468,9 +494,9 @@ TEST_CASE("hi-pdlp-fixed-point-error-cpu-cuda-agree-without-new-resources",
   CHECK(audit.descriptor_creations == 0);
   CHECK(audit.descriptor_destructions == 0);
   CHECK(audit.host_to_device_transfers == 0);
-  CHECK(audit.device_to_host_transfers ==
-        2 * (cuda_result.diagnostics.device_to_host_scalar_readbacks +
-             repeated_cuda_result.diagnostics.device_to_host_scalar_readbacks));
+  CHECK(audit.device_to_host_transfers == 4);
+  CHECK(audit.device_to_host_bytes == 2 * (3 * sizeof(double) + sizeof(int)));
+  CHECK(audit.synchronization_calls == 2);
   CHECK(download(*cuda->backend, cuda->next_primal) == next_primal);
   CHECK(download(*cuda->backend, cuda->next_dual) == next_dual);
   CHECK(download(*cuda->backend, cuda->reflected_primal) == reflected_primal);

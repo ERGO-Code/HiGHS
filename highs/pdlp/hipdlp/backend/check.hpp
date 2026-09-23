@@ -60,6 +60,10 @@ struct CheckResult {
   double primal_anchor_distance;
   double dual_anchor_distance;
   bool requires_host_oracle;
+  bool fixed_point_valid;
+  bool anchor_distances_valid;
+  bool fixed_point_prepared;
+  bool certificate_screen_valid;
   bool primal_ray_possible;
   bool farkas_possible;
   std::size_t scalar_count;
@@ -75,6 +79,10 @@ struct CheckResult {
         primal_anchor_distance(0.0),
         dual_anchor_distance(0.0),
         requires_host_oracle(false),
+        fixed_point_valid(false),
+        anchor_distances_valid(false),
+        fixed_point_prepared(false),
+        certificate_screen_valid(false),
         primal_ray_possible(true),
         farkas_possible(true),
         scalar_count(0),

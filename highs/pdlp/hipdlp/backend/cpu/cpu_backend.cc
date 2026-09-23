@@ -281,6 +281,9 @@ api::Error CpuBackend::evaluateCheck(const model::Problem& problem,
   computed.scalar_count = 7 + (input.fixed_point ? 3 : 0) +
                          (input.anchor_distances ? 2 : 0);
   computed.valid = true;
+  computed.fixed_point_valid = input.fixed_point;
+  computed.fixed_point_prepared = input.fixed_point;
+  computed.anchor_distances_valid = input.anchor_distances;
   result = computed;
   return api::Error();
 }

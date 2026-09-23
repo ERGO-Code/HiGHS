@@ -1,5 +1,7 @@
 #include <cfloat>
 #include <cmath>
+#include <cstdint>
+#include <limits>
 
 #include "pdlp/hipdlp/backend/cuda/cuda_kernels.cuh"
 
@@ -11,6 +13,11 @@ namespace {
 
 const int kBlockSize = 256;
 const int kMaximumBlocks = 65535;
+using GridIndex = std::uint64_t;
+static_assert(std::numeric_limits<GridIndex>::max() -
+          static_cast<std::uint64_t>(std::numeric_limits<HighsInt>::max()) >=
+        static_cast<std::uint64_t>(kMaximumBlocks) * kBlockSize,
+        "grid stride must not overflow at the vector size limit");
 
 int blockCount(const HighsInt size) {
   if (size <= 0) return 0;
@@ -56,10 +63,29 @@ __global__ void axpyKernel(const HighsInt size, const double factor,
   }
 }
 
+__global__ void differenceKernel(const HighsInt size, const double* left,
+                                 const double* right, double* output,
+                                 int* error_flag) {
+  const GridIndex stride = static_cast<GridIndex>(blockDim.x) * gridDim.x;
+  for (GridIndex index = static_cast<GridIndex>(blockIdx.x) * blockDim.x + threadIdx.x;
+    index < static_cast<GridIndex>(size); index += stride) {
+    const double value = __dsub_rn(left[index], right[index]);
+    output[index] = value;
+    recordNonFinite(value, error_flag);
+  }
+}
+
+template <bool Reflect>
 __global__ void projectedPrimalKernel(
     const HighsInt size, const double* current, const double* transpose_product,
     const double* costs, const double* lower, const double* upper,
-    const double step_size, double* output, int* error_flag) {
+    const double literal_step, double* output, double* reflected, int* error_flag,
+    const double* step_parameter) {
+  const double step_size = step_parameter == nullptr ? literal_step : *step_parameter;
+  if (step_parameter != nullptr && (!isfinite(step_size) || step_size < 0.0)) {
+    atomicExch(error_flag, 1);
+    return;
+  }
   const HighsInt stride = static_cast<HighsInt>(blockDim.x) * gridDim.x;
   for (HighsInt index =
            static_cast<HighsInt>(blockIdx.x) * blockDim.x + threadIdx.x;
@@ -70,30 +96,60 @@ __global__ void projectedPrimalKernel(
     if (value > upper[index]) value = upper[index];
     output[index] = value;
     recordNonFinite(value, error_flag);
+    if (Reflect) {
+      const double doubled = __dmul_rn(2.0, value);
+      const double reflection = __dsub_rn(doubled, current[index]);
+      reflected[index] = reflection;
+      recordNonFinite(doubled, error_flag);
+      recordNonFinite(reflection, error_flag);
+    }
   }
 }
 
+template <bool Reflect>
 __global__ void projectedDualKernel(const HighsInt size, const double* current,
                                     const double* extrapolated_product,
                                     const double* row_lower,
                                     const HighsBool* equality_rows,
-                                    const double step_size, double* output,
-                                    int* error_flag) {
+                                    const double literal_step, double* output,
+                                    double* reflected, int* error_flag,
+                                    const double* step_parameter) {
+  const double step_size = step_parameter == nullptr ? literal_step : *step_parameter;
+  if (step_parameter != nullptr && (!isfinite(step_size) || step_size < 0.0)) {
+    atomicExch(error_flag, 1);
+    return;
+  }
   const HighsInt stride = static_cast<HighsInt>(blockDim.x) * gridDim.x;
   for (HighsInt index =
            static_cast<HighsInt>(blockIdx.x) * blockDim.x + threadIdx.x;
        index < size; index += stride) {
+     recordNonFinite(extrapolated_product[index], error_flag);
     double value = current[index] +
                    step_size * (row_lower[index] - extrapolated_product[index]);
     if (!equality_rows[index] && value < 0.0) value = 0.0;
     output[index] = value;
     recordNonFinite(value, error_flag);
+    if (Reflect) {
+      const double doubled = __dmul_rn(2.0, value);
+      const double reflection = __dsub_rn(doubled, current[index]);
+      reflected[index] = reflection;
+      recordNonFinite(doubled, error_flag);
+      recordNonFinite(reflection, error_flag);
+    }
   }
 }
 
 __global__ void vectorBlendKernel(const HighsInt size, const double* left,
-                                  const double* right, const double left_weight,
-                                  double* output, int* error_flag) {
+                                  const double* right, const double literal_weight,
+                                  double* output, int* error_flag,
+                                  const double* weight_parameter) {
+  const double left_weight = weight_parameter == nullptr
+      ? literal_weight : *weight_parameter;
+  if (weight_parameter != nullptr &&
+      (!isfinite(left_weight) || left_weight < 0.0 || left_weight > 1.0)) {
+    atomicExch(error_flag, 1);
+    return;
+  }
   const double right_weight = 1.0 - left_weight;
   const HighsInt stride = static_cast<HighsInt>(blockDim.x) * gridDim.x;
   for (HighsInt index =
@@ -103,6 +159,34 @@ __global__ void vectorBlendKernel(const HighsInt size, const double* left,
         left_weight * left[index] + right_weight * right[index];
     output[index] = value;
     recordNonFinite(value, error_flag);
+  }
+}
+
+__global__ void vectorPairBlendKernel(const HighsInt primal_size,
+    const HighsInt dual_size, const double* primal_left, const double* primal_right,
+    const double* dual_left, const double* dual_right, const double literal_weight,
+    double* primal_output, double* dual_output, int* error_flag,
+    const double* weight_parameter) {
+  const double left_weight = weight_parameter == nullptr ? literal_weight : *weight_parameter;
+  if (!isfinite(left_weight) || left_weight < 0.0 || left_weight > 1.0) {
+    atomicExch(error_flag, 1);
+    return;
+  }
+  const double right_weight = 1.0 - left_weight;
+  const HighsInt size = primal_size > dual_size ? primal_size : dual_size;
+  const GridIndex stride = static_cast<GridIndex>(blockDim.x) * gridDim.x;
+  for (GridIndex index = static_cast<GridIndex>(blockIdx.x) * blockDim.x + threadIdx.x;
+       index < static_cast<GridIndex>(size); index += stride) {
+    if (index < static_cast<GridIndex>(primal_size)) {
+      const double value = left_weight * primal_left[index] + right_weight * primal_right[index];
+      primal_output[index] = value;
+      recordNonFinite(value, error_flag);
+    }
+    if (index < static_cast<GridIndex>(dual_size)) {
+      const double value = left_weight * dual_left[index] + right_weight * dual_right[index];
+      dual_output[index] = value;
+      recordNonFinite(value, error_flag);
+    }
   }
 }
 
@@ -190,10 +274,17 @@ enum CheckNormIndex {
 
 enum CheckSumIndex { kCheckPrimalObjective, kCheckDualObjective, kCheckDeltaDot };
 
+__device__ void requestCheckFallback(CheckPartial& partial, const int reason) {
+  if (reason == kCheckRawFallback) partial.requires_host_oracle = 1;
+  else partial.optional_invalid |= reason;
+}
+
 __device__ void addCheckNorm(CheckNormState& norm, const double value,
-                             CheckPartial& partial, const bool optional = false) {
+                             CheckPartial& partial, const int reason = kCheckRawFallback) {
   if (!isfinite(value)) {
-    (optional ? partial.optional_invalid : partial.requires_host_oracle) = 1;
+    requestCheckFallback(partial, reason);
+    if (reason == kCheckFixedPointFallback)
+      partial.optional_invalid |= kCheckUnpreparedProducts;
     return;
   }
   const double magnitude = fabs(value);
@@ -228,9 +319,9 @@ __device__ void mergeCheckNorm(CheckNormState& left,
 }
 
 __device__ void addCheckSum(CheckSumState& sum, const double value,
-                            CheckPartial& partial, const bool optional = false) {
+                            CheckPartial& partial, const int reason = kCheckRawFallback) {
   if (!isfinite(value)) {
-    (optional ? partial.optional_invalid : partial.requires_host_oracle) = 1;
+    requestCheckFallback(partial, reason);
     return;
   }
   const double magnitude = fabs(value);
@@ -240,7 +331,7 @@ __device__ void addCheckSum(CheckSumState& sum, const double value,
   const double combined = __dadd_rn(sum.value, value);
   const double absolute = __dadd_rn(sum.absolute_sum, fabs(value));
   if (!isfinite(combined) || !isfinite(absolute))
-    (optional ? partial.optional_invalid : partial.requires_host_oracle) = 1;
+    requestCheckFallback(partial, reason);
   sum.value = isfinite(combined) ? combined : 0.0;
   sum.absolute_sum = isfinite(absolute) ? absolute : 0.0;
 }
@@ -261,8 +352,8 @@ __device__ void mergeCheckPartial(CheckPartial& left,
     const double absolute = __dadd_rn(left.sums[index].absolute_sum,
                                      right.sums[index].absolute_sum);
     if (!isfinite(combined) || !isfinite(absolute))
-      (index == kCheckDeltaDot ? left.optional_invalid
-                              : left.requires_host_oracle) = 1;
+      requestCheckFallback(left, index == kCheckDeltaDot
+                                     ? kCheckFixedPointFallback : kCheckRawFallback);
     left.sums[index].value = isfinite(combined) ? combined : 0.0;
     left.sums[index].absolute_sum = isfinite(absolute) ? absolute : 0.0;
   }
@@ -270,26 +361,26 @@ __device__ void mergeCheckPartial(CheckPartial& left,
 
 __device__ double finishCheckNorm(const CheckNormState& norm,
                                  CheckPartial& partial,
-                                 const bool optional = false) {
+                                 const int reason = kCheckRawFallback) {
   const double value = norm.scale == 0.0
                            ? 0.0
                            : __dmul_rn(norm.scale, __dsqrt_rn(norm.sum_of_squares));
   if (!isfinite(value))
-    (optional ? partial.optional_invalid : partial.requires_host_oracle) = 1;
+    requestCheckFallback(partial, reason);
   return value;
 }
 
 __device__ double finishCheckSum(CheckSumState& sum, const double offset,
                                 const double count, CheckPartial& partial,
-                                const bool optional = false) {
-  addCheckSum(sum, offset, partial, optional);
+                                const int reason = kCheckRawFallback) {
+  addCheckSum(sum, offset, partial, reason);
   const double cancellation_limit =
       __dmul_rn(__dmul_rn(64.0 * DBL_EPSILON, count + 1.0), sum.absolute_sum);
   if (sum.absolute_sum > DBL_MAX / 4.0 ||
       (sum.absolute_sum > 0.0 && fabs(sum.value) <= cancellation_limit) ||
       (sum.minimum_nonzero > 0.0 &&
        sum.minimum_nonzero <= __dmul_rn(DBL_EPSILON, sum.absolute_sum)))
-    (optional ? partial.optional_invalid : partial.requires_host_oracle) = 1;
+    requestCheckFallback(partial, reason);
   return sum.value;
 }
 
@@ -409,12 +500,12 @@ __global__ void checkPartialsKernel(const DeviceCheckProblem problem,
                   __dmul_rn(problem.row_lower[index], dual), partial);
       if (input.fixed_point)
         addCheckNorm(partial.norms[kCheckDualDelta], input.delta_dual[index],
-                     partial, true);
+                     partial, kCheckFixedPointFallback);
       if (input.anchor_distances) {
         const double anchor = input.dual_anchor[index];
-        if (!isfinite(anchor)) partial.optional_invalid = 1;
+        if (!isfinite(anchor)) partial.optional_invalid |= kCheckAnchorFallback;
         addCheckNorm(partial.norms[kCheckDualAnchor], __dsub_rn(dual, anchor),
-                     partial, true);
+               partial, kCheckAnchorFallback);
       }
     }
     if (index < problem.num_cols) {
@@ -442,16 +533,17 @@ __global__ void checkPartialsKernel(const DeviceCheckProblem problem,
       if (input.fixed_point) {
         const double delta = input.delta_primal[index];
         const double product = input.aty_delta[index];
-        if (!isfinite(product)) partial.optional_invalid = 1;
-        addCheckNorm(partial.norms[kCheckPrimalDelta], delta, partial, true);
+        if (!isfinite(product))
+          partial.optional_invalid |= kCheckFixedPointFallback | kCheckUnpreparedProducts;
+        addCheckNorm(partial.norms[kCheckPrimalDelta], delta, partial, kCheckFixedPointFallback);
         addCheckSum(partial.sums[kCheckDeltaDot], __dmul_rn(delta, product),
-                    partial, true);
+                    partial, kCheckFixedPointFallback);
       }
       if (input.anchor_distances) {
         const double anchor = input.primal_anchor[index];
-        if (!isfinite(anchor)) partial.optional_invalid = 1;
+        if (!isfinite(anchor)) partial.optional_invalid |= kCheckAnchorFallback;
         addCheckNorm(partial.norms[kCheckPrimalAnchor], __dsub_rn(primal, anchor),
-                     partial, true);
+               partial, kCheckAnchorFallback);
       }
     }
   }
@@ -500,24 +592,25 @@ __global__ void checkPacketKernel(const DeviceCheckProblem problem,
   guardCheckStopping(problem, input, packet, total);
   if (input.fixed_point) {
     packet.primal_delta_norm =
-      finishCheckNorm(total.norms[kCheckPrimalDelta], total, true);
+      finishCheckNorm(total.norms[kCheckPrimalDelta], total, kCheckFixedPointFallback);
     packet.dual_delta_norm =
-      finishCheckNorm(total.norms[kCheckDualDelta], total, true);
+      finishCheckNorm(total.norms[kCheckDualDelta], total, kCheckFixedPointFallback);
     packet.delta_dot = finishCheckSum(total.sums[kCheckDeltaDot], 0.0,
                       static_cast<double>(problem.num_cols), total,
-                      true);
+                      kCheckFixedPointFallback);
   }
   if (input.anchor_distances) {
     packet.primal_anchor_distance =
-      finishCheckNorm(total.norms[kCheckPrimalAnchor], total, true);
+      finishCheckNorm(total.norms[kCheckPrimalAnchor], total, kCheckAnchorFallback);
     packet.dual_anchor_distance =
-      finishCheckNorm(total.norms[kCheckDualAnchor], total, true);
+      finishCheckNorm(total.norms[kCheckDualAnchor], total, kCheckAnchorFallback);
   }
   if (*error_flag == 0 && total.numerical_error != 0) *error_flag = 1;
   packet.error_flag = *error_flag;
-    packet.requires_host_oracle =
-      total.requires_host_oracle || total.optional_invalid ||
-      (input.fixed_point && *input.optional_error != 0);
+  packet.fallback_flags = (total.requires_host_oracle ? kCheckRawFallback : 0) |
+                           total.optional_invalid;
+  if (input.fixed_point && *input.optional_error != 0)
+    packet.fallback_flags |= kCheckFixedPointFallback | kCheckUnpreparedProducts;
   packet.primal_ray_possible = 1;
   packet.farkas_possible = 1;
   *output = packet;
@@ -751,9 +844,13 @@ cudaError_t preloadKernels() {
       reinterpret_cast<const void*>(fillKernel),
       reinterpret_cast<const void*>(scaleKernel),
       reinterpret_cast<const void*>(axpyKernel),
-      reinterpret_cast<const void*>(projectedPrimalKernel),
-      reinterpret_cast<const void*>(projectedDualKernel),
+      reinterpret_cast<const void*>(differenceKernel),
+      reinterpret_cast<const void*>(projectedPrimalKernel<false>),
+      reinterpret_cast<const void*>(projectedPrimalKernel<true>),
+      reinterpret_cast<const void*>(projectedDualKernel<false>),
+      reinterpret_cast<const void*>(projectedDualKernel<true>),
       reinterpret_cast<const void*>(vectorBlendKernel),
+      reinterpret_cast<const void*>(vectorPairBlendKernel),
       reinterpret_cast<const void*>(averageKernel),
       reinterpret_cast<const void*>(finiteCheckKernel),
       reinterpret_cast<const void*>(dotKernel),
@@ -866,6 +963,16 @@ cudaError_t launchAxpy(const cudaStream_t stream, const HighsInt size,
   return cudaPeekAtLastError();
 }
 
+cudaError_t launchDifference(const cudaStream_t stream, const HighsInt size,
+                             const double* left, const double* right,
+                             double* output, int* error_flag) {
+  const int blocks = blockCount(size);
+  if (blocks == 0) return cudaSuccess;
+  differenceKernel<<<blocks, kBlockSize, 0, stream>>>(size, left, right, output,
+                                                    error_flag);
+  return cudaPeekAtLastError();
+}
+
 cudaError_t launchProjectedPrimalUpdate(
     const cudaStream_t stream, const HighsInt size, const double* current,
     const double* transpose_product, const double* costs, const double* lower,
@@ -873,9 +980,9 @@ cudaError_t launchProjectedPrimalUpdate(
     int* error_flag) {
   const int blocks = blockCount(size);
   if (blocks == 0) return cudaSuccess;
-  projectedPrimalKernel<<<blocks, kBlockSize, 0, stream>>>(
+    projectedPrimalKernel<false><<<blocks, kBlockSize, 0, stream>>>(
       size, current, transpose_product, costs, lower, upper, step_size, output,
-      error_flag);
+      nullptr, error_flag, nullptr);
   return cudaPeekAtLastError();
 }
 
@@ -886,20 +993,59 @@ cudaError_t launchProjectedDualUpdate(
     int* error_flag) {
   const int blocks = blockCount(size);
   if (blocks == 0) return cudaSuccess;
-  projectedDualKernel<<<blocks, kBlockSize, 0, stream>>>(
+  projectedDualKernel<false><<<blocks, kBlockSize, 0, stream>>>(
       size, current, extrapolated_product, row_lower, equality_rows, step_size,
-      output, error_flag);
+      output, nullptr, error_flag, nullptr);
+  return cudaPeekAtLastError();
+}
+
+cudaError_t launchProjectedPrimalUpdateAndReflect(
+    const cudaStream_t stream, const HighsInt size, const double* current,
+    const double* transpose_product, const double* costs, const double* lower,
+    const double* upper, const double step_size, double* output,
+    double* reflected, int* error_flag, const double* step_parameter) {
+  const int blocks = blockCount(size);
+  if (blocks == 0) return cudaSuccess;
+  projectedPrimalKernel<true><<<blocks, kBlockSize, 0, stream>>>(
+      size, current, transpose_product, costs, lower, upper, step_size, output,
+      reflected, error_flag, step_parameter);
+  return cudaPeekAtLastError();
+}
+
+cudaError_t launchProjectedDualUpdateAndReflect(
+    const cudaStream_t stream, const HighsInt size, const double* current,
+    const double* extrapolated_product, const double* row_lower,
+    const HighsBool* equality_rows, const double step_size, double* output,
+    double* reflected, int* error_flag, const double* step_parameter) {
+  const int blocks = blockCount(size);
+  if (blocks == 0) return cudaSuccess;
+  projectedDualKernel<true><<<blocks, kBlockSize, 0, stream>>>(
+      size, current, extrapolated_product, row_lower, equality_rows, step_size,
+      output, reflected, error_flag, step_parameter);
   return cudaPeekAtLastError();
 }
 
 cudaError_t launchVectorBlend(const cudaStream_t stream, const HighsInt size,
                               const double* left, const double* right,
                               const double left_weight, double* output,
-                              int* error_flag) {
+                              int* error_flag, const double* weight_parameter) {
   const int blocks = blockCount(size);
   if (blocks == 0) return cudaSuccess;
   vectorBlendKernel<<<blocks, kBlockSize, 0, stream>>>(
-      size, left, right, left_weight, output, error_flag);
+      size, left, right, left_weight, output, error_flag, weight_parameter);
+  return cudaPeekAtLastError();
+}
+
+cudaError_t launchVectorPairBlend(const cudaStream_t stream, const HighsInt primal_size,
+    const HighsInt dual_size, const double* primal_left, const double* primal_right,
+    const double* dual_left, const double* dual_right, const double left_weight,
+    double* primal_output, double* dual_output, int* error_flag,
+    const double* weight_parameter) {
+  const int blocks = blockCount(primal_size > dual_size ? primal_size : dual_size);
+  if (blocks == 0) return cudaSuccess;
+  vectorPairBlendKernel<<<blocks, kBlockSize, 0, stream>>>(primal_size, dual_size,
+      primal_left, primal_right, dual_left, dual_right, left_weight,
+      primal_output, dual_output, error_flag, weight_parameter);
   return cudaPeekAtLastError();
 }
 

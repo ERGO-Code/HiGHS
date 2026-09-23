@@ -188,6 +188,31 @@ TEST_CASE("hi-pdlp-curtis-reid-fixed-scales",
   CHECK(second.col_scale == first.col_scale);
 }
 
+TEST_CASE("hi-pdlp-legacy-scaling-balances-diagonal-primal-dual-geometry",
+          "[pdlp][hipdlp][model][scaling][algorithm-study]") {
+  hipdlp::model::SparseMatrix matrix;
+  matrix.num_rows = 2;
+  matrix.num_cols = 2;
+  matrix.starts = {0, 1, 2};
+  matrix.indices = {0, 1};
+  matrix.values = {4.0, 9.0};
+  hipdlp::model::ScalingOptions options;
+  options.mode = hipdlp::model::ScalingMode::kLegacy;
+  options.legacy_scaling_mode = kPdlpScalingRuiz | kPdlpScalingPC;
+  const hipdlp::model::ScalingResult result =
+      hipdlp::model::computeScalingPipeline(matrix, options);
+  REQUIRE(result.ok());
+  checkVectorApprox(result.scaling.row_scale, {0.5, 1.0 / 3.0});
+  checkVectorApprox(result.scaling.col_scale, {0.5, 1.0 / 3.0});
+  for (std::size_t index = 0; index < matrix.values.size(); ++index) {
+    CHECK(result.scaling.row_scale[index] ==
+          Approx(result.scaling.col_scale[index]).epsilon(1e-12));
+    CHECK(matrix.values[index] * result.scaling.row_scale[index] *
+              result.scaling.col_scale[index] ==
+          Approx(1.0).epsilon(1e-12));
+  }
+}
+
 TEST_CASE("hi-pdlp-scaling-pipeline-fixed-vectors",
           "[pdlp][hipdlp][phase3][phase3b][model][scaling]") {
   const hipdlp::model::SparseMatrix matrix = makeCurtisReidFixture();
@@ -238,14 +263,14 @@ TEST_CASE("hi-pdlp-scaling-pipeline-fixed-vectors",
       hipdlp::model::computeScalingPipeline(matrix, auto_options);
   REQUIRE(automatic.ok());
   checkVectorApprox(automatic.scaling.row_scale,
-                    {0.59460355750136062, 0.14865088937534016});
+            {0.59460355750136062, 0.14865088937534016});
   checkVectorApprox(automatic.scaling.col_scale,
-                    {1.1892071150027208, 0.5946035575013604});
-  CHECK(automatic.scaling.curtis_reid_sweeps == 20);
+            {1.1892071150027208, 0.5946035575013604});
+    CHECK(automatic.scaling.curtis_reid_sweeps == 20);
   CHECK(automatic.scaling.stages ==
         std::vector<hipdlp::model::ScalingStage>(
-            {hipdlp::model::ScalingStage::kCurtisReid,
-             hipdlp::model::ScalingStage::kRuiz,
+        {hipdlp::model::ScalingStage::kCurtisReid,
+         hipdlp::model::ScalingStage::kRuiz,
              hipdlp::model::ScalingStage::kPockChambolle,
              hipdlp::model::ScalingStage::kL2}));
 

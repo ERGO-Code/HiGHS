@@ -559,7 +559,7 @@ class CublasHandle {
     status = cublasSetStream(value_, stream);
     if (status != CUBLAS_STATUS_SUCCESS)
       return cublasFailure("stream binding", status);
-    status = cublasSetPointerMode(value_, CUBLAS_POINTER_MODE_HOST);
+    status = cublasSetPointerMode(value_, CUBLAS_POINTER_MODE_DEVICE);
     return status == CUBLAS_STATUS_SUCCESS
                ? api::Error()
                : cublasFailure("pointer mode selection", status);
@@ -879,6 +879,7 @@ struct CudaBackend::Impl {
   DeviceBuffer<int> error_flag;
   PinnedDownloadBuffer<int> download_error;
   DeviceBuffer<double> reduction_result;
+  DeviceBuffer<double> difference_scratch;
   DeviceBuffer<double> spmv_alpha;
   DeviceBuffer<double> spmv_beta;
   bool recording;
@@ -1215,7 +1216,8 @@ template <typename ImplType>
 api::Error executeSpmv(ImplType& impl, const CudaProblemResource& problem,
                        const SparseStorage& matrix,
                        const CudaVectorResource& input,
-                       CudaVectorResource& output, int* error_flag) {
+                       CudaVectorResource& output, int* error_flag,
+                       const bool check_output = true) {
   if (matrix.num_nonzeros == 0)
     return launchResult(
         "empty SpMV fill kernel launch",
@@ -1229,9 +1231,54 @@ api::Error executeSpmv(ImplType& impl, const CudaProblemResource& problem,
       const_cast<unsigned char*>(problem.spmv_buffer.get()));
   if (status != CUSPARSE_STATUS_SUCCESS)
     return cusparseFailure("SpMV execution", status);
+  if (!check_output) return api::Error();
   return launchResult("SpMV finite-check kernel launch",
                       launchFiniteCheck(impl.stream.get(), output.size,
                                         output.values.get(), error_flag));
+}
+
+template <typename ImplType>
+api::Error enqueueNorm(ImplType& impl, const HighsInt size, const double* input,
+                        double* output) {
+  if (size == 0)
+    return launchResult("empty norm reduction",
+        launchFill(impl.stream.get(), 1, 0.0, output));
+#if CUBLAS_VER_MAJOR >= 12
+  HIPDLP_CUDA_RECORD_PRIMITIVE();
+  const cublasStatus_t status = cublasDnrm2_64(
+      impl.cublas.get(), static_cast<int64_t>(size), input, 1, output);
+#else
+  if (size > std::numeric_limits<int>::max())
+    return launchResult("wide norm reduction",
+        launchNorm2(impl.stream.get(), size, input, output, impl.error_flag.get()));
+  HIPDLP_CUDA_RECORD_PRIMITIVE();
+  const cublasStatus_t status = cublasDnrm2(
+      impl.cublas.get(), static_cast<int>(size), input, 1, output);
+#endif
+  return status == CUBLAS_STATUS_SUCCESS ? api::Error()
+                                         : cublasFailure("norm reduction", status);
+}
+
+template <typename ImplType>
+api::Error enqueueDot(ImplType& impl, const HighsInt size, const double* left,
+                       const double* right, double* output) {
+  if (size == 0)
+    return launchResult("empty dot reduction",
+        launchFill(impl.stream.get(), 1, 0.0, output));
+#if CUBLAS_VER_MAJOR >= 12
+  HIPDLP_CUDA_RECORD_PRIMITIVE();
+  const cublasStatus_t status = cublasDdot_64(
+      impl.cublas.get(), static_cast<int64_t>(size), left, 1, right, 1, output);
+#else
+  if (size > std::numeric_limits<int>::max())
+    return launchResult("wide dot reduction",
+        launchDot(impl.stream.get(), size, left, right, output, impl.error_flag.get()));
+  HIPDLP_CUDA_RECORD_PRIMITIVE();
+  const cublasStatus_t status = cublasDdot(
+      impl.cublas.get(), static_cast<int>(size), left, 1, right, 1, output);
+#endif
+  return status == CUBLAS_STATUS_SUCCESS ? api::Error()
+                                         : cublasFailure("dot reduction", status);
 }
 
 bool dependenciesAlive(const CudaCommandBufferResource& command_buffer) {
@@ -1513,21 +1560,17 @@ api::Error CudaBackend::prepareCheckFixedPoint(
       impl_->stream.get());
   if (status != cudaSuccess)
     return check.fail(cudaFailure("check optional error reset", status));
-  api::Error error = copy(primal, delta_primal);
-  if (!error.ok()) return check.fail(error);
-  error = launchResult(
+    api::Error error = launchResult(
       "check primal delta kernel launch",
-      launchAxpy(impl_->stream.get(), cuda_problem->num_cols, -1.0,
-                 vectors[2]->values.get(), vectorResource(delta_primal)->values.get(),
-                 check.optional_error.get()));
-  if (!error.ok()) return check.fail(error);
-  error = copy(dual, delta_dual);
+      launchDifference(impl_->stream.get(), cuda_problem->num_cols,
+               vectors[0]->values.get(), vectors[2]->values.get(),
+               vectorResource(delta_primal)->values.get(), check.optional_error.get()));
   if (!error.ok()) return check.fail(error);
   error = launchResult(
       "check dual delta kernel launch",
-      launchAxpy(impl_->stream.get(), cuda_problem->num_rows, -1.0,
-                 vectors[3]->values.get(), vectorResource(delta_dual)->values.get(),
-                 check.optional_error.get()));
+      launchDifference(impl_->stream.get(), cuda_problem->num_rows,
+               vectors[1]->values.get(), vectors[3]->values.get(),
+               vectorResource(delta_dual)->values.get(), check.optional_error.get()));
   if (!error.ok()) return check.fail(error);
   error = executeSpmv(*impl_, *cuda_problem, cuda_problem->transpose,
                       *vectors[5], *vectorResource(aty_delta),
@@ -1605,10 +1648,11 @@ api::Error CudaBackend::evaluateCheck(const model::Problem& problem,
 
   CudaCertificateStorage& certificate = check.certificate;
   const bool oracle_rounding_supported = certificateNormEnvironmentSupported();
-  if (oracle_rounding_supported &&
+    const bool screen_supported = oracle_rounding_supported &&
       static_cast<double>(certificate.data.num_rows) +
               certificate.data.num_cols <
-          4503599627370496.0) {
+      4503599627370496.0;
+    if (screen_supported) {
     error = launchResult(
         "certificate screen kernel launch",
         launchCertificateScreen(
@@ -1642,11 +1686,20 @@ api::Error CudaBackend::evaluateCheck(const model::Problem& problem,
   const bool stopping_enabled = input.primal_tolerance > 0.0 ||
                                 input.dual_tolerance > 0.0 ||
                                 input.gap_tolerance > 0.0;
-  computed.requires_host_oracle = packet.requires_host_oracle != 0 ||
+  computed.requires_host_oracle = (packet.fallback_flags & kCheckRawFallback) != 0 ||
                                  (stopping_enabled && !oracle_rounding_supported);
-  if (!computed.requires_host_oracle) {
+  computed.fixed_point_prepared = input.fixed_point &&
+      (packet.fallback_flags & kCheckUnpreparedProducts) == 0;
+  computed.fixed_point_valid = computed.fixed_point_prepared &&
+      (packet.fallback_flags & kCheckFixedPointFallback) == 0;
+  computed.anchor_distances_valid = input.anchor_distances &&
+      (packet.fallback_flags & kCheckAnchorFallback) == 0;
+  computed.certificate_screen_valid = screen_supported;
+  if (screen_supported) {
     computed.primal_ray_possible = packet.primal_ray_possible != 0;
     computed.farkas_possible = packet.farkas_possible != 0;
+  }
+  if (!computed.requires_host_oracle) {
     computed.raw.primal_residual = packet.primal_residual;
     computed.raw.dual_residual = packet.dual_residual;
     computed.raw.objective_gap = packet.objective_gap;
@@ -1654,14 +1707,19 @@ api::Error CudaBackend::evaluateCheck(const model::Problem& problem,
     computed.raw.dual_objective = packet.dual_objective;
     computed.raw.unscaled_rhs_norm = packet.unscaled_rhs_norm;
     computed.raw.unscaled_cost_norm = packet.unscaled_cost_norm;
+    computed.scalar_count = 7;
+    computed.valid = true;
+  }
+  if (computed.fixed_point_valid) {
     computed.primal_delta_norm = packet.primal_delta_norm;
     computed.dual_delta_norm = packet.dual_delta_norm;
     computed.delta_dot = packet.delta_dot;
+    computed.scalar_count += 3;
+  }
+  if (computed.anchor_distances_valid) {
     computed.primal_anchor_distance = packet.primal_anchor_distance;
     computed.dual_anchor_distance = packet.dual_anchor_distance;
-    computed.scalar_count =
-        7 + (input.fixed_point ? 3 : 0) + (input.anchor_distances ? 2 : 0);
-    computed.valid = true;
+    computed.scalar_count += 2;
   }
   result = computed;
   return api::Error();
@@ -1685,6 +1743,13 @@ api::Error CudaBackend::createVector(const HighsInt size,
     }
     error = resource->descriptor.create(size, resource->values.get());
     if (!error.ok()) return error;
+    if (static_cast<std::size_t>(size) > impl_->difference_scratch.size()) {
+      DeviceBuffer<double> scratch;
+      error = scratch.allocate(static_cast<std::size_t>(size),
+                                "preparing difference reduction scratch");
+      if (!error.ok()) return error;
+      impl_->difference_scratch = std::move(scratch);
+    }
     vector = VectorHandle(std::unique_ptr<Resource>(resource.release()));
   } catch (const std::bad_alloc&) {
     return allocationFailure("creating a vector");
@@ -1779,6 +1844,25 @@ api::Error CudaBackend::axpy(const double factor, const VectorHandle& input,
       launchAxpy(impl_->stream.get(), cuda_input->size, factor,
                  cuda_input->values.get(), cuda_output->values.get(),
                  impl_->error_flag.get()));
+}
+
+api::Error CudaBackend::difference(const VectorHandle& left,
+                                   const VectorHandle& right,
+                                   VectorHandle& output) {
+  const CudaVectorResource* first = vectorResource(left);
+  const CudaVectorResource* second = vectorResource(right);
+  CudaVectorResource* destination = vectorResource(output);
+  if (first == nullptr || second == nullptr || destination == nullptr ||
+      first->size != second->size || first->size != destination->size ||
+      destination == first || destination == second)
+    return invalidArgument("HiPDLP CUDA difference arguments are invalid");
+  impl_->recordDependency(first->lifetime);
+  impl_->recordDependency(second->lifetime);
+  impl_->recordDependency(destination->lifetime);
+  return launchResult("difference kernel launch",
+      launchDifference(impl_->stream.get(), first->size, first->values.get(),
+                       second->values.get(), destination->values.get(),
+                       impl_->error_flag.get()));
 }
 
 api::Error CudaBackend::multiply(const ProblemHandle& problem,
@@ -1882,11 +1966,183 @@ api::Error CudaBackend::fusedProjectedDualUpdate(
                                 next->values.get(), impl_->error_flag.get()));
 }
 
+api::Error CudaBackend::fusedProjectedPrimalUpdateAndReflect(
+    const ProblemHandle& problem, WorkspaceHandle& workspace,
+    const VectorHandle& current, const VectorHandle& product,
+    const double step_size, VectorHandle& candidate, VectorHandle& reflected) {
+  return fusedProjectedPrimalUpdateAndReflect(problem, workspace, current,
+      product, ScalarParameter(step_size), candidate, reflected);
+}
+
+api::Error CudaBackend::scalarParameter(const ScalarParameter& parameter,
+                                       const double*& device_value) {
+  device_value = nullptr;
+  if (parameter.vector == nullptr) return api::Error();
+  const CudaVectorResource* values = vectorResource(*parameter.vector);
+  if (values == nullptr || parameter.index < 0 || parameter.index >= values->size)
+    return invalidArgument("HiPDLP CUDA scalar parameter owner or index is invalid");
+  impl_->recordDependency(values->lifetime);
+  device_value = values->values.get() + parameter.index;
+  return api::Error();
+}
+
+api::Error CudaBackend::fusedProjectedPrimalUpdateAndReflect(
+    const ProblemHandle& problem, WorkspaceHandle& workspace,
+    const VectorHandle& current, const VectorHandle& product,
+    const ScalarParameter& step, VectorHandle& candidate, VectorHandle& reflected) {
+  const double step_size = step.value;
+  const api::Error handles = validateReflectionHandles(current, product,
+                                                       candidate, reflected);
+  if (!handles.ok()) return handles;
+  const CudaProblemResource* cuda_problem = problemResource(problem);
+  const CudaWorkspaceResource* cuda_workspace = workspaceResource(workspace);
+  const CudaVectorResource* cuda_current = vectorResource(current);
+  const CudaVectorResource* cuda_product = vectorResource(product);
+  CudaVectorResource* cuda_candidate = vectorResource(candidate);
+  CudaVectorResource* cuda_reflected = vectorResource(reflected);
+  if (!cuda_problem || !cuda_workspace || !cuda_current || !cuda_product ||
+      !cuda_candidate || !cuda_reflected || !std::isfinite(step_size) ||
+      step_size < 0.0 || cuda_workspace->num_cols != cuda_problem->num_cols ||
+      cuda_current->size != cuda_problem->num_cols ||
+      cuda_product->size != cuda_current->size ||
+      cuda_candidate->size != cuda_current->size ||
+      cuda_reflected->size != cuda_current->size)
+    return invalidArgument("HiPDLP CUDA primal projection/reflection arguments are invalid");
+  if (step.vector == &candidate || step.vector == &reflected)
+    return invalidArgument("HiPDLP CUDA scalar parameter aliases an output");
+  const double* device_step = nullptr;
+  const api::Error parameter_error = scalarParameter(step, device_step);
+  if (!parameter_error.ok()) return parameter_error;
+  impl_->recordDependency(cuda_problem->lifetime);
+  impl_->recordDependency(cuda_workspace->lifetime);
+  impl_->recordDependency(cuda_current->lifetime);
+  impl_->recordDependency(cuda_product->lifetime);
+  impl_->recordDependency(cuda_candidate->lifetime);
+  impl_->recordDependency(cuda_reflected->lifetime);
+  return launchResult(
+      "primal projection/reflection kernel launch",
+      launchProjectedPrimalUpdateAndReflect(
+          impl_->stream.get(), cuda_current->size, cuda_current->values.get(),
+          cuda_product->values.get(), cuda_problem->costs.get(),
+          cuda_problem->col_lower.get(), cuda_problem->col_upper.get(),
+          step_size, cuda_candidate->values.get(), cuda_reflected->values.get(),
+          impl_->error_flag.get(), device_step));
+}
+
+api::Error CudaBackend::fusedProjectedDualUpdateAndReflect(
+    const ProblemHandle& problem, WorkspaceHandle& workspace,
+    const VectorHandle& current, const VectorHandle& product,
+    const double step_size, VectorHandle& candidate, VectorHandle& reflected) {
+  return fusedProjectedDualUpdateAndReflect(problem, workspace, current,
+      product, ScalarParameter(step_size), candidate, reflected);
+}
+
+api::Error CudaBackend::fusedProjectedDualUpdateAndReflect(
+    const ProblemHandle& problem, WorkspaceHandle& workspace,
+    const VectorHandle& current, const VectorHandle& product,
+    const ScalarParameter& step, VectorHandle& candidate, VectorHandle& reflected) {
+  const double step_size = step.value;
+  const api::Error handles = validateReflectionHandles(current, product,
+                                                       candidate, reflected);
+  if (!handles.ok()) return handles;
+  const CudaProblemResource* cuda_problem = problemResource(problem);
+  const CudaWorkspaceResource* cuda_workspace = workspaceResource(workspace);
+  const CudaVectorResource* cuda_current = vectorResource(current);
+  const CudaVectorResource* cuda_product = vectorResource(product);
+  CudaVectorResource* cuda_candidate = vectorResource(candidate);
+  CudaVectorResource* cuda_reflected = vectorResource(reflected);
+  if (!cuda_problem || !cuda_workspace || !cuda_current || !cuda_product ||
+      !cuda_candidate || !cuda_reflected || !std::isfinite(step_size) ||
+      step_size < 0.0 || cuda_workspace->num_rows != cuda_problem->num_rows ||
+      cuda_current->size != cuda_problem->num_rows ||
+      cuda_product->size != cuda_current->size ||
+      cuda_candidate->size != cuda_current->size ||
+      cuda_reflected->size != cuda_current->size)
+    return invalidArgument("HiPDLP CUDA dual projection/reflection arguments are invalid");
+  if (step.vector == &candidate || step.vector == &reflected)
+    return invalidArgument("HiPDLP CUDA scalar parameter aliases an output");
+  const double* device_step = nullptr;
+  const api::Error parameter_error = scalarParameter(step, device_step);
+  if (!parameter_error.ok()) return parameter_error;
+  impl_->recordDependency(cuda_problem->lifetime);
+  impl_->recordDependency(cuda_workspace->lifetime);
+  impl_->recordDependency(cuda_current->lifetime);
+  impl_->recordDependency(cuda_product->lifetime);
+  impl_->recordDependency(cuda_candidate->lifetime);
+  impl_->recordDependency(cuda_reflected->lifetime);
+  return launchResult(
+      "dual projection/reflection kernel launch",
+      launchProjectedDualUpdateAndReflect(
+          impl_->stream.get(), cuda_current->size, cuda_current->values.get(),
+          cuda_product->values.get(), cuda_problem->row_lower.get(),
+          cuda_problem->equality_rows.get(), step_size,
+          cuda_candidate->values.get(), cuda_reflected->values.get(),
+          impl_->error_flag.get(), device_step));
+}
+
+api::Error CudaBackend::multiplyAndProjectedDualUpdateAndReflect(
+    const ProblemHandle& problem, WorkspaceHandle& workspace,
+    const VectorHandle& input, const VectorHandle& current,
+    const ScalarParameter& step, VectorHandle& product,
+    VectorHandle& candidate, VectorHandle& reflected) {
+  const api::Error handles = validateReflectionHandles(current, product,
+                                                       candidate, reflected);
+  if (!handles.ok()) return handles;
+  const CudaProblemResource* cuda_problem = problemResource(problem);
+  const CudaWorkspaceResource* cuda_workspace = workspaceResource(workspace);
+  const CudaVectorResource* cuda_input = vectorResource(input);
+  const CudaVectorResource* cuda_current = vectorResource(current);
+  CudaVectorResource* cuda_product = vectorResource(product);
+  CudaVectorResource* cuda_candidate = vectorResource(candidate);
+  CudaVectorResource* cuda_reflected = vectorResource(reflected);
+  if (!cuda_problem || !cuda_workspace || !cuda_input || !cuda_current ||
+      !cuda_product || !cuda_candidate || !cuda_reflected ||
+      cuda_input == cuda_product || !std::isfinite(step.value) || step.value < 0.0 ||
+      cuda_input->size != cuda_problem->num_cols ||
+      cuda_workspace->num_rows != cuda_problem->num_rows ||
+      cuda_current->size != cuda_problem->num_rows ||
+      cuda_product->size != cuda_current->size ||
+      cuda_candidate->size != cuda_current->size ||
+      cuda_reflected->size != cuda_current->size ||
+      step.vector == &product || step.vector == &candidate || step.vector == &reflected)
+    return invalidArgument("HiPDLP CUDA product/projection arguments are invalid");
+  const double* device_step = nullptr;
+  api::Error error = scalarParameter(step, device_step);
+  if (!error.ok()) return error;
+  impl_->recordDependency(cuda_problem->lifetime);
+  impl_->recordDependency(cuda_workspace->lifetime);
+  impl_->recordDependency(cuda_input->lifetime);
+  impl_->recordDependency(cuda_current->lifetime);
+  impl_->recordDependency(cuda_product->lifetime);
+  impl_->recordDependency(cuda_candidate->lifetime);
+  impl_->recordDependency(cuda_reflected->lifetime);
+  error = executeSpmv(*impl_, *cuda_problem, cuda_problem->matrix, *cuda_input,
+                      *cuda_product, impl_->error_flag.get(), false);
+  if (!error.ok()) return error;
+  return launchResult("product/projection/reflection kernel launch",
+      launchProjectedDualUpdateAndReflect(impl_->stream.get(), cuda_current->size,
+          cuda_current->values.get(), cuda_product->values.get(),
+          cuda_problem->row_lower.get(), cuda_problem->equality_rows.get(),
+          step.value, cuda_candidate->values.get(), cuda_reflected->values.get(),
+          impl_->error_flag.get(), device_step));
+}
+
 api::Error CudaBackend::fusedVectorBlend(
     WorkspaceHandle& workspace, const VectorHandle& primal_left,
     const VectorHandle& dual_left, const VectorHandle& primal_right,
     const VectorHandle& dual_right, const double left_weight,
     VectorHandle& primal_output, VectorHandle& dual_output) {
+  return fusedVectorBlend(workspace, primal_left, dual_left, primal_right,
+                           dual_right, ScalarParameter(left_weight),
+                           primal_output, dual_output);
+}
+
+api::Error CudaBackend::fusedVectorBlend(
+    WorkspaceHandle& workspace, const VectorHandle& primal_left,
+    const VectorHandle& dual_left, const VectorHandle& primal_right,
+    const VectorHandle& dual_right, const ScalarParameter& weight,
+    VectorHandle& primal_output, VectorHandle& dual_output) {
+  const double left_weight = weight.value;
   CudaWorkspaceResource* cuda_workspace = workspaceResource(workspace);
   const CudaVectorResource* p_left = vectorResource(primal_left);
   const CudaVectorResource* d_left = vectorResource(dual_left);
@@ -1904,6 +2160,11 @@ api::Error CudaBackend::fusedVectorBlend(
       d_left->size != cuda_workspace->num_rows)
     return invalidArgument(
         "HiPDLP CUDA fused vector blend arguments are invalid");
+  if (weight.vector == &primal_output || weight.vector == &dual_output)
+    return invalidArgument("HiPDLP CUDA scalar parameter aliases an output");
+  const double* device_weight = nullptr;
+  const api::Error parameter_error = scalarParameter(weight, device_weight);
+  if (!parameter_error.ok()) return parameter_error;
   impl_->recordDependency(cuda_workspace->lifetime);
   impl_->recordDependency(p_left->lifetime);
   impl_->recordDependency(d_left->lifetime);
@@ -1911,17 +2172,12 @@ api::Error CudaBackend::fusedVectorBlend(
   impl_->recordDependency(d_right->lifetime);
   impl_->recordDependency(p_output->lifetime);
   impl_->recordDependency(d_output->lifetime);
-  api::Error error = launchResult(
-      "primal vector blend kernel launch",
-      launchVectorBlend(impl_->stream.get(), p_left->size, p_left->values.get(),
-                        p_right->values.get(), left_weight,
-                        p_output->values.get(), impl_->error_flag.get()));
-  if (!error.ok()) return error;
   return launchResult(
-      "dual vector blend kernel launch",
-      launchVectorBlend(impl_->stream.get(), d_left->size, d_left->values.get(),
-                        d_right->values.get(), left_weight,
-                        d_output->values.get(), impl_->error_flag.get()));
+      "paired vector blend kernel launch",
+      launchVectorPairBlend(impl_->stream.get(), p_left->size, d_left->size,
+        p_left->values.get(), p_right->values.get(), d_left->values.get(),
+        d_right->values.get(), left_weight, p_output->values.get(),
+        d_output->values.get(), impl_->error_flag.get(), device_weight));
 }
 
 api::Error CudaBackend::fusedAverageUpdate(WorkspaceHandle& workspace,
@@ -1960,11 +2216,12 @@ api::Error CudaBackend::dot(const VectorHandle& left, const VectorHandle& right,
   if (cuda_left == nullptr || cuda_right == nullptr ||
       cuda_left->size != cuda_right->size)
     return invalidArgument("HiPDLP CUDA dot dimensions are inconsistent");
-  api::Error error = launchResult(
-      "dot reduction kernel launch",
-      launchDot(impl_->stream.get(), cuda_left->size, cuda_left->values.get(),
-                cuda_right->values.get(), impl_->reduction_result.get(),
-                impl_->error_flag.get()));
+  api::Error error = enqueueDot(*impl_, cuda_left->size, cuda_left->values.get(),
+                                cuda_right->values.get(), impl_->reduction_result.get());
+  if (!error.ok()) return error;
+  error = launchResult("dot finite-check kernel launch",
+        launchFiniteCheck(impl_->stream.get(), 1, impl_->reduction_result.get(),
+                           impl_->error_flag.get()));
   if (!error.ok()) return error;
   double reduced = 0.0;
   const cudaError_t status =
@@ -1983,11 +2240,12 @@ api::Error CudaBackend::norm2(const VectorHandle& vector, double& result) {
   const CudaVectorResource* cuda_vector = vectorResource(vector);
   if (cuda_vector == nullptr)
     return invalidArgument("HiPDLP CUDA norm vector is invalid");
-  api::Error error = launchResult(
-      "norm reduction kernel launch",
-      launchNorm2(impl_->stream.get(), cuda_vector->size,
-                  cuda_vector->values.get(), impl_->reduction_result.get(),
-                  impl_->error_flag.get()));
+  api::Error error = enqueueNorm(*impl_, cuda_vector->size, cuda_vector->values.get(),
+                                 impl_->reduction_result.get());
+  if (!error.ok()) return error;
+  error = launchResult("norm finite-check kernel launch",
+        launchFiniteCheck(impl_->stream.get(), 1, impl_->reduction_result.get(),
+                           impl_->error_flag.get()));
   if (!error.ok()) return error;
   double reduced = 0.0;
   const cudaError_t status =
@@ -2011,12 +2269,25 @@ api::Error CudaBackend::differenceNorm2(const VectorHandle& left,
       cuda_left->size != cuda_right->size)
     return invalidArgument(
         "HiPDLP CUDA difference norm dimensions are inconsistent");
-  api::Error error =
-      launchResult("difference norm reduction kernel launch",
-                   launchDifferenceNorm2(
-                       impl_->stream.get(), cuda_left->size,
-                       cuda_left->values.get(), cuda_right->values.get(),
-                       impl_->reduction_result.get(), impl_->error_flag.get()));
+  api::Error error;
+  if (cuda_left->size > 0) {
+    error = launchResult("difference kernel launch",
+        launchDifference(impl_->stream.get(), cuda_left->size,
+                         cuda_left->values.get(), cuda_right->values.get(),
+                         impl_->difference_scratch.get(), impl_->error_flag.get()));
+    if (!error.ok()) return error;
+    error = enqueueNorm(*impl_, cuda_left->size, impl_->difference_scratch.get(),
+               impl_->reduction_result.get());
+    if (!error.ok()) return error;
+    error = launchResult("difference norm finite-check kernel launch",
+        launchFiniteCheck(impl_->stream.get(), 1, impl_->reduction_result.get(),
+                           impl_->error_flag.get()));
+  } else {
+    error = launchResult("difference norm reduction kernel launch",
+        launchDifferenceNorm2(impl_->stream.get(), cuda_left->size,
+                              cuda_left->values.get(), cuda_right->values.get(),
+                              impl_->reduction_result.get(), impl_->error_flag.get()));
+  }
   if (!error.ok()) return error;
   double reduced = 0.0;
   const cudaError_t status =
@@ -2032,23 +2303,74 @@ api::Error CudaBackend::differenceNorm2(const VectorHandle& left,
   return api::Error();
 }
 
+api::Error CudaBackend::reduceFixedPointMetrics(
+    const VectorHandle& delta_primal, const VectorHandle& delta_dual,
+    const VectorHandle& aty_delta, double& primal_norm, double& dual_norm,
+    double& cross_term) {
+  if (impl_->recording) return unsupported("host reductions during recording");
+  const CudaVectorResource* primal = vectorResource(delta_primal);
+  const CudaVectorResource* dual = vectorResource(delta_dual);
+  const CudaVectorResource* product = vectorResource(aty_delta);
+  if (primal == nullptr || dual == nullptr || product == nullptr ||
+      primal->size != product->size || &primal_norm == &dual_norm ||
+      &primal_norm == &cross_term || &dual_norm == &cross_term)
+    return invalidArgument("HiPDLP CUDA fixed-point reduction arguments are invalid");
+  double* values = impl_->reduction_result.get();
+  api::Error error = enqueueNorm(*impl_, primal->size, primal->values.get(), values);
+  if (!error.ok()) return error;
+  error = enqueueNorm(*impl_, dual->size, dual->values.get(), values + 1);
+  if (!error.ok()) return error;
+  error = enqueueDot(*impl_, primal->size, primal->values.get(), product->values.get(), values + 2);
+  if (!error.ok()) return error;
+  error = launchResult("fixed-point result finite check",
+      launchFiniteCheck(impl_->stream.get(), 3, values, impl_->error_flag.get()));
+  if (!error.ok()) return error;
+  double received[3] = {};
+  const cudaError_t status = cudaMemcpyAsync(received, values, sizeof(received),
+                                             cudaMemcpyDeviceToHost, impl_->stream.get());
+  if (status != cudaSuccess) return cudaFailure("fixed-point result download", status);
+  HIPDLP_CUDA_AUDIT(device_to_host_transfers);
+  HIPDLP_CUDA_AUDIT_ADD(device_to_host_bytes, sizeof(received));
+  error = impl_->synchronizeAndCheck();
+  if (!error.ok()) return error;
+  primal_norm = received[0];
+  dual_norm = received[1];
+  cross_term = received[2];
+  return api::Error();
+}
+
 api::Error CudaBackend::reduceConvergenceMetrics(
     const VectorHandle& primal_residual, const VectorHandle& dual_residual,
     const double primal_objective, const double dual_objective,
     ConvergenceMetrics& metrics) {
   if (!std::isfinite(primal_objective) || !std::isfinite(dual_objective))
     return invalidArgument("convergence objectives must be finite");
-  double primal_norm = 0.0;
-  api::Error error = norm2(primal_residual, primal_norm);
+  if (impl_->recording) return unsupported("host reductions during recording");
+  const CudaVectorResource* primal = vectorResource(primal_residual);
+  const CudaVectorResource* dual = vectorResource(dual_residual);
+  if (primal == nullptr || dual == nullptr)
+    return invalidArgument("HiPDLP CUDA convergence reduction arguments are invalid");
+  double* values = impl_->reduction_result.get();
+  api::Error error = enqueueNorm(*impl_, primal->size, primal->values.get(), values);
   if (!error.ok()) return error;
-  double dual_norm = 0.0;
-  error = norm2(dual_residual, dual_norm);
+  error = enqueueNorm(*impl_, dual->size, dual->values.get(), values + 1);
+  if (!error.ok()) return error;
+  error = launchResult("convergence result finite check",
+      launchFiniteCheck(impl_->stream.get(), 2, values, impl_->error_flag.get()));
+  if (!error.ok()) return error;
+  double received[2] = {};
+  const cudaError_t status = cudaMemcpyAsync(received, values, sizeof(received),
+                                             cudaMemcpyDeviceToHost, impl_->stream.get());
+  if (status != cudaSuccess) return cudaFailure("convergence result download", status);
+  HIPDLP_CUDA_AUDIT(device_to_host_transfers);
+  HIPDLP_CUDA_AUDIT_ADD(device_to_host_bytes, sizeof(received));
+  error = impl_->synchronizeAndCheck();
   if (!error.ok()) return error;
   const double gap = std::abs(primal_objective - dual_objective);
   if (!std::isfinite(gap))
     return backendFailure("HiPDLP CUDA convergence gap is non-finite");
-  metrics.primal_residual = primal_norm;
-  metrics.dual_residual = dual_norm;
+  metrics.primal_residual = received[0];
+  metrics.dual_residual = received[1];
   metrics.objective_gap = gap;
   return api::Error();
 }
@@ -2374,7 +2696,7 @@ api::Error createCudaBackend(std::unique_ptr<Backend>& backend) {
           "HiPDLP CUDA backend initialization failed (injected failure)");
     error = impl->error_flag.allocate(1, "creating error-state storage");
     if (!error.ok()) return error;
-    error = impl->reduction_result.allocate(1, "creating reduction storage");
+    error = impl->reduction_result.allocate(3, "creating reduction storage");
     if (!error.ok()) return error;
     error = impl->spmv_alpha.allocate(1, "creating SpMV alpha storage");
     if (!error.ok()) return error;

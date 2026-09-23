@@ -83,6 +83,10 @@ api::Error computeRawConvergenceMetrics(
 
 StoppingResult evaluateStopping(const StoppingInput& input);
 
+bool shouldVerifyOriginalKkt(const StoppingResult& stopping, HighsInt iteration,
+                             const ConvergenceTolerances& tolerances,
+                             double kkt_tolerance);
+
 }  // namespace algorithm
 }  // namespace hipdlp
 
