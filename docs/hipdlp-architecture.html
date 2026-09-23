@@ -512,6 +512,7 @@
       font-weight: 700;
     }
     .fallback-path,
+    .certificate-path,
     .final-path {
       display: grid;
       grid-template-columns: 1.2fr auto 1.2fr auto 1fr;
@@ -525,6 +526,11 @@
       border: 1px solid var(--d2h);
       border-left: 5px solid var(--d2h);
       background: #fff1f3;
+    }
+    .certificate-path {
+      border: 1px solid var(--host);
+      border-left: 5px solid var(--host);
+      background: var(--host-soft);
     }
     .final-path {
       grid-template-columns: 1fr auto 1fr auto 1fr auto 1fr;
@@ -567,7 +573,7 @@
     }
     .kernel-card dt { color: var(--muted); font-size: 12px; font-weight: 700; }
     .kernel-card dd { margin: 0; overflow-wrap: anywhere; }
-    .kernel-card .kernel-review-question {
+    .kernel-card .review-question {
       margin: 10px 0 0;
       padding-top: 9px;
       border-top: 1px dashed var(--line);
@@ -984,6 +990,7 @@
         content: "↓";
       }
       .fallback-path,
+      .certificate-path,
       .final-path { grid-template-columns: 1fr; }
       .path-arrow { transform: rotate(90deg); }
       .error-rail { position: static; }
@@ -1680,12 +1687,21 @@
             <p>Boundary candidate products include <code>A * primal_candidate</code> and <code>A^T * dual_candidate</code>; they are cadence/limit/time checks, not hidden work inside every production step.</p>
 
             <div class="fallback-path" aria-label="Host oracle fallback path">
-              <strong>threshold uncertainty / optional metric fallback / suspected certificate</strong>
+              <strong>threshold uncertainty / optional metric fallback<br><code>requires_host_oracle</code></strong>
               <span class="path-arrow" aria-hidden="true">→</span>
               <span>full primal + dual + Ax + A^T y D2H<br><strong>2*(rows+cols) doubles</strong></span>
               <span class="path-arrow" aria-hidden="true">→</span>
-              <strong>host oracle</strong>
+              <strong>raw convergence host oracle</strong>
             </div>
+
+            <div class="certificate-path" aria-label="Certificate verification path">
+              <strong>resident certificate screen<br><code>certificate_possible</code></strong>
+              <span class="path-arrow" aria-hidden="true">→</span>
+              <span>full primal + dual + Ax + A^T y D2H<br><strong>2*(rows+cols) doubles</strong></span>
+              <span class="path-arrow" aria-hidden="true">→</span>
+              <strong><code>detectCertificate()</code><br>independent certificate verification</strong>
+            </div>
+            <p><strong>Download 触发器：</strong>positive certificate screen 与 raw-metric fallback 是两条不同分支；前者在普通 cadence 也可能触发完整 candidate D2H，但不会进入 raw convergence host oracle。</p>
 
             <div class="final-path" aria-label="最终原模型 KKT 路径">
               <strong>postsolve</strong>
@@ -1718,7 +1734,7 @@
                   <div><dt>graph</dt><dd>Yes—captured in each recorded production step.</dd></div>
                   <div><dt>performance</dt><dd>O(cols), bandwidth-heavy; clamp divergence and parameter indirection matter.</dd></div>
                 </dl>
-                <p class="kernel-review-question"><strong>Review：</strong>Do bound distributions make clamp divergence visible in profiler traces?</p>
+                <p class="review-question"><strong>Review：</strong>Do bound distributions make clamp divergence visible in profiler traces?</p>
               </article>
 
               <article class="kernel-card">
@@ -1732,7 +1748,7 @@
                   <div><dt>graph</dt><dd>Yes—follows the first cuSPARSE node in the captured step.</dd></div>
                   <div><dt>performance</dt><dd>O(rows), bandwidth-heavy; mixed row types can diverge.</dd></div>
                 </dl>
-                <p class="kernel-review-question"><strong>Review：</strong>Would grouping equality rows improve locality enough to justify remapping?</p>
+                <p class="review-question"><strong>Review：</strong>Would grouping equality rows improve locality enough to justify remapping?</p>
               </article>
 
               <article class="kernel-card">
@@ -1746,7 +1762,7 @@
                   <div><dt>graph</dt><dd>Yes—one paired graph node replaces two vector launches.</dd></div>
                   <div><dt>performance</dt><dd>O(max(rows, cols)); imbalance leaves one side of later iterations idle.</dd></div>
                 </dl>
-                <p class="kernel-review-question"><strong>Review：</strong>At extreme row/column imbalance, is one paired launch still cheaper than two right-sized launches?</p>
+                <p class="review-question"><strong>Review：</strong>At extreme row/column imbalance, is one paired launch still cheaper than two right-sized launches?</p>
               </article>
 
               <article class="kernel-card">
@@ -1760,7 +1776,7 @@
                   <div><dt>graph</dt><dd>No—runs at a cadence/limit/time boundary, outside the 39-step graph.</dd></div>
                   <div><dt>performance</dt><dd>O(max(rows, cols)) plus static-shared tree reduction; occupancy depends on the large partial type.</dd></div>
                 </dl>
-                <p class="kernel-review-question"><strong>Review：</strong>Does static shared storage constrain occupancy on every supported GPU?</p>
+                <p class="review-question"><strong>Review：</strong>Does static shared storage constrain occupancy on every supported GPU?</p>
               </article>
 
               <article class="kernel-card">
@@ -1774,7 +1790,7 @@
                   <div><dt>graph</dt><dd>No—boundary check only, followed by compact D2H and synchronization.</dd></div>
                   <div><dt>performance</dt><dd>O(partial_count ≤ 1024); launch and one-block reduction latency dominate small checks.</dd></div>
                 </dl>
-                <p class="kernel-review-question"><strong>Review：</strong>Does the compact packet save more transfer time than this second reduction launch costs?</p>
+                <p class="review-question"><strong>Review：</strong>Does the compact packet save more transfer time than this second reduction launch costs?</p>
               </article>
 
               <article class="kernel-card vendor">
@@ -1787,7 +1803,7 @@
                   <div><dt>graph</dt><dd>Yes for both production SpMVs; library calls are captured with the custom kernels.</dd></div>
                   <div><dt>performance</dt><dd>O(nnz), sparse bandwidth and matrix structure dominate; inspect actual kernels with Nsight Systems/Compute.</dd></div>
                 </dl>
-                <p class="kernel-review-question"><strong>Review：</strong>Do profiler-observed vendor kernels, scratch traffic or matrix ordering dominate the two-SpMV step?</p>
+                <p class="review-question"><strong>Review：</strong>Do profiler-observed vendor kernels, scratch traffic or matrix ordering dominate the two-SpMV step?</p>
               </article>
             </div>
             <p class="source-row">Launch证据：
@@ -1905,14 +1921,14 @@
           <span class="fact-tag hypothesis">Cadence boundary</span>
           <h3>Cadence boundary、fallback D2H 与 synchronization</h3>
           <h4>症状</h4>
-          <p>正常 112-byte packet 很小，但 resident check、同步或 host oracle fallback 触发完整 candidate D2H 时会形成周期性尖峰。</p>
+          <p>正常 112-byte packet 很小，但 resident check、同步、host oracle fallback 或 positive certificate screen 触发完整 candidate D2H 时会形成周期性尖峰。</p>
           <h4>当前证据</h4>
           <p>现有 counters 能区分 ordinary boundary 与 fallback；尚需 trace 证明 packet、同步和 candidate download 的实际时间线。</p>
           <p class="report-evidence">证据路径：<code>docs/hipdlp-phase8-gpu-performance-report.md</code></p>
           <h4>看什么指标</h4>
-          <p><code>boundary_seconds</code>、<code>download_seconds</code>、ordinary D2H bytes/transfers/synchronizations、<code>candidate_downloads</code> 与 host-oracle 次数。</p>
+          <p><code>boundary_seconds</code>、<code>download_seconds</code>、ordinary D2H bytes/transfers/synchronizations、<code>candidate_downloads</code>、<code>host_oracle_checks</code> 与 <code>certificate_checks</code>。</p>
           <h4>下一步实验</h4>
-          <p>分别采集无 fallback、certificate fallback 与 host oracle fallback，核对每次同步前后的 packet/full-candidate bytes。</p>
+          <p>分别采集无 full D2H、certificate-screen hit 与 host oracle fallback，核对每次同步前后的 packet/full-candidate bytes，并区分 independent certificate verification 与 raw convergence oracle。</p>
           <h4>不能破坏</h4>
           <p>不能跳过不确定性 fallback、finite/error_flag 同步、certificate screen 或最终候选下载；失败不能伪装成收敛。</p>
         </article>
@@ -2036,7 +2052,7 @@
                 <th scope="row">Download / synchronization</th>
                 <td><code>download_seconds</code>, <code>candidate_downloads</code>, <code>ordinary_check_d2h_bytes</code>, <code>ordinary_check_transfers</code>, <code>ordinary_check_synchronizations</code>, <code>host_oracle_checks</code>, <code>certificate_checks</code></td>
                 <td>solver trace + Nsight Systems</td>
-                <td>是 112-byte packet、full candidate D2H、host oracle fallback，还是同步等待造成尖峰？</td>
+                <td>是 112-byte packet、certificate verification / host oracle 触发的 full candidate D2H，还是同步等待造成尖峰？</td>
               </tr>
               <tr>
                 <th scope="row">Trajectory / verification</th>
@@ -2301,6 +2317,8 @@
                   <summary>展开参考答案</summary>
                   <p><strong>结论：</strong>每个线程处理一个起始索引，并按整个 grid 的 stride 继续前进。</p>
                   <p><strong>代码证据：</strong><code>index += blockDim.x * gridDim.x</code>。</p>
+                  <p><strong>静态边界：</strong>源码能证明线程起点和 stride 递增关系，但前提是索引与下一次加法都可表示；它不能证明实际吞吐或 occupancy。</p>
+                  <p><strong>运行时工具：</strong>用大于一个满 grid 的 sentinel 向量做 CPU/CUDA 对照，再用 Nsight Compute 检查 achieved occupancy 与 memory throughput。</p>
                   <p><strong>Review 推理：</strong>静态代码能证明覆盖方式；实际吞吐和 occupancy 仍需 profiler。</p>
                 </details>
               </div>
@@ -2310,6 +2328,8 @@
                   <summary>展开参考答案</summary>
                   <p><strong>结论：</strong>不会；上限只限制并发起点数量，grid-stride loop 继续覆盖更大的 N。</p>
                   <p><strong>代码证据：</strong><code>blockCount()</code> cap blocks，但 kernel 的 <code>for (...; index &lt; size; index += stride)</code> 不 cap <code>size</code>。</p>
+                  <p><strong>静态边界：</strong>循环形状能证明 block cap 不等于 size cap，但只有显式检查索引宽度与 <code>index + stride</code> 后才能把证明扩展到声明的最大尺寸。</p>
+                  <p><strong>运行时工具：</strong>以 <code>N = 65535 × 256 + 1</code> 的边界样例对照 CPU 输出，并在 Compute Sanitizer 下检查越界访问。</p>
                   <p><strong>Review 推理：</strong>要同时审查循环和索引类型；只看 launch geometry 会错误地推断覆盖缺口。</p>
                 </details>
               </div>
@@ -2319,6 +2339,8 @@
                   <summary>展开参考答案</summary>
                   <p><strong>结论：</strong>上下界 clamp 可能造成 warp divergence；atomic 只把 non-finite 失败汇总为单向错误标志。</p>
                   <p><strong>代码证据：</strong><code>if (value &lt; lower[index])</code>、<code>if (value &gt; upper[index])</code> 与 <code>recordNonFinite()</code>。</p>
+                  <p><strong>静态边界：</strong>分支条件和只写 1 的幂等 error flag 可由源码验证；源码不能量化真实 bound 分布造成的 warp divergence。</p>
+                  <p><strong>运行时工具：</strong>注入 finite/non-finite 与不同 bound 分布的样例，用 Compute Sanitizer 验证错误路径，并用 Nsight Compute 查看 branch efficiency。</p>
                   <p><strong>Review 推理：</strong>正确性可由分支和幂等标志判断；分支代价必须结合 bound 分布和 profiler 观察。</p>
                 </details>
               </div>
@@ -2344,7 +2366,7 @@
               <div class="concept-node"><strong>Pinned staging</strong><span>CheckPacket 或完整 candidate</span></div>
             </div>
             <div class="hipdlp-example">
-              <p><strong>HiPDLP 例子：</strong>八个 column vectors 与八个 row vectors 在所选 backend 中创建；CUDA 普通检查把一个 <code>CheckPacket</code> 下载到 pinned Host memory，只有 fallback 或最终结果才下载完整候选。</p>
+              <p><strong>HiPDLP 例子：</strong>八个 column vectors 与八个 row vectors 在所选 backend 中创建；CUDA 普通检查通常只把一个 <code>CheckPacket</code> 下载到 pinned Host memory，但 <code>requires_host_oracle</code>、<code>certificate_possible</code> 或 terminal/postsolve 路径会下载完整候选。</p>
               <p class="source-row"><a href="../highs/pdlp/hipdlp/backend/cuda/cuda_backend.cu">查看 cuda_backend.cu</a></p>
             </div>
             <div class="lesson-questions">
@@ -2354,6 +2376,8 @@
                   <summary>展开参考答案</summary>
                   <p><strong>结论：</strong>opaque handle 把驻留位置和资源类型封装在 backend 内，阻止算法层直接解引用或跨 backend 混用。</p>
                   <p><strong>代码证据：</strong><code>Handle&lt;Tag&gt;</code> 私有持有 <code>std::unique_ptr&lt;Resource&gt;</code>，只有 CPU/CUDA backend 是 friend。</p>
+                  <p><strong>静态边界：</strong>C++ 类型系统能证明 opaque handle 的 copy/access 边界，不能证明运行时传入的 handle 属于同一 backend、尺寸匹配或尚未 move。</p>
+                  <p><strong>运行时工具：</strong>用 backend contract tests 覆盖跨 backend、moved-from、错误尺寸和 alias 输入，并在 CUDA 路径配合 Compute Sanitizer。</p>
                   <p><strong>Review 推理：</strong>类型封装能证明访问边界；owner、尺寸与 alias 仍必须由具体 backend 在每次操作中校验。</p>
                 </details>
               </div>
@@ -2363,6 +2387,8 @@
                   <summary>展开参考答案</summary>
                   <p><strong>结论：</strong>pinned Host buffer 支持可靠的异步 D2H staging，并可在多次 cadence boundary 复用。</p>
                   <p><strong>代码证据：</strong><code>PinnedCheckPacket::allocate()</code> 调用 <code>cudaMallocHost(..., sizeof(CheckPacket))</code>。</p>
+                  <p><strong>静态边界：</strong><code>cudaMallocHost</code> 与复用路径能证明 buffer 类型和生命周期，不能证明传输重叠、固定 pinning 成本或端到端收益。</p>
+                  <p><strong>运行时工具：</strong>用 Nsight Systems 对齐 cadence boundary、D2H memcpy 和 stream synchronize，比较 pinned allocation 与复用成本。</p>
                   <p><strong>Review 推理：</strong>复用和异步语义由代码可见；pinning 是否值得其固定成本需用边界频率与 timeline 衡量。</p>
                 </details>
               </div>
@@ -2372,6 +2398,8 @@
                   <summary>展开参考答案</summary>
                   <p><strong>结论：</strong>vector kernel 可按连续 index 获得 coalescing，而 CSR 的 index/value 访问受矩阵结构和 vendor kernel 控制。</p>
                   <p><strong>代码证据：</strong>custom kernel 直接访问 <code>current[index]</code>；SpMV 通过 CSR descriptor 进入 <code>cusparseSpMV</code>。</p>
+                  <p><strong>静态边界：</strong>源码只证明 custom vector 的显式下标和 cuSPARSE descriptor 边界，不能推出 vendor kernel 的 cache、transaction 或合并访问行为。</p>
+                  <p><strong>运行时工具：</strong>用 Nsight Compute 的 Memory Workload Analysis 分别观察 custom kernel 与 cuSPARSE kernel，并按矩阵结构分桶比较。</p>
                   <p><strong>Review 推理：</strong>源码可分类访问模式，但 cache hit、transaction 和有效带宽必须由 Nsight Compute 证明。</p>
                 </details>
               </div>
@@ -2407,6 +2435,8 @@
                   <summary>展开参考答案</summary>
                   <p><strong>结论：</strong>同一 CUDA stream 内的操作按提交顺序执行，因此数据依赖不需要 Host 逐项等待。</p>
                   <p><strong>代码证据：</strong>custom launches 使用 <code>impl_-&gt;stream.get()</code>，cuBLAS/cuSPARSE handles 也由 <code>*SetStream</code> 绑定它。</p>
+                  <p><strong>静态边界：</strong>handle 绑定与调用点能证明预期使用同一 stream，不能证明运行时没有漏绑 handle、默认 stream 工作或外部并发。</p>
+                  <p><strong>运行时工具：</strong>用 Nsight Systems 的 stream timeline 核对 producer/consumer 顺序，并以 Compute Sanitizer racecheck 检查并发 hazard。</p>
                   <p><strong>Review 推理：</strong>要证明顺序，必须追踪所有 producer/consumer 是否真的在同一 stream；仅看到异步 API 名称不够。</p>
                 </details>
               </div>
@@ -2416,6 +2446,8 @@
                   <summary>展开参考答案</summary>
                   <p><strong>结论：</strong>kernel 先写 device <code>error_flag</code>，Host 在显式检查边界异步复制该 flag 并同步 stream 后形成 structured error。</p>
                   <p><strong>代码证据：</strong><code>synchronizeAndCheck()</code> 执行 <code>cudaMemcpyAsync</code>、<code>cudaStreamSynchronize</code>，再检查 <code>host_error</code>。</p>
+                  <p><strong>静态边界：</strong>控制流能证明 device flag 经 D2H 和 synchronize 转成 <code>api::Error</code>，不能证明每种异步失败都写入该 flag。</p>
+                  <p><strong>运行时工具：</strong>注入 NaN 和非法访问样例，结合错误传播测试与 Compute Sanitizer 验证同步边界实际暴露失败。</p>
                   <p><strong>Review 推理：</strong>launch status 只覆盖提交错误；异步执行错误必须在同步或后续 API 边界显式暴露。</p>
                 </details>
               </div>
@@ -2425,6 +2457,8 @@
                   <summary>展开参考答案</summary>
                   <p><strong>结论：</strong>不能；必须等待该 stream 完成复制，之后 Host 读取才有定义且可见。</p>
                   <p><strong>代码证据：</strong>download path 在 <code>cudaMemcpyAsync(..., cudaMemcpyDeviceToHost, stream)</code> 后调用 <code>cudaStreamSynchronize(stream)</code> 再 publish。</p>
+                  <p><strong>静态边界：</strong>语句顺序能证明当前路径在 synchronize 后 publish，不能证明所有调用路径都遵守同一可见性边界或传输何时完成。</p>
+                  <p><strong>运行时工具：</strong>用 sentinel integration test 检查 Host 读取值，并在 Nsight Systems 中确认 memcpy 完成先于 Host consumer。</p>
                   <p><strong>Review 推理：</strong>pinned memory 允许异步传输但不取消完成依赖；检查读取位置是否在同步之后。</p>
                 </details>
               </div>
@@ -2460,6 +2494,8 @@
                   <summary>展开参考答案</summary>
                   <p><strong>结论：</strong>先用 Systems 判断时间是否来自 launch gaps、同步或某个 kernel，再对主导 kernel 使用 Compute。</p>
                   <p><strong>代码证据：</strong><code>SolveDiagnostics</code> 已分出 setup、step、boundary、download 与 replay counters，可先限定阶段。</p>
+                  <p><strong>静态边界：</strong>诊断字段能划分代码阶段，却不能把 wall time 归因到 launch gap、同步、copy 或特定 kernel。</p>
+                  <p><strong>运行时工具：</strong>先用 Nsight Systems 定位主导时间段，再只对主导 kernel 运行 Nsight Compute。</p>
                   <p><strong>Review 推理：</strong>Compute 的深度指标不能回答端到端调度占比；先定位再下钻可避免优化非瓶颈。</p>
                 </details>
               </div>
@@ -2469,6 +2505,8 @@
                   <summary>展开参考答案</summary>
                   <p><strong>结论：</strong>不足；低 occupancy 可能仍隐藏了足够延迟，也可能该 kernel 根本不占主要 wall time。</p>
                   <p><strong>代码证据：</strong><code>checkPartialsKernel</code> 使用 <code>__shared__ CheckPartial shared[256]</code>，但只在 cadence boundary 运行。</p>
+                  <p><strong>静态边界：</strong>static shared 声明能给出潜在资源约束，不能证明 achieved occupancy、stall 原因或该 kernel 的 wall-time 权重。</p>
+                  <p><strong>运行时工具：</strong>联合 Nsight Compute 的 occupancy/stall/bandwidth 指标与 Nsight Systems 的 duration、频率和端到端占比。</p>
                   <p><strong>Review 推理：</strong>必须联合 kernel duration、调用频率、带宽、stall 与端到端占比，单一指标只是线索。</p>
                 </details>
               </div>
@@ -2478,6 +2516,8 @@
                   <summary>展开参考答案</summary>
                   <p><strong>结论：</strong>同时比较 launch gaps、kernel duration、有效线程比例、每步成本和总迭代数。</p>
                   <p><strong>代码证据：</strong><code>vectorPairBlendKernel</code> 按 <code>max(num_cols, num_rows)</code> launch，并对 row/column 分别作 size guard。</p>
+                  <p><strong>静态边界：</strong>launch geometry 能显示融合减少节点并可能产生 idle lanes，不能证明 register pressure、调度成本或净 speedup。</p>
+                  <p><strong>运行时工具：</strong>以相同模型、状态、残差和 KKT 结果做 A/B，使用 Systems 比较 gaps、Compute 比较 active threads 与 registers。</p>
                   <p><strong>Review 推理：</strong>融合减少固定成本却可能增加空转或寄存器压力；只有同工作量、同正确性轨迹的测量可裁决。</p>
                 </details>
               </div>
@@ -2515,6 +2555,8 @@
                   <summary>展开参考答案</summary>
                   <p><strong>结论：</strong>workspace 尺寸由 descriptor 和算法决定，可按 matrix/transpose 最大值一次分配并在所有 step 复用。</p>
                   <p><strong>代码证据：</strong><code>querySpmvBufferSize()</code> 填写两份 <code>spmv_buffer_size</code>，随后只分配一个最大尺寸的 <code>spmv_buffer</code>。</p>
+                  <p><strong>静态边界：</strong>setup 路径能证明 HiPDLP 只分配一个最大 scratch buffer，不能证明 vendor 内部无额外分配或 descriptor 永不失配。</p>
+                  <p><strong>运行时工具：</strong>用 Nsight Systems 的 CUDA API trace 检查 steady state 无 allocation，并以不同 matrix/transpose 尺寸重复 SpMV contract tests。</p>
                   <p><strong>Review 推理：</strong>这能消除迭代内 allocation；仍需确认 descriptor 生命周期和尺寸变化不会让复用失效。</p>
                 </details>
               </div>
@@ -2524,6 +2566,8 @@
                   <summary>展开参考答案</summary>
                   <p><strong>结论：</strong>结果已知为零，专用 fill kernel 避免依赖空 CSR 的 vendor 行为并保持输出定义明确。</p>
                   <p><strong>代码证据：</strong><code>executeSpmv</code> 在 <code>matrix.num_nonzeros == 0</code> 时调用 <code>launchFill(..., 0.0, output)</code>。</p>
+                  <p><strong>静态边界：</strong>零 NNZ 分支能证明 CUDA 输出被显式写零，不能单独证明 CPU/CUDA 契约一致或后续检查覆盖完整。</p>
+                  <p><strong>运行时工具：</strong>用零行、零列和零 NNZ 模型做 CPU/CUDA differential test，并在 Compute Sanitizer 下验证 fill 边界。</p>
                   <p><strong>Review 推理：</strong>边界分支应与 CPU 语义一致，并仍经过后续需要的 finite/error 检查。</p>
                 </details>
               </div>
@@ -2533,6 +2577,8 @@
                   <summary>展开参考答案</summary>
                   <p><strong>结论：</strong>不能；HiPDLP 只选择 API、descriptor 与算法枚举，内部 kernel geometry 由 library/runtime 决定。</p>
                   <p><strong>代码证据：</strong>调用点是 <code>cusparseSpMV(..., CUSPARSE_SPMV_ALG_DEFAULT, spmv_buffer)</code>，没有 HiPDLP launch dimensions。</p>
+                  <p><strong>静态边界：</strong>wrapper 只能证明 descriptor、枚举与 API 参数，不能证明 vendor 选择的 kernel geometry、scratch traffic 或性能。</p>
+                  <p><strong>运行时工具：</strong>用 Nsight Systems 识别实际 cuSPARSE kernels，再用 Nsight Compute 按矩阵 shape/nnz 分析它们。</p>
                   <p><strong>Review 推理：</strong>实际 kernel、scratch traffic 和矩阵结构影响必须由 Systems/Compute trace 观察，不能从 wrapper 推断。</p>
                 </details>
               </div>
@@ -2573,6 +2619,8 @@
                   <summary>展开参考答案</summary>
                   <p><strong>结论：</strong>捕获的是 recording 区间内提交到 stream 的 kernels/library calls；Host 的停止、时间与 restart 决策留在 graph 外。</p>
                   <p><strong>代码证据：</strong><code>cudaStreamBeginCapture</code>/<code>cudaStreamEndCapture</code> 包住 repeated <code>enqueueHalpernPdhgStep</code>，boundary check 另行执行。</p>
+                  <p><strong>静态边界：</strong>capture 的词法范围能划分 Host 控制与提交操作，不能证明实例化后的 graph node 集合与依赖边完全符合预期。</p>
+                  <p><strong>运行时工具：</strong>用 <code>cudaGraphDebugDotPrint</code> 检查 node/dependency 图，并以 Nsight Systems 核对 replay 中实际执行的 kernels。</p>
                   <p><strong>Review 推理：</strong>Graph 只能复用固定依赖图；把数据依赖的 Host 决策塞入 capture 会改变可观察语义。</p>
                 </details>
               </div>
@@ -2582,6 +2630,8 @@
                   <summary>展开参考答案</summary>
                   <p><strong>结论：</strong>第 40 步后需要 Host 控制的 cadence boundary；录 39 步保持初始/重启后的 direct step 和 boundary 对齐。</p>
                   <p><strong>代码证据：</strong><code>kConvergenceCadence == 40</code>、<code>kRecordedStepCount == 39</code>，replay 条件要求 <code>total_iterations % 40 == 1</code>。</p>
+                  <p><strong>静态边界：</strong>常量和 modulo 条件能证明预期 1 + 39 调度，不能穷尽 restart、limit 与 short-tail 的动态组合。</p>
+                  <p><strong>运行时工具：</strong>用 1/39/40/41-step、restart 和 limit integration cases 检查 counters，并在 Systems timeline 核对 direct/replay 边界。</p>
                   <p><strong>Review 推理：</strong>检查 off-by-one 必须同时模拟初始、restart、iteration limit 与 short tail，而不能只看常态循环。</p>
                 </details>
               </div>
@@ -2591,6 +2641,8 @@
                   <summary>展开参考答案</summary>
                   <p><strong>结论：</strong>graph nodes 捕获了资源地址；若 problem/workspace/vector 已释放，executable 仍非空但其指针已失效。</p>
                   <p><strong>代码证据：</strong><code>CudaCommandBufferResource</code> 保存 <code>std::weak_ptr&lt;int&gt; dependencies</code>，<code>replay()</code> 先调用 <code>dependenciesAlive()</code>。</p>
+                  <p><strong>静态边界：</strong><code>weak_ptr</code> guard 能证明已登记 token 的过期检测，不能证明 capture 使用的每个资源都调用了 <code>recordDependency</code>。</p>
+                  <p><strong>运行时工具：</strong>逐类销毁 problem/workspace/vector 后尝试 replay，断言 structured error，并用 Compute Sanitizer 排除漏登记导致的 use-after-free。</p>
                   <p><strong>Review 推理：</strong>Graph object 的生命周期不等于被捕获资源的生命周期；重放前的显式 guard 防止 use-after-free。</p>
                 </details>
               </div>
@@ -2631,6 +2683,8 @@
                   <summary>展开参考答案</summary>
                   <p><strong>结论：</strong>不会改变数值 reduction；它只把多个失败写合并成同一个幂等布尔状态。</p>
                   <p><strong>代码证据：</strong><code>recordNonFinite()</code> 仅执行 <code>atomicExch(error_flag, 1)</code>，数值 partials 在独立的 shared-memory tree 中合并。</p>
+                  <p><strong>静态边界：</strong>所有 writer 都执行 <code>atomicExch(..., 1)</code> 可证明 flag 结果与写入顺序无关，不能证明其他数值路径没有顺序敏感操作。</p>
+                  <p><strong>运行时工具：</strong>并发注入多个 non-finite 值，重复运行并用 Compute Sanitizer racecheck 验证 flag 路径与数值 partials 分离。</p>
                   <p><strong>Review 推理：</strong>要把错误汇总原子与浮点累加原子区分开；前者的写入顺序不改变最终 1。</p>
                 </details>
               </div>
@@ -2640,6 +2694,8 @@
                   <summary>展开参考答案</summary>
                   <p><strong>结论：</strong>不足；它固定自有 kernel 的合并拓扑，但不能控制 cuSPARSE 内部顺序、编译选项或硬件差异。</p>
                   <p><strong>代码证据：</strong>custom check 使用 <code>for (distance = 128; ...)</code>，而 SpMV 使用 vendor-controlled <code>CUSPARSE_SPMV_ALG_DEFAULT</code>。</p>
+                  <p><strong>静态边界：</strong>固定 tree 只约束自有 reduction 源码；cuSPARSE、编译 flags、driver 与 GPU 架构仍在证明边界外。</p>
+                  <p><strong>运行时工具：</strong>跨 GPU、toolchain 与 library 版本重复运行，分别比较 bit pattern、残差轨迹和最终 KKT 接受结果。</p>
                   <p><strong>Review 推理：</strong>确定性声明必须限定组件、平台与容差；跨环境要靠重复运行和数值接受测试验证。</p>
                 </details>
               </div>
@@ -2649,6 +2705,8 @@
                   <summary>展开参考答案</summary>
                   <p><strong>结论：</strong>resident check 针对变换/缩放空间与紧凑指标；最终用户结论必须在恢复后的原 HighsLp 上独立验证。</p>
                   <p><strong>代码证据：</strong>solver 先调用 <code>model::postsolve</code>，再调用 <code>verification::verifyKkt(original_model.lp(), solution, ...)</code>。</p>
+                  <p><strong>静态边界：</strong>控制流能证明 postsolve 后调用独立 verifier，不能证明映射、下载值或 verifier 数值实现本身无缺陷。</p>
+                  <p><strong>运行时工具：</strong>用 CPU differential cases 和故障注入破坏 transformed candidate、download 或 mapping，确认 original-model KKT 会拒绝。</p>
                   <p><strong>Review 推理：</strong>分层 oracle 能发现 transformation、download 或 backend 的共同错误，避免同源计算自证正确。</p>
                 </details>
               </div>
@@ -2684,8 +2742,10 @@
                 <p class="review-question"><strong>问题 1：</strong>普通 boundary 偶发变慢，第一组证据应收集什么？</p>
                 <details class="answer">
                   <summary>展开参考答案</summary>
-                  <p><strong>结论：</strong>先对齐 boundary/download counters 与 Nsight Systems timeline，判断是 packet、full candidate fallback 还是同步等待。</p>
-                  <p><strong>代码证据：</strong><code>ordinary_check_d2h_bytes</code>、<code>candidate_downloads</code>、<code>host_oracle_checks</code> 与 <code>boundary_seconds</code> 分开记录。</p>
+                  <p><strong>结论：</strong>先对齐 boundary/download counters 与 Nsight Systems timeline，判断是 packet、host-oracle/certificate full candidate download 还是同步等待。</p>
+                  <p><strong>代码证据：</strong><code>ordinary_check_d2h_bytes</code>、<code>candidate_downloads</code>、<code>host_oracle_checks</code>、<code>certificate_checks</code> 与 <code>boundary_seconds</code> 分开记录。</p>
+                  <p><strong>静态边界：</strong>diagnostics 字段能证明事件被分类计数，不能仅凭 counters 证明某次延迟来自 copy、同步或 Host 工作。</p>
+                  <p><strong>运行时工具：</strong>用 Nsight Systems 将 <code>boundary_seconds</code>、packet/full-candidate memcpy 与 Host wait 在同一 timeline 上关联。</p>
                   <p><strong>Review 推理：</strong>先分类事件才能选对深挖对象；直接看某个 kernel 容易漏掉 D2H 或 Host wait。</p>
                 </details>
               </div>
@@ -2695,6 +2755,8 @@
                   <summary>展开参考答案</summary>
                   <p><strong>结论：</strong>不能；Sanitizer 主要发现内存、race 和 API 使用问题，不证明数值等价、KKT 接受或 speedup。</p>
                   <p><strong>代码证据：</strong>HiPDLP 的接受链还包含 resident check、Host fallback、postsolve 与 <code>verifyKkt</code>，性能则由诊断和 profiler 衡量。</p>
+                  <p><strong>静态边界：</strong>接受链源码能列出 sanitizer 之外的数值与语义义务，但不能证明这些义务在目标模型上都通过。</p>
+                  <p><strong>运行时工具：</strong>组合 Compute Sanitizer、CPU/CUDA differential tests、postsolve/KKT tests 与 Systems/Compute profiling，分别回答非法访问、等价性和性能。</p>
                   <p><strong>Review 推理：</strong>工具结论必须限制在其检测能力；正确性、数值与性能需要互补证据。</p>
                 </details>
               </div>
@@ -2704,6 +2766,8 @@
                   <summary>展开参考答案</summary>
                   <p><strong>结论：</strong>不能；launch status 只证明提交成功，异步执行错误要在后续同步/检查边界观测。</p>
                   <p><strong>代码证据：</strong><code>replay()</code> 检查 <code>cudaGraphLaunch</code>，后续 <code>synchronizeAndCheck()</code> 下载 error flag 并同步 stream。</p>
+                  <p><strong>静态边界：</strong><code>cudaGraphLaunch</code> 返回值只证明提交，源码中后续同步/error-flag 边界才覆盖异步执行结果。</p>
+                  <p><strong>运行时工具：</strong>用 graph 内故障注入配合 Compute Sanitizer 和同步边界测试，确认提交成功后的 device failure 仍变成 <code>api::Error</code>。</p>
                   <p><strong>Review 推理：</strong>调试时要同时保留 API status、device error state 和同步点，避免 success-shaped false negative。</p>
                 </details>
               </div>
@@ -2728,24 +2792,30 @@
               <summary>展开参考答案</summary>
               <p><strong>结论：</strong>它是 backend-owned column vector：setup 创建，primal kernel 写入，边界检查在 Device 上读取，必要时下载到 <code>HostIterate::primal</code>，最后由 postsolve 恢复原模型语义。</p>
               <p><strong>代码证据：</strong><code>createIterationVectors()</code> 创建它；<code>fusedProjectedPrimalUpdateAndReflect(..., *state.primal_candidate, ...)</code> 写入；<code>check_input.primal = state.primal_candidate</code>；<code>downloadIterate()</code> 下载；<code>postsolveIterate()</code> 调用 <code>model::postsolve</code>。</p>
+              <p><strong>静态边界：</strong>调用链能证明 owner、handle 传递和 postsolve 顺序，不能证明运行时地址、内容与 stream 完成时刻。</p>
+              <p><strong>运行时工具：</strong>用 cuda-gdb 或受控 sentinel instrumentation 观察 candidate，再以 Nsight Systems 核对 resident check、D2H 和 Host consumer 顺序。</p>
               <p><strong>Review 推理：</strong>逐边界检查 owner、尺寸、驻留与同步，才能避免把 device candidate、Host copy 和 original solution 当成同一对象。</p>
             </details>
           </div>
           <div class="qa-pair">
-            <p class="review-question"><strong>综合题 2：</strong>正常 cadence check 是否需要完整 candidate D2H？</p>
+            <p class="review-question"><strong>综合题 2：</strong>正常 cadence check 是否总是只需 112-byte packet？</p>
             <details class="answer">
               <summary>展开参考答案</summary>
-              <p><strong>结论：</strong>不需要；正常路径在 Device 上计算 resident check，只下载一个 112-byte packet。仅不确定/fallback、证书或最终输出需要更大下载。</p>
-              <p><strong>代码证据：</strong><code>checkPartialsKernel</code> 与 <code>checkPacketKernel</code> 生成 <code>CheckPacket</code>，普通路径记录 <code>ordinary_check_d2h_bytes</code>；完整候选经 <code>downloadIterate()</code> 单独计入 <code>candidate_downloads</code>。</p>
+              <p><strong>结论：</strong>不是。resident check 的 baseline 只下载 112-byte packet；<code>requires_host_oracle</code> 会为 raw metrics 下载完整候选，而 <code>certificate_possible</code> 在普通 cadence 也可能触发完整 candidate D2H，随后进入 <code>detectCertificate()</code>，不是 raw convergence host oracle。terminal/postsolve 路径也会按需下载或复用同一候选。</p>
+              <p><strong>代码证据：</strong><code>checkPartialsKernel</code> 与 <code>checkPacketKernel</code> 生成 <code>CheckPacket</code>；solver 分别在 <code>check.requires_host_oracle</code> 和后续 <code>certificate_possible</code> 分支调用缓存的 <code>download_candidate()</code>，后者再调用 <code>detectCertificate()</code>；完整候选统一计入 <code>candidate_downloads</code>。</p>
+              <p><strong>静态边界：</strong>控制流能证明 packet baseline 以及 host-oracle、certificate、terminal/verification 的 full-candidate 触发器，不能证明运行时触发频率和实际 bytes。</p>
+              <p><strong>运行时工具：</strong>联合 <code>candidate_downloads</code>、<code>host_oracle_checks</code>、<code>certificate_checks</code> 与 Nsight Systems D2H trace 区分每种触发器。</p>
               <p><strong>Review 推理：</strong>必须用 counters 和 Systems trace 核对每个 boundary 的实际 bytes；“API 能下载”不等于正常路径必须下载。</p>
             </details>
           </div>
           <div class="qa-pair">
-            <p class="review-question"><strong>综合题 3：</strong>证明当 <code>N &gt; 65535 × 256</code> 时 grid-stride kernel 仍覆盖每个索引。</p>
+            <p class="review-question"><strong>综合题 3：</strong>对显式使用 <code>GridIndex</code> 的 <code>differenceKernel</code> 和 <code>vectorPairBlendKernel</code>，证明当 <code>N &gt; 65535 × 256</code> 时仍覆盖每个索引。</p>
             <details class="answer">
               <summary>展开参考答案</summary>
-              <p><strong>结论：</strong>满 grid 提供 stride 个起点 <code>0..stride-1</code>；任意 <code>i &lt; N</code> 都可唯一写成 <code>i = r + q × stride</code>，由起点 r 的线程在第 q 次循环访问。</p>
-              <p><strong>代码证据：</strong><code>stride = blockDim.x * gridDim.x</code>，循环执行 <code>index += stride</code>；宽索引 <code>GridIndex</code> 与 static_assert 防止支持范围内的 stride 加法溢出。</p>
+              <p><strong>结论：</strong>满 grid 提供 stride 个起点 <code>0..stride-1</code>；任意 <code>i &lt; N</code> 都可唯一写成 <code>i = r + q × stride</code>，由起点 r 的线程在第 q 次循环访问。该证明只覆盖显式使用 <code>GridIndex</code> 的 kernels。</p>
+              <p><strong>代码证据：</strong><code>differenceKernel</code> 和 <code>vectorPairBlendKernel</code> 以 <code>GridIndex</code> 计算 <code>stride</code> 与 <code>index += stride</code>；static_assert 保证最大支持 <code>HighsInt</code> 索引再加最大 grid stride 仍能由 <code>GridIndex</code> 表示。<code>projectedPrimalKernel</code> 等仍用 <code>HighsInt</code>，所以这条无溢出证明不能外推到所有 grid-stride loops。</p>
+              <p><strong>静态边界：</strong><code>GridIndex</code> 与 static_assert 的无溢出证明只适用于显式使用该类型的 kernels；仍以 <code>HighsInt</code> 递增的 loops 必须单独审计。</p>
+              <p><strong>运行时工具：</strong>用 <code>N = 65535 × 256 + 1</code> 的 sentinel 对照和 Compute Sanitizer 验证边界执行；该样例不能替代最大 <code>HighsInt</code> 的静态证明。</p>
               <p><strong>Review 推理：</strong>覆盖证明还需确认 grid 含所有 residue 起点、循环条件是 <code>index &lt; size</code>，且索引类型能表示 N 与后续加法。</p>
             </details>
           </div>
@@ -2755,6 +2825,8 @@
               <summary>展开参考答案</summary>
               <p><strong>结论：</strong>每个参与 capture 的 problem/workspace/vector 提交其 lifetime token；command buffer 只保存 weak references，任何资源先销毁都会让 replay 明确失败。</p>
               <p><strong>代码证据：</strong><code>recordDependency(shared_ptr)</code> 收集 token，<code>endRecording()</code> 移入 <code>dependencies</code>，<code>replay()</code> 在 <code>cudaGraphLaunch</code> 前执行 <code>dependenciesAlive()</code> 并返回 “dependency has expired”。</p>
+              <p><strong>静态边界：</strong>weak dependency set 与 replay guard 只能覆盖已登记资源，不能证明 capture 期间的每个 device pointer 都有对应 token。</p>
+              <p><strong>运行时工具：</strong>为 problem、workspace 和每类 vector 做逐一销毁/重放测试，并在 Compute Sanitizer 下确认没有 guard 前 use-after-free。</p>
               <p><strong>Review 推理：</strong>检查必须覆盖每种被捕获资源的 record call，并测试销毁任一资源后 replay 失败，而非只检查 graph handle 非空。</p>
             </details>
           </div>

@@ -18,6 +18,22 @@ SYSTEM_NODE_IDS = {
     "node-postsolve",
     "node-kkt",
 }
+VOID_ELEMENTS = {
+    "area",
+    "base",
+    "br",
+    "col",
+    "embed",
+    "hr",
+    "img",
+    "input",
+    "link",
+    "meta",
+    "param",
+    "source",
+    "track",
+    "wbr",
+}
 
 
 class ArchitecturePageParser(HTMLParser):
@@ -36,14 +52,36 @@ class ArchitecturePageParser(HTMLParser):
         self.style_chunks = []
         self.in_style = False
         self.cuda_lessons = 0
+        self.total_review_questions = 0
         self.review_questions = 0
+        self.kernel_review_questions = 0
         self.answers = 0
+        self.lesson_question_counts = {}
+        self.lesson_answer_counts = {}
+        self.integrated_review_questions = 0
+        self.integrated_answers = 0
+        self.answer_texts = []
+        self.element_stack = []
+        self.answer_chunks = None
         self.current_node = None
         self.detail_node = None
         self.node_text = {node_id: [] for node_id in SYSTEM_NODE_IDS}
         self.node_detail_count = {node_id: 0 for node_id in SYSTEM_NODE_IDS}
         self.node_detail_text = {node_id: [] for node_id in SYSTEM_NODE_IDS}
         self.node_detail_links = {node_id: [] for node_id in SYSTEM_NODE_IDS}
+
+    def has_context(self, element_id=None, class_name=None):
+        return any(
+            (element_id is None or item["id"] == element_id)
+            and (class_name is None or class_name in item["classes"])
+            for item in self.element_stack
+        )
+
+    def lesson_context(self):
+        for item in reversed(self.element_stack):
+            if "cuda-lesson" in item["classes"]:
+                return item["id"]
+        return None
 
     def handle_starttag(self, tag, attrs):
         attributes = dict(attrs)
@@ -54,12 +92,41 @@ class ArchitecturePageParser(HTMLParser):
         if tag == "article" and element_id in SYSTEM_NODE_IDS:
             self.current_node = element_id
         classes = set(attributes.get("class", "").split())
-        if "cuda-lesson" in classes:
+        in_learning_view = (
+            element_id == "learning-review"
+            or self.has_context(element_id="learning-review")
+        )
+        in_kernel_card = (
+            "kernel-card" in classes
+            or self.has_context(class_name="kernel-card")
+        )
+        in_integrated_exercises = (
+            "integrated-exercises" in classes
+            or self.has_context(class_name="integrated-exercises")
+        )
+        lesson_id = self.lesson_context()
+        if "cuda-lesson" in classes and in_learning_view:
             self.cuda_lessons += 1
+            lesson_id = element_id
+            self.lesson_question_counts[lesson_id] = 0
+            self.lesson_answer_counts[lesson_id] = 0
         if "review-question" in classes:
-            self.review_questions += 1
-        if tag == "details" and "answer" in classes:
+            self.total_review_questions += 1
+            if in_learning_view:
+                self.review_questions += 1
+                if lesson_id is not None:
+                    self.lesson_question_counts[lesson_id] += 1
+                elif in_integrated_exercises:
+                    self.integrated_review_questions += 1
+            if in_kernel_card:
+                self.kernel_review_questions += 1
+        if tag == "details" and "answer" in classes and in_learning_view:
             self.answers += 1
+            self.answer_chunks = []
+            if lesson_id is not None:
+                self.lesson_answer_counts[lesson_id] += 1
+            elif in_integrated_exercises:
+                self.integrated_answers += 1
         if tag == "button" and "data-lane" in attributes:
             self.lane_buttons.append(attributes)
         if tag == "div" and "lane-card" in classes:
@@ -89,8 +156,19 @@ class ArchitecturePageParser(HTMLParser):
             self.in_data = True
         if tag == "style":
             self.in_style = True
+        if tag not in VOID_ELEMENTS:
+            self.element_stack.append({
+                "tag": tag,
+                "id": element_id,
+                "classes": classes,
+            })
 
     def handle_endtag(self, tag):
+        if tag == "details" and self.answer_chunks is not None:
+            self.answer_texts.append(
+                " ".join("".join(self.answer_chunks).split())
+            )
+            self.answer_chunks = None
         if tag == "script" and self.in_data:
             self.in_data = False
         if tag == "style":
@@ -99,6 +177,8 @@ class ArchitecturePageParser(HTMLParser):
             self.detail_node = None
         if tag == "article" and self.current_node is not None:
             self.current_node = None
+        if self.element_stack:
+            self.element_stack.pop()
 
     def handle_data(self, data):
         if self.in_data:
@@ -109,6 +189,8 @@ class ArchitecturePageParser(HTMLParser):
             self.node_text[self.current_node].append(data)
         if self.detail_node is not None:
             self.node_detail_text[self.detail_node].append(data)
+        if self.answer_chunks is not None:
+            self.answer_chunks.append(data)
 
 
 class ArchitecturePageTests(unittest.TestCase):
@@ -146,6 +228,16 @@ class ArchitecturePageTests(unittest.TestCase):
         self.assertEqual(self.parser.cuda_lessons, 8)
         self.assertEqual(self.parser.review_questions, 28)
         self.assertEqual(self.parser.answers, 28)
+        self.assertEqual(
+            self.parser.lesson_question_counts,
+            {f"cuda-lesson-{index}": 3 for index in range(1, 9)},
+        )
+        self.assertEqual(
+            self.parser.lesson_answer_counts,
+            {f"cuda-lesson-{index}": 3 for index in range(1, 9)},
+        )
+        self.assertEqual(self.parser.integrated_review_questions, 4)
+        self.assertEqual(self.parser.integrated_answers, 4)
         self.assertNotIn('class="answer" open', self.source)
         for heading in (
             "执行模型",
@@ -158,6 +250,55 @@ class ArchitecturePageTests(unittest.TestCase):
             "调试工具地图",
         ):
             self.assertIn(heading, self.source)
+
+    def test_kernel_prompts_remain_review_questions(self):
+        self.assertEqual(self.parser.total_review_questions, 34)
+        self.assertEqual(self.parser.kernel_review_questions, 6)
+        self.assertNotIn("kernel-review-question", self.source)
+
+    def test_learning_answers_separate_static_and_runtime_evidence(self):
+        self.assertEqual(len(self.parser.answer_texts), 28)
+        for index, answer_text in enumerate(self.parser.answer_texts, start=1):
+            with self.subTest(answer=index):
+                self.assertIn("静态边界：", answer_text)
+                self.assertIn("运行时工具：", answer_text)
+
+    def test_candidate_download_paths_distinguish_certificate_verification(self):
+        self.assertNotIn(
+            "threshold uncertainty / optional metric fallback / "
+            "suspected certificate",
+            self.source,
+        )
+        for evidence in (
+            "普通 cadence 也可能触发完整 candidate D2H",
+            "<code>requires_host_oracle</code>",
+            "<code>certificate_possible</code>",
+            "<code>detectCertificate()</code>",
+            "raw convergence host oracle",
+            "independent certificate verification",
+        ):
+            self.assertIn(evidence, self.source)
+
+    def test_grid_stride_proof_is_scoped_to_grid_index_kernels(self):
+        self.assertIn(
+            "该证明只覆盖显式使用 <code>GridIndex</code> 的",
+            self.source,
+        )
+        self.assertIn(
+            "<code>differenceKernel</code> 和 "
+            "<code>vectorPairBlendKernel</code>",
+            self.source,
+        )
+        self.assertIn(
+            "<code>projectedPrimalKernel</code> 等仍用 "
+            "<code>HighsInt</code>",
+            self.source,
+        )
+        self.assertNotIn(
+            "宽索引 <code>GridIndex</code> 与 static_assert "
+            "防止支持范围内的 stride 加法溢出",
+            self.source,
+        )
 
     def test_system_map_has_the_real_solve_boundaries(self):
         self.assertTrue(SYSTEM_NODE_IDS <= self.parser.ids)
