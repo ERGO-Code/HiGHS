@@ -19,6 +19,122 @@ SYSTEM_NODE_IDS = {
     "node-postsolve",
     "node-kkt",
 }
+VIEW_IDS = {
+    "system-map",
+    "data-residency",
+    "iteration-correctness",
+    "bottlenecks",
+    "learning-review",
+}
+COMPONENT_DRAWER_FIELDS = {
+    "responsibility",
+    "inputs",
+    "outputs",
+    "owner-lifetime",
+    "residency",
+    "errors",
+    "invariants",
+    "source-order",
+    "tests",
+    "good-signals",
+    "danger-signals",
+    "review-questions",
+}
+EVIDENCE_CATEGORIES = {
+    "all",
+    "fact",
+    "measured",
+    "hypothesis",
+    "unavailable",
+}
+PRODUCTION_CUSTOM_KERNELS = {
+    "fillKernel",
+    "scaleKernel",
+    "axpyKernel",
+    "differenceKernel",
+    "projectedPrimalKernel",
+    "projectedDualKernel",
+    "vectorBlendKernel",
+    "vectorPairBlendKernel",
+    "averageKernel",
+    "finiteCheckKernel",
+    "dotKernel",
+    "normKernel",
+    "differenceNormKernel",
+    "checkPartialsKernel",
+    "checkPacketKernel",
+    "certificateRecoveryKernel",
+    "certificateNormKernel",
+    "certificateNormalizeKernel",
+    "certificateConditionsKernel",
+    "certificateFlagsKernel",
+}
+GENERIC_256_KERNELS = {
+    "fillKernel",
+    "scaleKernel",
+    "axpyKernel",
+    "differenceKernel",
+    "projectedPrimalKernel",
+    "projectedDualKernel",
+    "vectorBlendKernel",
+    "vectorPairBlendKernel",
+    "averageKernel",
+    "finiteCheckKernel",
+}
+GENERIC_KERNEL_GRIDS = {
+    "fillKernel": "blockCount(size)",
+    "scaleKernel": "blockCount(size)",
+    "axpyKernel": "blockCount(size)",
+    "differenceKernel": "blockCount(size)",
+    "projectedPrimalKernel": "blockCount(num_cols)",
+    "projectedDualKernel": "blockCount(num_rows)",
+    "vectorBlendKernel": "blockCount(size)",
+    "vectorPairBlendKernel": "blockCount(max(primal_size, dual_size))",
+    "averageKernel": "blockCount(size)",
+    "finiteCheckKernel": "blockCount(size)",
+}
+SERIAL_1X1_KERNELS = {
+    "dotKernel",
+    "normKernel",
+    "differenceNormKernel",
+}
+PARTIAL_1024_KERNELS = {
+    "checkPartialsKernel",
+    "certificateRecoveryKernel",
+    "certificateNormalizeKernel",
+    "certificateConditionsKernel",
+}
+FINAL_1X256_KERNELS = {
+    "checkPacketKernel",
+    "certificateNormKernel",
+    "certificateFlagsKernel",
+}
+CHECK_AND_CERTIFICATE_KERNELS = {
+    "checkPartialsKernel",
+    "checkPacketKernel",
+    "certificateRecoveryKernel",
+    "certificateNormKernel",
+    "certificateNormalizeKernel",
+    "certificateConditionsKernel",
+    "certificateFlagsKernel",
+}
+STATIC_SHARED_BY_KERNEL = {
+    "checkPartialsKernel": "CheckPartial[256]",
+    "checkPacketKernel": "CheckPartial[256]",
+    "certificateRecoveryKernel": "CertificateNormPartial[256]",
+    "certificateNormKernel": "CertificateNormPartial[256]",
+    "certificateNormalizeKernel": "CertificateNormPartial[256]",
+    "certificateConditionsKernel": "ScreenPartial[256]",
+    "certificateFlagsKernel": "ScreenPartial[256]",
+}
+CERTIFICATE_KERNEL_SEQUENCE = [
+    "certificateRecoveryKernel",
+    "certificateNormKernel(normalization)",
+    "certificateNormalizeKernel",
+    "certificateNormKernel(verifier)",
+    "certificateConditionsKernel",
+    "certificateFlagsKernel",
+]
 CUDA_LESSON_IDS = {
     f"cuda-lesson-{index}" for index in range(1, 9)
 }
@@ -101,12 +217,18 @@ class ArchitecturePageParser(HTMLParser):
         self.links = []
         self.data_chunks = []
         self.in_data = False
+        self.script_chunks = []
+        self.in_script = False
         self.elements = {}
         self.lane_buttons = []
+        self.evidence_filter_buttons = []
+        self.evidence_cards = []
+        self.kernel_inventory_rows = []
         self.backend_lane_cards = []
         self.backend_filter_cards = []
         self.shared_operation_cards = []
         self.style_chunks = []
+        self.inline_styles = []
         self.in_style = False
         self.cuda_lessons = 0
         self.total_review_questions = 0
@@ -116,6 +238,7 @@ class ArchitecturePageParser(HTMLParser):
         self.lesson_question_counts = {}
         self.lesson_answer_counts = {}
         self.lesson_part_counts = {}
+        self.lesson_text = {}
         self.integrated_review_questions = 0
         self.integrated_answers = 0
         self.integrated_exercises = {}
@@ -134,6 +257,10 @@ class ArchitecturePageParser(HTMLParser):
         self.node_detail_count = {node_id: 0 for node_id in SYSTEM_NODE_IDS}
         self.node_detail_text = {node_id: [] for node_id in SYSTEM_NODE_IDS}
         self.node_detail_links = {node_id: [] for node_id in SYSTEM_NODE_IDS}
+        self.node_detail_fields = {
+            node_id: {} for node_id in SYSTEM_NODE_IDS
+        }
+        self.detail_field_capture = None
 
     def has_context(self, element_id=None, class_name=None):
         return any(
@@ -194,6 +321,7 @@ class ArchitecturePageParser(HTMLParser):
             lesson_id = element_id
             self.lesson_question_counts[lesson_id] = 0
             self.lesson_answer_counts[lesson_id] = 0
+            self.lesson_text[lesson_id] = []
             self.lesson_part_counts[lesson_id] = {
                 "visual": 0,
                 "code_example": 0,
@@ -295,6 +423,15 @@ class ArchitecturePageParser(HTMLParser):
             }
         if tag == "button" and "data-lane" in attributes:
             self.lane_buttons.append(attributes)
+        if tag == "button" and "data-evidence-filter" in attributes:
+            self.evidence_filter_buttons.append(attributes)
+        if "data-evidence" in attributes:
+            self.evidence_cards.append({
+                "tag": tag,
+                "attributes": attributes,
+            })
+        if "data-kernel" in attributes:
+            self.kernel_inventory_rows.append(attributes)
         if "data-backend" in attributes:
             self.backend_filter_cards.append({
                 "attributes": attributes,
@@ -312,6 +449,14 @@ class ArchitecturePageParser(HTMLParser):
         ):
             self.detail_node = self.current_node
             self.node_detail_count[self.current_node] += 1
+        drawer_field = attributes.get("data-drawer-field")
+        if self.detail_node is not None and drawer_field is not None:
+            self.detail_field_capture = {
+                "tag": tag,
+                "node": self.detail_node,
+                "field": drawer_field,
+                "chunks": [],
+            }
         if tag == "a" and self.detail_node is not None:
             self.node_detail_links[self.detail_node].append(
                 attributes.get("href", "")
@@ -324,8 +469,18 @@ class ArchitecturePageParser(HTMLParser):
                 self.remote_assets.append(value)
             if name == "href" and value:
                 self.links.append(value)
+        srcset = attributes.get("srcset", "")
+        for candidate in srcset.split(","):
+            value = candidate.strip().split(" ", 1)[0]
+            if value.startswith(("http://", "https://", "//")):
+                self.remote_assets.append(value)
+        inline_style = attributes.get("style")
+        if inline_style is not None:
+            self.inline_styles.append(inline_style)
         if tag == "script" and element_id == "architecture-data":
             self.in_data = True
+        if tag == "script":
+            self.in_script = True
         if tag == "style":
             self.in_style = True
         if tag not in VOID_ELEMENTS:
@@ -337,6 +492,17 @@ class ArchitecturePageParser(HTMLParser):
             })
 
     def handle_endtag(self, tag):
+        if (
+            self.detail_field_capture is not None
+            and tag == self.detail_field_capture["tag"]
+        ):
+            content = " ".join(
+                "".join(self.detail_field_capture["chunks"]).split()
+            )
+            node = self.detail_field_capture["node"]
+            field = self.detail_field_capture["field"]
+            self.node_detail_fields[node].setdefault(field, []).append(content)
+            self.detail_field_capture = None
         if (
             self.review_content_capture is not None
             and tag == self.review_content_capture["tag"]
@@ -364,6 +530,8 @@ class ArchitecturePageParser(HTMLParser):
             self.answer_chunks = None
         if tag == "script" and self.in_data:
             self.in_data = False
+        if tag == "script":
+            self.in_script = False
         if tag == "style":
             self.in_style = False
         if tag == "details" and self.detail_node is not None:
@@ -376,12 +544,19 @@ class ArchitecturePageParser(HTMLParser):
     def handle_data(self, data):
         if self.in_data:
             self.data_chunks.append(data)
+        if self.in_script:
+            self.script_chunks.append(data)
         if self.in_style:
             self.style_chunks.append(data)
+        lesson_id = self.lesson_context()
+        if lesson_id in self.lesson_text:
+            self.lesson_text[lesson_id].append(data)
         if self.current_node is not None:
             self.node_text[self.current_node].append(data)
         if self.detail_node is not None:
             self.node_detail_text[self.detail_node].append(data)
+        if self.detail_field_capture is not None:
+            self.detail_field_capture["chunks"].append(data)
         if self.answer_chunks is not None:
             self.answer_chunks.append(data)
         if self.review_content_capture is not None:
@@ -405,13 +580,34 @@ class ArchitecturePageTests(unittest.TestCase):
     def test_page_is_offline_and_has_five_views(self):
         self.assertEqual(self.parser.remote_assets, [])
         self.assertEqual(len(self.parser.tabs), 5)
-        self.assertTrue({
-            "system-map",
-            "data-residency",
-            "iteration-correctness",
-            "bottlenecks",
-            "learning-review",
-        } <= self.parser.ids)
+        self.assertTrue(VIEW_IDS <= self.parser.ids)
+        css = "\n".join(
+            self.parser.style_chunks + self.parser.inline_styles
+        )
+        css_network_patterns = (
+            r"@import\s+(?:url\(\s*)?[\"']?\s*(?:https?:)?//",
+            r"url\(\s*[\"']?\s*(?:https?:)?//",
+        )
+        for pattern in css_network_patterns:
+            with self.subTest(css_network_pattern=pattern):
+                self.assertIsNone(re.search(pattern, css, re.IGNORECASE))
+
+        javascript = "\n".join(self.parser.script_chunks)
+        javascript_network_patterns = (
+            r"\bfetch\s*\(\s*[\"'](?:https?:)?//",
+            r"\.open\s*\(\s*[\"'][A-Z]+[\"']\s*,\s*"
+            r"[\"'](?:https?:)?//",
+            r"\b(?:new\s+)?WebSocket\s*\(\s*[\"'](?:wss?:)?//",
+            r"\b(?:new\s+)?EventSource\s*\(\s*[\"'](?:https?:)?//",
+            r"\bimport\s*\(\s*[\"'](?:https?:)?//",
+            r"\bimport\s+(?:[^;\n]*?\s+from\s+)?"
+            r"[\"'](?:https?:)?//",
+        )
+        for pattern in javascript_network_patterns:
+            with self.subTest(javascript_network_pattern=pattern):
+                self.assertIsNone(
+                    re.search(pattern, javascript, re.IGNORECASE)
+                )
         self.assertEqual(self.data["snapshot"], {
             "branch": "feature/hipdlp-rewrite",
             "commit": "49b85f4f3",
@@ -422,18 +618,17 @@ class ArchitecturePageTests(unittest.TestCase):
     def test_tabs_reference_existing_views_and_static_content_is_not_hidden(
             self):
         controls = {tab["aria-controls"] for tab in self.parser.tabs}
-        self.assertEqual(controls, {
-            "system-map",
-            "data-residency",
-            "iteration-correctness",
-            "bottlenecks",
-            "learning-review",
-        })
+        self.assertEqual(controls, VIEW_IDS)
         self.assertTrue(controls <= self.parser.ids)
-        self.assertNotIn(
-            '<section class="view" id="system-map" hidden',
-            self.source,
-        )
+        for view_id in sorted(controls):
+            with self.subTest(view_id=view_id):
+                panel = self.parser.elements[view_id]
+                self.assertEqual(panel["tag"], "section")
+                self.assertEqual(
+                    panel["attributes"].get("role"),
+                    "tabpanel",
+                )
+                self.assertNotIn("hidden", panel["attributes"])
         self.assertIn("prefers-reduced-motion: reduce", self.source)
         self.assertIn("transition: none !important;", self.source)
         self.assertIn("@media print", self.source)
@@ -511,6 +706,37 @@ class ArchitecturePageTests(unittest.TestCase):
             "调试工具地图",
         ):
             self.assertIn(heading, self.source)
+
+    def test_lessons_two_and_three_cover_memory_and_timing_in_context(self):
+        memory_lesson = self.normalized(
+            self.parser.lesson_text["cuda-lesson-2"]
+        )
+        for topic in (
+            "Host memory",
+            "pinned Host memory",
+            "global Device memory",
+            "register",
+            "static shared memory",
+            "CheckPartial partial",
+            "__shared__ CheckPartial shared[256]",
+            "dynamic shared memory = 0",
+        ):
+            with self.subTest(lesson=2, topic=topic):
+                self.assertIn(topic, memory_lesson)
+
+        timing_lesson = self.normalized(
+            self.parser.lesson_text["cuda-lesson-3"]
+        )
+        for topic in (
+            "cudaEventRecord",
+            "cudaEventSynchronize",
+            "cudaEventElapsedTime",
+            "cudaStreamSynchronize",
+            "GPU elapsed time",
+            "Host synchronization wall time",
+        ):
+            with self.subTest(lesson=3, topic=topic):
+                self.assertIn(topic, timing_lesson)
 
     def test_kernel_prompts_remain_review_questions(self):
         self.assertEqual(self.parser.total_review_questions, 34)
@@ -754,29 +980,84 @@ class ArchitecturePageTests(unittest.TestCase):
         )
 
     def test_every_system_node_has_complete_review_details(self):
-        required_labels = (
-            "所有权",
-            "输入",
-            "输出",
-            "执行位置",
-            "失败",
-            "源码",
-            "Review：",
-        )
         for node_id in sorted(SYSTEM_NODE_IDS):
             with self.subTest(node_id=node_id):
                 self.assertEqual(self.parser.node_detail_count[node_id], 1)
-                detail_text = self.normalized(
-                    self.parser.node_detail_text[node_id]
-                )
-                for label in required_labels:
-                    self.assertIn(label, detail_text)
-                review_question = detail_text.partition("Review：")[2]
+                fields = self.parser.node_detail_fields[node_id]
+                self.assertEqual(set(fields), COMPONENT_DRAWER_FIELDS)
+                for field_name, values in fields.items():
+                    with self.subTest(
+                        node_id=node_id,
+                        field_name=field_name,
+                    ):
+                        self.assertEqual(len(values), 1)
+                        self.assertTrue(values[0].strip())
+                review_question = fields["review-questions"][0]
                 self.assertGreaterEqual(len(review_question), 12)
                 self.assertIn("？", review_question)
+                source_order = fields["source-order"][0]
+                self.assertIn("→", source_order)
+                for signal_field in ("good-signals", "danger-signals"):
+                    self.assertGreaterEqual(
+                        len(fields[signal_field][0]),
+                        12,
+                    )
                 links = self.parser.node_detail_links[node_id]
                 self.assertEqual(len(links), 1)
                 self.assertTrue(links[0].startswith("../highs/"))
+
+    def test_evidence_filter_has_accessible_controls_and_immutable_cards(self):
+        self.assertEqual(
+            {
+                button["data-evidence-filter"]
+                for button in self.parser.evidence_filter_buttons
+            },
+            EVIDENCE_CATEGORIES,
+        )
+        self.assertEqual(len(self.parser.evidence_filter_buttons), 5)
+        for button in self.parser.evidence_filter_buttons:
+            category = button["data-evidence-filter"]
+            with self.subTest(category=category):
+                self.assertEqual(button.get("type"), "button")
+                self.assertEqual(
+                    button.get("aria-pressed"),
+                    "true" if category == "all" else "false",
+                )
+
+        card_categories = {
+            card["attributes"]["data-evidence"]
+            for card in self.parser.evidence_cards
+        }
+        self.assertEqual(
+            card_categories,
+            EVIDENCE_CATEGORIES - {"all"},
+        )
+        self.assertTrue(self.parser.evidence_cards)
+        self.assertTrue(all(
+            "hidden" not in card["attributes"]
+            for card in self.parser.evidence_cards
+        ))
+        status = self.parser.elements["evidence-filter-status"]["attributes"]
+        self.assertEqual(status.get("role"), "status")
+        self.assertEqual(status.get("aria-live"), "polite")
+        self.assertEqual(status.get("aria-atomic"), "true")
+
+        function_start = self.source.index(
+            "function activateEvidenceFilter("
+        )
+        function_end = self.source.index(
+            "function activateLane(", function_start
+        )
+        function_source = self.source[function_start:function_end]
+        for behavior in (
+            "card.hidden =",
+            'button.setAttribute("aria-pressed",',
+            "evidenceFilterStatus.textContent =",
+        ):
+            with self.subTest(behavior=behavior):
+                self.assertIn(behavior, function_source)
+        self.assertNotIn("card.textContent", function_source)
+        self.assertNotIn("card.innerHTML", function_source)
 
     def test_all_local_source_links_resolve(self):
         source_links = [
@@ -808,6 +1089,146 @@ class ArchitecturePageTests(unittest.TestCase):
         self.assertEqual(kernels["checkPacketKernel"]["blocks"], 1)
         self.assertEqual(kernels["cusparseSpMV"]["grid"], "vendor-controlled")
         self.assertEqual(kernels["checkPacketKernel"]["dynamicSharedBytes"], 0)
+        for name in SERIAL_1X1_KERNELS:
+            with self.subTest(kernel=name):
+                self.assertIn(name, kernels)
+                self.assertEqual(kernels[name]["threads"], 1)
+
+    def test_cuda_kernel_inventory_is_complete_and_source_accurate(self):
+        kernels = {
+            item["name"]: item
+            for item in self.data["kernels"]
+            if item.get("kind") == "custom"
+        }
+        self.assertEqual(set(kernels), PRODUCTION_CUSTOM_KERNELS)
+        self.assertEqual(
+            {
+                row["data-kernel"]
+                for row in self.parser.kernel_inventory_rows
+            },
+            PRODUCTION_CUSTOM_KERNELS | {"cusparseSpMV"},
+        )
+        for name, kernel in kernels.items():
+            with self.subTest(kernel=name):
+                self.assertEqual(kernel["dynamicSharedBytes"], 0)
+                self.assertTrue(kernel["logicalElements"])
+                self.assertTrue(kernel["buffers"])
+                self.assertTrue(kernel["reviewRisk"])
+                self.assertTrue(kernel["grid"])
+                self.assertTrue(kernel["staticShared"])
+
+        for name in GENERIC_256_KERNELS:
+            with self.subTest(kernel=name, geometry="generic"):
+                self.assertEqual(
+                    kernels[name]["grid"],
+                    GENERIC_KERNEL_GRIDS[name],
+                )
+                self.assertEqual(kernels[name]["threads"], 256)
+                self.assertEqual(kernels[name]["maxBlocks"], 65535)
+                self.assertEqual(kernels[name]["staticShared"], "none")
+        for name in SERIAL_1X1_KERNELS:
+            with self.subTest(kernel=name, geometry="serial"):
+                self.assertEqual(kernels[name]["grid"], "1")
+                self.assertEqual(kernels[name]["blocks"], 1)
+                self.assertEqual(kernels[name]["threads"], 1)
+                self.assertEqual(kernels[name]["staticShared"], "none")
+        for name in CHECK_AND_CERTIFICATE_KERNELS:
+            with self.subTest(kernel=name, geometry="reduction"):
+                self.assertEqual(kernels[name]["threads"], 256)
+                self.assertEqual(
+                    kernels[name]["staticShared"],
+                    STATIC_SHARED_BY_KERNEL[name],
+                )
+        for name in PARTIAL_1024_KERNELS:
+            with self.subTest(kernel=name, geometry="partial"):
+                self.assertEqual(
+                    kernels[name]["grid"],
+                    "checkPartialCount(rows, cols)",
+                )
+                self.assertEqual(kernels[name]["maxBlocks"], 1024)
+        for name in FINAL_1X256_KERNELS:
+            with self.subTest(kernel=name, geometry="final"):
+                self.assertEqual(kernels[name]["grid"], "1")
+                self.assertEqual(kernels[name]["blocks"], 1)
+
+        vendor = {
+            item["name"]: item
+            for item in self.data["kernels"]
+            if item.get("kind") == "vendor"
+        }
+        self.assertEqual(set(vendor), {"cusparseSpMV"})
+        self.assertEqual(vendor["cusparseSpMV"]["grid"], "vendor-controlled")
+
+        self.assertEqual(
+            self.data["certificateKernelSequence"],
+            CERTIFICATE_KERNEL_SEQUENCE,
+        )
+        self.assertEqual(
+            self.data["testOnlyKernels"],
+            [{
+                "name": "injectedFailureKernel",
+                "guard": "HIGHS_HIPDLP_TESTING",
+                "launch": "<<<1, 1, 0, stream>>>",
+            }],
+        )
+        self.assertNotIn(
+            "所有 custom launches 使用 256 threads",
+            self.source,
+        )
+        self.assertIn(
+            "cuSPARSE launch geometry 由 vendor 控制",
+            self.source,
+        )
+
+    def test_certificate_screen_has_explicit_eligibility_and_fallback(self):
+        self.assertIn("certificateScreen", self.data)
+        screen = self.data["certificateScreen"]
+        self.assertEqual(screen["architecture"], "AArch64")
+        self.assertEqual(screen["glibcCompile"], "2.39")
+        self.assertEqual(screen["glibcRuntime"], "2.39")
+        self.assertFalse(screen["fastMath"])
+        self.assertEqual(screen["fltRadix"], 2)
+        self.assertEqual(screen["dblMantDig"], 53)
+        self.assertEqual(screen["dblMaxExp"], 1024)
+        self.assertEqual(screen["fltEvalMethod"], 0)
+        self.assertEqual(screen["rounding"], "FE_TONEAREST")
+        self.assertEqual(screen["fpcrClearMask"], "((3 << 22) | (1 << 24) | 3)")
+        self.assertEqual(
+            screen["dimensionLimitExclusive"],
+            4503599627370496,
+        )
+        self.assertEqual(
+            screen["ineligibleDefaults"],
+            {
+                "certificateScreenValid": False,
+                "primalRayPossible": True,
+                "farkasPossible": True,
+            },
+        )
+        self.assertIn("certificate-screen-gate", self.parser.elements)
+        for limitation in (
+            "__aarch64__",
+            "__GLIBC__ == 2",
+            "__GLIBC_MINOR__ == 39",
+            "!defined(__FAST_MATH__)",
+            "FLT_RADIX == 2",
+            "DBL_MANT_DIG == 53",
+            "DBL_MAX_EXP == 1024",
+            "LDBL_MANT_DIG &gt;= 53",
+            "LDBL_MAX_EXP &gt;= DBL_MAX_EXP",
+            "FLT_EVAL_METHOD == 0",
+            'gnu_get_libc_version() == "2.39"',
+            "fegetround() == FE_TONEAREST",
+            "num_rows + num_cols < 4503599627370496",
+            "certificate_screen_valid = false",
+            "primal_ray_possible = true",
+            "farkas_possible = true",
+            "certificate_possible = true",
+            "requires_host_oracle = true",
+            "full-candidate Host certificate verification",
+        ):
+            with self.subTest(limitation=limitation):
+                self.assertIn(limitation, self.source)
 
     def test_replay_semantics_match_solver_scheduling(self):
         self.assertEqual(
@@ -997,6 +1418,14 @@ class ArchitecturePageTests(unittest.TestCase):
         self.assertEqual(matrix, 332016)
         self.assertEqual(vectors, 96000)
         self.assertEqual(candidate, 24000)
+        for exact_output in (
+            "332016 bytes",
+            "96000 bytes",
+            "24000 bytes",
+            "112 bytes",
+        ):
+            with self.subTest(exact_output=exact_output):
+                self.assertIn(exact_output, self.source)
 
     def test_performance_workbench_has_scoped_hotspots_and_report_evidence(
             self):
@@ -1062,6 +1491,7 @@ class ArchitecturePageTests(unittest.TestCase):
             "${label} 必须是非负安全整数",
             "function estimateMemory({ rows, cols, nnz, indexBytes })",
             "function formatBytes(bytes)",
+            "`${bytes} bytes`",
             "function updateEstimator(root = document)",
             "估算结果超过 JavaScript 安全整数范围",
         ):
@@ -1176,13 +1606,13 @@ class ArchitecturePageTests(unittest.TestCase):
             'rows: ""',
             'name: "4-byte indices"',
             'indexBytes: "4"',
-            'matrix: "240.24 KiB"',
+            'matrix: "246008 bytes (240.24 KiB)"',
             'name: "8-byte indices"',
             'indexBytes: "8"',
-            'matrix: "324.23 KiB"',
-            'vector: "93.75 KiB"',
-            'candidate: "23.44 KiB"',
-            'packet: "112 B"',
+            'matrix: "332016 bytes (324.23 KiB)"',
+            'vector: "96000 bytes (93.75 KiB)"',
+            'candidate: "24000 bytes (23.44 KiB)"',
+            'packet: "112 bytes"',
             'name: "16-byte indices"',
             'indexBytes: "16"',
             "resultsHidden: true",

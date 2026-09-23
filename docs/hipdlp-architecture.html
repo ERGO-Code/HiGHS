@@ -48,7 +48,8 @@
     [role="tab"][aria-selected="true"] { border-bottom-color: var(--host); }
     .view { margin: 24px 0; padding: 24px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
     .enhanced .view[hidden],
-    .enhanced [data-backend][hidden] { display: none; }
+    .enhanced [data-backend][hidden],
+    .enhanced [data-evidence][hidden] { display: none; }
     :where(a, button, input, select, summary, [tabindex]):focus-visible {
       outline: 3px solid var(--correctness);
       outline-offset: 3px;
@@ -84,6 +85,27 @@
       gap: 8px;
       margin: 18px 0;
     }
+    .evidence-filter {
+      display: flex;
+      flex-wrap: wrap;
+      width: 100%;
+      margin: 12px 0 6px;
+      border-radius: var(--radius);
+    }
+    .evidence-filter button { flex: 1 1 110px; }
+    .evidence-filter-status {
+      margin: 0 0 18px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .evidence-controls {
+      margin-top: 16px;
+      padding: 12px 16px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--surface);
+    }
+    .evidence-controls .evidence-filter-status { margin-bottom: 0; }
     .legend-label { margin-right: 4px; font-weight: 700; }
     .fact-tag {
       display: inline-flex;
@@ -553,6 +575,17 @@
       border-left: 5px solid var(--host);
       background: var(--host-soft);
     }
+    .certificate-gate {
+      margin: 16px 0;
+      padding: 16px 18px;
+      border: 2px solid var(--correctness);
+      border-radius: var(--radius);
+      background: var(--correctness-soft);
+    }
+    .certificate-gate h4 { margin: 0 0 8px; }
+    .certificate-gate p,
+    .certificate-gate ul { margin-block: 8px; }
+    .certificate-gate code { overflow-wrap: anywhere; }
     .final-path {
       grid-template-columns: 1fr auto 1fr auto 1fr auto 1fr;
       border: 1px solid var(--correctness);
@@ -599,6 +632,15 @@
       padding-top: 9px;
       border-top: 1px dashed var(--line);
       color: #704b0e;
+    }
+    .kernel-inventory th:first-child,
+    .kernel-inventory td:first-child { min-width: 190px; }
+    .kernel-inventory td { vertical-align: top; }
+    .kernel-sequence {
+      margin: 14px 0;
+      padding: 12px 16px 12px 38px;
+      border-left: 4px solid var(--correctness);
+      background: var(--correctness-soft);
     }
     .error-rail {
       position: sticky;
@@ -1045,10 +1087,12 @@
       }
       .shell { width: 100%; }
       .tablist,
-      .segment { display: none !important; }
+      .segment,
+      .evidence-controls { display: none !important; }
       .view,
       .view[hidden],
-      [data-backend][hidden] {
+      [data-backend][hidden],
+      [data-evidence][hidden] {
         display: block !important;
       }
       .view {
@@ -1101,6 +1145,17 @@
     <button id="tab-bottlenecks" role="tab" aria-selected="false" aria-controls="bottlenecks" data-view="bottlenecks">卡点与优化</button>
     <button id="tab-learning-review" role="tab" aria-selected="false" aria-controls="learning-review" data-view="learning-review">学习与 Review</button>
   </nav>
+  <aside class="shell evidence-controls" aria-label="全局证据卡片筛选">
+    <strong>全局证据筛选</strong>
+    <div class="segment evidence-filter" role="group" aria-label="证据卡片筛选">
+      <button type="button" data-evidence-filter="all" aria-pressed="true">全部</button>
+      <button type="button" data-evidence-filter="fact" aria-pressed="false">事实</button>
+      <button type="button" data-evidence-filter="measured" aria-pressed="false">实测</button>
+      <button type="button" data-evidence-filter="hypothesis" aria-pressed="false">假设</button>
+      <button type="button" data-evidence-filter="unavailable" aria-pressed="false">不可用</button>
+    </div>
+    <p id="evidence-filter-status" class="evidence-filter-status" role="status" aria-live="polite" aria-atomic="true">全部证据卡片可见；筛选只改变卡片可见性，不改写事实文本。</p>
+  </aside>
   <main class="shell">
     <section class="view" id="system-map" role="tabpanel" aria-labelledby="tab-system-map" tabindex="0">
       <header class="view-heading">
@@ -1129,7 +1184,6 @@
         <span class="fact-tag hypothesis">待测假设</span>
         <span class="fact-tag unavailable">未实现后端</span>
       </div>
-
       <figure class="flow-figure">
         <figcaption>控制流总览（箭头文字说明传递内容与分支语义）</figcaption>
         <div class="flow-scroll">
@@ -1225,157 +1279,171 @@
       </figure>
 
       <div class="component-grid">
-        <article class="node host" id="node-wrapper">
-          <div class="node-header">
-            <span class="fact-tag fact">已实现</span>
-            <span class="residency">CPU / Host</span>
-          </div>
+        <article class="node host" id="node-wrapper" data-evidence="fact">
+          <div class="node-header"><span class="fact-tag fact">已实现</span><span class="residency">CPU / Host</span></div>
           <h3>HiGHS 求解入口</h3>
           <code>solveLpHiPdlp</code>
           <p>借用求解器对象中的模型、选项与输出槽，并原样把调用边界交给 HiPDLP API。</p>
           <details class="component-detail">
             <summary>展开接口、所有权与 Review 要点</summary>
             <dl>
-              <div><dt>所有权</dt><dd>借用 HighsLpSolverObject 字段；HighsSolution、HighsInfo 与状态由调用方拥有。</dd></div>
-              <div><dt>输入</dt><dd>HighsOptions、HighsTimer、HighsLp、HighsCallback</dd></div>
-              <div><dt>输出</dt><dd>HighsStatus，并就地更新 basis、solution、model status 与 info</dd></div>
-              <div><dt>执行位置</dt><dd>CPU / Host</dd></div>
-              <div><dt>失败</dt><dd>不改写错误语义，直接返回 API 产生的 HighsStatus。</dd></div>
-              <div><dt>源码</dt><dd><a href="../highs/pdlp/HiPdlpWrapper.cpp">打开源码</a></dd></div>
+              <div data-drawer-field="responsibility"><dt>职责</dt><dd>保持 HiGHS 与 HiPDLP 的薄边界，只转交模型、选项、计时器、回调与输出槽。</dd></div>
+              <div data-drawer-field="inputs"><dt>输入</dt><dd>HighsOptions、HighsTimer、HighsLp、HighsCallback。</dd></div>
+              <div data-drawer-field="outputs"><dt>输出</dt><dd>HighsStatus，并就地更新 basis、solution、model status 与 info。</dd></div>
+              <div data-drawer-field="owner-lifetime"><dt>所有权</dt><dd>借用 HighsLpSolverObject 字段；结果对象由调用方拥有，Wrapper 不延长生命周期。</dd></div>
+              <div data-drawer-field="residency"><dt>驻留</dt><dd>CPU / Host；此边界不创建 Device 数据或触发 H2D。</dd></div>
+              <div data-drawer-field="errors"><dt>失败</dt><dd>不改写错误语义，直接返回 API 产生的 HighsStatus。</dd></div>
+              <div data-drawer-field="invariants"><dt>不变量</dt><dd>不得复制整个 LP、重复翻译选项，或把失败状态改造成成功形状。</dd></div>
+              <div data-drawer-field="source-order"><dt>阅读顺序</dt><dd><a href="../highs/pdlp/HiPdlpWrapper.cpp">HiPdlpWrapper.cpp</a> → <code>hipdlp::api::solve</code> 调用点 → 输出写回。</dd></div>
+              <div data-drawer-field="tests"><dt>相关测试</dt><dd><code>check/TestHiPdlpSolver.cpp</code> 的 API 状态、solution 与 info 映射案例。</dd></div>
+              <div data-drawer-field="good-signals"><dt>好信号</dt><dd>函数短小、只有一次 API 调用，输入借用与输出写回位置一眼可见。</dd></div>
+              <div data-drawer-field="danger-signals"><dt>危险信号</dt><dd>Wrapper 开始拥有求解状态、复制模型、重复扣减时间预算或吞掉错误。</dd></div>
+              <div data-drawer-field="review-questions"><dt>Review：</dt><dd>Wrapper 是否仍只负责透传，没有复制模型、重复翻译选项或改变失败状态？</dd></div>
             </dl>
-            <p><strong>Review：</strong>Wrapper 是否仍只负责透传，没有复制模型或重复翻译选项？</p>
           </details>
         </article>
 
-        <article class="node host" id="node-api">
-          <div class="node-header">
-            <span class="fact-tag fact">已实现</span>
-            <span class="residency">CPU / Host</span>
-          </div>
+        <article class="node host" id="node-api" data-evidence="fact">
+          <div class="node-header"><span class="fact-tag fact">已实现</span><span class="residency">CPU / Host</span></div>
           <h3>API 路由与选项翻译</h3>
           <code>hipdlp::api::solve</code>
           <p>翻译 HighsOptions，选择 legacy/rewrite，并把剩余全局时间预算交给 rewrite。</p>
           <details class="component-detail">
             <summary>展开接口、所有权与 Review 要点</summary>
             <dl>
-              <div><dt>所有权</dt><dd>API 借用 HighsLp；SolveResult 拥有返回解。</dd></div>
-              <div><dt>输入</dt><dd>HighsOptions、HighsLp、MigrationOptions</dd></div>
-              <div><dt>输出</dt><dd>SolveResult → HighsSolution/HighsInfo/status</dd></div>
-              <div><dt>执行位置</dt><dd>CPU / Host</dd></div>
-              <div><dt>失败</dt><dd>选项翻译错误直接形成结构化失败结果。</dd></div>
-              <div><dt>源码</dt><dd><a href="../highs/pdlp/hipdlp/api/solver.cc">打开源码</a></dd></div>
+              <div data-drawer-field="responsibility"><dt>职责</dt><dd>翻译公共选项、选择 legacy/rewrite，并把剩余全局时间预算交给所选实现。</dd></div>
+              <div data-drawer-field="inputs"><dt>输入</dt><dd>HighsOptions、HighsLp、MigrationOptions 与已消耗的全局时间。</dd></div>
+              <div data-drawer-field="outputs"><dt>输出</dt><dd>SolveResult → HighsSolution、HighsInfo、model status 与 HighsStatus。</dd></div>
+              <div data-drawer-field="owner-lifetime"><dt>所有权</dt><dd>API 借用 HighsLp；SolveResult 拥有返回解，路由不改变原模型生命周期。</dd></div>
+              <div data-drawer-field="residency"><dt>驻留</dt><dd>CPU / Host 控制面；尚未创建 backend resource。</dd></div>
+              <div data-drawer-field="errors"><dt>失败</dt><dd>非法枚举、非有限容差或预算错误直接形成结构化失败结果。</dd></div>
+              <div data-drawer-field="invariants"><dt>不变量</dt><dd>legacy/rewrite 只选一次；时间预算只扣除一次；状态映射不得掩盖 ErrorCode。</dd></div>
+              <div data-drawer-field="source-order"><dt>阅读顺序</dt><dd><a href="../highs/pdlp/hipdlp/api/solver.cc">api/solver.cc</a> → <code>api/options.cc</code> → legacy/rewrite 返回映射。</dd></div>
+              <div data-drawer-field="tests"><dt>相关测试</dt><dd><code>check/TestHiPdlpSolver.cpp</code> 的 option validation、migration 与 time-limit 案例。</dd></div>
+              <div data-drawer-field="good-signals"><dt>好信号</dt><dd>每个路由分支返回同一种 SolveResult，错误码与剩余时间计算集中可测。</dd></div>
+              <div data-drawer-field="danger-signals"><dt>危险信号</dt><dd>分支内重复翻译选项、重新启动计时器或把 rewrite 失败改成 legacy 成功。</dd></div>
+              <div data-drawer-field="review-questions"><dt>Review：</dt><dd>剩余时间预算是否只扣除一次，并且每个非法选项都在进入算法前被拒绝？</dd></div>
             </dl>
-            <p><strong>Review：</strong>剩余时间预算是否只扣除一次？</p>
           </details>
         </article>
 
-        <article class="node host" id="node-model">
-          <div class="node-header">
-            <span class="fact-tag fact">已实现</span>
-            <span class="residency">CPU / Host</span>
-          </div>
+        <article class="node host" id="node-model" data-evidence="fact">
+          <div class="node-header"><span class="fact-tag fact">已实现</span><span class="residency">CPU / Host</span></div>
           <h3>模型构建与变换</h3>
           <code>model::buildProblem</code>
           <p>校验 HighsLp，规范化边界并建立求解模型及可逆的缩放、行列变换元数据。</p>
           <details class="component-detail">
             <summary>展开接口、所有权与 Review 要点</summary>
             <dl>
-              <div><dt>所有权</dt><dd>OriginalModel 借用 HighsLp；Problem 拥有规范化数组与恢复元数据。</dd></div>
-              <div><dt>输入</dt><dd>原始 HighsLp；随后应用 SolverOptions 中的 scaling pipeline</dd></div>
-              <div><dt>输出</dt><dd>ProblemBuildResult（Problem 或结构化 api::Error）</dd></div>
-              <div><dt>执行位置</dt><dd>CPU / Host</dd></div>
-              <div><dt>失败</dt><dd>维度、稀疏存储、边界或数值无效时停止，不把无效模型交给后端。</dd></div>
-              <div><dt>源码</dt><dd><a href="../highs/pdlp/hipdlp/model/problem.cc">打开源码</a></dd></div>
+              <div data-drawer-field="responsibility"><dt>职责</dt><dd>校验 HighsLp，规范化边界，物化 A 与 Aᵀ，并保存 scaling、行列变换及 slack 恢复元数据。</dd></div>
+              <div data-drawer-field="inputs"><dt>输入</dt><dd>原始 HighsLp 与 SolverOptions 中的 scaling pipeline。</dd></div>
+              <div data-drawer-field="outputs"><dt>输出</dt><dd>ProblemBuildResult（拥有 Problem::Data，或返回结构化 api::Error）。</dd></div>
+              <div data-drawer-field="owner-lifetime"><dt>所有权</dt><dd>OriginalModel 非拥有地借用 HighsLp；Problem 独占规范化数组、CSR/transpose 与恢复元数据。</dd></div>
+              <div data-drawer-field="residency"><dt>驻留</dt><dd>构建与缩放发生在 CPU / Host；随后 backend 绑定可复制到 Device。</dd></div>
+              <div data-drawer-field="errors"><dt>失败</dt><dd>维度、稀疏存储、边界、索引或数值无效时停止，不把无效模型交给后端。</dd></div>
+              <div data-drawer-field="invariants"><dt>不变量</dt><dd>A 与 Aᵀ 表示同一算子；每个 scale、row-sign、slack 变换都有可逆映射。</dd></div>
+              <div data-drawer-field="source-order"><dt>阅读顺序</dt><dd><a href="../highs/pdlp/hipdlp/model/problem.cc">model/problem.cc</a> → <code>Problem::Data</code> → scaling/transformation metadata → postsolve consumer。</dd></div>
+              <div data-drawer-field="tests"><dt>相关测试</dt><dd><code>check/TestHiPdlpModel.cpp</code> 的稀疏结构、边界、scaling 与恢复映射案例。</dd></div>
+              <div data-drawer-field="good-signals"><dt>好信号</dt><dd>构建结果不可半初始化，metadata 与数组尺寸一起校验，A/Aᵀ 来源明确。</dd></div>
+              <div data-drawer-field="danger-signals"><dt>危险信号</dt><dd>原/变换索引混用、metadata 缺项、transpose 指向临时存储或无效值继续流入后端。</dd></div>
+              <div data-drawer-field="review-questions"><dt>Review：</dt><dd>每个 presolve/scale 变换是否保留足够逆映射，并在 backend 创建前证明尺寸与稀疏存储有效？</dd></div>
             </dl>
-            <p><strong>Review：</strong>每个 presolve/scale 变换是否都保留了足够的逆映射？</p>
           </details>
         </article>
 
-        <article class="node host" id="node-algorithm">
-          <div class="node-header">
-            <span class="fact-tag fact">已实现</span>
-            <span class="residency">CPU 控制面 · CPU/GPU 数据面</span>
-          </div>
+        <article class="node host" id="node-algorithm" data-evidence="fact">
+          <div class="node-header"><span class="fact-tag fact">已实现</span><span class="residency">CPU 控制面 · CPU/GPU 数据面</span></div>
           <h3>Rewrite 求解编排</h3>
           <code>algorithm::solve</code>
           <p>创建后端资源、运行 PDHG 迭代与停止判定，并协调候选解下载、证书、postsolve 和验证。</p>
           <details class="component-detail">
             <summary>展开接口、所有权与 Review 要点</summary>
             <dl>
-              <div><dt>所有权</dt><dd>借用 OriginalModel 与 SolveContext；本次调用独占 Backend、ProblemHandle、Workspace 与迭代向量。</dd></div>
-              <div><dt>输入</dt><dd>SolverOptions、OriginalModel、SolveContext</dd></div>
-              <div><dt>输出</dt><dd>api::SolveResult（状态、原模型解、迭代数、耗时或 Error）</dd></div>
-              <div><dt>执行位置</dt><dd>控制流在 CPU；向量和 kernels 位于所选 CPU/CUDA 后端。</dd></div>
-              <div><dt>失败</dt><dd>选项、后端能力、资源创建、数值检查或时间边界失败均形成 api::Error。</dd></div>
-              <div><dt>源码</dt><dd><a href="../highs/pdlp/hipdlp/algorithm/solver.cc">打开源码</a></dd></div>
+              <div data-drawer-field="responsibility"><dt>职责</dt><dd>拥有一次 solve 的资源生命周期，编排 PDHG、cadence checks、restart/PID、下载、证书、postsolve 与验证。</dd></div>
+              <div data-drawer-field="inputs"><dt>输入</dt><dd>SolverOptions、OriginalModel、SolveContext 与 backend kind。</dd></div>
+              <div data-drawer-field="outputs"><dt>输出</dt><dd>api::SolveResult（状态、原模型解、迭代数、耗时或 Error）。</dd></div>
+              <div data-drawer-field="owner-lifetime"><dt>所有权</dt><dd>借用 OriginalModel/SolveContext；本次调用独占 Backend、handles、workspace、command buffer 与向量。</dd></div>
+              <div data-drawer-field="residency"><dt>驻留</dt><dd>控制流在 CPU；向量、scratch、SpMV 和 custom kernels 位于所选 backend。</dd></div>
+              <div data-drawer-field="errors"><dt>失败</dt><dd>选项、能力、资源、数值、resident check、下载、postsolve 或 verification 失败均形成 api::Error。</dd></div>
+              <div data-drawer-field="invariants"><dt>不变量</dt><dd>每个 production step 恰有两次 SpMV；39-step replay 不越过 cadence；OPTIMAL 必须通过原模型 KKT。</dd></div>
+              <div data-drawer-field="source-order"><dt>阅读顺序</dt><dd><a href="../highs/pdlp/hipdlp/algorithm/solver.cc">algorithm/solver.cc</a> → <code>halpern_pdhg_step.cc</code> → convergence/restart helpers → backend calls。</dd></div>
+              <div data-drawer-field="tests"><dt>相关测试</dt><dd><code>TestHiPdlpSolver.cpp</code>、<code>TestHiPdlpConvergence.cpp</code> 与 <code>TestHiPdlpRestart.cpp</code>。</dd></div>
+              <div data-drawer-field="good-signals"><dt>好信号</dt><dd>下载由命名 lambda 去重，phase guard 覆盖边界，direct/replay/tail 调度与 diagnostics 一致。</dd></div>
+              <div data-drawer-field="danger-signals"><dt>危险信号</dt><dd>普通步内隐式 D2H、candidate products 重算、replay 越界或 backend convergence 直接产生 OPTIMAL。</dd></div>
+              <div data-drawer-field="review-questions"><dt>Review：</dt><dd>每个 Device→Host 边界是否有明确目的，replay 是否保持 cadence，且终止出口完成所需独立验证？</dd></div>
             </dl>
-            <p><strong>Review：</strong>每个设备到 Host 的边界是否有明确目的，并避免在普通迭代内重复创建资源？</p>
           </details>
         </article>
 
-        <article class="node host" id="node-backend">
-          <div class="node-header">
-            <span class="fact-tag fact">已实现</span>
-            <span class="residency">CPU 工厂 · CPU/CUDA 执行</span>
-          </div>
+        <article class="node host" id="node-backend" data-evidence="fact">
+          <div class="node-header"><span class="fact-tag fact">已实现</span><span class="residency">CPU 工厂 · CPU/CUDA 执行</span></div>
           <h3>后端工厂与设备选择</h3>
           <code>backend::createBackend</code>
           <p><strong>源码事实：</strong>CUDA 构建启用时，<code>auto</code> 调用 <code>createCudaBackend</code>，对任何非 OK 错误都会丢弃错误并选择 CPU；这记录当前实现，不代表期望行为。显式 <code>kCuda</code> 则返回 <code>createCudaBackend</code> 的错误，不进入 CPU fallback。</p>
           <details class="component-detail">
             <summary>展开接口、所有权与 Review 要点</summary>
             <dl>
-              <div><dt>所有权</dt><dd>FactoryResult 通过 unique_ptr 独占创建出的 Backend。</dd></div>
-              <div><dt>输入</dt><dd>Kind：auto、cpu、cuda、openmp 或 rocm</dd></div>
-              <div><dt>输出</dt><dd>FactoryResult（Backend 或 Error）</dd></div>
-              <div><dt>执行位置</dt><dd>工厂在 CPU；CPU 后端驻留 Host，CUDA 后端驻留 Device。</dd></div>
-              <div><dt>失败</dt><dd>显式 kCuda 创建失败时返回其错误；auto 会吞掉 CUDA 工厂的任何错误后尝试 CPU，而 CPU 创建或注册错误仍会返回。</dd></div>
-              <div><dt>源码</dt><dd><a href="../highs/pdlp/hipdlp/backend/backend_factory.cc">打开源码</a></dd></div>
+              <div data-drawer-field="responsibility"><dt>职责</dt><dd>把稳定 Backend 虚接口绑定到 CPU 或 CUDA 实现，并明确 unsupported/unavailable 后端。</dd></div>
+              <div data-drawer-field="inputs"><dt>输入</dt><dd>Kind：auto、cpu、cuda、openmp 或 rocm。</dd></div>
+              <div data-drawer-field="outputs"><dt>输出</dt><dd>FactoryResult（独占 Backend，或保留 ErrorCode 的 Error）。</dd></div>
+              <div data-drawer-field="owner-lifetime"><dt>所有权</dt><dd>FactoryResult 以 <code>unique_ptr</code> 独占 Backend；opaque handles 各自独占 Resource。</dd></div>
+              <div data-drawer-field="residency"><dt>驻留</dt><dd>工厂在 CPU；CPU Resource 驻留 Host，CUDA Resource/stream/library handles 属于 Device 上下文。</dd></div>
+              <div data-drawer-field="errors"><dt>失败</dt><dd>显式 kCuda 返回创建错误；auto 当前吞掉任何非 OK CUDA 创建错误再尝试 CPU。</dd></div>
+              <div data-drawer-field="invariants"><dt>不变量</dt><dd>算法只依赖 Backend 契约；不同 backend handles 不可混用；显式选择不得静默改用其他 backend。</dd></div>
+              <div data-drawer-field="source-order"><dt>阅读顺序</dt><dd><a href="../highs/pdlp/hipdlp/backend/backend_factory.cc">backend_factory.cc</a> → <code>backend.hpp</code> 契约 → CPU/CUDA resource 创建与 downcast。</dd></div>
+              <div data-drawer-field="tests"><dt>相关测试</dt><dd><code>check/TestHiPdlpBackend.cpp</code> 的 factory、handle owner、dimension、alias 与 failure-injection 案例。</dd></div>
+              <div data-drawer-field="good-signals"><dt>好信号</dt><dd>显式 kind 错误原样返回，Resource downcast 与尺寸校验集中，unsupported 有命名错误。</dd></div>
+              <div data-drawer-field="danger-signals"><dt>危险信号</dt><dd>auto 无差别吞掉 allocation/backend failure、跨 backend handle 被接受，或 unavailable 被伪装成成功。</dd></div>
+              <div data-drawer-field="review-questions"><dt>Review：</dt><dd><strong>风险：</strong><code>auto</code> 当前会吞掉 <code>kBackendUnavailable</code>、<code>kAllocationFailure</code> 与 <code>kBackendFailure</code>；是否应只对 unavailable 回退？</dd></div>
             </dl>
-            <p><strong>Review：</strong><strong>风险：</strong><code>auto</code> 当前会吞掉 <code>kBackendUnavailable</code>、<code>kAllocationFailure</code> 与 <code>kBackendFailure</code> 等 CUDA 创建错误；是否应只对 unavailable 回退，而让 allocation/backend failures 返回？当前广泛回退只是源码事实，不是期望行为。</p>
           </details>
         </article>
 
-        <article class="node host" id="node-postsolve">
-          <div class="node-header">
-            <span class="fact-tag fact">已实现</span>
-            <span class="residency">CPU / Host</span>
-          </div>
+        <article class="node host" id="node-postsolve" data-evidence="fact">
+          <div class="node-header"><span class="fact-tag fact">已实现</span><span class="residency">CPU / Host</span></div>
           <h3>解缩放与原模型恢复</h3>
           <code>model::postsolve</code>
           <p>把 Host 上的缩放 primal、dual 与 reduced costs 恢复为原始行列空间中的完整 HighsSolution。</p>
           <details class="component-detail">
             <summary>展开接口、所有权与 Review 要点</summary>
             <dl>
-              <div><dt>所有权</dt><dd>借用 Problem 与候选向量；PostsolveResult 拥有恢复后的 HighsSolution。</dd></div>
-              <div><dt>输入</dt><dd>Problem、scaled primal、scaled dual、scaled reduced costs</dd></div>
-              <div><dt>输出</dt><dd>PostsolveResult（HighsSolution、原目标值或 Error）</dd></div>
-              <div><dt>执行位置</dt><dd>CPU / Host；CUDA 候选解必须先 D2H。</dd></div>
-              <div><dt>失败</dt><dd>向量尺寸、非有限值、缩放元数据或恢复运算不安全时拒绝结果。</dd></div>
-              <div><dt>源码</dt><dd><a href="../highs/pdlp/hipdlp/model/problem.cc">打开源码</a></dd></div>
+              <div data-drawer-field="responsibility"><dt>职责</dt><dd>撤销 scaling、row signs、slack 与变换索引，把 candidate 恢复成原模型 HighsSolution。</dd></div>
+              <div data-drawer-field="inputs"><dt>输入</dt><dd>Problem、scaled primal、scaled dual、scaled reduced costs。</dd></div>
+              <div data-drawer-field="outputs"><dt>输出</dt><dd>PostsolveResult（原始行列语义下的 HighsSolution、目标值或 Error）。</dd></div>
+              <div data-drawer-field="owner-lifetime"><dt>所有权</dt><dd>借用 Problem 与候选向量；PostsolveResult 拥有恢复后的 HighsSolution。</dd></div>
+              <div data-drawer-field="residency"><dt>驻留</dt><dd>CPU / Host；CUDA candidate 必须先完成 D2H 并同步。</dd></div>
+              <div data-drawer-field="errors"><dt>失败</dt><dd>尺寸、映射、目标方向、非有限值或不安全恢复导致结构化错误。</dd></div>
+              <div data-drawer-field="invariants"><dt>不变量</dt><dd>输出尺寸等于原 HighsLp；每个 row-sign/slack/scale 只恢复一次；目标使用原 sense/offset。</dd></div>
+              <div data-drawer-field="source-order"><dt>阅读顺序</dt><dd><a href="../highs/pdlp/hipdlp/model/problem.cc">model/problem.cc</a> 的 postsolve → metadata producers → solver 的调用出口。</dd></div>
+              <div data-drawer-field="tests"><dt>相关测试</dt><dd><code>TestHiPdlpModel.cpp</code> 与 <code>TestHiPdlpSolver.cpp</code> 的 scaling、slack、目标值及拒绝路径。</dd></div>
+              <div data-drawer-field="good-signals"><dt>好信号</dt><dd>恢复顺序与 metadata 一一对应，尺寸和 finite checks 在结果发布前完成。</dd></div>
+              <div data-drawer-field="danger-signals"><dt>危险信号</dt><dd>直接发布 transformed vector、重复撤销 scale、遗漏 row sign/slack，或半写回后才报错。</dd></div>
+              <div data-drawer-field="review-questions"><dt>Review：</dt><dd>每个缩放、行符号与 slack 变换是否恰好撤销一次，并在失败时避免发布半恢复 solution？</dd></div>
             </dl>
-            <p><strong>Review：</strong>行列符号、比例与目标 offset 是否各恢复且仅恢复一次？</p>
           </details>
         </article>
 
-        <article class="node host" id="node-kkt">
-          <div class="node-header">
-            <span class="fact-tag fact">已实现</span>
-            <span class="residency">CPU / Host</span>
-          </div>
+        <article class="node host" id="node-kkt" data-evidence="fact">
+          <div class="node-header"><span class="fact-tag fact">已实现</span><span class="residency">CPU / Host</span></div>
           <h3>原模型独立 KKT 验证</h3>
           <code>verification::verifyKkt</code>
           <p>用原始 HighsLp 和恢复后的完整解独立重算 primal、dual、gap 与 complementarity 指标。</p>
           <details class="component-detail">
             <summary>展开接口、所有权与 Review 要点</summary>
             <dl>
-              <div><dt>所有权</dt><dd>借用原 HighsLp 与 HighsSolution；KktVerificationResult 按值拥有指标与错误文本。</dd></div>
-              <div><dt>输入</dt><dd>原始 HighsLp、完整 primal-dual HighsSolution、KKT tolerance</dd></div>
-              <div><dt>输出</dt><dd>KktVerificationResult：input_valid、metrics_finite、pass 与 metrics</dd></div>
-              <div><dt>执行位置</dt><dd>CPU / Host</dd></div>
-              <div><dt>失败</dt><dd>维度不一致、解不完整、非有限值或 KKT 超差；求解器将无效验证转成失败结果。</dd></div>
-              <div><dt>源码</dt><dd><a href="../highs/pdlp/hipdlp/verification/kkt_verifier.cc">打开源码</a></dd></div>
+              <div data-drawer-field="responsibility"><dt>职责</dt><dd>在原 HighsLp 上独立重算 feasibility 与 gap，作为 OPTIMAL 的最终 correctness gate。</dd></div>
+              <div data-drawer-field="inputs"><dt>输入</dt><dd>原始 HighsLp、完整 primal-dual HighsSolution 与 KKT tolerance。</dd></div>
+              <div data-drawer-field="outputs"><dt>输出</dt><dd>KktVerificationResult：input_valid、metrics_finite、pass 与 metrics。</dd></div>
+              <div data-drawer-field="owner-lifetime"><dt>所有权</dt><dd>借用原 HighsLp 与 HighsSolution；verification result 按值返回算法层。</dd></div>
+              <div data-drawer-field="residency"><dt>驻留</dt><dd>CPU / Host correctness gate，与 backend resident convergence 分离。</dd></div>
+              <div data-drawer-field="errors"><dt>失败</dt><dd>维度不一致、解不完整、非有限指标或 tolerance failure 均阻止 OPTIMAL。</dd></div>
+              <div data-drawer-field="invariants"><dt>不变量</dt><dd>只使用原模型系数与 postsolved 解；scaled/backend metrics 不能替代此 gate。</dd></div>
+              <div data-drawer-field="source-order"><dt>阅读顺序</dt><dd><a href="../highs/pdlp/hipdlp/verification/kkt_verifier.cc">kkt_verifier.cc</a> → metric 公式 → algorithm::solve 的 pass/fail 分支。</dd></div>
+              <div data-drawer-field="tests"><dt>相关测试</dt><dd><code>TestHiPdlpSolver.cpp</code> 与 <code>TestHiPdlpCertificates.cpp</code> 的 residual、gap 与拒绝路径。</dd></div>
+              <div data-drawer-field="good-signals"><dt>好信号</dt><dd>原模型数据独立传入，input_valid、metrics_finite 与 tolerance pass 分开报告。</dd></div>
+              <div data-drawer-field="danger-signals"><dt>危险信号</dt><dd>复用 scaled metrics、跳过 postsolve、把 NaN 比较当 pass，或在 verifier 前发布 OPTIMAL。</dd></div>
+              <div data-drawer-field="review-questions"><dt>Review：</dt><dd>所有 OPTIMAL 出口是否先 postsolve，再在原 HighsLp 上通过 input-valid、finite 与 tolerance 三重检查？</dd></div>
             </dl>
-            <p><strong>Review：</strong>验收是否始终针对原模型，而不是只验证缩放或变换后的 Problem？</p>
           </details>
         </article>
       </div>
@@ -1774,8 +1842,20 @@
               <strong>raw convergence host oracle</strong>
             </div>
 
+            <article class="certificate-gate" id="certificate-screen-gate">
+              <h4>CUDA resident certificate screen eligibility gate</h4>
+              <p><strong>只有全部条件同时满足才启动 certificate kernels：</strong></p>
+              <ul>
+                <li>编译环境：<code>__aarch64__</code>、<code>__GLIBC__ == 2</code>、<code>__GLIBC_MINOR__ == 39</code>、<code>!defined(__FAST_MATH__)</code>、<code>FLT_RADIX == 2</code>、<code>DBL_MANT_DIG == 53</code>、<code>DBL_MAX_EXP == 1024</code>、<code>LDBL_MANT_DIG &gt;= 53</code>、<code>LDBL_MAX_EXP &gt;= DBL_MAX_EXP</code>、<code>FLT_EVAL_METHOD == 0</code>。</li>
+                <li>运行环境：<code>gnu_get_libc_version() == "2.39"</code>、<code>fegetround() == FE_TONEAREST</code>，且 AArch64 FPCR 的 <code>((3 &lt;&lt; 22) | (1 &lt;&lt; 24) | 3)</code> mask 全为 0。</li>
+                <li>维度：原 certificate problem 必须满足 <code>num_rows + num_cols &lt; 4503599627370496</code>（严格小于 2<sup>52</sup>）。check workspace 准备还会显式校验原模型 dimensions、bounds、cost、matrix 与 row map；这些失败返回 Error，不是 screen skip。</li>
+              </ul>
+              <p><strong>不满足 gate：</strong>跳过 recovery/norm/normalize/conditions/flags launches，<code>certificate_screen_valid = false</code>；默认保持 <code>primal_ray_possible = true</code>、<code>farkas_possible = true</code>，所以 <code>certificate_possible = true</code>。算法在 cadence certificate 分支下载或复用 full candidate，并调用 <code>detectCertificate()</code>；独立 Host verifier 是裁决者，resident screen 不会错误排除候选。</p>
+              <p><strong>fallback 差异：</strong>启用了 stopping tolerance 且 rounding environment 不受支持时，<code>requires_host_oracle = true</code>，触发 full candidate D2H 和 raw convergence Host oracle；后续 certificate 分支复用该 candidate。仅因 2<sup>52</sup> 维度 gate 失败不会单独设置 raw-oracle flag，但仍会因两个 possible flags 为 true 进入 full-candidate Host certificate verification。</p>
+            </article>
+
             <div class="certificate-path" aria-label="Certificate verification path">
-              <strong>resident certificate screen<br><code>certificate_possible</code></strong>
+              <strong>eligibility gate → resident certificate screen<br><code>certificate_possible</code></strong>
               <span class="path-arrow" aria-hidden="true">→</span>
               <span>full primal + dual + Ax + A^T y D2H<br><strong>2*(rows+cols) doubles</strong></span>
               <span class="path-arrow" aria-hidden="true">→</span>
@@ -1801,7 +1881,7 @@
 
           <section class="kernel-section" aria-labelledby="kernel-title">
             <h3 id="kernel-title">CUDA launch drill-down</h3>
-            <p>所有 custom launches 使用 256 threads、0 bytes dynamic shared memory 与同一 Backend stream。以下“shared”明确区分静态 <code>__shared__</code> 数组与 launch 的 dynamic shared 参数。</p>
+            <p>custom launch 并非全部使用 256 threads：一般向量 kernels 使用 <code>blockCount(N) × 256</code>，dot/norm/difference-norm 是串行 <code>1 × 1</code>，check/certificate reductions 使用 256-thread blocks。所有 wrappers 的 dynamic shared 参数都是 0；reduction kernels 在源码中声明静态 <code>__shared__</code> 数组。cuSPARSE launch geometry 由 vendor 控制。</p>
             <div class="kernel-grid">
               <article class="kernel-card" data-backend="cuda">
                 <h4><code>projectedPrimalKernel&lt;true&gt;</code></h4>
@@ -1886,6 +1966,50 @@
                 <p class="review-question"><strong>Review：</strong>Do profiler-observed vendor kernels, scratch traffic or matrix ordering dominate the two-SpMV step?</p>
               </article>
             </div>
+
+            <h4>Production custom-kernel inventory</h4>
+            <p>下表覆盖 <code>cuda_kernels.cu</code> 中所有 production <code>__global__</code> symbols 及 launch wrappers；primal/dual templates 各自同时承载普通与 <code>Reflect=true</code> launch。所有行的 dynamic shared bytes 均为 0。</p>
+            <ol class="kernel-sequence" aria-label="certificate kernel launch sequence">
+              <li><code>certificateRecoveryKernel</code>：恢复原空间 intervals 并产生 normalization norm partials。</li>
+              <li><code>certificateNormKernel(..., verifier=false)</code>：单 block 合并 normalization bounds。</li>
+              <li><code>certificateNormalizeKernel</code>：规范化 intervals 并重算 verifier norm partials。</li>
+              <li><code>certificateNormKernel(..., verifier=true)</code>：单 block 写 verifier norm bounds。</li>
+              <li><code>certificateConditionsKernel</code>：检查 primal/Farkas 条件与 objective/support partials。</li>
+              <li><code>certificateFlagsKernel</code>：单 block 合并并写入 packet flags。</li>
+            </ol>
+            <div class="inventory-wrap">
+              <table class="diagnostics-table kernel-inventory">
+                <thead>
+                  <tr><th>Kernel</th><th>launch / logical work</th><th>buffers</th><th>review risk</th></tr>
+                </thead>
+                <tbody>
+                  <tr data-kernel="fillKernel"><th><code>fillKernel</code></th><td><code>blockCount(size) × 256</code>；grid-stride over size</td><td>write <code>output</code></td><td>zero-size wrapper skip；output size/lifetime</td></tr>
+                  <tr data-kernel="scaleKernel"><th><code>scaleKernel</code></th><td><code>blockCount(size) × 256</code>；grid-stride</td><td>read/write <code>values</code>；write <code>error_flag</code></td><td>factor overflow 与 non-finite atomic aggregation</td></tr>
+                  <tr data-kernel="axpyKernel"><th><code>axpyKernel</code></th><td><code>blockCount(size) × 256</code>；grid-stride</td><td>read <code>input</code>；read/write <code>output</code>；error flag</td><td>alias contract、rounding 与 bandwidth</td></tr>
+                  <tr data-kernel="differenceKernel"><th><code>differenceKernel</code></th><td><code>blockCount(size) × 256</code>；<code>GridIndex</code> stride</td><td>read left/right；write output/error</td><td>wide-index proof 只适用于此显式 GridIndex loop</td></tr>
+                  <tr data-kernel="projectedPrimalKernel"><th><code>projectedPrimalKernel&lt;false/true&gt;</code></th><td><code>blockCount(num_cols) × 256</code>；grid-stride</td><td>current/aty/cost/bounds/step → output/reflected/error</td><td>step parameter、bound divergence、reflection finite checks</td></tr>
+                  <tr data-kernel="projectedDualKernel"><th><code>projectedDualKernel&lt;false/true&gt;</code></th><td><code>blockCount(num_rows) × 256</code>；grid-stride</td><td>current/Ax/row bounds/types/step → output/reflected/error</td><td>equality/inequality divergence 与 extrapolated-product validity</td></tr>
+                  <tr data-kernel="vectorBlendKernel"><th><code>vectorBlendKernel</code></th><td><code>blockCount(size) × 256</code>；grid-stride</td><td>left/right/weight → output/error</td><td>weight range、parameter indirection、aliasing</td></tr>
+                  <tr data-kernel="vectorPairBlendKernel"><th><code>vectorPairBlendKernel</code></th><td><code>blockCount(max(cols, rows)) × 256</code>；<code>GridIndex</code> stride</td><td>primal/dual pairs → paired outputs/error</td><td>极端矩形维度造成一侧线程空转</td></tr>
+                  <tr data-kernel="averageKernel"><th><code>averageKernel</code></th><td><code>blockCount(size) × 256</code>；grid-stride</td><td>current + weight；read/write sum；error</td><td>累加误差、overflow 与 average lifetime</td></tr>
+                  <tr data-kernel="finiteCheckKernel"><th><code>finiteCheckKernel</code></th><td><code>blockCount(size) × 256</code>；grid-stride</td><td>read values；atomic write error flag</td><td>额外带宽与遗漏 consumer-side checks</td></tr>
+                  <tr data-kernel="dotKernel"><th><code>dotKernel</code></th><td><code>1 × 1</code>；单 thread serial O(N)</td><td>left/right → result/error</td><td>不是 256-thread reduction；延迟与串行 rounding</td></tr>
+                  <tr data-kernel="normKernel"><th><code>normKernel</code></th><td><code>1 × 1</code>；scaled serial O(N)</td><td>values → result/error</td><td>稳定 norm 但串行，不能声称并行 reduction</td></tr>
+                  <tr data-kernel="differenceNormKernel"><th><code>differenceNormKernel</code></th><td><code>1 × 1</code>；scaled serial O(N)</td><td>left/right → result/error</td><td>串行 difference+norm 的 latency 与 rounding</td></tr>
+                  <tr data-kernel="checkPartialsKernel"><th><code>checkPartialsKernel</code></th><td><code>checkPartialCount(rows, cols) × 256</code>，max 1024</td><td>problem/check vectors → <code>CheckPartial[]</code></td><td>static <code>CheckPartial[256]</code> 影响 occupancy；optional flags</td></tr>
+                  <tr data-kernel="checkPacketKernel"><th><code>checkPacketKernel</code></th><td><code>1 × 256</code>；merge ≤1024 partials</td><td>partials/problem/input/error → 112-byte packet</td><td>static <code>CheckPartial[256]</code>；thread-0 finalization/fallback</td></tr>
+                  <tr data-kernel="certificateRecoveryKernel"><th><code>certificateRecoveryKernel</code></th><td><code>checkPartialCount(rows, cols) × 256</code></td><td>original/scaled inputs → primal/dual/column intervals + norm partials</td><td>row map、directed recovery、unsafe under/overflow</td></tr>
+                  <tr data-kernel="certificateNormKernel"><th><code>certificateNormKernel</code></th><td><code>1 × 256</code>；launch 两次</td><td>norm partials → normalization/verifier <code>CertificateState</code></td><td>static <code>CertificateNormPartial[256]</code>；positive finite bounds</td></tr>
+                  <tr data-kernel="certificateNormalizeKernel"><th><code>certificateNormalizeKernel</code></th><td><code>checkPartialCount(rows, cols) × 256</code></td><td>state + intervals read/write → verifier norm partials</td><td>unsafe state 必须阻止 divide；static reduction</td></tr>
+                  <tr data-kernel="certificateConditionsKernel"><th><code>certificateConditionsKernel</code></th><td><code>checkPartialCount(rows, cols) × 256</code></td><td>original CSR/bounds/cost + intervals → screen partials</td><td>每 row 串行 CSR walk 可能负载失衡；directed interval ops</td></tr>
+                  <tr data-kernel="certificateFlagsKernel"><th><code>certificateFlagsKernel</code></th><td><code>1 × 256</code></td><td>state/partials/input + packet error → packet ray flags</td><td>static <code>ScreenPartial[256]</code>；unsafe 必须保持保守 true</td></tr>
+                  <tr data-kernel="cusparseSpMV"><th><code>cusparseSpMV</code></th><td>vendor-controlled；每 production step 两次</td><td>CSR descriptor + dense input + scratch → dense output</td><td>不能从 wrapper 发明 grid；用 Nsight Systems/Compute 观察</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <aside class="reading-hint">
+              <strong>Test-only：</strong><code>injectedFailureKernel</code> 仅在 <code>HIGHS_HIPDLP_TESTING</code> 下编译，以 <code>&lt;&lt;&lt;1, 1, 0, stream&gt;&gt;&gt;</code> 设置 error flag；它不属于 production inventory。
+            </aside>
             <p class="source-row">Launch证据：
               <a href="../highs/pdlp/hipdlp/backend/cuda/cuda_kernels.cu">backend/cuda/cuda_kernels.cu</a> ·
               <a href="../highs/pdlp/hipdlp/backend/cuda/cuda_backend.cu">backend/cuda/cuda_backend.cu</a>
@@ -1933,7 +2057,7 @@
       </aside>
 
       <div class="hotspot-grid">
-        <article class="hotspot-card" id="hotspot-1">
+        <article class="hotspot-card" id="hotspot-1" data-evidence="hypothesis">
           <span class="fact-tag hypothesis">Host fixed cost</span>
           <h3>Host 预处理与小模型固定成本</h3>
           <h4>症状</h4>
@@ -1949,7 +2073,7 @@
           <p>保留 transformation metadata、缩放语义、原模型 postsolve 与 KKT gate；不能把固定成本隐藏在计时窗口外。</p>
         </article>
 
-        <article class="hotspot-card" id="hotspot-2" data-backend="cpu">
+        <article class="hotspot-card" id="hotspot-2" data-backend="cpu" data-evidence="measured">
           <span class="fact-tag measured">CPU scoped comparison</span>
           <h3>Serial CPU SpMV 与 fused vector loops</h3>
           <h4>症状</h4>
@@ -1965,7 +2089,7 @@
           <p>保持两次 SpMV 的数据依赖、投影边界、finite checks、40-step cadence 和相同终止判定。</p>
         </article>
 
-        <article class="hotspot-card" id="hotspot-3" data-backend="cuda">
+        <article class="hotspot-card" id="hotspot-3" data-backend="cuda" data-evidence="hypothesis">
           <span class="fact-tag hypothesis">CUDA setup</span>
           <h3>CUDA setup、uploads、descriptors 与 graph capture</h3>
           <h4>症状</h4>
@@ -1981,7 +2105,7 @@
           <p>不能跨维度或已失效资源复用 descriptor/graph；所有 CUDA 创建失败仍必须作为 structured error 暴露。</p>
         </article>
 
-        <article class="hotspot-card" id="hotspot-4" data-backend="cuda">
+        <article class="hotspot-card" id="hotspot-4" data-backend="cuda" data-evidence="measured">
           <span class="fact-tag measured">CUDA scoped replay</span>
           <h3>Steady-state CUDA SpMV、fused kernels 与 replay</h3>
           <h4>症状</h4>
@@ -1997,7 +2121,7 @@
           <p>保留每步两次 SpMV、39-step recorded block、direct initial/restart/tail steps 与 non-finite error propagation。</p>
         </article>
 
-        <article class="hotspot-card" id="hotspot-5" data-backend="cuda">
+        <article class="hotspot-card" id="hotspot-5" data-backend="cuda" data-evidence="hypothesis">
           <span class="fact-tag hypothesis">Cadence boundary</span>
           <h3>Cadence boundary、fallback D2H 与 synchronization</h3>
           <h4>症状</h4>
@@ -2013,7 +2137,7 @@
           <p>不能跳过不确定性 fallback、finite/error_flag 同步、certificate screen 或最终候选下载；失败不能伪装成收敛。</p>
         </article>
 
-        <article class="hotspot-card" id="hotspot-6">
+        <article class="hotspot-card" id="hotspot-6" data-evidence="unavailable">
           <span class="fact-tag unavailable">No accepted pair</span>
           <h3>Scaling、norm guard、PID、restart 与 KKT 轨迹</h3>
           <h4>症状</h4>
@@ -2076,6 +2200,13 @@
             </div>
           </dl>
         </form>
+        <aside class="reading-hint" aria-label="Reference estimator outputs">
+          <strong>Reference case（rows=1000, columns=500, nonzeros=10000, index width=8）：</strong>
+          matrix <strong>332016 bytes</strong>（324.23 KiB）；
+          vectors <strong>96000 bytes</strong>（93.75 KiB）；
+          full candidate <strong>24000 bytes</strong>（23.44 KiB）；
+          packet <strong>112 bytes</strong>。Exact bytes 是验收输出，KiB 仅作辅助阅读。
+        </aside>
         <p><strong>公式范围：</strong>matrix = 两份 values/indices + 两份 row offsets；vectors = <code>8 * (rows + columns)</code> doubles；candidate = <code>2 * (rows + columns)</code> doubles；packet = 112 bytes。</p>
         <h4>下限未计入</h4>
         <ul class="estimator-exclusions">
@@ -2438,15 +2569,22 @@
               <span class="lesson-number">Lesson 2</span>
               <h4>内存模型</h4>
             </div>
-            <div class="concept-visual" role="img" aria-label="Host 模型上传到 Device 资源，普通检查只下载 pinned packet，必要时才下载完整候选">
-              <div class="concept-node"><strong>Host</strong><span>OriginalModel · options</span></div>
+            <div class="concept-visual" role="img" aria-label="Host memory 经 pinned transfer 连接 global Device memory；线程使用 register，block reduction 使用 static shared memory">
+              <div class="concept-node"><strong>Host memory</strong><span>OriginalModel · options</span></div>
               <span class="concept-arrow">H2D</span>
-              <div class="concept-node"><strong>Device</strong><span>ProblemHandle · vectors · workspace</span></div>
+              <div class="concept-node"><strong>global Device memory</strong><span>ProblemHandle · vectors · workspace</span></div>
+              <span class="concept-arrow">→</span>
+              <div class="concept-node"><strong>register / thread local</strong><span>one partial accumulator</span></div>
+              <span class="concept-arrow">→</span>
+              <div class="concept-node"><strong>static shared memory</strong><span>one reduction array / block</span></div>
               <span class="concept-arrow">D2H</span>
-              <div class="concept-node"><strong>Pinned staging</strong><span>CheckPacket 或完整 candidate</span></div>
+              <div class="concept-node"><strong>pinned Host memory</strong><span>CheckPacket 或完整 candidate</span></div>
             </div>
             <div class="hipdlp-example">
               <p><strong>HiPDLP 例子：</strong>八个 column vectors 与八个 row vectors 在所选 backend 中创建；CUDA 普通检查通常只把一个 <code>CheckPacket</code> 下载到 pinned Host memory，但 <code>requires_host_oracle</code>、<code>certificate_possible</code> 或 terminal/postsolve 路径会下载完整候选。</p>
+              <p><strong>global Device memory：</strong><code>DeviceBuffer</code> 持有 problem arrays、resident vectors、interval buffers 与 partial arrays；这些跨 kernel 存活，访问成本和 coalescing 需要与 Host memory 分开推理。</p>
+              <p><strong>register：</strong><code>CheckPartial partial = {}</code> 是每个 thread 的局部 accumulator，编译器通常尝试放入 registers，但源码不能保证不 spill；应以 Nsight Compute 的 register count/local-memory traffic 证明实际放置。</p>
+              <p><strong>static shared memory：</strong><code>__shared__ CheckPartial shared[256]</code> 是每个 block 的编译期数组，用于固定 reduction tree。wrapper 的 launch 写成 <code>&lt;&lt;&lt;blocks, 256, 0, stream&gt;&gt;&gt;</code>，所以 <strong>dynamic shared memory = 0</strong>；0 不代表没有 static shared allocation。</p>
               <p class="source-row"><a href="../highs/pdlp/hipdlp/backend/cuda/cuda_backend.cu">查看 cuda_backend.cu</a></p>
             </div>
             <div class="lesson-questions">
@@ -2502,10 +2640,14 @@
               <span class="concept-arrow">→</span>
               <div class="concept-node"><strong>One stream</strong><span>kernel → SpMV → kernel</span></div>
               <span class="concept-arrow">→</span>
-              <div class="concept-node"><strong>Boundary</strong><span>D2H → synchronize → inspect</span></div>
+              <div class="concept-node"><strong>CUDA events</strong><span>record start/stop → GPU elapsed</span></div>
+              <span class="concept-arrow">≠</span>
+              <div class="concept-node"><strong>Host boundary</strong><span>D2H → synchronize → wall time</span></div>
             </div>
             <div class="hipdlp-example">
               <p><strong>HiPDLP 例子：</strong>Backend 的 custom kernels、cuBLAS 与 cuSPARSE 都绑定到同一 stream；生产 step 依赖 stream 顺序，不在每个 kernel 后同步，boundary 才下载 packet/error 并等待。</p>
+              <p><strong>CUDA event timing：</strong><code>beginTiming()</code> 用 <code>cudaEventRecord</code> 在 backend stream 记录 start；<code>endTiming()</code> 记录 stop，调用 <code>cudaEventSynchronize</code>，再用 <code>cudaEventElapsedTime</code> 得到两个事件之间的 <strong>GPU elapsed time</strong>。它衡量该 stream 上事件之间的 Device 工作，不等同于整个 Host 调用耗时。</p>
+              <p><strong>对比 Host timing：</strong>围绕 <code>cudaStreamSynchronize</code> 观察到的 <strong>Host synchronization wall time</strong> 还包含此前排队工作的等待、D2H 完成、runtime/driver 开销与 Host 被阻塞的时间。分析慢点时必须说明测量边界，不能拿 event seconds 直接替代端到端 wall time。</p>
               <p class="source-row"><a href="../highs/pdlp/hipdlp/backend/cuda/cuda_backend.cu">查看 stream 与 handle 绑定</a></p>
             </div>
             <div class="lesson-questions">
@@ -3087,13 +3229,189 @@
         "hostInterruptible": false
       }
     },
+    "certificateScreen": {
+      "architecture": "AArch64",
+      "glibcCompile": "2.39",
+      "glibcRuntime": "2.39",
+      "fastMath": false,
+      "fltRadix": 2,
+      "dblMantDig": 53,
+      "dblMaxExp": 1024,
+      "longDoubleMantissaMin": 53,
+      "longDoubleMaxExpAtLeastDouble": true,
+      "fltEvalMethod": 0,
+      "rounding": "FE_TONEAREST",
+      "fpcrClearMask": "((3 << 22) | (1 << 24) | 3)",
+      "dimensionExpression": "num_rows + num_cols < 4503599627370496",
+      "dimensionLimitExclusive": 4503599627370496,
+      "ineligibleDefaults": {
+        "certificateScreenValid": false,
+        "primalRayPossible": true,
+        "farkasPossible": true
+      }
+    },
+    "certificateKernelSequence": [
+      "certificateRecoveryKernel",
+      "certificateNormKernel(normalization)",
+      "certificateNormalizeKernel",
+      "certificateNormKernel(verifier)",
+      "certificateConditionsKernel",
+      "certificateFlagsKernel"
+    ],
     "kernels": [
-      {"name": "projectedPrimalKernel", "threads": 256, "maxBlocks": 65535, "dynamicSharedBytes": 0},
-      {"name": "projectedDualKernel", "threads": 256, "maxBlocks": 65535, "dynamicSharedBytes": 0},
-      {"name": "vectorPairBlendKernel", "threads": 256, "maxBlocks": 65535, "dynamicSharedBytes": 0},
-      {"name": "checkPartialsKernel", "threads": 256, "maxBlocks": 1024, "dynamicSharedBytes": 0},
-      {"name": "checkPacketKernel", "threads": 256, "blocks": 1, "dynamicSharedBytes": 0},
-      {"name": "cusparseSpMV", "grid": "vendor-controlled"}
+      {
+        "name": "fillKernel", "kind": "custom", "logicalElements": "size",
+        "grid": "blockCount(size)", "threads": 256, "maxBlocks": 65535,
+        "dynamicSharedBytes": 0, "staticShared": "none",
+        "buffers": "output (write)",
+        "reviewRisk": "zero-size skip and output lifetime"
+      },
+      {
+        "name": "scaleKernel", "kind": "custom", "logicalElements": "size",
+        "grid": "blockCount(size)", "threads": 256, "maxBlocks": 65535,
+        "dynamicSharedBytes": 0, "staticShared": "none",
+        "buffers": "values (read/write), error_flag (write)",
+        "reviewRisk": "factor overflow and non-finite aggregation"
+      },
+      {
+        "name": "axpyKernel", "kind": "custom", "logicalElements": "size",
+        "grid": "blockCount(size)", "threads": 256, "maxBlocks": 65535,
+        "dynamicSharedBytes": 0, "staticShared": "none",
+        "buffers": "input (read), output (read/write), error_flag (write)",
+        "reviewRisk": "alias contract and bandwidth"
+      },
+      {
+        "name": "differenceKernel", "kind": "custom", "logicalElements": "size",
+        "grid": "blockCount(size)", "threads": 256, "maxBlocks": 65535,
+        "dynamicSharedBytes": 0, "staticShared": "none",
+        "buffers": "left/right (read), output/error_flag (write)",
+        "reviewRisk": "GridIndex coverage and directed subtraction"
+      },
+      {
+        "name": "projectedPrimalKernel", "kind": "custom", "logicalElements": "num_cols",
+        "grid": "blockCount(num_cols)", "threads": 256, "maxBlocks": 65535,
+        "dynamicSharedBytes": 0, "staticShared": "none",
+        "buffers": "current/aty/cost/bounds/step (read), output/reflected/error (write)",
+        "reviewRisk": "step validation, bound divergence, reflection finite checks"
+      },
+      {
+        "name": "projectedDualKernel", "kind": "custom", "logicalElements": "num_rows",
+        "grid": "blockCount(num_rows)", "threads": 256, "maxBlocks": 65535,
+        "dynamicSharedBytes": 0, "staticShared": "none",
+        "buffers": "current/Ax/row metadata/step (read), output/reflected/error (write)",
+        "reviewRisk": "row-type divergence and extrapolated-product validity"
+      },
+      {
+        "name": "vectorBlendKernel", "kind": "custom", "logicalElements": "size",
+        "grid": "blockCount(size)", "threads": 256, "maxBlocks": 65535,
+        "dynamicSharedBytes": 0, "staticShared": "none",
+        "buffers": "left/right/weight (read), output/error (write)",
+        "reviewRisk": "weight range and aliasing"
+      },
+      {
+        "name": "vectorPairBlendKernel", "kind": "custom", "logicalElements": "max(primal_size, dual_size)",
+        "grid": "blockCount(max(primal_size, dual_size))", "threads": 256, "maxBlocks": 65535,
+        "dynamicSharedBytes": 0, "staticShared": "none",
+        "buffers": "primal/dual pairs (read), paired outputs/error (write)",
+        "reviewRisk": "rectangular imbalance and GridIndex coverage"
+      },
+      {
+        "name": "averageKernel", "kind": "custom", "logicalElements": "size",
+        "grid": "blockCount(size)", "threads": 256, "maxBlocks": 65535,
+        "dynamicSharedBytes": 0, "staticShared": "none",
+        "buffers": "current (read), sum (read/write), error_flag (write)",
+        "reviewRisk": "accumulation error and overflow"
+      },
+      {
+        "name": "finiteCheckKernel", "kind": "custom", "logicalElements": "size",
+        "grid": "blockCount(size)", "threads": 256, "maxBlocks": 65535,
+        "dynamicSharedBytes": 0, "staticShared": "none",
+        "buffers": "values (read), error_flag (atomic write)",
+        "reviewRisk": "extra bandwidth and coverage of every consumer"
+      },
+      {
+        "name": "dotKernel", "kind": "custom", "logicalElements": "size",
+        "grid": "1", "blocks": 1, "threads": 1,
+        "dynamicSharedBytes": 0, "staticShared": "none",
+        "buffers": "left/right (read), result/error_flag (write)",
+        "reviewRisk": "serial latency and rounding order"
+      },
+      {
+        "name": "normKernel", "kind": "custom", "logicalElements": "size",
+        "grid": "1", "blocks": 1, "threads": 1,
+        "dynamicSharedBytes": 0, "staticShared": "none",
+        "buffers": "values (read), result/error_flag (write)",
+        "reviewRisk": "stable but serial norm"
+      },
+      {
+        "name": "differenceNormKernel", "kind": "custom", "logicalElements": "size",
+        "grid": "1", "blocks": 1, "threads": 1,
+        "dynamicSharedBytes": 0, "staticShared": "none",
+        "buffers": "left/right (read), result/error_flag (write)",
+        "reviewRisk": "serial difference-norm latency and rounding"
+      },
+      {
+        "name": "checkPartialsKernel", "kind": "custom", "logicalElements": "max(num_rows, num_cols)",
+        "grid": "checkPartialCount(rows, cols)", "threads": 256, "maxBlocks": 1024,
+        "dynamicSharedBytes": 0, "staticShared": "CheckPartial[256]",
+        "buffers": "problem/check vectors (read), partials (write)",
+        "reviewRisk": "static-shared occupancy and optional fallback flags"
+      },
+      {
+        "name": "checkPacketKernel", "kind": "custom", "logicalElements": "partial_count <= 1024",
+        "grid": "1", "blocks": 1, "threads": 256,
+        "dynamicSharedBytes": 0, "staticShared": "CheckPartial[256]",
+        "buffers": "partials/problem/input/error (read), CheckPacket/error (write)",
+        "reviewRisk": "thread-0 finalization and conservative fallback"
+      },
+      {
+        "name": "certificateRecoveryKernel", "kind": "custom", "logicalElements": "max(original rows, original cols)",
+        "grid": "checkPartialCount(rows, cols)", "threads": 256, "maxBlocks": 1024,
+        "dynamicSharedBytes": 0, "staticShared": "CertificateNormPartial[256]",
+        "buffers": "original/scaled data (read), interval vectors/norm partials (write)",
+        "reviewRisk": "row mapping and directed recovery safety"
+      },
+      {
+        "name": "certificateNormKernel", "kind": "custom", "logicalElements": "norm partial count",
+        "grid": "1", "blocks": 1, "threads": 256,
+        "dynamicSharedBytes": 0, "staticShared": "CertificateNormPartial[256]",
+        "buffers": "norm partials (read), CertificateState (write)",
+        "reviewRisk": "positive finite bounds; launched for normalization and verifier"
+      },
+      {
+        "name": "certificateNormalizeKernel", "kind": "custom", "logicalElements": "max(original rows, original cols)",
+        "grid": "checkPartialCount(rows, cols)", "threads": 256, "maxBlocks": 1024,
+        "dynamicSharedBytes": 0, "staticShared": "CertificateNormPartial[256]",
+        "buffers": "state/intervals (read/write), verifier norm partials (write)",
+        "reviewRisk": "unsafe state must prevent division"
+      },
+      {
+        "name": "certificateConditionsKernel", "kind": "custom", "logicalElements": "max(original rows, original cols) plus row nnz",
+        "grid": "checkPartialCount(rows, cols)", "threads": 256, "maxBlocks": 1024,
+        "dynamicSharedBytes": 0, "staticShared": "ScreenPartial[256]",
+        "buffers": "original CSR/bounds/cost/state/intervals (read), screen partials (write)",
+        "reviewRisk": "serial CSR row walks and interval arithmetic"
+      },
+      {
+        "name": "certificateFlagsKernel", "kind": "custom", "logicalElements": "screen partial count",
+        "grid": "1", "blocks": 1, "threads": 256,
+        "dynamicSharedBytes": 0, "staticShared": "ScreenPartial[256]",
+        "buffers": "state/partials/input/packet error (read), packet flags (write)",
+        "reviewRisk": "unsafe cases must remain conservatively possible"
+      },
+      {
+        "name": "cusparseSpMV", "kind": "vendor", "logicalElements": "nnz",
+        "grid": "vendor-controlled",
+        "buffers": "CSR descriptor/input/scratch (read), dense output (write)",
+        "reviewRisk": "observe actual geometry and traffic with profiler"
+      }
+    ],
+    "testOnlyKernels": [
+      {
+        "name": "injectedFailureKernel",
+        "guard": "HIGHS_HIPDLP_TESTING",
+        "launch": "<<<1, 1, 0, stream>>>"
+      }
     ]
   }
   </script>
@@ -3168,11 +3486,52 @@
       cuda: "CUDA",
       compare: "对比",
     };
+    const evidenceFilterButtons =
+      document.querySelectorAll("[data-evidence-filter]");
+    const evidenceCards = document.querySelectorAll("[data-evidence]");
+    const evidenceFilterStatus = document.querySelector(
+      "#evidence-filter-status"
+    );
+    const evidenceLabels = {
+      all: "全部",
+      fact: "事实",
+      measured: "实测",
+      hypothesis: "假设",
+      unavailable: "不可用",
+    };
+    let activeLane = "compare";
+    let activeEvidenceFilter = "all";
+
+    function activateEvidenceFilter(category) {
+      if (!Object.hasOwn(evidenceLabels, category)) {
+        throw new RangeError(`Unknown evidence category: ${category}`);
+      }
+      activeEvidenceFilter = category;
+      let visibleCards = 0;
+      evidenceCards.forEach((card) => {
+        const evidenceMatches =
+          category === "all" || card.dataset.evidence === category;
+        const laneMatches =
+          !card.dataset.backend || activeLane === "compare" ||
+          card.dataset.backend === activeLane;
+        card.hidden = !(evidenceMatches && laneMatches);
+        if (!card.hidden) visibleCards += 1;
+      });
+      evidenceFilterStatus.textContent =
+        `${evidenceLabels[category]}证据：显示 ${visibleCards} 张分类卡片；` +
+        "只改变可见性，卡片事实文本保持不变。";
+      evidenceFilterButtons.forEach((button) => {
+        button.setAttribute("aria-pressed", String(
+          button.dataset.evidenceFilter === category
+        ));
+      });
+    }
 
     function activateLane(lane) {
       if (!Object.hasOwn(laneLabels, lane)) {
         throw new RangeError(`Unknown execution lane: ${lane}`);
       }
+      activeLane = lane;
       laneButtons.forEach((button) => {
         const isActive = button.dataset.lane === lane;
         button.setAttribute("aria-pressed", String(isActive));
@@ -3192,6 +3551,7 @@
       laneFilterStatus.textContent =
         `${laneLabels[lane]}模式：${cardSummary}；` +
         "共享算法与控制卡片始终保留。";
+      activateEvidenceFilter(activeEvidenceFilter);
     }
 
     laneButtons.forEach((button) => {
@@ -3199,7 +3559,13 @@
         button.dataset.lane
       ));
     });
+    evidenceFilterButtons.forEach((button) => {
+      button.addEventListener("click", () => activateEvidenceFilter(
+        button.dataset.evidenceFilter
+      ));
+    });
     activateLane("compare");
+    activateEvidenceFilter("all");
   </script>
   <script id="performance-workbench">
     function parseCount(input, label) {
@@ -3229,6 +3595,8 @@
     }
 
     function formatBytes(bytes) {
+      const exactBytes = `${bytes} bytes`;
+      if (bytes < 1024) return exactBytes;
       const units = ["B", "KiB", "MiB", "GiB", "TiB", "PiB"];
       let value = bytes;
       let unitIndex = 0;
@@ -3236,9 +3604,10 @@
         value /= 1024;
         unitIndex += 1;
       }
-      return `${value.toLocaleString("zh-CN", {
+      const approximate = `${value.toLocaleString("zh-CN", {
         maximumFractionDigits: unitIndex === 0 ? 0 : 2
       })} ${units[unitIndex]}`;
+      return `${exactBytes} (${approximate})`;
     }
 
     function updateEstimator(root = document) {
@@ -3314,10 +3683,10 @@
               resultsHidden: false,
               errorHidden: true,
               errorText: "",
-              matrix: "240.24 KiB",
-              vector: "93.75 KiB",
-              candidate: "23.44 KiB",
-              packet: "112 B"
+              matrix: "246008 bytes (240.24 KiB)",
+              vector: "96000 bytes (93.75 KiB)",
+              candidate: "24000 bytes (23.44 KiB)",
+              packet: "112 bytes"
             }
           },
           {
@@ -3328,10 +3697,10 @@
               resultsHidden: false,
               errorHidden: true,
               errorText: "",
-              matrix: "324.23 KiB",
-              vector: "93.75 KiB",
-              candidate: "23.44 KiB",
-              packet: "112 B"
+              matrix: "332016 bytes (324.23 KiB)",
+              vector: "96000 bytes (93.75 KiB)",
+              candidate: "24000 bytes (23.44 KiB)",
+              packet: "112 bytes"
             }
           },
           {
