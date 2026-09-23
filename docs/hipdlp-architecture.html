@@ -6,6 +6,9 @@
   <meta name="color-scheme" content="light">
   <link rel="icon" href="data:,">
   <title>HiPDLP Rewrite 架构与数据流</title>
+  <script>
+    document.documentElement.classList.add("enhanced");
+  </script>
   <style>
     :root {
       --paper: #f4f6f8;
@@ -29,15 +32,27 @@
     * { box-sizing: border-box; }
     body {
       margin: 0;
+      overflow-x: clip;
       color: var(--ink);
       background: var(--paper);
       font: 15px/1.6 "Noto Sans CJK SC", "Microsoft YaHei", sans-serif;
     }
     .shell { width: min(1440px, calc(100% - 32px)); margin: 0 auto; }
     .tablist { display: flex; overflow-x: auto; gap: 4px; }
-    [role="tab"] { border: 0; border-bottom: 3px solid transparent; padding: 14px 16px; }
+    [role="tab"] {
+      flex: 0 0 auto;
+      border: 0;
+      border-bottom: 3px solid transparent;
+      padding: 14px 16px;
+    }
     [role="tab"][aria-selected="true"] { border-bottom-color: var(--host); }
     .view { margin: 24px 0; padding: 24px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+    .enhanced .view[hidden],
+    .enhanced [data-backend][hidden] { display: none; }
+    :where(a, button, input, select, summary, [tabindex]):focus-visible {
+      outline: 3px solid var(--correctness);
+      outline-offset: 3px;
+    }
     .view-heading { max-width: 880px; }
     .eyebrow {
       margin: 0 0 4px;
@@ -387,6 +402,12 @@
       color: var(--host);
       background: var(--surface);
       box-shadow: 0 1px 3px rgb(23 33 43 / 12%);
+    }
+    .lane-summary {
+      margin: -12px 0 22px;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 700;
     }
     .iteration-layout {
       display: grid;
@@ -1005,6 +1026,64 @@
     @media (max-width: 480px) {
       .course-index { grid-template-columns: 1fr; }
     }
+    @media (prefers-reduced-motion: reduce) {
+      *,
+      *::before,
+      *::after {
+        scroll-behavior: auto !important;
+        animation: none !important;
+        transition: none !important;
+      }
+    }
+    @media print {
+      @page { margin: 12mm; }
+      body {
+        overflow: visible;
+        color: #000;
+        background: #fff;
+        font-size: 10pt;
+      }
+      .shell { width: 100%; }
+      .tablist,
+      .segment { display: none !important; }
+      .view,
+      .view[hidden],
+      [data-backend][hidden] {
+        display: block !important;
+      }
+      .view {
+        margin: 0;
+        padding: 0;
+        border: 0;
+        break-before: page;
+      }
+      main .view:first-child { break-before: auto; }
+      details:not([open]) > :not(summary) { display: block !important; }
+      details > summary {
+        color: #000 !important;
+        list-style: none;
+      }
+      details > summary::-webkit-details-marker { display: none; }
+      .flow-scroll,
+      .transform-chain,
+      .inventory-wrap,
+      .table-wrap,
+      .concept-visual {
+        overflow: visible;
+      }
+      .flow-map,
+      .vector-inventory,
+      .diagnostics-table { min-width: 0; }
+      .fact-tag {
+        color: #000 !important;
+        background: #fff !important;
+      }
+      .unavailable { border-style: dashed; }
+      .qa-pair,
+      .hotspot-card,
+      .kernel-card,
+      .node { break-inside: avoid; }
+    }
   </style>
 </head>
 <body>
@@ -1016,14 +1095,14 @@
     </div>
   </header>
   <nav class="shell tablist" role="tablist" aria-label="架构视图">
-    <button role="tab" aria-selected="true" aria-controls="system-map" data-view="system-map">系统地图</button>
-    <button role="tab" aria-selected="false" aria-controls="data-residency" data-view="data-residency">数据与驻留</button>
-    <button role="tab" aria-selected="false" aria-controls="iteration-correctness" data-view="iteration-correctness">迭代与正确性</button>
-    <button role="tab" aria-selected="false" aria-controls="bottlenecks" data-view="bottlenecks">卡点与优化</button>
-    <button role="tab" aria-selected="false" aria-controls="learning-review" data-view="learning-review">学习与 Review</button>
+    <button id="tab-system-map" role="tab" aria-selected="true" aria-controls="system-map" data-view="system-map">系统地图</button>
+    <button id="tab-data-residency" role="tab" aria-selected="false" aria-controls="data-residency" data-view="data-residency">数据与驻留</button>
+    <button id="tab-iteration-correctness" role="tab" aria-selected="false" aria-controls="iteration-correctness" data-view="iteration-correctness">迭代与正确性</button>
+    <button id="tab-bottlenecks" role="tab" aria-selected="false" aria-controls="bottlenecks" data-view="bottlenecks">卡点与优化</button>
+    <button id="tab-learning-review" role="tab" aria-selected="false" aria-controls="learning-review" data-view="learning-review">学习与 Review</button>
   </nav>
   <main class="shell">
-    <section class="view" id="system-map">
+    <section class="view" id="system-map" role="tabpanel" aria-labelledby="tab-system-map" tabindex="0">
       <header class="view-heading">
         <p class="eyebrow">End-to-end solve boundary</p>
         <h2>系统地图：从 HiGHS 入口到原模型 KKT</h2>
@@ -1301,7 +1380,7 @@
         </article>
       </div>
     </section>
-    <section class="view" id="data-residency">
+    <section class="view" id="data-residency" role="tabpanel" aria-labelledby="tab-data-residency" tabindex="0">
       <header class="view-heading">
         <p class="eyebrow">Ownership · residency · lifetime</p>
         <h2>数据与驻留：谁拥有，谁借用，数据在哪里</h2>
@@ -1434,7 +1513,7 @@
 
       <h3>同一套句柄，两种资源驻留</h3>
       <div class="resource-columns">
-        <article class="resource-card">
+        <article class="resource-card" data-backend="cpu">
           <div class="node-header">
             <h3>CPU resource column</h3>
             <span class="residency">CPU / Host</span>
@@ -1450,7 +1529,7 @@
           </p>
         </article>
 
-        <article class="resource-card device-resource">
+        <article class="resource-card device-resource" data-backend="cuda">
           <div class="node-header">
             <h3>CUDA resource column</h3>
             <span class="residency" style="color: var(--device)">CUDA / Device</span>
@@ -1511,7 +1590,7 @@
       </p>
 
       <div class="data-grid">
-        <article class="data-card graph-card">
+        <article class="data-card graph-card" data-backend="cuda">
           <h3>CUDA graph 的弱生命周期依赖</h3>
           <div class="ownership-row">
             <span class="ownership-pill lifetime">shared lifetime token</span>
@@ -1533,19 +1612,19 @@
 
       <h3>传输图例：哪些边界真正搬数据</h3>
       <div class="transfer-grid" aria-label="Host Device 传输路径">
-        <article class="transfer-item h2d">
+        <article class="transfer-item h2d" data-backend="cuda">
           <h4>Setup H2D · Host → Device</h4>
           <p><code>bindProblem</code> 上传 costs、bounds、row types、matrix 与 transpose；<code>prepareCheckWorkspace</code> 另上传 scaling、原模型 certificate 与 check 数据。它们在迭代前建立常驻 Device 副本。</p>
         </article>
-        <article class="transfer-item d2h">
+        <article class="transfer-item d2h" data-backend="cuda">
           <h4>Candidate D2H · Device → Host</h4>
           <p><code>prepareCandidate</code> 批量下载 primal、dual、candidate_ax、candidate_aty：共 <strong>2*(rows+cols)</strong> doubles（另有错误标志），供 Host oracle、postsolve 与原空间验证使用。</p>
         </article>
-        <article class="transfer-item d2h">
+        <article class="transfer-item d2h" data-backend="cuda">
           <h4>Resident-check D2H · Device → Host</h4>
           <p><code>evaluateCheck</code> 普通边界只下载 compact <code>CheckPacket</code> 并同步；包内 metrics 与 fallback flags 决定是否必须进入完整 Host oracle 路径。</p>
         </article>
-        <article class="transfer-item h2d">
+        <article class="transfer-item h2d" data-backend="cuda">
           <h4>Vector upload H2D · Host → Device</h4>
           <p><code>uploadVector</code> 是显式 Host 向量入口；普通零初始化和迭代更新留在 Device kernel 内，不应误记为逐迭代 H2D。</p>
         </article>
@@ -1555,7 +1634,7 @@
         <a href="../highs/pdlp/hipdlp/algorithm/solver.cc">candidate/check boundary</a>
       </p>
     </section>
-    <section class="view" id="iteration-correctness">
+    <section class="view" id="iteration-correctness" role="tabpanel" aria-labelledby="tab-iteration-correctness" tabindex="0">
       <header class="view-heading">
         <p class="eyebrow">Production step · boundary checks · CUDA launch geometry</p>
         <h2>迭代与正确性：两次 SpMV，从生产步到 OPTIMAL gate</h2>
@@ -1567,16 +1646,17 @@
         <button type="button" data-lane="cuda" aria-pressed="false">CUDA</button>
         <button type="button" data-lane="compare" aria-pressed="true">对比</button>
       </div>
+      <p id="lane-filter-status" class="lane-summary" role="status" aria-live="polite" aria-atomic="true">对比模式：显示 CPU 与 CUDA 后端卡片；共享算法与控制卡片始终保留。</p>
 
       <div class="iteration-layout">
         <div class="iteration-main">
           <ul class="iteration-facts" aria-label="迭代常量">
             <li><strong>2</strong><span>SpMV / production step</span></li>
             <li><strong>40</strong><span>convergence cadence</span></li>
-            <li><strong>39</strong><span>recorded steps / graph replay</span></li>
-            <li><strong>117</strong><span>parameter doubles</span></li>
-            <li><strong>936 B</strong><span>parameter upload</span></li>
-            <li><strong>112 B</strong><span>ordinary check packet</span></li>
+            <li class="backend-fact" data-backend="cuda"><strong>39</strong><span>recorded steps / graph replay</span></li>
+            <li class="backend-fact" data-backend="cuda"><strong>117</strong><span>parameter doubles</span></li>
+            <li class="backend-fact" data-backend="cuda"><strong>936 B</strong><span>parameter upload</span></li>
+            <li class="backend-fact" data-backend="cuda"><strong>112 B</strong><span>ordinary check packet</span></li>
           </ul>
 
           <section aria-labelledby="production-step-title">
@@ -1667,7 +1747,7 @@
             </p>
           </section>
 
-          <aside class="graph-note">
+          <aside class="graph-note" data-backend="cuda">
             <h3>CUDA graph：1 direct + 39 recorded steps</h3>
             <p>在 40-step cadence 中，<code>RecordedIterationBlock</code> 捕获 39 个 production steps。每步 3 个 scalars，共 <strong>39 × 3 = 117 doubles = 936 bytes</strong>；replay 前上传参数，随后调用 <code>cudaGraphLaunch</code>。</p>
             <p><strong>Replay scheduling：</strong>The initial step and the first post-restart step execute directly. Short tails with fewer than 39 remaining steps execute directly.</p>
@@ -1723,7 +1803,7 @@
             <h3 id="kernel-title">CUDA launch drill-down</h3>
             <p>所有 custom launches 使用 256 threads、0 bytes dynamic shared memory 与同一 Backend stream。以下“shared”明确区分静态 <code>__shared__</code> 数组与 launch 的 dynamic shared 参数。</p>
             <div class="kernel-grid">
-              <article class="kernel-card">
+              <article class="kernel-card" data-backend="cuda">
                 <h4><code>projectedPrimalKernel&lt;true&gt;</code></h4>
                 <code>&lt;&lt;&lt;blocks, 256, 0, stream&gt;&gt;&gt;</code>
                 <dl>
@@ -1737,7 +1817,7 @@
                 <p class="review-question"><strong>Review：</strong>Do bound distributions make clamp divergence visible in profiler traces?</p>
               </article>
 
-              <article class="kernel-card">
+              <article class="kernel-card" data-backend="cuda">
                 <h4><code>projectedDualKernel&lt;true&gt;</code></h4>
                 <code>&lt;&lt;&lt;blocks, 256, 0, stream&gt;&gt;&gt;</code>
                 <dl>
@@ -1751,7 +1831,7 @@
                 <p class="review-question"><strong>Review：</strong>Would grouping equality rows improve locality enough to justify remapping?</p>
               </article>
 
-              <article class="kernel-card">
+              <article class="kernel-card" data-backend="cuda">
                 <h4><code>vectorPairBlendKernel</code></h4>
                 <code>&lt;&lt;&lt;blocks, 256, 0, stream&gt;&gt;&gt;</code>
                 <dl>
@@ -1765,7 +1845,7 @@
                 <p class="review-question"><strong>Review：</strong>At extreme row/column imbalance, is one paired launch still cheaper than two right-sized launches?</p>
               </article>
 
-              <article class="kernel-card">
+              <article class="kernel-card" data-backend="cuda">
                 <h4><code>checkPartialsKernel</code></h4>
                 <code>&lt;&lt;&lt;blocks, 256, 0, stream&gt;&gt;&gt;</code>
                 <dl>
@@ -1779,7 +1859,7 @@
                 <p class="review-question"><strong>Review：</strong>Does static shared storage constrain occupancy on every supported GPU?</p>
               </article>
 
-              <article class="kernel-card">
+              <article class="kernel-card" data-backend="cuda">
                 <h4><code>checkPacketKernel</code></h4>
                 <code>&lt;&lt;&lt;1, 256, 0, stream&gt;&gt;&gt; · blocks = 1</code>
                 <dl>
@@ -1793,7 +1873,7 @@
                 <p class="review-question"><strong>Review：</strong>Does the compact packet save more transfer time than this second reduction launch costs?</p>
               </article>
 
-              <article class="kernel-card vendor">
+              <article class="kernel-card vendor" data-backend="cuda">
                 <h4><code>executeSpmv → cusparseSpMV</code></h4>
                 <code>grid = vendor-controlled · CUSPARSE_SPMV_ALG_DEFAULT</code>
                 <dl>
@@ -1839,7 +1919,7 @@
         </aside>
       </div>
     </section>
-    <section class="view" id="bottlenecks">
+    <section class="view" id="bottlenecks" role="tabpanel" aria-labelledby="tab-bottlenecks" tabindex="0">
       <header class="view-heading">
         <p class="eyebrow">Evidence-bounded performance workflow</p>
         <h2>性能工作台：从症状到可证伪实验</h2>
@@ -1869,7 +1949,7 @@
           <p>保留 transformation metadata、缩放语义、原模型 postsolve 与 KKT gate；不能把固定成本隐藏在计时窗口外。</p>
         </article>
 
-        <article class="hotspot-card" id="hotspot-2">
+        <article class="hotspot-card" id="hotspot-2" data-backend="cpu">
           <span class="fact-tag measured">CPU scoped comparison</span>
           <h3>Serial CPU SpMV 与 fused vector loops</h3>
           <h4>症状</h4>
@@ -1885,7 +1965,7 @@
           <p>保持两次 SpMV 的数据依赖、投影边界、finite checks、40-step cadence 和相同终止判定。</p>
         </article>
 
-        <article class="hotspot-card" id="hotspot-3">
+        <article class="hotspot-card" id="hotspot-3" data-backend="cuda">
           <span class="fact-tag hypothesis">CUDA setup</span>
           <h3>CUDA setup、uploads、descriptors 与 graph capture</h3>
           <h4>症状</h4>
@@ -1901,7 +1981,7 @@
           <p>不能跨维度或已失效资源复用 descriptor/graph；所有 CUDA 创建失败仍必须作为 structured error 暴露。</p>
         </article>
 
-        <article class="hotspot-card" id="hotspot-4">
+        <article class="hotspot-card" id="hotspot-4" data-backend="cuda">
           <span class="fact-tag measured">CUDA scoped replay</span>
           <h3>Steady-state CUDA SpMV、fused kernels 与 replay</h3>
           <h4>症状</h4>
@@ -1917,7 +1997,7 @@
           <p>保留每步两次 SpMV、39-step recorded block、direct initial/restart/tail steps 与 non-finite error propagation。</p>
         </article>
 
-        <article class="hotspot-card" id="hotspot-5">
+        <article class="hotspot-card" id="hotspot-5" data-backend="cuda">
           <span class="fact-tag hypothesis">Cadence boundary</span>
           <h3>Cadence boundary、fallback D2H 与 synchronization</h3>
           <h4>症状</h4>
@@ -2068,7 +2148,7 @@
         </p>
       </section>
     </section>
-    <section class="view" id="learning-review">
+    <section class="view" id="learning-review" role="tabpanel" aria-labelledby="tab-learning-review" tabindex="0">
       <header class="view-heading">
         <p class="eyebrow">Read · predict · verify · review</p>
         <h2>学习与 Review：从 C++ 所有权走到 CUDA 证据</h2>
@@ -3017,13 +3097,82 @@
     ]
   }
   </script>
+  <script id="view-controls">
+    const tabs = Array.from(
+      document.querySelectorAll('[role="tab"][aria-controls]')
+    );
+    const views = Array.from(document.querySelectorAll(".view"));
+    const viewIds = new Set(views.map((view) => view.id));
+
+    function activateView(viewId, updateHash = true) {
+      const target = document.getElementById(viewId);
+      if (!target || !target.classList.contains("view")) return;
+      views.forEach((view) => {
+        view.hidden = view !== target;
+      });
+      tabs.forEach((tab) => {
+        const selected = tab.getAttribute("aria-controls") === viewId;
+        tab.setAttribute("aria-selected", String(selected));
+        tab.tabIndex = selected ? 0 : -1;
+      });
+      if (updateHash) history.replaceState(null, "", `#${viewId}`);
+    }
+
+    function viewIdFromHash() {
+      const viewId = location.hash.slice(1);
+      return viewIds.has(viewId) ? viewId : null;
+    }
+
+    tabs.forEach((tab, index) => {
+      tab.addEventListener("click", () => {
+        activateView(tab.getAttribute("aria-controls"));
+      });
+      tab.addEventListener("keydown", (event) => {
+        let nextIndex = null;
+        if (event.key === "ArrowRight") {
+          nextIndex = (index + 1) % tabs.length;
+        } else if (event.key === "ArrowLeft") {
+          nextIndex = (index - 1 + tabs.length) % tabs.length;
+        } else if (event.key === "Home") {
+          nextIndex = 0;
+        } else if (event.key === "End") {
+          nextIndex = tabs.length - 1;
+        }
+        if (nextIndex === null) return;
+        event.preventDefault();
+        const nextTab = tabs[nextIndex];
+        activateView(nextTab.getAttribute("aria-controls"));
+        nextTab.focus();
+      });
+    });
+
+    window.addEventListener("hashchange", () => {
+      const viewId = viewIdFromHash();
+      if (viewId) activateView(viewId, false);
+    });
+
+    activateView(
+      viewIdFromHash() || tabs[0].getAttribute("aria-controls"),
+      false
+    );
+  </script>
   <script id="lane-controls">
     const laneButtons =
       document.querySelectorAll(".segment [data-lane]");
-    const backendLaneCards =
-      document.querySelectorAll(".lane-card[data-backend]");
+    const backendLaneCards = document.querySelectorAll("[data-backend]");
+    const laneFilterStatus = document.querySelector(
+      "#lane-filter-status"
+    );
+    const laneLabels = {
+      cpu: "CPU",
+      cuda: "CUDA",
+      compare: "对比",
+    };
 
     function activateLane(lane) {
+      if (!Object.hasOwn(laneLabels, lane)) {
+        throw new RangeError(`Unknown execution lane: ${lane}`);
+      }
       laneButtons.forEach((button) => {
         const isActive = button.dataset.lane === lane;
         button.setAttribute("aria-pressed", String(isActive));
@@ -3031,6 +3180,18 @@
       backendLaneCards.forEach((card) => {
         card.hidden = lane !== "compare" && card.dataset.backend !== lane;
       });
+      const cpuCards = Array.from(backendLaneCards).filter(
+        (card) => card.dataset.backend === "cpu"
+      ).length;
+      const cudaCards = backendLaneCards.length - cpuCards;
+      const cardSummary = lane === "compare"
+        ? `显示 ${cpuCards} 张 CPU 卡片与 ${cudaCards} 张 CUDA 卡片`
+        : `显示 ${lane === "cpu" ? cpuCards : cudaCards} 张 ` +
+          `${laneLabels[lane]} 卡片，隐藏 ` +
+          `${lane === "cpu" ? cudaCards : cpuCards} 张其他后端卡片`;
+      laneFilterStatus.textContent =
+        `${laneLabels[lane]}模式：${cardSummary}；` +
+        "共享算法与控制卡片始终保留。";
     }
 
     laneButtons.forEach((button) => {

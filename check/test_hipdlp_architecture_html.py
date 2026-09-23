@@ -1,3 +1,4 @@
+from collections import Counter
 import json
 from html.parser import HTMLParser
 from pathlib import Path
@@ -39,6 +40,16 @@ REVIEW_PASS_IDS = {
     "numerical-correctness",
     "concurrency-cuda-semantics",
     "performance",
+}
+BACKEND_FILTER_CARD_CLASSES = {
+    "backend-fact",
+    "graph-card",
+    "graph-note",
+    "hotspot-card",
+    "kernel-card",
+    "lane-card",
+    "resource-card",
+    "transfer-item",
 }
 APPROVED_GLOSSARY_TERMS = {
     "CSR",
@@ -93,6 +104,7 @@ class ArchitecturePageParser(HTMLParser):
         self.elements = {}
         self.lane_buttons = []
         self.backend_lane_cards = []
+        self.backend_filter_cards = []
         self.shared_operation_cards = []
         self.style_chunks = []
         self.in_style = False
@@ -283,6 +295,12 @@ class ArchitecturePageParser(HTMLParser):
             }
         if tag == "button" and "data-lane" in attributes:
             self.lane_buttons.append(attributes)
+        if "data-backend" in attributes:
+            self.backend_filter_cards.append({
+                "attributes": attributes,
+                "classes": classes,
+                "tag": tag,
+            })
         if tag == "div" and "lane-card" in classes:
             self.backend_lane_cards.append(attributes)
         if tag == "li" and "operation-card" in classes:
@@ -400,6 +418,56 @@ class ArchitecturePageTests(unittest.TestCase):
             "generated": "2026-09-23",
             "workingTree": "dirty",
         })
+
+    def test_tabs_reference_existing_views_and_static_content_is_not_hidden(
+            self):
+        controls = {tab["aria-controls"] for tab in self.parser.tabs}
+        self.assertEqual(controls, {
+            "system-map",
+            "data-residency",
+            "iteration-correctness",
+            "bottlenecks",
+            "learning-review",
+        })
+        self.assertTrue(controls <= self.parser.ids)
+        self.assertNotIn(
+            '<section class="view" id="system-map" hidden',
+            self.source,
+        )
+        self.assertIn("prefers-reduced-motion: reduce", self.source)
+        self.assertIn("transition: none !important;", self.source)
+        self.assertIn("@media print", self.source)
+        self.assertIn('aria-live="polite"', self.source)
+
+    def test_interaction_functions_are_present_without_external_frameworks(
+            self):
+        for token in (
+            "function activateView(",
+            "function activateLane(",
+            "function estimateMemory(",
+            "function updateEstimator(",
+            "history.replaceState",
+            "ArrowRight",
+            "ArrowLeft",
+            "Home",
+            "End",
+        ):
+            with self.subTest(token=token):
+                self.assertIn(token, self.source)
+        for forbidden in ("React", "Vue", "d3.", "mermaid", "cdn."):
+            with self.subTest(forbidden=forbidden):
+                self.assertNotIn(forbidden, self.source)
+
+    def test_every_local_page_link_resolves(self):
+        missing = []
+        for link in self.parser.links:
+            parts = urlsplit(link)
+            if parts.scheme or link.startswith("#"):
+                continue
+            target = unquote(parts.path)
+            if target and not (PAGE.parent / target).resolve().exists():
+                missing.append(link)
+        self.assertEqual(missing, [])
 
     def test_learning_view_has_complete_routes_lessons_and_answers(self):
         self.assertTrue({"route-30", "route-cpp-90", "route-cuda"}
@@ -762,7 +830,7 @@ class ArchitecturePageTests(unittest.TestCase):
             with self.subTest(phrase=phrase):
                 self.assertIn(phrase, self.source)
 
-    def test_lane_controls_filter_only_backend_cards_and_default_to_compare(self):
+    def test_lane_controls_filter_backend_cards_and_default_to_compare(self):
         self.assertEqual(
             [
                 (button["data-lane"], button["aria-pressed"])
@@ -790,11 +858,47 @@ class ArchitecturePageTests(unittest.TestCase):
         )
         for behavior in (
             'function activateLane(lane)',
-            'document.querySelectorAll(".lane-card[data-backend]")',
+            'document.querySelectorAll("[data-backend]")',
             'button.setAttribute("aria-pressed", String(isActive))',
             'card.hidden = lane !== "compare" && card.dataset.backend !== lane',
             'button.addEventListener("click", () => activateLane(',
             'activateLane("compare")',
+        ):
+            with self.subTest(behavior=behavior):
+                self.assertIn(behavior, self.source)
+
+    def test_lane_filter_covers_relevant_views_and_announces_results(self):
+        counts = Counter()
+        for card in self.parser.backend_filter_cards:
+            kinds = BACKEND_FILTER_CARD_CLASSES & card["classes"]
+            self.assertEqual(len(kinds), 1, card)
+            counts[(kinds.pop(), card["attributes"]["data-backend"])] += 1
+            self.assertNotIn("hidden", card["attributes"])
+
+        self.assertEqual(counts, Counter({
+            ("backend-fact", "cuda"): 4,
+            ("graph-card", "cuda"): 1,
+            ("graph-note", "cuda"): 1,
+            ("hotspot-card", "cpu"): 1,
+            ("hotspot-card", "cuda"): 3,
+            ("kernel-card", "cuda"): 6,
+            ("lane-card", "cpu"): 5,
+            ("lane-card", "cuda"): 5,
+            ("resource-card", "cpu"): 1,
+            ("resource-card", "cuda"): 1,
+            ("transfer-item", "cuda"): 4,
+        }))
+
+        status = self.parser.elements["lane-filter-status"]["attributes"]
+        self.assertEqual(status["role"], "status")
+        self.assertEqual(status["aria-live"], "polite")
+        self.assertEqual(status["aria-atomic"], "true")
+        for behavior in (
+            'const backendLaneCards = document.querySelectorAll(',
+            '"[data-backend]"',
+            'const laneFilterStatus = document.querySelector(',
+            '"#lane-filter-status"',
+            "laneFilterStatus.textContent =",
         ):
             with self.subTest(behavior=behavior):
                 self.assertIn(behavior, self.source)
@@ -1162,7 +1266,7 @@ class ArchitecturePageTests(unittest.TestCase):
 
     def test_cuda_replay_card_states_release_acceptance_limit(self):
         card = re.search(
-            r'<article class="hotspot-card" id="hotspot-4">'
+            r'<article class="hotspot-card" id="hotspot-4"[^>]*>'
             r"(?P<body>.*?)</article>",
             self.source,
             re.DOTALL,
