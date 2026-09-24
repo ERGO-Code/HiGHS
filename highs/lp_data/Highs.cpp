@@ -1136,6 +1136,31 @@ HighsStatus Highs::presolve() {
 }
 
 HighsStatus Highs::run() {
+  const bool clear_names = false;
+  if (clear_names && (this->model_.lp_.col_names_.size() ||
+                      this->model_.lp_.row_names_.size())) {
+    printf(
+        "\n=================\nHighs::passModel Clearing "
+        "names\n=================\n"
+        "col_names_.size() = %d; row_names_.size() = %d\n",
+        int(this->model_.lp_.col_names_.size()),
+        int(this->model_.lp_.row_names_.size()));
+    this->model_.lp_.col_names_.clear();
+    this->model_.lp_.row_names_.clear();
+    printf("After Clear\n");
+    printf("col_names_.size() = %d; row_names_.size() = %d\n",
+           int(this->model_.lp_.col_names_.size()),
+           int(this->model_.lp_.row_names_.size()));
+    printf("col_names_.capacity() = %d; row_names_.capacity() = %d\n",
+           int(this->model_.lp_.col_names_.capacity()),
+           int(this->model_.lp_.row_names_.capacity()));
+    this->model_.lp_.col_names_.shrink_to_fit();
+    this->model_.lp_.row_names_.shrink_to_fit();
+    printf("After ShrinkToFit\n");
+    printf("col_names_.capacity() = %d; row_names_.capacity() = %d\n",
+           int(this->model_.lp_.col_names_.capacity()),
+           int(this->model_.lp_.row_names_.capacity()));
+  }
   // Level 0 of Highs::run()
   // Action the file operations associated with running HiGHS, and
   // call Highs::runFromUserScaling()
