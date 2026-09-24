@@ -1718,6 +1718,9 @@ HPresolve::Result HPresolve::normaliseCliqueRows(
         rowsizeInteger[row] != rowsize[row])
       continue;
 
+    // skip redundant rows
+    if (isRedundant(row)) continue;
+
     // store row
     storeRow(row);
 
@@ -1755,9 +1758,6 @@ HPresolve::Result HPresolve::normaliseCliqueRows(
     if (impliedRowBounds.getSumUpper(row) >
         model->row_upper_[row] + primal_feastol)
       rhs = model->row_upper_[row];
-
-    // skip free rows
-    if (lhs <= -kHighsInf && rhs >= kHighsInf) continue;
 
     // transform row
     HighsInt direction = rhs < kHighsInf ? HighsInt{1} : HighsInt{-1};
