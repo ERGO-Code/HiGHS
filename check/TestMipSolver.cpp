@@ -2036,47 +2036,41 @@ TEST_CASE("dominated-column-double-fixing", "[highs_test_mip_solver]") {
   highs.setOptionValue("output_flag", dev_run);
   solve(highs, kHighsOnString, HighsModelStatus::kInfeasible);
 }
-
 /*
 TEST_CASE("fix-1819", "[highs_test_mip_solver]") {
   std::string filename;
-  filename =
-    std::string(HIGHS_DIR) + "/check/instances/1819-5000.mps";
+  filename = std::string(HIGHS_DIR) + "/check/instances/1819-5000.mps";
+  //  "/srv/miplib2017/n5-3.mps.gz";//air05.mps.gz";
+  // "/srv/mps_da/pds-100.mps.gz";
   Highs h;
-  highs.setOptionValue("output_flag", dev_run);
+  //  h.setOptionValue("output_flag", dev_run);
   h.setOptionValue("mip_rel_gap", 0.1);
   REQUIRE(h.readModel(filename) == HighsStatus::kOk);
   HighsLp lp = h.getLp();
   std::vector<std::string> col_names = lp.col_names_;
   std::vector<std::string> row_names = lp.row_names_;
 
-  double tt = -h.getRunTime();
-  h.run();
-  tt += h.getRunTime();
-  if (dev_run)
-    printf("With       names: time = %9.8f\n", tt);
+  // Easily flip the order when passName is used
+  const HighsInt k_for_use_pass_name = 1;
+  for (HighsInt k = 0; k < 2; k++) {
+    h.passModel(lp);
+    if (k == k_for_use_pass_name) {
+      HighsInt mu = 1;
+      HighsInt to_col = lp.num_col_ / mu;
+      HighsInt to_row = lp.num_row_ / mu;
+      for (HighsInt iCol = 0; iCol < std::min(to_col, lp.num_col_); iCol++)
+        h.passColName(iCol, col_names[iCol]);
+      for (HighsInt iRow = 0; iRow < std::min(to_row, lp.num_row_); iRow++)
+        h.passRowName(iRow, row_names[iRow]);
+    }
 
-  //  lp.col_names_.clear();
-  //  lp.row_names_.clear();
-
-  h.passModel(lp);
-  HighsInt mu = 1;
-  HighsInt to_col = lp.num_col_/mu;
-  HighsInt to_row = lp.num_row_/mu;
-  for (HighsInt iCol = 0;
-                iCol < std::min(to_col, lp.num_col_);
-                iCol++)
-    h.passColName(iCol, col_names[iCol]);
-  for (HighsInt iRow = 0;
-                iRow < std::min(to_row, lp.num_row_);
-                iRow++)
-    h.passRowName(iRow, row_names[iRow]);
-
-  tt = -h.getRunTime();
-  h.run();
-  tt += h.getRunTime();
-  if (dev_run)
-    printf("With passColName: time = %9.8f\n", tt);
+    double tt = -h.getRunTime();
+    h.run();
+    tt += h.getRunTime();
+    //  if (dev_run)
+    printf("With %s: time = %9.8f\n",
+           k == k_for_use_pass_name ? "passColName" : "      names", tt);
+  }
 
   h.resetGlobalScheduler(true);
 }

@@ -1161,6 +1161,20 @@ HighsStatus Highs::run() {
            int(this->model_.lp_.col_names_.capacity()),
            int(this->model_.lp_.row_names_.capacity()));
   }
+  const bool new_lp = false;
+  if (new_lp) {
+    HighsLp lp;
+    lp.num_col_ = this->model_.lp_.num_col_;
+    lp.num_row_ = this->model_.lp_.num_row_;
+    lp.col_cost_ = this->model_.lp_.col_cost_;
+    lp.col_lower_ = this->model_.lp_.col_lower_;
+    lp.col_upper_ = this->model_.lp_.col_upper_;
+    lp.integrality_ = this->model_.lp_.integrality_;
+    lp.a_matrix_ = this->model_.lp_.a_matrix_;
+    lp.row_lower_ = this->model_.lp_.row_lower_;
+    lp.row_upper_ = this->model_.lp_.row_upper_;
+    this->model_.lp_ = lp;
+  }
   // Level 0 of Highs::run()
   // Action the file operations associated with running HiGHS, and
   // call Highs::runFromUserScaling()
