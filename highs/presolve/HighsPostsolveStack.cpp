@@ -495,12 +495,12 @@ void HighsPostsolveStack::DuplicateRow::undo(const HighsOptions& options,
           : computeStatus(solution.row_dual[row], basis.row_status[row],
                           options.dual_feasibility_tolerance);
 
-  auto computeRowDualAndStatus = [&](bool tightened) {
+  auto computeRowDualAndStatus = [&](bool tightened, const HighsInt dir) {
     if (tightened) {
       solution.row_dual[duplicateRow] =
-          solution.row_dual[row] / duplicateRowScale;
+          solution.row_dual[row] * duplicateRowScale;
       if (basis.valid) {
-        if (duplicateRowScale > 0)
+        if (dir * duplicateRowScale > 0)
           basis.row_status[duplicateRow] = HighsBasisStatus::kUpper;
         else
           basis.row_status[duplicateRow] = HighsBasisStatus::kLower;
@@ -529,10 +529,10 @@ void HighsPostsolveStack::DuplicateRow::undo(const HighsOptions& options,
       // if row sits on its upper bound, and the row upper bound was
       // tightened using the parallel row we make the row basic and
       // transfer its dual value to the parallel row with the proper scale
-      computeRowDualAndStatus(rowUpperTightened);
+      computeRowDualAndStatus(rowUpperTightened, 1);
       break;
     case HighsBasisStatus::kLower:
-      computeRowDualAndStatus(rowLowerTightened);
+      computeRowDualAndStatus(rowLowerTightened, -1);
       break;
     default:
       assert(false);
