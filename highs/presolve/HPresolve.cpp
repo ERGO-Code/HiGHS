@@ -9320,7 +9320,6 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
 
           if (mipsolver != nullptr && mipsolver->mipdata_->cliquesExtracted) {
             mipsolver->mipdata_->cliquetable.presolveEliminateCol(col);
-            mipsolver->mipdata_->cliquetable.presolveEliminateCol(duplicateCol);
           }
 
           // change bounds
