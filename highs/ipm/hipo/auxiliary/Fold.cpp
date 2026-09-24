@@ -287,16 +287,16 @@ void test_folding(const HighsLp& lp) {
   printf("Rows: used %d out of %zu\n", colours_used_rows, lp.row_lower_.size());
   printf("Cols: used %d out of %zu\n", colours_used_cols, lp.col_cost_.size());
 
-  std::vector<Int> colour(lp.a_matrix_.num_row_, 0);
-  colour.insert(colour.end(), lp.a_matrix_.num_col_, 1);
-  ColourRefinement CR(lp.a_matrix_, colour, true);
+  for (Int& i : colour_cols) i += colours_used_rows;
+
+  std::vector<Int> colour_matrix = std::move(colour_rows);
+  colour_matrix.insert(colour_matrix.end(), colour_cols.begin(),
+                       colour_cols.end());
+
+  ColourRefinement CR(lp.a_matrix_, colour_matrix, true);
   CR.run();
 
-  if (lp.a_matrix_.num_row_ + lp.a_matrix_.num_col_ < 200) {
-    printf("\n\n");
-    for (Int c : colour) printf("%d-", c);
-  }
-  printf("\nUsed %d colours for %d vertices\n\n", CR.coloursUsed(),
+  printf("\nMatrix: used %d out of %d\n\n", CR.coloursUsed(),
          lp.a_matrix_.num_row_ + lp.a_matrix_.num_col_);
 }
 
