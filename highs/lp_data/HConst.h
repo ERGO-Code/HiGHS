@@ -31,6 +31,8 @@ const double kHighsZero = 1e-50;
 const std::string kHighsOffString = "off";
 const std::string kHighsChooseString = "choose";
 const std::string kHighsOnString = "on";
+const std::string kHighsSparseString = "sparse";
+const std::string kHighsPartialString = "partial";
 const HighsInt kHighsMaxStringLength = 512;
 const HighsInt kSimplexConcurrencyLimit = 8;
 const double kRunningAverageMultiplier = 0.05;
@@ -161,8 +163,9 @@ enum SolutionStyle {
   kSolutionStyleGlpsolRaw,     // 2;
   kSolutionStyleGlpsolPretty,  // 3;
   kSolutionStyleSparse,        // 4;
+  kSolutionStylePartial,       // 5;
   kSolutionStyleMin = kSolutionStyleOldRaw,
-  kSolutionStyleMax = kSolutionStyleSparse
+  kSolutionStyleMax = kSolutionStylePartial
 };
 
 enum GlpsolCostRowLocation {

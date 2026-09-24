@@ -23,6 +23,7 @@
 #include "util/HighsCDouble.h"
 #include "util/HighsMatrixUtils.h"
 #include "util/HighsSort.h"
+#include "util/stringutil.h"
 
 using std::fabs;
 using std::max;
@@ -2202,7 +2203,8 @@ HighsStatus readSolutionFile(const std::string& filename,
                              const HighsInt style) {
   HighsStatus return_status = HighsStatus::kOk;
   const HighsLogOptions& log_options = options.log_options;
-  if (style != kSolutionStyleRaw && style != kSolutionStyleSparse) {
+  if (style != kSolutionStyleRaw && style != kSolutionStyleSparse &&
+      style != kSolutionStylePartial) {
     highsLogUser(log_options, HighsLogType::kError,
                  "readSolutionFile: Cannot read file of style %d\n",
                  (int)style);
@@ -2219,6 +2221,7 @@ HighsStatus readSolutionFile(const std::string& filename,
   std::string hash;
   std::string keyword;
   std::string value_string;
+  std::string qualifier_string;
   std::string name;
   double value;
   HighsInt num_col = -1;
@@ -2265,6 +2268,7 @@ HighsStatus readSolutionFile(const std::string& filename,
     if (!lp.row_hash_.name2index.size()) lp.row_hash_.form(lp.row_names_);
   }
   bool sparse = false;
+  bool partial = false;
   if (!miplib_sol) {
     if (!readSolutionFileIgnoreLineOk(in_file))
       return readSolutionFileErrorReturn(in_file);  // Optimal
@@ -2284,22 +2288,27 @@ HighsStatus readSolutionFile(const std::string& filename,
       return readSolutionFileErrorReturn(in_file);  // EOL
     if (!readSolutionFileIgnoreLineOk(in_file))
       return readSolutionFileErrorReturn(in_file);  // Objective
-    // Next line should be "Columns" and correct number
-    if (!readSolutionFileHashKeywordIntLineOk(hash, keyword, value_string,
-                                              num_col, in_file)) {
+    // Next line should be "Columns", correct number and possibly a
+    // qualifier string
+    if (!readSolutionFileHashKeywordIntStringLineOk(
+            hash, keyword, value_string, num_col, qualifier_string, in_file)) {
       highsLogUser(log_options, HighsLogType::kError,
-                   "readSolutionFile: Error reading line \"%s %s %s\"\n",
-                   hash.c_str(), keyword.c_str(), value_string.c_str());
+                   "readSolutionFile: Error reading line \"%s %s %s%s\"\n",
+                   hash.c_str(), keyword.c_str(), value_string.c_str(),
+                   qualifier_string.c_str());
       return readSolutionFileErrorReturn(in_file);
     }
     assert(keyword == "Columns");
-    // The default style parameter is kSolutionStyleRaw, and this still
-    // allows sparse files to be read. Recognise the latter from num_col
-    // <= 0. Doesn't matter if num_col = 0, since there's nothing to
-    // read either way
+    // The default style parameter is kSolutionStyleRaw, and this
+    // still allows sparse or partial files to be read. Recognise the
+    // latter from num_col <= 0. Doesn't matter if num_col = 0, since
+    // there's nothing to read either way
     sparse = num_col <= 0;
+    partial = num_col <= 0 && qualifier_string == kHighsPartialString;
+    if (partial) sparse = false;
     if (style == kSolutionStyleSparse) assert(sparse);
-    if (sparse) {
+    if (style == kSolutionStylePartial) assert(partial);
+    if (sparse || partial) {
       num_col = -num_col;
       assert(num_col <= lp_num_col);
     } else {
@@ -2329,8 +2338,8 @@ HighsStatus readSolutionFile(const std::string& filename,
       num_value++;
       if (in_file.eof()) break;
     }
-  } else if (sparse) {
-    read_solution.col_value.assign(lp_num_col, 0);
+  } else if (sparse || partial) {
+    read_solution.col_value.assign(lp_num_col, sparse ? 0.0 : kHighsUndefined);
     for (HighsInt iX = 0; iX < num_col; iX++) {
       if (!readSolutionFileIdDoubleIntLineOk(name, value, iCol, in_file))
         return readSolutionFileErrorReturn(in_file);
@@ -2362,9 +2371,9 @@ HighsStatus readSolutionFile(const std::string& filename,
     }
   }
   read_solution.value_valid = true;
-  if (miplib_sol || sparse) {
-    // MIPLIB and sparse format only have column values, so compute
-    // the row values and return
+  if (miplib_sol || sparse || partial) {
+    // MIPLIB, sparse and partial format only have column values, so
+    // compute the row values and return
     if (calculateRowValuesQuad(lp, read_solution.col_value,
                                read_solution.row_value) != HighsStatus::kOk)
       return readSolutionFileErrorReturn(in_file);
@@ -2578,6 +2587,41 @@ bool readSolutionFileHashKeywordIntLineOk(std::string& hash,
   if (value_string[std::strspn(value_string.c_str(), "-0123456789")])
     return false;
   value = std::stoi(value_string);  // integer value
+  return true;
+}
+
+bool readSolutionFileHashKeywordIntStringLineOk(
+    std::string& hash, std::string& keyword, std::string& value_string,
+    HighsInt& value, std::string& qualifier_string, std::ifstream& in_file) {
+  hash = "";
+  keyword = "";
+  value_string = "";
+  qualifier_string = "";
+  // Read the hash symbol
+  if (in_file.eof()) return false;
+  in_file >> hash;  // #
+  if (hash != "#") return false;
+
+  // Read the keyword
+  if (in_file.eof()) return false;
+  in_file >> keyword;  // keyword
+
+  // Read the value
+  if (in_file.eof()) return false;
+  // Read as a string, and then check it only contains digits
+  in_file >> value_string;
+  if (value_string[std::strspn(value_string.c_str(), "-0123456789")])
+    return false;
+  value = std::stoi(value_string);  // integer value
+  // See whether there is a qualifier string
+  if (!in_file.eof()) {
+    in_file >> qualifier_string;
+    tolower(qualifier_string);
+    if (qualifier_string != kHighsSparseString &&
+        qualifier_string != kHighsPartialString)
+      qualifier_string = "";
+  }
+
   return true;
 }
 

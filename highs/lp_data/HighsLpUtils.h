@@ -242,6 +242,9 @@ bool readSolutionFileHashKeywordIntLineOk(std::string& hash,
                                           std::string& value_string,
                                           HighsInt& value,
                                           std::ifstream& in_file);
+bool readSolutionFileHashKeywordIntStringLineOk(
+    std::string& hash, std::string& keyword, std::string& value_string,
+    HighsInt& value, std::string& qualifier_string, std::ifstream& in_file);
 bool readSolutionFileIdIgnoreLineOk(std::string& id, std::ifstream& in_file);
 bool readSolutionFileIdDoubleLineOk(std::string& id, double& value,
                                     std::ifstream& in_file);

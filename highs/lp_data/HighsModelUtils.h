@@ -56,11 +56,12 @@ void writeObjectiveValue(FILE* file, const HighsLogOptions& log_options,
 void writePrimalSolution(FILE* file, const HighsLogOptions& log_options,
                          const HighsLp& lp,
                          const std::vector<double>& primal_solution,
-                         const bool sparse = false);
+                         const bool sparse, const bool partial = false);
 
 void writeModelSolution(FILE* file, const HighsLogOptions& log_options,
                         const HighsModel& model, const HighsSolution& solution,
-                        const HighsInfo& info, const bool sparse = false);
+                        const HighsInfo& info, const bool sparse,
+                        const bool partial);
 
 bool replaceSpacesByUnderscores(std::string& name);
 
