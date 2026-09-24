@@ -5,7 +5,7 @@
 #include <stack>
 
 #include "CollectionLinkedLists.h"
-#include "util/HighsSparseMatrix.h"
+#include "lp_data/HighsLp.h"
 
 namespace hipo {
 
@@ -60,11 +60,20 @@ class ColourRefinement {
   ColourRefinement(const HighsSparseMatrix& A, std::vector<Int>& colour,
                    bool bipartite);
   void run();
-  Int coloursUsed() const { return latest_colour_; }
+  Int coloursUsed() const { return latest_colour_ + 1; }
 };
 
 void test_folding();
-void test_folding(const HighsSparseMatrix& A);
+void test_folding(const HighsLp& lp);
+
+class ColourRefinementVector {
+  const Int n_;
+  CollectionLinkedLists colour_classes_;
+
+ public:
+  ColourRefinementVector(Int n);
+  Int run(const std::vector<double>& w, std::vector<Int>& colour);
+};
 
 }  // namespace hipo
 

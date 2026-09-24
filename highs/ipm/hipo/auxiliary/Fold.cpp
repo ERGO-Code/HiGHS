@@ -1,6 +1,7 @@
 #include "Fold.h"
 
 #include <algorithm>
+#include <map>
 
 #include "ipm/hipo/auxiliary/Auxiliary.h"
 #include "util/HighsSparseMatrix.h"
@@ -260,54 +261,90 @@ void ColourRefinement::run() {
 }
 
 void test_folding() {
-  HighsSparseMatrix A1;
-  A1.start_ = {0, 3, 7, 11, 15, 18, 21, 24, 27, 30};
-  A1.index_ = {4, 5, 6, 4, 5, 7, 8, 4, 6, 7, 8, 5, 6, 7, 8,
-               0, 1, 2, 0, 1, 3, 0, 2, 3, 1, 2, 3, 1, 2, 3};
-  A1.value_.resize(A1.index_.size());
-  A1.num_row_ = A1.start_.size() - 1;
-  A1.num_col_ = A1.start_.size() - 1;
-  std::vector<Int> colour1(A1.start_.size() - 1, 0);
+  std::vector<double> w0{0, 1, 1, 0, 3, 0, 1, 5, 3, 0, 0, 0, 1};
+  std::vector<Int> colour(13, 0);
+  ColourRefinementVector CRV(colour.size());
+  CRV.run(w0, colour);
 
-  ColourRefinement CR1(A1, colour1, false);
-  CR1.run();
+  std::vector<double> w1{5, 3, 7, 5, 8, 5, 7, 7, 10, 4, 5, 4, 3};
+  CRV.run(w1, colour);
 
-  printf("\n\n");
-  for (Int c : colour1) printf("%d", c);
-  printf("\n");
-
-  //
-  // bipartite
-
-  HighsSparseMatrix A2;
-  A2.start_ = {0, 3, 6, 9, 12, 15};
-  A2.index_ = {0, 1, 2, 0, 1, 3, 0, 2, 3, 1, 2, 3, 1, 2, 3};
-  A2.value_.resize(A2.index_.size());
-  A2.num_row_ = *std::max_element(A2.index_.begin(), A2.index_.end()) + 1;
-  A2.num_col_ = A2.start_.size() - 1;
-  std::vector<Int> colour2(A2.num_row_, 0);
-  colour2.insert(colour2.end(), A2.num_col_, 1);
-
-  ColourRefinement CR2(A2, colour2, true);
-  CR2.run();
-
-  printf("\n\n");
-  for (Int c : colour2) printf("%d", c);
-  printf("\n");
+  exit(1);
 }
 
-void test_folding(const HighsSparseMatrix& A) {
-  std::vector<Int> colour(A.num_row_, 0);
-  colour.insert(colour.end(), A.num_col_, 1);
-  ColourRefinement CR(A, colour, true);
+void test_folding(const HighsLp& lp) {
+  std::vector<Int> colour_rows(lp.row_lower_.size(), 0);
+  ColourRefinementVector CRV_rows(lp.row_lower_.size());
+  CRV_rows.run(lp.row_lower_, colour_rows);
+  Int colours_used_rows = CRV_rows.run(lp.row_upper_, colour_rows);
+
+  std::vector<Int> colour_cols(lp.col_cost_.size(), 0);
+  ColourRefinementVector CRV_cols(lp.col_cost_.size());
+  CRV_cols.run(lp.col_cost_, colour_cols);
+  CRV_cols.run(lp.col_lower_, colour_cols);
+  Int colours_used_cols = CRV_cols.run(lp.col_upper_, colour_cols);
+
+  printf("Rows: used %d out of %zu\n", colours_used_rows, lp.row_lower_.size());
+  printf("Cols: used %d out of %zu\n", colours_used_cols, lp.col_cost_.size());
+
+  std::vector<Int> colour(lp.a_matrix_.num_row_, 0);
+  colour.insert(colour.end(), lp.a_matrix_.num_col_, 1);
+  ColourRefinement CR(lp.a_matrix_, colour, true);
   CR.run();
 
-  if (A.num_row_ + A.num_col_ < 200) {
+  if (lp.a_matrix_.num_row_ + lp.a_matrix_.num_col_ < 200) {
     printf("\n\n");
     for (Int c : colour) printf("%d-", c);
   }
   printf("\nUsed %d colours for %d vertices\n\n", CR.coloursUsed(),
-         A.num_row_ + A.num_col_);
+         lp.a_matrix_.num_row_ + lp.a_matrix_.num_col_);
+}
+
+ColourRefinementVector::ColourRefinementVector(Int n) : n_{n} {
+  colour_classes_.init(n_, n_);
+}
+
+Int ColourRefinementVector::run(const std::vector<double>& w,
+                                std::vector<Int>& colour) {
+  assert(w.size() == n_ && colour.size() == n_);
+
+  colour_classes_.clear();
+  for (Int i = 0; i < n_; ++i) colour_classes_.append(i, colour[i]);
+  Int latest_colour = *std::max_element(colour.begin(), colour.end());
+  Int max_initial_colour = latest_colour;
+
+  using ValueColourPair = std::map<double, Int>;
+  std::vector<ValueColourPair> info_by_colour;
+
+  for (Int r = 0; r <= max_initial_colour; ++r) {
+    info_by_colour.push_back({});
+    bool r_used = false;
+
+    Int v = colour_classes_.head(r);
+    while (colour_classes_.cont(v)) {
+      auto it = info_by_colour[r].find(w[v]);
+      if (it == info_by_colour[r].end()) {
+        if (r_used) {
+          ++latest_colour;
+          info_by_colour[r].insert({w[v], latest_colour});
+        } else {
+          r_used = true;
+          info_by_colour[r].insert({w[v], r});
+        }
+      }
+
+      colour[v] = info_by_colour[r][w[v]];
+      v = colour_classes_.next(v);
+    }
+  }
+
+  // for (double d : w) printf("%7.2f ", d);
+  // printf("\n");
+
+  // for (Int i : colour) printf("%8d", i);
+  // printf("\n");
+
+  return latest_colour + 1;
 }
 
 }  // namespace hipo
