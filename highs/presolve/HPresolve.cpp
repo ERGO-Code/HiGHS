@@ -927,8 +927,8 @@ void HPresolve::matrixNonZeroChanged(HighsInt row, HighsInt col, double oldCoef,
   if (!colIsDeleted) {
     // update dual activity; relaxed activity bound invalidates derived implied
     // bounds
-    if (!impliedDualRowBounds.impliedBoundsValidAfterCoefChange(
-            col, row, oldCoef, newCoef))
+    if (!impliedDualRowBounds.implBndsValidAfterCoefChange(col, row, oldCoef,
+                                                           newCoef))
       resetRowDualImpliedBoundsDerivedFromCol(col);
     // not relaxed; only reset if sourced from this column
     else if (rowDualLowerSource[row] == col || rowDualUpperSource[row] == col)
@@ -941,8 +941,8 @@ void HPresolve::matrixNonZeroChanged(HighsInt row, HighsInt col, double oldCoef,
   if (!rowIsDeleted) {
     // update primal activity; relaxed activity bound invalidates derived
     // implied bounds
-    if (!impliedRowBounds.impliedBoundsValidAfterCoefChange(row, col, oldCoef,
-                                                            newCoef))
+    if (!impliedRowBounds.implBndsValidAfterCoefChange(row, col, oldCoef,
+                                                       newCoef))
       resetColImpliedBoundsDerivedFromRow(row);
     // not relaxed; only reset if sourced from this row
     else if (colLowerSource[col] == row || colUpperSource[col] == row)
