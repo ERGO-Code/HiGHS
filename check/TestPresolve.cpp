@@ -1276,6 +1276,91 @@ TEST_CASE("test-non-stop-initial-sweep", "[highs_test_presolve]") {
   h.resetGlobalScheduler(true);
 }
 
+TEST_CASE("test-duplicate-row", "[highs_test_presolve]") {
+  HighsLp lp;
+  lp.num_col_ = 3;
+  lp.num_row_ = 2;
+  lp.col_cost_ = {2, -1, 1};
+  lp.col_lower_ = {0, 0, 0};
+  lp.col_upper_ = {kHighsInf, 2, kHighsInf};
+  lp.a_matrix_.start_ = {0, 2, 4, 6};
+  lp.a_matrix_.index_ = {0, 1, 0, 1, 0, 1};
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  h.setOptionValue("presolve_rule_logging", true);
+  h.setOptionValue(kSolverString, kIpxString);
+
+  lp.row_lower_ = {-kHighsInf, -4};
+  lp.row_upper_ = {0, 0};
+  for (HighsInt bound_flip = 0; bound_flip < 2; bound_flip++) {
+    lp.a_matrix_.value_ = {1, -4, -1, 4, 3, -12};
+    for (HighsInt lhs_flip = 0; lhs_flip < 2; lhs_flip++) {
+      // Base model has parallel rows
+      //
+      // r0:         x -  y +  3z <= 0
+      // r1: -4 <= -4x + 4y - 12z <= 0
+      //
+      // After x is fixed at 0 (dominated column) these parallel rows
+      // are deduced to be the doubleton equation
+      //
+      // -y + 3z = 0
+      //
+      // with r1 being removed - presumably because the elimination
+      // multiplier (-0.25) is then less than 1 in magnitude.
+      //
+      // This allows z to be substituted and y is then fixed at 2,
+      // reducing the problem to empty
+      //
+      // In substitution, the row dual for the equation is 1/3
+      //
+      // * r0 is made basic because its lower bound was tightened, and
+      // the sign of the dual means that it can't be nonbasic so it
+      // can't be nonbasic
+      //
+      // * r1 is made nonbasic and the dual is now correctly scaled by
+      // _multiplying_ by (-0.25) - since the row values are larger,
+      // the dual must be reduced in magnitude - and should be viewed
+      // as being at its upper bound
+      //
+      // However, in DuplicateRow::undo, computeRowDualAndStatus was
+      // previously only passed "tightened", and no indication of
+      // whether that was at its lower or upper bound. Hence it made
+      // r1 nonbasic at its lower bound when it tightens the lower
+      // bound of r0, due to the negative sign of the scale factor.
+      //
+      // However, it's the upper bound on r1 that tightens the lower
+      // bound on r0. By passing the direction sign -1 (+1) if r0 is
+      // tightened at its lower (upper) bound, r1 is now set to be
+      // nonbasic at the correct bound.
+      //
+      // The spurious lower bound on r1 is necessary to expose the
+      // consequences of the error since the simplex solver only needs
+      // the basic/nonbasic status to set values of variables to
+      // bound, unless they are ranged, in which case the
+      // HighsBasisStatus being lower or upper is used.
+      //
+      // The multiple passes ensure code coverage in
+      // DuplicateRow::undo - all four cases are passed to
+      // computeRowDualAndStatus - and test the correctness of both
+      // primal-dual and basis postsolve.
+      //
+      h.setOptionValue("run_crossover", kHighsOnString);
+      for (HighsInt k = 0; k < 2; k++) {
+        REQUIRE(h.passModel(lp) == HighsStatus::kOk);
+        REQUIRE(h.run() == HighsStatus::kOk);
+
+        REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
+        h.setOptionValue("run_crossover", kHighsOffString);
+      }
+      lp.a_matrix_.value_ = {-1, 4, 1, -4, -3, 12};
+    }
+    lp.row_lower_ = {0, 0};
+    lp.row_upper_ = {kHighsInf, 4};
+  }
+
+  h.resetGlobalScheduler(true);
+}
+
 /*
 TEST_CASE("test-fuzzing", "[highs_test_presolve]") {
   Highs h;
@@ -1283,7 +1368,8 @@ TEST_CASE("test-fuzzing", "[highs_test_presolve]") {
   //  if (dev_run) {
   printf("\n====================\nWithout presolve\n====================\n");
 
-  const std::string model = "issue-010";
+  const std::string model = "issue-002";
+  const bool reduces_to_empty = true;
   std::string model_file = std::string(HIGHS_DIR) + "/build/OscarFuzzing/" +
                            model + "/" + model + ".mps";
 
@@ -1303,24 +1389,23 @@ TEST_CASE("test-fuzzing", "[highs_test_presolve]") {
   std::string options_file =
       std::string(HIGHS_DIR) + "/build/OscarFuzzing/" + model + "/options.txt";
   REQUIRE(h.readOptions(options_file) == HighsStatus::kOk);
-
-  //  REQUIRE(h.setOptionValue("presolve_rule_off", 1 << kPresolveRuleColStuffing) == HighsStatus::kOk);
-
   HighsOptions options = h.getOptions();
 
-  printf("\n====================\nPresolved LP\n====================\n");
-  h.presolve();
+  if (!reduces_to_empty) {
+    printf("\n====================\nPresolved LP\n====================\n");
+    h.presolve();
 
-  HighsLp lp = h.getPresolvedLp();
+    HighsLp lp = h.getPresolvedLp();
 
-  h.clear();
-  h.passModel(lp);
+    h.clear();
+    h.passModel(lp);
 
-  h.setOptionValue(kPresolveString, kHighsOffString);
+    h.setOptionValue(kPresolveString, kHighsOffString);
 
-  h.run();
-  h.writeSolution("", 1);
-  h.clear();
+    h.run();
+    h.writeSolution("", 1);
+    h.clear();
+  }
 
   printf(
       "\n====================\nPresolve no crossover\n====================\n");
@@ -1330,6 +1415,8 @@ TEST_CASE("test-fuzzing", "[highs_test_presolve]") {
   h.setOptionValue("presolve_rule_logging", true);
   h.setOptionValue("log_dev_level", 1);
   h.writeOptions("", true);
+
+  //  h.setOptionValue(kSolverString, kIpxString);
 
   h.run();
   h.writeSolution("", 1);
