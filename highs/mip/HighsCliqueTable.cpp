@@ -1527,9 +1527,6 @@ void HighsCliqueTable::processInfeasibleVertices(HighsDomain& globaldom) {
     globaldom.fixCol(v.col, static_cast<double>(v.val));
     if (globaldom.infeasible()) return;
     if (!wasfixed) ++nfixings;
-    if (presolveColStates[v.col] != PresolveColState::kEliminated)
-      presolveColStates[v.col] =
-          v.val ? PresolveColState::kFixedOne : PresolveColState::kFixedZero;
     if (colDeleted[v.col]) continue;
     colDeleted[v.col] = true;
 
