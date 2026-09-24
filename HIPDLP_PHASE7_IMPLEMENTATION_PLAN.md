@@ -434,10 +434,10 @@ python3 run_benchmark.py \
 - [x] Execute the regression selection for rewrite CPU, rewrite CUDA, legacy,
   in-tree cuPDLP, cuPDLPx, cuOpt 26.08, HiGHS simplex, and HiGHS IPM.
 - [x] Triage every rejected result before expanding the suite.
-- [ ] Run the full Netlib feasible manifest with a 300-second per-instance
+- [x] Run the full Netlib feasible manifest with a 300-second per-instance
   limit for the same available solvers.
-- [ ] Run the energy regression selection with a 300-second limit.
-- [ ] Run the full energy manifest only after checking available disk, RAM, and
+- [x] Run the energy regression selection with a 300-second limit.
+- [x] Run the full energy manifest only after checking available disk, RAM, and
   GPU memory against the huge instances. A resource refusal is not a solver
   correctness failure; record it as `NOT_RUN_RESOURCE_LIMIT`.
 - [x] Do not claim a legacy CUDA comparison unless a distinct legacy CUDA build
@@ -448,25 +448,21 @@ python3 run_benchmark.py \
 non-finite result, failed certificate, failed KKT gate, or reference-objective
 error above `1e-3`.
 
-**Evidence to date (2026-09-03):** The canonical Netlib regression summary has
-824 rows, exactly 103 for each of the eight requested solvers, in
-`/home/yanyu/benchmark-results/lp/hipdlp-rewrite/phase7/summary.csv`.
-Provenance-stable fresh rewrite runs are under
-`netlib-regression-recheck-20260903-01`: CPU accepts 97/103 and CUDA 96/103;
-every rewrite `OPTIMAL` result passes all three independent `1e-4` KKT gates.
-The rejected rewrite rows are time limits only. The other accepted counts are
-legacy 28/103, in-tree cuPDLP 40/103, cuPDLPx 49/103 after the dotted-instance
-adapter fix, cuOpt 45/103, HiGHS simplex 102/103, and HiGHS IPM 103/103.
-All 270 recorded regression or historical disagreements have a non-`UNRESOLVED`
-classification in `disagreements.csv`. The legacy evidence uses the CPU build;
-no legacy CUDA result is claimed.
+**Completion evidence (2026-09-04):** The canonical summary contains 824
+Netlib regression, 912 full-Netlib, 32 energy-regression, and 72 full-energy
+rows, with the requested eight solvers represented in every matrix. Full
+Netlib accepts rewrite CPU on 111/114 and rewrite CUDA on 107/114; all rewrite
+rejections are 300-second time limits. Energy regression accepts both rewrite
+backends on 4/4. Full energy accepts each on 6/9, with the same two solver time
+limits and one harness process timeout. Every rewrite `OPTIMAL` has complete
+finite postsolve data and passes all three original-LP `1e-4` KKT gates.
 
-The full Netlib requirement is not complete. Only rewrite CPU has a complete
-300-second run: 111/114 accepted, with `pilot`, `fit2d`, and `greenbea` at
-`TIME_LIMIT`. No full rewrite CUDA or full baseline-solver matrix exists.
-Neither energy regression nor full energy has run. The resource check found
-121.69 GiB of CUDA-visible unified memory, 81.30 GiB free at inspection time,
-and 3.70 TB free disk, but that check is not a substitute for those runs.
+The full-energy resource artifact records 3.696 TB available disk,
+120,252,540 kB available host memory, 16,777,212 kB free swap, and 83.138 GiB
+of 121.689 GiB CUDA-visible unified memory free before execution. All 72 rows
+were run; no row is `NOT_RUN_RESOURCE_LIMIT` or `RESOURCE_LIMIT`. Exact commands
+and logs remain in the immutable run directories. The legacy evidence uses the
+CPU build; no legacy CUDA result is claimed.
 
 ## Task 8: Triage Disagreements
 
@@ -488,7 +484,7 @@ UNRESOLVED
 - [x] For rewrite CPU/CUDA disagreement, compare the first failing convergence
   boundary, restart decision, and PID outcome. Do not patch the CUDA backend
   when CPU and CUDA exhibit the same trajectory.
-- [ ] Add a focused regression test before fixing a rewrite defect, make the
+- [x] Add a focused regression test before fixing a rewrite defect, make the
   smallest solver change, rerun that test, then rerun only the affected
   instance across CPU and CUDA.
 - [x] Leave baseline defects unchanged and document them.
@@ -512,14 +508,13 @@ boundaries, and debugger captures are under `pilot4-direct-triage-20260903-01`.
 
 Historical false infeasible claims on `fffff800`, `gfrd-pnc`, `greenbea`, and
 `vtp.base` are classified resolved `REWRITE_DEFECT`; the focused certificate
-regression passes and current runs no longer make those claims. The corrected
+regression was observed red before the bound-scale stationarity fix, passes,
+and current runs no longer make those claims. The corrected
 `forplan` reference is `-664.2189612722`. cuOpt's all-zero reported reduced
 costs and external first-order KKT failures remain documented baseline defects;
-no upstream solver source was modified. Task 8 is not phase-wide complete until
-the missing full Netlib and energy scopes are executed and triaged. Since the
-directly investigated regression discrepancy is not a rewrite defect, the
-conditional fix-and-rerun checkbox remains open rather than being marked as a
-solver fix.
+no upstream solver source was modified. The completed full Netlib and energy
+scopes add no new rewrite defect, and every rejected row has a final
+classification.
 
 ## Task 9: Produce the Phase 7 Report
 
@@ -544,15 +539,15 @@ solver fix.
 - [x] Update `HIPDLP_REWRITE_PLAN.md` with a short Phase 7 outcome and remaining
   blockers. Do not append assertion totals, dependency scans, or hash audits.
 
-**Evidence (2026-09-03):** `summary.csv` contains 977 unique canonical
-solver/instance rows: 39 smoke, 824 Netlib regression, and 114 full-Netlib CPU.
-`disagreements.csv` contains 270 rows with zero `UNRESOLVED` in the executed
-scope. `evidence-audit.csv` covers all 26 original physical result directories.
-The findings-first human report is
-`docs/hipdlp-phase7-cross-solver-report.md`; it lists missing full Netlib and
-energy checks, separates every scope's counts, labels timings as descriptive
-single runs, and concludes that Phase 8 must not proceed. The rewrite plan has
-the same interim outcome and blockers.
+**Evidence (2026-09-04):** `summary.csv` contains 1,879 unique canonical
+scope/solver/instance rows: 39 smoke, 824 Netlib regression, 912 full Netlib,
+32 energy regression, and 72 full energy. `disagreements.csv` contains 626
+classified rows with zero `UNRESOLVED`. `evidence-audit.csv` covers 83
+run-level or special evidence directories. The findings-first human report is
+`docs/hipdlp-phase7-cross-solver-report.md`; it records complete scope counts,
+resource evidence, descriptive single-run timing boundaries, and the remaining
+non-Phase-7 performance/stabilization gates. The rewrite plan carries the same
+completion outcome.
 
 ## Phase 7 Completion Criteria
 
@@ -570,3 +565,40 @@ Phase 7 is complete only when:
 
 Formal performance gates, legacy deletion, and the end of the stabilization
 window are not Phase 7 completion criteria.
+
+**Completion record (2026-09-04):** All Phase 7 completion criteria above are
+satisfied. Phase 7 clears the correctness prerequisite to begin Phase 8 work;
+the separate performance and stabilization gates still control legacy removal.
+
+## Phase 8 Handoff Update (2026-09-08)
+
+Phase 7 remains the historical correctness campaign above. Phase 8 implementation
+and new acceptance evidence are recorded separately in
+`docs/hipdlp-phase8-gpu-performance-report.md`; they do not overwrite the Phase 7
+matrix. True legacy CUDA has now been frozen in an independent pre-rewrite
+`CUPDLP_GPU=ON` build outside the source tree.
+
+Actual-option verification found that the Phase 7 migration adapter set final
+`kkt_tolerance=1e-4` but retained the independent
+`pdlp_optimality_tolerance=1e-7` default. Phase 8 protocol r2 reproduces those
+effective rewrite settings. The first new driver's explicit `1e-4` iteration
+option failed the larger energy reference-objective preflight and is retained
+as rejected configuration evidence, not as a speedup. Final KKT and reference
+acceptance thresholds remain `1e-4` and `1e-3`, respectively. Formal paired
+performance execution for that historical four-case denominator retained all
+24 jobs and 144 records, with 126 accepted and 18 rejected legacy records. CPU
+and CUDA legacy gates were NOT_PASS; accepted-subset diagnostic ratios must not
+replace the full declared denominator. The current focused CPU build matrix and CUDA regressions pass,
+but the performance, full-release and stabilization/removal requirements remain
+unsatisfied. See the Phase 8 report for complete before/after timing, measured
+communication/allocation costs, and the unresolved >20% legacy regressions.
+
+The later Phase 8 legacy-qualified rerun corrected the four-case selection and
+accuracy mismatch without changing this Phase 7 record. Phase 7 supplied only
+30 full-Netlib legacy outcomes that were accepted within 60 seconds and no
+eligible energy outcomes. Fresh true legacy CPU/CUDA qualification at uniform
+`1e-4` froze a 23-instance strict intersection before rewrite execution. The
+formal 552-record run leaves CPU at 22/23 complete pairs and CUDA at 20/23 due
+to rewrite time limits, so both performance gates remain NOT_PASS. The complete
+selection and result chain is documented in the Phase 8 report and
+`20260908T205450Z-legacy-qualified-1e4` artifacts.

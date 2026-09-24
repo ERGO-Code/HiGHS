@@ -100,6 +100,43 @@ the HiGHS interior point or simplex solvers.
   * Setting the option [__solver__](@ref option-solver) to "pdlp" forces the cuPDLP-C solver to be used
   * Setting the option [__solver__](@ref option-solver) to "hipdlp" forces the HiPDLP solver to be used
 
+HiPDLP uses the modular FP64 implementation by default. Its
+[__hipdlp_backend__](@ref option-hipdlp-backend) option selects serial `cpu`,
+`cuda`, or `auto`; `auto` uses CUDA only when it was built and a compatible
+device is available. Explicit unavailable requests fail instead of silently
+falling back. `openmp` and `rocm` are reserved, unavailable backends. The CMake
+option `HIGHS_HIPDLP_CUDA` is independent of cuPDLP's `CUPDLP_GPU` option.
+
+Default HiPDLP scaling applies deterministic host Curtis-Reid scaling followed
+by the enabled legacy stages. Fixed and PID step-size policies are supported;
+the public adaptive request maps to fixed, not PID. Benchmarks using explicit
+PID must be distinguished from that default path. The independent PDLP
+iteration tolerance and final KKT tolerance are separate options; changing
+one is not a substitute for setting the other.
+
+The experimental `hipdlp_early_kkt_check` option is false by default. When
+enabled, it can request an additional original-model KKT check every 400
+iterations near convergence, without relaxing the final KKT tolerance. Extra
+checks are disabled when that tolerance is looser than a requested internal
+tolerance. This does not choose a scaling mode and can add verification cost;
+the evaluated scaling/check combination did not improve the held-out batch.
+See the [bounded algorithm study](../hipdlp-phase8-algorithm-study.md) before
+using it as a performance option.
+
+CUDA keeps routine check reductions on device and returns a small scalar
+packet. Optimality/certificate candidates and final solutions still undergo
+independent original-model verification. The final HiPDLP optimality check
+uses the original LP's primal feasibility, dual/stationarity, objective gap,
+and aggregate absolute complementarity. Gap and complementarity normalization
+exclude the additive objective constant. This relative KKT contract is not
+an absolute objective-error guarantee; known-reference benchmark checks remain
+separate. Internal scaled checks are triggers, not sufficient evidence for
+returning optimal. See the [original stopping contract](../hipdlp-original-stopping.md)
+for definitions and compatibility details. Performance and migration acceptance
+are documented in the developer report
+[`hipdlp-phase8-gpu-performance-report.md`](../hipdlp-phase8-gpu-performance-report.md);
+the existence of the CUDA backend is not a claim that every model runs faster.
+
 ### Basic solution
 
 The simplex solver always generates a [basic solution](@ref

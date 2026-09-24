@@ -1,226 +1,203 @@
 # HiPDLP Phase 7 Cross-Solver Validation Report
 
-Date: 2026-09-03
+Date: 2026-09-04
 
-Status: **INCOMPLETE. Do not proceed to Phase 8.**
+Status: **COMPLETE. Phase 7 correctness validation is closed.**
 
 ## Findings
 
-1. Phase 7 is not complete. The full Netlib matrix is missing for rewrite CUDA
-   and all comparison solvers, and no energy regression or full-energy run
-   exists.
-2. The result root contained 26 physical directories when audited, not 10.
-   Four cannot support a completion claim: one empty cuPDLPx attempt, the old
-   rewrite CUDA regression that crossed a source-change boundary, and the old
-   smoke and reference-triage directories that have no run-level provenance.
-3. Fresh, provenance-stable smoke runs pass rewrite CPU and CUDA 13/13. Their
-   statuses and iteration counts agree on all 13 instances; the largest paired
-   objective relative difference is `1.97e-12` on `scrs8`.
-4. Fresh Netlib regression runs accept rewrite CPU on 97/103 and CUDA on
-   96/103. Every rewrite `OPTIMAL` result passes the original-LP `1e-4` primal,
-   dual, and gap checks. All rejected rewrite rows are time limits.
-5. `pilot4` is the only fresh CPU/CUDA terminal disagreement. Equal iteration
-   budgets produce KKT-passing `ITERATION_LIMIT` results on both backends. The
-   first restart split is a strict comparison at the `1e-13` scale, and both
-   backends take the same controlled PID update one 40-iteration cadence apart.
-   This is `TIME_OR_ITERATION_LIMIT`, not a CUDA backend defect.
-6. The earlier false infeasible claims on `fffff800`, `gfrd-pnc`, `greenbea`,
-   and `vtp.base` were real rewrite defects and are resolved by the certificate
-   fix. The old pre-fix directories remain characterization evidence only.
-7. cuOpt 26.08 reports finite but incorrect all-zero reduced costs on AFIRO.
-   The raw values are retained and marked inconsistent; KKT uses reduced costs
-   independently derived in C++ from the original LP and cuOpt row duals.
-8. cuPDLPx output naming truncates dotted instance names at the first dot. The
-   adapter previously misclassified `vtp.base`, `pilot.ja`, and `pilot.we` as
-   `SOLVE_ERROR`. A focused test and one-line adapter fix preserve the real
-   outcomes: two accepted `OPTIMAL` results and one `TIME_LIMIT`.
+1. The canonical validation matrix is complete: 39 smoke rows, 824 Netlib
+   regression rows, 912 full-Netlib rows, 32 energy-regression rows, and 72
+   full-energy rows. `summary.csv` contains 1,879 unique
+   scope/solver/instance rows.
+2. No new rewrite correctness defect was found while filling the missing
+   matrix. Every executed rewrite `OPTIMAL` result has complete finite
+   postsolve/KKT data and independently recomputed original-LP primal, dual,
+   and gap metrics at or below `1e-4`.
+3. Full Netlib accepts rewrite CPU on 111/114 and rewrite CUDA on 107/114.
+   Every rejection is a 300-second `TIME_LIMIT`. The four CPU/CUDA terminal
+   differences (`d2q06c`, `fit1d`, `greenbeb`, and `sierra`) are CUDA time
+   limits against CPU optimal results and are classified
+   `TIME_OR_ITERATION_LIMIT`.
+4. Energy regression accepts rewrite CPU and CUDA on 4/4. Their statuses and
+   iteration counts match on every instance, and their largest paired
+   objective relative difference is `5.84e-14`.
+5. Full energy was run for all nine instances and all eight solver
+   configurations. Rewrite CPU and CUDA each accept 6/9. Both time out on
+   `zen-garden-eur-PI-28-2ts` and `pypsa-eur-elec_16_1h_2050`; both hit the
+   harness process timeout on `pypsa-de-elec-trex_vopt_50_1h`. Missing timeout
+   metrics are rejected, never counted as success.
+6. No run was refused for memory or disk. The preflight found 3.696 TB disk
+   available, 120,252,540 kB host memory available, 16,777,212 kB free swap,
+   and 83.138 GiB of 121.689 GiB CUDA-visible unified memory free. The largest
+   observed rewrite process used about 8.1 GiB RSS on CPU and 5.4 GiB RSS on
+   CUDA. `RESOURCE_LIMIT` and `NOT_RUN_RESOURCE_LIMIT` counts are zero.
+7. The previously fixed false-`INFEASIBLE` claims on `fffff800`, `gfrd-pnc`,
+   `greenbea`, and `vtp.base` remain resolved. The root cause was acceptance of
+   an approximate Farkas direction without charging stationarity error at
+   bound scale. The focused
+   `hi-pdlp-farkas-accounts-for-stationarity-error-at-bound-scale` regression
+   and the post-fix CPU/CUDA artifacts remain the evidence; no solver change
+   was needed in this completion campaign.
+8. Baseline first-order solvers still have many solver-reported `OPTIMAL`
+   results rejected by the common KKT/reference gates. cuOpt's reported
+   reduced costs remain preserved and inconsistent; all 227 parseable cuOpt
+   Netlib/energy canonical results use `derived_from_row_dual` for KKT.
 
 ## Repository Identity
 
-The audited HiPDLP checkout is branch `feature/hipdlp-rewrite` at
-`db17f8cfbea6e7ce79b0c76239570c3e32cca635`. The working tree is dirty and
-contains the rewrite solver, certificate verifier, adapters, tests, and plans.
-Results must therefore be identified by the recorded executable, manifest, and
-configuration hashes plus the before/after provenance snapshots, not by `HEAD`
-alone.
+The campaign began from branch `feature/hipdlp-rewrite` at
+`db17f8cfbea6e7ce79b0c76239570c3e32cca635` with the recorded dirty tree: 21
+modified and 8 untracked files. During the campaign the checkout advanced
+outside this agent to `5a396aaadbcd5a76b7cfa688cbf2588ddd666f1b`
+(`Add HiPDLP Phase 7 validation`) and became clean. This agent made no commit.
+The final reporting pass leaves only this report and the two Phase 7 plan files
+modified in the working tree; they remain uncommitted.
 
-The public default selector in this uncommitted working tree already points to
-the rewrite. That pre-existing overlap with Phase 8 does not authorize legacy
-deletion or any additional cutover work.
+All benchmark results use the fixed CPU and CUDA builds named in the plan.
+Run metadata records executable, manifest, and solver-configuration identities,
+so the evidence does not rely on the final repository `HEAD` alone.
 
-Machine-readable evidence is under
-`/home/yanyu/benchmark-results/lp/hipdlp-rewrite/phase7`:
+No Phase 8 implementation work was performed. Legacy remains present, and no
+legacy CUDA comparison is claimed because no distinct `CUPDLP_GPU=ON` legacy
+build exists.
 
-- `evidence-audit.csv`: one row for each of the original 26 directories;
-- `summary.csv`: 977 canonical solver/instance rows for executed scopes;
-- `disagreements.csv`: 270 classified regression or historical disagreements;
-- `generate_canonical_summary.py`: aggregation logic with row-count,
-  uniqueness, and zero-`UNRESOLVED` assertions.
+## Reused CPU Netlib Evidence
 
-## Original Directory Audit
+No rewrite CPU Netlib suite, shard, or resume run was executed during this
+completion campaign, and no new `netlib-*hipdlp-rewrite-cpu*` directory was
+created. The canonical report reuses these immutable artifacts:
 
-| Directory | Rows / accepted | Decision | Reason |
-| --- | ---: | --- | --- |
-| `certificate-fix-cpu-20260902-01` | 4 / 3 | defect evidence | Stable four-case CPU rerun; `greenbea` remains a time limit. |
-| `certificate-fix-cuda-20260902-01` | 4 / 3 | defect evidence | Stable four-case CUDA rerun; `greenbea` remains a time limit. |
-| `netlib-full-hipdlp-rewrite-cpu-20260903-01` | 114 / 111 | partial Phase 7 evidence | Complete rewrite CPU full Netlib run only. |
-| `netlib-full-hipdlp-rewrite-cpu-resume-b01-20260903` | 10 / 10 | duplicate supplement | Superseded by the complete 114-row run. |
-| `netlib-full-hipdlp-rewrite-cpu-resume-b02-20260903` | 10 / 9 | duplicate supplement | Superseded by the complete 114-row run. |
-| `netlib-regression-cuopt-26.08-20260903-01` | 103 / 45 | baseline evidence | Pinned adapter and cuOpt; reported reduced costs remain defective. |
-| `netlib-regression-cupdlp-in-tree-20260903-01` | 103 / 40 | baseline evidence | Binary, manifest, and config identities are stable. |
-| `netlib-regression-cupdlpx-20260903-01` | 0 / 0 | not evidence | Empty initial attempt with the wrong configuration. |
-| `netlib-regression-cupdlpx-20260903-02` | 103 / 47 | partial baseline evidence | Three dotted names were misparsed by the adapter; corrected separately. |
-| `netlib-regression-highs-ipm-20260903-01` | 103 / 103 | reference evidence | Stable high-accuracy IPM results. |
-| `netlib-regression-highs-simplex-20260903-01` | 103 / 102 | reference evidence | `qap15` reaches the 60-second limit. |
-| `netlib-regression-hipdlp-legacy-20260902-01` | 101 / 28 | merged legacy shard | Incomplete first pass; deduplicate with later shards. |
-| `netlib-regression-hipdlp-legacy-20260902-02` | 30 / 11 | merged legacy shard | Overlapping retry shard. |
-| `netlib-regression-hipdlp-legacy-resume-b01-20260902` | 10 / 4 | merged legacy shard | Stable continuation shard. |
-| `netlib-regression-hipdlp-legacy-resume-b02-20260902` | 10 / 2 | merged legacy shard | Stable continuation shard. |
-| `netlib-regression-hipdlp-legacy-resume-b03-20260903` | 10 / 2 | merged legacy shard | Stable continuation shard. |
-| `netlib-regression-hipdlp-legacy-resume-b04-20260903` | 10 / 2 | merged legacy shard | Stable continuation shard. |
-| `netlib-regression-hipdlp-legacy-resume-b05-20260903` | 10 / 1 | merged legacy shard | Stable continuation shard. |
-| `netlib-regression-hipdlp-legacy-resume-b06-20260903` | 10 / 3 | merged legacy shard | Stable continuation shard. |
-| `netlib-regression-hipdlp-legacy-resume-b07-20260903` | 10 / 0 | merged legacy shard | Stable continuation shard. |
-| `netlib-regression-hipdlp-legacy-resume-b08-20260903` | 3 / 3 | merged legacy shard | Final continuation shard. |
-| `netlib-regression-hipdlp-rewrite-cpu-20260902-01` | 103 / 93 | historical defect evidence | Pre-certificate-fix and pre-reference-correction. |
-| `netlib-regression-hipdlp-rewrite-cpu-20260902-02` | 103 / 97 | superseded evidence | Stable old binary; replaced by the fresh provenance run. |
-| `netlib-regression-hipdlp-rewrite-cuda-20260902-01` | 103 / 95 | not evidence | Run spanned a source/build edit at 12:30 local time. |
-| `netlib-regression-reference-triage-20260902-01` | 20 / n/a | not evidence | No metadata, command identity, or hashes. |
-| `smoke-20260902-01` | 39 / 31 | not evidence | Numerically useful but no run-level provenance. |
+| Scope | Artifact | Rows | Accepted / statuses |
+| --- | --- | ---: | --- |
+| smoke | `smoke-recheck-20260903-02/rewrite-cpu` | 13 | 13; 13 `OPTIMAL` |
+| Netlib regression | `netlib-regression-recheck-20260903-01/rewrite-cpu` | 103 | 97; 97 `OPTIMAL`, 6 `TIME_LIMIT` |
+| full Netlib | `netlib-full-hipdlp-rewrite-cpu-20260903-01` | 114 | 111; 111 `OPTIMAL`, 3 `TIME_LIMIT` |
 
-The canonical summary replaces invalid or superseded rewrite evidence with
-`smoke-recheck-20260903-02` and
-`netlib-regression-recheck-20260903-01`. It merges the legacy shards by latest
-timestamp and replaces the three dotted cuPDLPx rows with
-`cupdlpx-exit-fix-20260903-02`.
-
-## Task Status
-
-| Task | Status | Evidence |
-| --- | --- | --- |
-| 1. Freeze execution point | Complete, 3/3 | CPU/CUDA builds and focused routing checks pass; dirty tree recorded. |
-| 2. HiGHS-family adapter | Partial, 5/6 | Fresh AFIRO simplex/IPM/cuPDLP results pass; historical missing-target RED was not retained. |
-| 3. External verifier | Partial, 4/5 | Valid AFIRO passes and one-value perturbation fails; historical missing-target RED was not retained. |
-| 4. cuOpt adapter | Complete, 5/5 | Pinned test passes; reduced-cost baseline defect is explicit. |
-| 5. Harness configs | Complete, 6/6 | Six runner tests and seven dry runs pass; dry runs create no result directory. |
-| 6. Thirteen-instance smoke | Complete, 6/6 | Rewrite CPU and CUDA both 13/13 with stable provenance. |
-| 7. Cross-solver suites | Partial, 3/6 | Regression executed and classified; full matrix and both energy scopes missing. |
-| 8. Triage disagreements | Partial, 4/5 | Regression has no `UNRESOLVED`; later scopes do not yet exist. |
-| 9. Report | Complete, 5/5 | This report and the three machine-readable audit files agree. |
-
-Overall checklist state after this report: 41 checked and 6 unchecked out of
-47. An unchecked historical RED is not retroactively treated as proof.
+All 221 reused rewrite CPU `OPTIMAL` rows pass the independent original-LP KKT
+gate in their respective scopes. The full-Netlib CPU time limits are `pilot`,
+`fit2d`, and `greenbea`.
 
 ## Result Counts
 
-### Smoke
+### Smoke And Netlib Regression
 
-| Solver | Accepted | Statuses |
-| --- | ---: | --- |
-| rewrite CPU | 13/13 | 13 `OPTIMAL` |
-| rewrite CUDA | 13/13 | 13 `OPTIMAL` |
-| legacy | 5/13 | 10 `OPTIMAL`, 3 process timeouts; 5 optimal claims fail KKT |
+| Solver | Smoke accepted | Netlib regression accepted | Regression statuses |
+| --- | ---: | ---: | --- |
+| rewrite CPU | 13/13 | 97/103 | 97 `OPTIMAL`, 6 `TIME_LIMIT` |
+| rewrite CUDA | 13/13 | 96/103 | 96 `OPTIMAL`, 7 `TIME_LIMIT` |
+| legacy | 5/13 | 28/103 | 81 `OPTIMAL`, 22 process timeouts |
+| in-tree cuPDLP | n/a | 40/103 | 95 `OPTIMAL`, 4 `TIME_LIMIT`, 4 `UNKNOWN` |
+| cuPDLPx | n/a | 49/103 | 99 `OPTIMAL`, 3 `TIME_LIMIT`, 1 `SOLVE_ERROR` |
+| cuOpt 26.08 | n/a | 45/103 | 99 `OPTIMAL`, 3 `TIME_LIMIT`, 1 parser failure |
+| HiGHS simplex | n/a | 102/103 | 102 `OPTIMAL`, 1 `TIME_LIMIT` |
+| HiGHS IPM | n/a | 103/103 | 103 `OPTIMAL` |
 
-### Netlib Regression
-
-| Solver | Accepted | Statuses |
-| --- | ---: | --- |
-| rewrite CPU | 97/103 | 97 `OPTIMAL`, 6 `TIME_LIMIT` |
-| rewrite CUDA | 96/103 | 96 `OPTIMAL`, 7 `TIME_LIMIT` |
-| legacy | 28/103 | 81 `OPTIMAL`, 22 missing after process timeout |
-| in-tree cuPDLP | 40/103 | 95 `OPTIMAL`, 4 `UNKNOWN`, 4 `TIME_LIMIT` |
-| cuPDLPx | 49/103 | 99 `OPTIMAL`, 3 `TIME_LIMIT`, 1 parser `SOLVE_ERROR` |
-| cuOpt 26.08 | 45/103 | 99 `OPTIMAL`, 3 `TIME_LIMIT`, 1 parser error |
-| HiGHS simplex | 102/103 | 102 `OPTIMAL`, 1 `TIME_LIMIT` |
-| HiGHS IPM | 103/103 | 103 `OPTIMAL` |
-
-Low baseline acceptance counts reflect the strict independent `1e-4` KKT and
-`1e-3` reference-objective gates. They are not substituted for solver-reported
-status.
+The regression `pilot4` difference remains fully classified. At 300 seconds in
+full Netlib both rewrite backends return independently verified `OPTIMAL`; the
+CUDA result takes 2,905,720 iterations and 229.69 seconds.
 
 ### Full Netlib
 
-Only rewrite CPU has run: 111/114 accepted. `pilot`, `fit2d`, and `greenbea`
-reach the 300-second limit. All 111 `OPTIMAL` rows pass the original-LP KKT
-gate. The other seven solver/backend paths are not run.
+| Solver | Accepted | Statuses |
+| --- | ---: | --- |
+| rewrite CPU | 111/114 | 111 `OPTIMAL`, 3 `TIME_LIMIT` |
+| rewrite CUDA | 107/114 | 107 `OPTIMAL`, 7 `TIME_LIMIT` |
+| legacy | 30/114 | 92 `OPTIMAL`, 22 process timeouts |
+| in-tree cuPDLP | 43/114 | 110 `OPTIMAL`, 4 `UNKNOWN` |
+| cuPDLPx | 52/114 | 112 `OPTIMAL`, 1 `TIME_LIMIT`, 1 `SOLVE_ERROR` |
+| cuOpt 26.08 | 47/114 | 112 `OPTIMAL`, 1 `TIME_LIMIT`, 1 parser failure |
+| HiGHS simplex | 113/114 | 113 `OPTIMAL`, 1 `TIME_LIMIT` |
+| HiGHS IPM | 114/114 | 114 `OPTIMAL` |
 
-### Energy
+Rewrite CUDA time limits are `d2q06c`, `fit1d`, `fit2d`, `greenbea`,
+`greenbeb`, `pilot`, and `sierra`. Baseline acceptance is lower than reported
+`OPTIMAL` counts because every solver is held to the same independent KKT and
+trusted-objective gates.
 
-Energy regression: not run for any solver. Full energy: not run for any solver.
-The resource probe found sufficient host/disk capacity and a CUDA-visible
-unified memory pool, so no instance is currently classified
-`NOT_RUN_RESOURCE_LIMIT`; it remains `NOT_RUN`.
+### Energy Regression
 
-## CPU, CUDA, And Legacy
+| Solver | Accepted | Statuses |
+| --- | ---: | --- |
+| rewrite CPU | 4/4 | 4 `OPTIMAL` |
+| rewrite CUDA | 4/4 | 4 `OPTIMAL` |
+| legacy | 0/4 | 3 `OPTIMAL`, 1 process timeout |
+| in-tree cuPDLP | 1/4 | 4 `OPTIMAL` |
+| cuPDLPx | 2/4 | 4 `OPTIMAL` |
+| cuOpt 26.08 | 1/4 | 4 `OPTIMAL` |
+| HiGHS simplex | 4/4 | 4 `OPTIMAL` |
+| HiGHS IPM | 4/4 | 4 `OPTIMAL` |
 
-Smoke CPU/CUDA decisions and iteration counts match on all 13 instances.
-Regression has one terminal difference, `pilot4`, explained above. The six
-common rewrite time limits are `fit1d`, `d2q06c`, `greenbeb`, `greenbea`,
-`pilot`, and `sierra`.
+### Full Energy
 
-Against legacy on the same 103-instance regression set:
+| Solver | Accepted | Statuses |
+| --- | ---: | --- |
+| rewrite CPU | 6/9 | 6 `OPTIMAL`, 2 `TIME_LIMIT`, 1 process timeout |
+| rewrite CUDA | 6/9 | 6 `OPTIMAL`, 2 `TIME_LIMIT`, 1 process timeout |
+| legacy | 0/9 | 3 `OPTIMAL`, 6 process timeouts |
+| in-tree cuPDLP | 1/9 | 6 `OPTIMAL`, 2 `TIME_LIMIT`, 1 process timeout |
+| cuPDLPx | 2/9 | 7 `OPTIMAL`, 1 `TIME_LIMIT`, 1 process timeout |
+| cuOpt 26.08 | 2/9 | 7 `OPTIMAL`, 1 `TIME_LIMIT`, 1 process timeout |
+| HiGHS simplex | 7/9 | 7 `OPTIMAL`, 1 `TIME_LIMIT`, 1 process timeout |
+| HiGHS IPM | 7/9 | 7 `OPTIMAL`, 1 `TIME_LIMIT`, 1 process timeout |
 
-- rewrite CPU passes while legacy fails on 71 instances;
-- both pass on 26;
-- both fail on 4;
-- legacy passes while rewrite times out on `fit1d` and `greenbeb`.
-
-The objective differences above `1e-3` are `modszk1`, `bnl2`, `lotfi`, and
-the time-limited rewrite result for `pilot`. Every corresponding legacy row is
-rejected by the independent gate. No legacy CUDA comparison is claimed because
-there is no distinct legacy build with `CUPDLP_GPU=ON`.
+All 72 planned full-energy rows were executed. There are no hidden resource
+skips. Process timeouts have blank reported solver status and unavailable
+metrics in raw data, as required; canonical rows retain those missing fields
+and `timed_out=true`.
 
 ## Disagreement Classes
 
-The current `disagreements.csv` contains:
+`disagreements.csv` contains 626 rows:
 
 | Classification | Rows |
 | --- | ---: |
-| `TIME_OR_ITERATION_LIMIT` | 46 |
-| `BASELINE_DEFECT` | 215 |
-| `UNSUPPORTED_STATUS_OR_CERTIFICATE` | 4 |
-| resolved `REWRITE_DEFECT` | 4 |
-| resolved `REFERENCE_OR_MODEL_ISSUE` | 1 |
+| `BASELINE_DEFECT` | 501 |
+| `TIME_OR_ITERATION_LIMIT` | 108 |
+| `REFERENCE_OR_MODEL_ISSUE` | 5 |
+| `UNSUPPORTED_STATUS_OR_CERTIFICATE` | 8 |
+| resolved historical `REWRITE_DEFECT` | 4 |
+| `RESOURCE_LIMIT` | 0 |
 | `UNRESOLVED` | 0 |
 
-This zero applies only to the executed smoke and Netlib regression scopes plus
-the historical fixes. It is not a Phase 7 completion claim for the missing
-full-Netlib and energy scopes.
+The four `REWRITE_DEFECT` rows are the resolved historical Farkas cases, not
+new failures. The five reference/model rows are the corrected historical
+`forplan` reference plus the cuPDLPx/cuOpt `forplan` parser results in regression
+and full Netlib. The eight unsupported-status rows are in-tree cuPDLP's four
+unverified `UNKNOWN` results represented in both Netlib scopes.
 
-## Checks Not Run
+No canonical run reports `INFEASIBLE`, `UNBOUNDED`, or
+`UNBOUNDED_OR_INFEASIBLE`, so there is no unverified certificate claim in the
+completion matrix.
 
-- Full Netlib: rewrite CUDA, legacy, in-tree cuPDLP, cuPDLPx, cuOpt, simplex,
-  and IPM.
-- Energy regression: all eight requested solvers.
-- Full energy: all available solvers.
-- A distinct legacy CUDA comparison, because no such build is configured.
-- The two historical pre-implementation target-absence checks; no retained
-  command or session artifact can prove them retroactively.
+## Machine-Readable Evidence
 
-The missing full-Netlib and energy matrices were not started as partial
-background work: completing the required sequential eight-solver, 300-second
-matrix is a separate multi-hour benchmark campaign. No relevant benchmark or
-debugger process remains active. This is a scheduling gap, not a resource
-refusal or a solver pass; every missing row remains `NOT_RUN`.
+The result root is
+`/home/yanyu/benchmark-results/lp/hipdlp-rewrite/phase7`:
 
-The exact `unittest` command printed in Task 4 rejects an absolute file path as
-a module name. The equivalent pinned direct-file invocation passed and is
-recorded in the implementation plan.
+- `summary.csv`: 1,879 unique canonical rows;
+- `disagreements.csv`: 626 classified rows, zero `UNRESOLVED`;
+- `evidence-audit.csv`: 83 run-level or special evidence directories;
+- `generate_canonical_summary.py`: cardinality, unique-key, rewrite-KKT, and
+  zero-`UNRESOLVED` assertions;
+- `full-energy-resource-check-20260904-01/resource-check.json`: resource
+  decision and observed huge-instance pressure.
 
-A repository-wide `git diff --check` in `lp-benchmarks` reports pre-existing
-trailing whitespace in `manifests/netlib-feasible.csv` and
-`suites/netlib-feasible-reference.csv`. The scoped check for the touched
-cuPDLPx adapter and test is clean; the unrelated reference rows were not
-modified.
+Raw commands, stdout/stderr, adapter `result.json`, metadata, and parsed rows
+remain in their immutable run directories. `forplan` uses the trusted objective
+`-664.2189612722`. cuOpt raw reduced costs remain unchanged.
 
-All recorded timings are descriptive single runs. They are not the formal
-five-repetition performance gate and must not be used for the Phase 8 cutover
-performance decision.
+All timings are descriptive single runs. They are not the formal
+five-repetition performance gate.
 
-## Phase 8 Decision
+## Remaining Non-Phase-7 Gates
 
-**Do not continue to Phase 8.** The Phase 7 exit criteria lack evidence for the
-full Netlib comparison and both energy scopes, and those absent scopes have not
-been triaged. Do not delete legacy code. The pre-existing uncommitted default
-rewrite routing should remain reversible until these gates and the separate
-performance gate are complete.
+The two historical pre-implementation target-absence RED invocations remain
+unverifiable because no artifact was retained. A distinct legacy CUDA baseline
+was not configured and is not claimed. Neither item is a Phase 7 correctness
+completion blocker.
+
+Formal paired performance gates and the legacy stabilization/removal decision
+remain outside Phase 7. Phase 7 now satisfies the correctness prerequisite to
+begin Phase 8 work, but legacy must not be deleted until those separate gates
+authorize removal.

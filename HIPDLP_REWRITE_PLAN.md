@@ -1821,21 +1821,23 @@ Execute this phase through `HIPDLP_PHASE7_IMPLEMENTATION_PLAN.md`.
 **Exit criteria:** no unexplained incorrect status, non-finite result, or KKT
 failure remains in the supported suite.
 
-**Interim audit (2026-09-03):** Phase 7 is incomplete. Provenance-stable
-rewrite smoke passes CPU and CUDA 13/13. The 103-instance Netlib regression
-accepts rewrite CPU on 97 and CUDA on 96; every rewrite `OPTIMAL` passes the
-independent original-LP KKT gate, and the only terminal CPU/CUDA difference is
-an explained `pilot4` time-limit/cadence effect. Full Netlib exists only for
-rewrite CPU (111/114 accepted), and no energy regression or full-energy matrix
-has run. The canonical summary, disagreement classifications, directory audit,
-and human report are under the Phase 7 result root and
-`docs/hipdlp-phase7-cross-solver-report.md`. Phase 8 must not proceed until the
-missing full Netlib and energy scopes are executed and triaged. No legacy CUDA
-comparison is claimed.
+**Completion audit (2026-09-04):** Phase 7 is complete. Provenance-stable smoke
+passes rewrite CPU and CUDA 13/13. The eight-solver Netlib regression, full
+Netlib, energy regression, and full-energy matrices contain 824, 912, 32, and
+72 canonical rows, respectively. Full Netlib accepts rewrite CPU on 111/114
+and CUDA on 107/114; full energy accepts each on 6/9. Every rewrite `OPTIMAL`
+passes the independent original-LP `1e-4` KKT gate, all rewrite rejections are
+time or process limits, and all 626 disagreement rows have non-`UNRESOLVED`
+classifications. No new rewrite defect was found. The canonical summary,
+directory audit, resource evidence, classifications, and human report are under
+the Phase 7 result root and `docs/hipdlp-phase7-cross-solver-report.md`. No
+legacy CUDA comparison is claimed. Phase 7 clears the correctness prerequisite
+for Phase 8, while the separate performance and stabilization gates still
+govern legacy removal.
 
 ### Phase 8: Cut over and remove legacy code
 
-- Switch public `solver = "hipdlp"` to the rewrite.
+- [x] Switch public `solver = "hipdlp"` to the rewrite (already completed before Phase 8).
 - Retain the legacy selector for one stabilization window if maintenance cost
   is acceptable.
 - Confirm CMake CPU/CUDA configurations, unavailable-placeholder behavior, and
@@ -1846,6 +1848,43 @@ comparison is claimed.
 
 **Exit criteria:** all Definition of Done items below pass from a clean build,
 and the legacy implementation is no longer needed to diagnose routine failures.
+
+**Historical four-case checkpoint (2026-09-08; superseded denominator):
+BLOCKED, not COMPLETE.** Production
+GPU checks now use a backend-neutral 112-byte result packet, conservative
+certificate screening, transactional prepared downloads and the unchanged
+host policy/independent verifier. The original rewrite and distinct true legacy
+CPU/CUDA baselines are frozen outside the source tree. Matched production
+builds and twelve original-model correctness preflights pass. The representative
+one-warmup/five-measurement experiment executed all 24 jobs and 144 records;
+strict revalidation accepts 126 and rejects 18 legacy results. CPU has only
+2/4 accepted legacy pairs and CUDA 3/4; their diagnostic accepted-subset ratios
+are 3.9903 and 5.2256, not valid substitutes for the full four-pair gate. Both
+performance gates are NOT_PASS. Candidate/preoptimization full-solve ratios
+are 1.0269 CPU and 1.0213 CUDA, so this batch does not establish full-solve
+acceleration. Current CMake Clang/GCC, Bazel/Meson CPU focused checks pass
+175 cases each; CUDA passes 236 cases and memcheck is clean. The strict process-wide
+allocation audit still sees recurring vendor worker allocations, and the large
+energy fixed-workload CPU/CUDA trajectory check fails its unchanged `1e-9`
+threshold in both before/after CUDA. Details, commands, timing boundaries and
+remaining gates are in `docs/hipdlp-phase8-gpu-performance-report.md`. Legacy
+remains present until the independent removal conditions are met.
+
+**Legacy-qualified rerun (2026-09-08): supersedes the four-case denominator.**
+The available Phase 7 data contained 30 unique full-Netlib legacy cases that
+passed independent verification within 60 seconds and zero eligible energy
+cases, so an honest common set could not reach the requested approximate 50.
+Fresh frozen legacy CPU/CUDA qualification at uniform `1e-4` retained their
+strict 23-case intersection before candidate execution. The formal run used
+all 23 cases, PID, FP64, one warmup and five measurements for 552/552 records.
+Legacy CPU/CUDA each passed 138/138 records; candidate CPU passed 132/138 and
+CUDA 120/138. CPU `fit2d` and CUDA `fit1d`, `fit2d`, `greenbeb` reached the
+60-second limit. Thus CPU has 22/23 and CUDA 20/23 complete pairs; formal GM/CI
+are N/A by the no-denominator-shrink rule and both gates remain NOT_PASS.
+Accepted-subset diagnostic GMs (not gates) are 2.3907 CPU and 2.1477 CUDA, with
+34 ratios over 1.20. Evidence is under
+`phase8/20260908T205450Z-legacy-qualified-1e4`; the previous four-case result is
+historical only. Legacy removal remains blocked.
 
 ## 9. Build and CI Matrix
 
@@ -2073,9 +2112,7 @@ The current working tree supersedes the cutover conclusion in Section 14.2:
   `4.27e-6`, `1.60e-5`, and `8.26e-5`. The documented Python LP smoke test also
   reports `Optimal` with objective and primal value 10.
 
-Phase 7 may now start. This follow-up did not rerun the complete 13-instance
-rewrite smoke suite, and it did not run any cross-solver matrix. Those are the
-first tasks in the Phase 7 implementation plan. The cutover changes are also
-still uncommitted in the current working tree, so Phase 7 results must record
-the exact working-tree state rather than treating `HEAD` alone as the tested
-source.
+This checkpoint supplied the prerequisites for Phase 7. The validation campaign
+was subsequently completed on 2026-09-04 as recorded in the Phase 7 section and
+human report. Results remain identified by their fixed executable, manifest,
+configuration, and run metadata rather than repository `HEAD` alone.
