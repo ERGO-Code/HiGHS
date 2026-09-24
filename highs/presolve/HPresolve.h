@@ -491,8 +491,8 @@ class HPresolve {
 
   HighsModelStatus run(HighsPostsolveStack& postsolve_stack);
 
-  void substitute(HighsInt substcol, HighsInt staycol, double offset,
-                  double scale);
+  Result substitute(HighsInt substcol, HighsInt staycol, double offset,
+                    double scale, HighsInt row = -1);
 
   Result removeFixedCol(HighsInt col);
 
