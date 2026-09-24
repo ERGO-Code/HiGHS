@@ -50,6 +50,8 @@
 
 namespace presolve {
 
+HPresolve::~HPresolve() { delete presolveCliqueTable; }
+
 #ifndef NDEBUG
 void HPresolve::debugPrintRow(HighsPostsolveStack& postsolve_stack,
                               HighsInt row) {
@@ -111,6 +113,9 @@ void HPresolve::setInput(HighsLp& model_, const HighsOptions& options_,
 void HPresolve::setInput(HighsMipSolver& mipsolver,
                          const HighsInt presolve_reduction_limit) {
   this->mipsolver = &mipsolver;
+  presolveCliqueTable = new HPresolveCliqueTable(
+      mipsolver.mipdata_->cliquetable,
+      mipsolver.mipdata_->presolvedModel.num_col_);
 
   probingContingent = 1000;
   probingNumDelCol = 0;
@@ -2618,7 +2623,7 @@ void HPresolve::markColDeleted(HighsInt col) {
   ++numDeletedCols;
   if (col == model->fme_obj_col_) model->fme_obj_col_ = -1;
   if (mipsolver != nullptr && mipsolver->mipdata_->cliquesExtracted) {
-    mipsolver->mipdata_->cliquetable.presolveEliminateCol(col);
+    presolveCliqueTable->eliminateCol(col);
   }
 }
 
@@ -4123,10 +4128,10 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
             // skip binary column
             if (col == binCol) continue;
 
-            // Use presolveEliminateCol rather than presolveSubstituteCol to
-            // avoid cascading clique fixings that could corrupt this loop
+            // Use eliminateCol rather than substituteCol to avoid
+            // cascading clique fixings that could corrupt this loop
             if (mipsolver != nullptr && mipsolver->mipdata_->cliquesExtracted) {
-              mipsolver->mipdata_->cliquetable.presolveEliminateCol(col);
+              presolveCliqueTable->eliminateCol(col);
             }
 
             // get column lower and upper bounds used to compute bounds on row
@@ -9316,7 +9321,7 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
           }
 
           if (mipsolver != nullptr && mipsolver->mipdata_->cliquesExtracted) {
-            mipsolver->mipdata_->cliquetable.presolveEliminateCol(col);
+            presolveCliqueTable->eliminateCol(col);
           }
 
           // change bounds
@@ -9753,8 +9758,8 @@ HPresolve::Result HPresolve::updateCliqueTableFixedCol(const HighsInt col,
     return Result::kOk;
   }
   std::vector<HighsCliqueTable::CliqueVar> impliedFixings;
-  if (!mipsolver->mipdata_->cliquetable.presolveFixCol(
-          col, static_cast<bool>(val), impliedFixings)) {
+  if (!presolveCliqueTable->fixCol(col, static_cast<bool>(val),
+                                   impliedFixings)) {
     return Result::kPrimalInfeasible;
   }
 
@@ -9775,7 +9780,6 @@ HPresolve::Result HPresolve::updateCliqueTableSubstituteCol(
   if (mipsolver == nullptr || !mipsolver->mipdata_->cliquesExtracted) {
     return Result::kOk;
   }
-  HighsCliqueTable& cliquetable = mipsolver->mipdata_->cliquetable;
   bool isBinary =
       model->integrality_[substCol] != HighsVarType::kContinuous &&
       model->integrality_[stayCol] != HighsVarType::kContinuous &&
@@ -9788,7 +9792,8 @@ HPresolve::Result HPresolve::updateCliqueTableSubstituteCol(
   HighsCliqueTable::CliqueVar replacement(
       stayCol, scale == 1.0 ? HighsInt{1} : HighsInt{0});
   std::vector<HighsCliqueTable::CliqueVar> impliedFixings;
-  if (!cliquetable.presolveSubstituteCol(substCol, replacement, impliedFixings))
+  if (!presolveCliqueTable->substituteCol(substCol, replacement,
+                                          impliedFixings))
     return Result::kPrimalInfeasible;
 
   for (HighsCliqueTable::CliqueVar& v : impliedFixings) {

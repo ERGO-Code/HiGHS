@@ -24,6 +24,7 @@
 #include "lp_data/HighsOptions.h"
 #include "mip/HighsMipSolver.h"
 #include "presolve/HPresolveAnalysis.h"
+#include "presolve/HPresolveCliqueTable.h"
 #include "util/HighsCDouble.h"
 #include "util/HighsHash.h"
 #include "util/HighsHashTree.h"
@@ -40,6 +41,7 @@ class HPresolve {
   const HighsOptions* options;
   HighsTimer* timer;
   HighsMipSolver* mipsolver = nullptr;
+  HPresolveCliqueTable* presolveCliqueTable = nullptr;
   double primal_feastol;
   std::vector<HighsBool> allow_rule_;
 
@@ -388,6 +390,8 @@ class HPresolve {
   bool silentLog() const;
 
  public:
+  ~HPresolve();
+
   // for LP presolve
   void setInput(HighsLp& model_, const HighsOptions& options_,
                 const HighsInt presolve_reduction_limit,

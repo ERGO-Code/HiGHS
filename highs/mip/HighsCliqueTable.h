@@ -26,7 +26,11 @@ namespace presolve {
 class HighsPostsolveStack;
 }
 
+class HPresolveCliqueTable;
+
 class HighsCliqueTable {
+  friend class HPresolveCliqueTable;
+
  public:
   struct CliqueVar {
 #ifdef HIGHSINT64
@@ -66,8 +70,6 @@ class HighsCliqueTable {
     CliqueVar replace;
   };
 
-  enum class PresolveColState { kActive, kFixedZero, kFixedOne, kEliminated };
-
  private:
   std::vector<CliqueVar> cliqueentries;
 
@@ -87,10 +89,6 @@ class HighsCliqueTable {
   std::vector<std::pair<HighsInt, CliqueVar>> cliqueextensions;
   std::vector<HighsBool> iscandidate;
   std::vector<HighsBool> colDeleted;
-  std::vector<PresolveColState> presolveColStates;
-  std::vector<CliqueVar> presolveFixingQueue;
-  std::vector<HighsInt> presolveIncidentCliques;
-  std::vector<CliqueVar> presolveShortenedClique;
   std::vector<uint32_t> cliquehits;
   std::vector<HighsInt> cliquehitinds;
 
@@ -170,10 +168,6 @@ class HighsCliqueTable {
 
   void replaceLiteral(CliqueVar substitutedVar, CliqueVar replacementVar);
 
-  void checkCompactClique(HighsInt cliqueId, HighsInt threshold,
-                          HighsInt activeSize, HighsInt actualSize,
-                          bool equality, HighsInt origin);
-
  public:
   int64_t numNeighbourhoodQueries;
 
@@ -194,7 +188,6 @@ class HighsCliqueTable {
     numcliquesvar.resize(2 * ncols, 0);
     colsubstituted.resize(ncols);
     colDeleted.resize(ncols, false);
-    presolveColStates.resize(ncols, PresolveColState::kActive);
   }
 
   void setinPresolveProbingFlag(const bool inPresolveProbing) {
@@ -336,14 +329,6 @@ class HighsCliqueTable {
 
   void runCliqueMerging(HighsDomain& globaldomain,
                         std::vector<CliqueVar>& clique, bool equation = false);
-
-  bool presolveFixCol(HighsInt col, bool val,
-                      std::vector<CliqueVar>& impliedFixings);
-
-  void presolveEliminateCol(HighsInt col);
-
-  bool presolveSubstituteCol(HighsInt substCol, CliqueVar replacement,
-                             std::vector<CliqueVar>& impliedFixings);
 
   void rebuild(HighsInt ncols,
                const presolve::HighsPostsolveStack& postSolveStack,
