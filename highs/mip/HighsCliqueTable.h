@@ -170,6 +170,10 @@ class HighsCliqueTable {
 
   void replaceLiteral(CliqueVar substitutedVar, CliqueVar replacementVar);
 
+  void checkCompactClique(HighsInt cliqueId, HighsInt threshold,
+                          HighsInt activeSize, HighsInt actualSize,
+                          bool equality, HighsInt origin);
+
  public:
   int64_t numNeighbourhoodQueries;
 

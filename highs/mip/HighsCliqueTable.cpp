@@ -844,16 +844,17 @@ void HighsCliqueTable::removeClique(HighsInt cliqueid, bool recordDeletedRow) {
 void HighsCliqueTable::fixLastActiveAndRemove(HighsDomain& globaldom,
                                               HighsInt cliqueid) {
   if (cliques[cliqueid].equality && cliques[cliqueid].numActive() == 1)
-    for (HighsInt i = cliques[cliqueid].start; i != cliques[cliqueid].end; ++i)
-      if (!colDeleted[cliqueentries[i].col]) {
-        if (!globaldom.isFixed(static_cast<HighsInt>(cliqueentries[i].col))) {
-          fixCol(globaldom, cliqueentries[i].complement(), false);
-        } else if (globaldom.col_lower_[cliqueentries[i].col] !=
-                   cliqueentries[i].val) {
-          globaldom.markInfeasible();
-        }
-        break;
+    for (HighsInt i = cliques[cliqueid].start; i != cliques[cliqueid].end;
+         ++i) {
+      if (colDeleted[cliqueentries[i].col]) continue;
+      if (!globaldom.isFixed(static_cast<HighsInt>(cliqueentries[i].col))) {
+        fixCol(globaldom, cliqueentries[i].complement(), false);
+      } else if (globaldom.col_lower_[cliqueentries[i].col] !=
+                 cliqueentries[i].val) {
+        globaldom.markInfeasible();
       }
+      break;
+    }
   removeClique(cliqueid);
 }
 
@@ -1616,8 +1617,8 @@ void HighsCliqueTable::processInfeasibleVertices(HighsDomain& globaldom) {
           doAddClique(clq.data(), clq.size(), equality, origin);
         } else if (equality) {
           if (clq.empty() ||
-              (globaldom.isFixed(static_cast<HighsInt>(clq[0].col)) &&
-               globaldom.col_lower_[clq[0].col] != clq[0].val)) {
+              globaldom.isFixedToVal(static_cast<HighsInt>(clq[0].col),
+                                     1 - clq[0].val)) {
             globaldom.markInfeasible();
           } else if (!globaldom.isFixed(static_cast<HighsInt>(clq[0].col))) {
             fixCol(globaldom, clq[0].complement(), false);
@@ -2219,6 +2220,28 @@ void HighsCliqueTable::runCliqueMerging(HighsDomain& globaldomain) {
   }
 }
 
+void HighsCliqueTable::checkCompactClique(const HighsInt cliqueId,
+                                          const HighsInt threshold,
+                                          const HighsInt activeSize,
+                                          const HighsInt actualSize,
+                                          const bool equality,
+                                          const HighsInt origin) {
+  const Clique& clique = cliques[cliqueId];
+  if (activeSize == 2 ||
+      clique.numZeroFixed >= std::max(threshold, actualSize >> 1)) {
+    presolveShortenedClique.clear();
+    presolveShortenedClique.reserve(activeSize);
+    for (HighsInt i = clique.start; i != clique.end; ++i) {
+      if (!colDeleted[cliqueentries[i].col])
+        presolveShortenedClique.push_back(cliqueentries[i]);
+    }
+    removeClique(cliqueId, false);
+    doAddClique(presolveShortenedClique.data(),
+                static_cast<HighsInt>(presolveShortenedClique.size()), equality,
+                origin);
+  }
+}
+
 bool HighsCliqueTable::presolveFixCol(HighsInt col, bool val,
                                       std::vector<CliqueVar>& impliedFixings) {
   const PresolveColState state = presolveColStates[col];
@@ -2318,20 +2341,9 @@ bool HighsCliqueTable::presolveFixCol(HighsInt col, bool val,
         continue;
       }
 
-      if (!inPresolveProbing &&
-          (activeSize == 2 ||
-           clique.numZeroFixed >= std::max(HighsInt{10}, actualSize >> 1))) {
-        presolveShortenedClique.clear();
-        presolveShortenedClique.reserve(activeSize);
-        for (HighsInt i = clique.start; i != clique.end; ++i) {
-          if (!colDeleted[cliqueentries[i].col])
-            presolveShortenedClique.push_back(cliqueentries[i]);
-        }
-        removeClique(cliqueId, false);
-        doAddClique(presolveShortenedClique.data(),
-                    static_cast<HighsInt>(presolveShortenedClique.size()),
-                    equality, origin);
-      }
+      if (!inPresolveProbing)
+        checkCompactClique(cliqueId, 10, activeSize, actualSize, equality,
+                           origin);
     }
   }
   return true;
@@ -2363,7 +2375,6 @@ void HighsCliqueTable::presolveEliminateCol(const HighsInt col) {
   invertedHashListSizeTwo[2 * col + 1].clear();
 
   pdqsort(presolveIncidentCliques.begin(), presolveIncidentCliques.end());
-  auto& shortenedClique = presolveShortenedClique;
 
   for (const HighsInt cliqueId : presolveIncidentCliques) {
     Clique& clique = cliques[cliqueId];
@@ -2377,19 +2388,8 @@ void HighsCliqueTable::presolveEliminateCol(const HighsInt col) {
       removeClique(cliqueId, false);
       continue;
     }
-    if (!inPresolveProbing &&
-        (activeSize == 2 ||
-         clique.numZeroFixed >= std::max(HighsInt{10}, actualSize >> 1))) {
-      shortenedClique.clear();
-      shortenedClique.reserve(activeSize);
-      for (HighsInt i = clique.start; i != clique.end; ++i) {
-        if (!colDeleted[cliqueentries[i].col])
-          shortenedClique.push_back(cliqueentries[i]);
-      }
-      removeClique(cliqueId, false);
-      doAddClique(shortenedClique.data(),
-                  static_cast<HighsInt>(shortenedClique.size()), false, -1);
-    }
+    if (!inPresolveProbing)
+      checkCompactClique(cliqueId, 10, activeSize, actualSize, false, -1);
   }
 }
 
