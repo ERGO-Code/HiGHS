@@ -1733,6 +1733,7 @@ HPresolve::Result HPresolve::normaliseCliqueRows(
   const double maxDynamism = 1e5;
 
   std::vector<nonZero> nzs;
+  std::vector<HighsInt> perm;
   std::vector<double> rowCoefsInt;
 
   for (HighsInt row = 0; row < model->num_row_; row++) {
@@ -1805,7 +1806,7 @@ HPresolve::Result HPresolve::normaliseCliqueRows(
 
     // sort by descending coefficient value
     HighsInt numBin = static_cast<HighsInt>(nzs.size());
-    std::vector<HighsInt> perm(numBin);
+    perm.resize(numBin);
     std::iota(perm.begin(), perm.end(), 0);
     pdqsort(perm.begin(), perm.end(), [&](HighsInt a, HighsInt b) {
       return nzs[a].value > nzs[b].value;
