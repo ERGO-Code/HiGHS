@@ -2369,7 +2369,8 @@ HighsStatus readSolutionFile(const std::string& filename,
       } else if (iCol < 0) {
         // No column names or index, so cannot assign the value
         highsLogUser(log_options, HighsLogType::kError,
-                     "readSolutionFile: Error reading line \"%s\": column "
+                     "readSolutionFile: Error reading sparse/partial column "
+                     "value line \"%s\": column "
                      "index is undefined and model has no column names so name "
                      "\"%s\" cannot be used to assign the value\n",
                      column_section_line.c_str(), name.c_str());
@@ -2381,8 +2382,13 @@ HighsStatus readSolutionFile(const std::string& filename,
   } else {
     assert(is_col);
     for (HighsInt iX = 0; iX < num_col; iX++) {
-      if (!readSolutionFileIdDoubleLineOk(name, value, in_file))
+      if (!readSolutionFileIdDoubleLineOk(name, value, in_file)) {
+        highsLogUser(
+            log_options, HighsLogType::kError,
+            "readSolutionFile: Error reading column value line \"%s %g\"\n",
+            name.c_str(), value);
         return readSolutionFileErrorReturn(in_file);
+      }
       if (have_col_names) {
         // Use the column name if possible
         return_status =
@@ -2430,8 +2436,12 @@ HighsStatus readSolutionFile(const std::string& filename,
   is_col = false;
   assert(!is_col);
   for (HighsInt iX = 0; iX < num_row; iX++) {
-    if (!readSolutionFileIdDoubleLineOk(name, value, in_file))
+    if (!readSolutionFileIdDoubleLineOk(name, value, in_file)) {
+      highsLogUser(log_options, HighsLogType::kError,
+                   "readSolutionFile: Error reading row value line \"%s %g\"\n",
+                   name.c_str(), value);
       return readSolutionFileErrorReturn(in_file);
+    }
     if (num_row_ok) {
       if (have_row_names) {
         // Use the row name if possible
@@ -2488,12 +2498,17 @@ HighsStatus readSolutionFile(const std::string& filename,
                                     read_solution, read_basis, in_file);
     }
     assert(keyword == "Columns");
-    double dual;
+    double value;
     is_col = true;
     assert(is_col);
     for (HighsInt iX = 0; iX < num_col; iX++) {
-      if (!readSolutionFileIdDoubleLineOk(name, dual, in_file))
+      if (!readSolutionFileIdDoubleLineOk(name, value, in_file)) {
+        highsLogUser(
+            log_options, HighsLogType::kError,
+            "readSolutionFile: Error reading column dual line \"%s %g\"\n",
+            name.c_str(), value);
         return readSolutionFileErrorReturn(in_file);
+      }
       if (have_col_names) {
         // Use the column name if possible
         return_status =
@@ -2504,7 +2519,7 @@ HighsStatus readSolutionFile(const std::string& filename,
         // Have to assume column dual values are in the right order
         iCol = iX;
       }
-      read_solution.col_dual[iCol] = dual;
+      read_solution.col_dual[iCol] = value;
     }
     // Read in the col dual values: next line should be "Rows" and correct
     // number
@@ -2520,8 +2535,13 @@ HighsStatus readSolutionFile(const std::string& filename,
     is_col = false;
     assert(!is_col);
     for (HighsInt iX = 0; iX < num_row; iX++) {
-      if (!readSolutionFileIdDoubleLineOk(name, dual, in_file))
+      if (!readSolutionFileIdDoubleLineOk(name, value, in_file)) {
+        highsLogUser(
+            log_options, HighsLogType::kError,
+            "readSolutionFile: Error reading row dual line \"%s %g\"\n",
+            name.c_str(), value);
         return readSolutionFileErrorReturn(in_file);
+      }
       if (have_row_names) {
         // Use the row name if possible
         return_status =
@@ -2532,7 +2552,7 @@ HighsStatus readSolutionFile(const std::string& filename,
         // Have to assume row dual values are in the right order
         iRow = iX;
       }
-      read_solution.row_dual[iRow] = dual;
+      read_solution.row_dual[iRow] = value;
     }
   }
   // OK to have no EOL
@@ -2610,7 +2630,7 @@ bool readSolutionFileHashKeywordIntLineOk(std::string& hash,
   if (in_file.eof()) return false;
   // Read as a string, and then check it only contains digits
   in_file >> value_string;
-  if (value_string[std::strspn(value_string.c_str(), "-0123456789")])
+  if (value_string[std::strspn(value_string.c_str(), kLegalIntegerCharacters)])
     return false;
   value = std::stoi(value_string);  // integer value
   return true;
@@ -2637,7 +2657,7 @@ bool readSolutionFileColumnHeaderLineOk(
   if (column_section_line_ss.eof()) return false;
   // Read as a string, and then check it only contains digits
   column_section_line_ss >> value_string;
-  if (value_string[std::strspn(value_string.c_str(), "-0123456789")])
+  if (value_string[std::strspn(value_string.c_str(), kLegalIntegerCharacters)])
     return false;
   value = std::stoi(value_string);  // integer value
   // See whether there is a qualifier string
@@ -2665,7 +2685,8 @@ bool readSolutionFileColumnLineOk(std::string& id, double& value,
     std::string index_string;
     // Read as a string, and then check it only contains digits
     column_section_line_ss >> index_string;
-    if (index_string[std::strspn(index_string.c_str(), "-0123456789")])
+    if (index_string[std::strspn(index_string.c_str(),
+                                 kLegalIntegerCharacters)])
       return false;
     index = std::stoi(index_string);
   }

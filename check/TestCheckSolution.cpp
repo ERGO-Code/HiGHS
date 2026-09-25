@@ -785,7 +785,6 @@ TEST_CASE("issue-3317", "[highs_check_solution]") {
   Highs h;
   h.setOptionValue("output_flag", dev_run);
   REQUIRE(h.passModel(lp) == HighsStatus::kOk);
-  printf("Opening file %s\n", sol_file.c_str());
   FILE* file = fopen(sol_file.c_str(), "w");
   REQUIRE(file != nullptr);
   std::string file_content =
