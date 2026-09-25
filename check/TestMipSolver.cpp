@@ -2036,3 +2036,33 @@ TEST_CASE("dominated-column-double-fixing", "[highs_test_mip_solver]") {
   highs.setOptionValue("output_flag", dev_run);
   solve(highs, kHighsOnString, HighsModelStatus::kInfeasible);
 }
+
+TEST_CASE("implied-integer-bound-rounding", "[highs_test_mip_solver]") {
+  HighsLp lp;
+  lp.num_col_ = 6;
+  lp.num_row_ = 6;
+  lp.sense_ = ObjSense::kMinimize;
+  lp.offset_ = -4;
+  lp.col_cost_ = {5, 0, 0, 0, 0, -2.5};
+  lp.col_lower_ = {-kHighsInf, -kHighsInf, 0, -kHighsInf, -kHighsInf, -10};
+  lp.col_upper_ = {6, 4.5, 1, 6.25, 10, kHighsInf};
+  lp.row_lower_ = {-kHighsInf, -kHighsInf, 40, -30, -kHighsInf, -28.5};
+  lp.row_upper_ = {kHighsInf, 2, 40, -30, 0.5, kHighsInf};
+  lp.integrality_ = {HighsVarType::kInteger, HighsVarType::kContinuous,
+                     HighsVarType::kInteger, HighsVarType::kContinuous,
+                     HighsVarType::kContinuous, HighsVarType::kContinuous};
+  lp.a_matrix_.format_ = MatrixFormat::kColwise;
+  lp.a_matrix_.start_ = {0, 3, 7, 10, 13, 15, 19};
+  lp.a_matrix_.index_ = {0, 2, 3, 1, 2, 3, 5, 1, 2, 3,
+                         2, 3, 5, 1, 3, 1, 2, 3, 5};
+  lp.a_matrix_.value_ = {1.5, 7, 1, -1, -1.0 / 3, 2, 0.5, -1.0 / 3, 1, -5,
+                         -1, -9, 3, 1, 1, 1, -1, -1, -20};
+
+  const double optimal_objective = -48401.0 / 1614.0;
+  for (const std::string& presolve : {kHighsOnString, kHighsOffString}) {
+    Highs highs;
+    highs.setOptionValue("output_flag", dev_run);
+    REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
+    solve(highs, presolve, HighsModelStatus::kOptimal, optimal_objective);
+  }
+}
