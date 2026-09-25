@@ -13,7 +13,7 @@
 #include "mip/HighsCliqueTable.h"
 
 class HPresolveCliqueTable {
-  HighsCliqueTable* table;
+  HighsCliqueTable* table = nullptr;
 
   enum class ColState : int8_t { kActive, kFixedZero, kFixedOne, kEliminated };
 
@@ -27,14 +27,9 @@ class HPresolveCliqueTable {
                           bool equality, HighsInt origin);
 
  public:
-  HPresolveCliqueTable(HighsCliqueTable& table, HighsInt numCol);
+  void setCliqueTable(HighsCliqueTable* table) { this->table = table; }
 
-  void rebuild(HighsCliqueTable& table, HighsInt numCol);
-
-  void markFixed(HighsInt col, bool val) {
-    if (colStates[col] != ColState::kEliminated)
-      colStates[col] = val ? ColState::kFixedOne : ColState::kFixedZero;
-  }
+  void rebuild(HighsCliqueTable& table);
 
   bool fixCol(HighsInt col, bool val,
               std::vector<HighsCliqueTable::CliqueVar>& impliedFixings);

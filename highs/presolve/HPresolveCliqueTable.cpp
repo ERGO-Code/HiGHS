@@ -15,14 +15,9 @@
 using CliqueVar = HighsCliqueTable::CliqueVar;
 using Clique = HighsCliqueTable::Clique;
 
-HPresolveCliqueTable::HPresolveCliqueTable(HighsCliqueTable& table,
-                                           const HighsInt numCol)
-    : table(&table), colStates(numCol, ColState::kActive) {}
-
-void HPresolveCliqueTable::rebuild(HighsCliqueTable& table,
-                                   const HighsInt numCol) {
-  this->table = &table;
-  colStates.assign(numCol, ColState::kActive);
+void HPresolveCliqueTable::rebuild(HighsCliqueTable& table) {
+  setCliqueTable(&table);
+  colStates.assign(table.colDeleted.size(), ColState::kActive);
 }
 
 void HPresolveCliqueTable::checkCompactClique(const HighsInt cliqueId,

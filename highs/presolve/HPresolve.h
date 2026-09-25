@@ -41,7 +41,7 @@ class HPresolve {
   const HighsOptions* options;
   HighsTimer* timer;
   HighsMipSolver* mipsolver = nullptr;
-  HPresolveCliqueTable* presolveCliqueTable = nullptr;
+  HPresolveCliqueTable presolveCliqueTable;
   double primal_feastol;
   std::vector<HighsBool> allow_rule_;
 
@@ -390,8 +390,6 @@ class HPresolve {
   bool silentLog() const;
 
  public:
-  ~HPresolve();
-
   // for LP presolve
   void setInput(HighsLp& model_, const HighsOptions& options_,
                 const HighsInt presolve_reduction_limit,
