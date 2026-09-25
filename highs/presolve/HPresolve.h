@@ -24,6 +24,7 @@
 #include "lp_data/HighsOptions.h"
 #include "mip/HighsMipSolver.h"
 #include "presolve/HPresolveAnalysis.h"
+#include "presolve/HPresolveCliqueTable.h"
 #include "util/HighsCDouble.h"
 #include "util/HighsHash.h"
 #include "util/HighsHashTree.h"
@@ -40,6 +41,7 @@ class HPresolve {
   const HighsOptions* options;
   HighsTimer* timer;
   HighsMipSolver* mipsolver = nullptr;
+  HPresolveCliqueTable presolveCliqueTable;
   double primal_feastol;
   std::vector<HighsBool> allow_rule_;
 
@@ -493,8 +495,8 @@ class HPresolve {
 
   HighsModelStatus run(HighsPostsolveStack& postsolve_stack);
 
-  void substitute(HighsInt substcol, HighsInt staycol, double offset,
-                  double scale);
+  Result substitute(HighsInt substcol, HighsInt staycol, double offset,
+                    double scale, HighsInt row = -1);
 
   Result removeFixedCol(HighsInt col);
 

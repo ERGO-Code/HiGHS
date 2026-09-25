@@ -111,6 +111,7 @@ void HPresolve::setInput(HighsLp& model_, const HighsOptions& options_,
 void HPresolve::setInput(HighsMipSolver& mipsolver,
                          const HighsInt presolve_reduction_limit) {
   this->mipsolver = &mipsolver;
+  presolveCliqueTable.rebuild(mipsolver.mipdata_->cliquetable);
 
   probingContingent = 1000;
   probingNumDelCol = 0;
@@ -1246,6 +1247,7 @@ void HPresolve::shrinkProblem(HighsPostsolveStack& postsolve_stack) {
     mipsolver->mipdata_->cliquetable.rebuild(model->num_col_, postsolve_stack,
                                              mipsolver->mipdata_->getDomain(),
                                              newColIndex, newRowIndex);
+    presolveCliqueTable.rebuild(mipsolver->mipdata_->cliquetable);
     mipsolver->mipdata_->implications.rebuild(model->num_col_, newColIndex,
                                               newRowIndex);
     mipsolver->mipdata_->getCutPool() =
@@ -2669,7 +2671,7 @@ void HPresolve::markColDeleted(HighsInt col) {
   ++numDeletedCols;
   if (col == model->fme_obj_col_) model->fme_obj_col_ = -1;
   if (mipsolver != nullptr && mipsolver->mipdata_->cliquesExtracted) {
-    mipsolver->mipdata_->cliquetable.presolveEliminateCol(col);
+    presolveCliqueTable.eliminateCol(col);
   }
 }
 
@@ -3014,12 +3016,9 @@ HPresolve::Result HPresolve::applyConflictGraphSubstitutions(
         model->col_lower_[substitution.substcol],
         model->col_upper_[substitution.substcol], 0.0, false, false,
         HighsPostsolveStack::RowType::kEq, HighsEmptySlice());
-    HPRESOLVE_CHECKED_CALL(updateCliqueTableSubstituteCol(
-        substitution.substcol, substitution.staycol, substitution.offset,
-        substitution.scale));
-    markColDeleted(substitution.substcol);
-    substitute(substitution.substcol, substitution.staycol, substitution.offset,
-               substitution.scale);
+    HPRESOLVE_CHECKED_CALL(substitute(substitution.substcol,
+                                      substitution.staycol, substitution.offset,
+                                      substitution.scale));
     HPRESOLVE_CHECKED_CALL(checkLimits(postsolve_stack));
   }
 
@@ -3046,10 +3045,8 @@ HPresolve::Result HPresolve::applyConflictGraphSubstitutions(
         model->col_lower_[subst.substcol], model->col_upper_[subst.substcol],
         0.0, false, false, HighsPostsolveStack::RowType::kEq,
         HighsEmptySlice());
-    HPRESOLVE_CHECKED_CALL(updateCliqueTableSubstituteCol(
-        subst.substcol, subst.replace.col, offset, scale));
-    markColDeleted(subst.substcol);
-    substitute(subst.substcol, subst.replace.col, offset, scale);
+    HPRESOLVE_CHECKED_CALL(
+        substitute(subst.substcol, subst.replace.col, offset, scale));
     HPRESOLVE_CHECKED_CALL(checkLimits(postsolve_stack));
   }
 
@@ -3721,13 +3718,9 @@ HPresolve::Result HPresolve::doubletonEq(HighsPostsolveStack& postsolve_stack,
       model->col_cost_[substcol], lowerTightened, upperTightened, rowType,
       getColumnVector(substcol));
 
-  HPRESOLVE_CHECKED_CALL(updateCliqueTableSubstituteCol(
-      substcol, staycol, rhs / substcoef, -staycoef / substcoef));
-
   // finally modify matrix
-  markColDeleted(substcol);
-  removeRow(row);
-  substitute(substcol, staycol, rhs / substcoef, -staycoef / substcoef);
+  HPRESOLVE_CHECKED_CALL(substitute(substcol, staycol, rhs / substcoef,
+                                    -staycoef / substcoef, row));
 
   analysis_.logging_on_ = logging_on;
   if (logging_on) analysis_.stopPresolveRuleLog(kPresolveRuleDoubletonEquation);
@@ -4197,8 +4190,10 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
             // skip binary column
             if (col == binCol) continue;
 
+            // Use eliminateCol rather than substituteCol to avoid
+            // cascading clique fixings that could corrupt this loop
             if (mipsolver != nullptr && mipsolver->mipdata_->cliquesExtracted) {
-              mipsolver->mipdata_->cliquetable.presolveEliminateCol(col);
+              presolveCliqueTable.eliminateCol(col);
             }
 
             // get column lower and upper bounds used to compute bounds on row
@@ -4225,8 +4220,7 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
                   -1, col, binCol, 1.0, -scale, offset, lower, upper, 0.0,
                   false, false, HighsPostsolveStack::RowType::kEq,
                   HighsEmptySlice());
-              substitute(col, binCol, offset, scale);
-              return Result::kOk;
+              return substitute(col, binCol, offset, scale);
             };
 
             // 1. binary coefficient is positive:
@@ -5317,10 +5311,7 @@ HPresolve::Result HPresolve::dualFixing(HighsPostsolveStack& postsolve_stack,
             -1, col, rowNz.index(), 1.0, -scale, offset, model->col_lower_[col],
             model->col_upper_[col], 0.0, false, false,
             HighsPostsolveStack::RowType::kEq, HighsEmptySlice());
-        HPRESOLVE_CHECKED_CALL(
-            updateCliqueTableSubstituteCol(col, rowNz.index(), offset, scale));
-        markColDeleted(col);
-        substitute(col, rowNz.index(), offset, scale);
+        HPRESOLVE_CHECKED_CALL(substitute(col, rowNz.index(), offset, scale));
         HPRESOLVE_CHECKED_CALL(checkLimits(postsolve_stack));
         break;
       }
@@ -8491,8 +8482,14 @@ HPresolve::Result HPresolve::fourierMotzkin(
   return finalise();
 }
 
-void HPresolve::substitute(HighsInt substcol, HighsInt staycol, double offset,
-                           double scale) {
+HPresolve::Result HPresolve::substitute(HighsInt substcol, HighsInt staycol,
+                                        double offset, double scale,
+                                        HighsInt row) {
+  HPRESOLVE_CHECKED_CALL(
+      updateCliqueTableSubstituteCol(substcol, staycol, offset, scale));
+  markColDeleted(substcol);
+  if (row != -1) removeRow(row);
+
   // Preserve explicit integrality, i.e., upgrade implied integral
   // column if it is substituting an integral column
   if (model->integrality_[substcol] == HighsVarType::kInteger &&
@@ -8539,6 +8536,8 @@ void HPresolve::substitute(HighsInt substcol, HighsInt staycol, double offset,
       model->col_cost_[staycol] = 0.0;
     model->col_cost_[substcol] = 0.0;
   }
+
+  return Result::kOk;
 }
 
 HPresolve::Result HPresolve::fixColToLower(HighsPostsolveStack& postsolve_stack,
@@ -9384,7 +9383,7 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
           }
 
           if (mipsolver != nullptr && mipsolver->mipdata_->cliquesExtracted) {
-            mipsolver->mipdata_->cliquetable.presolveEliminateCol(col);
+            presolveCliqueTable.eliminateCol(col);
           }
 
           // change bounds
@@ -9821,8 +9820,8 @@ HPresolve::Result HPresolve::updateCliqueTableFixedCol(const HighsInt col,
     return Result::kOk;
   }
   std::vector<HighsCliqueTable::CliqueVar> impliedFixings;
-  if (!mipsolver->mipdata_->cliquetable.presolveFixCol(
-          col, static_cast<bool>(val), impliedFixings)) {
+  if (!presolveCliqueTable.fixCol(col, static_cast<bool>(val),
+                                  impliedFixings)) {
     return Result::kPrimalInfeasible;
   }
 
@@ -9843,7 +9842,6 @@ HPresolve::Result HPresolve::updateCliqueTableSubstituteCol(
   if (mipsolver == nullptr || !mipsolver->mipdata_->cliquesExtracted) {
     return Result::kOk;
   }
-  HighsCliqueTable& cliquetable = mipsolver->mipdata_->cliquetable;
   bool isBinary =
       model->integrality_[substCol] != HighsVarType::kContinuous &&
       model->integrality_[stayCol] != HighsVarType::kContinuous &&
@@ -9856,7 +9854,7 @@ HPresolve::Result HPresolve::updateCliqueTableSubstituteCol(
   HighsCliqueTable::CliqueVar replacement(
       stayCol, scale == 1.0 ? HighsInt{1} : HighsInt{0});
   std::vector<HighsCliqueTable::CliqueVar> impliedFixings;
-  if (!cliquetable.presolveSubstituteCol(substCol, replacement, impliedFixings))
+  if (!presolveCliqueTable.substituteCol(substCol, replacement, impliedFixings))
     return Result::kPrimalInfeasible;
 
   for (HighsCliqueTable::CliqueVar& v : impliedFixings) {
