@@ -214,7 +214,9 @@ class HPresolve {
 
   void resetRowDualImpliedBoundsDerivedFromCol(HighsInt col);
 
-  void matrixNonZeroChanged(HighsInt row, HighsInt col);
+  void matrixNonZeroChanged(HighsInt row, HighsInt col, double oldCoef,
+                            double newCoef, bool rowIsDeleted,
+                            bool colIsDeleted);
 
   void changeRowLower(HighsInt row, double newLower,
                       bool skipRowDualUpdate = false);
@@ -538,8 +540,6 @@ class HPresolve {
   void aggregateVarBounds();
 
   Result sparsify(HighsPostsolveStack& postsolve_stack);
-
-  void setRelaxedImpliedBounds();
 
   const HighsPresolveLog& getPresolveLog() const {
     return analysis_.presolve_log_;

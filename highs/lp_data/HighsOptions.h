@@ -1500,7 +1500,7 @@ class HighsOptions : public HighsOptionsStruct {
 
     record_bool = new OptionRecordBool(
         "use_implied_bounds_from_presolve",
-        "Use relaxed implied bounds from presolve", advanced,
+        "Use relaxed implied bounds from presolve: redundant option!", advanced,
         &use_implied_bounds_from_presolve, false);
     records.push_back(record_bool);
 
