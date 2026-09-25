@@ -135,7 +135,7 @@ bool HPresolveCliqueTable::fixCol(HighsInt col, bool val,
 
 void HPresolveCliqueTable::eliminateCol(const HighsInt col) {
   if (colStates[col].isEliminated()) return;
-  colStates[col] = ColState{ColState::kEliminated};
+  colStates[col] = ColState(ColState::kEliminated);
   if (table->colDeleted[col]) return;
   table->colDeleted[col] = true;
 
