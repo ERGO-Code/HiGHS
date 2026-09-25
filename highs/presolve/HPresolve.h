@@ -500,6 +500,8 @@ class HPresolve {
 
   void removeFixedCol(HighsInt col, double fixval);
 
+  void unlinkRow(HighsInt row);
+
   void removeRow(HighsInt row);
 
   Result removeDependentEquations(HighsPostsolveStack& postsolve_stack);
@@ -534,6 +536,8 @@ class HPresolve {
                              const HighsMatrixSlice<RowStorageFormat>& vector);
 
   void extractVarBounds(HighsInt row);
+
+  void aggregateVarBounds();
 
   Result sparsify(HighsPostsolveStack& postsolve_stack);
 
