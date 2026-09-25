@@ -785,13 +785,20 @@ TEST_CASE("issue-3317", "[highs_check_solution]") {
   Highs h;
   h.setOptionValue("output_flag", dev_run);
   REQUIRE(h.passModel(lp) == HighsStatus::kOk);
-
+  printf("Opening file %s\n", sol_file.c_str());
   FILE* file = fopen(sol_file.c_str(), "w");
+  REQUIRE(file != nullptr);
   std::string file_content =
       "Model status\nFeasible\n\n# Primal solution values\nFeasible\nObjective "
       "0\n# Columns -1 partial\nx 4\n";
   fprintf(file, "%s", file_content.c_str());
   fclose(file);
+  // Without column names, the solution file cannot be read
+  REQUIRE(h.readSolution(sol_file) == HighsStatus::kError);
+
+  REQUIRE(h.passColName(0, "x") == HighsStatus::kOk);
+  REQUIRE(h.passColName(1, "y") == HighsStatus::kOk);
+
   REQUIRE(h.readSolution(sol_file) == HighsStatus::kOk);
 
   h.setOptionValue(kPresolveString, kHighsOffString);

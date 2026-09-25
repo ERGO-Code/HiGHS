@@ -2290,16 +2290,16 @@ HighsStatus readSolutionFile(const std::string& filename,
       return readSolutionFileErrorReturn(in_file);  // Objective
     // Next line should be "Columns", correct number and possibly a
     // qualifier string, so can't be read (easily) as a std::ifstream
-    std::string column_header_line;
-    std::getline(in_file, column_header_line);
-    std::stringstream column_header_line_ss(column_header_line);
-    if (column_header_line.empty() ||
+    std::string column_section_line;
+    std::getline(in_file, column_section_line);
+    std::stringstream column_section_line_ss(column_section_line);
+    if (column_section_line.empty() ||
         !readSolutionFileColumnHeaderLineOk(hash, keyword, value_string,
                                             num_col, qualifier_string,
-                                            column_header_line_ss)) {
+                                            column_section_line_ss)) {
       highsLogUser(log_options, HighsLogType::kError,
                    "readSolutionFile: Error reading line \"%s\"\n",
-                   column_header_line.c_str());
+                   column_section_line.c_str());
       return readSolutionFileErrorReturn(in_file);
     }
     assert(keyword == "Columns");
@@ -2346,15 +2346,36 @@ HighsStatus readSolutionFile(const std::string& filename,
   } else if (sparse || partial) {
     read_solution.col_value.assign(lp_num_col, sparse ? 0.0 : kHighsUndefined);
     for (HighsInt iX = 0; iX < num_col; iX++) {
-      if (!readSolutionFileIdDoubleIntLineOk(name, value, iCol, in_file))
+      // Each line should be a column name, a value and possibly an
+      // index - which is used if the model has no column names
+      std::string column_section_line;
+      std::getline(in_file, column_section_line);
+      std::stringstream column_section_line_ss(column_section_line);
+      if (column_section_line.empty() ||
+          !readSolutionFileColumnLineOk(name, value, iCol,
+                                        column_section_line_ss)) {
+        highsLogUser(
+            log_options, HighsLogType::kError,
+            "readSolutionFile: Error reading column section line \"%s\"\n",
+            column_section_line.c_str());
         return readSolutionFileErrorReturn(in_file);
+      }
       if (have_col_names) {
         // Use the column name if possible
         return_status =
             getIndexFromName(log_options, from_method, is_col, name,
                              lp.col_hash_.name2index, iCol, lp.col_names_);
         if (return_status != HighsStatus::kOk) return return_status;
+      } else if (iCol < 0) {
+        // No column names or index, so cannot assign the value
+        highsLogUser(log_options, HighsLogType::kError,
+                     "readSolutionFile: Error reading line \"%s\": column "
+                     "index is undefined and model has no column names so name "
+                     "\"%s\" cannot be used to assign the value\n",
+                     column_section_line.c_str(), name.c_str());
+        return readSolutionFileErrorReturn(in_file);
       }
+      assert(0 <= iCol && iCol < lp.num_col_);
       read_solution.col_value[iCol] = value;
     }
   } else {
@@ -2598,36 +2619,56 @@ bool readSolutionFileHashKeywordIntLineOk(std::string& hash,
 bool readSolutionFileColumnHeaderLineOk(
     std::string& hash, std::string& keyword, std::string& value_string,
     HighsInt& value, std::string& qualifier_string,
-    std::stringstream& column_header_line_ss) {
+    std::stringstream& column_section_line_ss) {
   hash = "";
   keyword = "";
   value_string = "";
   qualifier_string = "";
   // Read the hash symbol
-  if (column_header_line_ss.eof()) return false;
-  column_header_line_ss >> hash;  // #
+  if (column_section_line_ss.eof()) return false;
+  column_section_line_ss >> hash;  // #
   if (hash != "#") return false;
 
   // Read the keyword
-  if (column_header_line_ss.eof()) return false;
-  column_header_line_ss >> keyword;  // keyword
+  if (column_section_line_ss.eof()) return false;
+  column_section_line_ss >> keyword;  // keyword
 
   // Read the value
-  if (column_header_line_ss.eof()) return false;
+  if (column_section_line_ss.eof()) return false;
   // Read as a string, and then check it only contains digits
-  column_header_line_ss >> value_string;
+  column_section_line_ss >> value_string;
   if (value_string[std::strspn(value_string.c_str(), "-0123456789")])
     return false;
   value = std::stoi(value_string);  // integer value
   // See whether there is a qualifier string
-  if (!column_header_line_ss.eof()) {
-    column_header_line_ss >> qualifier_string;
+  if (!column_section_line_ss.eof()) {
+    column_section_line_ss >> qualifier_string;
     tolower(qualifier_string);
     if (qualifier_string != kHighsSparseString &&
         qualifier_string != kHighsPartialString)
       qualifier_string = "";
   }
 
+  return true;
+}
+
+bool readSolutionFileColumnLineOk(std::string& id, double& value,
+                                  HighsInt& index,
+                                  std::stringstream& column_section_line_ss) {
+  if (column_section_line_ss.eof()) return false;
+  column_section_line_ss >> id;  // Id
+  if (column_section_line_ss.eof()) return false;
+  column_section_line_ss >> value;  // double value
+  // See whether there is an index
+  index = -1;
+  if (!column_section_line_ss.eof()) {
+    std::string index_string;
+    // Read as a string, and then check it only contains digits
+    column_section_line_ss >> index_string;
+    if (index_string[std::strspn(index_string.c_str(), "-0123456789")])
+      return false;
+    index = std::stoi(index_string);
+  }
   return true;
 }
 
@@ -2644,18 +2685,6 @@ bool readSolutionFileIdDoubleLineOk(std::string& id, double& value,
   in_file >> id;  // Id
   if (in_file.eof()) return false;
   in_file >> value;  // double value
-  return true;
-}
-
-bool readSolutionFileIdDoubleIntLineOk(std::string& id, double& value,
-                                       HighsInt& index,
-                                       std::ifstream& in_file) {
-  if (in_file.eof()) return false;
-  in_file >> id;  // Id
-  if (in_file.eof()) return false;
-  in_file >> value;  // double value
-  if (in_file.eof()) return false;
-  in_file >> index;  // double value
   return true;
 }
 
