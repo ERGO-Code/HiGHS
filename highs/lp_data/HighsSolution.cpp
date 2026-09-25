@@ -1635,7 +1635,7 @@ HighsStatus ipxSolutionToHighsSolution(
   const bool get_row_activities = ipx_num_row < lp.num_row_;
   if (get_row_activities) row_activity.assign(lp.num_row_, 0);
   HighsInt ipx_slack = lp.num_col_;
-  assert(ipx_num_row == lp.num_row_);
+  assert(ipx_num_row <= lp.num_row_);
   HighsInt dual_infeasibility_count = 0;
   double primal_infeasibility;
   double relative_primal_infeasibility;
