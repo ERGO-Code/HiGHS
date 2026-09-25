@@ -1360,7 +1360,6 @@ TEST_CASE("test-duplicate-row", "[highs_test_presolve]") {
 
   h.resetGlobalScheduler(true);
 }
-
 /*
 TEST_CASE("test-fuzzing", "[highs_test_presolve]") {
   Highs h;
@@ -1368,7 +1367,7 @@ TEST_CASE("test-fuzzing", "[highs_test_presolve]") {
   //  if (dev_run) {
   printf("\n====================\nWithout presolve\n====================\n");
 
-  const std::string model = "issue-002";
+  const std::string model = "issue-003";
   const bool reduces_to_empty = true;
   std::string model_file = std::string(HIGHS_DIR) + "/build/OscarFuzzing/" +
                            model + "/" + model + ".mps";
