@@ -214,7 +214,9 @@ class HPresolve {
 
   void resetRowDualImpliedBoundsDerivedFromCol(HighsInt col);
 
-  void matrixNonZeroChanged(HighsInt row, HighsInt col);
+  void matrixNonZeroChanged(HighsInt row, HighsInt col, double oldCoef,
+                            double newCoef, bool rowIsDeleted,
+                            bool colIsDeleted);
 
   void changeRowLower(HighsInt row, double newLower,
                       bool skipRowDualUpdate = false);
