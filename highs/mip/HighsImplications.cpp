@@ -804,12 +804,9 @@ void HighsImplications::cleanupVlb(HighsInt col, HighsInt vlbCol,
     mipsolver.mipdata_->debugSolution.checkVlb(col, vlbCol, vlb.coef,
                                                vlb.constant);
   } else if (allowBoundChanges && minlb > lb + mipsolver.mipdata_->epsilon) {
-    double newlb = static_cast<double>(minlb);
-    if (mipsolver.isColIntegral(col)) {
-      newlb = std::ceil(newlb - mipsolver.mipdata_->feastol);
-    }
     mipsolver.mipdata_->getDomain().changeBound(
-        HighsBoundType::kLower, col, newlb, HighsDomain::Reason::unspecified());
+        HighsBoundType::kLower, col, static_cast<double>(minlb),
+        HighsDomain::Reason::unspecified());
     infeasible = mipsolver.mipdata_->getDomain().infeasible();
   }
 }
@@ -848,12 +845,9 @@ void HighsImplications::cleanupVub(HighsInt col, HighsInt vubCol,
     mipsolver.mipdata_->debugSolution.checkVub(col, vubCol, vub.coef,
                                                vub.constant);
   } else if (allowBoundChanges && maxub < ub - mipsolver.mipdata_->epsilon) {
-    double newub = static_cast<double>(maxub);
-    if (mipsolver.isColIntegral(col)) {
-      newub = std::floor(newub + mipsolver.mipdata_->feastol);
-    }
     mipsolver.mipdata_->getDomain().changeBound(
-        HighsBoundType::kUpper, col, newub, HighsDomain::Reason::unspecified());
+        HighsBoundType::kUpper, col, static_cast<double>(maxub),
+        HighsDomain::Reason::unspecified());
     infeasible = mipsolver.mipdata_->getDomain().infeasible();
   }
 }

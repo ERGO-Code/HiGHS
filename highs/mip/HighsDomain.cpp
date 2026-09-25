@@ -2027,6 +2027,9 @@ void HighsDomain::changeBound(HighsDomainChange boundchg, Reason reason) {
 
   HighsInt prevPos;
   if (boundchg.boundtype == HighsBoundType::kLower) {
+    if (mipsolver->isColIntegral(boundchg.column)) {
+      boundchg.boundval = std::ceil(boundchg.boundval - feastol());
+    }
     if (boundchg.boundval <= col_lower_[boundchg.column]) {
       if (reason.type != Reason::kBranching) return;
       boundchg.boundval = col_lower_[boundchg.column];
@@ -2048,6 +2051,9 @@ void HighsDomain::changeBound(HighsDomainChange boundchg, Reason reason) {
     prevPos = colLowerPos_[boundchg.column];
     colLowerPos_[boundchg.column] = domchgstack_.size();
   } else {
+    if (mipsolver->isColIntegral(boundchg.column)) {
+      boundchg.boundval = std::floor(boundchg.boundval + feastol());
+    }
     if (boundchg.boundval >= col_upper_[boundchg.column]) {
       if (reason.type != Reason::kBranching) return;
       boundchg.boundval = col_upper_[boundchg.column];
