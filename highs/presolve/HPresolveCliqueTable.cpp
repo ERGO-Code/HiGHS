@@ -179,9 +179,24 @@ void HPresolveCliqueTable::eliminateCol(const HighsInt col) {
 bool HPresolveCliqueTable::substituteCol(
     const HighsInt substCol, const CliqueVar replacement,
     std::vector<CliqueVar>& impliedFixings) {
-  if (!colStates[substCol].isActive()) return true;
+  if (substCol == static_cast<HighsInt>(replacement.col)) {
+    // Substituting itself is either redundant or infeasible
+    return replacement.val == 1;
+  }
+  if (!colStates[substCol].isActive()) {
+    // Don't do anything if col to be substituted is already handled
+    return true;
+  }
   if (colStates[replacement.col].isEliminated()) {
+    // Eliminate substituted column if replacement is eliminated
     eliminateCol(substCol);
+    return true;
+  }
+  if (colStates[replacement.col].isFixed()) {
+    // If replacement is fixed then bypass direct substitutions via fixings
+    const bool fixVal = colStates[replacement.col].isFixedTo(replacement.val);
+    impliedFixings.push_back(CliqueVar(substCol, fixVal));
+    if (!fixCol(substCol, fixVal, impliedFixings)) return false;
     return true;
   }
   struct Overlap {
