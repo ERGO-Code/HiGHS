@@ -7103,6 +7103,8 @@ void HPresolve::moveCutsToPool(HighsPostsolveStack& postsolve_stack) {
     assert(newRowIndex[Arow[i]] != -1);
     Arow[i] = newRowIndex[Arow[i]];
   }
+
+  mipsolver->mipdata_->implications.compactRows(newRowIndex);
 }
 
 HighsModelStatus HPresolve::run(HighsPostsolveStack& postsolve_stack) {

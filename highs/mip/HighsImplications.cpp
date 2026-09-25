@@ -511,6 +511,26 @@ void HighsImplications::addVLB(HighsInt col, HighsInt vlbcol, double vlbcoef,
   if (origin >= 0) rowToVarBounds[origin].insert(col, vlbcol);
 }
 
+void HighsImplications::compactRows(const std::vector<HighsInt>& newRowIndex) {
+  for (HighsInt r = 0; r < static_cast<HighsInt>(rowToVarBounds.size()); ++r)
+    rowToVarBounds[r].clear();
+
+  for (HighsInt col = 0; col < static_cast<HighsInt>(vlbs.size()); ++col) {
+    vlbs[col].for_each([&](HighsInt vlbCol, VarBound& vlb) {
+      if (vlb.origin >= 0) {
+        vlb.origin = newRowIndex[vlb.origin];
+        if (vlb.origin >= 0) rowToVarBounds[vlb.origin].insert(col, vlbCol);
+      }
+    });
+    vubs[col].for_each([&](HighsInt vubCol, VarBound& vub) {
+      if (vub.origin >= 0) {
+        vub.origin = newRowIndex[vub.origin];
+        if (vub.origin >= 0) rowToVarBounds[vub.origin].insert(col, vubCol);
+      }
+    });
+  }
+}
+
 void HighsImplications::rebuild(HighsInt ncols,
                                 const std::vector<HighsInt>& orig2reducedcol,
                                 const std::vector<HighsInt>& orig2reducedrow) {
