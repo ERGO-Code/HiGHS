@@ -9832,6 +9832,8 @@ void HPresolve::aggregateVarBounds() {
     if (lb > -kHighsInf) {
       implications.getVlbs(col).for_each(
           [&](HighsInt binaryCol, const HighsImplications::VarBound& vlb) {
+            // skip deleted cols
+            if (colDeleted[binaryCol]) return;
             // skip if the VLB is dominated by the global lower bound
             if (implications.redundantVlb(vlb, lb)) return;
             // tighten so that minValue() >= lb
@@ -9853,6 +9855,8 @@ void HPresolve::aggregateVarBounds() {
     if (ub < kHighsInf) {
       implications.getVubs(col).for_each(
           [&](HighsInt binaryCol, const HighsImplications::VarBound& vub) {
+            // skip deleted cols
+            if (colDeleted[binaryCol]) return;
             // skip if the VUB is dominated by the global upper bound
             if (implications.redundantVub(vub, ub)) return;
             // tighten so that maxValue() <= ub
