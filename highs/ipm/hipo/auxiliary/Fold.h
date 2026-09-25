@@ -1,5 +1,5 @@
-#ifndef HIPO_FOLDING_H
-#define HIPO_FOLDING_H
+#ifndef HIGHS_FOLDING_H
+#define HIGHS_FOLDING_H
 
 #include <functional>
 #include <stack>
@@ -7,35 +7,36 @@
 #include "CollectionLinkedLists.h"
 #include "lp_data/HighsLp.h"
 
-namespace hipo {
+namespace highs {
+
+namespace folding {
 
 class ColourRefinement {
-  const Int n_;
-  const bool bipartite_ = false;
+  const HighsInt n_;
 
   const HighsSparseMatrix& A_;
   HighsSparseMatrix At_;
 
-  std::vector<Int>& colour_;
+  std::vector<HighsInt>& colour_;
 
-  std::vector<Int> colour_degree_;
-  std::vector<Int> max_colour_degree_;
-  std::vector<Int> min_colour_degree_;
+  std::vector<HighsInt> colour_degree_;
+  std::vector<HighsInt> max_colour_degree_;
+  std::vector<HighsInt> min_colour_degree_;
 
-  std::vector<Int> colours_touched_;
+  std::vector<HighsInt> colours_touched_;
   std::vector<HighsBool> in_colours_touched_;
-  Int top_touched_{};
+  HighsInt top_touched_{};
 
-  std::vector<Int> colours_split_;
-  Int top_split_{};
+  std::vector<HighsInt> colours_split_;
+  HighsInt top_split_{};
 
   CollectionLinkedLists colour_classes_;
   CollectionLinkedLists colour_classes_touched_;
 
-  Int latest_colour_;
-  Int refining_colour_;
+  HighsInt latest_colour_;
+  HighsInt refining_colour_;
 
-  std::stack<Int> stack_refine_;
+  std::stack<HighsInt> stack_refine_;
   std::vector<HighsBool> in_stack_;
 
   double time_setup_{};
@@ -49,32 +50,31 @@ class ColourRefinement {
   void computeColourDegrees();
   void findSplitColours();
   void splitColours();
-  void splitColour(Int split_colour);
+  void splitColour(HighsInt split_colour);
   void prepareNextIter();
 
-  void forEachNeighbour(Int v, const std::function<void(int)>& f);
-  void forEachNeighbourNonBipartite(Int v, const std::function<void(int)>& f);
-  void forEachNeighbourBipartite(Int v, const std::function<void(int)>& f);
+  void forEachNeighbour(HighsInt v, const std::function<void(int)>& f);
 
  public:
-  ColourRefinement(const HighsSparseMatrix& A, std::vector<Int>& colour,
-                   bool bipartite);
+  ColourRefinement(const HighsSparseMatrix& A, std::vector<HighsInt>& colour);
   void run();
-  Int coloursUsed() const { return latest_colour_ + 1; }
+  HighsInt coloursUsed() const { return latest_colour_ + 1; }
 };
 
 void test_folding();
 void test_folding(const HighsLp& lp);
 
 class ColourRefinementVector {
-  const Int n_;
+  const HighsInt n_;
   CollectionLinkedLists colour_classes_;
 
  public:
-  ColourRefinementVector(Int n);
-  Int run(const std::vector<double>& w, std::vector<Int>& colour);
+  ColourRefinementVector(HighsInt n);
+  HighsInt run(const std::vector<double>& w, std::vector<HighsInt>& colour);
 };
 
-}  // namespace hipo
+}  // namespace folding
+
+}  // namespace highs
 
 #endif

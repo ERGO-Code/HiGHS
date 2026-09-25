@@ -1,50 +1,50 @@
-#ifndef HIPO_COLLECTION_LINKED_LISTS_H
-#define HIPO_COLLECTION_LINKED_LISTS_H
+#ifndef HIGHS_COLLECTION_LINKED_LISTS_H
+#define HIGHS_COLLECTION_LINKED_LISTS_H
 
 #include <vector>
 
-#include "ipm/hipo/auxiliary/IntConfig.h"
+#include "util/HighsType.h"
 
-namespace hipo {
+namespace highs {
+
+namespace folding {
 
 // Collection of linked lists.
 // See highs/ipm/basiclu/lu_list.h for an explanation.
 
 class CollectionLinkedLists {
-  std::vector<Int> forward_;
-  std::vector<Int> backward_;
-  std::vector<Int> length_;
+  std::vector<HighsInt> forward_;
+  std::vector<HighsInt> backward_;
+  std::vector<HighsInt> length_;
 
-  Int n_elem_{};
-  Int n_lists_{};
+  HighsInt n_elem_{};
+  HighsInt n_lists_{};
 
   void print() const;
 
  public:
   // initialise and clear
-  void init(Int n_elem, Int n_lists);
-  void clear(Int list);
+  void init(HighsInt n_elem, HighsInt n_lists);
+  void clear(HighsInt list);
   void clear();
 
   // modify the lists
-  void append(Int elem, Int list);
-  void remove(Int elem, Int list);
+  void append(HighsInt elem, HighsInt list);
+  void remove(HighsInt elem, HighsInt list);
 
   // read the lists
-  Int head(Int list) const { return forward_[n_elem_ + list]; }
-  Int next(Int elem) const { return forward_[elem]; }
-  Int tail(Int list) const { return backward_[n_elem_ + list]; }
-  Int prev(Int elem) const { return backward_[elem]; }
-  Int length(Int list) const { return length_[list]; }
-  bool cont(Int v) const { return v < n_elem_; }
-
-  void test();
+  HighsInt head(HighsInt list) const { return forward_[n_elem_ + list]; }
+  HighsInt next(HighsInt elem) const { return forward_[elem]; }
+  HighsInt tail(HighsInt list) const { return backward_[n_elem_ + list]; }
+  HighsInt prev(HighsInt elem) const { return backward_[elem]; }
+  HighsInt length(HighsInt list) const { return length_[list]; }
+  bool cont(HighsInt v) const { return v < n_elem_; }
 };
 
 /*
 To go through list i:
 
-Int v = head(i);
+HighsInt v = head(i);
 while (cont(v)){
   ...
   v = next(v);
@@ -52,13 +52,15 @@ while (cont(v)){
 
 or reverse
 
-Int v = tail(i);
+HighsInt v = tail(i);
 while (cont(v)){
   ...
   v = prev(v);
 }
 */
 
-}  // namespace hipo
+}  // namespace folding
+
+}  // namespace highs
 
 #endif
