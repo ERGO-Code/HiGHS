@@ -2,7 +2,7 @@
 
 There are several specialist data structures that can be used to
 interact with HiGHS when using [`C++`](@ref cpp-getting-started) and
-[`Python`](@ref python-getting-started), and they are defined in the
+[`Python`](../interfaces/python/getting-started.md), and they are defined in the
 sections on [enums](@ref structures-enums) and [classes](@ref
 classes-overview). The advantage using these classes is that many
 fewer parameters are needed when passing data to and from

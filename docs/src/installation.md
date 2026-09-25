@@ -16,7 +16,7 @@ bazel build //...
 ## Install via a package manager
 
 HiGHS can be installed using a package manager in the cases of
-[`Julia`](@ref HiGHS.jl), [`Python`](@ref python-getting-started), [`CSharp`](@ref nuget) and [`Rust`](@ref Rust).
+[`Julia`](@ref HiGHS.jl), [`Python`](interfaces/python/getting-started.md), [`CSharp`](@ref nuget) and [`Rust`](@ref Rust).
 
 Note, that HiGHS is available via apt on Linux. For simplex, ipx and the MIP and QP solvers, the execution should be as expected. We advise users not to use HiPO from the apt installation, the Metis version linked there is not thread safe. If you consider using HiPO, please use the binaries linked below, compilation from source or the python wrapper.
 

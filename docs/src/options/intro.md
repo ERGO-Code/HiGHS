@@ -42,5 +42,5 @@ To get the type of option `name`, call:
 [status, type] = h.getOptionType(name)
 ```
 
-Examples of calls to options methods are given in the [examples section](@ref example-py).
+Examples of calls to options methods are given in the [examples section](../interfaces/python/modeling.md).
 

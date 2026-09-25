@@ -1,7 +1,7 @@
 # [Introduction](@id guide-introduction)
 
 This guide describes the features of HiGHS that are available when it
-is called from [`Python`](@ref python-getting-started), [`C++`](@ref
+is called from [`Python`](../interfaces/python/getting-started.md), [`C++`](@ref
 cpp-getting-started), [`C`](@ref c-api), [`C#`](@ref csharp)  and [`Fortran`](@ref
 fortran-api). It is written in three sections: [basic](@ref
 guide-basic), [further](@ref guide-further) and [advanced](@ref

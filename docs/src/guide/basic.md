@@ -110,7 +110,7 @@ The option values that control HiGHS are of type `string`, `bool`,
 the name of their identifier. A full specification of the options is
 given in the [list of options](@ref option-definitions). An option
 value is changed by passing its name and value to the method
-[`setOptionValue`](@ref example-py-option-values).  The current value
+[`setOptionValue`](../interfaces/python/api.md#highspy.Highs.setOptionValue).  The current value
 of an option is obtained by passing its name to the method
-[`getOptionValue`](@ref example-py-option-values).
+[`getOptionValue`](../interfaces/python/api.md#highspy.Highs.getOptionValue).
 

@@ -1,0 +1,38 @@
+<a id="callbacks"></a>
+
+# Callbacks
+
+`highspy` exposes callback helpers for receiving solver events and, for MIP
+models, interacting with incumbent solutions, logging, interrupts, and cut
+pool events.
+
+The high-level wrapper stores callback event objects on the
+`highspy.Highs.callbacks` collection and provides convenience events
+such as `cbMipGetCutPool`.
+
+```python
+import highspy
+import numpy as np
+
+h = highspy.Highs()
+x = h.addBinaries(2, 3)
+h.addConstrs(x[:, j].sum() == 1 for j in range(3))
+
+def print_cuts(event):
+    for cut in event.cuts:
+        print(cut)
+
+h.cbMipGetCutPool += print_cuts
+h.minimize((np.ones((2, 3)) * x).sum())
+```
+
+<a id="callback-api"></a>
+
+## Callback API
+
+| [`highspy.HighsCallback`](api.md#highspy.HighsCallback)(callback_type, highs)         |          |
+|---------------------------------------------------------------------------------------|----------|
+| [`highspy.HighsCallbackEvent`](api.md#highspy.HighsCallbackEvent)(callback_type, ...) |          |
+| [`highspy._core.cb.HighsCallbackInput`](api.md#highspy._core.cb.HighsCallbackInput)   |          |
+| [`highspy._core.cb.HighsCallbackOutput`](api.md#highspy._core.cb.HighsCallbackOutput) |          |
+| [`highspy._core.cb.HighsCallbackType`](api.md#highspy._core.cb.HighsCallbackType)     | Members: |
