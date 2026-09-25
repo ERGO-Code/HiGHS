@@ -7104,7 +7104,7 @@ void HPresolve::moveCutsToPool(HighsPostsolveStack& postsolve_stack) {
     Arow[i] = newRowIndex[Arow[i]];
   }
 
-  mipsolver->mipdata_->implications.compactRows(newRowIndex);
+  mipsolver->mipdata_->implications.reindexRows(model->num_row_, newRowIndex);
 }
 
 HighsModelStatus HPresolve::run(HighsPostsolveStack& postsolve_stack) {

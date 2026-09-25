@@ -212,7 +212,7 @@ class HighsImplications {
 
   bool runProbing(HighsInt col, HighsInt& numReductions);
 
-  void compactRows(const std::vector<HighsInt>& newRowIndex);
+  void reindexRows(HighsInt nrows, const std::vector<HighsInt>& newRowIndex);
 
   void rebuild(HighsInt ncols, const std::vector<HighsInt>& cIndex,
                const std::vector<HighsInt>& rIndex);
