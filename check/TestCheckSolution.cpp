@@ -728,7 +728,7 @@ void runSetLpSolution(const std::string model) {
   highs.resetGlobalScheduler(true);
 }
 
-TEST_CASE("miplib-sol-file", "[highs_filereader]") {
+TEST_CASE("miplib-sol-file", "[highs_check_solution]") {
   const std::string test_name = Catch::getResultCapture().getCurrentTestName();
   std::string sol_file = test_name + ".sol";
   std::string lp_file = test_name + ".lp";
@@ -767,7 +767,7 @@ TEST_CASE("miplib-sol-file", "[highs_filereader]") {
   h.resetGlobalScheduler(true);
 }
 
-TEST_CASE("issue-3317", "[highs_filereader]") {
+TEST_CASE("issue-3317", "[highs_check_solution]") {
   const std::string test_name = Catch::getResultCapture().getCurrentTestName();
   std::string sol_file = test_name + ".sol";
   HighsLp lp;
@@ -783,7 +783,7 @@ TEST_CASE("issue-3317", "[highs_filereader]") {
   lp.a_matrix_.value_ = {1, 1};
   lp.integrality_ = {HighsVarType::kInteger, HighsVarType::kInteger};
   Highs h;
-  //  h.setOptionValue("output_flag", dev_run);
+  h.setOptionValue("output_flag", dev_run);
   REQUIRE(h.passModel(lp) == HighsStatus::kOk);
 
   FILE* file = fopen(sol_file.c_str(), "w");

@@ -2289,20 +2289,25 @@ HighsStatus readSolutionFile(const std::string& filename,
     if (!readSolutionFileIgnoreLineOk(in_file))
       return readSolutionFileErrorReturn(in_file);  // Objective
     // Next line should be "Columns", correct number and possibly a
-    // qualifier string
-    if (!readSolutionFileHashKeywordIntStringLineOk(
-            hash, keyword, value_string, num_col, qualifier_string, in_file)) {
+    // qualifier string, so can't be read (easily) as a std::ifstream
+    std::string column_header_line;
+    std::getline(in_file, column_header_line);
+    std::stringstream column_header_line_ss(column_header_line);
+    if (column_header_line.empty() ||
+        !readSolutionFileColumnHeaderLineOk(hash, keyword, value_string,
+                                            num_col, qualifier_string,
+                                            column_header_line_ss)) {
       highsLogUser(log_options, HighsLogType::kError,
-                   "readSolutionFile: Error reading line \"%s %s %s%s\"\n",
-                   hash.c_str(), keyword.c_str(), value_string.c_str(),
-                   qualifier_string.c_str());
+                   "readSolutionFile: Error reading line \"%s\"\n",
+                   column_header_line.c_str());
       return readSolutionFileErrorReturn(in_file);
     }
     assert(keyword == "Columns");
     // The default style parameter is kSolutionStyleRaw, and this
-    // still allows sparse or partial files to be read. Recognise the
-    // latter from num_col <= 0. Doesn't matter if num_col = 0, since
-    // there's nothing to read either way
+    // still allows sparse or partial files to be read. Recognise
+    // sparse or partial files from num_col <= 0, where sparse is the
+    // default (for back-compatibility). Doesn't matter if num_col =
+    // 0, since there's nothing to read either way
     sparse = num_col <= 0;
     partial = num_col <= 0 && qualifier_string == kHighsPartialString;
     if (partial) sparse = false;
@@ -2590,32 +2595,33 @@ bool readSolutionFileHashKeywordIntLineOk(std::string& hash,
   return true;
 }
 
-bool readSolutionFileHashKeywordIntStringLineOk(
+bool readSolutionFileColumnHeaderLineOk(
     std::string& hash, std::string& keyword, std::string& value_string,
-    HighsInt& value, std::string& qualifier_string, std::ifstream& in_file) {
+    HighsInt& value, std::string& qualifier_string,
+    std::stringstream& column_header_line_ss) {
   hash = "";
   keyword = "";
   value_string = "";
   qualifier_string = "";
   // Read the hash symbol
-  if (in_file.eof()) return false;
-  in_file >> hash;  // #
+  if (column_header_line_ss.eof()) return false;
+  column_header_line_ss >> hash;  // #
   if (hash != "#") return false;
 
   // Read the keyword
-  if (in_file.eof()) return false;
-  in_file >> keyword;  // keyword
+  if (column_header_line_ss.eof()) return false;
+  column_header_line_ss >> keyword;  // keyword
 
   // Read the value
-  if (in_file.eof()) return false;
+  if (column_header_line_ss.eof()) return false;
   // Read as a string, and then check it only contains digits
-  in_file >> value_string;
+  column_header_line_ss >> value_string;
   if (value_string[std::strspn(value_string.c_str(), "-0123456789")])
     return false;
   value = std::stoi(value_string);  // integer value
   // See whether there is a qualifier string
-  if (!in_file.eof()) {
-    in_file >> qualifier_string;
+  if (!column_header_line_ss.eof()) {
+    column_header_line_ss >> qualifier_string;
     tolower(qualifier_string);
     if (qualifier_string != kHighsSparseString &&
         qualifier_string != kHighsPartialString)
