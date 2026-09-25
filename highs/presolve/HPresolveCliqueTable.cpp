@@ -17,7 +17,13 @@ using Clique = HighsCliqueTable::Clique;
 
 HPresolveCliqueTable::HPresolveCliqueTable(HighsCliqueTable& table,
                                            const HighsInt numCol)
-    : table(table), colStates(numCol, ColState::kActive) {}
+    : table(&table), colStates(numCol, ColState::kActive) {}
+
+void HPresolveCliqueTable::rebuild(HighsCliqueTable& table,
+                                   const HighsInt numCol) {
+  this->table = &table;
+  colStates.assign(numCol, ColState::kActive);
+}
 
 void HPresolveCliqueTable::checkCompactClique(const HighsInt cliqueId,
                                               const HighsInt threshold,
@@ -25,19 +31,19 @@ void HPresolveCliqueTable::checkCompactClique(const HighsInt cliqueId,
                                               const HighsInt actualSize,
                                               const bool equality,
                                               const HighsInt origin) {
-  const Clique& clique = table.cliques[cliqueId];
+  const Clique& clique = table->cliques[cliqueId];
   if (activeSize == 2 ||
       clique.numZeroFixed >= std::max(threshold, actualSize >> 1)) {
     shortenedClique.clear();
     shortenedClique.reserve(activeSize);
     for (HighsInt i = clique.start; i != clique.end; ++i) {
-      if (!table.colDeleted[table.cliqueentries[i].col])
-        shortenedClique.push_back(table.cliqueentries[i]);
+      if (!table->colDeleted[table->cliqueentries[i].col])
+        shortenedClique.push_back(table->cliqueentries[i]);
     }
-    table.removeClique(cliqueId, false);
-    table.doAddClique(shortenedClique.data(),
-                      static_cast<HighsInt>(shortenedClique.size()), equality,
-                      origin);
+    table->removeClique(cliqueId, false);
+    table->doAddClique(shortenedClique.data(),
+                       static_cast<HighsInt>(shortenedClique.size()), equality,
+                       origin);
   }
 }
 
@@ -47,16 +53,15 @@ bool HPresolveCliqueTable::fixCol(HighsInt col, bool val,
   if (state != ColState::kActive) {
     // Don't queue fixes for already eliminated or fixed cols
     if (state == ColState::kEliminated) return true;
-    return state ==
-           (val ? ColState::kFixedOne : ColState::kFixedZero);
+    return state == (val ? ColState::kFixedOne : ColState::kFixedZero);
   }
 
-  if (table.invertedHashList[2 * col].empty() &&
-      table.invertedHashList[2 * col + 1].empty() &&
-      table.invertedHashListSizeTwo[2 * col].empty() &&
-      table.invertedHashListSizeTwo[2 * col + 1].empty()) {
+  if (table->invertedHashList[2 * col].empty() &&
+      table->invertedHashList[2 * col + 1].empty() &&
+      table->invertedHashListSizeTwo[2 * col].empty() &&
+      table->invertedHashListSizeTwo[2 * col + 1].empty()) {
     colStates[col] = val ? ColState::kFixedOne : ColState::kFixedZero;
-    table.colDeleted[col] = true;
+    table->colDeleted[col] = true;
     return true;
   }
 
@@ -66,11 +71,11 @@ bool HPresolveCliqueTable::fixCol(HighsInt col, bool val,
 
   auto collectIncidentCliques = [&](const CliqueVar v) {
     incidentCliques.clear();
-    table.invertedHashList[v.index()].for_each(
+    table->invertedHashList[v.index()].for_each(
         [&](const HighsInt cliqueId, HighsInt) {
           incidentCliques.push_back(cliqueId);
         });
-    table.invertedHashListSizeTwo[v.index()].for_each(
+    table->invertedHashListSizeTwo[v.index()].for_each(
         [&](const HighsInt cliqueId) { incidentCliques.push_back(cliqueId); });
   };
 
@@ -86,16 +91,16 @@ bool HPresolveCliqueTable::fixCol(HighsInt col, bool val,
       return false;
     }
     colStates[v.col] = v.val ? ColState::kFixedOne : ColState::kFixedZero;
-    table.colDeleted[v.col] = true;
+    table->colDeleted[v.col] = true;
     if (!(v.col == col && v.val == val)) impliedFixings.emplace_back(v);
 
     // Fix all other literals in incident cliques to be inactive
     collectIncidentCliques(v);
     for (const HighsInt cliqueId : incidentCliques) {
-      if (table.cliques[cliqueId].start == -1) continue;
-      for (HighsInt i = table.cliques[cliqueId].start;
-           i != table.cliques[cliqueId].end; ++i) {
-        CliqueVar v2 = table.cliqueentries[i];
+      if (table->cliques[cliqueId].start == -1) continue;
+      for (HighsInt i = table->cliques[cliqueId].start;
+           i != table->cliques[cliqueId].end; ++i) {
+        CliqueVar v2 = table->cliqueentries[i];
         if (v.col == v2.col) continue;
         const ColState otherState = colStates[v2.col];
         if ((v2.val == 1 && otherState == ColState::kFixedOne) ||
@@ -106,15 +111,15 @@ bool HPresolveCliqueTable::fixCol(HighsInt col, bool val,
           fixingQueue.emplace_back(static_cast<HighsUInt>(v2.col), 1 - v2.val);
         }
       }
-      table.removeClique(cliqueId);
+      table->removeClique(cliqueId);
     }
 
     // Remove complement-literal from cliques
     collectIncidentCliques(v.complement());
-    table.invertedHashList[v.complement().index()].clear();
-    table.invertedHashListSizeTwo[v.complement().index()].clear();
+    table->invertedHashList[v.complement().index()].clear();
+    table->invertedHashListSizeTwo[v.complement().index()].clear();
     for (const HighsInt cliqueId : incidentCliques) {
-      Clique& clique = table.cliques[cliqueId];
+      Clique& clique = table->cliques[cliqueId];
       if (clique.start == -1) continue;
       const bool equality = clique.equality;
       const HighsInt origin = clique.origin;
@@ -125,17 +130,17 @@ bool HPresolveCliqueTable::fixCol(HighsInt col, bool val,
         if (equality) {
           if (activeSize == 0) return false;
           for (HighsInt i = clique.start; i != clique.end; ++i) {
-            if (!table.colDeleted[table.cliqueentries[i].col]) {
-              fixingQueue.push_back(table.cliqueentries[i]);
+            if (!table->colDeleted[table->cliqueentries[i].col]) {
+              fixingQueue.push_back(table->cliqueentries[i]);
               break;
             }
           }
         }
-        table.removeClique(cliqueId);
+        table->removeClique(cliqueId);
         continue;
       }
 
-      if (!table.inPresolveProbing)
+      if (!table->inPresolveProbing)
         checkCompactClique(cliqueId, 10, activeSize, actualSize, equality,
                            origin);
     }
@@ -146,31 +151,31 @@ bool HPresolveCliqueTable::fixCol(HighsInt col, bool val,
 void HPresolveCliqueTable::eliminateCol(const HighsInt col) {
   if (colStates[col] == ColState::kEliminated) return;
   colStates[col] = ColState::kEliminated;
-  if (table.colDeleted[col]) return;
-  table.colDeleted[col] = true;
+  if (table->colDeleted[col]) return;
+  table->colDeleted[col] = true;
 
   incidentCliques.clear();
-  table.invertedHashList[2 * col].for_each(
+  table->invertedHashList[2 * col].for_each(
       [&](const HighsInt cliqueId, HighsInt) {
         incidentCliques.push_back(cliqueId);
       });
-  table.invertedHashList[2 * col].clear();
-  table.invertedHashListSizeTwo[2 * col].for_each(
+  table->invertedHashList[2 * col].clear();
+  table->invertedHashListSizeTwo[2 * col].for_each(
       [&](const HighsInt cliqueId) { incidentCliques.push_back(cliqueId); });
-  table.invertedHashListSizeTwo[2 * col].clear();
-  table.invertedHashList[2 * col + 1].for_each(
+  table->invertedHashListSizeTwo[2 * col].clear();
+  table->invertedHashList[2 * col + 1].for_each(
       [&](const HighsInt cliqueId, HighsInt) {
         incidentCliques.push_back(cliqueId);
       });
-  table.invertedHashList[2 * col + 1].clear();
-  table.invertedHashListSizeTwo[2 * col + 1].for_each(
+  table->invertedHashList[2 * col + 1].clear();
+  table->invertedHashListSizeTwo[2 * col + 1].for_each(
       [&](const HighsInt cliqueId) { incidentCliques.push_back(cliqueId); });
-  table.invertedHashListSizeTwo[2 * col + 1].clear();
+  table->invertedHashListSizeTwo[2 * col + 1].clear();
 
   pdqsort(incidentCliques.begin(), incidentCliques.end());
 
   for (const HighsInt cliqueId : incidentCliques) {
-    Clique& clique = table.cliques[cliqueId];
+    Clique& clique = table->cliques[cliqueId];
     if (clique.start == -1) continue;
     ++clique.numZeroFixed;
     clique.origin = -1;
@@ -178,10 +183,10 @@ void HPresolveCliqueTable::eliminateCol(const HighsInt col) {
     const HighsInt actualSize = clique.end - clique.start;
     const HighsInt activeSize = clique.numActive();
     if (activeSize <= 1) {
-      table.removeClique(cliqueId, false);
+      table->removeClique(cliqueId, false);
       continue;
     }
-    if (!table.inPresolveProbing)
+    if (!table->inPresolveProbing)
       checkCompactClique(cliqueId, 10, activeSize, actualSize, false, -1);
   }
 }
@@ -201,24 +206,24 @@ bool HPresolveCliqueTable::substituteCol(
   };
   std::vector<Overlap> overlaps;
   auto collectOverlaps = [&](const CliqueVar v) {
-    table.invertedHashList[v.index()].for_each(
+    table->invertedHashList[v.index()].for_each(
         [&](const HighsInt cliqueId, const HighsInt substPos) {
           const HighsInt* replacePos =
-              table.invertedHashList[replacement.index()].find(cliqueId);
+              table->invertedHashList[replacement.index()].find(cliqueId);
           if (replacePos == nullptr)
             replacePos =
-                table.invertedHashList[replacement.complement().index()].find(
+                table->invertedHashList[replacement.complement().index()].find(
                     cliqueId);
           if (replacePos != nullptr)
             overlaps.push_back({cliqueId, substPos, *replacePos});
         });
-    table.invertedHashListSizeTwo[v.index()].for_each(
+    table->invertedHashListSizeTwo[v.index()].for_each(
         [&](const HighsInt cliqueId) {
-          HighsInt substPos = table.cliques[cliqueId].start;
+          HighsInt substPos = table->cliques[cliqueId].start;
           HighsInt replacePos = substPos + 1;
-          if (table.cliqueentries[replacePos] == v)
+          if (table->cliqueentries[replacePos] == v)
             std::swap(substPos, replacePos);
-          if (table.cliqueentries[replacePos].col == replacement.col)
+          if (table->cliqueentries[replacePos].col == replacement.col)
             overlaps.push_back({cliqueId, substPos, replacePos});
         });
   };
@@ -233,28 +238,28 @@ bool HPresolveCliqueTable::substituteCol(
 
   for (const Overlap& overlap : overlaps) {
     const HighsInt cliqueId = overlap.cliqueId;
-    if (table.cliques[cliqueId].start == -1) continue;
+    if (table->cliques[cliqueId].start == -1) continue;
     const HighsInt substPos = overlap.substPos;
     const HighsInt replacePos = overlap.replacePos;
-    table.cliques[cliqueId].origin = -1;
-    const bool equality = table.cliques[cliqueId].equality;
+    table->cliques[cliqueId].origin = -1;
+    const bool equality = table->cliques[cliqueId].equality;
 
-    const CliqueVar substVar = table.cliqueentries[substPos].val
+    const CliqueVar substVar = table->cliqueentries[substPos].val
                                    ? replacement
                                    : replacement.complement();
-    const CliqueVar replacementVar = table.cliqueentries[replacePos];
+    const CliqueVar replacementVar = table->cliqueentries[replacePos];
 
     // If both replacement and its complement will exist in new clique
     // then clique is automatically fulfilled. Set all other literals to 0
     if (substVar.val != replacementVar.val) {
-      for (HighsInt i = table.cliques[cliqueId].start;
-           i != table.cliques[cliqueId].end; ++i) {
+      for (HighsInt i = table->cliques[cliqueId].start;
+           i != table->cliques[cliqueId].end; ++i) {
         if (i != substPos && i != replacePos &&
-            !table.colDeleted[table.cliqueentries[i].col]) {
-          potentialFixings.push_back(table.cliqueentries[i].complement());
+            !table->colDeleted[table->cliqueentries[i].col]) {
+          potentialFixings.push_back(table->cliqueentries[i].complement());
         }
       }
-      table.removeClique(cliqueId, false);
+      table->removeClique(cliqueId, false);
       continue;
     }
 
@@ -262,21 +267,21 @@ bool HPresolveCliqueTable::substituteCol(
     // has to take value 0
     potentialFixings.push_back(substVar.complement());
     shortenedClique.clear();
-    shortenedClique.reserve(table.cliques[cliqueId].end -
-                            table.cliques[cliqueId].start);
-    for (HighsInt i = table.cliques[cliqueId].start;
-         i != table.cliques[cliqueId].end; ++i) {
+    shortenedClique.reserve(table->cliques[cliqueId].end -
+                            table->cliques[cliqueId].start);
+    for (HighsInt i = table->cliques[cliqueId].start;
+         i != table->cliques[cliqueId].end; ++i) {
       if (i != substPos && i != replacePos &&
-          !table.colDeleted[table.cliqueentries[i].col]) {
-        shortenedClique.push_back(table.cliqueentries[i]);
+          !table->colDeleted[table->cliqueentries[i].col]) {
+        shortenedClique.push_back(table->cliqueentries[i]);
       }
     }
-    table.removeClique(cliqueId, false);
+    table->removeClique(cliqueId, false);
 
     if (shortenedClique.size() >= 2) {
-      table.doAddClique(shortenedClique.data(),
-                        static_cast<HighsInt>(shortenedClique.size()), equality,
-                        -1);
+      table->doAddClique(shortenedClique.data(),
+                         static_cast<HighsInt>(shortenedClique.size()),
+                         equality, -1);
     } else if (equality) {
       if (shortenedClique.empty()) return false;
       potentialFixings.push_back(shortenedClique[0]);
@@ -284,10 +289,10 @@ bool HPresolveCliqueTable::substituteCol(
   }
 
   // Now substitute all entries
-  table.replaceLiteral(CliqueVar(substCol, 1), replacement);
-  table.replaceLiteral(CliqueVar(substCol, 0), replacement.complement());
+  table->replaceLiteral(CliqueVar(substCol, 1), replacement);
+  table->replaceLiteral(CliqueVar(substCol, 0), replacement.complement());
   colStates[substCol] = ColState::kEliminated;
-  table.colDeleted[substCol] = true;
+  table->colDeleted[substCol] = true;
 
   for (CliqueVar v : potentialFixings) {
     const ColState state = colStates[v.col];

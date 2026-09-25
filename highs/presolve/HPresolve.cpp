@@ -113,9 +113,9 @@ void HPresolve::setInput(HighsLp& model_, const HighsOptions& options_,
 void HPresolve::setInput(HighsMipSolver& mipsolver,
                          const HighsInt presolve_reduction_limit) {
   this->mipsolver = &mipsolver;
-  presolveCliqueTable = new HPresolveCliqueTable(
-      mipsolver.mipdata_->cliquetable,
-      mipsolver.mipdata_->presolvedModel.num_col_);
+  presolveCliqueTable =
+      new HPresolveCliqueTable(mipsolver.mipdata_->cliquetable,
+                               mipsolver.mipdata_->presolvedModel.num_col_);
 
   probingContingent = 1000;
   probingNumDelCol = 0;
@@ -1228,6 +1228,8 @@ void HPresolve::shrinkProblem(HighsPostsolveStack& postsolve_stack) {
     mipsolver->mipdata_->cliquetable.rebuild(model->num_col_, postsolve_stack,
                                              mipsolver->mipdata_->getDomain(),
                                              newColIndex, newRowIndex);
+    presolveCliqueTable->rebuild(mipsolver->mipdata_->cliquetable,
+                                 model->num_col_);
     mipsolver->mipdata_->implications.rebuild(model->num_col_, newColIndex,
                                               newRowIndex);
     mipsolver->mipdata_->getCutPool() =
