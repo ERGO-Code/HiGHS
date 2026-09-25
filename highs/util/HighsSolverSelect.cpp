@@ -45,7 +45,7 @@ double relativeNumberOfDuplicates(std::vector<double>& values) {
 // join the same cluster when they agree to the relative tolerance `tol`.
 // `abs_values` is sorted in place.
 double relativeNumberOfAlmostIdentical(std::vector<double>& abs_values,
-                                      const double tol) {
+                                       const double tol) {
   const size_t n = abs_values.size();
   if (n < 2) return 0.0;
   std::sort(abs_values.begin(), abs_values.end());
@@ -78,7 +78,7 @@ double maxOverMin(const double max_abs, const double min_abs) {
 }  // namespace
 
 HighsLpFeatures computeLpFeatures(const HighsLp& lp,
-                                 const HighsLpFeatureParams& params) {
+                                  const HighsLpFeatureParams& params) {
   HighsLpFeatures f;
   const HighsInt num_col = lp.num_col_;
   const HighsInt num_row = lp.num_row_;
@@ -151,9 +151,9 @@ HighsLpFeatures computeLpFeatures(const HighsLp& lp,
 
   double max_abs_rhs = 0.0;
   double min_abs_rhs = kHighsInf;
-  std::vector<double> rhs_values;        // one representative per row
+  std::vector<double> rhs_values;  // one representative per row
   rhs_values.reserve(num_row);
-  std::vector<double> all_finite_rhs;    // every finite bound, for the range
+  std::vector<double> all_finite_rhs;  // every finite bound, for the range
   all_finite_rhs.reserve(num_row);
 
   for (HighsInt iRow = 0; iRow < num_row; iRow++) {
@@ -242,9 +242,9 @@ HighsLpFeatures computeLpFeatures(const HighsLp& lp,
   // "Dense" rows: longer than `dense_row_factor` times the mean row length and
   // at least `dense_row_min_count` nonzeros.
   const double mean_row_count = safeRatio(d_num_nz, d_num_row);
-  const double dense_row_threshold = std::max(
-      params.dense_row_factor * mean_row_count,
-      static_cast<double>(params.dense_row_min_count));
+  const double dense_row_threshold =
+      std::max(params.dense_row_factor * mean_row_count,
+               static_cast<double>(params.dense_row_min_count));
   HighsInt num_dense_rows = 0;
   for (HighsInt iRow = 0; iRow < num_row; iRow++)
     if (static_cast<double>(row_count[iRow]) > dense_row_threshold)
@@ -258,8 +258,10 @@ HighsLpFeatures computeLpFeatures(const HighsLp& lp,
   f.relative_num_inequalities = safeRatio(num_inequalities, d_num_row);
   f.relative_num_ranged_rows = safeRatio(num_ranged_rows, d_num_row);
   f.relative_num_free_rows = safeRatio(num_free_rows, d_num_row);
-  f.relative_num_cols_without_upper = safeRatio(num_cols_without_upper, d_num_col);
-  f.relative_num_cols_without_lower = safeRatio(num_cols_without_lower, d_num_col);
+  f.relative_num_cols_without_upper =
+      safeRatio(num_cols_without_upper, d_num_col);
+  f.relative_num_cols_without_lower =
+      safeRatio(num_cols_without_lower, d_num_col);
   f.relative_num_free_cols = safeRatio(num_free_cols, d_num_col);
   f.relative_num_boxed_cols = safeRatio(num_boxed_cols, d_num_col);
   f.relative_num_singly_bounded_cols =
@@ -267,8 +269,8 @@ HighsLpFeatures computeLpFeatures(const HighsLp& lp,
   f.relative_num_fixed_cols = safeRatio(num_fixed_cols, d_num_col);
 
   // How degenerate is the problem?
-  f.relative_num_almost_identical_nonzeros =
-      relativeNumberOfAlmostIdentical(abs_matrix_values, params.almost_identical_tol);
+  f.relative_num_almost_identical_nonzeros = relativeNumberOfAlmostIdentical(
+      abs_matrix_values, params.almost_identical_tol);
   f.relative_num_identical_obj_values = relativeNumberOfDuplicates(obj_values);
   f.relative_num_identical_rhs_values = relativeNumberOfDuplicates(rhs_values);
 
@@ -279,7 +281,8 @@ HighsLpFeatures computeLpFeatures(const HighsLp& lp,
   f.min_abs_obj_coefficient = min_abs_obj;
   f.max_abs_rhs_value = max_abs_rhs;
   f.min_abs_rhs_value = min_abs_rhs;
-  f.relative_max_matrix_coefficient = maxOverMin(max_abs_matrix, min_abs_matrix);
+  f.relative_max_matrix_coefficient =
+      maxOverMin(max_abs_matrix, min_abs_matrix);
   f.relative_max_obj_coefficient = maxOverMin(max_abs_obj, min_abs_obj);
   f.relative_max_rhs_value = maxOverMin(max_abs_rhs, min_abs_rhs);
 
@@ -315,8 +318,10 @@ std::vector<std::pair<std::string, double>> highsLpFeatureVector(
 
       {"relative_num_almost_identical_nonzeros",
        f.relative_num_almost_identical_nonzeros},
-      {"relative_num_identical_obj_values", f.relative_num_identical_obj_values},
-      {"relative_num_identical_rhs_values", f.relative_num_identical_rhs_values},
+      {"relative_num_identical_obj_values",
+       f.relative_num_identical_obj_values},
+      {"relative_num_identical_rhs_values",
+       f.relative_num_identical_rhs_values},
 
       {"relative_max_matrix_coefficient", f.relative_max_matrix_coefficient},
       {"relative_max_obj_coefficient", f.relative_max_obj_coefficient},
@@ -353,11 +358,11 @@ HighsSolverSelect selectSolverByFeatures(const HighsLpFeatures& f) {
 
   const bool large = f.num_nz > 500000;
   const bool very_large = f.num_nz > 5000000;
-  const bool dense =
-      f.matrix_nonzero_density > 1e-2 || f.avg_nonzeros_per_row > 25.0 ||
-      f.relative_num_dense_rows > 1e-2;
-  const bool ill_conditioned = f.relative_max_matrix_coefficient > 1e8 ||
-                               f.relative_max_rhs_value > 1e8;
+  const bool dense = f.matrix_nonzero_density > 1e-2 ||
+                     f.avg_nonzeros_per_row > 25.0 ||
+                     f.relative_num_dense_rows > 1e-2;
+  const bool ill_conditioned =
+      f.relative_max_matrix_coefficient > 1e8 || f.relative_max_rhs_value > 1e8;
 
   // Simplex is the safe default for small, sparse, well-scaled models: it
   // thrives on sparsity and warm-starts cheaply.

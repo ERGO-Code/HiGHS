@@ -1,42 +1,31 @@
-# Solver selection by structural features
+# Solver selection by LP features
 
 Pick an LP algorithm — dual simplex, IPX or HiPO — from cheap structural
 features of the presolved model, and extract those features in bulk so a
-selection model can be fitted offline.
-
-Files: [`HighsSolverSelect.h`](HighsSolverSelect.h) ·
-[`HighsSolverSelect.cpp`](HighsSolverSelect.cpp)
+selection model can be fitted.
 
 ## Idea
 
-From Zonghao Gu's Gurobi 11.0 talk *"New Performance Techniques"* (2023),
-slide 6. Gurobi computed ~90 features of the presolved model over ~2200 hard
-instances and fitted a decision tree to choose between a simplex-style vertex
-solution and a barrier-style interior solution.
+Features of the presolved model, fitted a decision tree to choose between simplex and IPM. Features are scale free: nrows, ncols, nonzeros, or a max/min ratio, so they
+compare across instances of any size. Four questions:
 
-Features are **scale free** — a count over `#rows`/`#cols`/`#nonzeros`, or a
-`max/min` magnitude ratio — so they compare across instances of any size. They
-answer four questions:
 
-| Question | Why it matters |
-|----------|----------------|
-| How **constrained**? | Barrier wants a non-empty interior |
-| How **degenerate**?  | Simplex can stall on ties / alternative optima |
-| How **stable**?      | Wide value ranges hurt simplex and barrier differently |
-| How **dense**?       | Simplex thrives on sparsity |
+| Question | Reason |
+|----------|--------|
+| How constrained? | Barrier needs a non-empty interior |
+| How degenerate?  | Simplex can stall |
+| How stable?      | Wide value ranges hurt simplex and barrier differently |
+| How dense?       | Simplex thrives on sparsity |
 
 ## Workflow
 
-1. **Extract** — for each presolved instance, write `highsLpFeatureVector` as a
-   CSV row (header from `highsLpFeatureNames`); add a label for which solver was
+1. Extract — for each presolved instance, write `highsLpFeatureVector` as a
+   CSV row; add a label for which solver was
    fastest.
-2. **Fit** — run PCA / train a classifier on that matrix offline.
-3. **Deploy** — replace the body of `selectSolverByFeatures(const
+2. Fit — run PCA / train a classifier on that matrix.
+3. ToDo — replace the body of `selectSolverByFeatures(const
    HighsLpFeatures&)` with the fitted classifier. Until then it uses a
    [placeholder heuristic](#placeholder-heuristic).
-
-The feature definitions here are the contract between steps 1 and 3 — keep them
-in sync.
 
 ## API
 
@@ -50,7 +39,7 @@ auto head = highsLpFeatureNames();                 // vector<string> — the CSV
 HighsSolverSelect s = selectSolverByFeatures(lp);  // -> kDualSimplex | kIpx | kHipo
 ```
 
-`lp` is expected to be the **presolved** LP. All helpers are safe on empty /
+`lp` is expected to be the **presolved** LP. Helpers are safe on empty /
 degenerate input (features fall back to 0). `selectSolver(lp)` is the original
 entry point (still a stub returning `kDualSimplex`); point it at
 `selectSolverByFeatures` once the classifier lands.
@@ -66,10 +55,10 @@ entry point (still a stub returning `kDualSimplex`); point it at
 ## Features
 
 `m` = #rows, `n` = #cols, `nnz` = #matrix nonzeros. A bound is *finite* when
-strictly inside `(-kHighsInf, kHighsInf)`. Every ratio is guarded (0 if the
+strictly inside `(-kHighsInf, kHighsInf)`. Ratios are guarded (0 if the
 denominator is 0). Magnitude minima are taken over strictly nonzero values.
 
-The **Rank** column is the slide-6 predictive-power order (1 = strongest).
+The **Rank** column is the predictive-power order (1 = strongest).
 
 ### Size
 
