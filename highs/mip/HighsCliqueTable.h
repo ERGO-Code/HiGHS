@@ -26,7 +26,11 @@ namespace presolve {
 class HighsPostsolveStack;
 }
 
+class HPresolveCliqueTable;
+
 class HighsCliqueTable {
+  friend class HPresolveCliqueTable;
+
  public:
   struct CliqueVar {
 #ifdef HIGHSINT64
@@ -95,7 +99,7 @@ class HighsCliqueTable {
   HighsInt numEntries;
   HighsInt maxEntries;
   HighsInt minEntriesForParallelism;
-  bool inPresolve;
+  bool inPresolveProbing;
   bool allowParallel;
 
   void unlink(HighsInt pos, HighsInt cliqueid);
@@ -160,6 +164,10 @@ class HighsCliqueTable {
                           int64_t& numNeighbourhoodqueries, CliqueVar v,
                           CliqueVar* q, HighsInt N) const;
 
+  void recordSubstitution(Substitution substitution);
+
+  void replaceLiteral(CliqueVar substitutedVar, CliqueVar replacementVar);
+
  public:
   int64_t numNeighbourhoodQueries;
 
@@ -170,7 +178,7 @@ class HighsCliqueTable {
     numEntries = 0;
     maxEntries = kHighsIInf;
     minEntriesForParallelism = kHighsIInf;
-    inPresolve = false;
+    inPresolveProbing = false;
     allowParallel = true;
   }
 
@@ -182,9 +190,9 @@ class HighsCliqueTable {
     colDeleted.resize(ncols, false);
   }
 
-  void setPresolveFlag(bool inPresolve) { this->inPresolve = inPresolve; }
-
-  bool getPresolveFlag() const { return inPresolve; }
+  void setinPresolveProbingFlag(const bool inPresolveProbing) {
+    this->inPresolveProbing = inPresolveProbing;
+  }
 
   HighsInt getNumEntries() const { return numEntries; }
 
@@ -212,7 +220,7 @@ class HighsCliqueTable {
                  HighsInt numcliquevars, bool equality = false,
                  HighsInt origin = kHighsIInf);
 
-  void removeClique(HighsInt cliqueid);
+  void removeClique(HighsInt cliqueid, bool recordDeletedRow = true);
 
   void fixLastActiveAndRemove(HighsDomain& globaldom, HighsInt cliqueid);
 
