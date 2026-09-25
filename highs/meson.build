@@ -300,6 +300,8 @@ _srcs = [
     'pdlp/hipdlp/scaling.cc',
     'presolve/HPresolve.cpp',
     'presolve/HPresolveAnalysis.cpp',
+    'presolve/HPresolveInitialSweep.cpp',
+    'presolve/HPresolveUtils.cpp',
     'presolve/HPresolveTest.cpp',
     'presolve/HighsPostsolveStack.cpp',
     'presolve/HighsSymmetry.cpp',
