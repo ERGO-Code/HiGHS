@@ -135,7 +135,7 @@ bool HPresolveCliqueTable::fixCol(HighsInt col, bool val,
 
 void HPresolveCliqueTable::eliminateCol(const HighsInt col) {
   if (colStates[col].isEliminated()) return;
-  colStates[col] = {ColState::kEliminated};
+  colStates[col] = ColState{ColState::kEliminated};
   if (table->colDeleted[col]) return;
   table->colDeleted[col] = true;
 
@@ -276,7 +276,7 @@ bool HPresolveCliqueTable::substituteCol(
   // Now substitute all entries
   table->replaceLiteral(CliqueVar(substCol, 1), replacement);
   table->replaceLiteral(CliqueVar(substCol, 0), replacement.complement());
-  colStates[substCol] = {ColState::kEliminated};
+  colStates[substCol] = ColState{ColState::kEliminated};
   table->colDeleted[substCol] = true;
 
   for (CliqueVar v : potentialFixings) {
