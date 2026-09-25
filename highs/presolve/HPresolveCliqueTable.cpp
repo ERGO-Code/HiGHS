@@ -17,7 +17,7 @@ using Clique = HighsCliqueTable::Clique;
 
 void HPresolveCliqueTable::rebuild(HighsCliqueTable& table) {
   setCliqueTable(&table);
-  colStates.assign(table.colDeleted.size(), ColState::kActive);
+  colStates.assign(table.colDeleted.size(), ColState{});
 }
 
 void HPresolveCliqueTable::checkCompactClique(const HighsInt cliqueId,
@@ -45,17 +45,16 @@ void HPresolveCliqueTable::checkCompactClique(const HighsInt cliqueId,
 bool HPresolveCliqueTable::fixCol(HighsInt col, bool val,
                                   std::vector<CliqueVar>& impliedFixings) {
   const ColState state = colStates[col];
-  if (state != ColState::kActive) {
-    // Don't queue fixes for already eliminated or fixed cols
-    if (state == ColState::kEliminated) return true;
-    return state == (val ? ColState::kFixedOne : ColState::kFixedZero);
+  if (!state.isActive()) {
+    if (state.isEliminated()) return true;
+    return state.isFixedTo(val);
   }
 
   if (table->invertedHashList[2 * col].empty() &&
       table->invertedHashList[2 * col + 1].empty() &&
       table->invertedHashListSizeTwo[2 * col].empty() &&
       table->invertedHashListSizeTwo[2 * col + 1].empty()) {
-    colStates[col] = val ? ColState::kFixedOne : ColState::kFixedZero;
+    colStates[col] = ColState::fixed(val);
     table->colDeleted[col] = true;
     return true;
   }
@@ -77,15 +76,9 @@ bool HPresolveCliqueTable::fixCol(HighsInt col, bool val,
   while (nextFixing != fixingQueue.size()) {
     CliqueVar v = fixingQueue[nextFixing++];
     const ColState state = colStates[v.col];
-    if (state == ColState::kEliminated) continue;
-    if ((v.val == 1 && state == ColState::kFixedOne) ||
-        (v.val == 0 && state == ColState::kFixedZero)) {
-      continue;
-    }
-    if (state == ColState::kFixedOne || state == ColState::kFixedZero) {
-      return false;
-    }
-    colStates[v.col] = v.val ? ColState::kFixedOne : ColState::kFixedZero;
+    if (state.isEliminated() || state.isFixedTo(v.val)) continue;
+    if (state.isFixed()) return false;
+    colStates[v.col] = ColState::fixed(v.val);
     table->colDeleted[v.col] = true;
     if (!(v.col == col && v.val == val)) impliedFixings.emplace_back(v);
 
@@ -98,11 +91,8 @@ bool HPresolveCliqueTable::fixCol(HighsInt col, bool val,
         CliqueVar v2 = table->cliqueentries[i];
         if (v.col == v2.col) continue;
         const ColState otherState = colStates[v2.col];
-        if ((v2.val == 1 && otherState == ColState::kFixedOne) ||
-            (v2.val == 0 && otherState == ColState::kFixedZero)) {
-          return false;
-        }
-        if (otherState == ColState::kActive) {
+        if (otherState.isFixedTo(v2.val)) return false;
+        if (otherState.isActive()) {
           fixingQueue.emplace_back(static_cast<HighsUInt>(v2.col), 1 - v2.val);
         }
       }
@@ -144,8 +134,8 @@ bool HPresolveCliqueTable::fixCol(HighsInt col, bool val,
 }
 
 void HPresolveCliqueTable::eliminateCol(const HighsInt col) {
-  if (colStates[col] == ColState::kEliminated) return;
-  colStates[col] = ColState::kEliminated;
+  if (colStates[col].isEliminated()) return;
+  colStates[col] = {ColState::kEliminated};
   if (table->colDeleted[col]) return;
   table->colDeleted[col] = true;
 
@@ -189,8 +179,8 @@ void HPresolveCliqueTable::eliminateCol(const HighsInt col) {
 bool HPresolveCliqueTable::substituteCol(
     const HighsInt substCol, const CliqueVar replacement,
     std::vector<CliqueVar>& impliedFixings) {
-  if (colStates[substCol] != ColState::kActive) return true;
-  if (colStates[replacement.col] == ColState::kEliminated) {
+  if (!colStates[substCol].isActive()) return true;
+  if (colStates[replacement.col].isEliminated()) {
     eliminateCol(substCol);
     return true;
   }
@@ -286,19 +276,13 @@ bool HPresolveCliqueTable::substituteCol(
   // Now substitute all entries
   table->replaceLiteral(CliqueVar(substCol, 1), replacement);
   table->replaceLiteral(CliqueVar(substCol, 0), replacement.complement());
-  colStates[substCol] = ColState::kEliminated;
+  colStates[substCol] = {ColState::kEliminated};
   table->colDeleted[substCol] = true;
 
   for (CliqueVar v : potentialFixings) {
     const ColState state = colStates[v.col];
-    if ((v.val && state == ColState::kFixedOne) ||
-        (!v.val && state == ColState::kFixedZero) ||
-        state == ColState::kEliminated) {
-      continue;
-    }
-    if (state == ColState::kFixedZero || state == ColState::kFixedOne) {
-      return false;
-    }
+    if (state.isEliminated() || state.isFixedTo(v.val)) continue;
+    if (state.isFixed()) return false;
     impliedFixings.push_back(v);
     if (!fixCol(static_cast<HighsInt>(v.col), v.val, impliedFixings)) {
       return false;

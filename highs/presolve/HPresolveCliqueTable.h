@@ -15,7 +15,18 @@
 class HPresolveCliqueTable {
   HighsCliqueTable* table = nullptr;
 
-  enum class ColState : int8_t { kActive, kFixedZero, kFixedOne, kEliminated };
+  struct ColState {
+    enum Value : int8_t { kActive, kFixedZero, kFixedOne, kEliminated };
+    Value value = kActive;
+
+    bool isActive() const { return value == kActive; }
+    bool isEliminated() const { return value == kEliminated; }
+    bool isFixed() const { return value == kFixedOne || value == kFixedZero; }
+    bool isFixedTo(bool val) const {
+      return value == (val ? kFixedOne : kFixedZero);
+    }
+    static ColState fixed(bool val) { return {val ? kFixedOne : kFixedZero}; }
+  };
 
   std::vector<ColState> colStates;
   std::vector<HighsCliqueTable::CliqueVar> fixingQueue;
