@@ -1249,8 +1249,6 @@ TEST_CASE("presolve-light-no-crossover", "[highs_test_presolve]") {
 }
 
 TEST_CASE("test-non-stop-initial-sweep", "[highs_test_presolve]") {
-  Highs h;
-  h.setOptionValue("output_flag", dev_run);
   HighsLp lp;
   lp.num_col_ = 3;
   lp.num_row_ = 1;
@@ -1264,6 +1262,9 @@ TEST_CASE("test-non-stop-initial-sweep", "[highs_test_presolve]") {
   lp.a_matrix_.index_ = {0, 1};
   lp.a_matrix_.value_ = {1, 1};
 
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+
   REQUIRE(h.passModel(lp) == HighsStatus::kOk);
 
   h.setOptionValue("presolve_reduction_limit", 0);
@@ -1276,7 +1277,43 @@ TEST_CASE("test-non-stop-initial-sweep", "[highs_test_presolve]") {
   h.resetGlobalScheduler(true);
 }
 
-TEST_CASE("test-duplicate-row", "[highs_test_presolve]") {
+TEST_CASE("test-sparsify-primal-dual-postsolve", "[highs_test_presolve]") {
+  // LP has an empty first row so, after its removal, the original
+  // index of the other two rows is one less than their index in the
+  // presolved problem when sparsify takes place. Before #3324, the
+  // row indices used in equalityRowAdditions were in the presolved
+  // space, rather than the original space, leading to an error in
+  // dual postsolve because multiples of the wrong dual were added to
+  // the dual of the equation used to sparsify
+  HighsLp lp;
+  lp.num_col_ = 3;
+  lp.num_row_ = 3;
+  lp.col_cost_ = {0, 0, 1};
+  lp.col_lower_ = {-kHighsInf, -kHighsInf, -kHighsInf};
+  lp.col_upper_ = {1, 1, 1};
+  lp.a_matrix_.start_ = {0, 2, 4, 6};
+  lp.a_matrix_.index_ = {1, 2, 1, 2, 1, 2};
+  lp.a_matrix_.value_ = {8, -1, 1, -1, 1, -1};
+  lp.row_lower_ = {0, -kHighsInf, 0};
+  lp.row_upper_ = {0, 0, 0};
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+
+  REQUIRE(h.passModel(lp) == HighsStatus::kOk);
+
+  h.setOptionValue("presolve_rule_logging", true);
+  h.setOptionValue(kSolverString, kIpxString);
+  h.setOptionValue("run_crossover", kHighsOffString);
+
+  HighsStatus status = h.run();
+  if (dev_run) h.writeSolution("", 1);
+  REQUIRE(status == HighsStatus::kOk);
+  REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
+
+  h.resetGlobalScheduler(true);
+}
+
+TEST_CASE("test-duplicate-row-postsolve", "[highs_test_presolve]") {
   HighsLp lp;
   lp.num_col_ = 3;
   lp.num_row_ = 2;
@@ -1368,8 +1405,8 @@ TEST_CASE("test-fuzzing", "[highs_test_presolve]") {
   //  if (dev_run) {
   printf("\n====================\nWithout presolve\n====================\n");
 
-  const std::string model = "issue-002";
-  const bool reduces_to_empty = true;
+  const std::string model = "issue-003";
+  const bool reduces_to_empty = false;
   std::string model_file = std::string(HIGHS_DIR) + "/build/OscarFuzzing/" +
                            model + "/" + model + ".mps";
 
@@ -1393,12 +1430,17 @@ TEST_CASE("test-fuzzing", "[highs_test_presolve]") {
 
   if (!reduces_to_empty) {
     printf("\n====================\nPresolved LP\n====================\n");
+    // Set this so that pure presolve runs the same as presolve before
+    // IPM without crossover
+    h.setOptionValue("lp_presolve_requires_basis_postsolve", false);
+
     h.presolve();
 
     HighsLp lp = h.getPresolvedLp();
 
     h.clear();
     h.passModel(lp);
+    h.writeModel("");
 
     h.setOptionValue(kPresolveString, kHighsOffString);
 
