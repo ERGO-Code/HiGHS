@@ -1537,6 +1537,8 @@ std::string utilPresolveRuleTypeToString(const HighsInt rule_type) {
     return "Initial sweep";
   } else if (rule_type == kPresolveRuleFourierMotzkin) {
     return "Fourier-Motzkin";
+  } else if (rule_type == kPresolveRuleWeaklyDominatedCol) {
+    return "Weakly dominated col";
   }
   assert(1 == 0);
   return "????";

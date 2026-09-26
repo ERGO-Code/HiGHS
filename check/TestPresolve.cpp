@@ -1361,14 +1361,52 @@ TEST_CASE("test-duplicate-row", "[highs_test_presolve]") {
   h.resetGlobalScheduler(true);
 }
 
+TEST_CASE("test-weakly-dominated-column-primal-dual-postsolve",
+          "[highs_test_presolve]") {
+  HighsLp lp;
+  lp.num_col_ = 3;
+  lp.num_row_ = 1;
+  lp.col_cost_ = {1, -1, 1};
+  lp.col_lower_ = {0, 0, 0};
+  lp.col_upper_ = {1, kHighsInf, 6};
+  lp.a_matrix_.start_ = {0, 1, 2, 3};
+  lp.a_matrix_.index_ = {0, 0, 0};
+  lp.a_matrix_.value_ = lp.col_cost_;
+  lp.row_lower_ = {6};
+  lp.row_upper_ = {kHighsInf};
+
+  Highs h;
+  //  h.setOptionValue("output_flag", dev_run);
+
+  REQUIRE(h.passModel(lp) == HighsStatus::kOk);
+
+  h.setOptionValue("presolve_rule_logging", true);
+  h.setOptionValue(kSolverString, kIpxString);
+  h.setOptionValue("run_crossover", kHighsOffString);
+
+  REQUIRE(h.run() == HighsStatus::kWarning);
+  REQUIRE(h.getModelStatus() == HighsModelStatus::kUnknown);
+
+  h.clearSolver();
+
+  h.setOptionValue("presolve_rule_off", 1 << kPresolveRuleWeaklyDominatedCol);
+
+  REQUIRE(h.run() == HighsStatus::kOk);
+  REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
+  //  if (dev_run)
+  h.writeSolution("", 1);
+
+  h.resetGlobalScheduler(true);
+}
+
 /*
-TEST_CASE("test-fuzzing", "[highs_test_presolve]") {
+  TEST_CASE("test-fuzzing", "[highs_test_presolve]") {
   Highs h;
   //  h.setOptionValue("output_flag", dev_run);
   //  if (dev_run) {
   printf("\n====================\nWithout presolve\n====================\n");
 
-  const std::string model = "issue-002";
+  const std::string model = "issue-005";
   const bool reduces_to_empty = true;
   std::string model_file = std::string(HIGHS_DIR) + "/build/OscarFuzzing/" +
                            model + "/" + model + ".mps";
@@ -1393,12 +1431,17 @@ TEST_CASE("test-fuzzing", "[highs_test_presolve]") {
 
   if (!reduces_to_empty) {
     printf("\n====================\nPresolved LP\n====================\n");
+    // Set this so that pure presolve runs the same as presolve before
+    // IPM without crossover
+    h.setOptionValue("lp_presolve_requires_basis_postsolve", false);
+
     h.presolve();
 
     HighsLp lp = h.getPresolvedLp();
 
     h.clear();
     h.passModel(lp);
+    h.writeModel("");
 
     h.setOptionValue(kPresolveString, kHighsOffString);
 

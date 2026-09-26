@@ -5103,14 +5103,16 @@ HPresolve::Result HPresolve::detectDominatedCol(
     if (direction * dualBound < -options->dual_feasibility_tolerance)
       return Result::kOk;
     if (direction * bound != -kHighsInf) {
-      if (logging_on) analysis_.startPresolveRuleLog(kPresolveRuleDominatedCol);
+      if (logging_on)
+        analysis_.startPresolveRuleLog(kPresolveRuleWeaklyDominatedCol);
       // fix variable
       if (direction > 0)
         HPRESOLVE_CHECKED_CALL(fixColToLower(postsolve_stack, col));
       else
         HPRESOLVE_CHECKED_CALL(fixColToUpper(postsolve_stack, col));
       analysis_.logging_on_ = logging_on;
-      if (logging_on) analysis_.stopPresolveRuleLog(kPresolveRuleDominatedCol);
+      if (logging_on)
+        analysis_.stopPresolveRuleLog(kPresolveRuleWeaklyDominatedCol);
       // handle row singletons (if requested)
       if (handleSingletonRows)
         HPRESOLVE_CHECKED_CALL(removeRowSingletons(postsolve_stack));
@@ -5173,15 +5175,17 @@ HPresolve::Result HPresolve::detectDominatedCol(
       dominatedCol(col, colDualUpper, model->col_upper_[col], HighsInt{-1}));
   if (colDeleted[col]) return Result::kOk;
 
-  // check for weakly dominated column
-  HPRESOLVE_CHECKED_CALL(
-      weaklyDominatedCol(col, colDualLower, model->col_lower_[col],
-                         model->col_upper_[col], dynamism, HighsInt{1}));
-  if (colDeleted[col]) return Result::kOk;
+  if (this->allow_rule_[kPresolveRuleWeaklyDominatedCol]) {
+    // check for weakly dominated column
+    HPRESOLVE_CHECKED_CALL(
+        weaklyDominatedCol(col, colDualLower, model->col_lower_[col],
+                           model->col_upper_[col], dynamism, HighsInt{1}));
+    if (colDeleted[col]) return Result::kOk;
 
-  HPRESOLVE_CHECKED_CALL(
-      weaklyDominatedCol(col, colDualUpper, model->col_upper_[col],
-                         model->col_lower_[col], dynamism, HighsInt{-1}));
+    HPRESOLVE_CHECKED_CALL(
+        weaklyDominatedCol(col, colDualUpper, model->col_upper_[col],
+                           model->col_lower_[col], dynamism, HighsInt{-1}));
+  }
   return Result::kOk;
 }
 
