@@ -119,6 +119,9 @@ static QpVector& computesearchdirection_major(
                      yyp);  // Bogus return to satisfy method definition
     QpVector v = l;         // TODO PERF: buffer QpVector
     factor.solveLT(v);
+    // the triangular solves fill in v beyond the sparsity pattern of m,
+    // which Zprod reads
+    v.resparsify();
     basis.Zprod(v, p);
     // p = +/-(yp - Zv), the part of yp that is Q-conjugate to Z, with the
     // sign that makes p a descent direction
