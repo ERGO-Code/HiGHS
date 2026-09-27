@@ -120,10 +120,12 @@ static QpVector& computesearchdirection_major(
     QpVector v = l;         // TODO PERF: buffer QpVector
     factor.solveLT(v);
     basis.Zprod(v, p);
+    // p = +/-(yp - Zv), the part of yp that is Q-conjugate to Z, with the
+    // sign that makes p a descent direction
     if (gradient.getGradient().dot(yyp) < 0.0) {
       return p.saxpy(-1.0, 1.0, yyp);
     } else {
-      return p.saxpy(-1.0, -1.0, yyp);
+      return p.saxpy(1.0, -1.0, yyp);
     }
 
   } else {
