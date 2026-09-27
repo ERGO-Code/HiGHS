@@ -456,7 +456,8 @@ void Quass::solve(const QpVector& x0, const QpVector& ra, Basis& b0,
       maxsteplength = computemaxsteplength(runtime, p, gradient, buffer_Qp,
                                            zero_curvature_direction);
       if (!zero_curvature_direction) {
-        status = factor.expand(buffer_yp, buffer_gyp, buffer_l, buffer_m);
+        status = factor.expand(buffer_yp, buffer_gyp, buffer_l, buffer_m,
+                               p * buffer_Qp);
         if (status != QpSolverStatus::OK) return notOkReturn();
       }
       redgrad.expand(buffer_yp);
