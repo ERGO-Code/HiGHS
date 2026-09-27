@@ -59,6 +59,9 @@ class CholeskyFactor {
     L.resize(current_k_max * current_k_max);
   }
 
+  // the factor no longer matches the null space: recompute it when next used
+  void invalidate() { uptodate = false; }
+
   QpSolverStatus recompute() {
     std::vector<std::vector<double>> orig;
     HighsInt dim_ns = basis.getinactive().size();

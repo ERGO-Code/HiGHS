@@ -509,6 +509,11 @@ void Quass::solve(const QpVector& x0, const QpVector& ra, Basis& b0,
           factor.reduce(
               buffer_d, maxabsd,
               indexof(basis.getinactive(), stepres.limitingconstraint) != -1);
+        } else {
+          // yp was not added to the factor, and the change of basis alters
+          // the other null space columns too: recompute the factor when next
+          // needed
+          factor.invalidate();
         }
         redgrad.reduce(buffer_d, maxabsd);
         redgrad.update(stepres.alpha, false);
