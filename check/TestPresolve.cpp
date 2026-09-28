@@ -1397,7 +1397,6 @@ TEST_CASE("test-duplicate-row-postsolve", "[highs_test_presolve]") {
 
   h.resetGlobalScheduler(true);
 }
-
 /*
 TEST_CASE("test-fuzzing", "[highs_test_presolve]") {
   Highs h;

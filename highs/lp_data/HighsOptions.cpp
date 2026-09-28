@@ -559,7 +559,8 @@ OptionStatus setLocalOptionValue(const HighsLogOptions& report_log_options,
         getOptionRecord<OptionRecordBool>(option_records[index]), value_bool);
   } else if (type == HighsOptionType::kInt) {
     // Check that the string only contains legitimate characters
-    if (value_trim.find_first_not_of("+-0123456789eE") != std::string::npos)
+    if (value_trim.find_first_not_of(kLegalIntegerCharacters) !=
+        std::string::npos)
       return OptionStatus::kIllegalValue;
     HighsInt value_int;
     int scanned_num_char;
@@ -592,20 +593,10 @@ OptionStatus setLocalOptionValue(const HighsLogOptions& report_log_options,
     } else if (value_trim == "-inf") {
       value_double = -kHighsInf;
     } else {
-      if (value_trim.find_first_not_of("+-.0123456789eE") != std::string::npos)
+      if (value_trim.find_first_not_of(kLegalDoubleCharacters) !=
+          std::string::npos)
         return OptionStatus::kIllegalValue;
-      HighsInt value_int = atoi(value_trim.c_str());
       value_double = atof(value_trim.c_str());
-      double value_int_double = value_int;
-      if (value_double == value_int_double) {
-        highsLogDev(report_log_options, HighsLogType::kInfo,
-                    "setLocalOptionValue: Value = \"%s\" converts via atoi as "
-                    "%" HIGHSINT_FORMAT
-                    " "
-                    "so is %g as double, and %g via atof\n",
-                    value_trim.c_str(), value_int, value_int_double,
-                    value_double);
-      }
     }
     return setLocalOptionValue(
         report_log_options,
