@@ -157,7 +157,9 @@ TEST_CASE("Highs_HashTree_findCommon_hash_collision", "[util]") {
   });
   REQUIRE(hasCommon);
 
-  // find_common should find the common element
+  // find_common should find the common element in both orders
   const auto* common = tree1.find_common(tree2);
+  REQUIRE(common != nullptr);
+  common = tree2.find_common(tree1);
   REQUIRE(common != nullptr);
 }
