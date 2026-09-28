@@ -501,24 +501,12 @@ HPresolve::StatusResult HPresolve::convertImpliedInteger(HighsInt col,
 
 void HPresolve::chooseRules() {
   const bool silent = silentLog();
+  // By default all presolve rules are allowed
   this->allow_rule_.assign(kPresolveRuleCount, true);
-  std::vector<HighsBool> presolve_light_rule_off(kPresolveRuleCount, false);
-  const bool presolve_light_on = options->presolve_light == kHighsOnString;
-  if (presolve_light_on) {
-    // Define the rules not used in presolve_light mode
-    presolve_light_rule_off[kPresolveRuleDependentEquations] = true;
-    presolve_light_rule_off[kPresolveRuleDependentFreeCols] = true;
-    presolve_light_rule_off[kPresolveRuleAggregator] = true;
-    presolve_light_rule_off[kPresolveRuleParallelRowsAndCols] = true;
-    presolve_light_rule_off[kPresolveRuleSparsify] = true;
-    presolve_light_rule_off[kPresolveRuleProbing] = true;
-    presolve_light_rule_off[kPresolveRuleEnumeration] = true;
-    presolve_light_rule_off[kPresolveRuleDualFixing] = true;
-    presolve_light_rule_off[kPresolveRuleColStuffing] = true;
-    presolve_light_rule_off[kPresolveRuleFourierMotzkin] = true;
-  }
 
-  // Some rules can be switched off only in initial sweep
+  // All rules except kPresolveRuleDominatedCol can be switched off,
+  // although the most fundamental can only be switched off in initial
+  // sweep
   auto allowedOffInInitialSweep = [&] (const HighsInt rule_type) {
     if (rule_type == kPresolveRuleEmptyRow) return true;
     if (rule_type == kPresolveRuleSingletonRow) return true;
@@ -528,6 +516,14 @@ void HPresolve::chooseRules() {
     return false;
   };
 
+  auto logRule = [&] (const HighsInt rule_type) {
+    highsLogUser(options->log_options, HighsLogType::kInfo,
+		 " %1s Rule %2d (set bit %2d = %7d): %s\n", 
+		 allowedOffInInitialSweep(rule_type) ? "*" : " ",
+		 int(rule_type), int(rule_type), int(1<<rule_type),
+		 utilPresolveRuleTypeToString(rule_type).c_str());
+  };
+
   if (!silent && options->log_dev_level) {
     // State which rules can be off, and what bit to set
     highsLogUser(options->log_options, HighsLogType::kInfo,
@@ -535,57 +531,58 @@ void HPresolve::chooseRules() {
                  "presolve_rule_off option:\n");
     for (HighsInt rule_type = kPresolveRuleMin;
          rule_type < kPresolveRuleCount; rule_type++) {
-      if (rule_type < kPresolveRuleFirstAllowOffGeneral &&
-	  !allowedOffInInitialSweep(rule_type)) continue;
-      HighsInt bit = 1 << rule_type;
-      // This is a rule that can be switched off
-      highsLogUser(options->log_options, HighsLogType::kInfo,
-                   " %1s  Rule %2d (set bit %2d = %7d): %s\n", 
-		   allowedOffInInitialSweep(rule_type) ? "*" : " ",
-		   int(rule_type), int(rule_type), int(bit),
-                   utilPresolveRuleTypeToString(rule_type).c_str());
+      // Only kPresolveRuleDominatedCol cannot be switched off
+      if (rule_type == kPresolveRuleDominatedCol) continue;
+      logRule(rule_type);
     }
     highsLogUser(options->log_options, HighsLogType::kInfo, " * Only in initial sweep\n");
   }
   
-  if (options->presolve_rule_off || presolve_light_on) {
-    // Some presolve rules are off or presolve_light mode is being used
+  if (options->presolve_light == kHighsOnString) {
+    // Switch off the rules not used in presolve_light mode
+    allow_rule_[kPresolveRuleDependentEquations] = false;
+    allow_rule_[kPresolveRuleDependentFreeCols] = false;
+    allow_rule_[kPresolveRuleAggregator] = false;
+    allow_rule_[kPresolveRuleParallelRowsAndCols] = false;
+    allow_rule_[kPresolveRuleSparsify] = false;
+    allow_rule_[kPresolveRuleProbing] = false;
+    allow_rule_[kPresolveRuleEnumeration] = false;
+    allow_rule_[kPresolveRuleDualFixing] = false;
+    allow_rule_[kPresolveRuleColStuffing] = false;
+    allow_rule_[kPresolveRuleFourierMotzkin] = false;
+  }
+
+  if (options->presolve_rule_off) {
+    // Some presolve rules are off
     //
     // Transform options->presolve_rule_off into logical settings in
     // allow_rule_[*], commenting on the rules switched off
-    if (!presolve_light_on && !silent)
+    if (!silent)
       highsLogUser(options->log_options, HighsLogType::kInfo,
-                   "Presolve rules not allowed:\n");
+                   "Presolve rules switched off:\n");
+    bool off_in_initial_sweep = false;
     for (HighsInt rule_type = kPresolveRuleMin; rule_type < kPresolveRuleCount;
          rule_type++) {
       HighsInt bit = 1 << rule_type;
       // Identify whether this rule is allowed
-      const bool rule_off = (options->presolve_rule_off & bit) ||
-                            presolve_light_rule_off[rule_type];
-      if (rule_type >= kPresolveRuleFirstAllowOffGeneral ||
-	  allowedOffInInitialSweep(rule_type)) {
-        // This is a rule that can be switched off
-        allow_rule_[rule_type] = !rule_off;
-        // Possibly comment positively if it is off
-        if (rule_off && !presolve_light_on && !silent)
-          highsLogUser(options->log_options, HighsLogType::kInfo,
-                       "   Rule %2d (set bit %2d = %7d): %s\n", int(rule_type),
-                       int(rule_type), int(bit),
-                       utilPresolveRuleTypeToString(rule_type).c_str());
-      } else if (rule_off) {
-        // This is a rule that cannot be switched off so, if an
-        // attempt is made, don't allow it to be off and possibly
-        // comment negatively
-        if (!silent)
-          highsLogUser(options->log_options, HighsLogType::kWarning,
-                       "Cannot disallow rule %2d (bit %2d = %5d): %s\n",
-                       int(rule_type), int(rule_type), int(bit),
-                       utilPresolveRuleTypeToString(rule_type).c_str());
-        // Check that we're not here because presolve_light mode is
-        // being used
-        assert(!presolve_light_rule_off[rule_type]);
+      if (!(options->presolve_rule_off & bit)) continue;
+      if (rule_type != kPresolveRuleDominatedCol) {
+	off_in_initial_sweep = allowedOffInInitialSweep(rule_type) || off_in_initial_sweep;
+	allow_rule_[rule_type] = false;
+	if (!silent) logRule(rule_type);
+      } else {
+	// This is a rule that cannot be switched off so, if an
+	// attempt is made, don't allow it to be off and possibly
+	// comment negatively
+	if (!silent)
+	  highsLogUser(options->log_options, HighsLogType::kWarning,
+		       "Cannot disallow rule %2d (bit %2d = %5d): %s\n",
+		       int(rule_type), int(rule_type), int(bit),
+		       utilPresolveRuleTypeToString(rule_type).c_str());
       }
     }
+    if (!silent && off_in_initial_sweep)
+      highsLogUser(options->log_options, HighsLogType::kInfo, " * Only in initial sweep\n");
   }
 }
 
@@ -6554,7 +6551,7 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
     analysis_.presolveTimerStart(kPresolveClockInitialSweep);
     const bool logging_on = analysis_.logging_on_;
     if (logging_on) analysis_.startPresolveRuleLog(kPresolveRuleInitialSweep);
-    HPresolveInitialSweep sweep(*model, *options, primal_feastol);
+    HPresolveInitialSweep sweep(*model, *options, allow_rule_.data(), primal_feastol);
     auto sweep_result = sweep.run(postsolve_stack);
     numDeletedCols = sweep.numDeletedCols();
     numDeletedRows = sweep.numDeletedRows();

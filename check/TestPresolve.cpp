@@ -4,7 +4,7 @@
 #include "catch.hpp"
 #include "presolve/HPresolve.h"
 
-const bool dev_run = true;//false;
+const bool dev_run = false;
 
 bool doubleEqual(const double v0, const double v1) {
   return std::fabs(v0 - v1) < 1e-8;
@@ -1531,12 +1531,22 @@ TEST_CASE("presolve-rules-off", "[highs_test_presolve]") {
   REQUIRE(h.setOptionValue("presolve_reduction_limit", 0) == HighsStatus::kOk);
 
   HighsInt presolve_rule_off = 0;
+  const HighsRunData& run_data = h.getRunData();
   for (HighsInt k = 0; k < 6; k++) { 
     REQUIRE(h.setOptionValue("presolve_rule_off", presolve_rule_off) == HighsStatus::kOk);
 
     REQUIRE(h.passModel(lp) == HighsStatus::kOk);
     REQUIRE(h.run() == HighsStatus::kOk);
+
+    printf("Pass %d: presolved LP has %1d rows, %1d cols and %2d nonzeros\n",
+	   int(k),
+	   int(run_data.presolved_model_num_row),
+	   int(run_data.presolved_model_num_col),
+	   int(run_data.presolved_model_num_nz));
     if (k == 0) {
+      REQUIRE(run_data.presolved_model_num_row == 1);
+      REQUIRE(run_data.presolved_model_num_col == 4);
+      REQUIRE(run_data.presolved_model_num_nz == 3);
       presolve_rule_off += (1 << kPresolveRuleRedundantRow);
     } else if (k == 1) {
       presolve_rule_off += (1 << kPresolveRuleSingletonRow);

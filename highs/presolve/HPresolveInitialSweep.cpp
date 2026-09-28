@@ -23,9 +23,11 @@ namespace presolve {
 
 HPresolveInitialSweep::HPresolveInitialSweep(HighsLp& model,
                                              const HighsOptions& options,
-                                             double primal_feastol)
+					     const HighsBool* allow_rule,
+                                             const double primal_feastol)
     : model_(&model),
       options_(&options),
+      allow_rule_(allow_rule),
       primal_feastol_(primal_feastol),
       num_deleted_rows_(0),
       num_deleted_cols_(0) {}
@@ -126,12 +128,6 @@ double HPresolveInitialSweep::getMaxAbsColVal(HighsInt col) const {
   return maxVal;
 }
 
-bool HPresolveInitialSweep::isRedundant(HighsInt row, double sumLower,
-                                        double sumUpper) const {
-  return sumLower >= model_->row_lower_[row] - primal_feastol_ &&
-         sumUpper <= model_->row_upper_[row] + primal_feastol_;
-}
-
 HPresolveInitialSweep::Result HPresolveInitialSweep::singletonRow(
     HighsPostsolveStack& postsolve_stack, HighsInt row, HighsInt col,
     double val) {
@@ -183,9 +179,14 @@ HPresolveInitialSweep::Result HPresolveInitialSweep::run(
   // singleton row, and val_of_row the matrix entry of the singleton
   std::vector<HighsInt> col_of_row(model_->num_row_, -1);
   std::vector<double> val_of_row(model_->num_row_, 0);
+  const HighsBool compute_implied_bounds = allow_rule_[kPresolveRuleRedundantRow];
   // Compute the implied bounds on rows
-  std::vector<HighsCDouble> implied_row_lower(model_->num_row_, 0);
-  std::vector<HighsCDouble> implied_row_upper(model_->num_row_, 0);
+  std::vector<HighsCDouble> implied_row_lower;
+  std::vector<HighsCDouble> implied_row_upper;
+  if (compute_implied_bounds) {
+    implied_row_lower.assign(model_->num_row_, 0);
+    implied_row_upper.assign(model_->num_row_, 0);
+  }
 
   // Pass through the columns, identifying any that are empty or
   // fixed, so can be removed, updating the model in place.
@@ -230,20 +231,22 @@ HPresolveInitialSweep::Result HPresolveInitialSweep::run(
         model_->a_matrix_.index_[nnz] = iRow;
         model_->a_matrix_.value_[nnz] = value;
         nnz++;
-        double row_lower_bnd = value > 0 ? model_->col_lower_[num_col]
-                                         : model_->col_upper_[num_col];
-        double row_upper_bnd = value > 0 ? model_->col_upper_[num_col]
-                                         : model_->col_lower_[num_col];
-        if (std::abs(row_lower_bnd) == kHighsInf)
-          implied_row_lower[iRow] = static_cast<HighsCDouble>(-kHighsInf);
-        else if (static_cast<double>(implied_row_lower[iRow]) > -kHighsInf)
-          implied_row_lower[iRow] +=
+	if (compute_implied_bounds) {
+	  double row_lower_bnd = value > 0 ? model_->col_lower_[num_col]
+	    : model_->col_upper_[num_col];
+	  double row_upper_bnd = value > 0 ? model_->col_upper_[num_col]
+	    : model_->col_lower_[num_col];
+	  if (std::abs(row_lower_bnd) == kHighsInf)
+	    implied_row_lower[iRow] = static_cast<HighsCDouble>(-kHighsInf);
+	  else if (static_cast<double>(implied_row_lower[iRow]) > -kHighsInf)
+	    implied_row_lower[iRow] +=
               static_cast<HighsCDouble>(value) * row_lower_bnd;
-        if (std::abs(row_upper_bnd) == kHighsInf)
-          implied_row_upper[iRow] = static_cast<HighsCDouble>(kHighsInf);
-        else if (static_cast<double>(implied_row_upper[iRow]) < kHighsInf)
-          implied_row_upper[iRow] +=
+	  if (std::abs(row_upper_bnd) == kHighsInf)
+	    implied_row_upper[iRow] = static_cast<HighsCDouble>(kHighsInf);
+	  else if (static_cast<double>(implied_row_upper[iRow]) < kHighsInf)
+	    implied_row_upper[iRow] +=
               static_cast<HighsCDouble>(value) * row_upper_bnd;
+	}
       }
       model_->a_matrix_.start_[num_col] = new_col_start;
       num_col++;
@@ -266,14 +269,20 @@ HPresolveInitialSweep::Result HPresolveInitialSweep::run(
     model_->fme_obj_col_ = newColIndex[model_->fme_obj_col_];
   postsolve_stack.compressColIndexMap(newColIndex);
 
+  auto isRedundant = [&] (const HighsInt iRow) {
+    return
+      static_cast<double>(implied_row_lower[iRow]) >= model_->row_lower_[iRow] - primal_feastol_ &&
+      static_cast<double>(implied_row_upper[iRow]) <= model_->row_upper_[iRow] + primal_feastol_;
+   
+  };
+
   // Row pass: count empty, singleton, and redundant rows
   for (HighsInt iRow = 0; iRow < model_->num_row_; iRow++) {
     if (row_count[iRow] == 0)
       num_empty_row++;
     else if (row_count[iRow] == 1)
       num_singleton_row++;
-    else if (isRedundant(iRow, static_cast<double>(implied_row_lower[iRow]),
-                         static_cast<double>(implied_row_upper[iRow])))
+    else if (allow_rule_[kPresolveRuleRedundantRow] && isRedundant(iRow))
       num_redundant_row++;
   }
 
@@ -298,8 +307,7 @@ HPresolveInitialSweep::Result HPresolveInitialSweep::run(
                                     val_of_row[iRow]));
         }
       } else {
-        if (isRedundant(iRow, static_cast<double>(implied_row_lower[iRow]),
-                        static_cast<double>(implied_row_upper[iRow]))) {
+        if (allow_rule_[kPresolveRuleRedundantRow] && isRedundant(iRow)) {
           postsolve_stack.redundantRow(iRow);
           newRowIndex[iRow] = -1;
           num_deleted_rows_++;
