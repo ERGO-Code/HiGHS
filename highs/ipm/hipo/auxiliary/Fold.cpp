@@ -257,14 +257,9 @@ HighsInt Folder::findInitialRowColour(std::vector<HighsInt>& colour) {
 
   for (HighsInt row = 0; row < lp_.num_row_; ++row) {
     RowData data(lp_, row, colour[row]);
-    auto it = row_map.find(data);
-    if (it == row_map.end()) {
-      colour[row] = next_colour;
-      row_map.insert({data, next_colour});
-      next_colour++;
-    } else {
-      colour[row] = it->second;
-    }
+    auto result = row_map.insert({data, next_colour});
+    if (result.second) next_colour++;
+    colour[row] = result.first->second;
   }
 
   return next_colour;
@@ -277,14 +272,9 @@ HighsInt Folder::findInitialColColour(std::vector<HighsInt>& colour) {
 
   for (HighsInt col = 0; col < lp_.num_col_; ++col) {
     ColData data(lp_, col, colour[col]);
-    auto found = col_map.find(data);
-    if (found == col_map.end()) {
-      colour[col] = next_colour;
-      col_map.insert({data, next_colour});
-      next_colour++;
-    } else {
-      colour[col] = found->second;
-    }
+    auto result = col_map.insert({data, next_colour});
+    if (result.second) next_colour++;
+    colour[col] = result.first->second;
   }
 
   return next_colour;
