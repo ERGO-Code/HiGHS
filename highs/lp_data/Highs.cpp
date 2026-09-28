@@ -1250,7 +1250,7 @@ HighsStatus Highs::optimizeModelTryCatch() {
 HighsStatus Highs::calledOptimizeModel() {
   // Level 2b of Highs::run()
   //
-  highs::folding::test_folding(model_.lp_);
+  // highs::folding::test_folding(model_.lp_);
 
   HighsInt min_highs_debug_level = kHighsDebugLevelMin;
   // kHighsDebugLevelCostly;

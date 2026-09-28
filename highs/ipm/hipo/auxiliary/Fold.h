@@ -61,16 +61,16 @@ class ColourRefinement {
   HighsInt coloursUsed() const { return latest_colour_ + 1; }
 };
 
-void test_folding();
 void test_folding(const HighsLp& lp);
 
-class ColourRefinementVector {
-  const HighsInt n_;
-  CollectionLinkedLists colour_classes_;
+class Folder {
+  const HighsLp& lp_;
 
  public:
-  ColourRefinementVector(HighsInt n);
-  HighsInt run(const std::vector<double>& w, std::vector<HighsInt>& colour);
+  Folder(const HighsLp& lp) : lp_{lp} {}
+
+  HighsInt findInitialRowColour(std::vector<HighsInt>& colour);
+  HighsInt findInitialColColour(std::vector<HighsInt>& colour);
 };
 
 }  // namespace folding

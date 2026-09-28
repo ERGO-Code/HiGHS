@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <map>
 
+#include "DoubleQuantizer.h"
 #include "ipm/hipo/auxiliary/Auxiliary.h"
 #include "util/HighsSparseMatrix.h"
 
@@ -235,32 +236,16 @@ void ColourRefinement::run() {
   printf("  prepare %f\n", time_prepare_);
 }
 
-void test_folding() {
-  std::vector<double> w0{0, 1, 1, 0, 3, 0, 1, 5, 3, 0, 0, 0, 1};
-  std::vector<HighsInt> colour(13, 0);
-  ColourRefinementVector CRV(colour.size());
-  CRV.run(w0, colour);
-
-  std::vector<double> w1{5, 3, 7, 5, 8, 5, 7, 7, 10, 4, 5, 4, 3};
-  CRV.run(w1, colour);
-
-  exit(1);
-}
-
 void test_folding(const HighsLp& lp) {
-  std::vector<HighsInt> colour_rows(lp.row_lower_.size(), 0);
-  ColourRefinementVector CRV_rows(lp.row_lower_.size());
-  CRV_rows.run(lp.row_lower_, colour_rows);
-  HighsInt colours_used_rows = CRV_rows.run(lp.row_upper_, colour_rows);
-
-  std::vector<HighsInt> colour_cols(lp.col_cost_.size(), 0);
-  ColourRefinementVector CRV_cols(lp.col_cost_.size());
-  CRV_cols.run(lp.col_cost_, colour_cols);
-  CRV_cols.run(lp.col_lower_, colour_cols);
-  HighsInt colours_used_cols = CRV_cols.run(lp.col_upper_, colour_cols);
+  Folder folder(lp);
+  std::vector<HighsInt> colour_rows, colour_cols;
+  HighsInt colours_used_rows = folder.findInitialRowColour(colour_rows);
+  HighsInt colours_used_cols = folder.findInitialColColour(colour_cols);
 
   printf("Rows: used %d out of %zu\n", colours_used_rows, lp.row_lower_.size());
   printf("Cols: used %d out of %zu\n", colours_used_cols, lp.col_cost_.size());
+
+  exit(1);
 
   for (HighsInt& i : colour_cols) i += colours_used_rows;
 
@@ -275,51 +260,44 @@ void test_folding(const HighsLp& lp) {
          lp.a_matrix_.num_row_ + lp.a_matrix_.num_col_);
 }
 
-ColourRefinementVector::ColourRefinementVector(HighsInt n) : n_{n} {
-  colour_classes_.init(n_, n_);
-}
+HighsInt Folder::findInitialRowColour(std::vector<HighsInt>& colour) {
+  colour.assign(lp_.num_row_, 0);
+  QuantizedMap<RowData> row_map;
+  HighsInt next_colour = 0;
 
-HighsInt ColourRefinementVector::run(const std::vector<double>& w,
-                                     std::vector<HighsInt>& colour) {
-  assert(w.size() == n_ && colour.size() == n_);
-
-  colour_classes_.clear();
-  for (HighsInt i = 0; i < n_; ++i) colour_classes_.append(i, colour[i]);
-  HighsInt latest_colour = *std::max_element(colour.begin(), colour.end());
-  HighsInt max_initial_colour = latest_colour;
-
-  using ValueColourPair = std::map<double, HighsInt>;
-  std::vector<ValueColourPair> info_by_colour;
-
-  for (HighsInt r = 0; r <= max_initial_colour; ++r) {
-    info_by_colour.push_back({});
-    bool r_used = false;
-
-    HighsInt v = colour_classes_.head(r);
-    while (colour_classes_.cont(v)) {
-      auto it = info_by_colour[r].find(w[v]);
-      if (it == info_by_colour[r].end()) {
-        if (r_used) {
-          ++latest_colour;
-          info_by_colour[r].insert({w[v], latest_colour});
-        } else {
-          r_used = true;
-          info_by_colour[r].insert({w[v], r});
-        }
-      }
-
-      colour[v] = info_by_colour[r][w[v]];
-      v = colour_classes_.next(v);
+  for (HighsInt row = 0; row < lp_.num_row_; ++row) {
+    RowData data(lp_, row, colour[row]);
+    auto it = row_map.find(data);
+    if (it == row_map.end()) {
+      colour[row] = next_colour;
+      row_map.insert({data, next_colour});
+      next_colour++;
+    } else {
+      colour[row] = it->second;
     }
   }
 
-  // for (double d : w) printf("%7.2f ", d);
-  // printf("\n");
+  return next_colour;
+}
 
-  // for (HighsInt i : colour) printf("%8d", i);
-  // printf("\n");
+HighsInt Folder::findInitialColColour(std::vector<HighsInt>& colour) {
+  colour.assign(lp_.num_col_, 0);
+  QuantizedMap<ColData> col_map;
+  HighsInt next_colour = 0;
 
-  return latest_colour + 1;
+  for (HighsInt col = 0; col < lp_.num_col_; ++col) {
+    ColData data(lp_, col, colour[col]);
+    auto found = col_map.find(data);
+    if (found == col_map.end()) {
+      colour[col] = next_colour;
+      col_map.insert({data, next_colour});
+      next_colour++;
+    } else {
+      colour[col] = found->second;
+    }
+  }
+
+  return next_colour;
 }
 
 }  // namespace folding

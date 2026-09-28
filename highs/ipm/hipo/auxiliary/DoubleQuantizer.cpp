@@ -55,7 +55,5 @@ bool DoubleQuantizer::operator()(const RowData& x, const RowData& y) const {
   return x.colour == y.colour && equal(x.bl, y.bl) && equal(x.bu, y.bu);
 }
 
-QuantizedDoubleMap<ColData> map;
-
 }  // namespace folding
 }  // namespace highs

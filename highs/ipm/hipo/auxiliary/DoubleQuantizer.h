@@ -14,6 +14,9 @@ struct RowData {
   double bl;
   double bu;
   HighsInt colour;
+
+  RowData(const HighsLp& lp, HighsInt row, HighsInt c)
+      : bl{lp.row_lower_[row]}, bu{lp.row_upper_[row]}, colour{c} {}
 };
 
 struct ColData {
@@ -21,6 +24,12 @@ struct ColData {
   double l;
   double u;
   HighsInt colour;
+
+  ColData(const HighsLp& lp, HighsInt col, HighsInt c)
+      : c{lp.col_cost_[col]},
+        l{lp.col_lower_[col]},
+        u{lp.col_upper_[col]},
+        colour{c} {}
 };
 
 /*
@@ -63,20 +72,22 @@ struct DoubleQuantizer {
 
   bool equal(double x, double y) const;
 
-  // these operators compute hash
+  // hashing operators
   size_t operator()(double x) const;
   size_t operator()(const RowData& ri) const;
   size_t operator()(const ColData& ci) const;
 
-  // these operators assess equality
+  // equality operators
   bool operator()(double x, double y) const;
   bool operator()(const RowData& x, const RowData& y) const;
   bool operator()(const ColData& x, const ColData& y) const;
 };
 
+// Map that uses the DoubleQuantizer to assign integers to objects of type T
+// that are different according to the hashing and equality operators.
 template <typename T>
-using QuantizedDoubleMap =
-    std::unordered_map<T, double, DoubleQuantizer, DoubleQuantizer>;
+using QuantizedMap =
+    std::unordered_map<T, HighsInt, DoubleQuantizer, DoubleQuantizer>;
 
 }  // namespace folding
 }  // namespace highs
