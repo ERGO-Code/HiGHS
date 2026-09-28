@@ -11,28 +11,6 @@ namespace highs {
 
 namespace folding {
 
-struct RowData {
-  double bl;
-  double bu;
-  HighsInt colour;
-
-  RowData(const HighsLp& lp, HighsInt row, HighsInt colour_in)
-      : bl{lp.row_lower_[row]}, bu{lp.row_upper_[row]}, colour{colour_in} {}
-};
-
-struct ColData {
-  double c;
-  double l;
-  double u;
-  HighsInt colour;
-
-  ColData(const HighsLp& lp, HighsInt col, HighsInt colour_in)
-      : c{lp.col_cost_[col]},
-        l{lp.col_lower_[col]},
-        u{lp.col_upper_[col]},
-        colour{colour_in} {}
-};
-
 /*
 Define hash and equality operators, so that variables of type double can be
 grouped together if they are "close enough". This is based on an absolute
@@ -60,16 +38,14 @@ never merged, because the double format can no longer represent values a
 tolerance apart.
 */
 
+struct RowData;
+struct ColData;
+
 struct DoubleQuantizer {
   static constexpr double inv_tol = 1.0 / kQuantizationTolerance;
 
-  double bucket(double d) const;
-
-  size_t hash(double d) const;
-  size_t hash(HighsInt i) const;
-  void combine(size_t& x, size_t y) const;
-
-  bool equal(double x, double y) const;
+  static double bucket(double d);
+  void hash_combine(size_t& x, size_t y) const;
 
   // hashing operators
   size_t operator()(double x) const;
@@ -80,6 +56,30 @@ struct DoubleQuantizer {
   bool operator()(double x, double y) const;
   bool operator()(const RowData& x, const RowData& y) const;
   bool operator()(const ColData& x, const ColData& y) const;
+};
+
+struct RowData {
+  double quantized_bl;
+  double quantized_bu;
+  HighsInt colour;
+
+  RowData(const HighsLp& lp, HighsInt row, HighsInt colour_in)
+      : quantized_bl{DoubleQuantizer::bucket(lp.row_lower_[row])},
+        quantized_bu{DoubleQuantizer::bucket(lp.row_upper_[row])},
+        colour{colour_in} {}
+};
+
+struct ColData {
+  double quantized_c;
+  double quantized_l;
+  double quantized_u;
+  HighsInt colour;
+
+  ColData(const HighsLp& lp, HighsInt col, HighsInt colour_in)
+      : quantized_c{DoubleQuantizer::bucket(lp.col_cost_[col])},
+        quantized_l{DoubleQuantizer::bucket(lp.col_lower_[col])},
+        quantized_u{DoubleQuantizer::bucket(lp.col_upper_[col])},
+        colour{colour_in} {}
 };
 
 template <typename P, typename Q>
