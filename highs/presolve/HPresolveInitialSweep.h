@@ -24,7 +24,7 @@ class HPresolveInitialSweep {
     kDualInfeasible,
   };
 
-  HPresolveInitialSweep(HighsLp& model,
+  HPresolveInitialSweep(HighsLp& lp,
 			const HighsOptions& options,
 			const std::vector<HighsBool>& allow_rule,
                         const double primal_feastol);
@@ -35,7 +35,7 @@ class HPresolveInitialSweep {
   HighsInt numDeletedCols() const { return num_deleted_cols_; }
 
  private:
-  HighsLp& model_;
+  HighsLp& lp_;
   const HighsOptions& options_;
   const std::vector<HighsBool>& allow_rule_;
   const double primal_feastol_;
