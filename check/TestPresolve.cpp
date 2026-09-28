@@ -772,38 +772,26 @@ TEST_CASE("presolve-egout-ac", "[highs_test_presolve]") {
   REQUIRE(h.getPresolveLog().rule[kPresolveRuleSparsify].call == 0);
   REQUIRE(h.postsolve(solution, basis) == HighsStatus::kOk);
 
-  // Check that pure presolve reduces the LP to empty using sparsify
-  // when lp_presolve_requires_basis_postsolve is false
-  bool lp_presolve_requires_basis_postsolve = false;
-  REQUIRE(h.setOptionValue("lp_presolve_requires_basis_postsolve",
-                           lp_presolve_requires_basis_postsolve) ==
+  // Now, with crossover off, check that pure presolve reduces the LP
+  // to empty using sparsify, both via direct presolve...
+  REQUIRE(h.setOptionValue("run_crossover", kHighsOffString) ==
           HighsStatus::kOk);
   REQUIRE(h.presolve() == HighsStatus::kOk);
   REQUIRE(h.getPresolveLog().rule[kPresolveRuleSparsify].call > 0);
   REQUIRE(h.postsolve(solution, basis) == HighsStatus::kOk);
-  REQUIRE(h.getOptions().lp_presolve_requires_basis_postsolve ==
-          lp_presolve_requires_basis_postsolve);
 
-  // Now, with crossover off
-  REQUIRE(h.setOptionValue("run_crossover", kHighsOffString) ==
-          HighsStatus::kOk);
+  REQUIRE(h.getRunData().presolved_model_num_col == 0);
+  REQUIRE(h.getRunData().presolved_model_num_row == 0);
+  REQUIRE(h.getRunData().presolved_model_num_nz == 0);
 
-  // Now reset lp_presolve_requires_basis_postsolve default to true,
-  // to test whether it's set false due to running IPM without
-  // crossover
-  lp_presolve_requires_basis_postsolve = true;
-  REQUIRE(h.setOptionValue("lp_presolve_requires_basis_postsolve",
-                           lp_presolve_requires_basis_postsolve) ==
-          HighsStatus::kOk);
-
+  // ... and when solving using IPM without crossover
   REQUIRE(h.clearSolver() == HighsStatus::kOk);
   REQUIRE(h.run() == HighsStatus::kOk);
   REQUIRE(h.getPresolveLog().rule[kPresolveRuleSparsify].call > 0);
-  // Ensure that lp_presolve_requires_basis_postsolve has been reset
-  // to true, after being set false before presolve when using IPM
-  // without crossover
-  REQUIRE(h.getOptions().lp_presolve_requires_basis_postsolve ==
-          lp_presolve_requires_basis_postsolve);
+
+  REQUIRE(h.getRunData().presolved_model_num_col == 0);
+  REQUIRE(h.getRunData().presolved_model_num_row == 0);
+  REQUIRE(h.getRunData().presolved_model_num_nz == 0);
 
   h.resetGlobalScheduler(true);
 }
