@@ -16,8 +16,8 @@ struct RowData {
   double bu;
   HighsInt colour;
 
-  RowData(const HighsLp& lp, HighsInt row, HighsInt c)
-      : bl{lp.row_lower_[row]}, bu{lp.row_upper_[row]}, colour{c} {}
+  RowData(const HighsLp& lp, HighsInt row, HighsInt colour_in)
+      : bl{lp.row_lower_[row]}, bu{lp.row_upper_[row]}, colour{colour_in} {}
 };
 
 struct ColData {
@@ -26,11 +26,11 @@ struct ColData {
   double u;
   HighsInt colour;
 
-  ColData(const HighsLp& lp, HighsInt col, HighsInt c)
+  ColData(const HighsLp& lp, HighsInt col, HighsInt colour_in)
       : c{lp.col_cost_[col]},
         l{lp.col_lower_[col]},
         u{lp.col_upper_[col]},
-        colour{c} {}
+        colour{colour_in} {}
 };
 
 /*
@@ -61,9 +61,7 @@ tolerance apart.
 */
 
 struct DoubleQuantizer {
-  const double tolerance;
-
-  DoubleQuantizer(double tol = kQuantizationTolerance) : tolerance{tol} {}
+  static constexpr double inv_tol = 1.0 / kQuantizationTolerance;
 
   double bucket(double d) const;
 

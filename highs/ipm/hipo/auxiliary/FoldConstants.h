@@ -5,7 +5,7 @@ namespace highs {
 
 namespace folding {
 
-const double kQuantizationTolerance = 1e-6;
+constexpr double kQuantizationTolerance = 1e-6;
 
 }  // namespace folding
 }  // namespace highs

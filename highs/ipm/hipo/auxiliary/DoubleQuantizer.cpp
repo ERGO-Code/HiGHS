@@ -5,7 +5,9 @@ namespace highs {
 namespace folding {
 
 double DoubleQuantizer::bucket(double d) const {
-  return std::round(d / tolerance);
+  // Do not use llround and return int64_t, because that is undefined
+  // behaviour if d is infinite or too large.
+  return std::round(d * inv_tol);
 }
 
 size_t DoubleQuantizer::hash(double d) const {
@@ -18,7 +20,7 @@ size_t DoubleQuantizer::hash(HighsInt i) const {
 
 void DoubleQuantizer::combine(size_t& x, size_t y) const {
   // hash_combine from boost
-  x ^= y + 0x9e3779b9 + (x << 6) + (x >> 2);
+  x ^= y + 0x9e3779b97f4a7c15 + (x << 6) + (x >> 2);
 }
 
 bool DoubleQuantizer::equal(double x, double y) const {
