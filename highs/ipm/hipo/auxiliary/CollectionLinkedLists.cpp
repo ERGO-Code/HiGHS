@@ -1,6 +1,7 @@
 #include "CollectionLinkedLists.h"
 
 #include <cassert>
+#include <cstdio>
 
 namespace highs {
 

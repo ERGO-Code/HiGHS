@@ -4,6 +4,7 @@
 #include <unordered_map>
 
 #include "FoldConstants.h"
+#include "lp_data/HighsLp.h"
 #include "util/HighsType.h"
 
 namespace highs {
