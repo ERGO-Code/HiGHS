@@ -1106,12 +1106,14 @@ void HighsDomain::ObjectivePropagation::debugCheckObjectiveLower() const {
   for (HighsInt i = partitionStarts[numPartitions]; i < numObjNzs; ++i) {
     HighsInt col = objNonzeros[i];
     if (cost[col] > 0) {
+      if (domain->col_lower_[col] == 0.0) continue;
       if (domain->col_lower_[col] > -kHighsInf)
         lowerFromScratch +=
             static_cast<HighsCDouble>(domain->col_lower_[col]) * cost[col];
       else
         ++numInf;
     } else {
+      if (domain->col_upper_[col] == 0.0) continue;
       if (domain->col_upper_[col] < kHighsInf)
         lowerFromScratch +=
             static_cast<HighsCDouble>(domain->col_upper_[col]) * cost[col];
