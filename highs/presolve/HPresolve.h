@@ -502,6 +502,8 @@ class HPresolve {
 
   Result removeFixedCol(HighsInt col, double fixval);
 
+  void unlinkRow(HighsInt row);
+
   void removeRow(HighsInt row);
 
   Result removeDependentEquations(HighsPostsolveStack& postsolve_stack);
@@ -541,6 +543,8 @@ class HPresolve {
 
   Result updateCliqueTableSubstituteCol(HighsInt substCol, HighsInt stayCol,
                                         double offset, double scale);
+
+  void aggregateVarBounds();
 
   Result sparsify(HighsPostsolveStack& postsolve_stack);
 
