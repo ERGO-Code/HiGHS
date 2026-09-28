@@ -41,6 +41,8 @@ class HPresolve {
   HighsTimer* timer;
   HighsMipSolver* mipsolver = nullptr;
   double primal_feastol;
+  bool requires_basis_postsolve_;
+  bool requires_primal_dual_postsolve_;
   std::vector<HighsBool> allow_rule_;
 
   // triplet storage

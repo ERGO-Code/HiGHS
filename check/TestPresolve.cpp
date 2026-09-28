@@ -739,13 +739,12 @@ TEST_CASE("presolve-egout-ac", "[highs_test_presolve]") {
   std::string model_file =
       std::string(HIGHS_DIR) + "/check/instances/egout-ac.mps";
   Highs h;
-  //  h.setOptionValue("output_flag", dev_run);
+  h.setOptionValue("output_flag", dev_run);
   REQUIRE(h.setOptionValue("presolve_rule_logging", true) == HighsStatus::kOk);
-  //  if (dev_run)
+  if (dev_run)
     REQUIRE(h.setOptionValue("log_dev_level", 1) == HighsStatus::kOk);
   REQUIRE(h.readModel(model_file) == HighsStatus::kOk);
   // Firstly check that pure presolve reduces the LP to empty
-  printf("\n=============\nPure presolve\n=============\n");
   REQUIRE(h.presolve() == HighsStatus::kOk);
   // Ensure that sparsify isn't called
   REQUIRE(h.getPresolveLog().rule[kPresolveRuleSparsify].call == 0);
@@ -766,13 +765,11 @@ TEST_CASE("presolve-egout-ac", "[highs_test_presolve]") {
   // Check that using IPM with crossover runs OK without using
   // sparsify
   REQUIRE(h.setOptionValue("solver", kIpmString) == HighsStatus::kOk);
-  printf("\n=============\nIPM with crossover - run\n=============\n");
   REQUIRE(h.run() == HighsStatus::kOk);
   REQUIRE(h.getPresolveLog().rule[kPresolveRuleSparsify].call == 0);
 
   // Check that pure presolve reduces the LP to empty without using
   // sparsify
-  printf("\n=============\nIPM with crossover - presolve\n=============\n");
   REQUIRE(h.presolve() == HighsStatus::kOk);
   REQUIRE(h.getPresolveLog().rule[kPresolveRuleSparsify].call == 0);
   REQUIRE(h.postsolve(solution, basis) == HighsStatus::kOk);
@@ -781,7 +778,6 @@ TEST_CASE("presolve-egout-ac", "[highs_test_presolve]") {
   // to empty using sparsify, both via direct presolve...
   REQUIRE(h.setOptionValue("run_crossover", kHighsOffString) ==
           HighsStatus::kOk);
-  printf("\n=============\nIPM without crossover - presolve\n=============\n");
   REQUIRE(h.presolve() == HighsStatus::kOk);
   REQUIRE(h.getPresolveLog().rule[kPresolveRuleSparsify].call > 0);
   REQUIRE(h.postsolve(solution, basis) == HighsStatus::kOk);
@@ -792,7 +788,6 @@ TEST_CASE("presolve-egout-ac", "[highs_test_presolve]") {
 
   // ... and when solving using IPM without crossover
   REQUIRE(h.clearSolver() == HighsStatus::kOk);
-  printf("\n=============\nIPM without crossover - run\n=============\n");
   REQUIRE(h.run() == HighsStatus::kOk);
   REQUIRE(h.getPresolveLog().rule[kPresolveRuleSparsify].call > 0);
 
