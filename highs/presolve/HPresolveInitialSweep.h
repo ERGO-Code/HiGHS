@@ -24,9 +24,8 @@ class HPresolveInitialSweep {
     kDualInfeasible,
   };
 
-  HPresolveInitialSweep(HighsLp& lp,
-			const HighsOptions& options,
-			const std::vector<HighsBool>& allow_rule,
+  HPresolveInitialSweep(HighsLp& lp, const HighsOptions& options,
+                        const std::vector<HighsBool>& allow_rule,
                         const double primal_feastol);
 
   Result run(HighsPostsolveStack& postsolve_stack);

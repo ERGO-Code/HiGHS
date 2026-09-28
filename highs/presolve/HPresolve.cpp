@@ -507,7 +507,7 @@ void HPresolve::chooseRules() {
   // All rules except kPresolveRuleDominatedCol can be switched off,
   // although the most fundamental can only be switched off in initial
   // sweep
-  auto allowedOffInInitialSweep = [&] (const HighsInt rule_type) {
+  auto allowedOffInInitialSweep = [&](const HighsInt rule_type) {
     if (rule_type == kPresolveRuleEmptyRow) return true;
     if (rule_type == kPresolveRuleSingletonRow) return true;
     if (rule_type == kPresolveRuleRedundantRow) return true;
@@ -516,12 +516,12 @@ void HPresolve::chooseRules() {
     return false;
   };
 
-  auto logRule = [&] (const HighsInt rule_type) {
+  auto logRule = [&](const HighsInt rule_type) {
     highsLogUser(options->log_options, HighsLogType::kInfo,
-		 " %1s Rule %2d (set bit %2d = %7d): %s\n", 
-		 allowedOffInInitialSweep(rule_type) ? "*" : " ",
-		 int(rule_type), int(rule_type), int(1<<rule_type),
-		 utilPresolveRuleTypeToString(rule_type).c_str());
+                 " %1s Rule %2d (set bit %2d = %7d): %s\n",
+                 allowedOffInInitialSweep(rule_type) ? "*" : " ",
+                 int(rule_type), int(rule_type), int(1 << rule_type),
+                 utilPresolveRuleTypeToString(rule_type).c_str());
   };
 
   if (!silent && options->log_dev_level) {
@@ -529,15 +529,16 @@ void HPresolve::chooseRules() {
     highsLogUser(options->log_options, HighsLogType::kInfo,
                  "Permitted suppression of presolve rules via "
                  "presolve_rule_off option:\n");
-    for (HighsInt rule_type = kPresolveRuleMin;
-         rule_type < kPresolveRuleCount; rule_type++) {
+    for (HighsInt rule_type = kPresolveRuleMin; rule_type < kPresolveRuleCount;
+         rule_type++) {
       // Only kPresolveRuleDominatedCol cannot be switched off
       if (rule_type == kPresolveRuleDominatedCol) continue;
       logRule(rule_type);
     }
-    highsLogUser(options->log_options, HighsLogType::kInfo, " * Only in initial sweep\n");
+    highsLogUser(options->log_options, HighsLogType::kInfo,
+                 " * Only in initial sweep\n");
   }
-  
+
   if (options->presolve_light == kHighsOnString) {
     // Switch off the rules not used in presolve_light mode
     allow_rule_[kPresolveRuleDependentEquations] = false;
@@ -567,22 +568,24 @@ void HPresolve::chooseRules() {
       // Identify whether this rule is allowed
       if (!(options->presolve_rule_off & bit)) continue;
       if (rule_type != kPresolveRuleDominatedCol) {
-	off_in_initial_sweep = allowedOffInInitialSweep(rule_type) || off_in_initial_sweep;
-	allow_rule_[rule_type] = false;
-	if (!silent) logRule(rule_type);
+        off_in_initial_sweep =
+            allowedOffInInitialSweep(rule_type) || off_in_initial_sweep;
+        allow_rule_[rule_type] = false;
+        if (!silent) logRule(rule_type);
       } else {
-	// This is a rule that cannot be switched off so, if an
-	// attempt is made, don't allow it to be off and possibly
-	// comment negatively
-	if (!silent)
-	  highsLogUser(options->log_options, HighsLogType::kWarning,
-		       "Cannot disallow rule %2d (bit %2d = %5d): %s\n",
-		       int(rule_type), int(rule_type), int(bit),
-		       utilPresolveRuleTypeToString(rule_type).c_str());
+        // This is a rule that cannot be switched off so, if an
+        // attempt is made, don't allow it to be off and possibly
+        // comment negatively
+        if (!silent)
+          highsLogUser(options->log_options, HighsLogType::kWarning,
+                       "Cannot disallow rule %2d (bit %2d = %5d): %s\n",
+                       int(rule_type), int(rule_type), int(bit),
+                       utilPresolveRuleTypeToString(rule_type).c_str());
       }
     }
     if (!silent && off_in_initial_sweep)
-      highsLogUser(options->log_options, HighsLogType::kInfo, " * Only in initial sweep\n");
+      highsLogUser(options->log_options, HighsLogType::kInfo,
+                   " * Only in initial sweep\n");
   }
 }
 
@@ -6562,6 +6565,11 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
       return Result::kPrimalInfeasible;
     if (sweep_result == HPresolveInitialSweep::Result::kDualInfeasible)
       return Result::kDualInfeasible;
+    // Check that time and reduction limits have not been reached
+    //
+    // NB Setting presolve_reduciton_limit = 0 ensures that presolve
+    // returns after initial sweep
+    HPRESOLVE_CHECKED_CALL(checkLimits(postsolve_stack));
   }
   if (!okSetupPresolveDataStructures()) {
     highsLogUser(options->log_options, HighsLogType::kError,
