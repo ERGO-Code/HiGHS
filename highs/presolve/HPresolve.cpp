@@ -523,16 +523,14 @@ void HPresolve::chooseRules() {
     highsLogUser(options->log_options, HighsLogType::kInfo,
                  "Permitted suppression of presolve rules via "
                  "presolve_rule_off option:\n");
-    HighsInt bit =
-        std::pow(int(2), static_cast<int>(kPresolveRuleFirstAllowOff));
     for (HighsInt rule_type = kPresolveRuleFirstAllowOff;
          rule_type < kPresolveRuleCount; rule_type++) {
+      HighsInt bit = 1 << rule_type;
       // This is a rule that can be switched off
       highsLogUser(options->log_options, HighsLogType::kInfo,
                    "   Rule %2d (set bit %2d = %7d): %s\n", int(rule_type),
                    int(rule_type), int(bit),
                    utilPresolveRuleTypeToString(rule_type).c_str());
-      bit *= 2;
     }
   }
   if (options->presolve_rule_off || presolve_light_on) {

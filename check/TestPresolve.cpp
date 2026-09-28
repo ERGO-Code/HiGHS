@@ -4,7 +4,7 @@
 #include "catch.hpp"
 #include "presolve/HPresolve.h"
 
-const bool dev_run = false;
+const bool dev_run = true;//false;
 
 bool doubleEqual(const double v0, const double v1) {
   return std::fabs(v0 - v1) < 1e-8;
@@ -1465,3 +1465,49 @@ TEST_CASE("test-fuzzing", "[highs_test_presolve]") {
   h.resetGlobalScheduler(true);
 }
 */
+
+TEST_CASE("presolve-rules-off", "[highs_test_presolve]") {
+  HighsLp lp;
+  lp.num_col_ = 7;
+  lp.num_row_ = 4;
+  lp.col_cost_ = {1, 1, 1, 1, 1, 1, 1};
+  lp.col_lower_ = {0, 1, 0, 1, 1, -kHighsInf, 0};
+  lp.col_upper_ = {1, 1, kHighsInf, 3, 1, 1, 1};
+  lp.row_lower_ = {2, 8, 10, 13};
+  lp.row_upper_ = {4, 9, 16, 26};
+  lp.a_matrix_.start_ = {0, 1, 5, 6, 6, 10, 12, 13};
+  lp.a_matrix_.index_ = {2, 0, 1, 2, 3, 0, 0, 1, 2, 3, 2, 3, 2};
+  lp.a_matrix_.value_ = {6, 1, 4, 7, 11, 2, 3, 5, 8, 12, 9, 13, 10};
+  // Cols 1 and 4 fixed at 1; col 3 empty (fixed at LB = 1) then
+  //
+  // Rows 0 and 3 singletons; row 1 empty
+  //
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  if (dev_run) {
+    REQUIRE(h.setOptionValue("log_dev_level", 1) == HighsStatus::kOk);
+    REQUIRE(h.setOptionValue("presolve_rule_logging", true) == HighsStatus::kOk);
+  }
+  // Only allow initial sweep
+  REQUIRE(h.setOptionValue("presolve_reduction_limit", 0) == HighsStatus::kOk);
+
+  
+
+  REQUIRE(h.passModel(lp) == HighsStatus::kOk);
+
+  // Add a redundant row
+  std::vector<HighsInt> index = {0, 5, 6};
+  std::vector<double> value = {1, 1, 1};
+  h.addRow(-kHighsInf, 4, 3, index.data(), value.data());
+
+  h.writeModel();
+
+
+
+  REQUIRE(h.run() == HighsStatus::kOk);
+
+  h.resetGlobalScheduler(true);
+
+}
+
+
