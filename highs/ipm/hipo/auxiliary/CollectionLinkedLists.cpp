@@ -34,10 +34,6 @@ void CollectionLinkedLists::clear(HighsInt list) {
   length_[list] = 0;
 }
 
-void CollectionLinkedLists::clear() {
-  for (HighsInt i = 0; i < n_lists_; ++i) clear(i);
-}
-
 void CollectionLinkedLists::append(HighsInt elem, HighsInt list) {
   const HighsInt temp = backward_[n_elem_ + list];
   backward_[n_elem_ + list] = elem;

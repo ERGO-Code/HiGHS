@@ -23,41 +23,43 @@ class CollectionLinkedLists {
   void print() const;
 
  public:
-  // initialise and clear
   void init(HighsInt n_elem, HighsInt n_lists);
   void clear(HighsInt list);
-  void clear();
 
-  // modify the lists
+  HighsInt n() const { return n_elem_; }
   void append(HighsInt elem, HighsInt list);
   void remove(HighsInt elem, HighsInt list);
-
-  // read the lists
-  HighsInt head(HighsInt list) const { return forward_[n_elem_ + list]; }
-  HighsInt next(HighsInt elem) const { return forward_[elem]; }
-  HighsInt tail(HighsInt list) const { return backward_[n_elem_ + list]; }
-  HighsInt prev(HighsInt elem) const { return backward_[elem]; }
   HighsInt length(HighsInt list) const { return length_[list]; }
-  bool cont(HighsInt v) const { return v < n_elem_; }
+
+  const HighsInt& head(HighsInt list) const { return forward_[n_elem_ + list]; }
+  const HighsInt& next(HighsInt elem) const { return forward_[elem]; }
+
+  // Define iterator for range-based loop:
+  //  for (HighsInt v : list(i))
+  //
+  struct List {
+    const CollectionLinkedLists* owner;
+    HighsInt list;
+
+    struct Iterator {
+      const CollectionLinkedLists* owner;
+      HighsInt current;
+
+      HighsInt operator*() const { return current; }
+      Iterator& operator++() {
+        current = owner->next(current);
+        return *this;
+      }
+      bool operator!=(const Iterator& o) const { return current != o.current; }
+      bool operator==(const Iterator& o) const { return current == o.current; }
+    };
+
+    Iterator begin() { return {owner, owner->head(list)}; }
+    Iterator end() { return {owner, owner->n() + list}; }
+  };
+
+  List list(HighsInt l) { return List{this, l}; }
 };
-
-/*
-To go through list i:
-
-HighsInt v = head(i);
-while (cont(v)){
-  ...
-  v = next(v);
-}
-
-or reverse
-
-HighsInt v = tail(i);
-while (cont(v)){
-  ...
-  v = prev(v);
-}
-*/
 
 }  // namespace folding
 

@@ -82,8 +82,7 @@ void ColourRefinement::chooseRefiningColour() {
 void ColourRefinement::computeColourDegrees() {
   hipo::Clock clock;
 
-  for (HighsInt v = colour_classes_.head(refining_colour_);
-       colour_classes_.cont(v); v = colour_classes_.next(v)) {
+  for (HighsInt v : colour_classes_.list(refining_colour_)) {
     forEachNeighbour(v, [this](HighsInt w) {
       colour_degree_[w]++;
       if (colour_degree_[w] == 1) colour_classes_touched_.append(w, colour_[w]);
@@ -106,9 +105,7 @@ void ColourRefinement::computeColourDegrees() {
     else {
       min_colour_degree_[c] = max_colour_degree_[c];
 
-      for (HighsInt v = colour_classes_touched_.head(c);
-           colour_classes_touched_.cont(v);
-           v = colour_classes_touched_.next(v)) {
+      for (HighsInt v : colour_classes_touched_.list(c)) {
         if (colour_degree_[v] < min_colour_degree_[c])
           min_colour_degree_[c] = colour_degree_[v];
       }
@@ -151,8 +148,7 @@ void ColourRefinement::splitColour(const HighsInt s) {
   degree_count[0] =
       colour_classes_.length(s) - colour_classes_touched_.length(s);
 
-  for (HighsInt v = colour_classes_touched_.head(s);
-       colour_classes_touched_.cont(v); v = colour_classes_touched_.next(v)) {
+  for (HighsInt v : colour_classes_touched_.list(s)) {
     degree_count[colour_degree_[v]]++;
   }
 
@@ -183,8 +179,7 @@ void ColourRefinement::splitColour(const HighsInt s) {
     }
   }
 
-  for (HighsInt v = colour_classes_touched_.head(s);
-       colour_classes_touched_.cont(v); v = colour_classes_touched_.next(v)) {
+  for (HighsInt v : colour_classes_touched_.list(s)) {
     if (new_colour[colour_degree_[v]] != s) {
       colour_classes_.remove(v, s);
       colour_classes_.append(v, new_colour[colour_degree_[v]]);
@@ -198,8 +193,7 @@ void ColourRefinement::prepareNextIter() {
 
   for (HighsInt el = 0; el < top_touched_; ++el) {
     const HighsInt c = colours_touched_[el];
-    for (HighsInt v = colour_classes_touched_.head(c);
-         colour_classes_touched_.cont(v); v = colour_classes_touched_.next(v)) {
+    for (HighsInt v : colour_classes_touched_.list(c)) {
       colour_degree_[v] = 0;
     }
     max_colour_degree_[c] = 0;
@@ -241,8 +235,6 @@ void test_folding(const HighsLp& lp) {
   printf("Rows: used %d out of %zu\n", colours_used_rows, lp.row_lower_.size());
   printf("Cols: used %d out of %zu\n", colours_used_cols, lp.col_cost_.size());
 
-  exit(1);
-
   for (HighsInt& i : colour_cols) i += colours_used_rows;
 
   std::vector<HighsInt> colour_matrix = std::move(colour_rows);
@@ -254,6 +246,8 @@ void test_folding(const HighsLp& lp) {
 
   printf("\nMatrix: used %d out of %d\n\n", CR.coloursUsed(),
          lp.a_matrix_.num_row_ + lp.a_matrix_.num_col_);
+
+  exit(1);
 }
 
 HighsInt Folder::findInitialRowColour(std::vector<HighsInt>& colour) {
