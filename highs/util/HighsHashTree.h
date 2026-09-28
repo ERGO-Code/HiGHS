@@ -506,7 +506,7 @@ class HighsHashTree {
 
   template <int SizeClass>
   inline static bool pastChunkEnd(InnerLeaf<SizeClass>* leaf, int i, int pos) {
-    return i == leaf->size || get_first_chunk16(leaf->hashes[i]) != pos;
+    return i >= leaf->size || get_first_chunk16(leaf->hashes[i]) != pos;
   }
 
   template <int SizeClass>
