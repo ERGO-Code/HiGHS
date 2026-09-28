@@ -1413,7 +1413,7 @@ TEST_CASE("test-weakly-dominated-column-primal-dual-postsolve",
   lp.row_upper_ = {kHighsInf};
 
   Highs h;
-  //  h.setOptionValue("output_flag", dev_run);
+  h.setOptionValue("output_flag", dev_run);
 
   REQUIRE(h.passModel(lp) == HighsStatus::kOk);
 
@@ -1514,6 +1514,8 @@ TEST_CASE("presolve-rules-off", "[highs_test_presolve]") {
   lp.col_upper_ = {1, 1, kHighsInf, 3, 1, 1, 1};
   lp.row_lower_ = {2, 8, 10, 13, -kHighsInf};
   lp.row_upper_ = {4, 9, 16, 26, 4};
+  lp.a_matrix_.num_col_ = lp.num_col_;
+  lp.a_matrix_.num_row_ = lp.num_row_;
   lp.a_matrix_.start_ = {0, 2, 6, 7, 7, 11, 14, 16};
   lp.a_matrix_.index_ = {2, 4, 0, 1, 2, 3, 0, 0, 1, 2, 3, 2, 3, 4, 2, 4};
   lp.a_matrix_.value_ = {6, 1, 1, 4, 7, 11, 2, 3, 5, 8, 12, 9, 13, 1, 10, 1};
@@ -1522,16 +1524,18 @@ TEST_CASE("presolve-rules-off", "[highs_test_presolve]") {
   // Rows 0 and 3 singletons; row 1 empty, row 4 redundant
   //
   Highs h;
-  //  h.setOptionValue("output_flag", dev_run);
-  //  if (dev_run) {
-  REQUIRE(h.setOptionValue("log_dev_level", 1) == HighsStatus::kOk);
-  REQUIRE(h.setOptionValue("presolve_rule_logging", true) == HighsStatus::kOk);
-  //  }
+  h.setOptionValue("output_flag", dev_run);
+  if (dev_run) {
+    REQUIRE(h.setOptionValue("log_dev_level", 1) == HighsStatus::kOk);
+    REQUIRE(h.setOptionValue("presolve_rule_logging", true) ==
+            HighsStatus::kOk);
+  }
   // Only allow initial sweep
   REQUIRE(h.setOptionValue("presolve_reduction_limit", 0) == HighsStatus::kOk);
 
   HighsInt presolve_rule_off = 0;
   const HighsRunData& run_data = h.getRunData();
+  // Loop six times, with all five reductions allowed, reducing to 0
   for (HighsInt k = 0; k < 6; k++) {
     REQUIRE(h.setOptionValue("presolve_rule_off", presolve_rule_off) ==
             HighsStatus::kOk);
@@ -1539,24 +1543,35 @@ TEST_CASE("presolve-rules-off", "[highs_test_presolve]") {
     REQUIRE(h.passModel(lp) == HighsStatus::kOk);
     REQUIRE(h.run() == HighsStatus::kOk);
 
-    printf("Pass %d: presolved LP has %1d rows, %1d cols and %2d nonzeros\n",
-           int(k), int(run_data.presolved_model_num_row),
-           int(run_data.presolved_model_num_col),
-           int(run_data.presolved_model_num_nz));
     if (k == 0) {
       REQUIRE(run_data.presolved_model_num_row == 1);
       REQUIRE(run_data.presolved_model_num_col == 4);
       REQUIRE(run_data.presolved_model_num_nz == 3);
       presolve_rule_off += (1 << kPresolveRuleRedundantRow);
     } else if (k == 1) {
+      REQUIRE(run_data.presolved_model_num_row == 2);
+      REQUIRE(run_data.presolved_model_num_col == 4);
+      REQUIRE(run_data.presolved_model_num_nz == 6);
       presolve_rule_off += (1 << kPresolveRuleSingletonRow);
     } else if (k == 2) {
+      REQUIRE(run_data.presolved_model_num_row == 4);
+      REQUIRE(run_data.presolved_model_num_col == 4);
+      REQUIRE(run_data.presolved_model_num_nz == 8);
       presolve_rule_off += (1 << kPresolveRuleEmptyRow);
     } else if (k == 3) {
+      REQUIRE(run_data.presolved_model_num_row == 5);
+      REQUIRE(run_data.presolved_model_num_col == 4);
+      REQUIRE(run_data.presolved_model_num_nz == 8);
       presolve_rule_off += (1 << kPresolveRuleFixedCol);
     } else if (k == 4) {
+      REQUIRE(run_data.presolved_model_num_row == 5);
+      REQUIRE(run_data.presolved_model_num_col == 6);
+      REQUIRE(run_data.presolved_model_num_nz == 16);
       presolve_rule_off += (1 << kPresolveRuleEmptyCol);
     } else {
+      REQUIRE(run_data.presolved_model_num_row == lp.num_row_);
+      REQUIRE(run_data.presolved_model_num_col == lp.num_col_);
+      REQUIRE(run_data.presolved_model_num_nz == lp.a_matrix_.numNz());
     }
   }
 
