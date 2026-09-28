@@ -26,8 +26,9 @@ TEST_CASE("semi-variable-model", "[highs_test_semi_variables]") {
   const double semi_col_lower = lp.col_lower_[semi_col];
   const double semi_col_upper = lp.col_upper_[semi_col];
   lp.col_cost_[semi_col] = semi_col_cost;
+  lp.model_name_ = "semi-variable-model";
   optimal_objective_function_value = 6.83333;
-  // Legal to have infinte upper bounds on semi-variables
+  // Legal to have infinite upper bounds on semi-variables
   lp.col_upper_[semi_col] = inf;
   return_status = highs.passModel(model);
   REQUIRE(return_status == HighsStatus::kOk);
@@ -334,6 +335,9 @@ TEST_CASE("3015", "[highs_test_semi_variables]") {
   double optimal_objective_value = -1407973.679417;
   Highs highs;
   highs.setOptionValue("output_flag", dev_run);
+  // Disable Fourier-Motzkin presolve so that the semi-variable
+  // infeasibility is still triggered with default mip_feasibility_tolerance
+  highs.setOptionValue("presolve_rule_off", 1 << kPresolveRuleFourierMotzkin);
   highs.readModel(filename);
   HighsStatus status = highs.run();
   REQUIRE(status == HighsStatus::kError);

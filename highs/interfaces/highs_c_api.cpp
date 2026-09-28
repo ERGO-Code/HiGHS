@@ -61,9 +61,6 @@ HighsInt Highs_lpCall(const HighsInt num_col, const HighsInt num_row,
       if (copy_row_basis) row_basis_status[i] = (HighsInt)basis.row_status[i];
     }
   }
-
-  highs.resetGlobalScheduler(true);
-
   return (HighsInt)status;
 }
 
@@ -106,9 +103,6 @@ HighsInt Highs_mipCall(const HighsInt num_col, const HighsInt num_row,
         row_value[i] = solution.row_value[i];
     }
   }
-
-  highs.resetGlobalScheduler(true);
-
   return (HighsInt)status;
 }
 
@@ -165,18 +159,12 @@ HighsInt Highs_qpCall(
       if (copy_row_basis) row_basis_status[i] = (HighsInt)basis.row_status[i];
     }
   }
-
-  highs.resetGlobalScheduler(true);
-
   return (HighsInt)status;
 }
 
 void* Highs_create(void) { return new Highs(); }
 
-void Highs_destroy(void* highs) {
-  Highs::resetGlobalScheduler(true);
-  delete (Highs*)highs;
-}
+void Highs_destroy(void* highs) { delete (Highs*)highs; }
 
 const char* Highs_version(void) { return highsVersion(); }
 HighsInt Highs_versionMajor(void) { return highsVersionMajor(); }
@@ -299,6 +287,19 @@ HighsInt Highs_passHessian(void* highs, const HighsInt dim,
       ->passHessian(dim, num_nz, format, start, index, value);
 }
 
+HighsInt Highs_passHessianOracle(void* highs, const HighsInt dim,
+                                 HighsCHessianFunctionType oracleCall,
+                                 void* oracle_data) {
+  auto status =
+      static_cast<Highs*>(highs)->passHessian(dim, oracleCall, oracle_data);
+  return static_cast<HighsInt>(status);
+}
+
+HighsInt Highs_checkHessianOracle(void* highs) {
+  auto status = static_cast<Highs*>(highs)->checkHessianOracle();
+  return static_cast<HighsInt>(status);
+}
+
 HighsInt Highs_passLinearObjectives(const void* highs,
                                     const HighsInt num_linear_objective,
                                     const double* weight, const double* offset,
@@ -377,6 +378,10 @@ HighsInt Highs_clearModel(void* highs) {
 
 HighsInt Highs_clearSolver(void* highs) {
   return (HighsInt)((Highs*)highs)->clearSolver();
+}
+
+HighsInt Highs_releaseMemory(void* highs) {
+  return (HighsInt)((Highs*)highs)->releaseMemory();
 }
 
 HighsInt Highs_setBoolOptionValue(void* highs, const char* option,
@@ -536,6 +541,9 @@ HighsInt Highs_getInfoType(const void* highs, const char* info,
 HighsInt Highs_getSolution(const void* highs, double* col_value,
                            double* col_dual, double* row_value,
                            double* row_dual) {
+  if (((Highs*)highs)->getInfo().primal_solution_status == kSolutionStatusNone)
+    return kHighsStatusError;
+
   const HighsSolution& solution = ((Highs*)highs)->getSolution();
 
   if (col_value != nullptr) {
@@ -567,6 +575,7 @@ HighsInt Highs_getSolution(const void* highs, double* col_value,
 HighsInt Highs_getBasis(const void* highs, HighsInt* col_status,
                         HighsInt* row_status) {
   const HighsBasis& basis = ((Highs*)highs)->getBasis();
+  if (!basis.valid) return kHighsStatusError;
   for (size_t i = 0; i < basis.col_status.size(); i++) {
     col_status[i] = static_cast<HighsInt>(basis.col_status[i]);
   }
@@ -752,7 +761,7 @@ HighsInt Highs_setCallback(void* highs, HighsCCallbackType user_callback,
                            void* user_callback_data) {
   auto status = static_cast<Highs*>(highs)->setCallback(user_callback,
                                                         user_callback_data);
-  return static_cast<int>(status);
+  return static_cast<HighsInt>(status);
 }
 
 HighsInt Highs_startCallback(void* highs, const HighsInt callback_type) {
@@ -1184,7 +1193,7 @@ HighsInt Highs_getPresolvedNumRow(const void* highs) {
 }
 
 HighsInt Highs_getPresolvedNumNz(const void* highs) {
-  return ((Highs*)highs)->getPresolvedLp().a_matrix_.numNz();
+  return ((Highs*)highs)->getPresolvedLp().numNz();
 }
 
 // Gets pointers to all the public data members of HighsLp: avoids
@@ -1231,7 +1240,7 @@ static HighsInt Highs_getHighsLpData(const HighsLp& lp, const HighsInt a_format,
         (desired_a_format == MatrixFormat::kRowwise &&
          lp.a_matrix_.isRowwise())) {
       // Incumbent format is OK
-      *num_nz = lp.a_matrix_.numNz();
+      *num_nz = lp.numNz();
       if (a_start)
         memcpy(a_start, lp.a_matrix_.start_.data(),
                num_start_entries * sizeof(HighsInt));
@@ -1561,6 +1570,8 @@ const void* Highs_getCallbackDataOutItem(const HighsCallbackDataOut* data_out,
     return (void*)(&data_out->ipm_iteration_count);
   } else if (!strcmp(item_name, kHighsCallbackDataOutPdlpIterationCountName)) {
     return (void*)(&data_out->pdlp_iteration_count);
+  } else if (!strcmp(item_name, kHighsCallbackDataOutQpasmIterationCountName)) {
+    return (void*)(&data_out->qpasm_iteration_count);
   } else if (!strcmp(item_name,
                      kHighsCallbackDataOutObjectiveFunctionValueName)) {
     return (void*)(&data_out->objective_function_value);
@@ -1593,6 +1604,8 @@ const void* Highs_getCallbackDataOutItem(const HighsCallbackDataOut* data_out,
     return (void*)(data_out->cutpool_lower);
   } else if (!strcmp(item_name, kHighsCallbackDataOutCutpoolUpperName)) {
     return (void*)(data_out->cutpool_upper);
+  } else if (!strcmp(item_name, kHighsCallbackDataOutQpSolutionName)) {
+    return (void*)(data_out->qp_solution);
   }
   return nullptr;
 }

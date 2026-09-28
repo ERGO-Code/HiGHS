@@ -58,22 +58,17 @@ struct HighsPrimalDualErrors {
 
 void getKktFailures(const HighsOptions& options, const HighsModel& model,
                     const HighsSolution& solution, const HighsBasis& basis,
-                    HighsInfo& highs_info);
-
-void getKktFailures(const HighsOptions& options, const HighsModel& model,
-                    const HighsSolution& solution, const HighsBasis& basis,
                     HighsInfo& highs_info,
-                    HighsPrimalDualErrors& primal_dual_errors,
+                    HighsPrimalDualErrors* primal_dual_errors = nullptr,
                     const bool get_residuals = false);
 
-void getLpKktFailures(const HighsOptions& options, const HighsLp& lp,
-                      const HighsSolution& solution, const HighsBasis& basis,
-                      HighsInfo& highs_info);
+void getQpKktFailures(const HighsOptions& options, const HighsModel& model,
+                      const HighsSolution& solution, HighsInfo& highs_info);
 
 void getLpKktFailures(const HighsOptions& options, const HighsLp& lp,
                       const HighsSolution& solution, const HighsBasis& basis,
                       HighsInfo& highs_info,
-                      HighsPrimalDualErrors& primal_dual_errors,
+                      HighsPrimalDualErrors* primal_dual_errors = nullptr,
                       const bool get_residuals = false);
 
 // Inner getKktFailures
@@ -101,6 +96,9 @@ void lpKktCheck(HighsModelStatus& model_status, HighsInfo& info,
                 const HighsLp& lp, const HighsSolution& solution,
                 const HighsBasis& basis, const HighsOptions& options,
                 const std::string& message);
+
+std::vector<double> getEffectiveCosts(const HighsLp& lp,
+                                      const HighsOptions& options);
 
 void getPrimalDualGlpsolErrors(const HighsOptions& options, const HighsLp& lp,
                                const std::vector<double>& gradient,

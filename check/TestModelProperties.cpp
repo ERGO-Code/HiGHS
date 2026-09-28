@@ -141,3 +141,23 @@ TEST_CASE("afiro-ill-conditioning", "[highs_model_properties]") {
   highs.getIllConditioning(ill_conditioning, constraint);
   highs.getIllConditioning(ill_conditioning, !constraint);
 }
+
+TEST_CASE("infinite-bounds", "[highs_model_properties]") {
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  HighsLp lp;
+  // clang-format off
+  lp.col_lower_ = {-1e25,     0, -1e12,     0, -1e25, -1e12, -1e25,     0, -1e12,     0, -1e25, -1e12};
+  lp.col_upper_ = {    0,  1e25,     0,  1e12,  1e25,  1e12,     0,  1e25,     0,  1e12,  1e25,  1e12};
+  lp.num_col_ = static_cast<HighsInt>(lp.col_lower_.size());
+  lp.num_row_ = 0;
+  lp.col_cost_.assign(lp.num_col_, 0);
+  lp.integrality_ = {HighsVarType::kContinuous, HighsVarType::kContinuous,
+		     HighsVarType::kInteger, HighsVarType::kInteger,
+		     HighsVarType::kContinuous, HighsVarType::kInteger,
+		     HighsVarType::kSemiContinuous, HighsVarType::kSemiContinuous,
+		     HighsVarType::kSemiInteger, HighsVarType::kSemiInteger,
+		     HighsVarType::kSemiContinuous, HighsVarType::kSemiInteger};
+  // clang-format on
+  REQUIRE(h.passModel(lp) == HighsStatus::kOk);
+}

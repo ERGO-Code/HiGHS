@@ -13,8 +13,9 @@
 #include "util/HighsIntegers.h"
 
 HighsTransformedLp::HighsTransformedLp(const HighsLpRelaxation& lprelaxation,
-                                       HighsImplications& implications)
-    : lprelaxation(lprelaxation) {
+                                       HighsImplications& implications,
+                                       const HighsDomain& globaldom)
+    : lprelaxation(lprelaxation), globaldom_(globaldom) {
   assert(lprelaxation.scaledOptimal(lprelaxation.getStatus()));
   const HighsMipSolver& mipsolver = implications.mipsolver;
   const HighsSolution& lpSolution = lprelaxation.getLpSolver().getSolution();
@@ -34,22 +35,24 @@ HighsTransformedLp::HighsTransformedLp(const HighsLpRelaxation& lprelaxation,
   vectorsum.setDimension(numTransformedCol);
 
   for (HighsInt col : mipsolver.mipdata_->continuous_cols) {
-    mipsolver.mipdata_->implications.cleanupVarbounds(col);
-    if (mipsolver.mipdata_->domain.infeasible()) return;
+    if (!mipsolver.mipdata_->parallelLockActive())
+      mipsolver.mipdata_->implications.cleanupVarbounds(col);
 
-    if (mipsolver.mipdata_->domain.isFixed(col)) continue;
+    if (globaldom_.infeasible()) return;
 
-    double bestub = mipsolver.mipdata_->domain.col_upper_[col];
+    if (globaldom_.isFixed(col)) continue;
+
+    double bestub = globaldom_.col_upper_[col];
     simpleUbDist[col] = bestub - lpSolution.col_value[col];
     if (simpleUbDist[col] <= mipsolver.mipdata_->feastol)
       simpleUbDist[col] = 0.0;
-    bestVub[col] = implications.getBestVub(col, lpSolution, bestub);
+    bestVub[col] = implications.getBestVub(col, lpSolution, bestub, globaldom_);
 
-    double bestlb = mipsolver.mipdata_->domain.col_lower_[col];
+    double bestlb = globaldom_.col_lower_[col];
     simpleLbDist[col] = lpSolution.col_value[col] - bestlb;
     if (simpleLbDist[col] <= mipsolver.mipdata_->feastol)
       simpleLbDist[col] = 0.0;
-    bestVlb[col] = implications.getBestVlb(col, lpSolution, bestlb);
+    bestVlb[col] = implications.getBestVlb(col, lpSolution, bestlb, globaldom_);
 
     lbDist[col] = lpSolution.col_value[col] - bestlb;
     if (lbDist[col] <= mipsolver.mipdata_->feastol) lbDist[col] = 0.0;
@@ -60,11 +63,13 @@ HighsTransformedLp::HighsTransformedLp(const HighsLpRelaxation& lprelaxation,
   }
 
   for (HighsInt col : mipsolver.mipdata_->integral_cols) {
-    double bestub = mipsolver.mipdata_->domain.col_upper_[col];
-    double bestlb = mipsolver.mipdata_->domain.col_lower_[col];
+    double bestub = globaldom_.col_upper_[col];
+    double bestlb = globaldom_.col_lower_[col];
 
-    mipsolver.mipdata_->implications.cleanupVarbounds(col);
-    if (mipsolver.mipdata_->domain.infeasible()) return;
+    if (!mipsolver.mipdata_->parallelLockActive())
+      mipsolver.mipdata_->implications.cleanupVarbounds(col);
+
+    if (globaldom_.infeasible()) return;
     simpleUbDist[col] = bestub - lpSolution.col_value[col];
     if (simpleUbDist[col] <= mipsolver.mipdata_->feastol)
       simpleUbDist[col] = 0.0;
@@ -76,10 +81,10 @@ HighsTransformedLp::HighsTransformedLp(const HighsLpRelaxation& lprelaxation,
     if (simpleBndDist > 0 &&
         std::fabs(HighsIntegers::nearestInteger(lpSolution.col_value[col]) -
                   lpSolution.col_value[col]) < mipsolver.mipdata_->feastol) {
-      bestVub[col] =
-          mipsolver.mipdata_->implications.getBestVub(col, lpSolution, bestub);
-      bestVlb[col] =
-          mipsolver.mipdata_->implications.getBestVlb(col, lpSolution, bestlb);
+      bestVub[col] = mipsolver.mipdata_->implications.getBestVub(
+          col, lpSolution, bestub, globaldom_);
+      bestVlb[col] = mipsolver.mipdata_->implications.getBestVlb(
+          col, lpSolution, bestlb, globaldom_);
 
       lbDist[col] = lpSolution.col_value[col] - bestlb;
       if (lbDist[col] <= mipsolver.mipdata_->feastol) lbDist[col] = 0.0;
@@ -105,8 +110,8 @@ HighsTransformedLp::HighsTransformedLp(const HighsLpRelaxation& lprelaxation,
   HighsInt indexOffset = mipsolver.numCol();
   for (HighsInt row = 0; row != numLpRow; ++row) {
     HighsInt slackIndex = indexOffset + row;
-    double bestub = lprelaxation.slackUpper(row);
-    double bestlb = lprelaxation.slackLower(row);
+    double bestub = lprelaxation.slackUpper(row, globaldom_);
+    double bestlb = lprelaxation.slackLower(row, globaldom_);
 
     if (bestlb == bestub) continue;
 
@@ -128,7 +133,8 @@ bool HighsTransformedLp::transform(std::vector<double>& vals,
                                    std::vector<double>& upper,
                                    std::vector<double>& solval,
                                    std::vector<HighsInt>& inds, double& rhs,
-                                   bool& integersPositive, bool preferVbds) {
+                                   bool& integersPositive, bool preferVbds,
+                                   bool enforceSameBds) {
   // vector sum should be empty
   assert(vectorsum.getNonzeros().empty());
 
@@ -140,13 +146,15 @@ bool HighsTransformedLp::transform(std::vector<double>& vals,
   HighsInt numNz = inds.size();
 
   auto getLb = [&](HighsInt col) {
-    return (col < slackOffset ? mip.mipdata_->domain.col_lower_[col]
-                              : lprelaxation.slackLower(col - slackOffset));
+    return (col < slackOffset
+                ? globaldom_.col_lower_[col]
+                : lprelaxation.slackLower(col - slackOffset, globaldom_));
   };
 
   auto getUb = [&](HighsInt col) {
-    return (col < slackOffset ? mip.mipdata_->domain.col_upper_[col]
-                              : lprelaxation.slackUpper(col - slackOffset));
+    return (col < slackOffset
+                ? globaldom_.col_upper_[col]
+                : lprelaxation.slackUpper(col - slackOffset, globaldom_));
   };
 
   auto remove = [&](HighsInt position) {
@@ -188,6 +196,11 @@ bool HighsTransformedLp::transform(std::vector<double>& vals,
       mip.mipdata_->implications.cleanupVub(col, bestVub[col].first,
                                             bestVub[col].second, ub, redundant,
                                             infeasible, false);
+      if (redundant) {
+        bestVub[col].first = -1;
+        ubDist[col] = simpleUbDist[col];
+        boundDist[col] = std::min(lbDist[col], ubDist[col]);
+      }
     }
 
     // the code below uses the difference between the column upper and lower
@@ -203,6 +216,11 @@ bool HighsTransformedLp::transform(std::vector<double>& vals,
       mip.mipdata_->implications.cleanupVlb(col, bestVlb[col].first,
                                             bestVlb[col].second, lb, redundant,
                                             infeasible, false);
+      if (redundant) {
+        bestVlb[col].first = -1;
+        lbDist[col] = simpleLbDist[col];
+        boundDist[col] = std::min(lbDist[col], ubDist[col]);
+      }
     }
 
     // store the old bound type so that we can restore it if the continuous
@@ -216,7 +234,25 @@ bool HighsTransformedLp::transform(std::vector<double>& vals,
     // column.
     BoundType oldBoundType = boundTypes[col];
 
-    if (lprelaxation.isColIntegral(col)) {
+    if (enforceSameBds && oldBoundType != BoundType::kUnused) {
+      // Don't allow different bound types to be used in stacked
+      // transformations unless they're going to be relaxed out
+      // This ensures that a single call to untransform remains valid
+      if (lprelaxation.isColIntegral(col) &&
+          (ub - lb <= 1.5 || boundDist[col] != 0.0 || simpleLbDist[col] == 0 ||
+           simpleUbDist[col] == 0)) {
+        i++;
+        continue;
+      }
+      if (oldBoundType == BoundType::kSimpleLb ||
+          oldBoundType == BoundType::kSimpleUb) {
+        if (lbDist[col] < ubDist[col] && vals[i] > 0) {
+          boundTypes[col] = BoundType::kSimpleLb;
+        } else if (ubDist[col] < lbDist[col] && vals[i] < 0) {
+          boundTypes[col] = BoundType::kSimpleUb;
+        }
+      }
+    } else if (lprelaxation.isColIntegral(col)) {
       if (ub - lb <= 1.5 || boundDist[col] != 0.0 || simpleLbDist[col] == 0 ||
           simpleUbDist[col] == 0) {
         // since we skip the handling of variable bound constraints for all
@@ -321,6 +357,11 @@ bool HighsTransformedLp::transform(std::vector<double>& vals,
           remove(i);
           continue;
         }
+        break;
+      case BoundType::kUnused:
+        assert(false);
+        vectorsum.clear();
+        return false;
     }
     // move to next element
     i++;
@@ -358,6 +399,8 @@ bool HighsTransformedLp::transform(std::vector<double>& vals,
   for (HighsInt j = 0; j != numNz; ++j) {
     HighsInt col = inds[j];
 
+    if (enforceSameBds && boundTypes[col] != BoundType::kUnused) continue;
+
     // get bounds
     double lb = getLb(col);
     double ub = getUb(col);
@@ -366,7 +409,9 @@ bool HighsTransformedLp::transform(std::vector<double>& vals,
     assert(lb != -kHighsInf || ub != kHighsInf);
 
     // set bound type for previously unprocessed integer-constrained variables
-    if (!lprelaxation.isColIntegral(col)) continue;
+    if (!lprelaxation.isColIntegral(col) &&
+        boundTypes[col] != BoundType::kUnused)
+      continue;
 
     // do not overwrite bound type for integral slacks from vlb / vub
     // constraints
@@ -425,6 +470,10 @@ bool HighsTransformedLp::transform(std::vector<double>& vals,
         solval[j] = ubDist[col];
         break;
       }
+      case BoundType::kUnused: {
+        assert(false);
+        return false;
+      }
     }
 
     // check if all integer-constrained variables have positive coefficients
@@ -467,11 +516,11 @@ bool HighsTransformedLp::untransform(std::vector<double>& vals,
       }
       case BoundType::kSimpleLb: {
         if (col < slackOffset) {
-          tmpRhs += vals[i] * mip.mipdata_->domain.col_lower_[col];
+          tmpRhs += vals[i] * globaldom_.col_lower_[col];
           vectorsum.add(col, vals[i]);
         } else {
           HighsInt row = col - slackOffset;
-          tmpRhs += vals[i] * lprelaxation.slackLower(row);
+          tmpRhs += vals[i] * lprelaxation.slackLower(row, globaldom_);
 
           HighsInt rowlen;
           const HighsInt* rowinds;
@@ -485,11 +534,11 @@ bool HighsTransformedLp::untransform(std::vector<double>& vals,
       }
       case BoundType::kSimpleUb: {
         if (col < slackOffset) {
-          tmpRhs -= vals[i] * mip.mipdata_->domain.col_upper_[col];
+          tmpRhs -= vals[i] * globaldom_.col_upper_[col];
           vectorsum.add(col, -vals[i]);
         } else {
           HighsInt row = col - slackOffset;
-          tmpRhs -= vals[i] * lprelaxation.slackUpper(row);
+          tmpRhs -= vals[i] * lprelaxation.slackUpper(row, globaldom_);
           vals[i] = -vals[i];
 
           HighsInt rowlen;
@@ -500,6 +549,12 @@ bool HighsTransformedLp::untransform(std::vector<double>& vals,
           for (HighsInt j = 0; j != rowlen; ++j)
             vectorsum.add(rowinds[j], vals[i] * rowvals[j]);
         }
+        break;
+      }
+      case BoundType::kUnused: {
+        assert(false);
+        vectorsum.clear();
+        return false;
       }
     }
   }
@@ -525,15 +580,15 @@ bool HighsTransformedLp::untransform(std::vector<double>& vals,
 
       if (absval <= mip.mipdata_->feastol) {
         if (val > 0) {
-          if (mip.mipdata_->domain.col_lower_[col] == -kHighsInf)
+          if (globaldom_.col_lower_[col] == -kHighsInf)
             abort = true;
           else
-            tmpRhs -= val * mip.mipdata_->domain.col_lower_[col];
+            tmpRhs -= val * globaldom_.col_lower_[col];
         } else {
-          if (mip.mipdata_->domain.col_upper_[col] == kHighsInf)
+          if (globaldom_.col_upper_[col] == kHighsInf)
             abort = true;
           else
-            tmpRhs -= val * mip.mipdata_->domain.col_upper_[col];
+            tmpRhs -= val * globaldom_.col_upper_[col];
         }
         return true;
       }

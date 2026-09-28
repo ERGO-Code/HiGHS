@@ -21,10 +21,6 @@ class HighsTask {
   friend class HighsSplitDeque;
 
  public:
-  enum Constants {
-    kMaxTaskSize = 64,
-  };
-
   class Interrupt {};
 
  private:
@@ -53,7 +49,7 @@ class HighsTask {
     }
   };
 
-  char taskData[kMaxTaskSize - sizeof(Metadata)];
+  char taskData[HighsSchedulerConstants::kMaxTaskSize - sizeof(Metadata)];
   Metadata metadata;
 
   CallableBase& getCallable() {

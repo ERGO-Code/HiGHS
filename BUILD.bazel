@@ -88,6 +88,7 @@ cc_library(
     copts = select({
         "@rules_cc//cc/compiler:msvc-cl": [],
         "//conditions:default": [
+            "-fexceptions",
             "-Wno-unused-variable",
             "-Wno-unused-but-set-variable",
         ],
@@ -117,6 +118,10 @@ cc_library(
     ],
     linkopts = select({
         "@rules_cc//cc/compiler:msvc-cl": ["-DEFAULTLIB:shell32.lib"],
+        "@platforms//os:linux": [
+          "-Wl,--no-as-needed -ldl",
+          "-pthread",
+        ],
         "//conditions:default": ["-lpthread"],
     }),
     visibility = ["//visibility:public"],
@@ -224,8 +229,11 @@ TEST_NAMES = [
     "TestLpValidation",
     "TestMipSolver",
     "TestPresolve",
+    "TestPresolveRules",
+    "TestQpOracle",
     "TestQpSolver",
     "TestRanging",
+    "TestRunData",
     "TestRays",
     "TestSemiVariables",
     "TestSetup",
@@ -240,6 +248,7 @@ TEST_NAMES = [
     copts = ["-Iextern"] + select({
         "@rules_cc//cc/compiler:msvc-cl": [],
         "//conditions:default": [
+            "-fexceptions",
             "-Wno-unused-variable",
             "-Wno-unused-but-set-variable",
         ],

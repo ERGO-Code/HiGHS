@@ -7,13 +7,13 @@ The nuget package Highs.Native is on https://www.nuget.org, at https://www.nuget
 It can be added to your C# project with `dotnet`
 
 ```shell
-dotnet add package Highs.Native --version 1.14.0
+dotnet add package Highs.Native --version 1.15.1
 ```
 
 The nuget package contains runtime libraries for
 
 * `win-x64`
-* `win-x32`
+* `win-x86`
 * `linux-x64`
 * `linux-arm64`
 * `macos-x64`
@@ -21,7 +21,7 @@ The nuget package contains runtime libraries for
 
 #### Local build
 
-To build the wrapper locally, you would need `cmake` and `dotnet`. CMake can be configured to generate the files required for the dotnet package locally, wtih the `BUILD_DOTNET` cmake variable. Assuming the build directory is called `build`, the package is generated in `build/dotnet/Highs.Native`, with a single runtime library, depending on the platform. From the HiGHS root directory, run
+To build the wrapper locally, you would need `cmake` and `dotnet`. CMake can be configured to generate the files required for the dotnet package locally, with the `BUILD_DOTNET` cmake variable. Assuming the build directory is called `build`, the package is generated in `build/dotnet/Highs.Native`, with a single runtime library, depending on the platform. From the HiGHS root directory, run
 
 ``` bash
 cmake -S. -Bbuild -DCSHARP=ON -DBUILD_DOTNET=ON

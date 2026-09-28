@@ -106,6 +106,8 @@ static const HighsInt kHighsCallbackMipInterrupt = 6;
 static const HighsInt kHighsCallbackMipGetCutPool = 7;
 static const HighsInt kHighsCallbackMipDefineLazyConstraints = 8;
 static const HighsInt kHighsCallbackCallbackMipUserSolution = 9;
+static const HighsInt kHighsCallbackQpFirstFeasiblePoint = 10;
+static const HighsInt kHighsCallbackQpInterrupt = 11;
 
 static const char* const kHighsCallbackDataOutLogTypeName = "log_type";
 static const char* const kHighsCallbackDataOutRunningTimeName = "running_time";
@@ -115,6 +117,8 @@ static const char* const kHighsCallbackDataOutIpmIterationCountName =
     "ipm_iteration_count";
 static const char* const kHighsCallbackDataOutPdlpIterationCountName =
     "pdlp_iteration_count";
+static const char* const kHighsCallbackDataOutQpasmIterationCountName =
+    "qpasm_iteration_count";
 static const char* const kHighsCallbackDataOutObjectiveFunctionValueName =
     "objective_function_value";
 static const char* const kHighsCallbackDataOutMipNodeCountName =
@@ -143,6 +147,7 @@ static const char* const kHighsCallbackDataOutCutpoolLowerName =
     "cutpool_lower";
 static const char* const kHighsCallbackDataOutCutpoolUpperName =
     "cutpool_upper";
+static const char* const kHighsCallbackDataOutQpSolutionName = "qp_solution";
 
 const HighsInt kHighsIisStrategyLight = 0;
 // Forces full IIS calculation as before - ie with the
@@ -160,6 +165,12 @@ const HighsInt kHighsIisBoundBoxed = 4;
 const HighsInt kHighsIisStatusNotInConflict = -1;
 const HighsInt kHighsIisStatusMaybeInConflict = 0;
 const HighsInt kHighsIisStatusInConflict = 1;
+
+const HighsInt kHighsHessianOracleCallTypeMin = 0;
+const HighsInt kHighsHessianOracleCallTypeEntry = 0;
+const HighsInt kHighsHessianOracleCallTypeColumn = 1;
+const HighsInt kHighsHessianOracleCallTypeProduct = 2;
+const HighsInt kHighsHessianOracleCallTypeMax = 2;
 
 #ifdef __cplusplus
 extern "C" {
@@ -281,7 +292,8 @@ HighsInt Highs_qpCall(
 /**
  * Create a Highs instance and return the reference.
  *
- * Call `Highs_destroy` on the returned reference to clean up allocated memory.
+ * Call `Highs_destroy` on the returned reference to clean up memory
+ * allocated for this instance.
  *
  * @returns A pointer to the Highs instance.
  */
@@ -289,7 +301,13 @@ void* Highs_create(void);
 
 /**
  * Destroy the model `highs` created by `Highs_create` and free all
- * corresponding memory. Future calls using `highs` are not allowed.
+ * memory allocated for this instance. Future calls using `highs` are
+ * not allowed.
+ *
+ * Since the global scheduler's memory is shared by concurrent Highs
+ * instances, it cannot be freed by `Highs_destroy`. Hence, to free
+ * all memory used by HiGHS, `Highs_resetGlobalScheduler` must also be
+ * called.
  *
  * To empty a model without invalidating `highs`, see `Highs_clearModel`.
  *
@@ -394,6 +412,20 @@ HighsInt Highs_clearModel(void* highs);
  * @returns A `kHighsStatus` constant indicating whether the call succeeded.
  */
 HighsInt Highs_clearSolver(void* highs);
+
+/**
+ * Release all retained memory back to the allocator.
+ *
+ * Clears all solver state and shrinks internal vectors to free unused
+ * capacity. Useful in long-running services that reuse a Highs instance
+ * across multiple solves to prevent unbounded RSS growth from heap
+ * fragmentation.
+ *
+ * @param highs     A pointer to the Highs instance.
+ *
+ * @returns A `kHighsStatus` constant indicating whether the call succeeded.
+ */
+HighsInt Highs_releaseMemory(void* highs);
 
 /**
  * Presolve a model.
@@ -584,6 +616,29 @@ HighsInt Highs_passHessian(void* highs, const HighsInt dim,
                            const HighsInt num_nz, const HighsInt format,
                            const HighsInt* start, const HighsInt* index,
                            const double* value);
+
+/**
+ * Set the Hessian oracle callback method
+ *
+ * @param highs        A pointer to the Highs instance.
+ * @param dim          Dimension of the Hessian
+ * @param oracleCall   A pointer to the Hessian oracle callback
+ * @param oracle_data  A pointer to the Hessian oracle callback data
+ *
+ * @returns A `kHighsStatus` constant indicating whether the call succeeded.
+ */
+HighsInt Highs_passHessianOracle(void* highs, const HighsInt dim,
+                                 HighsCHessianFunctionType oracleCall,
+                                 void* oracle_data);
+
+/**
+ * Check the Hessian oracle callback method
+ *
+ * @param highs     A pointer to the Highs instance.
+ *
+ * @returns A `kHighsStatus` constant indicating whether the call succeeded.
+ */
+HighsInt Highs_checkHessianOracle(void* highs);
 
 /**
  * Passes multiple linear objective data to HiGHS, clearing any such
@@ -975,7 +1030,8 @@ HighsInt Highs_getInfoType(const void* highs, const char* info, HighsInt* type);
  * @param row_dual   An array of length [num_row], to be filled with dual row
  *                   values.
  *
- * @returns A `kHighsStatus` constant indicating whether the call succeeded.
+ * @returns A `kHighsStatus` constant indicating whether a primal solution
+ * exists.
  */
 HighsInt Highs_getSolution(const void* highs, double* col_value,
                            double* col_dual, double* row_value,
@@ -993,7 +1049,7 @@ HighsInt Highs_getSolution(const void* highs, double* col_value,
  *                    basis statuses in the form of a `kHighsBasisStatus`
  *                    constant.
  *
- * @returns A `kHighsStatus` constant indicating whether the call succeeded.
+ * @returns A `kHighsStatus` constant indicating whether the basis is valid.
  */
 HighsInt Highs_getBasis(const void* highs, HighsInt* col_status,
                         HighsInt* row_status);
@@ -2476,6 +2532,12 @@ HighsInt Highs_getIis(void* highs, HighsInt* iis_num_col, HighsInt* iis_num_row,
                       HighsInt* col_status, HighsInt* row_status);
 /**
  * Releases all resources held by the global scheduler instance.
+ *
+ * Although the scheduler instance is created internally by a Highs
+ * instance, any subsequent Highs instances share the
+ * scheduler. Hence, calling `Highs_destroy` does not free the global
+ * scheduler's memory, so `Highs_resetGlobalScheduler` must also be
+ * called.
  *
  * It is not thread-safe to call this function while calling `Highs_run` or one
  * of the `Highs_XXXcall` methods on any other Highs instance in any thread.

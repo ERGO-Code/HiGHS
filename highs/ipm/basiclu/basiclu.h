@@ -30,6 +30,8 @@ typedef int64_t lu_int;
 typedef int lu_int;
 #define LU_INT_MAX INT_MAX
 #endif
+
+#define LU_DOUBLE_INFINITY INFINITY
 /* #include <limits.h> */
 /* typedef long lu_int; */
 /* #define LU_INT_MAX LONG_MAX */
@@ -49,6 +51,7 @@ typedef int lu_int;
 #define BASICLU_OK 0
 #define BASICLU_REALLOCATE 1
 #define BASICLU_WARNING_singular_matrix 2
+#define BASICLU_WARNING_timeout 3
 #define BASICLU_ERROR_invalid_store (-1)
 #define BASICLU_ERROR_invalid_call (-2)
 #define BASICLU_ERROR_argument_missing (-3)
@@ -78,6 +81,8 @@ typedef int lu_int;
 #define BASICLU_SPARSE_THRESHOLD 12
 #define BASICLU_REMOVE_COLUMNS 13
 #define BASICLU_SEARCH_ROWS 14
+#define BASICLU_TIME_START 15
+#define BASICLU_TIME_LIMIT 16
 
 /* user readable */
 #define BASICLU_DIM 64
@@ -132,6 +137,9 @@ typedef int lu_int;
 
 #define BASICLU_PIVOT_ERROR 120
 
+/* Moved from private entries in xstore */
+#define BASICLU_RANKDEF 261
+  
 /* ----------------------- */
 /* user callable functions */
 /* ----------------------- */
@@ -153,6 +161,8 @@ typedef int lu_int;
 #include "ipm/basiclu/basiclu_obj_solve_for_update.h"
 #include "ipm/basiclu/basiclu_obj_update.h"
 #include "ipm/basiclu/basiclu_obj_free.h"
+
+double basiclu_wallclock();
 
 #ifdef __cplusplus
 }

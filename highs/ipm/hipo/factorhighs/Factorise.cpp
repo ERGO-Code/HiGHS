@@ -4,7 +4,7 @@
 #include <fstream>
 
 #include "DataCollector.h"
-#include "FactorHiGHSSettings.h"
+#include "FactorHighsSettings.h"
 #include "FormatHandler.h"
 #include "HybridHybridFormatHandler.h"
 #include "ReturnValues.h"
@@ -14,23 +14,24 @@
 
 namespace hipo {
 
-Factorise::Factorise(const Symbolic& S, const std::vector<Int>& rowsM,
-                     const std::vector<Int>& ptrM,
-                     const std::vector<double>& valM, const Regul& regul,
-                     const Logger* logger, DataCollector& data,
+Factorise::Factorise(const Symbolic& S, Int n, Int nz, const Int* rowsM,
+                     const Int* ptrM, const double* valM,
+                     const FHoptions& FH_opt, const Logger* logger,
+                     DataCollector& data,
                      std::vector<std::vector<double>>& sn_columns,
                      CliqueStack* stack)
     : S_{S},
       sn_columns_{sn_columns},
-      regul_{regul},
       logger_{logger},
       data_{data},
+      FH_opt_{FH_opt},
       stack_{stack} {
   // Input the symmetric matrix to be factorised in CSC format and the symbolic
   // factorisation coming from Analyse.
   // Only the lower triangular part of the matrix is used.
+  // Diagonal entries must be stored for each column, even if zero.
 
-  n_ = ptrM.size() - 1;
+  n_ = n;
 
   if (n_ != S_.size()) {
     if (logger_)
@@ -41,9 +42,15 @@ Factorise::Factorise(const Symbolic& S, const std::vector<Int>& rowsM,
   }
 
   // Make a copy of the matrix to be factorised
-  rowsM_ = rowsM;
-  valM_ = valM;
-  ptrM_ = ptrM;
+  rowsM_ = std::vector<Int>(rowsM, rowsM + nz);
+  valM_ = std::vector<double>(valM, valM + nz);
+  ptrM_ = std::vector<Int>(ptrM, ptrM + n + 1);
+
+  // adjust data if one-based indexing is used
+  if (FH_opt_.one_indexing) {
+    for (Int& i : rowsM_) --i;
+    for (Int& i : ptrM_) --i;
+  }
 
   // Permute the matrix.
   // This also removes any entry not in the lower triangle.
@@ -98,10 +105,10 @@ void Factorise::processSupernode(Int sn) {
   // Assemble frontal matrix for supernode sn, perform partial factorisation and
   // store the result.
 
-  TaskGroupSpecial tg;
+  highs::parallel::TaskGroup tg;
   HIPO_CLOCK_CREATE;
 
-  const bool parallel = S_.parTree();
+  const bool parallel = FH_opt_.parallel_tree;
   const bool serial = !parallel;
 
   if (flag_stop_.load(std::memory_order_relaxed)) return;
@@ -141,7 +148,7 @@ void Factorise::processSupernode(Int sn) {
   // initialise the format handler
   // this also allocates space for the frontal matrix and schur complement
   std::unique_ptr<FormatHandler> FH(new HybridHybridFormatHandler(
-      S_, sn, regul_, data_, sn_columns_[sn], clique_ptr));
+      S_, sn, data_, sn_columns_[sn], clique_ptr, FH_opt_));
 
   HIPO_CLOCK_STOP(2, data_, kTimeFactorisePrepare);
 
@@ -182,10 +189,13 @@ void Factorise::processSupernode(Int sn) {
 
       if (flag_stop_.load(std::memory_order_relaxed)) return;
 
+      TSAN_ANNOTATE_HAPPENS_AFTER(&schur_contribution_[child_sn]);
+
       child_clique = schur_contribution_[child_sn].data();
 
       if (!child_clique) {
-        if (logger_) logger_->printInfo("Missing child supernode contribution\n");
+        if (logger_)
+          logger_->printInfo("Missing child supernode contribution\n");
         flag_stop_.store(true, std::memory_order_relaxed);
         return;
       }
@@ -195,49 +205,7 @@ void Factorise::processSupernode(Int sn) {
       assert(child == child_sn);
     }
 
-    // determine size of clique of child
-    const Int child_begin = S_.snStart(child_sn);
-    const Int child_end = S_.snStart(child_sn + 1);
-
-    // number of nodes in child sn
-    const Int child_size = child_end - child_begin;
-
-    // size of clique of child sn
-    const Int nc = S_.ptr(child_sn + 1) - S_.ptr(child_sn) - child_size;
-
-    // ASSEMBLE INTO FRONTAL
-    HIPO_CLOCK_START(2);
-    // go through the columns of the contribution of the child
-    for (Int col = 0; col < nc; ++col) {
-      // relative index of column in the frontal matrix
-      Int j = S_.relindClique(child_sn, col);
-
-      if (j < sn_size) {
-        // assemble into frontal
-
-        // go through the rows of the contribution of the child
-        Int row = col;
-        while (row < nc) {
-          // relative index of the entry in the matrix frontal
-          const Int i = S_.relindClique(child_sn, row);
-
-          // how many entries to sum
-          Int consecutive = S_.consecutiveSums(child_sn, row);
-
-          FH->assembleFrontalMultiple(consecutive, child_clique, nc, child_sn,
-                                      row, col, i, j);
-
-          row += consecutive;
-        }
-      } else
-        break;
-    }
-    HIPO_CLOCK_STOP(2, data_, kTimeFactoriseAssembleChildrenFrontal);
-
-    // ASSEMBLE INTO CLIQUE
-    HIPO_CLOCK_START(2);
-    FH->assembleClique(child_clique, nc, child_sn);
-    HIPO_CLOCK_STOP(2, data_, kTimeFactoriseAssembleChildrenClique);
+    FH->assembleChild(child_sn, child_clique);
 
     // Schur contribution of the child is no longer needed
     if (parallel) {
@@ -282,13 +250,36 @@ void Factorise::processSupernode(Int sn) {
 
   if (serial) stack_->pushWork(sn);
 
+  TSAN_ANNOTATE_HAPPENS_BEFORE(&schur_contribution_[sn]);
+
   HIPO_CLOCK_STOP(2, data_, kTimeFactoriseTerminate);
+}
+
+void Factorise::processTreeSerial() {
+  if (!stack_) {
+    // processing the tree in serial requires a CliqueStack
+    flag_stop_.store(true, std::memory_order_relaxed);
+    return;
+  }
+  if (stack_->empty()) stack_->init(S_.maxStackSize());
+  for (Int sn = 0; sn < S_.sn(); ++sn) {
+    processSupernode(sn);
+  }
+}
+
+void Factorise::processTreeParallel() {
+  highs::parallel::TaskGroup tg;
+  // spawn roots
+  for (Int sn = 0; sn < S_.sn(); ++sn) {
+    if (S_.snParent(sn) == -1) {
+      tg.spawn([=]() { processSupernode(sn); });
+    }
+  }
+  tg.taskWait();
 }
 
 bool Factorise::run(Numeric& num) {
   HIPO_CLOCK_CREATE;
-
-  TaskGroupSpecial tg;
 
   total_reg_.assign(n_, 0.0);
 
@@ -301,30 +292,15 @@ bool Factorise::run(Numeric& num) {
   // the memory of previous factorisations.
   sn_columns_.resize(S_.sn());
 
-  if (S_.parTree()) {
-    Int spawned_roots{};
-    // spawn tasks for root supernodes
-    for (Int sn = 0; sn < S_.sn(); ++sn) {
-      if (S_.snParent(sn) == -1) {
-        tg.spawn([=]() { processSupernode(sn); });
-        ++spawned_roots;
-      }
-    }
-
-    // sync tasks for root supernodes
-    tg.taskWait();
+  if (FH_opt_.parallel_tree) {
+    processTreeParallel();
   } else {
-    // processing the tree in serial requires a CliqueStack
-    if (!stack_) return true;
-    if (stack_->empty()) stack_->init(S_.maxStackSize());
-
-    // go through each supernode serially
-    for (Int sn = 0; sn < S_.sn(); ++sn) {
-      processSupernode(sn);
-    }
+    processTreeSerial();
   }
 
   if (flag_stop_.load(std::memory_order_relaxed)) return true;
+
+  permuteVector(total_reg_, S_.iperm());
 
   // move factorisation to numerical object
   num.S_ = &S_;
@@ -333,6 +309,9 @@ bool Factorise::run(Numeric& num) {
   num.swaps_ = std::move(swaps_);
   num.pivot_2x2_ = std::move(pivot_2x2_);
   num.data_ = &data_;
+  num.options_ = &FH_opt_;
+
+  if (num.prepare()) return true;
 
   HIPO_CLOCK_STOP(1, data_, kTimeFactorise);
 

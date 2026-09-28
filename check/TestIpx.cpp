@@ -47,6 +47,7 @@ TEST_CASE("test-ipx", "[highs_ipx]") {
   if (!dev_run) parameters.display = 0;
   parameters.highs_logging = false;
   parameters.timeless_log = false;
+  parameters.time_limit = kHighsInf;
   lps.SetParameters(parameters);
 
   // Solve the LP.

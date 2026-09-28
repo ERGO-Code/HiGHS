@@ -531,8 +531,13 @@ void writeSolutionFile(FILE* file, const HighsOptions& options,
     highsFprintfString(file, log_options, ss.str());
   } else if (style == kSolutionStyleGlpsolRaw ||
              style == kSolutionStyleGlpsolPretty) {
+    if (model.isQp()) {
+      highsLogUser(options.log_options, HighsLogType::kError,
+                   "Cannot write QP solution in Glpsol format\n");
+      return;
+    }
     const bool raw = style == kSolutionStyleGlpsolRaw;
-    writeGlpsolSolution(file, options, model, basis, solution, model_status,
+    writeGlpsolSolution(file, options, model.lp_, basis, solution, model_status,
                         info, raw);
   } else {
     // Standard raw solution file, possibly sparse => only nonzero primal values
@@ -581,7 +586,7 @@ void writeGlpsolCostRow(FILE* file, const HighsLogOptions& log_options,
 }
 
 void writeGlpsolSolution(FILE* file, const HighsOptions& options,
-                         const HighsModel& model, const HighsBasis& basis,
+                         const HighsLp& lp, const HighsBasis& basis,
                          const HighsSolution& solution,
                          const HighsModelStatus model_status,
                          const HighsInfo& info, const bool raw) {
@@ -592,17 +597,16 @@ void writeGlpsolSolution(FILE* file, const HighsOptions& options,
   const double kGlpsolMediumQuality = 1e-6;
   const double kGlpsolLowQuality = 1e-3;
   const double kGlpsolPrintAsZero = 1e-9;
-  const HighsLp& lp = model.lp_;
   const HighsLogOptions& log_options = options.log_options;
   assert(lp.col_names_.size() == static_cast<size_t>(lp.num_col_));
   assert(lp.row_names_.size() == static_cast<size_t>(lp.num_row_));
   // Determine number of nonzeros including the objective function
   // and, hence, determine whether there is an objective function
-  HighsInt num_nz = lp.a_matrix_.numNz();
+  HighsInt num_nz = lp.numNz();
   for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++)
     if (lp.col_cost_[iCol]) num_nz++;
-  const bool empty_cost_row = num_nz == lp.a_matrix_.numNz();
-  const bool has_objective = !empty_cost_row || model.hessian_.dim_;
+  const bool empty_cost_row = num_nz == lp.numNz();
+  const bool has_objective = !empty_cost_row;
   // Writes the solution using the GLPK raw style (defined in
   // api/wrsol.c) or pretty style (defined in api/prsol.c)
   //
@@ -702,7 +706,7 @@ void writeGlpsolSolution(FILE* file, const HighsOptions& options,
   const HighsInt glpsol_num_row = num_row + delta_num_row;
   // If the cost row isn't reported, then the number of nonzeros is
   // just the number in the constraint matrix
-  if (cost_row_location <= 0) num_nz = lp.a_matrix_.numNz();
+  if (cost_row_location <= 0) num_nz = lp.numNz();
   // Record the discrete nature of the model
   HighsInt num_integer = 0;
   HighsInt num_binary = 0;
@@ -1108,7 +1112,7 @@ void writeGlpsolSolution(FILE* file, const HighsOptions& options,
   double absolute_error_value;
   HighsInt relative_error_index;
   double relative_error_value;
-  getKktFailures(options, model, solution, basis, local_info, errors, true);
+  getLpKktFailures(options, lp, solution, basis, local_info, &errors, true);
   highsFprintfString(file, log_options, "\n");
   if (is_mip) {
     highsFprintfString(file, log_options, "Integer feasibility conditions:\n");
@@ -1379,27 +1383,35 @@ std::string utilSolutionStatusToString(const HighsInt solution_status) {
 }
 
 // Return a string representation of HighsBasisStatus
-std::string utilBasisStatusToString(const HighsBasisStatus basis_status) {
+StatusString utilBasisStatusToString(const HighsBasisStatus basis_status) {
+  StatusString status;
   switch (basis_status) {
     case HighsBasisStatus::kLower:
-      return "At lower/fixed bound";
+      status.full_ = "At lower/fixed bound";
+      status.s2_ = "LO";
       break;
     case HighsBasisStatus::kBasic:
-      return "Basic";
+      status.full_ = "Basic";
+      status.s2_ = "BS";
       break;
     case HighsBasisStatus::kUpper:
-      return "At upper bound";
+      status.full_ = "At upper bound";
+      status.s2_ = "UP";
       break;
     case HighsBasisStatus::kZero:
-      return "Free at zero";
+      status.full_ = "Free at zero";
+      status.s2_ = "ZE";
       break;
     case HighsBasisStatus::kNonbasic:
-      return "Nonbasic";
+      status.full_ = "Nonbasic";
+      status.s2_ = "NB";
       break;
     default:
       assert(1 == 0);
-      return "Unrecognised solution status";
+      status.full_ = "Unrecognised solution status";
+      status.s2_ = "??";
   }
+  return status;
 }
 
 // Return a string representation of basis validity
@@ -1515,6 +1527,16 @@ std::string utilPresolveRuleTypeToString(const HighsInt rule_type) {
     return "Probing";
   } else if (rule_type == kPresolveRuleEnumeration) {
     return "Enumeration";
+  } else if (rule_type == kPresolveRuleDualFixing) {
+    return "Dual fixing";
+  } else if (rule_type == kPresolveRuleZeroCostSingleton) {
+    return "Zero cost singleton";
+  } else if (rule_type == kPresolveRuleColStuffing) {
+    return "Col stuffing";
+  } else if (rule_type == kPresolveRuleInitialSweep) {
+    return "Initial sweep";
+  } else if (rule_type == kPresolveRuleFourierMotzkin) {
+    return "Fourier-Motzkin";
   }
   assert(1 == 0);
   return "????";

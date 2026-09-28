@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "DataCollector.h"
+#include "FactorHighsOptions.h"
 #include "Symbolic.h"
 #include "ipm/hipo/auxiliary/IntConfig.h"
 #include "ipm/hipo/auxiliary/Logger.h"
@@ -79,11 +80,16 @@ class Analyse {
 
   std::vector<std::vector<Int64>> clique_block_start_{};
 
-  // block size
-  Int nb_{};
+  const FHoptions& FH_opt_;
 
   const Logger* logger_;
   DataCollector& data_;
+
+  TreeSchedule schedule_solve_;
+
+  double ops_solve_;
+  double critical_ops_solve_;
+  std::vector<double> task_ops_solve_;
 
   // Functions to perform analyse phase
   void permute(const std::vector<Int>& iperm);
@@ -103,15 +109,17 @@ class Analyse {
   void computeStorage(Int fr, Int sz, Int64& fr_entries,
                       Int64& cl_entries) const;
   void computeCriticalPath();
+  void computeCriticalPathSolve();
   void computeBlockStart();
   void computeStackSize();
+  void computeTreeScheduleSolve();
   Int checkOverflow() const;
 
  public:
   // Constructor: matrix must be in lower triangular format
-  Analyse(const std::vector<Int>& rows, const std::vector<Int>& ptr,
-          const std::vector<Int>& signs, Int nb, const Logger* logger,
-          DataCollector& data, const std::vector<Int>& perm);
+  Analyse(Int n, Int nz, const Int* rows, const Int* ptr, const Int* signs,
+          const FHoptions& FH_opt, const Logger* logger, DataCollector& data,
+          const Int* perm);
 
   // Run analyse phase and save the result in Symbolic object S
   Int run(Symbolic& S);

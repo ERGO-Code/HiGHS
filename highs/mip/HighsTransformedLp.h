@@ -19,8 +19,8 @@
 #include "lp_data/HConst.h"
 #include "mip/HighsImplications.h"
 #include "util/HighsCDouble.h"
-#include "util/HighsInt.h"
 #include "util/HighsSparseVectorSum.h"
+#include "util/HighsType.h"
 
 class HighsLpRelaxation;
 
@@ -29,6 +29,7 @@ class HighsLpRelaxation;
 class HighsTransformedLp {
  private:
   const HighsLpRelaxation& lprelaxation;
+  const HighsDomain& globaldom_;
 
   std::vector<std::pair<HighsInt, HighsImplications::VarBound>> bestVub;
   std::vector<std::pair<HighsInt, HighsImplications::VarBound>> bestVlb;
@@ -38,6 +39,7 @@ class HighsTransformedLp {
   std::vector<double> ubDist;
   std::vector<double> boundDist;
   enum class BoundType : uint8_t {
+    kUnused,
     kSimpleUb,
     kSimpleLb,
     kVariableUb,
@@ -48,16 +50,24 @@ class HighsTransformedLp {
 
  public:
   HighsTransformedLp(const HighsLpRelaxation& lprelaxation,
-                     HighsImplications& implications);
+                     HighsImplications& implications,
+                     const HighsDomain& globaldom);
 
   double boundDistance(HighsInt col) const { return boundDist[col]; }
 
   bool transform(std::vector<double>& vals, std::vector<double>& upper,
                  std::vector<double>& solval, std::vector<HighsInt>& inds,
-                 double& rhs, bool& integralPositive, bool preferVbds = false);
+                 double& rhs, bool& integralPositive, bool preferVbds = false,
+                 bool enforceSameBds = false);
 
   bool untransform(std::vector<double>& vals, std::vector<HighsInt>& inds,
                    double& rhs, bool integral = false);
+
+  const HighsDomain& getGlobaldom() const { return globaldom_; }
+
+  void initMultiRowTransform() {
+    boundTypes.assign(boundTypes.size(), BoundType::kUnused);
+  }
 };
 
 #endif

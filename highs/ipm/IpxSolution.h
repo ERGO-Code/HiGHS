@@ -15,7 +15,7 @@
 
 #include <vector>
 
-#include "util/HighsInt.h"
+#include "util/HighsType.h"
 typedef HighsInt ipxint;
 
 struct IpxSolution {

@@ -1269,8 +1269,8 @@ HMpsFF::Parsekey HMpsFF::parseBounds(const HighsLogOptions& log_options,
   HighsInt num_si = 0;
   HighsInt num_sc = 0;
 
-  std::vector<bool> has_lower;
-  std::vector<bool> has_upper;
+  std::vector<HighsBool> has_lower;
+  std::vector<HighsBool> has_upper;
   has_lower.assign(num_col, false);
   has_upper.assign(num_col, false);
 

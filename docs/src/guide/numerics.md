@@ -2,7 +2,7 @@
 
 Optimization solvers cannot be expected to find the exact solution of
 a problem, since it may not be possible to represent that solution
-using floating-point arithemtic. However, solvers will typically run
+using floating-point arithmetic. However, solvers will typically run
 faster and find more accurate solutions if the problem has good
 numerical properties. Ideally the optimal value of all primal
 variables (and dual variables when relevant) will be of order

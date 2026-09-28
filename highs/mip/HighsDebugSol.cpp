@@ -68,13 +68,15 @@ void HighsDebugSol::activate() {
 
       HighsCDouble debugsolobj = 0.0;
       for (HighsInt i = 0; i != mipsolver->orig_model_->num_col_; ++i)
-        debugsolobj += mipsolver->orig_model_->col_cost_[i] *
-                       HighsCDouble(debugOrigSolution[i]);
+        debugsolobj +=
+            static_cast<HighsCDouble>(mipsolver->orig_model_->col_cost_[i]) *
+            debugOrigSolution[i];
 
-      debugSolObjective = double(debugsolobj + mipsolver->orig_model_->offset_);
+      debugSolObjective =
+          static_cast<double>(debugsolobj + mipsolver->orig_model_->offset_);
       debugSolActive = true;
       printf("debug sol active\n");
-      registerDomain(mipsolver->mipdata_->domain);
+      registerDomain(mipsolver->mipdata_->getDomain());
     } else {
       highsLogUser(mipsolver->options_mip_->log_options, HighsLogType::kWarning,
                    "debug solution: could not open file '%s'\n",
@@ -83,8 +85,8 @@ void HighsDebugSol::activate() {
       model.lp_ = *mipsolver->model_;
       model.lp_.col_names_.clear();
       model.lp_.row_names_.clear();
-      model.lp_.col_lower_ = mipsolver->mipdata_->domain.col_lower_;
-      model.lp_.col_upper_ = mipsolver->mipdata_->domain.col_upper_;
+      model.lp_.col_lower_ = mipsolver->mipdata_->getDomain().col_lower_;
+      model.lp_.col_upper_ = mipsolver->mipdata_->getDomain().col_upper_;
       FilereaderMps().writeModelToFile(*mipsolver->options_mip_,
                                        "debug_mip.mps", model);
     }
@@ -101,9 +103,10 @@ void HighsDebugSol::shrink(const std::vector<HighsInt>& newColIndex) {
   debugSolution.resize(mipsolver->model_->num_col_);
   HighsCDouble debugsolobj = 0.0;
   for (HighsInt i = 0; i != mipsolver->model_->num_col_; ++i)
-    debugsolobj += mipsolver->model_->col_cost_[i] * debugSolution[i];
+    debugsolobj += static_cast<HighsCDouble>(mipsolver->model_->col_cost_[i]) *
+                   debugSolution[i];
 
-  debugSolObjective = double(debugsolobj);
+  debugSolObjective = static_cast<double>(debugsolobj);
 
   conflictingBounds.clear();
 }
@@ -297,7 +300,7 @@ void HighsDebugSol::checkConflictReconvergenceFrontier(
     }
   }
 
-  auto reconvChg = mipsolver->mipdata_->domain.flip(reconvDomchg.domchg);
+  auto reconvChg = mipsolver->mipdata_->getDomain().flip(reconvDomchg.domchg);
 
   if (reconvChg.boundtype == HighsBoundType::kLower) {
     if (debugSolution[reconvChg.column] >= reconvChg.boundval)

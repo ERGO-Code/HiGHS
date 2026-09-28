@@ -6,15 +6,15 @@
 
 namespace hipo {
 
-FormatHandler::FormatHandler(const Symbolic& S, Int sn, const Regul& regul,
-                             std::vector<double>& frontal, double* clique_ptr)
+FormatHandler::FormatHandler(const Symbolic& S, Int sn,
+                             std::vector<double>& frontal, double* clique_ptr,
+                             const FHoptions& FH_opt)
     : S_{&S},
-      regul_{regul},
       sn_{sn},
-      nb_{S_->blockSize()},
       sn_size_{S_->snStart(sn_ + 1) - S_->snStart(sn_)},
       ldf_{(Int)(S_->ptr(sn_ + 1) - S_->ptr(sn_))},
       ldc_{ldf_ - sn_size_},
+      FH_opt_{FH_opt},
       frontal_{frontal},
       clique_ptr_{clique_ptr} {
   local_reg_.resize(sn_size_);

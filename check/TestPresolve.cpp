@@ -2,6 +2,7 @@
 #include "Highs.h"
 #include "SpecialLps.h"
 #include "catch.hpp"
+#include "presolve/HPresolve.h"
 
 const bool dev_run = false;
 
@@ -71,6 +72,8 @@ TEST_CASE("postsolve-no-basis", "[highs_test_presolve]") {
           "Col      Primal  Col      Primal\n");
     for (HighsInt iCol = 0; iCol < presolved_lp.num_col_; iCol++) {
       HighsInt original_iCol = original_col_indices[iCol];
+      // Skip columns added by presolve (e.g. FME objective reformulation)
+      if (original_iCol >= highs.getNumCol()) continue;
       if (dev_run)
         printf("%3d %11.5g  %3d %11.5g\n", int(iCol), solution.col_value[iCol],
                int(original_iCol), postsolve_solution.col_value[original_iCol]);
@@ -136,11 +139,14 @@ TEST_CASE("presolve", "[highs_test_presolve]") {
   // Have to set matrix dimensions to match presolved_model.lp_
   lp.setMatrixDimensions();
   highs.passModel(lp);
+  // Disable Fourier-Motzkin so this LP is not reduced
+  highs.setOptionValue("presolve_rule_off", 1 << kPresolveRuleFourierMotzkin);
   REQUIRE(highs.presolve() == HighsStatus::kOk);
   REQUIRE(lp.equalButForNames(presolved_model.lp_));
   REQUIRE(highs.getModelPresolveStatus() == HighsPresolveStatus::kNotReduced);
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kNotset);
   REQUIRE(!presolved_model.isEmpty());
+  highs.setOptionValue("presolve_rule_off", 0);
 
   special_lps.primalDualInfeasible1Lp(lp, require_model_status);
   highs.passModel(lp);
@@ -192,11 +198,13 @@ void presolveSolvePostsolve(const std::string& model_file,
     if (dev_run)
       printf("Presolve timeout: return status = %d\n", (int)return_status);
   }
+  REQUIRE(model_presolve_status != HighsPresolveStatus::kUnboundedOrInfeasible);
   HighsLp lp = highs0.getPresolvedLp();
   highs1.passModel(lp);
   highs1.setOptionValue("solve_relaxation", solve_relaxation);
   highs1.setOptionValue("presolve", kHighsOffString);
   highs1.run();
+  REQUIRE(highs1.getModelStatus() == HighsModelStatus::kOptimal);
   HighsSolution solution = highs1.getSolution();
   const double objective_value = highs1.getInfo().objective_function_value;
   if (lp.isMip() && !solve_relaxation) {
@@ -630,46 +638,6 @@ TEST_CASE("write-presolved-model", "[highs_test_presolve]") {
   highs1.resetGlobalScheduler(true);
 }
 
-TEST_CASE("presolve-slacks", "[highs_test_presolve]") {
-  // This LP reduces to empty, because the equation is a doubleton
-  HighsLp lp;
-  lp.num_col_ = 2;
-  lp.num_row_ = 1;
-  lp.col_cost_ = {1, 0};
-  lp.col_lower_ = {0, 0};
-  lp.col_upper_ = {kHighsInf, kHighsInf};
-  lp.row_lower_ = {1};
-  lp.row_upper_ = {1};
-  lp.a_matrix_.start_ = {0, 1, 2};
-  lp.a_matrix_.index_ = {0, 0};
-  lp.a_matrix_.value_ = {1, 1};
-  Highs h;
-  h.setOptionValue("output_flag", dev_run);
-  REQUIRE(h.passModel(lp) == HighsStatus::kOk);
-  REQUIRE(h.presolve() == HighsStatus::kOk);
-  REQUIRE(h.getPresolvedLp().num_col_ == 0);
-  REQUIRE(h.getPresolvedLp().num_row_ == 0);
-
-  lp.num_col_ = 4;
-  lp.num_row_ = 2;
-  lp.col_cost_ = {-10, -25, 0, 0};
-  lp.col_lower_ = {0, 0, 0, 0};
-  lp.col_upper_ = {kHighsInf, kHighsInf, kHighsInf, kHighsInf};
-  lp.row_lower_ = {80, 120};
-  lp.row_upper_ = {80, 120};
-  lp.a_matrix_.start_ = {0, 2, 4, 5, 6};
-  lp.a_matrix_.index_ = {0, 1, 0, 1, 0, 1};
-  lp.a_matrix_.value_ = {1, 1, 2, 4, 1, 1};
-  REQUIRE(h.setOptionValue("presolve_remove_slacks", true) == HighsStatus::kOk);
-  REQUIRE(h.passModel(lp) == HighsStatus::kOk);
-  REQUIRE(h.run() == HighsStatus::kOk);
-  REQUIRE(h.presolve() == HighsStatus::kOk);
-  REQUIRE(h.getPresolvedLp().num_col_ == 2);
-  REQUIRE(h.getPresolvedLp().num_row_ == 2);
-
-  h.resetGlobalScheduler(true);
-}
-
 TEST_CASE("presolve-issue-2095", "[highs_test_presolve]") {
   std::string model_file =
       std::string(HIGHS_DIR) + "/check/instances/issue-2095.mps";
@@ -909,4 +877,550 @@ TEST_CASE("presolve-issue-2874", "[highs_test_presolve]") {
   highs.readModel(model_file);
   REQUIRE(highs.presolve() == HighsStatus::kOk);
   REQUIRE(highs.getModelPresolveStatus() == HighsPresolveStatus::kInfeasible);
+
+  highs.resetGlobalScheduler(true);
 }
+
+TEST_CASE("presolve-light", "[highs_test_presolve]") {
+  std::string model_file =
+      std::string(HIGHS_DIR) + "/check/instances/afiro.mps";
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  highs.readModel(model_file);
+  HighsInt presolved_num_col;
+  HighsInt presolved_num_row;
+  HighsInt presolved_num_nz;
+  for (HighsInt k = 0; k < 2; k++) {
+    REQUIRE(highs.presolve() == HighsStatus::kOk);
+    REQUIRE(highs.getModelPresolveStatus() == HighsPresolveStatus::kReduced);
+    const HighsLp& presolved_lp = highs.getPresolvedLp();
+    if (k == 1) {
+      REQUIRE(presolved_lp.num_col_ > presolved_num_col);
+      REQUIRE(presolved_lp.num_row_ > presolved_num_row);
+      REQUIRE(presolved_lp.numNz() > presolved_num_nz);
+    }
+    presolved_num_col = presolved_lp.num_col_;
+    presolved_num_row = presolved_lp.num_row_;
+    presolved_num_nz = presolved_lp.numNz();
+
+    if (dev_run)
+      printf("%s presolved LP has %d columns; %d rows and %d nonzeros\n",
+             k == 0 ? "Fully" : "Lightly", int(presolved_num_col),
+             int(presolved_num_row), int(presolved_num_nz));
+    highs.setOptionValue("presolve_light", kHighsOnString);
+  }
+
+  highs.resetGlobalScheduler(true);
+}
+
+TEST_CASE("presolve-initial-sweep-postsolve", "[highs_test_presolve]") {
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  if (dev_run) {
+    highs.setOptionValue("log_dev_level", 1);
+    highs.setOptionValue("presolve_rule_logging", true);
+  }
+  HighsLp lp;
+  lp.num_col_ = 3;
+  lp.num_row_ = 1;
+  lp.col_cost_ = {0, 1, 2};
+  lp.col_lower_ = {1, 2, 0};
+  lp.col_upper_ = {1, kHighsInf, kHighsInf};
+  lp.row_lower_ = {-kHighsInf};
+  lp.row_upper_ = {5};
+  lp.a_matrix_.start_ = {0, 1, 2, 3};
+  lp.a_matrix_.index_ = {0, 0, 0};
+  lp.a_matrix_.value_ = {3, 2, -1};
+  highs.passModel(lp);
+  // Presolved to empty, so no simplex iterations if postsolve is correct
+  highs.run();
+  REQUIRE(highs.getInfo().simplex_iteration_count == 0);
+  if (dev_run) highs.writeSolution("", 1);
+
+  highs.resetGlobalScheduler(true);
+}
+
+TEST_CASE("presolve-initial-sweep", "[highs_test_presolve]") {
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  if (dev_run) {
+    highs.setOptionValue("log_dev_level", 1);
+    highs.setOptionValue("presolve_rule_logging", true);
+  }
+  HighsLp lp;
+  lp.num_col_ = 2;
+  lp.num_row_ = 1;
+  lp.col_cost_ = {-1, 1};
+  lp.col_lower_ = {1, 0};
+  lp.col_upper_ = {1, kHighsInf};
+  lp.row_lower_ = {-kHighsInf};
+  lp.row_upper_ = {5};
+  lp.a_matrix_.start_ = {0, 1, 1};
+  lp.a_matrix_.index_ = {0};
+  lp.a_matrix_.value_ = {3};
+  HighsStatus pass_model_status = HighsStatus::kOk;
+  for (HighsInt k = 0; k < 4; k++) {
+    if (dev_run) printf("\nPass k = %d\n==========\n", int(k));
+    REQUIRE(highs.passModel(lp) == pass_model_status);
+    highs.run();
+    if (k == 0) {
+      // Remove the empty column
+      lp.num_col_ = 1;
+      lp.col_cost_ = {-1};
+      lp.col_lower_ = {1};
+      lp.col_upper_ = {1};
+      lp.a_matrix_.start_ = {0, 1};
+    } else if (k == 1) {
+      REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
+      lp.col_upper_ = {0};
+      pass_model_status = HighsStatus::kWarning;
+      // Can infeasible column bounds even reach presolve?
+    } else if (k == 2) {
+      REQUIRE(highs.getModelStatus() == HighsModelStatus::kInfeasible);
+      lp.col_lower_ = {1e+20};
+      lp.col_upper_ = {kHighsInf};
+      lp.row_upper_ = {kHighsInf};
+      pass_model_status = HighsStatus::kError;
+      // Why is this model accepted when error returns?
+    } else {
+      REQUIRE(highs.getModelStatus() == HighsModelStatus::kUnbounded);
+    }
+    if (dev_run) highs.writeSolution("", 1);
+  }
+  highs.resetGlobalScheduler(true);
+}
+
+TEST_CASE("presolve-initial-sweep-all", "[highs_test_presolve]") {
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  highs.setOptionValue("presolve_light", kHighsOnString);
+  if (dev_run) {
+    highs.setOptionValue("log_dev_level", 1);
+    highs.setOptionValue("presolve_rule_logging", true);
+  }
+  HighsLp lp;
+  lp.num_col_ = 7;
+  lp.num_row_ = 4;
+  lp.col_cost_ = {1, 1, 1, 1, 1, 1, 1};
+  lp.col_lower_ = {0, 1, 0, 1, 1, -kHighsInf, 0};
+  lp.col_upper_ = {1, 1, kHighsInf, 3, 1, 1, 1};
+  lp.row_lower_ = {2, 8, 10, 13};
+  lp.row_upper_ = {4, 9, 16, 26};
+  lp.a_matrix_.start_ = {0, 1, 5, 6, 6, 10, 12, 13};
+  lp.a_matrix_.index_ = {2, 0, 1, 2, 3, 0, 0, 1, 2, 3, 2, 3, 2};
+  lp.a_matrix_.value_ = {6, 1, 4, 7, 11, 2, 3, 5, 8, 12, 9, 13, 10};
+  // Cols 1 and 4 fixed at 1; col 3 empty (fixed at LB = 1) then
+  //
+  // Rows 0 and 3 singletons; row 1 empty
+  REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
+
+  highs.run();
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
+  if (dev_run) highs.writeSolution("", 1);
+
+  // Add a redundant row
+  std::vector<HighsInt> index = {0, 5, 6};
+  std::vector<double> value = {1, 1, 1};
+  highs.addRow(-kHighsInf, 4, 3, index.data(), value.data());
+
+  highs.setOptionValue("use_warm_start", false);
+  highs.run();
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
+  if (dev_run) highs.writeSolution("", 1);
+
+  highs.resetGlobalScheduler(true);
+}
+
+TEST_CASE("bound_implied", "[highs_test_presolve]") {
+  std::string model_file =
+      std::string(HIGHS_DIR) + "/check/instances/bound_implied.mps";
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  highs.readModel(model_file);
+  highs.run();
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
+}
+
+TEST_CASE("issue-2962", "[highs_test_presolve]") {
+  // Model that exposes the case where zeroCostSingleton in postsolve
+  // requires the column to inherit the basic status of the row
+  std::string model_file =
+      std::string(HIGHS_DIR) + "/check/instances/p0548.mps";
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  h.setOptionValue("solve_relaxation", true);
+  h.setOptionValue("log_dev_level", 1);
+  h.setOptionValue("presolve_rule_logging", true);
+
+  h.readModel(model_file);
+  REQUIRE(h.run() == HighsStatus::kOk);
+
+  h.resetGlobalScheduler(true);
+}
+
+TEST_CASE("add-to-matrix", "[highs_test_presolve]") {
+  // Build a simple LP: min x0 + x1 s.t. x0 + x1 >= 2, 0 <= x0,x1 <= 3
+  HighsLp lp;
+  lp.num_col_ = 2;
+  lp.num_row_ = 1;
+  lp.col_cost_ = {1, 1};
+  lp.col_lower_ = {0, 0};
+  lp.col_upper_ = {3, 3};
+  lp.row_lower_ = {2};
+  lp.row_upper_ = {kHighsInf};
+  lp.a_matrix_.format_ = MatrixFormat::kColwise;
+  lp.a_matrix_.start_ = {0, 1, 2};
+  lp.a_matrix_.index_ = {0, 0};
+  lp.a_matrix_.value_ = {1, 1};
+
+  HighsOptions options;
+  options.output_flag = dev_run;
+  presolve::HighsPostsolveStack postsolve_stack;
+  postsolve_stack.initializeIndexMaps(lp.num_row_, lp.num_col_);
+
+  presolve::HPresolve hpresolve;
+  hpresolve.setInput(lp, options, 0);
+  REQUIRE(hpresolve.okSetupPresolveDataStructures());
+
+  // Add a single redundant row: x0 + x1 <= 10
+  std::vector<HighsInt> indices = {0, 1};
+  std::vector<double> values = {1.0, 1.0};
+  REQUIRE(hpresolve.addToMatrix(postsolve_stack, -kHighsInf, 10.0, indices,
+                                values));
+  REQUIRE(lp.num_row_ == 2);
+
+  // Add multiple redundant rows: x0 <= 5, x1 <= 5
+  std::vector<std::vector<HighsInt>> multi_indices = {{0}, {1}};
+  std::vector<std::vector<double>> multi_values = {{1.0}, {1.0}};
+  std::vector<double> lower = {-kHighsInf, -kHighsInf};
+  std::vector<double> upper = {5, 5};
+  REQUIRE(hpresolve.addToMatrix(postsolve_stack, lower, upper, multi_indices,
+                                multi_values));
+  REQUIRE(lp.num_row_ == 4);
+
+  // Rebuild a_matrix_ from internal triplet structure
+  hpresolve.shrinkProblem(postsolve_stack);
+
+  // Solve the augmented LP with presolve on and off to verify correctness
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  h.setOptionValue("presolve", "off");
+  REQUIRE(h.passModel(lp) == HighsStatus::kOk);
+  h.run();
+  REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
+  REQUIRE(h.getInfo().objective_function_value == 2.0);
+
+  h.setOptionValue("presolve", "on");
+  REQUIRE(h.passModel(lp) == HighsStatus::kOk);
+  h.run();
+  REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
+  REQUIRE(h.getInfo().objective_function_value == 2.0);
+
+  h.resetGlobalScheduler(true);
+}
+
+TEST_CASE("max-lp-dual-postsolve", "[highs_test_presolve]") {
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+
+  // Start with blending problem
+  HighsLp lp;
+  lp.model_name_ = "blending";
+  lp.num_col_ = 2;
+  lp.num_row_ = 2;
+  lp.col_cost_ = {8, 10};
+  lp.col_lower_ = {0, 0};
+  lp.col_upper_ = {inf, inf};
+  lp.row_lower_ = {-inf, -inf};
+  lp.row_upper_ = {120, 210};
+  lp.a_matrix_.format_ = MatrixFormat::kColwise;
+  lp.a_matrix_.start_ = {0, 2, 4};
+  lp.a_matrix_.index_ = {0, 1, 0, 1};
+  lp.a_matrix_.value_ = {0.3, 0.7, 0.5, 0.5};
+  lp.sense_ = ObjSense::kMaximize;
+  lp.offset_ = 0;
+  h.passModel(lp);
+
+  REQUIRE(h.setOptionValue("solver", kIpxString) == HighsStatus::kOk);
+  REQUIRE(h.setOptionValue("run_crossover", kHighsOffString) ==
+          HighsStatus::kOk);
+
+  h.run();
+  if (dev_run) h.writeSolution("", kSolutionStylePretty);
+  REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
+
+  double optimal_objective = h.getObjectiveValue();
+  HighsSolution solution = h.getSolution();
+
+  // Add a redundant constraint that's removed in presolve so that
+  // postsolve must be performed
+  std::vector<HighsInt> index = {0, 1};
+  std::vector<double> value = {1, 1};
+  REQUIRE(h.addRow(-inf, 1000, 2, index.data(), value.data()) ==
+          HighsStatus::kOk);
+  h.clearSolver();
+
+  h.run();
+  if (dev_run) h.writeSolution("", kSolutionStylePretty);
+  REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
+
+  REQUIRE(doubleEqual(optimal_objective, h.getObjectiveValue()));
+  // Check that the dual values are unchanged for the original problem
+  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++)
+    REQUIRE(
+        doubleEqual(solution.col_dual[iCol], h.getSolution().col_dual[iCol]));
+  for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++)
+    REQUIRE(
+        doubleEqual(solution.row_dual[iRow], h.getSolution().row_dual[iRow]));
+
+  REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
+
+  h.resetGlobalScheduler(true);
+}
+
+TEST_CASE("issue-3140", "[highs_test_presolve]") {
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  HighsLp lp;
+  lp.num_col_ = 9;
+  lp.num_row_ = 5;
+  lp.col_cost_ = {4, 0, 0, -3, -1, 4, -4, 1, -4};
+  lp.col_lower_ = {0, 1, 0, 0, 0, 0, 0, 0, 0};
+  lp.col_upper_ = {10, 9, 0, 8, 9, 6, 5, 7, 7};
+  lp.row_lower_ = {8, -kHighsInf, -1, 1, -kHighsInf};
+  lp.row_upper_ = {8, -3, -1, kHighsInf, 3};
+  lp.a_matrix_.format_ = MatrixFormat::kColwise;
+  lp.a_matrix_.start_ = {0, 2, 3, 3, 5, 7, 9, 11, 13, 15};
+  lp.a_matrix_.index_ = {1, 2, 0, 0, 3, 3, 4, 0, 3, 2, 3, 2, 4, 0, 1};
+  lp.a_matrix_.value_ = {-3, -2, 1, 2, 1, -3, 2, 1, -3, -1, 1, 1, 3, -3, -2};
+
+  REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
+  REQUIRE(highs.presolve() == HighsStatus::kOk);
+  REQUIRE(highs.getModelPresolveStatus() ==
+          HighsPresolveStatus::kReducedToEmpty);
+
+  highs.resetGlobalScheduler(true);
+}
+
+TEST_CASE("dual-bound-relaxation-unbounded", "[highs_test_presolve]") {
+  HighsLp lp;
+  lp.num_col_ = 3;
+  lp.num_row_ = 2;
+  lp.col_cost_ = {0, -5, 0};
+  lp.col_lower_ = {0, 0, 0};
+  lp.col_upper_ = {kHighsInf, kHighsInf, 1};
+  lp.row_lower_ = {-kHighsInf, -kHighsInf};
+  lp.row_upper_ = {0, 1};
+  lp.a_matrix_.format_ = MatrixFormat::kColwise;
+  lp.a_matrix_.start_ = {0, 2, 4, 6};
+  lp.a_matrix_.index_ = {0, 1, 0, 1, 0, 1};
+  lp.a_matrix_.value_ = {1, -1, -1, 1, -1, 1};
+
+  // The feasible ray x0 = x1 = t, x2 = 0 has objective -5*t.
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
+  REQUIRE(highs.run() == HighsStatus::kOk);
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kUnbounded);
+}
+
+TEST_CASE("presolve-light-no-crossover", "[highs_test_presolve]") {
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  std::string source = "instances";  //"miplib2017";
+  std::string model = "adlittle";    //"germanrr";  //"neos-2746589-doon";//
+  std::string type = "mps";
+  std::string filename =
+      (source == "instances" ? std::string(HIGHS_DIR) + "/check/instances/"
+                             : "/srv/" + source) +
+      "/" + model + "." + type + (source == "instances" ? "" : ".gz");
+
+  REQUIRE(h.readModel(filename) == HighsStatus::kOk);
+  const HighsLp& lp = h.getLp();
+
+  REQUIRE(h.setOptionValue("presolve_light", kHighsOnString) ==
+          HighsStatus::kOk);
+  const std::string solver = kIpxString;  // kHipoString;  //
+  REQUIRE(h.setOptionValue("solver", solver) == HighsStatus::kOk);
+  REQUIRE(h.setOptionValue("run_crossover", kHighsOffString) ==
+          HighsStatus::kOk);
+  REQUIRE(h.setOptionValue("solve_relaxation", true) == HighsStatus::kOk);
+  h.run();
+}
+
+TEST_CASE("test-non-stop-initial-sweep", "[highs_test_presolve]") {
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  HighsLp lp;
+  lp.num_col_ = 3;
+  lp.num_row_ = 1;
+  lp.col_cost_ = {0, 0, 0};
+  lp.col_lower_ = {-kHighsInf, -1, -kHighsInf};
+  lp.col_upper_ = {kHighsInf, -1, kHighsInf};
+  lp.row_lower_ = {0};
+  lp.row_upper_ = {0};
+  lp.a_matrix_.format_ = MatrixFormat::kRowwise;
+  lp.a_matrix_.start_ = {0, 2};
+  lp.a_matrix_.index_ = {0, 1};
+  lp.a_matrix_.value_ = {1, 1};
+
+  REQUIRE(h.passModel(lp) == HighsStatus::kOk);
+
+  h.setOptionValue("presolve_reduction_limit", 0);
+  h.setOptionValue(kSolverString, kIpxString);
+  h.setOptionValue("run_crossover", kHighsOffString);
+
+  REQUIRE(h.run() == HighsStatus::kOk);
+  REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
+
+  h.resetGlobalScheduler(true);
+}
+
+TEST_CASE("test-duplicate-row", "[highs_test_presolve]") {
+  HighsLp lp;
+  lp.num_col_ = 3;
+  lp.num_row_ = 2;
+  lp.col_cost_ = {2, -1, 1};
+  lp.col_lower_ = {0, 0, 0};
+  lp.col_upper_ = {kHighsInf, 2, kHighsInf};
+  lp.a_matrix_.start_ = {0, 2, 4, 6};
+  lp.a_matrix_.index_ = {0, 1, 0, 1, 0, 1};
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  h.setOptionValue("presolve_rule_logging", true);
+  h.setOptionValue(kSolverString, kIpxString);
+
+  lp.row_lower_ = {-kHighsInf, -4};
+  lp.row_upper_ = {0, 0};
+  for (HighsInt bound_flip = 0; bound_flip < 2; bound_flip++) {
+    lp.a_matrix_.value_ = {1, -4, -1, 4, 3, -12};
+    for (HighsInt lhs_flip = 0; lhs_flip < 2; lhs_flip++) {
+      // Base model has parallel rows
+      //
+      // r0:         x -  y +  3z <= 0
+      // r1: -4 <= -4x + 4y - 12z <= 0
+      //
+      // After x is fixed at 0 (dominated column) these parallel rows
+      // are deduced to be the doubleton equation
+      //
+      // -y + 3z = 0
+      //
+      // with r1 being removed - presumably because the elimination
+      // multiplier (-0.25) is then less than 1 in magnitude.
+      //
+      // This allows z to be substituted and y is then fixed at 2,
+      // reducing the problem to empty
+      //
+      // In substitution, the row dual for the equation is 1/3
+      //
+      // * r0 is made basic because its lower bound was tightened, and
+      // the sign of the dual means that it can't be nonbasic so it
+      // can't be nonbasic
+      //
+      // * r1 is made nonbasic and the dual is now correctly scaled by
+      // _multiplying_ by (-0.25) - since the row values are larger,
+      // the dual must be reduced in magnitude - and should be viewed
+      // as being at its upper bound
+      //
+      // However, in DuplicateRow::undo, computeRowDualAndStatus was
+      // previously only passed "tightened", and no indication of
+      // whether that was at its lower or upper bound. Hence it made
+      // r1 nonbasic at its lower bound when it tightens the lower
+      // bound of r0, due to the negative sign of the scale factor.
+      //
+      // However, it's the upper bound on r1 that tightens the lower
+      // bound on r0. By passing the direction sign -1 (+1) if r0 is
+      // tightened at its lower (upper) bound, r1 is now set to be
+      // nonbasic at the correct bound.
+      //
+      // The spurious lower bound on r1 is necessary to expose the
+      // consequences of the error since the simplex solver only needs
+      // the basic/nonbasic status to set values of variables to
+      // bound, unless they are ranged, in which case the
+      // HighsBasisStatus being lower or upper is used.
+      //
+      // The multiple passes ensure code coverage in
+      // DuplicateRow::undo - all four cases are passed to
+      // computeRowDualAndStatus - and test the correctness of both
+      // primal-dual and basis postsolve.
+      //
+      h.setOptionValue("run_crossover", kHighsOnString);
+      for (HighsInt k = 0; k < 2; k++) {
+        REQUIRE(h.passModel(lp) == HighsStatus::kOk);
+        REQUIRE(h.run() == HighsStatus::kOk);
+
+        REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
+        h.setOptionValue("run_crossover", kHighsOffString);
+      }
+      lp.a_matrix_.value_ = {-1, 4, 1, -4, -3, 12};
+    }
+    lp.row_lower_ = {0, 0};
+    lp.row_upper_ = {kHighsInf, 4};
+  }
+
+  h.resetGlobalScheduler(true);
+}
+
+/*
+TEST_CASE("test-fuzzing", "[highs_test_presolve]") {
+  Highs h;
+  //  h.setOptionValue("output_flag", dev_run);
+  //  if (dev_run) {
+  printf("\n====================\nWithout presolve\n====================\n");
+
+  const std::string model = "issue-002";
+  const bool reduces_to_empty = true;
+  std::string model_file = std::string(HIGHS_DIR) + "/build/OscarFuzzing/" +
+                           model + "/" + model + ".mps";
+
+  REQUIRE(h.readModel(model_file) == HighsStatus::kOk);
+
+  h.setOptionValue(kPresolveString, kHighsOffString);
+
+  REQUIRE(h.run() == HighsStatus::kOk);
+  REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
+  h.writeModel("");
+  h.writeSolution("", 1);
+  //  }
+  h.clearSolver();
+
+  h.setOptionValue(kPresolveString, kHighsOnString);
+
+  std::string options_file =
+      std::string(HIGHS_DIR) + "/build/OscarFuzzing/" + model + "/options.txt";
+  REQUIRE(h.readOptions(options_file) == HighsStatus::kOk);
+  HighsOptions options = h.getOptions();
+
+  if (!reduces_to_empty) {
+    printf("\n====================\nPresolved LP\n====================\n");
+    h.presolve();
+
+    HighsLp lp = h.getPresolvedLp();
+
+    h.clear();
+    h.passModel(lp);
+
+    h.setOptionValue(kPresolveString, kHighsOffString);
+
+    h.run();
+    h.writeSolution("", 1);
+    h.clear();
+  }
+
+  printf(
+      "\n====================\nPresolve no crossover\n====================\n");
+  REQUIRE(h.readModel(model_file) == HighsStatus::kOk);
+  h.passOptions(options);
+
+  h.setOptionValue("presolve_rule_logging", true);
+  h.setOptionValue("log_dev_level", 1);
+  h.writeOptions("", true);
+
+  //  h.setOptionValue(kSolverString, kIpxString);
+
+  h.run();
+  h.writeSolution("", 1);
+
+  h.resetGlobalScheduler(true);
+}
+*/

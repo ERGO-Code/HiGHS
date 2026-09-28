@@ -19,7 +19,7 @@
 #include <vector>
 
 #include "io/Filereader.h"
-#include "util/HighsInt.h"
+#include "util/HighsType.h"
 
 using std::string;
 using std::vector;

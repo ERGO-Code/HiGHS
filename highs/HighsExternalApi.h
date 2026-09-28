@@ -20,7 +20,7 @@
 #include "HighsExtrasApi.h"
 #include "io/HighsIO.h"
 #include "util/HighsDynamicLibrary.h"
-#include "util/HighsInt.h"
+#include "util/HighsType.h"
 #include "util/stringutil.h"
 
 //

@@ -1,6 +1,6 @@
 #include "DataCollector.h"
 
-#include "FactorHiGHSSettings.h"
+#include "FactorHighsSettings.h"
 #include "ipm/hipo/auxiliary/Logger.h"
 
 namespace hipo {

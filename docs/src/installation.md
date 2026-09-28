@@ -5,6 +5,34 @@
 HiGHS uses CMake as build system, and requires at least version
 3.15. Details about building from source using CMake can be found in `HiGHS/cmake/README.md`.
 
+### Bazel build
+
+Alternatively, building with Bazel is supported for Bazel-based projects. To build HiGHS, from the root directory, run
+
+```
+bazel build //...
+```
+
+## Install via a package manager
+
+HiGHS can be installed using a package manager in the cases of
+[`Julia`](@ref HiGHS.jl), [`Python`](@ref python-getting-started), [`CSharp`](@ref nuget) and [`Rust`](@ref Rust).
+
+Note, that HiGHS is available via apt on Linux. For simplex, ipx and the MIP and QP solvers, the execution should be as expected. We advise users not to use HiPO from the apt installation, the Metis version linked there is not thread safe. If you consider using HiPO, please use the binaries linked below, compilation from source or the python wrapper.
+
+## Precompiled Binaries
+
+Precompiled static binaries are available at https://github.com/ERGO-Code/HiGHS/releases.
+
+Additionally, there is one package containing shared libraries for Windows x64.
+
+The `*-mit` binary packages contain HiGHS and are MIT-licenced.
+The `*-apache` binary packages contain HiGHS with HiPO and are Apache-licenced, due to the licensing of the dependencies of HiPO. For more information, see [THIRD_PARTY_NOTICES.md](https://github.com/ERGO-Code/HiGHS/blob/master/THIRD_PARTY_NOTICES.md).
+
+If you have any questions or requests for more platforms and binaries, please get in touch with us at hello@highs.dev.
+
+To install a precompiled binary, download and extract the archive corresponding to your Operating System and architecture, the executable is located at `/bin/highs`.
+
 ## HiGHS with HiPO
 
 HiGHS does not have any external dependencies, however, the new interior point solver HiPO uses BLAS. At the moment HiPO is optional and can be enabled via CMake.
@@ -61,34 +89,8 @@ cmake -S. -B build -DHIPO=ON -DCMAKE_TOOLCHAIN_FILE="C:/vcpkg/scripts/buildsyste
 
 ##### Path to BLAS
 
-To specify explicitly which BLAS vendor to look for, `BLA_VENDOR` coud be set in CMake, e.g. `-DBLA_VENDOR=Apple` or `-DBLA_VENDOR=OpenBLAS`. Alternatively, to specify which BLAS library to use, set `BLAS_LIBRARIES` to the full path of the library e.g. `-DBLAS_LIBRARIES=/path_to/libopenblas.so`.
+To specify explicitly which BLAS vendor to look for, `BLA_VENDOR` could be set in CMake, e.g. `-DBLA_VENDOR=Apple` or `-DBLA_VENDOR=OpenBLAS`. Alternatively, to specify which BLAS library to use, set `BLAS_LIBRARIES` to the full path of the library e.g. `-DBLAS_LIBRARIES=/path_to/libopenblas.so`.
 
-
-## Bazel build
-
-Alternatively, building with Bazel is supported for Bazel-based projects. To build HiGHS, from the root directory, run
-
-```
-bazel build //...
-```
-
-## Install via a package manager
-
-HiGHS can be installed using a package manager in the cases of
-[`Julia`](@ref HiGHS.jl), [`Python`](@ref python-getting-started), [`CSharp`](@ref nuget) and [`Rust`](@ref Rust).
-
-## Precompiled Binaries
-
-Precompiled static binaries are available at https://github.com/ERGO-Code/HiGHS/releases.
-
-Additionally, there is one package containing shared libraries for Windows x64.
-
-The `*-mit` binary packages contain HiGHS and are MIT-licenced.
-The `*-apache` binary packages contain HiGHS with HiPO and are Apache-licenced, due to the licensing of the dependencies of HiPO. For more information, see [THIRD_PARTY_NOTICES.md](https://github.com/ERGO-Code/HiGHS/blob/master/THIRD_PARTY_NOTICES.md).
-
-If you have any questions or requests for more platforms and binaries, please get in touch with us at hello@highs.dev.
-
-To install a precompiled binary, download and extract the archive corresponding to your Operating System and architecture, the executable is located at `/bin/highs`.
 
 ## [Building HiGHS with NVidia GPU support](@id gpu-build)
 
@@ -115,7 +117,7 @@ cmake --build build --parallel
 
 to build HiGHS.
 
-### Bazel build with Cuda
+### Bazel build with CUDA
 
 Alternatively, for Bazel run
 
@@ -128,3 +130,73 @@ It may be necessary to also specify the architecture, e.g.
 ```
 bazel build //... --//:cupdlp_gpu --@rules_cuda//cuda:archs=sm_89
 ```
+
+## [Building HiGHS with AMD GPU support](@id gpu-build-amd)
+
+The native HiPDLP solver can also run on an AMD GPU using
+[ROCm](https://rocm.docs.amd.com/) / HIP. This requires a ROCm
+installation providing the HIP compiler and the hipBLAS and hipSPARSE
+libraries. Make sure the HIP compiler is available by running
+
+```
+hipcc --version
+```
+
+ROCm 10.0 or newer is recommended (this is the version the HIP backend
+is tested against). On such a ROCm, the supported GPU architectures are
+`gfx908` and newer (e.g. `gfx908`/MI100, `gfx90a`/MI200,
+`gfx942`/MI300, and recent RDNA cards).
+
+Then build HiGHS, from the root directory, with
+
+```
+cmake -S. -Bbuild -DHIPDLP_HIP=ON
+cmake --build build --parallel
+```
+
+CMake must be able to find ROCm. If it is not installed in the default
+location, point it there, for example
+
+```
+export PATH=/opt/rocm/bin:$PATH
+export CMAKE_PREFIX_PATH=/opt/rocm
+```
+
+By default the HIP device code is compiled for a generic set of GPU
+architectures. To target the specific GPU on the build machine (which
+also speeds up compilation and linking), set `CMAKE_HIP_ARCHITECTURES`
+to its `gfx` target, for example
+
+```
+cmake -S. -Bbuild -DHIPDLP_HIP=ON -DCMAKE_HIP_ARCHITECTURES=gfx90a
+```
+
+You can find the `gfx` identifier of the installed GPU with `rocminfo`
+(look for the `gfx` name, e.g. `gfx90a` for MI200-class cards or
+`gfx942` for MI300). Multiple architectures may be given as a
+semicolon-separated list, e.g. `-DCMAKE_HIP_ARCHITECTURES="gfx90a;gfx942"`.
+
+By default the host C/C++ sources are compiled with the system compiler
+(e.g. GCC) and only the HIP device code with ROCm's compiler. To build
+the whole of HiGHS with the ROCm toolchain instead, for a uniform
+Clang-based build, point CMake at `amdclang` / `amdclang++`
+
+```
+cmake -S. -Bbuild -DHIPDLP_HIP=ON \
+  -DCMAKE_C_COMPILER=amdclang -DCMAKE_CXX_COMPILER=amdclang++
+```
+
+The HIP backend compiles the same HiPDLP source as the CUDA backend,
+selecting the AMD implementation at build time. Once built, the solver
+is selected at run time by setting the [__solver__](@ref
+option-solver) option to "hipdlp".
+
+To check the ROCm / HIP backend on the local machine, run the example
+`call_highs_hipdlp` (also registered as the ctest
+`cxx_examples_call_highs_hipdlp`), which solves a small LP with
+`solver = "hipdlp"` and verifies the result. A successful run is a
+quick end-to-end sanity check of the GPU backend.
+
+To confirm the work is actually running on the GPU, watch `rocm-smi`
+(for example `watch -n 0.1 rocm-smi`) while the solve runs and check
+that GPU utilisation and memory usage rise.

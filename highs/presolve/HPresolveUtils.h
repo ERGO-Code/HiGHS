@@ -5,16 +5,23 @@
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#ifndef __SRC_LIB_CRASHSOLUTION_HPP__
-#define __SRC_LIB_CRASHSOLUTION_HPP__
+#ifndef PRESOLVE_HIGHS_PRESOLVE_UTILS_H_
+#define PRESOLVE_HIGHS_PRESOLVE_UTILS_H_
 
-#include <cstdlib>
+#include "lp_data/HConst.h"
 
-#include "runtime.hpp"
+namespace presolve {
 
-inline bool isfreevar(Instance& instance, HighsInt idx) {
-  return instance.var_lo[idx] == -std::numeric_limits<double>::infinity() &&
-         instance.var_up[idx] == std::numeric_limits<double>::infinity();
-}
+enum class SingletonRowResult {
+  kRedundant,
+  kPrimalInfeasible,
+  kBoundsTightened,
+};
 
+SingletonRowResult computeSingletonRowBounds(
+    double val, double rowLower, double rowUpper, double colLower,
+    double colUpper, double primalFeastol, double maxAbsColVal, bool isIntegral,
+    double& lb, double& ub, bool& lowerTightened, bool& upperTightened);
+
+}  // namespace presolve
 #endif

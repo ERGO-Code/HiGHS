@@ -32,7 +32,7 @@ There is still one action in`app/RunHighs.cpp` that should be performed in `High
 - Write out the presolved model
 
 These "HiGHS files" actions must only be performed at the "top level"
-of `Highs::run()`, and this is acheived by caching the file options in
+of `Highs::run()`, and this is achieved by caching the file options in
 the `Highs` class and clearing them from options_ so that they aren't
 applied at lower level calls to `Highs::run()`. They are then restored
 before returning from `Highs::run()`.
@@ -42,7 +42,7 @@ before returning from `Highs::run()`.
 User objective and/or bound scaling is performed before assessing
 whether there is excessive problem data and suggesting user objective
 and bound scaling. These user scaling actions must only be performed
-at the "top level" of `Highs::run()`, and this is acheived by caching
+at the "top level" of `Highs::run()`, and this is achieved by caching
 the user scaling options in the `Highs` class and clearing them from
 options_ so that they aren't applied at lower level calls to
 `Highs::run()`. If user scaling has been applied in a call to
@@ -53,8 +53,8 @@ returning from `Highs::run()`.
 
 The `HighsLp` class contains data values and structures that cannot be handled explicitly by the solvers.
 
-- If a variable has an excessivly large objective cost, this is
-  interpreted as being infinte, and handled in
+- If a variable has an excessively large objective cost, this is
+  interpreted as being infinite, and handled in
   `Highs::handleInfCost()` by fixing the variable at its lower or
   upper bound (when finite) according to the sign of the cost and the
   sense of the optimization, and zeroing the cost. After solving the

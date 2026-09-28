@@ -186,6 +186,8 @@ options:
                                    "choose" * default
                                    "on"
                                    "off"
+      --threads int              Set maximum number of threads to use:
+                                 0: automatic * default
       --run_crossover text       Set run_crossover option to:
                                    "choose"
                                    "on" * default
@@ -256,13 +258,13 @@ The nuget package Highs.Native is on https://www.nuget.org, at https://www.nuget
 It can be added to your C# project with `dotnet`
 
 ```shell
-dotnet add package Highs.Native --version 1.14.0
+dotnet add package Highs.Native --version 1.15.1
 ```
 
 The nuget package contains runtime libraries for
 
 * `win-x64`
-* `win-x32`
+* `win-x86`
 * `linux-x64`
 * `linux-arm64`
 * `macos-x64`

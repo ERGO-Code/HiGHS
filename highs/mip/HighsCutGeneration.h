@@ -18,8 +18,8 @@
 #include <vector>
 
 #include "util/HighsCDouble.h"
-#include "util/HighsInt.h"
 #include "util/HighsRandom.h"
+#include "util/HighsType.h"
 
 class HighsLpRelaxation;
 class HighsTransformedLp;
@@ -38,8 +38,8 @@ class HighsCutGeneration {
   HighsCDouble lambda;
   std::vector<double> upper;
   std::vector<double> solval;
-  std::vector<uint8_t> complementation;
-  std::vector<uint8_t> isintegral;
+  std::vector<HighsBool> complementation;
+  std::vector<HighsBool> isintegral;
   const double feastol;
   const double epsilon;
 
@@ -56,7 +56,7 @@ class HighsCutGeneration {
 
   std::vector<double> tmpVals;
   std::vector<HighsInt> tmpInds;
-  std::vector<uint8_t> tmpComplementation;
+  std::vector<HighsBool> tmpComplementation;
   std::vector<double> tmpSolval;
 
   bool determineCover(bool lpSol = true);
@@ -72,7 +72,7 @@ class HighsCutGeneration {
 
   double scale(double val);
 
-  bool postprocessCut();
+  bool postprocessCut(const HighsDomain& globaldom);
 
   bool preprocessBaseInequality(bool& hasUnboundedInts, bool& hasGeneralInts,
                                 bool& hasContinuous);
@@ -101,12 +101,15 @@ class HighsCutGeneration {
 
   /// generate a conflict from the given proof constraint which cuts of the
   /// given local domain
-  bool generateConflict(HighsDomain& localdom, std::vector<HighsInt>& proofinds,
+  bool generateConflict(const HighsDomain& localdom,
+                        const HighsDomain& globaldom,
+                        std::vector<HighsInt>& proofinds,
                         std::vector<double>& proofvals, double& proofrhs);
 
   /// applies postprocessing to an externally generated cut and adds it to the
   /// cutpool if it is violated enough
-  bool finalizeAndAddCut(std::vector<HighsInt>& inds, std::vector<double>& vals,
+  bool finalizeAndAddCut(const HighsDomain& globaldom,
+                         std::vector<HighsInt>& inds, std::vector<double>& vals,
                          double& rhs);
 };
 

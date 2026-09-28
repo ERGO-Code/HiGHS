@@ -82,16 +82,6 @@ public:
     // Sets the basis to the slack basis.
     void SetToSlackBasis();
 
-    // Loads basis and factorizes it.
-    // @basic_status: size n+m array with BasicStatus of each variable
-    // Returns: IPX_ERROR_invalid_basis if the basis is invalid (basic_status
-    //          contains an invalid entry or # basic variables != m). In this
-    //          case the old basis is unchanged.
-    //          Otherwise the return code from Factorize() is returned and the
-    //          old basis has been replaced. If the given basis is singular, it
-    //          will be repaired with slack variables by the LU factorization.
-    Int Load(const int* basic_status);
-
     // Factorizes the current basis matrix from scratch. If nonsingular, a
     // stability check is performed afterwards and the factorization is repeated
     // with a tighter pivot tolerance if the LU factors were unstable.
@@ -100,7 +90,7 @@ public:
     //          "error" from the view point of the Basis object, which remains
     //          in a perfectly valid state.
     //          0 otherwise.
-    Int Factorize();
+    Int Factorize(const bool allow_timeout = true);
 
     // Returns true if the LU factorization has not been updated.
     bool FactorizationIsFresh() const;
@@ -246,21 +236,21 @@ private:
     // On return the object has been initialized to a basis that is nonsingular
     // in exact arithmetic. The condition number of the basis matrix can be
     // unacceptably high, however.
-    void CrashBasis(const double* colweights);
+    void CrashBasis(const double* colweights, bool& interrupt);
 
     // Repairs singularities in the basis matrix by replacing basic columns by
     // slack columns. The status of slack variables that enter the basis becomes
     // BASIC and the status of variables that leave the basis becomes NONBASIC.
     // On return info->basis_repairs >= 0 if repaired successfully, < 0 if
     // failed.
-    void Repair(Info* info);
+    void Repair(Info* info, bool& interrupt);
 
     // Factorizes the basis matrix using a strict absolute pivot tolerance (if
     // supported by the LU implementation). Does not perform the stability check
     // that Factorize() does.
     // @num_dropped: if not NULL, returns the # columns that were dropped from
     //               the basis matrix and replaced by unit columns.
-    void CrashFactorize(Int* num_dropped);
+    void CrashFactorize(Int* num_dropped, bool& interrupt);
 
     // Similar to ExchangeIfStable() but is guaranteed to exchange jb and jn.
     // If refactorization is required (either for speed or because the LU
@@ -268,7 +258,7 @@ private:
     // @num_dropped: is passed to CrashFactorize() if called; otherwise is set
     //               to 0 if not NULL.
     void CrashExchange(Int jb, Int jn, double tableau_entry, int sys,
-                       Int* num_dropped);
+		      Int* num_dropped, bool& interrupt);
 
     // Pivots free variables into the basis if they can replace a nonfree
     // basic variable. A variable is "free" if its weight is infinite. If a free
@@ -341,6 +331,8 @@ inline bool Basis::IsBasic(Int j) const {
 inline bool Basis::IsNonbasic(Int j) const {
     return StatusOf(j) == NONBASIC || StatusOf(j) == NONBASIC_FIXED;
 }
+
+double luTime();
 
 // Returns x[basis] (in Matlab notation).
 Vector CopyBasic(const Vector& x, const Basis& basis);

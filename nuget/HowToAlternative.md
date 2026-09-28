@@ -57,7 +57,7 @@ make
 ```
 
 ### linux-arm64
-This might run on a linux-x64 system (or use a linux-arm64 system and skipp the toolchain part)
+This might run on a linux-x64 system (or use a linux-arm64 system and skip the toolchain part)
 ```shell
 mkdir build_arm
 cd build_arm

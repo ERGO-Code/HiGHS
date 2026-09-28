@@ -33,6 +33,8 @@ namespace hipo {
 // linear solver chosen, so that only the appropriate data (upper triangle,
 // lower triangle, or else) is constructed.
 
+enum LinearSolverType { kFactorHighsType = 1, kUpLookingType };
+
 class LinearSolver {
  public:
   bool valid_ = false;
@@ -65,6 +67,8 @@ class LinearSolver {
 
   virtual void clear() = 0;
 
+  virtual LinearSolverType type() const = 0;
+
   // =================================================================
   // Virtual functions.
   // These may be overridden by derived classes, if needed.
@@ -75,6 +79,17 @@ class LinearSolver {
   virtual double nz() const { return 0; }
   virtual void getReg(std::vector<double>& reg){};
 };
+
+inline std::string LinearSolverTypeToString(LinearSolverType t) {
+  static const std::map<LinearSolverType, std::string> type_map{
+      {kFactorHighsType, "FactorHighs"},
+      {kUpLookingType, "UpLooking"},
+  };
+  
+  auto found = type_map.find(t);
+  if (found != type_map.end()) return found->second;
+  return "XUnknown";
+}
 
 }  // namespace hipo
 

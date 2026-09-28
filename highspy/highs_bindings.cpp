@@ -1234,7 +1234,9 @@ PYBIND11_MODULE(_core, m, py::mod_gil_not_used()) {
                      &HighsInfo::max_complementarity_violation)
       .def_readwrite("primal_dual_objective_error",
                      &HighsInfo::primal_dual_objective_error)
-      .def_readwrite("primal_dual_integral", &HighsInfo::primal_dual_integral);
+      .def_readwrite("primal_dual_integral", &HighsInfo::primal_dual_integral)
+      .def_readwrite("active_cost_norm", &HighsInfo::active_cost_norm)
+      .def_readwrite("active_bound_norm", &HighsInfo::active_bound_norm);
   py::class_<HighsOptions>(m, "HighsOptions", py::module_local())
       .def(py::init<>())
       .def_readwrite("presolve", &HighsOptions::presolve)
@@ -1380,6 +1382,7 @@ PYBIND11_MODULE(_core, m, py::mod_gil_not_used()) {
       .def("clear", &Highs::clear)
       .def("clearModel", &Highs::clearModel)
       .def("clearSolver", &Highs::clearSolver)
+      .def("releaseMemory", &Highs::releaseMemory)
       .def("passModel", &highs_passModel)
       .def("passModel", &highs_passModelPointers)
       .def("passModel", &highs_passLp)
@@ -1821,6 +1824,10 @@ PYBIND11_MODULE(_core, m, py::mod_gil_not_used()) {
              HighsCallbackType::kCallbackMipDefineLazyConstraints)
       .value("kCallbackMipUserSolution",
              HighsCallbackType::kCallbackMipUserSolution)
+      .value("kHighsCallbackQpFirstFeasiblePoint",
+             HighsCallbackType::kCallbackQpFirstFeasiblePoint)
+      .value("kHighsCallbackQpInterrupt",
+             HighsCallbackType::kCallbackQpInterrupt)
       .value("kCallbackMax", HighsCallbackType::kCallbackMax)
       .value("kNumCallbackType", HighsCallbackType::kNumCallbackType)
       .export_values();

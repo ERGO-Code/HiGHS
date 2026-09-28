@@ -47,7 +47,7 @@ void HighsModkSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
   const HighsMipSolver& mipsolver = lpRelaxation.getMipSolver();
   const HighsLp& lp = lpRelaxation.getLp();
 
-  std::vector<uint8_t> skipRow(lp.num_row_);
+  std::vector<HighsBool> skipRow(lp.num_row_);
 
   // mark all rows that have continuous variables with a nonzero solution value
   // in the transformed LP to be skipped

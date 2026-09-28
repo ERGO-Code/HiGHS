@@ -92,6 +92,7 @@ public:
     double centringAlphaScaling() const{return parameters_.centring_alpha_scaling; }
     ipxint badProductsTolerance() const{return parameters_.bad_products_tolerance; }
     bool timelessLog() const{return parameters_.timeless_log; }
+    double timeLimit() const {return parameters_.time_limit; }
     void setTimerOffset(const double offset) { this->timer_.offset_ = offset; }
 
 

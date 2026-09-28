@@ -18,8 +18,8 @@
 #include "parallel/HighsCacheAlign.h"
 #include "parallel/HighsSchedulerConstants.h"
 #include "parallel/HighsSplitDeque.h"
-#include "util/HighsInt.h"
 #include "util/HighsRandom.h"
+#include "util/HighsType.h"
 
 class HighsTaskExecutor {
  public:

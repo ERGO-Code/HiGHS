@@ -55,6 +55,7 @@ class HighsLp {
   bool is_moved_;
   HighsInt cost_row_location_;
   bool has_infinite_cost_;
+  HighsInt fme_obj_col_ = -1;
   HighsLpMods mods_;
 
   bool operator==(const HighsLp& lp) const;
@@ -64,6 +65,7 @@ class HighsLp {
   bool equalNames(const HighsLp& lp) const;
   bool equalScaling(const HighsLp& lp) const;
   bool isMip() const;
+  HighsInt numNz() const { return this->a_matrix_.numNz(); }
   bool hasSemiVariables() const;
   bool hasInfiniteCost(const double infinite_cost) const;
   bool hasMods() const;

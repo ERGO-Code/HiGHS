@@ -5,11 +5,17 @@
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#ifndef __SRC_LIB_PERTURBATION_HPP__
-#define __SRC_LIB_PERTURBATION_HPP__
+/**@file HighsType.h
+ * @brief The definition for basic types to use
+ */
 
-#include "runtime.hpp"
+#ifndef UTIL_HIGHS_TYPE_H_
+#define UTIL_HIGHS_TYPE_H_
 
-void perturb(Runtime& rt);
+#include "util/HighsInt.h"
+
+// vector<bool> is not thread-safe, so HiGHS uses vector<HighsBool>
+
+typedef uint8_t HighsBool;
 
 #endif

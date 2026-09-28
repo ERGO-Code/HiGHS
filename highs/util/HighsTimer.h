@@ -19,7 +19,7 @@
 #include <string>
 #include <vector>
 
-#include "util/HighsInt.h"
+#include "util/HighsType.h"
 
 const HighsInt check_clock = -46;
 const HighsInt simplex_no_basis_clock = 8;
@@ -231,6 +231,21 @@ class HighsTimer {
     clock_num_call[i_clock] += num_call;
     clock_time[i_clock] += time;
   }
+
+  /*
+  void logRunTime(const char* message) const {
+    if (!printf_flag) return;
+    double time = this->read();
+    std::string time_string =
+    // std::to_string(time);
+#ifndef NDEBUG
+      std::to_string(time);
+#else
+      std::to_string(static_cast<int>(time));
+#endif
+    printf("%-30s: %s\n", message, time_string.c_str());
+  }
+      */
 
   /**
    * @brief Report timing information for the clock indices in the list
