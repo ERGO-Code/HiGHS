@@ -35,8 +35,8 @@ class HPresolveInitialSweep {
   HighsInt numDeletedCols() const { return num_deleted_cols_; }
 
  private:
-  HighsLp* model_;
-  const HighsOptions* options_;
+  HighsLp& model_;
+  const HighsOptions& options_;
   const std::vector<HighsBool>& allow_rule_;
   const double primal_feastol_;
   HighsInt num_deleted_rows_;
