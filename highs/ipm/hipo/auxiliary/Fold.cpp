@@ -250,34 +250,28 @@ void test_folding(const HighsLp& lp) {
   exit(1);
 }
 
-HighsInt Folder::findInitialRowColour(std::vector<HighsInt>& colour) {
-  colour.assign(lp_.num_row_, 0);
-  QuantizedMap<RowData, HighsInt> row_map;
+template <typename Data>
+HighsInt Folder::findInitialColour(HighsInt n, std::vector<HighsInt>& colour) {
+  colour.assign(n, 0);
+  QuantizedMap<Data, HighsInt> map;
   HighsInt next_colour = 0;
 
-  for (HighsInt row = 0; row < lp_.num_row_; ++row) {
-    RowData data(lp_, row, colour[row]);
-    auto result = row_map.insert({data, next_colour});
+  for (HighsInt i = 0; i < n; ++i) {
+    Data data(lp_, i, colour[i]);
+    auto result = map.insert({data, next_colour});
     if (result.second) next_colour++;
-    colour[row] = result.first->second;
+    colour[i] = result.first->second;
   }
 
   return next_colour;
 }
 
+HighsInt Folder::findInitialRowColour(std::vector<HighsInt>& colour) {
+  return findInitialColour<RowData>(lp_.num_row_, colour);
+}
+
 HighsInt Folder::findInitialColColour(std::vector<HighsInt>& colour) {
-  colour.assign(lp_.num_col_, 0);
-  QuantizedMap<ColData, HighsInt> col_map;
-  HighsInt next_colour = 0;
-
-  for (HighsInt col = 0; col < lp_.num_col_; ++col) {
-    ColData data(lp_, col, colour[col]);
-    auto result = col_map.insert({data, next_colour});
-    if (result.second) next_colour++;
-    colour[col] = result.first->second;
-  }
-
-  return next_colour;
+  return findInitialColour<ColData>(lp_.num_col_, colour);
 }
 
 }  // namespace folding

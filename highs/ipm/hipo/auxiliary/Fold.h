@@ -66,6 +66,9 @@ void test_folding(const HighsLp& lp);
 class Folder {
   const HighsLp& lp_;
 
+  template <typename Data>
+  HighsInt findInitialColour(HighsInt num, std::vector<HighsInt>& colour);
+
  public:
   Folder(const HighsLp& lp) : lp_{lp} {}
 
