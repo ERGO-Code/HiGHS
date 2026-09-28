@@ -1215,7 +1215,7 @@ class HighsHashTree {
   static NodePtr copy_recurse(NodePtr node) {
     switch (node.getType()) {
       case kEmpty:
-        throw std::logic_error("Unexpected node type in empty in hash tree");
+        return NodePtr(nullptr);
       case kListLeaf: {
         ListLeaf* leaf = node.getListLeaf();
 
@@ -1253,8 +1253,10 @@ class HighsHashTree {
         BranchNode* newBranch =
             (BranchNode*)::operator new(getBranchNodeSize(size));
         newBranch->occupation = branch->occupation;
-        for (int i = 0; i < size; ++i)
+        for (int i = 0; i < size; ++i) {
+          assert(branch->child(i).getType() != kEmpty);
           newBranch->child(i) = copy_recurse(branch->child(i));
+        }
 
         return newBranch;
       }

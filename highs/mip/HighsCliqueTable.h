@@ -160,6 +160,16 @@ class HighsCliqueTable {
                           int64_t& numNeighbourhoodqueries, CliqueVar v,
                           CliqueVar* q, HighsInt N) const;
 
+  template <bool Sort = true, typename Comparator>
+  HighsInt extendClique(std::vector<HighsInt>& neighbourhoodInds,
+                        std::vector<CliqueVar>& clqVars, HighsInt seedPos,
+                        HighsInt extensionEnd,
+                        const Comparator& candidateOrder);
+
+  HighsInt extendClique(std::vector<HighsInt>& neighbourhoodInds,
+                        std::vector<CliqueVar>& clqVars, HighsInt seedPos,
+                        HighsInt extensionEnd);
+
  public:
   int64_t numNeighbourhoodQueries;
 
@@ -262,6 +272,9 @@ class HighsCliqueTable {
   void cliquePartition(const std::vector<double>& objective,
                        std::vector<CliqueVar>& clqVars,
                        std::vector<HighsInt>& partitionStart);
+
+  void cliqueCover(std::vector<CliqueVar>& clqVars,
+                   std::vector<std::vector<CliqueVar>>& cover);
 
   bool foundCover(HighsDomain& globaldom, CliqueVar v1, CliqueVar v2);
 

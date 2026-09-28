@@ -204,7 +204,7 @@ void writeObjectiveValue(FILE* file, const HighsLogOptions& log_options,
 void writePrimalSolution(FILE* file, const HighsLogOptions& log_options,
                          const HighsLp& lp,
                          const std::vector<double>& primal_solution,
-                         const bool sparse) {
+                         const bool sparse, const bool partial) {
   // Use when writing out the solution file (when names can be assumed
   // to exist) and the improving solution in the MIP solver (when
   // names cannot be assumed to exist)
@@ -212,7 +212,9 @@ void writePrimalSolution(FILE* file, const HighsLogOptions& log_options,
   const bool have_col_names = lp.col_names_.size() > 0;
   if (have_col_names)
     assert(lp.col_names_.size() == static_cast<size_t>(lp.num_col_));
-  if (sparse) {
+  const bool sparse_or_partial = sparse || partial;
+  assert(!(sparse && partial));
+  if (sparse_or_partial) {
     // Determine the number of nonzero primal solution values
     for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++)
       if (primal_solution[iCol]) num_nonzero_primal_value++;
@@ -223,20 +225,26 @@ void writePrimalSolution(FILE* file, const HighsLogOptions& log_options,
 
   std::stringstream ss;
   ss.str(std::string());
-  HighsInt num_col_field = sparse ? -num_nonzero_primal_value : lp.num_col_;
-  ss << highsFormatToString("# Columns %d\n", int(num_col_field));
+  HighsInt num_col_field =
+      sparse_or_partial ? -num_nonzero_primal_value : lp.num_col_;
+  std::string sparse_or_partial_string =
+      sparse_or_partial
+          ? (" " + (sparse ? kHighsSparseString : kHighsPartialString))
+          : "";
+  ss << highsFormatToString("# Columns %d%s\n", int(num_col_field),
+                            sparse_or_partial_string.c_str());
   highsFprintfString(file, log_options, ss.str());
   for (HighsInt ix = 0; ix < lp.num_col_; ix++) {
-    if (sparse && !primal_solution[ix]) continue;
+    if (sparse_or_partial && !primal_solution[ix]) continue;
     auto valStr = highsDoubleToString(primal_solution[ix],
                                       kHighsSolutionValueToStringTolerance);
-    // Don't invent names locallty: if none exist, then indicate this
-    // - so that the (sparse) solution line format remains "name value
-    // (index)"
+    // Don't invent names locally: if none exist, then indicate this -
+    // so that the (sparse/partial) solution line format remains "name
+    // value (index)"
     const std::string name = have_col_names ? lp.col_names_[ix] : "NoName";
     ss.str(std::string());
     ss << highsFormatToString("%-s %s", name.c_str(), valStr.data());
-    if (sparse) ss << highsFormatToString(" %d", int(ix));
+    if (sparse_or_partial) ss << highsFormatToString(" %d", int(ix));
     ss << "\n";
     highsFprintfString(file, log_options, ss.str());
   }
@@ -245,7 +253,8 @@ void writePrimalSolution(FILE* file, const HighsLogOptions& log_options,
 
 void writeModelSolution(FILE* file, const HighsLogOptions& log_options,
                         const HighsModel& model, const HighsSolution& solution,
-                        const HighsInfo& info, const bool sparse) {
+                        const HighsInfo& info, const bool sparse,
+                        const bool partial) {
   const HighsLp& lp = model.lp_;
   const bool have_primal = solution.value_valid;
   const bool have_dual = solution.dual_valid;
@@ -274,8 +283,8 @@ void writeModelSolution(FILE* file, const HighsLogOptions& log_options,
     }
     writeModelObjective(file, log_options, model, solution.col_value);
     writePrimalSolution(file, log_options, model.lp_, solution.col_value,
-                        sparse);
-    if (sparse) return;
+                        sparse, partial);
+    if (sparse || partial) return;
     ss.str(std::string());
     ss << highsFormatToString("# Rows %" HIGHSINT_FORMAT "\n", lp.num_row_);
     highsFprintfString(file, log_options, ss.str());
@@ -540,16 +549,20 @@ void writeSolutionFile(FILE* file, const HighsOptions& options,
     writeGlpsolSolution(file, options, model.lp_, basis, solution, model_status,
                         info, raw);
   } else {
-    // Standard raw solution file, possibly sparse => only nonzero primal values
+    // Standard raw solution file, possibly sparse or partial => only
+    // nonzero primal values, but different flag
     const bool sparse = style == kSolutionStyleSparse;
-    assert(style == kSolutionStyleRaw || sparse);
+    const bool partial = style == kSolutionStylePartial;
+    assert(!(sparse && partial));
+    assert(style == kSolutionStyleRaw || sparse || partial);
     highsFprintfString(file, log_options, "Model status\n");
     std::stringstream ss;
     ss.str(std::string());
     ss << highsFormatToString("%s\n",
                               utilModelStatusToString(model_status).c_str());
     highsFprintfString(file, log_options, ss.str());
-    writeModelSolution(file, log_options, model, solution, info, sparse);
+    writeModelSolution(file, log_options, model, solution, info, sparse,
+                       partial);
   }
 }
 
