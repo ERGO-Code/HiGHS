@@ -511,7 +511,8 @@ class HighsHashTree {
 
   template <int SizeClass>
   inline static void advancePastCurrentHash(InnerLeaf<SizeClass>* leaf, int& i,
-                                            int pos, uint16_t commonHash) {
+                                            int pos) {
+    uint16_t commonHash = leaf->hashes[i];
     i++;
     while (!pastChunkEnd(leaf, i, pos) && leaf->hashes[i] == commonHash) ++i;
   }
@@ -548,11 +549,10 @@ class HighsHashTree {
         } else if (leaf2->hashes[j] > leaf1->hashes[i]) {
           ++j;
         } else {
-          uint16_t commonHash = leaf1->hashes[i];
           int iSave = i;
           int jSave = j;
-          advancePastCurrentHash(leaf1, i, pos, commonHash);
-          advancePastCurrentHash(leaf2, j, pos, commonHash);
+          advancePastCurrentHash(leaf1, i, pos);
+          advancePastCurrentHash(leaf2, j, pos);
           for (int ii = iSave; ii < i; ++ii)
             for (int jj = jSave; jj < j; ++jj)
               if (leaf1->entries[ii].key() == leaf2->entries[jj].key())
