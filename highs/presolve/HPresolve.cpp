@@ -586,8 +586,19 @@ void HPresolve::chooseRules() {
                    " * Only in initial sweep\n");
   }
 
-  if (requireBasicSolution(options)) {
-    allow_rule_[kPresolveRuleSparsify] = false;
+  if (mipsolver == nullptr) {
+    // Switch off rules that are incompatible with basis or
+    // primal-dual postsolve
+    if (requireBasicSolution(options)) {
+      // Basic postsolve, so can't use sparsify or any rule using
+      // EqualityRowAddition(s), but latter seems to be skipped by
+      // setting trySparsify false
+      allow_rule_[kPresolveRuleSparsify] = false;
+    } else {
+      // needs prima-dual postsolve, so can't use weakly dominated
+      // column rule
+      allow_rule_[kPresolveRuleWeaklyDominatedCol] = false;
+    }
   }
 }
 
