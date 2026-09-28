@@ -333,7 +333,7 @@ set(hipo_util_sources
     ipm/hipo/auxiliary/Auxiliary.cpp
     ipm/hipo/auxiliary/CollectionLinkedLists.cpp
     ipm/hipo/auxiliary/Fold.cpp
-    ipm/hipo/auxiliary/FoldAux.cpp
+    ipm/hipo/auxiliary/DoubleQuantizer.cpp
     ipm/hipo/auxiliary/KrylovMethods.cpp
     ipm/hipo/auxiliary/Logger.cpp
     ipm/hipo/auxiliary/VectorOperations.cpp)
@@ -342,7 +342,7 @@ set(hipo_util_headers
     ipm/hipo/auxiliary/Auxiliary.h
     ipm/hipo/auxiliary/CollectionLinkedLists.h
     ipm/hipo/auxiliary/Fold.h
-    ipm/hipo/auxiliary/FoldAux.h
+    ipm/hipo/auxiliary/DoubleQuantizer.h
     ipm/hipo/auxiliary/IntConfig.h
     ipm/hipo/auxiliary/KrylovMethods.h
     ipm/hipo/auxiliary/Logger.h
