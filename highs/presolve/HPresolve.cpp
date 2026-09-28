@@ -518,21 +518,36 @@ void HPresolve::chooseRules() {
     presolve_light_rule_off[kPresolveRuleFourierMotzkin] = true;
   }
 
+  // Some rules can be switched off only in initial sweep
+  auto allowedOffInInitialSweep = [&] (const HighsInt rule_type) {
+    if (rule_type == kPresolveRuleEmptyRow) return true;
+    if (rule_type == kPresolveRuleSingletonRow) return true;
+    if (rule_type == kPresolveRuleRedundantRow) return true;
+    if (rule_type == kPresolveRuleEmptyCol) return true;
+    if (rule_type == kPresolveRuleFixedCol) return true;
+    return false;
+  };
+
   if (!silent && options->log_dev_level) {
     // State which rules can be off, and what bit to set
     highsLogUser(options->log_options, HighsLogType::kInfo,
                  "Permitted suppression of presolve rules via "
                  "presolve_rule_off option:\n");
-    for (HighsInt rule_type = kPresolveRuleFirstAllowOff;
+    for (HighsInt rule_type = kPresolveRuleMin;
          rule_type < kPresolveRuleCount; rule_type++) {
+      if (rule_type < kPresolveRuleFirstAllowOffGeneral &&
+	  !allowedOffInInitialSweep(rule_type)) continue;
       HighsInt bit = 1 << rule_type;
       // This is a rule that can be switched off
       highsLogUser(options->log_options, HighsLogType::kInfo,
-                   "   Rule %2d (set bit %2d = %7d): %s\n", int(rule_type),
-                   int(rule_type), int(bit),
+                   " %1s  Rule %2d (set bit %2d = %7d): %s\n", 
+		   allowedOffInInitialSweep(rule_type) ? "*" : " ",
+		   int(rule_type), int(rule_type), int(bit),
                    utilPresolveRuleTypeToString(rule_type).c_str());
     }
+    highsLogUser(options->log_options, HighsLogType::kInfo, " * Only in initial sweep\n");
   }
+  
   if (options->presolve_rule_off || presolve_light_on) {
     // Some presolve rules are off or presolve_light mode is being used
     //
@@ -541,13 +556,14 @@ void HPresolve::chooseRules() {
     if (!presolve_light_on && !silent)
       highsLogUser(options->log_options, HighsLogType::kInfo,
                    "Presolve rules not allowed:\n");
-    HighsInt bit = 1;
     for (HighsInt rule_type = kPresolveRuleMin; rule_type < kPresolveRuleCount;
          rule_type++) {
+      HighsInt bit = 1 << rule_type;
       // Identify whether this rule is allowed
       const bool rule_off = (options->presolve_rule_off & bit) ||
                             presolve_light_rule_off[rule_type];
-      if (rule_type >= kPresolveRuleFirstAllowOff) {
+      if (rule_type >= kPresolveRuleFirstAllowOffGeneral ||
+	  allowedOffInInitialSweep(rule_type)) {
         // This is a rule that can be switched off
         allow_rule_[rule_type] = !rule_off;
         // Possibly comment positively if it is off
@@ -569,7 +585,6 @@ void HPresolve::chooseRules() {
         // being used
         assert(!presolve_light_rule_off[rule_type]);
       }
-      bit *= 2;
     }
   }
 }

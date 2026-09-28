@@ -1491,11 +1491,25 @@ TEST_CASE("presolve-rules-off", "[highs_test_presolve]") {
   // Only allow initial sweep
   REQUIRE(h.setOptionValue("presolve_reduction_limit", 0) == HighsStatus::kOk);
 
-  
+  HighsInt presolve_rule_off = 0;
+  for (HighsInt k = 0; k < 6; k++) { 
+    REQUIRE(h.setOptionValue("presolve_rule_off", presolve_rule_off) == HighsStatus::kOk);
 
-  REQUIRE(h.passModel(lp) == HighsStatus::kOk);
-
-  REQUIRE(h.run() == HighsStatus::kOk);
+    REQUIRE(h.passModel(lp) == HighsStatus::kOk);
+    REQUIRE(h.run() == HighsStatus::kOk);
+    if (k == 0) {
+      presolve_rule_off += (1 << kPresolveRuleRedundantRow);
+    } else if (k == 1) {
+      presolve_rule_off += (1 << kPresolveRuleSingletonRow);
+    } else if (k == 2) {
+      presolve_rule_off += (1 << kPresolveRuleEmptyRow);
+    } else if (k == 3) {
+      presolve_rule_off += (1 << kPresolveRuleFixedCol);
+    } else if (k == 4) {
+      presolve_rule_off += (1 << kPresolveRuleEmptyCol);
+    } else {
+    }
+  }
 
   h.resetGlobalScheduler(true);
 

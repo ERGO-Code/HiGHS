@@ -274,8 +274,8 @@ enum PresolveRuleType : int {
   kPresolveRuleFixedCol,
   kPresolveRuleDominatedCol,
   // The remaining rules can be switched off
-  kPresolveRuleFirstAllowOff,
-  kPresolveRuleForcingRow = kPresolveRuleFirstAllowOff,
+  kPresolveRuleFirstAllowOffGeneral,
+  kPresolveRuleForcingRow = kPresolveRuleFirstAllowOffGeneral,
   kPresolveRuleForcingCol,
   kPresolveRuleFreeColSubstitution,
   kPresolveRuleDoubletonEquation,
