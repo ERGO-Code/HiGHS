@@ -646,6 +646,8 @@ TEST_CASE("presolve-issue-2095", "[highs_test_presolve]") {
   highs.readModel(model_file);
   REQUIRE(highs.presolve() == HighsStatus::kOk);
   REQUIRE(highs.getModelPresolveStatus() == HighsPresolveStatus::kReduced);
+
+  highs.resetGlobalScheduler(true);
 }
 
 TEST_CASE("presolve-only-at-root", "[highs_test_presolve]") {
@@ -1458,7 +1460,6 @@ TEST_CASE("test-weakly-dominated-column-primal-dual-postsolve",
     printf("\n====================\nPresolved LP\n====================\n");
     // Set this so that pure presolve runs the same as presolve before
     // IPM without crossover
-    h.setOptionValue("lp_presolve_requires_basis_postsolve", false);
 
     h.presolve();
 
