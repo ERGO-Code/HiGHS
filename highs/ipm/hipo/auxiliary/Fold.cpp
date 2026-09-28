@@ -82,8 +82,8 @@ void ColourRefinement::chooseRefiningColour() {
 void ColourRefinement::computeColourDegrees() {
   hipo::Clock clock;
 
-  HighsInt v = colour_classes_.head(refining_colour_);
-  while (colour_classes_.cont(v)) {
+  for (HighsInt v = colour_classes_.head(refining_colour_);
+       colour_classes_.cont(v); v = colour_classes_.next(v)) {
     forEachNeighbour(v, [this](HighsInt w) {
       colour_degree_[w]++;
       if (colour_degree_[w] == 1) colour_classes_touched_.append(w, colour_[w]);
@@ -97,8 +97,6 @@ void ColourRefinement::computeColourDegrees() {
       if (colour_degree_[w] > max_colour_degree_[colour_[w]])
         max_colour_degree_[colour_[w]] = colour_degree_[w];
     });
-
-    v = colour_classes_.next(v);
   }
 
   for (HighsInt el = 0; el < top_touched_; ++el) {
@@ -107,11 +105,12 @@ void ColourRefinement::computeColourDegrees() {
       min_colour_degree_[c] = 0;
     else {
       min_colour_degree_[c] = max_colour_degree_[c];
-      HighsInt v = colour_classes_touched_.head(c);
-      while (colour_classes_touched_.cont(v)) {
+
+      for (HighsInt v = colour_classes_touched_.head(c);
+           colour_classes_touched_.cont(v);
+           v = colour_classes_touched_.next(v)) {
         if (colour_degree_[v] < min_colour_degree_[c])
           min_colour_degree_[c] = colour_degree_[v];
-        v = colour_classes_touched_.next(v);
       }
     }
   }
@@ -152,10 +151,9 @@ void ColourRefinement::splitColour(const HighsInt s) {
   degree_count[0] =
       colour_classes_.length(s) - colour_classes_touched_.length(s);
 
-  HighsInt v = colour_classes_touched_.head(s);
-  while (colour_classes_touched_.cont(v)) {
+  for (HighsInt v = colour_classes_touched_.head(s);
+       colour_classes_touched_.cont(v); v = colour_classes_touched_.next(v)) {
     degree_count[colour_degree_[v]]++;
-    v = colour_classes_touched_.next(v);
   }
 
   HighsInt max_degree_count_index = 0;
@@ -185,14 +183,13 @@ void ColourRefinement::splitColour(const HighsInt s) {
     }
   }
 
-  v = colour_classes_touched_.head(s);
-  while (colour_classes_touched_.cont(v)) {
+  for (HighsInt v = colour_classes_touched_.head(s);
+       colour_classes_touched_.cont(v); v = colour_classes_touched_.next(v)) {
     if (new_colour[colour_degree_[v]] != s) {
       colour_classes_.remove(v, s);
       colour_classes_.append(v, new_colour[colour_degree_[v]]);
       colour_[v] = new_colour[colour_degree_[v]];
     }
-    v = colour_classes_touched_.next(v);
   }
 }
 
@@ -201,10 +198,9 @@ void ColourRefinement::prepareNextIter() {
 
   for (HighsInt el = 0; el < top_touched_; ++el) {
     const HighsInt c = colours_touched_[el];
-    HighsInt v = colour_classes_touched_.head(c);
-    while (colour_classes_touched_.cont(v)) {
+    for (HighsInt v = colour_classes_touched_.head(c);
+         colour_classes_touched_.cont(v); v = colour_classes_touched_.next(v)) {
       colour_degree_[v] = 0;
-      v = colour_classes_touched_.next(v);
     }
     max_colour_degree_[c] = 0;
     colour_classes_touched_.clear(c);
