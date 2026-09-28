@@ -9600,7 +9600,8 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
         //    HIGHSINT_FORMAT ")\n", numSingleton, numSingletonCandidate,
         //    model->row_lower_[parallelRowCand] ==
         //        model->row_upper_[parallelRowCand]);
-	assert(mipsolver != nullptr || this->allow_rule_[kPresolveRuleSparsify]);
+        assert(mipsolver != nullptr ||
+               this->allow_rule_[kPresolveRuleSparsify]);
         HPRESOLVE_CHECKED_CALL(equalityRowAddition(
             postsolve_stack, i, parallelRowCand, -rowScale, getStoredRow()));
         delRow = parallelRowCand;
@@ -9610,7 +9611,8 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
         //    row and %" HIGHSINT_FORMAT " " "singletons in other inequality
         //    row\n", numSingletonCandidate, numSingleton);
         // the row parallelRowCand is an equation; add it to the other row
-	assert(mipsolver != nullptr || this->allow_rule_[kPresolveRuleSparsify]);
+        assert(mipsolver != nullptr ||
+               this->allow_rule_[kPresolveRuleSparsify]);
         HPRESOLVE_CHECKED_CALL(equalityRowAddition(
             postsolve_stack, parallelRowCand, i,
             -rowMax[i].first / rowMax[parallelRowCand].first,
