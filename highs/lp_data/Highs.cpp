@@ -1488,10 +1488,8 @@ HighsStatus Highs::calledOptimizeModel() {
   double this_postsolve_time = -1;
   double this_solve_original_lp_time = -1;
   HighsInt postsolve_iteration_count = -1;
-  const bool ipm_no_crossover =
-      useIpm(options_.solver) && options_.run_crossover == kHighsOffString;
-  const bool lp_no_solution_basis =
-      ipm_no_crossover || options_.solver == kPdlpString;
+  const bool lp_no_solution_basis = noSolutionBasis(options_.solver, options_.run_crossover);
+  //  const bool lp_no_solution_basis = noSolutionBasis(options_);
   if (options_.icrash) {
     ICrashStrategy strategy = ICrashStrategy::kICA;
     bool strategy_ok = parseICrashStrategy(options_.icrash_strategy, strategy);

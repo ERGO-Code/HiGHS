@@ -1800,5 +1800,6 @@ bool solverValidForQp(const std::string& solver);
 
 bool useIpm(const std::string& solver);
 bool usePdlp(const std::string& solver);
+bool noSolutionBasis(const std::string& solver, const std::string& run_crossover);
 
 #endif
