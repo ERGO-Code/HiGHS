@@ -509,6 +509,13 @@ class HighsHashTree {
     return i == leaf->size || get_first_chunk16(leaf->hashes[i]) != pos;
   }
 
+  template <int SizeClass>
+  inline static void advancePastCurrentHash(InnerLeaf<SizeClass>* leaf, int& i,
+                                            int pos, uint16_t commonHash) {
+    i++;
+    while (!pastChunkEnd(leaf, i, pos) && leaf->hashes[i] == commonHash) ++i;
+  }
+
   template <int SizeClass1, int SizeClass2>
   static HighsHashTableEntry<K, V>* findCommonInLeaf(
       InnerLeaf<SizeClass1>* leaf1, InnerLeaf<SizeClass2>* leaf2, int hashPos) {
@@ -543,13 +550,9 @@ class HighsHashTree {
         } else {
           uint16_t commonHash = leaf1->hashes[i];
           int iSave = i;
-          i++;
-          while (!pastChunkEnd(leaf1, i, pos) && leaf1->hashes[i] == commonHash)
-            ++i;
           int jSave = j;
-          j++;
-          while (!pastChunkEnd(leaf2, j, pos) && leaf2->hashes[j] == commonHash)
-            ++j;
+          advancePastCurrentHash(leaf1, i, pos, commonHash);
+          advancePastCurrentHash(leaf2, j, pos, commonHash);
           for (int ii = iSave; ii < i; ++ii)
             for (int jj = jSave; jj < j; ++jj)
               if (leaf1->entries[ii].key() == leaf2->entries[jj].key())
