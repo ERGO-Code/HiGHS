@@ -38,8 +38,6 @@
 #include "util/HighsSplay.h"
 #include "util/HighsUtils.h"
 
-#define ENABLE_SPARSIFY_FOR_LP 0
-
 #define HPRESOLVE_CHECKED_CALL(presolveCall)            \
   do {                                                  \
     HPresolve::Result __result = presolveCall;          \
@@ -6627,12 +6625,8 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
     // HighsOptions::lp_presolve_requires_basis_postsolve is true by
     // default, and only switched to false if the solver is IPM
     // without crossover or PDLP
-#if ENABLE_SPARSIFY_FOR_LP
-    bool trySparsify = true;  // mipsolver != nullptr;
-#else
     bool trySparsify =
         mipsolver != nullptr || !options->lp_presolve_requires_basis_postsolve;
-#endif
     bool tryProbing = mipsolver != nullptr;
     bool tryFourierMotzkin = mipsolver != nullptr;
     HighsInt numCliquesBeforeProbing = -1;
@@ -9463,11 +9457,11 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
 
     const HighsInt numSingleton = getNumSingletons(i);
 
-#if !ENABLE_SPARSIFY_FOR_LP
-    if (mipsolver == nullptr && options->lp_presolve_requires_basis_postsolve &&
+    if (mipsolver == nullptr &&
+	options->lp_presolve_requires_basis_postsolve &&
         numSingleton != 0)
       continue;
-#endif
+
     HighsInt delRow = -1;
     if (it != buckets.end()) storeRow(i);
     while (it != buckets.end() && it->first == rowHashes[i]) {
@@ -9476,12 +9470,11 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
 
       const HighsInt numSingletonCandidate = getNumSingletons(parallelRowCand);
 
-#if !ENABLE_SPARSIFY_FOR_LP
       if (mipsolver == nullptr &&
           options->lp_presolve_requires_basis_postsolve &&
           numSingletonCandidate != 0)
         continue;
-#endif
+
       if (rowsize[i] - numSingleton !=
           rowsize[parallelRowCand] - numSingletonCandidate)
         continue;
