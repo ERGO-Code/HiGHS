@@ -1160,6 +1160,8 @@ bool usePdlp(const std::string& solver) {
   return solver == kPdlpString || solver == kHiPdlpString;
 }
 
-bool noSolutionBasis(const std::string& solver, const std::string& run_crossover) {
-  return (useIpm(solver) && run_crossover == kHighsOffString) || usePdlp(solver);
+bool requireBasicSolution(const HighsOptions* options) {
+  return !(useIpm(options->solver) &&
+           options->run_crossover == kHighsOffString) &&
+         !usePdlp(options->solver);
 }
