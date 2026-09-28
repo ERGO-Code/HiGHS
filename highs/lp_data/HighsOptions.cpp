@@ -1151,3 +1151,12 @@ bool solverValidForQp(const std::string& solver) {
   return solver == kHighsChooseString || solver == kQpAsmString ||
          solver == kIpmString || solver == kHipoString;
 }
+
+bool useIpm(const std::string& solver) {
+  return solver == kIpmString || solver == kHipoString || solver == kIpxString;
+}
+
+bool usePdlp(const std::string& solver) {
+  return solver == kPdlpString || solver == kHiPdlpString;
+}
+

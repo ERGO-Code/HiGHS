@@ -1798,4 +1798,7 @@ bool solverValidForLp(const std::string& solver);
 bool solverValidForMip(const std::string& solver);
 bool solverValidForQp(const std::string& solver);
 
+bool useIpm(const std::string& solver);
+bool usePdlp(const std::string& solver);
+
 #endif

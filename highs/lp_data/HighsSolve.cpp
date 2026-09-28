@@ -715,14 +715,6 @@ void assessExcessiveObjectiveBoundScaling(const HighsLogOptions log_options,
                  problem.c_str());
 }
 
-bool useIpm(const std::string& solver) {
-  return solver == kIpmString || solver == kHipoString || solver == kIpxString;
-}
-
-bool usePdlp(const std::string& solver) {
-  return solver == kPdlpString || solver == kHiPdlpString;
-}
-
 // Decide whether to use the HiPO IPM solver
 bool useHipo(const HighsOptions& options,
              const std::string& specific_solver_option, const HighsLp& lp,
