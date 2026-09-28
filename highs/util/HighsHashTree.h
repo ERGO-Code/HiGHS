@@ -504,6 +504,19 @@ class HighsHashTree {
     }
   }
 
+  template <int SizeClass>
+  inline static bool pastChunkEnd(InnerLeaf<SizeClass>* leaf, int i, int pos) {
+    return i >= leaf->size || get_first_chunk16(leaf->hashes[i]) != pos;
+  }
+
+  template <int SizeClass>
+  inline static void advancePastCurrentHash(InnerLeaf<SizeClass>* leaf, int& i,
+                                            int pos) {
+    uint16_t commonHash = leaf->hashes[i];
+    i++;
+    while (!pastChunkEnd(leaf, i, pos) && leaf->hashes[i] == commonHash) ++i;
+  }
+
   template <int SizeClass1, int SizeClass2>
   static HighsHashTableEntry<K, V>* findCommonInLeaf(
       InnerLeaf<SizeClass1>* leaf1, InnerLeaf<SizeClass2>* leaf2, int hashPos) {
@@ -533,23 +546,19 @@ class HighsHashTree {
       while (true) {
         if (leaf1->hashes[i] > leaf2->hashes[j]) {
           ++i;
-          if (i == leaf1->size || get_first_chunk16(leaf1->hashes[i]) != pos)
-            break;
         } else if (leaf2->hashes[j] > leaf1->hashes[i]) {
           ++j;
-          if (j == leaf2->size || get_first_chunk16(leaf2->hashes[j]) != pos)
-            break;
         } else {
-          if (leaf1->entries[i].key() == leaf2->entries[j].key())
-            return &leaf1->entries[i];
-
-          ++i;
-          if (i == leaf1->size || get_first_chunk16(leaf1->hashes[i]) != pos)
-            break;
-          ++j;
-          if (j == leaf2->size || get_first_chunk16(leaf2->hashes[j]) != pos)
-            break;
+          int iSave = i;
+          int jSave = j;
+          advancePastCurrentHash(leaf1, i, pos);
+          advancePastCurrentHash(leaf2, j, pos);
+          for (int ii = iSave; ii < i; ++ii)
+            for (int jj = jSave; jj < j; ++jj)
+              if (leaf1->entries[ii].key() == leaf2->entries[jj].key())
+                return &leaf1->entries[ii];
         }
+        if (pastChunkEnd(leaf1, i, pos) || pastChunkEnd(leaf2, j, pos)) break;
       };
     }
 
@@ -593,7 +602,7 @@ class HighsHashTree {
                              leaf->entries[i].key()))
               return &leaf->entries[i];
             ++i;
-          } while (i < leaf->size && get_first_chunk16(leaf->hashes[i]) == pos);
+          } while (!pastChunkEnd(leaf, i, pos));
         }
         break;
       }
@@ -1223,11 +1232,11 @@ class HighsHashTree {
 
         ListNode* iter = &leaf->first;
         ListNode* copyIter = &copyLeaf->first;
-        do {
+        while (iter->next != nullptr) {
           copyIter->next = new ListNode(*iter->next);
           iter = iter->next;
           copyIter = copyIter->next;
-        } while (iter->next != nullptr);
+        }
 
         return copyLeaf;
       }
