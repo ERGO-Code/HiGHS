@@ -7,7 +7,7 @@ namespace highs {
 
 namespace folding {
 
-void CollectionLinkedLists::init(HighsInt n_elem, HighsInt n_lists) {
+void LinkedLists::init(HighsInt n_elem, HighsInt n_lists) {
   n_elem_ = n_elem;
   n_lists_ = n_lists;
   forward_.resize(n_elem + n_lists);
@@ -19,7 +19,7 @@ void CollectionLinkedLists::init(HighsInt n_elem, HighsInt n_lists) {
   length_.assign(n_lists, 0);
 }
 
-void CollectionLinkedLists::clear(HighsInt list) {
+void LinkedLists::clear(HighsInt list) {
   /*HighsInt current = forward_[n_elem_ + list];
   while (current < n_elem_) {
     const HighsInt temp = forward_[current];
@@ -34,7 +34,7 @@ void CollectionLinkedLists::clear(HighsInt list) {
   length_[list] = 0;
 }
 
-void CollectionLinkedLists::append(HighsInt elem, HighsInt list) {
+void LinkedLists::append(HighsInt elem, HighsInt list) {
   const HighsInt temp = backward_[n_elem_ + list];
   backward_[n_elem_ + list] = elem;
   backward_[elem] = temp;
@@ -43,7 +43,7 @@ void CollectionLinkedLists::append(HighsInt elem, HighsInt list) {
   length_[list]++;
 }
 
-void CollectionLinkedLists::remove(HighsInt elem, HighsInt list) {
+void LinkedLists::remove(HighsInt elem, HighsInt list) {
   forward_[backward_[elem]] = forward_[elem];
   backward_[forward_[elem]] = backward_[elem];
   forward_[elem] = elem;
@@ -51,7 +51,7 @@ void CollectionLinkedLists::remove(HighsInt elem, HighsInt list) {
   length_[list]--;
 }
 
-void CollectionLinkedLists::print() const {
+void LinkedLists::print() const {
   printf("H:  ");
   for (HighsInt i = 0; i < n_lists_; ++i) printf("%3d", forward_[n_elem_ + i]);
   printf("\n");

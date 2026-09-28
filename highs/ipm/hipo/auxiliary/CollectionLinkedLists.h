@@ -12,7 +12,7 @@ namespace folding {
 // Collection of linked lists.
 // See highs/ipm/basiclu/lu_list.h for an explanation.
 
-class CollectionLinkedLists {
+class LinkedLists {
   std::vector<HighsInt> forward_;
   std::vector<HighsInt> backward_;
   std::vector<HighsInt> length_;
@@ -38,11 +38,11 @@ class CollectionLinkedLists {
   //  for (HighsInt v : list(i))
   //
   struct List {
-    const CollectionLinkedLists* owner;
+    const LinkedLists* owner;
     HighsInt list;
 
     struct Iterator {
-      const CollectionLinkedLists* owner;
+      const LinkedLists* owner;
       HighsInt current;
 
       HighsInt operator*() const { return current; }

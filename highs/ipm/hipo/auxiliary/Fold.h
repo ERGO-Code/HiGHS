@@ -30,8 +30,8 @@ class ColourRefinement {
   std::vector<HighsInt> colours_split_;
   HighsInt top_split_{};
 
-  CollectionLinkedLists colour_classes_;
-  CollectionLinkedLists colour_classes_touched_;
+  LinkedLists colour_classes_;
+  LinkedLists colour_classes_touched_;
 
   HighsInt latest_colour_;
   HighsInt refining_colour_;
