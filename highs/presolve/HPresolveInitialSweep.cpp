@@ -23,7 +23,7 @@ namespace presolve {
 
 HPresolveInitialSweep::HPresolveInitialSweep(HighsLp& model,
                                              const HighsOptions& options,
-					     const HighsBool* allow_rule,
+					     const std::vector<HighsBool>& allow_rule,
                                              const double primal_feastol)
     : model_(&model),
       options_(&options),

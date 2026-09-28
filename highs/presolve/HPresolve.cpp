@@ -6551,7 +6551,7 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
     analysis_.presolveTimerStart(kPresolveClockInitialSweep);
     const bool logging_on = analysis_.logging_on_;
     if (logging_on) analysis_.startPresolveRuleLog(kPresolveRuleInitialSweep);
-    HPresolveInitialSweep sweep(*model, *options, allow_rule_.data(), primal_feastol);
+    HPresolveInitialSweep sweep(*model, *options, allow_rule_, primal_feastol);
     auto sweep_result = sweep.run(postsolve_stack);
     numDeletedCols = sweep.numDeletedCols();
     numDeletedRows = sweep.numDeletedRows();

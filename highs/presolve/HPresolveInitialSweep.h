@@ -26,7 +26,7 @@ class HPresolveInitialSweep {
 
   HPresolveInitialSweep(HighsLp& model,
 			const HighsOptions& options,
-			const HighsBool* allow_rule,
+			const std::vector<HighsBool>& allow_rule,
                         const double primal_feastol);
 
   Result run(HighsPostsolveStack& postsolve_stack);
@@ -37,7 +37,7 @@ class HPresolveInitialSweep {
  private:
   HighsLp* model_;
   const HighsOptions* options_;
-  const HighsBool* allow_rule_;
+  const std::vector<HighsBool>& allow_rule_;
   const double primal_feastol_;
   HighsInt num_deleted_rows_;
   HighsInt num_deleted_cols_;
