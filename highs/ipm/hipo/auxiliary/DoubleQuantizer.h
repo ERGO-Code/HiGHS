@@ -84,11 +84,8 @@ struct DoubleQuantizer {
   bool operator()(const ColData& x, const ColData& y) const;
 };
 
-// Map that uses the DoubleQuantizer to assign integers to objects of type T
-// that are different according to the hashing and equality operators.
-template <typename T>
-using QuantizedMap =
-    std::unordered_map<T, HighsInt, DoubleQuantizer, DoubleQuantizer>;
+template <typename P, typename Q>
+using QuantizedMap = std::unordered_map<P, Q, DoubleQuantizer, DoubleQuantizer>;
 
 }  // namespace folding
 }  // namespace highs

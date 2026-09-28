@@ -262,7 +262,7 @@ void test_folding(const HighsLp& lp) {
 
 HighsInt Folder::findInitialRowColour(std::vector<HighsInt>& colour) {
   colour.assign(lp_.num_row_, 0);
-  QuantizedMap<RowData> row_map;
+  QuantizedMap<RowData, HighsInt> row_map;
   HighsInt next_colour = 0;
 
   for (HighsInt row = 0; row < lp_.num_row_; ++row) {
@@ -282,7 +282,7 @@ HighsInt Folder::findInitialRowColour(std::vector<HighsInt>& colour) {
 
 HighsInt Folder::findInitialColColour(std::vector<HighsInt>& colour) {
   colour.assign(lp_.num_col_, 0);
-  QuantizedMap<ColData> col_map;
+  QuantizedMap<ColData, HighsInt> col_map;
   HighsInt next_colour = 0;
 
   for (HighsInt col = 0; col < lp_.num_col_; ++col) {
