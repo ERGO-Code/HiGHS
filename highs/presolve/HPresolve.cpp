@@ -2699,6 +2699,11 @@ HPresolve::Result HPresolve::changeColUpper(HighsInt col, double newUpper) {
   double oldUpper = model->col_upper_[col];
   model->col_upper_[col] = newUpper;
 
+  double impliedMargin = colsize[col] != 1 ? primal_feastol : -primal_feastol;
+  if (!isUpperStrictlyImplied(col, &impliedMargin)) {
+    resetRowDualImpliedBoundsDerivedFromCol(col);
+  }
+
   HPRESOLVE_CHECKED_CALL(checkColBounds(col));
 
   for (const HighsSliceNonzero& nonzero : getColumnVector(col)) {
@@ -2722,6 +2727,11 @@ HPresolve::Result HPresolve::changeColLower(HighsInt col, double newLower) {
 
   double oldLower = model->col_lower_[col];
   model->col_lower_[col] = newLower;
+
+  double impliedMargin = colsize[col] != 1 ? primal_feastol : -primal_feastol;
+  if (!isLowerStrictlyImplied(col, &impliedMargin)) {
+    resetRowDualImpliedBoundsDerivedFromCol(col);
+  }
 
   HPRESOLVE_CHECKED_CALL(checkColBounds(col));
 
