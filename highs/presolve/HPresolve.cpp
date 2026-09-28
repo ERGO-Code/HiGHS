@@ -585,6 +585,10 @@ void HPresolve::chooseRules() {
       highsLogUser(options->log_options, HighsLogType::kInfo,
                    " * Only in initial sweep\n");
   }
+
+  if (options->lp_presolve_requires_basis_postsolve) {
+    allow_rule_[kPresolveRuleSparsify] = false;
+  }
 }
 
 void HPresolve::link(HighsInt pos) {
@@ -6621,12 +6625,7 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
     // the problem is a MIP, IPM is run without crossover, or when
     // PDLP is used. However, if the LP is reduced to empty, the basis
     // must not be formed in the case of IPM without crossover or PDLP
-    //
-    // HighsOptions::lp_presolve_requires_basis_postsolve is true by
-    // default, and only switched to false if the solver is IPM
-    // without crossover or PDLP
-    bool trySparsify =
-        mipsolver != nullptr || !options->lp_presolve_requires_basis_postsolve;
+    bool trySparsify = mipsolver != nullptr || allow_rule_[kPresolveRuleSparsify];
     bool tryProbing = mipsolver != nullptr;
     bool tryFourierMotzkin = mipsolver != nullptr;
     HighsInt numCliquesBeforeProbing = -1;
@@ -9458,7 +9457,7 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
     const HighsInt numSingleton = getNumSingletons(i);
 
     if (mipsolver == nullptr &&
-	options->lp_presolve_requires_basis_postsolve &&
+	!allow_rule_[kPresolveRuleSparsify] &&
         numSingleton != 0)
       continue;
 
@@ -9471,7 +9470,7 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
       const HighsInt numSingletonCandidate = getNumSingletons(parallelRowCand);
 
       if (mipsolver == nullptr &&
-          options->lp_presolve_requires_basis_postsolve &&
+          !allow_rule_[kPresolveRuleSparsify] &&
           numSingletonCandidate != 0)
         continue;
 
