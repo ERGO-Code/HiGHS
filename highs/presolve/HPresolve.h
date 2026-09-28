@@ -214,7 +214,9 @@ class HPresolve {
 
   void resetRowDualImpliedBoundsDerivedFromCol(HighsInt col);
 
-  void matrixNonZeroChanged(HighsInt row, HighsInt col);
+  void matrixNonZeroChanged(HighsInt row, HighsInt col, double oldCoef,
+                            double newCoef, bool rowIsDeleted,
+                            bool colIsDeleted);
 
   void changeRowLower(HighsInt row, double newLower,
                       bool skipRowDualUpdate = false);
@@ -498,6 +500,8 @@ class HPresolve {
 
   void removeFixedCol(HighsInt col, double fixval);
 
+  void unlinkRow(HighsInt row);
+
   void removeRow(HighsInt row);
 
   Result removeDependentEquations(HighsPostsolveStack& postsolve_stack);
@@ -532,6 +536,8 @@ class HPresolve {
                              const HighsMatrixSlice<RowStorageFormat>& vector);
 
   void extractVarBounds(HighsInt row);
+
+  void aggregateVarBounds();
 
   Result sparsify(HighsPostsolveStack& postsolve_stack);
 

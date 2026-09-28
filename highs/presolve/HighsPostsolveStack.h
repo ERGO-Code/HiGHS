@@ -769,7 +769,15 @@ class HighsPostsolveStack {
 
     reductionValues.push(EqualityRowAdditions{origRowIndex[addedEqRow]});
     reductionValues.push(rowValues);
-    reductionValues.push(targetRows);
+    // On entry, targetRows are in the presolved space, but in
+    // postsolve they need to be in the original space. For
+    // equalityRowAddition the transformation is simply
+    // origRowIndex[row], but for equalityRowAdditions all indices
+    // must be transformed in the std::vector<Nonzero> targetRows
+    std::vector<Nonzero> orig_targetRows = targetRows;
+    for (auto& targetRow : orig_targetRows)
+      targetRow.index = origRowIndex[targetRow.index];
+    reductionValues.push(orig_targetRows);
     reductionAdded(ReductionType::kEqualityRowAdditions);
   }
 
