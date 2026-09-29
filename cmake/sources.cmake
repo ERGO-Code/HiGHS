@@ -347,6 +347,7 @@ set_source_files_properties (io/filereaderlp/reader.cpp PROPERTIES SKIP_UNITY_BU
 
 set(highs_sources
     folding/CollectionLinkedLists.cpp
+    folding/ColourRefinement.cpp
     folding/DoubleQuantizer.cpp
     folding/Fold.cpp
     interfaces/highs_c_api.cpp
@@ -476,6 +477,7 @@ set(highs_headers
     ../extern/zstr/strict_fstream.hpp
     ../extern/zstr/zstr.hpp
     folding/CollectionLinkedLists.h
+    folding/ColourRefinement.h
     folding/DoubleQuantizer.h
     folding/Fold.h
     folding/FoldConstants.h
