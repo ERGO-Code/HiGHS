@@ -1224,6 +1224,42 @@ TEST_CASE("hi-pdlp-resident-check-kkt-rejection-continues-to-next-candidate",
   CHECK_FALSE(verification.pass);
 }
 
+TEST_CASE("hi-pdlp-rejected-kkt-verifications-back-off",
+          "[pdlp][hipdlp][solver][cpu][kkt-gate]") {
+  // The loose transformed tolerance passes at every boundary while the
+  // original one is out of reach, so every due verification is rejected. The
+  // CPU verifies every boundary; a device backend spaces the checks 1, 2, 4,
+  // 8 and then 16 boundaries apart. The limit boundary is always checked.
+  const HighsLp lp = makeResidentDiagonalLp(17, true);
+  std::vector<hipdlp::backend::Kind> backends = {hipdlp::backend::Kind::kCpu};
+#ifdef HIGHS_HIPDLP_CUDA_DETECTED
+  if (cudaBackendUsable()) backends.push_back(hipdlp::backend::Kind::kCuda);
+#endif
+  for (const hipdlp::backend::Kind backend : backends) {
+    CAPTURE(static_cast<int>(backend));
+    hipdlp::api::SolverOptions options = makeCpuFixedOptions();
+    options.backend = backend;
+    options.optimality_tolerance = 0.4;
+    options.kkt_tolerance = 1e-12;
+    options.iteration_limit = 1600;
+    hipdlp::algorithm::SolveDiagnostics diagnostics;
+    hipdlp::algorithm::SolveContext context;
+    context.diagnostics = &diagnostics;
+    const hipdlp::api::SolveResult result = hipdlp::algorithm::solve(
+        options, hipdlp::model::OriginalModel(lp), context);
+    INFO(result.error.message);
+    REQUIRE(result.ok());
+    CHECK(result.status == hipdlp::api::SolverStatus::kIterationLimit);
+    CHECK(result.iteration_count == 1600);
+    // Every boundary on the CPU; on a device, iterations 40, 80, 160, 320,
+    // 640, 1280 and the limit at 1600.
+    const std::size_t expected =
+        backend == hipdlp::backend::Kind::kCpu ? 40 : 7;
+    CHECK(diagnostics.original_kkt_verifications == expected);
+    CHECK(diagnostics.original_kkt_rejections == expected);
+  }
+}
+
 TEST_CASE("hi-pdlp-resident-check-limit-does-not-finalize-unused-fpe",
           "[pdlp][hipdlp][phase8][solver][cpu][iteration-limit]") {
   const HighsLp lp = makeResidentDiagonalLp(2, true);

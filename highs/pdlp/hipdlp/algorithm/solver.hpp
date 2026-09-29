@@ -26,6 +26,8 @@ struct SolveDiagnostics {
   std::size_t candidate_downloads;
   std::size_t host_oracle_checks;
   std::size_t certificate_checks;
+  std::size_t original_kkt_verifications;
+  std::size_t original_kkt_rejections;
   std::size_t restart_reference_checks;
   std::size_t fixed_point_evaluations;
   std::size_t command_buffer_replays;

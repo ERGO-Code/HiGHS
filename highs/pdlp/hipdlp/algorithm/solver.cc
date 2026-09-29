@@ -32,6 +32,14 @@ namespace {
 
 const HighsInt kConvergenceCadence = 40;
 const HighsInt kRecordedStepCount = kConvergenceCadence - 1;
+// On a device backend a host-side original-KKT verification costs about as
+// much as a boundary of iterations, so rejected verifications back off to at
+// most this many boundaries, which bounds how late a candidate is confirmed.
+const HighsInt kMaximumVerificationGap = 16;
+
+bool iteratesOnDevice(const backend::Kind kind) {
+  return kind == backend::Kind::kCuda;
+}
 
 class RecordedIterationBlock {
  public:
@@ -786,6 +794,8 @@ SolveDiagnostics::SolveDiagnostics()
       candidate_downloads(0),
       host_oracle_checks(0),
       certificate_checks(0),
+      original_kkt_verifications(0),
+      original_kkt_rejections(0),
       restart_reference_checks(0),
       fixed_point_evaluations(0),
       command_buffer_replays(0),
@@ -1084,6 +1094,10 @@ api::SolveResult solve(const api::SolverOptions& options,
     FixedPointRestartState restart_state = resetFixedPointRestart(0.0);
     const FixedPointRestartParameters restart_parameters;
     bool restart_reference_pending = false;
+    const bool back_off_verifications =
+        iteratesOnDevice(selected_backend->descriptor().kind);
+    HighsInt rejected_verifications = 0;
+    HighsInt next_verification_iteration = 0;
     error = selected_backend->prepareCheckWorkspace(
       built.problem, original_model.lp(), workspace);
     if (!error.ok()) return failure(error);
@@ -1294,14 +1308,22 @@ api::SolveResult solve(const api::SolverOptions& options,
         };
         const bool certificate_possible =
             check.primal_ray_possible || check.farkas_possible;
-        if (stopping.decision == StoppingDecision::kOptimal ||
-          (options.early_kkt_check &&
-           shouldVerifyOriginalKkt(stopping, total_iterations, tolerances,
-                       options.kkt_tolerance))) {
+        // A terminal boundary always verifies, so a limit never hides an
+        // acceptable candidate behind the backoff.
+        const bool verification_due =
+            iteration_limit || time_limit ||
+            total_iterations >= next_verification_iteration;
+        if (verification_due &&
+            (stopping.decision == StoppingDecision::kOptimal ||
+             (options.early_kkt_check &&
+              shouldVerifyOriginalKkt(stopping, total_iterations, tolerances,
+                                      options.kkt_tolerance)))) {
           error = postsolve_candidate();
           if (!error.ok()) return failure(error);
           SolvePhaseGuard host_verification(
               context, SolvePhase::kHostVerification, total_iterations);
+          if (context.diagnostics != nullptr)
+            ++context.diagnostics->original_kkt_verifications;
           const verification::KktVerificationResult verification =
               verification::verifyKkt(original_model.lp(), solution,
                                       options.kkt_tolerance);
@@ -1314,6 +1336,20 @@ api::SolveResult solve(const api::SolverOptions& options,
                           options.kkt_tolerance);
             return api::SolveResult::success(api::SolverStatus::kOptimal,
                                              solution, total_iterations);
+          }
+          if (context.diagnostics != nullptr)
+            ++context.diagnostics->original_kkt_rejections;
+          // The transformed metrics can pass long before the original ones;
+          // wait 1, 2, 4, ... boundaries before paying for another check.
+          if (back_off_verifications) {
+            const HighsInt gap =
+                rejected_verifications >= 4
+                    ? kMaximumVerificationGap
+                    : std::min(kMaximumVerificationGap,
+                               HighsInt(1) << rejected_verifications);
+            ++rejected_verifications;
+            next_verification_iteration =
+                total_iterations + gap * kConvergenceCadence;
           }
         }
 
