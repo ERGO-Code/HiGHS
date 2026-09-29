@@ -1126,6 +1126,9 @@ TEST_CASE("hi-pdlp-resident-check-production-fixed-and-pid",
   options.optimality_tolerance = 1e-12;
   options.kkt_tolerance = 1e-12;
   options.iteration_limit = 200000;
+  // Production scaling: like legacy, unscaled PID can drive the primal weight
+  // to extremes once the primal iterate is pinned at its bounds.
+  options.scaling.mode = hipdlp::model::ScalingMode::kAuto;
   SECTION("fixed") {}
   SECTION("PID") {
     options.policy.step_size = hipdlp::api::StepSizePolicy::kPid;
@@ -2132,7 +2135,7 @@ TEST_CASE("hi-pdlp-rewrite-consumes-the-pid-primal-weight-update",
     CHECK(pid_result.solution.col_value != fixed_result.solution.col_value);
   }
 
-  SECTION("an undefined residual ratio falls back to the best weight") {
+  SECTION("a boxed column's zero dual residual does not disable the PID") {
     const HighsLp lp = makeBoxedColumnLp();
     const hipdlp::api::SolveResult fixed_result =
         hipdlp::algorithm::solve(fixed, hipdlp::model::OriginalModel(lp));
@@ -2147,10 +2150,9 @@ TEST_CASE("hi-pdlp-rewrite-consumes-the-pid-primal-weight-update",
     INFO(pid_result.error.message);
     REQUIRE(pid_result.ok());
     CHECK(pid_diagnostics.primal_weight_updates > 0);
-    // Reverting to the best weight leaves the steps, and the run, unchanged.
-    CHECK(pid_result.iteration_count == fixed_result.iteration_count);
-    CHECK(pid_result.solution.col_value == fixed_result.solution.col_value);
-    CHECK(pid_result.solution.row_dual == fixed_result.solution.row_dual);
+    // The bound projection makes a boxed column's dual residual zero; the
+    // controller must still move the weight, and with it the trajectory.
+    CHECK(pid_result.solution.col_value != fixed_result.solution.col_value);
   }
 }
 

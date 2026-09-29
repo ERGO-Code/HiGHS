@@ -3666,7 +3666,7 @@ TEST_CASE("hi-pdlp-fixed-trace-restart-primal-weight-uses-anchor-distances",
   checkBitwiseEqualPrimalWeightResult(update.result, expected);
 }
 
-TEST_CASE("hi-pdlp-fixed-trace-restart-primal-weight-controls-and-falls-back",
+TEST_CASE("hi-pdlp-fixed-trace-restart-primal-weight-controls-bounded-and-free",
           "[pdlp][hipdlp][phase7p][restart][primal-weight][policy][exact]") {
   const hipdlp::algorithm::FixedTraceResult bounded =
       runTrace(makeOneStepLp(), makePrimalWeightOptions(3));
@@ -3689,14 +3689,17 @@ TEST_CASE("hi-pdlp-fixed-trace-restart-primal-weight-controls-and-falls-back",
   CHECK(free_column.fixed_point_restart_checks[0].error.fixed_point_error ==
         kErrorAtTwo);
 
-  // A zero relative dual residual makes the ratio inadmissible and reverts to
-  // the best weight; the free column keeps the ratio inside its window.
+  // The bounded column's zero relative dual residual is structural, so the
+  // shared distances control its weight exactly as for the free column; only
+  // the best-gap tracking, which needs the ratio, differs.
   CHECK(bounded.convergence_checks[0].stopping.metrics.relative_dual ==
         kBoundedRelativeDualAtTwo);
   CHECK(bounded.primal_weight_updates[0].result.kind ==
-        hipdlp::algorithm::PrimalWeightUpdateKind::kRevertedToBest);
-  CHECK(bounded.primal_weight_updates[0].result.next.primal_weight == 1.0);
-  CHECK(bounded.primal_weight_updates[0].result.next.error_sum == 0.0);
+        hipdlp::algorithm::PrimalWeightUpdateKind::kControlled);
+  CHECK(bounded.primal_weight_updates[0].result.next.primal_weight ==
+        free_column.primal_weight_updates[0].result.next.primal_weight);
+  CHECK(bounded.primal_weight_updates[0].result.next.error_sum ==
+        free_column.primal_weight_updates[0].result.next.error_sum);
 
   CHECK(free_column.convergence_checks[0].raw.dual_residual == 21.0 / 16.0);
   CHECK(free_column.convergence_checks[0].stopping.metrics.relative_primal ==
@@ -3740,10 +3743,12 @@ TEST_CASE("hi-pdlp-fixed-trace-restart-primal-weight-preserves-eta",
 
 TEST_CASE("hi-pdlp-fixed-trace-restart-primal-weight-installs-later-steps",
           "[pdlp][hipdlp][phase7p][restart][primal-weight][steps]") {
+  // The free column keeps the residual ratio defined, so the update at two is
+  // a controlled one and the only restart that installs steps in this trace.
   hipdlp::algorithm::FixedTraceOptions options = makePrimalWeightOptions(4);
   options.fixed_point_restart.parameters.artificial_threshold = 0.6;
   const hipdlp::algorithm::FixedTraceResult result =
-      runTrace(makeOneStepLp(), options);
+      runTrace(makeFreeStepLp(), options);
   INFO(result.error.message);
   REQUIRE(result.ok());
   REQUIRE(result.points.size() == 5);
@@ -3764,7 +3769,7 @@ TEST_CASE("hi-pdlp-fixed-trace-restart-primal-weight-installs-later-steps",
   oracle_options.dual_step_sizes.assign(2, options.dual_step_size);
   oracle_options.dual_step_sizes.resize(4, installed.dual_step);
   const hipdlp::algorithm::FixedTraceResult oracle =
-      runTrace(makeOneStepLp(), oracle_options);
+      runTrace(makeFreeStepLp(), oracle_options);
   INFO(oracle.error.message);
   REQUIRE(oracle.ok());
   CHECK(oracle.primal_weight_updates.empty());
@@ -3780,7 +3785,7 @@ TEST_CASE("hi-pdlp-fixed-trace-restart-primal-weight-installs-later-steps",
   hipdlp::algorithm::FixedTraceOptions disabled_options = options;
   disabled_options.primal_weight.enabled = false;
   const hipdlp::algorithm::FixedTraceResult disabled =
-      runTrace(makeOneStepLp(), disabled_options);
+      runTrace(makeFreeStepLp(), disabled_options);
   INFO(disabled.error.message);
   REQUIRE(disabled.ok());
   REQUIRE(disabled.convergence_checks.size() == 2);
@@ -4049,7 +4054,9 @@ TEST_CASE("hi-pdlp-fixed-trace-restart-primal-weight-is-transactional",
         runTrace(makeOneStepLp(), options);
     INFO(recovered.error.message);
     REQUIRE(recovered.ok());
-    REQUIRE(recovered.primal_weight_updates.size() == 1);
+    // The bounded column's update at two is controlled, and its new steps
+    // restart the run again at the final boundary.
+    REQUIRE(recovered.primal_weight_updates.size() == 2);
   }
 #endif
 }

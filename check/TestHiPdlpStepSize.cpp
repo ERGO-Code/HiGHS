@@ -489,7 +489,7 @@ TEST_CASE("hi-pdlp-primal-weight-guard-windows-are-strict-and-fall-back",
       {1.0, 1e-16, 1.0, 1.0, 0.0}, {1.0, 1e12, 1.0, 1.0, 0.0},
       {0.0, 8.0, 1.0, 1.0, 0.0},   {1.0, 0.0, 1.0, 1.0, 0.0},
       {1.0, 8.0, 1.0, 1e8, 0.5},   {1.0, 8.0, 1.0, 1e-8, 0.5},
-      {1.0, 8.0, 0.0, 1e-3, 0.5},  {1.0, 8.0, 1e-3, 0.0, 0.5}};
+      {1.0, 8.0, 0.0, 1e-3, 0.5}};
 
   for (std::size_t index = 0; index < sizeof(cases) / sizeof(cases[0]);
        ++index) {
@@ -513,6 +513,23 @@ TEST_CASE("hi-pdlp-primal-weight-guard-windows-are-strict-and-fall-back",
     CHECK(result.primal_step == 0.5 / 3.0);
     CHECK(result.dual_step == 1.5);
   }
+
+  // A zero dual residual is structural (a boxed column absorbs any reduced
+  // cost), so the controller still runs; only best tracking needs the ratio.
+  const hipdlp::algorithm::PrimalWeightUpdateResult zero_dual =
+      hipdlp::algorithm::updatePrimalWeight(
+          makeUpdateInput(history, 0.25, 1.0, 1.0, 8.0, 1e-3, 0.0));
+  const hipdlp::algorithm::PrimalWeightUpdateResult defined_ratio =
+      hipdlp::algorithm::updatePrimalWeight(
+          makeUpdateInput(history, 0.25, 1.0, 1.0, 8.0, 1e-3, 1e-3));
+  REQUIRE(zero_dual.ok());
+  REQUIRE(defined_ratio.ok());
+  CHECK(zero_dual.outcome == hipdlp::algorithm::PrimalWeightOutcome::kPidUpdate);
+  CHECK(zero_dual.next.primal_weight == defined_ratio.next.primal_weight);
+  CHECK(zero_dual.next.error_sum == defined_ratio.next.error_sum);
+  CHECK(zero_dual.next.previous_error == defined_ratio.next.previous_error);
+  CHECK(zero_dual.next.best_residual_gap == 0.5);
+  CHECK(zero_dual.next.best_primal_weight == 3.0);
 
   // One ulp inside every window still performs the PID update.
   const double inside_cases[4][4] = {

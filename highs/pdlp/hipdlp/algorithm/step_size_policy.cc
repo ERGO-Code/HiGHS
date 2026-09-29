@@ -228,13 +228,18 @@ PrimalWeightUpdateResult updatePrimalWeightImpl(
         api::ErrorCode::kInvalidArgument,
         "HiPDLP primal-weight residual ratio is outside FP64 range");
 
+  // Unlike an extreme ratio, a zero dual residual with a nonzero primal one is
+  // structural: the bound projection lets a boxed column absorb any reduced
+  // cost. It must not disable the controller, which only uses the distances.
+  const bool structural_zero_dual = input.relative_dual_residual == 0.0 &&
+                                    input.relative_primal_residual > 0.0;
   PrimalWeightState next = input.previous;
   PrimalWeightUpdateKind kind = PrimalWeightUpdateKind::kRevertedToBest;
   if (input.primal_anchor_distance > kMinimumDistance &&
       input.dual_anchor_distance > kMinimumDistance &&
       input.primal_anchor_distance < kMaximumDistance &&
       input.dual_anchor_distance < kMaximumDistance &&
-      residual_ratio > kMinimumResidualRatio &&
+      (residual_ratio > kMinimumResidualRatio || structural_zero_dual) &&
       residual_ratio < kMaximumResidualRatio) {
     const double dual_log = std::log(input.dual_anchor_distance);
     const double primal_log = std::log(input.primal_anchor_distance);
