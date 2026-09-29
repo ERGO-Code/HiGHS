@@ -13,6 +13,7 @@ namespace {
 
 const int kBlockSize = 256;
 const int kMaximumBlocks = 65535;
+const int kWarpSize = 32;
 using GridIndex = std::uint64_t;
 static_assert(std::numeric_limits<GridIndex>::max() -
           static_cast<std::uint64_t>(std::numeric_limits<HighsInt>::max()) >=
@@ -744,10 +745,41 @@ __global__ void certificateNormalizeKernel(
   if (threadIdx.x == 0) partials[blockIdx.x] = shared[0];
 }
 
+// One warp per row: the lanes stride over the row and their outward-rounded
+// partial sums are combined with outward-rounded additions, which encloses the
+// activity for any summation order.
+__global__ void certificateRowActivityKernel(
+    const DeviceCertificateProblem problem, const CertificateState* state,
+    const certificate::Interval* primal, certificate::Interval* activity) {
+  using namespace certificate;
+  if (state->unsafe) return;
+  const HighsInt lane = static_cast<HighsInt>(threadIdx.x) % kWarpSize;
+  const HighsInt warps =
+      static_cast<HighsInt>(gridDim.x) * (blockDim.x / kWarpSize);
+  for (HighsInt row = (static_cast<HighsInt>(blockIdx.x) * blockDim.x +
+                       threadIdx.x) / kWarpSize;
+       row < problem.num_rows; row += warps) {
+    Interval sum = {0.0, 0.0};
+    for (HighsInt entry = problem.row_starts[row] + lane;
+         entry < problem.row_starts[row + 1]; entry += kWarpSize)
+      sum = add(sum, multiply(primal[problem.column_indices[entry]],
+                              problem.matrix_values[entry]));
+    for (int offset = kWarpSize / 2; offset > 0; offset /= 2) {
+      const Interval other = {
+          __shfl_down_sync(0xffffffffu, sum.lower, offset),
+          __shfl_down_sync(0xffffffffu, sum.upper, offset)};
+      sum = add(sum, other);
+    }
+    if (lane == 0) activity[row] = sum;
+  }
+}
+
 __global__ void certificateConditionsKernel(
     const DeviceCertificateProblem problem, const CertificateState* state,
     const certificate::Interval* primal, const certificate::Interval* dual,
-    const certificate::Interval* column, certificate::ScreenPartial* partials) {
+    const certificate::Interval* column,
+    const certificate::Interval* activities,
+    certificate::ScreenPartial* partials) {
   using namespace certificate;
   ScreenPartial partial = {};
   partial.unsafe = state->unsafe;
@@ -771,12 +803,7 @@ __global__ void certificateConditionsKernel(
                multiply(primal[index], problem.costs[index]));
       }
       if (index < problem.num_rows) {
-        Interval activity = {0.0, 0.0};
-        for (HighsInt entry = problem.row_starts[index];
-             entry < problem.row_starts[index + 1]; ++entry)
-          activity =
-              add(activity, multiply(primal[problem.column_indices[entry]],
-                                     problem.matrix_values[entry]));
+        const Interval activity = activities[index];
         partial.primal_violation =
             maximum(partial.primal_violation,
                     violationLower(activity, problem.row_lower[index],
@@ -861,6 +888,7 @@ cudaError_t preloadKernels() {
       reinterpret_cast<const void*>(certificateRecoveryKernel),
       reinterpret_cast<const void*>(certificateNormKernel),
       reinterpret_cast<const void*>(certificateNormalizeKernel),
+      reinterpret_cast<const void*>(certificateRowActivityKernel),
       reinterpret_cast<const void*>(certificateConditionsKernel),
       reinterpret_cast<const void*>(certificateFlagsKernel),
 #ifdef HIGHS_HIPDLP_TESTING
@@ -907,8 +935,9 @@ cudaError_t launchCertificateScreen(
     const cudaStream_t stream, const DeviceCertificateProblem& problem,
     const DeviceCheckInput& input, certificate::Interval* primal,
     certificate::Interval* dual, certificate::Interval* column,
-    CertificateNormPartial* norm_partials, CertificateState* state,
-    certificate::ScreenPartial* partials, CheckPacket* packet) {
+    certificate::Interval* activity, CertificateNormPartial* norm_partials,
+    CertificateState* state, certificate::ScreenPartial* partials,
+    CheckPacket* packet) {
   const int blocks =
       static_cast<int>(checkPartialCount(problem.num_rows, problem.num_cols));
   certificateRecoveryKernel<<<blocks, kBlockSize, 0, stream>>>(
@@ -927,8 +956,19 @@ cudaError_t launchCertificateScreen(
       problem, blocks, norm_partials, true, state);
   status = cudaPeekAtLastError();
   if (status != cudaSuccess) return status;
+  const HighsInt rows_per_block = kBlockSize / kWarpSize;
+  const HighsInt activity_blocks =
+      problem.num_rows == 0 ? 0 : 1 + (problem.num_rows - 1) / rows_per_block;
+  if (activity_blocks > 0) {
+    certificateRowActivityKernel<<<
+        static_cast<int>(activity_blocks < kMaximumBlocks ? activity_blocks
+                                                          : kMaximumBlocks),
+        kBlockSize, 0, stream>>>(problem, state, primal, activity);
+    status = cudaPeekAtLastError();
+    if (status != cudaSuccess) return status;
+  }
   certificateConditionsKernel<<<blocks, kBlockSize, 0, stream>>>(
-      problem, state, primal, dual, column, partials);
+      problem, state, primal, dual, column, activity, partials);
   status = cudaPeekAtLastError();
   if (status != cudaSuccess) return status;
   certificateFlagsKernel<<<1, kBlockSize, 0, stream>>>(problem, input, blocks,

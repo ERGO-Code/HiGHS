@@ -817,6 +817,7 @@ struct CudaCertificateStorage {
   DeviceBuffer<certificate::Interval> primal;
   DeviceBuffer<certificate::Interval> dual;
   DeviceBuffer<certificate::Interval> column;
+  DeviceBuffer<certificate::Interval> activity;
   DeviceBuffer<CertificateNormPartial> norm_partials;
   DeviceBuffer<CertificateState> state;
   DeviceBuffer<certificate::ScreenPartial> partials;
@@ -1093,6 +1094,9 @@ api::Error prepareCertificateStorage(const model::Problem& problem,
   if (!error.ok()) return error;
   error = storage.dual.allocate(lp.num_row_,
                                 "allocating certificate dual intervals");
+  if (!error.ok()) return error;
+  error = storage.activity.allocate(
+      lp.num_row_, "allocating certificate row activity intervals");
   if (!error.ok()) return error;
   const std::size_t count = checkPartialCount(lp.num_row_, lp.num_col_);
   error = storage.norm_partials.allocate(
@@ -1658,7 +1662,8 @@ api::Error CudaBackend::evaluateCheck(const model::Problem& problem,
         launchCertificateScreen(
             impl_->stream.get(), certificate.data, device_input,
             certificate.primal.get(), certificate.dual.get(),
-            certificate.column.get(), certificate.norm_partials.get(),
+            certificate.column.get(), certificate.activity.get(),
+            certificate.norm_partials.get(),
             certificate.state.get(), certificate.partials.get(),
             check.packet.get()));
     if (!error.ok()) return check.fail(error);

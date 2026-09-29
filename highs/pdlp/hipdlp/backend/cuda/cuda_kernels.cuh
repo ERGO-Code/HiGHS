@@ -134,8 +134,9 @@ cudaError_t launchCertificateScreen(
     cudaStream_t stream, const DeviceCertificateProblem& problem,
     const DeviceCheckInput& input, certificate::Interval* primal,
     certificate::Interval* dual, certificate::Interval* column,
-    CertificateNormPartial* norm_partials, CertificateState* state,
-    certificate::ScreenPartial* partials, CheckPacket* packet);
+    certificate::Interval* activity, CertificateNormPartial* norm_partials,
+    CertificateState* state, certificate::ScreenPartial* partials,
+    CheckPacket* packet);
 
 std::size_t checkPartialCount(HighsInt rows, HighsInt cols);
 cudaError_t launchCheckPartials(cudaStream_t stream,
