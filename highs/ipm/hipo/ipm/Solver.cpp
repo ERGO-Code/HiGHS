@@ -6,7 +6,6 @@
 
 #include "UpLookingSolver.h"
 #include "ipm/IpxWrapper.h"
-#include "ipm/hipo/auxiliary/Fold.h"
 #include "ipm/hipo/auxiliary/Logger.h"
 #include "lp_data/HighsSolution.h"
 #include "parallel/HighsParallel.h"

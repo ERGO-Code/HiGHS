@@ -19,10 +19,10 @@
 #include <sstream>
 
 #include "HighsExternalApi.h"
+#include "folding/Fold.h"
 #include "io/Filereader.h"
 #include "io/LoadOptions.h"
 #include "ipm/IpxWrapper.h"
-#include "ipm/hipo/auxiliary/Fold.h"
 #include "lp_data/HighsCallbackStruct.h"
 #include "lp_data/HighsInfoDebug.h"
 #include "lp_data/HighsLpSolverObject.h"
@@ -1250,7 +1250,7 @@ HighsStatus Highs::optimizeModelTryCatch() {
 HighsStatus Highs::calledOptimizeModel() {
   // Level 2b of Highs::run()
   //
-  // highs::folding::test_folding(model_.lp_);
+  highs::folding::test_folding(model_.lp_);
 
   HighsInt min_highs_debug_level = kHighsDebugLevelMin;
   // kHighsDebugLevelCostly;

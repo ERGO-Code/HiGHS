@@ -331,18 +331,12 @@ set(factor_highs_headers
 
 set(hipo_util_sources
     ipm/hipo/auxiliary/Auxiliary.cpp
-    ipm/hipo/auxiliary/CollectionLinkedLists.cpp
-    ipm/hipo/auxiliary/Fold.cpp
-    ipm/hipo/auxiliary/DoubleQuantizer.cpp
     ipm/hipo/auxiliary/KrylovMethods.cpp
     ipm/hipo/auxiliary/Logger.cpp
     ipm/hipo/auxiliary/VectorOperations.cpp)
 
 set(hipo_util_headers
     ipm/hipo/auxiliary/Auxiliary.h
-    ipm/hipo/auxiliary/CollectionLinkedLists.h
-    ipm/hipo/auxiliary/Fold.h
-    ipm/hipo/auxiliary/DoubleQuantizer.h
     ipm/hipo/auxiliary/IntConfig.h
     ipm/hipo/auxiliary/KrylovMethods.h
     ipm/hipo/auxiliary/Logger.h
@@ -352,6 +346,9 @@ set(hipo_util_headers
 set_source_files_properties (io/filereaderlp/reader.cpp PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)
 
 set(highs_sources
+    folding/CollectionLinkedLists.cpp
+    folding/DoubleQuantizer.cpp
+    folding/Fold.cpp
     interfaces/highs_c_api.cpp
     io/Filereader.cpp
     io/FilereaderLp.cpp
@@ -478,6 +475,10 @@ set(highs_headers
     ../extern/pdqsort/pdqsort.h
     ../extern/zstr/strict_fstream.hpp
     ../extern/zstr/zstr.hpp
+    folding/CollectionLinkedLists.h
+    folding/DoubleQuantizer.h
+    folding/Fold.h
+    folding/FoldConstants.h
     interfaces/highs_c_api.h
     io/Filereader.h
     io/FilereaderLp.h
