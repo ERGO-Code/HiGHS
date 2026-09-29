@@ -28,9 +28,7 @@ ColourRefinement::ColourRefinement(const HighsSparseMatrix& A,
       colour_degree_(n_, 0),
       max_colour_degree_(n_, 0),
       min_colour_degree_(n_, 0),
-      colours_touched_(n_, 0),
       in_colours_touched_(n_, 0),
-      colours_split_(n_, 0),
       in_stack_(n_, 0) {
   hipo::Clock clock;
 
@@ -49,6 +47,9 @@ ColourRefinement::ColourRefinement(const HighsSparseMatrix& A,
 
   At_ = A_;
   At_.ensureRowwise();
+
+  colours_touched_.reserve(n_);
+  colours_split_.reserve(n_);
 
   time_setup_ = clock.stop();
 }
@@ -72,8 +73,7 @@ void ColourRefinement::computeColourDegrees() {
       if (colour_degree_[w] == 1) colour_classes_touched_.append(w, colour_[w]);
 
       if (!in_colours_touched_[colour_[w]]) {
-        colours_touched_[top_touched_] = colour_[w];
-        top_touched_++;
+        colours_touched_.push_back(colour_[w]);
         in_colours_touched_[colour_[w]] = 1;
       }
 
@@ -82,8 +82,7 @@ void ColourRefinement::computeColourDegrees() {
     }
   }
 
-  for (HighsInt el = 0; el < top_touched_; ++el) {
-    const HighsInt c = colours_touched_[el];
+  for (HighsInt c : colours_touched_) {
     if (colour_classes_.length(c) != colour_classes_touched_.length(c))
       min_colour_degree_[c] = 0;
     else {
@@ -102,15 +101,13 @@ void ColourRefinement::computeColourDegrees() {
 void ColourRefinement::findSplitColours() {
   hipo::Clock clock;
 
-  top_split_ = 0;
-  for (HighsInt el = 0; el < top_touched_; ++el) {
-    const HighsInt c = colours_touched_[el];
+  colours_split_.clear();
+  for (HighsInt c : colours_touched_) {
     if (min_colour_degree_[c] < max_colour_degree_[c]) {
-      colours_split_[top_split_] = c;
-      top_split_++;
+      colours_split_.push_back(c);
     }
   }
-  std::sort(colours_split_.begin(), colours_split_.begin() + top_split_);
+  std::sort(colours_split_.begin(), colours_split_.end());
 
   time_find_split_ += clock.stop();
 }
@@ -118,10 +115,7 @@ void ColourRefinement::findSplitColours() {
 void ColourRefinement::splitColours() {
   hipo::Clock clock;
 
-  for (HighsInt el = 0; el < top_split_; ++el) {
-    const HighsInt s = colours_split_[el];
-    splitColour(s);
-  }
+  for (HighsInt s : colours_split_) splitColour(s);
 
   time_split_ += clock.stop();
 }
@@ -175,8 +169,7 @@ void ColourRefinement::splitColour(const HighsInt s) {
 void ColourRefinement::prepareNextIter() {
   hipo::Clock clock;
 
-  for (HighsInt el = 0; el < top_touched_; ++el) {
-    const HighsInt c = colours_touched_[el];
+  for (HighsInt c : colours_touched_) {
     for (HighsInt v : colour_classes_touched_.list(c)) {
       colour_degree_[v] = 0;
     }
@@ -184,7 +177,7 @@ void ColourRefinement::prepareNextIter() {
     colour_classes_touched_.clear(c);
     in_colours_touched_[c] = 0;
   }
-  top_touched_ = 0;
+  colours_touched_.clear();
 
   time_prepare_ += clock.stop();
 }

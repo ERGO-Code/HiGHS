@@ -25,10 +25,8 @@ class ColourRefinement {
 
   std::vector<HighsInt> colours_touched_;
   std::vector<HighsBool> in_colours_touched_;
-  HighsInt top_touched_{};
 
   std::vector<HighsInt> colours_split_;
-  HighsInt top_split_{};
 
   LinkedLists colour_classes_;
   LinkedLists colour_classes_touched_;
