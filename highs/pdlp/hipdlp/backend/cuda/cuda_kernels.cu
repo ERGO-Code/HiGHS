@@ -376,8 +376,9 @@ __device__ double finishCheckNorm(const CheckNormState& norm,
 // does not.
 //
 // Overflow and cancellation always fall back. Absorption of a small term into
-// a large partial sum (minimum_nonzero <= eps * sum|a_i|) falls back only when
-// no interval will judge the sum. When one will, absorption is redundant:
+// a large partial sum (minimum_nonzero <= eps * sum|a_i|) falls back only for
+// the objective sums, and only when no interval will judge them. When one will,
+// absorption is redundant:
 // every summation order, serial or tree, satisfies
 //   |fl(sum a_i) - sum a_i| <= gamma_k * sum|a_i|,
 // and a rounding that swallows a small term is one of the k roundings that
@@ -389,6 +390,12 @@ __device__ double finishCheckNorm(const CheckNormState& norm,
 // The bound only breaks in the subnormal range, where a rounding error is
 // absolute rather than relative; the interval carries a floor for it, and a
 // subnormal term still falls back here.
+//
+// The fixed-point sum delta_dot has no interval, but it needs none for
+// absorption: its fallback recomputes the same dot product with backend
+// primitives, another rounding of the same sum, so it can differ from the
+// packet by no more than the bound above. It falls back on overflow and
+// cancellation only.
 __device__ double finishCheckSum(CheckSumState& sum, const double offset,
                                 const double count, CheckPartial& partial,
                                 const int reason = kCheckRawFallback,
@@ -396,7 +403,7 @@ __device__ double finishCheckSum(CheckSumState& sum, const double offset,
   addCheckSum(sum, offset, partial, reason);
   const double cancellation_limit =
       __dmul_rn(__dmul_rn(64.0 * DBL_EPSILON, count + 1.0), sum.absolute_sum);
-  const bool has_term = sum.minimum_nonzero > 0.0;
+  const bool has_term = reason == kCheckRawFallback && sum.minimum_nonzero > 0.0;
   const bool subnormal_term = has_term && sum.minimum_nonzero < DBL_MIN;
   const bool absorbed_term =
       has_term &&
