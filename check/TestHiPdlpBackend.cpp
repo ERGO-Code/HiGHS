@@ -1,6 +1,7 @@
 #include <sys/stat.h>
 
 #include <algorithm>
+#include <cfloat>
 #include <cmath>
 #include <cstring>
 #include <fstream>
@@ -3151,6 +3152,108 @@ TEST_CASE("hi-pdlp-cuda-check-packet-preserves-pending-sticky-error",
   CHECK(repeated.code == first.code);
   CHECK(repeated.message == first.message);
   checkEmptyPacket(result);
+}
+
+// One offset of 1e16 followed by 1e4 unit terms. Every unit term is absorbed
+// by the serial oracle (1e16 + 1 ties to even), so it reports exactly 1e16
+// with a zero gap, while the GPU tree sum keeps them and reports 1e16 + 1e4.
+// The absorbed terms therefore move the relative gap from 0 to about 5e-13,
+// and a gap tolerance between the two is a real disagreement the interval in
+// guardCheckStopping must catch without help from the absorption heuristic.
+struct AbsorbedObjectiveCase {
+  static constexpr HighsInt kTerms = 10000;
+  HighsLp lp;
+  std::vector<double> primal;
+  hipdlp::algorithm::RawConvergenceMetrics oracle;
+
+  AbsorbedObjectiveCase() {
+    lp = makeEqualityLp(0, kTerms, std::vector<HighsInt>(kTerms + 1, 0), {}, {});
+    lp.offset_ = 1e16;
+    lp.col_cost_.assign(kTerms, 1.0);
+    primal.assign(kTerms, 1.0);
+    hipdlp::model::ProblemBuildResult built = hipdlp::model::buildProblem(lp);
+    REQUIRE(built.ok());
+    REQUIRE(hipdlp::algorithm::computeRawConvergenceMetrics(
+                built.problem, primal, {}, {},
+                std::vector<double>(kTerms, 0.0), oracle).ok());
+  }
+
+  static double relativeGap(const hipdlp::algorithm::RawConvergenceMetrics& raw) {
+    return raw.objective_gap /
+           (1.0 + std::fabs(raw.primal_objective) + std::fabs(raw.dual_objective));
+  }
+
+  hipdlp::backend::CheckResult evaluate(const double gap_tolerance) const {
+    ResidentCheckFixture fixture(hipdlp::backend::Kind::kCuda, lp);
+    fixture.prepare(lp);
+    REQUIRE(fixture.backend->uploadVector(primal, fixture.primal).ok());
+    fixture.input.gap_tolerance = gap_tolerance;
+    hipdlp::backend::CheckResult result;
+    REQUIRE(fixture.backend->evaluateCheck(fixture.problem, fixture.workspace,
+                                           fixture.input, result).ok());
+    return result;
+  }
+};
+
+void checkAbsorbedTermsStayGuardedByInterval() {
+  const AbsorbedObjectiveCase absorbed;
+  // The oracle really did absorb every term.
+  REQUIRE(absorbed.oracle.primal_objective == 1e16);
+  REQUIRE(absorbed.oracle.objective_gap == 0.0);
+
+  // Tolerance between the oracle gap (0) and the GPU gap (~5e-13): the two
+  // sides would disagree about stopping, so the GPU must defer.
+  const hipdlp::backend::CheckResult straddling = absorbed.evaluate(2.5e-13);
+  CHECK(straddling.requires_host_oracle);
+  CHECK_FALSE(straddling.valid);
+
+  // Tolerance far above the interval: the GPU answer is accepted although it
+  // differs from the oracle by every absorbed term, and both sides agree.
+  const double loose = 1e-9;
+  const hipdlp::backend::CheckResult accepted = absorbed.evaluate(loose);
+  REQUIRE(accepted.valid);
+  CHECK_FALSE(accepted.requires_host_oracle);
+  const double difference =
+      std::fabs(accepted.raw.primal_objective - absorbed.oracle.primal_objective);
+  CHECK(difference == double(AbsorbedObjectiveCase::kTerms));
+  // ...and stays inside the textbook bound n * u * sum|a_i| for a serial sum.
+  CHECK(difference <= AbsorbedObjectiveCase::kTerms * (DBL_EPSILON / 2) *
+                          (1e16 + AbsorbedObjectiveCase::kTerms));
+  CHECK((AbsorbedObjectiveCase::relativeGap(accepted.raw) <= loose) ==
+        (AbsorbedObjectiveCase::relativeGap(absorbed.oracle) <= loose));
+
+  // Whenever the GPU does answer, it reaches the oracle's stopping decision.
+  for (const double tolerance : {1e-16, 1e-15, 1e-14, 1e-13, 2.5e-13, 1e-12,
+                                 1e-11, 1e-10, 1e-9, 1e-8, 1e-6}) {
+    INFO("gap tolerance " << tolerance);
+    const hipdlp::backend::CheckResult result = absorbed.evaluate(tolerance);
+    if (result.requires_host_oracle) continue;
+    REQUIRE(result.valid);
+    CHECK((AbsorbedObjectiveCase::relativeGap(result.raw) <= tolerance) ==
+          (AbsorbedObjectiveCase::relativeGap(absorbed.oracle) <= tolerance));
+  }
+
+  // With no gap tolerance no interval judges the objectives, so absorption
+  // alone still defers to the oracle.
+  const hipdlp::backend::CheckResult unguarded = absorbed.evaluate(0.0);
+  CHECK(unguarded.requires_host_oracle);
+
+  // A subnormal term always defers, guarded or not.
+  HighsLp tiny = makeEqualityLp(0, 1, {0, 0}, {}, {});
+  tiny.col_cost_ = {1e-310};
+  ResidentCheckFixture fixture(hipdlp::backend::Kind::kCuda, tiny);
+  fixture.prepare(tiny);
+  REQUIRE(fixture.backend->uploadVector({1.0}, fixture.primal).ok());
+  fixture.input.gap_tolerance = 1e-4;
+  hipdlp::backend::CheckResult result;
+  REQUIRE(fixture.backend->evaluateCheck(fixture.problem, fixture.workspace,
+                                         fixture.input, result).ok());
+  CHECK(result.requires_host_oracle);
+}
+
+TEST_CASE("hi-pdlp-cuda-check-packet-absorbed-terms-stay-interval-guarded",
+          "[pdlp][hipdlp][phase8][backend][check-packet][cuda]") {
+  checkAbsorbedTermsStayGuardedByInterval();
 }
 
 TEST_CASE("hi-pdlp-cuda-check-packet-requests-serial-objective-oracle",

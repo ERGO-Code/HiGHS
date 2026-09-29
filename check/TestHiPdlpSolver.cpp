@@ -1369,7 +1369,8 @@ TEST_CASE("hi-pdlp-resident-check-production-cuda-host-oracle-fallback",
           "[pdlp][hipdlp][phase8][solver][cuda][host-oracle]") {
   REQUIRE(cudaBackendUsable());
   HighsLp lp = makeResidentDiagonalLp(1, false);
-  lp.offset_ = 1e150;
+  // sum|a_i| above DBL_MAX / 4 trips the overflow guard on every check.
+  lp.offset_ = 5e307;
   hipdlp::api::SolverOptions options = makeCpuFixedOptions();
   options.optimality_tolerance = 1e-12;
   options.kkt_tolerance = 1e-12;
@@ -1399,6 +1400,53 @@ TEST_CASE("hi-pdlp-resident-check-production-cuda-host-oracle-fallback",
   CHECK(gpu_diagnostics.fixed_point_evaluations + 1 ==
         gpu_diagnostics.ordinary_check_boundaries +
             gpu_diagnostics.restart_reference_checks);
+  CHECK(gpu_diagnostics.restarts == cpu_diagnostics.restarts);
+  CHECK(gpu_diagnostics.primal_weight_updates ==
+        cpu_diagnostics.primal_weight_updates);
+  CHECK(gpu_diagnostics.ordinary_check_transfers ==
+        gpu_diagnostics.ordinary_check_boundaries);
+  CHECK(gpu_diagnostics.ordinary_check_d2h_bytes ==
+        112 * gpu_diagnostics.ordinary_check_boundaries);
+  CHECK(gpu_diagnostics.ordinary_check_synchronizations ==
+        gpu_diagnostics.ordinary_check_boundaries);
+  const hipdlp::verification::KktVerificationResult verification =
+      hipdlp::verification::verifyKkt(lp, gpu.solution, options.kkt_tolerance);
+  INFO(verification.error);
+  REQUIRE(verification.pass);
+}
+
+TEST_CASE("hi-pdlp-resident-check-production-cuda-absorbed-offset-stays-on-device",
+          "[pdlp][hipdlp][phase8][solver][cuda][absorbed-offset]") {
+  REQUIRE(cudaBackendUsable());
+  HighsLp lp = makeResidentDiagonalLp(1, false);
+  lp.offset_ = 1e150;
+  hipdlp::api::SolverOptions options = makeCpuFixedOptions();
+  options.optimality_tolerance = 1e-12;
+  options.kkt_tolerance = 1e-12;
+  options.policy.step_size = hipdlp::api::StepSizePolicy::kPid;
+  hipdlp::algorithm::SolveDiagnostics cpu_diagnostics;
+  hipdlp::algorithm::SolveContext context;
+  context.diagnostics = &cpu_diagnostics;
+  const hipdlp::api::SolveResult cpu = hipdlp::algorithm::solve(
+      options, hipdlp::model::OriginalModel(lp), context);
+  INFO(cpu.error.message);
+  REQUIRE(cpu.ok());
+  REQUIRE(cpu.status == hipdlp::api::SolverStatus::kOptimal);
+  hipdlp::algorithm::SolveDiagnostics gpu_diagnostics;
+  context.diagnostics = &gpu_diagnostics;
+  options.backend = hipdlp::backend::Kind::kCuda;
+  const hipdlp::api::SolveResult gpu = hipdlp::algorithm::solve(
+      options, hipdlp::model::OriginalModel(lp), context);
+  INFO(gpu.error.message);
+  REQUIRE(gpu.ok());
+  CHECK(gpu.status == cpu.status);
+  CHECK(gpu.iteration_count == cpu.iteration_count);
+  CHECK(gpu_diagnostics.ordinary_check_boundaries >= 3);
+  // Every small term is absorbed by the 1e150 offset, but the interval in
+  // guardCheckStopping accepts the device packet, so only the terminal
+  // boundary ever reaches the host oracle.
+  CHECK(gpu_diagnostics.host_oracle_checks == 1);
+  CHECK(gpu_diagnostics.candidate_downloads == 1);
   CHECK(gpu_diagnostics.restarts == cpu_diagnostics.restarts);
   CHECK(gpu_diagnostics.primal_weight_updates ==
         cpu_diagnostics.primal_weight_updates);

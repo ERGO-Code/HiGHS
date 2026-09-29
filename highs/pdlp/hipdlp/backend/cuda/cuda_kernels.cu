@@ -371,16 +371,39 @@ __device__ double finishCheckNorm(const CheckNormState& norm,
   return value;
 }
 
+// interval_guarded: guardCheckStopping will judge this sum against a strict
+// a-priori interval, so the heuristics below only cover what that interval
+// does not.
+//
+// Overflow and cancellation always fall back. Absorption of a small term into
+// a large partial sum (minimum_nonzero <= eps * sum|a_i|) falls back only when
+// no interval will judge the sum. When one will, absorption is redundant:
+// every summation order, serial or tree, satisfies
+//   |fl(sum a_i) - sum a_i| <= gamma_k * sum|a_i|,
+// and a rounding that swallows a small term is one of the k roundings that
+// bound already counts. The host oracle and the GPU each lie within that
+// distance of the exact sum, so guardCheckStopping's interval
+// (relative_error * sum|a_i| + a subnormal floor) contains both, and it falls
+// back whenever the interval straddles a tolerance. Absorbed terms therefore
+// cannot flip a stopping decision unnoticed; at worst they widen the interval.
+// The bound only breaks in the subnormal range, where a rounding error is
+// absolute rather than relative; the interval carries a floor for it, and a
+// subnormal term still falls back here.
 __device__ double finishCheckSum(CheckSumState& sum, const double offset,
                                 const double count, CheckPartial& partial,
-                                const int reason = kCheckRawFallback) {
+                                const int reason = kCheckRawFallback,
+                                const bool interval_guarded = false) {
   addCheckSum(sum, offset, partial, reason);
   const double cancellation_limit =
       __dmul_rn(__dmul_rn(64.0 * DBL_EPSILON, count + 1.0), sum.absolute_sum);
+  const bool has_term = sum.minimum_nonzero > 0.0;
+  const bool subnormal_term = has_term && sum.minimum_nonzero < DBL_MIN;
+  const bool absorbed_term =
+      has_term &&
+      sum.minimum_nonzero <= __dmul_rn(DBL_EPSILON, sum.absolute_sum);
   if (sum.absolute_sum > DBL_MAX / 4.0 ||
       (sum.absolute_sum > 0.0 && fabs(sum.value) <= cancellation_limit) ||
-      (sum.minimum_nonzero > 0.0 &&
-       sum.minimum_nonzero <= __dmul_rn(DBL_EPSILON, sum.absolute_sum)))
+      (interval_guarded ? subnormal_term : absorbed_term))
     requestCheckFallback(partial, reason);
   return sum.value;
 }
@@ -580,12 +603,16 @@ __global__ void checkPacketKernel(const DeviceCheckProblem problem,
   CheckPacket packet = {};
   packet.primal_residual = finishCheckNorm(total.norms[kCheckPrimalResidual], total);
   packet.dual_residual = finishCheckNorm(total.norms[kCheckDualResidual], total);
+  // The gap interval in guardCheckStopping judges both objective sums.
+  const bool objective_guarded = input.gap_tolerance > 0.0;
   packet.primal_objective = finishCheckSum(
       total.sums[kCheckPrimalObjective], problem.objective_offset,
-      static_cast<double>(problem.num_cols), total);
+      static_cast<double>(problem.num_cols), total, kCheckRawFallback,
+      objective_guarded);
   packet.dual_objective = finishCheckSum(
       total.sums[kCheckDualObjective], problem.objective_offset,
-      static_cast<double>(problem.num_rows) + 2.0 * problem.num_cols, total);
+      static_cast<double>(problem.num_rows) + 2.0 * problem.num_cols, total,
+      kCheckRawFallback, objective_guarded);
   packet.objective_gap = fabs(__dsub_rn(packet.primal_objective, packet.dual_objective));
   if (!isfinite(packet.objective_gap)) total.requires_host_oracle = 1;
   packet.unscaled_rhs_norm = problem.unscaled_rhs_norm;
