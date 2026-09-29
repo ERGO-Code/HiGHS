@@ -531,11 +531,19 @@ void HighsNameHash::form(const std::vector<std::string>& name) {
         this->name2index.emplace(name[index], static_cast<int>(index));
     const bool duplicate = !emplace_result.second;
     if (duplicate) {
-      // Find the original and mark it as duplicate, noting that
-      // search->second is the index associated with the first
-      // occurrence of the name, not the position in name2index
+      // Find the original
       auto& search = emplace_result.first;
-      search->second = kHashIsDuplicate;
+      printf("HighsNameHash::form For index %2d (name \"%s\") search->second = %d\n", int(index), name[index].c_str(), search->second);
+      if (search->second >= 0) {
+	// search->second is is the index associated with the first
+	// occurrence of the name (not the position in name2index), so
+	// initialise the duplicate count
+	search->second = -1;
+      } else {
+	// search->second < 0, then -search->second is the duplicate
+	// count, so increase it
+	search->second--;
+      }
     }
   }
 }
@@ -554,13 +562,32 @@ bool HighsNameHash::hasDuplicate(const std::vector<std::string>& name) {
 
 bool HighsNameHash::updateFindsDuplicate(int index, const std::string& old_name,
 					 const std::string& new_name) {
-  this->name2index.erase(old_name);
+  auto find_result = this->name2index.find(old_name);
+  if (find_result != this->name2index.end()) {
+    // Old name is present, so find out if it's a duplicate
+    printf("HighsNameHash::updateFindsDuplicate First  find \"%s\" is %2d\n",
+	   find_result->first.c_str(), int(find_result->second));
+    if (find_result->second < 0) {
+      // At least one duplicate of old_name
+      find_result->second++;
+      auto new_find_result = this->name2index.find(old_name);
+      printf("HighsNameHash::updateFindsDuplicate Second find \"%s\" is %2d\n",
+	     new_find_result->first.c_str(), int(new_find_result->second));
+    } else {
+      // Old name was unique, so erase it
+      this->name2index.erase(old_name);
+    }
+  }
   auto emplace_result = this->name2index.emplace(new_name, index);
   const bool duplicate = !emplace_result.second;
   if (duplicate) {
     // Find the original and mark it as duplicate
     auto& search = emplace_result.first;
-    search->second = kHashIsDuplicate;
+    if (search->second >= 0) {
+      search->second = -1;
+    } else {
+      search->second--;
+    }
     return true;
   }
   return false;

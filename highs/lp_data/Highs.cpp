@@ -783,7 +783,8 @@ HighsStatus Highs::clearLinearObjectives() {
 }
 
 HighsStatus Highs::passColName(const HighsInt col, const std::string& name) {
-  const HighsInt num_col = this->model_.lp_.num_col_;
+  HighsLp& lp = this->model_.lp_;
+  const HighsInt num_col = lp.num_col_;
   if (col < 0 || col >= num_col) {
     highsLogUser(
         options_.log_options, HighsLogType::kError,
@@ -796,17 +797,17 @@ HighsStatus Highs::passColName(const HighsInt col, const std::string& name) {
                  "Cannot define empty column names\n");
     return HighsStatus::kError;
   }
-  if (this->model_.lp_.col_hash_.size() < this->model_.lp_.col_names_.size())
-    this->model_.lp_.col_hash_.form(this->model_.lp_.col_names_);
-  this->model_.lp_.col_names_.resize(num_col);
+  lp.col_names_.resize(num_col);
+  if (!lp.col_hash_.size()) lp.col_hash_.form(lp.col_names_);
   const bool is_duplicate = 
-    this->model_.lp_.col_hash_.updateFindsDuplicate(col, this->model_.lp_.col_names_[col], name);
-  this->model_.lp_.col_names_[col] = name;
+    lp.col_hash_.updateFindsDuplicate(col, lp.col_names_[col], name);
+  lp.col_names_[col] = name;
   return is_duplicate ? HighsStatus::kWarning : HighsStatus::kOk;
 }
 
 HighsStatus Highs::passRowName(const HighsInt row, const std::string& name) {
-  const HighsInt num_row = this->model_.lp_.num_row_;
+  HighsLp& lp = this->model_.lp_;
+  const HighsInt num_row = lp.num_row_;
   if (row < 0 || row >= num_row) {
     highsLogUser(
         options_.log_options, HighsLogType::kError,
@@ -819,10 +820,11 @@ HighsStatus Highs::passRowName(const HighsInt row, const std::string& name) {
                  "Cannot define empty row names\n");
     return HighsStatus::kError;
   }
-  this->model_.lp_.row_names_.resize(num_row);
+  lp.row_names_.resize(num_row);
+  if (!lp.row_hash_.size()) lp.row_hash_.form(lp.row_names_);
   const bool is_duplicate = 
-    this->model_.lp_.row_hash_.updateFindsDuplicate(row, this->model_.lp_.row_names_[row], name);
-  this->model_.lp_.row_names_[row] = name;
+    lp.row_hash_.updateFindsDuplicate(row, lp.row_names_[row], name);
+  lp.row_names_[row] = name;
   return is_duplicate ? HighsStatus::kWarning : HighsStatus::kOk;
 }
 

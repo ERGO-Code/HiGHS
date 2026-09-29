@@ -80,7 +80,7 @@ TEST_CASE("highs-names", "[highs_names]") {
   iCol = lp.num_col_ / 2;
   std::string iCol_name;
   REQUIRE(highs.getColName(iCol, iCol_name) == HighsStatus::kOk);
-  REQUIRE(highs.passColName(iCol, col0_name) == HighsStatus::kOk);
+  REQUIRE(highs.passColName(iCol, col0_name) == HighsStatus::kWarning);
 
   // column num_col/2 is no longer called iCol_name
   status = highs.getColByName(iCol_name, iCol);
@@ -188,30 +188,47 @@ TEST_CASE("highs-illegal-col-row-name", "[model_names]") {
 
 TEST_CASE("test-3316", "[model_names]") {
   HighsLp lp;
-  lp.num_col_ = 2;
+  HighsInt dim = 10;
+  lp.num_col_ = dim;
   lp.num_row_ = 1;
-  lp.col_cost_ = {1, 2};
-  lp.col_lower_ = {0, 0};
-  lp.col_upper_ = {1, 1};
+  lp.col_cost_.assign(dim, 0);
+  lp.col_lower_.assign(dim, 0);
+  lp.col_upper_.assign(dim, 1);
   lp.row_lower_ = {-kHighsInf};
   lp.row_upper_ = {5};
-  lp.a_matrix_.start_ = {0, 1, 2};
-  lp.a_matrix_.index_ = {0, 0};
-  lp.a_matrix_.value_ = {1, 1};
+  lp.a_matrix_.start_.assign(dim+1, 0);
+  lp.a_matrix_.index_.assign(dim, 0);
+  lp.a_matrix_.value_.assign(dim, 1);
+  for (HighsInt iCol = 0; iCol < dim; iCol++) {
+    lp.col_cost_[iCol] = -iCol;
+    lp.a_matrix_.start_[iCol] = iCol;
+  }
+  lp.a_matrix_.start_[dim] = dim;
   Highs h;
   //  h.setOptionValue("output_flag", dev_run);
   
   REQUIRE(h.passModel(lp) == HighsStatus::kOk);
-  REQUIRE(h.passColName(0, "C0") == HighsStatus::kOk);
+  REQUIRE(h.passColName(0, "C3") == HighsStatus::kOk);
+  // Names are now [C3], so passing (1, "C1") is OK
   REQUIRE(h.passColName(1, "C1") == HighsStatus::kOk);
+  // Names are now [C3, C1], so passing (2, "C3") yields duplicate
+  REQUIRE(h.passColName(2, "C3") == HighsStatus::kWarning);
+  // Names are now [C3, C1, C3], so passing (2, "C2") is OK
+  REQUIRE(h.passColName(2, "C2") == HighsStatus::kOk);
+  // Names are now [C3, C1, C2], so passing (3, "C3") yields duplicate
+  REQUIRE(h.passColName(3, "C3") == HighsStatus::kWarning);
+  // Names are now [C3, C1, C2, C3], so passing (0, "C0") is OK
+  REQUIRE(h.passColName(0, "C0") == HighsStatus::kOk);
+  // Names are now [C0, C1, C2, C3], so passing (0, "C0") is OK
 
   REQUIRE(h.run() == HighsStatus::kOk);
 
-  REQUIRE(h.passColName(0, "C1") == HighsStatus::kWarning);
+  for (HighsInt iCol = 2; iCol < dim; iCol++) 
+    REQUIRE(h.passColName(iCol, "C1") == HighsStatus::kWarning);
 
   REQUIRE(h.run() == HighsStatus::kOk);
 
-  h.writeModel();
+  //  h.writeModel();
 
   h.resetGlobalScheduler(true);
 
