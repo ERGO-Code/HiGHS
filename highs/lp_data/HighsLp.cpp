@@ -565,7 +565,7 @@ bool HighsNameHash::hasDuplicate(const std::vector<std::string>& name) {
 //  auto emplace_result = this->name2index.emplace(new_name, 0);
   
 
-bool HighsNameHash::updateFindsDuplicate(int index, const std::string& old_name,
+bool HighsNameHash::updateFindsDuplicate(const std::string& old_name,
                                          const std::string& new_name) {
   auto find_result = this->name2index.find(old_name);
   if (find_result != this->name2index.end()) {
@@ -578,7 +578,7 @@ bool HighsNameHash::updateFindsDuplicate(int index, const std::string& old_name,
       this->name2index.erase(old_name);
     }
   }
-  auto emplace_result = this->name2index.emplace(new_name, index);
+  auto emplace_result = this->name2index.emplace(new_name, 0);
   const bool duplicate = !emplace_result.second;
   if (duplicate) {
     // Find the original and mark it as duplicate
