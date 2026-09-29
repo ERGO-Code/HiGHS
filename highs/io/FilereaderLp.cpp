@@ -121,8 +121,19 @@ FilereaderRetcode FilereaderLp::readModelFromFile(const HighsOptions& options,
     std::map<std::shared_ptr<Variable>, std::vector<unsigned int>>
         consofvarmap_index;
     std::map<std::shared_ptr<Variable>, std::vector<double>> consofvarmap_value;
+    HighsInt num_report = 0;
+    HighsInt max_num_report = 10;
+    HighsInt num_illegal_name = 0;
     for (size_t i = 0; i < m.constraints.size(); i++) {
       std::shared_ptr<Constraint> con = m.constraints[i];
+      // Cannot handle quadratic constraints, so comment and rerurn
+      // error
+      if (!con->expr->quadterms.empty()) {
+        highsLogUser(options.log_options, HighsLogType::kError,
+                     "Quadratic constraints not supported by HiGHS\n");
+        return FilereaderRetcode::kParserError;
+      }
+      // Handle linear constraint data
       lp.row_names_[i] = con->expr->name;
       for (size_t j = 0; j < con->expr->linterms.size(); j++) {
         std::shared_ptr<LinTerm> lt = con->expr->linterms[j];
@@ -137,10 +148,19 @@ FilereaderRetcode FilereaderLp::readModelFromFile(const HighsOptions& options,
       lp.row_lower_.push_back(con->lowerbound);
       lp.row_upper_.push_back(con->upperbound);
 
-      if (!con->expr->quadterms.empty()) {
-        highsLogUser(options.log_options, HighsLogType::kError,
-                     "Quadratic constraints not supported by HiGHS\n");
-        return FilereaderRetcode::kParserError;
+      if (con->expr->offset != 0) {
+        // Possibly report the occurrence of an illegal name in the
+        // LHS of a constraint
+        if (num_report < max_num_report)
+          highsLogUser(options.log_options, HighsLogType::kWarning,
+                       "Ignored illegal numeric variable name \"%g\" in "
+                       "constraint %d (name"
+                       "\"%s\") of LP file - "
+                       "often the result of a constant term in the left-hand "
+                       "side of a constraint\n",
+                       con->expr->offset, int(i), lp.row_names_[i].c_str());
+        num_report++;
+        num_illegal_name++;
       }
     }
 
@@ -198,11 +218,9 @@ FilereaderRetcode FilereaderLp::readModelFromFile(const HighsOptions& options,
     std::vector<double> column(lp.num_row_, 0);
     std::vector<HighsInt> nz_count(lp.num_row_, 0);
     std::vector<HighsInt> zero_count(lp.num_row_, 0);
-    HighsInt sum_num_duplicate = 0;
-    HighsInt sum_num_zero = 0;
+    HighsInt num_duplicate = 0;
+    HighsInt num_zero = 0;
     HighsInt sum_cancellation = 0;
-    HighsInt num_report = 0;
-    HighsInt max_num_report = 10;
     for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
       // Save the start, since this will be reduced if there are
       // repeated row indices in a column
@@ -255,8 +273,8 @@ FilereaderRetcode FilereaderLp::readModelFromFile(const HighsOptions& options,
                            int(iRow), lp.row_names_[iRow].c_str());
             num_report++;
           }
-          sum_num_duplicate += (num_ocurrence - 1);
-          sum_num_zero += zero_count[iRow];
+          num_duplicate += (num_ocurrence - 1);
+          num_zero += zero_count[iRow];
           if (column[iRow] == 0 && nz_count[iRow] > 0) sum_cancellation++;
         }
         zero_count[iRow] = 0;
@@ -270,24 +288,31 @@ FilereaderRetcode FilereaderLp::readModelFromFile(const HighsOptions& options,
       }
     }
     matrix.start_[lp.num_col_] = num_nz;
-    warning_issued = sum_num_duplicate > 0 || sum_num_zero > 0;
+    warning_issued = num_illegal_name > 0 || num_duplicate > 0 || num_zero > 0;
     HighsInt num_report_skipped = num_report - max_num_report;
     if (num_report_skipped > 0)
       highsLogUser(options.log_options, HighsLogType::kInfo,
                    "Skipped %d further warning%s of this kind\n",
-                   int(num_report_skipped), num_report_skipped > 1 ? "s" : "");
+                   int(num_report_skipped),
+                   highsIntToPlural(num_report_skipped).c_str());
 
-    if (sum_num_duplicate > 0)
+    if (num_illegal_name > 0)
+      highsLogUser(options.log_options, HighsLogType::kWarning,
+                   "lp file contains %d constraint%s with an illegal numeric "
+                   "variable name\n",
+                   int(num_illegal_name),
+                   highsIntToPlural(num_illegal_name).c_str());
+    if (num_duplicate > 0)
       highsLogUser(options.log_options, HighsLogType::kWarning,
                    "lp file contains %d repeated variable%s in constraints: "
                    "summing them yielded %d cancellation%s\n",
-                   int(sum_num_duplicate), sum_num_duplicate > 1 ? "s" : "",
+                   int(num_duplicate), highsIntToPlural(num_duplicate).c_str(),
                    int(sum_cancellation),
-                   (sum_cancellation == 0 || sum_cancellation > 1) ? "s" : "");
-    if (sum_num_zero > 0)
+                   highsIntToPlural(sum_cancellation).c_str());
+    if (num_zero > 0)
       highsLogUser(options.log_options, HighsLogType::kWarning,
-                   "lp file contains %d explicit zero%s\n", int(sum_num_zero),
-                   sum_num_zero > 1 ? "s" : "");
+                   "lp file contains %d explicit zero%s\n", int(num_zero),
+                   highsIntToPlural(num_zero).c_str());
 
   } catch (std::invalid_argument& ex) {
     // lpassert in highs/io/filereaderlp/def.hpp throws

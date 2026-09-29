@@ -569,8 +569,8 @@ void Reader::processconsec() {
     LpComparisonType dir = begin->dir;
     ++begin;
 
-    // should still not be at end of section yet, but a right-hand-side value
-    // should be next
+    // should still not be at end of section yet, but a right-hand
+    // side value should be next
     lpassert(begin != sectiontokens[LpSectionKeyword::CON].second);
     lpassert(begin->type == ProcessedTokenType::CONST);
     switch (dir) {

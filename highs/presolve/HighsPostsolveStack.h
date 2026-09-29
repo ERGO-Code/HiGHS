@@ -283,16 +283,6 @@ class HighsPostsolveStack {
     void transformToPresolvedSpace(std::vector<double>& primalSol) const;
   };
 
-  struct SlackColSubstitution {
-    double rhs;
-    HighsInt row;
-    HighsInt col;
-
-    void undo(const HighsOptions& options,
-              const std::vector<Nonzero>& rowValues, HighsSolution& solution,
-              HighsBasis& basis);
-  };
-
   struct ZeroObjSingletonContinuousCol {
     double origRowLower;
     double origRowUpper;
@@ -325,7 +315,6 @@ class HighsPostsolveStack {
     kForcingColumnRemovedRow,
     kDuplicateRow,
     kDuplicateColumn,
-    kSlackColSubstitution,
     kZeroObjSingletonContinuousCol,
     kFourierMotzkinBlock,
     kFourierMotzkinObjCol,
@@ -411,9 +400,6 @@ class HighsPostsolveStack {
       }
       case ReductionType::kDuplicateColumn: {
         return "Duplicate column";
-      }
-      case ReductionType::kSlackColSubstitution: {
-        return "Slack col substitution";
       }
       case ReductionType::kImpliedEquation: {
         return "Implied equation";
@@ -608,19 +594,6 @@ class HighsPostsolveStack {
   }
 
   template <typename RowStorageFormat>
-  void slackColSubstitution(HighsInt row, HighsInt col, double rhs,
-                            const HighsMatrixSlice<RowStorageFormat>& rowVec) {
-    rowValues.clear();
-    for (const HighsSliceNonzero& rowVal : rowVec)
-      rowValues.emplace_back(origColIndex[rowVal.index()], rowVal.value());
-
-    reductionValues.push(
-        SlackColSubstitution{rhs, origRowIndex[row], origColIndex[col]});
-    reductionValues.push(rowValues);
-    reductionAdded(ReductionType::kSlackColSubstitution);
-  }
-
-  template <typename RowStorageFormat>
   void zeroCostSingleton(HighsInt row, HighsInt col, double origRowLower,
                          double origRowUpper, double new_row_lb,
                          double new_row_ub, double lb, double ub, double coef,
@@ -796,7 +769,15 @@ class HighsPostsolveStack {
 
     reductionValues.push(EqualityRowAdditions{origRowIndex[addedEqRow]});
     reductionValues.push(rowValues);
-    reductionValues.push(targetRows);
+    // On entry, targetRows are in the presolved space, but in
+    // postsolve they need to be in the original space. For
+    // equalityRowAddition the transformation is simply
+    // origRowIndex[row], but for equalityRowAdditions all indices
+    // must be transformed in the std::vector<Nonzero> targetRows
+    std::vector<Nonzero> orig_targetRows = targetRows;
+    for (auto& targetRow : orig_targetRows)
+      targetRow.index = origRowIndex[targetRow.index];
+    reductionValues.push(orig_targetRows);
     reductionAdded(ReductionType::kEqualityRowAdditions);
   }
 
@@ -1284,18 +1265,11 @@ class HighsPostsolveStack {
           reduction.undo(options, solution, basis);
           break;
         }
-        case ReductionType::kSlackColSubstitution: {
-          SlackColSubstitution reduction;
+        case ReductionType::kZeroObjSingletonContinuousCol: {
+          ZeroObjSingletonContinuousCol reduction;
           reductionValues_.pop(rowValues_);
           reductionValues_.pop(reduction);
           reduction.undo(options, rowValues_, solution, basis);
-          break;
-        }
-        case ReductionType::kZeroObjSingletonContinuousCol: {
-          ZeroObjSingletonContinuousCol reduction;
-          reductionValues.pop(rowValues);
-          reductionValues.pop(reduction);
-          reduction.undo(options, rowValues, solution, basis);
           break;
         }
         case ReductionType::kFourierMotzkinBlock: {

@@ -124,3 +124,42 @@ TEST_CASE("Highs_HashTree", "[util]") {
     }
   }
 }
+
+TEST_CASE("Highs_HashTree_findCommon_hash_collision", "[util]") {
+  // findCommonInLeaf may not work when 16-bit hashes
+  // match but keys differ.
+
+  // These three keys all share the same top-16 bits of their 64-bit hash
+  const int keyA = 57501;
+  const int keyB = 91344;
+  const int keyC = 159347;
+
+  REQUIRE((HighsHashHelpers::hash(keyA) >> 48) ==
+          (HighsHashHelpers::hash(keyB) >> 48));
+  REQUIRE((HighsHashHelpers::hash(keyA) >> 48) ==
+          (HighsHashHelpers::hash(keyC) >> 48));
+
+  HighsHashTree<int> tree1;
+  HighsHashTree<int> tree2;
+
+  tree1.insert(keyA);
+  tree1.insert(keyB);
+  tree2.insert(keyB);
+  tree2.insert(keyC);
+
+  REQUIRE(tree1.contains(keyB));
+  REQUIRE(tree2.contains(keyB));
+
+  // Confirm that a common element exists
+  bool hasCommon = false;
+  tree1.for_each([&](const int& k) {
+    if (tree2.contains(k)) hasCommon = true;
+  });
+  REQUIRE(hasCommon);
+
+  // find_common should find the common element in both orders
+  const auto* common = tree1.find_common(tree2);
+  REQUIRE(common != nullptr);
+  common = tree2.find_common(tree1);
+  REQUIRE(common != nullptr);
+}

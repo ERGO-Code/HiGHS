@@ -495,12 +495,12 @@ void HighsPostsolveStack::DuplicateRow::undo(const HighsOptions& options,
           : computeStatus(solution.row_dual[row], basis.row_status[row],
                           options.dual_feasibility_tolerance);
 
-  auto computeRowDualAndStatus = [&](bool tightened) {
+  auto computeRowDualAndStatus = [&](bool tightened, const HighsInt dir) {
     if (tightened) {
       solution.row_dual[duplicateRow] =
-          solution.row_dual[row] / duplicateRowScale;
+          solution.row_dual[row] * duplicateRowScale;
       if (basis.valid) {
-        if (duplicateRowScale > 0)
+        if (dir * duplicateRowScale > 0)
           basis.row_status[duplicateRow] = HighsBasisStatus::kUpper;
         else
           basis.row_status[duplicateRow] = HighsBasisStatus::kLower;
@@ -529,10 +529,10 @@ void HighsPostsolveStack::DuplicateRow::undo(const HighsOptions& options,
       // if row sits on its upper bound, and the row upper bound was
       // tightened using the parallel row we make the row basic and
       // transfer its dual value to the parallel row with the proper scale
-      computeRowDualAndStatus(rowUpperTightened);
+      computeRowDualAndStatus(rowUpperTightened, 1);
       break;
     case HighsBasisStatus::kLower:
-      computeRowDualAndStatus(rowLowerTightened);
+      computeRowDualAndStatus(rowLowerTightened, -1);
       break;
     default:
       assert(false);
@@ -1292,64 +1292,6 @@ void HighsPostsolveStack::DuplicateColumn::undoFix(
 void HighsPostsolveStack::DuplicateColumn::transformToPresolvedSpace(
     std::vector<double>& primalSol) const {
   primalSol[col] = primalSol[col] + colScale * primalSol[duplicateCol];
-}
-
-void HighsPostsolveStack::SlackColSubstitution::undo(
-    const HighsOptions& options, const std::vector<Nonzero>& rowValues,
-    HighsSolution& solution, HighsBasis& basis) {
-  bool debug_print = false;
-
-  // compute primal values
-  double colCoef = 0;
-  HighsCDouble rowValue = 0;
-  for (const auto& rowVal : rowValues) {
-    if (rowVal.index == col)
-      colCoef = rowVal.value;
-    else
-      rowValue += rowVal.value * solution.col_value[rowVal.index];
-  }
-
-  assert(colCoef != 0);
-  // Row values aren't fully postsolved, so why do this?
-  solution.row_value[row] =
-      static_cast<double>(rowValue + colCoef * solution.col_value[col]);
-
-  solution.col_value[col] = static_cast<double>((rhs - rowValue) / colCoef);
-
-  // If no dual values requested, return here
-  if (!solution.dual_valid) return;
-
-  // Row retains its dual value, and column has this dual value scaled by coeff
-  solution.col_dual[col] = -solution.row_dual[row] / colCoef;
-
-  // Set basis status if necessary
-  if (!basis.valid) return;
-
-  // If row is basic, then slack is basic, otherwise row retains its status
-  HighsBasisStatus save_row_basis_status = basis.row_status[row];
-  if (basis.row_status[row] == HighsBasisStatus::kBasic) {
-    basis.col_status[col] = HighsBasisStatus::kBasic;
-    basis.row_status[row] =
-        computeRowStatus(solution.row_dual[row], RowType::kEq);
-  } else if (basis.row_status[row] == HighsBasisStatus::kLower) {
-    basis.col_status[col] =
-        colCoef > 0 ? HighsBasisStatus::kUpper : HighsBasisStatus::kLower;
-  } else {
-    basis.col_status[col] =
-        colCoef > 0 ? HighsBasisStatus::kLower : HighsBasisStatus::kUpper;
-  }
-  if (debug_print)
-    printf(
-        "HighsPostsolveStack::SlackColSubstitution::undo OgRowStatus = %s; "
-        "RowStatus = %s; ColStatus = %s\n",
-        utilBasisStatusToString(save_row_basis_status).full_.c_str(),
-        utilBasisStatusToString(basis.row_status[row]).full_.c_str(),
-        utilBasisStatusToString(basis.col_status[col]).full_.c_str());
-  if (basis.col_status[col] == HighsBasisStatus::kLower) {
-    assert(solution.col_dual[col] > -options.dual_feasibility_tolerance);
-  } else if (basis.col_status[col] == HighsBasisStatus::kUpper) {
-    assert(solution.col_dual[col] < options.dual_feasibility_tolerance);
-  }
 }
 
 void HighsPostsolveStack::FourierMotzkinObjCol::transformToPresolvedSpace(
