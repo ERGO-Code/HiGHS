@@ -1413,7 +1413,7 @@ TEST_CASE("test-weakly-dominated-column-primal-dual-postsolve",
   lp.row_upper_ = {kHighsInf};
 
   Highs h;
-  //  h.setOptionValue("output_flag", dev_run);
+  h.setOptionValue("output_flag", dev_run);
 
   REQUIRE(h.passModel(lp) == HighsStatus::kOk);
 
@@ -1430,8 +1430,8 @@ TEST_CASE("test-weakly-dominated-column-primal-dual-postsolve",
 
   REQUIRE(h.run() == HighsStatus::kOk);
   REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
-  //  if (dev_run)
-  h.writeSolution("", 1);
+  if (dev_run)
+    h.writeSolution("", 1);
 
   h.resetGlobalScheduler(true);
 }

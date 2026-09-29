@@ -130,8 +130,9 @@ struct HighsNameHash {
   void form(const std::vector<std::string>& name);
   bool hasDuplicate(const std::vector<std::string>& name);
   bool updateFindsDuplicate(int index, const std::string& old_name,
-			    const std::string& new_name);
-  void clear();
+                            const std::string& new_name);
+  bool ok(const std::vector<std::string>& name);
+  void clear() { this->name2index.clear(); }
 };
 
 struct HighsPresolveRuleLog {

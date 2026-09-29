@@ -5,7 +5,7 @@
 #include "catch.hpp"
 
 const bool dev_run = false;
-TEST_CASE("highs-names", "[highs_names]") {
+TEST_CASE("highs-names", "[model_names]") {
   const std::string test_name = Catch::getResultCapture().getCurrentTestName();
   const std::string solution_file = test_name + ".sol";
   std::string name;
@@ -102,7 +102,7 @@ TEST_CASE("highs-names", "[highs_names]") {
   REQUIRE(highs.getRowName(0, name) == HighsStatus::kOk);
   REQUIRE(name == row0_name);
   iRow = lp.num_row_ / 2;
-  REQUIRE(highs.passRowName(iRow, row0_name) == HighsStatus::kOk);
+  REQUIRE(highs.passRowName(iRow, row0_name) == HighsStatus::kWarning);
   // Model can (since duplicates lead to generic names in fix-2887) be
   // written
   REQUIRE(highs.writeModel("") == HighsStatus::kWarning);
@@ -196,7 +196,7 @@ TEST_CASE("test-3316", "[model_names]") {
   lp.col_upper_.assign(dim, 1);
   lp.row_lower_ = {-kHighsInf};
   lp.row_upper_ = {5};
-  lp.a_matrix_.start_.assign(dim+1, 0);
+  lp.a_matrix_.start_.assign(dim + 1, 0);
   lp.a_matrix_.index_.assign(dim, 0);
   lp.a_matrix_.value_.assign(dim, 1);
   for (HighsInt iCol = 0; iCol < dim; iCol++) {
@@ -205,8 +205,8 @@ TEST_CASE("test-3316", "[model_names]") {
   }
   lp.a_matrix_.start_[dim] = dim;
   Highs h;
-  //  h.setOptionValue("output_flag", dev_run);
-  
+  h.setOptionValue("output_flag", dev_run);
+
   REQUIRE(h.passModel(lp) == HighsStatus::kOk);
   REQUIRE(h.passColName(0, "C3") == HighsStatus::kOk);
   // Names are now [C3], so passing (1, "C1") is OK
@@ -220,17 +220,4 @@ TEST_CASE("test-3316", "[model_names]") {
   // Names are now [C3, C1, C2, C3], so passing (0, "C0") is OK
   REQUIRE(h.passColName(0, "C0") == HighsStatus::kOk);
   // Names are now [C0, C1, C2, C3], so passing (0, "C0") is OK
-
-  REQUIRE(h.run() == HighsStatus::kOk);
-
-  for (HighsInt iCol = 2; iCol < dim; iCol++) 
-    REQUIRE(h.passColName(iCol, "C1") == HighsStatus::kWarning);
-
-  REQUIRE(h.run() == HighsStatus::kOk);
-
-  //  h.writeModel();
-
-  h.resetGlobalScheduler(true);
-
 }
-

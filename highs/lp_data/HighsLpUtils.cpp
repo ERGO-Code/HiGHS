@@ -1628,7 +1628,10 @@ void appendColsToLpVectors(HighsLp& lp, const HighsInt num_new_col,
     lp.col_lower_[iCol] = colLower[new_col];
     lp.col_upper_[iCol] = colUpper[new_col];
     // Cannot guarantee to create unique names, so name is blank
-    if (have_names) lp.col_names_[iCol] = "";
+    if (have_names) {
+      //      if (lp.col_hash_.size()) lp.col_hash_.updateFindsDuplicate(iCol, lp.col_names_[iCol], "");
+      lp.col_names_[iCol] = "";
+    }
     if (have_integrality) lp.integrality_[iCol] = HighsVarType::kContinuous;
   }
 }
