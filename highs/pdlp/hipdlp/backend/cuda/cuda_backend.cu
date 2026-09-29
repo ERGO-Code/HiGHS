@@ -3,6 +3,7 @@
 #include <cusparse.h>
 
 #include <cfenv>
+#include <cfloat>
 #include <cmath>
 #include <cstdint>
 #include <cstring>
@@ -15,6 +16,9 @@
 
 #ifdef __GLIBC__
 #include <gnu/libc-version.h>
+#endif
+#if defined(__x86_64__) && defined(__SSE2_MATH__)
+#include <xmmintrin.h>
 #endif
 
 #include "pdlp/hipdlp/backend/cuda/cuda_backend.hpp"
@@ -939,6 +943,16 @@ bool certificateNormEnvironmentSupported() {
   uint64_t control = 0;
   asm volatile("mrs %0, fpcr" : "=r"(control));
   return (control & ((uint64_t(3) << 22) | (uint64_t(1) << 24) | 3)) == 0;
+#elif defined(__x86_64__) && defined(__SSE2_MATH__) && defined(__GLIBC__) && \
+    __GLIBC__ == 2 && __GLIBC_MINOR__ == 39 && !defined(__FAST_MATH__) &&   \
+    FLT_RADIX == 2 && DBL_MANT_DIG == 53 && DBL_MAX_EXP == 1024 &&          \
+    LDBL_MANT_DIG >= 53 && LDBL_MAX_EXP >= DBL_MAX_EXP && FLT_EVAL_METHOD == 0
+  if (std::strcmp(gnu_get_libc_version(), "2.39") != 0 ||
+      std::fegetround() != FE_TONEAREST)
+    return false;
+  // SSE rounding control must be nearest (bits 13-14), with neither
+  // flush-to-zero (bit 15) nor denormals-are-zero (bit 6).
+  return (_mm_getcsr() & ((3u << 13) | (1u << 15) | (1u << 6))) == 0;
 #else
   return false;
 #endif
