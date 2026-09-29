@@ -53,20 +53,22 @@ void ColourRefinement::chooseRefiningColour() {
   refining_colour_ = stack_.pop();
 }
 
+void ColourRefinement::touchNeighbour(HighsInt w) {
+  colour_degree_[w]++;
+  if (colour_degree_[w] == 1) colour_classes_touched_.append(w, colour_[w]);
+
+  colours_touched_.pushIfNotPresent(colour_[w]);
+
+  if (colour_degree_[w] > max_colour_degree_[colour_[w]])
+    max_colour_degree_[colour_[w]] = colour_degree_[w];
+}
+
 void ColourRefinement::computeColourDegrees() {
   hipo::Clock clock;
 
   for (HighsInt v : colour_classes_.list(refining_colour_)) {
     for (HighsInt w : neighbours(v)) {
-      colour_degree_[w]++;
-      if (colour_degree_[w] == 1) colour_classes_touched_.append(w, colour_[w]);
-
-      if (!colours_touched_.belong(colour_[w])) {
-        colours_touched_.push(colour_[w]);
-      }
-
-      if (colour_degree_[w] > max_colour_degree_[colour_[w]])
-        max_colour_degree_[colour_[w]] = colour_degree_[w];
+      touchNeighbour(w);
     }
   }
 

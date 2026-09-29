@@ -42,6 +42,9 @@ class ColourRefinement {
       s[++top] = i;
       in_stack[i] = 1;
     }
+    void pushIfNotPresent(HighsInt i) {
+      if (!in_stack[i]) push(i);
+    }
     HighsInt pop() {
       HighsInt elem = s[top--];
       in_stack[elem] = 0;
@@ -102,6 +105,7 @@ class ColourRefinement {
   }
 
   void chooseRefiningColour();
+  void touchNeighbour(HighsInt w);
   void computeColourDegrees();
   void findSplitColours();
   void splitColours();
