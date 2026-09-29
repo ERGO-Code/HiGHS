@@ -1279,6 +1279,11 @@ HighsStatus Highs::calledOptimizeModel() {
     }
   }
 
+  // As exposed by #1819, retaining the name hashes generated when
+  // adding names using addColName/addRowName can lead to serious
+  // performance regression, so clear them now
+  this->model_.lp_.clearAllNameHash();
+
   if (!options_.use_warm_start) this->clearSolver();
   if (ekk_instance_.status_.has_nla)
     assert(ekk_instance_.lpFactorRowCompatible(model_.lp_.num_row_));
