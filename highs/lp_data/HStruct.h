@@ -126,10 +126,11 @@ struct HighsLpMods {
 
 struct HighsNameHash {
   std::unordered_map<std::string, int> name2index;
+  size_t size() { return this->name2index.size(); }
   void form(const std::vector<std::string>& name);
   bool hasDuplicate(const std::vector<std::string>& name);
-  void update(int index, const std::string& old_name,
-              const std::string& new_name);
+  bool updateFindsDuplicate(int index, const std::string& old_name,
+			    const std::string& new_name);
   void clear();
 };
 

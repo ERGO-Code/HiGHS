@@ -796,11 +796,13 @@ HighsStatus Highs::passColName(const HighsInt col, const std::string& name) {
                  "Cannot define empty column names\n");
     return HighsStatus::kError;
   }
+  if (this->model_.lp_.col_hash_.size() < this->model_.lp_.col_names_.size())
+    this->model_.lp_.col_hash_.form(this->model_.lp_.col_names_);
   this->model_.lp_.col_names_.resize(num_col);
-  this->model_.lp_.col_hash_.update(col, this->model_.lp_.col_names_[col],
-                                    name);
+  const bool is_duplicate = 
+    this->model_.lp_.col_hash_.updateFindsDuplicate(col, this->model_.lp_.col_names_[col], name);
   this->model_.lp_.col_names_[col] = name;
-  return HighsStatus::kOk;
+  return is_duplicate ? HighsStatus::kWarning : HighsStatus::kOk;
 }
 
 HighsStatus Highs::passRowName(const HighsInt row, const std::string& name) {
@@ -818,10 +820,10 @@ HighsStatus Highs::passRowName(const HighsInt row, const std::string& name) {
     return HighsStatus::kError;
   }
   this->model_.lp_.row_names_.resize(num_row);
-  this->model_.lp_.row_hash_.update(row, this->model_.lp_.row_names_[row],
-                                    name);
+  const bool is_duplicate = 
+    this->model_.lp_.row_hash_.updateFindsDuplicate(row, this->model_.lp_.row_names_[row], name);
   this->model_.lp_.row_names_[row] = name;
-  return HighsStatus::kOk;
+  return is_duplicate ? HighsStatus::kWarning : HighsStatus::kOk;
 }
 
 HighsStatus Highs::passModelName(const std::string& name) {

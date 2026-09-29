@@ -185,3 +185,35 @@ TEST_CASE("highs-illegal-col-row-name", "[model_names]") {
   std::remove(mps_file.c_str());
   std::remove(lp_file.c_str());
 }
+
+TEST_CASE("test-3316", "[model_names]") {
+  HighsLp lp;
+  lp.num_col_ = 2;
+  lp.num_row_ = 1;
+  lp.col_cost_ = {1, 2};
+  lp.col_lower_ = {0, 0};
+  lp.col_upper_ = {1, 1};
+  lp.row_lower_ = {-kHighsInf};
+  lp.row_upper_ = {5};
+  lp.a_matrix_.start_ = {0, 1, 2};
+  lp.a_matrix_.index_ = {0, 0};
+  lp.a_matrix_.value_ = {1, 1};
+  Highs h;
+  //  h.setOptionValue("output_flag", dev_run);
+  
+  REQUIRE(h.passModel(lp) == HighsStatus::kOk);
+  REQUIRE(h.passColName(0, "C0") == HighsStatus::kOk);
+  REQUIRE(h.passColName(1, "C1") == HighsStatus::kOk);
+
+  REQUIRE(h.run() == HighsStatus::kOk);
+
+  REQUIRE(h.passColName(0, "C1") == HighsStatus::kWarning);
+
+  REQUIRE(h.run() == HighsStatus::kOk);
+
+  h.writeModel();
+
+  h.resetGlobalScheduler(true);
+
+}
+
