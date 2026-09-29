@@ -2168,7 +2168,7 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postsolve_stack) {
       }
     };
 
-    const bool dualFixProbingEnabled = allow_rule_[kPresolveRuleDualFixProbing];
+    const bool dualFixProbingEnabled = allow_rule_[kPresolveRuleDualFixProbing] && !mipsolver->submip;
     if (dualFixProbingEnabled) {
       domain.getDualFixProbingPropagation().recomputeLocks();
     }
