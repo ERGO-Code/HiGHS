@@ -39,7 +39,7 @@ class LinkedLists {
   //
   struct List {
     const LinkedLists* owner;
-    HighsInt list;
+    const HighsInt list;
 
     struct Iterator {
       const LinkedLists* owner;
@@ -54,11 +54,11 @@ class LinkedLists {
       bool operator==(const Iterator& o) const { return current == o.current; }
     };
 
-    Iterator begin() { return {owner, owner->head(list)}; }
-    Iterator end() { return {owner, owner->n() + list}; }
+    Iterator begin() const { return {owner, owner->head(list)}; }
+    Iterator end() const { return {owner, owner->n() + list}; }
   };
 
-  List list(HighsInt l) { return List{this, l}; }
+  List list(HighsInt l) const { return {this, l}; }
 };
 
 }  // namespace folding

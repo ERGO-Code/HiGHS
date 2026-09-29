@@ -53,22 +53,6 @@ ColourRefinement::ColourRefinement(const HighsSparseMatrix& A,
   time_setup_ = clock.stop();
 }
 
-void ColourRefinement::forEachNeighbour(HighsInt v,
-                                        const std::function<void(int)>& f) {
-  if (v < A_.num_row_) {
-    for (HighsInt el = At_.start_[v]; el < At_.start_[v + 1]; ++el) {
-      const HighsInt w = At_.index_[el] + A_.num_row_;
-      f(w);
-    }
-  } else {
-    for (HighsInt el = A_.start_[v - A_.num_row_];
-         el < A_.start_[v - A_.num_row_ + 1]; ++el) {
-      const HighsInt w = A_.index_[el];
-      f(w);
-    }
-  }
-}
-
 void ColourRefinement::chooseRefiningColour() {
   hipo::Clock clock;
 
@@ -83,7 +67,7 @@ void ColourRefinement::computeColourDegrees() {
   hipo::Clock clock;
 
   for (HighsInt v : colour_classes_.list(refining_colour_)) {
-    forEachNeighbour(v, [this](HighsInt w) {
+    for (HighsInt w : neighbours(v)) {
       colour_degree_[w]++;
       if (colour_degree_[w] == 1) colour_classes_touched_.append(w, colour_[w]);
 
@@ -95,7 +79,7 @@ void ColourRefinement::computeColourDegrees() {
 
       if (colour_degree_[w] > max_colour_degree_[colour_[w]])
         max_colour_degree_[colour_[w]] = colour_degree_[w];
-    });
+    }
   }
 
   for (HighsInt el = 0; el < top_touched_; ++el) {
