@@ -52,8 +52,10 @@ class ColourRefinement {
     }
     bool belong(HighsInt i) const { return in_stack[i]; }
     bool empty() const { return top < 0; }
-    std::vector<HighsInt>::iterator begin() { return s.begin(); }
-    std::vector<HighsInt>::iterator end() { return s.begin() + (top + 1); }
+    std::vector<HighsInt>::const_iterator begin() { return s.begin(); }
+    std::vector<HighsInt>::const_iterator end() {
+      return s.begin() + (top + 1);
+    }
   };
 
   IteratableStack stack_;
