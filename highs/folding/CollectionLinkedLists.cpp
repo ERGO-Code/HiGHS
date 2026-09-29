@@ -12,23 +12,13 @@ void LinkedLists::init(HighsInt n_elem, HighsInt n_lists) {
   n_lists_ = n_lists;
   forward_.resize(n_elem + n_lists);
   backward_.resize(n_elem + n_lists);
-  for (HighsInt i = 0; i < n_elem + n_lists; ++i) {
-    forward_[i] = i;
-    backward_[i] = i;
+  length_.resize(n_lists);
+  for (HighsInt i = 0; i < n_lists; ++i) {
+    clear(i);
   }
-  length_.assign(n_lists, 0);
 }
 
 void LinkedLists::clear(HighsInt list) {
-  /*HighsInt current = forward_[n_elem_ + list];
-  while (current < n_elem_) {
-    const HighsInt temp = forward_[current];
-    forward_[current] = current;
-    backward_[current] = current;
-    current = temp;
-  }
-  */
-
   forward_[n_elem_ + list] = n_elem_ + list;
   backward_[n_elem_ + list] = n_elem_ + list;
   length_[list] = 0;
@@ -49,30 +39,6 @@ void LinkedLists::remove(HighsInt elem, HighsInt list) {
   forward_[elem] = elem;
   backward_[elem] = elem;
   length_[list]--;
-}
-
-void LinkedLists::print() const {
-  printf("H:  ");
-  for (HighsInt i = 0; i < n_lists_; ++i) printf("%3d", forward_[n_elem_ + i]);
-  printf("\n");
-
-  printf("T:  ");
-  for (HighsInt i = 0; i < n_lists_; ++i) printf("%3d", backward_[n_elem_ + i]);
-  printf("\n");
-
-  printf("L:  ");
-  for (HighsInt i = 0; i < n_lists_; ++i) printf("%3d", length_[i]);
-  printf("\n");
-
-  printf("N:  ");
-  for (HighsInt i = 0; i < n_elem_; ++i) printf("%3d", forward_[i]);
-  printf("\n");
-
-  printf("P:  ");
-  for (HighsInt i = 0; i < n_elem_; ++i) printf("%3d", backward_[i]);
-  printf("\n");
-
-  printf("\n\n");
 }
 
 }  // namespace folding

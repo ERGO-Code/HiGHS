@@ -13,14 +13,12 @@ namespace folding {
 // See highs/ipm/basiclu/lu_list.h for an explanation.
 
 class LinkedLists {
-  std::vector<HighsInt> forward_;
-  std::vector<HighsInt> backward_;
-  std::vector<HighsInt> length_;
-
   HighsInt n_elem_{};
   HighsInt n_lists_{};
 
-  void print() const;
+  std::vector<HighsInt> forward_;
+  std::vector<HighsInt> backward_;
+  std::vector<HighsInt> length_;
 
  public:
   void init(HighsInt n_elem, HighsInt n_lists);
