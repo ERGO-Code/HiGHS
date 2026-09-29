@@ -1488,7 +1488,7 @@ HighsStatus Highs::calledOptimizeModel() {
   double this_postsolve_time = -1;
   double this_solve_original_lp_time = -1;
   HighsInt postsolve_iteration_count = -1;
-  const bool require_basic_solution = requireBasicSolution(&options_);
+  const bool may_require_basis_postsolve = mayRequireBasisPostsolve(&options_);
   if (options_.icrash) {
     ICrashStrategy strategy = ICrashStrategy::kICA;
     bool strategy_ok = parseICrashStrategy(options_.icrash_strategy, strategy);
@@ -1860,7 +1860,7 @@ HighsStatus Highs::calledOptimizeModel() {
     // If presolve has been run assuming that there's no basis
     // postsolve - allowing sparsify to be used in presolve -
     // invalidate any basis
-    if (!require_basic_solution) this->invalidateBasis();
+    if (!may_require_basis_postsolve) this->invalidateBasis();
     const bool have_optimal_reduced_solution =
         model_presolve_status_ == HighsPresolveStatus::kReducedToEmpty ||
         (model_presolve_status_ == HighsPresolveStatus::kReduced &&

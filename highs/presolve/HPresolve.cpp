@@ -586,19 +586,21 @@ void HPresolve::chooseRules() {
                    " * Only in initial sweep\n");
   }
 
-  requires_basis_postsolve_ = false;
-  requires_primal_dual_postsolve_ = false;
+  may_require_basis_postsolve_ = false;
+  may_require_primal_dual_postsolve_ = false;
   if (mipsolver == nullptr) {
-    // Record whether basis or primal-dual postsolve is required, and
-    // switch off rules that are correspondingly incompatible
-    if (requireBasicSolution(options)) {
-      requires_basis_postsolve_ = true;
+    // Record whether one or both of basis and primal-dual postsolve
+    // may be required, and switch off rules that are correspondingly
+    // incompatible
+    if (mayRequireBasisPostsolve(options)) {
+      may_require_basis_postsolve_ = true;
       // Cannot use sparsify or any parallel row rule using
       // EqualityRowAddition(s). Latter are avoided logically in
       // HPresolve::detectParallelRowsAndCols
       allow_rule_[kPresolveRuleSparsify] = false;
-    } else {
-      requires_primal_dual_postsolve_ = true;
+    }
+    if (mayRequirePrimalDualPostsolve(options)) {
+      may_require_primal_dual_postsolve_ = true;
       // Cannot use weakly dominated column rule
       allow_rule_[kPresolveRuleWeaklyDominatedCol] = false;
     }
@@ -6639,7 +6641,7 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
     // the problem is a MIP, IPM is run without crossover, or when
     // PDLP is used. However, if the LP is reduced to empty, the basis
     // must not be formed in the case of IPM without crossover or PDLP
-    bool trySparsify = !requires_basis_postsolve_;
+    bool trySparsify = !may_require_basis_postsolve_;
     bool tryProbing = mipsolver != nullptr;
     bool tryFourierMotzkin = mipsolver != nullptr;
     HighsInt numCliquesBeforeProbing = -1;
@@ -9472,9 +9474,9 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
 
     // The conditional block where equalityRowAddition is called
     // cannot be reached if numSingleton = 0 and numSingletonCandidate
-    // = 0. Hence, if requires_basis_postsolve_ is true, continue is
+    // = 0. Hence, if may_require_basis_postsolve_ is true, continue is
     // called if numSingleton != 0 or numSingletonCandidate != 0
-    if (requires_basis_postsolve_ && numSingleton != 0) continue;
+    if (may_require_basis_postsolve_ && numSingleton != 0) continue;
 
     HighsInt delRow = -1;
     if (it != buckets.end()) storeRow(i);
@@ -9484,7 +9486,7 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
 
       const HighsInt numSingletonCandidate = getNumSingletons(parallelRowCand);
 
-      if (requires_basis_postsolve_ && numSingletonCandidate != 0) continue;
+      if (may_require_basis_postsolve_ && numSingletonCandidate != 0) continue;
 
       if (rowsize[i] - numSingleton !=
           rowsize[parallelRowCand] - numSingletonCandidate)
@@ -9525,7 +9527,7 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
       }
       if (!parallel) continue;
 
-      if (requires_basis_postsolve_)
+      if (may_require_basis_postsolve_)
         assert(numSingleton == 0 && numSingletonCandidate == 0);
 
       if (numSingleton == 0 && numSingletonCandidate == 0) {
@@ -9616,7 +9618,7 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
         //    HIGHSINT_FORMAT ")\n", numSingleton, numSingletonCandidate,
         //    model->row_lower_[parallelRowCand] ==
         //        model->row_upper_[parallelRowCand]);
-        assert(!requires_basis_postsolve_);
+        assert(!may_require_basis_postsolve_);
         HPRESOLVE_CHECKED_CALL(equalityRowAddition(
             postsolve_stack, i, parallelRowCand, -rowScale, getStoredRow()));
         delRow = parallelRowCand;
@@ -9626,7 +9628,7 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
         //    row and %" HIGHSINT_FORMAT " " "singletons in other inequality
         //    row\n", numSingletonCandidate, numSingleton);
         // the row parallelRowCand is an equation; add it to the other row
-        assert(!requires_basis_postsolve_);
+        assert(!may_require_basis_postsolve_);
         HPRESOLVE_CHECKED_CALL(equalityRowAddition(
             postsolve_stack, parallelRowCand, i,
             -rowMax[i].first / rowMax[parallelRowCand].first,
@@ -9678,7 +9680,7 @@ template <typename RowStorageFormat>
 HPresolve::Result HPresolve::equalityRowAddition(
     HighsPostsolveStack& postsolve_stack, HighsInt stayrow, HighsInt removerow,
     double scale, const HighsMatrixSlice<RowStorageFormat>& rowvector) {
-  assert(!requires_basis_postsolve_);
+  assert(!may_require_basis_postsolve_);
   // extract non-zero positions
   std::vector<HighsInt> stay_rowpositions;
   getRowPositions(stayrow, stay_rowpositions);
@@ -9992,7 +9994,7 @@ void HPresolve::aggregateVarBounds() {
 }
 
 HPresolve::Result HPresolve::sparsify(HighsPostsolveStack& postsolve_stack) {
-  assert(!requires_basis_postsolve_);
+  assert(!may_require_basis_postsolve_);
   assert(allow_rule_[kPresolveRuleSparsify]);
   std::vector<HighsPostsolveStack::Nonzero> sparsifyRows;
   const bool logging_on = analysis_.logging_on_;

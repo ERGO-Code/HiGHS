@@ -1800,6 +1800,6 @@ bool solverValidForQp(const std::string& solver);
 
 bool useIpm(const std::string& solver);
 bool usePdlp(const std::string& solver);
-bool requireBasicSolution(const HighsOptions* options);
-
+bool mayRequireBasisPostsolve(const HighsOptions* options);
+bool mayRequirePrimalDualPostsolve(const HighsOptions* options);
 #endif
