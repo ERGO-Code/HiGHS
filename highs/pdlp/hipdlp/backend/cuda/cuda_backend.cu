@@ -728,6 +728,9 @@ class SparseMatrixDescriptor {
   cusparseSpMatDescr_t value_;
 };
 
+// CSR_ALG2 is bitwise deterministic across runs, unlike the default ALG1.
+const cusparseSpMVAlg_t kSpmvAlgorithm = CUSPARSE_SPMV_CSR_ALG2;
+
 struct SparseStorage {
   HighsInt num_rows;
   HighsInt num_cols;
@@ -736,6 +739,8 @@ struct SparseStorage {
   DeviceBuffer<HighsInt> starts;
   DeviceBuffer<HighsInt> indices;
   DeviceBuffer<double> values;
+  // Holds this matrix's preprocessed SpMV plan, so it is never shared.
+  DeviceBuffer<unsigned char> spmv_buffer;
   SparseMatrixDescriptor descriptor;
 
   SparseStorage()
@@ -784,7 +789,6 @@ struct CudaProblemResource : Resource {
   DeviceBuffer<HighsBool> equality_rows;
   SparseStorage matrix;
   SparseStorage transpose;
-  DeviceBuffer<unsigned char> spmv_buffer;
 
   explicit CudaProblemResource(const CudaBackend* backend)
       : lifetime(new int(0)),
@@ -1182,7 +1186,7 @@ api::Error initializeProblemResource(const model::Problem& problem,
 }
 
 template <typename ImplType>
-api::Error querySpmvBufferSize(ImplType& impl, SparseStorage& matrix) {
+api::Error prepareSpmvPlan(ImplType& impl, SparseStorage& matrix) {
   if (matrix.num_nonzeros == 0) {
     matrix.spmv_buffer_size = 0;
     return api::Error();
@@ -1201,28 +1205,32 @@ api::Error querySpmvBufferSize(ImplType& impl, SparseStorage& matrix) {
   if (!error.ok()) return error;
   error = output_descriptor.create(matrix.num_rows, output.get());
   if (!error.ok()) return error;
-  const cusparseStatus_t status = cusparseSpMV_bufferSize(
+  cusparseStatus_t status = cusparseSpMV_bufferSize(
       impl.cusparse.get(), CUSPARSE_OPERATION_NON_TRANSPOSE,
       impl.spmv_alpha.get(), matrix.descriptor.get(), input_descriptor.get(),
       impl.spmv_beta.get(), output_descriptor.get(), CUDA_R_64F,
-      CUSPARSE_SPMV_ALG_DEFAULT, &matrix.spmv_buffer_size);
+      kSpmvAlgorithm, &matrix.spmv_buffer_size);
+  if (status != CUSPARSE_STATUS_SUCCESS)
+    return cusparseFailure("SpMV buffer sizing", status);
+  error = matrix.spmv_buffer.allocate(matrix.spmv_buffer_size,
+                                      "allocating cuSPARSE SpMV workspace");
+  if (!error.ok()) return error;
+  // Partition the rows once instead of on every product.
+  status = cusparseSpMV_preprocess(
+      impl.cusparse.get(), CUSPARSE_OPERATION_NON_TRANSPOSE,
+      impl.spmv_alpha.get(), matrix.descriptor.get(), input_descriptor.get(),
+      impl.spmv_beta.get(), output_descriptor.get(), CUDA_R_64F,
+      kSpmvAlgorithm, matrix.spmv_buffer.get());
   return status == CUSPARSE_STATUS_SUCCESS
              ? api::Error()
-             : cusparseFailure("SpMV buffer sizing", status);
+             : cusparseFailure("SpMV preprocessing", status);
 }
 
 template <typename ImplType>
 api::Error prepareSpmvStorage(ImplType& impl, CudaProblemResource& resource) {
-  api::Error error = querySpmvBufferSize(impl, resource.matrix);
+  const api::Error error = prepareSpmvPlan(impl, resource.matrix);
   if (!error.ok()) return error;
-  error = querySpmvBufferSize(impl, resource.transpose);
-  if (!error.ok()) return error;
-  const std::size_t buffer_size =
-      resource.matrix.spmv_buffer_size > resource.transpose.spmv_buffer_size
-          ? resource.matrix.spmv_buffer_size
-          : resource.transpose.spmv_buffer_size;
-  return resource.spmv_buffer.allocate(buffer_size,
-                                       "allocating cuSPARSE SpMV workspace");
+  return prepareSpmvPlan(impl, resource.transpose);
 }
 
 api::Error launchResult(const char* operation, const cudaError_t status) {
@@ -1231,8 +1239,7 @@ api::Error launchResult(const char* operation, const cudaError_t status) {
 }
 
 template <typename ImplType>
-api::Error executeSpmv(ImplType& impl, const CudaProblemResource& problem,
-                       const SparseStorage& matrix,
+api::Error executeSpmv(ImplType& impl, const SparseStorage& matrix,
                        const CudaVectorResource& input,
                        CudaVectorResource& output, int* error_flag,
                        const bool check_output = true) {
@@ -1245,8 +1252,7 @@ api::Error executeSpmv(ImplType& impl, const CudaProblemResource& problem,
       impl.cusparse.get(), CUSPARSE_OPERATION_NON_TRANSPOSE,
       impl.spmv_alpha.get(), matrix.descriptor.get(), input.descriptor.get(),
       impl.spmv_beta.get(), output.descriptor.get(), CUDA_R_64F,
-      CUSPARSE_SPMV_ALG_DEFAULT,
-      const_cast<unsigned char*>(problem.spmv_buffer.get()));
+      kSpmvAlgorithm, const_cast<unsigned char*>(matrix.spmv_buffer.get()));
   if (status != CUSPARSE_STATUS_SUCCESS)
     return cusparseFailure("SpMV execution", status);
   if (!check_output) return api::Error();
@@ -1590,7 +1596,7 @@ api::Error CudaBackend::prepareCheckFixedPoint(
                vectors[1]->values.get(), vectors[3]->values.get(),
                vectorResource(delta_dual)->values.get(), check.optional_error.get()));
   if (!error.ok()) return check.fail(error);
-  error = executeSpmv(*impl_, *cuda_problem, cuda_problem->transpose,
+  error = executeSpmv(*impl_, cuda_problem->transpose,
                       *vectors[5], *vectorResource(aty_delta),
                       check.optional_error.get());
   return error.ok() ? error : check.fail(error);
@@ -1899,7 +1905,7 @@ api::Error CudaBackend::multiply(const ProblemHandle& problem,
   impl_->recordDependency(cuda_problem->lifetime);
   impl_->recordDependency(cuda_input->lifetime);
   impl_->recordDependency(cuda_output->lifetime);
-  return executeSpmv(*impl_, *cuda_problem, cuda_problem->matrix, *cuda_input,
+  return executeSpmv(*impl_, cuda_problem->matrix, *cuda_input,
                      *cuda_output, impl_->error_flag.get());
 }
 
@@ -1919,7 +1925,7 @@ api::Error CudaBackend::multiplyTranspose(const ProblemHandle& problem,
   impl_->recordDependency(cuda_problem->lifetime);
   impl_->recordDependency(cuda_input->lifetime);
   impl_->recordDependency(cuda_output->lifetime);
-  return executeSpmv(*impl_, *cuda_problem, cuda_problem->transpose,
+  return executeSpmv(*impl_, cuda_problem->transpose,
                      *cuda_input, *cuda_output, impl_->error_flag.get());
 }
 
@@ -2135,7 +2141,7 @@ api::Error CudaBackend::multiplyAndProjectedDualUpdateAndReflect(
   impl_->recordDependency(cuda_product->lifetime);
   impl_->recordDependency(cuda_candidate->lifetime);
   impl_->recordDependency(cuda_reflected->lifetime);
-  error = executeSpmv(*impl_, *cuda_problem, cuda_problem->matrix, *cuda_input,
+  error = executeSpmv(*impl_, cuda_problem->matrix, *cuda_input,
                       *cuda_product, impl_->error_flag.get(), false);
   if (!error.ok()) return error;
   return launchResult("product/projection/reflection kernel launch",
