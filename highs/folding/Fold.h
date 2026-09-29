@@ -23,9 +23,6 @@ class ColourRefinement {
   std::vector<HighsInt> max_colour_degree_;
   std::vector<HighsInt> min_colour_degree_;
 
-  std::vector<HighsInt> colours_touched_;
-  std::vector<HighsBool> in_colours_touched_;
-
   std::vector<HighsInt> colours_split_;
 
   LinkedLists colour_classes_;
@@ -34,11 +31,35 @@ class ColourRefinement {
   HighsInt latest_colour_;
   HighsInt refining_colour_;
 
-  std::stack<HighsInt> stack_refine_;
-  std::vector<HighsBool> in_stack_;
+  struct IteratableStack {
+    std::vector<HighsInt> s;
+    HighsInt top;
+    std::vector<HighsBool> in_stack;
+
+    IteratableStack(HighsInt n) {
+      s.reserve(n);
+      top = -1;
+      in_stack.resize(n, 0);
+    }
+    void push(HighsInt i) {
+      s[++top] = i;
+      in_stack[i] = 1;
+    }
+    HighsInt pop() {
+      HighsInt elem = s[top--];
+      in_stack[elem] = 0;
+      return elem;
+    }
+    bool belong(HighsInt i) const { return in_stack[i]; }
+    bool empty() const { return top < 0; }
+    std::vector<HighsInt>::iterator begin() { return s.begin(); }
+    std::vector<HighsInt>::iterator end() { return s.begin() + (top + 1); }
+  };
+
+  IteratableStack stack_;
+  IteratableStack colours_touched_;
 
   double time_setup_{};
-  double time_choose_{};
   double time_degrees_{};
   double time_find_split_{};
   double time_split_{};

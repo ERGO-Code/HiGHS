@@ -28,8 +28,8 @@ ColourRefinement::ColourRefinement(const HighsSparseMatrix& A,
       colour_degree_(n_, 0),
       max_colour_degree_(n_, 0),
       min_colour_degree_(n_, 0),
-      in_colours_touched_(n_, 0),
-      in_stack_(n_, 0) {
+      stack_(n_),
+      colours_touched_(n_) {
   hipo::Clock clock;
 
   colour_classes_.init(n_, n_);
@@ -40,28 +40,18 @@ ColourRefinement::ColourRefinement(const HighsSparseMatrix& A,
   for (HighsInt i = 0; i < n_; ++i) colour_classes_.append(i, colour_[i]);
 
   latest_colour_ = *std::max_element(colour_.begin(), colour_.end());
-  for (HighsInt i = 0; i <= latest_colour_; ++i) {
-    stack_refine_.push(i);
-    in_stack_[i] = 1;
-  }
+  for (HighsInt i = 0; i <= latest_colour_; ++i) stack_.push(i);
 
   At_ = A_;
   At_.ensureRowwise();
 
-  colours_touched_.reserve(n_);
   colours_split_.reserve(n_);
 
   time_setup_ = clock.stop();
 }
 
 void ColourRefinement::chooseRefiningColour() {
-  hipo::Clock clock;
-
-  refining_colour_ = stack_refine_.top();
-  stack_refine_.pop();
-  in_stack_[refining_colour_] = 0;
-
-  time_choose_ += clock.stop();
+  refining_colour_ = stack_.pop();
 }
 
 void ColourRefinement::computeColourDegrees() {
@@ -72,9 +62,8 @@ void ColourRefinement::computeColourDegrees() {
       colour_degree_[w]++;
       if (colour_degree_[w] == 1) colour_classes_touched_.append(w, colour_[w]);
 
-      if (!in_colours_touched_[colour_[w]]) {
-        colours_touched_.push_back(colour_[w]);
-        in_colours_touched_[colour_[w]] = 1;
+      if (!colours_touched_.belong(colour_[w])) {
+        colours_touched_.push(colour_[w]);
       }
 
       if (colour_degree_[w] > max_colour_degree_[colour_[w]])
@@ -141,17 +130,15 @@ void ColourRefinement::splitColour(const HighsInt s) {
     if (degree_count[i] >= 1) {
       if (i == min_colour_degree_[s]) {
         new_colour[i] = s;
-        if (!in_stack_[s] && max_degree_count_index != i) {
-          stack_refine_.push(new_colour[i]);
-          in_stack_[new_colour[i]] = 1;
+        if (!stack_.belong(s) && max_degree_count_index != i) {
+          stack_.push(new_colour[i]);
         }
 
       } else {
         latest_colour_++;
         new_colour[i] = latest_colour_;
-        if (in_stack_[s] || i != max_degree_count_index) {
-          stack_refine_.push(new_colour[i]);
-          in_stack_[new_colour[i]] = 1;
+        if (stack_.belong(s) || i != max_degree_count_index) {
+          stack_.push(new_colour[i]);
         }
       }
     }
@@ -169,15 +156,14 @@ void ColourRefinement::splitColour(const HighsInt s) {
 void ColourRefinement::prepareNextIter() {
   hipo::Clock clock;
 
-  for (HighsInt c : colours_touched_) {
+  while (!colours_touched_.empty()) {
+    HighsInt c = colours_touched_.pop();
     for (HighsInt v : colour_classes_touched_.list(c)) {
       colour_degree_[v] = 0;
     }
     max_colour_degree_[c] = 0;
     colour_classes_touched_.clear(c);
-    in_colours_touched_[c] = 0;
   }
-  colours_touched_.clear();
 
   time_prepare_ += clock.stop();
 }
@@ -185,7 +171,7 @@ void ColourRefinement::prepareNextIter() {
 void ColourRefinement::run() {
   hipo::Clock clock;
 
-  while (!stack_refine_.empty()) {
+  while (!stack_.empty()) {
     chooseRefiningColour();
     computeColourDegrees();
     findSplitColours();
@@ -196,7 +182,6 @@ void ColourRefinement::run() {
   printf("ColourRefinement timers\n");
   printf("Total     %f\n", clock.stop());
   printf("  setup   %f\n", time_setup_);
-  printf("  choose  %f\n", time_choose_);
   printf("  degrees %f\n", time_degrees_);
   printf("  find    %f\n", time_find_split_);
   printf("  split   %f\n", time_split_);
