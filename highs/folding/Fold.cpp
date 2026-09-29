@@ -1,5 +1,7 @@
 #include "Fold.h"
 
+#include "DoubleQuantizer.h"
+
 namespace highs {
 
 namespace folding {
@@ -45,11 +47,11 @@ HighsInt Folder::findInitialColour(HighsInt n, std::vector<HighsInt>& colour) {
 }
 
 HighsInt Folder::findInitialRowColour(std::vector<HighsInt>& colour) {
-  return findInitialColour<RowData>(lp_.num_row_, colour);
+  return findInitialColour<RowQuantizedData>(lp_.num_row_, colour);
 }
 
 HighsInt Folder::findInitialColColour(std::vector<HighsInt>& colour) {
-  return findInitialColour<ColData>(lp_.num_col_, colour);
+  return findInitialColour<ColQuantizedData>(lp_.num_col_, colour);
 }
 
 }  // namespace folding

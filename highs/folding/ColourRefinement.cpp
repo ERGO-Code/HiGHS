@@ -3,7 +3,6 @@
 #include <algorithm>
 #include <map>
 
-#include "DoubleQuantizer.h"
 #include "ipm/hipo/auxiliary/Auxiliary.h"
 #include "util/HighsSparseMatrix.h"
 

@@ -38,8 +38,8 @@ never merged, because the double format can no longer represent values a
 tolerance apart.
 */
 
-struct RowData;
-struct ColData;
+struct RowQuantizedData;
+struct ColQuantizedData;
 
 struct DoubleQuantizer {
   static constexpr double inv_tol = 1.0 / kQuantizationTolerance;
@@ -49,33 +49,33 @@ struct DoubleQuantizer {
 
   // hashing operators
   size_t operator()(double x) const;
-  size_t operator()(const RowData& ri) const;
-  size_t operator()(const ColData& ci) const;
+  size_t operator()(const RowQuantizedData& ri) const;
+  size_t operator()(const ColQuantizedData& ci) const;
 
   // equality operators
   bool operator()(double x, double y) const;
-  bool operator()(const RowData& x, const RowData& y) const;
-  bool operator()(const ColData& x, const ColData& y) const;
+  bool operator()(const RowQuantizedData& x, const RowQuantizedData& y) const;
+  bool operator()(const ColQuantizedData& x, const ColQuantizedData& y) const;
 };
 
-struct RowData {
+struct RowQuantizedData {
   double quantized_bl;
   double quantized_bu;
   HighsInt colour;
 
-  RowData(const HighsLp& lp, HighsInt row, HighsInt colour_in)
+  RowQuantizedData(const HighsLp& lp, HighsInt row, HighsInt colour_in)
       : quantized_bl{DoubleQuantizer::bucket(lp.row_lower_[row])},
         quantized_bu{DoubleQuantizer::bucket(lp.row_upper_[row])},
         colour{colour_in} {}
 };
 
-struct ColData {
+struct ColQuantizedData {
   double quantized_c;
   double quantized_l;
   double quantized_u;
   HighsInt colour;
 
-  ColData(const HighsLp& lp, HighsInt col, HighsInt colour_in)
+  ColQuantizedData(const HighsLp& lp, HighsInt col, HighsInt colour_in)
       : quantized_c{DoubleQuantizer::bucket(lp.col_cost_[col])},
         quantized_l{DoubleQuantizer::bucket(lp.col_lower_[col])},
         quantized_u{DoubleQuantizer::bucket(lp.col_upper_[col])},
