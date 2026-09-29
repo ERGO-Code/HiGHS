@@ -61,25 +61,21 @@ struct DoubleQuantizer {
 struct RowQuantizedData {
   double quantized_bl;
   double quantized_bu;
-  HighsInt colour;
 
-  RowQuantizedData(const HighsLp& lp, HighsInt row, HighsInt colour_in)
+  RowQuantizedData(const HighsLp& lp, HighsInt row)
       : quantized_bl{DoubleQuantizer::bucket(lp.row_lower_[row])},
-        quantized_bu{DoubleQuantizer::bucket(lp.row_upper_[row])},
-        colour{colour_in} {}
+        quantized_bu{DoubleQuantizer::bucket(lp.row_upper_[row])} {}
 };
 
 struct ColQuantizedData {
   double quantized_c;
   double quantized_l;
   double quantized_u;
-  HighsInt colour;
 
-  ColQuantizedData(const HighsLp& lp, HighsInt col, HighsInt colour_in)
+  ColQuantizedData(const HighsLp& lp, HighsInt col)
       : quantized_c{DoubleQuantizer::bucket(lp.col_cost_[col])},
         quantized_l{DoubleQuantizer::bucket(lp.col_lower_[col])},
-        quantized_u{DoubleQuantizer::bucket(lp.col_upper_[col])},
-        colour{colour_in} {}
+        quantized_u{DoubleQuantizer::bucket(lp.col_upper_[col])} {}
 };
 
 template <typename P, typename Q>
