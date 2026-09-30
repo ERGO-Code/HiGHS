@@ -1488,10 +1488,7 @@ HighsStatus Highs::calledOptimizeModel() {
   double this_postsolve_time = -1;
   double this_solve_original_lp_time = -1;
   HighsInt postsolve_iteration_count = -1;
-  const bool ipm_no_crossover =
-      useIpm(options_.solver) && options_.run_crossover == kHighsOffString;
-  const bool lp_no_solution_basis =
-      ipm_no_crossover || options_.solver == kPdlpString;
+  const bool may_require_basis_postsolve = mayRequireBasisPostsolve(&options_);
   if (options_.icrash) {
     ICrashStrategy strategy = ICrashStrategy::kICA;
     bool strategy_ok = parseICrashStrategy(options_.icrash_strategy, strategy);
@@ -1635,15 +1632,6 @@ HighsStatus Highs::calledOptimizeModel() {
     if (return_status == HighsStatus::kError)
       return returnFromOptimizeModel(return_status, undo_mods);
   } else {
-    // Otherwise, consider presolve
-    //
-    // If using IPM to solve the reduced LP, but not crossover, set
-    // lp_presolve_requires_basis_postsolve so that presolve can use
-    // rules for which postsolve does not generate a basis.
-    const bool lp_presolve_requires_basis_postsolve =
-        options_.lp_presolve_requires_basis_postsolve;
-    if (lp_no_solution_basis)
-      options_.lp_presolve_requires_basis_postsolve = false;
     // Possibly presolve - according to option_.presolve
     //
     // If solving the relaxation of a MIP, make sure that LP presolve
@@ -1658,9 +1646,6 @@ HighsStatus Highs::calledOptimizeModel() {
     this_presolve_time += to_presolve_time;
     presolve_.info_.presolve_time = this_presolve_time;
     this->run_data_.presolve_time = this_presolve_time;
-    // Recover any modified options
-    options_.lp_presolve_requires_basis_postsolve =
-        lp_presolve_requires_basis_postsolve;
 
     // Set an illegal local pivot threshold value that's updated after
     // solving the presolved LP - if simplex is used
@@ -1873,9 +1858,9 @@ HighsStatus Highs::calledOptimizeModel() {
     // Postsolve. Does nothing if there were no reductions during presolve.
 
     // If presolve has been run assuming that there's no basis
-    // postsolve - allowing sparsify to be used in presolve - so
+    // postsolve - allowing sparsify to be used in presolve -
     // invalidate any basis
-    if (lp_no_solution_basis) this->invalidateBasis();
+    if (!may_require_basis_postsolve) this->invalidateBasis();
     const bool have_optimal_reduced_solution =
         model_presolve_status_ == HighsPresolveStatus::kReducedToEmpty ||
         (model_presolve_status_ == HighsPresolveStatus::kReduced &&

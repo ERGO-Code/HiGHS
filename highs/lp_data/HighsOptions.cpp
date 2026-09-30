@@ -1151,3 +1151,33 @@ bool solverValidForQp(const std::string& solver) {
   return solver == kHighsChooseString || solver == kQpAsmString ||
          solver == kIpmString || solver == kHipoString;
 }
+
+bool useIpm(const std::string& solver) {
+  return solver == kIpmString || solver == kHipoString || solver == kIpxString;
+}
+
+bool usePdlp(const std::string& solver) {
+  return solver == kPdlpString || solver == kHiPdlpString;
+}
+
+bool mayRequireBasisPostsolve(const HighsOptions* options) {
+  if (usePdlp(options->solver)) return false;
+  if (useIpm(options->solver) && options->run_crossover == kHighsOffString)
+    return false;
+  return true;
+}
+
+bool mayRequirePrimalDualPostsolve(const HighsOptions* options) {
+  if (usePdlp(options->solver)) return true;
+  if (useIpm(options->solver)) {
+    if (options->run_crossover == kHighsOffString) return true;
+    if (options->run_crossover == kHighsChooseString) return true;
+    // Currently if run_crossover is on, and crossover fails, then
+    // simplex is started, so basis postsolve will be used. If this
+    // policy changes and a primal-dual solution is found, then the
+    // following will be required
+    //
+    //    if (options->run_crossover == kHighsOnString) return true;
+  }
+  return false;
+}
