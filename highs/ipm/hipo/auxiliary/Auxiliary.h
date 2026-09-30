@@ -29,7 +29,6 @@ void permuteSym(const std::vector<Int>& iperm, std::vector<Int>& ptr,
 void childrenLinkedList(const std::vector<Int>& parent, std::vector<Int>& head,
                         std::vector<Int>& next);
 highs::folding::LinkedLists getChildren(const std::vector<Int>& parent);
-void reverseLinkedList(std::vector<Int>& head, std::vector<Int>& next);
 void dfsPostorder(Int node, Int& start, std::vector<Int>& head,
                   const std::vector<Int>& next, std::vector<Int>& order);
 void processEdge(Int j, Int i, const std::vector<Int>& first,

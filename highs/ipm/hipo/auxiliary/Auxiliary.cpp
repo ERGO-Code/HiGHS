@@ -193,29 +193,6 @@ highs::folding::LinkedLists getChildren(const std::vector<Int>& parent) {
   return children;
 }
 
-void reverseLinkedList(std::vector<Int>& head, std::vector<Int>& next) {
-  // Reverse the linked list of children of each node.
-  // If a node has children (a -> b -> c -> -1), the reverse list contains
-  // children (c -> b -> a -> -1).
-
-  const Int n = head.size();
-
-  for (Int node = 0; node < n; ++node) {
-    Int prev_node = -1;
-    Int curr_node = head[node];
-    Int next_node = -1;
-
-    while (curr_node != -1) {
-      next_node = next[curr_node];
-      next[curr_node] = prev_node;
-      prev_node = curr_node;
-      curr_node = next_node;
-    }
-
-    head[node] = prev_node;
-  }
-}
-
 void dfsPostorder(Int node, Int& start, std::vector<Int>& head,
                   const std::vector<Int>& next, std::vector<Int>& order) {
   // Perform depth first search starting from root node and order the nodes

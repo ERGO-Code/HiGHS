@@ -18,9 +18,8 @@ HybridSolveHandler::HybridSolveHandler(
     : SolveHandler(S, sn_columns, data, options),
       swaps_{swaps},
       any_swaps_{any_swap},
-      pivot_2x2_{pivot_2x2} {
-  childrenLinkedList(S_.schedule().task_parent, first_child_, next_child_);
-
+      pivot_2x2_{pivot_2x2},
+      children_{getChildren(S_.schedule().task_parent)} {
   bool need_parallel_work =
       options_.parallel_backward || options_.parallel_forward;
   bool need_serial_work =
@@ -207,10 +206,8 @@ void HybridSolveHandler::processForwardSn(Int sn, double* x,
 void HybridSolveHandler::processForwardTask(Int task, double* x) const {
   // wait for children to complete
   highs::parallel::TaskGroup tg;
-  Int child = first_child_[task];
-  while (child != -1) {
+  for (Int child : children_.list(task)) {
     tg.spawn([=, &x]() { processForwardTask(child, x); });
-    child = next_child_[child];
   }
   tg.taskWait();
 
@@ -221,8 +218,7 @@ void HybridSolveHandler::processForwardTask(Int task, double* x) const {
   Int end_col_in_task = S_.snStart(lead_sn + 1);
 
   // assembel contributions of children
-  child = first_child_[task];
-  while (child != -1) {
+  for (Int child : children_.list(task)) {
     for (Int i = 0; i < static_cast<Int>(task_rows_[child].size()); ++i) {
       if (task_rows_[child][i] < end_col_in_task)
         x[task_rows_[child][i]] -= task_vals_[child][i];
@@ -231,7 +227,6 @@ void HybridSolveHandler::processForwardTask(Int task, double* x) const {
         task_vals_[task].push_back(task_vals_[child][i]);
       }
     }
-    child = next_child_[child];
   }
 
   for (Int sn : S_.schedule().sn_per_task[task]) {
@@ -401,10 +396,8 @@ void HybridSolveHandler::processBackwardTask(Int task, double* x) const {
 
   // wait for children to complete
   highs::parallel::TaskGroup tg;
-  Int child = first_child_[task];
-  while (child != -1) {
+  for (Int child : children_.list(task)) {
     tg.spawn([=, &x]() { processBackwardTask(child, x); });
-    child = next_child_[child];
   }
   tg.taskWait();
 }

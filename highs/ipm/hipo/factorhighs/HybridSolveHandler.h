@@ -2,6 +2,7 @@
 #define FACTORHIGHS_HYBRID_SOLVE_HANDLER_H
 
 #include "SolveHandler.h"
+#include "folding/CollectionLinkedLists.h"
 
 namespace hipo {
 
@@ -13,7 +14,7 @@ class HybridSolveHandler : public SolveHandler {
   mutable std::vector<std::vector<double>> parallel_gemv_workspace_;
   mutable std::vector<double> serial_gemv_workspace_;
 
-  std::vector<Int> first_child_, next_child_;
+  const highs::folding::LinkedLists children_;
   mutable std::vector<std::vector<Int>> task_rows_;
   mutable std::vector<std::vector<double>> task_vals_;
 
