@@ -3501,7 +3501,7 @@ HighsStatus Highs::getColByName(const std::string& name, HighsInt& col) {
   std::string from_method = "Highs::getColByName";
   const bool is_column = true;
   return getIndexFromName(options_.log_options, from_method, is_column, name,
-                          lp.col_hash_.name2index, col, lp.col_names_);
+                          lp.col_hash_, col, lp.col_names_);
 }
 
 HighsStatus Highs::getColIntegrality(const HighsInt col,
@@ -3589,7 +3589,7 @@ HighsStatus Highs::getRowByName(const std::string& name, HighsInt& row) {
   std::string from_method = "Highs::getRowByName";
   const bool is_column = false;
   return getIndexFromName(options_.log_options, from_method, is_column, name,
-                          lp.row_hash_.name2index, row, lp.row_names_);
+                          lp.row_hash_, row, lp.row_names_);
 }
 
 HighsStatus Highs::getCoeff(const HighsInt row, const HighsInt col,

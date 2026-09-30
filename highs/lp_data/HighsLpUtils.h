@@ -33,7 +33,7 @@ void writeBasisFile(FILE*& file, const HighsOptions& options, const HighsLp& lp,
 HighsStatus getIndexFromName(
     const HighsLogOptions& log_options, std::string& from_method,
     const bool is_column, const std::string& name,
-    const std::unordered_map<std::string, int>& name2index, HighsInt& index,
+    HighsNameHash& name_hash, HighsInt& index,
     const std::vector<std::string>& names);
 
 HighsStatus readBasisFile(const HighsLogOptions& log_options, HighsLp& lp,
