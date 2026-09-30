@@ -1,18 +1,14 @@
-#ifndef HIGHS_COLLECTION_LINKED_LISTS_H
-#define HIGHS_COLLECTION_LINKED_LISTS_H
+#ifndef HIGHS_LINKED_LISTS_H
+#define HIGHS_LINKED_LISTS_H
 
 #include <vector>
 
 #include "util/HighsType.h"
 
-namespace highs {
-
-namespace folding {
-
 // Collection of linked lists.
 // See highs/ipm/basiclu/lu_list.h for an explanation.
 
-class LinkedLists {
+class HighsLinkedLists {
   HighsInt n_elem_{};
   HighsInt n_lists_{};
 
@@ -43,11 +39,11 @@ class LinkedLists {
   //
   template <bool reverse>
   struct List {
-    const LinkedLists* owner;
+    const HighsLinkedLists* owner;
     const HighsInt list;
 
     struct Iterator {
-      const LinkedLists* owner;
+      const HighsLinkedLists* owner;
       HighsInt current;
 
       HighsInt operator*() const { return current; }
@@ -71,9 +67,5 @@ class LinkedLists {
   List<false> list(HighsInt l) const { return List<false>{this, l}; }
   List<true> listReverse(HighsInt l) const { return List<true>{this, l}; }
 };
-
-}  // namespace folding
-
-}  // namespace highs
 
 #endif

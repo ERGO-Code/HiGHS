@@ -7,9 +7,9 @@
 #include <string>
 #include <vector>
 
-#include "folding/CollectionLinkedLists.h"
 #include "ipm/hipo/auxiliary/IntConfig.h"
 #include "parallel/HighsParallel.h"
+#include "util/HighsLinkedLists.h"
 
 namespace hipo {
 
@@ -28,7 +28,7 @@ void permuteSym(const std::vector<Int>& iperm, std::vector<Int>& ptr,
                 std::vector<Int>& rows, std::vector<double>& val, bool lower);
 void childrenLinkedList(const std::vector<Int>& parent, std::vector<Int>& head,
                         std::vector<Int>& next);
-highs::folding::LinkedLists getChildren(const std::vector<Int>& parent);
+HighsLinkedLists getChildren(const std::vector<Int>& parent);
 void dfsPostorder(Int node, Int& start, std::vector<Int>& head,
                   const std::vector<Int>& next, std::vector<Int>& order);
 void processEdge(Int j, Int i, const std::vector<Int>& first,

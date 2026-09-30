@@ -346,7 +346,6 @@ set(hipo_util_headers
 set_source_files_properties (io/filereaderlp/reader.cpp PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)
 
 set(highs_sources
-    folding/CollectionLinkedLists.cpp
     folding/ColourRefinement.cpp
     folding/DoubleQuantizer.cpp
     folding/Fold.cpp
@@ -460,6 +459,7 @@ set(highs_sources
     util/HighsDynamicLibrary.cpp
     util/HighsHash.cpp
     util/HighsLinearSumBounds.cpp
+    util/HighsLinkedLists.cpp
     util/HighsMatrixPic.cpp
     util/HighsMatrixUtils.cpp
     util/HighsSort.cpp
@@ -476,7 +476,6 @@ set(highs_headers
     ../extern/pdqsort/pdqsort.h
     ../extern/zstr/strict_fstream.hpp
     ../extern/zstr/zstr.hpp
-    folding/CollectionLinkedLists.h
     folding/ColourRefinement.h
     folding/DoubleQuantizer.h
     folding/Fold.h
@@ -635,6 +634,7 @@ set(highs_headers
     util/HighsType.h
     util/HighsIntegers.h
     util/HighsLinearSumBounds.h
+    util/HighsLinkedLists.h
     util/HighsMatrixPic.h
     util/HighsMatrixSlice.h
     util/HighsMatrixUtils.h

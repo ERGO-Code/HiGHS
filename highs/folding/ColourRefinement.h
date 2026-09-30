@@ -1,8 +1,8 @@
 #ifndef HIGHS_COLOUR_REFINEMENT_H
 #define HIGHS_COLOUR_REFINEMENT_H
 
-#include "CollectionLinkedLists.h"
 #include "lp_data/HighsLp.h"
+#include "util/HighsLinkedLists.h"
 
 namespace highs {
 
@@ -22,8 +22,8 @@ class ColourRefinement {
 
   std::vector<HighsInt> colours_split_;
 
-  LinkedLists colour_classes_;
-  LinkedLists colour_classes_touched_;
+  HighsLinkedLists colour_classes_;
+  HighsLinkedLists colour_classes_touched_;
 
   HighsInt latest_colour_;
   HighsInt refining_colour_;

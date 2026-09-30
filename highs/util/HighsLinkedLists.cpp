@@ -1,13 +1,9 @@
-#include "CollectionLinkedLists.h"
+#include "HighsLinkedLists.h"
 
 #include <cassert>
 #include <cstdio>
 
-namespace highs {
-
-namespace folding {
-
-void LinkedLists::init(HighsInt n_elem, HighsInt n_lists) {
+void HighsLinkedLists::init(HighsInt n_elem, HighsInt n_lists) {
   n_elem_ = n_elem;
   n_lists_ = n_lists;
   forward_.resize(n_elem + n_lists);
@@ -19,13 +15,13 @@ void LinkedLists::init(HighsInt n_elem, HighsInt n_lists) {
   }
 }
 
-void LinkedLists::clear(HighsInt list) {
+void HighsLinkedLists::clear(HighsInt list) {
   forward_[n_elem_ + list] = n_elem_ + list;
   backward_[n_elem_ + list] = n_elem_ + list;
   length_[list] = 0;
 }
 
-void LinkedLists::append(HighsInt elem, HighsInt list) {
+void HighsLinkedLists::append(HighsInt elem, HighsInt list) {
   const HighsInt temp = backward_[n_elem_ + list];
   backward_[n_elem_ + list] = elem;
   backward_[elem] = temp;
@@ -34,14 +30,10 @@ void LinkedLists::append(HighsInt elem, HighsInt list) {
   length_[list]++;
 }
 
-void LinkedLists::remove(HighsInt elem, HighsInt list) {
+void HighsLinkedLists::remove(HighsInt elem, HighsInt list) {
   forward_[backward_[elem]] = forward_[elem];
   backward_[forward_[elem]] = backward_[elem];
   forward_[elem] = elem;
   backward_[elem] = elem;
   length_[list]--;
 }
-
-}  // namespace folding
-
-}  // namespace highs

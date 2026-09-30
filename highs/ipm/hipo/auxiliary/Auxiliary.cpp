@@ -180,8 +180,8 @@ void childrenLinkedList(const std::vector<Int>& parent, std::vector<Int>& head,
   }
 }
 
-highs::folding::LinkedLists getChildren(const std::vector<Int>& parent) {
-  highs::folding::LinkedLists children;
+HighsLinkedLists getChildren(const std::vector<Int>& parent) {
+  HighsLinkedLists children;
   const Int n = parent.size();
   children.init(n, n);
 

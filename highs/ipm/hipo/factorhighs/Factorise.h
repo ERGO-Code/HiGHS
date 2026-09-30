@@ -25,7 +25,7 @@ class Factorise {
   const Symbolic& S_;
 
   // linked lists of children per supernode
-  highs::folding::LinkedLists children_;
+  HighsLinkedLists children_;
 
   // generated elements, aka Schur complements.
   std::vector<std::vector<double>> schur_contribution_{};
