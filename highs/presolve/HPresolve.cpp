@@ -6585,7 +6585,7 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
       return Result::kDualInfeasible;
     // Check that time and reduction limits have not been reached
     //
-    // NB Setting presolve_reduciton_limit = 0 ensures that presolve
+    // NB Setting presolve_reduction_limit = 0 ensures that presolve
     // returns after initial sweep
     HPRESOLVE_CHECKED_CALL(checkLimits(postsolve_stack));
   }

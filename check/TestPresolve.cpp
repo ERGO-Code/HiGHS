@@ -1450,8 +1450,6 @@ TEST_CASE("test-weakly-dominated-column-primal-dual-postsolve",
 
   if (!reduces_to_empty) {
     printf("\n====================\nPresolved LP\n====================\n");
-    // Set this so that pure presolve runs the same as presolve before
-    // IPM without crossover
 
     h.presolve();
 
