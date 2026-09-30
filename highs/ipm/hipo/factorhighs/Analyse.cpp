@@ -389,9 +389,7 @@ double Analyse::doRelaxSnMaxNz(double& flops, double& spops,
     fake_nz_[i] = 0;
   }
 
-  // build linked lists of children
-  std::vector<Int> first_child, next_child;
-  childrenLinkedList(sn_parent_, first_child, next_child);
+  highs::folding::LinkedLists children = getChildren(sn_parent_);
 
   // =================================================
   // Merge supernodes
@@ -404,14 +402,12 @@ double Analyse::doRelaxSnMaxNz(double& flops, double& spops,
     // more child to merge with
 
     while (true) {
-      Int child = first_child[sn];
-
       // info for first criterion
       Int64 nz_fakenz = int64_limit;
       Int size_fakenz = 0;
       Int child_fakenz = -1;
 
-      while (child != -1) {
+      for (Int child : children.list(sn)) {
         // how many zero rows would become nonzero
         const Int rows_filled =
             sn_size[sn] + clique_size[sn] - clique_size[child];
@@ -430,8 +426,6 @@ double Analyse::doRelaxSnMaxNz(double& flops, double& spops,
           size_fakenz = sn_size[child];
           child_fakenz = child;
         }
-
-        child = next_child[child];
       }
 
       if (nz_fakenz <= max_artificial_nz) {
@@ -448,17 +442,7 @@ double Analyse::doRelaxSnMaxNz(double& flops, double& spops,
         merged_into_[child_fakenz] = sn;
 
         // remove child from linked list of children
-        child = first_child[sn];
-        if (child == child_fakenz) {
-          // child_smallest is the first child
-          first_child[sn] = next_child[child_fakenz];
-        } else {
-          while (next_child[child] != child_fakenz) {
-            child = next_child[child];
-          }
-          // now child is the previous child of child_smallest
-          next_child[child] = next_child[child_fakenz];
-        }
+        children.remove(child_fakenz, sn);
 
       } else {
         // no more children can be merged with parent
