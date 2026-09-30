@@ -3222,6 +3222,100 @@ void checkScreenFlagsMatchHostReference() {
   }
 }
 
+// Rows longer than kCertificateSegmentLength are split across warps. The
+// segment sums of +1024 and -1024 cancel only if every segment is added exactly
+// once, so a dropped or repeated segment flips the row test.
+void checkScreenLongRowsMatchHostReference() {
+  const HighsInt length = hipdlp::backend::cuda::certificate::kSegmentLength;
+  struct Case {
+    const char* name;
+    std::vector<std::vector<std::pair<HighsInt, double>>> rows;
+    HighsInt cols;
+    bool ray_possible;
+  };
+  const auto balanced_row = [&](const HighsInt total, const double tail_sign) {
+    std::vector<std::pair<HighsInt, double>> row;
+    for (HighsInt col = 0; col < total; ++col) {
+      double value = 1.0;
+      if (col >= length && col < 2 * length) value = -1.0;
+      if (col >= 2 * length) value = tail_sign;
+      row.push_back({col, value});
+    }
+    return row;
+  };
+  std::vector<Case> cases;
+  // Two full segments that cancel.
+  cases.push_back({"two-segments-cancel", {balanced_row(2 * length, 0.0)},
+                   2 * length, true});
+  // A short third segment breaks the cancellation.
+  cases.push_back({"partial-tail-breaks", {balanced_row(2 * length + 452, 1.0)},
+                   2 * length + 452, false});
+  {
+    // Two long rows around a short one. The last row's short tail alternates
+    // and sums to zero; flipping its final sign puts an error of -2 in that
+    // last segment alone.
+    const HighsInt cols = 3 * length;
+    std::vector<std::pair<HighsInt, double>> shorter = {{0, 1.0}, {1, -1.0}};
+    std::vector<std::pair<HighsInt, double>> tail =
+        balanced_row(2 * length + 6, 0.0);
+    for (auto& entry : tail)
+      if (entry.first >= 2 * length) entry.second = entry.first % 2 ? 1.0 : -1.0;
+    cases.push_back({"tail-balanced",
+                     {balanced_row(2 * length, 0.0), shorter, tail}, cols, true});
+    tail.back().second = -tail.back().second;
+    cases.push_back({"tail-only-error",
+                     {balanced_row(2 * length, 0.0), shorter, tail}, cols,
+                     false});
+  }
+  for (const Case& test : cases) {
+    INFO(test.name);
+    const HighsInt rows = static_cast<HighsInt>(test.rows.size());
+    std::vector<std::vector<std::pair<HighsInt, double>>> by_col(test.cols);
+    for (HighsInt row = 0; row < rows; ++row)
+      for (const auto& entry : test.rows[row])
+        by_col[entry.first].push_back({row, entry.second});
+    std::vector<HighsInt> starts = {0};
+    std::vector<HighsInt> indices;
+    std::vector<double> values;
+    for (const auto& column : by_col) {
+      for (const auto& entry : column) {
+        indices.push_back(entry.first);
+        values.push_back(entry.second);
+      }
+      starts.push_back(static_cast<HighsInt>(indices.size()));
+    }
+    HighsLp lp = makeEqualityLp(rows, test.cols, starts, indices, values);
+    lp.col_lower_.assign(test.cols, 0.0);
+    lp.col_cost_.assign(test.cols, 0.0);
+    lp.col_cost_[0] = -1.0;
+    const std::vector<double> primal(test.cols, 1.0);
+    const std::vector<double> dual(rows, 1.0);
+    const std::vector<double> aty(test.cols, 1.0);
+    const double tolerance = 1e-4;
+    ResidentCheckFixture fixture(hipdlp::backend::Kind::kCuda, lp);
+    fixture.prepare(lp);
+    const auto screen =
+        hostCertificateScreen(fixture.problem, lp, primal, dual, aty, tolerance);
+    CHECK(screen.primal_ray_possible == test.ray_possible);
+    fixture.input.certificate_tolerance = tolerance;
+    REQUIRE(fixture.backend->uploadVector(primal, fixture.primal).ok());
+    REQUIRE(fixture.backend->uploadVector(dual, fixture.dual).ok());
+    REQUIRE(fixture.backend->uploadVector(aty, fixture.aty).ok());
+    REQUIRE(fixture.backend->multiply(fixture.bound, fixture.primal, fixture.ax)
+                .ok());
+    hipdlp::backend::CheckResult result;
+    REQUIRE(fixture.backend->evaluateCheck(fixture.problem, fixture.workspace,
+                                           fixture.input, result).ok());
+    CHECK(result.primal_ray_possible == screen.primal_ray_possible);
+    CHECK(result.farkas_possible == screen.farkas_possible);
+  }
+}
+
+TEST_CASE("hi-pdlp-cuda-check-packet-screen-long-rows-match-host-reference",
+          "[pdlp][hipdlp][phase8][backend][check-packet][cuda]") {
+  checkScreenLongRowsMatchHostReference();
+}
+
 TEST_CASE("hi-pdlp-cuda-check-packet-screen-flags-match-host-reference",
           "[pdlp][hipdlp][phase8][backend][check-packet][cuda]") {
   checkScreenFlagsMatchHostReference();

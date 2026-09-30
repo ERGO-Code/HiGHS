@@ -826,6 +826,12 @@ struct CudaCertificateStorage {
   DeviceBuffer<certificate::Interval> dual;
   DeviceBuffer<certificate::Interval> column;
   DeviceBuffer<certificate::Interval> activity;
+  DeviceBuffer<HighsInt> segment_row;
+  DeviceBuffer<HighsInt> segment_begin;
+  DeviceBuffer<certificate::Interval> segment_partial;
+  DeviceBuffer<HighsInt> long_row;
+  DeviceBuffer<HighsInt> long_first;
+  DeviceBuffer<HighsInt> long_count;
   DeviceBuffer<CertificateNormPartial> norm_partials;
   DeviceBuffer<CertificateState> state;
   DeviceBuffer<certificate::ScreenPartial> partials;
@@ -1116,6 +1122,52 @@ api::Error prepareCertificateStorage(const model::Problem& problem,
   error = storage.activity.allocate(
       lp.num_row_, "allocating certificate row activity intervals");
   if (!error.ok()) return error;
+  // Row segments: every row gets at least one, and a row longer than
+  // kCertificateSegmentLength is split so several warps share it.
+  std::vector<HighsInt> segment_row;
+  std::vector<HighsInt> segment_begin;
+  std::vector<HighsInt> long_row;
+  std::vector<HighsInt> long_first;
+  std::vector<HighsInt> long_count;
+  for (HighsInt row = 0; row < lp.num_row_; ++row) {
+    const HighsInt start = original.starts[row];
+    const HighsInt length = original.starts[row + 1] - start;
+    const HighsInt parts =
+        length <= kCertificateSegmentLength
+            ? 1 : 1 + (length - 1) / kCertificateSegmentLength;
+    if (parts > 1) {
+      long_row.push_back(row);
+      long_first.push_back(static_cast<HighsInt>(segment_row.size()));
+      long_count.push_back(parts);
+    }
+    for (HighsInt part = 0; part < parts; ++part) {
+      segment_row.push_back(row);
+      segment_begin.push_back(start + part * kCertificateSegmentLength);
+    }
+  }
+  error = allocateAndUpload(segment_row, storage.segment_row, stream,
+                            "allocating certificate segment rows",
+                            "certificate segment-row upload");
+  if (!error.ok()) return error;
+  error = allocateAndUpload(segment_begin, storage.segment_begin, stream,
+                            "allocating certificate segment starts",
+                            "certificate segment-start upload");
+  if (!error.ok()) return error;
+  error = allocateAndUpload(long_row, storage.long_row, stream,
+                            "allocating certificate long rows",
+                            "certificate long-row upload");
+  if (!error.ok()) return error;
+  error = allocateAndUpload(long_first, storage.long_first, stream,
+                            "allocating certificate long-row starts",
+                            "certificate long-row-start upload");
+  if (!error.ok()) return error;
+  error = allocateAndUpload(long_count, storage.long_count, stream,
+                            "allocating certificate long-row counts",
+                            "certificate long-row-count upload");
+  if (!error.ok()) return error;
+  error = storage.segment_partial.allocate(
+      segment_row.size(), "allocating certificate segment partial sums");
+  if (!error.ok()) return error;
   const std::size_t count = checkPartialCount(lp.num_row_, lp.num_col_);
   error = storage.norm_partials.allocate(
       count, "allocating certificate norm partials");
@@ -1139,6 +1191,14 @@ api::Error prepareCertificateStorage(const model::Problem& problem,
   storage.data.row_sign = storage.row_sign.get();
   storage.data.row_scale = check.row_scale.get();
   storage.data.col_scale = check.col_scale.get();
+  storage.data.num_segments = static_cast<HighsInt>(segment_row.size());
+  storage.data.segment_row = storage.segment_row.get();
+  storage.data.segment_begin = storage.segment_begin.get();
+  storage.data.segment_partial = storage.segment_partial.get();
+  storage.data.num_long_rows = static_cast<HighsInt>(long_row.size());
+  storage.data.long_row = storage.long_row.get();
+  storage.data.long_first = storage.long_first.get();
+  storage.data.long_count = storage.long_count.get();
   storage.data.sense_sign = lp.sense_ == ObjSense::kMinimize ? 1.0 : -1.0;
   storage.data.column_bounds_straddle_zero = true;
   for (HighsInt col = 0; col < lp.num_col_; ++col)

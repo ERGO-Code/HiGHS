@@ -779,9 +779,10 @@ __global__ void certificateNormalizeKernel(
   if (threadIdx.x == 0) partials[blockIdx.x] = shared[0];
 }
 
-// One warp per row: the lanes stride over the row and their outward-rounded
-// partial sums are combined with outward-rounded additions, which encloses the
-// activity for any summation order.
+// One warp per row segment: the lanes stride over the segment and their
+// outward-rounded partial sums are combined with outward-rounded additions,
+// which encloses the activity for any summation order. Splitting a long row
+// into segments, and adding the segment sums afterwards, is one more order.
 __global__ void certificateRowActivityKernel(
     const DeviceCertificateProblem problem, const CertificateState* state,
     const certificate::Interval* primal, certificate::Interval* activity) {
@@ -790,12 +791,16 @@ __global__ void certificateRowActivityKernel(
   const HighsInt lane = static_cast<HighsInt>(threadIdx.x) % kWarpSize;
   const HighsInt warps =
       static_cast<HighsInt>(gridDim.x) * (blockDim.x / kWarpSize);
-  for (HighsInt row = (static_cast<HighsInt>(blockIdx.x) * blockDim.x +
-                       threadIdx.x) / kWarpSize;
-       row < problem.num_rows; row += warps) {
+  for (HighsInt segment = (static_cast<HighsInt>(blockIdx.x) * blockDim.x +
+                           threadIdx.x) / kWarpSize;
+       segment < problem.num_segments; segment += warps) {
+    const HighsInt row = problem.segment_row[segment];
+    const HighsInt begin = problem.segment_begin[segment];
+    const HighsInt row_end = problem.row_starts[row + 1];
+    const HighsInt end = row_end - begin < kCertificateSegmentLength
+                             ? row_end : begin + kCertificateSegmentLength;
     Interval sum = {0.0, 0.0};
-    for (HighsInt entry = problem.row_starts[row] + lane;
-         entry < problem.row_starts[row + 1]; entry += kWarpSize)
+    for (HighsInt entry = begin + lane; entry < end; entry += kWarpSize)
       sum = add(sum, multiply(primal[problem.column_indices[entry]],
                               problem.matrix_values[entry]));
     for (int offset = kWarpSize / 2; offset > 0; offset /= 2) {
@@ -804,7 +809,29 @@ __global__ void certificateRowActivityKernel(
           __shfl_down_sync(0xffffffffu, sum.upper, offset)};
       sum = add(sum, other);
     }
-    if (lane == 0) activity[row] = sum;
+    if (lane == 0) {
+      if (row_end - problem.row_starts[row] <= kCertificateSegmentLength)
+        activity[row] = sum;
+      else
+        problem.segment_partial[segment] = sum;
+    }
+  }
+}
+
+// Adds the segment sums of each row that was split.
+__global__ void certificateLongRowKernel(
+    const DeviceCertificateProblem problem, const CertificateState* state,
+    certificate::Interval* activity) {
+  using namespace certificate;
+  if (state->unsafe || state->rows_skipped) return;
+  const HighsInt stride = static_cast<HighsInt>(blockDim.x) * gridDim.x;
+  for (HighsInt index = static_cast<HighsInt>(blockIdx.x) * blockDim.x + threadIdx.x;
+       index < problem.num_long_rows; index += stride) {
+    Interval sum = {0.0, 0.0};
+    const HighsInt first = problem.long_first[index];
+    for (HighsInt part = 0; part < problem.long_count[index]; ++part)
+      sum = add(sum, problem.segment_partial[first + part]);
+    activity[problem.long_row[index]] = sum;
   }
 }
 
@@ -978,6 +1005,7 @@ cudaError_t preloadKernels() {
       reinterpret_cast<const void*>(certificateNormKernel),
       reinterpret_cast<const void*>(certificateNormalizeKernel),
       reinterpret_cast<const void*>(certificateRowActivityKernel),
+      reinterpret_cast<const void*>(certificateLongRowKernel),
       reinterpret_cast<const void*>(certificateConditionsKernel),
       reinterpret_cast<const void*>(certificateRaySkipKernel),
       reinterpret_cast<const void*>(certificateRowViolationKernel),
@@ -1055,9 +1083,10 @@ cudaError_t launchCertificateScreen(
                                                          partials, state);
   status = cudaPeekAtLastError();
   if (status != cudaSuccess) return status;
-  const HighsInt rows_per_block = kBlockSize / kWarpSize;
+  const HighsInt segments_per_block = kBlockSize / kWarpSize;
   const HighsInt activity_blocks =
-      problem.num_rows == 0 ? 0 : 1 + (problem.num_rows - 1) / rows_per_block;
+      problem.num_segments == 0
+          ? 0 : 1 + (problem.num_segments - 1) / segments_per_block;
   if (activity_blocks > 0) {
     certificateRowActivityKernel<<<
         static_cast<int>(activity_blocks < kMaximumBlocks ? activity_blocks
@@ -1065,6 +1094,12 @@ cudaError_t launchCertificateScreen(
         kBlockSize, 0, stream>>>(problem, state, primal, activity);
     status = cudaPeekAtLastError();
     if (status != cudaSuccess) return status;
+    if (problem.num_long_rows > 0) {
+      certificateLongRowKernel<<<blockCount(problem.num_long_rows), kBlockSize,
+                                 0, stream>>>(problem, state, activity);
+      status = cudaPeekAtLastError();
+      if (status != cudaSuccess) return status;
+    }
     certificateRowViolationKernel<<<blocks, kBlockSize, 0, stream>>>(
         problem, state, activity, state);
     status = cudaPeekAtLastError();

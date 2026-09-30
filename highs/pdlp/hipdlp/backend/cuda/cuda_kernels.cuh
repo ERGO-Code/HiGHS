@@ -47,6 +47,10 @@ struct DeviceCheckInput {
   double gap_tolerance;
 };
 
+// A row longer than this is split into segments handled by separate warps, so
+// one huge row cannot serialize the whole certificate row-activity pass.
+const HighsInt kCertificateSegmentLength = certificate::kSegmentLength;
+
 struct DeviceCertificateProblem {
   HighsInt num_rows;
   HighsInt num_cols;
@@ -62,6 +66,17 @@ struct DeviceCertificateProblem {
   const double* row_sign;
   const double* row_scale;
   const double* col_scale;
+  // Every row owns at least one segment of at most kCertificateSegmentLength
+  // entries; a row with several segments has its partial sums combined by
+  // certificateLongRowKernel.
+  HighsInt num_segments;
+  const HighsInt* segment_row;
+  const HighsInt* segment_begin;
+  certificate::Interval* segment_partial;
+  HighsInt num_long_rows;
+  const HighsInt* long_row;
+  const HighsInt* long_first;
+  const HighsInt* long_count;
   double sense_sign;
   bool column_bounds_straddle_zero;
 };

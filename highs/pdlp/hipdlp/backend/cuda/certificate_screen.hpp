@@ -32,6 +32,9 @@ struct SumBounds {
   double absolute_sum;
 };
 
+// Rows longer than this are split across warps in the row-activity pass.
+const int kSegmentLength = 1024;
+
 struct ScreenPartial {
   SumBounds objective;
   SumBounds row_support;
