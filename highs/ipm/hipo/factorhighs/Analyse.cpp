@@ -316,9 +316,7 @@ void Analyse::relaxSnNetOps(double& flops, double& spops) {
     clique_size[i] = col_count_[sn_start_[i]] - sn_size[i];
   }
 
-  // build linked lists of children
-  std::vector<Int> first_child, next_child;
-  childrenLinkedList(sn_parent_, first_child, next_child);
+  highs::folding::LinkedLists childrenLists = getChildren(sn_parent_);
 
   // =================================================
   // Merge supernodes
@@ -329,10 +327,8 @@ void Analyse::relaxSnNetOps(double& flops, double& spops) {
   for (Int sn = 0; sn < sn_count_; ++sn) {
     // sort children by increasing size
     std::vector<Int> children;
-    Int child = first_child[sn];
-    while (child != -1) {
+    for (Int child : childrenLists.list(sn)) {
       children.push_back(child);
-      child = next_child[child];
     }
     std::sort(children.begin(), children.end(),
               [&](Int a, Int b) { return sn_size[a] < sn_size[b]; });
@@ -925,9 +921,7 @@ void Analyse::computeCriticalPath() {
 
   std::vector<double> critical_ops(sn_count_);
 
-  // linked lists of children
-  std::vector<Int> head, next;
-  childrenLinkedList(sn_parent_, head, next);
+  highs::folding::LinkedLists children = getChildren(sn_parent_);
 
   for (Int sn = 0; sn < sn_count_; ++sn) {
     // supernode size
@@ -941,15 +935,13 @@ void Analyse::computeCriticalPath() {
 
   for (Int sn = 0; sn < sn_count_; ++sn) {
     // leaf nodes
-    if (head[sn] == -1) continue;
+    if (children.list(sn).empty()) continue;
 
     double max_ops{};
-    Int child = head[sn];
-    while (child != -1) {
+    for (Int child : children.list(sn)) {
       // critical_ops of this supernode is max over children of
       // (ops_of_this_sn + critical_ops_of_child)
       max_ops = std::max(max_ops, critical_ops[sn] + critical_ops[child]);
-      child = next[child];
     }
     critical_ops[sn] = max_ops;
   }
@@ -966,9 +958,8 @@ void Analyse::computeCriticalPathSolve() {
 
   std::vector<double> critical_ops(schedule_solve_.count());
 
-  // linked lists of children
-  std::vector<Int> head, next;
-  childrenLinkedList(schedule_solve_.task_parent, head, next);
+  highs::folding::LinkedLists children =
+      getChildren(schedule_solve_.task_parent);
 
   ops_solve_ = 0.0;
   critical_ops_solve_ = 0.0;
@@ -980,15 +971,13 @@ void Analyse::computeCriticalPathSolve() {
 
   for (Int task = 0; task < schedule_solve_.count(); ++task) {
     // leaf task
-    if (head[task] == -1) continue;
+    if (children.list(task).empty()) continue;
 
     double max_ops{};
-    Int child = head[task];
-    while (child != -1) {
+    for (Int child : children.list(task)) {
       // critical_ops of this supernode is max over children of
       // (ops_of_this_task + critical_ops_of_child)
       max_ops = std::max(max_ops, critical_ops[task] + critical_ops[child]);
-      child = next[child];
     }
     critical_ops[task] = max_ops;
   }
@@ -1222,14 +1211,12 @@ void Analyse::computeStackSize() {
     total_frontal += frontal_entries;
   }
 
-  // linked lists of children
-  std::vector<Int> head, next;
-  childrenLinkedList(sn_parent_, head, next);
+  highs::folding::LinkedLists children = getChildren(sn_parent_);
 
   // go through the supernodes
   for (Int sn = 0; sn < sn_count_; ++sn) {
     // leaf node
-    if (head[sn] == -1) {
+    if (children.list(sn).empty()) {
       stack_subtrees[sn] = clique_entries[sn];
       continue;
     }
@@ -1242,14 +1229,11 @@ void Analyse::computeStackSize() {
     Int64 clique_partial_entries{};
     Int64 storage_1{};
 
-    Int child = head[sn];
-    while (child != -1) {
+    for (Int child : children.list(sn)) {
       Int64 current = stack_subtrees[child] + clique_partial_entries;
 
       clique_partial_entries += clique_entries[child];
       storage_1 = std::max(storage_1, current);
-
-      child = next[child];
     }
 
     Int64 storage_2 = clique_partial_entries + clique_entries[sn];
@@ -1277,8 +1261,7 @@ void Analyse::computeTreeScheduleSolve() {
     total_ops += this_sn_dense_ops;
   }
 
-  std::vector<Int> head, next;
-  childrenLinkedList(sn_parent_, head, next);
+  highs::folding::LinkedLists children = getChildren(sn_parent_);
 
   const double task_ops_thresh =
       std::max(total_ops * kLargeTaskRelativeThresh, kLargeTaskAbsoluteThres);
@@ -1294,10 +1277,8 @@ void Analyse::computeTreeScheduleSolve() {
   // supernode will continue it.
   for (Int sn = 0; sn < sn_count_; ++sn) {
     double this_sn_task_ops = sn_ops[sn];
-    Int child = head[sn];
-    while (child != -1) {
+    for (Int child : children.list(sn)) {
       this_sn_task_ops += child_ops[child];
-      child = next[child];
     }
 
     const bool task_large = this_sn_task_ops > task_ops_thresh;
@@ -1329,15 +1310,13 @@ void Analyse::computeTreeScheduleSolve() {
   schedule_solve_.task_parent.assign(task_count, -1);
   for (Int task = 0; task < task_count; ++task) {
     for (Int sn : schedule_solve_.sn_per_task[task]) {
-      Int child = head[sn];
-      while (child != -1) {
+      for (Int child : children.list(sn)) {
         const Int child_task = task_numbering[sets.getSet(child)];
         if (child_task != task) {
           assert(child_task < task);
           assert(schedule_solve_.task_parent[child_task] == -1);
           schedule_solve_.task_parent[child_task] = task;
         }
-        child = next[child];
       }
     }
   }
