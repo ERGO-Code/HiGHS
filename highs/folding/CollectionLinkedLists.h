@@ -30,10 +30,18 @@ class LinkedLists {
 
   const HighsInt& head(HighsInt list) const { return forward_[n_elem_ + list]; }
   const HighsInt& next(HighsInt elem) const { return forward_[elem]; }
+  const HighsInt& tail(HighsInt list) const {
+    return backward_[n_elem_ + list];
+  }
+  const HighsInt& prev(HighsInt elem) const { return backward_[elem]; }
 
   // Define iterator for range-based loop:
   //  for (HighsInt v : list(i))
   //
+  // and reverse:
+  //  for (HighsInt v : listReverse(i))
+  //
+  template <bool reverse>
   struct List {
     const LinkedLists* owner;
     const HighsInt list;
@@ -44,18 +52,21 @@ class LinkedLists {
 
       HighsInt operator*() const { return current; }
       Iterator& operator++() {
-        current = owner->next(current);
+        current = reverse ? owner->prev(current) : owner->next(current);
         return *this;
       }
       bool operator!=(const Iterator& o) const { return current != o.current; }
       bool operator==(const Iterator& o) const { return current == o.current; }
     };
 
-    Iterator begin() const { return {owner, owner->head(list)}; }
+    Iterator begin() const {
+      return {owner, reverse ? owner->tail(list) : owner->head(list)};
+    }
     Iterator end() const { return {owner, owner->n_elem_ + list}; }
   };
 
-  List list(HighsInt l) const { return {this, l}; }
+  List<false> list(HighsInt l) const { return List<false>{this, l}; }
+  List<true> listReverse(HighsInt l) const { return List<true>{this, l}; }
 };
 
 }  // namespace folding
