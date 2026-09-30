@@ -67,8 +67,8 @@ void ColourRefinement::computeColourDegrees() {
   hipo::Clock clock;
 
   for (HighsInt v : colour_classes_.list(refining_colour_)) {
-    for (HighsInt w : neighbours(v)) {
-      touchNeighbour(w);
+    for (Neighbour w : neighbours(v)) {
+      touchNeighbour(w.index);
     }
   }
 
