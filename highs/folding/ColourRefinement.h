@@ -34,11 +34,14 @@ class ColourRefinement {
     std::vector<HighsBool> in_stack;
 
     IteratableStack(HighsInt n) {
-      s.reserve(n);
+      s.resize(n);
       top = -1;
       in_stack.resize(n, 0);
     }
+    bool belong(HighsInt i) const { return in_stack[i]; }
+    bool empty() const { return top < 0; }
     void push(HighsInt i) {
+      assert(!in_stack[i]);
       s[++top] = i;
       in_stack[i] = 1;
     }
@@ -46,14 +49,15 @@ class ColourRefinement {
       if (!in_stack[i]) push(i);
     }
     HighsInt pop() {
+      assert(!empty());
       HighsInt elem = s[top--];
       in_stack[elem] = 0;
       return elem;
     }
-    bool belong(HighsInt i) const { return in_stack[i]; }
-    bool empty() const { return top < 0; }
-    std::vector<HighsInt>::const_iterator begin() { return s.begin(); }
-    std::vector<HighsInt>::const_iterator end() {
+
+    // iterators in reverse pop order
+    std::vector<HighsInt>::const_iterator begin() const { return s.begin(); }
+    std::vector<HighsInt>::const_iterator end() const {
       return s.begin() + (top + 1);
     }
   };
