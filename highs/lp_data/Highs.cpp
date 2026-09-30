@@ -786,10 +786,10 @@ HighsStatus Highs::passColName(const HighsInt col, const std::string& name) {
   HighsLp& lp = this->model_.lp_;
   const HighsInt num_col = lp.num_col_;
   if (col < 0 || col >= num_col) {
-    highsLogUser(
-        options_.log_options, HighsLogType::kError,
-        "Index %d for column name %s is outside the range [0, num_col = %d)\n",
-        int(col), name.c_str(), int(num_col));
+    highsLogUser(options_.log_options, HighsLogType::kError,
+                 "Index %d for column name \"%s\" is outside the range [0, "
+                 "num_col = %d)\n",
+                 int(col), name.c_str(), int(num_col));
     return HighsStatus::kError;
   }
   if (int(name.length()) <= 0) {
@@ -801,6 +801,11 @@ HighsStatus Highs::passColName(const HighsInt col, const std::string& name) {
   if (!lp.col_hash_.size()) lp.col_hash_.form(lp.col_names_);
   const bool is_duplicate =
       lp.col_hash_.updateFindsDuplicate(col, lp.col_names_[col], name);
+  if (is_duplicate)
+    highsLogUser(
+        options_.log_options, HighsLogType::kWarning,
+        "Name \"%s\" passed for column %d is a duplicate, but accepted\n",
+        name.c_str(), int(col));
   lp.col_names_[col] = name;
   assert(lp.col_hash_.ok(lp.col_names_));
   return is_duplicate ? HighsStatus::kWarning : HighsStatus::kOk;
@@ -812,7 +817,7 @@ HighsStatus Highs::passRowName(const HighsInt row, const std::string& name) {
   if (row < 0 || row >= num_row) {
     highsLogUser(
         options_.log_options, HighsLogType::kError,
-        "Index %d for row name %s is outside the range [0, num_row = %d)\n",
+        "Index %d for row name \"%s\" is outside the range [0, num_row = %d)\n",
         int(row), name.c_str(), int(num_row));
     return HighsStatus::kError;
   }
@@ -825,6 +830,10 @@ HighsStatus Highs::passRowName(const HighsInt row, const std::string& name) {
   if (!lp.row_hash_.size()) lp.row_hash_.form(lp.row_names_);
   const bool is_duplicate =
       lp.row_hash_.updateFindsDuplicate(row, lp.row_names_[row], name);
+  if (is_duplicate)
+    highsLogUser(options_.log_options, HighsLogType::kWarning,
+                 "Name \"%s\" passed for row %d is a duplicate, but accepted\n",
+                 name.c_str(), int(row));
   lp.row_names_[row] = name;
   assert(lp.row_hash_.ok(lp.row_names_));
   return is_duplicate ? HighsStatus::kWarning : HighsStatus::kOk;

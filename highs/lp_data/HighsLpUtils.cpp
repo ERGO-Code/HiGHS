@@ -2983,13 +2983,13 @@ HighsStatus getIndexFromName(const HighsLogOptions& log_options,
     auto search = name2index.find(name);
     if (search == name2index.end()) {
       highsLogUser(log_options, HighsLogType::kError,
-                   "%s: %s name %s is not found\n", from_method.c_str(),
+                   "%s: %s name \"%s\" is not found\n", from_method.c_str(),
                    is_column ? "column" : "row", name.c_str());
       return false;
     }
     if (search->second < 0) {
       highsLogUser(log_options, HighsLogType::kError,
-                   "%s: %s name %s is duplicated\n", from_method.c_str(),
+                   "%s: %s name \"%s\" is duplicated\n", from_method.c_str(),
                    is_column ? "column" : "row", name.c_str());
       return false;
     }
