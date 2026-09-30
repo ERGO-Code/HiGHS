@@ -129,9 +129,11 @@ struct HighsNameHash {
   size_t size() { return this->name2index.size(); }
   void form(const std::vector<std::string>& name);
   bool hasDuplicate(const std::vector<std::string>& name);
-  void addName(const std::string& name);
-  bool addNameFindsDuplicate(const std::string& name);
-  bool updateFindsDuplicate(const std::string& old_name,
+  void addName(const HighsInt index, const std::string& name);
+  bool addNameFindsDuplicate(const HighsInt index,
+			     const std::string& name);
+  bool updateFindsDuplicate(const HighsInt index,
+			    const std::string& old_name,
                             const std::string& new_name);
   bool ok(const std::vector<std::string>& name);
   void clear() { this->name2index.clear(); }

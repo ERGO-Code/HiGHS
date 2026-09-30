@@ -1627,9 +1627,9 @@ void appendColsToLpVectors(HighsLp& lp, const HighsInt num_new_col,
     lp.col_cost_[iCol] = colCost[new_col];
     lp.col_lower_[iCol] = colLower[new_col];
     lp.col_upper_[iCol] = colUpper[new_col];
-    // Cannot guarantee to create unique names, so name is blank
     if (have_names) {
-      //      if (lp.col_hash_.size()) lp.col_hash_.updateFindsDuplicate(iCol, lp.col_names_[iCol], "");
+      // Cannot guarantee to create unique names, so name is blank
+      lp.col_hash_.addName(iCol, "");
       lp.col_names_[iCol] = "";
     }
     if (have_integrality) lp.integrality_[iCol] = HighsVarType::kContinuous;
@@ -1651,8 +1651,11 @@ void appendRowsToLpVectors(HighsLp& lp, const HighsInt num_new_row,
     HighsInt iRow = lp.num_row_ + new_row;
     lp.row_lower_[iRow] = rowLower[new_row];
     lp.row_upper_[iRow] = rowUpper[new_row];
-    // Cannot guarantee to create unique names, so name is blank
-    if (have_names) lp.row_names_[iRow] = "";
+    if (have_names) {
+      // Cannot guarantee to create unique names, so name is blank
+      lp.row_hash_.addName(iRow, "");
+      lp.row_names_[iRow] = "";
+    }
   }
 }
 
@@ -2264,11 +2267,11 @@ HighsStatus readSolutionFile(const std::string& filename,
   }
   if (have_col_names) {
     // Ensure that the col name hash table has been formed
-    if (!lp.col_hash_.name2index.size()) lp.col_hash_.form(lp.col_names_);
+    if (!lp.col_hash_.size()) lp.col_hash_.form(lp.col_names_);
   }
   if (have_row_names) {
     // Ensure that the row name hash table has been formed
-    if (!lp.row_hash_.name2index.size()) lp.row_hash_.form(lp.row_names_);
+    if (!lp.row_hash_.size()) lp.row_hash_.form(lp.row_names_);
   }
   bool sparse = false;
   bool partial = false;
@@ -2435,7 +2438,7 @@ HighsStatus readSolutionFile(const std::string& filename,
   // next.
   HighsInt iRow;
   const bool num_row_ok = num_row == lp_num_row;
-  assert(!have_row_names || lp.row_hash_.name2index.size());
+  assert(!have_row_names || lp.row_hash_.size());
   is_col = false;
   assert(!is_col);
   for (HighsInt iX = 0; iX < num_row; iX++) {
@@ -2987,7 +2990,7 @@ HighsStatus getIndexFromName(
                  is_column ? "column" : "row", name.c_str());
     return HighsStatus::kError;
   }
-  if (search->second == kHashIsDuplicate) {
+  if (search->second < 0) {
     highsLogUser(log_options, HighsLogType::kError,
                  "%s: %s name %s is duplicated\n", from_method.c_str(),
                  is_column ? "column" : "row", name.c_str());
@@ -3033,11 +3036,11 @@ HighsStatus readBasisStream(const HighsLogOptions& log_options, HighsLp& lp,
       lp.row_names_.size() == static_cast<size_t>(lp.num_row_);
   if (have_col_names) {
     // Ensure that the col name hash table has been formed
-    if (!lp.col_hash_.name2index.size()) lp.col_hash_.form(lp.col_names_);
+    if (!lp.col_hash_.size()) lp.col_hash_.form(lp.col_names_);
   }
   if (have_row_names) {
     // Ensure that the row name hash table has been formed
-    if (!lp.row_hash_.name2index.size()) lp.row_hash_.form(lp.row_names_);
+    if (!lp.row_hash_.size()) lp.row_hash_.form(lp.row_names_);
   }
   if (v1 || v2) {
     if (v1) {

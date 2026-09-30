@@ -800,7 +800,7 @@ HighsStatus Highs::passColName(const HighsInt col, const std::string& name) {
   lp.col_names_.resize(num_col);
   if (!lp.col_hash_.size()) lp.col_hash_.form(lp.col_names_);
   const bool is_duplicate =
-      lp.col_hash_.updateFindsDuplicate(lp.col_names_[col], name);
+    lp.col_hash_.updateFindsDuplicate(col, lp.col_names_[col], name);
   lp.col_names_[col] = name;
   assert(lp.col_hash_.ok(lp.col_names_));
   return is_duplicate ? HighsStatus::kWarning : HighsStatus::kOk;
@@ -824,7 +824,7 @@ HighsStatus Highs::passRowName(const HighsInt row, const std::string& name) {
   lp.row_names_.resize(num_row);
   if (!lp.row_hash_.size()) lp.row_hash_.form(lp.row_names_);
   const bool is_duplicate =
-      lp.row_hash_.updateFindsDuplicate(lp.row_names_[row], name);
+    lp.row_hash_.updateFindsDuplicate(row, lp.row_names_[row], name);
   lp.row_names_[row] = name;
   assert(lp.row_hash_.ok(lp.row_names_));
   return is_duplicate ? HighsStatus::kWarning : HighsStatus::kOk;
@@ -3497,7 +3497,7 @@ HighsStatus Highs::getColName(const HighsInt col, std::string& name) const {
 HighsStatus Highs::getColByName(const std::string& name, HighsInt& col) {
   HighsLp& lp = model_.lp_;
   if (!lp.col_names_.size()) return HighsStatus::kError;
-  if (!lp.col_hash_.name2index.size()) lp.col_hash_.form(lp.col_names_);
+  if (!lp.col_hash_.size()) lp.col_hash_.form(lp.col_names_);
   std::string from_method = "Highs::getColByName";
   const bool is_column = true;
   return getIndexFromName(options_.log_options, from_method, is_column, name,
@@ -3585,7 +3585,7 @@ HighsStatus Highs::getRowName(const HighsInt row, std::string& name) const {
 HighsStatus Highs::getRowByName(const std::string& name, HighsInt& row) {
   HighsLp& lp = model_.lp_;
   if (!lp.row_names_.size()) return HighsStatus::kError;
-  if (!lp.row_hash_.name2index.size()) lp.row_hash_.form(lp.row_names_);
+  if (!lp.row_hash_.size()) lp.row_hash_.form(lp.row_names_);
   std::string from_method = "Highs::getRowByName";
   const bool is_column = false;
   return getIndexFromName(options_.log_options, from_method, is_column, name,

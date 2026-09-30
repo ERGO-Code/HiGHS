@@ -528,7 +528,7 @@ void HighsNameHash::form(const std::vector<std::string>& name) {
   this->clear();
   for (size_t index = 0; index < name.size(); index++) {
     auto emplace_result =
-        this->name2index.emplace(name[index], static_cast<int>(index));
+      this->name2index.emplace(name[index], static_cast<int>(index));
     const bool duplicate = !emplace_result.second;
     if (duplicate) {
       // Find the original
@@ -553,7 +553,7 @@ bool HighsNameHash::hasDuplicate(const std::vector<std::string>& name) {
   bool has_duplicate = false;
   for (size_t index = 0; index < name.size(); index++) {
     auto emplace_result =
-        this->name2index.emplace(name[index], static_cast<int>(index));
+      this->name2index.emplace(name[index], static_cast<int>(index));
     has_duplicate = !emplace_result.second;
     if (has_duplicate) break;
   }
@@ -561,12 +561,13 @@ bool HighsNameHash::hasDuplicate(const std::vector<std::string>& name) {
   return has_duplicate;
 }
 
-void HighsNameHash::addName(const std::string& name) {
-  addNameFindsDuplicate(name);
+void HighsNameHash::addName(const HighsInt index, const std::string& name) {
+  if (!this->size()) return;
+  addNameFindsDuplicate(index, name);
 }
 
-bool HighsNameHash::addNameFindsDuplicate(const std::string& name) {
-  auto emplace_result = this->name2index.emplace(name, 0);
+bool HighsNameHash::addNameFindsDuplicate(const HighsInt index, const std::string& name) {
+  auto emplace_result = this->name2index.emplace(name, static_cast<int>(index));
   const bool duplicate = !emplace_result.second;
   if (duplicate) {
     // Find the original and mark it as duplicate
@@ -581,7 +582,8 @@ bool HighsNameHash::addNameFindsDuplicate(const std::string& name) {
   return false;
 }
 
-bool HighsNameHash::updateFindsDuplicate(const std::string& old_name,
+bool HighsNameHash::updateFindsDuplicate(const HighsInt index,
+					 const std::string& old_name,
                                          const std::string& new_name) {
   // Update duplication data for old_name, erasing it if it disappears
   auto find_result = this->name2index.find(old_name);
@@ -595,14 +597,14 @@ bool HighsNameHash::updateFindsDuplicate(const std::string& old_name,
       this->name2index.erase(old_name);
     }
   }
-  return addNameFindsDuplicate(new_name);
+  return addNameFindsDuplicate(index, new_name);
 }
 
 bool HighsNameHash::ok(const std::vector<std::string>& name) {
   HighsInt num_name = name.size();
   HighsNameHash helper;
   for (HighsInt index = 0; index < num_name; index++)
-    helper.name2index.emplace(name[index], static_cast<int>(index));
+    helper.name2index.emplace(name[index], 0);
   for (auto& entry : helper.name2index) {
     std::string unique_name = entry.first;
     auto find_result = this->name2index.find(unique_name);

@@ -220,4 +220,13 @@ TEST_CASE("test-3316", "[model_names]") {
   // Names are now [C3, C1, C2, C3], so passing (0, "C0") is OK
   REQUIRE(h.passColName(0, "C0") == HighsStatus::kOk);
   // Names are now [C0, C1, C2, C3], so passing (0, "C0") is OK
+  HighsInt col;
+  REQUIRE(h.getColByName("C0", col) == HighsStatus::kOk);
+  REQUIRE(col == 0);
+  REQUIRE(h.getColByName("C1", col) == HighsStatus::kOk);
+  REQUIRE(col == 1);
+  REQUIRE(h.getColByName("C2", col) == HighsStatus::kOk);
+  REQUIRE(col == 2);
+  REQUIRE(h.getColByName("C3", col) == HighsStatus::kOk);
+  REQUIRE(col == 3);
 }
