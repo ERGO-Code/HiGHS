@@ -800,7 +800,7 @@ HighsStatus Highs::passColName(const HighsInt col, const std::string& name) {
   lp.col_names_.resize(num_col);
   if (!lp.col_hash_.size()) lp.col_hash_.form(lp.col_names_);
   const bool is_duplicate =
-    lp.col_hash_.updateFindsDuplicate(col, lp.col_names_[col], name);
+      lp.col_hash_.updateFindsDuplicate(col, lp.col_names_[col], name);
   lp.col_names_[col] = name;
   assert(lp.col_hash_.ok(lp.col_names_));
   return is_duplicate ? HighsStatus::kWarning : HighsStatus::kOk;
@@ -824,7 +824,7 @@ HighsStatus Highs::passRowName(const HighsInt row, const std::string& name) {
   lp.row_names_.resize(num_row);
   if (!lp.row_hash_.size()) lp.row_hash_.form(lp.row_names_);
   const bool is_duplicate =
-    lp.row_hash_.updateFindsDuplicate(row, lp.row_names_[row], name);
+      lp.row_hash_.updateFindsDuplicate(row, lp.row_names_[row], name);
   lp.row_names_[row] = name;
   assert(lp.row_hash_.ok(lp.row_names_));
   return is_duplicate ? HighsStatus::kWarning : HighsStatus::kOk;

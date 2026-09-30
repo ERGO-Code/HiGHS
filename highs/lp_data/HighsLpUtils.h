@@ -30,11 +30,11 @@ using std::vector;
 void writeBasisFile(FILE*& file, const HighsOptions& options, const HighsLp& lp,
                     const HighsBasis& basis);
 
-HighsStatus getIndexFromName(
-    const HighsLogOptions& log_options, std::string& from_method,
-    const bool is_column, const std::string& name,
-    HighsNameHash& name_hash, HighsInt& index,
-    const std::vector<std::string>& names);
+HighsStatus getIndexFromName(const HighsLogOptions& log_options,
+                             std::string& from_method, const bool is_column,
+                             const std::string& name, HighsNameHash& name_hash,
+                             HighsInt& index,
+                             const std::vector<std::string>& names);
 
 HighsStatus readBasisFile(const HighsLogOptions& log_options, HighsLp& lp,
                           HighsBasis& basis, const std::string& filename);

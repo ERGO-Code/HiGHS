@@ -213,13 +213,18 @@ TEST_CASE("test-3316", "[model_names]") {
   REQUIRE(h.passColName(1, "C1") == HighsStatus::kOk);
   // Names are now [C3, C1], so passing (2, "C3") yields duplicate
   REQUIRE(h.passColName(2, "C3") == HighsStatus::kWarning);
-  // Names are now [C3, C1, C3], so passing (2, "C2") is OK
+  // Names are now [C3, C1, C3], so passing (2, "C2") is OK, and C3 is
+  // no longer duplicate
   REQUIRE(h.passColName(2, "C2") == HighsStatus::kOk);
   // Names are now [C3, C1, C2], so passing (3, "C3") yields duplicate
   REQUIRE(h.passColName(3, "C3") == HighsStatus::kWarning);
-  // Names are now [C3, C1, C2, C3], so passing (0, "C0") is OK
+  // Names are now [C3, C1, C2, C3], so passing (0, "C0") is OK, and C3 is
+  // no longer duplicate
   REQUIRE(h.passColName(0, "C0") == HighsStatus::kOk);
-  // Names are now [C0, C1, C2, C3], so passing (0, "C0") is OK
+  // Names are now [C0, C1, C2, C3], and the name hash has records
+  //
+  // [("C0", 0), ("C2", 2), ("C1", 1), ("C3", 0), ("", -5)]
+
   HighsInt col;
   REQUIRE(h.getColByName("C0", col) == HighsStatus::kOk);
   REQUIRE(col == 0);
@@ -227,6 +232,12 @@ TEST_CASE("test-3316", "[model_names]") {
   REQUIRE(col == 1);
   REQUIRE(h.getColByName("C2", col) == HighsStatus::kOk);
   REQUIRE(col == 2);
+  // The name hash index associated with "C3" is not 3, but its
+  // duplicate count reduced to zero. As a result, there is a failure
+  // in getIndexFromName, which is rectified by reforming the name
+  // hash
   REQUIRE(h.getColByName("C3", col) == HighsStatus::kOk);
   REQUIRE(col == 3);
+  // There are six blank names, so the following fails
+  REQUIRE(h.getColByName("", col) == HighsStatus::kError);
 }
