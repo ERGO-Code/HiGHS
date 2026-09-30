@@ -218,7 +218,8 @@ int main(int argc, char** argv) {
 
   Highs highs;
   highs.setOptionValue("output_flag", adapter.log);
-  if (highs.readModel(adapter.instance) != HighsStatus::kOk) {
+  // A warning (for example dropped tiny matrix entries) still yields a model.
+  if (highs.readModel(adapter.instance) == HighsStatus::kError) {
     std::fprintf(stderr, "failed to read %s\n", adapter.instance.c_str());
     return 3;
   }
@@ -228,6 +229,9 @@ int main(int argc, char** argv) {
   highs.setOptionValue("hipdlp_scaling", adapter.scaling);
   highs.setOptionValue("pdlp_step_size_strategy", step_size_strategy);
   highs.setOptionValue("kkt_tolerance", adapter.kkt_tolerance);
+  // Legacy stops on kkt_tolerance; the rewrite stops on this option, whose
+  // default is tighter, so a fair comparison needs both set.
+  highs.setOptionValue("pdlp_optimality_tolerance", adapter.kkt_tolerance);
   highs.setOptionValue("time_limit", adapter.time_limit);
   highs.setOptionValue("pdlp_iteration_limit", adapter.iteration_limit);
 
