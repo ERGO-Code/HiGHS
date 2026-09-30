@@ -63,6 +63,9 @@ class LinkedLists {
       return {owner, reverse ? owner->tail(list) : owner->head(list)};
     }
     Iterator end() const { return {owner, owner->n_elem_ + list}; }
+
+    bool empty() const { return begin() == end(); }
+    HighsInt front() const { return *begin(); }
   };
 
   List<false> list(HighsInt l) const { return List<false>{this, l}; }

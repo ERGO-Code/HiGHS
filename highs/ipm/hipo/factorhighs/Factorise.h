@@ -24,13 +24,8 @@ class Factorise {
   // symbolic factorisation
   const Symbolic& S_;
 
-  // children in supernodal elimination tree
-  std::vector<Int> first_child_{};
-  std::vector<Int> next_child_{};
-
-  // reverse linked lists of chidlren
-  std::vector<Int> first_child_reverse_{};
-  std::vector<Int> next_child_reverse_{};
+  // linked lists of children per supernode
+  highs::folding::LinkedLists children_;
 
   // generated elements, aka Schur complements.
   std::vector<std::vector<double>> schur_contribution_{};

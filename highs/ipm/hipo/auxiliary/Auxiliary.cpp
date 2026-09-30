@@ -180,6 +180,19 @@ void childrenLinkedList(const std::vector<Int>& parent, std::vector<Int>& head,
   }
 }
 
+highs::folding::LinkedLists getChildren(const std::vector<Int>& parent) {
+  highs::folding::LinkedLists children;
+  const Int n = parent.size();
+  children.init(n, n);
+
+  for (Int node = 0; node < n; ++node) {
+    if (parent[node] == -1) continue;
+    children.append(node, parent[node]);
+  }
+
+  return children;
+}
+
 void reverseLinkedList(std::vector<Int>& head, std::vector<Int>& next) {
   // Reverse the linked list of children of each node.
   // If a node has children (a -> b -> c -> -1), the reverse list contains

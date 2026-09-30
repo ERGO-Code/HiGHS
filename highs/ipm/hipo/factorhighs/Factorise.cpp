@@ -65,13 +65,7 @@ Factorise::Factorise(const Symbolic& S, Int n, Int nz, const Int* rowsM,
   transpose(ptrM_, rowsM_, valM_, temp_ptr, temp_rows, temp_val);
   transpose(temp_ptr, temp_rows, temp_val, ptrM_, rowsM_, valM_);
 
-  // create linked lists of children in supernodal elimination tree
-  childrenLinkedList(S_.snParent(), first_child_, next_child_);
-
-  // create reverse linked lists of children
-  first_child_reverse_ = first_child_;
-  next_child_reverse_ = next_child_;
-  reverseLinkedList(first_child_reverse_, next_child_reverse_);
+  children_ = getChildren(S_.snParent());
 
   // compute largest diagonal entry in absolute value
   max_diag_ = 0.0;
@@ -115,15 +109,13 @@ void Factorise::processSupernode(Int sn) {
 
   if (parallel) {
     // spawn children of this supernode in forward order
-    Int child_to_spawn = first_child_[sn];
-    while (child_to_spawn != -1) {
+    for (Int child_to_spawn : children_.list(sn)) {
       tg.spawn([=]() { processSupernode(child_to_spawn); });
-      child_to_spawn = next_child_[child_to_spawn];
     }
 
     // wait for first child to finish, before starting the parent (if there is a
     // first child)
-    if (first_child_[sn] != -1) tg.sync();
+    if (!children_.list(sn).empty()) tg.sync();
   }
 
   // ===================================================
@@ -174,8 +166,8 @@ void Factorise::processSupernode(Int sn) {
   // ===================================================
   // Assemble frontal matrices of children
   // ===================================================
-  Int child_sn = first_child_reverse_[sn];
-  while (child_sn != -1) {
+
+  for (Int child_sn : children_.listReverse(sn)) {
     // Child contribution is found:
     // - in cliquestack, if we are processing the tree in serial.
     // - in schur_contribution_ if we are processing the tree in parallel.
@@ -185,7 +177,7 @@ void Factorise::processSupernode(Int sn) {
 
     if (parallel) {
       // sync with spawned child, apart from the first one
-      if (child_sn != first_child_reverse_[sn]) tg.sync();
+      if (child_sn != children_.listReverse(sn).front()) tg.sync();
 
       if (flag_stop_.load(std::memory_order_relaxed)) return;
 
@@ -213,9 +205,6 @@ void Factorise::processSupernode(Int sn) {
     } else {
       stack_->popChild();
     }
-
-    // move on to the next child
-    child_sn = next_child_reverse_[child_sn];
   }
 
   if (flag_stop_.load(std::memory_order_relaxed)) return;
