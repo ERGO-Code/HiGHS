@@ -14,7 +14,8 @@ void LinkedLists::init(HighsInt n_elem, HighsInt n_lists) {
   backward_.resize(n_elem + n_lists);
   length_.resize(n_lists);
   for (HighsInt i = 0; i < n_lists; ++i) {
-    clear(i);
+    forward_[n_elem_ + i] = n_elem_ + i;
+    backward_[n_elem_ + i] = n_elem_ + i;
   }
 }
 

@@ -11,15 +11,22 @@ void test_folding(const HighsLp& lp);
 
 class Folder {
   const HighsLp& lp_;
+  std::vector<HighsInt> colour_;
+
+  HighsInt initial_row_colours_;
+  HighsInt initial_col_colours_;
+  HighsInt matrix_colours_;
 
   template <typename Data>
   HighsInt findInitialColour(HighsInt num, HighsInt* colour, HighsInt start);
 
- public:
-  Folder(const HighsLp& lp) : lp_{lp} {}
+  void findInitialColour();
+  void foldMatrix();
 
-  HighsInt findInitialRowColour(HighsInt* colour, HighsInt start);
-  HighsInt findInitialColColour(HighsInt* colour, HighsInt start);
+ public:
+  Folder(const HighsLp& lp);
+  void run();
+  void print() const;
 };
 
 }  // namespace folding

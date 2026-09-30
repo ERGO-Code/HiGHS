@@ -24,7 +24,6 @@ class LinkedLists {
   void init(HighsInt n_elem, HighsInt n_lists);
   void clear(HighsInt list);
 
-  HighsInt n() const { return n_elem_; }
   void append(HighsInt elem, HighsInt list);
   void remove(HighsInt elem, HighsInt list);
   HighsInt length(HighsInt list) const { return length_[list]; }
@@ -53,7 +52,7 @@ class LinkedLists {
     };
 
     Iterator begin() const { return {owner, owner->head(list)}; }
-    Iterator end() const { return {owner, owner->n() + list}; }
+    Iterator end() const { return {owner, owner->n_elem_ + list}; }
   };
 
   List list(HighsInt l) const { return {this, l}; }
