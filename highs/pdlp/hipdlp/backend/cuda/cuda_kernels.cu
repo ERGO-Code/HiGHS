@@ -786,7 +786,7 @@ __global__ void certificateRowActivityKernel(
     const DeviceCertificateProblem problem, const CertificateState* state,
     const certificate::Interval* primal, certificate::Interval* activity) {
   using namespace certificate;
-  if (state->unsafe) return;
+  if (state->unsafe || state->rows_skipped) return;
   const HighsInt lane = static_cast<HighsInt>(threadIdx.x) % kWarpSize;
   const HighsInt warps =
       static_cast<HighsInt>(gridDim.x) * (blockDim.x / kWarpSize);
@@ -808,11 +808,28 @@ __global__ void certificateRowActivityKernel(
   }
 }
 
+// Merges the per-block screen partials; the result is valid in thread 0.
+__device__ certificate::ScreenPartial mergeScreenPartials(
+    const certificate::ScreenPartial* partials, const int count) {
+  certificate::ScreenPartial partial = {};
+  for (int index = threadIdx.x; index < count; index += blockDim.x)
+    certificate::mergeScreen(partial, partials[index]);
+  __shared__ certificate::ScreenPartial shared[kBlockSize];
+  shared[threadIdx.x] = partial;
+  __syncthreads();
+  for (int distance = kBlockSize / 2; distance > 0; distance /= 2) {
+    if (threadIdx.x < distance)
+      certificate::mergeScreen(shared[threadIdx.x],
+                               shared[threadIdx.x + distance]);
+    __syncthreads();
+  }
+  return shared[0];
+}
+
 __global__ void certificateConditionsKernel(
     const DeviceCertificateProblem problem, const CertificateState* state,
     const certificate::Interval* primal, const certificate::Interval* dual,
     const certificate::Interval* column,
-    const certificate::Interval* activities,
     certificate::ScreenPartial* partials) {
   using namespace certificate;
   ScreenPartial partial = {};
@@ -837,11 +854,6 @@ __global__ void certificateConditionsKernel(
                multiply(primal[index], problem.costs[index]));
       }
       if (index < problem.num_rows) {
-        const Interval activity = activities[index];
-        partial.primal_violation =
-            maximum(partial.primal_violation,
-                    violationLower(activity, problem.row_lower[index],
-                                   problem.row_upper[index], false));
         partial.farkas_violation =
             maximum(partial.farkas_violation,
                     violationLower(dual[index], problem.row_lower[index],
@@ -864,25 +876,68 @@ __global__ void certificateConditionsKernel(
   if (threadIdx.x == 0) partials[blockIdx.x] = shared[0];
 }
 
+// Decides from the column part and the objective alone whether a primal ray is
+// already ruled out. finishScreen rejects a ray when either the violation or
+// the objective test rejects, and the violation is a maximum over columns and
+// rows, so a rejection that holds without the rows holds with them and the
+// final flags cannot change.
+__global__ void certificateRaySkipKernel(
+    const DeviceCertificateProblem problem, const DeviceCheckInput input,
+    const int count, const certificate::ScreenPartial* partials,
+    CertificateState* state) {
+  const certificate::ScreenPartial partial =
+      mergeScreenPartials(partials, count);
+  if (threadIdx.x != 0) return;
+  state->row_violation_bits = 0;
+  state->rows_skipped =
+      !state->unsafe && !partial.unsafe &&
+      (certificate::rejectViolation(partial.primal_violation,
+                                    state->primal_verifier_norm,
+                                    input.certificate_tolerance) ||
+       certificate::rejectObjective(
+           certificate::serialSumBounds(partial.objective,
+                                        static_cast<double>(problem.num_cols)),
+           state->primal_verifier_norm, problem.sense_sign,
+           input.certificate_tolerance));
+}
+
+__global__ void certificateRowViolationKernel(
+    const DeviceCertificateProblem problem, const CertificateState* state,
+    const certificate::Interval* activities, CertificateState* output) {
+  using namespace certificate;
+  if (state->unsafe || state->rows_skipped) return;
+  double violation = 0.0;
+  const HighsInt stride = static_cast<HighsInt>(blockDim.x) * gridDim.x;
+  for (HighsInt row = static_cast<HighsInt>(blockIdx.x) * blockDim.x + threadIdx.x;
+       row < problem.num_rows; row += stride)
+    violation = maximum(violation,
+                        violationLower(activities[row], problem.row_lower[row],
+                                       problem.row_upper[row], false));
+  __shared__ double shared[kBlockSize];
+  shared[threadIdx.x] = violation;
+  __syncthreads();
+  for (int distance = kBlockSize / 2; distance > 0; distance /= 2) {
+    if (threadIdx.x < distance)
+      shared[threadIdx.x] = maximum(shared[threadIdx.x],
+                                    shared[threadIdx.x + distance]);
+    __syncthreads();
+  }
+  if (threadIdx.x == 0 && shared[0] > 0.0)
+    atomicMax(&output->row_violation_bits,
+              static_cast<unsigned long long>(__double_as_longlong(shared[0])));
+}
+
 __global__ void certificateFlagsKernel(
     const DeviceCertificateProblem problem, const DeviceCheckInput input,
     const int count, const CertificateState* state,
     const certificate::ScreenPartial* partials, CheckPacket* packet) {
-  certificate::ScreenPartial partial = {};
-  for (int index = threadIdx.x; index < count; index += blockDim.x)
-    certificate::mergeScreen(partial, partials[index]);
-  __shared__ certificate::ScreenPartial shared[kBlockSize];
-  shared[threadIdx.x] = partial;
-  __syncthreads();
-  for (int distance = kBlockSize / 2; distance > 0; distance /= 2) {
-    if (threadIdx.x < distance)
-      certificate::mergeScreen(shared[threadIdx.x],
-                               shared[threadIdx.x + distance]);
-    __syncthreads();
-  }
+  certificate::ScreenPartial partial = mergeScreenPartials(partials, count);
   if (threadIdx.x != 0) return;
+  partial.primal_violation = certificate::maximum(
+      partial.primal_violation, __longlong_as_double(
+                                    static_cast<long long>(state->row_violation_bits)));
   const certificate::ScreenFlags flags = certificate::finishScreen(
-      shared[0], state->primal_verifier_norm, state->dual_verifier_norm,
+      partial, state->primal_verifier_norm, state->dual_verifier_norm,
       static_cast<double>(problem.num_cols),
       static_cast<double>(problem.num_rows), problem.sense_sign,
       problem.column_bounds_straddle_zero,
@@ -924,6 +979,8 @@ cudaError_t preloadKernels() {
       reinterpret_cast<const void*>(certificateNormalizeKernel),
       reinterpret_cast<const void*>(certificateRowActivityKernel),
       reinterpret_cast<const void*>(certificateConditionsKernel),
+      reinterpret_cast<const void*>(certificateRaySkipKernel),
+      reinterpret_cast<const void*>(certificateRowViolationKernel),
       reinterpret_cast<const void*>(certificateFlagsKernel),
 #ifdef HIGHS_HIPDLP_TESTING
       reinterpret_cast<const void*>(injectedFailureKernel),
@@ -990,6 +1047,14 @@ cudaError_t launchCertificateScreen(
       problem, blocks, norm_partials, true, state);
   status = cudaPeekAtLastError();
   if (status != cudaSuccess) return status;
+  certificateConditionsKernel<<<blocks, kBlockSize, 0, stream>>>(
+      problem, state, primal, dual, column, partials);
+  status = cudaPeekAtLastError();
+  if (status != cudaSuccess) return status;
+  certificateRaySkipKernel<<<1, kBlockSize, 0, stream>>>(problem, input, blocks,
+                                                         partials, state);
+  status = cudaPeekAtLastError();
+  if (status != cudaSuccess) return status;
   const HighsInt rows_per_block = kBlockSize / kWarpSize;
   const HighsInt activity_blocks =
       problem.num_rows == 0 ? 0 : 1 + (problem.num_rows - 1) / rows_per_block;
@@ -1000,11 +1065,11 @@ cudaError_t launchCertificateScreen(
         kBlockSize, 0, stream>>>(problem, state, primal, activity);
     status = cudaPeekAtLastError();
     if (status != cudaSuccess) return status;
+    certificateRowViolationKernel<<<blocks, kBlockSize, 0, stream>>>(
+        problem, state, activity, state);
+    status = cudaPeekAtLastError();
+    if (status != cudaSuccess) return status;
   }
-  certificateConditionsKernel<<<blocks, kBlockSize, 0, stream>>>(
-      problem, state, primal, dual, column, activity, partials);
-  status = cudaPeekAtLastError();
-  if (status != cudaSuccess) return status;
   certificateFlagsKernel<<<1, kBlockSize, 0, stream>>>(problem, input, blocks,
                                                        state, partials, packet);
   return cudaPeekAtLastError();

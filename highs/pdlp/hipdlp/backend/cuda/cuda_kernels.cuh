@@ -78,6 +78,12 @@ struct CertificateState {
   certificate::Interval primal_verifier_norm;
   certificate::Interval dual_verifier_norm;
   int unsafe;
+  // Set when the columns and objective alone already rule out a primal ray, so
+  // the row activities are never computed.
+  int rows_skipped;
+  // Largest row violation as the bits of a nonnegative double, which order
+  // like the values, so blocks can combine it with atomicMax.
+  unsigned long long row_violation_bits;
 };
 
 struct CheckNormState {

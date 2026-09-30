@@ -3154,6 +3154,79 @@ TEST_CASE("hi-pdlp-cuda-check-packet-preserves-pending-sticky-error",
   checkEmptyPacket(result);
 }
 
+// The device screen skips the row activities when the columns and objective
+// already rule out a primal ray. The flags must still equal the host screen,
+// which always evaluates the rows, in each regime: rejected by rows only,
+// rejected by columns only, and not rejected.
+void checkScreenFlagsMatchHostReference() {
+  struct Case {
+    const char* name;
+    HighsLp lp;
+    std::vector<double> primal;
+  };
+  std::vector<Case> cases;
+  {
+    // A d = 1 breaks the equality row; every column condition holds.
+    HighsLp lp = makeEqualityLp(1, 2, {0, 1, 1}, {0}, {1.0});
+    lp.col_lower_ = {0.0, 0.0};
+    lp.col_cost_ = {-1.0, 0.0};
+    lp.row_lower_ = {1.0};
+    lp.row_upper_ = {1.0};
+    cases.push_back({"rows-only", lp, {1.0, 0.0}});
+  }
+  {
+    // d_0 > 0 against a finite upper bound; the empty row holds trivially.
+    HighsLp lp = makeEqualityLp(1, 2, {0, 0, 0}, {}, {});
+    lp.col_lower_ = {0.0, 0.0};
+    lp.col_upper_ = {1.0, kHighsInf};
+    lp.col_cost_ = {-1.0, 0.0};
+    cases.push_back({"columns-only", lp, {1.0, 0.0}});
+  }
+  {
+    // Objective test alone: d improves nothing.
+    HighsLp lp = makeEqualityLp(1, 2, {0, 0, 0}, {}, {});
+    lp.col_lower_ = {0.0, 0.0};
+    lp.col_cost_ = {1.0, 0.0};
+    cases.push_back({"objective-only", lp, {1.0, 0.0}});
+  }
+  {
+    // A genuine recession direction, so nothing is rejected.
+    HighsLp lp = makeEqualityLp(1, 2, {0, 0, 0}, {}, {});
+    lp.col_lower_ = {0.0, 0.0};
+    lp.col_cost_ = {-1.0, 0.0};
+    cases.push_back({"accepted", lp, {1.0, 0.0}});
+  }
+  for (const Case& test : cases) {
+    INFO(test.name);
+    for (const double tolerance : {1e-4, 1e-9}) {
+      ResidentCheckFixture fixture(hipdlp::backend::Kind::kCuda, test.lp);
+      fixture.prepare(test.lp);
+      // Nonzero multipliers keep the dual verifier norm positive, otherwise
+      // finishScreen returns both flags before looking at any violation.
+      const std::vector<double> dual(test.lp.num_row_, 1.0);
+      const std::vector<double> aty(test.lp.num_col_, 1.0);
+      const auto screen = hostCertificateScreen(fixture.problem, test.lp,
+                                                test.primal, dual, aty, tolerance);
+      fixture.input.certificate_tolerance = tolerance;
+      REQUIRE(fixture.backend->uploadVector(test.primal, fixture.primal).ok());
+      REQUIRE(fixture.backend->uploadVector(dual, fixture.dual).ok());
+      REQUIRE(fixture.backend->uploadVector(aty, fixture.aty).ok());
+      REQUIRE(fixture.backend->multiply(fixture.bound, fixture.primal, fixture.ax)
+                  .ok());
+      hipdlp::backend::CheckResult result;
+      REQUIRE(fixture.backend->evaluateCheck(fixture.problem, fixture.workspace,
+                                             fixture.input, result).ok());
+      CHECK(result.primal_ray_possible == screen.primal_ray_possible);
+      CHECK(result.farkas_possible == screen.farkas_possible);
+    }
+  }
+}
+
+TEST_CASE("hi-pdlp-cuda-check-packet-screen-flags-match-host-reference",
+          "[pdlp][hipdlp][phase8][backend][check-packet][cuda]") {
+  checkScreenFlagsMatchHostReference();
+}
+
 // One offset of 1e16 followed by 1e4 unit terms. Every unit term is absorbed
 // by the serial oracle (1e16 + 1 ties to even), so it reports exactly 1e16
 // with a zero gap, while the GPU tree sum keeps them and reports 1e16 + 1e4.
