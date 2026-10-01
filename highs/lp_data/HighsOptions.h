@@ -372,6 +372,7 @@ struct HighsOptionsStruct {
   HighsInt user_bound_scale;
   HighsInt highs_debug_level;
   HighsInt highs_analysis_level;
+  HighsInt solver_select_strategy;
   HighsInt simplex_strategy;
   HighsInt simplex_scale_strategy;
   HighsInt simplex_crash_strategy;
@@ -565,6 +566,7 @@ struct HighsOptionsStruct {
         user_bound_scale(0),
         highs_debug_level(0),
         highs_analysis_level(0),
+        solver_select_strategy(0),
         simplex_strategy(0),
         simplex_scale_strategy(0),
         simplex_crash_strategy(0),
@@ -912,6 +914,13 @@ class HighsOptions : public HighsOptionsStruct {
         &highs_analysis_level, kHighsAnalysisLevelMin,
         kHighsAnalysisLevelMin,  // kHighsAnalysisLevelMipTime,  //
         kHighsAnalysisLevelMax);
+    records.push_back(record_int);
+
+    record_int = new OptionRecordInt(
+        "solver_select_strategy",
+        "Strategy for automatic solver selection 0 => Simplex only; 1 => "
+        "Columns, rows, nonzeros and integrality; 2 => Full",
+        advanced, &solver_select_strategy, 0, 0, 2);
     records.push_back(record_int);
 
     record_int = new OptionRecordInt(

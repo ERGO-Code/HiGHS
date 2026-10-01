@@ -381,6 +381,6 @@ HighsSolverSelect selectSolverByFeatures(const HighsLp& lp,
   return selectSolverByFeatures(computeLpFeatures(lp, params));
 }
 
-HighsSolverSelect selectSolver(const HighsLp& lp) {
+HighsSolverSelect selectSolver(const HighsLp& lp, const int strategy) {
   return HighsSolverSelect::kDualSimplex;
 }

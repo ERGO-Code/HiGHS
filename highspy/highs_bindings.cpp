@@ -1275,6 +1275,8 @@ PYBIND11_MODULE(_core, m, py::mod_gil_not_used()) {
       .def_readwrite("highs_debug_level", &HighsOptions::highs_debug_level)
       .def_readwrite("highs_analysis_level",
                      &HighsOptions::highs_analysis_level)
+      .def_readwrite("solver_select_strategy",
+                     &HighsOptions::solver_select_strategy)
       .def_readwrite("simplex_strategy", &HighsOptions::simplex_strategy)
       .def_readwrite("simplex_scale_strategy",
                      &HighsOptions::simplex_scale_strategy)

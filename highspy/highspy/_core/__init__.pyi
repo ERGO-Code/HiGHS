@@ -483,6 +483,7 @@ class HighsOptions:
     small_matrix_value: float
     solution_file: str
     solver: str
+    solver_select_strategy: int
     threads: int
     time_limit: float
     write_model_file: str

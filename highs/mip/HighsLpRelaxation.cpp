@@ -19,6 +19,7 @@
 #include "mip/MipTimer.h"
 #include "util/HighsCDouble.h"
 #include "util/HighsHash.h"
+#include "util/HighsSolverSelect.h"
 
 void HighsLpRelaxation::setProfiling(HighsProfiling* profiling) {
   assert(profiling);
@@ -1163,9 +1164,25 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
       // use_solver = "choose";
       // choose from simplex, IPM, HIPO
       // todo: get presolved LP from relaxation and pass to solver select
-      use_solver = kSimplexString;
-    }
 
+      HighsSolverSelect selected_solver = selectSolver(
+          getLp(), mipsolver.options_mip_->solver_select_strategy);
+
+      switch (selected_solver) {
+        case HighsSolverSelect::kHipo:
+          use_solver = kHipoString;
+          break;
+        case HighsSolverSelect::kIpx:
+          use_solver = kIpxString;
+          break;
+        case HighsSolverSelect::kDualSimplex:
+          use_solver = kSimplexString;
+        default:
+          assert(0 == 1);
+          use_solver = kSimplexString;
+          break;
+      }
+    }
   }
   HighsStatus callstatus;
   // Now allowing the use of IPM at the root node

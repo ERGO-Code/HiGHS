@@ -169,18 +169,18 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object,
     return_status = simplexSolve();
     if (return_status == HighsStatus::kError) return return_status;
   } else {
-    // options.solver == "choose"
     assert(options.solver == "choose");
 
-    // choose
     // Automatic solver select.
     // todo: ensure lp_ is the presolved LP
-    HighsSolverSelect selected_solver = selectSolver(solver_object.lp_);
+    HighsSolverSelect selected_solver = selectSolver(
+        solver_object.lp_, solver_object.options_.solver_select_strategy);
 
-    switch(selected_solver) {
+    switch (selected_solver) {
       case HighsSolverSelect::kPrimalSimplex:
-        // ...
-
+        // Set option for primal simplex in solver_object
+        solver_object.options_.simplex_strategy = 4;
+        return_status = simplexSolve();
         break;
       case HighsSolverSelect::kDualSimplex:
         return_status = simplexSolve();

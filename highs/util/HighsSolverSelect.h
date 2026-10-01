@@ -29,6 +29,12 @@ enum class HighsSolverSelect {
   kHipdlp
 };
 
+enum class SolverSelectStrategy {
+  kSimplexOnly,
+  kNColsRowsNnzIntegrality,
+  kFull
+};
+
 struct HighsLpFeatureParams {
   // Two coefficients are "almost identical" when their absolute values agree to
   // this relative tolerance.  Feeds `relative_num_almost_identical_nonzeros`.
@@ -97,9 +103,7 @@ std::vector<std::pair<std::string, double>> highsLpFeatureVector(
     const HighsLpFeatures& features);
 std::vector<std::string> highsLpFeatureNames();
 
-// Original entry point: pick a solver for `lp` (expected to be the presolved
-// LP).  Currently a stub returning dual simplex.
-HighsSolverSelect selectSolver(const HighsLp& lp);
+HighsSolverSelect selectSolver(const HighsLp& lp, const int strategy);
 
 // Pick a solver.  Until the PCA model is wired in, this applies a transparent
 // heuristic over `computeLpFeatures(lp)` and only ever returns kDualSimplex,
