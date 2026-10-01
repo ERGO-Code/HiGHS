@@ -602,8 +602,12 @@ void HPresolve::chooseRules() {
     }
     if (mayRequirePrimalDualPostsolve(options)) {
       may_require_primal_dual_postsolve_ = true;
-      // Cannot use weakly dominated column rule
-      allow_rule_[kPresolveRuleWeaklyDominatedCol] = false;
+      // Cannot use weakly dominated column rule (see
+      // test-weakly-dominated-column-primal-dual-postsolve)
+      //      allow_rule_[kPresolveRuleWeaklyDominatedCol] = false;
+      // Cannot use kPresolveRuleDualFixing rule (see
+      // )
+      //      allow_rule_[kPresolveRuleDualFixing] = false;
     }
   }
 }

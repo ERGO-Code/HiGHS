@@ -1401,9 +1401,66 @@ TEST_CASE("test-weakly-dominated-column-primal-dual-postsolve",
   lp.a_matrix_.value_ = lp.col_cost_;
   lp.row_lower_ = {6};
   lp.row_upper_ = {kHighsInf};
-
+  // LP is
+  //
+  // min x-y-z; 6 <= x-y-z; x\in [0, 1]; y >=0; z\in [0, 6]
+  //
+  // Solution var(pr; du) without presolve is
+  //
+  // x(1; 0), y(0; 0), z(5; 0), r0(6; 1)
+  //
+  // With presolve
+  //
+  // 0. kPresolveRuleWeaklyDominatedCol fixes y at 0
+  //
+  // 1. kPresolveRuleWeaklyDominatedCol fixes z at 6
+  //
+  // 2. Problem is min x ; 0 <= x; x \in [0,1], so redundant row
+  //
+  // 3. Problem is min x ; x \in [0, 1] so fix x at 0 => EMPTY
+  //
+  // After undoing 3, solution is x(0; 1)
+  // 
+  // After undoing 2, solution is x(0; 1); r0(0; 0) because undoing
+  // redundant row just sets dual to 0
+  //
+  // Undoing 1, gives z at 6 with uniquely-defined dual of 1 - which
+  // is infeasible. Only recovery is a dual step by changing row dual
+  // from 0 to 1, so dual of x is 1->0; and z has dual -1 - which is
+  // feasible. However, row is not known for this step.
+  //
+  // With presolve and no weakly dominated column rule
+  //
+  // 0. ImpliedEquation x-y-z = 6
+  //
+  // 1. y is duplicate of x, so fix y to 0
+  //
+  // 2. z is duplicate of x, so fix z to 6
+  //
+  // 3. Problem is min x ; 0 <= x; x \in [0,1], so singleton row
+  //
+  // 4. Problem is min x ; x \in [0, 1] so fix x at 0
+  //
+  // After undoing 4, solution is x(0; 1)
+  //
+  // After undoing 3, solution is x(0; 0); r0(0; 1) because undoing
+  // singleton row considers tightening and sets dual to 1
+  //
+  // Undoing 2 gives z at 6 with uniquely-defined dual of 0, and
+  // undoing 1 gives y at y with uniquely-defined dual of 0
+  //
+  // Hence difference without weakly dominated column rule is just that
+  //
+  // min x ; 0 <= x; x \in [0,1]
+  //
+  // is interpreted as having a singleton row, rather than a redundant
+  // row. Hence, the row dual is set to 1, rather than 0 in
+  // postsolve. This suggests that kPresolveRuleWeaklyDominatedCol may
+  // be OK, and that using redundant row rather than singleton row is
+  // the issue, as the latter links the row to a column
+ 
   Highs h;
-  h.setOptionValue("output_flag", dev_run);
+  //h.setOptionValue("output_flag", dev_run);
 
   REQUIRE(h.passModel(lp) == HighsStatus::kOk);
 
@@ -1411,9 +1468,9 @@ TEST_CASE("test-weakly-dominated-column-primal-dual-postsolve",
   h.setOptionValue(kSolverString, kIpxString);
   h.setOptionValue("run_crossover", kHighsOffString);
 
+  if (dev_run) h.writeSolution("", 1);
   REQUIRE(h.run() == HighsStatus::kOk);
   REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
-  if (dev_run) h.writeSolution("", 1);
 
   h.resetGlobalScheduler(true);
 }
@@ -1425,7 +1482,7 @@ TEST_CASE("test-weakly-dominated-column-primal-dual-postsolve",
   printf("\n====================\nWithout presolve\n====================\n");
 
   const std::string model = "issue-007";
-  const bool reduces_to_empty = false;
+  const bool reduces_to_empty = true;
   std::string model_file = std::string(HIGHS_DIR) + "/build/OscarFuzzing/" +
                            model + "/" + model + ".mps";
 
@@ -1476,11 +1533,18 @@ TEST_CASE("test-weakly-dominated-column-primal-dual-postsolve",
   REQUIRE(h.readModel(model_file) == HighsStatus::kOk);
   h.passOptions(options);
 
-  h.setOptionValue("presolve_rule_logging", true);
-  h.setOptionValue("log_dev_level", 1);
   h.writeOptions("", true);
 
-  //  h.setOptionValue(kSolverString, kIpxString);
+  h.run();
+  h.writeSolution("", 1);
+
+  printf(
+      "\n====================\nPresolve with crossover\n====================\n");
+  REQUIRE(h.readModel(model_file) == HighsStatus::kOk);
+  options.run_crossover = kHighsOnString;
+  h.passOptions(options);
+
+  h.writeOptions("", true);
 
   h.run();
   h.writeSolution("", 1);
