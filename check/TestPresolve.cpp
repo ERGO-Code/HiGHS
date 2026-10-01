@@ -1418,15 +1418,14 @@ TEST_CASE("test-weakly-dominated-column-primal-dual-postsolve",
   h.resetGlobalScheduler(true);
 }
 
-/*
   TEST_CASE("test-fuzzing", "[highs_test_presolve]") {
   Highs h;
   //  h.setOptionValue("output_flag", dev_run);
   //  if (dev_run) {
   printf("\n====================\nWithout presolve\n====================\n");
 
-  const std::string model = "issue-005";
-  const bool reduces_to_empty = true;
+  const std::string model = "issue-007";
+  const bool reduces_to_empty = false;
   std::string model_file = std::string(HIGHS_DIR) + "/build/OscarFuzzing/" +
                            model + "/" + model + ".mps";
 
@@ -1446,6 +1445,12 @@ TEST_CASE("test-weakly-dominated-column-primal-dual-postsolve",
   std::string options_file =
       std::string(HIGHS_DIR) + "/build/OscarFuzzing/" + model + "/options.txt";
   REQUIRE(h.readOptions(options_file) == HighsStatus::kOk);
+  HighsInt presolve_rule_off = 0;
+  //presolve_rule_off += (1 << kPresolveRuleZeroCostSingleton);
+  //  presolve_rule_off += (1 << kPresolveRuleAggregator);
+  // presolve_rule_off += (1 << kPresolveRuleDualFixing);
+  REQUIRE(h.setOptionValue("presolve_rule_off", presolve_rule_off) == HighsStatus::kOk);
+
   HighsOptions options = h.getOptions();
 
   if (!reduces_to_empty) {
@@ -1482,7 +1487,6 @@ TEST_CASE("test-weakly-dominated-column-primal-dual-postsolve",
 
   h.resetGlobalScheduler(true);
 }
-*/
 
 TEST_CASE("presolve-rules-off", "[highs_test_presolve]") {
   HighsLp lp;
