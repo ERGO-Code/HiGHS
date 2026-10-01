@@ -341,9 +341,6 @@ set(hipo_util_headers
     ipm/hipo/auxiliary/Logger.h
     ipm/hipo/auxiliary/VectorOperations.h)
 
-# redefinition of 'kHighsInf'
-set_source_files_properties (io/filereaderlp/reader.cpp PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)
-
 set(highs_sources
     interfaces/highs_c_api.cpp
     io/Filereader.cpp
@@ -353,7 +350,7 @@ set(highs_sources
     io/HMpsFF.cpp
     io/HMPSIO.cpp
     io/LoadOptions.cpp
-    io/filereaderlp/reader.cpp
+    io/LpReader.cpp
     ipm/IpxWrapper.cpp
     lp_data/Highs.cpp
     lp_data/HighsCallback.cpp
@@ -480,10 +477,7 @@ set(highs_headers
     io/HMpsFF.h
     io/HMPSIO.h
     io/LoadOptions.h
-    io/filereaderlp/builder.hpp
-    io/filereaderlp/def.hpp
-    io/filereaderlp/model.hpp
-    io/filereaderlp/reader.hpp
+    io/LpReader.h
     ipm/IpxSolution.h
     ipm/IpxWrapper.h
     lp_data/HConst.h
