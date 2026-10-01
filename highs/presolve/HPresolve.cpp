@@ -693,17 +693,17 @@ void HPresolve::markChangedCol(HighsInt col) {
     changedColIndices.push_back(col);
     changedColFlag[col] = true;
   }
-  if (numSingleEquationChecked == 0) return;
-  for (const auto& nz : getColumnVector(col)) {
-    resetSingleEquationChecked(nz.index());
-    if (numSingleEquationChecked == 0) break;
-  }
+  for (const auto& nz : getColumnVector(col))
+    if (!resetSingleEquationChecked(nz.index())) break;
 }
 
-void HPresolve::resetSingleEquationChecked(HighsInt row) {
-  if (!singleEquationChecked[row]) return;
-  singleEquationChecked[row] = false;
-  --numSingleEquationChecked;
+bool HPresolve::resetSingleEquationChecked(HighsInt row) {
+  // clears the flag of the row and returns whether any row is still flagged
+  if (singleEquationChecked[row]) {
+    singleEquationChecked[row] = false;
+    --numSingleEquationChecked;
+  }
+  return numSingleEquationChecked > 0;
 }
 
 double HPresolve::getMaxAbsColVal(HighsInt col) const {

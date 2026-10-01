@@ -195,7 +195,7 @@ class HPresolve {
 
   void markChangedCol(HighsInt col);
 
-  void resetSingleEquationChecked(HighsInt row);
+  bool resetSingleEquationChecked(HighsInt row);
 
   double getMaxAbsColVal(HighsInt col) const;
 
