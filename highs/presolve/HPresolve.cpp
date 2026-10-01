@@ -604,7 +604,7 @@ void HPresolve::chooseRules() {
       may_require_primal_dual_postsolve_ = true;
       // Cannot use weakly dominated column rule (see
       // test-weakly-dominated-column-primal-dual-postsolve)
-      //      allow_rule_[kPresolveRuleWeaklyDominatedCol] = false;
+      allow_rule_[kPresolveRuleWeaklyDominatedCol] = false;
       // Cannot use kPresolveRuleDualFixing rule (see
       // )
       //      allow_rule_[kPresolveRuleDualFixing] = false;
@@ -3880,6 +3880,7 @@ HPresolve::Result HPresolve::singletonCol(HighsPostsolveStack& postsolve_stack,
 
   // detect strong / weak domination
   if (timing) analysis_.presolveTimerStart(kPresolveClockSingletonColDominated);
+  // Pass handleSingletonRows = false 
   HPRESOLVE_CHECKED_CALL(detectDominatedCol(postsolve_stack, col, false));
   if (timing) analysis_.presolveTimerStop(kPresolveClockSingletonColDominated);
   if (colDeleted[col]) return Result::kOk;
@@ -5139,7 +5140,9 @@ HPresolve::Result HPresolve::detectDominatedCol(
     HighsPostsolveStack& postsolve_stack, HighsInt col,
     bool handleSingletonRows) {
   assert(!colDeleted[col]);
-
+  // handleSingletonRows is true by default, but set false when
+  // calling detectDominatedCol in HPresolve::singletonCol
+  //
   // get bounds on column dual
   double colDualUpper =
       -impliedDualRowBounds.getSumLower(col, -model->col_cost_[col]);

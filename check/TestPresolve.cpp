@@ -1403,7 +1403,7 @@ TEST_CASE("test-weakly-dominated-column-primal-dual-postsolve",
   lp.row_upper_ = {kHighsInf};
   // LP is
   //
-  // min x-y-z; 6 <= x-y-z; x\in [0, 1]; y >=0; z\in [0, 6]
+  // min x-y-z; 6 <= x-y+z; x\in [0, 1]; y >=0; z\in [0, 6]
   //
   // Solution var(pr; du) without presolve is
   //
@@ -1415,7 +1415,9 @@ TEST_CASE("test-weakly-dominated-column-primal-dual-postsolve",
   //
   // 1. kPresolveRuleWeaklyDominatedCol fixes z at 6
   //
-  // 2. Problem is min x ; 0 <= x; x \in [0,1], so redundant row
+  // 2. Problem is min x ; 0 <= x; x \in [0, 1]. When considering
+  // singleton row, col bounds not tightened, so row removed as
+  // redundant
   //
   // 3. Problem is min x ; x \in [0, 1] so fix x at 0 => EMPTY
   //
@@ -1431,13 +1433,15 @@ TEST_CASE("test-weakly-dominated-column-primal-dual-postsolve",
   //
   // With presolve and no weakly dominated column rule
   //
-  // 0. ImpliedEquation x-y-z = 6
+  // 0. ImpliedEquation x-y+z = 6, leads to x = 6 + y - z having
+  // implied lower bound of 0, so col_lower[0] is set to -inf
   //
   // 1. y is duplicate of x, so fix y to 0
   //
   // 2. z is duplicate of x, so fix z to 6
   //
-  // 3. Problem is min x ; 0 <= x; x \in [0,1], so singleton row
+  // 3. Problem is min x ; x = 0; x \in (-inf,1]. When considering
+  // singleton row, col bounds tightened, so row removed as singleton
   //
   // 4. Problem is min x ; x \in [0, 1] so fix x at 0
   //
@@ -1449,18 +1453,16 @@ TEST_CASE("test-weakly-dominated-column-primal-dual-postsolve",
   // Undoing 2 gives z at 6 with uniquely-defined dual of 0, and
   // undoing 1 gives y at y with uniquely-defined dual of 0
   //
-  // Hence difference without weakly dominated column rule is just that
-  //
-  // min x ; 0 <= x; x \in [0,1]
-  //
-  // is interpreted as having a singleton row, rather than a redundant
+  // Hence difference without weakly dominated column rule is just
+  // that the problem after removing y and z is different, so the
+  // constraint is removed as a singleton row, rather than a redundant
   // row. Hence, the row dual is set to 1, rather than 0 in
   // postsolve. This suggests that kPresolveRuleWeaklyDominatedCol may
   // be OK, and that using redundant row rather than singleton row is
   // the issue, as the latter links the row to a column
  
   Highs h;
-  //h.setOptionValue("output_flag", dev_run);
+  h.setOptionValue("output_flag", dev_run);
 
   REQUIRE(h.passModel(lp) == HighsStatus::kOk);
 
@@ -1481,7 +1483,7 @@ TEST_CASE("test-weakly-dominated-column-primal-dual-postsolve",
   //  if (dev_run) {
   printf("\n====================\nWithout presolve\n====================\n");
 
-  const std::string model = "issue-007";
+  const std::string model = "issue-005";
   const bool reduces_to_empty = true;
   std::string model_file = std::string(HIGHS_DIR) + "/build/OscarFuzzing/" +
                            model + "/" + model + ".mps";
