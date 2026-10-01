@@ -93,6 +93,10 @@ class HighsLp {
   void deleteCols(const HighsIndexCollection& index_collection);
   void deleteRows(const HighsIndexCollection& index_collection);
   void unapplyMods();
+  void clearAllNameHash() {
+    this->col_hash_.clear();
+    this->row_hash_.clear();
+  }
   void clear();
 };
 
