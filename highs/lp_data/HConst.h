@@ -31,6 +31,8 @@ const double kHighsZero = 1e-50;
 const std::string kHighsOffString = "off";
 const std::string kHighsChooseString = "choose";
 const std::string kHighsOnString = "on";
+const std::string kHighsSparseString = "sparse";
+const std::string kHighsPartialString = "partial";
 const HighsInt kHighsMaxStringLength = 512;
 const HighsInt kSimplexConcurrencyLimit = 8;
 const double kRunningAverageMultiplier = 0.05;
@@ -161,8 +163,9 @@ enum SolutionStyle {
   kSolutionStyleGlpsolRaw,     // 2;
   kSolutionStyleGlpsolPretty,  // 3;
   kSolutionStyleSparse,        // 4;
+  kSolutionStylePartial,       // 5;
   kSolutionStyleMin = kSolutionStyleOldRaw,
-  kSolutionStyleMax = kSolutionStyleSparse
+  kSolutionStyleMax = kSolutionStylePartial
 };
 
 enum GlpsolCostRowLocation {
@@ -270,9 +273,7 @@ enum PresolveRuleType : int {
   kPresolveRuleEmptyCol,
   kPresolveRuleFixedCol,
   kPresolveRuleDominatedCol,
-  // The remaining rules can be switched off
-  kPresolveRuleFirstAllowOff,
-  kPresolveRuleForcingRow = kPresolveRuleFirstAllowOff,
+  kPresolveRuleForcingRow,
   kPresolveRuleForcingCol,
   kPresolveRuleFreeColSubstitution,
   kPresolveRuleDoubletonEquation,
@@ -288,7 +289,8 @@ enum PresolveRuleType : int {
   kPresolveRuleColStuffing,
   kPresolveRuleInitialSweep,
   kPresolveRuleFourierMotzkin,
-  kPresolveRuleMax = kPresolveRuleFourierMotzkin,
+  kPresolveRuleWeaklyDominatedCol,
+  kPresolveRuleMax = kPresolveRuleWeaklyDominatedCol,
   kPresolveRuleLastAllowOff = kPresolveRuleMax,
   kPresolveRuleCount
 };
@@ -404,9 +406,6 @@ const double kMaxSemiVariableUpper = 1e5;
 
 // Limit on primal values being realistic
 const double kExcessivePrimalValue = 1e25;
-
-// Hash marker for duplicates
-const HighsInt kHashIsDuplicate = -1;
 
 // Tolerance values for highsDoubleToString
 const double kModelValueToStringTolerance = 1e-15;

@@ -1106,12 +1106,14 @@ void HighsDomain::ObjectivePropagation::debugCheckObjectiveLower() const {
   for (HighsInt i = partitionStarts[numPartitions]; i < numObjNzs; ++i) {
     HighsInt col = objNonzeros[i];
     if (cost[col] > 0) {
+      if (domain->col_lower_[col] == 0.0) continue;
       if (domain->col_lower_[col] > -kHighsInf)
         lowerFromScratch +=
             static_cast<HighsCDouble>(domain->col_lower_[col]) * cost[col];
       else
         ++numInf;
     } else {
+      if (domain->col_upper_[col] == 0.0) continue;
       if (domain->col_upper_[col] < kHighsInf)
         lowerFromScratch +=
             static_cast<HighsCDouble>(domain->col_upper_[col]) * cost[col];
@@ -2027,6 +2029,9 @@ void HighsDomain::changeBound(HighsDomainChange boundchg, Reason reason) {
 
   HighsInt prevPos;
   if (boundchg.boundtype == HighsBoundType::kLower) {
+    if (mipsolver->isColIntegral(boundchg.column)) {
+      boundchg.boundval = std::ceil(boundchg.boundval - feastol());
+    }
     if (boundchg.boundval <= col_lower_[boundchg.column]) {
       if (reason.type != Reason::kBranching) return;
       boundchg.boundval = col_lower_[boundchg.column];
@@ -2048,6 +2053,9 @@ void HighsDomain::changeBound(HighsDomainChange boundchg, Reason reason) {
     prevPos = colLowerPos_[boundchg.column];
     colLowerPos_[boundchg.column] = domchgstack_.size();
   } else {
+    if (mipsolver->isColIntegral(boundchg.column)) {
+      boundchg.boundval = std::floor(boundchg.boundval + feastol());
+    }
     if (boundchg.boundval >= col_upper_[boundchg.column]) {
       if (reason.type != Reason::kBranching) return;
       boundchg.boundval = col_upper_[boundchg.column];

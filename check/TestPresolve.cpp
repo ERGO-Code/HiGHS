@@ -646,6 +646,8 @@ TEST_CASE("presolve-issue-2095", "[highs_test_presolve]") {
   highs.readModel(model_file);
   REQUIRE(highs.presolve() == HighsStatus::kOk);
   REQUIRE(highs.getModelPresolveStatus() == HighsPresolveStatus::kReduced);
+
+  highs.resetGlobalScheduler(true);
 }
 
 TEST_CASE("presolve-only-at-root", "[highs_test_presolve]") {
@@ -772,38 +774,26 @@ TEST_CASE("presolve-egout-ac", "[highs_test_presolve]") {
   REQUIRE(h.getPresolveLog().rule[kPresolveRuleSparsify].call == 0);
   REQUIRE(h.postsolve(solution, basis) == HighsStatus::kOk);
 
-  // Check that pure presolve reduces the LP to empty using sparsify
-  // when lp_presolve_requires_basis_postsolve is false
-  bool lp_presolve_requires_basis_postsolve = false;
-  REQUIRE(h.setOptionValue("lp_presolve_requires_basis_postsolve",
-                           lp_presolve_requires_basis_postsolve) ==
+  // Now, with crossover off, check that pure presolve reduces the LP
+  // to empty using sparsify, both via direct presolve...
+  REQUIRE(h.setOptionValue("run_crossover", kHighsOffString) ==
           HighsStatus::kOk);
   REQUIRE(h.presolve() == HighsStatus::kOk);
   REQUIRE(h.getPresolveLog().rule[kPresolveRuleSparsify].call > 0);
   REQUIRE(h.postsolve(solution, basis) == HighsStatus::kOk);
-  REQUIRE(h.getOptions().lp_presolve_requires_basis_postsolve ==
-          lp_presolve_requires_basis_postsolve);
 
-  // Now, with crossover off
-  REQUIRE(h.setOptionValue("run_crossover", kHighsOffString) ==
-          HighsStatus::kOk);
+  REQUIRE(h.getRunData().presolved_model_num_col == 0);
+  REQUIRE(h.getRunData().presolved_model_num_row == 0);
+  REQUIRE(h.getRunData().presolved_model_num_nz == 0);
 
-  // Now reset lp_presolve_requires_basis_postsolve default to true,
-  // to test whether it's set false due to running IPM without
-  // crossover
-  lp_presolve_requires_basis_postsolve = true;
-  REQUIRE(h.setOptionValue("lp_presolve_requires_basis_postsolve",
-                           lp_presolve_requires_basis_postsolve) ==
-          HighsStatus::kOk);
-
+  // ... and when solving using IPM without crossover
   REQUIRE(h.clearSolver() == HighsStatus::kOk);
   REQUIRE(h.run() == HighsStatus::kOk);
   REQUIRE(h.getPresolveLog().rule[kPresolveRuleSparsify].call > 0);
-  // Ensure that lp_presolve_requires_basis_postsolve has been reset
-  // to true, after being set false before presolve when using IPM
-  // without crossover
-  REQUIRE(h.getOptions().lp_presolve_requires_basis_postsolve ==
-          lp_presolve_requires_basis_postsolve);
+
+  REQUIRE(h.getRunData().presolved_model_num_col == 0);
+  REQUIRE(h.getRunData().presolved_model_num_row == 0);
+  REQUIRE(h.getRunData().presolved_model_num_nz == 0);
 
   h.resetGlobalScheduler(true);
 }
@@ -1249,8 +1239,6 @@ TEST_CASE("presolve-light-no-crossover", "[highs_test_presolve]") {
 }
 
 TEST_CASE("test-non-stop-initial-sweep", "[highs_test_presolve]") {
-  Highs h;
-  h.setOptionValue("output_flag", dev_run);
   HighsLp lp;
   lp.num_col_ = 3;
   lp.num_row_ = 1;
@@ -1264,6 +1252,9 @@ TEST_CASE("test-non-stop-initial-sweep", "[highs_test_presolve]") {
   lp.a_matrix_.index_ = {0, 1};
   lp.a_matrix_.value_ = {1, 1};
 
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+
   REQUIRE(h.passModel(lp) == HighsStatus::kOk);
 
   h.setOptionValue("presolve_reduction_limit", 0);
@@ -1276,7 +1267,43 @@ TEST_CASE("test-non-stop-initial-sweep", "[highs_test_presolve]") {
   h.resetGlobalScheduler(true);
 }
 
-TEST_CASE("test-duplicate-row", "[highs_test_presolve]") {
+TEST_CASE("test-sparsify-primal-dual-postsolve", "[highs_test_presolve]") {
+  // LP has an empty first row so, after its removal, the original
+  // index of the other two rows is one less than their index in the
+  // presolved problem when sparsify takes place. Before #3324, the
+  // row indices used in equalityRowAdditions were in the presolved
+  // space, rather than the original space, leading to an error in
+  // dual postsolve because multiples of the wrong dual were added to
+  // the dual of the equation used to sparsify
+  HighsLp lp;
+  lp.num_col_ = 3;
+  lp.num_row_ = 3;
+  lp.col_cost_ = {0, 0, 1};
+  lp.col_lower_ = {-kHighsInf, -kHighsInf, -kHighsInf};
+  lp.col_upper_ = {1, 1, 1};
+  lp.a_matrix_.start_ = {0, 2, 4, 6};
+  lp.a_matrix_.index_ = {1, 2, 1, 2, 1, 2};
+  lp.a_matrix_.value_ = {8, -1, 1, -1, 1, -1};
+  lp.row_lower_ = {0, -kHighsInf, 0};
+  lp.row_upper_ = {0, 0, 0};
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+
+  REQUIRE(h.passModel(lp) == HighsStatus::kOk);
+
+  h.setOptionValue("presolve_rule_logging", true);
+  h.setOptionValue(kSolverString, kIpxString);
+  h.setOptionValue("run_crossover", kHighsOffString);
+
+  HighsStatus status = h.run();
+  if (dev_run) h.writeSolution("", 1);
+  REQUIRE(status == HighsStatus::kOk);
+  REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
+
+  h.resetGlobalScheduler(true);
+}
+
+TEST_CASE("test-duplicate-row-postsolve", "[highs_test_presolve]") {
   HighsLp lp;
   lp.num_col_ = 3;
   lp.num_row_ = 2;
@@ -1361,14 +1388,44 @@ TEST_CASE("test-duplicate-row", "[highs_test_presolve]") {
   h.resetGlobalScheduler(true);
 }
 
+TEST_CASE("test-weakly-dominated-column-primal-dual-postsolve",
+          "[highs_test_presolve]") {
+  HighsLp lp;
+  lp.num_col_ = 3;
+  lp.num_row_ = 1;
+  lp.col_cost_ = {1, -1, 1};
+  lp.col_lower_ = {0, 0, 0};
+  lp.col_upper_ = {1, kHighsInf, 6};
+  lp.a_matrix_.start_ = {0, 1, 2, 3};
+  lp.a_matrix_.index_ = {0, 0, 0};
+  lp.a_matrix_.value_ = lp.col_cost_;
+  lp.row_lower_ = {6};
+  lp.row_upper_ = {kHighsInf};
+
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+
+  REQUIRE(h.passModel(lp) == HighsStatus::kOk);
+
+  h.setOptionValue("presolve_rule_logging", true);
+  h.setOptionValue(kSolverString, kIpxString);
+  h.setOptionValue("run_crossover", kHighsOffString);
+
+  REQUIRE(h.run() == HighsStatus::kOk);
+  REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
+  if (dev_run) h.writeSolution("", 1);
+
+  h.resetGlobalScheduler(true);
+}
+
 /*
-TEST_CASE("test-fuzzing", "[highs_test_presolve]") {
+  TEST_CASE("test-fuzzing", "[highs_test_presolve]") {
   Highs h;
   //  h.setOptionValue("output_flag", dev_run);
   //  if (dev_run) {
   printf("\n====================\nWithout presolve\n====================\n");
 
-  const std::string model = "issue-002";
+  const std::string model = "issue-005";
   const bool reduces_to_empty = true;
   std::string model_file = std::string(HIGHS_DIR) + "/build/OscarFuzzing/" +
                            model + "/" + model + ".mps";
@@ -1393,12 +1450,14 @@ TEST_CASE("test-fuzzing", "[highs_test_presolve]") {
 
   if (!reduces_to_empty) {
     printf("\n====================\nPresolved LP\n====================\n");
+
     h.presolve();
 
     HighsLp lp = h.getPresolvedLp();
 
     h.clear();
     h.passModel(lp);
+    h.writeModel("");
 
     h.setOptionValue(kPresolveString, kHighsOffString);
 
@@ -1424,3 +1483,76 @@ TEST_CASE("test-fuzzing", "[highs_test_presolve]") {
   h.resetGlobalScheduler(true);
 }
 */
+
+TEST_CASE("presolve-rules-off", "[highs_test_presolve]") {
+  HighsLp lp;
+  lp.num_col_ = 7;
+  lp.num_row_ = 5;
+  lp.col_cost_ = {1, 1, 1, 1, 1, 1, 1};
+  lp.col_lower_ = {0, 1, 0, 1, 1, -kHighsInf, 0};
+  lp.col_upper_ = {1, 1, kHighsInf, 3, 1, 1, 1};
+  lp.row_lower_ = {2, 8, 10, 13, -kHighsInf};
+  lp.row_upper_ = {4, 9, 16, 26, 4};
+  lp.a_matrix_.num_col_ = lp.num_col_;
+  lp.a_matrix_.num_row_ = lp.num_row_;
+  lp.a_matrix_.start_ = {0, 2, 6, 7, 7, 11, 14, 16};
+  lp.a_matrix_.index_ = {2, 4, 0, 1, 2, 3, 0, 0, 1, 2, 3, 2, 3, 4, 2, 4};
+  lp.a_matrix_.value_ = {6, 1, 1, 4, 7, 11, 2, 3, 5, 8, 12, 9, 13, 1, 10, 1};
+  // Cols 1 and 4 fixed at 1; col 3 empty (fixed at LB = 1) then
+  //
+  // Rows 0 and 3 singletons; row 1 empty, row 4 redundant
+  //
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  if (dev_run) {
+    REQUIRE(h.setOptionValue("log_dev_level", 1) == HighsStatus::kOk);
+    REQUIRE(h.setOptionValue("presolve_rule_logging", true) ==
+            HighsStatus::kOk);
+  }
+  // Only allow initial sweep
+  REQUIRE(h.setOptionValue("presolve_reduction_limit", 0) == HighsStatus::kOk);
+
+  HighsInt presolve_rule_off = 0;
+  const HighsRunData& run_data = h.getRunData();
+  // Loop six times, with all five reductions allowed, reducing to 0
+  for (HighsInt k = 0; k < 6; k++) {
+    REQUIRE(h.setOptionValue("presolve_rule_off", presolve_rule_off) ==
+            HighsStatus::kOk);
+
+    REQUIRE(h.passModel(lp) == HighsStatus::kOk);
+    REQUIRE(h.run() == HighsStatus::kOk);
+
+    if (k == 0) {
+      REQUIRE(run_data.presolved_model_num_row == 1);
+      REQUIRE(run_data.presolved_model_num_col == 4);
+      REQUIRE(run_data.presolved_model_num_nz == 3);
+      presolve_rule_off += (1 << kPresolveRuleRedundantRow);
+    } else if (k == 1) {
+      REQUIRE(run_data.presolved_model_num_row == 2);
+      REQUIRE(run_data.presolved_model_num_col == 4);
+      REQUIRE(run_data.presolved_model_num_nz == 6);
+      presolve_rule_off += (1 << kPresolveRuleSingletonRow);
+    } else if (k == 2) {
+      REQUIRE(run_data.presolved_model_num_row == 4);
+      REQUIRE(run_data.presolved_model_num_col == 4);
+      REQUIRE(run_data.presolved_model_num_nz == 8);
+      presolve_rule_off += (1 << kPresolveRuleEmptyRow);
+    } else if (k == 3) {
+      REQUIRE(run_data.presolved_model_num_row == 5);
+      REQUIRE(run_data.presolved_model_num_col == 4);
+      REQUIRE(run_data.presolved_model_num_nz == 8);
+      presolve_rule_off += (1 << kPresolveRuleFixedCol);
+    } else if (k == 4) {
+      REQUIRE(run_data.presolved_model_num_row == 5);
+      REQUIRE(run_data.presolved_model_num_col == 6);
+      REQUIRE(run_data.presolved_model_num_nz == 16);
+      presolve_rule_off += (1 << kPresolveRuleEmptyCol);
+    } else {
+      REQUIRE(run_data.presolved_model_num_row == lp.num_row_);
+      REQUIRE(run_data.presolved_model_num_col == lp.num_col_);
+      REQUIRE(run_data.presolved_model_num_nz == lp.a_matrix_.numNz());
+    }
+  }
+
+  h.resetGlobalScheduler(true);
+}
