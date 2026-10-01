@@ -45,6 +45,61 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object,
   HighsStatus call_status;
   HighsOptions& options = solver_object.options_;
   HighsProfiling* profiling = solver_object.profiling_;
+
+  if (options.solver == kHighsChooseString && !options.run_centring) {
+    // Automatic solver selection. When called from Highs::run,
+    // solver_object.lp_ is the presolved LP (if presolve has reduced
+    // it). Map the selection onto the corresponding solver option
+    // value and solve by recursion, so that the IPM fallback and
+    // clean-up logic below is shared with explicit solver choices
+    const HighsSolverSelect selected_solver =
+        selectSolver(solver_object.lp_, options.solver_select_strategy,
+                     options.solver_select_require_basis);
+
+    // If a basis is required, the selected solver must yield one
+    // (IPM only does so via crossover)
+    if (options.solver_select_require_basis &&
+        !solverYieldsBasis(selected_solver,
+                           options.run_crossover != kHighsOffString)) {
+      highsLogUser(options.log_options, HighsLogType::kError,
+                   "Solver selection (strategy %d) chose a solver that does "
+                   "not yield the basis that is required\n",
+                   int(options.solver_select_strategy));
+      solver_object.model_status_ = HighsModelStatus::kSolveError;
+      return HighsStatus::kError;
+    }
+
+    const HighsInt simplex_strategy = options.simplex_strategy;
+    std::string selected_solver_string = kSimplexString;
+    switch (selected_solver) {
+      case HighsSolverSelect::kPrimalSimplex:
+        options.simplex_strategy = kSimplexStrategyPrimal;
+        break;
+      case HighsSolverSelect::kDualSimplex:
+        break;
+      case HighsSolverSelect::kIpx:
+        selected_solver_string = kIpxString;
+        break;
+      case HighsSolverSelect::kHipo:
+        selected_solver_string = kHipoString;
+        break;
+      case HighsSolverSelect::kCupdlp:
+        selected_solver_string = kPdlpString;
+        break;
+      case HighsSolverSelect::kHipdlp:
+        selected_solver_string = kHiPdlpString;
+        break;
+    }
+    highsLogDev(options.log_options, HighsLogType::kInfo,
+                "Solver selection (strategy %d) chose \"%s\"\n",
+                int(options.solver_select_strategy),
+                selected_solver_string.c_str());
+    options.solver = selected_solver_string;
+    return_status = solveLp(solver_object, message);
+    options.solver = kHighsChooseString;
+    options.simplex_strategy = simplex_strategy;
+    return return_status;
+  }
   // Reset unscaled model status and solution params - except for
   // iteration counts
   resetModelStatusAndHighsInfo(solver_object);
@@ -164,78 +219,9 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object,
       }  // unwelcome_ipx_status
       // clang-format on
     }
-  } else if (options.solver == "simplex") {
+  } else {
     // Use Simplex
     return_status = simplexSolve();
-    if (return_status == HighsStatus::kError) return return_status;
-  } else {
-    assert(options.solver == "choose");
-
-    // Automatic solver select.
-    // todo: ensure lp_ is the presolved LP
-    HighsSolverSelect selected_solver = selectSolver(
-        solver_object.lp_, solver_object.options_.solver_select_strategy);
-
-    switch (selected_solver) {
-      case HighsSolverSelect::kPrimalSimplex:
-        // Set option for primal simplex in solver_object
-        solver_object.options_.simplex_strategy = 4;
-        return_status = simplexSolve();
-        break;
-      case HighsSolverSelect::kDualSimplex:
-        return_status = simplexSolve();
-        break;
-      case HighsSolverSelect::kHipo:
-        // Use HIPO to solve the LP
-        try {
-          call_status = solveLpHipo(solver_object);
-        } catch (const std::exception& exception) {
-          highsLogDev(options.log_options, HighsLogType::kError,
-                      "Exception %s in solveLpHipo\n", exception.what());
-          call_status = HighsStatus::kError;
-        }
-        return_status = interpretCallStatus(options.log_options, call_status,
-                                            return_status, "solveLpHipo");
-        break;
-      case HighsSolverSelect::kIpx:
-        try {
-          call_status = solveLpIpx(solver_object);
-        } catch (const std::exception& exception) {
-          highsLogDev(options.log_options, HighsLogType::kError,
-                      "Exception %s in solveLpIpx\n", exception.what());
-          call_status = HighsStatus::kError;
-        }
-        return_status = interpretCallStatus(options.log_options, call_status,
-                                            return_status, "solveLpIpx");
-        break;
-      case HighsSolverSelect::kCupdlp:
-        profiling->start(kSubSolverPdlp);
-        try {
-          call_status = solveLpCupdlp(solver_object);
-        } catch (const std::exception& exception) {
-          highsLogDev(options.log_options, HighsLogType::kError,
-                      "Exception %s in solveLpCupdlp\n", exception.what());
-          call_status = HighsStatus::kError;
-        }
-        profiling->stop(kSubSolverPdlp);
-        return_status = interpretCallStatus(options.log_options, call_status,
-                                            return_status, "solveLp-Pdlp");
-        break;
-      case HighsSolverSelect::kHipdlp:
-        profiling->start(kSubSolverPdlp);
-        try {
-          call_status = solveLpHiPdlp(solver_object);
-        } catch (const std::exception& exception) {
-          highsLogDev(options.log_options, HighsLogType::kError,
-                      "Exception %s in solveHiPdlp\n", exception.what());
-          call_status = HighsStatus::kError;
-        }
-        profiling->stop(kSubSolverPdlp);
-        return_status = interpretCallStatus(options.log_options, call_status,
-                                            return_status, "solveLp-Pdlp");
-        break;
-    }
-
     if (return_status == HighsStatus::kError) return return_status;
   }
   // Analyse the HiGHS (basic) solution

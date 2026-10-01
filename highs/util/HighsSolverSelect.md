@@ -37,12 +37,23 @@ auto row  = highsLpFeatureVector(f);               // vector<pair<string,double>
 auto head = highsLpFeatureNames();                 // vector<string> — the CSV header
 
 HighsSolverSelect s = selectSolverByFeatures(lp);  // -> kDualSimplex | kIpx | kHipo
+HighsSolverSelect b = selectSolverByFeatures(lp, /*require_basis=*/true);
+bool ok = solverYieldsBasis(b, /*run_crossover=*/true);
 ```
 
+When `require_basis` is true (e.g. the LP relaxation of a MIP, where
+HiGHS sets the advanced option `solver_select_require_basis`), a separate
+heuristic is used that only returns a solver yielding a basic solution:
+simplex, or IPX/HiPO followed by crossover. When it is false, PDLP may
+also be chosen (ToDo: currently the same heuristic is used for both).
+If, with `solver_select_require_basis` set, the chosen solver can't yield
+a basis — e.g. IPM with `run_crossover = off` — `solveLp` returns an
+error rather than substituting another solver.
+
 `lp` is expected to be the **presolved** LP. Helpers are safe on empty /
-degenerate input (features fall back to 0). `selectSolver(lp)` is the original
-entry point (still a stub returning `kDualSimplex`); point it at
-`selectSolverByFeatures` once the classifier lands.
+degenerate input (features fall back to 0). `selectSolver(lp, strategy,
+require_basis)` is the entry point used by `solveLp` when `solver = choose`:
+strategy 0 returns `kDualSimplex`, strategy 3 calls `selectSolverByFeatures`.
 
 ### Tuning — `HighsLpFeatureParams`
 

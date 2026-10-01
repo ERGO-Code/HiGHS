@@ -373,6 +373,7 @@ struct HighsOptionsStruct {
   HighsInt highs_debug_level;
   HighsInt highs_analysis_level;
   HighsInt solver_select_strategy;
+  bool solver_select_require_basis;
   HighsInt simplex_strategy;
   HighsInt simplex_scale_strategy;
   HighsInt simplex_crash_strategy;
@@ -567,6 +568,7 @@ struct HighsOptionsStruct {
         highs_debug_level(0),
         highs_analysis_level(0),
         solver_select_strategy(0),
+        solver_select_require_basis(false),
         simplex_strategy(0),
         simplex_scale_strategy(0),
         simplex_crash_strategy(0),
@@ -919,9 +921,16 @@ class HighsOptions : public HighsOptionsStruct {
     record_int = new OptionRecordInt(
         "solver_select_strategy",
         "Strategy for automatic solver selection 0 => Simplex only; 1 => "
-        "Columns, rows, nonzeros and integrality; 2 => Full",
-        advanced, &solver_select_strategy, 0, 0, 2);
+        "Columns, rows, nonzeros and integrality; 2 => Full; "
+        "3 => Heuristic",
+        advanced, &solver_select_strategy, 0, 0, 3);
     records.push_back(record_int);
+
+    record_bool = new OptionRecordBool(
+        "solver_select_require_basis",
+        "Restrict automatic solver selection to solvers that yield a basis",
+        advanced, &solver_select_require_basis, false);
+    records.push_back(record_bool);
 
     record_int = new OptionRecordInt(
         "simplex_strategy",

@@ -103,14 +103,23 @@ std::vector<std::pair<std::string, double>> highsLpFeatureVector(
     const HighsLpFeatures& features);
 std::vector<std::string> highsLpFeatureNames();
 
-HighsSolverSelect selectSolver(const HighsLp& lp, const int strategy);
+// When `require_basis` is true, only a solver that yields a basic
+// solution is returned: simplex, or IPX/HiPO (which yield a basis via
+// crossover). In particular, PDLP is never returned
+HighsSolverSelect selectSolver(const HighsLp& lp, const int strategy,
+                               const bool require_basis = false);
 
-// Pick a solver.  Until the PCA model is wired in, this applies a transparent
-// heuristic over `computeLpFeatures(lp)` and only ever returns kDualSimplex,
-// kIpx or kHipo.
+// True if `solver` can yield a basic solution, given whether crossover
+// is run after IPM
+bool solverYieldsBasis(const HighsSolverSelect solver,
+                       const bool run_crossover = true);
+
+// Heuristic over `computeLpFeatures(lp)`, with separate heuristics
+// according to whether a basis is required
 HighsSolverSelect selectSolverByFeatures(
-    const HighsLp& lp,
+    const HighsLp& lp, const bool require_basis = false,
     const HighsLpFeatureParams& params = HighsLpFeatureParams());
-HighsSolverSelect selectSolverByFeatures(const HighsLpFeatures& features);
+HighsSolverSelect selectSolverByFeatures(const HighsLpFeatures& features,
+                                         const bool require_basis = false);
 
 #endif /* UTIL_HIGHS_SOLVER_SELECT_H_ */

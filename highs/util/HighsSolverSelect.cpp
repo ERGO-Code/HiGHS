@@ -11,6 +11,7 @@
 #include "util/HighsSolverSelect.h"
 
 #include <algorithm>
+#include <cassert>
 #include <cmath>
 
 #include "lp_data/HConst.h"
@@ -349,7 +350,9 @@ std::vector<std::string> highsLpFeatureNames() {
   return names;
 }
 
-HighsSolverSelect selectSolverByFeatures(const HighsLpFeatures& f) {
+// Heuristic for when a basis is required, as when solving the LP
+// relaxation of a MIP. Returns kDualSimplex, kIpx or kHipo
+static HighsSolverSelect selectSolverRequiringBasis(const HighsLpFeatures& f) {
   // NOTE: provisional heuristic.  Replace the body with the classifier fitted
   // offline on `highsLpFeatureVector` once the PCA / decision-tree study is
   // done; the feature definitions above are the contract with that study.
@@ -376,11 +379,63 @@ HighsSolverSelect selectSolverByFeatures(const HighsLpFeatures& f) {
   return HighsSolverSelect::kIpx;
 }
 
-HighsSolverSelect selectSolverByFeatures(const HighsLp& lp,
-                                         const HighsLpFeatureParams& params) {
-  return selectSolverByFeatures(computeLpFeatures(lp, params));
+// Heuristic for when a basis is not required, so PDLP may also be
+// chosen
+static HighsSolverSelect selectSolverNotRequiringBasis(
+    const HighsLpFeatures& f) {
+  // ToDo: identify when PDLP (cuPDLP-C or HiPDLP) should be
+  // chosen. Until then, use the same choice as when a basis is
+  // required
+  return selectSolverRequiringBasis(f);
 }
 
-HighsSolverSelect selectSolver(const HighsLp& lp, const int strategy) {
+bool solverYieldsBasis(const HighsSolverSelect solver,
+                       const bool run_crossover) {
+  switch (solver) {
+    case HighsSolverSelect::kDualSimplex:
+    case HighsSolverSelect::kPrimalSimplex:
+      return true;
+    case HighsSolverSelect::kIpx:
+    case HighsSolverSelect::kHipo:
+      return run_crossover;
+    case HighsSolverSelect::kCupdlp:
+    case HighsSolverSelect::kHipdlp:
+      return false;
+  }
+  return false;
+}
+
+HighsSolverSelect selectSolverByFeatures(const HighsLpFeatures& f,
+                                         const bool require_basis) {
+  const HighsSolverSelect solver = require_basis
+                                       ? selectSolverRequiringBasis(f)
+                                       : selectSolverNotRequiringBasis(f);
+  assert(!require_basis || solverYieldsBasis(solver));
+  return solver;
+}
+
+HighsSolverSelect selectSolverByFeatures(const HighsLp& lp,
+                                         const bool require_basis,
+                                         const HighsLpFeatureParams& params) {
+  return selectSolverByFeatures(computeLpFeatures(lp, params), require_basis);
+}
+
+HighsSolverSelect selectSolver(const HighsLp& lp, const int strategy,
+                               const bool require_basis) {
+  switch (strategy) {
+    case 0:
+      return HighsSolverSelect::kDualSimplex;
+      break;
+    case 1:
+      // todo
+      break;
+    case 2:
+      // todo
+      break;
+    case 3:
+      // Heuristic
+      return selectSolverByFeatures(lp, require_basis);
+  }
+
   return HighsSolverSelect::kDualSimplex;
 }

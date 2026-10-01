@@ -19,7 +19,6 @@
 #include "mip/MipTimer.h"
 #include "util/HighsCDouble.h"
 #include "util/HighsHash.h"
-#include "util/HighsSolverSelect.h"
 
 void HighsLpRelaxation::setProfiling(HighsProfiling* profiling) {
   assert(profiling);
@@ -1160,33 +1159,21 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
       use_solver = kSimplexString;
     } else {
       // mip_lp_solver == "choose"
-      assert(mip_lp_solver == "choose");
-      // use_solver = "choose";
-      // choose from simplex, IPM, HIPO
-      // todo: get presolved LP from relaxation and pass to solver select
-
-      HighsSolverSelect selected_solver = selectSolver(
-          getLp(), mipsolver.options_mip_->solver_select_strategy);
-
-      switch (selected_solver) {
-        case HighsSolverSelect::kHipo:
-          use_solver = kHipoString;
-          break;
-        case HighsSolverSelect::kIpx:
-          use_solver = kIpxString;
-          break;
-        case HighsSolverSelect::kDualSimplex:
-          use_solver = kSimplexString;
-        default:
-          assert(0 == 1);
-          use_solver = kSimplexString;
-          break;
-      }
+      assert(mip_lp_solver == kHighsChooseString);
+      // Defer the choice of simplex, IPX or HiPO to solveLp, so that
+      // it is made using the LP after it has been presolved by
+      // lpsolver. Solvers that don't yield a basis are excluded, since
+      // the MIP solver requires one
+      use_solver = kHighsChooseString;
+      lpsolver.setOptionValue("solver_select_strategy",
+                              mipsolver.options_mip_->solver_select_strategy);
+      lpsolver.setOptionValue("solver_select_require_basis", true);
     }
   }
   HighsStatus callstatus;
   // Now allowing the use of IPM at the root node
   lpsolver.setOptionValue("solver", use_solver);
+  const bool use_choose = use_solver == kHighsChooseString;
   bool use_ipm = useIpm(use_solver);
   bool use_simplex = !use_ipm;
   if (use_ipm) {
@@ -1239,6 +1226,19 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
     mipsolver.profiling_->setSubMip(profiling_submip);
     mipsolver.profiling_->solveCall("LP2", mipsolver.submip);
     callstatus = lpsolver.optimizeLp();
+
+    // // The automatically selected solver may have been IPX or HiPO,
+    // // so fall back to simplex
+    // if (use_choose && callstatus == HighsStatus::kError &&
+    //     mipsolver.options_mip_->solver_select_strategy != 0) {
+    //   highsLogDev(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
+    //               "HighsLpRelaxation::run Automatically selected solver has "
+    //               "failed : status = %s Try simplex\n",
+    //               lpsolver.modelStatusToString(lpsolver.getModelStatus())
+    //                   .c_str());
+    //   lpsolver.setOptionValue("solver", kSimplexString);
+    //   callstatus = lpsolver.optimizeLp();
+    // }
   }
   // Revert the value of lpsolver.options_.solver
   lpsolver.setOptionValue("solver", solver);
@@ -1250,7 +1250,9 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
   }
   this->solved_first_lp = true;
   HighsInt itercount = -1;
-  if (use_simplex) {
+  // If the automatically selected solver was IPM, treat the iteration
+  // count as for an explicit IPM solve
+  if (use_simplex && !(use_choose && info.ipm_iteration_count > 0)) {
     itercount = std::max(HighsInt{0}, info.simplex_iteration_count);
     numlpiters += itercount;
   }
