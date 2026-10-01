@@ -1464,9 +1464,9 @@ TEST_CASE("test-weakly-dominated-column-primal-dual-postsolve",
   h.setOptionValue(kSolverString, kIpxString);
   h.setOptionValue("run_crossover", kHighsOffString);
 
-  if (dev_run) h.writeSolution("", 1);
   REQUIRE(h.run() == HighsStatus::kOk);
   REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
+  if (dev_run) h.writeSolution("", 1);
 
   h.resetGlobalScheduler(true);
 }
