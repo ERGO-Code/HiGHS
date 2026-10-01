@@ -9,6 +9,7 @@
 #include "Symbolic.h"
 #include "ipm/hipo/auxiliary/IntConfig.h"
 #include "ipm/hipo/auxiliary/Logger.h"
+#include "util/HighsLinkedLists.h"
 
 namespace hipo {
 
