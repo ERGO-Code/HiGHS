@@ -25,18 +25,20 @@ ColourRefinement::ColourRefinement(const HighsSparseMatrix& A,
       A_{A},
       colour_{colour},
       colour_degree_(n_, 0),
+      colour_sums_(n_, 0.0),
+      node_touched_(n_, false),
       max_colour_degree_(n_, 0),
       min_colour_degree_(n_, 0),
       stack_(n_),
       colours_touched_(n_) {
   hipo::Clock clock;
 
-  colour_classes_.init(n_, n_);
-  colour_classes_touched_.init(n_, n_);
+  node_by_colour_.init(n_, n_);
+  node_touched_by_colour_.init(n_, n_);
 
   assert(colour_.size() == n_);
 
-  for (HighsInt i = 0; i < n_; ++i) colour_classes_.append(i, colour_[i]);
+  for (HighsInt i = 0; i < n_; ++i) node_by_colour_.append(i, colour_[i]);
 
   latest_colour_ = *std::max_element(colour_.begin(), colour_.end());
   for (HighsInt i = 0; i <= latest_colour_; ++i) stack_.push(i);
@@ -55,7 +57,7 @@ void ColourRefinement::chooseRefiningColour() {
 
 void ColourRefinement::touchNeighbour(HighsInt w) {
   colour_degree_[w]++;
-  if (colour_degree_[w] == 1) colour_classes_touched_.append(w, colour_[w]);
+  if (colour_degree_[w] == 1) node_touched_by_colour_.append(w, colour_[w]);
 
   colours_touched_.pushIfNotPresent(colour_[w]);
 
@@ -66,19 +68,19 @@ void ColourRefinement::touchNeighbour(HighsInt w) {
 void ColourRefinement::computeColourDegrees() {
   hipo::Clock clock;
 
-  for (HighsInt v : colour_classes_.list(refining_colour_)) {
-    for (Neighbour w : neighbours(v)) {
-      touchNeighbour(w.index);
+  for (HighsInt v : node_by_colour_.list(refining_colour_)) {
+    for (Neighbour neigh : neighbours(v)) {
+      touchNeighbour(neigh.index);
     }
   }
 
   for (HighsInt c : colours_touched_) {
-    if (colour_classes_.length(c) != colour_classes_touched_.length(c))
+    if (node_by_colour_.length(c) != node_touched_by_colour_.length(c))
       min_colour_degree_[c] = 0;
     else {
       min_colour_degree_[c] = max_colour_degree_[c];
 
-      for (HighsInt v : colour_classes_touched_.list(c)) {
+      for (HighsInt v : node_touched_by_colour_.list(c)) {
         if (colour_degree_[v] < min_colour_degree_[c])
           min_colour_degree_[c] = colour_degree_[v];
       }
@@ -86,6 +88,24 @@ void ColourRefinement::computeColourDegrees() {
   }
 
   time_degrees_ += clock.stop();
+}
+
+void ColourRefinement::touchNeighbour(const Neighbour& neigh) {
+  const HighsInt w = neigh.index;
+  colour_sums_[w] += neigh.value;
+  if (!node_touched_[w]) {
+    node_touched_[w] = true;
+    node_touched_by_colour_.append(w, colour_[w]);
+  }
+  colours_touched_.pushIfNotPresent(colour_[w]);
+}
+
+void ColourRefinement::computeColourSums() {
+  for (HighsInt v : node_by_colour_.list(refining_colour_)) {
+    for (const Neighbour& neigh : neighbours(v)) {
+      touchNeighbour(neigh);
+    }
+  }
 }
 
 void ColourRefinement::findSplitColours() {
@@ -114,9 +134,9 @@ void ColourRefinement::splitColour(const HighsInt s) {
   const HighsInt max_degree = max_colour_degree_[s];
   std::vector<HighsInt> degree_count(max_degree + 1, 0);
   degree_count[0] =
-      colour_classes_.length(s) - colour_classes_touched_.length(s);
+      node_by_colour_.length(s) - node_touched_by_colour_.length(s);
 
-  for (HighsInt v : colour_classes_touched_.list(s)) {
+  for (HighsInt v : node_touched_by_colour_.list(s)) {
     degree_count[colour_degree_[v]]++;
   }
 
@@ -145,10 +165,10 @@ void ColourRefinement::splitColour(const HighsInt s) {
     }
   }
 
-  for (HighsInt v : colour_classes_touched_.list(s)) {
+  for (HighsInt v : node_touched_by_colour_.list(s)) {
     if (new_colour[colour_degree_[v]] != s) {
-      colour_classes_.remove(v, s);
-      colour_classes_.append(v, new_colour[colour_degree_[v]]);
+      node_by_colour_.remove(v, s);
+      node_by_colour_.append(v, new_colour[colour_degree_[v]]);
       colour_[v] = new_colour[colour_degree_[v]];
     }
   }
@@ -159,11 +179,13 @@ void ColourRefinement::prepareNextIter() {
 
   while (!colours_touched_.empty()) {
     HighsInt c = colours_touched_.pop();
-    for (HighsInt v : colour_classes_touched_.list(c)) {
+    for (HighsInt v : node_touched_by_colour_.list(c)) {
       colour_degree_[v] = 0;
+      colour_sums_[v] = 0.0;
+      node_touched_[v] = false;
     }
     max_colour_degree_[c] = 0;
-    colour_classes_touched_.clear(c);
+    node_touched_by_colour_.clear(c);
   }
 
   time_prepare_ += clock.stop();

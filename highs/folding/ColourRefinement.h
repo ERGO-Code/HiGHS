@@ -20,20 +20,23 @@ class ColourRefinement {
   std::vector<HighsInt> max_colour_degree_;
   std::vector<HighsInt> min_colour_degree_;
 
+  std::vector<double> colour_sums_;
+  std::vector<HighsBool> node_touched_;
+
   std::vector<HighsInt> colours_split_;
 
-  HighsLinkedLists colour_classes_;
-  HighsLinkedLists colour_classes_touched_;
+  HighsLinkedLists node_by_colour_;
+  HighsLinkedLists node_touched_by_colour_;
 
   HighsInt latest_colour_;
   HighsInt refining_colour_;
 
-  struct IteratableStack {
+  struct IterableStack {
     std::vector<HighsInt> s;
     HighsInt top;
     std::vector<HighsBool> in_stack;
 
-    IteratableStack(HighsInt n) {
+    IterableStack(HighsInt n) {
       s.resize(n);
       top = -1;
       in_stack.resize(n, 0);
@@ -62,8 +65,8 @@ class ColourRefinement {
     }
   };
 
-  IteratableStack stack_;
-  IteratableStack colours_touched_;
+  IterableStack stack_;
+  IterableStack colours_touched_;
 
   double time_setup_{};
   double time_degrees_{};
@@ -129,6 +132,9 @@ class ColourRefinement {
   void splitColours();
   void splitColour(HighsInt split_colour);
   void prepareNextIter();
+
+  void computeColourSums();
+  void touchNeighbour(const Neighbour& neigh);
 
  public:
   ColourRefinement(const HighsSparseMatrix& A, std::vector<HighsInt>& colour);
