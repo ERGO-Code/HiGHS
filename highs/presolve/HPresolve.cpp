@@ -606,8 +606,8 @@ void HPresolve::chooseRules() {
       // test-weakly-dominated-column-primal-dual-postsolve)
       allow_rule_[kPresolveRuleWeaklyDominatedCol] = false;
       // Cannot use kPresolveRuleDualFixing rule (see
-      // )
-      //      allow_rule_[kPresolveRuleDualFixing] = false;
+      // test-dual-fixing-primal-dual-postsolve)
+      allow_rule_[kPresolveRuleDualFixing] = false;
     }
   }
 }
@@ -3880,7 +3880,7 @@ HPresolve::Result HPresolve::singletonCol(HighsPostsolveStack& postsolve_stack,
 
   // detect strong / weak domination
   if (timing) analysis_.presolveTimerStart(kPresolveClockSingletonColDominated);
-  // Pass handleSingletonRows = false 
+  // Pass handleSingletonRows = false
   HPRESOLVE_CHECKED_CALL(detectDominatedCol(postsolve_stack, col, false));
   if (timing) analysis_.presolveTimerStop(kPresolveClockSingletonColDominated);
   if (colDeleted[col]) return Result::kOk;
