@@ -240,6 +240,17 @@ bool HPresolve::isUpperStrictlyImplied(HighsInt col, double* tolerance) const {
                   (tolerance != nullptr ? *tolerance : primal_feastol));
 }
 
+bool HPresolve::isStrictlyImpliedForDual(HighsInt col, bool lower) const {
+  // checks whether the lower (upper) bound of a column is strictly implied by
+  // the rows; then the bound is never active, the reduced cost of the column
+  // cannot be positive (negative), and the dual constraint of the column has
+  // the side sum_i a_ij y_i >= (<=) c_j. for singleton columns, a bound that
+  // is implied within the primal feasibility tolerance suffices.
+  double impliedMargin = colsize[col] != 1 ? primal_feastol : -primal_feastol;
+  return lower ? isLowerStrictlyImplied(col, &impliedMargin)
+               : isUpperStrictlyImplied(col, &impliedMargin);
+}
+
 bool HPresolve::isBinary(HighsInt col) const {
   return model->integrality_[col] == HighsVarType::kInteger &&
          model->col_lower_[col] == 0.0 && model->col_upper_[col] == 1.0;
@@ -722,15 +733,11 @@ bool HPresolve::checkUpdateRowDualImpliedBounds(HighsInt col,
   // right hand side -cost which becomes a >= constraint with side +cost.
   // Furthermore, we can ignore strictly redundant primal
   // column bounds and treat them as if they are infinite
-  double impliedMargin = colsize[col] != 1 ? primal_feastol : -primal_feastol;
+  double myDualRowLower =
+      isStrictlyImpliedForDual(col, true) ? model->col_cost_[col] : -kHighsInf;
 
-  double myDualRowLower = isLowerStrictlyImplied(col, &impliedMargin)
-                              ? model->col_cost_[col]
-                              : -kHighsInf;
-
-  double myDualRowUpper = isUpperStrictlyImplied(col, &impliedMargin)
-                              ? model->col_cost_[col]
-                              : kHighsInf;
+  double myDualRowUpper =
+      isStrictlyImpliedForDual(col, false) ? model->col_cost_[col] : kHighsInf;
 
   if (dualRowLower != nullptr) *dualRowLower = myDualRowLower;
   if (dualRowUpper != nullptr) *dualRowUpper = myDualRowUpper;
@@ -953,6 +960,30 @@ void HPresolve::resetRowDualImpliedBoundsDerivedFromCol(HighsInt col) {
     // set implied bounds to infinite values if they were deduced from the
     // given column
     resetRowDualImpliedBounds(row, col);
+  }
+}
+
+void HPresolve::resetRowDualImpliedBoundsIfDualSideLost(HighsInt col,
+                                                        bool lower) {
+  // while the column's lower (upper) bound is strictly implied, the dual
+  // constraint of the column has the side sum_i a_ij y_i >= (<=) c_j, which
+  // yields lower (upper) bounds on y_i for positive coefficients and upper
+  // (lower) bounds for negative coefficients. the side >= (<=) is lost when
+  // the lower (upper) bound is no longer strictly implied, i.e. when it is
+  // tightened such that it may become active, or when the implied lower (upper)
+  // bound from the rows is relaxed. then the implied row dual bounds derived
+  // from the lost side are reset.
+  if (isStrictlyImpliedForDual(col, lower)) return;
+  if (implRowDualSourceByCol[col].empty()) return;
+  for (const HighsSliceNonzero& nonzero : getColumnVector(col)) {
+    HighsInt row = nonzero.index();
+    if ((nonzero.value() > 0) == lower) {
+      if (rowDualLowerSource[row] == col)
+        changeImplRowDualLower(row, -kHighsInf, -1);
+    } else {
+      if (rowDualUpperSource[row] == col)
+        changeImplRowDualUpper(row, kHighsInf, -1);
+    }
   }
 }
 
@@ -2730,10 +2761,9 @@ HPresolve::Result HPresolve::changeColUpper(HighsInt col, double newUpper) {
   double oldUpper = model->col_upper_[col];
   model->col_upper_[col] = newUpper;
 
-  double impliedMargin = colsize[col] != 1 ? primal_feastol : -primal_feastol;
-  if (!isUpperStrictlyImplied(col, &impliedMargin)) {
-    resetRowDualImpliedBoundsDerivedFromCol(col);
-  }
+  // a tighter upper bound may no longer be strictly implied; then the <= side
+  // of the dual constraint is lost
+  resetRowDualImpliedBoundsIfDualSideLost(col, false);
 
   HPRESOLVE_CHECKED_CALL(checkColBounds(col));
 
@@ -2759,10 +2789,9 @@ HPresolve::Result HPresolve::changeColLower(HighsInt col, double newLower) {
   double oldLower = model->col_lower_[col];
   model->col_lower_[col] = newLower;
 
-  double impliedMargin = colsize[col] != 1 ? primal_feastol : -primal_feastol;
-  if (!isLowerStrictlyImplied(col, &impliedMargin)) {
-    resetRowDualImpliedBoundsDerivedFromCol(col);
-  }
+  // a tighter lower bound may no longer be strictly implied; then the >= side
+  // of the dual constraint is lost
+  resetRowDualImpliedBoundsIfDualSideLost(col, true);
 
   HPRESOLVE_CHECKED_CALL(checkColBounds(col));
 
@@ -2867,6 +2896,10 @@ void HPresolve::changeImplColUpper(HighsInt col, double newUpper,
   // update implied bound
   implColUpper[col] = newUpper;
 
+  // if the implied upper bound was relaxed, the upper bound may no longer be
+  // strictly implied; then the <= side of the dual constraint is lost
+  resetRowDualImpliedBoundsIfDualSideLost(col, false);
+
   // if the old and the new implied bound are not better than the upper bound,
   // nothing needs to be updated
   if (!newImpliedFree &&
@@ -2910,6 +2943,10 @@ void HPresolve::changeImplColLower(HighsInt col, double newLower,
 
   // update implied bound
   implColLower[col] = newLower;
+
+  // if the implied lower bound was relaxed, the lower bound may no longer be
+  // strictly implied; then the >= side of the dual constraint is lost
+  resetRowDualImpliedBoundsIfDualSideLost(col, true);
 
   // if the old and the new implied bound are not better than the lower bound,
   // nothing needs to be updated
