@@ -240,15 +240,16 @@ bool HPresolve::isUpperStrictlyImplied(HighsInt col, double* tolerance) const {
                   (tolerance != nullptr ? *tolerance : primal_feastol));
 }
 
-bool HPresolve::isStrictlyImpliedForDual(HighsInt col, bool lower) const {
+bool HPresolve::isStrictlyImpliedForDual(HighsInt col,
+                                         bool isLowerBound) const {
   // checks whether the lower (upper) bound of a column is strictly implied by
   // the rows; then the bound is never active, the reduced cost of the column
   // cannot be positive (negative), and the dual constraint of the column has
   // the side sum_i a_ij y_i >= (<=) c_j. for singleton columns, a bound that
   // is implied within the primal feasibility tolerance suffices.
   double impliedMargin = colsize[col] != 1 ? primal_feastol : -primal_feastol;
-  return lower ? isLowerStrictlyImplied(col, &impliedMargin)
-               : isUpperStrictlyImplied(col, &impliedMargin);
+  return isLowerBound ? isLowerStrictlyImplied(col, &impliedMargin)
+                      : isUpperStrictlyImplied(col, &impliedMargin);
 }
 
 bool HPresolve::isBinary(HighsInt col) const {
@@ -964,7 +965,7 @@ void HPresolve::resetRowDualImpliedBoundsDerivedFromCol(HighsInt col) {
 }
 
 void HPresolve::resetRowDualImpliedBoundsIfDualSideLost(HighsInt col,
-                                                        bool lower) {
+                                                        bool isLowerBound) {
   // while the column's lower (upper) bound is strictly implied, the dual
   // constraint of the column has the side sum_i a_ij y_i >= (<=) c_j, which
   // yields lower (upper) bounds on y_i for positive coefficients and upper
@@ -973,11 +974,14 @@ void HPresolve::resetRowDualImpliedBoundsIfDualSideLost(HighsInt col,
   // tightened such that it may become active, or when the implied lower (upper)
   // bound from the rows is relaxed. then the implied row dual bounds derived
   // from the lost side are reset.
-  if (isStrictlyImpliedForDual(col, lower)) return;
+  if (isStrictlyImpliedForDual(col, isLowerBound)) return;
   if (implRowDualSourceByCol[col].empty()) return;
+  // walk the column rather than implRowDualSourceByCol[col], since the sign of
+  // the coefficient is needed and looking it up with findNonzero would splay
+  // the row, which invalidates a traversal of the row by a caller
   for (const HighsSliceNonzero& nonzero : getColumnVector(col)) {
     HighsInt row = nonzero.index();
-    if ((nonzero.value() > 0) == lower) {
+    if ((nonzero.value() > 0) == isLowerBound) {
       if (rowDualLowerSource[row] == col)
         changeImplRowDualLower(row, -kHighsInf, -1);
     } else {
