@@ -2019,7 +2019,10 @@ HighsStatus Highs::calledOptimizeModel() {
                          int(postsolve_iteration_count));
         }
       } else {
-        highsLogUser(log_options, HighsLogType::kError,
+        // Postsolve has failed, so any simplex data for the presolved
+	// problem is useless
+	ekk_instance_.clear();
+	highsLogUser(log_options, HighsLogType::kError,
                      "Postsolve return status is %d\n", (int)postsolve_status);
         setHighsModelStatusAndClearSolutionAndBasis(
             HighsModelStatus::kPostsolveError);
@@ -4015,6 +4018,15 @@ HighsPostsolveStatus Highs::runPostsolve() {
   presolve_.data_.postSolveStack.undo(
       options_, presolve_.data_.recovered_solution_,
       presolve_.data_.recovered_basis_, 0, report_3040_col);
+  // Recovered basis was assumed to be consistent, but #3323
+  // exposes that in exceptional circumstances it may not be,
+  // so check here and return solver error if it is
+  // inconsistent
+  if (!isBasisConsistent(this->model_.lp_, presolve_.data_.recovered_basis_)) {
+    highsLogUser(options_.log_options, HighsLogType::kError,
+		 "Highs::runPostsolve: Error in basis after postsolve\n");
+    return HighsPostsolveStatus::kBasisError;
+  }
   // Compute the row activities
   assert(model_.lp_.a_matrix_.isColwise());
   calculateRowValuesQuad(model_.lp_, presolve_.data_.recovered_solution_);
