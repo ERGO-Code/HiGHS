@@ -36,6 +36,8 @@ struct HighsCommandLineOptions {
   std::string cmd_read_solution_file = "";
   std::string cmd_presolve = "";
   std::string cmd_solver = "";
+  int cmd_solver_select_strategy = 0;
+  bool cmd_solver_select_require_basis = false;
   std::string cmd_parallel = "";
   std::string cmd_crossover = "";
   std::string cmd_write_solution_file = "";
@@ -108,6 +110,20 @@ void setupCommandLineOptions(CLI::App& app,
                  "\"simplex\"\n"
                  "\"hipo\"\n"
                  "\"ipm\"");
+
+  app.add_option("--" + kSolverSelectStrategyString,
+                 cmd_options.cmd_solver_select_strategy,
+                 "Strategy for automatic solver selection,\nused when "
+                 "--" + kSolverString + "=choose:\n"
+                 "0: simplex only * default\n"
+                 "1: columns, rows, nonzeros and integrality\n"
+                 "2: full\n"
+                 "3: heuristic");
+
+  app.add_flag("--" + kSolverSelectRequireBasisString,
+               cmd_options.cmd_solver_select_require_basis,
+               "Restrict automatic solver selection to\nsolvers that yield "
+               "a basis");
 
   app.add_option("--" + kParallelString, cmd_options.cmd_parallel,
                  "Set parallel option to:\n"
@@ -236,6 +252,23 @@ bool loadOptions(const CLI::App& app, const HighsLogOptions& report_log_options,
     if (setLocalOptionValue(report_log_options, kSolverString,
                             options.log_options, options.records,
                             c.cmd_solver) != OptionStatus::kOk)
+      return false;
+  }
+
+  // Solver select strategy option.
+  if (app.count("--" + kSolverSelectStrategyString) > 0) {
+    HighsInt value = c.cmd_solver_select_strategy;
+    if (setLocalOptionValue(report_log_options, kSolverSelectStrategyString,
+                            options.records, value) != OptionStatus::kOk)
+      return false;
+  }
+
+  // Solver select require-basis option.
+  if (app.count("--" + kSolverSelectRequireBasisString) > 0) {
+    if (setLocalOptionValue(report_log_options, kSolverSelectRequireBasisString,
+                            options.records,
+                            c.cmd_solver_select_require_basis) !=
+        OptionStatus::kOk)
       return false;
   }
 
