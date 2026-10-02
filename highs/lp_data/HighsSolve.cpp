@@ -613,13 +613,6 @@ void assessExcessiveObjectiveBoundScaling(const HighsOptions& options,
     highsLogUser(log_options, HighsLogType::kWarning,
                  "%s has some excessively large bounds on constraints\n",
                  problem.c_str());
-  double use_primal_feasibility_tolerance =
-      options.primal_feasibility_tolerance;
-  double use_dual_feasibility_tolerance = options.dual_feasibility_tolerance;
-  if (model.isMip() && !options.solve_relaxation) {
-    use_primal_feasibility_tolerance = options.mip_feasibility_tolerance;
-    use_dual_feasibility_tolerance = options.mip_feasibility_tolerance * 0.1;
-  }
 
   // Lambda to determine recommended user scaling values
   auto suggestScaling = [&](double min_value, double max_value,
@@ -681,10 +674,10 @@ void assessExcessiveObjectiveBoundScaling(const HighsOptions& options,
 
   min_col_cost = std::min(min_continuous_col_cost, min_noncontinuous_col_cost);
   max_col_cost = std::max(max_continuous_col_cost, max_noncontinuous_col_cost);
-  min_effective_col_cost =
-      std::min(min_effective_continuous_col_cost, min_effective_noncontinuous_col_cost);
-  max_effective_col_cost =
-      std::max(max_effective_continuous_col_cost, max_effective_noncontinuous_col_cost);
+  min_effective_col_cost = std::min(min_effective_continuous_col_cost,
+                                    min_effective_noncontinuous_col_cost);
+  max_effective_col_cost = std::max(max_effective_continuous_col_cost,
+                                    max_effective_noncontinuous_col_cost);
   double min_objective_coefficient =
       std::min(min_effective_col_cost, min_continuous_hessian_value);
   double max_objective_coefficient =
@@ -759,6 +752,13 @@ void assessExcessiveObjectiveBoundScaling(const HighsOptions& options,
 
   // Assess the reationship between extreme objective/bound values and
   // feasibility tolerances
+  double use_primal_feasibility_tolerance =
+      options.primal_feasibility_tolerance;
+  double use_dual_feasibility_tolerance = options.dual_feasibility_tolerance;
+  if (model.isMip() && !options.solve_relaxation) {
+    use_primal_feasibility_tolerance = options.mip_feasibility_tolerance;
+    use_dual_feasibility_tolerance = options.mip_feasibility_tolerance * 0.1;
+  }
   const double max_objective = std::max(max_col_cost, max_hessian_value);
   const double max_bound =
       std::max(max_continuous_col_bound,
