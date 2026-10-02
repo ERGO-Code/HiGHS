@@ -822,12 +822,14 @@ HighsStatus writeMps(
     if (offset) {
       // Handle the objective offset as a RHS entry for the cost row
       double v = -use_sense * offset;
-      fprintf(file, "    RHS_V     %-8s  " fpFormat "\n", objective_name.c_str(), v);
+      fprintf(file, "    RHS_V     %-8s  " fpFormat "\n",
+              objective_name.c_str(), v);
     }
     for (HighsInt r_n = 0; r_n < num_row; r_n++) {
       double v = rhs[r_n];
       if (v) {
-        fprintf(file, "    RHS_V     %-8s  " fpFormat "\n", row_names[r_n].c_str(), v);
+        fprintf(file, "    RHS_V     %-8s  " fpFormat "\n",
+                row_names[r_n].c_str(), v);
       }
     }
   }
@@ -836,7 +838,8 @@ HighsStatus writeMps(
     for (HighsInt r_n = 0; r_n < num_row; r_n++) {
       double v = ranges[r_n];
       if (v) {
-        fprintf(file, "    RANGE     %-8s  " fpFormat "\n", row_names[r_n].c_str(), v);
+        fprintf(file, "    RANGE     %-8s  " fpFormat "\n",
+                row_names[r_n].c_str(), v);
       }
     }
   }
@@ -862,8 +865,8 @@ HighsStatus writeMps(
       }
       if (lb == ub) {
         // Equal lower and upper bounds: Fixed
-        fprintf(file, " FX BOUND     %-8s  " fpFormat "\n", col_names[c_n].c_str(),
-                lb);
+        fprintf(file, " FX BOUND     %-8s  " fpFormat "\n",
+                col_names[c_n].c_str(), lb);
       } else if (highs_isInfinity(-lb) && highs_isInfinity(ub)) {
         // Infinite lower and upper bounds: Free
         fprintf(file, " FR BOUND     %-8s\n", col_names[c_n].c_str());
@@ -937,8 +940,8 @@ HighsStatus writeMps(
                   log_options, HighsLogType::kWarning,
                   "Upper bound for semi-variable \"%s\" is %g but writing %g\n",
                   col_names[c_n].c_str(), ub, use_ub);
-            fprintf(file, " LO BOUND     %-8s  " fpFormat "\n", col_names[c_n].c_str(),
-                    use_lb);
+            fprintf(file, " LO BOUND     %-8s  " fpFormat "\n",
+                    col_names[c_n].c_str(), use_lb);
             if (integrality[c_n] == HighsVarType::kSemiInteger) {
               fprintf(file, " SI BOUND     %-8s  " fpFormat "\n",
                       col_names[c_n].c_str(), use_ub);
@@ -961,8 +964,8 @@ HighsStatus writeMps(
           }
           if (!highs_isInfinity(ub)) {
             // Upper bounded variable
-            fprintf(file, " UP BOUND     %-8s  " fpFormat "\n", col_names[c_n].c_str(),
-                    ub);
+            fprintf(file, " UP BOUND     %-8s  " fpFormat "\n",
+                    col_names[c_n].c_str(), ub);
           }
         }
       }
@@ -982,8 +985,9 @@ HighsStatus writeMps(
         assert(row >= col);
         // May have explicit zeroes on the diagonal
         if (q_value[el])
-          fprintf(file, "    %-8s  %-8s  " fpFormat "\n", col_names[col].c_str(),
-                  col_names[row].c_str(), use_sense * q_value[el]);
+          fprintf(file, "    %-8s  %-8s  " fpFormat "\n",
+                  col_names[col].c_str(), col_names[row].c_str(),
+                  use_sense * q_value[el]);
       }
     }
   }
