@@ -300,15 +300,13 @@ class HighsDomain {
     HighsInt getZeroCostFixingPosition() const { return zeroCostStartPos_; }
 
     bool ableToFixToLb(const HighsInt col) const {
-      return mipsolver->model_->col_cost_[col] >=
-                 -mipsolver->options_mip_->dual_feasibility_tolerance &&
-             mipsolver->model_->col_lower_[col] != -kHighsInf;
+      return domain->col_lower_[col] != -kHighsInf &&
+             mipsolver->model_->col_cost_[col] >= 0;
     }
 
     bool ableToFixToUb(const HighsInt col) const {
-      return mipsolver->model_->col_cost_[col] <=
-                 mipsolver->options_mip_->dual_feasibility_tolerance &&
-             mipsolver->model_->col_upper_[col] != kHighsInf;
+      return domain->col_upper_[col] != kHighsInf &&
+             mipsolver->model_->col_cost_[col] <= 0;
     }
 
     void beginProbing() {
@@ -319,7 +317,9 @@ class HighsDomain {
         redundantRowInds_.clear();
       }
 
+#ifndef NDEBUG
       for (const auto& flag : redundantRowFlags_) assert(!flag);
+#endif
 
       fixedZeroCostColumns_.clear();
       setZeroCostFixingPosition(kHighsIInf);

@@ -728,8 +728,6 @@ void HighsDomain::DualFixProbingPropagation::propagate() {
     fixedZeroCostColumns_.emplace_back(FixedZeroCostColumn{col, direction});
   };
 
-  const double dualTol = mipsolver->options_mip_->dual_feasibility_tolerance;
-
   for (HighsInt i = previousRedundantRowSize;
        i != static_cast<HighsInt>(redundantRowInds_.size()); ++i) {
     const RowSide& idx = redundantRowInds_[i];
@@ -746,7 +744,7 @@ void HighsDomain::DualFixProbingPropagation::propagate() {
         // if LHS: Positive val removes a lower lock, negative an upper
         // if RHS: Negative val removes a lower lock, positive an upper
         const bool reducesLowerLock = (val > 0) == isLhs;
-        if (reducesLowerLock && cost >= -dualTol) {
+        if (reducesLowerLock && cost >= 0) {
           if (colLowerReducedNumLocks_[col] == 0 &&
               colUpperReducedNumLocks_[col] == 0) {
             clearColNumReducedLocks_.push_back(col);
@@ -755,7 +753,7 @@ void HighsDomain::DualFixProbingPropagation::propagate() {
           if (colLowerReducedNumLocks_[col] == colLowerLocksOriginal_[col]) {
             addCandidateFixing(col);
           }
-        } else if (!reducesLowerLock && cost <= dualTol) {
+        } else if (!reducesLowerLock && cost <= 0) {
           if (colLowerReducedNumLocks_[col] == 0 &&
               colUpperReducedNumLocks_[col] == 0) {
             clearColNumReducedLocks_.push_back(col);
@@ -769,6 +767,8 @@ void HighsDomain::DualFixProbingPropagation::propagate() {
     }
   }
 
+  previousRedundantRowSize = static_cast<HighsInt>(redundantRowInds_.size());
+
   for (const HighsInt col : candidateFixedCols_) {
     if (domain->isFixed(col)) continue;
     const bool canBeFixedToLower =
@@ -779,12 +779,10 @@ void HighsDomain::DualFixProbingPropagation::propagate() {
         colUpperReducedNumLocks_[col] == colUpperLocksOriginal_[col];
     if (!canBeFixedToLower && !canBeFixedToUpper) continue;
     const double cost = mipsolver->model_->col_cost_[col];
-    if (std::abs(cost) <= dualTol) {
+    if (cost == 0) {
       DualFixProbingFixDirection direction = zeroCostDirections_[col];
       if (direction == FixUndecided) {
-        direction = canBeFixedToLower && (!canBeFixedToUpper || cost >= 0)
-                        ? FixLowerBound
-                        : FixUpperBound;
+        direction = canBeFixedToLower ? FixLowerBound : FixUpperBound;
       }
       if (direction == FixLowerBound && canBeFixedToLower) {
         collectZeroCostFixing(col, FixLowerBound);
@@ -807,8 +805,6 @@ void HighsDomain::DualFixProbingPropagation::propagate() {
     candidateColFixedFlags_[x] = false;
   }
   candidateFixedCols_.clear();
-
-  previousRedundantRowSize = static_cast<HighsInt>(redundantRowInds_.size());
 }
 
 void HighsDomain::DualFixProbingPropagation::propagateZeroCosts() {
@@ -1746,8 +1742,7 @@ void HighsDomain::updateActivityLbChange(HighsInt col, double oldbound,
   }
 
   const bool trackRedundancy =
-      newbound >= oldbound + mipsolver->mipdata_->feastol &&
-      dualFixProbingPropagation.isEnabled();
+      newbound > oldbound && dualFixProbingPropagation.isEnabled();
 
   for (HighsInt i = start; i != end; ++i) {
     if (mip->a_matrix_.value_[i] > 0) {
@@ -1923,8 +1918,7 @@ void HighsDomain::updateActivityUbChange(HighsInt col, double oldbound,
   }
 
   const bool trackRedundancy =
-      newbound <= oldbound - mipsolver->mipdata_->feastol &&
-      dualFixProbingPropagation.isEnabled();
+      newbound < oldbound && dualFixProbingPropagation.isEnabled();
 
   for (HighsInt i = start; i != end; ++i) {
     if (mip->a_matrix_.value_[i] > 0) {
