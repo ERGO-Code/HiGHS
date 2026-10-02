@@ -500,6 +500,8 @@ void assessExcessiveObjectiveBoundScaling(const HighsOptions& options,
 
   if (min_col_cost == kHighsInf) min_col_cost = 0;
   if (max_col_cost == -kHighsInf) max_col_cost = 0;
+  if (min_effective_col_cost == kHighsInf) min_effective_col_cost = 0;
+  if (max_effective_col_cost == -kHighsInf) max_effective_col_cost = 0;
   if (min_continuous_col_bound == kHighsInf) min_continuous_col_bound = 0;
   if (max_continuous_col_bound == -kHighsInf) max_continuous_col_bound = 0;
   if (min_noncontinuous_col_bound == kHighsInf) min_noncontinuous_col_bound = 0;
@@ -521,6 +523,11 @@ void assessExcessiveObjectiveBoundScaling(const HighsOptions& options,
   if (lp.num_col_) {
     highsLogUser(log_options, HighsLogType::kInfo, "  Cost    [%5.0e, %5.0e]\n",
                  min_col_cost, max_col_cost);
+    if (min_effective_col_cost < min_col_cost ||
+        max_effective_col_cost > max_col_cost)
+      highsLogUser(log_options, HighsLogType::kInfo,
+                   "  Cost    [%5.0e, %5.0e] (effective)\n",
+                   min_effective_col_cost, max_effective_col_cost);
     if (num_hessian_nz)
       highsLogUser(log_options, HighsLogType::kInfo,
                    "  Hessian [%5.0e, %5.0e]\n", min_hessian_value,
