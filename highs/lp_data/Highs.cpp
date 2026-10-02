@@ -1174,7 +1174,7 @@ HighsStatus Highs::run() {
   // Determine coefficient ranges and possibly warn the user about
   // excessive values, obtaining suggested values for user_objective_scale
   // and user_bound_scale
-  assessExcessiveObjectiveBoundScaling(this->options_.log_options, this->model_,
+  assessExcessiveObjectiveBoundScaling(this->options_, this->model_,
                                        user_scale_data);
 
   // Optimize the model in the Highs instance
@@ -2329,8 +2329,7 @@ HighsStatus Highs::getObjectiveBoundScaling(HighsInt& suggested_objective_scale,
   this->logHeader();
   HighsUserScaleData data;
   initialiseUserScaleData(this->options_, data);
-  assessExcessiveObjectiveBoundScaling(this->options_.log_options, this->model_,
-                                       data);
+  assessExcessiveObjectiveBoundScaling(this->options_, this->model_, data);
   suggested_objective_scale = data.suggested_user_objective_scale;
   suggested_bound_scale = data.suggested_user_bound_scale;
   return HighsStatus::kOk;
@@ -4020,17 +4019,15 @@ HighsPostsolveStatus Highs::runPostsolve() {
   presolve_.data_.postSolveStack.undo(
       options_, presolve_.data_.recovered_solution_,
       presolve_.data_.recovered_basis_, 0, report_3040_col);
-  if (have_basis) {
+  if (have_basis &&
+      !isBasisConsistent(this->model_.lp_, presolve_.data_.recovered_basis_)) {
     // Recovered basis was assumed to be consistent, but #3323
     // exposes that in exceptional circumstances it may not be,
     // so check here and return solver error if it is
     // inconsistent
-    if (!isBasisConsistent(this->model_.lp_,
-                           presolve_.data_.recovered_basis_)) {
-      highsLogUser(options_.log_options, HighsLogType::kError,
-                   "Highs::runPostsolve: Error in basis after postsolve\n");
-      return HighsPostsolveStatus::kBasisError;
-    }
+    highsLogUser(options_.log_options, HighsLogType::kError,
+                 "Highs::runPostsolve: Error in basis after postsolve\n");
+    return HighsPostsolveStatus::kBasisError;
   }
   // Compute the row activities
   assert(model_.lp_.a_matrix_.isColwise());
