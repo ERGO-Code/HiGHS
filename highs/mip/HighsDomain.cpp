@@ -649,6 +649,7 @@ void HighsDomain::DualFixProbingPropagation::recomputeLocks() {
 
   applyingZeroCostFixings_ = false;
   previousRedundantRowSize = 0;
+  numGlobalRedundantRows_ = 0;
 
   colLowerLocksOriginal_.assign(mipsolver->numCol(), 0);
   colUpperLocksOriginal_.assign(mipsolver->numCol(), 0);
@@ -676,11 +677,15 @@ void HighsDomain::DualFixProbingPropagation::recomputeLocks() {
         colLowerLocksOriginal_[col]++;
     }
   }
+
+  // Check for any pre-redundant rows
+  for (HighsInt row = 0; row != mipsolver->numRow(); row++) {
+    updateRhsRedundant(row);
+    updateLhsRedundant(row);
+  }
 }
 
 void HighsDomain::DualFixProbingPropagation::updateRhsRedundant(HighsInt row) {
-  if (!isEnabled()) return;
-
   RowSide idx{row, true};
   if (domain->activitymaxinf_[row] != 0 || redundantRowFlags_[idx] ||
       mipsolver->model_->row_upper_[row] == kHighsInf)
@@ -690,12 +695,11 @@ void HighsDomain::DualFixProbingPropagation::updateRhsRedundant(HighsInt row) {
       mipsolver->model_->row_upper_[row] + mipsolver->mipdata_->feastol) {
     redundantRowInds_.push_back(idx);
     redundantRowFlags_[idx] = 1;
+    if (!isEnabled()) ++numGlobalRedundantRows_;
   }
 }
 
 void HighsDomain::DualFixProbingPropagation::updateLhsRedundant(HighsInt row) {
-  if (!isEnabled()) return;
-
   RowSide idx{row, false};
   if (domain->activitymininf_[row] != 0 || redundantRowFlags_[idx] ||
       mipsolver->model_->row_lower_[row] == -kHighsInf)
@@ -705,6 +709,7 @@ void HighsDomain::DualFixProbingPropagation::updateLhsRedundant(HighsInt row) {
       mipsolver->model_->row_lower_[row] - mipsolver->mipdata_->feastol) {
     redundantRowInds_.push_back(idx);
     redundantRowFlags_[idx] = 1;
+    if (!isEnabled()) ++numGlobalRedundantRows_;
   }
 }
 
@@ -1741,8 +1746,7 @@ void HighsDomain::updateActivityLbChange(HighsInt col, double oldbound,
     if (infeasible_) return;
   }
 
-  const bool trackRedundancy =
-      newbound > oldbound && dualFixProbingPropagation.isEnabled();
+  const bool trackRedundancy = newbound > oldbound && getDualFixProbingActive();
 
   for (HighsInt i = start; i != end; ++i) {
     if (mip->a_matrix_.value_[i] > 0) {
@@ -1917,8 +1921,7 @@ void HighsDomain::updateActivityUbChange(HighsInt col, double oldbound,
     if (infeasible_) return;
   }
 
-  const bool trackRedundancy =
-      newbound < oldbound && dualFixProbingPropagation.isEnabled();
+  const bool trackRedundancy = newbound < oldbound && getDualFixProbingActive();
 
   for (HighsInt i = start; i != end; ++i) {
     if (mip->a_matrix_.value_[i] > 0) {

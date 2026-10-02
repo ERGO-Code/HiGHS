@@ -249,6 +249,7 @@ class HighsDomain {
     std::vector<HighsBool> redundantRowFlags_;
     std::vector<RowSide> redundantRowInds_;
     HighsInt previousRedundantRowSize = 0;
+    HighsInt numGlobalRedundantRows_ = 0;
 
     // Track direction of zero fixings so we don't store disagreeing results
     enum DualFixProbingFixDirection {
@@ -311,16 +312,7 @@ class HighsDomain {
 
     void beginProbing() {
       previousRedundantRowSize = 0;
-      if (!redundantRowInds_.empty()) {
-        for (const auto x : redundantRowInds_) redundantRowFlags_[x] = false;
-
-        redundantRowInds_.clear();
-      }
-
-#ifndef NDEBUG
-      for (const auto& flag : redundantRowFlags_) assert(!flag);
-#endif
-
+      assert(redundantRowInds_.size() == numGlobalRedundantRows_);
       fixedZeroCostColumns_.clear();
       setZeroCostFixingPosition(kHighsIInf);
       applyingZeroCostFixings_ = false;
@@ -335,6 +327,11 @@ class HighsDomain {
 
     void endProbing() {
       setEnabled(false);
+      for (HighsInt i = numGlobalRedundantRows_;
+           i < static_cast<HighsInt>(redundantRowInds_.size()); ++i) {
+        redundantRowFlags_[redundantRowInds_[i]] = false;
+      }
+      redundantRowInds_.resize(numGlobalRedundantRows_);
       fixedZeroCostColumns_.clear();
       applyingZeroCostFixings_ = false;
       storeLiftingOpportunity = nullptr;
