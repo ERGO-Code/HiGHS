@@ -501,7 +501,7 @@ void minimalApiQp() {
   HighsInt a_index[2] = {0, 0};
   double a_value[2] = {1.0, 1.0};
 
-  // Start with triangular Hessian, then 
+  // Start with triangular Hessian, then
   HighsInt q_format = kHighsHessianFormatTriangular;
   HighsInt q_num_nz = 4;
   HighsInt q_start[3] = {0, 2, 3};
@@ -513,37 +513,38 @@ void minimalApiQp() {
   double* col_value = (double*)malloc(sizeof(double) * num_col);
 
   HighsInt model_status;
-  HighsInt return_status =
-    Highs_qpCall(num_col, num_row, num_nz, q_num_nz, a_format, q_format, sense, offset,
-		 col_cost, col_lower, col_upper, row_lower, row_upper, a_start, a_index,
-		 a_value, q_start, q_index, q_value, col_value, NULL, NULL, NULL, NULL,
-		 NULL, &model_status);
+  HighsInt return_status = Highs_qpCall(
+      num_col, num_row, num_nz, q_num_nz, a_format, q_format, sense, offset,
+      col_cost, col_lower, col_upper, row_lower, row_upper, a_start, a_index,
+      a_value, q_start, q_index, q_value, col_value, NULL, NULL, NULL, NULL,
+      NULL, &model_status);
   assert(return_status == kHighsStatusOk);
   assertIntValuesEqual("Model status for QP qph", model_status,
-		       kHighsModelStatusOptimal);
+                       kHighsModelStatusOptimal);
   for (HighsInt iCol = 0; iCol < num_col; iCol++) {
     if (dev_run) printf("x%d1 = %g\n", (int)iCol, col_value[iCol]);
     assertDoubleValuesEqual("Solution value for QP qph", col_value[iCol],
-			    required_x[iCol]);
+                            required_x[iCol]);
   }
 
   HighsInt square_q_format = kHighsHessianFormatSquare;
   HighsInt square_q_num_nz = 5;
   HighsInt square_q_start[3] = {0, 2, 3};
   HighsInt square_q_index[5] = {0, 2, 1, 0, 2};
-  double   square_q_value[5] = {2.0, -1.0, 0.2, -1.0, 2.0};
+  double square_q_value[5] = {2.0, -1.0, 0.2, -1.0, 2.0};
 
-  Highs_qpCall(num_col, num_row, num_nz, square_q_num_nz, a_format, square_q_format, sense, offset,
-	       col_cost, col_lower, col_upper, row_lower, row_upper, a_start, a_index,
-	       a_value, square_q_start, square_q_index, square_q_value, col_value, NULL, NULL, NULL, NULL,
-	       NULL, &model_status);
+  Highs_qpCall(num_col, num_row, num_nz, square_q_num_nz, a_format,
+               square_q_format, sense, offset, col_cost, col_lower, col_upper,
+               row_lower, row_upper, a_start, a_index, a_value, square_q_start,
+               square_q_index, square_q_value, col_value, NULL, NULL, NULL,
+               NULL, NULL, &model_status);
   assert(return_status == kHighsStatusOk);
   assertIntValuesEqual("Model status for QP qph", model_status,
-		       kHighsModelStatusOptimal);
+                       kHighsModelStatusOptimal);
   for (HighsInt iCol = 0; iCol < num_col; iCol++) {
     if (dev_run) printf("x%d1 = %g\n", (int)iCol, col_value[iCol]);
     assertDoubleValuesEqual("Solution value for QP qph", col_value[iCol],
-			    required_x[iCol]);
+                            required_x[iCol]);
   }
 
   free(col_value);
@@ -686,7 +687,7 @@ void testNames() {
   HighsInt presolved_num_col = Highs_getPresolvedNumCol(highs);
   HighsInt presolved_num_row = Highs_getPresolvedNumRow(highs);
   assert(presolved_num_col == num_col);
-  assert(presolved_num_row == num_row-1);
+  assert(presolved_num_row == num_row - 1);
 
   char presolved_name[5];
 
@@ -694,23 +695,27 @@ void testNames() {
   assert(return_status == kHighsStatusError);
   return_status = Highs_getPresolvedRowName(highs, -1, presolved_name);
   assert(return_status == kHighsStatusError);
-  return_status = Highs_getPresolvedColName(highs, presolved_num_col, presolved_name);
+  return_status =
+      Highs_getPresolvedColName(highs, presolved_num_col, presolved_name);
   assert(return_status == kHighsStatusError);
-  return_status = Highs_getPresolvedRowName(highs, presolved_num_row, presolved_name);
+  return_status =
+      Highs_getPresolvedRowName(highs, presolved_num_row, presolved_name);
   assert(return_status == kHighsStatusError);
-  
+
   for (HighsInt iCol = 0; iCol < presolved_num_col; iCol++) {
     return_status = Highs_getPresolvedColName(highs, iCol, presolved_name);
     assert(return_status == kHighsStatusOk);
     if (dev_run)
-      printf("Presolved column %" HIGHSINT_FORMAT " has name %s\n", iCol, presolved_name);
+      printf("Presolved column %" HIGHSINT_FORMAT " has name %s\n", iCol,
+             presolved_name);
   }
 
   for (HighsInt iRow = 0; iRow < presolved_num_row; iRow++) {
     return_status = Highs_getPresolvedRowName(highs, iRow, presolved_name);
     assert(return_status == kHighsStatusOk);
     if (dev_run)
-      printf("Presolved row    %" HIGHSINT_FORMAT " has name %s\n", iRow, presolved_name);
+      printf("Presolved row    %" HIGHSINT_FORMAT " has name %s\n", iRow,
+             presolved_name);
   }
 
   Highs_destroy(highs);
@@ -1550,16 +1555,18 @@ void testPassHessian() {
     } else {
       q_format = kHighsHessianFormatSquare;
     }
-    return_status = Highs_passHessian(highs, 1, 1, q_format, start, index, value);
-    assertIntValuesEqual("Return of passHessian", return_status, kHighsStatusOk);
+    return_status =
+        Highs_passHessian(highs, 1, 1, q_format, start, index, value);
+    assertIntValuesEqual("Return of passHessian", return_status,
+                         kHighsStatusOk);
     Highs_run(highs);
     // Solving max -x^2 + 2x
     assertIntValuesEqual("Status", Highs_getModelStatus(highs),
-			 kHighsModelStatusOptimal);  // kOptimal
+                         kHighsModelStatusOptimal);  // kOptimal
     Highs_getSolution(highs, col_value, col_dual, NULL, NULL);
     double objective_value = Highs_getObjectiveValue(highs);
     assertDoubleValuesEqual("Objective", objective_value,
-			    optimal_objective_value);
+                            optimal_objective_value);
     assertDoubleValuesEqual("Primal", col_value[0], primal);
     assertDoubleValuesEqual("Dual", col_dual[0], dual);
   }
@@ -1849,8 +1856,8 @@ void testGetModel() {
   // Get the model dimensions by passing array pointers as NULL
   HighsInt return_status;
   return_status = Highs_getLp(highs, a_format, &ck_num_col, &ck_num_row,
-              &ck_num_nz, &ck_sense, &ck_offset, NULL, NULL, NULL, NULL, NULL,
-              NULL, NULL, NULL, NULL);
+                              &ck_num_nz, &ck_sense, &ck_offset, NULL, NULL,
+                              NULL, NULL, NULL, NULL, NULL, NULL, NULL);
   assert(return_status == kHighsStatusOk);
 
   assert(ck_num_col == num_col);
@@ -1870,10 +1877,10 @@ void testGetModel() {
   double* ck_a_value = (double*)malloc(sizeof(double) * num_nz);
 
   // Get the arrays
-  return_status = Highs_getLp(highs, a_format, &ck_num_col, &ck_num_row,
-              &ck_num_nz, &ck_sense, &ck_offset, ck_col_cost, ck_col_lower,
-              ck_col_upper, ck_row_lower, ck_row_upper, ck_a_start, ck_a_index,
-              ck_a_value, NULL);
+  return_status = Highs_getLp(
+      highs, a_format, &ck_num_col, &ck_num_row, &ck_num_nz, &ck_sense,
+      &ck_offset, ck_col_cost, ck_col_lower, ck_col_upper, ck_row_lower,
+      ck_row_upper, ck_a_start, ck_a_index, ck_a_value, NULL);
   assert(return_status == kHighsStatusOk);
 
   assert(doubleArraysEqual(num_col, ck_col_cost, col_cost));
@@ -1887,9 +1894,8 @@ void testGetModel() {
 
   return_status = Highs_getModel(
       highs, a_format, 0, &ck_num_col, &ck_num_row, &ck_num_nz, NULL, &ck_sense,
-      &ck_offset, ck_col_cost, ck_col_lower,
-      ck_col_upper, ck_row_lower, ck_row_upper, ck_a_start, ck_a_index,
-      ck_a_value, NULL, NULL, NULL, NULL);
+      &ck_offset, ck_col_cost, ck_col_lower, ck_col_upper, ck_row_lower,
+      ck_row_upper, ck_a_start, ck_a_index, ck_a_value, NULL, NULL, NULL, NULL);
   assert(return_status == kHighsStatusOk);
 
   assert(ck_num_col == num_col);
@@ -2202,7 +2208,7 @@ void testIis() {
   // x + 2y + z <= 1
   //
   // with variables in [0, 1], constraints 0 and 2 form an IIS with
-  // 
+  //
   // x free; 0 <= y; 0 <= z
   //
   // x + y - z >= 2; x + 2y + z <= 1
@@ -2220,7 +2226,7 @@ void testIis() {
   double value_1[3] = {1, 1, -1};
   double value_2[3] = {1, 1, 1};
   double value_3[3] = {1, 2, 1};
-  ret = Highs_addRow(highs,  2.0, 2.0, 3, index, value_1);
+  ret = Highs_addRow(highs, 2.0, 2.0, 3, index, value_1);
   assert(ret == 0);
   ret = Highs_addRow(highs, -inf, 5.0, 3, index, value_2);
   assert(ret == 0);
@@ -2232,22 +2238,15 @@ void testIis() {
   HighsInt num_nz;
   HighsInt sense;
   double offset;
-  ret = Highs_getLp(highs, kHighsMatrixFormatRowwise,
-		    &num_col, &num_row, &num_nz,
-		    &sense, &offset,
-		    NULL, NULL, NULL, 
-		    NULL, NULL,
-		    NULL, NULL, NULL,
-		    NULL);
+  ret = Highs_getLp(highs, kHighsMatrixFormatRowwise, &num_col, &num_row,
+                    &num_nz, &sense, &offset, NULL, NULL, NULL, NULL, NULL,
+                    NULL, NULL, NULL, NULL);
 
-  for (int k = 0 ; k < 2; k++) {
+  for (int k = 0; k < 2; k++) {
     HighsInt iis_num_col;
     HighsInt iis_num_row;
-    ret = Highs_getIis(highs,
-		       &iis_num_col, &iis_num_row,
-		       NULL, NULL,
-		       NULL, NULL,
-		       NULL, NULL);
+    ret = Highs_getIis(highs, &iis_num_col, &iis_num_row, NULL, NULL, NULL,
+                       NULL, NULL, NULL);
     assert(ret == 0);
 
     if (k == 0) {
@@ -2255,7 +2254,7 @@ void testIis() {
       assert(iis_num_col == 0);
       assert(iis_num_row == 0);
       Highs_setIntOptionValue(highs, "iis_strategy",
-			      kHighsIisStrategyFromLpRowPriority);
+                              kHighsIisStrategyFromLpRowPriority);
     } else {
       assert(iis_num_col == 3);
       assert(iis_num_row == 2);
@@ -2265,13 +2264,11 @@ void testIis() {
       HighsInt* row_bound = (HighsInt*)malloc(sizeof(HighsInt) * iis_num_row);
       HighsInt* col_status = (HighsInt*)malloc(sizeof(HighsInt) * num_col);
       HighsInt* row_status = (HighsInt*)malloc(sizeof(HighsInt) * num_row);
-      ret = Highs_getIis(highs,
-			 &iis_num_col, &iis_num_row,
-			 col_index, row_index,
-			 col_bound, row_bound,
-			 col_status, row_status);
+      ret =
+          Highs_getIis(highs, &iis_num_col, &iis_num_row, col_index, row_index,
+                       col_bound, row_bound, col_status, row_status);
       assert(ret == 0);
-      
+
       assert(col_index[0] == 0);
       assert(col_index[1] == 1);
       assert(col_index[2] == 2);
@@ -2289,11 +2286,11 @@ void testIis() {
       assert(col_status[0] == kHighsIisStatusInConflict);
       assert(col_status[1] == kHighsIisStatusInConflict);
       assert(col_status[2] == kHighsIisStatusInConflict);
-      
+
       assert(row_status[0] == kHighsIisStatusInConflict);
       assert(row_status[1] == kHighsIisStatusNotInConflict);
       assert(row_status[2] == kHighsIisStatusInConflict);
-      
+
       free(col_index);
       free(row_index);
       free(col_bound);
@@ -2321,13 +2318,9 @@ void testIis() {
   ret = Highs_addRow(highs, -inf, 120, 2, index, value_2);
   assert(ret == 0);
 
-  ret = Highs_getLp(highs, kHighsMatrixFormatRowwise,
-		    &num_col, &num_row, &num_nz,
-		    &sense, &offset,
-		    NULL, NULL, NULL, 
-		    NULL, NULL,
-		    NULL, NULL, NULL,
-		    NULL);
+  ret = Highs_getLp(highs, kHighsMatrixFormatRowwise, &num_col, &num_row,
+                    &num_nz, &sense, &offset, NULL, NULL, NULL, NULL, NULL,
+                    NULL, NULL, NULL, NULL);
 
   HighsInt* col_index = NULL;
   HighsInt* row_index = NULL;
@@ -2338,24 +2331,18 @@ void testIis() {
 
   // First try with kIisStrategyLight
   Highs_setIntOptionValue(highs, "iis_strategy", kHighsIisStrategyLight);
-  
-  for (int k = 0 ; k < 2; k++) {
+
+  for (int k = 0; k < 2; k++) {
     HighsInt iis_num_col;
     HighsInt iis_num_row;
-    ret = Highs_getIis(highs,
-		       &iis_num_col, &iis_num_row,
-		       NULL, NULL,
-		       NULL, NULL,
-		       NULL, NULL);
+    ret = Highs_getIis(highs, &iis_num_col, &iis_num_row, NULL, NULL, NULL,
+                       NULL, NULL, NULL);
     assert(ret == 0);
 
     assert(iis_num_col == 0);
     assert(iis_num_row == 0);
-    ret = Highs_getIis(highs,
-		       &iis_num_col, &iis_num_row,
-		       col_index, row_index,
-		       col_bound, row_bound,
-		       col_status, row_status);
+    ret = Highs_getIis(highs, &iis_num_col, &iis_num_row, col_index, row_index,
+                       col_bound, row_bound, col_status, row_status);
     assert(ret == 0);
     if (k == 0) {
       // Before running HiGHS, model status is unknown
@@ -2376,23 +2363,17 @@ void testIis() {
   // Now try with kHighsIisStrategyFromLpRowPriority
   Highs_clearSolver(highs);
   Highs_setIntOptionValue(highs, "iis_strategy",
-			  kHighsIisStrategyFromLpRowPriority);
+                          kHighsIisStrategyFromLpRowPriority);
   HighsInt iis_num_col;
   HighsInt iis_num_row;
-  ret = Highs_getIis(highs,
-		     &iis_num_col, &iis_num_row,
-		     NULL, NULL,
-		     NULL, NULL,
-		     NULL, NULL);
+  ret = Highs_getIis(highs, &iis_num_col, &iis_num_row, NULL, NULL, NULL, NULL,
+                     NULL, NULL);
   assert(ret == 0);
 
   assert(iis_num_col == 0);
   assert(iis_num_row == 0);
-  ret = Highs_getIis(highs,
-		     &iis_num_col, &iis_num_row,
-		     col_index, row_index,
-		     col_bound, row_bound,
-		     col_status, row_status);
+  ret = Highs_getIis(highs, &iis_num_col, &iis_num_row, col_index, row_index,
+                     col_bound, row_bound, col_status, row_status);
   assert(ret == 0);
   // With kHighsIisStrategyFromLpRowPriority, model status is found to
   // be feasible
@@ -2440,9 +2421,9 @@ void testFixedLp() {
   Highs_setBoolOptionValue(highs, "output_flag", dev_run);
   Highs_setStringOptionValue(highs, "presolve", "off");
   HighsInt return_status =
-    Highs_passMip(highs, num_col, num_row, num_nz, a_format, sense, offset,
-		  col_cost, col_lower, col_upper, row_lower, row_upper,
-		  a_start, a_index, a_value, integrality);
+      Highs_passMip(highs, num_col, num_row, num_nz, a_format, sense, offset,
+                    col_cost, col_lower, col_upper, row_lower, row_upper,
+                    a_start, a_index, a_value, integrality);
   assert(return_status == kHighsStatusOk);
   return_status = Highs_run(highs);
   double mip_objective_function_value;
@@ -2459,37 +2440,45 @@ void testFixedLp() {
   HighsInt fixed_lp_num_nz;
   HighsInt fixed_lp_sense;
   double fixed_lp_offset;
-  Highs_getFixedLp(highs, kHighsMatrixFormatColwise, &fixed_lp_num_col, &fixed_lp_num_row,
-		   &fixed_lp_num_nz, &fixed_lp_sense, &fixed_lp_offset, NULL, NULL, NULL, NULL, NULL,
-		   NULL, NULL, NULL);
+  Highs_getFixedLp(highs, kHighsMatrixFormatColwise, &fixed_lp_num_col,
+                   &fixed_lp_num_row, &fixed_lp_num_nz, &fixed_lp_sense,
+                   &fixed_lp_offset, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                   NULL);
 
   assert(fixed_lp_num_col == num_col);
   assert(fixed_lp_num_row == num_row);
   assert(fixed_lp_num_nz == num_nz);
   assert(fixed_lp_sense == sense);
 
-  double* fixed_lp_col_cost = (double*)malloc(sizeof(double) * fixed_lp_num_col);
-  double* fixed_lp_col_lower = (double*)malloc(sizeof(double) * fixed_lp_num_col);
-  double* fixed_lp_col_upper = (double*)malloc(sizeof(double) * fixed_lp_num_col);
-  double* fixed_lp_row_lower = (double*)malloc(sizeof(double) * fixed_lp_num_row);
-  double* fixed_lp_row_upper = (double*)malloc(sizeof(double) * fixed_lp_num_row);
-  HighsInt* fixed_lp_a_start = (HighsInt*)malloc(sizeof(HighsInt) * fixed_lp_num_col);
-  HighsInt* fixed_lp_a_index = (HighsInt*)malloc(sizeof(HighsInt) * fixed_lp_num_nz);
+  double* fixed_lp_col_cost =
+      (double*)malloc(sizeof(double) * fixed_lp_num_col);
+  double* fixed_lp_col_lower =
+      (double*)malloc(sizeof(double) * fixed_lp_num_col);
+  double* fixed_lp_col_upper =
+      (double*)malloc(sizeof(double) * fixed_lp_num_col);
+  double* fixed_lp_row_lower =
+      (double*)malloc(sizeof(double) * fixed_lp_num_row);
+  double* fixed_lp_row_upper =
+      (double*)malloc(sizeof(double) * fixed_lp_num_row);
+  HighsInt* fixed_lp_a_start =
+      (HighsInt*)malloc(sizeof(HighsInt) * fixed_lp_num_col);
+  HighsInt* fixed_lp_a_index =
+      (HighsInt*)malloc(sizeof(HighsInt) * fixed_lp_num_nz);
   double* fixed_lp_a_value = (double*)malloc(sizeof(double) * num_nz);
 
   // Get the arrays
-  Highs_getFixedLp(highs, kHighsMatrixFormatColwise, &fixed_lp_num_col, &fixed_lp_num_row,
-		   &fixed_lp_num_nz, &fixed_lp_sense, &fixed_lp_offset, fixed_lp_col_cost, fixed_lp_col_lower,
-		   fixed_lp_col_upper, fixed_lp_row_lower, fixed_lp_row_upper, fixed_lp_a_start, fixed_lp_a_index,
-		   fixed_lp_a_value);
-  
-  return_status = Highs_passLp(highs,
-			       fixed_lp_num_col, fixed_lp_num_row, fixed_lp_num_nz,
-			       kHighsMatrixFormatColwise,
-			       fixed_lp_sense, fixed_lp_offset,
-			       fixed_lp_col_cost, fixed_lp_col_lower, fixed_lp_col_upper,
-			       fixed_lp_row_lower, fixed_lp_row_upper,
-			       fixed_lp_a_start, fixed_lp_a_index, fixed_lp_a_value);
+  Highs_getFixedLp(highs, kHighsMatrixFormatColwise, &fixed_lp_num_col,
+                   &fixed_lp_num_row, &fixed_lp_num_nz, &fixed_lp_sense,
+                   &fixed_lp_offset, fixed_lp_col_cost, fixed_lp_col_lower,
+                   fixed_lp_col_upper, fixed_lp_row_lower, fixed_lp_row_upper,
+                   fixed_lp_a_start, fixed_lp_a_index, fixed_lp_a_value);
+
+  return_status =
+      Highs_passLp(highs, fixed_lp_num_col, fixed_lp_num_row, fixed_lp_num_nz,
+                   kHighsMatrixFormatColwise, fixed_lp_sense, fixed_lp_offset,
+                   fixed_lp_col_cost, fixed_lp_col_lower, fixed_lp_col_upper,
+                   fixed_lp_row_lower, fixed_lp_row_upper, fixed_lp_a_start,
+                   fixed_lp_a_index, fixed_lp_a_value);
   assert(return_status == kHighsStatusOk);
 
   return_status = Highs_setSolution(highs, col_value, NULL, NULL, NULL);
@@ -2501,8 +2490,7 @@ void testFixedLp() {
                                            &objective_function_value);
   assert(return_status == kHighsStatusOk);
   assert(objective_function_value == mip_objective_function_value);
-  
- 
+
   free(col_value);
   free(fixed_lp_col_cost);
   free(fixed_lp_col_lower);
@@ -2512,7 +2500,7 @@ void testFixedLp() {
   free(fixed_lp_a_start);
   free(fixed_lp_a_index);
   free(fixed_lp_a_value);
-  
+
   Highs_destroy(highs);
 }
 
