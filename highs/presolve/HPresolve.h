@@ -43,6 +43,8 @@ class HPresolve {
   HighsMipSolver* mipsolver = nullptr;
   HPresolveCliqueTable presolveCliqueTable;
   double primal_feastol;
+  bool may_require_basis_postsolve_;
+  bool may_require_primal_dual_postsolve_;
   std::vector<HighsBool> allow_rule_;
 
   // triplet storage
@@ -135,6 +137,10 @@ class HPresolve {
   HighsInt numDeletedRows;
   HighsInt numDeletedCols;
 
+  // number of rows with singleEquationChecked set, so that marking a changed
+  // column can skip clearing the flags of its rows when none is set
+  HighsInt numSingleEquationChecked;
+
   // store old problem sizes to compute percentage reductions in
   // presolve loop
   HighsInt oldNumCol;
@@ -188,6 +194,8 @@ class HPresolve {
   void markChangedRow(HighsInt row);
 
   void markChangedCol(HighsInt col);
+
+  bool resetSingleEquationChecked(HighsInt row);
 
   double getMaxAbsColVal(HighsInt col) const;
 

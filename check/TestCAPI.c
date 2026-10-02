@@ -655,7 +655,11 @@ void testNames() {
   // Define all column names to be the same
   for (HighsInt iCol = 0; iCol < num_col; iCol++) {
     return_status = Highs_passColName(highs, iCol, col_prefix);
-    assert(return_status == kHighsStatusOk);
+    if (iCol == 0) {
+      assert(return_status == kHighsStatusOk);
+    } else {
+      assert(return_status == kHighsStatusWarning);
+    }
   }
   return_status = Highs_writeModel(highs, "");
   assert(return_status == kHighsStatusWarning);
@@ -686,7 +690,11 @@ void testNames() {
   // Define all row names to be the same
   for (HighsInt iRow = 0; iRow < num_row; iRow++) {
     return_status = Highs_passRowName(highs, iRow, row_prefix);
-    assert(return_status == kHighsStatusOk);
+    if (iRow == 0) {
+      assert(return_status == kHighsStatusOk);
+    } else {
+      assert(return_status == kHighsStatusWarning);
+    }
   }
   return_status = Highs_writeModel(highs, "");
   assert(return_status == kHighsStatusWarning);

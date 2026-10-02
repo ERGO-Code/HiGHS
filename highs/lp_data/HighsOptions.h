@@ -1507,7 +1507,7 @@ class HighsOptions : public HighsOptionsStruct {
     record_bool = new OptionRecordBool(
         "lp_presolve_requires_basis_postsolve",
         "Prevents LP presolve steps for which postsolve cannot maintain a "
-        "basis",
+        "basis: redundant option!",
         advanced, &lp_presolve_requires_basis_postsolve, true);
     records.push_back(record_bool);
 
@@ -1798,4 +1798,8 @@ bool solverValidForLp(const std::string& solver);
 bool solverValidForMip(const std::string& solver);
 bool solverValidForQp(const std::string& solver);
 
+bool useIpm(const std::string& solver);
+bool usePdlp(const std::string& solver);
+bool mayRequireBasisPostsolve(const HighsOptions* options);
+bool mayRequirePrimalDualPostsolve(const HighsOptions* options);
 #endif

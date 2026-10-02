@@ -524,43 +524,98 @@ bool HighsLpMods::isClear() {
   return true;
 }
 
-void HighsNameHash::form(const std::vector<std::string>& name) {
+void HighsNameHash::form(const std::vector<std::string>& names) {
   this->clear();
-  for (size_t index = 0; index < name.size(); index++) {
+  for (size_t index = 0; index < names.size(); index++) {
     auto emplace_result =
-        this->name2index.emplace(name[index], static_cast<int>(index));
+        this->name2index.emplace(names[index], static_cast<int>(index));
     const bool duplicate = !emplace_result.second;
     if (duplicate) {
-      // Find the original and mark it as duplicate
+      // Find the original
       auto& search = emplace_result.first;
-      assert(int(search->second) < int(this->name2index.size()));
-      search->second = kHashIsDuplicate;
+      if (search->second >= 0) {
+        // search->second is is the index associated with the first
+        // occurrence of the name (not the position in name2index), so
+        // initialise the duplicate count
+        search->second = -1;
+      } else {
+        // search->second < 0, then -search->second is the duplicate
+        // count, so increase it
+        search->second--;
+      }
     }
   }
+  assert(this->ok(names));
 }
 
-bool HighsNameHash::hasDuplicate(const std::vector<std::string>& name) {
+bool HighsNameHash::hasDuplicate(const std::vector<std::string>& names) {
   this->clear();
   bool has_duplicate = false;
-  for (size_t index = 0; index < name.size(); index++) {
-    has_duplicate =
-        !this->name2index.emplace(name[index], static_cast<int>(index)).second;
+  for (size_t index = 0; index < names.size(); index++) {
+    auto emplace_result =
+        this->name2index.emplace(names[index], static_cast<int>(index));
+    has_duplicate = !emplace_result.second;
     if (has_duplicate) break;
   }
   this->clear();
   return has_duplicate;
 }
 
-void HighsNameHash::update(int index, const std::string& old_name,
-                           const std::string& new_name) {
-  this->name2index.erase(old_name);
-  auto emplace_result = this->name2index.emplace(new_name, index);
-  if (!emplace_result.second) {
-    // Find the original and mark it as duplicate
-    auto& search = emplace_result.first;
-    assert(int(search->second) < int(this->name2index.size()));
-    search->second = kHashIsDuplicate;
-  }
+void HighsNameHash::addName(const HighsInt index, const std::string& name) {
+  if (!this->size()) return;
+  addNameFindsDuplicate(index, name);
 }
 
-void HighsNameHash::clear() { this->name2index.clear(); }
+bool HighsNameHash::addNameFindsDuplicate(const HighsInt index,
+                                          const std::string& name) {
+  auto emplace_result = this->name2index.emplace(name, static_cast<int>(index));
+  const bool duplicate = !emplace_result.second;
+  if (duplicate) {
+    // Find the original and mark it as duplicate
+    auto& search = emplace_result.first;
+    if (search->second >= 0) {
+      search->second = -1;
+    } else {
+      search->second--;
+    }
+    return true;
+  }
+  return false;
+}
+
+bool HighsNameHash::updateFindsDuplicate(const HighsInt index,
+                                         const std::string& old_name,
+                                         const std::string& new_name) {
+  // Update duplication data for old_name, erasing it if it disappears
+  auto find_result = this->name2index.find(old_name);
+  if (find_result != this->name2index.end()) {
+    // Old name is present, so find out if it's a duplicate
+    if (find_result->second < 0) {
+      // At least one duplicate of old_name
+      find_result->second++;
+    } else {
+      // Old name was unique, so erase it
+      this->name2index.erase(old_name);
+    }
+  }
+  return addNameFindsDuplicate(index, new_name);
+}
+
+bool HighsNameHash::ok(const std::vector<std::string>& names) {
+  HighsInt num_name = names.size();
+  HighsNameHash helper;
+  for (HighsInt index = 0; index < num_name; index++)
+    helper.name2index.emplace(names[index], 0);
+  for (auto& entry : helper.name2index) {
+    std::string unique_name = entry.first;
+    auto find_result = this->name2index.find(unique_name);
+    if (find_result == this->name2index.end()) return false;
+    HighsInt count = 0;
+    for (HighsInt index = 0; index < num_name; index++)
+      if (names[index] == unique_name) count++;
+    if ((count == 1 && find_result->second < 0) ||
+        (count > 1 && count != 1 - find_result->second))
+      return false;
+  }
+  return true;
+}
