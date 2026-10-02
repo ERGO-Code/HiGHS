@@ -1732,7 +1732,77 @@ TEST_CASE("issue-3342", "[highs_test_presolve]") {
   lp.a_matrix_.start_ = {0, 1, 2, 3, 5};
   lp.a_matrix_.index_ = {1, 0, 0, 0, 1};
   lp.a_matrix_.value_ = {1, 2, 2, -2, -2};
-
+  //
+  // LP is
+  //
+  // min -6w + 2x - y + 2z;
+  //
+  // 3 <= 2x + 2y - 2z;
+  //
+  // -4 <= w - 2z <= 0
+  //
+  // w \in [-6, 2]; -4 <= x; y <= 2; z <= 1
+  //
+  // Solution vr(Pr; Du; St) without presolve or after 1 simplex
+  // iteration after basis postsolve
+  //
+  // Cols: w(2; -4; UB), x(1/2; 0; BS), y(2; -3; UB), z(1; 0; BS)
+  //
+  // Rows: r0(3; 1; LB), r1(0; -2; UB)
+  //
+  // With presolve and dominated column rule allowed
+  //
+  // 0. Dominated column fixes y at UB
+  //
+  // 1. Dominated column fixes z at UB
+  //
+  // 2. Singleton row -2 <= w <= 2 tightens bounds on w to [-2, 2]
+  //
+  // 3. Empty column fixes w at UB
+  //
+  // 4. Singleton row 1 <= 2x tightens bounds on x to [1/2, inf)
+  //
+  // 5. Empty column fixes x at LB: EMPTY
+  //
+  // Basis and primal-dual postsolve give
+  //
+  // After undoing 5, solution is
+  //
+  // x(1/2; 2; LB)
+  //
+  // After undoing 4, solution is
+  //
+  // x(1/2; 0; BS), r0(1; 1; LB)
+  //
+  // After undoing 3, solution is
+  //
+  // w(2; -6; UB), x(1/2; 0; BS), r0(1; 1; LB)
+  //
+  // After undoing 2, solution is
+  //
+  // w(2; -6; UB), x(1/2; 0; BS), r0(1; 1; LB), r1(2; 0; BS)
+  //
+  // After undoing 1, solution is
+  //
+  // Cols: w(2; -6; UB), x(1/2; 0; BS), z(1; 4; UB)
+  //
+  // Rows: r0(-1; 1; LB), r1(0; 0; BS)
+  //
+  // Hence dual for z is infeasible!
+  //
+  // Correction is to change dual on r1 to -2, making it UB. This
+  // gives zero dual for z, so it can be BS in solution
+  //
+  // Cols: w(2; -4; UB), x(1/2; 0; BS), z(1; 0; BS)
+  //
+  // Rows: r0(-1; 1; LB), r1(0; -2; UB)
+  //
+  // Then, after undoing 1, solution is (as above)
+  //
+  // Cols: w(2; -4; UB), x(1/2; 0; BS), y(2; -3; UB), z(1; 0; BS)
+  //
+  // Rows: r0(-1; 1; LB), r1(0; -2; UB)
+  //
   const bool reduces_to_empty = true;
 
   HighsOptions options;
