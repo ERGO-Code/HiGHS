@@ -154,8 +154,8 @@ HighsLpFeatures computeLpFeatures(const HighsLp& lp,
   double min_abs_rhs = kHighsInf;
   std::vector<double> rhs_values;  // one representative per row
   rhs_values.reserve(num_row);
-  std::vector<double> all_finite_rhs;  // every finite bound, for the range
-  all_finite_rhs.reserve(num_row);
+  // std::vector<double> all_finite_rhs;  // every finite bound, for the range
+  // all_finite_rhs.reserve(num_row);
 
   for (HighsInt iRow = 0; iRow < num_row; iRow++) {
     const double lower = lp.row_lower_[iRow];
@@ -182,7 +182,7 @@ HighsLpFeatures computeLpFeatures(const HighsLp& lp,
     for (int k = 0; k < 2; k++) {
       const double bound = k == 0 ? lower : upper;
       if (!isFinite(bound)) continue;
-      all_finite_rhs.push_back(bound);
+      // all_finite_rhs.push_back(bound);
       const double abs_bound = std::fabs(bound);
       if (abs_bound > 0.0) {
         max_abs_rhs = std::max(max_abs_rhs, abs_bound);
