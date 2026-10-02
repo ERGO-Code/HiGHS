@@ -29,7 +29,6 @@
 #include "presolve/HPresolveUtils.h"
 #include "presolve/HighsPostsolveStack.h"
 #include "presolve/PresolveTimer.h"
-#include "test_kkt/DevKkt.h"
 #include "util/HFactor.h"
 #include "util/HighsCDouble.h"
 #include "util/HighsIntegers.h"
