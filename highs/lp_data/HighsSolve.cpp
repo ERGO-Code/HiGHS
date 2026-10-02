@@ -687,9 +687,9 @@ void assessExcessiveObjectiveBoundScaling(const HighsOptions& options,
   max_effective_col_cost =
       std::max(max_effective_continuous_col_cost, max_effective_noncontinuous_col_cost);
   double min_objective_coefficient =
-      std::min(min_col_cost, min_continuous_hessian_value);
+      std::min(min_effective_col_cost, min_continuous_hessian_value);
   double max_objective_coefficient =
-      std::max(max_col_cost, max_continuous_hessian_value);
+      std::max(max_effective_col_cost, max_continuous_hessian_value);
   if (min_objective_coefficient == kHighsInf) min_objective_coefficient = 0;
   if (max_objective_coefficient == -kHighsInf) max_objective_coefficient = 0;
 
