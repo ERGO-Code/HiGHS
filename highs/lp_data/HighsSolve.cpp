@@ -374,11 +374,13 @@ HighsStatus solveUnconstrainedLp(const HighsOptions& options, const HighsLp& lp,
 // determine the model coefficient ranges, assess it for values
 // outside the [small, large] range, and give appropriate scaling
 // recommendations
-void assessExcessiveObjectiveBoundScaling(const HighsLogOptions log_options,
+void assessExcessiveObjectiveBoundScaling(const HighsOptions& options,
                                           const HighsModel& model,
                                           HighsUserScaleData& user_scale_data) {
+  const HighsLogOptions& log_options = options.log_options;
   const HighsLp& lp = model.lp_;
   if (lp.num_col_ == 0 || lp.num_row_ == 0) return;
+  std::vector<double> effective_cost = getEffectiveCosts(lp, options);
   const bool user_cost_or_bound_scale =
       user_scale_data.user_objective_scale || user_scale_data.user_bound_scale;
   const double small_objective_coefficient =
