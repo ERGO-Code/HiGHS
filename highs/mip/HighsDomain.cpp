@@ -650,6 +650,7 @@ void HighsDomain::DualFixProbingPropagation::recomputeLocks() {
   applyingZeroCostFixings_ = false;
   previousRedundantRowSize = 0;
   numGlobalRedundantRows_ = 0;
+  numCachedGlobalRedundantRows_ = 0;
 
   colLowerLocksOriginal_.assign(mipsolver->numCol(), 0);
   colUpperLocksOriginal_.assign(mipsolver->numCol(), 0);
@@ -661,6 +662,8 @@ void HighsDomain::DualFixProbingPropagation::recomputeLocks() {
   candidateColFixedFlags_.assign(mipsolver->numCol(), false);
   clearColNumReducedLocks_.clear();
   clearColNumReducedLocks_.reserve(mipsolver->numCol());
+  globalCandidateFixedCols_.clear();
+  globalCandidateFixedCols_.reserve(mipsolver->numCol());
 
   // compute the locks for each variable
   const HighsLp* model = mipsolver->model_;
@@ -683,6 +686,42 @@ void HighsDomain::DualFixProbingPropagation::recomputeLocks() {
     updateRhsRedundant(row);
     updateLhsRedundant(row);
   }
+}
+
+void HighsDomain::DualFixProbingPropagation::cacheGlobalRedundantRows() {
+  // Go through rows made redundant via domain changes made while
+  // dualFixProbingPropagation was not enabled
+  for (; numCachedGlobalRedundantRows_ < numGlobalRedundantRows_;
+       ++numCachedGlobalRedundantRows_) {
+    const RowSide& side = redundantRowInds_[numCachedGlobalRedundantRows_];
+    const HighsInt start = mipsolver->mipdata_->ARstart_[side.row];
+    const HighsInt end = mipsolver->mipdata_->ARstart_[side.row + 1];
+    for (HighsInt i = start; i < end; ++i) {
+      const double val = mipsolver->mipdata_->ARvalue_[i];
+      if (val == 0.0) continue;
+      const HighsInt col = mipsolver->mipdata_->ARindex_[i];
+      const bool isUpperLock = (val > 0) == side.isRhs;
+      HighsInt& locks = isUpperLock ? colUpperLocksOriginal_[col]
+                                    : colLowerLocksOriginal_[col];
+      --locks;
+      const double cost = mipsolver->model_->col_cost_[col];
+      if (locks == 0 &&
+          ((isUpperLock && cost <= 0) || (!isUpperLock && cost >= 0))) {
+        globalCandidateFixedCols_.push_back(col);
+      }
+    }
+  }
+
+  // Schedule candidate fixes. These will naturally get fixed in the
+  // global domain over time.
+  HighsInt numCandidates = 0;
+  for (HighsInt col : globalCandidateFixedCols_) {
+    if (domain->isFixed(col) || candidateColFixedFlags_[col]) continue;
+    globalCandidateFixedCols_[numCandidates++] = col;
+    candidateColFixedFlags_[col] = true;
+    candidateFixedCols_.push_back(col);
+  }
+  globalCandidateFixedCols_.resize(numCandidates);
 }
 
 void HighsDomain::DualFixProbingPropagation::updateRhsRedundant(HighsInt row) {
@@ -714,14 +753,9 @@ void HighsDomain::DualFixProbingPropagation::updateLhsRedundant(HighsInt row) {
 }
 
 void HighsDomain::DualFixProbingPropagation::propagate() {
-  HighsInt numNewRedundantRows =
-      static_cast<HighsInt>(redundantRowInds_.size()) -
-      previousRedundantRowSize;
-  if (!isEnabled() || numNewRedundantRows <= 0) return;
+  if (!isActive()) return;
 
-  assert(candidateFixedCols_.empty());
-
-  auto addCandidateFixing = [&](HighsInt col) {
+  auto addCandidateFixing = [&](const HighsInt col) {
     if (!candidateColFixedFlags_[col]) {
       candidateFixedCols_.push_back(col);
       candidateColFixedFlags_[col] = true;

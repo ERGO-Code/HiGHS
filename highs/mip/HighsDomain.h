@@ -250,6 +250,7 @@ class HighsDomain {
     std::vector<RowSide> redundantRowInds_;
     HighsInt previousRedundantRowSize = 0;
     HighsInt numGlobalRedundantRows_ = 0;
+    HighsInt numCachedGlobalRedundantRows_ = 0;
 
     // Track direction of zero fixings so we don't store disagreeing results
     enum DualFixProbingFixDirection {
@@ -272,15 +273,17 @@ class HighsDomain {
 
     bool enabled_ = false;
 
-    // Original lower / upper locks + number of removed locks after propagation.
+    // Remaining global lower / upper locks
     std::vector<HighsInt> colLowerLocksOriginal_;
     std::vector<HighsInt> colUpperLocksOriginal_;
+    // Number of removed locks after propagation.
     std::vector<HighsInt> colLowerReducedNumLocks_;
     std::vector<HighsInt> colUpperReducedNumLocks_;
     std::vector<HighsInt> clearColNumReducedLocks_;
 
     std::vector<HighsInt> candidateFixedCols_;
     std::vector<HighsBool> candidateColFixedFlags_;
+    std::vector<HighsInt> globalCandidateFixedCols_;
 
     void setEnabled(const bool val) { enabled_ = val; }
 
@@ -288,8 +291,9 @@ class HighsDomain {
 
     // active only when new redundant rows are found.
     bool isActive() const {
-      return enabled_ && static_cast<HighsInt>(redundantRowInds_.size()) >
-                             previousRedundantRowSize;
+      return enabled_ && (!candidateFixedCols_.empty() ||
+                          static_cast<HighsInt>(redundantRowInds_.size()) >
+                              previousRedundantRowSize);
     }
 
     bool isZeroCostFixingActive() const { return applyingZeroCostFixings_; }
@@ -311,8 +315,9 @@ class HighsDomain {
     }
 
     void beginProbing() {
-      previousRedundantRowSize = 0;
-      assert(redundantRowInds_.size() == numGlobalRedundantRows_);
+      previousRedundantRowSize = numGlobalRedundantRows_;
+      assert(static_cast<HighsInt>(redundantRowInds_.size()) ==
+             numGlobalRedundantRows_);
       fixedZeroCostColumns_.clear();
       setZeroCostFixingPosition(kHighsIInf);
       applyingZeroCostFixings_ = false;
@@ -323,6 +328,7 @@ class HighsDomain {
         colUpperReducedNumLocks_[col] = 0;
       }
       clearColNumReducedLocks_.clear();
+      cacheGlobalRedundantRows();
     }
 
     void endProbing() {
@@ -335,6 +341,10 @@ class HighsDomain {
       fixedZeroCostColumns_.clear();
       applyingZeroCostFixings_ = false;
       storeLiftingOpportunity = nullptr;
+      for (const HighsInt col : candidateFixedCols_) {
+        candidateColFixedFlags_[col] = false;
+      }
+      candidateFixedCols_.clear();
     }
 
     DualFixProbingPropagation() = default;
@@ -345,6 +355,7 @@ class HighsDomain {
         const DualFixProbingPropagation& other) = delete;
 
     void recomputeLocks();
+    void cacheGlobalRedundantRows();
     void updateRhsRedundant(HighsInt row);
     void updateLhsRedundant(HighsInt row);
     void propagate();
