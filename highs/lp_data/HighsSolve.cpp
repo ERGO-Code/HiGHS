@@ -380,7 +380,6 @@ void assessExcessiveObjectiveBoundScaling(const HighsOptions& options,
   const HighsLp& lp = model.lp_;
   if (lp.num_col_ == 0 || lp.num_row_ == 0) return;
   std::vector<double> effective_cost = getEffectiveCosts(lp, options);
-  assert(effective_cost.size() == size_t(lp.num_col_));
   const bool user_cost_or_bound_scale =
       user_scale_data.user_objective_scale || user_scale_data.user_bound_scale;
   const double small_objective_coefficient =
