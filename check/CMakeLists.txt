@@ -282,11 +282,12 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
 
   # define settings
   set(settings
-      "--presolve=off"
+    #   "--presolve=off"
       "--presolve=on"
-      "--random_seed=1"
-      "--random_seed=2"
-      "--random_seed=3"
+      "--solver_select_strategy=3"
+    #   "--random_seed=1"
+    #   "--random_seed=2"
+    #   "--random_seed=3"
   #   "--random_seed=4"
   #   "--random_seed=5"
   #   "--parallel=on"

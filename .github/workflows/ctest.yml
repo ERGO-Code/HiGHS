@@ -1,0 +1,41 @@
+name: ctest
+
+# Minimal CI while iterating on solver-select: just configure, build and
+# ctest on each OS. The rest of the workflows are parked in
+# .github/workflows-disabled/ — move them back (and delete this file) before
+# merging.
+
+on: [push, pull_request]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ctest:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Create Build Environment
+        run: cmake -E make_directory ${{github.workspace}}/build
+
+      - name: Configure CMake
+        shell: bash
+        working-directory: ${{github.workspace}}/build
+        run: cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        shell: bash
+        working-directory: ${{github.workspace}}/build
+        run: cmake --build . --parallel --config Release
+
+      - name: Test
+        shell: bash
+        working-directory: ${{github.workspace}}/build
+        run: ctest --parallel --timeout 300 --output-on-failure -C Release
