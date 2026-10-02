@@ -491,13 +491,72 @@ ScalingResult computeScalingPipeline(const SparseMatrix& matrix,
   return result;
 }
 
+namespace {
+
+struct ScaledNorms {
+  double cost;
+  double rhs;
+  double bounds;
+};
+
+ScaledNorms computeScaledNorms(const Problem& problem,
+                               const ScalingMetadata& scaling) {
+  double cost_scale = 0.0, cost_sum = 1.0;
+  double rhs_scale = 0.0, rhs_sum = 1.0;
+  double bound_scale = 0.0, bound_sum = 1.0;
+  for (HighsInt col = 0; col < problem.numCols(); ++col) {
+    updateScaledSumOfSquares(problem.costs()[col] * scaling.col_scale[col],
+                             cost_scale, cost_sum);
+    if (std::abs(problem.colLower()[col]) < kHighsInf)
+      updateScaledSumOfSquares(problem.colLower()[col] / scaling.col_scale[col],
+                               bound_scale, bound_sum);
+    if (std::abs(problem.colUpper()[col]) < kHighsInf)
+      updateScaledSumOfSquares(problem.colUpper()[col] / scaling.col_scale[col],
+                               bound_scale, bound_sum);
+  }
+  for (HighsInt row = 0; row < problem.numRows(); ++row) {
+    if (std::abs(problem.rowLower()[row]) < kHighsInf)
+      updateScaledSumOfSquares(problem.rowLower()[row] * scaling.row_scale[row],
+                               rhs_scale, rhs_sum);
+  }
+  const auto norm = [](const double scale, const double sum) {
+    return scale == 0.0 ? 0.0 : scale * std::sqrt(sum);
+  };
+  return {norm(cost_scale, cost_sum), norm(rhs_scale, rhs_sum),
+          norm(bound_scale, bound_sum)};
+}
+
+}  // namespace
+
+double scaledNormInflation(const Problem& problem,
+                           const ScalingMetadata& candidate,
+                           const ScalingMetadata& reference) {
+  const ScaledNorms numerator = computeScaledNorms(problem, candidate);
+  const ScaledNorms denominator = computeScaledNorms(problem, reference);
+  return std::max({(1.0 + numerator.cost) / (1.0 + denominator.cost),
+                   (1.0 + numerator.rhs) / (1.0 + denominator.rhs),
+                   (1.0 + numerator.bounds) / (1.0 + denominator.bounds)});
+}
+
 api::Error applyScalingPipeline(Problem& problem,
                                 const ScalingOptions& options) {
   if (!problem.initialized())
     return invalidScaling("HiPDLP problem is not initialized");
-  const ScalingResult result =
-      computeScalingPipeline(problem.matrix(), options);
+  ScalingResult result = computeScalingPipeline(problem.matrix(), options);
   if (!result.ok()) return result.error;
+  if (options.mode == ScalingMode::kAuto &&
+      result.scaling.curtis_reid_sweeps > 0) {
+    ScalingOptions without_curtis_reid = options;
+    without_curtis_reid.mode = ScalingMode::kLegacy;
+    ScalingResult fallback =
+        computeScalingPipeline(problem.matrix(), without_curtis_reid);
+    if (fallback.ok() &&
+        scaledNormInflation(problem, result.scaling, fallback.scaling) >
+            kCurtisReidInflationLimit) {
+      fallback.scaling.curtis_reid_rejected = true;
+      result = fallback;
+    }
+  }
   if (result.scaling.stages.empty()) return api::Error();
   return problem.applyDiagonalScaling(result.scaling.row_scale,
                                       result.scaling.col_scale, result.scaling);

@@ -108,7 +108,10 @@ falling back. `openmp` and `rocm` are reserved, unavailable backends. The CMake
 option `HIGHS_HIPDLP_CUDA` is independent of cuPDLP's `CUPDLP_GPU` option.
 
 Default HiPDLP scaling applies deterministic host Curtis-Reid scaling followed
-by the enabled legacy stages. Fixed and PID step-size policies are supported;
+by the enabled legacy stages, unless Curtis-Reid would make the scaled costs,
+right-hand sides or bounds more than a factor 1000 larger (2-norm) than the
+legacy stages alone give; then it is dropped and only the legacy stages are
+applied, and the solve log says so. Fixed and PID step-size policies are supported;
 the public adaptive request maps to fixed, not PID. Benchmarks using explicit
 PID must be distinguished from that default path. The independent PDLP
 iteration tolerance and final KKT tolerance are separate options; changing

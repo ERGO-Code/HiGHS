@@ -848,6 +848,11 @@ api::SolveResult solve(const api::SolverOptions& options,
     if (!built.ok()) return failure(built.error);
     error = model::applyScalingPipeline(built.problem, options.scaling);
     if (!error.ok()) return failure(error);
+    if (context.log != nullptr && built.problem.scaling().curtis_reid_rejected)
+      context.log->info(
+          "HiPDLP rewrite scaling: Curtis-Reid rejected, it would inflate the "
+          "scaled costs, right-hand sides or bounds; using Ruiz and "
+          "Pock-Chambolle");
     if (built.problem.matrix().numNonzeros() == 0) {
       return failure(
           api::Error(api::ErrorCode::kInvalidModel,

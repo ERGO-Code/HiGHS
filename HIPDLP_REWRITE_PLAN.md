@@ -184,7 +184,12 @@ Selection rules:
 
 - `auto` is the rewrite default. It applies Curtis-Reid first, followed by the
   Ruiz, Pock-Chambolle, and L2 stages selected by the existing
-  `pdlp_scaling_mode` bits;
+  `pdlp_scaling_mode` bits. If Curtis-Reid would inflate the 2-norm of the
+  scaled costs, right-hand sides or finite bounds by more than a factor
+  `kCurtisReidInflationLimit` (1000) relative to the same stages without it,
+  `auto` drops Curtis-Reid and logs that it did. The stopping test is measured
+  in unscaled space, so extreme scale factors make it unreachable in practice
+  (observed on the `neso-2245`/`neso-2005` models);
 - `curtis_reid` applies only Curtis-Reid scaling;
 - `legacy` omits Curtis-Reid and retains the existing HiPDLP scaling sequence;
 - `off`, or the existing `pdlp_features_off` scaling bit, disables all scaling;

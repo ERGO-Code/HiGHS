@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <cmath>
 #include <limits>
 #include <type_traits>
@@ -27,6 +28,38 @@ HighsLp makeTransformationLp() {
   lp.a_matrix_.value_ = {1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, -7.0, -2.0};
   lp.sense_ = ObjSense::kMaximize;
   lp.offset_ = 7.0;
+  return lp;
+}
+
+// Every row and column holds one unit entry and `tiny_per_line` entries of
+// 1e-7. The geometric mean Curtis-Reid equalises is set by the tiny entries,
+// so it scales every row by about 1e6 although only the unit entries matter.
+HighsLp makeManyTinyEntriesLp(const HighsInt size,
+                              const HighsInt tiny_per_line) {
+  HighsLp lp;
+  lp.num_col_ = size;
+  lp.num_row_ = size;
+  lp.col_cost_.assign(size, 1.0);
+  lp.col_lower_.assign(size, 0.0);
+  lp.col_upper_.assign(size, kHighsInf);
+  lp.row_lower_.assign(size, 1.0);
+  lp.row_upper_.assign(size, kHighsInf);
+  lp.a_matrix_.format_ = MatrixFormat::kColwise;
+  lp.a_matrix_.num_col_ = size;
+  lp.a_matrix_.num_row_ = size;
+  lp.a_matrix_.start_.assign(1, 0);
+  for (HighsInt col = 0; col < size; ++col) {
+    std::vector<HighsInt> rows;
+    for (HighsInt offset = 0; offset <= tiny_per_line; ++offset)
+      rows.push_back((col + offset) % size);
+    std::sort(rows.begin(), rows.end());
+    for (const HighsInt row : rows) {
+      lp.a_matrix_.index_.push_back(row);
+      lp.a_matrix_.value_.push_back(row == col ? 1.0 : 1e-7);
+    }
+    lp.a_matrix_.start_.push_back(
+        static_cast<HighsInt>(lp.a_matrix_.index_.size()));
+  }
   return lp;
 }
 
@@ -858,3 +891,58 @@ static_assert(!std::is_copy_constructible<hipdlp::model::Problem>::value,
               "Problem must remain move-only");
 static_assert(std::is_move_constructible<hipdlp::model::Problem>::value,
               "Problem must remain movable");
+
+TEST_CASE("hi-pdlp-auto-scaling-rejects-curtis-reid-that-inflates-scaled-data",
+          "[pdlp][hipdlp][model][scaling]") {
+  using hipdlp::model::ScalingMode;
+  using hipdlp::model::ScalingStage;
+  hipdlp::model::ScalingOptions options;
+  options.mode = ScalingMode::kAuto;
+
+  hipdlp::model::ProblemBuildResult tiny =
+      hipdlp::model::buildProblem(makeManyTinyEntriesLp(40, 10));
+  REQUIRE(tiny.ok());
+  hipdlp::model::ScalingOptions curtis_reid_only = options;
+  curtis_reid_only.mode = ScalingMode::kCurtisReid;
+  hipdlp::model::ScalingOptions without_curtis_reid = options;
+  without_curtis_reid.mode = ScalingMode::kLegacy;
+  const hipdlp::model::ScalingResult curtis_reid = hipdlp::model::
+      computeScalingPipeline(tiny.problem.matrix(), curtis_reid_only);
+  const hipdlp::model::ScalingResult legacy = hipdlp::model::
+      computeScalingPipeline(tiny.problem.matrix(), without_curtis_reid);
+  REQUIRE(curtis_reid.ok());
+  REQUIRE(legacy.ok());
+  CHECK(hipdlp::model::scaledNormInflation(tiny.problem, curtis_reid.scaling,
+                                           legacy.scaling) >
+        hipdlp::model::kCurtisReidInflationLimit);
+
+  REQUIRE(hipdlp::model::applyScalingPipeline(tiny.problem, options).ok());
+  CHECK(tiny.problem.scaling().curtis_reid_rejected);
+  CHECK(tiny.problem.scaling().curtis_reid_sweeps == 0);
+  CHECK(tiny.problem.scaling().stages ==
+        std::vector<ScalingStage>(
+            {ScalingStage::kRuiz, ScalingStage::kPockChambolle}));
+  CHECK(tiny.problem.scaling().row_scale == legacy.scaling.row_scale);
+  CHECK(tiny.problem.scaling().col_scale == legacy.scaling.col_scale);
+
+  // Asking for Curtis-Reid explicitly is never second-guessed.
+  hipdlp::model::ProblemBuildResult explicit_request =
+      hipdlp::model::buildProblem(makeManyTinyEntriesLp(40, 10));
+  REQUIRE(explicit_request.ok());
+  REQUIRE(hipdlp::model::applyScalingPipeline(explicit_request.problem,
+                                              curtis_reid_only)
+              .ok());
+  CHECK_FALSE(explicit_request.problem.scaling().curtis_reid_rejected);
+  CHECK(explicit_request.problem.scaling().stages ==
+        std::vector<ScalingStage>({ScalingStage::kCurtisReid}));
+
+  // A problem Curtis-Reid does not distort keeps it.
+  hipdlp::model::ProblemBuildResult benign =
+      hipdlp::model::buildProblem(makeTransformationLp());
+  REQUIRE(benign.ok());
+  REQUIRE(hipdlp::model::applyScalingPipeline(benign.problem, options).ok());
+  CHECK_FALSE(benign.problem.scaling().curtis_reid_rejected);
+  REQUIRE_FALSE(benign.problem.scaling().stages.empty());
+  CHECK(benign.problem.scaling().stages.front() ==
+        ScalingStage::kCurtisReid);
+}
