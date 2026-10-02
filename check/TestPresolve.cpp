@@ -13,6 +13,9 @@ bool doubleEqual(const double v0, const double v1) {
 void presolveSolvePostsolve(const std::string& model_file,
                             const bool solve_relaxation = false);
 
+void debugPrimalDualPresolve(const HighsLp& lp, const bool reduces_to_empty,
+                             HighsOptions& options);
+
 TEST_CASE("presolve-solve-postsolve-lp", "[highs_test_presolve]") {
   std::string model_file =
       std::string(HIGHS_DIR) + "/check/instances/25fv47.mps";
@@ -1709,6 +1712,120 @@ TEST_CASE("presolve-rules-off", "[highs_test_presolve]") {
       REQUIRE(run_data.presolved_model_num_col == lp.num_col_);
       REQUIRE(run_data.presolved_model_num_nz == lp.a_matrix_.numNz());
     }
+  }
+
+  h.resetGlobalScheduler(true);
+}
+
+TEST_CASE("issue-3342", "[highs_test_presolve]") {
+  HighsLp lp;
+  lp.model_name_ = "issue-3342";
+  lp.num_col_ = 4;
+  lp.num_row_ = 2;
+  lp.col_cost_ = {-6, 2, -1, 2};
+  lp.col_lower_ = {-6, -4, -kHighsInf, -kHighsInf};
+  lp.col_upper_ = {2, kHighsInf, 2, 1};
+  lp.row_lower_ = {3, -4};
+  lp.row_upper_ = {kHighsInf, 0};
+  lp.a_matrix_.start_ = {0, 1, 2, 3, 5};
+  lp.a_matrix_.index_ = {1, 0, 0, 0, 1};
+  lp.a_matrix_.value_ = {1, 2, 2, -2, -2};
+
+  const bool reduces_to_empty = true;
+
+  HighsOptions options;
+  options.solver = kHipoString;
+  options.threads = 1;
+
+  debugPrimalDualPresolve(lp, reduces_to_empty, options);
+}
+
+void debugPrimalDualPresolve(const HighsLp& lp, const bool reduces_to_empty,
+                             HighsOptions& options) {
+  const bool debugging = true;  // dev_run;
+  const bool strict_test = true;
+  Highs h;
+  //  h.setOptionValue("output_flag", dev_run);
+
+  options.run_crossover = kHighsOffString;
+  options.presolve == kHighsOnString;
+  options.presolve_rule_logging = true;
+  REQUIRE(h.passOptions(options) == HighsStatus::kOk);
+
+  if (debugging)
+    printf("\n====================\nWithout presolve\n====================\n");
+
+  REQUIRE(h.passModel(lp) == HighsStatus::kOk);
+
+  REQUIRE(h.setOptionValue(kSolverString, kSimplexString) == HighsStatus::kOk);
+  REQUIRE(h.setOptionValue(kPresolveString, kHighsOffString) ==
+          HighsStatus::kOk);
+
+  REQUIRE(h.run() == HighsStatus::kOk);
+  REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
+  if (debugging) {
+    h.writeModel("");
+    h.writeSolution("", 1);
+  }
+
+  if (!reduces_to_empty) {
+    if (debugging)
+      printf("\n====================\nPresolved LP\n====================\n");
+
+    REQUIRE(h.passOptions(options) == HighsStatus::kOk);
+    REQUIRE(h.setOptionValue(kSolverString, kIpxString) == HighsStatus::kOk);
+
+    h.presolve();
+
+    HighsLp presolved_lp = h.getPresolvedLp();
+
+    h.passModel(presolved_lp);
+    if (debugging) h.writeModel("");
+
+    REQUIRE(h.setOptionValue(kPresolveString, kHighsOffString) ==
+            HighsStatus::kOk);
+
+    h.run();
+    if (debugging) h.writeSolution("", 1);
+  }
+
+  if (debugging)
+    printf(
+        "\n====================\nPresolve no "
+        "crossover\n====================\n");
+
+  h.passModel(lp);
+  REQUIRE(h.passOptions(options) == HighsStatus::kOk);
+
+  if (debugging) h.writeOptions("", true);
+
+  HighsStatus status = h.run();
+  HighsModelStatus model_status = h.getModelStatus();
+
+  if (debugging) h.writeSolution("", 1);
+
+  if (strict_test) {
+    REQUIRE(model_status == HighsModelStatus::kOptimal);
+    REQUIRE(status == HighsStatus::kOk);
+  }
+
+  if (debugging)
+    printf(
+        "\n====================\nPresolve with "
+        "crossover\n====================\n");
+
+  h.passModel(lp);
+  REQUIRE(h.passOptions(options) == HighsStatus::kOk);
+
+  h.setOptionValue("run_crossover", kHighsOnString);
+
+  REQUIRE(h.run() == HighsStatus::kOk);
+  REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
+
+  if (debugging) h.writeSolution("", 1);
+
+  if (strict_test) {
+    REQUIRE(h.getRunData().num_simplex_iterations_after_postsolve == 0);
   }
 
   h.resetGlobalScheduler(true);

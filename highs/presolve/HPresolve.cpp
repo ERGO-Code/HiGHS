@@ -506,9 +506,8 @@ void HPresolve::chooseRules() {
   // By default all presolve rules are allowed
   this->allow_rule_.assign(kPresolveRuleCount, true);
 
-  // All rules except kPresolveRuleDominatedCol can be switched off,
-  // although the most fundamental can only be switched off in initial
-  // sweep
+  // All rules can be switched off, although the most fundamental can
+  // only be switched off in initial sweep
   auto allowedOffInInitialSweep = [&](const HighsInt rule_type) {
     if (rule_type == kPresolveRuleEmptyRow) return true;
     if (rule_type == kPresolveRuleSingletonRow) return true;
@@ -543,6 +542,7 @@ void HPresolve::chooseRules() {
 
   if (options->presolve_light == kHighsOnString) {
     // Switch off the rules not used in presolve_light mode
+    allow_rule_[kPresolveRuleDominatedCol] = false;
     allow_rule_[kPresolveRuleDependentEquations] = false;
     allow_rule_[kPresolveRuleDependentFreeCols] = false;
     allow_rule_[kPresolveRuleAggregator] = false;
@@ -551,6 +551,7 @@ void HPresolve::chooseRules() {
     allow_rule_[kPresolveRuleProbing] = false;
     allow_rule_[kPresolveRuleEnumeration] = false;
     allow_rule_[kPresolveRuleDualFixing] = false;
+    allow_rule_[kPresolveRuleZeroCostSingleton] = false;
     allow_rule_[kPresolveRuleColStuffing] = false;
     allow_rule_[kPresolveRuleFourierMotzkin] = false;
   }
@@ -612,7 +613,18 @@ void HPresolve::chooseRules() {
       // test-dual-fixing-primal-dual-postsolve)
       allow_rule_[kPresolveRuleDualFixing] = false;
     }
+    if (may_require_basis_postsolve_ || may_require_primal_dual_postsolve_) {
+      // Cannot use dominated column rule for either basis or
+      // primal-dual postsolve (see issue-3342)
+      allow_rule_[kPresolveRuleDominatedCol] = false;
+    }
   }
+  // If dominated column rule is off, weakly dominated column rule
+  // isn't currently considered, because checks for weakly dominated
+  // columns are currently only in HPresolve::detectDominatedCol, but
+  // this makes it explicit
+  if (!allow_rule_[kPresolveRuleDominatedCol])
+    allow_rule_[kPresolveRuleWeaklyDominatedCol] = false;
 }
 
 void HPresolve::link(HighsInt pos) {
@@ -3891,12 +3903,16 @@ HPresolve::Result HPresolve::singletonCol(HighsPostsolveStack& postsolve_stack,
     return Result::kOk;
   }
 
-  // detect strong / weak domination
-  if (timing) analysis_.presolveTimerStart(kPresolveClockSingletonColDominated);
-  // Pass handleSingletonRows = false
-  HPRESOLVE_CHECKED_CALL(detectDominatedCol(postsolve_stack, col, false));
-  if (timing) analysis_.presolveTimerStop(kPresolveClockSingletonColDominated);
-  if (colDeleted[col]) return Result::kOk;
+  if (this->allow_rule_[kPresolveRuleDominatedCol]) {
+    // detect strong / weak domination
+    if (timing)
+      analysis_.presolveTimerStart(kPresolveClockSingletonColDominated);
+    // Pass handleSingletonRows = false
+    HPRESOLVE_CHECKED_CALL(detectDominatedCol(postsolve_stack, col, false));
+    if (timing)
+      analysis_.presolveTimerStop(kPresolveClockSingletonColDominated);
+    if (colDeleted[col]) return Result::kOk;
+  }
 
   // check if variable is implied integer
   if (mipsolver != nullptr)
@@ -5043,11 +5059,13 @@ HPresolve::Result HPresolve::colPresolve(HighsPostsolveStack& postsolve_stack,
       break;
   }
 
-  // detect strong / weak domination
-  if (timing) analysis_.presolveTimerStart(kPresolveClockInitialColDominated);
-  HPRESOLVE_CHECKED_CALL(detectDominatedCol(postsolve_stack, col));
-  if (timing) analysis_.presolveTimerStop(kPresolveClockInitialColDominated);
-  if (colDeleted[col]) return Result::kOk;
+  if (this->allow_rule_[kPresolveRuleDominatedCol]) {
+    // detect strong / weak domination
+    if (timing) analysis_.presolveTimerStart(kPresolveClockInitialColDominated);
+    HPRESOLVE_CHECKED_CALL(detectDominatedCol(postsolve_stack, col));
+    if (timing) analysis_.presolveTimerStop(kPresolveClockInitialColDominated);
+    if (colDeleted[col]) return Result::kOk;
+  }
 
   // column is not (weakly) dominated
 
@@ -5152,6 +5170,7 @@ HPresolve::Result HPresolve::colPresolve(HighsPostsolveStack& postsolve_stack,
 HPresolve::Result HPresolve::detectDominatedCol(
     HighsPostsolveStack& postsolve_stack, HighsInt col,
     bool handleSingletonRows) {
+  assert(allow_rule_[kPresolveRuleDominatedCol]);
   assert(!colDeleted[col]);
   // handleSingletonRows is true by default, but set false when
   // calling detectDominatedCol in HPresolve::singletonCol
