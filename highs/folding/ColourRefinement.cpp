@@ -101,11 +101,111 @@ void ColourRefinement::touchNeighbour(const Neighbour& neigh) {
 }
 
 void ColourRefinement::computeColourSums() {
+  hipo::Clock clock;
+
+  // For each vertex, compute the sum of the entries shared by that vertex and
+  // another vertex of the refining colour.
   for (HighsInt v : node_by_colour_.list(refining_colour_)) {
     for (const Neighbour& neigh : neighbours(v)) {
       touchNeighbour(neigh);
     }
   }
+
+  time_degrees_ += clock.stop();
+}
+
+void ColourRefinement::splitColoursNew() {
+  for (HighsInt split_colour : colours_touched_) {
+    if (checkIfColourSplits(split_colour)) {
+      splitColourNew(split_colour);
+    }
+  }
+}
+
+bool ColourRefinement::checkIfColourSplits(HighsInt split_colour) {
+  // Given a colour touched by the refining colour, and the colour sums,
+  // populate the map with the sums corresponding to each vertex of that colour.
+  // The map uses the DoubleQuantizer, so sums that are in the same bucket are
+  // considered the same.
+
+  hipo::Clock clock;
+
+  sum_map_.clear();
+
+  // Insert each sum in colour_sums_ into sum_map_ and count how many times each
+  // sum appears.
+  const HighsInt nodes_with_zero_sum =
+      node_by_colour_.length(split_colour) -
+      node_touched_by_colour_.length(split_colour);
+
+  if (nodes_with_zero_sum > 0)
+    sum_map_.insert({0.0, SumData{nodes_with_zero_sum, -1}});
+
+  for (HighsInt v : node_touched_by_colour_.list(split_colour)) {
+    auto result = sum_map_.insert({colour_sums_[v], SumData{1, -1}});
+    if (!result.second) {
+      SumData& data = result.first->second;
+      data.count++;
+    }
+  }
+
+  bool colour_does_split = sum_map_.size() > 1;
+
+  time_find_split_ += clock.stop();
+
+  return colour_does_split;
+}
+
+void ColourRefinement::splitColourNew(HighsInt split_colour) {
+  hipo::Clock clock;
+
+  // sum_map_ contains the new colour classes in which split_colour is divided.
+  // Find iterators to the largest and smallest of these classes
+  auto it_largest = sum_map_.begin();
+  auto it_smallest = sum_map_.begin();
+
+  for (auto it = sum_map_.begin(); it != sum_map_.end(); ++it) {
+    const SumData& data = it->second;
+    if (data.count > it_largest->second.count) it_largest = it;
+    if (data.count < it_smallest->second.count) it_smallest = it;
+  }
+
+  // All colour classes are added to the stack for later refinement, apart from
+  // the largest one.
+  // One class can reuse the current split_colour: we use the class with sum
+  // zero, if it exists, or the smallest class.
+  const auto it_zero = sum_map_.find(0.0);
+  const auto it_reusing_colour =
+      it_zero != sum_map_.end() ? it_zero : it_smallest;
+
+  // Add colours to the stack
+  for (auto it = sum_map_.begin(); it != sum_map_.end(); ++it) {
+    SumData& data = it->second;
+    if (it == it_reusing_colour) {
+      data.colour = split_colour;
+      if (!stack_.belong(split_colour) && it != it_largest)
+        stack_.push(split_colour);
+
+    } else {
+      latest_colour_++;
+      data.colour = latest_colour_;
+      if (stack_.belong(split_colour) || it != it_largest)
+        stack_.push(latest_colour_);
+    }
+  }
+
+  // Assign nodes to new colours
+  for (HighsInt v : node_touched_by_colour_.list(split_colour)) {
+    auto it = sum_map_.find(colour_sums_[v]);
+    SumData& data = it->second;
+    if (data.colour != split_colour) {
+      node_by_colour_.remove(v, split_colour);
+      node_by_colour_.append(v, data.colour);
+      colour_[v] = data.colour;
+    }
+  }
+
+  time_split_ += clock.stop();
 }
 
 void ColourRefinement::findSplitColours() {
@@ -191,6 +291,16 @@ void ColourRefinement::prepareNextIter() {
   time_prepare_ += clock.stop();
 }
 
+void ColourRefinement::printTimes(double total_time) const {
+  printf("ColourRefinement timers\n");
+  printf("Total     %f\n", total_time);
+  printf("  setup   %f\n", time_setup_);
+  printf("  degrees %f\n", time_degrees_);
+  printf("  find    %f\n", time_find_split_);
+  printf("  split   %f\n", time_split_);
+  printf("  prepare %f\n", time_prepare_);
+}
+
 void ColourRefinement::run() {
   hipo::Clock clock;
 
@@ -202,13 +312,20 @@ void ColourRefinement::run() {
     prepareNextIter();
   }
 
-  printf("ColourRefinement timers\n");
-  printf("Total     %f\n", clock.stop());
-  printf("  setup   %f\n", time_setup_);
-  printf("  degrees %f\n", time_degrees_);
-  printf("  find    %f\n", time_find_split_);
-  printf("  split   %f\n", time_split_);
-  printf("  prepare %f\n", time_prepare_);
+  printTimes(clock.stop());
+}
+
+void ColourRefinement::runNew() {
+  hipo::Clock clock;
+
+  while (!stack_.empty()) {
+    chooseRefiningColour();
+    computeColourSums();
+    splitColoursNew();
+    prepareNextIter();
+  }
+
+  printTimes(clock.stop());
 }
 }  // namespace folding
 }  // namespace highs

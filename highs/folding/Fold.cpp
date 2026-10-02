@@ -44,7 +44,7 @@ void Folder::findInitialColour() {
 
 void Folder::foldMatrix() {
   ColourRefinement CR(lp_.a_matrix_, colour_);
-  CR.run();
+  CR.runNew();
   matrix_colours_ = CR.coloursUsed();
 }
 

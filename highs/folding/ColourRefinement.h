@@ -1,6 +1,7 @@
 #ifndef HIGHS_COLOUR_REFINEMENT_H
 #define HIGHS_COLOUR_REFINEMENT_H
 
+#include "DoubleQuantizer.h"
 #include "lp_data/HighsLp.h"
 #include "util/HighsLinkedLists.h"
 
@@ -67,6 +68,12 @@ class ColourRefinement {
 
   IterableStack stack_;
   IterableStack colours_touched_;
+
+  struct SumData {
+    HighsInt count;
+    HighsInt colour;
+  };
+  QuantizedMap<double, SumData> sum_map_;
 
   double time_setup_{};
   double time_degrees_{};
@@ -135,10 +142,16 @@ class ColourRefinement {
 
   void computeColourSums();
   void touchNeighbour(const Neighbour& neigh);
+  void splitColoursNew();
+  bool checkIfColourSplits(HighsInt split_colour);
+  void splitColourNew(HighsInt split_colour);
+
+  void printTimes(double total_time) const;
 
  public:
   ColourRefinement(const HighsSparseMatrix& A, std::vector<HighsInt>& colour);
   void run();
+  void runNew();
   HighsInt coloursUsed() const { return latest_colour_ + 1; }
 };
 
