@@ -567,6 +567,18 @@ void assessExcessiveObjectiveBoundScaling(const HighsOptions& options,
   if (max_col_cost > large_objective_coefficient)
     highsLogUser(log_options, HighsLogType::kWarning,
                  "%s has some excessively large costs\n", problem.c_str());
+
+  if (0 < min_effective_col_cost && min_effective_col_cost < min_col_cost &&
+      min_effective_col_cost < small_objective_coefficient)
+    highsLogUser(log_options, HighsLogType::kWarning,
+                 "%s has some excessively small effective costs\n",
+                 problem.c_str());
+  if (max_effective_col_cost > max_col_cost &&
+      max_effective_col_cost > large_objective_coefficient)
+    highsLogUser(log_options, HighsLogType::kWarning,
+                 "%s has some excessively large effective costs\n",
+                 problem.c_str());
+
   if (0 < min_hessian_value && min_hessian_value < small_objective_coefficient)
     highsLogUser(log_options, HighsLogType::kWarning,
                  "%s has some excessively small Hessian values\n",
@@ -663,11 +675,17 @@ void assessExcessiveObjectiveBoundScaling(const HighsOptions& options,
       pow(2.0, user_scale_data.suggested_user_bound_scale);
   min_noncontinuous_col_cost *= suggested_user_bound_scale_value;
   max_noncontinuous_col_cost *= suggested_user_bound_scale_value;
+  min_effective_noncontinuous_col_cost *= suggested_user_bound_scale_value;
+  max_effective_noncontinuous_col_cost *= suggested_user_bound_scale_value;
   min_hessian_value /= suggested_user_bound_scale_value;
   max_hessian_value /= suggested_user_bound_scale_value;
 
   min_col_cost = std::min(min_continuous_col_cost, min_noncontinuous_col_cost);
   max_col_cost = std::max(max_continuous_col_cost, max_noncontinuous_col_cost);
+  min_effective_col_cost =
+      std::min(min_effective_continuous_col_cost, min_effective_noncontinuous_col_cost);
+  max_effective_col_cost =
+      std::max(max_effective_continuous_col_cost, max_effective_noncontinuous_col_cost);
   double min_objective_coefficient =
       std::min(min_col_cost, min_continuous_hessian_value);
   double max_objective_coefficient =
