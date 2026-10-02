@@ -1719,7 +1719,6 @@ TEST_CASE("presolve-rules-off", "[highs_test_presolve]") {
   h.resetGlobalScheduler(true);
 }
 
-/*
 TEST_CASE("issue-3342", "[highs_test_presolve]") {
   HighsLp lp;
   lp.model_name_ = "issue-3342";
@@ -1737,7 +1736,7 @@ TEST_CASE("issue-3342", "[highs_test_presolve]") {
   const bool reduces_to_empty = true;
 
   HighsOptions options;
-  options.solver = kHipoString;
+  options.solver = kIpmString;
   options.threads = 1;
 
   debugPrimalDualPresolve(lp, reduces_to_empty, options);
@@ -1833,4 +1832,3 @@ void debugPrimalDualPresolve(const HighsLp& lp, const bool reduces_to_empty,
 
   h.resetGlobalScheduler(true);
 }
-*/
