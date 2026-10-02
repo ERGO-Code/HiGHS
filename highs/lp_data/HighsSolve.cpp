@@ -580,6 +580,13 @@ void assessExcessiveObjectiveBoundScaling(const HighsOptions& options,
     highsLogUser(log_options, HighsLogType::kWarning,
                  "%s has some excessively large bounds on constraints\n",
                  problem.c_str());
+  double use_primal_feasibility_tolerance =
+      options.primal_feasibility_tolerance;
+  double use_dual_feasibility_tolerance = options.dual_feasibility_tolerance;
+  if (model.isMip() && !options.solve_relaxation) {
+    use_primal_feasibility_tolerance = options.mip_feasibility_tolerance;
+    use_dual_feasibility_tolerance = options.mip_feasibility_tolerance * 0.1;
+  }
 
   // Lambda to determine recommended user scaling values
   auto suggestScaling = [&](double min_value, double max_value,
@@ -710,11 +717,46 @@ void assessExcessiveObjectiveBoundScaling(const HighsOptions& options,
                  message.str().c_str());
     warning_issued = true;
   }
-  if (warning_issued)
+
+  // Assess the reationship between extreme objective/bound values and
+  // feasibility tolerances
+  const double max_objective = std::max(max_col_cost, max_hessian_value);
+  const double max_bound =
+      std::max(max_continuous_col_bound,
+               std::max(max_noncontinuous_col_bound, max_row_bound));
+  const double primal_ratio = max_bound / use_primal_feasibility_tolerance;
+  const double dual_ratio = max_objective / use_dual_feasibility_tolerance;
+  const bool primal_fragile = primal_ratio > 1e-1 / kHighsMacheps;
+  const bool dual_fragile = dual_ratio > 1e-1 / kHighsMacheps;
+  const bool numerically_fragile = primal_fragile || dual_fragile;
+  if (numerically_fragile) {
+    std::string blanks(problem.length(), ' ');
+    if (primal_fragile)
+      highsLogUser(log_options, HighsLogType::kWarning,
+                   "%s has excessively large ratio (%.1g) between max variable "
+                   "or constraint bound"
+                   " (%.1g) and primal feasibility tolerance (%.1g)\n",
+                   problem.c_str(), primal_ratio, max_bound,
+                   use_primal_feasibility_tolerance);
+    if (dual_fragile)
+      highsLogUser(log_options, HighsLogType::kWarning,
+                   "%s has excessively large ratio (%.1g) between max "
+                   "objective coefficient"
+                   " (%.1g) and dual feasibility tolerance (%.1g)\n",
+                   (primal_fragile ? blanks : problem).c_str(), dual_ratio,
+                   max_objective, use_dual_feasibility_tolerance);
     highsLogUser(log_options, HighsLogType::kWarning,
-                 "%s is badly scaled, which may compromise the speed, accuracy "
-                 "and reliability of solvers in HiGHS\n",
-                 problem.c_str());
+                 "   Improve scaling and/or increase tolerance\n");
+    warning_issued = true;
+  }
+  // Give a scary warning to users asking too much of HiGHS!
+  if (warning_issued)
+    highsLogUser(
+        log_options, HighsLogType::kWarning,
+        "%s is badly scaled, %swhich may compromise the speed, accuracy "
+        "and reliability of solvers in HiGHS\n",
+        problem.c_str(),
+        numerically_fragile ? "particularly relative to tolerances, " : "");
 }
 
 // Decide whether to use the HiPO IPM solver
