@@ -741,8 +741,6 @@ TEST_CASE("presolve-egout-ac", "[highs_test_presolve]") {
   Highs h;
   h.setOptionValue("output_flag", dev_run);
   REQUIRE(h.setOptionValue("presolve_rule_logging", true) == HighsStatus::kOk);
-  if (dev_run)
-    REQUIRE(h.setOptionValue("log_dev_level", 1) == HighsStatus::kOk);
   REQUIRE(h.readModel(model_file) == HighsStatus::kOk);
   // Firstly check that pure presolve reduces the LP to empty
   REQUIRE(h.presolve() == HighsStatus::kOk);
@@ -762,38 +760,34 @@ TEST_CASE("presolve-egout-ac", "[highs_test_presolve]") {
   // ie doesn't trigger assert due to sparsify having been used
   REQUIRE(h.postsolve(solution, basis) == HighsStatus::kOk);
 
-  // Check that using IPM with crossover runs OK without using
-  // sparsify
+  // Check that when using IPM with crossover presolve reduces the LP
+  // to empty without using sparsify (since basis postsolve may have
+  // been required) and postsolve is OK
   REQUIRE(h.setOptionValue("solver", kIpmString) == HighsStatus::kOk);
   REQUIRE(h.run() == HighsStatus::kOk);
   REQUIRE(h.getPresolveLog().rule[kPresolveRuleSparsify].call == 0);
+  REQUIRE(h.getRunData().presolved_model_num_col == 0);
+  REQUIRE(h.getRunData().presolved_model_num_row == 0);
+  REQUIRE(h.getRunData().presolved_model_num_nz == 0);
 
   // Check that pure presolve reduces the LP to empty without using
-  // sparsify
+  // sparsify (since options settings are for IPM with crossover) and
+  // basis postsolve may have been required
   REQUIRE(h.presolve() == HighsStatus::kOk);
   REQUIRE(h.getPresolveLog().rule[kPresolveRuleSparsify].call == 0);
-  REQUIRE(h.postsolve(solution, basis) == HighsStatus::kOk);
+  REQUIRE(h.getRunData().presolved_model_num_col == 0);
+  REQUIRE(h.getRunData().presolved_model_num_row == 0);
+  REQUIRE(h.getRunData().presolved_model_num_nz == 0);
 
-  // Now, with crossover off, check that pure presolve reduces the LP
-  // to empty using sparsify, both via direct presolve...
+  REQUIRE(h.postsolve(solution, basis) == HighsStatus::kOk);
+  REQUIRE(h.clearSolver() == HighsStatus::kOk);
+
+  // Now, with crossover off, check that presolve uses sparsify and
+  // postsolve is correct
   REQUIRE(h.setOptionValue("run_crossover", kHighsOffString) ==
           HighsStatus::kOk);
-  REQUIRE(h.presolve() == HighsStatus::kOk);
-  REQUIRE(h.getPresolveLog().rule[kPresolveRuleSparsify].call > 0);
-  REQUIRE(h.postsolve(solution, basis) == HighsStatus::kOk);
-
-  REQUIRE(h.getRunData().presolved_model_num_col == 0);
-  REQUIRE(h.getRunData().presolved_model_num_row == 0);
-  REQUIRE(h.getRunData().presolved_model_num_nz == 0);
-
-  // ... and when solving using IPM without crossover
-  REQUIRE(h.clearSolver() == HighsStatus::kOk);
   REQUIRE(h.run() == HighsStatus::kOk);
   REQUIRE(h.getPresolveLog().rule[kPresolveRuleSparsify].call > 0);
-
-  REQUIRE(h.getRunData().presolved_model_num_col == 0);
-  REQUIRE(h.getRunData().presolved_model_num_row == 0);
-  REQUIRE(h.getRunData().presolved_model_num_nz == 0);
 
   h.resetGlobalScheduler(true);
 }
@@ -1401,6 +1395,65 @@ TEST_CASE("test-weakly-dominated-column-primal-dual-postsolve",
   lp.a_matrix_.value_ = lp.col_cost_;
   lp.row_lower_ = {6};
   lp.row_upper_ = {kHighsInf};
+  // LP is
+  //
+  // min x-y-z; 6 <= x-y+z; x\in [0, 1]; y >=0; z\in [0, 6]
+  //
+  // Solution var(pr; du) without presolve is
+  //
+  // x(1; 0), y(0; 0), z(5; 0), r0(6; 1)
+  //
+  // With presolve
+  //
+  // 0. kPresolveRuleWeaklyDominatedCol fixes y at 0
+  //
+  // 1. kPresolveRuleWeaklyDominatedCol fixes z at 6
+  //
+  // 2. Problem is min x ; 0 <= x; x \in [0, 1]. When considering
+  // singleton row, col bounds not tightened, so row removed as
+  // redundant
+  //
+  // 3. Problem is min x ; x \in [0, 1] so fix x at 0 => EMPTY
+  //
+  // After undoing 3, solution is x(0; 1)
+  //
+  // After undoing 2, solution is x(0; 1); r0(0; 0) because undoing
+  // redundant row just sets dual to 0
+  //
+  // Undoing 1, gives z at 6 with uniquely-defined dual of 1 - which
+  // is infeasible. Only recovery is a dual step by changing row dual
+  // from 0 to 1, so dual of x is 1->0; and z has dual -1 - which is
+  // feasible. However, row is not known for this step.
+  //
+  // With presolve and no weakly dominated column rule
+  //
+  // 0. ImpliedEquation x-y+z = 6, leads to x = 6 + y - z having
+  // implied lower bound of 0, so col_lower[0] is set to -inf
+  //
+  // 1. y is duplicate of x, so fix y to 0
+  //
+  // 2. z is duplicate of x, so fix z to 6
+  //
+  // 3. Problem is min x ; x = 0; x \in (-inf,1]. When considering
+  // singleton row, col bounds tightened, so row removed as singleton
+  //
+  // 4. Problem is min x ; x \in [0, 1] so fix x at 0
+  //
+  // After undoing 4, solution is x(0; 1)
+  //
+  // After undoing 3, solution is x(0; 0); r0(0; 1) because undoing
+  // singleton row considers tightening and sets dual to 1
+  //
+  // Undoing 2 gives z at 6 with uniquely-defined dual of 0, and
+  // undoing 1 gives y at y with uniquely-defined dual of 0
+  //
+  // Hence difference without weakly dominated column rule is just
+  // that the problem after removing y and z is different, so the
+  // constraint is removed as a singleton row, rather than a redundant
+  // row. Hence, the row dual is set to 1, rather than 0 in
+  // postsolve. This suggests that kPresolveRuleWeaklyDominatedCol may
+  // be OK, and that using redundant row rather than singleton row is
+  // the issue, as the latter links the row to a column
 
   Highs h;
   h.setOptionValue("output_flag", dev_run);
@@ -1418,6 +1471,96 @@ TEST_CASE("test-weakly-dominated-column-primal-dual-postsolve",
   h.resetGlobalScheduler(true);
 }
 
+TEST_CASE("test-dual-fixing-primal-dual-postsolve", "[highs_test_presolve]") {
+  HighsLp lp;
+  lp.num_col_ = 5;
+  lp.num_row_ = 3;
+  lp.col_cost_ = {0, -8, 0, 0, 1};
+  lp.col_lower_ = {-kHighsInf, -kHighsInf, 0, -kHighsInf, 0};
+  lp.col_upper_ = {kHighsInf, 7, 9, 3, 1};
+  lp.a_matrix_.start_ = {0, 2, 4, 5, 7, 8};
+  lp.a_matrix_.index_ = {0, 2, 1, 2, 1, 0, 1, 1};
+  lp.a_matrix_.value_ = {1, 1, 1, -1, -1, -2, -1, -1};
+  lp.row_lower_ = {-kHighsInf, -5, 0};
+  lp.row_upper_ = {8, -5, kHighsInf};
+  // LP is
+  //
+  // min -8w +z;
+  //
+  // v-2z <=8; w-x-y-z = -5; 0 <= v-w;
+  //
+  // v free, w <= 7, x \in [0, 9], y <= 3, z \in [0, 1]
+  //
+  // Solution var(pr; du) without presolve is
+  //
+  // Cols: v(7; 0), w(7; -8), x(9; 0), y(3; 0), z(0; 1)
+  //
+  // Rows: r0(1; 0), r1(-5; 0), r2(0; 0)
+  //
+  // With presolve
+  //
+  // 0. Dual fixing gives z = 0
+  //
+  // 1. Zero objective singleton continuous column removes x and gives
+  //
+  // min -8w; v-2y<=8 -5 <= w-y <= 4; 0 <= v-w
+  //
+  // v free, w <= 7, y <= 3
+  //
+  // 2. Free column substitution v = 8 + 2y gives
+  //
+  // min -8w; -5 <= w-y <= 4; 0 <= v-w; w <= 7, y <= 3
+  //
+  // With crossover, solution is
+  //
+  // w(7; -8; UB), y(3; 0; UB), r0(4; 0; BS), r1(-1; 0; BS)
+  //
+  // Without crossover, solution is
+  //
+  // w(7; -4.8), y(3; -3.2), r0(4; -3.2), r1(-1; 0)
+  //
+  // After undoing 2, solution is
+  //
+  // v(14; 0), w(7; -4.8), y(3; -3.2)
+  //
+  // r0(8; 0), r1(4; -3.2), r2(7; 0)
+  //
+  // After undoing 1, solution is
+  //
+  // v(14; 0), w(7; -4.8), x(9; -3.2), y(3; -3.2)
+  //
+  // r0(8; 0), r1(-5; -3.2), r2(7; 0)
+  //
+  // After undoing 0, solution is
+  //
+  // v(14; 0), w(7; -4.8), x(9; -3.2), y(3; -3.2), z(0; -2.2)
+  //
+  // r0(8; 0), r1(-5; -3.2), r2(7; 0)
+  //
+  // Hence z is at LB with dual of -2.2, so not feasible
+  //
+  // Getting a dual feasible solution would require the dual of r1 to
+  // be increased to at least -1, giving solution
+  //
+  // v(14; 0), w(7; -7), x(9; -1), y(3; -1), z(0; 0)
+  //
+  // r0(8; 0), r1(-5; 0), r2(7; -1)
+
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+
+  REQUIRE(h.passModel(lp) == HighsStatus::kOk);
+
+  h.setOptionValue("presolve_rule_logging", true);
+  h.setOptionValue(kSolverString, kIpxString);
+  h.setOptionValue("run_crossover", kHighsOffString);
+
+  if (dev_run) h.writeSolution("", 1);
+  REQUIRE(h.run() == HighsStatus::kOk);
+  REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
+
+  h.resetGlobalScheduler(true);
+}
 /*
   TEST_CASE("test-fuzzing", "[highs_test_presolve]") {
   Highs h;
@@ -1425,7 +1568,7 @@ TEST_CASE("test-weakly-dominated-column-primal-dual-postsolve",
   //  if (dev_run) {
   printf("\n====================\nWithout presolve\n====================\n");
 
-  const std::string model = "issue-005";
+  const std::string model = "issue-007";
   const bool reduces_to_empty = true;
   std::string model_file = std::string(HIGHS_DIR) + "/build/OscarFuzzing/" +
                            model + "/" + model + ".mps";
@@ -1446,6 +1589,13 @@ TEST_CASE("test-weakly-dominated-column-primal-dual-postsolve",
   std::string options_file =
       std::string(HIGHS_DIR) + "/build/OscarFuzzing/" + model + "/options.txt";
   REQUIRE(h.readOptions(options_file) == HighsStatus::kOk);
+  HighsInt presolve_rule_off = 0;
+  //presolve_rule_off += (1 << kPresolveRuleZeroCostSingleton);
+  //  presolve_rule_off += (1 << kPresolveRuleAggregator);
+  // presolve_rule_off += (1 << kPresolveRuleDualFixing);
+  REQUIRE(h.setOptionValue("presolve_rule_off", presolve_rule_off) ==
+HighsStatus::kOk);
+
   HighsOptions options = h.getOptions();
 
   if (!reduces_to_empty) {
@@ -1471,11 +1621,18 @@ TEST_CASE("test-weakly-dominated-column-primal-dual-postsolve",
   REQUIRE(h.readModel(model_file) == HighsStatus::kOk);
   h.passOptions(options);
 
-  h.setOptionValue("presolve_rule_logging", true);
-  h.setOptionValue("log_dev_level", 1);
   h.writeOptions("", true);
 
-  //  h.setOptionValue(kSolverString, kIpxString);
+  h.run();
+  h.writeSolution("", 1);
+
+  printf(
+      "\n====================\nPresolve with
+crossover\n====================\n"); REQUIRE(h.readModel(model_file) ==
+HighsStatus::kOk); options.run_crossover = kHighsOnString;
+  h.passOptions(options);
+
+  h.writeOptions("", true);
 
   h.run();
   h.writeSolution("", 1);
