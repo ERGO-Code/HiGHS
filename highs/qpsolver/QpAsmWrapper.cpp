@@ -263,5 +263,9 @@ HighsStatus solveQpAsm(const HighsOptions& options, HighsTimer& timer,
   // Set the QP-specific values of info
   info.simplex_iteration_count += stats.phase1_iterations;
   info.qp_iteration_count += stats.num_iterations;
+  // Basis validity is set locally to solvers; solution status is set
+  // in getKktErrors
+  info.basis_validity =
+      basis.valid ? kBasisValidityValid : kBasisValidityInvalid;
   return return_status;
 }

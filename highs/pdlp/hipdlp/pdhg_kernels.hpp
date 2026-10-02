@@ -47,8 +47,7 @@ void launchKernelHalpernPrimalMajor_wrapper(
     const double* d_current_primal, double* d_pdhg_primal,
     double* d_reflected_primal, const double* d_dual_product,
     const double* d_objective, const double* d_var_lb, const double* d_var_ub,
-    const double* d_step_size, int n, double* d_dual_slack,
-    gpuStream_t stream);
+    const double* d_step_size, int n, double* d_dual_slack, gpuStream_t stream);
 
 void launchKernelHalpernDualMinor_wrapper(const double* d_current_dual,
                                           double* d_reflected_dual,

@@ -201,7 +201,7 @@ struct HighsMipSolverData {
   void checkObjIntegrality();
   void runMipPresolve(const HighsInt presolve_reduction_limit);
   void setupDomainPropagation();
-  void saveReportMipSolution(const double new_upper_limit = -kHighsInf);
+  void saveReportMipSolution(const double new_upper_limit);
   void checkAddSolution();
   void runSetup();
   double transformNewIntegerFeasibleSolution(

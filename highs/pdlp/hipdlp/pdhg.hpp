@@ -248,17 +248,18 @@ class PDLPSolver {
   HighsInt *d_at_row_ptr_ = nullptr, *d_at_col_ind_ = nullptr;
   double* d_at_val_ = nullptr;
   // Packed into a single device allocation to avoid 3 separate H→D transfers
-  // per iteration. Layout: [primal_step, dual_step, halpern_iteration (as int)].
+  // per iteration. Layout: [primal_step, dual_step, halpern_iteration (as
+  // int)].
   struct GpuStepParams {
     double primal_step;
     double dual_step;
-    int    halpern_iteration;
+    int halpern_iteration;
   };
   GpuStepParams* d_step_params_ = nullptr;
   // Convenience device pointers aliasing into d_step_params_
-  int*    d_halpern_iteration_ = nullptr;
-  double* d_primal_step_size_  = nullptr;
-  double* d_dual_step_size_    = nullptr;
+  int* d_halpern_iteration_ = nullptr;
+  double* d_primal_step_size_ = nullptr;
+  double* d_dual_step_size_ = nullptr;
 
   // GPU Vectors (Device memory)
   double *d_x_current_ = nullptr, *d_y_current_ = nullptr;

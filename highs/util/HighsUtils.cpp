@@ -1257,3 +1257,11 @@ bool highsPause(const bool pause_condition, const std::string& message) {
   }
   return pause_condition;
 }
+
+bool handleExceptionIsOom(const HighsLogOptions& log_options,
+                          const std::string& source,
+                          const std::exception& exception) {
+  highsLogUser(log_options, HighsLogType::kError, "Exception %s in %s\n",
+               exception.what(), source.c_str());
+  return dynamic_cast<const std::bad_alloc*>(&exception);
+}

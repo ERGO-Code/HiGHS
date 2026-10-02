@@ -663,6 +663,10 @@ class HighsDomain {
     return col_lower_[col] == col_upper_[col];
   }
 
+  bool isFixedToVal(HighsInt col, HighsInt val) const {
+    return col_lower_[col] == val && col_upper_[col] == val;
+  }
+
   bool isFixing(const HighsDomainChange& domchg) const;
 
   HighsDomainChange flip(const HighsDomainChange& domchg) const;

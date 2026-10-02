@@ -56,11 +56,12 @@ void writeObjectiveValue(FILE* file, const HighsLogOptions& log_options,
 void writePrimalSolution(FILE* file, const HighsLogOptions& log_options,
                          const HighsLp& lp,
                          const std::vector<double>& primal_solution,
-                         const bool sparse = false);
+                         const bool sparse, const bool partial = false);
 
 void writeModelSolution(FILE* file, const HighsLogOptions& log_options,
                         const HighsModel& model, const HighsSolution& solution,
-                        const HighsInfo& info, const bool sparse = false);
+                        const HighsInfo& info, const bool sparse,
+                        const bool partial);
 
 bool replaceSpacesByUnderscores(std::string& name);
 
@@ -92,7 +93,7 @@ void writeGlpsolCostRow(FILE* file, const HighsLogOptions& log_options,
                         const double objective_function_value);
 
 void writeGlpsolSolution(FILE* file, const HighsOptions& options,
-                         const HighsModel& model, const HighsBasis& basis,
+                         const HighsLp& lp, const HighsBasis& basis,
                          const HighsSolution& solution,
                          const HighsModelStatus model_status,
                          const HighsInfo& info, const bool raw);

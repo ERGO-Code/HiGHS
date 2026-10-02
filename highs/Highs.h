@@ -577,7 +577,7 @@ class Highs {
   /**
    * @brief Zero all clocks in the internal HighsTimer instance
    */
-  void zeroAllClocks() { timer_.zeroAllClocks(); };
+  void zeroAllClocks() { timer_.zeroAllClocks(); }
 
   /**
    * @brief Return a const reference to the internal HighsSolution
@@ -590,7 +590,7 @@ class Highs {
   /**
    * @brief Return a const reference to the internal ICrash info instance
    */
-  const ICrashInfo& getICrashInfo() const { return icrash_info_; };
+  const ICrashInfo& getICrashInfo() const { return icrash_info_; }
 
   /**
    * @brief Return a const reference to the internal HighsBasis instance

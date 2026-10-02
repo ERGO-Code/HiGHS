@@ -30,6 +30,7 @@ class HPresolveAnalysis {
  public:
   bool allow_logging_;
   bool logging_on_;
+  bool called_analyse_presolve_rule_log_;
 
   int log_rule_type_;
   HighsInt num_deleted_rows0_;
@@ -47,7 +48,7 @@ class HPresolveAnalysis {
 
   std::string presolveReductionTypeToString(const HighsInt reduction_type);
   void startPresolveRuleLog(const HighsInt rule_type);
-  void stopPresolveRuleLog(const HighsInt rule_type);
+  void stopPresolveRuleLog(const HighsInt rule_type = -1);
   bool analysePresolveRuleLog(const bool report = false);
   void presolveTimerStart(const HighsInt presolve_clock = 0) const;
   void presolveTimerStop(const HighsInt presolve_clock = 0) const;

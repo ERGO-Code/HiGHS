@@ -55,6 +55,7 @@ class HighsLp {
   bool is_moved_;
   HighsInt cost_row_location_;
   bool has_infinite_cost_;
+  HighsInt fme_obj_col_ = -1;
   HighsLpMods mods_;
 
   bool operator==(const HighsLp& lp) const;
@@ -92,6 +93,10 @@ class HighsLp {
   void deleteCols(const HighsIndexCollection& index_collection);
   void deleteRows(const HighsIndexCollection& index_collection);
   void unapplyMods();
+  void clearAllNameHash() {
+    this->col_hash_.clear();
+    this->row_hash_.clear();
+  }
   void clear();
 };
 
