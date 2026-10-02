@@ -1409,6 +1409,30 @@ TEST_CASE("issue-2894", "[qpsolver]") {
 }
 */
 
+TEST_CASE("issue-3322", "[qpsolver]") {
+  // Convex QP: a maximization whose only quadratic term is a negative
+  // multiple of the square of a free column. The active set solver
+  // declared it non-convex, because the new diagonal entry of the
+  // Cholesky factor of the reduced Hessian was computed as the
+  // difference of two nearly equal numbers
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  const std::string filename =
+      std::string(HIGHS_DIR) + "/check/instances/3322.mps";
+  REQUIRE(h.readModel(filename) == HighsStatus::kOk);
+  REQUIRE(h.setOptionValue("solver", kQpAsmString) == HighsStatus::kOk);
+  const double required_objective_function_value = -1.5339266953e-02;
+  for (const double regularization : {1e-7, 0.0}) {
+    REQUIRE(h.setOptionValue("qp_regularization_value", regularization) ==
+            HighsStatus::kOk);
+    REQUIRE(h.run() == HighsStatus::kOk);
+    REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
+    REQUIRE(okValueDifference(h.getInfo().objective_function_value,
+                              required_objective_function_value));
+  }
+  h.resetGlobalScheduler(true);
+}
+
 TEST_CASE("issue-3045", "[qpsolver]") {
   // Nonconvex QP
   //

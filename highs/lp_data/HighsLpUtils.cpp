@@ -1627,8 +1627,11 @@ void appendColsToLpVectors(HighsLp& lp, const HighsInt num_new_col,
     lp.col_cost_[iCol] = colCost[new_col];
     lp.col_lower_[iCol] = colLower[new_col];
     lp.col_upper_[iCol] = colUpper[new_col];
-    // Cannot guarantee to create unique names, so name is blank
-    if (have_names) lp.col_names_[iCol] = "";
+    if (have_names) {
+      // Cannot guarantee to create unique names, so name is blank
+      lp.col_hash_.addName(iCol, "");
+      lp.col_names_[iCol] = "";
+    }
     if (have_integrality) lp.integrality_[iCol] = HighsVarType::kContinuous;
   }
 }
@@ -1648,8 +1651,11 @@ void appendRowsToLpVectors(HighsLp& lp, const HighsInt num_new_row,
     HighsInt iRow = lp.num_row_ + new_row;
     lp.row_lower_[iRow] = rowLower[new_row];
     lp.row_upper_[iRow] = rowUpper[new_row];
-    // Cannot guarantee to create unique names, so name is blank
-    if (have_names) lp.row_names_[iRow] = "";
+    if (have_names) {
+      // Cannot guarantee to create unique names, so name is blank
+      lp.row_hash_.addName(iRow, "");
+      lp.row_names_[iRow] = "";
+    }
   }
 }
 
@@ -2261,11 +2267,11 @@ HighsStatus readSolutionFile(const std::string& filename,
   }
   if (have_col_names) {
     // Ensure that the col name hash table has been formed
-    if (!lp.col_hash_.name2index.size()) lp.col_hash_.form(lp.col_names_);
+    if (!lp.col_hash_.size()) lp.col_hash_.form(lp.col_names_);
   }
   if (have_row_names) {
     // Ensure that the row name hash table has been formed
-    if (!lp.row_hash_.name2index.size()) lp.row_hash_.form(lp.row_names_);
+    if (!lp.row_hash_.size()) lp.row_hash_.form(lp.row_names_);
   }
   bool sparse = false;
   bool partial = false;
@@ -2335,9 +2341,8 @@ HighsStatus readSolutionFile(const std::string& filename,
     for (;;) {
       // Only false return is for encountering EOF
       if (!readSolutionFileIdDoubleLineOk(name, value, in_file)) break;
-      return_status =
-          getIndexFromName(log_options, from_method, is_col, name,
-                           lp.col_hash_.name2index, iCol, lp.col_names_);
+      return_status = getIndexFromName(log_options, from_method, is_col, name,
+                                       lp.col_hash_, iCol, lp.col_names_);
       if (return_status != HighsStatus::kOk) return return_status;
       read_solution.col_value[iCol] = value;
       num_value++;
@@ -2362,9 +2367,8 @@ HighsStatus readSolutionFile(const std::string& filename,
       }
       if (have_col_names) {
         // Use the column name if possible
-        return_status =
-            getIndexFromName(log_options, from_method, is_col, name,
-                             lp.col_hash_.name2index, iCol, lp.col_names_);
+        return_status = getIndexFromName(log_options, from_method, is_col, name,
+                                         lp.col_hash_, iCol, lp.col_names_);
         if (return_status != HighsStatus::kOk) return return_status;
       } else if (iCol < 0) {
         // No column names or index, so cannot assign the value
@@ -2391,9 +2395,8 @@ HighsStatus readSolutionFile(const std::string& filename,
       }
       if (have_col_names) {
         // Use the column name if possible
-        return_status =
-            getIndexFromName(log_options, from_method, is_col, name,
-                             lp.col_hash_.name2index, iCol, lp.col_names_);
+        return_status = getIndexFromName(log_options, from_method, is_col, name,
+                                         lp.col_hash_, iCol, lp.col_names_);
         if (return_status != HighsStatus::kOk) return return_status;
       } else {
         // Have to assume column solution values are in the right order
@@ -2432,7 +2435,7 @@ HighsStatus readSolutionFile(const std::string& filename,
   // next.
   HighsInt iRow;
   const bool num_row_ok = num_row == lp_num_row;
-  assert(!have_row_names || lp.row_hash_.name2index.size());
+  assert(!have_row_names || lp.row_hash_.size());
   is_col = false;
   assert(!is_col);
   for (HighsInt iX = 0; iX < num_row; iX++) {
@@ -2445,9 +2448,8 @@ HighsStatus readSolutionFile(const std::string& filename,
     if (num_row_ok) {
       if (have_row_names) {
         // Use the row name if possible
-        return_status =
-            getIndexFromName(log_options, from_method, is_col, name,
-                             lp.row_hash_.name2index, iRow, lp.row_names_);
+        return_status = getIndexFromName(log_options, from_method, is_col, name,
+                                         lp.row_hash_, iRow, lp.row_names_);
         if (return_status != HighsStatus::kOk) return return_status;
       } else {
         // Have to assume row solution values are in the right order
@@ -2511,9 +2513,8 @@ HighsStatus readSolutionFile(const std::string& filename,
       }
       if (have_col_names) {
         // Use the column name if possible
-        return_status =
-            getIndexFromName(log_options, from_method, is_col, name,
-                             lp.col_hash_.name2index, iCol, lp.col_names_);
+        return_status = getIndexFromName(log_options, from_method, is_col, name,
+                                         lp.col_hash_, iCol, lp.col_names_);
         if (return_status != HighsStatus::kOk) return return_status;
       } else {
         // Have to assume column dual values are in the right order
@@ -2544,9 +2545,8 @@ HighsStatus readSolutionFile(const std::string& filename,
       }
       if (have_row_names) {
         // Use the row name if possible
-        return_status =
-            getIndexFromName(log_options, from_method, is_col, name,
-                             lp.row_hash_.name2index, iRow, lp.row_names_);
+        return_status = getIndexFromName(log_options, from_method, is_col, name,
+                                         lp.row_hash_, iRow, lp.row_names_);
         if (return_status != HighsStatus::kOk) return return_status;
       } else {
         // Have to assume row dual values are in the right order
@@ -2971,27 +2971,50 @@ void writeBasisFile(FILE*& file, const HighsOptions& options, const HighsLp& lp,
   }
 }
 
-HighsStatus getIndexFromName(
-    const HighsLogOptions& log_options, std::string& from_method,
-    const bool is_column, const std::string& name,
-    const std::unordered_map<std::string, int>& name2index, HighsInt& index,
-    const std::vector<std::string>& names) {
+HighsStatus getIndexFromName(const HighsLogOptions& log_options,
+                             std::string& from_method, const bool is_column,
+                             const std::string& name, HighsNameHash& name_hash,
+                             HighsInt& index,
+                             const std::vector<std::string>& names) {
+  std::unordered_map<std::string, int>& name2index = name_hash.name2index;
   assert(name2index.size());
-  auto search = name2index.find(name);
-  if (search == name2index.end()) {
-    highsLogUser(log_options, HighsLogType::kError,
-                 "%s: %s name %s is not found\n", from_method.c_str(),
-                 is_column ? "column" : "row", name.c_str());
-    return HighsStatus::kError;
+
+  auto nameIsUnique = [&]() {
+    auto search = name2index.find(name);
+    if (search == name2index.end()) {
+      highsLogUser(log_options, HighsLogType::kError,
+                   "%s: %s name \"%s\" is not found\n", from_method.c_str(),
+                   is_column ? "column" : "row", name.c_str());
+      return false;
+    }
+    if (search->second < 0) {
+      highsLogUser(log_options, HighsLogType::kError,
+                   "%s: %s name \"%s\" is duplicated\n", from_method.c_str(),
+                   is_column ? "column" : "row", name.c_str());
+      return false;
+    }
+    index = search->second;
+    return true;
+  };
+
+  if (!nameIsUnique()) return HighsStatus::kError;
+
+  assert(static_cast<size_t>(index) < names.size());
+
+  if (names[index] != name) {
+    // If index has been used to store a duplication count that has
+    // been reduced to zero, then index will be zero, so is unlikely
+    // to be the index of name: name2index must be reformed
+    name_hash.form(names);
+    const bool name_is_unique = nameIsUnique();
+    // If name must be found and not duplicate, since these cases
+    // would have been handled after first call to nameIsUnique
+    assert(name_is_unique);
+    if (!name_is_unique) return HighsStatus::kError;
+    const bool index_ok = names[index] == name;
+    assert(index_ok);
+    if (!index_ok) return HighsStatus::kError;
   }
-  if (search->second == kHashIsDuplicate) {
-    highsLogUser(log_options, HighsLogType::kError,
-                 "%s: %s name %s is duplicated\n", from_method.c_str(),
-                 is_column ? "column" : "row", name.c_str());
-    return HighsStatus::kError;
-  }
-  index = search->second;
-  assert(names[index] == name);
   return HighsStatus::kOk;
 }
 
@@ -3030,11 +3053,11 @@ HighsStatus readBasisStream(const HighsLogOptions& log_options, HighsLp& lp,
       lp.row_names_.size() == static_cast<size_t>(lp.num_row_);
   if (have_col_names) {
     // Ensure that the col name hash table has been formed
-    if (!lp.col_hash_.name2index.size()) lp.col_hash_.form(lp.col_names_);
+    if (!lp.col_hash_.size()) lp.col_hash_.form(lp.col_names_);
   }
   if (have_row_names) {
     // Ensure that the row name hash table has been formed
-    if (!lp.row_hash_.name2index.size()) lp.row_hash_.form(lp.row_names_);
+    if (!lp.row_hash_.size()) lp.row_hash_.form(lp.row_names_);
   }
   if (v1 || v2) {
     if (v1) {
@@ -3081,7 +3104,7 @@ HighsStatus readBasisStream(const HighsLogOptions& log_options, HighsLp& lp,
           // Use the column name if possible
           call_status =
               getIndexFromName(log_options, from_method, is_column, name,
-                               lp.col_hash_.name2index, iCol, lp.col_names_);
+                               lp.col_hash_, iCol, lp.col_names_);
           if (call_status != HighsStatus::kOk) return call_status;
         } else {
           // Have to assume column basis status are in the right order
@@ -3115,7 +3138,7 @@ HighsStatus readBasisStream(const HighsLogOptions& log_options, HighsLp& lp,
           // Use the row name if possible
           call_status =
               getIndexFromName(log_options, from_method, is_column, name,
-                               lp.row_hash_.name2index, iRow, lp.row_names_);
+                               lp.row_hash_, iRow, lp.row_names_);
           if (call_status != HighsStatus::kOk) return call_status;
         } else {
           // Have to assume row solution values are in the right order

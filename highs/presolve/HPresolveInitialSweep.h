@@ -24,8 +24,9 @@ class HPresolveInitialSweep {
     kDualInfeasible,
   };
 
-  HPresolveInitialSweep(HighsLp& model, const HighsOptions& options,
-                        double primal_feastol);
+  HPresolveInitialSweep(HighsLp& lp, const HighsOptions& options,
+                        const std::vector<HighsBool>& allow_rule,
+                        const double primal_feastol);
 
   Result run(HighsPostsolveStack& postsolve_stack);
 
@@ -33,9 +34,10 @@ class HPresolveInitialSweep {
   HighsInt numDeletedCols() const { return num_deleted_cols_; }
 
  private:
-  HighsLp* model_;
-  const HighsOptions* options_;
-  double primal_feastol_;
+  HighsLp& lp_;
+  const HighsOptions& options_;
+  const std::vector<HighsBool>& allow_rule_;
+  const double primal_feastol_;
   HighsInt num_deleted_rows_;
   HighsInt num_deleted_cols_;
 
@@ -46,7 +48,6 @@ class HPresolveInitialSweep {
   Result singletonRow(HighsPostsolveStack& postsolve_stack, HighsInt row,
                       HighsInt col, double val);
   double getMaxAbsColVal(HighsInt col) const;
-  bool isRedundant(HighsInt row, double sumLower, double sumUpper) const;
 };
 
 }  // namespace presolve

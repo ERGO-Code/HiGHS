@@ -136,7 +136,7 @@ By default, CMake builds the debug version of the binaries. These are generated 
 
 It is also possible to specify a specific Visual studio version to build with:
 ```shell
-    cmake -G "Visual Studio 17 2022" -S . -B build
+    cmake -G "Visual Studio 18 2026" -S . -B build
     cmake --build build
 ```
 
