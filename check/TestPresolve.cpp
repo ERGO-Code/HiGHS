@@ -1183,8 +1183,10 @@ TEST_CASE("issue-3140", "[highs_test_presolve]") {
 
   REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
   REQUIRE(highs.presolve() == HighsStatus::kOk);
-  REQUIRE(highs.getModelPresolveStatus() ==
-          HighsPresolveStatus::kReducedToEmpty);
+  REQUIRE(highs.getModelPresolveStatus() == HighsPresolveStatus::kReduced);
+  // No longer reduced to empty with dominated column rule off (#3342)
+  //
+  // HighsPresolveStatus::kReducedToEmpty);
 
   highs.resetGlobalScheduler(true);
 }
@@ -1742,10 +1744,10 @@ TEST_CASE("issue-3342", "[highs_test_presolve]") {
 
 void debugPrimalDualPresolve(const HighsLp& lp, const bool reduces_to_empty,
                              HighsOptions& options) {
-  const bool debugging = true;  // dev_run;
+  const bool debugging = dev_run;  // true;  //
   const bool strict_test = true;
   Highs h;
-  //  h.setOptionValue("output_flag", dev_run);
+  options.output_flag = debugging || dev_run;
 
   options.run_crossover = kHighsOffString;
   options.presolve == kHighsOnString;
