@@ -357,9 +357,9 @@ void FilereaderLp::writeToFileValue(FILE* file, const double value,
                                     const bool force_plus) {
   // As for writeModelAsMps
   if (force_plus) {
-    this->writeToFile(file, " %+.15g", value);
+    this->writeToFile(file, " %+.17g", value);
   } else {
-    this->writeToFile(file, " %.15g", value);
+    this->writeToFile(file, " %.17g", value);
   }
 }
 

@@ -177,6 +177,9 @@ bool HPresolve::okSetupPresolveDataStructures() {
   // call to shrinkProblem
   numDeletedCols = 0;
   numDeletedRows = 0;
+  // number of equations checked by the single-equation extension of dual
+  // fixing
+  numSingleEquationChecked = 0;
   // Need to reset current number of deleted rows and columns in logging
   analysis_.resetNumDeleted();
 
@@ -602,8 +605,12 @@ void HPresolve::chooseRules() {
     }
     if (mayRequirePrimalDualPostsolve(options)) {
       may_require_primal_dual_postsolve_ = true;
-      // Cannot use weakly dominated column rule
+      // Cannot use weakly dominated column rule (see
+      // test-weakly-dominated-column-primal-dual-postsolve)
       allow_rule_[kPresolveRuleWeaklyDominatedCol] = false;
+      // Cannot use kPresolveRuleDualFixing rule (see
+      // test-dual-fixing-primal-dual-postsolve)
+      allow_rule_[kPresolveRuleDualFixing] = false;
     }
   }
 }
@@ -682,7 +689,7 @@ void HPresolve::markChangedRow(HighsInt row) {
     changedRowIndices.push_back(row);
     changedRowFlag[row] = true;
   }
-  singleEquationChecked[row] = false;
+  resetSingleEquationChecked(row);
 }
 
 void HPresolve::markChangedCol(HighsInt col) {
@@ -691,7 +698,16 @@ void HPresolve::markChangedCol(HighsInt col) {
     changedColFlag[col] = true;
   }
   for (const auto& nz : getColumnVector(col))
-    singleEquationChecked[nz.index()] = false;
+    if (!resetSingleEquationChecked(nz.index())) break;
+}
+
+bool HPresolve::resetSingleEquationChecked(HighsInt row) {
+  // clears the flag of the row and returns whether any row is still flagged
+  if (singleEquationChecked[row]) {
+    singleEquationChecked[row] = false;
+    --numSingleEquationChecked;
+  }
+  return numSingleEquationChecked > 0;
 }
 
 double HPresolve::getMaxAbsColVal(HighsInt col) const {
@@ -2705,6 +2721,7 @@ void HPresolve::markRowDeleted(HighsInt row) {
   changedRowFlag[row] = true;
   rowDeleted[row] = true;
   ++numDeletedRows;
+  resetSingleEquationChecked(row);
 }
 
 void HPresolve::markColDeleted(HighsInt col) {
@@ -3876,6 +3893,7 @@ HPresolve::Result HPresolve::singletonCol(HighsPostsolveStack& postsolve_stack,
 
   // detect strong / weak domination
   if (timing) analysis_.presolveTimerStart(kPresolveClockSingletonColDominated);
+  // Pass handleSingletonRows = false
   HPRESOLVE_CHECKED_CALL(detectDominatedCol(postsolve_stack, col, false));
   if (timing) analysis_.presolveTimerStop(kPresolveClockSingletonColDominated);
   if (colDeleted[col]) return Result::kOk;
@@ -5135,7 +5153,9 @@ HPresolve::Result HPresolve::detectDominatedCol(
     HighsPostsolveStack& postsolve_stack, HighsInt col,
     bool handleSingletonRows) {
   assert(!colDeleted[col]);
-
+  // handleSingletonRows is true by default, but set false when
+  // calling detectDominatedCol in HPresolve::singletonCol
+  //
   // get bounds on column dual
   double colDualUpper =
       -impliedDualRowBounds.getSumLower(col, -model->col_cost_[col]);
@@ -5576,7 +5596,9 @@ HPresolve::Result HPresolve::dualFixing(HighsPostsolveStack& postsolve_stack,
         // Achterberg et al., Presolve Reductions in Mixed Integer
         // Programming, INFORMS Journal on Computing 32(2):473-506.
         HPRESOLVE_CHECKED_CALL(handleSingleEquation(equationRow));
+        assert(!rowDeleted[equationRow]);
         singleEquationChecked[equationRow] = true;
+        ++numSingleEquationChecked;
         if (colDeleted[col]) return Result::kOk;
       } else if (mipsolver != nullptr && model->col_lower_[col] != -kHighsInf &&
                  model->col_upper_[col] != kHighsInf) {
