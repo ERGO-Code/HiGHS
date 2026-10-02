@@ -284,11 +284,22 @@ void testUserScale(Highs& h) {
 void testLp(Highs& h, const double cost, const double col_lower,
             const double bound) {
   HighsLp lp = lp1(cost, col_lower, bound);
+  double primal_feasibility_tolerance =
+      h.getOptions().primal_feasibility_tolerance;
+  double dual_feasibility_tolerance = h.getOptions().dual_feasibility_tolerance;
+  REQUIRE(h.setOptionValue("primal_feasibility_tolerance", 1e-7) ==
+          HighsStatus::kOk);
+  REQUIRE(h.setOptionValue("dual_feasibility_tolerance", 1e-8) ==
+          HighsStatus::kOk);
   h.passModel(lp);
   testUserScale(h);
   lp.sense_ = ObjSense::kMaximize;
   h.passModel(lp);
   testUserScale(h);
+  REQUIRE(h.setOptionValue("primal_feasibility_tolerance",
+                           primal_feasibility_tolerance) == HighsStatus::kOk);
+  REQUIRE(h.setOptionValue("dual_feasibility_tolerance",
+                           dual_feasibility_tolerance) == HighsStatus::kOk);
 }
 
 void testMip(Highs& h, const double cost, const double col_lower,
@@ -320,7 +331,7 @@ TEST_CASE("ill-scaled-model", "[highs_user_scale]") {
   h.setOptionValue("output_flag", dev_run);
   h.setOptionValue("qp_regularization_value", 0);
   h.setOptionValue("presolve", kHighsOffString);
-  // Preolve on triggers assert
+  // Presolve on triggers assert
   const bool expose_presolve_bug = false;
   if (expose_presolve_bug) {
     h.setOptionValue("presolve", kHighsOffString);

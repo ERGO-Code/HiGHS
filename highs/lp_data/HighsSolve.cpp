@@ -109,7 +109,6 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object,
         SOLVE_CATCH_CALL(solveLpCupdlp(solver_object), "cuPDLP-C");
       } else {
         SOLVE_CATCH_CALL(solveLpHiPdlp(solver_object), "HiPDLP");
-        ;
       }
       profiling->stop(kSubSolverPdlp);
       return_status = interpretCallStatus(options.log_options, call_status,
@@ -381,6 +380,7 @@ void assessExcessiveObjectiveBoundScaling(const HighsOptions& options,
   const HighsLp& lp = model.lp_;
   if (lp.num_col_ == 0 || lp.num_row_ == 0) return;
   std::vector<double> effective_cost = getEffectiveCosts(lp, options);
+  assert(effective_cost.size() == size_t(lp.num_col_));
   const bool user_cost_or_bound_scale =
       user_scale_data.user_objective_scale || user_scale_data.user_bound_scale;
   const double small_objective_coefficient =
@@ -417,6 +417,10 @@ void assessExcessiveObjectiveBoundScaling(const HighsOptions& options,
   double min_noncontinuous_col_cost = kHighsInf;
   double max_continuous_col_cost = -kHighsInf;
   double max_noncontinuous_col_cost = -kHighsInf;
+  double min_effective_continuous_col_cost = kHighsInf;
+  double min_effective_noncontinuous_col_cost = kHighsInf;
+  double max_effective_continuous_col_cost = -kHighsInf;
+  double max_effective_noncontinuous_col_cost = -kHighsInf;
   double min_continuous_col_bound = kHighsInf;
   double min_noncontinuous_col_bound = kHighsInf;
   double max_continuous_col_bound = -kHighsInf;
@@ -432,6 +436,9 @@ void assessExcessiveObjectiveBoundScaling(const HighsOptions& options,
     if (is_mip && lp.integrality_[iCol] != HighsVarType::kContinuous) {
       assessFiniteNonzero(lp.col_cost_[iCol], min_noncontinuous_col_cost,
                           max_noncontinuous_col_cost);
+      assessFiniteNonzero(effective_cost[iCol],
+                          min_effective_noncontinuous_col_cost,
+                          max_effective_noncontinuous_col_cost);
       assessFiniteNonzero(lp.col_lower_[iCol], min_noncontinuous_col_bound,
                           max_noncontinuous_col_bound);
       assessFiniteNonzero(lp.col_upper_[iCol], min_noncontinuous_col_bound,
@@ -440,6 +447,9 @@ void assessExcessiveObjectiveBoundScaling(const HighsOptions& options,
     } else {
       assessFiniteNonzero(lp.col_cost_[iCol], min_continuous_col_cost,
                           max_continuous_col_cost);
+      assessFiniteNonzero(effective_cost[iCol],
+                          min_effective_continuous_col_cost,
+                          max_effective_continuous_col_cost);
       assessFiniteNonzero(lp.col_lower_[iCol], min_continuous_col_bound,
                           max_continuous_col_bound);
       assessFiniteNonzero(lp.col_upper_[iCol], min_continuous_col_bound,
@@ -451,6 +461,11 @@ void assessExcessiveObjectiveBoundScaling(const HighsOptions& options,
       std::min(min_continuous_col_cost, min_noncontinuous_col_cost);
   double max_col_cost =
       std::max(max_continuous_col_cost, max_noncontinuous_col_cost);
+
+  double min_effective_col_cost = std::min(
+      min_effective_continuous_col_cost, min_effective_noncontinuous_col_cost);
+  double max_effective_col_cost = std::max(
+      max_effective_continuous_col_cost, max_effective_noncontinuous_col_cost);
 
   double min_matrix_value = kHighsInf;
   double max_matrix_value = -kHighsInf;
