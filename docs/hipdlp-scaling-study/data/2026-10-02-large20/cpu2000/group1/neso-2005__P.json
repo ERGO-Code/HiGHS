@@ -1,0 +1,38 @@
+{
+  "name": "neso-2005",
+  "config": "P",
+  "backend": "cpu",
+  "status": "TIME_LIMIT",
+  "call_status": 0,
+  "iterations": 1099,
+  "order": 3,
+  "kkt_pass": false,
+  "certificate_pass": false,
+  "kkt_tolerance": 0.0001,
+  "pdlp_optimality_tolerance": 0.0001,
+  "solver_wall_sec": 181.379226811,
+  "verification_wall_sec": 0.221809413,
+  "time_limit": 180,
+  "iteration_limit": 2000,
+  "relative_primal_residual": 0.009431512080702123,
+  "relative_dual_residual": 0.19431015797857615,
+  "relative_objective_gap": 0.32447984637596367,
+  "command": [
+    "/tmp/hipdlp-large20-20261002/large-compare",
+    "/tmp/hipdlp-large20-20261002/lp/neso-2005.mps",
+    "neso-2005",
+    "cpu",
+    "A,L,S,P",
+    "180.0",
+    "2000"
+  ],
+  "guard_rejected": false,
+  "selector_log": [],
+  "model": {
+    "name": "neso-2005",
+    "rows": 60083,
+    "cols": 108047,
+    "nnz": 36876017,
+    "read_wall_sec": 90.561007629
+  }
+}

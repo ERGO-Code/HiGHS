@@ -1,0 +1,41 @@
+{
+  "name": "L1_sixm250",
+  "config": "S",
+  "backend": "cpu",
+  "status": "ITERATION_LIMIT",
+  "call_status": 0,
+  "iterations": 2000,
+  "order": 2,
+  "kkt_pass": false,
+  "certificate_pass": false,
+  "kkt_tolerance": 0.0001,
+  "pdlp_optimality_tolerance": 0.0001,
+  "solver_wall_sec": 102.293008819,
+  "verification_wall_sec": 0.129308918,
+  "time_limit": 180,
+  "iteration_limit": 2000,
+  "relative_primal_residual": 0.00022360414937357595,
+  "relative_dual_residual": 0.05474778109194345,
+  "relative_objective_gap": 0.9999998247701877,
+  "command": [
+    "/tmp/hipdlp-large20-20261002/large-compare",
+    "/tmp/hipdlp-large20-20261002/lp/L1_sixm250.mps",
+    "L1_sixm250",
+    "cpu",
+    "A,L,S,P",
+    "180.0",
+    "2000"
+  ],
+  "guard_rejected": false,
+  "selector_log": [
+    "HiPDLP scaling selector: 200 iterations each; log Kw(A|A) 22.150875069322822, log Kw(A|L) 22.150875069322822, log Kw(L|A) 22.150875069322822, log Kw(L|L) 22.150875069322822; geometric mean Kw A 4168720825.9165082, L 4168720825.9165082; continuing CR+Ruiz+PC",
+    "HiPDLP scaling selector: total 2000 iterations including 200 discarded pilot iterations"
+  ],
+  "model": {
+    "name": "L1_sixm250",
+    "rows": 986069,
+    "cols": 428032,
+    "nnz": 4280320,
+    "read_wall_sec": 11.754566825
+  }
+}

@@ -29,7 +29,8 @@ SolverOptions::SolverOptions()
       features_off(0),
       iteration_limit(0),
       optimality_tolerance(0.0),
-      early_kkt_check(false) {}
+      early_kkt_check(false),
+      scaling_selector(false) {}
 
 bool OptionTranslationResult::ok() const { return error.ok(); }
 
@@ -211,6 +212,7 @@ OptionTranslationResult translateOptions(const HighsOptions& highs_options,
   result.options.scaling.features_off = highs_options.pdlp_features_off;
   result.options.optimality_tolerance = highs_options.pdlp_optimality_tolerance;
   result.options.early_kkt_check = highs_options.hipdlp_early_kkt_check;
+  result.options.scaling_selector = highs_options.hipdlp_scaling_selector;
 
   // Only the rewrite is constrained by the policies it actually implements.
   if (migration.implementation == SolverImplementation::kRewrite) {

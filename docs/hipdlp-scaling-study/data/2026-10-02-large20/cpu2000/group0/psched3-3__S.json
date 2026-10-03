@@ -1,0 +1,41 @@
+{
+  "name": "psched3-3",
+  "config": "S",
+  "backend": "cpu",
+  "status": "ITERATION_LIMIT",
+  "call_status": 0,
+  "iterations": 2000,
+  "order": 0,
+  "kkt_pass": false,
+  "certificate_pass": false,
+  "kkt_tolerance": 0.0001,
+  "pdlp_optimality_tolerance": 0.0001,
+  "solver_wall_sec": 19.339215206,
+  "verification_wall_sec": 0.022172868,
+  "time_limit": 180,
+  "iteration_limit": 2000,
+  "relative_primal_residual": 29.621630119393966,
+  "relative_dual_residual": 8.216072943967312e-05,
+  "relative_objective_gap": 0.9987179261170058,
+  "command": [
+    "/tmp/hipdlp-large20-20261002/large-compare",
+    "/tmp/hipdlp-large20-20261002/lp/psched3-3.mps",
+    "psched3-3",
+    "cpu",
+    "S,P,A,L",
+    "180.0",
+    "2000"
+  ],
+  "guard_rejected": false,
+  "selector_log": [
+    "HiPDLP scaling selector: 200 iterations each; log Kw(A|A) 21.795263715413167, log Kw(A|L) 21.794919368089097, log Kw(L|A) 11.666416163977839, log Kw(L|L) 11.68853722260676; geometric mean Kw A 2920706984.0645461, L 117886.39592273433; continuing Ruiz+PC",
+    "HiPDLP scaling selector: total 2000 iterations including 200 discarded pilot iterations"
+  ],
+  "model": {
+    "name": "psched3-3",
+    "rows": 266227,
+    "cols": 79555,
+    "nnz": 1062479,
+    "read_wall_sec": 2.032225841
+  }
+}

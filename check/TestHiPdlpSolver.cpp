@@ -2643,3 +2643,125 @@ TEST_CASE("hi-pdlp-rewrite-runs-one-control-loop-on-every-backend",
     REQUIRE(result.solution.dual_valid);
   }
 }
+
+TEST_CASE("hi-pdlp-scaling-selector-preserves-winning-state-and-budget",
+          "[pdlp][hipdlp][solver][scaling-selector]") {
+  using hipdlp::api::SolverStatus;
+  using hipdlp::model::ScalingMode;
+  for (const std::string name : {"adlittle", "rgn"}) {
+    CAPTURE(name);
+    // Benchmark input is copied before readModel; only this scratch copy is
+    // opened by the solver. adlittle selects A, rgn selects L.
+    const char* scratch_dir = std::getenv("TMPDIR");
+    if (scratch_dir == nullptr) scratch_dir = std::getenv("TEMP");
+#if defined(_WIN32)
+    if (scratch_dir == nullptr) scratch_dir = ".";
+#else
+    if (scratch_dir == nullptr) scratch_dir = "/tmp";
+#endif
+    const std::string scratch = std::string(scratch_dir) +
+                                "/hipdlp-selector-test-" + name + ".mps";
+    {
+      std::ifstream source(
+          std::string(HIGHS_DIR) + "/check/instances/" + name + ".mps",
+          std::ios::binary);
+      REQUIRE(source.good());
+      std::ofstream copy(scratch, std::ios::binary);
+      copy << source.rdbuf();
+      REQUIRE(copy.good());
+    }
+    Highs highs;
+    highs.setOptionValue("output_flag", false);
+    const HighsStatus read_status = highs.readModel(scratch);
+    std::remove(scratch.c_str());
+    REQUIRE(read_status != HighsStatus::kError);
+    const hipdlp::model::OriginalModel original(highs.getLp());
+    auto options = makeCpuFixedOptions();
+    options.iteration_limit = 100000;
+    options.scaling.mode = ScalingMode::kAuto;
+    options.scaling_selector = true;
+    RecordingLogSink log;
+    hipdlp::algorithm::SolveContext context;
+    context.log = &log;
+    const auto selected = hipdlp::algorithm::solve(options, original, context);
+    REQUIRE(selected.ok());
+    REQUIRE(selected.status == SolverStatus::kOptimal);
+    CHECK(log.countContaining(
+              "continuing " +
+              std::string(name == "adlittle" ? "CR+Ruiz+PC" : "Ruiz+PC")) == 1);
+    options.scaling_selector = false;
+    options.scaling.mode =
+        name == "adlittle" ? ScalingMode::kAuto : ScalingMode::kLegacy;
+    const auto baseline = hipdlp::algorithm::solve(options, original);
+    REQUIRE(baseline.ok());
+    REQUIRE(baseline.status == SolverStatus::kOptimal);
+    CHECK(selected.iteration_count == baseline.iteration_count + 200);
+    CHECK(selected.solution.col_value == baseline.solution.col_value);
+    CHECK(selected.solution.row_dual == baseline.solution.row_dual);
+
+    // A's suspended stack and L's continued stack must both honor total work.
+    options.scaling_selector = true;
+    options.scaling.mode = ScalingMode::kAuto;
+    options.iteration_limit = 441;
+    const auto limited = hipdlp::algorithm::solve(options, original);
+    REQUIRE(limited.ok());
+    CHECK(limited.status == SolverStatus::kIterationLimit);
+    CHECK(limited.iteration_count == 441);
+    options.iteration_limit = 160;
+    const auto short_run = hipdlp::algorithm::solve(options, original);
+    REQUIRE(short_run.ok());
+    CHECK(short_run.iteration_count == 160);
+  }
+}
+
+TEST_CASE("hi-pdlp-single-pilot-observation-preserves-state",
+          "[hipdlp][solver][single-pilot]") {
+  for (auto kind :
+       {hipdlp::backend::Kind::kCpu, hipdlp::backend::Kind::kCuda}) {
+    if (kind == hipdlp::backend::Kind::kCuda && !cudaBackendUsable()) continue;
+    CAPTURE(kind);
+    Highs highs;
+    highs.setOptionValue("output_flag", false);
+    REQUIRE(highs.readModel(std::string(HIGHS_DIR) +
+                            "/check/instances/adlittle.mps") !=
+            HighsStatus::kError);
+    auto options = makeCpuFixedOptions();
+    options.backend = kind;
+    options.scaling.mode = hipdlp::model::ScalingMode::kLegacy;
+    options.scaling.legacy_scaling_mode = kPdlpScalingPC;
+    options.iteration_limit = 100000;
+    const hipdlp::model::OriginalModel original(highs.getLp());
+    const auto baseline = hipdlp::algorithm::solve(options, original);
+    REQUIRE(baseline.status == hipdlp::api::SolverStatus::kOptimal);
+    class Observer : public hipdlp::algorithm::PilotObserver {
+     public:
+      bool stop = false;
+      std::vector<HighsInt> checkpoints;
+      bool checkpoint(HighsInt it, const HighsSolution& solution, double,
+                      double, std::size_t) override {
+        CHECK(solution.value_valid);
+        checkpoints.push_back(it);
+        return stop && it == 200;
+      }
+    } observer;
+    hipdlp::algorithm::SolveContext context;
+    context.pilot_observer = &observer;
+    const auto observed = hipdlp::algorithm::solve(options, original, context);
+    CHECK(observer.checkpoints == std::vector<HighsInt>{40, 80, 120, 160, 200});
+    CHECK(observed.status == baseline.status);
+    CHECK(observed.iteration_count == baseline.iteration_count);
+    CHECK(observed.solution.col_value == baseline.solution.col_value);
+    CHECK(observed.solution.row_dual == baseline.solution.row_dual);
+    observer.stop = true;
+    const auto stopped = hipdlp::algorithm::solve(options, original, context);
+    REQUIRE(stopped.status == hipdlp::api::SolverStatus::kIterationLimit);
+    CHECK(stopped.iteration_count == 200);
+    options.iteration_limit = 200;
+    const auto limited = hipdlp::algorithm::solve(options, original);
+    CHECK(stopped.solution.col_value == limited.solution.col_value);
+    CHECK(stopped.solution.row_dual == limited.solution.row_dual);
+    options.iteration_limit = 81;
+    const auto short_run = hipdlp::algorithm::solve(options, original, context);
+    CHECK(short_run.iteration_count == 81);
+  }
+}

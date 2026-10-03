@@ -439,6 +439,7 @@ struct HighsOptionsStruct {
   // Options for the HiPDLP rewrite
   std::string hipdlp_backend;
   std::string hipdlp_scaling;
+  bool hipdlp_scaling_selector;
   HighsInt hipdlp_curtis_reid_iterations;
     bool hipdlp_early_kkt_check;
 
@@ -626,6 +627,7 @@ struct HighsOptionsStruct {
         pdlp_optimality_tolerance(0.0),
         hipdlp_backend(""),
         hipdlp_scaling(""),
+        hipdlp_scaling_selector(false),
         hipdlp_curtis_reid_iterations(0),
         hipdlp_early_kkt_check(false),
         test_qp_oracle(false),
@@ -1466,6 +1468,13 @@ class HighsOptions : public HighsOptionsStruct {
                             advanced, &hipdlp_curtis_reid_iterations, 1,
                             kHiPdlpDefaultCurtisReidIterations, kHighsIInf);
     records.push_back(record_int);
+
+    record_bool = new OptionRecordBool(
+        "hipdlp_scaling_selector",
+        "Experimental auto scaling: compare two 200-iteration pilots by "
+        "geometric-mean Kw and continue the winner after the Curtis-Reid guard",
+        advanced, &hipdlp_scaling_selector, false);
+    records.push_back(record_bool);
 
     record_bool = new OptionRecordBool(
         "hipdlp_early_kkt_check",

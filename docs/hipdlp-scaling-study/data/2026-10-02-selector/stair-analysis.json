@@ -1,0 +1,386 @@
+{
+  "A": {
+    "full_spectrum": {
+      "shape": [
+        356,
+        467
+      ],
+      "rank": 356,
+      "sigma_max": 0.9659242834825215,
+      "sigma_min_positive": 0.012703527583725782,
+      "condition": 76.03591027109245
+    },
+    "active_free_spectrum": {
+      "shape": [
+        350,
+        349
+      ],
+      "rank": 349,
+      "sigma_max": 0.9480958694466082,
+      "sigma_min_positive": 0.003061129535622447,
+      "condition": 309.72092438872346
+    },
+    "active_zero_rc_spectrum": {
+      "shape": [
+        350,
+        353
+      ],
+      "rank": 350,
+      "sigma_max": 0.948095892096437,
+      "sigma_min_positive": 0.003062737115158982,
+      "condition": 309.55836444592234
+    },
+    "weight": 0.013110152792682435,
+    "primal_term": 157362.92723888168,
+    "dual_term": 839.4338367316489,
+    "reference_Kw": 152811.50226720495,
+    "trajectories": [
+      {
+        "pilot": "A",
+        "length": 200,
+        "Dx": 3200.173654021233,
+        "Dy": 7.441262832249302,
+        "primal_term": 67131.26771461168,
+        "dual_term": 2111.813394330597,
+        "Kw": 66883.57350627719,
+        "reference_error_energy": 33579.0994811012,
+        "slowest_dual_mode_fraction": 0.3519370312265737
+      },
+      {
+        "pilot": "A",
+        "length": 1000,
+        "Dx": 3781.5364432949123,
+        "Dy": 5.773475111161901,
+        "primal_term": 93737.70961979196,
+        "dual_term": 1271.2672150476799,
+        "Kw": 91771.47787359997,
+        "reference_error_energy": 12331.390659772518,
+        "slowest_dual_mode_fraction": 0.42567992156597206
+      },
+      {
+        "pilot": "A",
+        "length": 4000,
+        "Dx": 4850.147975014893,
+        "Dy": 4.712551855930932,
+        "primal_term": 154201.1935554857,
+        "dual_term": 846.9826914310935,
+        "Kw": 149764.7985465748,
+        "reference_error_energy": 223.92068671986493,
+        "slowest_dual_mode_fraction": 0.12722320638326162
+      },
+      {
+        "pilot": "A",
+        "length": 16000,
+        "Dx": 4899.709645393062,
+        "Dy": 4.6915430666947024,
+        "primal_term": 157368.7325218046,
+        "dual_term": 839.4477430856703,
+        "Kw": 152817.12316343773,
+        "reference_error_energy": 9.589499972806112e-05,
+        "slowest_dual_mode_fraction": 0.626376808106378
+      },
+      {
+        "pilot": "A",
+        "length": 64000,
+        "Dx": 4899.709645393062,
+        "Dy": 4.6915430666947024,
+        "primal_term": 157368.7325218046,
+        "dual_term": 839.4477430856703,
+        "Kw": 152817.12316343773,
+        "reference_error_energy": 9.589499972806112e-05,
+        "slowest_dual_mode_fraction": 0.626376808106378
+      },
+      {
+        "pilot": "A",
+        "length": 128000,
+        "Dx": 4899.709645393062,
+        "Dy": 4.6915430666947024,
+        "primal_term": 157368.7325218046,
+        "dual_term": 839.4477430856703,
+        "Kw": 152817.12316343773,
+        "reference_error_energy": 9.589499972806112e-05,
+        "slowest_dual_mode_fraction": 0.626376808106378
+      },
+      {
+        "pilot": "A",
+        "length": 256000,
+        "Dx": 4899.709645393062,
+        "Dy": 4.6915430666947024,
+        "primal_term": 157368.7325218046,
+        "dual_term": 839.4477430856703,
+        "Kw": 152817.12316343773,
+        "reference_error_energy": 9.589499972806112e-05,
+        "slowest_dual_mode_fraction": 0.626376808106378
+      },
+      {
+        "pilot": "L",
+        "length": 200,
+        "Dx": 3260.4037645335657,
+        "Dy": 5.389497233384127,
+        "primal_term": 69681.98751041353,
+        "dual_term": 1107.7933601532034,
+        "Kw": 68377.56836528688,
+        "reference_error_energy": 29955.64687683932,
+        "slowest_dual_mode_fraction": 0.2987719913863696
+      },
+      {
+        "pilot": "L",
+        "length": 1000,
+        "Dx": 4522.643470374151,
+        "Dy": 5.528626798958012,
+        "primal_term": 134079.5250925578,
+        "dual_term": 1165.726851757871,
+        "Kw": 130636.67307872622,
+        "reference_error_energy": 2692.8260095339756,
+        "slowest_dual_mode_fraction": 0.3622842559561673
+      },
+      {
+        "pilot": "L",
+        "length": 4000,
+        "Dx": 5092.448412528968,
+        "Dy": 5.131164445458254,
+        "primal_term": 169992.99830730446,
+        "dual_term": 1004.1396535450992,
+        "Kw": 165170.2879623955,
+        "reference_error_energy": 419.60377459875014,
+        "slowest_dual_mode_fraction": 0.02017283228951124
+      },
+      {
+        "pilot": "L",
+        "length": 16000,
+        "Dx": 4979.859219487105,
+        "Dy": 4.813804569991558,
+        "primal_term": 162559.3254326461,
+        "dual_term": 883.7698081980287,
+        "Kw": 157873.6546606779,
+        "reference_error_energy": 78.53796654111387,
+        "slowest_dual_mode_fraction": 0.004909533200834874
+      },
+      {
+        "pilot": "L",
+        "length": 64000,
+        "Dx": 4926.168572030469,
+        "Dy": 4.686029157449754,
+        "primal_term": 159072.93564486128,
+        "dual_term": 837.4757186935998,
+        "Kw": 154461.34951773702,
+        "reference_error_energy": 15.00205878135845,
+        "slowest_dual_mode_fraction": 0.07603614296130361
+      },
+      {
+        "pilot": "L",
+        "length": 128000,
+        "Dx": 4908.057475033833,
+        "Dy": 4.691060417974259,
+        "primal_term": 157905.4200219499,
+        "dual_term": 839.2750333683268,
+        "Kw": 153335.3558279596,
+        "reference_error_energy": 8.054099600569856,
+        "slowest_dual_mode_fraction": 0.06575873012649541
+      },
+      {
+        "pilot": "L",
+        "length": 256000,
+        "Dx": 4905.122932169161,
+        "Dy": 4.688814606510771,
+        "primal_term": 157716.65218549536,
+        "dual_term": 838.4716319439045,
+        "Kw": 153152.24436584252,
+        "reference_error_energy": 7.075993467905304,
+        "slowest_dual_mode_fraction": 0.0011398013542747117
+      }
+    ]
+  },
+  "L": {
+    "full_spectrum": {
+      "shape": [
+        356,
+        467
+      ],
+      "rank": 356,
+      "sigma_max": 0.9617284608876417,
+      "sigma_min_positive": 0.013454167526440476,
+      "condition": 71.48182590989954
+    },
+    "active_free_spectrum": {
+      "shape": [
+        350,
+        349
+      ],
+      "rank": 349,
+      "sigma_max": 0.9260383856103808,
+      "sigma_min_positive": 0.0004535236407033529,
+      "condition": 2041.8745628656147
+    },
+    "active_zero_rc_spectrum": {
+      "shape": [
+        350,
+        353
+      ],
+      "rank": 350,
+      "sigma_max": 0.9260391467357134,
+      "sigma_min_positive": 0.00044801575381784626,
+      "condition": 2066.9789819762036
+    },
+    "weight": 0.013110152792682435,
+    "primal_term": 71184.868994946,
+    "dual_term": 53715.19861754199,
+    "reference_Kw": 120119.94978972046,
+    "trajectories": [
+      {
+        "pilot": "A",
+        "length": 200,
+        "Dx": 2018.6843129675772,
+        "Dy": 5.045447265017248,
+        "primal_term": 26712.502381474842,
+        "dual_term": 970.8711449297086,
+        "Kw": 26623.888213726736,
+        "reference_error_energy": 70922.19140348602,
+        "slowest_dual_mode_fraction": 0.9841620696328065
+      },
+      {
+        "pilot": "A",
+        "length": 1000,
+        "Dx": 2507.04857154481,
+        "Dy": 2.652226805176896,
+        "primal_term": 41200.572773609885,
+        "dual_term": 268.2770802650414,
+        "Kw": 39881.77314474784,
+        "reference_error_energy": 58364.20882162361,
+        "slowest_dual_mode_fraction": 0.9958183232241014
+      },
+      {
+        "pilot": "A",
+        "length": 4000,
+        "Dx": 3277.27478729916,
+        "Dy": 36.49855031691484,
+        "primal_term": 70404.99489346171,
+        "dual_term": 50805.82188103536,
+        "Kw": 116571.89225947102,
+        "reference_error_energy": 63.007346963300066,
+        "slowest_dual_mode_fraction": 0.8820986735925498
+      },
+      {
+        "pilot": "A",
+        "length": 16000,
+        "Dx": 3295.424777009734,
+        "Dy": 37.52702119576042,
+        "primal_term": 71186.97899224897,
+        "dual_term": 53709.416743529335,
+        "Kw": 120116.4184413839,
+        "reference_error_energy": 0.00018171595729436668,
+        "slowest_dual_mode_fraction": 0.9928444232109109
+      },
+      {
+        "pilot": "A",
+        "length": 64000,
+        "Dx": 3295.424777009734,
+        "Dy": 37.52702119576042,
+        "primal_term": 71186.97899224897,
+        "dual_term": 53709.416743529335,
+        "Kw": 120116.4184413839,
+        "reference_error_energy": 0.00018171595729436668,
+        "slowest_dual_mode_fraction": 0.9928444232109109
+      },
+      {
+        "pilot": "A",
+        "length": 128000,
+        "Dx": 3295.424777009734,
+        "Dy": 37.52702119576042,
+        "primal_term": 71186.97899224897,
+        "dual_term": 53709.416743529335,
+        "Kw": 120116.4184413839,
+        "reference_error_energy": 0.00018171595729436668,
+        "slowest_dual_mode_fraction": 0.9928444232109109
+      },
+      {
+        "pilot": "A",
+        "length": 256000,
+        "Dx": 3295.424777009734,
+        "Dy": 37.52702119576042,
+        "primal_term": 71186.97899224897,
+        "dual_term": 53709.416743529335,
+        "Kw": 120116.4184413839,
+        "reference_error_energy": 0.00018171595729436668,
+        "slowest_dual_mode_fraction": 0.9928444232109109
+      },
+      {
+        "pilot": "L",
+        "length": 200,
+        "Dx": 1931.1659100216118,
+        "Dy": 2.088111715973046,
+        "primal_term": 24446.513528304342,
+        "dual_term": 166.29137002955423,
+        "Kw": 23670.834973002467,
+        "reference_error_energy": 68688.3197471583,
+        "slowest_dual_mode_fraction": 0.9953127680464526
+      },
+      {
+        "pilot": "L",
+        "length": 1000,
+        "Dx": 3082.964557187309,
+        "Dy": 2.2019752704692843,
+        "primal_term": 62303.84099307112,
+        "dual_term": 184.92137995770065,
+        "Kw": 60097.22125978659,
+        "reference_error_energy": 53829.09780962895,
+        "slowest_dual_mode_fraction": 0.9963609284320597
+      },
+      {
+        "pilot": "L",
+        "length": 4000,
+        "Dx": 3410.31789545097,
+        "Dy": 9.8797933498897,
+        "primal_term": 76237.29622029107,
+        "dual_term": 3722.6994292166805,
+        "Kw": 76899.80354858362,
+        "reference_error_energy": 38963.84404449113,
+        "slowest_dual_mode_fraction": 0.9545896212592268
+      },
+      {
+        "pilot": "L",
+        "length": 16000,
+        "Dx": 3342.7190567010052,
+        "Dy": 15.842906655335375,
+        "primal_term": 73244.92052146861,
+        "dual_term": 9572.645538874527,
+        "Kw": 79648.0103416744,
+        "reference_error_energy": 25103.191914867537,
+        "slowest_dual_mode_fraction": 0.896760483334154
+      },
+      {
+        "pilot": "L",
+        "length": 64000,
+        "Dx": 3310.906982558859,
+        "Dy": 26.24044745421276,
+        "primal_term": 71857.43604883185,
+        "dual_term": 26260.60479560651,
+        "Kw": 94362.91240663247,
+        "reference_error_energy": 9758.486116423368,
+        "slowest_dual_mode_fraction": 0.6679425063776429
+      },
+      {
+        "pilot": "L",
+        "length": 128000,
+        "Dx": 3300.1791722703283,
+        "Dy": 30.2506973826725,
+        "primal_term": 71392.53378686424,
+        "dual_term": 34900.61125179272,
+        "Kw": 102225.14278093442,
+        "reference_error_energy": 6096.775946851589,
+        "slowest_dual_mode_fraction": 0.4790764679778742
+      },
+      {
+        "pilot": "L",
+        "length": 256000,
+        "Dx": 3298.4360092828783,
+        "Dy": 33.40490540955535,
+        "primal_term": 71317.13427132793,
+        "dual_term": 42558.15027740119,
+        "Kw": 109517.1021421915,
+        "reference_error_energy": 3357.276819104866,
+        "slowest_dual_mode_fraction": 0.2949948204130745
+      }
+    ]
+  }
+}

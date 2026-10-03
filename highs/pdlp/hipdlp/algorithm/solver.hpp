@@ -89,10 +89,24 @@ class SolveObserver {
   virtual void onEvent(const SolveObservation& observation) noexcept = 0;
 };
 
+// Internal experiment hook. Observes original-coordinate candidates at ordinary
+// boundaries through iteration 200. Returning true requests an iteration-limit
+// result; returning false leaves all iterate/restart state in place. Terminal
+// convergence, certificates and limits retain precedence. No public option
+// enables this hook; the default path performs no extra downloads or checks.
+class PilotObserver {
+ public:
+  virtual ~PilotObserver() {}
+  virtual bool checkpoint(HighsInt iteration, const HighsSolution& solution,
+                          double elapsed_seconds, double fixed_point_error,
+                          std::size_t restarts) = 0;
+};
+
 struct SolveContext {
   SolveLogSink* log;
   SolveDiagnostics* diagnostics;
   SolveObserver* observer;
+  PilotObserver* pilot_observer;
   bool use_command_buffers;
 
   SolveContext();

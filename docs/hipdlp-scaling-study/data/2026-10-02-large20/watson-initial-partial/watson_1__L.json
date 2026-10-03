@@ -1,0 +1,38 @@
+{
+  "name": "watson_1",
+  "config": "L",
+  "backend": "cuda",
+  "status": "OPTIMAL",
+  "call_status": 0,
+  "iterations": 190240,
+  "order": 0,
+  "kkt_pass": true,
+  "certificate_pass": false,
+  "kkt_tolerance": 0.0001,
+  "pdlp_optimality_tolerance": 0.0001,
+  "solver_wall_sec": 29.284485747,
+  "verification_wall_sec": 0.036344654,
+  "time_limit": 180,
+  "iteration_limit": 2147483647,
+  "relative_primal_residual": 4.160566183716466e-05,
+  "relative_dual_residual": 2.3787332291700184e-07,
+  "relative_objective_gap": 9.214051293539157e-05,
+  "command": [
+    "/tmp/hipdlp-large20-20261002/large-compare",
+    "/tmp/hipdlp-large20-20261002/lp/watson_1.mps",
+    "watson_1",
+    "cuda",
+    "L,S,P,A",
+    "180.0",
+    "2147483647"
+  ],
+  "guard_rejected": false,
+  "selector_log": [],
+  "model": {
+    "name": "watson_1",
+    "rows": 201155,
+    "cols": 383927,
+    "nnz": 1052028,
+    "read_wall_sec": 1.838982743
+  }
+}

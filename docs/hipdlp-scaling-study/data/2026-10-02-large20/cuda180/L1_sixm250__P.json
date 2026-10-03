@@ -1,0 +1,38 @@
+{
+  "name": "L1_sixm250",
+  "config": "P",
+  "backend": "cuda",
+  "status": "TIME_LIMIT",
+  "call_status": 0,
+  "iterations": 25320,
+  "order": 3,
+  "kkt_pass": false,
+  "certificate_pass": false,
+  "kkt_tolerance": 0.0001,
+  "pdlp_optimality_tolerance": 0.0001,
+  "solver_wall_sec": 180.706211464,
+  "verification_wall_sec": 0.107625495,
+  "time_limit": 180,
+  "iteration_limit": 2147483647,
+  "relative_primal_residual": 2.1053524929289353e-06,
+  "relative_dual_residual": 0.023791725372271807,
+  "relative_objective_gap": 0.9999998117216008,
+  "command": [
+    "/tmp/hipdlp-large20-20261002/large-compare",
+    "/tmp/hipdlp-large20-20261002/lp/L1_sixm250.mps",
+    "L1_sixm250",
+    "cuda",
+    "A,L,S,P",
+    "180.0",
+    "2147483647"
+  ],
+  "guard_rejected": false,
+  "selector_log": [],
+  "model": {
+    "name": "L1_sixm250",
+    "rows": 986069,
+    "cols": 428032,
+    "nnz": 4280320,
+    "read_wall_sec": 10.354303673
+  }
+}

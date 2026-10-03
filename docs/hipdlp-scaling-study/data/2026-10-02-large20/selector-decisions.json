@@ -1,0 +1,50 @@
+{
+  "all_four_cross_scores_exactly_equal": [
+    "L1_sixm250",
+    "graph40-40",
+    "neos1",
+    "pds-100",
+    "savsched1",
+    "square41",
+    "steiner_t",
+    "support19"
+  ],
+  "choices": {
+    "CR+Ruiz+PC": [
+      "L1_sixm250",
+      "fome13",
+      "graph40-40",
+      "istefanov_med",
+      "neos1",
+      "p28",
+      "pds-100",
+      "savsched1",
+      "square41",
+      "steiner_t",
+      "support19"
+    ],
+    "Ruiz+PC": [
+      "798kRows",
+      "cont11",
+      "osa-60",
+      "psched3-3",
+      "pypsa-eur-240t5n",
+      "ts-palko",
+      "watson_1"
+    ],
+    "guard_skipped": [
+      "neso-2005",
+      "neso-2245"
+    ]
+  },
+  "geometric_mean_log_score_ties": [
+    "L1_sixm250",
+    "graph40-40",
+    "neos1",
+    "pds-100",
+    "savsched1",
+    "square41",
+    "steiner_t",
+    "support19"
+  ]
+}

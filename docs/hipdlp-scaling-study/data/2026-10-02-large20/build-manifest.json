@@ -1,0 +1,132 @@
+{
+  "date": "2026-10-02",
+  "head": "043320530",
+  "selection": "fixed-seed size strata, refined before running the five medium draft entries; minimum rows+cols >= 100000 or nnz >= 1000000; add four independent larger heldouts and pds-100",
+  "configs": [
+    "A",
+    "L",
+    "S",
+    "P"
+  ],
+  "backend": "cuda",
+  "solver_time_limit_sec": 180,
+  "iteration_limit": 2147483647,
+  "kkt_tolerance": 0.0001,
+  "pdlp_optimality_tolerance": 0.0001,
+  "step_size": "fixed",
+  "presolve": "off",
+  "cpu_iteration_probe_budget": 2000,
+  "timing": "fresh solves, shared LP I/O excluded, CUDA warmup before measurement, sequential GPU runs, cyclic balanced configuration order",
+  "ranking": "verified solve count first, then sum of solver times on common verified solves; report observed total and PAR2 capped failure time separately",
+  "names": [
+    "neso-2245",
+    "neso-2005",
+    "steiner_t",
+    "savsched1",
+    "798kRows",
+    "watson_1",
+    "ts-palko",
+    "graph40-40",
+    "psched3-3",
+    "osa-60",
+    "cont11",
+    "fome13",
+    "p28",
+    "neos1",
+    "pypsa-eur-240t5n",
+    "pds-100",
+    "L1_sixm250",
+    "istefanov_med",
+    "support19",
+    "square41"
+  ],
+  "features": {
+    "steiner_t": {
+      "rows": 7695,
+      "cols": 71450,
+      "nnz": 2428993
+    },
+    "savsched1": {
+      "rows": 295989,
+      "cols": 328575,
+      "nnz": 1770507
+    },
+    "798kRows": {
+      "rows": 797867,
+      "cols": 1052744,
+      "nnz": 2342532
+    },
+    "watson_1": {
+      "rows": 201155,
+      "cols": 383927,
+      "nnz": 1052028
+    },
+    "ts-palko": {
+      "rows": 22002,
+      "cols": 47235,
+      "nnz": 1076903
+    },
+    "graph40-40": {
+      "rows": 360900,
+      "cols": 102600,
+      "nnz": 1260900
+    },
+    "psched3-3": {
+      "rows": 266227,
+      "cols": 79555,
+      "nnz": 1062479
+    },
+    "osa-60": {
+      "rows": 10280,
+      "cols": 232966,
+      "nnz": 1397793
+    },
+    "cont11": {
+      "rows": 160792,
+      "cols": 120793,
+      "nnz": 440387
+    },
+    "fome13": {
+      "rows": 48568,
+      "cols": 97840,
+      "nnz": 285056
+    },
+    "p28": {
+      "rows": 74309,
+      "cols": 284407,
+      "nnz": 618063
+    },
+    "neos1": {
+      "rows": 131581,
+      "cols": 1892,
+      "nnz": 468009
+    },
+    "pypsa-eur-240t5n": {
+      "rows": 119299,
+      "cols": 56899,
+      "nnz": 237928
+    },
+    "pds-100": {
+      "rows": 156243,
+      "cols": 505360,
+      "nnz": 1086785
+    }
+  },
+  "cpu_iteration_probe_role": "fixed 2000-total-iteration probes of pilot behavior and early trajectory; capped runs do not estimate convergence iteration ratios",
+  "cpu_iteration_probe_jobs": 4,
+  "study_list_overlap": 14,
+  "independent_holdout_validation": "See SELECTOR_STUDY.md; this large20 batch is a size-focused timing sample, not an independent selector-validation set.",
+  "size_rule": {
+    "minimum_rows_plus_cols": 100000,
+    "or_minimum_nnz": 1000000
+  },
+  "unrun_draft_entries_removed": [
+    "Clp-Primal_50",
+    "cre-d",
+    "dcp3",
+    "nug20",
+    "world"
+  ],
+  "primary_watson_records": "cuda180-watson-repeat",
+  "finalist_confirmation": "cuda180-finalists-repeat: L,P on nine common verified solves"
+}

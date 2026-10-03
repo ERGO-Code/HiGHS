@@ -1,0 +1,41 @@
+{
+  "name": "ts-palko",
+  "config": "S",
+  "backend": "cpu",
+  "status": "ITERATION_LIMIT",
+  "call_status": 0,
+  "iterations": 2000,
+  "order": 1,
+  "kkt_pass": false,
+  "certificate_pass": false,
+  "kkt_tolerance": 0.0001,
+  "pdlp_optimality_tolerance": 0.0001,
+  "solver_wall_sec": 12.018456734,
+  "verification_wall_sec": 0.011013354,
+  "time_limit": 180,
+  "iteration_limit": 2000,
+  "relative_primal_residual": 0.23407704939674576,
+  "relative_dual_residual": 0.0025074842846836303,
+  "relative_objective_gap": 0.27769638561719573,
+  "command": [
+    "/tmp/hipdlp-large20-20261002/large-compare",
+    "/tmp/hipdlp-large20-20261002/lp/ts-palko.mps",
+    "ts-palko",
+    "cpu",
+    "L,S,P,A",
+    "180.0",
+    "2000"
+  ],
+  "guard_rejected": false,
+  "selector_log": [
+    "HiPDLP scaling selector: 200 iterations each; log Kw(A|A) 17.489843011753397, log Kw(A|L) 17.692155396672788, log Kw(L|A) 16.608545410138323, log Kw(L|L) 16.818043649562817; geometric mean Kw A 43618817.280468576, L 18133915.544037234; continuing Ruiz+PC",
+    "HiPDLP scaling selector: total 2000 iterations including 200 discarded pilot iterations"
+  ],
+  "model": {
+    "name": "ts-palko",
+    "rows": 22002,
+    "cols": 47235,
+    "nnz": 1076903,
+    "read_wall_sec": 1.344011388
+  }
+}

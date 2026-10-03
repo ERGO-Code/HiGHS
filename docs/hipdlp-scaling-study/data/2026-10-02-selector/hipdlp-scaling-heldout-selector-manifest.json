@@ -1,0 +1,132 @@
+[
+  {
+    "name": "3d-lp",
+    "source": "/srv/mps_da/3d-lp.mps.gz",
+    "sha256": "1d72f0d097c95a5936b338dc3aef1e0f01710f092c7bc66d56a2f236031375d7"
+  },
+  {
+    "name": "afiro",
+    "source": "/srv/mps_da/afiro.mps.gz",
+    "sha256": "69134ccd37b413d21044967e4f1e1e37cd26e65b01a28a64cb6809a2d017f6ef"
+  },
+  {
+    "name": "avgas",
+    "source": "/srv/mps_da/avgas.mps.gz",
+    "sha256": "237f78a59a02909d42ede76876de8692917c6e36a3ee01d3b134fed5f5411db5"
+  },
+  {
+    "name": "blending",
+    "source": "/srv/mps_da/blending.mps.gz",
+    "sha256": "43d5b0f2f29ed264aacceff60fa76146cd25519fc70fc5e42a298bcc10bf88b2"
+  },
+  {
+    "name": "chip",
+    "source": "/srv/mps_da/chip.mps.gz",
+    "sha256": "b6c8c146fc43b5d8173f03dd0946a0f873ea23b3ac3419a341fdb7d4aebec42c"
+  },
+  {
+    "name": "distillation",
+    "source": "/srv/mps_da/distillation.mps.gz",
+    "sha256": "9c0acd966c24bc7bad6e30383a8c92d8b6ab60a6e869e765922bc12df8e66d4a"
+  },
+  {
+    "name": "distillation_dual",
+    "source": "/srv/mps_da/distillation_dual.mps.gz",
+    "sha256": "1fa6102da68883847d8859f95a620d320d73988568425613521c674b584c71b1"
+  },
+  {
+    "name": "dual",
+    "source": "/srv/mps_da/dual.mps.gz",
+    "sha256": "4309d50052527a3e0374e852ded05b6f4d5b46680d73084caecd59a80ce7f500"
+  },
+  {
+    "name": "flugpl",
+    "source": "/srv/mps_da/flugpl.mps.gz",
+    "sha256": "0124e523813fdd0ee4934bb7e2f06d4389a41b9edff17eb42615b45ae3774dbd"
+  },
+  {
+    "name": "forest6",
+    "source": "/srv/mps_da/forest6.mps.gz",
+    "sha256": "0749ac689df115caecfb17dea3eb8d94eb036391626b75c9e2846df0fb146aef"
+  },
+  {
+    "name": "primal",
+    "source": "/srv/mps_da/primal.mps.gz",
+    "sha256": "73ae0cf9031746e476f9b2f19ca9bca9b03be53d00f918b0be9bf7a7ee72932f"
+  },
+  {
+    "name": "sc50a",
+    "source": "/srv/mps_da/sc50a.mps.gz",
+    "sha256": "9cf396be416624ba7ff2a4901a70a0e060f3faaf490f7d8e6228803ad39fd6a4"
+  },
+  {
+    "name": "sc50b",
+    "source": "/srv/mps_da/sc50b.mps.gz",
+    "sha256": "d78bd7a000194ead156b8fc33491252e985eeb83f68cf1f871c13010fe9d2318"
+  },
+  {
+    "name": "sc105",
+    "source": "/srv/mps_da/sc105.mps.gz",
+    "sha256": "5cb29152ce48013487be2939a6e59bb19a775367115947036f82ebbdeae46226"
+  },
+  {
+    "name": "nug01",
+    "source": "/srv/mps_da/nug01.mps.gz",
+    "sha256": "c9646e211e9fcfe1d89343f74b8efde15e5b82f7f1c13eaac7f693fc9d3a84f2"
+  },
+  {
+    "name": "nug02",
+    "source": "/srv/mps_da/nug02.mps.gz",
+    "sha256": "6d8a92767b2dfda6805273d256654d4872528a9e57d892455596a74f3c29b911"
+  },
+  {
+    "name": "nug03",
+    "source": "/srv/mps_da/nug03.mps.gz",
+    "sha256": "80d79554583e6bf7bf08ad57fc2b565492e850d2b74b16677c881bcecef1cb5b"
+  },
+  {
+    "name": "qap04lp",
+    "source": "/srv/mps_da/qap04lp.mps.gz",
+    "sha256": "b8b69c5afb05131a16e81fc429847013e0ba12a935dbe51c17cb2acabb0ff050"
+  },
+  {
+    "name": "qap06lp",
+    "source": "/srv/mps_da/qap06lp.mps.gz",
+    "sha256": "da3088bd926b05b9a7ab329d27bff5dc33a04fc6a90271221136770ffbb2a0df"
+  },
+  {
+    "name": "qap08lp",
+    "source": "/srv/mps_da/qap08lp.mps.gz",
+    "sha256": "bbbc6b2307a549c4005ea920e56bce16efecc09e0d0686a34a57acbaa8a3a4e2"
+  },
+  {
+    "name": "qap10",
+    "source": "/srv/mps_da/qap10.mps.gz",
+    "sha256": "fb37cf89bfc20ffe8d9df02a6efe469c334f24a1b67925ca0192b0d1d948fc44"
+  },
+  {
+    "name": "qap12",
+    "source": "/srv/mps_da/qap12.mps.gz",
+    "sha256": "a1e26103915aaad5809847f3263f801a4568a59c6cce44f2d1dc13d073306143"
+  },
+  {
+    "name": "qap14",
+    "source": "/srv/mps_da/qap14.mps.gz",
+    "sha256": "6af96e20d1e600355ec5535e54e6a06e754a348316402f18f2b3d4035a46fdc8"
+  },
+  {
+    "name": "qap16",
+    "source": "/srv/mps_da/qap16.mps.gz",
+    "sha256": "442350e7de1143d59092d2417c8b0efa134712f4acf21dab19f34b4a313bc5b3"
+  },
+  {
+    "name": "qap18",
+    "source": "/srv/mps_da/qap18.mps.gz",
+    "sha256": "ec7f5f0c5858146cac19b59aedd434f24e7e0fcc153a202e32a6f7039dea93d7"
+  },
+  {
+    "name": "small_pre",
+    "source": "/srv/mps_da/small_pre.mps.gz",
+    "sha256": "1993813d9c7f87b9f8de9e768b5e5a4f268226da5d558ff18df45156a5bec785"
+  }
+]

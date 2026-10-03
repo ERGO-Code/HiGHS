@@ -1,0 +1,202 @@
+[
+  {
+    "name": "neso-2245",
+    "source": "/srv/mps_da/neso-2245.mps.gz",
+    "sha256": "8bb8bafb83de63739f607e1429be3a6162f1b5826f6e0f1bb723b7e74c1c4fe2",
+    "mps_sha256": "eec0f1e7f2bd3eb6b1d7363cc0a75bb9fb29c735e5826c0f6ee74bfed2379a3d",
+    "gzip_members": 1,
+    "non_gzip_trailing_bytes": 0,
+    "previous_mps_sha256": "eec0f1e7f2bd3eb6b1d7363cc0a75bb9fb29c735e5826c0f6ee74bfed2379a3d",
+    "previous_copy_identical": true
+  },
+  {
+    "name": "neso-2005",
+    "source": "/srv/mps_da/neso-2005.mps.gz",
+    "sha256": "c1c5f16c87f6aba6bb0b84d5b3854e361024d9b0cb1d19138e149f40745eac2f",
+    "mps_sha256": "1fcd544fbbfea62b4eded1c45ab99d7349bc0cd980651f92e6f2af39654e40e5",
+    "gzip_members": 1,
+    "non_gzip_trailing_bytes": 0,
+    "previous_mps_sha256": "1fcd544fbbfea62b4eded1c45ab99d7349bc0cd980651f92e6f2af39654e40e5",
+    "previous_copy_identical": true
+  },
+  {
+    "name": "steiner_t",
+    "source": "/srv/mps_da/steiner_t.mps.gz",
+    "sha256": "ed8e9cee038e71c4cd0467521da280e270434deec82df693e86e9daeffe8b2e1",
+    "mps_sha256": "3792551db892e1366e3b0bb62c92f0f91b9776e913111e1e0f5cb831986e5409",
+    "gzip_members": 1,
+    "non_gzip_trailing_bytes": 0,
+    "previous_mps_sha256": "3792551db892e1366e3b0bb62c92f0f91b9776e913111e1e0f5cb831986e5409",
+    "previous_copy_identical": true
+  },
+  {
+    "name": "savsched1",
+    "source": "/srv/mps_da/savsched1.mps.gz",
+    "sha256": "2ec33faecdd716a14114ad34ee883566065517fd08d18f091492cd5d5948f665",
+    "mps_sha256": "8ea8cd6b5d336bdf1ab8283b4282acc5ec071195caefa29564fc8183d733757a",
+    "gzip_members": 1,
+    "non_gzip_trailing_bytes": 0,
+    "previous_mps_sha256": "8ea8cd6b5d336bdf1ab8283b4282acc5ec071195caefa29564fc8183d733757a",
+    "previous_copy_identical": true
+  },
+  {
+    "name": "798kRows",
+    "source": "/srv/mps_da/798kRows.mps.gz",
+    "sha256": "d7b56c8c03288377de17f35eb0595b6f902ae66b9e340d0192c5f9c6c3a57f06",
+    "mps_sha256": "7df8f8229480be0e901999b7580322b1710e577cc9a96f7d05f98de57d0b42c8",
+    "gzip_members": 1,
+    "non_gzip_trailing_bytes": 0,
+    "previous_mps_sha256": "7df8f8229480be0e901999b7580322b1710e577cc9a96f7d05f98de57d0b42c8",
+    "previous_copy_identical": true
+  },
+  {
+    "name": "watson_1",
+    "source": "/srv/mps_da/watson_1.mps.gz",
+    "sha256": "6c69fb48b5f5619955d04a4ef5a5317be8029b603dc54185ccdbf5e8d59f2b85",
+    "mps_sha256": "4c594ae2f8e30fc7f798b4b143337c992df86eb17a28f3e04220a12662def9a2",
+    "gzip_members": 1,
+    "non_gzip_trailing_bytes": 0,
+    "previous_mps_sha256": "4c594ae2f8e30fc7f798b4b143337c992df86eb17a28f3e04220a12662def9a2",
+    "previous_copy_identical": true
+  },
+  {
+    "name": "ts-palko",
+    "source": "/srv/mps_da/ts-palko.mps.gz",
+    "sha256": "be26f6ecdac0617dbe8c3a08b6e6dd2696dacf615019064a57bcd00232d9742f",
+    "mps_sha256": "42a631d31bf19b152a06971b036b4f78a1777759aeb8a4d3c9855bd10e517bae",
+    "gzip_members": 1,
+    "non_gzip_trailing_bytes": 0,
+    "previous_mps_sha256": "42a631d31bf19b152a06971b036b4f78a1777759aeb8a4d3c9855bd10e517bae",
+    "previous_copy_identical": true
+  },
+  {
+    "name": "graph40-40",
+    "source": "/srv/mps_da/graph40-40.mps.gz",
+    "sha256": "55f1f2038fb2da7fb99be8a80aa9948d62e2ad7b0203eaf1d0d26a27419e7e50",
+    "mps_sha256": "6e7aeadd8a6c30eb17b4cd4106914c6493836b9ac1227b76b42219fcc204b143",
+    "gzip_members": 1,
+    "non_gzip_trailing_bytes": 0,
+    "previous_mps_sha256": "6e7aeadd8a6c30eb17b4cd4106914c6493836b9ac1227b76b42219fcc204b143",
+    "previous_copy_identical": true
+  },
+  {
+    "name": "psched3-3",
+    "source": "/srv/mps_da/psched3-3.mps.gz",
+    "sha256": "cd65a064d6f34a7c9c777acf8ad774059272377e4ee3b2067f5427558d1c9755",
+    "mps_sha256": "557d9b10970fa314d439e0e64fa695ecfa507a25b055c46cc32afec502fcde06",
+    "gzip_members": 1,
+    "non_gzip_trailing_bytes": 0,
+    "previous_mps_sha256": "557d9b10970fa314d439e0e64fa695ecfa507a25b055c46cc32afec502fcde06",
+    "previous_copy_identical": true
+  },
+  {
+    "name": "osa-60",
+    "source": "/srv/mps_da/osa-60.mps.gz",
+    "sha256": "342134028fa5c3ed23c34c32c07d0c60e83280b7db7b0832be06e1580be7de49",
+    "mps_sha256": "6a317c5ce3ae1308312648f4e6881a481ee0dee9b5d8c69f0e56400dc82845a3",
+    "gzip_members": 1,
+    "non_gzip_trailing_bytes": 0,
+    "previous_mps_sha256": "6a317c5ce3ae1308312648f4e6881a481ee0dee9b5d8c69f0e56400dc82845a3",
+    "previous_copy_identical": true
+  },
+  {
+    "name": "cont11",
+    "source": "/srv/mps_da/cont11.mps.gz",
+    "sha256": "1420a0a5c0dcb9d72526756fd79be5cb7970f35624efd01f6c39c9b0425d28b4",
+    "mps_sha256": "eb555d8859bd9e8df2b32a53da72857d9c8125b28013ec2be68f5aa42a13d2ca",
+    "gzip_members": 1,
+    "non_gzip_trailing_bytes": 0,
+    "previous_mps_sha256": "eb555d8859bd9e8df2b32a53da72857d9c8125b28013ec2be68f5aa42a13d2ca",
+    "previous_copy_identical": true
+  },
+  {
+    "name": "fome13",
+    "source": "/srv/mps_da/fome13.mps.gz",
+    "sha256": "f178eacb58e0abdf80e40f02afff4ae634d8af10936210f7a8e98354c4c154a8",
+    "mps_sha256": "da577f5c3f3d6e5b07a7d967d34e829d7499a05af6ba2b4985d4346279f369ef",
+    "gzip_members": 1,
+    "non_gzip_trailing_bytes": 0,
+    "previous_mps_sha256": "da577f5c3f3d6e5b07a7d967d34e829d7499a05af6ba2b4985d4346279f369ef",
+    "previous_copy_identical": true
+  },
+  {
+    "name": "p28",
+    "source": "/srv/mps_da/p28.mps.gz",
+    "sha256": "208bced33f504d5730fac4a9cd6cb3129e0a1affe7f38511ff7a0e292cf87d95",
+    "mps_sha256": "548052d75b6080a0f8e505179ddf9c6d3b3072ebdaf95f5461e40e7ea0e7465c",
+    "gzip_members": 1,
+    "non_gzip_trailing_bytes": 1144,
+    "previous_mps_sha256": "1f47eb6ae7c60ff3c592df6e2216cb9e3fb6e7353b8de5d26b5ba29b72069503",
+    "previous_copy_identical": false
+  },
+  {
+    "name": "neos1",
+    "source": "/srv/mps_da/neos1.mps.gz",
+    "sha256": "01989c2efdbba2c45727fe38fb3072b76969b7e687cb3ab9a8ff8ca057921aec",
+    "mps_sha256": "9d63e6825cda70ef7fadc29e209daefa886cd70598aa4c434f42308929100cc2",
+    "gzip_members": 1,
+    "non_gzip_trailing_bytes": 0,
+    "previous_mps_sha256": "9d63e6825cda70ef7fadc29e209daefa886cd70598aa4c434f42308929100cc2",
+    "previous_copy_identical": true
+  },
+  {
+    "name": "pypsa-eur-240t5n",
+    "source": "/srv/mps_da/pypsa-eur-240t5n.mps.gz",
+    "sha256": "a46a7968154f62be830d6c349480457e25c0e77657dd9141ccfbd9a7716e8c84",
+    "mps_sha256": "68704bb54cc21012dbbdef2a9e49c316bd3244399234eba42a6b881f931b8883",
+    "gzip_members": 1,
+    "non_gzip_trailing_bytes": 0,
+    "previous_mps_sha256": "68704bb54cc21012dbbdef2a9e49c316bd3244399234eba42a6b881f931b8883",
+    "previous_copy_identical": true
+  },
+  {
+    "name": "pds-100",
+    "source": "/srv/mps_da/pds-100.mps.gz",
+    "sha256": "a91cdc65557870b51013c45770a5c1b50e25f268cce7bb40ebfbece6668b9c0a",
+    "mps_sha256": "092a05ba91ff04fd6a90e6ddd0636207ebe4534169c5e33ef9a4c2719c356c45",
+    "gzip_members": 1,
+    "non_gzip_trailing_bytes": 0,
+    "previous_mps_sha256": "092a05ba91ff04fd6a90e6ddd0636207ebe4534169c5e33ef9a4c2719c356c45",
+    "previous_copy_identical": true
+  },
+  {
+    "name": "L1_sixm250",
+    "source": "/srv/mps_da/L1_sixm250.mps.gz",
+    "sha256": "3b5bf89d9f89e2909655c542d61653f11710469f70004fd5e59eb56a3ac801df",
+    "mps_sha256": "637f5ca3dce9e15c00b22ff343d366b9bed0765f3e0337d1b9f8aef552404df2",
+    "gzip_members": 1,
+    "non_gzip_trailing_bytes": 0,
+    "previous_mps_sha256": "637f5ca3dce9e15c00b22ff343d366b9bed0765f3e0337d1b9f8aef552404df2",
+    "previous_copy_identical": true
+  },
+  {
+    "name": "istefanov_med",
+    "source": "/srv/mps_da/istefanov_med.mps.gz",
+    "sha256": "06fef490269dfc2f5b014298a2f212808da2a2f996ab3f66dc810e3a0d9b90ea",
+    "mps_sha256": "d5207956fc20b3964c8a980d845b304220df3430dce65142285cce0d37e59af3",
+    "gzip_members": 1,
+    "non_gzip_trailing_bytes": 0,
+    "previous_mps_sha256": "d5207956fc20b3964c8a980d845b304220df3430dce65142285cce0d37e59af3",
+    "previous_copy_identical": true
+  },
+  {
+    "name": "support19",
+    "source": "/srv/mps_da/support19.mps.gz",
+    "sha256": "7b6fbdecebf3735699191f84c4f01e3cd19ae1060e15d0f12f2c4f091334c443",
+    "mps_sha256": "65164976033fc68693ed308c4b6e2cb4cd4494c3d8f10df4ba6b2aa1a5e7f487",
+    "gzip_members": 1,
+    "non_gzip_trailing_bytes": 0,
+    "previous_mps_sha256": "65164976033fc68693ed308c4b6e2cb4cd4494c3d8f10df4ba6b2aa1a5e7f487",
+    "previous_copy_identical": true
+  },
+  {
+    "name": "square41",
+    "source": "/srv/mps_da/square41.mps.gz",
+    "sha256": "7ac75cc1bd03562cdeea6541a334ad2daf0eb66b4faf3352d1934aa03798c366",
+    "mps_sha256": "379f1ba7e143d9eeab2b6d48cff0420b774122db750fbeeaaf058300a4a69dda",
+    "gzip_members": 1,
+    "non_gzip_trailing_bytes": 0,
+    "previous_mps_sha256": "379f1ba7e143d9eeab2b6d48cff0420b774122db750fbeeaaf058300a4a69dda",
+    "previous_copy_identical": true
+  }
+]

@@ -1,9 +1,11 @@
 #include "pdlp/hipdlp/algorithm/solver.hpp"
 
+#include <algorithm>
 #include <chrono>
 #include <cmath>
 #include <cstdarg>
 #include <cstdio>
+#include <functional>
 #include <limits>
 #include <memory>
 #include <new>
@@ -213,6 +215,124 @@ struct HostIterate {
   std::vector<double> aty;
   std::vector<double> reduced_costs;
 };
+
+const HighsInt kScalingPilotIterations = 200;
+
+// A checkpoint runs after the ordinary convergence and restart boundary. The
+// first call stack remains alive while the second pilot runs, preserving every
+// vector, anchor, PID/restart state and command buffer of the eventual winner.
+struct ScalingPilotHook {
+  std::function<api::SolveResult(const model::Problem&, const HostIterate&)>
+      checkpoint;
+  HighsInt discarded_iterations = 0;
+  bool fired = false;
+};
+
+struct ScalingPilotSnapshot {
+  std::vector<double> primal, dual, initial_primal;
+  model::ScalingMetadata scaling;
+  double sigma = 0.0;
+  double weight = 1.0;
+};
+
+// Match tools/proxy2.cpp's deterministic 60-step spectral estimate. This is
+// only a selection score; the solver's conservative step-size bound is intact.
+double pilotOperatorNorm(const model::Problem& problem) {
+  const model::SparseMatrix& a = problem.matrix();
+  const model::SparseMatrix& at = problem.transpose();
+  std::vector<double> x(a.num_cols), y(a.num_rows);
+  double norm = 0.0, sigma = 0.0;
+  for (HighsInt col = 0; col < a.num_cols; ++col) {
+    x[col] = 1.0 + 0.37 * std::sin(static_cast<double>(col));
+    norm = std::hypot(norm, x[col]);
+  }
+  for (double& value : x) value /= norm;
+  for (int iteration = 0; iteration < 60; ++iteration) {
+    for (HighsInt row = 0; row < a.num_rows; ++row) {
+      double value = 0.0;
+      for (HighsInt entry = a.starts[row]; entry < a.starts[row + 1]; ++entry)
+        value += a.values[entry] * x[a.indices[entry]];
+      y[row] = value;
+    }
+    norm = 0.0;
+    for (HighsInt col = 0; col < at.num_rows; ++col) {
+      double value = 0.0;
+      for (HighsInt entry = at.starts[col]; entry < at.starts[col + 1]; ++entry)
+        value += at.values[entry] * y[at.indices[entry]];
+      x[col] = value;
+      norm = std::hypot(norm, value);
+    }
+    if (norm == 0.0) return 0.0;
+    sigma = std::sqrt(norm);
+    for (double& value : x) value /= norm;
+  }
+  return sigma;
+}
+
+api::Error snapshotScalingPilot(const model::Problem& problem,
+                                const HostIterate& host,
+                                ScalingPilotSnapshot& snapshot) {
+  api::Error error =
+      model::unscalePrimal(problem, host.primal, snapshot.primal);
+  if (!error.ok()) return error;
+  error = model::unscaleDual(problem, host.dual, snapshot.dual);
+  if (!error.ok()) return error;
+  snapshot.scaling = problem.scaling();
+  snapshot.weight = (1.0 + problem.unscaledNorms().objective_l2) /
+                    (1.0 + problem.unscaledNorms().row_bounds_l2);
+  snapshot.sigma = pilotOperatorNorm(problem);
+  snapshot.initial_primal.resize(problem.numCols());
+  for (HighsInt col = 0; col < problem.numCols(); ++col)
+    snapshot.initial_primal[col] =
+        std::min(std::max(0.0, problem.colLower()[col]),
+                 problem.colUpper()[col]) *
+        snapshot.scaling.col_scale[col];
+
+  // The original study postsolved each pilot, then reconstructed synthetic
+  // slacks from original row activities. Preserve that scoring convention even
+  // though a non-converged pilot's actual slack can differ from its activity.
+  const model::TransformationMetadata& transform = problem.transformation();
+  const model::SparseMatrix& matrix = problem.matrix();
+  for (HighsInt original_row = 0; original_row < transform.original_num_rows;
+       ++original_row) {
+    const HighsInt slack = transform.slack_col_for_original_row[original_row];
+    if (slack < 0) continue;
+    const HighsInt row = transform.original_to_transformed_row[original_row];
+    double activity = 0.0;
+    for (HighsInt entry = matrix.starts[row]; entry < matrix.starts[row + 1];
+         ++entry) {
+      const HighsInt col = matrix.indices[entry];
+      if (col < transform.original_num_cols)
+        activity += matrix.values[entry] * host.primal[col] /
+                    snapshot.scaling.row_scale[row];
+    }
+    snapshot.primal[slack] = activity;
+  }
+  return api::Error();
+}
+
+// Both pilot solutions score both candidate coordinate systems. Work in log
+// space so neither squaring distances nor the geometric mean overflows FP64.
+double pilotLogKw(const ScalingPilotSnapshot& candidate,
+                  const ScalingPilotSnapshot& pilot) {
+  long double primal_squared = 0.0L, dual_squared = 0.0L;
+  for (std::size_t col = 0; col < pilot.primal.size(); ++col) {
+    const long double value = (static_cast<long double>(pilot.primal[col]) -
+                               candidate.initial_primal[col]) /
+                              candidate.scaling.col_scale[col];
+    primal_squared += value * value;
+  }
+  for (std::size_t row = 0; row < pilot.dual.size(); ++row) {
+    const long double value = static_cast<long double>(pilot.dual[row]) /
+                              candidate.scaling.row_scale[row];
+    dual_squared += value * value;
+  }
+  const long double kw =
+      candidate.sigma * 0.5L *
+      (candidate.weight * primal_squared + dual_squared / candidate.weight);
+  return static_cast<double>(std::log(std::max(
+      kw, static_cast<long double>(std::numeric_limits<double>::min()))));
+}
 
 // Reused across boundaries so certificate detection allocates nothing new
 // once the loop is running.
@@ -818,11 +938,15 @@ SolveLogSink::~SolveLogSink() {}
 
 SolveContext::SolveContext()
     : log(nullptr), diagnostics(nullptr), observer(nullptr),
+      pilot_observer(nullptr),
       use_command_buffers(true) {}
 
-api::SolveResult solve(const api::SolverOptions& options,
-                       const model::OriginalModel& original_model,
-                       const SolveContext& context) {
+static api::SolveResult solveImpl(const api::SolverOptions& requested_options,
+                                  const model::OriginalModel& original_model,
+                                  const SolveContext& context,
+                                  ScalingPilotHook* pilot_hook = nullptr) {
+  const api::SolverOptions& options = requested_options;
+  HighsInt iteration_budget = options.iteration_limit;
   HighsInt total_iterations = 0;
   SolvePhaseGuard solve_phase(context, SolvePhase::kSolve, total_iterations);
   const SolveClock::time_point start = SolveClock::now();
@@ -853,6 +977,12 @@ api::SolveResult solve(const api::SolverOptions& options,
           "HiPDLP rewrite scaling: Curtis-Reid rejected, it would inflate the "
           "scaled costs, right-hand sides or bounds; using Ruiz and "
           "Pock-Chambolle");
+    if (built.problem.scaling().curtis_reid_rejected && pilot_hook != nullptr) {
+      pilot_hook = nullptr;
+      if (context.log != nullptr)
+        context.log->info(
+            "HiPDLP scaling selector: guard chose Ruiz+PC; pilots skipped");
+    }
     if (built.problem.matrix().numNonzeros() == 0) {
       return failure(
           api::Error(api::ErrorCode::kInvalidModel,
@@ -937,7 +1067,7 @@ api::SolveResult solve(const api::SolverOptions& options,
       stopping_input.tolerances = tolerances;
       stopping_input.iteration = 0;
       stopping_input.elapsed_time = elapsedSeconds(start);
-      stopping_input.limits.iteration = options.iteration_limit;
+      stopping_input.limits.iteration = iteration_budget;
       stopping_input.limits.time = options.time_limit;
       const StoppingResult stopping = evaluateStopping(stopping_input);
       if (!stopping.ok()) return failure(stopping.error);
@@ -963,8 +1093,8 @@ api::SolveResult solve(const api::SolverOptions& options,
                                            solution, 0);
         }
       }
-        const bool initial_iteration_limit = options.iteration_limit == 0;
-        if (initial_iteration_limit || timeLimitReached(options, start) ||
+      const bool initial_iteration_limit = iteration_budget == 0;
+      if (initial_iteration_limit || timeLimitReached(options, start) ||
           stopping.decision == StoppingDecision::kIterationLimit ||
           stopping.decision == StoppingDecision::kTimeLimit) {
         if (!postsolved) {
@@ -1124,8 +1254,8 @@ api::SolveResult solve(const api::SolverOptions& options,
       static_cast<std::size_t>(original_model.lp().num_col_));
     RecordedIterationBlock recorded_block;
     if (context.use_command_buffers &&
-        (options.iteration_limit == kHighsIInf ||
-         options.iteration_limit >= kConvergenceCadence)) {
+        (iteration_budget == kHighsIInf ||
+         iteration_budget >= kConvergenceCadence)) {
       error = recorded_block.prepare(*selected_backend, state);
       if (!error.ok()) return failure(error);
       if (recorded_block.ready() && context.diagnostics != nullptr)
@@ -1137,6 +1267,24 @@ api::SolveResult solve(const api::SolverOptions& options,
     SolvePhaseGuard iteration_block(context, SolvePhase::kIterationBlock,
                                     total_iterations);
     while (true) {
+      if (pilot_hook != nullptr && !pilot_hook->fired &&
+          total_iterations == kScalingPilotIterations) {
+        pilot_hook->fired = true;
+        iteration_block.finish(true);
+        iterations.finish(true);
+        error = prepareCandidate(*selected_backend, problem_handle, state,
+                                 vectors, host, context, total_iterations);
+        if (!error.ok()) return failure(error);
+        const api::SolveResult selected =
+            pilot_hook->checkpoint(built.problem, host);
+        if (!selected.error.ok() ||
+            selected.status != api::SolverStatus::kNotSet)
+          return selected;
+        if (iteration_budget != kHighsIInf)
+          iteration_budget -= pilot_hook->discarded_iterations;
+        iterations.begin();
+        iteration_block.begin();
+      }
       if (timeLimitReached(options, start)) {
         SolvePhaseGuard boundary(context, SolvePhase::kBoundary,
                                  total_iterations);
@@ -1173,13 +1321,16 @@ api::SolveResult solve(const api::SolverOptions& options,
 
       {
         SolvePhaseGuard step(context, SolvePhase::kStep, total_iterations);
-        const bool replay_block = recorded_block.ready() &&
+        const bool replay_block =
+            recorded_block.ready() &&
             total_iterations % kConvergenceCadence == 1 &&
             !restart_reference_pending &&
-            total_iterations <= std::numeric_limits<HighsInt>::max() - kRecordedStepCount &&
-            state.iteration <= std::numeric_limits<HighsInt>::max() - kRecordedStepCount &&
-            (options.iteration_limit == kHighsIInf ||
-             options.iteration_limit - total_iterations >= kRecordedStepCount);
+            total_iterations <=
+                std::numeric_limits<HighsInt>::max() - kRecordedStepCount &&
+            state.iteration <=
+                std::numeric_limits<HighsInt>::max() - kRecordedStepCount &&
+            (iteration_budget == kHighsIInf ||
+             iteration_budget - total_iterations >= kRecordedStepCount);
         const HighsInt completed_steps = replay_block ? kRecordedStepCount : 1;
         error = replay_block
             ? recorded_block.replay(*selected_backend, state)
@@ -1197,8 +1348,8 @@ api::SolveResult solve(const api::SolverOptions& options,
       }
 
       const bool cadence_boundary = total_iterations % kConvergenceCadence == 0;
-      const bool iteration_limit = options.iteration_limit != kHighsIInf &&
-                                   total_iterations >= options.iteration_limit;
+      const bool iteration_limit = iteration_budget != kHighsIInf &&
+                                   total_iterations >= iteration_budget;
       const bool time_limit = timeLimitReached(options, start);
       boundary_metrics_valid = false;
       backend::CheckResult check;
@@ -1293,7 +1444,7 @@ api::SolveResult solve(const api::SolverOptions& options,
         stopping_input.tolerances = tolerances;
         stopping_input.iteration = total_iterations;
         stopping_input.elapsed_time = elapsedSeconds(start);
-        stopping_input.limits.iteration = options.iteration_limit;
+        stopping_input.limits.iteration = iteration_budget;
         stopping_input.limits.time = options.time_limit;
         const StoppingResult stopping = evaluateStopping(stopping_input);
         if (!stopping.ok()) return failure(stopping.error);
@@ -1356,6 +1507,22 @@ api::SolveResult solve(const api::SolverOptions& options,
             next_verification_iteration =
                 total_iterations + gap * kConvergenceCadence;
           }
+        }
+
+        bool pilot_stop = false;
+        if (context.pilot_observer != nullptr && cadence_boundary &&
+            total_iterations <= kScalingPilotIterations) {
+          error = postsolve_candidate();
+          if (!error.ok()) return failure(error);
+          pilot_stop = context.pilot_observer->checkpoint(
+              total_iterations, solution, elapsedSeconds(start),
+              fixed_point_from_packet
+                  ? computeFixedPointError(
+                        check.primal_delta_norm, check.dual_delta_norm,
+                        check.delta_dot, current_steps.primal_weight,
+                        current_steps.base_step).fixed_point_error
+                  : std::numeric_limits<double>::quiet_NaN(),
+              context.diagnostics == nullptr ? 0 : context.diagnostics->restarts);
         }
 
         if (iteration_limit ||
@@ -1423,6 +1590,9 @@ api::SolveResult solve(const api::SolverOptions& options,
                                    outcome.certificate);
           }
         }
+        if (pilot_stop)
+          return api::SolveResult::success(api::SolverStatus::kIterationLimit,
+                                           solution, total_iterations);
       }
 
       if (restart_reference_pending) {
@@ -1540,6 +1710,112 @@ api::SolveResult solve(const api::SolverOptions& options,
   } catch (const std::bad_alloc&) {
     return failure(api::Error(api::ErrorCode::kAllocationFailure,
                               "HiPDLP rewrite solve allocation failed"));
+  }
+}
+
+api::SolveResult solve(const api::SolverOptions& options,
+                       const model::OriginalModel& original_model,
+                       const SolveContext& context) {
+  if (!options.scaling_selector)
+    return solveImpl(options, original_model, context);
+  const api::Error error = validateOptions(options);
+  if (!error.ok()) return failure(error);
+  if (options.scaling.mode != model::ScalingMode::kAuto ||
+      options.scaling.legacy_scaling_mode !=
+          (kPdlpScalingRuiz | kPdlpScalingPC) ||
+      (options.scaling.features_off & kPdlpScalingOff))
+    return failure(api::Error(
+        api::ErrorCode::kInvalidOption,
+        "HiPDLP scaling selector requires auto scaling with Ruiz+PC enabled"));
+  // Small budgets retain normal stopping semantics without a partial contest.
+  if (options.iteration_limit != kHighsIInf &&
+      options.iteration_limit <= 2 * kScalingPilotIterations) {
+    if (context.log != nullptr)
+      context.log->info(
+          "HiPDLP scaling selector: insufficient iteration budget; pilots "
+          "skipped");
+    return solveImpl(options, original_model, context);
+  }
+  const SolveClock::time_point start = SolveClock::now();
+  const double prior_total_seconds =
+      context.diagnostics == nullptr ? 0.0
+                                     : context.diagnostics->total_wall_seconds;
+  try {
+    ScalingPilotHook first, second;
+    ScalingPilotSnapshot a, l;
+    bool choose_first = false;
+    HighsInt discarded = 0;
+    second.checkpoint = [&](const model::Problem& problem,
+                            const HostIterate& host) {
+      const api::Error snapshot_error = snapshotScalingPilot(problem, host, l);
+      if (!snapshot_error.ok()) return failure(snapshot_error);
+      const double aa = pilotLogKw(a, a), al = pilotLogKw(a, l);
+      const double la = pilotLogKw(l, a), ll = pilotLogKw(l, l);
+      const double score_a = 0.5 * (aa + al), score_l = 0.5 * (la + ll);
+      // Invalid estimates fall back to the guarded default; ties also choose A.
+      choose_first = !std::isfinite(score_a) || !std::isfinite(score_l) ||
+                     score_a <= score_l;
+      if (context.log != nullptr)
+        context.log->info(formatted(
+            "HiPDLP scaling selector: 200 iterations each; log Kw(A|A) %.17g, "
+            "log Kw(A|L) %.17g, log Kw(L|A) %.17g, log Kw(L|L) %.17g; "
+            "geometric mean Kw A %.17g, L %.17g; continuing %s",
+            aa, al, la, ll, std::exp(score_a), std::exp(score_l),
+            choose_first ? "CR+Ruiz+PC" : "Ruiz+PC"));
+      discarded = kScalingPilotIterations;
+      if (choose_first) {
+        // Private sentinel: release L's state and resume A's suspended stack.
+        api::SolveResult paused;
+        paused.status = api::SolverStatus::kIterationLimit;
+        return paused;
+      }
+      return api::SolveResult();
+    };
+    first.checkpoint = [&](const model::Problem& problem,
+                           const HostIterate& host) {
+      const api::Error snapshot_error = snapshotScalingPilot(problem, host, a);
+      if (!snapshot_error.ok()) return failure(snapshot_error);
+      api::SolverOptions legacy = options;
+      legacy.scaling_selector = false;
+      legacy.scaling.mode = model::ScalingMode::kLegacy;
+      if (legacy.iteration_limit != kHighsIInf)
+        legacy.iteration_limit -= kScalingPilotIterations;
+      if (legacy.time_limit != kHighsInf)
+        legacy.time_limit =
+            std::max(0.0, legacy.time_limit - elapsedSeconds(start));
+      api::SolveResult result =
+          solveImpl(legacy, original_model, context, &second);
+      discarded = kScalingPilotIterations;
+      if (second.fired && choose_first && result.ok() && !result.has_solution) {
+        first.discarded_iterations = discarded;
+        return api::SolveResult();
+      }
+      return result;
+    };
+    api::SolveResult result =
+        solveImpl(options, original_model, context, &first);
+    // Nested solve scopes overlap in wall time, unlike their iteration phases.
+    if (context.diagnostics != nullptr)
+      context.diagnostics->total_wall_seconds =
+          prior_total_seconds + elapsedSeconds(start);
+    if (result.ok()) {
+      if (result.iteration_count >
+          std::numeric_limits<HighsInt>::max() - discarded)
+        return failure(api::Error(
+            api::ErrorCode::kInvalidArgument,
+            "HiPDLP scaling selector iteration count overflowed"));
+      result.iteration_count += discarded;
+      if (context.log != nullptr && discarded != 0)
+        context.log->info(
+            formatted("HiPDLP scaling selector: total %lld iterations "
+                      "including %lld discarded pilot iterations",
+                      static_cast<long long>(result.iteration_count),
+                      static_cast<long long>(discarded)));
+    }
+    return result;
+  } catch (const std::bad_alloc&) {
+    return failure(api::Error(api::ErrorCode::kAllocationFailure,
+                              "HiPDLP scaling selector allocation failed"));
   }
 }
 

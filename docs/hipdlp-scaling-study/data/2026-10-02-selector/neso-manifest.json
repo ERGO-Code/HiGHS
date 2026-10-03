@@ -1,0 +1,12 @@
+[
+  {
+    "name": "neso-2245",
+    "sha256": "8bb8bafb83de63739f607e1429be3a6162f1b5826f6e0f1bb723b7e74c1c4fe2",
+    "source": "/srv/mps_da/neso-2245.mps.gz"
+  },
+  {
+    "name": "neso-2005",
+    "sha256": "c1c5f16c87f6aba6bb0b84d5b3854e361024d9b0cb1d19138e149f40745eac2f",
+    "source": "/srv/mps_da/neso-2005.mps.gz"
+  }
+]

@@ -1,0 +1,38 @@
+{
+  "name": "798kRows",
+  "config": "P",
+  "backend": "cuda",
+  "status": "TIME_LIMIT",
+  "call_status": 0,
+  "iterations": 380520,
+  "order": 3,
+  "kkt_pass": false,
+  "certificate_pass": false,
+  "kkt_tolerance": 0.0001,
+  "pdlp_optimality_tolerance": 0.0001,
+  "solver_wall_sec": 180.405275667,
+  "verification_wall_sec": 0.133058032,
+  "time_limit": 180,
+  "iteration_limit": 2147483647,
+  "relative_primal_residual": 1.1571177116767887e-06,
+  "relative_dual_residual": 1.022395131045823e-05,
+  "relative_objective_gap": 0.35344815907991944,
+  "command": [
+    "/tmp/hipdlp-large20-20261002/large-compare",
+    "/tmp/hipdlp-large20-20261002/lp/798kRows.mps",
+    "798kRows",
+    "cuda",
+    "A,L,S,P",
+    "180.0",
+    "2147483647"
+  ],
+  "guard_rejected": false,
+  "selector_log": [],
+  "model": {
+    "name": "798kRows",
+    "rows": 797867,
+    "cols": 1052744,
+    "nnz": 2342532,
+    "read_wall_sec": 6.909988288
+  }
+}

@@ -1,0 +1,38 @@
+{
+  "name": "pypsa-eur-240t5n",
+  "config": "L",
+  "backend": "cuda",
+  "status": "OPTIMAL",
+  "call_status": 0,
+  "iterations": 107080,
+  "order": 1,
+  "kkt_pass": true,
+  "certificate_pass": false,
+  "kkt_tolerance": 0.0001,
+  "pdlp_optimality_tolerance": 0.0001,
+  "solver_wall_sec": 5.548838223,
+  "verification_wall_sec": 0.012154235,
+  "time_limit": 180,
+  "iteration_limit": 2147483647,
+  "relative_primal_residual": 7.049424433193701e-08,
+  "relative_dual_residual": 3.6843434282261214e-07,
+  "relative_objective_gap": 1.9579678373264653e-05,
+  "command": [
+    "/tmp/hipdlp-large20-20261002/large-compare",
+    "/tmp/hipdlp-large20-20261002/lp/pypsa-eur-240t5n.mps",
+    "pypsa-eur-240t5n",
+    "cuda",
+    "P,L",
+    "180.0",
+    "2147483647"
+  ],
+  "guard_rejected": false,
+  "selector_log": [],
+  "model": {
+    "name": "pypsa-eur-240t5n",
+    "rows": 119299,
+    "cols": 56899,
+    "nnz": 237928,
+    "read_wall_sec": 0.538935288
+  }
+}

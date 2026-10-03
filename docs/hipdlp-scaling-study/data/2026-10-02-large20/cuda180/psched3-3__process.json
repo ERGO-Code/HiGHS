@@ -1,0 +1,13 @@
+{
+  "command": [
+    "/tmp/hipdlp-large20-20261002/large-compare",
+    "/tmp/hipdlp-large20-20261002/lp/psched3-3.mps",
+    "psched3-3",
+    "cuda",
+    "A,L,S,P",
+    "180.0",
+    "2147483647"
+  ],
+  "returncode": 0,
+  "process_wall_sec": 723.4302064203657
+}

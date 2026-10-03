@@ -1,0 +1,33 @@
+{
+  "schema": "hipdlp-migration-adapter/1",
+  "instance": "/tmp/hipdlp-scaling-study/lp/stair.mps",
+  "implementation": "rewrite",
+  "backend": "cpu",
+  "requested_backend": "cpu",
+  "step_size": "fixed",
+  "status": "OPTIMAL",
+  "call_status": "ok",
+  "iterations": 15600,
+  "objective": -251.26656891204996,
+  "solver_wall_sec": 0.451292,
+  "end_to_end_sec": 0.460568042,
+  "relative_primal_residual": 5.9698364212720414e-06,
+  "relative_dual_residual": 2.628857463171652e-05,
+  "relative_objective_gap": 3.369277989284797e-06,
+  "kkt_input_valid": true,
+  "kkt_pass": true,
+  "certificate_kind": "none",
+  "certificate_pass": false,
+  "options": {
+    "presolve": "off",
+    "hipdlp_scaling": "auto",
+    "pdlp_step_size_strategy": 0,
+    "kkt_tolerance": 0.0001,
+    "pdlp_optimality_tolerance": 0.0001,
+    "hipdlp_scaling_selector": false,
+    "time_limit": 600,
+    "pdlp_iteration_limit": 1000000
+  },
+  "executable": "/tmp/hipdlp-scaling-study/selector-adapter",
+  "highs_version": "1.15.1"
+}

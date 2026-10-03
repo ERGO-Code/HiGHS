@@ -1,0 +1,90 @@
+{
+  "instances": 26,
+  "solved": {
+    "A": 24,
+    "L": 24,
+    "S": 24
+  },
+  "censored": [
+    "small_pre"
+  ],
+  "common_solved": 24,
+  "metrics": {
+    "A": {
+      "common_solved_iteration_GM": 627.3944004885944,
+      "PAR2_SGM": 2155.665626199543
+    },
+    "L": {
+      "common_solved_iteration_GM": 589.6931583525012,
+      "PAR2_SGM": 2096.426161069934
+    },
+    "S": {
+      "common_solved_iteration_GM": 658.205429921973,
+      "PAR2_SGM": 2207.650877783566
+    }
+  },
+  "selector_over_A_common_GM": 1.0491095065709601,
+  "selector_over_A_shifted_PAR2_GM": 1.0164736248202024,
+  "worst_regressions": [
+    {
+      "name": "afiro",
+      "A": 240,
+      "S": 400,
+      "ratio": 1.6666666666666667
+    },
+    {
+      "name": "qap06lp",
+      "A": 400,
+      "S": 600,
+      "ratio": 1.5
+    },
+    {
+      "name": "sc50a",
+      "A": 440,
+      "S": 640,
+      "ratio": 1.4545454545454546
+    },
+    {
+      "name": "sc50b",
+      "A": 480,
+      "S": 600,
+      "ratio": 1.25
+    },
+    {
+      "name": "qap08lp",
+      "A": 920,
+      "S": 1120,
+      "ratio": 1.2173913043478262
+    },
+    {
+      "name": "sc105",
+      "A": 1680,
+      "S": 1840,
+      "ratio": 1.0952380952380953
+    },
+    {
+      "name": "qap10",
+      "A": 12080,
+      "S": 12280,
+      "ratio": 1.0165562913907285
+    },
+    {
+      "name": "qap14",
+      "A": 21120,
+      "S": 21320,
+      "ratio": 1.009469696969697
+    },
+    {
+      "name": "qap12",
+      "A": 26800,
+      "S": 27000,
+      "ratio": 1.007462686567164
+    },
+    {
+      "name": "qap16",
+      "A": 40040,
+      "S": 40240,
+      "ratio": 1.004995004995005
+    }
+  ]
+}

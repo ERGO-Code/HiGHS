@@ -1,0 +1,38 @@
+{
+  "name": "osa-60",
+  "config": "A",
+  "backend": "cuda",
+  "status": "TIME_LIMIT",
+  "call_status": 0,
+  "iterations": 1522440,
+  "order": 3,
+  "kkt_pass": false,
+  "certificate_pass": false,
+  "kkt_tolerance": 0.0001,
+  "pdlp_optimality_tolerance": 0.0001,
+  "solver_wall_sec": 180.068270814,
+  "verification_wall_sec": 0.019418106,
+  "time_limit": 180,
+  "iteration_limit": 2147483647,
+  "relative_primal_residual": 0.01263350394935864,
+  "relative_dual_residual": 2.731096187223984e-06,
+  "relative_objective_gap": 0.0060059694565110485,
+  "command": [
+    "/tmp/hipdlp-large20-20261002/large-compare",
+    "/tmp/hipdlp-large20-20261002/lp/osa-60.mps",
+    "osa-60",
+    "cuda",
+    "L,S,P,A",
+    "180.0",
+    "2147483647"
+  ],
+  "guard_rejected": false,
+  "selector_log": [],
+  "model": {
+    "name": "osa-60",
+    "rows": 10280,
+    "cols": 232966,
+    "nnz": 1397793,
+    "read_wall_sec": 2.39828542
+  }
+}

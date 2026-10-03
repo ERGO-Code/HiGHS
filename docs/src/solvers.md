@@ -117,6 +117,16 @@ PID must be distinguished from that default path. The independent PDLP
 iteration tolerance and final KKT tolerance are separate options; changing
 one is not a substitute for setting the other.
 
+An experimental, opt-in `hipdlp_scaling_selector=true` requires `auto` scaling
+with Ruiz and Pock-Chambolle enabled. After the Curtis-Reid guard, it runs
+200 iterations with each pipeline, scores both scalings from both pilot
+iterates using the geometric mean of their Kw estimates, and continues the
+winner's complete state. The discarded pilot counts toward the iteration
+limit, and both pilots share the time budget. Guard rejections skip the pilots.
+Iteration budgets of 400 or less use the guarded default. Kw uses the initial
+unscaled primal weight even for PID, so this experimental policy has no
+validated performance guarantee for PID or held-out problems.
+
 The experimental `hipdlp_early_kkt_check` option is false by default. When
 enabled, it can request an additional original-model KKT check every 400
 iterations near convergence, without relaxing the final KKT tolerance. Extra
@@ -231,4 +241,3 @@ The option [__solver__](@ref option-solver) is ignored and the default solver is
 * The problem is an LP and __solver__ is set to "qpasm".
 * The problem is a QP and __solver__ is set to "simplex", "ipx", "pdlp" or "hipdlp".
 * The problem is a MIP and __solver__ is not set to "choose".
-

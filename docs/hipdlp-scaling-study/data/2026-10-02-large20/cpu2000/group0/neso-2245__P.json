@@ -1,0 +1,38 @@
+{
+  "name": "neso-2245",
+  "config": "P",
+  "backend": "cpu",
+  "status": "ITERATION_LIMIT",
+  "call_status": 0,
+  "iterations": 2000,
+  "order": 3,
+  "kkt_pass": false,
+  "certificate_pass": false,
+  "kkt_tolerance": 0.0001,
+  "pdlp_optimality_tolerance": 0.0001,
+  "solver_wall_sec": 124.358301625,
+  "verification_wall_sec": 0.094645253,
+  "time_limit": 180,
+  "iteration_limit": 2000,
+  "relative_primal_residual": 0.00019039372275085045,
+  "relative_dual_residual": 0.017438850241509853,
+  "relative_objective_gap": 0.00994481455686264,
+  "command": [
+    "/tmp/hipdlp-large20-20261002/large-compare",
+    "/tmp/hipdlp-large20-20261002/lp/neso-2245.mps",
+    "neso-2245",
+    "cpu",
+    "A,L,S,P",
+    "180.0",
+    "2000"
+  ],
+  "guard_rejected": false,
+  "selector_log": [],
+  "model": {
+    "name": "neso-2245",
+    "rows": 45715,
+    "cols": 93151,
+    "nnz": 12980419,
+    "read_wall_sec": 26.328871766
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "name": "neso-2005",
+  "config": "S",
+  "backend": "cpu",
+  "status": "TIME_LIMIT",
+  "call_status": 0,
+  "iterations": 922,
+  "order": 2,
+  "kkt_pass": false,
+  "certificate_pass": false,
+  "kkt_tolerance": 0.0001,
+  "pdlp_optimality_tolerance": 0.0001,
+  "solver_wall_sec": 181.401324093,
+  "verification_wall_sec": 0.219790588,
+  "time_limit": 180,
+  "iteration_limit": 2000,
+  "relative_primal_residual": 0.0070528662731685916,
+  "relative_dual_residual": 0.14876551749123038,
+  "relative_objective_gap": 0.356444463685369,
+  "command": [
+    "/tmp/hipdlp-large20-20261002/large-compare",
+    "/tmp/hipdlp-large20-20261002/lp/neso-2005.mps",
+    "neso-2005",
+    "cpu",
+    "A,L,S,P",
+    "180.0",
+    "2000"
+  ],
+  "guard_rejected": true,
+  "selector_log": [
+    "HiPDLP scaling selector: guard chose Ruiz+PC; pilots skipped"
+  ],
+  "model": {
+    "name": "neso-2005",
+    "rows": 60083,
+    "cols": 108047,
+    "nnz": 36876017,
+    "read_wall_sec": 90.561007629
+  }
+}

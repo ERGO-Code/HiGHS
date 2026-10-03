@@ -1,0 +1,38 @@
+{
+  "name": "square41",
+  "config": "A",
+  "backend": "cuda",
+  "status": "TIME_LIMIT",
+  "call_status": 0,
+  "iterations": 59080,
+  "order": 1,
+  "kkt_pass": false,
+  "certificate_pass": false,
+  "kkt_tolerance": 0.0001,
+  "pdlp_optimality_tolerance": 0.0001,
+  "solver_wall_sec": 180.597593744,
+  "verification_wall_sec": 0.094690688,
+  "time_limit": 180,
+  "iteration_limit": 2147483647,
+  "relative_primal_residual": 0.011238925645075115,
+  "relative_dual_residual": 0.006515711839693794,
+  "relative_objective_gap": 0.013192478471629987,
+  "command": [
+    "/tmp/hipdlp-large20-20261002/large-compare",
+    "/tmp/hipdlp-large20-20261002/lp/square41.mps",
+    "square41",
+    "cuda",
+    "P,A,L,S",
+    "180.0",
+    "2147483647"
+  ],
+  "guard_rejected": false,
+  "selector_log": [],
+  "model": {
+    "name": "square41",
+    "rows": 40160,
+    "cols": 62234,
+    "nnz": 13566426,
+    "read_wall_sec": 15.818595808
+  }
+}

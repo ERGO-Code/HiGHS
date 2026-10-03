@@ -1,0 +1,838 @@
+{
+  "schema": "one-pilot-tree/1",
+  "default": "P",
+  "depth": 2,
+  "regression_penalty": 3,
+  "minimum_leaf": 8,
+  "minimum_families": 3,
+  "minimum_predicted_saving": 0.25,
+  "maximum_training_regression_fraction": 0.2,
+  "label_kind": "verified CPU iterations, plus 200 on switch; no timeout labels",
+  "runtime_gate": "savings > 1.5*(elapsed pilot + feature cost + estimated fresh setup)",
+  "features": [
+    "a_max",
+    "a_median",
+    "a_min",
+    "a_p10",
+    "a_p90",
+    "bounds_l2",
+    "bounds_max",
+    "bounds_median",
+    "bounds_min",
+    "bounds_p10",
+    "bounds_p90",
+    "col_boxed",
+    "col_degree_max",
+    "col_degree_median",
+    "col_degree_min",
+    "col_degree_p10",
+    "col_degree_p90",
+    "col_fixed",
+    "col_free",
+    "col_norm_max",
+    "col_norm_median",
+    "col_norm_min",
+    "col_norm_p10",
+    "col_norm_p90",
+    "cols",
+    "cost_l2",
+    "cost_max",
+    "cost_median",
+    "cost_min",
+    "cost_p10",
+    "cost_p90",
+    "dual_120",
+    "dual_160",
+    "dual_200",
+    "dual_40",
+    "dual_80",
+    "dual_change",
+    "fp_120",
+    "fp_160",
+    "fp_200",
+    "fp_40",
+    "fp_80",
+    "fp_change",
+    "gap_120",
+    "gap_160",
+    "gap_200",
+    "gap_40",
+    "gap_80",
+    "gap_change",
+    "nnz",
+    "primal_120",
+    "primal_160",
+    "primal_200",
+    "primal_40",
+    "primal_80",
+    "primal_change",
+    "restarts_120",
+    "restarts_160",
+    "restarts_200",
+    "restarts_40",
+    "restarts_80",
+    "rhs_l2",
+    "rhs_max",
+    "rhs_median",
+    "rhs_min",
+    "rhs_p10",
+    "rhs_p90",
+    "row_boxed",
+    "row_degree_max",
+    "row_degree_median",
+    "row_degree_min",
+    "row_degree_p10",
+    "row_degree_p90",
+    "row_equal",
+    "row_free",
+    "row_norm_max",
+    "row_norm_median",
+    "row_norm_min",
+    "row_norm_p10",
+    "row_norm_p90",
+    "rows",
+    "xnorm_120",
+    "xnorm_160",
+    "xnorm_200",
+    "xnorm_40",
+    "xnorm_80",
+    "xnorm_change",
+    "ynorm_120",
+    "ynorm_160",
+    "ynorm_200",
+    "ynorm_40",
+    "ynorm_80",
+    "ynorm_change"
+  ],
+  "tree": [
+    {
+      "feature_index": 23,
+      "threshold": 1.6998160966649982,
+      "left": 1,
+      "right": 4,
+      "feature": "col_norm_p90"
+    },
+    {
+      "feature_index": 24,
+      "threshold": 3.2423578704483758,
+      "left": 2,
+      "right": 3,
+      "feature": "cols"
+    },
+    {
+      "action": "L",
+      "ratio": 0.6061530528939114,
+      "baseline_iterations": 77576.66666666667,
+      "support": 12,
+      "families": 10,
+      "regression_fraction": 0.08333333333333333,
+      "loss": -366640.0
+    },
+    {
+      "action": "P",
+      "ratio": 1.0,
+      "baseline_iterations": 7994.285714285715,
+      "support": 21,
+      "families": 14,
+      "regression_fraction": 0.0,
+      "loss": 0.0
+    },
+    {
+      "feature_index": 4,
+      "threshold": 1.62204440385241,
+      "left": 5,
+      "right": 6,
+      "feature": "a_p90"
+    },
+    {
+      "action": "L",
+      "ratio": 0.1528156832596579,
+      "baseline_iterations": 260150.0,
+      "support": 8,
+      "families": 7,
+      "regression_fraction": 0.125,
+      "loss": -1763160.0
+    },
+    {
+      "action": "A",
+      "ratio": 0.0610127336554529,
+      "baseline_iterations": 2526447.272727273,
+      "support": 11,
+      "families": 10,
+      "regression_fraction": 0.18181818181818182,
+      "loss": -26095320.0
+    }
+  ],
+  "training_names": [
+    "25fv47",
+    "adlittle",
+    "adlittleB",
+    "agg2",
+    "agg3",
+    "blend",
+    "blendB",
+    "boeing2",
+    "brandy",
+    "cre-a",
+    "cre-c",
+    "czprob",
+    "datt256",
+    "dcmulti",
+    "degen2",
+    "degen3",
+    "e226",
+    "egout",
+    "etamacro",
+    "ex3sta1",
+    "ganges",
+    "gen4",
+    "israel",
+    "kb2",
+    "kb2B",
+    "ken-07",
+    "ken-11",
+    "ken-13",
+    "lotfi",
+    "lp0005",
+    "lp0020",
+    "lp22",
+    "maros-r7",
+    "nesm",
+    "p4k",
+    "p9k1003",
+    "recipe",
+    "shell",
+    "ship04l",
+    "ship04s",
+    "ship08l",
+    "ship08s",
+    "ship12l",
+    "ship12s",
+    "sp150x300d",
+    "stair",
+    "standata",
+    "standgub",
+    "standmps",
+    "steiner_d",
+    "stocfor1",
+    "woodlands09"
+  ],
+  "validation_names": [
+    "bandm",
+    "beaconfd",
+    "bell5",
+    "ex10",
+    "finnis",
+    "fit1p",
+    "i-003-252-fix",
+    "l30",
+    "lseu",
+    "node1186",
+    "rgn",
+    "share1b",
+    "share2b"
+  ],
+  "family_map": {
+    "25fv47": "fv",
+    "adlittle": "adlittle",
+    "adlittleB": "adlittle",
+    "agg2": "agg",
+    "agg3": "agg",
+    "bandm": "bandm",
+    "beaconfd": "beaconfd",
+    "bell5": "bell",
+    "blend": "blend",
+    "blendB": "blend",
+    "boeing2": "boeing",
+    "brandy": "brandy",
+    "cre-a": "cre",
+    "cre-c": "cre",
+    "czprob": "czpro",
+    "datt256": "datt",
+    "dcmulti": "dcmulti",
+    "degen2": "degen",
+    "degen3": "degen",
+    "e226": "e",
+    "egout": "egout",
+    "etamacro": "etamacro",
+    "ex10": "ex",
+    "ex3sta1": "exsta",
+    "finnis": "finnis",
+    "fit1p": "fitp",
+    "ganges": "ganges",
+    "gen4": "gen",
+    "i-003-252-fix": "i---fix",
+    "israel": "israel",
+    "kb2": "kb",
+    "kb2B": "kb",
+    "ken-07": "ken",
+    "ken-11": "ken",
+    "ken-13": "ken",
+    "l30": "l",
+    "lotfi": "lotfi",
+    "lp0005": "lp",
+    "lp0020": "lp",
+    "lp22": "lp",
+    "lseu": "lseu",
+    "maros-r7": "maros-r",
+    "nesm": "nesm",
+    "node1186": "node",
+    "p4k": "pk",
+    "p9k1003": "pk",
+    "recipe": "recipe",
+    "rgn": "rgn",
+    "share1b": "share",
+    "share2b": "share",
+    "shell": "shell",
+    "ship04l": "ship",
+    "ship04s": "ship",
+    "ship08l": "ship",
+    "ship08s": "ship",
+    "ship12l": "ship",
+    "ship12s": "ship",
+    "sp150x300d": "spxd",
+    "stair": "stair",
+    "standata": "standata",
+    "standgub": "standgu",
+    "standmps": "standmps",
+    "steiner_d": "steiner_d",
+    "stocfor1": "stocfor",
+    "woodlands09": "woodlands"
+  },
+  "external_families": [
+    "afiro",
+    "avgas",
+    "blending",
+    "chip",
+    "cont",
+    "d-lp",
+    "distillation",
+    "dual",
+    "flugpl",
+    "fome",
+    "forest",
+    "graph",
+    "istefanov_med",
+    "krows",
+    "l_sixm",
+    "neos",
+    "neso",
+    "nug",
+    "osa",
+    "p",
+    "pds",
+    "primal",
+    "psched",
+    "pypsa-eur-tn",
+    "qap",
+    "savsched",
+    "sc",
+    "small_pre",
+    "square",
+    "steiner_t",
+    "support",
+    "ts-palko",
+    "watson"
+  ],
+  "excluded_external_family_names": [
+    "graph40-40",
+    "nug05",
+    "nug06",
+    "nug07",
+    "nug08-3rd",
+    "nug08",
+    "nug12",
+    "nug15",
+    "p0548",
+    "pds-02",
+    "sc205",
+    "scagr25",
+    "scagr7",
+    "scfxm1",
+    "scorpion",
+    "scsd1",
+    "scsd6",
+    "scsd8",
+    "sctap1",
+    "sctap2",
+    "sctap3"
+  ],
+  "excluded_early_solves": [
+    "chrom1024-7",
+    "gt2",
+    "nug04"
+  ],
+  "validation": [
+    {
+      "name": "bandm",
+      "family": "bandm",
+      "chosen": "L",
+      "P": 35200,
+      "L": 82880,
+      "A": 5080,
+      "selected": 83080,
+      "ratio": 2.360227272727273
+    },
+    {
+      "name": "beaconfd",
+      "family": "beaconfd",
+      "chosen": "L",
+      "P": 1418240,
+      "L": 1204240,
+      "A": 503800,
+      "selected": 1204440,
+      "ratio": 0.849249774368231
+    },
+    {
+      "name": "bell5",
+      "family": "bell",
+      "chosen": "A",
+      "P": 1995720,
+      "L": 40640,
+      "A": 2440,
+      "selected": 2640,
+      "ratio": 0.0013228308580361975
+    },
+    {
+      "name": "ex10",
+      "family": "ex",
+      "chosen": "P",
+      "P": 480,
+      "L": 480,
+      "A": 480,
+      "selected": 480,
+      "ratio": 1.0
+    },
+    {
+      "name": "finnis",
+      "family": "finnis",
+      "chosen": "L",
+      "P": 11960,
+      "L": 9920,
+      "A": 5320,
+      "selected": 10120,
+      "ratio": 0.8461538461538461
+    },
+    {
+      "name": "fit1p",
+      "family": "fitp",
+      "chosen": "L",
+      "P": 77720,
+      "L": 116200,
+      "A": 39640,
+      "selected": 116400,
+      "ratio": 1.4976839938239834
+    },
+    {
+      "name": "i-003-252-fix",
+      "family": "i---fix",
+      "chosen": "P",
+      "P": 120120,
+      "L": 92840,
+      "A": 101920,
+      "selected": 120120,
+      "ratio": 1.0
+    },
+    {
+      "name": "l30",
+      "family": "l",
+      "chosen": "P",
+      "P": 166440,
+      "L": 15320,
+      "A": 105800,
+      "selected": 166440,
+      "ratio": 1.0
+    },
+    {
+      "name": "lseu",
+      "family": "lseu",
+      "chosen": "A",
+      "P": 5520,
+      "L": 1840,
+      "A": 33520,
+      "selected": 33720,
+      "ratio": 6.108695652173913
+    },
+    {
+      "name": "node1186",
+      "family": "node",
+      "chosen": "L",
+      "P": 1920,
+      "L": 1000,
+      "A": 2040,
+      "selected": 1200,
+      "ratio": 0.625
+    },
+    {
+      "name": "rgn",
+      "family": "rgn",
+      "chosen": "L",
+      "P": 33880,
+      "L": 9840,
+      "A": 17880,
+      "selected": 10040,
+      "ratio": 0.29634002361275086
+    },
+    {
+      "name": "share1b",
+      "family": "share",
+      "chosen": "A",
+      "P": 3673400,
+      "L": 866320,
+      "A": 42880,
+      "selected": 43080,
+      "ratio": 0.011727554853813906
+    },
+    {
+      "name": "share2b",
+      "family": "share",
+      "chosen": "A",
+      "P": 166200,
+      "L": 69640,
+      "A": 144960,
+      "selected": 145160,
+      "ratio": 0.8734055354993984
+    }
+  ],
+  "validation_summary": {
+    "count": 13,
+    "baseline_iteration_sum": 7706800,
+    "selected_iteration_sum": 1936920,
+    "switches": 10,
+    "worst_ratio": 6.108695652173913
+  },
+  "label_source_sha256": {
+    "cpu_all.csv": "9daab0bec0501f0d0bb881dab989209ea4769fbcff3fcafc93b2b73e4066285f",
+    "cpu_long.csv": "4f7a5edc74164ddae93b0328f4ac3c7b30c5ac4075de4fb24376235b4d275cc0",
+    "cpu_patched.csv": "71a3e41c6c116edd6f2844b835bdaaf39dfefa2056fd1a34f044042cab359c5d"
+  },
+  "training_labels": {
+    "25fv47": {
+      "P": 11960,
+      "L": 13640,
+      "A": 10760
+    },
+    "adlittle": {
+      "P": 19240,
+      "L": 10560,
+      "A": 1720
+    },
+    "adlittleB": {
+      "P": 20200,
+      "L": 12280,
+      "A": 4280
+    },
+    "agg2": {
+      "P": 122080,
+      "L": 42880,
+      "A": 23880
+    },
+    "agg3": {
+      "P": 122000,
+      "L": 43040,
+      "A": 24600
+    },
+    "blend": {
+      "P": 2600,
+      "L": 1800,
+      "A": 7920
+    },
+    "blendB": {
+      "P": 4120,
+      "L": 1320,
+      "A": 7040
+    },
+    "boeing2": {
+      "P": 1179960,
+      "L": 108240,
+      "A": 206240
+    },
+    "brandy": {
+      "P": 21840,
+      "L": 11960,
+      "A": 27840
+    },
+    "cre-a": {
+      "P": 22160,
+      "L": 11280,
+      "A": 23960
+    },
+    "cre-c": {
+      "P": 40800,
+      "L": 10000,
+      "A": 28920
+    },
+    "czprob": {
+      "P": 19600,
+      "L": 7480,
+      "A": 9120
+    },
+    "datt256": {
+      "P": 480,
+      "L": 480,
+      "A": 480
+    },
+    "dcmulti": {
+      "P": 6920,
+      "L": 4560,
+      "A": 2480
+    },
+    "degen2": {
+      "P": 2320,
+      "L": 2320,
+      "A": 2320
+    },
+    "degen3": {
+      "P": 8120,
+      "L": 8120,
+      "A": 8120
+    },
+    "e226": {
+      "P": 95600,
+      "L": 31560,
+      "A": 7480
+    },
+    "egout": {
+      "P": 39880,
+      "L": 27920,
+      "A": 8640
+    },
+    "etamacro": {
+      "P": 58080,
+      "L": 6560,
+      "A": 2400
+    },
+    "ex3sta1": {
+      "P": 4320,
+      "L": 3480,
+      "A": 5960
+    },
+    "ganges": {
+      "P": 16800,
+      "L": 12280,
+      "A": 10000
+    },
+    "gen4": {
+      "P": 560,
+      "L": 560,
+      "A": 960
+    },
+    "israel": {
+      "P": 18840,
+      "L": 4360,
+      "A": 3600
+    },
+    "kb2": {
+      "P": 12816520,
+      "L": 20938640,
+      "A": 1088760
+    },
+    "kb2B": {
+      "P": 10293680,
+      "L": 3041640,
+      "A": 105760
+    },
+    "ken-07": {
+      "P": 2760,
+      "L": 2760,
+      "A": 2760
+    },
+    "ken-11": {
+      "P": 4200,
+      "L": 4200,
+      "A": 4200
+    },
+    "ken-13": {
+      "P": 8440,
+      "L": 8440,
+      "A": 8440
+    },
+    "lotfi": {
+      "P": 2615000,
+      "L": 80320,
+      "A": 2880
+    },
+    "lp0005": {
+      "P": 1373680,
+      "L": 1139520,
+      "A": 420680
+    },
+    "lp0020": {
+      "P": 524480,
+      "L": 76360,
+      "A": 136400
+    },
+    "lp22": {
+      "P": 15480,
+      "L": 15480,
+      "A": 15480
+    },
+    "maros-r7": {
+      "P": 6480,
+      "L": 6480,
+      "A": 64440
+    },
+    "nesm": {
+      "P": 22680,
+      "L": 106680,
+      "A": 493080
+    },
+    "p4k": {
+      "P": 400,
+      "L": 400,
+      "A": 400
+    },
+    "p9k1003": {
+      "P": 2120,
+      "L": 2120,
+      "A": 2120
+    },
+    "recipe": {
+      "P": 38080,
+      "L": 38080,
+      "A": 38080
+    },
+    "shell": {
+      "P": 6040,
+      "L": 6040,
+      "A": 6040
+    },
+    "ship04l": {
+      "P": 5440,
+      "L": 5440,
+      "A": 5600
+    },
+    "ship04s": {
+      "P": 7240,
+      "L": 5880,
+      "A": 6240
+    },
+    "ship08l": {
+      "P": 7200,
+      "L": 6800,
+      "A": 6680
+    },
+    "ship08s": {
+      "P": 3920,
+      "L": 4320,
+      "A": 4240
+    },
+    "ship12l": {
+      "P": 16560,
+      "L": 16680,
+      "A": 18400
+    },
+    "ship12s": {
+      "P": 10040,
+      "L": 11680,
+      "A": 14920
+    },
+    "sp150x300d": {
+      "P": 104560,
+      "L": 70360,
+      "A": 2920
+    },
+    "stair": {
+      "P": 311440,
+      "L": 287400,
+      "A": 15600
+    },
+    "standata": {
+      "P": 4560,
+      "L": 1440,
+      "A": 4520
+    },
+    "standgub": {
+      "P": 4560,
+      "L": 1440,
+      "A": 4520
+    },
+    "standmps": {
+      "P": 530920,
+      "L": 220200,
+      "A": 816680
+    },
+    "steiner_d": {
+      "P": 4560,
+      "L": 4560,
+      "A": 4560
+    },
+    "stocfor1": {
+      "P": 390760,
+      "L": 52000,
+      "A": 4560
+    },
+    "woodlands09": {
+      "P": 640,
+      "L": 600,
+      "A": 480
+    }
+  },
+  "validation_labels": {
+    "bandm": {
+      "P": 35200,
+      "L": 82880,
+      "A": 5080
+    },
+    "beaconfd": {
+      "P": 1418240,
+      "L": 1204240,
+      "A": 503800
+    },
+    "bell5": {
+      "P": 1995720,
+      "L": 40640,
+      "A": 2440
+    },
+    "ex10": {
+      "P": 480,
+      "L": 480,
+      "A": 480
+    },
+    "finnis": {
+      "P": 11960,
+      "L": 9920,
+      "A": 5320
+    },
+    "fit1p": {
+      "P": 77720,
+      "L": 116200,
+      "A": 39640
+    },
+    "i-003-252-fix": {
+      "P": 120120,
+      "L": 92840,
+      "A": 101920
+    },
+    "l30": {
+      "P": 166440,
+      "L": 15320,
+      "A": 105800
+    },
+    "lseu": {
+      "P": 5520,
+      "L": 1840,
+      "A": 33520
+    },
+    "node1186": {
+      "P": 1920,
+      "L": 1000,
+      "A": 2040
+    },
+    "rgn": {
+      "P": 33880,
+      "L": 9840,
+      "A": 17880
+    },
+    "share1b": {
+      "P": 3673400,
+      "L": 866320,
+      "A": 42880
+    },
+    "share2b": {
+      "P": 166200,
+      "L": 69640,
+      "A": 144960
+    }
+  }
+}

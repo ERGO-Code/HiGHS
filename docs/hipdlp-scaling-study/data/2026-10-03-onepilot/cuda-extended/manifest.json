@@ -1,0 +1,18 @@
+[
+  {
+    "name": "neso-2005",
+    "source": "/srv/mps_da/neso-2005.mps.gz",
+    "sha256": "c1c5f16c87f6aba6bb0b84d5b3854e361024d9b0cb1d19138e149f40745eac2f",
+    "mps_sha256": "1fcd544fbbfea62b4eded1c45ab99d7349bc0cd980651f92e6f2af39654e40e5",
+    "gzip_members": 1,
+    "non_gzip_trailing_bytes": 0
+  },
+  {
+    "name": "cont11",
+    "source": "/srv/mps_da/cont11.mps.gz",
+    "sha256": "1420a0a5c0dcb9d72526756fd79be5cb7970f35624efd01f6c39c9b0425d28b4",
+    "mps_sha256": "eb555d8859bd9e8df2b32a53da72857d9c8125b28013ec2be68f5aa42a13d2ca",
+    "gzip_members": 1,
+    "non_gzip_trailing_bytes": 0
+  }
+]

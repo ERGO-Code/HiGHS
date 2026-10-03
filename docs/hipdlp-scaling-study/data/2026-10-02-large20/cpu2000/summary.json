@@ -1,0 +1,143 @@
+{
+  "measured_runs": 80,
+  "instances": 20,
+  "shared_input_read_total_sec": 193.221665236,
+  "common_verified_names": [
+    "graph40-40",
+    "savsched1"
+  ],
+  "configurations": {
+    "A": {
+      "completed": 20,
+      "verified": 2,
+      "verified_solved_names": [
+        "graph40-40",
+        "savsched1"
+      ],
+      "verified_solved_total_sec": 33.622435893,
+      "observed_total_sec": 914.129502781,
+      "par2_sec": 6513.622435893,
+      "common_solved_total_sec": 33.622435893,
+      "common_solved_time_geomean_sec": 12.328663492081821,
+      "observed_total_with_shared_input_read_sec": 1107.351168017,
+      "common_solved_iteration_geomean": 579.6550698475775,
+      "time_ratio_geomean_to_auto": 1.0,
+      "worst_time_regressions_to_auto": [
+        {
+          "name": "graph40-40",
+          "time_ratio_to_auto": 1.0,
+          "seconds": 5.38225888,
+          "auto_seconds": 5.38225888
+        },
+        {
+          "name": "savsched1",
+          "time_ratio_to_auto": 1.0,
+          "seconds": 28.240177013,
+          "auto_seconds": 28.240177013
+        }
+      ],
+      "lost_solves_to_auto": [],
+      "censored_time_regressions_to_auto": [],
+      "gained_solves_to_auto": []
+    },
+    "L": {
+      "completed": 20,
+      "verified": 2,
+      "verified_solved_names": [
+        "graph40-40",
+        "savsched1"
+      ],
+      "verified_solved_total_sec": 32.251986195,
+      "observed_total_sec": 899.996388604,
+      "par2_sec": 6512.2519861949995,
+      "common_solved_total_sec": 32.251986195,
+      "common_solved_time_geomean_sec": 11.446405202508517,
+      "observed_total_with_shared_input_read_sec": 1093.21805384,
+      "common_solved_iteration_geomean": 579.6550698475775,
+      "time_ratio_geomean_to_auto": 0.9284384483249187,
+      "worst_time_regressions_to_auto": [
+        {
+          "name": "savsched1",
+          "time_ratio_to_auto": 0.9732594320973139,
+          "seconds": 27.485018642,
+          "auto_seconds": 28.240177013
+        },
+        {
+          "name": "graph40-40",
+          "time_ratio_to_auto": 0.8856815807789609,
+          "seconds": 4.766967553,
+          "auto_seconds": 5.38225888
+        }
+      ],
+      "lost_solves_to_auto": [],
+      "censored_time_regressions_to_auto": [],
+      "gained_solves_to_auto": []
+    },
+    "P": {
+      "completed": 20,
+      "verified": 2,
+      "verified_solved_names": [
+        "graph40-40",
+        "savsched1"
+      ],
+      "verified_solved_total_sec": 31.724709674,
+      "observed_total_sec": 901.5604548809999,
+      "par2_sec": 6511.724709674,
+      "common_solved_total_sec": 31.724709674,
+      "common_solved_time_geomean_sec": 10.98002433150322,
+      "observed_total_with_shared_input_read_sec": 1094.782120117,
+      "common_solved_iteration_geomean": 579.6550698475775,
+      "time_ratio_geomean_to_auto": 0.8906094596997659,
+      "worst_time_regressions_to_auto": [
+        {
+          "name": "savsched1",
+          "time_ratio_to_auto": 0.9670693304233928,
+          "seconds": 27.310209075,
+          "auto_seconds": 28.240177013
+        },
+        {
+          "name": "graph40-40",
+          "time_ratio_to_auto": 0.8201947727568244,
+          "seconds": 4.414500599,
+          "auto_seconds": 5.38225888
+        }
+      ],
+      "lost_solves_to_auto": [],
+      "censored_time_regressions_to_auto": [],
+      "gained_solves_to_auto": []
+    },
+    "S": {
+      "completed": 20,
+      "verified": 2,
+      "verified_solved_names": [
+        "graph40-40",
+        "savsched1"
+      ],
+      "verified_solved_total_sec": 47.341477879,
+      "observed_total_sec": 1023.570833768,
+      "par2_sec": 6527.341477878999,
+      "common_solved_total_sec": 47.341477879,
+      "common_solved_time_geomean_sec": 19.730151358585907,
+      "observed_total_with_shared_input_read_sec": 1216.792499004,
+      "common_solved_iteration_geomean": 839.0470785361207,
+      "time_ratio_geomean_to_auto": 1.6003479510376575,
+      "worst_time_regressions_to_auto": [
+        {
+          "name": "graph40-40",
+          "time_ratio_to_auto": 1.9681487132406383,
+          "seconds": 10.593085889,
+          "auto_seconds": 5.38225888
+        },
+        {
+          "name": "savsched1",
+          "time_ratio_to_auto": 1.3012805115592354,
+          "seconds": 36.74839199,
+          "auto_seconds": 28.240177013
+        }
+      ],
+      "lost_solves_to_auto": [],
+      "censored_time_regressions_to_auto": [],
+      "gained_solves_to_auto": []
+    }
+  }
+}

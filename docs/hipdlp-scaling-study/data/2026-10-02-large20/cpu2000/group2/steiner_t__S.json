@@ -1,0 +1,41 @@
+{
+  "name": "steiner_t",
+  "config": "S",
+  "backend": "cpu",
+  "status": "ITERATION_LIMIT",
+  "call_status": 0,
+  "iterations": 2000,
+  "order": 2,
+  "kkt_pass": false,
+  "certificate_pass": false,
+  "kkt_tolerance": 0.0001,
+  "pdlp_optimality_tolerance": 0.0001,
+  "solver_wall_sec": 24.282383233,
+  "verification_wall_sec": 0.018380431,
+  "time_limit": 180,
+  "iteration_limit": 2000,
+  "relative_primal_residual": 0.08053614914790364,
+  "relative_dual_residual": 0.0029007613919772505,
+  "relative_objective_gap": 0.1510957557164982,
+  "command": [
+    "/tmp/hipdlp-large20-20261002/large-compare",
+    "/tmp/hipdlp-large20-20261002/lp/steiner_t.mps",
+    "steiner_t",
+    "cpu",
+    "A,L,S,P",
+    "180.0",
+    "2000"
+  ],
+  "guard_rejected": false,
+  "selector_log": [
+    "HiPDLP scaling selector: 200 iterations each; log Kw(A|A) 10.728993421319707, log Kw(A|L) 10.728993421319707, log Kw(L|A) 10.728993421319707, log Kw(L|L) 10.728993421319707; geometric mean Kw A 45660.707791917943, L 45660.707791917943; continuing CR+Ruiz+PC",
+    "HiPDLP scaling selector: total 2000 iterations including 200 discarded pilot iterations"
+  ],
+  "model": {
+    "name": "steiner_t",
+    "rows": 7695,
+    "cols": 71450,
+    "nnz": 2428993,
+    "read_wall_sec": 2.840582161
+  }
+}

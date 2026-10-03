@@ -43,6 +43,7 @@ struct AdapterOptions {
   double verification_tolerance = 1e-4;
   std::string output_dir;
   bool log = false;
+  bool scaling_selector = false;
   int scaling_mask = -1;
   int ruiz_iters = -1;
   int cr_iters = -1;
@@ -58,6 +59,7 @@ void usage() {
                "         [--step-size fixed|pid]\n"
                "         [--presolve on|off]\n"
                "         [--scaling auto|off|curtis_reid|legacy]\n"
+               "         [--scaling-selector]\n"
                "         [--time-limit SECONDS]\n"
                "         [--kkt-tolerance TOL]\n"
                "         [--iteration-limit N]\n"
@@ -113,6 +115,8 @@ bool parseArguments(const int argc, char** argv, AdapterOptions& options) {
       options.drop_tol = std::atof(value.c_str());
     } else if (flag == "--dump-solution") {
       if (!nextValue(argc, argv, index, options.dump)) return false;
+    } else if (flag == "--scaling-selector") {
+      options.scaling_selector = true;
     } else if (flag == "--log") {
       options.log = true;
     } else {
@@ -265,6 +269,7 @@ int main(int argc, char** argv) {
   highs.setOptionValue("presolve", adapter.presolve);
   highs.setOptionValue("hipdlp_backend", effective_backend);
   highs.setOptionValue("hipdlp_scaling", adapter.scaling);
+  highs.setOptionValue("hipdlp_scaling_selector", adapter.scaling_selector);
   highs.setOptionValue("pdlp_step_size_strategy", step_size_strategy);
   if (adapter.scaling_mask >= 0) highs.setOptionValue("pdlp_scaling_mode", (HighsInt)adapter.scaling_mask);
   if (adapter.ruiz_iters >= 0) highs.setOptionValue("pdlp_ruiz_iterations", (HighsInt)adapter.ruiz_iters);
@@ -399,6 +404,10 @@ int main(int argc, char** argv) {
   json += formatLine("    \"pdlp_step_size_strategy\": %lld,",
                      static_cast<long long>(step_size_strategy));
   json += formatLine("    \"kkt_tolerance\": %.17g,", adapter.kkt_tolerance);
+  json += formatLine("    \"pdlp_optimality_tolerance\": %.17g,",
+                     adapter.kkt_tolerance);
+  json += formatLine("    \"hipdlp_scaling_selector\": %s,",
+                     adapter.scaling_selector ? "true" : "false");
   json += formatLine("    \"time_limit\": %.17g,", adapter.time_limit);
   json += formatLine("    \"pdlp_iteration_limit\": %lld",
                      static_cast<long long>(adapter.iteration_limit));

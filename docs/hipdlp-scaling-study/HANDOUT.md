@@ -57,3 +57,104 @@ Hardware used: RTX A4500 + i9-14900K. Tolerance 1e-4 everywhere, fixed step size
   validate on held-out instances + neso on CUDA; consider warm-starting the chosen scaling.
 - Decide whether `verifyKkt`'s boxed-column sign rule is the intended acceptance bar (3.4x iterations on neso).
 - Investigate stair; PID step size changes the w term of Kw.
+
+## 4. Continuation (2026-10-02)
+
+An opt-in two-pilot prototype now exists in the working tree as
+`hipdlp_scaling_selector=true`. See [the continuation report](SELECTOR_STUDY.md)
+and `data/2026-10-02-selector/` for guard reproduction, HEAD/HEAD~1 test parity,
+new held-out CPU validation and stair's slow dual-mode diagnosis. The new
+held-out batch does not confirm the estimated 20% gain; the default stays off.
+
+The subsequent [twenty-large-LP timing study](LARGE20_STUDY.md) compares auto,
+Ruiz+PC, the selector and PC-only on CUDA at equal 1e-4 tolerances. PC-only has
+the lowest observed aggregate time within a 180-second per-instance budget,
+with 9/20 verified solves (Ruiz+PC and selector also 9/20; auto 8/20). A repeat
+on the nine PC/Ruiz common solves confirms the order, although almost all of
+the difference comes from neso-2245. Eleven all-policy timeouts prevent a
+conclusion about total time to converge on every instance. Full copied-input
+payload checks and source hashes are retained in `data/2026-10-02-large20/`.
+
+## 5. Next direction: one 200-iteration pilot + a small model (2026-10-03)
+
+User objective: choose a suitable scaling with the simplest effective method
+to reduce **aggregate elapsed time**, especially on large LPs. This is the
+next experiment, not an implemented policy; keep changes small and preserve
+the existing opt-in prototype and results.
+
+- Start with a fixed default (PC-only or Ruiz+PC). PC-only is the current
+  large-CUDA timing baseline; Ruiz+PC solved more in the earlier 122-instance
+  sample. Neither is established as the universal default.
+- Run that default for 200 iterations. Collect cheap static features
+  (coefficient/row/column norm distributions, bound types, cost/RHS scales)
+  and progress at several pilot checkpoints (unscaled residuals and gap,
+  primal/dual growth, fixed-point error, restarts, time per iteration).
+  Account for any extra original-model KKT feature evaluation in elapsed time.
+- Try a shallow decision tree or another small model with candidates
+  P=PC, L=Ruiz+PC, A=CR+Ruiz+PC. Predict time saved relative to the default,
+  allowing an uncertain decision to continue the default. Switch only when
+  predicted savings justify extra setup/switch costs and regression risk.
+  Keeping the default continues its existing state: the first 200 iterations
+  are useful work. Cross-scaling warm starts are a separate validation item;
+  do not blindly reuse anchors/restart history in different coordinates.
+- Keep the CR guard before any CR candidate is run. Kw may be a feature,
+  not the sole decision rule: stair's true-solution Kw also prefers the
+  slower scaling. One-pilot Kw bias does not rule out learned progress features.
+- Optional later fallback: a second pilot only for difficult, uncertain
+  instances, with a time budget; avoid paying two-pilot costs on every LP.
+
+Evaluate total time including scaling, features, inference, pilots and
+switching, plus solved counts and worst regressions. Train with asymmetric
+time-loss penalties and split by instance family; retain held-out names
+outside `data/instances.txt`. The nine common large-CUDA solves leave only
+about 1.7% headroom over fixed PC even for a free perfect P/L/A selector;
+the eleven all-policy timeouts need longer, equal-budget measurements before
+being assigned a winning label. Do not treat timeout times as convergence.
+
+Use CPU iteration counts for policy comparisons and serial CUDA timings for
+elapsed-time validation. Keep both tolerances equal (currently 1e-4), copy
+read-only benchmark LPs to scratch, and **do not change `verifyKkt` without
+asking the user**. This handoff update makes no solver/default changes.
+
+
+## 6. One-pilot small-model experiment completed (2026-10-03)
+
+See [ONE_PILOT_STUDY.md](ONE_PILOT_STUDY.md) and
+`data/2026-10-03-onepilot/`. A separate study driver starts P, observes
+40/80/120/160/200 iterations and evaluates a depth-two tree. Retaining P
+preserves state; L/A switches are cold and charge the discarded 200 iterations
+and all setup to the global budgets. Guarded A and final `verifyKkt` acceptance
+are preserved. No production default or public learned-selector option is added;
+the existing opt-in two-pilot prototype and previous results remain intact.
+
+- Training: 52 instances / 36 name-derived family groups; 13 family-validation
+  names; external held-out and large20 families excluded. Only verified P/L/A
+  CPU iteration triples are labels; 3x regression penalty and conservative
+  support/savings gates. The tree selects only three static features, and a
+  static-only ablation produces identical choices.
+- CPU: family-validation M reduces total iterations 74.87% against P, but
+  fixed A is better and the worst M/P regression is lseu 6.109x. The 26-name
+  external batch solves 23/26 for every policy; M reduces common-solve total
+  iterations only 3.96% against P. Time-limited qap18/small_pre are censored.
+  stair is a separate training-sample diagnostic and still selects slow L.
+- Serial CUDA, nine large known solves: P 205.184 s, M 210.887 s (+2.78%),
+  both 9/9. Repeat: P 203.148 s, M 210.035 s (+3.39%), both 9/9. The tree
+  itself proposes P on every one; no runtime-gate rejection is responsible.
+  Feature extraction costs 4.375 s in the primary run, exceeding the free
+  measured P/L/A oracle headroom of 3.707 s (1.81%).
+- Four independent large heldouts: observing the 200-iteration P pilot costs
+  31.331 s versus 23.860 s plain (+31.31%); 0/4 converge at that pilot budget.
+  Longer 240 s P/M runs newly solve cont11 at about 233 s; neso-2005 remains
+  a timeout for both. L/A are not measured at 240 s, so no winning P/L/A label
+  is assigned to either. The remaining previous all-policy timeouts are still
+  unresolved.
+- CPU/CUDA continuation checks and cold-switch/global-budget driver checks
+  pass. Targeted unit tests: 80 assertions; full `[hipdlp]`: 341/350 cases pass,
+  with the same inherited 9 failed cases / 16 assertions.
+
+Conclusion: this one-pilot tree does not reduce aggregate large-CUDA time.
+Keep it experimental. Next reduce observation cost using existing scaling/
+resident-check data, and collect longer equal-budget serial CUDA convergence
+labels on hard LPs before learning an elapsed-time policy. Do not infer a
+universal default or a timeout winner from this sample. `verifyKkt` remains
+unchanged; changing it still requires asking the user.

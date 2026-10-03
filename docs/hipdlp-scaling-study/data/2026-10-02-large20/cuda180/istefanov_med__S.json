@@ -1,0 +1,41 @@
+{
+  "name": "istefanov_med",
+  "config": "S",
+  "backend": "cuda",
+  "status": "TIME_LIMIT",
+  "call_status": 0,
+  "iterations": 1107520,
+  "order": 1,
+  "kkt_pass": false,
+  "certificate_pass": false,
+  "kkt_tolerance": 0.0001,
+  "pdlp_optimality_tolerance": 0.0001,
+  "solver_wall_sec": 180.084120617,
+  "verification_wall_sec": 0.01862297,
+  "time_limit": 180,
+  "iteration_limit": 2147483647,
+  "relative_primal_residual": 4.6629367034256575e-15,
+  "relative_dual_residual": 0.2676241290984188,
+  "relative_objective_gap": 0.006416865335013214,
+  "command": [
+    "/tmp/hipdlp-large20-20261002/large-compare",
+    "/tmp/hipdlp-large20-20261002/lp/istefanov_med.mps",
+    "istefanov_med",
+    "cuda",
+    "L,S,P,A",
+    "180.0",
+    "2147483647"
+  ],
+  "guard_rejected": false,
+  "selector_log": [
+    "HiPDLP scaling selector: 200 iterations each; log Kw(A|A) -2.6702689573981657, log Kw(A|L) 5.4087403193688823, log Kw(L|A) 1.6484395971548558, log Kw(L|L) 1.6998844181842618; geometric mean Kw A 3.9323439812954217, L 5.3343231536950677; continuing CR+Ruiz+PC",
+    "HiPDLP scaling selector: total 1107520 iterations including 200 discarded pilot iterations"
+  ],
+  "model": {
+    "name": "istefanov_med",
+    "rows": 20002,
+    "cols": 20304,
+    "nnz": 3029591,
+    "read_wall_sec": 4.685489689
+  }
+}

@@ -1,0 +1,250 @@
+{
+  "measured_runs": 80,
+  "instances": 20,
+  "shared_input_read_total_sec": 174.735449973,
+  "common_verified_names": [
+    "fome13",
+    "graph40-40",
+    "neos1",
+    "neso-2245",
+    "pds-100",
+    "pypsa-eur-240t5n",
+    "savsched1",
+    "steiner_t"
+  ],
+  "configurations": {
+    "A": {
+      "completed": 20,
+      "verified": 8,
+      "verified_solved_names": [
+        "fome13",
+        "graph40-40",
+        "neos1",
+        "neso-2245",
+        "pds-100",
+        "pypsa-eur-240t5n",
+        "savsched1",
+        "steiner_t"
+      ],
+      "verified_solved_total_sec": 203.69724540800001,
+      "observed_total_sec": 2367.986117802,
+      "par2_sec": 4523.6972454080005,
+      "common_solved_total_sec": 203.69724540800001,
+      "common_solved_time_geomean_sec": 11.349314696695831,
+      "observed_total_with_shared_input_read_sec": 2542.721567775,
+      "time_ratio_geomean_to_auto": 1.0,
+      "worst_time_regressions_to_auto": [
+        {
+          "name": "graph40-40",
+          "time_ratio_to_auto": 1.0,
+          "seconds": 2.266238007,
+          "auto_seconds": 2.266238007
+        },
+        {
+          "name": "steiner_t",
+          "time_ratio_to_auto": 1.0,
+          "seconds": 13.698343099,
+          "auto_seconds": 13.698343099
+        },
+        {
+          "name": "savsched1",
+          "time_ratio_to_auto": 1.0,
+          "seconds": 2.816364094,
+          "auto_seconds": 2.816364094
+        },
+        {
+          "name": "neos1",
+          "time_ratio_to_auto": 1.0,
+          "seconds": 8.63785161,
+          "auto_seconds": 8.63785161
+        },
+        {
+          "name": "neso-2245",
+          "time_ratio_to_auto": 1.0,
+          "seconds": 121.764450026,
+          "auto_seconds": 121.764450026
+        }
+      ],
+      "lost_solves_to_auto": [],
+      "censored_time_regressions_to_auto": [],
+      "gained_solves_to_auto": []
+    },
+    "L": {
+      "completed": 20,
+      "verified": 9,
+      "verified_solved_names": [
+        "fome13",
+        "graph40-40",
+        "neos1",
+        "neso-2245",
+        "pds-100",
+        "pypsa-eur-240t5n",
+        "savsched1",
+        "steiner_t",
+        "watson_1"
+      ],
+      "verified_solved_total_sec": 226.418379866,
+      "observed_total_sec": 2210.854008454,
+      "par2_sec": 4186.418379866,
+      "common_solved_total_sec": 197.133894119,
+      "common_solved_time_geomean_sec": 10.425991864799489,
+      "observed_total_with_shared_input_read_sec": 2385.589458427,
+      "time_ratio_geomean_to_auto": 0.9186450586161693,
+      "worst_time_regressions_to_auto": [
+        {
+          "name": "pypsa-eur-240t5n",
+          "time_ratio_to_auto": 1.0977572765646497,
+          "seconds": 5.332496946,
+          "auto_seconds": 4.857628421
+        },
+        {
+          "name": "fome13",
+          "time_ratio_to_auto": 1.03503813794964,
+          "seconds": 26.168837197,
+          "auto_seconds": 25.28296904
+        },
+        {
+          "name": "pds-100",
+          "time_ratio_to_auto": 0.9717807839838328,
+          "seconds": 23.68560284,
+          "auto_seconds": 24.373401111
+        },
+        {
+          "name": "neso-2245",
+          "time_ratio_to_auto": 0.9616787290460914,
+          "seconds": 117.098281544,
+          "auto_seconds": 121.764450026
+        },
+        {
+          "name": "neos1",
+          "time_ratio_to_auto": 0.9488412368084197,
+          "seconds": 8.195949805,
+          "auto_seconds": 8.63785161
+        }
+      ],
+      "lost_solves_to_auto": [],
+      "censored_time_regressions_to_auto": [],
+      "gained_solves_to_auto": [
+        "watson_1"
+      ]
+    },
+    "P": {
+      "completed": 20,
+      "verified": 9,
+      "verified_solved_names": [
+        "fome13",
+        "graph40-40",
+        "neos1",
+        "neso-2245",
+        "pds-100",
+        "pypsa-eur-240t5n",
+        "savsched1",
+        "steiner_t",
+        "watson_1"
+      ],
+      "verified_solved_total_sec": 194.573773273,
+      "observed_total_sec": 2178.852617831,
+      "par2_sec": 4154.573773273,
+      "common_solved_total_sec": 166.886247849,
+      "common_solved_time_geomean_sec": 10.025122724734441,
+      "observed_total_with_shared_input_read_sec": 2353.588067804,
+      "time_ratio_geomean_to_auto": 0.8833240589983019,
+      "worst_time_regressions_to_auto": [
+        {
+          "name": "pypsa-eur-240t5n",
+          "time_ratio_to_auto": 1.668144724896816,
+          "seconds": 8.103227226,
+          "auto_seconds": 4.857628421
+        },
+        {
+          "name": "pds-100",
+          "time_ratio_to_auto": 0.9640566697683968,
+          "seconds": 23.497339906,
+          "auto_seconds": 24.373401111
+        },
+        {
+          "name": "fome13",
+          "time_ratio_to_auto": 0.9334558603327704,
+          "seconds": 23.600535617,
+          "auto_seconds": 25.28296904
+        },
+        {
+          "name": "neos1",
+          "time_ratio_to_auto": 0.9295589456184232,
+          "seconds": 8.029392235,
+          "auto_seconds": 8.63785161
+        },
+        {
+          "name": "steiner_t",
+          "time_ratio_to_auto": 0.9198868130934673,
+          "seconds": 12.600925178,
+          "auto_seconds": 13.698343099
+        }
+      ],
+      "lost_solves_to_auto": [],
+      "censored_time_regressions_to_auto": [],
+      "gained_solves_to_auto": [
+        "watson_1"
+      ]
+    },
+    "S": {
+      "completed": 20,
+      "verified": 9,
+      "verified_solved_names": [
+        "fome13",
+        "graph40-40",
+        "neos1",
+        "neso-2245",
+        "pds-100",
+        "pypsa-eur-240t5n",
+        "savsched1",
+        "steiner_t",
+        "watson_1"
+      ],
+      "verified_solved_total_sec": 247.666293582,
+      "observed_total_sec": 2231.858048527,
+      "par2_sec": 4207.6662935819995,
+      "common_solved_total_sec": 214.896262325,
+      "common_solved_time_geomean_sec": 14.902661774515881,
+      "observed_total_with_shared_input_read_sec": 2406.5934985,
+      "time_ratio_geomean_to_auto": 1.3130891311749906,
+      "worst_time_regressions_to_auto": [
+        {
+          "name": "savsched1",
+          "time_ratio_to_auto": 2.416010108031153,
+          "seconds": 6.804364119,
+          "auto_seconds": 2.816364094
+        },
+        {
+          "name": "graph40-40",
+          "time_ratio_to_auto": 1.9206771480114884,
+          "seconds": 4.352711552,
+          "auto_seconds": 2.266238007
+        },
+        {
+          "name": "pypsa-eur-240t5n",
+          "time_ratio_to_auto": 1.2686796094484558,
+          "seconds": 6.162774128,
+          "auto_seconds": 4.857628421
+        },
+        {
+          "name": "steiner_t",
+          "time_ratio_to_auto": 1.2073567939181897,
+          "seconds": 16.538787606,
+          "auto_seconds": 13.698343099
+        },
+        {
+          "name": "pds-100",
+          "time_ratio_to_auto": 1.188854651553845,
+          "seconds": 28.976431285,
+          "auto_seconds": 24.373401111
+        }
+      ],
+      "lost_solves_to_auto": [],
+      "censored_time_regressions_to_auto": [],
+      "gained_solves_to_auto": [
+        "watson_1"
+      ]
+    }
+  }
+}

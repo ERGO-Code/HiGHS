@@ -1,0 +1,41 @@
+{
+  "name": "square41",
+  "config": "S",
+  "backend": "cuda",
+  "status": "TIME_LIMIT",
+  "call_status": 0,
+  "iterations": 54760,
+  "order": 3,
+  "kkt_pass": false,
+  "certificate_pass": false,
+  "kkt_tolerance": 0.0001,
+  "pdlp_optimality_tolerance": 0.0001,
+  "solver_wall_sec": 180.557772395,
+  "verification_wall_sec": 0.081489349,
+  "time_limit": 180,
+  "iteration_limit": 2147483647,
+  "relative_primal_residual": 0.014738772847964987,
+  "relative_dual_residual": 0.006009176047881426,
+  "relative_objective_gap": 0.012660343791433106,
+  "command": [
+    "/tmp/hipdlp-large20-20261002/large-compare",
+    "/tmp/hipdlp-large20-20261002/lp/square41.mps",
+    "square41",
+    "cuda",
+    "P,A,L,S",
+    "180.0",
+    "2147483647"
+  ],
+  "guard_rejected": false,
+  "selector_log": [
+    "HiPDLP scaling selector: 200 iterations each; log Kw(A|A) 5.7830485811514674, log Kw(A|L) 5.7830485811514674, log Kw(L|A) 5.7830485811514674, log Kw(L|L) 5.7830485811514674; geometric mean Kw A 324.74770259697266, L 324.74770259697266; continuing CR+Ruiz+PC",
+    "HiPDLP scaling selector: total 54760 iterations including 200 discarded pilot iterations"
+  ],
+  "model": {
+    "name": "square41",
+    "rows": 40160,
+    "cols": 62234,
+    "nnz": 13566426,
+    "read_wall_sec": 15.818595808
+  }
+}

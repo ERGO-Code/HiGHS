@@ -1,0 +1,38 @@
+{
+  "name": "p28",
+  "config": "A",
+  "backend": "cpu",
+  "status": "ITERATION_LIMIT",
+  "call_status": 0,
+  "iterations": 2000,
+  "order": 1,
+  "kkt_pass": false,
+  "certificate_pass": false,
+  "kkt_tolerance": 0.0001,
+  "pdlp_optimality_tolerance": 0.0001,
+  "solver_wall_sec": 19.467006424,
+  "verification_wall_sec": 0.028837123,
+  "time_limit": 180,
+  "iteration_limit": 2000,
+  "relative_primal_residual": 0.00026230962096055805,
+  "relative_dual_residual": 12.443935251976978,
+  "relative_objective_gap": 0.9999999999999937,
+  "command": [
+    "/tmp/hipdlp-large20-20261002/large-compare",
+    "/tmp/hipdlp-large20-20261002/lp/p28.mps",
+    "p28",
+    "cpu",
+    "P,A,L,S",
+    "180.0",
+    "2000"
+  ],
+  "guard_rejected": false,
+  "selector_log": [],
+  "model": {
+    "name": "p28",
+    "rows": 74309,
+    "cols": 284407,
+    "nnz": 618063,
+    "read_wall_sec": 2.658232486
+  }
+}

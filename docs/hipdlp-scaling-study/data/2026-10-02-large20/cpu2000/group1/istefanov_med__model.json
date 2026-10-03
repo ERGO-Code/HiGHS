@@ -1,0 +1,7 @@
+{
+  "name": "istefanov_med",
+  "rows": 20002,
+  "cols": 20304,
+  "nnz": 3029591,
+  "read_wall_sec": 3.705267578
+}

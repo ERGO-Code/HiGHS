@@ -1,0 +1,13 @@
+{
+  "command": [
+    "/tmp/hipdlp-large20-20261002/large-compare",
+    "/tmp/hipdlp-large20-20261002/lp/steiner_t.mps",
+    "steiner_t",
+    "cuda",
+    "P,L",
+    "180.0",
+    "2147483647"
+  ],
+  "returncode": 0,
+  "process_wall_sec": 28.509894888382405
+}

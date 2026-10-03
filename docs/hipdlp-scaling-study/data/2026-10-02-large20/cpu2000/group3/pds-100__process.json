@@ -1,0 +1,13 @@
+{
+  "command": [
+    "/tmp/hipdlp-large20-20261002/large-compare",
+    "/tmp/hipdlp-large20-20261002/lp/pds-100.mps",
+    "pds-100",
+    "cpu",
+    "P,A,L,S",
+    "180.0",
+    "2000"
+  ],
+  "returncode": 0,
+  "process_wall_sec": 150.7375897099264
+}

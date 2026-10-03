@@ -1,0 +1,38 @@
+{
+  "name": "798kRows",
+  "config": "A",
+  "backend": "cpu",
+  "status": "ITERATION_LIMIT",
+  "call_status": 0,
+  "iterations": 2000,
+  "order": 3,
+  "kkt_pass": false,
+  "certificate_pass": false,
+  "kkt_tolerance": 0.0001,
+  "pdlp_optimality_tolerance": 0.0001,
+  "solver_wall_sec": 76.749344587,
+  "verification_wall_sec": 0.110692001,
+  "time_limit": 180,
+  "iteration_limit": 2000,
+  "relative_primal_residual": 0.48282614319493866,
+  "relative_dual_residual": 0.1265346900383682,
+  "relative_objective_gap": 0.9999999999997978,
+  "command": [
+    "/tmp/hipdlp-large20-20261002/large-compare",
+    "/tmp/hipdlp-large20-20261002/lp/798kRows.mps",
+    "798kRows",
+    "cpu",
+    "L,S,P,A",
+    "180.0",
+    "2000"
+  ],
+  "guard_rejected": false,
+  "selector_log": [],
+  "model": {
+    "name": "798kRows",
+    "rows": 797867,
+    "cols": 1052744,
+    "nnz": 2342532,
+    "read_wall_sec": 7.253714834
+  }
+}

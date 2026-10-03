@@ -1,0 +1,174 @@
+{
+  "count": 14,
+  "backend": "cpu",
+  "common_names": [
+    "bandm",
+    "beaconfd",
+    "bell5",
+    "ex10",
+    "finnis",
+    "fit1p",
+    "i-003-252-fix",
+    "l30",
+    "lseu",
+    "node1186",
+    "rgn",
+    "share1b",
+    "share2b",
+    "stair"
+  ],
+  "policies": {
+    "A": {
+      "solved": 14,
+      "feature_seconds": 0,
+      "common_iteration_sum": 1021360,
+      "common_iteration_gm": 19015.387585339777
+    },
+    "L": {
+      "solved": 14,
+      "feature_seconds": 0,
+      "common_iteration_sum": 2798560,
+      "common_iteration_gm": 31627.490177275355
+    },
+    "M": {
+      "solved": 14,
+      "feature_seconds": 0.17889518999999998,
+      "common_iteration_sum": 2224520,
+      "common_iteration_gm": 33435.15848866203
+    },
+    "P": {
+      "solved": 14,
+      "feature_seconds": 0,
+      "common_iteration_sum": 8018240,
+      "common_iteration_gm": 69445.61484330641
+    }
+  },
+  "switches": [
+    {
+      "name": "bandm",
+      "chosen": "L",
+      "discarded_iterations": 200
+    },
+    {
+      "name": "beaconfd",
+      "chosen": "L",
+      "discarded_iterations": 200
+    },
+    {
+      "name": "bell5",
+      "chosen": "A",
+      "discarded_iterations": 200
+    },
+    {
+      "name": "finnis",
+      "chosen": "L",
+      "discarded_iterations": 200
+    },
+    {
+      "name": "fit1p",
+      "chosen": "L",
+      "discarded_iterations": 200
+    },
+    {
+      "name": "lseu",
+      "chosen": "A",
+      "discarded_iterations": 200
+    },
+    {
+      "name": "node1186",
+      "chosen": "L",
+      "discarded_iterations": 200
+    },
+    {
+      "name": "rgn",
+      "chosen": "L",
+      "discarded_iterations": 200
+    },
+    {
+      "name": "share1b",
+      "chosen": "A",
+      "discarded_iterations": 200
+    },
+    {
+      "name": "share2b",
+      "chosen": "A",
+      "discarded_iterations": 200
+    },
+    {
+      "name": "stair",
+      "chosen": "L",
+      "discarded_iterations": 200
+    }
+  ],
+  "MP_common_names": [
+    "bandm",
+    "beaconfd",
+    "bell5",
+    "ex10",
+    "finnis",
+    "fit1p",
+    "i-003-252-fix",
+    "l30",
+    "lseu",
+    "node1186",
+    "rgn",
+    "share1b",
+    "share2b",
+    "stair"
+  ],
+  "worst_iteration_regressions": [
+    {
+      "name": "lseu",
+      "ratio": 6.108695652173913,
+      "P": 5520,
+      "M": 33720
+    },
+    {
+      "name": "bandm",
+      "ratio": 2.360227272727273,
+      "P": 35200,
+      "M": 83080
+    },
+    {
+      "name": "fit1p",
+      "ratio": 1.4976839938239834,
+      "P": 77720,
+      "M": 116400
+    },
+    {
+      "name": "ex10",
+      "ratio": 1.0,
+      "P": 480,
+      "M": 480
+    },
+    {
+      "name": "i-003-252-fix",
+      "ratio": 1.0,
+      "P": 120120,
+      "M": 120120
+    }
+  ],
+  "cpu_iteration_eligible_names": [
+    "bandm",
+    "beaconfd",
+    "bell5",
+    "ex10",
+    "finnis",
+    "fit1p",
+    "i-003-252-fix",
+    "l30",
+    "lseu",
+    "node1186",
+    "rgn",
+    "share1b",
+    "share2b",
+    "stair"
+  ],
+  "cpu_iteration_censored_names": [],
+  "cpu_par2_iterations": {
+    "A": 1021360,
+    "L": 2798560,
+    "M": 2224520,
+    "P": 8018240
+  }
+}

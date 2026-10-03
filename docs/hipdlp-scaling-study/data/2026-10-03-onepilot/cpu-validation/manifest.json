@@ -1,0 +1,114 @@
+[
+  {
+    "name": "bandm",
+    "source": "/srv/mps_da/bandm.mps.gz",
+    "sha256": "8164764213827a054215735b3786c3c80c14cb81a72270fe3b7b3db1f2d19b51",
+    "mps_sha256": "f9a5dfa4064b0f79181f51c8f5191e7c081d0718a8832d20766811372a1887f3",
+    "gzip_members": 1,
+    "non_gzip_trailing_bytes": 0
+  },
+  {
+    "name": "beaconfd",
+    "source": "/srv/mps_da/beaconfd.mps.gz",
+    "sha256": "31b2ba10668b0f0ce33ad9a6df67b9eb1789d93b3ddd81c8fd99704ed78b11b7",
+    "mps_sha256": "201d4c5697fdc21a11f66740409079e830c3531d4aa7263be365a7826ed6dea3",
+    "gzip_members": 1,
+    "non_gzip_trailing_bytes": 0
+  },
+  {
+    "name": "bell5",
+    "source": "/srv/mps_da/bell5.mps.gz",
+    "sha256": "5450027fab6d9eab53ea924f4fec79bfcb44e1d1d806fbf740ac9c492bba4c90",
+    "mps_sha256": "d4846d7ea889d482e32842832e599ca6d0dc04fd8ea3ea58f49a52b436859dd5",
+    "gzip_members": 1,
+    "non_gzip_trailing_bytes": 0
+  },
+  {
+    "name": "ex10",
+    "source": "/srv/mps_da/ex10.mps.gz",
+    "sha256": "dc378d816262d32426a8392c27d798ed2d86bac3d2e5494c5719a62860ef65b7",
+    "mps_sha256": "5ba93fc7bdd06b360ecb5a57088354bfc99cf0ac114fce1715fe7f10a169617b",
+    "gzip_members": 1,
+    "non_gzip_trailing_bytes": 0
+  },
+  {
+    "name": "finnis",
+    "source": "/srv/mps_da/finnis.mps.gz",
+    "sha256": "679c2c0fb3ba439f97d6c0f7cc868b9fc99f402a6c25daebecbd9d08cd6bd71e",
+    "mps_sha256": "3b7eaa0096f85381c493240ebc1749c4c7802355e19eb9090f378d382f748a98",
+    "gzip_members": 1,
+    "non_gzip_trailing_bytes": 0
+  },
+  {
+    "name": "fit1p",
+    "source": "/srv/mps_da/fit1p.mps.gz",
+    "sha256": "62a6eba525ea61fb71cfeeabde7738b870a6e55800e535f57c039e15cdeb1a41",
+    "mps_sha256": "7ceddb5582012ffff24b83c05bbb3d864275b5ae4e7cafab8fd671b321267988",
+    "gzip_members": 1,
+    "non_gzip_trailing_bytes": 0
+  },
+  {
+    "name": "i-003-252-fix",
+    "source": "/srv/mps_da/i-003-252-fix.mps.gz",
+    "sha256": "b34ee4b265b72075e728a8438a9a44380d7b704604ae5ee4132adf1812f1b68f",
+    "mps_sha256": "7005f84fc19c7cdf3ba69a65227d1b33d6fe043c10b0bd755c1a2600b12bab16",
+    "gzip_members": 1,
+    "non_gzip_trailing_bytes": 0
+  },
+  {
+    "name": "l30",
+    "source": "/srv/mps_da/l30.mps.gz",
+    "sha256": "42fa54b674d9013566aca11a0e7cb8f4f16b81486ec6ce0658fd581cdc0c3854",
+    "mps_sha256": "3a37e84d310ccba33c53d33bcfdca9d68451098e93708c371e88c077c2ca7000",
+    "gzip_members": 1,
+    "non_gzip_trailing_bytes": 0
+  },
+  {
+    "name": "lseu",
+    "source": "/srv/mps_da/lseu.mps.gz",
+    "sha256": "f572da5741f912330106ea39b03980cd0fcef50b7edc549e8559ce9a720dc9d4",
+    "mps_sha256": "00416576ed4adac15b62b1982cb7be9d7dcb2d6505067dd8396183ff1eac3dab",
+    "gzip_members": 1,
+    "non_gzip_trailing_bytes": 0
+  },
+  {
+    "name": "node1186",
+    "source": "/srv/mps_da/node1186.mps.gz",
+    "sha256": "028f7d35554e86d123d36a17a544ac61798637737b88934fc2a9a9a4b26ed8d2",
+    "mps_sha256": "0ba0142c28c6a99127b28cec3ad8b5fe30a9fa8173d728e10b689a47b01c6f64",
+    "gzip_members": 1,
+    "non_gzip_trailing_bytes": 0
+  },
+  {
+    "name": "rgn",
+    "source": "/srv/mps_da/rgn.mps.gz",
+    "sha256": "9ce273edd4e27c24a328fa22b3d02f5acbe1eb7c1ae948589dcda783ef855fa2",
+    "mps_sha256": "b5dcb0e7587a8c676af20c845c805657202828b344848759caa72d1aa70a50ef",
+    "gzip_members": 1,
+    "non_gzip_trailing_bytes": 0
+  },
+  {
+    "name": "share1b",
+    "source": "/srv/mps_da/share1b.mps.gz",
+    "sha256": "d6853f81071bda87fb19dd609d311a5922aaa695ccf42c99f2e2649649214c5d",
+    "mps_sha256": "f25fabe397354e1cb07e7ff00e5b04e5ec809eac85760ea050969ddcb0904053",
+    "gzip_members": 1,
+    "non_gzip_trailing_bytes": 0
+  },
+  {
+    "name": "share2b",
+    "source": "/srv/mps_da/share2b.mps.gz",
+    "sha256": "d7b4c070fab1f9bcd1f09eff363136078e6310694652f3f594f6e5ae1469bd8f",
+    "mps_sha256": "f7ddd9cd8e7b9569f2a37af35f95ecc1d9ae24f88344d0ea01050bd599042ef8",
+    "gzip_members": 1,
+    "non_gzip_trailing_bytes": 0
+  },
+  {
+    "name": "stair",
+    "source": "/srv/mps_da/stair.mps.gz",
+    "sha256": "52d1cf3a5674b7219f6fd24ab508dd3b887847d70e9deaa4185fb08e20bbd266",
+    "mps_sha256": "6276b3a0692a12bf975b75001505c975a7eeb8cfe7431647bfaa7265358aeea2",
+    "gzip_members": 1,
+    "non_gzip_trailing_bytes": 0
+  }
+]

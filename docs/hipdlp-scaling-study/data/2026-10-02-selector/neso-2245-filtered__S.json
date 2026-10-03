@@ -1,0 +1,33 @@
+{
+  "schema": "hipdlp-migration-adapter/1",
+  "instance": "/tmp/hipdlp-scaling-study/lp/neso-2245-filtered.mps",
+  "implementation": "rewrite",
+  "backend": "cuda",
+  "requested_backend": "cuda",
+  "step_size": "fixed",
+  "status": "OPTIMAL",
+  "call_status": "ok",
+  "iterations": 106080,
+  "objective": -22308.479057381155,
+  "solver_wall_sec": 124.322743222,
+  "end_to_end_sec": 142.030718632,
+  "relative_primal_residual": 2.0338718371089046e-06,
+  "relative_dual_residual": 1.1385032256874972e-07,
+  "relative_objective_gap": 5.41672183273734e-07,
+  "kkt_input_valid": true,
+  "kkt_pass": true,
+  "certificate_kind": "none",
+  "certificate_pass": false,
+  "options": {
+    "presolve": "off",
+    "hipdlp_scaling": "auto",
+    "pdlp_step_size_strategy": 0,
+    "kkt_tolerance": 0.0001,
+    "pdlp_optimality_tolerance": 0.0001,
+    "hipdlp_scaling_selector": true,
+    "time_limit": 1800,
+    "pdlp_iteration_limit": 400000
+  },
+  "executable": "/tmp/hipdlp-scaling-study/selector-adapter",
+  "highs_version": "1.15.1"
+}

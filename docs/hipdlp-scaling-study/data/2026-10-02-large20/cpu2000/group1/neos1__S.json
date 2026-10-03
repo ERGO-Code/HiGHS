@@ -1,0 +1,41 @@
+{
+  "name": "neos1",
+  "config": "S",
+  "backend": "cpu",
+  "status": "ITERATION_LIMIT",
+  "call_status": 0,
+  "iterations": 2000,
+  "order": 3,
+  "kkt_pass": false,
+  "certificate_pass": false,
+  "kkt_tolerance": 0.0001,
+  "pdlp_optimality_tolerance": 0.0001,
+  "solver_wall_sec": 6.590023329,
+  "verification_wall_sec": 0.007117915,
+  "time_limit": 180,
+  "iteration_limit": 2000,
+  "relative_primal_residual": 22.934851183318187,
+  "relative_dual_residual": 0.23909068565441172,
+  "relative_objective_gap": 0.19912124582869922,
+  "command": [
+    "/tmp/hipdlp-large20-20261002/large-compare",
+    "/tmp/hipdlp-large20-20261002/lp/neos1.mps",
+    "neos1",
+    "cpu",
+    "P,A,L,S",
+    "180.0",
+    "2000"
+  ],
+  "guard_rejected": false,
+  "selector_log": [
+    "HiPDLP scaling selector: 200 iterations each; log Kw(A|A) 17.554232537499271, log Kw(A|L) 17.554232537499271, log Kw(L|A) 17.554232537499271, log Kw(L|L) 17.554232537499271; geometric mean Kw A 42044222.437476985, L 42044222.437476985; continuing CR+Ruiz+PC",
+    "HiPDLP scaling selector: total 2000 iterations including 200 discarded pilot iterations"
+  ],
+  "model": {
+    "name": "neos1",
+    "rows": 131581,
+    "cols": 1892,
+    "nnz": 468009,
+    "read_wall_sec": 0.791006437
+  }
+}

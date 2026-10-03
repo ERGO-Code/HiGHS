@@ -1,0 +1,14 @@
+{
+  "complete": true,
+  "primary_cuda_runs": 80,
+  "complete_watson_remeasurement_runs": 4,
+  "finalist_repeat_runs": 18,
+  "cpu_probe_runs": 80,
+  "kkt_tolerance": 0.0001,
+  "pdlp_optimality_tolerance": 0.0001,
+  "source_hashes_unchanged": 20,
+  "verifyKkt_unchanged": true,
+  "scope": "Fastest observed policy among A,L,S,P on the selected 20 large LPs at the 180-second CUDA budget; eleven all-policy timeouts prevent a full-convergence workload claim.",
+  "winner": "P: PC-only",
+  "report": "docs/hipdlp-scaling-study/LARGE20_STUDY.md"
+}

@@ -47,6 +47,7 @@ struct SolverOptions {
   EffectivePolicy policy;
   double optimality_tolerance;
   bool early_kkt_check;
+  bool scaling_selector;
 
   SolverOptions();
 };

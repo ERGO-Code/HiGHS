@@ -1,0 +1,210 @@
+[
+  {
+    "name": "3d-lp",
+    "source": "/srv/mps_da/3d-lp.mps.gz",
+    "sha256": "1d72f0d097c95a5936b338dc3aef1e0f01710f092c7bc66d56a2f236031375d7",
+    "mps_sha256": "4e1920931fec29c999600ea0895424b3ae75b05b142892913a58af3ac13516f2",
+    "gzip_members": 1,
+    "non_gzip_trailing_bytes": 0
+  },
+  {
+    "name": "afiro",
+    "source": "/srv/mps_da/afiro.mps.gz",
+    "sha256": "69134ccd37b413d21044967e4f1e1e37cd26e65b01a28a64cb6809a2d017f6ef",
+    "mps_sha256": "9cd304f02717cbd6f85068cb777b69d28539b22a4868ae0f0fb425f514f0eea5",
+    "gzip_members": 1,
+    "non_gzip_trailing_bytes": 0
+  },
+  {
+    "name": "avgas",
+    "source": "/srv/mps_da/avgas.mps.gz",
+    "sha256": "237f78a59a02909d42ede76876de8692917c6e36a3ee01d3b134fed5f5411db5",
+    "mps_sha256": "10d0e68381321ee9b6a22a53a33d07f7740070b0a077a78ef742a9e88eca8213",
+    "gzip_members": 1,
+    "non_gzip_trailing_bytes": 0
+  },
+  {
+    "name": "blending",
+    "source": "/srv/mps_da/blending.mps.gz",
+    "sha256": "43d5b0f2f29ed264aacceff60fa76146cd25519fc70fc5e42a298bcc10bf88b2",
+    "mps_sha256": "7492ca2ab50f3001537ed1fad71d321e1fc62258369270172aa20193a1a12de6",
+    "gzip_members": 1,
+    "non_gzip_trailing_bytes": 0
+  },
+  {
+    "name": "chip",
+    "source": "/srv/mps_da/chip.mps.gz",
+    "sha256": "b6c8c146fc43b5d8173f03dd0946a0f873ea23b3ac3419a341fdb7d4aebec42c",
+    "mps_sha256": "87efd5ff9e47f8a767344ed8d4e5615ab4fc58ebf0c7a59219eccd53e66238fe",
+    "gzip_members": 1,
+    "non_gzip_trailing_bytes": 0
+  },
+  {
+    "name": "distillation",
+    "source": "/srv/mps_da/distillation.mps.gz",
+    "sha256": "9c0acd966c24bc7bad6e30383a8c92d8b6ab60a6e869e765922bc12df8e66d4a",
+    "mps_sha256": "8d95e876aa21c777f6e14db4c66c335f62edbba5ebb2e464fa37fa6193e1362f",
+    "gzip_members": 1,
+    "non_gzip_trailing_bytes": 0
+  },
+  {
+    "name": "distillation_dual",
+    "source": "/srv/mps_da/distillation_dual.mps.gz",
+    "sha256": "1fa6102da68883847d8859f95a620d320d73988568425613521c674b584c71b1",
+    "mps_sha256": "a5c9e14a08798e15bf8a1f98c2e5a4f32bbc2bad7dc7bfae9198abc75d60907a",
+    "gzip_members": 1,
+    "non_gzip_trailing_bytes": 0
+  },
+  {
+    "name": "dual",
+    "source": "/srv/mps_da/dual.mps.gz",
+    "sha256": "4309d50052527a3e0374e852ded05b6f4d5b46680d73084caecd59a80ce7f500",
+    "mps_sha256": "a5c9e14a08798e15bf8a1f98c2e5a4f32bbc2bad7dc7bfae9198abc75d60907a",
+    "gzip_members": 1,
+    "non_gzip_trailing_bytes": 0
+  },
+  {
+    "name": "flugpl",
+    "source": "/srv/mps_da/flugpl.mps.gz",
+    "sha256": "0124e523813fdd0ee4934bb7e2f06d4389a41b9edff17eb42615b45ae3774dbd",
+    "mps_sha256": "ed4b1fcb07d26b513027721d61344c2c4371cb506bf66098df328047c183b0c0",
+    "gzip_members": 1,
+    "non_gzip_trailing_bytes": 0
+  },
+  {
+    "name": "forest6",
+    "source": "/srv/mps_da/forest6.mps.gz",
+    "sha256": "0749ac689df115caecfb17dea3eb8d94eb036391626b75c9e2846df0fb146aef",
+    "mps_sha256": "75dad945ffb9a78f1df19151a05bf109221ca038ab1f9346b8c063653dab98ca",
+    "gzip_members": 1,
+    "non_gzip_trailing_bytes": 0
+  },
+  {
+    "name": "primal",
+    "source": "/srv/mps_da/primal.mps.gz",
+    "sha256": "73ae0cf9031746e476f9b2f19ca9bca9b03be53d00f918b0be9bf7a7ee72932f",
+    "mps_sha256": "8d95e876aa21c777f6e14db4c66c335f62edbba5ebb2e464fa37fa6193e1362f",
+    "gzip_members": 1,
+    "non_gzip_trailing_bytes": 0
+  },
+  {
+    "name": "sc50a",
+    "source": "/srv/mps_da/sc50a.mps.gz",
+    "sha256": "9cf396be416624ba7ff2a4901a70a0e060f3faaf490f7d8e6228803ad39fd6a4",
+    "mps_sha256": "0da35be1f3383fc0b8b5b2c77c8c37152caf570a04ba61733bece00fb848cf07",
+    "gzip_members": 1,
+    "non_gzip_trailing_bytes": 0
+  },
+  {
+    "name": "sc50b",
+    "source": "/srv/mps_da/sc50b.mps.gz",
+    "sha256": "d78bd7a000194ead156b8fc33491252e985eeb83f68cf1f871c13010fe9d2318",
+    "mps_sha256": "9db8ba2c2d21147fac311d13cdf1798b3695ebe3ba9f5209167ee941ad7bc6e9",
+    "gzip_members": 1,
+    "non_gzip_trailing_bytes": 0
+  },
+  {
+    "name": "sc105",
+    "source": "/srv/mps_da/sc105.mps.gz",
+    "sha256": "5cb29152ce48013487be2939a6e59bb19a775367115947036f82ebbdeae46226",
+    "mps_sha256": "883857107560de8df60f87e915bd49c70851a2f199566e3451df52921d715503",
+    "gzip_members": 1,
+    "non_gzip_trailing_bytes": 0
+  },
+  {
+    "name": "nug01",
+    "source": "/srv/mps_da/nug01.mps.gz",
+    "sha256": "c9646e211e9fcfe1d89343f74b8efde15e5b82f7f1c13eaac7f693fc9d3a84f2",
+    "mps_sha256": "86e267566a76c992318ce7ce9f34ddc3b53c90fd4c3972e0adafcd36659eacc2",
+    "gzip_members": 1,
+    "non_gzip_trailing_bytes": 0
+  },
+  {
+    "name": "nug02",
+    "source": "/srv/mps_da/nug02.mps.gz",
+    "sha256": "6d8a92767b2dfda6805273d256654d4872528a9e57d892455596a74f3c29b911",
+    "mps_sha256": "9d2f5e623141a291ef2c43cd7da75b0d8d46b71a71db6431c91a11889fcebbae",
+    "gzip_members": 1,
+    "non_gzip_trailing_bytes": 0
+  },
+  {
+    "name": "nug03",
+    "source": "/srv/mps_da/nug03.mps.gz",
+    "sha256": "80d79554583e6bf7bf08ad57fc2b565492e850d2b74b16677c881bcecef1cb5b",
+    "mps_sha256": "e1a78f97021349e748367d6142ba235ef15adf945a96fc0a1c5e37958d73ac1a",
+    "gzip_members": 1,
+    "non_gzip_trailing_bytes": 0
+  },
+  {
+    "name": "qap04lp",
+    "source": "/srv/mps_da/qap04lp.mps.gz",
+    "sha256": "b8b69c5afb05131a16e81fc429847013e0ba12a935dbe51c17cb2acabb0ff050",
+    "mps_sha256": "8c9462f0eef158261cac57f4f1953c33d701d383a3aa5cf1ed183e752b04063a",
+    "gzip_members": 1,
+    "non_gzip_trailing_bytes": 0
+  },
+  {
+    "name": "qap06lp",
+    "source": "/srv/mps_da/qap06lp.mps.gz",
+    "sha256": "da3088bd926b05b9a7ab329d27bff5dc33a04fc6a90271221136770ffbb2a0df",
+    "mps_sha256": "e29d7771665086af2a5fab8ff10207fee55869b9e418f4516e9d1821a685f476",
+    "gzip_members": 1,
+    "non_gzip_trailing_bytes": 0
+  },
+  {
+    "name": "qap08lp",
+    "source": "/srv/mps_da/qap08lp.mps.gz",
+    "sha256": "bbbc6b2307a549c4005ea920e56bce16efecc09e0d0686a34a57acbaa8a3a4e2",
+    "mps_sha256": "94daba7817bc1b498da91a92abfb8ca618a8548e41d4a79e8232452314252cc4",
+    "gzip_members": 1,
+    "non_gzip_trailing_bytes": 0
+  },
+  {
+    "name": "qap10",
+    "source": "/srv/mps_da/qap10.mps.gz",
+    "sha256": "fb37cf89bfc20ffe8d9df02a6efe469c334f24a1b67925ca0192b0d1d948fc44",
+    "mps_sha256": "b9b8eee0a619e91011a57fe036f92a53c3cca7a3d967638bd33d1ea58740d92b",
+    "gzip_members": 1,
+    "non_gzip_trailing_bytes": 0
+  },
+  {
+    "name": "qap12",
+    "source": "/srv/mps_da/qap12.mps.gz",
+    "sha256": "a1e26103915aaad5809847f3263f801a4568a59c6cce44f2d1dc13d073306143",
+    "mps_sha256": "94d577e8733cbf3b72cbfa35de2486d7dd5c99c7ee3db93c52663026b8ed9314",
+    "gzip_members": 1,
+    "non_gzip_trailing_bytes": 0
+  },
+  {
+    "name": "qap14",
+    "source": "/srv/mps_da/qap14.mps.gz",
+    "sha256": "6af96e20d1e600355ec5535e54e6a06e754a348316402f18f2b3d4035a46fdc8",
+    "mps_sha256": "b272a027f9567edac6452950a3890261752ee0820dc48e2efa2d50488af619bb",
+    "gzip_members": 1,
+    "non_gzip_trailing_bytes": 0
+  },
+  {
+    "name": "qap16",
+    "source": "/srv/mps_da/qap16.mps.gz",
+    "sha256": "442350e7de1143d59092d2417c8b0efa134712f4acf21dab19f34b4a313bc5b3",
+    "mps_sha256": "e0463771e2a764d60a1e8eb17966a7085ba649a8c4df21f50c34bc7c8c57ac30",
+    "gzip_members": 1,
+    "non_gzip_trailing_bytes": 0
+  },
+  {
+    "name": "qap18",
+    "source": "/srv/mps_da/qap18.mps.gz",
+    "sha256": "ec7f5f0c5858146cac19b59aedd434f24e7e0fcc153a202e32a6f7039dea93d7",
+    "mps_sha256": "9dfe750206194cc69bbd738ac210727d7319f686ba3f77c500ec64034d5f53e3",
+    "gzip_members": 1,
+    "non_gzip_trailing_bytes": 0
+  },
+  {
+    "name": "small_pre",
+    "source": "/srv/mps_da/small_pre.mps.gz",
+    "sha256": "1993813d9c7f87b9f8de9e768b5e5a4f268226da5d558ff18df45156a5bec785",
+    "mps_sha256": "ca308efb3af15257cf22e0c5b3c0415c9fdc2427151d0dd003426cb856106000",
+    "gzip_members": 1,
+    "non_gzip_trailing_bytes": 0
+  }
+]

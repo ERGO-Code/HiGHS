@@ -1,0 +1,38 @@
+{
+  "name": "pds-100",
+  "config": "L",
+  "backend": "cuda",
+  "status": "OPTIMAL",
+  "call_status": 0,
+  "iterations": 138360,
+  "order": 0,
+  "kkt_pass": true,
+  "certificate_pass": false,
+  "kkt_tolerance": 0.0001,
+  "pdlp_optimality_tolerance": 0.0001,
+  "solver_wall_sec": 23.702839494,
+  "verification_wall_sec": 0.041920865,
+  "time_limit": 180,
+  "iteration_limit": 2147483647,
+  "relative_primal_residual": 8.031422131908113e-07,
+  "relative_dual_residual": 3.0867181142093614e-06,
+  "relative_objective_gap": 6.912281956028322e-06,
+  "command": [
+    "/tmp/hipdlp-large20-20261002/large-compare",
+    "/tmp/hipdlp-large20-20261002/lp/pds-100.mps",
+    "pds-100",
+    "cuda",
+    "L,P",
+    "180.0",
+    "2147483647"
+  ],
+  "guard_rejected": false,
+  "selector_log": [],
+  "model": {
+    "name": "pds-100",
+    "rows": 156243,
+    "cols": 505360,
+    "nnz": 1086785,
+    "read_wall_sec": 2.476828528
+  }
+}
