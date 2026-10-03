@@ -697,6 +697,7 @@ std::vector<double> getEffectiveCosts(const HighsLp& lp,
   std::vector<HighsInt> col_of_id;
   std::vector<double> row_mu_of_id;
 
+  assert(lp.a_matrix_.isColwise());
   for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++)
     col_count.push_back(lp.a_matrix_.start_[iCol + 1] -
                         lp.a_matrix_.start_[iCol]);

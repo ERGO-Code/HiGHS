@@ -1174,6 +1174,7 @@ HighsStatus Highs::run() {
   // Determine coefficient ranges and possibly warn the user about
   // excessive values, obtaining suggested values for user_objective_scale
   // and user_bound_scale
+  this->model_.lp_.a_matrix_.ensureColwise();
   assessExcessiveObjectiveBoundScaling(this->options_, this->model_,
                                        user_scale_data);
 
