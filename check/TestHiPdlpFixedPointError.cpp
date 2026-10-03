@@ -171,7 +171,7 @@ TEST_CASE("hi-pdlp-cuda-fixed-point-reuses-prepared-products",
   REQUIRE(result.ok());
   CHECK(result.fixed_point_error == 3.0);
   const auto audit = hipdlp::backend::cuda::testing::resourceAudit();
-  CHECK(audit.direct_primitive_enqueue_calls == 4);
+  CHECK(audit.direct_primitive_enqueue_calls == 1);
   CHECK(audit.device_to_device_transfers == 0);
   CHECK(audit.device_to_host_transfers == 2);
   CHECK(audit.synchronization_calls == 1);

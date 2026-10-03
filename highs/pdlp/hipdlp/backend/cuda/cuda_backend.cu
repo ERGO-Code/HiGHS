@@ -894,6 +894,7 @@ struct CudaBackend::Impl {
   DeviceBuffer<int> error_flag;
   PinnedDownloadBuffer<int> download_error;
   DeviceBuffer<double> reduction_result;
+  DeviceBuffer<FixedPointPartial> fixed_point_partials;
   DeviceBuffer<double> difference_scratch;
   DeviceBuffer<double> spmv_alpha;
   DeviceBuffer<double> spmv_beta;
@@ -1732,11 +1733,11 @@ api::Error CudaBackend::evaluateCheck(const model::Problem& problem,
 
   CudaCertificateStorage& certificate = check.certificate;
   const bool oracle_rounding_supported = certificateNormEnvironmentSupported();
-    const bool screen_supported = oracle_rounding_supported &&
-      static_cast<double>(certificate.data.num_rows) +
-              certificate.data.num_cols <
-      4503599627370496.0;
-    if (screen_supported) {
+  const bool screen_supported =
+      input.certificates && oracle_rounding_supported &&
+      static_cast<double>(certificate.data.num_rows) + certificate.data.num_cols <
+          4503599627370496.0;
+  if (screen_supported) {
     error = launchResult(
         "certificate screen kernel launch",
         launchCertificateScreen(
@@ -1780,7 +1781,10 @@ api::Error CudaBackend::evaluateCheck(const model::Problem& problem,
   computed.anchor_distances_valid = input.anchor_distances &&
       (packet.fallback_flags & kCheckAnchorFallback) == 0;
   computed.certificate_screen_valid = screen_supported;
-  if (screen_supported) {
+  if (!input.certificates) {
+    computed.primal_ray_possible = false;
+    computed.farkas_possible = false;
+  } else if (screen_supported) {
     computed.primal_ray_possible = packet.primal_ray_possible != 0;
     computed.farkas_possible = packet.farkas_possible != 0;
   }
@@ -2401,14 +2405,10 @@ api::Error CudaBackend::reduceFixedPointMetrics(
       &primal_norm == &cross_term || &dual_norm == &cross_term)
     return invalidArgument("HiPDLP CUDA fixed-point reduction arguments are invalid");
   double* values = impl_->reduction_result.get();
-  api::Error error = enqueueNorm(*impl_, primal->size, primal->values.get(), values);
-  if (!error.ok()) return error;
-  error = enqueueNorm(*impl_, dual->size, dual->values.get(), values + 1);
-  if (!error.ok()) return error;
-  error = enqueueDot(*impl_, primal->size, primal->values.get(), product->values.get(), values + 2);
-  if (!error.ok()) return error;
-  error = launchResult("fixed-point result finite check",
-      launchFiniteCheck(impl_->stream.get(), 3, values, impl_->error_flag.get()));
+  api::Error error = launchResult("fused fixed-point reduction",
+      launchFixedPointReduction(impl_->stream.get(), primal->size, dual->size,
+          primal->values.get(), dual->values.get(), product->values.get(),
+          impl_->fixed_point_partials.get(), values, impl_->error_flag.get()));
   if (!error.ok()) return error;
   double received[3] = {};
   const cudaError_t status = cudaMemcpyAsync(received, values, sizeof(received),
@@ -2782,6 +2782,9 @@ api::Error createCudaBackend(std::unique_ptr<Backend>& backend) {
     error = impl->error_flag.allocate(1, "creating error-state storage");
     if (!error.ok()) return error;
     error = impl->reduction_result.allocate(3, "creating reduction storage");
+    if (!error.ok()) return error;
+    error = impl->fixed_point_partials.allocate(
+        checkPartialCount(kHighsIInf, kHighsIInf), "creating fixed-point reduction storage");
     if (!error.ok()) return error;
     error = impl->spmv_alpha.allocate(1, "creating SpMV alpha storage");
     if (!error.ok()) return error;

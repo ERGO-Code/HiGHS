@@ -919,8 +919,9 @@ TEST_CASE("hi-pdlp-solve-observes-production-phases-without-step-allocation",
     CHECK(observer.complete_blocks >= 3);
     CHECK(diagnostics.restarts > 0);
     CHECK(observer.terminal_boundaries == 1);
-    CHECK(observer.ordinary_boundaries == 0);
-    CHECK(observer.special_boundaries + observer.terminal_boundaries + 1 ==
+    CHECK(observer.ordinary_boundaries > 0);
+    CHECK(observer.special_boundaries + observer.ordinary_boundaries +
+              observer.terminal_boundaries + 1 ==
           diagnostics.check_boundaries);
     if (solve_allocation_testing::available)
       CHECK(observer.ordinary_allocations == 0);
@@ -1008,7 +1009,7 @@ TEST_CASE("hi-pdlp-solve-timings-are-opt-in-and-preserve-results",
   CHECK(diagnostics.host_preparation_seconds > 0.0);
   CHECK(diagnostics.host_verification_seconds > 0.0);
   CHECK(diagnostics.reference_fixed_point_seconds > 0.0);
-  CHECK(diagnostics.fixed_point_fallback_seconds == 0.0);
+  CHECK(diagnostics.fixed_point_fallback_seconds > 0.0);
   CHECK(diagnostics.iteration_block_seconds <= diagnostics.iterations_seconds);
   CHECK(diagnostics.step_seconds <= diagnostics.iterations_seconds);
   CHECK(diagnostics.total_wall_seconds >=
@@ -1147,7 +1148,7 @@ TEST_CASE("hi-pdlp-resident-check-production-fixed-and-pid",
     REQUIRE(result.status == hipdlp::api::SolverStatus::kOptimal);
     REQUIRE(result.has_solution);
     CHECK(result.iteration_count % 40 == 0);
-    CHECK(diagnostics.ordinary_check_boundaries >= 3);
+    CHECK(diagnostics.ordinary_check_boundaries >= 2);
     CHECK(diagnostics.resident_check_calls ==
           diagnostics.ordinary_check_boundaries);
     CHECK(diagnostics.check_boundaries ==
@@ -1155,13 +1156,14 @@ TEST_CASE("hi-pdlp-resident-check-production-fixed-and-pid",
     CHECK(diagnostics.ordinary_check_d2h_bytes == 0);
     CHECK(diagnostics.ordinary_check_transfers == 0);
     CHECK(diagnostics.ordinary_check_synchronizations == 0);
-    CHECK(diagnostics.candidate_downloads == diagnostics.resident_check_calls);
+    CHECK(diagnostics.candidate_downloads < diagnostics.resident_check_calls);
     CHECK(diagnostics.host_oracle_checks == 1);
-    CHECK(diagnostics.certificate_checks == diagnostics.resident_check_calls);
+    CHECK(diagnostics.certificate_checks ==
+          1 + static_cast<std::size_t>((result.iteration_count - 1) / 200));
     CHECK(diagnostics.restarts > 0);
     CHECK(diagnostics.restart_reference_checks == diagnostics.restarts);
     CHECK(diagnostics.fixed_point_evaluations + 1 ==
-          diagnostics.ordinary_check_boundaries +
+          static_cast<std::size_t>(result.iteration_count / 40) +
               diagnostics.restart_reference_checks);
     CHECK(diagnostics.resource_creation_calls_before_iterations == 18);
     CHECK(diagnostics.resource_creation_calls_during_iterations == 0);
@@ -1213,7 +1215,7 @@ TEST_CASE("hi-pdlp-resident-check-kkt-rejection-continues-to-next-candidate",
   CHECK(rejected_diagnostics.resident_check_calls == 2);
   CHECK(rejected_diagnostics.ordinary_check_boundaries == 1);
   CHECK(rejected_diagnostics.candidate_downloads == 2);
-  CHECK(rejected_diagnostics.certificate_checks == 3);
+  CHECK(rejected_diagnostics.certificate_checks == 2);
   CHECK(rejected_diagnostics.fixed_point_evaluations == 1);
   CHECK(rejected_diagnostics.restart_reference_checks == 0);
   const hipdlp::verification::KktVerificationResult verification =
@@ -1392,13 +1394,13 @@ TEST_CASE("hi-pdlp-resident-check-production-cuda-host-oracle-fallback",
   REQUIRE(gpu.ok());
   CHECK(gpu.status == cpu.status);
   CHECK(gpu.iteration_count == cpu.iteration_count);
-  CHECK(gpu_diagnostics.ordinary_check_boundaries >= 3);
+  CHECK(gpu_diagnostics.ordinary_check_boundaries >= 2);
   CHECK(gpu_diagnostics.host_oracle_checks ==
         gpu_diagnostics.resident_check_calls + 1);
   CHECK(gpu_diagnostics.candidate_downloads ==
         gpu_diagnostics.resident_check_calls);
   CHECK(gpu_diagnostics.fixed_point_evaluations + 1 ==
-        gpu_diagnostics.ordinary_check_boundaries +
+        static_cast<std::size_t>(gpu.iteration_count / 40) +
             gpu_diagnostics.restart_reference_checks);
   CHECK(gpu_diagnostics.restarts == cpu_diagnostics.restarts);
   CHECK(gpu_diagnostics.primal_weight_updates ==
@@ -1441,7 +1443,7 @@ TEST_CASE("hi-pdlp-resident-check-production-cuda-absorbed-offset-stays-on-devic
   REQUIRE(gpu.ok());
   CHECK(gpu.status == cpu.status);
   CHECK(gpu.iteration_count == cpu.iteration_count);
-  CHECK(gpu_diagnostics.ordinary_check_boundaries >= 3);
+  CHECK(gpu_diagnostics.ordinary_check_boundaries >= 2);
   // Every small term is absorbed by the 1e150 offset, but the interval in
   // guardCheckStopping accepts the device packet, so only the terminal
   // boundary ever reaches the host oracle.
@@ -1497,7 +1499,7 @@ TEST_CASE("hi-pdlp-resident-check-production-cuda-scalar-transport",
     CHECK(gpu_diagnostics.restarts == cpu_diagnostics.restarts);
     CHECK(gpu_diagnostics.primal_weight_updates ==
           cpu_diagnostics.primal_weight_updates);
-    CHECK(gpu_diagnostics.ordinary_check_boundaries >= 3);
+    CHECK(gpu_diagnostics.ordinary_check_boundaries >= 2);
     CHECK(gpu_diagnostics.ordinary_check_transfers ==
           gpu_diagnostics.ordinary_check_boundaries);
     CHECK(gpu_diagnostics.ordinary_check_d2h_bytes ==
@@ -2195,6 +2197,8 @@ TEST_CASE("hi-pdlp-rewrite-consumes-the-pid-primal-weight-update",
   pid.policy.step_size = hipdlp::api::StepSizePolicy::kPid;
 
   SECTION("a defined residual ratio changes the later trajectory") {
+    // Compare both trajectories at the same budget, despite different check times.
+    fixed.kkt_tolerance = pid.kkt_tolerance = 1e-30;
     const HighsLp lp = makeTinyFeasibleLp();
     hipdlp::algorithm::SolveDiagnostics fixed_diagnostics;
     hipdlp::algorithm::SolveContext fixed_context;
@@ -2764,4 +2768,53 @@ TEST_CASE("hi-pdlp-single-pilot-observation-preserves-state",
     const auto short_run = hipdlp::algorithm::solve(options, original, context);
     CHECK(short_run.iteration_count == 81);
   }
+}
+
+TEST_CASE("hi-pdlp-certificate-cadence-and-adaptive-termination",
+          "[hipdlp][solver][check-optimization][cpu]") {
+  struct Boundaries : hipdlp::algorithm::SolveObserver {
+    std::vector<HighsInt> iterations;
+    void onEvent(const hipdlp::algorithm::SolveObservation& event) noexcept override {
+      if (event.begin && event.phase == hipdlp::algorithm::SolvePhase::kBoundary)
+        iterations.push_back(event.iteration);
+    }
+  } observer;
+  auto options = makeCpuFixedOptions();
+  options.iteration_limit = 239;
+  options.kkt_tolerance = options.optimality_tolerance = 1e-30;
+  hipdlp::algorithm::SolveDiagnostics diagnostics;
+  hipdlp::algorithm::SolveContext context;
+  context.diagnostics = &diagnostics;
+  context.observer = &observer;
+  const HighsLp lp = makeResidentDiagonalLp(33, true);
+  const auto result = hipdlp::algorithm::solve(
+      options, hipdlp::model::OriginalModel(lp), context);
+  INFO(result.error.message);
+  REQUIRE(result.ok());
+  REQUIRE(result.status == hipdlp::api::SolverStatus::kIterationLimit);
+  CHECK(result.iteration_count == 239);
+  CHECK(observer.iterations == std::vector<HighsInt>{0, 40, 200, 239});
+  CHECK(diagnostics.certificate_checks == 3); // Initial, periodic, terminal.
+  CHECK(diagnostics.candidate_downloads == 2);
+  CHECK(diagnostics.fixed_point_evaluations == 5 + diagnostics.restart_reference_checks);
+
+  // Force extra observations without changing the restart schedule. The final
+  // iterate and restart count must agree with the sparsely checked run.
+  struct ObservePilot : hipdlp::algorithm::PilotObserver {
+    bool checkpoint(HighsInt, const HighsSolution&, double, double, std::size_t) override {
+      return false;
+    }
+  } pilot;
+  hipdlp::algorithm::SolveDiagnostics frequent;
+  context.diagnostics = &frequent;
+  context.observer = nullptr;
+  context.pilot_observer = &pilot;
+  const auto reference = hipdlp::algorithm::solve(
+      options, hipdlp::model::OriginalModel(lp), context);
+  REQUIRE(reference.ok());
+  REQUIRE(reference.iteration_count == result.iteration_count);
+  CHECK(frequent.restarts == diagnostics.restarts);
+  CHECK(frequent.resident_check_calls > diagnostics.resident_check_calls);
+  CHECK(reference.solution.col_value == result.solution.col_value);
+  CHECK(reference.solution.row_dual == result.solution.row_dual);
 }

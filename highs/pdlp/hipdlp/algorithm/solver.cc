@@ -32,8 +32,22 @@ namespace hipdlp {
 namespace algorithm {
 namespace {
 
-const HighsInt kConvergenceCadence = 40;
-const HighsInt kRecordedStepCount = kConvergenceCadence - 1;
+const HighsInt kRestartCadence = 40;
+const HighsInt kCertificateCadence = 5 * kRestartCadence;
+
+// Check more often near convergence, with a bounded delay while far away.
+// All intervals are multiples of the unchanged restart cadence.
+HighsInt terminationCheckInterval(const NormalizedConvergenceMetrics& metrics,
+                                 const ConvergenceTolerances& tolerances) {
+  const double ratio = std::max(
+      metrics.relative_primal / tolerances.primal,
+      std::max(metrics.relative_dual / tolerances.dual,
+               metrics.relative_gap / tolerances.gap));
+  if (ratio <= 10.0) return kRestartCadence;
+  if (ratio <= 100.0) return 2 * kRestartCadence;
+  return kCertificateCadence;
+}
+const HighsInt kRecordedStepCount = kRestartCadence - 1;
 // On a device backend a host-side original-KKT verification costs about as
 // much as a boundary of iterations, so rejected verifications back off to at
 // most this many boundaries, which bounds how late a candidate is confirmed.
@@ -1233,6 +1247,7 @@ static api::SolveResult solveImpl(const api::SolverOptions& requested_options,
         iteratesOnDevice(selected_backend->descriptor().kind);
     HighsInt rejected_verifications = 0;
     HighsInt next_verification_iteration = 0;
+    HighsInt next_termination_iteration = kRestartCadence;
     error = selected_backend->prepareCheckWorkspace(
       built.problem, original_model.lp(), workspace);
     if (!error.ok()) return failure(error);
@@ -1255,7 +1270,7 @@ static api::SolveResult solveImpl(const api::SolverOptions& requested_options,
     RecordedIterationBlock recorded_block;
     if (context.use_command_buffers &&
         (iteration_budget == kHighsIInf ||
-         iteration_budget >= kConvergenceCadence)) {
+         iteration_budget >= kRestartCadence)) {
       error = recorded_block.prepare(*selected_backend, state);
       if (!error.ok()) return failure(error);
       if (recorded_block.ready() && context.diagnostics != nullptr)
@@ -1323,7 +1338,7 @@ static api::SolveResult solveImpl(const api::SolverOptions& requested_options,
         SolvePhaseGuard step(context, SolvePhase::kStep, total_iterations);
         const bool replay_block =
             recorded_block.ready() &&
-            total_iterations % kConvergenceCadence == 1 &&
+            total_iterations % kRestartCadence == 1 &&
             !restart_reference_pending &&
             total_iterations <=
                 std::numeric_limits<HighsInt>::max() - kRecordedStepCount &&
@@ -1347,7 +1362,7 @@ static api::SolveResult solveImpl(const api::SolverOptions& requested_options,
         }
       }
 
-      const bool cadence_boundary = total_iterations % kConvergenceCadence == 0;
+      const bool cadence_boundary = total_iterations % kRestartCadence == 0;
       const bool iteration_limit = iteration_budget != kHighsIInf &&
                                    total_iterations >= iteration_budget;
       const bool time_limit = timeLimitReached(options, start);
@@ -1356,7 +1371,39 @@ static api::SolveResult solveImpl(const api::SolverOptions& requested_options,
       bool fixed_point_from_packet = false;
       SolvePhaseGuard boundary(context, SolvePhase::kBoundary,
                                total_iterations, false);
-      if (cadence_boundary || iteration_limit || time_limit) {
+      const bool certificate_due =
+          total_iterations % kCertificateCadence == 0 || iteration_limit ||
+          time_limit;
+      bool termination_due =
+          total_iterations >= next_termination_iteration || certificate_due ||
+          (cadence_boundary && context.pilot_observer != nullptr &&
+           total_iterations <= kScalingPilotIterations);
+      FixedPointErrorResult standalone_fixed_point;
+      bool standalone_fpe = false;
+      // Between termination checks only the FPE is needed. PID needs fresh
+      // convergence metrics only if this trial actually requests a restart.
+      if (cadence_boundary && !termination_due) {
+        standalone_fixed_point = evaluateCandidateFixedPointError(
+            *selected_backend, problem_handle, state, vectors.aty_delta,
+            current_steps, context, total_iterations,
+            SolvePhase::kFixedPointFallback);
+        standalone_fpe = true;
+        if (!standalone_fixed_point.ok()) {
+          // Let a verified terminal result retain precedence over an FPE error.
+          termination_due = true;
+        } else if (use_pid) {
+          FixedPointRestartInput trial;
+          trial.previous = restart_state;
+          trial.current_error = standalone_fixed_point.fixed_point_error;
+          trial.halpern_iterations = state.iteration;
+          trial.total_iterations = total_iterations;
+          trial.parameters = restart_parameters;
+          const FixedPointRestartResult restart = evaluateFixedPointRestart(trial);
+          termination_due =
+              !restart.ok() || restart.decision == RestartDecision::kRestart;
+        }
+      }
+      if (termination_due) {
         boundary.begin();
         if (context.diagnostics != nullptr) {
           ++context.diagnostics->check_boundaries;
@@ -1372,11 +1419,12 @@ static api::SolveResult solveImpl(const api::SolverOptions& requested_options,
         check_input.dual = state.dual_candidate;
         check_input.ax = &vectors.candidate_ax;
         check_input.aty = &vectors.candidate_aty;
+        check_input.certificates = certificate_due;
         check_input.certificate_tolerance = options.kkt_tolerance;
         check_input.primal_tolerance = options.optimality_tolerance;
         check_input.dual_tolerance = options.optimality_tolerance;
         check_input.gap_tolerance = options.optimality_tolerance;
-        if (cadence_boundary) {
+        if (cadence_boundary && !standalone_fpe) {
           const FixedPointErrorInput fixed_point_input =
               candidateFixedPointErrorInput(state, vectors.aty_delta,
                                             current_steps);
@@ -1390,11 +1438,11 @@ static api::SolveResult solveImpl(const api::SolverOptions& requested_options,
             check_input.delta_primal = fixed_point_input.delta_primal;
             check_input.delta_dual = fixed_point_input.delta_dual;
             check_input.aty_delta = fixed_point_input.aty_delta;
-            check_input.anchor_distances = use_pid;
-            check_input.primal_anchor = state.primal_anchor;
-            check_input.dual_anchor = state.dual_anchor;
           }
         }
+        check_input.anchor_distances = cadence_boundary && use_pid;
+        check_input.primal_anchor = state.primal_anchor;
+        check_input.dual_anchor = state.dual_anchor;
         error = evaluateResidentCheck(
             *selected_backend, built.problem, workspace, check_input,
             cadence_boundary, context.diagnostics, check);
@@ -1450,6 +1498,10 @@ static api::SolveResult solveImpl(const api::SolverOptions& requested_options,
         if (!stopping.ok()) return failure(stopping.error);
         boundary_metrics = stopping.metrics;
         boundary_metrics_valid = true;
+        const HighsInt interval =
+            terminationCheckInterval(boundary_metrics, tolerances);
+        next_termination_iteration = total_iterations > kHighsIInf - interval
+            ? kHighsIInf : total_iterations + interval;
 
         bool postsolved = false;
         const auto postsolve_candidate = [&]() -> api::Error {
@@ -1463,7 +1515,7 @@ static api::SolveResult solveImpl(const api::SolverOptions& requested_options,
           return postsolve_error;
         };
         const bool certificate_possible =
-            check.primal_ray_possible || check.farkas_possible;
+            certificate_due && (check.primal_ray_possible || check.farkas_possible);
         // A terminal boundary always verifies, so a limit never hides an
         // acceptable candidate behind the backoff.
         const bool verification_due =
@@ -1505,7 +1557,7 @@ static api::SolveResult solveImpl(const api::SolverOptions& requested_options,
                                HighsInt(1) << rejected_verifications);
             ++rejected_verifications;
             next_verification_iteration =
-                total_iterations + gap * kConvergenceCadence;
+                total_iterations + gap * kRestartCadence;
           }
         }
 
@@ -1553,7 +1605,7 @@ static api::SolveResult solveImpl(const api::SolverOptions& requested_options,
           error = postsolve_candidate();
           if (!error.ok()) return failure(error);
           CertificateOutcome outcome;
-          if (certificate_possible)
+          if (!certificate_due || certificate_possible)
             outcome = detectCertificate(
                 context, built.problem, original_model.lp(), host,
               options.kkt_tolerance, certificate_buffers, total_iterations);
@@ -1614,15 +1666,18 @@ static api::SolveResult solveImpl(const api::SolverOptions& requested_options,
       if (cadence_boundary) {
         if (context.diagnostics != nullptr)
           ++context.diagnostics->fixed_point_evaluations;
-        const FixedPointErrorResult fixed_point = fixed_point_from_packet
-            ? computeFixedPointError(
-                  check.primal_delta_norm, check.dual_delta_norm,
-                  check.delta_dot, current_steps.primal_weight,
-                  current_steps.base_step)
-            : evaluateCandidateFixedPointError(
-                  *selected_backend, problem_handle, state, vectors.aty_delta,
-              current_steps, context, total_iterations,
-              SolvePhase::kFixedPointFallback, check.fixed_point_prepared);
+        FixedPointErrorResult fixed_point = standalone_fixed_point;
+        if (!standalone_fpe) {
+          fixed_point = fixed_point_from_packet
+              ? computeFixedPointError(
+                    check.primal_delta_norm, check.dual_delta_norm,
+                    check.delta_dot, current_steps.primal_weight,
+                    current_steps.base_step)
+              : evaluateCandidateFixedPointError(
+                    *selected_backend, problem_handle, state, vectors.aty_delta,
+                    current_steps, context, total_iterations,
+                    SolvePhase::kFixedPointFallback, check.fixed_point_prepared);
+        }
         if (!fixed_point.ok()) return failure(fixed_point.error);
         FixedPointRestartInput restart_input;
         restart_input.previous = restart_state;
@@ -1695,7 +1750,7 @@ static api::SolveResult solveImpl(const api::SolverOptions& requested_options,
           restart_state = restart.next;
         }
         const HighsInt convergence_boundary =
-            total_iterations / kConvergenceCadence;
+            total_iterations / kRestartCadence;
         if (convergence_boundary % 40 == 0) {
           logBoundary(context, total_iterations, boundary_metrics,
                       current_steps, restart.condition, use_pid, pid_outcome);

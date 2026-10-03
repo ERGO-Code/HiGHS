@@ -319,6 +319,65 @@ __device__ void mergeCheckNorm(CheckNormState& left,
   }
 }
 
+__device__ void mergeFixedPointPartial(FixedPointPartial& left,
+                                        const FixedPointPartial& right) {
+  mergeCheckNorm(left.primal, right.primal);
+  mergeCheckNorm(left.dual, right.dual);
+  left.cross = __dadd_rn(left.cross, right.cross);
+  left.invalid |= right.invalid || !isfinite(left.cross);
+}
+
+__device__ FixedPointPartial reduceFixedPointBlock(FixedPointPartial partial) {
+  __shared__ FixedPointPartial shared[kBlockSize];
+  shared[threadIdx.x] = partial;
+  __syncthreads();
+  for (int distance = kBlockSize / 2; distance > 0; distance /= 2) {
+    if (threadIdx.x < distance)
+      mergeFixedPointPartial(shared[threadIdx.x], shared[threadIdx.x + distance]);
+    __syncthreads();
+  }
+  return shared[0];
+}
+
+__global__ void fixedPointPartialsKernel(
+    const HighsInt primal_size, const HighsInt dual_size,
+    const double* primal, const double* dual, const double* product,
+    FixedPointPartial* partials) {
+  FixedPointPartial partial = {};
+  CheckPartial validity = {};
+  const GridIndex size = primal_size > dual_size ? primal_size : dual_size;
+  const GridIndex stride = static_cast<GridIndex>(blockDim.x) * gridDim.x;
+  for (GridIndex index = static_cast<GridIndex>(blockIdx.x) * blockDim.x + threadIdx.x;
+       index < size; index += stride) {
+    if (index < static_cast<GridIndex>(primal_size)) {
+      const double value = primal[index];
+      addCheckNorm(partial.primal, value, validity, kCheckFixedPointFallback);
+      partial.cross = __dadd_rn(partial.cross, __dmul_rn(value, product[index]));
+      partial.invalid |= !isfinite(partial.cross);
+    }
+    if (index < static_cast<GridIndex>(dual_size))
+      addCheckNorm(partial.dual, dual[index], validity, kCheckFixedPointFallback);
+  }
+  partial.invalid |= validity.optional_invalid != 0;
+  const FixedPointPartial total = reduceFixedPointBlock(partial);
+  if (threadIdx.x == 0) partials[blockIdx.x] = total;
+}
+
+__global__ void fixedPointResultKernel(const int count,
+                                       const FixedPointPartial* partials,
+                                       double* result, int* error_flag) {
+  FixedPointPartial partial = {};
+  for (int index = threadIdx.x; index < count; index += blockDim.x)
+    mergeFixedPointPartial(partial, partials[index]);
+  const FixedPointPartial total = reduceFixedPointBlock(partial);
+  if (threadIdx.x != 0) return;
+  result[0] = __dmul_rn(total.primal.scale, __dsqrt_rn(total.primal.sum_of_squares));
+  result[1] = __dmul_rn(total.dual.scale, __dsqrt_rn(total.dual.sum_of_squares));
+  result[2] = total.cross;
+  if (total.invalid) atomicExch(error_flag, 1);
+  for (int index = 0; index < 3; ++index) recordNonFinite(result[index], error_flag);
+}
+
 __device__ void addCheckSum(CheckSumState& sum, const double value,
                             CheckPartial& partial, const int reason = kCheckRawFallback) {
   if (!isfinite(value)) {
@@ -999,6 +1058,8 @@ cudaError_t preloadKernels() {
       reinterpret_cast<const void*>(dotKernel),
       reinterpret_cast<const void*>(normKernel),
       reinterpret_cast<const void*>(differenceNormKernel),
+      reinterpret_cast<const void*>(fixedPointPartialsKernel),
+      reinterpret_cast<const void*>(fixedPointResultKernel),
       reinterpret_cast<const void*>(checkPartialsKernel),
       reinterpret_cast<const void*>(checkPacketKernel),
       reinterpret_cast<const void*>(certificateRecoveryKernel),
@@ -1028,6 +1089,20 @@ std::size_t checkPartialCount(const HighsInt rows, const HighsInt cols) {
   const HighsInt count = 1 + (size - 1) / kBlockSize;
   return static_cast<std::size_t>(count < kMaximumCheckBlocks
                                       ? count : kMaximumCheckBlocks);
+}
+
+cudaError_t launchFixedPointReduction(
+    const cudaStream_t stream, const HighsInt primal_size, const HighsInt dual_size,
+    const double* primal, const double* dual, const double* product,
+    FixedPointPartial* partials, double* result, int* error_flag) {
+  const int blocks = static_cast<int>(checkPartialCount(primal_size, dual_size));
+  fixedPointPartialsKernel<<<blocks, kBlockSize, 0, stream>>>(
+      primal_size, dual_size, primal, dual, product, partials);
+  const cudaError_t status = cudaPeekAtLastError();
+  if (status != cudaSuccess) return status;
+  fixedPointResultKernel<<<1, kBlockSize, 0, stream>>>(
+      blocks, partials, result, error_flag);
+  return cudaPeekAtLastError();
 }
 
 cudaError_t launchCheckPartials(const cudaStream_t stream,

@@ -106,6 +106,19 @@ struct CheckNormState {
   double sum_of_squares;
 };
 
+// Compact workspace for the FPE-only path: two stable norms and one dot.
+struct FixedPointPartial {
+  CheckNormState primal;
+  CheckNormState dual;
+  double cross;
+  int invalid;
+};
+
+cudaError_t launchFixedPointReduction(
+    cudaStream_t stream, HighsInt primal_size, HighsInt dual_size,
+    const double* primal, const double* dual, const double* product,
+    FixedPointPartial* partials, double* result, int* error_flag);
+
 struct CheckSumState {
   double value;
   double absolute_sum;

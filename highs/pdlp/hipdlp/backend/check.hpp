@@ -22,6 +22,8 @@ struct CheckInput {
   const VectorHandle* dual_anchor;
   bool fixed_point;
   bool anchor_distances;
+  // Disable the certificate screen on convergence-only boundaries.
+  bool certificates;
   double certificate_tolerance;
   double primal_tolerance;
   double dual_tolerance;
@@ -39,6 +41,7 @@ struct CheckInput {
         dual_anchor(nullptr),
         fixed_point(false),
         anchor_distances(false),
+        certificates(true),
         certificate_tolerance(1e-4),
         primal_tolerance(0.0),
         dual_tolerance(0.0),

@@ -927,13 +927,13 @@ TEST_CASE("hi-pdlp-solve-prefers-a-verified-certificate-over-a-limit",
   CHECK(tied.status == hipdlp::api::SolverStatus::kInfeasible);
   CHECK(tied.iteration_count == reference.iteration_count);
 
-  // One boundary earlier there is no certificate yet, so the limit wins.
+  // A limit between scheduled certificate checks must still verify the candidate.
   options.iteration_limit = reference.iteration_count - 40;
   if (options.iteration_limit > 0) {
     const hipdlp::api::SolveResult early =
         hipdlp::algorithm::solve(options, model);
-    CHECK(early.status == hipdlp::api::SolverStatus::kIterationLimit);
-    CHECK(early.certificate.kind == hipdlp::api::CertificateKind::kNone);
+    CHECK(early.status == hipdlp::api::SolverStatus::kInfeasible);
+    CHECK(early.certificate.kind == hipdlp::api::CertificateKind::kPrimalInfeasibility);
   }
 }
 

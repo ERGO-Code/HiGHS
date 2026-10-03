@@ -254,6 +254,8 @@ api::Error CpuBackend::evaluateCheck(const model::Problem& problem,
   }
 
   CheckResult computed;
+  computed.primal_ray_possible = input.certificates;
+  computed.farkas_possible = input.certificates;
   api::Error error = algorithm::computeRawConvergenceMetrics(
       problem, vectors[0]->values, vectors[1]->values, vectors[2]->values,
       vectors[3]->values, computed.raw);

@@ -2471,6 +2471,33 @@ TEST_CASE(
   checkCertificateUncertainRecovery(hipdlp::backend::Kind::kCpu);
 }
 
+TEST_CASE("hi-pdlp-check-can-disable-certificates",
+          "[hipdlp][backend][check-optimization]") {
+  std::vector<hipdlp::backend::Kind> kinds = {hipdlp::backend::Kind::kCpu};
+#ifdef HIGHS_HIPDLP_CUDA_DETECTED
+  kinds.push_back(hipdlp::backend::Kind::kCuda);
+#endif
+  for (const auto kind : kinds) {
+    const HighsLp lp = makeEqualityLp(1, 1, {0, 1}, {0}, {1.0});
+    ResidentCheckFixture fixture(kind, lp);
+    fixture.prepare(lp);
+    hipdlp::backend::CheckResult enabled, disabled;
+    REQUIRE(fixture.backend->evaluateCheck(fixture.problem, fixture.workspace,
+                                          fixture.input, enabled).ok());
+    fixture.input.certificates = false;
+    REQUIRE(fixture.backend->evaluateCheck(fixture.problem, fixture.workspace,
+                                          fixture.input, disabled).ok());
+    CHECK_FALSE(disabled.certificate_screen_valid);
+    CHECK_FALSE(disabled.primal_ray_possible);
+    CHECK_FALSE(disabled.farkas_possible);
+    CHECK(disabled.valid == enabled.valid);
+    CHECK(disabled.requires_host_oracle == enabled.requires_host_oracle);
+    CHECK(disabled.raw.primal_residual == enabled.raw.primal_residual);
+    CHECK(disabled.raw.dual_residual == enabled.raw.dual_residual);
+    CHECK(disabled.raw.objective_gap == enabled.raw.objective_gap);
+  }
+}
+
 TEST_CASE("hi-pdlp-check-packet-defaults-are-invalid",
           "[pdlp][hipdlp][phase8][backend][check-packet][cpu]") {
   hipdlp::backend::CheckInput input;
@@ -4682,6 +4709,29 @@ TEST_CASE("hi-pdlp-cuda-fixed-point-reductions-use-one-wait",
   CHECK(dual_norm == 19.0);
   CHECK(cross == 23.0);
   CHECK_FALSE(backend->synchronize().ok());
+}
+
+TEST_CASE("hi-pdlp-cuda-fused-fpe-handles-empty-and-extreme-vectors",
+          "[hipdlp][backend][cuda][check-optimization]") {
+  auto backend = makeCudaBackend();
+  for (const HighsInt size : {0, 1, 257, 65537}) {
+    for (const double scale : {1e-200, 1.0, 1e200}) {
+      const HighsInt dual_size = size == 0 ? 0 : size + 2;
+      std::vector<double> p(size, scale), d(dual_size, scale), a(size, 1.0 / scale);
+      hipdlp::backend::VectorHandle primal, dual, product;
+      REQUIRE(backend->createVector(size, primal).ok());
+      REQUIRE(backend->createVector(dual_size, dual).ok());
+      REQUIRE(backend->createVector(size, product).ok());
+      REQUIRE(backend->uploadVector(p, primal).ok());
+      REQUIRE(backend->uploadVector(d, dual).ok());
+      REQUIRE(backend->uploadVector(a, product).ok());
+      double pn = -1.0, dn = -1.0, cross = -1.0;
+      REQUIRE(backend->reduceFixedPointMetrics(primal, dual, product, pn, dn, cross).ok());
+      CHECK(pn / scale == Approx(std::sqrt(static_cast<double>(size))));
+      CHECK(dn / scale == Approx(std::sqrt(static_cast<double>(dual_size))));
+      CHECK(cross == Approx(static_cast<double>(size)));
+    }
+  }
 }
 
 TEST_CASE("hi-pdlp-cuda-difference-norm-is-parallel-and-preallocated",
