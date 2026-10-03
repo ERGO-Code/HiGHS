@@ -522,8 +522,8 @@ void assessExcessiveObjectiveBoundScaling(const HighsOptions& options,
   if (lp.num_col_) {
     highsLogUser(log_options, HighsLogType::kInfo, "  Cost    [%5.0e, %5.0e]\n",
                  min_col_cost, max_col_cost);
-    if (min_effective_col_cost < min_col_cost ||
-        max_effective_col_cost > max_col_cost)
+    if (min_effective_col_cost != min_col_cost ||
+        max_effective_col_cost != max_col_cost)
       highsLogUser(log_options, HighsLogType::kInfo,
                    "  Cost    [%5.0e, %5.0e] (effective)\n",
                    min_effective_col_cost, max_effective_col_cost);
@@ -560,19 +560,26 @@ void assessExcessiveObjectiveBoundScaling(const HighsOptions& options,
   const std::string problem =
       user_cost_or_bound_scale ? "User-scaled problem" : "Problem";
 
-  if (0 < min_col_cost && min_col_cost < small_objective_coefficient)
+  // If the effective costs aren't small or large, don't report costs
+  // that are small or large
+  if (0 < min_col_cost && min_col_cost < small_objective_coefficient &&
+      0 < min_effective_col_cost &&
+      min_effective_col_cost < small_objective_coefficient)
     highsLogUser(log_options, HighsLogType::kWarning,
                  "%s has some excessively small costs\n", problem.c_str());
-  if (max_col_cost > large_objective_coefficient)
+  if (max_col_cost > large_objective_coefficient &&
+      max_effective_col_cost > large_objective_coefficient)
     highsLogUser(log_options, HighsLogType::kWarning,
                  "%s has some excessively large costs\n", problem.c_str());
 
-  if (0 < min_effective_col_cost && min_effective_col_cost < min_col_cost &&
+  // If extreme effective costs aren't different from extreme costs,
+  // don't report extreme costs
+  if (0 < min_effective_col_cost && min_effective_col_cost != min_col_cost &&
       min_effective_col_cost < small_objective_coefficient)
     highsLogUser(log_options, HighsLogType::kWarning,
                  "%s has some excessively small effective costs\n",
                  problem.c_str());
-  if (max_effective_col_cost > max_col_cost &&
+  if (max_effective_col_cost != max_col_cost &&
       max_effective_col_cost > large_objective_coefficient)
     highsLogUser(log_options, HighsLogType::kWarning,
                  "%s has some excessively large effective costs\n",
@@ -665,15 +672,11 @@ void assessExcessiveObjectiveBoundScaling(const HighsOptions& options,
   // suggested
   double suggested_user_bound_scale_value =
       pow(2.0, user_scale_data.suggested_user_bound_scale);
-  min_noncontinuous_col_cost *= suggested_user_bound_scale_value;
-  max_noncontinuous_col_cost *= suggested_user_bound_scale_value;
   min_effective_noncontinuous_col_cost *= suggested_user_bound_scale_value;
   max_effective_noncontinuous_col_cost *= suggested_user_bound_scale_value;
   min_hessian_value /= suggested_user_bound_scale_value;
   max_hessian_value /= suggested_user_bound_scale_value;
 
-  min_col_cost = std::min(min_continuous_col_cost, min_noncontinuous_col_cost);
-  max_col_cost = std::max(max_continuous_col_cost, max_noncontinuous_col_cost);
   min_effective_col_cost = std::min(min_effective_continuous_col_cost,
                                     min_effective_noncontinuous_col_cost);
   max_effective_col_cost = std::max(max_effective_continuous_col_cost,
@@ -759,7 +762,8 @@ void assessExcessiveObjectiveBoundScaling(const HighsOptions& options,
     use_primal_feasibility_tolerance = options.mip_feasibility_tolerance;
     use_dual_feasibility_tolerance = options.mip_feasibility_tolerance * 0.1;
   }
-  const double max_objective = std::max(max_col_cost, max_hessian_value);
+  const double max_objective =
+      std::max(max_effective_col_cost, max_hessian_value);
   const double max_bound =
       std::max(max_continuous_col_bound,
                std::max(max_noncontinuous_col_bound, max_row_bound));

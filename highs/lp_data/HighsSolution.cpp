@@ -684,6 +684,11 @@ void getVariableKktFailures(const double primal_feasibility_tolerance,
 
 std::vector<double> getEffectiveCosts(const HighsLp& lp,
                                       const HighsOptions& options) {
+  // Look for free column singletons that allow equations to be added
+  // into the objective and, hence, compute the effective costs of an
+  // LP: handles the case where the objective is min z, with a
+  // constraint z - c^Tx so the "true" costs are c.
+  //
   // Constants to distinguish row status: kFree (row may contain a
   // free column singleton); >0 (position in "ID" vectors to indicate
   // that its singleton column is to be added into costs); kUsed (row
@@ -711,8 +716,9 @@ std::vector<double> getEffectiveCosts(const HighsLp& lp,
           col_count[iCol] == 1 && lp.col_lower_[iCol] == -kHighsInf &&
           lp.col_upper_[iCol] == kHighsInf && effective_costs[iCol];
       if (!free_column_singleton) continue;
-      // Potential free column singleton - so long as the row has not
-      // already been selected for substituted into the objective
+      // Potential free column singleton - so long as the row is an
+      // equation and has not already been selected for substitution
+      // into the objective
       //
       // Find the row in the column (which may originally have had
       // more than one entry)
@@ -728,6 +734,8 @@ std::vector<double> getEffectiveCosts(const HighsLp& lp,
       }
       if (iRow < 0) continue;
       assert(iRow == lp.a_matrix_.index_[iEl]);
+      // Row must be an equation
+      if (lp.row_lower_[iRow] != lp.row_upper_[iRow]) continue;
       // Found a free column singleton, so can zero its column cost,
       // as its effective cost is zero after substitution, so the
       // elimination need not be done

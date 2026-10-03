@@ -2330,6 +2330,7 @@ HighsStatus Highs::getObjectiveBoundScaling(HighsInt& suggested_objective_scale,
   this->logHeader();
   HighsUserScaleData data;
   initialiseUserScaleData(this->options_, data);
+  this->model_.lp_.a_matrix_.ensureColwise();
   assessExcessiveObjectiveBoundScaling(this->options_, this->model_, data);
   suggested_objective_scale = data.suggested_user_objective_scale;
   suggested_bound_scale = data.suggested_user_bound_scale;
