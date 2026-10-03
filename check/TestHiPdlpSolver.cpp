@@ -1262,6 +1262,64 @@ TEST_CASE("hi-pdlp-rejected-kkt-verifications-back-off",
   }
 }
 
+TEST_CASE("hi-pdlp-cuda-overlapped-verification-matches-boundary-verification",
+          "[pdlp][hipdlp][solver][cuda][kkt-gate]") {
+  // Without an observer the host verifies a deferred candidate while the next
+  // block runs; an observer keeps the verification at its boundary. Both must
+  // return the same result and the same work counts.
+  REQUIRE(cudaBackendUsable());
+  struct QuietObserver : hipdlp::algorithm::SolveObserver {
+    void onEvent(const hipdlp::algorithm::SolveObservation&) noexcept override {}
+  } quiet;
+  for (const HighsInt dimension : {1, 257}) {
+    CAPTURE(dimension);
+    const HighsLp lp = makeResidentDiagonalLp(dimension, false);
+    hipdlp::api::SolverOptions options = makeCpuFixedOptions();
+    options.backend = hipdlp::backend::Kind::kCuda;
+    options.policy.step_size = hipdlp::api::StepSizePolicy::kPid;
+    options.iteration_limit = 400;
+    options.optimality_tolerance = 1e-12;
+    options.kkt_tolerance = 1e-12;
+    hipdlp::algorithm::SolveDiagnostics overlapped_diagnostics;
+    hipdlp::algorithm::SolveContext context;
+    context.diagnostics = &overlapped_diagnostics;
+    const hipdlp::api::SolveResult overlapped = hipdlp::algorithm::solve(
+        options, hipdlp::model::OriginalModel(lp), context);
+    hipdlp::algorithm::SolveDiagnostics boundary_diagnostics;
+    context.diagnostics = &boundary_diagnostics;
+    context.observer = &quiet;
+    const hipdlp::api::SolveResult boundary = hipdlp::algorithm::solve(
+        options, hipdlp::model::OriginalModel(lp), context);
+    INFO(overlapped.error.message);
+    REQUIRE(overlapped.ok());
+    REQUIRE(boundary.ok());
+    REQUIRE(boundary.status == hipdlp::api::SolverStatus::kOptimal);
+    CHECK(overlapped.status == boundary.status);
+    CHECK(overlapped.iteration_count == boundary.iteration_count);
+    CHECK(overlapped.solution.col_value == boundary.solution.col_value);
+    CHECK(overlapped.solution.row_dual == boundary.solution.row_dual);
+    CHECK(overlapped_diagnostics.restarts == boundary_diagnostics.restarts);
+    CHECK(overlapped_diagnostics.primal_weight_updates ==
+          boundary_diagnostics.primal_weight_updates);
+    CHECK(overlapped_diagnostics.fixed_point_evaluations ==
+          boundary_diagnostics.fixed_point_evaluations);
+    CHECK(overlapped_diagnostics.restart_reference_checks ==
+          boundary_diagnostics.restart_reference_checks);
+    CHECK(overlapped_diagnostics.check_boundaries ==
+          boundary_diagnostics.check_boundaries);
+    CHECK(overlapped_diagnostics.resident_check_calls ==
+          boundary_diagnostics.resident_check_calls);
+    CHECK(overlapped_diagnostics.candidate_downloads ==
+          boundary_diagnostics.candidate_downloads);
+    CHECK(overlapped_diagnostics.command_buffer_replays ==
+          boundary_diagnostics.command_buffer_replays);
+    CHECK(overlapped_diagnostics.original_kkt_verifications ==
+          boundary_diagnostics.original_kkt_verifications);
+    CHECK(overlapped_diagnostics.original_kkt_rejections ==
+          boundary_diagnostics.original_kkt_rejections);
+  }
+}
+
 TEST_CASE("hi-pdlp-resident-check-limit-does-not-finalize-unused-fpe",
           "[pdlp][hipdlp][phase8][solver][cpu][iteration-limit]") {
   const HighsLp lp = makeResidentDiagonalLp(2, true);

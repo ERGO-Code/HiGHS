@@ -160,6 +160,23 @@ double* phaseSeconds(SolveDiagnostics* diagnostics, const SolvePhase phase) {
   return nullptr;
 }
 
+// Copies the wall-clock accumulations, which keep counting discarded work.
+void keepTimings(const SolveDiagnostics& from, SolveDiagnostics& into) {
+  into.total_wall_seconds = from.total_wall_seconds;
+  into.preprocessing_seconds = from.preprocessing_seconds;
+  into.backend_setup_seconds = from.backend_setup_seconds;
+  into.operator_norm_seconds = from.operator_norm_seconds;
+  into.iterations_seconds = from.iterations_seconds;
+  into.iteration_block_seconds = from.iteration_block_seconds;
+  into.step_seconds = from.step_seconds;
+  into.boundary_seconds = from.boundary_seconds;
+  into.download_seconds = from.download_seconds;
+  into.host_preparation_seconds = from.host_preparation_seconds;
+  into.host_verification_seconds = from.host_verification_seconds;
+  into.reference_fixed_point_seconds = from.reference_fixed_point_seconds;
+  into.fixed_point_fallback_seconds = from.fixed_point_fallback_seconds;
+}
+
 class SolvePhaseGuard {
  public:
   SolvePhaseGuard(const SolveContext& context, const SolvePhase phase,
@@ -1276,6 +1293,88 @@ static api::SolveResult solveImpl(const api::SolverOptions& requested_options,
       if (recorded_block.ready() && context.diagnostics != nullptr)
         context.diagnostics->resource_creation_calls_before_iterations += 2;
     }
+
+    // Judges the postsolved candidate of an iteration against the original
+    // model; a rejection schedules the next verification.
+    const auto judge_candidate = [&](const HighsInt candidate_iteration,
+                                     bool& accepted) -> api::Error {
+      accepted = false;
+      SolvePhaseGuard host_verification(context, SolvePhase::kHostVerification,
+                                        candidate_iteration);
+      if (context.diagnostics != nullptr)
+        ++context.diagnostics->original_kkt_verifications;
+      const verification::KktVerificationResult verification =
+          verification::verifyKkt(original_model.lp(), solution,
+                                  options.kkt_tolerance);
+      if (!verification.input_valid || !verification.metrics_finite)
+        return invalidKktResult(verification);
+      accepted = verification.pass;
+      if (accepted) return api::Error();
+      if (context.diagnostics != nullptr)
+        ++context.diagnostics->original_kkt_rejections;
+      // The transformed metrics can pass long before the original ones;
+      // wait 1, 2, 4, ... boundaries before paying for another check.
+      if (back_off_verifications) {
+        const HighsInt gap =
+            rejected_verifications >= 4
+                ? kMaximumVerificationGap
+                : std::min(kMaximumVerificationGap,
+                           HighsInt(1) << rejected_verifications);
+        ++rejected_verifications;
+        next_verification_iteration =
+            candidate_iteration + gap * kRestartCadence;
+      }
+      return api::Error();
+    };
+
+    // On a device, a candidate due for original-KKT verification is
+    // downloaded at its boundary but verified on the host only after the next
+    // recorded block has been enqueued, so the device is not idle meanwhile.
+    // An accepted candidate is returned with its own iteration count and
+    // diagnostic counts, and the extra block is discarded, so results do not
+    // change. Observed solves verify at the boundary so that phase audits see
+    // the accepted boundary as the terminal one.
+    const bool overlap_verifications = back_off_verifications &&
+                                       recorded_block.ready() &&
+                                       pilot_hook == nullptr &&
+                                       context.pilot_observer == nullptr &&
+                                       context.observer == nullptr;
+    bool verification_pending = false;
+    HighsInt pending_iteration = 0;
+    SolveDiagnostics pending_diagnostics;
+    const auto verify_pending = [&](bool& accepted) -> api::Error {
+      accepted = false;
+      verification_pending = false;
+      const api::Error postsolve_error = postsolveIterate(
+          built.problem, host, solution, context, pending_iteration);
+      if (!postsolve_error.ok()) return postsolve_error;
+      return judge_candidate(pending_iteration, accepted);
+    };
+    const auto accept_pending = [&]() -> api::SolveResult {
+      // Let the discarded block finish before the backend is torn down; it
+      // cannot change the accepted result.
+      (void)selected_backend->synchronize();
+      if (context.diagnostics != nullptr) {
+        SolveDiagnostics accepted_counts = pending_diagnostics;
+        ++accepted_counts.original_kkt_verifications;
+        keepTimings(*context.diagnostics, accepted_counts);
+        *context.diagnostics = accepted_counts;
+      }
+      logCompletion(context, original_model.lp(), api::SolverStatus::kOptimal,
+                    solution, pending_iteration, elapsedSeconds(start),
+                    options.kkt_tolerance);
+      return api::SolveResult::success(api::SolverStatus::kOptimal, solution,
+                                       pending_iteration);
+    };
+    // A failure after a deferral must not hide a candidate that its own
+    // boundary would have accepted before the failing step ran.
+    const auto fail = [&](const api::Error& failed) -> api::SolveResult {
+      if (verification_pending) {
+        bool accepted = false;
+        if (verify_pending(accepted).ok() && accepted) return accept_pending();
+      }
+      return failure(failed);
+    };
     backend_setup.finish();
     SolvePhaseGuard iterations(context, SolvePhase::kIterations,
                                total_iterations);
@@ -1289,7 +1388,7 @@ static api::SolveResult solveImpl(const api::SolverOptions& requested_options,
         iterations.finish(true);
         error = prepareCandidate(*selected_backend, problem_handle, state,
                                  vectors, host, context, total_iterations);
-        if (!error.ok()) return failure(error);
+        if (!error.ok()) return fail(error);
         const api::SolveResult selected =
             pilot_hook->checkpoint(built.problem, host);
         if (!selected.error.ok() ||
@@ -1303,6 +1402,14 @@ static api::SolveResult solveImpl(const api::SolverOptions& requested_options,
       if (timeLimitReached(options, start)) {
         SolvePhaseGuard boundary(context, SolvePhase::kBoundary,
                                  total_iterations);
+        // A deferred verification outranks the limit, as it would have at
+        // its own boundary.
+        if (verification_pending) {
+          bool accepted = false;
+          error = verify_pending(accepted);
+          if (!error.ok()) return fail(error);
+          if (accepted) return accept_pending();
+        }
         if (total_iterations == 0) {
           error = downloadIterate(*selected_backend, *state.current_primal,
                                   *state.current_dual, vectors.current_ax,
@@ -1312,10 +1419,10 @@ static api::SolveResult solveImpl(const api::SolverOptions& requested_options,
           error = prepareCandidate(*selected_backend, problem_handle, state,
                                    vectors, host, context, total_iterations);
         }
-        if (!error.ok()) return failure(error);
+        if (!error.ok()) return fail(error);
         error = postsolveIterate(built.problem, host, solution, context,
               total_iterations);
-        if (!error.ok()) return failure(error);
+        if (!error.ok()) return fail(error);
         const CertificateOutcome outcome = detectCertificate(
           context, built.problem, original_model.lp(), host,
           options.kkt_tolerance,
@@ -1350,9 +1457,9 @@ static api::SolveResult solveImpl(const api::SolverOptions& requested_options,
         error = replay_block
             ? recorded_block.replay(*selected_backend, state)
             : enqueueHalpernPdhgStep(*selected_backend, state);
-        if (!error.ok()) return failure(error);
+        if (!error.ok()) return fail(error);
         if (total_iterations > std::numeric_limits<HighsInt>::max() - completed_steps) {
-          return failure(api::Error(api::ErrorCode::kInvalidArgument,
+          return fail(api::Error(api::ErrorCode::kInvalidArgument,
                                     "HiPDLP rewrite iteration count overflowed"));
         }
         total_iterations += completed_steps;
@@ -1366,6 +1473,15 @@ static api::SolveResult solveImpl(const api::SolverOptions& requested_options,
       const bool iteration_limit = iteration_budget != kHighsIInf &&
                                    total_iterations >= iteration_budget;
       const bool time_limit = timeLimitReached(options, start);
+      // The block just enqueued runs on the device while the host verifies
+      // the candidate deferred at the previous boundary.
+      if (verification_pending &&
+          (cadence_boundary || iteration_limit || time_limit)) {
+        bool accepted = false;
+        error = verify_pending(accepted);
+        if (!error.ok()) return fail(error);
+        if (accepted) return accept_pending();
+      }
       boundary_metrics_valid = false;
       backend::CheckResult check;
       bool fixed_point_from_packet = false;
@@ -1412,7 +1528,7 @@ static api::SolveResult solveImpl(const api::SolverOptions& requested_options,
         }
         error = prepareCandidateProducts(*selected_backend, problem_handle,
                                          state, vectors);
-        if (!error.ok()) return failure(error);
+        if (!error.ok()) return fail(error);
 
         backend::CheckInput check_input;
         check_input.primal = state.primal_candidate;
@@ -1454,9 +1570,9 @@ static api::SolveResult solveImpl(const api::SolverOptions& requested_options,
               *selected_backend, built.problem, workspace, check_input,
               cadence_boundary, context.diagnostics, check);
         }
-        if (!error.ok()) return failure(error);
+        if (!error.ok()) return fail(error);
         if (!check.valid && !check.requires_host_oracle) {
-          return failure(api::Error(
+          return fail(api::Error(
               api::ErrorCode::kInternal,
               "HiPDLP rewrite check returned no valid metrics or host oracle"));
         }
@@ -1478,14 +1594,14 @@ static api::SolveResult solveImpl(const api::SolverOptions& requested_options,
         RawConvergenceMetrics raw = check.raw;
         if (check.requires_host_oracle) {
           error = download_candidate();
-          if (!error.ok()) return failure(error);
+          if (!error.ok()) return fail(error);
           if (context.diagnostics != nullptr)
             ++context.diagnostics->host_oracle_checks;
           SolvePhaseGuard verification(context, SolvePhase::kHostVerification,
                                        total_iterations);
           error = computeRawConvergenceMetrics(
               built.problem, host.primal, host.dual, host.ax, host.aty, raw);
-          if (!error.ok()) return failure(error);
+          if (!error.ok()) return fail(error);
         }
         StoppingInput stopping_input;
         stopping_input.raw = raw;
@@ -1495,7 +1611,7 @@ static api::SolveResult solveImpl(const api::SolverOptions& requested_options,
         stopping_input.limits.iteration = iteration_budget;
         stopping_input.limits.time = options.time_limit;
         const StoppingResult stopping = evaluateStopping(stopping_input);
-        if (!stopping.ok()) return failure(stopping.error);
+        if (!stopping.ok()) return fail(stopping.error);
         boundary_metrics = stopping.metrics;
         boundary_metrics_valid = true;
         const HighsInt interval =
@@ -1526,38 +1642,33 @@ static api::SolveResult solveImpl(const api::SolverOptions& requested_options,
              (options.early_kkt_check &&
               shouldVerifyOriginalKkt(stopping, total_iterations, tolerances,
                                       options.kkt_tolerance)))) {
-          error = postsolve_candidate();
-          if (!error.ok()) return failure(error);
-          SolvePhaseGuard host_verification(
-              context, SolvePhase::kHostVerification, total_iterations);
-          if (context.diagnostics != nullptr)
-            ++context.diagnostics->original_kkt_verifications;
-          const verification::KktVerificationResult verification =
-              verification::verifyKkt(original_model.lp(), solution,
-                                      options.kkt_tolerance);
-          if (!verification.input_valid || !verification.metrics_finite)
-            return failure(invalidKktResult(verification));
-          if (verification.pass) {
-            logCompletion(context, original_model.lp(),
-                          api::SolverStatus::kOptimal, solution,
-                          total_iterations, elapsedSeconds(start),
-                          options.kkt_tolerance);
-            return api::SolveResult::success(api::SolverStatus::kOptimal,
-                                             solution, total_iterations);
-          }
-          if (context.diagnostics != nullptr)
-            ++context.diagnostics->original_kkt_rejections;
-          // The transformed metrics can pass long before the original ones;
-          // wait 1, 2, 4, ... boundaries before paying for another check.
-          if (back_off_verifications) {
-            const HighsInt gap =
-                rejected_verifications >= 4
-                    ? kMaximumVerificationGap
-                    : std::min(kMaximumVerificationGap,
-                               HighsInt(1) << rejected_verifications);
-            ++rejected_verifications;
-            next_verification_iteration =
-                total_iterations + gap * kRestartCadence;
+          // Defer only when nothing else at this boundary can end the solve.
+          const bool defer_verification =
+              overlap_verifications && !iteration_limit && !time_limit &&
+              !certificate_possible &&
+              stopping.decision != StoppingDecision::kIterationLimit &&
+              stopping.decision != StoppingDecision::kTimeLimit;
+          if (defer_verification) {
+            error = download_candidate();
+            if (!error.ok()) return fail(error);
+            verification_pending = true;
+            pending_iteration = total_iterations;
+            if (context.diagnostics != nullptr)
+              pending_diagnostics = *context.diagnostics;
+          } else {
+            error = postsolve_candidate();
+            if (!error.ok()) return fail(error);
+            bool accepted = false;
+            error = judge_candidate(total_iterations, accepted);
+            if (!error.ok()) return fail(error);
+            if (accepted) {
+              logCompletion(context, original_model.lp(),
+                            api::SolverStatus::kOptimal, solution,
+                            total_iterations, elapsedSeconds(start),
+                            options.kkt_tolerance);
+              return api::SolveResult::success(api::SolverStatus::kOptimal,
+                                               solution, total_iterations);
+            }
           }
         }
 
@@ -1565,7 +1676,7 @@ static api::SolveResult solveImpl(const api::SolverOptions& requested_options,
         if (context.pilot_observer != nullptr && cadence_boundary &&
             total_iterations <= kScalingPilotIterations) {
           error = postsolve_candidate();
-          if (!error.ok()) return failure(error);
+          if (!error.ok()) return fail(error);
           pilot_stop = context.pilot_observer->checkpoint(
               total_iterations, solution, elapsedSeconds(start),
               fixed_point_from_packet
@@ -1580,7 +1691,7 @@ static api::SolveResult solveImpl(const api::SolverOptions& requested_options,
         if (iteration_limit ||
             stopping.decision == StoppingDecision::kIterationLimit) {
           error = postsolve_candidate();
-          if (!error.ok()) return failure(error);
+          if (!error.ok()) return fail(error);
           CertificateOutcome outcome;
           if (certificate_possible)
             outcome = detectCertificate(
@@ -1602,8 +1713,14 @@ static api::SolveResult solveImpl(const api::SolverOptions& requested_options,
         }
         if (time_limit || stopping.decision == StoppingDecision::kTimeLimit ||
             timeLimitReached(options, start)) {
+          if (verification_pending) {
+            bool accepted = false;
+            error = verify_pending(accepted);
+            if (!error.ok()) return fail(error);
+            if (accepted) return accept_pending();
+          }
           error = postsolve_candidate();
-          if (!error.ok()) return failure(error);
+          if (!error.ok()) return fail(error);
           CertificateOutcome outcome;
           if (!certificate_due || certificate_possible)
             outcome = detectCertificate(
@@ -1628,13 +1745,13 @@ static api::SolveResult solveImpl(const api::SolverOptions& requested_options,
         // verified optimal iterate or a numerical error.
         if (certificate_possible) {
           error = download_candidate();
-          if (!error.ok()) return failure(error);
+          if (!error.ok()) return fail(error);
           const CertificateOutcome outcome = detectCertificate(
               context, built.problem, original_model.lp(), host,
               options.kkt_tolerance, certificate_buffers, total_iterations);
           if (outcome.available) {
             error = postsolve_candidate();
-            if (!error.ok()) return failure(error);
+            if (!error.ok()) return fail(error);
             logCertificateCompletion(context, outcome.status,
                                      outcome.certificate, total_iterations,
                                      elapsedSeconds(start));
@@ -1658,7 +1775,7 @@ static api::SolveResult solveImpl(const api::SolverOptions& requested_options,
                                              current_steps, context,
                                              total_iterations,
                                              SolvePhase::kReferenceFixedPoint);
-        if (!reference.ok()) return failure(reference.error);
+        if (!reference.ok()) return fail(reference.error);
         restart_state = resetFixedPointRestart(reference.fixed_point_error);
         restart_reference_pending = false;
       }
@@ -1678,7 +1795,7 @@ static api::SolveResult solveImpl(const api::SolverOptions& requested_options,
                     current_steps, context, total_iterations,
                     SolvePhase::kFixedPointFallback, check.fixed_point_prepared);
         }
-        if (!fixed_point.ok()) return failure(fixed_point.error);
+        if (!fixed_point.ok()) return fail(fixed_point.error);
         FixedPointRestartInput restart_input;
         restart_input.previous = restart_state;
         restart_input.current_error = fixed_point.fixed_point_error;
@@ -1687,14 +1804,14 @@ static api::SolveResult solveImpl(const api::SolverOptions& requested_options,
         restart_input.parameters = restart_parameters;
         const FixedPointRestartResult restart =
             evaluateFixedPointRestart(restart_input);
-        if (!restart.ok()) return failure(restart.error);
+        if (!restart.ok()) return fail(restart.error);
         PrimalWeightUpdateKind pid_outcome = PrimalWeightUpdateKind::kNone;
         if (restart.decision == RestartDecision::kRestart) {
           PrimalWeightUpdateResult primal_weight_update;
           bool install_steps = false;
           if (use_pid) {
             if (!boundary_metrics_valid) {
-              return failure(api::Error(
+              return fail(api::Error(
                   api::ErrorCode::kInternal,
                   "HiPDLP rewrite restart boundary has no convergence "
                   "observation"));
@@ -1708,10 +1825,10 @@ static api::SolveResult solveImpl(const api::SolverOptions& requested_options,
               error = selected_backend->differenceNorm2(
                 *state.primal_candidate, *state.primal_anchor,
                 primal_distance);
-              if (!error.ok()) return failure(error);
+              if (!error.ok()) return fail(error);
               error = selected_backend->differenceNorm2(
                 *state.dual_candidate, *state.dual_anchor, dual_distance);
-              if (!error.ok()) return failure(error);
+              if (!error.ok()) return fail(error);
             }
 
             PrimalWeightUpdateInput weight_input;
@@ -1727,14 +1844,14 @@ static api::SolveResult solveImpl(const api::SolverOptions& requested_options,
             weight_input.parameters = primal_weight_parameters;
             primal_weight_update = updatePrimalWeightAtRestart(weight_input);
             if (!primal_weight_update.ok())
-              return failure(primal_weight_update.error);
+              return fail(primal_weight_update.error);
             pid_outcome = primal_weight_update.kind;
             install_steps = true;
           }
 
           error =
               restartHalpernPdhgStateFromCandidate(*selected_backend, state);
-          if (!error.ok()) return failure(error);
+          if (!error.ok()) return fail(error);
           if (install_steps) {
             // Installed steps only affect the iterations after this boundary.
             primal_weight_state = primal_weight_update.next;
