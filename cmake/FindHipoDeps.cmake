@@ -171,6 +171,21 @@ function(highs_configure_blas)
             set(NO_AVX512 ON CACHE BOOL "Build OpenBLAS without AVX512" FORCE)
         endif()
 
+        if(UNIX AND NOT APPLE AND NOT CMAKE_SIZEOF_VOID_P EQUAL 4)
+            # OpenBLAS' CMake build (kernel/CMakeLists.txt's build_core()) sets
+            # -mavx2 for DYNAMIC_ARCH's AVX2 cores (HASWELL, ZEN, EXCAVATOR, ...)
+            # but never adds -mfma, even though those cores' C-level packing/copy
+            # routines are meant to run with AVX2+FMA3 to match their hand-written
+            # assembly GEMM kernels. The Makefile build (what Debian/Ubuntu and
+            # vcpkg ship) does set it. Measured impact on a Haswell-dispatching
+            # host: ~35% slower without it. Shadow CMAKE_C_FLAGS locally (no
+            # CACHE) so this only reaches the OpenBLAS subbuild below and reverts
+            # once this function returns - HiGHS's own targets must stay runnable
+            # on any x86_64 host regardless of FMA support.
+            message(STATUS "Adding -mfma for OpenBLAS's AVX2 DYNAMIC_ARCH kernels (missing from its CMake build).")
+            set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mfma")
+        endif()
+
         set(OPENBLAS_BUILD_TYPE "Release" CACHE STRING "Build type for OpenBLAS" FORCE)
 
         if(NOT DEBUG_MEMORY STREQUAL "Off")
