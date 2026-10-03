@@ -1220,7 +1220,6 @@ TEST_CASE("presolve-light-no-crossover", "[highs_test_presolve]") {
       "/" + model + "." + type + (source == "instances" ? "" : ".gz");
 
   REQUIRE(h.readModel(filename) == HighsStatus::kOk);
-  const HighsLp& lp = h.getLp();
 
   REQUIRE(h.setOptionValue("presolve_light", kHighsOnString) ==
           HighsStatus::kOk);
@@ -1230,6 +1229,8 @@ TEST_CASE("presolve-light-no-crossover", "[highs_test_presolve]") {
           HighsStatus::kOk);
   REQUIRE(h.setOptionValue("solve_relaxation", true) == HighsStatus::kOk);
   h.run();
+
+  h.resetGlobalScheduler(true);
 }
 
 TEST_CASE("test-non-stop-initial-sweep", "[highs_test_presolve]") {

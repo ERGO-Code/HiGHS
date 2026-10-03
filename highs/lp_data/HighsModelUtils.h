@@ -116,6 +116,9 @@ std::string utilBasisValidityToString(const HighsInt basis_validity);
 
 std::string utilPresolveRuleTypeToString(const HighsInt rule_type);
 
+std::string utilPostsolveStatusToString(
+    const HighsPostsolveStatus postsolve_status);
+
 HighsStatus highsStatusFromHighsModelStatus(HighsModelStatus model_status);
 
 std::string statusToString(const HighsBasisStatus status, const double lower,
