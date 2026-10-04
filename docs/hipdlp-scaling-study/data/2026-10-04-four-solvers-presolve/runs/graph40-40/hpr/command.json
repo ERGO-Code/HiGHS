@@ -1,0 +1,39 @@
+{
+  "name": "graph40-40",
+  "solver": "hpr",
+  "native_tolerance": 0.0001,
+  "scaling": "Ruiz10+PC(alpha=1)",
+  "presolve": true,
+  "model": "/tmp/hipdlp-four20/models/graph40-40-canonical.mps",
+  "sha256": "7a26b055a3ac36b7fe5e731b6199f206d1be1f92d66d35498ca09aad3b5aa139",
+  "dimensions": {
+    "rows": 360900,
+    "cols": 102600,
+    "nnz": 1260900
+  },
+  "executable_sha256": "bcac2842285dc1635e1dec6ef4355dd96bcca424754cde29663e655c40dc9134",
+  "command": [
+    "/tmp/neso-gpu-comparison/hpr-build/solve_mps_file",
+    "-i",
+    "/tmp/hipdlp-four20/models/graph40-40-canonical.mps",
+    "--presolver",
+    "pslp",
+    "--tol",
+    "1e-4",
+    "--cr",
+    "false",
+    "--ruiz",
+    "true",
+    "--pock",
+    "true",
+    "--bc",
+    "false",
+    "--time-limit",
+    "300.0",
+    "--print-debug-info",
+    "false"
+  ],
+  "time_limit": 300.0,
+  "external_wall_limit": 780.0,
+  "started": 1791139216.0593014
+}

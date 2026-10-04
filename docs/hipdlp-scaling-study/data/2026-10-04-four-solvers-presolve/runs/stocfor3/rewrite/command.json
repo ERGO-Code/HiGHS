@@ -1,0 +1,25 @@
+{
+  "name": "stocfor3",
+  "solver": "rewrite",
+  "native_tolerance": 0.0001,
+  "scaling": "Ruiz10+PC(alpha=1)",
+  "presolve": true,
+  "model": "/tmp/hipdlp-four20/models/stocfor3-canonical.mps",
+  "sha256": "f2fae061db6315d17444971eaa6da15408566b9d2da5ad62ee0c20ca8c39f31b",
+  "dimensions": {
+    "rows": 16675,
+    "cols": 15695,
+    "nnz": 64875
+  },
+  "executable_sha256": "28975486685f9f701dad4a89beadc7b3b200f5d431375b87c2b0c01dcff1d5cf",
+  "command": [
+    "/tmp/hipdlp-four20/hipdlp-presolve",
+    "/tmp/hipdlp-four20/models/stocfor3-canonical.mps",
+    "rewrite",
+    "/tmp/hipdlp-four20/runs/stocfor3/rewrite/solution",
+    "300.0"
+  ],
+  "time_limit": 300.0,
+  "external_wall_limit": 780.0,
+  "started": 1791139331.5652475
+}

@@ -1,0 +1,25 @@
+{
+  "name": "pds-100",
+  "solver": "legacy",
+  "native_tolerance": 0.0001,
+  "scaling": "Ruiz10+PC(alpha=1)",
+  "presolve": true,
+  "model": "/tmp/hipdlp-four20/models/pds-100-canonical.mps",
+  "sha256": "2bb2e92f1a55049ba204b8437f6d11b528ae910a8de202f45585ee25d0f29d9b",
+  "dimensions": {
+    "rows": 156243,
+    "cols": 505360,
+    "nnz": 1086785
+  },
+  "executable_sha256": "28975486685f9f701dad4a89beadc7b3b200f5d431375b87c2b0c01dcff1d5cf",
+  "command": [
+    "/tmp/hipdlp-four20/hipdlp-presolve",
+    "/tmp/hipdlp-four20/models/pds-100-canonical.mps",
+    "legacy",
+    "/tmp/hipdlp-four20/runs/pds-100/legacy/solution",
+    "300.0"
+  ],
+  "time_limit": 300.0,
+  "external_wall_limit": 780.0,
+  "started": 1791139248.2309923
+}

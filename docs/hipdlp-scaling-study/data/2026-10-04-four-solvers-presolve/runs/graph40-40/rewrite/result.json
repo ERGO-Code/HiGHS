@@ -1,0 +1,76 @@
+{
+  "name": "graph40-40",
+  "solver": "rewrite",
+  "native_tolerance": 0.0001,
+  "scaling": "Ruiz10+PC(alpha=1)",
+  "presolve": true,
+  "model": "/tmp/hipdlp-four20/models/graph40-40-canonical.mps",
+  "sha256": "7a26b055a3ac36b7fe5e731b6199f206d1be1f92d66d35498ca09aad3b5aa139",
+  "dimensions": {
+    "rows": 360900,
+    "cols": 102600,
+    "nnz": 1260900
+  },
+  "executable_sha256": "28975486685f9f701dad4a89beadc7b3b200f5d431375b87c2b0c01dcff1d5cf",
+  "command": [
+    "/tmp/hipdlp-four20/hipdlp-presolve",
+    "/tmp/hipdlp-four20/models/graph40-40-canonical.mps",
+    "rewrite",
+    "/tmp/hipdlp-four20/runs/graph40-40/rewrite/solution",
+    "300.0"
+  ],
+  "time_limit": 300.0,
+  "external_wall_limit": 780.0,
+  "started": 1791139207.7712886,
+  "exit_code": 0,
+  "process_wall_sec": 8.044086118694395,
+  "read_wall_sec": 3.281585298,
+  "solver_wall_sec": 4.13079858,
+  "read_plus_solve_wall_sec": 7.412383878,
+  "native": {
+    "status": "OPTIMAL",
+    "iterations": 280,
+    "time": 4.13079858,
+    "presolve_seconds": 3.120118935,
+    "algorithm_seconds": 0.933350344,
+    "postsolve_seconds": 0.077114749,
+    "presolve_status": "Reduced",
+    "reduced_rows": 342600,
+    "reduced_cols": 97500,
+    "reduced_nnz": 1206300,
+    "rewrite_preprocessing_seconds": 0.474819233,
+    "backend_setup_seconds": 0.30821511599999996,
+    "operator_norm_seconds": 0.004247568,
+    "iterations_seconds": 0.11270167,
+    "host_kkt_checks": 1,
+    "kkt_screens": 5
+  },
+  "verification": {
+    "kkt_contract": "hipdlp-original-kkt/2",
+    "tolerance": 0.0001,
+    "kkt_pass": false,
+    "objective": -300,
+    "primal": 9.057742190765605e-05,
+    "dual": 0.0007971259875342651,
+    "gap": 0.10314412431207402,
+    "complementarity": 0.10314418095948699,
+    "stationarity": 0.0007971259875342651
+  },
+  "exports": {
+    "primal": {
+      "path": "/tmp/hipdlp-four20/runs/graph40-40/rewrite/solution.primal.txt",
+      "sha256": "f1a6ac9415de07c1c5ae4f1f03556a51709ae72583e68ee50c856cf9b77ce4fc",
+      "bytes": 2233706
+    },
+    "dual": {
+      "path": "/tmp/hipdlp-four20/runs/graph40-40/rewrite/solution.dual.txt",
+      "sha256": "d57c52439a5f834d0ea12dcc9239d8e573f776497dd179ffdc206d990e2f380f",
+      "bytes": 995758
+    },
+    "reduced_cost": {
+      "path": "/tmp/hipdlp-four20/runs/graph40-40/rewrite/solution.reduced_cost.txt",
+      "sha256": "38ff80cd36ebde1e2ffeed8ffd92ddd9226be51484b9b7d1e965549d1f37aae1",
+      "bytes": 2100035
+    }
+  }
+}

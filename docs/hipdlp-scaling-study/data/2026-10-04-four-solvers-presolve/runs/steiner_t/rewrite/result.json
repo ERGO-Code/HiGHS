@@ -1,0 +1,76 @@
+{
+  "name": "steiner_t",
+  "solver": "rewrite",
+  "native_tolerance": 0.0001,
+  "scaling": "Ruiz10+PC(alpha=1)",
+  "presolve": true,
+  "model": "/tmp/hipdlp-four20/models/steiner_t-canonical.mps",
+  "sha256": "311de0ea761e1b62a392403c0010f280fc0842524fcd281e56f6be4645ebb14f",
+  "dimensions": {
+    "rows": 7695,
+    "cols": 71450,
+    "nnz": 2428993
+  },
+  "executable_sha256": "28975486685f9f701dad4a89beadc7b3b200f5d431375b87c2b0c01dcff1d5cf",
+  "command": [
+    "/tmp/hipdlp-four20/hipdlp-presolve",
+    "/tmp/hipdlp-four20/models/steiner_t-canonical.mps",
+    "rewrite",
+    "/tmp/hipdlp-four20/runs/steiner_t/rewrite/solution",
+    "300.0"
+  ],
+  "time_limit": 300.0,
+  "external_wall_limit": 780.0,
+  "started": 1791139099.7558165,
+  "exit_code": 0,
+  "process_wall_sec": 10.502444541081786,
+  "read_wall_sec": 3.056260002,
+  "solver_wall_sec": 7.086606212,
+  "read_plus_solve_wall_sec": 10.142866214000001,
+  "native": {
+    "status": "OPTIMAL",
+    "iterations": 16640,
+    "time": 7.086606212,
+    "presolve_seconds": 3.75098887,
+    "algorithm_seconds": 3.273243881,
+    "postsolve_seconds": 0.062226779,
+    "presolve_status": "Reduced",
+    "reduced_rows": 7240,
+    "reduced_cols": 68743,
+    "reduced_nnz": 2354847,
+    "rewrite_preprocessing_seconds": 0.705591286,
+    "backend_setup_seconds": 0.308154566,
+    "operator_norm_seconds": 0.007714257,
+    "iterations_seconds": 2.237023905,
+    "host_kkt_checks": 1,
+    "kkt_screens": 43
+  },
+  "verification": {
+    "kkt_contract": "hipdlp-original-kkt/2",
+    "tolerance": 0.0001,
+    "kkt_pass": true,
+    "objective": -134.51372475786704,
+    "primal": 8.816575762782275e-05,
+    "dual": 1.622269433691296e-06,
+    "gap": 7.271904337132454e-06,
+    "complementarity": 1.8247040046617345e-05,
+    "stationarity": 1.4210854715202004e-14
+  },
+  "exports": {
+    "primal": {
+      "path": "/tmp/hipdlp-four20/runs/steiner_t/rewrite/solution.primal.txt",
+      "sha256": "2b95cb708331bf0e3ca9c4ba6376d562a8885842db57b191b3cdc9ad4c91fa8f",
+      "bytes": 278009
+    },
+    "dual": {
+      "path": "/tmp/hipdlp-four20/runs/steiner_t/rewrite/solution.dual.txt",
+      "sha256": "a8076896c02d9290d366f5138e3e670acb06233c89a784a7ea57aac58fcc3c2e",
+      "bytes": 98852
+    },
+    "reduced_cost": {
+      "path": "/tmp/hipdlp-four20/runs/steiner_t/rewrite/solution.reduced_cost.txt",
+      "sha256": "9374a0391fcbb4f66ae1ee465c100ce285da6811f0cb1b4466fd09519c2c4a31",
+      "bytes": 1447477
+    }
+  }
+}

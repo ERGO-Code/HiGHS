@@ -1,0 +1,76 @@
+{
+  "name": "a2864",
+  "solver": "rewrite",
+  "native_tolerance": 0.0001,
+  "scaling": "Ruiz10+PC(alpha=1)",
+  "presolve": true,
+  "model": "/tmp/hipdlp-four20/models/a2864-canonical.mps",
+  "sha256": "6b28378912d83af49cf3429bc6a13cdfd5d2085e5cdbbb0dd94f00bca25f70e1",
+  "dimensions": {
+    "rows": 22117,
+    "cols": 200787,
+    "nnz": 20078717
+  },
+  "executable_sha256": "28975486685f9f701dad4a89beadc7b3b200f5d431375b87c2b0c01dcff1d5cf",
+  "command": [
+    "/tmp/hipdlp-four20/hipdlp-presolve",
+    "/tmp/hipdlp-four20/models/a2864-canonical.mps",
+    "rewrite",
+    "/tmp/hipdlp-four20/runs/a2864/rewrite/solution",
+    "300.0"
+  ],
+  "time_limit": 300.0,
+  "external_wall_limit": 780.0,
+  "started": 1791138517.0254037,
+  "exit_code": 0,
+  "process_wall_sec": 65.50298771495,
+  "read_wall_sec": 24.580562534,
+  "solver_wall_sec": 40.362452729,
+  "read_plus_solve_wall_sec": 64.94301526299999,
+  "native": {
+    "status": "OPTIMAL",
+    "iterations": 1760,
+    "time": 40.362452729,
+    "presolve_seconds": 38.642794701,
+    "algorithm_seconds": 1.003825201,
+    "postsolve_seconds": 0.715590595,
+    "presolve_status": "Reduced",
+    "reduced_rows": 20669,
+    "reduced_cols": 13824,
+    "reduced_nnz": 1378816,
+    "rewrite_preprocessing_seconds": 0.495801692,
+    "backend_setup_seconds": 0.28500254199999997,
+    "operator_norm_seconds": 0.003848024,
+    "iterations_seconds": 0.211215641,
+    "host_kkt_checks": 1,
+    "kkt_screens": 1
+  },
+  "verification": {
+    "kkt_contract": "hipdlp-original-kkt/2",
+    "tolerance": 0.0001,
+    "kkt_pass": true,
+    "objective": -282.9603206617613,
+    "primal": 5.982187680331208e-06,
+    "dual": 1.5115132982246315e-05,
+    "gap": 9.205802999296397e-05,
+    "complementarity": 9.397342828107378e-05,
+    "stationarity": 7.105427357601002e-15
+  },
+  "exports": {
+    "primal": {
+      "path": "/tmp/hipdlp-four20/runs/a2864/rewrite/solution.primal.txt",
+      "sha256": "3b983fe9a66fb50743ce2037652f31a7db29c2eddf69679b22c221d63a6f1eec",
+      "bytes": 669786
+    },
+    "dual": {
+      "path": "/tmp/hipdlp-four20/runs/a2864/rewrite/solution.dual.txt",
+      "sha256": "aabc291aa4229a7fa02bc11ab3b1613423a30b7d4e04c3626f8dd8d5b3a524b7",
+      "bytes": 118273
+    },
+    "reduced_cost": {
+      "path": "/tmp/hipdlp-four20/runs/a2864/rewrite/solution.reduced_cost.txt",
+      "sha256": "bc88ce11f4ab31ed11d3298a15537b6b3132678d433b24132cd81633b75b4ed2",
+      "bytes": 4020948
+    }
+  }
+}

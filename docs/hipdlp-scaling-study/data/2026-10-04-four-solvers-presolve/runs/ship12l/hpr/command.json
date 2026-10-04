@@ -1,0 +1,39 @@
+{
+  "name": "ship12l",
+  "solver": "hpr",
+  "native_tolerance": 0.0001,
+  "scaling": "Ruiz10+PC(alpha=1)",
+  "presolve": true,
+  "model": "/tmp/hipdlp-four20/models/ship12l-canonical.mps",
+  "sha256": "f08833942dc62f759c8bbd2c86a39580c229cd7a5f597c1403e82b061b21d911",
+  "dimensions": {
+    "rows": 1151,
+    "cols": 5427,
+    "nnz": 16170
+  },
+  "executable_sha256": "bcac2842285dc1635e1dec6ef4355dd96bcca424754cde29663e655c40dc9134",
+  "command": [
+    "/tmp/neso-gpu-comparison/hpr-build/solve_mps_file",
+    "-i",
+    "/tmp/hipdlp-four20/models/ship12l-canonical.mps",
+    "--presolver",
+    "pslp",
+    "--tol",
+    "1e-4",
+    "--cr",
+    "false",
+    "--ruiz",
+    "true",
+    "--pock",
+    "true",
+    "--bc",
+    "false",
+    "--time-limit",
+    "300.0",
+    "--print-debug-info",
+    "false"
+  ],
+  "time_limit": 300.0,
+  "external_wall_limit": 780.0,
+  "started": 1791139314.49715
+}

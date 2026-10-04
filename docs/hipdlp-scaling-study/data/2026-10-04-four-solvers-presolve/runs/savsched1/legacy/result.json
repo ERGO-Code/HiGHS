@@ -1,0 +1,76 @@
+{
+  "name": "savsched1",
+  "solver": "legacy",
+  "native_tolerance": 0.0001,
+  "scaling": "Ruiz10+PC(alpha=1)",
+  "presolve": true,
+  "model": "/tmp/hipdlp-four20/models/savsched1-canonical.mps",
+  "sha256": "7867757af8c3a512d7dc8c27670291faf0cd83d60f114809dd645c05e1cc3657",
+  "dimensions": {
+    "rows": 295989,
+    "cols": 328575,
+    "nnz": 1770507
+  },
+  "executable_sha256": "28975486685f9f701dad4a89beadc7b3b200f5d431375b87c2b0c01dcff1d5cf",
+  "command": [
+    "/tmp/hipdlp-four20/hipdlp-presolve",
+    "/tmp/hipdlp-four20/models/savsched1-canonical.mps",
+    "legacy",
+    "/tmp/hipdlp-four20/runs/savsched1/legacy/solution",
+    "300.0"
+  ],
+  "time_limit": 300.0,
+  "external_wall_limit": 780.0,
+  "started": 1791139123.9371128,
+  "exit_code": 0,
+  "process_wall_sec": 10.50119098694995,
+  "read_wall_sec": 4.590373233,
+  "solver_wall_sec": 5.077933688,
+  "read_plus_solve_wall_sec": 9.668306921,
+  "native": {
+    "status": "OPTIMAL",
+    "iterations": 440,
+    "time": 5.077933688,
+    "presolve_seconds": 3.09616948,
+    "algorithm_seconds": 1.828082413,
+    "postsolve_seconds": 0.153221428,
+    "presolve_status": "Reduced",
+    "reduced_rows": 289031,
+    "reduced_cols": 309584,
+    "reduced_nnz": 1744488,
+    "rewrite_preprocessing_seconds": 0,
+    "backend_setup_seconds": 0,
+    "operator_norm_seconds": 0,
+    "iterations_seconds": 0,
+    "host_kkt_checks": 0,
+    "kkt_screens": 0
+  },
+  "verification": {
+    "kkt_contract": "hipdlp-original-kkt/2",
+    "tolerance": 0.0001,
+    "kkt_pass": false,
+    "objective": 217.43313173153828,
+    "primal": 1.5054763272388527e-05,
+    "dual": 0.00714330013985483,
+    "gap": 0.0008099188181159826,
+    "complementarity": 0.0008756515720099111,
+    "stationarity": 0.03243013928368149
+  },
+  "exports": {
+    "primal": {
+      "path": "/tmp/hipdlp-four20/runs/savsched1/legacy/solution.primal.txt",
+      "sha256": "a8e3a2b1a9df3606d5e914c3b38fd761f926e1ddf45bd36f75a0d0fbe7cd8255",
+      "bytes": 4988094
+    },
+    "dual": {
+      "path": "/tmp/hipdlp-four20/runs/savsched1/legacy/solution.dual.txt",
+      "sha256": "1076f751eda66b74f3c8a94e3c961ba6eae417a5cf997faa39e36027455f6add",
+      "bytes": 2155701
+    },
+    "reduced_cost": {
+      "path": "/tmp/hipdlp-four20/runs/savsched1/legacy/solution.reduced_cost.txt",
+      "sha256": "2ff101b23c5e72fcfaa18839f448d0d2ae423a9526e192d9786bc2b303e99496",
+      "bytes": 2051260
+    }
+  }
+}

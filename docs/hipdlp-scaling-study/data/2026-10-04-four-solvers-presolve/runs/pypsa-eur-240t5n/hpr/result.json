@@ -1,0 +1,81 @@
+{
+  "name": "pypsa-eur-240t5n",
+  "solver": "hpr",
+  "native_tolerance": 0.0001,
+  "scaling": "Ruiz10+PC(alpha=1)",
+  "presolve": true,
+  "model": "/tmp/hipdlp-four20/models/pypsa-eur-240t5n-canonical.mps",
+  "sha256": "9aa348f2a24db153c2dd117a315d08365f4aeb9e3f0a89918f351c142aa77b4e",
+  "dimensions": {
+    "rows": 119299,
+    "cols": 56899,
+    "nnz": 237928
+  },
+  "executable_sha256": "bcac2842285dc1635e1dec6ef4355dd96bcca424754cde29663e655c40dc9134",
+  "command": [
+    "/tmp/neso-gpu-comparison/hpr-build/solve_mps_file",
+    "-i",
+    "/tmp/hipdlp-four20/models/pypsa-eur-240t5n-canonical.mps",
+    "--presolver",
+    "pslp",
+    "--tol",
+    "1e-4",
+    "--cr",
+    "false",
+    "--ruiz",
+    "true",
+    "--pock",
+    "true",
+    "--bc",
+    "false",
+    "--time-limit",
+    "300.0",
+    "--print-debug-info",
+    "false"
+  ],
+  "time_limit": 300.0,
+  "external_wall_limit": 780.0,
+  "started": 1791138397.979552,
+  "exit_code": 0,
+  "process_wall_sec": 1.5201374092139304,
+  "read_wall_sec": 0.332487697,
+  "solver_wall_sec": 0.75009458,
+  "read_plus_solve_wall_sec": 1.082582277,
+  "native": {
+    "status": "OPTIMAL",
+    "iterations": 1700,
+    "time": 0.308384791,
+    "objective": 16483962134.39379,
+    "residual": 5.826473606835507e-05,
+    "gap": 2.976479903432584e-05,
+    "total_time": 0.458908084
+  },
+  "verification": {
+    "kkt_contract": "hipdlp-original-kkt/2",
+    "tolerance": 0.0001,
+    "kkt_pass": false,
+    "objective": 17943903253.51643,
+    "primal": 2.9613108437499154e-08,
+    "dual": 0.004176378803569614,
+    "gap": 2.352860170904588e-05,
+    "complementarity": 0.00012333583089038308,
+    "stationarity": 19.216866575958193
+  },
+  "exports": {
+    "primal": {
+      "path": "/tmp/hipdlp-four20/runs/pypsa-eur-240t5n/hpr/solution.primal.txt",
+      "sha256": "fdd0a995eb607d4e533edd519556dad88e7a620354ed6bf10fbdb40156bc0241",
+      "bytes": 549857
+    },
+    "dual": {
+      "path": "/tmp/hipdlp-four20/runs/pypsa-eur-240t5n/hpr/solution.dual.txt",
+      "sha256": "2cc703313e62848ae01054869e1d24ff697496201b73c23a4711afad880958d8",
+      "bytes": 1492820
+    },
+    "reduced_cost": {
+      "path": "/tmp/hipdlp-four20/runs/pypsa-eur-240t5n/hpr/solution.reduced_cost.txt",
+      "sha256": "4e72d42a2470703b1fa38108a68478cefb6d15268a47bfb0871533ace062599d",
+      "bytes": 127345
+    }
+  }
+}

@@ -1,0 +1,21 @@
+Termination Reason: OPTIMAL
+Presolve Status: REDUCED
+Presolve Time (sec): 8.603400e-02
+Reduced Rows: 29893
+Reduced Columns: 101720
+Reduced Nonzeros: 219357
+Precondition time (sec): 8.290000e-04
+Runtime (sec): 2.701180e-01
+Iterations Count: 6200
+ASB Step Raise Count: 0
+ASB Revert Count: 0
+ASB Power Iterations: 0
+Primal Objective Value: 2.382189e+10
+Dual Objective Value: 2.382251e+10
+Relative Primal Residual: 1.121826e-06
+Relative Dual Residual: 9.911462e-05
+Absolute Objective Gap: 6.131623e+05
+Relative Objective Gap: 1.286956e-05
+Rows: 33874
+Columns: 105728
+Nonzeros: 230200

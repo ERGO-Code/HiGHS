@@ -1,0 +1,81 @@
+{
+  "name": "neos1",
+  "solver": "hpr",
+  "native_tolerance": 0.0001,
+  "scaling": "Ruiz10+PC(alpha=1)",
+  "presolve": true,
+  "model": "/tmp/hipdlp-four20/models/neos1-canonical.mps",
+  "sha256": "45367e1033fb32144a90a9baebff8622ec6083e8b2c416e5c32297d479f46e84",
+  "dimensions": {
+    "rows": 131581,
+    "cols": 1892,
+    "nnz": 468009
+  },
+  "executable_sha256": "bcac2842285dc1635e1dec6ef4355dd96bcca424754cde29663e655c40dc9134",
+  "command": [
+    "/tmp/neso-gpu-comparison/hpr-build/solve_mps_file",
+    "-i",
+    "/tmp/hipdlp-four20/models/neos1-canonical.mps",
+    "--presolver",
+    "pslp",
+    "--tol",
+    "1e-4",
+    "--cr",
+    "false",
+    "--ruiz",
+    "true",
+    "--pock",
+    "true",
+    "--bc",
+    "false",
+    "--time-limit",
+    "300.0",
+    "--print-debug-info",
+    "false"
+  ],
+  "time_limit": 300.0,
+  "external_wall_limit": 780.0,
+  "started": 1791139241.8677278,
+  "exit_code": 0,
+  "process_wall_sec": 1.7711659870110452,
+  "read_wall_sec": 0.448548658,
+  "solver_wall_sec": 0.934635822,
+  "read_plus_solve_wall_sec": 1.38318448,
+  "native": {
+    "status": "OPTIMAL",
+    "iterations": 8600,
+    "time": 0.41064275,
+    "objective": 46707.59338125453,
+    "residual": 8.375529740487642e-05,
+    "gap": 8.375529740487642e-05,
+    "total_time": 0.537887137
+  },
+  "verification": {
+    "kkt_contract": "hipdlp-original-kkt/2",
+    "tolerance": 0.0001,
+    "kkt_pass": false,
+    "objective": 46707.59338125452,
+    "primal": 0.6654926627907116,
+    "dual": 0.0001763833639500112,
+    "gap": 8.375529740542157e-05,
+    "complementarity": 0.00011026596092674965,
+    "stationarity": 0.0003527667279000224
+  },
+  "exports": {
+    "primal": {
+      "path": "/tmp/hipdlp-four20/runs/neos1/hpr/solution.primal.txt",
+      "sha256": "666c940b3a6874fcf4efbefbd425f2b3e0bc08760d686e5818dd7c03516cb7e7",
+      "bytes": 26052
+    },
+    "dual": {
+      "path": "/tmp/hipdlp-four20/runs/neos1/hpr/solution.dual.txt",
+      "sha256": "5a08dc53fa93cf07cc270283b3f23296b2b52edfbf307beff317aaca5a4473be",
+      "bytes": 337133
+    },
+    "reduced_cost": {
+      "path": "/tmp/hipdlp-four20/runs/neos1/hpr/solution.reduced_cost.txt",
+      "sha256": "4249a22b63845ec4014c0700ecbd5bf04b0fc2625830034f92e05fb7c2701111",
+      "bytes": 16153
+    }
+  }
+}

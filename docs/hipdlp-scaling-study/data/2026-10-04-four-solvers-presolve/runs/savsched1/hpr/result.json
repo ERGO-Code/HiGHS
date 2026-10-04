@@ -1,0 +1,81 @@
+{
+  "name": "savsched1",
+  "solver": "hpr",
+  "native_tolerance": 0.0001,
+  "scaling": "Ruiz10+PC(alpha=1)",
+  "presolve": true,
+  "model": "/tmp/hipdlp-four20/models/savsched1-canonical.mps",
+  "sha256": "7867757af8c3a512d7dc8c27670291faf0cd83d60f114809dd645c05e1cc3657",
+  "dimensions": {
+    "rows": 295989,
+    "cols": 328575,
+    "nnz": 1770507
+  },
+  "executable_sha256": "bcac2842285dc1635e1dec6ef4355dd96bcca424754cde29663e655c40dc9134",
+  "command": [
+    "/tmp/neso-gpu-comparison/hpr-build/solve_mps_file",
+    "-i",
+    "/tmp/hipdlp-four20/models/savsched1-canonical.mps",
+    "--presolver",
+    "pslp",
+    "--tol",
+    "1e-4",
+    "--cr",
+    "false",
+    "--ruiz",
+    "true",
+    "--pock",
+    "true",
+    "--bc",
+    "false",
+    "--time-limit",
+    "300.0",
+    "--print-debug-info",
+    "false"
+  ],
+  "time_limit": 300.0,
+  "external_wall_limit": 780.0,
+  "started": 1791139145.612419,
+  "exit_code": 0,
+  "process_wall_sec": 5.5303272302262485,
+  "read_wall_sec": 2.58535579,
+  "solver_wall_sec": 2.133047268,
+  "read_plus_solve_wall_sec": 4.718403058,
+  "native": {
+    "status": "OPTIMAL",
+    "iterations": 480,
+    "time": 0.311311238,
+    "objective": 217.40456823830027,
+    "residual": 1.8153347008716524e-05,
+    "gap": 1.8153347008716524e-05,
+    "total_time": 0.807149789
+  },
+  "verification": {
+    "kkt_contract": "hipdlp-original-kkt/2",
+    "tolerance": 0.0001,
+    "kkt_pass": false,
+    "objective": 217.40456823779928,
+    "primal": 3.0312540813781653e-06,
+    "dual": 6.675238330598113e-05,
+    "gap": 0.00012160700873566431,
+    "complementarity": 0.0001464403470637584,
+    "stationarity": 0.0007342762163657923
+  },
+  "exports": {
+    "primal": {
+      "path": "/tmp/hipdlp-four20/runs/savsched1/hpr/solution.primal.txt",
+      "sha256": "f93f3bca6cea28530628c346969632424d4c689d6d45fdccf02561aced6f34ff",
+      "bytes": 5611519
+    },
+    "dual": {
+      "path": "/tmp/hipdlp-four20/runs/savsched1/hpr/solution.dual.txt",
+      "sha256": "e913dbdd950f0d24e71142320e1aa4a7ee5f73f7094a2d7cd2298f033134d80e",
+      "bytes": 1795808
+    },
+    "reduced_cost": {
+      "path": "/tmp/hipdlp-four20/runs/savsched1/hpr/solution.reduced_cost.txt",
+      "sha256": "9154aca5ae028d9023653d2c1506b58bc68396ff0bf10fca27171633f786bbdc",
+      "bytes": 1948825
+    }
+  }
+}

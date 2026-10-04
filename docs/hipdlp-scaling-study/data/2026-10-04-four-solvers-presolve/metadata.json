@@ -1,0 +1,44 @@
+{
+  "date": "2026-10-04T19:26:16+01:00",
+  "hipdlp_commit": "ae149d7d42517c16897078c899231172c2919f83",
+  "hpr_commit": "79dbaa3fb082a1b826785d13dcd30d9ba350e056",
+  "cupdlpx_commit": "083b90e482f9f0e8229eac965d189a1ba386ca20",
+  "gpu": "NVIDIA GeForce RTX 4070 Ti SUPER, 580.173.02, 16376 MiB",
+  "cpu": "Architecture:                            x86_64\nCPU op-mode(s):                          32-bit, 64-bit\nAddress sizes:                           46 bits physical, 48 bits virtual\nByte Order:                              Little Endian\nCPU(s):                                  28\nOn-line CPU(s) list:                     0-27\nVendor ID:                               GenuineIntel\nModel name:                              Intel(R) Core(TM) i7-14700\nCPU family:                              6\nModel:                                   183\nThread(s) per core:                      2\nCore(s) per socket:                      20\nSocket(s):                               1\nStepping:                                1\nCPU(s) scaling MHz:                      17%\nCPU max MHz:                             5400.0000\nCPU min MHz:                             800.0000\nBogoMIPS:                                4224.00\nFlags:                                   fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush dts acpi mmx fxsr sse sse2 ss ht tm pbe syscall nx pdpe1gb rdtscp lm constant_tsc art arch_perfmon pebs bts rep_good nopl xtopology nonstop_tsc cpuid aperfmperf tsc_known_freq pni pclmulqdq dtes64 monitor ds_cpl vmx smx est tm2 ssse3 sdbg fma cx16 xtpr pdcm pcid sse4_1 sse4_2 x2apic movbe popcnt tsc_deadline_timer aes xsave avx f16c rdrand lahf_lm abm 3dnowprefetch cpuid_fault epb ssbd ibrs ibpb stibp ibrs_enhanced tpr_shadow flexpriority ept vpid ept_ad fsgsbase tsc_adjust bmi1 avx2 smep bmi2 erms invpcid rdseed adx smap clflushopt clwb intel_pt sha_ni xsaveopt xsavec xgetbv1 xsaves split_lock_detect user_shstk avx_vnni dtherm ida arat pln pts hwp hwp_notify hwp_act_window hwp_epp hwp_pkg_req hfi vnmi umip pku ospke waitpkg gfni vaes vpclmulqdq rdpid movdiri movdir64b fsrm md_clear serialize pconfig arch_lbr ibt flush_l1d arch_capabilities\nVirtualization:                          VT-x\nL1d cache:                               768 KiB (20 instances)\nL1i cache:                               1 MiB (20 instances)\nL2 cache:                                28 MiB (11 instances)\nL3 cache:                                33 MiB (1 instance)\nNUMA node(s):                            1\nNUMA node0 CPU(s):                       0-27\nVulnerability Gather data sampling:      Not affected\nVulnerability Ghostwrite:                Not affected\nVulnerability Indirect target selection: Not affected\nVulnerability Itlb multihit:             Not affected\nVulnerability L1tf:                      Not affected\nVulnerability Mds:                       Not affected\nVulnerability Meltdown:                  Not affected\nVulnerability Mmio stale data:           Not affected\nVulnerability Old microcode:             Not affected\nVulnerability Reg file data sampling:    Mitigation; Clear Register File\nVulnerability Retbleed:                  Not affected\nVulnerability Spec rstack overflow:      Not affected\nVulnerability Spec store bypass:         Mitigation; Speculative Store Bypass disabled via prctl\nVulnerability Spectre v1:                Mitigation; usercopy/swapgs barriers and __user pointer sanitization\nVulnerability Spectre v2:                Mitigation; Enhanced / Automatic IBRS; IBPB conditional; PBRSB-eIBRS SW sequence; BHI BHI_DIS_S\nVulnerability Srbds:                     Not affected\nVulnerability Tsa:                       Not affected\nVulnerability Tsx async abort:           Not affected\nVulnerability Vmscape:                   Mitigation; IBPB before exit to userspace",
+  "cuda": "nvcc: NVIDIA (R) Cuda compiler driver\nCopyright (c) 2005-2025 NVIDIA Corporation\nBuilt on Wed_Jan_15_19:20:09_PST_2025\nCuda compilation tools, release 12.8, V12.8.61\nBuild cuda_12.8.r12.8/compiler.35404655_0",
+  "environment": {
+    "CUDA_VISIBLE_DEVICES": "0",
+    "OMP_NUM_THREADS": "1",
+    "OPENBLAS_NUM_THREADS": "1",
+    "LD_LIBRARY_PATH": "/home/yzhou/.local/lib:"
+  },
+  "solvers_order": [
+    "legacy",
+    "rewrite",
+    "hpr",
+    "cupdlpx"
+  ],
+  "native_tolerance": 0.0001,
+  "shared_kkt_tolerance": 0.0001,
+  "native_limit_seconds": 300,
+  "external_limit_seconds": 780,
+  "scaling": {
+    "ruiz_iterations": 10,
+    "pc_alpha": 1,
+    "cr": false,
+    "geometric": false,
+    "bound_cost": false,
+    "l2": false
+  },
+  "library_sha256": "bf00a9344fea1ff3facce63bf5709d807efc6b72dace2f61dbaa6ab91d5b795a",
+  "artifacts": {
+    "/tmp/hipdlp-four20/hipdlp-presolve": "28975486685f9f701dad4a89beadc7b3b200f5d431375b87c2b0c01dcff1d5cf",
+    "/tmp/hipdlp-four20/verify-server": "e6a72869213eedeb1b24eca8d8eca102e2b2ad4adaf5af23af2dcd18f1127ce0",
+    "/tmp/neso-gpu-comparison/hpr-build/solve_mps_file": "bcac2842285dc1635e1dec6ef4355dd96bcca424754cde29663e655c40dc9134",
+    "/tmp/neso-gpu-comparison/cupdlpx-current-build/cupdlpx": "1fa7d94ad344670978de9c0e0b24711785b9c3877507e1c6a4a2e1762c30dc3e",
+    "/home/yzhou/Documents/Github/hipdlp2/docs/hipdlp-scaling-study/tools/four_solver_presolve.cpp": "87c136f20aa78748d9be52c619b07e00b0351ce4e64f935d79471ce00b2f9de5",
+    "/home/yzhou/Documents/Github/hipdlp2/docs/hipdlp-scaling-study/tools/four_solver_run.py": "36a188645a4b6c4f89851db204a92f6862930240d1835daa7d375dd3679eaf61",
+    "/home/yzhou/Documents/Github/hipdlp2/docs/hipdlp-scaling-study/tools/gpu_comparison_verify.cpp": "52226cfa897719a0c9f3dd682b2281edb3cef16cdf316f2536e32773f27e7a96"
+  },
+  "observed_hipdlp_runtime_library": "/tmp/hipdlp-four20/build/lib/libhighs.so.1.15.1"
+}

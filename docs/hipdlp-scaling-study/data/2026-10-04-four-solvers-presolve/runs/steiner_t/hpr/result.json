@@ -1,0 +1,81 @@
+{
+  "name": "steiner_t",
+  "solver": "hpr",
+  "native_tolerance": 0.0001,
+  "scaling": "Ruiz10+PC(alpha=1)",
+  "presolve": true,
+  "model": "/tmp/hipdlp-four20/models/steiner_t-canonical.mps",
+  "sha256": "311de0ea761e1b62a392403c0010f280fc0842524fcd281e56f6be4645ebb14f",
+  "dimensions": {
+    "rows": 7695,
+    "cols": 71450,
+    "nnz": 2428993
+  },
+  "executable_sha256": "bcac2842285dc1635e1dec6ef4355dd96bcca424754cde29663e655c40dc9134",
+  "command": [
+    "/tmp/neso-gpu-comparison/hpr-build/solve_mps_file",
+    "-i",
+    "/tmp/hipdlp-four20/models/steiner_t-canonical.mps",
+    "--presolver",
+    "pslp",
+    "--tol",
+    "1e-4",
+    "--cr",
+    "false",
+    "--ruiz",
+    "true",
+    "--pock",
+    "true",
+    "--bc",
+    "false",
+    "--time-limit",
+    "300.0",
+    "--print-debug-info",
+    "false"
+  ],
+  "time_limit": 300.0,
+  "external_wall_limit": 780.0,
+  "started": 1791139110.3805299,
+  "exit_code": 0,
+  "process_wall_sec": 4.933073479216546,
+  "read_wall_sec": 2.1173859,
+  "solver_wall_sec": 2.44873039,
+  "read_plus_solve_wall_sec": 4.56611629,
+  "native": {
+    "status": "OPTIMAL",
+    "iterations": 13950,
+    "time": 1.308921846,
+    "objective": -134.53530220047554,
+    "residual": 7.634698660113283e-05,
+    "gap": 7.125148509566146e-05,
+    "total_time": 1.7349817619999999
+  },
+  "verification": {
+    "kkt_contract": "hipdlp-original-kkt/2",
+    "tolerance": 0.0001,
+    "kkt_pass": false,
+    "objective": -134.5353022004755,
+    "primal": 0.0009786319791302844,
+    "dual": 8.127372095418176e-05,
+    "gap": 5.76343081581087e-05,
+    "complementarity": 0.000497413401785646,
+    "stationarity": 0.0012191058143127265
+  },
+  "exports": {
+    "primal": {
+      "path": "/tmp/hipdlp-four20/runs/steiner_t/hpr/solution.primal.txt",
+      "sha256": "78bccb8af135c6e48e5970e31e586034cf0ffd37418f995d7210778a402aed0c",
+      "bytes": 276172
+    },
+    "dual": {
+      "path": "/tmp/hipdlp-four20/runs/steiner_t/hpr/solution.dual.txt",
+      "sha256": "bd2791a8404391e304987cf3ab7f98fd4bf5a20bf842867c57a2904908fff01c",
+      "bytes": 95622
+    },
+    "reduced_cost": {
+      "path": "/tmp/hipdlp-four20/runs/steiner_t/hpr/solution.reduced_cost.txt",
+      "sha256": "a139d0b4e7e541705873743f547d6658217ea8c385c1e1240ec5e0af0dec6e51",
+      "bytes": 1316147
+    }
+  }
+}

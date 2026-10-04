@@ -1,0 +1,81 @@
+{
+  "name": "fome13",
+  "solver": "hpr",
+  "native_tolerance": 0.0001,
+  "scaling": "Ruiz10+PC(alpha=1)",
+  "presolve": true,
+  "model": "/tmp/hipdlp-four20/models/fome13-canonical.mps",
+  "sha256": "fde6645602b63f12bc7172ccbd40e48c825731d410fccc76d793dddbbb1cdea3",
+  "dimensions": {
+    "rows": 48568,
+    "cols": 97840,
+    "nnz": 285056
+  },
+  "executable_sha256": "bcac2842285dc1635e1dec6ef4355dd96bcca424754cde29663e655c40dc9134",
+  "command": [
+    "/tmp/neso-gpu-comparison/hpr-build/solve_mps_file",
+    "-i",
+    "/tmp/hipdlp-four20/models/fome13-canonical.mps",
+    "--presolver",
+    "pslp",
+    "--tol",
+    "1e-4",
+    "--cr",
+    "false",
+    "--ruiz",
+    "true",
+    "--pock",
+    "true",
+    "--bc",
+    "false",
+    "--time-limit",
+    "300.0",
+    "--print-debug-info",
+    "false"
+  ],
+  "time_limit": 300.0,
+  "external_wall_limit": 780.0,
+  "started": 1791139231.2278621,
+  "exit_code": 0,
+  "process_wall_sec": 1.8714377251453698,
+  "read_wall_sec": 0.424531223,
+  "solver_wall_sec": 0.97975859,
+  "read_plus_solve_wall_sec": 1.404289813,
+  "native": {
+    "status": "OPTIMAL",
+    "iterations": 11700,
+    "time": 0.395800819,
+    "objective": 90130264.24997711,
+    "residual": 5.908421143270048e-06,
+    "gap": 5.908421143270048e-06,
+    "total_time": 0.634529374
+  },
+  "verification": {
+    "kkt_contract": "hipdlp-original-kkt/2",
+    "tolerance": 0.0001,
+    "kkt_pass": false,
+    "objective": 90130264.25007136,
+    "primal": 6.003662915463696e-06,
+    "dual": 2.495918341517732e-08,
+    "gap": 5.901449489984185e-06,
+    "complementarity": 0.006243401472282646,
+    "stationarity": 0.24972068593615404
+  },
+  "exports": {
+    "primal": {
+      "path": "/tmp/hipdlp-four20/runs/fome13/hpr/solution.primal.txt",
+      "sha256": "3558e2a6886790ed1cfe72aae6a60b7bfd4cf422e49d1582d6ad27c365e52f15",
+      "bytes": 776099
+    },
+    "dual": {
+      "path": "/tmp/hipdlp-four20/runs/fome13/hpr/solution.dual.txt",
+      "sha256": "505853a24ec90510c3744be9a8592db69e0c0f54b30cc7c4d8adbee2443f7ad6",
+      "bytes": 892954
+    },
+    "reduced_cost": {
+      "path": "/tmp/hipdlp-four20/runs/fome13/hpr/solution.reduced_cost.txt",
+      "sha256": "ccd0f0b1f12f3eedf15bade8a0c7040b1a7b90cfd5ae8bb043585198227fde02",
+      "bytes": 1375112
+    }
+  }
+}

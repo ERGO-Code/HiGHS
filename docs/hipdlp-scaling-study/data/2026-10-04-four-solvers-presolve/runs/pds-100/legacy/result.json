@@ -1,0 +1,76 @@
+{
+  "name": "pds-100",
+  "solver": "legacy",
+  "native_tolerance": 0.0001,
+  "scaling": "Ruiz10+PC(alpha=1)",
+  "presolve": true,
+  "model": "/tmp/hipdlp-four20/models/pds-100-canonical.mps",
+  "sha256": "2bb2e92f1a55049ba204b8437f6d11b528ae910a8de202f45585ee25d0f29d9b",
+  "dimensions": {
+    "rows": 156243,
+    "cols": 505360,
+    "nnz": 1086785
+  },
+  "executable_sha256": "28975486685f9f701dad4a89beadc7b3b200f5d431375b87c2b0c01dcff1d5cf",
+  "command": [
+    "/tmp/hipdlp-four20/hipdlp-presolve",
+    "/tmp/hipdlp-four20/models/pds-100-canonical.mps",
+    "legacy",
+    "/tmp/hipdlp-four20/runs/pds-100/legacy/solution",
+    "300.0"
+  ],
+  "time_limit": 300.0,
+  "external_wall_limit": 780.0,
+  "started": 1791139248.2309923,
+  "exit_code": 0,
+  "process_wall_sec": 15.772913442924619,
+  "read_wall_sec": 3.00332264,
+  "solver_wall_sec": 11.637974531,
+  "read_plus_solve_wall_sec": 14.641297171,
+  "native": {
+    "status": "OPTIMAL",
+    "iterations": 6760,
+    "time": 11.637974531,
+    "presolve_seconds": 9.067957991,
+    "algorithm_seconds": 2.432369594,
+    "postsolve_seconds": 0.136959065,
+    "presolve_status": "Reduced",
+    "reduced_rows": 77830,
+    "reduced_cols": 416592,
+    "reduced_nnz": 957764,
+    "rewrite_preprocessing_seconds": 0,
+    "backend_setup_seconds": 0,
+    "operator_norm_seconds": 0,
+    "iterations_seconds": 0,
+    "host_kkt_checks": 0,
+    "kkt_screens": 0
+  },
+  "verification": {
+    "kkt_contract": "hipdlp-original-kkt/2",
+    "tolerance": 0.0001,
+    "kkt_pass": false,
+    "objective": 10930218144.041452,
+    "primal": 2.8975297677361306e-05,
+    "dual": 4.435045975501452e-06,
+    "gap": 0.00010347002085148259,
+    "complementarity": 0.00042243297874467974,
+    "stationarity": 0.44350459755014526
+  },
+  "exports": {
+    "primal": {
+      "path": "/tmp/hipdlp-four20/runs/pds-100/legacy/solution.primal.txt",
+      "sha256": "01e47d56f91e697eeb0a127cf9346ea591a7b142e3f6de6e44fc1e94b6067aee",
+      "bytes": 2529167
+    },
+    "dual": {
+      "path": "/tmp/hipdlp-four20/runs/pds-100/legacy/solution.dual.txt",
+      "sha256": "ebb315401a48adedee45d4b4723e723fa0481939353dd900f3f6c7faadd2b378",
+      "bytes": 2936515
+    },
+    "reduced_cost": {
+      "path": "/tmp/hipdlp-four20/runs/pds-100/legacy/solution.reduced_cost.txt",
+      "sha256": "ce8b9bc84b2b2a18bb8655b9297aeb3c5f5a4677fc0951fbfe9f06365757b615",
+      "bytes": 7299140
+    }
+  }
+}

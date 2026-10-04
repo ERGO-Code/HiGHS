@@ -1,0 +1,76 @@
+{
+  "name": "neso-2245",
+  "solver": "legacy",
+  "native_tolerance": 0.0001,
+  "scaling": "Ruiz10+PC(alpha=1)",
+  "presolve": true,
+  "model": "/tmp/hipdlp-four20/models/neso-2245-canonical.mps",
+  "sha256": "6db340c8ac458bbaabdd25a745ec71827690ccd65d90d6d582745c72039be89e",
+  "dimensions": {
+    "rows": 45715,
+    "cols": 93151,
+    "nnz": 12980419
+  },
+  "executable_sha256": "28975486685f9f701dad4a89beadc7b3b200f5d431375b87c2b0c01dcff1d5cf",
+  "command": [
+    "/tmp/hipdlp-four20/hipdlp-presolve",
+    "/tmp/hipdlp-four20/models/neso-2245-canonical.mps",
+    "legacy",
+    "/tmp/hipdlp-four20/runs/neso-2245/legacy/solution",
+    "300.0"
+  ],
+  "time_limit": 300.0,
+  "external_wall_limit": 780.0,
+  "started": 1791138635.3489423,
+  "exit_code": 0,
+  "process_wall_sec": 36.66971107572317,
+  "read_wall_sec": 22.133835153,
+  "solver_wall_sec": 14.092108522,
+  "read_plus_solve_wall_sec": 36.225943674999996,
+  "native": {
+    "status": "OPTIMAL",
+    "iterations": 2480,
+    "time": 14.092108522,
+    "presolve_seconds": 11.276456586,
+    "algorithm_seconds": 2.328362398,
+    "postsolve_seconds": 0.487135652,
+    "presolve_status": "Reduced",
+    "reduced_rows": 13771,
+    "reduced_cols": 18196,
+    "reduced_nnz": 4391084,
+    "rewrite_preprocessing_seconds": 0,
+    "backend_setup_seconds": 0,
+    "operator_norm_seconds": 0,
+    "iterations_seconds": 0,
+    "host_kkt_checks": 0,
+    "kkt_screens": 0
+  },
+  "verification": {
+    "kkt_contract": "hipdlp-original-kkt/2",
+    "tolerance": 0.0001,
+    "kkt_pass": false,
+    "objective": -22315.24912101413,
+    "primal": 0.0007461124748939969,
+    "dual": 0.05339802493220186,
+    "gap": 0.00024728638074397757,
+    "complementarity": 0.00047886347162857804,
+    "stationarity": 0.007885902303721104
+  },
+  "exports": {
+    "primal": {
+      "path": "/tmp/hipdlp-four20/runs/neso-2245/legacy/solution.primal.txt",
+      "sha256": "580499c6d975443cf2e4e02cf6ce0c3521a034852b6029ae0cb98da2dde6afdf",
+      "bytes": 433106
+    },
+    "dual": {
+      "path": "/tmp/hipdlp-four20/runs/neso-2245/legacy/solution.dual.txt",
+      "sha256": "78d6b45b33fb584b3c011c5dfd19d6221b00fb3836d6be3306cae36d13537ba0",
+      "bytes": 271440
+    },
+    "reduced_cost": {
+      "path": "/tmp/hipdlp-four20/runs/neso-2245/legacy/solution.reduced_cost.txt",
+      "sha256": "18dbd9da368b82e31435578a634112c36a15cc8c296136ef28233f7babfcc629",
+      "bytes": 1019803
+    }
+  }
+}

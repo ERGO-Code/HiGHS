@@ -1,0 +1,74 @@
+{
+  "name": "steiner_t",
+  "solver": "cupdlpx",
+  "native_tolerance": 0.0001,
+  "scaling": "Ruiz10+PC(alpha=1)",
+  "presolve": true,
+  "model": "/tmp/hipdlp-four20/models/steiner_t-canonical.mps",
+  "sha256": "311de0ea761e1b62a392403c0010f280fc0842524fcd281e56f6be4645ebb14f",
+  "dimensions": {
+    "rows": 7695,
+    "cols": 71450,
+    "nnz": 2428993
+  },
+  "executable_sha256": "1fa7d94ad344670978de9c0e0b24711785b9c3877507e1c6a4a2e1762c30dc3e",
+  "command": [
+    "/tmp/neso-gpu-comparison/cupdlpx-current-build/cupdlpx",
+    "--eps_opt",
+    "1e-4",
+    "--eps_feas",
+    "1e-4",
+    "--time_limit",
+    "300.0",
+    "--geo_mean_iter",
+    "0",
+    "--l_inf_ruiz_iter",
+    "10",
+    "--pock_chambolle_alpha",
+    "1",
+    "--no_bound_obj_rescaling",
+    "/tmp/hipdlp-four20/models/steiner_t-canonical.mps",
+    "/tmp/hipdlp-four20/runs/steiner_t/cupdlpx"
+  ],
+  "time_limit": 300.0,
+  "external_wall_limit": 780.0,
+  "started": 1791139115.4065003,
+  "exit_code": 0,
+  "process_wall_sec": 3.6279971608892083,
+  "read_wall_sec": 0.7443233770000001,
+  "solver_wall_sec": 2.537724413,
+  "read_plus_solve_wall_sec": 3.28204779,
+  "native": {
+    "status": "OPTIMAL",
+    "iterations": 16000,
+    "time": 1.963831
+  },
+  "verification": {
+    "kkt_contract": "hipdlp-original-kkt/2",
+    "tolerance": 0.0001,
+    "kkt_pass": false,
+    "objective": -134.502944980663,
+    "primal": 0.0007336604926481138,
+    "dual": 7.4814129766556676e-06,
+    "gap": 6.334510570258847e-05,
+    "complementarity": 0.0004937294347624968,
+    "stationarity": 2.842170943040401e-14
+  },
+  "exports": {
+    "primal": {
+      "path": "/tmp/hipdlp-four20/runs/steiner_t/cupdlpx/steiner_t-canonical_primal_solution.txt",
+      "sha256": "fda57b2bb0ca706989d851008b26c326b7dbe9137c5924f433d5fce0dff5eb25",
+      "bytes": 262986
+    },
+    "dual": {
+      "path": "/tmp/hipdlp-four20/runs/steiner_t/cupdlpx/steiner_t-canonical_dual_solution.txt",
+      "sha256": "34602cd0517c50b5178920149a127fdc8297f71b3f9c918aec4ee88f49e5b2ca",
+      "bytes": 98313
+    },
+    "reduced_cost": {
+      "path": "/tmp/hipdlp-four20/runs/steiner_t/cupdlpx/steiner_t-canonical_reduced_cost.txt",
+      "sha256": "a373094bbccb8894b5b9679b8ae872a8d18d10bbe2460b2880e39562b678134c",
+      "bytes": 1458081
+    }
+  }
+}

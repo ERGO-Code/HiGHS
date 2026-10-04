@@ -1,0 +1,76 @@
+{
+  "name": "stocfor3",
+  "solver": "legacy",
+  "native_tolerance": 0.0001,
+  "scaling": "Ruiz10+PC(alpha=1)",
+  "presolve": true,
+  "model": "/tmp/hipdlp-four20/models/stocfor3-canonical.mps",
+  "sha256": "f2fae061db6315d17444971eaa6da15408566b9d2da5ad62ee0c20ca8c39f31b",
+  "dimensions": {
+    "rows": 16675,
+    "cols": 15695,
+    "nnz": 64875
+  },
+  "executable_sha256": "28975486685f9f701dad4a89beadc7b3b200f5d431375b87c2b0c01dcff1d5cf",
+  "command": [
+    "/tmp/hipdlp-four20/hipdlp-presolve",
+    "/tmp/hipdlp-four20/models/stocfor3-canonical.mps",
+    "legacy",
+    "/tmp/hipdlp-four20/runs/stocfor3/legacy/solution",
+    "300.0"
+  ],
+  "time_limit": 300.0,
+  "external_wall_limit": 780.0,
+  "started": 1791139329.2632608,
+  "exit_code": 0,
+  "process_wall_sec": 2.2730144490487874,
+  "read_wall_sec": 0.134063693,
+  "solver_wall_sec": 1.834880893,
+  "read_plus_solve_wall_sec": 1.968944586,
+  "native": {
+    "status": "OPTIMAL",
+    "iterations": 37080,
+    "time": 1.834880893,
+    "presolve_seconds": 0.12617174,
+    "algorithm_seconds": 1.700519382,
+    "postsolve_seconds": 0.008122568,
+    "presolve_status": "Reduced",
+    "reduced_rows": 8288,
+    "reduced_cols": 7575,
+    "reduced_nnz": 50315,
+    "rewrite_preprocessing_seconds": 0,
+    "backend_setup_seconds": 0,
+    "operator_norm_seconds": 0,
+    "iterations_seconds": 0,
+    "host_kkt_checks": 0,
+    "kkt_screens": 0
+  },
+  "verification": {
+    "kkt_contract": "hipdlp-original-kkt/2",
+    "tolerance": 0.0001,
+    "kkt_pass": false,
+    "objective": -39976.74119077152,
+    "primal": 0.00024107665971217254,
+    "dual": 1.655229290387835e-05,
+    "gap": 6.045657748365027e-07,
+    "complementarity": 4.589231546808578e-06,
+    "stationarity": 0.0002350563736132072
+  },
+  "exports": {
+    "primal": {
+      "path": "/tmp/hipdlp-four20/runs/stocfor3/legacy/solution.primal.txt",
+      "sha256": "8f32b56a0e5c77c0246311e7f44135747690ba961b0e51ffaf09cc95559815b9",
+      "bytes": 220730
+    },
+    "dual": {
+      "path": "/tmp/hipdlp-four20/runs/stocfor3/legacy/solution.dual.txt",
+      "sha256": "d23830fba7109fc30f47cfb1f6a1e187a1fb29b61fed367b192d2901ae9363ae",
+      "bytes": 275857
+    },
+    "reduced_cost": {
+      "path": "/tmp/hipdlp-four20/runs/stocfor3/legacy/solution.reduced_cost.txt",
+      "sha256": "dc2d45b691f559e2b2a9c9cd1c634fa795def6aba6466261a80ea78570f50adc",
+      "bytes": 117004
+    }
+  }
+}

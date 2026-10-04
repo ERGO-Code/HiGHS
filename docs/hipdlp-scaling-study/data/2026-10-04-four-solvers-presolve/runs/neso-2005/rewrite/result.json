@@ -1,0 +1,76 @@
+{
+  "name": "neso-2005",
+  "solver": "rewrite",
+  "native_tolerance": 0.0001,
+  "scaling": "Ruiz10+PC(alpha=1)",
+  "presolve": true,
+  "model": "/tmp/hipdlp-four20/models/neso-2005-canonical.mps",
+  "sha256": "4e4c69fcf4aa131fcee14b45779a4f7c5c06a1c977f6d3626247ff9c8f0b9edb",
+  "dimensions": {
+    "rows": 60083,
+    "cols": 108047,
+    "nnz": 36876017
+  },
+  "executable_sha256": "28975486685f9f701dad4a89beadc7b3b200f5d431375b87c2b0c01dcff1d5cf",
+  "command": [
+    "/tmp/hipdlp-four20/hipdlp-presolve",
+    "/tmp/hipdlp-four20/models/neso-2005-canonical.mps",
+    "rewrite",
+    "/tmp/hipdlp-four20/runs/neso-2005/rewrite/solution",
+    "300.0"
+  ],
+  "time_limit": 300.0,
+  "external_wall_limit": 780.0,
+  "started": 1791138887.0360901,
+  "exit_code": 0,
+  "process_wall_sec": 127.90802933787927,
+  "read_wall_sec": 59.65437727,
+  "solver_wall_sec": 67.688633229,
+  "read_plus_solve_wall_sec": 127.343010499,
+  "native": {
+    "status": "OPTIMAL",
+    "iterations": 48720,
+    "time": 67.688633229,
+    "presolve_seconds": 35.125611379,
+    "algorithm_seconds": 31.166883722,
+    "postsolve_seconds": 1.395961287,
+    "presolve_status": "Reduced",
+    "reduced_rows": 23695,
+    "reduced_cols": 19511,
+    "reduced_nnz": 12549475,
+    "rewrite_preprocessing_seconds": 3.596593211,
+    "backend_setup_seconds": 0.617459804,
+    "operator_norm_seconds": 0.01885246,
+    "iterations_seconds": 26.852735273,
+    "host_kkt_checks": 1,
+    "kkt_screens": 362
+  },
+  "verification": {
+    "kkt_contract": "hipdlp-original-kkt/2",
+    "tolerance": 0.0001,
+    "kkt_pass": false,
+    "objective": -10174.448492892703,
+    "primal": 9.027046240068624e-05,
+    "dual": 0.5909582964240424,
+    "gap": 0.0008237900320501509,
+    "complementarity": 0.0008937152430094174,
+    "stationarity": 1.5999604917384522
+  },
+  "exports": {
+    "primal": {
+      "path": "/tmp/hipdlp-four20/runs/neso-2005/rewrite/solution.primal.txt",
+      "sha256": "74976049f65258855f73b047f18b7c19e18e645fec88ec167272b3b0649c8487",
+      "bytes": 727507
+    },
+    "dual": {
+      "path": "/tmp/hipdlp-four20/runs/neso-2005/rewrite/solution.dual.txt",
+      "sha256": "f207ae4ae4f58889b1c78dba1c03f57b1609cf3481162dfe5dbc8c30685ee73c",
+      "bytes": 297074
+    },
+    "reduced_cost": {
+      "path": "/tmp/hipdlp-four20/runs/neso-2005/rewrite/solution.reduced_cost.txt",
+      "sha256": "f4cba40ad66ef800dc2568c2e11bc238fafc746ef0d845e88d4c302ecf5bea38",
+      "bytes": 1209330
+    }
+  }
+}

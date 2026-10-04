@@ -1,0 +1,74 @@
+{
+  "name": "graph40-40",
+  "solver": "cupdlpx",
+  "native_tolerance": 0.0001,
+  "scaling": "Ruiz10+PC(alpha=1)",
+  "presolve": true,
+  "model": "/tmp/hipdlp-four20/models/graph40-40-canonical.mps",
+  "sha256": "7a26b055a3ac36b7fe5e731b6199f206d1be1f92d66d35498ca09aad3b5aa139",
+  "dimensions": {
+    "rows": 360900,
+    "cols": 102600,
+    "nnz": 1260900
+  },
+  "executable_sha256": "1fa7d94ad344670978de9c0e0b24711785b9c3877507e1c6a4a2e1762c30dc3e",
+  "command": [
+    "/tmp/neso-gpu-comparison/cupdlpx-current-build/cupdlpx",
+    "--eps_opt",
+    "1e-4",
+    "--eps_feas",
+    "1e-4",
+    "--time_limit",
+    "300.0",
+    "--geo_mean_iter",
+    "0",
+    "--l_inf_ruiz_iter",
+    "10",
+    "--pock_chambolle_alpha",
+    "1",
+    "--no_bound_obj_rescaling",
+    "/tmp/hipdlp-four20/models/graph40-40-canonical.mps",
+    "/tmp/hipdlp-four20/runs/graph40-40/cupdlpx"
+  ],
+  "time_limit": 300.0,
+  "external_wall_limit": 780.0,
+  "started": 1791139220.056249,
+  "exit_code": 0,
+  "process_wall_sec": 2.473521215841174,
+  "read_wall_sec": 1.2932899230000001,
+  "solver_wall_sec": 0.5681658740000001,
+  "read_plus_solve_wall_sec": 1.861455797,
+  "native": {
+    "status": "OPTIMAL",
+    "iterations": 200,
+    "time": 0.0522
+  },
+  "verification": {
+    "kkt_contract": "hipdlp-original-kkt/2",
+    "tolerance": 0.0001,
+    "kkt_pass": false,
+    "objective": -300,
+    "primal": 0.0023651501065259225,
+    "dual": 2.225995215911271e-05,
+    "gap": 0.0003521406229635019,
+    "complementarity": 0.0004315852840184336,
+    "stationarity": 3.4728350837426314e-20
+  },
+  "exports": {
+    "primal": {
+      "path": "/tmp/hipdlp-four20/runs/graph40-40/cupdlpx/graph40-40-canonical_primal_solution.txt",
+      "sha256": "53aded28ac8d903f2e98ce506373cb69df24c6d7286708c0aa1a65491d1a9447",
+      "bytes": 2234082
+    },
+    "dual": {
+      "path": "/tmp/hipdlp-four20/runs/graph40-40/cupdlpx/graph40-40-canonical_dual_solution.txt",
+      "sha256": "86b670626299d827535cc57cf80d3aad3747a68235e4d634bd4540c21165e891",
+      "bytes": 1516076
+    },
+    "reduced_cost": {
+      "path": "/tmp/hipdlp-four20/runs/graph40-40/cupdlpx/graph40-40-canonical_reduced_cost.txt",
+      "sha256": "d11e59c478364aafb052bc6ad76829c0a4256d1fc2b8c593a3c548b6ec0a9cfd",
+      "bytes": 2442825
+    }
+  }
+}

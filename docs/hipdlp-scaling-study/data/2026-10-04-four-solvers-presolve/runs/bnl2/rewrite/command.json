@@ -1,0 +1,25 @@
+{
+  "name": "bnl2",
+  "solver": "rewrite",
+  "native_tolerance": 0.0001,
+  "scaling": "Ruiz10+PC(alpha=1)",
+  "presolve": true,
+  "model": "/tmp/hipdlp-four20/models/bnl2-canonical.mps",
+  "sha256": "1a36a71076f42780180c8804ff423260d46029eccd41eb5384d9a3d40d6ace97",
+  "dimensions": {
+    "rows": 2324,
+    "cols": 3489,
+    "nnz": 13999
+  },
+  "executable_sha256": "28975486685f9f701dad4a89beadc7b3b200f5d431375b87c2b0c01dcff1d5cf",
+  "command": [
+    "/tmp/hipdlp-four20/hipdlp-presolve",
+    "/tmp/hipdlp-four20/models/bnl2-canonical.mps",
+    "rewrite",
+    "/tmp/hipdlp-four20/runs/bnl2/rewrite/solution",
+    "300.0"
+  ],
+  "time_limit": 300.0,
+  "external_wall_limit": 780.0,
+  "started": 1791139299.5351784
+}

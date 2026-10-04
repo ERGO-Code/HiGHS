@@ -1,0 +1,36 @@
+{
+  "name": "pds-100",
+  "solver": "cupdlpx",
+  "native_tolerance": 0.0001,
+  "scaling": "Ruiz10+PC(alpha=1)",
+  "presolve": true,
+  "model": "/tmp/hipdlp-four20/models/pds-100-canonical.mps",
+  "sha256": "2bb2e92f1a55049ba204b8437f6d11b528ae910a8de202f45585ee25d0f29d9b",
+  "dimensions": {
+    "rows": 156243,
+    "cols": 505360,
+    "nnz": 1086785
+  },
+  "executable_sha256": "1fa7d94ad344670978de9c0e0b24711785b9c3877507e1c6a4a2e1762c30dc3e",
+  "command": [
+    "/tmp/neso-gpu-comparison/cupdlpx-current-build/cupdlpx",
+    "--eps_opt",
+    "1e-4",
+    "--eps_feas",
+    "1e-4",
+    "--time_limit",
+    "300.0",
+    "--geo_mean_iter",
+    "0",
+    "--l_inf_ruiz_iter",
+    "10",
+    "--pock_chambolle_alpha",
+    "1",
+    "--no_bound_obj_rescaling",
+    "/tmp/hipdlp-four20/models/pds-100-canonical.mps",
+    "/tmp/hipdlp-four20/runs/pds-100/cupdlpx"
+  ],
+  "time_limit": 300.0,
+  "external_wall_limit": 780.0,
+  "started": 1791139283.8119454
+}

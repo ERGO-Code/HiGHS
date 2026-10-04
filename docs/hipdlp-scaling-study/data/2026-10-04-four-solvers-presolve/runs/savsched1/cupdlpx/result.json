@@ -1,0 +1,74 @@
+{
+  "name": "savsched1",
+  "solver": "cupdlpx",
+  "native_tolerance": 0.0001,
+  "scaling": "Ruiz10+PC(alpha=1)",
+  "presolve": true,
+  "model": "/tmp/hipdlp-four20/models/savsched1-canonical.mps",
+  "sha256": "7867757af8c3a512d7dc8c27670291faf0cd83d60f114809dd645c05e1cc3657",
+  "dimensions": {
+    "rows": 295989,
+    "cols": 328575,
+    "nnz": 1770507
+  },
+  "executable_sha256": "1fa7d94ad344670978de9c0e0b24711785b9c3877507e1c6a4a2e1762c30dc3e",
+  "command": [
+    "/tmp/neso-gpu-comparison/cupdlpx-current-build/cupdlpx",
+    "--eps_opt",
+    "1e-4",
+    "--eps_feas",
+    "1e-4",
+    "--time_limit",
+    "300.0",
+    "--geo_mean_iter",
+    "0",
+    "--l_inf_ruiz_iter",
+    "10",
+    "--pock_chambolle_alpha",
+    "1",
+    "--no_bound_obj_rescaling",
+    "/tmp/hipdlp-four20/models/savsched1-canonical.mps",
+    "/tmp/hipdlp-four20/runs/savsched1/cupdlpx"
+  ],
+  "time_limit": 300.0,
+  "external_wall_limit": 780.0,
+  "started": 1791139151.5153642,
+  "exit_code": 0,
+  "process_wall_sec": 2.824739273171872,
+  "read_wall_sec": 1.087745695,
+  "solver_wall_sec": 1.022425131,
+  "read_plus_solve_wall_sec": 2.110170826,
+  "native": {
+    "status": "OPTIMAL",
+    "iterations": 800,
+    "time": 0.153622
+  },
+  "verification": {
+    "kkt_contract": "hipdlp-original-kkt/2",
+    "tolerance": 0.0001,
+    "kkt_pass": true,
+    "objective": 217.40528600329958,
+    "primal": 6.102446935329908e-08,
+    "dual": 2.9991413667703043e-07,
+    "gap": 2.2005591970220727e-05,
+    "complementarity": 2.5820794626803184e-05,
+    "stationarity": 3.794192489220416e-07
+  },
+  "exports": {
+    "primal": {
+      "path": "/tmp/hipdlp-four20/runs/savsched1/cupdlpx/savsched1-canonical_primal_solution.txt",
+      "sha256": "df0664108e89c90f4721118b16fc0c5009a55bf829af351c159ebcdb11996a53",
+      "bytes": 5609107
+    },
+    "dual": {
+      "path": "/tmp/hipdlp-four20/runs/savsched1/cupdlpx/savsched1-canonical_dual_solution.txt",
+      "sha256": "e5ceae6079360b45158ca29925d32f28a16fc6c9778a518a222798fb3fed0a8c",
+      "bytes": 1797733
+    },
+    "reduced_cost": {
+      "path": "/tmp/hipdlp-four20/runs/savsched1/cupdlpx/savsched1-canonical_reduced_cost.txt",
+      "sha256": "146854a61734b2c17c1064152bc244a8726ffd7f517f4ef8d16db918ac561cf0",
+      "bytes": 6930209
+    }
+  }
+}

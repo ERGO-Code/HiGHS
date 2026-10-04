@@ -1,0 +1,74 @@
+{
+  "name": "pilot87",
+  "solver": "cupdlpx",
+  "native_tolerance": 0.0001,
+  "scaling": "Ruiz10+PC(alpha=1)",
+  "presolve": true,
+  "model": "/tmp/hipdlp-four20/models/pilot87-canonical.mps",
+  "sha256": "ceb35bc4554fe17743c146688c8db6c53dfb513ed0aa450482295a2ab38c1e96",
+  "dimensions": {
+    "rows": 2030,
+    "cols": 4883,
+    "nnz": 73152
+  },
+  "executable_sha256": "1fa7d94ad344670978de9c0e0b24711785b9c3877507e1c6a4a2e1762c30dc3e",
+  "command": [
+    "/tmp/neso-gpu-comparison/cupdlpx-current-build/cupdlpx",
+    "--eps_opt",
+    "1e-4",
+    "--eps_feas",
+    "1e-4",
+    "--time_limit",
+    "300.0",
+    "--geo_mean_iter",
+    "0",
+    "--l_inf_ruiz_iter",
+    "10",
+    "--pock_chambolle_alpha",
+    "1",
+    "--no_bound_obj_rescaling",
+    "/tmp/hipdlp-four20/models/pilot87-canonical.mps",
+    "/tmp/hipdlp-four20/runs/pilot87/cupdlpx"
+  ],
+  "time_limit": 300.0,
+  "external_wall_limit": 780.0,
+  "started": 1791139326.9977465,
+  "exit_code": 0,
+  "process_wall_sec": 1.9718577731400728,
+  "read_wall_sec": 0.044343229000000005,
+  "solver_wall_sec": 1.615141223,
+  "read_plus_solve_wall_sec": 1.659484452,
+  "native": {
+    "status": "OPTIMAL",
+    "iterations": 52000,
+    "time": 1.212531
+  },
+  "verification": {
+    "kkt_contract": "hipdlp-original-kkt/2",
+    "tolerance": 0.0001,
+    "kkt_pass": false,
+    "objective": 301.7496726741917,
+    "primal": 4.4600467921022845e-05,
+    "dual": 4.4661500262415617e-07,
+    "gap": 0.0002741691083701621,
+    "complementarity": 0.0010939680043245443,
+    "stationarity": 1.9187741711740574e-06
+  },
+  "exports": {
+    "primal": {
+      "path": "/tmp/hipdlp-four20/runs/pilot87/cupdlpx/pilot87-canonical_primal_solution.txt",
+      "sha256": "ad85cb7a34323aabdc142af88eac80172e870c7f1a6c267f88ad3518288c7866",
+      "bytes": 55328
+    },
+    "dual": {
+      "path": "/tmp/hipdlp-four20/runs/pilot87/cupdlpx/pilot87-canonical_dual_solution.txt",
+      "sha256": "e0ecaed1584a215a22b24f4f2b20b29c1eeefd04c65b621a072ebbef4193c6f5",
+      "bytes": 41819
+    },
+    "reduced_cost": {
+      "path": "/tmp/hipdlp-four20/runs/pilot87/cupdlpx/pilot87-canonical_reduced_cost.txt",
+      "sha256": "29672459f92070c3fdb3609e03671cd6c5cf96b27164488c0f07364190356310",
+      "bytes": 91057
+    }
+  }
+}

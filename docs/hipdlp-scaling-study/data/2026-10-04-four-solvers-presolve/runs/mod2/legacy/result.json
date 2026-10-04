@@ -1,0 +1,76 @@
+{
+  "name": "mod2",
+  "solver": "legacy",
+  "native_tolerance": 0.0001,
+  "scaling": "Ruiz10+PC(alpha=1)",
+  "presolve": true,
+  "model": "/tmp/hipdlp-four20/models/mod2-canonical.mps",
+  "sha256": "9e5a0f90e43e2b91443e3b9aefbe29810bdb76ba01cd90aa471d66ec3ec14cc4",
+  "dimensions": {
+    "rows": 34774,
+    "cols": 31728,
+    "nnz": 165129
+  },
+  "executable_sha256": "28975486685f9f701dad4a89beadc7b3b200f5d431375b87c2b0c01dcff1d5cf",
+  "command": [
+    "/tmp/hipdlp-four20/hipdlp-presolve",
+    "/tmp/hipdlp-four20/models/mod2-canonical.mps",
+    "legacy",
+    "/tmp/hipdlp-four20/runs/mod2/legacy/solution",
+    "300.0"
+  ],
+  "time_limit": 300.0,
+  "external_wall_limit": 780.0,
+  "started": 1791138414.2702847,
+  "exit_code": 0,
+  "process_wall_sec": 2.8746544122695923,
+  "read_wall_sec": 0.409104175,
+  "solver_wall_sec": 2.128157609,
+  "read_plus_solve_wall_sec": 2.537261784,
+  "native": {
+    "status": "OPTIMAL",
+    "iterations": 38680,
+    "time": 2.128157609,
+    "presolve_seconds": 0.28102557,
+    "algorithm_seconds": 1.830373031,
+    "postsolve_seconds": 0.016673117,
+    "presolve_status": "Reduced",
+    "reduced_rows": 25933,
+    "reduced_cols": 25979,
+    "reduced_nnz": 119546,
+    "rewrite_preprocessing_seconds": 0,
+    "backend_setup_seconds": 0,
+    "operator_norm_seconds": 0,
+    "iterations_seconds": 0,
+    "host_kkt_checks": 0,
+    "kkt_screens": 0
+  },
+  "verification": {
+    "kkt_contract": "hipdlp-original-kkt/2",
+    "tolerance": 0.0001,
+    "kkt_pass": false,
+    "objective": 43631810.05781444,
+    "primal": 4.23467398822337e-06,
+    "dual": 0.0004341903276170051,
+    "gap": 0.0053328554521503285,
+    "complementarity": 0.006227913762667801,
+    "stationarity": 6.628175865270153
+  },
+  "exports": {
+    "primal": {
+      "path": "/tmp/hipdlp-four20/runs/mod2/legacy/solution.primal.txt",
+      "sha256": "f7a27f04e14400517bf7bdea8ab57d09ffbddb2116b97d906928075f91f7eeb0",
+      "bytes": 370038
+    },
+    "dual": {
+      "path": "/tmp/hipdlp-four20/runs/mod2/legacy/solution.dual.txt",
+      "sha256": "7f26af56e12005a882dc9388f6f33730817b81cb00604b679881aa19c8a98016",
+      "bytes": 388760
+    },
+    "reduced_cost": {
+      "path": "/tmp/hipdlp-four20/runs/mod2/legacy/solution.reduced_cost.txt",
+      "sha256": "43f3b9f8ff15c0f0d793fded3094f884fc3fe483b924f8ad8dca32f00bafe97c",
+      "bytes": 360800
+    }
+  }
+}

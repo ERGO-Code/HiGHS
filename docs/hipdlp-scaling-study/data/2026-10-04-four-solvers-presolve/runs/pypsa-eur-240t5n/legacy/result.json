@@ -1,0 +1,76 @@
+{
+  "name": "pypsa-eur-240t5n",
+  "solver": "legacy",
+  "native_tolerance": 0.0001,
+  "scaling": "Ruiz10+PC(alpha=1)",
+  "presolve": true,
+  "model": "/tmp/hipdlp-four20/models/pypsa-eur-240t5n-canonical.mps",
+  "sha256": "9aa348f2a24db153c2dd117a315d08365f4aeb9e3f0a89918f351c142aa77b4e",
+  "dimensions": {
+    "rows": 119299,
+    "cols": 56899,
+    "nnz": 237928
+  },
+  "executable_sha256": "28975486685f9f701dad4a89beadc7b3b200f5d431375b87c2b0c01dcff1d5cf",
+  "command": [
+    "/tmp/hipdlp-four20/hipdlp-presolve",
+    "/tmp/hipdlp-four20/models/pypsa-eur-240t5n-canonical.mps",
+    "legacy",
+    "/tmp/hipdlp-four20/runs/pypsa-eur-240t5n/legacy/solution",
+    "300.0"
+  ],
+  "time_limit": 300.0,
+  "external_wall_limit": 780.0,
+  "started": 1791138393.1057928,
+  "exit_code": 0,
+  "process_wall_sec": 2.9259809209033847,
+  "read_wall_sec": 0.72105204,
+  "solver_wall_sec": 1.763130035,
+  "read_plus_solve_wall_sec": 2.484182075,
+  "native": {
+    "status": "OPTIMAL",
+    "iterations": 1440,
+    "time": 1.763130035,
+    "presolve_seconds": 0.338562015,
+    "algorithm_seconds": 1.388012242,
+    "postsolve_seconds": 0.036430855,
+    "presolve_status": "Reduced",
+    "reduced_rows": 39697,
+    "reduced_cols": 46736,
+    "reduced_nnz": 152745,
+    "rewrite_preprocessing_seconds": 0,
+    "backend_setup_seconds": 0,
+    "operator_norm_seconds": 0,
+    "iterations_seconds": 0,
+    "host_kkt_checks": 0,
+    "kkt_screens": 0
+  },
+  "verification": {
+    "kkt_contract": "hipdlp-original-kkt/2",
+    "tolerance": 0.0001,
+    "kkt_pass": false,
+    "objective": 17941752542.796707,
+    "primal": 4.0456375691286587e-07,
+    "dual": 0.08307683414521945,
+    "gap": 0.0012599941000426306,
+    "complementarity": 0.0007393068439097567,
+    "stationarity": 3199.182622344612
+  },
+  "exports": {
+    "primal": {
+      "path": "/tmp/hipdlp-four20/runs/pypsa-eur-240t5n/legacy/solution.primal.txt",
+      "sha256": "8f2fc6b8c69af7df34b44e49c10eea63e451ebd2dc35cb016e7e2a4d2e9b690a",
+      "bytes": 495837
+    },
+    "dual": {
+      "path": "/tmp/hipdlp-four20/runs/pypsa-eur-240t5n/legacy/solution.dual.txt",
+      "sha256": "33716d41551c52f67a657277b91e8549171110ed87166025445b459ea1e282a4",
+      "bytes": 1444567
+    },
+    "reduced_cost": {
+      "path": "/tmp/hipdlp-four20/runs/pypsa-eur-240t5n/legacy/solution.reduced_cost.txt",
+      "sha256": "ef8f4f7ca9fbdeb069c283523d77cbdf1c3b89a48208957540de817ca24e9f99",
+      "bytes": 117746
+    }
+  }
+}

@@ -1,0 +1,81 @@
+{
+  "name": "nug20",
+  "solver": "hpr",
+  "native_tolerance": 0.0001,
+  "scaling": "Ruiz10+PC(alpha=1)",
+  "presolve": true,
+  "model": "/tmp/hipdlp-four20/models/nug20-canonical.mps",
+  "sha256": "9c56946e44adba6ed36a76146903eeccb3be53f4507f8180bff49ebdfd247d3a",
+  "dimensions": {
+    "rows": 15240,
+    "cols": 72600,
+    "nnz": 304800
+  },
+  "executable_sha256": "bcac2842285dc1635e1dec6ef4355dd96bcca424754cde29663e655c40dc9134",
+  "command": [
+    "/tmp/neso-gpu-comparison/hpr-build/solve_mps_file",
+    "-i",
+    "/tmp/hipdlp-four20/models/nug20-canonical.mps",
+    "--presolver",
+    "pslp",
+    "--tol",
+    "1e-4",
+    "--cr",
+    "false",
+    "--ruiz",
+    "true",
+    "--pock",
+    "true",
+    "--bc",
+    "false",
+    "--time-limit",
+    "300.0",
+    "--print-debug-info",
+    "false"
+  ],
+  "time_limit": 300.0,
+  "external_wall_limit": 780.0,
+  "started": 1791138411.0481029,
+  "exit_code": 0,
+  "process_wall_sec": 1.5195464990101755,
+  "read_wall_sec": 0.364959394,
+  "solver_wall_sec": 0.761175401,
+  "read_plus_solve_wall_sec": 1.126134795,
+  "native": {
+    "status": "OPTIMAL",
+    "iterations": 2700,
+    "time": 0.239158464,
+    "objective": 2181.622872159519,
+    "residual": 8.422673692691306e-05,
+    "gap": 4.6656969700729404e-06,
+    "total_time": 0.38044088
+  },
+  "verification": {
+    "kkt_contract": "hipdlp-original-kkt/2",
+    "tolerance": 0.0001,
+    "kkt_pass": false,
+    "objective": 2181.6228721595267,
+    "primal": 1.4695845527111983e-05,
+    "dual": 7.449624298390784e-05,
+    "gap": 4.665696972156912e-06,
+    "complementarity": 0.0002150094024820333,
+    "stationarity": 0.0030543459623402214
+  },
+  "exports": {
+    "primal": {
+      "path": "/tmp/hipdlp-four20/runs/nug20/hpr/solution.primal.txt",
+      "sha256": "0eb197aea7e0929cadf6bf5c0ec0746aa95f6bb2e032f7354e74d4781acfc8c2",
+      "bytes": 403880
+    },
+    "dual": {
+      "path": "/tmp/hipdlp-four20/runs/nug20/hpr/solution.dual.txt",
+      "sha256": "7f9ee1b146528075a87c9be771bfaaa2b98d3ca45784c6d2cf6e1a373b029e53",
+      "bytes": 294358
+    },
+    "reduced_cost": {
+      "path": "/tmp/hipdlp-four20/runs/nug20/hpr/solution.reduced_cost.txt",
+      "sha256": "2a9a8e86e4507e9d6588a0a65645e380da944d220c036a2a573fb3af8ae5f85a",
+      "bytes": 1163371
+    }
+  }
+}

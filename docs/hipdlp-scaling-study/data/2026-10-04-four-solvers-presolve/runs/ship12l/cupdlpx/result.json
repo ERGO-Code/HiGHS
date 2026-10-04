@@ -1,0 +1,74 @@
+{
+  "name": "ship12l",
+  "solver": "cupdlpx",
+  "native_tolerance": 0.0001,
+  "scaling": "Ruiz10+PC(alpha=1)",
+  "presolve": true,
+  "model": "/tmp/hipdlp-four20/models/ship12l-canonical.mps",
+  "sha256": "f08833942dc62f759c8bbd2c86a39580c229cd7a5f597c1403e82b061b21d911",
+  "dimensions": {
+    "rows": 1151,
+    "cols": 5427,
+    "nnz": 16170
+  },
+  "executable_sha256": "1fa7d94ad344670978de9c0e0b24711785b9c3877507e1c6a4a2e1762c30dc3e",
+  "command": [
+    "/tmp/neso-gpu-comparison/cupdlpx-current-build/cupdlpx",
+    "--eps_opt",
+    "1e-4",
+    "--eps_feas",
+    "1e-4",
+    "--time_limit",
+    "300.0",
+    "--geo_mean_iter",
+    "0",
+    "--l_inf_ruiz_iter",
+    "10",
+    "--pock_chambolle_alpha",
+    "1",
+    "--no_bound_obj_rescaling",
+    "/tmp/hipdlp-four20/models/ship12l-canonical.mps",
+    "/tmp/hipdlp-four20/runs/ship12l/cupdlpx"
+  ],
+  "time_limit": 300.0,
+  "external_wall_limit": 780.0,
+  "started": 1791139315.2803082,
+  "exit_code": 0,
+  "process_wall_sec": 1.1690964656881988,
+  "read_wall_sec": 0.009529615999999907,
+  "solver_wall_sec": 0.869525567,
+  "read_plus_solve_wall_sec": 0.879055183,
+  "native": {
+    "status": "OPTIMAL",
+    "iterations": 7800,
+    "time": 0.184116
+  },
+  "verification": {
+    "kkt_contract": "hipdlp-original-kkt/2",
+    "tolerance": 0.0001,
+    "kkt_pass": true,
+    "objective": 1470240.2637433484,
+    "primal": 6.453154479140719e-05,
+    "dual": 8.984757785786537e-06,
+    "gap": 1.9341603238805337e-05,
+    "complementarity": 2.1020525121828842e-05,
+    "stationarity": 0.05058418633397821
+  },
+  "exports": {
+    "primal": {
+      "path": "/tmp/hipdlp-four20/runs/ship12l/cupdlpx/ship12l-canonical_primal_solution.txt",
+      "sha256": "b7654cdfb1cc47ca3d9e696864bbe4544a2ad47c3ce680a65f7a40c77b2e92f8",
+      "bytes": 22648
+    },
+    "dual": {
+      "path": "/tmp/hipdlp-four20/runs/ship12l/cupdlpx/ship12l-canonical_dual_solution.txt",
+      "sha256": "022dbda668d6a607d9addc986105cfc5dbe2de6e0a26bacd0309f18a9046b920",
+      "bytes": 17238
+    },
+    "reduced_cost": {
+      "path": "/tmp/hipdlp-four20/runs/ship12l/cupdlpx/ship12l-canonical_reduced_cost.txt",
+      "sha256": "db01f228e6a5b375d8e66a29752d90ae0b3e02497f2bc7f619728f8c158c76de",
+      "bytes": 89206
+    }
+  }
+}

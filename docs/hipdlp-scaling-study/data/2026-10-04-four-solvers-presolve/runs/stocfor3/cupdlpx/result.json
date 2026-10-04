@@ -1,0 +1,74 @@
+{
+  "name": "stocfor3",
+  "solver": "cupdlpx",
+  "native_tolerance": 0.0001,
+  "scaling": "Ruiz10+PC(alpha=1)",
+  "presolve": true,
+  "model": "/tmp/hipdlp-four20/models/stocfor3-canonical.mps",
+  "sha256": "f2fae061db6315d17444971eaa6da15408566b9d2da5ad62ee0c20ca8c39f31b",
+  "dimensions": {
+    "rows": 16675,
+    "cols": 15695,
+    "nnz": 64875
+  },
+  "executable_sha256": "1fa7d94ad344670978de9c0e0b24711785b9c3877507e1c6a4a2e1762c30dc3e",
+  "command": [
+    "/tmp/neso-gpu-comparison/cupdlpx-current-build/cupdlpx",
+    "--eps_opt",
+    "1e-4",
+    "--eps_feas",
+    "1e-4",
+    "--time_limit",
+    "300.0",
+    "--geo_mean_iter",
+    "0",
+    "--l_inf_ruiz_iter",
+    "10",
+    "--pock_chambolle_alpha",
+    "1",
+    "--no_bound_obj_rescaling",
+    "/tmp/hipdlp-four20/models/stocfor3-canonical.mps",
+    "/tmp/hipdlp-four20/runs/stocfor3/cupdlpx"
+  ],
+  "time_limit": 300.0,
+  "external_wall_limit": 780.0,
+  "started": 1791139334.7045374,
+  "exit_code": 0,
+  "process_wall_sec": 2.0220214668661356,
+  "read_wall_sec": 0.058579719,
+  "solver_wall_sec": 1.633375135,
+  "read_plus_solve_wall_sec": 1.691954854,
+  "native": {
+    "status": "OPTIMAL",
+    "iterations": 32000,
+    "time": 0.744286
+  },
+  "verification": {
+    "kkt_contract": "hipdlp-original-kkt/2",
+    "tolerance": 0.0001,
+    "kkt_pass": false,
+    "objective": -39976.666958144386,
+    "primal": 6.807250731658723e-05,
+    "dual": 0.38113201186268597,
+    "gap": 0.0003039440478863621,
+    "complementarity": 0.0002703463492828943,
+    "stationarity": 5.412392657415921
+  },
+  "exports": {
+    "primal": {
+      "path": "/tmp/hipdlp-four20/runs/stocfor3/cupdlpx/stocfor3-canonical_primal_solution.txt",
+      "sha256": "37bdb5c506ee2d7a15e7f1860db9deaf8b2deea20a0ce83c1eb1b67282f89ce8",
+      "bytes": 197545
+    },
+    "dual": {
+      "path": "/tmp/hipdlp-four20/runs/stocfor3/cupdlpx/stocfor3-canonical_dual_solution.txt",
+      "sha256": "4fdac374ca0e44cde0948bbb31b841a208934f04b4702f02ee300ef98e80fa8c",
+      "bytes": 275234
+    },
+    "reduced_cost": {
+      "path": "/tmp/hipdlp-four20/runs/stocfor3/cupdlpx/stocfor3-canonical_reduced_cost.txt",
+      "sha256": "bdb3d173452595ccb5176e07089ec4befe6349262d1c25b5af27530ad3660b75",
+      "bytes": 209574
+    }
+  }
+}

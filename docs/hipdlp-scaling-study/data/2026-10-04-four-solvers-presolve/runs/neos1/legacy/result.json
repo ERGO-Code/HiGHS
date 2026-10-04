@@ -1,0 +1,76 @@
+{
+  "name": "neos1",
+  "solver": "legacy",
+  "native_tolerance": 0.0001,
+  "scaling": "Ruiz10+PC(alpha=1)",
+  "presolve": true,
+  "model": "/tmp/hipdlp-four20/models/neos1-canonical.mps",
+  "sha256": "45367e1033fb32144a90a9baebff8622ec6083e8b2c416e5c32297d479f46e84",
+  "dimensions": {
+    "rows": 131581,
+    "cols": 1892,
+    "nnz": 468009
+  },
+  "executable_sha256": "28975486685f9f701dad4a89beadc7b3b200f5d431375b87c2b0c01dcff1d5cf",
+  "command": [
+    "/tmp/hipdlp-four20/hipdlp-presolve",
+    "/tmp/hipdlp-four20/models/neos1-canonical.mps",
+    "legacy",
+    "/tmp/hipdlp-four20/runs/neos1/legacy/solution",
+    "300.0"
+  ],
+  "time_limit": 300.0,
+  "external_wall_limit": 780.0,
+  "started": 1791139236.1960263,
+  "exit_code": 0,
+  "process_wall_sec": 2.6737146470695734,
+  "read_wall_sec": 0.782579349,
+  "solver_wall_sec": 1.540444548,
+  "read_plus_solve_wall_sec": 2.323023897,
+  "native": {
+    "status": "OPTIMAL",
+    "iterations": 9440,
+    "time": 1.540444548,
+    "presolve_seconds": 0.511043575,
+    "algorithm_seconds": 1.029332413,
+    "postsolve_seconds": 1.72e-07,
+    "presolve_status": "Not reduced",
+    "reduced_rows": 131581,
+    "reduced_cols": 1892,
+    "reduced_nnz": 468009,
+    "rewrite_preprocessing_seconds": 0,
+    "backend_setup_seconds": 0,
+    "operator_norm_seconds": 0,
+    "iterations_seconds": 0,
+    "host_kkt_checks": 0,
+    "kkt_screens": 0
+  },
+  "verification": {
+    "kkt_contract": "hipdlp-original-kkt/2",
+    "tolerance": 0.0001,
+    "kkt_pass": false,
+    "objective": 46713.50751499329,
+    "primal": 1.4663697043384616,
+    "dual": 0.00014050882000893328,
+    "gap": 3.3479167879063945e-05,
+    "complementarity": 0.00024215877258866556,
+    "stationarity": 0.00028101764001786655
+  },
+  "exports": {
+    "primal": {
+      "path": "/tmp/hipdlp-four20/runs/neos1/legacy/solution.primal.txt",
+      "sha256": "64e05e059a587f26125c7bc3e65dc45805b4ff58490ebfd45b8e1d8da06b67d0",
+      "bytes": 29661
+    },
+    "dual": {
+      "path": "/tmp/hipdlp-four20/runs/neos1/legacy/solution.dual.txt",
+      "sha256": "449ae13cbb279a15a8d175b37ec3c5c54290e8a0a305e635ab256dd08808d577",
+      "bytes": 318893
+    },
+    "reduced_cost": {
+      "path": "/tmp/hipdlp-four20/runs/neos1/legacy/solution.reduced_cost.txt",
+      "sha256": "b20f1b08c82d7df5acaa9b19702d435ff3383fb4c13c925f8ea1ffc9531a5192",
+      "bytes": 12091
+    }
+  }
+}

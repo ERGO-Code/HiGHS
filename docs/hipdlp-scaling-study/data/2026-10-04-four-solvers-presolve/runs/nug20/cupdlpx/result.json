@@ -1,0 +1,74 @@
+{
+  "name": "nug20",
+  "solver": "cupdlpx",
+  "native_tolerance": 0.0001,
+  "scaling": "Ruiz10+PC(alpha=1)",
+  "presolve": true,
+  "model": "/tmp/hipdlp-four20/models/nug20-canonical.mps",
+  "sha256": "9c56946e44adba6ed36a76146903eeccb3be53f4507f8180bff49ebdfd247d3a",
+  "dimensions": {
+    "rows": 15240,
+    "cols": 72600,
+    "nnz": 304800
+  },
+  "executable_sha256": "1fa7d94ad344670978de9c0e0b24711785b9c3877507e1c6a4a2e1762c30dc3e",
+  "command": [
+    "/tmp/neso-gpu-comparison/cupdlpx-current-build/cupdlpx",
+    "--eps_opt",
+    "1e-4",
+    "--eps_feas",
+    "1e-4",
+    "--time_limit",
+    "300.0",
+    "--geo_mean_iter",
+    "0",
+    "--l_inf_ruiz_iter",
+    "10",
+    "--pock_chambolle_alpha",
+    "1",
+    "--no_bound_obj_rescaling",
+    "/tmp/hipdlp-four20/models/nug20-canonical.mps",
+    "/tmp/hipdlp-four20/runs/nug20/cupdlpx"
+  ],
+  "time_limit": 300.0,
+  "external_wall_limit": 780.0,
+  "started": 1791138412.6567833,
+  "exit_code": 0,
+  "process_wall_sec": 1.0183196398429573,
+  "read_wall_sec": 0.19194634900000002,
+  "solver_wall_sec": 0.4551147,
+  "read_plus_solve_wall_sec": 0.6470610489999999,
+  "native": {
+    "status": "OPTIMAL",
+    "iterations": 2600,
+    "time": 0.118584
+  },
+  "verification": {
+    "kkt_contract": "hipdlp-original-kkt/2",
+    "tolerance": 0.0001,
+    "kkt_pass": false,
+    "objective": 2181.6179734233924,
+    "primal": 2.4934269763937644e-05,
+    "dual": 9.627869444931625e-05,
+    "gap": 3.3039084649015637e-06,
+    "complementarity": 0.0002491370530312222,
+    "stationarity": 0.0039474264724219665
+  },
+  "exports": {
+    "primal": {
+      "path": "/tmp/hipdlp-four20/runs/nug20/cupdlpx/nug20-canonical_primal_solution.txt",
+      "sha256": "1daa950358a0c29dad775e0dec98abe074c19b8035420094ddea9471931ef95f",
+      "bytes": 403044
+    },
+    "dual": {
+      "path": "/tmp/hipdlp-four20/runs/nug20/cupdlpx/nug20-canonical_dual_solution.txt",
+      "sha256": "ffe7d99ff4ac058caba4f8fe71d4e0ccde118e66960fd12912d67e9b76ef0474",
+      "bytes": 294263
+    },
+    "reduced_cost": {
+      "path": "/tmp/hipdlp-four20/runs/nug20/cupdlpx/nug20-canonical_reduced_cost.txt",
+      "sha256": "921020b88b8b4e09e0603ecef73e462b2632846d237d5fb36d86c8c59df0602a",
+      "bytes": 1301514
+    }
+  }
+}

@@ -1,0 +1,81 @@
+{
+  "name": "neso-2005",
+  "solver": "hpr",
+  "native_tolerance": 0.0001,
+  "scaling": "Ruiz10+PC(alpha=1)",
+  "presolve": true,
+  "model": "/tmp/hipdlp-four20/models/neso-2005-canonical.mps",
+  "sha256": "4e4c69fcf4aa131fcee14b45779a4f7c5c06a1c977f6d3626247ff9c8f0b9edb",
+  "dimensions": {
+    "rows": 60083,
+    "cols": 108047,
+    "nnz": 36876017
+  },
+  "executable_sha256": "bcac2842285dc1635e1dec6ef4355dd96bcca424754cde29663e655c40dc9134",
+  "command": [
+    "/tmp/neso-gpu-comparison/hpr-build/solve_mps_file",
+    "-i",
+    "/tmp/hipdlp-four20/models/neso-2005-canonical.mps",
+    "--presolver",
+    "pslp",
+    "--tol",
+    "1e-4",
+    "--cr",
+    "false",
+    "--ruiz",
+    "true",
+    "--pock",
+    "true",
+    "--bc",
+    "false",
+    "--time-limit",
+    "300.0",
+    "--print-debug-info",
+    "false"
+  ],
+  "time_limit": 300.0,
+  "external_wall_limit": 780.0,
+  "started": 1791139015.4103835,
+  "exit_code": 0,
+  "process_wall_sec": 44.16163991903886,
+  "read_wall_sec": 34.006532994,
+  "solver_wall_sec": 9.709680667,
+  "read_plus_solve_wall_sec": 43.716213661,
+  "native": {
+    "status": "OPTIMAL",
+    "iterations": 4500,
+    "time": 2.533417516,
+    "objective": -10171.527578289068,
+    "residual": 5.1066974673742833e-05,
+    "gap": 7.517043900534521e-07,
+    "total_time": 6.848918641
+  },
+  "verification": {
+    "kkt_contract": "hipdlp-original-kkt/2",
+    "tolerance": 0.0001,
+    "kkt_pass": false,
+    "objective": -10171.525495531881,
+    "primal": 0.0006195653483497441,
+    "dual": 0.14375952614070336,
+    "gap": 0.0031550240447869482,
+    "complementarity": 0.0037638542919952696,
+    "stationarity": 0.0016957690776115975
+  },
+  "exports": {
+    "primal": {
+      "path": "/tmp/hipdlp-four20/runs/neso-2005/hpr/solution.primal.txt",
+      "sha256": "b3cb9c48baf764daeacdc12e5b92f81a8ced4edbf665c8501fa055715dad0b37",
+      "bytes": 733748
+    },
+    "dual": {
+      "path": "/tmp/hipdlp-four20/runs/neso-2005/hpr/solution.dual.txt",
+      "sha256": "1d2c591302b206be4a151ee157e72b3313cb04f28a596df7873f99d0ae9dc74e",
+      "bytes": 722800
+    },
+    "reduced_cost": {
+      "path": "/tmp/hipdlp-four20/runs/neso-2005/hpr/solution.reduced_cost.txt",
+      "sha256": "71f70a1a386d0b3fa727c9ce6b06f08171092dee4d4c618753c9d931271a43d1",
+      "bytes": 1042339
+    }
+  }
+}
