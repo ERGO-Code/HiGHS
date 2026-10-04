@@ -1174,7 +1174,8 @@ HighsStatus Highs::run() {
   // Determine coefficient ranges and possibly warn the user about
   // excessive values, obtaining suggested values for user_objective_scale
   // and user_bound_scale
-  assessExcessiveObjectiveBoundScaling(this->options_.log_options, this->model_,
+  this->model_.lp_.a_matrix_.ensureColwise();
+  assessExcessiveObjectiveBoundScaling(this->options_, this->model_,
                                        user_scale_data);
 
   // Optimize the model in the Highs instance
@@ -2005,7 +2006,7 @@ HighsStatus Highs::calledOptimizeModel() {
           postsolve_iteration_count += info_.simplex_iteration_count;
           //
           return_status = HighsStatus::kOk;
-          return_status = interpretCallStatus(options_.log_options, call_status,
+          return_status = interpretCallStatus(log_options, call_status,
                                               return_status, "callSolveLp");
           // Recover the options
           options_ = save_options;
@@ -2014,13 +2015,17 @@ HighsStatus Highs::calledOptimizeModel() {
           this->run_data_.num_simplex_iterations_after_postsolve =
               postsolve_iteration_count;
           if (postsolve_iteration_count > 0)
-            highsLogUser(options_.log_options, HighsLogType::kInfo,
+            highsLogUser(log_options, HighsLogType::kInfo,
                          "Required %d simplex iterations after postsolve\n",
                          int(postsolve_iteration_count));
         }
       } else {
+        // Postsolve has failed, so any simplex data for the presolved
+        // problem is useless
+        ekk_instance_.clear();
         highsLogUser(log_options, HighsLogType::kError,
-                     "Postsolve return status is %d\n", (int)postsolve_status);
+                     "Postsolve return status: %s\n",
+                     utilPostsolveStatusToString(postsolve_status).c_str());
         setHighsModelStatusAndClearSolutionAndBasis(
             HighsModelStatus::kPostsolveError);
         return returnFromOptimizeModel(HighsStatus::kError, undo_mods);
@@ -2067,7 +2072,7 @@ HighsStatus Highs::calledOptimizeModel() {
         options_.solver = solver;
         options_.pdlp_iteration_limit = pdlp_iteration_limit;
         return_status = HighsStatus::kOk;
-        return_status = interpretCallStatus(options_.log_options, call_status,
+        return_status = interpretCallStatus(log_options, call_status,
                                             return_status, "callSolveLp");
         if (return_status == HighsStatus::kError)
           return returnFromOptimizeModel(HighsStatus::kError, undo_mods);
@@ -2145,7 +2150,7 @@ HighsStatus Highs::calledOptimizeModel() {
     double rlv_time_difference =
         fabs(sum_time - this_solve_time) / this_solve_time;
     if (rlv_time_difference > 0.1) {
-      highsLogDev(options_.log_options, HighsLogType::kInfo,
+      highsLogDev(log_options, HighsLogType::kInfo,
                   "Strange: Solve time = %g; Sum times = %g: relative "
                   "difference = %g\n",
                   this_solve_time, sum_time, rlv_time_difference);
@@ -2325,8 +2330,8 @@ HighsStatus Highs::getObjectiveBoundScaling(HighsInt& suggested_objective_scale,
   this->logHeader();
   HighsUserScaleData data;
   initialiseUserScaleData(this->options_, data);
-  assessExcessiveObjectiveBoundScaling(this->options_.log_options, this->model_,
-                                       data);
+  this->model_.lp_.a_matrix_.ensureColwise();
+  assessExcessiveObjectiveBoundScaling(this->options_, this->model_, data);
   suggested_objective_scale = data.suggested_user_objective_scale;
   suggested_bound_scale = data.suggested_user_bound_scale;
   return HighsStatus::kOk;
@@ -4012,9 +4017,20 @@ HighsPostsolveStatus Highs::runPostsolve() {
   const bool have_dual_solution =
       presolve_.data_.recovered_solution_.dual_valid;
   const HighsInt report_3040_col = -578;
+  const bool have_basis = presolve_.data_.recovered_basis_.valid;
   presolve_.data_.postSolveStack.undo(
       options_, presolve_.data_.recovered_solution_,
       presolve_.data_.recovered_basis_, 0, report_3040_col);
+  if (have_basis &&
+      !isBasisConsistent(this->model_.lp_, presolve_.data_.recovered_basis_)) {
+    // Recovered basis was assumed to be consistent, but #3323
+    // exposes that in exceptional circumstances it may not be,
+    // so check here and return solver error if it is
+    // inconsistent
+    highsLogUser(options_.log_options, HighsLogType::kError,
+                 "Highs::runPostsolve: Error in basis after postsolve\n");
+    return HighsPostsolveStatus::kBasisError;
+  }
   // Compute the row activities
   assert(model_.lp_.a_matrix_.isColwise());
   calculateRowValuesQuad(model_.lp_, presolve_.data_.recovered_solution_);
@@ -4408,7 +4424,8 @@ HighsStatus Highs::callRunPostsolve(const HighsSolution& solution,
           "Postsolve performed for MIP, but model status cannot be known\n");
     } else {
       highsLogUser(options_.log_options, HighsLogType::kError,
-                   "Postsolve return status is %d\n", int(postsolve_status));
+                   "Postsolve return status: %s\n",
+                   utilPostsolveStatusToString(postsolve_status).c_str());
       setHighsModelStatusAndClearSolutionAndBasis(
           HighsModelStatus::kPostsolveError);
     }
@@ -4542,7 +4559,8 @@ HighsStatus Highs::callRunPostsolve(const HighsSolution& solution,
       }
     } else {
       highsLogUser(options_.log_options, HighsLogType::kError,
-                   "Postsolve return status is %d\n", (int)postsolve_status);
+                   "Postsolve return status: %s\n",
+                   utilPostsolveStatusToString(postsolve_status).c_str());
       setHighsModelStatusAndClearSolutionAndBasis(
           HighsModelStatus::kPostsolveError);
       // Set undo_mods = false, since passing models requiring

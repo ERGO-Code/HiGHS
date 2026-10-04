@@ -169,6 +169,106 @@ TEST_CASE("user-small-cost-scale", "[highs_user_scale]") {
   highs.resetGlobalScheduler(true);
 }
 
+TEST_CASE("build-get-objective-bound-scaling", "[highs_data]") {
+  Highs highs;
+  // highs.setOptionValue("output_flag", dev_run);
+  const double large_cost = 1.0e+10;           // Algebraically C
+  const double small_cost = 1 / large_cost;    // Algebraically c
+  const double large_bound = 2.0e+10;          // Algebraically B
+  const double small_bound = 1 / large_bound;  // Algebraically b
+  REQUIRE(highs.addCol(large_cost, -inf, inf, 0, nullptr, nullptr) ==
+          HighsStatus::kOk);
+  std::vector<HighsInt> index = {0};
+  std::vector<double> value = {1.0};
+  REQUIRE(highs.addRow(2.0, inf, 1, index.data(), value.data()) ==
+          HighsStatus::kOk);
+  REQUIRE(highs.addCol(0.0, -inf, inf, 0, nullptr, nullptr) ==
+          HighsStatus::kOk);
+  // LP is
+  // min Cx, st 2 <= x; x, y free
+  //
+  // After building row-wise, Highs::model_.lp_.a_matrix_ is row-wise
+  // so this checks that it's converted to col-wise when calling
+  // getObjectiveBoundScaling
+  HighsInt suggested_objective_scale;
+  HighsInt suggested_bound_scale;
+  REQUIRE(highs.getObjectiveBoundScaling(suggested_objective_scale,
+                                         suggested_bound_scale) ==
+          HighsStatus::kOk);
+  printf("Case 0: suggested objective scale = %d; suggested bound scale = %d\n",
+         int(suggested_objective_scale), int(suggested_bound_scale));
+  REQUIRE(suggested_objective_scale == -14);
+  REQUIRE(suggested_bound_scale == 0);
+
+  // Now change the bound on y to something excessive for code coverage
+  REQUIRE(highs.changeColBounds(1, large_bound, inf) == HighsStatus::kOk);
+
+  REQUIRE(highs.getObjectiveBoundScaling(suggested_objective_scale,
+                                         suggested_bound_scale) ==
+          HighsStatus::kOk);
+  printf("Case 1: suggested objective scale = %d; suggested bound scale = %d\n",
+         int(suggested_objective_scale), int(suggested_bound_scale));
+  REQUIRE(suggested_objective_scale == -14);
+  REQUIRE(suggested_bound_scale == -15);
+
+  // Now test small cost logging
+  REQUIRE(highs.changeColCost(0, small_cost) == HighsStatus::kOk);
+  REQUIRE(highs.getObjectiveBoundScaling(suggested_objective_scale,
+                                         suggested_bound_scale) ==
+          HighsStatus::kOk);
+  printf("Case 2: suggested objective scale = %d; suggested bound scale = %d\n",
+         int(suggested_objective_scale), int(suggested_bound_scale));
+  REQUIRE(suggested_objective_scale == 20);
+  REQUIRE(suggested_bound_scale == -15);
+
+  // Revert to the large cost
+  REQUIRE(highs.changeColCost(0, large_cost) == HighsStatus::kOk);
+
+  // Now make the row an equation, so x=2 can be substituted into the
+  // objective, giving LP
+  //
+  // min 2, st x = 2, x free, y >= B
+  //
+  // This means that the large cost isn't important, since it's
+  // eliminated by the substitution
+  REQUIRE(highs.changeRowBounds(0, 2.0, 2.0) == HighsStatus::kOk);
+  REQUIRE(highs.getObjectiveBoundScaling(suggested_objective_scale,
+                                         suggested_bound_scale) ==
+          HighsStatus::kOk);
+  printf("Case 3: suggested objective scale = %d; suggested bound scale = %d\n",
+         int(suggested_objective_scale), int(suggested_bound_scale));
+  REQUIRE(suggested_objective_scale == 0);
+  REQUIRE(suggested_bound_scale == -15);
+
+  // Now make the large cost small, so x=2 can be substituted into the
+  // objective, giving LP
+  //
+  // min 2, st x = 2, x free, y >= B
+  //
+  // This means that the small cost isn't important, since it's
+  // eliminated by the substitution
+  REQUIRE(highs.changeColCost(0, small_cost) == HighsStatus::kOk);
+  REQUIRE(highs.getObjectiveBoundScaling(suggested_objective_scale,
+                                         suggested_bound_scale) ==
+          HighsStatus::kOk);
+  printf("Case 4: suggested objective scale = %d; suggested bound scale = %d\n",
+         int(suggested_objective_scale), int(suggested_bound_scale));
+  REQUIRE(suggested_objective_scale == 0);
+  REQUIRE(suggested_bound_scale == -15);
+
+  // Now make the large bound small
+  REQUIRE(highs.changeColBounds(1, small_bound, inf) == HighsStatus::kOk);
+  REQUIRE(highs.getObjectiveBoundScaling(suggested_objective_scale,
+                                         suggested_bound_scale) ==
+          HighsStatus::kOk);
+  printf("Case 5: suggested objective scale = %d; suggested bound scale = %d\n",
+         int(suggested_objective_scale), int(suggested_bound_scale));
+  REQUIRE(suggested_objective_scale == 0);
+  REQUIRE(suggested_bound_scale == 0);
+
+  highs.resetGlobalScheduler(true);
+}
+
 HighsLp lp0(const double cost, const double bound) {
   // This LP is unbounded and causes assert in presolve!
   HighsLp lp;
@@ -320,7 +420,7 @@ TEST_CASE("ill-scaled-model", "[highs_user_scale]") {
   h.setOptionValue("output_flag", dev_run);
   h.setOptionValue("qp_regularization_value", 0);
   h.setOptionValue("presolve", kHighsOffString);
-  // Preolve on triggers assert
+  // Presolve on triggers assert
   const bool expose_presolve_bug = false;
   if (expose_presolve_bug) {
     h.setOptionValue("presolve", kHighsOffString);
