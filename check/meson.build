@@ -82,12 +82,16 @@ test_array = [
   ['test_TestUserScale', 'TestUserScale.cpp'],
 ]
 foreach test : test_array
+  test_support = []
+  if test.get(0) == 'test_TestHiPdlpTrace'
+    test_support += ['hipdlp/fixed_trace.cc']
+  endif
   test(test.get(0),
        executable(test.get(0),
           sources : ['TestMain.cpp',
                      'Avgas.cpp',
                      test.get(1),
-                     highs_conf_file],
+                     highs_conf_file] + test_support,
           dependencies : _deps,
           link_with : highslib,
           cpp_args : _args,
@@ -98,6 +102,7 @@ foreach test : test_array
 endforeach
 
 executable('lp_solver_validation_adapter',
+           build_by_default: false,
      sources: ['LpSolverValidationAdapter.cpp', highs_conf_file],
      dependencies: _deps,
      link_with: highslib,
@@ -106,6 +111,7 @@ executable('lp_solver_validation_adapter',
     )
 
 executable('external_lp_solution_verifier',
+           build_by_default: false,
            sources: ['ExternalLpSolutionVerifier.cpp', highs_conf_file],
            dependencies: _deps,
            link_with: highslib,

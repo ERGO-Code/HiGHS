@@ -7,13 +7,15 @@
 //
 // The solver timer starts after the model has been read and stops when the
 // solve call returns; end_to_end_sec additionally covers reading and reporting.
+// This calls the solver directly, without HiGHS presolve or postsolve. Use the
+// highs executable for end-to-end runs with presolve.
 
+#include <chrono>
 #include <cmath>
+#include <cstdarg>
 #include <cstdio>
 #include <cstdlib>
-#include <cstdarg>
 #include <cstring>
-#include <chrono>
 #include <string>
 #include <vector>
 
@@ -35,7 +37,6 @@ struct AdapterOptions {
   std::string implementation = "rewrite";
   std::string backend = "auto";
   std::string step_size = "fixed";
-  std::string presolve = "off";
   std::string scaling = "auto";
   double time_limit = 3600.0;
   double kkt_tolerance = 1e-4;
@@ -51,7 +52,6 @@ void usage() {
                "         [--implementation legacy|rewrite]\n"
                "         [--backend auto|cpu|cuda]\n"
                "         [--step-size fixed|pid]\n"
-               "         [--presolve on|off]\n"
                "         [--scaling auto|off|curtis_reid|legacy]\n"
                "         [--time-limit SECONDS]\n"
                "         [--kkt-tolerance TOL]\n"
@@ -78,8 +78,6 @@ bool parseArguments(const int argc, char** argv, AdapterOptions& options) {
       if (!nextValue(argc, argv, index, options.backend)) return false;
     } else if (flag == "--step-size") {
       if (!nextValue(argc, argv, index, options.step_size)) return false;
-    } else if (flag == "--presolve") {
-      if (!nextValue(argc, argv, index, options.presolve)) return false;
     } else if (flag == "--scaling") {
       if (!nextValue(argc, argv, index, options.scaling)) return false;
     } else if (flag == "--time-limit") {
@@ -224,7 +222,7 @@ int main(int argc, char** argv) {
     return 3;
   }
   highs.setOptionValue("solver", kHiPdlpString);
-  highs.setOptionValue("presolve", adapter.presolve);
+  highs.setOptionValue("presolve", "off");
   highs.setOptionValue("hipdlp_backend", effective_backend);
   highs.setOptionValue("hipdlp_scaling", adapter.scaling);
   highs.setOptionValue("pdlp_step_size_strategy", step_size_strategy);
@@ -267,21 +265,19 @@ int main(int argc, char** argv) {
       certificateKindName(rewrite_result.certificate.kind);
   if (rewrite_result.certificate.kind ==
       hipdlp::api::CertificateKind::kPrimalUnboundedness) {
-    certificate_pass =
-        hipdlp::verification::verifyPrimalRay(
-            lp, rewrite_result.certificate.column_direction,
-            adapter.verification_tolerance)
-            .pass;
+    certificate_pass = hipdlp::verification::verifyPrimalRay(
+                           lp, rewrite_result.certificate.column_direction,
+                           adapter.verification_tolerance)
+                           .pass;
   } else if (rewrite_result.certificate.kind ==
                  hipdlp::api::CertificateKind::kPrimalInfeasibility ||
              rewrite_result.certificate.kind ==
                  hipdlp::api::CertificateKind::kAmbiguous) {
-    certificate_pass =
-        hipdlp::verification::verifyFarkasCertificate(
-            lp, rewrite_result.certificate.row_direction,
-            rewrite_result.certificate.column_direction,
-            adapter.verification_tolerance)
-            .pass;
+    certificate_pass = hipdlp::verification::verifyFarkasCertificate(
+                           lp, rewrite_result.certificate.row_direction,
+                           rewrite_result.certificate.column_direction,
+                           adapter.verification_tolerance)
+                           .pass;
   }
 
   double objective = 0.0;
@@ -310,10 +306,10 @@ int main(int argc, char** argv) {
       std::chrono::duration<double>(std::chrono::steady_clock::now() -
                                     end_to_end_start)
           .count();
-    const char* return_status_name =
+  const char* return_status_name =
       status == HighsStatus::kOk
-        ? "ok"
-        : (status == HighsStatus::kWarning ? "warning" : "error");
+          ? "ok"
+          : (status == HighsStatus::kWarning ? "warning" : "error");
 
   std::string json;
   json += "{\n";
@@ -325,26 +321,26 @@ int main(int argc, char** argv) {
   json += quotedField("step_size", adapter.step_size);
   json += quotedField("status", modelStatusName(model_status));
   json += quotedField("call_status", return_status_name);
-  json += intField("iterations",
-                   static_cast<long long>(info.pdlp_iteration_count),
-                   iterations_available);
+  json +=
+      intField("iterations", static_cast<long long>(info.pdlp_iteration_count),
+               iterations_available);
   json += nullableDoubleField("objective", objective, objective_available);
   json += doubleField("solver_wall_sec", solver_wall_sec);
   json += doubleField("end_to_end_sec", end_to_end_sec);
   json += doubleField("relative_primal_residual",
                       kkt.metrics.relative_primal_residual);
-  json += doubleField("relative_dual_residual",
-                      kkt.metrics.relative_dual_residual);
-  json += doubleField("relative_objective_gap",
-                      kkt.metrics.relative_objective_gap);
+  json +=
+      doubleField("relative_dual_residual", kkt.metrics.relative_dual_residual);
+  json +=
+      doubleField("relative_objective_gap", kkt.metrics.relative_objective_gap);
   json += boolField("kkt_input_valid", kkt.input_valid);
   json += boolField("kkt_pass", kkt.pass);
   json += quotedField("certificate_kind", certificate_kind);
   json += boolField("certificate_pass", certificate_pass);
   json += "  \"options\": {\n";
-  json += formatLine("    \"presolve\": \"%s\",", adapter.presolve.c_str());
-  json += formatLine("    \"hipdlp_scaling\": \"%s\",",
-                     adapter.scaling.c_str());
+  json += "    \"presolve\": \"off\",\n";
+  json +=
+      formatLine("    \"hipdlp_scaling\": \"%s\",", adapter.scaling.c_str());
   json += formatLine("    \"pdlp_step_size_strategy\": %lld,",
                      static_cast<long long>(step_size_strategy));
   json += formatLine("    \"kkt_tolerance\": %.17g,", adapter.kkt_tolerance);
@@ -362,18 +358,17 @@ int main(int argc, char** argv) {
                 : std::string("hipdlp-rewrite-") + effective_backend;
   std::string common_json;
   common_json += "{\n";
-  common_json +=
-      formatLine("  \"schema\": \"lp-cross-solver-result/1\",");
+  common_json += formatLine("  \"schema\": \"lp-cross-solver-result/1\",");
   common_json += quotedField("solver", solver_name);
   common_json += quotedField("instance", adapter.instance);
   common_json += quotedField("status", modelStatusName(model_status));
   common_json += quotedField("return_status", return_status_name);
   common_json += nullableDoubleField("solver_time_sec", solver_wall_sec, true);
-  common_json += intField("iterations",
-                          static_cast<long long>(info.pdlp_iteration_count),
-                          iterations_available);
-  common_json += nullableDoubleField("primal_objective", objective,
-                                     objective_available);
+  common_json +=
+      intField("iterations", static_cast<long long>(info.pdlp_iteration_count),
+               iterations_available);
+  common_json +=
+      nullableDoubleField("primal_objective", objective, objective_available);
   common_json += nullableDoubleField("relative_primal_residual",
                                      kkt.metrics.relative_primal_residual,
                                      kkt.metrics_finite);

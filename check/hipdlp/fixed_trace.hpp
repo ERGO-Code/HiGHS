@@ -1,5 +1,6 @@
-#ifndef PDLP_HIPDLP_ALGORITHM_FIXED_TRACE_HPP_
-#define PDLP_HIPDLP_ALGORITHM_FIXED_TRACE_HPP_
+// Test-only iteration replay and oracle. Never linked into the solver library.
+#ifndef CHECK_HIPDLP_FIXED_TRACE_HPP_
+#define CHECK_HIPDLP_FIXED_TRACE_HPP_
 
 #include <cstddef>
 #include <vector>

@@ -3607,8 +3607,8 @@ TEST_CASE("hi-pdlp-rocm-reservation-has-no-implementation-surface",
   CHECK(backend_factory.find("namespace rocm") == std::string::npos);
 
   const char* rocm_neutral_files[] = {
-      "highs/pdlp/hipdlp/algorithm/fixed_trace.cc",
-      "highs/pdlp/hipdlp/algorithm/fixed_trace.hpp",
+      "check/hipdlp/fixed_trace.cc",
+      "check/hipdlp/fixed_trace.hpp",
       "highs/pdlp/hipdlp/algorithm/halpern_pdhg_step.cc",
       "highs/pdlp/hipdlp/algorithm/halpern_pdhg_step.hpp",
       "highs/pdlp/hipdlp/algorithm/solver.cc",
@@ -3775,7 +3775,7 @@ TEST_CASE("hi-pdlp-phase5h-shared-step-ownership-boundary",
   }
 
   const std::string fixed_trace =
-      readSourceFile("highs/pdlp/hipdlp/algorithm/fixed_trace.cc");
+      readSourceFile("check/hipdlp/fixed_trace.cc");
   const std::string shared_step =
       readSourceFile("highs/pdlp/hipdlp/algorithm/halpern_pdhg_step.cc");
   CHECK(countText(shared_step, "api::Error enqueueHalpernPdhgStep(") == 1);
@@ -3793,8 +3793,8 @@ TEST_CASE("hi-pdlp-phase5h-shared-step-ownership-boundary",
   CHECK(recorded_call != std::string::npos);
 
   const char* backend_independent_files[] = {
-      "highs/pdlp/hipdlp/algorithm/fixed_trace.cc",
-      "highs/pdlp/hipdlp/algorithm/fixed_trace.hpp",
+      "check/hipdlp/fixed_trace.cc",
+      "check/hipdlp/fixed_trace.hpp",
       "highs/pdlp/hipdlp/algorithm/halpern_pdhg_step.cc",
       "highs/pdlp/hipdlp/algorithm/halpern_pdhg_step.hpp",
       "highs/pdlp/hipdlp/algorithm/solver.cc",

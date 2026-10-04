@@ -1,4 +1,4 @@
-#include "pdlp/hipdlp/algorithm/fixed_trace.hpp"
+#include "fixed_trace.hpp"
 
 #include <algorithm>
 #include <cmath>

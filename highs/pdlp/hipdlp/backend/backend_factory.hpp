@@ -13,9 +13,9 @@ struct FactoryResult {
   api::Error error;
   std::unique_ptr<Backend> backend;
 
-  FactoryResult();
-  FactoryResult(FactoryResult&& other);
-  FactoryResult& operator=(FactoryResult&& other);
+  FactoryResult() = default;
+  FactoryResult(FactoryResult&&) = default;
+  FactoryResult& operator=(FactoryResult&&) = default;
 
   FactoryResult(const FactoryResult&) = delete;
   FactoryResult& operator=(const FactoryResult&) = delete;

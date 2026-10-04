@@ -1,7 +1,6 @@
 #include "pdlp/hipdlp/backend/backend_factory.hpp"
 
 #include <new>
-#include <utility>
 
 #include "HConfig.h"
 #include "pdlp/hipdlp/backend/cpu/cpu_backend.hpp"
@@ -34,17 +33,6 @@ const Descriptor kRegistrations[] = {
     {Kind::kRocm, "rocm", false, false, PrecisionDescriptor(), Capabilities()}};
 
 }  // namespace
-
-FactoryResult::FactoryResult() {}
-
-FactoryResult::FactoryResult(FactoryResult&& other)
-    : error(std::move(other.error)), backend(std::move(other.backend)) {}
-
-FactoryResult& FactoryResult::operator=(FactoryResult&& other) {
-  error = std::move(other.error);
-  backend = std::move(other.backend);
-  return *this;
-}
 
 bool FactoryResult::ok() const {
   return error.ok() && backend.get() != nullptr;

@@ -49,22 +49,22 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
       TestHighsRbTree.cpp
       TestHighsSparseMatrix.cpp
       TestHighsVersion.cpp
-    TestHiPdlpAveraging.cpp
-    TestHiPdlpBackend.cpp
-            TestHiPdlpCertificates.cpp
-        TestHiPdlpConvergence.cpp
-            TestHiPdlpFixedPointError.cpp
-            TestHiPdlpOperatorNorm.cpp
-                TestHiPdlpRestart.cpp
-                TestHiPdlpStepSize.cpp
-            TestHiPdlpSolver.cpp
-        TestHiPdlpTrace.cpp
+      TestHiPdlpAveraging.cpp
+      TestHiPdlpBackend.cpp
+      TestHiPdlpCertificates.cpp
+      TestHiPdlpConvergence.cpp
+      TestHiPdlpFixedPointError.cpp
+      TestHiPdlpModel.cpp
+      TestHiPdlpOperatorNorm.cpp
+      TestHiPdlpRestart.cpp
+      TestHiPdlpSolver.cpp
+      TestHiPdlpStepSize.cpp
+      TestHiPdlpTrace.cpp
       TestHSet.cpp
       TestICrash.cpp
       TestIis.cpp
       TestInfo.cpp
       TestIO.cpp
-    TestHiPdlpModel.cpp
       TestIpm.cpp
       TestIpx.cpp
       TestLogging.cpp
@@ -96,7 +96,8 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
       TestThrow.cpp
       TestTspSolver.cpp
       TestUserScale.cpp
-      Avgas.cpp)
+      Avgas.cpp
+      hipdlp/fixed_trace.cc)
 
 
   if (HIPO)
@@ -121,9 +122,9 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
 
   add_executable(unit_tests ${TEST_SOURCES})
 
-    if(HIGHS_HIPDLP_CUDA_DETECTED)
-        target_compile_definitions(unit_tests PRIVATE HIGHS_HIPDLP_TESTING)
-    endif()
+  if(HIGHS_HIPDLP_CUDA_DETECTED)
+    target_compile_definitions(unit_tests PRIVATE HIGHS_HIPDLP_TESTING)
+  endif()
 
   set_target_properties(unit_tests PROPERTIES UNITY_BUILD OFF)
 
@@ -169,9 +170,9 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
 
 
   # Migration/benchmark adapter. Deliberately not installed and not part of any
-  # public interface: it only exists to compare the legacy and rewrite HiPDLP
-  # implementations through one entry point and one timer boundary.
-  add_executable(hipdlp_migration_adapter HiPdlpMigrationAdapter.cpp)
+  # public interface: explicitly build this target to compare the legacy and
+  # rewrite cores without HiGHS presolve/postsolve. Production uses bin/highs.
+  add_executable(hipdlp_migration_adapter EXCLUDE_FROM_ALL HiPdlpMigrationAdapter.cpp)
   if (FAST_BUILD)
     target_link_libraries(hipdlp_migration_adapter highs)
   else()
@@ -197,14 +198,14 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
     endif()
   endif()
 
-  add_executable(lp_solver_validation_adapter LpSolverValidationAdapter.cpp)
+  add_executable(lp_solver_validation_adapter EXCLUDE_FROM_ALL LpSolverValidationAdapter.cpp)
   if (FAST_BUILD)
     target_link_libraries(lp_solver_validation_adapter highs)
   else()
     target_link_libraries(lp_solver_validation_adapter libhighs)
   endif()
 
-  add_executable(external_lp_solution_verifier ExternalLpSolutionVerifier.cpp)
+  add_executable(external_lp_solution_verifier EXCLUDE_FROM_ALL ExternalLpSolutionVerifier.cpp)
   if (FAST_BUILD)
     target_link_libraries(external_lp_solution_verifier highs)
   else()

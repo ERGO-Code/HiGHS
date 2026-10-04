@@ -13,50 +13,48 @@ namespace algorithm {
 
 // Self-audit of the resources the control loop itself asks the backend for.
 struct SolveDiagnostics {
-  std::size_t resource_creation_calls_before_iterations;
-  std::size_t resource_creation_calls_during_iterations;
-  std::size_t primal_weight_updates;
-  std::size_t restarts;
-  std::size_t check_boundaries;
-  std::size_t resident_check_calls;
-  std::size_t ordinary_check_boundaries;
-  std::size_t ordinary_check_d2h_bytes;
-  std::size_t ordinary_check_transfers;
-  std::size_t ordinary_check_synchronizations;
-  std::size_t candidate_downloads;
-  std::size_t host_oracle_checks;
-  std::size_t certificate_checks;
-  std::size_t original_kkt_verifications;
-  std::size_t original_kkt_rejections;
-  std::size_t kkt_screens;
-  std::size_t kkt_screen_rejections;
-  std::size_t restart_reference_checks;
-  std::size_t fixed_point_evaluations;
-  std::size_t command_buffer_replays;
-  std::size_t recorded_iterations;
+  std::size_t resource_creation_calls_before_iterations = 0;
+  std::size_t resource_creation_calls_during_iterations = 0;
+  std::size_t primal_weight_updates = 0;
+  std::size_t restarts = 0;
+  std::size_t check_boundaries = 0;
+  std::size_t resident_check_calls = 0;
+  std::size_t ordinary_check_boundaries = 0;
+  std::size_t ordinary_check_d2h_bytes = 0;
+  std::size_t ordinary_check_transfers = 0;
+  std::size_t ordinary_check_synchronizations = 0;
+  std::size_t candidate_downloads = 0;
+  std::size_t host_oracle_checks = 0;
+  std::size_t certificate_checks = 0;
+  std::size_t original_kkt_verifications = 0;
+  std::size_t original_kkt_rejections = 0;
+  std::size_t kkt_screens = 0;
+  std::size_t kkt_screen_rejections = 0;
+  std::size_t restart_reference_checks = 0;
+  std::size_t fixed_point_evaluations = 0;
+  std::size_t command_buffer_replays = 0;
+  std::size_t recorded_iterations = 0;
 
-  double total_wall_seconds;
-  double preprocessing_seconds;
+  double total_wall_seconds = 0.0;
+  double preprocessing_seconds = 0.0;
   model::PreprocessingDiagnostics preprocessing;
-  double backend_setup_seconds;
-  double operator_norm_seconds;
-  double iterations_seconds;
-  double iteration_block_seconds;
-  double step_seconds;
-  double boundary_seconds;
-  double download_seconds;
-  double host_preparation_seconds;
-  double host_verification_seconds;
-  double reference_fixed_point_seconds;
-  double fixed_point_fallback_seconds;
-
-  SolveDiagnostics();
+  double backend_setup_seconds = 0.0;
+  double operator_norm_seconds = 0.0;
+  double iterations_seconds = 0.0;
+  double iteration_block_seconds = 0.0;
+  double step_seconds = 0.0;
+  double boundary_seconds = 0.0;
+  double download_seconds = 0.0;
+  double host_preparation_seconds = 0.0;
+  double host_verification_seconds = 0.0;
+  double reference_fixed_point_seconds = 0.0;
+  double fixed_point_fallback_seconds = 0.0;
 };
 
 // The solve loop reports through this sink instead of owning HiGHS log options.
 class SolveLogSink {
  public:
-  virtual ~SolveLogSink();
+  virtual ~SolveLogSink() = default;
 
   virtual void info(const std::string& message) = 0;
   virtual void warning(const std::string& message) = 0;
@@ -88,7 +86,7 @@ struct SolveObservation {
 
 class SolveObserver {
  public:
-  virtual ~SolveObserver() {}
+  virtual ~SolveObserver() = default;
   virtual void onEvent(const SolveObservation& observation) noexcept = 0;
 };
 
@@ -99,20 +97,18 @@ class SolveObserver {
 // enables this hook; the default path performs no extra downloads or checks.
 class PilotObserver {
  public:
-  virtual ~PilotObserver() {}
+  virtual ~PilotObserver() = default;
   virtual bool checkpoint(HighsInt iteration, const HighsSolution& solution,
                           double elapsed_seconds, double fixed_point_error,
                           std::size_t restarts) = 0;
 };
 
 struct SolveContext {
-  SolveLogSink* log;
-  SolveDiagnostics* diagnostics;
-  SolveObserver* observer;
-  PilotObserver* pilot_observer;
-  bool use_command_buffers;
-
-  SolveContext();
+  SolveLogSink* log = nullptr;
+  SolveDiagnostics* diagnostics = nullptr;
+  SolveObserver* observer = nullptr;
+  PilotObserver* pilot_observer = nullptr;
+  bool use_command_buffers = true;
 };
 
 // options.time_limit is the remaining local budget for this call alone.

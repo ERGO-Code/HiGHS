@@ -1,4 +1,152 @@
-# HiGHS - Linear optimization software
+# HiPDLP / HiGHS - Linear optimization software
+
+This fork develops **HiPDLP rewrite**, an FP64 LP solver with CPU and NVIDIA
+CUDA backends, inside HiGHS. `solver = hipdlp` selects the rewrite. The legacy
+implementation remains available through internal comparison tools. The HiGHS
+documentation and attribution follow the fork-specific instructions below.
+
+## HiPDLP rewrite
+
+### Build and run
+
+Build the CUDA solver with CMake and an installed CUDA toolkit:
+
+```sh
+cmake -S . -B build-release \
+  -DCMAKE_BUILD_TYPE=Release \
+  -DHIGHS_HIPDLP_CUDA=ON \
+  -DBUILD_TESTING=OFF
+cmake --build build-release --target highs-bin -j
+```
+
+If CUDA is outside the compiler search path, also set
+`-DCMAKE_CUDA_COMPILER=/path/to/cuda/bin/nvcc`. Set
+`-DHIGHS_HIPDLP_CUDA=OFF` for a CPU-only build. `CUPDLP_GPU` controls the older
+PDLP GPU build; it is **not needed** for rewrite CUDA.
+
+Use the regular `highs` executable and an options file; no separate production
+HiPDLP CLI is needed. For GPU, presolve, Ruiz + Pock–Chambolle scaling, and
+`1e-4` tolerances, save this as `hipdlp.options`:
+
+```ini
+solver = hipdlp
+presolve = on
+hipdlp_backend = cuda
+hipdlp_scaling = legacy
+pdlp_scaling_mode = 5
+pdlp_ruiz_iterations = 10
+pdlp_step_size_strategy = 0
+pdlp_restart_strategy = 3
+pdlp_optimality_tolerance = 1e-4
+kkt_tolerance = 1e-4
+```
+
+```sh
+build-release/bin/highs model.mps --options_file hipdlp.options
+```
+
+Here `hipdlp_scaling = legacy` selects the scaling pipeline without Curtis–Reid;
+it **does not select the legacy solver**. To enable guarded Curtis–Reid before
+Ruiz + PC, change it to `auto`.
+
+### Options and accuracy
+
+| Option | Meaning |
+| --- | --- |
+| `hipdlp_backend` | `auto` tries CUDA and falls back to CPU; `cpu` and `cuda` request a specific backend. Explicit CUDA requests fail if unavailable. |
+| `hipdlp_scaling` | `auto`: guarded CR, then selected Ruiz/PC/L2 stages; `legacy`: those stages without CR; `curtis_reid`: CR alone without the spread guard; `off`: no scaling. |
+| `hipdlp_curtis_reid_iterations` | CR sweeps, default 20. |
+| `pdlp_scaling_mode` | Bit mask: Ruiz = 1, L2 = 2, PC = 4; default 5 means Ruiz + PC. |
+| `pdlp_ruiz_iterations` | Ruiz sweeps, default 10. |
+| `pdlp_step_size_strategy` | Rewrite supports fixed = 0 and PID = 3. The shared adaptive default = 1 maps to fixed with a warning; Malitsky–Pock = 2 is unsupported. |
+| `pdlp_restart_strategy` | Rewrite uses Halpern = 3. Other shared restart settings produce a substitution warning. |
+| `pdlp_optimality_tolerance` | Tolerance for convergence checks in the iteration loop. |
+| `kkt_tolerance` | Tolerance for independent KKT and certificate verification. Set both tolerances explicitly when comparing solvers. |
+| `time_limit`, `pdlp_iteration_limit` | Solve time and iteration budgets. |
+
+`openmp` and `rocm` are reserved backend names with no implementation. They
+return an unavailable-backend error. The advanced experiments
+`hipdlp_scaling_selector` and `hipdlp_early_kkt_check` remain disabled by default;
+leave them off for the configuration above. The scaling selector runs extra
+pilots and is separate from the normal `auto` guard.
+
+The normal CR guard rejects a candidate when either raw row or column scale
+spread exceeds `1e8`, before applying CR. It then continues with Ruiz/PC on the
+unmodified matrix. This is a numerical guard, not a prediction of solve time.
+
+CUDA screens candidates before the independent host KKT verifier. The screen
+does not replace that verifier or relax its tolerance. When HiGHS presolve is
+enabled, the rewrite's input is the **presolved LP**: its KKT check precedes
+HiGHS postsolve. A common KKT check on the restored original model is a separate
+benchmark measurement; native `OPTIMAL` statuses from different solvers are
+not interchangeable accuracy guarantees. See the
+[20-model comparison](docs/hipdlp-four-solvers-presolve.md).
+
+### Code layout and maintenance
+
+The rewrite lives under `highs/pdlp/hipdlp/`:
+
+| Directory | Responsibility |
+| --- | --- |
+| `api/` | Translate HiGHS options, dispatch implementations, map results. |
+| `model/` | Canonical sparse model, scaling and coordinate recovery. Scaling currently runs on the host. |
+| `algorithm/` | Halpern PDHG control loop, step sizes, restarts, convergence and timing. |
+| `backend/cpu/`, `backend/cuda/` | Memory, sparse operations and iteration kernels. |
+| `verification/` | Independent KKT and infeasibility/unboundedness certificate checks. |
+| `legacy/` | Adapter to the old implementation; root-level `pdhg`, `scaling`, `restart` and `linalg` files also belong to legacy. |
+| `check/hipdlp/` (repository root) | Test-only fixed-iteration replay and oracle, excluded from the solver library and installed headers. |
+
+Use `bin/highs` for end-to-end runs. Reading, HiGHS presolve, rewrite
+preprocessing/scaling, iterations and HiGHS postsolve are separate phases.
+Rewrite's `SolveDiagnostics::preprocessing` does not include model reading or
+HiGHS presolve. Keep these boundaries explicit when reporting performance.
+
+The solver loop uses RAII for phase timing and backend resources. Diagnostics
+and context defaults live with their declarations. Add algorithm decisions to
+`algorithm/`, numerical primitives to the relevant backend, and verification
+rules to `verification/`; keep test or benchmark replay out of the runtime
+library. Follow the repository's `.clang-format` style for edited C++ code.
+
+### Tests and development tools
+
+Use a separate build with tests enabled:
+
+```sh
+cmake -S . -B build-test \
+  -DCMAKE_BUILD_TYPE=Release \
+  -DHIGHS_HIPDLP_CUDA=ON \
+  -DBUILD_TESTING=ON -DALL_TESTS=ON
+cmake --build build-test --target unit_tests -j
+build-test/bin/unit_tests '[hipdlp]'
+```
+
+Repeat with CUDA off to check the CPU-only configuration. Review numerical,
+certificate and limit tests as well as backend tests before a release; do not
+treat a successful compilation as release qualification.
+
+The [cleanup validation record](docs/hipdlp-release-cleanup.md) lists the
+remaining baseline test failures. This cleanup alone does not qualify the
+solver for release.
+
+Benchmark/audit executables are not installed and are excluded from the default
+build. Build only the tools needed:
+
+```sh
+cmake --build build-test --target hipdlp_migration_adapter
+cmake --build build-test --target lp_solver_validation_adapter external_lp_solution_verifier
+```
+
+The migration adapter compares solver cores and **does not run HiGHS
+presolve/postsolve**. Its ineffective `--presolve` option has been removed; old
+invocations must omit that flag. For presolved comparisons use `highs` or the
+[four-solver study workflow](docs/hipdlp-four-solvers-presolve.md). The
+`hipdlp_solve_audit` target is additionally available on supported Linux/glibc
+builds. Historical study commands and results refer to their recorded source
+revisions and build configurations.
+
+---
+
+## Upstream HiGHS
 
 <!-- ![Build Status](https://github.com/ERGO-Code/HiGHS/actions/workflows/build.yml/badge.svg) -->
 

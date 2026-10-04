@@ -38,11 +38,11 @@ const HighsInt kCertificateCadence = 5 * kRestartCadence;
 // Check more often near convergence, with a bounded delay while far away.
 // All intervals are multiples of the unchanged restart cadence.
 HighsInt terminationCheckInterval(const NormalizedConvergenceMetrics& metrics,
-                                 const ConvergenceTolerances& tolerances) {
-  const double ratio = std::max(
-      metrics.relative_primal / tolerances.primal,
-      std::max(metrics.relative_dual / tolerances.dual,
-               metrics.relative_gap / tolerances.gap));
+                                  const ConvergenceTolerances& tolerances) {
+  const double ratio =
+      std::max(metrics.relative_primal / tolerances.primal,
+               std::max(metrics.relative_dual / tolerances.dual,
+                        metrics.relative_gap / tolerances.gap));
   if (ratio <= 10.0) return kRestartCadence;
   if (ratio <= 100.0) return 2 * kRestartCadence;
   return kCertificateCadence;
@@ -62,7 +62,7 @@ class RecordedIterationBlock {
   bool ready() const { return commands_.valid(); }
 
   api::Error prepare(backend::Backend& selected_backend,
-                      const HalpernPdhgState& initial) {
+                     const HalpernPdhgState& initial) {
     recorder_ = backend::commandBufferRecorder(selected_backend);
     if (recorder_ == nullptr) return api::Error();
     values_.resize(3 * kRecordedStepCount);
@@ -94,7 +94,8 @@ class RecordedIterationBlock {
     return recorder_->endRecording(commands_);
   }
 
-  api::Error replay(backend::Backend& selected_backend, HalpernPdhgState& state) {
+  api::Error replay(backend::Backend& selected_backend,
+                    HalpernPdhgState& state) {
     updateValues(state);
     api::Error error = selected_backend.uploadVector(values_, parameters_);
     if (!error.ok()) return error;
@@ -184,7 +185,8 @@ class SolvePhaseGuard {
                   const HighsInt& iteration, const bool begin_now = true)
       : observer_(context.observer),
         seconds_(phaseSeconds(context.diagnostics, phase)),
-        phase_(phase), iteration_(iteration),
+        phase_(phase),
+        iteration_(iteration),
         active_(false) {
     if (begin_now) begin();
   }
@@ -380,8 +382,7 @@ struct CertificateOutcome {
   api::SolverStatus status;
   api::Certificate certificate;
 
-  CertificateOutcome()
-      : available(false), status(api::SolverStatus::kNotSet) {}
+  CertificateOutcome() : available(false), status(api::SolverStatus::kNotSet) {}
 };
 
 api::SolveResult failure(const api::Error& error) {
@@ -435,10 +436,8 @@ api::Error requireSolveCapabilities(backend::Backend& selected_backend) {
       backend::Capability::kFusedPrimalDualUpdate,
       backend::Capability::kVectorOperations, backend::Capability::kReductions,
       backend::Capability::kHostDownload};
-  for (std::size_t index = 0; index < sizeof(required) / sizeof(required[0]);
-       ++index) {
-    const api::Error error =
-        selected_backend.requireCapability(required[index]);
+  for (const backend::Capability capability : required) {
+    const api::Error error = selected_backend.requireCapability(capability);
     if (!error.ok()) return error;
   }
   return api::Error();
@@ -458,18 +457,14 @@ api::Error createIterationVectors(backend::Backend& selected_backend,
       &vectors.current_dual,   &vectors.next_dual,      &vectors.dual_anchor,
       &vectors.dual_candidate, &vectors.reflected_dual, &vectors.current_ax,
       &vectors.reflected_ax,   &vectors.candidate_ax};
-  for (std::size_t index = 0;
-       index < sizeof(col_vectors) / sizeof(col_vectors[0]); ++index) {
-    const api::Error error =
-        selected_backend.createVector(num_cols, *col_vectors[index]);
+  for (backend::VectorHandle* vector : col_vectors) {
+    const api::Error error = selected_backend.createVector(num_cols, *vector);
     if (!error.ok()) return error;
     if (diagnostics != nullptr)
       ++diagnostics->resource_creation_calls_before_iterations;
   }
-  for (std::size_t index = 0;
-       index < sizeof(row_vectors) / sizeof(row_vectors[0]); ++index) {
-    const api::Error error =
-        selected_backend.createVector(num_rows, *row_vectors[index]);
+  for (backend::VectorHandle* vector : row_vectors) {
+    const api::Error error = selected_backend.createVector(num_rows, *vector);
     if (!error.ok()) return error;
     if (diagnostics != nullptr)
       ++diagnostics->resource_creation_calls_before_iterations;
@@ -491,8 +486,8 @@ api::Error downloadIterate(backend::Backend& selected_backend,
                            const backend::VectorHandle& primal,
                            const backend::VectorHandle& dual,
                            const backend::VectorHandle& ax,
-                           const backend::VectorHandle& aty,
-                           HostIterate& host, const SolveContext& context,
+                           const backend::VectorHandle& aty, HostIterate& host,
+                           const SolveContext& context,
                            const HighsInt iteration) {
   SolvePhaseGuard download(context, SolvePhase::kDownload, iteration);
   const backend::VectorDownload downloads[] = {{&primal, &host.primal},
@@ -504,8 +499,8 @@ api::Error downloadIterate(backend::Backend& selected_backend,
 
 api::Error prepareCandidateProducts(
     backend::Backend& selected_backend,
-    const backend::ProblemHandle& problem_handle,
-    const HalpernPdhgState& state, IterationVectors& vectors) {
+    const backend::ProblemHandle& problem_handle, const HalpernPdhgState& state,
+    IterationVectors& vectors) {
   api::Error error = selected_backend.multiply(
       problem_handle, *state.primal_candidate, vectors.candidate_ax);
   if (!error.ok()) return error;
@@ -529,11 +524,13 @@ api::Error prepareCandidate(backend::Backend& selected_backend,
                          vectors.candidate_aty, host, context, iteration);
 }
 
-api::Error evaluateResidentCheck(
-    backend::Backend& selected_backend, const model::Problem& problem,
-    backend::WorkspaceHandle& workspace, const backend::CheckInput& input,
-    const bool ordinary_boundary, SolveDiagnostics* diagnostics,
-    backend::CheckResult& result) {
+api::Error evaluateResidentCheck(backend::Backend& selected_backend,
+                                 const model::Problem& problem,
+                                 backend::WorkspaceHandle& workspace,
+                                 const backend::CheckInput& input,
+                                 const bool ordinary_boundary,
+                                 SolveDiagnostics* diagnostics,
+                                 backend::CheckResult& result) {
   if (diagnostics != nullptr) ++diagnostics->resident_check_calls;
   const api::Error error =
       selected_backend.evaluateCheck(problem, workspace, input, result);
@@ -567,8 +564,8 @@ api::Error postsolveIterate(const model::Problem& problem, HostIterate& host,
 }
 
 FixedPointErrorInput candidateFixedPointErrorInput(
-  const HalpernPdhgState& state,
-    backend::VectorHandle& aty_delta, const InitialStepSizes& step_sizes) {
+    const HalpernPdhgState& state, backend::VectorHandle& aty_delta,
+    const InitialStepSizes& step_sizes) {
   FixedPointErrorInput input;
   input.next_primal = state.primal_candidate;
   input.next_dual = state.dual_candidate;
@@ -591,7 +588,8 @@ FixedPointErrorResult evaluateCandidateFixedPointError(
   SolvePhaseGuard evaluation(context, phase, iteration);
   return evaluateFixedPointError(
       selected_backend, problem_handle,
-      candidateFixedPointErrorInput(state, aty_delta, step_sizes), products_prepared);
+      candidateFixedPointErrorInput(state, aty_delta, step_sizes),
+      products_prepared);
 }
 
 api::Error invalidKktResult(
@@ -628,15 +626,13 @@ double largest(const double left, const double right) {
 // one, so the loop simply keeps iterating.
 CertificateOutcome detectCertificate(const SolveContext& context,
                                      const model::Problem& problem,
-                                     const HighsLp& lp,
-                                     const HostIterate& host,
+                                     const HighsLp& lp, const HostIterate& host,
                                      const double tolerance,
                                      CertificateBuffers& buffers,
                                      const HighsInt iteration) {
-                          SolvePhaseGuard verification(context, SolvePhase::kHostVerification,
-                                   iteration);
-  if (context.diagnostics != nullptr)
-    ++context.diagnostics->certificate_checks;
+  SolvePhaseGuard verification(context, SolvePhase::kHostVerification,
+                               iteration);
+  if (context.diagnostics != nullptr) ++context.diagnostics->certificate_checks;
   CertificateOutcome outcome;
   if (lp.num_col_ == 0 && lp.num_row_ == 0) return outcome;
 
@@ -684,13 +680,12 @@ CertificateOutcome detectCertificate(const SolveContext& context,
     outcome.certificate.kind = api::CertificateKind::kAmbiguous;
     outcome.certificate.row_direction = buffers.dual_direction;
     outcome.certificate.column_direction = buffers.column_multiplier;
-    outcome.certificate.metrics.direction_norm =
-        farkas.metrics.direction_norm;
-    outcome.certificate.metrics.max_normalized_violation = largest(
-        largest(farkas.metrics.max_normalized_row_sign_violation,
-                farkas.metrics.max_normalized_column_sign_violation),
-        largest(ray.metrics.max_normalized_column_violation,
-                ray.metrics.max_normalized_row_violation));
+    outcome.certificate.metrics.direction_norm = farkas.metrics.direction_norm;
+    outcome.certificate.metrics.max_normalized_violation =
+        largest(largest(farkas.metrics.max_normalized_row_sign_violation,
+                        farkas.metrics.max_normalized_column_sign_violation),
+                largest(ray.metrics.max_normalized_column_violation,
+                        ray.metrics.max_normalized_row_violation));
     outcome.certificate.metrics.max_normalized_residual =
         farkas.metrics.max_normalized_stationarity_residual;
     outcome.certificate.metrics.margin =
@@ -704,8 +699,7 @@ CertificateOutcome detectCertificate(const SolveContext& context,
     outcome.certificate.kind = api::CertificateKind::kPrimalInfeasibility;
     outcome.certificate.row_direction = buffers.dual_direction;
     outcome.certificate.column_direction = buffers.column_multiplier;
-    outcome.certificate.metrics.direction_norm =
-        farkas.metrics.direction_norm;
+    outcome.certificate.metrics.direction_norm = farkas.metrics.direction_norm;
     outcome.certificate.metrics.max_normalized_violation =
         largest(farkas.metrics.max_normalized_row_sign_violation,
                 farkas.metrics.max_normalized_column_sign_violation);
@@ -832,8 +826,7 @@ void logBoundary(const SolveContext& context, const HighsInt iteration,
                  const NormalizedConvergenceMetrics& metrics,
                  const InitialStepSizes& steps,
                  const FixedPointRestartCondition restart_condition,
-                 const bool use_pid,
-                 const PrimalWeightUpdateKind pid_outcome) {
+                 const bool use_pid, const PrimalWeightUpdateKind pid_outcome) {
   if (context.log == nullptr) return;
   context.log->info(formatted(
       "HiPDLP rewrite boundary: iteration %lld, relative primal %.17g, dual "
@@ -932,54 +925,10 @@ api::SolveResult certifiedResult(const api::SolverStatus status,
 
 }  // namespace
 
-SolveDiagnostics::SolveDiagnostics()
-    : resource_creation_calls_before_iterations(0),
-      resource_creation_calls_during_iterations(0),
-      primal_weight_updates(0),
-      restarts(0),
-      check_boundaries(0),
-      resident_check_calls(0),
-      ordinary_check_boundaries(0),
-      ordinary_check_d2h_bytes(0),
-      ordinary_check_transfers(0),
-      ordinary_check_synchronizations(0),
-      candidate_downloads(0),
-      host_oracle_checks(0),
-      certificate_checks(0),
-      original_kkt_verifications(0),
-      original_kkt_rejections(0),
-      kkt_screens(0),
-      kkt_screen_rejections(0),
-      restart_reference_checks(0),
-      fixed_point_evaluations(0),
-      command_buffer_replays(0),
-      recorded_iterations(0),
-      total_wall_seconds(0.0),
-      preprocessing_seconds(0.0),
-      backend_setup_seconds(0.0),
-      operator_norm_seconds(0.0),
-      iterations_seconds(0.0),
-      iteration_block_seconds(0.0),
-      step_seconds(0.0),
-      boundary_seconds(0.0),
-      download_seconds(0.0),
-      host_preparation_seconds(0.0),
-      host_verification_seconds(0.0),
-      reference_fixed_point_seconds(0.0),
-      fixed_point_fallback_seconds(0.0) {}
-
-SolveLogSink::~SolveLogSink() {}
-
-SolveContext::SolveContext()
-    : log(nullptr), diagnostics(nullptr), observer(nullptr),
-      pilot_observer(nullptr),
-      use_command_buffers(true) {}
-
-static api::SolveResult solveImpl(const api::SolverOptions& requested_options,
+static api::SolveResult solveImpl(const api::SolverOptions& options,
                                   const model::OriginalModel& original_model,
                                   const SolveContext& context,
                                   ScalingPilotHook* pilot_hook = nullptr) {
-  const api::SolverOptions& options = requested_options;
   HighsInt iteration_budget = options.iteration_limit;
   HighsInt total_iterations = 0;
   SolvePhaseGuard solve_phase(context, SolvePhase::kSolve, total_iterations);
@@ -1001,14 +950,15 @@ static api::SolveResult solveImpl(const api::SolverOptions& requested_options,
     backend_setup.finish();
 
     SolvePhaseGuard preprocessing(context, SolvePhase::kPreprocessing,
-                    total_iterations);
+                                  total_iterations);
     model::PreprocessingDiagnostics* preprocessing_diagnostics =
-        context.diagnostics == nullptr ? nullptr : &context.diagnostics->preprocessing;
+        context.diagnostics == nullptr ? nullptr
+                                       : &context.diagnostics->preprocessing;
     model::ProblemBuildResult built =
         model::buildProblem(original_model.lp(), preprocessing_diagnostics);
     if (!built.ok()) return failure(built.error);
     error = model::applyScalingPipeline(built.problem, options.scaling,
-                                         preprocessing_diagnostics);
+                                        preprocessing_diagnostics);
     if (!error.ok()) return failure(error);
     if (context.log != nullptr && built.problem.scaling().curtis_reid_rejected)
       context.log->info(
@@ -1025,9 +975,9 @@ static api::SolveResult solveImpl(const api::SolverOptions& requested_options,
           api::Error(api::ErrorCode::kInvalidModel,
                      "HiPDLP rewrite does not yet support zero-operator LPs"));
     }
-            preprocessing.finish();
+    preprocessing.finish();
 
-            backend_setup.begin();
+    backend_setup.begin();
     backend::ProblemHandle problem_handle;
     error = selected_backend->bindProblem(built.problem, problem_handle);
     if (!error.ok()) return failure(error);
@@ -1082,10 +1032,10 @@ static api::SolveResult solveImpl(const api::SolverOptions& requested_options,
     {
       SolvePhaseGuard boundary(context, SolvePhase::kBoundary,
                                total_iterations);
-      error = downloadIterate(*selected_backend, vectors.current_primal,
-                              vectors.current_dual, vectors.current_ax,
-                              vectors.current_aty, host, context,
-                              total_iterations);
+      error =
+          downloadIterate(*selected_backend, vectors.current_primal,
+                          vectors.current_dual, vectors.current_ax,
+                          vectors.current_aty, host, context, total_iterations);
       if (!error.ok()) return failure(error);
       RawConvergenceMetrics raw;
       if (context.diagnostics != nullptr) {
@@ -1112,11 +1062,11 @@ static api::SolveResult solveImpl(const api::SolverOptions& requested_options,
       bool postsolved = false;
       if (stopping.decision == StoppingDecision::kOptimal) {
         error = postsolveIterate(built.problem, host, solution, context,
-                                total_iterations);
+                                 total_iterations);
         if (!error.ok()) return failure(error);
         postsolved = true;
         SolvePhaseGuard host_verification(
-          context, SolvePhase::kHostVerification, total_iterations);
+            context, SolvePhase::kHostVerification, total_iterations);
         const verification::KktVerificationResult verification =
             verification::verifyKkt(original_model.lp(), solution,
                                     options.kkt_tolerance);
@@ -1136,23 +1086,21 @@ static api::SolveResult solveImpl(const api::SolverOptions& requested_options,
           stopping.decision == StoppingDecision::kTimeLimit) {
         if (!postsolved) {
           error = postsolveIterate(built.problem, host, solution, context,
-                                  total_iterations);
+                                   total_iterations);
           if (!error.ok()) return failure(error);
         }
         const CertificateOutcome outcome = detectCertificate(
-          context, built.problem, original_model.lp(), host,
-          options.kkt_tolerance,
-            certificate_buffers, total_iterations);
+            context, built.problem, original_model.lp(), host,
+            options.kkt_tolerance, certificate_buffers, total_iterations);
         if (outcome.available) {
-          logCertificateCompletion(context, outcome.status,
-                                   outcome.certificate, 0,
-                                   elapsedSeconds(start));
+          logCertificateCompletion(context, outcome.status, outcome.certificate,
+                                   0, elapsedSeconds(start));
           return certifiedResult(outcome.status, solution, 0,
                                  outcome.certificate);
         }
         const api::SolverStatus status =
-          initial_iteration_limit ||
-              stopping.decision == StoppingDecision::kIterationLimit
+            initial_iteration_limit ||
+                    stopping.decision == StoppingDecision::kIterationLimit
                 ? api::SolverStatus::kIterationLimit
                 : api::SolverStatus::kTimeLimit;
         logCompletion(context, original_model.lp(), status, solution, 0,
@@ -1164,12 +1112,11 @@ static api::SolveResult solveImpl(const api::SolverOptions& requested_options,
       // certificate treatment as every later candidate.
       const CertificateOutcome outcome = detectCertificate(
           context, built.problem, original_model.lp(), host,
-          options.kkt_tolerance,
-          certificate_buffers, total_iterations);
+          options.kkt_tolerance, certificate_buffers, total_iterations);
       if (outcome.available) {
         if (!postsolved) {
           error = postsolveIterate(built.problem, host, solution, context,
-                                  total_iterations);
+                                   total_iterations);
           if (!error.ok()) return failure(error);
         }
         logCertificateCompletion(context, outcome.status, outcome.certificate,
@@ -1183,15 +1130,15 @@ static api::SolveResult solveImpl(const api::SolverOptions& requested_options,
     // The remaining budget is checked on both sides of the power iteration.
     if (timeLimitReached(options, start)) {
       error = postsolveIterate(built.problem, host, solution, context,
-                              total_iterations);
+                               total_iterations);
       if (!error.ok()) return failure(error);
       logCompletion(context, original_model.lp(), api::SolverStatus::kTimeLimit,
                     solution, 0, elapsedSeconds(start), options.kkt_tolerance);
       return api::SolveResult::success(api::SolverStatus::kTimeLimit, solution,
                                        0);
     }
-      SolvePhaseGuard norm_phase(context, SolvePhase::kOperatorNorm,
-                     total_iterations);
+    SolvePhaseGuard norm_phase(context, SolvePhase::kOperatorNorm,
+                               total_iterations);
     const OperatorNormResult operator_norm = estimateOperatorNormSquared(
         *selected_backend, problem_handle, built.problem.numRows(),
         built.problem.numCols());
@@ -1203,10 +1150,10 @@ static api::SolveResult solveImpl(const api::SolverOptions& requested_options,
           api::Error(api::ErrorCode::kInvalidModel,
                      "HiPDLP rewrite does not yet support zero-operator LPs"));
     }
-            norm_phase.finish();
+    norm_phase.finish();
     if (timeLimitReached(options, start)) {
       error = postsolveIterate(built.problem, host, solution, context,
-                              total_iterations);
+                               total_iterations);
       if (!error.ok()) return failure(error);
       logCompletion(context, original_model.lp(), api::SolverStatus::kTimeLimit,
                     solution, 0, elapsedSeconds(start), options.kkt_tolerance);
@@ -1214,7 +1161,7 @@ static api::SolveResult solveImpl(const api::SolverOptions& requested_options,
                                        0);
     }
 
-                      backend_setup.begin();
+    backend_setup.begin();
     StepSizeInitializationInput step_input;
     double operator_norm_upper_bound_squared = 0.0;
     const std::vector<model::ScalingStage>& scaling_stages =
@@ -1272,28 +1219,28 @@ static api::SolveResult solveImpl(const api::SolverOptions& requested_options,
     HighsInt next_verification_iteration = 0;
     HighsInt next_termination_iteration = kRestartCadence;
     error = selected_backend->prepareCheckWorkspace(
-      built.problem, original_model.lp(), workspace);
+        built.problem, original_model.lp(), workspace);
     if (!error.ok()) return failure(error);
     const backend::VectorDownload candidate_downloads[] = {
-      {state.primal_candidate, &host.primal},
-      {state.dual_candidate, &host.dual},
-      {&vectors.candidate_ax, &host.ax},
-      {&vectors.candidate_aty, &host.aty}};
+        {state.primal_candidate, &host.primal},
+        {state.dual_candidate, &host.dual},
+        {&vectors.candidate_ax, &host.ax},
+        {&vectors.candidate_aty, &host.aty}};
     error = selected_backend->prepareVectorDownloads(candidate_downloads, 4);
     if (!error.ok()) return failure(error);
-    host.reduced_costs.resize(static_cast<std::size_t>(built.problem.numCols()));
+    host.reduced_costs.resize(
+        static_cast<std::size_t>(built.problem.numCols()));
     certificate_buffers.scaled_column_multiplier.reserve(
-      static_cast<std::size_t>(built.problem.numCols()));
+        static_cast<std::size_t>(built.problem.numCols()));
     certificate_buffers.primal_direction.reserve(
-      static_cast<std::size_t>(original_model.lp().num_col_));
+        static_cast<std::size_t>(original_model.lp().num_col_));
     certificate_buffers.dual_direction.reserve(
-      static_cast<std::size_t>(original_model.lp().num_row_));
+        static_cast<std::size_t>(original_model.lp().num_row_));
     certificate_buffers.column_multiplier.reserve(
-      static_cast<std::size_t>(original_model.lp().num_col_));
+        static_cast<std::size_t>(original_model.lp().num_col_));
     RecordedIterationBlock recorded_block;
-    if (context.use_command_buffers &&
-        (iteration_budget == kHighsIInf ||
-         iteration_budget >= kRestartCadence)) {
+    if (context.use_command_buffers && (iteration_budget == kHighsIInf ||
+                                        iteration_budget >= kRestartCadence)) {
       error = recorded_block.prepare(*selected_backend, state);
       if (!error.ok()) return failure(error);
       if (recorded_block.ready() && context.diagnostics != nullptr)
@@ -1340,11 +1287,10 @@ static api::SolveResult solveImpl(const api::SolverOptions& requested_options,
     // diagnostic counts, and the extra block is discarded, so results do not
     // change. Observed solves verify at the boundary so that phase audits see
     // the accepted boundary as the terminal one.
-    const bool overlap_verifications = back_off_verifications &&
-                                       recorded_block.ready() &&
-                                       pilot_hook == nullptr &&
-                                       context.pilot_observer == nullptr &&
-                                       context.observer == nullptr;
+    const bool overlap_verifications =
+        back_off_verifications && recorded_block.ready() &&
+        pilot_hook == nullptr && context.pilot_observer == nullptr &&
+        context.observer == nullptr;
     bool verification_pending = false;
     HighsInt pending_iteration = 0;
     SolveDiagnostics pending_diagnostics;
@@ -1427,16 +1373,14 @@ static api::SolveResult solveImpl(const api::SolverOptions& requested_options,
         }
         if (!error.ok()) return fail(error);
         error = postsolveIterate(built.problem, host, solution, context,
-              total_iterations);
+                                 total_iterations);
         if (!error.ok()) return fail(error);
         const CertificateOutcome outcome = detectCertificate(
-          context, built.problem, original_model.lp(), host,
-          options.kkt_tolerance,
-            certificate_buffers, total_iterations);
+            context, built.problem, original_model.lp(), host,
+            options.kkt_tolerance, certificate_buffers, total_iterations);
         if (outcome.available) {
-          logCertificateCompletion(context, outcome.status,
-                                   outcome.certificate, total_iterations,
-                                   elapsedSeconds(start));
+          logCertificateCompletion(context, outcome.status, outcome.certificate,
+                                   total_iterations, elapsedSeconds(start));
           return certifiedResult(outcome.status, solution, total_iterations,
                                  outcome.certificate);
         }
@@ -1450,8 +1394,7 @@ static api::SolveResult solveImpl(const api::SolverOptions& requested_options,
       {
         SolvePhaseGuard step(context, SolvePhase::kStep, total_iterations);
         const bool replay_block =
-            recorded_block.ready() &&
-            total_iterations % kRestartCadence == 1 &&
+            recorded_block.ready() && total_iterations % kRestartCadence == 1 &&
             !restart_reference_pending &&
             total_iterations <=
                 std::numeric_limits<HighsInt>::max() - kRecordedStepCount &&
@@ -1460,13 +1403,13 @@ static api::SolveResult solveImpl(const api::SolverOptions& requested_options,
             (iteration_budget == kHighsIInf ||
              iteration_budget - total_iterations >= kRecordedStepCount);
         const HighsInt completed_steps = replay_block ? kRecordedStepCount : 1;
-        error = replay_block
-            ? recorded_block.replay(*selected_backend, state)
-            : enqueueHalpernPdhgStep(*selected_backend, state);
+        error = replay_block ? recorded_block.replay(*selected_backend, state)
+                             : enqueueHalpernPdhgStep(*selected_backend, state);
         if (!error.ok()) return fail(error);
-        if (total_iterations > std::numeric_limits<HighsInt>::max() - completed_steps) {
+        if (total_iterations >
+            std::numeric_limits<HighsInt>::max() - completed_steps) {
           return fail(api::Error(api::ErrorCode::kInvalidArgument,
-                                    "HiPDLP rewrite iteration count overflowed"));
+                                 "HiPDLP rewrite iteration count overflowed"));
         }
         total_iterations += completed_steps;
         if (replay_block && context.diagnostics != nullptr) {
@@ -1491,8 +1434,8 @@ static api::SolveResult solveImpl(const api::SolverOptions& requested_options,
       boundary_metrics_valid = false;
       backend::CheckResult check;
       bool fixed_point_from_packet = false;
-      SolvePhaseGuard boundary(context, SolvePhase::kBoundary,
-                               total_iterations, false);
+      SolvePhaseGuard boundary(context, SolvePhase::kBoundary, total_iterations,
+                               false);
       const bool certificate_due =
           total_iterations % kCertificateCadence == 0 || iteration_limit ||
           time_limit;
@@ -1520,7 +1463,8 @@ static api::SolveResult solveImpl(const api::SolverOptions& requested_options,
           trial.halpern_iterations = state.iteration;
           trial.total_iterations = total_iterations;
           trial.parameters = restart_parameters;
-          const FixedPointRestartResult restart = evaluateFixedPointRestart(trial);
+          const FixedPointRestartResult restart =
+              evaluateFixedPointRestart(trial);
           termination_due =
               !restart.ok() || restart.decision == RestartDecision::kRestart;
         }
@@ -1550,11 +1494,12 @@ static api::SolveResult solveImpl(const api::SolverOptions& requested_options,
           const FixedPointErrorInput fixed_point_input =
               candidateFixedPointErrorInput(state, vectors.aty_delta,
                                             current_steps);
-            error = selected_backend->prepareCheckFixedPoint(
+          error = selected_backend->prepareCheckFixedPoint(
               problem_handle, workspace, *fixed_point_input.next_primal,
               *fixed_point_input.next_dual, *fixed_point_input.reflected_primal,
-              *fixed_point_input.reflected_dual, *fixed_point_input.delta_primal,
-              *fixed_point_input.delta_dual, *fixed_point_input.aty_delta);
+              *fixed_point_input.reflected_dual,
+              *fixed_point_input.delta_primal, *fixed_point_input.delta_dual,
+              *fixed_point_input.aty_delta);
           if (error.ok()) {
             check_input.fixed_point = true;
             check_input.delta_primal = fixed_point_input.delta_primal;
@@ -1565,9 +1510,9 @@ static api::SolveResult solveImpl(const api::SolverOptions& requested_options,
         check_input.anchor_distances = cadence_boundary && use_pid;
         check_input.primal_anchor = state.primal_anchor;
         check_input.dual_anchor = state.dual_anchor;
-        error = evaluateResidentCheck(
-            *selected_backend, built.problem, workspace, check_input,
-            cadence_boundary, context.diagnostics, check);
+        error = evaluateResidentCheck(*selected_backend, built.problem,
+                                      workspace, check_input, cadence_boundary,
+                                      context.diagnostics, check);
         if (!error.ok() &&
             (check_input.fixed_point || check_input.anchor_distances)) {
           check_input.fixed_point = false;
@@ -1582,7 +1527,8 @@ static api::SolveResult solveImpl(const api::SolverOptions& requested_options,
               api::ErrorCode::kInternal,
               "HiPDLP rewrite check returned no valid metrics or host oracle"));
         }
-        fixed_point_from_packet = check_input.fixed_point && check.fixed_point_valid;
+        fixed_point_from_packet =
+            check_input.fixed_point && check.fixed_point_valid;
 
         bool candidate_downloaded = false;
         const auto download_candidate = [&]() -> api::Error {
@@ -1590,9 +1536,9 @@ static api::SolveResult solveImpl(const api::SolverOptions& requested_options,
           if (context.diagnostics != nullptr)
             ++context.diagnostics->candidate_downloads;
           const api::Error download_error = downloadIterate(
-              *selected_backend, *state.primal_candidate,
-              *state.dual_candidate, vectors.candidate_ax,
-              vectors.candidate_aty, host, context, total_iterations);
+              *selected_backend, *state.primal_candidate, *state.dual_candidate,
+              vectors.candidate_ax, vectors.candidate_aty, host, context,
+              total_iterations);
           candidate_downloaded = download_error.ok();
           return download_error;
         };
@@ -1623,21 +1569,22 @@ static api::SolveResult solveImpl(const api::SolverOptions& requested_options,
         const HighsInt interval =
             terminationCheckInterval(boundary_metrics, tolerances);
         next_termination_iteration = total_iterations > kHighsIInf - interval
-            ? kHighsIInf : total_iterations + interval;
+                                         ? kHighsIInf
+                                         : total_iterations + interval;
 
         bool postsolved = false;
         const auto postsolve_candidate = [&]() -> api::Error {
           if (postsolved) return api::Error();
           const api::Error download_error = download_candidate();
           if (!download_error.ok()) return download_error;
-          const api::Error postsolve_error =
-              postsolveIterate(built.problem, host, solution, context,
-                      total_iterations);
+          const api::Error postsolve_error = postsolveIterate(
+              built.problem, host, solution, context, total_iterations);
           postsolved = postsolve_error.ok();
           return postsolve_error;
         };
         const bool certificate_possible =
-            certificate_due && (check.primal_ray_possible || check.farkas_possible);
+            certificate_due &&
+            (check.primal_ray_possible || check.farkas_possible);
         // A backend that bounds the original-model metrics rejects a candidate
         // whose bounds already fail without the host verifier, so the verifier
         // runs only near acceptance and such rejections do not back off.
@@ -1707,9 +1654,11 @@ static api::SolveResult solveImpl(const api::SolverOptions& requested_options,
                   ? computeFixedPointError(
                         check.primal_delta_norm, check.dual_delta_norm,
                         check.delta_dot, current_steps.primal_weight,
-                        current_steps.base_step).fixed_point_error
+                        current_steps.base_step)
+                        .fixed_point_error
                   : std::numeric_limits<double>::quiet_NaN(),
-              context.diagnostics == nullptr ? 0 : context.diagnostics->restarts);
+              context.diagnostics == nullptr ? 0
+                                             : context.diagnostics->restarts);
         }
 
         if (iteration_limit ||
@@ -1720,7 +1669,7 @@ static api::SolveResult solveImpl(const api::SolverOptions& requested_options,
           if (certificate_possible)
             outcome = detectCertificate(
                 context, built.problem, original_model.lp(), host,
-              options.kkt_tolerance, certificate_buffers, total_iterations);
+                options.kkt_tolerance, certificate_buffers, total_iterations);
           if (outcome.available) {
             logCertificateCompletion(context, outcome.status,
                                      outcome.certificate, total_iterations,
@@ -1749,7 +1698,7 @@ static api::SolveResult solveImpl(const api::SolverOptions& requested_options,
           if (!certificate_due || certificate_possible)
             outcome = detectCertificate(
                 context, built.problem, original_model.lp(), host,
-              options.kkt_tolerance, certificate_buffers, total_iterations);
+                options.kkt_tolerance, certificate_buffers, total_iterations);
           if (outcome.available) {
             logCertificateCompletion(context, outcome.status,
                                      outcome.certificate, total_iterations,
@@ -1794,11 +1743,10 @@ static api::SolveResult solveImpl(const api::SolverOptions& requested_options,
           ++context.diagnostics->fixed_point_evaluations;
         }
         const FixedPointErrorResult reference =
-            evaluateCandidateFixedPointError(*selected_backend, problem_handle,
-                                             state, vectors.aty_delta,
-                                             current_steps, context,
-                                             total_iterations,
-                                             SolvePhase::kReferenceFixedPoint);
+            evaluateCandidateFixedPointError(
+                *selected_backend, problem_handle, state, vectors.aty_delta,
+                current_steps, context, total_iterations,
+                SolvePhase::kReferenceFixedPoint);
         if (!reference.ok()) return fail(reference.error);
         restart_state = resetFixedPointRestart(reference.fixed_point_error);
         restart_reference_pending = false;
@@ -1809,15 +1757,17 @@ static api::SolveResult solveImpl(const api::SolverOptions& requested_options,
           ++context.diagnostics->fixed_point_evaluations;
         FixedPointErrorResult fixed_point = standalone_fixed_point;
         if (!standalone_fpe) {
-          fixed_point = fixed_point_from_packet
-              ? computeFixedPointError(
-                    check.primal_delta_norm, check.dual_delta_norm,
-                    check.delta_dot, current_steps.primal_weight,
-                    current_steps.base_step)
-              : evaluateCandidateFixedPointError(
-                    *selected_backend, problem_handle, state, vectors.aty_delta,
-                    current_steps, context, total_iterations,
-                    SolvePhase::kFixedPointFallback, check.fixed_point_prepared);
+          fixed_point =
+              fixed_point_from_packet
+                  ? computeFixedPointError(
+                        check.primal_delta_norm, check.dual_delta_norm,
+                        check.delta_dot, current_steps.primal_weight,
+                        current_steps.base_step)
+                  : evaluateCandidateFixedPointError(
+                        *selected_backend, problem_handle, state,
+                        vectors.aty_delta, current_steps, context,
+                        total_iterations, SolvePhase::kFixedPointFallback,
+                        check.fixed_point_prepared);
         }
         if (!fixed_point.ok()) return fail(fixed_point.error);
         FixedPointRestartInput restart_input;
@@ -1846,12 +1796,12 @@ static api::SolveResult solveImpl(const api::SolverOptions& requested_options,
             if (!check.anchor_distances_valid) {
               SolvePhaseGuard fallback(context, SolvePhase::kFixedPointFallback,
                                        total_iterations);
-              error = selected_backend->differenceNorm2(
-                *state.primal_candidate, *state.primal_anchor,
-                primal_distance);
+              error = selected_backend->differenceNorm2(*state.primal_candidate,
+                                                        *state.primal_anchor,
+                                                        primal_distance);
               if (!error.ok()) return fail(error);
               error = selected_backend->differenceNorm2(
-                *state.dual_candidate, *state.dual_anchor, dual_distance);
+                  *state.dual_candidate, *state.dual_anchor, dual_distance);
               if (!error.ok()) return fail(error);
             }
 
@@ -1997,9 +1947,9 @@ api::SolveResult solve(const api::SolverOptions& options,
     if (result.ok()) {
       if (result.iteration_count >
           std::numeric_limits<HighsInt>::max() - discarded)
-        return failure(api::Error(
-            api::ErrorCode::kInvalidArgument,
-            "HiPDLP scaling selector iteration count overflowed"));
+        return failure(
+            api::Error(api::ErrorCode::kInvalidArgument,
+                       "HiPDLP scaling selector iteration count overflowed"));
       result.iteration_count += discarded;
       if (context.log != nullptr && discarded != 0)
         context.log->info(

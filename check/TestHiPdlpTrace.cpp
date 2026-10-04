@@ -7,7 +7,7 @@
 #include "catch.hpp"
 #include "lp_data/HConst.h"
 #include "lp_data/HighsOptions.h"
-#include "pdlp/hipdlp/algorithm/fixed_trace.hpp"
+#include "hipdlp/fixed_trace.hpp"
 #include "pdlp/hipdlp/backend/backend_factory.hpp"
 #ifdef HIGHS_HIPDLP_CUDA_DETECTED
 #include "pdlp/hipdlp/backend/cuda/cuda_backend_testing.hpp"

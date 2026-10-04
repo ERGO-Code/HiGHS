@@ -296,7 +296,6 @@ _srcs = [
     'pdlp/hipdlp/algorithm/averaging_policy.cc',
     'pdlp/hipdlp/algorithm/convergence.cc',
     'pdlp/hipdlp/algorithm/fixed_point_error.cc',
-    'pdlp/hipdlp/algorithm/fixed_trace.cc',
     'pdlp/hipdlp/algorithm/halpern_pdhg_step.cc',
     'pdlp/hipdlp/algorithm/operator_norm.cc',
     'pdlp/hipdlp/algorithm/restart_policy.cc',

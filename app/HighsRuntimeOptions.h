@@ -106,6 +106,7 @@ void setupCommandLineOptions(CLI::App& app,
                  "Set solver option to:\n"
                  "\"choose\" * default\n"
                  "\"simplex\"\n"
+                 "\"hipdlp\" (HiPDLP rewrite)\n"
                  "\"hipo\"\n"
                  "\"ipm\"");
 
