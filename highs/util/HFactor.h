@@ -524,7 +524,12 @@ class HFactor {
     for (HighsInt k = mc_start[iCol]; k < mc_start[iCol] + mc_count_a[iCol];
          k++)
       max_value = max(max_value, fabs(mc_value[k]));
-    mc_min_pivot[iCol] = max(max_value * pivot_threshold, pivot_tolerance);
+    //    mc_min_pivot[iCol] = max(max_value * pivot_threshold, pivot_tolerance);
+    mc_min_pivot[iCol] = max_value * pivot_threshold;
+    if (mc_min_pivot[iCol] < pivot_tolerance) {
+      printf("colFixMax: %g = mc_min_pivot[%d] < pivot_tolerance = %g\n",
+	     mc_min_pivot[iCol], int(iCol), pivot_tolerance);
+    }
   }
 
   double colDelete(const HighsInt iCol, const HighsInt iRow) {
