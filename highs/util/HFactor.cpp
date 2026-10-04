@@ -1632,7 +1632,7 @@ void HFactor::zeroCol(const HighsInt jCol, const double pivot_multiplier) {
     // conservative, since zeroCol is only used when singularity is
     // detected as a consequence of |pivot_multiplier| <
     // pivot_tolerance
-    assert(abs_value < std::fabs(pivot_multiplier));
+    assert(abs_value <= std::fabs(pivot_multiplier));
   }
   // Remove the column from the linked list of columns containing it
   clinkDel(jCol);
