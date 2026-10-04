@@ -186,10 +186,8 @@ TEST_CASE("Factor-get-set-invert", "[highs_test_factor]") {
 
 TEST_CASE("Factor-zero-col-pivot-tolerance", "[highs_test_factor]") {
   Highs highs;
-  REQUIRE(highs.setOptionValue("output_flag", false) == HighsStatus::kOk);
+  //  REQUIRE(highs.setOptionValue("output_flag", dev_run) == HighsStatus::kOk);
   REQUIRE(highs.setOptionValue("presolve", "off") == HighsStatus::kOk);
-  REQUIRE(highs.setOptionValue("solver", "simplex") == HighsStatus::kOk);
-  REQUIRE(highs.setOptionValue("threads", 1) == HighsStatus::kOk);
 
   // Near-dependent columns used to select a pivot below the absolute
   // tolerance, then discard a larger entry in that column.
