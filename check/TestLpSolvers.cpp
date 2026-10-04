@@ -582,3 +582,22 @@ TEST_CASE("releaseMemory", "[highs_lp_solver]") {
 
   h.resetGlobalScheduler(true);
 }
+
+TEST_CASE("issue-2300", "[highs_lp_solver]") {
+  // After presolve, the only dual infeasibility at the start is that
+  // of a free nonbasic variable. Dual phase 2 is forced, hands over to
+  // dual phase 1 without iterating, and phase 1 must not then use the
+  // list of free variables that phase 2 created
+  std::string model_file =
+      std::string(HIGHS_DIR) + "/check/instances/issue-2300.mps";
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  REQUIRE(h.readModel(model_file) == HighsStatus::kOk);
+  REQUIRE(h.run() == HighsStatus::kOk);
+  REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
+  const double optimal_objective = 4.0735475989e-04;
+  REQUIRE(std::fabs(h.getInfo().objective_function_value -
+                    optimal_objective) < 1e-12);
+
+  h.resetGlobalScheduler(true);
+}
