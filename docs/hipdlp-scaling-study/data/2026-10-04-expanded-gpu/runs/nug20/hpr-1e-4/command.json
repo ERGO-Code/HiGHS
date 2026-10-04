@@ -1,0 +1,29 @@
+{
+  "name": "nug20",
+  "solver": "hpr",
+  "native_tolerance": "1e-4",
+  "model": "/tmp/hipdlp-expanded-gpu/models/nug20-canonical.mps",
+  "sha256": "9c56946e44adba6ed36a76146903eeccb3be53f4507f8180bff49ebdfd247d3a",
+  "dimensions": {
+    "rows": 15240,
+    "cols": 72600,
+    "nnz": 304800
+  },
+  "command": [
+    "/tmp/neso-gpu-comparison/hpr-build/solve_mps_file",
+    "-i",
+    "/tmp/hipdlp-expanded-gpu/models/nug20-canonical.mps",
+    "--presolver",
+    "none",
+    "--tol",
+    "1e-4",
+    "--cr",
+    "true",
+    "--time-limit",
+    "300.0",
+    "--print-debug-info",
+    "false"
+  ],
+  "time_limit": 300.0,
+  "started": 1791123744.355766
+}

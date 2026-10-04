@@ -7,7 +7,7 @@
   "baseline/neso-2245.preprocessing-command.json": "5893c4fc9d2a2a3cb18c111688a989af58de7a4367f94b05a02b951bb12dba0a",
   "baseline/neso-2245.preprocessing.jsonl": "97d5b23bb3ee9b0d9be84d099c80b374706c0c1725996181352ce88d27fc6a43",
   "baseline/neso-2245.process.json": "efeb196f033f84eedb336ac2cb01fd1a3bf07858594d2b63718d7911e2026b19",
-  "baseline/tests.log": "00fa2681265dc66365f0028c97527c872129165977714c1f7e33c0153ab62d7f",
+  "baseline/tests.log.gz": "0c618d6669020be7f8451154d405c16b49a9a86bd3f3be1917d57f29a5949e65",
   "build-metadata.json": "84b73f3fdfad67dc263edf36bab334b58459ecf4b4bde4dcdcdebb3af38960f1",
   "equivalence.json": "839f7d9ba11fd32ce91a8bd78494a2ab5d0ab4e7d1c88e00bf6ed085d243072d",
   "implementation.patch": "fd722afc5e4ee5110996e7cc3c434113e85eefd25919535cc1766897095d106b",
@@ -24,6 +24,6 @@
   "optimized/neso-2245.preprocessing-command.json": "5013b6eabdeb4860932d2a8cbb364b5b0d38d702c4878f3e76d069f39b5428aa",
   "optimized/neso-2245.preprocessing.jsonl": "2382245bb24ac927f5334384b59d77564b12247ea7a1f3a14664b8e28370ab23",
   "optimized/neso-2245.process.json": "231118e565e2b0985c5f54d3325909ace8fd36cbf39959324badc22c9d39f38f",
-  "optimized/tests.log": "6ac30d69cf9da177256773b137540843d33ecd13d598fc1e78fa30b6b7871ad0",
+  "optimized/tests.log.gz": "753e3edd41b1b170e1415005d0f026440884bbb46ee7f52088b0c25a799ab111",
   "test-comparison.json": "e50fc3b043dd1215306e11cdf6c3aaaf14afe50af5343229c29ab4d9df81fb14"
 }

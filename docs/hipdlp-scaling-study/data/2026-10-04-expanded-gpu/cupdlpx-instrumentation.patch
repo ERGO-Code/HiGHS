@@ -1,0 +1,56 @@
+diff --git a/src/cli.c b/src/cli.c
+index cc85c93..ee82f52 100644
+--- a/src/cli.c
++++ b/src/cli.c
+@@ -21,6 +21,7 @@ limitations under the License.
+ #include "utils.h"
+ #include <getopt.h>
+ #include <libgen.h>
++#include <time.h>
+ #include <stdbool.h>
+ #include <stdint.h>
+ #include <stdio.h>
+@@ -74,7 +75,7 @@ void save_solution(const double *data, int size, const char *output_dir, const c
+ 
+     for (int i = 0; i < size; ++i)
+     {
+-        fprintf(outfile, "%.10g\n", data[i]);
++        fprintf(outfile, "%.17g\n", data[i]);
+     }
+ 
+     fclose(outfile);
+@@ -439,7 +440,10 @@ int main(int argc, char *argv[])
+         return 1;
+     }
+ 
++    struct timespec benchmark_read_start, benchmark_read_end, benchmark_solve_end;
++    clock_gettime(CLOCK_MONOTONIC, &benchmark_read_start);
+     lp_problem_t *problem = read_mps_file(filename);
++    clock_gettime(CLOCK_MONOTONIC, &benchmark_read_end);
+ 
+     if (problem == NULL)
+     {
+@@ -449,6 +453,15 @@ int main(int argc, char *argv[])
+     }
+ 
+     cupdlpx_result_t *result = solve_lp_problem(problem, &params);
++    clock_gettime(CLOCK_MONOTONIC, &benchmark_solve_end);
++    const double benchmark_read_seconds =
++        (double)(benchmark_read_end.tv_sec - benchmark_read_start.tv_sec) +
++        1e-9 * (benchmark_read_end.tv_nsec - benchmark_read_start.tv_nsec);
++    const double benchmark_solve_seconds =
++        (double)(benchmark_solve_end.tv_sec - benchmark_read_end.tv_sec) +
++        1e-9 * (benchmark_solve_end.tv_nsec - benchmark_read_end.tv_nsec);
++    printf("BENCH_TIMING {\"read_wall_sec\":%.17g,\"solver_wall_sec\":%.17g}\n",
++           benchmark_read_seconds, benchmark_solve_seconds);
+ 
+     if (result == NULL)
+     {
+@@ -460,6 +473,7 @@ int main(int argc, char *argv[])
+         save_solution(
+             result->primal_solution, problem->num_variables, output_dir, instance_name, "_primal_solution.txt");
+         save_solution(result->dual_solution, problem->num_constraints, output_dir, instance_name, "_dual_solution.txt");
++        save_solution(result->reduced_cost, problem->num_variables, output_dir, instance_name, "_reduced_cost.txt");
+         cupdlpx_result_free(result);
+     }
+ 

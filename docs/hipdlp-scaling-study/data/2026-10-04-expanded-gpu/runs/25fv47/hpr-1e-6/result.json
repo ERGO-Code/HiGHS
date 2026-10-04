@@ -1,0 +1,55 @@
+{
+  "name": "25fv47",
+  "solver": "hpr",
+  "native_tolerance": "1e-6",
+  "model": "/tmp/hipdlp-expanded-gpu/models/25fv47-canonical.mps",
+  "sha256": "dc128fc55562ee9590a0ab85f4f18e608352504c01db8ef0199e540561539a02",
+  "dimensions": {
+    "rows": 821,
+    "cols": 1571,
+    "nnz": 10400
+  },
+  "command": [
+    "/tmp/neso-gpu-comparison/hpr-build/solve_mps_file",
+    "-i",
+    "/tmp/hipdlp-expanded-gpu/models/25fv47-canonical.mps",
+    "--presolver",
+    "none",
+    "--tol",
+    "1e-6",
+    "--cr",
+    "true",
+    "--time-limit",
+    "300.0",
+    "--print-debug-info",
+    "false"
+  ],
+  "time_limit": 300.0,
+  "started": 1791123683.750028,
+  "exit_code": 0,
+  "process_wall_sec": 1.520478358026594,
+  "read_wall_sec": 0.009064281,
+  "solver_wall_sec": 1.224208054,
+  "read_plus_solve_wall_sec": 1.2332723349999999,
+  "native": {
+    "status": "OPTIMAL",
+    "iterations": 56400,
+    "time": 0.991784619,
+    "objective": 5501.836518651726,
+    "residual": 8.044801048893404e-07,
+    "gap": 8.044801048893404e-07,
+    "total_time": 1.043555839
+  },
+  "verification": {
+    "kkt_contract": "hipdlp-original-kkt/2",
+    "tolerance": 0.0001,
+    "kkt_pass": true,
+    "objective": 5501.836518651736,
+    "primal": 2.7844021492371625e-07,
+    "dual": 6.048059891857341e-07,
+    "gap": 8.044801104266275e-07,
+    "complementarity": 1.8710226968825926e-06,
+    "stationarity": 1.319976975278081e-05
+  },
+  "selected": true
+}

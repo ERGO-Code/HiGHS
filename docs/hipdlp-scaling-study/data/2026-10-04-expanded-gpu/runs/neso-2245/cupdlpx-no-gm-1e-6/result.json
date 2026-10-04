@@ -1,0 +1,50 @@
+{
+  "name": "neso-2245",
+  "solver": "cupdlpx-no-gm",
+  "native_tolerance": "1e-6",
+  "model": "/tmp/hipdlp-expanded-gpu/models/neso-2245-canonical.mps",
+  "sha256": "6db340c8ac458bbaabdd25a745ec71827690ccd65d90d6d582745c72039be89e",
+  "dimensions": {
+    "rows": 45715,
+    "cols": 93151,
+    "nnz": 12980419
+  },
+  "command": [
+    "/tmp/neso-gpu-comparison/cupdlpx-current-build/cupdlpx",
+    "--no_presolve",
+    "--eps_opt",
+    "1e-6",
+    "--eps_feas",
+    "1e-6",
+    "--time_limit",
+    "300.0",
+    "--geo_mean_iter",
+    "0",
+    "/tmp/hipdlp-expanded-gpu/models/neso-2245-canonical.mps",
+    "/tmp/hipdlp-expanded-gpu/runs/neso-2245/cupdlpx-no-gm-1e-6"
+  ],
+  "time_limit": 300.0,
+  "started": 1791124411.940856,
+  "exit_code": 0,
+  "process_wall_sec": 14.012816146947443,
+  "read_wall_sec": 7.530395675,
+  "solver_wall_sec": 6.029234006,
+  "read_plus_solve_wall_sec": 13.559629681,
+  "native": {
+    "status": "OPTIMAL",
+    "iterations": 9800,
+    "time": 5.286382
+  },
+  "verification": {
+    "kkt_contract": "hipdlp-original-kkt/2",
+    "tolerance": 0.0001,
+    "kkt_pass": true,
+    "objective": -22308.44384127444,
+    "primal": 6.359852718706206e-13,
+    "dual": 4.4819341889706375e-07,
+    "gap": 5.157179302528151e-07,
+    "complementarity": 5.157770517422051e-07,
+    "stationarity": 1.6126374471926296e-07
+  },
+  "selected": true
+}

@@ -1,0 +1,98 @@
+[
+  {
+    "source": "/tmp/hipdlp-expanded-gpu/original/25fv47.mps",
+    "target": "/tmp/hipdlp-expanded-gpu/models/25fv47-canonical.mps",
+    "source_sha256": "e4ee6ed9e3fecb368bdc6fca6f9def3abc31f7937ec627b0eb4afa7c0b528b96",
+    "target_sha256": "dc128fc55562ee9590a0ab85f4f18e608352504c01db8ef0199e540561539a02",
+    "threshold": 1e-09,
+    "removed": 0,
+    "bound_only_columns": 0,
+    "declared_columns": 1571,
+    "audit": {
+      "equal_after_highs_default_filter": true,
+      "rows": 821,
+      "cols": 1571,
+      "nnz": 10400
+    }
+  },
+  {
+    "source": "/tmp/hipdlp-expanded-gpu/original/pds-20.mps",
+    "target": "/tmp/hipdlp-expanded-gpu/models/pds-20-canonical.mps",
+    "source_sha256": "1c9a78e3ae1c7368d15c59446e644bf2545072c0711e22d17cc70526c572e626",
+    "target_sha256": "2ccf7623336221353d6c29f8d9b2f718d5b8a287806cf340e2a31c98e60da00b",
+    "threshold": 1e-09,
+    "removed": 0,
+    "bound_only_columns": 0,
+    "declared_columns": 105728,
+    "audit": {
+      "equal_after_highs_default_filter": true,
+      "rows": 33874,
+      "cols": 105728,
+      "nnz": 230200
+    }
+  },
+  {
+    "source": "/tmp/hipdlp-expanded-gpu/original/pypsa-eur-240t5n.mps",
+    "target": "/tmp/hipdlp-expanded-gpu/models/pypsa-eur-240t5n-canonical.mps",
+    "source_sha256": "68704bb54cc21012dbbdef2a9e49c316bd3244399234eba42a6b881f931b8883",
+    "target_sha256": "9aa348f2a24db153c2dd117a315d08365f4aeb9e3f0a89918f351c142aa77b4e",
+    "threshold": 1e-09,
+    "removed": 0,
+    "bound_only_columns": 0,
+    "declared_columns": 56899,
+    "audit": {
+      "equal_after_highs_default_filter": true,
+      "rows": 119299,
+      "cols": 56899,
+      "nnz": 237928
+    }
+  },
+  {
+    "source": "/tmp/hipdlp-expanded-gpu/original/nug20.mps",
+    "target": "/tmp/hipdlp-expanded-gpu/models/nug20-canonical.mps",
+    "source_sha256": "048990e3b89b822dc1d7cf99798aba4393be126537de2f7c65613ad6119c4892",
+    "target_sha256": "9c56946e44adba6ed36a76146903eeccb3be53f4507f8180bff49ebdfd247d3a",
+    "threshold": 1e-09,
+    "removed": 0,
+    "bound_only_columns": 0,
+    "declared_columns": 72600,
+    "audit": {
+      "equal_after_highs_default_filter": true,
+      "rows": 15240,
+      "cols": 72600,
+      "nnz": 304800
+    }
+  },
+  {
+    "source": "/tmp/hipdlp-expanded-gpu/original/mod2.mps",
+    "target": "/tmp/hipdlp-expanded-gpu/models/mod2-canonical.mps",
+    "source_sha256": "0b48f78d7ce4c2745d4523f22a6cf0847fa5aebd064ea25caaf3071fda210670",
+    "target_sha256": "9e5a0f90e43e2b91443e3b9aefbe29810bdb76ba01cd90aa471d66ec3ec14cc4",
+    "threshold": 1e-09,
+    "removed": 0,
+    "bound_only_columns": 0,
+    "declared_columns": 31728,
+    "audit": {
+      "equal_after_highs_default_filter": true,
+      "rows": 34774,
+      "cols": 31728,
+      "nnz": 165129
+    }
+  },
+  {
+    "source": "/tmp/hipdlp-expanded-gpu/original/a2864.mps",
+    "target": "/tmp/hipdlp-expanded-gpu/models/a2864-canonical.mps",
+    "source_sha256": "1bb10e807cb77d9b36cf3e4da164c7fb5f32af5d41576a26ff7ce21cca529e0a",
+    "target_sha256": "6b28378912d83af49cf3429bc6a13cdfd5d2085e5cdbbb0dd94f00bca25f70e1",
+    "threshold": 1e-09,
+    "removed": 0,
+    "bound_only_columns": 0,
+    "declared_columns": 200787,
+    "audit": {
+      "equal_after_highs_default_filter": true,
+      "rows": 22117,
+      "cols": 200787,
+      "nnz": 20078717
+    }
+  }
+]

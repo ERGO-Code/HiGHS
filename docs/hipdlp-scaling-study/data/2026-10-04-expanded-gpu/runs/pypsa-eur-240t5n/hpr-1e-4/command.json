@@ -1,0 +1,29 @@
+{
+  "name": "pypsa-eur-240t5n",
+  "solver": "hpr",
+  "native_tolerance": "1e-4",
+  "model": "/tmp/hipdlp-expanded-gpu/models/pypsa-eur-240t5n-canonical.mps",
+  "sha256": "9aa348f2a24db153c2dd117a315d08365f4aeb9e3f0a89918f351c142aa77b4e",
+  "dimensions": {
+    "rows": 119299,
+    "cols": 56899,
+    "nnz": 237928
+  },
+  "command": [
+    "/tmp/neso-gpu-comparison/hpr-build/solve_mps_file",
+    "-i",
+    "/tmp/hipdlp-expanded-gpu/models/pypsa-eur-240t5n-canonical.mps",
+    "--presolver",
+    "none",
+    "--tol",
+    "1e-4",
+    "--cr",
+    "true",
+    "--time-limit",
+    "300.0",
+    "--print-debug-info",
+    "false"
+  ],
+  "time_limit": 300.0,
+  "started": 1791123705.1203237
+}

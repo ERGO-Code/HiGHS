@@ -1,0 +1,16 @@
+Termination Reason: OPTIMAL
+Precondition time (sec): 4.776000e-03
+Runtime (sec): 9.803250e-01
+Iterations Count: 45000
+ASB Step Raise Count: 0
+ASB Revert Count: 0
+ASB Power Iterations: 9
+Primal Objective Value: 5.501855e+03
+Dual Objective Value: 5.501846e+03
+Relative Primal Residual: 4.007972e-07
+Relative Dual Residual: 3.286752e-08
+Absolute Objective Gap: 8.513773e-03
+Relative Objective Gap: 7.736487e-07
+Rows: 821
+Columns: 1571
+Nonzeros: 10400

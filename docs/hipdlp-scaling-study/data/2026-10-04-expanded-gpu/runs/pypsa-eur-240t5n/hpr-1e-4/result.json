@@ -1,0 +1,55 @@
+{
+  "name": "pypsa-eur-240t5n",
+  "solver": "hpr",
+  "native_tolerance": "1e-4",
+  "model": "/tmp/hipdlp-expanded-gpu/models/pypsa-eur-240t5n-canonical.mps",
+  "sha256": "9aa348f2a24db153c2dd117a315d08365f4aeb9e3f0a89918f351c142aa77b4e",
+  "dimensions": {
+    "rows": 119299,
+    "cols": 56899,
+    "nnz": 237928
+  },
+  "command": [
+    "/tmp/neso-gpu-comparison/hpr-build/solve_mps_file",
+    "-i",
+    "/tmp/hipdlp-expanded-gpu/models/pypsa-eur-240t5n-canonical.mps",
+    "--presolver",
+    "none",
+    "--tol",
+    "1e-4",
+    "--cr",
+    "true",
+    "--time-limit",
+    "300.0",
+    "--print-debug-info",
+    "false"
+  ],
+  "time_limit": 300.0,
+  "started": 1791123705.1203237,
+  "exit_code": 0,
+  "process_wall_sec": 1.3697367222048342,
+  "read_wall_sec": 0.328351289,
+  "solver_wall_sec": 0.647142393,
+  "read_plus_solve_wall_sec": 0.975493682,
+  "native": {
+    "status": "OPTIMAL",
+    "iterations": 7100,
+    "time": 0.306942796,
+    "objective": 17943583328.06539,
+    "residual": 8.400213836530356e-05,
+    "gap": 2.636487007616723e-05,
+    "total_time": 0.372652918
+  },
+  "verification": {
+    "kkt_contract": "hipdlp-original-kkt/2",
+    "tolerance": 0.0001,
+    "kkt_pass": false,
+    "objective": 17943583328.06537,
+    "primal": 1.9244574564312975e-08,
+    "dual": 0.000830776822458202,
+    "gap": 3.448578407965479e-05,
+    "complementarity": 2.5588747291455868e-05,
+    "stationarity": 33.453017593241384
+  },
+  "selected": false
+}

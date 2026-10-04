@@ -1,0 +1,26 @@
+{
+  "name": "pds-20",
+  "solver": "cupdlpx",
+  "native_tolerance": "1e-4",
+  "model": "/tmp/hipdlp-expanded-gpu/models/pds-20-canonical.mps",
+  "sha256": "2ccf7623336221353d6c29f8d9b2f718d5b8a287806cf340e2a31c98e60da00b",
+  "dimensions": {
+    "rows": 33874,
+    "cols": 105728,
+    "nnz": 230200
+  },
+  "command": [
+    "/tmp/neso-gpu-comparison/cupdlpx-current-build/cupdlpx",
+    "--no_presolve",
+    "--eps_opt",
+    "1e-4",
+    "--eps_feas",
+    "1e-4",
+    "--time_limit",
+    "300.0",
+    "/tmp/hipdlp-expanded-gpu/models/pds-20-canonical.mps",
+    "/tmp/hipdlp-expanded-gpu/runs/pds-20/cupdlpx-1e-4"
+  ],
+  "time_limit": 300.0,
+  "started": 1791123696.269948
+}

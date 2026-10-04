@@ -1,0 +1,45 @@
+{
+  "name": "pypsa-eur-240t5n",
+  "solver": "rewrite",
+  "native_tolerance": "1e-4",
+  "model": "/tmp/hipdlp-expanded-gpu/models/pypsa-eur-240t5n-canonical.mps",
+  "sha256": "9aa348f2a24db153c2dd117a315d08365f4aeb9e3f0a89918f351c142aa77b4e",
+  "dimensions": {
+    "rows": 119299,
+    "cols": 56899,
+    "nnz": 237928
+  },
+  "command": [
+    "/tmp/hipdlp-expanded-gpu/rewrite",
+    "/tmp/hipdlp-expanded-gpu/models/pypsa-eur-240t5n-canonical.mps",
+    "/tmp/hipdlp-expanded-gpu/runs/pypsa-eur-240t5n/rewrite-1e-4/solution",
+    "300.0"
+  ],
+  "time_limit": 300.0,
+  "started": 1791123703.1024973,
+  "exit_code": 0,
+  "process_wall_sec": 1.8713280861265957,
+  "read_wall_sec": 0.679091529,
+  "solver_wall_sec": 0.731612417,
+  "read_plus_solve_wall_sec": 1.410703946,
+  "native": {
+    "status": "OPTIMAL",
+    "iterations": 2440,
+    "time": 0.731612417,
+    "preprocessing_seconds": 0.309002942,
+    "host_kkt_checks": 1,
+    "kkt_screens": 7
+  },
+  "verification": {
+    "kkt_contract": "hipdlp-original-kkt/2",
+    "tolerance": 0.0001,
+    "kkt_pass": true,
+    "objective": 17942986062.7867,
+    "primal": 3.32579852214869e-07,
+    "dual": 8.134900968373305e-05,
+    "gap": 9.062460172015158e-06,
+    "complementarity": 5.017530079143544e-05,
+    "stationarity": 1.8277140911848733e-10
+  },
+  "selected": true
+}

@@ -1,0 +1,29 @@
+{
+  "name": "a2864",
+  "solver": "hpr",
+  "native_tolerance": "1e-4",
+  "model": "/tmp/hipdlp-expanded-gpu/models/a2864-canonical.mps",
+  "sha256": "6b28378912d83af49cf3429bc6a13cdfd5d2085e5cdbbb0dd94f00bca25f70e1",
+  "dimensions": {
+    "rows": 22117,
+    "cols": 200787,
+    "nnz": 20078717
+  },
+  "command": [
+    "/tmp/neso-gpu-comparison/hpr-build/solve_mps_file",
+    "-i",
+    "/tmp/hipdlp-expanded-gpu/models/a2864-canonical.mps",
+    "--presolver",
+    "none",
+    "--tol",
+    "1e-4",
+    "--cr",
+    "true",
+    "--time-limit",
+    "300.0",
+    "--print-debug-info",
+    "false"
+  ],
+  "time_limit": 300.0,
+  "started": 1791124190.2967312
+}

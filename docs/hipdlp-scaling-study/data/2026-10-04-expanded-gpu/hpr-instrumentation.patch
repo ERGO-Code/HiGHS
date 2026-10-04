@@ -1,0 +1,44 @@
+diff --git a/src/cli/solve_mps_file.cpp b/src/cli/solve_mps_file.cpp
+index 206090e..71f746d 100644
+--- a/src/cli/solve_mps_file.cpp
++++ b/src/cli/solve_mps_file.cpp
+@@ -3,6 +3,7 @@
+ #include <cctype>
+ #include <cstdint>
+ #include <cstdlib>
++#include <cstdio>
+ #include <iomanip>
+ #include <iostream>
+ #include <limits>
+@@ -472,7 +473,31 @@ int main(int argc, char** argv) {
+         return 1;
+     }
+ 
++    const auto benchmark_solve_start = std::chrono::steady_clock::now();
+     HPRLP_results output = solve(model, &param);
++    const double benchmark_solve_seconds = std::chrono::duration<double>(
++        std::chrono::steady_clock::now() - benchmark_solve_start).count();
++    std::printf("BENCH_TIMING {\"read_wall_sec\":%.17g,\"solver_wall_sec\":%.17g}\n",
++                read_elapsed.count(), benchmark_solve_seconds);
++
++    // Study-only passive export; the solver and its numerical path are unchanged.
++    if (const char* prefix = std::getenv("NESO_SOLUTION_PREFIX")) {
++        const auto dump = [prefix](const char* suffix, const double* values, int size) {
++            if (!values) return;
++            const std::string path = std::string(prefix) + suffix;
++            FILE* file = std::fopen(path.c_str(), "w");
++            if (!file) throw std::runtime_error("Cannot export solution");
++            for (int i = 0; i < size; ++i) std::fprintf(file, "%.17g\n", values[i]);
++            std::fclose(file);
++        };
++        dump(".primal.txt", output.x, model->n);
++        dump(".dual.txt", output.y, model->m);
++        dump(".reduced_cost.txt", output.z, model->n);
++        FILE* file = std::fopen((std::string(prefix) + ".json").c_str(), "w");
++        if (!file) throw std::runtime_error("Cannot export metadata");
++        std::fprintf(file, "{\"status\":\"%s\",\"iterations\":%d,\"time\":%.17g,\"objective\":%.17g,\"residual\":%.17g,\"gap\":%.17g,\"total_time\":%.17g}\n", output.status, output.iter, output.time, output.primal_obj, output.residuals, output.gap, output.timing.total_time);
++        std::fclose(file);
++    }
+ 
+ 
+     if (output.x) free(output.x);

@@ -1,0 +1,33 @@
+{
+  "commits": {
+    "rewrite": "f36962d34e14f9ae10ac2c440cc653dcf0a919d1",
+    "hpr": "79dbaa3fb082a1b826785d13dcd30d9ba350e056",
+    "cupdlpx": "083b90e482f9f0e8229eac965d189a1ba386ca20"
+  },
+  "binaries": {
+    "/tmp/hipdlp-expanded-gpu/rewrite": "17f01603df50ef813a10aecb318fb43e65032c8aa97a284f038a4a5253ba5420",
+    "/tmp/hipdlp-expanded-gpu/verify-server": "9b2e275959e2ee2c6db25c53fdd4890e37c0924e0a825656561debe61ce03310",
+    "/home/yzhou/Documents/Github/hipdlp2/build-scaling-cuda/lib/libhighs.so.1.15.1": "b9efc1fa8001502b6f9eacb8619bda9d3904417118a17852f0c9a994177fe963",
+    "/tmp/neso-gpu-comparison/hpr-build/solve_mps_file": "bcac2842285dc1635e1dec6ef4355dd96bcca424754cde29663e655c40dc9134",
+    "/tmp/neso-gpu-comparison/cupdlpx-current-build/cupdlpx": "1fa7d94ad344670978de9c0e0b24711785b9c3877507e1c6a4a2e1762c30dc3e"
+  },
+  "gpu": "NVIDIA GeForce RTX 4070 Ti SUPER 16GB",
+  "time_limit_seconds": 300,
+  "presolve": "off",
+  "common_kkt_tolerance": 0.0001,
+  "tolerance_grid": [
+    "1e-4",
+    "1e-6",
+    "1e-8"
+  ],
+  "cpu": "Intel Core i7-14700",
+  "logical_cpus": 28,
+  "cuda_toolkit": "12.8.61",
+  "nvidia_driver": "580.173.02",
+  "gpu_memory_mib": 16376,
+  "environment": {
+    "CUDA_VISIBLE_DEVICES": "0",
+    "OMP_NUM_THREADS": "1",
+    "OPENBLAS_NUM_THREADS": "1"
+  }
+}
