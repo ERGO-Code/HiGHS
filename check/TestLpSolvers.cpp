@@ -596,8 +596,8 @@ TEST_CASE("issue-2300", "[highs_lp_solver]") {
   REQUIRE(h.run() == HighsStatus::kOk);
   REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
   const double optimal_objective = 4.0735475989e-04;
-  REQUIRE(std::fabs(h.getInfo().objective_function_value -
-                    optimal_objective) < 1e-12);
+  REQUIRE(std::fabs(h.getInfo().objective_function_value - optimal_objective) <
+          1e-12);
 
   h.resetGlobalScheduler(true);
 }
