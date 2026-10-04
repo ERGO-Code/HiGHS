@@ -1,0 +1,21 @@
+[
+  "/home/yzhou/Documents/Github/hipdlp2/build-scaling-cuda/bin/external_lp_solution_verifier",
+  "--instance",
+  "/tmp/neso-gpu-comparison/canonical-checked/neso-2005-canonical.mps",
+  "--primal-values",
+  "/tmp/neso-gpu-comparison/runs/neso-2005-canonical/cupdlpx/neso-2005-canonical_primal_solution.txt",
+  "--row-dual-values",
+  "/tmp/neso-gpu-comparison/runs/neso-2005-canonical/cupdlpx/neso-2005-canonical_dual_solution.txt",
+  "--solver",
+  "cupdlpx",
+  "--status",
+  "TIME_LIMIT",
+  "--solver-time",
+  "600.0745",
+  "--iterations",
+  "414800",
+  "--tolerance",
+  "1e-4",
+  "--output",
+  "/tmp/neso-gpu-comparison/runs/neso-2005-canonical/cupdlpx/verification.json"
+]

@@ -1,0 +1,8 @@
+[
+  "/tmp/neso-gpu-comparison/neso-kkt",
+  "/tmp/neso-gpu-comparison/canonical-checked/neso-2005-canonical.mps",
+  "/tmp/neso-gpu-comparison/runs/neso-2005-canonical/julia-cr/solution.primal.txt",
+  "/tmp/neso-gpu-comparison/runs/neso-2005-canonical/julia-cr/solution.dual.txt",
+  "/tmp/neso-gpu-comparison/runs/neso-2005-canonical/julia-cr/solution.reduced_cost.txt",
+  "/tmp/neso-gpu-comparison/runs/neso-2005-canonical/julia-cr/verification-reported.json"
+]

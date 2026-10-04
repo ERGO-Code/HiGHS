@@ -105,7 +105,10 @@ bool finiteScaledValue(const double value, const double row_scale,
   return std::isfinite(result) && result != 0.0;
 }
 
-api::Error composeScaling(SparseMatrix& matrix,
+// Only private working values are mutated; a failed stage is discarded by the
+// caller. The original Problem's public scaling operation remains transactional.
+api::Error composeScalingValues(const SparseMatrix& matrix,
+                          std::vector<double>& values,
                           const std::vector<double>& row_scale,
                           const std::vector<double>& col_scale,
                           std::vector<double>& cumulative_row_scale,
@@ -116,7 +119,6 @@ api::Error composeScaling(SparseMatrix& matrix,
       cumulative_col_scale.size() != col_scale.size())
     return invalidScaling("HiPDLP scale composition dimensions are invalid");
 
-  std::vector<double> values(matrix.values.size());
   std::vector<double> composed_rows(row_scale.size());
   std::vector<double> composed_cols(col_scale.size());
   for (HighsInt row = 0; row < matrix.num_rows; ++row) {
@@ -126,7 +128,7 @@ api::Error composeScaling(SparseMatrix& matrix,
     for (HighsInt entry = matrix.starts[row]; entry < matrix.starts[row + 1];
          ++entry) {
       const HighsInt col = matrix.indices[entry];
-      if (!finiteScaledValue(matrix.values[entry], row_scale[row],
+      if (!finiteScaledValue(values[entry], row_scale[row],
                              col_scale[col], values[entry]))
         return invalidScaling(
             "HiPDLP matrix value is unsafe during scale composition");
@@ -137,10 +139,18 @@ api::Error composeScaling(SparseMatrix& matrix,
                                composed_cols[col]))
       return invalidScaling("HiPDLP cumulative column scale is invalid");
   }
-  matrix.values.swap(values);
   cumulative_row_scale.swap(composed_rows);
   cumulative_col_scale.swap(composed_cols);
   return api::Error();
+}
+
+api::Error composeScaling(SparseMatrix& matrix,
+                          const std::vector<double>& row_scale,
+                          const std::vector<double>& col_scale,
+                          std::vector<double>& cumulative_row_scale,
+                          std::vector<double>& cumulative_col_scale) {
+  return composeScalingValues(matrix, matrix.values, row_scale, col_scale,
+                               cumulative_row_scale, cumulative_col_scale);
 }
 
 ScalingResult makeScalingResult(const SparseMatrix& matrix,
@@ -324,7 +334,8 @@ api::Error applyCurtisReidScaling(Problem& problem, const HighsInt sweeps) {
 }
 
 ScalingResult computeRuizScaling(const SparseMatrix& matrix,
-                                 const HighsInt iterations) {
+                                 const HighsInt iterations,
+                                 PreprocessingDiagnostics* diagnostics) {
   ScalingResult result = makeScalingResult(matrix, ScalingStage::kRuiz);
   result.scaling.ruiz_iterations = iterations;
   if (iterations < 0) {
@@ -335,21 +346,26 @@ ScalingResult computeRuizScaling(const SparseMatrix& matrix,
   result.error = validateSparseMatrix(matrix);
   if (!result.error.ok()) return result;
 
-  SparseMatrix working = matrix;
+  detail::PreprocessingTimer copy(
+      diagnostics ? &diagnostics->scaling_copy_seconds : nullptr);
+  std::vector<double> working_values = matrix.values;
+  copy.reset(nullptr);
+  std::vector<double> row_max(matrix.num_rows);
+  std::vector<double> col_max(matrix.num_cols);
+  std::vector<double> row_scale(matrix.num_rows);
+  std::vector<double> col_scale(matrix.num_cols);
   for (HighsInt iteration = 0; iteration < iterations; ++iteration) {
-    std::vector<double> row_max(matrix.num_rows, 0.0);
-    std::vector<double> col_max(matrix.num_cols, 0.0);
-    for (HighsInt row = 0; row < working.num_rows; ++row) {
-      for (HighsInt entry = working.starts[row];
-           entry < working.starts[row + 1]; ++entry) {
-        const HighsInt col = working.indices[entry];
-        const double magnitude = std::abs(working.values[entry]);
+    std::fill(row_max.begin(), row_max.end(), 0.0);
+    std::fill(col_max.begin(), col_max.end(), 0.0);
+    for (HighsInt row = 0; row < matrix.num_rows; ++row) {
+      for (HighsInt entry = matrix.starts[row];
+           entry < matrix.starts[row + 1]; ++entry) {
+        const HighsInt col = matrix.indices[entry];
+        const double magnitude = std::abs(working_values[entry]);
         row_max[row] = std::max(row_max[row], magnitude);
         col_max[col] = std::max(col_max[col], magnitude);
       }
     }
-    std::vector<double> row_scale(matrix.num_rows, 1.0);
-    std::vector<double> col_scale(matrix.num_cols, 1.0);
     for (HighsInt row = 0; row < matrix.num_rows; ++row) {
       result.error = inverseSquareRoot(row_max[row], row_scale[row]);
       if (!result.error.ok()) return result;
@@ -359,8 +375,8 @@ ScalingResult computeRuizScaling(const SparseMatrix& matrix,
       if (!result.error.ok()) return result;
     }
     result.error =
-        composeScaling(working, row_scale, col_scale, result.scaling.row_scale,
-                       result.scaling.col_scale);
+        composeScalingValues(matrix, working_values, row_scale, col_scale,
+                             result.scaling.row_scale, result.scaling.col_scale);
     if (!result.error.ok()) return result;
   }
   return result;
@@ -440,7 +456,8 @@ ScalingResult computeL2Scaling(const SparseMatrix& matrix) {
 }
 
 ScalingResult computeScalingPipeline(const SparseMatrix& matrix,
-                                     const ScalingOptions& options) {
+                                     const ScalingOptions& options,
+                                     PreprocessingDiagnostics* diagnostics) {
   ScalingResult result;
   result.error = validateScalingOptions(options);
   if (!result.error.ok()) return result;
@@ -453,9 +470,14 @@ ScalingResult computeScalingPipeline(const SparseMatrix& matrix,
       (options.features_off & kPdlpScalingOff) != 0)
     return result;
 
+  detail::PreprocessingTimer copy(
+      diagnostics ? &diagnostics->scaling_copy_seconds : nullptr);
   SparseMatrix working = matrix;
+  copy.reset(nullptr);
   if (options.mode == ScalingMode::kAuto ||
       options.mode == ScalingMode::kCurtisReid) {
+    detail::PreprocessingTimer stage(
+        diagnostics ? &diagnostics->curtis_reid_seconds : nullptr);
     const CurtisReidResult curtis_reid =
         computeCurtisReidScaling(working, options.curtis_reid_sweeps);
     if (!curtis_reid.ok()) {
@@ -472,18 +494,24 @@ ScalingResult computeScalingPipeline(const SparseMatrix& matrix,
   if (options.mode == ScalingMode::kCurtisReid) return result;
 
   if ((options.legacy_scaling_mode & kPdlpScalingRuiz) != 0) {
+    detail::PreprocessingTimer stage(
+        diagnostics ? &diagnostics->ruiz_seconds : nullptr);
     const ScalingResult ruiz =
-        computeRuizScaling(working, options.ruiz_iterations);
+        computeRuizScaling(working, options.ruiz_iterations, diagnostics);
     result.error = appendScaling(ruiz, working, result.scaling);
     if (!result.error.ok()) return result;
     result.scaling.ruiz_iterations = options.ruiz_iterations;
   }
   if ((options.legacy_scaling_mode & kPdlpScalingPC) != 0) {
+    detail::PreprocessingTimer stage(
+        diagnostics ? &diagnostics->pock_chambolle_seconds : nullptr);
     result.error = appendScaling(computePockChambolleScaling(working), working,
                                  result.scaling);
     if (!result.error.ok()) return result;
   }
   if ((options.legacy_scaling_mode & kPdlpScalingL2) != 0) {
+    detail::PreprocessingTimer stage(
+        diagnostics ? &diagnostics->l2_seconds : nullptr);
     result.error =
         appendScaling(computeL2Scaling(working), working, result.scaling);
     if (!result.error.ok()) return result;
@@ -539,17 +567,25 @@ double scaledNormInflation(const Problem& problem,
 }
 
 api::Error applyScalingPipeline(Problem& problem,
-                                const ScalingOptions& options) {
+                                const ScalingOptions& options,
+                                PreprocessingDiagnostics* diagnostics) {
+  detail::PreprocessingTimer total(
+      diagnostics ? &diagnostics->scaling_seconds : nullptr);
   if (!problem.initialized())
     return invalidScaling("HiPDLP problem is not initialized");
-  ScalingResult result = computeScalingPipeline(problem.matrix(), options);
+  detail::PreprocessingTimer phase(
+      diagnostics ? &diagnostics->scaling_candidate_seconds : nullptr);
+  ScalingResult result = computeScalingPipeline(problem.matrix(), options, diagnostics);
+  phase.reset(nullptr);
   if (!result.ok()) return result.error;
   if (options.mode == ScalingMode::kAuto &&
       result.scaling.curtis_reid_sweeps > 0) {
     ScalingOptions without_curtis_reid = options;
     without_curtis_reid.mode = ScalingMode::kLegacy;
+    phase.reset(diagnostics ? &diagnostics->scaling_reference_seconds : nullptr);
     ScalingResult fallback =
-        computeScalingPipeline(problem.matrix(), without_curtis_reid);
+        computeScalingPipeline(problem.matrix(), without_curtis_reid, diagnostics);
+    phase.reset(diagnostics ? &diagnostics->scaling_guard_seconds : nullptr);
     if (fallback.ok() &&
         scaledNormInflation(problem, result.scaling, fallback.scaling) >
             kCurtisReidInflationLimit) {
@@ -558,6 +594,7 @@ api::Error applyScalingPipeline(Problem& problem,
     }
   }
   if (result.scaling.stages.empty()) return api::Error();
+  phase.reset(diagnostics ? &diagnostics->scaling_apply_seconds : nullptr);
   return problem.applyDiagonalScaling(result.scaling.row_scale,
                                       result.scaling.col_scale, result.scaling);
 }

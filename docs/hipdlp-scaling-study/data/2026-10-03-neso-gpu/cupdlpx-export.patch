@@ -1,0 +1,21 @@
+diff --git a/src/cli.c b/src/cli.c
+index cc85c93..36e609a 100644
+--- a/src/cli.c
++++ b/src/cli.c
+@@ -74,7 +74,7 @@ void save_solution(const double *data, int size, const char *output_dir, const c
+ 
+     for (int i = 0; i < size; ++i)
+     {
+-        fprintf(outfile, "%.10g\n", data[i]);
++        fprintf(outfile, "%.17g\n", data[i]);
+     }
+ 
+     fclose(outfile);
+@@ -460,6 +460,7 @@ int main(int argc, char *argv[])
+         save_solution(
+             result->primal_solution, problem->num_variables, output_dir, instance_name, "_primal_solution.txt");
+         save_solution(result->dual_solution, problem->num_constraints, output_dir, instance_name, "_dual_solution.txt");
++        save_solution(result->reduced_cost, problem->num_variables, output_dir, instance_name, "_reduced_cost.txt");
+         cupdlpx_result_free(result);
+     }
+ 

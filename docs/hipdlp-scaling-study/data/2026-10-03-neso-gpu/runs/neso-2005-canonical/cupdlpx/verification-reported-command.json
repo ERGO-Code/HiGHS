@@ -1,0 +1,8 @@
+[
+  "/tmp/neso-gpu-comparison/neso-kkt",
+  "/tmp/neso-gpu-comparison/canonical-checked/neso-2005-canonical.mps",
+  "/tmp/neso-gpu-comparison/runs/neso-2005-canonical/cupdlpx/neso-2005-canonical_primal_solution.txt",
+  "/tmp/neso-gpu-comparison/runs/neso-2005-canonical/cupdlpx/neso-2005-canonical_dual_solution.txt",
+  "/tmp/neso-gpu-comparison/runs/neso-2005-canonical/cupdlpx/neso-2005-canonical_reduced_cost.txt",
+  "/tmp/neso-gpu-comparison/runs/neso-2005-canonical/cupdlpx/verification-reported.json"
+]

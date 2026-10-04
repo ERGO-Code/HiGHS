@@ -1,0 +1,770 @@
+diff --git a/check/TestHiPdlpModel.cpp b/check/TestHiPdlpModel.cpp
+index 2e8322953..743b80dab 100644
+--- a/check/TestHiPdlpModel.cpp
++++ b/check/TestHiPdlpModel.cpp
+@@ -221,6 +221,86 @@ TEST_CASE("hi-pdlp-curtis-reid-fixed-scales",
+   CHECK(second.col_scale == first.col_scale);
+ }
+ 
++TEST_CASE("hi-pdlp-sparse-ingestion-preserves-equivalent-encodings",
++          "[pdlp][hipdlp][model][preprocessing]") {
++  const HighsLp original = makeTransformationLp();
++  const auto expected = hipdlp::model::buildProblem(original);
++  REQUIRE(expected.ok());
++  struct Entry { HighsInt row; HighsInt col; double value; };
++  std::vector<Entry> entries;
++  for (HighsInt col = 0; col < original.num_col_; ++col) {
++    for (HighsInt i = original.a_matrix_.start_[col];
++         i < original.a_matrix_.start_[col + 1]; ++i) {
++      const HighsInt row = original.a_matrix_.index_[i];
++      const double half = original.a_matrix_.value_[i] / 2.0;
++      entries.push_back({row, col, half});
++      entries.push_back({row, col, 0.0});
++      entries.push_back({row, col, half});
++      entries.push_back({row, col, -0.0});
++    }
++  }
++  // An exactly cancelling pair also exercises removal of a whole position.
++  entries.push_back({0, 2, 16.0});
++  entries.push_back({0, 2, -16.0});
++  for (int permutation = 0; permutation < 4; ++permutation) {
++    std::reverse(entries.begin(), entries.end());
++    std::rotate(entries.begin(), entries.begin() + permutation + 1, entries.end());
++    for (const auto format : {MatrixFormat::kColwise, MatrixFormat::kRowwise}) {
++      HighsLp lp = original;
++      auto& matrix = lp.a_matrix_;
++      matrix.format_ = format;
++      matrix.start_.assign(1, 0);
++      matrix.index_.clear();
++      matrix.value_.clear();
++      const bool colwise = format == MatrixFormat::kColwise;
++      const HighsInt outer_size = colwise ? lp.num_col_ : lp.num_row_;
++      for (HighsInt outer = 0; outer < outer_size; ++outer) {
++        for (const Entry& entry : entries) {
++          if ((colwise ? entry.col : entry.row) != outer) continue;
++          matrix.index_.push_back(colwise ? entry.row : entry.col);
++          matrix.value_.push_back(entry.value);
++        }
++        matrix.start_.push_back(static_cast<HighsInt>(matrix.value_.size()));
++      }
++      const HighsSparseMatrix input = matrix;
++      hipdlp::model::PreprocessingDiagnostics diagnostics;
++      const auto actual = hipdlp::model::buildProblem(lp, &diagnostics);
++      REQUIRE(actual.ok());
++      CHECK(matrix == input);
++      CHECK(actual.problem.matrix().starts == expected.problem.matrix().starts);
++      CHECK(actual.problem.matrix().indices == expected.problem.matrix().indices);
++      CHECK(actual.problem.matrix().values == expected.problem.matrix().values);
++      CHECK(actual.problem.transpose().starts == expected.problem.transpose().starts);
++      CHECK(actual.problem.transpose().indices == expected.problem.transpose().indices);
++      CHECK(actual.problem.transpose().values == expected.problem.transpose().values);
++      CHECK(actual.problem.unscaledNorms().matrix_frobenius ==
++            expected.problem.unscaledNorms().matrix_frobenius);
++    }
++  }
++}
++
++TEST_CASE("hi-pdlp-sparse-ingestion-rejects-unsafe-entries",
++          "[pdlp][hipdlp][model][preprocessing]") {
++  for (const auto format : {MatrixFormat::kColwise, MatrixFormat::kRowwise}) {
++    for (int invalid = 0; invalid < 5; ++invalid) {
++      HighsLp lp = makeUnsafeScalingLp();
++      lp.a_matrix_.format_ = format;
++      if (invalid < 2)
++        lp.a_matrix_.index_[0] = invalid == 0 ? -1 : lp.num_col_;
++      else if (invalid < 4)
++        lp.a_matrix_.value_[0] = invalid == 2
++            ? std::numeric_limits<double>::quiet_NaN()
++            : std::numeric_limits<double>::infinity();
++      else {
++        lp.a_matrix_.start_ = {0, 2};
++        lp.a_matrix_.index_ = {0, 0};
++        lp.a_matrix_.value_.assign(2, std::numeric_limits<double>::max());
++      }
++      CHECK_FALSE(hipdlp::model::buildProblem(lp).ok());
++    }
++  }
++}
++
+ TEST_CASE("hi-pdlp-legacy-scaling-balances-diagonal-primal-dual-geometry",
+           "[pdlp][hipdlp][model][scaling][algorithm-study]") {
+   hipdlp::model::SparseMatrix matrix;
+diff --git a/cmake/sources.cmake b/cmake/sources.cmake
+index ea57683bb..d479689dd 100644
+--- a/cmake/sources.cmake
++++ b/cmake/sources.cmake
+@@ -608,6 +608,7 @@ set(highs_headers
+     pdlp/hipdlp/linalg.hpp
+     pdlp/hipdlp/legacy/legacy_solver_adapter.hpp
+     pdlp/hipdlp/logger.hpp
++    pdlp/hipdlp/model/preprocessing.hpp
+     pdlp/hipdlp/model/problem.hpp
+     pdlp/hipdlp/model/scaling.hpp
+     pdlp/hipdlp/pdhg.hpp
+diff --git a/highs/pdlp/hipdlp/algorithm/solver.cc b/highs/pdlp/hipdlp/algorithm/solver.cc
+index 3941bb1d2..5c04f9ea2 100644
+--- a/highs/pdlp/hipdlp/algorithm/solver.cc
++++ b/highs/pdlp/hipdlp/algorithm/solver.cc
+@@ -164,6 +164,7 @@ double* phaseSeconds(SolveDiagnostics* diagnostics, const SolvePhase phase) {
+ void keepTimings(const SolveDiagnostics& from, SolveDiagnostics& into) {
+   into.total_wall_seconds = from.total_wall_seconds;
+   into.preprocessing_seconds = from.preprocessing_seconds;
++  into.preprocessing = from.preprocessing;
+   into.backend_setup_seconds = from.backend_setup_seconds;
+   into.operator_norm_seconds = from.operator_norm_seconds;
+   into.iterations_seconds = from.iterations_seconds;
+@@ -1001,9 +1002,13 @@ static api::SolveResult solveImpl(const api::SolverOptions& requested_options,
+ 
+     SolvePhaseGuard preprocessing(context, SolvePhase::kPreprocessing,
+                     total_iterations);
+-    model::ProblemBuildResult built = model::buildProblem(original_model.lp());
++    model::PreprocessingDiagnostics* preprocessing_diagnostics =
++        context.diagnostics == nullptr ? nullptr : &context.diagnostics->preprocessing;
++    model::ProblemBuildResult built =
++        model::buildProblem(original_model.lp(), preprocessing_diagnostics);
+     if (!built.ok()) return failure(built.error);
+-    error = model::applyScalingPipeline(built.problem, options.scaling);
++    error = model::applyScalingPipeline(built.problem, options.scaling,
++                                         preprocessing_diagnostics);
+     if (!error.ok()) return failure(error);
+     if (context.log != nullptr && built.problem.scaling().curtis_reid_rejected)
+       context.log->info(
+diff --git a/highs/pdlp/hipdlp/algorithm/solver.hpp b/highs/pdlp/hipdlp/algorithm/solver.hpp
+index 652a12a42..10f7cd78b 100644
+--- a/highs/pdlp/hipdlp/algorithm/solver.hpp
++++ b/highs/pdlp/hipdlp/algorithm/solver.hpp
+@@ -37,6 +37,7 @@ struct SolveDiagnostics {
+ 
+   double total_wall_seconds;
+   double preprocessing_seconds;
++  model::PreprocessingDiagnostics preprocessing;
+   double backend_setup_seconds;
+   double operator_norm_seconds;
+   double iterations_seconds;
+diff --git a/highs/pdlp/hipdlp/model/problem.cc b/highs/pdlp/hipdlp/model/problem.cc
+index 28e2b2354..27777d379 100644
+--- a/highs/pdlp/hipdlp/model/problem.cc
++++ b/highs/pdlp/hipdlp/model/problem.cc
+@@ -86,8 +86,7 @@ api::Error canonicalizeEntries(const HighsInt num_rows, const HighsInt num_cols,
+       return invalidModel("HiPDLP matrix contains a non-finite value");
+   }
+   std::sort(entries.begin(), entries.end(), entryLess);
+-  std::vector<MatrixEntry> canonical;
+-  canonical.reserve(entries.size());
++  std::size_t output = 0;
+   std::size_t entry = 0;
+   while (entry < entries.size()) {
+     const HighsInt row = entries[entry].row;
+@@ -104,35 +103,112 @@ api::Error canonicalizeEntries(const HighsInt num_rows, const HighsInt num_cols,
+     const double value = static_cast<double>(sum);
+     if (!std::isfinite(value))
+       return invalidModel("HiPDLP duplicate matrix sum exceeds FP64 range");
+-    if (value != 0.0) canonical.push_back({row, col, value});
++    if (value != 0.0) entries[output++] = {row, col, value};
+   }
+-  entries.swap(canonical);
++  entries.resize(output);
+   return api::Error();
+ }
+ 
+-SparseMatrix makeCompressedMatrix(const HighsInt num_rows,
+-                                  const HighsInt num_cols,
+-                                  const std::vector<MatrixEntry>& entries) {
+-  SparseMatrix matrix;
+-  matrix.num_rows = num_rows;
+-  matrix.num_cols = num_cols;
+-  matrix.starts.assign(static_cast<std::size_t>(num_rows) + 1, 0);
+-  matrix.indices.reserve(entries.size());
+-  matrix.values.reserve(entries.size());
+-  HighsInt current_row = 0;
+-  for (std::size_t entry = 0; entry < entries.size(); ++entry) {
+-    while (current_row < entries[entry].row) {
+-      matrix.starts[static_cast<std::size_t>(++current_row)] =
+-          static_cast<HighsInt>(matrix.indices.size());
++// Build CSR directly. A column-wise traversal visits column indices in order;
++// only noncanonical rows need sorting, with the same value ordering and
++// long-double duplicate accumulation as the general triplet path.
++api::Error makeOriginalMatrix(const HighsLp& lp, SparseMatrix& matrix) {
++  const HighsSparseMatrix& input = lp.a_matrix_;
++  const bool colwise = input.format_ == MatrixFormat::kColwise;
++  const HighsInt inner_size = colwise ? lp.num_row_ : lp.num_col_;
++  matrix.num_rows = lp.num_row_;
++  matrix.num_cols = lp.num_col_;
++  matrix.starts.assign(static_cast<std::size_t>(lp.num_row_) + 1, 0);
++  for (std::size_t entry = 0; entry < input.value_.size(); ++entry) {
++    const HighsInt inner = input.index_[entry];
++    if (inner < 0 || inner >= inner_size)
++      return invalidModel("HiPDLP matrix index is out of range");
++    if (!std::isfinite(input.value_[entry]))
++      return invalidModel("HiPDLP matrix contains a non-finite value");
++    if (colwise) ++matrix.starts[inner + 1];
++  }
++  if (colwise) {
++    for (HighsInt row = 0; row < lp.num_row_; ++row)
++      matrix.starts[row + 1] += matrix.starts[row];
++    std::vector<HighsInt> next = matrix.starts;
++    matrix.indices.resize(input.index_.size());
++    matrix.values.resize(input.value_.size());
++    for (HighsInt col = 0; col < lp.num_col_; ++col) {
++      for (HighsInt entry = input.start_[col]; entry < input.start_[col + 1];
++           ++entry) {
++        const HighsInt output = next[input.index_[entry]]++;
++        matrix.indices[output] = col;
++        matrix.values[output] = input.value_[entry];
++      }
++    }
++  } else {
++    matrix.starts = input.start_;
++    matrix.indices = input.index_;
++    matrix.values = input.value_;
++  }
++
++  std::vector<MatrixEntry> row_entries;
++  HighsInt end = 0;
++  HighsInt output = 0;
++  for (HighsInt row = 0; row < lp.num_row_; ++row) {
++    const HighsInt begin = end;
++    end = matrix.starts[row + 1];
++    bool ordered_unique = true;
++    HighsInt previous_col = -1;
++    for (HighsInt entry = begin; entry < end; ++entry) {
++      if (previous_col >= matrix.indices[entry]) {
++        ordered_unique = false;
++        break;
++      }
++      previous_col = matrix.indices[entry];
++    }
++    matrix.starts[row] = output;
++    if (ordered_unique) {
++      for (HighsInt entry = begin; entry < end; ++entry) {
++        if (matrix.values[entry] == 0.0) continue;
++        matrix.indices[output] = matrix.indices[entry];
++        matrix.values[output++] = matrix.values[entry];
++      }
++    } else {
++      row_entries.clear();
++      for (HighsInt entry = begin; entry < end; ++entry)
++        row_entries.push_back({0, matrix.indices[entry], matrix.values[entry]});
++      const api::Error error = canonicalizeEntries(1, lp.num_col_, row_entries);
++      if (!error.ok()) return error;
++      for (const MatrixEntry& entry : row_entries) {
++        matrix.indices[output] = entry.col;
++        matrix.values[output++] = entry.value;
++      }
+     }
+-    matrix.indices.push_back(entries[entry].col);
+-    matrix.values.push_back(entries[entry].value);
+   }
+-  while (current_row < num_rows) {
+-    matrix.starts[static_cast<std::size_t>(++current_row)] =
+-        static_cast<HighsInt>(matrix.indices.size());
++  matrix.starts[lp.num_row_] = output;
++  matrix.indices.resize(output);
++  matrix.values.resize(output);
++  return api::Error();
++}
++
++// Each source row is canonical. Scattering rows in increasing order makes
++// every transpose row canonical without another sort or duplicate reduction.
++SparseMatrix transposeMatrix(const SparseMatrix& matrix) {
++  SparseMatrix transpose;
++  transpose.num_rows = matrix.num_cols;
++  transpose.num_cols = matrix.num_rows;
++  transpose.starts.assign(static_cast<std::size_t>(matrix.num_cols) + 1, 0);
++  for (const HighsInt col : matrix.indices) ++transpose.starts[col + 1];
++  for (HighsInt col = 0; col < matrix.num_cols; ++col)
++    transpose.starts[col + 1] += transpose.starts[col];
++  std::vector<HighsInt> next = transpose.starts;
++  transpose.indices.resize(matrix.indices.size());
++  transpose.values.resize(matrix.values.size());
++  for (HighsInt row = 0; row < matrix.num_rows; ++row) {
++    for (HighsInt entry = matrix.starts[row]; entry < matrix.starts[row + 1];
++         ++entry) {
++      const HighsInt output = next[matrix.indices[entry]]++;
++      transpose.indices[output] = row;
++      transpose.values[output] = matrix.values[entry];
++    }
+   }
+-  return matrix;
++  return transpose;
+ }
+ 
+ api::Error validateLp(const HighsLp& lp) {
+@@ -757,7 +833,12 @@ PostsolveResult postsolve(const Problem& problem,
+   return result;
+ }
+ 
+-ProblemBuildResult buildProblem(const HighsLp& lp) {
++ProblemBuildResult buildProblem(const HighsLp& lp,
++                                PreprocessingDiagnostics* diagnostics) {
++  detail::PreprocessingTimer total(
++      diagnostics ? &diagnostics->model_build_seconds : nullptr);
++  detail::PreprocessingTimer phase(
++      diagnostics ? &diagnostics->validation_seconds : nullptr);
+   ProblemBuildResult result;
+   result.error = validateLp(lp);
+   if (!result.error.ok()) return result;
+@@ -775,30 +856,13 @@ ProblemBuildResult buildProblem(const HighsLp& lp) {
+                              original_row_upper, "row");
+   if (!result.error.ok()) return result;
+ 
+-  std::vector<MatrixEntry> original_entries;
+-  original_entries.reserve(lp.a_matrix_.value_.size());
+-  if (lp.a_matrix_.format_ == MatrixFormat::kColwise) {
+-    for (HighsInt col = 0; col < lp.num_col_; ++col) {
+-      for (HighsInt entry = lp.a_matrix_.start_[col];
+-           entry < lp.a_matrix_.start_[col + 1]; ++entry) {
+-        original_entries.push_back(
+-            {lp.a_matrix_.index_[entry], col, lp.a_matrix_.value_[entry]});
+-      }
+-    }
+-  } else {
+-    for (HighsInt row = 0; row < lp.num_row_; ++row) {
+-      for (HighsInt entry = lp.a_matrix_.start_[row];
+-           entry < lp.a_matrix_.start_[row + 1]; ++entry) {
+-        original_entries.push_back(
+-            {row, lp.a_matrix_.index_[entry], lp.a_matrix_.value_[entry]});
+-      }
+-    }
+-  }
+-  result.error =
+-      canonicalizeEntries(lp.num_row_, lp.num_col_, original_entries);
++  phase.reset(diagnostics ? &diagnostics->input_matrix_seconds : nullptr);
++  SparseMatrix original_matrix;
++  result.error = makeOriginalMatrix(lp, original_matrix);
+   if (!result.error.ok()) return result;
+ 
+   std::unique_ptr<Problem::Data> data(new Problem::Data());
++  phase.reset(diagnostics ? &diagnostics->row_transform_seconds : nullptr);
+   TransformationMetadata& transform = data->transformation;
+   transform.original_num_rows = lp.num_row_;
+   transform.original_num_cols = lp.num_col_;
+@@ -848,6 +912,12 @@ ProblemBuildResult buildProblem(const HighsLp& lp) {
+     transform.transformed_to_original_row[transformed_row] = row;
+   }
+ 
++  if (num_slacks > std::numeric_limits<HighsInt>::max() - lp.num_col_ ||
++      original_matrix.values.size() >
++          static_cast<std::size_t>(std::numeric_limits<HighsInt>::max() - num_slacks)) {
++    result.error = invalidModel("HiPDLP transformed matrix exceeds index range");
++    return result;
++  }
+   data->num_rows = lp.num_row_;
+   data->num_cols = lp.num_col_ + num_slacks;
+   data->objective_sense = ObjSense::kMinimize;
+@@ -895,49 +965,59 @@ ProblemBuildResult buildProblem(const HighsLp& lp) {
+     }
+   }
+ 
+-  std::vector<MatrixEntry> transformed_entries;
+-  transformed_entries.reserve(original_entries.size() + num_slacks);
+-  for (std::size_t entry = 0; entry < original_entries.size(); ++entry) {
+-    const HighsInt original_row = original_entries[entry].row;
+-    transformed_entries.push_back(
+-        {transform.original_to_transformed_row[original_row],
+-         original_entries[entry].col,
+-         transform.original_row_sign[original_row] *
+-             original_entries[entry].value});
+-  }
+-  for (HighsInt original_row = 0; original_row < lp.num_row_; ++original_row) {
+-    const HighsInt slack = transform.slack_col_for_original_row[original_row];
+-    if (slack >= 0) {
+-      transformed_entries.push_back(
+-          {transform.original_to_transformed_row[original_row], slack, -1.0});
++  phase.reset(diagnostics ? &diagnostics->transformed_matrix_seconds : nullptr);
++  bool identity_rows = num_slacks == 0;
++  for (HighsInt row = 0; identity_rows && row < lp.num_row_; ++row)
++    identity_rows = transform.original_to_transformed_row[row] == row;
++  if (identity_rows) {
++    data->matrix = std::move(original_matrix);
++    for (HighsInt row = 0; row < data->num_rows; ++row) {
++      if (transform.original_row_sign[row] == 1.0) continue;
++      for (HighsInt entry = data->matrix.starts[row];
++           entry < data->matrix.starts[row + 1]; ++entry)
++        data->matrix.values[entry] = -data->matrix.values[entry];
++    }
++  } else {
++    SparseMatrix& matrix = data->matrix;
++    matrix.num_rows = data->num_rows;
++    matrix.num_cols = data->num_cols;
++    matrix.starts.resize(static_cast<std::size_t>(data->num_rows) + 1);
++    matrix.indices.resize(original_matrix.indices.size() + num_slacks);
++    matrix.values.resize(original_matrix.values.size() + num_slacks);
++    HighsInt output = 0;
++    for (HighsInt row = 0; row < data->num_rows; ++row) {
++      matrix.starts[row] = output;
++      const HighsInt original_row = transform.transformed_to_original_row[row];
++      const double sign = transform.original_row_sign[original_row];
++      for (HighsInt entry = original_matrix.starts[original_row];
++           entry < original_matrix.starts[original_row + 1]; ++entry) {
++        matrix.indices[output] = original_matrix.indices[entry];
++        matrix.values[output++] = sign * original_matrix.values[entry];
++      }
++      const HighsInt slack = transform.slack_col_for_original_row[original_row];
++      if (slack >= 0) {
++        // Synthetic columns follow every original column, so appending the
++        // single slack preserves the canonical order of this row.
++        matrix.indices[output] = slack;
++        matrix.values[output++] = -1.0;
++      }
+     }
++    matrix.starts[data->num_rows] = output;
++    original_matrix = SparseMatrix();
+   }
+-  result.error =
+-      canonicalizeEntries(data->num_rows, data->num_cols, transformed_entries);
+-  if (!result.error.ok()) return result;
+-  data->matrix =
+-      makeCompressedMatrix(data->num_rows, data->num_cols, transformed_entries);
+ 
+-  std::vector<MatrixEntry> transpose_entries;
+-  transpose_entries.reserve(transformed_entries.size());
+-  for (std::size_t entry = 0; entry < transformed_entries.size(); ++entry) {
+-    transpose_entries.push_back({transformed_entries[entry].col,
+-                                 transformed_entries[entry].row,
+-                                 transformed_entries[entry].value});
+-  }
+-  result.error =
+-      canonicalizeEntries(data->num_cols, data->num_rows, transpose_entries);
+-  if (!result.error.ok()) return result;
+-  data->transpose =
+-      makeCompressedMatrix(data->num_cols, data->num_rows, transpose_entries);
++  phase.reset(diagnostics ? &diagnostics->transpose_seconds : nullptr);
++  data->transpose = transposeMatrix(data->matrix);
+ 
+   data->scaling.row_scale.assign(data->num_rows, 1.0);
++  phase.reset(diagnostics ? &diagnostics->unscaled_norms_seconds : nullptr);
+   data->scaling.col_scale.assign(data->num_cols, 1.0);
+   bool norms_valid = true;
+   data->unscaled_norms.objective_l2 = stableNorm(data->costs, norms_valid);
+   data->unscaled_norms.row_bounds_l2 = stableNorm(data->row_lower, norms_valid);
+   data->unscaled_norms.matrix_frobenius =
+       stableNorm(data->matrix.values, norms_valid);
++  phase.reset(nullptr);
+   if (!norms_valid) {
+     result.error = invalidModel("HiPDLP unscaled norm is non-finite");
+     return result;
+diff --git a/highs/pdlp/hipdlp/model/problem.hpp b/highs/pdlp/hipdlp/model/problem.hpp
+index 77e5e9a35..4e4efa72f 100644
+--- a/highs/pdlp/hipdlp/model/problem.hpp
++++ b/highs/pdlp/hipdlp/model/problem.hpp
+@@ -7,6 +7,7 @@
+ #include "lp_data/HighsLp.h"
+ #include "lp_data/HighsSolution.h"
+ #include "pdlp/hipdlp/api/status.hpp"
++#include "pdlp/hipdlp/model/preprocessing.hpp"
+ 
+ namespace hipdlp {
+ namespace model {
+@@ -154,7 +155,8 @@ class Problem {
+   struct Data;
+   std::unique_ptr<Data> data_;
+ 
+-  friend ProblemBuildResult buildProblem(const HighsLp& lp);
++  friend ProblemBuildResult buildProblem(const HighsLp& lp,
++                                         PreprocessingDiagnostics* diagnostics);
+ };
+ 
+ struct ProblemBuildResult {
+@@ -171,7 +173,8 @@ struct ProblemBuildResult {
+   bool ok() const;
+ };
+ 
+-ProblemBuildResult buildProblem(const HighsLp& lp);
++ProblemBuildResult buildProblem(const HighsLp& lp,
++                                PreprocessingDiagnostics* diagnostics = nullptr);
+ PostsolveResult postsolve(const Problem& problem,
+                           const std::vector<double>& scaled_primal,
+                           const std::vector<double>& scaled_dual,
+diff --git a/highs/pdlp/hipdlp/model/scaling.cc b/highs/pdlp/hipdlp/model/scaling.cc
+index d30410f9d..cd70d0aa7 100644
+--- a/highs/pdlp/hipdlp/model/scaling.cc
++++ b/highs/pdlp/hipdlp/model/scaling.cc
+@@ -105,7 +105,10 @@ bool finiteScaledValue(const double value, const double row_scale,
+   return std::isfinite(result) && result != 0.0;
+ }
+ 
+-api::Error composeScaling(SparseMatrix& matrix,
++// Only private working values are mutated; a failed stage is discarded by the
++// caller. The original Problem's public scaling operation remains transactional.
++api::Error composeScalingValues(const SparseMatrix& matrix,
++                          std::vector<double>& values,
+                           const std::vector<double>& row_scale,
+                           const std::vector<double>& col_scale,
+                           std::vector<double>& cumulative_row_scale,
+@@ -116,7 +119,6 @@ api::Error composeScaling(SparseMatrix& matrix,
+       cumulative_col_scale.size() != col_scale.size())
+     return invalidScaling("HiPDLP scale composition dimensions are invalid");
+ 
+-  std::vector<double> values(matrix.values.size());
+   std::vector<double> composed_rows(row_scale.size());
+   std::vector<double> composed_cols(col_scale.size());
+   for (HighsInt row = 0; row < matrix.num_rows; ++row) {
+@@ -126,7 +128,7 @@ api::Error composeScaling(SparseMatrix& matrix,
+     for (HighsInt entry = matrix.starts[row]; entry < matrix.starts[row + 1];
+          ++entry) {
+       const HighsInt col = matrix.indices[entry];
+-      if (!finiteScaledValue(matrix.values[entry], row_scale[row],
++      if (!finiteScaledValue(values[entry], row_scale[row],
+                              col_scale[col], values[entry]))
+         return invalidScaling(
+             "HiPDLP matrix value is unsafe during scale composition");
+@@ -137,12 +139,20 @@ api::Error composeScaling(SparseMatrix& matrix,
+                                composed_cols[col]))
+       return invalidScaling("HiPDLP cumulative column scale is invalid");
+   }
+-  matrix.values.swap(values);
+   cumulative_row_scale.swap(composed_rows);
+   cumulative_col_scale.swap(composed_cols);
+   return api::Error();
+ }
+ 
++api::Error composeScaling(SparseMatrix& matrix,
++                          const std::vector<double>& row_scale,
++                          const std::vector<double>& col_scale,
++                          std::vector<double>& cumulative_row_scale,
++                          std::vector<double>& cumulative_col_scale) {
++  return composeScalingValues(matrix, matrix.values, row_scale, col_scale,
++                               cumulative_row_scale, cumulative_col_scale);
++}
++
+ ScalingResult makeScalingResult(const SparseMatrix& matrix,
+                                 const ScalingStage stage) {
+   ScalingResult result;
+@@ -324,7 +334,8 @@ api::Error applyCurtisReidScaling(Problem& problem, const HighsInt sweeps) {
+ }
+ 
+ ScalingResult computeRuizScaling(const SparseMatrix& matrix,
+-                                 const HighsInt iterations) {
++                                 const HighsInt iterations,
++                                 PreprocessingDiagnostics* diagnostics) {
+   ScalingResult result = makeScalingResult(matrix, ScalingStage::kRuiz);
+   result.scaling.ruiz_iterations = iterations;
+   if (iterations < 0) {
+@@ -335,21 +346,26 @@ ScalingResult computeRuizScaling(const SparseMatrix& matrix,
+   result.error = validateSparseMatrix(matrix);
+   if (!result.error.ok()) return result;
+ 
+-  SparseMatrix working = matrix;
++  detail::PreprocessingTimer copy(
++      diagnostics ? &diagnostics->scaling_copy_seconds : nullptr);
++  std::vector<double> working_values = matrix.values;
++  copy.reset(nullptr);
++  std::vector<double> row_max(matrix.num_rows);
++  std::vector<double> col_max(matrix.num_cols);
++  std::vector<double> row_scale(matrix.num_rows);
++  std::vector<double> col_scale(matrix.num_cols);
+   for (HighsInt iteration = 0; iteration < iterations; ++iteration) {
+-    std::vector<double> row_max(matrix.num_rows, 0.0);
+-    std::vector<double> col_max(matrix.num_cols, 0.0);
+-    for (HighsInt row = 0; row < working.num_rows; ++row) {
+-      for (HighsInt entry = working.starts[row];
+-           entry < working.starts[row + 1]; ++entry) {
+-        const HighsInt col = working.indices[entry];
+-        const double magnitude = std::abs(working.values[entry]);
++    std::fill(row_max.begin(), row_max.end(), 0.0);
++    std::fill(col_max.begin(), col_max.end(), 0.0);
++    for (HighsInt row = 0; row < matrix.num_rows; ++row) {
++      for (HighsInt entry = matrix.starts[row];
++           entry < matrix.starts[row + 1]; ++entry) {
++        const HighsInt col = matrix.indices[entry];
++        const double magnitude = std::abs(working_values[entry]);
+         row_max[row] = std::max(row_max[row], magnitude);
+         col_max[col] = std::max(col_max[col], magnitude);
+       }
+     }
+-    std::vector<double> row_scale(matrix.num_rows, 1.0);
+-    std::vector<double> col_scale(matrix.num_cols, 1.0);
+     for (HighsInt row = 0; row < matrix.num_rows; ++row) {
+       result.error = inverseSquareRoot(row_max[row], row_scale[row]);
+       if (!result.error.ok()) return result;
+@@ -359,8 +375,8 @@ ScalingResult computeRuizScaling(const SparseMatrix& matrix,
+       if (!result.error.ok()) return result;
+     }
+     result.error =
+-        composeScaling(working, row_scale, col_scale, result.scaling.row_scale,
+-                       result.scaling.col_scale);
++        composeScalingValues(matrix, working_values, row_scale, col_scale,
++                             result.scaling.row_scale, result.scaling.col_scale);
+     if (!result.error.ok()) return result;
+   }
+   return result;
+@@ -440,7 +456,8 @@ ScalingResult computeL2Scaling(const SparseMatrix& matrix) {
+ }
+ 
+ ScalingResult computeScalingPipeline(const SparseMatrix& matrix,
+-                                     const ScalingOptions& options) {
++                                     const ScalingOptions& options,
++                                     PreprocessingDiagnostics* diagnostics) {
+   ScalingResult result;
+   result.error = validateScalingOptions(options);
+   if (!result.error.ok()) return result;
+@@ -453,9 +470,14 @@ ScalingResult computeScalingPipeline(const SparseMatrix& matrix,
+       (options.features_off & kPdlpScalingOff) != 0)
+     return result;
+ 
++  detail::PreprocessingTimer copy(
++      diagnostics ? &diagnostics->scaling_copy_seconds : nullptr);
+   SparseMatrix working = matrix;
++  copy.reset(nullptr);
+   if (options.mode == ScalingMode::kAuto ||
+       options.mode == ScalingMode::kCurtisReid) {
++    detail::PreprocessingTimer stage(
++        diagnostics ? &diagnostics->curtis_reid_seconds : nullptr);
+     const CurtisReidResult curtis_reid =
+         computeCurtisReidScaling(working, options.curtis_reid_sweeps);
+     if (!curtis_reid.ok()) {
+@@ -472,18 +494,24 @@ ScalingResult computeScalingPipeline(const SparseMatrix& matrix,
+   if (options.mode == ScalingMode::kCurtisReid) return result;
+ 
+   if ((options.legacy_scaling_mode & kPdlpScalingRuiz) != 0) {
++    detail::PreprocessingTimer stage(
++        diagnostics ? &diagnostics->ruiz_seconds : nullptr);
+     const ScalingResult ruiz =
+-        computeRuizScaling(working, options.ruiz_iterations);
++        computeRuizScaling(working, options.ruiz_iterations, diagnostics);
+     result.error = appendScaling(ruiz, working, result.scaling);
+     if (!result.error.ok()) return result;
+     result.scaling.ruiz_iterations = options.ruiz_iterations;
+   }
+   if ((options.legacy_scaling_mode & kPdlpScalingPC) != 0) {
++    detail::PreprocessingTimer stage(
++        diagnostics ? &diagnostics->pock_chambolle_seconds : nullptr);
+     result.error = appendScaling(computePockChambolleScaling(working), working,
+                                  result.scaling);
+     if (!result.error.ok()) return result;
+   }
+   if ((options.legacy_scaling_mode & kPdlpScalingL2) != 0) {
++    detail::PreprocessingTimer stage(
++        diagnostics ? &diagnostics->l2_seconds : nullptr);
+     result.error =
+         appendScaling(computeL2Scaling(working), working, result.scaling);
+     if (!result.error.ok()) return result;
+@@ -539,17 +567,25 @@ double scaledNormInflation(const Problem& problem,
+ }
+ 
+ api::Error applyScalingPipeline(Problem& problem,
+-                                const ScalingOptions& options) {
++                                const ScalingOptions& options,
++                                PreprocessingDiagnostics* diagnostics) {
++  detail::PreprocessingTimer total(
++      diagnostics ? &diagnostics->scaling_seconds : nullptr);
+   if (!problem.initialized())
+     return invalidScaling("HiPDLP problem is not initialized");
+-  ScalingResult result = computeScalingPipeline(problem.matrix(), options);
++  detail::PreprocessingTimer phase(
++      diagnostics ? &diagnostics->scaling_candidate_seconds : nullptr);
++  ScalingResult result = computeScalingPipeline(problem.matrix(), options, diagnostics);
++  phase.reset(nullptr);
+   if (!result.ok()) return result.error;
+   if (options.mode == ScalingMode::kAuto &&
+       result.scaling.curtis_reid_sweeps > 0) {
+     ScalingOptions without_curtis_reid = options;
+     without_curtis_reid.mode = ScalingMode::kLegacy;
++    phase.reset(diagnostics ? &diagnostics->scaling_reference_seconds : nullptr);
+     ScalingResult fallback =
+-        computeScalingPipeline(problem.matrix(), without_curtis_reid);
++        computeScalingPipeline(problem.matrix(), without_curtis_reid, diagnostics);
++    phase.reset(diagnostics ? &diagnostics->scaling_guard_seconds : nullptr);
+     if (fallback.ok() &&
+         scaledNormInflation(problem, result.scaling, fallback.scaling) >
+             kCurtisReidInflationLimit) {
+@@ -558,6 +594,7 @@ api::Error applyScalingPipeline(Problem& problem,
+     }
+   }
+   if (result.scaling.stages.empty()) return api::Error();
++  phase.reset(diagnostics ? &diagnostics->scaling_apply_seconds : nullptr);
+   return problem.applyDiagonalScaling(result.scaling.row_scale,
+                                       result.scaling.col_scale, result.scaling);
+ }
+diff --git a/highs/pdlp/hipdlp/model/scaling.hpp b/highs/pdlp/hipdlp/model/scaling.hpp
+index f58c57c74..c518d3bc7 100644
+--- a/highs/pdlp/hipdlp/model/scaling.hpp
++++ b/highs/pdlp/hipdlp/model/scaling.hpp
+@@ -56,11 +56,13 @@ CurtisReidResult computeCurtisReidScaling(const SparseMatrix& matrix,
+ api::Error applyCurtisReidScaling(Problem& problem, HighsInt sweeps);
+ 
+ ScalingResult computeRuizScaling(const SparseMatrix& matrix,
+-                                 HighsInt iterations);
++                                 HighsInt iterations,
++                                 PreprocessingDiagnostics* diagnostics = nullptr);
+ ScalingResult computePockChambolleScaling(const SparseMatrix& matrix);
+ ScalingResult computeL2Scaling(const SparseMatrix& matrix);
+ ScalingResult computeScalingPipeline(const SparseMatrix& matrix,
+-                                     const ScalingOptions& options);
++                                     const ScalingOptions& options,
++                                     PreprocessingDiagnostics* diagnostics = nullptr);
+ // Largest factor, over the cost vector, the finite row lower bounds and the
+ // finite column bounds of the unscaled `problem`, by which the 2-norm after
+ // applying `candidate` exceeds the 2-norm after applying `reference`.
+@@ -68,7 +70,8 @@ double scaledNormInflation(const Problem& problem,
+                            const ScalingMetadata& candidate,
+                            const ScalingMetadata& reference);
+ api::Error applyScalingPipeline(Problem& problem,
+-                                const ScalingOptions& options);
++                                const ScalingOptions& options,
++                                PreprocessingDiagnostics* diagnostics = nullptr);
+ 
+ api::Error scalePrimal(const Problem& problem,
+                        const std::vector<double>& unscaled,
+diff --git a/highs/pdlp/hipdlp/model/preprocessing.hpp b/highs/pdlp/hipdlp/model/preprocessing.hpp
+new file mode 100644
+index 000000000..507f720dc
+--- /dev/null
++++ b/highs/pdlp/hipdlp/model/preprocessing.hpp
+@@ -0,0 +1,55 @@
++#ifndef PDLP_HIPDLP_MODEL_PREPROCESSING_HPP_
++#define PDLP_HIPDLP_MODEL_PREPROCESSING_HPP_
++
++#include <chrono>
++
++namespace hipdlp {
++namespace model {
++
++// Optional wall timings. Child phases are nested in model_build/scaling and
++// accumulate across both candidate and fallback scaling pipelines.
++struct PreprocessingDiagnostics {
++  double model_build_seconds = 0.0;
++  double validation_seconds = 0.0;
++  double input_matrix_seconds = 0.0;
++  double row_transform_seconds = 0.0;
++  double transformed_matrix_seconds = 0.0;
++  double transpose_seconds = 0.0;
++  double unscaled_norms_seconds = 0.0;
++  double scaling_seconds = 0.0;
++  double scaling_candidate_seconds = 0.0;
++  double scaling_reference_seconds = 0.0;
++  double scaling_guard_seconds = 0.0;
++  double scaling_apply_seconds = 0.0;
++  double scaling_copy_seconds = 0.0;
++  double curtis_reid_seconds = 0.0;
++  double ruiz_seconds = 0.0;
++  double pock_chambolle_seconds = 0.0;
++  double l2_seconds = 0.0;
++};
++
++namespace detail {
++class PreprocessingTimer {
++ public:
++  explicit PreprocessingTimer(double* seconds) { reset(seconds); }
++  ~PreprocessingTimer() { reset(nullptr); }
++
++  void reset(double* seconds) {
++    if (seconds_ != nullptr)
++      *seconds_ += std::chrono::duration<double>(Clock::now() - start_).count();
++    seconds_ = seconds;
++    if (seconds_ != nullptr) start_ = Clock::now();
++  }
++
++  PreprocessingTimer(const PreprocessingTimer&) = delete;
++  PreprocessingTimer& operator=(const PreprocessingTimer&) = delete;
++
++ private:
++  using Clock = std::chrono::steady_clock;
++  double* seconds_ = nullptr;
++  Clock::time_point start_;
++};
++}  // namespace detail
++}  // namespace model
++}  // namespace hipdlp
++#endif

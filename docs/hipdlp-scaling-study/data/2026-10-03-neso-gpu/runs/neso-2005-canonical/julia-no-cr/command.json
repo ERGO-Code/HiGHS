@@ -1,0 +1,20 @@
+{
+  "name": "neso-2005-canonical",
+  "solver": "julia-no-cr",
+  "model": "/tmp/neso-gpu-comparison/canonical-checked/neso-2005-canonical.mps",
+  "sha256": "4e4c69fcf4aa131fcee14b45779a4f7c5c06a1c977f6d3626247ff9c8f0b9edb",
+  "command": [
+    "julia",
+    "--project=/tmp/neso-gpu-comparison/HPR-LP-current",
+    "/home/yzhou/Documents/Github/hipdlp2/docs/hipdlp-scaling-study/tools/neso_hpr_julia.jl",
+    "/tmp/neso-gpu-comparison/canonical-checked/neso-2005-canonical.mps",
+    "/tmp/neso-gpu-comparison/runs/neso-2005-canonical/julia-no-cr/solution",
+    "false",
+    "1e-8",
+    "180.0"
+  ],
+  "time_limit": 180.0,
+  "started": 1791067588.5483482,
+  "hpr_tolerance": "1e-8",
+  "cup_tolerance": "1e-4"
+}

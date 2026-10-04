@@ -1,0 +1,22 @@
+[
+  {
+    "source": "/tmp/hipdlp-scaling-study/lp/neso-2245.mps",
+    "target": "/tmp/neso-gpu-comparison/canonical-checked/neso-2245-canonical.mps",
+    "source_sha256": "eec0f1e7f2bd3eb6b1d7363cc0a75bb9fb29c735e5826c0f6ee74bfed2379a3d",
+    "target_sha256": "6db340c8ac458bbaabdd25a745ec71827690ccd65d90d6d582745c72039be89e",
+    "threshold": 1e-09,
+    "removed": 7871092,
+    "bound_only_columns": 29762,
+    "declared_columns": 93151
+  },
+  {
+    "source": "/tmp/hipdlp-scaling-study/lp/neso-2005.mps",
+    "target": "/tmp/neso-gpu-comparison/canonical-checked/neso-2005-canonical.mps",
+    "source_sha256": "1fcd544fbbfea62b4eded1c45ab99d7349bc0cd980651f92e6f2af39654e40e5",
+    "target_sha256": "4e4c69fcf4aa131fcee14b45779a4f7c5c06a1c977f6d3626247ff9c8f0b9edb",
+    "threshold": 1e-09,
+    "removed": 16761762,
+    "bound_only_columns": 29460,
+    "declared_columns": 108047
+  }
+]

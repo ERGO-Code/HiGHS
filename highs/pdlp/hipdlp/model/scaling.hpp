@@ -56,11 +56,13 @@ CurtisReidResult computeCurtisReidScaling(const SparseMatrix& matrix,
 api::Error applyCurtisReidScaling(Problem& problem, HighsInt sweeps);
 
 ScalingResult computeRuizScaling(const SparseMatrix& matrix,
-                                 HighsInt iterations);
+                                 HighsInt iterations,
+                                 PreprocessingDiagnostics* diagnostics = nullptr);
 ScalingResult computePockChambolleScaling(const SparseMatrix& matrix);
 ScalingResult computeL2Scaling(const SparseMatrix& matrix);
 ScalingResult computeScalingPipeline(const SparseMatrix& matrix,
-                                     const ScalingOptions& options);
+                                     const ScalingOptions& options,
+                                     PreprocessingDiagnostics* diagnostics = nullptr);
 // Largest factor, over the cost vector, the finite row lower bounds and the
 // finite column bounds of the unscaled `problem`, by which the 2-norm after
 // applying `candidate` exceeds the 2-norm after applying `reference`.
@@ -68,7 +70,8 @@ double scaledNormInflation(const Problem& problem,
                            const ScalingMetadata& candidate,
                            const ScalingMetadata& reference);
 api::Error applyScalingPipeline(Problem& problem,
-                                const ScalingOptions& options);
+                                const ScalingOptions& options,
+                                PreprocessingDiagnostics* diagnostics = nullptr);
 
 api::Error scalePrimal(const Problem& problem,
                        const std::vector<double>& unscaled,

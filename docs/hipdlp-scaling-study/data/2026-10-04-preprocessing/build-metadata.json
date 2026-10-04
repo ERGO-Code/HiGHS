@@ -1,0 +1,20 @@
+{
+  "base_commit": "8703b5cdecef02ee4c7ca350d024cfea10b2fe17",
+  "gpu": "NVIDIA GeForce RTX 4070 Ti SUPER (16 GB)",
+  "configuration": {
+    "backend": "cuda",
+    "scaling": "auto",
+    "presolve": "off",
+    "step_size": "pid",
+    "kkt_tolerance": 0.0001,
+    "optimality_tolerance": 0.0001
+  },
+  "binaries": {
+    "baseline/profile": "bcfcecfedf7dede41034f0a3e3359df85c3171556a7e982624f56cf9252aa18f",
+    "baseline/preprocess": "f17c9004bff1b8a88bcb0ea5497ea555dc3b0bf6c65e1ca030d714cf45629170",
+    "baseline/lib/libhighs.so": "500afdab5b95ee34aee7d48a91f31da08bea6caac008e845c1f8e61abc75f1f4",
+    "optimized/profile": "2d7cd0d97f4b1523b75114be5a6fe1a7fbc7ede9298675a5ae6824fb8cc9b584",
+    "optimized/preprocess": "e795ff7dc83c9168e26dc6303fa351b160cbd426fe93c37230aa042ff0fc3172",
+    "optimized/lib/libhighs.so": "b9efc1fa8001502b6f9eacb8619bda9d3904417118a17852f0c9a994177fe963"
+  }
+}

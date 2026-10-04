@@ -164,6 +164,7 @@ double* phaseSeconds(SolveDiagnostics* diagnostics, const SolvePhase phase) {
 void keepTimings(const SolveDiagnostics& from, SolveDiagnostics& into) {
   into.total_wall_seconds = from.total_wall_seconds;
   into.preprocessing_seconds = from.preprocessing_seconds;
+  into.preprocessing = from.preprocessing;
   into.backend_setup_seconds = from.backend_setup_seconds;
   into.operator_norm_seconds = from.operator_norm_seconds;
   into.iterations_seconds = from.iterations_seconds;
@@ -1001,9 +1002,13 @@ static api::SolveResult solveImpl(const api::SolverOptions& requested_options,
 
     SolvePhaseGuard preprocessing(context, SolvePhase::kPreprocessing,
                     total_iterations);
-    model::ProblemBuildResult built = model::buildProblem(original_model.lp());
+    model::PreprocessingDiagnostics* preprocessing_diagnostics =
+        context.diagnostics == nullptr ? nullptr : &context.diagnostics->preprocessing;
+    model::ProblemBuildResult built =
+        model::buildProblem(original_model.lp(), preprocessing_diagnostics);
     if (!built.ok()) return failure(built.error);
-    error = model::applyScalingPipeline(built.problem, options.scaling);
+    error = model::applyScalingPipeline(built.problem, options.scaling,
+                                         preprocessing_diagnostics);
     if (!error.ok()) return failure(error);
     if (context.log != nullptr && built.problem.scaling().curtis_reid_rejected)
       context.log->info(

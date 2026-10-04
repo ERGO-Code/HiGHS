@@ -1,0 +1,21 @@
+[
+  "/home/yzhou/Documents/Github/hipdlp2/build-scaling-cuda/bin/external_lp_solution_verifier",
+  "--instance",
+  "/tmp/neso-gpu-comparison/canonical-checked/neso-2005-canonical.mps",
+  "--primal-values",
+  "/tmp/neso-gpu-comparison/runs/neso-2005-canonical/hpr-cr-tight/solution.primal.txt",
+  "--row-dual-values",
+  "/tmp/neso-gpu-comparison/runs/neso-2005-canonical/hpr-cr-tight/solution.dual.txt",
+  "--solver",
+  "hpr-cr-tight",
+  "--status",
+  "OPTIMAL",
+  "--solver-time",
+  "43.679410784",
+  "--iterations",
+  "39750",
+  "--tolerance",
+  "1e-4",
+  "--output",
+  "/tmp/neso-gpu-comparison/runs/neso-2005-canonical/hpr-cr-tight/verification.json"
+]

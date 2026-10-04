@@ -1,0 +1,21 @@
+{
+  "name": "neso-2005",
+  "solver": "cupdlpx",
+  "model": "/tmp/hipdlp-scaling-study/lp/neso-2005.mps",
+  "sha256": "1fcd544fbbfea62b4eded1c45ab99d7349bc0cd980651f92e6f2af39654e40e5",
+  "command": [
+    "/tmp/neso-gpu-comparison/cupdlpx-current-build/cupdlpx",
+    "--no_presolve",
+    "--eps_opt",
+    "1e-4",
+    "--eps_feas",
+    "1e-4",
+    "--time_limit",
+    "600",
+    "--verbose",
+    "/tmp/hipdlp-scaling-study/lp/neso-2005.mps",
+    "/tmp/neso-gpu-comparison/runs/neso-2005/cupdlpx"
+  ],
+  "time_limit": 600,
+  "started": 1791064773.235531
+}

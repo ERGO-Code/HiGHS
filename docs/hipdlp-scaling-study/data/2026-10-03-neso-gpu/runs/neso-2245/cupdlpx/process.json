@@ -1,0 +1,23 @@
+{
+  "name": "neso-2245",
+  "solver": "cupdlpx",
+  "model": "/tmp/hipdlp-scaling-study/lp/neso-2245.mps",
+  "sha256": "eec0f1e7f2bd3eb6b1d7363cc0a75bb9fb29c735e5826c0f6ee74bfed2379a3d",
+  "command": [
+    "/tmp/neso-gpu-comparison/cupdlpx-current-build/cupdlpx",
+    "--no_presolve",
+    "--eps_opt",
+    "1e-4",
+    "--eps_feas",
+    "1e-4",
+    "--time_limit",
+    "600",
+    "--verbose",
+    "/tmp/hipdlp-scaling-study/lp/neso-2245.mps",
+    "/tmp/neso-gpu-comparison/runs/neso-2245/cupdlpx"
+  ],
+  "time_limit": 600,
+  "started": 1791064525.1450615,
+  "exit_code": 0,
+  "process_wall_sec": 244.38755498593673
+}

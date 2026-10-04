@@ -37,6 +37,7 @@ struct SolveDiagnostics {
 
   double total_wall_seconds;
   double preprocessing_seconds;
+  model::PreprocessingDiagnostics preprocessing;
   double backend_setup_seconds;
   double operator_norm_seconds;
   double iterations_seconds;

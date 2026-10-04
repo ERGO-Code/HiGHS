@@ -1,0 +1,33 @@
+{
+  "schema": "hipdlp-migration-adapter/1",
+  "instance": "/tmp/neso-gpu-comparison/canonical-checked/neso-2245-canonical.mps",
+  "implementation": "rewrite",
+  "backend": "cuda",
+  "requested_backend": "cuda",
+  "step_size": "pid",
+  "status": "OPTIMAL",
+  "call_status": "ok",
+  "iterations": 6880,
+  "objective": -22308.443841254451,
+  "solver_wall_sec": 18.581028281999998,
+  "end_to_end_sec": 35.374817350999997,
+  "relative_primal_residual": 9.0097054358801473e-13,
+  "relative_dual_residual": 2.7650544714624018e-06,
+  "relative_objective_gap": 2.1875313370616203e-05,
+  "kkt_input_valid": true,
+  "kkt_pass": true,
+  "certificate_kind": "none",
+  "certificate_pass": false,
+  "options": {
+    "presolve": "off",
+    "hipdlp_scaling": "legacy",
+    "pdlp_step_size_strategy": 3,
+    "kkt_tolerance": 0.0001,
+    "pdlp_optimality_tolerance": 0.0001,
+    "hipdlp_scaling_selector": false,
+    "time_limit": 600,
+    "pdlp_iteration_limit": 2147483647
+  },
+  "executable": "/tmp/neso-gpu-comparison/rewrite-adapter",
+  "highs_version": "1.15.1"
+}

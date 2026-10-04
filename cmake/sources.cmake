@@ -608,6 +608,7 @@ set(highs_headers
     pdlp/hipdlp/linalg.hpp
     pdlp/hipdlp/legacy/legacy_solver_adapter.hpp
     pdlp/hipdlp/logger.hpp
+    pdlp/hipdlp/model/preprocessing.hpp
     pdlp/hipdlp/model/problem.hpp
     pdlp/hipdlp/model/scaling.hpp
     pdlp/hipdlp/pdhg.hpp

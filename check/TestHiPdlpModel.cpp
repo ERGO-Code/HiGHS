@@ -221,6 +221,86 @@ TEST_CASE("hi-pdlp-curtis-reid-fixed-scales",
   CHECK(second.col_scale == first.col_scale);
 }
 
+TEST_CASE("hi-pdlp-sparse-ingestion-preserves-equivalent-encodings",
+          "[pdlp][hipdlp][model][preprocessing]") {
+  const HighsLp original = makeTransformationLp();
+  const auto expected = hipdlp::model::buildProblem(original);
+  REQUIRE(expected.ok());
+  struct Entry { HighsInt row; HighsInt col; double value; };
+  std::vector<Entry> entries;
+  for (HighsInt col = 0; col < original.num_col_; ++col) {
+    for (HighsInt i = original.a_matrix_.start_[col];
+         i < original.a_matrix_.start_[col + 1]; ++i) {
+      const HighsInt row = original.a_matrix_.index_[i];
+      const double half = original.a_matrix_.value_[i] / 2.0;
+      entries.push_back({row, col, half});
+      entries.push_back({row, col, 0.0});
+      entries.push_back({row, col, half});
+      entries.push_back({row, col, -0.0});
+    }
+  }
+  // An exactly cancelling pair also exercises removal of a whole position.
+  entries.push_back({0, 2, 16.0});
+  entries.push_back({0, 2, -16.0});
+  for (int permutation = 0; permutation < 4; ++permutation) {
+    std::reverse(entries.begin(), entries.end());
+    std::rotate(entries.begin(), entries.begin() + permutation + 1, entries.end());
+    for (const auto format : {MatrixFormat::kColwise, MatrixFormat::kRowwise}) {
+      HighsLp lp = original;
+      auto& matrix = lp.a_matrix_;
+      matrix.format_ = format;
+      matrix.start_.assign(1, 0);
+      matrix.index_.clear();
+      matrix.value_.clear();
+      const bool colwise = format == MatrixFormat::kColwise;
+      const HighsInt outer_size = colwise ? lp.num_col_ : lp.num_row_;
+      for (HighsInt outer = 0; outer < outer_size; ++outer) {
+        for (const Entry& entry : entries) {
+          if ((colwise ? entry.col : entry.row) != outer) continue;
+          matrix.index_.push_back(colwise ? entry.row : entry.col);
+          matrix.value_.push_back(entry.value);
+        }
+        matrix.start_.push_back(static_cast<HighsInt>(matrix.value_.size()));
+      }
+      const HighsSparseMatrix input = matrix;
+      hipdlp::model::PreprocessingDiagnostics diagnostics;
+      const auto actual = hipdlp::model::buildProblem(lp, &diagnostics);
+      REQUIRE(actual.ok());
+      CHECK(matrix == input);
+      CHECK(actual.problem.matrix().starts == expected.problem.matrix().starts);
+      CHECK(actual.problem.matrix().indices == expected.problem.matrix().indices);
+      CHECK(actual.problem.matrix().values == expected.problem.matrix().values);
+      CHECK(actual.problem.transpose().starts == expected.problem.transpose().starts);
+      CHECK(actual.problem.transpose().indices == expected.problem.transpose().indices);
+      CHECK(actual.problem.transpose().values == expected.problem.transpose().values);
+      CHECK(actual.problem.unscaledNorms().matrix_frobenius ==
+            expected.problem.unscaledNorms().matrix_frobenius);
+    }
+  }
+}
+
+TEST_CASE("hi-pdlp-sparse-ingestion-rejects-unsafe-entries",
+          "[pdlp][hipdlp][model][preprocessing]") {
+  for (const auto format : {MatrixFormat::kColwise, MatrixFormat::kRowwise}) {
+    for (int invalid = 0; invalid < 5; ++invalid) {
+      HighsLp lp = makeUnsafeScalingLp();
+      lp.a_matrix_.format_ = format;
+      if (invalid < 2)
+        lp.a_matrix_.index_[0] = invalid == 0 ? -1 : lp.num_col_;
+      else if (invalid < 4)
+        lp.a_matrix_.value_[0] = invalid == 2
+            ? std::numeric_limits<double>::quiet_NaN()
+            : std::numeric_limits<double>::infinity();
+      else {
+        lp.a_matrix_.start_ = {0, 2};
+        lp.a_matrix_.index_ = {0, 0};
+        lp.a_matrix_.value_.assign(2, std::numeric_limits<double>::max());
+      }
+      CHECK_FALSE(hipdlp::model::buildProblem(lp).ok());
+    }
+  }
+}
+
 TEST_CASE("hi-pdlp-legacy-scaling-balances-diagonal-primal-dual-geometry",
           "[pdlp][hipdlp][model][scaling][algorithm-study]") {
   hipdlp::model::SparseMatrix matrix;

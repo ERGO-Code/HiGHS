@@ -86,8 +86,7 @@ api::Error canonicalizeEntries(const HighsInt num_rows, const HighsInt num_cols,
       return invalidModel("HiPDLP matrix contains a non-finite value");
   }
   std::sort(entries.begin(), entries.end(), entryLess);
-  std::vector<MatrixEntry> canonical;
-  canonical.reserve(entries.size());
+  std::size_t output = 0;
   std::size_t entry = 0;
   while (entry < entries.size()) {
     const HighsInt row = entries[entry].row;
@@ -104,35 +103,112 @@ api::Error canonicalizeEntries(const HighsInt num_rows, const HighsInt num_cols,
     const double value = static_cast<double>(sum);
     if (!std::isfinite(value))
       return invalidModel("HiPDLP duplicate matrix sum exceeds FP64 range");
-    if (value != 0.0) canonical.push_back({row, col, value});
+    if (value != 0.0) entries[output++] = {row, col, value};
   }
-  entries.swap(canonical);
+  entries.resize(output);
   return api::Error();
 }
 
-SparseMatrix makeCompressedMatrix(const HighsInt num_rows,
-                                  const HighsInt num_cols,
-                                  const std::vector<MatrixEntry>& entries) {
-  SparseMatrix matrix;
-  matrix.num_rows = num_rows;
-  matrix.num_cols = num_cols;
-  matrix.starts.assign(static_cast<std::size_t>(num_rows) + 1, 0);
-  matrix.indices.reserve(entries.size());
-  matrix.values.reserve(entries.size());
-  HighsInt current_row = 0;
-  for (std::size_t entry = 0; entry < entries.size(); ++entry) {
-    while (current_row < entries[entry].row) {
-      matrix.starts[static_cast<std::size_t>(++current_row)] =
-          static_cast<HighsInt>(matrix.indices.size());
+// Build CSR directly. A column-wise traversal visits column indices in order;
+// only noncanonical rows need sorting, with the same value ordering and
+// long-double duplicate accumulation as the general triplet path.
+api::Error makeOriginalMatrix(const HighsLp& lp, SparseMatrix& matrix) {
+  const HighsSparseMatrix& input = lp.a_matrix_;
+  const bool colwise = input.format_ == MatrixFormat::kColwise;
+  const HighsInt inner_size = colwise ? lp.num_row_ : lp.num_col_;
+  matrix.num_rows = lp.num_row_;
+  matrix.num_cols = lp.num_col_;
+  matrix.starts.assign(static_cast<std::size_t>(lp.num_row_) + 1, 0);
+  for (std::size_t entry = 0; entry < input.value_.size(); ++entry) {
+    const HighsInt inner = input.index_[entry];
+    if (inner < 0 || inner >= inner_size)
+      return invalidModel("HiPDLP matrix index is out of range");
+    if (!std::isfinite(input.value_[entry]))
+      return invalidModel("HiPDLP matrix contains a non-finite value");
+    if (colwise) ++matrix.starts[inner + 1];
+  }
+  if (colwise) {
+    for (HighsInt row = 0; row < lp.num_row_; ++row)
+      matrix.starts[row + 1] += matrix.starts[row];
+    std::vector<HighsInt> next = matrix.starts;
+    matrix.indices.resize(input.index_.size());
+    matrix.values.resize(input.value_.size());
+    for (HighsInt col = 0; col < lp.num_col_; ++col) {
+      for (HighsInt entry = input.start_[col]; entry < input.start_[col + 1];
+           ++entry) {
+        const HighsInt output = next[input.index_[entry]]++;
+        matrix.indices[output] = col;
+        matrix.values[output] = input.value_[entry];
+      }
     }
-    matrix.indices.push_back(entries[entry].col);
-    matrix.values.push_back(entries[entry].value);
+  } else {
+    matrix.starts = input.start_;
+    matrix.indices = input.index_;
+    matrix.values = input.value_;
   }
-  while (current_row < num_rows) {
-    matrix.starts[static_cast<std::size_t>(++current_row)] =
-        static_cast<HighsInt>(matrix.indices.size());
+
+  std::vector<MatrixEntry> row_entries;
+  HighsInt end = 0;
+  HighsInt output = 0;
+  for (HighsInt row = 0; row < lp.num_row_; ++row) {
+    const HighsInt begin = end;
+    end = matrix.starts[row + 1];
+    bool ordered_unique = true;
+    HighsInt previous_col = -1;
+    for (HighsInt entry = begin; entry < end; ++entry) {
+      if (previous_col >= matrix.indices[entry]) {
+        ordered_unique = false;
+        break;
+      }
+      previous_col = matrix.indices[entry];
+    }
+    matrix.starts[row] = output;
+    if (ordered_unique) {
+      for (HighsInt entry = begin; entry < end; ++entry) {
+        if (matrix.values[entry] == 0.0) continue;
+        matrix.indices[output] = matrix.indices[entry];
+        matrix.values[output++] = matrix.values[entry];
+      }
+    } else {
+      row_entries.clear();
+      for (HighsInt entry = begin; entry < end; ++entry)
+        row_entries.push_back({0, matrix.indices[entry], matrix.values[entry]});
+      const api::Error error = canonicalizeEntries(1, lp.num_col_, row_entries);
+      if (!error.ok()) return error;
+      for (const MatrixEntry& entry : row_entries) {
+        matrix.indices[output] = entry.col;
+        matrix.values[output++] = entry.value;
+      }
+    }
   }
-  return matrix;
+  matrix.starts[lp.num_row_] = output;
+  matrix.indices.resize(output);
+  matrix.values.resize(output);
+  return api::Error();
+}
+
+// Each source row is canonical. Scattering rows in increasing order makes
+// every transpose row canonical without another sort or duplicate reduction.
+SparseMatrix transposeMatrix(const SparseMatrix& matrix) {
+  SparseMatrix transpose;
+  transpose.num_rows = matrix.num_cols;
+  transpose.num_cols = matrix.num_rows;
+  transpose.starts.assign(static_cast<std::size_t>(matrix.num_cols) + 1, 0);
+  for (const HighsInt col : matrix.indices) ++transpose.starts[col + 1];
+  for (HighsInt col = 0; col < matrix.num_cols; ++col)
+    transpose.starts[col + 1] += transpose.starts[col];
+  std::vector<HighsInt> next = transpose.starts;
+  transpose.indices.resize(matrix.indices.size());
+  transpose.values.resize(matrix.values.size());
+  for (HighsInt row = 0; row < matrix.num_rows; ++row) {
+    for (HighsInt entry = matrix.starts[row]; entry < matrix.starts[row + 1];
+         ++entry) {
+      const HighsInt output = next[matrix.indices[entry]]++;
+      transpose.indices[output] = row;
+      transpose.values[output] = matrix.values[entry];
+    }
+  }
+  return transpose;
 }
 
 api::Error validateLp(const HighsLp& lp) {
@@ -757,7 +833,12 @@ PostsolveResult postsolve(const Problem& problem,
   return result;
 }
 
-ProblemBuildResult buildProblem(const HighsLp& lp) {
+ProblemBuildResult buildProblem(const HighsLp& lp,
+                                PreprocessingDiagnostics* diagnostics) {
+  detail::PreprocessingTimer total(
+      diagnostics ? &diagnostics->model_build_seconds : nullptr);
+  detail::PreprocessingTimer phase(
+      diagnostics ? &diagnostics->validation_seconds : nullptr);
   ProblemBuildResult result;
   result.error = validateLp(lp);
   if (!result.error.ok()) return result;
@@ -775,30 +856,13 @@ ProblemBuildResult buildProblem(const HighsLp& lp) {
                              original_row_upper, "row");
   if (!result.error.ok()) return result;
 
-  std::vector<MatrixEntry> original_entries;
-  original_entries.reserve(lp.a_matrix_.value_.size());
-  if (lp.a_matrix_.format_ == MatrixFormat::kColwise) {
-    for (HighsInt col = 0; col < lp.num_col_; ++col) {
-      for (HighsInt entry = lp.a_matrix_.start_[col];
-           entry < lp.a_matrix_.start_[col + 1]; ++entry) {
-        original_entries.push_back(
-            {lp.a_matrix_.index_[entry], col, lp.a_matrix_.value_[entry]});
-      }
-    }
-  } else {
-    for (HighsInt row = 0; row < lp.num_row_; ++row) {
-      for (HighsInt entry = lp.a_matrix_.start_[row];
-           entry < lp.a_matrix_.start_[row + 1]; ++entry) {
-        original_entries.push_back(
-            {row, lp.a_matrix_.index_[entry], lp.a_matrix_.value_[entry]});
-      }
-    }
-  }
-  result.error =
-      canonicalizeEntries(lp.num_row_, lp.num_col_, original_entries);
+  phase.reset(diagnostics ? &diagnostics->input_matrix_seconds : nullptr);
+  SparseMatrix original_matrix;
+  result.error = makeOriginalMatrix(lp, original_matrix);
   if (!result.error.ok()) return result;
 
   std::unique_ptr<Problem::Data> data(new Problem::Data());
+  phase.reset(diagnostics ? &diagnostics->row_transform_seconds : nullptr);
   TransformationMetadata& transform = data->transformation;
   transform.original_num_rows = lp.num_row_;
   transform.original_num_cols = lp.num_col_;
@@ -848,6 +912,12 @@ ProblemBuildResult buildProblem(const HighsLp& lp) {
     transform.transformed_to_original_row[transformed_row] = row;
   }
 
+  if (num_slacks > std::numeric_limits<HighsInt>::max() - lp.num_col_ ||
+      original_matrix.values.size() >
+          static_cast<std::size_t>(std::numeric_limits<HighsInt>::max() - num_slacks)) {
+    result.error = invalidModel("HiPDLP transformed matrix exceeds index range");
+    return result;
+  }
   data->num_rows = lp.num_row_;
   data->num_cols = lp.num_col_ + num_slacks;
   data->objective_sense = ObjSense::kMinimize;
@@ -895,49 +965,59 @@ ProblemBuildResult buildProblem(const HighsLp& lp) {
     }
   }
 
-  std::vector<MatrixEntry> transformed_entries;
-  transformed_entries.reserve(original_entries.size() + num_slacks);
-  for (std::size_t entry = 0; entry < original_entries.size(); ++entry) {
-    const HighsInt original_row = original_entries[entry].row;
-    transformed_entries.push_back(
-        {transform.original_to_transformed_row[original_row],
-         original_entries[entry].col,
-         transform.original_row_sign[original_row] *
-             original_entries[entry].value});
-  }
-  for (HighsInt original_row = 0; original_row < lp.num_row_; ++original_row) {
-    const HighsInt slack = transform.slack_col_for_original_row[original_row];
-    if (slack >= 0) {
-      transformed_entries.push_back(
-          {transform.original_to_transformed_row[original_row], slack, -1.0});
+  phase.reset(diagnostics ? &diagnostics->transformed_matrix_seconds : nullptr);
+  bool identity_rows = num_slacks == 0;
+  for (HighsInt row = 0; identity_rows && row < lp.num_row_; ++row)
+    identity_rows = transform.original_to_transformed_row[row] == row;
+  if (identity_rows) {
+    data->matrix = std::move(original_matrix);
+    for (HighsInt row = 0; row < data->num_rows; ++row) {
+      if (transform.original_row_sign[row] == 1.0) continue;
+      for (HighsInt entry = data->matrix.starts[row];
+           entry < data->matrix.starts[row + 1]; ++entry)
+        data->matrix.values[entry] = -data->matrix.values[entry];
     }
+  } else {
+    SparseMatrix& matrix = data->matrix;
+    matrix.num_rows = data->num_rows;
+    matrix.num_cols = data->num_cols;
+    matrix.starts.resize(static_cast<std::size_t>(data->num_rows) + 1);
+    matrix.indices.resize(original_matrix.indices.size() + num_slacks);
+    matrix.values.resize(original_matrix.values.size() + num_slacks);
+    HighsInt output = 0;
+    for (HighsInt row = 0; row < data->num_rows; ++row) {
+      matrix.starts[row] = output;
+      const HighsInt original_row = transform.transformed_to_original_row[row];
+      const double sign = transform.original_row_sign[original_row];
+      for (HighsInt entry = original_matrix.starts[original_row];
+           entry < original_matrix.starts[original_row + 1]; ++entry) {
+        matrix.indices[output] = original_matrix.indices[entry];
+        matrix.values[output++] = sign * original_matrix.values[entry];
+      }
+      const HighsInt slack = transform.slack_col_for_original_row[original_row];
+      if (slack >= 0) {
+        // Synthetic columns follow every original column, so appending the
+        // single slack preserves the canonical order of this row.
+        matrix.indices[output] = slack;
+        matrix.values[output++] = -1.0;
+      }
+    }
+    matrix.starts[data->num_rows] = output;
+    original_matrix = SparseMatrix();
   }
-  result.error =
-      canonicalizeEntries(data->num_rows, data->num_cols, transformed_entries);
-  if (!result.error.ok()) return result;
-  data->matrix =
-      makeCompressedMatrix(data->num_rows, data->num_cols, transformed_entries);
 
-  std::vector<MatrixEntry> transpose_entries;
-  transpose_entries.reserve(transformed_entries.size());
-  for (std::size_t entry = 0; entry < transformed_entries.size(); ++entry) {
-    transpose_entries.push_back({transformed_entries[entry].col,
-                                 transformed_entries[entry].row,
-                                 transformed_entries[entry].value});
-  }
-  result.error =
-      canonicalizeEntries(data->num_cols, data->num_rows, transpose_entries);
-  if (!result.error.ok()) return result;
-  data->transpose =
-      makeCompressedMatrix(data->num_cols, data->num_rows, transpose_entries);
+  phase.reset(diagnostics ? &diagnostics->transpose_seconds : nullptr);
+  data->transpose = transposeMatrix(data->matrix);
 
   data->scaling.row_scale.assign(data->num_rows, 1.0);
+  phase.reset(diagnostics ? &diagnostics->unscaled_norms_seconds : nullptr);
   data->scaling.col_scale.assign(data->num_cols, 1.0);
   bool norms_valid = true;
   data->unscaled_norms.objective_l2 = stableNorm(data->costs, norms_valid);
   data->unscaled_norms.row_bounds_l2 = stableNorm(data->row_lower, norms_valid);
   data->unscaled_norms.matrix_frobenius =
       stableNorm(data->matrix.values, norms_valid);
+  phase.reset(nullptr);
   if (!norms_valid) {
     result.error = invalidModel("HiPDLP unscaled norm is non-finite");
     return result;

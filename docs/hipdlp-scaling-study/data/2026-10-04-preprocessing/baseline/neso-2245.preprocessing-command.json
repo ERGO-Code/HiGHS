@@ -1,0 +1,9 @@
+{
+  "command": [
+    "/tmp/neso-preprocessing-study/baseline/preprocess",
+    "/tmp/neso-gpu-comparison/canonical-checked/neso-2245-canonical.mps",
+    "auto",
+    "1"
+  ],
+  "exit_code": 0
+}

@@ -1,0 +1,23 @@
+{
+  "name": "neso-2245-canonical",
+  "solver": "cupdlpx-full-export",
+  "model": "/tmp/neso-gpu-comparison/canonical-checked/neso-2245-canonical.mps",
+  "sha256": "6db340c8ac458bbaabdd25a745ec71827690ccd65d90d6d582745c72039be89e",
+  "command": [
+    "/tmp/neso-gpu-comparison/cupdlpx-current-build/cupdlpx",
+    "--no_presolve",
+    "--eps_opt",
+    "1e-4",
+    "--eps_feas",
+    "1e-4",
+    "--time_limit",
+    "600",
+    "--verbose",
+    "/tmp/neso-gpu-comparison/canonical-checked/neso-2245-canonical.mps",
+    "/tmp/neso-gpu-comparison/runs/neso-2245-canonical/cupdlpx-full-export"
+  ],
+  "time_limit": 600,
+  "started": 1791068119.134241,
+  "hpr_tolerance": "1e-4",
+  "cup_tolerance": "1e-4"
+}

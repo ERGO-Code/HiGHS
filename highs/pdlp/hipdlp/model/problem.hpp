@@ -7,6 +7,7 @@
 #include "lp_data/HighsLp.h"
 #include "lp_data/HighsSolution.h"
 #include "pdlp/hipdlp/api/status.hpp"
+#include "pdlp/hipdlp/model/preprocessing.hpp"
 
 namespace hipdlp {
 namespace model {
@@ -154,7 +155,8 @@ class Problem {
   struct Data;
   std::unique_ptr<Data> data_;
 
-  friend ProblemBuildResult buildProblem(const HighsLp& lp);
+  friend ProblemBuildResult buildProblem(const HighsLp& lp,
+                                         PreprocessingDiagnostics* diagnostics);
 };
 
 struct ProblemBuildResult {
@@ -171,7 +173,8 @@ struct ProblemBuildResult {
   bool ok() const;
 };
 
-ProblemBuildResult buildProblem(const HighsLp& lp);
+ProblemBuildResult buildProblem(const HighsLp& lp,
+                                PreprocessingDiagnostics* diagnostics = nullptr);
 PostsolveResult postsolve(const Problem& problem,
                           const std::vector<double>& scaled_primal,
                           const std::vector<double>& scaled_dual,
