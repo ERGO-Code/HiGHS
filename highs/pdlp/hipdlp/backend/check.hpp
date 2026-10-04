@@ -94,6 +94,27 @@ struct CheckResult {
         synchronizations(0) {}
 };
 
+// Lower bounds of the four relative metrics of the original-model KKT
+// verifier for a candidate. certain_failure means some bound exceeds the
+// tolerance, so the verifier would reject; otherwise the screen is
+// inconclusive and only the verifier can decide.
+struct KktScreenResult {
+  bool valid;
+  bool certain_failure;
+  double primal;
+  double dual;
+  double gap;
+  double complementarity;
+
+  KktScreenResult()
+      : valid(false),
+        certain_failure(false),
+        primal(0.0),
+        dual(0.0),
+        gap(0.0),
+        complementarity(0.0) {}
+};
+
 }  // namespace backend
 }  // namespace hipdlp
 

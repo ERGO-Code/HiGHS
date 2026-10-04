@@ -43,6 +43,11 @@ class CudaBackend : public Backend, public CommandBufferRecorder {
   api::Error evaluateCheck(const model::Problem& problem,
                            WorkspaceHandle& workspace, const CheckInput& input,
                            CheckResult& result) override;
+  api::Error screenOriginalKkt(const ProblemHandle& problem,
+                               WorkspaceHandle& workspace,
+                               const VectorHandle& primal,
+                               const VectorHandle& dual, double tolerance,
+                               KktScreenResult& result) override;
   api::Error createVector(HighsInt size, VectorHandle& vector) override;
   api::Error createBatchedVector(HighsInt size, HighsInt batch_size,
                                  VectorHandle& vector) override;

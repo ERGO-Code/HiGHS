@@ -7,6 +7,7 @@
 #include <fstream>
 #include <limits>
 #include <memory>
+#include <random>
 #include <sstream>
 #include <string>
 #include <type_traits>
@@ -14,6 +15,7 @@
 
 #include "HCheckConfig.h"
 #include "HConfig.h"
+#include "Highs.h"
 #include "catch.hpp"
 #include "lp_data/HConst.h"
 #include "pdlp/hipdlp/algorithm/halpern_pdhg_step.hpp"
@@ -29,6 +31,7 @@
 #include "pdlp/hipdlp/model/problem.hpp"
 #include "pdlp/hipdlp/model/scaling.hpp"
 #include "pdlp/hipdlp/verification/certificate_verifier.hpp"
+#include "pdlp/hipdlp/verification/kkt_verifier.hpp"
 
 namespace {
 
@@ -4709,6 +4712,106 @@ TEST_CASE("hi-pdlp-cuda-fixed-point-reductions-use-one-wait",
   CHECK(dual_norm == 19.0);
   CHECK(cross == 23.0);
   CHECK_FALSE(backend->synchronize().ok());
+}
+
+TEST_CASE("hi-pdlp-cuda-kkt-screen-bounds-the-host-verifier",
+          "[hipdlp][backend][cuda][kkt-screen]") {
+  // Every screened metric must be a lower bound of the host verifier's, so a
+  // certain failure never hides a candidate the verifier would accept. The
+  // candidates run from the optimum to heavily perturbed points of models
+  // with equality, inequality, ranged and free rows, in both senses.
+  std::size_t screened = 0;
+  std::size_t failing = 0;
+  for (const char* name : {"afiro", "adlittle", "avgas", "blending", "chip",
+                           "e226", "sctest", "scrs8", "shell", "stair"}) {
+    for (const bool maximize : {false, true}) {
+      CAPTURE(name, maximize);
+      Highs highs;
+      highs.setOptionValue("output_flag", false);
+      REQUIRE(highs.readModel(std::string(HIGHS_DIR) + "/check/instances/" +
+                              name + ".mps") != HighsStatus::kError);
+      HighsLp lp = highs.getLp();
+      if (maximize) {
+        for (double& cost : lp.col_cost_) cost = -cost;
+        lp.sense_ = ObjSense::kMaximize;
+        REQUIRE(highs.passModel(lp) != HighsStatus::kError);
+      }
+      REQUIRE(highs.run() == HighsStatus::kOk);
+      const HighsSolution optimum = highs.getSolution();
+      ResidentCheckFixture fixture(hipdlp::backend::Kind::kCuda, lp, true);
+      fixture.prepare(lp);
+      const hipdlp::model::Problem& problem = fixture.problem;
+      const hipdlp::model::ScalingMetadata& scaling = problem.scaling();
+      const hipdlp::model::TransformationMetadata& transform =
+          problem.transformation();
+      std::mt19937 random(20261003);
+      std::normal_distribution<double> gaussian(0.0, 1.0);
+      for (int trial = 0; trial < 24; ++trial) {
+        const double noise = trial == 0 ? 0.0 : std::pow(10.0, -0.5 * trial);
+        // A scaled candidate whose original-space point is the perturbed
+        // optimum; slack columns take their rows' activities.
+        std::vector<double> primal(problem.numCols(), 0.0);
+        for (HighsInt col = 0; col < lp.num_col_; ++col)
+          primal[col] = optimum.col_value[col] * (1.0 + noise * gaussian(random)) +
+                        noise * gaussian(random);
+        for (HighsInt row = 0; row < lp.num_row_; ++row) {
+          const HighsInt slack = transform.slack_col_for_original_row[row];
+          if (slack >= 0) primal[slack] = optimum.row_value[row];
+        }
+        for (HighsInt col = 0; col < problem.numCols(); ++col)
+          primal[col] /= scaling.col_scale[col];
+        std::vector<double> dual(problem.numRows(), 0.0);
+        for (HighsInt row = 0; row < lp.num_row_; ++row) {
+          const HighsInt transformed = transform.original_to_transformed_row[row];
+          dual[transformed] =
+              (transform.objective_sign * transform.original_row_sign[row] *
+                   optimum.row_dual[row] * (1.0 + noise * gaussian(random)) +
+               noise * gaussian(random)) /
+              scaling.row_scale[transformed];
+        }
+        // The host verifier sees what the solver hands it after postsolve.
+        const hipdlp::model::SparseMatrix& transpose = problem.transpose();
+        std::vector<double> reduced_costs(problem.numCols(), 0.0);
+        for (HighsInt col = 0; col < problem.numCols(); ++col) {
+          double product = 0.0;
+          for (HighsInt entry = transpose.starts[col];
+               entry < transpose.starts[col + 1]; ++entry)
+            product += transpose.values[entry] * dual[transpose.indices[entry]];
+          reduced_costs[col] = problem.costs()[col] - product;
+        }
+        const hipdlp::model::PostsolveResult postsolved =
+            hipdlp::model::postsolve(problem, primal, dual, reduced_costs);
+        REQUIRE(postsolved.ok());
+        REQUIRE(fixture.backend->uploadVector(primal, fixture.primal).ok());
+        REQUIRE(fixture.backend->uploadVector(dual, fixture.dual).ok());
+        for (const double tolerance : {1e-4, 1e-7}) {
+          CAPTURE(trial, tolerance);
+          const hipdlp::verification::KktVerificationResult verification =
+              hipdlp::verification::verifyKkt(lp, postsolved.solution, tolerance);
+          REQUIRE(verification.metrics_finite);
+          hipdlp::backend::KktScreenResult screen;
+          REQUIRE(fixture.backend
+                      ->screenOriginalKkt(fixture.bound, fixture.workspace,
+                                          fixture.primal, fixture.dual,
+                                          tolerance, screen)
+                      .ok());
+          REQUIRE(screen.valid);
+          CHECK(screen.primal <= verification.metrics.relative_primal_residual);
+          CHECK(screen.dual <= verification.metrics.relative_dual_residual);
+          CHECK(screen.gap <= verification.metrics.relative_objective_gap);
+          CHECK(screen.complementarity <=
+                verification.metrics.relative_complementarity);
+          if (verification.pass) CHECK_FALSE(screen.certain_failure);
+          if (!verification.pass) {
+            ++failing;
+            if (screen.certain_failure) ++screened;
+          }
+        }
+      }
+    }
+  }
+  // Most failing candidates fail by far more than the rounding margins.
+  CHECK(screened * 2 > failing);
 }
 
 TEST_CASE("hi-pdlp-cuda-fused-fpe-handles-empty-and-extreme-vectors",

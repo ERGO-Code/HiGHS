@@ -1230,8 +1230,9 @@ TEST_CASE("hi-pdlp-rejected-kkt-verifications-back-off",
           "[pdlp][hipdlp][solver][cpu][kkt-gate]") {
   // The loose transformed tolerance passes at every boundary while the
   // original one is out of reach, so every due verification is rejected. The
-  // CPU verifies every boundary; a device backend spaces the checks 1, 2, 4,
-  // 8 and then 16 boundaries apart. The limit boundary is always checked.
+  // CPU verifies on the host at every boundary; the CUDA screen already
+  // rejects each of those candidates, so only the limit boundary, which is
+  // always checked, reaches the host verifier.
   const HighsLp lp = makeResidentDiagonalLp(17, true);
   std::vector<hipdlp::backend::Kind> backends = {hipdlp::backend::Kind::kCpu};
 #ifdef HIGHS_HIPDLP_CUDA_DETECTED
@@ -1253,12 +1254,12 @@ TEST_CASE("hi-pdlp-rejected-kkt-verifications-back-off",
     REQUIRE(result.ok());
     CHECK(result.status == hipdlp::api::SolverStatus::kIterationLimit);
     CHECK(result.iteration_count == 1600);
-    // Every boundary on the CPU; on a device, iterations 40, 80, 160, 320,
-    // 640, 1280 and the limit at 1600.
-    const std::size_t expected =
-        backend == hipdlp::backend::Kind::kCpu ? 40 : 7;
-    CHECK(diagnostics.original_kkt_verifications == expected);
-    CHECK(diagnostics.original_kkt_rejections == expected);
+    const bool cpu = backend == hipdlp::backend::Kind::kCpu;
+    CHECK(diagnostics.original_kkt_verifications == (cpu ? 40u : 1u));
+    CHECK(diagnostics.original_kkt_rejections == (cpu ? 40u : 1u));
+    // Boundaries 40 to 1560 on CUDA; the CPU has no screen.
+    CHECK(diagnostics.kkt_screens == (cpu ? 0u : 39u));
+    CHECK(diagnostics.kkt_screen_rejections == (cpu ? 0u : 39u));
   }
 }
 

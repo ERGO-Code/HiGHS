@@ -1039,6 +1039,373 @@ __global__ void injectedFailureKernel(int* error_flag) {
 }
 #endif
 
+
+// Original-model KKT screen. Each quantity carries an error bound covering
+// the host verifier's different summation order and long-double unscaling, so
+// the reported values are lower bounds of the verifier's metrics.
+const int kScreenWarps = kBlockSize / 32;
+const int kMaximumScreenBlocks = 1024;
+
+__device__ void mergeScreenPartial(KktScreenPartial& left,
+                                   const KktScreenPartial& right) {
+  left.active_bound = fmax(left.active_bound, right.active_bound);
+  left.near_zero_cost = fmax(left.near_zero_cost, right.near_zero_cost);
+  left.primal_objective += right.primal_objective;
+  left.primal_absolute += right.primal_absolute;
+  left.dual_objective += right.dual_objective;
+  left.dual_absolute += right.dual_absolute;
+  left.dual_error += right.dual_error;
+  left.complementarity += right.complementarity;
+  left.invalid |= right.invalid;
+}
+
+// Reduces every thread's partial in a fixed order; thread 0 writes the block's.
+__device__ void writeScreenBlock(KktScreenPartial partial,
+                                 KktScreenPartial* partials) {
+  for (int offset = 16; offset > 0; offset >>= 1) {
+    partial.active_bound = fmax(partial.active_bound,
+        __shfl_down_sync(0xffffffffu, partial.active_bound, offset));
+    partial.near_zero_cost = fmax(partial.near_zero_cost,
+        __shfl_down_sync(0xffffffffu, partial.near_zero_cost, offset));
+    partial.primal_objective +=
+        __shfl_down_sync(0xffffffffu, partial.primal_objective, offset);
+    partial.primal_absolute +=
+        __shfl_down_sync(0xffffffffu, partial.primal_absolute, offset);
+    partial.dual_objective +=
+        __shfl_down_sync(0xffffffffu, partial.dual_objective, offset);
+    partial.dual_absolute +=
+        __shfl_down_sync(0xffffffffu, partial.dual_absolute, offset);
+    partial.dual_error += __shfl_down_sync(0xffffffffu, partial.dual_error, offset);
+    partial.complementarity +=
+        __shfl_down_sync(0xffffffffu, partial.complementarity, offset);
+    partial.invalid |= __shfl_down_sync(0xffffffffu, partial.invalid, offset);
+  }
+  __shared__ KktScreenPartial shared[kScreenWarps];
+  if ((threadIdx.x & 31) == 0) shared[threadIdx.x >> 5] = partial;
+  __syncthreads();
+  if (threadIdx.x != 0) return;
+  KktScreenPartial total = shared[0];
+  for (int warp = 1; warp < kScreenWarps; ++warp)
+    mergeScreenPartial(total, shared[warp]);
+  partials[blockIdx.x] = total;
+}
+
+// One thread per row segment: partial activity of the original primal.
+__global__ void kktScreenSegmentsKernel(const DeviceKktScreenProblem p,
+                                        const double* primal) {
+  const HighsInt stride = static_cast<HighsInt>(blockDim.x) * gridDim.x;
+  for (HighsInt segment = static_cast<HighsInt>(blockIdx.x) * blockDim.x + threadIdx.x;
+       segment < p.num_segments; segment += stride) {
+    const HighsInt row_end = p.row_starts[p.segment_row[segment] + 1];
+    const HighsInt begin = p.segment_begin[segment];
+    const HighsInt end = begin + kKktScreenSegmentLength < row_end
+                             ? begin + kKktScreenSegmentLength : row_end;
+    double sum = 0.0;
+    double absolute = 0.0;
+    for (HighsInt entry = begin; entry < end; ++entry) {
+      const HighsInt col = p.column_indices[entry];
+      const double term = p.matrix_values[entry] * (primal[col] * p.col_scale[col]);
+      sum += term;
+      absolute += fabs(term);
+    }
+    p.segment_sum[segment] = sum;
+    p.segment_absolute[segment] = absolute;
+  }
+}
+
+// One thread per original row: its activity from the segment sums, possibly
+// active bounds, dual-objective and complementarity terms.
+__global__ void kktScreenRowsKernel(const DeviceKktScreenProblem p,
+                                    const double* primal, const double* dual,
+                                    double* activity, double* activity_error,
+                                    KktScreenPartial* partials) {
+  KktScreenPartial acc = {};
+  const HighsInt stride = static_cast<HighsInt>(blockDim.x) * gridDim.x;
+  for (HighsInt row = static_cast<HighsInt>(blockIdx.x) * blockDim.x + threadIdx.x;
+       row < p.num_rows; row += stride) {
+    const HighsInt begin = p.row_starts[row];
+    const HighsInt end = p.row_starts[row + 1];
+    double sum = 0.0;
+    double absolute = 0.0;
+    for (HighsInt segment = p.row_first_segment[row];
+         segment < p.row_first_segment[row + 1]; ++segment) {
+      sum += p.segment_sum[segment];
+      absolute += p.segment_absolute[segment];
+    }
+    // Both summation orders, the products and the unscaled primal.
+    const double error = (2.0 * static_cast<double>(end - begin) + 8.0) *
+                         DBL_EPSILON * absolute * 1.01;
+    activity[row] = sum;
+    activity_error[row] = error;
+    const HighsInt transformed = p.row_map[row];
+    const double unscaled = dual[transformed] * p.row_scale[transformed];
+    if (!isfinite(sum) || !isfinite(error) || !isfinite(unscaled)) {
+      acc.invalid = 1;
+      continue;
+    }
+    const double lower = p.row_lower[row];
+    const double upper = p.row_upper[row];
+    const bool has_lower = isfinite(lower);
+    const bool has_upper = isfinite(upper);
+    if (has_lower && fabs(sum - lower) <= p.near_tolerance + error)
+      acc.active_bound = fmax(acc.active_bound, fabs(lower));
+    if (has_upper && fabs(sum - upper) <= p.near_tolerance + error)
+      acc.active_bound = fmax(acc.active_bound, fabs(upper));
+    // The verifier's row dual and its sense-adjusted value.
+    const double adjusted = p.row_sign[row] * unscaled;
+    const double row_dual = p.sense * adjusted;
+    const double dual_error = 4.0 * DBL_EPSILON * fabs(unscaled);
+    if (has_lower || has_upper) {
+      const double bound = !has_upper   ? lower
+                           : !has_lower ? upper
+                           : adjusted >= 0.0 ? lower : upper;
+      const double term = bound * row_dual;
+      acc.dual_objective += term;
+      acc.dual_absolute += fabs(term);
+      acc.dual_error += fabs(bound) * dual_error;
+    }
+    const double magnitude = fmax(0.0, fabs(adjusted) - dual_error);
+    if (adjusted > 0.0)
+      acc.complementarity +=
+          has_lower ? magnitude * fmax(0.0, fabs(sum - lower) - error) : magnitude;
+    else if (adjusted < 0.0)
+      acc.complementarity +=
+          has_upper ? magnitude * fmax(0.0, fabs(upper - sum) - error) : magnitude;
+  }
+  writeScreenBlock(acc, partials);
+}
+
+// One thread per original column, reading the scaled transpose: the reduced
+// cost as postsolve forms it, plus the column's objective, possibly active
+// bounds and complementarity terms.
+__global__ void kktScreenColumnsKernel(const DeviceKktScreenProblem p,
+                                       const double* primal, const double* dual,
+                                       double* reduced_cost,
+                                       double* reduced_cost_error,
+                                       KktScreenPartial* partials) {
+  KktScreenPartial acc = {};
+  const HighsInt stride = static_cast<HighsInt>(blockDim.x) * gridDim.x;
+  for (HighsInt col = static_cast<HighsInt>(blockIdx.x) * blockDim.x + threadIdx.x;
+       col < p.num_cols; col += stride) {
+    const HighsInt begin = p.transpose_starts[col];
+    const HighsInt end = p.transpose_starts[col + 1];
+    double sum = 0.0;
+    double absolute = 0.0;
+    for (HighsInt entry = begin; entry < end; ++entry) {
+      const double term = p.transpose_values[entry] * dual[p.transpose_indices[entry]];
+      sum += term;
+      absolute += fabs(term);
+    }
+    const double scale = p.col_scale[col];
+    const double cost = p.costs[col];
+    const double rc = p.sense * ((p.scaled_costs[col] - sum) / scale);
+    // Summation orders, scaled data that carries the scaling pipeline's
+    // roundings, and the verifier's own original-space products.
+    const double rc_error = 8.0 * (static_cast<double>(end - begin) + 64.0) *
+                            DBL_EPSILON * (fabs(cost) + absolute / scale) * 1.01;
+    reduced_cost[col] = rc;
+    reduced_cost_error[col] = rc_error;
+    const double value = primal[col] * scale;
+    if (!isfinite(rc) || !isfinite(rc_error) || !isfinite(value)) {
+      acc.invalid = 1;
+      continue;
+    }
+    const double value_error = 4.0 * DBL_EPSILON * fabs(value);
+    const double lower = p.col_lower[col];
+    const double upper = p.col_upper[col];
+    const bool has_lower = isfinite(lower);
+    const bool has_upper = isfinite(upper);
+    if (has_lower && fabs(value - lower) <= p.near_tolerance + value_error)
+      acc.active_bound = fmax(acc.active_bound, fabs(lower));
+    if (has_upper && fabs(value - upper) <= p.near_tolerance + value_error)
+      acc.active_bound = fmax(acc.active_bound, fabs(upper));
+    if (fabs(rc) < p.near_tolerance + rc_error)
+      acc.near_zero_cost = fmax(acc.near_zero_cost, fabs(cost));
+    const double objective = cost * value;
+    acc.primal_objective += objective;
+    acc.primal_absolute += fabs(objective);
+    const double adjusted = p.sense * rc;
+    if (has_lower || has_upper) {
+      double term = 0.0;
+      double term_error = 0.0;
+      if (!has_upper) {
+        term = lower * rc;
+        term_error = fabs(lower) * rc_error;
+      } else if (!has_lower) {
+        term = upper * rc;
+        term_error = fabs(upper) * rc_error;
+      } else if (fabs(adjusted) <= rc_error) {
+        // Either bound may be chosen, and the reduced cost is tiny.
+        term_error = 2.0 * fmax(fabs(lower), fabs(upper)) * rc_error;
+      } else {
+        const double bound = adjusted >= 0.0 ? lower : upper;
+        term = bound * rc;
+        term_error = fabs(bound) * rc_error;
+      }
+      acc.dual_objective += term;
+      acc.dual_absolute += fabs(term);
+      acc.dual_error += term_error;
+    }
+    if (adjusted > rc_error)
+      acc.complementarity +=
+          has_lower ? (adjusted - rc_error) * fmax(0.0, fabs(value - lower) - value_error)
+                    : adjusted - rc_error;
+    else if (adjusted < -rc_error)
+      acc.complementarity +=
+          has_upper ? (-adjusted - rc_error) * fmax(0.0, fabs(upper - value) - value_error)
+                    : -adjusted - rc_error;
+  }
+  writeScreenBlock(acc, partials);
+}
+
+__global__ void kktScreenTotalsKernel(const int row_count,
+                                      const KktScreenPartial* row_partials,
+                                      const int column_count,
+                                      const KktScreenPartial* column_partials,
+                                      KktScreenPacket* packet) {
+  KktScreenPartial total = {};
+  for (int index = threadIdx.x; index < row_count; index += blockDim.x)
+    mergeScreenPartial(total, row_partials[index]);
+  for (int index = threadIdx.x; index < column_count; index += blockDim.x)
+    mergeScreenPartial(total, column_partials[index]);
+  __shared__ KktScreenPartial shared[kBlockSize];
+  shared[threadIdx.x] = total;
+  __syncthreads();
+  for (int distance = kBlockSize / 2; distance > 0; distance /= 2) {
+    if (threadIdx.x < distance)
+      mergeScreenPartial(shared[threadIdx.x], shared[threadIdx.x + distance]);
+    __syncthreads();
+  }
+  if (threadIdx.x != 0) return;
+  packet->totals = shared[0];
+  packet->invalid = shared[0].invalid;
+}
+
+// Lower bounds of the relative primal and dual violations, given the
+// largest possible normalizations from the totals.
+__global__ void kktScreenViolationsKernel(
+    const DeviceKktScreenProblem p, const double* primal, const double* dual,
+    const double* activity, const double* activity_error,
+    const double* reduced_cost, const double* reduced_cost_error,
+    const KktScreenPacket* packet, double* partials) {
+  const double active_bound = packet->totals.active_bound;
+  const double near_zero_cost = packet->totals.near_zero_cost;
+  double primal_bound = 0.0;
+  double dual_bound = 0.0;
+  const HighsInt size = p.num_rows > p.num_cols ? p.num_rows : p.num_cols;
+  const HighsInt stride = static_cast<HighsInt>(blockDim.x) * gridDim.x;
+  for (HighsInt index = static_cast<HighsInt>(blockIdx.x) * blockDim.x + threadIdx.x;
+       index < size; index += stride) {
+    if (index < p.num_rows) {
+      const double value = activity[index];
+      const double error = activity_error[index];
+      const double lower = p.row_lower[index];
+      const double upper = p.row_upper[index];
+      const bool has_lower = isfinite(lower);
+      const bool has_upper = isfinite(upper);
+      if (has_lower && lower - value - error > 0.0)
+        primal_bound = fmax(primal_bound, (lower - value - error) /
+                                              (1.0 + fmax(active_bound, fabs(lower))));
+      if (has_upper && value - upper - error > 0.0)
+        primal_bound = fmax(primal_bound, (value - upper - error) /
+                                              (1.0 + fmax(active_bound, fabs(upper))));
+      const HighsInt transformed = p.row_map[index];
+      const double unscaled = dual[transformed] * p.row_scale[transformed];
+      const double adjusted = p.row_sign[index] * unscaled;
+      double violation = 0.0;
+      if (!has_lower && !has_upper) {
+        violation = fabs(adjusted);
+      } else if (!has_upper) {
+        violation = -adjusted;
+      } else if (!has_lower) {
+        violation = adjusted;
+      } else if (upper - lower > p.near_tolerance) {
+        const double midpoint = 0.5 * lower + 0.5 * upper;
+        if (fabs(value - midpoint) > error)
+          violation = value < midpoint ? -adjusted : adjusted;
+      }
+      violation -= 4.0 * DBL_EPSILON * fabs(unscaled);
+      if (violation > 0.0)
+        dual_bound = fmax(dual_bound, violation / (1.0 + near_zero_cost));
+    }
+    if (index < p.num_cols) {
+      const double value = primal[index] * p.col_scale[index];
+      const double value_error = 4.0 * DBL_EPSILON * fabs(value);
+      const double lower = p.col_lower[index];
+      const double upper = p.col_upper[index];
+      const bool has_lower = isfinite(lower);
+      const bool has_upper = isfinite(upper);
+      if (has_lower && lower - value - value_error > 0.0)
+        primal_bound = fmax(primal_bound, (lower - value - value_error) /
+                                              (1.0 + fmax(active_bound, fabs(lower))));
+      if (has_upper && value - upper - value_error > 0.0)
+        primal_bound = fmax(primal_bound, (value - upper - value_error) /
+                                              (1.0 + fmax(active_bound, fabs(upper))));
+      const double adjusted = p.sense * reduced_cost[index];
+      double violation = 0.0;
+      if (!has_lower && !has_upper) {
+        violation = fabs(adjusted);
+      } else if (!has_upper) {
+        violation = -adjusted;
+      } else if (!has_lower) {
+        violation = adjusted;
+      } else if (upper - lower > p.near_tolerance) {
+        const double midpoint = 0.5 * lower + 0.5 * upper;
+        if (fabs(value - midpoint) > value_error)
+          violation = value < midpoint ? -adjusted : adjusted;
+      }
+      violation -= reduced_cost_error[index];
+      if (violation > 0.0)
+        dual_bound = fmax(dual_bound,
+                          violation / (1.0 + fmax(near_zero_cost, fabs(p.costs[index]))));
+    }
+  }
+  __shared__ double shared_primal[kBlockSize];
+  __shared__ double shared_dual[kBlockSize];
+  shared_primal[threadIdx.x] = primal_bound;
+  shared_dual[threadIdx.x] = dual_bound;
+  __syncthreads();
+  for (int distance = kBlockSize / 2; distance > 0; distance /= 2) {
+    if (threadIdx.x < distance) {
+      shared_primal[threadIdx.x] =
+          fmax(shared_primal[threadIdx.x], shared_primal[threadIdx.x + distance]);
+      shared_dual[threadIdx.x] =
+          fmax(shared_dual[threadIdx.x], shared_dual[threadIdx.x + distance]);
+    }
+    __syncthreads();
+  }
+  if (threadIdx.x != 0) return;
+  partials[2 * blockIdx.x] = shared_primal[0];
+  partials[2 * blockIdx.x + 1] = shared_dual[0];
+}
+
+__global__ void kktScreenMaximaKernel(const int count, const double* partials,
+                                      KktScreenPacket* packet) {
+  double primal_bound = 0.0;
+  double dual_bound = 0.0;
+  for (int index = threadIdx.x; index < count; index += blockDim.x) {
+    primal_bound = fmax(primal_bound, partials[2 * index]);
+    dual_bound = fmax(dual_bound, partials[2 * index + 1]);
+  }
+  __shared__ double shared_primal[kBlockSize];
+  __shared__ double shared_dual[kBlockSize];
+  shared_primal[threadIdx.x] = primal_bound;
+  shared_dual[threadIdx.x] = dual_bound;
+  __syncthreads();
+  for (int distance = kBlockSize / 2; distance > 0; distance /= 2) {
+    if (threadIdx.x < distance) {
+      shared_primal[threadIdx.x] =
+          fmax(shared_primal[threadIdx.x], shared_primal[threadIdx.x + distance]);
+      shared_dual[threadIdx.x] =
+          fmax(shared_dual[threadIdx.x], shared_dual[threadIdx.x + distance]);
+    }
+    __syncthreads();
+  }
+  if (threadIdx.x != 0) return;
+  packet->primal = shared_primal[0];
+  packet->dual = shared_dual[0];
+}
+
 }  // namespace
 
 cudaError_t preloadKernels() {
@@ -1089,6 +1456,54 @@ std::size_t checkPartialCount(const HighsInt rows, const HighsInt cols) {
   const HighsInt count = 1 + (size - 1) / kBlockSize;
   return static_cast<std::size_t>(count < kMaximumCheckBlocks
                                       ? count : kMaximumCheckBlocks);
+}
+
+static int kktScreenBlocks(const HighsInt size) {
+  const HighsInt blocks = size <= 0 ? 1 : 1 + (size - 1) / kBlockSize;
+  return static_cast<int>(blocks < kMaximumScreenBlocks ? blocks
+                                                        : kMaximumScreenBlocks);
+}
+
+std::size_t kktScreenPartialCount(const HighsInt, const HighsInt) {
+  return static_cast<std::size_t>(kMaximumScreenBlocks);
+}
+
+cudaError_t launchKktScreen(const cudaStream_t stream,
+                            const DeviceKktScreenProblem& problem,
+                            const double* primal, const double* dual,
+                            double* activity, double* activity_error,
+                            double* reduced_cost, double* reduced_cost_error,
+                            KktScreenPartial* row_partials,
+                            KktScreenPartial* column_partials,
+                            double* violation_partials, KktScreenPacket* packet) {
+  const int row_blocks = kktScreenBlocks(problem.num_rows);
+  const int column_blocks = kktScreenBlocks(problem.num_cols);
+  kktScreenSegmentsKernel<<<kktScreenBlocks(problem.num_segments), kBlockSize, 0,
+                            stream>>>(problem, primal);
+  cudaError_t segment_status = cudaPeekAtLastError();
+  if (segment_status != cudaSuccess) return segment_status;
+  kktScreenRowsKernel<<<row_blocks, kBlockSize, 0, stream>>>(
+      problem, primal, dual, activity, activity_error, row_partials);
+  cudaError_t status = cudaPeekAtLastError();
+  if (status != cudaSuccess) return status;
+  kktScreenColumnsKernel<<<column_blocks, kBlockSize, 0, stream>>>(
+      problem, primal, dual, reduced_cost, reduced_cost_error, column_partials);
+  status = cudaPeekAtLastError();
+  if (status != cudaSuccess) return status;
+  kktScreenTotalsKernel<<<1, kBlockSize, 0, stream>>>(
+      row_blocks, row_partials, column_blocks, column_partials, packet);
+  status = cudaPeekAtLastError();
+  if (status != cudaSuccess) return status;
+  const int violation_blocks =
+      static_cast<int>(checkPartialCount(problem.num_rows, problem.num_cols));
+  kktScreenViolationsKernel<<<violation_blocks, kBlockSize, 0, stream>>>(
+      problem, primal, dual, activity, activity_error, reduced_cost,
+      reduced_cost_error, packet, violation_partials);
+  status = cudaPeekAtLastError();
+  if (status != cudaSuccess) return status;
+  kktScreenMaximaKernel<<<1, kBlockSize, 0, stream>>>(violation_blocks,
+                                                      violation_partials, packet);
+  return cudaPeekAtLastError();
 }
 
 cudaError_t launchFixedPointReduction(

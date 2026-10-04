@@ -133,6 +133,60 @@ two to five blocks on the larger models (pypsa 9.3 ms against a 4.0 ms block,
 neso-2245 121 ms against 37 ms, neso-2005 418 ms against 85 ms). About 5-9% of
 loop time on those models is still the device waiting for host verification.
 
+## Original-model KKT screen on CUDA (2026-10-03)
+
+The host verifier (`verifyKkt`) differs from the internal stopping test: it
+uses largest entries rather than norms, normalizes by the bounds that are within
+`sqrt(tolerance)` of being active and by the costs whose reduced costs are that
+small, uses a midpoint rule for boxed variables, and adds a complementarity
+test. The internal metrics therefore often pass long before it does (mod2: 613
+rejected verifications).
+
+The CUDA backend now bounds the verifier's four relative metrics from below on
+the device, from the scaled candidate: row activities with the original
+row-wise matrix (in 64-entry row segments, so long rows are summed by several
+threads) and reduced costs from the scaled transpose as postsolve forms them.
+Every quantity the host computes differently (summation order, long-double
+unscaling, the scaling pipeline's roundings) carries an error bound, and each
+`sqrt(tolerance)` threshold and midpoint test that the bound straddles takes
+the side that makes the metric smaller. When a lower bound already exceeds the
+tolerance the candidate is rejected without the host verifier and without
+advancing the backoff; otherwise the host verifier decides as before, so every
+`OPTIMAL` is still certified by the same independent verifier. The screen runs
+only where internal stopping passes and the backoff has elapsed. The CPU
+backend has no screen.
+
+`hi-pdlp-cuda-kkt-screen-bounds-the-host-verifier` checks ten Netlib models
+with equality, inequality, ranged and free rows in both senses, from the
+optimum to heavily perturbed candidates, at tolerances `1e-4` and `1e-7`. Of 960
+cases, 480 pass and 480 fail the verifier; the screen rejected all 480 failing
+ones and none of the passing ones, and its bounds never exceeded the verifier's
+metrics (smallest ratio 0.99998).
+
+A first version with one warp per row cost 826 us per screen on mod2, because
+the scalar FP64 tail ran on one lane while the warp still paid for 32 on this
+FP64-weak GPU. One thread per row or column, plus short row segments for long
+rows, brought it to 119 us.
+
+Against the overlapped verification above (same protocol):
+
+| Model (CUDA) | Iterations | Host verifications | Screens (rejected) | Loop time, s | Ratio |
+|---|---:|---:|---:|---:|---:|
+| 25fv47 | 9800 to 9560 | 6 to 1 | 26 (25) | 0.307 to 0.298 | 0.973 |
+| scorpion | 16560 to 16520 | 5 to 1 | 15 (14) | 0.482 to 0.492 | 1.022 |
+| pds-20 | 6640 to 6360 | 6 to 1 | 21 (20) | 0.563 to 0.507 | 0.901 |
+| pypsa-eur-240t5n | 2440 | 4 to 1 | 7 (6) | 0.235 to 0.220 | 0.936 |
+| nug20 | 4240 to 3840 | 7 to 1 | 38 (37) | 0.362 to 0.307 | 0.849 |
+| mod2 | 140880 to 140520 | 43 to 1 | 614 (613) | 7.166 to 6.969 | 0.973 |
+| a2864 | 8480 to 8440 | 5 to 1 | 13 (12) | 11.42 to 10.89 | 0.953 |
+| neso-2245 | 6880 to 6680 | 7 to 1 | 21 (20) | 6.186 to 5.492 | 0.888 |
+| neso-2005 | 30000 (budget) | 10 to 1 | 70 (70) | 62.74 to 61.35 | 0.978 |
+| Geometric mean | | | | | 0.940 |
+
+Acceptance no longer waits for the backoff, so the CUDA iteration counts now
+equal the CPU ones, which verify every boundary. Together with the overlap, loop
+time is about 0.92 of `35b83fd9c`.
+
 ## Follow-up experiments not adopted (2026-10-03)
 
 Recorded so the same ideas are not re-measured. Machine: RTX A4500 (sm_86) and

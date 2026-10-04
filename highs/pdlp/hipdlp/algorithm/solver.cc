@@ -947,6 +947,8 @@ SolveDiagnostics::SolveDiagnostics()
       certificate_checks(0),
       original_kkt_verifications(0),
       original_kkt_rejections(0),
+      kkt_screens(0),
+      kkt_screen_rejections(0),
       restart_reference_checks(0),
       fixed_point_evaluations(0),
       command_buffer_replays(0),
@@ -1632,11 +1634,29 @@ static api::SolveResult solveImpl(const api::SolverOptions& requested_options,
         };
         const bool certificate_possible =
             certificate_due && (check.primal_ray_possible || check.farkas_possible);
+        // A backend that bounds the original-model metrics rejects a candidate
+        // whose bounds already fail without the host verifier, so the verifier
+        // runs only near acceptance and such rejections do not back off.
+        const bool backoff_elapsed =
+            total_iterations >= next_verification_iteration;
+        bool screened_out = false;
+        if (stopping.decision == StoppingDecision::kOptimal &&
+            !iteration_limit && !time_limit && backoff_elapsed) {
+          backend::KktScreenResult screen;
+          error = selected_backend->screenOriginalKkt(
+              problem_handle, workspace, *state.primal_candidate,
+              *state.dual_candidate, options.kkt_tolerance, screen);
+          if (!error.ok()) return fail(error);
+          screened_out = screen.valid && screen.certain_failure;
+          if (context.diagnostics != nullptr && screen.valid) {
+            ++context.diagnostics->kkt_screens;
+            if (screened_out) ++context.diagnostics->kkt_screen_rejections;
+          }
+        }
         // A terminal boundary always verifies, so a limit never hides an
         // acceptable candidate behind the backoff.
         const bool verification_due =
-            iteration_limit || time_limit ||
-            total_iterations >= next_verification_iteration;
+            iteration_limit || time_limit || (backoff_elapsed && !screened_out);
         if (verification_due &&
             (stopping.decision == StoppingDecision::kOptimal ||
              (options.early_kkt_check &&

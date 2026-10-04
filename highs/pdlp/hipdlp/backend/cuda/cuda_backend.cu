@@ -854,6 +854,21 @@ struct CudaCheckStorage {
   DeviceBuffer<int> optional_error;
   PinnedCheckPacket received;
   CudaCertificateStorage certificate;
+  // Original-model KKT screen workspace.
+  DeviceBuffer<double> screen_activity;
+  DeviceBuffer<double> screen_activity_error;
+  DeviceBuffer<double> screen_reduced_cost;
+  DeviceBuffer<double> screen_reduced_cost_error;
+  DeviceBuffer<KktScreenPartial> screen_row_partials;
+  DeviceBuffer<KktScreenPartial> screen_column_partials;
+  DeviceBuffer<double> screen_violation_partials;
+  DeviceBuffer<KktScreenPacket> screen_packet;
+  PinnedDownloadBuffer<KktScreenPacket> screen_received;
+  DeviceBuffer<HighsInt> screen_row_first_segment;
+  DeviceBuffer<HighsInt> screen_segment_row;
+  DeviceBuffer<HighsInt> screen_segment_begin;
+  DeviceBuffer<double> screen_segment_sum;
+  DeviceBuffer<double> screen_segment_absolute;
   api::Error failure;
 
   CudaCheckStorage() : source(nullptr), data() {}
@@ -1580,6 +1595,75 @@ api::Error CudaBackend::prepareCheckWorkspace(const model::Problem& problem,
         scaling.col_scale, check->col_scale, impl_->stream.get(),
         "allocating check column scales", "check column-scale upload");
     if (!error.ok()) return error;
+    {
+      const std::size_t partial_count =
+          kktScreenPartialCount(original_lp.num_row_, original_lp.num_col_);
+      error = check->screen_activity.allocate(
+          original_lp.num_row_, "allocating KKT screen activity");
+      if (!error.ok()) return error;
+      error = check->screen_activity_error.allocate(
+          original_lp.num_row_, "allocating KKT screen activity bounds");
+      if (!error.ok()) return error;
+      error = check->screen_reduced_cost.allocate(
+          original_lp.num_col_, "allocating KKT screen reduced costs");
+      if (!error.ok()) return error;
+      error = check->screen_reduced_cost_error.allocate(
+          original_lp.num_col_, "allocating KKT screen reduced-cost bounds");
+      if (!error.ok()) return error;
+      error = check->screen_row_partials.allocate(
+          partial_count, "allocating KKT screen row partials");
+      if (!error.ok()) return error;
+      error = check->screen_column_partials.allocate(
+          partial_count, "allocating KKT screen column partials");
+      if (!error.ok()) return error;
+      error = check->screen_violation_partials.allocate(
+          2 * checkPartialCount(original_lp.num_row_, original_lp.num_col_),
+          "allocating KKT screen violation partials");
+      if (!error.ok()) return error;
+      error = check->screen_packet.allocate(1, "allocating KKT screen packet");
+      if (!error.ok()) return error;
+      error = check->screen_received.allocate(1);
+      if (!error.ok()) return error;
+      // Every row owns at least one segment of at most
+      // kKktScreenSegmentLength entries.
+      std::vector<HighsInt> first_segment(
+          static_cast<std::size_t>(original_lp.num_row_) + 1, 0);
+      std::vector<HighsInt> segment_row;
+      std::vector<HighsInt> segment_begin;
+      for (HighsInt row = 0; row < original_lp.num_row_; ++row) {
+        const HighsInt start = original_matrix.starts[row];
+        const HighsInt length = original_matrix.starts[row + 1] - start;
+        const HighsInt parts =
+            length <= kKktScreenSegmentLength
+                ? 1 : 1 + (length - 1) / kKktScreenSegmentLength;
+        for (HighsInt part = 0; part < parts; ++part) {
+          segment_row.push_back(row);
+          segment_begin.push_back(start + part * kKktScreenSegmentLength);
+        }
+        first_segment[row + 1] = first_segment[row] + parts;
+      }
+      error = allocateAndUpload(first_segment, check->screen_row_first_segment,
+                                impl_->stream.get(),
+                                "allocating KKT screen row segments",
+                                "KKT screen row-segment upload");
+      if (!error.ok()) return error;
+      error = allocateAndUpload(segment_row, check->screen_segment_row,
+                                impl_->stream.get(),
+                                "allocating KKT screen segment rows",
+                                "KKT screen segment-row upload");
+      if (!error.ok()) return error;
+      error = allocateAndUpload(segment_begin, check->screen_segment_begin,
+                                impl_->stream.get(),
+                                "allocating KKT screen segment starts",
+                                "KKT screen segment-start upload");
+      if (!error.ok()) return error;
+      error = check->screen_segment_sum.allocate(
+          first_segment.back(), "allocating KKT screen segment sums");
+      if (!error.ok()) return error;
+      error = check->screen_segment_absolute.allocate(
+          first_segment.back(), "allocating KKT screen segment magnitudes");
+      if (!error.ok()) return error;
+    }
     error = prepareCertificateStorage(problem, original_lp, original_matrix,
                                       impl_->stream.get(), *check);
     if (!error.ok()) return error;
@@ -1661,6 +1745,112 @@ api::Error CudaBackend::prepareCheckFixedPoint(
                       *vectors[5], *vectorResource(aty_delta),
                       check.optional_error.get());
   return error.ok() ? error : check.fail(error);
+}
+
+api::Error CudaBackend::screenOriginalKkt(const ProblemHandle& problem,
+                                          WorkspaceHandle& workspace,
+                                          const VectorHandle& primal,
+                                          const VectorHandle& dual,
+                                          const double tolerance,
+                                          KktScreenResult& result) {
+  result = KktScreenResult();
+  if (impl_->recording) return unsupported("KKT screens during recording");
+  const CudaProblemResource* cuda_problem = problemResource(problem);
+  CudaWorkspaceResource* cuda_workspace = workspaceResource(workspace);
+  const CudaVectorResource* primal_vector = vectorResource(primal);
+  const CudaVectorResource* dual_vector = vectorResource(dual);
+  if (cuda_problem == nullptr || cuda_workspace == nullptr ||
+      !cuda_workspace->check || primal_vector == nullptr ||
+      dual_vector == nullptr || primal_vector->size != cuda_problem->num_cols ||
+      dual_vector->size != cuda_problem->num_rows || !std::isfinite(tolerance) ||
+      tolerance < 0.0)
+    return invalidArgument("HiPDLP CUDA KKT screen arguments are invalid");
+  CudaCheckStorage& check = *cuda_workspace->check;
+  if (!check.failure.ok()) return check.failure;
+  const DeviceCertificateProblem& original = check.certificate.data;
+  DeviceKktScreenProblem screen = {};
+  screen.num_rows = original.num_rows;
+  screen.num_cols = original.num_cols;
+  screen.costs = original.costs;
+  screen.col_lower = original.col_lower;
+  screen.col_upper = original.col_upper;
+  screen.row_lower = original.row_lower;
+  screen.row_upper = original.row_upper;
+  screen.row_starts = original.row_starts;
+  screen.column_indices = original.column_indices;
+  screen.matrix_values = original.matrix_values;
+  screen.row_map = original.row_map;
+  screen.row_sign = original.row_sign;
+  screen.row_scale = original.row_scale;
+  screen.col_scale = original.col_scale;
+  screen.transpose_starts = cuda_problem->transpose.starts.get();
+  screen.transpose_indices = cuda_problem->transpose.indices.get();
+  screen.transpose_values = cuda_problem->transpose.values.get();
+  screen.scaled_costs = check.costs.get();
+  screen.num_segments = static_cast<HighsInt>(check.screen_segment_row.size());
+  screen.segment_row = check.screen_segment_row.get();
+  screen.segment_begin = check.screen_segment_begin.get();
+  screen.row_first_segment = check.screen_row_first_segment.get();
+  screen.segment_sum = check.screen_segment_sum.get();
+  screen.segment_absolute = check.screen_segment_absolute.get();
+  screen.sense = original.sense_sign;
+  screen.near_tolerance = std::sqrt(tolerance);
+  api::Error error = launchResult(
+      "KKT screen kernel launch",
+      launchKktScreen(impl_->stream.get(), screen, primal_vector->values.get(),
+                      dual_vector->values.get(), check.screen_activity.get(),
+                      check.screen_activity_error.get(),
+                      check.screen_reduced_cost.get(),
+                      check.screen_reduced_cost_error.get(),
+                      check.screen_row_partials.get(),
+                      check.screen_column_partials.get(),
+                      check.screen_violation_partials.get(),
+                      check.screen_packet.get()));
+  if (!error.ok()) return check.fail(error);
+  cudaError_t status = cudaMemcpyAsync(
+      check.screen_received.get(), check.screen_packet.get(),
+      sizeof(KktScreenPacket), cudaMemcpyDeviceToHost, impl_->stream.get());
+  if (status != cudaSuccess)
+    return check.fail(cudaFailure("KKT screen packet download", status));
+  status = cudaStreamSynchronize(impl_->stream.get());
+  if (status != cudaSuccess)
+    return check.fail(cudaFailure("KKT screen synchronization", status));
+  const KktScreenPacket& packet = *check.screen_received.get();
+  // A non-finite input leaves the screen inconclusive.
+  if (packet.invalid != 0) return api::Error();
+  const KktScreenPartial& totals = packet.totals;
+  const double rows = static_cast<double>(original.num_rows);
+  const double cols = static_cast<double>(original.num_cols);
+  // Both summation orders of each objective, plus the reduced-cost bounds.
+  const double primal_error =
+      (2.0 * cols + 8.0) * DBL_EPSILON * totals.primal_absolute;
+  const double dual_error =
+      (2.0 * (rows + cols) + 8.0) * DBL_EPSILON * totals.dual_absolute +
+      totals.dual_error;
+  const double denominator = 1.0 + std::fabs(totals.primal_objective) +
+                             primal_error + std::fabs(totals.dual_objective) +
+                             dual_error;
+  // Covers the verifier's own rounding of each quotient.
+  const double shrink = 1.0 - 1e-12;
+  result.primal = packet.primal * shrink;
+  result.dual = packet.dual * shrink;
+  result.gap = std::max(0.0, std::fabs(totals.primal_objective -
+                                       totals.dual_objective) -
+                                 primal_error - dual_error) /
+               denominator * shrink;
+  result.complementarity =
+      totals.complementarity * (1.0 - (2.0 * (rows + cols) + 8.0) * DBL_EPSILON) /
+      denominator * shrink;
+  if (!std::isfinite(result.primal) || !std::isfinite(result.dual) ||
+      !std::isfinite(result.gap) || !std::isfinite(result.complementarity)) {
+    result = KktScreenResult();
+    return api::Error();
+  }
+  result.valid = true;
+  result.certain_failure = result.primal > tolerance || result.dual > tolerance ||
+                           result.gap > tolerance ||
+                           result.complementarity > tolerance;
+  return api::Error();
 }
 
 api::Error CudaBackend::evaluateCheck(const model::Problem& problem,

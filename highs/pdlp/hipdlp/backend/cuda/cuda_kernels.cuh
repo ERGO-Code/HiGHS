@@ -119,6 +119,73 @@ cudaError_t launchFixedPointReduction(
     const double* primal, const double* dual, const double* product,
     FixedPointPartial* partials, double* result, int* error_flag);
 
+// Original-model KKT screen. Rows use the original row-wise matrix; reduced
+// costs come from the scaled transpose, as in postsolve. Every quantity the
+// host verifier would compute differently (summation order, long-double
+// unscaling) is given an error bound, so the results are lower bounds of the
+// verifier's metrics.
+struct DeviceKktScreenProblem {
+  HighsInt num_rows;  // original rows
+  HighsInt num_cols;  // original columns
+  const double* costs;
+  const double* col_lower;
+  const double* col_upper;
+  const double* row_lower;
+  const double* row_upper;
+  const HighsInt* row_starts;
+  const HighsInt* column_indices;
+  const double* matrix_values;
+  const HighsInt* row_map;
+  const double* row_sign;
+  const double* row_scale;
+  const double* col_scale;
+  const HighsInt* transpose_starts;
+  const HighsInt* transpose_indices;
+  const double* transpose_values;
+  const double* scaled_costs;
+  // Row segments of at most kKktScreenSegmentLength entries, so a long row
+  // is summed by several threads.
+  HighsInt num_segments;
+  const HighsInt* segment_row;
+  const HighsInt* segment_begin;
+  const HighsInt* row_first_segment;
+  double* segment_sum;
+  double* segment_absolute;
+  double sense;
+  double near_tolerance;
+};
+
+const HighsInt kKktScreenSegmentLength = 64;
+
+struct KktScreenPartial {
+  double active_bound;      // largest bound magnitude that may be active
+  double near_zero_cost;    // largest |cost| whose reduced cost may be small
+  double primal_objective;
+  double primal_absolute;
+  double dual_objective;
+  double dual_absolute;
+  double dual_error;        // reduced-cost uncertainty in the dual objective
+  double complementarity;   // lower bound
+  int invalid;
+};
+
+struct KktScreenPacket {
+  KktScreenPartial totals;
+  double primal;  // lower bound of the relative primal violation
+  double dual;    // lower bound of the relative dual violation
+  int invalid;
+};
+
+cudaError_t launchKktScreen(cudaStream_t stream,
+                            const DeviceKktScreenProblem& problem,
+                            const double* primal, const double* dual,
+                            double* activity, double* activity_error,
+                            double* reduced_cost, double* reduced_cost_error,
+                            KktScreenPartial* row_partials,
+                            KktScreenPartial* column_partials,
+                            double* violation_partials, KktScreenPacket* packet);
+std::size_t kktScreenPartialCount(HighsInt rows, HighsInt cols);
+
 struct CheckSumState {
   double value;
   double absolute_sum;

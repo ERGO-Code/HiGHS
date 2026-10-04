@@ -120,6 +120,14 @@ class Backend {
         return api::Error(api::ErrorCode::kUnsupportedCapability,
                                             "backend does not support resident checks");
     }
+  // Bounds the original-model KKT metrics of a scaled candidate on the
+  // backend. The default has no screen and leaves the result invalid.
+  virtual api::Error screenOriginalKkt(const ProblemHandle&, WorkspaceHandle&,
+                                       const VectorHandle&, const VectorHandle&,
+                                       double, KktScreenResult& result) {
+    result = KktScreenResult();
+    return api::Error();
+  }
   virtual api::Error createVector(HighsInt size, VectorHandle& vector) = 0;
   virtual api::Error createBatchedVector(HighsInt size, HighsInt batch_size,
                                          VectorHandle& vector) = 0;
