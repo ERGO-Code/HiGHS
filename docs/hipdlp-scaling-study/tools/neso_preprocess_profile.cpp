@@ -60,6 +60,12 @@ int main(int argc, char** argv) {
     std::printf("{\"repeat\":%d,\"original_fingerprint\":\"%016llx\","
                 "\"scaled_fingerprint\":\"%016llx\"", repeat,
                 (unsigned long long)original.value, (unsigned long long)scaled.value);
+    const auto& scaling = built.problem.scaling();
+    std::printf(",\"curtis_reid_rejected\":%s,\"curtis_reid_row_log_range\":%.17g,"
+                "\"curtis_reid_col_log_range\":%.17g",
+                scaling.curtis_reid_rejected ? "true" : "false",
+                scaling.curtis_reid_row_log_range,
+                scaling.curtis_reid_col_log_range);
 #define TIME(name) std::printf(",\"" #name "\":%.17g", d.name)
     TIME(model_build_seconds); TIME(validation_seconds); TIME(input_matrix_seconds);
     TIME(row_transform_seconds); TIME(transformed_matrix_seconds); TIME(transpose_seconds);

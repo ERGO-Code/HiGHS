@@ -349,6 +349,8 @@ bool SparseMatrix::samePattern(const SparseMatrix& other) const {
 ScalingMetadata::ScalingMetadata()
     : applied(false),
       curtis_reid_rejected(false),
+      curtis_reid_row_log_range(0.0),
+      curtis_reid_col_log_range(0.0),
       curtis_reid_sweeps(0),
       ruiz_iterations(0) {}
 

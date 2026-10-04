@@ -1012,9 +1012,8 @@ static api::SolveResult solveImpl(const api::SolverOptions& requested_options,
     if (!error.ok()) return failure(error);
     if (context.log != nullptr && built.problem.scaling().curtis_reid_rejected)
       context.log->info(
-          "HiPDLP rewrite scaling: Curtis-Reid rejected, it would inflate the "
-          "scaled costs, right-hand sides or bounds; using Ruiz and "
-          "Pock-Chambolle");
+          "HiPDLP rewrite scaling: Curtis-Reid rejected, raw scale spread "
+          "exceeds 1e8; continuing without Curtis-Reid");
     if (built.problem.scaling().curtis_reid_rejected && pilot_hook != nullptr) {
       pilot_hook = nullptr;
       if (context.log != nullptr)

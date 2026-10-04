@@ -1,4 +1,5 @@
 #include <cstdio>
+#include <cstdlib>
 #include "Highs.h"
 #include "pdlp/hipdlp/api/options.hpp"
 #include "pdlp/hipdlp/algorithm/solver.hpp"
@@ -6,7 +7,7 @@
 #include "pdlp/hipdlp/verification/kkt_verifier.hpp"
 
 int main(int argc, char** argv) {
-  if (argc != 3 && argc != 4) return 2;
+  if (argc < 3 || argc > 5) return 2;
   Highs highs;
   highs.setOptionValue("output_flag", false);
   if (highs.readModel(argv[1]) == HighsStatus::kError) return 3;
@@ -15,7 +16,7 @@ int main(int argc, char** argv) {
   highs.setOptionValue("pdlp_step_size_strategy", (HighsInt)3);
   highs.setOptionValue("kkt_tolerance", 1e-4);
   highs.setOptionValue("pdlp_optimality_tolerance", 1e-4);
-  highs.setOptionValue("time_limit", 600.0);
+  highs.setOptionValue("time_limit", argc == 5 ? std::atof(argv[4]) : 600.0);
   const auto translated = hipdlp::api::translateOptions(highs.getOptions(),
       hipdlp::api::MigrationOptions(hipdlp::api::SolverImplementation::kRewrite,
                                   hipdlp::backend::Kind::kCuda));
@@ -26,7 +27,7 @@ int main(int argc, char** argv) {
   const auto result = hipdlp::algorithm::solve(translated.options,
       hipdlp::model::OriginalModel(highs.getLp()), context);
   const auto kkt = hipdlp::verification::verifyKkt(highs.getLp(), result.solution, 1e-4);
-  if (argc == 4) {
+  if (argc >= 4) {
     FILE* output = std::fopen(argv[3], "wb");
     if (!output) return 6;
     for (const auto* values : {&result.solution.col_value, &result.solution.row_dual,

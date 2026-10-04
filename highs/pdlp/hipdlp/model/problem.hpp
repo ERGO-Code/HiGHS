@@ -33,9 +33,10 @@ struct SparseMatrix {
 
 struct ScalingMetadata {
   bool applied;
-  // True when auto scaling computed Curtis-Reid but discarded it because it
-  // inflated the scaled costs, right-hand sides or bounds (see scaling.hpp).
+  // True when auto rejected CR's raw log-scale spread before applying it.
   bool curtis_reid_rejected;
+  double curtis_reid_row_log_range;
+  double curtis_reid_col_log_range;
   HighsInt curtis_reid_sweeps;
   HighsInt ruiz_iterations;
   std::vector<ScalingStage> stages;

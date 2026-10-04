@@ -239,8 +239,16 @@ bool ScalingResult::ok() const { return error.ok(); }
 
 bool CurtisReidResult::ok() const { return error.ok(); }
 
+bool CurtisReidResult::scaleSpreadIsSafe() const {
+  const double limit = std::log(kCurtisReidMaximumScaleSpread);
+  return std::isfinite(row_log_range) && std::isfinite(col_log_range) &&
+         row_log_range >= 0.0 && col_log_range >= 0.0 &&
+         row_log_range <= limit && col_log_range <= limit;
+}
+
 CurtisReidResult computeCurtisReidScaling(const SparseMatrix& matrix,
-                                          const HighsInt sweeps) {
+                                          const HighsInt sweeps,
+                                          const bool guard_scale_spread) {
   CurtisReidResult result;
   if (sweeps <= 0) {
     result.error = api::Error(api::ErrorCode::kInvalidOption,
@@ -313,6 +321,20 @@ CurtisReidResult computeCurtisReidScaling(const SparseMatrix& matrix,
         return result;
       }
     }
+  }
+
+  const auto logRange = [](const std::vector<double>& logs) {
+    if (logs.empty()) return 0.0;
+    const auto extremes = std::minmax_element(logs.begin(), logs.end());
+    return *extremes.second - *extremes.first;
+  };
+  // The loops above check every log scale for finiteness. Check the raw ranges
+  // before clamping, which could otherwise hide an unsafe spread.
+  result.row_log_range = logRange(row_log);
+  result.col_log_range = logRange(col_log);
+  if (guard_scale_spread && !result.scaleSpreadIsSafe()) {
+    result.rejected_by_spread = true;
+    return result;
   }
 
   result.row_scale.resize(matrix.num_rows);
@@ -479,17 +501,23 @@ ScalingResult computeScalingPipeline(const SparseMatrix& matrix,
     detail::PreprocessingTimer stage(
         diagnostics ? &diagnostics->curtis_reid_seconds : nullptr);
     const CurtisReidResult curtis_reid =
-        computeCurtisReidScaling(working, options.curtis_reid_sweeps);
+        computeCurtisReidScaling(working, options.curtis_reid_sweeps,
+                                options.mode == ScalingMode::kAuto);
     if (!curtis_reid.ok()) {
       result.error = curtis_reid.error;
       return result;
     }
-    result.error =
-        composeScaling(working, curtis_reid.row_scale, curtis_reid.col_scale,
-                       result.scaling.row_scale, result.scaling.col_scale);
-    if (!result.error.ok()) return result;
-    result.scaling.curtis_reid_sweeps = options.curtis_reid_sweeps;
-    result.scaling.stages.push_back(ScalingStage::kCurtisReid);
+    result.scaling.curtis_reid_row_log_range = curtis_reid.row_log_range;
+    result.scaling.curtis_reid_col_log_range = curtis_reid.col_log_range;
+    result.scaling.curtis_reid_rejected = curtis_reid.rejected_by_spread;
+    if (!curtis_reid.rejected_by_spread) {
+      result.error =
+          composeScaling(working, curtis_reid.row_scale, curtis_reid.col_scale,
+                         result.scaling.row_scale, result.scaling.col_scale);
+      if (!result.error.ok()) return result;
+      result.scaling.curtis_reid_sweeps = options.curtis_reid_sweeps;
+      result.scaling.stages.push_back(ScalingStage::kCurtisReid);
+    }
   }
   if (options.mode == ScalingMode::kCurtisReid) return result;
 
@@ -578,22 +606,8 @@ api::Error applyScalingPipeline(Problem& problem,
   ScalingResult result = computeScalingPipeline(problem.matrix(), options, diagnostics);
   phase.reset(nullptr);
   if (!result.ok()) return result.error;
-  if (options.mode == ScalingMode::kAuto &&
-      result.scaling.curtis_reid_sweeps > 0) {
-    ScalingOptions without_curtis_reid = options;
-    without_curtis_reid.mode = ScalingMode::kLegacy;
-    phase.reset(diagnostics ? &diagnostics->scaling_reference_seconds : nullptr);
-    ScalingResult fallback =
-        computeScalingPipeline(problem.matrix(), without_curtis_reid, diagnostics);
-    phase.reset(diagnostics ? &diagnostics->scaling_guard_seconds : nullptr);
-    if (fallback.ok() &&
-        scaledNormInflation(problem, result.scaling, fallback.scaling) >
-            kCurtisReidInflationLimit) {
-      fallback.scaling.curtis_reid_rejected = true;
-      result = fallback;
-    }
-  }
-  if (result.scaling.stages.empty()) return api::Error();
+  if (result.scaling.stages.empty() && !result.scaling.curtis_reid_rejected)
+    return api::Error();
   phase.reset(diagnostics ? &diagnostics->scaling_apply_seconds : nullptr);
   return problem.applyDiagonalScaling(result.scaling.row_scale,
                                       result.scaling.col_scale, result.scaling);

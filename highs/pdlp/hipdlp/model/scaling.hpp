@@ -11,17 +11,14 @@ namespace model {
 
 const HighsInt kDefaultCurtisReidSweeps = 20;
 
-// Auto scaling discards Curtis-Reid when, compared with the same pipeline
-// without it, the scaled costs, right-hand sides or finite bounds would have a
-// 2-norm more than this factor larger.
-//
-// Curtis-Reid equalises the geometric mean of every row and column. A row
-// holding a few unit entries among thousands of tiny ones gets a scale that
-// is set by the tiny entries, and the columns it meets are scaled the other
-// way. The solver is then close to converged in scaled space while the
-// unscaled residual, which is what the stopping test measures, is amplified by
-// the same factors. Ruiz and Pock-Chambolle weight the large entries instead,
-// and do not do this.
+// HPR-LP-C's auto guard: check each raw CR log-scale range before exponent
+// clamping or applying CR. A rejected CR candidate leaves Ruiz/PC a pristine
+// matrix; no second full scaling pipeline is needed. This bounds spread, not
+// absolute scales or the change in costs/RHS/bounds, and is not a speedup test.
+const double kCurtisReidMaximumScaleSpread = 1e8;
+
+// Retained for the historical scaled-data-inflation diagnostic tools. Auto
+// selection now uses the raw CR scale-spread guard above.
 const double kCurtisReidInflationLimit = 1e3;
 
 enum class ScalingMode { kAuto, kOff, kCurtisReid, kLegacy };
@@ -47,12 +44,17 @@ struct CurtisReidResult {
   api::Error error;
   std::vector<double> row_scale;
   std::vector<double> col_scale;
+  double row_log_range = 0.0;
+  double col_log_range = 0.0;
+  bool rejected_by_spread = false;
 
   bool ok() const;
+  bool scaleSpreadIsSafe() const;
 };
 
 CurtisReidResult computeCurtisReidScaling(const SparseMatrix& matrix,
-                                          HighsInt sweeps);
+                                          HighsInt sweeps,
+                                          bool guard_scale_spread = false);
 api::Error applyCurtisReidScaling(Problem& problem, HighsInt sweeps);
 
 ScalingResult computeRuizScaling(const SparseMatrix& matrix,

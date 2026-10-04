@@ -7,7 +7,7 @@ namespace hipdlp {
 namespace model {
 
 // Optional wall timings. Child phases are nested in model_build/scaling and
-// accumulate across both candidate and fallback scaling pipelines.
+// accumulate across the requested scaling pipeline.
 struct PreprocessingDiagnostics {
   double model_build_seconds = 0.0;
   double validation_seconds = 0.0;
@@ -18,6 +18,7 @@ struct PreprocessingDiagnostics {
   double unscaled_norms_seconds = 0.0;
   double scaling_seconds = 0.0;
   double scaling_candidate_seconds = 0.0;
+  // Historical comparison timers: the spread guard needs no reference pipeline.
   double scaling_reference_seconds = 0.0;
   double scaling_guard_seconds = 0.0;
   double scaling_apply_seconds = 0.0;

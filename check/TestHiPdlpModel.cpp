@@ -972,7 +972,7 @@ static_assert(!std::is_copy_constructible<hipdlp::model::Problem>::value,
 static_assert(std::is_move_constructible<hipdlp::model::Problem>::value,
               "Problem must remain movable");
 
-TEST_CASE("hi-pdlp-auto-scaling-rejects-curtis-reid-that-inflates-scaled-data",
+TEST_CASE("hi-pdlp-auto-cr-spread-guard-is-distinct-from-data-inflation",
           "[pdlp][hipdlp][model][scaling]") {
   using hipdlp::model::ScalingMode;
   using hipdlp::model::ScalingStage;
@@ -996,14 +996,18 @@ TEST_CASE("hi-pdlp-auto-scaling-rejects-curtis-reid-that-inflates-scaled-data",
                                            legacy.scaling) >
         hipdlp::model::kCurtisReidInflationLimit);
 
-  REQUIRE(hipdlp::model::applyScalingPipeline(tiny.problem, options).ok());
-  CHECK(tiny.problem.scaling().curtis_reid_rejected);
-  CHECK(tiny.problem.scaling().curtis_reid_sweeps == 0);
+  // Uniformly large factors have little spread. HPR's rule accepts them even
+  // though the former cost/RHS/bound-inflation comparison would reject them.
+  hipdlp::model::PreprocessingDiagnostics diagnostics;
+  REQUIRE(hipdlp::model::applyScalingPipeline(tiny.problem, options,
+                                             &diagnostics).ok());
+  CHECK_FALSE(tiny.problem.scaling().curtis_reid_rejected);
+  CHECK(tiny.problem.scaling().curtis_reid_sweeps == 20);
   CHECK(tiny.problem.scaling().stages ==
         std::vector<ScalingStage>(
-            {ScalingStage::kRuiz, ScalingStage::kPockChambolle}));
-  CHECK(tiny.problem.scaling().row_scale == legacy.scaling.row_scale);
-  CHECK(tiny.problem.scaling().col_scale == legacy.scaling.col_scale);
+            {ScalingStage::kCurtisReid, ScalingStage::kRuiz,
+             ScalingStage::kPockChambolle}));
+  CHECK(diagnostics.scaling_reference_seconds == 0.0);
 
   // Asking for Curtis-Reid explicitly is never second-guessed.
   hipdlp::model::ProblemBuildResult explicit_request =
@@ -1025,4 +1029,115 @@ TEST_CASE("hi-pdlp-auto-scaling-rejects-curtis-reid-that-inflates-scaled-data",
   REQUIRE_FALSE(benign.problem.scaling().stages.empty());
   CHECK(benign.problem.scaling().stages.front() ==
         ScalingStage::kCurtisReid);
+}
+
+TEST_CASE("hi-pdlp-curtis-reid-spread-guard-uses-unclamped-logs",
+          "[pdlp][hipdlp][model][scaling]") {
+  using hipdlp::model::CurtisReidResult;
+  const double limit = std::log(hipdlp::model::kCurtisReidMaximumScaleSpread);
+  CurtisReidResult ranges;
+  ranges.row_log_range = ranges.col_log_range = limit;
+  CHECK(ranges.scaleSpreadIsSafe());
+  for (double bad : {std::nextafter(limit, std::numeric_limits<double>::infinity()),
+                     std::numeric_limits<double>::infinity(),
+                     std::numeric_limits<double>::quiet_NaN(), -1.0}) {
+    ranges.row_log_range = bad;
+    ranges.col_log_range = 0.0;
+    CHECK_FALSE(ranges.scaleSpreadIsSafe());
+    ranges.row_log_range = 0.0;
+    ranges.col_log_range = bad;
+    CHECK_FALSE(ranges.scaleSpreadIsSafe());
+  }
+
+  hipdlp::model::SparseMatrix matrix;
+  matrix.num_rows = matrix.num_cols = 2;
+  matrix.starts = {0, 1, 2};
+  matrix.indices = {0, 1};
+  matrix.values = {1e-200, 1e-100};
+  // Exponent clamping hides this spread; the raw logs must still reject.
+  const auto forced = hipdlp::model::computeCurtisReidScaling(matrix, 20);
+  const auto guarded = hipdlp::model::computeCurtisReidScaling(matrix, 20, true);
+  REQUIRE(forced.ok());
+  REQUIRE(guarded.ok());
+  CHECK(forced.row_scale[0] == forced.row_scale[1]);
+  CHECK(guarded.row_log_range > limit);
+  CHECK(guarded.rejected_by_spread);
+  CHECK(guarded.row_scale.empty());
+  CHECK(guarded.col_scale.empty());
+
+  matrix.num_rows = 0;
+  matrix.starts = {0};
+  matrix.indices.clear();
+  matrix.values.clear();
+  const auto empty = hipdlp::model::computeCurtisReidScaling(matrix, 20, true);
+  REQUIRE(empty.ok());
+  CHECK_FALSE(empty.rejected_by_spread);
+  CHECK(empty.row_log_range == 0.0);
+  CHECK(empty.col_log_range == 0.0);
+  CHECK(empty.col_scale == std::vector<double>({1.0, 1.0}));
+}
+
+TEST_CASE("hi-pdlp-auto-scaling-rejects-wide-cr-spread-before-composition",
+          "[pdlp][hipdlp][model][scaling]") {
+  using hipdlp::model::ScalingMode;
+  using hipdlp::model::ScalingStage;
+  HighsLp lp;
+  lp.num_col_ = lp.num_row_ = 2;
+  lp.col_cost_ = {1.0, 1.0};
+  lp.col_lower_ = {0.0, 0.0};
+  lp.col_upper_ = {kHighsInf, kHighsInf};
+  lp.row_lower_ = {1.0, 1.0};
+  lp.row_upper_ = {1.0, 1.0};
+  lp.a_matrix_.format_ = MatrixFormat::kRowwise;
+  lp.a_matrix_.num_col_ = lp.a_matrix_.num_row_ = 2;
+  SECTION("row spread") {
+    lp.a_matrix_.start_ = {0, 1, 2};
+    lp.a_matrix_.index_ = {0, 1};
+    lp.a_matrix_.value_ = {1e-12, 1.0};
+  }
+  SECTION("column spread") {
+    lp.a_matrix_.start_ = {0, 2, 4};
+    lp.a_matrix_.index_ = {0, 1, 0, 1};
+    lp.a_matrix_.value_ = {1e-12, 1.0, 1e-12, 1.0};
+  }
+  auto automatic = hipdlp::model::buildProblem(lp);
+  auto reference = hipdlp::model::buildProblem(lp);
+  auto forced = hipdlp::model::buildProblem(lp);
+  REQUIRE(automatic.ok());
+  REQUIRE(reference.ok());
+  REQUIRE(forced.ok());
+  hipdlp::model::ScalingOptions options;
+  hipdlp::model::PreprocessingDiagnostics diagnostics;
+  REQUIRE(hipdlp::model::applyScalingPipeline(automatic.problem, options,
+                                             &diagnostics).ok());
+  options.mode = ScalingMode::kLegacy;
+  REQUIRE(hipdlp::model::applyScalingPipeline(reference.problem, options).ok());
+  CHECK(automatic.problem.scaling().curtis_reid_rejected);
+  CHECK(automatic.problem.scaling().curtis_reid_sweeps == 0);
+  CHECK(automatic.problem.scaling().stages ==
+        std::vector<ScalingStage>({ScalingStage::kRuiz, ScalingStage::kPockChambolle}));
+  CHECK(automatic.problem.scaling().row_scale == reference.problem.scaling().row_scale);
+  CHECK(automatic.problem.scaling().col_scale == reference.problem.scaling().col_scale);
+  CHECK(automatic.problem.matrix().values == reference.problem.matrix().values);
+  CHECK(automatic.problem.transpose().values == reference.problem.transpose().values);
+  CHECK(automatic.problem.costs() == reference.problem.costs());
+  CHECK(automatic.problem.rowLower() == reference.problem.rowLower());
+  CHECK(diagnostics.scaling_reference_seconds == 0.0);
+  options.mode = ScalingMode::kCurtisReid;
+  REQUIRE(hipdlp::model::applyScalingPipeline(forced.problem, options).ok());
+  CHECK_FALSE(forced.problem.scaling().curtis_reid_rejected);
+  CHECK(forced.problem.scaling().stages ==
+        std::vector<ScalingStage>({ScalingStage::kCurtisReid}));
+
+  // Rejection remains observable when the user disables the following stages.
+  auto no_following_stages = hipdlp::model::buildProblem(lp);
+  REQUIRE(no_following_stages.ok());
+  const auto original_values = no_following_stages.problem.matrix().values;
+  options.mode = ScalingMode::kAuto;
+  options.legacy_scaling_mode = 0;
+  REQUIRE(hipdlp::model::applyScalingPipeline(no_following_stages.problem,
+                                             options).ok());
+  CHECK(no_following_stages.problem.scaling().curtis_reid_rejected);
+  CHECK_FALSE(no_following_stages.problem.scaling().applied);
+  CHECK(no_following_stages.problem.matrix().values == original_values);
 }
