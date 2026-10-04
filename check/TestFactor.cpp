@@ -184,6 +184,36 @@ TEST_CASE("Factor-get-set-invert", "[highs_test_factor]") {
     REQUIRE(iterate(variable_out[basis_change], variable_in[basis_change]));
 }
 
+TEST_CASE("Factor-zero-col-pivot-tolerance", "[highs_test_factor]") {
+  Highs highs;
+  REQUIRE(highs.setOptionValue("output_flag", false) == HighsStatus::kOk);
+  REQUIRE(highs.setOptionValue("presolve", "off") == HighsStatus::kOk);
+  REQUIRE(highs.setOptionValue("solver", "simplex") == HighsStatus::kOk);
+  REQUIRE(highs.setOptionValue("threads", 1) == HighsStatus::kOk);
+
+  // Near-dependent columns used to select a pivot below the absolute
+  // tolerance, then discard a larger entry in that column.
+  HighsLp model;
+  model.num_col_ = 4;
+  model.num_row_ = 5;
+  model.col_cost_ = {0, 0, 0, 0};
+  model.col_lower_ = {0, 0, 0, -kHighsInf};
+  model.col_upper_ = {kHighsInf, kHighsInf, kHighsInf, kHighsInf};
+  model.row_lower_ = {-kHighsInf, -kHighsInf, -kHighsInf, -kHighsInf,
+                      -kHighsInf};
+  model.row_upper_ = {0, 0, 0, 0, -1};
+  model.a_matrix_.format_ = MatrixFormat::kColwise;
+  model.a_matrix_.start_ = {0, 4, 8, 11, 14};
+  model.a_matrix_.index_ = {0, 2, 3, 4, 0, 2, 3, 4, 0, 1, 4, 1, 2, 4};
+  model.a_matrix_.value_ = {2, -1, 3e6, -1, -1e13, 1,    -3000001,
+                            1, 1,  1,   -2, 1e7,   -1e7, 1};
+  REQUIRE(highs.passModel(model) == HighsStatus::kOk);
+  REQUIRE(highs.run() == HighsStatus::kOk);
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
+
+  highs.resetGlobalScheduler(true);
+}
+
 HighsInt rowOut(const HighsInt variable_out) {
   for (HighsInt iRow = 0; iRow < num_row; iRow++)
     if (basic_set[iRow] == variable_out) return iRow;
