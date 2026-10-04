@@ -592,6 +592,7 @@ TEST_CASE("issue-2300", "[highs_lp_solver]") {
       std::string(HIGHS_DIR) + "/check/instances/issue-2300.mps";
   Highs h;
   h.setOptionValue("output_flag", dev_run);
+  if (dev_run) h.setOptionValue("log_dev_level", 1);
   REQUIRE(h.readModel(model_file) == HighsStatus::kOk);
   REQUIRE(h.run() == HighsStatus::kOk);
   REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
