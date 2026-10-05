@@ -3950,8 +3950,20 @@ bool HEkk::rebuildSolutionInaccurate() {
     } else {
       size += std::fabs(row_dual[iVar - num_col]);
     }
-    if (dual > options_->dual_feasibility_tolerance * std::max(1.0, size))
+    // Original code
+    //
+    //    if (dual > options_->dual_feasibility_tolerance * std::max(1.0, size))
+    //      return true;
+
+    //    if (dual > options_->dual_feasibility_tolerance) {
+    if (dual > options_->dual_feasibility_tolerance * std::max(1.0, size)) {
+      printf(
+          "HEkk::rebuildSolutionInaccurate() Dual residual trigger: row %d (%s "
+          "%d) residual %g; size %g\n",
+          int(iRow), iVar < num_col ? "col" : "row",
+          int(iVar < num_col ? iVar : iVar - num_col), dual, size);
       return true;
+    }
   }
   vector<double> value(info_.workValue_.begin(),
                        info_.workValue_.begin() + num_col + num_row);
@@ -3971,9 +3983,23 @@ bool HEkk::rebuildSolutionInaccurate() {
     }
   }
   for (HighsInt iRow = 0; iRow < num_row; iRow++) {
+    // Original code
+    //
+    //    if (std::fabs(residual[iRow]) >
+    //        options_->primal_feasibility_tolerance * std::max(1.0,
+    //        size[iRow]))
+    //      return true;
+
+    //    if (std::fabs(residual[iRow]) >
+    //    options_->primal_feasibility_tolerance) {
     if (std::fabs(residual[iRow]) >
-        options_->primal_feasibility_tolerance * std::max(1.0, size[iRow]))
+        options_->primal_feasibility_tolerance * std::max(1.0, size[iRow])) {
+      printf(
+          "HEkk::rebuildSolutionInaccurate() Primal residual trigger: row %d "
+          "residual %11.4g; size %11.4g\n",
+          int(iRow), std::fabs(residual[iRow]), size[iRow]);
       return true;
+    }
   }
   return false;
 }

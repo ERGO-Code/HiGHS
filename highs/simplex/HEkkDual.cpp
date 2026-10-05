@@ -1088,17 +1088,22 @@ void HEkkDual::rebuild() {
   // Recompute primal solution
   ekk_instance_.computePrimal();
 
-  if (info.update_count == 266 &&
-      this->ekk_instance_.iteration_count_ == 2654) {
-    printf("Reached update_count = 266; iteration_count_ = 2654\n");
+  // Negation of values when rebuildSolutionInaccurate returns true
+  // for issue-3194
+  const HighsInt check_update_count = -266;
+  const HighsInt check_iteration_count = -2654;
+  if (info.update_count == check_update_count &&
+      this->ekk_instance_.iteration_count_ == check_iteration_count) {
+    printf("Reached update_count = %d; iteration_count_ = %d\n",
+           int(info.update_count), int(this->ekk_instance_.iteration_count_));
   }
-    
+
   if (!refactor_basis_matrix && info.update_count > 0 &&
       ekk_instance_.rebuildSolutionInaccurate()) {
     printf("HEkkDual::rebuild(): rebuildSolutionInaccurate() returns true\n");
     printf("info.update_count = %d\n", int(info.update_count));
-    printf("this->iteration_count_ = %d\n", int(this->ekk_instance_.iteration_count_));
-/*    
+    printf("this->iteration_count_ = %d\n",
+           int(this->ekk_instance_.iteration_count_));
     // The values computed with the updated factor are inaccurate,
     // which the test in rebuildRefactor() can miss, so refactorize
     // and compute them again
@@ -1119,7 +1124,6 @@ void HEkkDual::rebuild() {
     correctDualInfeasibilities(dualInfeasCount);
     analysis->simplexTimerStop(CorrectDualClock);
     ekk_instance_.computePrimal();
-*/
   }
 
   // Collect primal infeasible as a list
