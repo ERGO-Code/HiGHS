@@ -2415,6 +2415,7 @@ void HighsDomain::setDomainChangeStack(
     const std::vector<HighsInt>& branchingPositions) {
   infeasible_ = false;
   mipsolver->mipdata_->debugSolution.resetDomain(*this);
+  const bool noSymmetry = !mipsolver->mipdata_->detectSymmetries;
 
   if (!domchgstack_.empty()) {
     for (const HighsDomainChange& domchg : domchgstack_) {
@@ -2446,6 +2447,23 @@ void HighsDomain::setDomainChangeStack(
     }
 
     if (k == stacksize) return;
+
+    // Remove redundant branching changes unless symmetry is active
+    if (noSymmetry) {
+      if (domchgstack[k].boundtype == HighsBoundType::kLower) {
+        if (domchgstack[k].boundval <= col_lower_[domchgstack[k].column]) {
+          if (domchgstack[k].boundval < col_lower_[domchgstack[k].column])
+            continue;
+          if (colLowerPos_[domchgstack[k].column] != -1) continue;
+        }
+      } else {
+        if (domchgstack[k].boundval >= col_upper_[domchgstack[k].column]) {
+          if (domchgstack[k].boundval > col_upper_[domchgstack[k].column])
+            continue;
+          if (colUpperPos_[domchgstack[k].column] != -1) continue;
+        }
+      }
+    }
 
     changeBound(domchgstack[k], Reason::branching());
     if (!infeasible_) propagate();
