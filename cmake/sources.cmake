@@ -415,8 +415,10 @@ set(highs_sources
     presolve/HighsPostsolveStack.cpp
     presolve/HighsSymmetry.cpp
     presolve/HPresolve.cpp
+    presolve/HPresolveAggregator.cpp
     presolve/HPresolveAnalysis.cpp
     presolve/HPresolveCliqueTable.cpp
+    presolve/HPresolveColStuffing.cpp
     presolve/HPresolveDependent.cpp
     presolve/HPresolveDominatedCols.cpp
     presolve/HPresolveDualFixing.cpp
@@ -428,6 +430,7 @@ set(highs_sources
     presolve/HPresolveSparsify.cpp
     presolve/HPresolveUtils.cpp
     presolve/HPresolveVarBndAggregation.cpp
+    presolve/HPresolveZeroCostSingleton.cpp
     presolve/HPresolveTest.cpp
     presolve/ICrash.cpp
     presolve/ICrashUtil.cpp
