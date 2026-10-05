@@ -1821,7 +1821,7 @@ void debugPrimalDualPresolve(const HighsLp& lp, const bool reduces_to_empty,
   options.output_flag = debugging || dev_run;
 
   options.run_crossover = kHighsOffString;
-  options.presolve == kHighsOnString;
+  options.presolve = kHighsOnString;
   options.presolve_rule_logging = true;
   REQUIRE(h.passOptions(options) == HighsStatus::kOk);
 

@@ -530,11 +530,8 @@ void HPresolve::chooseRules() {
                  "Permitted suppression of presolve rules via "
                  "presolve_rule_off option:\n");
     for (HighsInt rule_type = kPresolveRuleMin; rule_type < kPresolveRuleCount;
-         rule_type++) {
-      // Only kPresolveRuleDominatedCol cannot be switched off
-      if (rule_type == kPresolveRuleDominatedCol) continue;
+         rule_type++)
       logRule(rule_type);
-    }
     highsLogUser(options->log_options, HighsLogType::kInfo,
                  " * Only in initial sweep\n");
   }
