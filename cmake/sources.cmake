@@ -419,6 +419,7 @@ set(highs_sources
     presolve/HPresolveCliqueTable.cpp
     presolve/HPresolveFourierMotzkin.cpp
     presolve/HPresolveInitialSweep.cpp
+    presolve/HPresolveParallel.cpp
     presolve/HPresolveUtils.cpp
     presolve/HPresolveTest.cpp
     presolve/ICrash.cpp
