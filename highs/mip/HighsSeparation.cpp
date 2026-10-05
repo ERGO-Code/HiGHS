@@ -95,7 +95,7 @@ HighsInt HighsSeparation::separationRound(HighsDomain& propdomain,
     lp->getMipSolver().profiling_->start(implBoundClock);
   mipdata.implications.separateImpliedBounds(
       *lp, lp->getSolution().col_value, mipworker_.getCutPool(),
-      mipdata.feastol, mipworker_.getGlobalDomain(),
+      mipdata.feastol, mipworker_.getGlobalDomain(), mipworker_.randgen,
       mipdata.parallelLockActive());
   if (!mipdata.parallelLockActive())
     lp->getMipSolver().profiling_->stop(implBoundClock);

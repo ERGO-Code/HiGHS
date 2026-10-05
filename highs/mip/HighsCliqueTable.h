@@ -338,6 +338,9 @@ class HighsCliqueTable {
 
   HighsInt getNumImplications(HighsInt col, bool val) const;
 
+  std::pair<const CliqueVar*, HighsInt> getRandomClique(
+      CliqueVar v, HighsRandom& random) const;
+
   void runCliqueMerging(HighsDomain& globaldomain);
 
   void runCliqueMerging(HighsDomain& globaldomain,

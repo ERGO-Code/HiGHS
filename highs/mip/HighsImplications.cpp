@@ -465,7 +465,7 @@ bool HighsImplications::runProbing(HighsInt col, HighsInt& numReductions) {
           substitutions.push_back(substitution);
           colsubstituted[implcol] = true;
           ++numReductions;
-        } else if (!mipsolver.mipdata_->parallelLockActive()) {
+        } else {
           double lb = std::min(lbDown, lbUp);
           double ub = std::max(ubDown, ubUp);
 
@@ -780,11 +780,7 @@ void HighsImplications::buildFrom(const HighsImplications& init) {
 void HighsImplications::separateImpliedBounds(
     const HighsLpRelaxation& lpRelaxation, const std::vector<double>& sol,
     HighsCutPool& cutpool, double feastol, HighsDomain& globaldom,
-    bool thread_safe) {
-  std::array<HighsInt, 2> inds;
-  std::array<double, 2> vals;
-  double rhs;
-
+    HighsRandom& randgen, const bool thread_safe) {
   HighsInt numboundchgs = 0;
 
   // first do probing on all candidates that have not been probed yet
@@ -822,8 +818,7 @@ void HighsImplications::separateImpliedBounds(
     if (nextCleanupCall < 0) {
       // HighsInt oldNumEntries =
       // mipsolver.mipdata_->cliquetable.getNumEntries();
-      if (!mipsolver.mipdata_->parallelLockActive())
-        mipsolver.mipdata_->cliquetable.runCliqueMerging(globaldom);
+      mipsolver.mipdata_->cliquetable.runCliqueMerging(globaldom);
 
       // printf("numEntries: %d, beforeMerging: %d\n",
       //        mipsolver.mipdata_->cliquetable.getNumEntries(), oldNumEntries);
@@ -833,17 +828,15 @@ void HighsImplications::separateImpliedBounds(
       // printf("nextCleanupCall: %d\n", nextCleanupCall);
     }
 
-    if (!mipsolver.mipdata_->parallelLockActive())
-      mipsolver.mipdata_->cliquetable.numNeighbourhoodQueries = oldNumQueries;
+    mipsolver.mipdata_->cliquetable.numNeighbourhoodQueries = oldNumQueries;
   }
 
-  auto tryAddCut = [&](HighsInt implCol) {
-    double viol = sol[inds[0]] * vals[0] + sol[inds[1]] * vals[1] - rhs;
-    if (viol > feastol) {
-      cutpool.addCut(mipsolver, inds.data(), vals.data(), 2, rhs,
-                     !mipsolver.isColContinuous(implCol), false, false, false);
-    }
-  };
+  const HighsCliqueTable& cliquetable = mipsolver.mipdata_->cliquetable;
+  std::vector<HighsInt> inds;
+  std::vector<double> vals;
+  constexpr HighsInt maxLiftingEntries = 5;
+  inds.reserve(maxLiftingEntries + 2);
+  vals.reserve(maxLiftingEntries + 2);
 
   for (std::pair<HighsInt, double> fracint :
        lpRelaxation.getFractionalIntegers()) {
@@ -853,43 +846,79 @@ void HighsImplications::separateImpliedBounds(
       continue;
 
     for (HighsInt val = 0; val != 2; val++) {
+      if (implications[ImplIdx{col, val}].empty()) continue;
+      const std::pair<const HighsCliqueTable::CliqueVar*, HighsInt> clique =
+          cliquetable.getRandomClique({col, val}, randgen);
+      const HighsInt numLift = std::min(clique.second, maxLiftingEntries);
+      const HighsInt start = clique.second > maxLiftingEntries
+                                 ? randgen.integer(clique.second)
+                                 : 0;
+
+      auto tryAddCut = [&](HighsInt implCol, const double bound,
+                           const bool upper) {
+        const double sign = upper ? 1.0 : -1.0;
+        const double globalBound = upper ? globaldom.col_upper_[implCol]
+                                         : globaldom.col_lower_[implCol];
+        if (upper && (globalBound == kHighsInf || bound == kHighsInf)) return;
+        if (!upper && (globalBound == -kHighsInf || bound == -kHighsInf))
+          return;
+        const double coef = sign * (globalBound - bound);
+        if (coef <= feastol) return;
+
+        inds.assign({implCol, col});
+        vals.assign({sign, val ? coef : -coef});
+        HighsCDouble rhs = sign * (val ? globalBound : bound);
+        double viol =
+            sign * sol[implCol] + vals[1] * sol[col] - static_cast<double>(rhs);
+        double sqrnorm = 1.0 + coef * coef;
+
+        // Cut is: sign * y + sum(coef_i * x_i) <= sign * globalBound
+        // This is valid as at most one x_i literal can be true
+        HighsInt pos = start;
+        for (HighsInt i = 0; i < numLift; ++i) {
+          const auto v = clique.first[pos];
+          if (++pos == clique.second) pos = 0;
+          if (v.col == col || v.col == implCol ||
+              globaldom.col_lower_[v.col] != 0.0 ||
+              globaldom.col_upper_[v.col] != 1.0)
+            continue;
+          const double weight = v.weight(sol);
+          if (weight <= feastol) continue;
+          const Implication* other =
+              implications[ImplIdx{static_cast<HighsInt>(v.col),
+                                   static_cast<HighsInt>(v.val)}]
+                  .find(implCol);
+          if (other == nullptr) continue;
+          const double liftedCoef =
+              sign * (globalBound - (upper ? other->ub : other->lb));
+          if (liftedCoef <= feastol || std::abs(liftedCoef) == kHighsInf)
+            continue;
+          const double gain = liftedCoef * weight;
+          const double newviol = viol + gain;
+          const double newsqrnorm = sqrnorm + liftedCoef * liftedCoef;
+          if (gain <= feastol ||
+              (viol > 0.0 &&
+               newviol / std::sqrt(newsqrnorm) <= viol / std::sqrt(sqrnorm)))
+            continue;
+          inds.push_back(static_cast<HighsInt>(v.col));
+          vals.push_back(v.val ? liftedCoef : -liftedCoef);
+          if (!v.val) rhs -= liftedCoef;
+          viol = newviol;
+          sqrnorm = newsqrnorm;
+        }
+
+        if (viol > feastol) {
+          cutpool.addCut(mipsolver, inds.data(), vals.data(), inds.size(),
+                         static_cast<double>(rhs),
+                         !mipsolver.isColContinuous(implCol), false, false,
+                         false);
+        }
+      };
+
       implications[ImplIdx{col, val}].for_each(
           [&](HighsInt implCol, Implication implic) {
-            if (val == 1) {
-              if (implic.ub + feastol < globaldom.col_upper_[implCol]) {
-                vals[0] = 1.0;
-                inds[0] = implCol;
-                vals[1] = globaldom.col_upper_[implCol] - implic.ub;
-                inds[1] = col;
-                rhs = globaldom.col_upper_[implCol];
-                tryAddCut(implCol);
-              }
-              if (implic.lb - feastol > globaldom.col_lower_[implCol]) {
-                vals[0] = -1.0;
-                inds[0] = implCol;
-                vals[1] = implic.lb - globaldom.col_lower_[implCol];
-                inds[1] = col;
-                rhs = -globaldom.col_lower_[implCol];
-                tryAddCut(implCol);
-              }
-            } else {
-              if (implic.ub + feastol < globaldom.col_upper_[implCol]) {
-                vals[0] = 1.0;
-                inds[0] = implCol;
-                vals[1] = implic.ub - globaldom.col_upper_[implCol];
-                inds[1] = col;
-                rhs = implic.ub;
-                tryAddCut(implCol);
-              }
-              if (implic.lb - feastol > globaldom.col_lower_[implCol]) {
-                vals[0] = -1.0;
-                inds[0] = implCol;
-                vals[1] = globaldom.col_lower_[implCol] - implic.lb;
-                inds[1] = col;
-                rhs = -implic.lb;
-                tryAddCut(implCol);
-              }
-            }
+            tryAddCut(implCol, implic.ub, true);
+            tryAddCut(implCol, implic.lb, false);
           });
     }
   }

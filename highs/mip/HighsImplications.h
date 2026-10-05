@@ -19,6 +19,7 @@
 
 class HighsCliqueTable;
 class HighsLpRelaxation;
+class HighsRandom;
 
 class HighsImplications {
   HighsInt nextCleanupCall;
@@ -250,7 +251,8 @@ class HighsImplications {
   void separateImpliedBounds(const HighsLpRelaxation& lpRelaxation,
                              const std::vector<double>& sol,
                              HighsCutPool& cutpool, double feastol,
-                             HighsDomain& globaldom, bool thread_safe);
+                             HighsDomain& globaldom, HighsRandom& randgen,
+                             bool thread_safe);
 
   void cleanupVarbounds(HighsInt col);
 

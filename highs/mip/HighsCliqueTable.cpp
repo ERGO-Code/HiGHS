@@ -2014,6 +2014,32 @@ HighsInt HighsCliqueTable::getNumImplications(HighsInt col, bool val) const {
   return numimplics;
 }
 
+std::pair<const HighsCliqueTable::CliqueVar*, HighsInt>
+HighsCliqueTable::getRandomClique(const CliqueVar v,
+                                  HighsRandom& random) const {
+  const HighsInt count = numCliques(v);
+  if (count == 0) return {nullptr, 0};
+
+  constexpr HighsInt maxCliqueVisits = 32;
+  HighsInt remaining = random.integer(std::min(count, maxCliqueVisits));
+  HighsInt cliqueId = -1;
+  auto select = [&](const HighsInt id) {
+    if (remaining == 0) {
+      cliqueId = id;
+      return true;
+    }
+    --remaining;
+    return false;
+  };
+  invertedHashList[v.index()].for_each(
+      [&](const HighsInt id, HighsInt) { return select(id); });
+  if (cliqueId == -1) invertedHashListSizeTwo[v.index()].for_each(select);
+
+  assert(cliqueId != -1);
+  const Clique& clique = cliques[cliqueId];
+  return {cliqueentries.data() + clique.start, clique.end - clique.start};
+}
+
 void HighsCliqueTable::runCliqueMerging(HighsDomain& globaldomain,
                                         std::vector<CliqueVar>& clique,
                                         bool equation) {
