@@ -17,14 +17,8 @@ class ColourRefinement {
 
   std::vector<HighsInt>& colour_;
 
-  std::vector<HighsInt> colour_degree_;
-  std::vector<HighsInt> max_colour_degree_;
-  std::vector<HighsInt> min_colour_degree_;
-
   std::vector<double> colour_sums_;
   std::vector<HighsBool> node_touched_;
-
-  std::vector<HighsInt> colours_split_;
 
   HighsLinkedLists node_by_colour_;
   HighsLinkedLists node_touched_by_colour_;
@@ -76,8 +70,8 @@ class ColourRefinement {
   QuantizedMap<double, SumData> sum_map_;
 
   double time_setup_{};
-  double time_degrees_{};
-  double time_find_split_{};
+  double time_colour_sums{};
+  double time_check_split_{};
   double time_split_{};
   double time_prepare_{};
 
@@ -133,25 +127,18 @@ class ColourRefinement {
   }
 
   void chooseRefiningColour();
-  void touchNeighbour(HighsInt w);
-  void computeColourDegrees();
-  void findSplitColours();
-  void splitColours();
-  void splitColour(HighsInt split_colour);
-  void prepareNextIter();
-
   void computeColourSums();
   void touchNeighbour(const Neighbour& neigh);
-  void splitColoursNew();
+  void splitColours();
   bool checkIfColourSplits(HighsInt split_colour);
-  void splitColourNew(HighsInt split_colour);
+  void splitColour(HighsInt split_colour);
+  void prepareNextIter();
 
   void printTimes(double total_time) const;
 
  public:
   ColourRefinement(const HighsSparseMatrix& A, std::vector<HighsInt>& colour);
   void run();
-  void runNew();
   HighsInt coloursUsed() const { return latest_colour_ + 1; }
 };
 
