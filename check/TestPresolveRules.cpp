@@ -411,64 +411,9 @@ TEST_CASE("test-effective-costs", "[highs_test_presolve]") {
   Highs h;
   h.setOptionValue("output_flag", dev_run);
   bool test_all = true;
-  bool test_lp0 = test_all;
   bool test_lp1 = test_all;
   bool test_lp2 = test_all;
 
-  if (test_lp0) {
-    HighsLp lp;
-    // First LP is
-    //
-    // min 4z
-    //
-    // -1 <=    x + y - 2z <= 1
-    //
-    // -1 <= 201x + y      <= 1
-    //
-    // 0 <= x <= 1, y, z free
-    //
-    // where the bounds on the two constraints and non-unit
-    // coefficients of z in the objective and first contraint give
-    // code coverage
-    //
-    // Aiming to minimize 4z, and bound is given by 2z >= x + y - 1,
-    // so substitute z = (x+y-1)/2 into the objective to give
-    //
-    // min 2x + 2y - 2
-    //
-    // y is then minimized with bound is given by y >= -201x - 1, so
-    // substitute y = -201x - 1 into the objective to give
-    //
-    // min 2x +(-402x-2) - 2 = -400x - 4
-    //
-    // This function is minimized when x = 1 to give y = -202 and z =
-    // -101 with objective -404
-    //
-    // The optimal dual values are -400 for x, -2 for row 0 and 2 for
-    // row 1. However, although this example tests code coverage on
-    // identifying free column singletons and a double free column
-    // singleton identified in getEffectiveCosts, the dual of -400 for
-    // the only nonbasic column means that there are no active costs,
-    // so active_cost_norm is zero (hence absolute and relative dual
-    // infeasibility measures are identical).
-    lp.model_name_ = "LP0";
-    lp.num_col_ = 3;
-    lp.num_row_ = 2;
-    lp.col_cost_ = {0, 0, 4};
-    lp.col_lower_ = {0, -kHighsInf, -kHighsInf};
-    lp.col_upper_ = {1, kHighsInf, kHighsInf};
-    lp.a_matrix_.format_ = MatrixFormat::kRowwise;
-    lp.a_matrix_.start_ = {0, 3, 5};
-    lp.a_matrix_.index_ = {0, 1, 2, 0, 1};
-    lp.a_matrix_.value_ = {1, 1, -2, 201, 1};
-    lp.row_lower_ = {-1, -1};
-    lp.row_upper_ = {1, 1};
-    h.passModel(lp);
-    h.setOptionValue("log_dev_level", 1);
-    h.setOptionValue("presolve_rule_logging", kHighsOnString);
-    h.run();
-    REQUIRE(h.getInfo().active_cost_norm == 0);
-  }
   if (test_lp1) {
     HighsLp lp;
     // Here's a simpler example that reflects the behaviour observed

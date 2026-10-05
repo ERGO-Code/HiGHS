@@ -27,7 +27,7 @@ HighsStatus solveUnconstrainedLp(const HighsOptions& options, const HighsLp& lp,
                                  HighsModelStatus& model_status,
                                  HighsInfo& highs_info, HighsSolution& solution,
                                  HighsBasis& basis);
-void assessExcessiveObjectiveBoundScaling(const HighsLogOptions log_options,
+void assessExcessiveObjectiveBoundScaling(const HighsOptions& options,
                                           const HighsModel& model,
                                           HighsUserScaleData& user_scale_data);
 bool useHipo(const HighsOptions& options,

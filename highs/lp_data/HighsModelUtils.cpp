@@ -1441,64 +1441,44 @@ std::string utilModelStatusToString(const HighsModelStatus model_status) {
   switch (model_status) {
     case HighsModelStatus::kNotset:
       return "Not Set";
-      break;
     case HighsModelStatus::kLoadError:
       return "Load error";
-      break;
     case HighsModelStatus::kModelError:
       return "Model error";
-      break;
     case HighsModelStatus::kPresolveError:
       return "Presolve error";
-      break;
     case HighsModelStatus::kSolveError:
       return "Solve error";
-      break;
     case HighsModelStatus::kPostsolveError:
       return "Postsolve error";
-      break;
     case HighsModelStatus::kModelEmpty:
       return "Empty";
-      break;
     case HighsModelStatus::kMemoryLimit:
       return "Memory limit reached";
-      break;
     case HighsModelStatus::kOptimal:
       return "Optimal";
-      break;
     case HighsModelStatus::kInfeasible:
       return "Infeasible";
-      break;
     case HighsModelStatus::kUnboundedOrInfeasible:
       return "Primal infeasible or unbounded";
-      break;
     case HighsModelStatus::kUnbounded:
       return "Unbounded";
-      break;
     case HighsModelStatus::kObjectiveBound:
       return "Bound on objective reached";
-      break;
     case HighsModelStatus::kObjectiveTarget:
       return "Target for objective reached";
-      break;
     case HighsModelStatus::kTimeLimit:
       return "Time limit reached";
-      break;
     case HighsModelStatus::kIterationLimit:
       return "Iteration limit reached";
-      break;
     case HighsModelStatus::kSolutionLimit:
       return "Solution limit reached";
-      break;
     case HighsModelStatus::kInterrupt:
       return "Interrupted by user";
-      break;
     case HighsModelStatus::kHighsInterrupt:
       return "Interrupted by HiGHS";
-      break;
     case HighsModelStatus::kUnknown:
       return "Unknown";
-      break;
     default:
       assert(1 == 0);
       return "Unrecognised HiGHS model status";
@@ -1546,6 +1526,8 @@ std::string utilPresolveRuleTypeToString(const HighsInt rule_type) {
     return "Zero cost singleton";
   } else if (rule_type == kPresolveRuleColStuffing) {
     return "Col stuffing";
+  } else if (rule_type == kPresolveRuleDualFixProbing) {
+    return "Dual-fixing probing";
   } else if (rule_type == kPresolveRuleInitialSweep) {
     return "Initial sweep";
   } else if (rule_type == kPresolveRuleFourierMotzkin) {
@@ -1555,6 +1537,23 @@ std::string utilPresolveRuleTypeToString(const HighsInt rule_type) {
   }
   assert(1 == 0);
   return "????";
+}
+
+std::string utilPostsolveStatusToString(
+    const HighsPostsolveStatus postsolve_status) {
+  switch (postsolve_status) {
+    case HighsPostsolveStatus::kNotPresolved:
+      return "Not presolved";
+    case HighsPostsolveStatus::kNoPrimalSolutionError:
+      return "Primal solution error";
+    case HighsPostsolveStatus::kSolutionRecovered:
+      return "Solution recovered";
+    case HighsPostsolveStatus::kBasisError:
+      return "Basis error";
+    default:
+      assert(1 == 0);
+      return "Unrecognised HiGHS postsolve status";
+  }
 }
 
 // Deduce the HighsStatus value corresponding to a HighsModelStatus value.

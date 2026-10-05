@@ -191,9 +191,11 @@ struct ProcessedToken {
     double value;
     LpComparisonType dir;
   };
+  // whether the token was preceded by a + or - sign
+  bool hassign = false;
 
   ProcessedToken(const ProcessedToken&) = delete;
-  ProcessedToken(ProcessedToken&& t) : type(t.type) {
+  ProcessedToken(ProcessedToken&& t) : type(t.type), hassign(t.hassign) {
     switch (type) {
       case ProcessedTokenType::SECID:
         keyword = t.keyword;
@@ -371,7 +373,15 @@ void Reader::parseexpression(std::vector<ProcessedToken>::iterator& it,
     ++it;
   }
 
+  bool firstterm = true;
   while (it != end) {
+    // all terms but the first must be preceded by a sign, so that, e.g., "x y"
+    // is not read as "x + y"
+    if (!firstterm && (it->type == ProcessedTokenType::CONST ||
+                       it->type == ProcessedTokenType::VARID ||
+                       it->type == ProcessedTokenType::BRKOP))
+      lpassert(it->hassign);
+    firstterm = false;
     std::vector<ProcessedToken>::iterator next = it;
     ++next;
     // const var
@@ -414,7 +424,10 @@ void Reader::parseexpression(std::vector<ProcessedToken>::iterator& it,
     // quadratic expression
     if (next != end && it->type == ProcessedTokenType::BRKOP) {
       ++it;
+      bool firstquadterm = true;
       while (it != end && it->type != ProcessedTokenType::BRKCL) {
+        if (!firstquadterm) lpassert(it->hassign);
+        firstquadterm = false;
         // const var hat const
         std::vector<ProcessedToken>::iterator next1 = it;  // token after it
         std::vector<ProcessedToken>::iterator next2 = it;  // token 2nd-after it
@@ -849,6 +862,10 @@ void Reader::processsections() {
 void Reader::splittokens() {
   LpSectionKeyword currentsection = LpSectionKeyword::NONE;
 
+  // Any tokens must be preceded by a section keyword
+  lpassert(processedtokens.empty() ||
+           processedtokens.front().type == ProcessedTokenType::SECID);
+
   bool debug_open_section = false;
   for (std::vector<ProcessedToken>::iterator it(processedtokens.begin());
        it != processedtokens.end(); ++it) {
@@ -1047,6 +1064,7 @@ void Reader::processtokens() {
       // +/- Constant
       if (rawtokens[0].istype(RawTokenType::CONS)) {
         processedtokens.emplace_back(sign * rawtokens[0].dvalue);
+        processedtokens.back().hassign = true;
         nextrawtoken();
         continue;
       }
@@ -1054,6 +1072,7 @@ void Reader::processtokens() {
       // + [, + + [, - - [
       if (rawtokens[0].istype(RawTokenType::BRKOP) && sign == 1.0) {
         processedtokens.emplace_back(ProcessedTokenType::BRKOP);
+        processedtokens.back().hassign = true;
         nextrawtoken();
         continue;
       }
@@ -1064,6 +1083,7 @@ void Reader::processtokens() {
       // +/- variable name
       if (rawtokens[0].istype(RawTokenType::STR)) {
         processedtokens.emplace_back(sign);
+        processedtokens.back().hassign = true;
         continue;
       }
 
