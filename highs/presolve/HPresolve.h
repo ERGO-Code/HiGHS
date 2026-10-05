@@ -283,9 +283,6 @@ class HPresolve {
 
   HighsInt countFillin(HighsInt row);
 
-  bool checkFillin(HighsHashTable<HighsInt, HighsInt>& fillinCache,
-                   HighsInt row, HighsInt col);
-
   void reinsertEquation(HighsInt row);
 
   void clearLiftingOpportunities(HighsInt row) {
@@ -309,9 +306,6 @@ class HPresolve {
 
   void toCSC(std::vector<double>& Aval, std::vector<HighsInt>& Aindex,
              std::vector<HighsInt>& Astart);
-
-  void toCSR(std::vector<double>& ARval, std::vector<HighsInt>& ARindex,
-             std::vector<HighsInt>& ARstart);
 
   void getRowPositions(HighsInt row,
                        std::vector<HighsInt>& myrowpositions) const;

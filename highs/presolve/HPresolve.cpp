@@ -3291,66 +3291,6 @@ HighsInt HPresolve::countFillin(HighsInt row) {
   return fillin;
 }
 
-bool HPresolve::checkFillin(HighsHashTable<HighsInt, HighsInt>& fillinCache,
-                            HighsInt row, HighsInt col) {
-  // check numerics against markowitz tolerance
-  assert(rowpositions.size() == static_cast<size_t>(rowsize[row]));
-
-  // check fillin against max fillin
-  HighsInt fillin = -(rowsize[row] + colsize[col] - 1);
-
-#if 1
-  // first use fillin for rows where it is already computed
-  for (HighsInt coliter = colhead[col]; coliter != -1;
-       coliter = Anext[coliter]) {
-    if (Arow[coliter] == row) continue;
-
-    auto cachedFillin = fillinCache.find(Arow[coliter]);
-    if (cachedFillin == nullptr) continue;
-
-    fillin += (*cachedFillin - 1);
-    if (fillin > options->presolve_substitution_maxfillin) return false;
-  }
-
-  // iterate over rows of substituted column again to count the fillin for the
-  // remaining rows
-  for (HighsInt coliter = colhead[col]; coliter != -1;
-       coliter = Anext[coliter]) {
-    assert(Acol[coliter] == col);
-
-    if (Arow[coliter] == row) continue;
-
-    HighsInt& cachedFillin = fillinCache[Arow[coliter]];
-
-    if (cachedFillin != 0) continue;
-
-    HighsInt rowfillin = countFillin(Arow[coliter]);
-    cachedFillin = rowfillin + 1;
-    fillin += rowfillin;
-
-    if (fillin > options->presolve_substitution_maxfillin) return false;
-    // we count a fillin of 1 if the column is not present in the row and
-    // a fillin of zero otherwise. the fillin for the substituted column
-    // itself was already counted before the loop so we skip that entry.
-  }
-#else
-  for (HighsInt rowiter : rowpositions) {
-    if (rowiter == pos) continue;
-    for (coliter = colhead[col]; coliter != -1; coliter = Anext[coliter]) {
-      assert(Acol[coliter] == col);
-
-      if (rowiter != coliter &&
-          findNonzero(Arow[coliter], Acol[rowiter]) == -1) {
-        if (fillin == maxfillin) return false;
-        fillin += 1;
-      }
-    }
-  }
-#endif
-
-  return true;
-}
-
 void HPresolve::reinsertEquation(HighsInt row) {
   // check if this is an equation row and it now has a different size
   if (isEquation(row) && eqiters[row] != equations.end() &&
@@ -3604,34 +3544,6 @@ void HPresolve::toCSC(std::vector<double>& Aval, std::vector<HighsInt>& Aindex,
     assert(colsize[Acol[i]] >= 0);
     Aval[pos] = Avalue[i];
     Aindex[pos] = Arow[i];
-  }
-}
-
-void HPresolve::toCSR(std::vector<double>& ARval,
-                      std::vector<HighsInt>& ARindex,
-                      std::vector<HighsInt>& ARstart) {
-  // set up the row starts using the row size array
-  size_t numrow = rowsize.size();
-  ARstart.resize(numrow + 1);
-  HighsInt nnz = 0;
-  for (size_t i = 0; i != numrow; ++i) {
-    ARstart[i] = nnz;
-    nnz += rowsize[i];
-  }
-  ARstart[numrow] = nnz;
-
-  // now setup the entries of the CSC matrix
-  // we reuse the colsize array to count down to zero
-  // for determining the position of each nonzero
-  ARval.resize(nnz);
-  ARindex.resize(nnz);
-  for (HighsInt i = 0; i != nnz; ++i) {
-    if (Avalue[i] == 0.0) continue;
-    HighsInt pos = ARstart[Arow[i] + 1] - rowsize[Arow[i]];
-    --rowsize[Arow[i]];
-    assert(rowsize[Arow[i]] >= 0);
-    ARval[pos] = Avalue[i];
-    ARindex[pos] = Acol[i];
   }
 }
 
