@@ -60,6 +60,7 @@ HighsStatus Highs::clear() {
 
 HighsStatus Highs::clearModel() {
   model_.clear();
+  solver_select_num_integer_col_ = -1;
   multi_linear_objective_.clear();
   saved_objective_and_solution_.clear();
   return clearSolver();
@@ -4287,6 +4288,7 @@ HighsStatus Highs::callSolveLp(HighsLp& lp, const std::string& message) {
   HighsLpSolverObject solver_object(lp, basis_, solution_, info_, ekk_instance_,
                                     callback_, options_, timer_);
   solver_object.setProfiling(this->profiling_);
+  solver_object.solver_select_num_integer_col_ = solver_select_num_integer_col_;
 
   // Solve the LP
   return_status = solveLp(solver_object, message);

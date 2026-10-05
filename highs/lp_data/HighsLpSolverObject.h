@@ -40,6 +40,9 @@ class HighsLpSolverObject {
   HighsTimer& timer_;
   HighsProfiling* profiling_ = nullptr;
   HighsModelStatus model_status_ = HighsModelStatus::kNotset;
+  // Number of integer columns assumed by automatic solver selection;
+  // negative => count from lp_.integrality_
+  HighsInt solver_select_num_integer_col_ = -1;
   void setProfiling(HighsProfiling* profiling) {
     assert(profiling);
     profiling_ = profiling;

@@ -16,6 +16,7 @@
 
 #include "lp_data/HConst.h"
 #include "lp_data/HighsLp.h"
+#include "util/HighsSolverSelectModels.h"
 
 namespace {
 
@@ -133,13 +134,7 @@ HighsLpFeatures computeLpFeatures(const HighsLp& lp,
       min_abs_obj = std::min(min_abs_obj, abs_cost);
     }
   }
-  if (!lp.integrality_.empty()) {
-    for (HighsInt iCol = 0; iCol < num_col; iCol++)
-      if (lp.integrality_[iCol] == HighsVarType::kInteger ||
-          lp.integrality_[iCol] == HighsVarType::kSemiContinuous ||
-          lp.integrality_[iCol] == HighsVarType::kSemiInteger)
-        f.num_integer_col++;
-  }
+  f.num_integer_col = countIntegerCols(lp.integrality_);
   if (min_abs_obj == kHighsInf) min_abs_obj = 0.0;
 
   // --------------------------------------------------------------------------
@@ -343,6 +338,16 @@ std::vector<std::pair<std::string, double>> highsLpFeatureVector(
   };
 }
 
+HighsInt countIntegerCols(const std::vector<HighsVarType>& integrality) {
+  HighsInt num_integer_col = 0;
+  for (const HighsVarType type : integrality)
+    if (type == HighsVarType::kInteger ||
+        type == HighsVarType::kSemiContinuous ||
+        type == HighsVarType::kSemiInteger)
+      num_integer_col++;
+  return num_integer_col;
+}
+
 std::vector<std::string> highsLpFeatureNames() {
   std::vector<std::string> names;
   for (const auto& name_value : highsLpFeatureVector(HighsLpFeatures()))
@@ -389,6 +394,57 @@ static HighsSolverSelect selectSolverNotRequiringBasis(
   return selectSolverRequiringBasis(f);
 }
 
+static double transformFeature(const double value, const HighsInt transform) {
+  switch (transform) {
+    case 1:
+      return std::log10(1.0 + std::max(value, 0.0));
+    case 2:
+      return std::log10(std::max(value, 1e-10));
+    default:
+      return value;
+  }
+}
+
+// Transform and standardise the model's features, project them onto
+// its principal components, and walk its decision tree on the scores
+static HighsSolverSelect evaluateModel(const HighsSolverSelectModel& model,
+                                       const HighsLpFeatures& f) {
+  if (f.num_nz < model.min_num_nz) return HighsSolverSelect::kDualSimplex;
+  const std::vector<std::pair<std::string, double>> feature =
+      highsLpFeatureVector(f);
+  std::vector<double> z(model.num_feature);
+  for (HighsInt j = 0; j < model.num_feature; j++)
+    z[j] = (transformFeature(feature[model.feature_index[j]].second,
+                             model.transform[j]) -
+            model.mean[j]) /
+           model.scale[j];
+  std::vector<double> score(model.num_pc, 0.0);
+  for (HighsInt k = 0; k < model.num_pc; k++)
+    for (HighsInt j = 0; j < model.num_feature; j++)
+      score[k] += model.loading[k * model.num_feature + j] * z[j];
+  HighsInt node = 0;
+  while (model.left[node] >= 0) {
+    // The tree was fitted by scikit-learn, which compares in single
+    // precision
+    const float value = static_cast<float>(score[model.split_pc[node]]);
+    node = value <= model.threshold[node] ? model.left[node]
+                                          : model.right[node];
+  }
+  return model.leaf_solver[node];
+}
+
+HighsSolverSelect selectSolverByModel(const HighsLpFeatures& features,
+                                      const int strategy,
+                                      const bool require_basis) {
+  assert(strategy == 1 || strategy == 2);
+  const HighsSolverSelectModel& model =
+      strategy == 1 ? (require_basis ? kS1BasisModel : kS1NoBasisModel)
+                    : (require_basis ? kS2BasisModel : kS2NoBasisModel);
+  const HighsSolverSelect solver = evaluateModel(model, features);
+  assert(!require_basis || solverYieldsBasis(solver));
+  return solver;
+}
+
 bool solverYieldsBasis(const HighsSolverSelect solver,
                        const bool run_crossover) {
   switch (solver) {
@@ -421,17 +477,27 @@ HighsSolverSelect selectSolverByFeatures(const HighsLp& lp,
 }
 
 HighsSolverSelect selectSolver(const HighsLp& lp, const int strategy,
-                               const bool require_basis) {
+                               const bool require_basis,
+                               const HighsInt num_integer_col) {
   switch (strategy) {
     case 0:
       return HighsSolverSelect::kDualSimplex;
-      break;
-    case 1:
-      // todo
-      break;
-    case 2:
-      // todo
-      break;
+    case 1: {
+      // Only the size features are used, so don't compute the rest
+      HighsLpFeatures f;
+      f.num_row = lp.num_row_;
+      f.num_col = lp.num_col_;
+      f.num_nz = lp.a_matrix_.numNz();
+      f.num_integer_col = num_integer_col >= 0
+                              ? num_integer_col
+                              : countIntegerCols(lp.integrality_);
+      return selectSolverByModel(f, strategy, require_basis);
+    }
+    case 2: {
+      HighsLpFeatures f = computeLpFeatures(lp);
+      if (num_integer_col >= 0) f.num_integer_col = num_integer_col;
+      return selectSolverByModel(f, strategy, require_basis);
+    }
     case 3:
       // Heuristic
       return selectSolverByFeatures(lp, require_basis);

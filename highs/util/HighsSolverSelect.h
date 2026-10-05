@@ -16,6 +16,7 @@
 #include <utility>
 #include <vector>
 
+#include "lp_data/HConst.h"
 #include "util/HighsInt.h"
 
 class HighsLp;
@@ -103,11 +104,28 @@ std::vector<std::pair<std::string, double>> highsLpFeatureVector(
     const HighsLpFeatures& features);
 std::vector<std::string> highsLpFeatureNames();
 
+// Number of integer, semi-continuous or semi-integer columns
+HighsInt countIntegerCols(const std::vector<HighsVarType>& integrality);
+
 // When `require_basis` is true, only a solver that yields a basic
 // solution is returned: simplex, or IPX/HiPO (which yield a basis via
 // crossover). In particular, PDLP is never returned
+//
+// Strategy 0 => dual simplex; 1 => PCA model on num_col, num_row,
+// num_nz and num_integer_col; 2 => PCA model on the full feature
+// set; 3 => provisional hand-written heuristic. If
+// `num_integer_col` is non-negative, it overrides the count from
+// `lp.integrality_`, which is empty for the LP relaxation in the MIP
+// solver
 HighsSolverSelect selectSolver(const HighsLp& lp, const int strategy,
-                               const bool require_basis = false);
+                               const bool require_basis = false,
+                               const HighsInt num_integer_col = -1);
+
+// Strategies 1 and 2: evaluate the PCA + decision-tree model fitted
+// offline by tests/select/visualize.py (see HighsSolverSelectModels.h)
+HighsSolverSelect selectSolverByModel(const HighsLpFeatures& features,
+                                      const int strategy,
+                                      const bool require_basis);
 
 // True if `solver` can yield a basic solution, given whether crossover
 // is run after IPM

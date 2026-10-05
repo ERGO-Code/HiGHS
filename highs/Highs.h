@@ -1386,6 +1386,16 @@ class Highs {
    */
   void setProfiling(HighsProfiling* profiling);
 
+  /**
+   * @brief Set the number of integer columns assumed by automatic
+   * solver selection when the LP's integrality has been discarded, as
+   * for the LP relaxation in the MIP solver. Negative => count from the
+   * LP. Reset by clearModel()
+   */
+  void setSolverSelectNumIntegerCol(const HighsInt num_integer_col) {
+    solver_select_num_integer_col_ = num_integer_col;
+  }
+
   // Start of advanced methods: only for internal use!
 
   // Nested methods below Highs::run()
@@ -1655,6 +1665,8 @@ class Highs {
   HighsPresolveLog presolve_log_;
 
   HighsProfiling* profiling_ = nullptr;
+
+  HighsInt solver_select_num_integer_col_ = -1;
 
   HighsInt max_threads_ = 0;
   // This is strictly for debugging. It's used to check whether

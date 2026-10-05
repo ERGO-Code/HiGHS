@@ -10,6 +10,7 @@
 #include <algorithm>
 
 #include "lp_data/HighsSolve.h"  // For useIpm()
+#include "util/HighsSolverSelect.h"
 #include "mip/HighsCutPool.h"
 #include "mip/HighsDomain.h"
 #include "mip/HighsMipSolver.h"
@@ -246,11 +247,15 @@ void HighsLpRelaxation::loadModel() {
   lprows.reserve(lpmodel.num_row_);
   for (HighsInt i = 0; i != lpmodel.num_row_; ++i)
     lprows.push_back(LpRow::model(i));
+  // Automatic LP solver selection uses the number of integer
+  // columns, which is lost when integrality is cleared
+  const HighsInt num_integer_col = countIntegerCols(lpmodel.integrality_);
   lpmodel.integrality_.clear();
   HighsInt num_col = lpmodel.num_col_;
   lpsolver.clearSolver();
   lpsolver.clearModel();
   lpsolver.passModel(std::move(lpmodel));
+  lpsolver.setSolverSelectNumIntegerCol(num_integer_col);
   colLbBuffer.resize(num_col);
   colUbBuffer.resize(num_col);
 }
