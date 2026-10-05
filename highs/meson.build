@@ -311,6 +311,7 @@ _srcs = [
     'presolve/HPresolveInitialSweep.cpp',
     'presolve/HPresolveParallel.cpp',
     'presolve/HPresolveProbing.cpp',
+    'presolve/HPresolveProbingUtil.cpp',
     'presolve/HPresolveSparsify.cpp',
     'presolve/HPresolveUtils.cpp',
     'presolve/HPresolveVarBndAggregation.cpp',

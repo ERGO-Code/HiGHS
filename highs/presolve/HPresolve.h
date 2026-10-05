@@ -10,6 +10,7 @@
  */
 #ifndef PRESOLVE_HIGHS_PRESOLVE_H_
 #define PRESOLVE_HIGHS_PRESOLVE_H_
+#include <algorithm>
 #include <cassert>
 #include <cmath>
 #include <list>
@@ -389,7 +390,17 @@ class HPresolve {
                         double* worstCaseUpperBound = nullptr);
 
   template <typename storageFormat>
-  HighsCDouble computeDynamism(const HighsMatrixSlice<storageFormat>& vector);
+  HighsCDouble computeDynamism(const HighsMatrixSlice<storageFormat>& vector) {
+    double minAbsCoef = kHighsInf;
+    double maxAbsCoef = -kHighsInf;
+    for (const auto& nonzero : vector) {
+      double absCoef = std::abs(nonzero.value());
+      minAbsCoef = std::min(minAbsCoef, absCoef);
+      maxAbsCoef = std::max(maxAbsCoef, absCoef);
+    }
+    return static_cast<HighsCDouble>(maxAbsCoef) /
+           static_cast<HighsCDouble>(minAbsCoef);
+  }
 
   bool silentLog() const;
 
