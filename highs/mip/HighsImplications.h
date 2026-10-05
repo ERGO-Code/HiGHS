@@ -28,6 +28,8 @@ class HighsImplications {
     double ub = kHighsInf;
   };
 
+  std::vector<HighsDomainChange> implicationsDown;
+  std::vector<HighsDomainChange> implicationsUp;
   std::vector<HighsHashTree<HighsInt, Implication>> implications;
   std::vector<HighsHashTree<HighsInt, bool>> reverseImplications;
   std::vector<uint8_t> hasProbed;
@@ -70,6 +72,28 @@ class HighsImplications {
  private:
   std::vector<HighsHashTree<HighsInt, VarBound>> vubs;
   std::vector<HighsHashTree<HighsInt, VarBound>> vlbs;
+  struct TentativeFixing {
+    enum Direction : uint8_t { Undecided, FixLower, FixUpper };
+    Direction downProbe = Undecided;
+    Direction upProbe = Undecided;
+
+    bool isUndecided() const {
+      return downProbe == Undecided && upProbe == Undecided;
+    }
+
+    void record(bool upProbing, HighsBoundType boundtype) {
+      Direction& probe = upProbing ? upProbe : downProbe;
+      if (probe != Undecided) return;
+      probe = boundtype == HighsBoundType::kLower ? FixUpper : FixLower;
+    }
+
+    void clear() {
+      downProbe = Undecided;
+      upProbe = Undecided;
+    }
+  };
+  std::vector<HighsInt> dualFixProbingBinInds_;
+  std::vector<TentativeFixing> dualFixProbingBinFlags_;
 
   std::vector<HighsHashTree<HighsInt, HighsInt>> rowToVarBounds;
 
@@ -77,6 +101,7 @@ class HighsImplications {
   const HighsMipSolver& mipsolver;
   std::vector<HighsSubstitution> substitutions;
   std::vector<HighsBool> colsubstituted;
+
   HighsImplications(const HighsMipSolver& mipsolver) : mipsolver(mipsolver) {
     nextCleanupCall = mipsolver.numNonzero();
     numImplications = 0;
@@ -101,6 +126,7 @@ class HighsImplications {
     vubs.shrink_to_fit();
     vlbs.clear();
     vlbs.shrink_to_fit();
+    dualFixProbingBinInds_.clear();
     rowToVarBounds.clear();
     rowToVarBounds.shrink_to_fit();
     resize(mipsolver.numCol(), mipsolver.numRow());
@@ -117,6 +143,8 @@ class HighsImplications {
     vlbs.resize(ncols);
     rowToVarBounds.resize(nrows);
     maxVarBounds = calcMaxVarBounds(ncols);
+    dualFixProbingBinInds_.reserve(ncols);
+    dualFixProbingBinFlags_.assign(ncols, TentativeFixing{});
   }
 
   constexpr static int64_t calcMaxVarBounds(HighsInt numcol) {
@@ -240,6 +268,20 @@ class HighsImplications {
                   bool& infeasible, bool allowBoundChanges = true) const;
 
   void applyImplications(HighsDomain& domain, HighsInt col, HighsInt val);
+
+  void recordTentativeCliques(const HighsInt val,
+                              const HighsDomainChange& domchg) {
+    const HighsInt col = domchg.column;
+    TentativeFixing& fixing = dualFixProbingBinFlags_[col];
+    if (fixing.isUndecided()) dualFixProbingBinInds_.push_back(col);
+    fixing.record(val == 1, domchg.boundtype);
+  }
+
+  void clearTentativeCliques() {
+    for (const HighsInt col : dualFixProbingBinInds_)
+      dualFixProbingBinFlags_[col].clear();
+    dualFixProbingBinInds_.clear();
+  }
 };
 
 #endif

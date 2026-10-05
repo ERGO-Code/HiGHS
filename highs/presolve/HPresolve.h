@@ -581,7 +581,7 @@ class HPresolve {
   /*
   // Methods defined and used in HPresolveDebug, and only executed if
   // HPresolve::debug is called. This hasn't been used for ages, and
-  // is retained in case it's useful in future
+  // this comment is retained in case it's useful in future
   static void debug(const HighsLp& lp, const HighsOptions& options);
   void computeIntermediateMatrix(std::vector<HighsInt>& flagRow,
                                  std::vector<HighsInt>& flagCol,

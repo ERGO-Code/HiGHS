@@ -17,7 +17,6 @@ set(include_dirs
   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/presolve>
   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/qpsolver>
   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/simplex>
-  $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/test_kkt>
   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/util>
   $<BUILD_INTERFACE:${HIGHS_BINARY_DIR}>)
 
@@ -418,7 +417,6 @@ set(highs_sources
     presolve/HPresolve.cpp
     presolve/HPresolveAnalysis.cpp
     presolve/HPresolveCliqueTable.cpp
-    presolve/HPresolveDebug.cpp
     presolve/HPresolveInitialSweep.cpp
     presolve/HPresolveUtils.cpp
     presolve/HPresolveTest.cpp
@@ -450,8 +448,6 @@ set(highs_sources
     simplex/HSimplexNlaFreeze.cpp
     simplex/HSimplexNlaProductForm.cpp
     simplex/HSimplexReport.cpp
-    test_kkt/KktCh2.cpp
-    test_kkt/DevKkt.cpp
     util/HFactor.cpp
     util/HFactorDebug.cpp
     util/HFactorExtend.cpp
@@ -616,8 +612,6 @@ set(highs_headers
     simplex/SimplexConst.h
     simplex/SimplexStruct.h
     simplex/SimplexTimer.h
-    test_kkt/DevKkt.h
-    test_kkt/KktCh2.h
     util/FactorTimer.h
     util/HFactor.h
     util/HFactorConst.h
