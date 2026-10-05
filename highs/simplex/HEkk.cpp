@@ -3798,6 +3798,8 @@ std::string HEkk::rebuildReason(const HighsInt rebuild_reason) const {
     rebuild_reason_string = "Primal infeasible in primal simplex";
   } else if (rebuild_reason == kRebuildReasonChooseColumnFail) {
     rebuild_reason_string = "Choose column failure";
+  } else if (rebuild_reason == kRebuildReasonExcessivePrimalValue) {
+    rebuild_reason_string = "Excessive primal value";
   } else {
     rebuild_reason_string = "Unidentified";
     assert(1 == 0);
