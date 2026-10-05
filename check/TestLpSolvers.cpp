@@ -614,7 +614,7 @@ TEST_CASE("issue-3194", "[highs_lp_solver]") {
   std::string basis_file =
       std::string(HIGHS_DIR) + "/check/instances/issue-3194.bas";
   Highs h;
-  h.setOptionValue("output_flag", dev_run);
+  //  h.setOptionValue("output_flag", dev_run);
   REQUIRE(h.readModel(model_file) != HighsStatus::kError);
   REQUIRE(h.readBasis(basis_file) == HighsStatus::kOk);
   REQUIRE(h.run() == HighsStatus::kOk);
