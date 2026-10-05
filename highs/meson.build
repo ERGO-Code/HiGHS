@@ -304,6 +304,7 @@ _srcs = [
     'presolve/HPresolveFourierMotzkin.cpp',
     'presolve/HPresolveInitialSweep.cpp',
     'presolve/HPresolveParallel.cpp',
+    'presolve/HPresolveProbing.cpp',
     'presolve/HPresolveUtils.cpp',
     'presolve/HPresolveTest.cpp',
     'presolve/HighsPostsolveStack.cpp',
