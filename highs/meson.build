@@ -301,6 +301,7 @@ _srcs = [
     'presolve/HPresolve.cpp',
     'presolve/HPresolveAnalysis.cpp',
     'presolve/HPresolveCliqueTable.cpp',
+    'presolve/HPresolveDominatedCols.cpp',
     'presolve/HPresolveEnumeration.cpp',
     'presolve/HPresolveFourierMotzkin.cpp',
     'presolve/HPresolveInitialSweep.cpp',
