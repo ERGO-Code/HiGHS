@@ -417,6 +417,7 @@ set(highs_sources
     presolve/HPresolve.cpp
     presolve/HPresolveAnalysis.cpp
     presolve/HPresolveCliqueTable.cpp
+    presolve/HPresolveEnumeration.cpp
     presolve/HPresolveFourierMotzkin.cpp
     presolve/HPresolveInitialSweep.cpp
     presolve/HPresolveParallel.cpp
