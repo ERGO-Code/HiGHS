@@ -602,3 +602,35 @@ TEST_CASE("issue-2300", "[highs_lp_solver]") {
 
   h.resetGlobalScheduler(true);
 }
+
+TEST_CASE("issue-3194", "[highs_lp_solver]") {
+  // From this alien basis, dual simplex reaches an optimal basis at a
+  // rebuild that does not refactorize. The values computed with the
+  // updated factor are inaccurate, but the test in
+  // HEkk::factorSolveError() does not detect this, so the solution
+  // returned did not satisfy Ax = row_value
+  std::string model_file =
+      std::string(HIGHS_DIR) + "/check/instances/issue-3194.mps";
+  std::string basis_file =
+      std::string(HIGHS_DIR) + "/check/instances/issue-3194.bas";
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  REQUIRE(h.readModel(model_file) != HighsStatus::kError);
+  REQUIRE(h.readBasis(basis_file) == HighsStatus::kOk);
+  REQUIRE(h.run() == HighsStatus::kOk);
+  REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
+  const double optimal_objective = 818203670.005;
+  REQUIRE(std::fabs(h.getInfo().objective_function_value - optimal_objective) <
+          1e-9 * optimal_objective);
+  const HighsLp& lp = h.getLp();
+  const HighsSolution& solution = h.getSolution();
+  std::vector<double> row_activity;
+  lp.a_matrix_.product(row_activity, solution.col_value);
+  double max_residual = 0;
+  for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++)
+    max_residual = std::max(
+        std::fabs(row_activity[iRow] - solution.row_value[iRow]), max_residual);
+  REQUIRE(max_residual < 1e-8);
+
+  h.resetGlobalScheduler(true);
+}

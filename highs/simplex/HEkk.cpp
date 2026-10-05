@@ -3917,6 +3917,67 @@ double HEkk::factorSolveError() {
   return solution_error;
 }
 
+bool HEkk::rebuildSolutionInaccurate() {
+  // Assess the primal and dual values computed by rebuild using the
+  // equations that they should satisfy: zero reduced costs for basic
+  // variables, and [A I]x = 0. Each residual is measured relative to
+  // the sum of the magnitudes of the terms in its equation, so that
+  // rounding error in large terms is not taken as inaccuracy. Unlike
+  // factorSolveError(), this reaches every part of the factor that
+  // the values depend on, for the cost of one pass through the matrix.
+  const HighsInt num_col = lp_.num_col_;
+  const HighsInt num_row = lp_.num_row_;
+  const vector<HighsInt>& basic_index = basis_.basicIndex_;
+  const HighsSparseMatrix& a_matrix = lp_.a_matrix_;
+  // computeDual() sets the reduced cost of logical i to its cost
+  // (plus shift) minus y_i, so recover y from these reduced costs
+  vector<double> row_dual(num_row);
+  for (HighsInt iRow = 0; iRow < num_row; iRow++) {
+    const HighsInt iVar = num_col + iRow;
+    row_dual[iRow] =
+        info_.workCost_[iVar] + info_.workShift_[iVar] - info_.workDual_[iVar];
+  }
+  for (HighsInt iRow = 0; iRow < num_row; iRow++) {
+    const HighsInt iVar = basic_index[iRow];
+    const double dual = std::fabs(info_.workDual_[iVar]);
+    if (dual <= options_->dual_feasibility_tolerance) continue;
+    double size = std::fabs(info_.workCost_[iVar] + info_.workShift_[iVar]);
+    if (iVar < num_col) {
+      for (HighsInt iEl = a_matrix.start_[iVar];
+           iEl < a_matrix.start_[iVar + 1]; iEl++)
+        size +=
+            std::fabs(a_matrix.value_[iEl] * row_dual[a_matrix.index_[iEl]]);
+    } else {
+      size += std::fabs(row_dual[iVar - num_col]);
+    }
+    if (dual > options_->dual_feasibility_tolerance * std::max(1.0, size))
+      return true;
+  }
+  vector<double> value(info_.workValue_.begin(),
+                       info_.workValue_.begin() + num_col + num_row);
+  for (HighsInt iRow = 0; iRow < num_row; iRow++)
+    value[basic_index[iRow]] = info_.baseValue_[iRow];
+  vector<double> residual(value.begin() + num_col, value.end());
+  vector<double> size(num_row);
+  for (HighsInt iRow = 0; iRow < num_row; iRow++)
+    size[iRow] = std::fabs(residual[iRow]);
+  for (HighsInt iCol = 0; iCol < num_col; iCol++) {
+    if (value[iCol] == 0) continue;
+    for (HighsInt iEl = a_matrix.start_[iCol]; iEl < a_matrix.start_[iCol + 1];
+         iEl++) {
+      const double term = a_matrix.value_[iEl] * value[iCol];
+      residual[a_matrix.index_[iEl]] += term;
+      size[a_matrix.index_[iEl]] += std::fabs(term);
+    }
+  }
+  for (HighsInt iRow = 0; iRow < num_row; iRow++) {
+    if (std::fabs(residual[iRow]) >
+        options_->primal_feasibility_tolerance * std::max(1.0, size[iRow]))
+      return true;
+  }
+  return false;
+}
+
 void HEkk::clearBadBasisChange(const BadBasisChangeReason reason) {
   if (reason == BadBasisChangeReason::kAll) {
     bad_basis_change_.clear();

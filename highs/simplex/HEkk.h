@@ -111,6 +111,7 @@ class HEkk {
   void deleteRows(const HighsIndexCollection& index_collection);
   void unscaleSimplex(const HighsLp& incumbent_lp);
   double factorSolveError();
+  bool rebuildSolutionInaccurate();
 
   bool proofOfPrimalInfeasibility();
   bool proofOfPrimalInfeasibility(HVector& row_ep, const HighsInt move_out,

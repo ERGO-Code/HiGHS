@@ -1088,6 +1088,30 @@ void HEkkDual::rebuild() {
   // Recompute primal solution
   ekk_instance_.computePrimal();
 
+  if (!refactor_basis_matrix && info.update_count > 0 &&
+      ekk_instance_.rebuildSolutionInaccurate()) {
+    // The values computed with the updated factor are inaccurate,
+    // which the test in rebuildRefactor() can miss, so refactorize
+    // and compute them again
+    if (!ekk_instance_.getNonsingularInverse(solve_phase)) {
+      solve_phase = kSolvePhaseError;
+      return;
+    }
+    if (!ekk_instance_.status_.has_ar_matrix) {
+      assert(info.backtracking_);
+      ekk_instance_.initialisePartitionedRowwiseMatrix();
+    }
+    ekk_instance_.computeDual();
+    if (info.backtracking_) {
+      solve_phase = kSolvePhaseUnknown;
+      return;
+    }
+    analysis->simplexTimerStart(CorrectDualClock);
+    correctDualInfeasibilities(dualInfeasCount);
+    analysis->simplexTimerStop(CorrectDualClock);
+    ekk_instance_.computePrimal();
+  }
+
   // Collect primal infeasible as a list
   analysis->simplexTimerStart(CollectPrIfsClock);
   dualRHS.createArrayOfPrimalInfeasibilities();
