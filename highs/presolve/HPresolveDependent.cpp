@@ -5,19 +5,7 @@
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#include <algorithm>
-#include <cassert>
-#include <cmath>
-#include <numeric>
-#include <sstream>
-#include <string>
-#include <vector>
-
-#include "io/HighsIO.h"
 #include "presolve/HPresolve.h"
-#include "presolve/HighsPostsolveStack.h"
-#include "util/HFactor.h"
-#include "util/HighsSparseMatrix.h"
 
 namespace presolve {
 

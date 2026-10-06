@@ -5,15 +5,8 @@
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#include <cassert>
-#include <cmath>
-#include <map>
-#include <vector>
-
 #include "presolve/HPresolve.h"
 #include "presolve/HPresolveUtils.h"
-#include "presolve/HighsPostsolveStack.h"
-#include "util/HighsCDouble.h"
 
 namespace presolve {
 

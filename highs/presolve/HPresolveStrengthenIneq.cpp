@@ -5,17 +5,9 @@
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#include <algorithm>
-#include <cassert>
-#include <cstdint>
-#include <utility>
-#include <vector>
-
 #include "../extern/pdqsort/pdqsort.h"
 #include "presolve/HPresolve.h"
 #include "presolve/HPresolveUtils.h"
-#include "presolve/HighsPostsolveStack.h"
-#include "util/HighsCDouble.h"
 
 namespace presolve {
 

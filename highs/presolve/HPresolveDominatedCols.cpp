@@ -5,19 +5,9 @@
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#include <algorithm>
-#include <cassert>
-#include <cmath>
-#include <cstdint>
-#include <utility>
-#include <vector>
-
-#include "io/HighsIO.h"
-#include "mip/HighsCliqueTable.h"
 #include "mip/HighsMipSolverData.h"
 #include "presolve/HPresolve.h"
 #include "presolve/HPresolveUtils.h"
-#include "util/HighsHash.h"
 
 namespace presolve {
 

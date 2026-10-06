@@ -5,24 +5,11 @@
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#include <cassert>
-#include <cmath>
-#include <cstdint>
-#include <numeric>
-#include <utility>
-#include <vector>
-
 #include "../extern/pdqsort/pdqsort.h"
-#include "mip/HighsCliqueTable.h"
-#include "mip/HighsDomain.h"
-#include "mip/HighsImplications.h"
 #include "mip/HighsMipSolverData.h"
 #include "presolve/HPresolve.h"
 #include "presolve/HPresolveUtils.h"
-#include "presolve/HighsPostsolveStack.h"
-#include "util/HighsCDouble.h"
 #include "util/HighsIntegers.h"
-#include "util/HighsMatrixSlice.h"
 
 namespace presolve {
 
