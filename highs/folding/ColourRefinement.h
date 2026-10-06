@@ -195,6 +195,7 @@ class ColourRefinement {
       return to_refine.empty() ? kHighsIInf
                                : node_by_colour.length(to_refine.peek());
     }
+    HighsInt coloursUsed() const { return latest_colour + 1; }
   };
 
   const HighsSparseMatrix& A_;
@@ -235,8 +236,8 @@ class ColourRefinement {
                    std::vector<HighsInt>& col_colour);
   void run();
 
-  HighsInt rowColoursUsed() const { return rows_.latest_colour + 1; }
-  HighsInt colColoursUsed() const { return cols_.latest_colour + 1; }
+  HighsInt rowColoursUsed() const { return rows_.coloursUsed(); }
+  HighsInt colColoursUsed() const { return cols_.coloursUsed(); }
 };
 
 }  // namespace folding

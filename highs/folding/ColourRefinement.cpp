@@ -211,6 +211,12 @@ void ColourRefinement::run() {
       refine(rows_, cols_, At_);
     else
       refine(cols_, rows_, A_);
+
+    if (rows_.coloursUsed() > rows_.n * kFractionStop &&
+        cols_.coloursUsed() > cols_.n * kFractionStop) {
+      printf("Failed\n");
+      break;
+    }
   }
 
   printTimes();
