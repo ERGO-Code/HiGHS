@@ -1241,45 +1241,27 @@ TEST_CASE("issue-3364", "[highs_test_presolve_rules]") {
   //   i:  x0 + 2 x1 + 3 x3                  = 6
   //   D:  x0                     + x4      <= 7
   //   E:       x1                     + x5 <= 7
-  const bool generate_model = true;
   HighsLp lp;
-  if (generate_model) {
-    lp.num_col_ = 7;
-    lp.num_row_ = 5;
-    lp.sense_ = ObjSense::kMinimize;
-    lp.col_cost_ = {-1, -1, -1, 1, 1, -1, -1};
-    lp.col_lower_.assign(lp.num_col_, 0);
-    lp.col_upper_.assign(lp.num_col_, 10);
-    lp.integrality_ = {HighsVarType::kContinuous, HighsVarType::kContinuous,
-		       HighsVarType::kContinuous, HighsVarType::kInteger,
-		       HighsVarType::kInteger,    HighsVarType::kContinuous,
-		       HighsVarType::kContinuous};
-    lp.row_lower_ = {-kHighsInf, -kHighsInf, 6, -kHighsInf, -kHighsInf};
-    lp.row_upper_ = {13, 8, 6, 7, 7};
-    lp.a_matrix_.num_col_ = lp.num_col_;
-    lp.a_matrix_.num_row_ = lp.num_row_;
-
-    //    lp.a_matrix_.format_ = MatrixFormat::kRowwise;
-    //    lp.a_matrix_.start_ = {0, 3, 8, 11, 13, 15};
-    //    lp.a_matrix_.index_ = {0, 1, 2, 0, 1, 2, 3, 4, 0, 1, 2, 0, 5, 1, 6};
-    //    lp.a_matrix_.value_ = {1, 2, 3, 1, 2, 3, 2, 3, 1, 2, 3, 1, 1, 1, 1};
-    //    lp.a_matrix_.ensureColwise();
-
-    lp.a_matrix_.start_ = { 0,  4,  8, 11, 12, 13, 14, 15};
-    lp.a_matrix_.index_ = { 0,  1,  2,  3,  0,  1,  2,  4,  0,  1,  2,  0,  0,  3,  4};
-    lp.a_matrix_.value_ = { 1,  1,  1,  1,  2,  2,  2,  1,  3,  3,  3,  2,  3,  1,  1};
-    lp.col_names_ = {"x0", "x1", "x3", "s1", "s2", "x4", "x5"};
-    lp.row_names_ = {"B", "A", "i", "D", "E"};
+  lp.num_col_ = 7;
+  lp.num_row_ = 5;
+  lp.sense_ = ObjSense::kMinimize;
+  lp.col_cost_ = {-1, -1, -1, 1, 1, -1, -1};
+  lp.col_lower_.assign(lp.num_col_, 0);
+  lp.col_upper_.assign(lp.num_col_, 10);
+  lp.integrality_ = {HighsVarType::kContinuous, HighsVarType::kContinuous,
+		     HighsVarType::kContinuous, HighsVarType::kInteger,
+		     HighsVarType::kInteger,    HighsVarType::kContinuous,
+		     HighsVarType::kContinuous};
+  lp.row_lower_ = {-kHighsInf, -kHighsInf, 6, -kHighsInf, -kHighsInf};
+  lp.row_upper_ = {13, 8, 6, 7, 7};
+  lp.a_matrix_.num_col_ = lp.num_col_;
+  lp.a_matrix_.num_row_ = lp.num_row_;
+  lp.a_matrix_.start_ = { 0,  4,  8, 11, 12, 13, 14, 15};
+  lp.a_matrix_.index_ = { 0,  1,  2,  3,  0,  1,  2,  4,  0,  1,  2,  0,  0,  3,  4};
+  lp.a_matrix_.value_ = { 1,  1,  1,  1,  2,  2,  2,  1,  3,  3,  3,  2,  3,  1,  1};
+  lp.col_names_ = {"x0", "x1", "x3", "s1", "s2", "x4", "x5"};
+  lp.row_names_ = {"B", "A", "i", "D", "E"};
   
-    Highs h;
-    h.passModel(lp);
-    h.writeModel("3364.lp");
-  } else {
-    Highs h;
-    h.readModel("3364.lp");
-    h.writeModel("");
-    lp = h.getLp();
-  }
   HighsOptions options;
   options.presolve_rule_test = kPresolveRuleParallelRowsAndCols;
   // Rows with singletons are only considered when LP presolve need not
