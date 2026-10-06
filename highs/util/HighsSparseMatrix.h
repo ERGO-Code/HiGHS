@@ -130,6 +130,8 @@ class HighsSparseMatrix {
   void collectAj(HVector& column, const HighsInt use_col,
                  const double multiplier) const;
 
+  void buildOppositeFormat(HighsSparseMatrix& other) const;
+
  private:
   void priceByRowDenseResult(
       std::vector<double>& result, const HVector& column,

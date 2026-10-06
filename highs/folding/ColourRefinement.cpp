@@ -30,8 +30,7 @@ ColourRefinement::ColourRefinement(const HighsSparseMatrix& A,
   assert(A.isColwise());
   assert(rows_.n == A.num_row_ && cols_.n == A.num_col_);
 
-  At_ = A_;
-  At_.ensureRowwise();
+  A_.buildOppositeFormat(At_);
 }
 
 void ColourRefinement::computeColourSums(HighsInt refining_colour, Side& src,
