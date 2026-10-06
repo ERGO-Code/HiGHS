@@ -9663,8 +9663,8 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
       bool parallel = true;
       // If equalityRowAddition has been called within the loop for
       // this value of i, then it calls rowPresolve, which may call
-      // storeRow(j) for j<>i, changing this->rowpositions, so have to
-      // check and correct this
+      // storeRow(j) for j<>i, changing this->rowpositions, so
+      // (re-)set storeRow here
       storeRow(i);
       // getStoredRow() returns the indices and nonzeros corresponding
       // to rowpositions
