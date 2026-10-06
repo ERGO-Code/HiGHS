@@ -424,11 +424,13 @@ set(highs_sources
     presolve/HPresolveDualFixing.cpp
     presolve/HPresolveEnumeration.cpp
     presolve/HPresolveFourierMotzkin.cpp
+    presolve/HPresolveImpliedInts.cpp
     presolve/HPresolveInitialSweep.cpp
     presolve/HPresolveParallel.cpp
     presolve/HPresolveProbing.cpp
     presolve/HPresolveProbingUtil.cpp
     presolve/HPresolveSparsify.cpp
+    presolve/HPresolveStrengthenIneq.cpp
     presolve/HPresolveUtils.cpp
     presolve/HPresolveVarBndAggregation.cpp
     presolve/HPresolveZeroCostSingleton.cpp
