@@ -1222,8 +1222,7 @@ TEST_CASE("test-clique-implied-equality", "[highs_test_presolve_rules]") {
   highs.resetGlobalScheduler(true);
 }
 
-TEST_CASE("test-parallel-rows-stale-row-positions",
-          "[highs_test_presolve_rules]") {
+TEST_CASE("issue-3364", "[highs_test_presolve_rules]") {
   // Row i (2) is an equation with two parallel candidates in its bucket:
   // A (1), which carries two integer singletons, and B (0), which is exactly
   // parallel. A and B are never compared with each other: neither is an
@@ -1269,7 +1268,7 @@ TEST_CASE("test-parallel-rows-stale-row-positions",
   // maintain a basis for postsolve
   options.solver = kIpmString;
   options.run_crossover = kHighsOffString;
-  options.output_flag = dev_run;
+  //  options.output_flag = dev_run;
 
   HighsTimer timer;
   timer.start();
