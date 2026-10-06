@@ -102,12 +102,10 @@ TEST_CASE("EkkPrimal-all", "[highs_test_ekk]") {
 TEST_CASE("Ekk-excessive-primal-value", "[highs_test_ekk]") {
   std::string log;
   Highs highs;
-  REQUIRE(highs.setOptionValue("log_to_console", false) == HighsStatus::kOk);
+  REQUIRE(highs.setOptionValue("log_to_console", dev_run) == HighsStatus::kOk);
   REQUIRE(highs.setOptionValue("log_dev_level", kHighsLogDevLevelInfo) ==
           HighsStatus::kOk);
   REQUIRE(highs.setOptionValue("presolve", "off") == HighsStatus::kOk);
-  REQUIRE(highs.setOptionValue("solver", "simplex") == HighsStatus::kOk);
-  REQUIRE(highs.setOptionValue("threads", 1) == HighsStatus::kOk);
   REQUIRE(highs.setCallback(
               [&log](int callback_type, const std::string& message,
                      const HighsCallbackOutput*, HighsCallbackInput*, void*) {

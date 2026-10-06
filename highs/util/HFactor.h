@@ -468,7 +468,7 @@ class HFactor {
   void buildReportRankDeficiency();
   void buildMarkSingC();
   void buildFinish();
-  void zeroCol(const HighsInt iCol);
+  void zeroCol(const HighsInt iCol, const double pivot_multiplier);
   void luClear();
   // Rebuild using refactor information
   HighsInt rebuild(HighsTimerClock* factor_timer_clock_pointer);
@@ -524,7 +524,29 @@ class HFactor {
     for (HighsInt k = mc_start[iCol]; k < mc_start[iCol] + mc_count_a[iCol];
          k++)
       max_value = max(max_value, fabs(mc_value[k]));
-    mc_min_pivot[iCol] = max_value * pivot_threshold;
+    // Record the minimum value for an acceptable pivot in this
+    // column. Note that it can't just be max_value * pivot_threshold,
+    // since this may be less than pivot_tolerance
+    // (kDefaultPivotTolerance = 1e-10), possibly allowing a pivot
+    // less than pivot_tolerance to be chosen rather than larger
+    // values that satisfy the tolerance.
+    //
+    // Exposed by #3352 when the two entries in the pivotal column
+    // were -8.1e-11 and -1.6e-10. With mc_min_pivot[iCol] = 1.6e-11,
+    // -8.1e-11 was chosen as a pivot. However, it satisfies 8.1e-11 =
+    // abs_pivot_value < pivot_tolerance so the singular pivot is
+    // deferred.
+    //
+    // When singularity is detected, zeroCol is used to zero the
+    // pivotal column, on the assumption that all entries are less
+    // than the pivot (otherwise a larger pivot should have been
+    // chosen). This triggers the original assert(abs_value <
+    // pivot_tolerance), when abs_value = 1.6e-10. This is actually
+    // conservative, since singularity should only be triggered if
+    // there is no entry in the pivotal column >= pivot_tolerance, so
+    // every pivotal column entry should be less than or equal to
+    // abs_pivot_value.
+    mc_min_pivot[iCol] = max(max_value * pivot_threshold, pivot_tolerance);
   }
 
   double colDelete(const HighsInt iCol, const HighsInt iRow) {

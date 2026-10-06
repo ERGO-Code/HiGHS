@@ -2333,3 +2333,28 @@ TEST_CASE("implied-integer-bound-rounding", "[highs_test_mip_solver]") {
     solve(highs, presolve, HighsModelStatus::kOptimal, optimal_objective);
   }
 }
+
+TEST_CASE("implied-row-dual-bound-invalidation", "[highs_test_mip_solver]") {
+  HighsLp lp;
+  lp.num_col_ = 6;
+  lp.num_row_ = 2;
+  lp.col_cost_ = {0, 0, 0, 0, 4, -2};
+  lp.col_lower_ = {-kHighsInf, -5, 0, -5, 0, 0};
+  lp.col_upper_ = {-10, kHighsInf, kHighsInf, 5, 7, 2};
+  lp.row_lower_ = {-13, 11};
+  lp.row_upper_ = {kHighsInf, 11};
+  lp.integrality_ = {HighsVarType::kInteger, HighsVarType::kInteger,
+                     HighsVarType::kInteger, HighsVarType::kContinuous,
+                     HighsVarType::kInteger, HighsVarType::kInteger};
+  lp.a_matrix_.format_ = MatrixFormat::kColwise;
+  lp.a_matrix_.start_ = {0, 2, 4, 5, 6, 8, 10};
+  lp.a_matrix_.index_ = {0, 1, 0, 1, 1, 1, 0, 1, 0, 1};
+  lp.a_matrix_.value_ = {-3, 1, -1, -1, -2, -1, -8, 1, -1, 10};
+
+  for (const std::string& presolve : {kHighsOnString, kHighsOffString}) {
+    Highs highs;
+    highs.setOptionValue("output_flag", dev_run);
+    REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
+    solve(highs, presolve, HighsModelStatus::kOptimal, -4.0);
+  }
+}
