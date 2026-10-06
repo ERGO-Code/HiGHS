@@ -3142,6 +3142,38 @@ HighsTripletPositionSlice HPresolve::getStoredRow() const {
                                    rowpositions.data(), rowpositions.size());
 }
 
+  void HPresolve::checkAndCorrectRowPositions(const std::string& message,
+					      const HighsInt row,
+					      const bool assert_on_error) {
+  // Check that rowpositions corresponds to row
+  std::vector<HighsInt>check_rowpositions;
+  getRowPositions(row, check_rowpositions);
+  bool error = check_rowpositions.size() != rowpositions.size();
+  if (!error) {
+    for (size_t iX = 0; iX < rowpositions.size(); iX++) {
+      if (check_rowpositions[iX] != rowpositions[iX]) {
+	error = true;
+	break;
+      }
+    }
+  }
+  if (error) {
+    // Otherwise...
+    printf("HPresolve::checkAndCorrectRowPositions:%s rowpositions contains ", message.c_str());
+    if (rowpositions.size() > 10) printf("    \n");
+    for (size_t iX = 0; iX < rowpositions.size(); iX++) 
+      printf("%d ", int(rowpositions[iX]));
+    if (rowpositions.size() > 10) printf("\n");
+    printf("not ");
+    for (size_t iX = 0; iX < check_rowpositions.size(); iX++) 
+      printf("%d ", int(check_rowpositions[iX]));
+    printf("\n");
+    if (assert_on_error) assert(!error);
+    // correct rowpositions
+    rowpositions = check_rowpositions;
+  }
+}
+
 bool HPresolve::okFromCSC(const std::vector<double>& Aval,
                           const std::vector<HighsInt>& Aindex,
                           const std::vector<HighsInt>& Astart) {
@@ -9702,8 +9734,12 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
         assert(!may_require_basis_postsolve_);
         HPRESOLVE_CHECKED_CALL(equalityRowAddition(
             postsolve_stack, i, parallelRowCand, -rowScale, getStoredRow()));
+	// equalityRowAddition calls rowPresolve, which may call
+        // storeRow(j) for j<>i, changing this->rowpositions, so have
+        // to revert this
+	const bool assert_on_error = false;
+	checkAndCorrectRowPositions("isEquation(i)", i, assert_on_error);
         delRow = parallelRowCand;
-        // break; // study-3364
       } else if (isEquation(parallelRowCand)) {
         // printf(
         //    "nearly parallel case with %" HIGHSINT_FORMAT " singletons in eq
@@ -9715,8 +9751,11 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
             postsolve_stack, parallelRowCand, i,
             -rowMax[i].first / rowMax[parallelRowCand].first,
             getRowVector(parallelRowCand)));
+	// equalityRowAddition calls rowPresolve, which may call
+        // storeRow(j) for j<>i, changing this->rowpositions, so have
+        // to revert this
+	checkAndCorrectRowPositions("isEquation(parallelRowCand)", i);
         delRow = i;
-        // break; // study-3364
       } else {
         assert(numSingleton == 1);
         assert(numSingletonCandidate == 1);
