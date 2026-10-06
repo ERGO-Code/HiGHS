@@ -401,6 +401,75 @@ TEST_CASE("test-parallel-rows-cut-ordering", "[highs_test_presolve_rules]") {
   REQUIRE(!postsolve_stack.isCutRow(0));
 }
 
+TEST_CASE("test-parallel-rows-stale-row-positions",
+          "[highs_test_presolve_rules]") {
+  // Row i (2) is an equation with two parallel candidates in its bucket:
+  // A (1), which carries two integer singletons, and B (0), which is exactly
+  // parallel. A and B are never compared with each other: neither is an
+  // equation, so the singleton rules skip the pair. Visiting A adds row i into
+  // A, which leaves the integer inequality 2 s1 + 3 s2 <= 7, and rowPresolve
+  // on it calls storeRow(A). If the scan then went on to B, row i would be
+  // deleted with A's positions, leaving i's own nonzeros linked to a deleted
+  // row, which shrinkProblem would renumber to row -1.
+  // Rows D (3) and E (4) keep x0, x1 and x3 from being parallel columns; s1
+  // and s2 are integers whose coefficients have a fractional ratio, so they
+  // are not merged as parallel columns either.
+  //
+  //   cols: x0 x1 x3 s1 s2 x4 x5
+  //   B:  x0 + 2 x1 + 3 x3                 <= 8
+  //   A:  x0 + 2 x1 + 3 x3 + 2 s1 + 3 s2  <= 13
+  //   i:  x0 + 2 x1 + 3 x3                  = 6
+  //   D:  x0                     + x4      <= 7
+  //   E:       x1                     + x5 <= 7
+  HighsLp lp;
+  lp.num_col_ = 7;
+  lp.num_row_ = 5;
+  lp.sense_ = ObjSense::kMinimize;
+  lp.col_cost_ = {-1, -1, -1, 1, 1, -1, -1};
+  lp.col_lower_.assign(lp.num_col_, 0);
+  lp.col_upper_.assign(lp.num_col_, 10);
+  lp.integrality_ = {HighsVarType::kContinuous, HighsVarType::kContinuous,
+                     HighsVarType::kContinuous, HighsVarType::kInteger,
+                     HighsVarType::kInteger,    HighsVarType::kContinuous,
+                     HighsVarType::kContinuous};
+  lp.row_lower_ = {-kHighsInf, -kHighsInf, 6, -kHighsInf, -kHighsInf};
+  lp.row_upper_ = {8, 13, 6, 7, 7};
+  lp.a_matrix_.num_col_ = lp.num_col_;
+  lp.a_matrix_.num_row_ = lp.num_row_;
+  lp.a_matrix_.format_ = MatrixFormat::kRowwise;
+  lp.a_matrix_.start_ = {0, 3, 8, 11, 13, 15};
+  lp.a_matrix_.index_ = {0, 1, 2, 0, 1, 2, 3, 4, 0, 1, 2, 0, 5, 1, 6};
+  lp.a_matrix_.value_ = {1, 2, 3, 1, 2, 3, 2, 3, 1, 2, 3, 1, 1, 1, 1};
+  lp.a_matrix_.ensureColwise();
+
+  HighsOptions options;
+  options.presolve_rule_test = kPresolveRuleParallelRowsAndCols;
+  // Rows with singletons are only considered when LP presolve need not
+  // maintain a basis for postsolve
+  options.solver = kIpmString;
+  options.run_crossover = kHighsOffString;
+  options.output_flag = dev_run;
+
+  HighsTimer timer;
+  timer.start();
+
+  presolve::HighsPostsolveStack postsolve_stack;
+  postsolve_stack.initializeIndexMaps(lp.num_row_, lp.num_col_);
+
+  presolve::HPresolve presolve;
+  presolve.setInput(lp, options, -1, &timer);
+  REQUIRE(presolve.okSetupPresolveDataStructures());
+  HighsModelStatus status = presolve.run(postsolve_stack);
+  timer.stop();
+  REQUIRE(status == HighsModelStatus::kNotset);
+  // Every nonzero of the presolved model must belong to a row of it
+  REQUIRE(lp.a_matrix_.isColwise());
+  for (const HighsInt row : lp.a_matrix_.index_) {
+    REQUIRE(row >= 0);
+    REQUIRE(row < lp.num_row_);
+  }
+}
+
 TEST_CASE("test-effective-costs", "[highs_test_presolve]") {
   // Debugging ZeroObjSingletonContinuousCol for germanrr highlighted
   // the deficiency in computing the active_cost_norm when the
