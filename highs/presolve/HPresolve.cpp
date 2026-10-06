@@ -3177,6 +3177,24 @@ void HPresolve::checkAndCorrectRowPositions(const HighsInt row,
   }
 }
 
+void HPresolve::checkAndCorrectEquations(const HighsInt row,
+                                         HighsInt& row_count,
+                                         HighsInt& prev_row_count) {
+  row_count = -1;
+  prev_row_count = -1;
+  if (!isEquation(row)) return;
+  if (eqiters[row] != equations.end()) {
+    row_count = rowsize[row];
+    prev_row_count = eqiters[row]->first;
+    if (row_count != prev_row_count) reinsertEquation(row);
+  } else {
+    printf(
+        "HPresolve::checkAndCorrectEquations row %d has eqiters[row] == "
+        "equations.end()\n",
+        int(row));
+  }
+}
+
 bool HPresolve::okFromCSC(const std::vector<double>& Aval,
                           const std::vector<HighsInt>& Aindex,
                           const std::vector<HighsInt>& Astart) {
@@ -9845,11 +9863,33 @@ HPresolve::Result HPresolve::equalityRowAddition(
                 static_cast<HighsCDouble>(scale) * model->row_upper_[stayrow]);
   addToRowUpper(removerow,
                 static_cast<HighsCDouble>(scale) * model->row_upper_[stayrow]);
-
+  // equalityRowAddition changes the size of removerow (unlink for
+  // common nonzeros, addToMatrix for the rest), so removerow must be
+  // re-keyed in the size-ordered equations set, otherwise the next
+  // removeDoubletonEquations (in rowPresolve, for example) finds a
+  // stale size
+  //
+  HighsInt row_count = -1;
+  HighsInt prev_row_count = -1;
+  checkAndCorrectEquations(removerow, row_count, prev_row_count);
+  //  reinsertEquation(removerow);
+  //
   // row is now a singleton row, doubleton equation, or a row
   // that contains only singletons and we let the normal row presolve
   // handle the cases
   HPRESOLVE_CHECKED_CALL(rowPresolve(postsolve_stack, removerow));
+  if (row_count != prev_row_count
+      //      && !rowDeleted[removerow]
+  ) {
+    // Reinsertion was performed and was necessary
+    printf(
+        "HPresolve::equalityRowAddition removerow = %8d with prev_row_count = "
+        "%2d and row_count = %2d, and now rowcount[removerow] = %2d%s%s\n",
+        int(removerow), int(prev_row_count), int(row_count),
+        int(rowsize[removerow]),
+        int(row_count) != rowsize[removerow] ? " !!" : "  ",
+        rowDeleted[removerow] ? ":    Deleted" : ": Not deleted");
+  }
   return Result::kOk;
 }
 

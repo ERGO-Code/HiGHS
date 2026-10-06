@@ -1268,7 +1268,7 @@ TEST_CASE("issue-3364", "[highs_test_presolve_rules]") {
   // maintain a basis for postsolve
   options.solver = kIpmString;
   options.run_crossover = kHighsOffString;
-  //  options.output_flag = dev_run;
+  options.output_flag = dev_run;
 
   HighsTimer timer;
   timer.start();
@@ -1280,7 +1280,7 @@ TEST_CASE("issue-3364", "[highs_test_presolve_rules]") {
   presolve.setInput(lp, options, -1, &timer);
   REQUIRE(presolve.okSetupPresolveDataStructures());
   HighsModelStatus status = presolve.run(postsolve_stack);
-  timer.stop();
+  //  timer.stop();
   REQUIRE(status == HighsModelStatus::kNotset);
   // Every nonzero of the presolved model must belong to a row of it
   REQUIRE(lp.a_matrix_.isColwise());

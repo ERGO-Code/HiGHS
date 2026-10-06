@@ -322,6 +322,9 @@ class HPresolve {
                                    const std::string& message,
                                    const bool assert_on_error = true);
 
+  void checkAndCorrectEquations(const HighsInt row, HighsInt& row_count,
+                                HighsInt& prev_row_count);
+
   HighsTripletPositionSlice getStoredRow() const;
 
   HighsTripletListSlice getColumnVector(HighsInt col) const;
