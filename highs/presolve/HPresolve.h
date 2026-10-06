@@ -225,6 +225,8 @@ class HPresolve {
 
   void resetRowDualImpliedBoundsDerivedFromCol(HighsInt col);
 
+  void resetRowDualImpliedBoundsIfDualSideLost(HighsInt col, bool isLowerBound);
+
   void matrixNonZeroChanged(HighsInt row, HighsInt col, double oldCoef,
                             double newCoef, bool rowIsDeleted,
                             bool colIsDeleted);
@@ -281,6 +283,8 @@ class HPresolve {
   bool isUpperImplied(HighsInt col) const;
 
   bool isUpperStrictlyImplied(HighsInt col, double* tolerance = nullptr) const;
+
+  bool isStrictlyImpliedForDual(HighsInt col, bool isLowerBound) const;
 
   HighsInt countFillin(HighsInt row);
 

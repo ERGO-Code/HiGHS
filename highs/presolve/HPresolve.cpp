@@ -234,6 +234,18 @@ bool HPresolve::isUpperStrictlyImplied(HighsInt col, double* tolerance) const {
                   (tolerance != nullptr ? *tolerance : primal_feastol));
 }
 
+bool HPresolve::isStrictlyImpliedForDual(HighsInt col,
+                                         bool isLowerBound) const {
+  // checks whether the lower (upper) bound of a column is strictly implied by
+  // the rows; then the bound is never active, the reduced cost of the column
+  // cannot be positive (negative), and the dual constraint of the column has
+  // the side sum_i a_ij y_i >= (<=) c_j. for singleton columns, a bound that
+  // is implied within the primal feasibility tolerance suffices.
+  double impliedMargin = colsize[col] != 1 ? primal_feastol : -primal_feastol;
+  return isLowerBound ? isLowerStrictlyImplied(col, &impliedMargin)
+                      : isUpperStrictlyImplied(col, &impliedMargin);
+}
+
 bool HPresolve::isBinary(HighsInt col) const {
   return model->integrality_[col] == HighsVarType::kInteger &&
          model->col_lower_[col] == 0.0 && model->col_upper_[col] == 1.0;
@@ -324,9 +336,8 @@ void HPresolve::chooseRules() {
   // By default all presolve rules are allowed
   this->allow_rule_.assign(kPresolveRuleCount, true);
 
-  // All rules except kPresolveRuleDominatedCol can be switched off,
-  // although the most fundamental can only be switched off in initial
-  // sweep
+  // All rules can be switched off, although the most fundamental can
+  // only be switched off in initial sweep
   auto allowedOffInInitialSweep = [&](const HighsInt rule_type) {
     if (rule_type == kPresolveRuleEmptyRow) return true;
     if (rule_type == kPresolveRuleSingletonRow) return true;
@@ -350,17 +361,15 @@ void HPresolve::chooseRules() {
                  "Permitted suppression of presolve rules via "
                  "presolve_rule_off option:\n");
     for (HighsInt rule_type = kPresolveRuleMin; rule_type < kPresolveRuleCount;
-         rule_type++) {
-      // Only kPresolveRuleDominatedCol cannot be switched off
-      if (rule_type == kPresolveRuleDominatedCol) continue;
+         rule_type++)
       logRule(rule_type);
-    }
     highsLogUser(options->log_options, HighsLogType::kInfo,
                  " * Only in initial sweep\n");
   }
 
   if (options->presolve_light == kHighsOnString) {
     // Switch off the rules not used in presolve_light mode
+    allow_rule_[kPresolveRuleDominatedCol] = false;
     allow_rule_[kPresolveRuleDependentEquations] = false;
     allow_rule_[kPresolveRuleDependentFreeCols] = false;
     allow_rule_[kPresolveRuleAggregator] = false;
@@ -369,6 +378,7 @@ void HPresolve::chooseRules() {
     allow_rule_[kPresolveRuleProbing] = false;
     allow_rule_[kPresolveRuleEnumeration] = false;
     allow_rule_[kPresolveRuleDualFixing] = false;
+    allow_rule_[kPresolveRuleZeroCostSingleton] = false;
     allow_rule_[kPresolveRuleColStuffing] = false;
     allow_rule_[kPresolveRuleFourierMotzkin] = false;
   }
@@ -430,7 +440,18 @@ void HPresolve::chooseRules() {
       // test-dual-fixing-primal-dual-postsolve)
       allow_rule_[kPresolveRuleDualFixing] = false;
     }
+    if (may_require_basis_postsolve_ || may_require_primal_dual_postsolve_) {
+      // Cannot use dominated column rule for either basis or
+      // primal-dual postsolve (see issue-3342)
+      allow_rule_[kPresolveRuleDominatedCol] = false;
+    }
   }
+  // If dominated column rule is off, weakly dominated column rule
+  // isn't currently considered, because checks for weakly dominated
+  // columns are currently only in HPresolve::detectDominatedCol, but
+  // this makes it explicit
+  if (!allow_rule_[kPresolveRuleDominatedCol])
+    allow_rule_[kPresolveRuleWeaklyDominatedCol] = false;
 }
 
 void HPresolve::link(HighsInt pos) {
@@ -556,15 +577,11 @@ bool HPresolve::checkUpdateRowDualImpliedBounds(HighsInt col,
   // right hand side -cost which becomes a >= constraint with side +cost.
   // Furthermore, we can ignore strictly redundant primal
   // column bounds and treat them as if they are infinite
-  double impliedMargin = colsize[col] != 1 ? primal_feastol : -primal_feastol;
+  double myDualRowLower =
+      isStrictlyImpliedForDual(col, true) ? model->col_cost_[col] : -kHighsInf;
 
-  double myDualRowLower = isLowerStrictlyImplied(col, &impliedMargin)
-                              ? model->col_cost_[col]
-                              : -kHighsInf;
-
-  double myDualRowUpper = isUpperStrictlyImplied(col, &impliedMargin)
-                              ? model->col_cost_[col]
-                              : kHighsInf;
+  double myDualRowUpper =
+      isStrictlyImpliedForDual(col, false) ? model->col_cost_[col] : kHighsInf;
 
   if (dualRowLower != nullptr) *dualRowLower = myDualRowLower;
   if (dualRowUpper != nullptr) *dualRowUpper = myDualRowUpper;
@@ -787,6 +804,33 @@ void HPresolve::resetRowDualImpliedBoundsDerivedFromCol(HighsInt col) {
     // set implied bounds to infinite values if they were deduced from the
     // given column
     resetRowDualImpliedBounds(row, col);
+  }
+}
+
+void HPresolve::resetRowDualImpliedBoundsIfDualSideLost(HighsInt col,
+                                                        bool isLowerBound) {
+  // while the column's lower (upper) bound is strictly implied, the dual
+  // constraint of the column has the side sum_i a_ij y_i >= (<=) c_j, which
+  // yields lower (upper) bounds on y_i for positive coefficients and upper
+  // (lower) bounds for negative coefficients. the side >= (<=) is lost when
+  // the lower (upper) bound is no longer strictly implied, i.e. when it is
+  // tightened such that it may become active, or when the implied lower (upper)
+  // bound from the rows is relaxed. then the implied row dual bounds derived
+  // from the lost side are reset.
+  if (isStrictlyImpliedForDual(col, isLowerBound)) return;
+  if (implRowDualSourceByCol[col].empty()) return;
+  // walk the column rather than implRowDualSourceByCol[col], since the sign of
+  // the coefficient is needed and looking it up with findNonzero would splay
+  // the row, which invalidates a traversal of the row by a caller
+  for (const HighsSliceNonzero& nonzero : getColumnVector(col)) {
+    HighsInt row = nonzero.index();
+    if ((nonzero.value() > 0) == isLowerBound) {
+      if (rowDualLowerSource[row] == col)
+        changeImplRowDualLower(row, -kHighsInf, -1);
+    } else {
+      if (rowDualUpperSource[row] == col)
+        changeImplRowDualUpper(row, kHighsInf, -1);
+    }
   }
 }
 
@@ -1338,6 +1382,10 @@ HPresolve::Result HPresolve::changeColUpper(HighsInt col, double newUpper) {
   double oldUpper = model->col_upper_[col];
   model->col_upper_[col] = newUpper;
 
+  // a tighter upper bound may no longer be strictly implied; then the <= side
+  // of the dual constraint is lost
+  resetRowDualImpliedBoundsIfDualSideLost(col, false);
+
   HPRESOLVE_CHECKED_CALL(checkColBounds(col));
 
   for (const HighsSliceNonzero& nonzero : getColumnVector(col)) {
@@ -1361,6 +1409,10 @@ HPresolve::Result HPresolve::changeColLower(HighsInt col, double newLower) {
 
   double oldLower = model->col_lower_[col];
   model->col_lower_[col] = newLower;
+
+  // a tighter lower bound may no longer be strictly implied; then the >= side
+  // of the dual constraint is lost
+  resetRowDualImpliedBoundsIfDualSideLost(col, true);
 
   HPRESOLVE_CHECKED_CALL(checkColBounds(col));
 
@@ -1465,6 +1517,10 @@ void HPresolve::changeImplColUpper(HighsInt col, double newUpper,
   // update implied bound
   implColUpper[col] = newUpper;
 
+  // if the implied upper bound was relaxed, the upper bound may no longer be
+  // strictly implied; then the <= side of the dual constraint is lost
+  resetRowDualImpliedBoundsIfDualSideLost(col, false);
+
   // if the old and the new implied bound are not better than the upper bound,
   // nothing needs to be updated
   if (!newImpliedFree &&
@@ -1508,6 +1564,10 @@ void HPresolve::changeImplColLower(HighsInt col, double newLower,
 
   // update implied bound
   implColLower[col] = newLower;
+
+  // if the implied lower bound was relaxed, the lower bound may no longer be
+  // strictly implied; then the >= side of the dual constraint is lost
+  resetRowDualImpliedBoundsIfDualSideLost(col, true);
 
   // if the old and the new implied bound are not better than the lower bound,
   // nothing needs to be updated
@@ -2245,12 +2305,16 @@ HPresolve::Result HPresolve::singletonCol(HighsPostsolveStack& postsolve_stack,
     return Result::kOk;
   }
 
-  // detect strong / weak domination
-  if (timing) analysis_.presolveTimerStart(kPresolveClockSingletonColDominated);
-  // Pass handleSingletonRows = false
-  HPRESOLVE_CHECKED_CALL(detectDominatedCol(postsolve_stack, col, false));
-  if (timing) analysis_.presolveTimerStop(kPresolveClockSingletonColDominated);
-  if (colDeleted[col]) return Result::kOk;
+  if (this->allow_rule_[kPresolveRuleDominatedCol]) {
+    // detect strong / weak domination
+    if (timing)
+      analysis_.presolveTimerStart(kPresolveClockSingletonColDominated);
+    // Pass handleSingletonRows = false
+    HPRESOLVE_CHECKED_CALL(detectDominatedCol(postsolve_stack, col, false));
+    if (timing)
+      analysis_.presolveTimerStop(kPresolveClockSingletonColDominated);
+    if (colDeleted[col]) return Result::kOk;
+  }
 
   // check if variable is implied integer
   if (mipsolver != nullptr)
@@ -3377,11 +3441,13 @@ HPresolve::Result HPresolve::colPresolve(HighsPostsolveStack& postsolve_stack,
       break;
   }
 
-  // detect strong / weak domination
-  if (timing) analysis_.presolveTimerStart(kPresolveClockInitialColDominated);
-  HPRESOLVE_CHECKED_CALL(detectDominatedCol(postsolve_stack, col));
-  if (timing) analysis_.presolveTimerStop(kPresolveClockInitialColDominated);
-  if (colDeleted[col]) return Result::kOk;
+  if (this->allow_rule_[kPresolveRuleDominatedCol]) {
+    // detect strong / weak domination
+    if (timing) analysis_.presolveTimerStart(kPresolveClockInitialColDominated);
+    HPRESOLVE_CHECKED_CALL(detectDominatedCol(postsolve_stack, col));
+    if (timing) analysis_.presolveTimerStop(kPresolveClockInitialColDominated);
+    if (colDeleted[col]) return Result::kOk;
+  }
 
   // column is not (weakly) dominated
 
@@ -3486,6 +3552,7 @@ HPresolve::Result HPresolve::colPresolve(HighsPostsolveStack& postsolve_stack,
 HPresolve::Result HPresolve::detectDominatedCol(
     HighsPostsolveStack& postsolve_stack, HighsInt col,
     bool handleSingletonRows) {
+  assert(allow_rule_[kPresolveRuleDominatedCol]);
   assert(!colDeleted[col]);
   // handleSingletonRows is true by default, but set false when
   // calling detectDominatedCol in HPresolve::singletonCol
