@@ -9805,18 +9805,6 @@ HPresolve::Result HPresolve::equalityRowAddition(
   // that contains only singletons and we let the normal row presolve
   // handle the cases
   HPRESOLVE_CHECKED_CALL(rowPresolve(postsolve_stack, removerow));
-  if (row_count != prev_row_count
-      //      && !rowDeleted[removerow]
-  ) {
-    // Reinsertion was performed and was necessary
-    printf(
-        "HPresolve::equalityRowAddition removerow = %8d with prev_row_count = "
-        "%2d and row_count = %2d, and now rowcount[removerow] = %2d%s%s\n",
-        int(removerow), int(prev_row_count), int(row_count),
-        int(rowsize[removerow]),
-        int(row_count) != rowsize[removerow] ? " !!" : "  ",
-        rowDeleted[removerow] ? ":    Deleted" : ": Not deleted");
-  }
   return Result::kOk;
 }
 
