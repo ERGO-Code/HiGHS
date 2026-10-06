@@ -132,9 +132,9 @@ class ColourRefinement {
           colour_of_slot_(num_nodes),
           num_slots_{0},
           count_of_colour_(num_nodes, 0),
+          colours_(num_nodes),
           end_of_colour_(num_nodes, 0),
-          slots_in_order_(num_nodes),
-          colours_(num_nodes) {}
+          slots_in_order_(num_nodes) {}
 
     void add(HighsInt node, double weight,
              const std::vector<HighsInt>& colour_of_node);

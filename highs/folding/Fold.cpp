@@ -1,6 +1,7 @@
 #include "Fold.h"
 
 #include "DoubleQuantizer.h"
+#include "ipm/hipo/auxiliary/Auxiliary.h"
 
 namespace highs {
 
