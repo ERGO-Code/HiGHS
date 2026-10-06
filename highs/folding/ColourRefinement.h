@@ -80,6 +80,14 @@ class ColourRefinement {
   void splitColour(Side& side, HighsInt colour);
   void prepareNextIter(Side& side);
 
+  double time_sums_{};
+  mutable double time_check_{};
+  double time_insert_{};
+  double time_add_stack_{};
+  double time_new_colour_{};
+  double time_prepare_{};
+  void printTimes() const;
+
  public:
   ColourRefinement(const HighsSparseMatrix& A,
                    std::vector<HighsInt>& row_colour,

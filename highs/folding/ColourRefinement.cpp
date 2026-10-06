@@ -2,6 +2,8 @@
 
 #include <algorithm>
 
+#include "ipm/hipo/auxiliary/Auxiliary.h"
+
 namespace highs {
 namespace folding {
 
@@ -35,12 +37,14 @@ ColourRefinement::ColourRefinement(const HighsSparseMatrix& A,
 void ColourRefinement::computeColourSums(HighsInt refining_colour, Side& src,
                                          Side& dst,
                                          const HighsSparseMatrix& M) {
+  hipo::Clock clock;
   // Sum of the weights between each dst node and the nodes of refining_colour
   for (HighsInt v : src.node_by_colour.list(refining_colour)) {
     for (HighsInt k = M.start_[v]; k < M.start_[v + 1]; ++k) {
       touchNeighbour(k, M, dst);
     }
   }
+  time_sums_ += clock.stop();
 }
 
 void ColourRefinement::touchNeighbour(HighsInt k, const HighsSparseMatrix& M,
@@ -63,6 +67,8 @@ void ColourRefinement::splitColours(Side& side) {
 // Check if the nodes all fall in the same quantization bucket. In this way, the
 // unordered_map is not cleared and populated unless it is needed.
 bool ColourRefinement::colourSplits(const Side& side, HighsInt colour) const {
+  hipo::Clock clock;
+
   const bool has_untouched_nodes = side.node_by_colour.length(colour) >
                                    side.node_touched_by_colour.length(colour);
 
@@ -71,12 +77,18 @@ bool ColourRefinement::colourSplits(const Side& side, HighsInt colour) const {
           ? 0.0
           : side.sums[side.node_touched_by_colour.list(colour).front()]);
 
+  bool colour_split = false;
+
   for (HighsInt v : side.node_touched_by_colour.list(colour)) {
-    if (DoubleQuantizer::bucket(side.sums[v]) != quantized_reference)
-      return true;
+    if (DoubleQuantizer::bucket(side.sums[v]) != quantized_reference) {
+      colour_split = true;
+      break;
+    }
   }
 
-  return false;
+  time_check_ += clock.stop();
+
+  return colour_split;
 }
 
 void ColourRefinement::splitColour(Side& side, HighsInt split_colour) {
@@ -84,6 +96,8 @@ void ColourRefinement::splitColour(Side& side, HighsInt split_colour) {
   // populate the map with the sums corresponding to each vertex of that colour.
   // The map uses the DoubleQuantizer, so sums that are in the same bucket are
   // considered the same.
+
+  hipo::Clock clock;
 
   sum_map_.clear();
 
@@ -104,6 +118,9 @@ void ColourRefinement::splitColour(Side& side, HighsInt split_colour) {
       data.count++;
     }
   }
+
+  time_insert_ += clock.stop();
+  clock.start();
 
   // sum_map_ contains the new colour classes in which split_colour is divided.
   // Find iterators to the largest and smallest of these classes
@@ -141,6 +158,9 @@ void ColourRefinement::splitColour(Side& side, HighsInt split_colour) {
     }
   }
 
+  time_add_stack_ += clock.stop();
+  clock.start();
+
   // Assign nodes to new colours
   for (HighsInt v : side.node_touched_by_colour.list(split_colour)) {
     const HighsInt new_colour = sum_map_.find(side.sums[v])->second.colour;
@@ -150,9 +170,13 @@ void ColourRefinement::splitColour(Side& side, HighsInt split_colour) {
       side.colour[v] = new_colour;
     }
   }
+
+  time_new_colour_ += clock.stop();
 }
 
 void ColourRefinement::prepareNextIter(Side& side) {
+  hipo::Clock clock;
+
   while (!side.colours_touched.empty()) {
     const HighsInt c = side.colours_touched.pop();
     for (HighsInt v : side.node_touched_by_colour.list(c)) {
@@ -161,6 +185,8 @@ void ColourRefinement::prepareNextIter(Side& side) {
     }
     side.node_touched_by_colour.clear(c);
   }
+
+  time_prepare_ += clock.stop();
 }
 
 // Use top colour of src to refine the colours of dst.
@@ -183,6 +209,22 @@ void ColourRefinement::run() {
     else
       refine(cols_, rows_, A_);
   }
+
+  printTimes();
+}
+
+void ColourRefinement::printTimes() const {
+  const double time_total = time_sums_ + time_check_ + time_insert_ +
+                            time_add_stack_ + time_new_colour_ + time_prepare_;
+
+  printf("ColourRefinement timers\n");
+  printf("Total         %f\n", time_total);
+  printf("  sums        %f\n", time_sums_);
+  printf("  check       %f\n", time_check_);
+  printf("  insert      %f\n", time_insert_);
+  printf("  add stack   %f\n", time_add_stack_);
+  printf("  new colour  %f\n", time_new_colour_);
+  printf("  prepare     %f\n", time_prepare_);
 }
 
 }  // namespace folding

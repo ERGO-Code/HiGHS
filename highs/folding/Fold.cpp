@@ -85,15 +85,22 @@ void Folder::findInitialColour() {
 }
 
 void Folder::foldMatrix() {
+  hipo::Clock clock;
   ColourRefinement CR(lp_.a_matrix_, row_colour_, col_colour_);
+  printf("CR setup:     %f\n", clock.stop());
+
   CR.run();
   row_colours_ = CR.rowColoursUsed();
   col_colours_ = CR.colColoursUsed();
 }
 
 void Folder::run() {
+  hipo::Clock clock;
+
   findInitialColour();
   foldMatrix();
+
+  printf("Fold:         %f\n", clock.stop());
 }
 
 void Folder::print() const {
