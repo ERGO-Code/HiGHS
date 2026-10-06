@@ -10,6 +10,14 @@
 
 #include "lp_data/HConst.h"
 
+#define HPRESOLVE_CHECKED_CALL(presolveCall)            \
+  do {                                                  \
+    HPresolve::Result __result = presolveCall;          \
+    if (__result != presolve::HPresolve::Result::kOk) { \
+      return __result;                                  \
+    }                                                   \
+  } while (0)
+
 namespace presolve {
 
 enum class SingletonRowResult {

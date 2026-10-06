@@ -10,6 +10,7 @@
  */
 #ifndef PRESOLVE_HIGHS_PRESOLVE_H_
 #define PRESOLVE_HIGHS_PRESOLVE_H_
+#include <algorithm>
 #include <cassert>
 #include <cmath>
 #include <list>
@@ -287,9 +288,6 @@ class HPresolve {
 
   HighsInt countFillin(HighsInt row);
 
-  bool checkFillin(HighsHashTable<HighsInt, HighsInt>& fillinCache,
-                   HighsInt row, HighsInt col);
-
   void reinsertEquation(HighsInt row);
 
   void clearLiftingOpportunities(HighsInt row) {
@@ -313,9 +311,6 @@ class HPresolve {
 
   void toCSC(std::vector<double>& Aval, std::vector<HighsInt>& Aindex,
              std::vector<HighsInt>& Astart);
-
-  void toCSR(std::vector<double>& ARval, std::vector<HighsInt>& ARindex,
-             std::vector<HighsInt>& ARstart);
 
   void getRowPositions(HighsInt row,
                        std::vector<HighsInt>& myrowpositions) const;
@@ -399,7 +394,17 @@ class HPresolve {
                         double* worstCaseUpperBound = nullptr);
 
   template <typename storageFormat>
-  HighsCDouble computeDynamism(const HighsMatrixSlice<storageFormat>& vector);
+  HighsCDouble computeDynamism(const HighsMatrixSlice<storageFormat>& vector) {
+    double minAbsCoef = kHighsInf;
+    double maxAbsCoef = -kHighsInf;
+    for (const auto& nonzero : vector) {
+      double absCoef = std::abs(nonzero.value());
+      minAbsCoef = std::min(minAbsCoef, absCoef);
+      maxAbsCoef = std::max(maxAbsCoef, absCoef);
+    }
+    return static_cast<HighsCDouble>(maxAbsCoef) /
+           static_cast<HighsCDouble>(minAbsCoef);
+  }
 
   bool silentLog() const;
 
