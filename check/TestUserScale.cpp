@@ -171,7 +171,7 @@ TEST_CASE("user-small-cost-scale", "[highs_user_scale]") {
 
 TEST_CASE("build-get-objective-bound-scaling", "[highs_data]") {
   Highs highs;
-  // highs.setOptionValue("output_flag", dev_run);
+  highs.setOptionValue("output_flag", dev_run);
   const double large_cost = 1.0e+10;           // Algebraically C
   const double small_cost = 1 / large_cost;    // Algebraically c
   const double large_bound = 2.0e+10;          // Algebraically B

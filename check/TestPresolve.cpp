@@ -1718,13 +1718,12 @@ TEST_CASE("presolve-rules-off", "[highs_test_presolve]") {
 TEST_CASE("issue-3359", "[highs_test_presolve]") {
   const std::string model = "3359";
   std::string model_file =
-    std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
+      std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
   Highs h;
   //  h.setOptionValue("output_flag", dev_run);
   REQUIRE(h.readModel(model_file) == HighsStatus::kOk);
 
   h.run();
-  
-  h.resetGlobalScheduler(true);
 
+  h.resetGlobalScheduler(true);
 }

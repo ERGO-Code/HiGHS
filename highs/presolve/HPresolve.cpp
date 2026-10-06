@@ -3142,30 +3142,33 @@ HighsTripletPositionSlice HPresolve::getStoredRow() const {
                                    rowpositions.data(), rowpositions.size());
 }
 
-  void HPresolve::checkAndCorrectRowPositions(const std::string& message,
-					      const HighsInt row,
-					      const bool assert_on_error) {
+void HPresolve::checkAndCorrectRowPositions(const HighsInt row,
+                                            const std::string& message,
+                                            const bool assert_on_error) {
   // Check that rowpositions corresponds to row
-  std::vector<HighsInt>check_rowpositions;
+  std::vector<HighsInt> check_rowpositions;
   getRowPositions(row, check_rowpositions);
   bool error = check_rowpositions.size() != rowpositions.size();
   if (!error) {
     for (size_t iX = 0; iX < rowpositions.size(); iX++) {
       if (check_rowpositions[iX] != rowpositions[iX]) {
-	error = true;
-	break;
+        error = true;
+        break;
       }
     }
   }
   if (error) {
     // Otherwise...
-    printf("HPresolve::checkAndCorrectRowPositions:%s rowpositions contains ", message.c_str());
-    if (rowpositions.size() > 10) printf("    \n");
-    for (size_t iX = 0; iX < rowpositions.size(); iX++) 
+    const bool multi_line =
+        rowpositions.size() > 10 || check_rowpositions.size() > 10;
+    printf("HPresolve::checkAndCorrectRowPositions:%s rowpositions contains ",
+           message.c_str());
+    if (multi_line) printf("\n    ");
+    for (size_t iX = 0; iX < rowpositions.size(); iX++)
       printf("%d ", int(rowpositions[iX]));
-    if (rowpositions.size() > 10) printf("\n");
+    if (multi_line) printf("\n");
     printf("not ");
-    for (size_t iX = 0; iX < check_rowpositions.size(); iX++) 
+    for (size_t iX = 0; iX < check_rowpositions.size(); iX++)
       printf("%d ", int(check_rowpositions[iX]));
     printf("\n");
     if (assert_on_error) assert(!error);
@@ -9593,6 +9596,8 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
 
     HighsInt delRow = -1;
     if (it != buckets.end()) storeRow(i);
+    bool assert_on_rowpositions_error = true;
+    std::string message_on_rowpositions_error = "Unknown";
     while (it != buckets.end() && it->first == rowHashes[i]) {
       HighsInt parallelRowCand = it->second;
       last = it++;
@@ -9626,6 +9631,18 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
       double rowScale = rowMax[parallelRowCand].first / rowMax[i].first;
       // check parallel case
       bool parallel = true;
+      // If equalityRowAddition has been called within the loop for
+      // this value of i, then it calls rowPresolve, which may call
+      // storeRow(j) for j<>i, changing this->rowpositions, so have to
+      // check and correct this
+      checkAndCorrectRowPositions(i, message_on_rowpositions_error,
+                                  assert_on_rowpositions_error);
+      // Set up for any future call to checkAndCorrectRowPositions
+      assert_on_rowpositions_error = true;
+      message_on_rowpositions_error = "Unknown";
+
+      // getStoredRow() returns the indices and nonzeros corresponding
+      // to rowpositions
       for (const HighsSliceNonzero& rowNz : getStoredRow()) {
         if (colsize[rowNz.index()] == 1)  // skip singletons
           continue;
@@ -9734,11 +9751,11 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
         assert(!may_require_basis_postsolve_);
         HPRESOLVE_CHECKED_CALL(equalityRowAddition(
             postsolve_stack, i, parallelRowCand, -rowScale, getStoredRow()));
-	// equalityRowAddition calls rowPresolve, which may call
-        // storeRow(j) for j<>i, changing this->rowpositions, so have
-        // to revert this
-	const bool assert_on_error = false;
-	checkAndCorrectRowPositions("isEquation(i)", i, assert_on_error);
+        // Set up for any call to checkAndCorrectRowPositions in the
+        // next loop. The correction is known to be needed for
+        // issue-3364, so don't assert
+        assert_on_rowpositions_error = false;
+        message_on_rowpositions_error = "isEquation(i)";
         delRow = parallelRowCand;
       } else if (isEquation(parallelRowCand)) {
         // printf(
@@ -9751,10 +9768,11 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
             postsolve_stack, parallelRowCand, i,
             -rowMax[i].first / rowMax[parallelRowCand].first,
             getRowVector(parallelRowCand)));
-	// equalityRowAddition calls rowPresolve, which may call
-        // storeRow(j) for j<>i, changing this->rowpositions, so have
-        // to revert this
-	checkAndCorrectRowPositions("isEquation(parallelRowCand)", i);
+        // The same loss of data for row i in rowpositions may occur
+        // in this case, but it's not yet been observed, so assert if
+        // the correction is needed
+        assert_on_rowpositions_error = true;
+        message_on_rowpositions_error = "isEquation(parallelRowCand)";
         delRow = i;
       } else {
         assert(numSingleton == 1);

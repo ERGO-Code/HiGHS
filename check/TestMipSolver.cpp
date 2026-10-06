@@ -994,7 +994,7 @@ TEST_CASE("issue-2204", "[highs_test_mip_solver]") {
   solve(highs, kHighsOnString, require_model_status, optimal_objective);
 }
 
-TEST_CASE("ZI Round and Shifting Heuristics", "[highs_test_mip_solver]") {
+TEST_CASE("zi-round-and-shifting-heuristics", "[highs_test_mip_solver]") {
   std::string model_file = std::string(HIGHS_DIR) + "/check/instances/rgn.mps";
 
   Highs highs;

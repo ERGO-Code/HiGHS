@@ -318,9 +318,9 @@ class HPresolve {
 
   void storeRow(HighsInt row);
 
-  void checkAndCorrectRowPositions(const std::string& message,
-				   const HighsInt row,
-				   const bool assert_on_error = true);
+  void checkAndCorrectRowPositions(const HighsInt row,
+                                   const std::string& message,
+                                   const bool assert_on_error = true);
 
   HighsTripletPositionSlice getStoredRow() const;
 
