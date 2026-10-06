@@ -7,6 +7,23 @@
 namespace highs {
 namespace folding {
 
+void ColourRefinement::TouchedNodes::add(
+    HighsInt node, double weight, const std::vector<HighsInt>& colour_of_node) {
+  HighsInt slot = slot_of_node_[node];
+  if (slot >= 0) {
+    sum_of_slot_[slot] += weight;
+    return;
+  }
+  slot = num_slots_++;
+  slot_of_node_[node] = slot;
+  node_of_slot_[slot] = node;
+  sum_of_slot_[slot] = weight;
+
+  const HighsInt colour = colour_of_node[node];
+  colour_of_slot_[slot] = colour;
+  if (count_of_colour_[colour]++ == 0) colours_.push(colour);
+}
+
 void ColourRefinement::TouchedNodes::groupByColour() {
   HighsInt next_free = 0;
   for (HighsInt colour : colours_) {
