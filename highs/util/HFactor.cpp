@@ -1191,7 +1191,7 @@ HighsInt HFactor::buildKernel() {
       } else {
         // Otherwise, other entries in the pivotal column will be
         // smaller than the pivot, so zero the column
-        zeroCol(jColPivot);
+        zeroCol(jColPivot, pivot_multiplier);
         // Add the pivotal row to the linked list of rows with its new
         // count
         assert(mr_count[iRowPivot] == original_pivotal_row_count - 1);
@@ -1611,7 +1611,7 @@ void HFactor::buildFinish() {
   }
 }
 
-void HFactor::zeroCol(const HighsInt jCol) {
+void HFactor::zeroCol(const HighsInt jCol, const double pivot_multiplier) {
   const HighsInt a_count = mc_count_a[jCol];
   const HighsInt a_start = mc_start[jCol];
   const HighsInt a_end = a_start + a_count;
@@ -1628,7 +1628,11 @@ void HFactor::zeroCol(const HighsInt jCol) {
     // count
     assert(mr_count[iRow] == original_row_count - 1);
     rlinkAdd(iRow, mr_count[iRow]);
-    assert(abs_value < pivot_tolerance);
+    // Was assert(abs_value < pivot_tolerance), but this is
+    // conservative, since zeroCol is only used when singularity is
+    // detected as a consequence of |pivot_multiplier| <
+    // pivot_tolerance
+    assert(abs_value <= std::fabs(pivot_multiplier));
   }
   // Remove the column from the linked list of columns containing it
   clinkDel(jCol);
