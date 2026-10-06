@@ -1,41 +1,29 @@
 #ifndef HIGHS_COLOUR_REFINEMENT_H
 #define HIGHS_COLOUR_REFINEMENT_H
 
+#include <cassert>
+#include <vector>
+
 #include "DoubleQuantizer.h"
-#include "lp_data/HighsLp.h"
 #include "util/HighsLinkedLists.h"
+#include "util/HighsSparseMatrix.h"
 
 namespace highs {
-
 namespace folding {
 
+// Refines separate colourings of the rows and columns of matrix A, seen as the
+// biadjacency matrix of a weighted bipartite graph. Row colours and column
+// colours are numbered independently, each starting from 0 and consecutive.
+// Based on "Tight Lower and Upper Bounds for the Complexity of Canonical Colour
+// Refinement", Berkholz, Bonsma, Grohe
+
 class ColourRefinement {
-  const HighsInt n_;
-
-  const HighsSparseMatrix& A_;
-  HighsSparseMatrix At_;
-
-  std::vector<HighsInt>& colour_;
-
-  std::vector<double> colour_sums_;
-  std::vector<HighsBool> node_touched_;
-
-  HighsLinkedLists node_by_colour_;
-  HighsLinkedLists node_touched_by_colour_;
-
-  HighsInt latest_colour_;
-  HighsInt refining_colour_;
-
   struct IterableStack {
     std::vector<HighsInt> s;
     HighsInt top;
     std::vector<HighsBool> in_stack;
 
-    IterableStack(HighsInt n) {
-      s.resize(n);
-      top = -1;
-      in_stack.resize(n, 0);
-    }
+    IterableStack(HighsInt n) : s(n), top{-1}, in_stack(n, 0) {}
     bool belong(HighsInt i) const { return in_stack[i]; }
     bool empty() const { return top < 0; }
     void push(HighsInt i) {
@@ -43,25 +31,39 @@ class ColourRefinement {
       s[++top] = i;
       in_stack[i] = 1;
     }
-    void pushIfNotPresent(HighsInt i) {
-      if (!in_stack[i]) push(i);
-    }
     HighsInt pop() {
       assert(!empty());
-      HighsInt elem = s[top--];
+      const HighsInt elem = s[top--];
       in_stack[elem] = 0;
       return elem;
     }
 
-    // iterators in reverse pop order
+    // Iterators in reverse pop order
     std::vector<HighsInt>::const_iterator begin() const { return s.begin(); }
     std::vector<HighsInt>::const_iterator end() const {
       return s.begin() + (top + 1);
     }
   };
 
-  IterableStack stack_;
-  IterableStack colours_touched_;
+  // Everything that belongs to one side of the bipartite graph
+  struct Side {
+    HighsInt n;
+    std::vector<HighsInt>& colour;
+    HighsInt latest_colour;
+    std::vector<double> sums;
+    std::vector<HighsBool> node_touched;
+    HighsLinkedLists node_by_colour;
+    HighsLinkedLists node_touched_by_colour;
+    IterableStack to_refine;
+    IterableStack colours_touched;
+
+    explicit Side(std::vector<HighsInt>& c);
+  };
+
+  const HighsSparseMatrix& A_;
+  HighsSparseMatrix At_;
+  Side rows_;
+  Side cols_;
 
   struct SumData {
     HighsInt count;
@@ -69,81 +71,26 @@ class ColourRefinement {
   };
   QuantizedMap<double, SumData> sum_map_;
 
-  double time_setup_{};
-  double time_colour_sums{};
-  double time_check_split_{};
-  double time_split_{};
-  double time_prepare_{};
-
-  // Define iterator for range-based loop:
-  //  for (Neighbour i : neighbours(j))
-  //    ...
-  // neighbours(j) returns the neighbours of j in the bipartite graph, selecting
-  // correctly from rows or columns, and applying the correct offset. The index
-  // refers to the numbering of the bipartite graph, not of the matrix A. Rows
-  // are numbered before columns.
-  struct Neighbour {
-    HighsInt index;
-    double value;
-  };
-  struct Neighbours {
-    const HighsInt* first_index;
-    const HighsInt* last_index;
-    const double* first_value;
-    const HighsInt offset;
-
-    struct Iterator {
-      const HighsInt* index;
-      const double* value;
-      const HighsInt offset;
-
-      Neighbour operator*() const { return {*index + offset, *value}; }
-      Iterator& operator++() {
-        ++index;
-        ++value;
-        return *this;
-      }
-      bool operator!=(const Iterator& o) const { return index != o.index; }
-      bool operator==(const Iterator& o) const { return index == o.index; }
-    };
-
-    Iterator begin() const { return {first_index, first_value, offset}; }
-    Iterator end() const { return {last_index, nullptr, offset}; }
-  };
-
-  Neighbours neighbours(HighsInt i) const {
-    const bool is_row = i < A_.num_row_;
-
-    const HighsSparseMatrix& M = is_row ? At_ : A_;
-    const HighsInt j = is_row ? i : i - A_.num_row_;
-    const HighsInt offset = is_row ? A_.num_row_ : 0;
-
-    const HighsInt start = M.start_[j];
-    const HighsInt end = M.start_[j + 1];
-    const HighsInt* index_ptr = M.index_.data();
-    const double* value_ptr = M.value_.data();
-
-    return {index_ptr + start, index_ptr + end, value_ptr + start, offset};
-  }
-
-  void chooseRefiningColour();
-  void computeColourSums();
-  void touchNeighbour(const Neighbour& neigh);
-  void splitColours();
-  bool checkIfColourSplits(HighsInt split_colour);
-  void splitColour(HighsInt split_colour);
-  void prepareNextIter();
-
-  void printTimes(double total_time) const;
+  void refine(Side& src, Side& dst, const HighsSparseMatrix& M);
+  void computeColourSums(HighsInt refining_colour, Side& src, Side& dst,
+                         const HighsSparseMatrix& M);
+  void touchNeighbour(HighsInt k, const HighsSparseMatrix& M, Side& side);
+  void splitColours(Side& side);
+  bool colourSplits(const Side& side, HighsInt colour) const;
+  void splitColour(Side& side, HighsInt colour);
+  void prepareNextIter(Side& side);
 
  public:
-  ColourRefinement(const HighsSparseMatrix& A, std::vector<HighsInt>& colour);
+  ColourRefinement(const HighsSparseMatrix& A,
+                   std::vector<HighsInt>& row_colour,
+                   std::vector<HighsInt>& col_colour);
   void run();
-  HighsInt coloursUsed() const { return latest_colour_ + 1; }
+
+  HighsInt rowColoursUsed() const { return rows_.latest_colour + 1; }
+  HighsInt colColoursUsed() const { return cols_.latest_colour + 1; }
 };
 
 }  // namespace folding
-
 }  // namespace highs
 
 #endif

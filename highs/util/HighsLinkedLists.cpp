@@ -8,7 +8,7 @@ void HighsLinkedLists::init(HighsInt n_elem, HighsInt n_lists) {
   n_lists_ = n_lists;
   forward_.resize(n_elem + n_lists);
   backward_.resize(n_elem + n_lists);
-  length_.resize(n_lists);
+  length_.assign(n_lists, 0);
   for (HighsInt i = 0; i < n_lists; ++i) {
     forward_[n_elem_ + i] = n_elem_ + i;
     backward_[n_elem_ + i] = n_elem_ + i;

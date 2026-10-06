@@ -48,7 +48,7 @@ void test_paper_example() {
 }
 
 void test_folding(const HighsLp& lp) {
-  test_paper_example();
+  // test_paper_example();
 
   Folder folder(lp);
   folder.run();
@@ -57,9 +57,8 @@ void test_folding(const HighsLp& lp) {
   exit(1);
 }
 
-Folder::Folder(const HighsLp& lp) : lp_{lp} {
-  colour_.resize(lp_.num_row_ + lp_.num_col_);
-}
+Folder::Folder(const HighsLp& lp)
+    : lp_{lp}, row_colour_(lp.num_row_), col_colour_(lp.num_col_) {}
 
 template <typename Data>
 HighsInt Folder::findInitialColour(HighsInt n, HighsInt* colour,
@@ -79,16 +78,17 @@ HighsInt Folder::findInitialColour(HighsInt n, HighsInt* colour,
 
 void Folder::findInitialColour() {
   initial_row_colours_ =
-      findInitialColour<RowQuantizedData>(lp_.num_row_, colour_.data(), 0);
+      findInitialColour<RowQuantizedData>(lp_.num_row_, row_colour_.data(), 0);
 
-  initial_col_colours_ = findInitialColour<ColQuantizedData>(
-      lp_.num_col_, colour_.data() + lp_.num_row_, initial_row_colours_);
+  initial_col_colours_ =
+      findInitialColour<ColQuantizedData>(lp_.num_col_, col_colour_.data(), 0);
 }
 
 void Folder::foldMatrix() {
-  ColourRefinement CR(lp_.a_matrix_, colour_);
+  ColourRefinement CR(lp_.a_matrix_, row_colour_, col_colour_);
   CR.run();
-  matrix_colours_ = CR.coloursUsed();
+  row_colours_ = CR.rowColoursUsed();
+  col_colours_ = CR.colColoursUsed();
 }
 
 void Folder::run() {
@@ -97,15 +97,22 @@ void Folder::run() {
 }
 
 void Folder::print() const {
+  printf("Initial:\n");
   printf("Rows: %d out of %d\n", initial_row_colours_, lp_.num_row_);
   printf("Cols: %d out of %d\n", initial_col_colours_, lp_.num_col_);
-  printf("Matr: %d out of %d\n", matrix_colours_, lp_.num_row_ + lp_.num_col_);
+  printf("Final:\n");
+  printf("Rows: %d out of %d\n", row_colours_, lp_.num_row_);
+  printf("Cols: %d out of %d\n", col_colours_, lp_.num_col_);
+  printf("Matr: %d out of %d\n", row_colours_ + col_colours_,
+         lp_.num_row_ + lp_.num_col_);
 
+  /*
   for (HighsInt i = 0; i < lp_.num_row_; ++i) printf("%d ", colour_[i]);
   printf("\n");
   for (HighsInt i = 0; i < lp_.num_col_; ++i)
     printf("%d ", colour_[lp_.num_row_ + i]);
   printf("\n");
+  */
 }
 
 }  // namespace folding

@@ -11,11 +11,13 @@ void test_folding(const HighsLp& lp);
 
 class Folder {
   const HighsLp& lp_;
-  std::vector<HighsInt> colour_;
+  std::vector<HighsInt> row_colour_;
+  std::vector<HighsInt> col_colour_;
 
   HighsInt initial_row_colours_;
   HighsInt initial_col_colours_;
-  HighsInt matrix_colours_;
+  HighsInt row_colours_;
+  HighsInt col_colours_;
 
   template <typename Data>
   HighsInt findInitialColour(HighsInt num, HighsInt* colour, HighsInt start);
