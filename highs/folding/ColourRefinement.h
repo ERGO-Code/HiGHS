@@ -37,6 +37,10 @@ class ColourRefinement {
       in_stack[elem] = 0;
       return elem;
     }
+    HighsInt peek() const {
+      assert(!empty());
+      return s[top];
+    }
 
     // Iterators in reverse pop order
     std::vector<HighsInt>::const_iterator begin() const { return s.begin(); }
@@ -51,10 +55,10 @@ class ColourRefinement {
   // The nodes are stored using slots, numbered in order of first touch.
   // After groupByColour(), the slots of each colour can be iterated:
   //
-  //   for (HighsInt slot : touched.slotsOf(colour))
+  //   for (HighsInt slot : touched.slots(colour))
   //     ...
   //
-  // Example. The destination side has 6 nodes and two colours:
+  // Example: the destination side has 6 nodes and two colours:
   //
   //   colour 0: nodes {0, 1, 2}
   //   colour 1: nodes {3, 4, 5}
@@ -75,8 +79,6 @@ class ColourRefinement {
   //
   //      colours_:         stack [1, 0] <- top (order of first touch)
   //
-  //    The slots of the two colours are interleaved (colours 1, 0, 1, 0, 1).
-  //
   // 2) The slots of the two colours are currently interleaved (colours 1, 0, 1,
   //    0, 1). groupByColour() populates slots_in_order_ so that each colour
   //    corresponds to a contiguous range of slots in slots_in_order_:
@@ -89,12 +91,12 @@ class ColourRefinement {
   //
   //      end_or_colour_ = [3, 5]
   //
-  // 3) slotsOf(colour) return an iterable object that lists the slots used by
+  // 3) slots(colour) return an iterable object that lists the slots used by
   //    that colour. It can be used to iterate through the nodes touched,
   //    grouped by colour:
   //
-  //      slotsOf(1) = 0, 2, 4
-  //      slotsOf(0) = 1, 3
+  //      slots(1) = 0, 2, 4
+  //      slots(0) = 1, 3
   //
   //    Helper functions node(slot) and sum(slot) can be used to recover the
   //    node and sum corresponding to a specific slot.
@@ -114,7 +116,6 @@ class ColourRefinement {
     std::vector<HighsInt> end_of_colour_;
     std::vector<HighsInt> slots_in_order_;
 
-   public:
     struct SlotRange {
       const HighsInt* first;
       const HighsInt* last;
@@ -124,6 +125,7 @@ class ColourRefinement {
       HighsInt front() const { return *first; }
     };
 
+   public:
     explicit TouchedNodes(HighsInt num_nodes)
         : slot_of_node_(num_nodes, -1),
           node_of_slot_(num_nodes),
@@ -156,11 +158,11 @@ class ColourRefinement {
     void clear();
     const IterableStack& colours() const { return colours_; }
 
-    HighsInt numOfColour(HighsInt colour) const {
+    HighsInt colourCount(HighsInt colour) const {
       return count_of_colour_[colour];
     }
 
-    SlotRange slotsOf(HighsInt colour) const {
+    SlotRange slots(HighsInt colour) const {
       const HighsInt* base = slots_in_order_.data();
       const HighsInt end = end_of_colour_[colour];
       return {base + end - count_of_colour_[colour], base + end};
@@ -181,14 +183,17 @@ class ColourRefinement {
 
     explicit Side(std::vector<HighsInt>& c);
 
-    HighsInt newColour() { return ++latest_colour; }
     HighsInt numUntouchedNodes(HighsInt c) const {
-      return node_by_colour.length(c) - touched.numOfColour(c);
+      return node_by_colour.length(c) - touched.colourCount(c);
     }
     void moveNode(HighsInt node, HighsInt from, HighsInt to) {
       node_by_colour.remove(node, from);
       node_by_colour.append(node, to);
       colour[node] = to;
+    }
+    HighsInt peekLength() const {
+      return to_refine.empty() ? kHighsIInf
+                               : node_by_colour.length(to_refine.peek());
     }
   };
 

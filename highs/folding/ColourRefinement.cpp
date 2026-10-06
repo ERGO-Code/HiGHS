@@ -83,7 +83,7 @@ void ColourRefinement::splitColours(Side& side) {
 bool ColourRefinement::colourSplits(const Side& side, HighsInt colour) const {
   hipo::Clock clock;
 
-  const auto slots = side.touched.slotsOf(colour);
+  const auto slots = side.touched.slots(colour);
   const bool has_untouched_nodes = side.numUntouchedNodes(colour) > 0;
   const double quantized_reference = DoubleQuantizer::bucket(
       has_untouched_nodes ? 0.0 : side.touched.sum(slots.front()));
@@ -114,7 +114,7 @@ void ColourRefinement::countSums(const Side& side, HighsInt colour) {
   if (nodes_with_zero_sum > 0)
     sum_map_.insert({0.0, SumData{nodes_with_zero_sum, -1}});
 
-  for (HighsInt slot : side.touched.slotsOf(colour)) {
+  for (HighsInt slot : side.touched.slots(colour)) {
     auto result = sum_map_.insert({side.touched.sum(slot), SumData{1, -1}});
     if (!result.second) {
       SumData& data = result.first->second;
@@ -168,7 +168,7 @@ void ColourRefinement::assignNewColours(Side& side, HighsInt colour) {
 void ColourRefinement::moveNodesToNewColours(Side& side, HighsInt colour) {
   hipo::Clock clock;
 
-  for (HighsInt slot : side.touched.slotsOf(colour)) {
+  for (HighsInt slot : side.touched.slots(colour)) {
     const HighsInt node = side.touched.node(slot);
     const double sum = side.touched.sum(slot);
     const HighsInt new_colour = sum_map_.find(sum)->second.colour;
@@ -207,7 +207,7 @@ void ColourRefinement::refine(Side& src, Side& dst,
 
 void ColourRefinement::run() {
   while (!rows_.to_refine.empty() || !cols_.to_refine.empty()) {
-    if (!rows_.to_refine.empty())
+    if (rows_.peekLength() < cols_.peekLength())
       refine(rows_, cols_, At_);
     else
       refine(cols_, rows_, A_);
