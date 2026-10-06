@@ -9703,7 +9703,7 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
         HPRESOLVE_CHECKED_CALL(equalityRowAddition(
             postsolve_stack, i, parallelRowCand, -rowScale, getStoredRow()));
         delRow = parallelRowCand;
-        break;
+        // break; // study-3364
       } else if (isEquation(parallelRowCand)) {
         // printf(
         //    "nearly parallel case with %" HIGHSINT_FORMAT " singletons in eq
@@ -9716,7 +9716,7 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
             -rowMax[i].first / rowMax[parallelRowCand].first,
             getRowVector(parallelRowCand)));
         delRow = i;
-        break;
+        // break; // study-3364
       } else {
         assert(numSingleton == 1);
         assert(numSingletonCandidate == 1);

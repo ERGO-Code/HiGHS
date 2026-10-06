@@ -1259,7 +1259,8 @@ TEST_CASE("issue-3364", "[highs_test_presolve_rules]") {
   lp.a_matrix_.format_ = MatrixFormat::kRowwise;
   lp.a_matrix_.start_ = {0, 3, 8, 11, 13, 15};
   lp.a_matrix_.index_ = {0, 1, 2, 0, 1, 2, 3, 4, 0, 1, 2, 0, 5, 1, 6};
-  lp.a_matrix_.value_ = {1, 2, 3, 1, 2, 3, 2, 3, 1, 2, 3, 1, 1, 1, 1};9  lp.a_matrix_.ensureColwise();
+  lp.a_matrix_.value_ = {1, 2, 3, 1, 2, 3, 2, 3, 1, 2, 3, 1, 1, 1, 1};
+  lp.a_matrix_.ensureColwise();
 
   HighsOptions options;
   options.presolve_rule_test = kPresolveRuleParallelRowsAndCols;
