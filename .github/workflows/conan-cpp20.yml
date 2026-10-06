@@ -35,7 +35,7 @@ jobs:
 
       - name: Build
         working-directory: ${{github.workspace}}/build
-        run: cmake --build . --parallel
+        run: cmake --build . -j2
 
   conan-cpp20-libcxx:
     runs-on: ubuntu-latest
