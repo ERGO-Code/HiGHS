@@ -33,7 +33,7 @@ const HighsInt kMaxLineLength = 80;
 
 HighsStatus assessLp(HighsLp& lp, const HighsOptions& options) {
   HighsStatus return_status = HighsStatus::kOk;
-  HighsStatus call_status = lpDimensionsOk("assessLp", lp, options.log_options)
+  HighsStatus call_status = lpDimensionsLegal("assessLp", lp, options.log_options)
                                 ? HighsStatus::kOk
                                 : HighsStatus::kError;
   return_status = interpretCallStatus(options.log_options, call_status,
@@ -108,8 +108,8 @@ HighsStatus assessLp(HighsLp& lp, const HighsOptions& options) {
   return return_status;
 }
 
-bool lpDimensionsOk(const std::string& message, const HighsLp& lp,
-                    const HighsLogOptions& log_options) {
+bool lpDimensionsLegal(const std::string& message, const HighsLp& lp,
+		       const HighsLogOptions& log_options) {
   bool ok = true;
   const HighsInt num_col = lp.num_col_;
   const HighsInt num_row = lp.num_row_;

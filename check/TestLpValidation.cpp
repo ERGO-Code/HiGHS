@@ -690,3 +690,30 @@ TEST_CASE("LP-infeasible-bounds", "[highs_data]") {
 
   highs.resetGlobalScheduler(true);
 }
+
+TEST_CASE("issue-3366", "[highs_data]") {
+  HighsLp lp;
+  lp.sense_ = ObjSense::kMinimize;
+  lp.num_col_ = 1;
+  lp.num_row_ = 1;
+  lp.col_cost_ = {-1, 2};
+
+  lp.col_lower_ = {0, 1};
+  lp.col_upper_ = {1, 2};
+  lp.a_matrix_.format_ = MatrixFormat::kRowwise;
+  lp.a_matrix_.start_ = {0, 1, 2};
+  lp.a_matrix_.index_ = {0, 1};
+  lp.a_matrix_.value_ = {1, 2};
+  lp.row_lower_ = {1, 2};
+  lp.row_upper_ = {2, 3};
+  lp.col_names_ = {"C0", "C1"};
+  lp.row_names_ = {"R0", "R1"};
+  Highs h;
+  
+  //  h.setOptionValue("output_flag", dev_run);
+  REQUIRE(h.passModel(lp) == HighsStatus::kWarning);
+  h.run();
+  REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
+
+  h.resetGlobalScheduler(true);
+}
