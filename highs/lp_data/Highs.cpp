@@ -3988,8 +3988,8 @@ HighsPresolveStatus Highs::runPresolve(const bool force_lp_presolve,
           (HighsInt)original_lp.numNz() - (HighsInt)reduced_lp.numNz();
       // Clear any scaling information inherited by the reduced LP
       reduced_lp.clearScale();
-      assert(legalLpDimensions("RunPresolve: reduced_lp",
-                            options_.log_options, reduced_lp));
+      assert(legalLpDimensions("RunPresolve: reduced_lp", options_.log_options,
+                               reduced_lp));
       break;
     }
     case HighsPresolveStatus::kReducedToEmpty: {

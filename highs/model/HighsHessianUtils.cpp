@@ -22,7 +22,10 @@ using std::fabs;
 HighsStatus assessHessian(HighsHessian& hessian, const HighsOptions& options) {
   if (hessian.isOracle()) return HighsStatus::kOk;
 
-  HighsStatus return_status = legalHessianDimensions(options.log_options, hessian) ? HighsStatus::kOk : HighsStatus::kError;
+  HighsLogOptions log_options = options.log_options;
+  HighsStatus return_status = legalHessianDimensions(log_options, hessian)
+                                  ? HighsStatus::kOk
+                                  : HighsStatus::kError;
   if (return_status == HighsStatus::kError) return return_status;
 
   // If the Hessian has no columns there is nothing left to test
@@ -30,12 +33,14 @@ HighsStatus assessHessian(HighsHessian& hessian, const HighsOptions& options) {
     hessian.clear();
     return HighsStatus::kOk;
   }
-
+  return_status = interpretCallStatus(
+      log_options, trimHessianDimensions(log_options, hessian), return_status,
+      "trimHessianDimensions");
   // Assess the Hessian matrix
   //
   // The start of column 0 must be zero.
   if (hessian.start_[0]) {
-    highsLogUser(options.log_options, HighsLogType::kError,
+    highsLogUser(log_options, HighsLogType::kError,
                  "Hessian has nonzero value (%" HIGHSINT_FORMAT
                  ") for the start of column 0\n",
                  hessian.start_[0]);
@@ -44,26 +49,25 @@ HighsStatus assessHessian(HighsHessian& hessian, const HighsOptions& options) {
   // Assess Q, summing duplicates, but deferring the assessment of
   // values (other than those which are identically zero)
   bool sum_duplicates = true;
-  HighsStatus call_status =
-    assessMatrix(options.log_options, "Hessian", hessian.dim_,
-		 hessian.dim_, hessian.start_, hessian.index_,
-		 hessian.value_, 0, kHighsInf, sum_duplicates);
-  return_status = interpretCallStatus(options.log_options, call_status,
-                                      return_status, "assessMatrix");
+  HighsStatus call_status = assessMatrix(
+      log_options, "Hessian", hessian.dim_, hessian.dim_, hessian.start_,
+      hessian.index_, hessian.value_, 0, kHighsInf, sum_duplicates);
+  return_status = interpretCallStatus(log_options, call_status, return_status,
+                                      "assessMatrix");
   if (return_status == HighsStatus::kError) return return_status;
   // Transform the Hessian to pure column-wise lower triangle format
   call_status = normaliseHessian(options, hessian);
-  return_status = interpretCallStatus(options.log_options, call_status,
-                                      return_status, "normaliseHessian");
+  return_status = interpretCallStatus(log_options, call_status, return_status,
+                                      "normaliseHessian");
   if (return_status == HighsStatus::kError) return return_status;
   // Assess values in Q
   sum_duplicates = false;
-  call_status = assessMatrix(options.log_options, "Hessian", hessian.dim_,
-                             hessian.dim_, hessian.start_, hessian.index_,
-                             hessian.value_, options.small_matrix_value,
+  call_status = assessMatrix(log_options, "Hessian", hessian.dim_, hessian.dim_,
+                             hessian.start_, hessian.index_, hessian.value_,
+                             options.small_matrix_value,
                              options.large_matrix_value, sum_duplicates);
-  return_status = interpretCallStatus(options.log_options, call_status,
-                                      return_status, "assessMatrix");
+  return_status = interpretCallStatus(log_options, call_status, return_status,
+                                      "assessMatrix");
   if (return_status == HighsStatus::kError) return return_status;
 
   HighsInt hessian_num_nz = hessian.numNz();
@@ -80,16 +84,17 @@ HighsStatus assessHessian(HighsHessian& hessian, const HighsOptions& options) {
   if ((HighsInt)hessian.value_.size() > hessian_num_nz)
     hessian.value_.resize(hessian_num_nz);
 
-  if (return_status != HighsStatus::kError) return_status = HighsStatus::kOk;
+  //  if (return_status != HighsStatus::kError) return_status =
+  //  HighsStatus::kOk;
   if (return_status != HighsStatus::kOk)
-    highsLogDev(options.log_options, HighsLogType::kInfo,
+    highsLogDev(log_options, HighsLogType::kInfo,
                 "assessHessian returns HighsStatus = %s\n",
                 highsStatusToString(return_status).c_str());
   return return_status;
 }
 
 bool legalHessianDimensions(const HighsLogOptions& log_options,
-			    const HighsHessian& hessian) {
+                            const HighsHessian& hessian) {
   assert(!hessian.isOracle());
 
   if (hessian.dim_ == 0) return true;
@@ -98,12 +103,27 @@ bool legalHessianDimensions(const HighsLogOptions& log_options,
   vector<HighsInt> hessian_p_end;
   const bool partitioned = false;
   return legalMatrixDimensions(log_options, hessian.dim_, partitioned,
-                                hessian.start_, hessian_p_end, hessian.index_,
-                                hessian.value_);
+                               hessian.start_, hessian_p_end, hessian.index_,
+                               hessian.value_);
 }
 HighsStatus trimHessianDimensions(const HighsLogOptions& log_options,
-				  HighsHessian& hessian) {
+                                  HighsHessian& hessian) {
+  assert(!hessian.isOracle());
+  const HighsInt dim = hessian.dim_;
+  assert(dim > 0);
+  HighsInt trimmed = 0;
   HighsStatus status = HighsStatus::kOk;
+
+  trimmed = hessian.start_.size() - dim - 1;
+  if (trimmed) {
+    hessian.start_.resize(dim + 1);
+    highsLogUser(
+        log_options, HighsLogType::kWarning,
+        "Trimmed %d excess entr%s from HighsHessian data member start_\n",
+        int(trimmed), highsIntToPlural(trimmed, true).c_str());
+    status = HighsStatus::kWarning;
+  }
+
   return status;
 }
 

@@ -211,12 +211,12 @@ HPresolveInitialSweep::Result HPresolveInitialSweep::run(
       // column's contribution to the implied row bounds.
       newColIndex[iCol] = num_col;
       if (num_col < iCol) {
-	lp_.col_cost_[num_col] = lp_.col_cost_[iCol];
-	lp_.col_lower_[num_col] = lp_.col_lower_[iCol];
-	lp_.col_upper_[num_col] = lp_.col_upper_[iCol];
-	lp_.integrality_[num_col] = lp_.integrality_[iCol];
-	if (have_col_names)
-	  lp_.col_names_[num_col] = std::move(lp_.col_names_[iCol]);
+        lp_.col_cost_[num_col] = lp_.col_cost_[iCol];
+        lp_.col_lower_[num_col] = lp_.col_lower_[iCol];
+        lp_.col_upper_[num_col] = lp_.col_upper_[iCol];
+        lp_.integrality_[num_col] = lp_.integrality_[iCol];
+        if (have_col_names)
+          lp_.col_names_[num_col] = std::move(lp_.col_names_[iCol]);
       }
       HighsInt from_os = lp_.a_matrix_.start_[iCol];
       HighsInt new_col_start = nnz;
@@ -312,12 +312,12 @@ HPresolveInitialSweep::Result HPresolveInitialSweep::run(
         num_deleted_rows_++;
       } else {
         newRowIndex[iRow] = num_row;
-	if (num_row < iRow) {
-	  lp_.row_lower_[num_row] = lp_.row_lower_[iRow];
-	  lp_.row_upper_[num_row] = lp_.row_upper_[iRow];
-	  if (have_row_names)
-	    lp_.row_names_[num_row] = std::move(lp_.row_names_[iRow]);
-	}
+        if (num_row < iRow) {
+          lp_.row_lower_[num_row] = lp_.row_lower_[iRow];
+          lp_.row_upper_[num_row] = lp_.row_upper_[iRow];
+          if (have_row_names)
+            lp_.row_names_[num_row] = std::move(lp_.row_names_[iRow]);
+        }
         num_row++;
       }
     }

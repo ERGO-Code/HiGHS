@@ -49,11 +49,10 @@ HighsStatus assessMatrix(
     const std::string* row_names = nullptr);
 
 bool legalMatrixDimensions(const HighsLogOptions& log_options,
-			   const HighsInt num_vec,
-			   const bool partitioned,
-			   const vector<HighsInt>& matrix_start,
-			   const vector<HighsInt>& matrix_p_end,
-			   const vector<HighsInt>& matrix_index,
-			   const vector<double>& matrix_value);
+                           const HighsInt num_vec, const bool partitioned,
+                           const vector<HighsInt>& matrix_start,
+                           const vector<HighsInt>& matrix_p_end,
+                           const vector<HighsInt>& matrix_index,
+                           const vector<double>& matrix_value);
 
 #endif  // UTIL_HIGHSMATRIXUTILS_H_

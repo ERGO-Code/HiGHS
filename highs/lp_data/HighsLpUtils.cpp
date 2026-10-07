@@ -32,15 +32,18 @@ using std::min;
 const HighsInt kMaxLineLength = 80;
 
 HighsStatus assessLp(HighsLp& lp, const HighsOptions& options) {
+  HighsLogOptions log_options = options.log_options;
   HighsStatus return_status = HighsStatus::kOk;
-  HighsStatus call_status = legalLpDimensions("assessLp", options.log_options, lp)
+  HighsStatus call_status = legalLpDimensions("assessLp", log_options, lp)
                                 ? HighsStatus::kOk
                                 : HighsStatus::kError;
-  return_status = interpretCallStatus(options.log_options, call_status,
-                                      return_status, "assessLpDimensions");
+  return_status = interpretCallStatus(log_options, call_status, return_status,
+                                      "assessLpDimensions");
   if (return_status == HighsStatus::kError) return return_status;
 
-  return_status = interpretCallStatus(options.log_options, trimLpDimensions(options.log_options, lp), return_status, "trimLpDimensions");
+  return_status =
+      interpretCallStatus(log_options, trimLpDimensions(log_options, lp),
+                          return_status, "trimLpDimensions");
 
   if (lp.num_col_) {
     // Assess the LP column costs
@@ -51,16 +54,16 @@ HighsStatus assessLp(HighsLp& lp, const HighsOptions& options) {
     index_collection.to_ = lp.num_col_ - 1;
     call_status = assessCosts(options, 0, index_collection, lp.col_cost_,
                               lp.has_infinite_cost_, options.infinite_cost);
-    return_status = interpretCallStatus(options.log_options, call_status,
-                                        return_status, "assessCosts");
+    return_status = interpretCallStatus(log_options, call_status, return_status,
+                                        "assessCosts");
     if (return_status == HighsStatus::kError) return return_status;
     // Assess the LP column bounds
     call_status = assessBounds(
         options, "Col", 0, index_collection, lp.col_lower_, lp.col_upper_,
         options.infinite_bound, lp.isMip() ? lp.integrality_.data() : nullptr,
         lp.col_names_.data());
-    return_status = interpretCallStatus(options.log_options, call_status,
-                                        return_status, "assessBounds");
+    return_status = interpretCallStatus(log_options, call_status, return_status,
+                                        "assessBounds");
     if (return_status == HighsStatus::kError) return return_status;
   }
   if (lp.num_row_) {
@@ -73,8 +76,8 @@ HighsStatus assessLp(HighsLp& lp, const HighsOptions& options) {
     call_status = assessBounds(
         options, "Row", 0, index_collection, lp.row_lower_, lp.row_upper_,
         options.infinite_bound, nullptr, lp.row_names_.data());
-    return_status = interpretCallStatus(options.log_options, call_status,
-                                        return_status, "assessBounds");
+    return_status = interpretCallStatus(log_options, call_status, return_status,
+                                        "assessBounds");
     if (return_status == HighsStatus::kError) return return_status;
   }
   // If the LP has no columns the matrix must be empty and there is
@@ -89,28 +92,27 @@ HighsStatus assessLp(HighsLp& lp, const HighsOptions& options) {
 
   // Assess the LP matrix - even if there are no rows!
   const bool sum_duplicates = false;
-  call_status =
-      lp.a_matrix_.assess(options.log_options, "LP", options.small_matrix_value,
-                          options.large_matrix_value, sum_duplicates,
-                          lp.col_names_.data(), lp.row_names_.data());
-  return_status = interpretCallStatus(options.log_options, call_status,
-                                      return_status, "assessMatrix");
+  call_status = lp.a_matrix_.assess(
+      log_options, "LP", options.small_matrix_value, options.large_matrix_value,
+      sum_duplicates, lp.col_names_.data(), lp.row_names_.data());
+  return_status = interpretCallStatus(log_options, call_status, return_status,
+                                      "assessMatrix");
   if (return_status == HighsStatus::kError) return return_status;
   // If entries have been removed from the matrix, resize the start,
   // index and value vectors to prevent bug in presolve
   HighsInt lp_num_nz = lp.numNz();
-  lp.a_matrix_.start_.resize((lp.isColwise() ? lp.num_col_ : lp.num_row_)+1);
+  lp.a_matrix_.start_.resize((lp.isColwise() ? lp.num_col_ : lp.num_row_) + 1);
   lp.a_matrix_.index_.resize(lp_num_nz);
   lp.a_matrix_.value_.resize(lp_num_nz);
   if (return_status != HighsStatus::kOk)
-    highsLogDev(options.log_options, HighsLogType::kInfo,
+    highsLogDev(log_options, HighsLogType::kInfo,
                 "assessLp returns HighsStatus = %s\n",
                 highsStatusToString(return_status).c_str());
   return return_status;
 }
 
 bool legalLpDimensions(const std::string& message,
-		       const HighsLogOptions& log_options, const HighsLp& lp) {
+                       const HighsLogOptions& log_options, const HighsLp& lp) {
   bool ok = true;
   const HighsInt num_col = lp.num_col_;
   const HighsInt num_row = lp.num_row_;
@@ -129,27 +131,50 @@ bool legalLpDimensions(const std::string& message,
   HighsInt col_cost_size = lp.col_cost_.size();
   HighsInt col_lower_size = lp.col_lower_.size();
   HighsInt col_upper_size = lp.col_upper_.size();
+  HighsInt col_names_size = lp.col_names_.size();
+  HighsInt integrality_size = lp.integrality_.size();
   bool legal_col_cost_size = col_cost_size >= num_col;
   bool legal_col_lower_size = col_lower_size >= num_col;
   bool legal_col_upper_size = col_upper_size >= num_col;
+  bool legal_col_names_size = col_names_size == 0 || col_names_size >= num_col;
+  bool legal_integrality_size =
+      integrality_size == 0 || integrality_size >= num_col;
   if (!legal_col_cost_size)
-    highsLogUser(log_options, HighsLogType::kError,
-                 "LP dimension validation (%s) fails on col_cost.size() = %d < "
-                 "%d = num_col\n",
-                 message.c_str(), (int)col_cost_size, (int)num_col);
+    highsLogUser(
+        log_options, HighsLogType::kError,
+        "LP dimension validation (%s) fails on col_cost_.size() = %d < "
+        "%d = num_col\n",
+        message.c_str(), (int)col_cost_size, (int)num_col);
   ok = legal_col_cost_size && ok;
+
   if (!legal_col_lower_size)
     highsLogUser(log_options, HighsLogType::kError,
-                 "LP dimension validation (%s) fails on col_lower.size() = %d "
+                 "LP dimension validation (%s) fails on col_lower_.size() = %d "
                  "< %d = num_col\n",
                  message.c_str(), (int)col_lower_size, (int)num_col);
   ok = legal_col_lower_size && ok;
+
   if (!legal_col_upper_size)
     highsLogUser(log_options, HighsLogType::kError,
-                 "LP dimension validation (%s) fails on col_upper.size() = %d "
+                 "LP dimension validation (%s) fails on col_upper_.size() = %d "
                  "< %d = num_col\n",
                  message.c_str(), (int)col_upper_size, (int)num_col);
   ok = legal_col_upper_size && ok;
+
+  if (!legal_integrality_size)
+    highsLogUser(
+        log_options, HighsLogType::kError,
+        "LP dimension validation (%s) fails on integrality_.size() = %d "
+        "< %d = num_col\n",
+        message.c_str(), (int)integrality_size, (int)num_col);
+  ok = legal_integrality_size && ok;
+
+  if (!legal_col_names_size)
+    highsLogUser(log_options, HighsLogType::kError,
+                 "LP dimension validation (%s) fails on col_names_.size() = %d "
+                 "< %d = num_col\n",
+                 message.c_str(), (int)col_names_size, (int)num_col);
+  ok = legal_col_names_size && ok;
 
   bool legal_format = lp.a_matrix_.format_ == MatrixFormat::kColwise ||
                       lp.a_matrix_.format_ == MatrixFormat::kRowwise;
@@ -166,11 +191,9 @@ bool legalLpDimensions(const std::string& message,
   }
   const bool partitioned = false;
   vector<HighsInt> a_matrix_p_end;
-  bool legal_matrix_dimensions =
-      legalMatrixDimensions(log_options, num_vec, partitioned,
-                             lp.a_matrix_.start_, a_matrix_p_end,
-                             lp.a_matrix_.index_,
-                             lp.a_matrix_.value_);
+  bool legal_matrix_dimensions = legalMatrixDimensions(
+      log_options, num_vec, partitioned, lp.a_matrix_.start_, a_matrix_p_end,
+      lp.a_matrix_.index_, lp.a_matrix_.value_);
   if (!legal_matrix_dimensions)
     highsLogUser(log_options, HighsLogType::kError,
                  "LP dimension validation (%s) fails on a_matrix dimensions\n",
@@ -179,20 +202,30 @@ bool legalLpDimensions(const std::string& message,
 
   HighsInt row_lower_size = lp.row_lower_.size();
   HighsInt row_upper_size = lp.row_upper_.size();
+  HighsInt row_names_size = lp.row_names_.size();
   bool legal_row_lower_size = row_lower_size >= num_row;
   bool legal_row_upper_size = row_upper_size >= num_row;
+  bool legal_row_names_size = row_names_size == 0 || row_names_size >= num_row;
   if (!legal_row_lower_size)
     highsLogUser(log_options, HighsLogType::kError,
-                 "LP dimension validation (%s) fails on row_lower.size() = %d "
+                 "LP dimension validation (%s) fails on row_lower_.size() = %d "
                  "< %d = num_row\n",
                  message.c_str(), (int)row_lower_size, (int)num_row);
   ok = legal_row_lower_size && ok;
+
   if (!legal_row_upper_size)
     highsLogUser(log_options, HighsLogType::kError,
-                 "LP dimension validation (%s) fails on row_upper.size() = %d "
+                 "LP dimension validation (%s) fails on row_upper_.size() = %d "
                  "< %d = num_row\n",
                  message.c_str(), (int)row_upper_size, (int)num_row);
   ok = legal_row_upper_size && ok;
+
+  if (!legal_row_names_size)
+    highsLogUser(log_options, HighsLogType::kError,
+                 "LP dimension validation (%s) fails on row_names_.size() = %d "
+                 "< %d = num_row\n",
+                 message.c_str(), (int)row_names_size, (int)num_row);
+  ok = legal_row_names_size && ok;
 
   bool legal_a_matrix_num_col = lp.a_matrix_.num_col_ == num_col;
   bool legal_a_matrix_num_row = lp.a_matrix_.num_row_ == num_row;
@@ -202,6 +235,7 @@ bool legalLpDimensions(const std::string& message,
                  "!= %d = num_col\n",
                  message.c_str(), (int)lp.a_matrix_.num_col_, (int)num_col);
   ok = legal_a_matrix_num_col && ok;
+
   if (!legal_a_matrix_num_row)
     highsLogUser(log_options, HighsLogType::kError,
                  "LP dimension validation (%s) fails on a_matrix.num_row_ = %d "
@@ -279,12 +313,13 @@ HighsStatus trimLpDimensions(const HighsLogOptions& log_options, HighsLp& lp) {
   HighsInt trimmed = 0;
   HighsStatus status = HighsStatus::kOk;
 
-  auto logTrimming = [&] (const std::string& name) {
+  auto logTrimming = [&](const std::string& name) {
     if (trimmed == 0) return;
     assert(trimmed > 0);
     highsLogUser(log_options, HighsLogType::kWarning,
-		 "Trimmed %d excess entr%s from HighsLp data member %s\n",
-		 int(trimmed), highsIntToPlural(trimmed, true).c_str(), name.c_str());
+                 "Trimmed %d excess entr%s from HighsLp data member %s\n",
+                 int(trimmed), highsIntToPlural(trimmed, true).c_str(),
+                 name.c_str());
     status = HighsStatus::kWarning;
   };
 
@@ -343,7 +378,6 @@ HighsStatus trimLpDimensions(const HighsLogOptions& log_options, HighsLp& lp) {
   }
   return status;
 }
-
 
 HighsStatus assessCosts(const HighsOptions& options, const HighsInt ml_col_os,
                         const HighsIndexCollection& index_collection,
