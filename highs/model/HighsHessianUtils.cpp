@@ -21,12 +21,8 @@ using std::fabs;
 
 HighsStatus assessHessian(HighsHessian& hessian, const HighsOptions& options) {
   if (hessian.isOracle()) return HighsStatus::kOk;
-  HighsStatus return_status = HighsStatus::kOk;
-  HighsStatus call_status;
 
-  return_status = interpretCallStatus(options.log_options,
-                                      assessHessianDimensions(options, hessian),
-                                      return_status, "assessHessianDimensions");
+  HighsStatus return_status = legalHessianDimensions(options, hessian) ? HighsStatus::kOk : HighsStatus::kError;
   if (return_status == HighsStatus::kError) return return_status;
 
   // If the Hessian has no columns there is nothing left to test
@@ -48,9 +44,10 @@ HighsStatus assessHessian(HighsHessian& hessian, const HighsOptions& options) {
   // Assess Q, summing duplicates, but deferring the assessment of
   // values (other than those which are identically zero)
   bool sum_duplicates = true;
-  call_status = assessMatrix(options.log_options, "Hessian", hessian.dim_,
-                             hessian.dim_, hessian.start_, hessian.index_,
-                             hessian.value_, 0, kHighsInf, sum_duplicates);
+  HighsStatus call_status =
+    assessMatrix(options.log_options, "Hessian", hessian.dim_,
+		 hessian.dim_, hessian.start_, hessian.index_,
+		 hessian.value_, 0, kHighsInf, sum_duplicates);
   return_status = interpretCallStatus(options.log_options, call_status,
                                       return_status, "assessMatrix");
   if (return_status == HighsStatus::kError) return return_status;
@@ -91,16 +88,16 @@ HighsStatus assessHessian(HighsHessian& hessian, const HighsOptions& options) {
   return return_status;
 }
 
-HighsStatus assessHessianDimensions(const HighsOptions& options,
-                                    HighsHessian& hessian) {
+bool legalHessianDimensions(const HighsOptions& options,
+			    HighsHessian& hessian) {
   assert(!hessian.isOracle());
 
-  if (hessian.dim_ == 0) return HighsStatus::kOk;
+  if (hessian.dim_ == 0) return true;
 
   // Assess the Hessian dimensions and vector sizes
   vector<HighsInt> hessian_p_end;
   const bool partitioned = false;
-  return assessMatrixDimensions(options.log_options, hessian.dim_, partitioned,
+  return legalMatrixDimensions(options.log_options, hessian.dim_, partitioned,
                                 hessian.start_, hessian_p_end, hessian.index_,
                                 hessian.value_);
 }

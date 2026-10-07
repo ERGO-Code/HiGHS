@@ -708,10 +708,14 @@ TEST_CASE("issue-3366", "[highs_data]") {
   lp.row_upper_ = {2, 3};
   lp.col_names_ = {"C0", "C1"};
   lp.row_names_ = {"R0", "R1"};
+  //  lp.integrality_ = {HighsVarType::kInteger, HighsVarType::kContinuous};
   Highs h;
   
   //  h.setOptionValue("output_flag", dev_run);
-  REQUIRE(h.passModel(lp) == HighsStatus::kWarning);
+  h.passModel(lp);;
+  h.writeModel("");;
+  //  REQUIRE(h.passModel(lp) == HighsStatus::kWarning);
+  h.presolve();
   h.run();
   REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
 

@@ -33,7 +33,7 @@ const HighsInt kMaxLineLength = 80;
 
 HighsStatus assessLp(HighsLp& lp, const HighsOptions& options) {
   HighsStatus return_status = HighsStatus::kOk;
-  HighsStatus call_status = lpDimensionsLegal("assessLp", lp, options.log_options)
+  HighsStatus call_status = legalLpDimensions("assessLp", lp, options.log_options)
                                 ? HighsStatus::kOk
                                 : HighsStatus::kError;
   return_status = interpretCallStatus(options.log_options, call_status,
@@ -108,7 +108,7 @@ HighsStatus assessLp(HighsLp& lp, const HighsOptions& options) {
   return return_status;
 }
 
-bool lpDimensionsLegal(const std::string& message, const HighsLp& lp,
+bool legalLpDimensions(const std::string& message, const HighsLp& lp,
 		       const HighsLogOptions& log_options) {
   bool ok = true;
   const HighsInt num_col = lp.num_col_;
@@ -166,10 +166,10 @@ bool lpDimensionsLegal(const std::string& message, const HighsLp& lp,
   const bool partitioned = false;
   vector<HighsInt> a_matrix_p_end;
   bool legal_matrix_dimensions =
-      assessMatrixDimensions(log_options, num_vec, partitioned,
+      legalMatrixDimensions(log_options, num_vec, partitioned,
                              lp.a_matrix_.start_, a_matrix_p_end,
                              lp.a_matrix_.index_,
-                             lp.a_matrix_.value_) == HighsStatus::kOk;
+                             lp.a_matrix_.value_);
   if (!legal_matrix_dimensions)
     highsLogUser(log_options, HighsLogType::kError,
                  "LP dimension validation (%s) fails on a_matrix dimensions\n",

@@ -55,11 +55,9 @@ HighsStatus assessMatrix(
     const double small_matrix_value, const double large_matrix_value,
     const bool sum_duplicates, const std::string* col_names,
     const std::string* row_names) {
-  if (assessMatrixDimensions(log_options, num_vec, partitioned, matrix_start,
+  if (!legalMatrixDimensions(log_options, num_vec, partitioned, matrix_start,
                              matrix_p_end, matrix_index,
-                             matrix_value) == HighsStatus::kError) {
-    return HighsStatus::kError;
-  }
+                             matrix_value)) return HighsStatus::kError;
 
   auto possible_col_name = [&](const HighsInt ix) {
     std::string name = "";
@@ -337,13 +335,13 @@ HighsStatus assessMatrix(
   return return_status;
 }
 
-HighsStatus assessMatrixDimensions(const HighsLogOptions& log_options,
-                                   const HighsInt num_vec,
-                                   const bool partitioned,
-                                   const vector<HighsInt>& matrix_start,
-                                   const vector<HighsInt>& matrix_p_end,
-                                   const vector<HighsInt>& matrix_index,
-                                   const vector<double>& matrix_value) {
+bool legalMatrixDimensions(const HighsLogOptions& log_options,
+			   const HighsInt num_vec,
+			   const bool partitioned,
+			   const vector<HighsInt>& matrix_start,
+			   const vector<HighsInt>& matrix_p_end,
+			   const vector<HighsInt>& matrix_index,
+			   const vector<double>& matrix_value) {
   bool ok = true;
   // Assess main dimensions
   const bool legal_num_vec = num_vec >= 0;
@@ -402,6 +400,5 @@ HighsStatus assessMatrixDimensions(const HighsLogOptions& log_options,
         (int)num_nz);
     ok = false;
   }
-  if (ok) return HighsStatus::kOk;
-  return HighsStatus::kError;
+  return ok;
 }
