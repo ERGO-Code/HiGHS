@@ -12,7 +12,7 @@ double DoubleQuantizer::bucket(double d) {
 
 void DoubleQuantizer::hash_combine(size_t& x, size_t y) const {
   // hash_combine from boost
-  x ^= y + 0x9e3779b97f4a7c15 + (x << 6) + (x >> 2);
+  x ^= y + kFibonacciMultiplier + (x << 6) + (x >> 2);
 }
 
 size_t DoubleQuantizer::operator()(double d) const {

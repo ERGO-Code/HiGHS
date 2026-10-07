@@ -349,6 +349,7 @@ set(highs_sources
     folding/ColourRefinement.cpp
     folding/DoubleQuantizer.cpp
     folding/Fold.cpp
+    folding/SumClassifier.cpp
     interfaces/highs_c_api.cpp
     io/Filereader.cpp
     io/FilereaderLp.cpp
@@ -480,6 +481,7 @@ set(highs_headers
     folding/DoubleQuantizer.h
     folding/Fold.h
     folding/FoldConstants.h
+    folding/SumClassifier.h
     interfaces/highs_c_api.h
     io/Filereader.h
     io/FilereaderLp.h

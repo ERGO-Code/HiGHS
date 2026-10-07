@@ -13,11 +13,10 @@ class Folder {
   const HighsLp& lp_;
   std::vector<HighsInt> row_colour_;
   std::vector<HighsInt> col_colour_;
+  std::unique_ptr<ColourRefinement> CR_;
 
   HighsInt initial_row_colours_;
   HighsInt initial_col_colours_;
-  HighsInt row_colours_;
-  HighsInt col_colours_;
 
   template <typename Data>
   HighsInt findInitialColour(HighsInt num, HighsInt* colour, HighsInt start);

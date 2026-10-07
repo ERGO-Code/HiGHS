@@ -119,24 +119,23 @@ bool ColourRefinement::colourSplits(const Side& side, HighsInt colour) const {
   return colour_split;
 }
 
-void ColourRefinement::countSums(const Side& side, HighsInt colour) {
-  // Populate sum_map_ with the sums of the nodes of the colour, counting how
-  // many nodes have each sum. The map uses the DoubleQuantizer, so sums that
-  // are in the same bucket are considered the same.
+void ColourRefinement::countSums(Side& side, HighsInt colour) {
+  // Classify the nodes of the colour by quantized sum, counting how many nodes
+  // are in each class. The class of each touched node is saved, so it does not
+  // need to be looked up again when the nodes are moved.
   hipo::Clock clock;
 
-  sum_map_.clear();
+  const auto slots = side.touched.slots(colour);
+
+  // At most one class per touched node, plus the class of untouched nodes
+  classifier_.reset(slots.size() + 1);
 
   const HighsInt nodes_with_zero_sum = side.numUntouchedNodes(colour);
-  if (nodes_with_zero_sum > 0)
-    sum_map_.insert({0.0, SumData{nodes_with_zero_sum, -1}});
+  if (nodes_with_zero_sum > 0) classifier_.add(0.0, nodes_with_zero_sum);
 
-  for (HighsInt slot : side.touched.slots(colour)) {
-    auto result = sum_map_.insert({side.touched.sum(slot), SumData{1, -1}});
-    if (!result.second) {
-      SumData& data = result.first->second;
-      data.count++;
-    }
+  for (HighsInt slot : slots) {
+    const HighsInt new_class_id = classifier_.add(side.touched.sum(slot));
+    side.touched.setClass(slot, new_class_id);
   }
 
   time_count_sums_ += clock.stop();
@@ -145,37 +144,29 @@ void ColourRefinement::countSums(const Side& side, HighsInt colour) {
 void ColourRefinement::assignNewColours(Side& side, HighsInt colour) {
   hipo::Clock clock;
 
-  // sum_map_ contains the new colour classes in which split_colour is divided.
-  // Find iterators to the largest and smallest of these classes
-  auto it_largest = sum_map_.begin();
-  auto it_smallest = sum_map_.begin();
-
-  for (auto it = sum_map_.begin(); it != sum_map_.end(); ++it) {
-    const SumData& data = it->second;
-    if (data.count > it_largest->second.count) it_largest = it;
-    if (data.count < it_smallest->second.count) it_smallest = it;
-  }
+  // classifier_ contains the new colour classes in which colour is divided.
+  const HighsInt largest = classifier_.largest();
 
   // All colour classes are added to the stack for later refinement, apart from
   // the largest one. One class can reuse the current colour: we use the class
   // with sum zero, if it exists, or the smallest class.
-  const auto it_zero = sum_map_.find(0.0);
-  const auto it_reusing_colour =
-      it_zero != sum_map_.end() ? it_zero : it_smallest;
+  const HighsInt reusing_colour = classifier_.zeroClass() >= 0
+                                      ? classifier_.zeroClass()
+                                      : classifier_.smallest();
 
   // Add colours to the stack
   const bool colour_in_stack = side.to_refine.belong(colour);
 
-  for (auto it = sum_map_.begin(); it != sum_map_.end(); ++it) {
-    SumData& data = it->second;
-    if (it == it_reusing_colour) {
+  for (HighsInt j = 0; j < classifier_.size(); ++j) {
+    SumData& data = classifier_[j];
+    if (j == reusing_colour) {
       data.colour = colour;
-      if (!colour_in_stack && it != it_largest) side.to_refine.push(colour);
+      if (!colour_in_stack && j != largest) side.to_refine.push(colour);
 
     } else {
       ++side.latest_colour;
       data.colour = side.latest_colour;
-      if (colour_in_stack || it != it_largest) side.to_refine.push(data.colour);
+      if (colour_in_stack || j != largest) side.to_refine.push(data.colour);
     }
   }
 
@@ -187,8 +178,8 @@ void ColourRefinement::moveNodesToNewColours(Side& side, HighsInt colour) {
 
   for (HighsInt slot : side.touched.slots(colour)) {
     const HighsInt node = side.touched.node(slot);
-    const double sum = side.touched.sum(slot);
-    const HighsInt new_colour = sum_map_.find(sum)->second.colour;
+    const HighsInt class_id = side.touched.getClass(slot);
+    const HighsInt new_colour = classifier_[class_id].colour;
     if (new_colour != colour) {
       side.moveNode(node, colour, new_colour);
     }

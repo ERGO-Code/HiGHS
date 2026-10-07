@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "DoubleQuantizer.h"
+#include "SumClassifier.h"
 #include "util/HighsLinkedLists.h"
 #include "util/HighsSparseMatrix.h"
 
@@ -116,6 +117,7 @@ class ColourRefinement {
     std::vector<HighsInt> node_of_slot_;
     std::vector<double> sum_of_slot_;
     std::vector<HighsInt> colour_of_slot_;
+    std::vector<HighsInt> class_id_of_slot_;
     HighsInt num_slots_;
 
     std::vector<HighsInt> count_of_colour_;
@@ -130,6 +132,7 @@ class ColourRefinement {
           node_of_slot_(num_nodes),
           sum_of_slot_(num_nodes),
           colour_of_slot_(num_nodes),
+          class_id_of_slot_(num_nodes),
           num_slots_{0},
           count_of_colour_(num_nodes, 0),
           colours_(num_nodes),
@@ -147,6 +150,12 @@ class ColourRefinement {
     }
     HighsInt node(HighsInt slot) const { return node_of_slot_[slot]; }
     double sum(HighsInt slot) const { return sum_of_slot_[slot]; }
+
+    // Manage class id from classifier
+    void setClass(HighsInt slot, HighsInt class_id) {
+      class_id_of_slot_[slot] = class_id;
+    }
+    HighsInt getClass(HighsInt slot) const { return class_id_of_slot_[slot]; }
 
     struct SlotRange {
       const HighsInt* first;
@@ -194,12 +203,7 @@ class ColourRefinement {
   HighsSparseMatrix At_;
   Side rows_;
   Side cols_;
-
-  struct SumData {
-    HighsInt count;
-    HighsInt colour;
-  };
-  QuantizedMap<double, SumData> sum_map_;
+  SumClassifier classifier_;
 
   void refine(Side& src, Side& dst, const HighsSparseMatrix& M);
   void computeColourSums(HighsInt refining_colour, Side& src, Side& dst,
@@ -208,7 +212,7 @@ class ColourRefinement {
   bool colourSplits(const Side& side, HighsInt colour) const;
   void splitColour(Side& side, HighsInt colour);
 
-  void countSums(const Side& side, HighsInt colour);
+  void countSums(Side& side, HighsInt colour);
   void assignNewColours(Side& side, HighsInt colour);
   void moveNodesToNewColours(Side& side, HighsInt colour);
 

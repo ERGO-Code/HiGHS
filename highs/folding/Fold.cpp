@@ -86,13 +86,8 @@ void Folder::findInitialColour() {
 }
 
 void Folder::foldMatrix() {
-  hipo::Clock clock;
-  ColourRefinement CR(lp_.a_matrix_, row_colour_, col_colour_);
-  printf("CR setup:     %f\n", clock.stop());
-
-  CR.run();
-  row_colours_ = CR.rowColoursUsed();
-  col_colours_ = CR.colColoursUsed();
+  CR_.reset(new ColourRefinement(lp_.a_matrix_, row_colour_, col_colour_));
+  CR_->run();
 }
 
 void Folder::run() {
@@ -109,9 +104,9 @@ void Folder::print() const {
   printf("Rows: %d out of %d\n", initial_row_colours_, lp_.num_row_);
   printf("Cols: %d out of %d\n", initial_col_colours_, lp_.num_col_);
   printf("Final:\n");
-  printf("Rows: %d out of %d\n", row_colours_, lp_.num_row_);
-  printf("Cols: %d out of %d\n", col_colours_, lp_.num_col_);
-  printf("Matr: %d out of %d\n", row_colours_ + col_colours_,
+  printf("Rows: %d out of %d\n", CR_->rowColoursUsed(), lp_.num_row_);
+  printf("Cols: %d out of %d\n", CR_->colColoursUsed(), lp_.num_col_);
+  printf("Matr: %d out of %d\n", CR_->rowColoursUsed() + CR_->colColoursUsed(),
          lp_.num_row_ + lp_.num_col_);
 
   /*
