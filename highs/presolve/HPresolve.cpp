@@ -5342,7 +5342,7 @@ HPresolve::Result HPresolve::dualFixing(HighsPostsolveStack& postsolve_stack,
   // lambda for variable substitution
   auto substituteCol = [&](HighsInt col, HighsInt row, HighsInt direction,
                            double colBound, double otherColBound) {
-    if (rowsizeInteger[row] == 0) return Result::kOk;
+    if (rowsize[row] > 1000 || rowsizeInteger[row] == 0) return Result::kOk;
 
     // check lhs and rhs for finiteness
     bool lhsFinite = model->row_lower_[row] != -kHighsInf;
@@ -5892,6 +5892,7 @@ HPresolve::Result HPresolve::singletonColStuffing(
 
   // return if we have an empty or singleton row or row is ranged
   if (rowsize[row] <= 1 || isRanged(row)) return Result::kOk;
+  if (rowsize[row] > 1000) return Result::kOk;
 
   // check row
   HPRESOLVE_CHECKED_CALL(checkRow(row, model->row_upper_[row], HighsInt{1}));
