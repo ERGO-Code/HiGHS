@@ -1260,7 +1260,7 @@ TEST_CASE("issue-3364", "[highs_test_presolve_rules]") {
   lp.a_matrix_.index_ = {0, 1, 2, 3, 0, 1, 2, 4, 0, 1, 2, 0, 0, 3, 4};
   lp.a_matrix_.value_ = {1, 1, 1, 1, 2, 2, 2, 1, 3, 3, 3, 2, 3, 1, 1};
   lp.col_names_ = {"x0", "x1", "x3", "s1", "s2", "x4", "x5"};
-  lp.row_names_ = {"B", "A", "i", "D", "E"};
+  lp.row_names_ = {"A", "B", "i", "D", "E"};
 
   HighsOptions options;
   options.presolve_rule_test = kPresolveRuleParallelRowsAndCols;
