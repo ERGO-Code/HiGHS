@@ -849,7 +849,6 @@ void HighsImplications::separateImpliedBounds(
       if (implications[ImplIdx{col, val}].empty()) continue;
       std::pair<const HighsCliqueTable::CliqueVar*, HighsInt> clique{nullptr,
                                                                      0};
-      cliquetable.getRandomClique({col, val}, randgen);
       HighsInt numLift = -1;
       HighsInt start = 0;
 
