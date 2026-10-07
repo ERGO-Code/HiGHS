@@ -9605,10 +9605,11 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
     auto it = buckets.find(rowHashes[i]);
     decltype(it) last = it;
 
-    // The conditional block where equalityRowAddition is called
-    // cannot be reached if numSingleton = 0 and numSingletonCandidate
-    // = 0. Hence, if may_require_basis_postsolve_ is true, continue is
-    // called if numSingleton != 0 or numSingletonCandidate != 0
+    // equalityRowAddition is only called if row i or the candidate row
+    // contains singleton columns, i.e. if one of the rows is not exactly
+    // parallel. hence, if may_require_basis_postsolve_ is true, row i is
+    // skipped here if it contains singleton columns, and a candidate row is
+    // skipped below if it contains singleton columns
     if (may_require_basis_postsolve_ && rowsizeSingleton[i] != 0) continue;
 
     // reductions with row i change or delete row i or the candidate rows, and
