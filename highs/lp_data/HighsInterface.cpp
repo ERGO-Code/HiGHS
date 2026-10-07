@@ -2159,7 +2159,7 @@ HighsStatus Highs::elasticityFilterReturn(
     const HighsStatus return_status, const std::string& original_model_name,
     const HighsModelStatus original_model_status,
     const HighsInt original_num_col, const HighsInt original_num_row,
-    const std::vector<double>& original_col_cost,
+    const ObjSense original_sense, const std::vector<double>& original_col_cost,
     const std::vector<double>& original_col_lower,
     const std::vector<double>& original_col_upper,
     const std::vector<HighsVarType>& original_integrality) {
@@ -2184,6 +2184,9 @@ HighsStatus Highs::elasticityFilterReturn(
 
   run_status =
       this->changeColsCost(0, original_num_col - 1, original_col_cost.data());
+  assert(run_status == HighsStatus::kOk);
+
+  run_status = this->changeObjectiveSense(original_sense);
   assert(run_status == HighsStatus::kOk);
 
   run_status =
@@ -2286,6 +2289,7 @@ HighsStatus Highs::elasticityFilter(const double global_lower_penalty,
   // data vectors, as they will be modified in forming the e-LP
   const std::string original_model_name = lp.model_name_;
   const HighsModelStatus original_model_status = this->getModelStatus();
+  const ObjSense original_sense = lp.sense_;
   const HighsInt original_num_col = lp.num_col_;
   const HighsInt original_num_row = lp.num_row_;
   const std::vector<double> original_col_cost = lp.col_cost_;
@@ -2302,6 +2306,9 @@ HighsStatus Highs::elasticityFilter(const double global_lower_penalty,
   std::vector<double> zero_costs;
   zero_costs.assign(original_num_col, 0);
   run_status = this->changeColsCost(0, lp.num_col_ - 1, zero_costs.data());
+  assert(run_status == HighsStatus::kOk);
+  // Change the sense to minimize
+  run_status = this->changeObjectiveSense(ObjSense::kMinimize);
   assert(run_status == HighsStatus::kOk);
 
   const bool mip_relaxation_iis =
@@ -2578,7 +2585,7 @@ HighsStatus Highs::elasticityFilter(const double global_lower_penalty,
     this->iis_ = iis;
     return elasticityFilterReturn(
         HighsStatus::kError, original_model_name, original_model_status,
-        original_num_col, original_num_row, original_col_cost,
+        original_num_col, original_num_row, original_sense, original_col_cost,
         original_col_lower, original_col_upper, original_integrality);
   }
   if (kIisDevReport) this->writeSolution("", kSolutionStylePretty);
@@ -2593,7 +2600,7 @@ HighsStatus Highs::elasticityFilter(const double global_lower_penalty,
     this->iis_ = iis;
     return elasticityFilterReturn(
         HighsStatus::kOk, original_model_name, original_model_status,
-        original_num_col, original_num_row, original_col_cost,
+        original_num_col, original_num_row, original_sense, original_col_cost,
         original_col_lower, original_col_upper, original_integrality);
   }
   // If getting an (I)IS, assume no elastic columns, so no additional rows
@@ -2684,7 +2691,7 @@ HighsStatus Highs::elasticityFilter(const double global_lower_penalty,
       this->iis_ = iis;
       return elasticityFilterReturn(
           HighsStatus::kError, original_model_name, original_model_status,
-          original_num_col, original_num_row, original_col_cost,
+          original_num_col, original_num_row, original_sense, original_col_cost,
           original_col_lower, original_col_upper, original_integrality);
     }
     if (kIisDevReport) this->writeSolution("", kSolutionStylePretty);
@@ -2756,7 +2763,7 @@ HighsStatus Highs::elasticityFilter(const double global_lower_penalty,
     this->iis_ = iis;
     return elasticityFilterReturn(
         HighsStatus::kOk, original_model_name, original_model_status,
-        original_num_col, original_num_row, original_col_cost,
+        original_num_col, original_num_row, original_sense, original_col_cost,
         original_col_lower, original_col_upper, original_integrality);
   }
 
@@ -2837,8 +2844,8 @@ HighsStatus Highs::elasticityFilter(const double global_lower_penalty,
   this->iis_ = iis;
   return elasticityFilterReturn(
       HighsStatus::kOk, original_model_name, original_model_status,
-      original_num_col, original_num_row, original_col_cost, original_col_lower,
-      original_col_upper, original_integrality);
+      original_num_col, original_num_row, original_sense, original_col_cost,
+      original_col_lower, original_col_upper, original_integrality);
 }
 
 HighsStatus Highs::extractIis(HighsInt& num_iis_col, HighsInt& num_iis_row,
