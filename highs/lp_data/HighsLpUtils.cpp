@@ -40,7 +40,7 @@ HighsStatus assessLp(HighsLp& lp, const HighsOptions& options) {
                                       return_status, "assessLpDimensions");
   if (return_status == HighsStatus::kError) return return_status;
 
-  //  return_status = interpretCallStatus(options.log_options, trimLpDimensions(options.log_options, lp), return_status, "trimLpDimensions");
+  return_status = interpretCallStatus(options.log_options, trimLpDimensions(options.log_options, lp), return_status, "trimLpDimensions");
 
   if (lp.num_col_) {
     // Assess the LP column costs
@@ -81,7 +81,7 @@ HighsStatus assessLp(HighsLp& lp, const HighsOptions& options) {
   // nothing left to test
   if (lp.num_col_ == 0) {
     assert(!lp.numNz());
-    return HighsStatus::kOk;
+    return return_status;
   }
   // From here, any LP has lp.num_col_ > 0 and lp.a_matrix_.start_[lp.num_col_]
   // exists (as the number of nonzeros)
@@ -283,7 +283,7 @@ HighsStatus trimLpDimensions(const HighsLogOptions& log_options, HighsLp& lp) {
     if (trimmed == 0) return;
     assert(trimmed > 0);
     highsLogUser(log_options, HighsLogType::kWarning,
-		 "Trimmed %d excess entr%s from HighsLp member %s\n",
+		 "Trimmed %d excess entr%s from HighsLp data member %s\n",
 		 int(trimmed), highsIntToPlural(trimmed, true).c_str(), name.c_str());
     status = HighsStatus::kWarning;
   };
@@ -318,19 +318,30 @@ HighsStatus trimLpDimensions(const HighsLogOptions& log_options, HighsLp& lp) {
     logTrimming("row_upper_");
   }
 
-  trimmed = lp.col_names_.size() - num_col;
-  if (trimmed) {
-    lp.col_names_.resize(num_col);
-    logTrimming("col_names_");
+  if (lp.col_names_.size()) {
+    trimmed = lp.col_names_.size() - num_col;
+    if (trimmed) {
+      lp.col_names_.resize(num_col);
+      logTrimming("col_names_");
+    }
   }
 
-  trimmed = lp.row_names_.size() - num_row;
-  if (trimmed) {
-    lp.row_names_.resize(num_row);
-    logTrimming("row_names_");
+  if (lp.row_names_.size()) {
+    trimmed = lp.row_names_.size() - num_row;
+    if (trimmed) {
+      lp.row_names_.resize(num_row);
+      logTrimming("row_names_");
+    }
+  }
+
+  if (lp.integrality_.size()) {
+    trimmed = lp.integrality_.size() - num_col;
+    if (trimmed) {
+      lp.integrality_.resize(num_col);
+      logTrimming("integrality_");
+    }
   }
   return status;
-
 }
 
 

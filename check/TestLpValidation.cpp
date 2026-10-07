@@ -721,7 +721,7 @@ TEST_CASE("issue-3366", "[highs_data]") {
   lp.a_matrix_.index_ = {0, 1, 0, 1, 6};
   lp.a_matrix_.value_ = {1, 2, 1, 4, 7};
   lp.row_lower_ = {-inf, -inf, -1, 8};
-  lp.row_upper_ = {80, 120, 1, 9};
+  lp.row_upper_ = {80, 120, 1, 9, 10};
   lp.col_names_ = {"C0", "C1", "CX"};
   lp.row_names_ = {"R0", "R1", "R2", "RX"};
   lp.integrality_ = {HighsVarType::kInteger, HighsVarType::kContinuous, HighsVarType::kContinuous};
@@ -732,12 +732,12 @@ TEST_CASE("issue-3366", "[highs_data]") {
   // shrinkProblem isn't called.
   HighsOptions options;
   options.presolve_rule_off = 1 << kPresolveRuleInitialSweep;
-  //    options.output_flag = dev_run;
+  options.output_flag = dev_run;
 
   Highs h;
   h.passOptions(options);
   HighsStatus status = h.passModel(lp);
-  //  REQUIRE(status == HighsStatus::kWarning);
+  REQUIRE(status == HighsStatus::kWarning);
   h.presolve();
 
   HighsLp highs_lp = h.getLp();
@@ -753,7 +753,6 @@ TEST_CASE("issue-3366", "[highs_data]") {
   REQUIRE(highs_lp.col_names_.size() == static_cast<size_t>(lp.num_col_));
   REQUIRE(highs_lp.row_names_.size() == static_cast<size_t>(lp.num_row_));
   REQUIRE(highs_lp.integrality_.size() == static_cast<size_t>(lp.num_col_));
-
 
   h.resetGlobalScheduler(true);
 
