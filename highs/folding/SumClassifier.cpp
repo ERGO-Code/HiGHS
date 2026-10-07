@@ -26,6 +26,9 @@ void SumClassifier::reset(HighsInt max_classes) {
   zero_class_ = -1;
   max_classes_ = max_classes;
 
+  use_table_ = max_classes > kSmallClassThreshold;
+  if (!use_table_) return;
+
   // Guarantee that the size is a power of 2, at least twice as large as
   // max_classes
   size_t size = kMinTableSize;
@@ -40,21 +43,30 @@ void SumClassifier::reset(HighsInt max_classes) {
   ++stamp_;
 }
 
-HighsInt SumClassifier::add(double value, HighsInt count) {
-  // Add count values equal to value after quantization. Returns the index of
-  // the class they belong to.
+HighsInt SumClassifier::createEmptyClass(double quantized_value) {
+  const HighsInt class_id = size();
+  if (quantized_value == 0.0) zero_class_ = class_id;
+  classes_.push_back(SumData{quantized_value, 0, -1});
+  assert(size() <= max_classes_);
+  return class_id;
+}
 
-  const double quantized_value = quantize(value);
+HighsInt SumClassifier::classIdLinear(double quantized_value) {
+  for (HighsInt j = 0; j < size(); ++j)
+    if (classes_[j].quantized == quantized_value) return j;
+
+  const HighsInt new_id = createEmptyClass(quantized_value);
+  return new_id;
+}
+
+HighsInt SumClassifier::classIdTable(double quantized_value) {
   size_t slot = hash(quantized_value) & mask_;
 
   while (table_[slot].stamp == stamp_) {
     // Found a valid entry in the current slot
 
     // Either it has the correct value
-    if (table_[slot].quantized == quantized_value) {
-      classes_[table_[slot].class_id].count += count;
-      return table_[slot].class_id;
-    }
+    if (table_[slot].quantized == quantized_value) return table_[slot].class_id;
 
     // Or we move to the next slot
     slot = (slot + 1) & mask_;
@@ -62,12 +74,23 @@ HighsInt SumClassifier::add(double value, HighsInt count) {
 
   // At this point, slot indicates an empty entry of the table where to add
   // the new class
-  const HighsInt next_class_id = size();
-  if (quantized_value == 0.0) zero_class_ = next_class_id;
-  classes_.push_back(SumData{quantized_value, count, -1});
-  table_[slot] = TableSlot{quantized_value, next_class_id, stamp_};
-  assert(size() <= max_classes_);
-  return next_class_id;
+  const HighsInt class_id = createEmptyClass(quantized_value);
+  table_[slot] = TableSlot{quantized_value, class_id, stamp_};
+  return class_id;
+}
+
+HighsInt SumClassifier::add(double value, HighsInt count) {
+  // Add count values equal to value after quantization. Returns the index of
+  // the class they belong to.
+
+  const double quantized_value = quantize(value);
+
+  const HighsInt class_id = use_table_
+                                ? classIdTable(quantized_value)
+                                : classIdLinear(quantized_value);
+
+  classes_[class_id].count += count;
+  return class_id;
 }
 
 HighsInt SumClassifier::largest() const {
