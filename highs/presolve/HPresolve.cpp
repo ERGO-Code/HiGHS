@@ -9599,7 +9599,8 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
   for (HighsInt rowIndex = 0; rowIndex != model->num_row_; ++rowIndex) {
     HighsInt i = rowOrder[rowIndex];
     if (rowDeleted[i]) continue;
-    if (rowsize[i] <= 1 || (rowsize[i] == 2 && isEquation(i))) {
+    if (rowsize[i] <= 1 || (rowsize[i] == 2 && isEquation(i)) ||
+        rowsize[i] == rowsizeSingleton[i]) {
       HPRESOLVE_CHECKED_CALL(rowPresolve(postsolve_stack, i));
       continue;
     }
@@ -9771,8 +9772,9 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
         // the candidate row has changed, remove it from the buckets
         last = buckets.erase(last);
         // equalityRowAddition calls rowPresolve, which can delete or change
-        // row i and overwrite rowpositions
-        if (rowDeleted[i]) break;
+        // row i and overwrite rowpositions. stop if row i is deleted or only
+        // contains singleton columns
+        if (rowDeleted[i] || rowsize[i] == rowsizeSingleton[i]) break;
         storeRow(i);
       } else if (isEquation(parallelRowCand)) {
         // printf(
@@ -9815,9 +9817,10 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
       }
     }
 
-    // reinsert row i only if it is unchanged. the rowPresolve called by
-    // equalityRowAddition may also have deleted row i
-    if (delRow != i && !rowDeleted[i])
+    // reinsert row i only if it is unchanged and contains non-singleton
+    // columns. the rowPresolve called by equalityRowAddition may also have
+    // deleted row i
+    if (delRow != i && !rowDeleted[i] && rowsize[i] != rowsizeSingleton[i])
       buckets.emplace_hint(last, rowHashes[i], i);
 
     if (delRow != -1) HPRESOLVE_CHECKED_CALL(checkLimits(postsolve_stack));
