@@ -847,12 +847,11 @@ void HighsImplications::separateImpliedBounds(
 
     for (HighsInt val = 0; val != 2; val++) {
       if (implications[ImplIdx{col, val}].empty()) continue;
-      const std::pair<const HighsCliqueTable::CliqueVar*, HighsInt> clique =
-          cliquetable.getRandomClique({col, val}, randgen);
-      const HighsInt numLift = std::min(clique.second, maxLiftingEntries);
-      const HighsInt start = clique.second > maxLiftingEntries
-                                 ? randgen.integer(clique.second)
-                                 : 0;
+      std::pair<const HighsCliqueTable::CliqueVar*, HighsInt> clique{nullptr,
+                                                                     0};
+      cliquetable.getRandomClique({col, val}, randgen);
+      HighsInt numLift = -1;
+      HighsInt start = 0;
 
       auto tryAddCut = [&](HighsInt implCol, const double bound,
                            const bool upper) {
@@ -870,7 +869,16 @@ void HighsImplications::separateImpliedBounds(
         HighsCDouble rhs = sign * (val ? globalBound : bound);
         double viol =
             sign * sol[implCol] + vals[1] * sol[col] - static_cast<double>(rhs);
+        if (viol <= feastol) return;
         double sqrnorm = 1.0 + coef * coef;
+
+        if (numLift == -1) {
+          clique = cliquetable.getRandomClique({col, val}, randgen);
+          numLift = std::min(clique.second, maxLiftingEntries);
+          start = clique.second > maxLiftingEntries
+                      ? randgen.integer(clique.second)
+                      : 0;
+        }
 
         // Cut is: sign * y + sum(coef_i * x_i) <= sign * globalBound
         // This is valid as at most one x_i literal can be true
