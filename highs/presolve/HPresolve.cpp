@@ -656,6 +656,11 @@ void HPresolve::link(HighsInt pos) {
     ++rowsizeInteger[Arow[pos]];
   else if (model->integrality_[Acol[pos]] == HighsVarType::kImplicitInteger)
     ++rowsizeImplInt[Arow[pos]];
+
+  if (colsize[Acol[pos]] == 1)
+    ++rowsizeSingleton[Arow[pos]];
+  else if (colsize[Acol[pos]] == 2)
+    --rowsizeSingleton[Arow[Anext[pos]]];
 }
 
 void HPresolve::unlink(HighsInt pos) {
@@ -687,6 +692,11 @@ void HPresolve::unlink(HighsInt pos) {
     --rowsizeInteger[Arow[pos]];
   else if (model->integrality_[Acol[pos]] == HighsVarType::kImplicitInteger)
     --rowsizeImplInt[Arow[pos]];
+
+  if (colsize[Acol[pos]] == 0)
+    --rowsizeSingleton[Arow[pos]];
+  else if (colsize[Acol[pos]] == 1)
+    ++rowsizeSingleton[Arow[colhead[Acol[pos]]]];
 
   if (!rowDeleted[Arow[pos]]) {
     if (rowsize[Arow[pos]] == 1)
@@ -1225,6 +1235,7 @@ void HPresolve::shrinkProblem(HighsPostsolveStack& postsolve_stack) {
         rowsize[newRowIndex[i]] = rowsize[i];
         rowsizeInteger[newRowIndex[i]] = rowsizeInteger[i];
         rowsizeImplInt[newRowIndex[i]] = rowsizeImplInt[i];
+        rowsizeSingleton[newRowIndex[i]] = rowsizeSingleton[i];
         if (have_row_names)
           model->row_names_[newRowIndex[i]] = std::move(model->row_names_[i]);
         changedRowFlag[newRowIndex[i]] = changedRowFlag[i];
@@ -1279,6 +1290,7 @@ void HPresolve::shrinkProblem(HighsPostsolveStack& postsolve_stack) {
   rowsize.resize(model->num_row_);
   rowsizeInteger.resize(model->num_row_);
   rowsizeImplInt.resize(model->num_row_);
+  rowsizeSingleton.resize(model->num_row_);
   if (have_row_names) model->row_names_.resize(model->num_row_);
   changedRowFlag.resize(model->num_row_);
   singleEquationChecked.resize(model->num_row_);
@@ -2670,6 +2682,7 @@ bool HPresolve::addToMatrix(
   if (!okResize(rowsize, model->num_row_, HighsInt{0})) return false;
   if (!okResize(rowsizeInteger, model->num_row_, HighsInt{0})) return false;
   if (!okResize(rowsizeImplInt, model->num_row_, HighsInt{0})) return false;
+  if (!okResize(rowsizeSingleton, model->num_row_, HighsInt{0})) return false;
 
   // initialise row duals
   if (!okResize(rowDualLower, model->num_row_, -kHighsInf)) return false;
@@ -3216,6 +3229,7 @@ bool HPresolve::okFromCSC(const std::vector<double>& Aval,
   if (!okAssign(rowsize, model->num_row_)) return false;
   if (!okAssign(rowsizeInteger, model->num_row_)) return false;
   if (!okAssign(rowsizeImplInt, model->num_row_)) return false;
+  if (!okAssign(rowsizeSingleton, model->num_row_)) return false;
 
   impliedRowBounds.setNumSums(0);
   impliedDualRowBounds.setNumSums(0);
@@ -3286,6 +3300,7 @@ bool HPresolve::okFromCSR(const std::vector<double>& ARval,
   if (!okAssign(rowsize, model->num_row_)) return false;
   if (!okAssign(rowsizeInteger, model->num_row_)) return false;
   if (!okAssign(rowsizeImplInt, model->num_row_)) return false;
+  if (!okAssign(rowsizeSingleton, model->num_row_)) return false;
 
   impliedRowBounds.setNumSums(0);
   impliedDualRowBounds.setNumSums(0);
@@ -9121,8 +9136,6 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
   std::vector<std::pair<double, HighsInt>> rowMax(rowsize.size());
   std::vector<std::pair<double, HighsInt>> colMax(colsize.size());
 
-  HighsHashTable<HighsInt, HighsInt> numRowSingletons;
-
   HighsInt nnz = Avalue.size();
   rowHashes.assign(rowsize.begin(), rowsize.end());
   colHashes.assign(colsize.begin(), colsize.end());
@@ -9135,7 +9148,6 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
     if (colsize[Acol[i]] == 1) {
       colMax[Acol[i]].first = Avalue[i];
       --rowHashes[Arow[i]];
-      numRowSingletons[Arow[i]] += 1;
       continue;
     }
     double absVal = std::abs(Avalue[i]);
@@ -9445,34 +9457,18 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
       switch (reductionCase) {
         case kDominanceDuplicateColToLower:
           delCol = duplicateCol;
-          if (colsize[duplicateCol] == 1) {
-            HighsInt row = Arow[colhead[duplicateCol]];
-            numRowSingletons[row] -= 1;
-          }
           HPRESOLVE_CHECKED_CALL(fixColToLower(postsolve_stack, duplicateCol));
           break;
         case kDominanceDuplicateColToUpper:
           delCol = duplicateCol;
-          if (colsize[duplicateCol] == 1) {
-            HighsInt row = Arow[colhead[duplicateCol]];
-            numRowSingletons[row] -= 1;
-          }
           HPRESOLVE_CHECKED_CALL(fixColToUpper(postsolve_stack, duplicateCol));
           break;
         case kDominanceColToLower:
           delCol = col;
-          if (colsize[col] == 1) {
-            HighsInt row = Arow[colhead[col]];
-            numRowSingletons[row] -= 1;
-          }
           HPRESOLVE_CHECKED_CALL(fixColToLower(postsolve_stack, col));
           break;
         case kDominanceColToUpper:
           delCol = col;
-          if (colsize[col] == 1) {
-            HighsInt row = Arow[colhead[col]];
-            numRowSingletons[row] -= 1;
-          }
           HPRESOLVE_CHECKED_CALL(fixColToUpper(postsolve_stack, col));
           break;
         case kMergeParallelCols:
@@ -9508,10 +9504,6 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
             model->integrality_[col] = HighsVarType::kContinuous;
 
           markChangedCol(col);
-          if (colsize[duplicateCol] == 1) {
-            HighsInt row = Arow[colhead[duplicateCol]];
-            numRowSingletons[row] -= 1;
-          }
 
           // compute bounds of merged variable
           double mergeLower = 0;
@@ -9613,26 +9605,30 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
     auto it = buckets.find(rowHashes[i]);
     decltype(it) last = it;
 
-    auto getNumSingletons = [&](HighsInt row) {
-      const HighsInt* numSingletonPtr = numRowSingletons.find(row);
-      return (numSingletonPtr ? *numSingletonPtr : 0);
-    };
-
-    const HighsInt numSingleton = getNumSingletons(i);
-
     // The conditional block where equalityRowAddition is called
     // cannot be reached if numSingleton = 0 and numSingletonCandidate
     // = 0. Hence, if may_require_basis_postsolve_ is true, continue is
     // called if numSingleton != 0 or numSingletonCandidate != 0
-    if (may_require_basis_postsolve_ && numSingleton != 0) continue;
+    if (may_require_basis_postsolve_ && rowsizeSingleton[i] != 0) continue;
 
+    // reductions with row i change or delete row i or the candidate rows, and
+    // the rowPresolve called by equalityRowAddition can also change other
+    // rows. hence, the hashes and the row maxima computed above only serve as
+    // filters, and the parallel check below uses the current rows
+    //
+    // delRow is the row that the last reduction with row i changed or
+    // deleted, and -1 if there was no reduction. delRow = i means that row i
+    // has changed or has been deleted
     HighsInt delRow = -1;
     if (it != buckets.end()) storeRow(i);
     while (it != buckets.end() && it->first == rowHashes[i]) {
       HighsInt parallelRowCand = it->second;
       last = it++;
 
-      const HighsInt numSingletonCandidate = getNumSingletons(parallelRowCand);
+      if (rowDeleted[parallelRowCand]) continue;
+
+      const HighsInt numSingleton = rowsizeSingleton[i];
+      const HighsInt numSingletonCandidate = rowsizeSingleton[parallelRowCand];
 
       if (may_require_basis_postsolve_ && numSingletonCandidate != 0) continue;
 
@@ -9661,13 +9657,6 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
       double rowScale = rowMax[parallelRowCand].first / rowMax[i].first;
       // check parallel case
       bool parallel = true;
-      // If equalityRowAddition has been called within the loop for
-      // this value of i, then it calls rowPresolve, which may call
-      // storeRow(j) for j<>i, changing this->rowpositions, so
-      // (re-)set storeRow here
-      storeRow(i);
-      // getStoredRow() returns the indices and nonzeros corresponding
-      // to rowpositions
       for (const HighsSliceNonzero& rowNz : getStoredRow()) {
         if (colsize[rowNz.index()] == 1)  // skip singletons
           continue;
@@ -9777,6 +9766,12 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
         HPRESOLVE_CHECKED_CALL(equalityRowAddition(
             postsolve_stack, i, parallelRowCand, -rowScale, getStoredRow()));
         delRow = parallelRowCand;
+        // the candidate row has changed, remove it from the buckets
+        last = buckets.erase(last);
+        // equalityRowAddition calls rowPresolve, which can delete or change
+        // row i and overwrite rowpositions
+        if (rowDeleted[i]) break;
+        storeRow(i);
       } else if (isEquation(parallelRowCand)) {
         // printf(
         //    "nearly parallel case with %" HIGHSINT_FORMAT " singletons in eq
@@ -9788,7 +9783,9 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
             postsolve_stack, parallelRowCand, i,
             -rowMax[i].first / rowMax[parallelRowCand].first,
             getRowVector(parallelRowCand)));
+        // row i has changed or has been deleted, stop scanning
         delRow = i;
+        break;
       } else {
         assert(numSingleton == 1);
         assert(numSingletonCandidate == 1);
@@ -9816,12 +9813,12 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
       }
     }
 
-    if (delRow != -1) {
-      if (delRow != i) buckets.erase(last);
-
-      HPRESOLVE_CHECKED_CALL(checkLimits(postsolve_stack));
-    } else
+    // reinsert row i only if it is unchanged. the rowPresolve called by
+    // equalityRowAddition may also have deleted row i
+    if (delRow != i && !rowDeleted[i])
       buckets.emplace_hint(last, rowHashes[i], i);
+
+    if (delRow != -1) HPRESOLVE_CHECKED_CALL(checkLimits(postsolve_stack));
   }
 
   analysis_.logging_on_ = logging_on;
