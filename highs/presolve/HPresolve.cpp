@@ -9137,17 +9137,18 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
   std::vector<std::pair<double, HighsInt>> colMax(colsize.size());
 
   HighsInt nnz = Avalue.size();
-  rowHashes.assign(rowsize.begin(), rowsize.end());
+  // the initial row hashes are the numbers of non-singleton columns in the rows
+  rowHashes.resize(rowsize.size());
+  std::transform(rowsize.begin(), rowsize.end(), rowsizeSingleton.begin(),
+                 rowHashes.begin(), std::minus<HighsInt>());
   colHashes.assign(colsize.begin(), colsize.end());
 
-  // Step 1: Determine scales for rows and columns and remove column singletons
-  // from the initial row hashes which are initialized with the row sizes
+  // Step 1: Determine scales for rows and columns
   for (HighsInt i = 0; i != nnz; ++i) {
     if (Avalue[i] == 0.0) continue;
     assert(!colDeleted[Acol[i]]);
     if (colsize[Acol[i]] == 1) {
       colMax[Acol[i]].first = Avalue[i];
-      --rowHashes[Arow[i]];
       continue;
     }
     double absVal = std::abs(Avalue[i]);
