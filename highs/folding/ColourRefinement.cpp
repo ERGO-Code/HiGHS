@@ -190,7 +190,7 @@ void ColourRefinement::refine(Side& src, Side& dst,
   prepareNextIter(dst);
 }
 
-void ColourRefinement::run() {
+HighsInt ColourRefinement::run() {
   while (!rows_.to_refine.empty() || !cols_.to_refine.empty()) {
     if (rows_.peekLength() < cols_.peekLength())
       refine(rows_, cols_, At_);
@@ -199,10 +199,11 @@ void ColourRefinement::run() {
 
     if (rows_.coloursUsed() > rows_.n * kFractionStop &&
         cols_.coloursUsed() > cols_.n * kFractionStop) {
-      printf("Failed\n");
-      break;
+      return 1;
     }
   }
+
+  return 0;
 }
 
 }  // namespace folding

@@ -95,8 +95,10 @@ void Folder::foldMatrix() {
   ctor_time_ = clock.stop();
 
   clock.start();
-  CR_->run();
+  HighsInt status = CR_->run();
   run_time_ = clock.stop();
+
+  if (status) printf(" === Folding failed === \n");
 }
 
 void Folder::run() {

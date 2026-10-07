@@ -48,12 +48,10 @@ struct DoubleQuantizer {
   void hash_combine(size_t& x, size_t y) const;
 
   // hashing operators
-  size_t operator()(double x) const;
   size_t operator()(const RowQuantizedData& ri) const;
   size_t operator()(const ColQuantizedData& ci) const;
 
   // equality operators
-  bool operator()(double x, double y) const;
   bool operator()(const RowQuantizedData& x, const RowQuantizedData& y) const;
   bool operator()(const ColQuantizedData& x, const ColQuantizedData& y) const;
 };

@@ -15,10 +15,6 @@ void DoubleQuantizer::hash_combine(size_t& x, size_t y) const {
   x ^= y + kFibonacciMultiplier + (x << 6) + (x >> 2);
 }
 
-size_t DoubleQuantizer::operator()(double d) const {
-  return std::hash<double>()(bucket(d));
-}
-
 size_t DoubleQuantizer::operator()(const RowQuantizedData& ri) const {
   size_t h = std::hash<double>()(ri.quantized_bl);
   hash_combine(h, std::hash<double>()(ri.quantized_bu));
@@ -30,10 +26,6 @@ size_t DoubleQuantizer::operator()(const ColQuantizedData& ci) const {
   hash_combine(h, std::hash<double>()(ci.quantized_l));
   hash_combine(h, std::hash<double>()(ci.quantized_u));
   return h;
-}
-
-bool DoubleQuantizer::operator()(double x, double y) const {
-  return bucket(x) == bucket(y);
 }
 
 bool DoubleQuantizer::operator()(const ColQuantizedData& x,

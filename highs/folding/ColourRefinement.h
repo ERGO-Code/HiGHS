@@ -222,7 +222,7 @@ class ColourRefinement {
   ColourRefinement(const HighsSparseMatrix& A,
                    std::vector<HighsInt>& row_colour,
                    std::vector<HighsInt>& col_colour);
-  void run();
+  HighsInt run();
 
   HighsInt rowColoursUsed() const { return rows_.coloursUsed(); }
   HighsInt colColoursUsed() const { return cols_.coloursUsed(); }
