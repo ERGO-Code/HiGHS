@@ -480,7 +480,7 @@ HighsStatus Highs::passModel(HighsModel model) {
   lp.resetScale();
   // Check that the LP array dimensions are legal (ie at least the
   // size required by num_col_ and num_row_)
-  if (!legalLpDimensions("passModel", lp, options_.log_options))
+  if (!legalLpDimensions("passModel", options_.log_options, lp))
     return HighsStatus::kError;
   // Check that the Hessian format is valid
   if (!hessian.formatOk()) return HighsStatus::kError;
@@ -961,11 +961,11 @@ HighsStatus Highs::writeLocalModel(HighsModel& model,
   lp.ensureColwise();
 
   // Ensure that the dimensions are OK
-  if (!legalLpDimensions("writeLocalModel", lp, options_.log_options))
+  if (!legalLpDimensions("writeLocalModel", options_.log_options, lp))
     return HighsStatus::kError;
 
   if (model.hessian_.dim_ > 0 &&
-      !legalHessianDimensions(options_, model.hessian_))
+      !legalHessianDimensions(options_.log_options, model.hessian_))
     return HighsStatus::kError;
 
   // Check that the matrix starts are OK
@@ -3988,8 +3988,8 @@ HighsPresolveStatus Highs::runPresolve(const bool force_lp_presolve,
           (HighsInt)original_lp.numNz() - (HighsInt)reduced_lp.numNz();
       // Clear any scaling information inherited by the reduced LP
       reduced_lp.clearScale();
-      assert(legalLpDimensions("RunPresolve: reduced_lp", reduced_lp,
-                            options_.log_options));
+      assert(legalLpDimensions("RunPresolve: reduced_lp",
+                            options_.log_options, reduced_lp));
       break;
     }
     case HighsPresolveStatus::kReducedToEmpty: {
@@ -4903,7 +4903,7 @@ HighsStatus Highs::returnFromHighs(HighsStatus highs_return_status) {
   // Stop the HiGHS run clock if it is running
   if (timer_.running()) timer_.stop();
   const bool dimensions_ok =
-      legalLpDimensions("returnFromHighs", model_.lp_, options_.log_options);
+      legalLpDimensions("returnFromHighs", options_.log_options, model_.lp_);
   if (!dimensions_ok) {
     highsLogDev(options_.log_options, HighsLogType::kError,
                 "LP Dimension error in returnFromHighs()\n");

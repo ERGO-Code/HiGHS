@@ -22,7 +22,7 @@ using std::fabs;
 HighsStatus assessHessian(HighsHessian& hessian, const HighsOptions& options) {
   if (hessian.isOracle()) return HighsStatus::kOk;
 
-  HighsStatus return_status = legalHessianDimensions(options, hessian) ? HighsStatus::kOk : HighsStatus::kError;
+  HighsStatus return_status = legalHessianDimensions(options.log_options, hessian) ? HighsStatus::kOk : HighsStatus::kError;
   if (return_status == HighsStatus::kError) return return_status;
 
   // If the Hessian has no columns there is nothing left to test
@@ -88,8 +88,8 @@ HighsStatus assessHessian(HighsHessian& hessian, const HighsOptions& options) {
   return return_status;
 }
 
-bool legalHessianDimensions(const HighsOptions& options,
-			    HighsHessian& hessian) {
+bool legalHessianDimensions(const HighsLogOptions& log_options,
+			    const HighsHessian& hessian) {
   assert(!hessian.isOracle());
 
   if (hessian.dim_ == 0) return true;
@@ -97,9 +97,14 @@ bool legalHessianDimensions(const HighsOptions& options,
   // Assess the Hessian dimensions and vector sizes
   vector<HighsInt> hessian_p_end;
   const bool partitioned = false;
-  return legalMatrixDimensions(options.log_options, hessian.dim_, partitioned,
+  return legalMatrixDimensions(log_options, hessian.dim_, partitioned,
                                 hessian.start_, hessian_p_end, hessian.index_,
                                 hessian.value_);
+}
+HighsStatus trimHessianDimensions(const HighsLogOptions& log_options,
+				  HighsHessian& hessian) {
+  HighsStatus status = HighsStatus::kOk;
+  return status;
 }
 
 void completeHessianDiagonal(const HighsOptions& options,

@@ -33,12 +33,14 @@ const HighsInt kMaxLineLength = 80;
 
 HighsStatus assessLp(HighsLp& lp, const HighsOptions& options) {
   HighsStatus return_status = HighsStatus::kOk;
-  HighsStatus call_status = legalLpDimensions("assessLp", lp, options.log_options)
+  HighsStatus call_status = legalLpDimensions("assessLp", options.log_options, lp)
                                 ? HighsStatus::kOk
                                 : HighsStatus::kError;
   return_status = interpretCallStatus(options.log_options, call_status,
                                       return_status, "assessLpDimensions");
   if (return_status == HighsStatus::kError) return return_status;
+
+  //  return_status = interpretCallStatus(options.log_options, trimLpDimensions(options.log_options, lp), return_status, "trimLpDimensions");
 
   if (lp.num_col_) {
     // Assess the LP column costs
@@ -94,13 +96,12 @@ HighsStatus assessLp(HighsLp& lp, const HighsOptions& options) {
   return_status = interpretCallStatus(options.log_options, call_status,
                                       return_status, "assessMatrix");
   if (return_status == HighsStatus::kError) return return_status;
-  // If entries have been removed from the matrix, resize the index
-  // and value vectors to prevent bug in presolve
+  // If entries have been removed from the matrix, resize the start,
+  // index and value vectors to prevent bug in presolve
   HighsInt lp_num_nz = lp.numNz();
-  if ((HighsInt)lp.a_matrix_.index_.size() > lp_num_nz)
-    lp.a_matrix_.index_.resize(lp_num_nz);
-  if ((HighsInt)lp.a_matrix_.value_.size() > lp_num_nz)
-    lp.a_matrix_.value_.resize(lp_num_nz);
+  lp.a_matrix_.start_.resize((lp.isColwise() ? lp.num_col_ : lp.num_row_)+1);
+  lp.a_matrix_.index_.resize(lp_num_nz);
+  lp.a_matrix_.value_.resize(lp_num_nz);
   if (return_status != HighsStatus::kOk)
     highsLogDev(options.log_options, HighsLogType::kInfo,
                 "assessLp returns HighsStatus = %s\n",
@@ -108,8 +109,8 @@ HighsStatus assessLp(HighsLp& lp, const HighsOptions& options) {
   return return_status;
 }
 
-bool legalLpDimensions(const std::string& message, const HighsLp& lp,
-		       const HighsLogOptions& log_options) {
+bool legalLpDimensions(const std::string& message,
+		       const HighsLogOptions& log_options, const HighsLp& lp) {
   bool ok = true;
   const HighsInt num_col = lp.num_col_;
   const HighsInt num_row = lp.num_row_;
@@ -270,6 +271,68 @@ bool legalLpDimensions(const std::string& message, const HighsLp& lp,
 
   return ok;
 }
+
+HighsStatus trimLpDimensions(const HighsLogOptions& log_options, HighsLp& lp) {
+  const HighsInt num_col = lp.num_col_;
+  const HighsInt num_row = lp.num_row_;
+
+  HighsInt trimmed = 0;
+  HighsStatus status = HighsStatus::kOk;
+
+  auto logTrimming = [&] (const std::string& name) {
+    if (trimmed == 0) return;
+    assert(trimmed > 0);
+    highsLogUser(log_options, HighsLogType::kWarning,
+		 "Trimmed %d excess entr%s from HighsLp member %s\n",
+		 int(trimmed), highsIntToPlural(trimmed, true).c_str(), name.c_str());
+    status = HighsStatus::kWarning;
+  };
+
+  trimmed = lp.col_cost_.size() - num_col;
+  if (trimmed) {
+    lp.col_cost_.resize(num_col);
+    logTrimming("col_cost_");
+  }
+
+  trimmed = lp.col_lower_.size() - num_col;
+  if (trimmed) {
+    lp.col_lower_.resize(num_col);
+    logTrimming("col_lower_");
+  }
+
+  trimmed = lp.col_upper_.size() - num_col;
+  if (trimmed) {
+    lp.col_upper_.resize(num_col);
+    logTrimming("col_upper_");
+  }
+
+  trimmed = lp.row_lower_.size() - num_row;
+  if (trimmed) {
+    lp.row_lower_.resize(num_row);
+    logTrimming("row_lower_");
+  }
+
+  trimmed = lp.row_upper_.size() - num_row;
+  if (trimmed) {
+    lp.row_upper_.resize(num_row);
+    logTrimming("row_upper_");
+  }
+
+  trimmed = lp.col_names_.size() - num_col;
+  if (trimmed) {
+    lp.col_names_.resize(num_col);
+    logTrimming("col_names_");
+  }
+
+  trimmed = lp.row_names_.size() - num_row;
+  if (trimmed) {
+    lp.row_names_.resize(num_row);
+    logTrimming("row_names_");
+  }
+  return status;
+
+}
+
 
 HighsStatus assessCosts(const HighsOptions& options, const HighsInt ml_col_os,
                         const HighsIndexCollection& index_collection,

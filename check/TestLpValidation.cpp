@@ -3,6 +3,7 @@
 #include "Highs.h"
 #include "catch.hpp"
 #include "lp_data/HighsLpUtils.h"
+#include "lp_data/HighsOptions.h"
 
 const bool dev_run = false;
 const double inf = kHighsInf;
@@ -692,32 +693,68 @@ TEST_CASE("LP-infeasible-bounds", "[highs_data]") {
 }
 
 TEST_CASE("issue-3366", "[highs_data]") {
+  // In HPresolve::shrinkProblem
+  //
+  // assert(model->col_names_.size() == static_cast<size_t>(oldNumCol));
+  //
+  // is triggered if models have excessive numbers of column names -
+  // and the same for row names, so trim (with warning logging) any
+  // excessive HighsLp vectors
+  //
+  // In HighsLp::isMip() 
+  //
+  // assert(static_cast<HighsInt>(integrality_size) == this->num_col_)
+  //
+  // is triggered if models have excessive integrality values
+  //
+  // LP is blending with am empty row so that shrinkProblem is called,
+  // plus spurious entries in each vector
   HighsLp lp;
-  lp.sense_ = ObjSense::kMinimize;
-  lp.num_col_ = 1;
-  lp.num_row_ = 1;
-  lp.col_cost_ = {-1, 2};
-
-  lp.col_lower_ = {0, 1};
-  lp.col_upper_ = {1, 2};
+  lp.sense_ = ObjSense::kMaximize;
+  lp.num_col_ = 2;
+  lp.num_row_ = 3;
+  lp.col_cost_ = {10, 25, 1};
+  lp.col_lower_ = {0, 0, 2};
+  lp.col_upper_ = {100, 100, 3};
   lp.a_matrix_.format_ = MatrixFormat::kRowwise;
-  lp.a_matrix_.start_ = {0, 1, 2};
-  lp.a_matrix_.index_ = {0, 1};
-  lp.a_matrix_.value_ = {1, 2};
-  lp.row_lower_ = {1, 2};
-  lp.row_upper_ = {2, 3};
-  lp.col_names_ = {"C0", "C1"};
-  lp.row_names_ = {"R0", "R1"};
-  //  lp.integrality_ = {HighsVarType::kInteger, HighsVarType::kContinuous};
-  Highs h;
+  lp.a_matrix_.start_ = {0, 2, 4, 4, 5};
+  lp.a_matrix_.index_ = {0, 1, 0, 1, 6};
+  lp.a_matrix_.value_ = {1, 2, 1, 4, 7};
+  lp.row_lower_ = {-inf, -inf, -1, 8};
+  lp.row_upper_ = {80, 120, 1, 9};
+  lp.col_names_ = {"C0", "C1", "CX"};
+  lp.row_names_ = {"R0", "R1", "R2", "RX"};
+  lp.integrality_ = {HighsVarType::kInteger, HighsVarType::kContinuous, HighsVarType::kContinuous};
+  HighsInt true_nnz = 4;
   
-  //  h.setOptionValue("output_flag", dev_run);
-  h.passModel(lp);;
-  h.writeModel("");;
-  //  REQUIRE(h.passModel(lp) == HighsStatus::kWarning);
+  // Have to switch off initial sweep, as it resizes the presolved
+  // model, and there will also be no further reducitons, so
+  // shrinkProblem isn't called.
+  HighsOptions options;
+  options.presolve_rule_off = 1 << kPresolveRuleInitialSweep;
+  //    options.output_flag = dev_run;
+
+  Highs h;
+  h.passOptions(options);
+  HighsStatus status = h.passModel(lp);
+  //  REQUIRE(status == HighsStatus::kWarning);
   h.presolve();
-  h.run();
-  REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
+
+  HighsLp highs_lp = h.getLp();
+  highs_lp.ensureRowwise();
+  REQUIRE(highs_lp.col_cost_.size() == static_cast<size_t>(lp.num_col_));
+  REQUIRE(highs_lp.col_lower_.size() == static_cast<size_t>(lp.num_col_));
+  REQUIRE(highs_lp.col_upper_.size() == static_cast<size_t>(lp.num_col_));
+  REQUIRE(highs_lp.row_lower_.size() == static_cast<size_t>(lp.num_row_));
+  REQUIRE(highs_lp.row_upper_.size() == static_cast<size_t>(lp.num_row_));
+  REQUIRE(highs_lp.a_matrix_.start_.size() == static_cast<size_t>(lp.num_row_+1));
+  REQUIRE(highs_lp.a_matrix_.index_.size() == static_cast<size_t>(true_nnz));
+  REQUIRE(highs_lp.a_matrix_.value_.size() == static_cast<size_t>(true_nnz));
+  REQUIRE(highs_lp.col_names_.size() == static_cast<size_t>(lp.num_col_));
+  REQUIRE(highs_lp.row_names_.size() == static_cast<size_t>(lp.num_row_));
+  REQUIRE(highs_lp.integrality_.size() == static_cast<size_t>(lp.num_col_));
+
 
   h.resetGlobalScheduler(true);
+
 }
