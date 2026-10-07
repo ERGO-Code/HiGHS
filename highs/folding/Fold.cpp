@@ -78,16 +78,25 @@ HighsInt Folder::findInitialColour(HighsInt n, HighsInt* colour,
 }
 
 void Folder::findInitialColour() {
+  hipo::Clock clock;
+
   initial_row_colours_ =
       findInitialColour<RowQuantizedData>(lp_.num_row_, row_colour_.data(), 0);
 
   initial_col_colours_ =
       findInitialColour<ColQuantizedData>(lp_.num_col_, col_colour_.data(), 0);
+
+  initial_time_ = clock.stop();
 }
 
 void Folder::foldMatrix() {
+  hipo::Clock clock;
   CR_.reset(new ColourRefinement(lp_.a_matrix_, row_colour_, col_colour_));
+  ctor_time_ = clock.stop();
+
+  clock.start();
   CR_->run();
+  run_time_ = clock.stop();
 }
 
 void Folder::run() {
@@ -96,18 +105,27 @@ void Folder::run() {
   findInitialColour();
   foldMatrix();
 
-  printf("Fold:         %f\n", clock.stop());
+  fold_time_ = clock.stop();
 }
 
 void Folder::print() const {
-  printf("Initial:\n");
-  printf("Rows: %d out of %d\n", initial_row_colours_, lp_.num_row_);
-  printf("Cols: %d out of %d\n", initial_col_colours_, lp_.num_col_);
+  printf("\nInitial partition:\n");
+  printf("\tRows: %9d out of %9d\n", initial_row_colours_, lp_.num_row_);
+  printf("\tCols: %9d out of %9d\n", initial_col_colours_, lp_.num_col_);
   printf("Final:\n");
-  printf("Rows: %d out of %d\n", CR_->rowColoursUsed(), lp_.num_row_);
-  printf("Cols: %d out of %d\n", CR_->colColoursUsed(), lp_.num_col_);
-  printf("Matr: %d out of %d\n", CR_->rowColoursUsed() + CR_->colColoursUsed(),
+  printf("\tRows: %9d out of %9d (%.1f%%)\n", CR_->rowColoursUsed(),
+         lp_.num_row_, (double)CR_->rowColoursUsed() / lp_.num_row_ * 100);
+  printf("\tCols: %9d out of %9d (%.1f%%)\n", CR_->colColoursUsed(),
+         lp_.num_col_, (double)CR_->colColoursUsed() / lp_.num_col_ * 100);
+  printf("\tMatr: %9d out of %9d\n",
+         CR_->rowColoursUsed() + CR_->colColoursUsed(),
          lp_.num_row_ + lp_.num_col_);
+
+  printf("\n");
+  printf("Fold time        %f\n", fold_time_);
+  printf("Initial          %f\n", initial_time_);
+  printf("CR ctor          %f\n", ctor_time_);
+  printf("CR run           %f\n", run_time_);
 
   /*
   for (HighsInt i = 0; i < lp_.num_row_; ++i) printf("%d ", colour_[i]);

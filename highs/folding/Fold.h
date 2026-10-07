@@ -18,6 +18,11 @@ class Folder {
   HighsInt initial_row_colours_;
   HighsInt initial_col_colours_;
 
+  double initial_time_;
+  double ctor_time_;
+  double run_time_;
+  double fold_time_;
+
   template <typename Data>
   HighsInt findInitialColour(HighsInt num, HighsInt* colour, HighsInt start);
 

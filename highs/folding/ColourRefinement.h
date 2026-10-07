@@ -218,14 +218,6 @@ class ColourRefinement {
 
   void prepareNextIter(Side& side);
 
-  double time_sums_{};
-  mutable double time_check_{};
-  double time_count_sums_{};
-  double time_assign_{};
-  double time_new_colour_{};
-  double time_prepare_{};
-  void printTimes() const;
-
  public:
   ColourRefinement(const HighsSparseMatrix& A,
                    std::vector<HighsInt>& row_colour,

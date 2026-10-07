@@ -2,8 +2,6 @@
 
 #include <algorithm>
 
-#include "ipm/hipo/auxiliary/Auxiliary.h"
-
 namespace highs {
 namespace folding {
 
@@ -79,7 +77,6 @@ ColourRefinement::ColourRefinement(const HighsSparseMatrix& A,
 void ColourRefinement::computeColourSums(HighsInt refining_colour, Side& src,
                                          Side& dst,
                                          const HighsSparseMatrix& M) {
-  hipo::Clock clock;
   // Sum of the weights between each dst node and the nodes of refining_colour
   for (HighsInt v : src.node_by_colour.list(refining_colour)) {
     for (HighsInt k = M.start_[v]; k < M.start_[v + 1]; ++k) {
@@ -87,7 +84,6 @@ void ColourRefinement::computeColourSums(HighsInt refining_colour, Side& src,
     }
   }
   dst.touched.groupByColour();
-  time_sums_ += clock.stop();
 }
 
 void ColourRefinement::splitColours(Side& side) {
@@ -98,8 +94,6 @@ void ColourRefinement::splitColours(Side& side) {
 // Check if the nodes all fall in the same quantization bucket. In this way, the
 // unordered_map is not cleared and populated unless it is needed.
 bool ColourRefinement::colourSplits(const Side& side, HighsInt colour) const {
-  hipo::Clock clock;
-
   const auto slots = side.touched.slots(colour);
   const bool has_untouched_nodes = side.numUntouchedNodes(colour) > 0;
   const double quantized_reference = DoubleQuantizer::bucket(
@@ -114,8 +108,6 @@ bool ColourRefinement::colourSplits(const Side& side, HighsInt colour) const {
     }
   }
 
-  time_check_ += clock.stop();
-
   return colour_split;
 }
 
@@ -123,7 +115,6 @@ void ColourRefinement::countSums(Side& side, HighsInt colour) {
   // Classify the nodes of the colour by quantized sum, counting how many nodes
   // are in each class. The class of each touched node is saved, so it does not
   // need to be looked up again when the nodes are moved.
-  hipo::Clock clock;
 
   const auto slots = side.touched.slots(colour);
 
@@ -137,19 +128,15 @@ void ColourRefinement::countSums(Side& side, HighsInt colour) {
     const HighsInt new_class_id = classifier_.add(side.touched.sum(slot));
     side.touched.setClass(slot, new_class_id);
   }
-
-  time_count_sums_ += clock.stop();
 }
 
 void ColourRefinement::assignNewColours(Side& side, HighsInt colour) {
-  hipo::Clock clock;
-
   // classifier_ contains the new colour classes in which colour is divided.
-  const HighsInt largest = classifier_.largest();
 
   // All colour classes are added to the stack for later refinement, apart from
   // the largest one. One class can reuse the current colour: we use the class
   // with sum zero, if it exists, or the smallest class.
+  const HighsInt largest = classifier_.largest();
   const HighsInt reusing_colour = classifier_.zeroClass() >= 0
                                       ? classifier_.zeroClass()
                                       : classifier_.smallest();
@@ -169,13 +156,9 @@ void ColourRefinement::assignNewColours(Side& side, HighsInt colour) {
       if (colour_in_stack || j != largest) side.to_refine.push(data.colour);
     }
   }
-
-  time_assign_ += clock.stop();
 }
 
 void ColourRefinement::moveNodesToNewColours(Side& side, HighsInt colour) {
-  hipo::Clock clock;
-
   for (HighsInt slot : side.touched.slots(colour)) {
     const HighsInt node = side.touched.node(slot);
     const HighsInt class_id = side.touched.getClass(slot);
@@ -184,8 +167,6 @@ void ColourRefinement::moveNodesToNewColours(Side& side, HighsInt colour) {
       side.moveNode(node, colour, new_colour);
     }
   }
-
-  time_new_colour_ += clock.stop();
 }
 
 void ColourRefinement::splitColour(Side& side, HighsInt colour) {
@@ -194,11 +175,7 @@ void ColourRefinement::splitColour(Side& side, HighsInt colour) {
   moveNodesToNewColours(side, colour);
 }
 
-void ColourRefinement::prepareNextIter(Side& side) {
-  hipo::Clock clock;
-  side.touched.clear();
-  time_prepare_ += clock.stop();
-}
+void ColourRefinement::prepareNextIter(Side& side) { side.touched.clear(); }
 
 // Use top colour of src to refine the colours of dst.
 // M must be indexed by nodes of src and hold indices of nodes of dst.
@@ -226,22 +203,6 @@ void ColourRefinement::run() {
       break;
     }
   }
-
-  printTimes();
-}
-
-void ColourRefinement::printTimes() const {
-  const double time_total = time_sums_ + time_check_ + time_count_sums_ +
-                            time_assign_ + time_new_colour_ + time_prepare_;
-
-  printf("ColourRefinement timers\n");
-  printf("Total         %f\n", time_total);
-  printf("  sums        %f\n", time_sums_);
-  printf("  check       %f\n", time_check_);
-  printf("  count sums  %f\n", time_count_sums_);
-  printf("  assign      %f\n", time_assign_);
-  printf("  new colour  %f\n", time_new_colour_);
-  printf("  prepare     %f\n", time_prepare_);
 }
 
 }  // namespace folding
