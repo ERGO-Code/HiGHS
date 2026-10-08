@@ -44,9 +44,6 @@ HighsStatus readBasisStream(const HighsLogOptions& log_options, HighsLp& lp,
 // Methods taking HighsLp as an argument
 HighsStatus assessLp(HighsLp& lp, const HighsOptions& options);
 
-bool legalLpDimensions(const std::string& message,
-                       const HighsLogOptions& log_options, const HighsLp& lp);
-
 HighsStatus trimLpDimensions(const HighsLogOptions& log_options, HighsLp& lp);
 
 HighsStatus assessCosts(const HighsOptions& options, const HighsInt ml_col_os,

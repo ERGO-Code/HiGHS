@@ -23,7 +23,7 @@ HighsStatus assessHessian(HighsHessian& hessian, const HighsOptions& options) {
   if (hessian.isOracle()) return HighsStatus::kOk;
 
   HighsLogOptions log_options = options.log_options;
-  HighsStatus return_status = legalHessianDimensions(log_options, hessian)
+  HighsStatus return_status = hessian.legalDimensions(log_options)
                                   ? HighsStatus::kOk
                                   : HighsStatus::kError;
   if (return_status == HighsStatus::kError) return return_status;
@@ -93,19 +93,6 @@ HighsStatus assessHessian(HighsHessian& hessian, const HighsOptions& options) {
   return return_status;
 }
 
-bool legalHessianDimensions(const HighsLogOptions& log_options,
-                            const HighsHessian& hessian) {
-  assert(!hessian.isOracle());
-
-  if (hessian.dim_ == 0) return true;
-
-  // Assess the Hessian dimensions and vector sizes
-  vector<HighsInt> hessian_p_end;
-  const bool partitioned = false;
-  return legalMatrixDimensions(log_options, hessian.dim_, partitioned,
-                               hessian.start_, hessian_p_end, hessian.index_,
-                               hessian.value_);
-}
 HighsStatus trimHessianDimensions(const HighsLogOptions& log_options,
                                   HighsHessian& hessian) {
   assert(!hessian.isOracle());

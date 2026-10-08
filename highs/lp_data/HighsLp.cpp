@@ -504,11 +504,7 @@ bool HighsLp::legalDimensions(const std::string& message,
   } else {
     num_vec = num_row;
   }
-  const bool partitioned = false;
-  vector<HighsInt> a_matrix_p_end;
-  bool legal_matrix_dimensions = legalMatrixDimensions(
-      log_options, num_vec, partitioned, this->a_matrix_.start_, a_matrix_p_end,
-      this->a_matrix_.index_, this->a_matrix_.value_);
+  bool legal_matrix_dimensions = this->a_matrix_.legalDimensions(log_options, num_vec);
   if (!legal_matrix_dimensions)
     highsLogUser(log_options, HighsLogType::kError,
                  "LP dimension validation (%s) fails on a_matrix dimensions\n",
