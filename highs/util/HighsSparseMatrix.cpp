@@ -1747,3 +1747,9 @@ void HighsSparseMatrix::debugReportRowPrice(const HighsInt iRow,
   }
   printf("\n");
 }
+
+bool HighsSparseMatrix::legalDimensions(const HighsLogOptions& log_options, const HighsInt num_vec) const {
+  return legalMatrixDimensions(log_options, num_vec, this->format_ == MatrixFormat::kRowwisePartitioned,
+                               this->start_, this->p_end_, this->index_,
+                               this->value_);
+}

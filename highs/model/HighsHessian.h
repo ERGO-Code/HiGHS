@@ -56,6 +56,8 @@ class HighsHessian {
   HighsStatus checkOracle(const HighsLogOptions& log_options,
                           const bool exit_on_first_error) const;
   void print(const std::string& message = "") const;
+  bool legalDimensions(const HighsLogOptions& log_options) const;
+  HighsStatus trimDimensions(const HighsLogOptions& log_options);
 };
 
 #endif

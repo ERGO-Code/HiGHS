@@ -129,6 +129,7 @@ class HighsSparseMatrix {
                     const HighsInt use_col) const;
   void collectAj(HVector& column, const HighsInt use_col,
                  const double multiplier) const;
+  bool legalDimensions(const HighsLogOptions& log_options, const HighsInt num_vec) const;
 
  private:
   void priceByRowDenseResult(

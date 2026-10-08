@@ -13,6 +13,7 @@
 #include <cassert>
 #include <cstdio>
 
+#include "util/HighsMatrixUtils.h"
 #include "util/HighsRandom.h"
 
 void HighsHessian::clear() {
@@ -401,6 +402,41 @@ HighsHessian HighsHessian::toSquare() const {
   }
   return square_hessian;
 }
+
+bool HighsHessian::legalDimensions(const HighsLogOptions& log_options) const {
+  assert(!this->isOracle());
+
+  if (this->dim_ == 0) return true;
+
+  // Assess the Hessian dimensions and vector sizes
+  std::vector<HighsInt> hessian_p_end;
+  const bool partitioned = false;
+  return legalMatrixDimensions(log_options, this->dim_, partitioned,
+                               this->start_, hessian_p_end, this->index_,
+                               this->value_);
+}
+
+HighsStatus HighsHessian::trimDimensions(const HighsLogOptions& log_options) {
+  assert(!this->isOracle());
+  const HighsInt dim = this->dim_;
+  assert(dim > 0);
+  HighsInt trimmed = 0;
+  HighsStatus status = HighsStatus::kOk;
+
+  trimmed = this->start_.size() - dim - 1;
+  if (trimmed) {
+    this->start_.resize(dim + 1);
+    highsLogUser(
+        log_options, HighsLogType::kWarning,
+        "Trimmed %d excess entr%s from HighsHessian data member start_\n",
+        int(trimmed), highsIntToPlural(trimmed, true).c_str());
+    status = HighsStatus::kWarning;
+  }
+
+  return status;
+
+}
+
 
 HighsStatus HighsHessian::checkOracle(const HighsLogOptions& log_options,
                                       const bool exit_on_first_error) const {

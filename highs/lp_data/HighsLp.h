@@ -99,6 +99,8 @@ class HighsLp {
     this->col_hash_.clear();
     this->row_hash_.clear();
   }
+  bool legalDimensions(const std::string& message, const HighsLogOptions& log_options) const;
+  HighsStatus trimDimensions(const HighsLogOptions& log_options);
   void clear();
 };
 
