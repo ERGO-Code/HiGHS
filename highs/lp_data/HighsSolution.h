@@ -34,7 +34,7 @@ struct HighsError {
   HighsInt absolute_index;
   double relative_value;
   HighsInt relative_index;
-  void print(std::string message);
+  void print(const std::string& message);
   void reset();
   void invalidate();
 };

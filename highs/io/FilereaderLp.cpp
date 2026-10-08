@@ -363,7 +363,7 @@ void FilereaderLp::writeToFileValue(FILE* file, const double value,
   }
 }
 
-void FilereaderLp::writeToFileVar(FILE* file, const std::string var_name) {
+void FilereaderLp::writeToFileVar(FILE* file, const std::string& var_name) {
   this->writeToFile(file, " %s", var_name.c_str());
 }
 

@@ -41,7 +41,7 @@ HighsDebugStatus debugHighsLpSolution(
                             check_model_status_and_highs_info);
 }
 
-HighsDebugStatus debugHighsSolution(const string message,
+HighsDebugStatus debugHighsSolution(const string& message,
                                     const HighsOptions& options,
                                     const HighsModel& model,
                                     const HighsSolution& solution,
@@ -68,7 +68,7 @@ HighsDebugStatus debugHighsSolution(const string message,
 }
 
 HighsDebugStatus debugHighsSolution(
-    const string message, const HighsOptions& options, const HighsModel& model,
+    const string& message, const HighsOptions& options, const HighsModel& model,
     const HighsSolution& solution, const HighsBasis& basis,
     const HighsModelStatus model_status, const HighsInfo& info) {
   // Non-trivially expensive analysis of a solution to a model
@@ -175,7 +175,7 @@ HighsDebugStatus debugHighsSolution(
   return return_status;
 }
 
-void debugReportHighsSolution(const string message,
+void debugReportHighsSolution(const string& message,
                               const HighsLogOptions& log_options,
                               const HighsInfo& highs_info,
                               const HighsModelStatus model_status) {
@@ -452,7 +452,7 @@ HighsDebugStatus debugCompareHighsInfoInfeasibility(
   return return_status;
 }
 
-HighsDebugStatus debugCompareHighsInfoDouble(const string name,
+HighsDebugStatus debugCompareHighsInfoDouble(const string& name,
                                              const HighsOptions& options,
                                              const double v0, const double v1) {
   if (v0 == v1) return HighsDebugStatus::kOk;
@@ -478,7 +478,7 @@ HighsDebugStatus debugCompareHighsInfoDouble(const string name,
   return return_status;
 }
 
-HighsDebugStatus debugCompareHighsInfoInteger(const string name,
+HighsDebugStatus debugCompareHighsInfoInteger(const string& name,
                                               const HighsOptions& options,
                                               const HighsInt v0,
                                               const HighsInt v1) {

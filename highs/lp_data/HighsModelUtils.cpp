@@ -490,7 +490,7 @@ HighsStatus normaliseNames(const HighsLogOptions& log_options, bool column,
   return HighsStatus::kWarning;
 }
 
-HighsFileType getFileType(const std::string filename) {
+HighsFileType getFileType(const std::string& filename) {
   std::string lower_case_extension = getFilenameExt(filename);
   tolower(lower_case_extension);
   if (lower_case_extension.compare("mps") == 0) {

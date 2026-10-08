@@ -68,7 +68,7 @@ class HighsSparseMatrix {
   HighsStatus assessIndexBounds(const HighsLogOptions& log_options);
 
   HighsStatus assess(const HighsLogOptions& log_options,
-                     const std::string matrix_name,
+                     const std::string& matrix_name,
                      const double small_matrix_value,
                      const double large_matrix_value, const bool sum_duplicates,
                      const std::string* col_names = nullptr,

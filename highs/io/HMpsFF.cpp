@@ -19,7 +19,7 @@ namespace free_format_parser {
 const bool kNoClockCalls = false;
 
 FreeFormatParserReturnCode HMpsFF::loadProblem(
-    const HighsLogOptions& log_options, const std::string filename,
+    const HighsLogOptions& log_options, const std::string& filename,
     HighsModel& model) {
   // Keep track of any warnings that are issued so that
   // Highs::readModel can return HighsStatus::kWarning
@@ -728,7 +728,7 @@ typename HMpsFF::Parsekey HMpsFF::parseCols(const HighsLogOptions& log_options,
   col_value.assign(num_row, 0);
   col_index.resize(num_row);
 
-  auto parseName = [&rowidx, this](std::string name) {
+  auto parseName = [&rowidx, this](const std::string& name) {
     auto mit = rowname2idx.find(name);
 
     assert(mit != rowname2idx.end());

@@ -1513,7 +1513,7 @@ bool computeDualObjectiveValue(const double* gradient, const HighsLp& lp,
   return true;
 }
 
-void HighsError::print(std::string message) {
+void HighsError::print(const std::string& message) {
   printf(
       "\n%s\nAbsolute value = %11.4g; index = %9d\nRelative value = %11.4g; "
       "index = %9d\n",

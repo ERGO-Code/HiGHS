@@ -2907,7 +2907,8 @@ void Highs::callLpKktCheck(const HighsLp& lp, const std::string& message) {
              this->basis_, this->options_, message);
 }
 
-HighsStatus Highs::invertRequirementError(std::string method_name) const {
+HighsStatus Highs::invertRequirementError(
+    const std::string& method_name) const {
   assert(!ekk_instance_.status_.has_invert);
   highsLogUser(options_.log_options, HighsLogType::kError,
                "No invertible representation for %s\n", method_name.c_str());

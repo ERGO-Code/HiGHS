@@ -2760,7 +2760,7 @@ void HighsMipSolverData::setCallbackDataOut(
 
 bool HighsMipSolverData::interruptFromCallbackWithData(
     const int callback_type, const double mipsolver_objective_value,
-    const std::string message) const {
+    const std::string& message) const {
   if (!mipsolver.callback_->callbackActive(callback_type)) return false;
   assert(!mipsolver.submip);
   setCallbackDataOut(mipsolver_objective_value);

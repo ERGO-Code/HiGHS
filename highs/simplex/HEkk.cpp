@@ -3010,7 +3010,7 @@ double HEkk::computeDualForTableauColumn(const HighsInt iVar,
 }
 
 bool HEkk::reinvertOnNumericalTrouble(
-    const std::string method_name, double& numerical_trouble_measure,
+    const std::string& method_name, double& numerical_trouble_measure,
     const double alpha_from_col, const double alpha_from_row,
     const double numerical_trouble_tolerance) {
   double abs_alpha_from_col = fabs(alpha_from_col);
@@ -4358,7 +4358,7 @@ void HEkk::unitBtranResidual(const HighsInt row_out, const HVector& row_ep,
   }
 }
 
-void HighsSimplexStats::report(FILE* file, std::string message) const {
+void HighsSimplexStats::report(FILE* file, const std::string& message) const {
   fprintf(file, "\nSimplex stats: %s\n", message.c_str());
   fprintf(file, "   valid                      = %d\n", this->valid);
   fprintf(file, "   iteration_count            = %d\n",

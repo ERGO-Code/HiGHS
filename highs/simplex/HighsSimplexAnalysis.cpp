@@ -17,7 +17,7 @@
 #include "simplex/SimplexTimer.h"
 #include "util/FactorTimer.h"
 
-void HighsSimplexAnalysis::setup(const std::string lp_name, const HighsLp& lp,
+void HighsSimplexAnalysis::setup(const std::string& lp_name, const HighsLp& lp,
                                  const HighsOptions& options,
                                  const HighsInt simplex_iteration_count_) {
   // Copy Problem size

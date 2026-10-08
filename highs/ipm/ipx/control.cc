@@ -30,7 +30,7 @@ Int Control::InterruptCheck(const Int ipm_iteration_count) const {
     return 0;
 }
 
-void Control::hLog(std::string str) const {
+void Control::hLog(const std::string& str) const {
   if (parameters_.highs_logging) {
     assert(parameters_.log_options);
     const HighsLogOptions& log_options_ = *(parameters_.log_options);

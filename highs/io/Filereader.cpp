@@ -21,7 +21,7 @@ static inline void tolower(std::string& s) {
 }
 
 Filereader* Filereader::getFilereader(const HighsLogOptions& log_options,
-                                      const std::string filename) {
+                                      const std::string& filename) {
   Filereader* reader;
   std::string extension = getFilenameExt(filename);
   if (extension == "gz") {
