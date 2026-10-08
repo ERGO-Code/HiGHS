@@ -617,18 +617,30 @@ bool Parser::equalsIgnoreCase(const Token& token, const char* lower) const {
 
 // The section keywords that are one token long
 static const std::pair<const char*, Section> kKeywords[] = {
-    {"minimize", Section::kMinimize},   {"minimise", Section::kMinimize},
-    {"minimum", Section::kMinimize},    {"min", Section::kMinimize},
-    {"maximize", Section::kMaximize},   {"maximise", Section::kMaximize},
-    {"maximum", Section::kMaximize},    {"max", Section::kMaximize},
-    {"st", Section::kConstraints},      {"s.t.", Section::kConstraints},
-    {"st.", Section::kConstraints},     {"bounds", Section::kBounds},
-    {"bound", Section::kBounds},        {"general", Section::kGeneral},
-    {"generals", Section::kGeneral},    {"gen", Section::kGeneral},
-    {"integer", Section::kGeneral},     {"integers", Section::kGeneral},
-    {"binary", Section::kBinary},       {"binaries", Section::kBinary},
-    {"bin", Section::kBinary},          {"semi", Section::kSemi},
-    {"semis", Section::kSemi},          {"sos", Section::kSos},
+    {"minimize", Section::kMinimize},
+    {"minimise", Section::kMinimize},
+    {"minimum", Section::kMinimize},
+    {"min", Section::kMinimize},
+    {"maximize", Section::kMaximize},
+    {"maximise", Section::kMaximize},
+    {"maximum", Section::kMaximize},
+    {"max", Section::kMaximize},
+    {"st", Section::kConstraints},
+    {"s.t.", Section::kConstraints},
+    {"st.", Section::kConstraints},
+    {"bounds", Section::kBounds},
+    {"bound", Section::kBounds},
+    {"general", Section::kGeneral},
+    {"generals", Section::kGeneral},
+    {"gen", Section::kGeneral},
+    {"integer", Section::kGeneral},
+    {"integers", Section::kGeneral},
+    {"binary", Section::kBinary},
+    {"binaries", Section::kBinary},
+    {"bin", Section::kBinary},
+    {"semi", Section::kSemi},
+    {"semis", Section::kSemi},
+    {"sos", Section::kSos},
     {"end", Section::kEnd}};
 
 static bool isComparison(const Token& token) {
@@ -651,8 +663,7 @@ Section Parser::keywordAt(size_t i, size_t& num_tokens) {
   const Token& second = lexer_.peek(i + 1);
   if (second.kind == TokenKind::kColon) return Section::kNone;
   num_tokens = 2;
-  if ((equalsIgnoreCase(token, "subject") &&
-       equalsIgnoreCase(second, "to")) ||
+  if ((equalsIgnoreCase(token, "subject") && equalsIgnoreCase(second, "to")) ||
       (equalsIgnoreCase(token, "such") && equalsIgnoreCase(second, "that"))) {
     return second.line_start ? Section::kNone : Section::kConstraints;
   }
@@ -930,12 +941,12 @@ void Parser::addVariableTerm(HighsInt col, const Token& var, double coef,
     } else {
       RowEntry& entry = row_entries_[slot];
       if (!entry.repeated)
-        warning(var,
-                "variable " +
-                    quote(lp_.col_names_[col].data(),
-                          lp_.col_names_[col].size()) +
-                    " appears more than once in this constraint",
-                "repeated here", "the coefficients are summed");
+        warning(
+            var,
+            "variable " +
+                quote(lp_.col_names_[col].data(), lp_.col_names_[col].size()) +
+                " appears more than once in this constraint",
+            "repeated here", "the coefficients are summed");
       entry.repeated = true;
       entry.value += coef;
     }
@@ -958,10 +969,10 @@ void Parser::parseQuadratic(double sign) {
   while (lexer_.peek().kind != TokenKind::kCloseBracket) {
     const Token token = lexer_.peek();
     if (token.kind == TokenKind::kEndOfFile || atKeyword())
-      error(token, "expected `]`, found " + describe(token),
-            "expected `]` before this",
-            "the `[` on line " + std::to_string(open.line) +
-                " is never closed");
+      error(
+          token, "expected `]`, found " + describe(token),
+          "expected `]` before this",
+          "the `[` on line " + std::to_string(open.line) + " is never closed");
     bool has_sign = false;
     double term_sign = sign;
     while (isSign(lexer_.peek())) {
@@ -1175,8 +1186,8 @@ void Parser::parseVariableList(Section section) {
     const bool integer =
         type == HighsVarType::kInteger || type == HighsVarType::kSemiInteger;
     if (section == Section::kSemi) {
-      type = integer ? HighsVarType::kSemiInteger
-                     : HighsVarType::kSemiContinuous;
+      type =
+          integer ? HighsVarType::kSemiInteger : HighsVarType::kSemiContinuous;
     } else {
       type = semi ? HighsVarType::kSemiInteger : HighsVarType::kInteger;
       // A binary variable has an upper bound of 1, unless the bounds section
@@ -1214,9 +1225,9 @@ void Parser::finish(const HighsLogOptions& log_options) {
   while (i < hessian_entries_.size()) {
     const HessianEntry& entry = hessian_entries_[i];
     double value = 0;
-    for (; i < hessian_entries_.size() &&
-           hessian_entries_[i].col == entry.col &&
-           hessian_entries_[i].row == entry.row;
+    for (;
+         i < hessian_entries_.size() && hessian_entries_[i].col == entry.col &&
+         hessian_entries_[i].row == entry.row;
          i++)
       value += hessian_entries_[i].value;
     if (value == 0) continue;
