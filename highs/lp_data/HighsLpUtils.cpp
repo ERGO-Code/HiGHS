@@ -42,8 +42,8 @@ HighsStatus assessLp(HighsLp& lp, const HighsOptions& options) {
   if (return_status == HighsStatus::kError) return return_status;
 
   return_status =
-      interpretCallStatus(log_options, trimLpDimensions(log_options, lp),
-                          return_status, "trimLpDimensions");
+      interpretCallStatus(log_options, lp.trimDimensions(log_options),
+                          return_status, "lp.trimDimensions");
 
   if (lp.num_col_) {
     // Assess the LP column costs
@@ -109,79 +109,6 @@ HighsStatus assessLp(HighsLp& lp, const HighsOptions& options) {
                 "assessLp returns HighsStatus = %s\n",
                 highsStatusToString(return_status).c_str());
   return return_status;
-}
-
-HighsStatus trimLpDimensions(const HighsLogOptions& log_options, HighsLp& lp) {
-  const HighsInt num_col = lp.num_col_;
-  const HighsInt num_row = lp.num_row_;
-
-  HighsInt trimmed = 0;
-  HighsStatus status = HighsStatus::kOk;
-
-  auto logTrimming = [&](const std::string& name) {
-    if (trimmed == 0) return;
-    assert(trimmed > 0);
-    highsLogUser(log_options, HighsLogType::kWarning,
-                 "Trimmed %d excess entr%s from HighsLp data member %s\n",
-                 int(trimmed), highsIntToPlural(trimmed, true).c_str(),
-                 name.c_str());
-    status = HighsStatus::kWarning;
-  };
-
-  trimmed = lp.col_cost_.size() - num_col;
-  if (trimmed) {
-    lp.col_cost_.resize(num_col);
-    logTrimming("col_cost_");
-  }
-
-  trimmed = lp.col_lower_.size() - num_col;
-  if (trimmed) {
-    lp.col_lower_.resize(num_col);
-    logTrimming("col_lower_");
-  }
-
-  trimmed = lp.col_upper_.size() - num_col;
-  if (trimmed) {
-    lp.col_upper_.resize(num_col);
-    logTrimming("col_upper_");
-  }
-
-  trimmed = lp.row_lower_.size() - num_row;
-  if (trimmed) {
-    lp.row_lower_.resize(num_row);
-    logTrimming("row_lower_");
-  }
-
-  trimmed = lp.row_upper_.size() - num_row;
-  if (trimmed) {
-    lp.row_upper_.resize(num_row);
-    logTrimming("row_upper_");
-  }
-
-  if (lp.col_names_.size()) {
-    trimmed = lp.col_names_.size() - num_col;
-    if (trimmed) {
-      lp.col_names_.resize(num_col);
-      logTrimming("col_names_");
-    }
-  }
-
-  if (lp.row_names_.size()) {
-    trimmed = lp.row_names_.size() - num_row;
-    if (trimmed) {
-      lp.row_names_.resize(num_row);
-      logTrimming("row_names_");
-    }
-  }
-
-  if (lp.integrality_.size()) {
-    trimmed = lp.integrality_.size() - num_col;
-    if (trimmed) {
-      lp.integrality_.resize(num_col);
-      logTrimming("integrality_");
-    }
-  }
-  return status;
 }
 
 HighsStatus assessCosts(const HighsOptions& options, const HighsInt ml_col_os,

@@ -33,9 +33,8 @@ HighsStatus assessHessian(HighsHessian& hessian, const HighsOptions& options) {
     hessian.clear();
     return HighsStatus::kOk;
   }
-  return_status = interpretCallStatus(
-      log_options, trimHessianDimensions(log_options, hessian), return_status,
-      "trimHessianDimensions");
+  return_status = interpretCallStatus(log_options, hessian.trimDimensions(log_options), return_status,
+      "hessian.trimDimensions");
   // Assess the Hessian matrix
   //
   // The start of column 0 must be zero.
@@ -91,27 +90,6 @@ HighsStatus assessHessian(HighsHessian& hessian, const HighsOptions& options) {
                 "assessHessian returns HighsStatus = %s\n",
                 highsStatusToString(return_status).c_str());
   return return_status;
-}
-
-HighsStatus trimHessianDimensions(const HighsLogOptions& log_options,
-                                  HighsHessian& hessian) {
-  assert(!hessian.isOracle());
-  const HighsInt dim = hessian.dim_;
-  assert(dim > 0);
-  HighsInt trimmed = 0;
-  HighsStatus status = HighsStatus::kOk;
-
-  trimmed = hessian.start_.size() - dim - 1;
-  if (trimmed) {
-    hessian.start_.resize(dim + 1);
-    highsLogUser(
-        log_options, HighsLogType::kWarning,
-        "Trimmed %d excess entr%s from HighsHessian data member start_\n",
-        int(trimmed), highsIntToPlural(trimmed, true).c_str());
-    status = HighsStatus::kWarning;
-  }
-
-  return status;
 }
 
 void completeHessianDiagonal(const HighsOptions& options,

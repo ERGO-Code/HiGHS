@@ -23,8 +23,6 @@
 using std::vector;
 
 HighsStatus assessHessian(HighsHessian& hessian, const HighsOptions& options);
-HighsStatus trimHessianDimensions(const HighsLogOptions& log_options,
-                                  HighsHessian& hessian);
 void completeHessianDiagonal(const HighsOptions& options,
                              HighsHessian& hessian);
 bool okHessianDiagonal(const HighsOptions& options, HighsHessian& hessian,
