@@ -688,6 +688,12 @@ HighsStatus HighsLp::trimDimensions(const HighsLogOptions& log_options) {
       logTrimming("integrality_");
     }
   }
+
+  HighsStatus matrix_trim_status =
+    this->a_matrix_.trimDimensions(log_options,
+				   this->isColwise() ? this->num_col_ : this->num_row_);
+
+  if (matrix_trim_status == HighsStatus::kWarning) return matrix_trim_status;
   return status;
 }
 

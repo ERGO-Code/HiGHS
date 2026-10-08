@@ -21,21 +21,15 @@ using std::fabs;
 
 HighsStatus assessHessian(HighsHessian& hessian, const HighsOptions& options) {
   if (hessian.isOracle()) return HighsStatus::kOk;
-
   const HighsLogOptions& log_options = options.log_options;
-  HighsStatus return_status = hessian.legalDimensions(log_options)
-                                  ? HighsStatus::kOk
-                                  : HighsStatus::kError;
-  if (return_status == HighsStatus::kError) return return_status;
+  if (!hessian.legalDimensions(log_options)) return HighsStatus::kError;
+  HighsStatus return_status = hessian.trimDimensions(log_options);
 
   // If the Hessian has no columns there is nothing left to test
   if (hessian.dim_ == 0) {
     hessian.clear();
-    return HighsStatus::kOk;
+    return return_status;
   }
-  return_status =
-      interpretCallStatus(log_options, hessian.trimDimensions(log_options),
-                          return_status, "hessian.trimDimensions");
   // Assess the Hessian matrix
   //
   // The start of column 0 must be zero.

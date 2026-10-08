@@ -639,7 +639,7 @@ TEST_CASE("LP-change-coefficient", "[highs_data]") {
   highs.resetGlobalScheduler(true);
 }
 
-TEST_CASE("LP-illegal-start-ok", "[highs_data]") {
+TEST_CASE("LP-illegal-start", "[highs_data]") {
   Highs highs;
   //  highs.setOptionValue("output_flag", dev_run);
   HighsLp lp;
@@ -647,8 +647,9 @@ TEST_CASE("LP-illegal-start-ok", "[highs_data]") {
   lp.num_row_ = 1;
   lp.row_lower_ = {-inf};
   lp.row_upper_ = {1};
+  printf("\nIf the LP has no columns or no rows, then the user matrix is ignored\n");
   lp.a_matrix_.start_ = {1};
-  REQUIRE(highs.passModel(lp) == HighsStatus::kError);
+  REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
   REQUIRE(highs.getLp().a_matrix_.start_[0] == 0);
   REQUIRE(highs.getLp().a_matrix_.start_.size() == 1);
   REQUIRE(highs.getLp().a_matrix_.index_.size() == 0);
@@ -657,16 +658,59 @@ TEST_CASE("LP-illegal-start-ok", "[highs_data]") {
   lp.col_cost_ = {0};
   lp.col_lower_ = {0};
   lp.col_upper_ = {inf};
-  lp.a_matrix_.start_ = {0, -1};
+  lp.a_matrix_.start_ = {1};
+  printf("\nLP\nIllegal start_.size()\n");
+  REQUIRE(highs.passModel(lp) == HighsStatus::kError);
+  lp.a_matrix_.start_ = {1, -1};
+  printf("\nIllegal start_[1]\n");
+  REQUIRE(highs.passModel(lp) == HighsStatus::kError);
+  lp.a_matrix_.start_ = {1, 1};
+  printf("\nIllegal index size\n");
+  REQUIRE(highs.passModel(lp) == HighsStatus::kError);
   lp.a_matrix_.index_ = {0, 1};
+  printf("\nIllegal value size\n");
+  REQUIRE(highs.passModel(lp) == HighsStatus::kError);
   lp.a_matrix_.value_ = {1, 2};
+  printf("\nIllegal start_[0]\n");
   REQUIRE(highs.passModel(lp) == HighsStatus::kError);
   lp.a_matrix_.start_ = {0, 1};
+  printf("\nNeed to trim index\n");
   REQUIRE(highs.passModel(lp) == HighsStatus::kWarning);
   lp.a_matrix_.index_ = {0};
+  printf("\nNeed to trim value\n");
   REQUIRE(highs.passModel(lp) == HighsStatus::kWarning);
   lp.a_matrix_.value_ = {1};
+  printf("\nOK!\n");
   REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
+
+  HighsHessian hessian;
+  hessian.dim_ = lp.num_col_;
+  hessian.start_ = {1};
+  printf("\nHessian\nIllegal start_.size()\n");
+  REQUIRE(highs.passHessian(hessian) == HighsStatus::kError);
+  hessian.start_ = {1, -1};
+  printf("\nIllegal start_[1]\n");
+  REQUIRE(highs.passHessian(hessian) == HighsStatus::kError);
+  hessian.start_ = {1, 1};
+
+  printf("\nIllegal index size\n");
+  REQUIRE(highs.passHessian(hessian) == HighsStatus::kError);
+  hessian.index_ = {0, 1};
+  printf("\nIllegal value size\n");
+  REQUIRE(highs.passHessian(hessian) == HighsStatus::kError);
+  hessian.value_ = {1, 2};
+  printf("\nIllegal start_[0]\n");
+  REQUIRE(highs.passHessian(hessian) == HighsStatus::kError);
+  hessian.start_ = {0, 1};
+  printf("\nNeed to trim index\n");
+  REQUIRE(highs.passHessian(hessian) == HighsStatus::kWarning);
+  hessian.index_ = {0};
+  printf("\nNeed to trim value\n");
+  REQUIRE(highs.passHessian(hessian) == HighsStatus::kWarning);
+  hessian.value_ = {1};
+  printf("\nOK!\n");
+  REQUIRE(highs.passHessian(hessian) == HighsStatus::kOk);
+
 }
 
 TEST_CASE("LP-row-wise", "[highs_data]") {

@@ -406,9 +406,6 @@ HighsHessian HighsHessian::toSquare() const {
 
 bool HighsHessian::legalDimensions(const HighsLogOptions& log_options) const {
   assert(!this->isOracle());
-
-  if (this->dim_ == 0) return true;
-
   // Assess the Hessian dimensions and vector sizes
   std::vector<HighsInt> hessian_p_end;
   const bool partitioned = false;
@@ -419,11 +416,8 @@ bool HighsHessian::legalDimensions(const HighsLogOptions& log_options) const {
 
 HighsStatus HighsHessian::trimDimensions(const HighsLogOptions& log_options) {
   assert(!this->isOracle());
-  assert(this->dim_ > 0);
-
   std::vector<HighsInt> hessian_p_end;
   const bool partitioned = false;
-  
   return trimMatrixDimensions(log_options, "HighsHessian", this->name_, this->dim_,
 			      partitioned,
 			      this->start_, hessian_p_end, this->index_, this->value_);
