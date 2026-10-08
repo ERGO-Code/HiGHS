@@ -810,10 +810,10 @@ HighsStatus HighsSparseMatrix::assess(const HighsLogOptions& log_options,
     num_vec = this->num_row_;
   }
   const bool partitioned = this->format_ == MatrixFormat::kRowwisePartitioned;
-  return assessMatrix(log_options, "HighsSparseMatrix", this->name_, vec_dim, num_vec, partitioned,
-                      this->start_, this->p_end_, this->index_, this->value_,
-                      small_matrix_value, large_matrix_value, sum_duplicates,
-                      col_names, row_names);
+  return assessMatrix(log_options, "HighsSparseMatrix", this->name_, vec_dim,
+                      num_vec, partitioned, this->start_, this->p_end_,
+                      this->index_, this->value_, small_matrix_value,
+                      large_matrix_value, sum_duplicates, col_names, row_names);
 }
 
 void HighsSparseMatrix::assessSmallValues(const HighsLogOptions& log_options,
@@ -1751,14 +1751,15 @@ void HighsSparseMatrix::debugReportRowPrice(const HighsInt iRow,
 bool HighsSparseMatrix::legalDimensions(const HighsLogOptions& log_options,
                                         const HighsInt num_vec) const {
   return legalMatrixDimensions(
-			       log_options, "HighsSparseMatrix", this->name_,
-      num_vec, this->format_ == MatrixFormat::kRowwisePartitioned,
-      this->start_, this->p_end_, this->index_, this->value_);
+      log_options, "HighsSparseMatrix", this->name_, num_vec,
+      this->format_ == MatrixFormat::kRowwisePartitioned, this->start_,
+      this->p_end_, this->index_, this->value_);
 }
 
-HighsStatus HighsSparseMatrix::trimDimensions(const HighsLogOptions& log_options,
-                                        const HighsInt num_vec) {
-  return trimMatrixDimensions(log_options, "HighsSparseMatrix", this->name_, num_vec,
-			      this->format_ == MatrixFormat::kRowwisePartitioned,
-			      this->start_, this->p_end_, this->index_, this->value_);
+HighsStatus HighsSparseMatrix::trimDimensions(
+    const HighsLogOptions& log_options, const HighsInt num_vec) {
+  return trimMatrixDimensions(
+      log_options, "HighsSparseMatrix", this->name_, num_vec,
+      this->format_ == MatrixFormat::kRowwisePartitioned, this->start_,
+      this->p_end_, this->index_, this->value_);
 }

@@ -36,7 +36,7 @@ HighsStatus assessLp(HighsLp& lp, const HighsOptions& options) {
   if (!lp.legalDimensions("assessLp", log_options)) return HighsStatus::kError;
   HighsStatus return_status = lp.trimDimensions(log_options);
 
-  HighsStatus call_status = HighsStatus::kOk; 
+  HighsStatus call_status = HighsStatus::kOk;
   if (lp.num_col_) {
     // Assess the LP column costs
     HighsIndexCollection index_collection;
@@ -84,9 +84,9 @@ HighsStatus assessLp(HighsLp& lp, const HighsOptions& options) {
 
   // Assess the LP matrix - even if there are no rows!
   const bool sum_duplicates = false;
-  call_status = lp.a_matrix_.assess(
-      log_options, options.small_matrix_value, options.large_matrix_value,
-      sum_duplicates, lp.col_names_.data(), lp.row_names_.data());
+  call_status = lp.a_matrix_.assess(log_options, options.small_matrix_value,
+                                    options.large_matrix_value, sum_duplicates,
+                                    lp.col_names_.data(), lp.row_names_.data());
   return_status = interpretCallStatus(log_options, call_status, return_status,
                                       "assessMatrix");
   if (return_status == HighsStatus::kError) return return_status;

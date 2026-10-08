@@ -130,7 +130,7 @@ class HighsSparseMatrix {
   bool legalDimensions(const HighsLogOptions& log_options,
                        const HighsInt num_vec) const;
   HighsStatus trimDimensions(const HighsLogOptions& log_options,
-                       const HighsInt num_vec);
+                             const HighsInt num_vec);
 
  private:
   void priceByRowDenseResult(

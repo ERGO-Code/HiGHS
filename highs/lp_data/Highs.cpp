@@ -453,7 +453,8 @@ HighsStatus Highs::passModel(HighsModel model) {
   // Move the model's LP and Hessian to the internal LP and Hessian
   lp = std::move(model.lp_);
   hessian = std::move(model.hessian_);
-  lp.origin_name_ = "Original";
+  lp.origin_name_ = "User";
+  lp.a_matrix_.name_ = "User matrix";
   assert(lp.a_matrix_.formatOk());
   if (lp.num_col_ == 0 || lp.num_row_ == 0) {
     // Model constraint matrix has either no columns or no

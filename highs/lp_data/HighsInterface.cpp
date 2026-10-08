@@ -473,8 +473,7 @@ HighsStatus Highs::addColsInterface(
     // Assess the matrix rows
     return_status = interpretCallStatus(
         options_.log_options,
-        local_a_matrix.assess(options.log_options, 
-                              options.small_matrix_value,
+        local_a_matrix.assess(options.log_options, options.small_matrix_value,
                               options.large_matrix_value, sum_duplicates),
         return_status, "local_a_matrix.assess");
     if (return_status == HighsStatus::kError) return return_status;
@@ -606,8 +605,7 @@ HighsStatus Highs::addRowsInterface(HighsInt ext_num_new_row,
     const bool sum_duplicates = false;
     return_status = interpretCallStatus(
         options_.log_options,
-        local_ar_matrix.assess(options.log_options, 
-                               options.small_matrix_value,
+        local_ar_matrix.assess(options.log_options, options.small_matrix_value,
                                options.large_matrix_value, sum_duplicates),
         return_status, "local_ar_matrix.assess");
     if (return_status == HighsStatus::kError) return return_status;

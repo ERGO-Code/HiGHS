@@ -18,7 +18,10 @@
 
 class HighsLp {
  public:
-  HighsLp() { clear(); a_matrix_.name_ = "HighsLp::a_matrix_"; }
+  HighsLp() {
+    clear();
+    a_matrix_.name_ = "HighsLp::a_matrix_";
+  }
   // Model data
   HighsInt num_col_;
   HighsInt num_row_;

@@ -18,45 +18,48 @@
 #include "util/HighsHash.h"
 
 HighsStatus assessMatrix(
-    const HighsLogOptions& log_options, const std::string& class_name, const std::string& matrix_name,
-    const HighsInt vec_dim, const HighsInt num_vec,
-    vector<HighsInt>& matrix_start, vector<HighsInt>& matrix_index,
+    const HighsLogOptions& log_options, const std::string& class_name,
+    const std::string& matrix_name, const HighsInt vec_dim,
+    const HighsInt num_vec, vector<HighsInt>& matrix_start,
+    vector<HighsInt>& matrix_index, vector<double>& matrix_value,
+    const double small_matrix_value, const double large_matrix_value,
+    const bool sum_duplicates, const std::string* col_names,
+    const std::string* row_names) {
+  vector<HighsInt> matrix_p_end;
+  const bool partitioned = false;
+  return assessMatrix(log_options, class_name, matrix_name, vec_dim, num_vec,
+                      partitioned, matrix_start, matrix_p_end, matrix_index,
+                      matrix_value, small_matrix_value, large_matrix_value,
+                      sum_duplicates, col_names, row_names);
+}
+
+HighsStatus assessMatrix(
+    const HighsLogOptions& log_options, const std::string& class_name,
+    const std::string& matrix_name, const HighsInt vec_dim,
+    const HighsInt num_vec, vector<HighsInt>& matrix_start,
+    vector<HighsInt>& matrix_p_end, vector<HighsInt>& matrix_index,
     vector<double>& matrix_value, const double small_matrix_value,
     const double large_matrix_value, const bool sum_duplicates,
     const std::string* col_names, const std::string* row_names) {
-  vector<HighsInt> matrix_p_end;
   const bool partitioned = false;
-  return assessMatrix(log_options, class_name, matrix_name, vec_dim, num_vec, partitioned,
-                      matrix_start, matrix_p_end, matrix_index, matrix_value,
-                      small_matrix_value, large_matrix_value, sum_duplicates,
-                      col_names, row_names);
+  return assessMatrix(log_options, class_name, matrix_name, vec_dim, num_vec,
+                      partitioned, matrix_start, matrix_p_end, matrix_index,
+                      matrix_value, small_matrix_value, large_matrix_value,
+                      sum_duplicates, col_names, row_names);
 }
 
 HighsStatus assessMatrix(
-    const HighsLogOptions& log_options, const std::string& class_name, const std::string& matrix_name,
-    const HighsInt vec_dim, const HighsInt num_vec,
+    const HighsLogOptions& log_options, const std::string& class_name,
+    const std::string& matrix_name, const HighsInt vec_dim,
+    const HighsInt num_vec, const bool partitioned,
     vector<HighsInt>& matrix_start, vector<HighsInt>& matrix_p_end,
     vector<HighsInt>& matrix_index, vector<double>& matrix_value,
     const double small_matrix_value, const double large_matrix_value,
     const bool sum_duplicates, const std::string* col_names,
     const std::string* row_names) {
-  const bool partitioned = false;
-  return assessMatrix(log_options, class_name, matrix_name, vec_dim, num_vec, partitioned,
-                      matrix_start, matrix_p_end, matrix_index, matrix_value,
-                      small_matrix_value, large_matrix_value, sum_duplicates,
-                      col_names, row_names);
-}
-
-HighsStatus assessMatrix(
-    const HighsLogOptions& log_options, const std::string& class_name, const std::string& matrix_name,
-    const HighsInt vec_dim, const HighsInt num_vec, const bool partitioned,
-    vector<HighsInt>& matrix_start, vector<HighsInt>& matrix_p_end,
-    vector<HighsInt>& matrix_index, vector<double>& matrix_value,
-    const double small_matrix_value, const double large_matrix_value,
-    const bool sum_duplicates, const std::string* col_names,
-    const std::string* row_names) {
-  if (!legalMatrixDimensions(log_options, class_name, matrix_name, num_vec, partitioned, matrix_start,
-                             matrix_p_end, matrix_index, matrix_value))
+  if (!legalMatrixDimensions(log_options, class_name, matrix_name, num_vec,
+                             partitioned, matrix_start, matrix_p_end,
+                             matrix_index, matrix_value))
     return HighsStatus::kError;
 
   auto possible_col_name = [&](const HighsInt ix) {
@@ -101,7 +104,8 @@ HighsStatus assessMatrix(
                    " < %" HIGHSINT_FORMAT
                    " = "
                    "previous start\n",
-                   class_name.c_str(), matrix_name.c_str(), ix, this_start, previous_start);
+                   class_name.c_str(), matrix_name.c_str(), ix, this_start,
+                   previous_start);
       return HighsStatus::kError;
     }
     if (partitioned) {
@@ -114,7 +118,8 @@ HighsStatus assessMatrix(
                      " < %" HIGHSINT_FORMAT
                      " = "
                      " start\n",
-                     class_name.c_str(), matrix_name.c_str(), ix, this_p_end, this_start);
+                     class_name.c_str(), matrix_name.c_str(), ix, this_p_end,
+                     this_start);
         return HighsStatus::kError;
       }
     }
@@ -122,13 +127,13 @@ HighsStatus assessMatrix(
   }
   bool this_start_too_big = this_start > num_nz;
   if (this_start_too_big) {
-    highsLogUser(log_options, HighsLogType::kError,
-                 "s% %s matrix packed vector %" HIGHSINT_FORMAT
-                 " has illegal start of %" HIGHSINT_FORMAT
-                 " > %" HIGHSINT_FORMAT
-                 " = "
-                 "number of nonzeros\n",
-                 class_name.c_str(), matrix_name.c_str(), num_vec, this_start, num_nz);
+    highsLogUser(
+        log_options, HighsLogType::kError,
+        "s% %s matrix packed vector %" HIGHSINT_FORMAT
+        " has illegal start of %" HIGHSINT_FORMAT " > %" HIGHSINT_FORMAT
+        " = "
+        "number of nonzeros\n",
+        class_name.c_str(), matrix_name.c_str(), num_vec, this_start, num_nz);
     return HighsStatus::kError;
   }
   if (partitioned) {
@@ -140,7 +145,8 @@ HighsStatus assessMatrix(
                    " > %" HIGHSINT_FORMAT
                    " = "
                    "number of nonzeros\n",
-                   class_name.c_str(), matrix_name.c_str(), num_vec, this_p_end, num_nz);
+                   class_name.c_str(), matrix_name.c_str(), num_vec, this_p_end,
+                   num_nz);
       return HighsStatus::kError;
     }
   }
@@ -199,8 +205,8 @@ HighsStatus assessMatrix(
                      "s% %s matrix packed vector %" HIGHSINT_FORMAT
                      "%s, entry %" HIGHSINT_FORMAT
                      ", is illegal index %" HIGHSINT_FORMAT "\n",
-                     class_name.c_str(), matrix_name.c_str(), ix, possible_col_name(ix).c_str(), el,
-                     component);
+                     class_name.c_str(), matrix_name.c_str(), ix,
+                     possible_col_name(ix).c_str(), el, component);
         return HighsStatus::kError;
       }
       // Check that the index does not exceed the vector dimension
@@ -212,8 +218,8 @@ HighsStatus assessMatrix(
                      ", is illegal index "
                      "%12" HIGHSINT_FORMAT " >= %" HIGHSINT_FORMAT
                      " = vector dimension\n",
-                     class_name.c_str(), matrix_name.c_str(), ix, possible_col_name(ix).c_str(), el,
-                     component, vec_dim);
+                     class_name.c_str(), matrix_name.c_str(), ix,
+                     possible_col_name(ix).c_str(), el, component, vec_dim);
         return HighsStatus::kError;
       }
       // Check whether the index has already occurred.
@@ -239,8 +245,9 @@ HighsStatus assessMatrix(
                      "s% %s matrix packed vector %" HIGHSINT_FORMAT
                      "%s, has duplicate entries for index %" HIGHSINT_FORMAT
                      "%s\n",
-                     class_name.c_str(), matrix_name.c_str(), ix, possible_col_name(ix).c_str(),
-                     component, possible_row_name(component).c_str());
+                     class_name.c_str(), matrix_name.c_str(), ix,
+                     possible_col_name(ix).c_str(), component,
+                     possible_row_name(component).c_str());
         return HighsStatus::kError;
       }
       // Not a duplicate
@@ -296,8 +303,8 @@ HighsStatus assessMatrix(
     highsLogUser(log_options, HighsLogType::kError,
                  "s% %s matrix packed vector contains %" HIGHSINT_FORMAT
                  " |value| in [%g, %g] greater than %g\n",
-                 class_name.c_str(), matrix_name.c_str(), num_large_value, min_large_value,
-                 max_large_value, large_matrix_value);
+                 class_name.c_str(), matrix_name.c_str(), num_large_value,
+                 min_large_value, max_large_value, large_matrix_value);
     error_found = true;
   }
   if (num_small_value) {
@@ -308,8 +315,8 @@ HighsStatus assessMatrix(
           log_options, HighsLogType::kError,
           "s% %s matrix packed partitioned vector contains %" HIGHSINT_FORMAT
           " |value| in [%g, %g] less than or equal to %g: ignored\n",
-          class_name.c_str(), matrix_name.c_str(), num_small_value, min_small_value,
-          max_small_value, small_matrix_value);
+          class_name.c_str(), matrix_name.c_str(), num_small_value,
+          min_small_value, max_small_value, small_matrix_value);
       error_found = true;
       assert(num_small_value == 0);
     }
@@ -321,8 +328,8 @@ HighsStatus assessMatrix(
                    "s% %s matrix packed vector contains %" HIGHSINT_FORMAT
                    " |value| in [%g, %g] "
                    "less than or equal to %g: ignored\n",
-                   class_name.c_str(), matrix_name.c_str(), num_small_value, min_small_value,
-                   max_small_value, small_matrix_value);
+                   class_name.c_str(), matrix_name.c_str(), num_small_value,
+                   min_small_value, max_small_value, small_matrix_value);
       warning_found = true;
     }
   }
@@ -336,8 +343,8 @@ HighsStatus assessMatrix(
 }
 
 bool legalMatrixDimensions(const HighsLogOptions& log_options,
-				 const std::string& class_name,
-				 const std::string& matrix_name,
+                           const std::string& class_name,
+                           const std::string& matrix_name,
                            const HighsInt num_vec, const bool partitioned,
                            const vector<HighsInt>& start,
                            const vector<HighsInt>& p_end,
@@ -347,28 +354,30 @@ bool legalMatrixDimensions(const HighsLogOptions& log_options,
   // Assess main dimensions
   const bool legal_num_vec = num_vec >= 0;
   if (!legal_num_vec)
+    highsLogUser(log_options, HighsLogType::kError,
+                 "Matrix dimension validation for %s %s fails on number of "
+                 "vectors = %d < 0\n",
+                 class_name.c_str(), matrix_name.c_str(), (int)num_vec);
+  ok = legal_num_vec && ok;
+  const bool legal_start_size = (HighsInt)start.size() >= num_vec + 1;
+  if (!legal_start_size) {
     highsLogUser(
         log_options, HighsLogType::kError,
-        "Matrix dimension validation for %s %s fails on number of vectors = %d < 0\n",
-        class_name.c_str(), matrix_name.c_str(), (int)num_vec);
-  ok = legal_num_vec && ok;
-  const bool legal_start_size =
-      (HighsInt)start.size() >= num_vec + 1;
-  if (!legal_start_size) {
-    highsLogUser(log_options, HighsLogType::kError,
-                 "Matrix dimension validation for %s %s fails on start size = %d < %d = "
-                 "num vectors + 1\n",
-                 class_name.c_str(), matrix_name.c_str(), (int)start.size(), (int)(num_vec + 1));
+        "Matrix dimension validation for %s %s fails on start size = %d < %d = "
+        "num vectors + 1\n",
+        class_name.c_str(), matrix_name.c_str(), (int)start.size(),
+        (int)(num_vec + 1));
   }
   ok = legal_start_size && ok;
   if (partitioned) {
-    const bool legal_p_end_size =
-        (HighsInt)p_end.size() >= num_vec + 1;
+    const bool legal_p_end_size = (HighsInt)p_end.size() >= num_vec + 1;
     if (!legal_p_end_size)
-      highsLogUser(log_options, HighsLogType::kError,
-                   "Matrix dimension validation for %s %s fails on p_end size = %d < %d "
-                   "= num vectors + 1\n",
-                   class_name.c_str(), matrix_name.c_str(), (int)p_end.size(), (int)(num_vec + 1));
+      highsLogUser(
+          log_options, HighsLogType::kError,
+          "Matrix dimension validation for %s %s fails on p_end size = %d < %d "
+          "= num vectors + 1\n",
+          class_name.c_str(), matrix_name.c_str(), (int)p_end.size(),
+          (int)(num_vec + 1));
     ok = (HighsInt)p_end.size() >= num_vec + 1 && ok;
   }
   // Possibly check the sizes of the index and value vectors. Can only
@@ -378,40 +387,39 @@ bool legalMatrixDimensions(const HighsLogOptions& log_options,
   // the index and value vectors are non-negative.
   const HighsInt num_nz = legal_start_size ? start[num_vec] : 0;
   if (num_nz >= 0) {
-    const bool legal_index_size =
-        (HighsInt)index.size() >= num_nz;
+    const bool legal_index_size = (HighsInt)index.size() >= num_nz;
     if (!legal_index_size)
-      highsLogUser(log_options, HighsLogType::kError,
-                   "Matrix dimension validation for %s %s fails on index size = %d < %d "
-                   "= number of nonzeros\n",
-                   class_name.c_str(), matrix_name.c_str(), (int)index.size(), (int)num_nz);
+      highsLogUser(
+          log_options, HighsLogType::kError,
+          "Matrix dimension validation for %s %s fails on index size = %d < %d "
+          "= number of nonzeros\n",
+          class_name.c_str(), matrix_name.c_str(), (int)index.size(),
+          (int)num_nz);
     ok = legal_index_size && ok;
-    const bool legal_value_size =
-        (HighsInt)value.size() >= num_nz;
+    const bool legal_value_size = (HighsInt)value.size() >= num_nz;
     if (!legal_value_size)
-      highsLogUser(log_options, HighsLogType::kError,
-                   "Matrix dimension validation for %s %s fails on value size = %d < %d "
-                   "= number of nonzeros\n",
-                   class_name.c_str(), matrix_name.c_str(), (int)value.size(), (int)num_nz);
+      highsLogUser(
+          log_options, HighsLogType::kError,
+          "Matrix dimension validation for %s %s fails on value size = %d < %d "
+          "= number of nonzeros\n",
+          class_name.c_str(), matrix_name.c_str(), (int)value.size(),
+          (int)num_nz);
     ok = legal_value_size && ok;
   } else {
-    highsLogUser(
-        log_options, HighsLogType::kError,
-        "Matrix dimension validation for %s %s fails on number of nonzeros = %d < 0\n",
-        class_name.c_str(), matrix_name.c_str(), (int)num_nz);
+    highsLogUser(log_options, HighsLogType::kError,
+                 "Matrix dimension validation for %s %s fails on number of "
+                 "nonzeros = %d < 0\n",
+                 class_name.c_str(), matrix_name.c_str(), (int)num_nz);
     ok = false;
   }
   return ok;
 }
 
-HighsStatus trimMatrixDimensions(const HighsLogOptions& log_options,
-				 const std::string& class_name,
-				 const std::string& matrix_name,
-				 const HighsInt num_vec, const bool partitioned,
-				 vector<HighsInt>& start,
-				 vector<HighsInt>& p_end,
-				 vector<HighsInt>& index,
-				 vector<double>& value) {
+HighsStatus trimMatrixDimensions(
+    const HighsLogOptions& log_options, const std::string& class_name,
+    const std::string& matrix_name, const HighsInt num_vec,
+    const bool partitioned, vector<HighsInt>& start, vector<HighsInt>& p_end,
+    vector<HighsInt>& index, vector<double>& value) {
   assert(num_vec >= 0);
   assert(start.size() >= static_cast<size_t>(num_vec + 1));
   HighsInt trimmed = 0;
@@ -422,20 +430,19 @@ HighsStatus trimMatrixDimensions(const HighsLogOptions& log_options,
     highsLogUser(log_options, HighsLogType::kWarning,
                  "Trimmed %d excess entr%s from %s %s data member %s\n",
                  int(trimmed), highsIntToPlural(trimmed, true).c_str(),
-		 class_name.c_str(), matrix_name.c_str(), 
-                 name.c_str());
+                 class_name.c_str(), matrix_name.c_str(), name.c_str());
     status = HighsStatus::kWarning;
   };
 
   trimmed = start.size() - num_vec - 1;
   if (trimmed) {
-    start.resize(num_vec+1);
+    start.resize(num_vec + 1);
     logTrimming("start_");
   }
 
   const HighsInt num_nz = start[num_vec];
   assert(num_nz >= 0);
-  
+
   if (partitioned) {
     trimmed = p_end.size() - num_vec;
     if (trimmed) {
@@ -446,15 +453,15 @@ HighsStatus trimMatrixDimensions(const HighsLogOptions& log_options,
 
   trimmed = index.size() - num_nz;
   if (trimmed) {
-    index.resize(num_vec);
+    index.resize(num_nz);
     logTrimming("index_");
   }
-  
+
   trimmed = value.size() - num_nz;
   if (trimmed) {
-    value.resize(num_vec);
+    value.resize(num_nz);
     logTrimming("value_");
   }
-  
+
   return status;
 }
