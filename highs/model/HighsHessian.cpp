@@ -434,9 +434,7 @@ HighsStatus HighsHessian::trimDimensions(const HighsLogOptions& log_options) {
   }
 
   return status;
-
 }
-
 
 HighsStatus HighsHessian::checkOracle(const HighsLogOptions& log_options,
                                       const bool exit_on_first_error) const {

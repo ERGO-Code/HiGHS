@@ -720,7 +720,7 @@ TEST_CASE("issue-3366", "[highs_data]") {
   //
   // is triggered if models have excessive integrality values
   //
-  // LP is blending with am empty row so that shrinkProblem is called,
+  // LP is blending with an empty row so that shrinkProblem is called,
   // plus spurious entries in each vector
   HighsLp lp;
   lp.sense_ = ObjSense::kMaximize;
@@ -742,7 +742,7 @@ TEST_CASE("issue-3366", "[highs_data]") {
   HighsInt true_nnz = 4;
 
   // Have to switch off initial sweep, as it resizes the presolved
-  // model, and there will also be no further reducitons, so
+  // model, and there will also be no further reductions, so
   // shrinkProblem isn't called.
   HighsOptions options;
   options.presolve_rule_off = 1 << kPresolveRuleInitialSweep;

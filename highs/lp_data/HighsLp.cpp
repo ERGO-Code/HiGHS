@@ -427,7 +427,7 @@ void HighsLp::deleteRows(const HighsIndexCollection& index_collection) {
 }
 
 bool HighsLp::legalDimensions(const std::string& message,
-				const HighsLogOptions& log_options) const {
+                              const HighsLogOptions& log_options) const {
   bool ok = true;
   const HighsInt num_col = this->num_col_;
   const HighsInt num_row = this->num_row_;
@@ -504,7 +504,8 @@ bool HighsLp::legalDimensions(const std::string& message,
   } else {
     num_vec = num_row;
   }
-  bool legal_matrix_dimensions = this->a_matrix_.legalDimensions(log_options, num_vec);
+  bool legal_matrix_dimensions =
+      this->a_matrix_.legalDimensions(log_options, num_vec);
   if (!legal_matrix_dimensions)
     highsLogUser(log_options, HighsLogType::kError,
                  "LP dimension validation (%s) fails on a_matrix dimensions\n",

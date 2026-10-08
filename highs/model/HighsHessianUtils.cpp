@@ -22,7 +22,7 @@ using std::fabs;
 HighsStatus assessHessian(HighsHessian& hessian, const HighsOptions& options) {
   if (hessian.isOracle()) return HighsStatus::kOk;
 
-  HighsLogOptions log_options = options.log_options;
+  const HighsLogOptions& log_options = options.log_options;
   HighsStatus return_status = hessian.legalDimensions(log_options)
                                   ? HighsStatus::kOk
                                   : HighsStatus::kError;
@@ -33,8 +33,9 @@ HighsStatus assessHessian(HighsHessian& hessian, const HighsOptions& options) {
     hessian.clear();
     return HighsStatus::kOk;
   }
-  return_status = interpretCallStatus(log_options, hessian.trimDimensions(log_options), return_status,
-      "hessian.trimDimensions");
+  return_status =
+      interpretCallStatus(log_options, hessian.trimDimensions(log_options),
+                          return_status, "hessian.trimDimensions");
   // Assess the Hessian matrix
   //
   // The start of column 0 must be zero.

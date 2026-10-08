@@ -32,7 +32,7 @@ using std::min;
 const HighsInt kMaxLineLength = 80;
 
 HighsStatus assessLp(HighsLp& lp, const HighsOptions& options) {
-  HighsLogOptions log_options = options.log_options;
+  const HighsLogOptions& log_options = options.log_options;
   HighsStatus return_status = HighsStatus::kOk;
   HighsStatus call_status = lp.legalDimensions("assessLp", log_options)
                                 ? HighsStatus::kOk
@@ -83,6 +83,8 @@ HighsStatus assessLp(HighsLp& lp, const HighsOptions& options) {
   // If the LP has no columns the matrix must be empty and there is
   // nothing left to test
   if (lp.num_col_ == 0) {
+    // Clear the matrix in case there are oversized data members
+    lp.a_matrix_.clear();
     assert(!lp.numNz());
     return return_status;
   }

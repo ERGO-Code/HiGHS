@@ -3988,7 +3988,8 @@ HighsPresolveStatus Highs::runPresolve(const bool force_lp_presolve,
           (HighsInt)original_lp.numNz() - (HighsInt)reduced_lp.numNz();
       // Clear any scaling information inherited by the reduced LP
       reduced_lp.clearScale();
-      assert(reduced_lp.legalDimensions("RunPresolve: reduced_lp", options_.log_options));
+      assert(reduced_lp.legalDimensions("RunPresolve: reduced_lp",
+                                        options_.log_options));
       break;
     }
     case HighsPresolveStatus::kReducedToEmpty: {
@@ -4902,7 +4903,7 @@ HighsStatus Highs::returnFromHighs(HighsStatus highs_return_status) {
   // Stop the HiGHS run clock if it is running
   if (timer_.running()) timer_.stop();
   const bool dimensions_ok =
-    model_.lp_.legalDimensions("returnFromHighs", options_.log_options);
+      model_.lp_.legalDimensions("returnFromHighs", options_.log_options);
   if (!dimensions_ok) {
     highsLogDev(options_.log_options, HighsLogType::kError,
                 "LP Dimension error in returnFromHighs()\n");

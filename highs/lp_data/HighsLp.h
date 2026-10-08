@@ -74,8 +74,8 @@ class HighsLp {
   HighsCDouble objectiveCDoubleValue(const std::vector<double>& solution) const;
   void setMatrixDimensions();
   void setFormat(const MatrixFormat format);
-  bool isColwise() { return this->a_matrix_.isColwise(); };
-  bool isRowwise() { return this->a_matrix_.isRowwise(); };
+  bool isColwise() const { return this->a_matrix_.isColwise(); };
+  bool isRowwise() const { return this->a_matrix_.isRowwise(); };
   void ensureColwise() { this->a_matrix_.ensureColwise(); };
   void ensureRowwise() { this->a_matrix_.ensureRowwise(); };
   void clearScaling();
@@ -99,7 +99,8 @@ class HighsLp {
     this->col_hash_.clear();
     this->row_hash_.clear();
   }
-  bool legalDimensions(const std::string& message, const HighsLogOptions& log_options) const;
+  bool legalDimensions(const std::string& message,
+                       const HighsLogOptions& log_options) const;
   HighsStatus trimDimensions(const HighsLogOptions& log_options);
   void clear();
 };
