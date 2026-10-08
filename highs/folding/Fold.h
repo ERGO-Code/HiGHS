@@ -39,6 +39,7 @@ class Folder {
   HighsInt run();
   HighsLp getFoldedLp() const;
   void print() const;
+  void printFoldedLp() const;
 };
 
 }  // namespace folding
