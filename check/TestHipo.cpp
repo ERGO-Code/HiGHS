@@ -130,6 +130,39 @@ TEST_CASE("test-hipo-freevar", "[highs_hipo]") {
   highs.resetGlobalScheduler(true);
 }
 
+TEST_CASE("issue-3369", "[Highs_hipo]") {
+  // min   x
+  // s.t.  x >= 1
+  //       . <= 5 (empty row)
+
+  HighsLp lp;
+  lp.num_col_ = 1;
+  lp.num_row_ = 2;
+  lp.col_cost_ = {1};
+  lp.col_lower_ = {-kHighsInf};
+  lp.col_upper_ = {+kHighsInf};
+  lp.row_lower_ = {1, -kHighsInf};
+  lp.row_upper_ = {+kHighsInf, 5};
+  lp.a_matrix_.start_ = {0, 1};
+  lp.a_matrix_.index_ = {0};
+  lp.a_matrix_.value_ = {1};
+  lp.a_matrix_.format_ = MatrixFormat::kColwise;
+
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  REQUIRE(h.passModel(lp) == HighsStatus::kOk);
+  h.setOptionValue("solver", "hipo");
+  h.setOptionValue("run_crossover", "off");
+  h.setOptionValue("presolve", "off");
+  HighsStatus status = h.run();
+  REQUIRE(status == HighsStatus::kOk);
+  REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
+
+  // hipo used to fail after many iterations and restart with ipx because the
+  // slack of the empty row was set incorrectly in the post-processing.
+  REQUIRE(h.getInfo().ipm_iteration_count < 10);
+}
+
 TEST_CASE("test-hipo-linear-solver", "[highs_hipo]") {
   // problem size
   const int n = 5;
