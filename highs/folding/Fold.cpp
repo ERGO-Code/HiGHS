@@ -59,7 +59,12 @@ void test_folding(const HighsLp& lp) {
 }
 
 Folder::Folder(const HighsLp& lp)
-    : lp_{lp}, row_colour_(lp.num_row_), col_colour_(lp.num_col_) {}
+    : lp_{lp},
+      row_colour_(lp.num_row_),
+      col_colour_(lp.num_col_),
+      A_{lp_.a_matrix_} {
+  A_.buildOppositeFormat(At_);
+}
 
 template <typename Data>
 HighsInt Folder::findInitialColour(HighsInt n, HighsInt* colour,
@@ -89,9 +94,9 @@ void Folder::findInitialColour() {
   initial_time_ = clock.stop();
 }
 
-void Folder::foldMatrix() {
+HighsInt Folder::foldMatrix() {
   hipo::Clock clock;
-  CR_.reset(new ColourRefinement(lp_.a_matrix_, row_colour_, col_colour_));
+  CR_.reset(new ColourRefinement(A_, At_, row_colour_, col_colour_));
   ctor_time_ = clock.stop();
 
   clock.start();
@@ -99,15 +104,27 @@ void Folder::foldMatrix() {
   run_time_ = clock.stop();
 
   if (status) printf(" === Folding failed === \n");
+  return status;
 }
 
-void Folder::run() {
+HighsInt Folder::run() {
   hipo::Clock clock;
 
   findInitialColour();
-  foldMatrix();
+  HighsInt status = foldMatrix();
+  if (status == 0) fold_success_ = true;
 
   fold_time_ = clock.stop();
+
+  return status;
+}
+
+HighsLp Folder::getFoldedLp() const {
+  if (!fold_success_) return HighsLp{};
+
+  HighsLp folded_lp;
+
+  return folded_lp;
 }
 
 void Folder::print() const {

@@ -15,8 +15,13 @@ class Folder {
   std::vector<HighsInt> col_colour_;
   std::unique_ptr<ColourRefinement> CR_;
 
+  const HighsSparseMatrix& A_;
+  HighsSparseMatrix At_;
+
   HighsInt initial_row_colours_;
   HighsInt initial_col_colours_;
+
+  bool fold_success_ = false;
 
   double initial_time_;
   double ctor_time_;
@@ -27,11 +32,12 @@ class Folder {
   HighsInt findInitialColour(HighsInt num, HighsInt* colour, HighsInt start);
 
   void findInitialColour();
-  void foldMatrix();
+  HighsInt foldMatrix();
 
  public:
   Folder(const HighsLp& lp);
-  void run();
+  HighsInt run();
+  HighsLp getFoldedLp() const;
   void print() const;
 };
 

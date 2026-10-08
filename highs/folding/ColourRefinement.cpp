@@ -65,13 +65,13 @@ ColourRefinement::Side::Side(std::vector<HighsInt>& c)
 }
 
 ColourRefinement::ColourRefinement(const HighsSparseMatrix& A,
+                                   const HighsSparseMatrix& At,
                                    std::vector<HighsInt>& row_colour,
                                    std::vector<HighsInt>& col_colour)
-    : A_{A}, rows_(row_colour), cols_(col_colour) {
+    : A_{A}, At_{At}, rows_(row_colour), cols_(col_colour) {
   assert(A.isColwise());
+  assert(At_.isRowwise());
   assert(rows_.n == A.num_row_ && cols_.n == A.num_col_);
-
-  A_.buildOppositeFormat(At_);
 }
 
 void ColourRefinement::computeColourSums(HighsInt refining_colour, Side& src,

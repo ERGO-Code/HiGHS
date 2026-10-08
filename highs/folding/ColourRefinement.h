@@ -13,10 +13,11 @@ namespace highs {
 namespace folding {
 
 // Refines separate colourings of the rows and columns of matrix A (col-wise),
-// seen as the biadjacency matrix of a weighted bipartite graph. Row colours and
-// column colours are numbered independently, each starting from 0 and
-// consecutive. Based on "Tight Lower and Upper Bounds for the Complexity of
-// Canonical Colour Refinement", Berkholz, Bonsma, Grohe
+// seen as the biadjacency matrix of a weighted bipartite graph. A row-wise copy
+// At must also be provided. Row colours and column colours are numbered
+// independently, each starting from 0 and consecutive. Based on "Tight Lower
+// and Upper Bounds for the Complexity of Canonical Colour Refinement",
+// Berkholz, Bonsma, Grohe
 
 class ColourRefinement {
   struct IterableStack {
@@ -200,7 +201,7 @@ class ColourRefinement {
   };
 
   const HighsSparseMatrix& A_;
-  HighsSparseMatrix At_;
+  const HighsSparseMatrix& At_;
   Side rows_;
   Side cols_;
   SumClassifier classifier_;
@@ -219,7 +220,7 @@ class ColourRefinement {
   void prepareNextIter(Side& side);
 
  public:
-  ColourRefinement(const HighsSparseMatrix& A,
+  ColourRefinement(const HighsSparseMatrix& A, const HighsSparseMatrix& At,
                    std::vector<HighsInt>& row_colour,
                    std::vector<HighsInt>& col_colour);
   HighsInt run();
