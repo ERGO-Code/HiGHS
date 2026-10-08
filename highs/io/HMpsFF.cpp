@@ -398,7 +398,7 @@ bool HMpsFF::cannotParseSection(const HighsLogOptions& log_options,
 // Assuming string is not empty.
 HMpsFF::Parsekey HMpsFF::checkFirstWord(std::string& strline, size_t& start,
                                         size_t& end, std::string& word) const {
-  start = strline.find_first_not_of(" ");
+  start = strline.find_first_not_of(' ');
   if ((start + 1 == strline.size()) || is_empty(strline[start + 1])) {
     end = start + 1;
     word = strline[start];
@@ -2089,11 +2089,11 @@ double HMpsFF::getValue(const std::string& word, bool& is_nan,
                         const HighsInt id) const {
   // Lambda to replace any d or D by E
   auto dD2e = [&](std::string& word) {
-    size_t ix = word.find("D");
+    size_t ix = word.find('D');
     if (ix != std::string::npos) {
       word.replace(ix, 1, "E");
     } else {
-      ix = word.find("d");
+      ix = word.find('d');
       if (ix != std::string::npos) word.replace(ix, 1, "E");
     }
   };

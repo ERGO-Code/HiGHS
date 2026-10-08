@@ -178,13 +178,13 @@ bool HighsLp::okNames() const {
   for (HighsInt iCol = 0; iCol < this->num_col_; iCol++) {
     const std::string& name = this->col_names_[iCol];
     if (HighsInt(name.length()) == 0) return false;
-    size_t space_pos = name.find(" ");
+    size_t space_pos = name.find(' ');
     if (space_pos != std::string::npos) return false;
   }
   for (HighsInt iRow = 0; iRow < this->num_row_; iRow++) {
     const std::string& name = this->row_names_[iRow];
     if (HighsInt(name.length()) == 0) return false;
-    size_t space_pos = name.find(" ");
+    size_t space_pos = name.find(' ');
     if (space_pos != std::string::npos) return false;
   }
   return true;

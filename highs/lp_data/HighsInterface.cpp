@@ -4005,6 +4005,7 @@ HighsStatus Highs::multiobjectiveSolve() {
     return HighsStatus::kError;
   }
   std::vector<std::pair<HighsInt, HighsInt>> priority_objective;
+  priority_objective.reserve(num_linear_objective);
 
   for (HighsInt iObj = 0; iObj < num_linear_objective; iObj++)
     priority_objective.push_back(
