@@ -46,6 +46,12 @@ void test_paper_example() {
   folder.print();
   folder.printFoldedLp();
 
+  HighsLp folded_lp = folder.getFoldedLp();
+  Folder folder2(folded_lp);
+  folder2.run();
+  folder2.print();
+  folder2.printFoldedLp();
+
   exit(1);
 }
 

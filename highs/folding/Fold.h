@@ -35,7 +35,15 @@ class Folder {
   HighsInt foldMatrix();
 
  public:
-  Folder(const HighsLp& lp);
+  explicit Folder(const HighsLp& lp);
+
+  // Folder holds references to the lp, so it cannot bind to a temporary HighsLp
+  Folder(const HighsLp&&) = delete;
+
+  // Avoid copies because colour refinement holds reference to the Folder
+  Folder(const Folder&) = delete;
+  Folder& operator=(const Folder&) = delete;
+
   HighsInt run();
   HighsLp getFoldedLp() const;
   void print() const;
