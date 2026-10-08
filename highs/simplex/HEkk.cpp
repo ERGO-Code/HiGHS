@@ -765,7 +765,6 @@ HighsStatus HEkk::undualize() {
   // its values will be over-written in constructing the corresponding
   // data for the primal problem
   vector<int8_t> dual_nonbasic_flag = basis_.nonbasicFlag_;
-  vector<int8_t> dual_nonbasic_move = basis_.nonbasicMove_;
   vector<HighsInt>& primal_basic_index = basis_.basicIndex_;
   vector<int8_t>& primal_nonbasic_flag = basis_.nonbasicFlag_;
   vector<int8_t>& primal_nonbasic_move = basis_.nonbasicMove_;
@@ -3010,7 +3009,7 @@ double HEkk::computeDualForTableauColumn(const HighsInt iVar,
 }
 
 bool HEkk::reinvertOnNumericalTrouble(
-    const std::string method_name, double& numerical_trouble_measure,
+    const std::string& method_name, double& numerical_trouble_measure,
     const double alpha_from_col, const double alpha_from_row,
     const double numerical_trouble_tolerance) {
   double abs_alpha_from_col = fabs(alpha_from_col);
@@ -4358,7 +4357,7 @@ void HEkk::unitBtranResidual(const HighsInt row_out, const HVector& row_ep,
   }
 }
 
-void HighsSimplexStats::report(FILE* file, std::string message) const {
+void HighsSimplexStats::report(FILE* file, const std::string& message) const {
   fprintf(file, "\nSimplex stats: %s\n", message.c_str());
   fprintf(file, "   valid                      = %d\n", this->valid);
   fprintf(file, "   iteration_count            = %d\n",

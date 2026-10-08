@@ -126,7 +126,7 @@ class PresolveTimer {
   };
 
   bool reportPresolveClockList(
-      const char* grepStamp, const std::vector<HighsInt> presolve_clock_list,
+      const char* grepStamp, const std::vector<HighsInt>& presolve_clock_list,
       const HighsTimerClock& presolve_timer_clock,
       const HighsInt kPresolveClockIdeal = kPresolveClockPresolve,
       const double tolerance_percent_report_ = -1) {
@@ -149,7 +149,7 @@ class PresolveTimer {
 
   void csvPresolveClockList(const std::string& grep_query,
                             const std::string& model_name,
-                            const std::vector<HighsInt> presolve_clock_list,
+                            const std::vector<HighsInt>& presolve_clock_list,
                             const HighsTimerClock& presolve_timer_clock,
                             const HighsInt kPresolveClockIdeal,
                             const bool header, const bool end_line) {

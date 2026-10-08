@@ -113,7 +113,7 @@ struct RawToken {
     type = RawTokenType::STR;
     return *this;
   }
-  RawToken& operator=(const std::pair<double, std::string> vs) {
+  RawToken& operator=(const std::pair<double, std::string>& vs) {
     dvalue = vs.first;
     svalue = vs.second;
     type = RawTokenType::CONS;
@@ -286,11 +286,11 @@ class Reader {
   void processendsec();
   void parseexpression(std::vector<ProcessedToken>::iterator& it,
                        std::vector<ProcessedToken>::iterator end,
-                       std::shared_ptr<Expression> expr, bool isobj);
+                       const std::shared_ptr<Expression>& expr, bool isobj);
 
   //  void printRawTokens();
  public:
-  Reader(std::string filename) {
+  Reader(const std::string& filename) {
 #ifdef ZLIB_FOUND
     try {
       file.open(filename);
@@ -307,7 +307,7 @@ class Reader {
   Model read();
 };
 
-Model readinstance(std::string filename) {
+Model readinstance(const std::string& filename) {
   Reader reader(filename);
   return reader.read();
 }
@@ -367,7 +367,8 @@ void Reader::processnonesec() {
 
 void Reader::parseexpression(std::vector<ProcessedToken>::iterator& it,
                              std::vector<ProcessedToken>::iterator end,
-                             std::shared_ptr<Expression> expr, bool isobj) {
+                             const std::shared_ptr<Expression>& expr,
+                             bool isobj) {
   if (it != end && it->type == ProcessedTokenType::CONID) {
     expr->name = it->name;
     ++it;
@@ -934,9 +935,9 @@ void Reader::processtokens() {
   while (!rawtokens[0].istype(RawTokenType::FLEND)) {
     if (rawtokens[0].type == RawTokenType::STR) {
       if (parsesectionkeyword(rawtokens[0].svalue) != LpSectionKeyword::NONE) {
-	// Found an LP section keyword so check it's not a constraint name!
-	if (rawtokens[1].type == RawTokenType::COLON)
-	  rawtokens[0].type = RawTokenType::CONS;
+        // Found an LP section keyword so check it's not a constraint name!
+        if (rawtokens[1].type == RawTokenType::COLON)
+          rawtokens[0].type = RawTokenType::CONS;
       }
     }
     // Slash + asterisk: comment, skip everything up to next asterisk + slash
@@ -1357,7 +1358,8 @@ bool Reader::readnexttoken(RawToken& t) {
     // Extract the string corresponding to the double, in case the
     // double is a constraint name
     size_t double_len = endptr - startptr;
-    std::string double_name = this->linebuffer.substr(this->linebufferpos, double_len);
+    std::string double_name =
+        this->linebuffer.substr(this->linebufferpos, double_len);
     // t = constant;
     t = std::make_pair(constant, double_name);
     this->linebufferpos += endptr - startptr;

@@ -105,7 +105,7 @@ static QpVector& computesearchdirection_major(
     Gradient& gradient, QpVector& gyp, QpVector& l, QpVector& m, QpVector& p,
     QpSolverStatus& status) {
   status = QpSolverStatus::OK;
-  QpVector yyp = yp;  // TODO PERF: buffer QpVector
+  const QpVector& yyp = yp;
   // if (gradient.getGradient().dot(yp) > 0.0) {
   //   yyp.scale(-1.0);
   // }

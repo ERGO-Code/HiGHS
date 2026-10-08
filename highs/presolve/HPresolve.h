@@ -474,7 +474,7 @@ class HPresolve {
 
   void computeLocks(
       HighsInt col, bool considerObjective,
-      std::function<bool(HighsInt, bool, bool)> lockCallback) const;
+      const std::function<bool(HighsInt, bool, bool)>& lockCallback) const;
 
   Result dualFixing(HighsPostsolveStack& postsolve_stack, HighsInt col);
 

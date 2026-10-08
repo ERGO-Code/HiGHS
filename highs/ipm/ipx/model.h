@@ -343,8 +343,8 @@ private:
 
     void CorrectScaledBasicSolution(Vector& x, Vector& slack, Vector& y,
                                     Vector& z,
-                                    const std::vector<Int> cbasis,
-                                    const std::vector<Int> vbasis) const;
+                                    const std::vector<Int>& cbasis,
+                                    const std::vector<Int>& vbasis) const;
 
     // Performs lhs += alpha*A*rhs or lhs += alpha*A'rhs, where A is the user
     // matrix after scaling. This matrix is not stored explicitly, but is used

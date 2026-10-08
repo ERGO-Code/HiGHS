@@ -12,6 +12,7 @@
 #ifndef PRESOLVE_QUADRATIC_CRASH_H_
 #define PRESOLVE_QUADRATIC_CRASH_H_
 
+#include <utility>
 #include <vector>
 
 #include "io/HighsIO.h"
@@ -83,8 +84,8 @@ struct Quadratic {
   std::vector<double> lambda;
 
   Quadratic(HighsLp lp_, ICrashOptions options_)
-      : lp(lp_),
-        options(options_),
+      : lp(std::move(lp_)),
+        options(std::move(options_)),
         lp_objective(0.0),
         quadratic_objective(0.0),
         residual_norm_2(0.0),
@@ -96,8 +97,8 @@ HighsStatus callICrash(const HighsLp& lp, const ICrashOptions& options,
                        ICrashInfo& result);
 
 // Functions: Options.
-bool checkOptions(const HighsLp& lp, const ICrashOptions options);
-Quadratic parseOptions(const HighsLp& lp, const ICrashOptions options);
+bool checkOptions(const HighsLp& lp, const ICrashOptions& options);
+Quadratic parseOptions(const HighsLp& lp, const ICrashOptions& options);
 bool parseICrashStrategy(const std::string& strategy,
                          ICrashStrategy& icrash_strategy);
 std::string ICrashtrategyToString(const ICrashStrategy strategy);
@@ -113,7 +114,7 @@ bool solveSubproblem(Quadratic& idata, const ICrashOptions& options);
 double getQuadraticObjective(const Quadratic& idata);
 ICrashIterationDetails fillDetails(const int num, const Quadratic& idata);
 void fillICrashInfo(const int n_iterations, ICrashInfo& result);
-void reportSubproblem(const ICrashOptions options, const Quadratic& idata,
+void reportSubproblem(const ICrashOptions& options, const Quadratic& idata,
                       const int iteration);
 void reportOptions(const ICrashOptions& options);
 

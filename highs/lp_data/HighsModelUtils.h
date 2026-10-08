@@ -78,7 +78,7 @@ HighsStatus normaliseNames(const HighsLogOptions& log_options, bool column,
                            HighsNameHash& name_hash,
                            HighsFileType type = HighsFileType::kMps);
 
-HighsFileType getFileType(const std::string filename);
+HighsFileType getFileType(const std::string& filename);
 
 void writeSolutionFile(FILE* file, const HighsOptions& options,
                        const HighsModel& model, const HighsBasis& basis,

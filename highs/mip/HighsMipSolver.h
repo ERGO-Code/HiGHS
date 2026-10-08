@@ -30,7 +30,7 @@ struct HighsTerminator {
   void terminate();
   bool terminated() const;
   HighsModelStatus terminationStatus() const;
-  void report(const HighsLogOptions log_options) const;
+  void report(const HighsLogOptions& log_options) const;
 };
 
 struct MipViolation {

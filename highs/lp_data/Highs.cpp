@@ -733,7 +733,7 @@ HighsStatus Highs::passHessian(const HighsInt dim,
                           hessian_x_value, data);
     };
   } else {
-    oracle.call_ = oracleCall;
+    oracle.call_ = std::move(oracleCall);
   }
   oracle.data_ = oracle_data;
   // Check whether the new oracle is valid
@@ -2752,7 +2752,7 @@ HighsStatus Highs::setSolution(const HighsInt num_entries,
 HighsStatus Highs::setCallback(HighsCallbackFunctionType user_callback,
                                void* user_callback_data) {
   this->callback_.clear();
-  this->callback_.user_callback = user_callback;
+  this->callback_.user_callback = std::move(user_callback);
   this->callback_.user_callback_data = user_callback_data;
 
   options_.log_options.user_callback = this->callback_.user_callback;
@@ -3079,7 +3079,7 @@ HighsStatus Highs::changeColsIntegrality(const HighsInt from_col,
   return returnFromHighs(return_status);
 }
 
-static HighsStatus analyseSetCreateError(HighsLogOptions log_options,
+static HighsStatus analyseSetCreateError(const HighsLogOptions& log_options,
                                          const std::string& method,
                                          const HighsInt create_error,
                                          const bool ordered,
