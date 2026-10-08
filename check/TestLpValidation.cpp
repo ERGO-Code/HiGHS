@@ -639,17 +639,34 @@ TEST_CASE("LP-change-coefficient", "[highs_data]") {
   highs.resetGlobalScheduler(true);
 }
 
-TEST_CASE("LP-illegal-empty-start-ok", "[highs_data]") {
+TEST_CASE("LP-illegal-start-ok", "[highs_data]") {
   Highs highs;
-  highs.setOptionValue("output_flag", dev_run);
+  //  highs.setOptionValue("output_flag", dev_run);
   HighsLp lp;
   lp.num_col_ = 0;
   lp.num_row_ = 1;
   lp.row_lower_ = {-inf};
   lp.row_upper_ = {1};
   lp.a_matrix_.start_ = {1};
-  REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
+  REQUIRE(highs.passModel(lp) == HighsStatus::kError);
   REQUIRE(highs.getLp().a_matrix_.start_[0] == 0);
+  REQUIRE(highs.getLp().a_matrix_.start_.size() == 1);
+  REQUIRE(highs.getLp().a_matrix_.index_.size() == 0);
+  REQUIRE(highs.getLp().a_matrix_.value_.size() == 0);
+  lp.num_col_ = 1;
+  lp.col_cost_ = {0};
+  lp.col_lower_ = {0};
+  lp.col_upper_ = {inf};
+  lp.a_matrix_.start_ = {0, -1};
+  lp.a_matrix_.index_ = {0, 1};
+  lp.a_matrix_.value_ = {1, 2};
+  REQUIRE(highs.passModel(lp) == HighsStatus::kError);
+  lp.a_matrix_.start_ = {0, 1};
+  REQUIRE(highs.passModel(lp) == HighsStatus::kWarning);
+  lp.a_matrix_.index_ = {0};
+  REQUIRE(highs.passModel(lp) == HighsStatus::kWarning);
+  lp.a_matrix_.value_ = {1};
+  REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
 }
 
 TEST_CASE("LP-row-wise", "[highs_data]") {

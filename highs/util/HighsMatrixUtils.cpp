@@ -401,3 +401,4 @@ bool legalMatrixDimensions(const HighsLogOptions& log_options,
   }
   return ok;
 }
+

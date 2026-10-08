@@ -83,8 +83,6 @@ HighsStatus assessLp(HighsLp& lp, const HighsOptions& options) {
   // If the LP has no columns the matrix must be empty and there is
   // nothing left to test
   if (lp.num_col_ == 0) {
-    // Clear the matrix in case there are oversized data members
-    lp.a_matrix_.clear();
     assert(!lp.numNz());
     return return_status;
   }
