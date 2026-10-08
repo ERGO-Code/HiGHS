@@ -62,7 +62,7 @@ void test_folding(const HighsLp& lp) {
   folder.run();
   folder.print();
 
-  if (!folder.checkCorrect()) {
+  if (!folder.isPartitionCorrect()) {
     printf("Check failed\n");
   }
 
@@ -124,6 +124,7 @@ HighsInt Folder::run() {
   findInitialColour();
   HighsInt status = foldMatrix();
   if (status == 0) fold_success_ = true;
+  assert(status || isPartitionCorrect());
 
   fold_time_ = clock.stop();
 
@@ -330,114 +331,138 @@ void Folder::printFoldedLp() const {
   printf("\n");
 }
 
-bool Folder::checkCorrect() const {
+class ColourClasses {
+  std::vector<HighsInt> start_;
+  std::vector<HighsInt> nodes_;
+
+ public:
+  ColourClasses(const std::vector<HighsInt>& colour, HighsInt num_colours)
+      : start_(num_colours + 1, 0), nodes_(colour.size()) {
+    for (HighsInt c : colour) ++start_[c + 1];
+    for (HighsInt c = 0; c < num_colours; ++c) start_[c + 1] += start_[c];
+
+    std::vector<HighsInt> next(start_.begin(), start_.end() - 1);
+    for (HighsInt node = 0; node < static_cast<HighsInt>(colour.size()); ++node)
+      nodes_[next[colour[node]]++] = node;
+  }
+  HighsInt size(HighsInt c) const { return start_[c + 1] - start_[c]; }
+  HighsInt node(HighsInt c, HighsInt i) const { return nodes_[start_[c] + i]; }
+};
+
+bool Folder::isPartitionCorrect() const {
   if (!fold_success_) return false;
 
   const HighsInt num_row_colours = CR_->rowColoursUsed();
   const HighsInt num_col_colours = CR_->colColoursUsed();
-  bool success = true;
+
+  for (HighsInt c : row_colour_)
+    if (c < 0 || c >= num_row_colours) return false;
+  for (HighsInt c : col_colour_)
+    if (c < 0 || c >= num_col_colours) return false;
 
   // Check that bounds and costs are partitioned correctly
-  {
-    std::vector<double> reference;
-    std::vector<HighsBool> seen;
+  std::vector<double> reference;
+  std::vector<HighsBool> touched;
+  auto is_vector_partition_correct = [&](const std::vector<double>& v,
+                                         const std::vector<HighsInt>& c,
+                                         HighsInt num_colours) -> bool {
+    assert(v.size() == c.size());
+    const HighsInt n = static_cast<HighsInt>(v.size());
+    reference.assign(num_colours, 0.0);
+    touched.assign(num_colours, false);
 
-    auto check_vector = [&](const std::vector<double>& v,
-                            const std::vector<HighsInt>& c,
-                            HighsInt num_colours) -> bool {
-      assert(v.size() == c.size());
-      const HighsInt n = static_cast<HighsInt>(v.size());
-      reference.assign(num_colours, 0.0);
-      seen.assign(num_colours, false);
-
-      for (HighsInt i = 0; i < n; ++i) {
-        const HighsInt colour = c[i];
-        const double val = DoubleQuantizer::bucket(v[i]);
-        if (!seen[colour]) {
-          reference[colour] = val;
-          seen[colour] = true;
-        } else if (val != reference[colour]) {
-          return false;
-        }
+    for (HighsInt i = 0; i < n; ++i) {
+      const HighsInt colour = c[i];
+      const double val = DoubleQuantizer::bucket(v[i]);
+      if (!touched[colour]) {
+        reference[colour] = val;
+        touched[colour] = true;
+      } else if (val != reference[colour]) {
+        return false;
       }
-      return true;
-    };
-
-    success = check_vector(lp_.row_lower_, row_colour_, num_row_colours) &&
-              check_vector(lp_.row_upper_, row_colour_, num_row_colours) &&
-              check_vector(lp_.col_cost_, col_colour_, num_col_colours) &&
-              check_vector(lp_.col_lower_, col_colour_, num_col_colours) &&
-              check_vector(lp_.col_upper_, col_colour_, num_col_colours);
-  }
-
-  class ColourClasses {
-    std::vector<HighsInt> start_;
-    std::vector<HighsInt> nodes_;
-
-   public:
-    ColourClasses(const std::vector<HighsInt>& colour, HighsInt num_colours)
-        : start_(num_colours + 1, 0), nodes_(colour.size()) {
-      for (HighsInt c : colour) ++start_[c + 1];
-      for (HighsInt c = 0; c < num_colours; ++c) start_[c + 1] += start_[c];
-
-      std::vector<HighsInt> next(start_.begin(), start_.end() - 1);
-      for (HighsInt node = 0; node < static_cast<HighsInt>(colour.size());
-           ++node)
-        nodes_[next[colour[node]]++] = node;
     }
-    HighsInt size(HighsInt c) const { return start_[c + 1] - start_[c]; }
-    HighsInt node(HighsInt c, HighsInt i) const {
-      return nodes_[start_[c] + i];
-    }
+    return true;
   };
 
   // check that partition of A is equitable
-  {
-    std::vector<double> reference;
-    std::vector<double> sum;
+  auto is_matrix_partition_correct =
+      [](const HighsSparseMatrix& M, HighsInt num_major_colours,
+         HighsInt num_minor_colours, const std::vector<HighsInt>& major_colours,
+         const std::vector<HighsInt>& minor_colours) -> bool {
+    ColourClasses classes(major_colours, num_major_colours);
 
-    auto checkMatrix = [&](const HighsSparseMatrix& M,
-                           HighsInt num_major_colours,
-                           HighsInt num_minor_colours,
-                           const std::vector<HighsInt>& major_colour,
-                           const std::vector<HighsInt>& minor_colour) -> bool {
-      ColourClasses classes(major_colour, num_major_colours);
-      for (HighsInt r_colour = 0; r_colour < num_major_colours; ++r_colour) {
-        reference.assign(num_minor_colours, 0.0);
+    std::vector<double> sum(num_minor_colours, 0.0);
+    std::vector<HighsBool> is_touched(num_minor_colours, false);
+    std::vector<HighsInt> touched;
 
-        for (HighsInt node = 0; node < classes.size(r_colour); ++node) {
-          sum.assign(num_minor_colours, 0.0);
+    std::vector<double> reference(num_minor_colours, 0.0);
+    std::vector<HighsInt> reference_touched;
 
-          const HighsInt row = classes.node(r_colour, node);
-          for (HighsInt el = M.start_[row]; el < M.start_[row + 1]; ++el) {
-            const HighsInt col = M.index_[el];
-            const HighsInt c_colour = minor_colour[col];
-            if (node == 0)
-              reference[c_colour] += M.value_[el];
-            else
-              sum[c_colour] += M.value_[el];
+    for (HighsInt major_colour = 0; major_colour < num_major_colours;
+         ++major_colour) {
+      for (HighsInt i = 0; i < classes.size(major_colour); ++i) {
+        const HighsInt major = classes.node(major_colour, i);
+
+        for (HighsInt el = M.start_[major]; el < M.start_[major + 1]; ++el) {
+          const HighsInt minor = M.index_[el];
+          const HighsInt minor_colour = minor_colours[minor];
+
+          if (!is_touched[minor_colour]) {
+            is_touched[minor_colour] = true;
+            touched.push_back(minor_colour);
           }
 
-          if (node > 0) {
-            for (HighsInt i = 0; i < num_minor_colours; ++i)
-              if (DoubleQuantizer::bucket(reference[i]) !=
-                  DoubleQuantizer::bucket(sum[i]))
-                return false;
-          }
+          sum[minor_colour] += M.value_[el];
         }
+
+        if (i == 0) {
+          // The first node of each colour defines the reference
+          for (HighsInt j : touched) {
+            const double q = DoubleQuantizer::bucket(sum[j]);
+            if (q != 0.0) {
+              reference[j] = q;
+              reference_touched.push_back(j);
+            }
+          }
+        } else {
+          // The other nodes compare to the reference
+          for (HighsInt j : touched)
+            if (DoubleQuantizer::bucket(sum[j]) != reference[j]) return false;
+          for (HighsInt j : reference_touched)
+            if (DoubleQuantizer::bucket(sum[j]) != reference[j]) return false;
+        }
+
+        for (HighsInt j : touched) {
+          is_touched[j] = false;
+          sum[j] = 0.0;
+        }
+        touched.clear();
       }
 
-      return true;
-    };
+      for (HighsInt j : reference_touched) reference[j] = 0.0;
+      reference_touched.clear();
+    }
 
-    success = success &&
-              checkMatrix(At_, num_row_colours, num_col_colours, row_colour_,
-                          col_colour_) &&
-              checkMatrix(A_, num_col_colours, num_row_colours, col_colour_,
-                          row_colour_);
-  }
+    return true;
+  };
 
-  return success;
+  if (!is_vector_partition_correct(lp_.row_lower_, row_colour_,
+                                   num_row_colours) ||
+      !is_vector_partition_correct(lp_.row_upper_, row_colour_,
+                                   num_row_colours) ||
+      !is_vector_partition_correct(lp_.col_cost_, col_colour_,
+                                   num_col_colours) ||
+      !is_vector_partition_correct(lp_.col_lower_, col_colour_,
+                                   num_col_colours) ||
+      !is_vector_partition_correct(lp_.col_upper_, col_colour_,
+                                   num_col_colours) ||
+      !is_matrix_partition_correct(At_, num_row_colours, num_col_colours,
+                                   row_colour_, col_colour_) ||
+      !is_matrix_partition_correct(A_, num_col_colours, num_row_colours,
+                                   col_colour_, row_colour_))
+    return false;
+
+  return true;
 }
 
 }  // namespace folding

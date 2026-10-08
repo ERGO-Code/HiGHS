@@ -52,7 +52,7 @@ class Folder {
   void print() const;
   void printFoldedLp() const;
 
-  bool checkCorrect() const;
+  bool isPartitionCorrect() const;
 };
 
 }  // namespace folding
