@@ -2,6 +2,8 @@
 #define HIGHS_SUM_CLASSIFIER_H
 
 #include <cassert>
+#include <cstddef>
+#include <cstdint>
 #include <vector>
 
 #include "DoubleQuantizer.h"

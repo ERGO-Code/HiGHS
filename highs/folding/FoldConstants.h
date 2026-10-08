@@ -1,6 +1,9 @@
 #ifndef HIGHS_FOLD_CONSTANTS_H
 #define HIGHS_FOLD_CONSTANTS_H
 
+#include <cstddef>
+#include <cstdint>
+
 namespace highs {
 
 namespace folding {
