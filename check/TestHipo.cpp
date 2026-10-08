@@ -130,7 +130,7 @@ TEST_CASE("test-hipo-freevar", "[highs_hipo]") {
   highs.resetGlobalScheduler(true);
 }
 
-TEST_CASE("issue-3369", "[Highs_hipo]") {
+TEST_CASE("issue-3369", "[highs_hipo]") {
   // min   x
   // s.t.  x >= 1
   //       . <= 5 (empty row)
