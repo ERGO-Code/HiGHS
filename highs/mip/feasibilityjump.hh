@@ -508,7 +508,7 @@ class FeasibilityJumpSolver {
   }
 
   int solve(double* initialValues,
-            std::function<CallbackControlFlow(FJStatus)> callback) {
+            const std::function<CallbackControlFlow(FJStatus)>& callback) {
     assert(callback);
     highsLogDev(logOptions, HighsLogType::kInfo,
                 FJ_LOG_PREFIX
@@ -781,8 +781,9 @@ class FeasibilityJumpSolver {
     updateGoodMoves(varIdx);
   }
 
-  bool user_terminate(std::function<CallbackControlFlow(FJStatus)> callback,
-                      double* solution) {
+  bool user_terminate(
+      const std::function<CallbackControlFlow(FJStatus)>& callback,
+      double* solution) {
     const int CALLBACK_EFFORT = 500000;  // Originally 500000
     if (solution != nullptr ||
         totalEffort - effortAtLastCallback > CALLBACK_EFFORT) {

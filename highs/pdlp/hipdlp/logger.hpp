@@ -33,7 +33,8 @@ enum class LogLevel {
 class Logger {
  public:
   void initialise(const HighsInt log_dev_level,
-                  const HighsLogOptions log_options, HighsTimer* highs_timer_p);
+                  const HighsLogOptions& log_options,
+                  HighsTimer* highs_timer_p);
   LogLevel getLogLevel() const { return console_level_; }
   // Logging methods for different levels
   void info(const std::string& message) const;
@@ -50,7 +51,7 @@ class Logger {
                            const double current_eta, const bool forced = false);
   void printSummary(const SolverResults& results, HighsInt total_iter,
                     double total_time) const;
-  void setLogOptions(HighsLogOptions log_options) {
+  void setLogOptions(const HighsLogOptions& log_options) {
     log_options_ = log_options;
   }
 

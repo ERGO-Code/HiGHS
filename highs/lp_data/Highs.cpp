@@ -3079,7 +3079,7 @@ HighsStatus Highs::changeColsIntegrality(const HighsInt from_col,
   return returnFromHighs(return_status);
 }
 
-static HighsStatus analyseSetCreateError(HighsLogOptions log_options,
+static HighsStatus analyseSetCreateError(const HighsLogOptions& log_options,
                                          const std::string& method,
                                          const HighsInt create_error,
                                          const bool ordered,

@@ -250,7 +250,7 @@ void HighsSparseMatrix::addVec(const HighsInt num_nz, const HighsInt* index,
   }
 }
 
-void HighsSparseMatrix::addCols(const HighsSparseMatrix new_cols,
+void HighsSparseMatrix::addCols(const HighsSparseMatrix& new_cols,
                                 const int8_t* in_partition) {
   assert(new_cols.isColwise());
   const HighsInt num_new_col = new_cols.num_col_;
@@ -374,7 +374,7 @@ void HighsSparseMatrix::addCols(const HighsSparseMatrix new_cols,
   }
 }
 
-void HighsSparseMatrix::addRows(const HighsSparseMatrix new_rows,
+void HighsSparseMatrix::addRows(const HighsSparseMatrix& new_rows,
                                 const int8_t* in_partition) {
   assert(new_rows.isRowwise());
   const HighsInt num_new_row = new_rows.num_row_;

@@ -373,7 +373,7 @@ bool hasNamesWithSpaces(const HighsLogOptions& log_options, const bool col,
 bool hasIllegalNameForLpFile(const std::vector<std::string>& names) {
   HighsInt num_name = names.size();
   for (HighsInt ix = 0; ix < num_name; ix++) {
-    const std::string name = names[ix];
+    const std::string& name = names[ix];
     const std::string first_character = name.substr(0, 1);
     if (name.find_first_not_of(kLegalLpFileColRowNameChar) != std::string::npos)
       return true;

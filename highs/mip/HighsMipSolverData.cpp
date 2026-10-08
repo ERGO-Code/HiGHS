@@ -2855,7 +2855,8 @@ void HighsMipSolverData::terminatorReport() const {
 }
 
 void HighsMipSolverData::reportOriginalPresolvedCol(
-    const HighsInt original_col, const std::vector<double> presolved_solution) {
+    const HighsInt original_col,
+    const std::vector<double>& presolved_solution) {
   if (original_col < 0 || original_col >= mipsolver.orig_model_->num_col_)
     return;
   // Find this column in the presolved model
@@ -3051,7 +3052,7 @@ HighsModelStatus HighsTerminator::terminationStatus() const {
   return HighsModelStatus::kNotset;
 }
 
-void HighsTerminator::report(const HighsLogOptions log_options) const {
+void HighsTerminator::report(const HighsLogOptions& log_options) const {
   highsLogUser(log_options, HighsLogType::kInfo, "\nTerminator:        ");
   for (HighsInt instance = 0; instance < this->num_instance; instance++)
     highsLogUser(log_options, HighsLogType::kInfo, " %20d",

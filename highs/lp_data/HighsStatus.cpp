@@ -23,7 +23,7 @@ std::string highsStatusToString(HighsStatus status) {
   }
 }
 
-HighsStatus interpretCallStatus(const HighsLogOptions log_options,
+HighsStatus interpretCallStatus(const HighsLogOptions& log_options,
                                 const HighsStatus call_status,
                                 const HighsStatus from_return_status,
                                 const std::string& message) {

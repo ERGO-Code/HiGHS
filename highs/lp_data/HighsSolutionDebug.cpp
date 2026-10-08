@@ -75,9 +75,9 @@ HighsDebugStatus debugHighsSolution(
   //
   // Called to check the HiGHS model_status and info
   //
-  // Copy the data from info to highs_info so general method can be used
+  // Refer to info as highs_info so general method can be used
   //
-  HighsInfo highs_info = info;
+  const HighsInfo& highs_info = info;
   const bool check_model_status_and_highs_info = true;
   return debugHighsSolution(message, options, model.lp_, model.hessian_,
                             solution, basis, model_status, highs_info,

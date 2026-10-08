@@ -128,7 +128,7 @@ void changeLpMatrixCoefficient(HighsLp& lp, const HighsInt row,
 HighsStatus changeLpIntegrality(HighsLp& lp,
                                 const HighsIndexCollection& index_collection,
                                 const vector<HighsVarType>& new_integrality,
-                                const HighsOptions options);
+                                const HighsOptions& options);
 
 void changeLpCosts(HighsLp& lp, const HighsIndexCollection& index_collection,
                    const vector<double>& new_col_cost,

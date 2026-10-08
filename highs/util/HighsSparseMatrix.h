@@ -52,9 +52,9 @@ class HighsSparseMatrix {
 
   void addVec(const HighsInt num_nz, const HighsInt* index, const double* value,
               const double multiple = 1);
-  void addCols(const HighsSparseMatrix new_cols,
+  void addCols(const HighsSparseMatrix& new_cols,
                const int8_t* in_partition = NULL);
-  void addRows(const HighsSparseMatrix new_rows,
+  void addRows(const HighsSparseMatrix& new_rows,
                const int8_t* in_partition = NULL);
   void getRow(const HighsInt iRow, HighsInt& num_nz, HighsInt* index,
               double* value) const;
