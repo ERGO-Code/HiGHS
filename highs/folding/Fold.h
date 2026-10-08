@@ -1,6 +1,8 @@
 #ifndef HIGHS_FOLDING_H
 #define HIGHS_FOLDING_H
 
+#include <memory>
+
 #include "ColourRefinement.h"
 
 namespace highs {

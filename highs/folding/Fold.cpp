@@ -337,6 +337,7 @@ bool Folder::checkCorrect() const {
   const HighsInt num_col_colours = CR_->colColoursUsed();
   bool success = true;
 
+  // Check that bounds and costs are partitioned correctly
   {
     std::vector<double> reference;
     std::vector<HighsBool> seen;
@@ -390,47 +391,51 @@ bool Folder::checkCorrect() const {
     }
   };
 
-  std::vector<double> reference;
-  std::vector<double> sum;
+  // check that partition of A is equitable
+  {
+    std::vector<double> reference;
+    std::vector<double> sum;
 
-  auto checkMatrix = [&](const HighsSparseMatrix& M, HighsInt num_major_colours,
-                         HighsInt num_minor_colours,
-                         const std::vector<HighsInt>& major_colour,
-                         const std::vector<HighsInt>& minor_colour) -> bool {
-    ColourClasses classes(major_colour, num_major_colours);
-    for (HighsInt r_colour = 0; r_colour < num_major_colours; ++r_colour) {
-      reference.assign(num_minor_colours, 0.0);
+    auto checkMatrix = [&](const HighsSparseMatrix& M,
+                           HighsInt num_major_colours,
+                           HighsInt num_minor_colours,
+                           const std::vector<HighsInt>& major_colour,
+                           const std::vector<HighsInt>& minor_colour) -> bool {
+      ColourClasses classes(major_colour, num_major_colours);
+      for (HighsInt r_colour = 0; r_colour < num_major_colours; ++r_colour) {
+        reference.assign(num_minor_colours, 0.0);
 
-      for (HighsInt node = 0; node < classes.size(r_colour); ++node) {
-        sum.assign(num_minor_colours, 0.0);
+        for (HighsInt node = 0; node < classes.size(r_colour); ++node) {
+          sum.assign(num_minor_colours, 0.0);
 
-        const HighsInt row = classes.node(r_colour, node);
-        for (HighsInt el = M.start_[row]; el < M.start_[row + 1]; ++el) {
-          const HighsInt col = M.index_[el];
-          const HighsInt c_colour = minor_colour[col];
-          if (node == 0)
-            reference[c_colour] += M.value_[el];
-          else
-            sum[c_colour] += M.value_[el];
-        }
+          const HighsInt row = classes.node(r_colour, node);
+          for (HighsInt el = M.start_[row]; el < M.start_[row + 1]; ++el) {
+            const HighsInt col = M.index_[el];
+            const HighsInt c_colour = minor_colour[col];
+            if (node == 0)
+              reference[c_colour] += M.value_[el];
+            else
+              sum[c_colour] += M.value_[el];
+          }
 
-        if (node > 0) {
-          for (HighsInt i = 0; i < num_minor_colours; ++i)
-            if (DoubleQuantizer::bucket(reference[i]) !=
-                DoubleQuantizer::bucket(sum[i]))
-              return false;
+          if (node > 0) {
+            for (HighsInt i = 0; i < num_minor_colours; ++i)
+              if (DoubleQuantizer::bucket(reference[i]) !=
+                  DoubleQuantizer::bucket(sum[i]))
+                return false;
+          }
         }
       }
-    }
 
-    return true;
-  };
+      return true;
+    };
 
-  success = success &&
-            checkMatrix(At_, num_row_colours, num_col_colours, row_colour_,
-                        col_colour_) &&
-            checkMatrix(A_, num_col_colours, num_row_colours, col_colour_,
-                        row_colour_);
+    success = success &&
+              checkMatrix(At_, num_row_colours, num_col_colours, row_colour_,
+                          col_colour_) &&
+              checkMatrix(A_, num_col_colours, num_row_colours, col_colour_,
+                          row_colour_);
+  }
 
   return success;
 }
