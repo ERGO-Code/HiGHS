@@ -946,10 +946,10 @@ bool Highs::feasibleWrtBounds(const bool columns) const {
   const HighsLp& lp = model_.lp_;
   const double primal_feasibility_tolerance =
       this->options_.primal_feasibility_tolerance;
-  std::vector<double> value =
+  const std::vector<double>& value =
       columns ? this->solution_.col_value : this->solution_.row_value;
-  std::vector<double> lower = columns ? lp.col_lower_ : lp.row_lower_;
-  std::vector<double> upper = columns ? lp.col_upper_ : lp.row_upper_;
+  const std::vector<double>& lower = columns ? lp.col_lower_ : lp.row_lower_;
+  const std::vector<double>& upper = columns ? lp.col_upper_ : lp.row_upper_;
   HighsInt dim = columns ? lp.num_col_ : lp.num_row_;
   for (HighsInt iX = 0; iX < dim; iX++) {
     if (value[iX] < lower[iX] - primal_feasibility_tolerance) return false;

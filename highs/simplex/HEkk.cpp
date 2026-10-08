@@ -765,7 +765,6 @@ HighsStatus HEkk::undualize() {
   // its values will be over-written in constructing the corresponding
   // data for the primal problem
   vector<int8_t> dual_nonbasic_flag = basis_.nonbasicFlag_;
-  vector<int8_t> dual_nonbasic_move = basis_.nonbasicMove_;
   vector<HighsInt>& primal_basic_index = basis_.basicIndex_;
   vector<int8_t>& primal_nonbasic_flag = basis_.nonbasicFlag_;
   vector<int8_t>& primal_nonbasic_move = basis_.nonbasicMove_;

@@ -1525,7 +1525,7 @@ void HighsSparseMatrix::priceByRowWithSwitch(
   if (next_index < column.count) {
     // PRICE is not complete: finish without maintaining nonzeros of result
     if (quad_precision) {
-      std::vector<HighsCDouble> result_array = sum.values;
+      std::vector<HighsCDouble> result_array = std::move(sum.values);
       this->priceByRowDenseResult(result_array, column, next_index);
       // Determine indices of nonzeros in result
       result.count = 0;
