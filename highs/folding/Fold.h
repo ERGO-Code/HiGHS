@@ -27,6 +27,7 @@ class Folder {
   double ctor_time_;
   double run_time_;
   double fold_time_;
+  mutable double folded_lp_time_;
 
   template <typename Data>
   HighsInt findInitialColour(HighsInt num, HighsInt* colour, HighsInt start);
@@ -48,6 +49,8 @@ class Folder {
   HighsLp getFoldedLp() const;
   void print() const;
   void printFoldedLp() const;
+
+  bool checkCorrect() const;
 };
 
 }  // namespace folding

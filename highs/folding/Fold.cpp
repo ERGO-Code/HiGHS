@@ -56,11 +56,15 @@ void test_paper_example() {
 }
 
 void test_folding(const HighsLp& lp) {
-  test_paper_example();
+  // test_paper_example();
 
   Folder folder(lp);
   folder.run();
   folder.print();
+
+  if (!folder.checkCorrect()) {
+    printf("Check failed\n");
+  }
 
   exit(1);
 }
@@ -141,6 +145,8 @@ HighsLp Folder::getFoldedLp() const {
   // To achieve this efficiently, the folded matrix is built row-wise, from one
   // representative row per row colour (the one with the fewest nonzeros) and
   // it is then converted to col-wise.
+
+  hipo::Clock clock;
 
   if (!fold_success_) return HighsLp{};
 
@@ -254,6 +260,8 @@ HighsLp Folder::getFoldedLp() const {
 
   Aft.buildOppositeFormat(folded_lp.a_matrix_);
 
+  folded_lp_time_ = clock.stop();
+
   return folded_lp;
 }
 
@@ -275,6 +283,7 @@ void Folder::print() const {
   printf("Initial          %f\n", initial_time_);
   printf("CR ctor          %f\n", ctor_time_);
   printf("CR run           %f\n", run_time_);
+  printf("Folded lp        %f\n", folded_lp_time_);
 
   /*
   for (HighsInt i = 0; i < lp_.num_row_; ++i) printf("%d ", colour_[i]);
@@ -319,6 +328,111 @@ void Folder::printFoldedLp() const {
   printf("value: ");
   for (double d : flp.a_matrix_.value_) printf("%.1f ", d);
   printf("\n");
+}
+
+bool Folder::checkCorrect() const {
+  if (!fold_success_) return false;
+
+  const HighsInt num_row_colours = CR_->rowColoursUsed();
+  const HighsInt num_col_colours = CR_->colColoursUsed();
+  bool success = true;
+
+  {
+    std::vector<double> reference;
+    std::vector<HighsBool> seen;
+
+    auto check_vector = [&](const std::vector<double>& v,
+                            const std::vector<HighsInt>& c,
+                            HighsInt num_colours) -> bool {
+      assert(v.size() == c.size());
+      const HighsInt n = static_cast<HighsInt>(v.size());
+      reference.assign(num_colours, 0.0);
+      seen.assign(num_colours, false);
+
+      for (HighsInt i = 0; i < n; ++i) {
+        const HighsInt colour = c[i];
+        const double val = DoubleQuantizer::bucket(v[i]);
+        if (!seen[colour]) {
+          reference[colour] = val;
+          seen[colour] = true;
+        } else if (val != reference[colour]) {
+          return false;
+        }
+      }
+      return true;
+    };
+
+    success = check_vector(lp_.row_lower_, row_colour_, num_row_colours) &&
+              check_vector(lp_.row_upper_, row_colour_, num_row_colours) &&
+              check_vector(lp_.col_cost_, col_colour_, num_col_colours) &&
+              check_vector(lp_.col_lower_, col_colour_, num_col_colours) &&
+              check_vector(lp_.col_upper_, col_colour_, num_col_colours);
+  }
+
+  class ColourClasses {
+    std::vector<HighsInt> start_;
+    std::vector<HighsInt> nodes_;
+
+   public:
+    ColourClasses(const std::vector<HighsInt>& colour, HighsInt num_colours)
+        : start_(num_colours + 1, 0), nodes_(colour.size()) {
+      for (HighsInt c : colour) ++start_[c + 1];
+      for (HighsInt c = 0; c < num_colours; ++c) start_[c + 1] += start_[c];
+
+      std::vector<HighsInt> next(start_.begin(), start_.end() - 1);
+      for (HighsInt node = 0; node < static_cast<HighsInt>(colour.size());
+           ++node)
+        nodes_[next[colour[node]]++] = node;
+    }
+    HighsInt size(HighsInt c) const { return start_[c + 1] - start_[c]; }
+    HighsInt node(HighsInt c, HighsInt i) const {
+      return nodes_[start_[c] + i];
+    }
+  };
+
+  std::vector<double> reference;
+  std::vector<double> sum;
+
+  auto checkMatrix = [&](const HighsSparseMatrix& M, HighsInt num_major_colours,
+                         HighsInt num_minor_colours,
+                         const std::vector<HighsInt>& major_colour,
+                         const std::vector<HighsInt>& minor_colour) -> bool {
+    ColourClasses classes(major_colour, num_major_colours);
+    for (HighsInt r_colour = 0; r_colour < num_major_colours; ++r_colour) {
+      reference.assign(num_minor_colours, 0.0);
+
+      for (HighsInt node = 0; node < classes.size(r_colour); ++node) {
+        sum.assign(num_minor_colours, 0.0);
+
+        const HighsInt row = classes.node(r_colour, node);
+        for (HighsInt el = M.start_[row]; el < M.start_[row + 1]; ++el) {
+          const HighsInt col = M.index_[el];
+          const HighsInt c_colour = minor_colour[col];
+          if (node == 0)
+            reference[c_colour] += M.value_[el];
+          else
+            sum[c_colour] += M.value_[el];
+        }
+
+        if (node > 0) {
+          for (HighsInt i = 0; i < num_minor_colours; ++i)
+            if (DoubleQuantizer::bucket(reference[i]) !=
+                DoubleQuantizer::bucket(sum[i]))
+              return false;
+        }
+      }
+    }
+
+    return true;
+  };
+
+  success = success &&
+            checkMatrix(At_, num_row_colours, num_col_colours, row_colour_,
+                        col_colour_) &&
+            checkMatrix(A_, num_col_colours, num_row_colours, col_colour_,
+                        row_colour_);
+
+  return success;
 }
 
 }  // namespace folding
