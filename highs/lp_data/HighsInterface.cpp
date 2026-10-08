@@ -459,6 +459,7 @@ HighsStatus Highs::addColsInterface(
   // that is easy to handle and, if there are nonzeros, it can be
   // normalised
   HighsSparseMatrix local_a_matrix;
+  local_a_matrix.name_ = "local_a_matrix";
   local_a_matrix.num_col_ = ext_num_new_col;
   local_a_matrix.num_row_ = lp.num_row_;
   local_a_matrix.format_ = MatrixFormat::kColwise;
@@ -472,10 +473,10 @@ HighsStatus Highs::addColsInterface(
     // Assess the matrix rows
     return_status = interpretCallStatus(
         options_.log_options,
-        local_a_matrix.assess(options.log_options, "LP",
+        local_a_matrix.assess(options.log_options, 
                               options.small_matrix_value,
                               options.large_matrix_value, sum_duplicates),
-        return_status, "assessMatrix");
+        return_status, "local_a_matrix.assess");
     if (return_status == HighsStatus::kError) return return_status;
   } else {
     // No nonzeros so, whether the constraint matrix is column-wise or
@@ -591,6 +592,7 @@ HighsStatus Highs::addRowsInterface(HighsInt ext_num_new_row,
   // is easy to handle and, if there are nonzeros, it can be
   // normalised
   HighsSparseMatrix local_ar_matrix;
+  local_ar_matrix.name_ = "local_ar_matrix";
   local_ar_matrix.num_col_ = lp.num_col_;
   local_ar_matrix.num_row_ = ext_num_new_row;
   local_ar_matrix.format_ = MatrixFormat::kRowwise;
@@ -604,10 +606,10 @@ HighsStatus Highs::addRowsInterface(HighsInt ext_num_new_row,
     const bool sum_duplicates = false;
     return_status = interpretCallStatus(
         options_.log_options,
-        local_ar_matrix.assess(options.log_options, "LP",
+        local_ar_matrix.assess(options.log_options, 
                                options.small_matrix_value,
                                options.large_matrix_value, sum_duplicates),
-        return_status, "assessMatrix");
+        return_status, "local_ar_matrix.assess");
     if (return_status == HighsStatus::kError) return return_status;
   } else {
     // No nonzeros so, whether the constraint matrix is row-wise or

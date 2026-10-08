@@ -17,6 +17,7 @@
 #include "util/HighsRandom.h"
 
 void HighsHessian::clear() {
+  this->name_ = "Hessian";
   this->dim_ = 0;
   this->start_.clear();
   this->index_.clear();
@@ -411,29 +412,21 @@ bool HighsHessian::legalDimensions(const HighsLogOptions& log_options) const {
   // Assess the Hessian dimensions and vector sizes
   std::vector<HighsInt> hessian_p_end;
   const bool partitioned = false;
-  return legalMatrixDimensions(log_options, this->dim_, partitioned,
+  return legalMatrixDimensions(log_options, "HighsHessian", this->name_, this->dim_, partitioned,
                                this->start_, hessian_p_end, this->index_,
                                this->value_);
 }
 
 HighsStatus HighsHessian::trimDimensions(const HighsLogOptions& log_options) {
   assert(!this->isOracle());
-  const HighsInt dim = this->dim_;
-  assert(dim > 0);
-  HighsInt trimmed = 0;
-  HighsStatus status = HighsStatus::kOk;
+  assert(this->dim_ > 0);
 
-  trimmed = this->start_.size() - dim - 1;
-  if (trimmed) {
-    this->start_.resize(dim + 1);
-    highsLogUser(
-        log_options, HighsLogType::kWarning,
-        "Trimmed %d excess entr%s from HighsHessian data member start_\n",
-        int(trimmed), highsIntToPlural(trimmed, true).c_str());
-    status = HighsStatus::kWarning;
-  }
-
-  return status;
+  std::vector<HighsInt> hessian_p_end;
+  const bool partitioned = false;
+  
+  return trimMatrixDimensions(log_options, "HighsHessian", this->name_, this->dim_,
+			      partitioned,
+			      this->start_, hessian_p_end, this->index_, this->value_);
 }
 
 HighsStatus HighsHessian::checkOracle(const HighsLogOptions& log_options,

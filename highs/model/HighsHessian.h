@@ -22,6 +22,7 @@
 class HighsHessian {
  public:
   HighsHessian() { clear(); }
+  std::string name_;
   HighsInt dim_;
   HessianFormat format_;
   std::vector<HighsInt> start_;
