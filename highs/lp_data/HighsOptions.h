@@ -724,13 +724,6 @@ class HighsOptions : public HighsOptionsStruct {
     setLogOptions();
   }
 
-  HighsOptions(HighsOptions&& options) {
-    records = std::move(options.records);
-    HighsOptionsStruct::operator=(std::move(options));
-    this->log_options.log_stream = options.log_options.log_stream;
-    setLogOptions();
-  }
-
   const HighsOptions& operator=(const HighsOptions& other) {
     if (&other != this) {
       if ((HighsInt)records.size() == 0) initRecords();
@@ -741,15 +734,15 @@ class HighsOptions : public HighsOptionsStruct {
     return *this;
   }
 
-  const HighsOptions& operator=(HighsOptions&& other) {
-    if (&other != this) {
-      if ((HighsInt)records.size() == 0) initRecords();
-      HighsOptionsStruct::operator=(other);
-      this->log_options.log_stream = other.log_options.log_stream;
-      setLogOptions();
-    }
-    return *this;
-  }
+  // there is deliberately no move constructor or move assignment operator.
+  // each option record holds a pointer to the member of the object that
+  // created it, so records cannot be taken over from another object: a move
+  // constructor that steals them leaves the new object's records pointing at
+  // the members of the moved-from object (and dangling once it is destroyed).
+  // without move operations, rvalues bind to the copy constructor and copy
+  // assignment operator above, which give each object its own records. do
+  // not declare the move operations as deleted, since this would make moving
+  // (e.g. via std::move or returning by value) fail to compile.
 
   virtual ~HighsOptions() {
     if (records.size() > 0) deleteRecords();

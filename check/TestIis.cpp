@@ -1061,3 +1061,35 @@ TEST_CASE("iis-callback", "[highs-callback]") {
 
   highs.resetGlobalScheduler(true);
 }
+
+TEST_CASE("issue-3368", "[highs-callback]") {
+  // Checks that elasticity problem is solved as minimizer when
+  // HighsLp sense is ObjSense::kMaximize
+  const HighsInt x = 0;
+  const HighsInt y = 1;
+  HighsLp lp;
+  lp.num_col_ = 2;
+  lp.num_row_ = 2;
+  lp.col_cost_ = {0, 1};
+  lp.col_lower_ = {0, -kHighsInf};
+  lp.col_upper_ = {1, kHighsInf};
+  lp.row_lower_ = {0, 2};
+  lp.row_upper_ = {0, kHighsInf};
+  lp.a_matrix_.start_ = {0, 2, 3};
+  lp.a_matrix_.index_ = {x, y, y};
+  lp.a_matrix_.value_ = {-1, 1, 1};
+  lp.a_matrix_.format_ = MatrixFormat::kRowwise;
+
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  REQUIRE(h.passModel(lp) == HighsStatus::kOk);
+  const std::vector<ObjSense> senses{ObjSense::kMinimize, ObjSense::kMaximize};
+  for (auto& sense : senses) {
+    h.changeObjectiveSense(sense);
+    h.feasibilityRelaxation(1.0, 1.0, 1.0);
+    REQUIRE(h.getObjectiveValue() == 1.0);
+    REQUIRE(h.getSolution().col_value[x] == 2.0);
+    REQUIRE(h.getSolution().col_value[y] == 2.0);
+  }
+  h.resetGlobalScheduler(true);
+}
