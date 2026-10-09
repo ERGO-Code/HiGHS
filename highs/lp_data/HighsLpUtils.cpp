@@ -1618,7 +1618,6 @@ void appendColsToLpVectors(HighsLp& lp, const HighsInt num_new_col,
   lp.col_upper_.resize(new_num_col);
   const bool have_integrality = (lp.integrality_.size() != 0);
   if (have_integrality) {
-    printf("Integrality size = %d\n", int(lp.integrality_.size()));
     assert(HighsInt(lp.integrality_.size()) == lp.num_col_);
     lp.integrality_.resize(new_num_col);
   }

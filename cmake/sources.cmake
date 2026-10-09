@@ -499,6 +499,7 @@ set(highs_headers
     lp_data/HighsLpSolverObject.h
     lp_data/HighsLpUtils.h
     lp_data/HighsMipSolverObject.h
+    lp_data/HighsMiqp.h
     lp_data/HighsModelUtils.h
     lp_data/HighsOptions.h
     lp_data/HighsQpSolverObject.h
