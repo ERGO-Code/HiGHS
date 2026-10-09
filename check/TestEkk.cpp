@@ -131,3 +131,38 @@ TEST_CASE("Ekk-excessive-primal-value", "[highs_test_ekk]") {
 
   highs.resetGlobalScheduler(true);
 }
+
+TEST_CASE("Ekk-zero-dual-cost-shift", "[highs_test_ekk]") {
+  std::string log;
+  Highs highs;
+  REQUIRE(highs.setOptionValue("log_to_console", false) == HighsStatus::kOk);
+  REQUIRE(highs.setOptionValue("presolve", "off") == HighsStatus::kOk);
+  REQUIRE(highs.setOptionValue("solver", "simplex") == HighsStatus::kOk);
+  REQUIRE(highs.setOptionValue("threads", 1) == HighsStatus::kOk);
+  REQUIRE(highs.setCallback(
+              [&log](int callback_type, const std::string& message,
+                     const HighsCallbackOutput*, HighsCallbackInput*, void*) {
+                if (callback_type == kCallbackLogging) log += message;
+              }) == HighsStatus::kOk);
+  REQUIRE(highs.startCallback(kCallbackLogging) == HighsStatus::kOk);
+
+  // A zero reduced cost is encountered while an earlier cost shift remains.
+  HighsLp lp;
+  lp.num_col_ = 4;
+  lp.num_row_ = 4;
+  lp.col_cost_ = {0, 0, 0, 0};
+  lp.col_lower_ = {0, -kHighsInf, -kHighsInf, 0};
+  lp.col_upper_ = {0, kHighsInf, kHighsInf, kHighsInf};
+  lp.row_lower_ = {-1e12, 0, 0, -kHighsInf};
+  lp.row_upper_ = {-1e12, 0, 0, 0};
+  lp.a_matrix_.start_ = {0, 0, 2, 4, 5};
+  lp.a_matrix_.index_ = {0, 1, 1, 3, 3};
+  lp.a_matrix_.value_ = {1e-6, -1e12, 1, 1, -1};
+  lp.a_matrix_.format_ = MatrixFormat::kColwise;
+  REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
+  // The resulting primal values exceed kExcessivePrimalValue.
+  REQUIRE(highs.run() == HighsStatus::kError);
+  REQUIRE(log.find("excessive primal values") != std::string::npos);
+
+  highs.resetGlobalScheduler(true);
+}
