@@ -695,6 +695,7 @@ TEST_CASE("write-semicontinuous-variable", "[highs_filereader]") {
   highs.passModel(model);
   highs.writeModel(filename);
   Highs highs2;
+  highs2.setOptionValue("output_flag", dev_run);
   REQUIRE(highs2.readModel(filename) == HighsStatus::kOk);
   HighsModel model2 = highs2.getModel();
   REQUIRE(model2.lp_.col_lower_[0] == 3);
@@ -720,6 +721,7 @@ TEST_CASE("write-semiinteger-variable", "[highs_filereader]") {
   highs.passModel(model);
   highs.writeModel(filename);
   Highs highs2;
+  highs2.setOptionValue("output_flag", dev_run);
   REQUIRE(highs2.readModel(filename) == HighsStatus::kOk);
   HighsModel model2 = highs2.getModel();
   REQUIRE(model2.lp_.col_lower_[0] == 3);

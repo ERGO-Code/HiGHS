@@ -1141,7 +1141,7 @@ TEST_CASE("LP-getrows", "[highs_data]") {
 
 TEST_CASE("LP-interval-changes", "[highs_data]") {
   Highs highs;
-  // highs.setOptionValue("output_flag", dev_run);
+  highs.setOptionValue("output_flag", dev_run);
   const HighsOptions& options = highs.getOptions();
   const HighsInfo& info = highs.getInfo();
 

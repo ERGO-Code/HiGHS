@@ -51,53 +51,56 @@ HighsStatus Highs::solveMiqp() {
   // a MIP
   this->model_.hessian_.clear();
 
-  // Lambda to find the maximum value in an std::vector<HighsInt>
-  auto maxIndex = [&](const std::vector<HighsInt>& index) {
-    HighsInt max_index = 0;
-    for (HighsInt k = 0; k < int(index.size()); k++)
-      max_index = std::max(index[k], max_index);
-    return max_index;
-  };
-
   // Linearising the quadratic terms in the Hessian requires rows and
-  // (possibly) columns to be added to the incumbent HighsLp
-  //
-  // Add a column and row to the problem
-  std::vector<HighsInt> index = {0, 1, lp.num_row_};
-  std::vector<double> value = {1, 1, 1};
-  assert(index.size() == value.size());
-  HighsInt num_new_index = index.size();
+  // (possibly) columns to be added to the incumbent HighsLp. The
+  // following code (which only works for problems with at least 3
+  // columns and rows) illustrates the process
+  if (lp.num_col_ >= 3 && lp.num_row_ >= 3) {
+    // Lambda to find the maximum value in an std::vector<HighsInt>
+    auto maxIndex = [&](const std::vector<HighsInt>& index) {
+      HighsInt max_index = 0;
+      for (HighsInt k = 0; k < int(index.size()); k++)
+        max_index = std::max(index[k], max_index);
+      return max_index;
+    };
 
-  // Row indices must not exceed lp.num_row_ - 1, and this call
-  // illustrates what happens if they do!
-  status = this->addCol(1.0, 0, kHighsInf, num_new_index, index.data(),
-                        value.data());
-  assert(status == HighsStatus::kError);
-  // If addCol/addRow returns an error, the incumbent HighsLp is not
-  // changed
-  assert(lp.num_col_ == num_col);
+    // Add a column and row to the problem
+    std::vector<HighsInt> index = {0, 1, lp.num_row_};
+    std::vector<double> value = {1, 1, 1};
+    assert(index.size() == value.size());
+    HighsInt num_new_index = index.size();
 
-  // Now give a legal value to index[2]
-  index[2] = lp.num_row_ - 1;
+    // Row indices must not exceed lp.num_row_ - 1, and this call
+    // illustrates what happens if they do!
+    status = this->addCol(1.0, 0, kHighsInf, num_new_index, index.data(),
+                          value.data());
+    assert(status == HighsStatus::kError);
+    // If addCol/addRow returns an error, the incumbent HighsLp is not
+    // changed
+    assert(lp.num_col_ == num_col);
 
-  assert(maxIndex(index) < lp.num_row_);
-  status = this->addCol(1.0, 0, kHighsInf, num_new_index, index.data(),
-                        value.data());
-  assert(status == HighsStatus::kOk);
-  assert(lp.num_col_ == num_col + 1);
+    // Now give a legal value to index[2]
+    index[2] = lp.num_row_ - 1;
 
-  // The new column is continuous (HighsVarType::kContinuous) by
-  // default. This is how to make it an integer variable.
-  status = this->changeColIntegrality(1, HighsVarType::kInteger);
-  assert(status == HighsStatus::kOk);
+    assert(maxIndex(index) < lp.num_row_);
+    status = this->addCol(1.0, 0, kHighsInf, num_new_index, index.data(),
+                          value.data());
+    assert(status == HighsStatus::kOk);
+    assert(lp.num_col_ == num_col + 1);
 
-  // Now add a row
-  index[2] = lp.num_col_ - 1;
-  assert(maxIndex(index) < lp.num_col_);
-  status =
-      this->addRow(0, kHighsInf, num_new_index, index.data(), value.data());
-  assert(status == HighsStatus::kOk);
-  assert(lp.num_row_ == num_row + 1);
+    // The new column is continuous (HighsVarType::kContinuous) by
+    // default. This is how to make it an integer variable.
+    status = this->changeColIntegrality(1, HighsVarType::kInteger);
+    assert(status == HighsStatus::kOk);
+
+    // Now add a row
+    index[2] = lp.num_col_ - 1;
+    assert(maxIndex(index) < lp.num_col_);
+    status =
+        this->addRow(0, kHighsInf, num_new_index, index.data(), value.data());
+    assert(status == HighsStatus::kOk);
+    assert(lp.num_row_ == num_row + 1);
+  }
 
   // Once the linearisations have been added, the MILP is solved by
   // calling Highs::optimizeModel()
