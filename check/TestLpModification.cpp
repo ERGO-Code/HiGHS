@@ -2495,3 +2495,50 @@ TEST_CASE("hot-start-after-delete", "[highs_data]") {
 
   h.resetGlobalScheduler(true);
 }
+
+TEST_CASE("no-modification-on-error", "[highs_data]") {
+  HighsLp lp;
+  lp.num_col_ = 1;
+  lp.num_row_ = 2;
+  lp.col_cost_ = {-1};
+  lp.col_lower_ = {0};
+  lp.col_upper_ = {1};
+  lp.row_lower_ = {0, 0};
+  lp.row_upper_ = {inf, inf};
+  lp.a_matrix_.num_col_ = lp.num_col_;
+  lp.a_matrix_.num_row_ = lp.num_row_;
+  lp.a_matrix_.start_ = {0, 2};
+  lp.a_matrix_.index_ = {0, 1};
+  lp.a_matrix_.value_ = {1, 1};
+  lp.integrality_ = {HighsVarType::kInteger};
+  lp.col_names_ = {"C"};
+  lp.col_names_ = {"R0", "R1"};
+  Highs h;
+  //  h.setOptionValue("output_flag", dev_run);
+  REQUIRE(h.passModel(lp) == HighsStatus::kOk);
+
+  const HighsLp& highs_lp = h.getLp();
+  std::vector<HighsInt> index = {0};
+  std::vector<double> value = {1};
+  
+  assert(index.size() == value.size());
+  HighsInt num_new_index = index.size();
+  // Add a column with illegal row index
+  index[0] = highs_lp.num_row_;
+  REQUIRE(h.addCol(1.0, 0, kHighsInf, num_new_index, index.data(),
+		   value.data()) == HighsStatus::kError);
+
+  REQUIRE((lp == highs_lp));
+
+  // Add a row with illegal column index
+  index[0] = highs_lp.num_col_;
+  REQUIRE(h.addRow(0, kHighsInf, num_new_index, index.data(),
+		   value.data()) == HighsStatus::kError);
+
+  REQUIRE((lp == highs_lp));
+   
+  //  h.run();
+  h.resetGlobalScheduler(true);
+}
+
+
