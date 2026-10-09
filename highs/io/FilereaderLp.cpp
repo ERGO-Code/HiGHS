@@ -395,7 +395,11 @@ HighsStatus FilereaderLp::writeModelToFile(const HighsOptions& options,
   ar_matrix.ensureRowwise();
 
   FILE* file = fopen(filename.c_str(), "w");
-
+  if (file == 0) {
+    highsLogUser(options.log_options, HighsLogType::kError,
+                 "Cannot open file %s\n", filename.c_str());
+    return HighsStatus::kError;
+  }
   // write comment at the start of the file
   this->writeToFile(file, "\\ %s", LP_COMMENT_FILESTART);
   this->writeToFileLineEnd(file);
