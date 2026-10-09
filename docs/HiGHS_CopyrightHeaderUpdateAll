@@ -4,7 +4,7 @@
 ./HiGHS_CopyrightHeader.pl ../highs/interfaces/*.cpp
 ./HiGHS_CopyrightHeader.pl ../highs/interfaces/*.h
 ./HiGHS_CopyrightHeader.pl ../highs/interfaces/*.hpp
-./HiGHS_CopyrightHeader.pl ../highs/folding/*.cpp
+./HiGHS_CopyrightHeader.pl ../highs/folding/*.h
 ./HiGHS_CopyrightHeader.pl ../highs/folding/*.cpp
 ./HiGHS_CopyrightHeader.pl ../highs/io/*.cpp
 ./HiGHS_CopyrightHeader.pl ../highs/io/*.h

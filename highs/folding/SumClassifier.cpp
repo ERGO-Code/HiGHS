@@ -26,7 +26,7 @@ void SumClassifier::reset(HighsInt max_classes) {
   zero_class_ = -1;
   max_classes_ = max_classes;
 
-  use_table_ = max_classes > kSmallClassThreshold;
+  use_table_ = max_classes > static_cast<HighsInt>(kSmallClassThreshold);
   if (!use_table_) return;
 
   // Guarantee that the size is a power of 2, at least twice as large as
@@ -85,9 +85,8 @@ HighsInt SumClassifier::add(double value, HighsInt count) {
 
   const double quantized_value = quantize(value);
 
-  const HighsInt class_id = use_table_
-                                ? classIdTable(quantized_value)
-                                : classIdLinear(quantized_value);
+  const HighsInt class_id = use_table_ ? classIdTable(quantized_value)
+                                       : classIdLinear(quantized_value);
 
   classes_[class_id].count += count;
   return class_id;

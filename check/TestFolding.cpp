@@ -5,7 +5,7 @@
 #include "HCheckConfig.h"
 #include "Highs.h"
 #include "catch.hpp"
-#include "highs/folding/Fold.h"
+#include "folding/Fold.h"
 
 const bool dev_run = false;
 
