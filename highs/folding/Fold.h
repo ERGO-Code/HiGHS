@@ -9,7 +9,7 @@ namespace folding {
 
 void test_folding(const HighsLp& lp);
 
-class Folder {
+class LpFolder {
   const HighsLp& lp_;
   std::vector<HighsInt> row_colour_;
   std::vector<HighsInt> col_colour_;
@@ -40,14 +40,15 @@ class Folder {
   void foldMatrix();
 
  public:
-  explicit Folder(const HighsLp& lp);
+  explicit LpFolder(const HighsLp& lp);
 
-  // Folder holds references to the lp, so it cannot bind to a temporary HighsLp
-  Folder(const HighsLp&&) = delete;
+  // LpFolder holds references to the lp, so it cannot bind to a temporary
+  // HighsLp
+  LpFolder(const HighsLp&&) = delete;
 
-  // Avoid copies because colour refinement holds reference to the Folder
-  Folder(const Folder&) = delete;
-  Folder& operator=(const Folder&) = delete;
+  // Avoid copies because colour refinement holds reference to the LpFolder
+  LpFolder(const LpFolder&) = delete;
+  LpFolder& operator=(const LpFolder&) = delete;
 
   HighsInt run();
   HighsLp getFoldedLp() const;
