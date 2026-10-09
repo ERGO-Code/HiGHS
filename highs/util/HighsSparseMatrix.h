@@ -29,6 +29,7 @@ const HighsInt kDebugReportAll = -1;
 class HighsSparseMatrix {
  public:
   HighsSparseMatrix() { clear(); }
+  std::string name_;
   MatrixFormat format_;
   HighsInt num_col_;
   HighsInt num_row_;
@@ -62,13 +63,10 @@ class HighsSparseMatrix {
               double* value) const;
   void deleteCols(const HighsIndexCollection& index_collection);
   void deleteRows(const HighsIndexCollection& index_collection);
-  HighsStatus assessDimensions(const HighsLogOptions& log_options,
-                               const std::string matrix_name);
   HighsStatus assessStart(const HighsLogOptions& log_options);
   HighsStatus assessIndexBounds(const HighsLogOptions& log_options);
 
   HighsStatus assess(const HighsLogOptions& log_options,
-                     const std::string& matrix_name,
                      const double small_matrix_value,
                      const double large_matrix_value, const bool sum_duplicates,
                      const std::string* col_names = nullptr,
@@ -129,6 +127,10 @@ class HighsSparseMatrix {
                     const HighsInt use_col) const;
   void collectAj(HVector& column, const HighsInt use_col,
                  const double multiplier) const;
+  bool legalDimensions(const HighsLogOptions& log_options,
+                       const HighsInt num_vec) const;
+  HighsStatus trimDimensions(const HighsLogOptions& log_options,
+                             const HighsInt num_vec);
 
  private:
   void priceByRowDenseResult(

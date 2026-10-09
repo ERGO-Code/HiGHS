@@ -453,7 +453,8 @@ HighsStatus Highs::passModel(HighsModel model) {
   // Move the model's LP and Hessian to the internal LP and Hessian
   lp = std::move(model.lp_);
   hessian = std::move(model.hessian_);
-  lp.origin_name_ = "Original";
+  lp.origin_name_ = "User";
+  lp.a_matrix_.name_ = "User matrix";
   assert(lp.a_matrix_.formatOk());
   if (lp.num_col_ == 0 || lp.num_row_ == 0) {
     // Model constraint matrix has either no columns or no
@@ -478,8 +479,9 @@ HighsStatus Highs::passModel(HighsModel model) {
   assert(!lp.is_scaled_);
   assert(!lp.is_moved_);
   lp.resetScale();
-  // Check that the LP array dimensions are valid
-  if (!lpDimensionsOk("passModel", lp, options_.log_options))
+  // Check that the LP array dimensions are legal (ie at least the
+  // size required by num_col_ and num_row_)
+  if (!lp.legalDimensions("passModel", options_.log_options))
     return HighsStatus::kError;
   // Check that the Hessian format is valid
   if (!hessian.formatOk()) return HighsStatus::kError;
@@ -960,13 +962,12 @@ HighsStatus Highs::writeLocalModel(HighsModel& model,
   lp.ensureColwise();
 
   // Ensure that the dimensions are OK
-  if (!lpDimensionsOk("writeLocalModel", lp, options_.log_options))
+  if (!lp.legalDimensions("writeLocalModel", options_.log_options))
     return HighsStatus::kError;
 
-  if (model.hessian_.dim_ > 0) {
-    call_status = assessHessianDimensions(options_, model.hessian_);
-    if (call_status == HighsStatus::kError) return call_status;
-  }
+  if (model.hessian_.dim_ > 0 &&
+      !model.hessian_.legalDimensions(options_.log_options))
+    return HighsStatus::kError;
 
   // Check that the matrix starts are OK
   call_status = lp.a_matrix_.assessStart(options_.log_options);
@@ -3988,8 +3989,8 @@ HighsPresolveStatus Highs::runPresolve(const bool force_lp_presolve,
           (HighsInt)original_lp.numNz() - (HighsInt)reduced_lp.numNz();
       // Clear any scaling information inherited by the reduced LP
       reduced_lp.clearScale();
-      assert(lpDimensionsOk("RunPresolve: reduced_lp", reduced_lp,
-                            options_.log_options));
+      assert(reduced_lp.legalDimensions("RunPresolve: reduced_lp",
+                                        options_.log_options));
       break;
     }
     case HighsPresolveStatus::kReducedToEmpty: {
@@ -4903,7 +4904,7 @@ HighsStatus Highs::returnFromHighs(HighsStatus highs_return_status) {
   // Stop the HiGHS run clock if it is running
   if (timer_.running()) timer_.stop();
   const bool dimensions_ok =
-      lpDimensionsOk("returnFromHighs", model_.lp_, options_.log_options);
+      model_.lp_.legalDimensions("returnFromHighs", options_.log_options);
   if (!dimensions_ok) {
     highsLogDev(options_.log_options, HighsLogType::kError,
                 "LP Dimension error in returnFromHighs()\n");

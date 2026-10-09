@@ -459,6 +459,7 @@ HighsStatus Highs::addColsInterface(
   // that is easy to handle and, if there are nonzeros, it can be
   // normalised
   HighsSparseMatrix local_a_matrix;
+  local_a_matrix.name_ = "local_a_matrix";
   local_a_matrix.num_col_ = ext_num_new_col;
   local_a_matrix.num_row_ = lp.num_row_;
   local_a_matrix.format_ = MatrixFormat::kColwise;
@@ -472,10 +473,9 @@ HighsStatus Highs::addColsInterface(
     // Assess the matrix rows
     return_status = interpretCallStatus(
         options_.log_options,
-        local_a_matrix.assess(options.log_options, "LP",
-                              options.small_matrix_value,
+        local_a_matrix.assess(options.log_options, options.small_matrix_value,
                               options.large_matrix_value, sum_duplicates),
-        return_status, "assessMatrix");
+        return_status, "local_a_matrix.assess");
     if (return_status == HighsStatus::kError) return return_status;
   } else {
     // No nonzeros so, whether the constraint matrix is column-wise or
@@ -506,7 +506,7 @@ HighsStatus Highs::addColsInterface(
 
   // Increase the number of columns in the LP
   lp.num_col_ += ext_num_new_col;
-  assert(lpDimensionsOk("addCols", lp, options.log_options));
+  assert(lp.legalDimensions("addCols", options.log_options));
 
   // Interpret possible introduction of infinite costs
   lp.has_infinite_cost_ = lp.has_infinite_cost_ || local_has_infinite_cost;
@@ -591,6 +591,7 @@ HighsStatus Highs::addRowsInterface(HighsInt ext_num_new_row,
   // is easy to handle and, if there are nonzeros, it can be
   // normalised
   HighsSparseMatrix local_ar_matrix;
+  local_ar_matrix.name_ = "local_ar_matrix";
   local_ar_matrix.num_col_ = lp.num_col_;
   local_ar_matrix.num_row_ = ext_num_new_row;
   local_ar_matrix.format_ = MatrixFormat::kRowwise;
@@ -604,10 +605,9 @@ HighsStatus Highs::addRowsInterface(HighsInt ext_num_new_row,
     const bool sum_duplicates = false;
     return_status = interpretCallStatus(
         options_.log_options,
-        local_ar_matrix.assess(options.log_options, "LP",
-                               options.small_matrix_value,
+        local_ar_matrix.assess(options.log_options, options.small_matrix_value,
                                options.large_matrix_value, sum_duplicates),
-        return_status, "assessMatrix");
+        return_status, "local_ar_matrix.assess");
     if (return_status == HighsStatus::kError) return return_status;
   } else {
     // No nonzeros so, whether the constraint matrix is row-wise or
@@ -638,7 +638,7 @@ HighsStatus Highs::addRowsInterface(HighsInt ext_num_new_row,
 
   // Increase the number of rows in the LP
   lp.num_row_ += ext_num_new_row;
-  assert(lpDimensionsOk("addRows", lp, options.log_options));
+  assert(lp.legalDimensions("addRows", options.log_options));
 
   // Deduce the consequences of adding new rows
   invalidateModelStatusSolutionAndInfo();
@@ -765,7 +765,7 @@ void Highs::deleteColsInterface(HighsIndexCollection& index_collection) {
     }
     assert(new_col == lp.num_col_);
   }
-  assert(lpDimensionsOk("deleteCols", lp, options_.log_options));
+  assert(lp.legalDimensions("deleteCols", options_.log_options));
   lp.col_hash_.name2index.clear();
 }
 
@@ -818,7 +818,7 @@ void Highs::deleteRowsInterface(HighsIndexCollection& index_collection) {
     }
     assert(new_row == lp.num_row_);
   }
-  assert(lpDimensionsOk("deleteRows", lp, options_.log_options));
+  assert(lp.legalDimensions("deleteRows", options_.log_options));
   lp.row_hash_.name2index.clear();
 }
 

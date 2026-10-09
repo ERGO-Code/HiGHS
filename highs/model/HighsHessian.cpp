@@ -13,9 +13,11 @@
 #include <cassert>
 #include <cstdio>
 
+#include "util/HighsMatrixUtils.h"
 #include "util/HighsRandom.h"
 
 void HighsHessian::clear() {
+  this->name_ = "Hessian";
   this->dim_ = 0;
   this->start_.clear();
   this->index_.clear();
@@ -400,6 +402,25 @@ HighsHessian HighsHessian::toSquare() const {
     }
   }
   return square_hessian;
+}
+
+bool HighsHessian::legalDimensions(const HighsLogOptions& log_options) const {
+  assert(!this->isOracle());
+  // Assess the Hessian dimensions and vector sizes
+  std::vector<HighsInt> hessian_p_end;
+  const bool partitioned = false;
+  return legalMatrixDimensions(log_options, "HighsHessian", this->name_,
+                               this->dim_, partitioned, this->start_,
+                               hessian_p_end, this->index_, this->value_);
+}
+
+HighsStatus HighsHessian::trimDimensions(const HighsLogOptions& log_options) {
+  assert(!this->isOracle());
+  std::vector<HighsInt> hessian_p_end;
+  const bool partitioned = false;
+  return trimMatrixDimensions(log_options, "HighsHessian", this->name_,
+                              this->dim_, partitioned, this->start_,
+                              hessian_p_end, this->index_, this->value_);
 }
 
 HighsStatus HighsHessian::checkOracle(const HighsLogOptions& log_options,
