@@ -919,6 +919,7 @@ if(NOT FAST_BUILD)
     ${PROJECT_SOURCE_DIR}/extern
     ${PROJECT_SOURCE_DIR}/extern/zstr
     ${PROJECT_SOURCE_DIR}/highs
+    ${PROJECT_SOURCE_DIR}/highs/folding
     ${PROJECT_SOURCE_DIR}/highs/io
     ${PROJECT_SOURCE_DIR}/highs/pdlp/cupdlp
     ${PROJECT_SOURCE_DIR}/highs/pdlp/hipdlp

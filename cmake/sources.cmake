@@ -1,6 +1,7 @@
 set(include_dirs
   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/extern>
   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs>
+  $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/folding>
   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/interfaces>
   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/io>
   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/io/filereader>
