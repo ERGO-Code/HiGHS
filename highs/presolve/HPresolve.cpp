@@ -332,7 +332,7 @@ bool HPresolve::isImpliedEquationAtUpper(HighsInt row) const {
   // is an implied equation (using its upper bound) due to complementary
   // slackness
   return model->row_upper_[row] != kHighsInf &&
-         implRowDualLower[row] < -options->dual_feasibility_tolerance;
+         implRowDualUpper[row] < -options->dual_feasibility_tolerance;
 }
 
 HPresolve::StatusResult HPresolve::isImpliedIntegral(HighsInt col) {
