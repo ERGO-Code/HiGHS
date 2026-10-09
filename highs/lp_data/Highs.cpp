@@ -1204,7 +1204,7 @@ HighsStatus Highs::optimizeHighs() {
   // Level 1 of Highs::run()
   //
   // Move the "mods" to here
-  if (this->model_.isQp() && this->model_.isMip() && !this->options_.solve_relaxation) return solveMiqp();
+  if (this->solveAsMiqp()) return solveMiqp();
   return this->multi_linear_objective_.size() ? this->multiobjectiveSolve()
                                               : this->optimizeModel();
 }

@@ -1907,6 +1907,11 @@ class Highs {
 
   bool tryPdlpCleanup(HighsInt& pdlp_cleanup_iteration_limit,
                       const HighsInfo& presolved_lp_info) const;
+
+  bool solveAsMiqp() const {
+    return this->model_.isQp() && this->model_.isMip() &&
+           !this->options_.solve_relaxation;
+  }
 };
 
 // Start of deprecated methods not in the Highs class

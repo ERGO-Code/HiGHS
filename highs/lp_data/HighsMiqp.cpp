@@ -12,9 +12,9 @@
 
 HighsStatus Highs::solveMiqp() {
   HighsStatus status = HighsStatus::kOk;
-  //  return this->optimizeModel();
+  if (this->solveAsMiqp()) return this->optimizeModel();
   status = this->optimizeModel();
-  assert(status = HighsStatus::kError);
+  assert(status == HighsStatus::kError);
 
   HighsLp& lp = this->model_.lp_;
   HighsHessian hessian = std::move(this->model_.hessian_);
@@ -40,31 +40,31 @@ HighsStatus Highs::solveMiqp() {
 
   status = this->addCol(1.0, 0, kHighsInf, num_new_index, index.data(),
                         value.data());
-  assert(status = HighsStatus::kError);
+  assert(status == HighsStatus::kError);
   index[2] = lp.num_row_ - 1;
 
   assert(maxIndex(index) < lp.num_row_);
   status = this->addCol(1.0, 0, kHighsInf, num_new_index, index.data(),
                         value.data());
-  assert(status = HighsStatus::kOk);
+  assert(status == HighsStatus::kOk);
 
   index[2] = lp.num_col_ - 1;
   assert(maxIndex(index) < lp.num_col_);
   status =
       this->addRow(0, kHighsInf, num_new_index, index.data(), value.data());
-  assert(status = HighsStatus::kOk);
+  assert(status == HighsStatus::kOk);
 
   this->reportModelStats();
   const HighsStatus run_status = this->optimizeModel();
 
   status = this->deleteCols(num_col, lp.num_col_ - 1);
-  assert(status = HighsStatus::kOk);
+  assert(status == HighsStatus::kOk);
 
   status = this->deleteRows(num_row, lp.num_row_ - 1);
-  assert(status = HighsStatus::kOk);
+  assert(status == HighsStatus::kOk);
 
   this->model_.hessian_ = std::move(hessian);
   this->reportModelStats();
 
-  return HighsStatus::kError;//run_status;
+  return HighsStatus::kError;  // run_status;
 }
