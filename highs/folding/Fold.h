@@ -51,6 +51,8 @@ class Folder {
 
   HighsInt run();
   HighsLp getFoldedLp() const;
+  HighsSolution unfold(const HighsSolution& folded) const;
+
   void print() const;
 
   bool isPartitionCorrect() const;

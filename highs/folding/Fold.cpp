@@ -428,6 +428,55 @@ bool Folder::isPartitionCorrect() const {
   return true;
 }
 
+HighsSolution Folder::unfold(const HighsSolution& folded) const {
+  // Given partition matrices C and D for row and column partition respectively,
+  // and given the operation of scaling the columns and taking the transpose
+  // denoted as .^S, the mapping from folded solution (x',y',z') to original
+  // solution (x,y,z) is:
+  // - col value:   x  = D      x'
+  // - col dual :   z  = D^{ST} z'
+  // - row value:   Ax = C      A'x'
+  // - row dual :   y  = C^{ST} y'
+
+  HighsSolution sol;
+  if (fold_error_) return sol;
+
+  if (folded.value_valid) {
+    assert(folded.col_value.size() == static_cast<size_t>(num_col_colours_));
+    assert(folded.row_value.size() == static_cast<size_t>(num_row_colours_));
+    sol.col_value.resize(lp_.num_col_);
+    sol.row_value.resize(lp_.num_row_);
+    for (HighsInt c = 0; c < lp_.num_col_; ++c) {
+      const HighsInt c_colour = col_colour_[c];
+      sol.col_value[c] = folded.col_value[c_colour];
+    }
+    for (HighsInt r = 0; r < lp_.num_row_; ++r) {
+      const HighsInt r_colour = row_colour_[r];
+      sol.row_value[r] = folded.row_value[r_colour];
+    }
+  }
+
+  if (folded.dual_valid) {
+    assert(folded.col_dual.size() == static_cast<size_t>(num_col_colours_));
+    assert(folded.row_dual.size() == static_cast<size_t>(num_row_colours_));
+    sol.col_dual.resize(lp_.num_col_);
+    sol.row_dual.resize(lp_.num_row_);
+    for (HighsInt c = 0; c < lp_.num_col_; ++c) {
+      const HighsInt c_colour = col_colour_[c];
+      sol.col_dual[c] = folded.col_dual[c_colour] / col_colours_size_[c_colour];
+    }
+    for (HighsInt r = 0; r < lp_.num_row_; ++r) {
+      const HighsInt r_colour = row_colour_[r];
+      sol.row_dual[r] = folded.row_dual[r_colour] / row_colours_size_[r_colour];
+    }
+  }
+
+  sol.value_valid = folded.value_valid;
+  sol.dual_valid = folded.dual_valid;
+
+  return sol;
+}
+
 }  // namespace folding
 
 }  // namespace highs
