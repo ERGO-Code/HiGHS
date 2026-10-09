@@ -186,6 +186,27 @@ HighsStatus assessMatrix(
     return ok_value;
   };
 
+  // Lambda to identify whether an index has already occurred: when
+  // summing duplicates, also return the position of its entry
+  auto findIndex = [&](const HighsInt component, HighsInt& previous_el) {
+    if (use_highs_hash) return highs_hash.find(component) != nullptr;
+    auto found_component = index_el_map.find(component);
+    if (found_component == index_el_map.end()) return false;
+    previous_el = found_component->second;
+    return true;
+  };
+
+  // Lambda to record the occurrence of an index: when summing
+  // duplicates, also record the position of its entry so that any
+  // duplicates can be summed into it
+  auto recordIndex = [&](const HighsInt component, const HighsInt el) {
+    if (use_highs_hash) {
+      highs_hash.insert(component);
+    } else {
+      index_el_map.insert({component, el});
+    }
+  };
+
   for (HighsInt ix = 0; ix < num_vec; ix++) {
     HighsInt from_el = matrix_start[ix];
     HighsInt to_el = matrix_start[ix + 1];
@@ -218,17 +239,15 @@ HighsStatus assessMatrix(
                      component, vec_dim);
         return HighsStatus::kError;
       }
+      // If not summing duplicates, can check matrix value magnitude.
+      // This is done before checking for duplicates, so that an entry
+      // that is ignored because its value is small is not identified as
+      // a duplicate, and is not recorded, whatever the order of the
+      // entries
+      if (!sum_duplicates && !okMatrixValueMagnitude(el)) continue;
       // Check whether the index has already occurred.
       HighsInt previous_el = illegal_el;
-      bool is_duplicate = false;
-      if (use_highs_hash) {
-        is_duplicate = highs_hash.find(component) != nullptr;
-      } else {
-        auto found_component = index_el_map.find(component);
-        is_duplicate = found_component != index_el_map.end();
-        if (is_duplicate) previous_el = found_component->second;
-      }
-      if (is_duplicate) {
+      if (findIndex(component, previous_el)) {
         if (sum_duplicates) {
           num_duplicate++;
           // Sum the duplicate entry, making sure that it's been
@@ -245,22 +264,12 @@ HighsStatus assessMatrix(
                      component, possible_row_name(component).c_str());
         return HighsStatus::kError;
       }
-      // Not a duplicate
-      //
-      // If not summing duplicates, can check matrix value magnitude
-      if (!sum_duplicates && !okMatrixValueMagnitude(el)) continue;
-      // Shift the index and value of the OK entry to the new
-      // position in the index and value vectors, and increment
-      // the new number of nonzeros
+      // Not a duplicate, so record the index and shift the index and
+      // value of the OK entry to the new position in the index and value
+      // vectors, and increment the new number of nonzeros
+      recordIndex(component, num_new_nz);
       matrix_index[num_new_nz] = matrix_index[el];
       matrix_value[num_new_nz] = matrix_value[el];
-      if (use_highs_hash) {
-        // Record that the index has occurred
-        highs_hash.insert(component);
-      } else {
-        // Record where the index has occurred
-        index_el_map.insert({component, num_new_nz});
-      }
       num_new_nz++;
     }
     if (sum_duplicates) {
