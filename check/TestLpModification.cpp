@@ -1141,7 +1141,7 @@ TEST_CASE("LP-getrows", "[highs_data]") {
 
 TEST_CASE("LP-interval-changes", "[highs_data]") {
   Highs highs;
-  highs.setOptionValue("output_flag", dev_run);
+  // highs.setOptionValue("output_flag", dev_run);
   const HighsOptions& options = highs.getOptions();
   const HighsInfo& info = highs.getInfo();
 
@@ -1222,7 +1222,8 @@ TEST_CASE("LP-interval-changes", "[highs_data]") {
                         og_col01234_lower.data(), og_col01234_upper.data(),
                         get_num_nz, NULL, NULL, NULL) == HighsStatus::kOk);
   REQUIRE(highs.changeColsBounds(from_col, to_col, set_col01234_lower.data(),
-                                 og_col01234_upper.data()) == HighsStatus::kOk);
+                                 og_col01234_upper.data()) ==
+          HighsStatus::kWarning);
   REQUIRE(highs.getCols(from_col, to_col, get_num_col, NULL,
                         get_col01234_lower.data(), og_col01234_upper.data(),
                         get_num_nz, NULL, NULL, NULL) == HighsStatus::kOk);
@@ -2494,4 +2495,88 @@ TEST_CASE("hot-start-after-delete", "[highs_data]") {
   //  REQUIRE(info.simplex_iteration_count < ieration_count0);
 
   h.resetGlobalScheduler(true);
+}
+
+TEST_CASE("no-modification-on-error", "[highs_data]") {
+  const double cost = -1;
+  const double col_lb = 0;
+  const double col_ub = 1;
+  const double row0_lb = 0;
+  const double row0_ub = inf;
+  const std::string col_name = "C";
+  const std::string row0_name = "R0";
+  const std::string row1_name = "R1";
+  const HighsVarType col_integrality = HighsVarType::kInteger;
+  HighsLp lp;
+  lp.num_col_ = 1;
+  lp.num_row_ = 2;
+  lp.col_cost_ = {cost};
+  lp.col_lower_ = {col_lb};
+  lp.col_upper_ = {col_ub};
+  lp.row_lower_ = {row0_lb, 0};
+  lp.row_upper_ = {row0_ub, inf};
+  lp.a_matrix_.num_col_ = lp.num_col_;
+  lp.a_matrix_.num_row_ = lp.num_row_;
+  lp.a_matrix_.start_ = {0, 2};
+  lp.a_matrix_.index_ = {0, 1};
+  lp.a_matrix_.value_ = {1, 1};
+  lp.integrality_ = {col_integrality};
+  lp.col_names_ = {col_name};
+  lp.row_names_ = {row0_name, row1_name};
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  REQUIRE(h.passModel(lp) == HighsStatus::kOk);
+
+  const HighsLp& highs_lp = h.getLp();
+
+  // Not possible to change a cost to an illegal value
+  REQUIRE(h.changeColCost(-1, inf) == HighsStatus::kError);
+  REQUIRE((lp == highs_lp));
+  REQUIRE(h.changeColCost(0, inf) == HighsStatus::kOk);
+  REQUIRE(h.changeColCost(0, cost) == HighsStatus::kOk);
+  REQUIRE((lp == highs_lp));
+
+  REQUIRE(h.changeColBounds(-1, inf, -inf) == HighsStatus::kError);
+  REQUIRE((lp == highs_lp));
+  REQUIRE(h.changeColBounds(0, -inf, -inf) == HighsStatus::kError);
+  REQUIRE((lp == highs_lp));
+  REQUIRE(h.changeColBounds(0, 1, -1) == HighsStatus::kWarning);
+  REQUIRE(h.changeColBounds(0, col_lb, col_ub) == HighsStatus::kOk);
+  REQUIRE((lp == highs_lp));
+
+  REQUIRE(h.changeRowBounds(-1, inf, -inf) == HighsStatus::kError);
+  REQUIRE((lp == highs_lp));
+  REQUIRE(h.changeRowBounds(0, -inf, -inf) == HighsStatus::kError);
+  REQUIRE((lp == highs_lp));
+  REQUIRE(h.changeRowBounds(0, 1, -1) == HighsStatus::kWarning);
+  REQUIRE(h.changeRowBounds(0, row0_lb, row0_ub) == HighsStatus::kOk);
+  REQUIRE((lp == highs_lp));
+
+  // Not possible to change to an illegal integrality
+  REQUIRE(h.changeColIntegrality(-1, HighsVarType::kContinuous) ==
+          HighsStatus::kError);
+  REQUIRE((lp == highs_lp));
+  REQUIRE(h.changeColIntegrality(0, HighsVarType::kContinuous) ==
+          HighsStatus::kOk);
+  REQUIRE(h.changeColIntegrality(0, col_integrality) == HighsStatus::kOk);
+  REQUIRE((lp == highs_lp));
+
+  std::vector<HighsInt> index = {0};
+  std::vector<double> value = {1};
+
+  REQUIRE(index.size() == value.size());
+  HighsInt num_new_index = index.size();
+  // Try to add a column with illegal row index
+  index[0] = highs_lp.num_row_;
+  REQUIRE(h.addCol(1.0, 0, kHighsInf, num_new_index, index.data(),
+                   value.data()) == HighsStatus::kError);
+
+  REQUIRE((lp == highs_lp));
+
+  // Try to add a row with illegal column index
+  index[0] = highs_lp.num_col_;
+  REQUIRE(h.addRow(0, kHighsInf, num_new_index, index.data(), value.data()) ==
+          HighsStatus::kError);
+
+  REQUIRE((lp == highs_lp));
 }

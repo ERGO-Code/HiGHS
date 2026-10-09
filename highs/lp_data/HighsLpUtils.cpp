@@ -333,9 +333,10 @@ HighsStatus assessCosts(const HighsOptions& options, const HighsInt ml_col_os,
     has_infinite_cost = true;
     highsLogUser(options.log_options, HighsLogType::kInfo,
                  "%" HIGHSINT_FORMAT
-                 " |cost| values greater than or equal to %12g are treated as "
+                 " |cost| value%s greater than or equal to %12g %s treated as "
                  "Infinity\n",
-                 num_infinite_cost, infinite_cost);
+                 num_infinite_cost, highsIntToPlural(num_infinite_cost).c_str(),
+                 infinite_cost, highsIntToBe(num_infinite_cost).c_str());
   }
   return return_status;
 }
