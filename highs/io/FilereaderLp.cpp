@@ -75,7 +75,7 @@ FilereaderRetcode FilereaderLp::readModelFromFile(const HighsOptions& options,
     std::map<std::shared_ptr<Variable>, std::vector<std::shared_ptr<Variable>>>
         mat;
     std::map<std::shared_ptr<Variable>, std::vector<double>> mat2;
-    for (std::shared_ptr<QuadTerm> qt : m.objective->quadterms) {
+    for (const std::shared_ptr<QuadTerm>& qt : m.objective->quadterms) {
       if (qt->var1 != qt->var2) {
         mat[qt->var1].push_back(qt->var2);
         mat2[qt->var1].push_back(qt->coef / 2);
@@ -90,7 +90,7 @@ FilereaderRetcode FilereaderLp::readModelFromFile(const HighsOptions& options,
     // Determine whether there is a Hessian to set up by counting its
     // nonzero entries
     unsigned int qnnz = 0;
-    for (std::shared_ptr<Variable> var : m.variables)
+    for (const std::shared_ptr<Variable>& var : m.variables)
       for (size_t i = 0; i < mat[var].size(); i++)
         if (mat2[var][i]) qnnz++;
     if (qnnz) {
@@ -100,7 +100,7 @@ FilereaderRetcode FilereaderLp::readModelFromFile(const HighsOptions& options,
       // column 0, so have to clear this before pushing back start
       hessian.start_.clear();
       assert((int)hessian.start_.size() == 0);
-      for (std::shared_ptr<Variable> var : m.variables) {
+      for (const std::shared_ptr<Variable>& var : m.variables) {
         hessian.start_.push_back(qnnz);
         for (size_t i = 0; i < mat[var].size(); i++) {
           double value = mat2[var][i];
@@ -363,7 +363,7 @@ void FilereaderLp::writeToFileValue(FILE* file, const double value,
   }
 }
 
-void FilereaderLp::writeToFileVar(FILE* file, const std::string var_name) {
+void FilereaderLp::writeToFileVar(FILE* file, const std::string& var_name) {
   this->writeToFile(file, " %s", var_name.c_str());
 }
 
@@ -541,6 +541,9 @@ HighsStatus FilereaderLp::writeModelToFile(const HighsOptions& options,
           this->writeToFileVar(file, lp.col_names_[iCol]);
           this->writeToFileLineEnd(file);
         }
+      } else if (lp.integrality_[iCol] == HighsVarType::kSemiInteger) {
+        this->writeToFileVar(file, lp.col_names_[iCol]);
+        this->writeToFileLineEnd(file);
       }
     }
 

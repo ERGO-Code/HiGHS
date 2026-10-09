@@ -56,4 +56,5 @@ target_link_libraries(testcublas PRIVATE cudalin ${CUDA_LIBRARY})
 target_include_directories(cudalin PUBLIC 
     "$<BUILD_INTERFACE:${CMAKE_CUDA_PATH}/include>"
     "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../../hipdlp>"  # Add this for pdhg_kernels.hpp
+    "$<BUILD_INTERFACE:${HIGHS_BINARY_DIR}>"  # Add this for HConfig.h
 )

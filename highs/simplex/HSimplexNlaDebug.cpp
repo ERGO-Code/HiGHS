@@ -21,7 +21,7 @@ const double kSolveLargeError = 1e-8;
 const double kSolveExcessiveError = sqrt(kSolveLargeError);
 
 HighsDebugStatus HSimplexNla::debugCheckInvert(
-    const std::string message, const HighsInt alt_debug_level) const {
+    const std::string& message, const HighsInt alt_debug_level) const {
   // Sometimes a value other than highs_debug_level is passed as
   // alt_debug_level, either to force debugging, or to limit
   // debugging. If no value is passed, then alt_debug_level = -1, and
@@ -318,7 +318,7 @@ HighsDebugStatus HSimplexNla::debugReportInvertSolutionError(
 }
 
 HighsDebugStatus HSimplexNla::debugReportInvertSolutionError(
-    const std::string source, const bool transposed,
+    const std::string& source, const bool transposed,
     const double solve_error_norm, const double residual_error_norm,
     const bool force) const {
   const HighsOptions* options = this->options_;

@@ -946,10 +946,10 @@ bool Highs::feasibleWrtBounds(const bool columns) const {
   const HighsLp& lp = model_.lp_;
   const double primal_feasibility_tolerance =
       this->options_.primal_feasibility_tolerance;
-  std::vector<double> value =
+  const std::vector<double>& value =
       columns ? this->solution_.col_value : this->solution_.row_value;
-  std::vector<double> lower = columns ? lp.col_lower_ : lp.row_lower_;
-  std::vector<double> upper = columns ? lp.col_upper_ : lp.row_upper_;
+  const std::vector<double>& lower = columns ? lp.col_lower_ : lp.row_lower_;
+  const std::vector<double>& upper = columns ? lp.col_upper_ : lp.row_upper_;
   HighsInt dim = columns ? lp.num_col_ : lp.num_row_;
   for (HighsInt iX = 0; iX < dim; iX++) {
     if (value[iX] < lower[iX] - primal_feasibility_tolerance) return false;
@@ -2914,7 +2914,8 @@ void Highs::callLpKktCheck(const HighsLp& lp, const std::string& message) {
              this->basis_, this->options_, message);
 }
 
-HighsStatus Highs::invertRequirementError(std::string method_name) const {
+HighsStatus Highs::invertRequirementError(
+    const std::string& method_name) const {
   assert(!ekk_instance_.status_.has_invert);
   highsLogUser(options_.log_options, HighsLogType::kError,
                "No invertible representation for %s\n", method_name.c_str());
@@ -4011,6 +4012,7 @@ HighsStatus Highs::multiobjectiveSolve() {
     return HighsStatus::kError;
   }
   std::vector<std::pair<HighsInt, HighsInt>> priority_objective;
+  priority_objective.reserve(num_linear_objective);
 
   for (HighsInt iObj = 0; iObj < num_linear_objective; iObj++)
     priority_objective.push_back(

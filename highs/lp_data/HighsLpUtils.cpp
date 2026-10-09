@@ -1573,7 +1573,7 @@ void changeLpMatrixCoefficient(HighsLp& lp, const HighsInt row,
 HighsStatus changeLpIntegrality(HighsLp& lp,
                                 const HighsIndexCollection& index_collection,
                                 const vector<HighsVarType>& new_integrality,
-                                const HighsOptions options) {
+                                const HighsOptions& options) {
   HighsStatus return_status = HighsStatus::kOk;
   assert(ok(index_collection));
   HighsInt from_k;

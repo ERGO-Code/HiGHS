@@ -5,6 +5,6 @@
 
 #include "io/filereaderlp/model.hpp"
 
-Model readinstance(std::string filename);
+Model readinstance(const std::string& filename);
 
 #endif

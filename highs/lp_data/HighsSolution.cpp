@@ -703,6 +703,7 @@ std::vector<double> getEffectiveCosts(const HighsLp& lp,
   std::vector<double> row_mu_of_id;
 
   assert(lp.a_matrix_.isColwise());
+  col_count.reserve(lp.num_col_);
   for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++)
     col_count.push_back(lp.a_matrix_.start_[iCol + 1] -
                         lp.a_matrix_.start_[iCol]);
@@ -1513,7 +1514,7 @@ bool computeDualObjectiveValue(const double* gradient, const HighsLp& lp,
   return true;
 }
 
-void HighsError::print(std::string message) {
+void HighsError::print(const std::string& message) {
   printf(
       "\n%s\nAbsolute value = %11.4g; index = %9d\nRelative value = %11.4g; "
       "index = %9d\n",

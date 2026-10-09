@@ -33,8 +33,8 @@ class OptionRecord {
   std::string description;
   bool advanced;
 
-  OptionRecord(HighsOptionType Xtype, std::string Xname,
-               std::string Xdescription, bool Xadvanced) {
+  OptionRecord(HighsOptionType Xtype, const std::string& Xname,
+               const std::string& Xdescription, bool Xadvanced) {
     this->type = Xtype;
     this->name = Xname;
     this->description = Xdescription;
@@ -48,8 +48,8 @@ class OptionRecordBool : public OptionRecord {
  public:
   bool* value;
   bool default_value;
-  OptionRecordBool(std::string Xname, std::string Xdescription, bool Xadvanced,
-                   bool* Xvalue_pointer, bool Xdefault_value)
+  OptionRecordBool(const std::string& Xname, const std::string& Xdescription,
+                   bool Xadvanced, bool* Xvalue_pointer, bool Xdefault_value)
       : OptionRecord(HighsOptionType::kBool, Xname, Xdescription, Xadvanced) {
     value = Xvalue_pointer;
     default_value = Xdefault_value;
@@ -67,9 +67,10 @@ class OptionRecordInt : public OptionRecord {
   HighsInt lower_bound;
   HighsInt default_value;
   HighsInt upper_bound;
-  OptionRecordInt(std::string Xname, std::string Xdescription, bool Xadvanced,
-                  HighsInt* Xvalue_pointer, HighsInt Xlower_bound,
-                  HighsInt Xdefault_value, HighsInt Xupper_bound)
+  OptionRecordInt(const std::string& Xname, const std::string& Xdescription,
+                  bool Xadvanced, HighsInt* Xvalue_pointer,
+                  HighsInt Xlower_bound, HighsInt Xdefault_value,
+                  HighsInt Xupper_bound)
       : OptionRecord(HighsOptionType::kInt, Xname, Xdescription, Xadvanced) {
     value = Xvalue_pointer;
     lower_bound = Xlower_bound;
@@ -89,7 +90,7 @@ class OptionRecordDouble : public OptionRecord {
   double lower_bound;
   double upper_bound;
   double default_value;
-  OptionRecordDouble(std::string Xname, std::string Xdescription,
+  OptionRecordDouble(const std::string& Xname, const std::string& Xdescription,
                      bool Xadvanced, double* Xvalue_pointer,
                      double Xlower_bound, double Xdefault_value,
                      double Xupper_bound)
@@ -110,16 +111,16 @@ class OptionRecordString : public OptionRecord {
  public:
   std::string* value;
   std::string default_value;
-  OptionRecordString(std::string Xname, std::string Xdescription,
+  OptionRecordString(const std::string& Xname, const std::string& Xdescription,
                      bool Xadvanced, std::string* Xvalue_pointer,
-                     std::string Xdefault_value)
+                     const std::string& Xdefault_value)
       : OptionRecord(HighsOptionType::kString, Xname, Xdescription, Xadvanced) {
     value = Xvalue_pointer;
     default_value = Xdefault_value;
     *value = default_value;
   }
 
-  void assignvalue(std::string Xvalue) { *value = Xvalue; }
+  void assignvalue(const std::string& Xvalue) { *value = Xvalue; }
 
   virtual ~OptionRecordString() {}
 };

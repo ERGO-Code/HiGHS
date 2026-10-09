@@ -5362,7 +5362,7 @@ HPresolve::Result HPresolve::detectDominatedCol(
 
 void HPresolve::computeLocks(
     HighsInt col, bool considerObjective,
-    std::function<bool(HighsInt, bool, bool)> lockCallback) const {
+    const std::function<bool(HighsInt, bool, bool)>& lockCallback) const {
   // if the callback returns true, we stop examining the locks
   if (considerObjective) {
     // consider objective function
