@@ -23,6 +23,7 @@ test_array = [
   ['test_TestEkk', 'TestEkk.cpp'],
   ['test_TestFactor', 'TestFactor.cpp'],
   ['test_TestFilereader', 'TestFilereader.cpp'],
+  ['test_TestFolding', 'TestFolding.cpp'],
   ['test_TestHighsCDouble', 'TestHighsCDouble.cpp'],
   ['test_TestHighsGFkSolve', 'TestHighsGFkSolve.cpp'],
   ['test_TestHighsHash', 'TestHighsHash.cpp'],
