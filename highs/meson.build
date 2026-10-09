@@ -231,6 +231,10 @@ _hipo_srcs = [
 _srcs = [
     'HighsExternalApi.cpp',
     'HighsExternalDeps.cpp',
+    'folding/ColourRefinement.cpp',
+    'folding/DoubleQuantizer.cpp',
+    'folding/Fold.cpp',
+    'folding/SumClassifier.cpp',
     'io/filereaderlp/reader.cpp',
     'interfaces/highs_c_api.cpp',
     'io/Filereader.cpp',
