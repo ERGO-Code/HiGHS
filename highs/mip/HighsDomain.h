@@ -18,6 +18,7 @@
 #include "HighsPseudocost.h"
 #include "mip/HighsDomainChange.h"
 #include "mip/HighsMipSolver.h"
+#include "pdqsort/pdqsort.h"
 #include "util/HighsCDouble.h"
 #include "util/HighsRbTree.h"
 
@@ -708,16 +709,8 @@ class HighsDomain {
   std::vector<HighsDomainChange> getReducedDomainChangeStack(
       std::vector<HighsInt>& branchingPositions) const {
     std::vector<HighsDomainChange> reducedstack;
-    reducedstack.reserve(domchgstack_.size());
-    branchingPositions.reserve(branchPos_.size());
-    for (HighsInt i = 0; i < static_cast<HighsInt>(domchgstack_.size()); ++i) {
-      // keep only the tightest bound change for each variable
-      if ((domchgstack_[i].boundtype == HighsBoundType::kLower &&
-           colLowerPos_[domchgstack_[i].column] != i) ||
-          (domchgstack_[i].boundtype == HighsBoundType::kUpper &&
-           colUpperPos_[domchgstack_[i].column] != i))
-        continue;
-
+    if (domchgstack_.empty()) return reducedstack;
+    auto addChangeToReducedStack = [&](const HighsInt i) {
       if (domchgreason_[i].type == Reason::kBranching)
         branchingPositions.push_back(reducedstack.size());
       else {
@@ -732,6 +725,42 @@ class HighsDomain {
       }
 
       reducedstack.push_back(domchgstack_[i]);
+    };
+    // Collect tightest bound on each column in stack order
+    const HighsInt stackSize = static_cast<HighsInt>(domchgstack_.size());
+    const HighsInt numCols = mipsolver->numCol();
+    HighsInt logNumCols = 0;
+    for (HighsInt v = numCols - 1; v > 0; v >>= 1) {
+      ++logNumCols;
+    }
+    if ((stackSize - 1) / numCols <= logNumCols) {
+      // Stack smaller than n * (1 + ceil(log2(n)))
+      reducedstack.reserve(stackSize);
+      branchingPositions.reserve(branchPos_.size());
+      for (HighsInt i = 0; i < stackSize; i++) {
+        // keep only the tightest bound change for each variable
+        if ((domchgstack_[i].boundtype == HighsBoundType::kLower &&
+             colLowerPos_[domchgstack_[i].column] != i) ||
+            (domchgstack_[i].boundtype == HighsBoundType::kUpper &&
+             colUpperPos_[domchgstack_[i].column] != i))
+          continue;
+        addChangeToReducedStack(i);
+      }
+    } else {
+      // Stack is large. Avoid iterating over entire stack to
+      // hedge against worst-case performance
+      std::vector<HighsInt> positions;
+      positions.reserve(2 * numCols);
+      for (HighsInt col = 0; col < numCols; col++) {
+        if (colLowerPos_[col] != -1) positions.push_back(colLowerPos_[col]);
+        if (colUpperPos_[col] != -1) positions.push_back(colUpperPos_[col]);
+      }
+      pdqsort(positions.begin(), positions.end());
+      reducedstack.reserve(positions.size());
+      branchingPositions.reserve(std::min(positions.size(), branchPos_.size()));
+      for (const HighsInt i : positions) {
+        addChangeToReducedStack(i);
+      }
     }
 
     reducedstack.shrink_to_fit();
