@@ -679,19 +679,23 @@ TEST_CASE("lp-file-format-corrupt-files", "[highs_filereader]") {
 }
 
 TEST_CASE("filereader-lp-cannot-open-file", "[highs_filereader]") {
-    Highs highs;
-    std::string filename;
-    filename = std::string(HIGHS_DIR) + "/NONEXISTENT/FILEPATH/model.lp";
-    HighsStatus status = highs.writeModel(filename);
-    REQUIRE(status == HighsStatus::kError);
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  std::string filename;
+  filename = std::string(HIGHS_DIR) + "/NONEXISTENT/FILEPATH/model.lp";
+  HighsStatus status = highs.writeModel(filename);
+  REQUIRE(status == HighsStatus::kError);
 }
 
 TEST_CASE("filereader-mps-cannot-open-file", "[highs_filereader]") {
-    Highs highs;
-    std::string filename;
-    filename = std::string(HIGHS_DIR) + "/NONEXISTENT/FILEPATH/model.mps";
-    HighsStatus status = highs.writeModel(filename);
-    REQUIRE(status == HighsStatus::kError);
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  std::string filename;
+  filename = std::string(HIGHS_DIR) + "/NONEXISTENT/FILEPATH/model.mps";
+  HighsStatus status = highs.writeModel(filename);
+  REQUIRE(status == HighsStatus::kError);
+}
+
 TEST_CASE("write-semicontinuous-variable", "[highs_filereader]") {
   const std::string test_name = Catch::getResultCapture().getCurrentTestName();
   std::string filename = test_name + ".lp";
@@ -709,6 +713,7 @@ TEST_CASE("write-semicontinuous-variable", "[highs_filereader]") {
   highs.passModel(model);
   highs.writeModel(filename);
   Highs highs2;
+  highs2.setOptionValue("output_flag", dev_run);
   REQUIRE(highs2.readModel(filename) == HighsStatus::kOk);
   HighsModel model2 = highs2.getModel();
   REQUIRE(model2.lp_.col_lower_[0] == 3);
@@ -734,6 +739,7 @@ TEST_CASE("write-semiinteger-variable", "[highs_filereader]") {
   highs.passModel(model);
   highs.writeModel(filename);
   Highs highs2;
+  highs2.setOptionValue("output_flag", dev_run);
   REQUIRE(highs2.readModel(filename) == HighsStatus::kOk);
   HighsModel model2 = highs2.getModel();
   REQUIRE(model2.lp_.col_lower_[0] == 3);
