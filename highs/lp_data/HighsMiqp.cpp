@@ -12,7 +12,7 @@
 
 HighsStatus Highs::solveMiqp() {
   HighsStatus status = HighsStatus::kOk;
-  return this->optimizeModel();
+  //  return this->optimizeModel();
   status = this->optimizeModel();
   assert(status = HighsStatus::kError);
 
