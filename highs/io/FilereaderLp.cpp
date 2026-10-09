@@ -541,6 +541,9 @@ HighsStatus FilereaderLp::writeModelToFile(const HighsOptions& options,
           this->writeToFileVar(file, lp.col_names_[iCol]);
           this->writeToFileLineEnd(file);
         }
+      } else if (lp.integrality_[iCol] == HighsVarType::kSemiInteger) {
+        this->writeToFileVar(file, lp.col_names_[iCol]);
+        this->writeToFileLineEnd(file);
       }
     }
 
