@@ -2522,7 +2522,7 @@ TEST_CASE("no-modification-on-error", "[highs_data]") {
   lp.a_matrix_.value_ = {1, 1};
   lp.integrality_ = {col_integrality};
   lp.col_names_ = {col_name};
-  lp.col_names_ = {row0_name, row1_name};
+  lp.row_names_ = {row0_name, row1_name};
   Highs h;
   h.setOptionValue("output_flag", dev_run);
   REQUIRE(h.passModel(lp) == HighsStatus::kOk);
@@ -2538,19 +2538,24 @@ TEST_CASE("no-modification-on-error", "[highs_data]") {
 
   REQUIRE(h.changeColBounds(-1, inf, -inf) == HighsStatus::kError);
   REQUIRE((lp == highs_lp));
-  REQUIRE(h.changeColBounds(0, 1, -1) == HighsStatus::kWarning);
   REQUIRE(h.changeColBounds(0, -inf, -inf) == HighsStatus::kError);
+  REQUIRE((lp == highs_lp));
+  REQUIRE(h.changeColBounds(0, 1, -1) == HighsStatus::kWarning);
   REQUIRE(h.changeColBounds(0, col_lb, col_ub) == HighsStatus::kOk);
   REQUIRE((lp == highs_lp));
 
   REQUIRE(h.changeRowBounds(-1, inf, -inf) == HighsStatus::kError);
   REQUIRE((lp == highs_lp));
-  REQUIRE(h.changeRowBounds(0, 1, -1) == HighsStatus::kWarning);
   REQUIRE(h.changeRowBounds(0, -inf, -inf) == HighsStatus::kError);
+  REQUIRE((lp == highs_lp));
+  REQUIRE(h.changeRowBounds(0, 1, -1) == HighsStatus::kWarning);
   REQUIRE(h.changeRowBounds(0, row0_lb, row0_ub) == HighsStatus::kOk);
   REQUIRE((lp == highs_lp));
 
-  // Not possible to change a cost to an illegal integrality
+  // Not possible to change to an illegal integrality
+  REQUIRE(h.changeColIntegrality(-1, HighsVarType::kContinuous) ==
+          HighsStatus::kError);
+  REQUIRE((lp == highs_lp));
   REQUIRE(h.changeColIntegrality(0, HighsVarType::kContinuous) ==
           HighsStatus::kOk);
   REQUIRE(h.changeColIntegrality(0, col_integrality) == HighsStatus::kOk);
@@ -2559,7 +2564,7 @@ TEST_CASE("no-modification-on-error", "[highs_data]") {
   std::vector<HighsInt> index = {0};
   std::vector<double> value = {1};
 
-  assert(index.size() == value.size());
+  REQUIRE(index.size() == value.size());
   HighsInt num_new_index = index.size();
   // Try to add a column with illegal row index
   index[0] = highs_lp.num_row_;
