@@ -1675,6 +1675,8 @@ class Highs {
 
   HighsStatus completeSolutionFromDiscreteAssignment();
 
+  HighsStatus solveMiqp();
+
   HighsStatus callSolveLp(HighsLp& lp, const std::string& message);
   HighsStatus callSolveMip(HighsLp& lp, const std::string& message);
   HighsStatus callSolveQp(HighsModel& model, const std::string& message);

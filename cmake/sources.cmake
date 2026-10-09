@@ -366,6 +366,7 @@ set(highs_sources
     lp_data/HighsLp.cpp
     lp_data/HighsLpUtils.cpp
     lp_data/HighsModelUtils.cpp
+    lp_data/HighsMiqp.cpp
     lp_data/HighsOptions.cpp
     lp_data/HighsRanging.cpp
     lp_data/HighsRunData.cpp
