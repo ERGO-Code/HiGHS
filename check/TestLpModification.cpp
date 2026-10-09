@@ -2537,13 +2537,15 @@ TEST_CASE("no-modification-on-error", "[highs_data]") {
 
   REQUIRE(h.changeColBounds(-1, inf, -inf) == HighsStatus::kError);
   REQUIRE((lp == highs_lp));  
-  REQUIRE(h.changeColBounds(0, 1, -1) == HighsStatus::kOk);
+  REQUIRE(h.changeColBounds(0, 1, -1) == HighsStatus::kWarning);
   REQUIRE(h.changeColBounds(0, -inf, -inf) == HighsStatus::kError);
+  REQUIRE(h.changeColBounds(0, col_lb, col_ub) == HighsStatus::kOk);
   REQUIRE((lp == highs_lp));    
   
   REQUIRE(h.changeRowBounds(-1, inf, -inf) == HighsStatus::kError);
   REQUIRE((lp == highs_lp));  
-  REQUIRE(h.changeRowBounds(0, 1, -1) == HighsStatus::kOk);
+  REQUIRE(h.changeRowBounds(0, 1, -1) == HighsStatus::kWarning);
+  REQUIRE(h.changeRowBounds(0, -inf, -inf) == HighsStatus::kError);
   REQUIRE(h.changeRowBounds(0, row0_lb, row0_ub) == HighsStatus::kOk);
   REQUIRE((lp == highs_lp));    
 

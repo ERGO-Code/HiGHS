@@ -1006,7 +1006,7 @@ HighsStatus Highs::changeColBoundsInterface(
   }
   // Determine any implications for simplex data
   ekk_instance_.updateStatus(LpAction::kNewBounds);
-  return HighsStatus::kOk;
+  return return_status;
 }
 
 HighsStatus Highs::changeRowBoundsInterface(
@@ -1057,7 +1057,7 @@ HighsStatus Highs::changeRowBoundsInterface(
   }
   // Determine any implications for simplex data
   ekk_instance_.updateStatus(LpAction::kNewBounds);
-  return HighsStatus::kOk;
+  return return_status;
 }
 
 // Change a single coefficient in the matrix
