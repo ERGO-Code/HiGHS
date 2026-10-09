@@ -348,6 +348,7 @@ _srcs = [
     'util/HighsDynamicLibrary.cpp',
     'util/HighsHash.cpp',
     'util/HighsLinearSumBounds.cpp',
+    'util/HighsLinkedLists.cpp',
     'util/HighsMatrixPic.cpp',
     'util/HighsMatrixUtils.cpp',
     'util/HighsSort.cpp',
