@@ -692,4 +692,52 @@ TEST_CASE("filereader-mps-cannot-open-file", "[highs_filereader]") {
     filename = std::string(HIGHS_DIR) + "/NONEXISTENT/FILEPATH/model.mps";
     HighsStatus status = highs.writeModel(filename);
     REQUIRE(status == HighsStatus::kError);
+TEST_CASE("write-semicontinuous-variable", "[highs_filereader]") {
+  const std::string test_name = Catch::getResultCapture().getCurrentTestName();
+  std::string filename = test_name + ".lp";
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  HighsModel model;
+  HighsLp& lp = model.lp_;
+  lp.num_col_ = 1;
+  lp.num_row_ = 0;
+  lp.col_cost_ = {1};
+  lp.col_lower_ = {3};
+  lp.col_upper_ = {5};
+  lp.integrality_ = {HighsVarType::kSemiContinuous};
+  lp.col_names_ = {"x"};
+  highs.passModel(model);
+  highs.writeModel(filename);
+  Highs highs2;
+  REQUIRE(highs2.readModel(filename) == HighsStatus::kOk);
+  HighsModel model2 = highs2.getModel();
+  REQUIRE(model2.lp_.col_lower_[0] == 3);
+  REQUIRE(model2.lp_.col_upper_[0] == 5);
+  REQUIRE(model2.lp_.integrality_[0] == HighsVarType::kSemiContinuous);
+  std::remove(filename.c_str());
+}
+
+TEST_CASE("write-semiinteger-variable", "[highs_filereader]") {
+  const std::string test_name = Catch::getResultCapture().getCurrentTestName();
+  std::string filename = test_name + ".lp";
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  HighsModel model;
+  HighsLp& lp = model.lp_;
+  lp.num_col_ = 1;
+  lp.num_row_ = 0;
+  lp.col_cost_ = {1};
+  lp.col_lower_ = {3};
+  lp.col_upper_ = {5};
+  lp.integrality_ = {HighsVarType::kSemiInteger};
+  lp.col_names_ = {"x"};
+  highs.passModel(model);
+  highs.writeModel(filename);
+  Highs highs2;
+  REQUIRE(highs2.readModel(filename) == HighsStatus::kOk);
+  HighsModel model2 = highs2.getModel();
+  REQUIRE(model2.lp_.col_lower_[0] == 3);
+  REQUIRE(model2.lp_.col_upper_[0] == 5);
+  REQUIRE(model2.lp_.integrality_[0] == HighsVarType::kSemiInteger);
+  std::remove(filename.c_str());
 }
