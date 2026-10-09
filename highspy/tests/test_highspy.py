@@ -1,8 +1,8 @@
-import signal
 import tempfile
 import threading
 import unittest
 from sys import platform
+from unittest.mock import patch
 
 import numpy as np
 from highspy.highs import HighsError, HighsStatusError, highs_linear_expression, qsum
@@ -1358,25 +1358,22 @@ class TestHighsPy(unittest.TestCase):
         h.joinSolve(h.startSolve())
         h.joinSolve(h.startSolve(), 0)
 
-        # replace wait function with Ctrl+C signal
-        __tmp_wait = highspy.highs.Highs.wait
-        highspy.highs.Highs.wait = lambda self, t: signal.raise_signal(signal.SIGINT)  # type: ignore[assignment]
         h.HandleKeyboardInterrupt = False
 
         self.assertEqual(h.HandleKeyboardInterrupt, False)
         self.assertEqual(h.HandleUserInterrupt, False)
 
-        h.joinSolve(h.startSolve(), 0)
-        h.startSolve()
-        h.joinSolve(None, 0)
+        # simulate Ctrl+C by making wait raise KeyboardInterrupt
+        with patch.object(highspy.highs.Highs, "wait") as mock_wait:
+            mock_wait.side_effect = KeyboardInterrupt("Simulated user interrupt")
 
-        with self.assertRaises(SystemExit):
+            h.joinSolve(h.startSolve(), 0)
             h.startSolve()
-            h.joinSolve(None, 5)
-            unittest.main(exit=False)
+            h.joinSolve(None, 0)
 
-        # restore wait function (avoid issues in other tests)
-        highspy.highs.Highs.wait = __tmp_wait
+            with self.assertRaises(SystemExit):
+                h.startSolve()
+                h.joinSolve(None, 5)
 
     def test_callbacks(self):
         N = 8

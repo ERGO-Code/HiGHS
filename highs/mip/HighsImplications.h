@@ -28,6 +28,8 @@ class HighsImplications {
     double ub = kHighsInf;
   };
 
+  std::vector<HighsDomainChange> implicationsDown;
+  std::vector<HighsDomainChange> implicationsUp;
   std::vector<HighsHashTree<HighsInt, Implication>> implications;
   std::vector<HighsHashTree<HighsInt, bool>> reverseImplications;
   std::vector<uint8_t> hasProbed;
@@ -51,30 +53,60 @@ class HighsImplications {
   struct VarBound {
     double coef;
     double constant;
+    HighsInt origin;
 
     double minValue() const {
-      return static_cast<double>(static_cast<HighsCDouble>(constant) +
-                                 std::min(coef, 0.0));
+      double m = std::min(coef, 0.0);
+      if (std::abs(constant) >= kHighsInf || std::abs(m) >= kHighsInf)
+        return constant + m;
+      return static_cast<double>(static_cast<HighsCDouble>(constant) + m);
     }
     double maxValue() const {
-      return static_cast<double>(static_cast<HighsCDouble>(constant) +
-                                 std::max(coef, 0.0));
+      double m = std::max(coef, 0.0);
+      if (std::abs(constant) >= kHighsInf || std::abs(m) >= kHighsInf)
+        return constant + m;
+      return static_cast<double>(static_cast<HighsCDouble>(constant) + m);
     }
   };
 
  private:
   std::vector<HighsHashTree<HighsInt, VarBound>> vubs;
   std::vector<HighsHashTree<HighsInt, VarBound>> vlbs;
+  struct TentativeFixing {
+    enum Direction : uint8_t { Undecided, FixLower, FixUpper };
+    Direction downProbe = Undecided;
+    Direction upProbe = Undecided;
+
+    bool isUndecided() const {
+      return downProbe == Undecided && upProbe == Undecided;
+    }
+
+    void record(bool upProbing, HighsBoundType boundtype) {
+      Direction& probe = upProbing ? upProbe : downProbe;
+      if (probe != Undecided) return;
+      probe = boundtype == HighsBoundType::kLower ? FixUpper : FixLower;
+    }
+
+    void clear() {
+      downProbe = Undecided;
+      upProbe = Undecided;
+    }
+  };
+  std::vector<HighsInt> dualFixProbingBinInds_;
+  std::vector<TentativeFixing> dualFixProbingBinFlags_;
+
+  std::vector<HighsHashTree<HighsInt, HighsInt>> rowToVarBounds;
 
  public:
   const HighsMipSolver& mipsolver;
   std::vector<HighsSubstitution> substitutions;
   std::vector<HighsBool> colsubstituted;
+
   HighsImplications(const HighsMipSolver& mipsolver) : mipsolver(mipsolver) {
     nextCleanupCall = mipsolver.numNonzero();
     numImplications = 0;
     numVarBounds = 0;
-    resize(mipsolver.numCol());
+    resize(mipsolver.numCol(), mipsolver.numRow());
   }
 
   std::function<void(HighsInt, HighsInt, HighsInt, double)>
@@ -94,19 +126,25 @@ class HighsImplications {
     vubs.shrink_to_fit();
     vlbs.clear();
     vlbs.shrink_to_fit();
-    resize(mipsolver.numCol());
+    dualFixProbingBinInds_.clear();
+    rowToVarBounds.clear();
+    rowToVarBounds.shrink_to_fit();
+    resize(mipsolver.numCol(), mipsolver.numRow());
     numVarBounds = 0;
     nextCleanupCall = mipsolver.numNonzero();
   }
 
-  void resize(HighsInt ncols) {
+  void resize(HighsInt ncols, HighsInt nrows) {
     implications.resize(2 * static_cast<size_t>(ncols));
     hasProbed.resize(2 * static_cast<size_t>(ncols));
     reverseImplications.resize(ncols);
     colsubstituted.resize(ncols);
     vubs.resize(ncols);
     vlbs.resize(ncols);
+    rowToVarBounds.resize(nrows);
     maxVarBounds = calcMaxVarBounds(ncols);
+    dualFixProbingBinInds_.reserve(ncols);
+    dualFixProbingBinFlags_.assign(ncols, TentativeFixing{});
   }
 
   constexpr static int64_t calcMaxVarBounds(HighsInt numcol) {
@@ -127,17 +165,17 @@ class HighsImplications {
 
   void strengthenVarBound(VarBound& vbnd, HighsInt multiplier) const;
 
-  void addVUB(HighsInt col, HighsInt vubcol, double vubcoef,
-              double vubconstant);
+  void addVUB(HighsInt col, HighsInt vubcol, double vubcoef, double vubconstant,
+              HighsInt origin = -1);
 
   void addVUB(HighsInt col, HighsInt vubcol, double vubcoef, double vubconstant,
-              double colupperbound, bool colisinteger);
-
-  void addVLB(HighsInt col, HighsInt vlbcol, double vlbcoef,
-              double vlbconstant);
+              double colupperbound, bool colisinteger, HighsInt origin = -1);
 
   void addVLB(HighsInt col, HighsInt vlbcol, double vlbcoef, double vlbconstant,
-              double collowerbound, bool colisinteger);
+              HighsInt origin = -1);
+
+  void addVLB(HighsInt col, HighsInt vlbcol, double vlbcoef, double vlbconstant,
+              double collowerbound, bool colisinteger, HighsInt origin = -1);
 
   void columnTransformed(HighsInt col, double scale, double constant) {
     // Update implications affected by transformation
@@ -177,6 +215,19 @@ class HighsImplications {
     }
   }
 
+  const HighsHashTree<HighsInt, VarBound>& getVlbs(HighsInt col) const {
+    return vlbs[col];
+  }
+  const HighsHashTree<HighsInt, VarBound>& getVubs(HighsInt col) const {
+    return vubs[col];
+  }
+
+  void rowModified(HighsInt row);
+
+  const HighsHashTree<HighsInt, HighsInt>& getRowVarBounds(HighsInt row) const {
+    return rowToVarBounds[row];
+  }
+
   std::pair<HighsInt, VarBound> getBestVub(HighsInt col,
                                            const HighsSolution& lpSolution,
                                            double& bestUb,
@@ -188,6 +239,8 @@ class HighsImplications {
                                            const HighsDomain& globaldom) const;
 
   bool runProbing(HighsInt col, HighsInt& numReductions);
+
+  void reindexRows(HighsInt nrows, const std::vector<HighsInt>& newRowIndex);
 
   void rebuild(HighsInt ncols, const std::vector<HighsInt>& cIndex,
                const std::vector<HighsInt>& rIndex);
@@ -201,6 +254,11 @@ class HighsImplications {
 
   void cleanupVarbounds(HighsInt col);
 
+  bool redundantVlb(const VarBound& vlb, double lb) const;
+  bool redundantVub(const VarBound& vub, double ub) const;
+  bool tightenVlb(VarBound& vlb, double lb) const;
+  bool tightenVub(VarBound& vub, double ub) const;
+
   void cleanupVlb(HighsInt col, HighsInt vlbCol,
                   HighsImplications::VarBound& vlb, double lb, bool& redundant,
                   bool& infeasible, bool allowBoundChanges = true) const;
@@ -210,6 +268,20 @@ class HighsImplications {
                   bool& infeasible, bool allowBoundChanges = true) const;
 
   void applyImplications(HighsDomain& domain, HighsInt col, HighsInt val);
+
+  void recordTentativeCliques(const HighsInt val,
+                              const HighsDomainChange& domchg) {
+    const HighsInt col = domchg.column;
+    TentativeFixing& fixing = dualFixProbingBinFlags_[col];
+    if (fixing.isUndecided()) dualFixProbingBinInds_.push_back(col);
+    fixing.record(val == 1, domchg.boundtype);
+  }
+
+  void clearTentativeCliques() {
+    for (const HighsInt col : dualFixProbingBinInds_)
+      dualFixProbingBinFlags_[col].clear();
+    dualFixProbingBinInds_.clear();
+  }
 };
 
 #endif

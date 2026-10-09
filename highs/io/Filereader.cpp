@@ -21,7 +21,7 @@ static inline void tolower(std::string& s) {
 }
 
 Filereader* Filereader::getFilereader(const HighsLogOptions& log_options,
-                                      const std::string filename) {
+                                      const std::string& filename) {
   Filereader* reader;
   std::string extension = getFilenameExt(filename);
   if (extension == "gz") {
@@ -77,10 +77,10 @@ std::string extractModelName(const std::string& filename) {
   std::string name = filename;
   std::size_t found = name.find_last_of("/\\");
   if (found < name.size()) name = name.substr(found + 1);
-  found = name.find_last_of(".");
+  found = name.find_last_of('.');
   if (name.substr(found + 1) == "gz") {
     name.erase(found, name.size() - found);
-    found = name.find_last_of(".");
+    found = name.find_last_of('.');
   }
   if (found < name.size()) name.erase(found, name.size() - found);
   return name;

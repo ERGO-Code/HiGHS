@@ -103,9 +103,9 @@ class HEkkPrimal {
   void shiftBound(const bool lower, const HighsInt iVar, const double value,
                   const double random_value, double& bound, double& shift);
   void savePrimalRay();
-  HighsDebugStatus debugPrimalSimplex(const std::string message,
+  HighsDebugStatus debugPrimalSimplex(const std::string& message,
                                       const bool initialise = false);
-  HighsDebugStatus debugPrimalSteepestEdgeWeights(const std::string message);
+  HighsDebugStatus debugPrimalSteepestEdgeWeights(const std::string& message);
   HighsDebugStatus debugPrimalSteepestEdgeWeights(
       const HighsInt alt_debug_level = -1);
 

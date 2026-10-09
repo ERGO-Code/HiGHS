@@ -249,7 +249,7 @@ struct HighsMipSolverData {
   void setCallbackDataOut(const double mipsolver_objective_value) const;
   bool interruptFromCallbackWithData(const int callback_type,
                                      const double mipsolver_objective_value,
-                                     const std::string message = "") const;
+                                     const std::string& message = "") const;
   void queryExternalSolution(
       const double mipsolver_objective_value,
       const ExternalMipSolutionQueryOrigin external_solution_query_origin);
@@ -288,8 +288,9 @@ struct HighsMipSolverData {
   const HighsCutPool& getCutPool() const { return cutpools[0]; }
   const HighsLpRelaxation& getLp() const { return lps[0]; }
   const HighsPseudocost& getPseudoCost() const { return pseudocosts[0]; }
-  void reportOriginalPresolvedCol(const HighsInt original_col,
-                                  const std::vector<double> presolved_solution);
+  void reportOriginalPresolvedCol(
+      const HighsInt original_col,
+      const std::vector<double>& presolved_solution);
 };
 
 #endif

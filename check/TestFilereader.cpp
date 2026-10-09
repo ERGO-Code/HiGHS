@@ -26,7 +26,7 @@ TEST_CASE("filereader-edge-cases", "[highs_filereader]") {
   const bool test_garbage_lp = true;
 
   Highs highs;
-  if (!dev_run) highs.setOptionValue("output_flag", false);
+  highs.setOptionValue("output_flag", dev_run);
   const HighsInfo& info = highs.getInfo();
 
   if (run_first_tests) {
@@ -88,19 +88,13 @@ TEST_CASE("filereader-edge-cases", "[highs_filereader]") {
     }
 
     if (test_garbage_lp) {
-      // Since #2316, reading an LP file of garbage yields an empty
-      // model, since the absence of an objective is (rightly) no
-      // longer an error. However the LP file reader should fail due
-      // to the requirement that a LP format file must begin with a
-      // keyword.
+      // The absence of an objective is not an error (#2316), but the
+      // LP file reader fails due to the requirement that a LP format
+      // file must begin with a keyword.
       if (dev_run) printf("\ngarbage.lp\n");
       model_file = std::string(HIGHS_DIR) + "/check/instances/" + model + ".lp";
       read_status = highs.readModel(model_file);
-      // Should be HighsStatus::kError); #2316
-      REQUIRE(read_status == HighsStatus::kOk);
-      REQUIRE(highs.getLp().num_col_ == 0);
-      REQUIRE(highs.getLp().num_row_ == 0);
-      REQUIRE(highs.getLp().a_matrix_.numNz() == 0);
+      REQUIRE(read_status == HighsStatus::kError);
     }
   }
 
@@ -109,8 +103,7 @@ TEST_CASE("filereader-edge-cases", "[highs_filereader]") {
   if (dev_run) printf("\n%s.mps\n", model.c_str());
   model_file = std::string(HIGHS_DIR) + "/check/instances/" + model + ".lp";
   read_status = highs.readModel(model_file);
-  // Should be HighsStatus::kError); #2316
-  REQUIRE(read_status == HighsStatus::kOk);
+  REQUIRE(read_status == HighsStatus::kError);
 
   // Gurobi cannot read
   //
@@ -133,16 +126,18 @@ TEST_CASE("filereader-edge-cases", "[highs_filereader]") {
   REQUIRE(read_status == HighsStatus::kError);
 
   model = "1451";
-  // Vanilla .lp file, but for constraint named "end" which tests code
-  // to permit keywords as constraint names
+  // Vanilla .lp file, but for a constraint named "end" which tests
+  // code to permit keywords as constraint names, and 10 (other)
+  // constraints with constant in LHS that is viewed as a numeric
+  // variable name and ignored as illegal. The 11 instances
   if (dev_run) printf("\n%s.lp\n", model.c_str());
   model_file = std::string(HIGHS_DIR) + "/check/instances/" + model + ".lp";
   read_status = highs.readModel(model_file);
-  REQUIRE(read_status == HighsStatus::kOk);
+  REQUIRE(read_status == HighsStatus::kWarning);
   run_status = highs.run();
   REQUIRE(run_status == HighsStatus::kOk);
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
-  REQUIRE(highs.getInfo().objective_function_value == 2);
+  REQUIRE(highs.getInfo().objective_function_value == 9);
 
   highs.resetGlobalScheduler(true);
 }
@@ -637,4 +632,98 @@ TEST_CASE("matrix-hessian-image", "[highs_filereader]") {
   std::remove(hessian_image_filename_and_extension.c_str());
   std::remove("LpMatrix.pbm");
   std::remove("Hessian.pbm");
+}
+
+TEST_CASE("lp-file-format-corrupt-files", "[highs_filereader]") {
+  const std::string filename = "lp-file-format-corrupt-files.lp";
+  const std::vector<std::string> bad_models = {
+      // Terms after the first in an expression must be separated by a sign
+      "min\n obj: x y\nst\n c: x + y >= 1\nend\n",
+      "min\n obj: x + y\nst\n c: x + y >= 1 + 1\nend\n",
+      "min\n obj: x + y\nst\n c: x y >= 1\nend\n",
+      "min\n obj: 2 3 x\nst\n c: x >= 1\nend\n",
+      "min\n obj: x 3\nst\n c: x >= 1\nend\n",
+      "min\n obj: x [ x^2 ] / 2\nst\n c: x >= 1\nend\n",
+      "min\n obj: x + [ x^2 y^2 ] / 2\nst\n c: x + y >= 1\nend\n",
+      "min\n obj: x + [ x^2 2 x * y ] / 2\nst\n c: x + y >= 1\nend\n",
+      // Tokens before the first section keyword
+      "x + y\nmin\n obj: x + y\nst\n c: x + y >= 1\nend\n",
+      "comment\nmin\nend",
+  };
+  for (const std::string& model : bad_models) {
+    FILE* file = fopen(filename.c_str(), "w");
+    fprintf(file, "%s", model.c_str());
+    fclose(file);
+    Highs highs;
+    highs.setOptionValue("output_flag", dev_run);
+    REQUIRE(highs.readModel(filename) == HighsStatus::kError);
+  }
+  const std::vector<std::string> good_models = {
+      "min\n obj: x + y\nst\n c: x + y >= 1\nend\n",
+      "min\n obj: - x - 2 y + 3\nst\n c: x\n + y >= 1\nend\n",
+      "min\n obj: 2 + 3 x\nst\n c: x >= 1\nend\n",
+      "min\n obj: x + [ x^2 + 2 x * y + y^2 ] / 2\nst\n c: x + y >= 1\nend\n",
+      "min\n obj: [ x^2 ] / 2 + x\nst\n c: x >= 1\n x + y >= 2\nend\n",
+      "\\ comment\nmin\n obj: x + y\nst\n c: x + y >= 1\nend\n",
+      "\\ comment",
+  };
+  for (const std::string& model : good_models) {
+    FILE* file = fopen(filename.c_str(), "w");
+    fprintf(file, "%s", model.c_str());
+    fclose(file);
+    Highs highs;
+    highs.setOptionValue("output_flag", dev_run);
+    REQUIRE(highs.readModel(filename) == HighsStatus::kOk);
+  }
+  std::remove(filename.c_str());
+}
+
+TEST_CASE("write-semicontinuous-variable", "[highs_filereader]") {
+  const std::string test_name = Catch::getResultCapture().getCurrentTestName();
+  std::string filename = test_name + ".lp";
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  HighsModel model;
+  HighsLp& lp = model.lp_;
+  lp.num_col_ = 1;
+  lp.num_row_ = 0;
+  lp.col_cost_ = {1};
+  lp.col_lower_ = {3};
+  lp.col_upper_ = {5};
+  lp.integrality_ = {HighsVarType::kSemiContinuous};
+  lp.col_names_ = {"x"};
+  highs.passModel(model);
+  highs.writeModel(filename);
+  Highs highs2;
+  REQUIRE(highs2.readModel(filename) == HighsStatus::kOk);
+  HighsModel model2 = highs2.getModel();
+  REQUIRE(model2.lp_.col_lower_[0] == 3);
+  REQUIRE(model2.lp_.col_upper_[0] == 5);
+  REQUIRE(model2.lp_.integrality_[0] == HighsVarType::kSemiContinuous);
+  std::remove(filename.c_str());
+}
+
+TEST_CASE("write-semiinteger-variable", "[highs_filereader]") {
+  const std::string test_name = Catch::getResultCapture().getCurrentTestName();
+  std::string filename = test_name + ".lp";
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  HighsModel model;
+  HighsLp& lp = model.lp_;
+  lp.num_col_ = 1;
+  lp.num_row_ = 0;
+  lp.col_cost_ = {1};
+  lp.col_lower_ = {3};
+  lp.col_upper_ = {5};
+  lp.integrality_ = {HighsVarType::kSemiInteger};
+  lp.col_names_ = {"x"};
+  highs.passModel(model);
+  highs.writeModel(filename);
+  Highs highs2;
+  REQUIRE(highs2.readModel(filename) == HighsStatus::kOk);
+  HighsModel model2 = highs2.getModel();
+  REQUIRE(model2.lp_.col_lower_[0] == 3);
+  REQUIRE(model2.lp_.col_upper_[0] == 5);
+  REQUIRE(model2.lp_.integrality_[0] == HighsVarType::kSemiInteger);
+  std::remove(filename.c_str());
 }

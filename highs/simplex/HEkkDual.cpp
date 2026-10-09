@@ -609,6 +609,9 @@ void HEkkDual::solvePhase1() {
   // Switch to dual phase 1 bounds
   ekk_instance_.initialiseBound(SimplexAlgorithm::kDual, solve_phase);
   ekk_instance_.initialiseNonbasicValueAndMove();
+  // Free variables are boxed in phase 1, so the list of free variables
+  // created at the start of any earlier phase 2 must not be used (#2300)
+  dualRow.freeList.clear();
 
   // If there's no backtracking basis, save the initial basis in case of
   // backtracking
@@ -2960,7 +2963,7 @@ double HEkkDual::computeExactDualObjectiveValue(HVector& dual_col,
   return double(dual_objective);
 }
 
-HighsDebugStatus HEkkDual::debugDualSimplex(const std::string message,
+HighsDebugStatus HEkkDual::debugDualSimplex(const std::string& message,
                                             const bool initialise) {
   HighsDebugStatus return_status =
       ekk_instance_.debugSimplex(message, algorithm, solve_phase, initialise);

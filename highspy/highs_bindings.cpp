@@ -1,4 +1,5 @@
-#define PYBIND11_DETAILED_ERROR_MESSAGES 1
+// #define PYBIND11_DETAILED_ERROR_MESSAGES 1
+
 #include <pybind11/functional.h>
 #include <pybind11/numpy.h>
 #include <pybind11/pybind11.h>
@@ -1234,7 +1235,9 @@ PYBIND11_MODULE(_core, m, py::mod_gil_not_used()) {
                      &HighsInfo::max_complementarity_violation)
       .def_readwrite("primal_dual_objective_error",
                      &HighsInfo::primal_dual_objective_error)
-      .def_readwrite("primal_dual_integral", &HighsInfo::primal_dual_integral);
+      .def_readwrite("primal_dual_integral", &HighsInfo::primal_dual_integral)
+      .def_readwrite("active_cost_norm", &HighsInfo::active_cost_norm)
+      .def_readwrite("active_bound_norm", &HighsInfo::active_bound_norm);
   py::class_<HighsOptions>(m, "HighsOptions", py::module_local())
       .def(py::init<>())
       .def_readwrite("presolve", &HighsOptions::presolve)

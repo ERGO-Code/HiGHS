@@ -113,7 +113,7 @@ struct RawToken {
     type = RawTokenType::STR;
     return *this;
   }
-  RawToken& operator=(const std::pair<double, std::string> vs) {
+  RawToken& operator=(const std::pair<double, std::string>& vs) {
     dvalue = vs.first;
     svalue = vs.second;
     type = RawTokenType::CONS;
@@ -191,9 +191,11 @@ struct ProcessedToken {
     double value;
     LpComparisonType dir;
   };
+  // whether the token was preceded by a + or - sign
+  bool hassign = false;
 
   ProcessedToken(const ProcessedToken&) = delete;
-  ProcessedToken(ProcessedToken&& t) : type(t.type) {
+  ProcessedToken(ProcessedToken&& t) : type(t.type), hassign(t.hassign) {
     switch (type) {
       case ProcessedTokenType::SECID:
         keyword = t.keyword;
@@ -284,11 +286,11 @@ class Reader {
   void processendsec();
   void parseexpression(std::vector<ProcessedToken>::iterator& it,
                        std::vector<ProcessedToken>::iterator end,
-                       std::shared_ptr<Expression> expr, bool isobj);
+                       const std::shared_ptr<Expression>& expr, bool isobj);
 
   //  void printRawTokens();
  public:
-  Reader(std::string filename) {
+  Reader(const std::string& filename) {
 #ifdef ZLIB_FOUND
     try {
       file.open(filename);
@@ -305,7 +307,7 @@ class Reader {
   Model read();
 };
 
-Model readinstance(std::string filename) {
+Model readinstance(const std::string& filename) {
   Reader reader(filename);
   return reader.read();
 }
@@ -365,13 +367,22 @@ void Reader::processnonesec() {
 
 void Reader::parseexpression(std::vector<ProcessedToken>::iterator& it,
                              std::vector<ProcessedToken>::iterator end,
-                             std::shared_ptr<Expression> expr, bool isobj) {
+                             const std::shared_ptr<Expression>& expr,
+                             bool isobj) {
   if (it != end && it->type == ProcessedTokenType::CONID) {
     expr->name = it->name;
     ++it;
   }
 
+  bool firstterm = true;
   while (it != end) {
+    // all terms but the first must be preceded by a sign, so that, e.g., "x y"
+    // is not read as "x + y"
+    if (!firstterm && (it->type == ProcessedTokenType::CONST ||
+                       it->type == ProcessedTokenType::VARID ||
+                       it->type == ProcessedTokenType::BRKOP))
+      lpassert(it->hassign);
+    firstterm = false;
     std::vector<ProcessedToken>::iterator next = it;
     ++next;
     // const var
@@ -414,7 +425,10 @@ void Reader::parseexpression(std::vector<ProcessedToken>::iterator& it,
     // quadratic expression
     if (next != end && it->type == ProcessedTokenType::BRKOP) {
       ++it;
+      bool firstquadterm = true;
       while (it != end && it->type != ProcessedTokenType::BRKCL) {
+        if (!firstquadterm) lpassert(it->hassign);
+        firstquadterm = false;
         // const var hat const
         std::vector<ProcessedToken>::iterator next1 = it;  // token after it
         std::vector<ProcessedToken>::iterator next2 = it;  // token 2nd-after it
@@ -569,8 +583,8 @@ void Reader::processconsec() {
     LpComparisonType dir = begin->dir;
     ++begin;
 
-    // should still not be at end of section yet, but a right-hand-side value
-    // should be next
+    // should still not be at end of section yet, but a right-hand
+    // side value should be next
     lpassert(begin != sectiontokens[LpSectionKeyword::CON].second);
     lpassert(begin->type == ProcessedTokenType::CONST);
     switch (dir) {
@@ -849,6 +863,10 @@ void Reader::processsections() {
 void Reader::splittokens() {
   LpSectionKeyword currentsection = LpSectionKeyword::NONE;
 
+  // Any tokens must be preceded by a section keyword
+  lpassert(processedtokens.empty() ||
+           processedtokens.front().type == ProcessedTokenType::SECID);
+
   bool debug_open_section = false;
   for (std::vector<ProcessedToken>::iterator it(processedtokens.begin());
        it != processedtokens.end(); ++it) {
@@ -917,9 +935,9 @@ void Reader::processtokens() {
   while (!rawtokens[0].istype(RawTokenType::FLEND)) {
     if (rawtokens[0].type == RawTokenType::STR) {
       if (parsesectionkeyword(rawtokens[0].svalue) != LpSectionKeyword::NONE) {
-	// Found an LP section keyword so check it's not a constraint name!
-	if (rawtokens[1].type == RawTokenType::COLON)
-	  rawtokens[0].type = RawTokenType::CONS;
+        // Found an LP section keyword so check it's not a constraint name!
+        if (rawtokens[1].type == RawTokenType::COLON)
+          rawtokens[0].type = RawTokenType::CONS;
       }
     }
     // Slash + asterisk: comment, skip everything up to next asterisk + slash
@@ -1047,6 +1065,7 @@ void Reader::processtokens() {
       // +/- Constant
       if (rawtokens[0].istype(RawTokenType::CONS)) {
         processedtokens.emplace_back(sign * rawtokens[0].dvalue);
+        processedtokens.back().hassign = true;
         nextrawtoken();
         continue;
       }
@@ -1054,6 +1073,7 @@ void Reader::processtokens() {
       // + [, + + [, - - [
       if (rawtokens[0].istype(RawTokenType::BRKOP) && sign == 1.0) {
         processedtokens.emplace_back(ProcessedTokenType::BRKOP);
+        processedtokens.back().hassign = true;
         nextrawtoken();
         continue;
       }
@@ -1064,6 +1084,7 @@ void Reader::processtokens() {
       // +/- variable name
       if (rawtokens[0].istype(RawTokenType::STR)) {
         processedtokens.emplace_back(sign);
+        processedtokens.back().hassign = true;
         continue;
       }
 
@@ -1337,7 +1358,8 @@ bool Reader::readnexttoken(RawToken& t) {
     // Extract the string corresponding to the double, in case the
     // double is a constraint name
     size_t double_len = endptr - startptr;
-    std::string double_name = this->linebuffer.substr(this->linebufferpos, double_len);
+    std::string double_name =
+        this->linebuffer.substr(this->linebufferpos, double_len);
     // t = constant;
     t = std::make_pair(constant, double_name);
     this->linebufferpos += endptr - startptr;

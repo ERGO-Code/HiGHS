@@ -34,7 +34,7 @@ struct HighsError {
   HighsInt absolute_index;
   double relative_value;
   HighsInt relative_index;
-  void print(std::string message);
+  void print(const std::string& message);
   void reset();
   void invalidate();
 };
@@ -96,6 +96,9 @@ void lpKktCheck(HighsModelStatus& model_status, HighsInfo& info,
                 const HighsLp& lp, const HighsSolution& solution,
                 const HighsBasis& basis, const HighsOptions& options,
                 const std::string& message);
+
+std::vector<double> getEffectiveCosts(const HighsLp& lp,
+                                      const HighsOptions& options);
 
 void getPrimalDualGlpsolErrors(const HighsOptions& options, const HighsLp& lp,
                                const std::vector<double>& gradient,

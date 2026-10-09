@@ -22,7 +22,7 @@ struct Variable {
   double upperbound = std::numeric_limits<double>::infinity();
   std::string name;
 
-  Variable(std::string n = "") : name(n){};
+  Variable(const std::string& n = "") : name(n){};
 };
 
 struct LinTerm {
