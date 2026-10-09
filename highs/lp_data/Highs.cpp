@@ -3135,7 +3135,8 @@ HighsStatus Highs::changeColsIntegrality(const HighsInt num_set_entries,
     return analyseSetCreateError(options_.log_options, "changeColsIntegrality",
                                  create_error, true, num_set_entries,
                                  local_set.data(), model_.lp_.num_col_);
-  HighsStatus return_status = changeIntegralityInterface(index_collection, local_integrality.data());
+  HighsStatus return_status =
+      changeIntegralityInterface(index_collection, local_integrality.data());
   if (return_status == HighsStatus::kError) return HighsStatus::kError;
   return returnFromHighs(return_status);
 }
@@ -3147,7 +3148,8 @@ HighsStatus Highs::changeColsIntegrality(const HighsInt* mask,
   const bool create_error = create(index_collection, mask, model_.lp_.num_col_);
   assert(!create_error);
   (void)create_error;
-  HighsStatus return_status = changeIntegralityInterface(index_collection, integrality);
+  HighsStatus return_status =
+      changeIntegralityInterface(index_collection, integrality);
   if (return_status == HighsStatus::kError) return HighsStatus::kError;
   return returnFromHighs(return_status);
 }
@@ -3194,7 +3196,8 @@ HighsStatus Highs::changeColsCost(const HighsInt num_set_entries,
     return analyseSetCreateError(options_.log_options, "changeColsCost",
                                  create_error, true, num_set_entries,
                                  local_set.data(), model_.lp_.num_col_);
-  HighsStatus return_status = changeCostsInterface(index_collection, local_cost.data());
+  HighsStatus return_status =
+      changeCostsInterface(index_collection, local_cost.data());
   if (return_status == HighsStatus::kError) return HighsStatus::kError;
   return returnFromHighs(return_status);
 }
@@ -3229,7 +3232,8 @@ HighsStatus Highs::changeColsBounds(const HighsInt from_col,
                  int(from_col), int(to_col), int(model_.lp_.num_col_));
     return HighsStatus::kError;
   }
-  HighsStatus return_status = changeColBoundsInterface(index_collection, lower, upper);
+  HighsStatus return_status =
+      changeColBoundsInterface(index_collection, lower, upper);
   if (return_status == HighsStatus::kError) return HighsStatus::kError;
   return returnFromHighs(return_status);
 }
@@ -3275,7 +3279,8 @@ HighsStatus Highs::changeColsBounds(const HighsInt* mask, const double* lower,
   const bool create_error = create(index_collection, mask, model_.lp_.num_col_);
   assert(!create_error);
   (void)create_error;
-  HighsStatus return_status = changeColBoundsInterface(index_collection, lower, upper);
+  HighsStatus return_status =
+      changeColBoundsInterface(index_collection, lower, upper);
   if (return_status == HighsStatus::kError) return HighsStatus::kError;
   return returnFromHighs(return_status);
 }
@@ -3299,7 +3304,8 @@ HighsStatus Highs::changeRowsBounds(const HighsInt from_row,
                  int(from_row), int(to_row), int(model_.lp_.num_row_));
     return HighsStatus::kError;
   }
-  HighsStatus return_status = changeRowBoundsInterface(index_collection, lower, upper);
+  HighsStatus return_status =
+      changeRowBoundsInterface(index_collection, lower, upper);
   if (return_status == HighsStatus::kError) return HighsStatus::kError;
   return returnFromHighs(return_status);
 }
@@ -3345,7 +3351,8 @@ HighsStatus Highs::changeRowsBounds(const HighsInt* mask, const double* lower,
   const bool create_error = create(index_collection, mask, model_.lp_.num_row_);
   assert(!create_error);
   (void)create_error;
-  HighsStatus return_status = changeRowBoundsInterface(index_collection, lower, upper);
+  HighsStatus return_status =
+      changeRowBoundsInterface(index_collection, lower, upper);
   if (return_status == HighsStatus::kError) return HighsStatus::kError;
   return returnFromHighs(return_status);
 }
