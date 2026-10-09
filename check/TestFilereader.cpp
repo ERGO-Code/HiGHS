@@ -678,6 +678,20 @@ TEST_CASE("lp-file-format-corrupt-files", "[highs_filereader]") {
   std::remove(filename.c_str());
 }
 
+TEST_CASE("filereader-lp-cannot-open-file", "[highs_filereader]") {
+    Highs highs;
+    std::string filename;
+    filename = std::string(HIGHS_DIR) + "/NONEXISTENT/FILEPATH/model.lp";
+    HighsStatus status = highs.writeModel(filename);
+    REQUIRE(status == HighsStatus::kError);
+}
+
+TEST_CASE("filereader-mps-cannot-open-file", "[highs_filereader]") {
+    Highs highs;
+    std::string filename;
+    filename = std::string(HIGHS_DIR) + "/NONEXISTENT/FILEPATH/model.mps";
+    HighsStatus status = highs.writeModel(filename);
+    REQUIRE(status == HighsStatus::kError);
 TEST_CASE("write-semicontinuous-variable", "[highs_filereader]") {
   const std::string test_name = Catch::getResultCapture().getCurrentTestName();
   std::string filename = test_name + ".lp";
