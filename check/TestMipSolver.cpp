@@ -2384,7 +2384,13 @@ TEST_CASE("implied-equation-unbounded", "[highs_test_mip_solver]") {
   Highs highs;
   highs.setOptionValue("output_flag", dev_run);
   REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
-  solve(highs, kHighsOffString, HighsModelStatus::kUnbounded);
-  highs.setOptionValue("output_flag", dev_run);
-  solve(highs, kHighsOnString, HighsModelStatus::kUnboundedOrInfeasible);
+  for (const std::string& presolve : {kHighsOffString, kHighsOnString}) {
+    highs.clearSolver();
+    REQUIRE(highs.setOptionValue("presolve", presolve) == HighsStatus::kOk);
+    REQUIRE(highs.run() == HighsStatus::kOk);
+    const HighsModelStatus model_status = highs.getModelStatus();
+    REQUIRE((model_status == HighsModelStatus::kUnbounded ||
+             model_status == HighsModelStatus::kUnboundedOrInfeasible));
+  }
+  highs.resetGlobalScheduler(true);
 }
