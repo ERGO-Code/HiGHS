@@ -1824,6 +1824,7 @@ HighsStatus Highs::calledOptimizeModel() {
         // Presolve has returned kUnboundedOrInfeasible, but HiGHS
         // can't return this. Use primal simplex solver on the original
         // LP
+	HighsStatus save_return_status = return_status;
         HighsOptions save_options = options_;
         options_.solver = "simplex";
         options_.simplex_strategy = kSimplexStrategyPrimal;
@@ -1835,9 +1836,22 @@ HighsStatus Highs::calledOptimizeModel() {
         options_ = save_options;
         if (return_status == HighsStatus::kError)
           return returnFromOptimizeModel(return_status, undo_mods);
-        info_.valid = true;
-        assert(model_status_ == HighsModelStatus::kInfeasible ||
-               model_status_ == HighsModelStatus::kUnbounded);
+	// Primal simplex doesn't necessarily resolve the
+	// kUnboundedOrInfeasible case, as it may time out or reach
+	// the iteration count (#3383), or even fail
+	const bool resolved =
+	  model_status_ == HighsModelStatus::kInfeasible ||
+	  model_status_ == HighsModelStatus::kUnbounded;
+	if (resolved) {
+	  info_.valid = true;	  
+	} else {
+	  // Unresolved, so return with result from presolve
+	  printf("Highs::calledOptimizeModel() kUnboundedOrInfeasible unresolved\n");
+	  model_status_ = HighsModelStatus::kUnboundedOrInfeasible;
+	  return_status = save_return_status;
+	  setHighsModelStatusAndClearSolutionAndBasis(
+              HighsModelStatus::kUnboundedOrInfeasible);
+	}
         return returnFromOptimizeModel(return_status, undo_mods);
       }
       case HighsPresolveStatus::kTimeout: {
