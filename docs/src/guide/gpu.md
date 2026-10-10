@@ -11,9 +11,12 @@ The native HiPDLP solver additionally supports AMD GPUs through
 
 Whether HiPDLP (and cuPDLP-C) runs on the CPU or on a GPU is fixed at
 build time: the GPU backend is only compiled with `-DHIPDLP_HIP=ON`
-(AMD) or `-DCUPDLP_GPU=ON` (NVIDIA). The runtime [__solver__](@ref
-option-solver) option selects the *solver*, not the *device*: on a build
-without GPU support, `solver = "hipdlp"` still runs, but on the CPU.
+(AMD, HiPDLP only) or `-DCUPDLP_GPU=ON` (NVIDIA, HiPDLP and
+cuPDLP-C). The runtime [__solver__](@ref option-solver) option selects
+the *solver*, not the *device*: on a build without GPU support,
+`solver = "hipdlp"` still runs, but on the CPU. Conversely, on a GPU
+build, HiPDLP cannot fall back to the CPU: if no GPU is available at
+run time, the solve returns with an error.
 
 ### PDLP: A health warning
 
@@ -26,6 +29,11 @@ relative termination conditions, a solution deemed optimal by PDLP may
 not be accepted as optimal by HiGHS. The user should consider the
 infeasibility data returned by [HighsInfo](@ref HighsInfo) to decide
 whether the solution is acceptable to them.
+
+PDLP works in double precision, and each iteration is cheap, so a GPU
+only pays off for large LPs. For small LPs, the cost of launching GPU
+kernels dominates, and HiPDLP on a GPU can be slower than on the
+CPU.
 
 #### Termination criteria
 

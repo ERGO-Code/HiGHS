@@ -41,7 +41,10 @@ HighsStatus solveLpHiPdlp(const HighsOptions& options, HighsTimer& timer,
   PDLPSolver pdlp;
 
   // 0. Set up logger and params
-  pdlp.setup(options, timer);
+  if (pdlp.setup(options, timer) != HighsStatus::kOk) {
+    model_status = HighsModelStatus::kSolveError;
+    return HighsStatus::kError;
+  }
 
   // 1. Pass the LP to be solved
   pdlp.passLp(&lp);
