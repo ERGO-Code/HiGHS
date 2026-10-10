@@ -143,13 +143,17 @@ static void solveHyper(const HighsInt h_size, const HighsInt* h_lookup,
       HighsInt pivotRow = h_pivot_index[i];
       double pivot_multiplier = rhs_array[pivotRow];
       if (fabs(pivot_multiplier) > kHighsTiny) {
-        pivot_multiplier /= h_pivot_value[i];
-        rhs_array[pivotRow] = pivot_multiplier;
-        rhs_index[rhs_count++] = pivotRow;
-        const HighsInt start = h_start[i];
-        const HighsInt end = h_end[i];
-        for (HighsInt k = start; k < end; k++)
-          rhs_array[h_index[k]] -= pivot_multiplier * h_value[k];
+        if (fabs(h_pivot_value[i]) > kHighsTiny) {
+          pivot_multiplier /= h_pivot_value[i];
+          rhs_array[pivotRow] = pivot_multiplier;
+          rhs_index[rhs_count++] = pivotRow;
+          const HighsInt start = h_start[i];
+          const HighsInt end = h_end[i];
+          for (HighsInt k = start; k < end; k++)
+            rhs_array[h_index[k]] -= pivot_multiplier * h_value[k];
+        } else {
+          rhs_array[pivotRow] = 0;
+        }
       } else
         rhs_array[pivotRow] = 0;
     }
