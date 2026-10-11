@@ -2200,10 +2200,10 @@ void HEkkDual::updatePrimal(HVector* DSE_Vector) {
 
 // Record the shift in the cost of a particular column
 void HEkkDual::shiftCost(const HighsInt iCol, const double amount) {
+  if (!amount) return;
   HighsSimplexInfo& info = ekk_instance_.info_;
   info.costs_shifted = true;
   assert(info.workShift_[iCol] == 0);
-  if (!amount) return;
   double use_amount = amount;
   info.workShift_[iCol] = use_amount;
   // Analysis
