@@ -323,20 +323,16 @@ bool HPresolve::isImpliedEquationAtLower(HighsInt row) const {
   // if the implied lower bound on a row dual is strictly positive then the row
   // is an implied equation (using its lower bound) due to complementary
   // slackness
-  bool isLbndPositive =
-      implRowDualLower[row] > options->dual_feasibility_tolerance;
-  assert(!isLbndPositive || model->row_lower_[row] != -kHighsInf);
-  return isLbndPositive;
+  return model->row_lower_[row] != -kHighsInf &&
+         implRowDualLower[row] > options->dual_feasibility_tolerance;
 }
 
 bool HPresolve::isImpliedEquationAtUpper(HighsInt row) const {
   // if the implied upper bound on a row dual is strictly negative then the row
   // is an implied equation (using its upper bound) due to complementary
   // slackness
-  bool isUbndNegative =
-      implRowDualUpper[row] < -options->dual_feasibility_tolerance;
-  assert(!isUbndNegative || model->row_upper_[row] != kHighsInf);
-  return isUbndNegative;
+  return model->row_upper_[row] != kHighsInf &&
+         implRowDualUpper[row] < -options->dual_feasibility_tolerance;
 }
 
 HPresolve::StatusResult HPresolve::isImpliedIntegral(HighsInt col) {

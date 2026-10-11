@@ -2358,3 +2358,39 @@ TEST_CASE("implied-row-dual-bound-invalidation", "[highs_test_mip_solver]") {
     solve(highs, presolve, HighsModelStatus::kOptimal, -4.0);
   }
 }
+
+TEST_CASE("implied-equation-unbounded", "[highs_test_mip_solver]") {
+  // the MIP is unbounded, since x2 can be decreased and x1 increased without
+  // bound. with MIP presolve off, the root LP relaxation is still presolved,
+  // and the implied bounds on the row duals then point towards infinite row
+  // bounds. such rows must not be identified as implied equations
+  HighsLp lp;
+  lp.num_col_ = 8;
+  lp.num_row_ = 2;
+  lp.col_cost_ = {-4, -1, 0, 0, 0, 0, -3, -4};
+  lp.col_lower_ = {-kHighsInf, 0, -kHighsInf, 0, 4, 0, 0, -10};
+  lp.col_upper_ = {5, kHighsInf, 3, 1, 9, 4, 1, 10};
+  lp.row_lower_ = {-19, -1};
+  lp.row_upper_ = {kHighsInf, kHighsInf};
+  lp.integrality_ = {HighsVarType::kInteger,        HighsVarType::kInteger,
+                     HighsVarType::kInteger,        HighsVarType::kInteger,
+                     HighsVarType::kSemiContinuous, HighsVarType::kInteger,
+                     HighsVarType::kInteger,        HighsVarType::kContinuous};
+  lp.a_matrix_.format_ = MatrixFormat::kColwise;
+  lp.a_matrix_.start_ = {0, 1, 2, 3, 4, 6, 8, 9, 11};
+  lp.a_matrix_.index_ = {0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 1};
+  lp.a_matrix_.value_ = {7, -9, -1, -3, -1, -3, -3, 1, 1, 2, -8};
+
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
+  for (const std::string& presolve : {kHighsOffString, kHighsOnString}) {
+    highs.clearSolver();
+    REQUIRE(highs.setOptionValue("presolve", presolve) == HighsStatus::kOk);
+    REQUIRE(highs.run() == HighsStatus::kOk);
+    const HighsModelStatus model_status = highs.getModelStatus();
+    REQUIRE((model_status == HighsModelStatus::kUnbounded ||
+             model_status == HighsModelStatus::kUnboundedOrInfeasible));
+  }
+  highs.resetGlobalScheduler(true);
+}
