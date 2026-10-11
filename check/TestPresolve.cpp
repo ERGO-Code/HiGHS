@@ -1813,6 +1813,20 @@ TEST_CASE("issue-3342", "[highs_test_presolve]") {
   debugPrimalDualPresolve(lp, reduces_to_empty, options);
 }
 
+TEST_CASE("issue-3359", "[highs_test_presolve]") {
+  const std::string model = "3359";
+  std::string model_file =
+      std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  REQUIRE(h.readModel(model_file) == HighsStatus::kOk);
+
+  REQUIRE(h.run() == HighsStatus::kOk);
+  REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
+
+  h.resetGlobalScheduler(true);
+}
+
 TEST_CASE("issue-3391", "[highs_test_presolve]") {
   HighsLp lp;
   lp.model_name_ = "issue-3391";
