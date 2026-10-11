@@ -66,6 +66,8 @@ class HPresolve {
   std::vector<HighsInt> rowsize;
   std::vector<HighsInt> rowsizeInteger;
   std::vector<HighsInt> rowsizeImplInt;
+  // number of singleton columns in a row
+  std::vector<HighsInt> rowsizeSingleton;
   std::vector<HighsInt> colsize;
 
   // vector to store the nonzero positions of a row
