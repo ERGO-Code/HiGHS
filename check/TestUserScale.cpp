@@ -195,7 +195,8 @@ TEST_CASE("build-get-objective-bound-scaling", "[highs_data]") {
   REQUIRE(highs.getObjectiveBoundScaling(suggested_objective_scale,
                                          suggested_bound_scale) ==
           HighsStatus::kOk);
-  printf("Case 0: suggested objective scale = %d; suggested bound scale = %d\n",
+  if (dev_run)
+    printf("Case 0: suggested objective scale = %d; suggested bound scale = %d\n",
          int(suggested_objective_scale), int(suggested_bound_scale));
   REQUIRE(suggested_objective_scale == -14);
   REQUIRE(suggested_bound_scale == 0);
@@ -206,7 +207,8 @@ TEST_CASE("build-get-objective-bound-scaling", "[highs_data]") {
   REQUIRE(highs.getObjectiveBoundScaling(suggested_objective_scale,
                                          suggested_bound_scale) ==
           HighsStatus::kOk);
-  printf("Case 1: suggested objective scale = %d; suggested bound scale = %d\n",
+  if (dev_run)
+    printf("Case 1: suggested objective scale = %d; suggested bound scale = %d\n",
          int(suggested_objective_scale), int(suggested_bound_scale));
   REQUIRE(suggested_objective_scale == -14);
   REQUIRE(suggested_bound_scale == -15);
@@ -216,7 +218,8 @@ TEST_CASE("build-get-objective-bound-scaling", "[highs_data]") {
   REQUIRE(highs.getObjectiveBoundScaling(suggested_objective_scale,
                                          suggested_bound_scale) ==
           HighsStatus::kOk);
-  printf("Case 2: suggested objective scale = %d; suggested bound scale = %d\n",
+  if (dev_run)
+    printf("Case 2: suggested objective scale = %d; suggested bound scale = %d\n",
          int(suggested_objective_scale), int(suggested_bound_scale));
   REQUIRE(suggested_objective_scale == 20);
   REQUIRE(suggested_bound_scale == -15);
@@ -235,7 +238,8 @@ TEST_CASE("build-get-objective-bound-scaling", "[highs_data]") {
   REQUIRE(highs.getObjectiveBoundScaling(suggested_objective_scale,
                                          suggested_bound_scale) ==
           HighsStatus::kOk);
-  printf("Case 3: suggested objective scale = %d; suggested bound scale = %d\n",
+  if (dev_run)
+    printf("Case 3: suggested objective scale = %d; suggested bound scale = %d\n",
          int(suggested_objective_scale), int(suggested_bound_scale));
   REQUIRE(suggested_objective_scale == 0);
   REQUIRE(suggested_bound_scale == -15);
@@ -251,7 +255,8 @@ TEST_CASE("build-get-objective-bound-scaling", "[highs_data]") {
   REQUIRE(highs.getObjectiveBoundScaling(suggested_objective_scale,
                                          suggested_bound_scale) ==
           HighsStatus::kOk);
-  printf("Case 4: suggested objective scale = %d; suggested bound scale = %d\n",
+  if (dev_run)
+    printf("Case 4: suggested objective scale = %d; suggested bound scale = %d\n",
          int(suggested_objective_scale), int(suggested_bound_scale));
   REQUIRE(suggested_objective_scale == 0);
   REQUIRE(suggested_bound_scale == -15);
@@ -261,7 +266,8 @@ TEST_CASE("build-get-objective-bound-scaling", "[highs_data]") {
   REQUIRE(highs.getObjectiveBoundScaling(suggested_objective_scale,
                                          suggested_bound_scale) ==
           HighsStatus::kOk);
-  printf("Case 5: suggested objective scale = %d; suggested bound scale = %d\n",
+  if (dev_run)
+    printf("Case 5: suggested objective scale = %d; suggested bound scale = %d\n",
          int(suggested_objective_scale), int(suggested_bound_scale));
   REQUIRE(suggested_objective_scale == 0);
   REQUIRE(suggested_bound_scale == 0);

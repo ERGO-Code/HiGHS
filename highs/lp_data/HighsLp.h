@@ -106,7 +106,11 @@ class HighsLp {
     this->col_hash_.clear();
     this->row_hash_.clear();
   }
+
+  bool hasLogOptions() const { return this->log_options_ != nullptr; }
   void setLogOptions(HighsLogOptions& log_options);
+  void clearLogOptions();
+
   bool legalDimensions(const std::string& message) const;
   HighsStatus trimDimensions();
   void clear();

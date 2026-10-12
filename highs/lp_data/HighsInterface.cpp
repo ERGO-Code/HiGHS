@@ -3179,6 +3179,7 @@ HighsStatus Highs::computeIllConditioning(
   ill_conditioning.clear();
   HighsLp& incumbent_lp = this->model_.lp_;
   Highs conditioning;
+  conditioning.onFirstCall(false);
   const bool dev_conditioning = false;
   conditioning.setOptionValue("output_flag", false);  // dev_conditioning);
   std::vector<HighsInt> basic_var;

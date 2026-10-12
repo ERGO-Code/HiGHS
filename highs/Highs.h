@@ -173,7 +173,7 @@ class Highs {
   /**
    * @brief Checks any incumbent Hessian oracle
    */
-  HighsStatus checkHessianOracle(const bool exit_on_first_error = false) const;
+  HighsStatus checkHessianOracle(const bool exit_on_first_error = false);
 
   /**
    * @brief Pass multiple linear objectives for the incumbent model
@@ -240,7 +240,7 @@ class Highs {
    * the fime names passed
    */
   HighsStatus matrixImage(const std::string& matrix_image_filename,
-                          const std::string& hessian_image_filename = "") const;
+                          const std::string& hessian_image_filename = "");
 
   /**
    * @brief Presolve the incumbent model, allowing the presolved model
@@ -286,7 +286,7 @@ class Highs {
    * returns HighsStatus::kWarning.
    */
   HighsStatus assessPrimalSolution(bool& valid, bool& integral,
-                                   bool& feasible) const;
+                                   bool& feasible);
 
   /**
    * Methods for HiGHS option input/output
@@ -435,24 +435,24 @@ class Highs {
    */
 
   HighsStatus getRunDataValue(const std::string& run_data,
-                              HighsInt& value) const;
+                              HighsInt& value);
 
 #ifndef HIGHSINT64
   HighsStatus getRunDataValue(const std::string& run_data,
-                              int64_t& value) const;
+                              int64_t& value);
 #endif
 
-  HighsStatus getRunDataValue(const std::string& run_data, double& value) const;
+  HighsStatus getRunDataValue(const std::string& run_data, double& value);
 
   HighsStatus getRunDataType(const std::string& run_data,
-                             HighsRunDataType& type) const;
+                             HighsRunDataType& type);
 
   /**
    * @brief Write run data values to a file, with the extension ".html"
    * producing HTML, otherwise using the standard format used to read
    * options from a file.
    */
-  HighsStatus writeRunData(const std::string& filename = "") const;
+  HighsStatus writeRunData(const std::string& filename = "");
 
   /**
    * @brief Get a const reference to the internal info values.
@@ -464,22 +464,22 @@ class Highs {
    * it's of the correct type.
    */
 
-  HighsStatus getInfoValue(const std::string& info, HighsInt& value) const;
+  HighsStatus getInfoValue(const std::string& info, HighsInt& value);
 
 #ifndef HIGHSINT64
-  HighsStatus getInfoValue(const std::string& info, int64_t& value) const;
+  HighsStatus getInfoValue(const std::string& info, int64_t& value);
 #endif
 
-  HighsStatus getInfoValue(const std::string& info, double& value) const;
+  HighsStatus getInfoValue(const std::string& info, double& value);
 
-  HighsStatus getInfoType(const std::string& info, HighsInfoType& type) const;
+  HighsStatus getInfoType(const std::string& info, HighsInfoType& type);
 
   /**
    * @brief Write info values to a file, with the extension ".html"
    * producing HTML, otherwise using the standard format used to read
    * options from a file.
    */
-  HighsStatus writeInfo(const std::string& filename = "") const;
+  HighsStatus writeInfo(const std::string& filename = "");
 
   /**
    * @brief Get the value of infinity used by HiGHS
@@ -551,7 +551,7 @@ class Highs {
    * each integer variable fixed to the value it takes in the MIP
    * solution. If no solution is available, an error is returned.
    */
-  HighsStatus getFixedLp(HighsLp& lp) const;
+  HighsStatus getFixedLp(HighsLp& lp);
 
   /**
    * @brief Return a const reference to the incumbent LP
@@ -683,7 +683,7 @@ class Highs {
   /**
    * @brief Try to get the current dual objective function value
    */
-  HighsStatus getDualObjectiveValue(double& dual_objective_value) const;
+  HighsStatus getDualObjectiveValue(double& dual_objective_value);
 
   /**
    * Methods for operations with the invertible representation of the
@@ -694,7 +694,7 @@ class Highs {
    * @brief Returns true if an invertible representation of the
    * current basis matrix is available
    */
-  bool hasInvert() const;
+  bool hasInvert() const { return ekk_instance_.status_.has_invert; }
 
   /**
    * @brief Gets the basic variables in the order corresponding to
@@ -765,7 +765,7 @@ class Highs {
    * approximate condition number
    */
   HighsStatus getKappa(double& kappa, const bool exact = false,
-                       const bool report = false) const;
+                       const bool report = false);
 
   /**
    * @brief Get the number of columns in the incumbent model
@@ -817,7 +817,7 @@ class Highs {
       HighsInt*
           index,     //!< Array of size num_nz with row indices for the columns
       double* value  //!< Array of size num_nz with row values for the columns
-  ) const;
+  );
 
   /**
    * @brief Get multiple columns from the model given by a set
@@ -836,7 +836,7 @@ class Highs {
       HighsInt*
           index,     //!< Array of size num_nz with row indices for the columns
       double* value  //!< Array of size num_nz with row values for the columns
-  ) const;
+  );
 
   /**
    * @brief Get multiple columns from the model given by a mask
@@ -853,12 +853,12 @@ class Highs {
       HighsInt*
           index,     //!<  Array of size num_nz with row indices for the columns
       double* value  //!<  Array of size num_nz with row values for the columns
-  ) const;
+  );
 
   /**
    * @brief Get a column name from the incumbent model
    */
-  HighsStatus getColName(const HighsInt col, std::string& name) const;
+  HighsStatus getColName(const HighsInt col, std::string& name);
 
   /**
    * @brief Get column index corresponding to name
@@ -869,7 +869,7 @@ class Highs {
    * @brief Get a column integrality from the incumbent model
    */
   HighsStatus getColIntegrality(const HighsInt col,
-                                HighsVarType& integrality) const;
+                                HighsVarType& integrality);
 
   /**
    * @brief Get multiple rows from the model given by an interval [from_row,
@@ -889,7 +889,7 @@ class Highs {
       HighsInt*
           index,     //!< Array of size num_nz with column indices for the rows
       double* value  //!< Array of size num_nz with column values for the rows
-  ) const;
+  );
 
   /**
    * @brief Get multiple rows from the model given by a set
@@ -907,7 +907,7 @@ class Highs {
       HighsInt*
           index,     //!< Array of size num_nz with column indices for the rows
       double* value  //!< Array of size num_nz with column values for the rows
-  ) const;
+  );
 
   /**
    * @brief Get multiple rows from the model given by a mask
@@ -923,12 +923,12 @@ class Highs {
       HighsInt*
           index,     //!< Array of size num_nz with column indices for the rows
       double* value  //!< Array of size num_nz with column values for the rows
-  ) const;
+  );
 
   /**
    * @brief Get a row name from the incumbent model
    */
-  HighsStatus getRowName(const HighsInt row, std::string& name) const;
+  HighsStatus getRowName(const HighsInt row, std::string& name);
 
   /**
    * @brief Get row index corresponding to name
@@ -939,7 +939,7 @@ class Highs {
    * @brief Get a matrix coefficient
    */
   HighsStatus getCoeff(const HighsInt row, const HighsInt col,
-                       double& value) const;
+                       double& value);
 
   /**
    * @brief Write out the incumbent model to a file
@@ -1436,7 +1436,10 @@ class Highs {
    * Entries are indices of columns if in [0,num_col), and entries in [num_col,
    * num_col+num_row) are (num_col+row_index).
    */
-  const HighsInt* getBasicVariablesArray() const;
+  const HighsInt* getBasicVariablesArray() const {
+    assert(ekk_instance_.status_.has_invert);
+    return ekk_instance_.basis_.basicIndex_.data();
+  }
 
   /**
    * @brief Form a row of \f$B^{-1}\f$ for basis matrix \f$B\f$,
@@ -1460,7 +1463,7 @@ class Highs {
    * method: for HiGHS C++ and C API
    */
   HighsStatus getColOrRowName(const HighsLp& lp, const bool is_col,
-                              const HighsInt index, std::string& name) const;
+                              const HighsInt index, std::string& name);
 
   /**
    * @brief Development methods
@@ -1555,12 +1558,12 @@ class Highs {
 
   HighsStatus setHighsOutput(FILE* output = nullptr);
 
-  const HighsInfo& getHighsInfo() const;
+  const HighsInfo& getHighsInfo();
 
   HighsStatus getHighsInfoValue(const std::string& info, HighsInt& value);
 
   HighsStatus getHighsInfoValue(const std::string& info,
-                                double& value) const;  //!< The info value
+                                double& value);  //!< The info value
 
   HighsStatus writeHighsInfo(const std::string& filename  //!< The filename
   );
@@ -1571,7 +1574,7 @@ class Highs {
 
   const HighsModelStatus& getModelStatus(const bool scaled_model) const;
 
-  void onFirstCall();
+  void onFirstCall(const bool log_header = true);
 
   void deprecationMessage(const std::string& method_name,
                           const std::string& alt_method_name) const;

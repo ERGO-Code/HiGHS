@@ -117,7 +117,7 @@ HighsStatus Highs::setHighsOutput(FILE* output) {
   return HighsStatus::kOk;
 }
 
-const HighsInfo& Highs::getHighsInfo() const {
+const HighsInfo& Highs::getHighsInfo() {
   deprecationMessage("getHighsInfo", "getInfo");
   return getInfo();
 }
@@ -128,7 +128,7 @@ HighsStatus Highs::getHighsInfoValue(const std::string& info, HighsInt& value) {
 }
 
 HighsStatus Highs::getHighsInfoValue(const std::string& info,
-                                     double& value) const {
+                                     double& value) {
   deprecationMessage("getHighsInfoValue", "getInfoValue");
   return getInfoValue(info, value);
 }

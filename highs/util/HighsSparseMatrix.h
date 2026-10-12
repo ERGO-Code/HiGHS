@@ -130,7 +130,11 @@ class HighsSparseMatrix {
                     const HighsInt use_col) const;
   void collectAj(HVector& column, const HighsInt use_col,
                  const double multiplier) const;
+
+  bool hasLogOptions() const { return this->log_options_ != nullptr; }
   void setLogOptions(HighsLogOptions& log_options) { log_options_ = &log_options; }
+  void clearLogOptions() { this->log_options_ = nullptr; }
+
   bool legalDimensions(const HighsInt num_vec) const;
   HighsStatus trimDimensions(const HighsInt num_vec);
 

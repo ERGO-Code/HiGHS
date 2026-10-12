@@ -428,8 +428,13 @@ void HighsLp::deleteRows(const HighsIndexCollection& index_collection) {
 }
 
 void HighsLp::setLogOptions(HighsLogOptions& log_options) {
-  log_options_ = &log_options;
+  this->log_options_ = &log_options;
   a_matrix_.setLogOptions(log_options);
+}
+
+void HighsLp::clearLogOptions() {
+  this->log_options_ = nullptr;
+  a_matrix_.clearLogOptions();
 }
 
 bool HighsLp::legalDimensions(const std::string& message) const {
