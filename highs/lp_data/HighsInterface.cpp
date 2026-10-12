@@ -452,9 +452,6 @@ HighsStatus Highs::addColsInterface(
                    nullptr),
       return_status, "assessBounds");
   if (return_status == HighsStatus::kError) return return_status;
-  // Append the columns to the LP vectors and matrix
-  appendColsToLpVectors(lp, ext_num_new_col, local_colCost, local_colLower,
-                        local_colUpper);
   // Form a column-wise HighsSparseMatrix of the new matrix columns so
   // that is easy to handle and, if there are nonzeros, it can be
   // normalised
@@ -484,7 +481,11 @@ HighsStatus Highs::addColsInterface(
     // matrix columns
     local_a_matrix.start_.assign(ext_num_new_col + 1, 0);
   }
-  // Append the columns to LP matrix
+  assert(return_status != HighsStatus::kError);
+  // Now that data for new columns has been assessed and no errors can
+  // occur, append the columns to the LP vectors and matrix
+  appendColsToLpVectors(lp, ext_num_new_col, local_colCost, local_colLower,
+                        local_colUpper);
   lp.a_matrix_.addCols(local_a_matrix);
   if (lp_has_scaling) {
     // Extend the column scaling factors
@@ -584,9 +585,6 @@ HighsStatus Highs::addRowsInterface(HighsInt ext_num_new_row,
                    nullptr),
       return_status, "assessBounds");
   if (return_status == HighsStatus::kError) return return_status;
-  // Append the rows to the LP vectors
-  appendRowsToLpVectors(lp, ext_num_new_row, local_rowLower, local_rowUpper);
-
   // Form a row-wise HighsSparseMatrix of the new matrix rows so that
   // is easy to handle and, if there are nonzeros, it can be
   // normalised
@@ -616,7 +614,10 @@ HighsStatus Highs::addRowsInterface(HighsInt ext_num_new_row,
     // rows
     local_ar_matrix.start_.assign(ext_num_new_row + 1, 0);
   }
-  // Append the rows to LP matrix
+  assert(return_status != HighsStatus::kError);
+  // Now that data for new rows has been assessed and no errors can
+  // occur, append the rows to the LP vectors and matrix
+  appendRowsToLpVectors(lp, ext_num_new_row, local_rowLower, local_rowUpper);
   lp.a_matrix_.addRows(local_ar_matrix);
   if (lp_has_scaling) {
     // Extend the row scaling factors
@@ -946,10 +947,10 @@ bool Highs::feasibleWrtBounds(const bool columns) const {
   const HighsLp& lp = model_.lp_;
   const double primal_feasibility_tolerance =
       this->options_.primal_feasibility_tolerance;
-  std::vector<double> value =
+  const std::vector<double>& value =
       columns ? this->solution_.col_value : this->solution_.row_value;
-  std::vector<double> lower = columns ? lp.col_lower_ : lp.row_lower_;
-  std::vector<double> upper = columns ? lp.col_upper_ : lp.row_upper_;
+  const std::vector<double>& lower = columns ? lp.col_lower_ : lp.row_lower_;
+  const std::vector<double>& upper = columns ? lp.col_upper_ : lp.row_upper_;
   HighsInt dim = columns ? lp.num_col_ : lp.num_row_;
   for (HighsInt iX = 0; iX < dim; iX++) {
     if (value[iX] < lower[iX] - primal_feasibility_tolerance) return false;
@@ -1006,7 +1007,7 @@ HighsStatus Highs::changeColBoundsInterface(
   }
   // Determine any implications for simplex data
   ekk_instance_.updateStatus(LpAction::kNewBounds);
-  return HighsStatus::kOk;
+  return return_status;
 }
 
 HighsStatus Highs::changeRowBoundsInterface(
@@ -1057,7 +1058,7 @@ HighsStatus Highs::changeRowBoundsInterface(
   }
   // Determine any implications for simplex data
   ekk_instance_.updateStatus(LpAction::kNewBounds);
-  return HighsStatus::kOk;
+  return return_status;
 }
 
 // Change a single coefficient in the matrix
@@ -2159,7 +2160,7 @@ HighsStatus Highs::elasticityFilterReturn(
     const HighsStatus return_status, const std::string& original_model_name,
     const HighsModelStatus original_model_status,
     const HighsInt original_num_col, const HighsInt original_num_row,
-    const std::vector<double>& original_col_cost,
+    const ObjSense original_sense, const std::vector<double>& original_col_cost,
     const std::vector<double>& original_col_lower,
     const std::vector<double>& original_col_upper,
     const std::vector<HighsVarType>& original_integrality) {
@@ -2184,6 +2185,9 @@ HighsStatus Highs::elasticityFilterReturn(
 
   run_status =
       this->changeColsCost(0, original_num_col - 1, original_col_cost.data());
+  assert(run_status == HighsStatus::kOk);
+
+  run_status = this->changeObjectiveSense(original_sense);
   assert(run_status == HighsStatus::kOk);
 
   run_status =
@@ -2286,6 +2290,7 @@ HighsStatus Highs::elasticityFilter(const double global_lower_penalty,
   // data vectors, as they will be modified in forming the e-LP
   const std::string original_model_name = lp.model_name_;
   const HighsModelStatus original_model_status = this->getModelStatus();
+  const ObjSense original_sense = lp.sense_;
   const HighsInt original_num_col = lp.num_col_;
   const HighsInt original_num_row = lp.num_row_;
   const std::vector<double> original_col_cost = lp.col_cost_;
@@ -2302,6 +2307,9 @@ HighsStatus Highs::elasticityFilter(const double global_lower_penalty,
   std::vector<double> zero_costs;
   zero_costs.assign(original_num_col, 0);
   run_status = this->changeColsCost(0, lp.num_col_ - 1, zero_costs.data());
+  assert(run_status == HighsStatus::kOk);
+  // Change the sense to minimize
+  run_status = this->changeObjectiveSense(ObjSense::kMinimize);
   assert(run_status == HighsStatus::kOk);
 
   const bool mip_relaxation_iis =
@@ -2578,7 +2586,7 @@ HighsStatus Highs::elasticityFilter(const double global_lower_penalty,
     this->iis_ = iis;
     return elasticityFilterReturn(
         HighsStatus::kError, original_model_name, original_model_status,
-        original_num_col, original_num_row, original_col_cost,
+        original_num_col, original_num_row, original_sense, original_col_cost,
         original_col_lower, original_col_upper, original_integrality);
   }
   if (kIisDevReport) this->writeSolution("", kSolutionStylePretty);
@@ -2593,7 +2601,7 @@ HighsStatus Highs::elasticityFilter(const double global_lower_penalty,
     this->iis_ = iis;
     return elasticityFilterReturn(
         HighsStatus::kOk, original_model_name, original_model_status,
-        original_num_col, original_num_row, original_col_cost,
+        original_num_col, original_num_row, original_sense, original_col_cost,
         original_col_lower, original_col_upper, original_integrality);
   }
   // If getting an (I)IS, assume no elastic columns, so no additional rows
@@ -2684,7 +2692,7 @@ HighsStatus Highs::elasticityFilter(const double global_lower_penalty,
       this->iis_ = iis;
       return elasticityFilterReturn(
           HighsStatus::kError, original_model_name, original_model_status,
-          original_num_col, original_num_row, original_col_cost,
+          original_num_col, original_num_row, original_sense, original_col_cost,
           original_col_lower, original_col_upper, original_integrality);
     }
     if (kIisDevReport) this->writeSolution("", kSolutionStylePretty);
@@ -2756,7 +2764,7 @@ HighsStatus Highs::elasticityFilter(const double global_lower_penalty,
     this->iis_ = iis;
     return elasticityFilterReturn(
         HighsStatus::kOk, original_model_name, original_model_status,
-        original_num_col, original_num_row, original_col_cost,
+        original_num_col, original_num_row, original_sense, original_col_cost,
         original_col_lower, original_col_upper, original_integrality);
   }
 
@@ -2837,8 +2845,8 @@ HighsStatus Highs::elasticityFilter(const double global_lower_penalty,
   this->iis_ = iis;
   return elasticityFilterReturn(
       HighsStatus::kOk, original_model_name, original_model_status,
-      original_num_col, original_num_row, original_col_cost, original_col_lower,
-      original_col_upper, original_integrality);
+      original_num_col, original_num_row, original_sense, original_col_cost,
+      original_col_lower, original_col_upper, original_integrality);
 }
 
 HighsStatus Highs::extractIis(HighsInt& num_iis_col, HighsInt& num_iis_row,
@@ -2907,7 +2915,8 @@ void Highs::callLpKktCheck(const HighsLp& lp, const std::string& message) {
              this->basis_, this->options_, message);
 }
 
-HighsStatus Highs::invertRequirementError(std::string method_name) const {
+HighsStatus Highs::invertRequirementError(
+    const std::string& method_name) const {
   assert(!ekk_instance_.status_.has_invert);
   highsLogUser(options_.log_options, HighsLogType::kError,
                "No invertible representation for %s\n", method_name.c_str());
@@ -4004,6 +4013,7 @@ HighsStatus Highs::multiobjectiveSolve() {
     return HighsStatus::kError;
   }
   std::vector<std::pair<HighsInt, HighsInt>> priority_objective;
+  priority_objective.reserve(num_linear_objective);
 
   for (HighsInt iObj = 0; iObj < num_linear_objective; iObj++)
     priority_objective.push_back(

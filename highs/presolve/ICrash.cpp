@@ -49,7 +49,7 @@ bool parseICrashStrategy(const std::string& strategy,
   return true;
 }
 
-bool checkOptions(const HighsLp& lp, const ICrashOptions options) {
+bool checkOptions(const HighsLp& lp, const ICrashOptions& options) {
   if (options.exact) {
     // std::cout << "ICrashError: exact subproblem solution not available "
     //              "at the moment." << std::endl;
@@ -87,7 +87,7 @@ bool checkOptions(const HighsLp& lp, const ICrashOptions options) {
   return true;
 }
 
-Quadratic parseOptions(const HighsLp& lp, const ICrashOptions options) {
+Quadratic parseOptions(const HighsLp& lp, const ICrashOptions& options) {
   HighsLp ilp = lp;
   HighsLp local_lp;
   // HighsStatus status;
@@ -340,7 +340,7 @@ bool solveSubproblem(Quadratic& idata, const ICrashOptions& options) {
   return true;
 }
 
-void reportSubproblem(const ICrashOptions options, const Quadratic& idata,
+void reportSubproblem(const ICrashOptions& options, const Quadratic& idata,
                       const int iteration) {
   std::stringstream ss;
   // Report outcome.

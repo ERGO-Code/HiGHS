@@ -315,20 +315,16 @@ bool HPresolve::isImpliedEquationAtLower(HighsInt row) const {
   // if the implied lower bound on a row dual is strictly positive then the row
   // is an implied equation (using its lower bound) due to complementary
   // slackness
-  bool isLbndPositive =
-      implRowDualLower[row] > options->dual_feasibility_tolerance;
-  assert(!isLbndPositive || model->row_lower_[row] != -kHighsInf);
-  return isLbndPositive;
+  return model->row_lower_[row] != -kHighsInf &&
+         implRowDualLower[row] > options->dual_feasibility_tolerance;
 }
 
 bool HPresolve::isImpliedEquationAtUpper(HighsInt row) const {
   // if the implied upper bound on a row dual is strictly negative then the row
   // is an implied equation (using its upper bound) due to complementary
   // slackness
-  bool isUbndNegative =
-      implRowDualUpper[row] < -options->dual_feasibility_tolerance;
-  assert(!isUbndNegative || model->row_upper_[row] != kHighsInf);
-  return isUbndNegative;
+  return model->row_upper_[row] != kHighsInf &&
+         implRowDualUpper[row] < -options->dual_feasibility_tolerance;
 }
 
 void HPresolve::chooseRules() {
@@ -475,6 +471,11 @@ void HPresolve::link(HighsInt pos) {
     ++rowsizeInteger[Arow[pos]];
   else if (model->integrality_[Acol[pos]] == HighsVarType::kImplicitInteger)
     ++rowsizeImplInt[Arow[pos]];
+
+  if (colsize[Acol[pos]] == 1)
+    ++rowsizeSingleton[Arow[pos]];
+  else if (colsize[Acol[pos]] == 2)
+    --rowsizeSingleton[Arow[Anext[pos]]];
 }
 
 void HPresolve::unlink(HighsInt pos) {
@@ -506,6 +507,11 @@ void HPresolve::unlink(HighsInt pos) {
     --rowsizeInteger[Arow[pos]];
   else if (model->integrality_[Acol[pos]] == HighsVarType::kImplicitInteger)
     --rowsizeImplInt[Arow[pos]];
+
+  if (colsize[Acol[pos]] == 0)
+    --rowsizeSingleton[Arow[pos]];
+  else if (colsize[Acol[pos]] == 1)
+    ++rowsizeSingleton[Arow[colhead[Acol[pos]]]];
 
   if (!rowDeleted[Arow[pos]]) {
     if (rowsize[Arow[pos]] == 1)
@@ -1044,6 +1050,7 @@ void HPresolve::shrinkProblem(HighsPostsolveStack& postsolve_stack) {
         rowsize[newRowIndex[i]] = rowsize[i];
         rowsizeInteger[newRowIndex[i]] = rowsizeInteger[i];
         rowsizeImplInt[newRowIndex[i]] = rowsizeImplInt[i];
+        rowsizeSingleton[newRowIndex[i]] = rowsizeSingleton[i];
         if (have_row_names)
           model->row_names_[newRowIndex[i]] = std::move(model->row_names_[i]);
         changedRowFlag[newRowIndex[i]] = changedRowFlag[i];
@@ -1098,6 +1105,7 @@ void HPresolve::shrinkProblem(HighsPostsolveStack& postsolve_stack) {
   rowsize.resize(model->num_row_);
   rowsizeInteger.resize(model->num_row_);
   rowsizeImplInt.resize(model->num_row_);
+  rowsizeSingleton.resize(model->num_row_);
   if (have_row_names) model->row_names_.resize(model->num_row_);
   changedRowFlag.resize(model->num_row_);
   singleEquationChecked.resize(model->num_row_);
@@ -1253,6 +1261,7 @@ bool HPresolve::addToMatrix(
   if (!okResize(rowsize, model->num_row_, HighsInt{0})) return false;
   if (!okResize(rowsizeInteger, model->num_row_, HighsInt{0})) return false;
   if (!okResize(rowsizeImplInt, model->num_row_, HighsInt{0})) return false;
+  if (!okResize(rowsizeSingleton, model->num_row_, HighsInt{0})) return false;
 
   // initialise row duals
   if (!okResize(rowDualLower, model->num_row_, -kHighsInf)) return false;
@@ -1744,6 +1753,7 @@ bool HPresolve::okFromCSC(const std::vector<double>& Aval,
   if (!okAssign(rowsize, model->num_row_)) return false;
   if (!okAssign(rowsizeInteger, model->num_row_)) return false;
   if (!okAssign(rowsizeImplInt, model->num_row_)) return false;
+  if (!okAssign(rowsizeSingleton, model->num_row_)) return false;
 
   impliedRowBounds.setNumSums(0);
   impliedDualRowBounds.setNumSums(0);
@@ -1814,6 +1824,7 @@ bool HPresolve::okFromCSR(const std::vector<double>& ARval,
   if (!okAssign(rowsize, model->num_row_)) return false;
   if (!okAssign(rowsizeInteger, model->num_row_)) return false;
   if (!okAssign(rowsizeImplInt, model->num_row_)) return false;
+  if (!okAssign(rowsizeSingleton, model->num_row_)) return false;
 
   impliedRowBounds.setNumSums(0);
   impliedDualRowBounds.setNumSums(0);
@@ -3688,7 +3699,7 @@ HPresolve::Result HPresolve::detectDominatedCol(
 
 void HPresolve::computeLocks(
     HighsInt col, bool considerObjective,
-    std::function<bool(HighsInt, bool, bool)> lockCallback) const {
+    const std::function<bool(HighsInt, bool, bool)>& lockCallback) const {
   // if the callback returns true, we stop examining the locks
   if (considerObjective) {
     // consider objective function

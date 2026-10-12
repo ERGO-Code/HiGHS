@@ -402,7 +402,7 @@ class CholeskyFactor {
     current_k--;
   }
 
-  void report(std::string name = "") {
+  void report(const std::string& name = "") {
     printf("%s\n", name.c_str());
     for (HighsInt i = 0; i < current_k; i++) {
       for (HighsInt j = 0; j < current_k; j++) {
