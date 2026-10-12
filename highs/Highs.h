@@ -1571,7 +1571,7 @@ class Highs {
 
   const HighsModelStatus& getModelStatus(const bool scaled_model) const;
 
-  void logHeader();
+  void onFirstCall();
 
   void deprecationMessage(const std::string& method_name,
                           const std::string& alt_method_name) const;
@@ -1664,7 +1664,7 @@ class Highs {
   bool called_return_from_optimize_model = true;
   HighsInt debug_optimize_call_num_ = 0;
 
-  bool written_log_header_ = false;
+  bool made_first_call_ = false;
 
   void reportModelStats() const;
 

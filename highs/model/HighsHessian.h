@@ -29,6 +29,8 @@ class HighsHessian {
   std::vector<HighsInt> index_;
   std::vector<double> value_;
   HessianOracle oracle_;
+  HighsLogOptions* log_options_;
+  
   bool operator==(const HighsHessian& hessian) const;
   bool isOracle() const { return oracle_.call_ != nullptr; }
   void formFromOracle();

@@ -673,7 +673,7 @@ TEST_CASE("LP-change-coefficient", "[highs_data]") {
 
 TEST_CASE("LP-illegal-start", "[highs_data]") {
   Highs highs;
-  //  highs.setOptionValue("output_flag", dev_run);
+  highs.setOptionValue("output_flag", dev_run);
   HighsLp lp;
   lp.num_col_ = 0;
   lp.num_row_ = 1;

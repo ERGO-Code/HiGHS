@@ -39,6 +39,7 @@ class HighsModel {
   double objectiveValue(const std::vector<double>& solution) const;
   void objectiveGradient(const std::vector<double>& solution,
                          std::vector<double>& gradient) const;
+  void setLogOptions(HighsLogOptions& log_options);
 };
 
 #endif
