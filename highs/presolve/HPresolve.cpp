@@ -2439,12 +2439,21 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
 
   const bool logging_on = analysis_.logging_on_;
 
-  auto checkRowInfeasible = [&](HighsInt row) {
+  auto checkRowPrimalInfeasible = [&](HighsInt row) {
     if (impliedRowBounds.getSumLower(row) >
             model->row_upper_[row] + primal_feastol ||
         impliedRowBounds.getSumUpper(row) <
             model->row_lower_[row] - primal_feastol)
       return Result::kPrimalInfeasible;
+    return Result::kOk;
+  };
+
+  auto checkRowDualInfeasible = [&](HighsInt row) {
+    if ((implRowDualLower[row] > options->dual_feasibility_tolerance &&
+         model->row_lower_[row] == -kHighsInf) ||
+        (implRowDualUpper[row] < -options->dual_feasibility_tolerance &&
+         model->row_upper_[row] == kHighsInf))
+      return Result::kDualInfeasible;
     return Result::kOk;
   };
 
@@ -2466,8 +2475,11 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
   // printf("row presolve: ");
   // debugPrintRow(row);
 
-  // check for infeasibility
-  HPRESOLVE_CHECKED_CALL(checkRowInfeasible(row));
+  // check for primal infeasibility
+  HPRESOLVE_CHECKED_CALL(checkRowPrimalInfeasible(row));
+
+  // check for dual infeasibility
+  HPRESOLVE_CHECKED_CALL(checkRowDualInfeasible(row));
 
   // handle special cases directly via a call to the specialized procedure
   switch (rowsize[row]) {
