@@ -1663,6 +1663,7 @@ class Highs {
   HighsInt debug_optimize_call_num_ = 0;
 
   bool made_first_call_ = false;
+  bool written_log_header_ = false;
 
   void reportModelStats() const;
 
