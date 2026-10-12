@@ -18,9 +18,7 @@
 
 class HighsLp {
  public:
-  HighsLp() 
-    : log_options_(nullptr)
-  {
+  HighsLp() {
     clear();
     a_matrix_.name_ = "HighsLp::a_matrix_";
   }
@@ -62,8 +60,6 @@ class HighsLp {
   bool has_infinite_cost_;
   HighsInt fme_obj_col_ = -1;
   HighsLpMods mods_;
-
-  HighsLogOptions* log_options_;
 
   bool operator==(const HighsLp& lp) const;
   bool equalButForNames(const HighsLp& lp) const;
@@ -107,12 +103,9 @@ class HighsLp {
     this->row_hash_.clear();
   }
 
-  bool hasLogOptions() const { return this->log_options_ != nullptr; }
-  void setLogOptions(HighsLogOptions& log_options);
-  void clearLogOptions();
-
-  bool legalDimensions(const std::string& message) const;
-  HighsStatus trimDimensions();
+  bool legalDimensions(const std::string& message,
+                       const HighsLogOptions& log_options) const;
+  HighsStatus trimDimensions(const HighsLogOptions& log_options);
   void clear();
 };
 

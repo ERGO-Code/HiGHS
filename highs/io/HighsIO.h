@@ -46,7 +46,6 @@ struct HighsLogOptions {
   HighsCallbackFunctionType user_callback;
   void* user_callback_data;
   bool user_callback_active;
-  void copy(HighsLogOptions& log_options) const;
   void clear();
   HighsLogOptions()
       : log_stream(nullptr),

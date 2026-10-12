@@ -60,7 +60,6 @@ void HighsSparseMatrix::clear() {
   this->value_.clear();
   this->format_ = MatrixFormat::kColwise;
   this->start_.assign(1, 0);
-  this->log_options_ = nullptr;
 }
 
 void HighsSparseMatrix::exactResize() {
@@ -1749,18 +1748,16 @@ void HighsSparseMatrix::debugReportRowPrice(const HighsInt iRow,
   printf("\n");
 }
 
-bool HighsSparseMatrix::legalDimensions(const HighsInt num_vec) const {
-  assert(log_options_);
-  const HighsLogOptions& log_options = *log_options_;
+bool HighsSparseMatrix::legalDimensions(const HighsLogOptions& log_options,
+                                        const HighsInt num_vec) const {
   return legalMatrixDimensions(
       log_options, "HighsSparseMatrix", this->name_, num_vec,
       this->format_ == MatrixFormat::kRowwisePartitioned, this->start_,
       this->p_end_, this->index_, this->value_);
 }
 
-HighsStatus HighsSparseMatrix::trimDimensions(const HighsInt num_vec) {
-  assert(log_options_);
-  const HighsLogOptions& log_options = *log_options_;
+HighsStatus HighsSparseMatrix::trimDimensions(
+    const HighsLogOptions& log_options, const HighsInt num_vec) {
   return trimMatrixDimensions(
       log_options, "HighsSparseMatrix", this->name_, num_vec,
       this->format_ == MatrixFormat::kRowwisePartitioned, this->start_,

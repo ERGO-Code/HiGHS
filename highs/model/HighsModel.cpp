@@ -44,7 +44,3 @@ void HighsModel::objectiveGradient(const std::vector<double>& solution,
   for (HighsInt iCol = 0; iCol < this->lp_.num_col_; iCol++)
     gradient[iCol] += this->lp_.col_cost_[iCol];
 }
-
-void HighsModel::setLogOptions(HighsLogOptions& log_options) {
-  this->lp_.setLogOptions(log_options);
-}

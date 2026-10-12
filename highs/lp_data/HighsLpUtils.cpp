@@ -33,23 +33,8 @@ const HighsInt kMaxLineLength = 80;
 
 HighsStatus assessLp(HighsLp& lp, const HighsOptions& options) {
   const HighsLogOptions& log_options = options.log_options;
-  // Ensure that log_options_ is set
-  const bool has_log_options = lp.hasLogOptions();
-  HighsLogOptions local_log_options;
-  if (!has_log_options) {
-    log_options.copy(local_log_options);
-    lp.setLogOptions(local_log_options);
-  }
-
-  auto assessLpReturn = [&] (HighsStatus return_status) {
-    // Ensure that any local log options are cleared
-    if (!has_log_options) lp.clearLogOptions();
-    return return_status;
-  };
-
-  if (!lp.legalDimensions("assessLp")) assessLpReturn(HighsStatus::kError);
-
-  HighsStatus return_status = lp.trimDimensions();
+  if (!lp.legalDimensions("assessLp", log_options)) return HighsStatus::kError;
+  HighsStatus return_status = lp.trimDimensions(log_options);
 
   HighsStatus call_status = HighsStatus::kOk;
   if (lp.num_col_) {
@@ -63,7 +48,7 @@ HighsStatus assessLp(HighsLp& lp, const HighsOptions& options) {
                               lp.has_infinite_cost_, options.infinite_cost);
     return_status = interpretCallStatus(log_options, call_status, return_status,
                                         "assessCosts");
-    if (return_status == HighsStatus::kError) assessLpReturn(return_status);
+    if (return_status == HighsStatus::kError) return return_status;
     // Assess the LP column bounds
     call_status = assessBounds(
         options, "Col", 0, index_collection, lp.col_lower_, lp.col_upper_,
@@ -71,7 +56,7 @@ HighsStatus assessLp(HighsLp& lp, const HighsOptions& options) {
         lp.col_names_.data());
     return_status = interpretCallStatus(log_options, call_status, return_status,
                                         "assessBounds");
-    if (return_status == HighsStatus::kError) return assessLpReturn(return_status);
+    if (return_status == HighsStatus::kError) return return_status;
   }
   if (lp.num_row_) {
     // Assess the LP row bounds
@@ -85,13 +70,13 @@ HighsStatus assessLp(HighsLp& lp, const HighsOptions& options) {
         options.infinite_bound, nullptr, lp.row_names_.data());
     return_status = interpretCallStatus(log_options, call_status, return_status,
                                         "assessBounds");
-    if (return_status == HighsStatus::kError) return assessLpReturn(return_status);
+    if (return_status == HighsStatus::kError) return return_status;
   }
   // If the LP has no columns the matrix must be empty and there is
   // nothing left to test
   if (lp.num_col_ == 0) {
     assert(!lp.numNz());
-    return assessLpReturn(return_status);
+    return return_status;
   }
   // From here, any LP has lp.num_col_ > 0 and lp.a_matrix_.start_[lp.num_col_]
   // exists (as the number of nonzeros)
@@ -104,7 +89,7 @@ HighsStatus assessLp(HighsLp& lp, const HighsOptions& options) {
                                     lp.col_names_.data(), lp.row_names_.data());
   return_status = interpretCallStatus(log_options, call_status, return_status,
                                       "assessMatrix");
-  if (return_status == HighsStatus::kError) return assessLpReturn(return_status);
+  if (return_status == HighsStatus::kError) return return_status;
   // If entries have been removed from the matrix, resize the start,
   // index and value vectors to prevent bug in presolve
   HighsInt lp_num_nz = lp.numNz();
@@ -115,7 +100,7 @@ HighsStatus assessLp(HighsLp& lp, const HighsOptions& options) {
     highsLogDev(log_options, HighsLogType::kInfo,
                 "assessLp returns HighsStatus = %s\n",
                 highsStatusToString(return_status).c_str());
-  return assessLpReturn(return_status);
+  return return_status;
 }
 
 HighsStatus assessCosts(const HighsOptions& options, const HighsInt ml_col_os,

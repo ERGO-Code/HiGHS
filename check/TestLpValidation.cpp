@@ -171,7 +171,7 @@ TEST_CASE("LP-validation", "[highs_data]") {
   HighsOptions options;
   HighsStatus return_status;
   options.log_dev_level = kHighsLogDevLevelVerbose;
-  // options.output_flag = dev_run;
+  options.output_flag = dev_run;
 
   Avgas avgas;
   const HighsInt avgas_num_col = 8;

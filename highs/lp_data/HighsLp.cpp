@@ -228,7 +228,6 @@ void HighsLp::clear() {
   this->has_infinite_cost_ = false;
   this->fme_obj_col_ = -1;
   this->mods_.clear();
-  this->log_options_ = nullptr;
 }
 
 void HighsLp::clearScale() {
@@ -427,19 +426,8 @@ void HighsLp::deleteRows(const HighsIndexCollection& index_collection) {
   this->num_row_ = new_num_row;
 }
 
-void HighsLp::setLogOptions(HighsLogOptions& log_options) {
-  this->log_options_ = &log_options;
-  a_matrix_.setLogOptions(log_options);
-}
-
-void HighsLp::clearLogOptions() {
-  this->log_options_ = nullptr;
-  a_matrix_.clearLogOptions();
-}
-
-bool HighsLp::legalDimensions(const std::string& message) const {
-  assert(log_options_);
-  const HighsLogOptions& log_options = *log_options_;
+bool HighsLp::legalDimensions(const std::string& message,
+                              const HighsLogOptions& log_options) const {
   bool ok = true;
   const HighsInt num_col = this->num_col_;
   const HighsInt num_row = this->num_row_;
@@ -517,7 +505,7 @@ bool HighsLp::legalDimensions(const std::string& message) const {
     num_vec = num_row;
   }
   bool legal_matrix_dimensions =
-      this->a_matrix_.legalDimensions(num_vec);
+      this->a_matrix_.legalDimensions(log_options, num_vec);
   if (!legal_matrix_dimensions)
     highsLogUser(log_options, HighsLogType::kError,
                  "LP dimension validation (%s) fails on a_matrix dimensions\n",
@@ -630,9 +618,7 @@ bool HighsLp::legalDimensions(const std::string& message) const {
   return ok;
 }
 
-HighsStatus HighsLp::trimDimensions() {
-  assert(log_options_);
-  const HighsLogOptions& log_options = *log_options_;
+HighsStatus HighsLp::trimDimensions(const HighsLogOptions& log_options) {
   const HighsInt num_col = this->num_col_;
   const HighsInt num_row = this->num_row_;
 
@@ -704,7 +690,7 @@ HighsStatus HighsLp::trimDimensions() {
   }
 
   HighsStatus matrix_trim_status = this->a_matrix_.trimDimensions(
-      this->isColwise() ? this->num_col_ : this->num_row_);
+      log_options, this->isColwise() ? this->num_col_ : this->num_row_);
 
   if (matrix_trim_status == HighsStatus::kWarning) return matrix_trim_status;
   return status;

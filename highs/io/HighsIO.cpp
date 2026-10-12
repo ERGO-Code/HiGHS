@@ -359,18 +359,6 @@ const std::string highsInsertMdId(const std::string& from_string) {
   return to_string;
 }
 
-void HighsLogOptions::copy(HighsLogOptions& log_options) const {
-  log_options.log_stream = this->log_stream;
-  log_options.output_flag = this->output_flag;
-  log_options.log_to_console = this->log_to_console;
-  log_options.log_dev_level = this->log_dev_level;
-  log_options.user_log_callback = this->user_log_callback;
-  log_options.user_log_callback_data = this->user_log_callback_data;
-  log_options.user_callback = this->user_callback;
-  log_options.user_callback_data = this->user_callback_data;
-  log_options.user_callback_active = this->user_callback_active;
-}
-
 void HighsLogOptions::clear() {
   this->log_stream = nullptr;
   this->output_flag = nullptr;

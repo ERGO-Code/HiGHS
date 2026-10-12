@@ -285,8 +285,7 @@ class Highs {
    * valid, integral or feasible is false, then assessPrimalSolution
    * returns HighsStatus::kWarning.
    */
-  HighsStatus assessPrimalSolution(bool& valid, bool& integral,
-                                   bool& feasible);
+  HighsStatus assessPrimalSolution(bool& valid, bool& integral, bool& feasible);
 
   /**
    * Methods for HiGHS option input/output
@@ -434,12 +433,10 @@ class Highs {
    * it's of the correct type.
    */
 
-  HighsStatus getRunDataValue(const std::string& run_data,
-                              HighsInt& value);
+  HighsStatus getRunDataValue(const std::string& run_data, HighsInt& value);
 
 #ifndef HIGHSINT64
-  HighsStatus getRunDataValue(const std::string& run_data,
-                              int64_t& value);
+  HighsStatus getRunDataValue(const std::string& run_data, int64_t& value);
 #endif
 
   HighsStatus getRunDataValue(const std::string& run_data, double& value);
@@ -868,8 +865,7 @@ class Highs {
   /**
    * @brief Get a column integrality from the incumbent model
    */
-  HighsStatus getColIntegrality(const HighsInt col,
-                                HighsVarType& integrality);
+  HighsStatus getColIntegrality(const HighsInt col, HighsVarType& integrality);
 
   /**
    * @brief Get multiple rows from the model given by an interval [from_row,
@@ -938,8 +934,7 @@ class Highs {
   /**
    * @brief Get a matrix coefficient
    */
-  HighsStatus getCoeff(const HighsInt row, const HighsInt col,
-                       double& value);
+  HighsStatus getCoeff(const HighsInt row, const HighsInt col, double& value);
 
   /**
    * @brief Write out the incumbent model to a file

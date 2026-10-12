@@ -28,9 +28,7 @@ const HighsInt kDebugReportAll = -1;
 
 class HighsSparseMatrix {
  public:
-  HighsSparseMatrix()
-    : log_options_(nullptr)
-  { clear(); }
+  HighsSparseMatrix() { clear(); }
   std::string name_;
   MatrixFormat format_;
   HighsInt num_col_;
@@ -39,7 +37,6 @@ class HighsSparseMatrix {
   std::vector<HighsInt> p_end_;
   std::vector<HighsInt> index_;
   std::vector<double> value_;
-  HighsLogOptions* log_options_;
 
   bool operator==(const HighsSparseMatrix& matrix) const;
   bool equivalent(const HighsSparseMatrix& matrix) const;
@@ -130,13 +127,10 @@ class HighsSparseMatrix {
                     const HighsInt use_col) const;
   void collectAj(HVector& column, const HighsInt use_col,
                  const double multiplier) const;
-
-  bool hasLogOptions() const { return this->log_options_ != nullptr; }
-  void setLogOptions(HighsLogOptions& log_options) { log_options_ = &log_options; }
-  void clearLogOptions() { this->log_options_ = nullptr; }
-
-  bool legalDimensions(const HighsInt num_vec) const;
-  HighsStatus trimDimensions(const HighsInt num_vec);
+  bool legalDimensions(const HighsLogOptions& log_options,
+                       const HighsInt num_vec) const;
+  HighsStatus trimDimensions(const HighsLogOptions& log_options,
+                             const HighsInt num_vec);
 
  private:
   void priceByRowDenseResult(

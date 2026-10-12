@@ -66,8 +66,6 @@ HighsStatus Highs::clearModel() {
 }
 
 HighsStatus Highs::clearSolver() {
-  // Set log options pointers in case onFirstCall() has't been called
-  this->model_.setLogOptions(this->options_.log_options);
   clearDerivedModelProperties();
   invalidateSolverData();
   ekk_instance_.clear();
@@ -75,8 +73,6 @@ HighsStatus Highs::clearSolver() {
 }
 
 HighsStatus Highs::clearSolverDualData() {
-  // Set log options pointers in case onFirstCall() has't been called
-  this->model_.setLogOptions(this->options_.log_options);
   clearDerivedModelProperties();
   invalidateSolverDualData();
   return returnFromHighs(HighsStatus::kOk);
@@ -331,8 +327,7 @@ HighsStatus Highs::getRunDataType(const std::string& run_data,
   return HighsStatus::kError;
 }
 
-HighsStatus Highs::getRunDataValue(const std::string& run_data,
-                                   double& value) {
+HighsStatus Highs::getRunDataValue(const std::string& run_data, double& value) {
   this->onFirstCall();
   RunDataStatus status =
       getLocalRunDataValue(options_.log_options, run_data, run_data_.valid,
@@ -368,8 +363,7 @@ HighsStatus Highs::writeRunData(const std::string& filename) {
   return return_status;
 }
 
-HighsStatus Highs::getInfoValue(const std::string& info,
-                                HighsInt& value) {
+HighsStatus Highs::getInfoValue(const std::string& info, HighsInt& value) {
   this->onFirstCall();
   InfoStatus status = getLocalInfoValue(options_.log_options, info, info_.valid,
                                         info_.records, value);
@@ -397,8 +391,7 @@ HighsStatus Highs::getInfoValue(const std::string& info, int64_t& value) {
 }
 #endif
 
-HighsStatus Highs::getInfoType(const std::string& info,
-                               HighsInfoType& type) {
+HighsStatus Highs::getInfoType(const std::string& info, HighsInfoType& type) {
   this->onFirstCall();
   if (getLocalInfoType(options_.log_options, info, info_.records, type) ==
       InfoStatus::kOk)
@@ -467,7 +460,6 @@ HighsStatus Highs::passModel(HighsModel model) {
   hessian = std::move(model.hessian_);
   lp.origin_name_ = "User";
   lp.a_matrix_.name_ = "User matrix";
-  lp.setLogOptions(this->options_.log_options);
   assert(lp.a_matrix_.formatOk());
   if (lp.num_col_ == 0 || lp.num_row_ == 0) {
     // Model constraint matrix has either no columns or no
@@ -494,7 +486,7 @@ HighsStatus Highs::passModel(HighsModel model) {
   lp.resetScale();
   // Check that the LP array dimensions are legal (ie at least the
   // size required by num_col_ and num_row_)
-  if (!lp.legalDimensions("passModel"))
+  if (!lp.legalDimensions("passModel", options_.log_options))
     return HighsStatus::kError;
   // Check that the Hessian format is valid
   if (!hessian.formatOk()) return HighsStatus::kError;
@@ -910,9 +902,8 @@ HighsStatus Highs::readModel(const std::string& filename) {
   return returnFromHighs(return_status);
 }
 
-HighsStatus Highs::matrixImage(
-    const std::string& matrix_image_filename,
-    const std::string& hessian_image_filename) {
+HighsStatus Highs::matrixImage(const std::string& matrix_image_filename,
+                               const std::string& hessian_image_filename) {
   this->onFirstCall();
   HighsStatus status = HighsStatus::kOk;
   if (matrix_image_filename != "") {
@@ -990,7 +981,7 @@ HighsStatus Highs::writeLocalModel(HighsModel& model,
   lp.ensureColwise();
 
   // Ensure that the dimensions are OK
-  if (!lp.legalDimensions("writeLocalModel"))
+  if (!lp.legalDimensions("writeLocalModel", options_.log_options))
     return HighsStatus::kError;
 
   if (model.hessian_.dim_ > 0 &&
@@ -1183,7 +1174,7 @@ HighsStatus Highs::presolve() {
 
 HighsStatus Highs::run() {
   this->onFirstCall();
- // Level 0 of Highs::run()
+  // Level 0 of Highs::run()
   // Action the file operations associated with running HiGHS, and
   // call Highs::runFromUserScaling()
   HighsStatus status = HighsStatus::kOk;
@@ -2700,8 +2691,7 @@ HighsStatus Highs::setSolution(const HighsSolution& solution) {
 }
 
 HighsStatus Highs::getColOrRowName(const HighsLp& lp, const bool is_col,
-                                   const HighsInt index,
-                                   std::string& name) {
+                                   const HighsInt index, std::string& name) {
   this->onFirstCall();
   HighsInt num_index = is_col ? lp.num_col_ : lp.num_row_;
   if (index < 0 || index >= num_index) {
@@ -3652,8 +3642,7 @@ HighsStatus Highs::getRows(const HighsInt num_set_entries, const HighsInt* set,
 
 HighsStatus Highs::getRows(const HighsInt* mask, HighsInt& num_row,
                            double* lower, double* upper, HighsInt& num_nz,
-                           HighsInt* start, HighsInt* index,
-                           double* value) {
+                           HighsInt* start, HighsInt* index, double* value) {
   this->onFirstCall();
   HighsIndexCollection index_collection;
   const bool create_error = create(index_collection, mask, model_.lp_.num_row_);
@@ -4091,7 +4080,8 @@ HighsPresolveStatus Highs::runPresolve(const bool force_lp_presolve,
           (HighsInt)original_lp.numNz() - (HighsInt)reduced_lp.numNz();
       // Clear any scaling information inherited by the reduced LP
       reduced_lp.clearScale();
-      assert(reduced_lp.legalDimensions("RunPresolve: reduced_lp"));
+      assert(reduced_lp.legalDimensions("RunPresolve: reduced_lp",
+                                        options_.log_options));
       break;
     }
     case HighsPresolveStatus::kReducedToEmpty: {
@@ -4682,11 +4672,9 @@ HighsStatus Highs::callRunPostsolve(const HighsSolution& solution,
 void Highs::onFirstCall(const bool log_header) {
   if (made_first_call_) return;
   HighsLogOptions& log_options = options_.log_options;
-  this->model_.setLogOptions(log_options);
   if (!*log_options.output_flag) return;
   // With internal Highs instances the log header isn't logged
-  if (log_header)
-    highsLogHeader(log_options, options_.log_githash);
+  if (log_header) highsLogHeader(log_options, options_.log_githash);
   made_first_call_ = true;
   return;
 }
@@ -5009,7 +4997,7 @@ HighsStatus Highs::returnFromHighs(HighsStatus highs_return_status) {
   // Stop the HiGHS run clock if it is running
   if (timer_.running()) timer_.stop();
   const bool dimensions_ok =
-      model_.lp_.legalDimensions("returnFromHighs");
+      model_.lp_.legalDimensions("returnFromHighs", options_.log_options);
   if (!dimensions_ok) {
     highsLogDev(options_.log_options, HighsLogType::kError,
                 "LP Dimension error in returnFromHighs()\n");
