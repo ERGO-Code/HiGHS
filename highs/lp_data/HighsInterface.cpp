@@ -506,7 +506,7 @@ HighsStatus Highs::addColsInterface(
 
   // Increase the number of columns in the LP
   lp.num_col_ += ext_num_new_col;
-  assert(lp.legalDimensions("addCols", options.log_options));
+  assert(lp.legalDimensions("addCols"));
 
   // Interpret possible introduction of infinite costs
   lp.has_infinite_cost_ = lp.has_infinite_cost_ || local_has_infinite_cost;
@@ -638,7 +638,7 @@ HighsStatus Highs::addRowsInterface(HighsInt ext_num_new_row,
 
   // Increase the number of rows in the LP
   lp.num_row_ += ext_num_new_row;
-  assert(lp.legalDimensions("addRows", options.log_options));
+  assert(lp.legalDimensions("addRows"));
 
   // Deduce the consequences of adding new rows
   invalidateModelStatusSolutionAndInfo();
@@ -765,7 +765,7 @@ void Highs::deleteColsInterface(HighsIndexCollection& index_collection) {
     }
     assert(new_col == lp.num_col_);
   }
-  assert(lp.legalDimensions("deleteCols", options_.log_options));
+  assert(lp.legalDimensions("deleteCols"));
   lp.col_hash_.name2index.clear();
 }
 
@@ -818,7 +818,7 @@ void Highs::deleteRowsInterface(HighsIndexCollection& index_collection) {
     }
     assert(new_row == lp.num_row_);
   }
-  assert(lp.legalDimensions("deleteRows", options_.log_options));
+  assert(lp.legalDimensions("deleteRows"));
   lp.row_hash_.name2index.clear();
 }
 

@@ -18,7 +18,9 @@
 
 class HighsLp {
  public:
-  HighsLp() {
+  HighsLp() 
+    : log_options_(nullptr)
+  {
     clear();
     a_matrix_.name_ = "HighsLp::a_matrix_";
   }
@@ -61,6 +63,8 @@ class HighsLp {
   HighsInt fme_obj_col_ = -1;
   HighsLpMods mods_;
 
+  HighsLogOptions* log_options_;
+
   bool operator==(const HighsLp& lp) const;
   bool equalButForNames(const HighsLp& lp) const;
   bool equalButForScalingAndNames(const HighsLp& lp) const;
@@ -102,9 +106,9 @@ class HighsLp {
     this->col_hash_.clear();
     this->row_hash_.clear();
   }
-  bool legalDimensions(const std::string& message,
-                       const HighsLogOptions& log_options) const;
-  HighsStatus trimDimensions(const HighsLogOptions& log_options);
+  void setLogOptions(HighsLogOptions& log_options);
+  bool legalDimensions(const std::string& message) const;
+  HighsStatus trimDimensions();
   void clear();
 };
 

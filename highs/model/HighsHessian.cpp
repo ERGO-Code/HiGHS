@@ -25,6 +25,7 @@ void HighsHessian::clear() {
   this->format_ = HessianFormat::kTriangular;
   this->start_.assign(1, 0);
   this->oracle_.clear();
+  this->log_options_ = nullptr;
 }
 
 void HighsHessian::exactResize() {

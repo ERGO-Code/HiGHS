@@ -26,7 +26,7 @@ void cliCopyrightLine(const HighsLogOptions& log_options) {
 
 int runHighsReturn(Highs& highs, const int status) {
   // Possibly write out the HiGHS and CLI copyright lines
-  highs.logHeader();
+  highs.onFirstCall();
   cliCopyrightLine(highs.getOptions().log_options);
   // Close any log file explicitly
   highs.closeLogFile();
@@ -99,11 +99,11 @@ int main(int argc, char** argv) {
 
   // Pass the option settings to HiGHS. Only error-checking produces
   // output, but values are checked in loadOptions, so it's safe to
-  // call this first so that Highs::logHeader() uses reporting
+  // call this first so that Highs::onFirstCall() uses reporting
   // settings defined in any options file.
   highs.passOptions(loaded_options);
 
-  highs.logHeader();
+  highs.onFirstCall();
   // Acknowledge use of CLI for command line parsing
   cliCopyrightLine(log_options);
   // Log changes from the default option settings
