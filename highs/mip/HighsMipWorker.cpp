@@ -35,6 +35,11 @@ HighsMipWorker::HighsMipWorker(const HighsMipSolver& mipsolver,
   sepa_ptr_->setLpRelaxation(lp_);
 }
 
+HighsMipWorker::~HighsMipWorker() {
+  search_ptr_.reset();
+  sepa_ptr_.reset();
+}
+
 const HighsMipSolver& HighsMipWorker::getMipSolver() const {
   return mipsolver_;
 }
@@ -92,17 +97,15 @@ std::pair<bool, double> HighsMipWorker::transformNewIntegerFeasibleSolution(
   if (kAllowDeveloperAssert) assert(return_status == HighsStatus::kOk);
 
   // compute the objective value in the original space
+  MipViolation violation;
+  HighsCDouble mipsolver_quad_objective_value = 0;
+  bool feasible = mipsolver_.solutionFeasible(
+      mipsolver_.orig_model_, solution.col_value, &solution.row_value,
+      violation, mipsolver_quad_objective_value);
   double bound_violation_ = 0;
   double row_violation_ = 0;
   double integrality_violation_ = 0;
-
-  HighsCDouble mipsolver_quad_objective_value = 0;
-
-  bool feasible = mipsolver_.solutionFeasible(
-      mipsolver_.orig_model_, solution.col_value, &solution.row_value,
-      bound_violation_, row_violation_, integrality_violation_,
-      mipsolver_quad_objective_value);
-
+  violation.copy(bound_violation_, row_violation_, integrality_violation_);
   const double transformed_solobj = static_cast<double>(
       static_cast<HighsInt>(mipsolver_.orig_model_->sense_) *
           mipsolver_quad_objective_value -

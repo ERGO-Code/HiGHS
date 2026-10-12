@@ -13,7 +13,7 @@
 #include <vector>
 
 #include "mip/HighsDomain.h"
-#include "util/HighsInt.h"
+#include "util/HighsType.h"
 
 class HighsConflictPool {
  private:
@@ -36,6 +36,8 @@ class HighsConflictPool {
   std::vector<HighsInt> deletedConflicts_;
 
   std::vector<HighsDomain::ConflictPoolPropagation*> propagationDomains;
+
+  std::pair<HighsInt, HighsInt> allocateConflict(HighsInt conflictLen);
 
  public:
   HighsConflictPool(HighsInt agelim, HighsInt softlimit)

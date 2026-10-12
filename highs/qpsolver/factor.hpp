@@ -59,6 +59,9 @@ class CholeskyFactor {
     L.resize(current_k_max * current_k_max);
   }
 
+  // the factor no longer matches the null space: recompute it when next used
+  void invalidate() { uptodate = false; }
+
   QpSolverStatus recompute() {
     std::vector<std::vector<double>> orig;
     HighsInt dim_ns = basis.getinactive().size();
@@ -109,14 +112,21 @@ class CholeskyFactor {
     return QpSolverStatus::OK;
   }
 
+  // Appends the null space column yp to the factor. The new diagonal entry
+  // is the Schur complement mu - l'l, with mu = yp'Q yp and l = L^{-1}Z'Q yp.
+  // When yp is nearly Q-dependent on the current null space, mu and l'l agree
+  // to all digits and their difference is rounding error, possibly negative.
+  // For a nonempty null space, the caller passes curvature = p'Qp, with p the
+  // Q-conjugate search direction yp - Z(Z'QZ)^{-1}Z'Q yp: this is the same
+  // Schur complement, evaluated as a quadratic form without cancellation.
   QpSolverStatus expand(const QpVector& yp, QpVector& gyp, QpVector& l,
-                        QpVector& m) {
+                        QpVector& m, const double curvature) {
     if (!uptodate) {
       return QpSolverStatus::OK;
     }
     double mu = gyp * yp;
     l.resparsify();
-    double lambda = mu - l.norm2();
+    double lambda = l.dim > 0 ? curvature : mu;
     if (lambda > 0.0) {
       if (current_k_max <= current_k + 1) {
         resize(current_k_max * 2);
@@ -392,7 +402,7 @@ class CholeskyFactor {
     current_k--;
   }
 
-  void report(std::string name = "") {
+  void report(const std::string& name = "") {
     printf("%s\n", name.c_str());
     for (HighsInt i = 0; i < current_k; i++) {
       for (HighsInt j = 0; j < current_k; j++) {

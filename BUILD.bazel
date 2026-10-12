@@ -73,7 +73,6 @@ cc_library(
         "highs/presolve/*.cpp",
         "highs/qpsolver/*.cpp",
         "highs/simplex/*.cpp",
-        "highs/test_kkt/*.cpp",
         "highs/util/*.cpp",
     ]),
     hdrs = [
@@ -113,7 +112,6 @@ cc_library(
         # "highs/presolve",
         # "highs/qpsolver",
         # "highs/simplex",
-        # "highs/test_kkt",
         # "highs/util",
     ],
     linkopts = select({

@@ -412,6 +412,14 @@ HighsStatus solveLpHipo(HighsLpSolverObject& solver_object) {
                    solver_object.highs_info_, solver_object.callback_);
 }
 
+HighsStatus solveQpHipo(HighsQpSolverObject& solver_object) {
+  return solveHipo(solver_object.options_, solver_object.timer_,
+                   solver_object.model_.lp_, solver_object.model_.hessian_,
+                   solver_object.basis_, solver_object.solution_,
+                   solver_object.model_status_, solver_object.highs_info_,
+                   solver_object.callback_);
+}
+
 HighsStatus solveHipo(const HighsOptions& options, HighsTimer& timer,
                       const HighsLp& lp, const HighsHessian& Q,
                       HighsBasis& highs_basis, HighsSolution& highs_solution,
@@ -685,8 +693,9 @@ void fillInIpxData(const HighsLp& lp, ipx::Int& num_col, ipx::Int& num_row,
   if (free_rows.size() > 0) {
     HighsInt counter = 0;
     HighsInt findex = 0;
+    const HighsInt free_rows_size = static_cast<HighsInt>(free_rows.size());
     for (HighsInt row = 0; row < lp.num_row_; row++) {
-      if (free_rows[findex] == row) {
+      if (findex < free_rows_size && free_rows[findex] == row) {
         findex++;
         continue;
       } else {
@@ -732,7 +741,7 @@ void fillInIpxData(const HighsLp& lp, ipx::Int& num_col, ipx::Int& num_row,
   }
 
   for (HighsInt k = 0; k < num_slack; k++) {
-    Ai.push_back((ipx::Int)general_bounded_rows[k]);
+    Ai.push_back((ipx::Int)reduced_rowmap[general_bounded_rows[k]]);
     Ax.push_back(-1);
   }
 
@@ -1462,5 +1471,4 @@ HighsStatus reportHipoCrossoverStatus(const HighsOptions& options,
                  "Hipo: Crossover unrecognised status\n");
     return HighsStatus::kError;
   }
-  return HighsStatus::kError;
 }

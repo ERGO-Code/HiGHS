@@ -305,7 +305,7 @@ bool loadOptions(const CLI::App& app, const HighsLogOptions& report_log_options,
   // }
 
   if (c.model_file.size() == 0) {
-    std::cout << "Please specify filename in .mps|.lp|.ems format.\n";
+    std::cout << "Please specify filename in .mps or .lp format\n";
     return false;
   }
 

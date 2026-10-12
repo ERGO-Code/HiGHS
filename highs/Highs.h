@@ -192,7 +192,7 @@ class Highs {
    * @brief Get number of linear objectives from the incumbent model
    */
   HighsInt getNumLinearObjectives() const {
-    return multi_linear_objective_.size();
+    return static_cast<HighsInt>(multi_linear_objective_.size());
   }
 
   /**
@@ -535,7 +535,7 @@ class Highs {
    * the presolved model
    */
   const HighsInt* getPresolveOrigColsIndex() const {
-    return presolve_.data_.postSolveStack.getOrigColsIndex();
+    return presolve_.data_.postSolveStack.getOrigColIndex().data();
   }
 
   /**
@@ -543,7 +543,7 @@ class Highs {
    * presolved model
    */
   const HighsInt* getPresolveOrigRowsIndex() const {
-    return presolve_.data_.postSolveStack.getOrigRowsIndex();
+    return presolve_.data_.postSolveStack.getOrigRowIndex().data();
   }
 
   /**
@@ -577,7 +577,7 @@ class Highs {
   /**
    * @brief Zero all clocks in the internal HighsTimer instance
    */
-  void zeroAllClocks() { timer_.zeroAllClocks(); };
+  void zeroAllClocks() { timer_.zeroAllClocks(); }
 
   /**
    * @brief Return a const reference to the internal HighsSolution
@@ -590,7 +590,7 @@ class Highs {
   /**
    * @brief Return a const reference to the internal ICrash info instance
    */
-  const ICrashInfo& getICrashInfo() const { return icrash_info_; };
+  const ICrashInfo& getICrashInfo() const { return icrash_info_; }
 
   /**
    * @brief Return a const reference to the internal HighsBasis instance
@@ -781,7 +781,7 @@ class Highs {
    * @brief Get the number of (constraint matrix) nonzeros in the incumbent
    * model
    */
-  HighsInt getNumNz() const { return model_.lp_.a_matrix_.numNz(); }
+  HighsInt getNumNz() const { return model_.lp_.numNz(); }
 
   /**
    * @brief Get the number of Hessian matrix nonzeros in the incumbent model
@@ -1392,10 +1392,11 @@ class Highs {
   //
   // See highs/HighsRun.md
   HighsStatus optimizeHighs();
-  HighsStatus optimizeModel();
-  HighsStatus calledOptimizeModel();
   // Used in MIP solver as minimal LP solve
   HighsStatus optimizeLp();
+  HighsStatus optimizeModel();
+  HighsStatus optimizeModelTryCatch();
+  HighsStatus calledOptimizeModel();
 
   const HighsSimplexStats& getSimplexStats() const {
     return ekk_instance_.getSimplexStats();
@@ -1675,8 +1676,9 @@ class Highs {
   HighsStatus completeSolutionFromDiscreteAssignment();
 
   HighsStatus callSolveLp(HighsLp& lp, const std::string& message);
-  HighsStatus callSolveQp();
-  HighsStatus callSolveMip();
+  HighsStatus callSolveMip(HighsLp& lp, const std::string& message);
+  HighsStatus callSolveQp(HighsModel& model, const std::string& message);
+
   HighsStatus callRunPostsolve(const HighsSolution& solution,
                                const HighsBasis& basis);
 
@@ -1842,12 +1844,13 @@ class Highs {
   HighsStatus getIisInterface();
   HighsStatus getIisInterfaceReturn(
       const HighsStatus return_status, const HighsOptions& original_options,
-      const std::vector<bool>& original_callbacks);
+      const std::vector<HighsBool>& original_callbacks);
 
   HighsStatus elasticityFilterReturn(
       const HighsStatus return_status, const std::string& original_model_name,
       const HighsModelStatus original_model_status,
       const HighsInt original_num_col, const HighsInt original_num_row,
+      const ObjSense original_sense,
       const std::vector<double>& original_col_cost,
       const std::vector<double>& original_col_lower,
       const std::vector<double>& original_col_upper,
@@ -1870,9 +1873,8 @@ class Highs {
   bool aFormatOk(const HighsInt num_nz, const HighsInt format);
   bool qFormatOk(const HighsInt num_nz, const HighsInt format);
   void clearZeroHessian();
-  HighsStatus checkOptimality(const std::string& solver_type);
   void callLpKktCheck(const HighsLp& lp, const std::string& message = "");
-  HighsStatus invertRequirementError(std::string method_name) const;
+  HighsStatus invertRequirementError(const std::string& method_name) const;
 
   HighsStatus handleInfCost();
   void restoreInfCost(HighsStatus& return_status);

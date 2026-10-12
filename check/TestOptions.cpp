@@ -1,5 +1,6 @@
 #include <cstdio>
 #include <fstream>
+#include <utility>
 
 #include "HCheckConfig.h"
 #include "Highs.h"
@@ -544,6 +545,54 @@ TEST_CASE("default-options", "[highs_options]") {
   REQUIRE(h.passOptions(options) == HighsStatus::kOk);
 }
 
+TEST_CASE("options-copy-move", "[highs_options]") {
+  // the option records of a copied or moved HighsOptions object must refer
+  // to its own members, not to those of the source
+  auto setSource = [](HighsOptions& source) {
+    source.output_flag = dev_run;
+    source.simplex_strategy = kSimplexStrategyDual;
+  };
+  auto checkRecords = [](HighsOptions& options, HighsOptions& source) {
+    REQUIRE(options.simplex_strategy == kSimplexStrategyDual);
+    const HighsInt source_strategy = source.simplex_strategy;
+    REQUIRE(setLocalOptionValue(
+                options.log_options, "simplex_strategy", options.records,
+                HighsInt{kSimplexStrategyPrimal}) == OptionStatus::kOk);
+    REQUIRE(options.simplex_strategy == kSimplexStrategyPrimal);
+    REQUIRE(source.simplex_strategy == source_strategy);
+  };
+  {
+    // copy constructor
+    HighsOptions source;
+    setSource(source);
+    HighsOptions options(source);
+    checkRecords(options, source);
+  }
+  {
+    // move constructor
+    HighsOptions source;
+    setSource(source);
+    HighsOptions options(std::move(source));
+    checkRecords(options, source);
+  }
+  {
+    // copy assignment
+    HighsOptions source;
+    setSource(source);
+    HighsOptions options;
+    options = source;
+    checkRecords(options, source);
+  }
+  {
+    // move assignment
+    HighsOptions source;
+    setSource(source);
+    HighsOptions options;
+    options = std::move(source);
+    checkRecords(options, source);
+  }
+}
+
 TEST_CASE("incomplete-options-file-line", "[highs_options]") {
   const std::string test_name = Catch::getResultCapture().getCurrentTestName();
   const std::string incomplete_options_file = test_name + ".set";
@@ -563,11 +612,12 @@ TEST_CASE("incomplete-options-file-line", "[highs_options]") {
 
 TEST_CASE("string-option-case-insensitivity", "[highs_options]") {
   Highs highs;
-  highs.setOptionValue("output_flag", dev_run);
-  REQUIRE(highs.setOptionValue("output_flag", "True") == HighsStatus::kOk);
-  REQUIRE(highs.setOptionValue("output_flag", "TRUE ") == HighsStatus::kOk);
   REQUIRE(highs.setOptionValue("output_flag", "FaLsE") == HighsStatus::kOk);
   REQUIRE(highs.setOptionValue("output_flag", " false") == HighsStatus::kOk);
+  REQUIRE(highs.setOptionValue("output_flag", "True") == HighsStatus::kOk);
+  REQUIRE(highs.setOptionValue("output_flag", "TRUE ") == HighsStatus::kOk);
+  // Now ensure that output_flag setting corresponds to dev_run
+  highs.setOptionValue("output_flag", dev_run);
   REQUIRE(highs.setOptionValue(kParallelString, "On") == HighsStatus::kOk);
   REQUIRE(highs.setOptionValue(kParallelString, "OFF ") == HighsStatus::kOk);
   REQUIRE(highs.setOptionValue(kSolverString, " Choose") == HighsStatus::kOk);
@@ -580,4 +630,10 @@ TEST_CASE("string-option-case-insensitivity", "[highs_options]") {
           HighsStatus::kOk);
   REQUIRE(highs.setOptionValue(kHipoSystemString, "NormalEQ") ==
           HighsStatus::kOk);
+  // Still doesn't mean that "anything goes"
+  REQUIRE(highs.setOptionValue(kSolverString, "ASM") == HighsStatus::kError);
+  REQUIRE(highs.setOptionValue(kMipLpSolverString, "ASM") ==
+          HighsStatus::kError);
+  REQUIRE(highs.setOptionValue(kMipIpmSolverString, "ASM") ==
+          HighsStatus::kError);
 }

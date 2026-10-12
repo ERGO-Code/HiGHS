@@ -15,7 +15,7 @@
 #include <limits>
 #include <string>
 
-#include "util/HighsInt.h"
+#include "util/HighsType.h"
 
 const std::string kHighsCopyrightStatement =
     "Copyright (c) 2026 under MIT licence terms";
@@ -31,6 +31,8 @@ const double kHighsZero = 1e-50;
 const std::string kHighsOffString = "off";
 const std::string kHighsChooseString = "choose";
 const std::string kHighsOnString = "on";
+const std::string kHighsSparseString = "sparse";
+const std::string kHighsPartialString = "partial";
 const HighsInt kHighsMaxStringLength = 512;
 const HighsInt kSimplexConcurrencyLimit = 8;
 const double kRunningAverageMultiplier = 0.05;
@@ -39,6 +41,7 @@ const double kExcessivelySmallObjectiveCoefficient = 1e-4;
 const double kExcessivelyLargeObjectiveCoefficient = 1e6;
 const double kExcessivelySmallBoundValue = 1e-4;
 const double kExcessivelyLargeBoundValue = 1e6;
+const double kExcessivelyLargeIntegerBoundValue = 1e5;
 
 const HighsInt kNoThreadInstance = -1;
 const bool kAllowDeveloperAssert = false;
@@ -160,8 +163,9 @@ enum SolutionStyle {
   kSolutionStyleGlpsolRaw,     // 2;
   kSolutionStyleGlpsolPretty,  // 3;
   kSolutionStyleSparse,        // 4;
+  kSolutionStylePartial,       // 5;
   kSolutionStyleMin = kSolutionStyleOldRaw,
-  kSolutionStyleMax = kSolutionStyleSparse
+  kSolutionStyleMax = kSolutionStylePartial
 };
 
 enum GlpsolCostRowLocation {
@@ -189,6 +193,7 @@ enum class HighsPresolveStatus {
   kOptionsError,  // V2.0: Delete since it's not used!
   kNotSet,
   kOutOfMemory,  // V2.0: Move above kNotSet
+  kException     // V2.0: Move above kNotSet
 };
 
 enum class HighsPostsolveStatus {  // V2.0: Delete if not used!
@@ -241,7 +246,9 @@ enum HighsCallbackType : int {
   kCallbackMipGetCutPool,             // 7
   kCallbackMipDefineLazyConstraints,  // 8
   kCallbackMipUserSolution,           // 9
-  kCallbackMax = kCallbackMipUserSolution,
+  kCallbackQpFirstFeasiblePoint,      // 10
+  kCallbackQpInterrupt,               // 11
+  kCallbackMax = kCallbackQpInterrupt,
   kNumCallbackType
 };
 
@@ -266,9 +273,7 @@ enum PresolveRuleType : int {
   kPresolveRuleEmptyCol,
   kPresolveRuleFixedCol,
   kPresolveRuleDominatedCol,
-  // The remaining rules can be switched off
-  kPresolveRuleFirstAllowOff,
-  kPresolveRuleForcingRow = kPresolveRuleFirstAllowOff,
+  kPresolveRuleForcingRow,
   kPresolveRuleForcingCol,
   kPresolveRuleFreeColSubstitution,
   kPresolveRuleDoubletonEquation,
@@ -280,9 +285,13 @@ enum PresolveRuleType : int {
   kPresolveRuleProbing,
   kPresolveRuleEnumeration,
   kPresolveRuleDualFixing,
+  kPresolveRuleZeroCostSingleton,
   kPresolveRuleColStuffing,
+  kPresolveRuleDualFixProbing,
   kPresolveRuleInitialSweep,
-  kPresolveRuleMax = kPresolveRuleInitialSweep,
+  kPresolveRuleFourierMotzkin,
+  kPresolveRuleWeaklyDominatedCol,
+  kPresolveRuleMax = kPresolveRuleWeaklyDominatedCol,
   kPresolveRuleLastAllowOff = kPresolveRuleMax,
   kPresolveRuleCount
 };
@@ -399,9 +408,6 @@ const double kMaxSemiVariableUpper = 1e5;
 // Limit on primal values being realistic
 const double kExcessivePrimalValue = 1e25;
 
-// Hash marker for duplicates
-const HighsInt kHashIsDuplicate = -1;
-
 // Tolerance values for highsDoubleToString
 const double kModelValueToStringTolerance = 1e-15;
 const double kRangingValueToStringTolerance = 1e-13;
@@ -458,5 +464,23 @@ enum PdlpRestartStrategy {
   kPdlpRestartStrategyHalpern,
   kPdlpRestartStrategyMax = kPdlpRestartStrategyHalpern
 };
+
+namespace hipo {
+enum class ParallelTechnique {
+  kMin = 0,
+  kAnalyse = kMin,
+  kOrderNE,
+  kOrderAS,
+  kNEStruct,
+  kNEValues,
+  kTree,
+  kNode,
+  kForwardSolve,
+  kDiagonalSolve,
+  kBackwardSolve,
+  kCount,
+  kMaxSum = (1 << kCount) - 1
+};
+}
 
 #endif /* LP_DATA_HCONST_H_ */
