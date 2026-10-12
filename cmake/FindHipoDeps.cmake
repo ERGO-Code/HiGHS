@@ -10,6 +10,13 @@ endif()
 
 set(BLAS_ROOT "" CACHE STRING "Root directory of BLAS or OpenBLAS")
 
+# MSVC (cl.exe) cannot compile OpenBLAS's optimised x86_64 kernels, so with
+# BUILD_OPENBLAS it only gets the slow portable GENERIC target. When clang-cl
+# is available, build OpenBLAS with it instead, as a separate project (it is
+# ABI-compatible with MSVC), with DYNAMIC_ARCH for runtime CPU detection.
+option(BUILD_OPENBLAS_CLANG_CL
+    "With MSVC on x64, build OpenBLAS with clang-cl to get optimised kernels" ON)
+
 # set appropriate BLAS linking information
 function(highs_configure_blas_target)
     set(HIGHS_BLAS_TARGET "" PARENT_SCOPE)
@@ -61,7 +68,9 @@ macro(highs_export_blas_state)
             HIGHS_BLAS_COMPILE_DEFINITION
             HIGHS_BLAS_VENDOR
             HIGHS_BLAS_VERSION
-            HIGHS_BLAS_LICENSE)
+            HIGHS_BLAS_LICENSE
+            HIGHS_BLAS_BUILD_DEPENDENCY
+            HIGHS_BLAS_EXPORT_TARGETS)
         if(DEFINED ${_highs_blas_var})
             set(${_highs_blas_var} "${${_highs_blas_var}}" PARENT_SCOPE)
         else()
@@ -69,6 +78,129 @@ macro(highs_export_blas_state)
         endif()
     endforeach()
 endmacro()
+
+# With MSVC on x64, try to build OpenBLAS (version, options) with clang-cl and
+# Ninja as an external project. On success, sets result_var to TRUE and sets
+# HIGHS_BLAS_TARGET, HIGHS_BLAS_BUILD_DEPENDENCY and HIGHS_BLAS_EXPORT_TARGETS
+# in the parent scope; otherwise sets result_var to FALSE.
+function(highs_build_openblas_clang_cl result_var version)
+    set(${result_var} FALSE PARENT_SCOPE)
+
+    if(NOT BUILD_OPENBLAS_CLANG_CL)
+        return()
+    endif()
+    if(NOT CMAKE_SIZEOF_VOID_P EQUAL 8 OR
+       (CMAKE_GENERATOR_PLATFORM AND NOT CMAKE_GENERATOR_PLATFORM MATCHES "^[xX]64$") OR
+       NOT CMAKE_SYSTEM_PROCESSOR MATCHES "AMD64|x86_64")
+        message(STATUS "OpenBLAS with clang-cl is only set up for x64 targets")
+        return()
+    endif()
+
+    # Locations bundled with Visual Studio, derived from cl.exe at
+    # <VS>/VC/Tools/MSVC/<version>/bin/Host<arch>/<arch>/cl.exe. clang-cl and
+    # lld-link locate the MSVC headers/libraries and Windows SDK themselves.
+    get_filename_component(_msvc_bin_dir "${CMAKE_C_COMPILER}" DIRECTORY)
+    get_filename_component(_vs_dir "${_msvc_bin_dir}/../../../../../../.." ABSOLUTE)
+
+    find_program(HIGHS_CLANG_CL clang-cl
+        HINTS "$ENV{LLVM_ROOT}/bin" "$ENV{ProgramFiles}/LLVM/bin" "${_vs_dir}/VC/Tools/Llvm/x64/bin")
+    if(NOT HIGHS_CLANG_CL)
+        message(WARNING "clang-cl not found: OpenBLAS will be built with MSVC as the slow GENERIC target. "
+            "Install LLVM or the Visual Studio \"C++ Clang tools for Windows\" component, "
+            "or set HIGHS_CLANG_CL, for an optimised OpenBLAS.")
+        return()
+    endif()
+    get_filename_component(_llvm_bin_dir "${HIGHS_CLANG_CL}" DIRECTORY)
+    find_program(HIGHS_LLD_LINK lld-link HINTS "${_llvm_bin_dir}" NO_DEFAULT_PATH)
+    find_program(HIGHS_LLVM_LIB llvm-lib HINTS "${_llvm_bin_dir}" NO_DEFAULT_PATH)
+
+    if(CMAKE_GENERATOR MATCHES "Ninja")
+        set(HIGHS_NINJA "${CMAKE_MAKE_PROGRAM}")
+    else()
+        find_program(HIGHS_NINJA ninja
+            HINTS "${_vs_dir}/Common7/IDE/CommonExtensions/Microsoft/CMake/Ninja")
+    endif()
+    if(NOT HIGHS_NINJA)
+        message(WARNING "ninja not found: OpenBLAS will be built with MSVC as the slow GENERIC target.")
+        return()
+    endif()
+
+    message(STATUS "Building OpenBLAS with clang-cl (DYNAMIC_ARCH): ${HIGHS_CLANG_CL}")
+
+    # Keep CMake's default /DWIN32 /D_WINDOWS, which overriding CMAKE_C_FLAGS
+    # drops. Recent clang turns incompatible pointer types into errors, which
+    # some OpenBLAS kernels (e.g. the SKYLAKEX prefetch intrinsics) trigger.
+    set(_c_flags "/DWIN32 /D_WINDOWS -Wno-error=incompatible-pointer-types -Wno-everything")
+
+    set(_install_dir "${CMAKE_BINARY_DIR}/_deps/openblas-clang-cl-install")
+    set(_openblas_lib "${_install_dir}/lib/openblas.lib")
+
+    set(_cmake_args
+        -DCMAKE_BUILD_TYPE=Release
+        -DCMAKE_INSTALL_PREFIX=${_install_dir}
+        -DCMAKE_INSTALL_LIBDIR=lib
+        -DCMAKE_MAKE_PROGRAM=${HIGHS_NINJA}
+        -DCMAKE_C_COMPILER=${HIGHS_CLANG_CL}
+        -DBUILD_SHARED_LIBS=OFF
+        -DBUILD_STATIC_LIBS=ON
+        -DBUILD_TESTING=OFF
+        -DBUILD_WITHOUT_LAPACK=ON
+        -DNOFORTRAN=ON
+        -DONLY_CBLAS=ON
+        -DNO_LAPACK=ON
+        -DNO_LAPACKE=ON
+        # HiPO only uses double precision; defining only BUILD_DOUBLE makes
+        # OpenBLAS's CMake build skip the other precisions
+        -DBUILD_DOUBLE=ON
+        -DDYNAMIC_ARCH=ON)
+    if(HIGHS_LLD_LINK)
+        list(APPEND _cmake_args -DCMAKE_LINKER=${HIGHS_LLD_LINK})
+    endif()
+    if(HIGHS_LLVM_LIB)
+        list(APPEND _cmake_args -DCMAKE_AR=${HIGHS_LLVM_LIB})
+    endif()
+    if(NO_AVX512)
+        list(APPEND _cmake_args -DNO_AVX512=ON)
+    endif()
+    if(DEFINED CMAKE_MSVC_RUNTIME_LIBRARY)
+        list(APPEND _cmake_args
+            -DCMAKE_POLICY_DEFAULT_CMP0091=NEW
+            "-DCMAKE_MSVC_RUNTIME_LIBRARY=${CMAKE_MSVC_RUNTIME_LIBRARY}")
+    endif()
+
+    include(GNUInstallDirs)
+    include(ExternalProject)
+    ExternalProject_Add(openblas_clang_cl
+        GIT_REPOSITORY "https://github.com/OpenMathLib/OpenBLAS.git"
+        GIT_TAG        "v${version}"
+        GIT_SHALLOW    TRUE
+        PREFIX         "${CMAKE_BINARY_DIR}/_deps/openblas-clang-cl"
+        INSTALL_DIR    "${_install_dir}"
+        UPDATE_COMMAND ""
+        CMAKE_GENERATOR Ninja
+        CMAKE_ARGS     ${_cmake_args}
+        CMAKE_CACHE_ARGS
+            "-DCMAKE_C_FLAGS:STRING=${_c_flags}"
+        BUILD_BYPRODUCTS "${_openblas_lib}"
+        LOG_CONFIGURE  TRUE
+        LOG_BUILD      TRUE
+        LOG_INSTALL    TRUE
+        LOG_OUTPUT_ON_FAILURE TRUE)
+
+    # Wrap the library in an installable target, so that targets linking it
+    # can be exported
+    add_library(highs_openblas INTERFACE)
+    target_link_libraries(highs_openblas INTERFACE
+        $<BUILD_INTERFACE:${_openblas_lib}>
+        $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/${CMAKE_INSTALL_LIBDIR}/openblas.lib>)
+    install(TARGETS highs_openblas EXPORT highs-targets COMPONENT libs)
+    install(FILES "${_openblas_lib}" DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT libs)
+
+    set(HIGHS_BLAS_TARGET highs_openblas PARENT_SCOPE)
+    set(HIGHS_BLAS_BUILD_DEPENDENCY openblas_clang_cl PARENT_SCOPE)
+    set(HIGHS_BLAS_EXPORT_TARGETS highs_openblas PARENT_SCOPE)
+    set(${result_var} TRUE PARENT_SCOPE)
+endfunction()
 
 # discover BLAS (build if necessary) and set cmake variables for linking and metadata
 function(highs_configure_blas)
@@ -84,6 +216,19 @@ function(highs_configure_blas)
 
     if(BUILD_OPENBLAS)
         set(_highs_openblas_version "0.3.30")
+
+        if(CMAKE_C_COMPILER_ID STREQUAL "MSVC")
+            highs_build_openblas_clang_cl(_highs_openblas_clang_cl ${_highs_openblas_version})
+            if(_highs_openblas_clang_cl)
+                set(OpenBLAS_FOUND TRUE)
+                set(OpenBLAS_VERSION "${_highs_openblas_version}")
+                highs_configure_blas_metadata()
+
+                set(HIGHS_BLAS_CONFIGURED TRUE)
+                highs_export_blas_state()
+                return()
+            endif()
+        endif()
 
         include(FetchContent)
         set(FETCHCONTENT_QUIET OFF)
@@ -444,6 +589,10 @@ function(highs_link_blas target_name)
     endif()
 
     target_link_libraries(${target_name} PUBLIC ${HIGHS_BLAS_TARGET})
+
+    if(HIGHS_BLAS_BUILD_DEPENDENCY)
+        add_dependencies(${target_name} ${HIGHS_BLAS_BUILD_DEPENDENCY})
+    endif()
 
     if(HIGHS_BLAS_INCLUDE_DIRS)
         target_include_directories(${target_name} PUBLIC
