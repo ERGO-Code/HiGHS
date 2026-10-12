@@ -93,7 +93,6 @@ HighsStatus assessMatrix(
   // Set up this_start to be the first start in case num_vec = 0
   HighsInt this_start = matrix_start[0];
   HighsInt this_p_end = 0;
-  if (partitioned) this_p_end = matrix_p_end[0];
   for (HighsInt ix = 0; ix < num_vec; ix++) {
     this_start = matrix_start[ix];
     bool this_start_too_small = this_start < previous_start;

@@ -2296,6 +2296,12 @@ void HEkk::initialisePartitionedRowwiseMatrix() {
   analysis_.simplexTimerStart(matrixSetupClock);
   ar_matrix_.createRowwisePartitioned(lp_.a_matrix_,
                                       basis_.nonbasicFlag_.data());
+  assert(ar_matrix_.legalDimensions(options_->log_options, lp_.num_row_));
+  assert(ar_matrix_.trimDimensions(options_->log_options, lp_.num_row_) ==
+         HighsStatus::kOk);
+  assert(ar_matrix_.assess(options_->log_options, options_->small_matrix_value,
+                           options_->large_matrix_value,
+                           false) == HighsStatus::kOk);
   assert(ar_matrix_.debugPartitionOk(basis_.nonbasicFlag_.data()));
   analysis_.simplexTimerStop(matrixSetupClock);
   status_.has_ar_matrix = true;
