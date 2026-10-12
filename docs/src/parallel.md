@@ -113,7 +113,7 @@ performs best when BLAS runs in serial.
 When HiGHS is built with OpenBLAS, HiPO therefore sets the number of OpenBLAS
 threads to one before solving, and stops with an error if OpenBLAS does not
 then report using a single thread. This also applies when OpenBLAS is given
-directly via `BLAS_LIBRARIES` (see [Installation](@ref install)), as long as
+directly via `BLAS_LIBRARIES` (see [Installation](@ref install-blas)), as long as
 the library name contains "openblas".
 
 The number of OpenBLAS threads is a __process-wide__ setting, so it affects
