@@ -83,7 +83,7 @@ HighsStatus assessMatrix(
   // Check whether the first start is zero
   if (matrix_start[0]) {
     highsLogUser(log_options, HighsLogType::kError,
-                 "s% %s matrix start vector begins with %" HIGHSINT_FORMAT
+                 "%s %s matrix start vector begins with %" HIGHSINT_FORMAT
                  " rather than 0\n",
                  class_name.c_str(), matrix_name.c_str(), matrix_start[0]);
     return HighsStatus::kError;
@@ -99,7 +99,7 @@ HighsStatus assessMatrix(
     bool this_start_too_small = this_start < previous_start;
     if (this_start_too_small) {
       highsLogUser(log_options, HighsLogType::kError,
-                   "s% %s matrix packed vector %" HIGHSINT_FORMAT
+                   "%s %s matrix packed vector %" HIGHSINT_FORMAT
                    " has illegal start of %" HIGHSINT_FORMAT
                    " < %" HIGHSINT_FORMAT
                    " = "
@@ -113,7 +113,7 @@ HighsStatus assessMatrix(
       bool this_p_end_too_small = this_p_end < this_start;
       if (this_p_end_too_small) {
         highsLogUser(log_options, HighsLogType::kError,
-                     "s% %s matrix packed vector %" HIGHSINT_FORMAT
+                     "%s %s matrix packed vector %" HIGHSINT_FORMAT
                      " has illegal partition end of %" HIGHSINT_FORMAT
                      " < %" HIGHSINT_FORMAT
                      " = "
@@ -129,7 +129,7 @@ HighsStatus assessMatrix(
   if (this_start_too_big) {
     highsLogUser(
         log_options, HighsLogType::kError,
-        "s% %s matrix packed vector %" HIGHSINT_FORMAT
+        "%s %s matrix packed vector %" HIGHSINT_FORMAT
         " has illegal start of %" HIGHSINT_FORMAT " > %" HIGHSINT_FORMAT
         " = "
         "number of nonzeros\n",
@@ -140,7 +140,7 @@ HighsStatus assessMatrix(
     bool this_p_end_too_big = this_p_end > num_nz;
     if (this_p_end_too_big) {
       highsLogUser(log_options, HighsLogType::kError,
-                   "s% %s matrix packed vector %" HIGHSINT_FORMAT
+                   "%s %s matrix packed vector %" HIGHSINT_FORMAT
                    " has illegal partition end of %" HIGHSINT_FORMAT
                    " > %" HIGHSINT_FORMAT
                    " = "
@@ -202,7 +202,7 @@ HighsStatus assessMatrix(
       bool legal_component = component >= 0;
       if (!legal_component) {
         highsLogUser(log_options, HighsLogType::kError,
-                     "s% %s matrix packed vector %" HIGHSINT_FORMAT
+                     "%s %s matrix packed vector %" HIGHSINT_FORMAT
                      "%s, entry %" HIGHSINT_FORMAT
                      ", is illegal index %" HIGHSINT_FORMAT "\n",
                      class_name.c_str(), matrix_name.c_str(), ix,
@@ -213,7 +213,7 @@ HighsStatus assessMatrix(
       legal_component = component < vec_dim;
       if (!legal_component) {
         highsLogUser(log_options, HighsLogType::kError,
-                     "s% %s matrix packed vector %" HIGHSINT_FORMAT
+                     "%s %s matrix packed vector %" HIGHSINT_FORMAT
                      "%s, entry %" HIGHSINT_FORMAT
                      ", is illegal index "
                      "%12" HIGHSINT_FORMAT " >= %" HIGHSINT_FORMAT
@@ -242,7 +242,7 @@ HighsStatus assessMatrix(
           continue;
         }
         highsLogUser(log_options, HighsLogType::kError,
-                     "s% %s matrix packed vector %" HIGHSINT_FORMAT
+                     "%s %s matrix packed vector %" HIGHSINT_FORMAT
                      "%s, has duplicate entries for index %" HIGHSINT_FORMAT
                      "%s\n",
                      class_name.c_str(), matrix_name.c_str(), ix,
@@ -294,14 +294,14 @@ HighsStatus assessMatrix(
   }  // Loop 0; num_vec
   if (num_duplicate) {
     highsLogUser(log_options, HighsLogType::kInfo,
-                 "s% %s matrix packed vector contains %" HIGHSINT_FORMAT
+                 "%s %s matrix packed vector contains %" HIGHSINT_FORMAT
                  " duplicate entr%s: summed\n",
                  class_name.c_str(), matrix_name.c_str(), num_duplicate,
                  num_duplicate == 1 ? "y" : "ies");
   }
   if (num_large_value) {
     highsLogUser(log_options, HighsLogType::kError,
-                 "s% %s matrix packed vector contains %" HIGHSINT_FORMAT
+                 "%s %s matrix packed vector contains %" HIGHSINT_FORMAT
                  " |value| in [%g, %g] greater than %g\n",
                  class_name.c_str(), matrix_name.c_str(), num_large_value,
                  min_large_value, max_large_value, large_matrix_value);
@@ -313,7 +313,7 @@ HighsStatus assessMatrix(
       // values should be OK and the code above doesn't handle p_end
       highsLogUser(
           log_options, HighsLogType::kError,
-          "s% %s matrix packed partitioned vector contains %" HIGHSINT_FORMAT
+          "%s %s matrix packed partitioned vector contains %" HIGHSINT_FORMAT
           " |value| in [%g, %g] less than or equal to %g: ignored\n",
           class_name.c_str(), matrix_name.c_str(), num_small_value,
           min_small_value, max_small_value, small_matrix_value);
@@ -325,7 +325,7 @@ HighsStatus assessMatrix(
     // ignored
     if (max_small_value > 0) {
       highsLogUser(log_options, HighsLogType::kWarning,
-                   "s% %s matrix packed vector contains %" HIGHSINT_FORMAT
+                   "%s %s matrix packed vector contains %" HIGHSINT_FORMAT
                    " |value| in [%g, %g] "
                    "less than or equal to %g: ignored\n",
                    class_name.c_str(), matrix_name.c_str(), num_small_value,
@@ -370,15 +370,15 @@ bool legalMatrixDimensions(const HighsLogOptions& log_options,
   }
   ok = legal_start_size && ok;
   if (partitioned) {
-    const bool legal_p_end_size = (HighsInt)p_end.size() >= num_vec + 1;
+    const bool legal_p_end_size = (HighsInt)p_end.size() >= num_vec;
     if (!legal_p_end_size)
       highsLogUser(
           log_options, HighsLogType::kError,
           "Matrix dimension validation for %s %s fails on p_end size = %d < %d "
-          "= num vectors + 1\n",
+          "= num vectors\n",
           class_name.c_str(), matrix_name.c_str(), (int)p_end.size(),
           (int)(num_vec + 1));
-    ok = (HighsInt)p_end.size() >= num_vec + 1 && ok;
+    ok = (HighsInt)p_end.size() >= num_vec && ok;
   }
   // Possibly check the sizes of the index and value vectors. Can only
   // do this with the number of nonzeros, and this is only known if
