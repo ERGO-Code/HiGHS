@@ -241,8 +241,9 @@ TEST_CASE("test-3397", "[highs_ipm]") {
     lp.a_matrix_.value_ = {-1, 1};
     Highs h;
     h.setOptionValue("output_flag", dev_run);
-    h.setOptionValue("solver", kIpmString);
+    h.setOptionValue("solver", kIpxString);
     h.setOptionValue("presolve", kHighsOffString);
+    h.setOptionValue("time_limit", 10);
     REQUIRE(h.passModel(lp) == HighsStatus::kOk);
     h.run();
     REQUIRE(h.getModelStatus() == HighsModelStatus::kUnbounded);
@@ -265,8 +266,9 @@ TEST_CASE("test-3397", "[highs_ipm]") {
     lp.a_matrix_.value_ = {5, -1, 1, 2, 5, 1, -1, 5, 7, 1, 4, 1, 5, -1};
     Highs h;
     h.setOptionValue("output_flag", dev_run);
-    h.setOptionValue("solver", kIpmString);
+    h.setOptionValue("solver", kIpxString);
     h.setOptionValue("presolve", kHighsOffString);
+    h.setOptionValue("time_limit", 10);
     REQUIRE(h.passModel(lp) == HighsStatus::kOk);
     for (const std::string& crossover : {kHighsOnString, kHighsOffString}) {
       h.setOptionValue("run_crossover", crossover);
