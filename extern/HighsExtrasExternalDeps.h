@@ -184,8 +184,8 @@ struct blas : extras_feature<1> {
                             lda, B, ldb);
   }
 
-  static void openblas_set_num_threads(int num_threads) {
-    impl::template fn<11>()(num_threads);
+  static int openblas_set_num_threads(int num_threads) {
+    return impl::template fn<11>()(num_threads);
   }
 };
 

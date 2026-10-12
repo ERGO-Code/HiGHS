@@ -409,6 +409,7 @@ struct HighsOptionsStruct {
   HighsInt hipo_block_size;
   HighsInt hipo_parallel_force;
   HighsInt hipo_parallel_forbid;
+  bool hipo_serial_blas;
 
   // Options for PDLP solver
   HighsInt pdlp_features_off;
@@ -595,6 +596,7 @@ struct HighsOptionsStruct {
         hipo_block_size(0),
         hipo_parallel_force(0),
         hipo_parallel_forbid(0),
+        hipo_serial_blas(true),
         pdlp_features_off(0),
         pdlp_iteration_limit(0),
         pdlp_scaling_mode(0),
@@ -1366,6 +1368,13 @@ class HighsOptions : public HighsOptionsStruct {
                             advanced, &hipo_parallel_forbid, 0, 0,
                             static_cast<int>(hipo::ParallelTechnique::kMaxSum));
     records.push_back(record_int);
+
+    record_bool = new OptionRecordBool(
+        "hipo_serial_blas",
+        "Force OpenBLAS to run in serial when used by HiPO. This setting is "
+        "process-wide, so affects any other use of OpenBLAS",
+        advanced, &hipo_serial_blas, true);
+    records.push_back(record_bool);
 
     record_int = new OptionRecordInt(
         "pdlp_iteration_limit", "Iteration limit for PDLP solver", advanced,

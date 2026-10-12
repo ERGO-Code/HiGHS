@@ -42,6 +42,27 @@ set_optimizer_attribute(model, "time_limit", 60.0)
 For more details, including a range of tutorials and examples using HiGHS, see
 the [JuMP documentation](https://jump.dev/JuMP.jl/stable/).
 
+## HiPO and BLAS threads
+
+The HiGHS binaries used by HiGHS.jl access BLAS through
+[libblastrampoline](https://github.com/JuliaLinearAlgebra/libblastrampoline),
+which by default forwards to the OpenBLAS shipped with Julia. In this case
+HiPO does not change the number of BLAS threads, and Julia runs OpenBLAS with
+multiple threads by default. Since HiPO performs best when BLAS runs in serial
+(see [BLAS threads](@ref parallel-blas-threads)), set the number of BLAS
+threads to one before solving with HiPO:
+
+```julia
+using JuMP
+import HiGHS
+import LinearAlgebra
+LinearAlgebra.BLAS.set_num_threads(1)
+model = Model(HiGHS.Optimizer)
+set_attribute(model, "solver", "hipo")
+```
+
+Note that `BLAS.set_num_threads` affects all BLAS calls in the Julia session.
+
 ## Issues and feedback
 
 HiGHS.jl is maintained by the JuMP community and is not officially maintained

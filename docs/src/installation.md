@@ -91,6 +91,8 @@ cmake -S. -B build -DHIPO=ON -DCMAKE_TOOLCHAIN_FILE="C:/vcpkg/scripts/buildsyste
 
 To specify explicitly which BLAS vendor to look for, `BLA_VENDOR` could be set in CMake, e.g. `-DBLA_VENDOR=Apple` or `-DBLA_VENDOR=OpenBLAS`. Alternatively, to specify which BLAS library to use, set `BLAS_LIBRARIES` to the full path of the library e.g. `-DBLAS_LIBRARIES=/path_to/libopenblas.so`.
 
+When `BLAS_LIBRARIES` is used, HiGHS can only tell which vendor provides BLAS from the library name: if the name contains "openblas" (in any case), the library is treated as OpenBLAS. This matters for performance, because HiPO runs OpenBLAS in serial (see [BLAS threads](@ref parallel-blas-threads)). If OpenBLAS is provided under a different name, also set `-DBLA_VENDOR=OpenBLAS`.
+
 
 ## [Building HiGHS with NVidia GPU support](@id gpu-build)
 
