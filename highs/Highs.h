@@ -1553,7 +1553,7 @@ class Highs {
 
   HighsStatus setHighsOutput(FILE* output = nullptr);
 
-  const HighsInfo& getHighsInfo();
+  const HighsInfo& getHighsInfo() const;
 
   HighsStatus getHighsInfoValue(const std::string& info, HighsInt& value);
 
