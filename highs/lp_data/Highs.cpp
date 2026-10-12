@@ -4989,13 +4989,13 @@ HighsStatus Highs::initializeMultiThreading() {
   HighsLogOptions& log_options = this->options_.log_options;
   unsigned int available_cores = highs::parallel::available_core_count();
   highsLogDev(log_options, HighsLogType::kInfo,
-              "Scheduler initialized: %d threads (physical cores: %d)\n",
+              "Scheduler initialized: %d threads (available cores: %d)\n",
               static_cast<int>(this->max_threads_),
               static_cast<int>(available_cores));
   if (this->max_threads_ > static_cast<int>(available_cores))
     highsLogDev(
         log_options, HighsLogType::kWarning,
-        "Thread count (%d) exceeds physical cores (%d); consider reducing "
+        "Thread count (%d) exceeds available cores (%d); consider reducing "
         "threads or calling Highs::resetGlobalScheduler()\n",
         static_cast<int>(this->max_threads_),
         static_cast<int>(available_cores));

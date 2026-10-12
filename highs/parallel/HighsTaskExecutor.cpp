@@ -36,7 +36,8 @@ static unsigned int fallback_core_count() {
 }
 
 // Returns the number of physical cores available to this process,
-// respecting the OS affinity mask.
+// respecting the OS affinity mask. On hybrid CPUs (Windows only, for now)
+// only the performance cores are counted.
 unsigned int highs::parallel::available_core_count() {
 #if defined(__linux__)
   // Use dynamically-allocated cpu_set to support systems with >1024 CPUs
@@ -105,7 +106,12 @@ unsigned int highs::parallel::available_core_count() {
                                         &length))
     return fallback_core_count();
 
+  // On hybrid CPUs, only count the performance cores, i.e. those with the
+  // highest efficiency class: threads running on efficiency cores slow down
+  // the others when work is shared evenly. All cores have efficiency class 0
+  // on non-hybrid CPUs.
   unsigned int physical_cores = 0;
+  BYTE max_efficiency_class = 0;
   DWORD offset = 0;
   while (offset < length) {
     auto* entry = entry_at(offset);
@@ -116,8 +122,14 @@ unsigned int highs::parallel::available_core_count() {
         // Only count cores that match the affinity mask and process groups
         if ((mask & process_mask) &&
             std::find(process_groups.begin(), process_groups.end(), group) !=
-                process_groups.end())
-          physical_cores++;
+                process_groups.end()) {
+          BYTE efficiency_class = entry->Processor.EfficiencyClass;
+          if (efficiency_class > max_efficiency_class) {
+            max_efficiency_class = efficiency_class;
+            physical_cores = 0;
+          }
+          if (efficiency_class == max_efficiency_class) physical_cores++;
+        }
       }
     }
     offset += entry->Size;

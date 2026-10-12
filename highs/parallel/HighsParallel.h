@@ -18,7 +18,8 @@ namespace parallel {
 using mutex = HighsMutex;
 
 // Returns the number of physical cores available to this process,
-// respecting the OS affinity mask.
+// respecting the OS affinity mask. On hybrid CPUs (Windows only, for now)
+// only the performance cores are counted.
 unsigned int available_core_count();
 
 inline void initialize_scheduler(int numThreads = 0) {
