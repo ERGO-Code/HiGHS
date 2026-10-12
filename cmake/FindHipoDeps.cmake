@@ -152,7 +152,13 @@ function(highs_build_openblas_clang_cl result_var version)
         # HiPO only uses double precision; defining only BUILD_DOUBLE makes
         # OpenBLAS's CMake build skip the other precisions
         -DBUILD_DOUBLE=ON
-        -DDYNAMIC_ARCH=ON)
+        -DDYNAMIC_ARCH=ON
+        # HiPO always runs OpenBLAS with one thread, so build it without its
+        # thread pool, and with locking so that it can be called concurrently.
+        # A thread pool inside highs_extras.dll can crash at exit, when the
+        # DLL is unloaded while its threads are being terminated.
+        -DUSE_THREAD=OFF
+        -DUSE_LOCKING=ON)
     if(HIGHS_LLD_LINK)
         list(APPEND _cmake_args -DCMAKE_LINKER=${HIGHS_LLD_LINK})
     endif()
