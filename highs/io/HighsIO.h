@@ -112,6 +112,7 @@ const std::string highsBoolToString(const bool b,
                                     const HighsInt field_width = 2);
 
 const std::string highsIntToPlural(const HighsInt i, const bool y = false);
+const std::string highsIntToBe(const HighsInt i);
 const std::string highsInsertMdEscapes(const std::string& from_string);
 const std::string highsInsertMdId(const std::string& from_string);
 const std::string highsTimeToString(const double time);
