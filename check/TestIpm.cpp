@@ -6,7 +6,7 @@
 
 // I use dev_run to switch on/off printing and logging used for
 // development of the unit test
-const bool dev_run = true;
+const bool dev_run = false;
 const double inf = kHighsInf;
 
 TEST_CASE("test-analytic-centre", "[highs_ipm]") {
