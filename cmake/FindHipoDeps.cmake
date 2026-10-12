@@ -171,7 +171,8 @@ function(highs_configure_blas)
             set(NO_AVX512 ON CACHE BOOL "Build OpenBLAS without AVX512" FORCE)
         endif()
 
-        if(UNIX AND NOT APPLE AND NOT CMAKE_SIZEOF_VOID_P EQUAL 4)
+        if(UNIX AND NOT APPLE AND NOT CMAKE_SIZEOF_VOID_P EQUAL 4
+           AND CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86_64|AMD64)$")
             # OpenBLAS' CMake build (kernel/CMakeLists.txt's build_core()) sets
             # -mavx2 for DYNAMIC_ARCH's AVX2 cores (HASWELL, ZEN, EXCAVATOR, ...)
             # but never adds -mfma, even though those cores' C-level packing/copy
