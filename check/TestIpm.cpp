@@ -6,7 +6,7 @@
 
 // I use dev_run to switch on/off printing and logging used for
 // development of the unit test
-const bool dev_run = false;
+const bool dev_run = true;
 const double inf = kHighsInf;
 
 TEST_CASE("test-analytic-centre", "[highs_ipm]") {
@@ -223,4 +223,59 @@ TEST_CASE("test-2527", "[highs_ipm]") {
   REQUIRE(h.run() == HighsStatus::kOk);
 
   h.resetGlobalScheduler(true);
+}
+
+TEST_CASE("test-3397", "[highs_ipm]") {
+  // min x + y s.t. y - x >= 3; x, y free is unbounded
+  {
+    HighsLp lp;
+    lp.num_col_ = 2;
+    lp.num_row_ = 1;
+    lp.col_cost_ = {1, 1};
+    lp.col_lower_ = {-inf, -inf};
+    lp.col_upper_ = {inf, inf};
+    lp.row_lower_ = {3};
+    lp.row_upper_ = {inf};
+    lp.a_matrix_.start_ = {0, 1, 2};
+    lp.a_matrix_.index_ = {0, 0};
+    lp.a_matrix_.value_ = {-1, 1};
+    Highs h;
+    h.setOptionValue("output_flag", dev_run);
+    h.setOptionValue("solver", kIpmString);
+    h.setOptionValue("presolve", kHighsOffString);
+    REQUIRE(h.passModel(lp) == HighsStatus::kOk);
+    h.run();
+    REQUIRE(h.getModelStatus() == HighsModelStatus::kUnbounded);
+
+    h.resetGlobalScheduler(true);
+  }
+
+  // LP with optimal objective -185.875
+  {
+    HighsLp lp;
+    lp.num_col_ = 6;
+    lp.num_row_ = 8;
+    lp.col_cost_ = {-5, 0, 8, 0, -4, -7};
+    lp.col_lower_ = {3, -inf, -5, -inf, -5, -5};
+    lp.col_upper_ = {inf, inf, -1, inf, -4, inf};
+    lp.row_lower_ = {4, 11, -16.875, -inf, -inf, -34, 1.5, -inf};
+    lp.row_upper_ = {inf, 11, -16.875, 16, 0, -33.5, 1.5, -2};
+    lp.a_matrix_.start_ = {0, 3, 6, 6, 10, 12, 14};
+    lp.a_matrix_.index_ = {0, 3, 5, 1, 3, 6, 2, 4, 5, 7, 5, 6, 2, 4};
+    lp.a_matrix_.value_ = {5, -1, 1, 2, 5, 1, -1, 5, 7, 1, 4, 1, 5, -1};
+    Highs h;
+    h.setOptionValue("output_flag", dev_run);
+    h.setOptionValue("solver", kIpmString);
+    h.setOptionValue("presolve", kHighsOffString);
+    REQUIRE(h.passModel(lp) == HighsStatus::kOk);
+    for (const std::string& crossover : {kHighsOnString, kHighsOffString}) {
+      h.setOptionValue("run_crossover", crossover);
+      h.clearSolver();
+      h.run();
+      REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
+      REQUIRE(std::fabs(h.getInfo().objective_function_value + 185.875) < 1e-6);
+    }
+
+    h.resetGlobalScheduler(true);
+  }
 }
