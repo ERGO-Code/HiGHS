@@ -400,7 +400,7 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
         std::vector<HighsInt> inds;
         std::vector<double> solval;
         std::vector<double> upper;
-        std::vector<uint8_t> isIntegral;
+        std::vector<HighsBool> isIntegral;
         inds.reserve(lp.num_col_ + lp.num_row_);
         solval.reserve(lp.num_col_ + lp.num_row_);
         upper.reserve(lp.num_col_ + lp.num_row_);
@@ -412,12 +412,14 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
 
         double delta = 1.0;
 
+        transLp.initMultiRowTransform();
+
         for (HighsInt k = 0; k < pathLen; ++k) {
           bool integralPositive = false;
 
           if (!transLp.transform(aggregatedPath[k].second, tmpUpper, tmpSolval,
                                  aggregatedPath[k].first, rhs[k],
-                                 integralPositive)) {
+                                 integralPositive, false, true)) {
             pathLen = k;
             break;
           }

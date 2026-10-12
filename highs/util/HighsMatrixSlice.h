@@ -17,7 +17,7 @@
 #include <iterator>
 #include <vector>
 
-#include "util/HighsInt.h"
+#include "util/HighsType.h"
 
 template <typename StorageFormat>
 class HighsMatrixSlice;

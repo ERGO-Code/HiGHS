@@ -26,7 +26,11 @@ namespace presolve {
 class HighsPostsolveStack;
 }
 
+class HPresolveCliqueTable;
+
 class HighsCliqueTable {
+  friend class HPresolveCliqueTable;
+
  public:
   struct CliqueVar {
 #ifdef HIGHSINT64
@@ -83,8 +87,8 @@ class HighsCliqueTable {
   std::vector<Substitution> substitutions;
   std::vector<HighsInt> deletedrows;
   std::vector<std::pair<HighsInt, CliqueVar>> cliqueextensions;
-  std::vector<uint8_t> iscandidate;
-  std::vector<uint8_t> colDeleted;
+  std::vector<HighsBool> iscandidate;
+  std::vector<HighsBool> colDeleted;
   std::vector<uint32_t> cliquehits;
   std::vector<HighsInt> cliquehitinds;
 
@@ -95,7 +99,7 @@ class HighsCliqueTable {
   HighsInt numEntries;
   HighsInt maxEntries;
   HighsInt minEntriesForParallelism;
-  bool inPresolve;
+  bool inPresolveProbing;
   bool allowParallel;
 
   void unlink(HighsInt pos, HighsInt cliqueid);
@@ -112,9 +116,10 @@ class HighsCliqueTable {
   HighsInt runCliqueSubsumption(const HighsDomain& globaldom,
                                 std::vector<CliqueVar>& clique);
 
-  void cliqueSubsumption(const std::vector<CliqueVar>& clique, bool& redundant,
-                         HighsInt& dominatingOrigin,
-                         std::function<void(HighsInt)> removeCliqueCallback);
+  void cliqueSubsumption(
+      const std::vector<CliqueVar>& clique, bool& redundant,
+      HighsInt& dominatingOrigin,
+      const std::function<void(HighsInt)>& removeCliqueCallback);
 
   void collectCliques(const std::vector<CliqueVar>& clique);
 
@@ -160,27 +165,45 @@ class HighsCliqueTable {
                           int64_t& numNeighbourhoodqueries, CliqueVar v,
                           CliqueVar* q, HighsInt N) const;
 
+  void recordSubstitution(Substitution substitution);
+
+  void replaceLiteral(CliqueVar substitutedVar, CliqueVar replacementVar);
+
+  template <bool Sort = true, typename Comparator>
+  HighsInt extendClique(std::vector<HighsInt>& neighbourhoodInds,
+                        std::vector<CliqueVar>& clqVars, HighsInt seedPos,
+                        HighsInt extensionEnd,
+                        const Comparator& candidateOrder);
+
+  HighsInt extendClique(std::vector<HighsInt>& neighbourhoodInds,
+                        std::vector<CliqueVar>& clqVars, HighsInt seedPos,
+                        HighsInt extensionEnd);
+
  public:
   int64_t numNeighbourhoodQueries;
 
   HighsCliqueTable(HighsInt ncols) {
-    invertedHashList.resize(2 * static_cast<size_t>(ncols));
-    invertedHashListSizeTwo.resize(2 * static_cast<size_t>(ncols));
-    numcliquesvar.resize(2 * static_cast<size_t>(ncols), 0);
-    colsubstituted.resize(ncols);
-    colDeleted.resize(ncols, false);
+    resize(static_cast<size_t>(ncols));
     nfixings = 0;
     numNeighbourhoodQueries = 0;
     numEntries = 0;
     maxEntries = kHighsIInf;
     minEntriesForParallelism = kHighsIInf;
-    inPresolve = false;
+    inPresolveProbing = false;
     allowParallel = true;
   }
 
-  void setPresolveFlag(bool inPresolve) { this->inPresolve = inPresolve; }
+  void resize(size_t ncols) {
+    invertedHashList.resize(2 * ncols);
+    invertedHashListSizeTwo.resize(2 * ncols);
+    numcliquesvar.resize(2 * ncols, 0);
+    colsubstituted.resize(ncols);
+    colDeleted.resize(ncols, false);
+  }
 
-  bool getPresolveFlag() const { return inPresolve; }
+  void setinPresolveProbingFlag(const bool inPresolveProbing) {
+    this->inPresolveProbing = inPresolveProbing;
+  }
 
   HighsInt getNumEntries() const { return numEntries; }
 
@@ -208,7 +231,9 @@ class HighsCliqueTable {
                  HighsInt numcliquevars, bool equality = false,
                  HighsInt origin = kHighsIInf);
 
-  void removeClique(HighsInt cliqueid);
+  void removeClique(HighsInt cliqueid, bool recordDeletedRow = true);
+
+  void fixLastActiveAndRemove(HighsDomain& globaldom, HighsInt cliqueid);
 
   void resolveSubstitution(CliqueVar& v) const;
 
@@ -256,6 +281,9 @@ class HighsCliqueTable {
   void cliquePartition(const std::vector<double>& objective,
                        std::vector<CliqueVar>& clqVars,
                        std::vector<HighsInt>& partitionStart);
+
+  void cliqueCover(std::vector<CliqueVar>& clqVars,
+                   std::vector<std::vector<CliqueVar>>& cover);
 
   bool foundCover(HighsDomain& globaldom, CliqueVar v1, CliqueVar v2);
 

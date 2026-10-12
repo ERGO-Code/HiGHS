@@ -17,7 +17,6 @@ set(include_dirs
   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/presolve>
   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/qpsolver>
   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/simplex>
-  $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/test_kkt>
   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/util>
   $<BUILD_INTERFACE:${HIGHS_BINARY_DIR}>)
 
@@ -417,6 +416,9 @@ set(highs_sources
     presolve/HighsSymmetry.cpp
     presolve/HPresolve.cpp
     presolve/HPresolveAnalysis.cpp
+    presolve/HPresolveCliqueTable.cpp
+    presolve/HPresolveInitialSweep.cpp
+    presolve/HPresolveUtils.cpp
     presolve/HPresolveTest.cpp
     presolve/ICrash.cpp
     presolve/ICrashUtil.cpp
@@ -425,6 +427,7 @@ set(highs_sources
     qpsolver/a_asm.cpp
     qpsolver/a_quass.cpp
     qpsolver/basis.cpp
+    qpsolver/QpAsmWrapper.cpp
     qpsolver/quass.cpp
     qpsolver/ratiotest.cpp
     qpsolver/scaling.cpp
@@ -445,8 +448,6 @@ set(highs_sources
     simplex/HSimplexNlaFreeze.cpp
     simplex/HSimplexNlaProductForm.cpp
     simplex/HSimplexReport.cpp
-    test_kkt/KktCh2.cpp
-    test_kkt/DevKkt.cpp
     util/HFactor.cpp
     util/HFactorDebug.cpp
     util/HFactorExtend.cpp
@@ -496,8 +497,10 @@ set(highs_headers
     lp_data/HighsLp.h
     lp_data/HighsLpSolverObject.h
     lp_data/HighsLpUtils.h
+    lp_data/HighsMipSolverObject.h
     lp_data/HighsModelUtils.h
     lp_data/HighsOptions.h
+    lp_data/HighsQpSolverObject.h
     lp_data/HighsRanging.h
     lp_data/HighsRunData.h
     lp_data/HighsSolution.h
@@ -563,10 +566,14 @@ set(highs_headers
     presolve/HighsSymmetry.h
     presolve/HPresolve.h
     presolve/HPresolveAnalysis.h
+    presolve/HPresolveCliqueTable.h
+    presolve/HPresolveInitialSweep.h
+    presolve/HPresolveUtils.h
     presolve/ICrash.h
     presolve/ICrashUtil.h
     presolve/ICrashX.h
     presolve/PresolveComponent.h
+    presolve/PresolveTimer.h
     qpsolver/a_asm.hpp
     qpsolver/a_quass.hpp
     qpsolver/basis.hpp
@@ -580,6 +587,7 @@ set(highs_headers
     qpsolver/instance.hpp
     qpsolver/matrix.hpp
     qpsolver/pricing.hpp
+    qpsolver/QpAsmWrapper.h
     qpsolver/qpconst.hpp
     qpsolver/qpvector.hpp
     qpsolver/quass.hpp
@@ -604,8 +612,6 @@ set(highs_headers
     simplex/SimplexConst.h
     simplex/SimplexStruct.h
     simplex/SimplexTimer.h
-    test_kkt/DevKkt.h
-    test_kkt/KktCh2.h
     util/FactorTimer.h
     util/HFactor.h
     util/HFactorConst.h
@@ -618,6 +624,7 @@ set(highs_headers
     util/HighsHash.h
     util/HighsHashTree.h
     util/HighsInt.h
+    util/HighsType.h
     util/HighsIntegers.h
     util/HighsLinearSumBounds.h
     util/HighsMatrixPic.h

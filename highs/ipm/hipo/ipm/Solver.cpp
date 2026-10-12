@@ -20,6 +20,52 @@ Int Solver::load(const HighsLp& lp, const HighsHessian& Q) {
   return kOk;
 }
 
+void Solver::chooseAllowedParallelism(const HighsOptions& Hoptions) {
+  for (Int i = 0; i < static_cast<Int>(ParallelTechnique::kCount); ++i)
+    options_.parallel[i] = ParallelType::kChoose;
+
+  // set default based on option `parallel`
+  options_.setParallel(ParallelTechnique::kAnalyse, ParallelType::kOn);
+  options_.setParallel(ParallelTechnique::kOrderNE, ParallelType::kOn);
+  options_.setParallel(ParallelTechnique::kOrderAS, ParallelType::kOn);
+  if (Hoptions.parallel == kHighsOffString) {
+    options_.setParallel(ParallelTechnique::kTree, ParallelType::kOff);
+    options_.setParallel(ParallelTechnique::kNode, ParallelType::kOff);
+    options_.setParallel(ParallelTechnique::kForwardSolve, ParallelType::kOff);
+    options_.setParallel(ParallelTechnique::kDiagonalSolve, ParallelType::kOff);
+    options_.setParallel(ParallelTechnique::kBackwardSolve, ParallelType::kOff);
+  }
+
+  // override with option `hipo_parallel_type`
+  if (Hoptions.parallel == kHighsOnString) {
+    if (Hoptions.hipo_parallel_type == kHipoTreeString) {
+      options_.setParallel(ParallelTechnique::kTree, ParallelType::kOn);
+      options_.setParallel(ParallelTechnique::kNode, ParallelType::kOff);
+    } else if (Hoptions.hipo_parallel_type == kHipoNodeString) {
+      options_.setParallel(ParallelTechnique::kTree, ParallelType::kOff);
+      options_.setParallel(ParallelTechnique::kNode, ParallelType::kOn);
+    } else if (Hoptions.hipo_parallel_type == kHipoBothString) {
+      options_.setParallel(ParallelTechnique::kTree, ParallelType::kOn);
+      options_.setParallel(ParallelTechnique::kNode, ParallelType::kOn);
+    }
+  }
+
+  // override if threads is 1
+  if (highs::parallel::num_threads() == 1) {
+    for (Int i = 0; i < static_cast<Int>(ParallelTechnique::kCount); ++i)
+      options_.parallel[i] = ParallelType::kOff;
+  }
+
+  // override with option `hipo_parallel_force` or `hipo_parallel_forbid`
+  for (Int i = 0; i < static_cast<Int>(ParallelTechnique::kCount); ++i) {
+    bool force = testParallelBit(Hoptions.hipo_parallel_force, i);
+    bool forbid = testParallelBit(Hoptions.hipo_parallel_forbid, i);
+    if (force && forbid) continue;
+    if (force) options_.parallel[i] = ParallelType::kOn;
+    if (forbid) options_.parallel[i] = ParallelType::kOff;
+  }
+}
+
 void Solver::setOptions(const HighsOptions& highs_options) {
   options_.display = true;
   if (!highs_options.output_flag | !highs_options.log_to_console)
@@ -48,13 +94,12 @@ void Solver::setOptions(const HighsOptions& highs_options) {
 
   options_.max_iter = highs_options.ipm_iteration_limit;
   options_.crossover = highs_options.run_crossover;
-  options_.parallel = highs_options.parallel;
-  options_.parallel_type = highs_options.hipo_parallel_type;
   options_.nla = highs_options.hipo_system;
   options_.ordering = highs_options.hipo_ordering;
   options_.factor = highs_options.hipo_factor;
   options_.block_size = highs_options.hipo_block_size;
   options_.random_seed = highs_options.random_seed + 42;
+  chooseAllowedParallelism(highs_options);
 
   options_orig_ = options_;
   Hoptions_ = highs_options;
@@ -147,7 +192,7 @@ isFailure Solver::initialise() {
 
   start_time_ = control_.elapsed();
 
-  kkt_.reset(new KktMatrix(model_, regul_, info_, logger_));
+  kkt_.reset(new KktMatrix(model_, regul_, info_, logger_, options_));
   if (!kkt_) {
     info_.error = kErrorFailedAllocation;
     return true;
@@ -258,7 +303,6 @@ isFailure Solver::prepareIpx() {
 
   if (load_status) {
     logger_.printInfo("Error loading model into IPX\n");
-    info_.error = kErrorIpx;
     return true;
   }
   return false;
@@ -274,7 +318,6 @@ isFailure Solver::prepareIpxStartingPoint() {
 
   if (start_point_status) {
     logger_.printInfo("Error loading starting point into IPX\n");
-    info_.error = kErrorIpx;
     return true;
   }
 
@@ -297,26 +340,54 @@ void Solver::refineWithIpx() {
   if (prepareIpx()) return;
   if (prepareIpxStartingPoint()) return;
   ipx_lps_.Solve();
-  info_.ipx_used = true;
   info_.ipx_info = ipx_lps_.GetInfo();
-  setStatus1(IpxToHipoStatus(info_.ipx_info.status_ipm));
-  if (info_.ipx_info.status_crossover != IPX_STATUS_not_run)
-    setStatus2(IpxToHipoStatus(info_.ipx_info.status_crossover));
-  if (info_.ipx_info.errflag) info_.error = kErrorIpx;
+
+  // Hipo status_1 is no progress. If ipx fails, leave current hipo status,
+  // because no progress is better than failed status.
+
+  const bool ipx_status_usable =
+      info_.ipx_info.status_ipm != IPX_STATUS_not_run &&
+      info_.ipx_info.status_ipm != IPX_STATUS_failed;
+
+  if (ipx_status_usable) {
+    info_.ipx_used = true;
+    setStatus1(IpxToHipoStatus(info_.ipx_info.status_ipm));
+
+    const bool crossover_status_usable =
+        info_.ipx_info.status_crossover != IPX_STATUS_not_run &&
+        info_.ipx_info.status_crossover != IPX_STATUS_failed;
+
+    if (crossover_status_usable)
+      setStatus2(IpxToHipoStatus(info_.ipx_info.status_crossover));
+  }
 }
 
 void Solver::crossoverWithIpx() {
-  // at the moment this is almost identical to refineWithIpx, but in the future
-  // it will use ipx_lps_.CrossoverFromStartingPoint
+  // at the moment this is almost identical to refineWithIpx, but in the
+  // future it will use ipx_lps_.CrossoverFromStartingPoint
   if (prepareIpx()) return;
   if (prepareIpxStartingPoint()) return;
   ipx_lps_.Solve();
-  info_.ipx_used = true;
   info_.ipx_info = ipx_lps_.GetInfo();
-  setStatus2(IpxToHipoStatus(info_.ipx_info.status_ipm));
-  if (info_.ipx_info.status_crossover != IPX_STATUS_not_run)
-    setStatus2(IpxToHipoStatus(info_.ipx_info.status_crossover));
-  if (info_.ipx_info.errflag) info_.error = kErrorIpx;
+
+  // Hipo status_1 is optimal. If ipx fails, leave current hipo status,
+  // because optimal without crossover is better than failed status.
+
+  const bool ipx_status_usable =
+      info_.ipx_info.status_ipm != IPX_STATUS_not_run &&
+      info_.ipx_info.status_ipm != IPX_STATUS_failed;
+
+  if (ipx_status_usable) {
+    info_.ipx_used = true;
+    setStatus2(IpxToHipoStatus(info_.ipx_info.status_ipm));
+
+    const bool crossover_status_usable =
+        info_.ipx_info.status_crossover != IPX_STATUS_not_run &&
+        info_.ipx_info.status_crossover != IPX_STATUS_failed;
+
+    if (crossover_status_usable)
+      setStatus2(IpxToHipoStatus(info_.ipx_info.status_crossover));
+  }
 }
 
 isFailure Solver::solveNewtonSystem(NewtonDir& delta) {
@@ -982,8 +1053,8 @@ void Solver::bestWeight(const NewtonDir& delta, const NewtonDir& corrector,
                         double& alpha_d) const {
   // Find the best primal and dual weights for the corrector in the interval
   // [alpha_p_old * alpha_d_old, 1].
-  // Upon return, wp and wd are the optimal weights, alpha_p and alpha_d are the
-  // corresponding stepsizes.
+  // Upon return, wp and wd are the optimal weights, alpha_p and alpha_d are
+  // the corresponding stepsizes.
 
   // keep track of best stepsizes
   alpha_p = 0.0;
@@ -1090,7 +1161,8 @@ shouldTerminate Solver::checkBadIter() {
         } else {
           if (checkTerminationKkt()) {
             logger_.printw(
-                "HiPO stagnated but HiGHS considers the solution acceptable\n");
+                "HiPO stagnated but HiGHS considers the solution "
+                "acceptable\n");
             logger_.print("=== Primal-dual feasible point found\n");
             setStatus1(kStatusOptimal);
           } else {
@@ -1167,7 +1239,7 @@ isSuccess Solver::checkTerminationKkt() {
                       highs_solution, Hoptions_, "During HiPO solve");
 
     if (model_status == HighsModelStatus::kOptimal) {
-      logger_.printInfo("Check successfull\n");
+      logger_.printInfo("Check successful\n");
       return true;
     } else
       logger_.printInfo("Check failed\n");
@@ -1236,7 +1308,7 @@ isFailure Solver::initialiseLinearSolver() {
 }
 
 isSuccess Solver::switchToMultifrontal() {
-  bool switch_successfull = false;
+  bool switch_successful = false;
 
   if (LS_->type() == kUpLookingType && options_.factor == kHighsChooseString) {
     LS_.reset(new FactorHighsSolver(*kkt_, options_, model_, regul_, info_,
@@ -1251,11 +1323,11 @@ isSuccess Solver::switchToMultifrontal() {
       it_->largest_dx_x_ = 0;
       it_->largest_dy_y_ = 0;
       info_.error = kOk;
-      switch_successfull = true;
+      switch_successful = true;
     }
   }
 
-  return switch_successfull;
+  return switch_successful;
 }
 
 void Solver::printHeader() const {
@@ -1266,7 +1338,8 @@ void Solver::printHeader() const {
     if (!options_.timeless_log) logger_.print("    time");
     if (logger_.debug(1)) {
       logger_.print(
-          "     alpha p/d   sigma af/co   cor  solv  fact    static reg p/d    "
+          "     alpha p/d   sigma af/co   cor  solv  fact    static reg p/d  "
+          "  "
           " minT     maxT  (xj * zj / mu)_range_&_num   max_res");
     }
     logger_.print("\n");
@@ -1425,22 +1498,22 @@ void Solver::chooseNumberOfCorrectors() {
     // because there are two sweeps through L (forward and backward).
     double solv_effort = 2.0 * LS_->nz();
 
-    // The factorise phase uses BLAS-3 and can be parallelised, the solve phase
-    // uses BLAS-2 and cannot be parallelised. To account for this, the
+    // The factorise phase uses BLAS-3 and can be parallelised, the solve
+    // phase uses BLAS-2 and cannot be parallelised. To account for this, the
     // factorisation effort is multiplied by a coefficient < 1, estimated
     // empirically.
     double alpha = 1.0 / 112.0;
 
     double ratio = alpha * fact_effort / solv_effort;
 
-    // At each ipm iteration, there are up to (1+k) directions computed, where k
-    // is the number of correctors. Each direction requires up (1+f) solves,
+    // At each ipm iteration, there are up to (1+k) directions computed, where
+    // k is the number of correctors. Each direction requires up (1+f) solves,
     // where f is the number of refinement steps. So, up to (1+k)(1+f) solves
     // are performed per iteration. However, not all refinement steps are used
     // all the time, so use f/2.
     // Therefore, we want (1+k)(1+f/2) < ratio.
 
-    double thresh = ratio / (1.0 + kMaxIterRefine / 2.0) - 1;
+    double thresh = ratio / (1.0 + kRefineMaxIter / 2.0) - 1;
 
     info_.correctors = std::floor(thresh);
     info_.correctors = std::max(info_.correctors, (Int)1);

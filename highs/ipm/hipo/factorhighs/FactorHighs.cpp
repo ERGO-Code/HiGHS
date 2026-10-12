@@ -54,6 +54,17 @@ void FHsolver::setBlockSize(Int nb) {
 
 void FHsolver::setPivoting(bool pivoting) { options_.pivoting = pivoting; }
 
+void FHsolver::setParallel(bool tree, bool node) {
+  options_.parallel_tree = tree;
+  options_.parallel_node = node;
+}
+
+void FHsolver::setParallelSolve(bool forward, bool backward, bool diag) {
+  options_.parallel_forward = forward;
+  options_.parallel_backward = backward;
+  options_.parallel_diag = diag;
+}
+
 void FHsolver::setLogger(const Logger* logger, bool use_printf) {
   if (local_logger_ && logger_) delete logger_;
   local_logger_ = false;

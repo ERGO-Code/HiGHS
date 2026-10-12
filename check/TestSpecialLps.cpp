@@ -646,7 +646,7 @@ void unconstrained(Highs& highs) {
   REQUIRE(highs.run() == HighsStatus::kOk);
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
   REQUIRE(highs.getObjectiveValue() == -6);
-  REQUIRE(highs.changeColBounds(0, 4, 1) == HighsStatus::kOk);
+  REQUIRE(highs.changeColBounds(0, 4, 1) == HighsStatus::kWarning);
   REQUIRE(highs.setBasis() == HighsStatus::kOk);
   REQUIRE(highs.run() == HighsStatus::kOk);
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kInfeasible);

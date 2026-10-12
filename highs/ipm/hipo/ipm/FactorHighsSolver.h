@@ -31,7 +31,9 @@ class FactorHighsSolver : public LinearSolver {
 
   Int chooseNla();
   Int setNla();
-  void setParallel();
+  void setParallelBeforeSymbolic();
+  void setParallelAfterSymbolic();
+  void printParallel() const;
   Int chooseOrdering(const std::vector<Int>& rows, const std::vector<Int>& ptr,
                      const std::vector<Int>& signs, Symbolic& S,
                      std::string& ordering, const std::string& nla);

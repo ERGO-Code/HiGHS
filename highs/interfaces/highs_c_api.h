@@ -106,6 +106,8 @@ static const HighsInt kHighsCallbackMipInterrupt = 6;
 static const HighsInt kHighsCallbackMipGetCutPool = 7;
 static const HighsInt kHighsCallbackMipDefineLazyConstraints = 8;
 static const HighsInt kHighsCallbackCallbackMipUserSolution = 9;
+static const HighsInt kHighsCallbackQpFirstFeasiblePoint = 10;
+static const HighsInt kHighsCallbackQpInterrupt = 11;
 
 static const char* const kHighsCallbackDataOutLogTypeName = "log_type";
 static const char* const kHighsCallbackDataOutRunningTimeName = "running_time";
@@ -115,6 +117,8 @@ static const char* const kHighsCallbackDataOutIpmIterationCountName =
     "ipm_iteration_count";
 static const char* const kHighsCallbackDataOutPdlpIterationCountName =
     "pdlp_iteration_count";
+static const char* const kHighsCallbackDataOutQpasmIterationCountName =
+    "qpasm_iteration_count";
 static const char* const kHighsCallbackDataOutObjectiveFunctionValueName =
     "objective_function_value";
 static const char* const kHighsCallbackDataOutMipNodeCountName =
@@ -143,6 +147,7 @@ static const char* const kHighsCallbackDataOutCutpoolLowerName =
     "cutpool_lower";
 static const char* const kHighsCallbackDataOutCutpoolUpperName =
     "cutpool_upper";
+static const char* const kHighsCallbackDataOutQpSolutionName = "qp_solution";
 
 const HighsInt kHighsIisStrategyLight = 0;
 // Forces full IIS calculation as before - ie with the
@@ -1025,7 +1030,8 @@ HighsInt Highs_getInfoType(const void* highs, const char* info, HighsInt* type);
  * @param row_dual   An array of length [num_row], to be filled with dual row
  *                   values.
  *
- * @returns A `kHighsStatus` constant indicating whether the call succeeded.
+ * @returns A `kHighsStatus` constant indicating whether a primal solution
+ * exists.
  */
 HighsInt Highs_getSolution(const void* highs, double* col_value,
                            double* col_dual, double* row_value,
@@ -1043,7 +1049,7 @@ HighsInt Highs_getSolution(const void* highs, double* col_value,
  *                    basis statuses in the form of a `kHighsBasisStatus`
  *                    constant.
  *
- * @returns A `kHighsStatus` constant indicating whether the call succeeded.
+ * @returns A `kHighsStatus` constant indicating whether the basis is valid.
  */
 HighsInt Highs_getBasis(const void* highs, HighsInt* col_status,
                         HighsInt* row_status);

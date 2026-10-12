@@ -32,12 +32,13 @@ class Numeric {
   DataCollector* data_ = nullptr;
   const FHoptions* options_;
   std::unique_ptr<SolveHandler> SH_;
-  std::vector<double> gemv_workspace_;
 
   friend class Factorise;
 
   // dynamic regularisation applied to the matrix
   std::vector<double> total_reg_{};
+
+  void computeAnySwaps();
 
  public:
   Int prepare();
