@@ -60,29 +60,29 @@ HighsStatus Highs::clear() {
 
 HighsStatus Highs::clearModel() {
   model_.clear();
-  model_.setLogOptions(this->options_.log_options); // fix-3366
   multi_linear_objective_.clear();
   saved_objective_and_solution_.clear();
   return clearSolver();
 }
 
 HighsStatus Highs::clearSolver() {
-  HighsStatus return_status = HighsStatus::kOk;
+  // Set log options pointers in case onFirstCall() has't been called
+  this->model_.setLogOptions(this->options_.log_options);
   clearDerivedModelProperties();
   invalidateSolverData();
   ekk_instance_.clear();
-  return returnFromHighs(return_status);
+  return returnFromHighs(HighsStatus::kOk);
 }
 
 HighsStatus Highs::clearSolverDualData() {
-  HighsStatus return_status = HighsStatus::kOk;
+  // Set log options pointers in case onFirstCall() has't been called
+  this->model_.setLogOptions(this->options_.log_options);
   clearDerivedModelProperties();
   invalidateSolverDualData();
-  return returnFromHighs(return_status);
+  return returnFromHighs(HighsStatus::kOk);
 }
 
 HighsStatus Highs::releaseMemory() {
-  HighsStatus return_status = HighsStatus::kOk;
   // 1. Clear all model and solver state (same as clear()).
   clearModel();
 
@@ -133,7 +133,7 @@ HighsStatus Highs::releaseMemory() {
   // 4. Reset timer clocks (accumulated timing data).
   timer_.zeroAllClocks();
 
-  return returnFromHighs(return_status);
+  return returnFromHighs(HighsStatus::kOk);
 }
 
 HighsStatus Highs::setOptionValue(const std::string& option, const bool value) {
