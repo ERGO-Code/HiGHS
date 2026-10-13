@@ -235,6 +235,7 @@ TEST_NAMES = [
     "TestRays",
     "TestSemiVariables",
     "TestSetup",
+    "TestSolverSelect",
     "TestSort",
     "TestSpecialLps",
     "TestThrow",
