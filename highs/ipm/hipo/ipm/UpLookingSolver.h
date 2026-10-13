@@ -64,7 +64,7 @@ class UpLookingSolver : public LinearSolver {
   double flops() const override { return flops_; }
   double spops() const override { return 0; }
   double nz() const override { return valL_.size(); }
-  void getReg(std::vector<double>& reg) override;
+  void getReg(std::vector<double>& reg) const override;
 
   LinearSolverType type() const override { return kUpLookingType; }
 };

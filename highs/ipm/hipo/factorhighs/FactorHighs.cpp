@@ -46,7 +46,7 @@ Int FHsolver::backwardSolve(double* x, Int k) const {
   return N_.backwardSolve(x, k);
 }
 
-void FHsolver::getRegularisation(double* reg) { N_.getReg(reg); }
+void FHsolver::getRegularisation(double* reg) const { N_.getReg(reg); }
 
 void FHsolver::setBlockSize(Int nb) {
   if (nb > 0) options_.nb = nb;

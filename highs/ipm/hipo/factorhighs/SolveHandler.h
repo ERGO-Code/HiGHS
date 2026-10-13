@@ -4,9 +4,9 @@
 #include <vector>
 
 #include "DataCollector.h"
+#include "FactorHighsOptions.h"
 #include "Symbolic.h"
 #include "ipm/hipo/auxiliary/IntConfig.h"
-#include "FactorHighsOptions.h"
 
 namespace hipo {
 

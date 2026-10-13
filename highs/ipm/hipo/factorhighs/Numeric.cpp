@@ -114,7 +114,7 @@ Int Numeric::backwardSolve(double* x, Int k) const {
   SOLVE_MULTIPLE(backwardSolve);
 }
 
-void Numeric::getReg(double* reg) {
+void Numeric::getReg(double* reg) const {
   std::memcpy(reg, total_reg_.data(), total_reg_.size() * sizeof(double));
 }
 

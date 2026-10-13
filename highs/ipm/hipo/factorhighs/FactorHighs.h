@@ -127,7 +127,7 @@ class FHsolver {
   void setRegularisation(double reg_p = 0.0, double reg_d = 0.0);
 
   // Extract the regularisation values used, including static and dynamic.
-  void getRegularisation(double* reg);
+  void getRegularisation(double* reg) const;
 
   // Set block size for dense linear algebra
   void setBlockSize(Int nb);

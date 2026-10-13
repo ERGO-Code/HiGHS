@@ -54,7 +54,7 @@ class Numeric {
   Int diagSolve(double* x, Int k) const;
   Int backwardSolve(double* x, Int k) const;
 
-  void getReg(double* reg);
+  void getReg(double* reg) const;
   void inertia(Int& pos, Int& neg, Int& zero, double tol) const;
 };
 

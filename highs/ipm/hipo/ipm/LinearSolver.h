@@ -77,7 +77,7 @@ class LinearSolver {
   virtual double flops() const { return 0; }
   virtual double spops() const { return 0; }
   virtual double nz() const { return 0; }
-  virtual void getReg(std::vector<double>& reg){};
+  virtual void getReg(std::vector<double>& reg) const {};
 };
 
 inline std::string LinearSolverTypeToString(LinearSolverType t) {
@@ -85,7 +85,7 @@ inline std::string LinearSolverTypeToString(LinearSolverType t) {
       {kFactorHighsType, "FactorHighs"},
       {kUpLookingType, "UpLooking"},
   };
-  
+
   auto found = type_map.find(t);
   if (found != type_map.end()) return found->second;
   return "XUnknown";

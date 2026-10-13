@@ -286,7 +286,7 @@ Int UpLookingSolver::solveNE(const std::vector<double>& rhs,
   return kOk;
 }
 
-void UpLookingSolver::getReg(std::vector<double>& reg) {
+void UpLookingSolver::getReg(std::vector<double>& reg) const {
   reg = regularisation_;
   permuteVector(reg, kkt_.iperm());
 }

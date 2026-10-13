@@ -698,7 +698,7 @@ void FactorHighsSolver::printParallel() const {
 double FactorHighsSolver::flops() const { return kkt_.S.flops(); }
 double FactorHighsSolver::spops() const { return kkt_.S.spops(); }
 double FactorHighsSolver::nz() const { return (double)kkt_.S.nz(); }
-void FactorHighsSolver::getReg(std::vector<double>& reg) {
+void FactorHighsSolver::getReg(std::vector<double>& reg) const {
   FH_.getRegularisation(reg.data());
 }
 
