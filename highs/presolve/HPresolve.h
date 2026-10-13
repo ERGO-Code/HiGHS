@@ -66,6 +66,8 @@ class HPresolve {
   std::vector<HighsInt> rowsize;
   std::vector<HighsInt> rowsizeInteger;
   std::vector<HighsInt> rowsizeImplInt;
+  // number of singleton columns in a row
+  std::vector<HighsInt> rowsizeSingleton;
   std::vector<HighsInt> colsize;
 
   // vector to store the nonzero positions of a row
@@ -224,6 +226,8 @@ class HPresolve {
 
   void resetRowDualImpliedBoundsDerivedFromCol(HighsInt col);
 
+  void resetRowDualImpliedBoundsIfDualSideLost(HighsInt col, bool isLowerBound);
+
   void matrixNonZeroChanged(HighsInt row, HighsInt col, double oldCoef,
                             double newCoef, bool rowIsDeleted,
                             bool colIsDeleted);
@@ -280,6 +284,8 @@ class HPresolve {
   bool isUpperImplied(HighsInt col) const;
 
   bool isUpperStrictlyImplied(HighsInt col, double* tolerance = nullptr) const;
+
+  bool isStrictlyImpliedForDual(HighsInt col, bool isLowerBound) const;
 
   HighsInt countFillin(HighsInt row);
 
@@ -470,7 +476,7 @@ class HPresolve {
 
   void computeLocks(
       HighsInt col, bool considerObjective,
-      std::function<bool(HighsInt, bool, bool)> lockCallback) const;
+      const std::function<bool(HighsInt, bool, bool)>& lockCallback) const;
 
   Result dualFixing(HighsPostsolveStack& postsolve_stack, HighsInt col);
 
