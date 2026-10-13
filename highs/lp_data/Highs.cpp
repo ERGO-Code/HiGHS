@@ -203,7 +203,7 @@ HighsStatus Highs::resetOptions() {
 }
 
 HighsStatus Highs::writeOptions(const std::string& filename,
-                                const bool report_only_deviations) {
+                                const bool report_only_deviations) const {
   this->logHeader();
   HighsStatus return_status = HighsStatus::kOk;
   FILE* file;
@@ -327,7 +327,8 @@ HighsStatus Highs::getRunDataType(const std::string& run_data,
   return HighsStatus::kError;
 }
 
-HighsStatus Highs::getRunDataValue(const std::string& run_data, double& value) const {
+HighsStatus Highs::getRunDataValue(const std::string& run_data,
+                                   double& value) const {
   this->logHeader();
   RunDataStatus status =
       getLocalRunDataValue(options_.log_options, run_data, run_data_.valid,
@@ -363,7 +364,8 @@ HighsStatus Highs::writeRunData(const std::string& filename) const {
   return return_status;
 }
 
-HighsStatus Highs::getInfoValue(const std::string& info, HighsInt& value) const {
+HighsStatus Highs::getInfoValue(const std::string& info,
+                                HighsInt& value) const {
   this->logHeader();
   InfoStatus status = getLocalInfoValue(options_.log_options, info, info_.valid,
                                         info_.records, value);
@@ -391,7 +393,8 @@ HighsStatus Highs::getInfoValue(const std::string& info, int64_t& value) const {
 }
 #endif
 
-HighsStatus Highs::getInfoType(const std::string& info, HighsInfoType& type) const {
+HighsStatus Highs::getInfoType(const std::string& info,
+                               HighsInfoType& type) const {
   this->logHeader();
   if (getLocalInfoType(options_.log_options, info, info_.records, type) ==
       InfoStatus::kOk)
@@ -902,8 +905,9 @@ HighsStatus Highs::readModel(const std::string& filename) {
   return returnFromHighs(return_status);
 }
 
-HighsStatus Highs::matrixImage(const std::string& matrix_image_filename,
-                               const std::string& hessian_image_filename) const {
+HighsStatus Highs::matrixImage(
+    const std::string& matrix_image_filename,
+    const std::string& hessian_image_filename) const {
   this->logHeader();
   HighsStatus status = HighsStatus::kOk;
   if (matrix_image_filename != "") {
@@ -2351,6 +2355,8 @@ HighsStatus Highs::getIllConditioning(HighsIllConditioning& ill_conditioning,
                                       const bool constraint,
                                       const HighsInt method,
                                       const double ill_conditioning_bound) {
+  // Cannot be const, as calculations ensure that the incumbent LP is
+  // column-wise
   this->logHeader();
   if (!basis_.valid) {
     highsLogUser(options_.log_options, HighsLogType::kError,
@@ -2691,7 +2697,8 @@ HighsStatus Highs::setSolution(const HighsSolution& solution) {
 }
 
 HighsStatus Highs::getColOrRowName(const HighsLp& lp, const bool is_col,
-                                   const HighsInt index, std::string& name) const {
+                                   const HighsInt index,
+                                   std::string& name) const {
   this->logHeader();
   HighsInt num_index = is_col ? lp.num_col_ : lp.num_row_;
   if (index < 0 || index >= num_index) {
@@ -3609,7 +3616,8 @@ HighsStatus Highs::getRows(const HighsInt num_set_entries, const HighsInt* set,
 
 HighsStatus Highs::getRows(const HighsInt* mask, HighsInt& num_row,
                            double* lower, double* upper, HighsInt& num_nz,
-                           HighsInt* start, HighsInt* index, double* value) const {
+                           HighsInt* start, HighsInt* index,
+                           double* value) const {
   this->logHeader();
   HighsIndexCollection index_collection;
   const bool create_error = create(index_collection, mask, model_.lp_.num_row_);

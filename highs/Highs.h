@@ -372,7 +372,7 @@ class Highs {
    * Possible to write only deviations from default values.
    */
   HighsStatus writeOptions(const std::string& filename,  //!< The filename
-                           const bool report_only_deviations = false);
+                           const bool report_only_deviations = false) const;
 
   /**
    * @brief Returns the number of user-settable options
