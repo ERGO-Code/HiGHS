@@ -287,7 +287,7 @@ HighsStatus Highs::getStringOptionValues(const std::string& option,
 }
 
 HighsStatus Highs::getRunDataValue(const std::string& run_data,
-                                   HighsInt& value) {
+                                   HighsInt& value) const {
   this->logHeader();
   RunDataStatus status =
       getLocalRunDataValue(options_.log_options, run_data, run_data_.valid,
@@ -303,7 +303,7 @@ HighsStatus Highs::getRunDataValue(const std::string& run_data,
 
 #ifndef HIGHSINT64
 HighsStatus Highs::getRunDataValue(const std::string& run_data,
-                                   int64_t& value) {
+                                   int64_t& value) const {
   this->logHeader();
   RunDataStatus status =
       getLocalRunDataValue(options_.log_options, run_data, run_data_.valid,
@@ -319,7 +319,7 @@ HighsStatus Highs::getRunDataValue(const std::string& run_data,
 #endif
 
 HighsStatus Highs::getRunDataType(const std::string& run_data,
-                                  HighsRunDataType& type) {
+                                  HighsRunDataType& type) const {
   this->logHeader();
   if (getLocalRunDataType(options_.log_options, run_data, run_data_.records,
                           type) == RunDataStatus::kOk)
@@ -327,7 +327,7 @@ HighsStatus Highs::getRunDataType(const std::string& run_data,
   return HighsStatus::kError;
 }
 
-HighsStatus Highs::getRunDataValue(const std::string& run_data, double& value) {
+HighsStatus Highs::getRunDataValue(const std::string& run_data, double& value) const {
   this->logHeader();
   RunDataStatus status =
       getLocalRunDataValue(options_.log_options, run_data, run_data_.valid,
@@ -341,7 +341,7 @@ HighsStatus Highs::getRunDataValue(const std::string& run_data, double& value) {
   }
 }
 
-HighsStatus Highs::writeRunData(const std::string& filename) {
+HighsStatus Highs::writeRunData(const std::string& filename) const {
   this->logHeader();
   HighsStatus return_status = HighsStatus::kOk;
   FILE* file;
@@ -363,7 +363,7 @@ HighsStatus Highs::writeRunData(const std::string& filename) {
   return return_status;
 }
 
-HighsStatus Highs::getInfoValue(const std::string& info, HighsInt& value) {
+HighsStatus Highs::getInfoValue(const std::string& info, HighsInt& value) const {
   this->logHeader();
   InfoStatus status = getLocalInfoValue(options_.log_options, info, info_.valid,
                                         info_.records, value);
@@ -377,7 +377,7 @@ HighsStatus Highs::getInfoValue(const std::string& info, HighsInt& value) {
 }
 
 #ifndef HIGHSINT64
-HighsStatus Highs::getInfoValue(const std::string& info, int64_t& value) {
+HighsStatus Highs::getInfoValue(const std::string& info, int64_t& value) const {
   this->logHeader();
   InfoStatus status = getLocalInfoValue(options_.log_options, info, info_.valid,
                                         info_.records, value);
@@ -391,7 +391,7 @@ HighsStatus Highs::getInfoValue(const std::string& info, int64_t& value) {
 }
 #endif
 
-HighsStatus Highs::getInfoType(const std::string& info, HighsInfoType& type) {
+HighsStatus Highs::getInfoType(const std::string& info, HighsInfoType& type) const {
   this->logHeader();
   if (getLocalInfoType(options_.log_options, info, info_.records, type) ==
       InfoStatus::kOk)
@@ -399,7 +399,7 @@ HighsStatus Highs::getInfoType(const std::string& info, HighsInfoType& type) {
   return HighsStatus::kError;
 }
 
-HighsStatus Highs::getInfoValue(const std::string& info, double& value) {
+HighsStatus Highs::getInfoValue(const std::string& info, double& value) const {
   this->logHeader();
   InfoStatus status = getLocalInfoValue(options_.log_options, info, info_.valid,
                                         info_.records, value);
@@ -412,7 +412,7 @@ HighsStatus Highs::getInfoValue(const std::string& info, double& value) {
   }
 }
 
-HighsStatus Highs::writeInfo(const std::string& filename) {
+HighsStatus Highs::writeInfo(const std::string& filename) const {
   this->logHeader();
   HighsStatus return_status = HighsStatus::kOk;
   FILE* file;
@@ -757,7 +757,7 @@ HighsStatus Highs::passHessian(const HighsInt dim,
   return HighsStatus::kOk;
 }
 
-HighsStatus Highs::checkHessianOracle(const bool exit_on_first_error) {
+HighsStatus Highs::checkHessianOracle(const bool exit_on_first_error) const {
   this->logHeader();
   return this->model_.hessian_.checkOracle(options_.log_options,
                                            exit_on_first_error);
@@ -903,7 +903,7 @@ HighsStatus Highs::readModel(const std::string& filename) {
 }
 
 HighsStatus Highs::matrixImage(const std::string& matrix_image_filename,
-                               const std::string& hessian_image_filename) {
+                               const std::string& hessian_image_filename) const {
   this->logHeader();
   HighsStatus status = HighsStatus::kOk;
   if (matrix_image_filename != "") {
@@ -2223,7 +2223,7 @@ HighsStatus Highs::getStandardFormLp(HighsInt& num_col, HighsInt& num_row,
   return HighsStatus::kOk;
 }
 
-HighsStatus Highs::getFixedLp(HighsLp& lp) {
+HighsStatus Highs::getFixedLp(HighsLp& lp) const {
   this->logHeader();
   if (!this->model_.lp_.isMip()) {
     highsLogUser(options_.log_options, HighsLogType::kError,
@@ -2381,7 +2381,7 @@ HighsStatus Highs::getIis(HighsIis& iis) {
 }
 
 HighsStatus Highs::getDualObjectiveValue(
-    double& dual_objective_function_value) {
+    double& dual_objective_function_value) const {
   this->logHeader();
   bool have_dual_objective_value = computeDualObjectiveValue(
       model_, solution_, dual_objective_function_value);
@@ -2623,7 +2623,7 @@ HighsStatus Highs::getReducedColumn(const HighsInt col, double* col_vector,
 }
 
 HighsStatus Highs::getKappa(double& kappa, const bool exact,
-                            const bool report) {
+                            const bool report) const {
   this->logHeader();
   if (!ekk_instance_.status_.has_invert)
     return invertRequirementError("getKappa");
@@ -2691,7 +2691,7 @@ HighsStatus Highs::setSolution(const HighsSolution& solution) {
 }
 
 HighsStatus Highs::getColOrRowName(const HighsLp& lp, const bool is_col,
-                                   const HighsInt index, std::string& name) {
+                                   const HighsInt index, std::string& name) const {
   this->logHeader();
   HighsInt num_index = is_col ? lp.num_col_ : lp.num_row_;
   if (index < 0 || index >= num_index) {
@@ -3500,7 +3500,7 @@ HighsStatus Highs::getObjectiveOffset(double& offset) const {
 HighsStatus Highs::getCols(const HighsInt from_col, const HighsInt to_col,
                            HighsInt& num_col, double* costs, double* lower,
                            double* upper, HighsInt& num_nz, HighsInt* start,
-                           HighsInt* index, double* value) {
+                           HighsInt* index, double* value) const {
   this->logHeader();
   if (from_col > to_col) {
     // Empty interval
@@ -3526,7 +3526,7 @@ HighsStatus Highs::getCols(const HighsInt from_col, const HighsInt to_col,
 HighsStatus Highs::getCols(const HighsInt num_set_entries, const HighsInt* set,
                            HighsInt& num_col, double* costs, double* lower,
                            double* upper, HighsInt& num_nz, HighsInt* start,
-                           HighsInt* index, double* value) {
+                           HighsInt* index, double* value) const {
   this->logHeader();
   if (num_set_entries == 0) {
     // Empty interval
@@ -3549,7 +3549,7 @@ HighsStatus Highs::getCols(const HighsInt num_set_entries, const HighsInt* set,
 HighsStatus Highs::getCols(const HighsInt* mask, HighsInt& num_col,
                            double* costs, double* lower, double* upper,
                            HighsInt& num_nz, HighsInt* start, HighsInt* index,
-                           double* value) {
+                           double* value) const {
   this->logHeader();
   HighsIndexCollection index_collection;
   const bool create_error = create(index_collection, mask, model_.lp_.num_col_);
@@ -3560,7 +3560,7 @@ HighsStatus Highs::getCols(const HighsInt* mask, HighsInt& num_col,
   return HighsStatus::kOk;
 }
 
-HighsStatus Highs::getColName(const HighsInt col, std::string& name) {
+HighsStatus Highs::getColName(const HighsInt col, std::string& name) const {
   this->logHeader();
   return getColOrRowName(this->model_.lp_, true, col, name);
 }
@@ -3577,7 +3577,7 @@ HighsStatus Highs::getColByName(const std::string& name, HighsInt& col) {
 }
 
 HighsStatus Highs::getColIntegrality(const HighsInt col,
-                                     HighsVarType& integrality) {
+                                     HighsVarType& integrality) const {
   this->logHeader();
   if (col < 0 || col >= this->model_.lp_.num_col_) {
     highsLogUser(options_.log_options, HighsLogType::kError,
@@ -3595,7 +3595,7 @@ HighsStatus Highs::getColIntegrality(const HighsInt col,
 HighsStatus Highs::getRows(const HighsInt from_row, const HighsInt to_row,
                            HighsInt& num_row, double* lower, double* upper,
                            HighsInt& num_nz, HighsInt* start, HighsInt* index,
-                           double* value) {
+                           double* value) const {
   this->logHeader();
   if (from_row > to_row) {
     // Empty interval
@@ -3621,7 +3621,7 @@ HighsStatus Highs::getRows(const HighsInt from_row, const HighsInt to_row,
 HighsStatus Highs::getRows(const HighsInt num_set_entries, const HighsInt* set,
                            HighsInt& num_row, double* lower, double* upper,
                            HighsInt& num_nz, HighsInt* start, HighsInt* index,
-                           double* value) {
+                           double* value) const {
   this->logHeader();
   if (num_set_entries == 0) {
     num_row = 0;
@@ -3642,7 +3642,7 @@ HighsStatus Highs::getRows(const HighsInt num_set_entries, const HighsInt* set,
 
 HighsStatus Highs::getRows(const HighsInt* mask, HighsInt& num_row,
                            double* lower, double* upper, HighsInt& num_nz,
-                           HighsInt* start, HighsInt* index, double* value) {
+                           HighsInt* start, HighsInt* index, double* value) const {
   this->logHeader();
   HighsIndexCollection index_collection;
   const bool create_error = create(index_collection, mask, model_.lp_.num_row_);
@@ -3653,7 +3653,7 @@ HighsStatus Highs::getRows(const HighsInt* mask, HighsInt& num_row,
   return HighsStatus::kOk;
 }
 
-HighsStatus Highs::getRowName(const HighsInt row, std::string& name) {
+HighsStatus Highs::getRowName(const HighsInt row, std::string& name) const {
   this->logHeader();
   return getColOrRowName(this->model_.lp_, false, row, name);
 }
@@ -3670,7 +3670,7 @@ HighsStatus Highs::getRowByName(const std::string& name, HighsInt& row) {
 }
 
 HighsStatus Highs::getCoeff(const HighsInt row, const HighsInt col,
-                            double& value) {
+                            double& value) const {
   this->logHeader();
   if (row < 0 || row >= model_.lp_.num_row_) {
     highsLogUser(
@@ -3894,7 +3894,7 @@ HighsStatus Highs::readSolution(const std::string& filename,
 }
 
 HighsStatus Highs::assessPrimalSolution(bool& valid, bool& integral,
-                                        bool& feasible) {
+                                        bool& feasible) const {
   this->logHeader();
   return assessLpPrimalSolution("", options_, model_.lp_, solution_, valid,
                                 integral, feasible);
@@ -4669,7 +4669,7 @@ HighsStatus Highs::callRunPostsolve(const HighsSolution& solution,
 }
 
 // End of public methods
-void Highs::logHeader(const bool log_header) {
+void Highs::logHeader(const bool log_header) const {
   if (!options_.output_flag) return;
   //  if (!*options_.log_options.output_flag) return;
   static std::once_flag flag;
