@@ -10,6 +10,10 @@ endif()
 
 set(BLAS_ROOT "" CACHE STRING "Root directory of BLAS or OpenBLAS")
 
+option(HIGHS_OPENBLAS_REQUIRE_OPTIMIZED
+    "With BUILD_OPENBLAS on Windows ARM64, fail instead of falling back to generic OpenBLAS kernels when clang-cl or Ninja is unavailable"
+    OFF)
+
 # set appropriate BLAS linking information
 function(highs_configure_blas_target)
     set(HIGHS_BLAS_TARGET "" PARENT_SCOPE)
@@ -93,10 +97,16 @@ function(highs_build_openblas_windows_arm64 version result_var)
     endif()
 
     set(_fallback_msg "OpenBLAS will be built with the main compiler using generic C kernels, which are several times slower on Windows ARM64.")
+    if(HIGHS_OPENBLAS_REQUIRE_OPTIMIZED)
+        set(_fallback_level FATAL_ERROR)
+        set(_fallback_msg "HIGHS_OPENBLAS_REQUIRE_OPTIMIZED is ON, so not falling back to generic OpenBLAS kernels.")
+    else()
+        set(_fallback_level WARNING)
+    endif()
 
     string(TOLOWER "${CMAKE_HOST_SYSTEM_PROCESSOR}" _host_arch)
     if(NOT _host_arch MATCHES "^(arm64|aarch64)$")
-        message(WARNING "Building OpenBLAS with clang-cl for Windows ARM64 requires a native ARM64 host. ${_fallback_msg}")
+        message(${_fallback_level} "Building OpenBLAS with clang-cl for Windows ARM64 requires a native ARM64 host. ${_fallback_msg}")
         return()
     endif()
 
@@ -127,7 +137,7 @@ function(highs_build_openblas_windows_arm64 version result_var)
     endif()
 
     if(NOT HIGHS_OPENBLAS_C_COMPILER OR NOT HIGHS_OPENBLAS_NINJA)
-        message(WARNING "clang-cl and Ninja are needed to build optimised OpenBLAS kernels for Windows ARM64 "
+        message(${_fallback_level} "clang-cl and Ninja are needed to build optimised OpenBLAS kernels for Windows ARM64 "
                 "(install the \"C++ Clang Compiler for Windows\" Visual Studio component or LLVM, "
                 "or set HIGHS_OPENBLAS_C_COMPILER). ${_fallback_msg}")
         return()
