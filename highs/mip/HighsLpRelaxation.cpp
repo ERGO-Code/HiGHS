@@ -1187,7 +1187,6 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
     if (ipm_logging) {
       std::string presolve;
       lpsolver.getOptionValue("presolve", presolve);
-      std::cout << "IG LOG presolve = " << presolve << std::endl;
       printf(
           "HighsLpRelaxation::run Solving the root node with IPM, using "
           "presolve = %s\n",
@@ -1231,19 +1230,6 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
     mipsolver.profiling_->setSubMip(profiling_submip);
     mipsolver.profiling_->solveCall("LP2", mipsolver.submip);
     callstatus = lpsolver.optimizeLp();
-
-    // // The automatically selected solver may have been IPX or HiPO,
-    // // so fall back to simplex
-    // if (use_choose && callstatus == HighsStatus::kError &&
-    //     mipsolver.options_mip_->solver_select_strategy != 0) {
-    //   highsLogDev(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
-    //               "HighsLpRelaxation::run Automatically selected solver has "
-    //               "failed : status = %s Try simplex\n",
-    //               lpsolver.modelStatusToString(lpsolver.getModelStatus())
-    //                   .c_str());
-    //   lpsolver.setOptionValue("solver", kSimplexString);
-    //   callstatus = lpsolver.optimizeLp();
-    // }
   }
   // Revert the value of lpsolver.options_.solver
   lpsolver.setOptionValue("solver", solver);
