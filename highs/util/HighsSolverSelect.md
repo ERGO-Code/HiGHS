@@ -41,16 +41,19 @@ compare across instances of any size. Four questions:
 
 `solveLp` dispatches to `selectSolver(lp, strategy, require_basis,
 num_integer_col)` whenever `solver = choose` (or, inside the MIP solver,
-`mip_lp_solver = choose`). `strategy` is the **`solver_select_strategy`**
-option — `HighsInt`, range `[0, 3]`, default `0` — settable via
-`Highs::setOptionValue` or the CLI flag `--solver_select_strategy`:
+`mip_lp_solver = choose`). `strategy` is a `SolverSelectStrategy` (enum
+class) in C++; the **`solver_select_strategy`** *option* that drives it is
+the plain `HighsInt` the enum's values match — range `[0, 3]`, default `0` —
+settable via `Highs::setOptionValue` or the CLI flag
+`--solver_select_strategy`. The one place the raw option int becomes the
+typed enum is the `solveLp` call site, via `static_cast<SolverSelectStrategy>`.
 
-| Strategy | Behaviour |
-|:--------:|-----------|
-| 0 | Always `kDualSimplex`. |
-| 1 | `selectSolverByModel`: the fitted PCA + decision-tree model on 4 size features (`num_col`, `num_row`, `num_nz`, `num_integer_col`) — cheap, skips the rest of `computeLpFeatures`. |
-| 2 | `selectSolverByModel` on the full feature set (below). |
-| 3 | `selectSolverByFeatures`, the hand-written heuristic (see [below](#strategy-3--hand-written-heuristic)). |
+| Value | `SolverSelectStrategy` | Behaviour |
+|:-----:|-------------------------|-----------|
+| 0 | `kSimplexOnly` | Always `kDualSimplex`. |
+| 1 | `kNColsRowsNnzIntegrality` | `selectSolverByModel`: the fitted PCA + decision-tree model on 4 size features (`num_col`, `num_row`, `num_nz`, `num_integer_col`) — cheap, skips the rest of `computeLpFeatures`. |
+| 2 | `kFull` | `selectSolverByModel` on the full feature set (below). |
+| 3 | `kHeuristic` | `selectSolverByFeatures`, the hand-written heuristic (see [below](#strategy-3--hand-written-heuristic)). |
 
 `require_basis` is the **`solver_select_require_basis`** option — bool,
 default `false`, CLI flag `--solver_select_require_basis` — which restricts
@@ -110,10 +113,13 @@ HighsInt n_int = countIntegerCols(lp.integrality_);  // kInteger/kSemiContinuous
 
 HighsSolverSelect s = selectSolverByFeatures(lp);  // strategy 3 -> kDualSimplex | kIpx | kHipo
 HighsSolverSelect b = selectSolverByFeatures(lp, /*require_basis=*/true);
-HighsSolverSelect m = selectSolverByModel(f, /*strategy=*/2, /*require_basis=*/true);
+HighsSolverSelect m = selectSolverByModel(f, SolverSelectStrategy::kFull,
+                                          /*require_basis=*/true);
 bool ok = solverYieldsBasis(b, /*run_crossover=*/true);
 
-HighsSolverSelect e = selectSolver(lp, /*strategy=*/3, /*require_basis=*/false);  // full dispatch
+// full dispatch: strategy is SolverSelectStrategy, not a raw int
+HighsSolverSelect e = selectSolver(lp, SolverSelectStrategy::kHeuristic,
+                                   /*require_basis=*/false);
 ```
 
 `lp` is expected to be the **presolved** LP. Helpers are safe on empty /
