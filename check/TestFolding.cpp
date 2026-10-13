@@ -6,6 +6,7 @@
 #include "Highs.h"
 #include "catch.hpp"
 #include "folding/Fold.h"
+#include "lp_data/HighsSolution.h"
 
 const bool dev_run = false;
 
@@ -89,69 +90,16 @@ HighsLp getPaperFoldedFoldedLp() {
   return lp;
 }
 
-bool addDualTerm(double m, double lower, double upper, double tol,
-                 double& dual_obj) {
-  // A multiplier m for a pair of bounds contributes m*lower to the dual
-  // objective if m > 0 and m*upper if m < 0. Fails if the bound it needs is
-  // infinite.
-  if (m > tol) {
-    if (!std::isfinite(lower)) return false;
-    dual_obj += m * lower;
-  } else if (m < -tol) {
-    if (!std::isfinite(upper)) return false;
-    dual_obj += m * upper;
-  }
-  return true;
-}
-bool isOptimal(const HighsLp& lp, const HighsSolution& sol, double tol) {
-  REQUIRE(lp.sense_ == ObjSense::kMinimize);
-  REQUIRE(sol.col_value.size() == static_cast<size_t>(lp.num_col_));
-  REQUIRE(sol.row_dual.size() == static_cast<size_t>(lp.num_row_));
-  REQUIRE(sol.col_dual.size() == static_cast<size_t>(lp.num_col_));
+bool isOptimal(const Highs& highs, const HighsLp& lp,
+               const HighsSolution& sol) {
+  HighsInfo info = highs.getInfo();
+  const HighsOptions& options = highs.getOptions();
+  getLpKktFailures(highs.getOptions(), lp, sol, {}, info, nullptr);
 
-  const HighsSparseMatrix& A = lp.a_matrix_;
-  std::vector<double> Ax(lp.num_row_, 0.0);
-  std::vector<double> Aty(lp.num_col_, 0.0);
-  for (HighsInt j = 0; j < lp.num_col_; ++j)
-    for (HighsInt k = A.start_[j]; k < A.start_[j + 1]; ++k) {
-      Ax[A.index_[k]] += A.value_[k] * sol.col_value[j];
-      Aty[j] += A.value_[k] * sol.row_dual[A.index_[k]];
-    }
-
-  double primal_obj = lp.offset_;
-  double dual_obj = lp.offset_;
-
-  for (HighsInt j = 0; j < lp.num_col_; ++j) {
-    const double x = sol.col_value[j];
-
-    if (x < lp.col_lower_[j] - tol) return false;
-    if (x > lp.col_upper_[j] + tol) return false;
-
-    const double residual = lp.col_cost_[j] - Aty[j] - sol.col_dual[j];
-    if (std::abs(residual) > tol) return false;
-
-    primal_obj += lp.col_cost_[j] * x;
-    if (!addDualTerm(sol.col_dual[j], lp.col_lower_[j], lp.col_upper_[j], tol,
-                     dual_obj))
-      return false;
-  }
-
-  for (HighsInt i = 0; i < lp.num_row_; ++i) {
-    if (Ax[i] < lp.row_lower_[i] - tol) return false;
-    if (Ax[i] > lp.row_upper_[i] + tol) return false;
-
-    if (!sol.row_value.empty() && std::abs(sol.row_value[i] - Ax[i]) > tol)
-      return false;
-
-    if (!addDualTerm(sol.row_dual[i], lp.row_lower_[i], lp.row_upper_[i], tol,
-                     dual_obj))
-      return false;
-  }
-
-  if (std::abs(primal_obj - dual_obj) > tol * (1 + std::abs(primal_obj)))
-    return false;
-
-  return true;
+  return info.num_primal_infeasibilities == 0 &&
+         info.num_dual_infeasibilities == 0 &&
+         info.num_complementarity_violations == 0 &&
+         info.primal_dual_objective_error < options.optimality_tolerance;
 }
 
 void runFoldingTest(const std::string& filename) {
@@ -172,7 +120,7 @@ void runFoldingTest(const std::string& filename) {
 
   const HighsSolution folded_sol = highs.getSolution();
   const HighsSolution unfolded_sol = lpf.unfold(folded_sol);
-  REQUIRE(isOptimal(lp, unfolded_sol, 1e-6));
+  REQUIRE(isOptimal(highs, lp, unfolded_sol));
 
   highs.resetGlobalScheduler();
 }
@@ -222,14 +170,14 @@ TEST_CASE("test-folding-paper", "[highs-folding]") {
   const double folded_obj_2 = highs.getObjectiveValue();
 
   // Check that the three solutions are feasible for the respective lps
-  REQUIRE(isOptimal(lp, sol, 1e-6));
-  REQUIRE(isOptimal(folded_lp, folded_sol, 1e-6));
-  REQUIRE(isOptimal(folded_lp_2, folded_sol_2, 1e-6));
+  REQUIRE(isOptimal(highs, lp, sol));
+  REQUIRE(isOptimal(highs, folded_lp, folded_sol));
+  REQUIRE(isOptimal(highs, folded_lp_2, folded_sol_2));
 
   // Check that unfolding returns an optimal solution
-  REQUIRE(isOptimal(lp, unfolded_sol, 1e-6));
-  REQUIRE(isOptimal(folded_lp, unfolded_sol_2_once, 1e-6));
-  REQUIRE(isOptimal(lp, unfolded_sol_2_twice, 1e-6));
+  REQUIRE(isOptimal(highs, lp, unfolded_sol));
+  REQUIRE(isOptimal(highs, folded_lp, unfolded_sol_2_once));
+  REQUIRE(isOptimal(highs, lp, unfolded_sol_2_twice));
 
   // Check that objectives are the same
   REQUIRE(std::abs(folded_obj - obj) < 1e-6);
