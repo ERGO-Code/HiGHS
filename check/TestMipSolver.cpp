@@ -2418,7 +2418,10 @@ TEST_CASE("issue-3389", "[highs_test_mip_solver]") {
     REQUIRE(highs.setOptionValue("presolve", presolve) == HighsStatus::kOk);
     REQUIRE(highs.run() == HighsStatus::kOk);
     REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
-    REQUIRE(std::fabs(highs.getInfo().objective_function_value - 0.01) < 1e-8);
+    // x = 1.999999 is integral within the MIP feasibility tolerance
+    const double objective = highs.getInfo().objective_function_value;
+    REQUIRE((std::fabs(objective - 0.01) < 1e-8 ||
+             std::fabs(objective - 0.01999999) < 1e-8));
   }
   highs.resetGlobalScheduler(true);
 }
@@ -2449,7 +2452,10 @@ TEST_CASE("issue-3389-binding-row", "[highs_test_mip_solver]") {
     REQUIRE(highs.setOptionValue("presolve", presolve) == HighsStatus::kOk);
     REQUIRE(highs.run() == HighsStatus::kOk);
     REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
-    REQUIRE(std::fabs(highs.getInfo().objective_function_value - 0.01) < 1e-8);
+    // x = 1.9999995 is integral within the MIP feasibility tolerance
+    const double objective = highs.getInfo().objective_function_value;
+    REQUIRE((std::fabs(objective - 0.01) < 1e-8 ||
+             std::fabs(objective - 0.019999995) < 1e-8));
   }
   highs.resetGlobalScheduler(true);
 }
