@@ -28,6 +28,7 @@ jobs:
         run: |
           python3 -m pip install .
           pytest -v ./highspy
+          pytest -v check/test_solver_select_python.py
 
       - name: Test Python Examples
         run: |
