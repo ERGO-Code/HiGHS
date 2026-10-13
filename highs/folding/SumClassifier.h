@@ -20,7 +20,7 @@ namespace folding {
 //
 // Two strategies are used to find the class of a sum, chosen in reset() based
 // on the maximum number of classes:
-// - Small colours (at most kSmallClassLimit classes): linear scan of the
+// - Small colours (at most kSmallClassThreshold classes): linear scan of the
 //   classes. No hashing, and the classes are contiguous in memory.
 // - Large colours: custom hash table. A stamp is used to invalidate all
 //   existing entries during reset, so nothing has to be cleared or destroyed,
