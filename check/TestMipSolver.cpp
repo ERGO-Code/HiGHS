@@ -2394,3 +2394,62 @@ TEST_CASE("implied-equation-unbounded", "[highs_test_mip_solver]") {
   }
   highs.resetGlobalScheduler(true);
 }
+
+TEST_CASE("issue-3389", "[highs_test_mip_solver]") {
+  HighsLp lp;
+  lp.num_col_ = 2;
+  lp.num_row_ = 4;
+  lp.sense_ = ObjSense::kMaximize;
+  lp.col_cost_ = {0.01, 0};
+  lp.col_lower_ = {0, 0};
+  lp.col_upper_ = {3, 3};
+  lp.row_lower_ = {-500000, -kHighsInf, 1, -kHighsInf};
+  lp.row_upper_ = {kHighsInf, 499999, kHighsInf, 1};
+  lp.integrality_ = {HighsVarType::kInteger, HighsVarType::kInteger};
+  lp.a_matrix_.format_ = MatrixFormat::kColwise;
+  lp.a_matrix_.start_ = {0, 2, 6};
+  lp.a_matrix_.index_ = {0, 1, 0, 1, 2, 3};
+  lp.a_matrix_.value_ = {-1000000, -1000000, 1499999, 1499999, 1, 1};
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
+  for (const std::string& presolve : {kHighsOffString, kHighsOnString}) {
+    highs.clearSolver();
+    REQUIRE(highs.setOptionValue("presolve", presolve) == HighsStatus::kOk);
+    REQUIRE(highs.run() == HighsStatus::kOk);
+    REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
+    REQUIRE(std::fabs(highs.getInfo().objective_function_value - 0.01) < 1e-8);
+  }
+  highs.resetGlobalScheduler(true);
+}
+
+TEST_CASE("issue-3389-binding-row", "[highs_test_mip_solver]") {
+  // the smallest worst-case bound on x comes from row 0 (coefficient 1), but
+  // row 1 (coefficient 1e6) is the binding row: each row's bound has to be
+  // rounded with its own tolerance
+  HighsLp lp;
+  lp.num_col_ = 2;
+  lp.num_row_ = 4;
+  lp.sense_ = ObjSense::kMaximize;
+  lp.col_cost_ = {0.01, 0};
+  lp.col_lower_ = {0, 0};
+  lp.col_upper_ = {3, 3};
+  lp.row_lower_ = {-0.9999995, -999999.9, 1, -kHighsInf};
+  lp.row_upper_ = {kHighsInf, kHighsInf, kHighsInf, 1};
+  lp.integrality_ = {HighsVarType::kInteger, HighsVarType::kInteger};
+  lp.a_matrix_.format_ = MatrixFormat::kColwise;
+  lp.a_matrix_.start_ = {0, 2, 6};
+  lp.a_matrix_.index_ = {0, 1, 0, 1, 2, 3};
+  lp.a_matrix_.value_ = {-1, -1000000, 1, 1000000, 1, 1};
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
+  for (const std::string& presolve : {kHighsOffString, kHighsOnString}) {
+    highs.clearSolver();
+    REQUIRE(highs.setOptionValue("presolve", presolve) == HighsStatus::kOk);
+    REQUIRE(highs.run() == HighsStatus::kOk);
+    REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
+    REQUIRE(std::fabs(highs.getInfo().objective_function_value - 0.01) < 1e-8);
+  }
+  highs.resetGlobalScheduler(true);
+}

@@ -1598,8 +1598,6 @@ HPresolve::Result HPresolve::dominatedColumns(
           //                                  MINU^k_j(otherColBound)}
           double worstCaseUpper = computeWorstCaseUpperBound(
               col, otherCol, otherColBound, otherColCoeffPattern);
-          if (model->integrality_[col] != HighsVarType::kContinuous)
-            worstCaseUpper = std::floor(worstCaseUpper + primal_feastol);
           lowerBound = std::max(lowerBound, std::min(colBound, worstCaseUpper));
         }
       } else {
@@ -1618,16 +1616,12 @@ HPresolve::Result HPresolve::dominatedColumns(
           //                                   MAXU^j_k(otherColBound)}
           double worstCaseLower = computeWorstCaseLowerBound(
               col, otherCol, otherColBound, otherColCoeffPattern);
-          if (model->integrality_[col] != HighsVarType::kContinuous)
-            worstCaseLower = std::ceil(worstCaseLower - primal_feastol);
           upperBound = std::min(upperBound, std::max(colBound, worstCaseLower));
         }
       }
       // update bounds
       if (lowerBound < kHighsInf &&
           lowerBound > model->col_lower_[col] + primal_feastol) {
-        if (model->integrality_[col] != HighsVarType::kContinuous)
-          lowerBound = std::ceil(lowerBound - primal_feastol);
         if (lowerBound == model->col_upper_[col]) {
           numFixedColsPredBndAnalysis++;
           return fixCol(col, HighsInt{1});
@@ -1638,8 +1632,6 @@ HPresolve::Result HPresolve::dominatedColumns(
       }
       if (upperBound > -kHighsInf &&
           upperBound < model->col_upper_[col] - primal_feastol) {
-        if (model->integrality_[col] != HighsVarType::kContinuous)
-          upperBound = std::floor(upperBound + primal_feastol);
         if (upperBound == model->col_lower_[col]) {
           numFixedColsPredBndAnalysis++;
           return fixCol(col, HighsInt{-1});
@@ -5629,10 +5621,6 @@ HPresolve::Result HPresolve::dualFixing(HighsPostsolveStack& postsolve_stack,
          std::abs(newBound) > hugeBound))
       return false;
 
-    // round up to make sure that all rows are redundant
-    if (model->integrality_[col] != HighsVarType::kContinuous)
-      newBound = std::ceil(newBound - primal_feastol);
-
     // flip sign
     newBound *= direction;
     return true;
@@ -7156,7 +7144,8 @@ void HPresolve::computeColBounds(HighsInt col, HighsInt boundCol,
 
   // lambda for actual bound computation
   auto computeBound = [&](const nonZeros& triplet, double rhs,
-                          HighsInt direction, bool isWorstCaseBound) {
+                          HighsInt direction, bool isLowerBound,
+                          bool isWorstCaseBound) {
     HighsCDouble residual;
     if ((direction > 0 && !isWorstCaseBound) ||
         (direction < 0 && isWorstCaseBound)) {
@@ -7176,8 +7165,21 @@ void HPresolve::computeColBounds(HighsInt col, HighsInt boundCol,
                                         boundCol, triplet.kval, boundColValue);
       if (residual == kHighsInf) return -std::copysign(kHighsInf, triplet.jval);
     }
-    return static_cast<double>((static_cast<HighsCDouble>(rhs) - residual) /
-                               triplet.jval);
+    double bound = static_cast<double>(
+        (static_cast<HighsCDouble>(rhs) - residual) / triplet.jval);
+    // round bounds on integer columns. rounding implied bounds across the
+    // tolerance only loosens them, so the primal feasibility tolerance is
+    // safe. worst-case bounds are bounds that the column is moved to, and
+    // moving the column by delta changes the row activity by |jval| * delta,
+    // so the tolerance is scaled to keep the violation within the primal
+    // feasibility tolerance.
+    if (model->integrality_[col] != HighsVarType::kContinuous) {
+      double tol = isWorstCaseBound
+                       ? primal_feastol / std::max(1.0, std::abs(triplet.jval))
+                       : primal_feastol;
+      bound = isLowerBound ? std::ceil(bound - tol) : std::floor(bound + tol);
+    }
+    return bound;
   };
 
   // lambda for updating tightest bounds
@@ -7187,19 +7189,21 @@ void HPresolve::computeColBounds(HighsInt col, HighsInt boundCol,
     if (direction * triplet.jval < 0) {
       // lower bounds
       if (lowerBound != nullptr)
-        *lowerBound =
-            std::max(*lowerBound, computeBound(triplet, rhs, direction, false));
+        *lowerBound = std::max(
+            *lowerBound, computeBound(triplet, rhs, direction, true, false));
       if (worstCaseLowerBound != nullptr && *worstCaseLowerBound != kHighsInf)
-        *worstCaseLowerBound = std::max(
-            *worstCaseLowerBound, computeBound(triplet, rhs, direction, true));
+        *worstCaseLowerBound =
+            std::max(*worstCaseLowerBound,
+                     computeBound(triplet, rhs, direction, true, true));
     } else {
       // upper bounds
       if (upperBound != nullptr)
-        *upperBound =
-            std::min(*upperBound, computeBound(triplet, rhs, direction, false));
+        *upperBound = std::min(
+            *upperBound, computeBound(triplet, rhs, direction, false, false));
       if (worstCaseUpperBound != nullptr && *worstCaseUpperBound != -kHighsInf)
-        *worstCaseUpperBound = std::min(
-            *worstCaseUpperBound, computeBound(triplet, rhs, direction, true));
+        *worstCaseUpperBound =
+            std::min(*worstCaseUpperBound,
+                     computeBound(triplet, rhs, direction, false, true));
     }
   };
 
