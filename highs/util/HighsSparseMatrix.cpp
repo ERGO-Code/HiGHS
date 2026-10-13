@@ -228,6 +228,14 @@ void HighsSparseMatrix::ensureRowwise() {
   assert((HighsInt)this->value_.size() >= num_nz);
 }
 
+void HighsSparseMatrix::setEmptyColwise(const HighsInt num_col) {
+  this->clear();
+  assert(this->isColwise());
+  this->start_.assign(num_col + 1, 0);
+  this->num_col_ = num_col;
+  this->num_row_ = 0;
+}
+
 void HighsSparseMatrix::addVec(const HighsInt num_nz, const HighsInt* index,
                                const double* value, const double multiple) {
   HighsInt num_vec = 0;

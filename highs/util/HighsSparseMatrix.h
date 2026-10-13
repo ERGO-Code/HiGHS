@@ -50,7 +50,7 @@ class HighsSparseMatrix {
   void setFormat(const MatrixFormat desired_format);
   void ensureColwise();
   void ensureRowwise();
-
+  void setEmptyColwise(const HighsInt num_col);
   void addVec(const HighsInt num_nz, const HighsInt* index, const double* value,
               const double multiple = 1);
   void addCols(const HighsSparseMatrix& new_cols,
@@ -63,6 +63,8 @@ class HighsSparseMatrix {
               double* value) const;
   void deleteCols(const HighsIndexCollection& index_collection);
   void deleteRows(const HighsIndexCollection& index_collection);
+  // Used only in Highs::writeLocalModel but (ToDo) why can't this
+  // used assess?
   HighsStatus assessStart(const HighsLogOptions& log_options);
   HighsStatus assessIndexBounds(const HighsLogOptions& log_options);
 

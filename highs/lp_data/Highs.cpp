@@ -461,9 +461,13 @@ HighsStatus Highs::passModel(HighsModel model) {
   // Move the model's LP and Hessian to the internal LP and Hessian
   lp = std::move(model.lp_);
   hessian = std::move(model.hessian_);
-  lp.origin_name_ = "User";
-  lp.a_matrix_.name_ = "User matrix";
-  assert(lp.a_matrix_.formatOk());
+
+  auto clearModelAndReturnError = [&]() {
+    // Clear the incumbent model and any associated data
+    clearModel();
+    return HighsStatus::kError;
+  };
+
   if (lp.num_col_ == 0 || lp.num_row_ == 0) {
     // Model constraint matrix has either no columns or no
     // rows. Clearly the matrix is empty, so may have no orientation
@@ -472,14 +476,14 @@ HighsStatus Highs::passModel(HighsModel model) {
     highsLogUser(options_.log_options, HighsLogType::kInfo,
                  "Model has either no columns or no rows, so ignoring user "
                  "constraint matrix data and initialising empty matrix\n");
-    lp.a_matrix_.format_ = MatrixFormat::kColwise;
-    lp.a_matrix_.start_.assign(lp.num_col_ + 1, 0);
-    lp.a_matrix_.index_.clear();
-    lp.a_matrix_.value_.clear();
+    lp.a_matrix_.setEmptyColwise(lp.num_col_);
   } else {
     // Matrix has rows and columns, so a_matrix format must be valid
-    if (!lp.a_matrix_.formatOk()) return HighsStatus::kError;
+    if (!lp.a_matrix_.formatOk()) return clearModelAndReturnError();
   }
+  lp.origin_name_ = "User";
+  lp.a_matrix_.name_ = "User matrix";
+  assert(lp.a_matrix_.formatOk());
   // Dimensions in a_matrix_ may not be set, so take them from lp.
   lp.setMatrixDimensions();
   // Residual scale factors may be present. ToDo Allow user-defined
@@ -490,13 +494,13 @@ HighsStatus Highs::passModel(HighsModel model) {
   // Check that the LP array dimensions are legal (ie at least the
   // size required by num_col_ and num_row_)
   if (!lp.legalDimensions("passModel", options_.log_options))
-    return HighsStatus::kError;
+    return clearModelAndReturnError();
   // Check that the Hessian format is valid
-  if (!hessian.formatOk()) return HighsStatus::kError;
+  if (!hessian.formatOk()) return clearModelAndReturnError();
   // Check validity of the LP, normalising its values
   return_status = interpretCallStatus(
       options_.log_options, assessLp(lp, options_), return_status, "assessLp");
-  if (return_status == HighsStatus::kError) return return_status;
+  if (return_status == HighsStatus::kError) return clearModelAndReturnError();
   // Now legality of matrix is established, ensure that it is
   // column-wise
   lp.ensureColwise();
@@ -504,7 +508,7 @@ HighsStatus Highs::passModel(HighsModel model) {
   return_status = interpretCallStatus(options_.log_options,
                                       assessHessian(hessian, options_),
                                       return_status, "assessHessian");
-  if (return_status == HighsStatus::kError) return return_status;
+  if (return_status == HighsStatus::kError) return clearModelAndReturnError();
   if (hessian.dim_) {
     // Clear any zero Hessian
     if (hessian.numNz() == 0) {
@@ -525,8 +529,7 @@ HighsStatus Highs::passModel(HighsModel model) {
     writeHessianPicToFile(options_, "Hessian", model_.hessian_);
 
   // Clear solver status, solution, basis and info associated with any
-  // previous model; clear any HiGHS model object; create a HiGHS
-  // model object for this LP
+  // previous model
   return_status = interpretCallStatus(options_.log_options, clearSolver(),
                                       return_status, "clearSolver");
   return returnFromHighs(return_status);

@@ -442,7 +442,7 @@ TEST_CASE("LP-extreme-coefficient", "[highs_data]") {
   lp.a_matrix_.value_ = {1e300};
   lp.row_lower_ = {1};
   lp.row_upper_ = {inf};
-  if (!dev_run) highs.setOptionValue("output_flag", false);
+  //  highs.setOptionValue("output_flag", dev_run);
   // Reading a model with a large value results in HighsStatus::kError
   return_status = highs.passModel(lp);
   if (dev_run)
@@ -892,6 +892,30 @@ TEST_CASE("issue-3366", "[highs_data]") {
   HighsModel model = h.getModel();
   REQUIRE(model.hessian_.start_.size() ==
           static_cast<size_t>(hessian.dim_ + 1));
+
+  h.resetGlobalScheduler(true);
+}
+
+TEST_CASE("clear-illegal-model", "[highs_data]") {
+  // Ensures that an illegal model is cleared
+  HighsModel illegal_model;
+  std::vector<double> zero_vector(1);
+  illegal_model.lp_.num_col_ = 1;
+  illegal_model.lp_.num_row_ = 1;
+  illegal_model.lp_.col_cost_ = zero_vector;
+  illegal_model.lp_.col_lower_ = zero_vector;
+  illegal_model.lp_.col_upper_ = zero_vector;
+  illegal_model.lp_.row_lower_ = zero_vector;
+  illegal_model.lp_.row_upper_ = zero_vector;
+  illegal_model.lp_.a_matrix_.start_ = {-1, 0};
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  REQUIRE(h.passModel(illegal_model) == HighsStatus::kError);
+  // Create an empty model, and sure that it's equal to the incumbent
+  // model - implying that the illegal model has not been loaded, so
+  // the incumbent model is empty
+  HighsModel legal_model;
+  REQUIRE((h.getModel() == legal_model));
 
   h.resetGlobalScheduler(true);
 }

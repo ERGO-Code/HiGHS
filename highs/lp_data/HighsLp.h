@@ -77,6 +77,9 @@ class HighsLp {
   HighsCDouble objectiveCDoubleValue(const std::vector<double>& solution) const;
   void setMatrixDimensions();
   void setFormat(const MatrixFormat format);
+  void setEmptyColwise(const HighsInt num_col) {
+    this->a_matrix_.setEmptyColwise(num_col);
+  }
   bool isColwise() const { return this->a_matrix_.isColwise(); };
   bool isRowwise() const { return this->a_matrix_.isRowwise(); };
   void ensureColwise() { this->a_matrix_.ensureColwise(); };
