@@ -127,8 +127,7 @@ HighsStatus Highs::getHighsInfoValue(const std::string& info, HighsInt& value) {
   return getInfoValue(info, value);
 }
 
-HighsStatus Highs::getHighsInfoValue(const std::string& info,
-                                     double& value) const {
+HighsStatus Highs::getHighsInfoValue(const std::string& info, double& value) {
   deprecationMessage("getHighsInfoValue", "getInfoValue");
   return getInfoValue(info, value);
 }

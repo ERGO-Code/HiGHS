@@ -506,7 +506,7 @@ HighsStatus Highs::addColsInterface(
 
   // Increase the number of columns in the LP
   lp.num_col_ += ext_num_new_col;
-  assert(lp.legalDimensions("addCols"));
+  assert(lp.legalDimensions("addCols", options.log_options));
 
   // Interpret possible introduction of infinite costs
   lp.has_infinite_cost_ = lp.has_infinite_cost_ || local_has_infinite_cost;
@@ -638,7 +638,7 @@ HighsStatus Highs::addRowsInterface(HighsInt ext_num_new_row,
 
   // Increase the number of rows in the LP
   lp.num_row_ += ext_num_new_row;
-  assert(lp.legalDimensions("addRows"));
+  assert(lp.legalDimensions("addRows", options.log_options));
 
   // Deduce the consequences of adding new rows
   invalidateModelStatusSolutionAndInfo();
@@ -765,7 +765,7 @@ void Highs::deleteColsInterface(HighsIndexCollection& index_collection) {
     }
     assert(new_col == lp.num_col_);
   }
-  assert(lp.legalDimensions("deleteCols"));
+  assert(lp.legalDimensions("deleteCols", options_.log_options));
   lp.col_hash_.name2index.clear();
 }
 
@@ -818,7 +818,7 @@ void Highs::deleteRowsInterface(HighsIndexCollection& index_collection) {
     }
     assert(new_row == lp.num_row_);
   }
-  assert(lp.legalDimensions("deleteRows"));
+  assert(lp.legalDimensions("deleteRows", options_.log_options));
   lp.row_hash_.name2index.clear();
 }
 
@@ -3179,6 +3179,7 @@ HighsStatus Highs::computeIllConditioning(
   ill_conditioning.clear();
   HighsLp& incumbent_lp = this->model_.lp_;
   Highs conditioning;
+  conditioning.onFirstCall(false);
   const bool dev_conditioning = false;
   conditioning.setOptionValue("output_flag", false);  // dev_conditioning);
   std::vector<HighsInt> basic_var;

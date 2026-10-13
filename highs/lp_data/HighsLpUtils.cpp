@@ -33,8 +33,8 @@ const HighsInt kMaxLineLength = 80;
 
 HighsStatus assessLp(HighsLp& lp, const HighsOptions& options) {
   const HighsLogOptions& log_options = options.log_options;
-  if (!lp.legalDimensions("assessLp")) return HighsStatus::kError;
-  HighsStatus return_status = lp.trimDimensions();
+  if (!lp.legalDimensions("assessLp", log_options)) return HighsStatus::kError;
+  HighsStatus return_status = lp.trimDimensions(log_options);
 
   HighsStatus call_status = HighsStatus::kOk;
   if (lp.num_col_) {
