@@ -14,11 +14,26 @@
 #include <cassert>
 #include <cmath>
 
+#include "HighsExternalApi.h"
 #include "lp_data/HConst.h"
 #include "lp_data/HighsLp.h"
 #include "util/HighsSolverSelectModels.h"
 
 namespace {
+
+// kHipo is never returned unless HiPO is actually available in this build
+// (compiled in, and its external deps - AMD, BLAS, METIS, RCM - loaded), so
+// callers never have to separately check before acting on the result. IPX is
+// the fallback: both are interior-point methods with identical
+// basis/crossover semantics (see solverYieldsBasis), so substituting it in
+// preserves every invariant the model/heuristic already established -
+// notably that a solver chosen with require_basis = true still yields one.
+HighsSolverSelect substituteUnavailable(const HighsSolverSelect solver) {
+  if (solver == HighsSolverSelect::kHipo &&
+      !HighsExternalApi::isAvailable<HighsExtras::hipo>())
+    return HighsSolverSelect::kIpx;
+  return solver;
+}
 
 bool isFinite(const double value) {
   return value > -kHighsInf && value < kHighsInf;
@@ -440,7 +455,7 @@ HighsSolverSelect selectSolverByModel(const HighsLpFeatures& features,
   const HighsSolverSelectModel& model =
       strategy == 1 ? (require_basis ? kS1BasisModel : kS1NoBasisModel)
                     : (require_basis ? kS2BasisModel : kS2NoBasisModel);
-  const HighsSolverSelect solver = evaluateModel(model, features);
+  const HighsSolverSelect solver = substituteUnavailable(evaluateModel(model, features));
   assert(!require_basis || solverYieldsBasis(solver));
   return solver;
 }
@@ -463,9 +478,9 @@ bool solverYieldsBasis(const HighsSolverSelect solver,
 
 HighsSolverSelect selectSolverByFeatures(const HighsLpFeatures& f,
                                          const bool require_basis) {
-  const HighsSolverSelect solver = require_basis
-                                       ? selectSolverRequiringBasis(f)
-                                       : selectSolverNotRequiringBasis(f);
+  const HighsSolverSelect solver = substituteUnavailable(
+      require_basis ? selectSolverRequiringBasis(f)
+                    : selectSolverNotRequiringBasis(f));
   assert(!require_basis || solverYieldsBasis(solver));
   return solver;
 }
