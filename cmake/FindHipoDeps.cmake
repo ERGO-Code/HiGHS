@@ -114,6 +114,46 @@ function(highs_build_openblas_clang_cl result_var version)
     find_program(HIGHS_LLD_LINK lld-link HINTS "${_llvm_bin_dir}" NO_DEFAULT_PATH)
     find_program(HIGHS_LLVM_LIB llvm-lib HINTS "${_llvm_bin_dir}" NO_DEFAULT_PATH)
 
+    # Check that clang-cl can actually compile and link a program using the
+    # GNU inline asm and target attributes that OpenBLAS kernels rely on, so
+    # that a broken or too old installation falls back to the MSVC build here
+    # rather than failing later when OpenBLAS is built.
+    set(_probe_dir "${CMAKE_BINARY_DIR}/_deps/openblas-clang-cl-probe")
+    file(WRITE "${_probe_dir}/probe.c" [=[
+#include <stdio.h>
+#include <immintrin.h>
+__attribute__((target("avx2,fma"))) static double probe_avx2(const double* x) {
+  __m256d v = _mm256_loadu_pd(x);
+  v = _mm256_fmadd_pd(v, v, v);
+  double r[4];
+  _mm256_storeu_pd(r, v);
+  return r[0];
+}
+int main(int argc, char** argv) {
+  unsigned int a, b, c, d;
+  __asm__ __volatile__("cpuid" : "=a"(a), "=b"(b), "=c"(c), "=d"(d) : "a"(0), "c"(0));
+  double x[4] = {1.0, 2.0, 3.0, 4.0};
+  printf("%u %f\n", a, argc > 1 ? probe_avx2(x) : 0.0);
+  return 0;
+}
+]=])
+    set(_probe_cmd "${HIGHS_CLANG_CL}" /nologo /O2 probe.c /Fe:probe.exe)
+    if(HIGHS_LLD_LINK)
+        list(APPEND _probe_cmd -fuse-ld=lld)
+    endif()
+    execute_process(COMMAND ${_probe_cmd}
+        WORKING_DIRECTORY "${_probe_dir}"
+        RESULT_VARIABLE _probe_result
+        OUTPUT_VARIABLE _probe_output
+        ERROR_VARIABLE _probe_output)
+    if(NOT _probe_result EQUAL 0)
+        message(WARNING "clang-cl (${HIGHS_CLANG_CL}) failed to build a test program: "
+            "OpenBLAS will be built with MSVC as the slow GENERIC target. "
+            "Set BUILD_OPENBLAS_CLANG_CL=OFF to silence this warning, or HIGHS_CLANG_CL "
+            "to use another clang-cl.\n${_probe_output}")
+        return()
+    endif()
+
     if(CMAKE_GENERATOR MATCHES "Ninja")
         set(HIGHS_NINJA "${CMAKE_MAKE_PROGRAM}")
     else()
