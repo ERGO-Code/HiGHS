@@ -7,8 +7,6 @@ namespace highs {
 
 namespace folding {
 
-void test_folding(const HighsLp& lp);
-
 class LpFolder {
   const HighsLp& lp_;
   std::vector<HighsInt> row_colour_;

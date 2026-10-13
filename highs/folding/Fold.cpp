@@ -7,66 +7,6 @@ namespace highs {
 
 namespace folding {
 
-void test_paper_example() {
-  HighsLp lp;
-
-  lp.col_cost_ = {2, 2, 2, 1.5, 1.5, 1.5, 1.5, 1, 1, .5, .5, .5, .5};
-  lp.col_lower_ = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-  lp.col_upper_ = {kHighsInf, kHighsInf, kHighsInf, kHighsInf, kHighsInf,
-                   kHighsInf, kHighsInf, kHighsInf, kHighsInf, kHighsInf,
-                   kHighsInf, kHighsInf, kHighsInf};
-  lp.row_lower_ = {1, 1, 1, 1, 1, 1, 1};
-  lp.row_upper_ = {1, 1, 1, 1, 1, 1, 1};
-
-  lp.a_matrix_.start_ = {0, 6, 13, 19, 24, 29, 34, 39, 41, 43, 48, 53, 58, 63};
-
-  lp.a_matrix_.index_ = {0, 1, 2, 4, 5, 6, 0, 1, 2, 3, 4, 5, 6, 0, 1, 2,
-                         3, 4, 5, 0, 1, 2, 4, 6, 0, 1, 2, 3, 5, 0, 1, 2,
-                         4, 6, 0, 1, 2, 3, 5, 3, 4, 5, 6, 0, 1, 2, 3, 5,
-                         0, 1, 2, 4, 6, 0, 1, 2, 3, 5, 0, 1, 2, 4, 6};
-
-  lp.a_matrix_.value_ = {3,   -1,  1,       1.0 / 3, 1.0 / 3, 2.0 / 3, -1,
-                         1,   3,   1.0 / 3, 1.0 / 3, 1.0 / 3, 1.0 / 3, 1,
-                         3,   -1,  2.0 / 3, 1.0 / 3, 1.0 / 3, .25,     .25,
-                         .25, 1.5, 1.5,     .25,     .25,     .25,     1.5,
-                         1.5, .25, .25,     .25,     1.5,     1.5,     .25,
-                         .25, .25, 1.5,     1.5,     2,       2,       2,
-                         2,   3,   -2,      .5,      1,       -1,      -2,
-                         3,   .5,  1,       -1,      .5,      .5,      .5,
-                         -1,  1,   .5,      .5,      .5,      -1,      1};
-
-  lp.num_row_ = 7;
-  lp.num_col_ = 13;
-
-  lp.a_matrix_.num_row_ = 7;
-  lp.a_matrix_.num_col_ = 13;
-
-  LpFolder folder(lp);
-  folder.run();
-  folder.print();
-
-  HighsLp folded_lp = folder.getFoldedLp();
-  LpFolder folder2(folded_lp);
-  folder2.run();
-  folder2.print();
-
-  exit(1);
-}
-
-void test_folding(const HighsLp& lp) {
-  // test_paper_example();
-
-  LpFolder folder(lp);
-  folder.run();
-  folder.print();
-
-  if (!folder.isPartitionCorrect()) {
-    printf("Check failed\n");
-  }
-
-  exit(1);
-}
-
 LpFolder::LpFolder(const HighsLp& lp)
     : lp_{lp},
       row_colour_(lp.num_row_),
@@ -115,7 +55,6 @@ void LpFolder::foldMatrix() {
 
   if (status) {
     fold_error_ = 1;
-    printf(" === Folding failed === \n");
   } else {
     fold_error_ = 0;
 
@@ -133,11 +72,9 @@ void LpFolder::foldMatrix() {
 
 HighsInt LpFolder::run() {
   hipo::Clock clock;
-
   findInitialColour();
   foldMatrix();
   assert(fold_error_ || isPartitionCorrect());
-
   fold_time_ = clock.stop();
 
   return fold_error_;
@@ -349,9 +286,9 @@ bool LpFolder::isPartitionCorrect() const {
 
   // check that partition of A is equitable
   auto is_matrix_partition_correct =
-      [](const HighsSparseMatrix& M, HighsInt num_major_colours,
-         HighsInt num_minor_colours, const std::vector<HighsInt>& major_colours,
-         const std::vector<HighsInt>& minor_colours) -> bool {
+      [](const HighsSparseMatrix& M, const std::vector<HighsInt>& major_colours,
+         HighsInt num_major_colours, const std::vector<HighsInt>& minor_colours,
+         HighsInt num_minor_colours) -> bool {
     ColourClasses classes(major_colours, num_major_colours);
 
     std::vector<double> sum(num_minor_colours, 0.0);
@@ -419,10 +356,10 @@ bool LpFolder::isPartitionCorrect() const {
                                    num_col_colours_) ||
       !is_vector_partition_correct(lp_.col_upper_, col_colour_,
                                    num_col_colours_) ||
-      !is_matrix_partition_correct(At_, num_row_colours_, num_col_colours_,
-                                   row_colour_, col_colour_) ||
-      !is_matrix_partition_correct(A_, num_col_colours_, num_row_colours_,
-                                   col_colour_, row_colour_))
+      !is_matrix_partition_correct(At_, row_colour_, num_row_colours_,
+                                   col_colour_, num_col_colours_) ||
+      !is_matrix_partition_correct(A_, col_colour_, num_col_colours_,
+                                   row_colour_, num_row_colours_))
     return false;
 
   return true;
