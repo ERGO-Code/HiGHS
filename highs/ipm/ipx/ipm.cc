@@ -699,7 +699,7 @@ void IPM::MakeStep(const Step& step, bool isCentring) {
     iterate_->Update(step_primal_, &step.x[0], &step.xl[0], &step.xu[0],
                      step_dual_,   &step.y[0], &step.zl[0], &step.zu[0]);
     if (!isCentring){
-        // A step of length alpha reduces the residuals by the factor
+        // A step of length alpha should reduce the residuals by the factor
         // (1-alpha). If a residual that is not yet small hardly decreases
         // although the step is long, the Newton systems are inconsistent,
         // as for a primal or dual infeasible LP. The complementarity gap may
@@ -708,17 +708,23 @@ void IPM::MakeStep(const Step& step, bool isCentring) {
         // complementarity gap doesn't decrease although the step is long,
         // the iterate has stagnated (for example when rounding errors in
         // the objective prevent the optimality test from being satisfied).
+        const double large_step_thresh = 0.9;
+        const double reduction_thresh = 0.9;
+
         const Model& model = iterate_->model();
         const double tol = iterate_->feasibility_tol();
         const bool presidual_stalled =
-            step_primal_ >= 0.5 && iterate_->presidual() > 0.5 * presidual &&
-            iterate_->presidual() > tol * (1.0+model.norm_bounds());
+            step_primal_ >= large_step_thresh 
+            && iterate_->presidual() > reduction_thresh * presidual 
+            && iterate_->presidual() > tol * (1.0+model.norm_bounds());
         const bool dresidual_stalled =
-            step_dual_ >= 0.5 && iterate_->dresidual() > 0.5 * dresidual &&
-            iterate_->dresidual() > tol * (1.0+model.norm_c());
+            step_dual_ >= large_step_thresh 
+            && iterate_->dresidual() > reduction_thresh * dresidual 
+            && iterate_->dresidual() > tol * (1.0+model.norm_c());
         const bool complementarity_stalled =
-            std::min(step_primal_, step_dual_) >= 0.5 &&
-            iterate_->complementarity() > 0.5 * complementarity;
+            std::min(step_primal_, step_dual_) >= large_step_thresh 
+            && iterate_->complementarity() > reduction_thresh * complementarity;
+
         if (std::min(step_primal_, step_dual_) < 0.05 ||
             presidual_stalled || dresidual_stalled || complementarity_stalled)
             num_bad_iter_++;
