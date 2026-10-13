@@ -231,7 +231,6 @@ _hipo_srcs = [
 _srcs = [
     'HighsExternalApi.cpp',
     'HighsExternalDeps.cpp',
-    'io/filereaderlp/reader.cpp',
     'interfaces/highs_c_api.cpp',
     'io/Filereader.cpp',
     'io/FilereaderLp.cpp',
@@ -240,6 +239,7 @@ _srcs = [
     'io/HMpsFF.cpp',
     'io/HighsIO.cpp',
     'io/LoadOptions.cpp',
+    'io/LpReader.cpp',
     'ipm/IpxWrapper.cpp',
     'lp_data/Highs.cpp',
     'lp_data/HighsCallback.cpp',
