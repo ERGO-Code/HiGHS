@@ -452,9 +452,6 @@ HighsStatus Highs::addColsInterface(
                    nullptr),
       return_status, "assessBounds");
   if (return_status == HighsStatus::kError) return return_status;
-  // Append the columns to the LP vectors and matrix
-  appendColsToLpVectors(lp, ext_num_new_col, local_colCost, local_colLower,
-                        local_colUpper);
   // Form a column-wise HighsSparseMatrix of the new matrix columns so
   // that is easy to handle and, if there are nonzeros, it can be
   // normalised
@@ -484,7 +481,11 @@ HighsStatus Highs::addColsInterface(
     // matrix columns
     local_a_matrix.start_.assign(ext_num_new_col + 1, 0);
   }
-  // Append the columns to LP matrix
+  assert(return_status != HighsStatus::kError);
+  // Now that data for new columns has been assessed and no errors can
+  // occur, append the columns to the LP vectors and matrix
+  appendColsToLpVectors(lp, ext_num_new_col, local_colCost, local_colLower,
+                        local_colUpper);
   lp.a_matrix_.addCols(local_a_matrix);
   if (lp_has_scaling) {
     // Extend the column scaling factors
@@ -584,9 +585,6 @@ HighsStatus Highs::addRowsInterface(HighsInt ext_num_new_row,
                    nullptr),
       return_status, "assessBounds");
   if (return_status == HighsStatus::kError) return return_status;
-  // Append the rows to the LP vectors
-  appendRowsToLpVectors(lp, ext_num_new_row, local_rowLower, local_rowUpper);
-
   // Form a row-wise HighsSparseMatrix of the new matrix rows so that
   // is easy to handle and, if there are nonzeros, it can be
   // normalised
@@ -616,7 +614,10 @@ HighsStatus Highs::addRowsInterface(HighsInt ext_num_new_row,
     // rows
     local_ar_matrix.start_.assign(ext_num_new_row + 1, 0);
   }
-  // Append the rows to LP matrix
+  assert(return_status != HighsStatus::kError);
+  // Now that data for new rows has been assessed and no errors can
+  // occur, append the rows to the LP vectors and matrix
+  appendRowsToLpVectors(lp, ext_num_new_row, local_rowLower, local_rowUpper);
   lp.a_matrix_.addRows(local_ar_matrix);
   if (lp_has_scaling) {
     // Extend the row scaling factors
@@ -1006,7 +1007,7 @@ HighsStatus Highs::changeColBoundsInterface(
   }
   // Determine any implications for simplex data
   ekk_instance_.updateStatus(LpAction::kNewBounds);
-  return HighsStatus::kOk;
+  return return_status;
 }
 
 HighsStatus Highs::changeRowBoundsInterface(
@@ -1057,7 +1058,7 @@ HighsStatus Highs::changeRowBoundsInterface(
   }
   // Determine any implications for simplex data
   ekk_instance_.updateStatus(LpAction::kNewBounds);
-  return HighsStatus::kOk;
+  return return_status;
 }
 
 // Change a single coefficient in the matrix
