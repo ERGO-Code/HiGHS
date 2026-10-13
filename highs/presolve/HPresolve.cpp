@@ -4388,12 +4388,13 @@ void HPresolve::computeColBounds(HighsInt col, HighsInt boundCol,
     }
     double bound = static_cast<double>(
         (static_cast<HighsCDouble>(rhs) - residual) / triplet.jval);
-    // round bounds on integer columns. rounding implied bounds across the
-    // tolerance only loosens them, so the primal feasibility tolerance is
-    // safe. worst-case bounds are bounds that the column is moved to, and
-    // moving the column by delta changes the row activity by |jval| * delta,
-    // so the tolerance is scaled to keep the violation within the primal
-    // feasibility tolerance.
+    // round bounds on integer columns. implied bounds hold for every feasible
+    // solution, so rounding them with the primal feasibility tolerance is
+    // safe. worst-case bounds are values at which the row is satisfied for any
+    // values of the other columns, and the column may be fixed to them. moving
+    // the column past such a bound by delta can violate the row by
+    // |jval| * delta, so the tolerance is divided by |jval| to keep the
+    // violation within the primal feasibility tolerance.
     if (model->integrality_[col] != HighsVarType::kContinuous) {
       double tol = isWorstCaseBound
                        ? primal_feastol / std::max(1.0, std::abs(triplet.jval))
