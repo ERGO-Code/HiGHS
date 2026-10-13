@@ -80,7 +80,8 @@ bool HPresolveCliqueTable::fixCol(HighsInt col, bool val,
     if (state.isFixed()) return false;
     colStates[v.col] = ColState::fixed(v.val);
     table->colDeleted[v.col] = true;
-    if (!(v.col == col && v.val == val)) impliedFixings.emplace_back(v);
+    if (!(v.val == val && static_cast<HighsInt>(v.col) == col))
+      impliedFixings.emplace_back(v);
 
     // Fix all other literals in incident cliques to be inactive
     collectIncidentCliques(v);
