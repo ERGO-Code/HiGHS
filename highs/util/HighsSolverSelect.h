@@ -31,9 +31,10 @@ enum class HighsSolverSelect {
 };
 
 enum class SolverSelectStrategy {
-  kSimplexOnly,
-  kNColsRowsNnzIntegrality,
-  kFull
+  kSimplexOnly = 0,
+  kNColsRowsNnzIntegrality = 1,
+  kFull = 2,
+  kHeuristic = 3,
 };
 
 struct HighsLpFeatureParams {
@@ -111,20 +112,22 @@ HighsInt countIntegerCols(const std::vector<HighsVarType>& integrality);
 // solution is returned: simplex, or IPX/HiPO (which yield a basis via
 // crossover). In particular, PDLP is never returned
 //
-// Strategy 0 => dual simplex; 1 => PCA model on num_col, num_row,
-// num_nz and num_integer_col; 2 => PCA model on the full feature
-// set; 3 => provisional hand-written heuristic. If
-// `num_integer_col` is non-negative, it overrides the count from
-// `lp.integrality_`, which is empty for the LP relaxation in the MIP
-// solver
-HighsSolverSelect selectSolver(const HighsLp& lp, const int strategy,
+// kSimplexOnly => dual simplex; kNColsRowsNnzIntegrality => PCA model
+// on num_col, num_row, num_nz and num_integer_col; kFull => PCA model
+// on the full feature set; kHeuristic => provisional hand-written
+// heuristic. If `num_integer_col` is non-negative, it overrides the
+// count from `lp.integrality_`, which is empty for the LP relaxation
+// in the MIP solver
+HighsSolverSelect selectSolver(const HighsLp& lp,
+                               const SolverSelectStrategy strategy,
                                const bool require_basis = false,
                                const HighsInt num_integer_col = -1);
 
-// Strategies 1 and 2: evaluate the PCA + decision-tree model fitted
-// offline by tests/select/visualize.py (see HighsSolverSelectModels.h)
+// kNColsRowsNnzIntegrality and kFull: evaluate the PCA + decision-tree
+// model fitted offline by tests/select/visualize.py (see
+// HighsSolverSelectModels.h)
 HighsSolverSelect selectSolverByModel(const HighsLpFeatures& features,
-                                      const int strategy,
+                                      const SolverSelectStrategy strategy,
                                       const bool require_basis);
 
 // True if `solver` can yield a basic solution, given whether crossover

@@ -20,7 +20,8 @@ compare across instances of any size. Four questions:
 ## Workflow
 
 1. Extract — for each presolved instance, write `highsLpFeatureVector` as a
-   CSV row (`tests/select/extract_features`).
+   CSV row (`tests/select/extract_features`, in the `tests` repo —
+   see [Batch tool](#batch-tool) below).
 2. Label — `tests/select/collect_results.py` collects the 1.15.1 dual
    simplex / primal simplex / IPX / HiPO benchmark runs into `select.csv`,
    checking from the logs that the requested solver ran and how crossover
@@ -36,6 +37,66 @@ compare across instances of any size. Four questions:
    Without a basis requirement, PDLP is a proxy class for instances that no
    other solver solved within the time limit (there are no PDLP timings).
 
+## Strategies — `solver_select_strategy`
+
+`solveLp` dispatches to `selectSolver(lp, strategy, require_basis,
+num_integer_col)` whenever `solver = choose` (or, inside the MIP solver,
+`mip_lp_solver = choose`). `strategy` is the **`solver_select_strategy`**
+option — `HighsInt`, range `[0, 3]`, default `0` — settable via
+`Highs::setOptionValue` or the CLI flag `--solver_select_strategy`:
+
+| Strategy | Behaviour |
+|:--------:|-----------|
+| 0 | Always `kDualSimplex`. |
+| 1 | `selectSolverByModel`: the fitted PCA + decision-tree model on 4 size features (`num_col`, `num_row`, `num_nz`, `num_integer_col`) — cheap, skips the rest of `computeLpFeatures`. |
+| 2 | `selectSolverByModel` on the full feature set (below). |
+| 3 | `selectSolverByFeatures`, the hand-written heuristic (see [below](#strategy-3--hand-written-heuristic)). |
+
+`require_basis` is the **`solver_select_require_basis`** option — bool,
+default `false`, CLI flag `--solver_select_require_basis` — which restricts
+strategies 1–3 to a solver yielding a basis: simplex, or IPX/HiPO followed by
+crossover (`solverYieldsBasis`). If the chosen solver can't yield one (e.g.
+IPM with `run_crossover = off`), `solveLp` returns an error rather than
+silently substituting another solver. With `require_basis = false`, PDLP may
+also be chosen (by strategies 1 and 2; strategy 3 uses the same heuristic for
+both).
+
+A chosen `kHipo` is never actually returned unless HiPO is available in this
+build (`HighsExternalApi::isAvailable<HighsExtras::hipo>()` — compiled in and
+its deps, AMD/BLAS/METIS/RCM, loaded); otherwise it's substituted for `kIpx`,
+the other interior-point method with identical basis/crossover semantics.
+Callers never need to check availability themselves.
+
+### MIP solves
+
+A MIP node's LP relaxation always needs a basis (warm-starting, branching,
+pseudocosts), so `HighsLpRelaxation::run()` hardcodes `require_basis = true`
+on its `lpsolver` before dispatching — every call, every node, every
+(sub-)MIP — rather than relying on an inherited option value. `strategy` *is*
+read fresh from `mipsolver.options_mip_->solver_select_strategy` each time,
+so it does propagate via the plain `HighsOptions` copy `solveSubMip` makes
+for each sub-MIP it spawns.
+
+Because a node LP's `integrality_` is cleared before it's passed to the LP
+solver (it has to be a pure LP to solve as one), `num_integer_col` would
+otherwise always read 0 there. `HighsLpRelaxation::loadModel()` counts it
+from the original model before clearing and stashes it via
+`Highs::setSolverSelectNumIntegerCol`, which `selectSolver`'s
+`num_integer_col` parameter uses in place of recomputing it from (the now
+cleared) `lp.integrality_`.
+
+Re-selection only happens when the relaxation's `lpsolver` has no valid
+warm-start basis (the first LP of a (sub-)MIP, or after a basis-invalidating
+event) — most nodes just reuse simplex directly without calling
+`selectSolver` again. Different sub-MIPs (RINS/RENS/diving spawn their own
+`HighsMipSolver`, each with its own relaxation) routinely select differently
+from the parent tree and from each other, since they're usually much smaller
+after fixing. `lpsolver` is a plain default-constructed `Highs` — only
+`output_flag`, `random_seed` and the feasibility tolerances are copied from
+the MIP options — so `run_crossover` stays at the library default `"on"`
+there regardless of what the user set at the top level: the
+`require_basis`-with-crossover-off error case can't arise inside a MIP solve.
+
 ## API
 
 ```cpp
@@ -45,29 +106,18 @@ HighsLpFeatures f = computeLpFeatures(lp);         // one pass, does not modify 
 auto row  = highsLpFeatureVector(f);               // vector<pair<string,double>> — a CSV row
 auto head = highsLpFeatureNames();                 // vector<string> — the CSV header
 
-HighsSolverSelect s = selectSolverByFeatures(lp);  // -> kDualSimplex | kIpx | kHipo
+HighsInt n_int = countIntegerCols(lp.integrality_);  // kInteger/kSemiContinuous/kSemiInteger
+
+HighsSolverSelect s = selectSolverByFeatures(lp);  // strategy 3 -> kDualSimplex | kIpx | kHipo
 HighsSolverSelect b = selectSolverByFeatures(lp, /*require_basis=*/true);
+HighsSolverSelect m = selectSolverByModel(f, /*strategy=*/2, /*require_basis=*/true);
 bool ok = solverYieldsBasis(b, /*run_crossover=*/true);
+
+HighsSolverSelect e = selectSolver(lp, /*strategy=*/3, /*require_basis=*/false);  // full dispatch
 ```
 
-When `require_basis` is true (e.g. the LP relaxation of a MIP, where
-HiGHS sets the advanced option `solver_select_require_basis`), a separate
-heuristic is used that only returns a solver yielding a basic solution:
-simplex, or IPX/HiPO followed by crossover. When it is false, PDLP may
-also be chosen (by strategies 1 and 2; strategy 3 uses the same
-heuristic for both).
-If, with `solver_select_require_basis` set, the chosen solver can't yield
-a basis — e.g. IPM with `run_crossover = off` — `solveLp` returns an
-error rather than substituting another solver.
-
 `lp` is expected to be the **presolved** LP. Helpers are safe on empty /
-degenerate input (features fall back to 0). `selectSolver(lp, strategy,
-require_basis)` is the entry point used by `solveLp` when `solver = choose`:
-strategy 0 returns `kDualSimplex`; strategies 1 (`num_col`, `num_row`,
-`num_nz`, `num_integer_col`) and 2 (all features) evaluate the fitted PCA
-models via `selectSolverByModel`; strategy 3 calls `selectSolverByFeatures`.
-The MIP solver clears integrality from the LP it passes to its LP solver, so
-it passes the integer column count via `Highs::setSolverSelectNumIntegerCol`.
+degenerate input (features fall back to 0).
 
 ### Tuning — `HighsLpFeatureParams`
 
@@ -140,9 +190,11 @@ proxies (e.g. `log10`).
 | `avg_nonzeros_per_row` | 9 | `nnz / m` |
 | `max_nonzeros_in_row`, `max_nonzeros_in_col` | | longest row / column |
 
-## Placeholder heuristic
+## Strategy 3 — hand-written heuristic
 
-Stand-in until the fitted model is wired in:
+The provisional, hand-written fallback (`selectSolverByFeatures` /
+`selectSolverRequiringBasis`/`selectSolverNotRequiringBasis`), predating the
+fitted models above and still what strategy 3 evaluates:
 
 - empty input → `kDualSimplex`
 - small **and** sparse → `kDualSimplex`
@@ -173,3 +225,10 @@ for (const auto& [name, presolved_lp] : corpus) {
   csv << '\n';
 }
 ```
+
+## Batch tool
+
+A CLI that walks a directory of saved (presolved) model files and writes one
+CSV row per file — the loop above, wrapped up — lives in the sibling `tests`
+repo at `select/extract_features`, next to where the PCA on this feature set
+happens.

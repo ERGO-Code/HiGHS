@@ -449,12 +449,14 @@ static HighsSolverSelect evaluateModel(const HighsSolverSelectModel& model,
 }
 
 HighsSolverSelect selectSolverByModel(const HighsLpFeatures& features,
-                                      const int strategy,
+                                      const SolverSelectStrategy strategy,
                                       const bool require_basis) {
-  assert(strategy == 1 || strategy == 2);
+  assert(strategy == SolverSelectStrategy::kNColsRowsNnzIntegrality ||
+        strategy == SolverSelectStrategy::kFull);
   const HighsSolverSelectModel& model =
-      strategy == 1 ? (require_basis ? kS1BasisModel : kS1NoBasisModel)
-                    : (require_basis ? kS2BasisModel : kS2NoBasisModel);
+      strategy == SolverSelectStrategy::kNColsRowsNnzIntegrality
+          ? (require_basis ? kS1BasisModel : kS1NoBasisModel)
+          : (require_basis ? kS2BasisModel : kS2NoBasisModel);
   const HighsSolverSelect solver = substituteUnavailable(evaluateModel(model, features));
   assert(!require_basis || solverYieldsBasis(solver));
   return solver;
@@ -491,13 +493,14 @@ HighsSolverSelect selectSolverByFeatures(const HighsLp& lp,
   return selectSolverByFeatures(computeLpFeatures(lp, params), require_basis);
 }
 
-HighsSolverSelect selectSolver(const HighsLp& lp, const int strategy,
+HighsSolverSelect selectSolver(const HighsLp& lp,
+                               const SolverSelectStrategy strategy,
                                const bool require_basis,
                                const HighsInt num_integer_col) {
   switch (strategy) {
-    case 0:
+    case SolverSelectStrategy::kSimplexOnly:
       return HighsSolverSelect::kDualSimplex;
-    case 1: {
+    case SolverSelectStrategy::kNColsRowsNnzIntegrality: {
       // Only the size features are used, so don't compute the rest
       HighsLpFeatures f;
       f.num_row = lp.num_row_;
@@ -508,13 +511,12 @@ HighsSolverSelect selectSolver(const HighsLp& lp, const int strategy,
                               : countIntegerCols(lp.integrality_);
       return selectSolverByModel(f, strategy, require_basis);
     }
-    case 2: {
+    case SolverSelectStrategy::kFull: {
       HighsLpFeatures f = computeLpFeatures(lp);
       if (num_integer_col >= 0) f.num_integer_col = num_integer_col;
       return selectSolverByModel(f, strategy, require_basis);
     }
-    case 3:
-      // Heuristic
+    case SolverSelectStrategy::kHeuristic:
       return selectSolverByFeatures(lp, require_basis);
   }
 

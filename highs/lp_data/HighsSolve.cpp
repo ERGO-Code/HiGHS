@@ -52,10 +52,11 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object,
     // it). Map the selection onto the corresponding solver option
     // value and solve by recursion, so that the IPM fallback and
     // clean-up logic below is shared with explicit solver choices
-    const HighsSolverSelect selected_solver =
-        selectSolver(solver_object.lp_, options.solver_select_strategy,
-                     options.solver_select_require_basis,
-                     solver_object.solver_select_num_integer_col_);
+    const HighsSolverSelect selected_solver = selectSolver(
+        solver_object.lp_,
+        static_cast<SolverSelectStrategy>(options.solver_select_strategy),
+        options.solver_select_require_basis,
+        solver_object.solver_select_num_integer_col_);
 
     // If a basis is required, the selected solver must yield one
     // (IPM only does so via crossover)
