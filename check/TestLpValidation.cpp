@@ -817,14 +817,12 @@ TEST_CASE("issue-3366", "[highs_data]") {
   lp.a_matrix_.num_col_ = lp.num_col_;
   lp.a_matrix_.num_row_ = lp.num_row_;
 
-  if (dev_run)
-    printf("For matrix_copy.assess\n");
+  if (dev_run) printf("For matrix_copy.assess\n");
   HighsSparseMatrix matrix_copy = lp.a_matrix_;
   matrix_copy.name_ = "LP matrix A";
   REQUIRE(matrix_copy.assess(options) == HighsStatus::kWarning);
 
-  if (dev_run)
-    printf("For lp.assess\n");
+  if (dev_run) printf("For lp.assess\n");
   HighsLp lp_copy = lp;
   lp_copy.a_matrix_.name_ = "LP matrix B";
   REQUIRE(lp_copy.assess(options) == HighsStatus::kWarning);
@@ -832,8 +830,7 @@ TEST_CASE("issue-3366", "[highs_data]") {
   Highs h;
   h.passOptions(options);
   lp.a_matrix_.name_ = "LP matrix C";
-  if (dev_run)
-    printf("For h.passModel(lp)\n");
+  if (dev_run) printf("For h.passModel(lp)\n");
   REQUIRE(h.passModel(lp) == HighsStatus::kWarning);
   h.presolve();
 
@@ -865,5 +862,4 @@ TEST_CASE("issue-3366", "[highs_data]") {
           static_cast<size_t>(hessian.dim_ + 1));
 
   h.resetGlobalScheduler(true);
-
 }

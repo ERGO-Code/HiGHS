@@ -66,7 +66,9 @@ class HighsSparseMatrix {
   HighsStatus assessStart(const HighsLogOptions& log_options);
   HighsStatus assessIndexBounds(const HighsLogOptions& log_options);
 
-  HighsInt numVec() const { return this->isColwise() ? this->num_col_ : this->num_row_; }
+  HighsInt numVec() const {
+    return this->isColwise() ? this->num_col_ : this->num_row_;
+  }
   HighsStatus assess(const HighsOptions& options);
   HighsStatus assess(const HighsLogOptions& log_options,
                      const double small_matrix_value,

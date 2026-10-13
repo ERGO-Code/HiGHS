@@ -351,7 +351,7 @@ HighsStatus assessMatrix(
   // For start, warn about any trimming
   trimmed = matrix_start.size() - num_vec - 1;
   if (trimmed) {
-    matrix_start.resize(num_vec+1);
+    matrix_start.resize(num_vec + 1);
     logTrimming("start_");
   }
   // For index and value, warn about trimming to num_nz, but not

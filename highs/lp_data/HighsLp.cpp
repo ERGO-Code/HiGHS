@@ -629,7 +629,7 @@ HighsStatus HighsLp::trimDimensions(const HighsLogOptions& log_options) {
     lp_name = this->model_name_;
     if (this->origin_name_ != "") {
       lp_name += "+" + this->origin_name_;
-    } 
+    }
     lp_name += " ";
   } else if (this->origin_name_ != "") {
     lp_name = this->origin_name_ + " ";
