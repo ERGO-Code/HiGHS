@@ -1662,9 +1662,6 @@ class Highs {
   bool called_return_from_optimize_model = true;
   HighsInt debug_optimize_call_num_ = 0;
 
-  bool made_first_call_ = false;
-  bool written_log_header_ = false;
-
   void reportModelStats() const;
 
   void exactResizeModel() {

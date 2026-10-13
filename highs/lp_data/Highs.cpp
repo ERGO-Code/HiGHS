@@ -4670,15 +4670,13 @@ HighsStatus Highs::callRunPostsolve(const HighsSolution& solution,
 
 // End of public methods
 void Highs::onFirstCall(const bool log_header) {
-  if (made_first_call_) return;
-  // Put stuff here that's executed on the first call
-  made_first_call_ = true;
-  // Now consider calling highsLogHeader
-  HighsLogOptions& log_options = options_.log_options;
-  if (!*log_options.output_flag || written_log_header_) return;
-  // With internal Highs instances the log header isn't logged
-  if (log_header) highsLogHeader(log_options, options_.log_githash);
-  written_log_header_ = true;
+  if (!options_.output_flag || !log_header) return;
+  //  if (!*options_.log_options.output_flag) return;
+  static std::once_flag flag;
+
+  std::call_once(flag, [this]() {
+    highsLogHeader(options_.log_options, options_.log_githash);
+  });
   return;
 }
 

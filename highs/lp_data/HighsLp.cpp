@@ -504,8 +504,7 @@ bool HighsLp::legalDimensions(const std::string& message,
   } else {
     num_vec = num_row;
   }
-  bool legal_matrix_dimensions =
-      this->a_matrix_.legalDimensions(log_options, num_vec);
+  bool legal_matrix_dimensions = this->a_matrix_.legalDimensions(log_options);
   if (!legal_matrix_dimensions)
     highsLogUser(log_options, HighsLogType::kError,
                  "LP dimension validation (%s) fails on a_matrix dimensions\n",
@@ -625,13 +624,24 @@ HighsStatus HighsLp::trimDimensions(const HighsLogOptions& log_options) {
   HighsInt trimmed = 0;
   HighsStatus status = HighsStatus::kOk;
 
+  std::string lp_name = "";
+  if (this->model_name_ != "") {
+    lp_name = this->model_name_;
+    if (this->origin_name_ != "") {
+      lp_name += "+" + this->origin_name_;
+    } 
+    lp_name += " ";
+  } else if (this->origin_name_ != "") {
+    lp_name = this->origin_name_ + " ";
+  }
+
   auto logTrimming = [&](const std::string& name) {
     if (trimmed == 0) return;
     assert(trimmed > 0);
     highsLogUser(log_options, HighsLogType::kWarning,
-                 "Trimmed %d excess entr%s from HighsLp data member %s\n",
+                 "Trimmed %d excess entr%s from %sHighsLp data member %s\n",
                  int(trimmed), highsIntToPlural(trimmed, true).c_str(),
-                 name.c_str());
+                 lp_name.c_str(), name.c_str());
     status = HighsStatus::kWarning;
   };
 
@@ -689,11 +699,14 @@ HighsStatus HighsLp::trimDimensions(const HighsLogOptions& log_options) {
     }
   }
 
-  HighsStatus matrix_trim_status = this->a_matrix_.trimDimensions(
-      log_options, this->isColwise() ? this->num_col_ : this->num_row_);
+  HighsStatus matrix_trim_status = this->a_matrix_.trimDimensions(log_options);
 
   if (matrix_trim_status == HighsStatus::kWarning) return matrix_trim_status;
   return status;
+}
+
+HighsStatus HighsLp::assess(const HighsOptions& options) {
+  return assessLp(*this, options);
 }
 
 void HighsLp::unapplyMods() {

@@ -792,6 +792,14 @@ HighsStatus HighsSparseMatrix::assessIndexBounds(
   return HighsStatus::kOk;
 }
 
+HighsStatus HighsSparseMatrix::assess(const HighsOptions& options) {
+  const bool sum_duplicates = false;
+  return this->assess(options.log_options,
+		      options.small_matrix_value,
+		      options.large_matrix_value,
+		      sum_duplicates);
+}
+
 HighsStatus HighsSparseMatrix::assess(const HighsLogOptions& log_options,
                                       const double small_matrix_value,
                                       const double large_matrix_value,
@@ -1748,18 +1756,16 @@ void HighsSparseMatrix::debugReportRowPrice(const HighsInt iRow,
   printf("\n");
 }
 
-bool HighsSparseMatrix::legalDimensions(const HighsLogOptions& log_options,
-                                        const HighsInt num_vec) const {
+bool HighsSparseMatrix::legalDimensions(const HighsLogOptions& log_options) const {
   return legalMatrixDimensions(
-      log_options, "HighsSparseMatrix", this->name_, num_vec,
+      log_options, "HighsSparseMatrix", this->name_, this->numVec(),
       this->format_ == MatrixFormat::kRowwisePartitioned, this->start_,
       this->p_end_, this->index_, this->value_);
 }
 
-HighsStatus HighsSparseMatrix::trimDimensions(
-    const HighsLogOptions& log_options, const HighsInt num_vec) {
+HighsStatus HighsSparseMatrix::trimDimensions(const HighsLogOptions& log_options) {
   return trimMatrixDimensions(
-      log_options, "HighsSparseMatrix", this->name_, num_vec,
+      log_options, "HighsSparseMatrix", this->name_, this->numVec(),
       this->format_ == MatrixFormat::kRowwisePartitioned, this->start_,
       this->p_end_, this->index_, this->value_);
 }

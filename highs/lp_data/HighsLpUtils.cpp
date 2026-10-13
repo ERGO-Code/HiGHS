@@ -90,12 +90,9 @@ HighsStatus assessLp(HighsLp& lp, const HighsOptions& options) {
   return_status = interpretCallStatus(log_options, call_status, return_status,
                                       "assessMatrix");
   if (return_status == HighsStatus::kError) return return_status;
-  // If entries have been removed from the matrix, resize the start,
-  // index and value vectors to prevent bug in presolve
-  HighsInt lp_num_nz = lp.numNz();
-  lp.a_matrix_.start_.resize((lp.isColwise() ? lp.num_col_ : lp.num_row_) + 1);
-  lp.a_matrix_.index_.resize(lp_num_nz);
-  lp.a_matrix_.value_.resize(lp_num_nz);
+
+  // Matrix should have been trimmed in lp.a_matrix_.assess
+  assert(lp.a_matrix_.trimDimensions(log_options) == HighsStatus::kOk);
   if (return_status != HighsStatus::kOk)
     highsLogDev(log_options, HighsLogType::kInfo,
                 "assessLp returns HighsStatus = %s\n",

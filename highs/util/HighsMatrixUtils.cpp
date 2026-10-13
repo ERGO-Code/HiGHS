@@ -151,7 +151,7 @@ HighsStatus assessMatrix(
   }
   // Assess the indices and values
   // Count the number of acceptable indices/values
-  HighsInt num_new_nz = 0;
+  HighsInt new_num_nz = 0;
   HighsInt num_small_value = 0;
   double max_small_value = 0;
   double min_small_value = kHighsInf;
@@ -193,7 +193,7 @@ HighsStatus assessMatrix(
     HighsInt from_el = matrix_start[ix];
     HighsInt to_el = matrix_start[ix + 1];
     // Account for any index-value pairs removed so far
-    matrix_start[ix] = num_new_nz;
+    matrix_start[ix] = new_num_nz;
     for (HighsInt el = from_el; el < to_el; el++) {
       // Check the index
       HighsInt component = matrix_index[el];
@@ -256,32 +256,32 @@ HighsStatus assessMatrix(
       // Shift the index and value of the OK entry to the new
       // position in the index and value vectors, and increment
       // the new number of nonzeros
-      matrix_index[num_new_nz] = matrix_index[el];
-      matrix_value[num_new_nz] = matrix_value[el];
+      matrix_index[new_num_nz] = matrix_index[el];
+      matrix_value[new_num_nz] = matrix_value[el];
       if (use_highs_hash) {
         // Record that the index has occurred
         highs_hash.insert(component);
       } else {
         // Record where the index has occurred
-        index_el_map.insert({component, num_new_nz});
+        index_el_map.insert({component, new_num_nz});
       }
-      num_new_nz++;
+      new_num_nz++;
     }
     if (sum_duplicates) {
       // Now that any duplicates have been summed, can check matrix
       // value magnitude
       from_el = matrix_start[ix];
-      to_el = num_new_nz;
-      // Reset num_new_nz
-      num_new_nz = matrix_start[ix];
+      to_el = new_num_nz;
+      // Reset new_num_nz
+      new_num_nz = matrix_start[ix];
       for (HighsInt el = from_el; el < to_el; el++) {
         if (!okMatrixValueMagnitude(el)) continue;
         // Shift the index and value of the OK entry to the new
         // position in the index and value vectors, and increment
         // the new number of nonzeros
-        matrix_index[num_new_nz] = matrix_index[el];
-        matrix_value[num_new_nz] = matrix_value[el];
-        num_new_nz++;
+        matrix_index[new_num_nz] = matrix_index[el];
+        matrix_value[new_num_nz] = matrix_value[el];
+        new_num_nz++;
       }
     }
 
@@ -332,7 +332,38 @@ HighsStatus assessMatrix(
       warning_found = true;
     }
   }
-  matrix_start[num_vec] = num_new_nz;
+  matrix_start[num_vec] = new_num_nz;
+
+  // The start, index and value vectors may be larger than necessary,
+  // even if no entries have been removed from the matrix, so trim
+  // them to prevent a bug in presolve.
+  HighsInt trimmed = 0;
+
+  auto logTrimming = [&](const std::string& name) {
+    assert(trimmed > 0);
+    highsLogUser(log_options, HighsLogType::kWarning,
+                 "Trimmed %d excess entr%s from %s %s data member %s\n",
+                 int(trimmed), highsIntToPlural(trimmed, true).c_str(),
+                 matrix_name.c_str(), class_name.c_str(), name.c_str());
+    warning_found = true;
+  };
+
+  // For start, warn about any trimming
+  trimmed = matrix_start.size() - num_vec - 1;
+  if (trimmed) {
+    matrix_start.resize(num_vec+1);
+    logTrimming("start_");
+  }
+  // For index and value, warn about trimming to num_nz, but not
+  // trimming to new_num_nz, since this is logged otherwise
+  trimmed = matrix_index.size() - num_nz;
+  if (trimmed) logTrimming("index_");
+  matrix_index.resize(new_num_nz);
+
+  trimmed = matrix_value.size() - num_nz;
+  if (trimmed) logTrimming("value_");
+  matrix_value.resize(new_num_nz);
+
   HighsStatus return_status = HighsStatus::kOk;
   if (error_found)
     return_status = HighsStatus::kError;
@@ -429,7 +460,7 @@ HighsStatus trimMatrixDimensions(
     highsLogUser(log_options, HighsLogType::kWarning,
                  "Trimmed %d excess entr%s from %s %s data member %s\n",
                  int(trimmed), highsIntToPlural(trimmed, true).c_str(),
-                 class_name.c_str(), matrix_name.c_str(), name.c_str());
+                 matrix_name.c_str(), class_name.c_str(), name.c_str());
     status = HighsStatus::kWarning;
   };
 
