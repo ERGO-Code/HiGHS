@@ -506,6 +506,9 @@ void HighsMipSolverData::finishAnalyticCenterComputation(
     fflush(stdout);
   }
   analyticCenterComputed = true;
+  // Disable fixings if presolve=off as it possible to produce valid analytic
+  // centers close to a bound when adding sets of equalities and redundant
+  // constraints
   if (analyticCenterStatus == HighsModelStatus::kOptimal &&
       mipsolver.options_mip_->presolve != kHighsOffString) {
     HighsInt nfixed = 0;
