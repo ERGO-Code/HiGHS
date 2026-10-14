@@ -834,7 +834,7 @@ void HighsImplications::separateImpliedBounds(
   const HighsCliqueTable& cliquetable = mipsolver.mipdata_->cliquetable;
   std::vector<HighsInt> inds;
   std::vector<double> vals;
-  constexpr HighsInt maxLiftingEntries = 5;
+  constexpr HighsInt maxLiftingEntries = 20;
   inds.reserve(maxLiftingEntries + 2);
   vals.reserve(maxLiftingEntries + 2);
 
