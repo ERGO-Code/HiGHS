@@ -3454,14 +3454,13 @@ HighsStatus Highs::changeCoeff(const HighsInt row, const HighsInt col,
     return HighsStatus::kError;
   }
   const double abs_value = std::fabs(value);
-  if (0 < abs_value && abs_value <= options_.small_matrix_value) {
-    highsLogUser(options_.log_options, HighsLogType::kWarning,
-                 "|Value| of %g supplied to Highs::changeCoeff is in (0, %g]: "
-                 "zeroes any existing coefficient, otherwise ignored\n",
-                 abs_value, options_.small_matrix_value);
+  if (abs_value >= options_.large_matrix_value) {
+    highsLogUser(options_.log_options, HighsLogType::kError,
+                 "|Value| of %g supplied to Highs::changeCoeff is greater than %g\n",
+                 abs_value, options_.large_matrix_value);
+    return HighsStatus::kError;
   }
-  changeCoefficientInterface(row, col, value);
-  return returnFromHighs(HighsStatus::kOk);
+  return returnFromHighs(changeCoeffInterface(row, col, value));
 }
 
 HighsStatus Highs::getObjectiveSense(ObjSense& sense) const {
@@ -3668,7 +3667,7 @@ HighsStatus Highs::getCoeff(const HighsInt row, const HighsInt col,
         col, model_.lp_.num_col_);
     return HighsStatus::kError;
   }
-  getCoefficientInterface(row, col, value);
+  getCoeffInterface(row, col, value);
   return HighsStatus::kOk;
 }
 

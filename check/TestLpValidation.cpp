@@ -442,16 +442,15 @@ TEST_CASE("LP-extreme-coefficient", "[highs_data]") {
   lp.a_matrix_.value_ = {1e300};
   lp.row_lower_ = {1};
   lp.row_upper_ = {inf};
-  //  highs.setOptionValue("output_flag", dev_run);
+  highs.setOptionValue("output_flag", dev_run);
   // Reading a model with a large value results in HighsStatus::kError
   return_status = highs.passModel(lp);
   if (dev_run)
     printf("highs.passModel(filename); returns %d\n", (int)return_status);
   REQUIRE(return_status == HighsStatus::kError);
-  // Solving a model with a large value results in HighsStatus::kError
-  return_status = highs.run();
-  if (dev_run) printf("highs.run(); returns %d\n", (int)return_status);
-  REQUIRE(return_status == HighsStatus::kError);
+  // Check that an illegal model is not loaded
+  HighsModel empty_model;
+  REQUIRE((highs.getModel() == empty_model));
   lp.a_matrix_.value_[0] = 1e-300;
   return_status = highs.passModel(lp);
   if (dev_run)
@@ -624,7 +623,7 @@ TEST_CASE("LP-inf-cost", "[highs_data]") {
   highs.resetGlobalScheduler(true);
 }
 
-TEST_CASE("LP-change-coefficient", "[highs_data]") {
+TEST_CASE("LP-change-coefficient0", "[highs_data]") {
   std::string filename;
   filename = std::string(HIGHS_DIR) + "/check/instances/avgas.mps";
   Highs highs;
@@ -643,7 +642,7 @@ TEST_CASE("LP-change-coefficient", "[highs_data]") {
   REQUIRE(original_value == -1);
   // Change coefficient (4, 4) from -1 to a small value - zeroing it
   REQUIRE(highs.changeCoeff(zero_coefficient_row, change_coefficient_col,
-                            zero_coefficient_value) == HighsStatus::kOk);
+                            zero_coefficient_value) == HighsStatus::kWarning);
   required_objective_value = -8.6666666667;
   highs.run();
   delta_objective_value = std::fabs(required_objective_value -
@@ -669,6 +668,106 @@ TEST_CASE("LP-change-coefficient", "[highs_data]") {
   REQUIRE(delta_objective_value < 1e-8);
 
   highs.resetGlobalScheduler(true);
+}
+
+TEST_CASE("LP-change-coefficient1", "[highs_data]") {
+  const HighsInt nonzero_entry_row = 1;
+  const HighsInt nonzero_entry_col = 1;
+  const double nonzero_entry = 5;
+  HighsLp lp;
+  lp.num_col_ = 3;
+  lp.num_row_ = 3;
+  lp.col_cost_ = {1, 2, 3};
+  lp.col_lower_ = {0, 0, 0};
+  lp.col_upper_ = {1, 1, 1};
+  lp.a_matrix_.format_ = MatrixFormat::kColwise;
+  lp.a_matrix_.start_ = {0, 3, 6, 8};
+  lp.a_matrix_.index_ = {0, 1, 2, 0, nonzero_entry_row, 2, 0, 2};
+  lp.a_matrix_.value_ = {1, 2, 3, 4, nonzero_entry, 6, 7, 9};
+  lp.row_lower_ = {1, 1, 1};
+  lp.row_upper_ = {inf, inf, inf};
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  REQUIRE(h.passModel(lp) == HighsStatus::kOk);
+  const size_t original_size = h.getLp().numNz();
+
+  const double large_value = 1e1*h.getOptions().large_matrix_value;
+  const double ok_value = 8;
+  const double small_value = 1e-1*h.getOptions().small_matrix_value;
+  const HighsInt zero_entry_row = 1;
+  const HighsInt zero_entry_col = 2;
+  double zero_entry;
+  REQUIRE(h.getCoeff(zero_entry_row, zero_entry_col, zero_entry) == HighsStatus::kOk);
+  REQUIRE(zero_entry == 0);
+  double check_nonzero_entry;
+  REQUIRE(h.getCoeff(nonzero_entry_row, nonzero_entry_col, check_nonzero_entry) == HighsStatus::kOk);
+  REQUIRE(check_nonzero_entry == nonzero_entry);
+
+  auto checkEntry = [&] (const HighsInt row, const HighsInt col, const double value) {
+    double entry;
+    REQUIRE(h.getCoeff(row, col, entry) == HighsStatus::kOk);
+    REQUIRE(entry == value);
+  };
+
+  auto revertEntry = [&] (const HighsInt row, const HighsInt col, const double value) {
+    REQUIRE(h.changeCoeff(row, col, value) == HighsStatus::kOk);
+    checkEntry(row, col, value);
+  };
+
+  auto checkSize = [&] (const size_t change) {
+    const size_t size = original_size + change;
+    REQUIRE(h.getLp().numNz() == static_cast<HighsInt>(size));
+    if (h.getLp().a_matrix_.index_.size() != size) {
+      printf("ERROR\n");
+    }
+      
+    REQUIRE(h.getLp().a_matrix_.index_.size() == size);
+    REQUIRE(h.getLp().a_matrix_.value_.size() == size);
+  };
+
+  // Changing a zero entry yields a warning if the new value is zero
+  // or small, since it has no effect
+  REQUIRE(h.changeCoeff(zero_entry_row, zero_entry_col, 0) == HighsStatus::kWarning);
+  checkEntry(zero_entry_row, zero_entry_col, 0);
+  checkSize(0);
+
+  REQUIRE(h.changeCoeff(zero_entry_row, zero_entry_col, small_value) == HighsStatus::kWarning);
+  checkEntry(zero_entry_row, zero_entry_col, 0);
+  checkSize(0);
+
+  REQUIRE(h.changeCoeff(zero_entry_row, zero_entry_col, large_value) == HighsStatus::kError);
+  checkEntry(zero_entry_row, zero_entry_col, 0);
+  checkSize(0);
+
+  REQUIRE(h.changeCoeff(zero_entry_row, zero_entry_col, ok_value) == HighsStatus::kOk);
+  checkEntry(zero_entry_row, zero_entry_col, ok_value);
+  checkSize(1);
+  revertEntry(zero_entry_row, zero_entry_col, 0);
+  checkSize(0);
+
+  // Changing a nonzero entry yields a warning if the new value is small, since it is treated as zero
+  REQUIRE(h.changeCoeff(nonzero_entry_row, nonzero_entry_col, 0) == HighsStatus::kOk);
+  checkEntry(nonzero_entry_row, nonzero_entry_col, 0);
+  checkSize(-1);
+  revertEntry(nonzero_entry_row, nonzero_entry_col, nonzero_entry);
+  checkSize(0);
+
+  REQUIRE(h.changeCoeff(nonzero_entry_row, nonzero_entry_col, small_value) == HighsStatus::kWarning);
+  checkEntry(nonzero_entry_row, nonzero_entry_col, 0);
+  checkSize(-1);
+  revertEntry(nonzero_entry_row, nonzero_entry_col, nonzero_entry);
+  checkSize(0);
+
+  REQUIRE(h.changeCoeff(nonzero_entry_row, nonzero_entry_col, large_value) == HighsStatus::kError);
+  checkSize(0);
+  checkEntry(nonzero_entry_row, nonzero_entry_col, nonzero_entry);
+  checkSize(0);
+
+  REQUIRE(h.changeCoeff(nonzero_entry_row, nonzero_entry_col, ok_value) == HighsStatus::kOk);
+  checkSize(0);
+  revertEntry(nonzero_entry_row, nonzero_entry_col, nonzero_entry);
+  checkSize(0);
+
 }
 
 TEST_CASE("LP-illegal-start", "[highs_data]") {

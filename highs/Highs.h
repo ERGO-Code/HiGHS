@@ -1800,7 +1800,7 @@ class Highs {
                         HighsInt& num_nz, HighsInt* start, HighsInt* index,
                         double* value) const;
 
-  void getCoefficientInterface(const HighsInt ext_row, const HighsInt ext_col,
+  void getCoeffInterface(const HighsInt ext_row, const HighsInt ext_col,
                                double& value) const;
 
   HighsStatus changeObjectiveSenseInterface(const ObjSense ext_sense);
@@ -1817,9 +1817,9 @@ class Highs {
   HighsStatus changeRowBoundsInterface(HighsIndexCollection& index_collection,
                                        const double* usr_row_lower,
                                        const double* usr_row_upper);
-  void changeCoefficientInterface(const HighsInt ext_row,
-                                  const HighsInt ext_col,
-                                  const double ext_new_value);
+  HighsStatus changeCoeffInterface(const HighsInt ext_row,
+				   const HighsInt ext_col,
+				   const double ext_new_value);
   HighsStatus scaleColInterface(const HighsInt col, const double scale_value);
   HighsStatus scaleRowInterface(const HighsInt row, const double scale_value);
 
