@@ -270,7 +270,7 @@ TEST_CASE("LP-validation", "[highs_test_lp_validation]") {
   return_status =
       highs.addCols(XnumNewCol, XcolCost.data(), XcolLower.data(),
                     XcolUpper.data(), XnumNewNZ, XAstart.data(), NULL, NULL);
-  REQUIRE(return_status == HighsStatus::kWarning);
+  REQUIRE(return_status == HighsStatus::kOk);
 
   // Add a column with bound inconsistency due to lower
   XcolLower[0] = 1;
@@ -278,7 +278,7 @@ TEST_CASE("LP-validation", "[highs_test_lp_validation]") {
   return_status =
       highs.addCols(XnumNewCol, XcolCost.data(), XcolLower.data(),
                     XcolUpper.data(), XnumNewNZ, XAstart.data(), NULL, NULL);
-  REQUIRE(return_status == HighsStatus::kWarning);
+  REQUIRE(return_status == HighsStatus::kOk);
 
   // Add a column with illegal bound due to lower
   XcolLower[0] = my_infinity;

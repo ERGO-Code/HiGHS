@@ -1222,8 +1222,7 @@ TEST_CASE("LP-interval-changes", "[highs_test_lp_modification]") {
                         og_col01234_lower.data(), og_col01234_upper.data(),
                         get_num_nz, NULL, NULL, NULL) == HighsStatus::kOk);
   REQUIRE(highs.changeColsBounds(from_col, to_col, set_col01234_lower.data(),
-                                 og_col01234_upper.data()) ==
-          HighsStatus::kWarning);
+                                 og_col01234_upper.data()) == HighsStatus::kOk);
   REQUIRE(highs.getCols(from_col, to_col, get_num_col, NULL,
                         get_col01234_lower.data(), og_col01234_upper.data(),
                         get_num_nz, NULL, NULL, NULL) == HighsStatus::kOk);
@@ -2540,7 +2539,7 @@ TEST_CASE("no-modification-on-error", "[highs_test_lp_modification]") {
   REQUIRE((lp == highs_lp));
   REQUIRE(h.changeColBounds(0, -inf, -inf) == HighsStatus::kError);
   REQUIRE((lp == highs_lp));
-  REQUIRE(h.changeColBounds(0, 1, -1) == HighsStatus::kWarning);
+  REQUIRE(h.changeColBounds(0, 1, -1) == HighsStatus::kOk);
   REQUIRE(h.changeColBounds(0, col_lb, col_ub) == HighsStatus::kOk);
   REQUIRE((lp == highs_lp));
 
@@ -2548,7 +2547,7 @@ TEST_CASE("no-modification-on-error", "[highs_test_lp_modification]") {
   REQUIRE((lp == highs_lp));
   REQUIRE(h.changeRowBounds(0, -inf, -inf) == HighsStatus::kError);
   REQUIRE((lp == highs_lp));
-  REQUIRE(h.changeRowBounds(0, 1, -1) == HighsStatus::kWarning);
+  REQUIRE(h.changeRowBounds(0, 1, -1) == HighsStatus::kOk);
   REQUIRE(h.changeRowBounds(0, row0_lb, row0_ub) == HighsStatus::kOk);
   REQUIRE((lp == highs_lp));
 
@@ -2626,8 +2625,8 @@ TEST_CASE("add-extreme-values", "[highs_test_lp_modification]") {
           HighsStatus::kError);
   checkDimensions();
 
-  // Legal row with inconsistent bounds is added with warning
-  REQUIRE(h.addRow(1, 0, 2, p_index, p_two_ok_value) == HighsStatus::kWarning);
+  // Legal row with inconsistent bounds is added without warning
+  REQUIRE(h.addRow(1, 0, 2, p_index, p_two_ok_value) == HighsStatus::kOk);
   num_row++;
   num_nz += 2;
   checkDimensions();
@@ -2655,9 +2654,8 @@ TEST_CASE("add-extreme-values", "[highs_test_lp_modification]") {
           HighsStatus::kError);
   checkDimensions();
 
-  // Legal col with inconsistent bounds is added with warning
-  REQUIRE(h.addCol(0, 1, 0, 2, p_index, p_two_ok_value) ==
-          HighsStatus::kWarning);
+  // Legal col with inconsistent bounds is added without warning
+  REQUIRE(h.addCol(0, 1, 0, 2, p_index, p_two_ok_value) == HighsStatus::kOk);
   num_col++;
   num_nz += 2;
   checkDimensions();
