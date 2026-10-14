@@ -106,6 +106,7 @@ class HighsLp {
   bool legalDimensions(const std::string& message,
                        const HighsLogOptions& log_options) const;
   HighsStatus trimDimensions(const HighsLogOptions& log_options);
+  HighsStatus assess(const HighsOptions& options);
   void clear();
 };
 

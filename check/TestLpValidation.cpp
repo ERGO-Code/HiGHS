@@ -843,10 +843,27 @@ TEST_CASE("issue-3366", "[highs_data]") {
   options.presolve_rule_off = 1 << kPresolveRuleInitialSweep;
   options.output_flag = dev_run;
 
+  // Test out the class-specific assess methods - that users may run
+  // before passing a HighsLp or HighsSparseMatrix - which require
+  // matrix dimensions
+  lp.a_matrix_.num_col_ = lp.num_col_;
+  lp.a_matrix_.num_row_ = lp.num_row_;
+
+  if (dev_run) printf("For matrix_copy.assess\n");
+  HighsSparseMatrix matrix_copy = lp.a_matrix_;
+  matrix_copy.name_ = "LP matrix A";
+  REQUIRE(matrix_copy.assess(options) == HighsStatus::kWarning);
+
+  if (dev_run) printf("For lp.assess\n");
+  HighsLp lp_copy = lp;
+  lp_copy.a_matrix_.name_ = "LP matrix B";
+  REQUIRE(lp_copy.assess(options) == HighsStatus::kWarning);
+
   Highs h;
   h.passOptions(options);
-  HighsStatus status = h.passModel(lp);
-  REQUIRE(status == HighsStatus::kWarning);
+  lp.a_matrix_.name_ = "LP matrix C";
+  if (dev_run) printf("For h.passModel(lp)\n");
+  REQUIRE(h.passModel(lp) == HighsStatus::kWarning);
   h.presolve();
 
   HighsLp highs_lp = h.getLp();
@@ -868,13 +885,13 @@ TEST_CASE("issue-3366", "[highs_data]") {
   HighsHessian hessian;
   hessian.dim_ = lp.num_col_;
   hessian.start_ = {0, 1, 2, 3};
-  hessian.value_ = {0, 1, 2, 4};
-  hessian.index_ = {1, 1, 1, 5};
+  hessian.index_ = {0, 1, 4, 5};
+  hessian.value_ = {1, 1, 6, 7};
 
-  status = h.passHessian(hessian);
-  REQUIRE(status == HighsStatus::kWarning);
-  h.resetGlobalScheduler(true);
+  REQUIRE(h.passHessian(hessian) == HighsStatus::kWarning);
   HighsModel model = h.getModel();
   REQUIRE(model.hessian_.start_.size() ==
           static_cast<size_t>(hessian.dim_ + 1));
+
+  h.resetGlobalScheduler(true);
 }

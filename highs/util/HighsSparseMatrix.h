@@ -66,6 +66,10 @@ class HighsSparseMatrix {
   HighsStatus assessStart(const HighsLogOptions& log_options);
   HighsStatus assessIndexBounds(const HighsLogOptions& log_options);
 
+  HighsInt numVec() const {
+    return this->isColwise() ? this->num_col_ : this->num_row_;
+  }
+  HighsStatus assess(const HighsOptions& options);
   HighsStatus assess(const HighsLogOptions& log_options,
                      const double small_matrix_value,
                      const double large_matrix_value, const bool sum_duplicates,
@@ -127,10 +131,8 @@ class HighsSparseMatrix {
                     const HighsInt use_col) const;
   void collectAj(HVector& column, const HighsInt use_col,
                  const double multiplier) const;
-  bool legalDimensions(const HighsLogOptions& log_options,
-                       const HighsInt num_vec) const;
-  HighsStatus trimDimensions(const HighsLogOptions& log_options,
-                             const HighsInt num_vec);
+  bool legalDimensions(const HighsLogOptions& log_options) const;
+  HighsStatus trimDimensions(const HighsLogOptions& log_options);
 
  private:
   void priceByRowDenseResult(

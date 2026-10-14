@@ -1569,7 +1569,7 @@ class Highs {
 
   const HighsModelStatus& getModelStatus(const bool scaled_model) const;
 
-  void onFirstCall(const bool log_header = true);
+  void logHeader(const bool log_header = true);
 
   void deprecationMessage(const std::string& method_name,
                           const std::string& alt_method_name) const;
@@ -1661,9 +1661,6 @@ class Highs {
   // whether Highs::optimizeModel() is called recursively.
   bool called_return_from_optimize_model = true;
   HighsInt debug_optimize_call_num_ = 0;
-
-  bool made_first_call_ = false;
-  bool written_log_header_ = false;
 
   void reportModelStats() const;
 
