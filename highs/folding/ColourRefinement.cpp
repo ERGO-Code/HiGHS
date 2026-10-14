@@ -77,15 +77,22 @@ ColourRefinement::ColourRefinement(const HighsSparseMatrix& A,
 }
 
 void ColourRefinement::computeColourSums(HighsInt refining_colour, Side& src,
-                                         Side& dst,
-                                         const HighsSparseMatrix& M) {
-  // Sum of the weights between each dst node and the nodes of refining_colour
+                                         Side& dst, const HighsSparseMatrix& M,
+                                         const HighsHessian* Q) {
+  // Sum of the weights between each node and the nodes of refining_colour
   for (HighsInt v : src.node_by_colour.list(refining_colour)) {
     for (HighsInt k = M.start_[v]; k < M.start_[v + 1]; ++k) {
       dst.touched.add(M.index_[k], M.value_[k], dst.colour);
     }
+    if (Q) {
+      for (HighsInt k = Q->start_[v]; k < Q->start_[v + 1]; ++k) {
+        src.touched.add(Q->index_[k], Q->value_[k], src.colour);
+      }
+    }
   }
+
   dst.touched.groupByColour();
+  if (Q) src.touched.groupByColour();
 }
 
 void ColourRefinement::splitColours(Side& side) {
@@ -180,28 +187,36 @@ void ColourRefinement::splitColour(Side& side, HighsInt colour) {
 void ColourRefinement::prepareNextIter(Side& side) { side.touched.clear(); }
 
 // Use top colour of src to refine the colours of dst.
+// If the model is a QP and src corresponds to the columns, then also the
+// colours of src are refined.
 // M must be indexed by nodes of src and hold indices of nodes of dst.
 // - if src is rows and dst is cols, then M must be At
 // - if src is cols and dst is rows, then M must be A
 //
-void ColourRefinement::refine(Side& src, Side& dst,
-                              const HighsSparseMatrix& M) {
+void ColourRefinement::refine(Side& src, Side& dst, const HighsSparseMatrix& M,
+                              const HighsHessian* Q) {
   const HighsInt refining_colour = src.to_refine.pop();
-  computeColourSums(refining_colour, src, dst, M);
+  computeColourSums(refining_colour, src, dst, M, Q);
+
   splitColours(dst);
   prepareNextIter(dst);
+
+  if (Q) {
+    splitColours(src);
+    prepareNextIter(src);
+  }
 }
 
 HighsInt ColourRefinement::run() {
   while (!rows_.to_refine.empty() || !cols_.to_refine.empty()) {
     if (rows_.peekLength() < cols_.peekLength())
-      refine(rows_, cols_, At_);
+      refine(rows_, cols_, At_, nullptr);
     else
-      refine(cols_, rows_, A_);
+      refine(cols_, rows_, A_, Q_.empty() ? nullptr : &Q_);
 
     if (rows_.coloursUsed() > rows_.n * kFractionStop &&
         cols_.coloursUsed() > cols_.n * kFractionStop) {
-      return 1;
+      //return 1;
     }
   }
 

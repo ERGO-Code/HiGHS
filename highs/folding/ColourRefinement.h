@@ -6,19 +6,21 @@
 
 #include "DoubleQuantizer.h"
 #include "SumClassifier.h"
+#include "model/HighsHessian.h"
 #include "util/HighsLinkedLists.h"
 #include "util/HighsSparseMatrix.h"
-#include "model/HighsHessian.h"
 
 namespace highs {
 namespace folding {
 
 // Refines separate colourings of the rows and columns of matrix A (col-wise),
 // seen as the biadjacency matrix of a weighted bipartite graph. A row-wise copy
-// At must also be provided. Row colours and column colours are numbered
-// independently, each starting from 0 and consecutive. Based on "Tight Lower
-// and Upper Bounds for the Complexity of Canonical Colour Refinement",
-// Berkholz, Bonsma, Grohe
+// At must also be provided.
+// If Q is non-empty, then the graph is not bipartite as there are edges among
+// columns.
+// Row colours and column colours are numbered independently, each starting from
+// 0 and consecutive. Based on "Tight Lower and Upper Bounds for the Complexity
+// of Canonical Colour Refinement", Berkholz, Bonsma, Grohe
 
 class ColourRefinement {
   struct IterableStack {
@@ -208,17 +210,16 @@ class ColourRefinement {
   Side cols_;
   SumClassifier classifier_;
 
-  void refine(Side& src, Side& dst, const HighsSparseMatrix& M);
+  void refine(Side& src, Side& dst, const HighsSparseMatrix& M,
+              const HighsHessian* Q);
   void computeColourSums(HighsInt refining_colour, Side& src, Side& dst,
-                         const HighsSparseMatrix& M);
+                         const HighsSparseMatrix& M, const HighsHessian* Q);
   void splitColours(Side& side);
   bool colourSplits(const Side& side, HighsInt colour) const;
   void splitColour(Side& side, HighsInt colour);
-
   void countSums(Side& side, HighsInt colour);
   void assignNewColours(Side& side, HighsInt colour);
   void moveNodesToNewColours(Side& side, HighsInt colour);
-
   void prepareNextIter(Side& side);
 
  public:
@@ -226,7 +227,6 @@ class ColourRefinement {
                    const HighsHessian& Q, std::vector<HighsInt>& row_colour,
                    std::vector<HighsInt>& col_colour);
   HighsInt run();
-
   HighsInt rowColoursUsed() const { return rows_.coloursUsed(); }
   HighsInt colColoursUsed() const { return cols_.coloursUsed(); }
 };
