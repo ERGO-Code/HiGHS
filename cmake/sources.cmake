@@ -421,6 +421,7 @@ set(highs_sources
     presolve/HPresolveDualFixing.cpp
     presolve/HPresolveEnumeration.cpp
     presolve/HPresolveFourierMotzkin.cpp
+    presolve/HPresolveImplAwarePropagation.cpp
     presolve/HPresolveImpliedInts.cpp
     presolve/HPresolveInitialSweep.cpp
     presolve/HPresolveParallelRowsAndCols.cpp
