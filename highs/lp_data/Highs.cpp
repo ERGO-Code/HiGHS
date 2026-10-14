@@ -3455,9 +3455,10 @@ HighsStatus Highs::changeCoeff(const HighsInt row, const HighsInt col,
   }
   const double abs_value = std::fabs(value);
   if (abs_value >= options_.large_matrix_value) {
-    highsLogUser(options_.log_options, HighsLogType::kError,
-                 "|Value| of %g supplied to Highs::changeCoeff is greater than %g\n",
-                 abs_value, options_.large_matrix_value);
+    highsLogUser(
+        options_.log_options, HighsLogType::kError,
+        "|Value| of %g supplied to Highs::changeCoeff is greater than %g\n",
+        abs_value, options_.large_matrix_value);
     return HighsStatus::kError;
   }
   return returnFromHighs(changeCoeffInterface(row, col, value));

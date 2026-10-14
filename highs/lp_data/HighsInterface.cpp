@@ -857,9 +857,8 @@ void Highs::getRowsInterface(const HighsIndexCollection& index_collection,
   }
 }
 
-void Highs::getCoeffInterface(const HighsInt ext_row,
-			      const HighsInt ext_col,
-			      double& value) const {
+void Highs::getCoeffInterface(const HighsInt ext_row, const HighsInt ext_col,
+                              double& value) const {
   const HighsLp& lp = model_.lp_;
   assert(0 <= ext_row && ext_row < lp.num_row_);
   assert(0 <= ext_col && ext_col < lp.num_col_);
@@ -1063,8 +1062,8 @@ HighsStatus Highs::changeRowBoundsInterface(
 
 // Change a single coefficient in the matrix
 HighsStatus Highs::changeCoeffInterface(const HighsInt ext_row,
-					const HighsInt ext_col,
-					const double ext_new_value) {
+                                        const HighsInt ext_col,
+                                        const double ext_new_value) {
   HighsLp& lp = model_.lp_;
   // Ensure that the LP is column-wise
   lp.ensureColwise();
@@ -1076,7 +1075,8 @@ HighsStatus Highs::changeCoeffInterface(const HighsInt ext_row,
   assert(abs_ext_new_value < options_.large_matrix_value);
 
   HighsStatus return_status =
-    changeLpMatrixCoeff(options_.log_options, lp, ext_row, ext_col, ext_new_value, options_.small_matrix_value);
+      changeLpMatrixCoeff(options_.log_options, lp, ext_row, ext_col,
+                          ext_new_value, options_.small_matrix_value);
   assert(return_status != HighsStatus::kError);
   // Deduce the consequences of a changed element
   //

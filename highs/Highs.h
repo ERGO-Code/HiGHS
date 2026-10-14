@@ -1801,7 +1801,7 @@ class Highs {
                         double* value) const;
 
   void getCoeffInterface(const HighsInt ext_row, const HighsInt ext_col,
-                               double& value) const;
+                         double& value) const;
 
   HighsStatus changeObjectiveSenseInterface(const ObjSense ext_sense);
   HighsStatus changeObjectiveOffsetInterface(const double ext_offset);
@@ -1818,8 +1818,8 @@ class Highs {
                                        const double* usr_row_lower,
                                        const double* usr_row_upper);
   HighsStatus changeCoeffInterface(const HighsInt ext_row,
-				   const HighsInt ext_col,
-				   const double ext_new_value);
+                                   const HighsInt ext_col,
+                                   const double ext_new_value);
   HighsStatus scaleColInterface(const HighsInt col, const double scale_value);
   HighsStatus scaleRowInterface(const HighsInt row, const double scale_value);
 

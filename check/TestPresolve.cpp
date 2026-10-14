@@ -4,7 +4,7 @@
 #include "catch.hpp"
 #include "presolve/HPresolve.h"
 
-const bool dev_run = true;//false;
+const bool dev_run = false;
 
 bool doubleEqual(const double v0, const double v1) {
   return std::fabs(v0 - v1) < 1e-8;

@@ -118,10 +118,10 @@ void appendRowsToLpVectors(HighsLp& lp, const HighsInt num_new_row,
 void deleteScale(vector<double>& scale,
                  const HighsIndexCollection& index_collection);
 
-HighsStatus changeLpMatrixCoeff(const HighsLogOptions& log_options,
-				HighsLp& lp, const HighsInt row,
-				const HighsInt col, const double new_value,
-				const double small_matrix_value);
+HighsStatus changeLpMatrixCoeff(const HighsLogOptions& log_options, HighsLp& lp,
+                                const HighsInt row, const HighsInt col,
+                                const double new_value,
+                                const double small_matrix_value);
 
 HighsStatus changeLpIntegrality(HighsLp& lp,
                                 const HighsIndexCollection& index_collection,

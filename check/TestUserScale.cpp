@@ -169,7 +169,7 @@ TEST_CASE("user-small-cost-scale", "[highs_user_scale]") {
   highs.resetGlobalScheduler(true);
 }
 
-TEST_CASE("build-get-objective-bound-scaling", "[highs_data]") {
+TEST_CASE("build-get-objective-bound-scaling", "[highs_user_scale]") {
   Highs highs;
   highs.setOptionValue("output_flag", dev_run);
   const double large_cost = 1.0e+10;           // Algebraically C

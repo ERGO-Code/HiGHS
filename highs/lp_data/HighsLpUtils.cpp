@@ -1521,10 +1521,10 @@ void deleteScale(vector<double>& scale,
   }
 }
 
-HighsStatus changeLpMatrixCoeff(const HighsLogOptions& log_options,
-				HighsLp& lp, const HighsInt row,
-				const HighsInt col, const double new_value,
-				const double small_matrix_value) {
+HighsStatus changeLpMatrixCoeff(const HighsLogOptions& log_options, HighsLp& lp,
+                                const HighsInt row, const HighsInt col,
+                                const double new_value,
+                                const double small_matrix_value) {
   assert(0 <= row && row < lp.num_row_);
   assert(0 <= col && col < lp.num_col_);
 
@@ -1546,9 +1546,11 @@ HighsStatus changeLpMatrixCoeff(const HighsLogOptions& log_options,
     //
     // If coefficient is small, then just ignore it
     if (zero_new_value) {
-      highsLogUser(log_options, HighsLogType::kWarning,
-                 "|Value| of %g supplied to Highs::changeCoeff is less than %g and does not correspond to an existing nonzero: ignored\n",
-                 abs_new_value, small_matrix_value);
+      highsLogUser(
+          log_options, HighsLogType::kWarning,
+          "|Value| of %g supplied to Highs::changeCoeff is less than %g and "
+          "does not correspond to an existing nonzero: ignored\n",
+          abs_new_value, small_matrix_value);
       return HighsStatus::kWarning;
     }
     // New nonzero goes at the end of column "col", so have to
@@ -1572,8 +1574,10 @@ HighsStatus changeLpMatrixCoeff(const HighsLogOptions& log_options,
       // zero. If the new value is zero, it's OK, as it's the way of
       // zeroing nonzero entries.
       highsLogUser(log_options, HighsLogType::kWarning,
-		   "|Value| of %g supplied to Highs::changeCoeff is less than %g and zeroes (%d, %d) entry of %g\n",
-		   abs_new_value, small_matrix_value, int(row), int(col), lp.a_matrix_.value_[change_el]);
+                   "|Value| of %g supplied to Highs::changeCoeff is less than "
+                   "%g and zeroes (%d, %d) entry of %g\n",
+                   abs_new_value, small_matrix_value, int(row), int(col),
+                   lp.a_matrix_.value_[change_el]);
       return_status = HighsStatus::kWarning;
     }
     // Zeroing an existing nonzero, so have to decrement all
