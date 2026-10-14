@@ -10,12 +10,15 @@ namespace folding {
 Folder::Folder(const HighsModel& model)
     : model_{model},
       lp_{model.lp_},
-      Q_{model.hessian_},
       row_colour_(lp_.num_row_),
       col_colour_(lp_.num_col_),
-      A_{lp_.a_matrix_} {
-  assert(A_.isColwise());
+      A_{lp_.a_matrix_},
+      Q_{model.hessian_.toSquare()} {
   A_.buildOppositeFormat(At_);
+
+  assert(A_.isColwise());
+  assert(At_.isRowwise());
+  assert(Q_.format_ == HessianFormat::kSquare);
 }
 
 template <typename Data>

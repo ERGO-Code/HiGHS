@@ -11,13 +11,13 @@ namespace folding {
 class Folder {
   const HighsModel& model_;
   const HighsLp& lp_;
-  const HighsHessian& Q_;
 
   std::vector<HighsInt> row_colour_;
   std::vector<HighsInt> col_colour_;
 
   const HighsSparseMatrix& A_;
   HighsSparseMatrix At_;
+  const HighsHessian Q_;
 
   HighsInt initial_row_colours_{};
   HighsInt initial_col_colours_{};
