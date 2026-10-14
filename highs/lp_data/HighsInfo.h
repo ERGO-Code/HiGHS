@@ -28,8 +28,8 @@ class InfoRecord {
   std::string description;
   bool advanced;
 
-  InfoRecord(HighsInfoType Xtype, std::string Xname, std::string Xdescription,
-             bool Xadvanced) {
+  InfoRecord(HighsInfoType Xtype, const std::string& Xname,
+             const std::string& Xdescription, bool Xadvanced) {
     this->type = Xtype;
     this->name = Xname;
     this->description = Xdescription;
@@ -43,8 +43,9 @@ class InfoRecordInt64 : public InfoRecord {
  public:
   int64_t* value;
   int64_t default_value;
-  InfoRecordInt64(std::string Xname, std::string Xdescription, bool Xadvanced,
-                  int64_t* Xvalue_pointer, int64_t Xdefault_value)
+  InfoRecordInt64(const std::string& Xname, const std::string& Xdescription,
+                  bool Xadvanced, int64_t* Xvalue_pointer,
+                  int64_t Xdefault_value)
       : InfoRecord(HighsInfoType::kInt64, Xname, Xdescription, Xadvanced) {
     value = Xvalue_pointer;
     default_value = Xdefault_value;
@@ -58,8 +59,9 @@ class InfoRecordInt : public InfoRecord {
  public:
   HighsInt* value;
   HighsInt default_value;
-  InfoRecordInt(std::string Xname, std::string Xdescription, bool Xadvanced,
-                HighsInt* Xvalue_pointer, HighsInt Xdefault_value)
+  InfoRecordInt(const std::string& Xname, const std::string& Xdescription,
+                bool Xadvanced, HighsInt* Xvalue_pointer,
+                HighsInt Xdefault_value)
       : InfoRecord(HighsInfoType::kInt, Xname, Xdescription, Xadvanced) {
     value = Xvalue_pointer;
     default_value = Xdefault_value;
@@ -73,8 +75,9 @@ class InfoRecordDouble : public InfoRecord {
  public:
   double* value;
   double default_value;
-  InfoRecordDouble(std::string Xname, std::string Xdescription, bool Xadvanced,
-                   double* Xvalue_pointer, double Xdefault_value)
+  InfoRecordDouble(const std::string& Xname, const std::string& Xdescription,
+                   bool Xadvanced, double* Xvalue_pointer,
+                   double Xdefault_value)
       : InfoRecord(HighsInfoType::kDouble, Xname, Xdescription, Xadvanced) {
     value = Xvalue_pointer;
     default_value = Xdefault_value;

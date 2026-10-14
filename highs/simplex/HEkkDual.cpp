@@ -2963,7 +2963,7 @@ double HEkkDual::computeExactDualObjectiveValue(HVector& dual_col,
   return double(dual_objective);
 }
 
-HighsDebugStatus HEkkDual::debugDualSimplex(const std::string message,
+HighsDebugStatus HEkkDual::debugDualSimplex(const std::string& message,
                                             const bool initialise) {
   HighsDebugStatus return_status =
       ekk_instance_.debugSimplex(message, algorithm, solve_phase, initialise);

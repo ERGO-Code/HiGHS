@@ -848,10 +848,12 @@ HighsStatus writeMps(
       double lb = col_lower[c_n];
       double ub = col_upper[c_n];
       bool discrete = false;
-      if (have_int)
-        discrete = integrality[c_n] == HighsVarType::kInteger ||
-                   integrality[c_n] == HighsVarType::kSemiContinuous ||
-                   integrality[c_n] == HighsVarType::kSemiInteger;
+      bool semi = false;
+      if (have_int) {
+        semi = integrality[c_n] == HighsVarType::kSemiContinuous ||
+               integrality[c_n] == HighsVarType::kSemiInteger;
+        discrete = integrality[c_n] == HighsVarType::kInteger || semi;
+      }
       if (noCostZeroColumn(c_n)) {
         // Possibly skip this column if it's zero and has no cost
         if (!highs_isInfinity(ub) || lb) {
@@ -859,11 +861,13 @@ HighsStatus writeMps(
           num_no_cost_zero_columns_in_bounds_section++;
         }
       }
-      if (lb == ub) {
-        // Equal lower and upper bounds: Fixed
+      if (lb == ub && !semi) {
+        // Equal lower and upper bounds: Fixed. Not for semi-variables,
+        // since FX would lose the zero value, and the variable type
+        // is defined by SC/SI
         fprintf(file, " FX BOUND     %-8s  %.17g\n", col_names[c_n].c_str(),
                 lb);
-      } else if (highs_isInfinity(-lb) && highs_isInfinity(ub)) {
+      } else if (highs_isInfinity(-lb) && highs_isInfinity(ub) && !semi) {
         // Infinite lower and upper bounds: Free
         fprintf(file, " FR BOUND     %-8s\n", col_names[c_n].c_str());
       } else {

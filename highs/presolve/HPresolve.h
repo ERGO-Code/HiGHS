@@ -10,6 +10,7 @@
  */
 #ifndef PRESOLVE_HIGHS_PRESOLVE_H_
 #define PRESOLVE_HIGHS_PRESOLVE_H_
+#include <algorithm>
 #include <cassert>
 #include <cmath>
 #include <list>
@@ -66,6 +67,8 @@ class HPresolve {
   std::vector<HighsInt> rowsize;
   std::vector<HighsInt> rowsizeInteger;
   std::vector<HighsInt> rowsizeImplInt;
+  // number of singleton columns in a row
+  std::vector<HighsInt> rowsizeSingleton;
   std::vector<HighsInt> colsize;
 
   // vector to store the nonzero positions of a row
@@ -224,6 +227,8 @@ class HPresolve {
 
   void resetRowDualImpliedBoundsDerivedFromCol(HighsInt col);
 
+  void resetRowDualImpliedBoundsIfDualSideLost(HighsInt col, bool isLowerBound);
+
   void matrixNonZeroChanged(HighsInt row, HighsInt col, double oldCoef,
                             double newCoef, bool rowIsDeleted,
                             bool colIsDeleted);
@@ -281,10 +286,9 @@ class HPresolve {
 
   bool isUpperStrictlyImplied(HighsInt col, double* tolerance = nullptr) const;
 
-  HighsInt countFillin(HighsInt row);
+  bool isStrictlyImpliedForDual(HighsInt col, bool isLowerBound) const;
 
-  bool checkFillin(HighsHashTable<HighsInt, HighsInt>& fillinCache,
-                   HighsInt row, HighsInt col);
+  HighsInt countFillin(HighsInt row);
 
   void reinsertEquation(HighsInt row);
 
@@ -309,9 +313,6 @@ class HPresolve {
 
   void toCSC(std::vector<double>& Aval, std::vector<HighsInt>& Aindex,
              std::vector<HighsInt>& Astart);
-
-  void toCSR(std::vector<double>& ARval, std::vector<HighsInt>& ARindex,
-             std::vector<HighsInt>& ARstart);
 
   void getRowPositions(HighsInt row,
                        std::vector<HighsInt>& myrowpositions) const;
@@ -395,7 +396,17 @@ class HPresolve {
                         double* worstCaseUpperBound = nullptr);
 
   template <typename storageFormat>
-  HighsCDouble computeDynamism(const HighsMatrixSlice<storageFormat>& vector);
+  HighsCDouble computeDynamism(const HighsMatrixSlice<storageFormat>& vector) {
+    double minAbsCoef = kHighsInf;
+    double maxAbsCoef = -kHighsInf;
+    for (const auto& nonzero : vector) {
+      double absCoef = std::abs(nonzero.value());
+      minAbsCoef = std::min(minAbsCoef, absCoef);
+      maxAbsCoef = std::max(maxAbsCoef, absCoef);
+    }
+    return static_cast<HighsCDouble>(maxAbsCoef) /
+           static_cast<HighsCDouble>(minAbsCoef);
+  }
 
   bool silentLog() const;
 
@@ -470,7 +481,7 @@ class HPresolve {
 
   void computeLocks(
       HighsInt col, bool considerObjective,
-      std::function<bool(HighsInt, bool, bool)> lockCallback) const;
+      const std::function<bool(HighsInt, bool, bool)>& lockCallback) const;
 
   Result dualFixing(HighsPostsolveStack& postsolve_stack, HighsInt col);
 
