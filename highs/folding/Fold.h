@@ -39,7 +39,7 @@ class Folder {
   HighsInt findInitialColour(HighsInt num, HighsInt* colour, HighsInt start);
 
   void findInitialColour();
-  void foldMatrix();
+  void foldModel();
 
  public:
   explicit Folder(const HighsModel& model);

@@ -216,7 +216,7 @@ HighsInt ColourRefinement::run() {
 
     if (rows_.coloursUsed() > rows_.n * kFractionStop &&
         cols_.coloursUsed() > cols_.n * kFractionStop) {
-      //return 1;
+      return 1;
     }
   }
 

@@ -48,7 +48,7 @@ void Folder::findInitialColour() {
   initial_time_ = clock.stop();
 }
 
-void Folder::foldMatrix() {
+void Folder::foldModel() {
   hipo::Clock clock;
   ColourRefinement CR(A_, At_, Q_, row_colour_, col_colour_);
   ctor_time_ = clock.stop();
@@ -77,7 +77,7 @@ void Folder::foldMatrix() {
 HighsInt Folder::run() {
   hipo::Clock clock;
   findInitialColour();
-  foldMatrix();
+  foldModel();
   assert(fold_error_ || isPartitionCorrect());
   fold_time_ = clock.stop();
 
@@ -99,14 +99,17 @@ HighsModel Folder::getFoldedModel() const {
   // To achieve this efficiently, the folded matrix is built row-wise, from one
   // representative row per row colour (the one with the fewest nonzeros) and
   // it is then converted to col-wise.
+  // If the model is a QP, the folded Hessian has size equal to the number of
+  // col colours. Entry (i, j) is equal to the sum of all the entries of Q in
+  // rows of colour i and columns of colour j.
 
   hipo::Clock clock;
 
   if (fold_error_) return HighsModel{};
 
   // Representative row for each colour:
-  // For each colour, find the row with the least number of nonzero entries
-  auto nz_in_row = [&](HighsInt row) {
+  // For each colour, find the row with the fewest nonzero entries in A
+  auto nz_in_row_of_A = [&](HighsInt row) {
     return At_.start_[row + 1] - At_.start_[row];
   };
 
@@ -114,7 +117,8 @@ HighsModel Folder::getFoldedModel() const {
   for (HighsInt row = 0; row < A_.num_row_; ++row) {
     const HighsInt colour = row_colour_[row];
     const HighsInt current_best_row = row_of_colour[colour];
-    if (current_best_row < 0 || nz_in_row(row) < nz_in_row(current_best_row))
+    if (current_best_row < 0 ||
+        nz_in_row_of_A(row) < nz_in_row_of_A(current_best_row))
       row_of_colour[colour] = row;
   }
 
@@ -122,11 +126,19 @@ HighsModel Folder::getFoldedModel() const {
     assert(row_of_colour[colour] >= 0);
 
   // Representative col for each colour:
-  // For each colour, find the first column
+  // For each colour, find the column with the fewest nonzero entries in Q (or
+  // the first one, if Q is empty)
+  auto nz_in_col_of_Q = [&](HighsInt col) {
+    return Q_.empty() ? 0 : Q_.start_[col + 1] - Q_.start_[col];
+  };
+
   std::vector<HighsInt> col_of_colour(num_col_colours_, -1);
   for (HighsInt col = 0; col < A_.num_col_; ++col) {
     const HighsInt colour = col_colour_[col];
-    if (col_of_colour[colour] < 0) col_of_colour[colour] = col;
+    const HighsInt current_best_col = col_of_colour[colour];
+    if (current_best_col < 0 ||
+        nz_in_col_of_Q(col) < nz_in_col_of_Q(current_best_col))
+      col_of_colour[colour] = col;
   }
 
   for (HighsInt colour = 0; colour < num_col_colours_; ++colour)
@@ -178,7 +190,7 @@ HighsModel Folder::getFoldedModel() const {
   assert(Aft.start_.size() == 1 && Aft.start_[0] == 0);
 
   // For each row colour, accumulate the sum of entries with the same col colour
-  std::vector<double> dense_row(num_col_colours_, 0.0);
+  std::vector<double> accumulator(num_col_colours_, 0.0);
   std::vector<HighsBool> is_col_used(num_col_colours_, false);
   std::vector<HighsInt> col_used;
   for (HighsInt r_colour = 0; r_colour < num_row_colours_; ++r_colour) {
@@ -192,11 +204,11 @@ HighsModel Folder::getFoldedModel() const {
         is_col_used[c_colour] = true;
         col_used.push_back(c_colour);
       }
-      dense_row[c_colour] += At_.value_[el];
+      accumulator[c_colour] += At_.value_[el];
     }
 
     for (HighsInt c_colour : col_used) {
-      const double val = dense_row[c_colour];
+      const double val = accumulator[c_colour];
 
       // Skip sums that are quantized to zero
       if (DoubleQuantizer::bucket(val) != 0.0) {
@@ -204,7 +216,7 @@ HighsModel Folder::getFoldedModel() const {
         Aft.value_.push_back(val);
       }
 
-      dense_row[c_colour] = 0.0;
+      accumulator[c_colour] = 0.0;
       is_col_used[c_colour] = false;
     }
     col_used.clear();
@@ -213,6 +225,58 @@ HighsModel Folder::getFoldedModel() const {
   }
 
   folded_lp.a_matrix_ = Aft.buildOppositeFormat();
+
+  // Build the folded Hessian
+  if (!Q_.empty()) {
+    HighsHessian& Qf = folded_model.hessian_;
+    Qf.dim_ = num_col_colours_;
+    Qf.format_ = HessianFormat::kTriangular;
+    Qf.start_.reserve(num_col_colours_ + 1);
+    assert(Qf.start_.size() == 1 && Qf.start_[0] == 0);
+
+    // In the following, row and col refer to row and column entries of Q. Both
+    // of them are coloured according to the "col colour".
+
+    // For each row colour, accumulate the sum of entries with the same col
+    // colour
+    for (HighsInt r_colour = 0; r_colour < num_col_colours_; ++r_colour) {
+      const HighsInt row = col_of_colour[r_colour];
+
+      for (HighsInt el = Q_.start_[row]; el < Q_.start_[row + 1]; ++el) {
+        const HighsInt col = Q_.index_[el];
+        const HighsInt c_colour = col_colour_[col];
+
+        if (!is_col_used[c_colour]) {
+          is_col_used[c_colour] = true;
+          col_used.push_back(c_colour);
+        }
+        accumulator[c_colour] += Q_.value_[el];
+      }
+
+      for (HighsInt c_colour : col_used) {
+        const double val = accumulator[c_colour];
+
+        const bool skip =
+            // Skip sums that are quantized to zero
+            DoubleQuantizer::bucket(val) == 0.0 ||
+            // Skip sums corresponding to upper triangle.
+            // Qf is built by cols, so r_colour corresponds to the column number
+            // in Qf and c_colour to the row number in Qf.
+            r_colour > c_colour;
+
+        if (!skip) {
+          Qf.index_.push_back(c_colour);
+          Qf.value_.push_back(val * col_colours_size_[r_colour]);
+        }
+
+        accumulator[c_colour] = 0.0;
+        is_col_used[c_colour] = false;
+      }
+      col_used.clear();
+
+      Qf.start_.push_back(static_cast<HighsInt>(Qf.index_.size()));
+    }
+  }
 
   folded_lp_time_ = clock.stop();
 
