@@ -4365,7 +4365,8 @@ void HPresolve::computeColBounds(HighsInt col, HighsInt boundCol,
 
   // lambda for actual bound computation
   auto computeBound = [&](const nonZeros& triplet, double rhs,
-                          HighsInt direction, bool isWorstCaseBound) {
+                          HighsInt direction, bool isLowerBound,
+                          bool isWorstCaseBound) {
     HighsCDouble residual;
     if ((direction > 0 && !isWorstCaseBound) ||
         (direction < 0 && isWorstCaseBound)) {
@@ -4385,8 +4386,22 @@ void HPresolve::computeColBounds(HighsInt col, HighsInt boundCol,
                                         boundCol, triplet.kval, boundColValue);
       if (residual == kHighsInf) return -std::copysign(kHighsInf, triplet.jval);
     }
-    return static_cast<double>((static_cast<HighsCDouble>(rhs) - residual) /
-                               triplet.jval);
+    double bound = static_cast<double>(
+        (static_cast<HighsCDouble>(rhs) - residual) / triplet.jval);
+    // round bounds on integer columns. implied bounds hold for every feasible
+    // solution, so rounding them with the primal feasibility tolerance is
+    // safe. worst-case bounds are values at which the row is satisfied for any
+    // values of the other columns, and the column may be fixed to them. moving
+    // the column past such a bound by delta can violate the row by
+    // |jval| * delta, so the tolerance is divided by |jval| to keep the
+    // violation within the primal feasibility tolerance.
+    if (model->integrality_[col] != HighsVarType::kContinuous) {
+      double tol = isWorstCaseBound
+                       ? primal_feastol / std::max(1.0, std::abs(triplet.jval))
+                       : primal_feastol;
+      bound = isLowerBound ? std::ceil(bound - tol) : std::floor(bound + tol);
+    }
+    return bound;
   };
 
   // lambda for updating tightest bounds
@@ -4396,19 +4411,21 @@ void HPresolve::computeColBounds(HighsInt col, HighsInt boundCol,
     if (direction * triplet.jval < 0) {
       // lower bounds
       if (lowerBound != nullptr)
-        *lowerBound =
-            std::max(*lowerBound, computeBound(triplet, rhs, direction, false));
+        *lowerBound = std::max(
+            *lowerBound, computeBound(triplet, rhs, direction, true, false));
       if (worstCaseLowerBound != nullptr && *worstCaseLowerBound != kHighsInf)
-        *worstCaseLowerBound = std::max(
-            *worstCaseLowerBound, computeBound(triplet, rhs, direction, true));
+        *worstCaseLowerBound =
+            std::max(*worstCaseLowerBound,
+                     computeBound(triplet, rhs, direction, true, true));
     } else {
       // upper bounds
       if (upperBound != nullptr)
-        *upperBound =
-            std::min(*upperBound, computeBound(triplet, rhs, direction, false));
+        *upperBound = std::min(
+            *upperBound, computeBound(triplet, rhs, direction, false, false));
       if (worstCaseUpperBound != nullptr && *worstCaseUpperBound != -kHighsInf)
-        *worstCaseUpperBound = std::min(
-            *worstCaseUpperBound, computeBound(triplet, rhs, direction, true));
+        *worstCaseUpperBound =
+            std::min(*worstCaseUpperBound,
+                     computeBound(triplet, rhs, direction, false, true));
     }
   };
 

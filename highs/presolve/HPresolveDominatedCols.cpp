@@ -233,8 +233,6 @@ HPresolve::Result HPresolve::dominatedColumns(
           //                                  MINU^k_j(otherColBound)}
           double worstCaseUpper = computeWorstCaseUpperBound(
               col, otherCol, otherColBound, otherColCoeffPattern);
-          if (model->integrality_[col] != HighsVarType::kContinuous)
-            worstCaseUpper = std::floor(worstCaseUpper + primal_feastol);
           lowerBound = std::max(lowerBound, std::min(colBound, worstCaseUpper));
         }
       } else {
@@ -253,16 +251,12 @@ HPresolve::Result HPresolve::dominatedColumns(
           //                                   MAXU^j_k(otherColBound)}
           double worstCaseLower = computeWorstCaseLowerBound(
               col, otherCol, otherColBound, otherColCoeffPattern);
-          if (model->integrality_[col] != HighsVarType::kContinuous)
-            worstCaseLower = std::ceil(worstCaseLower - primal_feastol);
           upperBound = std::min(upperBound, std::max(colBound, worstCaseLower));
         }
       }
       // update bounds
       if (lowerBound < kHighsInf &&
           lowerBound > model->col_lower_[col] + primal_feastol) {
-        if (model->integrality_[col] != HighsVarType::kContinuous)
-          lowerBound = std::ceil(lowerBound - primal_feastol);
         if (lowerBound == model->col_upper_[col]) {
           numFixedColsPredBndAnalysis++;
           return fixCol(col, HighsInt{1});
@@ -273,8 +267,6 @@ HPresolve::Result HPresolve::dominatedColumns(
       }
       if (upperBound > -kHighsInf &&
           upperBound < model->col_upper_[col] - primal_feastol) {
-        if (model->integrality_[col] != HighsVarType::kContinuous)
-          upperBound = std::floor(upperBound + primal_feastol);
         if (upperBound == model->col_lower_[col]) {
           numFixedColsPredBndAnalysis++;
           return fixCol(col, HighsInt{-1});
