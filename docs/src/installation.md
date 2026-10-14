@@ -189,7 +189,14 @@ cmake -S. -Bbuild -DHIPDLP_HIP=ON \
 The HIP backend compiles the same HiPDLP source as the CUDA backend,
 selecting the AMD implementation at build time. Once built, the solver
 is selected at run time by setting the [__solver__](@ref
-option-solver) option to "hipdlp".
+option-solver) option to "hipdlp". Only HiPDLP has an AMD backend:
+with `solver = "pdlp"`, the cuPDLP-C solver runs on the CPU in a HIP
+build.
+
+If no AMD GPU is visible at run time (for example because
+`HIP_VISIBLE_DEVICES` hides it, or the driver is not loaded), HiPDLP
+reports an error and the solve returns with model status "Solve error".
+A HIP build cannot fall back to running HiPDLP on the CPU.
 
 To check the ROCm / HIP backend on the local machine, run the example
 `call_highs_hipdlp` (also registered as the ctest
@@ -197,6 +204,14 @@ To check the ROCm / HIP backend on the local machine, run the example
 `solver = "hipdlp"` and verifies the result. A successful run is a
 quick end-to-end sanity check of the GPU backend.
 
-To confirm the work is actually running on the GPU, watch `rocm-smi`
-(for example `watch -n 0.1 rocm-smi`) while the solve runs and check
-that GPU utilisation and memory usage rise.
+When HiPDLP runs on the GPU, the HiGHS log reports the device used, for
+example
+
+```
+Using HiPDLP first order PDLP solver on a GPU
+HIP device: <name of the AMD GPU>
+```
+
+To confirm that the work is running on the GPU, watch `amd-smi monitor`
+(or `rocm-smi` on older ROCm releases) while the solve runs,
+and check that GPU utilisation and memory usage rise.

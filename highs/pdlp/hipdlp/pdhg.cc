@@ -1758,7 +1758,8 @@ double PDLPSolver::powerMethodGpu() {
 }
 #endif
 
-void PDLPSolver::setup(const HighsOptions& options, HighsTimer& timer) {
+HighsStatus PDLPSolver::setup(const HighsOptions& options,
+                              HighsTimer& timer) {
   logger_.initialise(options.log_dev_level, options.log_options, &timer);
   logger_.printHeader();
   highs_timer_p_ = &timer;
@@ -1771,17 +1772,34 @@ void PDLPSolver::setup(const HighsOptions& options, HighsTimer& timer) {
 #endif
   );
 #if defined(CUPDLP_GPU) || defined(HIPDLP_GPU)
-  HighsInt n_devices = 0;
-  gpuGetDeviceCount(&n_devices);
+  // Fail gracefully if the GPU runtime reports no usable device, rather than
+  // reading uninitialised device properties and aborting in setupGpu()
+  int n_devices = 0;
+  const gpuError_t device_count_error = gpuGetDeviceCount(&n_devices);
+  if (device_count_error != gpuSuccess || n_devices < 1) {
+    highsLogUser(options.log_options, HighsLogType::kError,
+                 "HiPDLP was built for %s GPUs, but no %s device is "
+                 "available (%s)\n",
+                 GPU_BACKEND_NAME, GPU_BACKEND_NAME,
+                 device_count_error != gpuSuccess
+                     ? gpuGetErrorString(device_count_error)
+                     : "device count is zero");
+    return HighsStatus::kError;
+  }
   if (n_devices != 1)
-    highsLogUser(
-        options.log_options, HighsLogType::kInfo,
-        "Number of CUDA-enabled devices is %d: device 0 will be used\n",
-        n_devices);
+    highsLogUser(options.log_options, HighsLogType::kInfo,
+                 "Number of %s devices is %d: device 0 will be used\n",
+                 GPU_BACKEND_NAME, n_devices);
   gpuDeviceProp_t prop;
-  gpuGetDeviceProperties(&prop, 0);
-  highsLogUser(options.log_options, HighsLogType::kInfo, "Cuda device: %s\n",
-               prop.name);
+  const gpuError_t device_properties_error = gpuGetDeviceProperties(&prop, 0);
+  if (device_properties_error != gpuSuccess) {
+    highsLogUser(options.log_options, HighsLogType::kError,
+                 "HiPDLP cannot query %s device 0 (%s)\n", GPU_BACKEND_NAME,
+                 gpuGetErrorString(device_properties_error));
+    return HighsStatus::kError;
+  }
+  highsLogUser(options.log_options, HighsLogType::kInfo, "%s device: %s\n",
+               GPU_BACKEND_NAME, prop.name);
   highsLogUser(options.log_options, HighsLogType::kInfo,
                "Global memory available on device (GB): %f\n",
                (float(prop.totalGlobalMem)) / 1e9);
@@ -1849,6 +1867,7 @@ void PDLPSolver::setup(const HighsOptions& options, HighsTimer& timer) {
   params_.log_options_ = options.log_options;
   // log the options
   logger_.printParams(params_);
+  return HighsStatus::kOk;
 }
 
 void PDLPSolver::scaleProblem() {
