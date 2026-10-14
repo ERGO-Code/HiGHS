@@ -228,10 +228,6 @@ HPresolve::Result HPresolve::dualFixing(HighsPostsolveStack& postsolve_stack,
          std::abs(newBound) > hugeBound))
       return false;
 
-    // round up to make sure that all rows are redundant
-    if (model->integrality_[col] != HighsVarType::kContinuous)
-      newBound = std::ceil(newBound - primal_feastol);
-
     // flip sign
     newBound *= direction;
     return true;
