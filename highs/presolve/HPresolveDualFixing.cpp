@@ -31,14 +31,20 @@ HPresolve::Result HPresolve::dualFixing(HighsPostsolveStack& postsolve_stack,
   // lambda for variable substitution
   auto substituteCol = [&](HighsInt col, HighsInt row, HighsInt direction,
                            double colBound, double otherColBound) {
-    if (rowsizeInteger[row] == 0 || rowsize[row] > 1000) return Result::kOk;
+    assert(model->col_lower_[col] != -kHighsInf &&
+           model->col_upper_[col] != kHighsInf);
+    constexpr HighsInt maxSubstRowSize = 1000;
+    if (rowsizeInteger[row] == 0 || rowsize[row] > maxSubstRowSize)
+      return Result::kOk;
     // check lhs and rhs for finiteness
     const bool lhsFinite = model->row_lower_[row] != -kHighsInf;
     const bool rhsFinite = model->row_upper_[row] != kHighsInf;
     if (lhsFinite && rhsFinite) {
       // Row cannot be redundant if the column to be substituted can
       // account for all row activity
-      const double colCoef = Avalue[findNonzero(row, col)];
+      HighsInt pos = findNonzero(row, col);
+      assert(pos != -1);
+      const double colCoef = Avalue[pos];
       const HighsCDouble activityRange =
           std::abs(colCoef) *
           (static_cast<HighsCDouble>(model->col_upper_[col]) -

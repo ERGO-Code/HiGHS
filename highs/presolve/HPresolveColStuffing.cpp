@@ -232,8 +232,10 @@ HPresolve::Result HPresolve::singletonColStuffing(
   // get row index
   HighsInt row = Arow[colhead[col]];
 
-  // return if we have an empty or singleton row, a large row, or the row is ranged
-  if (rowsize[row] <= 1 || rowsize[row] > 1000 || isRanged(row))
+  // return if we have an empty or singleton row, a large row, or the row is
+  // ranged
+  constexpr HighsInt maxStuffingRowSize = 1000;
+  if (rowsize[row] <= 1 || rowsize[row] > maxStuffingRowSize || isRanged(row))
     return Result::kOk;
 
   // check row
