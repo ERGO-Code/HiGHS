@@ -1155,6 +1155,7 @@ restart:
       mipdata_->pruned_treeweight = 1.0;
       mipdata_->updateLowerBound(std::min(kHighsInf, mipdata_->upper_bound));
       mipdata_->printDisplayLine();
+      break;
     }
 
     if (nodeLim == maxNodesPerWorkerLim &&
