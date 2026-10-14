@@ -1472,5 +1472,5 @@ TEST_CASE("lp-file-format-large-file", "[LpFileFormat]") {
   // A name that is longer than a chunk
   const std::string name(1500000, 'x');
   REQUIRE(readLp(highs, "min\n obj: " + name + "\nend\n") == HighsStatus::kOk);
-  REQUIRE(highs.getLp().col_names_ == std::vector<std::string>{name});
+  REQUIRE((highs.getLp().col_names_ == std::vector<std::string>{name}));
 }
