@@ -2,13 +2,17 @@
 #define HIGHS_FOLDING_H
 
 #include "ColourRefinement.h"
+#include "model/HighsModel.h"
 
 namespace highs {
 
 namespace folding {
 
 class LpFolder {
+  const HighsModel& model_;
   const HighsLp& lp_;
+  const HighsHessian& Q_;
+
   std::vector<HighsInt> row_colour_;
   std::vector<HighsInt> col_colour_;
 
@@ -38,11 +42,11 @@ class LpFolder {
   void foldMatrix();
 
  public:
-  explicit LpFolder(const HighsLp& lp);
+  explicit LpFolder(const HighsModel& model);
 
   // LpFolder holds references to the lp, so it cannot bind to a temporary
   // HighsLp
-  LpFolder(const HighsLp&&) = delete;
+  LpFolder(const HighsModel&&) = delete;
 
   // Avoid copies because colour refinement holds reference to the LpFolder
   LpFolder(const LpFolder&) = delete;

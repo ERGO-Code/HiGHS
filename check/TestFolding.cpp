@@ -10,9 +10,10 @@
 
 const bool dev_run = false;
 
-HighsLp getPaperLp() {
+HighsModel getPaperLp() {
   // Define the LP from "Dimension Reduction via Colour Refinement"
-  HighsLp lp;
+  HighsModel model;
+  HighsLp& lp = model.lp_;
 
   lp.num_row_ = 7;
   lp.num_col_ = 13;
@@ -44,11 +45,12 @@ HighsLp getPaperLp() {
                          3,   .5,  1,       -1,      .5,      .5,      .5,
                          -1,  1,   .5,      .5,      .5,      -1,      1};
 
-  return lp;
+  return model;
 }
-HighsLp getPaperFoldedLp() {
+HighsModel getPaperFoldedLp() {
   // Define the folded LP from "Dimension Reduction via Colour Refinement"
-  HighsLp lp;
+  HighsModel model;
+  HighsLp& lp = model.lp_;
 
   lp.num_row_ = 2;
   lp.num_col_ = 4;
@@ -65,12 +67,13 @@ HighsLp getPaperFoldedLp() {
   lp.a_matrix_.index_ = {0, 1, 0, 1, 0, 1};
   lp.a_matrix_.value_ = {1, 3, 3, 1, 2, 2};
 
-  return lp;
+  return model;
 }
-HighsLp getPaperFoldedFoldedLp() {
+HighsModel getPaperFoldedFoldedLp() {
   // Define the folded folded LP from "Dimension Reduction via Colour
   // Refinement"
-  HighsLp lp;
+  HighsModel model;
+  HighsLp& lp = model.lp_;
 
   lp.num_row_ = 1;
   lp.num_col_ = 2;
@@ -87,7 +90,7 @@ HighsLp getPaperFoldedFoldedLp() {
   lp.a_matrix_.index_ = {0, 0};
   lp.a_matrix_.value_ = {4, 2};
 
-  return lp;
+  return model;
 }
 
 bool isOptimal(const Highs& highs, const HighsLp& lp,
@@ -108,8 +111,9 @@ void runFoldingTest(const std::string& filename) {
   highs.setOptionValue("presolve", "off");
   highs.readModel(filename);
   const HighsLp lp = highs.getLp();
+  const HighsModel model = highs.getModel();
 
-  highs::folding::LpFolder lpf(lp);
+  highs::folding::LpFolder lpf(model);
   if (lpf.run()) return;
   HighsLp folded_lp = lpf.getFoldedLp();
   if (dev_run) lpf.print();
@@ -126,19 +130,21 @@ void runFoldingTest(const std::string& filename) {
 }
 
 TEST_CASE("test-folding-paper", "[highs-folding]") {
-  HighsLp lp = getPaperLp();
+  HighsModel model = getPaperLp();
 
   // Fold
-  highs::folding::LpFolder lpf(lp);
+  highs::folding::LpFolder lpf(model);
   REQUIRE(lpf.run() == 0);
-  HighsLp folded_lp = lpf.getFoldedLp();
-  REQUIRE(folded_lp == getPaperFoldedLp());
+  HighsModel folded_model;
+  folded_model.lp_ = lpf.getFoldedLp();
+  REQUIRE(folded_model == getPaperFoldedLp());
 
   // Fold again
-  highs::folding::LpFolder lpf_2(folded_lp);
+  highs::folding::LpFolder lpf_2(folded_model);
   REQUIRE(lpf_2.run() == 0);
-  HighsLp folded_lp_2 = lpf_2.getFoldedLp();
-  REQUIRE(folded_lp_2 == getPaperFoldedFoldedLp());
+  HighsModel folded_model_2;
+  folded_model_2.lp_ = lpf_2.getFoldedLp();
+  REQUIRE(folded_model_2 == getPaperFoldedFoldedLp());
 
   // Set up highs
   Highs highs;
@@ -146,14 +152,14 @@ TEST_CASE("test-folding-paper", "[highs-folding]") {
   highs.setOptionValue("presolve", "off");
 
   // Solve original lp
-  REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
+  REQUIRE(highs.passModel(model) == HighsStatus::kOk);
   REQUIRE(highs.run() == HighsStatus::kOk);
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
   const HighsSolution sol = highs.getSolution();
   const double obj = highs.getObjectiveValue();
 
   // Solve folded lp
-  REQUIRE(highs.passModel(folded_lp) == HighsStatus::kOk);
+  REQUIRE(highs.passModel(folded_model) == HighsStatus::kOk);
   REQUIRE(highs.run() == HighsStatus::kOk);
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
   const HighsSolution folded_sol = highs.getSolution();
@@ -161,7 +167,7 @@ TEST_CASE("test-folding-paper", "[highs-folding]") {
   const double folded_obj = highs.getObjectiveValue();
 
   // Solve folded folded lp
-  REQUIRE(highs.passModel(folded_lp_2) == HighsStatus::kOk);
+  REQUIRE(highs.passModel(folded_model_2) == HighsStatus::kOk);
   REQUIRE(highs.run() == HighsStatus::kOk);
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
   const HighsSolution folded_sol_2 = highs.getSolution();
@@ -170,14 +176,14 @@ TEST_CASE("test-folding-paper", "[highs-folding]") {
   const double folded_obj_2 = highs.getObjectiveValue();
 
   // Check that the three solutions are feasible for the respective lps
-  REQUIRE(isOptimal(highs, lp, sol));
-  REQUIRE(isOptimal(highs, folded_lp, folded_sol));
-  REQUIRE(isOptimal(highs, folded_lp_2, folded_sol_2));
+  REQUIRE(isOptimal(highs, model.lp_, sol));
+  REQUIRE(isOptimal(highs, folded_model.lp_, folded_sol));
+  REQUIRE(isOptimal(highs, folded_model_2.lp_, folded_sol_2));
 
   // Check that unfolding returns an optimal solution
-  REQUIRE(isOptimal(highs, lp, unfolded_sol));
-  REQUIRE(isOptimal(highs, folded_lp, unfolded_sol_2_once));
-  REQUIRE(isOptimal(highs, lp, unfolded_sol_2_twice));
+  REQUIRE(isOptimal(highs, model.lp_, unfolded_sol));
+  REQUIRE(isOptimal(highs, folded_model.lp_, unfolded_sol_2_once));
+  REQUIRE(isOptimal(highs, model.lp_, unfolded_sol_2_twice));
 
   // Check that objectives are the same
   REQUIRE(std::abs(folded_obj - obj) < 1e-6);

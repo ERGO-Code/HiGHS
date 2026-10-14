@@ -7,10 +7,12 @@ namespace highs {
 
 namespace folding {
 
-LpFolder::LpFolder(const HighsLp& lp)
-    : lp_{lp},
-      row_colour_(lp.num_row_),
-      col_colour_(lp.num_col_),
+LpFolder::LpFolder(const HighsModel& model)
+    : model_{model},
+      lp_{model.lp_},
+      Q_{model.hessian_},
+      row_colour_(lp_.num_row_),
+      col_colour_(lp_.num_col_),
       A_{lp_.a_matrix_} {
   assert(A_.isColwise());
   A_.buildOppositeFormat(At_);
