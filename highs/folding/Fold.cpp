@@ -82,7 +82,7 @@ HighsInt LpFolder::run() {
   return fold_error_;
 }
 
-HighsLp LpFolder::getFoldedLp() const {
+HighsModel LpFolder::getFoldedModel() const {
   // Given the partition of rows and columns produced by colour refinement,
   // generate a folded LP with num_row equal to the number of row colours and
   // num_col equal to the number of col colours.
@@ -100,7 +100,7 @@ HighsLp LpFolder::getFoldedLp() const {
 
   hipo::Clock clock;
 
-  if (fold_error_) return HighsLp{};
+  if (fold_error_) return HighsModel{};
 
   // Representative row for each colour:
   // For each colour, find the row with the least number of nonzero entries
@@ -131,7 +131,8 @@ HighsLp LpFolder::getFoldedLp() const {
     assert(col_of_colour[colour] >= 0);
 
   // Build the folded lp
-  HighsLp folded_lp;
+  HighsModel folded_model;
+  HighsLp& folded_lp = folded_model.lp_;
   folded_lp.sense_ = lp_.sense_;
   folded_lp.offset_ = lp_.offset_;
 
@@ -213,7 +214,7 @@ HighsLp LpFolder::getFoldedLp() const {
 
   folded_lp_time_ = clock.stop();
 
-  return folded_lp;
+  return folded_model;
 }
 
 void LpFolder::print() const {

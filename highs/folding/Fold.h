@@ -53,7 +53,7 @@ class LpFolder {
   LpFolder& operator=(const LpFolder&) = delete;
 
   HighsInt run();
-  HighsLp getFoldedLp() const;
+  HighsModel getFoldedModel() const;
   HighsSolution unfold(const HighsSolution& folded) const;
 
   void print() const;
