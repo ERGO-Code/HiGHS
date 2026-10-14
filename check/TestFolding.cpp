@@ -113,7 +113,7 @@ void runFoldingTest(const std::string& filename) {
   const HighsLp lp = highs.getLp();
   const HighsModel model = highs.getModel();
 
-  highs::folding::LpFolder lpf(model);
+  highs::folding::Folder lpf(model);
   if (lpf.run()) return;
   HighsModel folded_model = lpf.getFoldedModel();
   if (dev_run) lpf.print();
@@ -133,13 +133,13 @@ TEST_CASE("test-folding-paper", "[highs-folding]") {
   HighsModel model = getPaperLp();
 
   // Fold
-  highs::folding::LpFolder lpf(model);
+  highs::folding::Folder lpf(model);
   REQUIRE(lpf.run() == 0);
   HighsModel folded_model = lpf.getFoldedModel();
   REQUIRE(folded_model == getPaperFoldedLp());
 
   // Fold again
-  highs::folding::LpFolder lpf_2(folded_model);
+  highs::folding::Folder lpf_2(folded_model);
   REQUIRE(lpf_2.run() == 0);
   HighsModel folded_model_2 = lpf_2.getFoldedModel();
   REQUIRE(folded_model_2 == getPaperFoldedFoldedLp());

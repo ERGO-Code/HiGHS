@@ -8,7 +8,7 @@ namespace highs {
 
 namespace folding {
 
-class LpFolder {
+class Folder {
   const HighsModel& model_;
   const HighsLp& lp_;
   const HighsHessian& Q_;
@@ -42,15 +42,15 @@ class LpFolder {
   void foldMatrix();
 
  public:
-  explicit LpFolder(const HighsModel& model);
+  explicit Folder(const HighsModel& model);
 
-  // LpFolder holds references to the lp, so it cannot bind to a temporary
+  // Folder holds references to the lp, so it cannot bind to a temporary
   // HighsLp
-  LpFolder(const HighsModel&&) = delete;
+  Folder(const HighsModel&&) = delete;
 
-  // Avoid copies because colour refinement holds reference to the LpFolder
-  LpFolder(const LpFolder&) = delete;
-  LpFolder& operator=(const LpFolder&) = delete;
+  // Avoid copies because colour refinement holds reference to the Folder
+  Folder(const Folder&) = delete;
+  Folder& operator=(const Folder&) = delete;
 
   HighsInt run();
   HighsModel getFoldedModel() const;

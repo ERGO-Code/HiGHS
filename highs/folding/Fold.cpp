@@ -7,7 +7,7 @@ namespace highs {
 
 namespace folding {
 
-LpFolder::LpFolder(const HighsModel& model)
+Folder::Folder(const HighsModel& model)
     : model_{model},
       lp_{model.lp_},
       Q_{model.hessian_},
@@ -19,8 +19,8 @@ LpFolder::LpFolder(const HighsModel& model)
 }
 
 template <typename Data>
-HighsInt LpFolder::findInitialColour(HighsInt n, HighsInt* colour,
-                                     HighsInt start) {
+HighsInt Folder::findInitialColour(HighsInt n, HighsInt* colour,
+                                   HighsInt start) {
   QuantizedMap<Data, HighsInt> map;
   HighsInt next_colour = start;
 
@@ -34,7 +34,7 @@ HighsInt LpFolder::findInitialColour(HighsInt n, HighsInt* colour,
   return next_colour - start;
 }
 
-void LpFolder::findInitialColour() {
+void Folder::findInitialColour() {
   hipo::Clock clock;
 
   initial_row_colours_ =
@@ -46,7 +46,7 @@ void LpFolder::findInitialColour() {
   initial_time_ = clock.stop();
 }
 
-void LpFolder::foldMatrix() {
+void Folder::foldMatrix() {
   hipo::Clock clock;
   ColourRefinement CR(A_, At_, row_colour_, col_colour_);
   ctor_time_ = clock.stop();
@@ -72,7 +72,7 @@ void LpFolder::foldMatrix() {
   }
 }
 
-HighsInt LpFolder::run() {
+HighsInt Folder::run() {
   hipo::Clock clock;
   findInitialColour();
   foldMatrix();
@@ -82,7 +82,7 @@ HighsInt LpFolder::run() {
   return fold_error_;
 }
 
-HighsModel LpFolder::getFoldedModel() const {
+HighsModel Folder::getFoldedModel() const {
   // Given the partition of rows and columns produced by colour refinement,
   // generate a folded LP with num_row equal to the number of row colours and
   // num_col equal to the number of col colours.
@@ -217,7 +217,7 @@ HighsModel LpFolder::getFoldedModel() const {
   return folded_model;
 }
 
-void LpFolder::print() const {
+void Folder::print() const {
   printf("\nInitial partition:\n");
   printf("\tRows: %9d out of %9d\n", initial_row_colours_, lp_.num_row_);
   printf("\tCols: %9d out of %9d\n", initial_col_colours_, lp_.num_col_);
@@ -255,7 +255,7 @@ class ColourClasses {
   HighsInt node(HighsInt c, HighsInt i) const { return nodes_[start_[c] + i]; }
 };
 
-bool LpFolder::isPartitionCorrect() const {
+bool Folder::isPartitionCorrect() const {
   if (fold_error_) return false;
 
   for (HighsInt c : row_colour_)
@@ -368,7 +368,7 @@ bool LpFolder::isPartitionCorrect() const {
   return true;
 }
 
-HighsSolution LpFolder::unfold(const HighsSolution& folded) const {
+HighsSolution Folder::unfold(const HighsSolution& folded) const {
   // Given partition matrices C and D for row and column partition respectively,
   // and given the operation of scaling the columns and taking the transpose
   // denoted as .^S, the mapping from folded solution (x',y',z') to original
