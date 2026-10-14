@@ -13,9 +13,8 @@ Folder::Folder(const HighsModel& model)
       row_colour_(lp_.num_row_),
       col_colour_(lp_.num_col_),
       A_{lp_.a_matrix_},
+      At_{A_.buildOppositeFormat()},
       Q_{model.hessian_.toSquare()} {
-  A_.buildOppositeFormat(At_);
-
   assert(A_.isColwise());
   assert(At_.isRowwise());
   assert(Q_.format_ == HessianFormat::kSquare);
@@ -213,7 +212,7 @@ HighsModel Folder::getFoldedModel() const {
     Aft.start_.push_back(static_cast<HighsInt>(Aft.index_.size()));
   }
 
-  Aft.buildOppositeFormat(folded_lp.a_matrix_);
+  folded_lp.a_matrix_ = Aft.buildOppositeFormat();
 
   folded_lp_time_ = clock.stop();
 

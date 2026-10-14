@@ -16,7 +16,7 @@ class Folder {
   std::vector<HighsInt> col_colour_;
 
   const HighsSparseMatrix& A_;
-  HighsSparseMatrix At_;
+  const HighsSparseMatrix At_;
   const HighsHessian Q_;
 
   HighsInt initial_row_colours_{};

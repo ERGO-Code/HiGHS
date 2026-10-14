@@ -1748,18 +1748,17 @@ void HighsSparseMatrix::debugReportRowPrice(const HighsInt iRow,
   printf("\n");
 }
 
-void HighsSparseMatrix::buildOppositeFormat(HighsSparseMatrix& other) const {
+HighsSparseMatrix HighsSparseMatrix::buildOppositeFormat() const {
   // Popoulate other with the transpose of this matrix.
   // Given a matrix A, doing
-  //    A.buildOppositeFormat(B);
+  //    B = A.buildOppositeFormat();
   // is more efficient than doing
   //    B = A;
   //    B.ensureRowWise();
   // because the latter requires a copy (B = A) and an internal copy in
   // ensureRowWise().
 
-  // other must be a different matrix
-  assert(&other != this);
+  HighsSparseMatrix other;
 
   const bool colwise = isColwise();
   const HighsInt num_major = colwise ? num_col_ : num_row_;
@@ -1791,4 +1790,6 @@ void HighsSparseMatrix::buildOppositeFormat(HighsSparseMatrix& other) const {
       other.value_[pos] = value_[el];
     }
   }
+
+  return other;
 }
