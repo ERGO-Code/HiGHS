@@ -8,6 +8,7 @@
 #include "SumClassifier.h"
 #include "util/HighsLinkedLists.h"
 #include "util/HighsSparseMatrix.h"
+#include "model/HighsHessian.h"
 
 namespace highs {
 namespace folding {
@@ -202,6 +203,7 @@ class ColourRefinement {
 
   const HighsSparseMatrix& A_;
   const HighsSparseMatrix& At_;
+  const HighsHessian& Q_;
   Side rows_;
   Side cols_;
   SumClassifier classifier_;
@@ -221,7 +223,7 @@ class ColourRefinement {
 
  public:
   ColourRefinement(const HighsSparseMatrix& A, const HighsSparseMatrix& At,
-                   std::vector<HighsInt>& row_colour,
+                   const HighsHessian& Q, std::vector<HighsInt>& row_colour,
                    std::vector<HighsInt>& col_colour);
   HighsInt run();
 

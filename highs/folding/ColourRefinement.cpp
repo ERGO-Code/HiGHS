@@ -66,11 +66,13 @@ ColourRefinement::Side::Side(std::vector<HighsInt>& c)
 
 ColourRefinement::ColourRefinement(const HighsSparseMatrix& A,
                                    const HighsSparseMatrix& At,
+                                   const HighsHessian& Q,
                                    std::vector<HighsInt>& row_colour,
                                    std::vector<HighsInt>& col_colour)
-    : A_{A}, At_{At}, rows_(row_colour), cols_(col_colour) {
+    : A_{A}, At_{At}, Q_{Q}, rows_(row_colour), cols_(col_colour) {
   assert(A.isColwise());
   assert(At_.isRowwise());
+  assert(Q_.format_ == HessianFormat::kSquare);
   assert(rows_.n == A.num_row_ && cols_.n == A.num_col_);
 }
 

@@ -50,7 +50,7 @@ void Folder::findInitialColour() {
 
 void Folder::foldMatrix() {
   hipo::Clock clock;
-  ColourRefinement CR(A_, At_, row_colour_, col_colour_);
+  ColourRefinement CR(A_, At_, Q_, row_colour_, col_colour_);
   ctor_time_ = clock.stop();
 
   clock.start();
