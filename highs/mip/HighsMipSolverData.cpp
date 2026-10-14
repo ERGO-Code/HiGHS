@@ -1103,10 +1103,10 @@ void HighsMipSolverData::runSetup() {
 		 "%" HIGHSINT_FORMAT " continuous, "
 		 "%" HIGHSINT_FORMAT " domain fixed)\n"
 		 "   %" HIGHSINT_FORMAT " nonzero%s\n"
-		 "   Thread count %" HIGHSINT_FORMAT " (of "
-		 "%" HIGHSINT_FORMAT " threads). "
-		 "Using %" HIGHSINT_FORMAT " max workers. "
-		 "Parallel search %s\n",
+		 "   Thread count %" HIGHSINT_FORMAT " ("
+		 "%" HIGHSINT_FORMAT " physical cores and "
+		 "%" HIGHSINT_FORMAT " logical processors). "
+		 "Using %" HIGHSINT_FORMAT " max workers.\n",
         // clang-format on
         mipsolver.numRow(), mipsolver.numRow() == 1 ? "" : "s", num_col,
         num_col == 1 ? "" : "s", num_binary, num_general_integer,
@@ -1114,8 +1114,8 @@ void HighsMipSolverData::runSetup() {
         mipsolver.numNonzero(), mipsolver.numNonzero() == 1 ? "" : "s",
         HighsInt{highs::parallel::num_threads()},
         HighsInt{static_cast<int>(highs::parallel::available_core_count())},
-        mipsolver.getMaxNumWorkers(),
-        mipsolver.getMaxNumWorkers() > 1 ? "on" : "off");
+        HighsInt{static_cast<int>(std::thread::hardware_concurrency())},
+        mipsolver.getMaxNumWorkers());
   } else {
     highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
                  "Model after restart has "
