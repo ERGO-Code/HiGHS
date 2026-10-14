@@ -76,6 +76,7 @@ HighsDomain::HighsDomain(HighsMipSolver& mipsolver) : mipsolver(&mipsolver) {
   infeasible_reason = Reason::unspecified();
   infeasible_ = false;
   dualFixProbingPropagation.domain = this;
+  dualFixProbingPropagation.mipsolver = &mipsolver;
 }
 
 void HighsDomain::addCutpool(HighsCutPool& cutpool) {

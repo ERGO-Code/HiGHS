@@ -1222,6 +1222,132 @@ TEST_CASE("test-clique-implied-equality", "[highs_test_presolve_rules]") {
   highs.resetGlobalScheduler(true);
 }
 
+TEST_CASE("issue-3364", "[highs_test_presolve_rules]") {
+  // Row i (2) is an equation with two parallel candidates in its bucket:
+  // A (0), which carries two integer singletons, and B (1), which is exactly
+  // parallel. A and B are never compared with each other: neither is an
+  // equation, so the singleton rules skip the pair. Visiting A adds row i into
+  // A, which leaves the integer inequality 2 s1 + 3 s2 <= 7, and rowPresolve
+  // on it calls storeRow(A). If the scan then went on to B, row i would be
+  // deleted with A's positions, leaving i's own nonzeros linked to a deleted
+  // row, which shrinkProblem would renumber to row -1.
+  // Rows D (3) and E (4) keep x0, x1 and x3 from being parallel columns; s1
+  // and s2 are integers whose coefficients have a fractional ratio, so they
+  // are not merged as parallel columns either.
+  //
+  //   cols: x0 x1 x3 s1 s2 x4 x5
+  //   A:  x0 + 2 x1 + 3 x3 + 2 s1 + 3 s2  <= 13
+  //   B:  x0 + 2 x1 + 3 x3                 <= 8
+  //   i:  x0 + 2 x1 + 3 x3                  = 6
+  //   D:  x0                     + x4      <= 7
+  //   E:       x1                     + x5 <= 7
+  HighsLp lp;
+  lp.num_col_ = 7;
+  lp.num_row_ = 5;
+  lp.sense_ = ObjSense::kMinimize;
+  lp.col_cost_ = {-1, -1, -1, 1, 1, -1, -1};
+  lp.col_lower_.assign(lp.num_col_, 0);
+  lp.col_upper_.assign(lp.num_col_, 10);
+  lp.integrality_ = {HighsVarType::kContinuous, HighsVarType::kContinuous,
+                     HighsVarType::kContinuous, HighsVarType::kInteger,
+                     HighsVarType::kInteger,    HighsVarType::kContinuous,
+                     HighsVarType::kContinuous};
+  lp.row_lower_ = {-kHighsInf, -kHighsInf, 6, -kHighsInf, -kHighsInf};
+  lp.row_upper_ = {13, 8, 6, 7, 7};
+  lp.a_matrix_.num_col_ = lp.num_col_;
+  lp.a_matrix_.num_row_ = lp.num_row_;
+  lp.a_matrix_.start_ = {0, 4, 8, 11, 12, 13, 14, 15};
+  lp.a_matrix_.index_ = {0, 1, 2, 3, 0, 1, 2, 4, 0, 1, 2, 0, 0, 3, 4};
+  lp.a_matrix_.value_ = {1, 1, 1, 1, 2, 2, 2, 1, 3, 3, 3, 2, 3, 1, 1};
+  lp.col_names_ = {"x0", "x1", "x3", "s1", "s2", "x4", "x5"};
+  lp.row_names_ = {"A", "B", "i", "D", "E"};
+
+  HighsOptions options;
+  options.presolve_rule_test = kPresolveRuleParallelRowsAndCols;
+  // Rows with singletons are only considered when LP presolve need not
+  // maintain a basis for postsolve
+  options.solver = kIpmString;
+  options.run_crossover = kHighsOffString;
+  options.output_flag = dev_run;
+
+  HighsTimer timer;
+  timer.start();
+
+  presolve::HighsPostsolveStack postsolve_stack;
+  postsolve_stack.initializeIndexMaps(lp.num_row_, lp.num_col_);
+
+  presolve::HPresolve presolve;
+  presolve.setInput(lp, options, -1, &timer);
+  REQUIRE(presolve.okSetupPresolveDataStructures());
+  HighsModelStatus status = presolve.run(postsolve_stack);
+  //  timer.stop();
+  REQUIRE(status == HighsModelStatus::kNotset);
+  // Every nonzero of the presolved model must belong to a row of it
+  REQUIRE(lp.a_matrix_.isColwise());
+  for (const HighsInt row : lp.a_matrix_.index_) {
+    REQUIRE(row >= 0);
+    REQUIRE(row < lp.num_row_);
+  }
+}
+
+TEST_CASE("test-parallel-rows-singleton-count", "[highs_test_presolve_rules]") {
+  // rows C (0), D (1) and i (2) are parallel except for one singleton each,
+  // and row i is an equation. adding row i into its first candidate (C or D)
+  // leaves u - s <= -10 (or t - s <= -10), which is a forcing row, so s is
+  // fixed at its upper bound and removed from row i. row i is then the
+  // equation x + 2 y = -6 without singletons, and adding it into the other
+  // candidate leaves a singleton row. this second reduction is only found if
+  // the scan continues and the number of singletons in row i is up to date.
+  // rows F (3) and G (4) keep x and y from being parallel columns.
+  //
+  //   cols: x y s u t w1 w2
+  //   C:  x + 2 y     + u             <= -6
+  //   D:  x + 2 y         + t         <= -6
+  //   i:  x + 2 y + s                  = 4
+  //   F:  x                   + w1    <= 7
+  //   G:      y                   + w2 <= 7
+  HighsLp lp;
+  lp.num_col_ = 7;
+  lp.num_row_ = 5;
+  lp.sense_ = ObjSense::kMinimize;
+  lp.col_cost_.assign(lp.num_col_, 1);
+  lp.col_lower_ = {-10, -10, 0, 0, 0, 0, 0};
+  lp.col_upper_.assign(lp.num_col_, 10);
+  lp.row_lower_ = {-kHighsInf, -kHighsInf, 4, -kHighsInf, -kHighsInf};
+  lp.row_upper_ = {-6, -6, 4, 7, 7};
+  lp.a_matrix_.num_col_ = lp.num_col_;
+  lp.a_matrix_.num_row_ = lp.num_row_;
+  lp.a_matrix_.start_ = {0, 4, 8, 9, 10, 11, 12, 13};
+  lp.a_matrix_.index_ = {0, 1, 2, 3, 0, 1, 2, 4, 2, 0, 1, 3, 4};
+  lp.a_matrix_.value_ = {1, 1, 1, 1, 2, 2, 2, 1, 1, 1, 1, 1, 1};
+
+  HighsOptions options;
+  options.presolve_rule_test = kPresolveRuleParallelRowsAndCols;
+  // rows with singletons are only considered when LP presolve need not
+  // maintain a basis for postsolve
+  options.solver = kIpmString;
+  options.run_crossover = kHighsOffString;
+  options.output_flag = dev_run;
+
+  HighsTimer timer;
+  timer.start();
+
+  presolve::HighsPostsolveStack postsolve_stack;
+  postsolve_stack.initializeIndexMaps(lp.num_row_, lp.num_col_);
+
+  presolve::HPresolve presolve;
+  presolve.setInput(lp, options, -1, &timer);
+  REQUIRE(presolve.okSetupPresolveDataStructures());
+  HighsModelStatus status = presolve.run(postsolve_stack);
+  timer.stop();
+  REQUIRE(status == HighsModelStatus::kNotset);
+  // rows C and D must have been removed, leaving rows i, F and G
+  REQUIRE(lp.num_row_ == 3);
+  REQUIRE(postsolve_stack.getOrigRowIndex(0) == 2);
+  REQUIRE(postsolve_stack.getOrigRowIndex(1) == 3);
+  REQUIRE(postsolve_stack.getOrigRowIndex(2) == 4);
+}
+
 void solveAndCheck(const std::string& message, const HighsLp& lp, Highs& h,
                    const std::string& solver, bool use_presolve,
                    const HighsInt require_presolved_model_num_col,

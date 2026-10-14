@@ -89,7 +89,7 @@ struct MatrixBase {
            doubleVectorRelEqual(v_check_value, v_true_value);
   }
 
-  void callLog(std::string message, const HighsInt id = 0) const {
+  void callLog(const std::string& message, const HighsInt id = 0) const {
     return;
     printf("%s: %d\n", message.c_str(), int(id));
   }
@@ -546,7 +546,7 @@ struct Matrix {
     return mat.vec_mat(index, value, num_nz);
   }
 
-  void report(std::string name = "") const {
+  void report(const std::string& name = "") const {
     // Check to see whether this is needed for a Hessian oracle
     assert(!this->mat.isOracle());
     if (name != "") {

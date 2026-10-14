@@ -131,7 +131,7 @@ HighsInt HighsCliqueTable::runCliqueSubsumption(
 void HighsCliqueTable::cliqueSubsumption(
     const std::vector<CliqueVar>& clique, bool& redundant,
     HighsInt& dominatingOrigin,
-    std::function<void(HighsInt)> removeCliqueCallback) {
+    const std::function<void(HighsInt)>& removeCliqueCallback) {
   // collect indices of cliques that contain variables from the
   // provided vector
   collectCliques(clique);

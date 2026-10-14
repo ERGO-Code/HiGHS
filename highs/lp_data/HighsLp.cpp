@@ -178,13 +178,13 @@ bool HighsLp::okNames() const {
   for (HighsInt iCol = 0; iCol < this->num_col_; iCol++) {
     const std::string& name = this->col_names_[iCol];
     if (HighsInt(name.length()) == 0) return false;
-    size_t space_pos = name.find(" ");
+    size_t space_pos = name.find(' ');
     if (space_pos != std::string::npos) return false;
   }
   for (HighsInt iRow = 0; iRow < this->num_row_; iRow++) {
     const std::string& name = this->row_names_[iRow];
     if (HighsInt(name.length()) == 0) return false;
-    size_t space_pos = name.find(" ");
+    size_t space_pos = name.find(' ');
     if (space_pos != std::string::npos) return false;
   }
   return true;
@@ -303,7 +303,7 @@ void HighsLp::moveBackLpAndUnapplyScaling(HighsLp& lp) {
   assert(this->is_moved_ == false);
 }
 
-void HighsLp::addColNames(const std::string name, const HighsInt num_new_col) {
+void HighsLp::addColNames(const std::string& name, const HighsInt num_new_col) {
   // Don't add names if there are no columns being added
   if (this->num_col_ == 0) return;
   HighsInt col_names_size = this->col_names_.size();
@@ -315,7 +315,7 @@ void HighsLp::addColNames(const std::string name, const HighsInt num_new_col) {
   // appendColsToLpVectors
 }
 
-void HighsLp::addRowNames(const std::string name, const HighsInt num_new_row) {
+void HighsLp::addRowNames(const std::string& name, const HighsInt num_new_row) {
   // Don't add names if there are no rows being added
   if (this->num_row_ == 0) return;
   HighsInt row_names_size = this->row_names_.size();

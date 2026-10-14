@@ -22,8 +22,6 @@
 
 HighsMipSolverData::HighsMipSolverData(HighsMipSolver& mipsolver)
     : mipsolver(mipsolver),
-      lps(1, HighsLpRelaxation(mipsolver)),
-      domains(1, HighsDomain(mipsolver)),
       pseudocosts(1),
       parallel_lock(false),
       heuristics(mipsolver),
@@ -75,6 +73,8 @@ HighsMipSolverData::HighsMipSolverData(HighsMipSolver& mipsolver)
       upper_limit(kHighsInf),
       optimality_limit(kHighsInf),
       debugSolution(mipsolver) {
+  lps.emplace_back(mipsolver);
+  domains.emplace_back(mipsolver);
   conflictpools.emplace_back(5 * mipsolver.options_mip_->mip_pool_age_limit,
                              mipsolver.options_mip_->mip_pool_soft_limit);
   cutpools.emplace_back(mipsolver.numCol(),
@@ -2761,7 +2761,7 @@ void HighsMipSolverData::setCallbackDataOut(
 
 bool HighsMipSolverData::interruptFromCallbackWithData(
     const int callback_type, const double mipsolver_objective_value,
-    const std::string message) const {
+    const std::string& message) const {
   if (!mipsolver.callback_->callbackActive(callback_type)) return false;
   assert(!mipsolver.submip);
   setCallbackDataOut(mipsolver_objective_value);
@@ -2856,7 +2856,8 @@ void HighsMipSolverData::terminatorReport() const {
 }
 
 void HighsMipSolverData::reportOriginalPresolvedCol(
-    const HighsInt original_col, const std::vector<double> presolved_solution) {
+    const HighsInt original_col,
+    const std::vector<double>& presolved_solution) {
   if (original_col < 0 || original_col >= mipsolver.orig_model_->num_col_)
     return;
   // Find this column in the presolved model
@@ -3052,7 +3053,7 @@ HighsModelStatus HighsTerminator::terminationStatus() const {
   return HighsModelStatus::kNotset;
 }
 
-void HighsTerminator::report(const HighsLogOptions log_options) const {
+void HighsTerminator::report(const HighsLogOptions& log_options) const {
   highsLogUser(log_options, HighsLogType::kInfo, "\nTerminator:        ");
   for (HighsInt instance = 0; instance < this->num_instance; instance++)
     highsLogUser(log_options, HighsLogType::kInfo, " %20d",

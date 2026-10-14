@@ -994,7 +994,7 @@ TEST_CASE("issue-2204", "[highs_test_mip_solver]") {
   solve(highs, kHighsOnString, require_model_status, optimal_objective);
 }
 
-TEST_CASE("ZI Round and Shifting Heuristics", "[highs_test_mip_solver]") {
+TEST_CASE("zi-round-and-shifting-heuristics", "[highs_test_mip_solver]") {
   std::string model_file = std::string(HIGHS_DIR) + "/check/instances/rgn.mps";
 
   Highs highs;
@@ -2332,4 +2332,143 @@ TEST_CASE("implied-integer-bound-rounding", "[highs_test_mip_solver]") {
     REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
     solve(highs, presolve, HighsModelStatus::kOptimal, optimal_objective);
   }
+}
+
+TEST_CASE("implied-row-dual-bound-invalidation", "[highs_test_mip_solver]") {
+  HighsLp lp;
+  lp.num_col_ = 6;
+  lp.num_row_ = 2;
+  lp.col_cost_ = {0, 0, 0, 0, 4, -2};
+  lp.col_lower_ = {-kHighsInf, -5, 0, -5, 0, 0};
+  lp.col_upper_ = {-10, kHighsInf, kHighsInf, 5, 7, 2};
+  lp.row_lower_ = {-13, 11};
+  lp.row_upper_ = {kHighsInf, 11};
+  lp.integrality_ = {HighsVarType::kInteger, HighsVarType::kInteger,
+                     HighsVarType::kInteger, HighsVarType::kContinuous,
+                     HighsVarType::kInteger, HighsVarType::kInteger};
+  lp.a_matrix_.format_ = MatrixFormat::kColwise;
+  lp.a_matrix_.start_ = {0, 2, 4, 5, 6, 8, 10};
+  lp.a_matrix_.index_ = {0, 1, 0, 1, 1, 1, 0, 1, 0, 1};
+  lp.a_matrix_.value_ = {-3, 1, -1, -1, -2, -1, -8, 1, -1, 10};
+
+  for (const std::string& presolve : {kHighsOnString, kHighsOffString}) {
+    Highs highs;
+    highs.setOptionValue("output_flag", dev_run);
+    REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
+    solve(highs, presolve, HighsModelStatus::kOptimal, -4.0);
+  }
+}
+
+TEST_CASE("implied-equation-unbounded", "[highs_test_mip_solver]") {
+  // the MIP is unbounded, since x2 can be decreased and x1 increased without
+  // bound. with MIP presolve off, the root LP relaxation is still presolved,
+  // and the implied bounds on the row duals then point towards infinite row
+  // bounds. such rows must not be identified as implied equations
+  HighsLp lp;
+  lp.num_col_ = 8;
+  lp.num_row_ = 2;
+  lp.col_cost_ = {-4, -1, 0, 0, 0, 0, -3, -4};
+  lp.col_lower_ = {-kHighsInf, 0, -kHighsInf, 0, 4, 0, 0, -10};
+  lp.col_upper_ = {5, kHighsInf, 3, 1, 9, 4, 1, 10};
+  lp.row_lower_ = {-19, -1};
+  lp.row_upper_ = {kHighsInf, kHighsInf};
+  lp.integrality_ = {HighsVarType::kInteger,        HighsVarType::kInteger,
+                     HighsVarType::kInteger,        HighsVarType::kInteger,
+                     HighsVarType::kSemiContinuous, HighsVarType::kInteger,
+                     HighsVarType::kInteger,        HighsVarType::kContinuous};
+  lp.a_matrix_.format_ = MatrixFormat::kColwise;
+  lp.a_matrix_.start_ = {0, 1, 2, 3, 4, 6, 8, 9, 11};
+  lp.a_matrix_.index_ = {0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 1};
+  lp.a_matrix_.value_ = {7, -9, -1, -3, -1, -3, -3, 1, 1, 2, -8};
+
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
+  for (const std::string& presolve : {kHighsOffString, kHighsOnString}) {
+    highs.clearSolver();
+    REQUIRE(highs.setOptionValue("presolve", presolve) == HighsStatus::kOk);
+    REQUIRE(highs.run() == HighsStatus::kOk);
+    const HighsModelStatus model_status = highs.getModelStatus();
+    REQUIRE((model_status == HighsModelStatus::kUnbounded ||
+             model_status == HighsModelStatus::kUnboundedOrInfeasible));
+  }
+  highs.resetGlobalScheduler(true);
+}
+
+TEST_CASE("issue-3389", "[highs_test_mip_solver]") {
+  // tol and coeff are powers of 2, so all data below is exact. with y = 1, the
+  // rows give 1 <= x <= 2 - 1 / coeff = 2 - tol / 2, and x = 2 - tol / 2 is
+  // integral within the MIP feasibility tolerance
+  const double tol = 1.0 / (1 << 20);
+  const double coeff = 2 / tol;
+  HighsLp lp;
+  lp.num_col_ = 2;
+  lp.num_row_ = 4;
+  lp.sense_ = ObjSense::kMaximize;
+  lp.col_cost_ = {1, 0};
+  lp.col_lower_ = {0, 0};
+  lp.col_upper_ = {3, 3};
+  lp.row_lower_ = {-0.5 * coeff, -kHighsInf, 1, -kHighsInf};
+  lp.row_upper_ = {kHighsInf, 0.5 * coeff - 1, kHighsInf, 1};
+  lp.integrality_ = {HighsVarType::kInteger, HighsVarType::kInteger};
+  lp.a_matrix_.format_ = MatrixFormat::kColwise;
+  lp.a_matrix_.start_ = {0, 2, 6};
+  lp.a_matrix_.index_ = {0, 1, 0, 1, 2, 3};
+  lp.a_matrix_.value_ = {-coeff,          -coeff, 1.5 * coeff - 1,
+                         1.5 * coeff - 1, 1,      1};
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  REQUIRE(highs.setOptionValue("mip_feasibility_tolerance", tol) ==
+          HighsStatus::kOk);
+  REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
+  for (const std::string& presolve : {kHighsOffString, kHighsOnString}) {
+    highs.clearSolver();
+    REQUIRE(highs.setOptionValue("presolve", presolve) == HighsStatus::kOk);
+    REQUIRE(highs.run() == HighsStatus::kOk);
+    REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
+    const double objective = highs.getInfo().objective_function_value;
+    REQUIRE((std::fabs(objective - 1) < 1e-8 ||
+             std::fabs(objective - (2 - 0.5 * tol)) < 1e-8));
+  }
+  highs.resetGlobalScheduler(true);
+}
+
+TEST_CASE("issue-3389-binding-row", "[highs_test_mip_solver]") {
+  // tol and coeff are powers of 2, so all data below is exact. with y = 1,
+  // row 0 gives x <= 2 - tol / 2 and row 1 gives x <= 2 - tol / 8. the
+  // smallest worst-case bound on x comes from row 0 (coefficient 1), but row 1
+  // (coefficient coeff) is the binding row: each row's bound has to be rounded
+  // with its own tolerance. x = 2 - tol / 2 is integral within the MIP
+  // feasibility tolerance
+  const double tol = 1.0 / (1 << 20);
+  const double coeff = 2 / tol;
+  HighsLp lp;
+  lp.num_col_ = 2;
+  lp.num_row_ = 4;
+  lp.sense_ = ObjSense::kMaximize;
+  lp.col_cost_ = {1, 0};
+  lp.col_lower_ = {0, 0};
+  lp.col_upper_ = {3, 3};
+  lp.row_lower_ = {-(1 - 0.5 * tol), -coeff * (1 - 0.125 * tol), 1, -kHighsInf};
+  lp.row_upper_ = {kHighsInf, kHighsInf, kHighsInf, 1};
+  lp.integrality_ = {HighsVarType::kInteger, HighsVarType::kInteger};
+  lp.a_matrix_.format_ = MatrixFormat::kColwise;
+  lp.a_matrix_.start_ = {0, 2, 6};
+  lp.a_matrix_.index_ = {0, 1, 0, 1, 2, 3};
+  lp.a_matrix_.value_ = {-1, -coeff, 1, coeff, 1, 1};
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  REQUIRE(highs.setOptionValue("mip_feasibility_tolerance", tol) ==
+          HighsStatus::kOk);
+  REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
+  for (const std::string& presolve : {kHighsOffString, kHighsOnString}) {
+    highs.clearSolver();
+    REQUIRE(highs.setOptionValue("presolve", presolve) == HighsStatus::kOk);
+    REQUIRE(highs.run() == HighsStatus::kOk);
+    REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
+    const double objective = highs.getInfo().objective_function_value;
+    REQUIRE((std::fabs(objective - 1) < 1e-8 ||
+             std::fabs(objective - (2 - 0.5 * tol)) < 1e-8));
+  }
+  highs.resetGlobalScheduler(true);
 }
