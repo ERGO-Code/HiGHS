@@ -417,7 +417,7 @@ Token Lexer::lex() {
     if (next == '=' || next == '<' || next == '>') token.len = 2;
   } else {
     // Only control characters can get here
-    char shown[8];
+    char shown[16];
     snprintf(shown, sizeof(shown), "0x%02X", c);
     throw ParseError{{std::string("unexpected control character ") + shown,
                       pos_, 1, line_,
