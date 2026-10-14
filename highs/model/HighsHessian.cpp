@@ -13,6 +13,7 @@
 #include <cassert>
 #include <cstdio>
 
+#include "model/HighsHessianUtils.h"
 #include "util/HighsMatrixUtils.h"
 #include "util/HighsRandom.h"
 
@@ -314,12 +315,6 @@ HighsCDouble HighsHessian::objectiveCDoubleValue(
   return objective_function_value;
 }
 
-bool HighsHessian::empty() const {
-  if (dim_ <= 0) return true;
-  if (this->isOracle() && this->oracle_.dim_ <= 0) return true;
-  return false;
-}
-
 bool HighsHessian::isDiagonal() const {
   if (this->isOracle()) {
     assert(111 == 888);
@@ -421,6 +416,10 @@ HighsStatus HighsHessian::trimDimensions(const HighsLogOptions& log_options) {
   return trimMatrixDimensions(log_options, "HighsHessian", this->name_,
                               this->dim_, partitioned, this->start_,
                               hessian_p_end, this->index_, this->value_);
+}
+
+HighsStatus HighsHessian::assess(const HighsOptions& options) {
+  return assessHessian(*this, options);
 }
 
 HighsStatus HighsHessian::checkOracle(const HighsLogOptions& log_options,

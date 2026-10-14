@@ -2615,53 +2615,59 @@ TEST_CASE("add-extreme-values", "[highs_test_lp_modification]") {
   checkDimensions();
 
   // Legal row with small value adds one nonzero
-  REQUIRE(h.addRow(0, 1, 2, p_index, p_one_small_value) == HighsStatus::kWarning);
+  REQUIRE(h.addRow(0, 1, 2, p_index, p_one_small_value) ==
+          HighsStatus::kWarning);
   num_row++;
   num_nz++;
   checkDimensions();
-  
+
   // Legal row with illegal bounds isn't added
-  REQUIRE(h.addRow(inf, inf, 2, p_index, p_two_ok_value) == HighsStatus::kError);
+  REQUIRE(h.addRow(inf, inf, 2, p_index, p_two_ok_value) ==
+          HighsStatus::kError);
   checkDimensions();
-  
+
   // Legal row with inconsistent bounds is added with warning
   REQUIRE(h.addRow(1, 0, 2, p_index, p_two_ok_value) == HighsStatus::kWarning);
   num_row++;
   num_nz += 2;
   checkDimensions();
-  
+
   // Legal row with ok value adds two nonzeros
   REQUIRE(h.addRow(0, 1, 2, p_index, p_two_ok_value) == HighsStatus::kOk);
   num_row++;
   num_nz += 2;
   checkDimensions();
-  
+
   // Illegal col isn't added
-  REQUIRE(h.addCol(0, 0, 1, 2, p_index, p_one_large_value) == HighsStatus::kError);
+  REQUIRE(h.addCol(0, 0, 1, 2, p_index, p_one_large_value) ==
+          HighsStatus::kError);
   checkDimensions();
 
   // Legal col with small value adds one nonzero
-  REQUIRE(h.addCol(0, 0, 1, 2, p_index, p_one_small_value) == HighsStatus::kWarning);
+  REQUIRE(h.addCol(0, 0, 1, 2, p_index, p_one_small_value) ==
+          HighsStatus::kWarning);
   num_col++;
   num_nz++;
   checkDimensions();
-  
+
   // Legal col with illegal bounds isn't added
-  REQUIRE(h.addCol(0, inf, inf, 2, p_index, p_two_ok_value) == HighsStatus::kError);
+  REQUIRE(h.addCol(0, inf, inf, 2, p_index, p_two_ok_value) ==
+          HighsStatus::kError);
   checkDimensions();
-  
+
   // Legal col with inconsistent bounds is added with warning
-  REQUIRE(h.addCol(0, 1, 0, 2, p_index, p_two_ok_value) == HighsStatus::kWarning);
+  REQUIRE(h.addCol(0, 1, 0, 2, p_index, p_two_ok_value) ==
+          HighsStatus::kWarning);
   num_col++;
   num_nz += 2;
   checkDimensions();
-  
+
   // Legal col with ok value adds two nonzeros
   REQUIRE(h.addCol(0, 0, 1, 2, p_index, p_two_ok_value) == HighsStatus::kOk);
   num_col++;
   num_nz += 2;
   checkDimensions();
-  
+
   REQUIRE(h.run() == HighsStatus::kOk);
   REQUIRE(h.getModelStatus() == HighsModelStatus::kInfeasible);
 

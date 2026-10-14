@@ -79,7 +79,6 @@ class HighsSparseMatrix {
                      const std::string* row_names = nullptr);
   void assessSmallValues(const HighsLogOptions& log_options,
                          const double small_matrix_value);
-  bool hasLargeValue(const double large_matrix_value);
   void considerColScaling(const HighsInt max_scale_factor_exponent,
                           double* col_scale);
   void considerRowScaling(const HighsInt max_scale_factor_exponent,

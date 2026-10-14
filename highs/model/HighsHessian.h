@@ -49,7 +49,8 @@ class HighsHessian {
                const double large_matrix_value) const;
   HighsInt dim() const;
   HighsInt numNz() const;
-  bool empty() const;
+  bool empty() const { return isEmpty(); }
+  bool isEmpty() const { return this->dim() <= 0; }
   bool isDiagonal() const;
   double diag(HighsInt i) const;
   double diagonal(HighsInt i) const;
@@ -59,6 +60,7 @@ class HighsHessian {
   void print(const std::string& message = "") const;
   bool legalDimensions(const HighsLogOptions& log_options) const;
   HighsStatus trimDimensions(const HighsLogOptions& log_options);
+  HighsStatus assess(const HighsOptions& options);
 };
 
 #endif

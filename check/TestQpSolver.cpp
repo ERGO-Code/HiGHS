@@ -1626,3 +1626,80 @@ TEST_CASE("test-qp-atwood", "[qpsolver]") {
   }
   h.resetGlobalScheduler(true);
 }
+
+TEST_CASE("test-assess-model", "[qpsolver]") {
+  HighsModel model;
+  model.lp_.num_col_ = 1;
+  model.lp_.num_row_ = 0;
+  model.lp_.col_cost_ = {0};
+  model.lp_.col_lower_ = {1};
+  model.lp_.col_upper_ = {2};
+  model.lp_.a_matrix_.num_col_ = 1;
+  model.lp_.a_matrix_.num_row_ = 0;
+  model.lp_.a_matrix_.start_ = {0, 0};
+  model.hessian_.dim_ = 2;
+  model.hessian_.start_ = {0, 1, 1};
+  model.hessian_.index_ = {0};
+  model.hessian_.value_ = {1};
+  HighsOptions options;
+  options.output_flag = dev_run;
+  options.setLogOptions();
+  // LP and Hessian are valid individually, but Hessian dimension
+  // cannot exceed the LP dimension
+  REQUIRE(model.lp_.assess(options) == HighsStatus::kOk);
+  REQUIRE(model.hessian_.assess(options) == HighsStatus::kOk);
+  REQUIRE(model.assess(options) == HighsStatus::kError);
+
+  Highs h;
+  h.passOptions(options);
+  HighsHessian empty_hessian;
+  HighsModel empty_model;
+  REQUIRE(h.passModel(model) == HighsStatus::kError);
+  REQUIRE((h.getModel() == empty_model));
+
+  // Passing the Hessian without an LP yields an error
+  REQUIRE(h.passHessian(model.hessian_) == HighsStatus::kError);
+  REQUIRE((h.getModel() == empty_model));
+
+  // Passing the LP and then the Hessian yields an error
+  REQUIRE(h.passModel(model.lp_) == HighsStatus::kOk);
+  REQUIRE(h.passHessian(model.hessian_) == HighsStatus::kError);
+  // Hence the model Hessian is empty
+  REQUIRE((h.getModel().hessian_ == empty_hessian));
+  h.clearModel();
+
+  // Add a couple of columns so that the LP dimension exceeds the
+  // Hessian dimension
+  model.lp_.num_col_ = 3;
+  model.lp_.col_cost_ = {0, 1, 1};
+  model.lp_.col_lower_ = {1, -1, -2};
+  model.lp_.col_upper_ = {2, 1, 1};
+  model.lp_.a_matrix_.num_col_ = 3;
+  model.lp_.a_matrix_.num_row_ = 0;
+  model.lp_.a_matrix_.start_ = {0, 0, 0, 0};
+
+  auto CheckSolutionAndObjective = [&]() {
+    REQUIRE(std::fabs(h.getSolution().col_value[0] - 1.0) < 1e-8);
+    REQUIRE(std::fabs(h.getSolution().col_value[1] + 1.0) < 1e-8);
+    REQUIRE(std::fabs(h.getSolution().col_value[2] + 2.0) < 1e-8);
+    REQUIRE(std::fabs(h.getObjectiveValue() + 2.5) < 1e-8);
+  };
+
+  // LP and Hessian are valid individually, and LP dimension
+  // can exceed the Hessian dimension
+  REQUIRE(model.lp_.assess(options) == HighsStatus::kOk);
+  REQUIRE(model.hessian_.assess(options) == HighsStatus::kOk);
+  REQUIRE(model.assess(options) == HighsStatus::kOk);
+
+  // Passing the LP and then the Hessian is OK
+  REQUIRE(h.passModel(model.lp_) == HighsStatus::kOk);
+  REQUIRE(h.passHessian(model.hessian_) == HighsStatus::kOk);
+  REQUIRE(h.run() == HighsStatus::kOk);
+  CheckSolutionAndObjective();
+
+  REQUIRE(h.passModel(model) == HighsStatus::kOk);
+  REQUIRE(h.run() == HighsStatus::kOk);
+  CheckSolutionAndObjective();
+
+  h.resetGlobalScheduler(true);
+}

@@ -3,7 +3,7 @@
 #include "SpecialLps.h"
 #include "catch.hpp"
 
-const bool dev_run = false;
+const bool dev_run = true;//false;
 
 void solve(Highs& highs, std::string presolve, std::string solver,
            const HighsModelStatus require_model_status,
@@ -646,7 +646,7 @@ void unconstrained(Highs& highs) {
   REQUIRE(highs.run() == HighsStatus::kOk);
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
   REQUIRE(highs.getObjectiveValue() == -6);
-  REQUIRE(highs.changeColBounds(0, 4, 1) == HighsStatus::kWarning);
+  REQUIRE(highs.changeColBounds(0, 4, 1) == HighsStatus::kOk);
   REQUIRE(highs.setBasis() == HighsStatus::kOk);
   REQUIRE(highs.run() == HighsStatus::kOk);
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kInfeasible);

@@ -3721,7 +3721,9 @@ void Highs::formIllConditioningLp1(HighsLp& ill_conditioning_lp,
   ill_conditioning_matrix.num_row_ = ill_conditioning_lp.num_row_;
 }
 
-bool Highs::infeasibleBoundsOk() {
+// ToDo: this method shouldn't change the incumbent model irrevocably,
+// since this loses user data
+bool Highs::processedBoundsFindsInfeasibility() {
   const HighsLogOptions& log_options = this->options_.log_options;
   HighsLp& lp = this->model_.lp_;
 
@@ -3825,6 +3827,9 @@ bool Highs::infeasibleBoundsOk() {
     // bounds being propagated to the relaxation, this can prevent a
     // dual ray from being constructed
   }
+  // Set performed_inward_integer_rounding = false since it's still
+  // checked in infeasibleBoundOk, and may be true from last pass with
+  // integer variable
   performed_inward_integer_rounding = false;
   for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
     if (lp.row_lower_[iRow] > lp.row_upper_[iRow])

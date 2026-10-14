@@ -167,6 +167,7 @@ HighsStatus assessCosts(const HighsOptions& options, const HighsInt ml_col_os,
                  num_infinite_cost, highsIntToPlural(num_infinite_cost).c_str(),
                  infinite_cost, highsIntToBe(num_infinite_cost).c_str());
   }
+  assert(return_status == HighsStatus::kOk);
   return return_status;
 }
 
@@ -260,13 +261,16 @@ HighsStatus assessBounds(const HighsOptions& options, const std::string& type,
         legalLowerUpperBound = true;
     }
     if (!legalLowerUpperBound) {
-      // Leave inconsistent bounds to be used to deduce infeasibility
-      highsLogUser(options.log_options, HighsLogType::kWarning,
+      // Leave inconsistent bounds to be used to deduce
+      // infeasibility. Cannot lissue a warning, as they are not
+      // removed (since the infeasibility is trivially discovered when
+      // there is an attempt to solve the model) and the call to
+      // Highs::model_.assess in Highs::run cannot yield a warning.
+      highsLogUser(options.log_options, HighsLogType::kInfo,
                    "%3s  %12" HIGHSINT_FORMAT
                    "%s has inconsistent bounds [%12g, %12g]\n",
                    type.c_str(), ml_ix, possible_name(ml_ix).c_str(),
                    lower[usr_ix], upper[usr_ix]);
-      warning_found = true;
     }
     // Check that the lower bound is not as much as +Infinity
     bool legalLowerBound = lower[usr_ix] < infinite_bound;
@@ -308,6 +312,7 @@ HighsStatus assessBounds(const HighsOptions& options, const std::string& type,
                  infinite_bound);
   }
 
+  assert(!warning_found);
   if (error_found)
     return_status = HighsStatus::kError;
   else if (warning_found)

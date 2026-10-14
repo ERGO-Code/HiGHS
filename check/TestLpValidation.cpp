@@ -377,9 +377,9 @@ TEST_CASE("LP-validation", "[highs_test_lp_validation]") {
   // for columns 9 and 10.
 
   // LP is found to be unbounded by presolve, but is primal
-  // infeasible. With infeasibleBoundsOk check in solveLp,
-  // infeasiblility is identified before reaching a solver, so
-  // presolve isn't called
+  // infeasible. With processedBoundsFindsInfeasibility check in
+  // Highs::calledOptimizeModel(), infeasiblility is identified before
+  // reaching a solver, so presolve isn't called
   HighsStatus run_status;
   HighsModelStatus model_status;
   run_status = highs.run();

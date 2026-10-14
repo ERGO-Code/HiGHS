@@ -450,9 +450,10 @@ HighsStatus Highs::passModel(HighsModel model) {
   // This is the "master" Highs::passModel, in that all the others
   // (and readModel) eventually call it
   //
+  HighsLogOptions& log_options = options_.log_options;
   // Possibly analyse the LP data
   if (kHighsAnalysisLevelModelData & options_.highs_analysis_level)
-    analyseLp(options_.log_options, model.lp_);
+    analyseLp(log_options, model.lp_);
   HighsStatus return_status = HighsStatus::kOk;
   HighsLp& lp = model_.lp_;
   HighsHessian& hessian = model_.hessian_;
@@ -464,7 +465,7 @@ HighsStatus Highs::passModel(HighsModel model) {
 
   auto clearModelAndReturnError = [&]() {
     // Clear the incumbent model and any associated data
-    clearModel();
+    this->clearModel();
     return HighsStatus::kError;
   };
 
@@ -473,7 +474,7 @@ HighsStatus Highs::passModel(HighsModel model) {
     // rows. Clearly the matrix is empty, so may have no orientation
     // or starts assigned. HiGHS assumes that such a model will have
     // null starts, so make it column-wise
-    highsLogUser(options_.log_options, HighsLogType::kInfo,
+    highsLogUser(log_options, HighsLogType::kInfo,
                  "Model has either no columns or no rows, so ignoring user "
                  "constraint matrix data and initialising empty matrix\n");
     lp.a_matrix_.setEmptyColwise(lp.num_col_);
@@ -493,26 +494,31 @@ HighsStatus Highs::passModel(HighsModel model) {
   lp.resetScale();
   // Check that the LP array dimensions are legal (ie at least the
   // size required by num_col_ and num_row_)
-  if (!lp.legalDimensions("passModel", options_.log_options))
+  if (!lp.legalDimensions("passModel", log_options))
     return clearModelAndReturnError();
   // Check that the Hessian format is valid
   if (!hessian.formatOk()) return clearModelAndReturnError();
   // Check validity of the LP, normalising its values
-  return_status = interpretCallStatus(
-      options_.log_options, assessLp(lp, options_), return_status, "assessLp");
+  return_status = interpretCallStatus(log_options, assessLp(lp, options_),
+                                      return_status, "assessLp");
   if (return_status == HighsStatus::kError) return clearModelAndReturnError();
   // Now legality of matrix is established, ensure that it is
   // column-wise
   lp.ensureColwise();
+  // First check raw consistency of LP and Hessian (column dimensions)
+  if (this->model_.lpHessianDimensionsCompatible(log_options) ==
+      HighsStatus::kError)
+    return clearModelAndReturnError();
+
   // Check validity of any Hessian, normalising its entries
-  return_status = interpretCallStatus(options_.log_options,
-                                      assessHessian(hessian, options_),
-                                      return_status, "assessHessian");
+  return_status =
+      interpretCallStatus(log_options, assessHessian(hessian, options_),
+                          return_status, "assessHessian");
   if (return_status == HighsStatus::kError) return clearModelAndReturnError();
   if (hessian.dim_) {
     // Clear any zero Hessian
     if (hessian.numNz() == 0) {
-      highsLogUser(options_.log_options, HighsLogType::kInfo,
+      highsLogUser(log_options, HighsLogType::kInfo,
                    "Hessian has dimension %" HIGHSINT_FORMAT
                    " but no nonzeros, so is ignored\n",
                    hessian.dim_);
@@ -530,8 +536,8 @@ HighsStatus Highs::passModel(HighsModel model) {
 
   // Clear solver status, solution, basis and info associated with any
   // previous model
-  return_status = interpretCallStatus(options_.log_options, clearSolver(),
-                                      return_status, "clearSolver");
+  return_status = interpretCallStatus(log_options, clearSolver(), return_status,
+                                      "clearSolver");
   return returnFromHighs(return_status);
 }
 
@@ -668,13 +674,25 @@ HighsStatus Highs::passModel(const HighsInt num_col, const HighsInt num_row,
 HighsStatus Highs::passHessian(HighsHessian hessian_) {
   this->logHeader();
   HighsStatus return_status = HighsStatus::kOk;
-  HighsHessian& hessian = model_.hessian_;
+  HighsHessian& hessian = this->model_.hessian_;
   hessian = std::move(hessian_);
+
+  auto clearHessianAndReturnError = [&]() {
+    // Clear the incumbent hessian and any associated data
+    hessian.clear();
+    return HighsStatus::kError;
+  };
+
+  // First check raw consistency of LP and Hessian (column dimensions)
+  if (this->model_.lpHessianDimensionsCompatible(options_.log_options) ==
+      HighsStatus::kError)
+    return clearHessianAndReturnError();
+
   // Check validity of any Hessian, normalising its entries
   return_status = interpretCallStatus(options_.log_options,
                                       assessHessian(hessian, options_),
                                       return_status, "assessHessian");
-  if (return_status == HighsStatus::kError) return return_status;
+  if (return_status == HighsStatus::kError) return clearHessianAndReturnError();
   if (hessian.dim_) {
     // Clear any zero Hessian
     if (hessian.numNz() == 0) {
@@ -1208,6 +1226,14 @@ HighsStatus Highs::run() {
   assessExcessiveObjectiveBoundScaling(this->options_, this->model_,
                                        user_scale_data);
 
+  status = model_.assess(options_);
+  if (status != HighsStatus::kOk) {
+    highsLogUser(options_.log_options, HighsLogType::kError,
+                 "Highs::run: model_.assess returns status %s\n",
+                 this->highsStatusToString(status).c_str());
+    return HighsStatus::kError;
+  }
+
   // Optimize the model in the Highs instance
   status = optimizeHighs();
   if (status == HighsStatus::kError) return status;
@@ -1423,24 +1449,21 @@ HighsStatus Highs::calledOptimizeModel() {
   }
   // Return immediately if the model is infeasible due to inconsistent
   // bounds, modifying any bounds with tiny infeasibilities
-  if (!infeasibleBoundsOk()) {
+  if (!processedBoundsFindsInfeasibility()) {
     setHighsModelStatusAndClearSolutionAndBasis(HighsModelStatus::kInfeasible);
     return returnFromOptimizeModel(return_status, undo_mods);
   }
-  // Ensure that the LP (and any simplex LP) has the matrix column-wise
+  // Ensure that the HighsLp has the matrix column-wise
   model_.lp_.ensureColwise();
-  // Ensure that the matrix has no large values
-  if (model_.lp_.a_matrix_.hasLargeValue(options_.large_matrix_value)) {
-    highsLogUser(options_.log_options, HighsLogType::kError,
-                 "Cannot solve a model with a |value| exceeding %g in "
-                 "constraint matrix\n",
-                 options_.large_matrix_value);
-    return returnFromOptimizeModel(HighsStatus::kError, undo_mods);
-  }
+  // Shouldn't have to check validity of the model since this is done
+  // when it is loaded or modified
+  assert((model_.assess(options_) == HighsStatus::kOk) &&
+         "model_.assess not HighsStatus::kOk");
+
   if (options_.highs_debug_level > min_highs_debug_level) {
     // Shouldn't have to check validity of the LP since this is done when it is
     // loaded or modified
-    call_status = assessLp(model_.lp_, options_);
+    call_status = model_.lp_.assess(options_);
     // If any errors have been found or normalisation carried out,
     // call_status will be kError or kWarning, so only valid return is OK.
     assert(call_status == HighsStatus::kOk);
