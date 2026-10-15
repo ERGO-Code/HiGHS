@@ -8,17 +8,23 @@ namespace highs {
 namespace folding {
 
 Folder::Folder(const HighsModel& model)
-    : model_{model},
-      lp_{model.lp_},
-      row_colour_(lp_.num_row_),
-      col_colour_(lp_.num_col_),
+    : lp_{model.lp_},
       A_{lp_.a_matrix_},
       At_{A_.buildOppositeFormat()},
-      Q_{model.hessian_.toSquare()} {
+      Q_{model.hessian_.toSquare()},
+      row_colour_(lp_.num_row_),
+      col_colour_(lp_.num_col_) {
   assert(A_.isColwise());
   assert(At_.isRowwise());
   assert(Q_.format_ == HessianFormat::kSquare);
   assert(Q_.dim_ == A_.num_col_);
+}
+
+double Folder::getRowFraction() const {
+  return static_cast<double>(num_row_colours_) / lp_.num_row_;
+}
+double Folder::getColFraction() const {
+  return static_cast<double>(num_col_colours_) / lp_.num_col_;
 }
 
 template <typename Data>

@@ -53,15 +53,13 @@ namespace folding {
 // problem has a unique optimal solution (for LPs).
 
 class Folder {
-  const HighsModel& model_;
   const HighsLp& lp_;
-
-  std::vector<HighsInt> row_colour_;
-  std::vector<HighsInt> col_colour_;
-
   const HighsSparseMatrix& A_;
   const HighsSparseMatrix At_;
   const HighsHessian Q_;
+
+  std::vector<HighsInt> row_colour_;
+  std::vector<HighsInt> col_colour_;
 
   HighsInt initial_row_colours_{};
   HighsInt initial_col_colours_{};
@@ -103,6 +101,9 @@ class Folder {
   void print() const;
 
   bool isPartitionCorrect() const;
+
+  double getRowFraction() const;
+  double getColFraction() const;
 };
 
 }  // namespace folding
