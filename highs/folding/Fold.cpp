@@ -1,7 +1,7 @@
 #include "Fold.h"
 
 #include "DoubleQuantizer.h"
-#include "ipm/hipo/auxiliary/Auxiliary.h"
+#include "util/HighsTimer.h"
 
 namespace highs {
 
@@ -37,7 +37,7 @@ HighsInt Folder::findInitialColour(HighsInt n, HighsInt* colour,
 }
 
 void Folder::findInitialColour() {
-  hipo::Clock clock;
+  HighsTimer timer;
 
   initial_row_colours_ =
       findInitialColour<RowQuantizedData>(lp_.num_row_, row_colour_.data(), 0);
@@ -45,17 +45,17 @@ void Folder::findInitialColour() {
   initial_col_colours_ =
       findInitialColour<ColQuantizedData>(lp_.num_col_, col_colour_.data(), 0);
 
-  initial_time_ = clock.stop();
+  initial_time_ = timer.read();
 }
 
 void Folder::foldModel() {
-  hipo::Clock clock;
-  ColourRefinement CR(A_, At_, Q_, row_colour_, col_colour_);
-  ctor_time_ = clock.stop();
+  HighsTimer timer;
 
-  clock.start();
+  ColourRefinement CR(A_, At_, Q_, row_colour_, col_colour_);
+  ctor_time_ = timer.read();
+
   HighsInt status = CR.run();
-  run_time_ = clock.stop();
+  run_time_ = timer.read() - ctor_time_;
 
   if (status) {
     fold_error_ = 1;
@@ -75,11 +75,11 @@ void Folder::foldModel() {
 }
 
 HighsInt Folder::run() {
-  hipo::Clock clock;
+  HighsTimer timer;
   findInitialColour();
   foldModel();
   assert(fold_error_ || isPartitionCorrect());
-  fold_time_ = clock.stop();
+  fold_time_ = timer.read();
 
   return fold_error_;
 }
@@ -103,7 +103,7 @@ HighsModel Folder::getFoldedModel() const {
   // col colours. Entry (i, j) is equal to the sum of all the entries of Q in
   // rows of colour i and columns of colour j.
 
-  hipo::Clock clock;
+  HighsTimer timer;
 
   if (fold_error_) return HighsModel{};
 
@@ -288,7 +288,7 @@ HighsModel Folder::getFoldedModel() const {
     }
   }
 
-  folded_lp_time_ = clock.stop();
+  folded_lp_time_ = timer.read();
 
   return folded_model;
 }
