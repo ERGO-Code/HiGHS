@@ -18,6 +18,7 @@ Folder::Folder(const HighsModel& model)
   assert(A_.isColwise());
   assert(At_.isRowwise());
   assert(Q_.format_ == HessianFormat::kSquare);
+  assert(Q_.dim_ == A_.num_col_);
 }
 
 template <typename Data>
@@ -363,10 +364,14 @@ bool Folder::isPartitionCorrect() const {
     return true;
   };
 
-  // check that partition of A is equitable
-  auto is_matrix_partition_correct =
-      [](const HighsSparseMatrix& M, const std::vector<HighsInt>& major_colours,
-         HighsInt num_major_colours, const std::vector<HighsInt>& minor_colours,
+  // Check that a partition is equitable: all the nodes of a major colour have
+  // the same sum of weights into each minor colour. The matrix is given by its
+  // vectors, so that it can be a HighsSparseMatrix or a HighsHessian.
+  auto is_partition_equitable =
+      [](const std::vector<HighsInt>& start, const std::vector<HighsInt>& index,
+         const std::vector<double>& value,
+         const std::vector<HighsInt>& major_colours, HighsInt num_major_colours,
+         const std::vector<HighsInt>& minor_colours,
          HighsInt num_minor_colours) -> bool {
     ColourClasses classes(major_colours, num_major_colours);
 
@@ -382,16 +387,14 @@ bool Folder::isPartitionCorrect() const {
       for (HighsInt i = 0; i < classes.size(major_colour); ++i) {
         const HighsInt major = classes.node(major_colour, i);
 
-        for (HighsInt el = M.start_[major]; el < M.start_[major + 1]; ++el) {
-          const HighsInt minor = M.index_[el];
-          const HighsInt minor_colour = minor_colours[minor];
+        for (HighsInt el = start[major]; el < start[major + 1]; ++el) {
+          const HighsInt minor_colour = minor_colours[index[el]];
 
           if (!is_touched[minor_colour]) {
             is_touched[minor_colour] = true;
             touched.push_back(minor_colour);
           }
-
-          sum[minor_colour] += M.value_[el];
+          sum[minor_colour] += value[el];
         }
 
         if (i == 0) {
@@ -435,10 +438,16 @@ bool Folder::isPartitionCorrect() const {
                                    num_col_colours_) ||
       !is_vector_partition_correct(lp_.col_upper_, col_colour_,
                                    num_col_colours_) ||
-      !is_matrix_partition_correct(At_, row_colour_, num_row_colours_,
-                                   col_colour_, num_col_colours_) ||
-      !is_matrix_partition_correct(A_, col_colour_, num_col_colours_,
-                                   row_colour_, num_row_colours_))
+      !is_partition_equitable(At_.start_, At_.index_, At_.value_, row_colour_,
+                              num_row_colours_, col_colour_,
+                              num_col_colours_) ||
+      !is_partition_equitable(A_.start_, A_.index_, A_.value_, col_colour_,
+                              num_col_colours_, row_colour_, num_row_colours_))
+    return false;
+
+  if (!Q_.empty() &&
+      !is_partition_equitable(Q_.start_, Q_.index_, Q_.value_, col_colour_,
+                              num_col_colours_, col_colour_, num_col_colours_))
     return false;
 
   return true;
