@@ -254,11 +254,11 @@ HighsModel Folder::getFoldedModel() const {
       }
 
       for (HighsInt c_colour : col_used) {
-        const double val = accumulator[c_colour];
+        const double val = accumulator[c_colour] * col_colours_size_[r_colour];
 
         const bool skip =
-            // Skip sums that are quantized to zero
-            DoubleQuantizer::bucket(val) == 0.0 ||
+            // Skip sums that are quantized to zero, if not on the diagonal
+            (r_colour != c_colour && DoubleQuantizer::bucket(val) == 0.0) ||
             // Skip sums corresponding to upper triangle.
             // Qf is built by cols, so r_colour corresponds to the column number
             // in Qf and c_colour to the row number in Qf.
@@ -266,7 +266,7 @@ HighsModel Folder::getFoldedModel() const {
 
         if (!skip) {
           Qf.index_.push_back(c_colour);
-          Qf.value_.push_back(val * col_colours_size_[r_colour]);
+          Qf.value_.push_back(val);
         }
 
         accumulator[c_colour] = 0.0;

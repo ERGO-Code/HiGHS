@@ -72,8 +72,9 @@ ColourRefinement::ColourRefinement(const HighsSparseMatrix& A,
     : A_{A}, At_{At}, Q_{Q}, rows_(row_colour), cols_(col_colour) {
   assert(A.isColwise());
   assert(At_.isRowwise());
-  assert(Q_.format_ == HessianFormat::kSquare);
+  assert(Q_.empty() || Q_.format_ == HessianFormat::kSquare);
   assert(rows_.n == A.num_row_ && cols_.n == A.num_col_);
+  assert(Q_.empty() || Q_.dim_ == A.num_col_);
 }
 
 void ColourRefinement::computeColourSums(HighsInt refining_colour, Side& src,
@@ -195,6 +196,8 @@ void ColourRefinement::prepareNextIter(Side& side) { side.touched.clear(); }
 //
 void ColourRefinement::refine(Side& src, Side& dst, const HighsSparseMatrix& M,
                               const HighsHessian* Q) {
+  assert(!Q || &src == &cols_);
+
   const HighsInt refining_colour = src.to_refine.pop();
   computeColourSums(refining_colour, src, dst, M, Q);
 
@@ -208,11 +211,13 @@ void ColourRefinement::refine(Side& src, Side& dst, const HighsSparseMatrix& M,
 }
 
 HighsInt ColourRefinement::run() {
+  const HighsHessian* Q_ptr = Q_.empty() ? nullptr : &Q_;
+
   while (!rows_.to_refine.empty() || !cols_.to_refine.empty()) {
     if (rows_.peekLength() < cols_.peekLength())
       refine(rows_, cols_, At_, nullptr);
     else
-      refine(cols_, rows_, A_, Q_.empty() ? nullptr : &Q_);
+      refine(cols_, rows_, A_, Q_ptr);
 
     if (rows_.coloursUsed() > rows_.n * kFractionStop &&
         cols_.coloursUsed() > cols_.n * kFractionStop) {
