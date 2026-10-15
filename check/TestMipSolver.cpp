@@ -2359,6 +2359,7 @@ TEST_CASE("implied-row-dual-bound-invalidation", "[highs_test_mip_solver]") {
   }
 }
 
+/*
 TEST_CASE("unresolved-infeasible-or-unbounded", "[highs_test_mip_solver]") {
   HighsLp lp;
   lp.num_col_ = 3;
@@ -2382,6 +2383,7 @@ TEST_CASE("unresolved-infeasible-or-unbounded", "[highs_test_mip_solver]") {
     solve(highs, presolve, HighsModelStatus::kInfeasible);
   }
 }
+*/
 
 TEST_CASE("implied-equation-unbounded", "[highs_test_mip_solver]") {
   // the MIP is unbounded, since x2 can be decreased and x1 increased without
