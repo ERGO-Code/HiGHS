@@ -257,6 +257,12 @@ TEST_CASE("test-folding-paper-qp", "[highs-folding]") {
 
 TEST_CASE("test-folding", "[highs-folding]") {
   std::string filename =
-      std::string(HIGHS_DIR) + "/check/instances/folding_example.mps";
+      std::string(HIGHS_DIR) + "/check/instances/folding_lp.mps";
+  runFoldingTest(filename);
+}
+
+TEST_CASE("test-folding-qp", "[highs-folding]") {
+  std::string filename =
+      std::string(HIGHS_DIR) + "/check/instances/folding_qp.mps";
   runFoldingTest(filename);
 }

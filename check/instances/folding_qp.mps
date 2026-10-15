@@ -1,0 +1,4104 @@
+* Transportation QP
+* 16 suppliers of 3 types, 14 customers of 3 types
+* 30 rows, 224 columns, 3360 entries in the lower triangle of Q
+* Expected colour refinement result: 6 row colours, 9 column colours
+NAME          TRANSPORTQP
+ROWS
+ N  COST
+ L  S00
+ L  S01
+ L  S02
+ L  S03
+ L  S04
+ L  S05
+ L  S06
+ L  S07
+ L  S08
+ L  S09
+ L  S10
+ L  S11
+ L  S12
+ L  S13
+ L  S14
+ L  S15
+ G  D00
+ G  D01
+ G  D02
+ G  D03
+ G  D04
+ G  D05
+ G  D06
+ G  D07
+ G  D08
+ G  D09
+ G  D10
+ G  D11
+ G  D12
+ G  D13
+COLUMNS
+    X00_00    COST                 5   S00                  1
+    X00_00    D00                  1
+    X00_01    COST                 7   S00                  1
+    X00_01    D01                  1
+    X00_02    COST                 5   S00                  1
+    X00_02    D02                  1
+    X00_03    COST                 7   S00                  1
+    X00_03    D03                  1
+    X00_04    COST                 7   S00                  1
+    X00_04    D04                  1
+    X00_05    COST                 3   S00                  1
+    X00_05    D05                  1
+    X00_06    COST                 3   S00                  1
+    X00_06    D06                  1
+    X00_07    COST                 3   S00                  1
+    X00_07    D07                  1
+    X00_08    COST                 7   S00                  1
+    X00_08    D08                  1
+    X00_09    COST                 5   S00                  1
+    X00_09    D09                  1
+    X00_10    COST                 3   S00                  1
+    X00_10    D10                  1
+    X00_11    COST                 5   S00                  1
+    X00_11    D11                  1
+    X00_12    COST                 3   S00                  1
+    X00_12    D12                  1
+    X00_13    COST                 7   S00                  1
+    X00_13    D13                  1
+    X01_00    COST                 5   S01                  1
+    X01_00    D00                  1
+    X01_01    COST                 7   S01                  1
+    X01_01    D01                  1
+    X01_02    COST                 5   S01                  1
+    X01_02    D02                  1
+    X01_03    COST                 7   S01                  1
+    X01_03    D03                  1
+    X01_04    COST                 7   S01                  1
+    X01_04    D04                  1
+    X01_05    COST                 3   S01                  1
+    X01_05    D05                  1
+    X01_06    COST                 3   S01                  1
+    X01_06    D06                  1
+    X01_07    COST                 3   S01                  1
+    X01_07    D07                  1
+    X01_08    COST                 7   S01                  1
+    X01_08    D08                  1
+    X01_09    COST                 5   S01                  1
+    X01_09    D09                  1
+    X01_10    COST                 3   S01                  1
+    X01_10    D10                  1
+    X01_11    COST                 5   S01                  1
+    X01_11    D11                  1
+    X01_12    COST                 3   S01                  1
+    X01_12    D12                  1
+    X01_13    COST                 7   S01                  1
+    X01_13    D13                  1
+    X02_00    COST                 5   S02                  1
+    X02_00    D00                  1
+    X02_01    COST                 7   S02                  1
+    X02_01    D01                  1
+    X02_02    COST                 5   S02                  1
+    X02_02    D02                  1
+    X02_03    COST                 7   S02                  1
+    X02_03    D03                  1
+    X02_04    COST                 7   S02                  1
+    X02_04    D04                  1
+    X02_05    COST                 3   S02                  1
+    X02_05    D05                  1
+    X02_06    COST                 3   S02                  1
+    X02_06    D06                  1
+    X02_07    COST                 3   S02                  1
+    X02_07    D07                  1
+    X02_08    COST                 7   S02                  1
+    X02_08    D08                  1
+    X02_09    COST                 5   S02                  1
+    X02_09    D09                  1
+    X02_10    COST                 3   S02                  1
+    X02_10    D10                  1
+    X02_11    COST                 5   S02                  1
+    X02_11    D11                  1
+    X02_12    COST                 3   S02                  1
+    X02_12    D12                  1
+    X02_13    COST                 7   S02                  1
+    X02_13    D13                  1
+    X03_00    COST                 5   S03                  1
+    X03_00    D00                  1
+    X03_01    COST                 7   S03                  1
+    X03_01    D01                  1
+    X03_02    COST                 5   S03                  1
+    X03_02    D02                  1
+    X03_03    COST                 7   S03                  1
+    X03_03    D03                  1
+    X03_04    COST                 7   S03                  1
+    X03_04    D04                  1
+    X03_05    COST                 3   S03                  1
+    X03_05    D05                  1
+    X03_06    COST                 3   S03                  1
+    X03_06    D06                  1
+    X03_07    COST                 3   S03                  1
+    X03_07    D07                  1
+    X03_08    COST                 7   S03                  1
+    X03_08    D08                  1
+    X03_09    COST                 5   S03                  1
+    X03_09    D09                  1
+    X03_10    COST                 3   S03                  1
+    X03_10    D10                  1
+    X03_11    COST                 5   S03                  1
+    X03_11    D11                  1
+    X03_12    COST                 3   S03                  1
+    X03_12    D12                  1
+    X03_13    COST                 7   S03                  1
+    X03_13    D13                  1
+    X04_00    COST                 8   S04                  1
+    X04_00    D00                  1
+    X04_01    COST                 2   S04                  1
+    X04_01    D01                  1
+    X04_02    COST                 8   S04                  1
+    X04_02    D02                  1
+    X04_03    COST                 2   S04                  1
+    X04_03    D03                  1
+    X04_04    COST                 2   S04                  1
+    X04_04    D04                  1
+    X04_05    COST                 4   S04                  1
+    X04_05    D05                  1
+    X04_06    COST                 4   S04                  1
+    X04_06    D06                  1
+    X04_07    COST                 4   S04                  1
+    X04_07    D07                  1
+    X04_08    COST                 2   S04                  1
+    X04_08    D08                  1
+    X04_09    COST                 8   S04                  1
+    X04_09    D09                  1
+    X04_10    COST                 4   S04                  1
+    X04_10    D10                  1
+    X04_11    COST                 8   S04                  1
+    X04_11    D11                  1
+    X04_12    COST                 4   S04                  1
+    X04_12    D12                  1
+    X04_13    COST                 2   S04                  1
+    X04_13    D13                  1
+    X05_00    COST                 4   S05                  1
+    X05_00    D00                  1
+    X05_01    COST                 9   S05                  1
+    X05_01    D01                  1
+    X05_02    COST                 4   S05                  1
+    X05_02    D02                  1
+    X05_03    COST                 9   S05                  1
+    X05_03    D03                  1
+    X05_04    COST                 9   S05                  1
+    X05_04    D04                  1
+    X05_05    COST                 6   S05                  1
+    X05_05    D05                  1
+    X05_06    COST                 6   S05                  1
+    X05_06    D06                  1
+    X05_07    COST                 6   S05                  1
+    X05_07    D07                  1
+    X05_08    COST                 9   S05                  1
+    X05_08    D08                  1
+    X05_09    COST                 4   S05                  1
+    X05_09    D09                  1
+    X05_10    COST                 6   S05                  1
+    X05_10    D10                  1
+    X05_11    COST                 4   S05                  1
+    X05_11    D11                  1
+    X05_12    COST                 6   S05                  1
+    X05_12    D12                  1
+    X05_13    COST                 9   S05                  1
+    X05_13    D13                  1
+    X06_00    COST                 4   S06                  1
+    X06_00    D00                  1
+    X06_01    COST                 9   S06                  1
+    X06_01    D01                  1
+    X06_02    COST                 4   S06                  1
+    X06_02    D02                  1
+    X06_03    COST                 9   S06                  1
+    X06_03    D03                  1
+    X06_04    COST                 9   S06                  1
+    X06_04    D04                  1
+    X06_05    COST                 6   S06                  1
+    X06_05    D05                  1
+    X06_06    COST                 6   S06                  1
+    X06_06    D06                  1
+    X06_07    COST                 6   S06                  1
+    X06_07    D07                  1
+    X06_08    COST                 9   S06                  1
+    X06_08    D08                  1
+    X06_09    COST                 4   S06                  1
+    X06_09    D09                  1
+    X06_10    COST                 6   S06                  1
+    X06_10    D10                  1
+    X06_11    COST                 4   S06                  1
+    X06_11    D11                  1
+    X06_12    COST                 6   S06                  1
+    X06_12    D12                  1
+    X06_13    COST                 9   S06                  1
+    X06_13    D13                  1
+    X07_00    COST                 5   S07                  1
+    X07_00    D00                  1
+    X07_01    COST                 7   S07                  1
+    X07_01    D01                  1
+    X07_02    COST                 5   S07                  1
+    X07_02    D02                  1
+    X07_03    COST                 7   S07                  1
+    X07_03    D03                  1
+    X07_04    COST                 7   S07                  1
+    X07_04    D04                  1
+    X07_05    COST                 3   S07                  1
+    X07_05    D05                  1
+    X07_06    COST                 3   S07                  1
+    X07_06    D06                  1
+    X07_07    COST                 3   S07                  1
+    X07_07    D07                  1
+    X07_08    COST                 7   S07                  1
+    X07_08    D08                  1
+    X07_09    COST                 5   S07                  1
+    X07_09    D09                  1
+    X07_10    COST                 3   S07                  1
+    X07_10    D10                  1
+    X07_11    COST                 5   S07                  1
+    X07_11    D11                  1
+    X07_12    COST                 3   S07                  1
+    X07_12    D12                  1
+    X07_13    COST                 7   S07                  1
+    X07_13    D13                  1
+    X08_00    COST                 8   S08                  1
+    X08_00    D00                  1
+    X08_01    COST                 2   S08                  1
+    X08_01    D01                  1
+    X08_02    COST                 8   S08                  1
+    X08_02    D02                  1
+    X08_03    COST                 2   S08                  1
+    X08_03    D03                  1
+    X08_04    COST                 2   S08                  1
+    X08_04    D04                  1
+    X08_05    COST                 4   S08                  1
+    X08_05    D05                  1
+    X08_06    COST                 4   S08                  1
+    X08_06    D06                  1
+    X08_07    COST                 4   S08                  1
+    X08_07    D07                  1
+    X08_08    COST                 2   S08                  1
+    X08_08    D08                  1
+    X08_09    COST                 8   S08                  1
+    X08_09    D09                  1
+    X08_10    COST                 4   S08                  1
+    X08_10    D10                  1
+    X08_11    COST                 8   S08                  1
+    X08_11    D11                  1
+    X08_12    COST                 4   S08                  1
+    X08_12    D12                  1
+    X08_13    COST                 2   S08                  1
+    X08_13    D13                  1
+    X09_00    COST                 4   S09                  1
+    X09_00    D00                  1
+    X09_01    COST                 9   S09                  1
+    X09_01    D01                  1
+    X09_02    COST                 4   S09                  1
+    X09_02    D02                  1
+    X09_03    COST                 9   S09                  1
+    X09_03    D03                  1
+    X09_04    COST                 9   S09                  1
+    X09_04    D04                  1
+    X09_05    COST                 6   S09                  1
+    X09_05    D05                  1
+    X09_06    COST                 6   S09                  1
+    X09_06    D06                  1
+    X09_07    COST                 6   S09                  1
+    X09_07    D07                  1
+    X09_08    COST                 9   S09                  1
+    X09_08    D08                  1
+    X09_09    COST                 4   S09                  1
+    X09_09    D09                  1
+    X09_10    COST                 6   S09                  1
+    X09_10    D10                  1
+    X09_11    COST                 4   S09                  1
+    X09_11    D11                  1
+    X09_12    COST                 6   S09                  1
+    X09_12    D12                  1
+    X09_13    COST                 9   S09                  1
+    X09_13    D13                  1
+    X10_00    COST                 4   S10                  1
+    X10_00    D00                  1
+    X10_01    COST                 9   S10                  1
+    X10_01    D01                  1
+    X10_02    COST                 4   S10                  1
+    X10_02    D02                  1
+    X10_03    COST                 9   S10                  1
+    X10_03    D03                  1
+    X10_04    COST                 9   S10                  1
+    X10_04    D04                  1
+    X10_05    COST                 6   S10                  1
+    X10_05    D05                  1
+    X10_06    COST                 6   S10                  1
+    X10_06    D06                  1
+    X10_07    COST                 6   S10                  1
+    X10_07    D07                  1
+    X10_08    COST                 9   S10                  1
+    X10_08    D08                  1
+    X10_09    COST                 4   S10                  1
+    X10_09    D09                  1
+    X10_10    COST                 6   S10                  1
+    X10_10    D10                  1
+    X10_11    COST                 4   S10                  1
+    X10_11    D11                  1
+    X10_12    COST                 6   S10                  1
+    X10_12    D12                  1
+    X10_13    COST                 9   S10                  1
+    X10_13    D13                  1
+    X11_00    COST                 4   S11                  1
+    X11_00    D00                  1
+    X11_01    COST                 9   S11                  1
+    X11_01    D01                  1
+    X11_02    COST                 4   S11                  1
+    X11_02    D02                  1
+    X11_03    COST                 9   S11                  1
+    X11_03    D03                  1
+    X11_04    COST                 9   S11                  1
+    X11_04    D04                  1
+    X11_05    COST                 6   S11                  1
+    X11_05    D05                  1
+    X11_06    COST                 6   S11                  1
+    X11_06    D06                  1
+    X11_07    COST                 6   S11                  1
+    X11_07    D07                  1
+    X11_08    COST                 9   S11                  1
+    X11_08    D08                  1
+    X11_09    COST                 4   S11                  1
+    X11_09    D09                  1
+    X11_10    COST                 6   S11                  1
+    X11_10    D10                  1
+    X11_11    COST                 4   S11                  1
+    X11_11    D11                  1
+    X11_12    COST                 6   S11                  1
+    X11_12    D12                  1
+    X11_13    COST                 9   S11                  1
+    X11_13    D13                  1
+    X12_00    COST                 8   S12                  1
+    X12_00    D00                  1
+    X12_01    COST                 2   S12                  1
+    X12_01    D01                  1
+    X12_02    COST                 8   S12                  1
+    X12_02    D02                  1
+    X12_03    COST                 2   S12                  1
+    X12_03    D03                  1
+    X12_04    COST                 2   S12                  1
+    X12_04    D04                  1
+    X12_05    COST                 4   S12                  1
+    X12_05    D05                  1
+    X12_06    COST                 4   S12                  1
+    X12_06    D06                  1
+    X12_07    COST                 4   S12                  1
+    X12_07    D07                  1
+    X12_08    COST                 2   S12                  1
+    X12_08    D08                  1
+    X12_09    COST                 8   S12                  1
+    X12_09    D09                  1
+    X12_10    COST                 4   S12                  1
+    X12_10    D10                  1
+    X12_11    COST                 8   S12                  1
+    X12_11    D11                  1
+    X12_12    COST                 4   S12                  1
+    X12_12    D12                  1
+    X12_13    COST                 2   S12                  1
+    X12_13    D13                  1
+    X13_00    COST                 4   S13                  1
+    X13_00    D00                  1
+    X13_01    COST                 9   S13                  1
+    X13_01    D01                  1
+    X13_02    COST                 4   S13                  1
+    X13_02    D02                  1
+    X13_03    COST                 9   S13                  1
+    X13_03    D03                  1
+    X13_04    COST                 9   S13                  1
+    X13_04    D04                  1
+    X13_05    COST                 6   S13                  1
+    X13_05    D05                  1
+    X13_06    COST                 6   S13                  1
+    X13_06    D06                  1
+    X13_07    COST                 6   S13                  1
+    X13_07    D07                  1
+    X13_08    COST                 9   S13                  1
+    X13_08    D08                  1
+    X13_09    COST                 4   S13                  1
+    X13_09    D09                  1
+    X13_10    COST                 6   S13                  1
+    X13_10    D10                  1
+    X13_11    COST                 4   S13                  1
+    X13_11    D11                  1
+    X13_12    COST                 6   S13                  1
+    X13_12    D12                  1
+    X13_13    COST                 9   S13                  1
+    X13_13    D13                  1
+    X14_00    COST                 5   S14                  1
+    X14_00    D00                  1
+    X14_01    COST                 7   S14                  1
+    X14_01    D01                  1
+    X14_02    COST                 5   S14                  1
+    X14_02    D02                  1
+    X14_03    COST                 7   S14                  1
+    X14_03    D03                  1
+    X14_04    COST                 7   S14                  1
+    X14_04    D04                  1
+    X14_05    COST                 3   S14                  1
+    X14_05    D05                  1
+    X14_06    COST                 3   S14                  1
+    X14_06    D06                  1
+    X14_07    COST                 3   S14                  1
+    X14_07    D07                  1
+    X14_08    COST                 7   S14                  1
+    X14_08    D08                  1
+    X14_09    COST                 5   S14                  1
+    X14_09    D09                  1
+    X14_10    COST                 3   S14                  1
+    X14_10    D10                  1
+    X14_11    COST                 5   S14                  1
+    X14_11    D11                  1
+    X14_12    COST                 3   S14                  1
+    X14_12    D12                  1
+    X14_13    COST                 7   S14                  1
+    X14_13    D13                  1
+    X15_00    COST                 8   S15                  1
+    X15_00    D00                  1
+    X15_01    COST                 2   S15                  1
+    X15_01    D01                  1
+    X15_02    COST                 8   S15                  1
+    X15_02    D02                  1
+    X15_03    COST                 2   S15                  1
+    X15_03    D03                  1
+    X15_04    COST                 2   S15                  1
+    X15_04    D04                  1
+    X15_05    COST                 4   S15                  1
+    X15_05    D05                  1
+    X15_06    COST                 4   S15                  1
+    X15_06    D06                  1
+    X15_07    COST                 4   S15                  1
+    X15_07    D07                  1
+    X15_08    COST                 2   S15                  1
+    X15_08    D08                  1
+    X15_09    COST                 8   S15                  1
+    X15_09    D09                  1
+    X15_10    COST                 4   S15                  1
+    X15_10    D10                  1
+    X15_11    COST                 8   S15                  1
+    X15_11    D11                  1
+    X15_12    COST                 4   S15                  1
+    X15_12    D12                  1
+    X15_13    COST                 2   S15                  1
+    X15_13    D13                  1
+RHS
+    RHS       S00                 30
+    RHS       S01                 30
+    RHS       S02                 30
+    RHS       S03                 30
+    RHS       S04                 45
+    RHS       S05                 20
+    RHS       S06                 20
+    RHS       S07                 30
+    RHS       S08                 45
+    RHS       S09                 20
+    RHS       S10                 20
+    RHS       S11                 20
+    RHS       S12                 45
+    RHS       S13                 20
+    RHS       S14                 30
+    RHS       S15                 45
+    RHS       D00                 20
+    RHS       D01                 30
+    RHS       D02                 20
+    RHS       D03                 30
+    RHS       D04                 30
+    RHS       D05                 25
+    RHS       D06                 25
+    RHS       D07                 25
+    RHS       D08                 30
+    RHS       D09                 20
+    RHS       D10                 25
+    RHS       D11                 20
+    RHS       D12                 25
+    RHS       D13                 30
+BOUNDS
+ UP BND       X00_00               5
+ UP BND       X00_01               9
+ UP BND       X00_02               5
+ UP BND       X00_03               9
+ UP BND       X00_04               9
+ UP BND       X00_05               4
+ UP BND       X00_06               4
+ UP BND       X00_07               4
+ UP BND       X00_08               9
+ UP BND       X00_09               5
+ UP BND       X00_10               4
+ UP BND       X00_11               5
+ UP BND       X00_12               4
+ UP BND       X00_13               9
+ UP BND       X01_00               5
+ UP BND       X01_01               9
+ UP BND       X01_02               5
+ UP BND       X01_03               9
+ UP BND       X01_04               9
+ UP BND       X01_05               4
+ UP BND       X01_06               4
+ UP BND       X01_07               4
+ UP BND       X01_08               9
+ UP BND       X01_09               5
+ UP BND       X01_10               4
+ UP BND       X01_11               5
+ UP BND       X01_12               4
+ UP BND       X01_13               9
+ UP BND       X02_00               5
+ UP BND       X02_01               9
+ UP BND       X02_02               5
+ UP BND       X02_03               9
+ UP BND       X02_04               9
+ UP BND       X02_05               4
+ UP BND       X02_06               4
+ UP BND       X02_07               4
+ UP BND       X02_08               9
+ UP BND       X02_09               5
+ UP BND       X02_10               4
+ UP BND       X02_11               5
+ UP BND       X02_12               4
+ UP BND       X02_13               9
+ UP BND       X03_00               5
+ UP BND       X03_01               9
+ UP BND       X03_02               5
+ UP BND       X03_03               9
+ UP BND       X03_04               9
+ UP BND       X03_05               4
+ UP BND       X03_06               4
+ UP BND       X03_07               4
+ UP BND       X03_08               9
+ UP BND       X03_09               5
+ UP BND       X03_10               4
+ UP BND       X03_11               5
+ UP BND       X03_12               4
+ UP BND       X03_13               9
+ UP BND       X04_00               3
+ UP BND       X04_01               2
+ UP BND       X04_02               3
+ UP BND       X04_03               2
+ UP BND       X04_04               2
+ UP BND       X04_05               7
+ UP BND       X04_06               7
+ UP BND       X04_07               7
+ UP BND       X04_08               2
+ UP BND       X04_09               3
+ UP BND       X04_10               7
+ UP BND       X04_11               3
+ UP BND       X04_12               7
+ UP BND       X04_13               2
+ UP BND       X05_00               3
+ UP BND       X05_01               8
+ UP BND       X05_02               3
+ UP BND       X05_03               8
+ UP BND       X05_04               8
+ UP BND       X05_05               6
+ UP BND       X05_06               6
+ UP BND       X05_07               6
+ UP BND       X05_08               8
+ UP BND       X05_09               3
+ UP BND       X05_10               6
+ UP BND       X05_11               3
+ UP BND       X05_12               6
+ UP BND       X05_13               8
+ UP BND       X06_00               3
+ UP BND       X06_01               8
+ UP BND       X06_02               3
+ UP BND       X06_03               8
+ UP BND       X06_04               8
+ UP BND       X06_05               6
+ UP BND       X06_06               6
+ UP BND       X06_07               6
+ UP BND       X06_08               8
+ UP BND       X06_09               3
+ UP BND       X06_10               6
+ UP BND       X06_11               3
+ UP BND       X06_12               6
+ UP BND       X06_13               8
+ UP BND       X07_00               5
+ UP BND       X07_01               9
+ UP BND       X07_02               5
+ UP BND       X07_03               9
+ UP BND       X07_04               9
+ UP BND       X07_05               4
+ UP BND       X07_06               4
+ UP BND       X07_07               4
+ UP BND       X07_08               9
+ UP BND       X07_09               5
+ UP BND       X07_10               4
+ UP BND       X07_11               5
+ UP BND       X07_12               4
+ UP BND       X07_13               9
+ UP BND       X08_00               3
+ UP BND       X08_01               2
+ UP BND       X08_02               3
+ UP BND       X08_03               2
+ UP BND       X08_04               2
+ UP BND       X08_05               7
+ UP BND       X08_06               7
+ UP BND       X08_07               7
+ UP BND       X08_08               2
+ UP BND       X08_09               3
+ UP BND       X08_10               7
+ UP BND       X08_11               3
+ UP BND       X08_12               7
+ UP BND       X08_13               2
+ UP BND       X09_00               3
+ UP BND       X09_01               8
+ UP BND       X09_02               3
+ UP BND       X09_03               8
+ UP BND       X09_04               8
+ UP BND       X09_05               6
+ UP BND       X09_06               6
+ UP BND       X09_07               6
+ UP BND       X09_08               8
+ UP BND       X09_09               3
+ UP BND       X09_10               6
+ UP BND       X09_11               3
+ UP BND       X09_12               6
+ UP BND       X09_13               8
+ UP BND       X10_00               3
+ UP BND       X10_01               8
+ UP BND       X10_02               3
+ UP BND       X10_03               8
+ UP BND       X10_04               8
+ UP BND       X10_05               6
+ UP BND       X10_06               6
+ UP BND       X10_07               6
+ UP BND       X10_08               8
+ UP BND       X10_09               3
+ UP BND       X10_10               6
+ UP BND       X10_11               3
+ UP BND       X10_12               6
+ UP BND       X10_13               8
+ UP BND       X11_00               3
+ UP BND       X11_01               8
+ UP BND       X11_02               3
+ UP BND       X11_03               8
+ UP BND       X11_04               8
+ UP BND       X11_05               6
+ UP BND       X11_06               6
+ UP BND       X11_07               6
+ UP BND       X11_08               8
+ UP BND       X11_09               3
+ UP BND       X11_10               6
+ UP BND       X11_11               3
+ UP BND       X11_12               6
+ UP BND       X11_13               8
+ UP BND       X12_00               3
+ UP BND       X12_01               2
+ UP BND       X12_02               3
+ UP BND       X12_03               2
+ UP BND       X12_04               2
+ UP BND       X12_05               7
+ UP BND       X12_06               7
+ UP BND       X12_07               7
+ UP BND       X12_08               2
+ UP BND       X12_09               3
+ UP BND       X12_10               7
+ UP BND       X12_11               3
+ UP BND       X12_12               7
+ UP BND       X12_13               2
+ UP BND       X13_00               3
+ UP BND       X13_01               8
+ UP BND       X13_02               3
+ UP BND       X13_03               8
+ UP BND       X13_04               8
+ UP BND       X13_05               6
+ UP BND       X13_06               6
+ UP BND       X13_07               6
+ UP BND       X13_08               8
+ UP BND       X13_09               3
+ UP BND       X13_10               6
+ UP BND       X13_11               3
+ UP BND       X13_12               6
+ UP BND       X13_13               8
+ UP BND       X14_00               5
+ UP BND       X14_01               9
+ UP BND       X14_02               5
+ UP BND       X14_03               9
+ UP BND       X14_04               9
+ UP BND       X14_05               4
+ UP BND       X14_06               4
+ UP BND       X14_07               4
+ UP BND       X14_08               9
+ UP BND       X14_09               5
+ UP BND       X14_10               4
+ UP BND       X14_11               5
+ UP BND       X14_12               4
+ UP BND       X14_13               9
+ UP BND       X15_00               3
+ UP BND       X15_01               2
+ UP BND       X15_02               3
+ UP BND       X15_03               2
+ UP BND       X15_04               2
+ UP BND       X15_05               7
+ UP BND       X15_06               7
+ UP BND       X15_07               7
+ UP BND       X15_08               2
+ UP BND       X15_09               3
+ UP BND       X15_10               7
+ UP BND       X15_11               3
+ UP BND       X15_12               7
+ UP BND       X15_13               2
+QUADOBJ
+    X00_00    X00_00             1.3
+    X00_01    X00_00               1
+    X00_01    X00_01             1.3
+    X00_02    X00_00               1
+    X00_02    X00_01               1
+    X00_02    X00_02             1.3
+    X00_03    X00_00               1
+    X00_03    X00_01               1
+    X00_03    X00_02               1
+    X00_03    X00_03             1.3
+    X00_04    X00_00               1
+    X00_04    X00_01               1
+    X00_04    X00_02               1
+    X00_04    X00_03               1
+    X00_04    X00_04             1.3
+    X00_05    X00_00               1
+    X00_05    X00_01               1
+    X00_05    X00_02               1
+    X00_05    X00_03               1
+    X00_05    X00_04               1
+    X00_05    X00_05             1.3
+    X00_06    X00_00               1
+    X00_06    X00_01               1
+    X00_06    X00_02               1
+    X00_06    X00_03               1
+    X00_06    X00_04               1
+    X00_06    X00_05               1
+    X00_06    X00_06             1.3
+    X00_07    X00_00               1
+    X00_07    X00_01               1
+    X00_07    X00_02               1
+    X00_07    X00_03               1
+    X00_07    X00_04               1
+    X00_07    X00_05               1
+    X00_07    X00_06               1
+    X00_07    X00_07             1.3
+    X00_08    X00_00               1
+    X00_08    X00_01               1
+    X00_08    X00_02               1
+    X00_08    X00_03               1
+    X00_08    X00_04               1
+    X00_08    X00_05               1
+    X00_08    X00_06               1
+    X00_08    X00_07               1
+    X00_08    X00_08             1.3
+    X00_09    X00_00               1
+    X00_09    X00_01               1
+    X00_09    X00_02               1
+    X00_09    X00_03               1
+    X00_09    X00_04               1
+    X00_09    X00_05               1
+    X00_09    X00_06               1
+    X00_09    X00_07               1
+    X00_09    X00_08               1
+    X00_09    X00_09             1.3
+    X00_10    X00_00               1
+    X00_10    X00_01               1
+    X00_10    X00_02               1
+    X00_10    X00_03               1
+    X00_10    X00_04               1
+    X00_10    X00_05               1
+    X00_10    X00_06               1
+    X00_10    X00_07               1
+    X00_10    X00_08               1
+    X00_10    X00_09               1
+    X00_10    X00_10             1.3
+    X00_11    X00_00               1
+    X00_11    X00_01               1
+    X00_11    X00_02               1
+    X00_11    X00_03               1
+    X00_11    X00_04               1
+    X00_11    X00_05               1
+    X00_11    X00_06               1
+    X00_11    X00_07               1
+    X00_11    X00_08               1
+    X00_11    X00_09               1
+    X00_11    X00_10               1
+    X00_11    X00_11             1.3
+    X00_12    X00_00               1
+    X00_12    X00_01               1
+    X00_12    X00_02               1
+    X00_12    X00_03               1
+    X00_12    X00_04               1
+    X00_12    X00_05               1
+    X00_12    X00_06               1
+    X00_12    X00_07               1
+    X00_12    X00_08               1
+    X00_12    X00_09               1
+    X00_12    X00_10               1
+    X00_12    X00_11               1
+    X00_12    X00_12             1.3
+    X00_13    X00_00               1
+    X00_13    X00_01               1
+    X00_13    X00_02               1
+    X00_13    X00_03               1
+    X00_13    X00_04               1
+    X00_13    X00_05               1
+    X00_13    X00_06               1
+    X00_13    X00_07               1
+    X00_13    X00_08               1
+    X00_13    X00_09               1
+    X00_13    X00_10               1
+    X00_13    X00_11               1
+    X00_13    X00_12               1
+    X00_13    X00_13             1.3
+    X01_00    X00_00             0.3
+    X01_00    X01_00             1.3
+    X01_01    X00_01             0.3
+    X01_01    X01_00               1
+    X01_01    X01_01             1.3
+    X01_02    X00_02             0.3
+    X01_02    X01_00               1
+    X01_02    X01_01               1
+    X01_02    X01_02             1.3
+    X01_03    X00_03             0.3
+    X01_03    X01_00               1
+    X01_03    X01_01               1
+    X01_03    X01_02               1
+    X01_03    X01_03             1.3
+    X01_04    X00_04             0.3
+    X01_04    X01_00               1
+    X01_04    X01_01               1
+    X01_04    X01_02               1
+    X01_04    X01_03               1
+    X01_04    X01_04             1.3
+    X01_05    X00_05             0.3
+    X01_05    X01_00               1
+    X01_05    X01_01               1
+    X01_05    X01_02               1
+    X01_05    X01_03               1
+    X01_05    X01_04               1
+    X01_05    X01_05             1.3
+    X01_06    X00_06             0.3
+    X01_06    X01_00               1
+    X01_06    X01_01               1
+    X01_06    X01_02               1
+    X01_06    X01_03               1
+    X01_06    X01_04               1
+    X01_06    X01_05               1
+    X01_06    X01_06             1.3
+    X01_07    X00_07             0.3
+    X01_07    X01_00               1
+    X01_07    X01_01               1
+    X01_07    X01_02               1
+    X01_07    X01_03               1
+    X01_07    X01_04               1
+    X01_07    X01_05               1
+    X01_07    X01_06               1
+    X01_07    X01_07             1.3
+    X01_08    X00_08             0.3
+    X01_08    X01_00               1
+    X01_08    X01_01               1
+    X01_08    X01_02               1
+    X01_08    X01_03               1
+    X01_08    X01_04               1
+    X01_08    X01_05               1
+    X01_08    X01_06               1
+    X01_08    X01_07               1
+    X01_08    X01_08             1.3
+    X01_09    X00_09             0.3
+    X01_09    X01_00               1
+    X01_09    X01_01               1
+    X01_09    X01_02               1
+    X01_09    X01_03               1
+    X01_09    X01_04               1
+    X01_09    X01_05               1
+    X01_09    X01_06               1
+    X01_09    X01_07               1
+    X01_09    X01_08               1
+    X01_09    X01_09             1.3
+    X01_10    X00_10             0.3
+    X01_10    X01_00               1
+    X01_10    X01_01               1
+    X01_10    X01_02               1
+    X01_10    X01_03               1
+    X01_10    X01_04               1
+    X01_10    X01_05               1
+    X01_10    X01_06               1
+    X01_10    X01_07               1
+    X01_10    X01_08               1
+    X01_10    X01_09               1
+    X01_10    X01_10             1.3
+    X01_11    X00_11             0.3
+    X01_11    X01_00               1
+    X01_11    X01_01               1
+    X01_11    X01_02               1
+    X01_11    X01_03               1
+    X01_11    X01_04               1
+    X01_11    X01_05               1
+    X01_11    X01_06               1
+    X01_11    X01_07               1
+    X01_11    X01_08               1
+    X01_11    X01_09               1
+    X01_11    X01_10               1
+    X01_11    X01_11             1.3
+    X01_12    X00_12             0.3
+    X01_12    X01_00               1
+    X01_12    X01_01               1
+    X01_12    X01_02               1
+    X01_12    X01_03               1
+    X01_12    X01_04               1
+    X01_12    X01_05               1
+    X01_12    X01_06               1
+    X01_12    X01_07               1
+    X01_12    X01_08               1
+    X01_12    X01_09               1
+    X01_12    X01_10               1
+    X01_12    X01_11               1
+    X01_12    X01_12             1.3
+    X01_13    X00_13             0.3
+    X01_13    X01_00               1
+    X01_13    X01_01               1
+    X01_13    X01_02               1
+    X01_13    X01_03               1
+    X01_13    X01_04               1
+    X01_13    X01_05               1
+    X01_13    X01_06               1
+    X01_13    X01_07               1
+    X01_13    X01_08               1
+    X01_13    X01_09               1
+    X01_13    X01_10               1
+    X01_13    X01_11               1
+    X01_13    X01_12               1
+    X01_13    X01_13             1.3
+    X02_00    X00_00             0.3
+    X02_00    X01_00             0.3
+    X02_00    X02_00             1.3
+    X02_01    X00_01             0.3
+    X02_01    X01_01             0.3
+    X02_01    X02_00               1
+    X02_01    X02_01             1.3
+    X02_02    X00_02             0.3
+    X02_02    X01_02             0.3
+    X02_02    X02_00               1
+    X02_02    X02_01               1
+    X02_02    X02_02             1.3
+    X02_03    X00_03             0.3
+    X02_03    X01_03             0.3
+    X02_03    X02_00               1
+    X02_03    X02_01               1
+    X02_03    X02_02               1
+    X02_03    X02_03             1.3
+    X02_04    X00_04             0.3
+    X02_04    X01_04             0.3
+    X02_04    X02_00               1
+    X02_04    X02_01               1
+    X02_04    X02_02               1
+    X02_04    X02_03               1
+    X02_04    X02_04             1.3
+    X02_05    X00_05             0.3
+    X02_05    X01_05             0.3
+    X02_05    X02_00               1
+    X02_05    X02_01               1
+    X02_05    X02_02               1
+    X02_05    X02_03               1
+    X02_05    X02_04               1
+    X02_05    X02_05             1.3
+    X02_06    X00_06             0.3
+    X02_06    X01_06             0.3
+    X02_06    X02_00               1
+    X02_06    X02_01               1
+    X02_06    X02_02               1
+    X02_06    X02_03               1
+    X02_06    X02_04               1
+    X02_06    X02_05               1
+    X02_06    X02_06             1.3
+    X02_07    X00_07             0.3
+    X02_07    X01_07             0.3
+    X02_07    X02_00               1
+    X02_07    X02_01               1
+    X02_07    X02_02               1
+    X02_07    X02_03               1
+    X02_07    X02_04               1
+    X02_07    X02_05               1
+    X02_07    X02_06               1
+    X02_07    X02_07             1.3
+    X02_08    X00_08             0.3
+    X02_08    X01_08             0.3
+    X02_08    X02_00               1
+    X02_08    X02_01               1
+    X02_08    X02_02               1
+    X02_08    X02_03               1
+    X02_08    X02_04               1
+    X02_08    X02_05               1
+    X02_08    X02_06               1
+    X02_08    X02_07               1
+    X02_08    X02_08             1.3
+    X02_09    X00_09             0.3
+    X02_09    X01_09             0.3
+    X02_09    X02_00               1
+    X02_09    X02_01               1
+    X02_09    X02_02               1
+    X02_09    X02_03               1
+    X02_09    X02_04               1
+    X02_09    X02_05               1
+    X02_09    X02_06               1
+    X02_09    X02_07               1
+    X02_09    X02_08               1
+    X02_09    X02_09             1.3
+    X02_10    X00_10             0.3
+    X02_10    X01_10             0.3
+    X02_10    X02_00               1
+    X02_10    X02_01               1
+    X02_10    X02_02               1
+    X02_10    X02_03               1
+    X02_10    X02_04               1
+    X02_10    X02_05               1
+    X02_10    X02_06               1
+    X02_10    X02_07               1
+    X02_10    X02_08               1
+    X02_10    X02_09               1
+    X02_10    X02_10             1.3
+    X02_11    X00_11             0.3
+    X02_11    X01_11             0.3
+    X02_11    X02_00               1
+    X02_11    X02_01               1
+    X02_11    X02_02               1
+    X02_11    X02_03               1
+    X02_11    X02_04               1
+    X02_11    X02_05               1
+    X02_11    X02_06               1
+    X02_11    X02_07               1
+    X02_11    X02_08               1
+    X02_11    X02_09               1
+    X02_11    X02_10               1
+    X02_11    X02_11             1.3
+    X02_12    X00_12             0.3
+    X02_12    X01_12             0.3
+    X02_12    X02_00               1
+    X02_12    X02_01               1
+    X02_12    X02_02               1
+    X02_12    X02_03               1
+    X02_12    X02_04               1
+    X02_12    X02_05               1
+    X02_12    X02_06               1
+    X02_12    X02_07               1
+    X02_12    X02_08               1
+    X02_12    X02_09               1
+    X02_12    X02_10               1
+    X02_12    X02_11               1
+    X02_12    X02_12             1.3
+    X02_13    X00_13             0.3
+    X02_13    X01_13             0.3
+    X02_13    X02_00               1
+    X02_13    X02_01               1
+    X02_13    X02_02               1
+    X02_13    X02_03               1
+    X02_13    X02_04               1
+    X02_13    X02_05               1
+    X02_13    X02_06               1
+    X02_13    X02_07               1
+    X02_13    X02_08               1
+    X02_13    X02_09               1
+    X02_13    X02_10               1
+    X02_13    X02_11               1
+    X02_13    X02_12               1
+    X02_13    X02_13             1.3
+    X03_00    X00_00             0.3
+    X03_00    X01_00             0.3
+    X03_00    X02_00             0.3
+    X03_00    X03_00             1.3
+    X03_01    X00_01             0.3
+    X03_01    X01_01             0.3
+    X03_01    X02_01             0.3
+    X03_01    X03_00               1
+    X03_01    X03_01             1.3
+    X03_02    X00_02             0.3
+    X03_02    X01_02             0.3
+    X03_02    X02_02             0.3
+    X03_02    X03_00               1
+    X03_02    X03_01               1
+    X03_02    X03_02             1.3
+    X03_03    X00_03             0.3
+    X03_03    X01_03             0.3
+    X03_03    X02_03             0.3
+    X03_03    X03_00               1
+    X03_03    X03_01               1
+    X03_03    X03_02               1
+    X03_03    X03_03             1.3
+    X03_04    X00_04             0.3
+    X03_04    X01_04             0.3
+    X03_04    X02_04             0.3
+    X03_04    X03_00               1
+    X03_04    X03_01               1
+    X03_04    X03_02               1
+    X03_04    X03_03               1
+    X03_04    X03_04             1.3
+    X03_05    X00_05             0.3
+    X03_05    X01_05             0.3
+    X03_05    X02_05             0.3
+    X03_05    X03_00               1
+    X03_05    X03_01               1
+    X03_05    X03_02               1
+    X03_05    X03_03               1
+    X03_05    X03_04               1
+    X03_05    X03_05             1.3
+    X03_06    X00_06             0.3
+    X03_06    X01_06             0.3
+    X03_06    X02_06             0.3
+    X03_06    X03_00               1
+    X03_06    X03_01               1
+    X03_06    X03_02               1
+    X03_06    X03_03               1
+    X03_06    X03_04               1
+    X03_06    X03_05               1
+    X03_06    X03_06             1.3
+    X03_07    X00_07             0.3
+    X03_07    X01_07             0.3
+    X03_07    X02_07             0.3
+    X03_07    X03_00               1
+    X03_07    X03_01               1
+    X03_07    X03_02               1
+    X03_07    X03_03               1
+    X03_07    X03_04               1
+    X03_07    X03_05               1
+    X03_07    X03_06               1
+    X03_07    X03_07             1.3
+    X03_08    X00_08             0.3
+    X03_08    X01_08             0.3
+    X03_08    X02_08             0.3
+    X03_08    X03_00               1
+    X03_08    X03_01               1
+    X03_08    X03_02               1
+    X03_08    X03_03               1
+    X03_08    X03_04               1
+    X03_08    X03_05               1
+    X03_08    X03_06               1
+    X03_08    X03_07               1
+    X03_08    X03_08             1.3
+    X03_09    X00_09             0.3
+    X03_09    X01_09             0.3
+    X03_09    X02_09             0.3
+    X03_09    X03_00               1
+    X03_09    X03_01               1
+    X03_09    X03_02               1
+    X03_09    X03_03               1
+    X03_09    X03_04               1
+    X03_09    X03_05               1
+    X03_09    X03_06               1
+    X03_09    X03_07               1
+    X03_09    X03_08               1
+    X03_09    X03_09             1.3
+    X03_10    X00_10             0.3
+    X03_10    X01_10             0.3
+    X03_10    X02_10             0.3
+    X03_10    X03_00               1
+    X03_10    X03_01               1
+    X03_10    X03_02               1
+    X03_10    X03_03               1
+    X03_10    X03_04               1
+    X03_10    X03_05               1
+    X03_10    X03_06               1
+    X03_10    X03_07               1
+    X03_10    X03_08               1
+    X03_10    X03_09               1
+    X03_10    X03_10             1.3
+    X03_11    X00_11             0.3
+    X03_11    X01_11             0.3
+    X03_11    X02_11             0.3
+    X03_11    X03_00               1
+    X03_11    X03_01               1
+    X03_11    X03_02               1
+    X03_11    X03_03               1
+    X03_11    X03_04               1
+    X03_11    X03_05               1
+    X03_11    X03_06               1
+    X03_11    X03_07               1
+    X03_11    X03_08               1
+    X03_11    X03_09               1
+    X03_11    X03_10               1
+    X03_11    X03_11             1.3
+    X03_12    X00_12             0.3
+    X03_12    X01_12             0.3
+    X03_12    X02_12             0.3
+    X03_12    X03_00               1
+    X03_12    X03_01               1
+    X03_12    X03_02               1
+    X03_12    X03_03               1
+    X03_12    X03_04               1
+    X03_12    X03_05               1
+    X03_12    X03_06               1
+    X03_12    X03_07               1
+    X03_12    X03_08               1
+    X03_12    X03_09               1
+    X03_12    X03_10               1
+    X03_12    X03_11               1
+    X03_12    X03_12             1.3
+    X03_13    X00_13             0.3
+    X03_13    X01_13             0.3
+    X03_13    X02_13             0.3
+    X03_13    X03_00               1
+    X03_13    X03_01               1
+    X03_13    X03_02               1
+    X03_13    X03_03               1
+    X03_13    X03_04               1
+    X03_13    X03_05               1
+    X03_13    X03_06               1
+    X03_13    X03_07               1
+    X03_13    X03_08               1
+    X03_13    X03_09               1
+    X03_13    X03_10               1
+    X03_13    X03_11               1
+    X03_13    X03_12               1
+    X03_13    X03_13             1.3
+    X04_00    X00_00             0.3
+    X04_00    X01_00             0.3
+    X04_00    X02_00             0.3
+    X04_00    X03_00             0.3
+    X04_00    X04_00             1.8
+    X04_01    X00_01             0.3
+    X04_01    X01_01             0.3
+    X04_01    X02_01             0.3
+    X04_01    X03_01             0.3
+    X04_01    X04_00             1.5
+    X04_01    X04_01             1.8
+    X04_02    X00_02             0.3
+    X04_02    X01_02             0.3
+    X04_02    X02_02             0.3
+    X04_02    X03_02             0.3
+    X04_02    X04_00             1.5
+    X04_02    X04_01             1.5
+    X04_02    X04_02             1.8
+    X04_03    X00_03             0.3
+    X04_03    X01_03             0.3
+    X04_03    X02_03             0.3
+    X04_03    X03_03             0.3
+    X04_03    X04_00             1.5
+    X04_03    X04_01             1.5
+    X04_03    X04_02             1.5
+    X04_03    X04_03             1.8
+    X04_04    X00_04             0.3
+    X04_04    X01_04             0.3
+    X04_04    X02_04             0.3
+    X04_04    X03_04             0.3
+    X04_04    X04_00             1.5
+    X04_04    X04_01             1.5
+    X04_04    X04_02             1.5
+    X04_04    X04_03             1.5
+    X04_04    X04_04             1.8
+    X04_05    X00_05             0.3
+    X04_05    X01_05             0.3
+    X04_05    X02_05             0.3
+    X04_05    X03_05             0.3
+    X04_05    X04_00             1.5
+    X04_05    X04_01             1.5
+    X04_05    X04_02             1.5
+    X04_05    X04_03             1.5
+    X04_05    X04_04             1.5
+    X04_05    X04_05             1.8
+    X04_06    X00_06             0.3
+    X04_06    X01_06             0.3
+    X04_06    X02_06             0.3
+    X04_06    X03_06             0.3
+    X04_06    X04_00             1.5
+    X04_06    X04_01             1.5
+    X04_06    X04_02             1.5
+    X04_06    X04_03             1.5
+    X04_06    X04_04             1.5
+    X04_06    X04_05             1.5
+    X04_06    X04_06             1.8
+    X04_07    X00_07             0.3
+    X04_07    X01_07             0.3
+    X04_07    X02_07             0.3
+    X04_07    X03_07             0.3
+    X04_07    X04_00             1.5
+    X04_07    X04_01             1.5
+    X04_07    X04_02             1.5
+    X04_07    X04_03             1.5
+    X04_07    X04_04             1.5
+    X04_07    X04_05             1.5
+    X04_07    X04_06             1.5
+    X04_07    X04_07             1.8
+    X04_08    X00_08             0.3
+    X04_08    X01_08             0.3
+    X04_08    X02_08             0.3
+    X04_08    X03_08             0.3
+    X04_08    X04_00             1.5
+    X04_08    X04_01             1.5
+    X04_08    X04_02             1.5
+    X04_08    X04_03             1.5
+    X04_08    X04_04             1.5
+    X04_08    X04_05             1.5
+    X04_08    X04_06             1.5
+    X04_08    X04_07             1.5
+    X04_08    X04_08             1.8
+    X04_09    X00_09             0.3
+    X04_09    X01_09             0.3
+    X04_09    X02_09             0.3
+    X04_09    X03_09             0.3
+    X04_09    X04_00             1.5
+    X04_09    X04_01             1.5
+    X04_09    X04_02             1.5
+    X04_09    X04_03             1.5
+    X04_09    X04_04             1.5
+    X04_09    X04_05             1.5
+    X04_09    X04_06             1.5
+    X04_09    X04_07             1.5
+    X04_09    X04_08             1.5
+    X04_09    X04_09             1.8
+    X04_10    X00_10             0.3
+    X04_10    X01_10             0.3
+    X04_10    X02_10             0.3
+    X04_10    X03_10             0.3
+    X04_10    X04_00             1.5
+    X04_10    X04_01             1.5
+    X04_10    X04_02             1.5
+    X04_10    X04_03             1.5
+    X04_10    X04_04             1.5
+    X04_10    X04_05             1.5
+    X04_10    X04_06             1.5
+    X04_10    X04_07             1.5
+    X04_10    X04_08             1.5
+    X04_10    X04_09             1.5
+    X04_10    X04_10             1.8
+    X04_11    X00_11             0.3
+    X04_11    X01_11             0.3
+    X04_11    X02_11             0.3
+    X04_11    X03_11             0.3
+    X04_11    X04_00             1.5
+    X04_11    X04_01             1.5
+    X04_11    X04_02             1.5
+    X04_11    X04_03             1.5
+    X04_11    X04_04             1.5
+    X04_11    X04_05             1.5
+    X04_11    X04_06             1.5
+    X04_11    X04_07             1.5
+    X04_11    X04_08             1.5
+    X04_11    X04_09             1.5
+    X04_11    X04_10             1.5
+    X04_11    X04_11             1.8
+    X04_12    X00_12             0.3
+    X04_12    X01_12             0.3
+    X04_12    X02_12             0.3
+    X04_12    X03_12             0.3
+    X04_12    X04_00             1.5
+    X04_12    X04_01             1.5
+    X04_12    X04_02             1.5
+    X04_12    X04_03             1.5
+    X04_12    X04_04             1.5
+    X04_12    X04_05             1.5
+    X04_12    X04_06             1.5
+    X04_12    X04_07             1.5
+    X04_12    X04_08             1.5
+    X04_12    X04_09             1.5
+    X04_12    X04_10             1.5
+    X04_12    X04_11             1.5
+    X04_12    X04_12             1.8
+    X04_13    X00_13             0.3
+    X04_13    X01_13             0.3
+    X04_13    X02_13             0.3
+    X04_13    X03_13             0.3
+    X04_13    X04_00             1.5
+    X04_13    X04_01             1.5
+    X04_13    X04_02             1.5
+    X04_13    X04_03             1.5
+    X04_13    X04_04             1.5
+    X04_13    X04_05             1.5
+    X04_13    X04_06             1.5
+    X04_13    X04_07             1.5
+    X04_13    X04_08             1.5
+    X04_13    X04_09             1.5
+    X04_13    X04_10             1.5
+    X04_13    X04_11             1.5
+    X04_13    X04_12             1.5
+    X04_13    X04_13             1.8
+    X05_00    X00_00             0.3
+    X05_00    X01_00             0.3
+    X05_00    X02_00             0.3
+    X05_00    X03_00             0.3
+    X05_00    X04_00             0.3
+    X05_00    X05_00             0.8
+    X05_01    X00_01             0.3
+    X05_01    X01_01             0.3
+    X05_01    X02_01             0.3
+    X05_01    X03_01             0.3
+    X05_01    X04_01             0.3
+    X05_01    X05_00             0.5
+    X05_01    X05_01             0.8
+    X05_02    X00_02             0.3
+    X05_02    X01_02             0.3
+    X05_02    X02_02             0.3
+    X05_02    X03_02             0.3
+    X05_02    X04_02             0.3
+    X05_02    X05_00             0.5
+    X05_02    X05_01             0.5
+    X05_02    X05_02             0.8
+    X05_03    X00_03             0.3
+    X05_03    X01_03             0.3
+    X05_03    X02_03             0.3
+    X05_03    X03_03             0.3
+    X05_03    X04_03             0.3
+    X05_03    X05_00             0.5
+    X05_03    X05_01             0.5
+    X05_03    X05_02             0.5
+    X05_03    X05_03             0.8
+    X05_04    X00_04             0.3
+    X05_04    X01_04             0.3
+    X05_04    X02_04             0.3
+    X05_04    X03_04             0.3
+    X05_04    X04_04             0.3
+    X05_04    X05_00             0.5
+    X05_04    X05_01             0.5
+    X05_04    X05_02             0.5
+    X05_04    X05_03             0.5
+    X05_04    X05_04             0.8
+    X05_05    X00_05             0.3
+    X05_05    X01_05             0.3
+    X05_05    X02_05             0.3
+    X05_05    X03_05             0.3
+    X05_05    X04_05             0.3
+    X05_05    X05_00             0.5
+    X05_05    X05_01             0.5
+    X05_05    X05_02             0.5
+    X05_05    X05_03             0.5
+    X05_05    X05_04             0.5
+    X05_05    X05_05             0.8
+    X05_06    X00_06             0.3
+    X05_06    X01_06             0.3
+    X05_06    X02_06             0.3
+    X05_06    X03_06             0.3
+    X05_06    X04_06             0.3
+    X05_06    X05_00             0.5
+    X05_06    X05_01             0.5
+    X05_06    X05_02             0.5
+    X05_06    X05_03             0.5
+    X05_06    X05_04             0.5
+    X05_06    X05_05             0.5
+    X05_06    X05_06             0.8
+    X05_07    X00_07             0.3
+    X05_07    X01_07             0.3
+    X05_07    X02_07             0.3
+    X05_07    X03_07             0.3
+    X05_07    X04_07             0.3
+    X05_07    X05_00             0.5
+    X05_07    X05_01             0.5
+    X05_07    X05_02             0.5
+    X05_07    X05_03             0.5
+    X05_07    X05_04             0.5
+    X05_07    X05_05             0.5
+    X05_07    X05_06             0.5
+    X05_07    X05_07             0.8
+    X05_08    X00_08             0.3
+    X05_08    X01_08             0.3
+    X05_08    X02_08             0.3
+    X05_08    X03_08             0.3
+    X05_08    X04_08             0.3
+    X05_08    X05_00             0.5
+    X05_08    X05_01             0.5
+    X05_08    X05_02             0.5
+    X05_08    X05_03             0.5
+    X05_08    X05_04             0.5
+    X05_08    X05_05             0.5
+    X05_08    X05_06             0.5
+    X05_08    X05_07             0.5
+    X05_08    X05_08             0.8
+    X05_09    X00_09             0.3
+    X05_09    X01_09             0.3
+    X05_09    X02_09             0.3
+    X05_09    X03_09             0.3
+    X05_09    X04_09             0.3
+    X05_09    X05_00             0.5
+    X05_09    X05_01             0.5
+    X05_09    X05_02             0.5
+    X05_09    X05_03             0.5
+    X05_09    X05_04             0.5
+    X05_09    X05_05             0.5
+    X05_09    X05_06             0.5
+    X05_09    X05_07             0.5
+    X05_09    X05_08             0.5
+    X05_09    X05_09             0.8
+    X05_10    X00_10             0.3
+    X05_10    X01_10             0.3
+    X05_10    X02_10             0.3
+    X05_10    X03_10             0.3
+    X05_10    X04_10             0.3
+    X05_10    X05_00             0.5
+    X05_10    X05_01             0.5
+    X05_10    X05_02             0.5
+    X05_10    X05_03             0.5
+    X05_10    X05_04             0.5
+    X05_10    X05_05             0.5
+    X05_10    X05_06             0.5
+    X05_10    X05_07             0.5
+    X05_10    X05_08             0.5
+    X05_10    X05_09             0.5
+    X05_10    X05_10             0.8
+    X05_11    X00_11             0.3
+    X05_11    X01_11             0.3
+    X05_11    X02_11             0.3
+    X05_11    X03_11             0.3
+    X05_11    X04_11             0.3
+    X05_11    X05_00             0.5
+    X05_11    X05_01             0.5
+    X05_11    X05_02             0.5
+    X05_11    X05_03             0.5
+    X05_11    X05_04             0.5
+    X05_11    X05_05             0.5
+    X05_11    X05_06             0.5
+    X05_11    X05_07             0.5
+    X05_11    X05_08             0.5
+    X05_11    X05_09             0.5
+    X05_11    X05_10             0.5
+    X05_11    X05_11             0.8
+    X05_12    X00_12             0.3
+    X05_12    X01_12             0.3
+    X05_12    X02_12             0.3
+    X05_12    X03_12             0.3
+    X05_12    X04_12             0.3
+    X05_12    X05_00             0.5
+    X05_12    X05_01             0.5
+    X05_12    X05_02             0.5
+    X05_12    X05_03             0.5
+    X05_12    X05_04             0.5
+    X05_12    X05_05             0.5
+    X05_12    X05_06             0.5
+    X05_12    X05_07             0.5
+    X05_12    X05_08             0.5
+    X05_12    X05_09             0.5
+    X05_12    X05_10             0.5
+    X05_12    X05_11             0.5
+    X05_12    X05_12             0.8
+    X05_13    X00_13             0.3
+    X05_13    X01_13             0.3
+    X05_13    X02_13             0.3
+    X05_13    X03_13             0.3
+    X05_13    X04_13             0.3
+    X05_13    X05_00             0.5
+    X05_13    X05_01             0.5
+    X05_13    X05_02             0.5
+    X05_13    X05_03             0.5
+    X05_13    X05_04             0.5
+    X05_13    X05_05             0.5
+    X05_13    X05_06             0.5
+    X05_13    X05_07             0.5
+    X05_13    X05_08             0.5
+    X05_13    X05_09             0.5
+    X05_13    X05_10             0.5
+    X05_13    X05_11             0.5
+    X05_13    X05_12             0.5
+    X05_13    X05_13             0.8
+    X06_00    X00_00             0.3
+    X06_00    X01_00             0.3
+    X06_00    X02_00             0.3
+    X06_00    X03_00             0.3
+    X06_00    X04_00             0.3
+    X06_00    X05_00             0.3
+    X06_00    X06_00             0.8
+    X06_01    X00_01             0.3
+    X06_01    X01_01             0.3
+    X06_01    X02_01             0.3
+    X06_01    X03_01             0.3
+    X06_01    X04_01             0.3
+    X06_01    X05_01             0.3
+    X06_01    X06_00             0.5
+    X06_01    X06_01             0.8
+    X06_02    X00_02             0.3
+    X06_02    X01_02             0.3
+    X06_02    X02_02             0.3
+    X06_02    X03_02             0.3
+    X06_02    X04_02             0.3
+    X06_02    X05_02             0.3
+    X06_02    X06_00             0.5
+    X06_02    X06_01             0.5
+    X06_02    X06_02             0.8
+    X06_03    X00_03             0.3
+    X06_03    X01_03             0.3
+    X06_03    X02_03             0.3
+    X06_03    X03_03             0.3
+    X06_03    X04_03             0.3
+    X06_03    X05_03             0.3
+    X06_03    X06_00             0.5
+    X06_03    X06_01             0.5
+    X06_03    X06_02             0.5
+    X06_03    X06_03             0.8
+    X06_04    X00_04             0.3
+    X06_04    X01_04             0.3
+    X06_04    X02_04             0.3
+    X06_04    X03_04             0.3
+    X06_04    X04_04             0.3
+    X06_04    X05_04             0.3
+    X06_04    X06_00             0.5
+    X06_04    X06_01             0.5
+    X06_04    X06_02             0.5
+    X06_04    X06_03             0.5
+    X06_04    X06_04             0.8
+    X06_05    X00_05             0.3
+    X06_05    X01_05             0.3
+    X06_05    X02_05             0.3
+    X06_05    X03_05             0.3
+    X06_05    X04_05             0.3
+    X06_05    X05_05             0.3
+    X06_05    X06_00             0.5
+    X06_05    X06_01             0.5
+    X06_05    X06_02             0.5
+    X06_05    X06_03             0.5
+    X06_05    X06_04             0.5
+    X06_05    X06_05             0.8
+    X06_06    X00_06             0.3
+    X06_06    X01_06             0.3
+    X06_06    X02_06             0.3
+    X06_06    X03_06             0.3
+    X06_06    X04_06             0.3
+    X06_06    X05_06             0.3
+    X06_06    X06_00             0.5
+    X06_06    X06_01             0.5
+    X06_06    X06_02             0.5
+    X06_06    X06_03             0.5
+    X06_06    X06_04             0.5
+    X06_06    X06_05             0.5
+    X06_06    X06_06             0.8
+    X06_07    X00_07             0.3
+    X06_07    X01_07             0.3
+    X06_07    X02_07             0.3
+    X06_07    X03_07             0.3
+    X06_07    X04_07             0.3
+    X06_07    X05_07             0.3
+    X06_07    X06_00             0.5
+    X06_07    X06_01             0.5
+    X06_07    X06_02             0.5
+    X06_07    X06_03             0.5
+    X06_07    X06_04             0.5
+    X06_07    X06_05             0.5
+    X06_07    X06_06             0.5
+    X06_07    X06_07             0.8
+    X06_08    X00_08             0.3
+    X06_08    X01_08             0.3
+    X06_08    X02_08             0.3
+    X06_08    X03_08             0.3
+    X06_08    X04_08             0.3
+    X06_08    X05_08             0.3
+    X06_08    X06_00             0.5
+    X06_08    X06_01             0.5
+    X06_08    X06_02             0.5
+    X06_08    X06_03             0.5
+    X06_08    X06_04             0.5
+    X06_08    X06_05             0.5
+    X06_08    X06_06             0.5
+    X06_08    X06_07             0.5
+    X06_08    X06_08             0.8
+    X06_09    X00_09             0.3
+    X06_09    X01_09             0.3
+    X06_09    X02_09             0.3
+    X06_09    X03_09             0.3
+    X06_09    X04_09             0.3
+    X06_09    X05_09             0.3
+    X06_09    X06_00             0.5
+    X06_09    X06_01             0.5
+    X06_09    X06_02             0.5
+    X06_09    X06_03             0.5
+    X06_09    X06_04             0.5
+    X06_09    X06_05             0.5
+    X06_09    X06_06             0.5
+    X06_09    X06_07             0.5
+    X06_09    X06_08             0.5
+    X06_09    X06_09             0.8
+    X06_10    X00_10             0.3
+    X06_10    X01_10             0.3
+    X06_10    X02_10             0.3
+    X06_10    X03_10             0.3
+    X06_10    X04_10             0.3
+    X06_10    X05_10             0.3
+    X06_10    X06_00             0.5
+    X06_10    X06_01             0.5
+    X06_10    X06_02             0.5
+    X06_10    X06_03             0.5
+    X06_10    X06_04             0.5
+    X06_10    X06_05             0.5
+    X06_10    X06_06             0.5
+    X06_10    X06_07             0.5
+    X06_10    X06_08             0.5
+    X06_10    X06_09             0.5
+    X06_10    X06_10             0.8
+    X06_11    X00_11             0.3
+    X06_11    X01_11             0.3
+    X06_11    X02_11             0.3
+    X06_11    X03_11             0.3
+    X06_11    X04_11             0.3
+    X06_11    X05_11             0.3
+    X06_11    X06_00             0.5
+    X06_11    X06_01             0.5
+    X06_11    X06_02             0.5
+    X06_11    X06_03             0.5
+    X06_11    X06_04             0.5
+    X06_11    X06_05             0.5
+    X06_11    X06_06             0.5
+    X06_11    X06_07             0.5
+    X06_11    X06_08             0.5
+    X06_11    X06_09             0.5
+    X06_11    X06_10             0.5
+    X06_11    X06_11             0.8
+    X06_12    X00_12             0.3
+    X06_12    X01_12             0.3
+    X06_12    X02_12             0.3
+    X06_12    X03_12             0.3
+    X06_12    X04_12             0.3
+    X06_12    X05_12             0.3
+    X06_12    X06_00             0.5
+    X06_12    X06_01             0.5
+    X06_12    X06_02             0.5
+    X06_12    X06_03             0.5
+    X06_12    X06_04             0.5
+    X06_12    X06_05             0.5
+    X06_12    X06_06             0.5
+    X06_12    X06_07             0.5
+    X06_12    X06_08             0.5
+    X06_12    X06_09             0.5
+    X06_12    X06_10             0.5
+    X06_12    X06_11             0.5
+    X06_12    X06_12             0.8
+    X06_13    X00_13             0.3
+    X06_13    X01_13             0.3
+    X06_13    X02_13             0.3
+    X06_13    X03_13             0.3
+    X06_13    X04_13             0.3
+    X06_13    X05_13             0.3
+    X06_13    X06_00             0.5
+    X06_13    X06_01             0.5
+    X06_13    X06_02             0.5
+    X06_13    X06_03             0.5
+    X06_13    X06_04             0.5
+    X06_13    X06_05             0.5
+    X06_13    X06_06             0.5
+    X06_13    X06_07             0.5
+    X06_13    X06_08             0.5
+    X06_13    X06_09             0.5
+    X06_13    X06_10             0.5
+    X06_13    X06_11             0.5
+    X06_13    X06_12             0.5
+    X06_13    X06_13             0.8
+    X07_00    X00_00             0.3
+    X07_00    X01_00             0.3
+    X07_00    X02_00             0.3
+    X07_00    X03_00             0.3
+    X07_00    X04_00             0.3
+    X07_00    X05_00             0.3
+    X07_00    X06_00             0.3
+    X07_00    X07_00             1.3
+    X07_01    X00_01             0.3
+    X07_01    X01_01             0.3
+    X07_01    X02_01             0.3
+    X07_01    X03_01             0.3
+    X07_01    X04_01             0.3
+    X07_01    X05_01             0.3
+    X07_01    X06_01             0.3
+    X07_01    X07_00               1
+    X07_01    X07_01             1.3
+    X07_02    X00_02             0.3
+    X07_02    X01_02             0.3
+    X07_02    X02_02             0.3
+    X07_02    X03_02             0.3
+    X07_02    X04_02             0.3
+    X07_02    X05_02             0.3
+    X07_02    X06_02             0.3
+    X07_02    X07_00               1
+    X07_02    X07_01               1
+    X07_02    X07_02             1.3
+    X07_03    X00_03             0.3
+    X07_03    X01_03             0.3
+    X07_03    X02_03             0.3
+    X07_03    X03_03             0.3
+    X07_03    X04_03             0.3
+    X07_03    X05_03             0.3
+    X07_03    X06_03             0.3
+    X07_03    X07_00               1
+    X07_03    X07_01               1
+    X07_03    X07_02               1
+    X07_03    X07_03             1.3
+    X07_04    X00_04             0.3
+    X07_04    X01_04             0.3
+    X07_04    X02_04             0.3
+    X07_04    X03_04             0.3
+    X07_04    X04_04             0.3
+    X07_04    X05_04             0.3
+    X07_04    X06_04             0.3
+    X07_04    X07_00               1
+    X07_04    X07_01               1
+    X07_04    X07_02               1
+    X07_04    X07_03               1
+    X07_04    X07_04             1.3
+    X07_05    X00_05             0.3
+    X07_05    X01_05             0.3
+    X07_05    X02_05             0.3
+    X07_05    X03_05             0.3
+    X07_05    X04_05             0.3
+    X07_05    X05_05             0.3
+    X07_05    X06_05             0.3
+    X07_05    X07_00               1
+    X07_05    X07_01               1
+    X07_05    X07_02               1
+    X07_05    X07_03               1
+    X07_05    X07_04               1
+    X07_05    X07_05             1.3
+    X07_06    X00_06             0.3
+    X07_06    X01_06             0.3
+    X07_06    X02_06             0.3
+    X07_06    X03_06             0.3
+    X07_06    X04_06             0.3
+    X07_06    X05_06             0.3
+    X07_06    X06_06             0.3
+    X07_06    X07_00               1
+    X07_06    X07_01               1
+    X07_06    X07_02               1
+    X07_06    X07_03               1
+    X07_06    X07_04               1
+    X07_06    X07_05               1
+    X07_06    X07_06             1.3
+    X07_07    X00_07             0.3
+    X07_07    X01_07             0.3
+    X07_07    X02_07             0.3
+    X07_07    X03_07             0.3
+    X07_07    X04_07             0.3
+    X07_07    X05_07             0.3
+    X07_07    X06_07             0.3
+    X07_07    X07_00               1
+    X07_07    X07_01               1
+    X07_07    X07_02               1
+    X07_07    X07_03               1
+    X07_07    X07_04               1
+    X07_07    X07_05               1
+    X07_07    X07_06               1
+    X07_07    X07_07             1.3
+    X07_08    X00_08             0.3
+    X07_08    X01_08             0.3
+    X07_08    X02_08             0.3
+    X07_08    X03_08             0.3
+    X07_08    X04_08             0.3
+    X07_08    X05_08             0.3
+    X07_08    X06_08             0.3
+    X07_08    X07_00               1
+    X07_08    X07_01               1
+    X07_08    X07_02               1
+    X07_08    X07_03               1
+    X07_08    X07_04               1
+    X07_08    X07_05               1
+    X07_08    X07_06               1
+    X07_08    X07_07               1
+    X07_08    X07_08             1.3
+    X07_09    X00_09             0.3
+    X07_09    X01_09             0.3
+    X07_09    X02_09             0.3
+    X07_09    X03_09             0.3
+    X07_09    X04_09             0.3
+    X07_09    X05_09             0.3
+    X07_09    X06_09             0.3
+    X07_09    X07_00               1
+    X07_09    X07_01               1
+    X07_09    X07_02               1
+    X07_09    X07_03               1
+    X07_09    X07_04               1
+    X07_09    X07_05               1
+    X07_09    X07_06               1
+    X07_09    X07_07               1
+    X07_09    X07_08               1
+    X07_09    X07_09             1.3
+    X07_10    X00_10             0.3
+    X07_10    X01_10             0.3
+    X07_10    X02_10             0.3
+    X07_10    X03_10             0.3
+    X07_10    X04_10             0.3
+    X07_10    X05_10             0.3
+    X07_10    X06_10             0.3
+    X07_10    X07_00               1
+    X07_10    X07_01               1
+    X07_10    X07_02               1
+    X07_10    X07_03               1
+    X07_10    X07_04               1
+    X07_10    X07_05               1
+    X07_10    X07_06               1
+    X07_10    X07_07               1
+    X07_10    X07_08               1
+    X07_10    X07_09               1
+    X07_10    X07_10             1.3
+    X07_11    X00_11             0.3
+    X07_11    X01_11             0.3
+    X07_11    X02_11             0.3
+    X07_11    X03_11             0.3
+    X07_11    X04_11             0.3
+    X07_11    X05_11             0.3
+    X07_11    X06_11             0.3
+    X07_11    X07_00               1
+    X07_11    X07_01               1
+    X07_11    X07_02               1
+    X07_11    X07_03               1
+    X07_11    X07_04               1
+    X07_11    X07_05               1
+    X07_11    X07_06               1
+    X07_11    X07_07               1
+    X07_11    X07_08               1
+    X07_11    X07_09               1
+    X07_11    X07_10               1
+    X07_11    X07_11             1.3
+    X07_12    X00_12             0.3
+    X07_12    X01_12             0.3
+    X07_12    X02_12             0.3
+    X07_12    X03_12             0.3
+    X07_12    X04_12             0.3
+    X07_12    X05_12             0.3
+    X07_12    X06_12             0.3
+    X07_12    X07_00               1
+    X07_12    X07_01               1
+    X07_12    X07_02               1
+    X07_12    X07_03               1
+    X07_12    X07_04               1
+    X07_12    X07_05               1
+    X07_12    X07_06               1
+    X07_12    X07_07               1
+    X07_12    X07_08               1
+    X07_12    X07_09               1
+    X07_12    X07_10               1
+    X07_12    X07_11               1
+    X07_12    X07_12             1.3
+    X07_13    X00_13             0.3
+    X07_13    X01_13             0.3
+    X07_13    X02_13             0.3
+    X07_13    X03_13             0.3
+    X07_13    X04_13             0.3
+    X07_13    X05_13             0.3
+    X07_13    X06_13             0.3
+    X07_13    X07_00               1
+    X07_13    X07_01               1
+    X07_13    X07_02               1
+    X07_13    X07_03               1
+    X07_13    X07_04               1
+    X07_13    X07_05               1
+    X07_13    X07_06               1
+    X07_13    X07_07               1
+    X07_13    X07_08               1
+    X07_13    X07_09               1
+    X07_13    X07_10               1
+    X07_13    X07_11               1
+    X07_13    X07_12               1
+    X07_13    X07_13             1.3
+    X08_00    X00_00             0.3
+    X08_00    X01_00             0.3
+    X08_00    X02_00             0.3
+    X08_00    X03_00             0.3
+    X08_00    X04_00             0.3
+    X08_00    X05_00             0.3
+    X08_00    X06_00             0.3
+    X08_00    X07_00             0.3
+    X08_00    X08_00             1.8
+    X08_01    X00_01             0.3
+    X08_01    X01_01             0.3
+    X08_01    X02_01             0.3
+    X08_01    X03_01             0.3
+    X08_01    X04_01             0.3
+    X08_01    X05_01             0.3
+    X08_01    X06_01             0.3
+    X08_01    X07_01             0.3
+    X08_01    X08_00             1.5
+    X08_01    X08_01             1.8
+    X08_02    X00_02             0.3
+    X08_02    X01_02             0.3
+    X08_02    X02_02             0.3
+    X08_02    X03_02             0.3
+    X08_02    X04_02             0.3
+    X08_02    X05_02             0.3
+    X08_02    X06_02             0.3
+    X08_02    X07_02             0.3
+    X08_02    X08_00             1.5
+    X08_02    X08_01             1.5
+    X08_02    X08_02             1.8
+    X08_03    X00_03             0.3
+    X08_03    X01_03             0.3
+    X08_03    X02_03             0.3
+    X08_03    X03_03             0.3
+    X08_03    X04_03             0.3
+    X08_03    X05_03             0.3
+    X08_03    X06_03             0.3
+    X08_03    X07_03             0.3
+    X08_03    X08_00             1.5
+    X08_03    X08_01             1.5
+    X08_03    X08_02             1.5
+    X08_03    X08_03             1.8
+    X08_04    X00_04             0.3
+    X08_04    X01_04             0.3
+    X08_04    X02_04             0.3
+    X08_04    X03_04             0.3
+    X08_04    X04_04             0.3
+    X08_04    X05_04             0.3
+    X08_04    X06_04             0.3
+    X08_04    X07_04             0.3
+    X08_04    X08_00             1.5
+    X08_04    X08_01             1.5
+    X08_04    X08_02             1.5
+    X08_04    X08_03             1.5
+    X08_04    X08_04             1.8
+    X08_05    X00_05             0.3
+    X08_05    X01_05             0.3
+    X08_05    X02_05             0.3
+    X08_05    X03_05             0.3
+    X08_05    X04_05             0.3
+    X08_05    X05_05             0.3
+    X08_05    X06_05             0.3
+    X08_05    X07_05             0.3
+    X08_05    X08_00             1.5
+    X08_05    X08_01             1.5
+    X08_05    X08_02             1.5
+    X08_05    X08_03             1.5
+    X08_05    X08_04             1.5
+    X08_05    X08_05             1.8
+    X08_06    X00_06             0.3
+    X08_06    X01_06             0.3
+    X08_06    X02_06             0.3
+    X08_06    X03_06             0.3
+    X08_06    X04_06             0.3
+    X08_06    X05_06             0.3
+    X08_06    X06_06             0.3
+    X08_06    X07_06             0.3
+    X08_06    X08_00             1.5
+    X08_06    X08_01             1.5
+    X08_06    X08_02             1.5
+    X08_06    X08_03             1.5
+    X08_06    X08_04             1.5
+    X08_06    X08_05             1.5
+    X08_06    X08_06             1.8
+    X08_07    X00_07             0.3
+    X08_07    X01_07             0.3
+    X08_07    X02_07             0.3
+    X08_07    X03_07             0.3
+    X08_07    X04_07             0.3
+    X08_07    X05_07             0.3
+    X08_07    X06_07             0.3
+    X08_07    X07_07             0.3
+    X08_07    X08_00             1.5
+    X08_07    X08_01             1.5
+    X08_07    X08_02             1.5
+    X08_07    X08_03             1.5
+    X08_07    X08_04             1.5
+    X08_07    X08_05             1.5
+    X08_07    X08_06             1.5
+    X08_07    X08_07             1.8
+    X08_08    X00_08             0.3
+    X08_08    X01_08             0.3
+    X08_08    X02_08             0.3
+    X08_08    X03_08             0.3
+    X08_08    X04_08             0.3
+    X08_08    X05_08             0.3
+    X08_08    X06_08             0.3
+    X08_08    X07_08             0.3
+    X08_08    X08_00             1.5
+    X08_08    X08_01             1.5
+    X08_08    X08_02             1.5
+    X08_08    X08_03             1.5
+    X08_08    X08_04             1.5
+    X08_08    X08_05             1.5
+    X08_08    X08_06             1.5
+    X08_08    X08_07             1.5
+    X08_08    X08_08             1.8
+    X08_09    X00_09             0.3
+    X08_09    X01_09             0.3
+    X08_09    X02_09             0.3
+    X08_09    X03_09             0.3
+    X08_09    X04_09             0.3
+    X08_09    X05_09             0.3
+    X08_09    X06_09             0.3
+    X08_09    X07_09             0.3
+    X08_09    X08_00             1.5
+    X08_09    X08_01             1.5
+    X08_09    X08_02             1.5
+    X08_09    X08_03             1.5
+    X08_09    X08_04             1.5
+    X08_09    X08_05             1.5
+    X08_09    X08_06             1.5
+    X08_09    X08_07             1.5
+    X08_09    X08_08             1.5
+    X08_09    X08_09             1.8
+    X08_10    X00_10             0.3
+    X08_10    X01_10             0.3
+    X08_10    X02_10             0.3
+    X08_10    X03_10             0.3
+    X08_10    X04_10             0.3
+    X08_10    X05_10             0.3
+    X08_10    X06_10             0.3
+    X08_10    X07_10             0.3
+    X08_10    X08_00             1.5
+    X08_10    X08_01             1.5
+    X08_10    X08_02             1.5
+    X08_10    X08_03             1.5
+    X08_10    X08_04             1.5
+    X08_10    X08_05             1.5
+    X08_10    X08_06             1.5
+    X08_10    X08_07             1.5
+    X08_10    X08_08             1.5
+    X08_10    X08_09             1.5
+    X08_10    X08_10             1.8
+    X08_11    X00_11             0.3
+    X08_11    X01_11             0.3
+    X08_11    X02_11             0.3
+    X08_11    X03_11             0.3
+    X08_11    X04_11             0.3
+    X08_11    X05_11             0.3
+    X08_11    X06_11             0.3
+    X08_11    X07_11             0.3
+    X08_11    X08_00             1.5
+    X08_11    X08_01             1.5
+    X08_11    X08_02             1.5
+    X08_11    X08_03             1.5
+    X08_11    X08_04             1.5
+    X08_11    X08_05             1.5
+    X08_11    X08_06             1.5
+    X08_11    X08_07             1.5
+    X08_11    X08_08             1.5
+    X08_11    X08_09             1.5
+    X08_11    X08_10             1.5
+    X08_11    X08_11             1.8
+    X08_12    X00_12             0.3
+    X08_12    X01_12             0.3
+    X08_12    X02_12             0.3
+    X08_12    X03_12             0.3
+    X08_12    X04_12             0.3
+    X08_12    X05_12             0.3
+    X08_12    X06_12             0.3
+    X08_12    X07_12             0.3
+    X08_12    X08_00             1.5
+    X08_12    X08_01             1.5
+    X08_12    X08_02             1.5
+    X08_12    X08_03             1.5
+    X08_12    X08_04             1.5
+    X08_12    X08_05             1.5
+    X08_12    X08_06             1.5
+    X08_12    X08_07             1.5
+    X08_12    X08_08             1.5
+    X08_12    X08_09             1.5
+    X08_12    X08_10             1.5
+    X08_12    X08_11             1.5
+    X08_12    X08_12             1.8
+    X08_13    X00_13             0.3
+    X08_13    X01_13             0.3
+    X08_13    X02_13             0.3
+    X08_13    X03_13             0.3
+    X08_13    X04_13             0.3
+    X08_13    X05_13             0.3
+    X08_13    X06_13             0.3
+    X08_13    X07_13             0.3
+    X08_13    X08_00             1.5
+    X08_13    X08_01             1.5
+    X08_13    X08_02             1.5
+    X08_13    X08_03             1.5
+    X08_13    X08_04             1.5
+    X08_13    X08_05             1.5
+    X08_13    X08_06             1.5
+    X08_13    X08_07             1.5
+    X08_13    X08_08             1.5
+    X08_13    X08_09             1.5
+    X08_13    X08_10             1.5
+    X08_13    X08_11             1.5
+    X08_13    X08_12             1.5
+    X08_13    X08_13             1.8
+    X09_00    X00_00             0.3
+    X09_00    X01_00             0.3
+    X09_00    X02_00             0.3
+    X09_00    X03_00             0.3
+    X09_00    X04_00             0.3
+    X09_00    X05_00             0.3
+    X09_00    X06_00             0.3
+    X09_00    X07_00             0.3
+    X09_00    X08_00             0.3
+    X09_00    X09_00             0.8
+    X09_01    X00_01             0.3
+    X09_01    X01_01             0.3
+    X09_01    X02_01             0.3
+    X09_01    X03_01             0.3
+    X09_01    X04_01             0.3
+    X09_01    X05_01             0.3
+    X09_01    X06_01             0.3
+    X09_01    X07_01             0.3
+    X09_01    X08_01             0.3
+    X09_01    X09_00             0.5
+    X09_01    X09_01             0.8
+    X09_02    X00_02             0.3
+    X09_02    X01_02             0.3
+    X09_02    X02_02             0.3
+    X09_02    X03_02             0.3
+    X09_02    X04_02             0.3
+    X09_02    X05_02             0.3
+    X09_02    X06_02             0.3
+    X09_02    X07_02             0.3
+    X09_02    X08_02             0.3
+    X09_02    X09_00             0.5
+    X09_02    X09_01             0.5
+    X09_02    X09_02             0.8
+    X09_03    X00_03             0.3
+    X09_03    X01_03             0.3
+    X09_03    X02_03             0.3
+    X09_03    X03_03             0.3
+    X09_03    X04_03             0.3
+    X09_03    X05_03             0.3
+    X09_03    X06_03             0.3
+    X09_03    X07_03             0.3
+    X09_03    X08_03             0.3
+    X09_03    X09_00             0.5
+    X09_03    X09_01             0.5
+    X09_03    X09_02             0.5
+    X09_03    X09_03             0.8
+    X09_04    X00_04             0.3
+    X09_04    X01_04             0.3
+    X09_04    X02_04             0.3
+    X09_04    X03_04             0.3
+    X09_04    X04_04             0.3
+    X09_04    X05_04             0.3
+    X09_04    X06_04             0.3
+    X09_04    X07_04             0.3
+    X09_04    X08_04             0.3
+    X09_04    X09_00             0.5
+    X09_04    X09_01             0.5
+    X09_04    X09_02             0.5
+    X09_04    X09_03             0.5
+    X09_04    X09_04             0.8
+    X09_05    X00_05             0.3
+    X09_05    X01_05             0.3
+    X09_05    X02_05             0.3
+    X09_05    X03_05             0.3
+    X09_05    X04_05             0.3
+    X09_05    X05_05             0.3
+    X09_05    X06_05             0.3
+    X09_05    X07_05             0.3
+    X09_05    X08_05             0.3
+    X09_05    X09_00             0.5
+    X09_05    X09_01             0.5
+    X09_05    X09_02             0.5
+    X09_05    X09_03             0.5
+    X09_05    X09_04             0.5
+    X09_05    X09_05             0.8
+    X09_06    X00_06             0.3
+    X09_06    X01_06             0.3
+    X09_06    X02_06             0.3
+    X09_06    X03_06             0.3
+    X09_06    X04_06             0.3
+    X09_06    X05_06             0.3
+    X09_06    X06_06             0.3
+    X09_06    X07_06             0.3
+    X09_06    X08_06             0.3
+    X09_06    X09_00             0.5
+    X09_06    X09_01             0.5
+    X09_06    X09_02             0.5
+    X09_06    X09_03             0.5
+    X09_06    X09_04             0.5
+    X09_06    X09_05             0.5
+    X09_06    X09_06             0.8
+    X09_07    X00_07             0.3
+    X09_07    X01_07             0.3
+    X09_07    X02_07             0.3
+    X09_07    X03_07             0.3
+    X09_07    X04_07             0.3
+    X09_07    X05_07             0.3
+    X09_07    X06_07             0.3
+    X09_07    X07_07             0.3
+    X09_07    X08_07             0.3
+    X09_07    X09_00             0.5
+    X09_07    X09_01             0.5
+    X09_07    X09_02             0.5
+    X09_07    X09_03             0.5
+    X09_07    X09_04             0.5
+    X09_07    X09_05             0.5
+    X09_07    X09_06             0.5
+    X09_07    X09_07             0.8
+    X09_08    X00_08             0.3
+    X09_08    X01_08             0.3
+    X09_08    X02_08             0.3
+    X09_08    X03_08             0.3
+    X09_08    X04_08             0.3
+    X09_08    X05_08             0.3
+    X09_08    X06_08             0.3
+    X09_08    X07_08             0.3
+    X09_08    X08_08             0.3
+    X09_08    X09_00             0.5
+    X09_08    X09_01             0.5
+    X09_08    X09_02             0.5
+    X09_08    X09_03             0.5
+    X09_08    X09_04             0.5
+    X09_08    X09_05             0.5
+    X09_08    X09_06             0.5
+    X09_08    X09_07             0.5
+    X09_08    X09_08             0.8
+    X09_09    X00_09             0.3
+    X09_09    X01_09             0.3
+    X09_09    X02_09             0.3
+    X09_09    X03_09             0.3
+    X09_09    X04_09             0.3
+    X09_09    X05_09             0.3
+    X09_09    X06_09             0.3
+    X09_09    X07_09             0.3
+    X09_09    X08_09             0.3
+    X09_09    X09_00             0.5
+    X09_09    X09_01             0.5
+    X09_09    X09_02             0.5
+    X09_09    X09_03             0.5
+    X09_09    X09_04             0.5
+    X09_09    X09_05             0.5
+    X09_09    X09_06             0.5
+    X09_09    X09_07             0.5
+    X09_09    X09_08             0.5
+    X09_09    X09_09             0.8
+    X09_10    X00_10             0.3
+    X09_10    X01_10             0.3
+    X09_10    X02_10             0.3
+    X09_10    X03_10             0.3
+    X09_10    X04_10             0.3
+    X09_10    X05_10             0.3
+    X09_10    X06_10             0.3
+    X09_10    X07_10             0.3
+    X09_10    X08_10             0.3
+    X09_10    X09_00             0.5
+    X09_10    X09_01             0.5
+    X09_10    X09_02             0.5
+    X09_10    X09_03             0.5
+    X09_10    X09_04             0.5
+    X09_10    X09_05             0.5
+    X09_10    X09_06             0.5
+    X09_10    X09_07             0.5
+    X09_10    X09_08             0.5
+    X09_10    X09_09             0.5
+    X09_10    X09_10             0.8
+    X09_11    X00_11             0.3
+    X09_11    X01_11             0.3
+    X09_11    X02_11             0.3
+    X09_11    X03_11             0.3
+    X09_11    X04_11             0.3
+    X09_11    X05_11             0.3
+    X09_11    X06_11             0.3
+    X09_11    X07_11             0.3
+    X09_11    X08_11             0.3
+    X09_11    X09_00             0.5
+    X09_11    X09_01             0.5
+    X09_11    X09_02             0.5
+    X09_11    X09_03             0.5
+    X09_11    X09_04             0.5
+    X09_11    X09_05             0.5
+    X09_11    X09_06             0.5
+    X09_11    X09_07             0.5
+    X09_11    X09_08             0.5
+    X09_11    X09_09             0.5
+    X09_11    X09_10             0.5
+    X09_11    X09_11             0.8
+    X09_12    X00_12             0.3
+    X09_12    X01_12             0.3
+    X09_12    X02_12             0.3
+    X09_12    X03_12             0.3
+    X09_12    X04_12             0.3
+    X09_12    X05_12             0.3
+    X09_12    X06_12             0.3
+    X09_12    X07_12             0.3
+    X09_12    X08_12             0.3
+    X09_12    X09_00             0.5
+    X09_12    X09_01             0.5
+    X09_12    X09_02             0.5
+    X09_12    X09_03             0.5
+    X09_12    X09_04             0.5
+    X09_12    X09_05             0.5
+    X09_12    X09_06             0.5
+    X09_12    X09_07             0.5
+    X09_12    X09_08             0.5
+    X09_12    X09_09             0.5
+    X09_12    X09_10             0.5
+    X09_12    X09_11             0.5
+    X09_12    X09_12             0.8
+    X09_13    X00_13             0.3
+    X09_13    X01_13             0.3
+    X09_13    X02_13             0.3
+    X09_13    X03_13             0.3
+    X09_13    X04_13             0.3
+    X09_13    X05_13             0.3
+    X09_13    X06_13             0.3
+    X09_13    X07_13             0.3
+    X09_13    X08_13             0.3
+    X09_13    X09_00             0.5
+    X09_13    X09_01             0.5
+    X09_13    X09_02             0.5
+    X09_13    X09_03             0.5
+    X09_13    X09_04             0.5
+    X09_13    X09_05             0.5
+    X09_13    X09_06             0.5
+    X09_13    X09_07             0.5
+    X09_13    X09_08             0.5
+    X09_13    X09_09             0.5
+    X09_13    X09_10             0.5
+    X09_13    X09_11             0.5
+    X09_13    X09_12             0.5
+    X09_13    X09_13             0.8
+    X10_00    X00_00             0.3
+    X10_00    X01_00             0.3
+    X10_00    X02_00             0.3
+    X10_00    X03_00             0.3
+    X10_00    X04_00             0.3
+    X10_00    X05_00             0.3
+    X10_00    X06_00             0.3
+    X10_00    X07_00             0.3
+    X10_00    X08_00             0.3
+    X10_00    X09_00             0.3
+    X10_00    X10_00             0.8
+    X10_01    X00_01             0.3
+    X10_01    X01_01             0.3
+    X10_01    X02_01             0.3
+    X10_01    X03_01             0.3
+    X10_01    X04_01             0.3
+    X10_01    X05_01             0.3
+    X10_01    X06_01             0.3
+    X10_01    X07_01             0.3
+    X10_01    X08_01             0.3
+    X10_01    X09_01             0.3
+    X10_01    X10_00             0.5
+    X10_01    X10_01             0.8
+    X10_02    X00_02             0.3
+    X10_02    X01_02             0.3
+    X10_02    X02_02             0.3
+    X10_02    X03_02             0.3
+    X10_02    X04_02             0.3
+    X10_02    X05_02             0.3
+    X10_02    X06_02             0.3
+    X10_02    X07_02             0.3
+    X10_02    X08_02             0.3
+    X10_02    X09_02             0.3
+    X10_02    X10_00             0.5
+    X10_02    X10_01             0.5
+    X10_02    X10_02             0.8
+    X10_03    X00_03             0.3
+    X10_03    X01_03             0.3
+    X10_03    X02_03             0.3
+    X10_03    X03_03             0.3
+    X10_03    X04_03             0.3
+    X10_03    X05_03             0.3
+    X10_03    X06_03             0.3
+    X10_03    X07_03             0.3
+    X10_03    X08_03             0.3
+    X10_03    X09_03             0.3
+    X10_03    X10_00             0.5
+    X10_03    X10_01             0.5
+    X10_03    X10_02             0.5
+    X10_03    X10_03             0.8
+    X10_04    X00_04             0.3
+    X10_04    X01_04             0.3
+    X10_04    X02_04             0.3
+    X10_04    X03_04             0.3
+    X10_04    X04_04             0.3
+    X10_04    X05_04             0.3
+    X10_04    X06_04             0.3
+    X10_04    X07_04             0.3
+    X10_04    X08_04             0.3
+    X10_04    X09_04             0.3
+    X10_04    X10_00             0.5
+    X10_04    X10_01             0.5
+    X10_04    X10_02             0.5
+    X10_04    X10_03             0.5
+    X10_04    X10_04             0.8
+    X10_05    X00_05             0.3
+    X10_05    X01_05             0.3
+    X10_05    X02_05             0.3
+    X10_05    X03_05             0.3
+    X10_05    X04_05             0.3
+    X10_05    X05_05             0.3
+    X10_05    X06_05             0.3
+    X10_05    X07_05             0.3
+    X10_05    X08_05             0.3
+    X10_05    X09_05             0.3
+    X10_05    X10_00             0.5
+    X10_05    X10_01             0.5
+    X10_05    X10_02             0.5
+    X10_05    X10_03             0.5
+    X10_05    X10_04             0.5
+    X10_05    X10_05             0.8
+    X10_06    X00_06             0.3
+    X10_06    X01_06             0.3
+    X10_06    X02_06             0.3
+    X10_06    X03_06             0.3
+    X10_06    X04_06             0.3
+    X10_06    X05_06             0.3
+    X10_06    X06_06             0.3
+    X10_06    X07_06             0.3
+    X10_06    X08_06             0.3
+    X10_06    X09_06             0.3
+    X10_06    X10_00             0.5
+    X10_06    X10_01             0.5
+    X10_06    X10_02             0.5
+    X10_06    X10_03             0.5
+    X10_06    X10_04             0.5
+    X10_06    X10_05             0.5
+    X10_06    X10_06             0.8
+    X10_07    X00_07             0.3
+    X10_07    X01_07             0.3
+    X10_07    X02_07             0.3
+    X10_07    X03_07             0.3
+    X10_07    X04_07             0.3
+    X10_07    X05_07             0.3
+    X10_07    X06_07             0.3
+    X10_07    X07_07             0.3
+    X10_07    X08_07             0.3
+    X10_07    X09_07             0.3
+    X10_07    X10_00             0.5
+    X10_07    X10_01             0.5
+    X10_07    X10_02             0.5
+    X10_07    X10_03             0.5
+    X10_07    X10_04             0.5
+    X10_07    X10_05             0.5
+    X10_07    X10_06             0.5
+    X10_07    X10_07             0.8
+    X10_08    X00_08             0.3
+    X10_08    X01_08             0.3
+    X10_08    X02_08             0.3
+    X10_08    X03_08             0.3
+    X10_08    X04_08             0.3
+    X10_08    X05_08             0.3
+    X10_08    X06_08             0.3
+    X10_08    X07_08             0.3
+    X10_08    X08_08             0.3
+    X10_08    X09_08             0.3
+    X10_08    X10_00             0.5
+    X10_08    X10_01             0.5
+    X10_08    X10_02             0.5
+    X10_08    X10_03             0.5
+    X10_08    X10_04             0.5
+    X10_08    X10_05             0.5
+    X10_08    X10_06             0.5
+    X10_08    X10_07             0.5
+    X10_08    X10_08             0.8
+    X10_09    X00_09             0.3
+    X10_09    X01_09             0.3
+    X10_09    X02_09             0.3
+    X10_09    X03_09             0.3
+    X10_09    X04_09             0.3
+    X10_09    X05_09             0.3
+    X10_09    X06_09             0.3
+    X10_09    X07_09             0.3
+    X10_09    X08_09             0.3
+    X10_09    X09_09             0.3
+    X10_09    X10_00             0.5
+    X10_09    X10_01             0.5
+    X10_09    X10_02             0.5
+    X10_09    X10_03             0.5
+    X10_09    X10_04             0.5
+    X10_09    X10_05             0.5
+    X10_09    X10_06             0.5
+    X10_09    X10_07             0.5
+    X10_09    X10_08             0.5
+    X10_09    X10_09             0.8
+    X10_10    X00_10             0.3
+    X10_10    X01_10             0.3
+    X10_10    X02_10             0.3
+    X10_10    X03_10             0.3
+    X10_10    X04_10             0.3
+    X10_10    X05_10             0.3
+    X10_10    X06_10             0.3
+    X10_10    X07_10             0.3
+    X10_10    X08_10             0.3
+    X10_10    X09_10             0.3
+    X10_10    X10_00             0.5
+    X10_10    X10_01             0.5
+    X10_10    X10_02             0.5
+    X10_10    X10_03             0.5
+    X10_10    X10_04             0.5
+    X10_10    X10_05             0.5
+    X10_10    X10_06             0.5
+    X10_10    X10_07             0.5
+    X10_10    X10_08             0.5
+    X10_10    X10_09             0.5
+    X10_10    X10_10             0.8
+    X10_11    X00_11             0.3
+    X10_11    X01_11             0.3
+    X10_11    X02_11             0.3
+    X10_11    X03_11             0.3
+    X10_11    X04_11             0.3
+    X10_11    X05_11             0.3
+    X10_11    X06_11             0.3
+    X10_11    X07_11             0.3
+    X10_11    X08_11             0.3
+    X10_11    X09_11             0.3
+    X10_11    X10_00             0.5
+    X10_11    X10_01             0.5
+    X10_11    X10_02             0.5
+    X10_11    X10_03             0.5
+    X10_11    X10_04             0.5
+    X10_11    X10_05             0.5
+    X10_11    X10_06             0.5
+    X10_11    X10_07             0.5
+    X10_11    X10_08             0.5
+    X10_11    X10_09             0.5
+    X10_11    X10_10             0.5
+    X10_11    X10_11             0.8
+    X10_12    X00_12             0.3
+    X10_12    X01_12             0.3
+    X10_12    X02_12             0.3
+    X10_12    X03_12             0.3
+    X10_12    X04_12             0.3
+    X10_12    X05_12             0.3
+    X10_12    X06_12             0.3
+    X10_12    X07_12             0.3
+    X10_12    X08_12             0.3
+    X10_12    X09_12             0.3
+    X10_12    X10_00             0.5
+    X10_12    X10_01             0.5
+    X10_12    X10_02             0.5
+    X10_12    X10_03             0.5
+    X10_12    X10_04             0.5
+    X10_12    X10_05             0.5
+    X10_12    X10_06             0.5
+    X10_12    X10_07             0.5
+    X10_12    X10_08             0.5
+    X10_12    X10_09             0.5
+    X10_12    X10_10             0.5
+    X10_12    X10_11             0.5
+    X10_12    X10_12             0.8
+    X10_13    X00_13             0.3
+    X10_13    X01_13             0.3
+    X10_13    X02_13             0.3
+    X10_13    X03_13             0.3
+    X10_13    X04_13             0.3
+    X10_13    X05_13             0.3
+    X10_13    X06_13             0.3
+    X10_13    X07_13             0.3
+    X10_13    X08_13             0.3
+    X10_13    X09_13             0.3
+    X10_13    X10_00             0.5
+    X10_13    X10_01             0.5
+    X10_13    X10_02             0.5
+    X10_13    X10_03             0.5
+    X10_13    X10_04             0.5
+    X10_13    X10_05             0.5
+    X10_13    X10_06             0.5
+    X10_13    X10_07             0.5
+    X10_13    X10_08             0.5
+    X10_13    X10_09             0.5
+    X10_13    X10_10             0.5
+    X10_13    X10_11             0.5
+    X10_13    X10_12             0.5
+    X10_13    X10_13             0.8
+    X11_00    X00_00             0.3
+    X11_00    X01_00             0.3
+    X11_00    X02_00             0.3
+    X11_00    X03_00             0.3
+    X11_00    X04_00             0.3
+    X11_00    X05_00             0.3
+    X11_00    X06_00             0.3
+    X11_00    X07_00             0.3
+    X11_00    X08_00             0.3
+    X11_00    X09_00             0.3
+    X11_00    X10_00             0.3
+    X11_00    X11_00             0.8
+    X11_01    X00_01             0.3
+    X11_01    X01_01             0.3
+    X11_01    X02_01             0.3
+    X11_01    X03_01             0.3
+    X11_01    X04_01             0.3
+    X11_01    X05_01             0.3
+    X11_01    X06_01             0.3
+    X11_01    X07_01             0.3
+    X11_01    X08_01             0.3
+    X11_01    X09_01             0.3
+    X11_01    X10_01             0.3
+    X11_01    X11_00             0.5
+    X11_01    X11_01             0.8
+    X11_02    X00_02             0.3
+    X11_02    X01_02             0.3
+    X11_02    X02_02             0.3
+    X11_02    X03_02             0.3
+    X11_02    X04_02             0.3
+    X11_02    X05_02             0.3
+    X11_02    X06_02             0.3
+    X11_02    X07_02             0.3
+    X11_02    X08_02             0.3
+    X11_02    X09_02             0.3
+    X11_02    X10_02             0.3
+    X11_02    X11_00             0.5
+    X11_02    X11_01             0.5
+    X11_02    X11_02             0.8
+    X11_03    X00_03             0.3
+    X11_03    X01_03             0.3
+    X11_03    X02_03             0.3
+    X11_03    X03_03             0.3
+    X11_03    X04_03             0.3
+    X11_03    X05_03             0.3
+    X11_03    X06_03             0.3
+    X11_03    X07_03             0.3
+    X11_03    X08_03             0.3
+    X11_03    X09_03             0.3
+    X11_03    X10_03             0.3
+    X11_03    X11_00             0.5
+    X11_03    X11_01             0.5
+    X11_03    X11_02             0.5
+    X11_03    X11_03             0.8
+    X11_04    X00_04             0.3
+    X11_04    X01_04             0.3
+    X11_04    X02_04             0.3
+    X11_04    X03_04             0.3
+    X11_04    X04_04             0.3
+    X11_04    X05_04             0.3
+    X11_04    X06_04             0.3
+    X11_04    X07_04             0.3
+    X11_04    X08_04             0.3
+    X11_04    X09_04             0.3
+    X11_04    X10_04             0.3
+    X11_04    X11_00             0.5
+    X11_04    X11_01             0.5
+    X11_04    X11_02             0.5
+    X11_04    X11_03             0.5
+    X11_04    X11_04             0.8
+    X11_05    X00_05             0.3
+    X11_05    X01_05             0.3
+    X11_05    X02_05             0.3
+    X11_05    X03_05             0.3
+    X11_05    X04_05             0.3
+    X11_05    X05_05             0.3
+    X11_05    X06_05             0.3
+    X11_05    X07_05             0.3
+    X11_05    X08_05             0.3
+    X11_05    X09_05             0.3
+    X11_05    X10_05             0.3
+    X11_05    X11_00             0.5
+    X11_05    X11_01             0.5
+    X11_05    X11_02             0.5
+    X11_05    X11_03             0.5
+    X11_05    X11_04             0.5
+    X11_05    X11_05             0.8
+    X11_06    X00_06             0.3
+    X11_06    X01_06             0.3
+    X11_06    X02_06             0.3
+    X11_06    X03_06             0.3
+    X11_06    X04_06             0.3
+    X11_06    X05_06             0.3
+    X11_06    X06_06             0.3
+    X11_06    X07_06             0.3
+    X11_06    X08_06             0.3
+    X11_06    X09_06             0.3
+    X11_06    X10_06             0.3
+    X11_06    X11_00             0.5
+    X11_06    X11_01             0.5
+    X11_06    X11_02             0.5
+    X11_06    X11_03             0.5
+    X11_06    X11_04             0.5
+    X11_06    X11_05             0.5
+    X11_06    X11_06             0.8
+    X11_07    X00_07             0.3
+    X11_07    X01_07             0.3
+    X11_07    X02_07             0.3
+    X11_07    X03_07             0.3
+    X11_07    X04_07             0.3
+    X11_07    X05_07             0.3
+    X11_07    X06_07             0.3
+    X11_07    X07_07             0.3
+    X11_07    X08_07             0.3
+    X11_07    X09_07             0.3
+    X11_07    X10_07             0.3
+    X11_07    X11_00             0.5
+    X11_07    X11_01             0.5
+    X11_07    X11_02             0.5
+    X11_07    X11_03             0.5
+    X11_07    X11_04             0.5
+    X11_07    X11_05             0.5
+    X11_07    X11_06             0.5
+    X11_07    X11_07             0.8
+    X11_08    X00_08             0.3
+    X11_08    X01_08             0.3
+    X11_08    X02_08             0.3
+    X11_08    X03_08             0.3
+    X11_08    X04_08             0.3
+    X11_08    X05_08             0.3
+    X11_08    X06_08             0.3
+    X11_08    X07_08             0.3
+    X11_08    X08_08             0.3
+    X11_08    X09_08             0.3
+    X11_08    X10_08             0.3
+    X11_08    X11_00             0.5
+    X11_08    X11_01             0.5
+    X11_08    X11_02             0.5
+    X11_08    X11_03             0.5
+    X11_08    X11_04             0.5
+    X11_08    X11_05             0.5
+    X11_08    X11_06             0.5
+    X11_08    X11_07             0.5
+    X11_08    X11_08             0.8
+    X11_09    X00_09             0.3
+    X11_09    X01_09             0.3
+    X11_09    X02_09             0.3
+    X11_09    X03_09             0.3
+    X11_09    X04_09             0.3
+    X11_09    X05_09             0.3
+    X11_09    X06_09             0.3
+    X11_09    X07_09             0.3
+    X11_09    X08_09             0.3
+    X11_09    X09_09             0.3
+    X11_09    X10_09             0.3
+    X11_09    X11_00             0.5
+    X11_09    X11_01             0.5
+    X11_09    X11_02             0.5
+    X11_09    X11_03             0.5
+    X11_09    X11_04             0.5
+    X11_09    X11_05             0.5
+    X11_09    X11_06             0.5
+    X11_09    X11_07             0.5
+    X11_09    X11_08             0.5
+    X11_09    X11_09             0.8
+    X11_10    X00_10             0.3
+    X11_10    X01_10             0.3
+    X11_10    X02_10             0.3
+    X11_10    X03_10             0.3
+    X11_10    X04_10             0.3
+    X11_10    X05_10             0.3
+    X11_10    X06_10             0.3
+    X11_10    X07_10             0.3
+    X11_10    X08_10             0.3
+    X11_10    X09_10             0.3
+    X11_10    X10_10             0.3
+    X11_10    X11_00             0.5
+    X11_10    X11_01             0.5
+    X11_10    X11_02             0.5
+    X11_10    X11_03             0.5
+    X11_10    X11_04             0.5
+    X11_10    X11_05             0.5
+    X11_10    X11_06             0.5
+    X11_10    X11_07             0.5
+    X11_10    X11_08             0.5
+    X11_10    X11_09             0.5
+    X11_10    X11_10             0.8
+    X11_11    X00_11             0.3
+    X11_11    X01_11             0.3
+    X11_11    X02_11             0.3
+    X11_11    X03_11             0.3
+    X11_11    X04_11             0.3
+    X11_11    X05_11             0.3
+    X11_11    X06_11             0.3
+    X11_11    X07_11             0.3
+    X11_11    X08_11             0.3
+    X11_11    X09_11             0.3
+    X11_11    X10_11             0.3
+    X11_11    X11_00             0.5
+    X11_11    X11_01             0.5
+    X11_11    X11_02             0.5
+    X11_11    X11_03             0.5
+    X11_11    X11_04             0.5
+    X11_11    X11_05             0.5
+    X11_11    X11_06             0.5
+    X11_11    X11_07             0.5
+    X11_11    X11_08             0.5
+    X11_11    X11_09             0.5
+    X11_11    X11_10             0.5
+    X11_11    X11_11             0.8
+    X11_12    X00_12             0.3
+    X11_12    X01_12             0.3
+    X11_12    X02_12             0.3
+    X11_12    X03_12             0.3
+    X11_12    X04_12             0.3
+    X11_12    X05_12             0.3
+    X11_12    X06_12             0.3
+    X11_12    X07_12             0.3
+    X11_12    X08_12             0.3
+    X11_12    X09_12             0.3
+    X11_12    X10_12             0.3
+    X11_12    X11_00             0.5
+    X11_12    X11_01             0.5
+    X11_12    X11_02             0.5
+    X11_12    X11_03             0.5
+    X11_12    X11_04             0.5
+    X11_12    X11_05             0.5
+    X11_12    X11_06             0.5
+    X11_12    X11_07             0.5
+    X11_12    X11_08             0.5
+    X11_12    X11_09             0.5
+    X11_12    X11_10             0.5
+    X11_12    X11_11             0.5
+    X11_12    X11_12             0.8
+    X11_13    X00_13             0.3
+    X11_13    X01_13             0.3
+    X11_13    X02_13             0.3
+    X11_13    X03_13             0.3
+    X11_13    X04_13             0.3
+    X11_13    X05_13             0.3
+    X11_13    X06_13             0.3
+    X11_13    X07_13             0.3
+    X11_13    X08_13             0.3
+    X11_13    X09_13             0.3
+    X11_13    X10_13             0.3
+    X11_13    X11_00             0.5
+    X11_13    X11_01             0.5
+    X11_13    X11_02             0.5
+    X11_13    X11_03             0.5
+    X11_13    X11_04             0.5
+    X11_13    X11_05             0.5
+    X11_13    X11_06             0.5
+    X11_13    X11_07             0.5
+    X11_13    X11_08             0.5
+    X11_13    X11_09             0.5
+    X11_13    X11_10             0.5
+    X11_13    X11_11             0.5
+    X11_13    X11_12             0.5
+    X11_13    X11_13             0.8
+    X12_00    X00_00             0.3
+    X12_00    X01_00             0.3
+    X12_00    X02_00             0.3
+    X12_00    X03_00             0.3
+    X12_00    X04_00             0.3
+    X12_00    X05_00             0.3
+    X12_00    X06_00             0.3
+    X12_00    X07_00             0.3
+    X12_00    X08_00             0.3
+    X12_00    X09_00             0.3
+    X12_00    X10_00             0.3
+    X12_00    X11_00             0.3
+    X12_00    X12_00             1.8
+    X12_01    X00_01             0.3
+    X12_01    X01_01             0.3
+    X12_01    X02_01             0.3
+    X12_01    X03_01             0.3
+    X12_01    X04_01             0.3
+    X12_01    X05_01             0.3
+    X12_01    X06_01             0.3
+    X12_01    X07_01             0.3
+    X12_01    X08_01             0.3
+    X12_01    X09_01             0.3
+    X12_01    X10_01             0.3
+    X12_01    X11_01             0.3
+    X12_01    X12_00             1.5
+    X12_01    X12_01             1.8
+    X12_02    X00_02             0.3
+    X12_02    X01_02             0.3
+    X12_02    X02_02             0.3
+    X12_02    X03_02             0.3
+    X12_02    X04_02             0.3
+    X12_02    X05_02             0.3
+    X12_02    X06_02             0.3
+    X12_02    X07_02             0.3
+    X12_02    X08_02             0.3
+    X12_02    X09_02             0.3
+    X12_02    X10_02             0.3
+    X12_02    X11_02             0.3
+    X12_02    X12_00             1.5
+    X12_02    X12_01             1.5
+    X12_02    X12_02             1.8
+    X12_03    X00_03             0.3
+    X12_03    X01_03             0.3
+    X12_03    X02_03             0.3
+    X12_03    X03_03             0.3
+    X12_03    X04_03             0.3
+    X12_03    X05_03             0.3
+    X12_03    X06_03             0.3
+    X12_03    X07_03             0.3
+    X12_03    X08_03             0.3
+    X12_03    X09_03             0.3
+    X12_03    X10_03             0.3
+    X12_03    X11_03             0.3
+    X12_03    X12_00             1.5
+    X12_03    X12_01             1.5
+    X12_03    X12_02             1.5
+    X12_03    X12_03             1.8
+    X12_04    X00_04             0.3
+    X12_04    X01_04             0.3
+    X12_04    X02_04             0.3
+    X12_04    X03_04             0.3
+    X12_04    X04_04             0.3
+    X12_04    X05_04             0.3
+    X12_04    X06_04             0.3
+    X12_04    X07_04             0.3
+    X12_04    X08_04             0.3
+    X12_04    X09_04             0.3
+    X12_04    X10_04             0.3
+    X12_04    X11_04             0.3
+    X12_04    X12_00             1.5
+    X12_04    X12_01             1.5
+    X12_04    X12_02             1.5
+    X12_04    X12_03             1.5
+    X12_04    X12_04             1.8
+    X12_05    X00_05             0.3
+    X12_05    X01_05             0.3
+    X12_05    X02_05             0.3
+    X12_05    X03_05             0.3
+    X12_05    X04_05             0.3
+    X12_05    X05_05             0.3
+    X12_05    X06_05             0.3
+    X12_05    X07_05             0.3
+    X12_05    X08_05             0.3
+    X12_05    X09_05             0.3
+    X12_05    X10_05             0.3
+    X12_05    X11_05             0.3
+    X12_05    X12_00             1.5
+    X12_05    X12_01             1.5
+    X12_05    X12_02             1.5
+    X12_05    X12_03             1.5
+    X12_05    X12_04             1.5
+    X12_05    X12_05             1.8
+    X12_06    X00_06             0.3
+    X12_06    X01_06             0.3
+    X12_06    X02_06             0.3
+    X12_06    X03_06             0.3
+    X12_06    X04_06             0.3
+    X12_06    X05_06             0.3
+    X12_06    X06_06             0.3
+    X12_06    X07_06             0.3
+    X12_06    X08_06             0.3
+    X12_06    X09_06             0.3
+    X12_06    X10_06             0.3
+    X12_06    X11_06             0.3
+    X12_06    X12_00             1.5
+    X12_06    X12_01             1.5
+    X12_06    X12_02             1.5
+    X12_06    X12_03             1.5
+    X12_06    X12_04             1.5
+    X12_06    X12_05             1.5
+    X12_06    X12_06             1.8
+    X12_07    X00_07             0.3
+    X12_07    X01_07             0.3
+    X12_07    X02_07             0.3
+    X12_07    X03_07             0.3
+    X12_07    X04_07             0.3
+    X12_07    X05_07             0.3
+    X12_07    X06_07             0.3
+    X12_07    X07_07             0.3
+    X12_07    X08_07             0.3
+    X12_07    X09_07             0.3
+    X12_07    X10_07             0.3
+    X12_07    X11_07             0.3
+    X12_07    X12_00             1.5
+    X12_07    X12_01             1.5
+    X12_07    X12_02             1.5
+    X12_07    X12_03             1.5
+    X12_07    X12_04             1.5
+    X12_07    X12_05             1.5
+    X12_07    X12_06             1.5
+    X12_07    X12_07             1.8
+    X12_08    X00_08             0.3
+    X12_08    X01_08             0.3
+    X12_08    X02_08             0.3
+    X12_08    X03_08             0.3
+    X12_08    X04_08             0.3
+    X12_08    X05_08             0.3
+    X12_08    X06_08             0.3
+    X12_08    X07_08             0.3
+    X12_08    X08_08             0.3
+    X12_08    X09_08             0.3
+    X12_08    X10_08             0.3
+    X12_08    X11_08             0.3
+    X12_08    X12_00             1.5
+    X12_08    X12_01             1.5
+    X12_08    X12_02             1.5
+    X12_08    X12_03             1.5
+    X12_08    X12_04             1.5
+    X12_08    X12_05             1.5
+    X12_08    X12_06             1.5
+    X12_08    X12_07             1.5
+    X12_08    X12_08             1.8
+    X12_09    X00_09             0.3
+    X12_09    X01_09             0.3
+    X12_09    X02_09             0.3
+    X12_09    X03_09             0.3
+    X12_09    X04_09             0.3
+    X12_09    X05_09             0.3
+    X12_09    X06_09             0.3
+    X12_09    X07_09             0.3
+    X12_09    X08_09             0.3
+    X12_09    X09_09             0.3
+    X12_09    X10_09             0.3
+    X12_09    X11_09             0.3
+    X12_09    X12_00             1.5
+    X12_09    X12_01             1.5
+    X12_09    X12_02             1.5
+    X12_09    X12_03             1.5
+    X12_09    X12_04             1.5
+    X12_09    X12_05             1.5
+    X12_09    X12_06             1.5
+    X12_09    X12_07             1.5
+    X12_09    X12_08             1.5
+    X12_09    X12_09             1.8
+    X12_10    X00_10             0.3
+    X12_10    X01_10             0.3
+    X12_10    X02_10             0.3
+    X12_10    X03_10             0.3
+    X12_10    X04_10             0.3
+    X12_10    X05_10             0.3
+    X12_10    X06_10             0.3
+    X12_10    X07_10             0.3
+    X12_10    X08_10             0.3
+    X12_10    X09_10             0.3
+    X12_10    X10_10             0.3
+    X12_10    X11_10             0.3
+    X12_10    X12_00             1.5
+    X12_10    X12_01             1.5
+    X12_10    X12_02             1.5
+    X12_10    X12_03             1.5
+    X12_10    X12_04             1.5
+    X12_10    X12_05             1.5
+    X12_10    X12_06             1.5
+    X12_10    X12_07             1.5
+    X12_10    X12_08             1.5
+    X12_10    X12_09             1.5
+    X12_10    X12_10             1.8
+    X12_11    X00_11             0.3
+    X12_11    X01_11             0.3
+    X12_11    X02_11             0.3
+    X12_11    X03_11             0.3
+    X12_11    X04_11             0.3
+    X12_11    X05_11             0.3
+    X12_11    X06_11             0.3
+    X12_11    X07_11             0.3
+    X12_11    X08_11             0.3
+    X12_11    X09_11             0.3
+    X12_11    X10_11             0.3
+    X12_11    X11_11             0.3
+    X12_11    X12_00             1.5
+    X12_11    X12_01             1.5
+    X12_11    X12_02             1.5
+    X12_11    X12_03             1.5
+    X12_11    X12_04             1.5
+    X12_11    X12_05             1.5
+    X12_11    X12_06             1.5
+    X12_11    X12_07             1.5
+    X12_11    X12_08             1.5
+    X12_11    X12_09             1.5
+    X12_11    X12_10             1.5
+    X12_11    X12_11             1.8
+    X12_12    X00_12             0.3
+    X12_12    X01_12             0.3
+    X12_12    X02_12             0.3
+    X12_12    X03_12             0.3
+    X12_12    X04_12             0.3
+    X12_12    X05_12             0.3
+    X12_12    X06_12             0.3
+    X12_12    X07_12             0.3
+    X12_12    X08_12             0.3
+    X12_12    X09_12             0.3
+    X12_12    X10_12             0.3
+    X12_12    X11_12             0.3
+    X12_12    X12_00             1.5
+    X12_12    X12_01             1.5
+    X12_12    X12_02             1.5
+    X12_12    X12_03             1.5
+    X12_12    X12_04             1.5
+    X12_12    X12_05             1.5
+    X12_12    X12_06             1.5
+    X12_12    X12_07             1.5
+    X12_12    X12_08             1.5
+    X12_12    X12_09             1.5
+    X12_12    X12_10             1.5
+    X12_12    X12_11             1.5
+    X12_12    X12_12             1.8
+    X12_13    X00_13             0.3
+    X12_13    X01_13             0.3
+    X12_13    X02_13             0.3
+    X12_13    X03_13             0.3
+    X12_13    X04_13             0.3
+    X12_13    X05_13             0.3
+    X12_13    X06_13             0.3
+    X12_13    X07_13             0.3
+    X12_13    X08_13             0.3
+    X12_13    X09_13             0.3
+    X12_13    X10_13             0.3
+    X12_13    X11_13             0.3
+    X12_13    X12_00             1.5
+    X12_13    X12_01             1.5
+    X12_13    X12_02             1.5
+    X12_13    X12_03             1.5
+    X12_13    X12_04             1.5
+    X12_13    X12_05             1.5
+    X12_13    X12_06             1.5
+    X12_13    X12_07             1.5
+    X12_13    X12_08             1.5
+    X12_13    X12_09             1.5
+    X12_13    X12_10             1.5
+    X12_13    X12_11             1.5
+    X12_13    X12_12             1.5
+    X12_13    X12_13             1.8
+    X13_00    X00_00             0.3
+    X13_00    X01_00             0.3
+    X13_00    X02_00             0.3
+    X13_00    X03_00             0.3
+    X13_00    X04_00             0.3
+    X13_00    X05_00             0.3
+    X13_00    X06_00             0.3
+    X13_00    X07_00             0.3
+    X13_00    X08_00             0.3
+    X13_00    X09_00             0.3
+    X13_00    X10_00             0.3
+    X13_00    X11_00             0.3
+    X13_00    X12_00             0.3
+    X13_00    X13_00             0.8
+    X13_01    X00_01             0.3
+    X13_01    X01_01             0.3
+    X13_01    X02_01             0.3
+    X13_01    X03_01             0.3
+    X13_01    X04_01             0.3
+    X13_01    X05_01             0.3
+    X13_01    X06_01             0.3
+    X13_01    X07_01             0.3
+    X13_01    X08_01             0.3
+    X13_01    X09_01             0.3
+    X13_01    X10_01             0.3
+    X13_01    X11_01             0.3
+    X13_01    X12_01             0.3
+    X13_01    X13_00             0.5
+    X13_01    X13_01             0.8
+    X13_02    X00_02             0.3
+    X13_02    X01_02             0.3
+    X13_02    X02_02             0.3
+    X13_02    X03_02             0.3
+    X13_02    X04_02             0.3
+    X13_02    X05_02             0.3
+    X13_02    X06_02             0.3
+    X13_02    X07_02             0.3
+    X13_02    X08_02             0.3
+    X13_02    X09_02             0.3
+    X13_02    X10_02             0.3
+    X13_02    X11_02             0.3
+    X13_02    X12_02             0.3
+    X13_02    X13_00             0.5
+    X13_02    X13_01             0.5
+    X13_02    X13_02             0.8
+    X13_03    X00_03             0.3
+    X13_03    X01_03             0.3
+    X13_03    X02_03             0.3
+    X13_03    X03_03             0.3
+    X13_03    X04_03             0.3
+    X13_03    X05_03             0.3
+    X13_03    X06_03             0.3
+    X13_03    X07_03             0.3
+    X13_03    X08_03             0.3
+    X13_03    X09_03             0.3
+    X13_03    X10_03             0.3
+    X13_03    X11_03             0.3
+    X13_03    X12_03             0.3
+    X13_03    X13_00             0.5
+    X13_03    X13_01             0.5
+    X13_03    X13_02             0.5
+    X13_03    X13_03             0.8
+    X13_04    X00_04             0.3
+    X13_04    X01_04             0.3
+    X13_04    X02_04             0.3
+    X13_04    X03_04             0.3
+    X13_04    X04_04             0.3
+    X13_04    X05_04             0.3
+    X13_04    X06_04             0.3
+    X13_04    X07_04             0.3
+    X13_04    X08_04             0.3
+    X13_04    X09_04             0.3
+    X13_04    X10_04             0.3
+    X13_04    X11_04             0.3
+    X13_04    X12_04             0.3
+    X13_04    X13_00             0.5
+    X13_04    X13_01             0.5
+    X13_04    X13_02             0.5
+    X13_04    X13_03             0.5
+    X13_04    X13_04             0.8
+    X13_05    X00_05             0.3
+    X13_05    X01_05             0.3
+    X13_05    X02_05             0.3
+    X13_05    X03_05             0.3
+    X13_05    X04_05             0.3
+    X13_05    X05_05             0.3
+    X13_05    X06_05             0.3
+    X13_05    X07_05             0.3
+    X13_05    X08_05             0.3
+    X13_05    X09_05             0.3
+    X13_05    X10_05             0.3
+    X13_05    X11_05             0.3
+    X13_05    X12_05             0.3
+    X13_05    X13_00             0.5
+    X13_05    X13_01             0.5
+    X13_05    X13_02             0.5
+    X13_05    X13_03             0.5
+    X13_05    X13_04             0.5
+    X13_05    X13_05             0.8
+    X13_06    X00_06             0.3
+    X13_06    X01_06             0.3
+    X13_06    X02_06             0.3
+    X13_06    X03_06             0.3
+    X13_06    X04_06             0.3
+    X13_06    X05_06             0.3
+    X13_06    X06_06             0.3
+    X13_06    X07_06             0.3
+    X13_06    X08_06             0.3
+    X13_06    X09_06             0.3
+    X13_06    X10_06             0.3
+    X13_06    X11_06             0.3
+    X13_06    X12_06             0.3
+    X13_06    X13_00             0.5
+    X13_06    X13_01             0.5
+    X13_06    X13_02             0.5
+    X13_06    X13_03             0.5
+    X13_06    X13_04             0.5
+    X13_06    X13_05             0.5
+    X13_06    X13_06             0.8
+    X13_07    X00_07             0.3
+    X13_07    X01_07             0.3
+    X13_07    X02_07             0.3
+    X13_07    X03_07             0.3
+    X13_07    X04_07             0.3
+    X13_07    X05_07             0.3
+    X13_07    X06_07             0.3
+    X13_07    X07_07             0.3
+    X13_07    X08_07             0.3
+    X13_07    X09_07             0.3
+    X13_07    X10_07             0.3
+    X13_07    X11_07             0.3
+    X13_07    X12_07             0.3
+    X13_07    X13_00             0.5
+    X13_07    X13_01             0.5
+    X13_07    X13_02             0.5
+    X13_07    X13_03             0.5
+    X13_07    X13_04             0.5
+    X13_07    X13_05             0.5
+    X13_07    X13_06             0.5
+    X13_07    X13_07             0.8
+    X13_08    X00_08             0.3
+    X13_08    X01_08             0.3
+    X13_08    X02_08             0.3
+    X13_08    X03_08             0.3
+    X13_08    X04_08             0.3
+    X13_08    X05_08             0.3
+    X13_08    X06_08             0.3
+    X13_08    X07_08             0.3
+    X13_08    X08_08             0.3
+    X13_08    X09_08             0.3
+    X13_08    X10_08             0.3
+    X13_08    X11_08             0.3
+    X13_08    X12_08             0.3
+    X13_08    X13_00             0.5
+    X13_08    X13_01             0.5
+    X13_08    X13_02             0.5
+    X13_08    X13_03             0.5
+    X13_08    X13_04             0.5
+    X13_08    X13_05             0.5
+    X13_08    X13_06             0.5
+    X13_08    X13_07             0.5
+    X13_08    X13_08             0.8
+    X13_09    X00_09             0.3
+    X13_09    X01_09             0.3
+    X13_09    X02_09             0.3
+    X13_09    X03_09             0.3
+    X13_09    X04_09             0.3
+    X13_09    X05_09             0.3
+    X13_09    X06_09             0.3
+    X13_09    X07_09             0.3
+    X13_09    X08_09             0.3
+    X13_09    X09_09             0.3
+    X13_09    X10_09             0.3
+    X13_09    X11_09             0.3
+    X13_09    X12_09             0.3
+    X13_09    X13_00             0.5
+    X13_09    X13_01             0.5
+    X13_09    X13_02             0.5
+    X13_09    X13_03             0.5
+    X13_09    X13_04             0.5
+    X13_09    X13_05             0.5
+    X13_09    X13_06             0.5
+    X13_09    X13_07             0.5
+    X13_09    X13_08             0.5
+    X13_09    X13_09             0.8
+    X13_10    X00_10             0.3
+    X13_10    X01_10             0.3
+    X13_10    X02_10             0.3
+    X13_10    X03_10             0.3
+    X13_10    X04_10             0.3
+    X13_10    X05_10             0.3
+    X13_10    X06_10             0.3
+    X13_10    X07_10             0.3
+    X13_10    X08_10             0.3
+    X13_10    X09_10             0.3
+    X13_10    X10_10             0.3
+    X13_10    X11_10             0.3
+    X13_10    X12_10             0.3
+    X13_10    X13_00             0.5
+    X13_10    X13_01             0.5
+    X13_10    X13_02             0.5
+    X13_10    X13_03             0.5
+    X13_10    X13_04             0.5
+    X13_10    X13_05             0.5
+    X13_10    X13_06             0.5
+    X13_10    X13_07             0.5
+    X13_10    X13_08             0.5
+    X13_10    X13_09             0.5
+    X13_10    X13_10             0.8
+    X13_11    X00_11             0.3
+    X13_11    X01_11             0.3
+    X13_11    X02_11             0.3
+    X13_11    X03_11             0.3
+    X13_11    X04_11             0.3
+    X13_11    X05_11             0.3
+    X13_11    X06_11             0.3
+    X13_11    X07_11             0.3
+    X13_11    X08_11             0.3
+    X13_11    X09_11             0.3
+    X13_11    X10_11             0.3
+    X13_11    X11_11             0.3
+    X13_11    X12_11             0.3
+    X13_11    X13_00             0.5
+    X13_11    X13_01             0.5
+    X13_11    X13_02             0.5
+    X13_11    X13_03             0.5
+    X13_11    X13_04             0.5
+    X13_11    X13_05             0.5
+    X13_11    X13_06             0.5
+    X13_11    X13_07             0.5
+    X13_11    X13_08             0.5
+    X13_11    X13_09             0.5
+    X13_11    X13_10             0.5
+    X13_11    X13_11             0.8
+    X13_12    X00_12             0.3
+    X13_12    X01_12             0.3
+    X13_12    X02_12             0.3
+    X13_12    X03_12             0.3
+    X13_12    X04_12             0.3
+    X13_12    X05_12             0.3
+    X13_12    X06_12             0.3
+    X13_12    X07_12             0.3
+    X13_12    X08_12             0.3
+    X13_12    X09_12             0.3
+    X13_12    X10_12             0.3
+    X13_12    X11_12             0.3
+    X13_12    X12_12             0.3
+    X13_12    X13_00             0.5
+    X13_12    X13_01             0.5
+    X13_12    X13_02             0.5
+    X13_12    X13_03             0.5
+    X13_12    X13_04             0.5
+    X13_12    X13_05             0.5
+    X13_12    X13_06             0.5
+    X13_12    X13_07             0.5
+    X13_12    X13_08             0.5
+    X13_12    X13_09             0.5
+    X13_12    X13_10             0.5
+    X13_12    X13_11             0.5
+    X13_12    X13_12             0.8
+    X13_13    X00_13             0.3
+    X13_13    X01_13             0.3
+    X13_13    X02_13             0.3
+    X13_13    X03_13             0.3
+    X13_13    X04_13             0.3
+    X13_13    X05_13             0.3
+    X13_13    X06_13             0.3
+    X13_13    X07_13             0.3
+    X13_13    X08_13             0.3
+    X13_13    X09_13             0.3
+    X13_13    X10_13             0.3
+    X13_13    X11_13             0.3
+    X13_13    X12_13             0.3
+    X13_13    X13_00             0.5
+    X13_13    X13_01             0.5
+    X13_13    X13_02             0.5
+    X13_13    X13_03             0.5
+    X13_13    X13_04             0.5
+    X13_13    X13_05             0.5
+    X13_13    X13_06             0.5
+    X13_13    X13_07             0.5
+    X13_13    X13_08             0.5
+    X13_13    X13_09             0.5
+    X13_13    X13_10             0.5
+    X13_13    X13_11             0.5
+    X13_13    X13_12             0.5
+    X13_13    X13_13             0.8
+    X14_00    X00_00             0.3
+    X14_00    X01_00             0.3
+    X14_00    X02_00             0.3
+    X14_00    X03_00             0.3
+    X14_00    X04_00             0.3
+    X14_00    X05_00             0.3
+    X14_00    X06_00             0.3
+    X14_00    X07_00             0.3
+    X14_00    X08_00             0.3
+    X14_00    X09_00             0.3
+    X14_00    X10_00             0.3
+    X14_00    X11_00             0.3
+    X14_00    X12_00             0.3
+    X14_00    X13_00             0.3
+    X14_00    X14_00             1.3
+    X14_01    X00_01             0.3
+    X14_01    X01_01             0.3
+    X14_01    X02_01             0.3
+    X14_01    X03_01             0.3
+    X14_01    X04_01             0.3
+    X14_01    X05_01             0.3
+    X14_01    X06_01             0.3
+    X14_01    X07_01             0.3
+    X14_01    X08_01             0.3
+    X14_01    X09_01             0.3
+    X14_01    X10_01             0.3
+    X14_01    X11_01             0.3
+    X14_01    X12_01             0.3
+    X14_01    X13_01             0.3
+    X14_01    X14_00               1
+    X14_01    X14_01             1.3
+    X14_02    X00_02             0.3
+    X14_02    X01_02             0.3
+    X14_02    X02_02             0.3
+    X14_02    X03_02             0.3
+    X14_02    X04_02             0.3
+    X14_02    X05_02             0.3
+    X14_02    X06_02             0.3
+    X14_02    X07_02             0.3
+    X14_02    X08_02             0.3
+    X14_02    X09_02             0.3
+    X14_02    X10_02             0.3
+    X14_02    X11_02             0.3
+    X14_02    X12_02             0.3
+    X14_02    X13_02             0.3
+    X14_02    X14_00               1
+    X14_02    X14_01               1
+    X14_02    X14_02             1.3
+    X14_03    X00_03             0.3
+    X14_03    X01_03             0.3
+    X14_03    X02_03             0.3
+    X14_03    X03_03             0.3
+    X14_03    X04_03             0.3
+    X14_03    X05_03             0.3
+    X14_03    X06_03             0.3
+    X14_03    X07_03             0.3
+    X14_03    X08_03             0.3
+    X14_03    X09_03             0.3
+    X14_03    X10_03             0.3
+    X14_03    X11_03             0.3
+    X14_03    X12_03             0.3
+    X14_03    X13_03             0.3
+    X14_03    X14_00               1
+    X14_03    X14_01               1
+    X14_03    X14_02               1
+    X14_03    X14_03             1.3
+    X14_04    X00_04             0.3
+    X14_04    X01_04             0.3
+    X14_04    X02_04             0.3
+    X14_04    X03_04             0.3
+    X14_04    X04_04             0.3
+    X14_04    X05_04             0.3
+    X14_04    X06_04             0.3
+    X14_04    X07_04             0.3
+    X14_04    X08_04             0.3
+    X14_04    X09_04             0.3
+    X14_04    X10_04             0.3
+    X14_04    X11_04             0.3
+    X14_04    X12_04             0.3
+    X14_04    X13_04             0.3
+    X14_04    X14_00               1
+    X14_04    X14_01               1
+    X14_04    X14_02               1
+    X14_04    X14_03               1
+    X14_04    X14_04             1.3
+    X14_05    X00_05             0.3
+    X14_05    X01_05             0.3
+    X14_05    X02_05             0.3
+    X14_05    X03_05             0.3
+    X14_05    X04_05             0.3
+    X14_05    X05_05             0.3
+    X14_05    X06_05             0.3
+    X14_05    X07_05             0.3
+    X14_05    X08_05             0.3
+    X14_05    X09_05             0.3
+    X14_05    X10_05             0.3
+    X14_05    X11_05             0.3
+    X14_05    X12_05             0.3
+    X14_05    X13_05             0.3
+    X14_05    X14_00               1
+    X14_05    X14_01               1
+    X14_05    X14_02               1
+    X14_05    X14_03               1
+    X14_05    X14_04               1
+    X14_05    X14_05             1.3
+    X14_06    X00_06             0.3
+    X14_06    X01_06             0.3
+    X14_06    X02_06             0.3
+    X14_06    X03_06             0.3
+    X14_06    X04_06             0.3
+    X14_06    X05_06             0.3
+    X14_06    X06_06             0.3
+    X14_06    X07_06             0.3
+    X14_06    X08_06             0.3
+    X14_06    X09_06             0.3
+    X14_06    X10_06             0.3
+    X14_06    X11_06             0.3
+    X14_06    X12_06             0.3
+    X14_06    X13_06             0.3
+    X14_06    X14_00               1
+    X14_06    X14_01               1
+    X14_06    X14_02               1
+    X14_06    X14_03               1
+    X14_06    X14_04               1
+    X14_06    X14_05               1
+    X14_06    X14_06             1.3
+    X14_07    X00_07             0.3
+    X14_07    X01_07             0.3
+    X14_07    X02_07             0.3
+    X14_07    X03_07             0.3
+    X14_07    X04_07             0.3
+    X14_07    X05_07             0.3
+    X14_07    X06_07             0.3
+    X14_07    X07_07             0.3
+    X14_07    X08_07             0.3
+    X14_07    X09_07             0.3
+    X14_07    X10_07             0.3
+    X14_07    X11_07             0.3
+    X14_07    X12_07             0.3
+    X14_07    X13_07             0.3
+    X14_07    X14_00               1
+    X14_07    X14_01               1
+    X14_07    X14_02               1
+    X14_07    X14_03               1
+    X14_07    X14_04               1
+    X14_07    X14_05               1
+    X14_07    X14_06               1
+    X14_07    X14_07             1.3
+    X14_08    X00_08             0.3
+    X14_08    X01_08             0.3
+    X14_08    X02_08             0.3
+    X14_08    X03_08             0.3
+    X14_08    X04_08             0.3
+    X14_08    X05_08             0.3
+    X14_08    X06_08             0.3
+    X14_08    X07_08             0.3
+    X14_08    X08_08             0.3
+    X14_08    X09_08             0.3
+    X14_08    X10_08             0.3
+    X14_08    X11_08             0.3
+    X14_08    X12_08             0.3
+    X14_08    X13_08             0.3
+    X14_08    X14_00               1
+    X14_08    X14_01               1
+    X14_08    X14_02               1
+    X14_08    X14_03               1
+    X14_08    X14_04               1
+    X14_08    X14_05               1
+    X14_08    X14_06               1
+    X14_08    X14_07               1
+    X14_08    X14_08             1.3
+    X14_09    X00_09             0.3
+    X14_09    X01_09             0.3
+    X14_09    X02_09             0.3
+    X14_09    X03_09             0.3
+    X14_09    X04_09             0.3
+    X14_09    X05_09             0.3
+    X14_09    X06_09             0.3
+    X14_09    X07_09             0.3
+    X14_09    X08_09             0.3
+    X14_09    X09_09             0.3
+    X14_09    X10_09             0.3
+    X14_09    X11_09             0.3
+    X14_09    X12_09             0.3
+    X14_09    X13_09             0.3
+    X14_09    X14_00               1
+    X14_09    X14_01               1
+    X14_09    X14_02               1
+    X14_09    X14_03               1
+    X14_09    X14_04               1
+    X14_09    X14_05               1
+    X14_09    X14_06               1
+    X14_09    X14_07               1
+    X14_09    X14_08               1
+    X14_09    X14_09             1.3
+    X14_10    X00_10             0.3
+    X14_10    X01_10             0.3
+    X14_10    X02_10             0.3
+    X14_10    X03_10             0.3
+    X14_10    X04_10             0.3
+    X14_10    X05_10             0.3
+    X14_10    X06_10             0.3
+    X14_10    X07_10             0.3
+    X14_10    X08_10             0.3
+    X14_10    X09_10             0.3
+    X14_10    X10_10             0.3
+    X14_10    X11_10             0.3
+    X14_10    X12_10             0.3
+    X14_10    X13_10             0.3
+    X14_10    X14_00               1
+    X14_10    X14_01               1
+    X14_10    X14_02               1
+    X14_10    X14_03               1
+    X14_10    X14_04               1
+    X14_10    X14_05               1
+    X14_10    X14_06               1
+    X14_10    X14_07               1
+    X14_10    X14_08               1
+    X14_10    X14_09               1
+    X14_10    X14_10             1.3
+    X14_11    X00_11             0.3
+    X14_11    X01_11             0.3
+    X14_11    X02_11             0.3
+    X14_11    X03_11             0.3
+    X14_11    X04_11             0.3
+    X14_11    X05_11             0.3
+    X14_11    X06_11             0.3
+    X14_11    X07_11             0.3
+    X14_11    X08_11             0.3
+    X14_11    X09_11             0.3
+    X14_11    X10_11             0.3
+    X14_11    X11_11             0.3
+    X14_11    X12_11             0.3
+    X14_11    X13_11             0.3
+    X14_11    X14_00               1
+    X14_11    X14_01               1
+    X14_11    X14_02               1
+    X14_11    X14_03               1
+    X14_11    X14_04               1
+    X14_11    X14_05               1
+    X14_11    X14_06               1
+    X14_11    X14_07               1
+    X14_11    X14_08               1
+    X14_11    X14_09               1
+    X14_11    X14_10               1
+    X14_11    X14_11             1.3
+    X14_12    X00_12             0.3
+    X14_12    X01_12             0.3
+    X14_12    X02_12             0.3
+    X14_12    X03_12             0.3
+    X14_12    X04_12             0.3
+    X14_12    X05_12             0.3
+    X14_12    X06_12             0.3
+    X14_12    X07_12             0.3
+    X14_12    X08_12             0.3
+    X14_12    X09_12             0.3
+    X14_12    X10_12             0.3
+    X14_12    X11_12             0.3
+    X14_12    X12_12             0.3
+    X14_12    X13_12             0.3
+    X14_12    X14_00               1
+    X14_12    X14_01               1
+    X14_12    X14_02               1
+    X14_12    X14_03               1
+    X14_12    X14_04               1
+    X14_12    X14_05               1
+    X14_12    X14_06               1
+    X14_12    X14_07               1
+    X14_12    X14_08               1
+    X14_12    X14_09               1
+    X14_12    X14_10               1
+    X14_12    X14_11               1
+    X14_12    X14_12             1.3
+    X14_13    X00_13             0.3
+    X14_13    X01_13             0.3
+    X14_13    X02_13             0.3
+    X14_13    X03_13             0.3
+    X14_13    X04_13             0.3
+    X14_13    X05_13             0.3
+    X14_13    X06_13             0.3
+    X14_13    X07_13             0.3
+    X14_13    X08_13             0.3
+    X14_13    X09_13             0.3
+    X14_13    X10_13             0.3
+    X14_13    X11_13             0.3
+    X14_13    X12_13             0.3
+    X14_13    X13_13             0.3
+    X14_13    X14_00               1
+    X14_13    X14_01               1
+    X14_13    X14_02               1
+    X14_13    X14_03               1
+    X14_13    X14_04               1
+    X14_13    X14_05               1
+    X14_13    X14_06               1
+    X14_13    X14_07               1
+    X14_13    X14_08               1
+    X14_13    X14_09               1
+    X14_13    X14_10               1
+    X14_13    X14_11               1
+    X14_13    X14_12               1
+    X14_13    X14_13             1.3
+    X15_00    X00_00             0.3
+    X15_00    X01_00             0.3
+    X15_00    X02_00             0.3
+    X15_00    X03_00             0.3
+    X15_00    X04_00             0.3
+    X15_00    X05_00             0.3
+    X15_00    X06_00             0.3
+    X15_00    X07_00             0.3
+    X15_00    X08_00             0.3
+    X15_00    X09_00             0.3
+    X15_00    X10_00             0.3
+    X15_00    X11_00             0.3
+    X15_00    X12_00             0.3
+    X15_00    X13_00             0.3
+    X15_00    X14_00             0.3
+    X15_00    X15_00             1.8
+    X15_01    X00_01             0.3
+    X15_01    X01_01             0.3
+    X15_01    X02_01             0.3
+    X15_01    X03_01             0.3
+    X15_01    X04_01             0.3
+    X15_01    X05_01             0.3
+    X15_01    X06_01             0.3
+    X15_01    X07_01             0.3
+    X15_01    X08_01             0.3
+    X15_01    X09_01             0.3
+    X15_01    X10_01             0.3
+    X15_01    X11_01             0.3
+    X15_01    X12_01             0.3
+    X15_01    X13_01             0.3
+    X15_01    X14_01             0.3
+    X15_01    X15_00             1.5
+    X15_01    X15_01             1.8
+    X15_02    X00_02             0.3
+    X15_02    X01_02             0.3
+    X15_02    X02_02             0.3
+    X15_02    X03_02             0.3
+    X15_02    X04_02             0.3
+    X15_02    X05_02             0.3
+    X15_02    X06_02             0.3
+    X15_02    X07_02             0.3
+    X15_02    X08_02             0.3
+    X15_02    X09_02             0.3
+    X15_02    X10_02             0.3
+    X15_02    X11_02             0.3
+    X15_02    X12_02             0.3
+    X15_02    X13_02             0.3
+    X15_02    X14_02             0.3
+    X15_02    X15_00             1.5
+    X15_02    X15_01             1.5
+    X15_02    X15_02             1.8
+    X15_03    X00_03             0.3
+    X15_03    X01_03             0.3
+    X15_03    X02_03             0.3
+    X15_03    X03_03             0.3
+    X15_03    X04_03             0.3
+    X15_03    X05_03             0.3
+    X15_03    X06_03             0.3
+    X15_03    X07_03             0.3
+    X15_03    X08_03             0.3
+    X15_03    X09_03             0.3
+    X15_03    X10_03             0.3
+    X15_03    X11_03             0.3
+    X15_03    X12_03             0.3
+    X15_03    X13_03             0.3
+    X15_03    X14_03             0.3
+    X15_03    X15_00             1.5
+    X15_03    X15_01             1.5
+    X15_03    X15_02             1.5
+    X15_03    X15_03             1.8
+    X15_04    X00_04             0.3
+    X15_04    X01_04             0.3
+    X15_04    X02_04             0.3
+    X15_04    X03_04             0.3
+    X15_04    X04_04             0.3
+    X15_04    X05_04             0.3
+    X15_04    X06_04             0.3
+    X15_04    X07_04             0.3
+    X15_04    X08_04             0.3
+    X15_04    X09_04             0.3
+    X15_04    X10_04             0.3
+    X15_04    X11_04             0.3
+    X15_04    X12_04             0.3
+    X15_04    X13_04             0.3
+    X15_04    X14_04             0.3
+    X15_04    X15_00             1.5
+    X15_04    X15_01             1.5
+    X15_04    X15_02             1.5
+    X15_04    X15_03             1.5
+    X15_04    X15_04             1.8
+    X15_05    X00_05             0.3
+    X15_05    X01_05             0.3
+    X15_05    X02_05             0.3
+    X15_05    X03_05             0.3
+    X15_05    X04_05             0.3
+    X15_05    X05_05             0.3
+    X15_05    X06_05             0.3
+    X15_05    X07_05             0.3
+    X15_05    X08_05             0.3
+    X15_05    X09_05             0.3
+    X15_05    X10_05             0.3
+    X15_05    X11_05             0.3
+    X15_05    X12_05             0.3
+    X15_05    X13_05             0.3
+    X15_05    X14_05             0.3
+    X15_05    X15_00             1.5
+    X15_05    X15_01             1.5
+    X15_05    X15_02             1.5
+    X15_05    X15_03             1.5
+    X15_05    X15_04             1.5
+    X15_05    X15_05             1.8
+    X15_06    X00_06             0.3
+    X15_06    X01_06             0.3
+    X15_06    X02_06             0.3
+    X15_06    X03_06             0.3
+    X15_06    X04_06             0.3
+    X15_06    X05_06             0.3
+    X15_06    X06_06             0.3
+    X15_06    X07_06             0.3
+    X15_06    X08_06             0.3
+    X15_06    X09_06             0.3
+    X15_06    X10_06             0.3
+    X15_06    X11_06             0.3
+    X15_06    X12_06             0.3
+    X15_06    X13_06             0.3
+    X15_06    X14_06             0.3
+    X15_06    X15_00             1.5
+    X15_06    X15_01             1.5
+    X15_06    X15_02             1.5
+    X15_06    X15_03             1.5
+    X15_06    X15_04             1.5
+    X15_06    X15_05             1.5
+    X15_06    X15_06             1.8
+    X15_07    X00_07             0.3
+    X15_07    X01_07             0.3
+    X15_07    X02_07             0.3
+    X15_07    X03_07             0.3
+    X15_07    X04_07             0.3
+    X15_07    X05_07             0.3
+    X15_07    X06_07             0.3
+    X15_07    X07_07             0.3
+    X15_07    X08_07             0.3
+    X15_07    X09_07             0.3
+    X15_07    X10_07             0.3
+    X15_07    X11_07             0.3
+    X15_07    X12_07             0.3
+    X15_07    X13_07             0.3
+    X15_07    X14_07             0.3
+    X15_07    X15_00             1.5
+    X15_07    X15_01             1.5
+    X15_07    X15_02             1.5
+    X15_07    X15_03             1.5
+    X15_07    X15_04             1.5
+    X15_07    X15_05             1.5
+    X15_07    X15_06             1.5
+    X15_07    X15_07             1.8
+    X15_08    X00_08             0.3
+    X15_08    X01_08             0.3
+    X15_08    X02_08             0.3
+    X15_08    X03_08             0.3
+    X15_08    X04_08             0.3
+    X15_08    X05_08             0.3
+    X15_08    X06_08             0.3
+    X15_08    X07_08             0.3
+    X15_08    X08_08             0.3
+    X15_08    X09_08             0.3
+    X15_08    X10_08             0.3
+    X15_08    X11_08             0.3
+    X15_08    X12_08             0.3
+    X15_08    X13_08             0.3
+    X15_08    X14_08             0.3
+    X15_08    X15_00             1.5
+    X15_08    X15_01             1.5
+    X15_08    X15_02             1.5
+    X15_08    X15_03             1.5
+    X15_08    X15_04             1.5
+    X15_08    X15_05             1.5
+    X15_08    X15_06             1.5
+    X15_08    X15_07             1.5
+    X15_08    X15_08             1.8
+    X15_09    X00_09             0.3
+    X15_09    X01_09             0.3
+    X15_09    X02_09             0.3
+    X15_09    X03_09             0.3
+    X15_09    X04_09             0.3
+    X15_09    X05_09             0.3
+    X15_09    X06_09             0.3
+    X15_09    X07_09             0.3
+    X15_09    X08_09             0.3
+    X15_09    X09_09             0.3
+    X15_09    X10_09             0.3
+    X15_09    X11_09             0.3
+    X15_09    X12_09             0.3
+    X15_09    X13_09             0.3
+    X15_09    X14_09             0.3
+    X15_09    X15_00             1.5
+    X15_09    X15_01             1.5
+    X15_09    X15_02             1.5
+    X15_09    X15_03             1.5
+    X15_09    X15_04             1.5
+    X15_09    X15_05             1.5
+    X15_09    X15_06             1.5
+    X15_09    X15_07             1.5
+    X15_09    X15_08             1.5
+    X15_09    X15_09             1.8
+    X15_10    X00_10             0.3
+    X15_10    X01_10             0.3
+    X15_10    X02_10             0.3
+    X15_10    X03_10             0.3
+    X15_10    X04_10             0.3
+    X15_10    X05_10             0.3
+    X15_10    X06_10             0.3
+    X15_10    X07_10             0.3
+    X15_10    X08_10             0.3
+    X15_10    X09_10             0.3
+    X15_10    X10_10             0.3
+    X15_10    X11_10             0.3
+    X15_10    X12_10             0.3
+    X15_10    X13_10             0.3
+    X15_10    X14_10             0.3
+    X15_10    X15_00             1.5
+    X15_10    X15_01             1.5
+    X15_10    X15_02             1.5
+    X15_10    X15_03             1.5
+    X15_10    X15_04             1.5
+    X15_10    X15_05             1.5
+    X15_10    X15_06             1.5
+    X15_10    X15_07             1.5
+    X15_10    X15_08             1.5
+    X15_10    X15_09             1.5
+    X15_10    X15_10             1.8
+    X15_11    X00_11             0.3
+    X15_11    X01_11             0.3
+    X15_11    X02_11             0.3
+    X15_11    X03_11             0.3
+    X15_11    X04_11             0.3
+    X15_11    X05_11             0.3
+    X15_11    X06_11             0.3
+    X15_11    X07_11             0.3
+    X15_11    X08_11             0.3
+    X15_11    X09_11             0.3
+    X15_11    X10_11             0.3
+    X15_11    X11_11             0.3
+    X15_11    X12_11             0.3
+    X15_11    X13_11             0.3
+    X15_11    X14_11             0.3
+    X15_11    X15_00             1.5
+    X15_11    X15_01             1.5
+    X15_11    X15_02             1.5
+    X15_11    X15_03             1.5
+    X15_11    X15_04             1.5
+    X15_11    X15_05             1.5
+    X15_11    X15_06             1.5
+    X15_11    X15_07             1.5
+    X15_11    X15_08             1.5
+    X15_11    X15_09             1.5
+    X15_11    X15_10             1.5
+    X15_11    X15_11             1.8
+    X15_12    X00_12             0.3
+    X15_12    X01_12             0.3
+    X15_12    X02_12             0.3
+    X15_12    X03_12             0.3
+    X15_12    X04_12             0.3
+    X15_12    X05_12             0.3
+    X15_12    X06_12             0.3
+    X15_12    X07_12             0.3
+    X15_12    X08_12             0.3
+    X15_12    X09_12             0.3
+    X15_12    X10_12             0.3
+    X15_12    X11_12             0.3
+    X15_12    X12_12             0.3
+    X15_12    X13_12             0.3
+    X15_12    X14_12             0.3
+    X15_12    X15_00             1.5
+    X15_12    X15_01             1.5
+    X15_12    X15_02             1.5
+    X15_12    X15_03             1.5
+    X15_12    X15_04             1.5
+    X15_12    X15_05             1.5
+    X15_12    X15_06             1.5
+    X15_12    X15_07             1.5
+    X15_12    X15_08             1.5
+    X15_12    X15_09             1.5
+    X15_12    X15_10             1.5
+    X15_12    X15_11             1.5
+    X15_12    X15_12             1.8
+    X15_13    X00_13             0.3
+    X15_13    X01_13             0.3
+    X15_13    X02_13             0.3
+    X15_13    X03_13             0.3
+    X15_13    X04_13             0.3
+    X15_13    X05_13             0.3
+    X15_13    X06_13             0.3
+    X15_13    X07_13             0.3
+    X15_13    X08_13             0.3
+    X15_13    X09_13             0.3
+    X15_13    X10_13             0.3
+    X15_13    X11_13             0.3
+    X15_13    X12_13             0.3
+    X15_13    X13_13             0.3
+    X15_13    X14_13             0.3
+    X15_13    X15_00             1.5
+    X15_13    X15_01             1.5
+    X15_13    X15_02             1.5
+    X15_13    X15_03             1.5
+    X15_13    X15_04             1.5
+    X15_13    X15_05             1.5
+    X15_13    X15_06             1.5
+    X15_13    X15_07             1.5
+    X15_13    X15_08             1.5
+    X15_13    X15_09             1.5
+    X15_13    X15_10             1.5
+    X15_13    X15_11             1.5
+    X15_13    X15_12             1.5
+    X15_13    X15_13             1.8
+ENDATA
