@@ -124,3 +124,23 @@ TEST_CASE("Sparse-matrix-products", "[highs_sparse_matrix]") {
     highs.clear();
   }
 }
+
+TEST_CASE("Sparse-matrix-transpose", "[highs_sparse_matrix]") {
+  std::string filename =
+      std::string(HIGHS_DIR) + "/check/instances/adlittle.mps";
+
+  Highs highs;
+  if (!dev_run) highs.setOptionValue("output_flag", false);
+  highs.readModel(filename);
+  HighsSparseMatrix matrix_cw = highs.getLp().a_matrix_;
+  REQUIRE(matrix_cw.isColwise());
+
+  HighsSparseMatrix matrix_rw = matrix_cw;
+  matrix_rw.ensureRowwise();
+
+  HighsSparseMatrix matrix_cw_T = matrix_cw.transpose();
+  HighsSparseMatrix matrix_rw_T = matrix_rw.transpose();
+
+  REQUIRE(matrix_rw == matrix_cw_T);
+  REQUIRE(matrix_cw == matrix_rw_T);
+}
