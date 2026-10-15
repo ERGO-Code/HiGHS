@@ -63,16 +63,24 @@ HiGHS has two interior point (IPM) solvers:
   use the augmented system, "normaleq" for normal equations, or
   "choose" to leave the choice to the solver.
 
+  The [__hipo\_factor__](@ref option-hipo-factor) option can be used to
+  select the factorisation to use: select "multifrontal" to force the use
+  of the parallel multifrontal factorisation (ideal for large and structured 
+  problems); select "uplooking" to force the use of the serial up-looking
+  factorisation (ideal for small and very sparse problems); select "choose" 
+  to leave the choice to the solver (recommended, as the solver can switch 
+  between the two factorisations during the iterations if needed).
+
   The option [__hipo\_ordering__](@ref option-hipo-ordering) can be used
   to select the fill-reducing heuristic to use during the
   factorisation:
-  
+
   * Nested dissection, obtained setting the option
     [__hipo\_ordering__](@ref option-hipo-ordering) to "metis".
-  
+
   * Approximate minimum degree, obtained setting the option
     [__hipo\_ordering__](@ref option-hipo-ordering) to "amd".
-  
+
   * Reverse Cuthill-McKee, obtained setting the option
     [__hipo\_ordering__](@ref option-hipo-ordering) to "rcm".
 
@@ -86,8 +94,9 @@ HiGHS includes the [
 cuPDLP-C](https://github.com/COPT-Public/cuPDLP-C) primal-dual hybrid
 gradient method for LP (PDLP), and also has a native PDLP solver,
 HiPDLP. On Linux and Windows, these solvers can be run on an NVIDIA
-[GPU](@ref gpu). On a CPU, they are unlikely to be competitive with
-the HiGHS interior point or simplex solvers.
+[GPU](@ref gpu), and HiPDLP can additionally be run on an AMD GPU via
+ROCm / HIP. On a CPU, they are unlikely to be competitive with the HiGHS
+interior point or simplex solvers.
 
   * Setting the option [__solver__](@ref option-solver) to "pdlp" forces the cuPDLP-C solver to be used
   * Setting the option [__solver__](@ref option-solver) to "hipdlp" forces the HiPDLP solver to be used
@@ -183,4 +192,3 @@ The option [__solver__](@ref option-solver) is ignored and the default solver is
 * The problem is an LP and __solver__ is set to "qpasm".
 * The problem is a QP and __solver__ is set to "simplex", "ipx", "pdlp" or "hipdlp".
 * The problem is a MIP and __solver__ is not set to "choose".
-

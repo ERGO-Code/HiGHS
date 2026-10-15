@@ -33,8 +33,7 @@ cmake -S . -B build \
     -DBUILD_SHARED_LIBS=ON \
     -DHIPO=ON \
     -DBUILD_SHARED_EXTRAS_LIB=OFF \
-    -DBLA_VENDOR=blastrampoline \
-    -DBLAS_LIBRARIES=\"${LBT}\"
+    -DBLA_VENDOR=libblastrampoline
 
 if [[ "${target}" == *-linux-* ]]; then
     make -C build -j ${nproc}

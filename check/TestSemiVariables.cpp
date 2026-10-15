@@ -28,7 +28,7 @@ TEST_CASE("semi-variable-model", "[highs_test_semi_variables]") {
   lp.col_cost_[semi_col] = semi_col_cost;
   lp.model_name_ = "semi-variable-model";
   optimal_objective_function_value = 6.83333;
-  // Legal to have infinte upper bounds on semi-variables
+  // Legal to have infinite upper bounds on semi-variables
   lp.col_upper_[semi_col] = inf;
   return_status = highs.passModel(model);
   REQUIRE(return_status == HighsStatus::kOk);
@@ -313,6 +313,50 @@ TEST_CASE("semi-variable-inf-upper", "[highs_test_semi_variables]") {
   highs.resetGlobalScheduler(true);
 }
 
+TEST_CASE("semi-variable-fixed-write", "[highs_test_semi_variables]") {
+  // A semi-variable with equal lower and upper bounds was written to
+  // MPS as FX, so the zero value was lost when the file was read back
+  const std::string test_name = Catch::getResultCapture().getCurrentTestName();
+  const std::vector<std::string> extensions = {".mps", ".lp"};
+  HighsLp lp;
+  lp.num_col_ = 2;
+  lp.num_row_ = 1;
+  lp.col_cost_ = {1, 1};
+  lp.col_lower_ = {2, 3};
+  lp.col_upper_ = {2, 3};
+  lp.row_lower_ = {-inf};
+  lp.row_upper_ = {10};
+  lp.a_matrix_.start_ = {0, 1, 2};
+  lp.a_matrix_.index_ = {0, 0};
+  lp.a_matrix_.value_ = {1, 1};
+  lp.a_matrix_.format_ = MatrixFormat::kColwise;
+  lp.integrality_ = {semi_continuous, semi_integer};
+  lp.col_names_ = {"sc", "si"};
+  lp.row_names_ = {"r"};
+  for (const std::string& extension : extensions) {
+    const std::string test_file = test_name + extension;
+    Highs highs;
+    highs.setOptionValue("output_flag", dev_run);
+    REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
+    REQUIRE(highs.run() == HighsStatus::kOk);
+    REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
+    REQUIRE(highs.getObjectiveValue() == 0);
+
+    REQUIRE(highs.writeModel(test_file) == HighsStatus::kOk);
+    REQUIRE(highs.readModel(test_file) == HighsStatus::kOk);
+    const HighsLp& read_lp = highs.getLp();
+    REQUIRE(read_lp.integrality_ == lp.integrality_);
+    REQUIRE(read_lp.col_lower_ == lp.col_lower_);
+    REQUIRE(read_lp.col_upper_ == lp.col_upper_);
+    REQUIRE(highs.run() == HighsStatus::kOk);
+    REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
+    REQUIRE(highs.getObjectiveValue() == 0);
+    std::remove(test_file.c_str());
+
+    highs.resetGlobalScheduler(true);
+  }
+}
+
 void semiModel0(HighsLp& lp) {
   lp.num_col_ = 4;
   lp.num_row_ = 4;
@@ -335,6 +379,9 @@ TEST_CASE("3015", "[highs_test_semi_variables]") {
   double optimal_objective_value = -1407973.679417;
   Highs highs;
   highs.setOptionValue("output_flag", dev_run);
+  // Disable Fourier-Motzkin presolve so that the semi-variable
+  // infeasibility is still triggered with default mip_feasibility_tolerance
+  highs.setOptionValue("presolve_rule_off", 1 << kPresolveRuleFourierMotzkin);
   highs.readModel(filename);
   HighsStatus status = highs.run();
   REQUIRE(status == HighsStatus::kError);

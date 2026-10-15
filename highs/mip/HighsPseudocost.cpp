@@ -46,7 +46,7 @@ HighsPseudocost::HighsPseudocost(const HighsMipSolver& mipsolver)
     conflict_avg_score =
         mipsolver.pscostinit->conflict_avg_score * mipsolver.numCol();
 
-    for (HighsInt i = 0; i != mipsolver.numCol(); ++i) {
+    for (HighsInt i : mipsolver.mipdata_->postSolveStack.getOrigCols()) {
       HighsInt origCol = mipsolver.mipdata_->postSolveStack.getOrigColIndex(i);
 
       pseudocostup[i] = mipsolver.pscostinit->pseudocostup[origCol];
@@ -114,7 +114,7 @@ HighsPseudocostInitialization::HighsPseudocostInitialization(
   HighsInt ncols = pscost.pseudocostup.size();
   conflict_avg_score /= ncols * pscost.conflict_weight;
 
-  for (HighsInt i = 0; i != ncols; ++i) {
+  for (HighsInt i : postsolveStack.getOrigCols()) {
     pseudocostup[postsolveStack.getOrigColIndex(i)] = pscost.pseudocostup[i];
     pseudocostdown[postsolveStack.getOrigColIndex(i)] =
         pscost.pseudocostdown[i];

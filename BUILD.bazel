@@ -56,7 +56,6 @@ cc_library(
         "highs/HighsExternalDeps.cpp",
     ] + glob([
         "highs/io/*.cpp",
-        "highs/io/filereaderlp/*.cpp",
         "highs/ipm/*.cpp",
         "highs/ipm/ipx/*.cc",
         "highs/ipm/basiclu/*.c",
@@ -73,7 +72,6 @@ cc_library(
         "highs/presolve/*.cpp",
         "highs/qpsolver/*.cpp",
         "highs/simplex/*.cpp",
-        "highs/test_kkt/*.cpp",
         "highs/util/*.cpp",
     ]),
     hdrs = [
@@ -81,7 +79,6 @@ cc_library(
     ] + glob([
         "**/*.h",
         "highs/pdlp/hipdlp/*.hpp",
-        "highs/io/filereaderlp/*.hpp",
         "highs/qpsolver/*.hpp",
         "extern/zstr/*.hpp",
     ]),
@@ -100,7 +97,6 @@ cc_library(
     includes = [
         "extern",
         "extern/catch",
-        # "extern/filereaderlp",
         # "extern/zstr",
         "highs",
         # "highs/ipm",
@@ -113,7 +109,6 @@ cc_library(
         # "highs/presolve",
         # "highs/qpsolver",
         # "highs/simplex",
-        # "highs/test_kkt",
         # "highs/util",
     ],
     linkopts = select({

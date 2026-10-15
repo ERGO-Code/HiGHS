@@ -105,7 +105,7 @@ static QpVector& computesearchdirection_major(
     Gradient& gradient, QpVector& gyp, QpVector& l, QpVector& m, QpVector& p,
     QpSolverStatus& status) {
   status = QpSolverStatus::OK;
-  QpVector yyp = yp;  // TODO PERF: buffer QpVector
+  const QpVector& yyp = yp;
   // if (gradient.getGradient().dot(yp) > 0.0) {
   //   yyp.scale(-1.0);
   // }
@@ -119,11 +119,16 @@ static QpVector& computesearchdirection_major(
                      yyp);  // Bogus return to satisfy method definition
     QpVector v = l;         // TODO PERF: buffer QpVector
     factor.solveLT(v);
+    // the triangular solves fill in v beyond the sparsity pattern of m,
+    // which Zprod reads
+    v.resparsify();
     basis.Zprod(v, p);
+    // p = +/-(yp - Zv), the part of yp that is Q-conjugate to Z, with the
+    // sign that makes p a descent direction
     if (gradient.getGradient().dot(yyp) < 0.0) {
       return p.saxpy(-1.0, 1.0, yyp);
     } else {
-      return p.saxpy(-1.0, -1.0, yyp);
+      return p.saxpy(1.0, -1.0, yyp);
     }
 
   } else {
@@ -306,7 +311,7 @@ static QpSolverStatus reinvert(Basis& basis, CholeskyFactor& factor,
 }
 
 void Quass::solve(const QpVector& x0, const QpVector& ra, Basis& b0,
-                  HighsTimer& timer) {
+                  HighsTimer& timer, HighsCallback& callback) {
   // feenableexcept(FE_ALL_EXCEPT & ~FE_INEXACT & ~FE_UNDERFLOW);
 
   runtime.statistics.time_start = std::chrono::high_resolution_clock::now();
@@ -361,7 +366,19 @@ void Quass::solve(const QpVector& x0, const QpVector& ra, Basis& b0,
       runtime.status = QpModelStatus::kTimeLimit;
       break;
     }
-
+    // Check interrupt
+    if (callback.active[kCallbackQpInterrupt]) {
+      callback.clearHighsCallbackOutput();
+      callback.data_out.qpasm_iteration_count =
+          runtime.statistics.num_iterations;
+      callback.data_out.objective_function_value =
+          runtime.instance.objval(runtime.primal);
+      if (callback.callbackAction(kCallbackQpInterrupt, "QP: interrupt")) {
+        runtime.status = QpModelStatus::kInterrupt;
+        return;
+      }
+    }
+    // Check null space limit
     if (basis.getnuminactive() > runtime.settings.nullspace_limit) {
       runtime.settings.nullspace_limit_log.fire(
           runtime.settings.nullspace_limit);
@@ -439,7 +456,8 @@ void Quass::solve(const QpVector& x0, const QpVector& ra, Basis& b0,
       maxsteplength = computemaxsteplength(runtime, p, gradient, buffer_Qp,
                                            zero_curvature_direction);
       if (!zero_curvature_direction) {
-        status = factor.expand(buffer_yp, buffer_gyp, buffer_l, buffer_m);
+        status = factor.expand(buffer_yp, buffer_gyp, buffer_l, buffer_m,
+                               p * buffer_Qp);
         if (status != QpSolverStatus::OK) return notOkReturn();
       }
       redgrad.expand(buffer_yp);
@@ -492,6 +510,11 @@ void Quass::solve(const QpVector& x0, const QpVector& ra, Basis& b0,
           factor.reduce(
               buffer_d, maxabsd,
               indexof(basis.getinactive(), stepres.limitingconstraint) != -1);
+        } else {
+          // yp was not added to the factor, and the change of basis alters
+          // the other null space columns too: recompute the factor when next
+          // needed
+          factor.invalidate();
         }
         redgrad.reduce(buffer_d, maxabsd);
         redgrad.update(stepres.alpha, false);

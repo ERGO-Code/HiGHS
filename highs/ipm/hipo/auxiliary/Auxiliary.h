@@ -115,6 +115,17 @@ class Clock {
   double stop() const;
 };
 
+struct TempTimer {
+  std::string name;
+  Clock clock;
+  double time = 0.0;
+
+  TempTimer(const char* s);
+  void start();
+  void stop();
+  ~TempTimer();
+};
+
 }  // namespace hipo
 
 #endif

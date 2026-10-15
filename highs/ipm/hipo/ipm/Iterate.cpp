@@ -20,16 +20,19 @@ void NewtonDir::clear() {
 }
 
 void NewtonDir::add(const NewtonDir& d) {
-  vectorAdd(x, d.x);
-  vectorAdd(y, d.y);
-  vectorAdd(xl, d.xl);
-  vectorAdd(xu, d.xu);
-  vectorAdd(zl, d.zl);
-  vectorAdd(zu, d.zu);
+  vectorAdd(x, 1.0, d.x, 1.0);
+  vectorAdd(y, 1.0, d.y, 1.0);
+  vectorAdd(xl, 1.0, d.xl, 1.0);
+  vectorAdd(xu, 1.0, d.xu, 1.0);
+  vectorAdd(zl, 1.0, d.zl, 1.0);
+  vectorAdd(zu, 1.0, d.zu, 1.0);
 }
 
-Iterate::Iterate(const Model& model_input, Regularisation& r)
-    : model{model_input}, delta(model.m(), model.n()), regul{r} {
+Iterate::Iterate(Model& model_input, Info& info_input, Regularisation& r)
+    : model{model_input},
+      info{info_input},
+      delta(model.m(), model.n()),
+      regul{r} {
   clearIter();
   clearRes();
   clearIres();
@@ -199,6 +202,8 @@ void Iterate::dualInfeasUnscaled() {
 }
 
 void Iterate::residual1234() {
+  Clock clock;
+
   // res1
   res.r1 = model.b();
   model.A().alphaProductPlusY(-1.0, x, res.r1);
@@ -227,8 +232,12 @@ void Iterate::residual1234() {
     if (model.hasUb(i)) res.r4[i] += zu[i];
   }
   if (model.qp()) model.Q().alphaProductPlusY(model.sense(), x, res.r4);
+
+  info.times[kResidualsTime] += clock.stop();
 }
 void Iterate::residual56(double sigma) {
+  Clock clock;
+
   for (Int i = 0; i < model.n(); ++i) {
     // res5
     if (model.hasLb(i))
@@ -242,6 +251,8 @@ void Iterate::residual56(double sigma) {
     else
       res.r6[i] = 0.0;
   }
+
+  info.times[kResidualsTime] += clock.stop();
 }
 
 std::vector<double> Iterate::residual7(const Residuals& r) const {
@@ -438,7 +449,7 @@ double Iterate::infeasAfterDropping() const {
   return std::max(pinf_max, dinf_max);
 }
 
-Int Iterate::finalResiduals(Info& info) const {
+void Iterate::finalResiduals() const {
   // If ipx has been used, the information is already available, otherwise,
   // compute it.
 
@@ -481,8 +492,6 @@ Int Iterate::finalResiduals(Info& info) const {
     info.d_obj = info.ipx_info.dobjval;
     info.pd_gap = std::abs(info.ipx_info.rel_objgap);
   }
-
-  return kStatusOk;
 }
 
 void Iterate::getReg(LinearSolver& LS, const std::string& nla) {
@@ -583,12 +592,51 @@ void Iterate::makeStep(double alpha_primal, double alpha_dual) {
   else
     bad_iter_ = 0;
 
-  vectorAdd(x, delta.x, alpha_primal);
-  vectorAdd(xl, delta.xl, alpha_primal);
-  vectorAdd(xu, delta.xu, alpha_primal);
-  vectorAdd(y, delta.y, alpha_dual);
-  vectorAdd(zl, delta.zl, alpha_dual);
-  vectorAdd(zu, delta.zu, alpha_dual);
+  vectorAdd(x, 1.0, delta.x, alpha_primal);
+  vectorAdd(xl, 1.0, delta.xl, alpha_primal);
+  vectorAdd(xu, 1.0, delta.xu, alpha_primal);
+  vectorAdd(y, 1.0, delta.y, alpha_dual);
+  vectorAdd(zl, 1.0, delta.zl, alpha_dual);
+  vectorAdd(zu, 1.0, delta.zu, alpha_dual);
+}
+
+void Iterate::saveBest(double feas_tol, double opt_tol, Int iter) {
+  const double primal_violation = pinf / feas_tol;
+  const double dual_violation = dinf / feas_tol;
+  const double gap_violation = pdgap / opt_tol;
+
+  double violation = std::max(primal_violation, dual_violation);
+  violation = std::max(violation, gap_violation);
+
+  if (violation < best_violation) {
+    best_x = x;
+    best_xl = xl;
+    best_xu = xu;
+    best_y = y;
+    best_zl = zl;
+    best_zu = zu;
+    best_violation = violation;
+    best_iter = iter;
+    model.saveBounds();
+  }
+}
+
+bool Iterate::resetBest(Int iter) {
+  if (iter == best_iter) return false;
+
+  x = best_x;
+  xl = best_xl;
+  xu = best_xu;
+  y = best_y;
+  zl = best_zl;
+  zu = best_zu;
+  model.resetBounds();
+
+  computeMu();
+  residual1234();
+  indicators();
+
+  return true;
 }
 
 bool Iterate::stagnation(std::stringstream& log_stream) {

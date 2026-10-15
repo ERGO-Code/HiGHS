@@ -6,7 +6,7 @@
 - Default: "choose"
 
 ## [solver](@id option-solver)
-- LP/QP solver: "choose", "simplex", "ipm", "ipx", "hipo", "pdlp", "qpasm" or "hipdlp", 
+- LP/QP solver: "choose", "simplex", "ipm", "ipx", "hipo", "pdlp", "hipdlp" or "qpasm"
 - Type: string
 - Default: "choose"
 
@@ -44,7 +44,7 @@
 - Default: 1e+20
 
 ## [infinite\_bound](@id option-infinite-bound)
-- Limit on |constraint bound|: values greater than or equal to this will be treated as infinite
+- Limit on |variable/constraint bound|: values greater than or equal to this will be treated as infinite
 - Type: double
 - Range: [1e+15, inf]
 - Default: 1e+20
@@ -440,12 +440,29 @@
 - Default: "choose"
 
 ## [hipo\_parallel\_type](@id option-hipo-parallel-type)
-- HiPO parallelism: "tree", "node" or "both"
+- HiPO parallelism: "tree", "node", "both" or "choose"
 - Type: string
-- Default: "both"
+- Default: "choose"
+
+## [hipo\_parallel\_force](@id option-hipo-parallel-force)
+- Bit map to force the use of parallel techniques in HiPO
+- Type: integer
+- Range: {0, 1023}
+- Default: 0
+
+## [hipo\_parallel\_forbid](@id option-hipo-parallel-forbid)
+- Bit map to forbid the use of parallel techniques in HiPO
+- Type: integer
+- Range: {0, 1023}
+- Default: 0
 
 ## [hipo\_ordering](@id option-hipo-ordering)
 - HiPO matrix reordering: "choose", "metis", "amd" or "rcm"
+- Type: string
+- Default: "choose"
+
+## [hipo\_fatcor](@id option-hipo-factor)
+- HiPO matrix factorisation: "choose", "multifrontal", or "uplooking"
 - Type: string
 - Default: "choose"
 

@@ -17,7 +17,7 @@
 #include "simplex/SimplexTimer.h"
 #include "util/FactorTimer.h"
 
-void HighsSimplexAnalysis::setup(const std::string lp_name, const HighsLp& lp,
+void HighsSimplexAnalysis::setup(const std::string& lp_name, const HighsLp& lp,
                                  const HighsOptions& options,
                                  const HighsInt simplex_iteration_count_) {
   // Copy Problem size
@@ -1227,10 +1227,10 @@ void HighsSimplexAnalysis::updateInvertFormData(const HFactor& factor) {
 
     HighsInt kernel_invert_num_el =
         factor.invert_num_el -
-        (factor.basis_matrix_num_el - factor.kernel_num_el);
+        (factor.basis_matrix_num_el - factor.kernel_num_el) - factor.kernel_dim;
     assert(factor.kernel_num_el);
-    double kernel_fill_factor =
-        (1.0 * kernel_invert_num_el) / factor.kernel_num_el;
+    double kernel_fill_factor = (1.0 * kernel_invert_num_el) /
+                                (factor.kernel_num_el + factor.kernel_dim);
     sum_kernel_fill_factor += kernel_fill_factor;
     running_average_kernel_fill_factor =
         0.95 * running_average_kernel_fill_factor + 0.05 * kernel_fill_factor;

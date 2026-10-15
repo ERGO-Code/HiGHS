@@ -208,8 +208,9 @@ static void userCallback(const int callback_type, const char* message,
 static HighsInt cCallHessian(const HighsInt call_type,
                              const HighsInt* x_num_entries,
                              const HighsInt* x_index, const double* x_value,
-                             HighsInt* q_x_num_entries, HighsInt* q_x_index,
-                             double* q_x_value, void* hessian_p) {
+                             HighsInt* hessian_x_num_entries,
+                             HighsInt* hessian_x_index, double* hessian_x_value,
+                             void* hessian_p) {
   assert(kHighsHessianOracleCallTypeMin <= call_type &&
          call_type <= kHighsHessianOracleCallTypeMax);
   CHessian hessian = *(CHessian*)hessian_p;
@@ -220,15 +221,15 @@ static HighsInt cCallHessian(const HighsInt call_type,
     return -1;
   } else {
     assert(x_index == NULL || *x_num_entries >= 0);
-    assert(q_x_index == NULL);
-    assert(q_x_value != NULL);
+    assert(hessian_x_index == NULL);
+    assert(hessian_x_value != NULL);
     if (x_index == NULL) {
       // Simple product with full vector x, full vector q_x
       for (HighsInt iCol = 0; iCol < hessian.dim_; iCol++)
         for (HighsInt iEl = hessian.start_[iCol];
              iEl < hessian.start_[iCol + 1]; iEl++) {
           HighsInt iRow = hessian.index_[iEl];
-          q_x_value[iRow] += hessian.value_[iEl] * x_value[iCol];
+          hessian_x_value[iRow] += hessian.value_[iEl] * x_value[iCol];
         }
     } else {
       // x is scattered with x_num_entries entries in rows x_index
@@ -237,7 +238,7 @@ static HighsInt cCallHessian(const HighsInt call_type,
         for (HighsInt iEl = hessian.start_[iCol];
              iEl < hessian.start_[iCol + 1]; iEl++) {
           HighsInt iRow = hessian.index_[iEl];
-          q_x_value[iRow] += hessian.value_[iEl] * x_value[iCol];
+          hessian_x_value[iRow] += hessian.value_[iEl] * x_value[iCol];
         }
       }
     }
@@ -654,7 +655,11 @@ void testNames() {
   // Define all column names to be the same
   for (HighsInt iCol = 0; iCol < num_col; iCol++) {
     return_status = Highs_passColName(highs, iCol, col_prefix);
-    assert(return_status == kHighsStatusOk);
+    if (iCol == 0) {
+      assert(return_status == kHighsStatusOk);
+    } else {
+      assert(return_status == kHighsStatusWarning);
+    }
   }
   return_status = Highs_writeModel(highs, "");
   assert(return_status == kHighsStatusWarning);
@@ -685,7 +690,11 @@ void testNames() {
   // Define all row names to be the same
   for (HighsInt iRow = 0; iRow < num_row; iRow++) {
     return_status = Highs_passRowName(highs, iRow, row_prefix);
-    assert(return_status == kHighsStatusOk);
+    if (iRow == 0) {
+      assert(return_status == kHighsStatusOk);
+    } else {
+      assert(return_status == kHighsStatusWarning);
+    }
   }
   return_status = Highs_writeModel(highs, "");
   assert(return_status == kHighsStatusWarning);
@@ -733,8 +742,9 @@ void testNames() {
 
   HighsInt presolved_num_col = Highs_getPresolvedNumCol(highs);
   HighsInt presolved_num_row = Highs_getPresolvedNumRow(highs);
-  assert(presolved_num_col == num_col);
-  assert(presolved_num_row == num_row - 1);
+  // Fourier-Motzkin presolve reduction may add columns/rows
+  // assert(presolved_num_col == num_col);
+  // assert(presolved_num_row == num_row-1);
 
   char presolved_name[5];
 
@@ -1171,8 +1181,18 @@ void fullApiMip() {
                     col_cost, col_lower, col_upper, row_lower, row_upper,
                     a_start, a_index, a_value, integrality);
   assert(return_status == kHighsStatusOk);
+
+  // Before solving the problem, Highs_getSolution should return error
+  return_status = Highs_getSolution(highs, NULL, NULL, NULL, NULL);
+  assert(return_status == kHighsStatusError);
+
   Highs_setStringOptionValue(highs, "presolve", "off");
   return_status = Highs_run(highs);
+
+  // Even after solving the problem, Highs_getBasis should return error
+  return_status = Highs_getBasis(highs, NULL, NULL);
+  assert(return_status == kHighsStatusError);
+
   // mip_node_count is always int64_t, so the following should be an
   // error depending on whether HIGHSINT64 is set
   HighsInt mip_node_count_int;
@@ -1510,8 +1530,10 @@ void passPresolveGetLp() {
         (double*)malloc(sizeof(double) * presolved_num_row);
     double* presolved_row_upper =
         (double*)malloc(sizeof(double) * presolved_num_row);
-    HighsInt* presolved_a_start =
-        (HighsInt*)malloc(sizeof(HighsInt) * (presolved_num_col + 1));
+    HighsInt* presolved_a_start = (HighsInt*)malloc(
+        sizeof(HighsInt) * (presolved_a_format == kHighsMatrixFormatColwise
+                                ? presolved_num_col + 1
+                                : presolved_num_row + 1));
     HighsInt* presolved_a_index =
         (HighsInt*)malloc(sizeof(HighsInt) * presolved_num_nz);
     double* presolved_a_value =
@@ -1538,9 +1560,9 @@ void passPresolveGetLp() {
     assert(return_status == kHighsStatusOk);
     return_status = Highs_run(local_highs);
 
-    double* col_value = (double*)malloc(sizeof(double) * num_col);
-    double* col_dual = (double*)malloc(sizeof(double) * num_col);
-    double* row_dual = (double*)malloc(sizeof(double) * num_row);
+    double* col_value = (double*)malloc(sizeof(double) * presolved_num_col);
+    double* col_dual = (double*)malloc(sizeof(double) * presolved_num_col);
+    double* row_dual = (double*)malloc(sizeof(double) * presolved_num_row);
 
     return_status =
         Highs_getSolution(local_highs, col_value, col_dual, NULL, row_dual);

@@ -47,7 +47,7 @@ public:
     //
     // If the debug level is < 3, expensive_computation() is not performed.
     void hLog(std::stringstream& logging) const;
-    void hLog(std::string str) const;
+    void hLog(const std::string& str) const;
     void hDebug(std::stringstream& logging, Int level=1) const;
     std::ostream& Debug(Int level=1) const;
 
@@ -92,6 +92,7 @@ public:
     double centringAlphaScaling() const{return parameters_.centring_alpha_scaling; }
     ipxint badProductsTolerance() const{return parameters_.bad_products_tolerance; }
     bool timelessLog() const{return parameters_.timeless_log; }
+    double timeLimit() const {return parameters_.time_limit; }
     void setTimerOffset(const double offset) { this->timer_.offset_ = offset; }
 
 

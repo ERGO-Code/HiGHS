@@ -254,7 +254,7 @@ void highsFprintfString(FILE* file, const HighsLogOptions& log_options_,
 
 std::string getFilenameExt(const std::string& filename) {
   std::string name = filename;
-  std::size_t found = name.find_last_of(".");
+  std::size_t found = name.find_last_of('.');
   if (found < name.size()) {
     name = name.substr(found + 1);
   } else {
@@ -308,6 +308,15 @@ const std::string highsBoolToString(const bool b, const HighsInt field_width) {
   if (abs_field_width <= 2) return b ? "true" : "false";
   if (field_width < 0) return b ? "true " : "false";
   return b ? " true" : "false";
+}
+
+const std::string highsIntToPlural(const HighsInt i, const bool y) {
+  if (y) return i == 1 ? "y" : "ies";
+  return i == 1 ? "" : "s";
+}
+
+const std::string highsIntToBe(const HighsInt i) {
+  return (i == 1 ? "is" : "are");
 }
 
 const std::string highsTimeToString(const double time) {

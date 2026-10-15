@@ -6,11 +6,10 @@
 
 namespace hipo {
 
-Symbolic::Symbolic() {}
-
-void Symbolic::setParallel(bool par_tree, bool par_node) {
-  parallel_tree_ = par_tree;
-  parallel_node_ = par_node;
+void TreeSchedule::clear() {
+  sn_per_task.clear();
+  task_parent.clear();
+  valid = false;
 }
 
 Int64 Symbolic::nz() const { return nz_; }
@@ -36,16 +35,19 @@ Int64 Symbolic::cliqueSize(Int sn) const {
   return clique_block_start_[sn].back();
 }
 Int64 Symbolic::maxStackSize() const { return max_stack_size_; }
-bool Symbolic::parTree() const { return parallel_tree_; }
-bool Symbolic::parNode() const { return parallel_node_; }
+Int Symbolic::largestFront() const { return largest_front_; }
 double Symbolic::storage() const { return serial_storage_; }
 Int Symbolic::depth() const { return tree_depth_; }
+double Symbolic::solveTreeSpeedup() const {
+  return ops_solve_ / critops_solve_;
+}
 
 const std::vector<Int64>& Symbolic::ptr() const { return ptr_; }
 const std::vector<Int>& Symbolic::iperm() const { return iperm_; }
 const std::vector<Int>& Symbolic::snParent() const { return sn_parent_; }
 const std::vector<Int>& Symbolic::snStart() const { return sn_start_; }
 const std::vector<Int>& Symbolic::pivotSign() const { return pivot_sign_; }
+const TreeSchedule& Symbolic::schedule() const { return schedule_solve_; }
 
 static std::string memoryString(double mem) {
   std::stringstream ss;
@@ -77,6 +79,10 @@ void Symbolic::print(const Logger& logger, bool verbose) const {
     log_stream << textline("Max tree speedup:") << fix(flops_ / critops_, 0, 2)
                << '\n';
     log_stream << textline("Tree depth:") << integer(tree_depth_, 0) << '\n';
+    log_stream << textline("Number of solve tasks:")
+               << integer(schedule_solve_.count(), 0) << '\n';
+    log_stream << textline("Solve tree speedup:")
+               << fix(ops_solve_ / critops_solve_, 0, 2) << '\n';
     log_stream << textline("Artificial nz:") << sci(artificial_nz_, 0, 1)
                << '\n';
     log_stream << textline("Artificial ops:") << sci(artificial_ops_, 0, 1)

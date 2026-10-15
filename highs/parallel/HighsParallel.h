@@ -17,12 +17,16 @@ namespace parallel {
 
 using mutex = HighsMutex;
 
+// Returns the number of physical cores available to this process,
+// respecting the OS affinity mask.
+unsigned int available_core_count();
+
 inline void initialize_scheduler(int numThreads = 0) {
   if (numThreads == 0) {
 #ifdef HIGHS_NO_DEFAULT_THREADS
     numThreads = 1;
 #else
-    numThreads = (std::thread::hardware_concurrency() + 1) / 2;
+    numThreads = available_core_count();
 #endif
   }
   HighsTaskExecutor::initialize(numThreads);

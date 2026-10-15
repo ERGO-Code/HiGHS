@@ -437,5 +437,6 @@ lu_int lu_build_factors(struct lu *this)
     this->Lnz = Lnz;
     this->Unz = Unz;
     this->Rnz = 0;
+    if (luTime() - this->basiclu_time_start > this->basiclu_time_limit) return BASICLU_WARNING_timeout;
     return status;
 }
