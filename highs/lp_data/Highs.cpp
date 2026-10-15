@@ -4744,8 +4744,14 @@ HighsStatus Highs::returnFromOptimizeModel(const HighsStatus run_return_status,
           (options_.solver == kPdlpString) || model_.isMip()) {
         assert(return_status == HighsStatus::kOk);
       } else {
-        // This model status is not permitted unless IPM is run without
-        // crossover, or if PDLP is used
+        // This model status is not permitted unless IPM is run
+        // without crossover, if PDLP is used, or if the problem is a
+        // MIP. This latter qualification was introduced in the case
+        // where MIP presolve identifies kUnboundedOrInfeasible and
+        // the problem is not then solved to resolve the model
+        // status. However, as exposed by #3383, it's possible that a
+        // LP relaxation yields kUnboundedOrInfeasible because the
+        // simplex iteration limit is zero.
         highsLogUser(
             options_.log_options, HighsLogType::kError,
             "returnFromHighs: HighsModelStatus::kUnboundedOrInfeasible is not "
