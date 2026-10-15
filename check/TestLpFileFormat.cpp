@@ -7,13 +7,12 @@
 const bool dev_run = false;
 const double inf = kHighsInf;
 
-const std::string kLpFile = "lp-file-format.lp";
-
 // Write `content` to an LP file and read it with `highs`. Everything that
 // HiGHS logs while reading the file is stored in `log`.
-static HighsStatus readLp(Highs& highs, const std::string& content,
-                          std::string& log) {
-  FILE* file = fopen(kLpFile.c_str(), "wb");
+static HighsStatus readLp(Highs& highs, const std::string& filename,
+                          const std::string& content, std::string& log) {
+  FILE* file = fopen(filename.c_str(), "wb");
+  REQUIRE(file != nullptr);
   fwrite(content.data(), 1, content.size(), file);
   fclose(file);
   log.clear();
@@ -26,16 +25,17 @@ static HighsStatus readLp(Highs& highs, const std::string& content,
       },
       &log);
   highs.startCallback(kCallbackLogging);
-  const HighsStatus status = highs.readModel(kLpFile);
+  const HighsStatus status = highs.readModel(filename);
   highs.stopCallback(kCallbackLogging);
-  std::remove(kLpFile.c_str());
+  std::remove(filename.c_str());
   if (dev_run) printf("%s", log.c_str());
   return status;
 }
 
-static HighsStatus readLp(Highs& highs, const std::string& content) {
+static HighsStatus readLp(Highs& highs, std::string& filename,
+                          const std::string& content) {
   std::string log;
-  return readLp(highs, content, log);
+  return readLp(highs, filename, content, log);
 }
 
 struct DiagnosticCase {
@@ -53,6 +53,8 @@ TEST_CASE("lp-file-format-quad-no-space", "[LpFileFormat]") {
 }
 
 TEST_CASE("lp-file-format-errors", "[LpFileFormat]") {
+  const std::string test_name = Catch::getResultCapture().getCurrentTestName();
+  std::string filename = test_name + ".lp";
   // Each file is invalid, and reading it logs the diagnostic
   const std::vector<DiagnosticCase> cases = {
     {"control-character",
@@ -61,7 +63,7 @@ TEST_CASE("lp-file-format-errors", "[LpFileFormat]") {
      "\x01\n"
      "end\n",
      "ERROR:   unexpected control character 0x01\n"
-     " --> lp-file-format.lp:3:1\n"
+     " --> " + filename + ":3:1\n"
      "  |\n"
      "3 |  \n"
      "  | ^ this character is not valid in an LP file\n"},
@@ -73,7 +75,7 @@ TEST_CASE("lp-file-format-errors", "[LpFileFormat]") {
      "\n"
      "  \n",
      "ERROR:   expected `end`, found end of file\n"
-     " --> lp-file-format.lp:4:11\n"
+     " --> " + filename + ":4:11\n"
      "  |\n"
      "4 |  c: x >= 1\n"
      "  |           ^ expected `end` after this\n"
@@ -85,7 +87,7 @@ TEST_CASE("lp-file-format-errors", "[LpFileFormat]") {
      " x\n"
      "end\n",
      "ERROR:   expected a section keyword, found `x`\n"
-     " --> lp-file-format.lp:1:1\n"
+     " --> " + filename + ":1:1\n"
      "  |\n"
      "1 | x + y\n"
      "  | ^ expected a keyword like `minimize` or `maximize`\n"
@@ -97,7 +99,7 @@ TEST_CASE("lp-file-format-errors", "[LpFileFormat]") {
      " c: x >= 1\n"
      "end\n",
      "ERROR:   expected a section keyword, found `subject`\n"
-     " --> lp-file-format.lp:1:1\n"
+     " --> " + filename + ":1:1\n"
      "  |\n"
      "1 | subject\n"
      "  | ^^^^^^^ expected a keyword like `minimize` or `maximize`\n"
@@ -110,7 +112,7 @@ TEST_CASE("lp-file-format-errors", "[LpFileFormat]") {
      " x\n"
      "end\n",
      "ERROR:   the objective is defined more than once\n"
-     " --> lp-file-format.lp:3:1\n"
+     " --> " + filename + ":3:1\n"
      "  |\n"
      "3 | max\n"
      "  | ^^^ second objective section\n"
@@ -123,7 +125,7 @@ TEST_CASE("lp-file-format-errors", "[LpFileFormat]") {
      " s1: S1:: x:1 y:2\n"
      "end\n",
      "ERROR:   SOS constraints are not supported by HiGHS\n"
-     " --> lp-file-format.lp:3:1\n"
+     " --> " + filename + ":3:1\n"
      "  |\n"
      "3 | sos\n"
      "  | ^^^ SOS section\n"},
@@ -133,7 +135,7 @@ TEST_CASE("lp-file-format-errors", "[LpFileFormat]") {
      "end\n"
      "x\n",
      "ERROR:   expected end of file, found `x`\n"
-     " --> lp-file-format.lp:4:1\n"
+     " --> " + filename + ":4:1\n"
      "  |\n"
      "4 | x\n"
      "  | ^ unexpected content after `end`\n"},
@@ -142,7 +144,7 @@ TEST_CASE("lp-file-format-errors", "[LpFileFormat]") {
      " obj: x y\n"
      "end\n",
      "ERROR:   expected `+` or `-`, found `y`\n"
-     " --> lp-file-format.lp:2:9\n"
+     " --> " + filename + ":2:9\n"
      "  |\n"
      "2 |  obj: x y\n"
      "  |         ^ expected `+` or `-` before this\n"
@@ -151,7 +153,7 @@ TEST_CASE("lp-file-format-errors", "[LpFileFormat]") {
     {"missing-sign-keyword",
      "Minimize a subject to a >= 1\n",
      "ERROR:   expected `+` or `-`, found `subject`\n"
-     " --> lp-file-format.lp:1:12\n"
+     " --> " + filename + ":1:12\n"
      "  |\n"
      "1 | Minimize a subject to a >= 1\n"
      "  |            ^^^^^^^ expected `+` or `-` before this\n"
@@ -162,7 +164,7 @@ TEST_CASE("lp-file-format-errors", "[LpFileFormat]") {
      " obj: x semi\n"
      "end\n",
      "ERROR:   expected `+` or `-`, found `semi`\n"
-     " --> lp-file-format.lp:2:9\n"
+     " --> " + filename + ":2:9\n"
      "  |\n"
      "2 |  obj: x semi\n"
      "  |         ^^^^ expected `+` or `-` before this\n"
@@ -173,7 +175,7 @@ TEST_CASE("lp-file-format-errors", "[LpFileFormat]") {
      " obj: x such that y\n"
      "end\n",
      "ERROR:   expected `+` or `-`, found `such`\n"
-     " --> lp-file-format.lp:2:9\n"
+     " --> " + filename + ":2:9\n"
      "  |\n"
      "2 |  obj: x such that y\n"
      "  |         ^^^^ expected `+` or `-` before this\n"
@@ -184,7 +186,7 @@ TEST_CASE("lp-file-format-errors", "[LpFileFormat]") {
      " obj: x + 0.2 5C0ST\n"
      "end\n",
      "ERROR:   expected `+` or `-`, found `5`\n"
-     " --> lp-file-format.lp:2:15\n"
+     " --> " + filename + ":2:15\n"
      "  |\n"
      "2 |  obj: x + 0.2 5C0ST\n"
      "  |               ^ expected `+` or `-` before this\n"
@@ -195,7 +197,7 @@ TEST_CASE("lp-file-format-errors", "[LpFileFormat]") {
      " obj: 2 3 x\n"
      "end\n",
      "ERROR:   expected `+` or `-`, found `3`\n"
-     " --> lp-file-format.lp:2:9\n"
+     " --> " + filename + ":2:9\n"
      "  |\n"
      "2 |  obj: 2 3 x\n"
      "  |         ^ expected `+` or `-` before this\n"
@@ -206,7 +208,7 @@ TEST_CASE("lp-file-format-errors", "[LpFileFormat]") {
      " obj: x + 2 [ x * y ]\n"
      "end\n",
      "ERROR:   expected `+` or `-`, found `[`\n"
-     " --> lp-file-format.lp:2:13\n"
+     " --> " + filename + ":2:13\n"
      "  |\n"
      "2 |  obj: x + 2 [ x * y ]\n"
      "  |             ^ expected `+` or `-` before this\n"
@@ -217,7 +219,7 @@ TEST_CASE("lp-file-format-errors", "[LpFileFormat]") {
      " obj: >= 1\n"
      "end\n",
      "ERROR:   expected a term, found `>=`\n"
-     " --> lp-file-format.lp:2:7\n"
+     " --> " + filename + ":2:7\n"
      "  |\n"
      "2 |  obj: >= 1\n"
      "  |       ^^ expected a number, a variable, or `[`\n"},
@@ -226,7 +228,7 @@ TEST_CASE("lp-file-format-errors", "[LpFileFormat]") {
      " obj: x + :\n"
      "end\n",
      "ERROR:   expected a term, found `:`\n"
-     " --> lp-file-format.lp:2:11\n"
+     " --> " + filename + ":2:11\n"
      "  |\n"
      "2 |  obj: x + :\n"
      "  |           ^ expected a number, a variable, or `[` after the sign\n"},
@@ -236,7 +238,7 @@ TEST_CASE("lp-file-format-errors", "[LpFileFormat]") {
      "st\n"
      "end\n",
      "ERROR:   expected a term, found `st`\n"
-     " --> lp-file-format.lp:3:1\n"
+     " --> " + filename + ":3:1\n"
      "  |\n"
      "3 | st\n"
      "  | ^^ expected a number, a variable, or `[` after the sign\n"
@@ -247,7 +249,7 @@ TEST_CASE("lp-file-format-errors", "[LpFileFormat]") {
      " obj: 2 * 3\n"
      "end\n",
      "ERROR:   expected a variable, found `3`\n"
-     " --> lp-file-format.lp:2:11\n"
+     " --> " + filename + ":2:11\n"
      "  |\n"
      "2 |  obj: 2 * 3\n"
      "  |           ^ expected a variable after `*`\n"},
@@ -256,7 +258,7 @@ TEST_CASE("lp-file-format-errors", "[LpFileFormat]") {
      " obj: x * y\n"
      "end\n",
      "ERROR:   quadratic terms must be inside `[` and `]`\n"
-     " --> lp-file-format.lp:2:9\n"
+     " --> " + filename + ":2:9\n"
      "  |\n"
      "2 |  obj: x * y\n"
      "  |         ^ unexpected `*` outside `[ ]`\n"},
@@ -265,7 +267,7 @@ TEST_CASE("lp-file-format-errors", "[LpFileFormat]") {
      " obj: 2 x ^ 2\n"
      "end\n",
      "ERROR:   quadratic terms must be inside `[` and `]`\n"
-     " --> lp-file-format.lp:2:11\n"
+     " --> " + filename + ":2:11\n"
      "  |\n"
      "2 |  obj: 2 x ^ 2\n"
      "  |           ^ unexpected `^` outside `[ ]`\n"},
@@ -273,7 +275,7 @@ TEST_CASE("lp-file-format-errors", "[LpFileFormat]") {
      "min\n"
      " obj: [ x * y\n",
      "ERROR:   expected `]`, found end of file\n"
-     " --> lp-file-format.lp:2:14\n"
+     " --> " + filename + ":2:14\n"
      "  |\n"
      "2 |  obj: [ x * y\n"
      "  |              ^ expected `]` before this\n"
@@ -284,7 +286,7 @@ TEST_CASE("lp-file-format-errors", "[LpFileFormat]") {
      " obj: [ x * y\n"
      "end\n",
      "ERROR:   expected `]`, found `end`\n"
-     " --> lp-file-format.lp:3:1\n"
+     " --> " + filename + ":3:1\n"
      "  |\n"
      "3 | end\n"
      "  | ^^^ expected `]` before this\n"
@@ -295,7 +297,7 @@ TEST_CASE("lp-file-format-errors", "[LpFileFormat]") {
      " obj: [ x ^ 2 y ^ 2 ] / 2\n"
      "end\n",
      "ERROR:   expected `+`, `-`, or `]`, found `y`\n"
-     " --> lp-file-format.lp:2:15\n"
+     " --> " + filename + ":2:15\n"
      "  |\n"
      "2 |  obj: [ x ^ 2 y ^ 2 ] / 2\n"
      "  |               ^ expected `+` or `-` before this\n"
@@ -306,7 +308,7 @@ TEST_CASE("lp-file-format-errors", "[LpFileFormat]") {
      " obj: [ x ^ 2 ] / 3\n"
      "end\n",
      "ERROR:   expected `2`, found `3`\n"
-     " --> lp-file-format.lp:2:19\n"
+     " --> " + filename + ":2:19\n"
      "  |\n"
      "2 |  obj: [ x ^ 2 ] / 3\n"
      "  |                   ^ expected `2` after `/`\n"
@@ -317,7 +319,7 @@ TEST_CASE("lp-file-format-errors", "[LpFileFormat]") {
      " obj: [ x ^ 2 ] /\n"
      "end\n",
      "ERROR:   expected `2`, found `end`\n"
-     " --> lp-file-format.lp:3:1\n"
+     " --> " + filename + ":3:1\n"
      "  |\n"
      "3 | end\n"
      "  | ^^^ expected `2` after `/`\n"
@@ -328,7 +330,7 @@ TEST_CASE("lp-file-format-errors", "[LpFileFormat]") {
      " obj: [ x ^ 3 ]\n"
      "end\n",
      "ERROR:   expected `2`, found `3`\n"
-     " --> lp-file-format.lp:2:13\n"
+     " --> " + filename + ":2:13\n"
      "  |\n"
      "2 |  obj: [ x ^ 3 ]\n"
      "  |             ^ expected `2` after `^`\n"
@@ -339,7 +341,7 @@ TEST_CASE("lp-file-format-errors", "[LpFileFormat]") {
      " obj: [ x ^ y ]\n"
      "end\n",
      "ERROR:   expected `2`, found `y`\n"
-     " --> lp-file-format.lp:2:13\n"
+     " --> " + filename + ":2:13\n"
      "  |\n"
      "2 |  obj: [ x ^ y ]\n"
      "  |             ^ expected `2` after `^`\n"
@@ -350,7 +352,7 @@ TEST_CASE("lp-file-format-errors", "[LpFileFormat]") {
      " obj: [ x ]\n"
      "end\n",
      "ERROR:   expected `^` or `*`, found `]`\n"
-     " --> lp-file-format.lp:2:11\n"
+     " --> " + filename + ":2:11\n"
      "  |\n"
      "2 |  obj: [ x ]\n"
      "  |           ^ expected `^ 2` or `* <variable>`\n"
@@ -361,7 +363,7 @@ TEST_CASE("lp-file-format-errors", "[LpFileFormat]") {
      " obj: [ 2 * 3 ]\n"
      "end\n",
      "ERROR:   expected a variable, found `3`\n"
-     " --> lp-file-format.lp:2:13\n"
+     " --> " + filename + ":2:13\n"
      "  |\n"
      "2 |  obj: [ 2 * 3 ]\n"
      "  |             ^ expected a variable in this term\n"},
@@ -370,7 +372,7 @@ TEST_CASE("lp-file-format-errors", "[LpFileFormat]") {
      " obj: [ x * 2 ]\n"
      "end\n",
      "ERROR:   expected a variable, found `2`\n"
-     " --> lp-file-format.lp:2:13\n"
+     " --> " + filename + ":2:13\n"
      "  |\n"
      "2 |  obj: [ x * 2 ]\n"
      "  |             ^ expected a variable after `*`\n"},
@@ -381,7 +383,7 @@ TEST_CASE("lp-file-format-errors", "[LpFileFormat]") {
      " c: x + [ x * y ] >= 1\n"
      "end\n",
      "ERROR:   quadratic constraints are not supported by HiGHS\n"
-     " --> lp-file-format.lp:4:9\n"
+     " --> " + filename + ":4:9\n"
      "  |\n"
      "4 |  c: x + [ x * y ] >= 1\n"
      "  |         ^ quadratic term in a constraint\n"},
@@ -392,7 +394,7 @@ TEST_CASE("lp-file-format-errors", "[LpFileFormat]") {
      " S1:: x:1 y:2\n"
      "end\n",
      "ERROR:   SOS constraints are not supported by HiGHS\n"
-     " --> lp-file-format.lp:4:2\n"
+     " --> " + filename + ":4:2\n"
      "  |\n"
      "4 |  S1:: x:1 y:2\n"
      "  |  ^^ SOS constraint\n"},
@@ -403,7 +405,7 @@ TEST_CASE("lp-file-format-errors", "[LpFileFormat]") {
      " c: S1:: x:1 y:2\n"
      "end\n",
      "ERROR:   SOS constraints are not supported by HiGHS\n"
-     " --> lp-file-format.lp:4:5\n"
+     " --> " + filename + ":4:5\n"
      "  |\n"
      "4 |  c: S1:: x:1 y:2\n"
      "  |     ^^ SOS constraint\n"},
@@ -414,7 +416,7 @@ TEST_CASE("lp-file-format-errors", "[LpFileFormat]") {
      " c: z = 1 -> x >= 1\n"
      "end\n",
      "ERROR:   indicator constraints are not supported by HiGHS\n"
-     " --> lp-file-format.lp:4:11\n"
+     " --> " + filename + ":4:11\n"
      "  |\n"
      "4 |  c: z = 1 -> x >= 1\n"
      "  |           ^^ indicator constraint\n"},
@@ -426,7 +428,7 @@ TEST_CASE("lp-file-format-errors", "[LpFileFormat]") {
      "bounds\n"
      "end\n",
      "ERROR:   expected a comparison, found `bounds`\n"
-     " --> lp-file-format.lp:5:1\n"
+     " --> " + filename + ":5:1\n"
      "  |\n"
      "5 | bounds\n"
      "  | ^^^^^^ expected `<=`, `>=`, or `=` before this\n"
@@ -438,7 +440,7 @@ TEST_CASE("lp-file-format-errors", "[LpFileFormat]") {
      "st\n"
      " c: x\n",
      "ERROR:   expected a comparison, found end of file\n"
-     " --> lp-file-format.lp:4:6\n"
+     " --> " + filename + ":4:6\n"
      "  |\n"
      "4 |  c: x\n"
      "  |      ^ expected `<=`, `>=`, or `=` before this\n"},
@@ -449,7 +451,7 @@ TEST_CASE("lp-file-format-errors", "[LpFileFormat]") {
      " c: x >= y\n"
      "end\n",
      "ERROR:   expected a number, found `y`\n"
-     " --> lp-file-format.lp:4:10\n"
+     " --> " + filename + ":4:10\n"
      "  |\n"
      "4 |  c: x >= y\n"
      "  |          ^ expected the right-hand side\n"},
@@ -459,7 +461,7 @@ TEST_CASE("lp-file-format-errors", "[LpFileFormat]") {
      "st\n"
      " c: x >= end\n",
      "ERROR:   expected a number, found `end`\n"
-     " --> lp-file-format.lp:4:10\n"
+     " --> " + filename + ":4:10\n"
      "  |\n"
      "4 |  c: x >= end\n"
      "  |          ^^^ expected the right-hand side\n"
@@ -472,7 +474,7 @@ TEST_CASE("lp-file-format-errors", "[LpFileFormat]") {
      " c: 3 x >= 2 y\n"
      "end\n",
      "ERROR:   expected a new line, found `y`\n"
-     " --> lp-file-format.lp:4:14\n"
+     " --> " + filename + ":4:14\n"
      "  |\n"
      "4 |  c: 3 x >= 2 y\n"
      "  |              ^ unexpected variable on the right-hand side\n"
@@ -485,7 +487,7 @@ TEST_CASE("lp-file-format-errors", "[LpFileFormat]") {
      " c: x + y >= 1 + 1\n"
      "end\n",
      "ERROR:   expected a new line, found `+`\n"
-     " --> lp-file-format.lp:4:16\n"
+     " --> " + filename + ":4:16\n"
      "  |\n"
      "4 |  c: x + y >= 1 + 1\n"
      "  |                ^ expected the constraint to end before this\n"
@@ -498,7 +500,7 @@ TEST_CASE("lp-file-format-errors", "[LpFileFormat]") {
      " x 1\n"
      "end\n",
      "ERROR:   expected `free` or a comparison, found `1`\n"
-     " --> lp-file-format.lp:4:4\n"
+     " --> " + filename + ":4:4\n"
      "  |\n"
      "4 |  x 1\n"
      "  |    ^ expected `free`, `<=`, `>=`, or `=`\n"},
@@ -509,7 +511,7 @@ TEST_CASE("lp-file-format-errors", "[LpFileFormat]") {
      " <= x\n"
      "end\n",
      "ERROR:   expected a bound, found `<=`\n"
-     " --> lp-file-format.lp:4:2\n"
+     " --> " + filename + ":4:2\n"
      "  |\n"
      "4 |  <= x\n"
      "  |  ^^ expected a variable or a number\n"},
@@ -520,7 +522,7 @@ TEST_CASE("lp-file-format-errors", "[LpFileFormat]") {
      " 1 x\n"
      "end\n",
      "ERROR:   expected a comparison, found `x`\n"
-     " --> lp-file-format.lp:4:4\n"
+     " --> " + filename + ":4:4\n"
      "  |\n"
      "4 |  1 x\n"
      "  |    ^ expected `<=`, `>=`, or `=`\n"},
@@ -531,7 +533,7 @@ TEST_CASE("lp-file-format-errors", "[LpFileFormat]") {
      " 1 <= 2\n"
      "end\n",
      "ERROR:   expected a variable, found `2`\n"
-     " --> lp-file-format.lp:4:7\n"
+     " --> " + filename + ":4:7\n"
      "  |\n"
      "4 |  1 <= 2\n"
      "  |       ^ expected a variable\n"},
@@ -542,7 +544,7 @@ TEST_CASE("lp-file-format-errors", "[LpFileFormat]") {
      " x <= y\n"
      "end\n",
      "ERROR:   expected a number, found `y`\n"
-     " --> lp-file-format.lp:4:7\n"
+     " --> " + filename + ":4:7\n"
      "  |\n"
      "4 |  x <= y\n"
      "  |       ^ expected the value of the bound\n"},
@@ -553,7 +555,7 @@ TEST_CASE("lp-file-format-errors", "[LpFileFormat]") {
      " 1 = x <= 2\n"
      "end\n",
      "ERROR:   a bound on both sides of a variable cannot use `=`\n"
-     " --> lp-file-format.lp:4:4\n"
+     " --> " + filename + ":4:4\n"
      "  |\n"
      "4 |  1 = x <= 2\n"
      "  |    ^ expected `<=` or `>=`\n"},
@@ -564,7 +566,7 @@ TEST_CASE("lp-file-format-errors", "[LpFileFormat]") {
      " 1 <= x >= 2\n"
      "end\n",
      "ERROR:   the comparisons in a bound on both sides of a variable must match\n"
-     " --> lp-file-format.lp:4:9\n"
+     " --> " + filename + ":4:9\n"
      "  |\n"
      "4 |  1 <= x >= 2\n"
      "  |         ^^ expected `<=`\n"},
@@ -575,7 +577,7 @@ TEST_CASE("lp-file-format-errors", "[LpFileFormat]") {
      " 2 >= x <= 1\n"
      "end\n",
      "ERROR:   the comparisons in a bound on both sides of a variable must match\n"
-     " --> lp-file-format.lp:4:9\n"
+     " --> " + filename + ":4:9\n"
      "  |\n"
      "4 |  2 >= x <= 1\n"
      "  |         ^^ expected `>=`\n"},
@@ -586,7 +588,7 @@ TEST_CASE("lp-file-format-errors", "[LpFileFormat]") {
      " x <= 1 y <= 2\n"
      "end\n",
      "ERROR:   expected a new line, found `y`\n"
-     " --> lp-file-format.lp:4:9\n"
+     " --> " + filename + ":4:9\n"
      "  |\n"
      "4 |  x <= 1 y <= 2\n"
      "  |         ^ expected the bound to end before this\n"
@@ -599,7 +601,7 @@ TEST_CASE("lp-file-format-errors", "[LpFileFormat]") {
      " x 1\n"
      "end\n",
      "ERROR:   expected a variable, found `1`\n"
-     " --> lp-file-format.lp:4:4\n"
+     " --> " + filename + ":4:4\n"
      "  |\n"
      "4 |  x 1\n"
      "  |    ^ expected a variable\n"},
@@ -617,7 +619,7 @@ TEST_CASE("lp-file-format-errors", "[LpFileFormat]") {
      " obj: x y\n"
      "end\n",
      "ERROR:   expected `+` or `-`, found `y`\n"
-     "  --> lp-file-format.lp:11:9\n"
+     "  --> " + filename + ":11:9\n"
      "   |\n"
      "11 |  obj: x y\n"
      "   |         ^ expected `+` or `-` before this\n"
@@ -628,7 +630,7 @@ TEST_CASE("lp-file-format-errors", "[LpFileFormat]") {
      " obj: x y\r\n"
      "end\r\n",
      "ERROR:   expected `+` or `-`, found `y`\n"
-     " --> lp-file-format.lp:2:9\n"
+     " --> " + filename + ":2:9\n"
      "  |\n"
      "2 |  obj: x y\n"
      "  |         ^ expected `+` or `-` before this\n"
@@ -639,7 +641,7 @@ TEST_CASE("lp-file-format-errors", "[LpFileFormat]") {
      "\tobj:\tx\ty\n"
      "end\n",
      "ERROR:   expected `+` or `-`, found `y`\n"
-     " --> lp-file-format.lp:2:9\n"
+     " --> " + filename + ":2:9\n"
      "  |\n"
      "2 |  obj: x y\n"
      "  |         ^ expected `+` or `-` before this\n"
@@ -650,7 +652,7 @@ TEST_CASE("lp-file-format-errors", "[LpFileFormat]") {
      " obj: 1 x1 + 2 x2 + 3 x3 + 4 x4 + 5 x5 + 6 x6 + 7 x7 + 8 x8 + 9 x9 + 10 x10 + 11 x11 + 12 x12 + 13 x13 + 14 x14 y 1 z1 +  2 z2 +  3 z3 +  4 z4 +  5 z5 +  6 z6 +  7 z7 +  8 z8 +  9 z9 +  10 z10 +  11 z11 +  12 z12 +  13 z13 +  14 z14\n"
      "end\n",
      "ERROR:   expected `+` or `-`, found `y`\n"
-     " --> lp-file-format.lp:2:113\n"
+     " --> " + filename + ":2:113\n"
      "  |\n"
      "2 | ...x10 + 11 x11 + 12 x12 + 13 x13 + 14 x14 y 1 z1 +  2 z2 +  3 z3 +  4 z4 +  5 z5 + ...\n"
      "  |                                            ^ expected `+` or `-` before this\n"
@@ -661,7 +663,7 @@ TEST_CASE("lp-file-format-errors", "[LpFileFormat]") {
      " obj: x aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"
      "end\n",
      "ERROR:   expected `+` or `-`, found `aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa...`\n"
-     " --> lp-file-format.lp:2:9\n"
+     " --> " + filename + ":2:9\n"
      "  |\n"
      "2 |  obj: x aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"
      "  |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ expected `+` or `-` before this\n"
@@ -672,7 +674,7 @@ TEST_CASE("lp-file-format-errors", "[LpFileFormat]") {
      " obj: caf\xC3\xA9 \xC3\xA9t\xC3\xA9\n"
      "end\n",
      "ERROR:   expected `+` or `-`, found `\xC3\xA9t\xC3\xA9`\n"
-     " --> lp-file-format.lp:2:12\n"
+     " --> " + filename + ":2:12\n"
      "  |\n"
      "2 |  obj: caf\xC3\xA9 \xC3\xA9t\xC3\xA9\n"
      "  |            ^^^ expected `+` or `-` before this\n"
@@ -683,7 +685,7 @@ TEST_CASE("lp-file-format-errors", "[LpFileFormat]") {
      " obj: x a\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\n"
      "end\n",
      "ERROR:   expected `+` or `-`, found `a\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9...`\n"
-     " --> lp-file-format.lp:2:9\n"
+     " --> " + filename + ":2:9\n"
      "  |\n"
      "2 |  obj: x a\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\n"
      "  |         ^^^^^^^^^^^^^^^^^ expected `+` or `-` before this\n"
@@ -694,7 +696,7 @@ TEST_CASE("lp-file-format-errors", "[LpFileFormat]") {
      " obj: x\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9 y\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9 + z\n"
      "end\n",
      "ERROR:   expected `+` or `-`, found `y\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9...`\n"
-     " --> lp-file-format.lp:2:39\n"
+     " --> " + filename + ":2:39\n"
      "  |\n"
      "2 | ...\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9 y\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9 + z\n"
      "  |                        ^^^^^^^^^^^^^^^^^^^^^ expected `+` or `-` before this\n"
@@ -705,7 +707,7 @@ TEST_CASE("lp-file-format-errors", "[LpFileFormat]") {
      " obj: a\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9 + z\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9x y\n"
      "end\n",
      "ERROR:   expected `+` or `-`, found `y`\n"
-     " --> lp-file-format.lp:2:74\n"
+     " --> " + filename + ":2:74\n"
      "  |\n"
      "2 | ...\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9x y\n"
      "  |                         ^ expected `+` or `-` before this\n"
@@ -715,7 +717,7 @@ TEST_CASE("lp-file-format-errors", "[LpFileFormat]") {
      "min\n"
      " x",
      "ERROR:   expected `end`, found end of file\n"
-     " --> lp-file-format.lp:2:3\n"
+     " --> " + filename + ":2:3\n"
      "  |\n"
      "2 |  x\n"
      "  |   ^ expected `end` after this\n"
@@ -729,7 +731,7 @@ TEST_CASE("lp-file-format-errors", "[LpFileFormat]") {
      "- continuous\n"
      "end\n",
      "ERROR:   expected a variable, found `-`\n"
-     " --> lp-file-format.lp:4:1\n"
+     " --> " + filename + ":4:1\n"
      "  |\n"
      "4 | - continuous\n"
      "  | ^ expected a variable\n"},
@@ -740,7 +742,7 @@ TEST_CASE("lp-file-format-errors", "[LpFileFormat]") {
      "continuous\n"
      "end\n",
      "ERROR:   expected a variable, found `-`\n"
-     " --> lp-file-format.lp:3:6\n"
+     " --> " + filename + ":3:6\n"
      "  |\n"
      "3 | semi -\n"
      "  |      ^ expected a variable\n"},
@@ -749,7 +751,7 @@ TEST_CASE("lp-file-format-errors", "[LpFileFormat]") {
      " obj: x y\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9 + z\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\n"
      "end\n",
      "ERROR:   expected `+` or `-`, found `y\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9...`\n"
-     " --> lp-file-format.lp:2:9\n"
+     " --> " + filename + ":2:9\n"
      "  |\n"
      "2 |  obj: x y\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9...\n"
      "  |         ^^^^^^^^^^^^^^^^^^^^^ expected `+` or `-` before this\n"
@@ -768,7 +770,7 @@ TEST_CASE("lp-file-format-errors", "[LpFileFormat]") {
      "min\r\n"
      " obj: x\r\n",
      "ERROR:   expected `end`, found end of file\n"
-     "  --> lp-file-format.lp:11:8\n"
+     "  --> " + filename + ":11:8\n"
      "   |\n"
      "11 |  obj: x\n"
      "   |        ^ expected `end` after this\n"
@@ -779,7 +781,7 @@ TEST_CASE("lp-file-format-errors", "[LpFileFormat]") {
      " x\x7F\n"
      "end\n",
      "ERROR:   unexpected control character 0x7F\n"
-     " --> lp-file-format.lp:2:3\n"
+     " --> " + filename + ":2:3\n"
      "  |\n"
      "2 |  x\x7F\n"
      "  |   ^ this character is not valid in an LP file\n"},
@@ -787,7 +789,7 @@ TEST_CASE("lp-file-format-errors", "[LpFileFormat]") {
      "min\n"
      " obj: x + 1",
      "ERROR:   expected `end`, found end of file\n"
-     " --> lp-file-format.lp:2:12\n"
+     " --> " + filename + ":2:12\n"
      "  |\n"
      "2 |  obj: x + 1\n"
      "  |            ^ expected `end` after this\n"
@@ -797,7 +799,7 @@ TEST_CASE("lp-file-format-errors", "[LpFileFormat]") {
      "min\n"
      " obj: x + 2e",
      "ERROR:   expected `end`, found end of file\n"
-     " --> lp-file-format.lp:2:13\n"
+     " --> " + filename + ":2:13\n"
      "  |\n"
      "2 |  obj: x + 2e\n"
      "  |             ^ expected `end` after this\n"
@@ -809,7 +811,7 @@ TEST_CASE("lp-file-format-errors", "[LpFileFormat]") {
      " y\n"
      "end\n",
      "ERROR:   expected `+` or `-`, found `y`\n"
-     " --> lp-file-format.lp:3:2\n"
+     " --> " + filename + ":3:2\n"
      "  |\n"
      "3 |  y\n"
      "  |  ^ expected `+` or `-` before this\n"
@@ -820,7 +822,7 @@ TEST_CASE("lp-file-format-errors", "[LpFileFormat]") {
      " obj: x 3 + y\n"
      "end\n",
      "ERROR:   expected `+` or `-`, found `3`\n"
-     " --> lp-file-format.lp:2:9\n"
+     " --> " + filename + ":2:9\n"
      "  |\n"
      "2 |  obj: x 3 + y\n"
      "  |         ^ expected `+` or `-` before this\n"
@@ -831,7 +833,7 @@ TEST_CASE("lp-file-format-errors", "[LpFileFormat]") {
      " obj: 2 *\n"
      "end\n",
      "ERROR:   expected a variable, found `end`\n"
-     " --> lp-file-format.lp:3:1\n"
+     " --> " + filename + ":3:1\n"
      "  |\n"
      "3 | end\n"
      "  | ^^^ expected a variable after `*`\n"},
@@ -842,7 +844,7 @@ TEST_CASE("lp-file-format-errors", "[LpFileFormat]") {
      " c: x >= [\n"
      "end\n",
      "ERROR:   expected a number, found `[`\n"
-     " --> lp-file-format.lp:4:10\n"
+     " --> " + filename + ":4:10\n"
      "  |\n"
      "4 |  c: x >= [\n"
      "  |          ^ expected the right-hand side\n"},
@@ -853,7 +855,7 @@ TEST_CASE("lp-file-format-errors", "[LpFileFormat]") {
      " c: x = y\n"
      "end\n",
      "ERROR:   expected a number, found `y`\n"
-     " --> lp-file-format.lp:4:9\n"
+     " --> " + filename + ":4:9\n"
      "  |\n"
      "4 |  c: x = y\n"
      "  |         ^ expected the right-hand side\n"},
@@ -864,7 +866,7 @@ TEST_CASE("lp-file-format-errors", "[LpFileFormat]") {
      " x y\n"
      "end\n",
      "ERROR:   expected `free` or a comparison, found `y`\n"
-     " --> lp-file-format.lp:4:4\n"
+     " --> " + filename + ":4:4\n"
      "  |\n"
      "4 |  x y\n"
      "  |    ^ expected `free`, `<=`, `>=`, or `=`\n"},
@@ -874,7 +876,7 @@ TEST_CASE("lp-file-format-errors", "[LpFileFormat]") {
      "semi-2\n"
      "end\n",
      "ERROR:   expected a variable, found `-`\n"
-     " --> lp-file-format.lp:3:5\n"
+     " --> " + filename + ":3:5\n"
      "  |\n"
      "3 | semi-2\n"
      "  |     ^ expected a variable\n"},
@@ -884,7 +886,7 @@ TEST_CASE("lp-file-format-errors", "[LpFileFormat]") {
      "semi-cont\n"
      "end\n",
      "ERROR:   expected a variable, found `-`\n"
-     " --> lp-file-format.lp:3:5\n"
+     " --> " + filename + ":3:5\n"
      "  |\n"
      "3 | semi-cont\n"
      "  |     ^ expected a variable\n"},
@@ -893,7 +895,7 @@ TEST_CASE("lp-file-format-errors", "[LpFileFormat]") {
      " obj: x y \xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\n"
      "end\n",
      "ERROR:   expected `+` or `-`, found `y`\n"
-     " --> lp-file-format.lp:2:9\n"
+     " --> " + filename + ":2:9\n"
      "  |\n"
      "2 |  obj: x y \xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9...\n"
      "  |         ^ expected `+` or `-` before this\n"
@@ -904,14 +906,16 @@ TEST_CASE("lp-file-format-errors", "[LpFileFormat]") {
     INFO(c.name);
     Highs highs;
     std::string log;
-    REQUIRE(readLp(highs, c.content, log) == HighsStatus::kError);
+    REQUIRE(readLp(highs, filename, c.content, log) == HighsStatus::kError);
     CAPTURE(log);
     REQUIRE(log.find(c.diagnostic) != std::string::npos);
-    REQUIRE(log.find("Parser error reading " + kLpFile) != std::string::npos);
+    REQUIRE(log.find("Parser error reading " + filename) != std::string::npos);
   }
 }
 
 TEST_CASE("lp-file-format-warnings", "[LpFileFormat]") {
+  const std::string test_name = Catch::getResultCapture().getCurrentTestName();
+  std::string filename = test_name + ".lp";
   // Each file is valid, but reading it logs warnings
   const std::vector<DiagnosticCase> cases = {
     {"constant",
@@ -921,7 +925,7 @@ TEST_CASE("lp-file-format-warnings", "[LpFileFormat]") {
      " c: x - 1 >= 1\n"
      "end\n",
      "WARNING: a constant on the left-hand side of a constraint is ignored\n"
-     " --> lp-file-format.lp:4:7\n"
+     " --> " + filename + ":4:7\n"
      "  |\n"
      "4 |  c: x - 1 >= 1\n"
      "  |       ^^^ this constant is ignored\n"
@@ -934,7 +938,7 @@ TEST_CASE("lp-file-format-warnings", "[LpFileFormat]") {
      " c: x + y + 2 x - x >= 1\n"
      "end\n",
      "WARNING: variable `x` appears more than once in this constraint\n"
-     " --> lp-file-format.lp:4:15\n"
+     " --> " + filename + ":4:15\n"
      "  |\n"
      "4 |  c: x + y + 2 x - x >= 1\n"
      "  |               ^ repeated here\n"
@@ -957,70 +961,70 @@ TEST_CASE("lp-file-format-warnings", "[LpFileFormat]") {
      " c11: x + 11 >= 11\n"
      "end\n",
      "WARNING: a constant on the left-hand side of a constraint is ignored\n"
-     " --> lp-file-format.lp:4:8\n"
+     " --> " + filename + ":4:8\n"
      "  |\n"
      "4 |  c1: x + 1 >= 1\n"
      "  |        ^^^ this constant is ignored\n"
      "  |\n"
      "  = help: move the constant to the right-hand side\n"
      "WARNING: a constant on the left-hand side of a constraint is ignored\n"
-     " --> lp-file-format.lp:5:8\n"
+     " --> " + filename + ":5:8\n"
      "  |\n"
      "5 |  c2: x + 2 >= 2\n"
      "  |        ^^^ this constant is ignored\n"
      "  |\n"
      "  = help: move the constant to the right-hand side\n"
      "WARNING: a constant on the left-hand side of a constraint is ignored\n"
-     " --> lp-file-format.lp:6:8\n"
+     " --> " + filename + ":6:8\n"
      "  |\n"
      "6 |  c3: x + 3 >= 3\n"
      "  |        ^^^ this constant is ignored\n"
      "  |\n"
      "  = help: move the constant to the right-hand side\n"
      "WARNING: a constant on the left-hand side of a constraint is ignored\n"
-     " --> lp-file-format.lp:7:8\n"
+     " --> " + filename + ":7:8\n"
      "  |\n"
      "7 |  c4: x + 4 >= 4\n"
      "  |        ^^^ this constant is ignored\n"
      "  |\n"
      "  = help: move the constant to the right-hand side\n"
      "WARNING: a constant on the left-hand side of a constraint is ignored\n"
-     " --> lp-file-format.lp:8:8\n"
+     " --> " + filename + ":8:8\n"
      "  |\n"
      "8 |  c5: x + 5 >= 5\n"
      "  |        ^^^ this constant is ignored\n"
      "  |\n"
      "  = help: move the constant to the right-hand side\n"
      "WARNING: a constant on the left-hand side of a constraint is ignored\n"
-     " --> lp-file-format.lp:9:8\n"
+     " --> " + filename + ":9:8\n"
      "  |\n"
      "9 |  c6: x + 6 >= 6\n"
      "  |        ^^^ this constant is ignored\n"
      "  |\n"
      "  = help: move the constant to the right-hand side\n"
      "WARNING: a constant on the left-hand side of a constraint is ignored\n"
-     "  --> lp-file-format.lp:10:8\n"
+     "  --> " + filename + ":10:8\n"
      "   |\n"
      "10 |  c7: x + 7 >= 7\n"
      "   |        ^^^ this constant is ignored\n"
      "   |\n"
      "   = help: move the constant to the right-hand side\n"
      "WARNING: a constant on the left-hand side of a constraint is ignored\n"
-     "  --> lp-file-format.lp:11:8\n"
+     "  --> " + filename + ":11:8\n"
      "   |\n"
      "11 |  c8: x + 8 >= 8\n"
      "   |        ^^^ this constant is ignored\n"
      "   |\n"
      "   = help: move the constant to the right-hand side\n"
      "WARNING: a constant on the left-hand side of a constraint is ignored\n"
-     "  --> lp-file-format.lp:12:8\n"
+     "  --> " + filename + ":12:8\n"
      "   |\n"
      "12 |  c9: x + 9 >= 9\n"
      "   |        ^^^ this constant is ignored\n"
      "   |\n"
      "   = help: move the constant to the right-hand side\n"
      "WARNING: a constant on the left-hand side of a constraint is ignored\n"
-     "  --> lp-file-format.lp:13:9\n"
+     "  --> " + filename + ":13:9\n"
      "   |\n"
      "13 |  c10: x + 10 >= 10\n"
      "   |         ^^^^ this constant is ignored\n"
@@ -1045,70 +1049,70 @@ TEST_CASE("lp-file-format-warnings", "[LpFileFormat]") {
      " c12: x + 12 >= 12\n"
      "end\n",
      "WARNING: a constant on the left-hand side of a constraint is ignored\n"
-     " --> lp-file-format.lp:4:8\n"
+     " --> " + filename + ":4:8\n"
      "  |\n"
      "4 |  c1: x + 1 >= 1\n"
      "  |        ^^^ this constant is ignored\n"
      "  |\n"
      "  = help: move the constant to the right-hand side\n"
      "WARNING: a constant on the left-hand side of a constraint is ignored\n"
-     " --> lp-file-format.lp:5:8\n"
+     " --> " + filename + ":5:8\n"
      "  |\n"
      "5 |  c2: x + 2 >= 2\n"
      "  |        ^^^ this constant is ignored\n"
      "  |\n"
      "  = help: move the constant to the right-hand side\n"
      "WARNING: a constant on the left-hand side of a constraint is ignored\n"
-     " --> lp-file-format.lp:6:8\n"
+     " --> " + filename + ":6:8\n"
      "  |\n"
      "6 |  c3: x + 3 >= 3\n"
      "  |        ^^^ this constant is ignored\n"
      "  |\n"
      "  = help: move the constant to the right-hand side\n"
      "WARNING: a constant on the left-hand side of a constraint is ignored\n"
-     " --> lp-file-format.lp:7:8\n"
+     " --> " + filename + ":7:8\n"
      "  |\n"
      "7 |  c4: x + 4 >= 4\n"
      "  |        ^^^ this constant is ignored\n"
      "  |\n"
      "  = help: move the constant to the right-hand side\n"
      "WARNING: a constant on the left-hand side of a constraint is ignored\n"
-     " --> lp-file-format.lp:8:8\n"
+     " --> " + filename + ":8:8\n"
      "  |\n"
      "8 |  c5: x + 5 >= 5\n"
      "  |        ^^^ this constant is ignored\n"
      "  |\n"
      "  = help: move the constant to the right-hand side\n"
      "WARNING: a constant on the left-hand side of a constraint is ignored\n"
-     " --> lp-file-format.lp:9:8\n"
+     " --> " + filename + ":9:8\n"
      "  |\n"
      "9 |  c6: x + 6 >= 6\n"
      "  |        ^^^ this constant is ignored\n"
      "  |\n"
      "  = help: move the constant to the right-hand side\n"
      "WARNING: a constant on the left-hand side of a constraint is ignored\n"
-     "  --> lp-file-format.lp:10:8\n"
+     "  --> " + filename + ":10:8\n"
      "   |\n"
      "10 |  c7: x + 7 >= 7\n"
      "   |        ^^^ this constant is ignored\n"
      "   |\n"
      "   = help: move the constant to the right-hand side\n"
      "WARNING: a constant on the left-hand side of a constraint is ignored\n"
-     "  --> lp-file-format.lp:11:8\n"
+     "  --> " + filename + ":11:8\n"
      "   |\n"
      "11 |  c8: x + 8 >= 8\n"
      "   |        ^^^ this constant is ignored\n"
      "   |\n"
      "   = help: move the constant to the right-hand side\n"
      "WARNING: a constant on the left-hand side of a constraint is ignored\n"
-     "  --> lp-file-format.lp:12:8\n"
+     "  --> " + filename + ":12:8\n"
      "   |\n"
      "12 |  c9: x + 9 >= 9\n"
      "   |        ^^^ this constant is ignored\n"
      "   |\n"
      "   = help: move the constant to the right-hand side\n"
      "WARNING: a constant on the left-hand side of a constraint is ignored\n"
-     "  --> lp-file-format.lp:13:9\n"
+     "  --> " + filename + ":13:9\n"
      "   |\n"
      "13 |  c10: x + 10 >= 10\n"
      "   |         ^^^^ this constant is ignored\n"
@@ -1122,7 +1126,7 @@ TEST_CASE("lp-file-format-warnings", "[LpFileFormat]") {
      " c: x - 1 + 2 >= 1\n"
      "end\n",
      "WARNING: a constant on the left-hand side of a constraint is ignored\n"
-     " --> lp-file-format.lp:4:7\n"
+     " --> " + filename + ":4:7\n"
      "  |\n"
      "4 |  c: x - 1 + 2 >= 1\n"
      "  |       ^^^ this constant is ignored\n"
@@ -1133,16 +1137,18 @@ TEST_CASE("lp-file-format-warnings", "[LpFileFormat]") {
     INFO(c.name);
     Highs highs;
     std::string log;
-    REQUIRE(readLp(highs, c.content, log) == HighsStatus::kWarning);
+    REQUIRE(readLp(highs, filename, c.content, log) == HighsStatus::kWarning);
     CAPTURE(log);
     REQUIRE(log.find(c.diagnostic) != std::string::npos);
   }
 }
 
 TEST_CASE("lp-file-format-warning-semantics", "[LpFileFormat]") {
+  const std::string test_name = Catch::getResultCapture().getCurrentTestName();
+  std::string filename = test_name + ".lp";
   Highs highs;
   // The constant is ignored, and the repeated variables are summed
-  REQUIRE(readLp(highs,
+  REQUIRE(readLp(highs, filename,
                  "min\n x\nst\n c: 2 x - 1 + y + x - 2 y >= 1\nend\n") ==
           HighsStatus::kWarning);
   const HighsLp& lp = highs.getLp();
@@ -1150,11 +1156,13 @@ TEST_CASE("lp-file-format-warning-semantics", "[LpFileFormat]") {
   REQUIRE(lp.a_matrix_.index_ == std::vector<HighsInt>{0, 0});
   REQUIRE(lp.a_matrix_.value_ == std::vector<double>{3, -1});
   // A zero constant is not worth a warning
-  REQUIRE(readLp(highs, "min\n x\nst\n c: x + 0 >= 1\nend\n") ==
+  REQUIRE(readLp(highs, filename, "min\n x\nst\n c: x + 0 >= 1\nend\n") ==
           HighsStatus::kOk);
 }
 
 TEST_CASE("lp-file-format-model", "[LpFileFormat]") {
+  const std::string test_name = Catch::getResultCapture().getCurrentTestName();
+  std::string filename = test_name + ".lp";
   const std::string content =
       "\\ A model that uses most of the LP file format\n"
       "MAXIMIZE\n"
@@ -1195,7 +1203,7 @@ TEST_CASE("lp-file-format-model", "[LpFileFormat]") {
       " sc\n"
       "end\n";
   Highs highs;
-  REQUIRE(readLp(highs, content) == HighsStatus::kOk);
+  REQUIRE(readLp(highs, filename, content) == HighsStatus::kOk);
   const HighsLp& lp = highs.getLp();
   const HighsInt num_col = 14;
   REQUIRE(lp.num_col_ == num_col);
@@ -1245,10 +1253,12 @@ TEST_CASE("lp-file-format-model", "[LpFileFormat]") {
 }
 
 TEST_CASE("lp-file-format-objective-and-bounds", "[LpFileFormat]") {
+  const std::string test_name = Catch::getResultCapture().getCurrentTestName();
+  std::string filename = test_name + ".lp";
   Highs highs;
   // An objective without a name, a constraint on one variable, and bounds
   // that start with infinity
-  REQUIRE(readLp(highs,
+  REQUIRE(readLp(highs, filename,
                  "min\n - x + 1\nst\n c: x = 1\nbounds\n inf >= x\n"
                  " infinity >= y\n x >= -1\nend\n") == HighsStatus::kOk);
   const HighsLp& lp = highs.getLp();
@@ -1262,10 +1272,12 @@ TEST_CASE("lp-file-format-objective-and-bounds", "[LpFileFormat]") {
 }
 
 TEST_CASE("lp-file-format-hessian", "[LpFileFormat]") {
+  const std::string test_name = Catch::getResultCapture().getCurrentTestName();
+  std::string filename = test_name + ".lp";
   Highs highs;
   // With "/ 2" the bracketed terms are 0.5 x'Qx, and without it they are
   // x'Qx. The terms in w cancel, so they are not in the Hessian
-  REQUIRE(readLp(highs,
+  REQUIRE(readLp(highs, filename,
                  "min\n"
                  " obj: x + [ 2 x ^ 2 + 4 x * y - y * x + 3 y ^ 2 ] / 2\n"
                  " + [ z * z ] - [ w ^ 2 ] + [ w ^ 2 + 2 * w * x - 2 x * w ]\n"
@@ -1279,80 +1291,92 @@ TEST_CASE("lp-file-format-hessian", "[LpFileFormat]") {
   REQUIRE(highs.getLp().col_cost_ == std::vector<double>{1, 0, 0, 0});
 
   // When all of the quadratic terms cancel, there is no Hessian
-  REQUIRE(readLp(highs, "min\n obj: x + [ x ^ 2 - x * x ] / 2\nend\n") ==
-          HighsStatus::kOk);
+  REQUIRE(
+      readLp(highs, filename, "min\n obj: x + [ x ^ 2 - x * x ] / 2\nend\n") ==
+      HighsStatus::kOk);
   REQUIRE(!highs.getModel().isQp());
 
   // Brackets can be empty
-  REQUIRE(readLp(highs, "min\n obj: x + [ ] / 2\nend\n") == HighsStatus::kOk);
+  REQUIRE(
+      readLp(highs, filename, "min\n obj: x + [ ] / 2\nend\n") ==
+      HighsStatus::kOk);
   REQUIRE(!highs.getModel().isQp());
 }
 
 TEST_CASE("lp-file-format-keywords", "[LpFileFormat]") {
+  const std::string test_name = Catch::getResultCapture().getCurrentTestName();
+  std::string filename = test_name + ".lp";
   Highs highs;
   for (const std::string& keyword :
        {"minimize", "Minimise", "MINIMUM", "min"}) {
-    REQUIRE(readLp(highs, keyword + "\n obj: x\nend\n") == HighsStatus::kOk);
+    REQUIRE(readLp(highs, filename, keyword + "\n obj: x\nend\n") ==
+            HighsStatus::kOk);
     REQUIRE(highs.getLp().sense_ == ObjSense::kMinimize);
   }
   for (const std::string& keyword :
        {"maximize", "Maximise", "MAXIMUM", "max"}) {
-    REQUIRE(readLp(highs, keyword + "\n obj: x\nend\n") == HighsStatus::kOk);
+    REQUIRE(readLp(highs, filename, keyword + "\n obj: x\nend\n") ==
+            HighsStatus::kOk);
     REQUIRE(highs.getLp().sense_ == ObjSense::kMaximize);
   }
   for (const std::string& keyword :
        {"subject to", "Such That", "st", "S.T.", "st."}) {
-    REQUIRE(readLp(highs, "min\n obj: x\n" + keyword + "\n c: x >= 1\nend\n") ==
+    REQUIRE(readLp(highs, filename,
+                   "min\n obj: x\n" + keyword + "\n c: x >= 1\nend\n") ==
             HighsStatus::kOk);
     REQUIRE(highs.getLp().num_row_ == 1);
   }
   for (const std::string& keyword : {"bounds", "BOUND"}) {
-    REQUIRE(readLp(highs, "min\n obj: x\n" + keyword + "\n x <= 1\nend\n") ==
+    REQUIRE(readLp(highs, filename,
+                   "min\n obj: x\n" + keyword + "\n x <= 1\nend\n") ==
             HighsStatus::kOk);
     REQUIRE(highs.getLp().col_upper_[0] == 1);
   }
   for (const std::string& keyword :
        {"general", "Generals", "GEN", "integer", "integers"}) {
-    REQUIRE(readLp(highs, "min\n obj: x\n" + keyword + "\n x\nend\n") ==
-            HighsStatus::kOk);
+    REQUIRE(
+        readLp(highs, filename, "min\n obj: x\n" + keyword + "\n x\nend\n") ==
+        HighsStatus::kOk);
     REQUIRE(highs.getLp().integrality_[0] == HighsVarType::kInteger);
   }
   for (const std::string& keyword : {"binary", "Binaries", "BIN"}) {
-    REQUIRE(readLp(highs, "min\n obj: x\n" + keyword + "\n x\nend\n") ==
-            HighsStatus::kOk);
+    REQUIRE(
+        readLp(highs, filename, "min\n obj: x\n" + keyword + "\n x\nend\n") ==
+        HighsStatus::kOk);
     REQUIRE(highs.getLp().integrality_[0] == HighsVarType::kInteger);
     REQUIRE(highs.getLp().col_upper_[0] == 1);
   }
   for (const std::string& keyword :
        {"semi-continuous", "Semi-Continuous", "semi", "SEMIS",
         "semi - continuous", "semi -continuous"}) {
-    REQUIRE(readLp(highs, "min\n obj: x\nbounds\n 1 <= x <= 2\n" + keyword +
-                              "\n x\nend\n") == HighsStatus::kOk);
+    REQUIRE(readLp(highs, filename,
+                   "min\n obj: x\nbounds\n 1 <= x <= 2\n" + keyword +
+                       "\n x\nend\n") == HighsStatus::kOk);
     REQUIRE(highs.getLp().integrality_[0] == HighsVarType::kSemiContinuous);
   }
   // Keywords followed by ":" are names, so this is a constraint named "end"
-  REQUIRE(readLp(highs, "min\n obj: x\nst\n end: x >= 1\nend\n") ==
+  REQUIRE(readLp(highs, filename, "min\n obj: x\nst\n end: x >= 1\nend\n") ==
           HighsStatus::kOk);
   REQUIRE(highs.getLp().row_names_ == std::vector<std::string>{"end"});
   // "subject" and "such" are only keywords when followed by "to" and "that"
-  REQUIRE(readLp(highs,
+  REQUIRE(readLp(highs, filename,
                  "min\n obj: x\nst\n subject: x >= 1\n such: x >= 2\nend\n") ==
           HighsStatus::kOk);
   REQUIRE(highs.getLp().row_names_ ==
           std::vector<std::string>{"subject", "such"});
-  REQUIRE(readLp(highs,
+  REQUIRE(readLp(highs, filename,
                  "min\n obj: x\nst\nsubject + x >= 1\nsuch + x >= 2\nend\n") ==
           HighsStatus::kOk);
   REQUIRE(highs.getLp().col_names_ ==
           std::vector<std::string>{"x", "subject", "such"});
   // A keyword that isn't at the start of a line is a name
-  REQUIRE(readLp(highs, "min\n obj: x + end + bounds\nend\n") ==
+  REQUIRE(readLp(highs, filename, "min\n obj: x + end + bounds\nend\n") ==
           HighsStatus::kOk);
   REQUIRE(highs.getLp().col_names_ ==
           std::vector<std::string>{"x", "end", "bounds"});
   // Sections can appear in any order, and be repeated, apart from the
   // objective
-  REQUIRE(readLp(highs,
+  REQUIRE(readLp(highs, filename,
                  "bounds\n x <= 1\nst\n c1: x + y >= 1\nmin\n obj: x\n"
                  "st\n c2: y >= 0\nbounds\n y <= 2\nend\n") ==
           HighsStatus::kOk);
@@ -1361,9 +1385,11 @@ TEST_CASE("lp-file-format-keywords", "[LpFileFormat]") {
 }
 
 TEST_CASE("lp-file-format-lexer", "[LpFileFormat]") {
+  const std::string test_name = Catch::getResultCapture().getCurrentTestName();
+  std::string filename = test_name + ".lp";
   Highs highs;
   // Comments, blank lines, tabs, CRLF line endings, and unusual names
-  REQUIRE(readLp(highs,
+  REQUIRE(readLp(highs, filename,
                  "\\ comment\r\n"
                  "\r\n"
                  "min \\ comment after a keyword\r\n"
@@ -1379,21 +1405,24 @@ TEST_CASE("lp-file-format-lexer", "[LpFileFormat]") {
   REQUIRE(lp.row_lower_ == std::vector<double>{100});
   // An empty file and a file with only comments are empty models
   for (const std::string& content : {"", " \n\t\n", "\\ comment"}) {
-    REQUIRE(readLp(highs, content) == HighsStatus::kOk);
+    REQUIRE(readLp(highs, filename, content) == HighsStatus::kOk);
     REQUIRE(highs.getLp().num_col_ == 0);
     REQUIRE(highs.getLp().num_row_ == 0);
   }
 }
 
 TEST_CASE("lp-file-format-row-names", "[LpFileFormat]") {
+  const std::string test_name = Catch::getResultCapture().getCurrentTestName();
+  std::string filename = test_name + ".lp";
   Highs highs;
   // A name beginning HiGHS_R is fine if there are no unnamed rows
-  REQUIRE(readLp(highs, "min\n obj: x\nst\n HiGHS_R7: x >= 1\nend\n") ==
-          HighsStatus::kOk);
+  REQUIRE(
+      readLp(highs, filename, "min\n obj: x\nst\n HiGHS_R7: x >= 1\nend\n") ==
+      HighsStatus::kOk);
   REQUIRE(highs.getLp().row_names_ == std::vector<std::string>{"HiGHS_R7"});
   // Otherwise the generated names might clash, so all row names are removed
   std::string log;
-  REQUIRE(readLp(highs,
+  REQUIRE(readLp(highs, filename,
                  "min\n obj: x\nst\n HiGHS_R7: x >= 1\n x >= 2\nend\n",
                  log) == HighsStatus::kOk);
   REQUIRE(log.find("WARNING: Cannot create row name beginning \"HiGHS_R\"") !=
@@ -1409,10 +1438,12 @@ TEST_CASE("lp-file-format-file-not-found", "[LpFileFormat]") {
 }
 
 TEST_CASE("lp-file-format-integrality", "[LpFileFormat]") {
+  const std::string test_name = Catch::getResultCapture().getCurrentTestName();
+  std::string filename = test_name + ".lp";
   // Semi-continuous variables that are also general or binary are
   // semi-integer, whatever order the sections are in
   Highs highs;
-  REQUIRE(readLp(highs,
+  REQUIRE(readLp(highs, filename,
                  "min\n obj: a + b + c\nbounds\n 1 <= a <= 2\n 1 <= b <= 2\n"
                  " 1 <= c <= 2\ngeneral\n a\nsemi\n a b c\ngeneral\n b c\n"
                  "binary\n b\nsemi\n c\nend\n") == HighsStatus::kOk);
@@ -1434,9 +1465,12 @@ static std::string largeLpFile(const HighsInt num_row,
 }
 
 TEST_CASE("lp-file-format-large-file", "[LpFileFormat]") {
+  const std::string test_name = Catch::getResultCapture().getCurrentTestName();
+  std::string filename = test_name + ".lp";
   const HighsInt num_row = 100000;
   Highs highs;
-  REQUIRE(readLp(highs, largeLpFile(num_row, "")) == HighsStatus::kOk);
+  REQUIRE(readLp(highs, filename, largeLpFile(num_row, "")) ==
+          HighsStatus::kOk);
   const HighsLp& lp = highs.getLp();
   REQUIRE(lp.num_row_ == num_row);
   REQUIRE(lp.num_col_ == 1001);
@@ -1451,19 +1485,19 @@ TEST_CASE("lp-file-format-large-file", "[LpFileFormat]") {
 
   // Diagnostics near the end of the file show the right line
   std::string log;
-  REQUIRE(readLp(highs, largeLpFile(num_row, " c: x y >= 1\n"), log) ==
-          HighsStatus::kError);
+  REQUIRE(readLp(highs, filename, largeLpFile(num_row, " c: x y >= 1\n"),
+          log) == HighsStatus::kError);
   REQUIRE(log.find("ERROR:   expected `+` or `-`, found `y`\n"
-                   "      --> lp-file-format.lp:100004:7\n"
+                   "      --> " + filename + ":100004:7\n"
                    "       |\n"
                    "100004 |  c: x y >= 1\n"
                    "       |       ^ expected `+` or `-` before this\n") !=
           std::string::npos);
-  REQUIRE(readLp(highs, largeLpFile(num_row, " d: x0 + 1 >= 1\n"), log) ==
-          HighsStatus::kWarning);
+  REQUIRE(readLp(highs, filename, largeLpFile(num_row, " d: x0 + 1 >= 1\n"),
+                 log) == HighsStatus::kWarning);
   REQUIRE(log.find("WARNING: a constant on the left-hand side of a "
                    "constraint is ignored\n"
-                   "      --> lp-file-format.lp:100004:8\n"
+                   "      --> " + filename + ":100004:8\n"
                    "       |\n"
                    "100004 |  d: x0 + 1 >= 1\n"
                    "       |        ^^^ this constant is ignored\n") !=
@@ -1471,6 +1505,7 @@ TEST_CASE("lp-file-format-large-file", "[LpFileFormat]") {
 
   // A name that is longer than a chunk
   const std::string name(1500000, 'x');
-  REQUIRE(readLp(highs, "min\n obj: " + name + "\nend\n") == HighsStatus::kOk);
+  REQUIRE(readLp(highs, filename, "min\n obj: " + name + "\nend\n") ==
+          HighsStatus::kOk);
   REQUIRE((highs.getLp().col_names_ == std::vector<std::string>{name}));
 }
