@@ -452,6 +452,38 @@ TEST_CASE("LP-extreme-coefficient", "[highs_data]") {
   highs.resetGlobalScheduler(true);
 }
 
+TEST_CASE("LP-duplicate-small-value", "[highs_data]") {
+  // a column with two entries in the same row is only illegal if both
+  // entries are retained: an entry that is ignored because its value is
+  // small is not identified as a duplicate. this must not depend on the
+  // order of the entries
+  HighsLp lp;
+  lp.num_col_ = 1;
+  lp.num_row_ = 3;
+  lp.col_cost_.assign(1, 1);
+  lp.col_lower_.assign(1, 0);
+  lp.col_upper_.assign(1, 1);
+  lp.row_lower_.assign(3, -inf);
+  lp.row_upper_.assign(3, 1);
+  lp.a_matrix_.format_ = MatrixFormat::kColwise;
+  lp.a_matrix_.start_ = {0, 2};
+  lp.a_matrix_.index_ = {2, 2};
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  lp.a_matrix_.value_ = {3, 1e-12};
+  REQUIRE(highs.passModel(lp) == HighsStatus::kWarning);
+  REQUIRE(highs.getLp().a_matrix_.numNz() == 1);
+  lp.a_matrix_.value_ = {1e-12, 3};
+  REQUIRE(highs.passModel(lp) == HighsStatus::kWarning);
+  REQUIRE(highs.getLp().a_matrix_.numNz() == 1);
+  lp.a_matrix_.value_ = {1e-12, 1e-12};
+  REQUIRE(highs.passModel(lp) == HighsStatus::kWarning);
+  REQUIRE(highs.getLp().a_matrix_.numNz() == 0);
+  lp.a_matrix_.value_ = {3, 3};
+  REQUIRE(highs.passModel(lp) == HighsStatus::kError);
+  highs.resetGlobalScheduler(true);
+}
+
 TEST_CASE("LP-inf-cost", "[highs_data]") {
   Highs highs;
   highs.setOptionValue("output_flag", dev_run);

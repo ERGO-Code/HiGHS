@@ -315,6 +315,10 @@ const std::string highsIntToPlural(const HighsInt i, const bool y) {
   return i == 1 ? "" : "s";
 }
 
+const std::string highsIntToBe(const HighsInt i) {
+  return (i == 1 ? "is" : "are");
+}
+
 const std::string highsTimeToString(const double time) {
   return
 #ifndef NDEBUG
