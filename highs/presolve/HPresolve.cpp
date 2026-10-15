@@ -384,11 +384,16 @@ void HPresolve::chooseRules() {
     return false;
   };
 
+  // width of the largest bit value, so that the rule list stays aligned
+  const int bitWidth =
+      static_cast<int>(std::to_string(1 << (kPresolveRuleCount - 1)).size());
+
   auto logRule = [&](const HighsInt rule_type) {
     highsLogUser(options->log_options, HighsLogType::kInfo,
-                 " %1s Rule %2d (set bit %2d = %7d): %s\n",
+                 " %1s Rule %2d (set bit %2d = %*d): %s\n",
                  allowedOffInInitialSweep(rule_type) ? "*" : " ",
-                 int(rule_type), int(rule_type), int(1 << rule_type),
+                 static_cast<int>(rule_type), static_cast<int>(rule_type),
+                 bitWidth, static_cast<int>(1 << rule_type),
                  utilPresolveRuleTypeToString(rule_type).c_str());
   };
 
