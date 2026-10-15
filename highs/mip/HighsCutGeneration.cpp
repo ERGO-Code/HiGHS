@@ -7,6 +7,8 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 #include "mip/HighsCutGeneration.h"
 
+#include <limits>
+
 #include "../extern/pdqsort/pdqsort.h"
 #include "mip/HighsDomain.h"
 #include "mip/HighsMipSolverData.h"
@@ -960,7 +962,11 @@ bool HighsCutGeneration::preprocessBaseInequality(bool& hasUnboundedInts,
 
       hasContinuous = true;
     } else {
-      if (upper[i] == kHighsInf) {
+      if (upper[i] != kHighsInf &&
+          std::abs(vals[i] * upper[i]) >
+              1 / std::numeric_limits<double>::epsilon())
+        return false;
+      if (upper[i] >= kHighsIInf) {
         hasUnboundedInts = true;
         hasGeneralInts = true;
       } else if (upper[i] != 1.0) {
