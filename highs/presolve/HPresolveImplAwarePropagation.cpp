@@ -101,8 +101,9 @@ HPresolve::Result HPresolve::implAwareConstrPropagation(
   auto fixCol = [&](HighsInt col, bool toUpper) {
     numVarsFixed++;
     trackColChange(col);
-    return toUpper ? fixColToUpper(postsolve_stack, col)
-                   : fixColToLower(postsolve_stack, col);
+    HPRESOLVE_CHECKED_CALL(toUpper ? fixColToUpper(postsolve_stack, col)
+                                   : fixColToLower(postsolve_stack, col));
+    return checkLimits(postsolve_stack);
   };
 
   auto addClique = [&](HighsCliqueTable::CliqueVar v1,
