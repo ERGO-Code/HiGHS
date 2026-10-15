@@ -253,20 +253,30 @@ HighsModel Folder::getFoldedModel() const {
         accumulator[c_colour] += Q_.value_[el];
       }
 
+      // Qf is built by cols, so r_colour corresponds to the column number in Qf
+      // and c_colour to the row number in Qf.
+
+      // The diagonal entry is always the first entry of the column, even if the
+      // representative row has no entry in its own colour. It is stored as
+      // zero if its value quantizes to zero.
+      const double diagonal =
+          is_col_used[r_colour]
+              ? accumulator[r_colour] * col_colours_size_[r_colour]
+              : 0.0;
+      Qf.index_.push_back(r_colour);
+      Qf.value_.push_back(DoubleQuantizer::bucket(diagonal) == 0.0 ? 0.0
+                                                                   : diagonal);
+
       for (HighsInt c_colour : col_used) {
-        const double val = accumulator[c_colour] * col_colours_size_[r_colour];
-
-        const bool skip =
-            // Skip sums that are quantized to zero, if not on the diagonal
-            (r_colour != c_colour && DoubleQuantizer::bucket(val) == 0.0) ||
-            // Skip sums corresponding to upper triangle.
-            // Qf is built by cols, so r_colour corresponds to the column number
-            // in Qf and c_colour to the row number in Qf.
-            r_colour > c_colour;
-
-        if (!skip) {
-          Qf.index_.push_back(c_colour);
-          Qf.value_.push_back(val);
+        // Off-diagonal entries below the diagonal only, skipping sums that
+        // quantize to zero
+        if (c_colour > r_colour) {
+          const double val =
+              accumulator[c_colour] * col_colours_size_[r_colour];
+          if (DoubleQuantizer::bucket(val) != 0.0) {
+            Qf.index_.push_back(c_colour);
+            Qf.value_.push_back(val);
+          }
         }
 
         accumulator[c_colour] = 0.0;
