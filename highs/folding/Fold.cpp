@@ -17,7 +17,7 @@ Folder::Folder(const HighsModel& model)
   assert(A_.isColwise());
   assert(At_.isRowwise());
   assert(Q_.format_ == HessianFormat::kSquare);
-  assert(Q_.dim_ == A_.num_col_);
+  assert(Q_.empty() || Q_.dim_ == A_.num_col_);
 }
 
 double Folder::getRowFraction() const {
