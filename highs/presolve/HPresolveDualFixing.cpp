@@ -31,9 +31,29 @@ HPresolve::Result HPresolve::dualFixing(HighsPostsolveStack& postsolve_stack,
   // lambda for variable substitution
   auto substituteCol = [&](HighsInt col, HighsInt row, HighsInt direction,
                            double colBound, double otherColBound) {
+    assert(model->col_lower_[col] != -kHighsInf &&
+           model->col_upper_[col] != kHighsInf);
+    constexpr HighsInt maxSubstRowSize = 1000;
+    if (rowsizeInteger[row] == 0 || rowsize[row] > maxSubstRowSize)
+      return Result::kOk;
     // check lhs and rhs for finiteness
-    bool lhsFinite = model->row_lower_[row] != -kHighsInf;
-    bool rhsFinite = model->row_upper_[row] != kHighsInf;
+    const bool lhsFinite = model->row_lower_[row] != -kHighsInf;
+    const bool rhsFinite = model->row_upper_[row] != kHighsInf;
+    if (lhsFinite && rhsFinite) {
+      // Row cannot be redundant if the column to be substituted can
+      // account for all row activity
+      HighsInt pos = findNonzero(row, col);
+      assert(pos != -1);
+      const double colCoef = Avalue[pos];
+      const HighsCDouble activityRange =
+          std::abs(colCoef) *
+          (static_cast<HighsCDouble>(model->col_upper_[col]) -
+           model->col_lower_[col]);
+      if (activityRange > static_cast<HighsCDouble>(model->row_upper_[row]) -
+                              model->row_lower_[row] + 2 * primal_feastol) {
+        return Result::kOk;
+      }
+    }
 
     // use storeRow and getStoredRow since getRowVector's rowroot[row] would be
     // overwritten by subsequent findNonZero calls, which would produce
