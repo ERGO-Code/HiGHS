@@ -97,23 +97,23 @@ class HSimplexNla {
                const HighsSparseMatrix* scaled_ar_matrix);
   bool sparseLoopStyle(const HighsInt count, const HighsInt dim,
                        HighsInt& to_entry) const;
-  void reportVector(const std::string message, const HighsInt num_index,
-                    const vector<double> vector_value,
-                    const vector<HighsInt> vector_index,
+  void reportVector(const std::string& message, const HighsInt num_index,
+                    const vector<double>& vector_value,
+                    const vector<HighsInt>& vector_index,
                     const bool force) const;
-  void reportArray(const std::string message, const HVector* vector,
+  void reportArray(const std::string& message, const HVector* vector,
                    const bool force = false) const;
-  void reportArray(const std::string message, const HighsInt offset,
+  void reportArray(const std::string& message, const HighsInt offset,
                    const HVector* vector, const bool force = false) const;
-  void reportArraySparse(const std::string message, const HVector* vector,
+  void reportArraySparse(const std::string& message, const HVector* vector,
                          const bool force = false) const;
-  void reportArraySparse(const std::string message, const HighsInt offset,
+  void reportArraySparse(const std::string& message, const HighsInt offset,
                          const HVector* vector, const bool force = false) const;
-  void reportPackValue(const std::string message, const HVector* vector,
+  void reportPackValue(const std::string& message, const HVector* vector,
                        const bool force = false) const;
   // Debug methods
-  HighsDebugStatus debugCheckData(const std::string message = "") const;
-  HighsDebugStatus debugCheckInvert(const std::string message,
+  HighsDebugStatus debugCheckData(const std::string& message = "") const;
+  HighsDebugStatus debugCheckInvert(const std::string& message,
                                     const HighsInt alt_debug_level = -1) const;
   double debugInvertResidualError(const bool transposed,
                                   const HVector& solution,
@@ -124,7 +124,7 @@ class HSimplexNla {
                                                   HVector& residual,
                                                   const bool force) const;
   HighsDebugStatus debugReportInvertSolutionError(
-      const std::string source, const bool transposed,
+      const std::string& source, const bool transposed,
       const double solve_error_norm, const double residual_error_norm,
       const bool force) const;
 

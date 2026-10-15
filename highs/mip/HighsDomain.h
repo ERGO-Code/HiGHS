@@ -10,6 +10,7 @@
 
 #include <cstdint>
 #include <deque>
+#include <functional>
 #include <memory>
 #include <set>
 #include <vector>
@@ -17,6 +18,7 @@
 #include "HighsPseudocost.h"
 #include "mip/HighsDomainChange.h"
 #include "mip/HighsMipSolver.h"
+#include "pdqsort/pdqsort.h"
 #include "util/HighsCDouble.h"
 #include "util/HighsRbTree.h"
 
@@ -235,6 +237,132 @@ class HighsDomain {
     void propagateConflict(HighsInt conflict);
   };
 
+  struct DualFixProbingPropagation {
+    HighsDomain* domain = nullptr;
+    HighsMipSolver* mipsolver = nullptr;
+
+    struct RowSide {
+      HighsInt row;
+      bool isRhs;
+      operator size_t() const { return 2 * row + isRhs; }
+    };
+
+    std::vector<HighsBool> redundantRowFlags_;
+    std::vector<RowSide> redundantRowInds_;
+    HighsInt previousRedundantRowSize = 0;
+    HighsInt numGlobalRedundantRows_ = 0;
+    HighsInt numCachedGlobalRedundantRows_ = 0;
+
+    // Track direction of zero fixings so we don't store disagreeing results
+    enum DualFixProbingFixDirection {
+      FixUndecided,
+      FixLowerBound,
+      FixUpperBound,
+    };
+
+    struct FixedZeroCostColumn {
+      HighsInt col;
+      DualFixProbingFixDirection direction;
+    };
+
+    std::vector<DualFixProbingFixDirection> zeroCostDirections_;
+    std::vector<FixedZeroCostColumn> fixedZeroCostColumns_;
+
+    bool applyingZeroCostFixings_ = false;
+    HighsInt zeroCostStartPos_ = kHighsIInf;
+    std::function<void()> storeLiftingOpportunity;
+
+    bool enabled_ = false;
+
+    // Remaining global lower / upper locks
+    std::vector<HighsInt> colLowerLocksOriginal_;
+    std::vector<HighsInt> colUpperLocksOriginal_;
+    // Number of removed locks after propagation.
+    std::vector<HighsInt> colLowerReducedNumLocks_;
+    std::vector<HighsInt> colUpperReducedNumLocks_;
+    std::vector<HighsInt> clearColNumReducedLocks_;
+
+    std::vector<HighsInt> candidateFixedCols_;
+    std::vector<HighsBool> candidateColFixedFlags_;
+    std::vector<HighsInt> globalCandidateFixedCols_;
+
+    void setEnabled(const bool val) { enabled_ = val; }
+
+    bool isEnabled() const { return enabled_; }
+
+    // active only when new redundant rows are found.
+    bool isActive() const {
+      return enabled_ && (!candidateFixedCols_.empty() ||
+                          static_cast<HighsInt>(redundantRowInds_.size()) >
+                              previousRedundantRowSize);
+    }
+
+    bool isZeroCostFixingActive() const { return applyingZeroCostFixings_; }
+
+    // mark the position when the first zero-cost variable can be fixed to its
+    // lower or upper bound.
+    void setZeroCostFixingPosition(HighsInt v) { zeroCostStartPos_ = v; }
+
+    HighsInt getZeroCostFixingPosition() const { return zeroCostStartPos_; }
+
+    bool ableToFixToLb(const HighsInt col) const {
+      return domain->col_lower_[col] != -kHighsInf &&
+             mipsolver->model_->col_cost_[col] >= 0;
+    }
+
+    bool ableToFixToUb(const HighsInt col) const {
+      return domain->col_upper_[col] != kHighsInf &&
+             mipsolver->model_->col_cost_[col] <= 0;
+    }
+
+    void beginProbing() {
+      previousRedundantRowSize = numGlobalRedundantRows_;
+      assert(static_cast<HighsInt>(redundantRowInds_.size()) ==
+             numGlobalRedundantRows_);
+      fixedZeroCostColumns_.clear();
+      setZeroCostFixingPosition(kHighsIInf);
+      applyingZeroCostFixings_ = false;
+      setEnabled(true);
+
+      for (const auto col : clearColNumReducedLocks_) {
+        colLowerReducedNumLocks_[col] = 0;
+        colUpperReducedNumLocks_[col] = 0;
+      }
+      clearColNumReducedLocks_.clear();
+      cacheGlobalRedundantRows();
+    }
+
+    void endProbing() {
+      setEnabled(false);
+      for (HighsInt i = numGlobalRedundantRows_;
+           i < static_cast<HighsInt>(redundantRowInds_.size()); ++i) {
+        redundantRowFlags_[redundantRowInds_[i]] = false;
+      }
+      redundantRowInds_.resize(numGlobalRedundantRows_);
+      fixedZeroCostColumns_.clear();
+      applyingZeroCostFixings_ = false;
+      storeLiftingOpportunity = nullptr;
+      for (const HighsInt col : candidateFixedCols_) {
+        candidateColFixedFlags_[col] = false;
+      }
+      candidateFixedCols_.clear();
+    }
+
+    DualFixProbingPropagation() = default;
+
+    DualFixProbingPropagation(const DualFixProbingPropagation& other) = delete;
+
+    DualFixProbingPropagation& operator=(
+        const DualFixProbingPropagation& other) = delete;
+
+    void recomputeLocks();
+    void cacheGlobalRedundantRows();
+    void updateRhsRedundant(HighsInt row);
+    void updateLhsRedundant(HighsInt row);
+    void propagate();
+    void propagateZeroCosts();
+  };
+
  private:
   struct ObjectivePropagation {
     HighsDomain* domain = nullptr;
@@ -320,6 +448,7 @@ class HighsDomain {
  private:
   std::deque<CutpoolPropagation> cutpoolpropagation;
   std::deque<ConflictPoolPropagation> conflictPoolPropagation;
+  DualFixProbingPropagation dualFixProbingPropagation;
 
   bool infeasible_ = false;
   Reason infeasible_reason;
@@ -346,6 +475,7 @@ class HighsDomain {
   std::vector<HighsInt> branchPos_;
   HighsHashTable<HighsInt> redundantRows_;
   bool recordRedundantRows_ = false;
+  bool dualFixProbingActive_ = false;
 
  public:
   std::vector<double> col_lower_;
@@ -383,9 +513,12 @@ class HighsDomain {
     for (ConflictPoolPropagation& conflictprop : conflictPoolPropagation)
       conflictprop.domain = this;
     if (objProp_.domain) objProp_.domain = this;
+    dualFixProbingPropagation.domain = this;
+    dualFixProbingPropagation.mipsolver = mipsolver;
   }
 
   HighsDomain& operator=(const HighsDomain& other) {
+    if (this == &other) return *this;
     changedcolsflags_ = other.changedcolsflags_;
     changedcols_ = other.changedcols_;
     domchgstack_ = other.domchgstack_;
@@ -414,6 +547,10 @@ class HighsDomain {
     for (ConflictPoolPropagation& conflictprop : conflictPoolPropagation)
       conflictprop.domain = this;
     if (objProp_.domain) objProp_.domain = this;
+    dualFixProbingPropagation.domain = this;
+    dualFixProbingActive_ = false;
+    dualFixProbingPropagation.mipsolver = mipsolver;
+    dualFixProbingPropagation.endProbing();
     return *this;
   }
 
@@ -572,16 +709,8 @@ class HighsDomain {
   std::vector<HighsDomainChange> getReducedDomainChangeStack(
       std::vector<HighsInt>& branchingPositions) const {
     std::vector<HighsDomainChange> reducedstack;
-    reducedstack.reserve(domchgstack_.size());
-    branchingPositions.reserve(branchPos_.size());
-    for (HighsInt i = 0; i < static_cast<HighsInt>(domchgstack_.size()); ++i) {
-      // keep only the tightest bound change for each variable
-      if ((domchgstack_[i].boundtype == HighsBoundType::kLower &&
-           colLowerPos_[domchgstack_[i].column] != i) ||
-          (domchgstack_[i].boundtype == HighsBoundType::kUpper &&
-           colUpperPos_[domchgstack_[i].column] != i))
-        continue;
-
+    if (domchgstack_.empty()) return reducedstack;
+    auto addChangeToReducedStack = [&](const HighsInt i) {
       if (domchgreason_[i].type == Reason::kBranching)
         branchingPositions.push_back(reducedstack.size());
       else {
@@ -596,6 +725,42 @@ class HighsDomain {
       }
 
       reducedstack.push_back(domchgstack_[i]);
+    };
+    // Collect tightest bound on each column in stack order
+    const HighsInt stackSize = static_cast<HighsInt>(domchgstack_.size());
+    const HighsInt numCols = mipsolver->numCol();
+    HighsInt logNumCols = 0;
+    for (HighsInt v = numCols - 1; v > 0; v >>= 1) {
+      ++logNumCols;
+    }
+    if ((stackSize - 1) / numCols <= logNumCols) {
+      // Stack smaller than n * (1 + ceil(log2(n)))
+      reducedstack.reserve(stackSize);
+      branchingPositions.reserve(branchPos_.size());
+      for (HighsInt i = 0; i < stackSize; i++) {
+        // keep only the tightest bound change for each variable
+        if ((domchgstack_[i].boundtype == HighsBoundType::kLower &&
+             colLowerPos_[domchgstack_[i].column] != i) ||
+            (domchgstack_[i].boundtype == HighsBoundType::kUpper &&
+             colUpperPos_[domchgstack_[i].column] != i))
+          continue;
+        addChangeToReducedStack(i);
+      }
+    } else {
+      // Stack is large. Avoid iterating over entire stack to
+      // hedge against worst-case performance
+      std::vector<HighsInt> positions;
+      positions.reserve(2 * numCols);
+      for (HighsInt col = 0; col < numCols; col++) {
+        if (colLowerPos_[col] != -1) positions.push_back(colLowerPos_[col]);
+        if (colUpperPos_[col] != -1) positions.push_back(colUpperPos_[col]);
+      }
+      pdqsort(positions.begin(), positions.end());
+      reducedstack.reserve(positions.size());
+      branchingPositions.reserve(std::min(positions.size(), branchPos_.size()));
+      for (const HighsInt i : positions) {
+        addChangeToReducedStack(i);
+      }
     }
 
     reducedstack.shrink_to_fit();
@@ -663,6 +828,10 @@ class HighsDomain {
     return col_lower_[col] == col_upper_[col];
   }
 
+  bool isFixedToVal(HighsInt col, HighsInt val) const {
+    return col_lower_[col] == val && col_upper_[col] == val;
+  }
+
   bool isFixing(const HighsDomainChange& domchg) const;
 
   HighsDomainChange flip(const HighsDomainChange& domchg) const;
@@ -686,6 +855,14 @@ class HighsDomain {
   void setRecordRedundantRows(bool val) { recordRedundantRows_ = val; };
 
   bool isRedundantRow(HighsInt row) const;
+
+  DualFixProbingPropagation& getDualFixProbingPropagation() {
+    return dualFixProbingPropagation;
+  }
+
+  void setDualFixProbingActive(const bool val) { dualFixProbingActive_ = val; }
+
+  bool getDualFixProbingActive() const { return dualFixProbingActive_; }
 };
 
 #endif

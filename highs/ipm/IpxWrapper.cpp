@@ -693,8 +693,9 @@ void fillInIpxData(const HighsLp& lp, ipx::Int& num_col, ipx::Int& num_row,
   if (free_rows.size() > 0) {
     HighsInt counter = 0;
     HighsInt findex = 0;
+    const HighsInt free_rows_size = static_cast<HighsInt>(free_rows.size());
     for (HighsInt row = 0; row < lp.num_row_; row++) {
-      if (free_rows[findex] == row) {
+      if (findex < free_rows_size && free_rows[findex] == row) {
         findex++;
         continue;
       } else {
@@ -740,7 +741,7 @@ void fillInIpxData(const HighsLp& lp, ipx::Int& num_col, ipx::Int& num_row,
   }
 
   for (HighsInt k = 0; k < num_slack; k++) {
-    Ai.push_back((ipx::Int)general_bounded_rows[k]);
+    Ai.push_back((ipx::Int)reduced_rowmap[general_bounded_rows[k]]);
     Ax.push_back(-1);
   }
 

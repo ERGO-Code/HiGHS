@@ -11,11 +11,17 @@
 
 #include "HighsExternalDeps.h"
 
+// Include zlib.h at file scope to avoid polluting HighsExtras namespace
+// with system typedefs (e.g., clock_t) via transitive includes.
+// ZLIB_VERSION macro is still usable inside the namespace below.
+#ifdef ZLIB_FOUND
+#include "zlib.h"  // defines ZLIB_VERSION
+#endif
+
 namespace HighsExtras {
 
 #ifdef ZLIB_FOUND
 constexpr bool __zlib_enabled = true;
-#include "zlib.h"  // defines ZLIB_VERSION
 #else
 constexpr bool __zlib_enabled = false;
 #define ZLIB_VERSION "unknown"

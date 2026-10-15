@@ -27,11 +27,9 @@ HighsStatus solveUnconstrainedLp(const HighsOptions& options, const HighsLp& lp,
                                  HighsModelStatus& model_status,
                                  HighsInfo& highs_info, HighsSolution& solution,
                                  HighsBasis& basis);
-void assessExcessiveObjectiveBoundScaling(const HighsLogOptions log_options,
+void assessExcessiveObjectiveBoundScaling(const HighsOptions& options,
                                           const HighsModel& model,
                                           HighsUserScaleData& user_scale_data);
-bool useIpm(const std::string& solver);
-bool usePdlp(const std::string& solver);
 bool useHipo(const HighsOptions& options,
              const std::string& specific_solver_option, const HighsLp& lp,
              const bool logging = false);

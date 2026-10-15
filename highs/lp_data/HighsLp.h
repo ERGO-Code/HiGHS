@@ -55,6 +55,7 @@ class HighsLp {
   bool is_moved_;
   HighsInt cost_row_location_;
   bool has_infinite_cost_;
+  HighsInt fme_obj_col_ = -1;
   HighsLpMods mods_;
 
   bool operator==(const HighsLp& lp) const;
@@ -83,8 +84,8 @@ class HighsLp {
   void moveBackLpAndUnapplyScaling(HighsLp& lp);
   void exactResize();
   bool okNames() const;
-  void addColNames(const std::string name, const HighsInt num_new_col = 1);
-  void addRowNames(const std::string name, const HighsInt num_new_row = 1);
+  void addColNames(const std::string& name, const HighsInt num_new_col = 1);
+  void addRowNames(const std::string& name, const HighsInt num_new_row = 1);
   void deleteColsFromVectors(HighsInt& new_num_col,
                              const HighsIndexCollection& index_collection);
   void deleteRowsFromVectors(HighsInt& new_num_row,
@@ -92,6 +93,10 @@ class HighsLp {
   void deleteCols(const HighsIndexCollection& index_collection);
   void deleteRows(const HighsIndexCollection& index_collection);
   void unapplyMods();
+  void clearAllNameHash() {
+    this->col_hash_.clear();
+    this->row_hash_.clear();
+  }
   void clear();
 };
 

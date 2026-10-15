@@ -53,6 +53,7 @@ void HighsInfo::invalidatePrimalKkt() {
   num_complementarity_violations = kHighsIllegalComplementarityCount;
   max_complementarity_violation = kHighsIllegalComplementarityViolation;
   primal_dual_objective_error = kHighsIllegalComplementarityViolation;
+  active_bound_norm = kHighsIllegalDoubleMeasure;
 }
 
 void HighsInfo::invalidateDualKkt() {
@@ -69,6 +70,7 @@ void HighsInfo::invalidateDualKkt() {
   num_complementarity_violations = kHighsIllegalComplementarityCount;
   max_complementarity_violation = kHighsIllegalComplementarityViolation;
   primal_dual_objective_error = kHighsIllegalComplementarityViolation;
+  active_cost_norm = kHighsIllegalDoubleMeasure;
 }
 
 bool HighsInfo::equal(const HighsInfo& info_) const {
@@ -149,6 +151,8 @@ bool HighsInfo::equal(const HighsInfo& info_) const {
     return false;
   if (info_.primal_dual_objective_error != this->primal_dual_objective_error)
     return false;
+  if (info_.active_cost_norm != this->active_cost_norm) return false;
+  if (info_.active_bound_norm != this->active_bound_norm) return false;
   return true;
 }
 

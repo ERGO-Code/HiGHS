@@ -24,10 +24,10 @@
     try {                                                                     \
       call_status = Solve;                                                    \
     } catch (const std::exception& exception) {                               \
-      highsLogDev(options.log_options, HighsLogType::kError,                  \
-                  "Exception %s when solving with %s\n", exception.what(),    \
-                  SolveString);                                               \
-      solver_object.model_status_ = HighsModelStatus::kSolveError;            \
+      solver_object.model_status_ =                                           \
+          handleExceptionIsOom(options.log_options, SolveString, exception)   \
+              ? HighsModelStatus::kMemoryLimit                                \
+              : HighsModelStatus::kSolveError;                                \
       call_status = HighsStatus::kError;                                      \
     } catch (const HighsTask::Interrupt&) {                                   \
       highsLogDev(options.log_options, HighsLogType::kError,                  \
@@ -109,7 +109,6 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object,
         SOLVE_CATCH_CALL(solveLpCupdlp(solver_object), "cuPDLP-C");
       } else {
         SOLVE_CATCH_CALL(solveLpHiPdlp(solver_object), "HiPDLP");
-        ;
       }
       profiling->stop(kSubSolverPdlp);
       return_status = interpretCallStatus(options.log_options, call_status,
@@ -374,11 +373,13 @@ HighsStatus solveUnconstrainedLp(const HighsOptions& options, const HighsLp& lp,
 // determine the model coefficient ranges, assess it for values
 // outside the [small, large] range, and give appropriate scaling
 // recommendations
-void assessExcessiveObjectiveBoundScaling(const HighsLogOptions log_options,
+void assessExcessiveObjectiveBoundScaling(const HighsOptions& options,
                                           const HighsModel& model,
                                           HighsUserScaleData& user_scale_data) {
+  const HighsLogOptions& log_options = options.log_options;
   const HighsLp& lp = model.lp_;
   if (lp.num_col_ == 0 || lp.num_row_ == 0) return;
+  std::vector<double> effective_cost = getEffectiveCosts(lp, options);
   const bool user_cost_or_bound_scale =
       user_scale_data.user_objective_scale || user_scale_data.user_bound_scale;
   const double small_objective_coefficient =
@@ -387,6 +388,7 @@ void assessExcessiveObjectiveBoundScaling(const HighsLogOptions log_options,
       kExcessivelyLargeObjectiveCoefficient;
   const double small_bound = kExcessivelySmallBoundValue;
   const double large_bound = kExcessivelyLargeBoundValue;
+  const double large_integer_bound = kExcessivelyLargeIntegerBoundValue;
   std::stringstream message;
   if (user_cost_or_bound_scale) {
     if (user_scale_data.user_objective_scale)
@@ -414,6 +416,10 @@ void assessExcessiveObjectiveBoundScaling(const HighsLogOptions log_options,
   double min_noncontinuous_col_cost = kHighsInf;
   double max_continuous_col_cost = -kHighsInf;
   double max_noncontinuous_col_cost = -kHighsInf;
+  double min_effective_continuous_col_cost = kHighsInf;
+  double min_effective_noncontinuous_col_cost = kHighsInf;
+  double max_effective_continuous_col_cost = -kHighsInf;
+  double max_effective_noncontinuous_col_cost = -kHighsInf;
   double min_continuous_col_bound = kHighsInf;
   double min_noncontinuous_col_bound = kHighsInf;
   double max_continuous_col_bound = -kHighsInf;
@@ -423,31 +429,42 @@ void assessExcessiveObjectiveBoundScaling(const HighsLogOptions log_options,
   double max_continuous_matrix_value = -kHighsInf;
   double max_noncontinuous_matrix_value = -kHighsInf;
   const bool is_mip = lp.integrality_.size();
+  HighsInt num_continuous_variable = 0;
+  HighsInt num_noncontinuous_variable = 0;
   for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
     if (is_mip && lp.integrality_[iCol] != HighsVarType::kContinuous) {
       assessFiniteNonzero(lp.col_cost_[iCol], min_noncontinuous_col_cost,
                           max_noncontinuous_col_cost);
+      assessFiniteNonzero(effective_cost[iCol],
+                          min_effective_noncontinuous_col_cost,
+                          max_effective_noncontinuous_col_cost);
       assessFiniteNonzero(lp.col_lower_[iCol], min_noncontinuous_col_bound,
                           max_noncontinuous_col_bound);
       assessFiniteNonzero(lp.col_upper_[iCol], min_noncontinuous_col_bound,
                           max_noncontinuous_col_bound);
+      num_noncontinuous_variable++;
     } else {
       assessFiniteNonzero(lp.col_cost_[iCol], min_continuous_col_cost,
                           max_continuous_col_cost);
+      assessFiniteNonzero(effective_cost[iCol],
+                          min_effective_continuous_col_cost,
+                          max_effective_continuous_col_cost);
       assessFiniteNonzero(lp.col_lower_[iCol], min_continuous_col_bound,
                           max_continuous_col_bound);
       assessFiniteNonzero(lp.col_upper_[iCol], min_continuous_col_bound,
                           max_continuous_col_bound);
+      num_continuous_variable++;
     }
   }
   double min_col_cost =
       std::min(min_continuous_col_cost, min_noncontinuous_col_cost);
   double max_col_cost =
       std::max(max_continuous_col_cost, max_noncontinuous_col_cost);
-  double min_col_bound =
-      std::min(min_continuous_col_bound, min_noncontinuous_col_bound);
-  double max_col_bound =
-      std::max(max_continuous_col_bound, max_noncontinuous_col_bound);
+
+  double min_effective_col_cost = std::min(
+      min_effective_continuous_col_cost, min_effective_noncontinuous_col_cost);
+  double max_effective_col_cost = std::max(
+      max_effective_continuous_col_cost, max_effective_noncontinuous_col_cost);
 
   double min_matrix_value = kHighsInf;
   double max_matrix_value = -kHighsInf;
@@ -482,8 +499,13 @@ void assessExcessiveObjectiveBoundScaling(const HighsLogOptions log_options,
 
   if (min_col_cost == kHighsInf) min_col_cost = 0;
   if (max_col_cost == -kHighsInf) max_col_cost = 0;
-  if (min_col_bound == kHighsInf) min_col_bound = 0;
-  if (max_col_bound == -kHighsInf) max_col_bound = 0;
+  if (min_effective_col_cost == kHighsInf) min_effective_col_cost = 0;
+  if (max_effective_col_cost == -kHighsInf) max_effective_col_cost = 0;
+  if (min_continuous_col_bound == kHighsInf) min_continuous_col_bound = 0;
+  if (max_continuous_col_bound == -kHighsInf) max_continuous_col_bound = 0;
+  if (min_noncontinuous_col_bound == kHighsInf) min_noncontinuous_col_bound = 0;
+  if (max_noncontinuous_col_bound == -kHighsInf)
+    max_noncontinuous_col_bound = 0;
   if (min_row_bound == kHighsInf) min_row_bound = 0;
   if (max_row_bound == -kHighsInf) max_row_bound = 0;
 
@@ -500,12 +522,25 @@ void assessExcessiveObjectiveBoundScaling(const HighsLogOptions log_options,
   if (lp.num_col_) {
     highsLogUser(log_options, HighsLogType::kInfo, "  Cost    [%5.0e, %5.0e]\n",
                  min_col_cost, max_col_cost);
+    if (min_effective_col_cost != min_col_cost ||
+        max_effective_col_cost != max_col_cost)
+      highsLogUser(log_options, HighsLogType::kInfo,
+                   "  Cost    [%5.0e, %5.0e] (effective)\n",
+                   min_effective_col_cost, max_effective_col_cost);
     if (num_hessian_nz)
       highsLogUser(log_options, HighsLogType::kInfo,
                    "  Hessian [%5.0e, %5.0e]\n", min_hessian_value,
                    max_hessian_value);
-    highsLogUser(log_options, HighsLogType::kInfo, "  Bound   [%5.0e, %5.0e]\n",
-                 min_col_bound, max_col_bound);
+    if (num_continuous_variable)
+      highsLogUser(log_options, HighsLogType::kInfo,
+                   "  Bound   [%5.0e, %5.0e]%s\n", min_continuous_col_bound,
+                   max_continuous_col_bound,
+                   num_noncontinuous_variable > 0 ? " (continuous)" : "");
+    if (num_noncontinuous_variable)
+      highsLogUser(log_options, HighsLogType::kInfo,
+                   "  Bound   [%5.0e, %5.0e]%s\n", min_noncontinuous_col_bound,
+                   max_noncontinuous_col_bound,
+                   num_continuous_variable > 0 ? " (non-continuous)" : "");
   }
   if (lp.num_row_)
     highsLogUser(log_options, HighsLogType::kInfo, "  RHS     [%5.0e, %5.0e]\n",
@@ -515,8 +550,9 @@ void assessExcessiveObjectiveBoundScaling(const HighsLogOptions log_options,
   // max_col_cost = 0
   assert(max_col_cost >= 0);
   // LPs with no columns or no finite nonzero bounds will have
-  // max_col_bound = 0
-  assert(max_col_bound >= 0);
+  // max_continuous_col_bound = 0 and max_noncontinuous_col_bound = 0
+  assert(max_continuous_col_bound >= 0);
+  assert(max_noncontinuous_col_bound >= 0);
   // LPs with no rows or no finite nonzero bounds will have
   // max_row_bound = 0
   assert(max_row_bound >= 0);
@@ -524,12 +560,31 @@ void assessExcessiveObjectiveBoundScaling(const HighsLogOptions log_options,
   const std::string problem =
       user_cost_or_bound_scale ? "User-scaled problem" : "Problem";
 
-  if (0 < min_col_cost && min_col_cost < small_objective_coefficient)
+  // If the effective costs aren't small or large, don't report costs
+  // that are small or large
+  if (0 < min_col_cost && min_col_cost < small_objective_coefficient &&
+      0 < min_effective_col_cost &&
+      min_effective_col_cost < small_objective_coefficient)
     highsLogUser(log_options, HighsLogType::kWarning,
                  "%s has some excessively small costs\n", problem.c_str());
-  if (max_col_cost > large_objective_coefficient)
+  if (max_col_cost > large_objective_coefficient &&
+      max_effective_col_cost > large_objective_coefficient)
     highsLogUser(log_options, HighsLogType::kWarning,
                  "%s has some excessively large costs\n", problem.c_str());
+
+  // If extreme effective costs aren't different from extreme costs,
+  // don't report extreme costs
+  if (0 < min_effective_col_cost && min_effective_col_cost != min_col_cost &&
+      min_effective_col_cost < small_objective_coefficient)
+    highsLogUser(log_options, HighsLogType::kWarning,
+                 "%s has some excessively small effective costs\n",
+                 problem.c_str());
+  if (max_effective_col_cost != max_col_cost &&
+      max_effective_col_cost > large_objective_coefficient)
+    highsLogUser(log_options, HighsLogType::kWarning,
+                 "%s has some excessively large effective costs\n",
+                 problem.c_str());
+
   if (0 < min_hessian_value && min_hessian_value < small_objective_coefficient)
     highsLogUser(log_options, HighsLogType::kWarning,
                  "%s has some excessively small Hessian values\n",
@@ -538,20 +593,33 @@ void assessExcessiveObjectiveBoundScaling(const HighsLogOptions log_options,
     highsLogUser(log_options, HighsLogType::kWarning,
                  "%s has some excessively large Hessian values\n",
                  problem.c_str());
-  if (0 < min_col_bound && min_col_bound < small_bound)
+  if (0 < min_continuous_col_bound && min_continuous_col_bound < small_bound)
     highsLogUser(log_options, HighsLogType::kWarning,
-                 "%s has some excessively small column bounds\n",
-                 problem.c_str());
-  if (max_col_bound > large_bound)
+                 "%s has some excessively small bounds on%s variables\n",
+                 problem.c_str(), is_mip ? " continuous" : "");
+  if (max_continuous_col_bound > large_bound)
     highsLogUser(log_options, HighsLogType::kWarning,
-                 "%s has some excessively large column bounds\n",
-                 problem.c_str());
+                 "%s has some excessively large bounds on%s variables\n",
+                 problem.c_str(), is_mip ? " continuous" : "");
+  if (0 < min_noncontinuous_col_bound &&
+      min_noncontinuous_col_bound < small_bound)
+    highsLogUser(
+        log_options, HighsLogType::kWarning,
+        "%s has some excessively small bounds on non-continuous variables\n",
+        problem.c_str());
+  if (max_noncontinuous_col_bound > large_integer_bound)
+    highsLogUser(
+        log_options, HighsLogType::kWarning,
+        "%s has some excessively large bounds on non-continuous variables\n",
+        problem.c_str());
   if (0 < min_row_bound && min_row_bound < small_bound)
     highsLogUser(log_options, HighsLogType::kWarning,
-                 "%s has some excessively small row bounds\n", problem.c_str());
+                 "%s has some excessively small bounds on constraints\n",
+                 problem.c_str());
   if (max_row_bound > large_bound)
     highsLogUser(log_options, HighsLogType::kWarning,
-                 "%s has some excessively large row bounds\n", problem.c_str());
+                 "%s has some excessively large bounds on constraints\n",
+                 problem.c_str());
 
   // Lambda to determine recommended user scaling values
   auto suggestScaling = [&](double min_value, double max_value,
@@ -604,17 +672,19 @@ void assessExcessiveObjectiveBoundScaling(const HighsLogOptions log_options,
   // suggested
   double suggested_user_bound_scale_value =
       pow(2.0, user_scale_data.suggested_user_bound_scale);
-  min_noncontinuous_col_cost *= suggested_user_bound_scale_value;
-  max_noncontinuous_col_cost *= suggested_user_bound_scale_value;
+  min_effective_noncontinuous_col_cost *= suggested_user_bound_scale_value;
+  max_effective_noncontinuous_col_cost *= suggested_user_bound_scale_value;
   min_hessian_value /= suggested_user_bound_scale_value;
   max_hessian_value /= suggested_user_bound_scale_value;
 
-  min_col_cost = std::min(min_continuous_col_cost, min_noncontinuous_col_cost);
-  max_col_cost = std::max(max_continuous_col_cost, max_noncontinuous_col_cost);
+  min_effective_col_cost = std::min(min_effective_continuous_col_cost,
+                                    min_effective_noncontinuous_col_cost);
+  max_effective_col_cost = std::max(max_effective_continuous_col_cost,
+                                    max_effective_noncontinuous_col_cost);
   double min_objective_coefficient =
-      std::min(min_col_cost, min_continuous_hessian_value);
+      std::min(min_effective_col_cost, min_continuous_hessian_value);
   double max_objective_coefficient =
-      std::max(max_col_cost, max_continuous_hessian_value);
+      std::max(max_effective_col_cost, max_continuous_hessian_value);
   if (min_objective_coefficient == kHighsInf) min_objective_coefficient = 0;
   if (max_objective_coefficient == -kHighsInf) max_objective_coefficient = 0;
 
@@ -632,6 +702,7 @@ void assessExcessiveObjectiveBoundScaling(const HighsLogOptions log_options,
   HighsInt suggested_objective_scale_order_of_magnitude =
       outerRoundedLog(suggested_objective_scaling, 10);
 
+  bool warning_issued = false;
   // Only report the order of magnitude scaling if there is no user
   // scaling
   bool order_of_magnitude_message =
@@ -652,9 +723,11 @@ void assessExcessiveObjectiveBoundScaling(const HighsLogOptions log_options,
         " setting the user_objective_scale option to %d",
         int(user_scale_data.suggested_user_objective_scale));
   }
-  if (order_of_magnitude_message || dl_user_objective_scale)
+  if (order_of_magnitude_message || dl_user_objective_scale) {
     highsLogUser(log_options, HighsLogType::kWarning, "%s\n",
                  message.str().c_str());
+    warning_issued = true;
+  }
 
   message.str(std::string());
   order_of_magnitude_message = suggested_bound_scale_order_of_magnitude &&
@@ -674,17 +747,59 @@ void assessExcessiveObjectiveBoundScaling(const HighsLogOptions log_options,
         " setting the user_bound_scale option to %d",
         int(user_scale_data.suggested_user_bound_scale));
   }
-  if (order_of_magnitude_message || dl_user_bound_scale)
+  if (order_of_magnitude_message || dl_user_bound_scale) {
     highsLogUser(log_options, HighsLogType::kWarning, "%s\n",
                  message.str().c_str());
-}
+    warning_issued = true;
+  }
 
-bool useIpm(const std::string& solver) {
-  return solver == kIpmString || solver == kHipoString || solver == kIpxString;
-}
-
-bool usePdlp(const std::string& solver) {
-  return solver == kPdlpString || solver == kHiPdlpString;
+  // Assess the reationship between extreme objective/bound values and
+  // feasibility tolerances
+  double use_primal_feasibility_tolerance =
+      options.primal_feasibility_tolerance;
+  double use_dual_feasibility_tolerance = options.dual_feasibility_tolerance;
+  if (model.isMip() && !options.solve_relaxation) {
+    use_primal_feasibility_tolerance = options.mip_feasibility_tolerance;
+    use_dual_feasibility_tolerance = options.mip_feasibility_tolerance * 0.1;
+  }
+  const double max_objective =
+      std::max(max_effective_col_cost, max_hessian_value);
+  const double max_bound =
+      std::max(max_continuous_col_bound,
+               std::max(max_noncontinuous_col_bound, max_row_bound));
+  const double primal_ratio = max_bound / use_primal_feasibility_tolerance;
+  const double dual_ratio = max_objective / use_dual_feasibility_tolerance;
+  const bool primal_fragile = primal_ratio > 1e-1 / kHighsMacheps;
+  const bool dual_fragile = dual_ratio > 1e-1 / kHighsMacheps;
+  const bool numerically_fragile = primal_fragile || dual_fragile;
+  if (numerically_fragile) {
+    std::string blanks(problem.length(), ' ');
+    if (primal_fragile)
+      highsLogUser(log_options, HighsLogType::kWarning,
+                   "%s has excessively large ratio (%.1g) between max variable "
+                   "or constraint bound"
+                   " (%.1g) and primal feasibility tolerance (%.1g)\n",
+                   problem.c_str(), primal_ratio, max_bound,
+                   use_primal_feasibility_tolerance);
+    if (dual_fragile)
+      highsLogUser(log_options, HighsLogType::kWarning,
+                   "%s has excessively large ratio (%.1g) between max "
+                   "objective coefficient"
+                   " (%.1g) and dual feasibility tolerance (%.1g)\n",
+                   (primal_fragile ? blanks : problem).c_str(), dual_ratio,
+                   max_objective, use_dual_feasibility_tolerance);
+    highsLogUser(log_options, HighsLogType::kWarning,
+                 "   Improve scaling and/or increase tolerance\n");
+    warning_issued = true;
+  }
+  // Give a scary warning to users asking too much of HiGHS!
+  if (warning_issued)
+    highsLogUser(
+        log_options, HighsLogType::kWarning,
+        "%s is badly scaled, %swhich may compromise the speed, accuracy "
+        "and reliability of solvers in HiGHS\n",
+        problem.c_str(),
+        numerically_fragile ? "particularly relative to tolerances, " : "");
 }
 
 // Decide whether to use the HiPO IPM solver
@@ -787,7 +902,7 @@ HighsStatus solveQp(HighsQpSolverObject& solver_object,
 
   // Get the objective and any KKT failures
   info.objective_function_value = model_.objectiveValue(solution.col_value);
-  getKktFailures(options, model_, solution, basis, info);
+  getQpKktFailures(options, model_, solution, info);
   info.valid = true;
   if (model_status == HighsModelStatus::kOptimal)
     return checkOptimality("QP", options, info, model_status);
@@ -873,9 +988,10 @@ HighsStatus solveMip(HighsMipSolverObject& solver_object,
   try {
     solver.run();
   } catch (const std::exception& exception) {
-    highsLogDev(options.log_options, HighsLogType::kError,
-                "Exception %s in MIP solver\n", exception.what());
-    solver.modelstatus_ = HighsModelStatus::kSolveError;
+    solver.modelstatus_ =
+        handleExceptionIsOom(options.log_options, "MIP solver", exception)
+            ? HighsModelStatus::kMemoryLimit
+            : HighsModelStatus::kSolveError;
   } catch (const HighsTask::Interrupt&) {
     highsLogDev(options.log_options, HighsLogType::kError,
                 "HighsTask interrupt when solving with MIP solver\n");
@@ -956,10 +1072,8 @@ HighsStatus solveMip(HighsMipSolverObject& solver_object,
                   mip_max_bound_violation, info.max_primal_infeasibility,
                   delta_max_bound_violation);
     info.max_integrality_violation = solver.integrality_violation_;
-    if (info.max_integrality_violation > options.mip_feasibility_tolerance) {
+    if (info.max_integrality_violation > options.mip_feasibility_tolerance)
       info.primal_solution_status = kSolutionStatusInfeasible;
-      assert(model_status == HighsModelStatus::kInfeasible);
-    }
   }
   // ... and remember to recover the primal feasibility tolerance
   options.primal_feasibility_tolerance = primal_feasibility_tolerance;

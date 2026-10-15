@@ -17,7 +17,6 @@ set(include_dirs
   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/presolve>
   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/qpsolver>
   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/simplex>
-  $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/test_kkt>
   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/util>
   $<BUILD_INTERFACE:${HIGHS_BINARY_DIR}>)
 
@@ -342,9 +341,6 @@ set(hipo_util_headers
     ipm/hipo/auxiliary/Logger.h
     ipm/hipo/auxiliary/VectorOperations.h)
 
-# redefinition of 'kHighsInf'
-set_source_files_properties (io/filereaderlp/reader.cpp PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)
-
 set(highs_sources
     interfaces/highs_c_api.cpp
     io/Filereader.cpp
@@ -354,7 +350,7 @@ set(highs_sources
     io/HMpsFF.cpp
     io/HMPSIO.cpp
     io/LoadOptions.cpp
-    io/filereaderlp/reader.cpp
+    io/LpReader.cpp
     ipm/IpxWrapper.cpp
     lp_data/Highs.cpp
     lp_data/HighsCallback.cpp
@@ -416,7 +412,25 @@ set(highs_sources
     presolve/HighsPostsolveStack.cpp
     presolve/HighsSymmetry.cpp
     presolve/HPresolve.cpp
+    presolve/HPresolveAggregator.cpp
     presolve/HPresolveAnalysis.cpp
+    presolve/HPresolveCliqueTable.cpp
+    presolve/HPresolveColStuffing.cpp
+    presolve/HPresolveDependent.cpp
+    presolve/HPresolveDominatedCols.cpp
+    presolve/HPresolveDualFixing.cpp
+    presolve/HPresolveEnumeration.cpp
+    presolve/HPresolveFourierMotzkin.cpp
+    presolve/HPresolveImpliedInts.cpp
+    presolve/HPresolveInitialSweep.cpp
+    presolve/HPresolveParallelRowsAndCols.cpp
+    presolve/HPresolveProbing.cpp
+    presolve/HPresolveProbingUtil.cpp
+    presolve/HPresolveSparsify.cpp
+    presolve/HPresolveStrengthenIneq.cpp
+    presolve/HPresolveUtils.cpp
+    presolve/HPresolveVarBndAggregation.cpp
+    presolve/HPresolveZeroCostSingleton.cpp
     presolve/HPresolveTest.cpp
     presolve/ICrash.cpp
     presolve/ICrashUtil.cpp
@@ -446,8 +460,6 @@ set(highs_sources
     simplex/HSimplexNlaFreeze.cpp
     simplex/HSimplexNlaProductForm.cpp
     simplex/HSimplexReport.cpp
-    test_kkt/KktCh2.cpp
-    test_kkt/DevKkt.cpp
     util/HFactor.cpp
     util/HFactorDebug.cpp
     util/HFactorExtend.cpp
@@ -480,10 +492,7 @@ set(highs_headers
     io/HMpsFF.h
     io/HMPSIO.h
     io/LoadOptions.h
-    io/filereaderlp/builder.hpp
-    io/filereaderlp/def.hpp
-    io/filereaderlp/model.hpp
-    io/filereaderlp/reader.hpp
+    io/LpReader.h
     ipm/IpxSolution.h
     ipm/IpxWrapper.h
     lp_data/HConst.h
@@ -566,6 +575,9 @@ set(highs_headers
     presolve/HighsSymmetry.h
     presolve/HPresolve.h
     presolve/HPresolveAnalysis.h
+    presolve/HPresolveCliqueTable.h
+    presolve/HPresolveInitialSweep.h
+    presolve/HPresolveUtils.h
     presolve/ICrash.h
     presolve/ICrashUtil.h
     presolve/ICrashX.h
@@ -609,8 +621,6 @@ set(highs_headers
     simplex/SimplexConst.h
     simplex/SimplexStruct.h
     simplex/SimplexTimer.h
-    test_kkt/DevKkt.h
-    test_kkt/KktCh2.h
     util/FactorTimer.h
     util/HFactor.h
     util/HFactorConst.h

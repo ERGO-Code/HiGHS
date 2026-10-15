@@ -655,7 +655,11 @@ void testNames() {
   // Define all column names to be the same
   for (HighsInt iCol = 0; iCol < num_col; iCol++) {
     return_status = Highs_passColName(highs, iCol, col_prefix);
-    assert(return_status == kHighsStatusOk);
+    if (iCol == 0) {
+      assert(return_status == kHighsStatusOk);
+    } else {
+      assert(return_status == kHighsStatusWarning);
+    }
   }
   return_status = Highs_writeModel(highs, "");
   assert(return_status == kHighsStatusWarning);
@@ -686,7 +690,11 @@ void testNames() {
   // Define all row names to be the same
   for (HighsInt iRow = 0; iRow < num_row; iRow++) {
     return_status = Highs_passRowName(highs, iRow, row_prefix);
-    assert(return_status == kHighsStatusOk);
+    if (iRow == 0) {
+      assert(return_status == kHighsStatusOk);
+    } else {
+      assert(return_status == kHighsStatusWarning);
+    }
   }
   return_status = Highs_writeModel(highs, "");
   assert(return_status == kHighsStatusWarning);
@@ -734,8 +742,9 @@ void testNames() {
 
   HighsInt presolved_num_col = Highs_getPresolvedNumCol(highs);
   HighsInt presolved_num_row = Highs_getPresolvedNumRow(highs);
-  assert(presolved_num_col == num_col);
-  assert(presolved_num_row == num_row - 1);
+  // Fourier-Motzkin presolve reduction may add columns/rows
+  // assert(presolved_num_col == num_col);
+  // assert(presolved_num_row == num_row-1);
 
   char presolved_name[5];
 
@@ -1172,8 +1181,18 @@ void fullApiMip() {
                     col_cost, col_lower, col_upper, row_lower, row_upper,
                     a_start, a_index, a_value, integrality);
   assert(return_status == kHighsStatusOk);
+
+  // Before solving the problem, Highs_getSolution should return error
+  return_status = Highs_getSolution(highs, NULL, NULL, NULL, NULL);
+  assert(return_status == kHighsStatusError);
+
   Highs_setStringOptionValue(highs, "presolve", "off");
   return_status = Highs_run(highs);
+
+  // Even after solving the problem, Highs_getBasis should return error
+  return_status = Highs_getBasis(highs, NULL, NULL);
+  assert(return_status == kHighsStatusError);
+
   // mip_node_count is always int64_t, so the following should be an
   // error depending on whether HIGHSINT64 is set
   HighsInt mip_node_count_int;

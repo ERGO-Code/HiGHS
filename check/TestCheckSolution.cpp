@@ -728,7 +728,7 @@ void runSetLpSolution(const std::string model) {
   highs.resetGlobalScheduler(true);
 }
 
-TEST_CASE("miplib-sol-file", "[highs_filereader]") {
+TEST_CASE("miplib-sol-file", "[highs_check_solution]") {
   const std::string test_name = Catch::getResultCapture().getCurrentTestName();
   std::string sol_file = test_name + ".sol";
   std::string lp_file = test_name + ".lp";
@@ -762,6 +762,47 @@ TEST_CASE("miplib-sol-file", "[highs_filereader]") {
   REQUIRE(h.run() == HighsStatus::kOk);
 
   std::remove(lp_file.c_str());
+  std::remove(sol_file.c_str());
+
+  h.resetGlobalScheduler(true);
+}
+
+TEST_CASE("issue-3317", "[highs_check_solution]") {
+  const std::string test_name = Catch::getResultCapture().getCurrentTestName();
+  std::string sol_file = test_name + ".sol";
+  HighsLp lp;
+  lp.num_col_ = 2;
+  lp.num_row_ = 2;
+  lp.col_cost_ = {1, 1};
+  lp.col_lower_ = {0, 0};
+  lp.col_upper_ = {kHighsInf, kHighsInf};
+  lp.row_lower_ = {4, 4};
+  lp.row_upper_ = {kHighsInf, kHighsInf};
+  lp.a_matrix_.start_ = {0, 1, 2};
+  lp.a_matrix_.index_ = {0, 1};
+  lp.a_matrix_.value_ = {1, 1};
+  lp.integrality_ = {HighsVarType::kInteger, HighsVarType::kInteger};
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  REQUIRE(h.passModel(lp) == HighsStatus::kOk);
+  FILE* file = fopen(sol_file.c_str(), "w");
+  REQUIRE(file != nullptr);
+  std::string file_content =
+      "Model status\nFeasible\n\n# Primal solution values\nFeasible\nObjective "
+      "0\n# Columns -1 partial\nx 4\n";
+  fprintf(file, "%s", file_content.c_str());
+  fclose(file);
+  // Without column names, the solution file cannot be read
+  REQUIRE(h.readSolution(sol_file) == HighsStatus::kError);
+
+  REQUIRE(h.passColName(0, "x") == HighsStatus::kOk);
+  REQUIRE(h.passColName(1, "y") == HighsStatus::kOk);
+
+  REQUIRE(h.readSolution(sol_file) == HighsStatus::kOk);
+
+  h.setOptionValue(kPresolveString, kHighsOffString);
+  REQUIRE(h.run() == HighsStatus::kOk);
+
   std::remove(sol_file.c_str());
 
   h.resetGlobalScheduler(true);

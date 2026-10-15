@@ -33,7 +33,7 @@ enum iClockMip : int {
   kMipClockPerformAging1,
   kMipClockDive,
   kMipClockOpenNodesToQueue0,
-  kMipClockDomainPropgate,
+  kMipClockDomainPropagate,
   kMipClockPruneInfeasibleNodes,
   kMipClockUpdateLocalDomain,
   kMipClockNodeSearch,
@@ -182,7 +182,7 @@ inline void initialiseMipProfilingNames(std::vector<std::string>& name) {
   name[kMipClockPerformAging1] = "Perform aging 1";
   name[kMipClockDive] = "Dive";
   name[kMipClockOpenNodesToQueue0] = "Open nodes to queue 0";
-  name[kMipClockDomainPropgate] = "Domain propagate";
+  name[kMipClockDomainPropagate] = "Domain propagate";
   name[kMipClockPruneInfeasibleNodes] = "Prune infeasible nodes";
   name[kMipClockUpdateLocalDomain] = "Update local domain";
   name[kMipClockNodeSearch] = "Node search";
@@ -342,7 +342,7 @@ class MipTimer {
     clock[kMipClockDive] = timer_pointer->clock_def("Dive");
     clock[kMipClockOpenNodesToQueue0] =
         timer_pointer->clock_def("Open nodes to queue 0");
-    clock[kMipClockDomainPropgate] =
+    clock[kMipClockDomainPropagate] =
         timer_pointer->clock_def("Domain propagate");
     clock[kMipClockPruneInfeasibleNodes] =
         timer_pointer->clock_def("Prune infeasible nodes");
@@ -391,7 +391,7 @@ class MipTimer {
   };
 
   bool reportMipClockList(const char* grepStamp,
-                          const std::vector<HighsInt> mip_clock_list,
+                          const std::vector<HighsInt>& mip_clock_list,
                           const HighsTimerClock& mip_timer_clock,
                           const HighsInt kMipClockIdeal = kMipClockTotal,
                           const double tolerance_percent_report_ = -1) {
@@ -412,9 +412,9 @@ class MipTimer {
         grepStamp, clockList, ideal_sum_time, tolerance_percent_report);
   };
 
-  void csvMipClockList(const std::string grep_query,
-                       const std::string model_name,
-                       const std::vector<HighsInt> mip_clock_list,
+  void csvMipClockList(const std::string& grep_query,
+                       const std::string& model_name,
+                       const std::vector<HighsInt>& mip_clock_list,
                        const HighsTimerClock& mip_timer_clock,
                        const HighsInt kMipClockIdeal, const bool header,
                        const bool end_line) {
@@ -546,7 +546,7 @@ class MipTimer {
   void reportMipSearchClock(const HighsTimerClock& mip_timer_clock) {
     const std::vector<HighsInt> mip_clock_list{
         kMipClockPerformAging1,        kMipClockDive,
-        kMipClockOpenNodesToQueue0,    kMipClockDomainPropgate,
+        kMipClockOpenNodesToQueue0,    kMipClockDomainPropagate,
         kMipClockPruneInfeasibleNodes, kMipClockUpdateLocalDomain,
         kMipClockNodeSearch,
         //	kMipClock@
@@ -591,7 +591,7 @@ class MipTimer {
                        kMipClockTotal);  //, kMipClockTolerancePercentReport);
   };
 
-  void csvMipClock(const std::string model_name,
+  void csvMipClock(const std::string& model_name,
                    const HighsTimerClock& mip_timer_clock, const bool header,
                    const bool end_line) {
     const std::vector<HighsInt> mip_clock_list{
@@ -601,7 +601,7 @@ class MipTimer {
                     kMipClockTotal, header, end_line);
   };
 
-  void csvEvaluateRootNodeClock(const std::string model_name,
+  void csvEvaluateRootNodeClock(const std::string& model_name,
                                 const HighsTimerClock& mip_timer_clock,
                                 const bool header, const bool end_line) {
     const std::vector<HighsInt> mip_clock_list{

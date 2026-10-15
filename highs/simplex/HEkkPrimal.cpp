@@ -2853,7 +2853,7 @@ void HEkkPrimal::shiftBound(const bool lower, const HighsInt iVar,
     double error = std::fabs(new_infeasibility + feasibility);
     highsLogDev(ekk_instance_.options_->log_options, HighsLogType::kInfo,
                 "HEkkPrimal::shiftBound Value(%4d) = %10.4g exceeds %s: "
-                "random_value = %g; value = %g; "
+                "old_bound = %g; random_value = %g; value = %g; "
                 "feasibility = %g; infeasibility = %g; shift = %g; bound = %g; "
                 "new_infeasibility = %g with error %g\n",
                 int(iVar), value, type.c_str(), old_bound, random_value, value,
@@ -2872,7 +2872,7 @@ void HEkkPrimal::savePrimalRay() {
   ekk_instance_.primal_ray_record_.sign = -move_in;
 }
 
-HighsDebugStatus HEkkPrimal::debugPrimalSimplex(const std::string message,
+HighsDebugStatus HEkkPrimal::debugPrimalSimplex(const std::string& message,
                                                 const bool initialise) {
   HighsDebugStatus return_status =
       ekk_instance_.debugSimplex(message, algorithm, solve_phase, initialise);
@@ -2885,7 +2885,7 @@ HighsDebugStatus HEkkPrimal::debugPrimalSimplex(const std::string message,
 }
 
 HighsDebugStatus HEkkPrimal::debugPrimalSteepestEdgeWeights(
-    const std::string message) {
+    const std::string& message) {
   // Possibly force the expensive check for development work
   const bool check_primal_edge_weights = true;
   if (check_primal_edge_weights) {

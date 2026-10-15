@@ -73,8 +73,7 @@ int main(int argc, char** argv) {
     std::cout << app.help();
     return runHighsReturn(highs, 0);
   } catch (const CLI::RequiredError& e) {
-    std::cout << "Please specify filename in .mps|.lp|.ems format."
-              << std::endl;
+    std::cout << "Please specify filename in .mps or .lp format" << std::endl;
     return runHighsReturn(highs, HighsStatus::kError);
   } catch (const CLI::ExtrasError& e) {
     std::cout << e.what() << std::endl;
