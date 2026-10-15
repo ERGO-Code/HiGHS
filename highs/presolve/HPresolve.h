@@ -284,9 +284,13 @@ class HPresolve {
 
   bool isLowerImplied(HighsInt col) const;
 
+  bool isLowerImplied(HighsInt col, double implLower) const;
+
   bool isLowerStrictlyImplied(HighsInt col, double* tolerance = nullptr) const;
 
   bool isUpperImplied(HighsInt col) const;
+
+  bool isUpperImplied(HighsInt col, double implUpper) const;
 
   bool isUpperStrictlyImplied(HighsInt col, double* tolerance = nullptr) const;
 

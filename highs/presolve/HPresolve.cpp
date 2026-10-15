@@ -211,8 +211,14 @@ bool HPresolve::rowCoefficientsIntegral(HighsInt row, double scale) const {
 }
 
 bool HPresolve::isLowerImplied(HighsInt col) const {
+  return isLowerImplied(col, implColLower[col]);
+}
+
+bool HPresolve::isLowerImplied(HighsInt col, double implLower) const {
+  // checks whether the given implied lower bound on the column implies the
+  // column's lower bound
   return (model->col_lower_[col] == -kHighsInf ||
-          implColLower[col] >= model->col_lower_[col] - primal_feastol);
+          implLower >= model->col_lower_[col] - primal_feastol);
 }
 
 bool HPresolve::isLowerStrictlyImplied(HighsInt col, double* tolerance) const {
@@ -223,8 +229,14 @@ bool HPresolve::isLowerStrictlyImplied(HighsInt col, double* tolerance) const {
 }
 
 bool HPresolve::isUpperImplied(HighsInt col) const {
+  return isUpperImplied(col, implColUpper[col]);
+}
+
+bool HPresolve::isUpperImplied(HighsInt col, double implUpper) const {
+  // checks whether the given implied upper bound on the column implies the
+  // column's upper bound
   return (model->col_upper_[col] == kHighsInf ||
-          implColUpper[col] <= model->col_upper_[col] + primal_feastol);
+          implUpper <= model->col_upper_[col] + primal_feastol);
 }
 
 bool HPresolve::isUpperStrictlyImplied(HighsInt col, double* tolerance) const {
@@ -1539,10 +1551,10 @@ void HPresolve::changeImplColUpper(HighsInt col, double newUpper,
     // <= constraint before
     markChangedCol(col);
   }
-  bool newImpliedFree =
-      isLowerImplied(col) &&
-      oldImplUpper > model->col_upper_[col] + primal_feastol &&
-      newUpper <= model->col_upper_[col] + primal_feastol;
+  // the column becomes implied free if its lower bound is implied and the new
+  // implied bound implies its upper bound, which was not implied before
+  bool newImpliedFree = isLowerImplied(col) && !isUpperImplied(col) &&
+                        isUpperImplied(col, newUpper);
 
   // remember the source of this upper bound, so that we can correctly identify
   // weak domination
@@ -1587,10 +1599,10 @@ void HPresolve::changeImplColLower(HighsInt col, double newLower,
     // was free, or a >= constraint before
     markChangedCol(col);
   }
-  bool newImpliedFree =
-      isUpperImplied(col) &&
-      oldImplLower < model->col_lower_[col] - primal_feastol &&
-      newLower >= model->col_lower_[col] - primal_feastol;
+  // the column becomes implied free if its upper bound is implied and the new
+  // implied bound implies its lower bound, which was not implied before
+  bool newImpliedFree = isUpperImplied(col) && !isLowerImplied(col) &&
+                        isLowerImplied(col, newLower);
 
   // remember the source of this lower bound, so that we can correctly identify
   // weak domination
