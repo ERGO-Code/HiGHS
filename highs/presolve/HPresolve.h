@@ -251,6 +251,10 @@ class HPresolve {
 
   bool isDualImpliedFree(HighsInt row) const;
 
+  bool isDualImpliedLeq(HighsInt row) const;
+
+  bool isDualImpliedGeq(HighsInt row) const;
+
   void dualImpliedFreeGetRhsAndRowType(HighsInt row, double& rhs,
                                        HighsPostsolveStack::RowType& rowType,
                                        bool relaxRowDualBounds = false);
@@ -280,13 +284,25 @@ class HPresolve {
 
   bool isLowerImplied(HighsInt col) const;
 
+  bool isLowerImplied(HighsInt col, double implLower) const;
+
   bool isLowerStrictlyImplied(HighsInt col, double* tolerance = nullptr) const;
 
   bool isUpperImplied(HighsInt col) const;
 
+  bool isUpperImplied(HighsInt col, double implUpper) const;
+
   bool isUpperStrictlyImplied(HighsInt col, double* tolerance = nullptr) const;
 
   bool isStrictlyImpliedForDual(HighsInt col, bool isLowerBound) const;
+
+  bool isRowDualLowerImplied(HighsInt row) const;
+
+  bool isRowDualLowerImplied(HighsInt row, double implLower) const;
+
+  bool isRowDualUpperImplied(HighsInt row) const;
+
+  bool isRowDualUpperImplied(HighsInt row, double implUpper) const;
 
   HighsInt countFillin(HighsInt row);
 

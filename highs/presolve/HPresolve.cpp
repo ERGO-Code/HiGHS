@@ -209,8 +209,14 @@ bool HPresolve::rowCoefficientsIntegral(HighsInt row, double scale) const {
 }
 
 bool HPresolve::isLowerImplied(HighsInt col) const {
+  return isLowerImplied(col, implColLower[col]);
+}
+
+bool HPresolve::isLowerImplied(HighsInt col, double implLower) const {
+  // checks whether the given implied lower bound on the column implies the
+  // column's lower bound
   return (model->col_lower_[col] == -kHighsInf ||
-          implColLower[col] >= model->col_lower_[col] - primal_feastol);
+          implLower >= model->col_lower_[col] - primal_feastol);
 }
 
 bool HPresolve::isLowerStrictlyImplied(HighsInt col, double* tolerance) const {
@@ -221,8 +227,14 @@ bool HPresolve::isLowerStrictlyImplied(HighsInt col, double* tolerance) const {
 }
 
 bool HPresolve::isUpperImplied(HighsInt col) const {
+  return isUpperImplied(col, implColUpper[col]);
+}
+
+bool HPresolve::isUpperImplied(HighsInt col, double implUpper) const {
+  // checks whether the given implied upper bound on the column implies the
+  // column's upper bound
   return (model->col_upper_[col] == kHighsInf ||
-          implColUpper[col] <= model->col_upper_[col] + primal_feastol);
+          implUpper <= model->col_upper_[col] + primal_feastol);
 }
 
 bool HPresolve::isUpperStrictlyImplied(HighsInt col, double* tolerance) const {
@@ -244,6 +256,28 @@ bool HPresolve::isStrictlyImpliedForDual(HighsInt col,
                       : isUpperStrictlyImplied(col, &impliedMargin);
 }
 
+bool HPresolve::isRowDualLowerImplied(HighsInt row) const {
+  return isRowDualLowerImplied(row, implRowDualLower[row]);
+}
+
+bool HPresolve::isRowDualLowerImplied(HighsInt row, double implLower) const {
+  // checks whether the given implied lower bound on the row dual implies the
+  // row dual's lower bound
+  return (rowDualLower[row] == -kHighsInf ||
+          implLower >= rowDualLower[row] - options->dual_feasibility_tolerance);
+}
+
+bool HPresolve::isRowDualUpperImplied(HighsInt row) const {
+  return isRowDualUpperImplied(row, implRowDualUpper[row]);
+}
+
+bool HPresolve::isRowDualUpperImplied(HighsInt row, double implUpper) const {
+  // checks whether the given implied upper bound on the row dual implies the
+  // row dual's upper bound
+  return (rowDualUpper[row] == kHighsInf ||
+          implUpper <= rowDualUpper[row] + options->dual_feasibility_tolerance);
+}
+
 bool HPresolve::isBinary(HighsInt col) const {
   return model->integrality_[col] == HighsVarType::kInteger &&
          model->col_lower_[col] == 0.0 && model->col_upper_[col] == 1.0;
@@ -254,10 +288,20 @@ bool HPresolve::isImpliedFree(HighsInt col) const {
 }
 
 bool HPresolve::isDualImpliedFree(HighsInt row) const {
-  return isEquation(row) ||
-         (model->row_upper_[row] != kHighsInf &&
-          implRowDualUpper[row] <= options->dual_feasibility_tolerance) ||
-         (model->row_lower_[row] != -kHighsInf &&
+  return isEquation(row) || isDualImpliedLeq(row) || isDualImpliedGeq(row);
+}
+
+bool HPresolve::isDualImpliedLeq(HighsInt row) const {
+  // checks whether the row has a finite upper bound and the row dual is
+  // implied to be non-positive
+  return (model->row_upper_[row] != kHighsInf &&
+          implRowDualUpper[row] <= options->dual_feasibility_tolerance);
+}
+
+bool HPresolve::isDualImpliedGeq(HighsInt row) const {
+  // checks whether the row has a finite lower bound and the row dual is
+  // implied to be non-negative
+  return (model->row_lower_[row] != -kHighsInf &&
           implRowDualLower[row] >= -options->dual_feasibility_tolerance);
 }
 
@@ -268,8 +312,7 @@ void HPresolve::dualImpliedFreeGetRhsAndRowType(
   if (isEquation(row)) {
     rowType = HighsPostsolveStack::RowType::kEq;
     rhs = model->row_upper_[row];
-  } else if (model->row_upper_[row] != kHighsInf &&
-             implRowDualUpper[row] <= options->dual_feasibility_tolerance) {
+  } else if (isDualImpliedLeq(row)) {
     rowType = HighsPostsolveStack::RowType::kLeq;
     rhs = model->row_upper_[row];
     if (relaxRowDualBounds) changeRowDualUpper(row, kHighsInf);
@@ -1506,10 +1549,10 @@ void HPresolve::changeImplColUpper(HighsInt col, double newUpper,
     // <= constraint before
     markChangedCol(col);
   }
-  bool newImpliedFree =
-      isLowerImplied(col) &&
-      oldImplUpper > model->col_upper_[col] + primal_feastol &&
-      newUpper <= model->col_upper_[col] + primal_feastol;
+  // the column becomes implied free if its lower bound is implied and the new
+  // implied bound implies its upper bound, which was not implied before
+  bool newImpliedFree = isLowerImplied(col) && !isUpperImplied(col) &&
+                        isUpperImplied(col, newUpper);
 
   // remember the source of this upper bound, so that we can correctly identify
   // weak domination
@@ -1554,10 +1597,10 @@ void HPresolve::changeImplColLower(HighsInt col, double newLower,
     // was free, or a >= constraint before
     markChangedCol(col);
   }
-  bool newImpliedFree =
-      isUpperImplied(col) &&
-      oldImplLower < model->col_lower_[col] - primal_feastol &&
-      newLower >= model->col_lower_[col] - primal_feastol;
+  // the column becomes implied free if its upper bound is implied and the new
+  // implied bound implies its lower bound, which was not implied before
+  bool newImpliedFree = isUpperImplied(col) && !isLowerImplied(col) &&
+                        isLowerImplied(col, newLower);
 
   // remember the source of this lower bound, so that we can correctly identify
   // weak domination
@@ -1597,14 +1640,19 @@ void HPresolve::changeImplRowDualUpper(HighsInt row, double newUpper,
   double oldImplUpper = implRowDualUpper[row];
   HighsInt oldUpperSource = rowDualUpperSource[row];
 
+  // mark the row as changed if the row dual becomes negative: then the row is
+  // an implied equation at its upper bound, or the problem is dual infeasible
+  // if the row has no upper bound (see rowPresolve)
   if (oldImplUpper >= -options->dual_feasibility_tolerance &&
       newUpper < -options->dual_feasibility_tolerance)
     markChangedRow(row);
 
-  bool newDualImplied =
-      !isDualImpliedFree(row) &&
-      oldImplUpper > rowDualUpper[row] + options->dual_feasibility_tolerance &&
-      newUpper <= rowDualUpper[row] + options->dual_feasibility_tolerance;
+  // the row becomes dual implied free if it was not dual implied free before
+  // and the new implied bound implies the row dual's upper bound (zero for <=
+  // rows); then implied free columns in the row are substitution candidates
+  bool newDualImplied = !isDualImpliedFree(row) &&
+                        !isRowDualUpperImplied(row) &&
+                        isRowDualUpperImplied(row, newUpper);
 
   // remember the source of this upper bound, so that we can correctly identify
   // weak domination
@@ -1638,14 +1686,19 @@ void HPresolve::changeImplRowDualLower(HighsInt row, double newLower,
   double oldImplLower = implRowDualLower[row];
   HighsInt oldLowerSource = rowDualLowerSource[row];
 
+  // mark the row as changed if the row dual becomes positive: then the row is
+  // an implied equation at its lower bound, or the problem is dual infeasible
+  // if the row has no lower bound (see rowPresolve)
   if (oldImplLower <= options->dual_feasibility_tolerance &&
       newLower > options->dual_feasibility_tolerance)
     markChangedRow(row);
 
-  bool newDualImplied =
-      !isDualImpliedFree(row) &&
-      oldImplLower < rowDualLower[row] - options->dual_feasibility_tolerance &&
-      newLower >= rowDualLower[row] - options->dual_feasibility_tolerance;
+  // the row becomes dual implied free if it was not dual implied free before
+  // and the new implied bound implies the row dual's lower bound (zero for >=
+  // rows); then implied free columns in the row are substitution candidates
+  bool newDualImplied = !isDualImpliedFree(row) &&
+                        !isRowDualLowerImplied(row) &&
+                        isRowDualLowerImplied(row, newLower);
 
   // remember the source of this lower bound, so that we can correctly identify
   // weak domination
