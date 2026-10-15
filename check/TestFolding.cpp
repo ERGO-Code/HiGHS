@@ -8,7 +8,7 @@
 #include "folding/Fold.h"
 #include "lp_data/HighsSolution.h"
 
-const bool dev_run = false;
+const bool dev_run = true;
 
 HighsModel getPaperLp() {
   // Define the LP from "Dimension Reduction via Colour Refinement"
@@ -264,5 +264,11 @@ TEST_CASE("test-folding", "[highs-folding]") {
 TEST_CASE("test-folding-qp", "[highs-folding]") {
   std::string filename =
       std::string(HIGHS_DIR) + "/check/instances/folding_qp.mps";
+  runFoldingTest(filename);
+}
+
+TEST_CASE("test-folding-qp-groups", "[highs-folding]") {
+  std::string filename =
+      std::string(HIGHS_DIR) + "/check/instances/folding_qp_groups.mps";
   runFoldingTest(filename);
 }
