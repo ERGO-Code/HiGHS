@@ -1640,6 +1640,31 @@ void HighsSparseMatrix::collectAj(HVector& column, const HighsInt use_col,
   }
 }
 
+HighsSparseMatrix HighsSparseMatrix::transpose() const {
+  // Given a matrix A, doing
+  //    B = A.transpose();
+  // is more efficient than doing
+  //    B = A;
+  //    B.ensureRowWise();
+  // because the latter requires a copy (B = A) and an internal copy in
+  // ensureRowWise(). Similarly for ensureColwise.
+
+  HighsSparseMatrix T;
+
+  const bool colwise = isColwise();
+  const HighsInt num_major = colwise ? num_col_ : num_row_;
+  const HighsInt num_minor = colwise ? num_row_ : num_col_;
+
+  T.format_ = colwise ? MatrixFormat::kRowwise : MatrixFormat::kColwise;
+  T.num_row_ = num_row_;
+  T.num_col_ = num_col_;
+
+  highsSparseTranspose(num_minor, num_major, start_, index_, value_, T.start_,
+                       T.index_, T.value_);
+
+  return T;
+}
+
 void HighsSparseMatrix::priceByRowDenseResult(
     std::vector<double>& result, const HVector& column,
     const HighsInt from_index, const HighsInt debug_report) const {
