@@ -102,8 +102,8 @@ class Folder {
 
   bool isPartitionCorrect() const;
 
-  double getRowFraction() const;
-  double getColFraction() const;
+  HighsInt numRowColours() const { return num_row_colours_; }
+  HighsInt numColColours() const { return num_col_colours_; }
 };
 
 }  // namespace folding

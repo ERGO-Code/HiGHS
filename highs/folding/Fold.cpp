@@ -20,13 +20,6 @@ Folder::Folder(const HighsModel& model)
   assert(Q_.empty() || Q_.dim_ == A_.num_col_);
 }
 
-double Folder::getRowFraction() const {
-  return static_cast<double>(num_row_colours_) / lp_.num_row_;
-}
-double Folder::getColFraction() const {
-  return static_cast<double>(num_col_colours_) / lp_.num_col_;
-}
-
 template <typename Data>
 HighsInt Folder::findInitialColour(HighsInt n, HighsInt* colour,
                                    HighsInt start) {
