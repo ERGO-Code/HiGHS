@@ -31,7 +31,22 @@
 #define HPRESOLVE_TIMED_CHECKED_CALL(presolveClock, presolveCall) \
   HPRESOLVE_TIMED_CHECKED_CALL_IF(true, presolveClock, presolveCall)
 
+class HighsCliqueTable;
+
 namespace presolve {
+
+// Sets the clique table's presolve probing flag and resets it when the scope
+// is left, on every exit
+class PresolveProbingScope {
+ public:
+  explicit PresolveProbingScope(HighsCliqueTable& cliquetable);
+  ~PresolveProbingScope();
+  PresolveProbingScope(const PresolveProbingScope&) = delete;
+  PresolveProbingScope& operator=(const PresolveProbingScope&) = delete;
+
+ private:
+  HighsCliqueTable& cliquetable_;
+};
 
 enum class SingletonRowResult {
   kRedundant,

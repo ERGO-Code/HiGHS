@@ -7,7 +7,18 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 #include "presolve/HPresolveUtils.h"
 
+#include "mip/HighsCliqueTable.h"
+
 namespace presolve {
+
+PresolveProbingScope::PresolveProbingScope(HighsCliqueTable& cliquetable)
+    : cliquetable_(cliquetable) {
+  cliquetable_.setinPresolveProbingFlag(true);
+}
+
+PresolveProbingScope::~PresolveProbingScope() {
+  cliquetable_.setinPresolveProbingFlag(false);
+}
 
 SingletonRowResult computeSingletonRowBounds(
     double val, double rowLower, double rowUpper, double colLower,
