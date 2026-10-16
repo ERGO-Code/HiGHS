@@ -3572,8 +3572,7 @@ HPresolve::Result HPresolve::colPresolve(HighsPostsolveStack& postsolve_stack,
   if (this->allow_rule_[kPresolveRuleDualFixing]) {
     const bool logging_on = analysis_.logging_on_;
     if (logging_on) analysis_.startPresolveRuleLog(kPresolveRuleDualFixing);
-    HPRESOLVE_TIMED_CHECKED_CALL_IF(timing,
-                                    kPresolveClockSingletonColDualFixing,
+    HPRESOLVE_TIMED_CHECKED_CALL_IF(timing, kPresolveClockInitialColDualFixing,
                                     dualFixing(postsolve_stack, col));
     analysis_.logging_on_ = logging_on;
     if (logging_on) analysis_.stopPresolveRuleLog(kPresolveRuleDualFixing);
@@ -4109,8 +4108,6 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
           numParallelRowColCalls < 5) {
         if (shrinkProblemEnabled && (numDeletedCols >= model->num_col_ / 2 ||
                                      numDeletedRows >= model->num_row_ / 2)) {
-          //	analysis_.presolveTimerStart(kPresolveClock@);
-          //	analysis_.presolveTimerStop(kPresolveClock@);
           analysis_.presolveTimerStart(kPresolveClockShrinkProblem);
           shrinkProblem(postsolve_stack);
           analysis_.presolveTimerStop(kPresolveClockShrinkProblem);
