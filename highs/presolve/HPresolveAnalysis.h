@@ -52,6 +52,10 @@ class HPresolveAnalysis {
   bool analysePresolveRuleLog(const bool report = false);
   void presolveTimerStart(const HighsInt presolve_clock = 0) const;
   void presolveTimerStop(const HighsInt presolve_clock = 0) const;
+  void reportPresolveTimer();
+  friend class HPresolve;
+
+ private:
   // Clock interface for HighsClockScope
   void start(const HighsInt presolve_clock) const {
     presolveTimerStart(presolve_clock);
@@ -59,8 +63,7 @@ class HPresolveAnalysis {
   void stop(const HighsInt presolve_clock) const {
     presolveTimerStop(presolve_clock);
   }
-  void reportPresolveTimer();
-  friend class HPresolve;
+  friend class HighsClockScope<const HPresolveAnalysis>;
 };
 
 // Starts a presolve timer and stops it when the scope is left, on every exit
