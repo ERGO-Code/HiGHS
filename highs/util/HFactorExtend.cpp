@@ -106,7 +106,7 @@ void HFactor::addRows(const HighsSparseMatrix* ar_matrix) {
     //    reportLu(kReportLuJustL);
   }
   // Now create a column-wise copy of the new rows
-  HighsSparseMatrix new_lr_cols = new_lr_rows;
+  HighsSparseMatrix new_lr_cols = new_lr_rows.getColwise();
   new_lr_cols.ensureColwise();
   //
   // Insert the column-wise copy into the L matrix

@@ -698,8 +698,7 @@ HighsStatus HEkk::dualize() {
   }
   lp_.offset_ += delta_offset;
   // Copy the row-wise dual LP constraint matrix and transpose it.
-  // ToDo Make this more efficient
-  lp_.a_matrix_ = dual_matrix;
+  lp_.a_matrix_ = dual_matrix.getColwise();
   lp_.a_matrix_.ensureColwise();
   // Add the extra columns to the dual LP constraint matrix
   lp_.a_matrix_.addCols(extra_columns);
@@ -952,8 +951,7 @@ HighsStatus HEkk::undualize() {
   primal_matrix.num_row_ = original_num_row_;
   primal_matrix.format_ = MatrixFormat::kRowwise;
   // Copy the row-wise primal LP constraint matrix and transpose it.
-  // ToDo Make this more efficient
-  lp_.a_matrix_ = primal_matrix;
+  lp_.a_matrix_ = primal_matrix.getColwise();
   lp_.a_matrix_.ensureColwise();
   // Some sanity checks
   assert(lp_.num_col_ == original_num_col_);

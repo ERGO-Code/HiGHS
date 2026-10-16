@@ -84,7 +84,7 @@ HighsStatus FilereaderLp::writeModelToFile(const HighsOptions& options,
   if (!ok_names) return HighsStatus::kError;
 
   // Create a row-wise copy of the matrix
-  HighsSparseMatrix ar_matrix = lp.a_matrix_;
+  HighsSparseMatrix ar_matrix = lp.a_matrix_.getRowwise();
   ar_matrix.ensureRowwise();
 
   FILE* file = fopen(filename.c_str(), "w");

@@ -41,10 +41,12 @@ bool HighsSparseMatrix::equivalent(const HighsSparseMatrix& matrix) const {
   if (*this == matrix) return true;
   // Creat a local copy in of matrix in the same format as this and
   // test for it being equal to this
-  HighsSparseMatrix lc_matrix = matrix;
+  HighsSparseMatrix lc_matrix;
   if (this->isColwise()) {
+    lc_matrix = matrix.getColwise();
     lc_matrix.ensureColwise();
   } else {
+    lc_matrix = matrix.getRowwise();
     lc_matrix.ensureRowwise();
   }
   return *this == lc_matrix;
