@@ -506,7 +506,11 @@ void HighsMipSolverData::finishAnalyticCenterComputation(
     fflush(stdout);
   }
   analyticCenterComputed = true;
-  if (analyticCenterStatus == HighsModelStatus::kOptimal) {
+  // Disable fixings if presolve=off as it possible to produce valid analytic
+  // centers close to a bound when adding sets of equalities and redundant
+  // constraints
+  if (analyticCenterStatus == HighsModelStatus::kOptimal &&
+      mipsolver.options_mip_->presolve != kHighsOffString) {
     HighsInt nfixed = 0;
     HighsInt nintfixed = 0;
     for (HighsInt i = 0; i != mipsolver.numCol(); ++i) {
@@ -514,8 +518,8 @@ void HighsMipSolverData::finishAnalyticCenterComputation(
                           mipsolver.mipdata_->getDomain().col_lower_[i];
       if (boundRange == 0.0) continue;
 
-      double tolerance =
-          mipsolver.mipdata_->feastol * std::min(boundRange, 1.0);
+      const double tolerance =
+          (mipsolver.mipdata_->feastol / 10) * std::min(boundRange, 1.0);
 
       if (analyticCenter[i] <= mipsolver.model_->col_lower_[i] + tolerance) {
         mipsolver.mipdata_->getDomain().changeBound(
