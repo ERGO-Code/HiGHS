@@ -209,6 +209,9 @@ struct HighsProfiling {
   //  HighsInt getSepaClockIndex(const std::string& name);
 };
 
+// Starts a profiling clock and stops it when the scope is left, on every exit
+using HighsProfilingScope = HighsClockScope<HighsProfiling>;
+
 struct HighsSimplexStats {
   bool valid;
   HighsInt iteration_count;

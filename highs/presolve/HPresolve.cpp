@@ -125,42 +125,64 @@ void HPresolve::setInput(HighsMipSolver& mipsolver,
 }
 
 bool HPresolve::okSetupPresolveDataStructures() {
-  analysis_.presolveTimerStart(kPresolveClockSetupResize);
-  if (!okResize(colLowerSource, model->num_col_, HighsInt{-1})) return false;
-  if (!okResize(colUpperSource, model->num_col_, HighsInt{-1})) return false;
-  if (!okResize(implColLower, model->num_col_, -kHighsInf)) return false;
-  if (!okResize(implColUpper, model->num_col_, kHighsInf)) return false;
-  if (!okResize(colImplSourceByRow, model->num_row_)) return false;
-  if (!okResize(implRowDualSourceByCol, model->num_col_)) return false;
-  if (!okResize(rowDualLower, model->num_row_, -kHighsInf)) return false;
-  if (!okResize(rowDualUpper, model->num_row_, kHighsInf)) return false;
-  if (!okResize(implRowDualLower, model->num_row_, -kHighsInf)) return false;
-  if (!okResize(implRowDualUpper, model->num_row_, kHighsInf)) return false;
-  if (!okResize(rowDualUpperSource, model->num_row_, HighsInt{-1}))
-    return false;
-  if (!okResize(rowDualLowerSource, model->num_row_, HighsInt{-1}))
-    return false;
-
-  for (HighsInt i = 0; i != model->num_row_; ++i) {
-    if (model->row_lower_[i] == -kHighsInf) rowDualUpper[i] = 0;
-    if (model->row_upper_[i] == kHighsInf) rowDualLower[i] = 0;
-  }
-
-  analysis_.presolveTimerStop(kPresolveClockSetupResize);
-
-  analysis_.presolveTimerStart(kPresolveClockSetupToCsc);
-  if (model->a_matrix_.isRowwise()) {
-    // Does this even happen?
-    assert(model->a_matrix_.isColwise());
-    if (!okFromCSR(model->a_matrix_.value_, model->a_matrix_.index_,
-                   model->a_matrix_.start_))
+  // Lambda for resizing the implied bound data
+  auto okResizeImpliedBoundData = [&]() {
+    PresolveTimerScope timer(analysis_, kPresolveClockSetupResize);
+    if (!okResize(colLowerSource, model->num_col_, HighsInt{-1})) return false;
+    if (!okResize(colUpperSource, model->num_col_, HighsInt{-1})) return false;
+    if (!okResize(implColLower, model->num_col_, -kHighsInf)) return false;
+    if (!okResize(implColUpper, model->num_col_, kHighsInf)) return false;
+    if (!okResize(colImplSourceByRow, model->num_row_)) return false;
+    if (!okResize(implRowDualSourceByCol, model->num_col_)) return false;
+    if (!okResize(rowDualLower, model->num_row_, -kHighsInf)) return false;
+    if (!okResize(rowDualUpper, model->num_row_, kHighsInf)) return false;
+    if (!okResize(implRowDualLower, model->num_row_, -kHighsInf)) return false;
+    if (!okResize(implRowDualUpper, model->num_row_, kHighsInf)) return false;
+    if (!okResize(rowDualUpperSource, model->num_row_, HighsInt{-1}))
       return false;
-  } else {
-    if (!okFromCSC(model->a_matrix_.value_, model->a_matrix_.index_,
-                   model->a_matrix_.start_))
+    if (!okResize(rowDualLowerSource, model->num_row_, HighsInt{-1}))
       return false;
-  }
-  analysis_.presolveTimerStop(kPresolveClockSetupToCsc);
+
+    for (HighsInt i = 0; i != model->num_row_; ++i) {
+      if (model->row_lower_[i] == -kHighsInf) rowDualUpper[i] = 0;
+      if (model->row_upper_[i] == kHighsInf) rowDualLower[i] = 0;
+    }
+    return true;
+  };
+
+  // Lambda for setting up the matrix
+  auto okSetupMatrix = [&]() {
+    PresolveTimerScope timer(analysis_, kPresolveClockSetupToCsc);
+    if (model->a_matrix_.isRowwise()) {
+      // Does this even happen?
+      assert(model->a_matrix_.isColwise());
+      return okFromCSR(model->a_matrix_.value_, model->a_matrix_.index_,
+                       model->a_matrix_.start_);
+    }
+    return okFromCSC(model->a_matrix_.value_, model->a_matrix_.index_,
+                     model->a_matrix_.start_);
+  };
+
+  // Lambda for resizing the change tracking data
+  auto okResizeChangeData = [&]() {
+    PresolveTimerScope timer(analysis_, kPresolveClockSetupResize);
+    // initialize everything as changed, but do not add all indices
+    // since the first thing presolve will do is a scan for easy reductions
+    // of each row and column and set the flag of processed columns to false
+    // from then on they are added to the vector whenever there are changes
+    if (!okResize(changedRowFlag, model->num_row_, uint8_t{1})) return false;
+    if (!okResize(rowDeleted, model->num_row_)) return false;
+    if (!okReserve(changedRowIndices, model->num_row_)) return false;
+    if (!okResize(changedColFlag, model->num_col_, uint8_t{1})) return false;
+    if (!okResize(colDeleted, model->num_col_)) return false;
+    if (!okReserve(changedColIndices, model->num_col_)) return false;
+    if (!okReserve(liftingOpportunities, model->num_row_)) return false;
+    if (!okResize(singleEquationChecked, model->num_row_)) return false;
+    return true;
+  };
+
+  if (!okResizeImpliedBoundData()) return false;
+  if (!okSetupMatrix()) return false;
 
   // numDeletedCols and numDeletedRows are not cumulative through the
   // whole of presolve, but "since the last time the model had no
@@ -174,21 +196,7 @@ bool HPresolve::okSetupPresolveDataStructures() {
   // Need to reset current number of deleted rows and columns in logging
   analysis_.resetNumDeleted();
 
-  analysis_.presolveTimerStart(kPresolveClockSetupResize);
-  // initialize everything as changed, but do not add all indices
-  // since the first thing presolve will do is a scan for easy reductions
-  // of each row and column and set the flag of processed columns to false
-  // from then on they are added to the vector whenever there are changes
-  if (!okResize(changedRowFlag, model->num_row_, uint8_t{1})) return false;
-  if (!okResize(rowDeleted, model->num_row_)) return false;
-  if (!okReserve(changedRowIndices, model->num_row_)) return false;
-  if (!okResize(changedColFlag, model->num_col_, uint8_t{1})) return false;
-  if (!okResize(colDeleted, model->num_col_)) return false;
-  if (!okReserve(changedColIndices, model->num_col_)) return false;
-  if (!okReserve(liftingOpportunities, model->num_row_)) return false;
-  if (!okResize(singleEquationChecked, model->num_row_)) return false;
-  analysis_.presolveTimerStop(kPresolveClockSetupResize);
-  return true;
+  return okResizeChangeData();
 }
 
 void HPresolve::setupSubstitutionOpportunities() {
@@ -3821,27 +3829,34 @@ HPresolve::Result HPresolve::checkOriginalModelBounds() {
 
 HPresolve::Result HPresolve::initialRowAndColPresolve(
     HighsPostsolveStack& postsolve_stack) {
-  // do a full scan over the rows as the singleton arrays and the changed row
-  // arrays are not initialized, also unset changedRowFlag so that the row will
-  // be added to the changed row vector when it is changed after it was
-  // processed
-  analysis_.presolveTimerStart(kPresolveClockInitialRow);
-  for (HighsInt row = 0; row != model->num_row_; ++row) {
-    if (rowDeleted[row]) continue;
-    HPRESOLVE_CHECKED_CALL(rowPresolve(postsolve_stack, row));
-    changedRowFlag[row] = false;
-  }
-  analysis_.presolveTimerStop(kPresolveClockInitialRow);
+  // Lambda for a full scan over the rows as the singleton arrays and the
+  // changed row arrays are not initialized, also unset changedRowFlag so that
+  // the row will be added to the changed row vector when it is changed after
+  // it was processed
+  auto presolveRows = [&]() {
+    PresolveTimerScope timer(analysis_, kPresolveClockInitialRow);
+    for (HighsInt row = 0; row != model->num_row_; ++row) {
+      if (rowDeleted[row]) continue;
+      HPRESOLVE_CHECKED_CALL(rowPresolve(postsolve_stack, row));
+      changedRowFlag[row] = false;
+    }
+    return Result::kOk;
+  };
 
-  // same for the columns
-  analysis_.presolveTimerStart(kPresolveClockInitialCol);
-  const bool timing = analysis_.analyse_presolve_time_;
-  for (HighsInt col = 0; col != model->num_col_; ++col) {
-    if (colDeleted[col]) continue;
-    HPRESOLVE_CHECKED_CALL(colPresolve(postsolve_stack, col, timing));
-    changedColFlag[col] = false;
-  }
-  analysis_.presolveTimerStop(kPresolveClockInitialCol);
+  // Lambda for the same for the columns
+  auto presolveCols = [&]() {
+    PresolveTimerScope timer(analysis_, kPresolveClockInitialCol);
+    const bool timing = analysis_.analyse_presolve_time_;
+    for (HighsInt col = 0; col != model->num_col_; ++col) {
+      if (colDeleted[col]) continue;
+      HPRESOLVE_CHECKED_CALL(colPresolve(postsolve_stack, col, timing));
+      changedColFlag[col] = false;
+    }
+    return Result::kOk;
+  };
+
+  HPRESOLVE_CHECKED_CALL(presolveRows());
+  HPRESOLVE_CHECKED_CALL(presolveCols());
 
   return checkLimits(postsolve_stack);
 }
