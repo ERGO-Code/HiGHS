@@ -2304,19 +2304,19 @@ HighsStatus readSolutionFile(const std::string& filename,
       std::getline(in_file, column_section_line);
       std::stringstream column_section_line_ss(column_section_line);
       if (column_section_line.empty() ||
-	  !readSolutionFileColumnHeaderLineOk(hash, keyword, value_string,
-					      num_col, qualifier_string,
-					      column_section_line_ss)) {
-	// If # hasn't been read, then it's "Objective_bound" or
-	// "MIP_rel_gap", so look at the next line
-	if (hash != "#") {
-	  assert(hash == "Objective_bound" || hash == "MIP_rel_gap");
-	  continue;
-	}
-	highsLogUser(log_options, HighsLogType::kError,
-		     "readSolutionFile: Error reading line \"%s\"\n",
-		     column_section_line.c_str());
-	return readSolutionFileErrorReturn(in_file);
+          !readSolutionFileColumnHeaderLineOk(hash, keyword, value_string,
+                                              num_col, qualifier_string,
+                                              column_section_line_ss)) {
+        // If # hasn't been read, then it's "Objective_bound" or
+        // "MIP_rel_gap", so look at the next line
+        if (hash != "#") {
+          assert(hash == "Objective_bound" || hash == "MIP_rel_gap");
+          continue;
+        }
+        highsLogUser(log_options, HighsLogType::kError,
+                     "readSolutionFile: Error reading line \"%s\"\n",
+                     column_section_line.c_str());
+        return readSolutionFileErrorReturn(in_file);
       }
       // "# Columns" has been read correctly, to break
       break;

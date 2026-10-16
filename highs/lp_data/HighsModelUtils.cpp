@@ -196,21 +196,22 @@ void writeLpObjective(FILE* file, const HighsLogOptions& log_options,
 void writeObjectiveValue(FILE* file, const HighsLogOptions& log_options,
                          const double objective_value) {
   auto obj_string = highsDoubleToString(objective_value,
-                                    kHighsSolutionValueToStringTolerance);
+                                        kHighsSolutionValueToStringTolerance);
   std::string s = highsFormatToString("Objective %s\n", obj_string.data());
   highsFprintfString(file, log_options, s);
 }
 
 void writeMipBoundGap(FILE* file, const HighsLogOptions& log_options,
-		      const double mip_dual_bound,
-		      const double mip_gap) {
-  std::string s = highsFormatToString("Objective_bound %s\n",
-				      highsDoubleToString(mip_dual_bound,
-							  kHighsSolutionValueToStringTolerance).data());
+                      const double mip_dual_bound, const double mip_gap) {
+  std::string s = highsFormatToString(
+      "Objective_bound %s\n",
+      highsDoubleToString(mip_dual_bound, kHighsSolutionValueToStringTolerance)
+          .data());
   highsFprintfString(file, log_options, s);
-  s = highsFormatToString("MIP_rel_gap %s\n",
-			  highsDoubleToString(mip_gap,
-					      kHighsSolutionValueToStringTolerance).data());
+  s = highsFormatToString(
+      "MIP_rel_gap %s\n",
+      highsDoubleToString(mip_gap, kHighsSolutionValueToStringTolerance)
+          .data());
   highsFprintfString(file, log_options, s);
 }
 
@@ -250,7 +251,7 @@ void writePrimalSolution(FILE* file, const HighsLogOptions& log_options,
   for (HighsInt ix = 0; ix < lp.num_col_; ix++) {
     if (sparse_or_partial && !primal_solution[ix]) continue;
     auto val_string = highsDoubleToString(primal_solution[ix],
-                                      kHighsSolutionValueToStringTolerance);
+                                          kHighsSolutionValueToStringTolerance);
     // Don't invent names locally: if none exist, then indicate this -
     // so that the (sparse/partial) solution line format remains "name
     // value (index)"
@@ -266,10 +267,9 @@ void writePrimalSolution(FILE* file, const HighsLogOptions& log_options,
 
 void writeModelSolution(FILE* file, const HighsLogOptions& log_options,
                         const HighsModel& model,
-			const HighsModelStatus model_status,
-			const HighsSolution& solution,
-                        const HighsInfo& info, const bool sparse,
-                        const bool partial) {
+                        const HighsModelStatus model_status,
+                        const HighsSolution& solution, const HighsInfo& info,
+                        const bool sparse, const bool partial) {
   const HighsLp& lp = model.lp_;
   const bool have_primal = solution.value_valid;
   const bool have_dual = solution.dual_valid;
@@ -289,7 +289,7 @@ void writeModelSolution(FILE* file, const HighsLogOptions& log_options,
   highsFprintfString(file, log_options, "Model status\n");
   ss.str(std::string());
   ss << highsFormatToString("%s\n",
-			    utilModelStatusToString(model_status).c_str());
+                            utilModelStatusToString(model_status).c_str());
   highsFprintfString(file, log_options, ss.str());
   highsFprintfString(file, log_options, "\n# Primal solution values\n");
   if (!have_primal || info.primal_solution_status == kSolutionStatusNone) {
@@ -302,7 +302,8 @@ void writeModelSolution(FILE* file, const HighsLogOptions& log_options,
       highsFprintfString(file, log_options, "Infeasible\n");
     }
     writeModelObjective(file, log_options, model, solution.col_value);
-    if (model.isMip() && model_status == HighsModelStatus::kOptimal && info.mip_gap < kHighsInf)
+    if (model.isMip() && model_status == HighsModelStatus::kOptimal &&
+        info.mip_gap < kHighsInf)
       writeMipBoundGap(file, log_options, info.mip_dual_bound, info.mip_gap);
     writePrimalSolution(file, log_options, model.lp_, solution.col_value,
                         sparse, partial);
@@ -311,8 +312,8 @@ void writeModelSolution(FILE* file, const HighsLogOptions& log_options,
     ss << highsFormatToString("# Rows %" HIGHSINT_FORMAT "\n", lp.num_row_);
     highsFprintfString(file, log_options, ss.str());
     for (HighsInt ix = 0; ix < lp.num_row_; ix++) {
-      auto val_string = highsDoubleToString(solution.row_value[ix],
-                                        kHighsSolutionValueToStringTolerance);
+      auto val_string = highsDoubleToString(
+          solution.row_value[ix], kHighsSolutionValueToStringTolerance);
       ss.str(std::string());
       ss << highsFormatToString("%-s %s\n", lp.row_names_[ix].c_str(),
                                 val_string.data());
@@ -344,8 +345,8 @@ void writeModelSolution(FILE* file, const HighsLogOptions& log_options,
     ss << highsFormatToString("# Rows %" HIGHSINT_FORMAT "\n", lp.num_row_);
     highsFprintfString(file, log_options, ss.str());
     for (HighsInt ix = 0; ix < lp.num_row_; ix++) {
-      auto val_string = highsDoubleToString(solution.row_dual[ix],
-                                        kHighsSolutionValueToStringTolerance);
+      auto val_string = highsDoubleToString(
+          solution.row_dual[ix], kHighsSolutionValueToStringTolerance);
       ss.str(std::string());
       ss << highsFormatToString("%-s %s\n", lp.row_names_[ix].c_str(),
                                 val_string.data());
@@ -558,19 +559,21 @@ void writeSolutionFile(FILE* file, const HighsOptions& options,
     // Log the objective value
     ss.str(std::string());
     auto obj_string = highsDoubleToString((double)info.objective_function_value,
-                                      kHighsSolutionValueToStringTolerance);
+                                          kHighsSolutionValueToStringTolerance);
     ss << highsFormatToString("Objective value: %s\n", obj_string.data());
     highsFprintfString(file, log_options, ss.str());
-    if (model.isMip() && model_status == HighsModelStatus::kOptimal && info.mip_gap < kHighsInf ) {
+    if (model.isMip() && model_status == HighsModelStatus::kOptimal &&
+        info.mip_gap < kHighsInf) {
       // Possibly log the MIP bounds and gap
-      auto mip_dual_bound_string = highsDoubleToString(info.mip_dual_bound,
-						   kHighsSolutionValueToStringTolerance);
+      auto mip_dual_bound_string = highsDoubleToString(
+          info.mip_dual_bound, kHighsSolutionValueToStringTolerance);
       auto mip_gap_string = highsGapToString(info.mip_gap);
       ss.str(std::string());
-      ss << highsFormatToString("Objective bound: %s\n", mip_dual_bound_string.data());
+      ss << highsFormatToString("Objective bound: %s\n",
+                                mip_dual_bound_string.data());
       ss << highsFormatToString("MIP rel gap: %s%\n", mip_gap_string.data());
       highsFprintfString(file, log_options, ss.str());
-    }   
+    }
   } else if (style == kSolutionStyleGlpsolRaw ||
              style == kSolutionStyleGlpsolPretty) {
     if (model.isQp()) {
@@ -588,8 +591,8 @@ void writeSolutionFile(FILE* file, const HighsOptions& options,
     const bool partial = style == kSolutionStylePartial;
     assert(!(sparse && partial));
     assert(style == kSolutionStyleRaw || sparse || partial);
-    writeModelSolution(file, log_options, model, model_status, solution, info, sparse,
-                       partial);
+    writeModelSolution(file, log_options, model, model_status, solution, info,
+                       sparse, partial);
   }
 }
 
