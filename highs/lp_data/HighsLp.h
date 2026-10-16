@@ -18,7 +18,10 @@
 
 class HighsLp {
  public:
-  HighsLp() { clear(); }
+  HighsLp() {
+    clear();
+    a_matrix_.name_ = "HighsLp::a_matrix_";
+  }
   // Model data
   HighsInt num_col_;
   HighsInt num_row_;
@@ -66,6 +69,7 @@ class HighsLp {
   bool equalScaling(const HighsLp& lp) const;
   bool isMip() const;
   HighsInt numNz() const { return this->a_matrix_.numNz(); }
+  bool isEmpty() const { return this->num_col_ <= 0 && this->num_row_ <= 0; }
   bool hasSemiVariables() const;
   bool hasInfiniteCost(const double infinite_cost) const;
   bool hasMods() const;
@@ -74,6 +78,11 @@ class HighsLp {
   HighsCDouble objectiveCDoubleValue(const std::vector<double>& solution) const;
   void setMatrixDimensions();
   void setFormat(const MatrixFormat format);
+  void setEmptyColwise(const HighsInt num_col) {
+    this->a_matrix_.setEmptyColwise(num_col);
+  }
+  bool isColwise() const { return this->a_matrix_.isColwise(); };
+  bool isRowwise() const { return this->a_matrix_.isRowwise(); };
   void ensureColwise() { this->a_matrix_.ensureColwise(); };
   void ensureRowwise() { this->a_matrix_.ensureRowwise(); };
   void clearScaling();
@@ -97,6 +106,11 @@ class HighsLp {
     this->col_hash_.clear();
     this->row_hash_.clear();
   }
+
+  bool legalDimensions(const std::string& message,
+                       const HighsLogOptions& log_options) const;
+  HighsStatus trimDimensions(const HighsLogOptions& log_options);
+  HighsStatus assess(const HighsOptions& options);
   void clear();
 };
 

@@ -22,6 +22,7 @@
 class HighsHessian {
  public:
   HighsHessian() { clear(); }
+  std::string name_;
   HighsInt dim_;
   HessianFormat format_;
   std::vector<HighsInt> start_;
@@ -48,7 +49,8 @@ class HighsHessian {
                const double large_matrix_value) const;
   HighsInt dim() const;
   HighsInt numNz() const;
-  bool empty() const;
+  bool empty() const { return isEmpty(); }
+  bool isEmpty() const { return this->dim() <= 0; }
   bool isDiagonal() const;
   double diag(HighsInt i) const;
   double diagonal(HighsInt i) const;
@@ -56,6 +58,9 @@ class HighsHessian {
   HighsStatus checkOracle(const HighsLogOptions& log_options,
                           const bool exit_on_first_error) const;
   void print(const std::string& message = "") const;
+  bool legalDimensions(const HighsLogOptions& log_options) const;
+  HighsStatus trimDimensions(const HighsLogOptions& log_options);
+  HighsStatus assess(const HighsOptions& options);
 };
 
 #endif

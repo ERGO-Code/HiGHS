@@ -120,6 +120,7 @@ TEST_CASE("highs-names", "[model_names]") {
 
 TEST_CASE("highs-model-name", "[model_names]") {
   Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
   const HighsLp& lp = highs.getLp();
 
   std::string name = lp.model_name_;

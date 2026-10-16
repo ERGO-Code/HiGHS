@@ -201,7 +201,7 @@ TEST_CASE("HighsHessian", "[highs_hessian]") {
     printf("\nOriginal\n");
     triangular_hessian.print();
   }
-  REQUIRE(assessHessian(triangular_hessian, options) == HighsStatus::kOk);
+  REQUIRE(assessHessian(triangular_hessian, options) == HighsStatus::kWarning);
   if (dev_run) {
     printf("\nReturned triangular Hessian\n");
     triangular_hessian.print();
@@ -218,7 +218,7 @@ TEST_CASE("HighsHessian", "[highs_hessian]") {
     printf("\nOriginal\n");
     triangular_hessian.print();
   }
-  REQUIRE(assessHessian(triangular_hessian, options) == HighsStatus::kOk);
+  REQUIRE(assessHessian(triangular_hessian, options) == HighsStatus::kWarning);
   if (dev_run) {
     printf("\nReturned triangular Hessian\n");
     triangular_hessian.print();
@@ -234,7 +234,7 @@ TEST_CASE("HighsHessian", "[highs_hessian]") {
     printf("\nOriginal\n");
     triangular_hessian.print();
   }
-  REQUIRE(assessHessian(triangular_hessian, options) == HighsStatus::kOk);
+  REQUIRE(assessHessian(triangular_hessian, options) == HighsStatus::kWarning);
   if (dev_run) {
     printf("\nReturned triangular Hessian\n");
     triangular_hessian.print();
@@ -247,7 +247,7 @@ TEST_CASE("HighsHessian", "[highs_hessian]") {
     printf("\nSquare Hessian as triangular original\n");
     triangular_hessian.print();
   }
-  REQUIRE(assessHessian(triangular_hessian, options) == HighsStatus::kOk);
+  REQUIRE(assessHessian(triangular_hessian, options) == HighsStatus::kWarning);
   if (dev_run) {
     printf("\nReturned triangular Hessian\n");
     triangular_hessian.print();
@@ -288,7 +288,7 @@ TEST_CASE("HighsHessian", "[highs_hessian]") {
     printf("\nOriginal\n");
     triangular_hessian.print();
   }
-  REQUIRE(assessHessian(triangular_hessian, options) == HighsStatus::kOk);
+  REQUIRE(assessHessian(triangular_hessian, options) == HighsStatus::kWarning);
   if (dev_run) {
     printf("\nReturned triangular Hessian\n");
     triangular_hessian.print();
@@ -305,7 +305,7 @@ TEST_CASE("HighsHessian", "[highs_hessian]") {
     printf("\nOriginal\n");
     triangular_hessian.print();
   }
-  REQUIRE(assessHessian(triangular_hessian, options) == HighsStatus::kOk);
+  REQUIRE(assessHessian(triangular_hessian, options) == HighsStatus::kWarning);
   if (dev_run) {
     printf("\nReturned triangular Hessian\n");
     triangular_hessian.print();
@@ -321,7 +321,7 @@ TEST_CASE("HighsHessian", "[highs_hessian]") {
     printf("\nOriginal\n");
     triangular_hessian.print();
   }
-  REQUIRE(assessHessian(triangular_hessian, options) == HighsStatus::kOk);
+  REQUIRE(assessHessian(triangular_hessian, options) == HighsStatus::kWarning);
   if (dev_run) {
     printf("\nReturned triangular Hessian\n");
     triangular_hessian.print();

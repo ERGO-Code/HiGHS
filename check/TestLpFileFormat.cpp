@@ -20,9 +20,8 @@ static HighsStatus readLp(Highs& highs, const std::string& filename,
   highs.setOptionValue("log_to_console", dev_run);
   highs.setCallback(
       [](int, const std::string& message, const HighsCallbackOutput*,
-         HighsCallbackInput*, void* user_data) {
-        *static_cast<std::string*>(user_data) += message;
-      },
+         HighsCallbackInput*,
+         void* user_data) { *static_cast<std::string*>(user_data) += message; },
       &log);
   highs.startCallback(kCallbackLogging);
   const HighsStatus status = highs.readModel(filename);
@@ -1208,9 +1207,9 @@ TEST_CASE("lp-file-format-model", "[LpFileFormat]") {
   const HighsInt num_col = 14;
   REQUIRE(lp.num_col_ == num_col);
   REQUIRE(lp.num_row_ == 8);
-  REQUIRE(lp.col_names_ ==
-          std::vector<std::string>{"x", "y", "z", "w", "v", "u", "t", "s",
-                                   "r", "q", "p", "sc", "b1", "b2"});
+  REQUIRE(lp.col_names_ == std::vector<std::string>{"x", "y", "z", "w", "v",
+                                                    "u", "t", "s", "r", "q",
+                                                    "p", "sc", "b1", "b2"});
   REQUIRE(lp.row_names_ == std::vector<std::string>{"c1", "c2", "55", "9.9",
                                                     "c5", "HiGHS_R5", "c7",
                                                     "c8"});
@@ -1225,8 +1224,8 @@ TEST_CASE("lp-file-format-model", "[LpFileFormat]") {
   REQUIRE(lp.col_cost_ == cost);
   REQUIRE(lp.col_lower_ == std::vector<double>{0, -5, -1, 1, -inf, 4, -inf,
                                                -inf, 0, 2, 0, 2, 0, 0});
-  REQUIRE(lp.col_upper_ == std::vector<double>{10, inf, 1, 3, inf, 4, inf,
-                                               inf, 7, 2, inf, 10, 5, 1});
+  REQUIRE(lp.col_upper_ == std::vector<double>{10, inf, 1, 3, inf, 4, inf, inf,
+                                               7, 2, inf, 10, 5, 1});
   std::vector<HighsVarType> integrality(num_col, HighsVarType::kContinuous);
   integrality[8] = HighsVarType::kInteger;
   integrality[9] = HighsVarType::kInteger;
@@ -1247,8 +1246,8 @@ TEST_CASE("lp-file-format-model", "[LpFileFormat]") {
   REQUIRE(matrix.start_ == start);
   REQUIRE(matrix.index_ ==
           std::vector<HighsInt>{0, 1, 2, 4, 5, 7, 0, 1, 3, 5, 7, 3, 5, 2});
-  REQUIRE(matrix.value_ == std::vector<double>{1, 1, 1, 2, 1, 1, 1, -1, 1, 1,
-                                               1, 1, 1, 1});
+  REQUIRE(matrix.value_ ==
+          std::vector<double>{1, 1, 1, 2, 1, 1, 1, -1, 1, 1, 1, 1, 1, 1});
   REQUIRE(!highs.getModel().isQp());
 }
 
@@ -1422,6 +1421,7 @@ TEST_CASE("lp-file-format-row-names", "[LpFileFormat]") {
   REQUIRE(highs.getLp().row_names_ == std::vector<std::string>{"HiGHS_R7"});
   // Otherwise the generated names might clash, so all row names are removed
   std::string log;
+
   REQUIRE(readLp(highs, filename,
                  "min\n obj: x\nst\n HiGHS_R7: x >= 1\n x >= 2\nend\n",
                  log) == HighsStatus::kOk);
@@ -1459,8 +1459,7 @@ static std::string largeLpFile(const HighsInt num_row,
   std::string content = "min\n obj: y\nst\n";
   for (HighsInt i = 0; i < num_row; i++)
     content += " c" + std::to_string(i) + ": " + std::to_string(i + 1) + " x" +
-               std::to_string(i % 1000) + " + y >= " + std::to_string(i) +
-               "\n";
+               std::to_string(i % 1000) + " + y >= " + std::to_string(i) + "\n";
   return content + extra + "end\n";
 }
 
