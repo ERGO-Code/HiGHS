@@ -704,7 +704,7 @@ void getUserParamsFromOptions(const HighsOptions& options, HighsTimer& timer,
     time_limit = std::max(0.0, time_limit);
   }
   ifChangeFloatParam[D_TIME_LIM] = true;
-  floatParam[D_TIME_LIM] = options.time_limit;
+  floatParam[D_TIME_LIM] = time_limit;
   //
   ifChangeIntParam[E_RESTART_METHOD] = true;
   cupdlp_int restart_on =
