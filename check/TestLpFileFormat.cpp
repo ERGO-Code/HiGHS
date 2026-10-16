@@ -20,9 +20,8 @@ static HighsStatus readLp(Highs& highs, const std::string& filename,
   highs.setOptionValue("log_to_console", dev_run);
   highs.setCallback(
       [](int, const std::string& message, const HighsCallbackOutput*,
-         HighsCallbackInput*, void* user_data) {
-        *static_cast<std::string*>(user_data) += message;
-      },
+         HighsCallbackInput*,
+         void* user_data) { *static_cast<std::string*>(user_data) += message; },
       &log);
   highs.startCallback(kCallbackLogging);
   const HighsStatus status = highs.readModel(filename);
@@ -57,850 +56,1099 @@ TEST_CASE("lp-file-format-errors", "[LpFileFormat]") {
   std::string filename = test_name + ".lp";
   // Each file is invalid, and reading it logs the diagnostic
   const std::vector<DiagnosticCase> cases = {
-    {"control-character",
-     "min\n"
-     " x\n"
-     "\x01\n"
-     "end\n",
-     "ERROR:   unexpected control character 0x01\n"
-     " --> " + filename + ":3:1\n"
-     "  |\n"
-     "3 |  \n"
-     "  | ^ this character is not valid in an LP file\n"},
-    {"missing-end",
-     "min\n"
-     " x\n"
-     "st\n"
-     " c: x >= 1\n"
-     "\n"
-     "  \n",
-     "ERROR:   expected `end`, found end of file\n"
-     " --> " + filename + ":4:11\n"
-     "  |\n"
-     "4 |  c: x >= 1\n"
-     "  |           ^ expected `end` after this\n"
-     "  |\n"
-     "  = help: an LP file must finish with the keyword `end`\n"},
-    {"no-section-keyword",
-     "x + y\n"
-     "min\n"
-     " x\n"
-     "end\n",
-     "ERROR:   expected a section keyword, found `x`\n"
-     " --> " + filename + ":1:1\n"
-     "  |\n"
-     "1 | x + y\n"
-     "  | ^ expected a keyword like `minimize` or `maximize`\n"
-     "  |\n"
-     "  = help: an LP file must start with a section keyword\n"},
-    {"subject-to-split",
-     "subject\n"
-     "to\n"
-     " c: x >= 1\n"
-     "end\n",
-     "ERROR:   expected a section keyword, found `subject`\n"
-     " --> " + filename + ":1:1\n"
-     "  |\n"
-     "1 | subject\n"
-     "  | ^^^^^^^ expected a keyword like `minimize` or `maximize`\n"
-     "  |\n"
-     "  = help: an LP file must start with a section keyword\n"},
-    {"duplicate-objective",
-     "min\n"
-     " x\n"
-     "max\n"
-     " x\n"
-     "end\n",
-     "ERROR:   the objective is defined more than once\n"
-     " --> " + filename + ":3:1\n"
-     "  |\n"
-     "3 | max\n"
-     "  | ^^^ second objective section\n"
-     "  |\n"
-     "  = help: the first objective section is on line 1\n"},
-    {"sos-section",
-     "min\n"
-     " x\n"
-     "sos\n"
-     " s1: S1:: x:1 y:2\n"
-     "end\n",
-     "ERROR:   SOS constraints are not supported by HiGHS\n"
-     " --> " + filename + ":3:1\n"
-     "  |\n"
-     "3 | sos\n"
-     "  | ^^^ SOS section\n"},
-    {"content-after-end",
-     "min\n"
-     " x\n"
-     "end\n"
-     "x\n",
-     "ERROR:   expected end of file, found `x`\n"
-     " --> " + filename + ":4:1\n"
-     "  |\n"
-     "4 | x\n"
-     "  | ^ unexpected content after `end`\n"},
-    {"missing-sign",
-     "min\n"
-     " obj: x y\n"
-     "end\n",
-     "ERROR:   expected `+` or `-`, found `y`\n"
-     " --> " + filename + ":2:9\n"
-     "  |\n"
-     "2 |  obj: x y\n"
-     "  |         ^ expected `+` or `-` before this\n"
-     "  |\n"
-     "  = help: terms in an expression must be separated by `+` or `-`\n"},
-    {"missing-sign-keyword",
-     "Minimize a subject to a >= 1\n",
-     "ERROR:   expected `+` or `-`, found `subject`\n"
-     " --> " + filename + ":1:12\n"
-     "  |\n"
-     "1 | Minimize a subject to a >= 1\n"
-     "  |            ^^^^^^^ expected `+` or `-` before this\n"
-     "  |\n"
-     "  = help: section keywords like `subject` must be at the start of a line\n"},
-    {"missing-sign-keyword-semi",
-     "min\n"
-     " obj: x semi\n"
-     "end\n",
-     "ERROR:   expected `+` or `-`, found `semi`\n"
-     " --> " + filename + ":2:9\n"
-     "  |\n"
-     "2 |  obj: x semi\n"
-     "  |         ^^^^ expected `+` or `-` before this\n"
-     "  |\n"
-     "  = help: section keywords like `semi` must be at the start of a line\n"},
-    {"missing-sign-keyword-such",
-     "min\n"
-     " obj: x such that y\n"
-     "end\n",
-     "ERROR:   expected `+` or `-`, found `such`\n"
-     " --> " + filename + ":2:9\n"
-     "  |\n"
-     "2 |  obj: x such that y\n"
-     "  |         ^^^^ expected `+` or `-` before this\n"
-     "  |\n"
-     "  = help: section keywords like `such` must be at the start of a line\n"},
-    {"missing-sign-digit-name",
-     "min\n"
-     " obj: x + 0.2 5C0ST\n"
-     "end\n",
-     "ERROR:   expected `+` or `-`, found `5`\n"
-     " --> " + filename + ":2:15\n"
-     "  |\n"
-     "2 |  obj: x + 0.2 5C0ST\n"
-     "  |               ^ expected `+` or `-` before this\n"
-     "  |\n"
-     "  = help: `5C0ST` looks like a name, but names cannot start with a digit\n"},
-    {"missing-sign-constant",
-     "min\n"
-     " obj: 2 3 x\n"
-     "end\n",
-     "ERROR:   expected `+` or `-`, found `3`\n"
-     " --> " + filename + ":2:9\n"
-     "  |\n"
-     "2 |  obj: 2 3 x\n"
-     "  |         ^ expected `+` or `-` before this\n"
-     "  |\n"
-     "  = help: terms in an expression must be separated by `+` or `-`\n"},
-    {"coefficient-bracket",
-     "min\n"
-     " obj: x + 2 [ x * y ]\n"
-     "end\n",
-     "ERROR:   expected `+` or `-`, found `[`\n"
-     " --> " + filename + ":2:13\n"
-     "  |\n"
-     "2 |  obj: x + 2 [ x * y ]\n"
-     "  |             ^ expected `+` or `-` before this\n"
-     "  |\n"
-     "  = help: a coefficient cannot multiply `[ ]`; move it inside the brackets\n"},
-    {"expected-term",
-     "min\n"
-     " obj: >= 1\n"
-     "end\n",
-     "ERROR:   expected a term, found `>=`\n"
-     " --> " + filename + ":2:7\n"
-     "  |\n"
-     "2 |  obj: >= 1\n"
-     "  |       ^^ expected a number, a variable, or `[`\n"},
-    {"expected-term-after-sign",
-     "min\n"
-     " obj: x + :\n"
-     "end\n",
-     "ERROR:   expected a term, found `:`\n"
-     " --> " + filename + ":2:11\n"
-     "  |\n"
-     "2 |  obj: x + :\n"
-     "  |           ^ expected a number, a variable, or `[` after the sign\n"},
-    {"expected-term-keyword",
-     "min\n"
-     " obj: x +\n"
-     "st\n"
-     "end\n",
-     "ERROR:   expected a term, found `st`\n"
-     " --> " + filename + ":3:1\n"
-     "  |\n"
-     "3 | st\n"
-     "  | ^^ expected a number, a variable, or `[` after the sign\n"
-     "  |\n"
-     "  = help: `st` is a section keyword because it is at the start of a line\n"},
-    {"expected-variable-after-times",
-     "min\n"
-     " obj: 2 * 3\n"
-     "end\n",
-     "ERROR:   expected a variable, found `3`\n"
-     " --> " + filename + ":2:11\n"
-     "  |\n"
-     "2 |  obj: 2 * 3\n"
-     "  |           ^ expected a variable after `*`\n"},
-    {"times-outside-brackets",
-     "min\n"
-     " obj: x * y\n"
-     "end\n",
-     "ERROR:   quadratic terms must be inside `[` and `]`\n"
-     " --> " + filename + ":2:9\n"
-     "  |\n"
-     "2 |  obj: x * y\n"
-     "  |         ^ unexpected `*` outside `[ ]`\n"},
-    {"power-outside-brackets",
-     "min\n"
-     " obj: 2 x ^ 2\n"
-     "end\n",
-     "ERROR:   quadratic terms must be inside `[` and `]`\n"
-     " --> " + filename + ":2:11\n"
-     "  |\n"
-     "2 |  obj: 2 x ^ 2\n"
-     "  |           ^ unexpected `^` outside `[ ]`\n"},
-    {"unclosed-bracket-eof",
-     "min\n"
-     " obj: [ x * y\n",
-     "ERROR:   expected `]`, found end of file\n"
-     " --> " + filename + ":2:14\n"
-     "  |\n"
-     "2 |  obj: [ x * y\n"
-     "  |              ^ expected `]` before this\n"
-     "  |\n"
-     "  = help: the `[` on line 2 is never closed\n"},
-    {"unclosed-bracket-keyword",
-     "min\n"
-     " obj: [ x * y\n"
-     "end\n",
-     "ERROR:   expected `]`, found `end`\n"
-     " --> " + filename + ":3:1\n"
-     "  |\n"
-     "3 | end\n"
-     "  | ^^^ expected `]` before this\n"
-     "  |\n"
-     "  = help: the `[` on line 2 is never closed\n"},
-    {"quadratic-missing-sign",
-     "min\n"
-     " obj: [ x ^ 2 y ^ 2 ] / 2\n"
-     "end\n",
-     "ERROR:   expected `+`, `-`, or `]`, found `y`\n"
-     " --> " + filename + ":2:15\n"
-     "  |\n"
-     "2 |  obj: [ x ^ 2 y ^ 2 ] / 2\n"
-     "  |               ^ expected `+` or `-` before this\n"
-     "  |\n"
-     "  = help: terms in an expression must be separated by `+` or `-`\n"},
-    {"quadratic-bad-divisor",
-     "min\n"
-     " obj: [ x ^ 2 ] / 3\n"
-     "end\n",
-     "ERROR:   expected `2`, found `3`\n"
-     " --> " + filename + ":2:19\n"
-     "  |\n"
-     "2 |  obj: [ x ^ 2 ] / 3\n"
-     "  |                   ^ expected `2` after `/`\n"
-     "  |\n"
-     "  = help: the quadratic part of the objective can only be divided by 2\n"},
-    {"quadratic-missing-divisor",
-     "min\n"
-     " obj: [ x ^ 2 ] /\n"
-     "end\n",
-     "ERROR:   expected `2`, found `end`\n"
-     " --> " + filename + ":3:1\n"
-     "  |\n"
-     "3 | end\n"
-     "  | ^^^ expected `2` after `/`\n"
-     "  |\n"
-     "  = help: the quadratic part of the objective can only be divided by 2\n"},
-    {"quadratic-bad-power",
-     "min\n"
-     " obj: [ x ^ 3 ]\n"
-     "end\n",
-     "ERROR:   expected `2`, found `3`\n"
-     " --> " + filename + ":2:13\n"
-     "  |\n"
-     "2 |  obj: [ x ^ 3 ]\n"
-     "  |             ^ expected `2` after `^`\n"
-     "  |\n"
-     "  = help: only squared terms like `x ^ 2` are supported\n"},
-    {"quadratic-missing-power",
-     "min\n"
-     " obj: [ x ^ y ]\n"
-     "end\n",
-     "ERROR:   expected `2`, found `y`\n"
-     " --> " + filename + ":2:13\n"
-     "  |\n"
-     "2 |  obj: [ x ^ y ]\n"
-     "  |             ^ expected `2` after `^`\n"
-     "  |\n"
-     "  = help: only squared terms like `x ^ 2` are supported\n"},
-    {"quadratic-linear-term",
-     "min\n"
-     " obj: [ x ]\n"
-     "end\n",
-     "ERROR:   expected `^` or `*`, found `]`\n"
-     " --> " + filename + ":2:11\n"
-     "  |\n"
-     "2 |  obj: [ x ]\n"
-     "  |           ^ expected `^ 2` or `* <variable>`\n"
-     "  |\n"
-     "  = help: linear terms must be outside `[` and `]`\n"},
-    {"quadratic-expected-variable",
-     "min\n"
-     " obj: [ 2 * 3 ]\n"
-     "end\n",
-     "ERROR:   expected a variable, found `3`\n"
-     " --> " + filename + ":2:13\n"
-     "  |\n"
-     "2 |  obj: [ 2 * 3 ]\n"
-     "  |             ^ expected a variable in this term\n"},
-    {"quadratic-expected-variable-after-times",
-     "min\n"
-     " obj: [ x * 2 ]\n"
-     "end\n",
-     "ERROR:   expected a variable, found `2`\n"
-     " --> " + filename + ":2:13\n"
-     "  |\n"
-     "2 |  obj: [ x * 2 ]\n"
-     "  |             ^ expected a variable after `*`\n"},
-    {"quadratic-constraint",
-     "min\n"
-     " x\n"
-     "st\n"
-     " c: x + [ x * y ] >= 1\n"
-     "end\n",
-     "ERROR:   quadratic constraints are not supported by HiGHS\n"
-     " --> " + filename + ":4:9\n"
-     "  |\n"
-     "4 |  c: x + [ x * y ] >= 1\n"
-     "  |         ^ quadratic term in a constraint\n"},
-    {"sos-constraint",
-     "min\n"
-     " x\n"
-     "st\n"
-     " S1:: x:1 y:2\n"
-     "end\n",
-     "ERROR:   SOS constraints are not supported by HiGHS\n"
-     " --> " + filename + ":4:2\n"
-     "  |\n"
-     "4 |  S1:: x:1 y:2\n"
-     "  |  ^^ SOS constraint\n"},
-    {"sos-constraint-named",
-     "min\n"
-     " x\n"
-     "st\n"
-     " c: S1:: x:1 y:2\n"
-     "end\n",
-     "ERROR:   SOS constraints are not supported by HiGHS\n"
-     " --> " + filename + ":4:5\n"
-     "  |\n"
-     "4 |  c: S1:: x:1 y:2\n"
-     "  |     ^^ SOS constraint\n"},
-    {"indicator-constraint",
-     "min\n"
-     " x\n"
-     "st\n"
-     " c: z = 1 -> x >= 1\n"
-     "end\n",
-     "ERROR:   indicator constraints are not supported by HiGHS\n"
-     " --> " + filename + ":4:11\n"
-     "  |\n"
-     "4 |  c: z = 1 -> x >= 1\n"
-     "  |           ^^ indicator constraint\n"},
-    {"missing-comparison-keyword",
-     "min\n"
-     " x\n"
-     "st\n"
-     " c: x\n"
-     "bounds\n"
-     "end\n",
-     "ERROR:   expected a comparison, found `bounds`\n"
-     " --> " + filename + ":5:1\n"
-     "  |\n"
-     "5 | bounds\n"
-     "  | ^^^^^^ expected `<=`, `>=`, or `=` before this\n"
-     "  |\n"
-     "  = help: `bounds` is a section keyword because it is at the start of a line\n"},
-    {"missing-comparison-eof",
-     "min\n"
-     " x\n"
-     "st\n"
-     " c: x\n",
-     "ERROR:   expected a comparison, found end of file\n"
-     " --> " + filename + ":4:6\n"
-     "  |\n"
-     "4 |  c: x\n"
-     "  |      ^ expected `<=`, `>=`, or `=` before this\n"},
-    {"missing-right-hand-side",
-     "min\n"
-     " x\n"
-     "st\n"
-     " c: x >= y\n"
-     "end\n",
-     "ERROR:   expected a number, found `y`\n"
-     " --> " + filename + ":4:10\n"
-     "  |\n"
-     "4 |  c: x >= y\n"
-     "  |          ^ expected the right-hand side\n"},
-    {"right-hand-side-keyword",
-     "min\n"
-     " x\n"
-     "st\n"
-     " c: x >= end\n",
-     "ERROR:   expected a number, found `end`\n"
-     " --> " + filename + ":4:10\n"
-     "  |\n"
-     "4 |  c: x >= end\n"
-     "  |          ^^^ expected the right-hand side\n"
-     "  |\n"
-     "  = help: section keywords like `end` must be at the start of a line\n"},
-    {"right-hand-side-variable",
-     "min\n"
-     " x\n"
-     "st\n"
-     " c: 3 x >= 2 y\n"
-     "end\n",
-     "ERROR:   expected a new line, found `y`\n"
-     " --> " + filename + ":4:14\n"
-     "  |\n"
-     "4 |  c: 3 x >= 2 y\n"
-     "  |              ^ unexpected variable on the right-hand side\n"
-     "  |\n"
-     "  = help: move the variables to the left-hand side\n"},
-    {"constraint-trailing-content",
-     "min\n"
-     " x\n"
-     "st\n"
-     " c: x + y >= 1 + 1\n"
-     "end\n",
-     "ERROR:   expected a new line, found `+`\n"
-     " --> " + filename + ":4:16\n"
-     "  |\n"
-     "4 |  c: x + y >= 1 + 1\n"
-     "  |                ^ expected the constraint to end before this\n"
-     "  |\n"
-     "  = help: a constraint ends with a comparison and a number; the next constraint must start on a new line\n"},
-    {"bound-missing-comparison",
-     "min\n"
-     " x\n"
-     "bounds\n"
-     " x 1\n"
-     "end\n",
-     "ERROR:   expected `free` or a comparison, found `1`\n"
-     " --> " + filename + ":4:4\n"
-     "  |\n"
-     "4 |  x 1\n"
-     "  |    ^ expected `free`, `<=`, `>=`, or `=`\n"},
-    {"bound-bad-start",
-     "min\n"
-     " x\n"
-     "bounds\n"
-     " <= x\n"
-     "end\n",
-     "ERROR:   expected a bound, found `<=`\n"
-     " --> " + filename + ":4:2\n"
-     "  |\n"
-     "4 |  <= x\n"
-     "  |  ^^ expected a variable or a number\n"},
-    {"bound-number-missing-comparison",
-     "min\n"
-     " x\n"
-     "bounds\n"
-     " 1 x\n"
-     "end\n",
-     "ERROR:   expected a comparison, found `x`\n"
-     " --> " + filename + ":4:4\n"
-     "  |\n"
-     "4 |  1 x\n"
-     "  |    ^ expected `<=`, `>=`, or `=`\n"},
-    {"bound-expected-variable",
-     "min\n"
-     " x\n"
-     "bounds\n"
-     " 1 <= 2\n"
-     "end\n",
-     "ERROR:   expected a variable, found `2`\n"
-     " --> " + filename + ":4:7\n"
-     "  |\n"
-     "4 |  1 <= 2\n"
-     "  |       ^ expected a variable\n"},
-    {"bound-missing-value",
-     "min\n"
-     " x\n"
-     "bounds\n"
-     " x <= y\n"
-     "end\n",
-     "ERROR:   expected a number, found `y`\n"
-     " --> " + filename + ":4:7\n"
-     "  |\n"
-     "4 |  x <= y\n"
-     "  |       ^ expected the value of the bound\n"},
-    {"bound-double-equal",
-     "min\n"
-     " x\n"
-     "bounds\n"
-     " 1 = x <= 2\n"
-     "end\n",
-     "ERROR:   a bound on both sides of a variable cannot use `=`\n"
-     " --> " + filename + ":4:4\n"
-     "  |\n"
-     "4 |  1 = x <= 2\n"
-     "  |    ^ expected `<=` or `>=`\n"},
-    {"bound-double-mismatch-less",
-     "min\n"
-     " x\n"
-     "bounds\n"
-     " 1 <= x >= 2\n"
-     "end\n",
-     "ERROR:   the comparisons in a bound on both sides of a variable must match\n"
-     " --> " + filename + ":4:9\n"
-     "  |\n"
-     "4 |  1 <= x >= 2\n"
-     "  |         ^^ expected `<=`\n"},
-    {"bound-double-mismatch-greater",
-     "min\n"
-     " x\n"
-     "bounds\n"
-     " 2 >= x <= 1\n"
-     "end\n",
-     "ERROR:   the comparisons in a bound on both sides of a variable must match\n"
-     " --> " + filename + ":4:9\n"
-     "  |\n"
-     "4 |  2 >= x <= 1\n"
-     "  |         ^^ expected `>=`\n"},
-    {"bound-trailing-content",
-     "min\n"
-     " x\n"
-     "bounds\n"
-     " x <= 1 y <= 2\n"
-     "end\n",
-     "ERROR:   expected a new line, found `y`\n"
-     " --> " + filename + ":4:9\n"
-     "  |\n"
-     "4 |  x <= 1 y <= 2\n"
-     "  |         ^ expected the bound to end before this\n"
-     "  |\n"
-     "  = help: each bound must be on its own line\n"},
-    {"general-not-variable",
-     "min\n"
-     " x\n"
-     "general\n"
-     " x 1\n"
-     "end\n",
-     "ERROR:   expected a variable, found `1`\n"
-     " --> " + filename + ":4:4\n"
-     "  |\n"
-     "4 |  x 1\n"
-     "  |    ^ expected a variable\n"},
-    {"render-gutter",
-     "\\ comment\n"
-     "\\ comment\n"
-     "\\ comment\n"
-     "\\ comment\n"
-     "\\ comment\n"
-     "\\ comment\n"
-     "\\ comment\n"
-     "\\ comment\n"
-     "\\ comment\n"
-     "min\n"
-     " obj: x y\n"
-     "end\n",
-     "ERROR:   expected `+` or `-`, found `y`\n"
-     "  --> " + filename + ":11:9\n"
-     "   |\n"
-     "11 |  obj: x y\n"
-     "   |         ^ expected `+` or `-` before this\n"
-     "   |\n"
-     "   = help: terms in an expression must be separated by `+` or `-`\n"},
-    {"render-crlf",
-     "min\r\n"
-     " obj: x y\r\n"
-     "end\r\n",
-     "ERROR:   expected `+` or `-`, found `y`\n"
-     " --> " + filename + ":2:9\n"
-     "  |\n"
-     "2 |  obj: x y\n"
-     "  |         ^ expected `+` or `-` before this\n"
-     "  |\n"
-     "  = help: terms in an expression must be separated by `+` or `-`\n"},
-    {"render-tab",
-     "min\n"
-     "\tobj:\tx\ty\n"
-     "end\n",
-     "ERROR:   expected `+` or `-`, found `y`\n"
-     " --> " + filename + ":2:9\n"
-     "  |\n"
-     "2 |  obj: x y\n"
-     "  |         ^ expected `+` or `-` before this\n"
-     "  |\n"
-     "  = help: terms in an expression must be separated by `+` or `-`\n"},
-    {"render-long-line",
-     "min\n"
-     " obj: 1 x1 + 2 x2 + 3 x3 + 4 x4 + 5 x5 + 6 x6 + 7 x7 + 8 x8 + 9 x9 + 10 x10 + 11 x11 + 12 x12 + 13 x13 + 14 x14 y 1 z1 +  2 z2 +  3 z3 +  4 z4 +  5 z5 +  6 z6 +  7 z7 +  8 z8 +  9 z9 +  10 z10 +  11 z11 +  12 z12 +  13 z13 +  14 z14\n"
-     "end\n",
-     "ERROR:   expected `+` or `-`, found `y`\n"
-     " --> " + filename + ":2:113\n"
-     "  |\n"
-     "2 | ...x10 + 11 x11 + 12 x12 + 13 x13 + 14 x14 y 1 z1 +  2 z2 +  3 z3 +  4 z4 +  5 z5 + ...\n"
-     "  |                                            ^ expected `+` or `-` before this\n"
-     "  |\n"
-     "  = help: terms in an expression must be separated by `+` or `-`\n"},
-    {"render-long-token",
-     "min\n"
-     " obj: x aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"
-     "end\n",
-     "ERROR:   expected `+` or `-`, found `aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa...`\n"
-     " --> " + filename + ":2:9\n"
-     "  |\n"
-     "2 |  obj: x aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"
-     "  |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ expected `+` or `-` before this\n"
-     "  |\n"
-     "  = help: terms in an expression must be separated by `+` or `-`\n"},
-    {"render-utf8",
-     "min\n"
-     " obj: caf\xC3\xA9 \xC3\xA9t\xC3\xA9\n"
-     "end\n",
-     "ERROR:   expected `+` or `-`, found `\xC3\xA9t\xC3\xA9`\n"
-     " --> " + filename + ":2:12\n"
-     "  |\n"
-     "2 |  obj: caf\xC3\xA9 \xC3\xA9t\xC3\xA9\n"
-     "  |            ^^^ expected `+` or `-` before this\n"
-     "  |\n"
-     "  = help: terms in an expression must be separated by `+` or `-`\n"},
-    {"render-utf8-truncate",
-     "min\n"
-     " obj: x a\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\n"
-     "end\n",
-     "ERROR:   expected `+` or `-`, found `a\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9...`\n"
-     " --> " + filename + ":2:9\n"
-     "  |\n"
-     "2 |  obj: x a\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\n"
-     "  |         ^^^^^^^^^^^^^^^^^ expected `+` or `-` before this\n"
-     "  |\n"
-     "  = help: terms in an expression must be separated by `+` or `-`\n"},
-    {"render-utf8-window",
-     "min\n"
-     " obj: x\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9 y\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9 + z\n"
-     "end\n",
-     "ERROR:   expected `+` or `-`, found `y\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9...`\n"
-     " --> " + filename + ":2:39\n"
-     "  |\n"
-     "2 | ...\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9 y\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9 + z\n"
-     "  |                        ^^^^^^^^^^^^^^^^^^^^^ expected `+` or `-` before this\n"
-     "  |\n"
-     "  = help: terms in an expression must be separated by `+` or `-`\n"},
-    {"render-utf8-window-left",
-     "min\n"
-     " obj: a\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9 + z\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9x y\n"
-     "end\n",
-     "ERROR:   expected `+` or `-`, found `y`\n"
-     " --> " + filename + ":2:74\n"
-     "  |\n"
-     "2 | ...\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9x y\n"
-     "  |                         ^ expected `+` or `-` before this\n"
-     "  |\n"
-     "  = help: terms in an expression must be separated by `+` or `-`\n"},
-    {"missing-end-no-newline",
-     "min\n"
-     " x",
-     "ERROR:   expected `end`, found end of file\n"
-     " --> " + filename + ":2:3\n"
-     "  |\n"
-     "2 |  x\n"
-     "  |   ^ expected `end` after this\n"
-     "  |\n"
-     "  = help: an LP file must finish with the keyword `end`\n"},
-    // The tokens of "semi-continuous" must be on one line
-    {"semi-dash-next-line",
-     "min\n"
-     " x\n"
-     "semi\n"
-     "- continuous\n"
-     "end\n",
-     "ERROR:   expected a variable, found `-`\n"
-     " --> " + filename + ":4:1\n"
-     "  |\n"
-     "4 | - continuous\n"
-     "  | ^ expected a variable\n"},
-    {"semi-continuous-next-line",
-     "min\n"
-     " x\n"
-     "semi -\n"
-     "continuous\n"
-     "end\n",
-     "ERROR:   expected a variable, found `-`\n"
-     " --> " + filename + ":3:6\n"
-     "  |\n"
-     "3 | semi -\n"
-     "  |      ^ expected a variable\n"},
-    {"render-utf8-window-right",
-     "min\n"
-     " obj: x y\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9 + z\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\n"
-     "end\n",
-     "ERROR:   expected `+` or `-`, found `y\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9...`\n"
-     " --> " + filename + ":2:9\n"
-     "  |\n"
-     "2 |  obj: x y\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9...\n"
-     "  |         ^^^^^^^^^^^^^^^^^^^^^ expected `+` or `-` before this\n"
-     "  |\n"
-     "  = help: terms in an expression must be separated by `+` or `-`\n"},
-    {"render-gutter-crlf-eof",
-     "\\ comment\r\n"
-     "\\ comment\r\n"
-     "\\ comment\r\n"
-     "\\ comment\r\n"
-     "\\ comment\r\n"
-     "\\ comment\r\n"
-     "\\ comment\r\n"
-     "\\ comment\r\n"
-     "\\ comment\r\n"
-     "min\r\n"
-     " obj: x\r\n",
-     "ERROR:   expected `end`, found end of file\n"
-     "  --> " + filename + ":11:8\n"
-     "   |\n"
-     "11 |  obj: x\n"
-     "   |        ^ expected `end` after this\n"
-     "   |\n"
-     "   = help: an LP file must finish with the keyword `end`\n"},
-    {"delete-character",
-     "min\n"
-     " x\x7F\n"
-     "end\n",
-     "ERROR:   unexpected control character 0x7F\n"
-     " --> " + filename + ":2:3\n"
-     "  |\n"
-     "2 |  x\x7F\n"
-     "  |   ^ this character is not valid in an LP file\n"},
-    {"missing-end-after-number",
-     "min\n"
-     " obj: x + 1",
-     "ERROR:   expected `end`, found end of file\n"
-     " --> " + filename + ":2:12\n"
-     "  |\n"
-     "2 |  obj: x + 1\n"
-     "  |            ^ expected `end` after this\n"
-     "  |\n"
-     "  = help: an LP file must finish with the keyword `end`\n"},
-    {"missing-end-after-exponent",
-     "min\n"
-     " obj: x + 2e",
-     "ERROR:   expected `end`, found end of file\n"
-     " --> " + filename + ":2:13\n"
-     "  |\n"
-     "2 |  obj: x + 2e\n"
-     "  |             ^ expected `end` after this\n"
-     "  |\n"
-     "  = help: an LP file must finish with the keyword `end`\n"},
-    {"missing-sign-new-line",
-     "min\n"
-     " obj: x\n"
-     " y\n"
-     "end\n",
-     "ERROR:   expected `+` or `-`, found `y`\n"
-     " --> " + filename + ":3:2\n"
-     "  |\n"
-     "3 |  y\n"
-     "  |  ^ expected `+` or `-` before this\n"
-     "  |\n"
-     "  = help: terms in an expression must be separated by `+` or `-`\n"},
-    {"missing-sign-constant-then-sign",
-     "min\n"
-     " obj: x 3 + y\n"
-     "end\n",
-     "ERROR:   expected `+` or `-`, found `3`\n"
-     " --> " + filename + ":2:9\n"
-     "  |\n"
-     "2 |  obj: x 3 + y\n"
-     "  |         ^ expected `+` or `-` before this\n"
-     "  |\n"
-     "  = help: terms in an expression must be separated by `+` or `-`\n"},
-    {"expected-variable-keyword",
-     "min\n"
-     " obj: 2 *\n"
-     "end\n",
-     "ERROR:   expected a variable, found `end`\n"
-     " --> " + filename + ":3:1\n"
-     "  |\n"
-     "3 | end\n"
-     "  | ^^^ expected a variable after `*`\n"},
-    {"right-hand-side-symbol",
-     "min\n"
-     " x\n"
-     "st\n"
-     " c: x >= [\n"
-     "end\n",
-     "ERROR:   expected a number, found `[`\n"
-     " --> " + filename + ":4:10\n"
-     "  |\n"
-     "4 |  c: x >= [\n"
-     "  |          ^ expected the right-hand side\n"},
-    {"constraint-equal-variable",
-     "min\n"
-     " x\n"
-     "st\n"
-     " c: x = y\n"
-     "end\n",
-     "ERROR:   expected a number, found `y`\n"
-     " --> " + filename + ":4:9\n"
-     "  |\n"
-     "4 |  c: x = y\n"
-     "  |         ^ expected the right-hand side\n"},
-    {"bound-not-free",
-     "min\n"
-     " x\n"
-     "bounds\n"
-     " x y\n"
-     "end\n",
-     "ERROR:   expected `free` or a comparison, found `y`\n"
-     " --> " + filename + ":4:4\n"
-     "  |\n"
-     "4 |  x y\n"
-     "  |    ^ expected `free`, `<=`, `>=`, or `=`\n"},
-    {"semi-dash-number",
-     "min\n"
-     " x\n"
-     "semi-2\n"
-     "end\n",
-     "ERROR:   expected a variable, found `-`\n"
-     " --> " + filename + ":3:5\n"
-     "  |\n"
-     "3 | semi-2\n"
-     "  |     ^ expected a variable\n"},
-    {"semi-dash-other",
-     "min\n"
-     " x\n"
-     "semi-cont\n"
-     "end\n",
-     "ERROR:   expected a variable, found `-`\n"
-     " --> " + filename + ":3:5\n"
-     "  |\n"
-     "3 | semi-cont\n"
-     "  |     ^ expected a variable\n"},
-    {"render-utf8-window-right-cut",
-     "min\n"
-     " obj: x y \xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\n"
-     "end\n",
-     "ERROR:   expected `+` or `-`, found `y`\n"
-     " --> " + filename + ":2:9\n"
-     "  |\n"
-     "2 |  obj: x y \xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9...\n"
-     "  |         ^ expected `+` or `-` before this\n"
-     "  |\n"
-     "  = help: terms in an expression must be separated by `+` or `-`\n"},
+      {"control-character",
+       "min\n"
+       " x\n"
+       "\x01\n"
+       "end\n",
+       "ERROR:   unexpected control character 0x01\n"
+       " --> " +
+           filename +
+           ":3:1\n"
+           "  |\n"
+           "3 |  \n"
+           "  | ^ this character is not valid in an LP file\n"},
+      {"missing-end",
+       "min\n"
+       " x\n"
+       "st\n"
+       " c: x >= 1\n"
+       "\n"
+       "  \n",
+       "ERROR:   expected `end`, found end of file\n"
+       " --> " +
+           filename +
+           ":4:11\n"
+           "  |\n"
+           "4 |  c: x >= 1\n"
+           "  |           ^ expected `end` after this\n"
+           "  |\n"
+           "  = help: an LP file must finish with the keyword `end`\n"},
+      {"no-section-keyword",
+       "x + y\n"
+       "min\n"
+       " x\n"
+       "end\n",
+       "ERROR:   expected a section keyword, found `x`\n"
+       " --> " +
+           filename +
+           ":1:1\n"
+           "  |\n"
+           "1 | x + y\n"
+           "  | ^ expected a keyword like `minimize` or `maximize`\n"
+           "  |\n"
+           "  = help: an LP file must start with a section keyword\n"},
+      {"subject-to-split",
+       "subject\n"
+       "to\n"
+       " c: x >= 1\n"
+       "end\n",
+       "ERROR:   expected a section keyword, found `subject`\n"
+       " --> " +
+           filename +
+           ":1:1\n"
+           "  |\n"
+           "1 | subject\n"
+           "  | ^^^^^^^ expected a keyword like `minimize` or `maximize`\n"
+           "  |\n"
+           "  = help: an LP file must start with a section keyword\n"},
+      {"duplicate-objective",
+       "min\n"
+       " x\n"
+       "max\n"
+       " x\n"
+       "end\n",
+       "ERROR:   the objective is defined more than once\n"
+       " --> " +
+           filename +
+           ":3:1\n"
+           "  |\n"
+           "3 | max\n"
+           "  | ^^^ second objective section\n"
+           "  |\n"
+           "  = help: the first objective section is on line 1\n"},
+      {"sos-section",
+       "min\n"
+       " x\n"
+       "sos\n"
+       " s1: S1:: x:1 y:2\n"
+       "end\n",
+       "ERROR:   SOS constraints are not supported by HiGHS\n"
+       " --> " +
+           filename +
+           ":3:1\n"
+           "  |\n"
+           "3 | sos\n"
+           "  | ^^^ SOS section\n"},
+      {"content-after-end",
+       "min\n"
+       " x\n"
+       "end\n"
+       "x\n",
+       "ERROR:   expected end of file, found `x`\n"
+       " --> " +
+           filename +
+           ":4:1\n"
+           "  |\n"
+           "4 | x\n"
+           "  | ^ unexpected content after `end`\n"},
+      {"missing-sign",
+       "min\n"
+       " obj: x y\n"
+       "end\n",
+       "ERROR:   expected `+` or `-`, found `y`\n"
+       " --> " +
+           filename +
+           ":2:9\n"
+           "  |\n"
+           "2 |  obj: x y\n"
+           "  |         ^ expected `+` or `-` before this\n"
+           "  |\n"
+           "  = help: terms in an expression must be separated by `+` or "
+           "`-`\n"},
+      {"missing-sign-keyword", "Minimize a subject to a >= 1\n",
+       "ERROR:   expected `+` or `-`, found `subject`\n"
+       " --> " +
+           filename +
+           ":1:12\n"
+           "  |\n"
+           "1 | Minimize a subject to a >= 1\n"
+           "  |            ^^^^^^^ expected `+` or `-` before this\n"
+           "  |\n"
+           "  = help: section keywords like `subject` must be at the start of "
+           "a line\n"},
+      {"missing-sign-keyword-semi",
+       "min\n"
+       " obj: x semi\n"
+       "end\n",
+       "ERROR:   expected `+` or `-`, found `semi`\n"
+       " --> " +
+           filename +
+           ":2:9\n"
+           "  |\n"
+           "2 |  obj: x semi\n"
+           "  |         ^^^^ expected `+` or `-` before this\n"
+           "  |\n"
+           "  = help: section keywords like `semi` must be at the start of a "
+           "line\n"},
+      {"missing-sign-keyword-such",
+       "min\n"
+       " obj: x such that y\n"
+       "end\n",
+       "ERROR:   expected `+` or `-`, found `such`\n"
+       " --> " +
+           filename +
+           ":2:9\n"
+           "  |\n"
+           "2 |  obj: x such that y\n"
+           "  |         ^^^^ expected `+` or `-` before this\n"
+           "  |\n"
+           "  = help: section keywords like `such` must be at the start of a "
+           "line\n"},
+      {"missing-sign-digit-name",
+       "min\n"
+       " obj: x + 0.2 5C0ST\n"
+       "end\n",
+       "ERROR:   expected `+` or `-`, found `5`\n"
+       " --> " +
+           filename +
+           ":2:15\n"
+           "  |\n"
+           "2 |  obj: x + 0.2 5C0ST\n"
+           "  |               ^ expected `+` or `-` before this\n"
+           "  |\n"
+           "  = help: `5C0ST` looks like a name, but names cannot start with a "
+           "digit\n"},
+      {"missing-sign-constant",
+       "min\n"
+       " obj: 2 3 x\n"
+       "end\n",
+       "ERROR:   expected `+` or `-`, found `3`\n"
+       " --> " +
+           filename +
+           ":2:9\n"
+           "  |\n"
+           "2 |  obj: 2 3 x\n"
+           "  |         ^ expected `+` or `-` before this\n"
+           "  |\n"
+           "  = help: terms in an expression must be separated by `+` or "
+           "`-`\n"},
+      {"coefficient-bracket",
+       "min\n"
+       " obj: x + 2 [ x * y ]\n"
+       "end\n",
+       "ERROR:   expected `+` or `-`, found `[`\n"
+       " --> " +
+           filename +
+           ":2:13\n"
+           "  |\n"
+           "2 |  obj: x + 2 [ x * y ]\n"
+           "  |             ^ expected `+` or `-` before this\n"
+           "  |\n"
+           "  = help: a coefficient cannot multiply `[ ]`; move it inside the "
+           "brackets\n"},
+      {"expected-term",
+       "min\n"
+       " obj: >= 1\n"
+       "end\n",
+       "ERROR:   expected a term, found `>=`\n"
+       " --> " +
+           filename +
+           ":2:7\n"
+           "  |\n"
+           "2 |  obj: >= 1\n"
+           "  |       ^^ expected a number, a variable, or `[`\n"},
+      {"expected-term-after-sign",
+       "min\n"
+       " obj: x + :\n"
+       "end\n",
+       "ERROR:   expected a term, found `:`\n"
+       " --> " +
+           filename +
+           ":2:11\n"
+           "  |\n"
+           "2 |  obj: x + :\n"
+           "  |           ^ expected a number, a variable, or `[` after the "
+           "sign\n"},
+      {"expected-term-keyword",
+       "min\n"
+       " obj: x +\n"
+       "st\n"
+       "end\n",
+       "ERROR:   expected a term, found `st`\n"
+       " --> " +
+           filename +
+           ":3:1\n"
+           "  |\n"
+           "3 | st\n"
+           "  | ^^ expected a number, a variable, or `[` after the sign\n"
+           "  |\n"
+           "  = help: `st` is a section keyword because it is at the start of "
+           "a line\n"},
+      {"expected-variable-after-times",
+       "min\n"
+       " obj: 2 * 3\n"
+       "end\n",
+       "ERROR:   expected a variable, found `3`\n"
+       " --> " +
+           filename +
+           ":2:11\n"
+           "  |\n"
+           "2 |  obj: 2 * 3\n"
+           "  |           ^ expected a variable after `*`\n"},
+      {"times-outside-brackets",
+       "min\n"
+       " obj: x * y\n"
+       "end\n",
+       "ERROR:   quadratic terms must be inside `[` and `]`\n"
+       " --> " +
+           filename +
+           ":2:9\n"
+           "  |\n"
+           "2 |  obj: x * y\n"
+           "  |         ^ unexpected `*` outside `[ ]`\n"},
+      {"power-outside-brackets",
+       "min\n"
+       " obj: 2 x ^ 2\n"
+       "end\n",
+       "ERROR:   quadratic terms must be inside `[` and `]`\n"
+       " --> " +
+           filename +
+           ":2:11\n"
+           "  |\n"
+           "2 |  obj: 2 x ^ 2\n"
+           "  |           ^ unexpected `^` outside `[ ]`\n"},
+      {"unclosed-bracket-eof",
+       "min\n"
+       " obj: [ x * y\n",
+       "ERROR:   expected `]`, found end of file\n"
+       " --> " +
+           filename +
+           ":2:14\n"
+           "  |\n"
+           "2 |  obj: [ x * y\n"
+           "  |              ^ expected `]` before this\n"
+           "  |\n"
+           "  = help: the `[` on line 2 is never closed\n"},
+      {"unclosed-bracket-keyword",
+       "min\n"
+       " obj: [ x * y\n"
+       "end\n",
+       "ERROR:   expected `]`, found `end`\n"
+       " --> " +
+           filename +
+           ":3:1\n"
+           "  |\n"
+           "3 | end\n"
+           "  | ^^^ expected `]` before this\n"
+           "  |\n"
+           "  = help: the `[` on line 2 is never closed\n"},
+      {"quadratic-missing-sign",
+       "min\n"
+       " obj: [ x ^ 2 y ^ 2 ] / 2\n"
+       "end\n",
+       "ERROR:   expected `+`, `-`, or `]`, found `y`\n"
+       " --> " +
+           filename +
+           ":2:15\n"
+           "  |\n"
+           "2 |  obj: [ x ^ 2 y ^ 2 ] / 2\n"
+           "  |               ^ expected `+` or `-` before this\n"
+           "  |\n"
+           "  = help: terms in an expression must be separated by `+` or "
+           "`-`\n"},
+      {"quadratic-bad-divisor",
+       "min\n"
+       " obj: [ x ^ 2 ] / 3\n"
+       "end\n",
+       "ERROR:   expected `2`, found `3`\n"
+       " --> " +
+           filename +
+           ":2:19\n"
+           "  |\n"
+           "2 |  obj: [ x ^ 2 ] / 3\n"
+           "  |                   ^ expected `2` after `/`\n"
+           "  |\n"
+           "  = help: the quadratic part of the objective can only be divided "
+           "by 2\n"},
+      {"quadratic-missing-divisor",
+       "min\n"
+       " obj: [ x ^ 2 ] /\n"
+       "end\n",
+       "ERROR:   expected `2`, found `end`\n"
+       " --> " +
+           filename +
+           ":3:1\n"
+           "  |\n"
+           "3 | end\n"
+           "  | ^^^ expected `2` after `/`\n"
+           "  |\n"
+           "  = help: the quadratic part of the objective can only be divided "
+           "by 2\n"},
+      {"quadratic-bad-power",
+       "min\n"
+       " obj: [ x ^ 3 ]\n"
+       "end\n",
+       "ERROR:   expected `2`, found `3`\n"
+       " --> " +
+           filename +
+           ":2:13\n"
+           "  |\n"
+           "2 |  obj: [ x ^ 3 ]\n"
+           "  |             ^ expected `2` after `^`\n"
+           "  |\n"
+           "  = help: only squared terms like `x ^ 2` are supported\n"},
+      {"quadratic-missing-power",
+       "min\n"
+       " obj: [ x ^ y ]\n"
+       "end\n",
+       "ERROR:   expected `2`, found `y`\n"
+       " --> " +
+           filename +
+           ":2:13\n"
+           "  |\n"
+           "2 |  obj: [ x ^ y ]\n"
+           "  |             ^ expected `2` after `^`\n"
+           "  |\n"
+           "  = help: only squared terms like `x ^ 2` are supported\n"},
+      {"quadratic-linear-term",
+       "min\n"
+       " obj: [ x ]\n"
+       "end\n",
+       "ERROR:   expected `^` or `*`, found `]`\n"
+       " --> " +
+           filename +
+           ":2:11\n"
+           "  |\n"
+           "2 |  obj: [ x ]\n"
+           "  |           ^ expected `^ 2` or `* <variable>`\n"
+           "  |\n"
+           "  = help: linear terms must be outside `[` and `]`\n"},
+      {"quadratic-expected-variable",
+       "min\n"
+       " obj: [ 2 * 3 ]\n"
+       "end\n",
+       "ERROR:   expected a variable, found `3`\n"
+       " --> " +
+           filename +
+           ":2:13\n"
+           "  |\n"
+           "2 |  obj: [ 2 * 3 ]\n"
+           "  |             ^ expected a variable in this term\n"},
+      {"quadratic-expected-variable-after-times",
+       "min\n"
+       " obj: [ x * 2 ]\n"
+       "end\n",
+       "ERROR:   expected a variable, found `2`\n"
+       " --> " +
+           filename +
+           ":2:13\n"
+           "  |\n"
+           "2 |  obj: [ x * 2 ]\n"
+           "  |             ^ expected a variable after `*`\n"},
+      {"quadratic-constraint",
+       "min\n"
+       " x\n"
+       "st\n"
+       " c: x + [ x * y ] >= 1\n"
+       "end\n",
+       "ERROR:   quadratic constraints are not supported by HiGHS\n"
+       " --> " +
+           filename +
+           ":4:9\n"
+           "  |\n"
+           "4 |  c: x + [ x * y ] >= 1\n"
+           "  |         ^ quadratic term in a constraint\n"},
+      {"sos-constraint",
+       "min\n"
+       " x\n"
+       "st\n"
+       " S1:: x:1 y:2\n"
+       "end\n",
+       "ERROR:   SOS constraints are not supported by HiGHS\n"
+       " --> " +
+           filename +
+           ":4:2\n"
+           "  |\n"
+           "4 |  S1:: x:1 y:2\n"
+           "  |  ^^ SOS constraint\n"},
+      {"sos-constraint-named",
+       "min\n"
+       " x\n"
+       "st\n"
+       " c: S1:: x:1 y:2\n"
+       "end\n",
+       "ERROR:   SOS constraints are not supported by HiGHS\n"
+       " --> " +
+           filename +
+           ":4:5\n"
+           "  |\n"
+           "4 |  c: S1:: x:1 y:2\n"
+           "  |     ^^ SOS constraint\n"},
+      {"indicator-constraint",
+       "min\n"
+       " x\n"
+       "st\n"
+       " c: z = 1 -> x >= 1\n"
+       "end\n",
+       "ERROR:   indicator constraints are not supported by HiGHS\n"
+       " --> " +
+           filename +
+           ":4:11\n"
+           "  |\n"
+           "4 |  c: z = 1 -> x >= 1\n"
+           "  |           ^^ indicator constraint\n"},
+      {"missing-comparison-keyword",
+       "min\n"
+       " x\n"
+       "st\n"
+       " c: x\n"
+       "bounds\n"
+       "end\n",
+       "ERROR:   expected a comparison, found `bounds`\n"
+       " --> " +
+           filename +
+           ":5:1\n"
+           "  |\n"
+           "5 | bounds\n"
+           "  | ^^^^^^ expected `<=`, `>=`, or `=` before this\n"
+           "  |\n"
+           "  = help: `bounds` is a section keyword because it is at the start "
+           "of a line\n"},
+      {"missing-comparison-eof",
+       "min\n"
+       " x\n"
+       "st\n"
+       " c: x\n",
+       "ERROR:   expected a comparison, found end of file\n"
+       " --> " +
+           filename +
+           ":4:6\n"
+           "  |\n"
+           "4 |  c: x\n"
+           "  |      ^ expected `<=`, `>=`, or `=` before this\n"},
+      {"missing-right-hand-side",
+       "min\n"
+       " x\n"
+       "st\n"
+       " c: x >= y\n"
+       "end\n",
+       "ERROR:   expected a number, found `y`\n"
+       " --> " +
+           filename +
+           ":4:10\n"
+           "  |\n"
+           "4 |  c: x >= y\n"
+           "  |          ^ expected the right-hand side\n"},
+      {"right-hand-side-keyword",
+       "min\n"
+       " x\n"
+       "st\n"
+       " c: x >= end\n",
+       "ERROR:   expected a number, found `end`\n"
+       " --> " +
+           filename +
+           ":4:10\n"
+           "  |\n"
+           "4 |  c: x >= end\n"
+           "  |          ^^^ expected the right-hand side\n"
+           "  |\n"
+           "  = help: section keywords like `end` must be at the start of a "
+           "line\n"},
+      {"right-hand-side-variable",
+       "min\n"
+       " x\n"
+       "st\n"
+       " c: 3 x >= 2 y\n"
+       "end\n",
+       "ERROR:   expected a new line, found `y`\n"
+       " --> " +
+           filename +
+           ":4:14\n"
+           "  |\n"
+           "4 |  c: 3 x >= 2 y\n"
+           "  |              ^ unexpected variable on the right-hand side\n"
+           "  |\n"
+           "  = help: move the variables to the left-hand side\n"},
+      {"constraint-trailing-content",
+       "min\n"
+       " x\n"
+       "st\n"
+       " c: x + y >= 1 + 1\n"
+       "end\n",
+       "ERROR:   expected a new line, found `+`\n"
+       " --> " +
+           filename +
+           ":4:16\n"
+           "  |\n"
+           "4 |  c: x + y >= 1 + 1\n"
+           "  |                ^ expected the constraint to end before this\n"
+           "  |\n"
+           "  = help: a constraint ends with a comparison and a number; the "
+           "next constraint must start on a new line\n"},
+      {"bound-missing-comparison",
+       "min\n"
+       " x\n"
+       "bounds\n"
+       " x 1\n"
+       "end\n",
+       "ERROR:   expected `free` or a comparison, found `1`\n"
+       " --> " +
+           filename +
+           ":4:4\n"
+           "  |\n"
+           "4 |  x 1\n"
+           "  |    ^ expected `free`, `<=`, `>=`, or `=`\n"},
+      {"bound-bad-start",
+       "min\n"
+       " x\n"
+       "bounds\n"
+       " <= x\n"
+       "end\n",
+       "ERROR:   expected a bound, found `<=`\n"
+       " --> " +
+           filename +
+           ":4:2\n"
+           "  |\n"
+           "4 |  <= x\n"
+           "  |  ^^ expected a variable or a number\n"},
+      {"bound-number-missing-comparison",
+       "min\n"
+       " x\n"
+       "bounds\n"
+       " 1 x\n"
+       "end\n",
+       "ERROR:   expected a comparison, found `x`\n"
+       " --> " +
+           filename +
+           ":4:4\n"
+           "  |\n"
+           "4 |  1 x\n"
+           "  |    ^ expected `<=`, `>=`, or `=`\n"},
+      {"bound-expected-variable",
+       "min\n"
+       " x\n"
+       "bounds\n"
+       " 1 <= 2\n"
+       "end\n",
+       "ERROR:   expected a variable, found `2`\n"
+       " --> " +
+           filename +
+           ":4:7\n"
+           "  |\n"
+           "4 |  1 <= 2\n"
+           "  |       ^ expected a variable\n"},
+      {"bound-missing-value",
+       "min\n"
+       " x\n"
+       "bounds\n"
+       " x <= y\n"
+       "end\n",
+       "ERROR:   expected a number, found `y`\n"
+       " --> " +
+           filename +
+           ":4:7\n"
+           "  |\n"
+           "4 |  x <= y\n"
+           "  |       ^ expected the value of the bound\n"},
+      {"bound-double-equal",
+       "min\n"
+       " x\n"
+       "bounds\n"
+       " 1 = x <= 2\n"
+       "end\n",
+       "ERROR:   a bound on both sides of a variable cannot use `=`\n"
+       " --> " +
+           filename +
+           ":4:4\n"
+           "  |\n"
+           "4 |  1 = x <= 2\n"
+           "  |    ^ expected `<=` or `>=`\n"},
+      {"bound-double-mismatch-less",
+       "min\n"
+       " x\n"
+       "bounds\n"
+       " 1 <= x >= 2\n"
+       "end\n",
+       "ERROR:   the comparisons in a bound on both sides of a variable must "
+       "match\n"
+       " --> " +
+           filename +
+           ":4:9\n"
+           "  |\n"
+           "4 |  1 <= x >= 2\n"
+           "  |         ^^ expected `<=`\n"},
+      {"bound-double-mismatch-greater",
+       "min\n"
+       " x\n"
+       "bounds\n"
+       " 2 >= x <= 1\n"
+       "end\n",
+       "ERROR:   the comparisons in a bound on both sides of a variable must "
+       "match\n"
+       " --> " +
+           filename +
+           ":4:9\n"
+           "  |\n"
+           "4 |  2 >= x <= 1\n"
+           "  |         ^^ expected `>=`\n"},
+      {"bound-trailing-content",
+       "min\n"
+       " x\n"
+       "bounds\n"
+       " x <= 1 y <= 2\n"
+       "end\n",
+       "ERROR:   expected a new line, found `y`\n"
+       " --> " +
+           filename +
+           ":4:9\n"
+           "  |\n"
+           "4 |  x <= 1 y <= 2\n"
+           "  |         ^ expected the bound to end before this\n"
+           "  |\n"
+           "  = help: each bound must be on its own line\n"},
+      {"general-not-variable",
+       "min\n"
+       " x\n"
+       "general\n"
+       " x 1\n"
+       "end\n",
+       "ERROR:   expected a variable, found `1`\n"
+       " --> " +
+           filename +
+           ":4:4\n"
+           "  |\n"
+           "4 |  x 1\n"
+           "  |    ^ expected a variable\n"},
+      {"render-gutter",
+       "\\ comment\n"
+       "\\ comment\n"
+       "\\ comment\n"
+       "\\ comment\n"
+       "\\ comment\n"
+       "\\ comment\n"
+       "\\ comment\n"
+       "\\ comment\n"
+       "\\ comment\n"
+       "min\n"
+       " obj: x y\n"
+       "end\n",
+       "ERROR:   expected `+` or `-`, found `y`\n"
+       "  --> " +
+           filename +
+           ":11:9\n"
+           "   |\n"
+           "11 |  obj: x y\n"
+           "   |         ^ expected `+` or `-` before this\n"
+           "   |\n"
+           "   = help: terms in an expression must be separated by `+` or "
+           "`-`\n"},
+      {"render-crlf",
+       "min\r\n"
+       " obj: x y\r\n"
+       "end\r\n",
+       "ERROR:   expected `+` or `-`, found `y`\n"
+       " --> " +
+           filename +
+           ":2:9\n"
+           "  |\n"
+           "2 |  obj: x y\n"
+           "  |         ^ expected `+` or `-` before this\n"
+           "  |\n"
+           "  = help: terms in an expression must be separated by `+` or "
+           "`-`\n"},
+      {"render-tab",
+       "min\n"
+       "\tobj:\tx\ty\n"
+       "end\n",
+       "ERROR:   expected `+` or `-`, found `y`\n"
+       " --> " +
+           filename +
+           ":2:9\n"
+           "  |\n"
+           "2 |  obj: x y\n"
+           "  |         ^ expected `+` or `-` before this\n"
+           "  |\n"
+           "  = help: terms in an expression must be separated by `+` or "
+           "`-`\n"},
+      {"render-long-line",
+       "min\n"
+       " obj: 1 x1 + 2 x2 + 3 x3 + 4 x4 + 5 x5 + 6 x6 + 7 x7 + 8 x8 + 9 x9 + "
+       "10 x10 + 11 x11 + 12 x12 + 13 x13 + 14 x14 y 1 z1 +  2 z2 +  3 z3 +  4 "
+       "z4 +  5 z5 +  6 z6 +  7 z7 +  8 z8 +  9 z9 +  10 z10 +  11 z11 +  12 "
+       "z12 +  13 z13 +  14 z14\n"
+       "end\n",
+       "ERROR:   expected `+` or `-`, found `y`\n"
+       " --> " +
+           filename +
+           ":2:113\n"
+           "  |\n"
+           "2 | ...x10 + 11 x11 + 12 x12 + 13 x13 + 14 x14 y 1 z1 +  2 z2 +  3 "
+           "z3 +  4 z4 +  5 z5 + ...\n"
+           "  |                                            ^ expected `+` or "
+           "`-` before this\n"
+           "  |\n"
+           "  = help: terms in an expression must be separated by `+` or "
+           "`-`\n"},
+      {"render-long-token",
+       "min\n"
+       " obj: x aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"
+       "end\n",
+       "ERROR:   expected `+` or `-`, found "
+       "`aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa...`\n"
+       " --> " +
+           filename +
+           ":2:9\n"
+           "  |\n"
+           "2 |  obj: x aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"
+           "  |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ expected `+` "
+           "or `-` before this\n"
+           "  |\n"
+           "  = help: terms in an expression must be separated by `+` or "
+           "`-`\n"},
+      {"render-utf8",
+       "min\n"
+       " obj: caf\xC3\xA9 \xC3\xA9t\xC3\xA9\n"
+       "end\n",
+       "ERROR:   expected `+` or `-`, found `\xC3\xA9t\xC3\xA9`\n"
+       " --> " +
+           filename +
+           ":2:12\n"
+           "  |\n"
+           "2 |  obj: caf\xC3\xA9 \xC3\xA9t\xC3\xA9\n"
+           "  |            ^^^ expected `+` or `-` before this\n"
+           "  |\n"
+           "  = help: terms in an expression must be separated by `+` or "
+           "`-`\n"},
+      {"render-utf8-truncate",
+       "min\n"
+       " obj: x "
+       "a\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3"
+       "\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\n"
+       "end\n",
+       "ERROR:   expected `+` or `-`, found "
+       "`a\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3"
+       "\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9...`\n"
+       " --> " +
+           filename +
+           ":2:9\n"
+           "  |\n"
+           "2 |  obj: x "
+           "a\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9"
+           "\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\n"
+           "  |         ^^^^^^^^^^^^^^^^^ expected `+` or `-` before this\n"
+           "  |\n"
+           "  = help: terms in an expression must be separated by `+` or "
+           "`-`\n"},
+      {"render-utf8-window",
+       "min\n"
+       " obj: "
+       "x\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3"
+       "\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9"
+       "\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3"
+       "\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9 "
+       "y\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3"
+       "\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9"
+       "\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3"
+       "\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9 + z\n"
+       "end\n",
+       "ERROR:   expected `+` or `-`, found "
+       "`y\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3"
+       "\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9...`\n"
+       " --> " +
+           filename +
+           ":2:39\n"
+           "  |\n"
+           "2 | "
+           "..."
+           "\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9"
+           "\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9"
+           "\xC3\xA9\xC3\xA9\xC3\xA9 "
+           "y\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9"
+           "\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9"
+           "\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9"
+           "\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9 + z\n"
+           "  |                        ^^^^^^^^^^^^^^^^^^^^^ expected `+` or "
+           "`-` before this\n"
+           "  |\n"
+           "  = help: terms in an expression must be separated by `+` or "
+           "`-`\n"},
+      {"render-utf8-window-left",
+       "min\n"
+       " obj: "
+       "a\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3"
+       "\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9"
+       "\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3"
+       "\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9 + "
+       "z\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3"
+       "\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9"
+       "\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3"
+       "\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9x y\n"
+       "end\n",
+       "ERROR:   expected `+` or `-`, found `y`\n"
+       " --> " +
+           filename +
+           ":2:74\n"
+           "  |\n"
+           "2 | "
+           "..."
+           "\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9"
+           "\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9"
+           "\xC3\xA9\xC3\xA9\xC3\xA9x y\n"
+           "  |                         ^ expected `+` or `-` before this\n"
+           "  |\n"
+           "  = help: terms in an expression must be separated by `+` or "
+           "`-`\n"},
+      {"missing-end-no-newline",
+       "min\n"
+       " x",
+       "ERROR:   expected `end`, found end of file\n"
+       " --> " +
+           filename +
+           ":2:3\n"
+           "  |\n"
+           "2 |  x\n"
+           "  |   ^ expected `end` after this\n"
+           "  |\n"
+           "  = help: an LP file must finish with the keyword `end`\n"},
+      // The tokens of "semi-continuous" must be on one line
+      {"semi-dash-next-line",
+       "min\n"
+       " x\n"
+       "semi\n"
+       "- continuous\n"
+       "end\n",
+       "ERROR:   expected a variable, found `-`\n"
+       " --> " +
+           filename +
+           ":4:1\n"
+           "  |\n"
+           "4 | - continuous\n"
+           "  | ^ expected a variable\n"},
+      {"semi-continuous-next-line",
+       "min\n"
+       " x\n"
+       "semi -\n"
+       "continuous\n"
+       "end\n",
+       "ERROR:   expected a variable, found `-`\n"
+       " --> " +
+           filename +
+           ":3:6\n"
+           "  |\n"
+           "3 | semi -\n"
+           "  |      ^ expected a variable\n"},
+      {"render-utf8-window-right",
+       "min\n"
+       " obj: x "
+       "y\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3"
+       "\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9"
+       "\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3"
+       "\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9"
+       "\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9 + "
+       "z\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3"
+       "\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9"
+       "\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3"
+       "\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\n"
+       "end\n",
+       "ERROR:   expected `+` or `-`, found "
+       "`y\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3"
+       "\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9...`\n"
+       " --> " +
+           filename +
+           ":2:9\n"
+           "  |\n"
+           "2 |  obj: x "
+           "y\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9"
+           "\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9"
+           "\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9"
+           "\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9"
+           "\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9..."
+           "\n"
+           "  |         ^^^^^^^^^^^^^^^^^^^^^ expected `+` or `-` before this\n"
+           "  |\n"
+           "  = help: terms in an expression must be separated by `+` or "
+           "`-`\n"},
+      {"render-gutter-crlf-eof",
+       "\\ comment\r\n"
+       "\\ comment\r\n"
+       "\\ comment\r\n"
+       "\\ comment\r\n"
+       "\\ comment\r\n"
+       "\\ comment\r\n"
+       "\\ comment\r\n"
+       "\\ comment\r\n"
+       "\\ comment\r\n"
+       "min\r\n"
+       " obj: x\r\n",
+       "ERROR:   expected `end`, found end of file\n"
+       "  --> " +
+           filename +
+           ":11:8\n"
+           "   |\n"
+           "11 |  obj: x\n"
+           "   |        ^ expected `end` after this\n"
+           "   |\n"
+           "   = help: an LP file must finish with the keyword `end`\n"},
+      {"delete-character",
+       "min\n"
+       " x\x7F\n"
+       "end\n",
+       "ERROR:   unexpected control character 0x7F\n"
+       " --> " +
+           filename +
+           ":2:3\n"
+           "  |\n"
+           "2 |  x\x7F\n"
+           "  |   ^ this character is not valid in an LP file\n"},
+      {"missing-end-after-number",
+       "min\n"
+       " obj: x + 1",
+       "ERROR:   expected `end`, found end of file\n"
+       " --> " +
+           filename +
+           ":2:12\n"
+           "  |\n"
+           "2 |  obj: x + 1\n"
+           "  |            ^ expected `end` after this\n"
+           "  |\n"
+           "  = help: an LP file must finish with the keyword `end`\n"},
+      {"missing-end-after-exponent",
+       "min\n"
+       " obj: x + 2e",
+       "ERROR:   expected `end`, found end of file\n"
+       " --> " +
+           filename +
+           ":2:13\n"
+           "  |\n"
+           "2 |  obj: x + 2e\n"
+           "  |             ^ expected `end` after this\n"
+           "  |\n"
+           "  = help: an LP file must finish with the keyword `end`\n"},
+      {"missing-sign-new-line",
+       "min\n"
+       " obj: x\n"
+       " y\n"
+       "end\n",
+       "ERROR:   expected `+` or `-`, found `y`\n"
+       " --> " +
+           filename +
+           ":3:2\n"
+           "  |\n"
+           "3 |  y\n"
+           "  |  ^ expected `+` or `-` before this\n"
+           "  |\n"
+           "  = help: terms in an expression must be separated by `+` or "
+           "`-`\n"},
+      {"missing-sign-constant-then-sign",
+       "min\n"
+       " obj: x 3 + y\n"
+       "end\n",
+       "ERROR:   expected `+` or `-`, found `3`\n"
+       " --> " +
+           filename +
+           ":2:9\n"
+           "  |\n"
+           "2 |  obj: x 3 + y\n"
+           "  |         ^ expected `+` or `-` before this\n"
+           "  |\n"
+           "  = help: terms in an expression must be separated by `+` or "
+           "`-`\n"},
+      {"expected-variable-keyword",
+       "min\n"
+       " obj: 2 *\n"
+       "end\n",
+       "ERROR:   expected a variable, found `end`\n"
+       " --> " +
+           filename +
+           ":3:1\n"
+           "  |\n"
+           "3 | end\n"
+           "  | ^^^ expected a variable after `*`\n"},
+      {"right-hand-side-symbol",
+       "min\n"
+       " x\n"
+       "st\n"
+       " c: x >= [\n"
+       "end\n",
+       "ERROR:   expected a number, found `[`\n"
+       " --> " +
+           filename +
+           ":4:10\n"
+           "  |\n"
+           "4 |  c: x >= [\n"
+           "  |          ^ expected the right-hand side\n"},
+      {"constraint-equal-variable",
+       "min\n"
+       " x\n"
+       "st\n"
+       " c: x = y\n"
+       "end\n",
+       "ERROR:   expected a number, found `y`\n"
+       " --> " +
+           filename +
+           ":4:9\n"
+           "  |\n"
+           "4 |  c: x = y\n"
+           "  |         ^ expected the right-hand side\n"},
+      {"bound-not-free",
+       "min\n"
+       " x\n"
+       "bounds\n"
+       " x y\n"
+       "end\n",
+       "ERROR:   expected `free` or a comparison, found `y`\n"
+       " --> " +
+           filename +
+           ":4:4\n"
+           "  |\n"
+           "4 |  x y\n"
+           "  |    ^ expected `free`, `<=`, `>=`, or `=`\n"},
+      {"semi-dash-number",
+       "min\n"
+       " x\n"
+       "semi-2\n"
+       "end\n",
+       "ERROR:   expected a variable, found `-`\n"
+       " --> " +
+           filename +
+           ":3:5\n"
+           "  |\n"
+           "3 | semi-2\n"
+           "  |     ^ expected a variable\n"},
+      {"semi-dash-other",
+       "min\n"
+       " x\n"
+       "semi-cont\n"
+       "end\n",
+       "ERROR:   expected a variable, found `-`\n"
+       " --> " +
+           filename +
+           ":3:5\n"
+           "  |\n"
+           "3 | semi-cont\n"
+           "  |     ^ expected a variable\n"},
+      {"render-utf8-window-right-cut",
+       "min\n"
+       " obj: x y "
+       "\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3"
+       "\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9"
+       "\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3"
+       "\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\n"
+       "end\n",
+       "ERROR:   expected `+` or `-`, found `y`\n"
+       " --> " +
+           filename +
+           ":2:9\n"
+           "  |\n"
+           "2 |  obj: x y "
+           "\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9"
+           "\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9\xC3\xA9"
+           "\xC3\xA9\xC3\xA9\xC3\xA9...\n"
+           "  |         ^ expected `+` or `-` before this\n"
+           "  |\n"
+           "  = help: terms in an expression must be separated by `+` or "
+           "`-`\n"},
   };
   for (const DiagnosticCase& c : cases) {
     INFO(c.name);
@@ -918,220 +1166,284 @@ TEST_CASE("lp-file-format-warnings", "[LpFileFormat]") {
   std::string filename = test_name + ".lp";
   // Each file is valid, but reading it logs warnings
   const std::vector<DiagnosticCase> cases = {
-    {"constant",
-     "min\n"
-     " x\n"
-     "st\n"
-     " c: x - 1 >= 1\n"
-     "end\n",
-     "WARNING: a constant on the left-hand side of a constraint is ignored\n"
-     " --> " + filename + ":4:7\n"
-     "  |\n"
-     "4 |  c: x - 1 >= 1\n"
-     "  |       ^^^ this constant is ignored\n"
-     "  |\n"
-     "  = help: move the constant to the right-hand side\n"},
-    {"duplicate",
-     "min\n"
-     " x\n"
-     "st\n"
-     " c: x + y + 2 x - x >= 1\n"
-     "end\n",
-     "WARNING: variable `x` appears more than once in this constraint\n"
-     " --> " + filename + ":4:15\n"
-     "  |\n"
-     "4 |  c: x + y + 2 x - x >= 1\n"
-     "  |               ^ repeated here\n"
-     "  |\n"
-     "  = help: the coefficients are summed\n"},
-    {"eleven",
-     "min\n"
-     " x\n"
-     "st\n"
-     " c1: x + 1 >= 1\n"
-     " c2: x + 2 >= 2\n"
-     " c3: x + 3 >= 3\n"
-     " c4: x + 4 >= 4\n"
-     " c5: x + 5 >= 5\n"
-     " c6: x + 6 >= 6\n"
-     " c7: x + 7 >= 7\n"
-     " c8: x + 8 >= 8\n"
-     " c9: x + 9 >= 9\n"
-     " c10: x + 10 >= 10\n"
-     " c11: x + 11 >= 11\n"
-     "end\n",
-     "WARNING: a constant on the left-hand side of a constraint is ignored\n"
-     " --> " + filename + ":4:8\n"
-     "  |\n"
-     "4 |  c1: x + 1 >= 1\n"
-     "  |        ^^^ this constant is ignored\n"
-     "  |\n"
-     "  = help: move the constant to the right-hand side\n"
-     "WARNING: a constant on the left-hand side of a constraint is ignored\n"
-     " --> " + filename + ":5:8\n"
-     "  |\n"
-     "5 |  c2: x + 2 >= 2\n"
-     "  |        ^^^ this constant is ignored\n"
-     "  |\n"
-     "  = help: move the constant to the right-hand side\n"
-     "WARNING: a constant on the left-hand side of a constraint is ignored\n"
-     " --> " + filename + ":6:8\n"
-     "  |\n"
-     "6 |  c3: x + 3 >= 3\n"
-     "  |        ^^^ this constant is ignored\n"
-     "  |\n"
-     "  = help: move the constant to the right-hand side\n"
-     "WARNING: a constant on the left-hand side of a constraint is ignored\n"
-     " --> " + filename + ":7:8\n"
-     "  |\n"
-     "7 |  c4: x + 4 >= 4\n"
-     "  |        ^^^ this constant is ignored\n"
-     "  |\n"
-     "  = help: move the constant to the right-hand side\n"
-     "WARNING: a constant on the left-hand side of a constraint is ignored\n"
-     " --> " + filename + ":8:8\n"
-     "  |\n"
-     "8 |  c5: x + 5 >= 5\n"
-     "  |        ^^^ this constant is ignored\n"
-     "  |\n"
-     "  = help: move the constant to the right-hand side\n"
-     "WARNING: a constant on the left-hand side of a constraint is ignored\n"
-     " --> " + filename + ":9:8\n"
-     "  |\n"
-     "9 |  c6: x + 6 >= 6\n"
-     "  |        ^^^ this constant is ignored\n"
-     "  |\n"
-     "  = help: move the constant to the right-hand side\n"
-     "WARNING: a constant on the left-hand side of a constraint is ignored\n"
-     "  --> " + filename + ":10:8\n"
-     "   |\n"
-     "10 |  c7: x + 7 >= 7\n"
-     "   |        ^^^ this constant is ignored\n"
-     "   |\n"
-     "   = help: move the constant to the right-hand side\n"
-     "WARNING: a constant on the left-hand side of a constraint is ignored\n"
-     "  --> " + filename + ":11:8\n"
-     "   |\n"
-     "11 |  c8: x + 8 >= 8\n"
-     "   |        ^^^ this constant is ignored\n"
-     "   |\n"
-     "   = help: move the constant to the right-hand side\n"
-     "WARNING: a constant on the left-hand side of a constraint is ignored\n"
-     "  --> " + filename + ":12:8\n"
-     "   |\n"
-     "12 |  c9: x + 9 >= 9\n"
-     "   |        ^^^ this constant is ignored\n"
-     "   |\n"
-     "   = help: move the constant to the right-hand side\n"
-     "WARNING: a constant on the left-hand side of a constraint is ignored\n"
-     "  --> " + filename + ":13:9\n"
-     "   |\n"
-     "13 |  c10: x + 10 >= 10\n"
-     "   |         ^^^^ this constant is ignored\n"
-     "   |\n"
-     "   = help: move the constant to the right-hand side\n"
-     "WARNING: 1 more warning was not shown\n"},
-    {"twelve",
-     "min\n"
-     " x\n"
-     "st\n"
-     " c1: x + 1 >= 1\n"
-     " c2: x + 2 >= 2\n"
-     " c3: x + 3 >= 3\n"
-     " c4: x + 4 >= 4\n"
-     " c5: x + 5 >= 5\n"
-     " c6: x + 6 >= 6\n"
-     " c7: x + 7 >= 7\n"
-     " c8: x + 8 >= 8\n"
-     " c9: x + 9 >= 9\n"
-     " c10: x + 10 >= 10\n"
-     " c11: x + 11 >= 11\n"
-     " c12: x + 12 >= 12\n"
-     "end\n",
-     "WARNING: a constant on the left-hand side of a constraint is ignored\n"
-     " --> " + filename + ":4:8\n"
-     "  |\n"
-     "4 |  c1: x + 1 >= 1\n"
-     "  |        ^^^ this constant is ignored\n"
-     "  |\n"
-     "  = help: move the constant to the right-hand side\n"
-     "WARNING: a constant on the left-hand side of a constraint is ignored\n"
-     " --> " + filename + ":5:8\n"
-     "  |\n"
-     "5 |  c2: x + 2 >= 2\n"
-     "  |        ^^^ this constant is ignored\n"
-     "  |\n"
-     "  = help: move the constant to the right-hand side\n"
-     "WARNING: a constant on the left-hand side of a constraint is ignored\n"
-     " --> " + filename + ":6:8\n"
-     "  |\n"
-     "6 |  c3: x + 3 >= 3\n"
-     "  |        ^^^ this constant is ignored\n"
-     "  |\n"
-     "  = help: move the constant to the right-hand side\n"
-     "WARNING: a constant on the left-hand side of a constraint is ignored\n"
-     " --> " + filename + ":7:8\n"
-     "  |\n"
-     "7 |  c4: x + 4 >= 4\n"
-     "  |        ^^^ this constant is ignored\n"
-     "  |\n"
-     "  = help: move the constant to the right-hand side\n"
-     "WARNING: a constant on the left-hand side of a constraint is ignored\n"
-     " --> " + filename + ":8:8\n"
-     "  |\n"
-     "8 |  c5: x + 5 >= 5\n"
-     "  |        ^^^ this constant is ignored\n"
-     "  |\n"
-     "  = help: move the constant to the right-hand side\n"
-     "WARNING: a constant on the left-hand side of a constraint is ignored\n"
-     " --> " + filename + ":9:8\n"
-     "  |\n"
-     "9 |  c6: x + 6 >= 6\n"
-     "  |        ^^^ this constant is ignored\n"
-     "  |\n"
-     "  = help: move the constant to the right-hand side\n"
-     "WARNING: a constant on the left-hand side of a constraint is ignored\n"
-     "  --> " + filename + ":10:8\n"
-     "   |\n"
-     "10 |  c7: x + 7 >= 7\n"
-     "   |        ^^^ this constant is ignored\n"
-     "   |\n"
-     "   = help: move the constant to the right-hand side\n"
-     "WARNING: a constant on the left-hand side of a constraint is ignored\n"
-     "  --> " + filename + ":11:8\n"
-     "   |\n"
-     "11 |  c8: x + 8 >= 8\n"
-     "   |        ^^^ this constant is ignored\n"
-     "   |\n"
-     "   = help: move the constant to the right-hand side\n"
-     "WARNING: a constant on the left-hand side of a constraint is ignored\n"
-     "  --> " + filename + ":12:8\n"
-     "   |\n"
-     "12 |  c9: x + 9 >= 9\n"
-     "   |        ^^^ this constant is ignored\n"
-     "   |\n"
-     "   = help: move the constant to the right-hand side\n"
-     "WARNING: a constant on the left-hand side of a constraint is ignored\n"
-     "  --> " + filename + ":13:9\n"
-     "   |\n"
-     "13 |  c10: x + 10 >= 10\n"
-     "   |         ^^^^ this constant is ignored\n"
-     "   |\n"
-     "   = help: move the constant to the right-hand side\n"
-     "WARNING: 2 more warnings were not shown\n"},
-    {"two-constants",
-     "min\n"
-     " x\n"
-     "st\n"
-     " c: x - 1 + 2 >= 1\n"
-     "end\n",
-     "WARNING: a constant on the left-hand side of a constraint is ignored\n"
-     " --> " + filename + ":4:7\n"
-     "  |\n"
-     "4 |  c: x - 1 + 2 >= 1\n"
-     "  |       ^^^ this constant is ignored\n"
-     "  |\n"
-     "  = help: move the constant to the right-hand side\n"},
+      {"constant",
+       "min\n"
+       " x\n"
+       "st\n"
+       " c: x - 1 >= 1\n"
+       "end\n",
+       "WARNING: a constant on the left-hand side of a constraint is ignored\n"
+       " --> " +
+           filename +
+           ":4:7\n"
+           "  |\n"
+           "4 |  c: x - 1 >= 1\n"
+           "  |       ^^^ this constant is ignored\n"
+           "  |\n"
+           "  = help: move the constant to the right-hand side\n"},
+      {"duplicate",
+       "min\n"
+       " x\n"
+       "st\n"
+       " c: x + y + 2 x - x >= 1\n"
+       "end\n",
+       "WARNING: variable `x` appears more than once in this constraint\n"
+       " --> " +
+           filename +
+           ":4:15\n"
+           "  |\n"
+           "4 |  c: x + y + 2 x - x >= 1\n"
+           "  |               ^ repeated here\n"
+           "  |\n"
+           "  = help: the coefficients are summed\n"},
+      {"eleven",
+       "min\n"
+       " x\n"
+       "st\n"
+       " c1: x + 1 >= 1\n"
+       " c2: x + 2 >= 2\n"
+       " c3: x + 3 >= 3\n"
+       " c4: x + 4 >= 4\n"
+       " c5: x + 5 >= 5\n"
+       " c6: x + 6 >= 6\n"
+       " c7: x + 7 >= 7\n"
+       " c8: x + 8 >= 8\n"
+       " c9: x + 9 >= 9\n"
+       " c10: x + 10 >= 10\n"
+       " c11: x + 11 >= 11\n"
+       "end\n",
+       "WARNING: a constant on the left-hand side of a constraint is ignored\n"
+       " --> " +
+           filename +
+           ":4:8\n"
+           "  |\n"
+           "4 |  c1: x + 1 >= 1\n"
+           "  |        ^^^ this constant is ignored\n"
+           "  |\n"
+           "  = help: move the constant to the right-hand side\n"
+           "WARNING: a constant on the left-hand side of a constraint is "
+           "ignored\n"
+           " --> " +
+           filename +
+           ":5:8\n"
+           "  |\n"
+           "5 |  c2: x + 2 >= 2\n"
+           "  |        ^^^ this constant is ignored\n"
+           "  |\n"
+           "  = help: move the constant to the right-hand side\n"
+           "WARNING: a constant on the left-hand side of a constraint is "
+           "ignored\n"
+           " --> " +
+           filename +
+           ":6:8\n"
+           "  |\n"
+           "6 |  c3: x + 3 >= 3\n"
+           "  |        ^^^ this constant is ignored\n"
+           "  |\n"
+           "  = help: move the constant to the right-hand side\n"
+           "WARNING: a constant on the left-hand side of a constraint is "
+           "ignored\n"
+           " --> " +
+           filename +
+           ":7:8\n"
+           "  |\n"
+           "7 |  c4: x + 4 >= 4\n"
+           "  |        ^^^ this constant is ignored\n"
+           "  |\n"
+           "  = help: move the constant to the right-hand side\n"
+           "WARNING: a constant on the left-hand side of a constraint is "
+           "ignored\n"
+           " --> " +
+           filename +
+           ":8:8\n"
+           "  |\n"
+           "8 |  c5: x + 5 >= 5\n"
+           "  |        ^^^ this constant is ignored\n"
+           "  |\n"
+           "  = help: move the constant to the right-hand side\n"
+           "WARNING: a constant on the left-hand side of a constraint is "
+           "ignored\n"
+           " --> " +
+           filename +
+           ":9:8\n"
+           "  |\n"
+           "9 |  c6: x + 6 >= 6\n"
+           "  |        ^^^ this constant is ignored\n"
+           "  |\n"
+           "  = help: move the constant to the right-hand side\n"
+           "WARNING: a constant on the left-hand side of a constraint is "
+           "ignored\n"
+           "  --> " +
+           filename +
+           ":10:8\n"
+           "   |\n"
+           "10 |  c7: x + 7 >= 7\n"
+           "   |        ^^^ this constant is ignored\n"
+           "   |\n"
+           "   = help: move the constant to the right-hand side\n"
+           "WARNING: a constant on the left-hand side of a constraint is "
+           "ignored\n"
+           "  --> " +
+           filename +
+           ":11:8\n"
+           "   |\n"
+           "11 |  c8: x + 8 >= 8\n"
+           "   |        ^^^ this constant is ignored\n"
+           "   |\n"
+           "   = help: move the constant to the right-hand side\n"
+           "WARNING: a constant on the left-hand side of a constraint is "
+           "ignored\n"
+           "  --> " +
+           filename +
+           ":12:8\n"
+           "   |\n"
+           "12 |  c9: x + 9 >= 9\n"
+           "   |        ^^^ this constant is ignored\n"
+           "   |\n"
+           "   = help: move the constant to the right-hand side\n"
+           "WARNING: a constant on the left-hand side of a constraint is "
+           "ignored\n"
+           "  --> " +
+           filename +
+           ":13:9\n"
+           "   |\n"
+           "13 |  c10: x + 10 >= 10\n"
+           "   |         ^^^^ this constant is ignored\n"
+           "   |\n"
+           "   = help: move the constant to the right-hand side\n"
+           "WARNING: 1 more warning was not shown\n"},
+      {"twelve",
+       "min\n"
+       " x\n"
+       "st\n"
+       " c1: x + 1 >= 1\n"
+       " c2: x + 2 >= 2\n"
+       " c3: x + 3 >= 3\n"
+       " c4: x + 4 >= 4\n"
+       " c5: x + 5 >= 5\n"
+       " c6: x + 6 >= 6\n"
+       " c7: x + 7 >= 7\n"
+       " c8: x + 8 >= 8\n"
+       " c9: x + 9 >= 9\n"
+       " c10: x + 10 >= 10\n"
+       " c11: x + 11 >= 11\n"
+       " c12: x + 12 >= 12\n"
+       "end\n",
+       "WARNING: a constant on the left-hand side of a constraint is ignored\n"
+       " --> " +
+           filename +
+           ":4:8\n"
+           "  |\n"
+           "4 |  c1: x + 1 >= 1\n"
+           "  |        ^^^ this constant is ignored\n"
+           "  |\n"
+           "  = help: move the constant to the right-hand side\n"
+           "WARNING: a constant on the left-hand side of a constraint is "
+           "ignored\n"
+           " --> " +
+           filename +
+           ":5:8\n"
+           "  |\n"
+           "5 |  c2: x + 2 >= 2\n"
+           "  |        ^^^ this constant is ignored\n"
+           "  |\n"
+           "  = help: move the constant to the right-hand side\n"
+           "WARNING: a constant on the left-hand side of a constraint is "
+           "ignored\n"
+           " --> " +
+           filename +
+           ":6:8\n"
+           "  |\n"
+           "6 |  c3: x + 3 >= 3\n"
+           "  |        ^^^ this constant is ignored\n"
+           "  |\n"
+           "  = help: move the constant to the right-hand side\n"
+           "WARNING: a constant on the left-hand side of a constraint is "
+           "ignored\n"
+           " --> " +
+           filename +
+           ":7:8\n"
+           "  |\n"
+           "7 |  c4: x + 4 >= 4\n"
+           "  |        ^^^ this constant is ignored\n"
+           "  |\n"
+           "  = help: move the constant to the right-hand side\n"
+           "WARNING: a constant on the left-hand side of a constraint is "
+           "ignored\n"
+           " --> " +
+           filename +
+           ":8:8\n"
+           "  |\n"
+           "8 |  c5: x + 5 >= 5\n"
+           "  |        ^^^ this constant is ignored\n"
+           "  |\n"
+           "  = help: move the constant to the right-hand side\n"
+           "WARNING: a constant on the left-hand side of a constraint is "
+           "ignored\n"
+           " --> " +
+           filename +
+           ":9:8\n"
+           "  |\n"
+           "9 |  c6: x + 6 >= 6\n"
+           "  |        ^^^ this constant is ignored\n"
+           "  |\n"
+           "  = help: move the constant to the right-hand side\n"
+           "WARNING: a constant on the left-hand side of a constraint is "
+           "ignored\n"
+           "  --> " +
+           filename +
+           ":10:8\n"
+           "   |\n"
+           "10 |  c7: x + 7 >= 7\n"
+           "   |        ^^^ this constant is ignored\n"
+           "   |\n"
+           "   = help: move the constant to the right-hand side\n"
+           "WARNING: a constant on the left-hand side of a constraint is "
+           "ignored\n"
+           "  --> " +
+           filename +
+           ":11:8\n"
+           "   |\n"
+           "11 |  c8: x + 8 >= 8\n"
+           "   |        ^^^ this constant is ignored\n"
+           "   |\n"
+           "   = help: move the constant to the right-hand side\n"
+           "WARNING: a constant on the left-hand side of a constraint is "
+           "ignored\n"
+           "  --> " +
+           filename +
+           ":12:8\n"
+           "   |\n"
+           "12 |  c9: x + 9 >= 9\n"
+           "   |        ^^^ this constant is ignored\n"
+           "   |\n"
+           "   = help: move the constant to the right-hand side\n"
+           "WARNING: a constant on the left-hand side of a constraint is "
+           "ignored\n"
+           "  --> " +
+           filename +
+           ":13:9\n"
+           "   |\n"
+           "13 |  c10: x + 10 >= 10\n"
+           "   |         ^^^^ this constant is ignored\n"
+           "   |\n"
+           "   = help: move the constant to the right-hand side\n"
+           "WARNING: 2 more warnings were not shown\n"},
+      {"two-constants",
+       "min\n"
+       " x\n"
+       "st\n"
+       " c: x - 1 + 2 >= 1\n"
+       "end\n",
+       "WARNING: a constant on the left-hand side of a constraint is ignored\n"
+       " --> " +
+           filename +
+           ":4:7\n"
+           "  |\n"
+           "4 |  c: x - 1 + 2 >= 1\n"
+           "  |       ^^^ this constant is ignored\n"
+           "  |\n"
+           "  = help: move the constant to the right-hand side\n"},
   };
   for (const DiagnosticCase& c : cases) {
     INFO(c.name);
@@ -1208,9 +1520,9 @@ TEST_CASE("lp-file-format-model", "[LpFileFormat]") {
   const HighsInt num_col = 14;
   REQUIRE(lp.num_col_ == num_col);
   REQUIRE(lp.num_row_ == 8);
-  REQUIRE(lp.col_names_ ==
-          std::vector<std::string>{"x", "y", "z", "w", "v", "u", "t", "s",
-                                   "r", "q", "p", "sc", "b1", "b2"});
+  REQUIRE(lp.col_names_ == std::vector<std::string>{"x", "y", "z", "w", "v",
+                                                    "u", "t", "s", "r", "q",
+                                                    "p", "sc", "b1", "b2"});
   REQUIRE(lp.row_names_ == std::vector<std::string>{"c1", "c2", "55", "9.9",
                                                     "c5", "HiGHS_R5", "c7",
                                                     "c8"});
@@ -1225,8 +1537,8 @@ TEST_CASE("lp-file-format-model", "[LpFileFormat]") {
   REQUIRE(lp.col_cost_ == cost);
   REQUIRE(lp.col_lower_ == std::vector<double>{0, -5, -1, 1, -inf, 4, -inf,
                                                -inf, 0, 2, 0, 2, 0, 0});
-  REQUIRE(lp.col_upper_ == std::vector<double>{10, inf, 1, 3, inf, 4, inf,
-                                               inf, 7, 2, inf, 10, 5, 1});
+  REQUIRE(lp.col_upper_ == std::vector<double>{10, inf, 1, 3, inf, 4, inf, inf,
+                                               7, 2, inf, 10, 5, 1});
   std::vector<HighsVarType> integrality(num_col, HighsVarType::kContinuous);
   integrality[8] = HighsVarType::kInteger;
   integrality[9] = HighsVarType::kInteger;
@@ -1247,8 +1559,8 @@ TEST_CASE("lp-file-format-model", "[LpFileFormat]") {
   REQUIRE(matrix.start_ == start);
   REQUIRE(matrix.index_ ==
           std::vector<HighsInt>{0, 1, 2, 4, 5, 7, 0, 1, 3, 5, 7, 3, 5, 2});
-  REQUIRE(matrix.value_ == std::vector<double>{1, 1, 1, 2, 1, 1, 1, -1, 1, 1,
-                                               1, 1, 1, 1});
+  REQUIRE(matrix.value_ ==
+          std::vector<double>{1, 1, 1, 2, 1, 1, 1, -1, 1, 1, 1, 1, 1, 1});
   REQUIRE(!highs.getModel().isQp());
 }
 
@@ -1297,9 +1609,8 @@ TEST_CASE("lp-file-format-hessian", "[LpFileFormat]") {
   REQUIRE(!highs.getModel().isQp());
 
   // Brackets can be empty
-  REQUIRE(
-      readLp(highs, filename, "min\n obj: x + [ ] / 2\nend\n") ==
-      HighsStatus::kOk);
+  REQUIRE(readLp(highs, filename, "min\n obj: x + [ ] / 2\nend\n") ==
+          HighsStatus::kOk);
   REQUIRE(!highs.getModel().isQp());
 }
 
@@ -1459,8 +1770,7 @@ static std::string largeLpFile(const HighsInt num_row,
   std::string content = "min\n obj: y\nst\n";
   for (HighsInt i = 0; i < num_row; i++)
     content += " c" + std::to_string(i) + ": " + std::to_string(i + 1) + " x" +
-               std::to_string(i % 1000) + " + y >= " + std::to_string(i) +
-               "\n";
+               std::to_string(i % 1000) + " + y >= " + std::to_string(i) + "\n";
   return content + extra + "end\n";
 }
 
@@ -1486,9 +1796,11 @@ TEST_CASE("lp-file-format-large-file", "[LpFileFormat]") {
   // Diagnostics near the end of the file show the right line
   std::string log;
   REQUIRE(readLp(highs, filename, largeLpFile(num_row, " c: x y >= 1\n"),
-          log) == HighsStatus::kError);
+                 log) == HighsStatus::kError);
   REQUIRE(log.find("ERROR:   expected `+` or `-`, found `y`\n"
-                   "      --> " + filename + ":100004:7\n"
+                   "      --> " +
+                   filename +
+                   ":100004:7\n"
                    "       |\n"
                    "100004 |  c: x y >= 1\n"
                    "       |       ^ expected `+` or `-` before this\n") !=
@@ -1497,7 +1809,9 @@ TEST_CASE("lp-file-format-large-file", "[LpFileFormat]") {
                  log) == HighsStatus::kWarning);
   REQUIRE(log.find("WARNING: a constant on the left-hand side of a "
                    "constraint is ignored\n"
-                   "      --> " + filename + ":100004:8\n"
+                   "      --> " +
+                   filename +
+                   ":100004:8\n"
                    "       |\n"
                    "100004 |  d: x0 + 1 >= 1\n"
                    "       |        ^^^ this constant is ignored\n") !=
