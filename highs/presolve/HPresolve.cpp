@@ -3885,25 +3885,20 @@ HPresolve::Result HPresolve::fastPresolveLoop(
   do {
     storeCurrentProblemSize();
 
-    analysis_.presolveTimerStart(kPresolveClockFastLoopRowSingletons);
-    HPRESOLVE_CHECKED_CALL(removeRowSingletons(postsolve_stack));
-    analysis_.presolveTimerStop(kPresolveClockFastLoopRowSingletons);
+    HPRESOLVE_TIMED_CHECKED_CALL(kPresolveClockFastLoopRowSingletons,
+                                 removeRowSingletons(postsolve_stack));
 
-    analysis_.presolveTimerStart(kPresolveClockFastLoopColSingletons);
-    HPRESOLVE_CHECKED_CALL(presolveChangedRows(postsolve_stack));
-    analysis_.presolveTimerStop(kPresolveClockFastLoopColSingletons);
+    HPRESOLVE_TIMED_CHECKED_CALL(kPresolveClockFastLoopColSingletons,
+                                 presolveChangedRows(postsolve_stack));
 
-    analysis_.presolveTimerStart(kPresolveClockFastLoopDoubletonEquations);
-    HPRESOLVE_CHECKED_CALL(removeDoubletonEquations(postsolve_stack));
-    analysis_.presolveTimerStop(kPresolveClockFastLoopDoubletonEquations);
+    HPRESOLVE_TIMED_CHECKED_CALL(kPresolveClockFastLoopDoubletonEquations,
+                                 removeDoubletonEquations(postsolve_stack));
 
-    analysis_.presolveTimerStart(kPresolveClockFastLoopChangedRows);
-    HPRESOLVE_CHECKED_CALL(presolveColSingletons(postsolve_stack));
-    analysis_.presolveTimerStop(kPresolveClockFastLoopChangedRows);
+    HPRESOLVE_TIMED_CHECKED_CALL(kPresolveClockFastLoopChangedRows,
+                                 presolveColSingletons(postsolve_stack));
 
-    analysis_.presolveTimerStart(kPresolveClockFastLoopChangedCols);
-    HPRESOLVE_CHECKED_CALL(presolveChangedCols(postsolve_stack));
-    analysis_.presolveTimerStop(kPresolveClockFastLoopChangedCols);
+    HPRESOLVE_TIMED_CHECKED_CALL(kPresolveClockFastLoopChangedCols,
+                                 presolveChangedCols(postsolve_stack));
 
   } while (problemSizeReduction() > 0.01);
 
@@ -4049,9 +4044,8 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
       return presolveReturn();
     }
 
-    analysis_.presolveTimerStart(kPresolveClockInitial);
-    HPRESOLVE_CHECKED_CALL(initialRowAndColPresolve(postsolve_stack));
-    analysis_.presolveTimerStop(kPresolveClockInitial);
+    HPRESOLVE_TIMED_CHECKED_CALL(kPresolveClockInitial,
+                                 initialRowAndColPresolve(postsolve_stack));
 
     HighsInt numParallelRowColCalls = 0;
     // ReductionType::kEqualityRowAddition(s) has no basis postsolve,
@@ -4083,9 +4077,8 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
         }
       }
 
-      analysis_.presolveTimerStart(kPresolveClockFastLoop);
-      HPRESOLVE_CHECKED_CALL(fastPresolveLoop(postsolve_stack));
-      analysis_.presolveTimerStop(kPresolveClockFastLoop);
+      HPRESOLVE_TIMED_CHECKED_CALL(kPresolveClockFastLoop,
+                                   fastPresolveLoop(postsolve_stack));
 
       storeCurrentProblemSize();
 
@@ -4108,18 +4101,16 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
       if (reducedToEmpty()) break;
 
       if (this->allow_rule_[kPresolveRuleAggregator]) {
-        analysis_.presolveTimerStart(kPresolveClockAggregator);
-        HPRESOLVE_CHECKED_CALL(aggregator(postsolve_stack));
-        analysis_.presolveTimerStop(kPresolveClockAggregator);
+        HPRESOLVE_TIMED_CHECKED_CALL(kPresolveClockAggregator,
+                                     aggregator(postsolve_stack));
       }
 
       if (problemSizeReduction() > 0.05) continue;
 
       if (trySparsify && this->allow_rule_[kPresolveRuleSparsify]) {
         HighsInt numNz = numNonzeros();
-        analysis_.presolveTimerStart(kPresolveClockSparsify);
-        HPRESOLVE_CHECKED_CALL(sparsify(postsolve_stack));
-        analysis_.presolveTimerStop(kPresolveClockSparsify);
+        HPRESOLVE_TIMED_CHECKED_CALL(kPresolveClockSparsify,
+                                     sparsify(postsolve_stack));
         double nzReduction =
             100.0 * (1.0 - (numNonzeros() / static_cast<double>(numNz)));
 
@@ -4127,9 +4118,8 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
           highsLogDev(options->log_options, HighsLogType::kInfo,
                       "Sparsify removed %.1f%% of nonzeros\n", nzReduction);
 
-          analysis_.presolveTimerStart(kPresolveClockFastLoop);
-          HPRESOLVE_CHECKED_CALL(fastPresolveLoop(postsolve_stack));
-          analysis_.presolveTimerStop(kPresolveClockFastLoop);
+          HPRESOLVE_TIMED_CHECKED_CALL(kPresolveClockFastLoop,
+                                       fastPresolveLoop(postsolve_stack));
         }
         trySparsify = false;
       }
@@ -4150,18 +4140,17 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
                     model->a_matrix_.start_);
         }
         storeCurrentProblemSize();
-        analysis_.presolveTimerStart(kPresolveClockParallelRowsAndCols);
-        HPRESOLVE_CHECKED_CALL(detectParallelRowsAndCols(postsolve_stack));
-        analysis_.presolveTimerStop(kPresolveClockParallelRowsAndCols);
+        HPRESOLVE_TIMED_CHECKED_CALL(
+            kPresolveClockParallelRowsAndCols,
+            detectParallelRowsAndCols(postsolve_stack));
         ++numParallelRowColCalls;
         if (problemSizeReduction() > 0.05) continue;
       }
 
       if (postsolve_stack.numReductions() == 35039) {
       }
-      analysis_.presolveTimerStart(kPresolveClockFastLoop);
-      HPRESOLVE_CHECKED_CALL(fastPresolveLoop(postsolve_stack));
-      analysis_.presolveTimerStop(kPresolveClockFastLoop);
+      HPRESOLVE_TIMED_CHECKED_CALL(kPresolveClockFastLoop,
+                                   fastPresolveLoop(postsolve_stack));
 
       if (mipsolver != nullptr) {
         HighsInt num_strengthened = -1;
@@ -4174,9 +4163,8 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
                       num_strengthened);
       }
 
-      analysis_.presolveTimerStart(kPresolveClockFastLoop);
-      HPRESOLVE_CHECKED_CALL(fastPresolveLoop(postsolve_stack));
-      analysis_.presolveTimerStop(kPresolveClockFastLoop);
+      HPRESOLVE_TIMED_CHECKED_CALL(kPresolveClockFastLoop,
+                                   fastPresolveLoop(postsolve_stack));
 
       if (mipsolver != nullptr && numCliquesBeforeProbing == -1) {
         numCliquesBeforeProbing = mipsolver->mipdata_->cliquetable.numCliques();
@@ -4219,15 +4207,15 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
         }
         storeCurrentProblemSize();
         if (this->allow_rule_[kPresolveRuleDependentEquations]) {
-          analysis_.presolveTimerStart(kPresolveClockDependentEquations);
-          HPRESOLVE_CHECKED_CALL(removeDependentEquations(postsolve_stack));
-          analysis_.presolveTimerStop(kPresolveClockDependentEquations);
+          HPRESOLVE_TIMED_CHECKED_CALL(
+              kPresolveClockDependentEquations,
+              removeDependentEquations(postsolve_stack));
           dependentEquationsCalled = true;
         }
         if (this->allow_rule_[kPresolveRuleDependentFreeCols]) {
-          analysis_.presolveTimerStart(kPresolveClockDependentFreeCol);
-          HPRESOLVE_CHECKED_CALL(removeDependentFreeCols(postsolve_stack));
-          analysis_.presolveTimerStop(kPresolveClockDependentFreeCol);
+          HPRESOLVE_TIMED_CHECKED_CALL(
+              kPresolveClockDependentFreeCol,
+              removeDependentFreeCols(postsolve_stack));
         }
         if (problemSizeReduction() > 0.05) continue;
       }

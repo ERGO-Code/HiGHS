@@ -18,6 +18,14 @@
     }                                                   \
   } while (0)
 
+// As HPRESOLVE_CHECKED_CALL, timing the call with the given presolve clock.
+// The timer is stopped on every exit, including the early return
+#define HPRESOLVE_TIMED_CHECKED_CALL(presolveClock, presolveCall)     \
+  do {                                                                \
+    PresolveTimerScope presolveTimerScope_(analysis_, presolveClock); \
+    HPRESOLVE_CHECKED_CALL(presolveCall);                             \
+  } while (0)
+
 namespace presolve {
 
 enum class SingletonRowResult {

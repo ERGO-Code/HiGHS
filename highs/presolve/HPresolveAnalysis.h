@@ -56,4 +56,21 @@ class HPresolveAnalysis {
   friend class HPresolve;
 };
 
+// Starts a presolve timer and stops it when the scope is left, on every exit
+class PresolveTimerScope {
+ public:
+  PresolveTimerScope(const HPresolveAnalysis& analysis,
+                     const HighsInt presolve_clock)
+      : analysis_(analysis), presolve_clock_(presolve_clock) {
+    analysis_.presolveTimerStart(presolve_clock_);
+  }
+  ~PresolveTimerScope() { analysis_.presolveTimerStop(presolve_clock_); }
+  PresolveTimerScope(const PresolveTimerScope&) = delete;
+  PresolveTimerScope& operator=(const PresolveTimerScope&) = delete;
+
+ private:
+  const HPresolveAnalysis& analysis_;
+  const HighsInt presolve_clock_;
+};
+
 #endif /* PRESOLVE_HPRESOLVEANALYSIS_H_ */
