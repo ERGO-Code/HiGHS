@@ -2449,7 +2449,7 @@ HPresolve::Result HPresolve::singletonCol(HighsPostsolveStack& postsolve_stack,
         analysis_.stopPresolveRuleLog(kPresolveRuleFreeColSubstitution);
       return checkLimits(postsolve_stack);
     }
-  }
+  }  // End of scope for timing the dual implied free check
 
   if (this->allow_rule_[kPresolveRuleZeroCostSingleton]) {
     // Remove if col is double-sided finite slack
