@@ -529,15 +529,26 @@ void writeSolutionFile(FILE* file, const HighsOptions& options,
     highsFprintfString(file, log_options, "\n");
     std::stringstream ss;
     ss.str(std::string());
-    ss << highsFormatToString("Model status: %s\n",
+    // Log the model status
+    ss << highsFormatToString("Model status: %s\n\n",
                               utilModelStatusToString(model_status).c_str());
     highsFprintfString(file, log_options, ss.str());
-    auto objStr = highsDoubleToString((double)info.objective_function_value,
-                                      kHighsSolutionValueToStringTolerance);
-    highsFprintfString(file, log_options, "\n");
+    // Log the objective value
     ss.str(std::string());
-    ss << highsFormatToString("Objective value: %s\n", objStr.data());
+    auto obj_string = highsDoubleToString((double)info.objective_function_value,
+                                      kHighsSolutionValueToStringTolerance);
+    ss << highsFormatToString("Objective value: %s\n", obj_string.data());
     highsFprintfString(file, log_options, ss.str());
+    if (model.isMip() && model_status == HighsModelStatus::kOptimal && info.mip_gap < kHighsInf ) {
+      // Possibly log the MIP bounds and gap
+      auto mip_dual_bound_string = highsDoubleToString(info.mip_dual_bound,
+						   kHighsSolutionValueToStringTolerance);
+      auto mip_gap_string = highsGapToString(info.mip_gap);
+      ss.str(std::string());
+      ss << highsFormatToString("Objective bound: %s\n", mip_dual_bound_string.data());
+      ss << highsFormatToString("MIP rel gap: %s%\n", mip_gap_string.data());
+      highsFprintfString(file, log_options, ss.str());
+    }   
   } else if (style == kSolutionStyleGlpsolRaw ||
              style == kSolutionStyleGlpsolPretty) {
     if (model.isQp()) {

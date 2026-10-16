@@ -1416,8 +1416,7 @@ std::array<char, 128> getGapString(const double gap_,
   if (gap_ == kHighsInf)
     std::strcpy(gapString.data(), "inf");
   else {
-    double printTol = std::max(std::min(1e-2, 1e-1 * gap_), 1e-6);
-    auto gapValString = highsDoubleToString(100.0 * gap_, printTol);
+    auto gapValString = highsGapToString(gap_);
     double gapTol = options_mip_->mip_rel_gap;
 
     if (options_mip_->mip_abs_gap > options_mip_->mip_feasibility_tolerance) {
@@ -1431,8 +1430,7 @@ std::array<char, 128> getGapString(const double gap_,
       std::snprintf(gapString.data(), gapString.size(), "%s%%",
                     gapValString.data());
     else if (gapTol != kHighsInf) {
-      printTol = std::max(std::min(1e-2, 1e-1 * gapTol), 1e-6);
-      auto gapTolString = highsDoubleToString(100.0 * gapTol, printTol);
+      auto gapTolString = highsGapToString(gapTol);
       std::snprintf(gapString.data(), gapString.size(),
                     "%s%% (tolerance: %s%%)", gapValString.data(),
                     gapTolString.data());
