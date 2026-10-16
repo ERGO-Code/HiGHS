@@ -2423,6 +2423,7 @@ HPresolve::Result HPresolve::singletonCol(HighsPostsolveStack& postsolve_stack,
   // now check if column is implied free within an equation and substitute the
   // column if that is the case
   {
+    // Scope for timing the dual implied free check
     PresolveTimerScope timer(analysis_,
                              kPresolveClockSingletonColDualImpliedFree, timing);
     if (isDualImpliedFree(row) && isImpliedFree(col) &&
@@ -3828,10 +3829,7 @@ HPresolve::Result HPresolve::checkOriginalModelBounds() {
 
 HPresolve::Result HPresolve::initialRowAndColPresolve(
     HighsPostsolveStack& postsolve_stack) {
-  // Lambda for a full scan over the rows as the singleton arrays and the
-  // changed row arrays are not initialized, also unset changedRowFlag so that
-  // the row will be added to the changed row vector when it is changed after
-  // it was processed
+  // Lambda for a full scan over the rows
   auto presolveRows = [&]() {
     PresolveTimerScope timer(analysis_, kPresolveClockInitialRow);
     for (HighsInt row = 0; row != model->num_row_; ++row) {
@@ -3842,7 +3840,7 @@ HPresolve::Result HPresolve::initialRowAndColPresolve(
     return Result::kOk;
   };
 
-  // Lambda for the same for the columns
+  // Lambda for a full scan over the cols
   auto presolveCols = [&]() {
     PresolveTimerScope timer(analysis_, kPresolveClockInitialCol);
     const bool timing = analysis_.analyse_presolve_time_;
