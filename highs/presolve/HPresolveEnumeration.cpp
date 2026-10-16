@@ -17,17 +17,13 @@ HPresolve::Result HPresolve::enumerateSolutions(
     HighsPostsolveStack& postsolve_stack) {
   // enumerate all solutions for pure binary constraints with a small number of
   // variables
-  mipsolver->profiling_->start(kMipClockEnumerationPresolve);
+  HighsProfilingScope clock(*mipsolver->profiling_,
+                            kMipClockEnumerationPresolve);
 
   // prepare probing
   bool firstCall = false;
-  mipsolver->mipdata_->cliquetable.setinPresolveProbingFlag(true);
-  Result prepareResult = prepareProbing(postsolve_stack, firstCall);
-  if (prepareResult != Result::kOk) {
-    mipsolver->profiling_->stop(kMipClockEnumerationPresolve);
-    mipsolver->mipdata_->cliquetable.setinPresolveProbingFlag(false);
-    return prepareResult;
-  }
+  PresolveProbingScope probingFlag(mipsolver->mipdata_->cliquetable);
+  HPRESOLVE_CHECKED_CALL(prepareProbing(postsolve_stack, firstCall));
 
   HighsDomain& domain = mipsolver->mipdata_->getDomain();
   HighsCliqueTable& cliquetable = mipsolver->mipdata_->cliquetable;
@@ -273,11 +269,7 @@ HPresolve::Result HPresolve::enumerateSolutions(
   };
 
   auto handleInfeasibility = [&](bool infeasible) {
-    if (infeasible) {
-      mipsolver->profiling_->stop(kMipClockEnumerationPresolve);
-      mipsolver->mipdata_->cliquetable.setinPresolveProbingFlag(false);
-      return Result::kPrimalInfeasible;
-    }
+    if (infeasible) return Result::kPrimalInfeasible;
     return Result::kOk;
   };
 
@@ -474,14 +466,9 @@ HPresolve::Result HPresolve::enumerateSolutions(
   HighsInt numBndsTightened = 0;
   HighsInt numVarsSubstituted = 0;
   HighsInt liftedNonzeros = 0;
-  Result finaliseResult =
-      finaliseProbing(postsolve_stack, firstCall, numVarsFixed,
-                      numBndsTightened, numVarsSubstituted, liftedNonzeros);
-  if (finaliseResult != Result::kOk) {
-    mipsolver->profiling_->stop(kMipClockEnumerationPresolve);
-    mipsolver->mipdata_->cliquetable.setinPresolveProbingFlag(false);
-    return finaliseResult;
-  }
+  HPRESOLVE_CHECKED_CALL(finaliseProbing(postsolve_stack, firstCall,
+                                         numVarsFixed, numBndsTightened,
+                                         numVarsSubstituted, liftedNonzeros));
 
   if (numVarsFixed > 0 || numBndsTightened > 0 || numVarsSubstituted > 0 ||
       numDeletedRows > 0 || liftedNonzeros > 0)
@@ -493,9 +480,6 @@ HPresolve::Result HPresolve::enumerateSolutions(
         static_cast<int>(numVarsFixed), static_cast<int>(numBndsTightened),
         static_cast<int>(numVarsSubstituted), static_cast<int>(numDeletedRows),
         static_cast<int>(liftedNonzeros));
-
-  mipsolver->profiling_->stop(kMipClockEnumerationPresolve);
-  mipsolver->mipdata_->cliquetable.setinPresolveProbingFlag(false);
 
   return checkLimits(postsolve_stack);
 }

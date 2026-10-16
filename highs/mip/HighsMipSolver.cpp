@@ -474,7 +474,7 @@ restart:
   // Maximum node processing budget for each worker in a batch during parallel
   constexpr HighsInt kMaxNodesPerWorker = 100;
   HighsInt maxNodesPerWorkerLim =
-      max_num_workers > 1 ? kMaxNodesPerWorker : kHighsIInf;
+      max_num_workers > 1 ? kMaxNodesPerWorker : 10000;
   int64_t numStallNodes = 0;
   int64_t lastLbLeave = 0;
   int64_t numQueueLeaves = 0;
