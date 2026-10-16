@@ -130,7 +130,9 @@ class HighsSparseMatrix {
   void collectAj(HVector& column, const HighsInt use_col,
                  const double multiplier) const;
 
-  HighsSparseMatrix transpose() const;
+  HighsSparseMatrix oppositeFormat() const;
+  HighsSparseMatrix getRowwise() const;
+  HighsSparseMatrix getColwise() const;
 
  private:
   void priceByRowDenseResult(

@@ -1640,12 +1640,12 @@ void HighsSparseMatrix::collectAj(HVector& column, const HighsInt use_col,
   }
 }
 
-HighsSparseMatrix HighsSparseMatrix::transpose() const {
+HighsSparseMatrix HighsSparseMatrix::oppositeFormat() const {
   // Given a matrix A, doing
-  //    B = A.transpose();
+  //    HighsSparseMatrix B = A.oppositeFormat();
   // is more efficient than doing
-  //    B = A;
-  //    B.ensureRowWise();
+  //    HighsSparseMatrix B = A;
+  //    B.ensureRowwise();
   // because the latter requires a copy (B = A) and an internal copy in
   // ensureRowWise(). Similarly for ensureColwise.
 
@@ -1663,6 +1663,25 @@ HighsSparseMatrix HighsSparseMatrix::transpose() const {
                        T.index_, T.value_);
 
   return T;
+}
+
+HighsSparseMatrix HighsSparseMatrix::getRowwise() const {
+  // To get a row-wise copy B of A, calling
+  //    HighsSparseMatrix B = A;
+  //    B.ensureRowwise();
+  // makes one copy if A is already rowwise and two otherwise (one is hidden
+  // inside ensureRowwise).
+  // Calling
+  //    HighsSparseMatrix B = A.getRowwise();
+  // makes one copy if A is already rowwise; otherwise the rowwise matrix is
+  // built by oppositeFormat() directly into B, with no additional copy (the
+  // return value is elided, or at worst moved).
+  if (isRowwise()) return *this;
+  return oppositeFormat();
+}
+HighsSparseMatrix HighsSparseMatrix::getColwise() const {
+  if (isColwise()) return *this;
+  return oppositeFormat();
 }
 
 void HighsSparseMatrix::priceByRowDenseResult(
