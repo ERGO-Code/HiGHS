@@ -18,13 +18,18 @@
     }                                                   \
   } while (0)
 
-// As HPRESOLVE_CHECKED_CALL, timing the call with the given presolve clock.
-// The timer is stopped on every exit, including the early return
-#define HPRESOLVE_TIMED_CHECKED_CALL(presolveClock, presolveCall)     \
-  do {                                                                \
-    PresolveTimerScope presolveTimerScope_(analysis_, presolveClock); \
-    HPRESOLVE_CHECKED_CALL(presolveCall);                             \
+// As HPRESOLVE_CHECKED_CALL, timing the call with the given presolve clock if
+// active is true. The timer is stopped on every exit, including the early
+// return
+#define HPRESOLVE_TIMED_CHECKED_CALL_IF(active, presolveClock, presolveCall)  \
+  do {                                                                        \
+    PresolveTimerScope presolveTimerScope_(analysis_, presolveClock, active); \
+    HPRESOLVE_CHECKED_CALL(presolveCall);                                     \
   } while (0)
+
+// As HPRESOLVE_CHECKED_CALL, timing the call with the given presolve clock
+#define HPRESOLVE_TIMED_CHECKED_CALL(presolveClock, presolveCall) \
+  HPRESOLVE_TIMED_CHECKED_CALL_IF(true, presolveClock, presolveCall)
 
 namespace presolve {
 
