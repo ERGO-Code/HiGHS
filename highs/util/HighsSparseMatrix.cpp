@@ -44,10 +44,12 @@ bool HighsSparseMatrix::equivalent(const HighsSparseMatrix& matrix) const {
   HighsSparseMatrix lc_matrix;
   if (this->isColwise()) {
     lc_matrix = matrix.getColwise();
-    lc_matrix.ensureColwise();
+    assert(lc_matrix.isColwise());
+    // lc_matrix.ensureColwise(); is now redundant
   } else {
     lc_matrix = matrix.getRowwise();
-    lc_matrix.ensureRowwise();
+    assert(lc_matrix.isRowwise());
+    // lc_matrix.ensureRowwise(); is now redundant
   }
   return *this == lc_matrix;
 }
