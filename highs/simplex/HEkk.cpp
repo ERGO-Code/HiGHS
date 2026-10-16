@@ -956,7 +956,7 @@ HighsStatus HEkk::undualize() {
   lp_.a_matrix_ = primal_matrix.getColwise();
   assert(lp_.a_matrix_.isColwise());
   // lp_.a_matrix_.ensureColwise(); is now redundant
-  
+
   // Some sanity checks
   assert(lp_.num_col_ == original_num_col_);
   assert(lp_.num_row_ == original_num_row_);
