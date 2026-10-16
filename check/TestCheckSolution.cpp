@@ -73,7 +73,7 @@ TEST_CASE("check-solution", "[highs_check_solution]") {
 TEST_CASE("check-set-mip-solution", "[highs_check_solution]") {
   const std::string test_name = Catch::getResultCapture().getCurrentTestName();
   HighsStatus return_status;
-  const std::string model = "flugpl";
+  const std::string model = "flugpl";//"small_mip";//
   std::string model_file =
       std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
   Highs highs;
@@ -99,6 +99,21 @@ TEST_CASE("check-set-mip-solution", "[highs_check_solution]") {
 
   highs.clear();
 
+  auto runTestSearchAndClear = [&] () {
+    highs.run();
+    if (dev_run) printf("Num nodes = %d\n", int(info.mip_node_count));
+    const bool different_search =
+        info.mip_node_count != scratch_num_nodes ||
+        info.simplex_iteration_count != scratch_num_simplex;
+    REQUIRE(different_search);
+    highs.clear();
+    highs.setOptionValue("output_flag", dev_run);
+    highs.setOptionValue("presolve", "off");
+  };
+  
+  highs.setOptionValue("output_flag", dev_run);
+  highs.setOptionValue("presolve", "off");
+
   const bool other_tests = true;
   const bool test0 = other_tests;
   bool valid, integral, feasible;
@@ -107,7 +122,6 @@ TEST_CASE("check-set-mip-solution", "[highs_check_solution]") {
       printf(
           "\n***************************\nSolving from saved "
           "solution\n***************************\n");
-    highs.setOptionValue("output_flag", dev_run);
     highs.readModel(model_file);
 
     return_status = highs.setSolution(optimal_solution);
@@ -173,6 +187,9 @@ TEST_CASE("check-set-mip-solution", "[highs_check_solution]") {
     return_status = highs.assessPrimalSolution(valid, integral, feasible);
     REQUIRE(return_status == HighsStatus::kWarning);
 
+    runTestSearchAndClear();
+      
+    /*
     highs.run();
     if (dev_run) printf("Num nodes = %d\n", int(info.mip_node_count));
     const bool different_search =
@@ -180,6 +197,7 @@ TEST_CASE("check-set-mip-solution", "[highs_check_solution]") {
         info.simplex_iteration_count != scratch_num_simplex;
     REQUIRE(different_search);
     highs.clear();
+    */
   }
 
   const bool test3 = other_tests;

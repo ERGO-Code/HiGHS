@@ -195,9 +195,9 @@ void writeLpObjective(FILE* file, const HighsLogOptions& log_options,
 
 void writeObjectiveValue(FILE* file, const HighsLogOptions& log_options,
                          const double objective_value) {
-  auto objStr = highsDoubleToString(objective_value,
+  auto obj_string = highsDoubleToString(objective_value,
                                     kHighsSolutionValueToStringTolerance);
-  std::string s = highsFormatToString("Objective %s\n", objStr.data());
+  std::string s = highsFormatToString("Objective %s\n", obj_string.data());
   highsFprintfString(file, log_options, s);
 }
 
@@ -249,14 +249,14 @@ void writePrimalSolution(FILE* file, const HighsLogOptions& log_options,
   highsFprintfString(file, log_options, ss.str());
   for (HighsInt ix = 0; ix < lp.num_col_; ix++) {
     if (sparse_or_partial && !primal_solution[ix]) continue;
-    auto valStr = highsDoubleToString(primal_solution[ix],
+    auto val_string = highsDoubleToString(primal_solution[ix],
                                       kHighsSolutionValueToStringTolerance);
     // Don't invent names locally: if none exist, then indicate this -
     // so that the (sparse/partial) solution line format remains "name
     // value (index)"
     const std::string name = have_col_names ? lp.col_names_[ix] : "NoName";
     ss.str(std::string());
-    ss << highsFormatToString("%-s %s", name.c_str(), valStr.data());
+    ss << highsFormatToString("%-s %s", name.c_str(), val_string.data());
     if (sparse_or_partial) ss << highsFormatToString(" %d", int(ix));
     ss << "\n";
     highsFprintfString(file, log_options, ss.str());
@@ -311,11 +311,11 @@ void writeModelSolution(FILE* file, const HighsLogOptions& log_options,
     ss << highsFormatToString("# Rows %" HIGHSINT_FORMAT "\n", lp.num_row_);
     highsFprintfString(file, log_options, ss.str());
     for (HighsInt ix = 0; ix < lp.num_row_; ix++) {
-      auto valStr = highsDoubleToString(solution.row_value[ix],
+      auto val_string = highsDoubleToString(solution.row_value[ix],
                                         kHighsSolutionValueToStringTolerance);
       ss.str(std::string());
       ss << highsFormatToString("%-s %s\n", lp.row_names_[ix].c_str(),
-                                valStr.data());
+                                val_string.data());
       highsFprintfString(file, log_options, ss.str());
     }
   }
@@ -344,11 +344,11 @@ void writeModelSolution(FILE* file, const HighsLogOptions& log_options,
     ss << highsFormatToString("# Rows %" HIGHSINT_FORMAT "\n", lp.num_row_);
     highsFprintfString(file, log_options, ss.str());
     for (HighsInt ix = 0; ix < lp.num_row_; ix++) {
-      auto valStr = highsDoubleToString(solution.row_dual[ix],
+      auto val_string = highsDoubleToString(solution.row_dual[ix],
                                         kHighsSolutionValueToStringTolerance);
       ss.str(std::string());
       ss << highsFormatToString("%-s %s\n", lp.row_names_[ix].c_str(),
-                                valStr.data());
+                                val_string.data());
       highsFprintfString(file, log_options, ss.str());
     }
   }
