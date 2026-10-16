@@ -125,7 +125,7 @@ TEST_CASE("Sparse-matrix-products", "[highs_sparse_matrix]") {
   }
 }
 
-TEST_CASE("Sparse-matrix-transpose", "[highs_sparse_matrix]") {
+TEST_CASE("Sparse-matrix-change-format", "[highs_sparse_matrix]") {
   std::string filename =
       std::string(HIGHS_DIR) + "/check/instances/adlittle.mps";
 
@@ -138,9 +138,23 @@ TEST_CASE("Sparse-matrix-transpose", "[highs_sparse_matrix]") {
   HighsSparseMatrix matrix_rw = matrix_cw;
   matrix_rw.ensureRowwise();
 
-  HighsSparseMatrix matrix_cw_T = matrix_cw.transpose();
-  HighsSparseMatrix matrix_rw_T = matrix_rw.transpose();
+  HighsSparseMatrix matrix_cw_T = matrix_cw.oppositeFormat();
+  HighsSparseMatrix matrix_rw_T = matrix_rw.oppositeFormat();
+  HighsSparseMatrix matrix_cw_T_T = matrix_cw_T.oppositeFormat();
+  HighsSparseMatrix matrix_rw_T_T = matrix_rw_T.oppositeFormat();
 
   REQUIRE(matrix_rw == matrix_cw_T);
+  REQUIRE(matrix_rw == matrix_rw_T_T);
   REQUIRE(matrix_cw == matrix_rw_T);
+  REQUIRE(matrix_cw == matrix_cw_T_T);
+
+  HighsSparseMatrix matrix_get_cw_from_cw = matrix_cw.getColwise();
+  HighsSparseMatrix matrix_get_cw_from_rw = matrix_rw.getColwise();
+  HighsSparseMatrix matrix_get_rw_from_cw = matrix_cw.getRowwise();
+  HighsSparseMatrix matrix_get_rw_from_rw = matrix_rw.getRowwise();
+
+  REQUIRE(matrix_cw == matrix_get_cw_from_cw);
+  REQUIRE(matrix_cw == matrix_get_cw_from_rw);
+  REQUIRE(matrix_rw == matrix_get_rw_from_cw);
+  REQUIRE(matrix_rw == matrix_get_rw_from_rw);
 }
