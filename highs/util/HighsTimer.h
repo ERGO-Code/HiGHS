@@ -397,4 +397,27 @@ class HighsTimer {
   bool printf_flag;
 };
 
+// Starts a clock and stops it when the scope is left, on every exit. The clock
+// is only used if active is true. Clocks must provide start(clock) and
+// stop(clock)
+template <typename Clocks>
+class HighsClockScope {
+ public:
+  HighsClockScope(Clocks& clocks, const HighsInt clock,
+                  const bool active = true)
+      : clocks_(clocks), clock_(clock), active_(active) {
+    if (active_) clocks_.start(clock_);
+  }
+  ~HighsClockScope() {
+    if (active_) clocks_.stop(clock_);
+  }
+  HighsClockScope(const HighsClockScope&) = delete;
+  HighsClockScope& operator=(const HighsClockScope&) = delete;
+
+ private:
+  Clocks& clocks_;
+  const HighsInt clock_;
+  const bool active_;
+};
+
 #endif /* UTIL_HIGHSTIMER_H_ */
