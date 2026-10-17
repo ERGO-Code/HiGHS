@@ -122,7 +122,7 @@ void HighsSparseMatrix::setFormat(const MatrixFormat desired_format) {
   assert(this->format_ == desired_format);
 }
 
-void HighsSparseMatrix::ensureColwise() {
+void HighsSparseMatrix::ensureColwiseOld() {
   assert(this->formatOk());
   if (this->isColwise()) return;
   HighsInt num_col = this->num_col_;
@@ -177,7 +177,7 @@ void HighsSparseMatrix::ensureColwise() {
   assert((HighsInt)this->value_.size() >= num_nz);
 }
 
-void HighsSparseMatrix::ensureRowwise() {
+void HighsSparseMatrix::ensureRowwiseOld() {
   assert(this->formatOk());
   if (this->isRowwise()) return;
   HighsInt num_col = this->num_col_;
@@ -1687,6 +1687,36 @@ HighsSparseMatrix HighsSparseMatrix::getRowwise() const {
 HighsSparseMatrix HighsSparseMatrix::getColwise() const {
   if (isColwise()) return *this;
   return oppositeFormat();
+}
+
+bool HighsSparseMatrix::correctColwise() const {
+  HighsSparseMatrix M1 = *this;
+  M1.ensureColwiseOld();
+  return M1 == oppositeFormat();
+}
+bool HighsSparseMatrix::correctRowwise() const {
+  HighsSparseMatrix M1 = *this;
+  M1.ensureRowwiseOld();
+  return M1 == oppositeFormat();
+}
+
+void HighsSparseMatrix::ensureColwise() {
+  // If a change of format is needed, the result of oppositeFormat() is built
+  // in a temporary and move-assigned into *this, so no extra copy is made.
+  assert(this->formatOk());
+  if (this->isColwise()) return;
+  assert(correctColwise());
+  std::vector<HighsInt> p_end = std::move(this->p_end_);
+  *this = oppositeFormat();
+  this->p_end_ = std::move(p_end);
+}
+void HighsSparseMatrix::ensureRowwise() {
+  assert(this->formatOk());
+  if (this->isRowwise()) return;
+  assert(correctRowwise());
+  std::vector<HighsInt> p_end = std::move(this->p_end_);
+  *this = oppositeFormat();
+  this->p_end_ = std::move(p_end);
 }
 
 void HighsSparseMatrix::priceByRowDenseResult(
