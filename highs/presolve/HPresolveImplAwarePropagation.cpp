@@ -17,7 +17,8 @@ HPresolve::Result HPresolve::implAwareConstrPropagation(
     HighsPostsolveStack& postsolve_stack) {
   if (mipsolver == nullptr) return Result::kOk;
 
-  mipsolver->profiling_->start(kMipClockImplAwareConstrPropagation);
+  HighsProfilingScope clock(*mipsolver->profiling_,
+                            kMipClockImplAwareConstrPropagation);
 
   HighsCliqueTable& cliquetable = mipsolver->mipdata_->cliquetable;
   HighsImplications& implications = mipsolver->mipdata_->implications;
@@ -880,7 +881,6 @@ HPresolve::Result HPresolve::implAwareConstrPropagation(
         " cliques, tightened %" HIGHSINT_FORMAT " bounds\n",
         numVarsFixed, numCliquesAdded, numBoundsTightened);
 
-  mipsolver->profiling_->stop(kMipClockImplAwareConstrPropagation);
   return checkLimits(postsolve_stack);
 }
 
