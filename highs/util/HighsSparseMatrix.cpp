@@ -41,11 +41,15 @@ bool HighsSparseMatrix::equivalent(const HighsSparseMatrix& matrix) const {
   if (*this == matrix) return true;
   // Creat a local copy in of matrix in the same format as this and
   // test for it being equal to this
-  HighsSparseMatrix lc_matrix = matrix;
+  HighsSparseMatrix lc_matrix;
   if (this->isColwise()) {
-    lc_matrix.ensureColwise();
+    lc_matrix = matrix.getColwise();
+    assert(lc_matrix.isColwise());
+    // lc_matrix.ensureColwise(); is now redundant
   } else {
-    lc_matrix.ensureRowwise();
+    lc_matrix = matrix.getRowwise();
+    assert(lc_matrix.isRowwise());
+    // lc_matrix.ensureRowwise(); is now redundant
   }
   return *this == lc_matrix;
 }
@@ -1638,6 +1642,51 @@ void HighsSparseMatrix::collectAj(HVector& column, const HighsInt use_col,
     if (value0 == 0) column.index[column.count++] = iRow;
     column.array[iRow] = (fabs(value1) < kHighsTiny) ? kHighsZero : value1;
   }
+}
+
+HighsSparseMatrix HighsSparseMatrix::oppositeFormat() const {
+  // Given a matrix A, doing
+  //    HighsSparseMatrix B = A.oppositeFormat();
+  // is more efficient than doing
+  //    HighsSparseMatrix B = A;
+  //    B.ensureRowwise();
+  // because the latter requires a copy (B = A) and an internal copy in
+  // ensureRowWise(). Similarly for ensureColwise.
+
+  HighsSparseMatrix T;
+
+  const bool colwise = isColwise();
+  const HighsInt num_major = colwise ? num_col_ : num_row_;
+  const HighsInt num_minor = colwise ? num_row_ : num_col_;
+
+  T.format_ = colwise ? MatrixFormat::kRowwise : MatrixFormat::kColwise;
+  T.num_row_ = num_row_;
+  T.num_col_ = num_col_;
+  T.p_end_ = p_end_;
+
+  highsSparseTranspose(num_minor, num_major, start_, index_, value_, T.start_,
+                       T.index_, T.value_);
+
+  return T;
+}
+
+HighsSparseMatrix HighsSparseMatrix::getRowwise() const {
+  // To get a row-wise copy B of A, calling
+  //    HighsSparseMatrix B = A;
+  //    B.ensureRowwise();
+  // makes one copy if A is already rowwise and two otherwise (one is hidden
+  // inside ensureRowwise).
+  // Calling
+  //    HighsSparseMatrix B = A.getRowwise();
+  // makes one copy if A is already rowwise; otherwise the rowwise matrix is
+  // built by oppositeFormat() directly into B, with no additional copy (the
+  // return value is elided, or at worst moved).
+  if (isRowwise()) return *this;
+  return oppositeFormat();
+}
+HighsSparseMatrix HighsSparseMatrix::getColwise() const {
+  if (isColwise()) return *this;
+  return oppositeFormat();
 }
 
 void HighsSparseMatrix::priceByRowDenseResult(
