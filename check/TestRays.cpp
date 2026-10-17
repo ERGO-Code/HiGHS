@@ -962,6 +962,8 @@ TEST_CASE("Rays-2415", "[highs_test_rays]") {
           HighsStatus::kOk);
   REQUIRE(h.getInfo().primal_solution_status != kSolutionStatusFeasible);
   REQUIRE(h.getInfo().primal_solution_status == kSolutionStatusNone);
+
+  h.resetGlobalScheduler(true);
 }
 
 TEST_CASE("Rays-2415-primal", "[highs_test_rays]") {
@@ -1007,4 +1009,37 @@ TEST_CASE("Rays-2415-primal", "[highs_test_rays]") {
     lp.integrality_ = {HighsVarType::kInteger};
     if (dev_run) printf("\nFor unbounded MIP\n");
   }
+
+  h.resetGlobalScheduler(true);
+}
+
+TEST_CASE("issue-3413", "[highs_test_rays]") {
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  std::vector<HighsInt> index = {0};
+  std::vector<double> value = {1};
+  h.addVar(0.0, kHighsInf);
+  h.addRow(-kHighsInf, -1, 1, index.data(), value.data());
+  h.setOptionValue(kSolverString, kIpmString);
+  h.run();
+  bool has_dual_ray = false;
+  std::vector<double> dual_ray_value = {NAN};
+  h.getDualRay(has_dual_ray, dual_ray_value.data());
+
+  h.clear();
+
+  /*
+  index = {0, 1};
+  value = {1, -1};
+  h.addVar(2.0, 3.0);
+  h.addVar(4.0, 4.0);
+  h.changeColIntegrality(0, HighsVarType::kSemiInteger);
+  h.addRow(0.0, kHighsInf, 2, index.data(), value.data());
+
+  has_dual_ray = false;
+  dual_ray_value = {NAN, NAN};
+  h.getDualRay(has_dual_ray, dual_ray_value.data());
+  */
+
+  h.resetGlobalScheduler(true);
 }

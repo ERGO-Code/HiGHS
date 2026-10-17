@@ -1590,6 +1590,7 @@ HighsStatus Highs::getDualRayInterface(bool& has_dual_ray,
   HighsHessian hessian;
   bool solve_relaxation;
   std::string presolve;
+  std::string solver;
   bool solve_feasibility_problem = false;
   const bool is_qp = model_.isQp();
 
@@ -1607,14 +1608,16 @@ HighsStatus Highs::getDualRayInterface(bool& has_dual_ray,
       }
       highsLogUser(options_.log_options, HighsLogType::kInfo,
                    "Solving LP to try to compute dual ray\n");
-      // Save the column costs, integrality, any Hessian and the
-      // presolve setting
+      // Save the column costs, any Hessian, the relaxation, presolve
+      // and solver settings, so that the feasibility problem is
+      // solved to yield a basic solution
       col_cost = lp.col_cost_;
       if (is_qp) hessian = model_.hessian_;
-      this->getOptionValue("presolve", presolve);
-      this->getOptionValue("solve_relaxation", solve_relaxation);
+      solve_relaxation = this->options_.solve_relaxation;
+      presolve = this->options_.presolve;
+      solver = this->options_.solver;
       solve_feasibility_problem = true;
-      // Zero the costs, integrality and Hessian
+      // Zero the costs and Hessian
       std::vector<double> zero_costs;
       zero_costs.assign(lp.num_col_, 0);
       // Take a copy of the primal ray record, since this will be
@@ -1630,9 +1633,18 @@ HighsStatus Highs::getDualRayInterface(bool& has_dual_ray,
         HighsHessian zero_hessian;
         this->passHessian(zero_hessian);
       }
-      this->setOptionValue("presolve", kHighsOffString);
-      this->setOptionValue("solve_relaxation", true);
+      //
+      this->options_.solve_relaxation = true;
+      this->options_.presolve = kHighsOffString;
+      this->options_.solver = kSimplexString;
       HighsStatus call_status = this->run();
+      // Restore the column costs, any Hessian, the relaxation,
+      // presolve and solver settings
+      this->options_.solve_relaxation = solve_relaxation;
+      this->options_.presolve = presolve;
+      this->options_.solver = solver;
+      lp.col_cost_ = col_cost;
+      if (is_qp) model_.hessian_ = hessian;
       if (call_status != HighsStatus::kOk) return_status = call_status;
       has_dual_ray = ekk_instance_.dual_ray_record_.index != kNoRayIndex;
       has_invert = ekk_instance_.status_.has_invert;
@@ -1677,10 +1689,7 @@ HighsStatus Highs::getDualRayInterface(bool& has_dual_ray,
     // information has been lost. Reverting the objective function via
     // Highs calls clears info_, so better to just copy the data
     // directly and set the info_ entries that are no longer valid
-    lp.col_cost_ = col_cost;
-    if (is_qp) model_.hessian_ = hessian;
-    this->setOptionValue("presolve", presolve);
-    this->setOptionValue("solve_relaxation", solve_relaxation);
+    //
     // The relaxation for an infeasible MIP may be feasible - so no
     // ray is generated - so make sure (#2415) that the primal
     // solution status is reset
