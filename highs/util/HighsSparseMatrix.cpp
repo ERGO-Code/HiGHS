@@ -1662,6 +1662,7 @@ HighsSparseMatrix HighsSparseMatrix::oppositeFormat() const {
   T.format_ = colwise ? MatrixFormat::kRowwise : MatrixFormat::kColwise;
   T.num_row_ = num_row_;
   T.num_col_ = num_col_;
+  T.p_end_ = p_end_;
 
   highsSparseTranspose(num_minor, num_major, start_, index_, value_, T.start_,
                        T.index_, T.value_);
