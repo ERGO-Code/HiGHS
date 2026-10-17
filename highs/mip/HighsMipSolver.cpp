@@ -401,6 +401,9 @@ restart:
          mipdata_->getDomain().getDomainChangeStack()) {
       worker.getGlobalDomain().changeBound(domchg,
                                            HighsDomain::Reason::unspecified());
+      if (worker.getGlobalDomain().infeasible()) {
+        return;
+      }
     }
 #ifndef NDEBUG
     for (HighsInt col = 0; col < numCol(); ++col) {
@@ -1136,9 +1139,24 @@ restart:
     if (mipdata_->nodequeue.empty()) break;
 
     // Reset global domain and sync worker's global domains.
-    bool spawn_more_workers = num_workers < max_num_workers &&
-                              mipdata_->nodequeue.numNodes() > num_workers;
+    const bool spawn_more_workers =
+        num_workers < max_num_workers &&
+        mipdata_->nodequeue.numNodes() > num_workers;
     resetGlobalDomain(spawn_more_workers, mipdata_->hasMultipleWorkers());
+
+    for (HighsMipWorker& worker : mipdata_->workers) {
+      if (worker.getGlobalDomain().infeasible()) {
+        infeasible = true;
+        break;
+      }
+    }
+    if (infeasible) {
+      mipdata_->nodequeue.clear();
+      mipdata_->pruned_treeweight = 1.0;
+      mipdata_->updateLowerBound(std::min(kHighsInf, mipdata_->upper_bound));
+      mipdata_->printDisplayLine();
+      break;
+    }
 
     if (nodeLim == maxNodesPerWorkerLim &&
         checkWorkerRestartVotes(workerRestartVotes))

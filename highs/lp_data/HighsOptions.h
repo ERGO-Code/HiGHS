@@ -1783,6 +1783,12 @@ class HighsOptions : public HighsOptionsStruct {
   std::vector<OptionRecord*> records;
   HighsInt num_user_settable_options_;
   void setLogOptions();
+  double getMipPrimalFeasibilityTolerance() const {
+    return this->mip_feasibility_tolerance;
+  }
+  double getMipDualFeasibilityTolerance() const {
+    return this->mip_feasibility_tolerance * 0.1;
+  }
 };
 
 void warnSolverInvalid(const HighsOptions& options,

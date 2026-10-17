@@ -102,7 +102,7 @@ The extent to which parallelism is used in HiPO depends on the value of the
 
 ## MIP
 
-If the [parallel](@ref option-parallel) option is set to "on", the MIP solver
+If the [parallel](@ref option-parallel) option is not set to "off", the MIP solver
 will explore the branch-and-bound tree using multiple threads.
 This exploration includes cuts and heuristics that are not run from the root node.
 
