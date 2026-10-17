@@ -3164,7 +3164,17 @@ HighsStatus Highs::userScaleSolution(HighsUserScaleData& data,
   info_.objective_function_value *= (bound_scale_value * objective_scale_value);
   if (has_integrality)
     info_.mip_dual_bound *= (bound_scale_value * objective_scale_value);
+
+  const double primal_feasibility_tolerance =
+      options_.primal_feasibility_tolerance;
+  // Remember to check primal feasibility using the tolerance used
+  // when the model was solved
+  if (model_.isMip() && !options_.solve_relaxation)
+    options_.primal_feasibility_tolerance =
+        options_.getMipPrimalFeasibilityTolerance();
   getKktFailures(options_, model_, solution_, basis_, info_);
+  // Restore the primal feasibility tolerance
+  options_.primal_feasibility_tolerance = primal_feasibility_tolerance;
   return reportKktFailures(model_.lp_, options_, info_,
                            "After removing user scaling")
              ? HighsStatus::kWarning
