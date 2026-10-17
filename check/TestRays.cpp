@@ -1015,18 +1015,39 @@ TEST_CASE("Rays-2415-primal", "[highs_test_rays]") {
 
 TEST_CASE("issue-3413", "[highs_test_rays]") {
   Highs h;
-  h.setOptionValue("output_flag", dev_run);
+  //  h.setOptionValue("output_flag", dev_run);
+  // An infeasible LP
   std::vector<HighsInt> index = {0};
   std::vector<double> value = {1};
-  h.addVar(0.0, kHighsInf);
+  h.addCol(0.0, 0.0, kHighsInf, 0, nullptr, nullptr);
   h.addRow(-kHighsInf, -1, 1, index.data(), value.data());
   h.setOptionValue(kSolverString, kIpmString);
   h.run();
   bool has_dual_ray = false;
   std::vector<double> dual_ray_value = {NAN};
   h.getDualRay(has_dual_ray, dual_ray_value.data());
-
+  REQUIRE(dual_ray_value[0] == -1);
   h.clear();
+
+  /*
+// An unbounded LP
+  //  h.setOptionValue("output_flag", dev_run);
+  h.addCol(-1.0, 0.0, kHighsInf, 0, nullptr, nullptr);
+  h.addRow(1, kHighsInf, 1, index.data(), value.data());
+  h.setOptionValue(kSolverString, kIpmString);
+  // Have to set simplex_iteration_limit = 0 to prevent primal simplex
+  // from resolving infeasible or unbounded
+  REQUIRE(h.setOptionValue("allow_unbounded_or_infeasible", true) ==
+HighsStatus::kOk); REQUIRE(h.setOptionValue("simplex_iteration_limit", 0) ==
+HighsStatus::kOk);
+
+  h.run();
+  bool has_primal_ray = false;
+  std::vector<double> primal_ray_value = {NAN};
+  h.getPrimalRay(has_primal_ray, primal_ray_value.data());
+  REQUIRE(primal_ray_value[0] == 1);
+  h.clear();
+ */
 
   /*
   index = {0, 1};
