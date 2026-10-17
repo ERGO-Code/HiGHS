@@ -538,7 +538,7 @@
 - Default: 1e-07
 
 ## [iis\_strategy](@id option-iis-strategy)
-- Strategy for IIS calculation: 0 => Light test; 1 => Try dual ray; 2 => Try elastic LP; 4 => Prioritise columns; 8 => Find true IIS; 16 => Find relaxation IIS for MIP
+- Strategy for IIS calculation: 0 => Light test; 1 => Try dual ray; 2 => Try elastic LP; 4 => Find true IIS; 8 => Prioritise columns; 16 => Find relaxation IIS for MIP
 - Type: integer
 - Range: {0, 31}
 - Default: 0
