@@ -467,10 +467,6 @@ if get_option('with_nanobind')
   ]
   _deps += nb_dep
 
-  highspy_cpp = files([
-    'highs_bindings.cpp'
-  ])
-
   py.extension_module(
     '_core',
     sources : highspy_cpp,
@@ -482,8 +478,8 @@ if get_option('with_nanobind')
   )
 
  highs_py_srcs = files(
-      'highspy/__init__.py',
-      'highspy/highs.py',)
+      '../highspy/highspy/__init__.py',
+      '../highspy/highspy/highs.py',)
 
   py.install_sources(highs_py_srcs,
     pure: false,
