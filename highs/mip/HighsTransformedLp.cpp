@@ -491,8 +491,7 @@ bool HighsTransformedLp::transform(const Row& row,
 bool HighsTransformedLp::untransform(Row& row, bool integral) {
   std::vector<double>& vals = row.vals;
   std::vector<HighsInt>& inds = row.inds;
-  // start from the right hand side in double precision
-  HighsCDouble tmpRhs = static_cast<double>(row.rhs);
+  HighsCDouble tmpRhs = row.rhs;
   const HighsMipSolver& mip = lprelaxation.getMipSolver();
   const HighsInt slackOffset = mip.numCol();
 
@@ -601,7 +600,7 @@ bool HighsTransformedLp::untransform(Row& row, bool integral) {
       vectorsum.clear();
       return false;
     }
-    row.rhs = static_cast<double>(tmpRhs);
+    row.rhs = tmpRhs;
   }
 
   inds = vectorsum.getNonzeros();

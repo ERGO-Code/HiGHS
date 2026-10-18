@@ -1066,9 +1066,10 @@ bool HighsCutGeneration::generateCut(HighsTransformedLp& transLp,
   }
 #endif
 
+  // the base inequality, which is overwritten by the cut
+  Row row{inds_, vals_, rhs_};
   bool intsPositive = true;
-  if (!transLp.transform(Row{inds_, vals_, rhs_}, cut, intsPositive))
-    return false;
+  if (!transLp.transform(row, cut, intsPositive)) return false;
 
   bool hasUnboundedInts = false;
   bool hasGeneralInts = false;
@@ -1101,7 +1102,6 @@ bool HighsCutGeneration::generateCut(HighsTransformedLp& transLp,
   cut.removeComplementation();
 
   // store the cut in the given vectors and remove zeros
-  Row row{inds_, vals_, 0.0};
   cut.store(row);
   row.removeZeros();
 
@@ -1142,21 +1142,18 @@ bool HighsCutGeneration::generateConflict(const HighsDomain& localdomain,
                                           std::vector<HighsInt>& proofinds,
                                           std::vector<double>& proofvals,
                                           double& proofrhs) {
-  const HighsInt numVars = proofinds.size();
-  cut.rhs = proofrhs;
+  // the proof, which is overwritten by the cut
+  Row row{proofinds, proofvals, proofrhs};
 
   lpRelaxation.getMipSolver().mipdata_->debugSolution.checkCut(
-      proofinds.data(), proofvals.data(), numVars, proofrhs);
+      proofinds.data(), proofvals.data(), proofinds.size(), proofrhs);
 
-  cut.vars.resize(numVars);
+  cut.load(row);
 
   HighsCDouble activity = 0.0;
-  for (HighsInt i = 0; i != numVars; ++i) {
-    HighsInt col = proofinds[i];
-    TransformedVar& var = cut.vars[i];
+  for (TransformedVar& var : cut.vars) {
+    HighsInt col = var.col;
 
-    var.col = col;
-    var.val = proofvals[i];
     var.upper = globaldom.col_upper_[col] - globaldom.col_lower_[col];
     var.integral = lpRelaxation.isColIntegral(col);
 
@@ -1213,7 +1210,6 @@ bool HighsCutGeneration::generateConflict(const HighsDomain& localdomain,
   }
 
   // store the cut in the given vectors
-  Row row{proofinds, proofvals, 0.0};
   cut.store(row);
 
   // apply cut postprocessing including scaling and removal of small
