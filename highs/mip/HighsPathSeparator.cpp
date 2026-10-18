@@ -475,7 +475,7 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
 
           for (HighsInt k = 0; k < pathLen; ++k) {
             double f = rhs[k] * scale;
-            HighsCDouble fDiff = HighsCDouble(f) - fLast;
+            HighsCDouble fDiff = static_cast<HighsCDouble>(f) - fLast;
             HighsInt len = aggregatedPath[k].first.size();
             cutRhs += fDiff;
             for (HighsInt j = 0; j < len; ++j) {
@@ -496,9 +496,9 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
                   fSum[i] += fDiff;
 
                   if (fSum[i] < maxFrac[i]) {
-                    cutVals[i] = double(downSum[i] + fSum[i]);
+                    cutVals[i] = static_cast<double>(downSum[i] + fSum[i]);
                   } else {
-                    cutVals[i] = double(downSum[i] + maxFrac[i]);
+                    cutVals[i] = static_cast<double>(downSum[i] + maxFrac[i]);
                   }
                   break;
                 }
@@ -506,7 +506,7 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
             }
 
             if (k > 0) {
-              double viol = double(cutRhs);
+              double viol = static_cast<double>(cutRhs);
               for (HighsInt j = 0; j < numInds; ++j) {
                 viol -= solval[j] * cutVals[j];
               }
@@ -515,7 +515,7 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
 
               if (viol > 10 * mip.mipdata_->feastol) {
                 scale = -delta;
-                double rhs = double(cutRhs) * scale;
+                double rhs = static_cast<double>(cutRhs) * scale;
                 for (HighsInt j = 0; j < numInds; ++j) {
                   cutVals[j] *= scale;
                 }

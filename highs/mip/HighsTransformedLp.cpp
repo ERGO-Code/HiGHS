@@ -481,7 +481,7 @@ bool HighsTransformedLp::transform(std::vector<double>& vals,
       integersPositive = integersPositive && vals[j] > 0;
   }
 
-  rhs = double(tmpRhs);
+  rhs = static_cast<double>(tmpRhs);
 
   if (numNz == 0 && rhs >= -mip.mipdata_->feastol) return false;
 
@@ -571,7 +571,7 @@ bool HighsTransformedLp::untransform(Row& row, bool integral) {
     };
 
     vectorsum.cleanup(IsZero);
-    row.rhs = std::round(double(tmpRhs));
+    row.rhs = std::round(static_cast<double>(tmpRhs));
   } else {
     bool abort = false;
     auto IsZero = [&](HighsInt col, double val) {
@@ -601,7 +601,7 @@ bool HighsTransformedLp::untransform(Row& row, bool integral) {
       vectorsum.clear();
       return false;
     }
-    row.rhs = double(tmpRhs);
+    row.rhs = static_cast<double>(tmpRhs);
   }
 
   inds = vectorsum.getNonzeros();

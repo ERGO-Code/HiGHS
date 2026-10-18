@@ -432,7 +432,8 @@ bool HighsCutGeneration::separateLiftedMixedIntegerCover() {
   auto phi_l = [&](double a) {
     assert(a < 0);
 
-    int64_t k = std::min(int64_t(a / static_cast<double>(al)), int64_t(-1));
+    int64_t k = std::min(static_cast<int64_t>(a / static_cast<double>(al)),
+                         int64_t{-1});
 
     for (; k >= kmin; --k) {
       if (a >= k * al + r) {
@@ -486,7 +487,8 @@ bool HighsCutGeneration::separateLiftedMixedIntegerCover() {
       }
     }
 
-    int64_t p = ((int64_t)(double)((z - m[cplussize]) / al)) - 1;
+    int64_t p =
+        static_cast<int64_t>(static_cast<double>((z - m[cplussize]) / al)) - 1;
     for (;; ++p) {
       if (z <= m[cplussize] + p * al + r) {
         assert(m[cplussize] + p * al <= z);
@@ -528,7 +530,9 @@ bool HighsCutGeneration::separateLiftedMixedIntegerCover() {
   return true;
 }
 
-static double fast_floor(double x) { return (int64_t)x - (x < (int64_t)x); }
+static double fast_floor(double x) {
+  return static_cast<int64_t>(x) - (x < static_cast<int64_t>(x));
+}
 
 bool HighsCutGeneration::cmirCutGenerationHeuristic(double minEfficacy,
                                                     bool onlyInitialCMIRScale) {
@@ -815,8 +819,8 @@ bool HighsCutGeneration::postprocessCut(Row& row,
 
     bool scaleSmallestValToOne = true;
 
-    if (intscale != 0.0 &&
-        intscale * std::max(1.0, maxAbsValue) <= (double)(uint64_t{1} << 52)) {
+    if (intscale != 0.0 && intscale * std::max(1.0, maxAbsValue) <=
+                               static_cast<double>(uint64_t{1} << 52)) {
       // A scale to make all value integral was found. The scale is only
       // rejected if it is in a range where not all integral values are
       // representable in double precision anymore or cannot be correctly
@@ -967,8 +971,8 @@ bool HighsCutGeneration::preprocessBaseInequality(bool& hasUnboundedInts,
       if (cancelSlack <= feastol) cancelNzs.push_back(i);
     }
 
-    if ((HighsInt)cancelNzs.size() < numCancel) return false;
-    if ((HighsInt)cancelNzs.size() > numCancel)
+    if (static_cast<HighsInt>(cancelNzs.size()) < numCancel) return false;
+    if (static_cast<HighsInt>(cancelNzs.size()) > numCancel)
       std::partial_sort(cancelNzs.begin(), cancelNzs.begin() + numCancel,
                         cancelNzs.end(), [&](HighsInt a, HighsInt b) {
                           return std::abs(cut.vars[a].val) <
@@ -1063,7 +1067,7 @@ bool HighsCutGeneration::generateCut(HighsTransformedLp& transLp,
                   static_cast<double>(row.rhs));
 
     if (!transLp.untransform(row)) return false;
-    tmprhs_ = (double)row.rhs;
+    tmprhs_ = static_cast<double>(row.rhs);
 
     // printf("after untransform of base inequality:\n");
     checkNumerics(valsCheck_.data(), valsCheck_.size(), tmprhs_);
@@ -1135,7 +1139,7 @@ bool HighsCutGeneration::generateCut(HighsTransformedLp& transLp,
   // apply cut postprocessing including scaling and removal of small
   // coefficients
   if (!postprocessCut(row, transLp.getGlobaldom())) return false;
-  rhs_ = (double)row.rhs;
+  rhs_ = static_cast<double>(row.rhs);
 
   lpRelaxation.getMipSolver().mipdata_->debugSolution.checkCut(
       inds_.data(), vals_.data(), inds_.size(), rhs_);
@@ -1241,7 +1245,7 @@ bool HighsCutGeneration::generateConflict(const HighsDomain& localdomain,
   // coefficients
   if (!postprocessCut(row, globaldom)) return false;
 
-  proofrhs = (double)row.rhs;
+  proofrhs = static_cast<double>(row.rhs);
 
   bool cutintegral = integralSupport && integralCoefficients;
 
