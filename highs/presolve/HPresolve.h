@@ -596,6 +596,7 @@ class HPresolve {
       HighsPostsolveStack& postsolve_stack);
   Result presolveRuleTestProbing(HighsPostsolveStack& postsolve_stack);
   Result presolveRuleTestFourierMotzkin(HighsPostsolveStack& postsolve_stack);
+  Result presolveRuleTestAggregator(HighsPostsolveStack& postsolve_stack);
 
   /*
   // Methods defined and used in HPresolveDebug, and only executed if
