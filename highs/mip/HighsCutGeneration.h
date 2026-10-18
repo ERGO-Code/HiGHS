@@ -44,6 +44,22 @@ class HighsCutGeneration {
     bool integral;
   };
 
+  // cut in the original space; refers to the vectors of the caller
+  struct Cut {
+    std::vector<HighsInt>& inds;
+    std::vector<double>& vals;
+    HighsCDouble rhs;
+
+    // scales the right hand side and all coefficients
+    void scale(double factor);
+
+    // removes zero coefficients
+    void removeZeros();
+
+    // returns the violation of the cut by the given solution
+    HighsCDouble violation(const std::vector<double>& sol) const;
+  };
+
   // base inequality and cut in the transformed space
   struct TransformedCut {
     std::vector<CutVariable> vars;
@@ -57,6 +73,9 @@ class HighsCutGeneration {
 
     // removes the complementation of all variables
     void removeComplementation();
+
+    // copies the indices, values, and right hand side to the given cut
+    void store(Cut& origCut) const;
   };
 
   const HighsLpRelaxation& lpRelaxation;
@@ -72,14 +91,8 @@ class HighsCutGeneration {
   const double feastol;
   const double epsilon;
 
-  // values, indices, and right hand side of the cut after it was transformed
-  // back; before, they are stored in cut
-  double* vals;
-  HighsInt* inds;
-  HighsCDouble rhs;
   bool integralSupport;
   bool integralCoefficients;
-  HighsInt rowlen;
   double initialScale;
 
   std::vector<HighsInt> integerinds;
@@ -98,13 +111,10 @@ class HighsCutGeneration {
   bool cmirCutGenerationHeuristic(double minEfficacy,
                                   bool onlyInitialCMIRScale = false);
 
-  bool postprocessCut(const HighsDomain& globaldom);
+  bool postprocessCut(Cut& origCut, const HighsDomain& globaldom);
 
   bool preprocessBaseInequality(bool& hasUnboundedInts, bool& hasGeneralInts,
                                 bool& hasContinuous);
-
-  void storeCutVars(std::vector<HighsInt>& cutInds,
-                    std::vector<double>& cutVals);
 
   template <typename T>
   void updateViolationAndNorm(const CutVariable& var, T aj,
