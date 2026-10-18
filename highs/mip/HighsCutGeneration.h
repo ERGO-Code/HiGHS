@@ -44,21 +44,36 @@ class HighsCutGeneration {
     bool integral;
   };
 
+  // base inequality and cut in the transformed space
+  struct TransformedCut {
+    std::vector<CutVariable> vars;
+    HighsCDouble rhs;
+
+    // scales the right hand side and all coefficients
+    void scale(double factor);
+
+    // flips the complementation of the given variable of this cut
+    void flipComplementation(CutVariable& var);
+
+    // removes the complementation of all variables
+    void removeComplementation();
+  };
+
   const HighsLpRelaxation& lpRelaxation;
   HighsCutPool& cutpool;
   HighsRandom randgen;
   std::vector<HighsInt> cover;
   HighsCDouble coverweight;
   HighsCDouble lambda;
-  std::vector<CutVariable> cutVars;
+  TransformedCut cut;
   // upper bounds and solution values from HighsTransformedLp::transform
   std::vector<double> transformUpper;
   std::vector<double> transformSolval;
   const double feastol;
   const double epsilon;
 
-  // values and indices of the cut after the base inequality was transformed
-  // back; before, they are stored in cutVars
+  // values, indices, and right hand side of the cut after it was transformed
+  // back; before, they are stored in cut
   double* vals;
   HighsInt* inds;
   HighsCDouble rhs;
@@ -70,7 +85,7 @@ class HighsCutGeneration {
   std::vector<HighsInt> integerinds;
   std::vector<double> deltas;
 
-  std::vector<CutVariable> tmpCutVars;
+  TransformedCut tmpCut;
 
   bool determineCover(bool lpSol = true);
 
@@ -87,10 +102,6 @@ class HighsCutGeneration {
 
   bool preprocessBaseInequality(bool& hasUnboundedInts, bool& hasGeneralInts,
                                 bool& hasContinuous);
-
-  void flipComplementation(HighsInt index);
-
-  void removeComplementation();
 
   void storeCutVars(std::vector<HighsInt>& cutInds,
                     std::vector<double>& cutVals);
