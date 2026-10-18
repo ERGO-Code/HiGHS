@@ -25,14 +25,61 @@ std::string get_parent_directory(const std::string& path) {
 }  // namespace
 
 // arrays are assumed to be contiguous c-style arrays of correct type
-// 
-// NOTE: unlike pybind11's array_t forcecast, nanobind's ndarray caster
-// requires the input to already support the buffer protocol/DLPack;
-// it will not auto-wrap a plain Python list/tuple.
-// None of the functions relying on this are exercised by SciPy today,
-// so this is left as a known, untested behavior difference for now.
 template <typename T>
 using dense_array_t = nb::ndarray<T, nb::numpy, nb::device::cpu, nb::c_contig>;
+
+// input array argument: like pybind11's array_t forcecast, also accepts
+// array-likes such as lists/tuples (nanobind's ndarray caster does not), by
+// falling back to numpy.ascontiguousarray (see type_caster below)
+template <typename T>
+struct array_like_t : dense_array_t<T> {
+  array_like_t() = default;
+  array_like_t(dense_array_t<T> array) : dense_array_t<T>(std::move(array)) {}
+};
+
+namespace nanobind {
+namespace detail {
+template <typename T>
+struct type_caster<array_like_t<T>> {
+  using Caster = make_caster<dense_array_t<T>>;
+  NB_TYPE_CASTER(array_like_t<T>, Caster::Name)
+
+  bool from_python(handle src, uint8_t flags,
+                   cleanup_list* cleanup) noexcept {
+    using Inner = dense_array_t<T>;
+    {
+      Caster caster;
+      if (caster.from_python(src, flags, cleanup)) {
+        value = caster.operator cast_t<Inner>();
+        return true;
+      }
+    }
+    // casting to dense_array_t failed, check if implicit conversion is allowed:
+    if (!(flags & (uint8_t)cast_flags::convert)) return false;
+    // try implicit conversion via np.ascontiguousarray
+    try {
+      const char* dtype = std::is_floating_point_v<T> ? "float64"
+                          : sizeof(T) == 8            ? "int64"
+                                                      : "int32";
+      // the resulting ndarray holds a reference to the converted array
+      object array = module_::import_("numpy").attr("ascontiguousarray")(
+          src, "dtype"_a = dtype);
+      Caster caster;
+      if (!caster.from_python(array, flags, cleanup)) return false;
+      value = caster.operator cast_t<Inner>();
+      return true;
+    } catch (...) {
+      return false;
+    }
+  }
+
+  static handle from_cpp(const array_like_t<T>& array, rv_policy policy,
+                         cleanup_list* cleanup) noexcept {
+    return Caster::from_cpp(array, policy, cleanup);
+  }
+};
+}  // namespace detail
+}  // namespace nanobind
 
 // heap-allocate a std::vector<T> and wrap it in an owning ndarray
 // ref. https://nanobind.readthedocs.io/en/latest/ndarray.html#data-ownership
@@ -66,7 +113,7 @@ auto make_readonly_ptr(std::vector<T> Base::* member) {
 // python)
 template <typename Base, typename T>
 auto make_setter_ptr(std::vector<T> Base::* member) {
-  return [member](Base& self, dense_array_t<T> array) {
+  return [member](Base& self, array_like_t<T> array) {
     if (array.ndim() != 1) {
       throw std::runtime_error("Expected a 1D array");
     }
@@ -83,15 +130,15 @@ HighsStatus highs_passModelPointers(
     Highs* h, const HighsInt num_col, const HighsInt num_row,
     const HighsInt num_nz, const HighsInt q_num_nz, const HighsInt a_format,
     const HighsInt q_format, const HighsInt sense, const double offset,
-    const dense_array_t<double> col_cost, const dense_array_t<double> col_lower,
-    const dense_array_t<double> col_upper,
-    const dense_array_t<double> row_lower,
-    const dense_array_t<double> row_upper,
-    const dense_array_t<HighsInt> a_start,
-    const dense_array_t<HighsInt> a_index, const dense_array_t<double> a_value,
-    const dense_array_t<HighsInt> q_start,
-    const dense_array_t<HighsInt> q_index, const dense_array_t<double> q_value,
-    const dense_array_t<HighsInt> integrality) {
+    const array_like_t<double> col_cost, const array_like_t<double> col_lower,
+    const array_like_t<double> col_upper,
+    const array_like_t<double> row_lower,
+    const array_like_t<double> row_upper,
+    const array_like_t<HighsInt> a_start,
+    const array_like_t<HighsInt> a_index, const array_like_t<double> a_value,
+    const array_like_t<HighsInt> q_start,
+    const array_like_t<HighsInt> q_index, const array_like_t<double> q_value,
+    const array_like_t<HighsInt> integrality) {
   const double* col_cost_ptr = col_cost.data();
   const double* col_lower_ptr = col_lower.data();
   const double* col_upper_ptr = col_upper.data();
@@ -120,15 +167,15 @@ HighsStatus highs_passLpPointers(Highs* h, const HighsInt num_col,
                                  const HighsInt num_row, const HighsInt num_nz,
                                  const HighsInt a_format, const HighsInt sense,
                                  const double offset,
-                                 const dense_array_t<double> col_cost,
-                                 const dense_array_t<double> col_lower,
-                                 const dense_array_t<double> col_upper,
-                                 const dense_array_t<double> row_lower,
-                                 const dense_array_t<double> row_upper,
-                                 const dense_array_t<HighsInt> a_start,
-                                 const dense_array_t<HighsInt> a_index,
-                                 const dense_array_t<double> a_value,
-                                 const dense_array_t<HighsInt> integrality) {
+                                 const array_like_t<double> col_cost,
+                                 const array_like_t<double> col_lower,
+                                 const array_like_t<double> col_upper,
+                                 const array_like_t<double> row_lower,
+                                 const array_like_t<double> row_upper,
+                                 const array_like_t<HighsInt> a_start,
+                                 const array_like_t<HighsInt> a_index,
+                                 const array_like_t<double> a_value,
+                                 const array_like_t<HighsInt> integrality) {
   const double* col_cost_ptr = col_cost.data();
   const double* col_lower_ptr = col_lower.data();
   const double* col_upper_ptr = col_upper.data();
@@ -154,9 +201,9 @@ HighsStatus highs_passHessian(Highs* h, HighsHessian& hessian) {
 HighsStatus highs_passHessianPointers(Highs* h, const HighsInt dim,
                                       const HighsInt num_nz,
                                       const HighsInt format,
-                                      const dense_array_t<HighsInt> q_start,
-                                      const dense_array_t<HighsInt> q_index,
-                                      const dense_array_t<double> q_value) {
+                                      const array_like_t<HighsInt> q_start,
+                                      const array_like_t<HighsInt> q_index,
+                                      const array_like_t<double> q_value) {
   const HighsInt* q_start_ptr = q_start.data();
   const HighsInt* q_index_ptr = q_index.data();
   const double* q_value_ptr = q_value.data();
@@ -275,7 +322,7 @@ highs_getBasisInverseColSparse(Highs* h, HighsInt col) {
 }
 
 std::tuple<HighsStatus, dense_array_t<double>> highs_getBasisSolve(
-    Highs* h, dense_array_t<double> rhs) {
+    Highs* h, array_like_t<double> rhs) {
   HighsInt num_row = h->getNumRow();
 
   double* rhs_ptr = rhs.data();
@@ -290,7 +337,7 @@ std::tuple<HighsStatus, dense_array_t<double>> highs_getBasisSolve(
 
 std::tuple<HighsStatus, dense_array_t<double>, HighsInt,
            dense_array_t<HighsInt>>
-highs_getBasisSolveSparse(Highs* h, dense_array_t<double> rhs) {
+highs_getBasisSolveSparse(Highs* h, array_like_t<double> rhs) {
   HighsInt num_row = h->getNumRow();
 
   double* rhs_ptr = rhs.data();
@@ -310,7 +357,7 @@ highs_getBasisSolveSparse(Highs* h, dense_array_t<double> rhs) {
 }
 
 std::tuple<HighsStatus, dense_array_t<double>> highs_getBasisTransposeSolve(
-    Highs* h, dense_array_t<double> rhs) {
+    Highs* h, array_like_t<double> rhs) {
   HighsInt num_row = h->getNumRow();
 
   double* rhs_ptr = rhs.data();
@@ -326,7 +373,7 @@ std::tuple<HighsStatus, dense_array_t<double>> highs_getBasisTransposeSolve(
 
 std::tuple<HighsStatus, dense_array_t<double>, HighsInt,
            dense_array_t<HighsInt>>
-highs_getBasisTransposeSolveSparse(Highs* h, dense_array_t<double> rhs) {
+highs_getBasisTransposeSolveSparse(Highs* h, array_like_t<double> rhs) {
   HighsInt num_row = h->getNumRow();
 
   double* rhs_ptr = rhs.data();
@@ -471,8 +518,8 @@ std::tuple<HighsStatus, bool, dense_array_t<double>> highs_getPrimalRay(
 }
 
 HighsStatus highs_addRow(Highs* h, double lower, double upper,
-                         HighsInt num_new_nz, dense_array_t<HighsInt> indices,
-                         dense_array_t<double> values) {
+                         HighsInt num_new_nz, array_like_t<HighsInt> indices,
+                         array_like_t<double> values) {
   HighsInt* indices_ptr = indices.data();
   double* values_ptr = values.data();
 
@@ -480,11 +527,11 @@ HighsStatus highs_addRow(Highs* h, double lower, double upper,
 }
 
 HighsStatus highs_addRows(Highs* h, HighsInt num_row,
-                          dense_array_t<double> lower,
-                          dense_array_t<double> upper, HighsInt num_new_nz,
-                          dense_array_t<HighsInt> starts,
-                          dense_array_t<HighsInt> indices,
-                          dense_array_t<double> values) {
+                          array_like_t<double> lower,
+                          array_like_t<double> upper, HighsInt num_new_nz,
+                          array_like_t<HighsInt> starts,
+                          array_like_t<HighsInt> indices,
+                          array_like_t<double> values) {
   double* lower_ptr = lower.data();
   double* upper_ptr = upper.data();
   HighsInt* starts_ptr = starts.data();
@@ -496,8 +543,8 @@ HighsStatus highs_addRows(Highs* h, HighsInt num_row,
 }
 
 HighsStatus highs_addCol(Highs* h, double cost, double lower, double upper,
-                         HighsInt num_new_nz, dense_array_t<HighsInt> indices,
-                         dense_array_t<double> values) {
+                         HighsInt num_new_nz, array_like_t<HighsInt> indices,
+                         array_like_t<double> values) {
   HighsInt* indices_ptr = indices.data();
   double* values_ptr = values.data();
 
@@ -505,12 +552,12 @@ HighsStatus highs_addCol(Highs* h, double cost, double lower, double upper,
 }
 
 HighsStatus highs_addCols(Highs* h, HighsInt num_col,
-                          dense_array_t<double> cost,
-                          dense_array_t<double> lower,
-                          dense_array_t<double> upper, HighsInt num_new_nz,
-                          dense_array_t<HighsInt> starts,
-                          dense_array_t<HighsInt> indices,
-                          dense_array_t<double> values) {
+                          array_like_t<double> cost,
+                          array_like_t<double> lower,
+                          array_like_t<double> upper, HighsInt num_new_nz,
+                          array_like_t<HighsInt> starts,
+                          array_like_t<HighsInt> indices,
+                          array_like_t<double> values) {
   double* cost_ptr = cost.data();
   double* lower_ptr = lower.data();
   double* upper_ptr = upper.data();
@@ -527,8 +574,8 @@ HighsStatus highs_addVar(Highs* h, double lower, double upper) {
 }
 
 HighsStatus highs_addVars(Highs* h, HighsInt num_vars,
-                          dense_array_t<double> lower,
-                          dense_array_t<double> upper) {
+                          array_like_t<double> lower,
+                          array_like_t<double> upper) {
   double* lower_ptr = lower.data();
   double* upper_ptr = upper.data();
 
@@ -536,8 +583,8 @@ HighsStatus highs_addVars(Highs* h, HighsInt num_vars,
 }
 
 HighsStatus highs_changeColsCost(Highs* h, HighsInt num_set_entries,
-                                 dense_array_t<HighsInt> indices,
-                                 dense_array_t<double> cost) {
+                                 array_like_t<HighsInt> indices,
+                                 array_like_t<double> cost) {
   HighsInt* indices_ptr = indices.data();
   double* cost_ptr = cost.data();
 
@@ -545,9 +592,9 @@ HighsStatus highs_changeColsCost(Highs* h, HighsInt num_set_entries,
 }
 
 HighsStatus highs_changeColsBounds(Highs* h, HighsInt num_set_entries,
-                                   dense_array_t<HighsInt> indices,
-                                   dense_array_t<double> lower,
-                                   dense_array_t<double> upper) {
+                                   array_like_t<HighsInt> indices,
+                                   array_like_t<double> lower,
+                                   array_like_t<double> upper) {
   HighsInt* indices_ptr = indices.data();
   double* lower_ptr = lower.data();
   double* upper_ptr = upper.data();
@@ -557,11 +604,11 @@ HighsStatus highs_changeColsBounds(Highs* h, HighsInt num_set_entries,
 }
 
 HighsStatus highs_changeColsIntegrality(
-    Highs* h, HighsInt num_set_entries, dense_array_t<HighsInt> indices,
+    Highs* h, HighsInt num_set_entries, array_like_t<HighsInt> indices,
     // HighsVarType is a scoped enum, so it has no nanobind ndarray dtype;
     // accept its uint8_t underlying representation instead,
     // then reinterpret_cast below.
-    dense_array_t<uint8_t> integrality) {
+    array_like_t<uint8_t> integrality) {
   HighsInt* indices_ptr = indices.data();
   HighsVarType* integrality_ptr =
       reinterpret_cast<HighsVarType*>(integrality.data());
@@ -571,9 +618,9 @@ HighsStatus highs_changeColsIntegrality(
 }
 
 HighsStatus highs_changeRowsBounds(Highs* h, HighsInt num_set_entries,
-                                   dense_array_t<HighsInt> indices,
-                                   dense_array_t<double> lower,
-                                   dense_array_t<double> upper) {
+                                   array_like_t<HighsInt> indices,
+                                   array_like_t<double> lower,
+                                   array_like_t<double> upper) {
   HighsInt* indices_ptr = indices.data();
   double* lower_ptr = lower.data();
   double* upper_ptr = upper.data();
@@ -584,13 +631,13 @@ HighsStatus highs_changeRowsBounds(Highs* h, HighsInt num_set_entries,
 
 // Same as deleteVars
 HighsStatus highs_deleteCols(Highs* h, HighsInt num_set_entries,
-                             dense_array_t<HighsInt> indices) {
+                             array_like_t<HighsInt> indices) {
   HighsInt* index_ptr = indices.data();
   return h->deleteCols(num_set_entries, index_ptr);
 }
 
 HighsStatus highs_deleteRows(Highs* h, HighsInt num_set_entries,
-                             dense_array_t<HighsInt> indices) {
+                             array_like_t<HighsInt> indices) {
   HighsInt* index_ptr = indices.data();
   return h->deleteRows(num_set_entries, index_ptr);
 }
@@ -600,8 +647,8 @@ HighsStatus highs_setSolution(Highs* h, HighsSolution& solution) {
 }
 
 HighsStatus highs_setSparseSolution(Highs* h, HighsInt num_entries,
-                                    dense_array_t<HighsInt> index,
-                                    dense_array_t<double> value) {
+                                    array_like_t<HighsInt> index,
+                                    array_like_t<double> value) {
   HighsInt* index_ptr = index.data();
   double* value_ptr = value.data();
 
@@ -758,7 +805,7 @@ highs_getRowEntries(Highs* h, HighsInt row) {
 std::tuple<HighsStatus, HighsInt, dense_array_t<double>, dense_array_t<double>,
            dense_array_t<double>, HighsInt>
 highs_getCols(Highs* h, HighsInt num_set_entries,
-              dense_array_t<HighsInt> indices) {
+              array_like_t<HighsInt> indices) {
   HighsInt* indices_ptr = indices.data();
   // Make sure that the vectors are not empty
   const HighsInt dim = num_set_entries > 0 ? num_set_entries : 1;
@@ -781,7 +828,7 @@ highs_getCols(Highs* h, HighsInt num_set_entries,
 std::tuple<HighsStatus, dense_array_t<HighsInt>, dense_array_t<HighsInt>,
            dense_array_t<double>>
 highs_getColsEntries(Highs* h, HighsInt num_set_entries,
-                     dense_array_t<HighsInt> indices) {
+                     array_like_t<HighsInt> indices) {
   HighsInt* indices_ptr = indices.data();
   // Make sure that the vectors are not empty
   const HighsInt dim = num_set_entries > 0 ? num_set_entries : 1;
@@ -815,7 +862,7 @@ std::tuple<HighsStatus, HighsVarType> highs_getColIntegrality(Highs* h,
 std::tuple<HighsStatus, HighsInt, dense_array_t<double>, dense_array_t<double>,
            HighsInt>
 highs_getRows(Highs* h, HighsInt num_set_entries,
-              dense_array_t<HighsInt> indices) {
+              array_like_t<HighsInt> indices) {
   HighsInt* indices_ptr = indices.data();
   // Make sure that the vectors are not empty
   const HighsInt dim = num_set_entries > 0 ? num_set_entries : 1;
@@ -835,7 +882,7 @@ highs_getRows(Highs* h, HighsInt num_set_entries,
 std::tuple<HighsStatus, dense_array_t<HighsInt>, dense_array_t<HighsInt>,
            dense_array_t<double>>
 highs_getRowsEntries(Highs* h, HighsInt num_set_entries,
-                     dense_array_t<HighsInt> indices) {
+                     array_like_t<HighsInt> indices) {
   HighsInt* indices_ptr = indices.data();
   // Make sure that the vectors are not empty
   const HighsInt dim = num_set_entries > 0 ? num_set_entries : 1;
@@ -909,14 +956,14 @@ HighsStatus highs_setCallback(
 }
 
 HighsStatus highs_setcbSolution(HighsCallbackInput* cb,
-                                const dense_array_t<double> value) {
+                                const array_like_t<double> value) {
   const double* value_ptr = value.data();
   return cb->setSolution(value.size(), value_ptr);
 }
 
 HighsStatus highs_setcbSparseSolution(HighsCallbackInput* cb,
-                                      const dense_array_t<HighsInt> index,
-                                      const dense_array_t<double> value) {
+                                      const array_like_t<HighsInt> index,
+                                      const array_like_t<double> value) {
   const HighsInt* index_ptr = index.data();
   const double* value_ptr = value.data();
 
