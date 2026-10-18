@@ -183,14 +183,12 @@ HighsLpRelaxation::HighsLpRelaxation(const HighsMipSolver& mipsolver)
   // Set primal feasibility tolerance for LP solves according to
   // mip_feasibility_tolerance, and smaller tolerance for dual
   // feasibility
-  double mip_primal_feasibility_tolerance =
-      mipsolver.options_mip_->mip_feasibility_tolerance;
-  double mip_dual_feasibility_tolerance =
-      mipsolver.options_mip_->mip_feasibility_tolerance * 0.1;
-  lpsolver.setOptionValue("primal_feasibility_tolerance",
-                          mip_primal_feasibility_tolerance);
-  lpsolver.setOptionValue("dual_feasibility_tolerance",
-                          mip_dual_feasibility_tolerance);
+  lpsolver.setOptionValue(
+      "primal_feasibility_tolerance",
+      mipsolver.options_mip_->getMipPrimalFeasibilityTolerance());
+  lpsolver.setOptionValue(
+      "dual_feasibility_tolerance",
+      mipsolver.options_mip_->getMipDualFeasibilityTolerance());
   status = Status::kNotSet;
   numlpiters = 0;
   avgSolveIters = 0;

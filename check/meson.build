@@ -42,7 +42,7 @@ test_array = [
   ['test_TestIpm', 'TestIpm.cpp'],
   ['test_TestIpx', 'TestIpx.cpp'],
   ['test_TestLogging', 'TestLogging.cpp'],
-  ['test_TestLPFileFormat', 'TestLPFileFormat.cpp'],
+  ['test_TestLpFileFormat', 'TestLpFileFormat.cpp'],
   ['test_TestLpModification', 'TestLpModification.cpp'],
   ['test_TestLpOrientation', 'TestLpOrientation.cpp'],
   ['test_TestLpSolvers', 'TestLpSolvers.cpp'],
