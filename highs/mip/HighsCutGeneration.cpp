@@ -354,7 +354,7 @@ bool HighsCutGeneration::separateLiftedMixedIntegerCover() {
     if (atUpper && !bestlAtUpper) continue;
 
     double valj = cut.vars[j].val;
-    double mju = ub * valj;
+    HighsCDouble mju = static_cast<HighsCDouble>(ub) * valj;
     HighsCDouble mu = mju - lambda;
 
     if (mu <= 10 * feastol) continue;
@@ -378,7 +378,8 @@ bool HighsCutGeneration::separateLiftedMixedIntegerCover() {
     HighsCDouble mcplus = m[cplusend];
     if (i < cplusend) mcplus -= mju;
 
-    double jlVal = static_cast<double>(mcplus + eta * valj);
+    double jlVal =
+        static_cast<double>(mcplus + static_cast<HighsCDouble>(eta) * valj);
 
     if (jlVal > bestlVal || (!atUpper && bestlAtUpper)) {
       lpos = i;
