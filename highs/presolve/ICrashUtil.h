@@ -34,7 +34,7 @@ void printMinorIterationDetails(const double iteration, const double col,
                                 const double old_value, const double update,
                                 const double ctx, const std::vector<double>& r,
                                 const double quadratic_objective,
-                                HighsLogOptions options);
+                                const HighsLogOptions& options);
 
 bool initialize(const HighsLp& lp, HighsSolution& solution,
                 std::vector<double>& lambda);

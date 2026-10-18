@@ -2,12 +2,7 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2021 at the University of Edinburgh    */
-/*                                                                       */
 /*    Available as open-source under the MIT License                     */
-/*                                                                       */
-/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
-/*    and Michael Feldmeier                                              */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -32,7 +27,11 @@ class HighsSpinMutex {
 #ifdef HIGHS_HAVE_MM_PAUSE
     _mm_pause();
 #else
-    // ToDo: See if this is OK on Mac M1
+    // On non-x86 platforms, use std::this_thread::yield() rather than a
+    // cheaper AArch64 spin hint. The callers use time-budgeted spin loops,
+    // and the constants are calibrated to the cost of this yield.
+    // Replacing it with a cheaper primitive causes substantially more
+    // contention on the atomic and has been measured to regress performance.
     std::this_thread::yield();
 #endif
   }

@@ -192,17 +192,54 @@ _ipx_srcs = [
     'ipm/ipx/utils.cc',
 ]
 
+_hipo_srcs = [
+    'ipm/hipo/ipm/IpmData.cpp',
+    'ipm/hipo/ipm/FactorHighsSolver.cpp',
+    'ipm/hipo/ipm/Control.cpp',
+    'ipm/hipo/ipm/Iterate.cpp',
+    'ipm/hipo/ipm/KktMatrix.cpp',
+    'ipm/hipo/ipm/Model.cpp',
+    'ipm/hipo/ipm/PreProcess.cpp',
+    'ipm/hipo/ipm/Refine.cpp',
+    'ipm/hipo/ipm/Solver.cpp',
+    'ipm/hipo/ipm/UpLookingSolver.cpp',
+    'ipm/hipo/factorhighs/Analyse.cpp',
+    'ipm/hipo/factorhighs/CallAndTimeBlas.cpp',
+    'ipm/hipo/factorhighs/CliqueStack.cpp',
+    'ipm/hipo/factorhighs/DataCollector.cpp',
+    'ipm/hipo/factorhighs/DenseFactHybrid.cpp',
+    'ipm/hipo/factorhighs/DenseFactKernel.cpp',
+    'ipm/hipo/factorhighs/DgemmParallel.cpp',
+    'ipm/hipo/factorhighs/FactorHighs_c_api.cpp',
+    'ipm/hipo/factorhighs/FactorHighs.cpp',
+    'ipm/hipo/factorhighs/Factorise.cpp',
+    'ipm/hipo/factorhighs/FormatHandler.cpp',
+    'ipm/hipo/factorhighs/HybridHybridFormatHandler.cpp',
+    'ipm/hipo/factorhighs/HybridSolveHandler.cpp',
+    'ipm/hipo/factorhighs/KrylovMethodsIpm.cpp',
+    'ipm/hipo/factorhighs/Numeric.cpp',
+    'ipm/hipo/factorhighs/SolveHandler.cpp',
+    'ipm/hipo/factorhighs/Swaps.cpp',
+    'ipm/hipo/factorhighs/Symbolic.cpp',
+    'ipm/hipo/auxiliary/Auxiliary.cpp',
+    'ipm/hipo/auxiliary/KrylovMethods.cpp',
+    'ipm/hipo/auxiliary/Logger.cpp',
+    'ipm/hipo/auxiliary/VectorOperations.cpp',
+]
+
+
 _srcs = [
-    '../extern/filereaderlp/reader.cpp',
+    'HighsExternalApi.cpp',
+    'HighsExternalDeps.cpp',
     'interfaces/highs_c_api.cpp',
     'io/Filereader.cpp',
-    'io/FilereaderEms.cpp',
     'io/FilereaderLp.cpp',
     'io/FilereaderMps.cpp',
     'io/HMPSIO.cpp',
     'io/HMpsFF.cpp',
     'io/HighsIO.cpp',
     'io/LoadOptions.cpp',
+    'io/LpReader.cpp',
     'ipm/IpxWrapper.cpp',
     'lp_data/Highs.cpp',
     'lp_data/HighsCallback.cpp',
@@ -217,6 +254,7 @@ _srcs = [
     'lp_data/HighsModelUtils.cpp',
     'lp_data/HighsOptions.cpp',
     'lp_data/HighsRanging.cpp',
+    'lp_data/HighsRunData.cpp',
     'lp_data/HighsSolution.cpp',
     'lp_data/HighsSolutionDebug.cpp',
     'lp_data/HighsSolve.cpp',
@@ -233,9 +271,10 @@ _srcs = [
     'mip/HighsImplications.cpp',
     'mip/HighsLpAggregator.cpp',
     'mip/HighsLpRelaxation.cpp',
-    'mip/HighsMipAnalysis.cpp',
+    'mip/HighsMachineSchedSeparator.cpp',
     'mip/HighsMipSolver.cpp',
     'mip/HighsMipSolverData.cpp',
+    'mip/HighsMipWorker.cpp',
     'mip/HighsModkSeparator.cpp',
     'mip/HighsNodeQueue.cpp',
     'mip/HighsObjectiveFunction.cpp',
@@ -253,8 +292,33 @@ _srcs = [
     'model/HighsModel.cpp',
     'parallel/HighsTaskExecutor.cpp',
     'pdlp/CupdlpWrapper.cpp',
+    'pdlp/HiPdlpWrapper.cpp',
+    'pdlp/hipdlp/linalg.cc',
+    'pdlp/hipdlp/logger.cc',
+    'pdlp/hipdlp/pdhg.cc',
+    'pdlp/hipdlp/restart.cc',
+    'pdlp/hipdlp/scaling.cc',
     'presolve/HPresolve.cpp',
+    'presolve/HPresolveAggregator.cpp',
     'presolve/HPresolveAnalysis.cpp',
+    'presolve/HPresolveCliqueTable.cpp',
+    'presolve/HPresolveColStuffing.cpp',
+    'presolve/HPresolveDependent.cpp',
+    'presolve/HPresolveDominatedCols.cpp',
+    'presolve/HPresolveDualFixing.cpp',
+    'presolve/HPresolveEnumeration.cpp',
+    'presolve/HPresolveFourierMotzkin.cpp',
+    'presolve/HPresolveImpliedInts.cpp',
+    'presolve/HPresolveInitialSweep.cpp',
+    'presolve/HPresolveParallelRowsAndCols.cpp',
+    'presolve/HPresolveProbing.cpp',
+    'presolve/HPresolveProbingUtil.cpp',
+    'presolve/HPresolveSparsify.cpp',
+    'presolve/HPresolveStrengthenIneq.cpp',
+    'presolve/HPresolveUtils.cpp',
+    'presolve/HPresolveVarBndAggregation.cpp',
+    'presolve/HPresolveZeroCostSingleton.cpp',
+    'presolve/HPresolveTest.cpp',
     'presolve/HighsPostsolveStack.cpp',
     'presolve/HighsSymmetry.cpp',
     'presolve/ICrash.cpp',
@@ -264,7 +328,7 @@ _srcs = [
     'qpsolver/a_asm.cpp',
     'qpsolver/a_quass.cpp',
     'qpsolver/basis.cpp',
-    'qpsolver/perturbation.cpp',
+    'qpsolver/QpAsmWrapper.cpp',
     'qpsolver/quass.cpp',
     'qpsolver/ratiotest.cpp',
     'qpsolver/scaling.cpp',
@@ -285,8 +349,6 @@ _srcs = [
     'simplex/HSimplexNlaProductForm.cpp',
     'simplex/HSimplexReport.cpp',
     'simplex/HighsSimplexAnalysis.cpp',
-    'test_kkt/DevKkt.cpp',
-    'test_kkt/KktCh2.cpp',
     'util/HFactor.cpp',
     'util/HFactorDebug.cpp',
     'util/HFactorExtend.cpp',
@@ -294,6 +356,7 @@ _srcs = [
     'util/HFactorUtils.cpp',
     'util/HSet.cpp',
     'util/HVectorBase.cpp',
+    'util/HighsDynamicLibrary.cpp',
     'util/HighsHash.cpp',
     'util/HighsLinearSumBounds.cpp',
     'util/HighsMatrixPic.cpp',
@@ -309,6 +372,7 @@ highslib_srcs = [
   files(_cupdlp_srcs),
   files(_basiclu_srcs),
   files(_ipx_srcs),
+  files(_hipo_srcs),
 ]
 
 
@@ -346,14 +410,14 @@ if get_option('with_fortran')
   _fsrcs = [
     'interfaces/highs_fortran_api.f90'
   ]
-  fortran_lib = library('FortranHighs',
-                        _fsrcs,
-                        dependencies: _deps,
-                        cpp_args: _args,
-                        link_with: highslib,
-                        include_directories: _incdirs,
-                        pic: true,
-                        install: do_install)
+  library('FortranHighs',
+          _fsrcs,
+          dependencies: _deps,
+          cpp_args: _args,
+          link_with: highslib,
+          include_directories: _incdirs,
+          pic: true,
+          install: do_install)
 endif
 
 # C#
@@ -362,18 +426,18 @@ if get_option('with_csharp')
   _cs_srcs = [
     'interfaces/highs_csharp_api.cs'
   ]
-  cs_lib = library('HighsCsharp',
-                        _cs_srcs,
-                        dependencies: _deps,
-                        cpp_args: _args,
-                        link_with: highslib,
-                        include_directories: _incdirs,
-                        pic: true,
-                        install: do_install)
+  library('HighsCsharp',
+          _cs_srcs,
+          dependencies: _deps,
+          cpp_args: _args,
+          link_with: highslib,
+          include_directories: _incdirs,
+          pic: true,
+          install: do_install)
 endif
 
 highspy_cpp = files([
-  'highs_bindings.cpp'
+  '../highspy/highs_bindings.cpp'
 ])
 
 if get_option('with_pybind11')

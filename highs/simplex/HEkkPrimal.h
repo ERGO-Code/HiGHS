@@ -103,9 +103,9 @@ class HEkkPrimal {
   void shiftBound(const bool lower, const HighsInt iVar, const double value,
                   const double random_value, double& bound, double& shift);
   void savePrimalRay();
-  HighsDebugStatus debugPrimalSimplex(const std::string message,
+  HighsDebugStatus debugPrimalSimplex(const std::string& message,
                                       const bool initialise = false);
-  HighsDebugStatus debugPrimalSteepestEdgeWeights(const std::string message);
+  HighsDebugStatus debugPrimalSteepestEdgeWeights(const std::string& message);
   HighsDebugStatus debugPrimalSteepestEdgeWeights(
       const HighsInt alt_debug_level = -1);
 
@@ -142,8 +142,8 @@ class HEkkPrimal {
 
   HighsInt num_flip_since_rebuild;
   // Primal phase 1 tools
-  vector<pair<double, int> > ph1SorterR;
-  vector<pair<double, int> > ph1SorterT;
+  vector<pair<double, HighsInt>> ph1SorterR;
+  vector<pair<double, HighsInt>> ph1SorterT;
   // Edge weights
   // Edge weight
   vector<double> edge_weight_;

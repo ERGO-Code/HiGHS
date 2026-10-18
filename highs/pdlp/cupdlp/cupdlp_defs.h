@@ -41,6 +41,8 @@ extern "C" {
 #define CUPDLP_DUMP_LINESEARCH_STATS (1)
 #define CUPDLP_INEXACT_EPS (1e-4)
 
+#define PDLP_DEBUG_LOG (0)
+
 typedef struct CUPDLP_CUDA_DENSE_VEC CUPDLPvec;
 typedef struct CUPDLP_DENSE_MATRIX CUPDLPdense;
 typedef struct CUPDLP_CSR_MATRIX CUPDLPcsr;
@@ -400,6 +402,14 @@ struct CUPDLP_TIMERS {
 #endif
 };
 
+struct DebugPdlpData {
+  double ax_norm;
+  double aty_norm;
+  double ax_average_norm;
+  double aty_average_norm;
+  double x_average_norm;
+};
+    
 struct CUPDLP_WORK {
   CUPDLPproblem *problem;
   CUPDLPsettings *settings;
@@ -423,6 +433,11 @@ struct CUPDLP_WORK {
 
   // cusparseDnVecDescr_t vecbuffer;
   cublasHandle_t cublashandle;
+#endif
+
+#if PDLP_DEBUG_LOG 
+  FILE* debug_pdlp_log_file_;
+  struct DebugPdlpData debug_pdlp_data_;
 #endif
 };
 

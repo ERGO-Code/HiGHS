@@ -30,7 +30,7 @@
 
 #include "io/HighsIO.h"
 #include "model/HighsModel.h"
-// #include "util/HighsInt.h"
+// #include "util/HighsType.h"
 #include "util/stringutil.h"
 
 using Triplet = std::tuple<HighsInt, HighsInt, double>;
@@ -57,7 +57,7 @@ class HMpsFF {
  public:
   HMpsFF() {}
   FreeFormatParserReturnCode loadProblem(const HighsLogOptions& log_options,
-                                         const std::string filename,
+                                         const std::string& filename,
                                          HighsModel& model);
 
   double time_limit_ = kHighsInf;
@@ -97,7 +97,7 @@ class HMpsFF {
   // that are defined as integer by markers in the column section, or
   // as binary by having a BV flag in the BOUNDS section, and without
   // any LI or UI flags in the BOUNDS section
-  std::vector<bool> col_binary;
+  std::vector<HighsBool> col_binary;
 
   // Record where the cost row is encountered
   HighsInt cost_row_location;
@@ -117,7 +117,7 @@ class HMpsFF {
   // file for the objective or a row. Have to be class data members so
   // that they can be used by parseName and addRhs in HMpsFF::parseRhs
   bool has_obj_entry_;
-  std::vector<bool> has_row_entry_;
+  std::vector<HighsBool> has_row_entry_;
 
   /// load LP from MPS file as transposed triplet matrix
   HighsInt parseFile(std::string filename);
@@ -173,6 +173,7 @@ class HMpsFF {
   std::vector<HighsInt> integer_column;
 
   std::vector<Triplet> entries;
+  HessianFormat q_format;
   std::vector<Triplet> q_entries;
   std::vector<std::vector<Triplet>> qrows_entries;
   std::vector<std::pair<HighsInt, double>> coeffobj;
@@ -185,8 +186,8 @@ class HMpsFF {
   std::vector<ConeType> cone_type;
   std::vector<double> cone_param;
   std::vector<std::vector<HighsInt>> cone_entries;
-  std::unordered_map<std::string, int> rowname2idx;
-  std::unordered_map<std::string, int> colname2idx;
+  std::unordered_map<std::string, HighsInt> rowname2idx;
+  std::unordered_map<std::string, HighsInt> colname2idx;
 
   mutable std::string section_args;
 
@@ -223,6 +224,11 @@ class HMpsFF {
   HMpsFF::Parsekey parseQuadRows(const HighsLogOptions& log_options,
                                  std::istream& file,
                                  const HMpsFF::Parsekey keyword);
+  HMpsFF::Parsekey parseQuadMatrix(const HighsLogOptions& log_options,
+                                   std::istream& file,
+                                   const std::string& section_name,
+                                   std::vector<Triplet>& q_entries);
+
   HMpsFF::Parsekey parseCones(const HighsLogOptions& log_options,
                               std::istream& file);
   HMpsFF::Parsekey parseSos(const HighsLogOptions& log_options,

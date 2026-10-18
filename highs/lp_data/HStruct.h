@@ -11,20 +11,12 @@
 #ifndef LP_DATA_HSTRUCT_H_
 #define LP_DATA_HSTRUCT_H_
 
+#include <functional>
 #include <unordered_map>
 #include <vector>
 
 #include "lp_data/HConst.h"
-
-struct HighsFiles {
-  bool empty = true;
-  std::string read_solution_file = "";
-  std::string read_basis_file = "";
-  std::string write_model_file = "";
-  std::string write_solution_file = "";
-  std::string write_basis_file = "";
-  void clear();
-};
+#include "util/HighsTimer.h"
 
 struct HighsSolution {
   bool value_valid = false;
@@ -36,6 +28,8 @@ struct HighsSolution {
   bool hasUndefined() const;
   void invalidate();
   void clear();
+  void print(const std::string& prefix = "",
+             const std::string& message = "") const;
 };
 
 struct HighsObjectiveSolution {
@@ -81,8 +75,10 @@ struct HighsBasis {
   std::string debug_origin_name = "None";
   std::vector<HighsBasisStatus> col_status;
   std::vector<HighsBasisStatus> row_status;
-  void print(std::string message = "") const;
-  void printScalars(std::string message = "") const;
+  void print(const std::string& prefix = "",
+             const std::string& message = "") const;
+  void printScalars(const std::string& prefix = "",
+                    const std::string& message = "") const;
   void invalidate();
   void clear();
 };
@@ -130,11 +126,15 @@ struct HighsLpMods {
 
 struct HighsNameHash {
   std::unordered_map<std::string, int> name2index;
-  void form(const std::vector<std::string>& name);
-  bool hasDuplicate(const std::vector<std::string>& name);
-  void update(int index, const std::string& old_name,
-              const std::string& new_name);
-  void clear();
+  size_t size() { return this->name2index.size(); }
+  void form(const std::vector<std::string>& names);
+  bool hasDuplicate(const std::vector<std::string>& names);
+  void addName(const HighsInt index, const std::string& name);
+  bool addNameFindsDuplicate(const HighsInt index, const std::string& name);
+  bool updateFindsDuplicate(const HighsInt index, const std::string& old_name,
+                            const std::string& new_name);
+  bool ok(const std::vector<std::string>& names);
+  void clear() { this->name2index.clear(); }
 };
 
 struct HighsPresolveRuleLog {
@@ -168,6 +168,50 @@ struct HighsLinearObjective {
   void clear();
 };
 
+struct HighsProfilingRecord {
+  std::vector<HighsInt> num_call;
+  std::vector<double> run_time;
+  std::vector<double> start_time;
+};
+
+struct HighsProfiling {
+  HighsTimer* timer = nullptr;
+  bool multi_threaded = true;
+  std::string model_name_ = "";
+  bool sub_solver_ = false;
+  bool mip_ = false;
+  HighsInt num_profiling_clock_ = -1;
+  std::vector<std::string> name;
+  // These vectors are over threads
+  std::vector<HighsBool> submip;
+  std::vector<HighsProfilingRecord> record;
+  std::vector<HighsProfilingRecord> submip_record;
+  bool initialized = false;
+
+  void initialize(HighsTimer& timer_, const bool subsolver_profiling,
+                  const bool mip_profiling = false);
+  void clear();
+  HighsInt numThread();
+  HighsInt myThread();
+  void setSubMip(const bool submip);
+  bool isSubMip();
+  HighsProfilingRecord* getHighsProfilingRecord(
+      const HighsInt record_type = kChooseRecord);
+  void start(const HighsInt profiling_clock, const bool restart = false);
+  void stop(const HighsInt profiling_clock);
+  double read(const HighsInt profiling_clock,
+              const HighsInt record_type = kChooseRecord);
+  bool running(const HighsInt profiling_clock,
+               const HighsInt record_type = kChooseRecord);
+  HighsInt numCall(const HighsInt profiling_clock,
+                   const HighsInt record_type = kChooseRecord);
+  void solveCall(const std::string& model, const bool submip);
+  //  HighsInt getSepaClockIndex(const std::string& name);
+};
+
+// Starts a profiling clock and stops it when the scope is left, on every exit
+using HighsProfilingScope = HighsClockScope<HighsProfiling>;
+
 struct HighsSimplexStats {
   bool valid;
   HighsInt iteration_count;
@@ -178,8 +222,73 @@ struct HighsSimplexStats {
   double row_ep_density;
   double row_ap_density;
   double row_DSE_density;
-  void report(FILE* file, const std::string message = "") const;
+  void report(FILE* file, const std::string& message = "") const;
   void initialise(const HighsInt iteration_count_ = 0);
+};
+
+struct HighsUserScaleData {
+  HighsInt user_objective_scale = 0;
+  HighsInt user_bound_scale = 0;
+  double infinite_cost;
+  double infinite_bound;
+  double small_matrix_value;
+  double large_matrix_value;
+  HighsInt num_infinite_costs;
+  HighsInt num_infinite_hessian_values;
+  HighsInt num_infinite_col_bounds;
+  HighsInt num_infinite_row_bounds;
+  HighsInt num_small_matrix_values;
+  HighsInt num_large_matrix_values;
+  HighsInt suggested_user_objective_scale;
+  HighsInt suggested_user_bound_scale;
+  bool applied = false;
+  void initialise(const HighsInt& user_objective_scale_,
+                  const HighsInt& user_bound_scale_,
+                  const double& infinite_cost_, const double& infinite_bound_,
+                  const double& small_matrix_value_,
+                  const double& large_matrix_value_);
+  bool scaleError(std::string& message) const;
+  bool scaleWarning(std::string& message) const;
+};
+
+using HighsHessianFunctionType = std::function<HighsInt(
+    const HighsInt call_type, const HighsInt* x_num_entries,
+    const HighsInt* x_index, const double* x_value,
+    HighsInt* hessian_x_num_entries, HighsInt* hessian_x_index,
+    double* hessian_x_value, void*)>;
+
+struct HessianOracle {
+  // Oracle to obtain values of Q' = multiplier_*Q + shift_*I and form
+  // products with Q', by calling a user-supplied function (call_) to
+  // form products with Q and then apply any non-trivial multiplier_
+  // or shift_
+  HighsInt dim_ = 0;
+  double multiplier_ = 1.0;  // Minimize
+  double shift_ = 0.0;       // No regularization
+  HighsHessianFunctionType call_ = nullptr;
+  void* data_ = nullptr;
+  void clear();
+  bool isValid() const { return hasProductCall(); }
+  bool hasProductCall() const;
+  void formFromOracle();
+  double diagonal(const HighsInt i) const;
+  double entry(const HighsInt i, const HighsInt j) const;
+  void getPackedColumn(const HighsInt col, HighsInt& col_num_entries,
+                       HighsInt* col_index, double* col_value) const;
+  void getScatteredColumn(const HighsInt col, HighsInt& col_num_entries,
+                          HighsInt* col_index, double* col_value) const;
+  void product(const std::vector<double>& x_value,
+               std::vector<double>& hessian_x_value) const;
+  void product(const double* x_value, double* hessian_x_value) const;
+  void product(const HighsInt x_num_entries, const HighsInt* x_index,
+               const double* x_value, double* hessian_x_value) const;
+  void scaleAndShift(const HighsInt* x_num_entries, const HighsInt* x_index,
+                     const double* x_value, double* hessian_x_value) const;
+};
+
+struct StatusString {
+  std::string full_;
+  std::string s2_;
 };
 
 #endif /* LP_DATA_HSTRUCT_H_ */

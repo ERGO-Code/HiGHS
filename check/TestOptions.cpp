@@ -1,4 +1,6 @@
 #include <cstdio>
+#include <fstream>
+#include <utility>
 
 #include "HCheckConfig.h"
 #include "Highs.h"
@@ -7,6 +9,16 @@
 #include "io/LoadOptions.h"
 
 const bool dev_run = false;
+
+TEST_CASE("definitions-md", "[highs_options]") {
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  // Use this name so that it can be copied to docs and provides code
+  // coverage
+  const std::string definitions_file = "definitions.md";
+  REQUIRE(h.writeOptions(definitions_file) == HighsStatus::kOk);
+  std::remove(definitions_file.c_str());
+}
 
 TEST_CASE("external-options", "[highs_options]") {
   Highs highs;
@@ -515,4 +527,113 @@ TEST_CASE("inf-value-options", "[highs_options]") {
   REQUIRE(value == -kHighsInf);
   highs.getOptionValue("objective_target", value);
   REQUIRE(value == kHighsInf);
+}
+
+TEST_CASE("default-options", "[highs_options]") {
+  // Makes sure that the default values of options are legal!
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  const std::string illegal_solver_value = "fred";
+  HighsOptions options;
+  options.solver = illegal_solver_value;
+  REQUIRE(h.passOptions(options) == HighsStatus::kError);
+  options = h.getOptions();
+  REQUIRE(options.solver != illegal_solver_value);
+  options.solver = illegal_solver_value;
+  REQUIRE(h.passOptions(options) == HighsStatus::kError);
+  options.solver = kSimplexString;
+  REQUIRE(h.passOptions(options) == HighsStatus::kOk);
+}
+
+TEST_CASE("options-copy-move", "[highs_options]") {
+  // the option records of a copied or moved HighsOptions object must refer
+  // to its own members, not to those of the source
+  auto setSource = [](HighsOptions& source) {
+    source.output_flag = dev_run;
+    source.simplex_strategy = kSimplexStrategyDual;
+  };
+  auto checkRecords = [](HighsOptions& options, HighsOptions& source) {
+    REQUIRE(options.simplex_strategy == kSimplexStrategyDual);
+    const HighsInt source_strategy = source.simplex_strategy;
+    REQUIRE(setLocalOptionValue(
+                options.log_options, "simplex_strategy", options.records,
+                HighsInt{kSimplexStrategyPrimal}) == OptionStatus::kOk);
+    REQUIRE(options.simplex_strategy == kSimplexStrategyPrimal);
+    REQUIRE(source.simplex_strategy == source_strategy);
+  };
+  {
+    // copy constructor
+    HighsOptions source;
+    setSource(source);
+    HighsOptions options(source);
+    checkRecords(options, source);
+  }
+  {
+    // move constructor
+    HighsOptions source;
+    setSource(source);
+    HighsOptions options(std::move(source));
+    checkRecords(options, source);
+  }
+  {
+    // copy assignment
+    HighsOptions source;
+    setSource(source);
+    HighsOptions options;
+    options = source;
+    checkRecords(options, source);
+  }
+  {
+    // move assignment
+    HighsOptions source;
+    setSource(source);
+    HighsOptions options;
+    options = std::move(source);
+    checkRecords(options, source);
+  }
+}
+
+TEST_CASE("incomplete-options-file-line", "[highs_options]") {
+  const std::string test_name = Catch::getResultCapture().getCurrentTestName();
+  const std::string incomplete_options_file = test_name + ".set";
+  std::ofstream f;
+  f.open(incomplete_options_file, std::ios::out);
+  f << "presolve = off\n";
+  f << " \n";
+  f.close();
+
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+
+  REQUIRE(h.readOptions(incomplete_options_file) == HighsStatus::kOk);
+
+  std::remove(incomplete_options_file.c_str());
+}
+
+TEST_CASE("string-option-case-insensitivity", "[highs_options]") {
+  Highs highs;
+  REQUIRE(highs.setOptionValue("output_flag", "FaLsE") == HighsStatus::kOk);
+  REQUIRE(highs.setOptionValue("output_flag", " false") == HighsStatus::kOk);
+  REQUIRE(highs.setOptionValue("output_flag", "True") == HighsStatus::kOk);
+  REQUIRE(highs.setOptionValue("output_flag", "TRUE ") == HighsStatus::kOk);
+  // Now ensure that output_flag setting corresponds to dev_run
+  highs.setOptionValue("output_flag", dev_run);
+  REQUIRE(highs.setOptionValue(kParallelString, "On") == HighsStatus::kOk);
+  REQUIRE(highs.setOptionValue(kParallelString, "OFF ") == HighsStatus::kOk);
+  REQUIRE(highs.setOptionValue(kSolverString, " Choose") == HighsStatus::kOk);
+  REQUIRE(highs.setOptionValue(kSolverString, "Simplex") == HighsStatus::kOk);
+  REQUIRE(highs.setOptionValue(kSolverString, " IPM") == HighsStatus::kOk);
+  REQUIRE(highs.setOptionValue(kSolverString, "PDLP ") == HighsStatus::kOk);
+  REQUIRE(highs.setOptionValue(kHipoOrderingString, "Metis") ==
+          HighsStatus::kOk);
+  REQUIRE(highs.setOptionValue(kHipoParallelString, "Tree") ==
+          HighsStatus::kOk);
+  REQUIRE(highs.setOptionValue(kHipoSystemString, "NormalEQ") ==
+          HighsStatus::kOk);
+  // Still doesn't mean that "anything goes"
+  REQUIRE(highs.setOptionValue(kSolverString, "ASM") == HighsStatus::kError);
+  REQUIRE(highs.setOptionValue(kMipLpSolverString, "ASM") ==
+          HighsStatus::kError);
+  REQUIRE(highs.setOptionValue(kMipIpmSolverString, "ASM") ==
+          HighsStatus::kError);
 }

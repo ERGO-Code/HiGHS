@@ -47,7 +47,7 @@ void HighsModkSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
   const HighsMipSolver& mipsolver = lpRelaxation.getMipSolver();
   const HighsLp& lp = lpRelaxation.getLp();
 
-  std::vector<uint8_t> skipRow(lp.num_row_);
+  std::vector<HighsBool> skipRow(lp.num_row_);
 
   // mark all rows that have continuous variables with a nonzero solution value
   // in the transformed LP to be skipped
@@ -134,8 +134,7 @@ void HighsModkSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
       HighsInt intRowLen = 0;
       for (HighsInt i = 0; i < rowlen; ++i) {
         if (solval[i] <= mipsolver.mipdata_->feastol) continue;
-        if (mipsolver.variableType(inds[i]) == HighsVarType::kContinuous)
-          continue;
+        if (mipsolver.isColContinuous(inds[i])) continue;
         ++intRowLen;
       }
 
@@ -151,8 +150,7 @@ void HighsModkSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
     if (!lpRelaxation.isRowIntegral(row)) {
       scaleVals.clear();
       for (HighsInt i = 0; i != rowlen; ++i) {
-        if (mipsolver.variableType(inds[i]) == HighsVarType::kContinuous)
-          continue;
+        if (mipsolver.isColContinuous(inds[i])) continue;
         if (solval[i] > mipsolver.mipdata_->feastol) {
           scaleVals.push_back(vals[i]);
         }
@@ -168,8 +166,7 @@ void HighsModkSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
       intrhs = HighsIntegers::nearestInteger(intscale * rhs);
 
       for (HighsInt i = 0; i != rowlen; ++i) {
-        if (mipsolver.variableType(inds[i]) == HighsVarType::kContinuous)
-          continue;
+        if (mipsolver.isColContinuous(inds[i])) continue;
         if (solval[i] > mipsolver.mipdata_->feastol) {
           intSystemIndex.push_back(inds[i]);
           intSystemValue.push_back(

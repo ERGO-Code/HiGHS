@@ -8,6 +8,7 @@
 #ifndef SIMPLEX_HAPP_H_
 #define SIMPLEX_HAPP_H_
 
+#include <cmath>
 // todo: clear includes.
 // #include <cstring>
 // #include <fstream>
@@ -21,6 +22,7 @@
 #include "lp_data/HighsLpUtils.h"
 #include "lp_data/HighsSolution.h"
 #include "lp_data/HighsSolve.h"
+#include "parallel/HighsParallel.h"
 #include "simplex/HEkk.h"
 #include "simplex/HSimplex.h"
 
@@ -40,6 +42,21 @@ inline HighsStatus returnFromSolveLpSimplex(HighsLpSolverObject& solver_object,
   // Copy the simplex iteration count to highs_info_ from ekk_instance
   solver_object.highs_info_.simplex_iteration_count =
       ekk_instance.iteration_count_;
+  // Stop whichever clock was running
+  if (solver_object.profiling_->sub_solver_) {
+    HighsInt profiling_clock = -1;
+    HighsProfilingRecord* thread_record =
+        solver_object.profiling_->getHighsProfilingRecord();
+    if (std::signbit(thread_record->start_time[kSubSolverDuSimplexBasis]))
+      profiling_clock = kSubSolverDuSimplexBasis;
+    if (std::signbit(thread_record->start_time[kSubSolverDuSimplexNoBasis]))
+      profiling_clock = kSubSolverDuSimplexNoBasis;
+    if (std::signbit(thread_record->start_time[kSubSolverPrSimplexBasis]))
+      profiling_clock = kSubSolverPrSimplexBasis;
+    if (std::signbit(thread_record->start_time[kSubSolverPrSimplexNoBasis]))
+      profiling_clock = kSubSolverPrSimplexNoBasis;
+    solver_object.profiling_->stop(profiling_clock);
+  }
   // Ensure that the incumbent LP is neither moved, nor scaled
   assert(!incumbent_lp.is_moved_);
   assert(!incumbent_lp.is_scaled_);
@@ -100,7 +117,26 @@ inline HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
     assert(retained_ekk_data_ok);
     return_status = HighsStatus::kError;
   }
-
+  if (solver_object.profiling_) {
+    HighsInt profiling_clock = -1;
+    if (options.simplex_strategy == kSimplexStrategyPrimal) {
+      if (basis.valid) {
+        profiling_clock = kSubSolverPrSimplexBasis;
+      } else {
+        profiling_clock = kSubSolverPrSimplexNoBasis;
+      }
+    } else {
+      if (basis.valid) {
+        profiling_clock = kSubSolverDuSimplexBasis;
+      } else {
+        profiling_clock = kSubSolverDuSimplexNoBasis;
+      }
+    }
+    assert(profiling_clock >= 0);
+    //    if (solver_object.profiling_->isSubMip()) { printf("solveLpSimplex:
+    //    sub-MIP on thread %d\n", int(solver_object.profiling_->myThread())); }
+    solver_object.profiling_->start(profiling_clock);
+  }
   // Copy the simplex iteration count from highs_info_ to ekk_instance, just for
   // convenience
   ekk_instance.iteration_count_ = highs_info.simplex_iteration_count;
@@ -388,6 +424,19 @@ inline HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
                       (int)ekk_instance.iteration_count_);
         }
       } else {
+        // There are unscaled primal infeasibilities, so use dual
+        // simplex
+        assert(num_unscaled_primal_infeasibilities > 0);
+        if (options.simplex_strategy != kSimplexStrategyDual)
+          highsLogDev(
+              options.log_options, HighsLogType::kInfo,
+              "Forcing change from %s to %s\n",
+              ekk_instance.simplexStrategyToString(options.simplex_strategy)
+                  .c_str(),
+              ekk_instance.simplexStrategyToString(kSimplexStrategyDual)
+                  .c_str());
+
+        options.simplex_strategy = kSimplexStrategyDual;
         // Using dual simplex, so force Devex if starting from an advanced
         // basis with no steepest edge weights
         if ((status.has_basis || basis.valid) &&

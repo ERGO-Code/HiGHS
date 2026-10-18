@@ -34,7 +34,7 @@ struct HighsError {
   HighsInt absolute_index;
   double relative_value;
   HighsInt relative_index;
-  void print(std::string message);
+  void print(const std::string& message);
   void reset();
   void invalidate();
 };
@@ -49,9 +49,7 @@ struct HighsPrimalDualErrors {
   double max_off_bound_nonbasic;
   double sum_off_bound_nonbasic;
   HighsInt glpsol_num_primal_residual_errors;
-  double glpsol_sum_primal_residual_errors;
   HighsInt glpsol_num_dual_residual_errors;
-  double glpsol_sum_dual_residual_errors;
   HighsError glpsol_max_primal_residual;
   HighsError glpsol_max_primal_infeasibility;
   HighsError glpsol_max_dual_residual;
@@ -60,24 +58,20 @@ struct HighsPrimalDualErrors {
 
 void getKktFailures(const HighsOptions& options, const HighsModel& model,
                     const HighsSolution& solution, const HighsBasis& basis,
-                    HighsInfo& highs_info);
-
-void getKktFailures(const HighsOptions& options, const HighsModel& model,
-                    const HighsSolution& solution, const HighsBasis& basis,
                     HighsInfo& highs_info,
-                    HighsPrimalDualErrors& primal_dual_errors,
+                    HighsPrimalDualErrors* primal_dual_errors = nullptr,
                     const bool get_residuals = false);
 
-void getLpKktFailures(const HighsOptions& options, const HighsLp& lp,
-                      const HighsSolution& solution, const HighsBasis& basis,
-                      HighsInfo& highs_info);
+void getQpKktFailures(const HighsOptions& options, const HighsModel& model,
+                      const HighsSolution& solution, HighsInfo& highs_info);
 
 void getLpKktFailures(const HighsOptions& options, const HighsLp& lp,
                       const HighsSolution& solution, const HighsBasis& basis,
                       HighsInfo& highs_info,
-                      HighsPrimalDualErrors& primal_dual_errors,
+                      HighsPrimalDualErrors* primal_dual_errors = nullptr,
                       const bool get_residuals = false);
 
+// Inner getKktFailures
 void getKktFailures(const HighsOptions& options, const bool is_qp,
                     const HighsLp& lp, const std::vector<double>& gradient,
                     const HighsSolution& solution, HighsInfo& highs_info,
@@ -85,12 +79,26 @@ void getKktFailures(const HighsOptions& options, const bool is_qp,
 
 void getVariableKktFailures(const double primal_feasibility_tolerance,
                             const double dual_feasibility_tolerance,
+                            const double mip_feasibility_tolerance,
                             const double lower, const double upper,
                             const double value, const double dual,
                             const HighsVarType integrality,
                             double& primal_infeasibility,
-                            double& dual_infeasibility, uint8_t& at_status,
-                            uint8_t& mid_status);
+                            double& dual_infeasibility,
+                            double& semi_infeasibility, uint8_t& at_status,
+                            uint8_t& mid_status, const HighsInt index = 0);
+
+void lpNoBasisKktCheck(HighsModelStatus& model_status, HighsInfo& info,
+                       const HighsLp& lp, const HighsSolution& solution,
+                       const HighsOptions& options, const std::string& message);
+
+void lpKktCheck(HighsModelStatus& model_status, HighsInfo& info,
+                const HighsLp& lp, const HighsSolution& solution,
+                const HighsBasis& basis, const HighsOptions& options,
+                const std::string& message);
+
+std::vector<double> getEffectiveCosts(const HighsLp& lp,
+                                      const HighsOptions& options);
 
 void getPrimalDualGlpsolErrors(const HighsOptions& options, const HighsLp& lp,
                                const std::vector<double>& gradient,
@@ -104,7 +112,7 @@ void getPrimalDualBasisErrors(const HighsOptions& options, const HighsLp& lp,
 
 bool getComplementarityViolations(const HighsLp& lp,
                                   const HighsSolution& solution,
-                                  const double complementarity_tolerance,
+                                  const double optimality_tolerance,
                                   HighsInt& num_complementarity_violations,
                                   double& max_complementarity_violation);
 
@@ -148,14 +156,24 @@ void resetModelStatusAndHighsInfo(HighsModelStatus& model_status,
                                   HighsInfo& highs_info);
 bool isBasisConsistent(const HighsLp& lp, const HighsBasis& basis);
 
+bool isColPrimalSolutionRightSize(const HighsLp& lp,
+                                  const HighsSolution& solution);
+bool isRowPrimalSolutionRightSize(const HighsLp& lp,
+                                  const HighsSolution& solution);
 bool isPrimalSolutionRightSize(const HighsLp& lp,
                                const HighsSolution& solution);
+
+bool isColDualSolutionRightSize(const HighsLp& lp,
+                                const HighsSolution& solution);
+bool isRowDualSolutionRightSize(const HighsLp& lp,
+                                const HighsSolution& solution);
 bool isDualSolutionRightSize(const HighsLp& lp, const HighsSolution& solution);
+
 bool isSolutionRightSize(const HighsLp& lp, const HighsSolution& solution);
 bool isBasisRightSize(const HighsLp& lp, const HighsBasis& basis);
 
-void reportLpKktFailures(const HighsLp& lp, const HighsOptions& options,
-                         const HighsInfo& highs_info,
-                         const std::string& solver = "");
+bool reportKktFailures(const HighsLp& lp, const HighsOptions& options,
+                       const HighsInfo& highs_info,
+                       const std::string& message = "");
 
 #endif  // LP_DATA_HIGHSSOLUTION_H_

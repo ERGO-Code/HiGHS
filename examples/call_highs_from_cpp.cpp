@@ -172,5 +172,7 @@ int main() {
     cout << endl;
   }
 
+  highs.resetGlobalScheduler(true);
+
   return 0;
 }

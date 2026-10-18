@@ -37,13 +37,10 @@ HighsObjectiveFunction::HighsObjectiveFunction(const HighsMipSolver& mipsolver)
     return;
   }
 
-  numIntegral =
-      std::partition(objectiveNonzeros.begin(), objectiveNonzeros.end(),
-                     [&](HighsInt i) {
-                       return mipsolver.variableType(i) !=
-                              HighsVarType::kContinuous;
-                     }) -
-      objectiveNonzeros.begin();
+  numIntegral = std::partition(
+                    objectiveNonzeros.begin(), objectiveNonzeros.end(),
+                    [&](HighsInt i) { return !mipsolver.isColContinuous(i); }) -
+                objectiveNonzeros.begin();
 
   if (numIntegral == 0)
     numBinary = 0;

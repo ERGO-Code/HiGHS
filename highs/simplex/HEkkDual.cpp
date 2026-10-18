@@ -375,7 +375,7 @@ HighsStatus HEkkDual::solve(const bool pass_force_phase2) {
         highsLogDev(options.log_options, HighsLogType::kWarning,
                     "HEkkDual:: Primal simplex clean up yields optimality, "
                     "but with %" HIGHSINT_FORMAT
-                    " (max %g) primal infeasibilities and " HIGHSINT_FORMAT
+                    " (max %g) primal infeasibilities and %" HIGHSINT_FORMAT
                     " (max %g) dual infeasibilities\n",
                     info.num_primal_infeasibilities,
                     info.max_primal_infeasibility,
@@ -609,6 +609,9 @@ void HEkkDual::solvePhase1() {
   // Switch to dual phase 1 bounds
   ekk_instance_.initialiseBound(SimplexAlgorithm::kDual, solve_phase);
   ekk_instance_.initialiseNonbasicValueAndMove();
+  // Free variables are boxed in phase 1, so the list of free variables
+  // created at the start of any earlier phase 2 must not be used (#2300)
+  dualRow.freeList.clear();
 
   // If there's no backtracking basis, save the initial basis in case of
   // backtracking
@@ -2281,7 +2284,7 @@ void HEkkDual::initialiseDevexFramework() {
   // summing the squares of the its entries over the indices in the
   // reference set. This is achieved by summing over all indices, but
   // multiplying the entry by the value in devex_index before
-  // equaring. Thus devex_index contains 1 for indices in the
+  // equating. Thus devex_index contains 1 for indices in the
   // reference set, and 0 otherwise. This is achieved by setting the
   // values of devex_index to be 1-nonbasicFlag^2, ASSUMING
   // |nonbasicFlag|=1 iff the corresponding variable is nonbasic
@@ -2731,7 +2734,7 @@ void HEkkDual::reportOnPossibleLpDualInfeasibility() {
               analysis.sum_dual_phase_1_lp_dual_infeasibility);
 }
 
-bool HEkkDual::dualInfoOk(const HighsLp& lp) {
+bool HEkkDual::dualInfoOk(const HighsLp& lp) const {
   HighsInt lp_num_col = lp.num_col_;
   HighsInt lp_num_row = lp.num_row_;
   bool dimensions_ok;
@@ -2960,7 +2963,7 @@ double HEkkDual::computeExactDualObjectiveValue(HVector& dual_col,
   return double(dual_objective);
 }
 
-HighsDebugStatus HEkkDual::debugDualSimplex(const std::string message,
+HighsDebugStatus HEkkDual::debugDualSimplex(const std::string& message,
                                             const bool initialise) {
   HighsDebugStatus return_status =
       ekk_instance_.debugSimplex(message, algorithm, solve_phase, initialise);

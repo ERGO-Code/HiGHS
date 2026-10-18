@@ -2,12 +2,7 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2021 at the University of Edinburgh    */
-/*                                                                       */
 /*    Available as open-source under the MIT License                     */
-/*                                                                       */
-/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
-/*    and Michael Feldmeier                                              */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -27,7 +22,7 @@
 class HighsBinarySemaphore {
   struct Data {
     std::atomic<int> count;
-    alignas(64) std::mutex mutex;
+    alignas(HighsSchedulerConstants::kCacheLineSize) std::mutex mutex;
     std::condition_variable condvar;
 
     Data(int init) : count(init) {}
@@ -57,10 +52,10 @@ class HighsBinarySemaphore {
     if (try_acquire()) return;
 
     auto tStart = std::chrono::high_resolution_clock::now();
-    int spinIters = 10;
+    int spinIters = HighsSchedulerConstants::kNumSpinTries;
     while (true) {
       for (int i = 0; i < spinIters; ++i) {
-        if (data_->count.load(std::memory_order_relaxed) == 1) {
+        if (data_->count.load(std::memory_order_acquire) == 1) {
           if (try_acquire()) return;
         }
         HighsSpinMutex::yieldProcessor();
@@ -86,7 +81,7 @@ class HighsBinarySemaphore {
 
     do {
       data_->condvar.wait(lg);
-    } while (data_->count.load(std::memory_order_relaxed) != 1);
+    } while (data_->count.load(std::memory_order_acquire) != 1);
 
     data_->count.store(0, std::memory_order_relaxed);
   }

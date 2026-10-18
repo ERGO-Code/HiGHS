@@ -29,6 +29,7 @@ class HighsLp;
 struct HighsDebugSol {
   const HighsMipSolver* mipsolver;
   double debugSolObjective;
+  std::vector<double> debugOrigSolution;
   std::vector<double> debugSolution;
   bool debugSolActive;
   std::unordered_map<const HighsDomain*, std::multiset<HighsDomainChange>>

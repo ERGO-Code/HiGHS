@@ -15,6 +15,7 @@
 #include <map>
 #include <vector>
 
+#include "HighsConflictPool.h"
 #include "mip/HighsDomainChange.h"
 
 class HighsDomain;
@@ -22,18 +23,20 @@ class HighsMipSolver;
 class HighsLpRelaxation;
 
 class HighsRedcostFixing {
-  std::vector<std::multimap<double, int>> lurkingColUpper;
-  std::vector<std::multimap<double, int>> lurkingColLower;
+  std::vector<std::multimap<double, HighsInt>> lurkingColUpper;
+  std::vector<std::multimap<double, HighsInt>> lurkingColLower;
 
  public:
   std::vector<std::pair<double, HighsDomainChange>> getLurkingBounds(
-      const HighsMipSolver& mipsolver) const;
+      const HighsMipSolver& mipsolver, const HighsDomain& globaldom) const;
 
   void propagateRootRedcost(const HighsMipSolver& mipsolver);
 
   static void propagateRedCost(const HighsMipSolver& mipsolver,
-                               HighsDomain& localdomain,
-                               const HighsLpRelaxation& lp);
+                               HighsDomain& localdomain, HighsDomain& globaldom,
+                               const HighsLpRelaxation& lp,
+                               HighsConflictPool& conflictpool,
+                               HighsPseudocost& pseudocost, double upper_limit);
 
   void addRootRedcost(const HighsMipSolver& mipsolver,
                       const std::vector<double>& lpredcost, double lpobjective);

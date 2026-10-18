@@ -128,7 +128,7 @@ void HEkkDualRHS::chooseMultiGlobal(HighsInt* chIndex, HighsInt* chCount,
   for (HighsInt i = 0; i < chLimit; i++) chIndex[i] = -1;
 
   const HighsUInt chooseCHECK = chLimit * 2;
-  vector<pair<double, int>> setP;
+  vector<pair<double, HighsInt>> setP;
   setP.reserve(chooseCHECK);
 
   std::vector<double>& edge_weight = ekk_instance_.dual_edge_weight_;
@@ -206,8 +206,8 @@ void HEkkDualRHS::chooseMultiGlobal(HighsInt* chIndex, HighsInt* chCount,
   // Store the setP
   pdqsort(setP.begin(), setP.end());
   if ((HighsInt)(setP.size()) > chLimit) setP.resize(chLimit);
-  *chCount = setP.size();
-  for (unsigned i = 0; i < setP.size(); i++) chIndex[i] = setP[i].second;
+  *chCount = static_cast<HighsInt>(setP.size());
+  for (size_t i = 0; i < setP.size(); i++) chIndex[i] = setP[i].second;
   analysis->simplexTimerStop(ChuzrDualClock);
 }
 
@@ -386,10 +386,10 @@ void HEkkDualRHS::updateInfeasList(HVector* column) {
     // The regular sparse way
     for (HighsInt i = 0; i < columnCount; i++) {
       HighsInt iRow = variable_index[i];
-      if (workMark[iRow] == 0) {
+      if (!workMark[iRow]) {
         if (work_infeasibility[iRow]) {
           workIndex[workCount++] = iRow;
-          workMark[iRow] = 1;
+          workMark[iRow] = true;
         }
       }
     }
@@ -397,10 +397,10 @@ void HEkkDualRHS::updateInfeasList(HVector* column) {
     // The hyper sparse way
     for (HighsInt i = 0; i < columnCount; i++) {
       HighsInt iRow = variable_index[i];
-      if (workMark[iRow] == 0) {
+      if (!workMark[iRow]) {
         if (work_infeasibility[iRow] > edge_weight[iRow] * workCutoff) {
           workIndex[workCount++] = iRow;
-          workMark[iRow] = 1;
+          workMark[iRow] = true;
         }
       }
     }
@@ -438,12 +438,12 @@ void HEkkDualRHS::createInfeasList(double columnDensity) {
   double* dwork = ekk_instance_.scattered_dual_edge_weight_.data();
 
   // 1. Build the full list
-  fill_n(workMark.data(), numRow, 0);
+  fill_n(workMark.data(), numRow, false);
   workCount = 0;
   workCutoff = 0;
   for (HighsInt iRow = 0; iRow < numRow; iRow++) {
     if (work_infeasibility[iRow]) {
-      workMark[iRow] = 1;
+      workMark[iRow] = true;
       workIndex[workCount++] = iRow;
     }
   }
@@ -465,12 +465,12 @@ void HEkkDualRHS::createInfeasList(double columnDensity) {
     workCutoff = min(maxMerit * 0.99999, cutMerit * 1.00001);
 
     // Create again
-    fill_n(workMark.data(), numRow, 0);
+    fill_n(workMark.data(), numRow, false);
     workCount = 0;
     for (HighsInt iRow = 0; iRow < numRow; iRow++) {
       if (work_infeasibility[iRow] >= edge_weight[iRow] * workCutoff) {
         workIndex[workCount++] = iRow;
-        workMark[iRow] = 1;
+        workMark[iRow] = true;
       }
     }
 
@@ -484,7 +484,7 @@ void HEkkDualRHS::createInfeasList(double columnDensity) {
         if (work_infeasibility[iRow] > edge_weight[iRow] * cutMerit) {
           workIndex[workCount++] = iRow;
         } else {
-          workMark[iRow] = 0;
+          workMark[iRow] = false;
         }
       }
     }

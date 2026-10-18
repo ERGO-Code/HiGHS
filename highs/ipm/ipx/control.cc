@@ -13,7 +13,7 @@ Control::Control() {
 Int Control::InterruptCheck(const Int ipm_iteration_count) const {
     HighsTaskExecutor::getThisWorkerDeque()->checkInterrupt();
     if (parameters_.time_limit >= 0.0 &&
-        parameters_.time_limit < timer_.Elapsed())
+        parameters_.time_limit < this->Elapsed())
         return IPX_ERROR_time_interrupt;
     // The pointer callback_ should not be null, since that indicates
     // that it's not been set
@@ -30,35 +30,39 @@ Int Control::InterruptCheck(const Int ipm_iteration_count) const {
     return 0;
 }
 
-void Control::hLog(std::string str) const {
+void Control::hLog(const std::string& str) const {
   if (parameters_.highs_logging) {
     assert(parameters_.log_options);
-    HighsLogOptions log_options_ = *(parameters_.log_options);
+    const HighsLogOptions& log_options_ = *(parameters_.log_options);
     highsLogUser(log_options_, HighsLogType::kInfo, "%s", str.c_str());
   } else {
     output_ << str;
   }
-
+  // Reset interval-based logging since something has been logged
+  interval_.Reset();
 }
 
 void Control::hLog(std::stringstream& logging) const {
   if (parameters_.highs_logging) {
     assert(parameters_.log_options);
-    HighsLogOptions log_options_ = *(parameters_.log_options);
+    const HighsLogOptions& log_options_ = *(parameters_.log_options);
     highsLogUser(log_options_, HighsLogType::kInfo, "%s", logging.str().c_str());
   } else {
     output_ << logging.str();
   }
   logging.str(std::string());
+  // Reset interval-based logging since something has been logged
+  interval_.Reset();
 }
 
 void Control::hIntervalLog(std::stringstream& logging) const {
+  double interval_elapsed = interval_.Elapsed();
   if (parameters_.print_interval >= 0.0 &&
       interval_.Elapsed() >= parameters_.print_interval) {
     interval_.Reset();
     if (parameters_.highs_logging) {
       assert(parameters_.log_options);
-      HighsLogOptions log_options_ = *(parameters_.log_options);
+      const HighsLogOptions& log_options_ = *(parameters_.log_options);
       highsLogUser(log_options_, HighsLogType::kInfo, "%s", logging.str().c_str());
     } else {
       output_ << logging.str();
@@ -79,7 +83,7 @@ void Control::ResetPrintInterval() const {
 }
 
 double Control::Elapsed() const {
-    return timer_.Elapsed();
+    return timer_.offset_ + timer_.Elapsed();
 }
 
 const Parameters& Control::parameters() const {

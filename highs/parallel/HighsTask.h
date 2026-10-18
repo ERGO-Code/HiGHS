@@ -2,12 +2,7 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2021 at the University of Edinburgh    */
-/*                                                                       */
 /*    Available as open-source under the MIT License                     */
-/*                                                                       */
-/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
-/*    and Michael Feldmeier                                              */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 #ifndef HIGHS_TASK_H_
@@ -26,10 +21,6 @@ class HighsTask {
   friend class HighsSplitDeque;
 
  public:
-  enum Constants {
-    kMaxTaskSize = 64,
-  };
-
   class Interrupt {};
 
  private:
@@ -58,7 +49,7 @@ class HighsTask {
     }
   };
 
-  char taskData[kMaxTaskSize - sizeof(Metadata)];
+  char taskData[HighsSchedulerConstants::kMaxTaskSize - sizeof(Metadata)];
   Metadata metadata;
 
   CallableBase& getCallable() {
@@ -127,7 +118,7 @@ class HighsTask {
     uintptr_t xormask = reinterpret_cast<uintptr_t>(owner) ^
                         reinterpret_cast<uintptr_t>(stealer);
     uintptr_t state =
-        metadata.stealer.fetch_xor(xormask, std::memory_order_relaxed);
+        metadata.stealer.fetch_xor(xormask, std::memory_order_acquire);
 
     assert(stealer != nullptr);
 

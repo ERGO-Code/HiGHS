@@ -116,7 +116,7 @@ class HEkk {
   bool proofOfPrimalInfeasibility(HVector& row_ep, const HighsInt move_out,
                                   const HighsInt row_out);
 
-  double getValueScale(const HighsInt count, const vector<double>& value);
+  double getValueScale(const HighsInt count, const vector<double>& value) const;
   double getMaxAbsRowValue(HighsInt row);
 
   void unitBtranIterativeRefinement(const HighsInt row_out, HVector& row_ep);
@@ -139,6 +139,9 @@ class HEkk {
   void initialisePartitionedRowwiseMatrix();
   bool lpFactorRowCompatible() const;
   bool lpFactorRowCompatible(const HighsInt expectedNumRow) const;
+  std::string simplexStrategyToString(const HighsInt simplex_strategy) const;
+
+  void zeroBasicDuals();
 
   // Interface methods
   void appendColsToVectors(const HighsInt num_new_col,
@@ -151,7 +154,7 @@ class HEkk {
 
   const HighsSimplexStats& getSimplexStats() const { return simplex_stats_; }
   void initialiseSimplexStats() { simplex_stats_.initialise(iteration_count_); }
-  void reportSimplexStats(FILE* file, const std::string message = "") const {
+  void reportSimplexStats(FILE* file, const std::string& message = "") const {
     simplex_stats_.report(file, message);
   }
 
@@ -167,7 +170,7 @@ class HEkk {
   void timeReporting(const HighsInt save_mod_recover);
   HighsDebugStatus debugRetainedDataOk(const HighsLp& lp) const;
   HighsDebugStatus debugNlaCheckInvert(
-      const std::string message, const HighsInt alt_debug_level = -1) const;
+      const std::string& message, const HighsInt alt_debug_level = -1) const;
   bool debugNlaScalingOk(const HighsLp& lp) const;
 
   // Data members
@@ -260,7 +263,7 @@ class HEkk {
   HighsSimplexStats simplex_stats_;
 
  private:
-  bool isUnconstrainedLp();
+  bool isUnconstrainedLp() const;
   void initialiseForSolve();
   void setSimplexOptions();
   void updateSimplexOptions();
@@ -301,7 +304,7 @@ class HEkk {
   void fullBtran(HVector& buffer);
   void choosePriceTechnique(const HighsInt price_strategy,
                             const double row_ep_density, bool& use_col_price,
-                            bool& use_row_price_w_switch);
+                            bool& use_row_price_w_switch) const;
   void tableauRowPrice(const bool quad_precision, const HVector& row_ep,
                        HVector& row_ap,
                        const HighsInt debug_report = kDebugReportOff);
@@ -309,8 +312,8 @@ class HEkk {
   void computePrimal();
   void computeDual();
   double computeDualForTableauColumn(const HighsInt iVar,
-                                     const HVector& tableau_column);
-  bool reinvertOnNumericalTrouble(const std::string method_name,
+                                     const HVector& tableau_column) const;
+  bool reinvertOnNumericalTrouble(const std::string& method_name,
                                   double& numerical_trouble_measure,
                                   const double alpha_from_col,
                                   const double alpha_from_row,
@@ -347,7 +350,7 @@ class HEkk {
   HighsStatus returnFromSolve(const HighsStatus return_status);
 
   void initialiseAnalysis();
-  std::string rebuildReason(const HighsInt rebuild_reason);
+  std::string rebuildReason(const HighsInt rebuild_reason) const;
 
   void clearBadBasisChange(
       const BadBasisChangeReason reason = BadBasisChangeReason::kAll);
@@ -359,7 +362,7 @@ class HEkk {
                              const BadBasisChangeReason reason,
                              const bool taboo = false);
   void clearBadBasisChangeTabooFlag();
-  bool tabooBadBasisChange();
+  bool tabooBadBasisChange() const;
   void applyTabooRowOut(vector<double>& values, const double overwrite_with);
   void unapplyTabooRowOut(vector<double>& values);
   void applyTabooVariableIn(vector<double>& values,
@@ -371,16 +374,16 @@ class HEkk {
   void assessDSEWeightError(const double computed_edge_weight,
                             const double updated_edge_weight);
   void updateOperationResultDensity(const double local_density,
-                                    double& density);
+                                    double& density) const;
   bool switchToDevex();
 
   // private debug methods
-  HighsDebugStatus debugSimplex(const std::string message,
+  HighsDebugStatus debugSimplex(const std::string& message,
                                 const SimplexAlgorithm algorithm,
                                 const HighsInt phase,
                                 const bool initialise = false) const;
   void debugReportReinvertOnNumericalTrouble(
-      const std::string method_name, const double numerical_trouble_measure,
+      const std::string& method_name, const double numerical_trouble_measure,
       const double alpha_from_col, const double alpha_from_row,
       const double numerical_trouble_tolerance, const bool reinvert) const;
 
@@ -398,15 +401,15 @@ class HEkk {
   bool debugOneNonbasicMoveVsWorkArraysOk(const HighsInt var) const;
 
   HighsDebugStatus debugNonbasicFreeColumnSet(
-      const HighsInt num_free_col, const HSet nonbasic_free_col_set) const;
+      const HighsInt num_free_col, const HSet& nonbasic_free_col_set) const;
   HighsDebugStatus debugRowMatrix() const;
-  HighsDebugStatus devDebugDualSteepestEdgeWeights(const std::string message);
+  HighsDebugStatus devDebugDualSteepestEdgeWeights(const std::string& message);
   HighsDebugStatus debugDualSteepestEdgeWeights(
       const HighsInt alt_debug_level = -1);
-  HighsDebugStatus debugSimplexDualInfeasible(const std::string message,
+  HighsDebugStatus debugSimplexDualInfeasible(const std::string& message,
                                               const bool force_report = false);
   HighsDebugStatus debugComputeDual(const bool initialise = false) const;
-
+  bool debugNoShiftsOrPerturbations() const;
   friend class HEkkPrimal;
   friend class HEkkDual;
   friend class HEkkDualRow;

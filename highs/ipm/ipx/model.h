@@ -60,7 +60,7 @@ public:
              const Int* Ap, const Int* Ai, const double* Ax,
              const double* rhs, const char* constr_type, const double offset,
 	     const double* obj, const double* lbuser, const double* ubuser);
-    // Performs Flippo's test for deciding dualization
+    // Performs Filippo's test for deciding dualization
     bool filippoDualizationTest() const;
     // Writes statistics of input data and preprocessing to @info.
     void GetInfo(Info* info) const;
@@ -343,8 +343,8 @@ private:
 
     void CorrectScaledBasicSolution(Vector& x, Vector& slack, Vector& y,
                                     Vector& z,
-                                    const std::vector<Int> cbasis,
-                                    const std::vector<Int> vbasis) const;
+                                    const std::vector<Int>& cbasis,
+                                    const std::vector<Int>& vbasis) const;
 
     // Performs lhs += alpha*A*rhs or lhs += alpha*A'rhs, where A is the user
     // matrix after scaling. This matrix is not stored explicitly, but is used

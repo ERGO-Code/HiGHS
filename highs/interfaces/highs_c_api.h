@@ -23,115 +23,206 @@
 //
 #include "lp_data/HighsCallbackStruct.h"
 
-const HighsInt kHighsMaximumStringLength = 512;
+// The maximum string length. This corresponds to the `kHighsMaxStringLength`
+// const in HConst.h. Note the difference of Max and Maximum.
+static const HighsInt kHighsMaximumStringLength = 512;
 
-const HighsInt kHighsStatusError = -1;
-const HighsInt kHighsStatusOk = 0;
-const HighsInt kHighsStatusWarning = 1;
+// Error codes for the return value of functions in the C API. These do not
+// appear in the C++ API.
+static const HighsInt kHighsStatusError = -1;
+static const HighsInt kHighsStatusOk = 0;
+static const HighsInt kHighsStatusWarning = 1;
 
-const HighsInt kHighsVarTypeContinuous = 0;
-const HighsInt kHighsVarTypeInteger = 1;
-const HighsInt kHighsVarTypeSemiContinuous = 2;
-const HighsInt kHighsVarTypeSemiInteger = 3;
-const HighsInt kHighsVarTypeImplicitInteger = 4;
+// The values of the `HighsVarType` enum in HConst.h.
+static const HighsInt kHighsVarTypeContinuous = 0;
+static const HighsInt kHighsVarTypeInteger = 1;
+static const HighsInt kHighsVarTypeSemiContinuous = 2;
+static const HighsInt kHighsVarTypeSemiInteger = 3;
+static const HighsInt kHighsVarTypeImplicitInteger = 4;
 
-const HighsInt kHighsOptionTypeBool = 0;
-const HighsInt kHighsOptionTypeInt = 1;
-const HighsInt kHighsOptionTypeDouble = 2;
-const HighsInt kHighsOptionTypeString = 3;
+// The values of the `HighsOptionType` enum in HConst.h.
+static const HighsInt kHighsOptionTypeBool = 0;
+static const HighsInt kHighsOptionTypeInt = 1;
+static const HighsInt kHighsOptionTypeDouble = 2;
+static const HighsInt kHighsOptionTypeString = 3;
 
-const HighsInt kHighsInfoTypeInt64 = -1;
-const HighsInt kHighsInfoTypeInt = 1;
-const HighsInt kHighsInfoTypeDouble = 2;
+// The values of the `HighsInfoType` enum in HConst.h.
+static const HighsInt kHighsInfoTypeInt64 = -1;
+static const HighsInt kHighsInfoTypeInt = 1;
+static const HighsInt kHighsInfoTypeDouble = 2;
 
-const HighsInt kHighsObjSenseMinimize = 1;
-const HighsInt kHighsObjSenseMaximize = -1;
+// The values of the `ObjSense` enum in HConst.h.
+static const HighsInt kHighsObjSenseMinimize = 1;
+static const HighsInt kHighsObjSenseMaximize = -1;
 
-const HighsInt kHighsMatrixFormatColwise = 1;
-const HighsInt kHighsMatrixFormatRowwise = 2;
+// The values of the `MatrixFormat` enum in HConst.h.
+static const HighsInt kHighsMatrixFormatColwise = 1;
+static const HighsInt kHighsMatrixFormatRowwise = 2;
 
-const HighsInt kHighsHessianFormatTriangular = 1;
-const HighsInt kHighsHessianFormatSquare = 2;
+// The values of the `HessianFormat` enum in HConst.h.
+static const HighsInt kHighsHessianFormatTriangular = 1;
+static const HighsInt kHighsHessianFormatSquare = 2;
 
-const HighsInt kHighsSolutionStatusNone = 0;
-const HighsInt kHighsSolutionStatusInfeasible = 1;
-const HighsInt kHighsSolutionStatusFeasible = 2;
+// The values of the `SolutionStatus` enum in HConst.h.
+static const HighsInt kHighsSolutionStatusNone = 0;
+static const HighsInt kHighsSolutionStatusInfeasible = 1;
+static const HighsInt kHighsSolutionStatusFeasible = 2;
 
-const HighsInt kHighsBasisValidityInvalid = 0;
-const HighsInt kHighsBasisValidityValid = 1;
+// The values of the `BasisValidity` enum in HConst.h
+static const HighsInt kHighsBasisValidityInvalid = 0;
+static const HighsInt kHighsBasisValidityValid = 1;
 
-const HighsInt kHighsPresolveStatusNotPresolved = -1;
-const HighsInt kHighsPresolveStatusNotReduced = 0;
-const HighsInt kHighsPresolveStatusInfeasible = 1;
-const HighsInt kHighsPresolveStatusUnboundedOrInfeasible = 2;
-const HighsInt kHighsPresolveStatusReduced = 3;
-const HighsInt kHighsPresolveStatusReducedToEmpty = 4;
-const HighsInt kHighsPresolveStatusTimeout = 5;
-const HighsInt kHighsPresolveStatusNullError = 6;
-const HighsInt kHighsPresolveStatusOptionsError = 7;
-const HighsInt kHighsPresolveStatusOutOfMemory = 8;
+// The values of the `HighsPresolveStatus` enum in HConst.h.
+static const HighsInt kHighsPresolveStatusNotPresolved = -1;
+static const HighsInt kHighsPresolveStatusNotReduced = 0;
+static const HighsInt kHighsPresolveStatusInfeasible = 1;
+static const HighsInt kHighsPresolveStatusUnboundedOrInfeasible = 2;
+static const HighsInt kHighsPresolveStatusReduced = 3;
+static const HighsInt kHighsPresolveStatusReducedToEmpty = 4;
+static const HighsInt kHighsPresolveStatusTimeout = 5;
+static const HighsInt kHighsPresolveStatusNullError = 6;
+static const HighsInt kHighsPresolveStatusOptionsError = 7;
+static const HighsInt kHighsPresolveStatusOutOfMemory = 8;
+static const HighsInt kHighsPresolveStatusException = 9;
 
-const HighsInt kHighsModelStatusNotset = 0;
-const HighsInt kHighsModelStatusLoadError = 1;
-const HighsInt kHighsModelStatusModelError = 2;
-const HighsInt kHighsModelStatusPresolveError = 3;
-const HighsInt kHighsModelStatusSolveError = 4;
-const HighsInt kHighsModelStatusPostsolveError = 5;
-const HighsInt kHighsModelStatusModelEmpty = 6;
-const HighsInt kHighsModelStatusOptimal = 7;
-const HighsInt kHighsModelStatusInfeasible = 8;
-const HighsInt kHighsModelStatusUnboundedOrInfeasible = 9;
-const HighsInt kHighsModelStatusUnbounded = 10;
-const HighsInt kHighsModelStatusObjectiveBound = 11;
-const HighsInt kHighsModelStatusObjectiveTarget = 12;
-const HighsInt kHighsModelStatusTimeLimit = 13;
-const HighsInt kHighsModelStatusIterationLimit = 14;
-const HighsInt kHighsModelStatusUnknown = 15;
-const HighsInt kHighsModelStatusSolutionLimit = 16;
-const HighsInt kHighsModelStatusInterrupt = 17;
+// The values of the `HighsModelStatus` enum in HConst.h.
+static const HighsInt kHighsModelStatusNotset = 0;
+static const HighsInt kHighsModelStatusLoadError = 1;
+static const HighsInt kHighsModelStatusModelError = 2;
+static const HighsInt kHighsModelStatusPresolveError = 3;
+static const HighsInt kHighsModelStatusSolveError = 4;
+static const HighsInt kHighsModelStatusPostsolveError = 5;
+static const HighsInt kHighsModelStatusModelEmpty = 6;
+static const HighsInt kHighsModelStatusOptimal = 7;
+static const HighsInt kHighsModelStatusInfeasible = 8;
+static const HighsInt kHighsModelStatusUnboundedOrInfeasible = 9;
+static const HighsInt kHighsModelStatusUnbounded = 10;
+static const HighsInt kHighsModelStatusObjectiveBound = 11;
+static const HighsInt kHighsModelStatusObjectiveTarget = 12;
+static const HighsInt kHighsModelStatusTimeLimit = 13;
+static const HighsInt kHighsModelStatusIterationLimit = 14;
+static const HighsInt kHighsModelStatusUnknown = 15;
+static const HighsInt kHighsModelStatusSolutionLimit = 16;
+static const HighsInt kHighsModelStatusInterrupt = 17;
+static const HighsInt kHighsModelStatusMemoryLimit = 18;
+static const HighsInt kHighsModelStatusHighsInterrupt = 19;
 
-const HighsInt kHighsBasisStatusLower = 0;
-const HighsInt kHighsBasisStatusBasic = 1;
-const HighsInt kHighsBasisStatusUpper = 2;
-const HighsInt kHighsBasisStatusZero = 3;
-const HighsInt kHighsBasisStatusNonbasic = 4;
+// The values of the `HighsBasisStatus` enum in HConst.h.
+static const HighsInt kHighsBasisStatusLower = 0;
+static const HighsInt kHighsBasisStatusBasic = 1;
+static const HighsInt kHighsBasisStatusUpper = 2;
+static const HighsInt kHighsBasisStatusZero = 3;
+static const HighsInt kHighsBasisStatusNonbasic = 4;
 
-const HighsInt kHighsCallbackLogging = 0;
-const HighsInt kHighsCallbackSimplexInterrupt = 1;
-const HighsInt kHighsCallbackIpmInterrupt = 2;
-const HighsInt kHighsCallbackMipSolution = 3;
-const HighsInt kHighsCallbackMipImprovingSolution = 4;
-const HighsInt kHighsCallbackMipLogging = 5;
-const HighsInt kHighsCallbackMipInterrupt = 6;
-const HighsInt kHighsCallbackMipGetCutPool = 7;
-const HighsInt kHighsCallbackMipDefineLazyConstraints = 8;
-const HighsInt kHighsCallbackCallbackMipUserSolution = 9;
+// The values of the `HighsCallbackType` enum in HConst.h.
+static const HighsInt kHighsCallbackLogging = 0;
+static const HighsInt kHighsCallbackSimplexInterrupt = 1;
+static const HighsInt kHighsCallbackIpmInterrupt = 2;
+static const HighsInt kHighsCallbackMipSolution = 3;
+static const HighsInt kHighsCallbackMipImprovingSolution = 4;
+static const HighsInt kHighsCallbackMipLogging = 5;
+static const HighsInt kHighsCallbackMipInterrupt = 6;
+static const HighsInt kHighsCallbackMipGetCutPool = 7;
+static const HighsInt kHighsCallbackMipDefineLazyConstraints = 8;
+static const HighsInt kHighsCallbackCallbackMipUserSolution = 9;
+static const HighsInt kHighsCallbackQpFirstFeasiblePoint = 10;
+static const HighsInt kHighsCallbackQpInterrupt = 11;
 
-const char* const kHighsCallbackDataOutLogTypeName = "log_type";
-const char* const kHighsCallbackDataOutRunningTimeName = "running_time";
-const char* const kHighsCallbackDataOutSimplexIterationCountName =
+// Constants for Highs_getCallbackDataOutItem. These do not appear in the C++
+// API.
+static const char* const kHighsCallbackDataOutLogTypeName = "log_type";
+static const char* const kHighsCallbackDataOutRunningTimeName = "running_time";
+static const char* const kHighsCallbackDataOutSimplexIterationCountName =
     "simplex_iteration_count";
-const char* const kHighsCallbackDataOutIpmIterationCountName =
+static const char* const kHighsCallbackDataOutIpmIterationCountName =
     "ipm_iteration_count";
-const char* const kHighsCallbackDataOutPdlpIterationCountName =
+static const char* const kHighsCallbackDataOutPdlpIterationCountName =
     "pdlp_iteration_count";
-const char* const kHighsCallbackDataOutObjectiveFunctionValueName =
+static const char* const kHighsCallbackDataOutQpasmIterationCountName =
+    "qpasm_iteration_count";
+static const char* const kHighsCallbackDataOutObjectiveFunctionValueName =
     "objective_function_value";
-const char* const kHighsCallbackDataOutMipNodeCountName = "mip_node_count";
-const char* const kHighsCallbackDataOutMipTotalLpIterationsName =
+static const char* const kHighsCallbackDataOutMipNodeCountName =
+    "mip_node_count";
+static const char* const kHighsCallbackDataOutMipTotalLpIterationsName =
     "mip_total_lp_iterations";
-const char* const kHighsCallbackDataOutMipPrimalBoundName = "mip_primal_bound";
-const char* const kHighsCallbackDataOutMipDualBoundName = "mip_dual_bound";
-const char* const kHighsCallbackDataOutMipGapName = "mip_gap";
-const char* const kHighsCallbackDataOutMipSolutionName = "mip_solution";
-const char* const kHighsCallbackDataOutCutpoolNumColName = "cutpool_num_col";
-const char* const kHighsCallbackDataOutCutpoolNumCutName = "cutpool_num_cut";
-const char* const kHighsCallbackDataOutCutpoolNumNzName = "cutpool_num_nz";
-const char* const kHighsCallbackDataOutCutpoolStartName = "cutpool_start";
-const char* const kHighsCallbackDataOutCutpoolIndexName = "cutpool_index";
-const char* const kHighsCallbackDataOutCutpoolValueName = "cutpool_value";
-const char* const kHighsCallbackDataOutCutpoolLowerName = "cutpool_lower";
-const char* const kHighsCallbackDataOutCutpoolUpperName = "cutpool_upper";
+static const char* const kHighsCallbackDataOutMipPrimalBoundName =
+    "mip_primal_bound";
+static const char* const kHighsCallbackDataOutMipDualBoundName =
+    "mip_dual_bound";
+static const char* const kHighsCallbackDataOutMipGapName = "mip_gap";
+static const char* const kHighsCallbackDataOutMipSolutionName = "mip_solution";
+static const char* const kHighsCallbackDataOutCutpoolNumColName =
+    "cutpool_num_col";
+static const char* const kHighsCallbackDataOutCutpoolNumCutName =
+    "cutpool_num_cut";
+static const char* const kHighsCallbackDataOutCutpoolNumNzName =
+    "cutpool_num_nz";
+static const char* const kHighsCallbackDataOutCutpoolStartName =
+    "cutpool_start";
+static const char* const kHighsCallbackDataOutCutpoolIndexName =
+    "cutpool_index";
+static const char* const kHighsCallbackDataOutCutpoolValueName =
+    "cutpool_value";
+static const char* const kHighsCallbackDataOutCutpoolLowerName =
+    "cutpool_lower";
+static const char* const kHighsCallbackDataOutCutpoolUpperName =
+    "cutpool_upper";
+static const char* const kHighsCallbackDataOutQpSolutionName = "qp_solution";
+
+// Modified values of the `IisStrategy` enum in HConst.h.
+static const HighsInt kHighsIisStrategyLight = 0;
+// Forces full IIS calculation as before - ie with the
+// kIisStrategyIrreducible = 4 bit set, as well as the
+// kIisStrategyFromLp = 2 bit set, and possibly the
+// kIisStrategyColPriority = 8 bit set
+static const HighsInt kHighsIisStrategyFromLpRowPriority = 6;
+static const HighsInt kHighsIisStrategyFromLpColPriority = 14;
+
+// Variants of the `IisBoundStatus` enum in HighsIis.h. The `Status` part has
+// been droped from the names.
+static const HighsInt kHighsIisBoundFree = 1;
+static const HighsInt kHighsIisBoundLower = 2;
+static const HighsInt kHighsIisBoundUpper = 3;
+static const HighsInt kHighsIisBoundBoxed = 4;
+
+// The values of the `IisStatus` enum in HConst.h.
+static const HighsInt kHighsIisStatusNotInConflict = -1;
+static const HighsInt kHighsIisStatusMaybeInConflict = 0;
+static const HighsInt kHighsIisStatusInConflict = 1;
+
+// The values of the `HessianOracleCallType` enum in HConst.H
+static const HighsInt kHighsHessianOracleCallTypeMin = 0;
+static const HighsInt kHighsHessianOracleCallTypeEntry = 0;
+static const HighsInt kHighsHessianOracleCallTypeColumn = 1;
+static const HighsInt kHighsHessianOracleCallTypeProduct = 2;
+static const HighsInt kHighsHessianOracleCallTypeMax = 2;
+
+// The values of the `PresolveRuleType` enum in HConst.h.
+static const HighsInt kHighsPresolveRuleEmptyRow = 0;
+static const HighsInt kHighsPresolveRuleSingletonRow = 1;
+static const HighsInt kHighsPresolveRuleRedundantRow = 2;
+static const HighsInt kHighsPresolveRuleEmptyCol = 3;
+static const HighsInt kHighsPresolveRuleFixedCol = 4;
+static const HighsInt kHighsPresolveRuleDominatedCol = 5;
+static const HighsInt kHighsPresolveRuleForcingRow = 6;
+static const HighsInt kHighsPresolveRuleForcingCol = 7;
+static const HighsInt kHighsPresolveRuleFreeColSubstitution = 8;
+static const HighsInt kHighsPresolveRuleDoubletonEquation = 9;
+static const HighsInt kHighsPresolveRuleDependentEquations = 10;
+static const HighsInt kHighsPresolveRuleDependentFreeCols = 11;
+static const HighsInt kHighsPresolveRuleAggregator = 12;
+static const HighsInt kHighsPresolveRuleParallelRowsAndCols = 13;
+static const HighsInt kHighsPresolveRuleSparsify = 14;
+static const HighsInt kHighsPresolveRuleProbing = 15;
+static const HighsInt kHighsPresolveRuleEnumeration = 16;
+static const HighsInt kHighsPresolveRuleDualFixing = 17;
+static const HighsInt kHighsPresolveRuleZeroCostSingleton = 18;
+static const HighsInt kHighsPresolveRuleColStuffing = 19;
+static const HighsInt kHighsPresolveRuleDualFixProbing = 20;
+static const HighsInt kHighsPresolveRuleInitialSweep = 21;
+static const HighsInt kHighsPresolveRuleFourierMotzkin = 22;
+static const HighsInt kHighsPresolveRuleWeaklyDominatedCol = 23;
 
 #ifdef __cplusplus
 extern "C" {
@@ -253,7 +344,8 @@ HighsInt Highs_qpCall(
 /**
  * Create a Highs instance and return the reference.
  *
- * Call `Highs_destroy` on the returned reference to clean up allocated memory.
+ * Call `Highs_destroy` on the returned reference to clean up memory
+ * allocated for this instance.
  *
  * @returns A pointer to the Highs instance.
  */
@@ -261,7 +353,13 @@ void* Highs_create(void);
 
 /**
  * Destroy the model `highs` created by `Highs_create` and free all
- * corresponding memory. Future calls using `highs` are not allowed.
+ * memory allocated for this instance. Future calls using `highs` are
+ * not allowed.
+ *
+ * Since the global scheduler's memory is shared by concurrent Highs
+ * instances, it cannot be freed by `Highs_destroy`. Hence, to free
+ * all memory used by HiGHS, `Highs_resetGlobalScheduler` must also be
+ * called.
  *
  * To empty a model without invalidating `highs`, see `Highs_clearModel`.
  *
@@ -368,6 +466,20 @@ HighsInt Highs_clearModel(void* highs);
 HighsInt Highs_clearSolver(void* highs);
 
 /**
+ * Release all retained memory back to the allocator.
+ *
+ * Clears all solver state and shrinks internal vectors to free unused
+ * capacity. Useful in long-running services that reuse a Highs instance
+ * across multiple solves to prevent unbounded RSS growth from heap
+ * fragmentation.
+ *
+ * @param highs     A pointer to the Highs instance.
+ *
+ * @returns A `kHighsStatus` constant indicating whether the call succeeded.
+ */
+HighsInt Highs_releaseMemory(void* highs);
+
+/**
  * Presolve a model.
  *
  * @param highs     A pointer to the Highs instance.
@@ -387,7 +499,9 @@ HighsInt Highs_presolve(void* highs);
 HighsInt Highs_run(void* highs);
 
 /**
- * Postsolve a model using a primal (and possibly dual) solution.
+ * Postsolve a model using a primal (and possibly dual) solution. The
+ * postsolved solution can be retrieved later by calling
+ * `Highs_getSolution`.
  *
  * @param highs       A pointer to the Highs instance.
  * @param col_value   An array of length [num_col] with the column solution
@@ -554,6 +668,29 @@ HighsInt Highs_passHessian(void* highs, const HighsInt dim,
                            const HighsInt num_nz, const HighsInt format,
                            const HighsInt* start, const HighsInt* index,
                            const double* value);
+
+/**
+ * Set the Hessian oracle callback method
+ *
+ * @param highs        A pointer to the Highs instance.
+ * @param dim          Dimension of the Hessian
+ * @param oracleCall   A pointer to the Hessian oracle callback
+ * @param oracle_data  A pointer to the Hessian oracle callback data
+ *
+ * @returns A `kHighsStatus` constant indicating whether the call succeeded.
+ */
+HighsInt Highs_passHessianOracle(void* highs, const HighsInt dim,
+                                 HighsCHessianFunctionType oracleCall,
+                                 void* oracle_data);
+
+/**
+ * Check the Hessian oracle callback method
+ *
+ * @param highs     A pointer to the Highs instance.
+ *
+ * @returns A `kHighsStatus` constant indicating whether the call succeeded.
+ */
+HighsInt Highs_checkHessianOracle(void* highs);
 
 /**
  * Passes multiple linear objective data to HiGHS, clearing any such
@@ -945,7 +1082,8 @@ HighsInt Highs_getInfoType(const void* highs, const char* info, HighsInt* type);
  * @param row_dual   An array of length [num_row], to be filled with dual row
  *                   values.
  *
- * @returns A `kHighsStatus` constant indicating whether the call succeeded.
+ * @returns A `kHighsStatus` constant indicating whether a primal solution
+ * exists.
  */
 HighsInt Highs_getSolution(const void* highs, double* col_value,
                            double* col_dual, double* row_value,
@@ -963,7 +1101,7 @@ HighsInt Highs_getSolution(const void* highs, double* col_value,
  *                    basis statuses in the form of a `kHighsBasisStatus`
  *                    constant.
  *
- * @returns A `kHighsStatus` constant indicating whether the call succeeded.
+ * @returns A `kHighsStatus` constant indicating whether the basis is valid.
  */
 HighsInt Highs_getBasis(const void* highs, HighsInt* col_status,
                         HighsInt* row_status);
@@ -2223,6 +2361,75 @@ HighsInt Highs_getPresolvedLp(const void* highs, const HighsInt a_format,
                               double* row_upper, HighsInt* a_start,
                               HighsInt* a_index, double* a_value,
                               HighsInt* integrality);
+/**
+ * Get the name of a column of the presolved LP.
+ *
+ * @param col   The index of the column to query.
+ * @param name  A pointer in which to store the name of the column. This must
+ *              have length `kHighsMaximumStringLength`.
+ *
+ * @returns A `kHighsStatus` constant indicating whether the call succeeded.
+ */
+HighsInt Highs_getPresolvedColName(const void* highs, const HighsInt col,
+                                   char* name);
+
+/**
+ * Get the name of a row of the presolved LP.
+ *
+ * @param row   The index of the row to query.
+ * @param name  A pointer in which to store the name of the row. This must
+ *              have length `kHighsMaximumStringLength`.
+ *
+ * @returns A `kHighsStatus` constant indicating whether the call succeeded.
+ */
+HighsInt Highs_getPresolvedRowName(const void* highs, const HighsInt row,
+                                   char* name);
+
+/**
+ * Get the data from a HiGHS IIS LP.
+ *
+ * The input arguments have the same meaning (in a different order) to those
+ * used in `Highs_passModel`.
+ *
+ * Note that all arrays must be pre-allocated to the correct size before calling
+ * `Highs_getModel`. Use the following query methods to check the appropriate
+ * size:
+ *  - `Highs_getPresolvedNumCol`
+ *  - `Highs_getPresolvedNumRow`
+ *  - `Highs_getPresolvedNumNz`
+ *
+ * @returns A `kHighsStatus` constant indicating whether the call succeeded.
+ */
+HighsInt Highs_getIisLp(const void* highs, const HighsInt a_format,
+                        HighsInt* num_col, HighsInt* num_row, HighsInt* num_nz,
+                        HighsInt* sense, double* offset, double* col_cost,
+                        double* col_lower, double* col_upper, double* row_lower,
+                        double* row_upper, HighsInt* a_start, HighsInt* a_index,
+                        double* a_value, HighsInt* integrality);
+
+/**
+ * Get the LP corresponding to a MIP with non-continuous variables
+ * fixed at a MIP solution
+ *
+ * The input arguments have the same meaning (in a different order) to those
+ * used in `Highs_passModel`.
+ *
+ * Note that all arrays must be pre-allocated to the correct size before calling
+ * `Highs_getModel`. Use the following query methods to check the appropriate
+ * size:
+ *  - `Highs_getNumCol`
+ *  - `Highs_getNumRow`
+ *  - `Highs_getNumNz`
+ *
+ * @returns A `kHighsStatus` constant indicating whether the call succeeded.
+ */
+HighsInt Highs_getFixedLp(const void* highs, const HighsInt a_format,
+                          HighsInt* num_col, HighsInt* num_row,
+                          HighsInt* num_nz, HighsInt* sense, double* offset,
+                          double* col_cost, double* col_lower,
+                          double* col_upper, double* row_lower,
+                          double* row_upper, HighsInt* a_start,
+                          HighsInt* a_index, double* a_value);
 
 /**
  * Set a primal (and possibly dual) solution as a starting point, then run
@@ -2343,7 +2550,46 @@ HighsInt Highs_feasibilityRelaxation(void* highs,
                                      const double* local_rhs_penalty);
 
 /**
+ * Attempt to compute an irreducible infeasibility subsystem (IIS) for
+ * an LP, QP, or the relaxation of a MIP. If no IIS is found, then the
+ * number of IIS columns and rows will be zero.
+ *
+ * @param highs                      A pointer to the Highs instance.
+ * @param const HighsInt iis_num_col Number of columns in the IIS.
+ * @param const HighsInt iis_num_row Number of rows in the IIS.
+ * @param const HighsInt* col_index  An array of length [iis_num_col], to be
+ *                                   filled with the indices of original
+ *                                   variables in the IIS.
+ * @param const HighsInt* row_index  An array of length [iis_num_col], to be
+ *                                   filled with the indices of original
+ *                                   constraints in the IIS.
+ * @param const HighsInt* col_bound  An array of length [iis_num_col], to be
+ *                                   filled with the bound status of variables
+ *                                   in the IIS.
+ * @param const HighsInt* row_bound  An array of length [iis_num_col], to be
+ *                                   filled with the bound status of constraints
+ *                                   in the IIS.
+ * @param const HighsInt* col_status An array of length [num_col], to be
+ *                                   filled with the IIS status of all original
+ *                                   variables.
+ * @param const HighsInt* row_status n array of length [num_col], to be
+ *                                   filled with the IIS status of all original
+ *                                   constraints.
+ *
+ * @returns A `kHighsStatus` constant indicating whether the call succeeded.
+ */
+HighsInt Highs_getIis(void* highs, HighsInt* iis_num_col, HighsInt* iis_num_row,
+                      HighsInt* col_index, HighsInt* row_index,
+                      HighsInt* col_bound, HighsInt* row_bound,
+                      HighsInt* col_status, HighsInt* row_status);
+/**
  * Releases all resources held by the global scheduler instance.
+ *
+ * Although the scheduler instance is created internally by a Highs
+ * instance, any subsequent Highs instances share the
+ * scheduler. Hence, calling `Highs_destroy` does not free the global
+ * scheduler's memory, so `Highs_resetGlobalScheduler` must also be
+ * called.
  *
  * It is not thread-safe to call this function while calling `Highs_run` or one
  * of the `Highs_XXXcall` methods on any other Highs instance in any thread.
@@ -2431,15 +2677,15 @@ HighsInt Highs_repairCallbackSolution(HighsCallbackDataIn* data_in);
 /**
  * Return the HiGHS compilation date.
  *
- * @returns Thse HiGHS compilation date.
+ * @returns The HiGHS compilation date.
  */
-const char* Highs_compilationDate(void);
+static const char* Highs_compilationDate(void);
 
 // These are deprecated because they don't follow the style guide. Constants
 // must begin with `k`.
-const HighsInt HighsStatuskError = -1;
-const HighsInt HighsStatuskOk = 0;
-const HighsInt HighsStatuskWarning = 1;
+static const HighsInt HighsStatuskError = -1;
+static const HighsInt HighsStatuskOk = 0;
+static const HighsInt HighsStatuskWarning = 1;
 
 HighsInt Highs_call(const HighsInt num_col, const HighsInt num_row,
                     const HighsInt num_nz, const double* col_cost,

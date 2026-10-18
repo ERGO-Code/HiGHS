@@ -16,9 +16,9 @@
 #include "util/HighsMatrixUtils.h"
 
 bool HighsLp::isMip() const {
-  HighsInt integrality_size = this->integrality_.size();
+  size_t integrality_size = this->integrality_.size();
   if (integrality_size) {
-    assert(integrality_size == this->num_col_);
+    assert(static_cast<HighsInt>(integrality_size) == this->num_col_);
     for (HighsInt iCol = 0; iCol < this->num_col_; iCol++)
       if (this->integrality_[iCol] != HighsVarType::kContinuous) return true;
   }
@@ -34,9 +34,9 @@ bool HighsLp::hasInfiniteCost(const double infinite_cost) const {
 }
 
 bool HighsLp::hasSemiVariables() const {
-  HighsInt integrality_size = this->integrality_.size();
+  size_t integrality_size = this->integrality_.size();
   if (integrality_size) {
-    assert(integrality_size == this->num_col_);
+    assert(static_cast<HighsInt>(integrality_size) == this->num_col_);
     for (HighsInt iCol = 0; iCol < this->num_col_; iCol++)
       if (this->integrality_[iCol] == HighsVarType::kSemiContinuous ||
           this->integrality_[iCol] == HighsVarType::kSemiInteger)
@@ -72,6 +72,15 @@ bool HighsLp::equalButForNames(const HighsLp& lp) const {
 }
 
 bool HighsLp::equalButForScalingAndNames(const HighsLp& lp) const {
+  const bool equal_vectors = equalVectors(lp);
+  const bool equal_matrix = this->a_matrix_ == lp.a_matrix_;
+#ifndef NDEBUG
+  if (!equal_matrix) printf("HighsLp::equalButForNames: Unequal matrix\n");
+#endif
+  return equal_vectors && equal_matrix;
+}
+
+bool HighsLp::equalVectors(const HighsLp& lp) const {
   bool equal_vectors = true;
   equal_vectors = this->num_col_ == lp.num_col_ && equal_vectors;
   equal_vectors = this->num_row_ == lp.num_row_ && equal_vectors;
@@ -86,11 +95,7 @@ bool HighsLp::equalButForScalingAndNames(const HighsLp& lp) const {
 #ifndef NDEBUG
   if (!equal_vectors) printf("HighsLp::equalButForNames: Unequal vectors\n");
 #endif
-  const bool equal_matrix = this->a_matrix_ == lp.a_matrix_;
-#ifndef NDEBUG
-  if (!equal_matrix) printf("HighsLp::equalButForNames: Unequal matrix\n");
-#endif
-  return equal_vectors && equal_matrix;
+  return equal_vectors;
 }
 
 bool HighsLp::equalNames(const HighsLp& lp) const {
@@ -129,7 +134,8 @@ HighsCDouble HighsLp::objectiveCDoubleValue(
   assert((int)solution.size() >= this->num_col_);
   HighsCDouble objective_function_value = this->offset_;
   for (HighsInt iCol = 0; iCol < this->num_col_; iCol++)
-    objective_function_value += this->col_cost_[iCol] * solution[iCol];
+    objective_function_value +=
+        static_cast<HighsCDouble>(this->col_cost_[iCol]) * solution[iCol];
   return objective_function_value;
 }
 
@@ -163,6 +169,27 @@ void HighsLp::exactResize() {
   if ((int)this->integrality_.size()) this->integrality_.resize(this->num_col_);
 }
 
+bool HighsLp::okNames() const {
+  if (this->col_names_.size() != static_cast<size_t>(this->num_col_))
+    return false;
+  if (this->row_names_.size() != static_cast<size_t>(this->num_row_))
+    return false;
+  // Look for names that are empty or have spaces
+  for (HighsInt iCol = 0; iCol < this->num_col_; iCol++) {
+    const std::string& name = this->col_names_[iCol];
+    if (HighsInt(name.length()) == 0) return false;
+    size_t space_pos = name.find(' ');
+    if (space_pos != std::string::npos) return false;
+  }
+  for (HighsInt iRow = 0; iRow < this->num_row_; iRow++) {
+    const std::string& name = this->row_names_[iRow];
+    if (HighsInt(name.length()) == 0) return false;
+    size_t space_pos = name.find(' ');
+    if (space_pos != std::string::npos) return false;
+  }
+  return true;
+}
+
 void HighsLp::clear() {
   this->num_col_ = 0;
   this->num_row_ = 0;
@@ -182,8 +209,10 @@ void HighsLp::clear() {
   this->origin_name_ = "";
   this->objective_name_ = "";
 
-  this->new_col_name_ix_ = 0;
-  this->new_row_name_ix_ = 0;
+  this->col_name_prefix_ = "";
+  this->row_name_prefix_ = "";
+  this->col_name_suffix_ = 0;
+  this->row_name_suffix_ = 0;
   this->col_names_.clear();
   this->row_names_.clear();
 
@@ -192,14 +221,12 @@ void HighsLp::clear() {
   this->col_hash_.clear();
   this->row_hash_.clear();
 
-  this->user_cost_scale_ = 0;
-  this->user_bound_scale_ = 0;
-
   this->clearScale();
   this->is_scaled_ = false;
   this->is_moved_ = false;
   this->cost_row_location_ = -1;
   this->has_infinite_cost_ = false;
+  this->fme_obj_col_ = -1;
   this->mods_.clear();
 }
 
@@ -276,137 +303,27 @@ void HighsLp::moveBackLpAndUnapplyScaling(HighsLp& lp) {
   assert(this->is_moved_ == false);
 }
 
-bool HighsLp::userBoundScaleOk(const HighsInt user_bound_scale,
-                               const double infinite_bound) const {
-  const HighsInt dl_user_bound_scale =
-      user_bound_scale - this->user_bound_scale_;
-  if (!dl_user_bound_scale) return true;
-  if (!boundScaleOk(this->col_lower_, this->col_upper_, dl_user_bound_scale,
-                    infinite_bound))
-    return false;
-  return boundScaleOk(this->row_lower_, this->row_upper_, dl_user_bound_scale,
-                      infinite_bound);
-}
-
-void HighsLp::userBoundScale(const HighsInt user_bound_scale) {
-  const HighsInt dl_user_bound_scale =
-      user_bound_scale - this->user_bound_scale_;
-  if (!dl_user_bound_scale) return;
-  double dl_user_bound_scale_value = std::pow(2, dl_user_bound_scale);
-  for (HighsInt iCol = 0; iCol < this->num_col_; iCol++) {
-    this->col_lower_[iCol] *= dl_user_bound_scale_value;
-    this->col_upper_[iCol] *= dl_user_bound_scale_value;
-  }
-  for (HighsInt iRow = 0; iRow < this->num_row_; iRow++) {
-    this->row_lower_[iRow] *= dl_user_bound_scale_value;
-    this->row_upper_[iRow] *= dl_user_bound_scale_value;
-  }
-  // Record the current user bound scaling applied to the LP
-  this->user_bound_scale_ = user_bound_scale;
-}
-
-bool HighsLp::userCostScaleOk(const HighsInt user_cost_scale,
-                              const double infinite_cost) const {
-  const HighsInt dl_user_cost_scale = user_cost_scale - this->user_cost_scale_;
-  if (!dl_user_cost_scale) return true;
-  return costScaleOk(this->col_cost_, dl_user_cost_scale, infinite_cost);
-}
-
-void HighsLp::userCostScale(const HighsInt user_cost_scale) {
-  const HighsInt dl_user_cost_scale = user_cost_scale - this->user_cost_scale_;
-  if (!dl_user_cost_scale) return;
-  double dl_user_cost_scale_value = std::pow(2, dl_user_cost_scale);
-  for (HighsInt iCol = 0; iCol < this->num_col_; iCol++)
-    this->col_cost_[iCol] *= dl_user_cost_scale_value;
-  this->user_cost_scale_ = user_cost_scale;
-}
-
-void HighsLp::addColNames(const std::string name, const HighsInt num_new_col) {
-  // Don't add names if there are no columns, or if the names are
-  // already incomplete
+void HighsLp::addColNames(const std::string& name, const HighsInt num_new_col) {
+  // Don't add names if there are no columns being added
   if (this->num_col_ == 0) return;
   HighsInt col_names_size = this->col_names_.size();
-  if (col_names_size < this->num_col_) return;
-  if (!this->col_hash_.name2index.size())
-    this->col_hash_.form(this->col_names_);
+  if (col_names_size <= 0) return;
+  assert(col_names_size == this->num_col_ + num_new_col);
   // Handle the addition of user-defined names later
   assert(name == "");
-  for (HighsInt iCol = this->num_col_; iCol < this->num_col_ + num_new_col;
-       iCol++) {
-    const std::string col_name =
-        "col_ekk_" + std::to_string(this->new_col_name_ix_++);
-    bool added = false;
-    auto search = this->col_hash_.name2index.find(col_name);
-    if (search == this->col_hash_.name2index.end()) {
-      // Name not found in hash
-      if (col_names_size == this->num_col_) {
-        // No space (or name) for this col name
-        this->col_names_.push_back(col_name);
-        added = true;
-      } else if (col_names_size > iCol) {
-        // Space for this col name. Only add if name is blank
-        if (this->col_names_[iCol] == "") {
-          this->col_names_[iCol] = col_name;
-          added = true;
-        }
-      }
-    }
-    if (added) {
-      const bool duplicate =
-          !this->col_hash_.name2index.emplace(col_name, iCol).second;
-      assert(!duplicate);
-      assert(this->col_names_[iCol] == col_name);
-      assert(this->col_hash_.name2index.find(col_name)->second == iCol);
-    } else {
-      // Duplicate name or other failure
-      this->col_hash_.name2index.clear();
-      return;
-    }
-  }
+  // Blank names for the new columns were added in
+  // appendColsToLpVectors
 }
 
-void HighsLp::addRowNames(const std::string name, const HighsInt num_new_row) {
-  // Don't add names if there are no rows, or if the names are already
-  // incomplete
+void HighsLp::addRowNames(const std::string& name, const HighsInt num_new_row) {
+  // Don't add names if there are no rows being added
   if (this->num_row_ == 0) return;
   HighsInt row_names_size = this->row_names_.size();
-  if (row_names_size < this->num_row_) return;
-  if (!this->row_hash_.name2index.size())
-    this->row_hash_.form(this->row_names_);
+  if (row_names_size <= 0) return;
+  assert(row_names_size == this->num_row_ + num_new_row);
   // Handle the addition of user-defined names later
   assert(name == "");
-  for (HighsInt iRow = this->num_row_; iRow < this->num_row_ + num_new_row;
-       iRow++) {
-    const std::string row_name =
-        "row_ekk_" + std::to_string(this->new_row_name_ix_++);
-    bool added = false;
-    auto search = this->row_hash_.name2index.find(row_name);
-    if (search == this->row_hash_.name2index.end()) {
-      // Name not found in hash
-      if (row_names_size == this->num_row_) {
-        // No space (or name) for this row name
-        this->row_names_.push_back(row_name);
-        added = true;
-      } else if (row_names_size > iRow) {
-        // Space for this row name. Only add if name is blank
-        if (this->row_names_[iRow] == "") {
-          this->row_names_[iRow] = row_name;
-          added = true;
-        }
-      }
-    }
-    if (added) {
-      const bool duplicate =
-          !this->row_hash_.name2index.emplace(row_name, iRow).second;
-      assert(!duplicate);
-      assert(this->row_names_[iRow] == row_name);
-      assert(this->row_hash_.name2index.find(row_name)->second == iRow);
-    } else {
-      // Duplicate name or other failure
-      this->row_hash_.name2index.clear();
-      return;
-    }
-  }
+  // Blank names for the new rows were added in appendRowsToLpVectors
 }
 
 void HighsLp::deleteColsFromVectors(
@@ -600,51 +517,105 @@ bool HighsLpMods::isClear() {
   if (this->save_inconsistent_semi_variable_upper_bound_value.size())
     return false;
   if (this->save_inconsistent_semi_variable_type.size()) return false;
-  if (this->save_relaxed_semi_variable_lower_bound_value.size()) return false;
+  if (this->save_relaxed_semi_variable_lower_bound_index.size()) return false;
   if (this->save_relaxed_semi_variable_lower_bound_value.size()) return false;
   if (this->save_tightened_semi_variable_upper_bound_index.size()) return false;
   if (this->save_tightened_semi_variable_upper_bound_value.size()) return false;
   return true;
 }
 
-void HighsNameHash::form(const std::vector<std::string>& name) {
-  size_t num_name = name.size();
+void HighsNameHash::form(const std::vector<std::string>& names) {
   this->clear();
-  for (size_t index = 0; index < num_name; index++) {
-    auto emplace_result = this->name2index.emplace(name[index], index);
+  for (size_t index = 0; index < names.size(); index++) {
+    auto emplace_result =
+        this->name2index.emplace(names[index], static_cast<int>(index));
     const bool duplicate = !emplace_result.second;
     if (duplicate) {
-      // Find the original and mark it as duplicate
+      // Find the original
       auto& search = emplace_result.first;
-      assert(int(search->second) < int(this->name2index.size()));
-      search->second = kHashIsDuplicate;
+      if (search->second >= 0) {
+        // search->second is is the index associated with the first
+        // occurrence of the name (not the position in name2index), so
+        // initialise the duplicate count
+        search->second = -1;
+      } else {
+        // search->second < 0, then -search->second is the duplicate
+        // count, so increase it
+        search->second--;
+      }
     }
   }
+  assert(this->ok(names));
 }
 
-bool HighsNameHash::hasDuplicate(const std::vector<std::string>& name) {
-  size_t num_name = name.size();
+bool HighsNameHash::hasDuplicate(const std::vector<std::string>& names) {
   this->clear();
   bool has_duplicate = false;
-  for (size_t index = 0; index < num_name; index++) {
-    has_duplicate = !this->name2index.emplace(name[index], index).second;
+  for (size_t index = 0; index < names.size(); index++) {
+    auto emplace_result =
+        this->name2index.emplace(names[index], static_cast<int>(index));
+    has_duplicate = !emplace_result.second;
     if (has_duplicate) break;
   }
   this->clear();
   return has_duplicate;
 }
 
-void HighsNameHash::update(int index, const std::string& old_name,
-                           const std::string& new_name) {
-  this->name2index.erase(old_name);
-  auto emplace_result = this->name2index.emplace(new_name, index);
+void HighsNameHash::addName(const HighsInt index, const std::string& name) {
+  if (!this->size()) return;
+  addNameFindsDuplicate(index, name);
+}
+
+bool HighsNameHash::addNameFindsDuplicate(const HighsInt index,
+                                          const std::string& name) {
+  auto emplace_result = this->name2index.emplace(name, static_cast<int>(index));
   const bool duplicate = !emplace_result.second;
   if (duplicate) {
     // Find the original and mark it as duplicate
     auto& search = emplace_result.first;
-    assert(int(search->second) < int(this->name2index.size()));
-    search->second = kHashIsDuplicate;
+    if (search->second >= 0) {
+      search->second = -1;
+    } else {
+      search->second--;
+    }
+    return true;
   }
+  return false;
 }
 
-void HighsNameHash::clear() { this->name2index.clear(); }
+bool HighsNameHash::updateFindsDuplicate(const HighsInt index,
+                                         const std::string& old_name,
+                                         const std::string& new_name) {
+  // Update duplication data for old_name, erasing it if it disappears
+  auto find_result = this->name2index.find(old_name);
+  if (find_result != this->name2index.end()) {
+    // Old name is present, so find out if it's a duplicate
+    if (find_result->second < 0) {
+      // At least one duplicate of old_name
+      find_result->second++;
+    } else {
+      // Old name was unique, so erase it
+      this->name2index.erase(old_name);
+    }
+  }
+  return addNameFindsDuplicate(index, new_name);
+}
+
+bool HighsNameHash::ok(const std::vector<std::string>& names) {
+  HighsInt num_name = names.size();
+  HighsNameHash helper;
+  for (HighsInt index = 0; index < num_name; index++)
+    helper.name2index.emplace(names[index], 0);
+  for (auto& entry : helper.name2index) {
+    std::string unique_name = entry.first;
+    auto find_result = this->name2index.find(unique_name);
+    if (find_result == this->name2index.end()) return false;
+    HighsInt count = 0;
+    for (HighsInt index = 0; index < num_name; index++)
+      if (names[index] == unique_name) count++;
+    if ((count == 1 && find_result->second < 0) ||
+        (count > 1 && count != 1 - find_result->second))
+      return false;
+  }
+  return true;
+}

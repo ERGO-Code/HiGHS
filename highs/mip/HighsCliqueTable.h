@@ -26,7 +26,11 @@ namespace presolve {
 class HighsPostsolveStack;
 }
 
+class HPresolveCliqueTable;
+
 class HighsCliqueTable {
+  friend class HPresolveCliqueTable;
+
  public:
   struct CliqueVar {
 #ifdef HIGHSINT64
@@ -58,6 +62,7 @@ class HighsCliqueTable {
     HighsInt origin;
     HighsInt numZeroFixed;
     bool equality;
+    HighsInt numActive() const { return end - start - numZeroFixed; }
   };
 
   struct Substitution {
@@ -72,7 +77,7 @@ class HighsCliqueTable {
   std::vector<HighsHashTree<HighsInt>> invertedHashListSizeTwo;
   HighsHashTable<std::pair<CliqueVar, CliqueVar>, HighsInt> sizeTwoCliques;
 
-  std::set<std::pair<HighsInt, int>> freespaces;
+  std::set<std::pair<HighsInt, HighsInt>> freespaces;
   std::vector<HighsInt> freeslots;
   std::vector<Clique> cliques;
   std::vector<HighsInt> numcliquesvar;
@@ -82,8 +87,8 @@ class HighsCliqueTable {
   std::vector<Substitution> substitutions;
   std::vector<HighsInt> deletedrows;
   std::vector<std::pair<HighsInt, CliqueVar>> cliqueextensions;
-  std::vector<uint8_t> iscandidate;
-  std::vector<uint8_t> colDeleted;
+  std::vector<HighsBool> iscandidate;
+  std::vector<HighsBool> colDeleted;
   std::vector<uint32_t> cliquehits;
   std::vector<HighsInt> cliquehitinds;
 
@@ -94,7 +99,8 @@ class HighsCliqueTable {
   HighsInt numEntries;
   HighsInt maxEntries;
   HighsInt minEntriesForParallelism;
-  bool inPresolve;
+  bool inPresolveProbing;
+  bool allowParallel;
 
   void unlink(HighsInt pos, HighsInt cliqueid);
 
@@ -109,6 +115,14 @@ class HighsCliqueTable {
 
   HighsInt runCliqueSubsumption(const HighsDomain& globaldom,
                                 std::vector<CliqueVar>& clique);
+
+  void cliqueSubsumption(
+      const std::vector<CliqueVar>& clique, bool& redundant,
+      HighsInt& dominatingOrigin,
+      const std::function<void(HighsInt)>& removeCliqueCallback);
+
+  void collectCliques(const std::vector<CliqueVar>& clique);
+
   struct BronKerboschData {
     const std::vector<double>& sol;
     std::vector<CliqueVar> P;
@@ -151,28 +165,51 @@ class HighsCliqueTable {
                           int64_t& numNeighbourhoodqueries, CliqueVar v,
                           CliqueVar* q, HighsInt N) const;
 
+  void recordSubstitution(Substitution substitution);
+
+  void replaceLiteral(CliqueVar substitutedVar, CliqueVar replacementVar);
+
+  template <bool Sort = true, typename Comparator>
+  HighsInt extendClique(std::vector<HighsInt>& neighbourhoodInds,
+                        std::vector<CliqueVar>& clqVars, HighsInt seedPos,
+                        HighsInt extensionEnd,
+                        const Comparator& candidateOrder);
+
+  HighsInt extendClique(std::vector<HighsInt>& neighbourhoodInds,
+                        std::vector<CliqueVar>& clqVars, HighsInt seedPos,
+                        HighsInt extensionEnd);
+
  public:
   int64_t numNeighbourhoodQueries;
 
   HighsCliqueTable(HighsInt ncols) {
-    invertedHashList.resize(2 * static_cast<size_t>(ncols));
-    invertedHashListSizeTwo.resize(2 * static_cast<size_t>(ncols));
-    numcliquesvar.resize(2 * static_cast<size_t>(ncols), 0);
-    colsubstituted.resize(ncols);
-    colDeleted.resize(ncols, false);
+    resize(static_cast<size_t>(ncols));
     nfixings = 0;
     numNeighbourhoodQueries = 0;
     numEntries = 0;
     maxEntries = kHighsIInf;
     minEntriesForParallelism = kHighsIInf;
-    inPresolve = false;
+    inPresolveProbing = false;
+    allowParallel = true;
   }
 
-  void setPresolveFlag(bool inPresolve) { this->inPresolve = inPresolve; }
+  void resize(size_t ncols) {
+    invertedHashList.resize(2 * ncols);
+    invertedHashListSizeTwo.resize(2 * ncols);
+    numcliquesvar.resize(2 * ncols, 0);
+    colsubstituted.resize(ncols);
+    colDeleted.resize(ncols, false);
+  }
 
-  bool getPresolveFlag() const { return inPresolve; }
+  void setinPresolveProbingFlag(const bool inPresolveProbing) {
+    this->inPresolveProbing = inPresolveProbing;
+  }
 
   HighsInt getNumEntries() const { return numEntries; }
+
+  HighsRandom& getRandgen() { return randgen; }
+
+  int64_t& getNumNeighbourhoodQueries() { return numNeighbourhoodQueries; }
 
   HighsInt partitionNeighbourhood(std::vector<HighsInt>& neighbourhoodInds,
                                   int64_t& numNeighbourhoodqueries, CliqueVar v,
@@ -181,6 +218,9 @@ class HighsCliqueTable {
   HighsInt shrinkToNeighbourhood(std::vector<HighsInt>& neighbourhoodInds,
                                  int64_t& numNeighbourhoodqueries, CliqueVar v,
                                  CliqueVar* q, HighsInt N);
+
+  bool fixCol(HighsDomain& globaldom, CliqueVar v,
+              bool doProcessInfeasibleVertices = false);
 
   bool processNewEdge(HighsDomain& globaldom, CliqueVar v1, CliqueVar v2);
 
@@ -191,7 +231,9 @@ class HighsCliqueTable {
                  HighsInt numcliquevars, bool equality = false,
                  HighsInt origin = kHighsIInf);
 
-  void removeClique(HighsInt cliqueid);
+  void removeClique(HighsInt cliqueid, bool recordDeletedRow = true);
+
+  void fixLastActiveAndRemove(HighsDomain& globaldom, HighsInt cliqueid);
 
   void resolveSubstitution(CliqueVar& v) const;
 
@@ -240,6 +282,9 @@ class HighsCliqueTable {
                        std::vector<CliqueVar>& clqVars,
                        std::vector<HighsInt>& partitionStart);
 
+  void cliqueCover(std::vector<CliqueVar>& clqVars,
+                   std::vector<std::vector<CliqueVar>>& cover);
+
   bool foundCover(HighsDomain& globaldom, CliqueVar v1, CliqueVar v2);
 
   void extractCliques(HighsMipSolver& mipsolver, bool transformRows = true);
@@ -276,7 +321,8 @@ class HighsCliqueTable {
 
   void separateCliques(const HighsMipSolver& mipsolver,
                        const std::vector<double>& sol, HighsCutPool& cutpool,
-                       double feastol);
+                       double feastol, HighsRandom& randgen,
+                       int64_t& localNumNeighbourhoodQueries);
 
   std::vector<std::vector<CliqueVar>> separateCliques(
       const std::vector<double>& sol, const HighsDomain& globaldom,
@@ -289,9 +335,9 @@ class HighsCliqueTable {
 
   void addImplications(HighsDomain& domain, HighsInt col, HighsInt val);
 
-  HighsInt getNumImplications(HighsInt col);
+  HighsInt getNumImplications(HighsInt col) const;
 
-  HighsInt getNumImplications(HighsInt col, bool val);
+  HighsInt getNumImplications(HighsInt col, bool val) const;
 
   void runCliqueMerging(HighsDomain& globaldomain);
 
@@ -312,6 +358,10 @@ class HighsCliqueTable {
 
   HighsInt numCliques(HighsInt col, bool val) const {
     return numcliquesvar[CliqueVar(col, val).index()];
+  }
+
+  void setAllowParallel(const bool allowParallel) {
+    this->allowParallel = allowParallel;
   }
 };
 

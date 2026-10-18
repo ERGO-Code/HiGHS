@@ -22,15 +22,21 @@ HighsPseudocost::HighsPseudocost(const HighsMipSolver& mipsolver)
       ncutoffsdown(mipsolver.numCol()),
       conflictscoreup(mipsolver.numCol()),
       conflictscoredown(mipsolver.numCol()),
+      changedpos(mipsolver.numCol(), -1),
       conflict_weight(1.0),
       conflict_avg_score(0.0),
       cost_total(0),
       inferences_total(0),
+      delta_cost_sum(0.0),
+      delta_inferences_sum(0.0),
       nsamplestotal(0),
       ninferencestotal(0),
       ncutoffstotal(0),
+      delta_nsamplestotal(0),
+      delta_ninferencestotal(0),
       minreliable(mipsolver.options_mip_->mip_pscost_minreliable),
       degeneracyFactor(1.0) {
+  deltas.reserve(std::min(HighsInt{256}, mipsolver.numCol()));
   if (mipsolver.pscostinit != nullptr) {
     cost_total = mipsolver.pscostinit->cost_total;
     inferences_total = mipsolver.pscostinit->inferences_total;
@@ -40,7 +46,7 @@ HighsPseudocost::HighsPseudocost(const HighsMipSolver& mipsolver)
     conflict_avg_score =
         mipsolver.pscostinit->conflict_avg_score * mipsolver.numCol();
 
-    for (HighsInt i = 0; i != mipsolver.numCol(); ++i) {
+    for (HighsInt i : mipsolver.mipdata_->postSolveStack.getOrigCols()) {
       HighsInt origCol = mipsolver.mipdata_->postSolveStack.getOrigColIndex(i);
 
       pseudocostup[i] = mipsolver.pscostinit->pseudocostup[origCol];
@@ -108,7 +114,7 @@ HighsPseudocostInitialization::HighsPseudocostInitialization(
   HighsInt ncols = pscost.pseudocostup.size();
   conflict_avg_score /= ncols * pscost.conflict_weight;
 
-  for (HighsInt i = 0; i != ncols; ++i) {
+  for (HighsInt i : postsolveStack.getOrigCols()) {
     pseudocostup[postsolveStack.getOrigColIndex(i)] = pscost.pseudocostup[i];
     pseudocostdown[postsolveStack.getOrigColIndex(i)] =
         pscost.pseudocostdown[i];

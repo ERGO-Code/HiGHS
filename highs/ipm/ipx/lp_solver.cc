@@ -13,7 +13,7 @@
 namespace ipx {
 
 Int LpSolver::LoadModel(Int num_var, const double offset,
-			const double* obj, const double* lb,
+                        const double* obj, const double* lb,
                         const double* ub, Int num_constr, const Int* Ap,
                         const Int* Ai, const double* Ax, const double* rhs,
                         const char* constr_type) {
@@ -55,68 +55,59 @@ Int LpSolver::Solve() {
     control_.ResetTimer();
     control_.OpenLogfile();
     control_.hLog("IPX version 1.0\n");
-    try {
-        InteriorPointSolve();
-	const bool run_crossover_on = control_.run_crossover() == 1;
-	const bool run_crossover_choose = control_.run_crossover() == -1;
-	const bool run_crossover_not_off = run_crossover_choose || run_crossover_on;
-	const bool run_crossover =
-	  (info_.status_ipm == IPX_STATUS_optimal && run_crossover_on) ||
-	  (info_.status_ipm == IPX_STATUS_imprecise && run_crossover_not_off);
-	//        if ((info_.status_ipm == IPX_STATUS_optimal ||
-	//             info_.status_ipm == IPX_STATUS_imprecise) && run_crossover_on) {
-	if (run_crossover) {
-	    if (run_crossover_on) {
-	      control_.hLog("Running crossover as requested\n");
-	    } else if (run_crossover_choose) {
-	      assert(info_.status_ipm == IPX_STATUS_imprecise);
-	      control_.hLog("Running crossover since IPX is imprecise\n");
-	    } else {
-	      assert(run_crossover_on || run_crossover_choose);
-	    }
-	    BuildCrossoverStartingPoint();
-            RunCrossover();
-        }
-        if (basis_) {
-            info_.ftran_sparse = basis_->frac_ftran_sparse();
-            info_.btran_sparse = basis_->frac_btran_sparse();
-            info_.time_lu_invert = basis_->time_factorize();
-            info_.time_lu_update = basis_->time_update();
-            info_.time_ftran = basis_->time_ftran();
-            info_.time_btran = basis_->time_btran();
-            info_.mean_fill = basis_->mean_fill();
-            info_.max_fill = basis_->max_fill();
-        }
-        if (info_.status_ipm == IPX_STATUS_primal_infeas ||
-            info_.status_ipm == IPX_STATUS_dual_infeas ||
-            info_.status_crossover == IPX_STATUS_primal_infeas ||
-            info_.status_crossover == IPX_STATUS_dual_infeas) {
-            // When IPM or crossover detect the model to be infeasible
-            // (currently only the former is implemented), then the problem is
-            // solved.
-            info_.status = IPX_STATUS_solved;
-        } else {
-            Int method_status = run_crossover ?
-                info_.status_crossover : info_.status_ipm;
-            if (method_status == IPX_STATUS_optimal ||
-                method_status == IPX_STATUS_imprecise)
-                info_.status = IPX_STATUS_solved;
-            else
-                info_.status = IPX_STATUS_stopped;
-        }
-        PrintSummary();
+
+    InteriorPointSolve();
+
+    const bool run_crossover_on = control_.run_crossover() == 1;
+    const bool run_crossover_choose = control_.run_crossover() == -1;
+    const bool run_crossover_not_off = run_crossover_choose || run_crossover_on;
+    const bool run_crossover =
+      (info_.status_ipm == IPX_STATUS_optimal && run_crossover_on) ||
+      (info_.status_ipm == IPX_STATUS_imprecise && run_crossover_not_off);
+    //        if ((info_.status_ipm == IPX_STATUS_optimal ||
+    //             info_.status_ipm == IPX_STATUS_imprecise) && run_crossover_on) {
+    if (run_crossover) {
+      if (run_crossover_on) {
+	control_.hLog("Running crossover as requested\n");
+      } else if (run_crossover_choose) {
+	assert(info_.status_ipm == IPX_STATUS_imprecise);
+	control_.hLog("Running crossover since IPX is imprecise\n");
+      } else {
+	assert(run_crossover_on || run_crossover_choose);
+      }
+      BuildCrossoverStartingPoint();
+      RunCrossover();
     }
-    catch (const std::bad_alloc&) {
-      control_.hLog(" out of memory\n");
-        info_.status = IPX_STATUS_out_of_memory;
+    if (basis_) {
+      info_.ftran_sparse = basis_->frac_ftran_sparse();
+      info_.btran_sparse = basis_->frac_btran_sparse();
+      info_.time_lu_invert = basis_->time_factorize();
+      info_.time_lu_update = basis_->time_update();
+      info_.time_ftran = basis_->time_ftran();
+      info_.time_btran = basis_->time_btran();
+      info_.mean_fill = basis_->mean_fill();
+      info_.max_fill = basis_->max_fill();
     }
-    catch (const std::exception& e) {
-      std::stringstream h_logging_stream;
-      h_logging_stream.str(std::string());
-      h_logging_stream << " internal error: " << e.what() << '\n';
-      control_.hLog(h_logging_stream);
-      info_.status = IPX_STATUS_internal_error;
+    if (info_.status_ipm == IPX_STATUS_primal_infeas ||
+	info_.status_ipm == IPX_STATUS_dual_infeas ||
+	info_.status_crossover == IPX_STATUS_primal_infeas ||
+	info_.status_crossover == IPX_STATUS_dual_infeas) {
+      // When IPM or crossover detect the model to be infeasible
+      // (currently only the former is implemented), then the problem is
+      // solved.
+      info_.status = IPX_STATUS_solved;
+    } else {
+      Int method_status = run_crossover ?
+	info_.status_crossover : info_.status_ipm;
+      if (method_status == IPX_STATUS_optimal ||
+	  method_status == IPX_STATUS_imprecise)
+	info_.status = IPX_STATUS_solved;
+      else
+	info_.status = IPX_STATUS_stopped;
     }
+
+    PrintSummary();
+
     info_.time_total = control_.Elapsed();
     control_.Debug(2) << info_;
     control_.CloseLogfile();
@@ -381,11 +372,10 @@ void LpSolver::InteriorPointSolve() {
             info_.rel_dresidual > control_.ipm_feasibility_tol())
             info_.status_ipm = IPX_STATUS_imprecise;
     }
-    if (info_.centring_tried) {
-      // Assess the success of analytic centre calculation
+
+    // Assess the success of analytic centre calculation
+    if (info_.centring_tried)
       info_.status_ipm = info_.centring_success ? IPX_STATUS_optimal : IPX_STATUS_imprecise;
-      assert(info_.status_ipm == IPX_STATUS_optimal);
-    }
 }
 
 void LpSolver::RunIPM() {
@@ -394,7 +384,7 @@ void LpSolver::RunIPM() {
     info_.centring_success = false;
 
     if (x_start_.size() != 0) {
-      control_.hLog(" Using starting point provided by user. Skipping initial iterations.\n");
+        control_.hLog(" Using starting point provided by user. Skipping initial iterations.\n");
         iterate_->Initialize(x_start_, xl_start_, xu_start_,
                              y_start_, zl_start_, zu_start_);
     }
@@ -522,12 +512,12 @@ void LpSolver::BuildStartingBasis() {
         info_.status_ipm = IPX_STATUS_debug;
         return;
     }
-    basis_.reset(new Basis(control_, model_));
     control_.hLog(" Constructing starting basis...\n");
+    basis_.reset(new Basis(control_, model_));
     StartingBasis(iterate_.get(), basis_.get(), &info_);
     if (info_.errflag == IPX_ERROR_user_interrupt) {
         info_.errflag = 0;
-	info_.status_ipm = IPX_STATUS_user_interrupt;
+        info_.status_ipm = IPX_STATUS_user_interrupt;
         return;
     } else if (info_.errflag == IPX_ERROR_time_interrupt) {
         info_.errflag = 0;
@@ -558,6 +548,7 @@ void LpSolver::BuildStartingBasis() {
 void LpSolver::RunMainIPM(IPM& ipm) {
     KKTSolverBasis kkt(control_, *basis_);
     Timer timer;
+    ipm.PrintHeader();
     ipm.maxiter(control_.ipm_maxiter());
     ipm.Driver(&kkt, iterate_.get(), &info_);
     info_.time_ipm2 = timer.Elapsed();

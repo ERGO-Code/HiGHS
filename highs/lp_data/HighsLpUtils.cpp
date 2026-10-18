@@ -23,6 +23,7 @@
 #include "util/HighsCDouble.h"
 #include "util/HighsMatrixUtils.h"
 #include "util/HighsSort.h"
+#include "util/stringutil.h"
 
 using std::fabs;
 using std::max;
@@ -54,7 +55,8 @@ HighsStatus assessLp(HighsLp& lp, const HighsOptions& options) {
     // Assess the LP column bounds
     call_status = assessBounds(
         options, "Col", 0, index_collection, lp.col_lower_, lp.col_upper_,
-        options.infinite_bound, lp.isMip() ? lp.integrality_.data() : nullptr);
+        options.infinite_bound, lp.isMip() ? lp.integrality_.data() : nullptr,
+        lp.col_names_.data());
     return_status = interpretCallStatus(options.log_options, call_status,
                                         return_status, "assessBounds");
     if (return_status == HighsStatus::kError) return return_status;
@@ -66,9 +68,9 @@ HighsStatus assessLp(HighsLp& lp, const HighsOptions& options) {
     index_collection.is_interval_ = true;
     index_collection.from_ = 0;
     index_collection.to_ = lp.num_row_ - 1;
-    call_status =
-        assessBounds(options, "Row", 0, index_collection, lp.row_lower_,
-                     lp.row_upper_, options.infinite_bound);
+    call_status = assessBounds(
+        options, "Row", 0, index_collection, lp.row_lower_, lp.row_upper_,
+        options.infinite_bound, nullptr, lp.row_names_.data());
     return_status = interpretCallStatus(options.log_options, call_status,
                                         return_status, "assessBounds");
     if (return_status == HighsStatus::kError) return return_status;
@@ -76,7 +78,7 @@ HighsStatus assessLp(HighsLp& lp, const HighsOptions& options) {
   // If the LP has no columns the matrix must be empty and there is
   // nothing left to test
   if (lp.num_col_ == 0) {
-    assert(!lp.a_matrix_.numNz());
+    assert(!lp.numNz());
     return HighsStatus::kOk;
   }
   // From here, any LP has lp.num_col_ > 0 and lp.a_matrix_.start_[lp.num_col_]
@@ -84,15 +86,17 @@ HighsStatus assessLp(HighsLp& lp, const HighsOptions& options) {
   assert(lp.num_col_ > 0);
 
   // Assess the LP matrix - even if there are no rows!
+  const bool sum_duplicates = false;
   call_status =
       lp.a_matrix_.assess(options.log_options, "LP", options.small_matrix_value,
-                          options.large_matrix_value);
+                          options.large_matrix_value, sum_duplicates,
+                          lp.col_names_.data(), lp.row_names_.data());
   return_status = interpretCallStatus(options.log_options, call_status,
                                       return_status, "assessMatrix");
   if (return_status == HighsStatus::kError) return return_status;
   // If entries have been removed from the matrix, resize the index
   // and value vectors to prevent bug in presolve
-  HighsInt lp_num_nz = lp.a_matrix_.numNz();
+  HighsInt lp_num_nz = lp.numNz();
   if ((HighsInt)lp.a_matrix_.index_.size() > lp_num_nz)
     lp.a_matrix_.index_.resize(lp_num_nz);
   if ((HighsInt)lp.a_matrix_.value_.size() > lp_num_nz)
@@ -104,7 +108,7 @@ HighsStatus assessLp(HighsLp& lp, const HighsOptions& options) {
   return return_status;
 }
 
-bool lpDimensionsOk(std::string message, const HighsLp& lp,
+bool lpDimensionsOk(const std::string& message, const HighsLp& lp,
                     const HighsLogOptions& log_options) {
   bool ok = true;
   const HighsInt num_col = lp.num_col_;
@@ -300,6 +304,7 @@ HighsStatus assessCosts(const HighsOptions& options, const HighsInt ml_col_os,
   // [0...num_new_col) which must be offset by the current number of
   // columns in the model.
   //
+
   HighsInt local_col;
   HighsInt usr_col = -1;
   HighsInt num_infinite_cost = 0;
@@ -328,19 +333,21 @@ HighsStatus assessCosts(const HighsOptions& options, const HighsInt ml_col_os,
     has_infinite_cost = true;
     highsLogUser(options.log_options, HighsLogType::kInfo,
                  "%" HIGHSINT_FORMAT
-                 " |cost| values greater than or equal to %12g are treated as "
+                 " |cost| value%s greater than or equal to %12g %s treated as "
                  "Infinity\n",
-                 num_infinite_cost, infinite_cost);
+                 num_infinite_cost, highsIntToPlural(num_infinite_cost).c_str(),
+                 infinite_cost, highsIntToBe(num_infinite_cost).c_str());
   }
   return return_status;
 }
 
-HighsStatus assessBounds(const HighsOptions& options, const char* type,
+HighsStatus assessBounds(const HighsOptions& options, const std::string& type,
                          const HighsInt ml_ix_os,
                          const HighsIndexCollection& index_collection,
                          vector<double>& lower, vector<double>& upper,
                          const double infinite_bound,
-                         const HighsVarType* integrality) {
+                         const HighsVarType* integrality,
+                         const std::string* names) {
   HighsStatus return_status = HighsStatus::kOk;
   assert(ok(index_collection));
   HighsInt from_k;
@@ -373,6 +380,12 @@ HighsStatus assessBounds(const HighsOptions& options, const char* type,
   // [0...num_new_row/col) which must be offset by the current number
   // of rows/columns (generically indices) in the model.
   //
+  auto possible_name = [&](const HighsInt ix) {
+    std::string name = "";
+    if (names) name = " (" + type + " " + names[ix] + ")";
+    return name;
+  };
+
   HighsInt num_infinite_lower_bound = 0;
   HighsInt num_infinite_upper_bound = 0;
   HighsInt local_ix;
@@ -421,8 +434,9 @@ HighsStatus assessBounds(const HighsOptions& options, const char* type,
       // Leave inconsistent bounds to be used to deduce infeasibility
       highsLogUser(options.log_options, HighsLogType::kWarning,
                    "%3s  %12" HIGHSINT_FORMAT
-                   " has inconsistent bounds [%12g, %12g]\n",
-                   type, ml_ix, lower[usr_ix], upper[usr_ix]);
+                   "%s has inconsistent bounds [%12g, %12g]\n",
+                   type.c_str(), ml_ix, possible_name(ml_ix).c_str(),
+                   lower[usr_ix], upper[usr_ix]);
       warning_found = true;
     }
     // Check that the lower bound is not as much as +Infinity
@@ -430,8 +444,9 @@ HighsStatus assessBounds(const HighsOptions& options, const char* type,
     if (!legalLowerBound) {
       highsLogUser(options.log_options, HighsLogType::kError,
                    "%3s  %12" HIGHSINT_FORMAT
-                   " has lower bound of %12g >= %12g\n",
-                   type, ml_ix, lower[usr_ix], infinite_bound);
+                   "%s  has lower bound of %12g >= %12g\n",
+                   type.c_str(), ml_ix, possible_name(ml_ix).c_str(),
+                   lower[usr_ix], infinite_bound);
       error_found = true;
     }
     // Check that the upper bound is not as little as -Infinity
@@ -439,24 +454,29 @@ HighsStatus assessBounds(const HighsOptions& options, const char* type,
     if (!legalUpperBound) {
       highsLogUser(options.log_options, HighsLogType::kError,
                    "%3s  %12" HIGHSINT_FORMAT
-                   " has upper bound of %12g <= %12g\n",
-                   type, ml_ix, upper[usr_ix], -infinite_bound);
+                   "%s  has upper bound of %12g <= %12g\n",
+                   type.c_str(), ml_ix, possible_name(ml_ix).c_str(),
+                   upper[usr_ix], -infinite_bound);
       error_found = true;
     }
   }
   if (num_infinite_lower_bound) {
     highsLogUser(options.log_options, HighsLogType::kInfo,
                  "%3ss:%12" HIGHSINT_FORMAT
-                 " lower bounds    less than or equal to %12g are treated as "
+                 " lower bound%s    less than or equal to %12g are treated as "
                  "-Infinity\n",
-                 type, num_infinite_lower_bound, -infinite_bound);
+                 type.c_str(), num_infinite_lower_bound,
+                 highsIntToPlural(num_infinite_lower_bound).c_str(),
+                 -infinite_bound);
   }
   if (num_infinite_upper_bound) {
     highsLogUser(options.log_options, HighsLogType::kInfo,
                  "%3ss:%12" HIGHSINT_FORMAT
-                 " upper bounds greater than or equal to %12g are treated as "
+                 " upper bound%s greater than or equal to %12g are treated as "
                  "+Infinity\n",
-                 type, num_infinite_upper_bound, infinite_bound);
+                 type.c_str(), num_infinite_upper_bound,
+                 highsIntToPlural(num_infinite_upper_bound).c_str(),
+                 infinite_bound);
   }
 
   if (error_found)
@@ -685,7 +705,7 @@ void relaxSemiVariables(HighsLp& lp, bool& made_semi_variable_mods) {
 }
 
 bool activeModifiedUpperBounds(const HighsOptions& options, const HighsLp& lp,
-                               const std::vector<double> col_value) {
+                               const std::vector<double>& col_value) {
   const std::vector<HighsInt>& tightened_semi_variable_upper_bound_index =
       lp.mods_.save_tightened_semi_variable_upper_bound_index;
   const HighsInt num_tightened_upper =
@@ -769,30 +789,159 @@ HighsStatus cleanBounds(const HighsOptions& options, HighsLp& lp) {
   return HighsStatus::kOk;
 }
 
-bool boundScaleOk(const vector<double>& lower, const vector<double>& upper,
-                  const HighsInt bound_scale, const double infinite_bound) {
-  if (!bound_scale) return true;
-  double bound_scale_value = std::pow(2, bound_scale);
-  for (HighsInt iCol = 0; iCol < HighsInt(lower.size()); iCol++) {
-    if (lower[iCol] > -kHighsInf &&
-        std::abs(lower[iCol] * bound_scale_value) > infinite_bound)
-      return false;
-    if (upper[iCol] < kHighsInf &&
-        std::abs(upper[iCol] * bound_scale_value) > infinite_bound)
-      return false;
-  }
-  return true;
+HighsStatus userScaleLp(HighsLp& lp, HighsUserScaleData& data,
+                        const HighsLogOptions& log_options) {
+  userScaleLp(lp, data, false);
+  HighsStatus return_status = userScaleStatus(log_options, data);
+  if (return_status == HighsStatus::kError) return HighsStatus::kError;
+  userScaleLp(lp, data);
+  return return_status;
 }
 
-bool costScaleOk(const vector<double>& cost, const HighsInt cost_scale,
-                 const double infinite_cost) {
-  if (!cost_scale) return true;
-  double cost_scale_value = std::pow(2, cost_scale);
-  for (HighsInt iCol = 0; iCol < HighsInt(cost.size()); iCol++)
-    if (std::abs(cost[iCol]) < kHighsInf &&
-        std::abs(cost[iCol] * cost_scale_value) > infinite_cost)
-      return false;
-  return true;
+void userScaleLp(HighsLp& lp, HighsUserScaleData& data, const bool apply) {
+  userScaleCosts(lp.integrality_, lp.offset_, lp.col_cost_, data, apply);
+  userScaleColBounds(lp.integrality_, lp.col_lower_, lp.col_upper_, data,
+                     apply);
+  userScaleMatrix(lp.integrality_, lp.a_matrix_, data, apply);
+  userScaleRowBounds(lp.row_lower_, lp.row_upper_, data, apply);
+}
+
+void userScaleCosts(const vector<HighsVarType>& integrality, double& offset,
+                    vector<double>& cost, HighsUserScaleData& data,
+                    const bool apply) {
+  data.num_infinite_costs = 0;
+  const HighsInt user_bound_scale = data.user_bound_scale;
+  const HighsInt user_objective_scale = data.user_objective_scale;
+  if (!user_bound_scale && !user_objective_scale) return;
+  const HighsInt num_col = cost.size();
+  if (num_col <= 0) return;
+  const HighsInt integrality_size = HighsInt(integrality.size());
+  const bool has_integrality = integrality_size > 0;
+  double bound_scale_value = std::pow(2, user_bound_scale);
+  double objective_scale_value = std::pow(2, user_objective_scale);
+  assert(!has_integrality || integrality_size >= num_col);
+  for (HighsInt iCol = 0; iCol < num_col; iCol++) {
+    double value = cost[iCol];
+    if (has_integrality && integrality[iCol] != HighsVarType::kContinuous)
+      value *= bound_scale_value;
+    value *= objective_scale_value;
+    if (std::abs(value) > data.infinite_cost) data.num_infinite_costs++;
+    if (apply) cost[iCol] = value;
+  }
+  if (apply) offset *= (bound_scale_value * objective_scale_value);
+}
+
+void userScaleColBounds(const vector<HighsVarType>& integrality,
+                        vector<double>& lower, vector<double>& upper,
+                        HighsUserScaleData& data, const bool apply) {
+  data.num_infinite_col_bounds = 0;
+  const HighsInt user_bound_scale = data.user_bound_scale;
+  if (!user_bound_scale) return;
+  const HighsInt num_col = lower.size();
+  if (num_col <= 0) return;
+  const HighsInt integrality_size = HighsInt(integrality.size());
+  const bool has_integrality = integrality_size > 0;
+  assert(!has_integrality || integrality_size >= num_col);
+  double bound_scale_value = std::pow(2, user_bound_scale);
+  for (HighsInt iCol = 0; iCol < num_col; iCol++) {
+    if (!has_integrality || integrality[iCol] == HighsVarType::kContinuous) {
+      if (lower[iCol] > -kHighsInf) {
+        double value = lower[iCol] * bound_scale_value;
+        if (std::abs(value) > data.infinite_bound)
+          data.num_infinite_col_bounds++;
+        if (apply) lower[iCol] = value;
+      }
+      if (upper[iCol] < kHighsInf) {
+        double value = upper[iCol] * bound_scale_value;
+        if (std::abs(value) > data.infinite_bound)
+          data.num_infinite_col_bounds++;
+        if (apply) upper[iCol] = value;
+      }
+    }
+  }
+}
+
+void userScaleRowBounds(vector<double>& lower, vector<double>& upper,
+                        HighsUserScaleData& data, const bool apply) {
+  data.num_infinite_row_bounds = 0;
+  const HighsInt user_bound_scale = data.user_bound_scale;
+  if (!user_bound_scale) return;
+  const HighsInt num_row = lower.size();
+  if (num_row <= 0) return;
+  double bound_scale_value = std::pow(2, user_bound_scale);
+  for (HighsInt iRow = 0; iRow < num_row; iRow++) {
+    if (lower[iRow] > -kHighsInf) {
+      double value = lower[iRow] * bound_scale_value;
+      if (std::abs(value) > data.infinite_bound) data.num_infinite_row_bounds++;
+      if (apply) lower[iRow] = value;
+    }
+    if (upper[iRow] < kHighsInf) {
+      double value = upper[iRow] * bound_scale_value;
+      if (std::abs(value) > data.infinite_bound) data.num_infinite_row_bounds++;
+      if (apply) upper[iRow] = value;
+    }
+  }
+}
+
+void userScaleMatrix(const vector<HighsVarType>& integrality,
+                     HighsSparseMatrix& matrix, HighsUserScaleData& data,
+                     const bool apply) {
+  data.num_small_matrix_values = 0;
+  data.num_large_matrix_values = 0;
+  const HighsInt user_bound_scale = data.user_bound_scale;
+  if (!user_bound_scale) return;
+  if (!integrality.size()) return;
+  const HighsInt num_col = matrix.num_col_;
+  if (num_col <= 0) return;
+  const HighsInt num_row = matrix.num_row_;
+  if (num_row <= 0) return;
+  assert(HighsInt(integrality.size()) >= num_col);
+  double bound_scale_value = std::pow(2, user_bound_scale);
+  if (matrix.isColwise()) {
+    for (HighsInt iCol = 0; iCol < num_col; iCol++) {
+      if (integrality[iCol] == HighsVarType::kContinuous) continue;
+      for (HighsInt iEl = matrix.start_[iCol]; iEl < matrix.start_[iCol + 1];
+           iEl++) {
+        double value = matrix.value_[iEl] * bound_scale_value;
+        double abs_value = std::fabs(value);
+        if (abs_value <= data.small_matrix_value)
+          data.num_small_matrix_values++;
+        else if (abs_value >= data.large_matrix_value)
+          data.num_large_matrix_values++;
+        if (apply) matrix.value_[iEl] = value;
+      }
+    }
+  } else {
+    for (HighsInt iRow = 0; iRow < num_row; iRow++) {
+      for (HighsInt iEl = matrix.start_[iRow]; iEl < matrix.start_[iRow + 1];
+           iEl++) {
+        HighsInt iCol = matrix.index_[iEl];
+        if (integrality[iCol] == HighsVarType::kContinuous) continue;
+        double value = matrix.value_[iEl] * bound_scale_value;
+        double abs_value = std::fabs(value);
+        if (abs_value <= data.small_matrix_value)
+          data.num_small_matrix_values++;
+        else if (abs_value >= data.large_matrix_value)
+          data.num_large_matrix_values++;
+        if (apply) matrix.value_[iEl] = value;
+      }
+    }
+  }
+}
+
+HighsStatus userScaleStatus(const HighsLogOptions& log_options,
+                            const HighsUserScaleData& data) {
+  HighsStatus return_status = HighsStatus::kOk;
+  std::string message;
+  if (data.scaleWarning(message)) {
+    highsLogUser(log_options, HighsLogType::kWarning, "%s\n", message.c_str());
+    return_status = HighsStatus::kWarning;
+  }
+  if (data.scaleError(message)) {
+    highsLogUser(log_options, HighsLogType::kError, "%s\n", message.c_str());
+    return_status = HighsStatus::kError;
+  }
+  return return_status;
 }
 
 bool considerScaling(const HighsOptions& options, HighsLp& lp) {
@@ -1479,8 +1628,11 @@ void appendColsToLpVectors(HighsLp& lp, const HighsInt num_new_col,
     lp.col_cost_[iCol] = colCost[new_col];
     lp.col_lower_[iCol] = colLower[new_col];
     lp.col_upper_[iCol] = colUpper[new_col];
-    // Cannot guarantee to create unique names, so name is blank
-    if (have_names) lp.col_names_[iCol] = "";
+    if (have_names) {
+      // Cannot guarantee to create unique names, so name is blank
+      lp.col_hash_.addName(iCol, "");
+      lp.col_names_[iCol] = "";
+    }
     if (have_integrality) lp.integrality_[iCol] = HighsVarType::kContinuous;
   }
 }
@@ -1500,8 +1652,11 @@ void appendRowsToLpVectors(HighsLp& lp, const HighsInt num_new_row,
     HighsInt iRow = lp.num_row_ + new_row;
     lp.row_lower_[iRow] = rowLower[new_row];
     lp.row_upper_[iRow] = rowUpper[new_row];
-    // Cannot guarantee to create unique names, so name is blank
-    if (have_names) lp.row_names_[iRow] = "";
+    if (have_names) {
+      // Cannot guarantee to create unique names, so name is blank
+      lp.row_hash_.addName(iRow, "");
+      lp.row_names_[iRow] = "";
+    }
   }
 }
 
@@ -1584,14 +1739,16 @@ void changeLpMatrixCoefficient(HighsLp& lp, const HighsInt row,
   lp.a_matrix_.value_[change_el] = new_value;
 }
 
-void changeLpIntegrality(HighsLp& lp,
-                         const HighsIndexCollection& index_collection,
-                         const vector<HighsVarType>& new_integrality) {
+HighsStatus changeLpIntegrality(HighsLp& lp,
+                                const HighsIndexCollection& index_collection,
+                                const vector<HighsVarType>& new_integrality,
+                                const HighsOptions& options) {
+  HighsStatus return_status = HighsStatus::kOk;
   assert(ok(index_collection));
   HighsInt from_k;
   HighsInt to_k;
   limits(index_collection, from_k, to_k);
-  if (from_k > to_k) return;
+  if (from_k > to_k) return return_status;
 
   const bool& interval = index_collection.is_interval_;
   const bool& mask = index_collection.is_mask_;
@@ -1602,11 +1759,13 @@ void changeLpIntegrality(HighsLp& lp,
   // technique
   HighsInt lp_col;
   HighsInt usr_col = -1;
+
   // If changing integrality for a problem without an integrality
   // vector (ie an LP), have to create it for the incumbent columns -
   // which are naturally continuous
   if (lp.integrality_.size() == 0)
     lp.integrality_.assign(lp.num_col_, HighsVarType::kContinuous);
+
   assert(HighsInt(lp.integrality_.size()) == lp.num_col_);
   for (HighsInt k = from_k; k < to_k + 1; k++) {
     if (interval || mask) {
@@ -1626,6 +1785,7 @@ void changeLpIntegrality(HighsLp& lp,
   // If integrality_ contains only HighsVarType::kContinuous then
   // clear it
   if (!lp.isMip()) lp.integrality_.clear();
+  return return_status;
 }
 
 void changeLpCosts(HighsLp& lp, const HighsIndexCollection& index_collection,
@@ -1789,8 +1949,10 @@ void reportLp(const HighsLogOptions& log_options, const HighsLp& lp,
   if ((HighsInt)report_level >= (HighsInt)HighsLogType::kDetailed) {
     reportLpColVectors(log_options, lp);
     reportLpRowVectors(log_options, lp);
-    if ((HighsInt)report_level >= (HighsInt)HighsLogType::kVerbose)
+    if ((HighsInt)report_level >= (HighsInt)HighsLogType::kVerbose) {
+      assert(lp.a_matrix_.isColwise());
       reportLpColMatrix(log_options, lp);
+    }
   }
 }
 
@@ -1808,17 +1970,21 @@ void reportLpDimensions(const HighsLogOptions& log_options, const HighsLp& lp) {
   else
     lp_num_nz = lp.a_matrix_.start_[lp.num_col_];
   highsLogUser(log_options, HighsLogType::kInfo,
-               "LP has %" HIGHSINT_FORMAT " columns, %" HIGHSINT_FORMAT " rows",
-               lp.num_col_, lp.num_row_);
+               "LP has %" HIGHSINT_FORMAT " row%s, %" HIGHSINT_FORMAT
+               " column%s",
+               lp.num_row_, lp.num_row_ == 1 ? "" : "s", lp.num_col_,
+               lp.num_col_ == 1 ? "" : "s");
   HighsInt num_int = getNumInt(lp);
   if (num_int) {
     highsLogUser(log_options, HighsLogType::kInfo,
-                 ", %" HIGHSINT_FORMAT " nonzeros and %" HIGHSINT_FORMAT
-                 " integer columns\n",
-                 lp_num_nz, num_int);
+                 ", %" HIGHSINT_FORMAT " nonzero%s and %" HIGHSINT_FORMAT
+                 " integer column%s\n",
+                 lp_num_nz, lp_num_nz == 1 ? "" : "s", num_int,
+                 num_int == 1 ? "" : "s");
   } else {
     highsLogUser(log_options, HighsLogType::kInfo,
-                 " and %" HIGHSINT_FORMAT " nonzeros\n", lp_num_nz, num_int);
+                 " and %" HIGHSINT_FORMAT " nonzero%s\n", lp_num_nz,
+                 lp_num_nz == 1 ? "" : "s");
   }
 }
 
@@ -1864,7 +2030,8 @@ void reportLpColVectors(const HighsLogOptions& log_options, const HighsLp& lp) {
   std::string type;
   HighsInt count;
   bool have_integer_columns = (getNumInt(lp) != 0);
-  bool have_col_names = (lp.col_names_.size() != 0);
+  bool have_col_names =
+      lp.col_names_.size() == static_cast<size_t>(lp.num_col_);
 
   highsLogUser(log_options, HighsLogType::kInfo,
                "  Column        Lower        Upper         Cost       "
@@ -1951,10 +2118,10 @@ void reportLpColMatrix(const HighsLogOptions& log_options, const HighsLp& lp) {
   }
 }
 
-void reportMatrix(const HighsLogOptions& log_options, const std::string message,
-                  const HighsInt num_col, const HighsInt num_nz,
-                  const HighsInt* start, const HighsInt* index,
-                  const double* value) {
+void reportMatrix(const HighsLogOptions& log_options,
+                  const std::string& message, const HighsInt num_col,
+                  const HighsInt num_nz, const HighsInt* start,
+                  const HighsInt* index, const double* value) {
   if (num_col <= 0) return;
   highsLogUser(log_options, HighsLogType::kInfo,
                "%-7s Index              Value\n", message.c_str());
@@ -2037,12 +2204,14 @@ void analyseLp(const HighsLogOptions& log_options, const HighsLp& lp) {
                      lp.row_upper_);
 }
 
-HighsStatus readSolutionFile(const std::string filename,
+HighsStatus readSolutionFile(const std::string& filename,
                              const HighsOptions& options, HighsLp& lp,
                              HighsBasis& basis, HighsSolution& solution,
                              const HighsInt style) {
+  HighsStatus return_status = HighsStatus::kOk;
   const HighsLogOptions& log_options = options.log_options;
-  if (style != kSolutionStyleRaw && style != kSolutionStyleSparse) {
+  if (style != kSolutionStyleRaw && style != kSolutionStyleSparse &&
+      style != kSolutionStylePartial) {
     highsLogUser(log_options, HighsLogType::kError,
                  "readSolutionFile: Cannot read file of style %d\n",
                  (int)style);
@@ -2055,11 +2224,15 @@ HighsStatus readSolutionFile(const std::string filename,
                  filename.c_str());
     return HighsStatus::kError;
   }
+  std::string from_method = "readSolutionFile";
+  std::string hash;
   std::string keyword;
+  std::string value_string;
+  std::string qualifier_string;
   std::string name;
   double value;
-  HighsInt num_col;
-  HighsInt num_row;
+  HighsInt num_col = -1;
+  HighsInt num_row = -1;
   const HighsInt lp_num_col = lp.num_col_;
   const HighsInt lp_num_row = lp.num_row_;
   // Define identifiers for reading in
@@ -2078,20 +2251,31 @@ HighsStatus readSolutionFile(const std::string filename,
     return readSolutionFileErrorReturn(
         in_file);  // Model (status) or =obj= (value)
   const bool miplib_sol = section_name == "=obj=";
+  const bool have_col_names =
+      lp.col_names_.size() == static_cast<size_t>(lp_num_col);
+  const bool have_row_names =
+      lp.row_names_.size() == static_cast<size_t>(lp_num_row);
   if (miplib_sol) {
     // A MIPLIB solution file has nonzero solution values for a subset
     // of the variables identified by name, so there must be column
-    // names
-    if (!lp.col_names_.size()) {
+    // names,
+    if (!have_col_names) {
       highsLogUser(log_options, HighsLogType::kError,
                    "readSolutionFile: Cannot read a MIPLIB solution file "
                    "without column names in the model\n");
       return HighsStatus::kError;
     }
+  }
+  if (have_col_names) {
     // Ensure that the col name hash table has been formed
-    if (!lp.col_hash_.name2index.size()) lp.col_hash_.form(lp.col_names_);
+    if (!lp.col_hash_.size()) lp.col_hash_.form(lp.col_names_);
+  }
+  if (have_row_names) {
+    // Ensure that the row name hash table has been formed
+    if (!lp.row_hash_.size()) lp.row_hash_.form(lp.row_names_);
   }
   bool sparse = false;
+  bool partial = false;
   if (!miplib_sol) {
     if (!readSolutionFileIgnoreLineOk(in_file))
       return readSolutionFileErrorReturn(in_file);  // Optimal
@@ -2111,77 +2295,131 @@ HighsStatus readSolutionFile(const std::string filename,
       return readSolutionFileErrorReturn(in_file);  // EOL
     if (!readSolutionFileIgnoreLineOk(in_file))
       return readSolutionFileErrorReturn(in_file);  // Objective
-    // Next line should be "Columns" and correct number
-    if (!readSolutionFileHashKeywordIntLineOk(keyword, num_col, in_file))
+    // Next line should be "Columns", correct number and possibly a
+    // qualifier string, so can't be read (easily) as a std::ifstream
+    std::string column_section_line;
+    std::getline(in_file, column_section_line);
+    std::stringstream column_section_line_ss(column_section_line);
+    if (column_section_line.empty() ||
+        !readSolutionFileColumnHeaderLineOk(hash, keyword, value_string,
+                                            num_col, qualifier_string,
+                                            column_section_line_ss)) {
+      highsLogUser(log_options, HighsLogType::kError,
+                   "readSolutionFile: Error reading line \"%s\"\n",
+                   column_section_line.c_str());
       return readSolutionFileErrorReturn(in_file);
+    }
     assert(keyword == "Columns");
-    // The default style parameter is kSolutionStyleRaw, and this still
-    // allows sparse files to be read. Recognise the latter from num_col
-    // <= 0. Doesn't matter if num_col = 0, since there's nothing to
-    // read either way
+    // The default style parameter is kSolutionStyleRaw, and this
+    // still allows sparse or partial files to be read. Recognise
+    // sparse or partial files from num_col <= 0, where sparse is the
+    // default (for back-compatibility). Doesn't matter if num_col =
+    // 0, since there's nothing to read either way
     sparse = num_col <= 0;
+    partial = num_col <= 0 && qualifier_string == kHighsPartialString;
+    if (partial) sparse = false;
     if (style == kSolutionStyleSparse) assert(sparse);
-    if (sparse) {
+    if (style == kSolutionStylePartial) assert(partial);
+    if (sparse || partial) {
       num_col = -num_col;
       assert(num_col <= lp_num_col);
     } else {
       if (num_col != lp_num_col) {
-        highsLogUser(log_options, HighsLogType::kError,
-                     "readSolutionFile: Solution file is for %" HIGHSINT_FORMAT
-                     " columns, not %" HIGHSINT_FORMAT "\n",
-                     num_col, lp_num_col);
+        highsLogUser(
+            log_options, HighsLogType::kError,
+            "readSolutionFile: Solution file is for %d columns, not %d\n",
+            int(num_col), int(lp_num_col));
         return readSolutionFileErrorReturn(in_file);
       }
     }
   }
+  bool is_col = true;
+  HighsInt iCol;
   if (miplib_sol) {
     HighsInt num_value = 0;
     read_solution.col_value.assign(lp_num_col, 0);
+    assert(is_col);
     for (;;) {
       // Only false return is for encountering EOF
       if (!readSolutionFileIdDoubleLineOk(name, value, in_file)) break;
-      auto search = lp.col_hash_.name2index.find(name);
-      if (search == lp.col_hash_.name2index.end()) {
-        highsLogUser(log_options, HighsLogType::kError,
-                     "readSolutionFile: name %s is not found\n", name.c_str());
-        return HighsStatus::kError;
-      } else if (search->second == kHashIsDuplicate) {
-        highsLogUser(log_options, HighsLogType::kError,
-                     "readSolutionFile: name %s is duplicated\n", name.c_str());
-        return HighsStatus::kError;
-      }
-      HighsInt iCol = search->second;
-      assert(lp.col_names_[iCol] == name);
+      return_status = getIndexFromName(log_options, from_method, is_col, name,
+                                       lp.col_hash_, iCol, lp.col_names_);
+      if (return_status != HighsStatus::kOk) return return_status;
       read_solution.col_value[iCol] = value;
       num_value++;
       if (in_file.eof()) break;
     }
-  } else if (sparse) {
-    read_solution.col_value.assign(lp_num_col, 0);
-    HighsInt iCol;
+  } else if (sparse || partial) {
+    read_solution.col_value.assign(lp_num_col, sparse ? 0.0 : kHighsUndefined);
     for (HighsInt iX = 0; iX < num_col; iX++) {
-      if (!readSolutionFileIdDoubleIntLineOk(value, iCol, in_file))
+      // Each line should be a column name, a value and possibly an
+      // index - which is used if the model has no column names
+      std::string column_section_line;
+      std::getline(in_file, column_section_line);
+      std::stringstream column_section_line_ss(column_section_line);
+      if (column_section_line.empty() ||
+          !readSolutionFileColumnLineOk(name, value, iCol,
+                                        column_section_line_ss)) {
+        highsLogUser(
+            log_options, HighsLogType::kError,
+            "readSolutionFile: Error reading column section line \"%s\"\n",
+            column_section_line.c_str());
         return readSolutionFileErrorReturn(in_file);
+      }
+      if (have_col_names) {
+        // Use the column name if possible
+        return_status = getIndexFromName(log_options, from_method, is_col, name,
+                                         lp.col_hash_, iCol, lp.col_names_);
+        if (return_status != HighsStatus::kOk) return return_status;
+      } else if (iCol < 0) {
+        // No column names or index, so cannot assign the value
+        highsLogUser(log_options, HighsLogType::kError,
+                     "readSolutionFile: Error reading sparse/partial column "
+                     "value line \"%s\": column "
+                     "index is undefined and model has no column names so name "
+                     "\"%s\" cannot be used to assign the value\n",
+                     column_section_line.c_str(), name.c_str());
+        return readSolutionFileErrorReturn(in_file);
+      }
+      assert(0 <= iCol && iCol < lp.num_col_);
       read_solution.col_value[iCol] = value;
     }
   } else {
-    for (HighsInt iCol = 0; iCol < num_col; iCol++) {
-      if (!readSolutionFileIdDoubleLineOk(name, value, in_file))
+    assert(is_col);
+    for (HighsInt iX = 0; iX < num_col; iX++) {
+      if (!readSolutionFileIdDoubleLineOk(name, value, in_file)) {
+        highsLogUser(
+            log_options, HighsLogType::kError,
+            "readSolutionFile: Error reading column value line \"%s %g\"\n",
+            name.c_str(), value);
         return readSolutionFileErrorReturn(in_file);
+      }
+      if (have_col_names) {
+        // Use the column name if possible
+        return_status = getIndexFromName(log_options, from_method, is_col, name,
+                                         lp.col_hash_, iCol, lp.col_names_);
+        if (return_status != HighsStatus::kOk) return return_status;
+      } else {
+        // Have to assume column solution values are in the right order
+        iCol = iX;
+      }
       read_solution.col_value[iCol] = value;
     }
   }
   read_solution.value_valid = true;
-  if (sparse) {
+  if (miplib_sol || sparse || partial) {
+    // MIPLIB, sparse and partial format only have column values, so
+    // compute the row values and return
     if (calculateRowValuesQuad(lp, read_solution.col_value,
                                read_solution.row_value) != HighsStatus::kOk)
       return readSolutionFileErrorReturn(in_file);
     return readSolutionFileReturn(HighsStatus::kOk, solution, basis,
                                   read_solution, read_basis, in_file);
   }
-  // Read in the col values: OK to have none, otherwise next line
+  // Read in the row values: OK to have none, otherwise next line
   // should be "Rows" and correct number
-  if (!readSolutionFileHashKeywordIntLineOk(keyword, num_row, in_file)) {
+  if (!readSolutionFileHashKeywordIntLineOk(hash, keyword, value_string,
+                                            num_row, in_file)) {
     // Compute the row values since there are none to read
     if (calculateRowValuesQuad(lp, read_solution.col_value,
                                read_solution.row_value) != HighsStatus::kOk)
@@ -2196,17 +2434,36 @@ HighsStatus readSolutionFile(const std::string filename,
   // of variables, but increasing numbers of constraints, and wants to
   // used the solution from one MIP as the starting solution for the
   // next.
+  HighsInt iRow;
   const bool num_row_ok = num_row == lp_num_row;
-  for (HighsInt iRow = 0; iRow < num_row; iRow++) {
-    if (!readSolutionFileIdDoubleLineOk(name, value, in_file))
+  assert(!have_row_names || lp.row_hash_.size());
+  is_col = false;
+  assert(!is_col);
+  for (HighsInt iX = 0; iX < num_row; iX++) {
+    if (!readSolutionFileIdDoubleLineOk(name, value, in_file)) {
+      highsLogUser(log_options, HighsLogType::kError,
+                   "readSolutionFile: Error reading row value line \"%s %g\"\n",
+                   name.c_str(), value);
       return readSolutionFileErrorReturn(in_file);
-    if (num_row_ok) read_solution.row_value[iRow] = value;
+    }
+    if (num_row_ok) {
+      if (have_row_names) {
+        // Use the row name if possible
+        return_status = getIndexFromName(log_options, from_method, is_col, name,
+                                         lp.row_hash_, iRow, lp.row_names_);
+        if (return_status != HighsStatus::kOk) return return_status;
+      } else {
+        // Have to assume row solution values are in the right order
+        iRow = iX;
+      }
+      read_solution.row_value[iRow] = value;
+    }
   }
   if (!num_row_ok) {
     highsLogUser(log_options, HighsLogType::kWarning,
-                 "readSolutionFile: Solution file is for %" HIGHSINT_FORMAT
-                 " rows, not %" HIGHSINT_FORMAT ": row values ignored\n",
-                 num_row, lp_num_row);
+                 "readSolutionFile: Solution file is for %d rows, not %d: row "
+                 "values ignored\n",
+                 int(num_row), int(lp_num_row));
     // Calculate the row values
     if (calculateRowValuesQuad(lp, read_solution.col_value,
                                read_solution.row_value) != HighsStatus::kOk)
@@ -2235,26 +2492,68 @@ HighsStatus readSolutionFile(const std::string filename,
     if (!readSolutionFileIgnoreLineOk(in_file))
       return readSolutionFileErrorReturn(in_file);  // EOL
     // Next line should be "Columns" and correct number
-    if (!readSolutionFileHashKeywordIntLineOk(keyword, num_col, in_file))
+    if (!readSolutionFileHashKeywordIntLineOk(hash, keyword, value_string,
+                                              num_col, in_file)) {
+      highsLogUser(log_options, HighsLogType::kError,
+                   "readSolutionFile: Error reading line \"%s %s %s\"\n",
+                   hash.c_str(), keyword.c_str(), value_string.c_str());
       return readSolutionFileReturn(HighsStatus::kOk, solution, basis,
                                     read_solution, read_basis, in_file);
-    assert(keyword == "Columns");
-    double dual;
-    for (HighsInt iCol = 0; iCol < num_col; iCol++) {
-      if (!readSolutionFileIdDoubleLineOk(name, dual, in_file))
-        return readSolutionFileErrorReturn(in_file);
-      read_solution.col_dual[iCol] = dual;
     }
-    // Read in the col values: next line should be "Rows" and correct
+    assert(keyword == "Columns");
+    double value;
+    is_col = true;
+    assert(is_col);
+    for (HighsInt iX = 0; iX < num_col; iX++) {
+      if (!readSolutionFileIdDoubleLineOk(name, value, in_file)) {
+        highsLogUser(
+            log_options, HighsLogType::kError,
+            "readSolutionFile: Error reading column dual line \"%s %g\"\n",
+            name.c_str(), value);
+        return readSolutionFileErrorReturn(in_file);
+      }
+      if (have_col_names) {
+        // Use the column name if possible
+        return_status = getIndexFromName(log_options, from_method, is_col, name,
+                                         lp.col_hash_, iCol, lp.col_names_);
+        if (return_status != HighsStatus::kOk) return return_status;
+      } else {
+        // Have to assume column dual values are in the right order
+        iCol = iX;
+      }
+      read_solution.col_dual[iCol] = value;
+    }
+    // Read in the col dual values: next line should be "Rows" and correct
     // number
-    if (!readSolutionFileHashKeywordIntLineOk(keyword, num_row, in_file))
+    if (!readSolutionFileHashKeywordIntLineOk(hash, keyword, value_string,
+                                              num_col, in_file)) {
+      highsLogUser(log_options, HighsLogType::kError,
+                   "readSolutionFile: Error reading line \"%s %s %s\"\n",
+                   hash.c_str(), keyword.c_str(), value_string.c_str());
       return readSolutionFileReturn(HighsStatus::kOk, solution, basis,
                                     read_solution, read_basis, in_file);
+    }
     assert(keyword == "Rows");
-    for (HighsInt iRow = 0; iRow < num_row; iRow++) {
-      if (!readSolutionFileIdDoubleLineOk(name, dual, in_file))
+    is_col = false;
+    assert(!is_col);
+    for (HighsInt iX = 0; iX < num_row; iX++) {
+      if (!readSolutionFileIdDoubleLineOk(name, value, in_file)) {
+        highsLogUser(
+            log_options, HighsLogType::kError,
+            "readSolutionFile: Error reading row dual line \"%s %g\"\n",
+            name.c_str(), value);
         return readSolutionFileErrorReturn(in_file);
-      read_solution.row_dual[iRow] = dual;
+      }
+      if (have_row_names) {
+        // Use the row name if possible
+        return_status = getIndexFromName(log_options, from_method, is_col, name,
+                                         lp.row_hash_, iRow, lp.row_names_);
+        if (return_status != HighsStatus::kOk) return return_status;
+      } else {
+        // Have to assume row dual values are in the right order
+        iRow = iX;
+      }
+      read_solution.row_dual[iRow] = value;
     }
   }
   // OK to have no EOL
@@ -2273,7 +2572,7 @@ HighsStatus readSolutionFile(const std::string filename,
                                   read_solution, read_basis,
                                   in_file);  // # Basis
   HighsStatus basis_read_status =
-      readBasisStream(log_options, read_basis, in_file);
+      readBasisStream(log_options, lp, read_basis, in_file);
   // Return with basis read status
   return readSolutionFileReturn(basis_read_status, solution, basis,
                                 read_solution, read_basis, in_file);
@@ -2311,14 +2610,87 @@ bool readSolutionFileKeywordLineOk(std::string& keyword,
   return true;
 }
 
-bool readSolutionFileHashKeywordIntLineOk(std::string& keyword, HighsInt& value,
+bool readSolutionFileHashKeywordIntLineOk(std::string& hash,
+                                          std::string& keyword,
+                                          std::string& value_string,
+                                          HighsInt& value,
                                           std::ifstream& in_file) {
+  hash = "";
+  keyword = "";
+  value_string = "";
+  // Read the hash symbol
   if (in_file.eof()) return false;
-  in_file >> keyword;  // #
+  in_file >> hash;  // #
+  if (hash != "#") return false;
+
+  // Read the keyword
   if (in_file.eof()) return false;
   in_file >> keyword;  // keyword
+
+  // Read the value
   if (in_file.eof()) return false;
-  in_file >> value;  // integer value
+  // Read as a string, and then check it only contains digits
+  in_file >> value_string;
+  if (value_string[std::strspn(value_string.c_str(), kLegalIntegerCharacters)])
+    return false;
+  value = std::stoi(value_string);  // integer value
+  return true;
+}
+
+bool readSolutionFileColumnHeaderLineOk(
+    std::string& hash, std::string& keyword, std::string& value_string,
+    HighsInt& value, std::string& qualifier_string,
+    std::stringstream& column_section_line_ss) {
+  hash = "";
+  keyword = "";
+  value_string = "";
+  qualifier_string = "";
+  // Read the hash symbol
+  if (column_section_line_ss.eof()) return false;
+  column_section_line_ss >> hash;  // #
+  if (hash != "#") return false;
+
+  // Read the keyword
+  if (column_section_line_ss.eof()) return false;
+  column_section_line_ss >> keyword;  // keyword
+
+  // Read the value
+  if (column_section_line_ss.eof()) return false;
+  // Read as a string, and then check it only contains digits
+  column_section_line_ss >> value_string;
+  if (value_string[std::strspn(value_string.c_str(), kLegalIntegerCharacters)])
+    return false;
+  value = std::stoi(value_string);  // integer value
+  // See whether there is a qualifier string
+  if (!column_section_line_ss.eof()) {
+    column_section_line_ss >> qualifier_string;
+    tolower(qualifier_string);
+    if (qualifier_string != kHighsSparseString &&
+        qualifier_string != kHighsPartialString)
+      qualifier_string = "";
+  }
+
+  return true;
+}
+
+bool readSolutionFileColumnLineOk(std::string& id, double& value,
+                                  HighsInt& index,
+                                  std::stringstream& column_section_line_ss) {
+  if (column_section_line_ss.eof()) return false;
+  column_section_line_ss >> id;  // Id
+  if (column_section_line_ss.eof()) return false;
+  column_section_line_ss >> value;  // double value
+  // See whether there is an index
+  index = -1;
+  if (!column_section_line_ss.eof()) {
+    std::string index_string;
+    // Read as a string, and then check it only contains digits
+    column_section_line_ss >> index_string;
+    if (index_string[std::strspn(index_string.c_str(),
+                                 kLegalIntegerCharacters)])
+      return false;
+    index = std::stoi(index_string);
+  }
   return true;
 }
 
@@ -2338,18 +2710,6 @@ bool readSolutionFileIdDoubleLineOk(std::string& id, double& value,
   return true;
 }
 
-bool readSolutionFileIdDoubleIntLineOk(double& value, HighsInt& index,
-                                       std::ifstream& in_file) {
-  std::string id;
-  if (in_file.eof()) return false;
-  in_file >> id;  // Id
-  if (in_file.eof()) return false;
-  in_file >> value;  // double value
-  if (in_file.eof()) return false;
-  in_file >> index;  // double value
-  return true;
-}
-
 void assessColPrimalSolution(const HighsOptions& options, const double primal,
                              const double lower, const double upper,
                              const HighsVarType type, double& col_infeasibility,
@@ -2364,6 +2724,9 @@ void assessColPrimalSolution(const HighsOptions& options, const double primal,
   integer_infeasibility = 0;
   if (type == HighsVarType::kInteger || type == HighsVarType::kSemiInteger) {
     integer_infeasibility = fractionality(primal);
+    assert(integer_infeasibility >= 0);
+    if (integer_infeasibility <= options.mip_feasibility_tolerance)
+      integer_infeasibility = 0;
   }
   if (col_infeasibility > 0 && (type == HighsVarType::kSemiContinuous ||
                                 type == HighsVarType::kSemiInteger)) {
@@ -2382,7 +2745,7 @@ void assessColPrimalSolution(const HighsOptions& options, const double primal,
 
 // Determine validity, primal feasibility and (when relevant) integer
 // feasibility of a solution
-HighsStatus assessLpPrimalSolution(const std::string message,
+HighsStatus assessLpPrimalSolution(const std::string& message,
                                    const HighsOptions& options,
                                    const HighsLp& lp,
                                    const HighsSolution& solution, bool& valid,
@@ -2407,17 +2770,35 @@ HighsStatus assessLpPrimalSolution(const std::string message,
   const double kPrimalFeasibilityTolerance =
       lp.isMip() ? options.mip_feasibility_tolerance
                  : options.primal_feasibility_tolerance;
-  highsLogUser(options.log_options, HighsLogType::kInfo,
-               "%sAssessing feasibility of %s tolerance of %11.4g\n",
-               message.c_str(),
-               lp.isMip() ? "MIP using primal feasibility and integrality"
-                          : "LP using primal feasibility",
-               kPrimalFeasibilityTolerance);
+  // Warning logging is done if an infeasibility or row residual
+  // exceeding the tolerance is found.  Ultimately, if no warnings
+  // have been issued, warning is set to false, and a one-line OK
+  // logging message is issued.
+  bool warning = true;
+  bool logged_header = false;
+
+  auto logHeader = [&]() {
+    if (logged_header) return;
+    highsLogUser(
+        options.log_options,
+        warning ? HighsLogType::kWarning : HighsLogType::kInfo,
+        "%sAssessing feasibility of %s of %.4g%s\n", message.c_str(),
+        lp.isMip()
+            ? "MIP solution using primal feasibility and integrality tolerances"
+            : "LP solution using primal feasibility tolerance",
+        kPrimalFeasibilityTolerance, feasible ? ": feasible" : "");
+    logged_header = true;
+  };
+
   vector<double> row_value;
   row_value.assign(lp.num_row_, 0);
   const bool have_integrality = (lp.integrality_.size() != 0);
   if (!solution.value_valid) return HighsStatus::kError;
+  const bool have_col_names =
+      lp.col_names_.size() == static_cast<size_t>(lp.num_col_);
   for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
+    const std::string name_string =
+        have_col_names ? (" (" + lp.col_names_[iCol] + ")") : "";
     const double primal = solution.col_value[iCol];
     const double lower = lp.col_lower_[iCol];
     const double upper = lp.col_upper_[iCol];
@@ -2431,11 +2812,14 @@ HighsStatus assessLpPrimalSolution(const std::string message,
                             col_infeasibility, integer_infeasibility);
     if (col_infeasibility > 0) {
       if (col_infeasibility > kPrimalFeasibilityTolerance) {
-        if (col_infeasibility > 2 * max_col_infeasibility)
+        if (col_infeasibility > 2 * max_col_infeasibility) {
+          logHeader();
           highsLogUser(options.log_options, HighsLogType::kWarning,
-                       "Col %6d has         infeasibility of %11.4g from "
+                       "Col %6d%s has         infeasibility of %11.4g from "
                        "[lower, value, upper] = [%15.8g; %15.8g; %15.8g]\n",
-                       (int)iCol, col_infeasibility, lower, primal, upper);
+                       int(iCol), name_string.c_str(), col_infeasibility, lower,
+                       primal, upper);
+        }
         num_col_infeasibilities++;
       }
       max_col_infeasibility =
@@ -2444,10 +2828,12 @@ HighsStatus assessLpPrimalSolution(const std::string message,
     }
     if (integer_infeasibility > 0) {
       if (integer_infeasibility > options.mip_feasibility_tolerance) {
-        if (integer_infeasibility > 2 * max_integer_infeasibility)
+        if (integer_infeasibility > 2 * max_integer_infeasibility) {
+          logHeader();
           highsLogUser(options.log_options, HighsLogType::kWarning,
-                       "Col %6d has integer infeasibility of %11.4g\n",
-                       (int)iCol, integer_infeasibility);
+                       "Col %6d%s has integer infeasibility of %11.4g\n",
+                       (int)iCol, name_string.c_str(), integer_infeasibility);
+        }
         num_integer_infeasibilities++;
       }
       max_integer_infeasibility =
@@ -2458,10 +2844,14 @@ HighsStatus assessLpPrimalSolution(const std::string message,
   HighsStatus return_status =
       calculateRowValuesQuad(lp, solution.col_value, row_value);
   if (return_status != HighsStatus::kOk) return return_status;
+  const bool have_row_names =
+      lp.row_names_.size() >= static_cast<size_t>(lp.num_row_);
   for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
     const double primal = solution.row_value[iRow];
     const double lower = lp.row_lower_[iRow];
     const double upper = lp.row_upper_[iRow];
+    const std::string name_string =
+        have_row_names ? (" (" + lp.row_names_[iRow] + ")") : "";
     // @primal_infeasibility calculation
     double row_infeasibility = 0;
     if (primal < lower - kPrimalFeasibilityTolerance) {
@@ -2471,11 +2861,14 @@ HighsStatus assessLpPrimalSolution(const std::string message,
     }
     if (row_infeasibility > 0) {
       if (row_infeasibility > kPrimalFeasibilityTolerance) {
-        if (row_infeasibility > 2 * max_row_infeasibility)
+        if (row_infeasibility > 2 * max_row_infeasibility) {
+          logHeader();
           highsLogUser(options.log_options, HighsLogType::kWarning,
-                       "Row %6d has         infeasibility of %11.4g from "
+                       "Row %6d%s has         infeasibility of %11.4g from "
                        "[lower, value, upper] = [%15.8g; %15.8g; %15.8g]\n",
-                       (int)iRow, row_infeasibility, lower, primal, upper);
+                       int(iRow), name_string.c_str(), row_infeasibility, lower,
+                       primal, upper);
+        }
         num_row_infeasibilities++;
       }
       max_row_infeasibility =
@@ -2485,64 +2878,155 @@ HighsStatus assessLpPrimalSolution(const std::string message,
     double row_residual = fabs(primal - row_value[iRow]);
     if (row_residual > kRowResidualTolerance) {
       if (row_residual > 2 * max_row_residual) {
+        logHeader();
         highsLogUser(options.log_options, HighsLogType::kWarning,
-                     "Row %6d has         residual      of %11.4g\n", (int)iRow,
-                     row_residual);
+                     "Row %6d%s has         residual      of %11.4g\n",
+                     int(iRow), name_string.c_str(), row_residual);
       }
       num_row_residuals++;
+    } else {
+      row_residual = 0;
     }
     max_row_residual = std::max(row_residual, max_row_residual);
     sum_row_residuals += row_residual;
   }
-  highsLogUser(options.log_options, HighsLogType::kInfo,
-               "Solution has               num          max          sum\n");
-  highsLogUser(options.log_options, HighsLogType::kInfo,
-               "Col     infeasibilities %6d  %11.4g  %11.4g\n",
-               (int)num_col_infeasibilities, max_col_infeasibility,
-               sum_col_infeasibilities);
-  if (lp.isMip())
-    highsLogUser(options.log_options, HighsLogType::kInfo,
-                 "Integer infeasibilities %6d  %11.4g  %11.4g\n",
-                 (int)num_integer_infeasibilities, max_integer_infeasibility,
-                 sum_integer_infeasibilities);
-  highsLogUser(options.log_options, HighsLogType::kInfo,
-               "Row     infeasibilities %6d  %11.4g  %11.4g\n",
-               (int)num_row_infeasibilities, max_row_infeasibility,
-               sum_row_infeasibilities);
-  highsLogUser(options.log_options, HighsLogType::kInfo,
-               "Row     residuals       %6d  %11.4g  %11.4g\n",
-               (int)num_row_residuals, max_row_residual, sum_row_residuals);
   valid = num_row_residuals == 0;
   integral = valid && num_integer_infeasibilities == 0;
   feasible = valid && num_col_infeasibilities == 0 &&
              num_integer_infeasibilities == 0 && num_row_infeasibilities == 0;
-  if (!(integral && feasible)) return HighsStatus::kWarning;
+  warning = !(integral && feasible);
+  if (!warning) {
+    // Issue the "OK" logging message
+    logHeader();
+    return HighsStatus::kOk;
+  }
+  assert(logged_header);
+  highsLogUser(options.log_options, HighsLogType::kWarning,
+               "Solution has               num          max          sum\n");
+  if (num_col_infeasibilities > 0)
+    highsLogUser(options.log_options, HighsLogType::kWarning,
+                 "Col     infeasibilities %6d  %11.4g  %11.4g\n",
+                 int(num_col_infeasibilities), max_col_infeasibility,
+                 sum_col_infeasibilities);
+  if (lp.isMip() && num_integer_infeasibilities > 0)
+    highsLogUser(options.log_options, HighsLogType::kWarning,
+                 "Integer infeasibilities %6d  %11.4g  %11.4g\n",
+                 int(num_integer_infeasibilities), max_integer_infeasibility,
+                 sum_integer_infeasibilities);
+  if (num_row_infeasibilities > 0)
+    highsLogUser(options.log_options, HighsLogType::kWarning,
+                 "Row     infeasibilities %6d  %11.4g  %11.4g\n",
+                 int(num_row_infeasibilities), max_row_infeasibility,
+                 sum_row_infeasibilities);
+  if (num_row_residuals > 0)
+    highsLogUser(options.log_options, HighsLogType::kWarning,
+                 "Row     residuals       %6d  %11.4g  %11.4g\n",
+                 int(num_row_residuals), max_row_residual, sum_row_residuals);
+  return HighsStatus::kWarning;
+}
+
+void writeBasisFile(FILE*& file, const HighsOptions& options, const HighsLp& lp,
+                    const HighsBasis& basis) {
+  const HighsLogOptions& log_options = options.log_options;
+  std::stringstream ss;
+  // Basis version line
+  ss.str(std::string());
+  ss << highsFormatToString("HiGHS_basis_file %s\n", kHighsBasisFileV2.c_str());
+  highsFprintfString(file, log_options, ss.str());
+  // Basis validity line
+  ss.str(std::string());
+  if (basis.valid == false) {
+    ss << highsFormatToString("None\n");
+    highsFprintfString(file, log_options, ss.str());
+    return;
+  }
+  assert(basis.col_status.size() == static_cast<size_t>(lp.num_col_));
+  assert(basis.row_status.size() == static_cast<size_t>(lp.num_row_));
+  assert(lp.col_names_.size() == static_cast<size_t>(lp.num_col_));
+  assert(lp.row_names_.size() == static_cast<size_t>(lp.num_row_));
+  ss << highsFormatToString("Valid\n");
+  highsFprintfString(file, log_options, ss.str());
+  // Column count line
+  ss.str(std::string());
+  ss << highsFormatToString("# Columns %d\n", int(lp.num_col_));
+  highsFprintfString(file, log_options, ss.str());
+  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
+    const std::string& name = lp.col_names_[iCol];
+    assert(name.length() != 0);
+    ss.str(std::string());
+    ss << highsFormatToString("%s %d\n", name.c_str(),
+                              int(basis.col_status[iCol]));
+    highsFprintfString(file, log_options, ss.str());
+  }
+  // Row count line
+  ss.str(std::string());
+  ss << highsFormatToString("# Rows %d\n", int(lp.num_row_));
+  highsFprintfString(file, log_options, ss.str());
+  for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
+    const std::string& name = lp.row_names_[iRow];
+    assert(name.length() != 0);
+    ss.str(std::string());
+    ss << highsFormatToString("%s %d\n", name.c_str(),
+                              int(basis.row_status[iRow]));
+    highsFprintfString(file, log_options, ss.str());
+  }
+}
+
+HighsStatus getIndexFromName(const HighsLogOptions& log_options,
+                             std::string& from_method, const bool is_column,
+                             const std::string& name, HighsNameHash& name_hash,
+                             HighsInt& index,
+                             const std::vector<std::string>& names) {
+  std::unordered_map<std::string, int>& name2index = name_hash.name2index;
+  assert(name2index.size());
+
+  auto nameIsUnique = [&]() {
+    auto search = name2index.find(name);
+    if (search == name2index.end()) {
+      highsLogUser(log_options, HighsLogType::kError,
+                   "%s: %s name \"%s\" is not found\n", from_method.c_str(),
+                   is_column ? "column" : "row", name.c_str());
+      return false;
+    }
+    if (search->second < 0) {
+      highsLogUser(log_options, HighsLogType::kError,
+                   "%s: %s name \"%s\" is duplicated\n", from_method.c_str(),
+                   is_column ? "column" : "row", name.c_str());
+      return false;
+    }
+    index = search->second;
+    return true;
+  };
+
+  if (!nameIsUnique()) return HighsStatus::kError;
+
+  assert(static_cast<size_t>(index) < names.size());
+
+  if (names[index] != name) {
+    // If index has been used to store a duplication count that has
+    // been reduced to zero, then index will be zero, so is unlikely
+    // to be the index of name: name2index must be reformed
+    name_hash.form(names);
+    const bool name_is_unique = nameIsUnique();
+    // If name must be found and not duplicate, since these cases
+    // would have been handled after first call to nameIsUnique
+    assert(name_is_unique);
+    if (!name_is_unique) return HighsStatus::kError;
+    const bool index_ok = names[index] == name;
+    assert(index_ok);
+    if (!index_ok) return HighsStatus::kError;
+  }
   return HighsStatus::kOk;
 }
 
-void writeBasisFile(FILE*& file, const HighsBasis& basis) {
-  fprintf(file, "HiGHS v%d\n", (int)HIGHS_VERSION_MAJOR);
-  if (basis.valid == false) {
-    fprintf(file, "None\n");
-    return;
-  }
-  fprintf(file, "Valid\n");
-  fprintf(file, "# Columns %d\n", (int)basis.col_status.size());
-  for (const auto& status : basis.col_status) fprintf(file, "%d ", (int)status);
-  fprintf(file, "\n");
-  fprintf(file, "# Rows %d\n", (int)basis.row_status.size());
-  for (const auto& status : basis.row_status) fprintf(file, "%d ", (int)status);
-  fprintf(file, "\n");
-}
-
-HighsStatus readBasisFile(const HighsLogOptions& log_options, HighsBasis& basis,
-                          const std::string filename) {
+HighsStatus readBasisFile(const HighsLogOptions& log_options, HighsLp& lp,
+                          HighsBasis& basis, const std::string& filename) {
   // Opens a basis file as an ifstream
   HighsStatus return_status = HighsStatus::kOk;
   std::ifstream in_file;
   in_file.open(filename.c_str(), std::ios::in);
   if (in_file.is_open()) {
-    return_status = readBasisStream(log_options, basis, in_file);
+    return_status = readBasisStream(log_options, lp, basis, in_file);
     in_file.close();
   } else {
     highsLogUser(log_options, HighsLogType::kError,
@@ -2553,23 +3037,47 @@ HighsStatus readBasisFile(const HighsLogOptions& log_options, HighsBasis& basis,
   return return_status;
 }
 
-HighsStatus readBasisStream(const HighsLogOptions& log_options,
+HighsStatus readBasisStream(const HighsLogOptions& log_options, HighsLp& lp,
                             HighsBasis& basis, std::ifstream& in_file) {
   // Reads a basis as an ifstream, returning an error if what's read is
   // inconsistent with the sizes of the HighsBasis passed in
   HighsStatus return_status = HighsStatus::kOk;
+  HighsStatus call_status = HighsStatus::kOk;
+  std::string from_method = "readBasisStream";
   std::string string_highs, string_version;
   in_file >> string_highs >> string_version;
-  if (string_version == "v1") {
+  const bool v1 = string_version == kHighsBasisFileV1;
+  const bool v2 = string_version == kHighsBasisFileV2;
+  const bool have_col_names =
+      lp.col_names_.size() == static_cast<size_t>(lp.num_col_);
+  const bool have_row_names =
+      lp.row_names_.size() == static_cast<size_t>(lp.num_row_);
+  if (have_col_names) {
+    // Ensure that the col name hash table has been formed
+    if (!lp.col_hash_.size()) lp.col_hash_.form(lp.col_names_);
+  }
+  if (have_row_names) {
+    // Ensure that the row name hash table has been formed
+    if (!lp.row_hash_.size()) lp.row_hash_.form(lp.row_names_);
+  }
+  if (v1 || v2) {
+    if (v1) {
+      // Ability to read v1 basis files is deprecated
+      highsLogUser(log_options, HighsLogType::kWarning,
+                   "readBasisFile: Basis file format %s is deprecated\n",
+                   kHighsBasisFileV1.c_str());
+      return_status = HighsStatus::kWarning;
+    }
     std::string keyword;
     in_file >> keyword;
     if (keyword == "None") {
       basis.valid = false;
-      return HighsStatus::kOk;
+      return return_status;
     }
     const HighsInt basis_num_col = (HighsInt)basis.col_status.size();
     const HighsInt basis_num_row = (HighsInt)basis.row_status.size();
     HighsInt int_status;
+    std::string name;
     assert(keyword == "Valid");
     HighsInt num_col, num_row;
     // Read in the columns section
@@ -2583,9 +3091,28 @@ HighsStatus readBasisStream(const HighsLogOptions& log_options,
                    num_col, basis_num_col);
       return HighsStatus::kError;
     }
-    for (HighsInt iCol = 0; iCol < num_col; iCol++) {
-      in_file >> int_status;
-      basis.col_status[iCol] = (HighsBasisStatus)int_status;
+    bool is_column = true;
+    if (v1) {
+      for (HighsInt iCol = 0; iCol < num_col; iCol++) {
+        in_file >> int_status;
+        basis.col_status[iCol] = (HighsBasisStatus)int_status;
+      }
+    } else {
+      HighsInt iCol;
+      for (HighsInt iX = 0; iX < num_col; iX++) {
+        in_file >> name >> int_status;
+        if (have_col_names) {
+          // Use the column name if possible
+          call_status =
+              getIndexFromName(log_options, from_method, is_column, name,
+                               lp.col_hash_, iCol, lp.col_names_);
+          if (call_status != HighsStatus::kOk) return call_status;
+        } else {
+          // Have to assume column basis status are in the right order
+          iCol = iX;
+        }
+        basis.col_status[iCol] = HighsBasisStatus(int_status);
+      }
     }
     // Read in the rows section
     in_file >> keyword >> keyword;
@@ -2598,9 +3125,28 @@ HighsStatus readBasisStream(const HighsLogOptions& log_options,
                    num_row, basis_num_row);
       return HighsStatus::kError;
     }
-    for (HighsInt iRow = 0; iRow < num_row; iRow++) {
-      in_file >> int_status;
-      basis.row_status[iRow] = (HighsBasisStatus)int_status;
+    is_column = false;
+    if (v1) {
+      for (HighsInt iRow = 0; iRow < num_row; iRow++) {
+        in_file >> int_status;
+        basis.row_status[iRow] = (HighsBasisStatus)int_status;
+      }
+    } else {
+      HighsInt iRow;
+      for (HighsInt iX = 0; iX < num_row; iX++) {
+        in_file >> name >> int_status;
+        if (have_row_names) {
+          // Use the row name if possible
+          call_status =
+              getIndexFromName(log_options, from_method, is_column, name,
+                               lp.row_hash_, iRow, lp.row_names_);
+          if (call_status != HighsStatus::kOk) return call_status;
+        } else {
+          // Have to assume row solution values are in the right order
+          iRow = iX;
+        }
+        basis.row_status[iRow] = HighsBasisStatus(int_status);
+      }
     }
   } else {
     highsLogUser(log_options, HighsLogType::kError,
@@ -2627,7 +3173,8 @@ HighsStatus calculateColDualsQuad(const HighsLp& lp, HighsSolution& solution) {
       const HighsInt row = lp.a_matrix_.index_[i];
       assert(row >= 0);
       assert(row < lp.num_row_);
-      col_dual_quad[col] += solution.row_dual[row] * lp.a_matrix_.value_[i];
+      col_dual_quad[col] += static_cast<HighsCDouble>(solution.row_dual[row]) *
+                            lp.a_matrix_.value_[i];
     }
     col_dual_quad[col] += lp.col_cost_[col];
   }
@@ -2660,7 +3207,8 @@ HighsStatus calculateRowValuesQuad(const HighsLp& lp,
       const HighsInt row = lp.a_matrix_.index_[i];
       assert(row >= 0);
       assert(row < lp.num_row_);
-      row_value_quad[row] += col_value[col] * lp.a_matrix_.value_[i];
+      row_value_quad[row] +=
+          static_cast<HighsCDouble>(col_value[col]) * lp.a_matrix_.value_[i];
       if (row == report_row) {
         printf(
             "calculateRowValuesQuad: Row %d becomes %g due to contribution of "
@@ -2730,63 +3278,65 @@ bool isMatrixDataNull(const HighsLogOptions& log_options,
 }
 
 void reportPresolveReductions(const HighsLogOptions& log_options,
-                              const HighsLp& lp, const HighsLp& presolve_lp) {
-  HighsInt num_col_from = lp.num_col_;
-  HighsInt num_row_from = lp.num_row_;
-  HighsInt num_els_from = lp.a_matrix_.start_[num_col_from];
-  HighsInt num_col_to = presolve_lp.num_col_;
-  HighsInt num_row_to = presolve_lp.num_row_;
-  HighsInt num_els_to;
-  if (num_col_to) {
-    num_els_to = presolve_lp.a_matrix_.start_[num_col_to];
-  } else {
-    num_els_to = 0;
-  }
-  char elemsignchar = '-';
-  HighsInt elemdelta = num_els_from - num_els_to;
-  if (num_els_from < num_els_to) {
-    elemdelta = -elemdelta;
-    elemsignchar = '+';
-  }
-  highsLogUser(
-      log_options, HighsLogType::kInfo,
-      "Presolve : Reductions: rows %" HIGHSINT_FORMAT "(-%" HIGHSINT_FORMAT
-      "); columns %" HIGHSINT_FORMAT "(-%" HIGHSINT_FORMAT
-      "); "
-      "elements %" HIGHSINT_FORMAT "(%c%" HIGHSINT_FORMAT ")\n",
-      num_row_to, (num_row_from - num_row_to), num_col_to,
-      (num_col_from - num_col_to), num_els_to, elemsignchar, elemdelta);
-}
+                              HighsPresolveStatus presolve_status,
+                              const HighsLp& lp, const HighsLp& presolved_lp) {
+  const HighsInt num_col_from = lp.num_col_;
+  const HighsInt num_row_from = lp.num_row_;
+  const HighsInt num_nz_from = lp.numNz();
+  HighsInt num_col_to = 0;
+  HighsInt num_row_to = 0;
+  HighsInt num_nz_to = 0;
+  std::string message = "";
 
-void reportPresolveReductions(const HighsLogOptions& log_options,
-                              const HighsLp& lp, const bool presolve_to_empty) {
-  HighsInt num_col_from = lp.num_col_;
-  HighsInt num_row_from = lp.num_row_;
-  HighsInt num_els_from = lp.a_matrix_.start_[num_col_from];
-  HighsInt num_col_to;
-  HighsInt num_row_to;
-  HighsInt num_els_to;
-  std::string message;
-  if (presolve_to_empty) {
-    num_col_to = 0;
-    num_row_to = 0;
-    num_els_to = 0;
-    message = "- Reduced to empty";
-  } else {
-    num_col_to = num_col_from;
-    num_row_to = num_row_from;
-    num_els_to = num_els_from;
-    message = "- Not reduced";
+  switch (presolve_status) {
+    case HighsPresolveStatus::kNotPresolved:
+    case HighsPresolveStatus::kInfeasible:
+    case HighsPresolveStatus::kUnboundedOrInfeasible:
+      return;
+    case HighsPresolveStatus::kNotReduced: {
+      num_col_to = num_col_from;
+      num_row_to = num_row_from;
+      num_nz_to = num_nz_from;
+      message = "- Not reduced";
+      break;
+    }
+    case HighsPresolveStatus::kReduced:
+    case HighsPresolveStatus::kTimeout: {
+      num_col_to = presolved_lp.num_col_;
+      num_row_to = presolved_lp.num_row_;
+      num_nz_to = presolved_lp.numNz();
+      message =
+          presolve_status == HighsPresolveStatus::kTimeout ? "- Timeout" : "";
+      break;
+    }
+    case HighsPresolveStatus::kReducedToEmpty: {
+      num_col_to = 0;
+      num_row_to = 0;
+      num_nz_to = 0;
+      message = "- Reduced to empty";
+      break;
+    }
+    default: {
+      assert(presolve_status == HighsPresolveStatus::kOutOfMemory ||
+             presolve_status == HighsPresolveStatus::kException);
+      return;
+    }
+  }
+  char nz_sign_char = '-';
+  HighsInt delta_nz = num_nz_from - num_nz_to;
+  if (num_nz_to > num_nz_from) {
+    delta_nz = -delta_nz;
+    nz_sign_char = '+';
   }
   highsLogUser(log_options, HighsLogType::kInfo,
-               "Presolve : Reductions: rows %" HIGHSINT_FORMAT
+               "Presolve reductions: rows %" HIGHSINT_FORMAT
                "(-%" HIGHSINT_FORMAT "); columns %" HIGHSINT_FORMAT
                "(-%" HIGHSINT_FORMAT
                "); "
-               "elements %" HIGHSINT_FORMAT "(-%" HIGHSINT_FORMAT ") %s\n",
+               "nonzeros %" HIGHSINT_FORMAT "(%c%" HIGHSINT_FORMAT ") %s\n",
                num_row_to, (num_row_from - num_row_to), num_col_to,
-               (num_col_from - num_col_to), num_els_to,
-               (num_els_from - num_els_to), message.c_str());
+               (num_col_from - num_col_to), num_nz_to, nz_sign_char, delta_nz,
+               message.c_str());
 }
 
 bool isLessInfeasibleDSECandidate(const HighsLogOptions& log_options,
@@ -2822,7 +3372,7 @@ bool isLessInfeasibleDSECandidate(const HighsLogOptions& log_options,
               " (limit %" HIGHSINT_FORMAT
               "); average "
               "column count = %0.2g (limit %" HIGHSINT_FORMAT
-              "): LP is %s a candidate for LiDSE\n",
+              "): LP %s a candidate for LiDSE\n",
               lp.model_name_.c_str(), max_col_num_en, max_allowed_col_num_en,
               average_col_num_en, max_average_col_num_en,
               LiDSE_candidate ? "is" : "is not");
@@ -2830,7 +3380,7 @@ bool isLessInfeasibleDSECandidate(const HighsLogOptions& log_options,
 }
 
 HighsLp withoutSemiVariables(const HighsLp& lp_, HighsSolution& solution,
-                             const double primal_feasibility_tolerance) {
+                             const double mip_feasibility_tolerance) {
   HighsLp lp = lp_;
   HighsInt num_col = lp.num_col_;
   HighsInt num_row = lp.num_row_;
@@ -2884,10 +3434,12 @@ HighsLp withoutSemiVariables(const HighsLp& lp_, HighsSolution& solution,
   HighsInt semi_row_num = 0;
   // Insert the new variables and their coefficients
   std::stringstream ss;
-  const bool has_col_names = (lp.col_names_.size() != 0);
-  const bool has_row_names = (lp.row_names_.size() != 0);
-  const bool has_solution = solution.value_valid;
-  if (has_solution) {
+  const bool have_col_names =
+      lp.col_names_.size() == static_cast<size_t>(lp.num_col_);
+  const bool have_row_names =
+      lp.row_names_.size() == static_cast<size_t>(lp.num_row_);
+  const bool have_solution = solution.value_valid;
+  if (have_solution) {
     // Create zeroed row values for the new rows
     assert((HighsInt)solution.row_value.size() == lp_.num_row_);
     for (HighsInt iCol = 0; iCol < 2 * num_semi_variables; iCol++)
@@ -2899,6 +3451,8 @@ HighsLp withoutSemiVariables(const HighsLp& lp_, HighsSolution& solution,
   for (HighsInt iCol = 0; iCol < num_col; iCol++) {
     if (lp.integrality_[iCol] == HighsVarType::kSemiContinuous ||
         lp.integrality_[iCol] == HighsVarType::kSemiInteger) {
+      const double semi_lower_bound = lp.col_lower_[iCol];
+      const double semi_upper_bound = lp.col_upper_[iCol];
       // Add a binary variable with zero cost
       lp.col_cost_.push_back(0);
       lp.col_lower_.push_back(0);
@@ -2906,26 +3460,26 @@ HighsLp withoutSemiVariables(const HighsLp& lp_, HighsSolution& solution,
       // Complete x - l*y >= 0
       lp.row_lower_.push_back(0);
       lp.row_upper_.push_back(kHighsInf);
-      if (has_col_names) {
+      if (have_col_names) {
         // Create a column name
         ss.str(std::string());
         ss << "semi_binary_" << semi_col_num++;
         lp.col_names_.push_back(ss.str());
       }
-      if (has_row_names) {
+      if (have_row_names) {
         // Create a row name
         ss.str(std::string());
         ss << "semi_lb_" << semi_row_num;
         lp.row_names_.push_back(ss.str());
       }
       index.push_back(row_num++);
-      value.push_back(-lp.col_lower_[iCol]);
+      value.push_back(-semi_lower_bound);
       // Accommodate any primal solution
-      if (has_solution) {
+      if (have_solution) {
         // Record the previous solution value so any change can be
         // determined
         const double prev_primal = solution.col_value[iCol];
-        if (solution.col_value[iCol] <= primal_feasibility_tolerance) {
+        if (solution.col_value[iCol] <= mip_feasibility_tolerance) {
           // Currently at or below zero, so binary is 0
           solution.col_value[iCol] = 0;
           solution.col_value.push_back(0);
@@ -2933,7 +3487,7 @@ HighsLp withoutSemiVariables(const HighsLp& lp_, HighsSolution& solution,
           // Otherwise, solution is at least lower bound, and binary
           // is 1
           solution.col_value[iCol] =
-              std::max(lp.col_lower_[iCol], solution.col_value[iCol]);
+              std::max(semi_lower_bound, solution.col_value[iCol]);
           solution.col_value.push_back(1);
         }
         const double dl_primal = solution.col_value[iCol] - prev_primal;
@@ -2948,21 +3502,21 @@ HighsLp withoutSemiVariables(const HighsLp& lp_, HighsSolution& solution,
         const HighsInt new_col = lp.col_cost_.size() - 1;
         const double binary_value = solution.col_value[new_col];
         solution.row_value[row_num - 1] =
-            solution.col_value[iCol] - lp.col_lower_[iCol] * binary_value;
+            solution.col_value[iCol] - semi_lower_bound * binary_value;
         solution.row_value[row_num] =
-            solution.col_value[iCol] - lp.col_upper_[iCol] * binary_value;
+            solution.col_value[iCol] - semi_upper_bound * binary_value;
       }
       // Complete x - u*y <= 0
       lp.row_lower_.push_back(-kHighsInf);
       lp.row_upper_.push_back(0);
-      if (has_row_names) {
+      if (have_row_names) {
         // Create a row name
         ss.str(std::string());
         ss << "semi_ub_" << semi_row_num++;
         lp.row_names_.push_back(ss.str());
       }
       index.push_back(row_num++);
-      value.push_back(-lp.col_upper_[iCol]);
+      value.push_back(-semi_upper_bound);
       // Add the next start
       start.push_back(index.size());
       lp.integrality_.push_back(HighsVarType::kInteger);
@@ -2981,13 +3535,16 @@ HighsLp withoutSemiVariables(const HighsLp& lp_, HighsSolution& solution,
   lp.num_col_ += num_semi_variables;
   lp.num_row_ += 2 * num_semi_variables;
   assert((HighsInt)index.size() == new_num_nz);
+  // Ensure that the matrix dimensions are consistent with the LP
+  // dimensions
+  lp.a_matrix_.num_col_ = lp.num_col_;
+  lp.a_matrix_.num_row_ = lp.num_row_;
   // Clear any modifications inherited from lp_
   lp.mods_.clear();
   return lp;
 }
 
 void removeRowsOfCountOne(const HighsLogOptions& log_options, HighsLp& lp) {
-  HighsLp row_wise_lp = lp;
   vector<HighsInt>& a_start = lp.a_matrix_.start_;
   vector<HighsInt>& a_index = lp.a_matrix_.index_;
   vector<double>& a_value = lp.a_matrix_.value_;
@@ -2996,7 +3553,7 @@ void removeRowsOfCountOne(const HighsLogOptions& log_options, HighsLp& lp) {
   vector<HighsInt> ar_start;
   vector<HighsInt> ar_index;
   vector<double> ar_value;
-  const bool has_name = lp.row_names_.size() > 0;
+  const bool have_name = lp.row_names_.size() > 0;
   HighsInt num_nz = a_start[lp.num_col_];
   const HighsInt original_num_nz = num_nz;
   const HighsInt original_num_row = lp.num_row_;
@@ -3049,7 +3606,7 @@ void removeRowsOfCountOne(const HighsLogOptions& log_options, HighsLp& lp) {
     }
     lp.row_lower_[newRow] = lp.row_lower_[iRow];
     lp.row_upper_[newRow] = lp.row_upper_[iRow];
-    if (has_name) lp.row_names_[newRow] = lp.row_names_[iRow];
+    if (have_name) lp.row_names_[newRow] = lp.row_names_[iRow];
     ar_start[newRow] = newEl;
     for (HighsInt iEl = ar_start[iRow]; iEl < ar_start[iRow + 1]; iEl++) {
       ar_index[newEl] = ar_index[iEl];
@@ -3062,7 +3619,7 @@ void removeRowsOfCountOne(const HighsLogOptions& log_options, HighsLp& lp) {
   lp.num_row_ = newRow;
   lp.row_lower_.resize(newRow);
   lp.row_upper_.resize(newRow);
-  if (has_name) lp.row_names_.resize(newRow);
+  if (have_name) lp.row_names_.resize(newRow);
 
   num_nz = ar_start[lp.num_row_];
   a_count.assign(lp.num_col_, 0);
@@ -3088,7 +3645,7 @@ void removeRowsOfCountOne(const HighsLogOptions& log_options, HighsLp& lp) {
   assert(original_num_row - lp.num_row_ == num_row_count_1);
   assert(original_num_nz - num_nz == num_row_count_1);
   highsLogUser(log_options, HighsLogType::kWarning,
-               "Removed %d rows of count 1\n", (int)num_row_count_1);
+               "Removed %d rows of count 1\n", int(num_row_count_1));
 }
 
 void getSubVectors(const HighsIndexCollection& index_collection,
@@ -3282,4 +3839,139 @@ void getSubVectorsTranspose(const HighsIndexCollection& index_collection,
       }
     }
   }
+}
+
+std::string highsVarTypeToString(const HighsVarType type) {
+  switch (type) {
+    case HighsVarType::kContinuous:
+      return "continuous";
+    case HighsVarType::kInteger:
+      return "integer";
+    case HighsVarType::kSemiContinuous:
+      return "semi continuous";
+    case HighsVarType::kSemiInteger:
+      return "semi integer";
+    case HighsVarType::kImplicitInteger:
+      return "implicit integer";
+    default:
+      return "unknown";
+  }
+}
+
+std::string highsVarTypeToString(const HighsInt type) {
+  if (type < HighsInt(HighsVarType::kContinuous) ||
+      type > HighsInt(HighsVarType::kImplicitInteger))
+    return "unknown";
+  HighsVarType type_ = HighsVarType(uint8_t(type));
+  return highsVarTypeToString(type_);
+}
+
+void initialiseUserScaleData(const HighsOptions& options,
+                             HighsUserScaleData& user_scale_data) {
+  user_scale_data.initialise(options.user_objective_scale,
+                             options.user_bound_scale, options.infinite_cost,
+                             options.infinite_bound, options.small_matrix_value,
+                             options.large_matrix_value);
+}
+
+void HighsUserScaleData::initialise(const HighsInt& user_objective_scale_,
+                                    const HighsInt& user_bound_scale_,
+                                    const double& infinite_cost_,
+                                    const double& infinite_bound_,
+                                    const double& small_matrix_value_,
+                                    const double& large_matrix_value_) {
+  this->user_objective_scale = user_objective_scale_;
+  this->user_bound_scale = user_bound_scale_;
+  this->infinite_cost = infinite_cost_;
+  this->infinite_bound = infinite_bound_;
+  this->small_matrix_value = small_matrix_value_;
+  this->large_matrix_value = large_matrix_value_;
+  this->num_infinite_costs = 0;
+  this->num_infinite_hessian_values = 0;
+  this->num_infinite_col_bounds = 0;
+  this->num_infinite_row_bounds = 0;
+  this->num_small_matrix_values = 0;
+  this->num_large_matrix_values = 0;
+  this->suggested_user_objective_scale = 0;
+  this->suggested_user_bound_scale = 0;
+  this->applied = false;
+}
+
+bool HighsUserScaleData::scaleError(std::string& message) const {
+  if (this->num_infinite_costs + this->num_infinite_hessian_values +
+          this->num_infinite_col_bounds + this->num_infinite_row_bounds +
+          this->num_large_matrix_values ==
+      0)
+    return false;
+  assert(this->user_objective_scale != 0 || this->user_bound_scale != 0);
+  std::stringstream ss;
+  ss.str(std::string());
+  ss << "User scaling of";
+  if (this->user_objective_scale != 0) {
+    ss << " 2**(" << this->user_objective_scale << ") for costs";
+  }
+  if (this->user_bound_scale != 0) {
+    if (this->user_objective_scale != 0) ss << " and";
+    ss << " 2**(" << this->user_bound_scale << ") for bounds";
+  }
+  ss << " yields";
+  if (this->num_infinite_costs) {
+    ss << " " << this->num_infinite_costs << " infinite cost";
+    if (this->num_infinite_costs > 1) ss << "s";
+  }
+  if (this->num_infinite_hessian_values) {
+    if (this->num_infinite_costs) {
+      if (this->num_infinite_col_bounds || this->num_infinite_row_bounds) {
+        ss << ",";
+      } else {
+        ss << " and";
+      }
+    }
+    ss << " " << this->num_infinite_hessian_values
+       << " infinite Hessian values";
+    if (this->num_infinite_hessian_values > 1) ss << "s";
+  }
+  if (this->num_infinite_col_bounds) {
+    if (this->num_infinite_costs || this->num_infinite_hessian_values) {
+      if (this->num_infinite_row_bounds) {
+        ss << ",";
+      } else {
+        ss << " and";
+      }
+    }
+    ss << " " << this->num_infinite_col_bounds << " infinite column bound";
+    if (this->num_infinite_col_bounds > 1) ss << "s";
+  }
+  if (this->num_infinite_row_bounds) {
+    if (this->num_infinite_costs || this->num_infinite_hessian_values ||
+        this->num_infinite_col_bounds)
+      ss << " and";
+    ss << " " << this->num_infinite_row_bounds << " infinite row bound";
+    if (this->num_infinite_row_bounds > 1) ss << "s";
+  }
+  if (this->num_large_matrix_values) {
+    if (this->num_infinite_costs + this->num_infinite_hessian_values +
+            this->num_infinite_col_bounds + this->num_infinite_row_bounds >
+        0)
+      ss << ", and";
+    ss << " " << this->num_large_matrix_values << " large matrix value";
+    if (this->num_large_matrix_values > 1) ss << "s";
+  }
+  ss << "\n";
+  message = ss.str();
+  return true;
+}
+
+bool HighsUserScaleData::scaleWarning(std::string& message) const {
+  if (this->num_small_matrix_values == 0) return false;
+  assert(this->user_bound_scale != 0);
+  std::stringstream ss;
+  ss.str(std::string());
+  ss << "User scaling of 2**(" << this->user_bound_scale
+     << ") for bounds yields " << this->num_small_matrix_values
+     << " small matrix value";
+  if (this->num_small_matrix_values > 1) ss << "s";
+  ss << "\n";
+  message = ss.str();
+  return true;
 }

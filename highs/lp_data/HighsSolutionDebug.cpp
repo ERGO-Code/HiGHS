@@ -27,7 +27,7 @@ const double excessive_residual_error = sqrt(large_residual_error);
 
 // Called from HighsSolve - solveLp
 HighsDebugStatus debugHighsLpSolution(
-    const std::string message, const HighsLpSolverObject& solver_object) {
+    const std::string& message, const HighsLpSolverObject& solver_object) {
   // Non-trivially expensive analysis of a solution to a model
   //
   // Called to check the unscaled model status and solution params
@@ -41,7 +41,7 @@ HighsDebugStatus debugHighsLpSolution(
                             check_model_status_and_highs_info);
 }
 
-HighsDebugStatus debugHighsSolution(const string message,
+HighsDebugStatus debugHighsSolution(const string& message,
                                     const HighsOptions& options,
                                     const HighsModel& model,
                                     const HighsSolution& solution,
@@ -68,16 +68,16 @@ HighsDebugStatus debugHighsSolution(const string message,
 }
 
 HighsDebugStatus debugHighsSolution(
-    const string message, const HighsOptions& options, const HighsModel& model,
+    const string& message, const HighsOptions& options, const HighsModel& model,
     const HighsSolution& solution, const HighsBasis& basis,
     const HighsModelStatus model_status, const HighsInfo& info) {
   // Non-trivially expensive analysis of a solution to a model
   //
   // Called to check the HiGHS model_status and info
   //
-  // Copy the data from info to highs_info so general method can be used
+  // Refer to info as highs_info so general method can be used
   //
-  HighsInfo highs_info = info;
+  const HighsInfo& highs_info = info;
   const bool check_model_status_and_highs_info = true;
   return debugHighsSolution(message, options, model.lp_, model.hessian_,
                             solution, basis, model_status, highs_info,
@@ -85,7 +85,7 @@ HighsDebugStatus debugHighsSolution(
 }
 
 HighsDebugStatus debugHighsSolution(
-    const std::string message, const HighsOptions& options, const HighsLp& lp,
+    const std::string& message, const HighsOptions& options, const HighsLp& lp,
     const HighsHessian& hessian, const HighsSolution& solution,
     const HighsBasis& basis, const HighsModelStatus model_status,
     const HighsInfo& highs_info, const bool check_model_status_and_highs_info) {
@@ -175,7 +175,7 @@ HighsDebugStatus debugHighsSolution(
   return return_status;
 }
 
-void debugReportHighsSolution(const string message,
+void debugReportHighsSolution(const string& message,
                               const HighsLogOptions& log_options,
                               const HighsInfo& highs_info,
                               const HighsModelStatus model_status) {
@@ -339,11 +339,10 @@ HighsDebugStatus debugAnalysePrimalDualErrors(
         options.log_options, report_level,
         "PrDuErrors : %-9s Primal residual:           num = %7" HIGHSINT_FORMAT
         "; "
-        "max = %9.4g; sum = %9.4g\n",
+        "max = %9.4g\n",
         value_adjective.c_str(),
         primal_dual_errors.glpsol_num_primal_residual_errors,
-        primal_dual_errors.glpsol_max_primal_residual.absolute_value,
-        primal_dual_errors.glpsol_sum_primal_residual_errors);
+        primal_dual_errors.glpsol_max_primal_residual.absolute_value);
   }
   if (primal_dual_errors.glpsol_num_dual_residual_errors >= 0) {
     if (primal_dual_errors.glpsol_max_dual_residual.absolute_value >
@@ -366,11 +365,10 @@ HighsDebugStatus debugAnalysePrimalDualErrors(
         options.log_options, report_level,
         "PrDuErrors : %-9s Dual residual:             num = %7" HIGHSINT_FORMAT
         "; "
-        "max = %9.4g; sum = %9.4g\n",
+        "max = %9.4g\n",
         value_adjective.c_str(),
         primal_dual_errors.glpsol_num_dual_residual_errors,
-        primal_dual_errors.glpsol_max_dual_residual.absolute_value,
-        primal_dual_errors.glpsol_sum_dual_residual_errors);
+        primal_dual_errors.glpsol_max_dual_residual.absolute_value);
   }
   return return_status;
 }
@@ -454,7 +452,7 @@ HighsDebugStatus debugCompareHighsInfoInfeasibility(
   return return_status;
 }
 
-HighsDebugStatus debugCompareHighsInfoDouble(const string name,
+HighsDebugStatus debugCompareHighsInfoDouble(const string& name,
                                              const HighsOptions& options,
                                              const double v0, const double v1) {
   if (v0 == v1) return HighsDebugStatus::kOk;
@@ -480,7 +478,7 @@ HighsDebugStatus debugCompareHighsInfoDouble(const string name,
   return return_status;
 }
 
-HighsDebugStatus debugCompareHighsInfoInteger(const string name,
+HighsDebugStatus debugCompareHighsInfoInteger(const string& name,
                                               const HighsOptions& options,
                                               const HighsInt v0,
                                               const HighsInt v1) {

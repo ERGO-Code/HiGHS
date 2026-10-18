@@ -27,7 +27,7 @@ void HVectorBase<Real>::setup(HighsInt size_) {
   count = 0;
   index.resize(size);
   array.assign(size, Real{0});
-  cwork.assign(size + 6400, 0);  // MAX invert
+  cwork.assign(size + 6400, false);  // MAX invert
   iwork.assign(size * 4, 0);
 
   packCount = 0;
@@ -87,8 +87,8 @@ void HVectorBase<Real>::tight() {
   HighsInt totalCount = 0;
   using std::abs;
   if (count < 0) {
-    for (size_t my_index = 0; my_index < array.size(); my_index++)
-      if (abs(array[my_index]) < kHighsTiny) array[my_index] = 0;
+    for (auto& val : array)
+      if (abs(val) < kHighsTiny) val = 0;
   } else {
     for (HighsInt i = 0; i < count; i++) {
       const HighsInt my_index = index[i];

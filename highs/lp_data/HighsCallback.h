@@ -20,14 +20,14 @@ class Highs;
 #include "lp_data/HStruct.h"
 #include "lp_data/HighsCallbackStruct.h"
 
-enum userMipSolutionCallbackOrigin {
-  kUserMipSolutionCallbackOriginAfterSetup = 0,
-  kUserMipSolutionCallbackOriginBeforeDive,
-  kUserMipSolutionCallbackOriginEvaluateRootNode0,
-  kUserMipSolutionCallbackOriginEvaluateRootNode1,
-  kUserMipSolutionCallbackOriginEvaluateRootNode2,
-  kUserMipSolutionCallbackOriginEvaluateRootNode3,
-  kUserMipSolutionCallbackOriginEvaluateRootNode4
+enum ExternalMipSolutionQueryOrigin {
+  kExternalMipSolutionQueryOriginAfterSetup = 0,
+  kExternalMipSolutionQueryOriginBeforeDive,
+  kExternalMipSolutionQueryOriginEvaluateRootNode0,
+  kExternalMipSolutionQueryOriginEvaluateRootNode1,
+  kExternalMipSolutionQueryOriginEvaluateRootNode2,
+  kExternalMipSolutionQueryOriginEvaluateRootNode3,
+  kExternalMipSolutionQueryOriginEvaluateRootNode4
 };
 
 /**
@@ -40,6 +40,7 @@ struct HighsCallbackOutput {
   HighsInt simplex_iteration_count;
   HighsInt ipm_iteration_count;
   HighsInt pdlp_iteration_count;
+  HighsInt qpasm_iteration_count;
   double objective_function_value;
   int64_t mip_node_count;
   int64_t mip_total_lp_iterations;
@@ -54,7 +55,8 @@ struct HighsCallbackOutput {
   std::vector<double> cutpool_value;
   std::vector<double> cutpool_lower;
   std::vector<double> cutpool_upper;
-  userMipSolutionCallbackOrigin user_solution_callback_origin;
+  std::vector<double> qp_solution;
+  ExternalMipSolutionQueryOrigin external_solution_query_origin;
 
   operator HighsCallbackDataOut() const;
 };
@@ -92,11 +94,11 @@ struct HighsCallback {
   HighsCCallbackType c_callback = nullptr;
   void* user_callback_data = nullptr;
   Highs* highs = nullptr;
-  std::vector<bool> active;
+  std::vector<HighsBool> active;
   HighsCallbackOutput data_out;
   HighsCallbackInput data_in;
   bool callbackActive(const int callback_type);
-  bool callbackAction(const int callback_type, std::string message = "");
+  bool callbackAction(const int callback_type, const std::string& message = "");
   void clearHighsCallbackOutput();
   void clearHighsCallbackInput();
   void clear();

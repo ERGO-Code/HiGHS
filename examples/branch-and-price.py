@@ -2,7 +2,11 @@
 #
 from collections import defaultdict
 from operator import itemgetter
-import highspy, random, time, math
+import highspy
+import random
+import time
+import math
+import numpy as np
 
 # Relative gap for column generation
 CG_GAP_REL = 1e-4
@@ -22,7 +26,7 @@ BinCapacity = 15
 #
 def solveGreedyModel():
     bins = defaultdict(float)
-    solution = defaultdict(list)
+    solution = defaultdict(list[int])
 
     for item, w in sorted(enumerate(ItemWeights), reverse=True, key=itemgetter(1)):
         index = next((i for i, W in bins.items() if W + w <= BinCapacity), len(bins))
@@ -56,17 +60,17 @@ def solveCompactModel():
     x = {(i,j): i*B + j for i in range(NumberItems) for j in range(B) }
     y = [len(x) + j for j in range(B)]
 
-    m.addVars(len(x), [0]*len(x), [1]*len(x));  # x_{ij} \in {0,1}, \forall i,j
-    m.addVars(len(y), [0]*len(y), [1]*len(y));  # y_{j}  \in {0,1}, \forall j
+    m.addVars(len(x), [0.0]*len(x), [1.0]*len(x))  # x_{ij} \in {0,1}, \forall i,j
+    m.addVars(len(y), [0.0]*len(y), [1.0]*len(y))  # y_{j}  \in {0,1}, \forall j
     m.changeColsIntegrality(
         len(x)+len(y),
         list(range(len(x)+len(y))),
-        [highspy.HighsVarType.kInteger]*(len(x)+len(y))
+        np.array([highspy.HighsVarType.kInteger]*(len(x)+len(y)))
     )
 
     # min sum_{j} y_{j}
     m.changeObjectiveSense(highspy.ObjSense.kMinimize)
-    m.changeColsCost(len(y), y, [1]*len(y))
+    m.changeColsCost(len(y), y, [1.0]*len(y))
     
     #      \sum_{j} x_{ij} == 1, \foreach i 
     # 1 <= \sum_{j} x_{ij} <= 1
@@ -76,7 +80,7 @@ def solveCompactModel():
             1,                                              # rhs
             B,                                              # Number of non-zero variables
             [x[i,j] for j in range(B)],                     # Indexes of variable
-            [1] * B                                         # Coefficients of variables
+            [1.0] * B                                       # Coefficients of variables
         )
 
     #         sum_{i} w_{i} * x_{ij} <= c * y_{j}, \foreach j
@@ -116,17 +120,17 @@ def createMasterProblem(columns: list):
     m.setOptionValue('output_flag', False)
     m.setOptionValue('random_seed', SEED)
     
-    m.addVars(len(columns), [0]*len(columns), [1]*len(columns))
+    m.addVars(len(columns), [0.0]*len(columns), [1.0]*len(columns))
     
     # min \sum_{k} \lambda_{k}
     m.changeObjectiveSense(highspy.ObjSense.kMinimize)
-    m.changeColsCost(len(columns), list(range(len(columns))), [1]*len(columns))
+    m.changeColsCost(len(columns), list(range(len(columns))), [1.0]*len(columns))
     
     #      \sum_{k \in K_i} \lambda_{k} == 1, \foreach i
     # 1 <= \sum_{k \in K_i} \lambda_{k} <= 1
     for i in range(NumberItems):
         K_i = [k for k, column in enumerate(columns) if i in column]
-        m.addRow(1, 1, len(K_i), K_i, [1]*len(K_i))
+        m.addRow(1, 1, len(K_i), K_i, [1.0]*len(K_i))
 
     m.run() 
 
@@ -150,8 +154,8 @@ def solveSubproblemExact(duals):
     m.setOptionValue('output_flag', False)
     m.setOptionValue('random_seed', SEED)
 
-    m.addVars(NumberItems, [0]*NumberItems, [1]*NumberItems)
-    m.changeColsIntegrality(NumberItems, list(range(NumberItems)), [highspy.HighsVarType.kInteger]*NumberItems)
+    m.addVars(NumberItems, [0.0]*NumberItems, [1.0]*NumberItems)
+    m.changeColsIntegrality(NumberItems, list(range(NumberItems)), np.array([highspy.HighsVarType.kInteger]*NumberItems))
 
     # max \sum_{i} \mu_{i} * z_{i}
     # where \mu_{i} is the dual variable for the i-th row of the master problem
@@ -179,7 +183,7 @@ def solveSubproblemExact(duals):
 # Solve the knapsack subproblem with greedy heuristic
 def solveSubproblemNotExact(duals):
     total_weight = 0
-    new_column = []
+    new_column : list[int] = []
     
     for i in sorted(range(NumberItems), key=lambda i: -duals[i]/ItemWeights[i]):
         if duals[i] >= 0 and ItemWeights[i] + total_weight <= BinCapacity:
@@ -192,8 +196,9 @@ def solveSubproblemNotExact(duals):
 #
 # Generate columns for the master problem
 #
-def generateColumns(columns: list, m, msg=True, solve_exact = False, start_time = 0):
+def generateColumns(columns: list[list[int]], m, msg=True, solve_exact = False, start_time = 0.0):
     best_gap = math.inf
+    row_format = ""
 
     iter = 0
     while True:
@@ -261,7 +266,7 @@ class Node:
     assigned_columns: list[int]
 
     value: float
-    final_columns: list[int]
+    final_columns: list[list[int]]
     final_columns_vals: list[float]
     final_fractional_columns: list[int]
 
@@ -320,7 +325,7 @@ def solveNode(node: Node, columns: list[list[int]], m):
 # Specifically, the code "up-branches" columns with fractional value in the RMP solution, i.e., forces specific columns 
 # to be selected in RMP.  The subproblems don't need to explicitly enforce this constraint (unlike other branching strategies).
 #
-def branchAndPrice(m, vals, columns, start_time=0):    
+def branchAndPrice(m, vals, columns: list[list[int]], start_time=0.0):    
     header = ["NodesExpl", "TreeSize", "CurrCols", "FracCols", "UB", "Time"]
     row_format ="{:>12}" * (len(header))
     print(row_format.format(*header))

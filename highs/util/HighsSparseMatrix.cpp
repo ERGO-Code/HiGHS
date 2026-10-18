@@ -36,6 +36,20 @@ bool HighsSparseMatrix::operator==(const HighsSparseMatrix& matrix) const {
   return equal;
 }
 
+bool HighsSparseMatrix::equivalent(const HighsSparseMatrix& matrix) const {
+  // Use this to test when the matrices may be in opposite format
+  if (*this == matrix) return true;
+  // Creat a local copy in of matrix in the same format as this and
+  // test for it being equal to this
+  HighsSparseMatrix lc_matrix = matrix;
+  if (this->isColwise()) {
+    lc_matrix.ensureColwise();
+  } else {
+    lc_matrix.ensureRowwise();
+  }
+  return *this == lc_matrix;
+}
+
 void HighsSparseMatrix::clear() {
   this->num_col_ = 0;
   this->num_row_ = 0;
@@ -87,7 +101,7 @@ HighsInt HighsSparseMatrix::numNz() const {
 
 void HighsSparseMatrix::range(double& min_value, double& max_value) const {
   assert(this->formatOk());
-  for (HighsInt iEl = 0; iEl < this->start_[this->num_col_]; iEl++) {
+  for (HighsInt iEl = 0; iEl < this->numNz(); iEl++) {
     double value = fabs(this->value_[iEl]);
     min_value = min(min_value, value);
     max_value = max(max_value, value);
@@ -236,7 +250,7 @@ void HighsSparseMatrix::addVec(const HighsInt num_nz, const HighsInt* index,
   }
 }
 
-void HighsSparseMatrix::addCols(const HighsSparseMatrix new_cols,
+void HighsSparseMatrix::addCols(const HighsSparseMatrix& new_cols,
                                 const int8_t* in_partition) {
   assert(new_cols.isColwise());
   const HighsInt num_new_col = new_cols.num_col_;
@@ -360,7 +374,7 @@ void HighsSparseMatrix::addCols(const HighsSparseMatrix new_cols,
   }
 }
 
-void HighsSparseMatrix::addRows(const HighsSparseMatrix new_rows,
+void HighsSparseMatrix::addRows(const HighsSparseMatrix& new_rows,
                                 const int8_t* in_partition) {
   assert(new_rows.isRowwise());
   const HighsInt num_new_row = new_rows.num_row_;
@@ -527,7 +541,7 @@ void HighsSparseMatrix::addRows(const HighsSparseMatrix new_rows,
 
 void HighsSparseMatrix::getCol(const HighsInt iCol, HighsInt& num_nz,
                                HighsInt* index, double* value) const {
-  assert(iCol >= 0 && iCol < this->num_row_);
+  assert(iCol >= 0 && iCol < this->num_col_);
   num_nz = 0;
   if (this->isColwise()) {
     for (HighsInt iEl = this->start_[iCol]; iEl < this->start_[iCol + 1];
@@ -766,8 +780,7 @@ HighsStatus HighsSparseMatrix::assessIndexBounds(
     vec_dim = this->num_col_;
     //    num_vec = this->num_row_;
   }
-  HighsInt num_nz = this->numNz();
-  for (HighsInt iEl = 1; iEl < num_nz; iEl++) {
+  for (HighsInt iEl = 0; iEl < this->numNz(); iEl++) {
     if (this->index_[iEl] < 0 || this->index_[iEl] >= vec_dim) {
       highsLogUser(log_options, HighsLogType::kError,
                    "Matrix index[%d] = %d is not in legal range of [0, %d)\n",
@@ -779,9 +792,12 @@ HighsStatus HighsSparseMatrix::assessIndexBounds(
 }
 
 HighsStatus HighsSparseMatrix::assess(const HighsLogOptions& log_options,
-                                      const std::string matrix_name,
+                                      const std::string& matrix_name,
                                       const double small_matrix_value,
-                                      const double large_matrix_value) {
+                                      const double large_matrix_value,
+                                      const bool sum_duplicates,
+                                      const std::string* col_names,
+                                      const std::string* row_names) {
   assert(this->formatOk());
   // Identify main dimensions
   HighsInt vec_dim;
@@ -796,13 +812,14 @@ HighsStatus HighsSparseMatrix::assess(const HighsLogOptions& log_options,
   const bool partitioned = this->format_ == MatrixFormat::kRowwisePartitioned;
   return assessMatrix(log_options, matrix_name, vec_dim, num_vec, partitioned,
                       this->start_, this->p_end_, this->index_, this->value_,
-                      small_matrix_value, large_matrix_value);
+                      small_matrix_value, large_matrix_value, sum_duplicates,
+                      col_names, row_names);
 }
 
 void HighsSparseMatrix::assessSmallValues(const HighsLogOptions& log_options,
                                           const double small_matrix_value) {
   double min_value = kHighsInf;
-  const HighsInt num_values = this->value_.size();
+  const HighsInt num_values = static_cast<HighsInt>(this->value_.size());
   for (HighsInt iX = 0; iX < num_values; iX++)
     min_value = std::min(std::abs(this->value_[iX]), min_value);
   if (min_value > small_matrix_value) return;
@@ -876,12 +893,12 @@ void HighsSparseMatrix::considerRowScaling(
         row_scale_value =
             min(max(min_allow_row_scale, row_scale_value), max_allow_row_scale);
         row_scale[iRow] = row_scale_value;
-        // Scale the rowumn
+        // Scale the row
         for (HighsInt iEl = this->start_[iRow]; iEl < this->start_[iRow + 1];
              iEl++)
           this->value_[iEl] *= row_scale[iRow];
       } else {
-        // Empty rowumn
+        // Empty row
         row_scale[iRow] = 1;
       }
     }
@@ -1137,10 +1154,10 @@ void HighsSparseMatrix::alphaProductPlusY(const double alpha,
                                           const std::vector<double>& x,
                                           std::vector<double>& y,
                                           const bool transpose) const {
-  assert(x.size() >= static_cast<size_t>(transpose) ? this->num_row_
-                                                    : this->num_col_);
-  assert(y.size() >= static_cast<size_t>(transpose) ? this->num_col_
-                                                    : this->num_row_);
+  assert(x.size() >=
+         static_cast<size_t>(transpose ? this->num_row_ : this->num_col_));
+  assert(y.size() >=
+         static_cast<size_t>(transpose ? this->num_col_ : this->num_row_));
   if (this->isColwise()) {
     if (transpose) {
       for (int iCol = 0; iCol < this->num_col_; iCol++)
@@ -1295,7 +1312,7 @@ void HighsSparseMatrix::productTransposeQuad(
 
     sum.cleanup([](HighsInt, double x) { return std::abs(x) <= kHighsTiny; });
     result_index = std::move(sum.nonzeroinds);
-    HighsInt result_num_nz = result_index.size();
+    HighsInt result_num_nz = static_cast<HighsInt>(result_index.size());
     result_value.reserve(result_num_nz);
     for (HighsInt i = 0; i < result_num_nz; ++i)
       result_value.push_back(sum.getValue(result_index[i]));
@@ -1508,7 +1525,7 @@ void HighsSparseMatrix::priceByRowWithSwitch(
   if (next_index < column.count) {
     // PRICE is not complete: finish without maintaining nonzeros of result
     if (quad_precision) {
-      std::vector<HighsCDouble> result_array = sum.values;
+      std::vector<HighsCDouble> result_array = std::move(sum.values);
       this->priceByRowDenseResult(result_array, column, next_index);
       // Determine indices of nonzeros in result
       result.count = 0;
@@ -1540,7 +1557,7 @@ void HighsSparseMatrix::priceByRowWithSwitch(
       // by virtue of result.setup. However, it will generally lose
       // this property by virtue of the following move
       result.index = std::move(sum.nonzeroinds);
-      HighsInt result_num_nz = result.index.size();
+      HighsInt result_num_nz = static_cast<HighsInt>(result.index.size());
       // Restore the size of result.index
       result.index.resize(this->num_col_);
       result.count = result_num_nz;

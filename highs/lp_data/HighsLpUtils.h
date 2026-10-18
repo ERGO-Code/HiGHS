@@ -27,17 +27,24 @@ class HighsOptions;
 
 using std::vector;
 
-void writeBasisFile(FILE*& file, const HighsBasis& basis);
+void writeBasisFile(FILE*& file, const HighsOptions& options, const HighsLp& lp,
+                    const HighsBasis& basis);
 
-HighsStatus readBasisFile(const HighsLogOptions& log_options, HighsBasis& basis,
-                          const std::string filename);
-HighsStatus readBasisStream(const HighsLogOptions& log_options,
+HighsStatus getIndexFromName(const HighsLogOptions& log_options,
+                             std::string& from_method, const bool is_column,
+                             const std::string& name, HighsNameHash& name_hash,
+                             HighsInt& index,
+                             const std::vector<std::string>& names);
+
+HighsStatus readBasisFile(const HighsLogOptions& log_options, HighsLp& lp,
+                          HighsBasis& basis, const std::string& filename);
+HighsStatus readBasisStream(const HighsLogOptions& log_options, HighsLp& lp,
                             HighsBasis& basis, std::ifstream& in_file);
 
 // Methods taking HighsLp as an argument
 HighsStatus assessLp(HighsLp& lp, const HighsOptions& options);
 
-bool lpDimensionsOk(std::string message, const HighsLp& lp,
+bool lpDimensionsOk(const std::string& message, const HighsLp& lp,
                     const HighsLogOptions& log_options);
 
 HighsStatus assessCosts(const HighsOptions& options, const HighsInt ml_col_os,
@@ -45,28 +52,46 @@ HighsStatus assessCosts(const HighsOptions& options, const HighsInt ml_col_os,
                         vector<double>& cost, bool& has_infinite_cost,
                         const double infinite_cost);
 
-HighsStatus assessBounds(const HighsOptions& options, const char* type,
+HighsStatus assessBounds(const HighsOptions& options, const std::string& type,
                          const HighsInt ml_ix_os,
                          const HighsIndexCollection& index_collection,
                          vector<double>& lower, vector<double>& upper,
                          const double infinite_bound,
-                         const HighsVarType* integrality = nullptr);
+                         const HighsVarType* integrality,
+                         const std::string* names = nullptr);
 
 HighsStatus cleanBounds(const HighsOptions& options, HighsLp& lp);
 
-bool boundScaleOk(const std::vector<double>& lower,
-                  const std::vector<double>& upper, const HighsInt bound_scale,
-                  const double infinite_bound);
+HighsStatus userScaleLp(HighsLp& lp, HighsUserScaleData& data,
+                        const HighsLogOptions& log_options);
 
-bool costScaleOk(const std::vector<double>& cost, const HighsInt cost_scale,
-                 const double infinite_cost);
+void userScaleLp(HighsLp& lp, HighsUserScaleData& data,
+                 const bool apply = true);
+
+void userScaleCosts(const vector<HighsVarType>& integrality, double& offset,
+                    vector<double>& cost, HighsUserScaleData& data,
+                    const bool apply = true);
+
+void userScaleColBounds(const vector<HighsVarType>& integrality,
+                        vector<double>& lower, vector<double>& upper,
+                        HighsUserScaleData& data, const bool apply = true);
+
+void userScaleRowBounds(vector<double>& lower, vector<double>& upper,
+                        HighsUserScaleData& data, const bool apply = true);
+
+void userScaleMatrix(const vector<HighsVarType>& integrality,
+                     HighsSparseMatrix& matrix, HighsUserScaleData& data,
+                     const bool apply = true);
+
+HighsStatus userScaleStatus(const HighsLogOptions& log_options,
+                            const HighsUserScaleData& data);
 
 HighsStatus assessSemiVariables(HighsLp& lp, const HighsOptions& options,
                                 bool& made_semi_variable_mods);
 void relaxSemiVariables(HighsLp& lp, bool& made_semi_variable_mods);
 
 bool activeModifiedUpperBounds(const HighsOptions& options, const HighsLp& lp,
-                               const std::vector<double> col_value);
+                               const std::vector<double>& col_value);
 
 bool considerScaling(const HighsOptions& options, HighsLp& lp);
 void scaleLp(const HighsOptions& options, HighsLp& lp,
@@ -100,9 +125,10 @@ void changeLpMatrixCoefficient(HighsLp& lp, const HighsInt row,
                                const HighsInt col, const double new_value,
                                const bool zero_new_value);
 
-void changeLpIntegrality(HighsLp& lp,
-                         const HighsIndexCollection& index_collection,
-                         const vector<HighsVarType>& new_integrality);
+HighsStatus changeLpIntegrality(HighsLp& lp,
+                                const HighsIndexCollection& index_collection,
+                                const vector<HighsVarType>& new_integrality,
+                                const HighsOptions& options);
 
 void changeLpCosts(HighsLp& lp, const HighsIndexCollection& index_collection,
                    const vector<double>& new_col_cost,
@@ -170,10 +196,10 @@ void reportLpColMatrix(const HighsLogOptions& log_options,
                        const HighsLp& lp  //!< LP whose data are to be reported
 );
 
-void reportMatrix(const HighsLogOptions& log_options, const std::string message,
-                  const HighsInt num_col, const HighsInt num_nz,
-                  const HighsInt* start, const HighsInt* index,
-                  const double* value);
+void reportMatrix(const HighsLogOptions& log_options,
+                  const std::string& message, const HighsInt num_col,
+                  const HighsInt num_nz, const HighsInt* start,
+                  const HighsInt* index, const double* value);
 
 // Get the number of integer-valued columns in the LP
 HighsInt getNumInt(const HighsLp& lp);
@@ -197,7 +223,7 @@ void getLpMatrixCoefficient(const HighsLp& lp, const HighsInt row,
 // Analyse the data in an LP problem
 void analyseLp(const HighsLogOptions& log_options, const HighsLp& lp);
 
-HighsStatus readSolutionFile(const std::string filename,
+HighsStatus readSolutionFile(const std::string& filename,
                              const HighsOptions& options, HighsLp& lp,
                              HighsBasis& basis, HighsSolution& solution,
                              const HighsInt style);
@@ -211,20 +237,28 @@ HighsStatus readSolutionFileReturn(const HighsStatus status,
 bool readSolutionFileIgnoreLineOk(std::ifstream& in_file);
 bool readSolutionFileKeywordLineOk(std::string& keyword,
                                    std::ifstream& in_file);
-bool readSolutionFileHashKeywordIntLineOk(std::string& keyword, HighsInt& value,
+bool readSolutionFileHashKeywordIntLineOk(std::string& hash,
+                                          std::string& keyword,
+                                          std::string& value_string,
+                                          HighsInt& value,
                                           std::ifstream& in_file);
+bool readSolutionFileColumnHeaderLineOk(
+    std::string& hash, std::string& keyword, std::string& value_string,
+    HighsInt& value, std::string& qualifier_string,
+    std::stringstream& column_section_line_ss);
+bool readSolutionFileColumnLineOk(std::string& id, double& value,
+                                  HighsInt& index,
+                                  std::stringstream& column_section_line_ss);
 bool readSolutionFileIdIgnoreLineOk(std::string& id, std::ifstream& in_file);
 bool readSolutionFileIdDoubleLineOk(std::string& id, double& value,
                                     std::ifstream& in_file);
-bool readSolutionFileIdDoubleIntLineOk(double& value, HighsInt& index,
-                                       std::ifstream& in_file);
 
 void assessColPrimalSolution(const HighsOptions& options, const double primal,
                              const double lower, const double upper,
                              const HighsVarType type, double& col_infeasibility,
                              double& integer_infeasibility);
 
-HighsStatus assessLpPrimalSolution(const std::string message,
+HighsStatus assessLpPrimalSolution(const std::string& message,
                                    const HighsOptions& options,
                                    const HighsLp& lp,
                                    const HighsSolution& solution, bool& valid,
@@ -250,16 +284,14 @@ bool isMatrixDataNull(const HighsLogOptions& log_options,
                       const double* usr_matrix_value);
 
 void reportPresolveReductions(const HighsLogOptions& log_options,
-                              const HighsLp& lp, const HighsLp& presolve_lp);
-
-void reportPresolveReductions(const HighsLogOptions& log_options,
-                              const HighsLp& lp, const bool presolve_to_empty);
+                              HighsPresolveStatus presolve_status,
+                              const HighsLp& lp, const HighsLp& presolved_lp);
 
 bool isLessInfeasibleDSECandidate(const HighsLogOptions& log_options,
                                   const HighsLp& lp);
 
 HighsLp withoutSemiVariables(const HighsLp& lp, HighsSolution& solution,
-                             const double primal_feasibility_tolerance);
+                             const double mip_feasibility_tolerance);
 
 void removeRowsOfCountOne(const HighsLogOptions& log_options, HighsLp& lp);
 
@@ -294,5 +326,11 @@ void getSubVectorsTranspose(const HighsIndexCollection& index_collection,
                             HighsInt* sub_matrix_start,
                             HighsInt* sub_matrix_index,
                             double* sub_matrix_value);
+
+std::string highsVarTypeToString(const HighsVarType type);
+std::string highsVarTypeToString(const HighsInt type);
+
+void initialiseUserScaleData(const HighsOptions& options,
+                             HighsUserScaleData& user_scale_data);
 
 #endif  // LP_DATA_HIGHSLPUTILS_H_

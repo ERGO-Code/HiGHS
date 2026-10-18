@@ -144,7 +144,7 @@ class HEkkDualRow {
 
   HighsInt debugFindInWorkData(
       const HighsInt iCol, const HighsInt count,
-      const std::vector<std::pair<HighsInt, double>>& workData_);
+      const std::vector<std::pair<HighsInt, double>>& workData_) const;
   HighsInt debugChooseColumnInfeasibilities() const;
   void debugReportBfrtVar(
       const HighsInt ix,

@@ -8,8 +8,36 @@
 /**@file ../app/RunHighs.cpp
  * @brief HiGHS main
  */
+#include <cstdio>  // For fclose
+
 #include "Highs.h"
 #include "HighsRuntimeOptions.h"
+
+static bool written_cli_copyright_line = false;
+
+void cliCopyrightLine(const HighsLogOptions& log_options) {
+  if (written_cli_copyright_line) return;
+  highsLogUser(log_options, HighsLogType::kInfo,
+               "Command line parsed using CLI11 %s: Copyright (c) 2017-2025 "
+               "University of Cincinnati\n",
+               CLI11_VERSION);
+  written_cli_copyright_line = true;
+}
+
+int runHighsReturn(Highs& highs, const int status) {
+  // Possibly write out the HiGHS and CLI copyright lines
+  highs.logHeader();
+  cliCopyrightLine(highs.getOptions().log_options);
+  // Close any log file explicitly
+  highs.closeLogFile();
+  // Check that the log file has been closed
+  assert(highs.getOptions().log_options.log_stream == nullptr);
+  return status;
+}
+
+int runHighsReturn(Highs& highs, const HighsStatus status) {
+  return runHighsReturn(highs, int(status));
+}
 
 int main(int argc, char** argv) {
   // Create the Highs instance.
@@ -21,9 +49,9 @@ int main(int argc, char** argv) {
   HighsCommandLineOptions cmd_options;
   HighsOptions loaded_options;
 
-  // Set "HiGHS.log" as the default log_file for the app so that
+  // Set kHighsRunLogFile as the default log_file for the app so that
   // log_file has this value if it isn't set in the file
-  loaded_options.log_file = "HiGHS.log";
+  loaded_options.log_file = kHighsRunLogFile;
   // When loading the options file, any messages are reported using
   // the default HighsLogOptions
 
@@ -40,31 +68,30 @@ int main(int argc, char** argv) {
     app.parse(argc, argv);
   } catch (const CLI::CallForHelp& e) {
     std::cout << app.help() << std::endl;
-    return 0;
+    return runHighsReturn(highs, 0);
   } catch (const CLI::CallForAllHelp& e) {
     std::cout << app.help();
-    return 0;
+    return runHighsReturn(highs, 0);
   } catch (const CLI::RequiredError& e) {
-    std::cout << "Please specify filename in .mps|.lp|.ems format."
-              << std::endl;
-    return (int)HighsStatus::kError;
+    std::cout << "Please specify filename in .mps or .lp format" << std::endl;
+    return runHighsReturn(highs, HighsStatus::kError);
   } catch (const CLI::ExtrasError& e) {
     std::cout << e.what() << std::endl;
     std::cout << "Multiple files not supported." << std::endl;
-    return (int)HighsStatus::kError;
+    return runHighsReturn(highs, HighsStatus::kError);
   } catch (const CLI::ArgumentMismatch& e) {
     std::cout << e.what() << std::endl;
     std::cout << "Too many arguments provided. Please provide only one."
               << std::endl;
-    return (int)HighsStatus::kError;
+    return runHighsReturn(highs, HighsStatus::kError);
   } catch (const CLI::ParseError& e) {
     std::cout << e.what() << std::endl;
     // app.exit() should be called from main.
-    return app.exit(e);
+    return runHighsReturn(highs, app.exit(e));
   }
 
   if (!loadOptions(app, log_options, cmd_options, loaded_options))
-    return (int)HighsStatus::kError;
+    return runHighsReturn(highs, HighsStatus::kError);
 
   // Open the app log file - unless output_flag is false, to avoid
   // creating an empty file. It does nothing if its name is "".
@@ -72,26 +99,27 @@ int main(int argc, char** argv) {
 
   // Pass the option settings to HiGHS. Only error-checking produces
   // output, but values are checked in loadOptions, so it's safe to
-  // call this first so that printHighsVersionCopyright uses reporting
+  // call this first so that Highs::logHeader() uses reporting
   // settings defined in any options file.
   highs.passOptions(loaded_options);
-  highs.writeOptions("", true);
 
-  // Lines to write out documentation of HighsOptions and HighsInfo
-  // highs.writeOptions("Options.md");
-  // highs.writeInfo("Info.md");
+  highs.logHeader();
+  // Acknowledge use of CLI for command line parsing
+  cliCopyrightLine(log_options);
+  // Log changes from the default option settings
+  highs.writeOptions("", true);
 
   // Load the model from model_file
   HighsStatus read_status = highs.readModel(cmd_options.model_file);
   if (read_status == HighsStatus::kError) {
     highsLogUser(log_options, HighsLogType::kInfo, "Error loading file\n");
-    return (int)read_status;
+    return runHighsReturn(highs, read_status);
   }
 
   if (options.write_presolved_model_file != "") {
     // Run presolve and write the presolved model to a file
     HighsStatus status = highs.presolve();
-    if (status == HighsStatus::kError) return int(status);
+    if (status == HighsStatus::kError) return runHighsReturn(highs, status);
     HighsPresolveStatus model_presolve_status = highs.getModelPresolveStatus();
     const bool ok_to_write =
         model_presolve_status == HighsPresolveStatus::kNotReduced ||
@@ -101,18 +129,18 @@ int main(int argc, char** argv) {
     if (!ok_to_write) {
       highsLogUser(log_options, HighsLogType::kInfo,
                    "No presolved model to write to file\n");
-      return int(status);
+      return runHighsReturn(highs, status);
     }
     status = highs.writePresolvedModel(options.write_presolved_model_file);
-    return int(status);
+    return runHighsReturn(highs, status);
   }
   // Solve the model
   HighsStatus run_status = highs.run();
-  if (run_status == HighsStatus::kError) return int(run_status);
+  if (run_status == HighsStatus::kError) runHighsReturn(highs, run_status);
 
   // Shut down task executor for explicit release of memory.
   // Valgrind still reachable otherwise.
   highs.resetGlobalScheduler(true);
 
-  return (int)run_status;
+  return runHighsReturn(highs, run_status);
 }

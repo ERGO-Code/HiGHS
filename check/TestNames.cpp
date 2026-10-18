@@ -5,7 +5,7 @@
 #include "catch.hpp"
 
 const bool dev_run = false;
-TEST_CASE("highs-names", "[highs_names]") {
+TEST_CASE("highs-names", "[model_names]") {
   const std::string test_name = Catch::getResultCapture().getCurrentTestName();
   const std::string solution_file = test_name + ".sol";
   std::string name;
@@ -80,7 +80,7 @@ TEST_CASE("highs-names", "[highs_names]") {
   iCol = lp.num_col_ / 2;
   std::string iCol_name;
   REQUIRE(highs.getColName(iCol, iCol_name) == HighsStatus::kOk);
-  REQUIRE(highs.passColName(iCol, col0_name) == HighsStatus::kOk);
+  REQUIRE(highs.passColName(iCol, col0_name) == HighsStatus::kWarning);
 
   // column num_col/2 is no longer called iCol_name
   status = highs.getColByName(iCol_name, iCol);
@@ -89,8 +89,9 @@ TEST_CASE("highs-names", "[highs_names]") {
   status = highs.getColByName(col0_name, iCol);
   REQUIRE(status == HighsStatus::kError);
 
-  // Model can't be written
-  REQUIRE(highs.writeModel("") == HighsStatus::kError);
+  // Model can (since duplicates lead to generic names in fix-2887) be
+  // written
+  REQUIRE(highs.writeModel("") == HighsStatus::kWarning);
   if (dev_run) highs.writeSolution("", 1);
 
   // Reinstate name and model writes OK
@@ -101,9 +102,10 @@ TEST_CASE("highs-names", "[highs_names]") {
   REQUIRE(highs.getRowName(0, name) == HighsStatus::kOk);
   REQUIRE(name == row0_name);
   iRow = lp.num_row_ / 2;
-  REQUIRE(highs.passRowName(iRow, row0_name) == HighsStatus::kOk);
-  // Model can't be written
-  REQUIRE(highs.writeModel("") == HighsStatus::kError);
+  REQUIRE(highs.passRowName(iRow, row0_name) == HighsStatus::kWarning);
+  // Model can (since duplicates lead to generic names in fix-2887) be
+  // written
+  REQUIRE(highs.writeModel("") == HighsStatus::kWarning);
   if (dev_run) highs.writeSolution("", 1);
 
   // Now work with a name-less model
@@ -111,11 +113,7 @@ TEST_CASE("highs-names", "[highs_names]") {
   local_lp.col_names_.clear();
   local_lp.row_names_.clear();
   highs.passModel(local_lp);
-  REQUIRE(highs.writeSolution(solution_file, 1) == HighsStatus::kOk);
-
-  // Cannot get name of column or row 0
-  REQUIRE(highs.getColName(0, name) == HighsStatus::kError);
-  REQUIRE(highs.getRowName(0, name) == HighsStatus::kError);
+  REQUIRE(highs.writeSolution(solution_file, 1) == HighsStatus::kWarning);
 
   std::remove(solution_file.c_str());
 }
@@ -130,4 +128,116 @@ TEST_CASE("highs-model-name", "[model_names]") {
   highs.passModelName("new_name");
   name = lp.model_name_;
   REQUIRE(name == "new_name");
+}
+
+TEST_CASE("highs-illegal-col-row-name", "[model_names]") {
+  const std::string test_name = Catch::getResultCapture().getCurrentTestName();
+  const std::string lp_file = test_name + ".lp";
+  const std::string mps_file = test_name + ".mps";
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  HighsLp lp;
+  lp.num_col_ = 2;
+  lp.num_row_ = 1;
+  lp.col_cost_ = {1, 2};
+  lp.col_lower_ = {0, 0};
+  lp.col_upper_ = {1, 1};
+  lp.row_lower_ = {-kHighsInf};
+  lp.row_upper_ = {5};
+  lp.a_matrix_.start_ = {0, 1, 2};
+  lp.a_matrix_.index_ = {0, 0};
+  lp.a_matrix_.value_ = {1, 1};
+
+  HighsStatus mps_write_return = HighsStatus::kWarning;
+  HighsStatus lp_write_return = HighsStatus::kWarning;
+  HighsStatus status = HighsStatus::kOk;
+  for (HighsInt k = 0; k < 3; k++) {
+    if (k == 0) {
+      // Repacing space with "_" is OK, but "^" is illegal for LP
+      lp.col_names_ = {"Col 0", "Col^1"};
+      lp.row_names_ = {"Row 0"};
+    } else if (k == 1) {
+      // Replacing blank with "c_ekk0" is OK, but "^" is illegal for
+      // LP
+      lp.col_names_ = {"", "Col^1"};
+      lp.row_names_ = {"Row 0"};
+    } else {
+      // Repacing space yields duplicate, and "^" is illegal for
+      // LP
+      lp.col_names_ = {"Col 0", "Col_0"};
+      lp.row_names_ = {"Row^0"};
+    }
+    status = h.passModel(lp);
+    REQUIRE(status != HighsStatus::kError);
+
+    status = h.writeModel(mps_file);
+    REQUIRE(status == mps_write_return);
+
+    status = h.writeModel(lp_file);
+    REQUIRE(status == lp_write_return);
+  }
+  status = h.readModel(mps_file);
+  REQUIRE(status == HighsStatus::kOk);
+
+  status = h.readModel(lp_file);
+  REQUIRE(status == HighsStatus::kOk);
+
+  std::remove(mps_file.c_str());
+  std::remove(lp_file.c_str());
+}
+
+TEST_CASE("test-3316", "[model_names]") {
+  HighsLp lp;
+  HighsInt dim = 10;
+  lp.num_col_ = dim;
+  lp.num_row_ = 1;
+  lp.col_cost_.assign(dim, 0);
+  lp.col_lower_.assign(dim, 0);
+  lp.col_upper_.assign(dim, 1);
+  lp.row_lower_ = {-kHighsInf};
+  lp.row_upper_ = {5};
+  lp.a_matrix_.start_.assign(dim + 1, 0);
+  lp.a_matrix_.index_.assign(dim, 0);
+  lp.a_matrix_.value_.assign(dim, 1);
+  for (HighsInt iCol = 0; iCol < dim; iCol++) {
+    lp.col_cost_[iCol] = -iCol;
+    lp.a_matrix_.start_[iCol] = iCol;
+  }
+  lp.a_matrix_.start_[dim] = dim;
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+
+  REQUIRE(h.passModel(lp) == HighsStatus::kOk);
+  REQUIRE(h.passColName(0, "C3") == HighsStatus::kOk);
+  // Names are now [C3], so passing (1, "C1") is OK
+  REQUIRE(h.passColName(1, "C1") == HighsStatus::kOk);
+  // Names are now [C3, C1], so passing (2, "C3") yields duplicate
+  REQUIRE(h.passColName(2, "C3") == HighsStatus::kWarning);
+  // Names are now [C3, C1, C3], so passing (2, "C2") is OK, and C3 is
+  // no longer duplicate
+  REQUIRE(h.passColName(2, "C2") == HighsStatus::kOk);
+  // Names are now [C3, C1, C2], so passing (3, "C3") yields duplicate
+  REQUIRE(h.passColName(3, "C3") == HighsStatus::kWarning);
+  // Names are now [C3, C1, C2, C3], so passing (0, "C0") is OK, and C3 is
+  // no longer duplicate
+  REQUIRE(h.passColName(0, "C0") == HighsStatus::kOk);
+  // Names are now [C0, C1, C2, C3], and the name hash has records
+  //
+  // [("C0", 0), ("C2", 2), ("C1", 1), ("C3", 0), ("", -5)]
+
+  HighsInt col;
+  REQUIRE(h.getColByName("C0", col) == HighsStatus::kOk);
+  REQUIRE(col == 0);
+  REQUIRE(h.getColByName("C1", col) == HighsStatus::kOk);
+  REQUIRE(col == 1);
+  REQUIRE(h.getColByName("C2", col) == HighsStatus::kOk);
+  REQUIRE(col == 2);
+  // The name hash index associated with "C3" is not 3, but its
+  // duplicate count reduced to zero. As a result, there is a failure
+  // in getIndexFromName, which is rectified by reforming the name
+  // hash
+  REQUIRE(h.getColByName("C3", col) == HighsStatus::kOk);
+  REQUIRE(col == 3);
+  // There are six blank names, so the following fails
+  REQUIRE(h.getColByName("", col) == HighsStatus::kError);
 }

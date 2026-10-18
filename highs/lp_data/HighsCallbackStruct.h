@@ -11,7 +11,7 @@
 #ifndef LP_DATA_HIGHSCALLBACKSTRUCT_H_
 #define LP_DATA_HIGHSCALLBACKSTRUCT_H_
 
-#include "util/HighsInt.h"
+#include "util/HighsType.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -21,13 +21,14 @@ extern "C" {
  * Struct to handle callback output data
  *
  */
-typedef struct {
+typedef struct HighsCallbackDataOut {
   void* cbdata;  // cast of HighsCallbackOutput
   int log_type;  // cast of HighsLogType
   double running_time;
   HighsInt simplex_iteration_count;
   HighsInt ipm_iteration_count;
   HighsInt pdlp_iteration_count;
+  HighsInt qpasm_iteration_count;
   double objective_function_value;
   int64_t mip_node_count;
   int64_t mip_total_lp_iterations;
@@ -44,13 +45,15 @@ typedef struct {
   double* cutpool_value;
   double* cutpool_lower;
   double* cutpool_upper;
-  HighsInt user_solution_callback_origin;
+  double* qp_solution;
+  HighsInt qp_solution_size;
+  HighsInt external_solution_query_origin;
 } HighsCallbackDataOut;
 
 // Some external packages (e.g., jump) currently assume that the first 2 fields
 // of this struct are interrupt and solution. Rearranging the struct may be a
 // breaking change.
-typedef struct {
+typedef struct HighsCallbackDataIn {
   int user_interrupt;
   double* user_solution;
   void* cbdata;  // cast of HighsCallbackInput (for internal use)
@@ -62,6 +65,11 @@ typedef struct {
 typedef void (*HighsCCallbackType)(int, const char*,
                                    const HighsCallbackDataOut*,
                                    HighsCallbackDataIn*, void*);
+
+typedef HighsInt (*HighsCHessianFunctionType)(const HighsInt, const HighsInt*,
+                                              const HighsInt*, const double*,
+                                              HighsInt*, HighsInt*, double*,
+                                              void*);
 
 #ifdef __cplusplus
 }

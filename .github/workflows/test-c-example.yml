@@ -5,11 +5,15 @@ name: test-c-example
 
 on: [push, pull_request]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   fast-build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Create Build Environment
         run: |
           mkdir build
@@ -38,7 +42,7 @@ jobs:
   fast-build-off:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Create Build Environment
         run: |
           mkdir build

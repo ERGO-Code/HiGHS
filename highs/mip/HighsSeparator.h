@@ -13,7 +13,17 @@
 #ifndef MIP_HIGHS_SEPARATOR_H_
 #define MIP_HIGHS_SEPARATOR_H_
 
-#include "util/HighsInt.h"
+#include <string>
+
+#include "util/HighsType.h"
+
+const std::string kImplboundSepaString = "Separation: Implied bounds";
+const std::string kCliqueSepaString = "Separation: Clique";
+const std::string kTableauSepaString = "Separation: Tableau";
+const std::string kPathAggrSepaString = "Separation: Path aggregation";
+const std::string kModKSepaString = "Separation: Mod-k";
+const std::string kMachineSchedSepaString =
+    "Separation: Single Machine Scheduling";
 
 class HighsLpRelaxation;
 class HighsTransformedLp;
@@ -30,7 +40,7 @@ class HighsSeparator {
   int clockIndex;
 
  public:
-  HighsSeparator(const HighsMipSolver& mipsolver, const char* name);
+  HighsSeparator(const HighsMipSolver& mipsolver, const std::string& name);
 
   virtual void separateLpSolution(HighsLpRelaxation& lpRelaxation,
                                   HighsLpAggregator& lpAggregator,

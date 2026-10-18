@@ -30,8 +30,6 @@
 //     }                                                                   \
 //   }
 
-typedef enum CONSTRAINT_TYPE { EQ = 0, LEQ, GEQ, BOUND } constraint_type;
-
 #define cupdlp_init_int(var, size) \
   { (var) = (int*)malloc((size) * sizeof(int)); }
 

@@ -103,7 +103,6 @@ HighsInt Highs_mipCall(const HighsInt num_col, const HighsInt num_row,
         row_value[i] = solution.row_value[i];
     }
   }
-
   return (HighsInt)status;
 }
 
@@ -288,6 +287,19 @@ HighsInt Highs_passHessian(void* highs, const HighsInt dim,
       ->passHessian(dim, num_nz, format, start, index, value);
 }
 
+HighsInt Highs_passHessianOracle(void* highs, const HighsInt dim,
+                                 HighsCHessianFunctionType oracleCall,
+                                 void* oracle_data) {
+  auto status =
+      static_cast<Highs*>(highs)->passHessian(dim, oracleCall, oracle_data);
+  return static_cast<HighsInt>(status);
+}
+
+HighsInt Highs_checkHessianOracle(void* highs) {
+  auto status = static_cast<Highs*>(highs)->checkHessianOracle();
+  return static_cast<HighsInt>(status);
+}
+
 HighsInt Highs_passLinearObjectives(const void* highs,
                                     const HighsInt num_linear_objective,
                                     const double* weight, const double* offset,
@@ -366,6 +378,10 @@ HighsInt Highs_clearModel(void* highs) {
 
 HighsInt Highs_clearSolver(void* highs) {
   return (HighsInt)((Highs*)highs)->clearSolver();
+}
+
+HighsInt Highs_releaseMemory(void* highs) {
+  return (HighsInt)((Highs*)highs)->releaseMemory();
 }
 
 HighsInt Highs_setBoolOptionValue(void* highs, const char* option,
@@ -525,6 +541,9 @@ HighsInt Highs_getInfoType(const void* highs, const char* info,
 HighsInt Highs_getSolution(const void* highs, double* col_value,
                            double* col_dual, double* row_value,
                            double* row_dual) {
+  if (((Highs*)highs)->getInfo().primal_solution_status == kSolutionStatusNone)
+    return kHighsStatusError;
+
   const HighsSolution& solution = ((Highs*)highs)->getSolution();
 
   if (col_value != nullptr) {
@@ -556,6 +575,7 @@ HighsInt Highs_getSolution(const void* highs, double* col_value,
 HighsInt Highs_getBasis(const void* highs, HighsInt* col_status,
                         HighsInt* row_status) {
   const HighsBasis& basis = ((Highs*)highs)->getBasis();
+  if (!basis.valid) return kHighsStatusError;
   for (size_t i = 0; i < basis.col_status.size(); i++) {
     col_status[i] = static_cast<HighsInt>(basis.col_status[i]);
   }
@@ -741,7 +761,7 @@ HighsInt Highs_setCallback(void* highs, HighsCCallbackType user_callback,
                            void* user_callback_data) {
   auto status = static_cast<Highs*>(highs)->setCallback(user_callback,
                                                         user_callback_data);
-  return static_cast<int>(status);
+  return static_cast<HighsInt>(status);
 }
 
 HighsInt Highs_startCallback(void* highs, const HighsInt callback_type) {
@@ -1055,11 +1075,21 @@ HighsInt Highs_getRowsByMask(const void* highs, const HighsInt* mask,
   return (HighsInt)status;
 }
 
-HighsInt Highs_getRowName(const void* highs, const HighsInt row, char* name) {
+static HighsInt Highs_getHighsLpColOrRowName(const void* highs,
+                                             const HighsLp& lp,
+                                             const bool is_col,
+                                             const HighsInt index, char* name) {
   std::string name_v;
-  HighsInt retcode = (HighsInt)((Highs*)highs)->getRowName(row, name_v);
+  HighsStatus status =
+      ((Highs*)highs)->getColOrRowName(lp, is_col, index, name_v);
+  if (status == HighsStatus::kError) return kHighsStatusError;
   strcpy(name, name_v.c_str());
-  return retcode;
+  return kHighsStatusOk;
+}
+
+HighsInt Highs_getRowName(const void* highs, const HighsInt row, char* name) {
+  return Highs_getHighsLpColOrRowName(highs, ((Highs*)highs)->getLp(), false,
+                                      row, name);
 }
 
 HighsInt Highs_getRowByName(const void* highs, const char* name,
@@ -1071,10 +1101,8 @@ HighsInt Highs_getRowByName(const void* highs, const char* name,
 }
 
 HighsInt Highs_getColName(const void* highs, const HighsInt col, char* name) {
-  std::string name_v;
-  HighsInt retcode = (HighsInt)((Highs*)highs)->getColName(col, name_v);
-  strcpy(name, name_v.c_str());
-  return retcode;
+  return Highs_getHighsLpColOrRowName(highs, ((Highs*)highs)->getLp(), true,
+                                      col, name);
 }
 
 HighsInt Highs_getColByName(const void* highs, const char* name,
@@ -1165,7 +1193,7 @@ HighsInt Highs_getPresolvedNumRow(const void* highs) {
 }
 
 HighsInt Highs_getPresolvedNumNz(const void* highs) {
-  return ((Highs*)highs)->getPresolvedLp().a_matrix_.numNz();
+  return ((Highs*)highs)->getPresolvedLp().numNz();
 }
 
 // Gets pointers to all the public data members of HighsLp: avoids
@@ -1212,7 +1240,7 @@ static HighsInt Highs_getHighsLpData(const HighsLp& lp, const HighsInt a_format,
         (desired_a_format == MatrixFormat::kRowwise &&
          lp.a_matrix_.isRowwise())) {
       // Incumbent format is OK
-      *num_nz = lp.a_matrix_.numNz();
+      *num_nz = lp.numNz();
       if (a_start)
         memcpy(a_start, lp.a_matrix_.start_.data(),
                num_start_entries * sizeof(HighsInt));
@@ -1285,6 +1313,23 @@ HighsInt Highs_getLp(const void* highs, const HighsInt a_format,
                               a_start, a_index, a_value, integrality);
 }
 
+HighsInt Highs_getFixedLp(const void* highs, const HighsInt a_format,
+                          HighsInt* num_col, HighsInt* num_row,
+                          HighsInt* num_nz, HighsInt* sense, double* offset,
+                          double* col_cost, double* col_lower,
+                          double* col_upper, double* row_lower,
+                          double* row_upper, HighsInt* a_start,
+                          HighsInt* a_index, double* a_value) {
+  HighsLp lp;
+  HighsInt status = HighsInt(((Highs*)highs)->getFixedLp(lp));
+  if (status == kHighsStatusError) return status;
+  HighsInt* integrality = nullptr;
+  Highs_getHighsLpData(lp, a_format, num_col, num_row, num_nz, sense, offset,
+                       col_cost, col_lower, col_upper, row_lower, row_upper,
+                       a_start, a_index, a_value, integrality);
+  return status;
+}
+
 HighsInt Highs_getPresolvedLp(const void* highs, const HighsInt a_format,
                               HighsInt* num_col, HighsInt* num_row,
                               HighsInt* num_nz, HighsInt* sense, double* offset,
@@ -1295,6 +1340,74 @@ HighsInt Highs_getPresolvedLp(const void* highs, const HighsInt a_format,
                               HighsInt* integrality) {
   return Highs_getHighsLpData(((Highs*)highs)->getPresolvedLp(), a_format,
                               num_col, num_row, num_nz, sense, offset, col_cost,
+                              col_lower, col_upper, row_lower, row_upper,
+                              a_start, a_index, a_value, integrality);
+}
+
+HighsInt Highs_getPresolvedColName(const void* highs, const HighsInt col,
+                                   char* name) {
+  return Highs_getHighsLpColOrRowName(highs, ((Highs*)highs)->getPresolvedLp(),
+                                      true, col, name);
+}
+
+HighsInt Highs_getPresolvedRowName(const void* highs, const HighsInt row,
+                                   char* name) {
+  return Highs_getHighsLpColOrRowName(highs, ((Highs*)highs)->getPresolvedLp(),
+                                      false, row, name);
+}
+
+HighsInt Highs_getIis(void* highs, HighsInt* iis_num_col, HighsInt* iis_num_row,
+                      HighsInt* col_index, HighsInt* row_index,
+                      HighsInt* col_bound, HighsInt* row_bound,
+                      HighsInt* col_status, HighsInt* row_status) {
+  HighsIis iis;
+  HighsInt status = (HighsInt)((Highs*)highs)->getIis(iis);
+  if (status == (HighsInt)HighsStatus::kError) return status;
+  *iis_num_col = iis.col_index_.size();
+  *iis_num_row = iis.row_index_.size();
+  if (col_index != nullptr) {
+    for (size_t i = 0; i < static_cast<size_t>(*iis_num_col); i++) {
+      col_index[i] = iis.col_index_[i];
+    }
+  }
+  if (row_index != nullptr) {
+    for (size_t i = 0; i < static_cast<size_t>(*iis_num_row); i++) {
+      row_index[i] = iis.row_index_[i];
+    }
+  }
+  if (col_bound != nullptr) {
+    for (size_t i = 0; i < static_cast<size_t>(*iis_num_col); i++) {
+      col_bound[i] = iis.col_bound_[i];
+    }
+  }
+  if (row_bound != nullptr) {
+    for (size_t i = 0; i < static_cast<size_t>(*iis_num_row); i++) {
+      row_bound[i] = iis.row_bound_[i];
+    }
+  }
+  if (col_status != nullptr) {
+    for (size_t i = 0;
+         i < static_cast<size_t>(((Highs*)highs)->getLp().num_col_); i++) {
+      col_status[i] = iis.col_status_[i];
+    }
+  }
+  if (row_status != nullptr) {
+    for (size_t i = 0;
+         i < static_cast<size_t>(((Highs*)highs)->getLp().num_row_); i++) {
+      row_status[i] = iis.row_status_[i];
+    }
+  }
+  return status;
+}
+
+HighsInt Highs_getIisLp(const void* highs, const HighsInt a_format,
+                        HighsInt* num_col, HighsInt* num_row, HighsInt* num_nz,
+                        HighsInt* sense, double* offset, double* col_cost,
+                        double* col_lower, double* col_upper, double* row_lower,
+                        double* row_upper, HighsInt* a_start, HighsInt* a_index,
+                        double* a_value, HighsInt* integrality) {
+  return Highs_getHighsLpData(((Highs*)highs)->getIisLp(), a_format, num_col,
+                              num_row, num_nz, sense, offset, col_cost,
                               col_lower, col_upper, row_lower, row_upper,
                               a_start, a_index, a_value, integrality);
 }
@@ -1457,6 +1570,8 @@ const void* Highs_getCallbackDataOutItem(const HighsCallbackDataOut* data_out,
     return (void*)(&data_out->ipm_iteration_count);
   } else if (!strcmp(item_name, kHighsCallbackDataOutPdlpIterationCountName)) {
     return (void*)(&data_out->pdlp_iteration_count);
+  } else if (!strcmp(item_name, kHighsCallbackDataOutQpasmIterationCountName)) {
+    return (void*)(&data_out->qpasm_iteration_count);
   } else if (!strcmp(item_name,
                      kHighsCallbackDataOutObjectiveFunctionValueName)) {
     return (void*)(&data_out->objective_function_value);
@@ -1489,6 +1604,8 @@ const void* Highs_getCallbackDataOutItem(const HighsCallbackDataOut* data_out,
     return (void*)(data_out->cutpool_lower);
   } else if (!strcmp(item_name, kHighsCallbackDataOutCutpoolUpperName)) {
     return (void*)(data_out->cutpool_upper);
+  } else if (!strcmp(item_name, kHighsCallbackDataOutQpSolutionName)) {
+    return (void*)(data_out->qp_solution);
   }
   return nullptr;
 }
@@ -1525,7 +1642,10 @@ HighsInt Highs_repairCallbackSolution(HighsCallbackDataIn* data_in) {
 // * Deprecated methods*
 // *********************
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-function"
 const char* Highs_compilationDate(void) { return "Deprecated"; }
+#pragma GCC diagnostic pop
 
 HighsInt Highs_call(const HighsInt num_col, const HighsInt num_row,
                     const HighsInt num_nz, const double* col_cost,

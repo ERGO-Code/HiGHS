@@ -17,8 +17,11 @@ set(CMAKE_CXX_COMPILER_NAMES clang++ g++ icpx c++ ${CMAKE_CXX_COMPILER_NAMES})
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
+option(HIGHS_VCPKG "Vcpkg integration: " OFF)
+message(STATUS "HIGHS_VCPKG: ${HIGHS_VCPKG}")
+include(vcpkg)
 include(set-version)
-set_version(VERSION)
+set_version(VERSION ${CMAKE_CURRENT_SOURCE_DIR})
 
 project(HIGHS VERSION ${VERSION} LANGUAGES CXX C)
 
@@ -57,7 +60,7 @@ endif()
 # message("CMAKE_CXX_COMPILER_ID is ${CMAKE_CXX_COMPILER_ID}")
 if (CMAKE_CXX_COMPILER_ID STREQUAL "IntelLLVM")
   message(STATUS "Compiler is IntelLLVM")
-  if (CMAKE_HOST_WIN32 AND CMAKE_VERSION VERSION_LESS "3.23.0") 
+  if (CMAKE_HOST_WIN32 AND CMAKE_VERSION VERSION_LESS "3.23.0")
       message(FATAL_ERROR "Need at least CMake 3.23 for IntelLLVM support of IntelDPCPP package on Windows")
   elseif(CMAKE_VERSION VERSION_LESS "3.23.0")
       message(FATAL_ERROR "CMake 3.20.5 is the minimum recommended for IntelLLVM on Linux")
@@ -66,6 +69,8 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "IntelLLVM")
   find_package(IntelSYCL REQUIRED)
 endif()
 
+# MSVC
+# set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 
 message(STATUS "Git hash: " ${GITHASH})
 # By default only build the C++ library.
@@ -73,9 +78,18 @@ option(BUILD_CXX "Build C++ library" ON)
 message(STATUS "Build C++ library: ${BUILD_CXX}")
 
 option(BUILD_CXX_EXE "Build C++ executable" ON)
-message(STATUS "Build C++ library: ${BUILD_CXX_EXE}")
+message(STATUS "Build C++ executable: ${BUILD_CXX_EXE}")
 
 option(BUILD_TESTING "Build Tests" ON)
+option(BUILD_SHARED_EXTRAS_LIB "Build shared extras library" ON)
+message(STATUS "Build shared extras library: ${BUILD_SHARED_EXTRAS_LIB}")
+
+option(BUILD_STATIC_EXE "Build static executable" OFF)
+if (BUILD_STATIC_EXE)
+  set (BUILD_SHARED_EXTRAS_LIB OFF)
+endif()
+
+set(HIGHS_SHARED_EXTRAS_LIBRARY ${BUILD_SHARED_EXTRAS_LIB})
 
 option(FORTRAN "Build Fortran interface" OFF)
 message(STATUS "Build Fortran: ${FORTRAN}")
@@ -86,11 +100,13 @@ if (FORTRAN OR CSHARP)
   set(BUILD_SHARED_LIBS ON)
 endif()
 
-option(PYTHON_BUILD_SETUP "Build Python interface from setup.py" OFF)
-message(STATUS "Build Python: ${PYTHON_BUILD_SETUP}")
-if (PYTHON_BUILD_SETUP)
-  set(BUILD_CXX OFF)
-  set(BUILD_TESTING OFF)
+option(HIPO "Build HIPO" OFF)
+message(STATUS "Build HIPO: ${HIPO}")
+
+option(HIPO_PYTHON OFF)
+if (HIPO_PYTHON)
+  set(HIPO ON)
+  message(STATUS "Build HIPO in Python: ON, setting HIPO=ON")
 endif()
 
 include(CMakeDependentOption)
@@ -115,17 +131,33 @@ endif()
 
 option(ZLIB "ZLIB" ON)
 message(STATUS "ZLIB: ${ZLIB}")
-if (PYTHON_BUILD_SETUP)
-  set(ZLIB OFF)
-endif()
+
+option(BUILD_EXAMPLES "Build examples" ON)
+message(STATUS "Build examples: ${BUILD_EXAMPLES}")
 
 option(HIGHS_COVERAGE "Activate the code coverage compilation" OFF)
 
-# Address | Thread | Leak 
+# Address | Thread | Leak
 # Linux atm
-# Only Debug is theted atm 
+# Only Debug atm
 # See below for RelWithDeb info, todo test wip
 set(DEBUG_MEMORY "Off" CACHE STRING "Sanitizers")
+
+if (NOT DEBUG_MEMORY STREQUAL "Off" AND BUILD_SHARED_EXTRAS_LIB)
+  # On Apple platforms, sanitizer runtimes interpose dlopen() such that the
+  # "@loader_path" token used to locate the highs_extras plugin resolves
+  # relative to the sanitizer runtime itself rather than libhighs, so the
+  # dynamic load fails. On Linux, HighsDynamicLibrary::load() dlopen()s
+  # "libhighs_extras.so" by bare filename, and dlopen() never consults the
+  # calling executable's own DT_RUNPATH (that only applies to resolving its
+  # own DT_NEEDED entries), so the plugin isn't found unless it happens to
+  # already be on LD_LIBRARY_PATH or a system library path. Statically link
+  # highs_extras instead to avoid the dlopen path entirely when sanitizers
+  # are enabled.
+  message(STATUS "DEBUG_MEMORY=${DEBUG_MEMORY}: forcing BUILD_SHARED_EXTRAS_LIB=OFF")
+  set (BUILD_SHARED_EXTRAS_LIB OFF)
+  set(HIGHS_SHARED_EXTRAS_LIBRARY ${BUILD_SHARED_EXTRAS_LIB})
+endif()
 
 # emscripten
 option(EMSCRIPTEN_HTML "Emscripten HTML output" OFF)
@@ -137,8 +169,23 @@ message(STATUS "Build pdlp with GPU: ${CUPDLP_GPU}")
 option(CUPDLP_FIND_CUDA "Build pdlp with GPU" OFF)
 message(STATUS "Use FindCUDAConf: ${CUPDLP_FIND_CUDA}")
 
-if(CUPDLP_GPU AND CMAKE_VERSION VERSION_LESS "3.25.0") 
-    message("CUPDLP FindCUDAConf requires CMake version minumum 3.24. Please use a higher version of CMake.")
+option(HIGHS_GPU_LIB "Build highs GPU as a single lib" OFF)
+message(STATUS "Build GPU with delayed loading: ${HIGHS_GPU_LIB}")
+
+option(HIPDLP_HIP "Build HiPDLP with AMD HIP (ROCm)" OFF)
+message(STATUS "Build HiPDLP with HIP: ${HIPDLP_HIP}")
+
+# For now
+if (HIGHS_GPU_LIB)
+  set(CUPDLP_GPU ON)
+endif()
+
+if (HIPDLP_HIP)
+  set(HIPDLP_GPU ON)
+endif()
+
+if(CUPDLP_GPU AND CMAKE_VERSION VERSION_LESS "3.25.0")
+    message("CUPDLP FindCUDAConf requires CMake version minimum 3.24. Please use a higher version of CMake.")
 endif()
 
 # if (NOT LINUX)
@@ -146,31 +193,111 @@ endif()
   # message(STATUS "CUPLDP with Nvidia is only supported on Linux at the moment. Using CPU version.")
 # endif()
 
-if (CUPDLP_GPU)
+option(BUILD_OPENBLAS "Build OpenBLAS" OFF)
+message(STATUS "Build OpenBLAS: ${BUILD_OPENBLAS}")
+option(NO_AVX512 "Build OpenBLAS without AVX512" OFF)
+
+if (HIPO_PYTHON OR BUILD_STATIC_EXE)
+  set(NO_AVX512 ON)
+endif()
+
+if (NO_AVX512)
+  message(STATUS "Build OpenBLAS without AVX512: ON")
+endif()
+
+if (HIPO AND CSHARP)
+  message(ERROR "HIPO is only available in C++. Not yet supported in C#.")
+endif()
+if (HIPO AND FORTRAN)
+  message(ERROR "HIPO is only available in C++. Not yet supported in FORTRAN")
+endif()
+if (HIPO AND NOT FAST_BUILD)
+  message(ERROR "HIPO is only available with FAST_BUILD=ON.")
+endif()
+
+if (CUPDLP_GPU OR HIPDLP_GPU)
   if (WIN32)
     set(BUILD_SHARED_LIBS ON)
   endif()
 
-  set (CUPDLP_CPU OFF)
-  message(NOTICE "Set build cuPDLP with CUDA")
+  set(CUPDLP_CPU OFF)
 
-  if (CUPDLP_FIND_CUDA)
-    # With FindCUDAConf.cmake
-    # Need to have the CUDA_HOME environment variable set.
-    include(FindCUDAConf)
-  else() 
-    # Without FindCUDAConf.cmake
-    enable_language(CUDA)
-    find_package(CUDAToolkit REQUIRED)
-    
-    set(CUDA_LIBRARY-NOTFOUND, OFF)
-    set(CUDA_LIBRARY CUDA::cudart CUDA::cublas CUDA::cusparse)
+  if (HIPDLP_HIP)
+    message(NOTICE "Set build HiPDLP with HIP (AMD ROCm)")
+
+    # ROCm/HIP requires CMake 3.21+
+    if(CMAKE_VERSION VERSION_LESS "3.21.0")
+      message(FATAL_ERROR "HIP support requires CMake >= 3.21")
+    endif()
+
+    # Allow the user to point to a non-standard ROCm install
+    if(DEFINED ENV{ROCM_PATH})
+      set(CMAKE_PREFIX_PATH "$ENV{ROCM_PATH}" ${CMAKE_PREFIX_PATH})
+    elseif(EXISTS "/opt/rocm")
+      set(CMAKE_PREFIX_PATH "/opt/rocm" ${CMAKE_PREFIX_PATH})
+    endif()
+
+    enable_language(HIP)
+    find_package(hipblas REQUIRED)
+    find_package(hipsparse REQUIRED)
+
+    # The default bfd linker is slow and memory-hungry with the ROCm toolchain
+    # and can stall on memory-constrained machines.
+    # The ROCm clang bundles lld and we use it if it is available.
+    find_program(HIGHS_LLD_LINKER NAMES ld.lld lld
+      HINTS ENV ROCM_PATH /opt/rocm
+      PATH_SUFFIXES lib/llvm/bin bin llvm/bin)
+    if (HIGHS_LLD_LINKER)
+      set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -fuse-ld=lld")
+      message(STATUS "HIP: linking with lld (${HIGHS_LLD_LINKER})")
+    else()
+      message(STATUS "HIP: lld not found; using the default linker")
+    endif()
+
+    set(GPU_LIBRARY roc::hipblas roc::hipsparse)
+    set(GPU_COMPILE_DEFINITIONS USE_HIP)
+
+  else()
+    message(NOTICE "Set build cuPDLP with CUDA")
+
+    if (CUPDLP_FIND_CUDA)
+      # With FindCUDAConf.cmake
+      # Need to have the CUDA_HOME environment variable set.
+      include(FindCUDAConf)
+    else()
+      # Without FindCUDAConf.cmake
+      enable_language(CUDA)
+      find_package(CUDAToolkit REQUIRED)
+
+      set(CUDA_LIBRARY-NOTFOUND, OFF)
+      set(CUDA_LIBRARY CUDA::cudart CUDA::cublas CUDA::cusparse)
+    endif()
+
+    set(GPU_LIBRARY ${CUDA_LIBRARY})
+    set(GPU_COMPILE_DEFINITIONS "")
   endif()
 
 else()
-  set (CUPDLP_CPU ON)
-    set(CUDA_LIBRARY-NOTFOUND true)
+  set(CUPDLP_CPU ON)
+  set(CUDA_LIBRARY-NOTFOUND true)
+  set(HIPDLP_GPU OFF)
 endif()
+
+if(BUILD_STATIC_EXE)
+  set(BUILD_SHARED_LIBS OFF)
+
+  # Link statically on Linux
+  if(UNIX AND NOT APPLE)
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static")
+    set(CMAKE_FIND_LIBRARY_SUFFIXES ".a")
+  endif()
+
+  # Windows: link runtime statically
+  # if(MSVC)
+  #   set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+  # endif()
+endif()
+
 
 if (BUILD_CXX)
   # Default Build Type to be Release
@@ -205,7 +332,7 @@ if (BUILD_CXX)
     set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR})
     set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR})
     set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_BINDIR})
-    # for multi-config build system (e.g. xcode) 
+    # for multi-config build system (e.g. xcode)
     foreach(OutputConfig IN LISTS CMAKE_CONFIGURATION_TYPES)
       string(TOUPPER ${OutputConfig} OUTPUTCONFIG)
       set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_${OUTPUTCONFIG} ${CMAKE_BINARY_DIR}/${OutputConfig}/${CMAKE_INSTALL_LIBDIR})
@@ -244,14 +371,14 @@ if (BUILD_CXX)
     option(STDCALL "Build highs with the __stdcall convention" OFF)
   endif()
 
-  if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR 
-    CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR  
-    CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang") 
+  if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR
+    CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR
+    CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
-  # elseif (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC") 
+  # elseif (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
   # not recognised by cl
-  #   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /std:c++11") 
-  endif()  
+  #   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /std:c++11")
+  endif()
 
   # Basic type
   include(CMakePushCheckState)
@@ -275,7 +402,7 @@ if (BUILD_CXX)
   check_type_size("int *" SIZEOF_INT_P LANGUAGE CXX)
   message(STATUS "Found int * size: ${SIZEOF_INT_P}")
   cmake_pop_check_state()
- 
+
   # Use current CMAKE_C_FLAGS and CMAKE_CXX_FLAGS when checking for IPO support,
   # instead of defaults: https://cmake.org/cmake/help/latest/policy/CMP0138.html
   if(MSVC AND BUILD_SHARED_LIBS)
@@ -293,7 +420,7 @@ if (BUILD_CXX)
     set(ipo_supported NO)
     message(STATUS "IPO / LTO not currently supported building HiGHS on MinGW")
   else()
-    if(CMAKE_VERSION VERSION_GREATER_EQUAL  "3.24.0") 
+    if(CMAKE_VERSION VERSION_GREATER_EQUAL  "3.24.0")
       cmake_policy(SET CMP0138 NEW)
     endif()
 
@@ -326,12 +453,28 @@ if (BUILD_CXX)
             "IPO / LTO: disabled by default when building a static library; "
             "set CMAKE_INTERPROCEDURAL_OPTIMIZATION=ON to enable")
   else()
-    set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
-    message(STATUS "IPO / LTO: enabled")
+    if(EXISTS "/etc/alpine-release")
+      # LTO is known to cause issues with fortified functions on Alpine (musl)
+      set(CMAKE_INTERPROCEDURAL_OPTIMIZATION FALSE)
+      message(STATUS "IPO / LTO: disabled on Alpine to avoid conflicts with fortified functions")
+    else()
+      set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
+      message(STATUS "IPO / LTO: enabled")
+    endif()
   endif()
-  if (CUPDLP_GPU AND CMAKE_INTERPROCEDURAL_OPTIMIZATION)
+  if ((CUPDLP_GPU OR HIPDLP_HIP) AND CMAKE_INTERPROCEDURAL_OPTIMIZATION)
       set(CMAKE_INTERPROCEDURAL_OPTIMIZATION FALSE)
       message(STATUS "IPO / LTO is not supported at the moment when PDLP is using GPU: LTO disabled.")
+  endif()
+
+  if (LINUX AND CMAKE_SIZEOF_VOID_P EQUAL 4)
+      set(CMAKE_INTERPROCEDURAL_OPTIMIZATION FALSE)
+      message(STATUS "IPO / LTO is not supported for 32-bit linux.")
+  endif()
+
+  if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+      set(CMAKE_INTERPROCEDURAL_OPTIMIZATION FALSE)
+      message(STATUS "IPO / LTO: disabled for Debug build")
   endif()
 
 endif()
@@ -371,7 +514,7 @@ else()
     HIGHS_HAVE_BUILTIN_CLZ)
 endif()
 
-set(CMAKE_MACOSX_RPATH ON)
+set(CMAKE_MACOSX_RPATH TRUE)
 
 if (BUILD_DOTNET)
     set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
@@ -384,6 +527,10 @@ else()
     set(CMAKE_BUILD_WITH_INSTALL_RPATH FALSE)
     set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 endif()
+
+# In your CMakeLists.txt
+set(CMAKE_INSTALL_DEFAULT_COMPONENT_NAME "cli;libs")
+
 
 if(NOT FAST_BUILD)
   set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${HIGHS_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR})
@@ -428,7 +575,7 @@ endif()
 
 # For debug of cuda locally
 
-# does not work with older CMake 
+# does not work with older CMake
 # add_compile_options("$<$<AND:$<CONFIG:Debug,RelWithDebInfo>,$<COMPILE_LANGUAGE:CUDA>>:-G>")
 
 # add_compile_options("$<$<COMPILE_LANGUAGE:CUDA>:-G>")
@@ -440,7 +587,7 @@ endif()
 
 # set(CMAKE_C_FLAGS "-Wno-deprecated-declarations")
 if (UNIX)
-  set(CMAKE_C_FLAGS "-Wno-implicit-function-declaration")
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-implicit-function-declaration")
 endif()
 
 
@@ -453,13 +600,15 @@ if(MSVC)
   add_compile_options("$<$<COMPILE_LANGUAGE:C,CXX>:-D_CRT_SECURE_NO_WARNINGS>")
   add_compile_options("$<$<COMPILE_LANGUAGE:C,CXX>:/MP>")
 
-  # Try to split large pdb files into objects. 
+  # Try to split large pdb files into objects.
   # https://github.com/tensorflow/tensorflow/issues/31610
   # add_compile_options("/Z7")
   # add_link_options("/DEBUG:FASTLINK")
 
-  add_compile_options("$<$<COMPILE_LANGUAGE:C,CXX>:/Z7>")
-  add_link_options("$<$<COMPILE_LANGUAGE:C,CXX>:/DEBUG:FASTLINK>")
+  if (NOT BUILD_STATIC_EXE)
+    add_compile_options("$<$<COMPILE_LANGUAGE:C,CXX>:/Z7>")
+    add_link_options("$<$<COMPILE_LANGUAGE:C,CXX>:/DEBUG:FASTLINK>")
+  endif()
 
   if(STDCALL)
     # /Gz - stdcall calling convention
@@ -500,12 +649,26 @@ if(ZLIB AND NOT TARGET ZLIB::ZLIB)
   find_package(ZLIB 1.2.3)
 endif()
 
-include(CPack)
-set(CPACK_PACKAGE_VERSION_MAJOR "${HIGHS_VERSION_MAJOR}")
-set(CPACK_PACKAGE_VERSION_MINOR "${HIGHS_VERSION_MINOR}")
-set(CPACK_PACKAGE_VERSION_PATCH "${HIGHS_VERSION_PATCH}")
-set(CPACK_PACKAGE_VENDOR "University of Edinburgh")
+if (NOT CMAKE_INSTALL_DOCDIR STREQUAL "" AND BUILD_CXX)
+  install(FILES
+      README.md
+      LICENSE.txt
+      AUTHORS
+      CITATION.cff
+      CODE_OF_CONDUCT.md
+      CONTRIBUTING.md
+      FEATURES.md
+      DESTINATION ${CMAKE_INSTALL_DOCDIR})
+endif()
 
+# Set default generator based on platform
+if(WIN32)
+    set(CPACK_GENERATOR "ZIP")
+elseif(APPLE)
+    set(CPACK_GENERATOR "TGZ")
+else()
+    set(CPACK_GENERATOR "TGZ")
+endif()
 
 # Deprecate
 # string(TIMESTAMP TODAY "%Y-%m-%d")
@@ -524,6 +687,10 @@ if (DEBUG_MEMORY STREQUAL "Address")
       -fsanitize=address,undefined \
       -fno-omit-frame-pointer \
       -fsanitize-address-use-after-scope")
+  set (CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_RELWITHDEBINFO} \
+      -fsanitize=address,undefined \
+      -fno-omit-frame-pointer \
+      -fsanitize-address-use-after-scope")
   set (CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO "${CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO} \
       -fsanitize=address,undefined \
       -fno-omit-frame-pointer \
@@ -538,18 +705,26 @@ if (DEBUG_MEMORY STREQUAL "Address")
       -fsanitize=address,undefined \
       -fno-omit-frame-pointer \
       -fno-optimize-sibling-calls ")
+  set (CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} \
+      -fsanitize=address,undefined \
+      -fno-omit-frame-pointer \
+      -fno-optimize-sibling-calls ")
   set (CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG} \
       -fsanitize=address,undefined \
       -fno-omit-frame-pointer \
       -fno-optimize-sibling-calls ")
 
 elseif (DEBUG_MEMORY STREQUAL "Thread")
-  set (CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} -fsanitize=thread,undefined \
+  set (CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} -fsanitize=thread \
       -fno-omit-frame-pointer")
-  set (CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO "${CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO} -fsanitize=thread,undefined \
+  set (CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_RELWITHDEBINFO} -fsanitize=thread \
+      -fno-omit-frame-pointer")
+  set (CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO "${CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO} -fsanitize=thread \
       -fno-omit-frame-pointer")
 
   set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fsanitize=thread \
+      -fno-omit-frame-pointer ")
+  set (CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -fsanitize=thread \
       -fno-omit-frame-pointer ")
   set (CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG} -fsanitize=thread \
       -fno-omit-frame-pointer ")
@@ -559,10 +734,15 @@ elseif (DEBUG_MEMORY STREQUAL "Leak")
     set (CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} \
         -fsanitize=leak \
         -fno-omit-frame-pointer")
+    set (CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_RELWITHDEBINFO} \
+        -fsanitize=leak \
+        -fno-omit-frame-pointer")
     set (CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO "${CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO} \
         -fsanitize=leak \
         -fno-omit-frame-pointer")
     set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fsanitize=leak \
+        -fno-omit-frame-pointer ")
+    set (CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -fsanitize=leak \
         -fno-omit-frame-pointer ")
     set (CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG} -fsanitize=leak \
         -fno-omit-frame-pointer ")
@@ -570,10 +750,15 @@ elseif (DEBUG_MEMORY STREQUAL "Leak")
     set (CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} \
         -fsanitize=leak,undefined \
         -fno-omit-frame-pointer")
+    set (CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_RELWITHDEBINFO} \
+        -fsanitize=leak,undefined \
+        -fno-omit-frame-pointer")
     set (CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO "${CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO} \
         -fsanitize=leak,undefined \
         -fno-omit-frame-pointer")
     set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fsanitize=leak,undefined \
+        -fno-omit-frame-pointer ")
+    set (CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -fsanitize=leak,undefined \
         -fno-omit-frame-pointer ")
     set (CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG} -fsanitize=leak,undefined \
         -fno-omit-frame-pointer ")
@@ -583,10 +768,15 @@ elseif (DEBUG_MEMORY STREQUAL "Memory")
     set (CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} \
         -fsanitize=memory \
         -fno-omit-frame-pointer")
+    set (CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_RELWITHDEBINFO} \
+        -fsanitize=memory \
+        -fno-omit-frame-pointer")
     set (CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO "${CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO} \
         -fsanitize=memory \
         -fno-omit-frame-pointer")
     set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fsanitize=memory \
+        -fno-omit-frame-pointer ")
+    set (CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -fsanitize=memory \
         -fno-omit-frame-pointer ")
     set (CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG} -fsanitize=memory \
         -fno-omit-frame-pointer ")
@@ -611,11 +801,11 @@ if(FAST_BUILD AND HIGHS_COVERAGE)
   message(STATUS "Building in coverage mode")
 
   # Enable coverage flags
-  add_compile_options(-O0) 
-  add_compile_options(--coverage) 
-  add_compile_options(-fprofile-update=atomic) 
+  add_compile_options(-O0)
+  add_compile_options(--coverage)
+  add_compile_options(-fprofile-update=atomic)
 
-  add_link_options(-O0) 
+  add_link_options(-O0)
   add_link_options(--coverage)    # Ensure coverage data is linked correctly
 
   find_program(GCOV_PATH gcov)
@@ -731,6 +921,7 @@ if(NOT FAST_BUILD)
     ${PROJECT_SOURCE_DIR}/highs
     ${PROJECT_SOURCE_DIR}/highs/io
     ${PROJECT_SOURCE_DIR}/highs/pdlp/cupdlp
+    ${PROJECT_SOURCE_DIR}/highs/pdlp/hipdlp
     ${PROJECT_SOURCE_DIR}/highs/ipm/ipx
     ${PROJECT_SOURCE_DIR}/highs/ipm/basiclu
     ${PROJECT_SOURCE_DIR}/highs/lp_data
@@ -739,7 +930,6 @@ if(NOT FAST_BUILD)
     ${PROJECT_SOURCE_DIR}/highs/presolve
     ${PROJECT_SOURCE_DIR}/highs/qpsolver
     ${PROJECT_SOURCE_DIR}/highs/simplex
-    ${PROJECT_SOURCE_DIR}/highs/test_kkt
     ${PROJECT_SOURCE_DIR}/highs/util)
 
   # explicitly switch on colored output for ninja
@@ -764,8 +954,6 @@ if(NOT FAST_BUILD)
 else(FAST_BUILD)
   message(STATUS "FAST_BUILD set to on.")
 
-  option(BUILD_EXAMPLES "Build examples" ON)
-  message(STATUS "Build examples: ${BUILD_EXAMPLES}")
 
   CMAKE_DEPENDENT_OPTION(BUILD_CXX_EXAMPLE "Build cxx example" ON "BUILD_EXAMPLES;BUILD_CXX" OFF)
   message(STATUS "Build C++ example: ${BUILD_CXX_EXAMPLE}")
@@ -779,17 +967,15 @@ else(FAST_BUILD)
 
   include(cpp-highs)
 
-  if(BUILD_CXX)
+  if(BUILD_CXX AND NOT HIPO_PYTHON)
     add_subdirectory(app)
     add_subdirectory(examples)
   endif()
 
-  if(BUILD_TESTING)
+  if(BUILD_TESTING AND NOT HIPO_PYTHON)
     enable_testing()
     add_subdirectory(check)
   endif()
-
-  include(python-highs)
 
   option(USE_DOTNET_STD_21 "Use .Net Standard 2.1 support" ON)
   message(STATUS ".Net: Use .Net Framework 2.1 support: ${USE_DOTNET_STD_21}")
@@ -811,4 +997,87 @@ else(FAST_BUILD)
     target_link_libraries(doctest highs)
   endif()
 
+endif()
+
+if (HIPO_PYTHON)
+  add_subdirectory(highspy)
+else()
+  add_subdirectory(extern)
+endif()
+
+# Prevent nested directory structure in the archive
+set(CPACK_INCLUDE_TOPLEVEL_DIRECTORY OFF)
+set(CPACK_COMPONENT_INCLUDE_TOPLEVEL_DIRECTORY OFF)
+
+# Detect system information
+if(UNIX AND NOT APPLE)
+  set(OS_NAME "linux")
+elseif(APPLE)
+  set(OS_NAME "apple")
+elseif(WIN32)
+  set(OS_NAME "windows")
+else()
+  set(OS_NAME "unknown")
+endif()
+
+# Get architecture
+if(CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64|AMD64")
+  set(ARCH "x86_64")
+elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64|ARM64")
+  set(ARCH "aarch64")
+elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "arm")
+  set(ARCH "arm")
+else()
+  set(ARCH ${CMAKE_SYSTEM_PROCESSOR})
+endif()
+
+# Get libc info (for Linux)
+if(UNIX AND NOT APPLE)
+  execute_process(
+    COMMAND ldd --version
+    OUTPUT_VARIABLE LDD_OUTPUT
+    ERROR_VARIABLE LDD_OUTPUT
+  )
+  if(LDD_OUTPUT MATCHES "musl")
+    set(LIBC "musl")
+  else()
+    set(LIBC "gnu")
+  endif()
+  set(PLATFORM "${ARCH}-${OS_NAME}-${LIBC}")
+else()
+  set(PLATFORM "${ARCH}-${OS_NAME}")
+endif()
+
+# Set CPack filename
+if(BUILD_STATIC_EXE)
+  if (HIPO)
+    set(CPACK_PACKAGE_FILE_NAME "highs-${VERSION}-${PLATFORM}-static-apache")
+  else()
+    set(CPACK_PACKAGE_FILE_NAME "highs-${VERSION}-${PLATFORM}-static-mit")
+  endif()
+else()
+  if (HIPO)
+    set(CPACK_PACKAGE_FILE_NAME "highs-${VERSION}-${PLATFORM}-apache")
+  else()
+    set(CPACK_PACKAGE_FILE_NAME "highs-${VERSION}-${PLATFORM}-mit")
+  endif()
+endif()
+
+set(CPACK_PACKAGE_NAME "HiGHS")
+set(CPACK_PACKAGE_VERSION ${PROJECT_VERSION})
+set(CPACK_PACKAGE_VERSION_MAJOR "${HIGHS_VERSION_MAJOR}")
+set(CPACK_PACKAGE_VERSION_MINOR "${HIGHS_VERSION_MINOR}")
+set(CPACK_PACKAGE_VERSION_PATCH "${HIGHS_VERSION_PATCH}")
+set(CPACK_PACKAGE_VENDOR "University of Edinburgh")
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "\
+Open source serial and parallel solvers for large-scale sparse \
+linear programming (LP), mixed-integer programming (MIP), and \
+quadratic programming (QP) models")
+
+set(CPACK_COMPONENTS_ALL cli libs)
+set(CPACK_COMPONENT_CLI_DISPLAY_NAME "HiGHS CLI (static)")
+set(CPACK_COMPONENT_LIBS_DISPLAY_NAME "HiGHS Libraries")
+
+if(NOT CPack_CMake_INCLUDED)
+  include(CPack)
 endif()

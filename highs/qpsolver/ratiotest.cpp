@@ -1,12 +1,19 @@
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/*                                                                       */
+/*    This file is part of the HiGHS linear optimization suite           */
+/*                                                                       */
+/*    Available as open-source under the MIT License                     */
+/*                                                                       */
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 #include "qpsolver/ratiotest.hpp"
 
 static double step(double x, double p, double l, double u, double t) {
-  if (p < -t && l > -std::numeric_limits<double>::infinity()) {
+  if (p < -t && l > -kHighsInf) {
     return (l - x) / p;
-  } else if (p > t && u < std::numeric_limits<double>::infinity()) {
+  } else if (p > t && u < kHighsInf) {
     return (u - x) / p;
   } else {
-    return std::numeric_limits<double>::infinity();
+    return kHighsInf;
   }
 }
 
@@ -17,6 +24,7 @@ static RatiotestResult ratiotest_textbook(Runtime& rt, const QpVector& p,
   RatiotestResult result;
   result.limitingconstraint = -1;
   result.alpha = alphastart;
+  result.nowactiveatlower = false;
 
   // check ratio towards variable bounds
   for (HighsInt j = 0; j < p.num_nz; j++) {
@@ -99,25 +107,25 @@ static RatiotestResult ratiotest_twopass(Runtime& runtime, const QpVector& p,
 Instance ratiotest_relax_instance(Runtime& runtime) {
   Instance relaxed_instance = runtime.instance;
   for (double& bound : relaxed_instance.con_lo) {
-    if (bound != -std::numeric_limits<double>::infinity()) {
+    if (bound != -kHighsInf) {
       bound -= runtime.settings.ratiotest_d;
     }
   }
 
   for (double& bound : relaxed_instance.con_up) {
-    if (bound != std::numeric_limits<double>::infinity()) {
+    if (bound != kHighsInf) {
       bound += runtime.settings.ratiotest_d;
     }
   }
 
   for (double& bound : relaxed_instance.var_lo) {
-    if (bound != -std::numeric_limits<double>::infinity()) {
+    if (bound != -kHighsInf) {
       bound -= runtime.settings.ratiotest_d;
     }
   }
 
   for (double& bound : relaxed_instance.var_up) {
-    if (bound != std::numeric_limits<double>::infinity()) {
+    if (bound != kHighsInf) {
       bound += runtime.settings.ratiotest_d;
     }
   }

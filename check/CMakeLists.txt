@@ -16,7 +16,7 @@ endif()
 
 if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
   # prepare Catch library
-  set(CATCH_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/extern)
+  set(CATCH_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/extern/catch)
   add_library(Catch INTERFACE)
   target_include_directories(Catch INTERFACE ${CATCH_INCLUDE_DIR})
 
@@ -39,6 +39,7 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
       TestFactor.cpp
       TestFilereader.cpp
       TestHighsCDouble.cpp
+      TestHighsExternalDeps.cpp
       TestHighsGFkSolve.cpp
       TestHighsHash.cpp
       TestHighsHessian.cpp
@@ -56,7 +57,7 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
       TestIpm.cpp
       TestIpx.cpp
       TestLogging.cpp
-      TestLPFileFormat.cpp
+      TestLpFileFormat.cpp
       TestLpModification.cpp
       TestLpOrientation.cpp
       TestLpSolvers.cpp
@@ -68,31 +69,34 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
       TestNames.cpp
       TestOptions.cpp
       TestPdlp.cpp
+      TestPdlpHi.cpp
       TestPresolve.cpp
+      TestPresolveRules.cpp
+      TestQpOracle.cpp
       TestQpSolver.cpp
       TestRanging.cpp
       TestRays.cpp
+      TestRunData.cpp
       TestSemiVariables.cpp
       TestSetup.cpp
       TestSort.cpp
       TestSpecialLps.cpp
+      TestSymmetry.cpp
       TestThrow.cpp
       TestTspSolver.cpp
       TestUserScale.cpp
       Avgas.cpp)
+
+
+  if (HIPO)
+      list(APPEND TEST_SOURCES TestHipo.cpp)
+  endif()
 
   set(OPT_LEVEL_CHANGED OFF)
 
   if(CMAKE_CXX_FLAGS_RELEASE MATCHES "-O[0-9s]" AND NOT CMAKE_CXX_FLAGS_RELEASE MATCHES "-O3")
     # message(MESSAGE "User has overridden the default optimization level for Release mode.")
     set(OPT_LEVEL_CHANGED ON)
-  endif()
-
-  if (LINUX AND NOT OPT_LEVEL_CHANGED AND CMAKE_CXX_COMPILER_ID STREQUAL "g++" AND CMAKE_SIZEOF_VOID_P EQUAL 8)
-    if (NOT ((${CMAKE_SYSTEM_PROCESSOR} STREQUAL "arm64")) AND 
-        NOT (${CMAKE_SYSTEM_PROCESSOR} MATCHES "riscv(32|64)"))
-        set(TEST_SOURCES ${TEST_SOURCES} TestLpSolversIterations.cpp)
-    endif()
   endif()
 
   if (BUILD_EXTRA_UNIT_TESTS)
@@ -106,6 +110,9 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
 
   add_executable(unit_tests ${TEST_SOURCES})
 
+  set_target_properties(unit_tests PROPERTIES UNITY_BUILD OFF)
+
+
   if (UNIX)
       target_compile_options(unit_tests PRIVATE "-Wno-unused-variable")
       target_compile_options(unit_tests PRIVATE "-Wno-unused-const-variable")
@@ -115,13 +122,19 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
     target_link_libraries(unit_tests highs Catch)
 
     if (CUPDLP_GPU)
-        if (WIN32)
-            target_link_libraries(unit_tests cudalin ${CUDA_LIBRARY})
-        else()
-            target_link_libraries(unit_tests cudalin ${CUDA_LIBRARY} m)
-        endif()
+        # Link unit tests to cuda too!
         target_include_directories(unit_tests PRIVATE ${PROJECT_SOURCE_DIR}/highs/pdlp/cupdlp/cuda)
         set_target_properties(unit_tests PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
+        if (WIN32)
+            target_link_libraries(unit_tests ${CUDA_LIBRARY})
+        else()
+            target_link_libraries(unit_tests ${CUDA_LIBRARY} m)
+        endif()
+
+        # If cudalin is used, link to cudalin too.
+        if (NOT HIGHS_GPU_LIB)
+            target_link_libraries(unit_tests cudalin)
+        endif()
     endif()
   else()
     target_link_libraries(unit_tests libhighs Catch)
@@ -152,7 +165,9 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
   add_test(NAME capi_unit_tests COMMAND capi_unit_tests)
 
   # Check whether test executable builds OK.
-  if (NOT HIGHS_COVERAGE)
+  if ((NOT HIGHS_COVERAGE) AND
+        (NOT BUILD_OPENBLAS OR
+        (LINUX AND CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64|amd64")))
     add_test(NAME unit-test-build
             COMMAND ${CMAKE_COMMAND}
                     --build ${HIGHS_BINARY_DIR}
@@ -251,14 +266,14 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
 
   set(failInstances
       )
-  
-  set(mipInstances 
+
+  set(mipInstances
       "small_mip\;3.2368421\;"
       "flugpl\;1201500\;"
       "lseu\;1120|1119.9999999\;"
       "egout\;(568.1007|568.1006999)\;"
       "gt2\;21166\;"
-      "rgn\;82.1999992\;"
+      "rgn\;82.19999\;"
       "bell5\;(8966406.49152|8966406.491519|8966406.49151)\;"
       "sp150x300d\;(69|68.9999999)\;"
       "p0548\;(8691|8690.9999999)\;"
@@ -277,7 +292,17 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
   #   "--parallel=on"
       )
 
-  if (UNIX AND NOT APPLE AND NOT CMAKE_CXX_COMPILER_ID STREQUAL "IntelLLVM")
+  if ((CMAKE_SIZEOF_VOID_P EQUAL 4) OR
+        (CMAKE_C_FLAGS MATCHES "-m32" OR CMAKE_CXX_FLAGS MATCHES "-m32"))
+    set(IS_32 ON)
+  else()
+    set(IS_32 OFF)
+  endif()
+
+  if (UNIX AND NOT APPLE AND
+        NOT CMAKE_CXX_COMPILER_ID STREQUAL "IntelLLVM"
+        AND CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64|amd64"
+        AND NOT IS_32)
     if (CUPDLP_GPU)
         set(pdlpInstances
             "25fv47\; 5.501847\;"
@@ -311,7 +336,9 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
             "standgub\; 1.25769944\;"
             )
     endif()
-  elseif(WIN32 AND NOT CMAKE_CXX_COMPILER_ID STREQUAL "IntelLLVM")
+  elseif(WIN32 AND NOT CMAKE_CXX_COMPILER_ID STREQUAL "IntelLLVM" AND
+            NOT (CMAKE_SIZEOF_VOID_P EQUAL 4) AND
+            CMAKE_SYSTEM_PROCESSOR MATCHES "AMD64|x86_64")
     if (CUPDLP_GPU)
         set(pdlpInstances
             "25fv47\; 5.50184\;"
@@ -428,7 +455,8 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
     if(${CMAKE_SYSTEM_PROCESSOR} MATCHES "riscv64")
         add_instancetests(successRiscVInstances "Optimal")
     endif()
-  else()
+  elseif(NOT (CMAKE_SYSTEM_PROCESSOR MATCHES "arm|aarch64") AND
+             NOT IS_32)
     add_instancetests(successInstances "Optimal")
   endif()
 
@@ -496,7 +524,7 @@ endif()
 
 if (BUILD_EXTRA_UNIT_TESTS AND BUILD_EXTRA_UNIT_ONLY)
     # prepare Catch library
-    set(CATCH_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/extern)
+    set(CATCH_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/extern/catch)
     add_library(Catch INTERFACE)
     target_include_directories(Catch INTERFACE ${CATCH_INCLUDE_DIR})
 

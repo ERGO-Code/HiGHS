@@ -38,6 +38,7 @@ class HighsSparseMatrix {
   std::vector<double> value_;
 
   bool operator==(const HighsSparseMatrix& matrix) const;
+  bool equivalent(const HighsSparseMatrix& matrix) const;
   void clear();
   void exactResize();
   bool formatOk() const { return (this->isColwise() || this->isRowwise()); };
@@ -51,9 +52,9 @@ class HighsSparseMatrix {
 
   void addVec(const HighsInt num_nz, const HighsInt* index, const double* value,
               const double multiple = 1);
-  void addCols(const HighsSparseMatrix new_cols,
+  void addCols(const HighsSparseMatrix& new_cols,
                const int8_t* in_partition = NULL);
-  void addRows(const HighsSparseMatrix new_rows,
+  void addRows(const HighsSparseMatrix& new_rows,
                const int8_t* in_partition = NULL);
   void getRow(const HighsInt iRow, HighsInt& num_nz, HighsInt* index,
               double* value) const;
@@ -67,9 +68,11 @@ class HighsSparseMatrix {
   HighsStatus assessIndexBounds(const HighsLogOptions& log_options);
 
   HighsStatus assess(const HighsLogOptions& log_options,
-                     const std::string matrix_name,
+                     const std::string& matrix_name,
                      const double small_matrix_value,
-                     const double large_matrix_value);
+                     const double large_matrix_value, const bool sum_duplicates,
+                     const std::string* col_names = nullptr,
+                     const std::string* row_names = nullptr);
   void assessSmallValues(const HighsLogOptions& log_options,
                          const double small_matrix_value);
   bool hasLargeValue(const double large_matrix_value);

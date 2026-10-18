@@ -36,7 +36,13 @@ Int Model::Load(const Control& control, Int num_constr, Int num_var,
     // dualize = -1 => Possibly dualize - Lukas style
     // dualize = 0 => No dualization
     // dualize = 1 => Perform dualization
-    assert(dualize == -1);
+    //
+    // Was just assert(dualize == -1) since the default value of
+    // HighsOptions::ipx_dualize_strategy is kIpxDualizeStrategyLukas
+    // = -1, but when refining with IPX in HiPO, dualization must be
+    // prevented, so ipx_param.dualize is set to 0 in
+    // Solver::prepareIpx()
+    assert(dualize == 0 || dualize == -1);
     const bool dualize_lukas = num_constr > 2*num_var;
     const bool dualize_filippo = filippoDualizationTest();
     if (dualize == -1) {
@@ -1420,8 +1426,8 @@ void Model::DualizeBackBasis(const std::vector<Int>& basic_status_solver,
 
 void Model::CorrectScaledBasicSolution(Vector& x, Vector& slack, Vector& y,
                                        Vector& z,
-                                       const std::vector<Int> cbasis,
-                                       const std::vector<Int> vbasis) const {
+                                       const std::vector<Int>& cbasis,
+                                       const std::vector<Int>& vbasis) const {
     for (Int j = 0; j < num_var_; j++) {
         if (vbasis[j] == IPX_nonbasic_lb)
             x[j] = scaled_lbuser_[j];

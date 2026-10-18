@@ -27,11 +27,12 @@ HighsModelStatus HighsMipSolverData::feasibilityJump() {
   std::vector<double> col_value(model->num_col_, 0.0);
   double objective_function_value;
 
+  const bool use_incumbent = !incumbent.empty();
+
   // Configure Feasibility Jump and pass it the problem
-  int verbosity = mipsolver.submip ? 0 : mipsolver.options_mip_->log_dev_level;
   auto solver = external_feasibilityjump::FeasibilityJumpSolver(
+      log_options,
       /* seed = */ mipsolver.options_mip_->random_seed,
-      /* verbosity = */ verbosity,
       /* equalityTolerance = */ epsilon,
       /* violationTolerance = */ feastol);
 
@@ -67,10 +68,14 @@ HighsModelStatus HighsMipSolverData::feasibilityJump() {
                   sense_multiplier * model->col_cost_[col]);
 
     double initial_assignment = 0.0;
-    if (std::isfinite(lower)) {
-      initial_assignment = lower;
-    } else if (std::isfinite(upper)) {
-      initial_assignment = upper;
+    if (use_incumbent && std::isfinite(incumbent[col])) {
+      initial_assignment = std::max(lower, std::min(upper, incumbent[col]));
+    } else {
+      if (std::isfinite(lower)) {
+        initial_assignment = lower;
+      } else if (std::isfinite(upper)) {
+        initial_assignment = upper;
+      }
     }
     col_value[col] = initial_assignment;
   }

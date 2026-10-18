@@ -33,7 +33,7 @@ public:
     // 0 OK
     // 1 OK, but the factorization is numerically unstable; suggests tightening
     //   the pivot tolerance (see below) and to refactorize.
-    // 2 OK, but singularities occured and were replaced by unit columns.
+    // 2 OK, but singularities occurred and were replaced by unit columns.
     // 3 = 1 and 2
     Int Factorize(const Int* Bbegin, const Int* Bend, const Int* Bi,
                   const double* Bx, bool strict_abs_pivottol);
@@ -100,6 +100,8 @@ public:
     // Gets/sets the tolerance for partial threshold pivoting in Factorize().
     double pivottol() const;
     void pivottol(double new_pivottol);
+    void timeStart(double new_time_start);
+    void timeLimit(double new_time_limit);
 
     // Returns the number of updates since the last factorization.
     Int updates() const;
@@ -120,6 +122,8 @@ private:
     virtual double _fill_factor() const = 0;
     virtual double _pivottol() const = 0;
     virtual void _pivottol(double new_pivottol) = 0;
+    virtual void _timeStart(double new_time_start) = 0;
+    virtual void _timeLimit(double new_time_limit) = 0;
 
     Int updates_{0};            // counts updates since factorization
 };

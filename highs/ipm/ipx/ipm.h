@@ -37,6 +37,7 @@ public:
 
     Int maxiter() const { return maxiter_; }
     void maxiter(Int i) { maxiter_ = i; }
+    void PrintHeader();
 
 private:
     struct Step;
@@ -67,7 +68,6 @@ private:
     void SolveNewtonSystem(const double* rb, const double* rc,
                            const double* rl, const double* ru,
                            const double* sl, const double* su, Step& lhs);
-    void PrintHeader();
     void PrintOutput();
 
     const Control& control_;

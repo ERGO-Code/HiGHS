@@ -18,7 +18,7 @@ HiGHS uses CMake (minimum version 3.15) as a build system, and can use the follo
 
 Instructions for building HiGHS from source code are in `HiGHS/cmake/README.md`.
 
-The simplest setup is to build HiGHS in a build directory within the root direcory. The
+The simplest setup is to build HiGHS in a build directory within the root directory. The
 name of the build folder is arbitrary but, assuming it is `build`,
 the sequence of commands is as follows
 

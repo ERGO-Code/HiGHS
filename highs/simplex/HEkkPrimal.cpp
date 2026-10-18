@@ -289,7 +289,6 @@ HighsStatus HEkkPrimal::solve(const bool pass_force_phase2) {
     // unboundedness. Time/iteration limit return is, of course,
     // possible, as are solver error
     HighsStatus return_status = HighsStatus::kOk;
-    analysis->simplexTimerStart(SimplexDualPhase2Clock);
     // Switch off any bound perturbation
     double save_dual_simplex_cost_perturbation_multiplier =
         info.dual_simplex_cost_perturbation_multiplier;
@@ -302,7 +301,6 @@ HighsStatus HEkkPrimal::solve(const bool pass_force_phase2) {
     info.dual_simplex_cost_perturbation_multiplier =
         save_dual_simplex_cost_perturbation_multiplier;
     info.simplex_strategy = simplex_strategy;
-    analysis->simplexTimerStop(SimplexDualPhase2Clock);
     assert(ekk_instance_.called_return_from_solve_);
     return_status = interpretCallStatus(options.log_options, call_status,
                                         return_status, "HEkkDual::solve");
@@ -316,7 +314,7 @@ HighsStatus HEkkPrimal::solve(const bool pass_force_phase2) {
       highsLogDev(options.log_options, HighsLogType::kWarning,
                   "HEkkPrimal:: Dual simplex clean up yields  optimality, but "
                   "with %" HIGHSINT_FORMAT
-                  " (max %g) primal infeasibilities and " HIGHSINT_FORMAT
+                  " (max %g) primal infeasibilities and %" HIGHSINT_FORMAT
                   " (max %g) dual infeasibilities\n",
                   info.num_primal_infeasibilities,
                   info.max_primal_infeasibility, info.num_dual_infeasibilities,
@@ -493,8 +491,10 @@ void HEkkPrimal::solvePhase1() {
     if (variable_in < 0) {
       // Optimal in phase 1, so should have primal infeasibilities
       assert(info.num_primal_infeasibilities > 0);
-      if (ekk_instance_.info_.bounds_perturbed) {
-        // Remove any bound perturbations and return to phase 1
+      if (ekk_instance_.info_.bounds_shifted ||
+          ekk_instance_.info_.bounds_perturbed) {
+        // Remove any bound shifts or perturbations and return to
+        // phase 1
         cleanup();
       } else {
         ekk_instance_.model_status_ = HighsModelStatus::kInfeasible;
@@ -622,8 +622,10 @@ void HEkkPrimal::solvePhase2() {
     // There is no candidate in CHUZR, so probably primal unbounded
     highsLogDev(options.log_options, HighsLogType::kInfo,
                 "primal-phase-2-unbounded\n");
-    if (ekk_instance_.info_.bounds_perturbed) {
-      // If the bounds have been perturbed, clean up and return
+    if (ekk_instance_.info_.bounds_shifted ||
+        ekk_instance_.info_.bounds_perturbed) {
+      // If the bounds have been shifted or perturbed, clean up and
+      // return
       cleanup();
       // If there are primal infeasibilities, go back to phase 1
       if (ekk_instance_.info_.num_primal_infeasibilities > 0)
@@ -644,7 +646,7 @@ void HEkkPrimal::solvePhase2() {
 
 void HEkkPrimal::cleanup() {
   HighsSimplexInfo& info = ekk_instance_.info_;
-  if (!info.bounds_perturbed) return;
+  if (!info.bounds_shifted && !info.bounds_perturbed) return;
   highsLogDev(ekk_instance_.options_->log_options, HighsLogType::kDetailed,
               "primal-cleanup-shift\n");
   // Remove perturbation and don't permit further perturbation
@@ -811,7 +813,7 @@ void HEkkPrimal::iterate() {
         ekk_instance_.iteration_count_ >= from_check_iter &&
         ekk_instance_.iteration_count_ <= to_check_iter;
     if (ekk_instance_.debug_iteration_report_) {
-      printf("HEkkDual::iterate Debug iteration %d\n",
+      printf("HEkkPrimal::iterate Debug iteration %d\n",
              (int)ekk_instance_.iteration_count_);
     }
   }
@@ -1214,9 +1216,9 @@ void HEkkPrimal::phase1ChooseRow() {
   pdqsort(ph1SorterR.begin(), ph1SorterR.end());
   double dMaxTheta = ph1SorterR[0].first;
   double dGradient = fabs(theta_dual);
-  for (size_t i = 0; i < ph1SorterR.size(); i++) {
-    double dMyTheta = ph1SorterR[i].first;
-    HighsInt index = ph1SorterR[i].second;
+  for (const auto& candidate : ph1SorterR) {
+    double dMyTheta = candidate.first;
+    HighsInt index = candidate.second;
     HighsInt iRow = index >= 0 ? index : index + num_row;
     dGradient -= fabs(col_aq.array[iRow]);
     // Stop when the gradient start to decrease
@@ -1940,6 +1942,9 @@ void HEkkPrimal::considerInfeasibleValueIn() {
                  info.workLower_[variable_in], bound_shift);
       info.workLowerShift_[variable_in] += bound_shift;
     }
+    // Surely better to record this
+    //
+    //    info.bounds_shifted = true;
     info.bounds_perturbed = true;
   }
   ekk_instance_.invalidatePrimalMaxSumInfeasibilityRecord();
@@ -1960,8 +1965,12 @@ void HEkkPrimal::phase2UpdatePrimal(const bool initialise) {
   // ignored. If they aren't ignored, then violations lead to either
   // identification of infeasibilities (and return to Phase 1) or
   // shifting of bounds to accommodate them.
+  //
+  // primal_correction_strategy is defined (const) as
+  // kSimplexPrimalCorrectionStrategyAlways
   const bool ignore_bounds =
       primal_correction_strategy == kSimplexPrimalCorrectionStrategyInRebuild;
+  assert(primal_correction_strategy == kSimplexPrimalCorrectionStrategyAlways);
   HighsInt to_entry;
   const bool use_col_indices = ekk_instance_.simplex_nla_.sparseLoopStyle(
       col_aq.count, num_row, to_entry);
@@ -1982,6 +1991,8 @@ void HEkkPrimal::phase2UpdatePrimal(const bool initialise) {
     if (!bound_violated) continue;
     // A bound is violated
     if (primal_correction_strategy == kSimplexPrimalCorrectionStrategyNone) {
+      // Not used
+      assert(111 == 222);
       // @primal_infeasibility calculation
       double primal_infeasibility;
       if (bound_violated < 0) {
@@ -1996,6 +2007,8 @@ void HEkkPrimal::phase2UpdatePrimal(const bool initialise) {
         primal_infeasible = true;
       }
     } else if (ignore_bounds) {
+      // Not used
+      assert(111 == 333);
       double ignored_violation;
       if (bound_violated < 0) {
         ignored_violation = lower - value;
@@ -2021,6 +2034,7 @@ void HEkkPrimal::phase2UpdatePrimal(const bool initialise) {
         info.baseLower_[iRow] = info.workLower_[iCol];
         info.workLowerShift_[iCol] += bound_shift;
       }
+      info.bounds_shifted = true;
       assert(bound_shift > 0);
     }
   }
@@ -2091,6 +2105,9 @@ bool HEkkPrimal::correctPrimal(const bool initialise) {
         num_primal_correction++;
         max_primal_correction = max(bound_shift, max_primal_correction);
         sum_primal_correction += bound_shift;
+        // Surely better to record this
+        //
+        // info.bounds_shifted = true;
         info.bounds_perturbed = true;
       } else {
         // Bound perturbation is not permitted
@@ -2836,7 +2853,7 @@ void HEkkPrimal::shiftBound(const bool lower, const HighsInt iVar,
     double error = std::fabs(new_infeasibility + feasibility);
     highsLogDev(ekk_instance_.options_->log_options, HighsLogType::kInfo,
                 "HEkkPrimal::shiftBound Value(%4d) = %10.4g exceeds %s: "
-                "random_value = %g; value = %g; "
+                "old_bound = %g; random_value = %g; value = %g; "
                 "feasibility = %g; infeasibility = %g; shift = %g; bound = %g; "
                 "new_infeasibility = %g with error %g\n",
                 int(iVar), value, type.c_str(), old_bound, random_value, value,
@@ -2855,7 +2872,7 @@ void HEkkPrimal::savePrimalRay() {
   ekk_instance_.primal_ray_record_.sign = -move_in;
 }
 
-HighsDebugStatus HEkkPrimal::debugPrimalSimplex(const std::string message,
+HighsDebugStatus HEkkPrimal::debugPrimalSimplex(const std::string& message,
                                                 const bool initialise) {
   HighsDebugStatus return_status =
       ekk_instance_.debugSimplex(message, algorithm, solve_phase, initialise);
@@ -2868,7 +2885,7 @@ HighsDebugStatus HEkkPrimal::debugPrimalSimplex(const std::string message,
 }
 
 HighsDebugStatus HEkkPrimal::debugPrimalSteepestEdgeWeights(
-    const std::string message) {
+    const std::string& message) {
   // Possibly force the expensive check for development work
   const bool check_primal_edge_weights = true;
   if (check_primal_edge_weights) {

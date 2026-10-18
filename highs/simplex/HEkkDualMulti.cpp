@@ -843,9 +843,9 @@ void HEkkDual::majorUpdatePrimal() {
         // Update steepest edge weights
         HVector* Row = finish->row_ep;
         double Kai = -2 / finish->alpha_row;
-        ekk_instance_.updateDualSteepestEdgeWeights(row_out, variable_in, Col,
-                                                    new_pivotal_edge_weight,
-                                                    Kai, Row->array.data());
+        ekk_instance_.updateDualSteepestEdgeWeights(
+            finish->row_out, finish->variable_in, Col, new_pivotal_edge_weight,
+            Kai, Row->array.data());
       } else if (edge_weight_mode == EdgeWeightMode::kDevex &&
                  !new_devex_framework) {
         // Update Devex weights
@@ -891,9 +891,9 @@ void HEkkDual::majorUpdatePrimal() {
         // Devex
         for (HighsInt jFn = 0; jFn < iFn; jFn++) {
           HighsInt jRow = multi_finish[jFn].row_out;
-          const double aa_iRow = colArray[iRow];
-          edge_weight[jRow] = max(edge_weight[jRow],
-                                  new_pivotal_edge_weight * aa_iRow * aa_iRow);
+          const double value = colArray[jRow];
+          edge_weight[jRow] =
+              max(edge_weight[jRow], new_pivotal_edge_weight * value * value);
         }
         edge_weight[iRow] = new_pivotal_edge_weight;
         num_devex_iterations++;
@@ -947,8 +947,8 @@ void HEkkDual::majorRollback() {
     ekk_instance_.updateMatrix(finish->variable_out, finish->variable_in);
 
     // 3. Roll back flips
-    for (unsigned i = 0; i < finish->flipList.size(); i++) {
-      ekk_instance_.flipBound(finish->flipList[i]);
+    for (HighsInt var : finish->flipList) {
+      ekk_instance_.flipBound(var);
     }
 
     // 4. Roll back cost
@@ -960,7 +960,7 @@ void HEkkDual::majorRollback() {
   }
 }
 
-bool HEkkDual::checkNonUnitWeightError(std::string message) {
+bool HEkkDual::checkNonUnitWeightError(const std::string& message) const {
   bool error_found = false;
   if (edge_weight_mode == EdgeWeightMode::kDantzig) {
     std::vector<double>& edge_weight = ekk_instance_.dual_edge_weight_;

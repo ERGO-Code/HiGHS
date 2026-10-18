@@ -28,7 +28,7 @@ class HighsTableauSeparator : public HighsSeparator {
                           HighsCutPool& cutpool) override;
 
   HighsTableauSeparator(const HighsMipSolver& mipsolver)
-      : HighsSeparator(mipsolver, "Tableau sepa"), numTries(0) {}
+      : HighsSeparator(mipsolver, kTableauSepaString), numTries(0) {}
 };
 
 #endif

@@ -11,7 +11,7 @@
 #ifndef SIMPLEX_SIMPLEXCONST_H_
 #define SIMPLEX_SIMPLEXCONST_H_
 
-#include "util/HighsInt.h"
+#include "util/HighsType.h"
 
 enum class SimplexAlgorithm { kNone = 0, kPrimal, kDual };
 

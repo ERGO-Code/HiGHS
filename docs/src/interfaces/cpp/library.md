@@ -98,3 +98,10 @@ To indicate that variables must take integer values use the `HighsLp::integralit
 
   highs.passModel(model);
 ```
+
+## Clearing the basis
+
+To clear any internal basis, call `HighsLp::setBasis` with no argument.
+
+
+

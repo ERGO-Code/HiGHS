@@ -11,13 +11,31 @@
 #ifndef LP_DATA_HIGHSSOLVE_H_
 #define LP_DATA_HIGHSSOLVE_H_
 
+#include "lp_data/HighsMipSolverObject.h"
 #include "lp_data/HighsModelUtils.h"
-HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message);
+#include "lp_data/HighsQpSolverObject.h"
+
+HighsStatus solveLp(HighsLpSolverObject& solver_object,
+                    const std::string& message);
+HighsStatus solveMip(HighsMipSolverObject& solver_object,
+                     const std::string& message);
+HighsStatus solveQp(HighsQpSolverObject& solver_object,
+                    const std::string& message);
+
 HighsStatus solveUnconstrainedLp(HighsLpSolverObject& solver_object);
 HighsStatus solveUnconstrainedLp(const HighsOptions& options, const HighsLp& lp,
                                  HighsModelStatus& model_status,
                                  HighsInfo& highs_info, HighsSolution& solution,
                                  HighsBasis& basis);
-void assessExcessiveBoundCost(const HighsLogOptions log_options,
-                              const HighsModel& model);
+void assessExcessiveObjectiveBoundScaling(const HighsOptions& options,
+                                          const HighsModel& model,
+                                          HighsUserScaleData& user_scale_data);
+bool useHipo(const HighsOptions& options,
+             const std::string& specific_solver_option, const HighsLp& lp,
+             const bool logging = false);
+
+HighsStatus checkOptimality(const std::string& solver_type,
+                            const HighsOptions& options_,
+                            const HighsInfo& info_,
+                            HighsModelStatus& model_status_);
 #endif  // LP_DATA_HIGHSSOLVE_H_

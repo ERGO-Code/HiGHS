@@ -1,6 +1,14 @@
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/*                                                                       */
+/*    This file is part of the HiGHS linear optimization suite           */
+/*                                                                       */
+/*    Available as open-source under the MIT License                     */
+/*                                                                       */
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 #ifndef __SRC_LIB_QPSOLVER_ASM_HPP__
 #define __SRC_LIB_QPSOLVER_ASM_HPP__
 
+#include "lp_data/HighsCallback.h"
 #include "qpsolver/instance.hpp"
 #include "qpsolver/qpconst.hpp"
 #include "qpsolver/settings.hpp"
@@ -62,9 +70,9 @@ void assessQpPrimalFeasibility(
     double& max_con_infeasibility, double& sum_con_infeasibilities,
     double& max_con_residual, double& sum_con_residuals);
 
-QpAsmStatus solveqp_actual(Instance& instance, Settings& settings,
-                           QpHotstartInformation& startinfo, Statistics& stats,
-                           QpModelStatus& status, QpSolution& solution,
-                           HighsTimer& qp_timer);
+QpAsmStatus solveqpActual(Instance& instance, Settings& settings,
+                          QpHotstartInformation& startinfo, Statistics& stats,
+                          QpModelStatus& status, QpSolution& solution,
+                          HighsTimer& qp_timer, HighsCallback& callback);
 
 #endif

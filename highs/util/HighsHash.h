@@ -21,7 +21,7 @@
 #include <utility>
 #include <vector>
 
-#include "util/HighsInt.h"
+#include "util/HighsType.h"
 
 #ifdef HIGHS_HAVE_BITSCAN_REVERSE
 #include <intrin.h>
@@ -988,6 +988,21 @@ class HighsHashTable {
     u64 initCapacity = u64{1} << (u64)std::ceil(std::log2(std::max(
                            128.0, 8 * static_cast<double>(minCapacity) / 7)));
     makeEmptyTable(initCapacity);
+  }
+
+  HighsHashTable(const HighsHashTable& hashTable)
+      : tableSizeMask(hashTable.tableSizeMask),
+        numHashShift(hashTable.numHashShift),
+        numElements(hashTable.numElements) {
+    u64 capacity = tableSizeMask + 1;
+    metadata = decltype(metadata)(new u8[capacity]);
+    entries =
+        decltype(entries)((Entry*)::operator new(sizeof(Entry) * capacity));
+
+    std::copy(hashTable.metadata.get(), hashTable.metadata.get() + capacity,
+              metadata.get());
+    std::copy(hashTable.entries.get(), hashTable.entries.get() + capacity,
+              entries.get());
   }
 
   iterator end() {

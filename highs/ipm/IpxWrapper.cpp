@@ -13,6 +13,7 @@
 
 #include <cassert>
 
+#include "HighsExternalApi.h"
 #include "lp_data/HighsOptions.h"
 #include "lp_data/HighsSolution.h"
 
@@ -63,6 +64,10 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
   resetModelStatusAndHighsInfo(model_status, highs_info);
   // Create the LpSolver instance
   ipx::LpSolver lps;
+  // Use the current HiGHS time as an offset for the lps.control_
+  // elapsed time
+  lps.setTimerOffset(timer.read());
+
   // Set IPX parameters
   //
   // Cannot set internal IPX parameters directly since they are
@@ -86,6 +91,10 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
   }
   parameters.highs_logging = true;
   parameters.timeless_log = options.timeless_log;
+  // Use this to change print_interval from default value (5s) to
+  // other value for debugging
+  //
+  //  parameters.print_interval = 1e-4;
   parameters.log_options = &options.log_options;
   // Just test feasibility and optimality tolerances for now
   // ToDo Set more parameters
@@ -121,8 +130,9 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
 
   parameters.analyse_basis_data =
       kHighsAnalysisLevelNlaData & options.highs_analysis_level;
-  // Determine the run time allowed for IPX
-  parameters.time_limit = options.time_limit - timer.read();
+  // Now that the lps.control_ elapsed time includes the HiGHS time,
+  // can use the HiGHS time limit
+  parameters.time_limit = options.time_limit;
   parameters.ipm_maxiter =
       options.ipm_iteration_limit - highs_info.ipm_iteration_count;
   // Determine if crossover is to be run or not
@@ -216,7 +226,8 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
   if (ipxStatusError(
           solve_status != IPX_STATUS_solved &&
               solve_status != IPX_STATUS_stopped,
-          options, "solve_status should be solved or stopped here but value is",
+          options, "Ipx",
+          "solve_status should be solved or stopped here but value is",
           (int)solve_status))
     return HighsStatus::kError;
 
@@ -277,7 +288,7 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
     }
   }
   // Should only reach here if Solve() returned IPX_STATUS_solved
-  if (ipxStatusError(solve_status != IPX_STATUS_solved, options,
+  if (ipxStatusError(solve_status != IPX_STATUS_solved, options, "Ipx",
                      "solve_status should be solved here but value is",
                      (int)solve_status))
     return HighsStatus::kError;
@@ -315,7 +326,7 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
   // Should only reach here if IPM is optimal or imprecise
   if (ipxStatusError(ipx_info.status_ipm != IPX_STATUS_optimal &&
                          ipx_info.status_ipm != IPX_STATUS_imprecise,
-                     options,
+                     options, "Ipx",
                      "ipm status should be not run, optimal or imprecise "
                      "but value is",
                      (int)ipx_info.status_ipm))
@@ -325,7 +336,7 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
   if (ipxStatusError(ipx_info.status_crossover != IPX_STATUS_not_run &&
                          ipx_info.status_crossover != IPX_STATUS_optimal &&
                          ipx_info.status_crossover != IPX_STATUS_imprecise,
-                     options,
+                     options, "Ipx",
                      "crossover status should be not run, optimal or imprecise "
                      "but value is",
                      (int)ipx_info.status_crossover))
@@ -394,6 +405,256 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
   return return_status;
 }
 
+HighsStatus solveLpHipo(HighsLpSolverObject& solver_object) {
+  return solveHipo(solver_object.options_, solver_object.timer_,
+                   solver_object.lp_, HighsHessian{}, solver_object.basis_,
+                   solver_object.solution_, solver_object.model_status_,
+                   solver_object.highs_info_, solver_object.callback_);
+}
+
+HighsStatus solveQpHipo(HighsQpSolverObject& solver_object) {
+  return solveHipo(solver_object.options_, solver_object.timer_,
+                   solver_object.model_.lp_, solver_object.model_.hessian_,
+                   solver_object.basis_, solver_object.solution_,
+                   solver_object.model_status_, solver_object.highs_info_,
+                   solver_object.callback_);
+}
+
+HighsStatus solveHipo(const HighsOptions& options, HighsTimer& timer,
+                      const HighsLp& lp, const HighsHessian& Q,
+                      HighsBasis& highs_basis, HighsSolution& highs_solution,
+                      HighsModelStatus& model_status, HighsInfo& highs_info,
+                      HighsCallback& callback) {
+  // Use HiPO
+  //
+  // Can return HighsModelStatus (HighsStatus) values:
+  //
+  // 1. kSolveError (kError) if various unlikely solution errors occur
+  //
+  // 2. kTimeLimit (kWarning) if time limit is reached
+  //
+  // 3. kIterationLimit (kWarning) if iteration limit is reached
+  //
+  // 4. kUnknown (kWarning) if HiPO makes no progress or if
+  // IPM/crossover are imprecise
+  //
+  // 5. kInfeasible (kOk) if HiPO identifies primal infeasibility
+  //
+  // 6. kUnboundedOrInfeasible (kOk) if HiPO identifies dual
+  // infeasibility
+  //
+  // kOptimal (kOk) if HiPO/crossover identify optimality
+  //
+  // With a non-error return, if just HiPO has been run then a
+  // non-vertex primal solution is obtained; if crossover has been run
+  // then a basis and primal+dual solution are obtained.
+  //
+  //
+  // Indicate that there is no valid primal solution, dual solution or basis
+  highs_basis.valid = false;
+  highs_solution.value_valid = false;
+  highs_solution.dual_valid = false;
+  // Indicate that no imprecise solution has (yet) been found
+  resetModelStatusAndHighsInfo(model_status, highs_info);
+
+  // force openblas to run in serial, for determinism and better performance
+  // no-op if openblas is not used
+  HighsExtras::blas::openblas_set_num_threads(1);
+
+  // Create solver instance
+  hipo::Solver hipo{};
+  // This creates ipx::LpSolver ipx_lps_, in case HiPO has to switch
+  // to IPX, so use the current HiGHS time as an offset for the
+  // ipx_lps.control_ elapsed time
+  hipo.setIpxTimerOffset(timer.read());
+
+  if (options.kkt_tolerance != kDefaultKktTolerance) {
+    highsLogUser(options.log_options, HighsLogType::kInfo,
+                 "IpxWrapper: feasibility_tol = %g; optimality_tol = %g; "
+                 "crossover_tol = %g\n",
+                 options.kkt_tolerance, 1e-1 * options.kkt_tolerance,
+                 1e-1 * options.kkt_tolerance);
+  }
+
+  hipo.setOptions(options);
+  hipo.setTimer(timer);
+  hipo.setCallback(callback);
+
+  // Load the problem
+  hipo::Int load_status = hipo.load(lp, Q);
+  if (load_status) {
+    model_status = HighsModelStatus::kSolveError;
+    return HighsStatus::kError;
+  }
+
+  // This information about the problem loaded into HiPO is needed for later
+  HighsInt num_row, num_col;
+  hipo.getOriginalDims(num_row, num_col);
+  std::vector<double> rhs;
+  std::vector<char> constraints;
+  fillInRhsAndConstraints(lp, rhs, constraints);
+
+  hipo.solve();
+
+  // const bool report_solve_data =
+  //    kHighsAnalysisLevelSolverSummaryData & options.highs_analysis_level;
+
+  // hipo.solved(), hipo.stopped(), hipo.failed() can be used to query if the
+  // status belongs to the solved, stopped or failed group.
+
+  // Get solver and solution information.
+  const hipo::Info hipo_info = hipo.getInfo();
+  hipo::Status solve_status = hipo_info.status;
+  highs_info.ipm_iteration_count +=
+      hipo_info.ipm_iter + hipo_info.ipx_info.iter;
+  highs_info.crossover_iteration_count += hipo_info.ipx_info.updates_crossover;
+
+  // Report hipo status
+  const HighsStatus solve_return_status =
+      reportHipoStatus(options, solve_status, hipo);
+  if (solve_return_status == HighsStatus::kError) {
+    model_status = HighsModelStatus::kSolveError;
+    return HighsStatus::kError;
+  }
+
+  // Report crossover status
+  const HighsStatus crossover_return_status = reportHipoCrossoverStatus(
+      options, hipo_info.ipx_info.status_crossover, !Q.empty());
+  if (crossover_return_status == HighsStatus::kError) {
+    model_status = HighsModelStatus::kSolveError;
+    return HighsStatus::kError;
+  }
+
+  // Failures should have been handled. Status should be stopped or solved.
+  if (ipxStatusError(!hipo.solved() && !hipo.stopped(), options, "Hipo",
+                     "status should be solved or stopped but value is",
+                     solve_status))
+    return HighsStatus::kError;
+
+  if (hipo.stopped()) {
+    const HighsModelStatus local_model_status = HighsModelStatus::kUnknown;
+
+    getHipoNonVertexSolution(options, lp, num_col, num_row, rhs, constraints,
+                             hipo, local_model_status, highs_solution);
+
+    // For crossover
+    if (illegalIpxStoppedCrossoverStatus(hipo_info.ipx_info, options))
+      return HighsStatus::kError;
+    // Can stop and reach time limit
+    if (hipo_info.ipx_info.status_crossover == IPX_STATUS_time_limit) {
+      model_status = HighsModelStatus::kTimeLimit;
+      return HighsStatus::kWarning;
+    }
+
+    // if crossover didn't time out, then solver can only stop as follows
+    if (solve_status == hipo::kStatusUserInterrupt) {
+      model_status = HighsModelStatus::kInterrupt;
+      return HighsStatus::kWarning;
+    } else if (solve_status == hipo::kStatusTimeLimit) {
+      model_status = HighsModelStatus::kTimeLimit;
+      return HighsStatus::kWarning;
+    } else if (solve_status == hipo::kStatusMaxIter) {
+      model_status = HighsModelStatus::kIterationLimit;
+      return HighsStatus::kWarning;
+    } else if (solve_status == hipo::kStatusNoProgress) {
+      reportHipoNoProgress(options, hipo_info);
+      model_status = HighsModelStatus::kUnknown;
+      return HighsStatus::kWarning;
+    } else {
+      assert(1 == 0);
+    }
+  }
+
+  // Stopped status should have been handled. Status should be solved.
+  if (ipxStatusError(!hipo.solved(), options, "Hipo",
+                     "status should be solved but value is", solve_status))
+    return HighsStatus::kError;
+
+  // primal/dual infeasible
+  if (solve_status == hipo::kStatusPrimalInfeasible ||
+      solve_status == hipo::kStatusDualInfeasible) {
+    if (solve_status == hipo::kStatusPrimalInfeasible)
+      model_status = HighsModelStatus::kInfeasible;
+    else
+      model_status = HighsModelStatus::kUnboundedOrInfeasible;
+
+    getHipoNonVertexSolution(options, lp, num_col, num_row, rhs, constraints,
+                             hipo, model_status, highs_solution);
+
+    return HighsStatus::kOk;
+  }
+
+  // Status should be optimal or imprecise
+  if (ipxStatusError(solve_status != hipo::kStatusOptimal &&
+                         solve_status != hipo::kStatusImprecise,
+                     options, "Hipo",
+                     "status should be optimal or imprecise but value is",
+                     solve_status))
+    return HighsStatus::kError;
+
+  const bool have_basic_solution =
+      hipo_info.ipx_info.status_crossover != IPX_STATUS_not_run;
+
+  const bool imprecise_solution =
+      hipo_info.status == hipo::kStatusImprecise ||
+      hipo_info.ipx_info.status_crossover == IPX_STATUS_imprecise;
+
+  if (have_basic_solution) {
+    IpxSolution hipo_solution;
+    hipo_solution.num_col = num_col;
+    hipo_solution.num_row = num_row;
+    hipo_solution.ipx_col_value.resize(num_col);
+    hipo_solution.ipx_row_value.resize(num_row);
+    hipo_solution.ipx_col_dual.resize(num_col);
+    hipo_solution.ipx_row_dual.resize(num_row);
+    hipo_solution.ipx_row_status.resize(num_row);
+    hipo_solution.ipx_col_status.resize(num_col);
+
+    hipo::Int errflag = hipo.getBasicSolution(
+        hipo_solution.ipx_col_value, hipo_solution.ipx_row_value,
+        hipo_solution.ipx_row_dual, hipo_solution.ipx_col_dual,
+        hipo_solution.ipx_row_status.data(),
+        hipo_solution.ipx_col_status.data());
+
+    if (errflag) {
+      highsLogUser(options.log_options, HighsLogType::kError,
+                   "IPX crossover getting basic solution: flag = %d\n",
+                   (int)errflag);
+      return HighsStatus::kError;
+    }
+    // Convert the IPX basic solution to a HiGHS basic solution
+    HighsStatus status = ipxBasicSolutionToHighsBasicSolution(
+        options.log_options, lp, rhs, constraints, hipo_solution, highs_basis,
+        highs_solution);
+    if (status != HighsStatus::kOk) {
+      highsLogUser(
+          options.log_options, HighsLogType::kError,
+          "Failed to convert IPX basic solution to Highs basic solution\n");
+      return HighsStatus::kError;
+    }
+  } else {
+    const HighsModelStatus local_model_status =
+        imprecise_solution ? HighsModelStatus::kUnknown
+                           : HighsModelStatus::kOptimal;
+    getHipoNonVertexSolution(options, lp, num_col, num_row, rhs, constraints,
+                             hipo, local_model_status, highs_solution);
+    assert(!highs_basis.valid);
+  }
+
+  highs_info.basis_validity =
+      highs_basis.valid ? kBasisValidityValid : kBasisValidityInvalid;
+
+  HighsStatus return_status;
+  if (imprecise_solution) {
+    model_status = HighsModelStatus::kUnknown;
+    return_status = HighsStatus::kWarning;
+  } else {
+    model_status = HighsModelStatus::kOptimal;
+    return_status = HighsStatus::kOk;
+  }
+  return return_status;
+}
+
 void fillInIpxData(const HighsLp& lp, ipx::Int& num_col, ipx::Int& num_row,
                    double& offset, std::vector<double>& obj,
                    std::vector<double>& col_lb, std::vector<double>& col_ub,
@@ -426,36 +687,15 @@ void fillInIpxData(const HighsLp& lp, ipx::Int& num_col, ipx::Int& num_row,
 
   const HighsInt num_slack = general_bounded_rows.size();
 
-  // For each row except free rows add entry to char array and set up rhs
-  // vector
-  rhs.reserve(num_row);
-  constraint_type.reserve(num_row);
-
-  for (int row = 0; row < num_row; row++) {
-    if (lp.row_lower_[row] > -kHighsInf && lp.row_upper_[row] >= kHighsInf) {
-      rhs.push_back(lp.row_lower_[row]);
-      constraint_type.push_back('>');
-    } else if (lp.row_lower_[row] <= -kHighsInf &&
-               lp.row_upper_[row] < kHighsInf) {
-      rhs.push_back(lp.row_upper_[row]);
-      constraint_type.push_back('<');
-    } else if (lp.row_lower_[row] == lp.row_upper_[row]) {
-      rhs.push_back(lp.row_upper_[row]);
-      constraint_type.push_back('=');
-    } else if (lp.row_lower_[row] > -kHighsInf &&
-               lp.row_upper_[row] < kHighsInf) {
-      // general bounded
-      rhs.push_back(0);
-      constraint_type.push_back('=');
-    }
-  }
+  fillInRhsAndConstraints(lp, rhs, constraint_type);
 
   std::vector<HighsInt> reduced_rowmap(lp.num_row_, -1);
   if (free_rows.size() > 0) {
     HighsInt counter = 0;
     HighsInt findex = 0;
+    const HighsInt free_rows_size = static_cast<HighsInt>(free_rows.size());
     for (HighsInt row = 0; row < lp.num_row_; row++) {
-      if (free_rows[findex] == row) {
+      if (findex < free_rows_size && free_rows[findex] == row) {
         findex++;
         continue;
       } else {
@@ -501,7 +741,7 @@ void fillInIpxData(const HighsLp& lp, ipx::Int& num_col, ipx::Int& num_row,
   }
 
   for (HighsInt k = 0; k < num_slack; k++) {
-    Ai.push_back((ipx::Int)general_bounded_rows[k]);
+    Ai.push_back((ipx::Int)reduced_rowmap[general_bounded_rows[k]]);
     Ax.push_back(-1);
   }
 
@@ -530,7 +770,36 @@ void fillInIpxData(const HighsLp& lp, ipx::Int& num_col, ipx::Int& num_row,
   for (HighsInt col = 0; col < lp.num_col_; col++) {
     obj[col] = (HighsInt)lp.sense_ * lp.col_cost_[col];
   }
-  obj.insert(obj.end(), num_slack, 0);
+}
+
+void fillInRhsAndConstraints(const HighsLp& lp, std::vector<double>& rhs,
+                             std::vector<char>& constraint_type) {
+  // For each row except free rows add entry to char array and set up rhs
+  // vector
+
+  const HighsInt num_row = lp.num_row_;
+
+  rhs.reserve(num_row);
+  constraint_type.reserve(num_row);
+
+  for (int row = 0; row < num_row; row++) {
+    if (lp.row_lower_[row] > -kHighsInf && lp.row_upper_[row] >= kHighsInf) {
+      rhs.push_back(lp.row_lower_[row]);
+      constraint_type.push_back('>');
+    } else if (lp.row_lower_[row] <= -kHighsInf &&
+               lp.row_upper_[row] < kHighsInf) {
+      rhs.push_back(lp.row_upper_[row]);
+      constraint_type.push_back('<');
+    } else if (lp.row_lower_[row] == lp.row_upper_[row]) {
+      rhs.push_back(lp.row_upper_[row]);
+      constraint_type.push_back('=');
+    } else if (lp.row_lower_[row] > -kHighsInf &&
+               lp.row_upper_[row] < kHighsInf) {
+      // general bounded
+      rhs.push_back(0);
+      constraint_type.push_back('=');
+    }
+  }
 }
 
 HighsStatus reportIpxSolveStatus(const HighsOptions& options,
@@ -645,14 +914,15 @@ HighsStatus reportIpxIpmCrossoverStatus(const HighsOptions& options,
 }
 
 bool ipxStatusError(const bool status_error, const HighsOptions& options,
-                    std::string message, const int value) {
+                    const std::string& solver, const std::string& message,
+                    const int value) {
   if (status_error) {
     if (value < 0) {
-      highsLogUser(options.log_options, HighsLogType::kError, "Ipx: %s\n",
-                   message.c_str());
+      highsLogUser(options.log_options, HighsLogType::kError, "%s: %s\n",
+                   solver.c_str(), message.c_str());
     } else {
-      highsLogUser(options.log_options, HighsLogType::kError, "Ipx: %s %d\n",
-                   message.c_str(), value);
+      highsLogUser(options.log_options, HighsLogType::kError, "%s: %s %d\n",
+                   solver.c_str(), message.c_str(), value);
     }
     fflush(NULL);
   }
@@ -674,26 +944,29 @@ bool illegalIpxSolvedStatus(const ipx::Info& ipx_info,
   found_illegal_status =
       found_illegal_status ||
       ipxStatusError(ipx_info.status_ipm == IPX_STATUS_time_limit, options,
+                     "Ipx",
                      "solved  status_ipm should not be IPX_STATUS_time_limit");
   // Cannot solve and reach iteration limit
   found_illegal_status =
       found_illegal_status ||
       ipxStatusError(ipx_info.status_ipm == IPX_STATUS_iter_limit, options,
+                     "Ipx",
                      "solved  status_ipm should not be IPX_STATUS_iter_limit");
   // Cannot solve and make no progress
   found_illegal_status =
       found_illegal_status ||
       ipxStatusError(ipx_info.status_ipm == IPX_STATUS_no_progress, options,
+                     "Ipx",
                      "solved  status_ipm should not be IPX_STATUS_no_progress");
   // Cannot solve and failed
   found_illegal_status =
       found_illegal_status ||
-      ipxStatusError(ipx_info.status_ipm == IPX_STATUS_failed, options,
+      ipxStatusError(ipx_info.status_ipm == IPX_STATUS_failed, options, "Ipx",
                      "solved  status_ipm should not be IPX_STATUS_failed");
   // Cannot solve and debug
   found_illegal_status =
       found_illegal_status ||
-      ipxStatusError(ipx_info.status_ipm == IPX_STATUS_debug, options,
+      ipxStatusError(ipx_info.status_ipm == IPX_STATUS_debug, options, "Ipx",
                      "solved  status_ipm should not be IPX_STATUS_debug");
   //==============
   // For crossover
@@ -704,42 +977,43 @@ bool illegalIpxSolvedStatus(const ipx::Info& ipx_info,
   found_illegal_status =
       found_illegal_status ||
       ipxStatusError(
-          ipx_info.status_crossover == IPX_STATUS_primal_infeas, options,
+          ipx_info.status_crossover == IPX_STATUS_primal_infeas, options, "Ipx",
           "solved  status_crossover should not be IPX_STATUS_primal_infeas");
   // Cannot solve with dual infeasibility
   found_illegal_status =
       found_illegal_status ||
       ipxStatusError(
-          ipx_info.status_crossover == IPX_STATUS_dual_infeas, options,
+          ipx_info.status_crossover == IPX_STATUS_dual_infeas, options, "Ipx",
           "solved  status_crossover should not be IPX_STATUS_dual_infeas");
   // Cannot solve and reach time limit
   found_illegal_status =
       found_illegal_status ||
       ipxStatusError(
-          ipx_info.status_crossover == IPX_STATUS_time_limit, options,
+          ipx_info.status_crossover == IPX_STATUS_time_limit, options, "Ipx",
           "solved  status_crossover should not be IPX_STATUS_time_limit");
   // Cannot solve and reach time limit
   found_illegal_status =
       found_illegal_status ||
       ipxStatusError(
-          ipx_info.status_crossover == IPX_STATUS_iter_limit, options,
+          ipx_info.status_crossover == IPX_STATUS_iter_limit, options, "Ipx",
           "solved  status_crossover should not be IPX_STATUS_iter_limit");
   // Cannot solve and make no progress
   found_illegal_status =
       found_illegal_status ||
       ipxStatusError(
-          ipx_info.status_crossover == IPX_STATUS_no_progress, options,
+          ipx_info.status_crossover == IPX_STATUS_no_progress, options, "Ipx",
           "solved  status_crossover should not be IPX_STATUS_no_progress");
   // Cannot solve and failed
   found_illegal_status =
       found_illegal_status ||
       ipxStatusError(
-          ipx_info.status_crossover == IPX_STATUS_failed, options,
+          ipx_info.status_crossover == IPX_STATUS_failed, options, "Ipx",
           "solved  status_crossover should not be IPX_STATUS_failed");
   // Cannot solve and debug
   found_illegal_status =
       found_illegal_status ||
       ipxStatusError(ipx_info.status_crossover == IPX_STATUS_debug, options,
+                     "Ipx",
                      "solved  status_crossover should not be IPX_STATUS_debug");
   return found_illegal_status;
 }
@@ -750,23 +1024,25 @@ bool illegalIpxStoppedIpmStatus(const ipx::Info& ipx_info,
   // Cannot stop and be optimal
   found_illegal_status =
       found_illegal_status ||
-      ipxStatusError(ipx_info.status_ipm == IPX_STATUS_optimal, options,
+      ipxStatusError(ipx_info.status_ipm == IPX_STATUS_optimal, options, "Ipx",
                      "stopped status_ipm should not be IPX_STATUS_optimal");
   // Cannot stop and be imprecise
   found_illegal_status =
       found_illegal_status ||
       ipxStatusError(ipx_info.status_ipm == IPX_STATUS_imprecise, options,
+                     "Ipx",
                      "stopped status_ipm should not be IPX_STATUS_imprecise");
   // Cannot stop with primal infeasibility
   found_illegal_status =
       found_illegal_status ||
       ipxStatusError(
-          ipx_info.status_ipm == IPX_STATUS_primal_infeas, options,
+          ipx_info.status_ipm == IPX_STATUS_primal_infeas, options, "Ipx",
           "stopped status_ipm should not be IPX_STATUS_primal_infeas");
   // Cannot stop with dual infeasibility
   found_illegal_status =
       found_illegal_status ||
       ipxStatusError(ipx_info.status_ipm == IPX_STATUS_dual_infeas, options,
+                     "Ipx",
                      "stopped status_ipm should not be IPX_STATUS_dual_infeas");
   // Can stop with time limit
   // Can stop with iter limit
@@ -774,12 +1050,12 @@ bool illegalIpxStoppedIpmStatus(const ipx::Info& ipx_info,
   // Cannot stop and failed - should be error return earlier
   found_illegal_status =
       found_illegal_status ||
-      ipxStatusError(ipx_info.status_ipm == IPX_STATUS_failed, options,
+      ipxStatusError(ipx_info.status_ipm == IPX_STATUS_failed, options, "Ipx",
                      "stopped status_ipm should not be IPX_STATUS_failed");
   // Cannot stop and debug - should be error return earlier
   found_illegal_status =
       found_illegal_status ||
-      ipxStatusError(ipx_info.status_ipm == IPX_STATUS_debug, options,
+      ipxStatusError(ipx_info.status_ipm == IPX_STATUS_debug, options, "Ipx",
                      "stopped status_ipm should not be IPX_STATUS_debug");
   return found_illegal_status;
 }
@@ -791,49 +1067,50 @@ bool illegalIpxStoppedCrossoverStatus(const ipx::Info& ipx_info,
   found_illegal_status =
       found_illegal_status ||
       ipxStatusError(
-          ipx_info.status_crossover == IPX_STATUS_optimal, options,
+          ipx_info.status_crossover == IPX_STATUS_optimal, options, "Ipx",
           "stopped status_crossover should not be IPX_STATUS_optimal");
   // Cannot stop and be imprecise
   found_illegal_status =
       found_illegal_status ||
       ipxStatusError(
-          ipx_info.status_crossover == IPX_STATUS_imprecise, options,
+          ipx_info.status_crossover == IPX_STATUS_imprecise, options, "Ipx",
           "stopped status_crossover should not be IPX_STATUS_imprecise");
   // Cannot stop with primal infeasibility
   found_illegal_status =
       found_illegal_status ||
       ipxStatusError(
-          ipx_info.status_crossover == IPX_STATUS_primal_infeas, options,
+          ipx_info.status_crossover == IPX_STATUS_primal_infeas, options, "Ipx",
           "stopped status_crossover should not be IPX_STATUS_primal_infeas");
   // Cannot stop with dual infeasibility
   found_illegal_status =
       found_illegal_status ||
       ipxStatusError(
-          ipx_info.status_crossover == IPX_STATUS_dual_infeas, options,
+          ipx_info.status_crossover == IPX_STATUS_dual_infeas, options, "Ipx",
           "stopped status_crossover should not be IPX_STATUS_dual_infeas");
   // Cannot stop and reach iteration limit
   found_illegal_status =
       found_illegal_status ||
       ipxStatusError(
-          ipx_info.status_crossover == IPX_STATUS_iter_limit, options,
+          ipx_info.status_crossover == IPX_STATUS_iter_limit, options, "Ipx",
           "stopped status_crossover should not be IPX_STATUS_iter_limit");
   // Can stop and reach time limit
   // Cannot stop with no_progress
   found_illegal_status =
       found_illegal_status ||
       ipxStatusError(
-          ipx_info.status_crossover == IPX_STATUS_no_progress, options,
+          ipx_info.status_crossover == IPX_STATUS_no_progress, options, "Ipx",
           "stopped status_crossover should not be IPX_STATUS_no_progress");
   // Cannot stop and failed - should be error return earlier
   found_illegal_status =
       found_illegal_status ||
       ipxStatusError(
-          ipx_info.status_crossover == IPX_STATUS_failed, options,
+          ipx_info.status_crossover == IPX_STATUS_failed, options, "Ipx",
           "stopped status_crossover should not be IPX_STATUS_failed");
   // Cannot stop and debug - should be error return earlier
   found_illegal_status =
       found_illegal_status ||
       ipxStatusError(ipx_info.status_crossover == IPX_STATUS_debug, options,
+                     "Ipx",
                      "stopped status_crossover should not be IPX_STATUS_debug");
   return found_illegal_status;
 }
@@ -849,6 +1126,19 @@ void reportIpmNoProgress(const HighsOptions& options,
   highsLogUser(options.log_options, HighsLogType::kWarning,
                "No progress: max absolute   dual residual = %11.4g\n",
                ipx_info.abs_dresidual);
+}
+
+void reportHipoNoProgress(const HighsOptions& options,
+                          const hipo::Info& hipo_info) {
+  highsLogUser(options.log_options, HighsLogType::kWarning,
+               "No progress: primal objective value       = %11.4g\n",
+               hipo_info.p_obj);
+  highsLogUser(options.log_options, HighsLogType::kWarning,
+               "No progress: max absolute primal residual = %11.4g\n",
+               hipo_info.p_res_abs);
+  highsLogUser(options.log_options, HighsLogType::kWarning,
+               "No progress: max absolute   dual residual = %11.4g\n",
+               hipo_info.d_res_abs);
 }
 
 void getHighsNonVertexSolution(const HighsOptions& options, const HighsLp& lp,
@@ -873,6 +1163,26 @@ void getHighsNonVertexSolution(const HighsOptions& options, const HighsLp& lp,
   lps.GetInteriorSolution(x.data(), xl.data(), xu.data(), slack.data(),
                           y.data(), zl.data(), zu.data());
 
+  ipxSolutionToHighsSolution(options, lp, rhs, constraint_type, num_col,
+                             num_row, x, slack, y, zl, zu, highs_solution);
+}
+
+void getHipoNonVertexSolution(const HighsOptions& options, const HighsLp& lp,
+                              const hipo::Int num_col, const hipo::Int num_row,
+                              const std::vector<double>& rhs,
+                              const std::vector<char>& constraint_type,
+                              const hipo::Solver& hipo,
+                              const HighsModelStatus model_status,
+                              HighsSolution& highs_solution) {
+  std::vector<double> x(num_col);
+  std::vector<double> xl(num_col);
+  std::vector<double> xu(num_col);
+  std::vector<double> zl(num_col);
+  std::vector<double> zu(num_col);
+  std::vector<double> slack(num_row);
+  std::vector<double> y(num_row);
+
+  hipo.getInteriorSolution(x, xl, xu, slack, y, zl, zu);
   ipxSolutionToHighsSolution(options, lp, rhs, constraint_type, num_col,
                              num_row, x, slack, y, zl, zu, highs_solution);
 }
@@ -1078,4 +1388,87 @@ void reportSolveData(const HighsLogOptions& log_options,
   highsLogDev(log_options, HighsLogType::kInfo,
               "    Volume increase      = %11.4g\n\n",
               ipx_info.volume_increase);
+}
+
+HighsStatus reportHipoStatus(const HighsOptions& options,
+                             const hipo::Int status, const hipo::Solver& hipo) {
+  if (hipo.solved()) {
+    highsLogUser(options.log_options, HighsLogType::kInfo, "Hipo: Solved\n");
+    return HighsStatus::kOk;
+  }
+
+  else if (hipo.stopped()) {
+    highsLogUser(options.log_options, HighsLogType::kWarning, "Hipo: %s\n",
+                 hipo::statusString((hipo::Status)status).c_str());
+    return HighsStatus::kWarning;
+  }
+
+  else if (hipo.failed()) {
+    highsLogUser(options.log_options, HighsLogType::kError, "Hipo: %s\n",
+                 hipo::statusString((hipo::Status)status).c_str());
+  }
+  return HighsStatus::kError;
+}
+
+HighsStatus reportHipoCrossoverStatus(const HighsOptions& options,
+                                      const ipx::Int status, bool is_qp) {
+  if (is_qp && options.run_crossover == kHighsOnString) {
+    highsLogUser(options.log_options, HighsLogType::kWarning,
+                 "Hipo: Crossover not available for QP\n");
+    return HighsStatus::kWarning;
+  }
+
+  if (status == IPX_STATUS_not_run) {
+    if (options.run_crossover == kHighsOnString) {
+      // Warn if crossover not run and run_crossover option is "on"
+      highsLogUser(options.log_options, HighsLogType::kWarning,
+                   "Hipo: Crossover not run\n");
+      return HighsStatus::kWarning;
+    }
+    return HighsStatus::kOk;
+  } else if (status == IPX_STATUS_optimal) {
+    highsLogUser(options.log_options, HighsLogType::kInfo,
+                 "Hipo: Crossover optimal\n");
+    return HighsStatus::kOk;
+  } else if (status == IPX_STATUS_imprecise) {
+    highsLogUser(options.log_options, HighsLogType::kWarning,
+                 "Hipo: Crossover imprecise\n");
+    return HighsStatus::kWarning;
+  } else if (status == IPX_STATUS_primal_infeas) {
+    highsLogUser(options.log_options, HighsLogType::kWarning,
+                 "Hipo: Crossover primal infeasible\n");
+    return HighsStatus::kWarning;
+  } else if (status == IPX_STATUS_dual_infeas) {
+    highsLogUser(options.log_options, HighsLogType::kWarning,
+                 "Hipo: Crossover dual infeasible\n");
+    return HighsStatus::kWarning;
+  } else if (status == IPX_STATUS_user_interrupt) {
+    highsLogUser(options.log_options, HighsLogType::kWarning,
+                 "Hipo: Crossover user interrupt\n");
+    return HighsStatus::kOk;
+  } else if (status == IPX_STATUS_time_limit) {
+    highsLogUser(options.log_options, HighsLogType::kWarning,
+                 "Hipo: Crossover reached time limit\n");
+    return HighsStatus::kWarning;
+  } else if (status == IPX_STATUS_iter_limit) {
+    highsLogUser(options.log_options, HighsLogType::kWarning,
+                 "Hipo: Crossover reached iteration limit\n");
+    return HighsStatus::kWarning;
+  } else if (status == IPX_STATUS_no_progress) {
+    highsLogUser(options.log_options, HighsLogType::kWarning,
+                 "Hipo: Crossover no progress\n");
+    return HighsStatus::kWarning;
+  } else if (status == IPX_STATUS_failed) {
+    highsLogUser(options.log_options, HighsLogType::kError,
+                 "Hipo: Crossover failed\n");
+    return HighsStatus::kError;
+  } else if (status == IPX_STATUS_debug) {
+    highsLogUser(options.log_options, HighsLogType::kError,
+                 "Hipo: Crossover debug\n");
+    return HighsStatus::kError;
+  } else {
+    highsLogUser(options.log_options, HighsLogType::kError,
+                 "Hipo: Crossover unrecognised status\n");
+    return HighsStatus::kError;
+  }
 }

@@ -1,3 +1,10 @@
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/*                                                                       */
+/*    This file is part of the HiGHS linear optimization suite           */
+/*                                                                       */
+/*    Available as open-source under the MIT License                     */
+/*                                                                       */
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 #ifndef __SRC_LIB_QPSOLVER_QUASS_HPP__
 #define __SRC_LIB_QPSOLVER_QUASS_HPP__
 
@@ -10,6 +17,6 @@
 QpAsmStatus solveqp(Instance& instance, Settings& settings, Statistics& stats,
                     HighsModelStatus& highs_model_status,
                     HighsBasis& highs_basis, HighsSolution& highs_solution,
-                    HighsTimer& timer);
+                    HighsTimer& qp_timer, HighsCallback& callback);
 
 #endif

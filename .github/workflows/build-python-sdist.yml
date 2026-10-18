@@ -2,6 +2,10 @@ name: build-python-sdist
 
 on: [push, pull_request]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build_sdist_ubuntu:
     runs-on: ${{ matrix.os }}
@@ -10,7 +14,7 @@ jobs:
         os: [ubuntu-latest]
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: seanmiddleditch/gha-setup-ninja@master
 
       - name: Build sdist
@@ -22,7 +26,7 @@ jobs:
 
       - name: install highspy
         run: |
-          python3 -m pip install dist/*.tar.gz --user 
+          python3 -m pip install dist/*.tar.gz --user
 
       - name: Test Python Examples
         run: |
@@ -38,7 +42,7 @@ jobs:
         os: [macos-latest]
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: seanmiddleditch/gha-setup-ninja@master
 
       - name: Build sdist
@@ -50,23 +54,53 @@ jobs:
 
       - name: install highspy
         run: |
-          python3 -m venv path/to/venv
-          source path/to/venv/bin/activate
-          python3 -m pip install dist/*.tar.gz 
+          python3 -m venv .venv
+          source .venv/bin/activate
+          python3 -m pip install dist/*.tar.gz
 
       - name: Test Python Examples
         run: |
-         source path/to/venv/bin/activate
+         source .venv/bin/activate
          python3 ./examples/call_highs_from_python_highspy.py
          python3 ./examples/call_highs_from_python_mps.py
          python3 ./examples/call_highs_from_python.py
          python3 ./examples/minimal.py
 
   build_sdist_win:
-    runs-on: windows-latest 
+    runs-on: windows-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
+
+      - name: Build sdist
+        run: pipx run build --sdist
+
+      - name: check metadata
+        run: pipx run twine check dist/*
+
+      - name: install highspy
+        run: python -m pip install (Get-ChildItem dist\*.tar.gz)
+
+      - name: Test Python Examples
+        run: |
+         python ./examples/call_highs_from_python_highspy.py
+         python ./examples/call_highs_from_python_mps.py
+         python ./examples/call_highs_from_python.py
+         python ./examples/minimal.py
+
+  build_sdist_ubuntu_hipo:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+
+    steps:
+      - uses: actions/checkout@v6
+      - uses: seanmiddleditch/gha-setup-ninja@master
+
+      - name: Build sdist
+        shell: bash
+        run: pipx run build --sdist --outdir ./dist highspy-extras/
 
       - name: Build sdist
         shell: bash
@@ -77,8 +111,86 @@ jobs:
 
       - name: install highspy
         run: |
-          $item = Get-ChildItem dist
-          python -m pip install "$item"
+          python3 -m pip install dist/*.tar.gz --user
+
+      - name: Test highspy
+        run: |
+          python3 -m pip install pytest
+          python3 -m pytest check/test_highspy_hipo.py
+
+      - name: Test Python Examples
+        run: |
+         python3 ./examples/call_highs_from_python_highspy.py
+         python3 ./examples/call_highs_from_python_mps.py
+         python3 ./examples/call_highs_from_python.py
+         python3 ./examples/minimal.py
+
+  build_sdist_mac_hipo:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [macos-latest]
+
+    steps:
+      - uses: actions/checkout@v6
+      - uses: seanmiddleditch/gha-setup-ninja@master
+
+      - name: Build sdist
+        shell: bash
+        run: pipx run build --sdist --outdir ./dist highspy-extras/
+
+      - name: Build sdist
+        shell: bash
+        run: pipx run build --sdist
+
+      - name: check metadata
+        run: pipx run twine check dist/*
+
+      - name: install highspy and highspy-extras
+        run: |
+          python3 -m venv .venv
+          source .venv/bin/activate
+          python3 -m pip install dist/*.tar.gz
+
+      - name: Test highspy
+        run: |
+          source .venv/bin/activate
+          python3 -m pip install pytest
+          python3 -m pytest check/test_highspy_hipo.py
+
+      - name: Test Python Examples
+        run: |
+         source .venv/bin/activate
+         python3 ./examples/call_highs_from_python_highspy.py
+         python3 ./examples/call_highs_from_python_mps.py
+         python3 ./examples/call_highs_from_python.py
+         python3 ./examples/minimal.py
+
+  build_sdist_win_hipo:
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Build highspy-extras sdist
+        run: pipx run build --sdist highspy-extras --outdir dist
+
+      - name: Build highspy sdist
+        run: pipx run build --sdist
+
+      - name: check metadata
+        run: pipx run twine check dist/*
+
+      # - name: Pre-install vcpkg dependencies
+      #   run: vcpkg install openblas[threads]:x64-windows-static --host-triplet=x64-windows-static
+
+      - name: install highspy and highspy-extras
+        run: python -m pip install (Get-ChildItem dist\*.tar.gz)
+
+      - name: Test highspy
+        run: |
+          python -m pip install pytest
+          python -m pytest check/test_highspy_hipo.py
 
       - name: Test Python Examples
         run: |

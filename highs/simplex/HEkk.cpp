@@ -192,6 +192,7 @@ void HEkk::clearEkkDataInfo() {
   info.backtracking_basis_.clear();
   info.backtracking_basis_costs_shifted_ = false;
   info.backtracking_basis_costs_perturbed_ = false;
+  info.backtracking_basis_bounds_shifted_ = false;
   info.backtracking_basis_bounds_perturbed_ = false;
   info.backtracking_basis_workShift_.clear();
   info.backtracking_basis_workLowerShift_.clear();
@@ -221,6 +222,7 @@ void HEkk::clearEkkDataInfo() {
   info.allow_bound_perturbation = true;
   info.costs_shifted = false;
   info.costs_perturbed = false;
+  info.bounds_shifted = false;
   info.bounds_perturbed = false;
 
   info.num_primal_infeasibilities = kHighsIllegalInfeasibilityCount;
@@ -451,7 +453,7 @@ HighsStatus HEkk::dualize() {
   assert(lp_.a_matrix_.isColwise());
   original_num_col_ = lp_.num_col_;
   original_num_row_ = lp_.num_row_;
-  original_num_nz_ = lp_.a_matrix_.numNz();
+  original_num_nz_ = lp_.numNz();
   original_offset_ = lp_.offset_;
   original_col_cost_ = lp_.col_cost_;
   original_col_lower_ = lp_.col_lower_;
@@ -763,7 +765,6 @@ HighsStatus HEkk::undualize() {
   // its values will be over-written in constructing the corresponding
   // data for the primal problem
   vector<int8_t> dual_nonbasic_flag = basis_.nonbasicFlag_;
-  vector<int8_t> dual_nonbasic_move = basis_.nonbasicMove_;
   vector<HighsInt>& primal_basic_index = basis_.basicIndex_;
   vector<int8_t>& primal_nonbasic_flag = basis_.nonbasicFlag_;
   vector<int8_t>& primal_nonbasic_move = basis_.nonbasicMove_;
@@ -957,7 +958,7 @@ HighsStatus HEkk::undualize() {
   // Some sanity checks
   assert(lp_.num_col_ == original_num_col_);
   assert(lp_.num_row_ == original_num_row_);
-  assert(lp_.a_matrix_.numNz() == original_num_nz_);
+  assert(lp_.numNz() == original_num_nz_);
   HighsInt num_basic_variables = primal_basic_index.size();
   bool num_basic_variables_ok = num_basic_variables == original_num_row_;
   if (!num_basic_variables_ok)
@@ -1052,8 +1053,8 @@ HighsStatus HEkk::solve(const bool force_phase2) {
     algorithm_name = "primal";
     reportSimplexPhaseIterations(options_->log_options, iteration_count_, info_,
                                  true);
-    highsLogUser(options_->log_options, HighsLogType::kInfo,
-                 "Using EKK primal simplex solver\n");
+    highsLogUser(options_->log_options, HighsLogType::kInfo, "Using %s\n",
+                 simplexStrategyToString(kSimplexStrategyPrimal).c_str());
     HEkkPrimal primal_solver(*this);
     call_status = primal_solver.solve(force_phase2);
     assert(called_return_from_solve_);
@@ -1066,17 +1067,36 @@ HighsStatus HEkk::solve(const bool force_phase2) {
     // Solve, depending on the particular strategy
     if (simplex_strategy == kSimplexStrategyDualTasks) {
       highsLogUser(options_->log_options, HighsLogType::kInfo,
-                   "Using EKK parallel dual simplex solver - SIP with "
-                   "concurrency of %d\n",
+                   "Using %s with concurrency of %d\n",
+                   simplexStrategyToString(kSimplexStrategyDualTasks).c_str(),
                    int(info_.num_concurrency));
     } else if (simplex_strategy == kSimplexStrategyDualMulti) {
       highsLogUser(options_->log_options, HighsLogType::kInfo,
-                   "Using EKK parallel dual simplex solver - PAMI with "
-                   "concurrency of %d\n",
+                   "Using %s with concurrency of %d\n",
+                   simplexStrategyToString(kSimplexStrategyDualMulti).c_str(),
                    int(info_.num_concurrency));
     } else {
-      highsLogUser(options_->log_options, HighsLogType::kInfo,
-                   "Using EKK dual simplex solver - serial\n");
+      std::stringstream ss;
+      ss.str(std::string());
+      assert(simplex_strategy == kSimplexStrategyChoose ||
+             simplex_strategy == kSimplexStrategyDual);
+      ss << highsFormatToString(
+          "Choosing to use %s%s",
+          options_->parallel == kHighsOnString ? "serial " : "",
+          simplexStrategyToString(kSimplexStrategyDual).c_str());
+      if (options_->parallel == kHighsOnString) {
+        ss << highsFormatToString(" despite setting parallel = on\n");
+        ss << highsFormatToString(
+            "To force parallel dual simplex, set simplex_strategy to "
+            "kSimplexStrategyDualTasks = %d or (preferably) "
+            "kSimplexStrategyDualMulti = %d\n",
+            kSimplexStrategyDualTasks, kSimplexStrategyDualMulti);
+      }
+      highsLogUser(options_->log_options, HighsLogType::kInfo, "%s\n",
+                   ss.str().c_str());
+
+      highsLogUser(options_->log_options, HighsLogType::kInfo, "Using %s\n",
+                   simplexStrategyToString(kSimplexStrategyDual).c_str());
     }
     HEkkDual dual_solver(*this);
     call_status = dual_solver.solve(force_phase2);
@@ -1101,7 +1121,7 @@ HighsStatus HEkk::solve(const bool force_phase2) {
   if (return_status == HighsStatus::kError)
     return returnFromEkkSolve(return_status);
   highsLogDev(options_->log_options, HighsLogType::kInfo,
-              "EKK %s simplex solver returns %" HIGHSINT_FORMAT
+              "%s simplex solver returns %" HIGHSINT_FORMAT
               " primal and %" HIGHSINT_FORMAT
               " dual infeasibilities: "
               "Status %s\n",
@@ -1578,7 +1598,7 @@ void HEkk::initialiseEkk() {
   status_.initialised_for_new_lp = true;
 }
 
-bool HEkk::isUnconstrainedLp() {
+bool HEkk::isUnconstrainedLp() const {
   bool is_unconstrained_lp = lp_.num_row_ <= 0;
   if (is_unconstrained_lp)
     highsLogDev(
@@ -1721,13 +1741,18 @@ void HEkk::chooseSimplexStrategyThreads(const HighsOptions& options,
   const HighsInt simplex_max_concurrency = options.simplex_max_concurrency;
   HighsInt max_threads = highs::parallel::num_threads();
 
-  if (options.parallel == kHighsOnString &&
-      simplex_strategy == kSimplexStrategyDual) {
-    // The parallel strategy is on and the simplex strategy is dual so use
-    // PAMI if there are enough threads
-    if (max_threads >= kDualMultiMinConcurrency)
-      simplex_strategy = kSimplexStrategyDualMulti;
-  }
+  // Don't allow the parallel option to switch from
+  // kSimplexStrategyDual to kSimplexStrategyDualMulti so the MIP
+  // solver only ever uses serial simplex
+  //
+  //  if (options.parallel == kHighsOnString &&
+  //      simplex_strategy == kSimplexStrategyDual) {
+  //    // The parallel strategy is on and the simplex strategy is dual so use
+  //    // PAMI if there are enough threads
+  //    if (max_threads >= kDualMultiMinConcurrency)
+  //      simplex_strategy = kSimplexStrategyDualMulti;
+  //  }
+
   //
   // If parallel strategies are used, the minimum concurrency will be
   // set to be at least the minimum required for the strategy
@@ -1877,6 +1902,8 @@ bool HEkk::getBacktrackingBasis() {
   basis_ = info_.backtracking_basis_;
   info_.costs_shifted = (info_.backtracking_basis_costs_shifted_ != 0);
   info_.costs_perturbed = (info_.backtracking_basis_costs_perturbed_ != 0);
+  info_.bounds_shifted = (info_.backtracking_basis_bounds_shifted_ != 0);
+  info_.bounds_perturbed = (info_.backtracking_basis_bounds_perturbed_ != 0);
   info_.workShift_ = info_.backtracking_basis_workShift_;
   const HighsInt num_tot = lp_.num_col_ + lp_.num_row_;
   for (HighsInt iVar = 0; iVar < num_tot; iVar++)
@@ -1901,6 +1928,7 @@ void HEkk::putBacktrackingBasis(
   info_.backtracking_basis_.basicIndex_ = basicIndex_before_compute_factor;
   info_.backtracking_basis_costs_shifted_ = info_.costs_shifted;
   info_.backtracking_basis_costs_perturbed_ = info_.costs_perturbed;
+  info_.backtracking_basis_bounds_shifted_ = info_.bounds_shifted;
   info_.backtracking_basis_bounds_perturbed_ = info_.bounds_perturbed;
   info_.backtracking_basis_workShift_ = info_.workShift_;
   const HighsInt num_tot = lp_.num_col_ + lp_.num_row_;
@@ -2291,6 +2319,29 @@ bool HEkk::lpFactorRowCompatible(const HighsInt expectedNumRow) const {
   return consistent_num_row;
 }
 
+std::string HEkk::simplexStrategyToString(
+    const HighsInt simplex_strategy) const {
+  assert(kSimplexStrategyMin <= simplex_strategy &&
+         simplex_strategy <= kSimplexStrategyMax);
+  if (simplex_strategy == kSimplexStrategyChoose)
+    return "choose simplex solver";
+  if (simplex_strategy == kSimplexStrategyDual) return "dual simplex solver";
+  if (simplex_strategy == kSimplexStrategyDualPlain)
+    return "serial dual simplex solver";
+  if (simplex_strategy == kSimplexStrategyDualTasks)
+    return "parallel dual simplex solver - SIP";
+  if (simplex_strategy == kSimplexStrategyDualMulti)
+    return "parallel dual simplex solver - PAMI";
+  if (simplex_strategy == kSimplexStrategyPrimal)
+    return "primal simplex solver";
+  return "Unknown";
+}
+
+void HEkk::zeroBasicDuals() {
+  for (HighsInt iRow = 0; iRow < lp_.num_row_; iRow++)
+    info_.workDual_[basis_.basicIndex_[iRow]] = 0;
+}
+
 void HEkk::setNonbasicMove() {
   const bool have_solution = false;
   // Don't have a simplex basis since nonbasicMove is not set up.
@@ -2419,53 +2470,45 @@ void HEkk::initialiseCost(const SimplexAlgorithm algorithm,
   // Dual simplex costs are either from the LP or perturbed
   if (!perturb || info_.dual_simplex_cost_perturbation_multiplier == 0) return;
   // Perturb the original costs, scale down if is too big
-  const bool report_cost_perturbation =
-      options_->output_flag;  // && analysis_.analyse_simplex_runtime_data;
   HighsInt num_original_nonzero_cost = 0;
-  if (report_cost_perturbation)
-    highsLogDev(options_->log_options, HighsLogType::kInfo,
-                "Cost perturbation for %s\n", lp_.model_name_.c_str());
+  highsLogDev(options_->log_options, HighsLogType::kInfo,
+              "Cost perturbation for %s\n", lp_.model_name_.c_str());
+  // Of the following, min_abs_cost and sum_abs_cost are only used for
+  // logging; only max_abs_cost determines perturbation
   double min_abs_cost = kHighsInf;
   double max_abs_cost = 0;
   double sum_abs_cost = 0;
   for (HighsInt i = 0; i < lp_.num_col_; i++) {
     const double abs_cost = fabs(info_.workCost_[i]);
-    if (report_cost_perturbation) {
-      if (abs_cost) {
-        num_original_nonzero_cost++;
-        min_abs_cost = min(min_abs_cost, abs_cost);
-      }
-      sum_abs_cost += abs_cost;
+    if (abs_cost) {
+      num_original_nonzero_cost++;
+      min_abs_cost = min(min_abs_cost, abs_cost);
     }
+    sum_abs_cost += abs_cost;
     max_abs_cost = max(max_abs_cost, abs_cost);
   }
   const HighsInt pct0 = (100 * num_original_nonzero_cost) / lp_.num_col_;
-  double average_abs_cost = 0;
-  if (report_cost_perturbation) {
+
+  highsLogDev(options_->log_options, HighsLogType::kInfo,
+              "   Initially have %" HIGHSINT_FORMAT
+              " nonzero costs (%3" HIGHSINT_FORMAT "%%)",
+              num_original_nonzero_cost, pct0);
+  if (num_original_nonzero_cost) {
     highsLogDev(options_->log_options, HighsLogType::kInfo,
-                "   Initially have %" HIGHSINT_FORMAT
-                " nonzero costs (%3" HIGHSINT_FORMAT "%%)",
-                num_original_nonzero_cost, pct0);
-    if (num_original_nonzero_cost) {
-      average_abs_cost = sum_abs_cost / num_original_nonzero_cost;
-      highsLogDev(options_->log_options, HighsLogType::kInfo,
-                  " with min / average / max = %g / %g / %g\n", min_abs_cost,
-                  average_abs_cost, max_abs_cost);
-    } else {
-      min_abs_cost = 1.0;
-      max_abs_cost = 1.0;
-      average_abs_cost = 1.0;
-      highsLogDev(options_->log_options, HighsLogType::kInfo,
-                  " but perturb as if max cost was 1\n");
-    }
+                " with min / average / max = %g / %g / %g\n", min_abs_cost,
+                sum_abs_cost / num_original_nonzero_cost, max_abs_cost);
+  } else {
+    max_abs_cost = 1.0;
+    highsLogDev(options_->log_options, HighsLogType::kInfo,
+                " but perturb as if max cost was 1\n");
   }
+
   if (max_abs_cost > 100) {
     max_abs_cost = sqrt(sqrt(max_abs_cost));
-    if (report_cost_perturbation)
-      highsLogDev(
-          options_->log_options, HighsLogType::kInfo,
-          "   Large so set max_abs_cost = sqrt(sqrt(max_abs_cost)) = %g\n",
-          max_abs_cost);
+    highsLogDev(
+        options_->log_options, HighsLogType::kInfo,
+        "   Large so set max_abs_cost = sqrt(sqrt(max_abs_cost)) = %g\n",
+        max_abs_cost);
   }
 
   // If there are few boxed variables, we will just use simple perturbation
@@ -2476,20 +2519,18 @@ void HEkk::initialiseCost(const SimplexAlgorithm algorithm,
   boxedRate /= num_tot;
   if (boxedRate < 0.01) {
     max_abs_cost = min(max_abs_cost, 1.0);
-    if (report_cost_perturbation)
-      highsLogDev(options_->log_options, HighsLogType::kInfo,
-                  "   Small boxedRate (%g) so set max_abs_cost = "
-                  "min(max_abs_cost, 1.0) = "
-                  "%g\n",
-                  boxedRate, max_abs_cost);
+    highsLogDev(options_->log_options, HighsLogType::kInfo,
+                "   Small boxedRate (%g) so set max_abs_cost = "
+                "min(max_abs_cost, 1.0) = "
+                "%g\n",
+                boxedRate, max_abs_cost);
   }
   // Determine the perturbation base
   cost_perturbation_max_abs_cost_ = max_abs_cost;
   cost_perturbation_base_ =
       info_.dual_simplex_cost_perturbation_multiplier * 5e-7 * max_abs_cost;
-  if (report_cost_perturbation)
-    highsLogDev(options_->log_options, HighsLogType::kInfo,
-                "   Perturbation column base = %g\n", cost_perturbation_base_);
+  highsLogDev(options_->log_options, HighsLogType::kInfo,
+              "   Perturbation column base = %g\n", cost_perturbation_base_);
 
   // Now do the perturbation
   for (HighsInt i = 0; i < lp_.num_col_; i++) {
@@ -2509,28 +2550,16 @@ void HEkk::initialiseCost(const SimplexAlgorithm algorithm,
     } else {
       // Fixed - no perturb
     }
-    //    if (report_cost_perturbation) {
-    //      const double perturbation1 = fabs(info_.workCost_[i] -
-    //      previous_cost); if (perturbation1)
-    //        updateValueDistribution(perturbation1,
-    //                                analysis_.cost_perturbation1_distribution);
-    //    }
   }
   const double row_cost_perturbation_base_ =
       info_.dual_simplex_cost_perturbation_multiplier * 1e-12;
-  if (report_cost_perturbation)
-    highsLogDev(options_->log_options, HighsLogType::kInfo,
-                "   Perturbation row    base = %g\n",
-                row_cost_perturbation_base_);
+  highsLogDev(options_->log_options, HighsLogType::kInfo,
+              "   Perturbation row    base = %g\n",
+              row_cost_perturbation_base_);
   for (HighsInt i = lp_.num_col_; i < num_tot; i++) {
     double perturbation2 =
         (0.5 - info_.numTotRandomValue_[i]) * row_cost_perturbation_base_;
     info_.workCost_[i] += perturbation2;
-    //    if (report_cost_perturbation) {
-    //      perturbation2 = fabs(perturbation2);
-    //      updateValueDistribution(perturbation2,
-    //                              analysis_.cost_perturbation2_distribution);
-    //    }
   }
   info_.costs_perturbed = true;
 }
@@ -2539,6 +2568,7 @@ void HEkk::initialiseBound(const SimplexAlgorithm algorithm,
                            const HighsInt solve_phase, const bool perturb) {
   initialiseLpColBound();
   initialiseLpRowBound();
+  info_.bounds_shifted = false;
   info_.bounds_perturbed = false;
   // Primal simplex bounds are either from the LP or perturbed
   if (algorithm == SimplexAlgorithm::kPrimal) {
@@ -2796,7 +2826,7 @@ void HEkk::fullBtran(HVector& buffer) {
 void HEkk::choosePriceTechnique(const HighsInt price_strategy,
                                 const double row_ep_density,
                                 bool& use_col_price,
-                                bool& use_row_price_w_switch) {
+                                bool& use_row_price_w_switch) const {
   // By default switch to column PRICE when pi_p has at least this
   // density
   const double density_for_column_price_switch = 0.75;
@@ -2966,7 +2996,7 @@ void HEkk::computeDual() {
 }
 
 double HEkk::computeDualForTableauColumn(const HighsInt iVar,
-                                         const HVector& tableau_column) {
+                                         const HVector& tableau_column) const {
   const vector<double>& workCost = info_.workCost_;
   const vector<HighsInt>& basicIndex = basis_.basicIndex_;
 
@@ -2979,7 +3009,7 @@ double HEkk::computeDualForTableauColumn(const HighsInt iVar,
 }
 
 bool HEkk::reinvertOnNumericalTrouble(
-    const std::string method_name, double& numerical_trouble_measure,
+    const std::string& method_name, double& numerical_trouble_measure,
     const double alpha_from_col, const double alpha_from_row,
     const double numerical_trouble_tolerance) {
   double abs_alpha_from_col = fabs(alpha_from_col);
@@ -3156,11 +3186,10 @@ bool HEkk::isBadBasisChange(const SimplexAlgorithm algorithm,
   } else {
     // Look to see whether this basis change is in the list of bad
     // ones
-    for (HighsInt iX = 0; iX < (HighsInt)bad_basis_change_.size(); iX++) {
-      if (bad_basis_change_[iX].variable_out == variable_out &&
-          bad_basis_change_[iX].variable_in == variable_in &&
-          bad_basis_change_[iX].row_out == row_out) {
-        bad_basis_change_[iX].taboo = true;
+    for (auto& change : bad_basis_change_) {
+      if (change.variable_out == variable_out &&
+          change.variable_in == variable_in && change.row_out == row_out) {
+        change.taboo = true;
         return true;
       }
     }
@@ -3519,7 +3548,8 @@ HighsStatus HEkk::returnFromSolve(const HighsStatus return_status) {
     case HighsModelStatus::kInfeasible: {
       // Primal infeasibility has been identified in primal phase 1,
       // or proved in dual phase 2. There should be no primal
-      // perturbations
+      // perturbations or shifts
+      assert(!info_.bounds_shifted);
       assert(!info_.bounds_perturbed);
       if (exit_algorithm_ == SimplexAlgorithm::kPrimal) {
         // Reset the simplex costs and recompute duals after primal
@@ -3536,6 +3566,7 @@ HighsStatus HEkk::returnFromSolve(const HighsStatus return_status) {
       // Dual simplex has identified dual infeasibility in phase
       // 1. There should be no dual perturbations
       assert(exit_algorithm_ == SimplexAlgorithm::kDual);
+      assert(!info_.costs_shifted);
       assert(!info_.costs_perturbed);
       // Reset the simplex bounds and recompute primals
       initialiseBound(SimplexAlgorithm::kDual, kSolvePhase2);
@@ -3549,7 +3580,10 @@ HighsStatus HEkk::returnFromSolve(const HighsStatus return_status) {
       // Primal simplex has identified unboundedness in phase 2. There
       // should be no primal or dual perturbations
       assert(exit_algorithm_ == SimplexAlgorithm::kPrimal);
-      assert(!info_.costs_perturbed && !info_.bounds_perturbed);
+      assert(!info_.costs_shifted);
+      assert(!info_.costs_perturbed);
+      assert(!info_.bounds_shifted);
+      assert(!info_.bounds_perturbed);
       computeSimplexInfeasible();
       // Primal solution should be feasible
       assert(info_.num_primal_infeasibilities == 0);
@@ -3579,13 +3613,14 @@ HighsStatus HEkk::returnFromSolve(const HighsStatus return_status) {
     default: {
       highsLogDev(
           options_->log_options, HighsLogType::kError,
-          "EKK %s simplex solver returns status %s\n",
+          "%s simplex solver returns status %s\n",
           exit_algorithm_ == SimplexAlgorithm::kPrimal ? "primal" : "dual",
           utilModelStatusToString(model_status_).c_str());
       return HighsStatus::kError;
       break;
     }
   }
+  this->zeroBasicDuals();
   assert(info_.num_primal_infeasibilities >= 0);
   assert(info_.num_dual_infeasibilities >= 0);
   if (info_.num_primal_infeasibilities == 0) {
@@ -3598,6 +3633,7 @@ HighsStatus HEkk::returnFromSolve(const HighsStatus return_status) {
   } else {
     return_dual_solution_status_ = kSolutionStatusInfeasible;
   }
+  assert(debugNoShiftsOrPerturbations());
   computePrimalObjectiveValue();
   if (!options_->log_dev_level) {
     const bool force = true;
@@ -3737,7 +3773,7 @@ void HEkk::initialiseAnalysis() {
   analysis_.setup(lp_name_, lp_, *options_, iteration_count_);
 }
 
-std::string HEkk::rebuildReason(const HighsInt rebuild_reason) {
+std::string HEkk::rebuildReason(const HighsInt rebuild_reason) const {
   std::string rebuild_reason_string;
   if (rebuild_reason == kRebuildReasonCleanup) {
     rebuild_reason_string = "Perturbation cleanup";
@@ -3761,6 +3797,8 @@ std::string HEkk::rebuildReason(const HighsInt rebuild_reason) {
     rebuild_reason_string = "Primal infeasible in primal simplex";
   } else if (rebuild_reason == kRebuildReasonChooseColumnFail) {
     rebuild_reason_string = "Choose column failure";
+  } else if (rebuild_reason == kRebuildReasonExcessivePrimalValue) {
+    rebuild_reason_string = "Excessive primal value";
   } else {
     rebuild_reason_string = "Unidentified";
     assert(1 == 0);
@@ -3946,24 +3984,23 @@ HighsInt HEkk::addBadBasisChange(const HighsInt row_out,
 }
 
 void HEkk::clearBadBasisChangeTabooFlag() {
-  for (HighsInt iX = 0; iX < (HighsInt)bad_basis_change_.size(); iX++)
-    bad_basis_change_[iX].taboo = false;
+  for (auto& change : bad_basis_change_) change.taboo = false;
 }
 
-bool HEkk::tabooBadBasisChange() {
-  for (HighsInt iX = 0; iX < (HighsInt)bad_basis_change_.size(); iX++) {
-    if (bad_basis_change_[iX].taboo) return true;
+bool HEkk::tabooBadBasisChange() const {
+  for (const auto& change : bad_basis_change_) {
+    if (change.taboo) return true;
   }
   return false;
 }
 
 void HEkk::applyTabooRowOut(vector<double>& values,
                             const double overwrite_with) {
-  assert((HighsInt)values.size() >= lp_.num_row_);
-  for (HighsInt iX = 0; iX < (HighsInt)bad_basis_change_.size(); iX++) {
-    if (bad_basis_change_[iX].taboo) {
-      HighsInt iRow = bad_basis_change_[iX].row_out;
-      bad_basis_change_[iX].save_value = values[iRow];
+  assert(values.size() >= static_cast<size_t>(lp_.num_row_));
+  for (auto& change : bad_basis_change_) {
+    if (change.taboo) {
+      HighsInt iRow = change.row_out;
+      change.save_value = values[iRow];
       values[iRow] = overwrite_with;
     }
   }
@@ -3982,11 +4019,12 @@ void HEkk::unapplyTabooRowOut(vector<double>& values) {
 
 void HEkk::applyTabooVariableIn(vector<double>& values,
                                 const double overwrite_with) {
-  assert((HighsInt)values.size() >= lp_.num_col_ + lp_.num_row_);
-  for (HighsInt iX = 0; iX < (HighsInt)bad_basis_change_.size(); iX++) {
-    if (bad_basis_change_[iX].taboo) {
-      HighsInt iCol = bad_basis_change_[iX].variable_in;
-      bad_basis_change_[iX].save_value = values[iCol];
+  assert(values.size() >=
+         static_cast<size_t>(lp_.num_col_) + static_cast<size_t>(lp_.num_row_));
+  for (auto& change : bad_basis_change_) {
+    if (change.taboo) {
+      HighsInt iCol = change.variable_in;
+      change.save_value = values[iCol];
       values[iCol] = overwrite_with;
     }
   }
@@ -4219,7 +4257,8 @@ bool HEkk::proofOfPrimalInfeasibility(HVector& row_ep, const HighsInt move_out,
   return proof_of_primal_infeasibility;
 }
 
-double HEkk::getValueScale(const HighsInt count, const vector<double>& value) {
+double HEkk::getValueScale(const HighsInt count,
+                           const vector<double>& value) const {
   if (count <= 0) return 1;
   double max_abs_value = 0;
   for (HighsInt iX = 0; iX < count; iX++)
@@ -4318,7 +4357,7 @@ void HEkk::unitBtranResidual(const HighsInt row_out, const HVector& row_ep,
   }
 }
 
-void HighsSimplexStats::report(FILE* file, std::string message) const {
+void HighsSimplexStats::report(FILE* file, const std::string& message) const {
   fprintf(file, "\nSimplex stats: %s\n", message.c_str());
   fprintf(file, "   valid                      = %d\n", this->valid);
   fprintf(file, "   iteration_count            = %d\n",

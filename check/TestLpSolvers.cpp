@@ -481,8 +481,6 @@ TEST_CASE("highs-files-mip", "[highs_lp_solver]") {
 
   h.run();
 
-  const int64_t mip_node_count = h.getInfo().mip_node_count;
-
   REQUIRE(fileExists(write_model_file));
   REQUIRE(fileExists(write_solution_file));
 
@@ -497,6 +495,110 @@ TEST_CASE("highs-files-mip", "[highs_lp_solver]") {
 
   std::remove(write_model_file.c_str());
   std::remove(write_solution_file.c_str());
+
+  h.resetGlobalScheduler(true);
+}
+
+/*
+TEST_CASE("highs-debug-level", "[highs_lp_solver]") {
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  std::string model_file =
+      std::string(HIGHS_DIR) + "/check/instances/avgas.mps";
+
+  h.readModel(model_file);
+  h.setOptionValue("solver", kIpmString);
+  h.setOptionValue("highs_debug_level",  1);
+  h.run();
+  h.setOptionValue("highs_debug_level",  2);
+  h.run();
+  h.setOptionValue("highs_debug_level",  3);
+  h.run();
+  h.resetGlobalScheduler(true);
+}
+*/
+TEST_CASE("solver-string", "[highs_lp_solver]") {
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  REQUIRE(h.setOptionValue(kSolverString, "fred") == HighsStatus::kError);
+  REQUIRE(h.setOptionValue(kSolverString, kHighsChooseString) ==
+          HighsStatus::kOk);
+  REQUIRE(h.setOptionValue(kSolverString, kSimplexString) == HighsStatus::kOk);
+  REQUIRE(h.setOptionValue(kSolverString, kIpmString) == HighsStatus::kOk);
+
+#ifdef HIPO
+  REQUIRE(h.setOptionValue(kSolverString, kHipoString) == HighsStatus::kOk);
+#else
+  REQUIRE(h.setOptionValue(kSolverString, kHipoString) == HighsStatus::kError);
+#endif
+  REQUIRE(h.setOptionValue(kSolverString, kIpxString) == HighsStatus::kOk);
+  REQUIRE(h.setOptionValue(kSolverString, kPdlpString) == HighsStatus::kOk);
+}
+
+TEST_CASE("choose-lp-solver", "[highs_lp_solver]") {
+  std::string model_file =
+      std::string(HIGHS_DIR) + "/check/instances/avgas.mps";
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  REQUIRE(h.readModel(model_file) == HighsStatus::kOk);
+
+  REQUIRE(h.setOptionValue(kSolverString, kPdlpString) == HighsStatus::kOk);
+  h.run();
+  REQUIRE(h.getInfo().pdlp_iteration_count > 0);
+
+  REQUIRE(h.setOptionValue(kSolverString, kIpmString) == HighsStatus::kOk);
+  // h.setOptionValue("output_flag", true);
+  h.run();
+  REQUIRE(h.getInfo().ipm_iteration_count > 0);
+
+  h.resetGlobalScheduler(true);
+}
+
+TEST_CASE("releaseMemory", "[highs_lp_solver]") {
+  std::string model_file =
+      std::string(HIGHS_DIR) + "/check/instances/avgas.mps";
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+
+  // First solve
+  REQUIRE(h.readModel(model_file) == HighsStatus::kOk);
+  REQUIRE(h.run() == HighsStatus::kOk);
+  REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
+  double first_objective = h.getInfo().objective_function_value;
+
+  // Release memory and verify we can solve again
+  REQUIRE(h.releaseMemory() == HighsStatus::kOk);
+
+  // Second solve on a different model
+  std::string model_file2 =
+      std::string(HIGHS_DIR) + "/check/instances/adlittle.mps";
+  REQUIRE(h.readModel(model_file2) == HighsStatus::kOk);
+  REQUIRE(h.run() == HighsStatus::kOk);
+  REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
+  double second_objective = h.getInfo().objective_function_value;
+
+  // Verify objectives are different (different problems)
+  REQUIRE(first_objective != second_objective);
+
+  h.resetGlobalScheduler(true);
+}
+
+TEST_CASE("issue-2300", "[highs_lp_solver]") {
+  // After presolve, the only dual infeasibility at the start is that
+  // of a free nonbasic variable. Dual phase 2 is forced, hands over to
+  // dual phase 1 without iterating, and phase 1 must not then use the
+  // list of free variables that phase 2 created
+  std::string model_file =
+      std::string(HIGHS_DIR) + "/check/instances/issue-2300.mps";
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  if (dev_run) h.setOptionValue("log_dev_level", 1);
+  REQUIRE(h.readModel(model_file) == HighsStatus::kOk);
+  REQUIRE(h.run() == HighsStatus::kOk);
+  REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
+  const double optimal_objective = 4.0735475989e-04;
+  REQUIRE(std::fabs(h.getInfo().objective_function_value - optimal_objective) <
+          1e-12);
 
   h.resetGlobalScheduler(true);
 }

@@ -47,7 +47,7 @@ public:
     //
     // If the debug level is < 3, expensive_computation() is not performed.
     void hLog(std::stringstream& logging) const;
-    void hLog(std::string str) const;
+    void hLog(const std::string& str) const;
     void hDebug(std::stringstream& logging, Int level=1) const;
     std::ostream& Debug(Int level=1) const;
 
@@ -92,6 +92,9 @@ public:
     double centringAlphaScaling() const{return parameters_.centring_alpha_scaling; }
     ipxint badProductsTolerance() const{return parameters_.bad_products_tolerance; }
     bool timelessLog() const{return parameters_.timeless_log; }
+    double timeLimit() const {return parameters_.time_limit; }
+    void setTimerOffset(const double offset) { this->timer_.offset_ = offset; }
+
 
     const Parameters& parameters() const;
     void parameters(const Parameters& new_parameters);
@@ -137,6 +140,7 @@ inline std::string sci2(double d) { return Scientific(d,0,2); }
 inline std::string sci8(double d) { return Scientific(d,0,8); }
 inline std::string fix2(double d) { return Fixed(d,0,2); }
 inline std::string fix8(double d) { return Fixed(d,0,8); }
+inline std::string time(double d) { return Fixed(d,8,1); }
 
 // Formats @text into a line of fixed width and indentation.
 // This is used to print messages like

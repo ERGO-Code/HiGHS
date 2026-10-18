@@ -88,7 +88,7 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
     HighsInt col = -1;
     double val = 0.0;
     for (HighsInt j = 0; j != len; ++j) {
-      if (mip.variableType(rowinds[j]) != HighsVarType::kContinuous) continue;
+      if (mip.isColIntegral(rowinds[j])) continue;
       if (transLp.boundDistance(rowinds[j]) == 0.0) continue;
       col = rowinds[j];
       val = rowvals[j];
@@ -96,7 +96,7 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
     }
 
     assert(col != -1);
-    assert(mip.variableType(col) == HighsVarType::kContinuous);
+    assert(mip.isColContinuous(col));
     assert(transLp.boundDistance(col) > 0.0);
 
     if (colSubstitutions[col].first != -1) continue;
@@ -400,7 +400,7 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
         std::vector<HighsInt> inds;
         std::vector<double> solval;
         std::vector<double> upper;
-        std::vector<uint8_t> isIntegral;
+        std::vector<HighsBool> isIntegral;
         inds.reserve(lp.num_col_ + lp.num_row_);
         solval.reserve(lp.num_col_ + lp.num_row_);
         upper.reserve(lp.num_col_ + lp.num_row_);
@@ -412,12 +412,14 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
 
         double delta = 1.0;
 
+        transLp.initMultiRowTransform();
+
         for (HighsInt k = 0; k < pathLen; ++k) {
           bool integralPositive = false;
 
           if (!transLp.transform(aggregatedPath[k].second, tmpUpper, tmpSolval,
                                  aggregatedPath[k].first, rhs[k],
-                                 integralPositive)) {
+                                 integralPositive, false, true)) {
             pathLen = k;
             break;
           }
@@ -530,7 +532,8 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
                 inds.resize(numInds);
 
                 if (transLp.untransform(cutVals, inds, rhs))
-                  success |= cutGen.finalizeAndAddCut(inds, cutVals, rhs);
+                  success |= cutGen.finalizeAndAddCut(transLp.getGlobaldom(),
+                                                      inds, cutVals, rhs);
 
                 // printf("cut is violated for k = %d\n", k);
                 break;
