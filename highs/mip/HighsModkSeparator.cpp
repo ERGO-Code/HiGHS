@@ -81,8 +81,7 @@ void HighsModkSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
   vals.reserve(lp.num_col_);
   scaleVals.reserve(lp.num_col_);
 
-  std::vector<double> upper;
-  std::vector<double> solval;
+  HighsTransformedLp::TransformedRow transformedRow;
   double rhs;
 
   const HighsSolution& lpSolution = lpRelaxation.getSolution();
@@ -125,16 +124,17 @@ void HighsModkSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
     }
 
     bool integralPositive = false;
-    if (!transLp.transform(vals, upper, solval, inds, rhs, integralPositive,
-                           true))
+    if (!transLp.transform(HighsTransformedLp::Row{inds, vals, rhs},
+                           transformedRow, integralPositive, true))
       continue;
+    rhs = static_cast<double>(transformedRow.rhs);
 
-    rowlen = inds.size();
+    rowlen = transformedRow.vars.size();
     if (rowlen > maxIntRowLen) {
       HighsInt intRowLen = 0;
-      for (HighsInt i = 0; i < rowlen; ++i) {
-        if (solval[i] <= mipsolver.mipdata_->feastol) continue;
-        if (mipsolver.isColContinuous(inds[i])) continue;
+      for (const auto& var : transformedRow.vars) {
+        if (var.solval <= mipsolver.mipdata_->feastol) continue;
+        if (mipsolver.isColContinuous(var.col)) continue;
         ++intRowLen;
       }
 
@@ -149,10 +149,10 @@ void HighsModkSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
 
     if (!lpRelaxation.isRowIntegral(row)) {
       scaleVals.clear();
-      for (HighsInt i = 0; i != rowlen; ++i) {
-        if (mipsolver.isColContinuous(inds[i])) continue;
-        if (solval[i] > mipsolver.mipdata_->feastol) {
-          scaleVals.push_back(vals[i]);
+      for (const auto& var : transformedRow.vars) {
+        if (mipsolver.isColContinuous(var.col)) continue;
+        if (var.solval > mipsolver.mipdata_->feastol) {
+          scaleVals.push_back(var.val);
         }
       }
 
@@ -165,22 +165,22 @@ void HighsModkSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
 
       intrhs = HighsIntegers::nearestInteger(intscale * rhs);
 
-      for (HighsInt i = 0; i != rowlen; ++i) {
-        if (mipsolver.isColContinuous(inds[i])) continue;
-        if (solval[i] > mipsolver.mipdata_->feastol) {
-          intSystemIndex.push_back(inds[i]);
+      for (const auto& var : transformedRow.vars) {
+        if (mipsolver.isColContinuous(var.col)) continue;
+        if (var.solval > mipsolver.mipdata_->feastol) {
+          intSystemIndex.push_back(var.col);
           intSystemValue.push_back(
-              HighsIntegers::nearestInteger(intscale * vals[i]));
+              HighsIntegers::nearestInteger(intscale * var.val));
         }
       }
     } else {
       intscale = 1.0;
       intrhs = HighsIntegers::nearestInteger(rhs);
 
-      for (HighsInt i = 0; i != rowlen; ++i) {
-        if (solval[i] > mipsolver.mipdata_->feastol) {
-          intSystemIndex.push_back(inds[i]);
-          intSystemValue.push_back(HighsIntegers::nearestInteger(vals[i]));
+      for (const auto& var : transformedRow.vars) {
+        if (var.solval > mipsolver.mipdata_->feastol) {
+          intSystemIndex.push_back(var.col);
+          intSystemValue.push_back(HighsIntegers::nearestInteger(var.val));
         }
       }
     }

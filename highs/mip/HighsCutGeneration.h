@@ -42,9 +42,6 @@ class HighsCutGeneration {
   HighsCDouble lambda;
   // base inequality and cut in the transformed space
   TransformedRow cut;
-  // upper bounds and solution values from HighsTransformedLp::transform
-  std::vector<double> transformUpper;
-  std::vector<double> transformSolval;
   const double feastol;
   const double epsilon;
 

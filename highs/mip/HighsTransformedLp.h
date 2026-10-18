@@ -72,6 +72,9 @@ class HighsTransformedLp {
     // removes the complementation of all variables
     void removeComplementation();
 
+    // copies the indices, values, and right hand side of the given row
+    void load(const Row& row);
+
     // copies the indices, values, and right hand side to the given row
     void store(Row& row) const;
   };
@@ -104,9 +107,9 @@ class HighsTransformedLp {
 
   double boundDistance(HighsInt col) const { return boundDist[col]; }
 
-  bool transform(std::vector<double>& vals, std::vector<double>& upper,
-                 std::vector<double>& solval, std::vector<HighsInt>& inds,
-                 double& rhs, bool& integralPositive, bool preferVbds = false,
+  // transforms the given row into the transformed space
+  bool transform(const Row& row, TransformedRow& transformedRow,
+                 bool& integralPositive, bool preferVbds = false,
                  bool enforceSameBds = false);
 
   // transforms the given row back into the original space

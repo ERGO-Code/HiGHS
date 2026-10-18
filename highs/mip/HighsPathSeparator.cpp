@@ -407,8 +407,8 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
         isIntegral.reserve(lp.num_col_ + lp.num_row_);
 
         std::vector<double> rhs(pathLen);
-        std::vector<double> tmpUpper;
-        std::vector<double> tmpSolval;
+        std::vector<HighsTransformedLp::TransformedRow> transformedPath(
+            pathLen);
 
         double delta = 1.0;
 
@@ -417,12 +417,14 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
         for (HighsInt k = 0; k < pathLen; ++k) {
           bool integralPositive = false;
 
-          if (!transLp.transform(aggregatedPath[k].second, tmpUpper, tmpSolval,
-                                 aggregatedPath[k].first, rhs[k],
-                                 integralPositive, false, true)) {
+          if (!transLp.transform(
+                  HighsTransformedLp::Row{aggregatedPath[k].first,
+                                          aggregatedPath[k].second, rhs[k]},
+                  transformedPath[k], integralPositive, false, true)) {
             pathLen = k;
             break;
           }
+          rhs[k] = static_cast<double>(transformedPath[k].rhs);
 
           if (k == 0) {
             if (rhs[k] > kHighsTiny) {
@@ -437,24 +439,22 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
 
           delta = std::max(std::abs(rhs[k]), delta);
 
-          HighsInt len = aggregatedPath[k].first.size();
-          for (HighsInt j = 0; j < len; ++j) {
-            HighsInt index = aggregatedPath[k].first[j];
+          for (const auto& var : transformedPath[k].vars) {
+            HighsInt index = var.col;
             HighsInt* pos = &indexPos[index];
             if (*pos == 0) {
               inds.push_back(index);
-              solval.push_back(tmpSolval[j]);
-              upper.push_back(tmpUpper[j]);
+              solval.push_back(var.solval);
+              upper.push_back(var.upper);
               isIntegral.push_back(lpRelaxation.isColIntegral(index));
-              if (isIntegral.back())
-                delta = std::max(std::abs(aggregatedPath[k].second[j]), delta);
+              if (isIntegral.back()) delta = std::max(std::abs(var.val), delta);
               *pos = inds.size();
             } else {
               assert(inds[*pos - 1] == index);
-              assert(solval[*pos - 1] == tmpSolval[j]);
-              assert(upper[*pos - 1] == tmpUpper[j]);
+              assert(solval[*pos - 1] == var.solval);
+              assert(upper[*pos - 1] == var.upper);
               if (isIntegral[*pos - 1])
-                delta = std::max(std::abs(aggregatedPath[k].second[j]), delta);
+                delta = std::max(std::abs(var.val), delta);
             }
           }
         }
@@ -476,13 +476,12 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
           for (HighsInt k = 0; k < pathLen; ++k) {
             double f = rhs[k] * scale;
             HighsCDouble fDiff = static_cast<HighsCDouble>(f) - fLast;
-            HighsInt len = aggregatedPath[k].first.size();
             cutRhs += fDiff;
-            for (HighsInt j = 0; j < len; ++j) {
-              HighsInt i = indexPos[aggregatedPath[k].first[j]] - 1;
+            for (const auto& var : transformedPath[k].vars) {
+              HighsInt i = indexPos[var.col] - 1;
               assert(i >= 0);
 
-              double gj = aggregatedPath[k].second[j] * scale;
+              double gj = var.val * scale;
 
               switch (isIntegral[i]) {
                 case 0:

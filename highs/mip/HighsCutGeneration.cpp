@@ -1032,69 +1032,45 @@ bool HighsCutGeneration::generateCut(HighsTransformedLp& transLp,
                                      bool onlyInitialCMIRScale) {
 #if 0
   if (vals_.size() > 1) {
-    std::vector<HighsInt> indsCheck_ = inds_;
-    std::vector<double> valsCheck_ = vals_;
-    double tmprhs_ = rhs_;
     bool intsPositive = true;
-    if (!transLp.transform(valsCheck_, transformUpper, transformSolval,
-                           indsCheck_, tmprhs_, intsPositive))
+    if (!transLp.transform(Row{inds_, vals_, rhs_}, cut, intsPositive))
       return false;
 
-    const HighsInt numVars = indsCheck_.size();
-    cut.rhs = tmprhs_;
-    cut.vars.resize(numVars);
-    for (HighsInt i = 0; i != numVars; ++i) {
-      cut.vars[i].col = indsCheck_[i];
-      cut.vars[i].val = valsCheck_[i];
-      cut.vars[i].upper = transformUpper[i];
-      cut.vars[i].solval = transformSolval[i];
-      cut.vars[i].flippedSolval = transformUpper[i] - transformSolval[i];
-      cut.vars[i].complemented = false;
-      cut.vars[i].integral = false;
-    }
     bool hasUnboundedInts = false;
     bool hasGeneralInts = false;
     bool hasContinuous = false;
     // printf("before preprocessing of base inequality:\n");
-    checkNumerics(valsCheck_.data(), valsCheck_.size(), tmprhs_);
+    std::vector<HighsInt> indsCheck_;
+    std::vector<double> valsCheck_;
+    Row checkRow{indsCheck_, valsCheck_, 0.0};
+    cut.store(checkRow);
+    checkNumerics(valsCheck_.data(), valsCheck_.size(),
+                  static_cast<double>(checkRow.rhs));
     if (!preprocessBaseInequality(hasUnboundedInts, hasGeneralInts,
                                   hasContinuous))
       return false;
-    Row row{indsCheck_, valsCheck_, 0.0};
-    cut.store(row);
+    cut.store(checkRow);
     // printf("after preprocessing of base inequality:\n");
     checkNumerics(valsCheck_.data(), valsCheck_.size(),
-                  static_cast<double>(row.rhs));
+                  static_cast<double>(checkRow.rhs));
 
-    if (!transLp.untransform(row)) return false;
-    tmprhs_ = static_cast<double>(row.rhs);
+    if (!transLp.untransform(checkRow)) return false;
 
     // printf("after untransform of base inequality:\n");
-    checkNumerics(valsCheck_.data(), valsCheck_.size(), tmprhs_);
+    checkNumerics(valsCheck_.data(), valsCheck_.size(),
+                  static_cast<double>(checkRow.rhs));
 
     // finally check whether the cut is violated
     lpRelaxation.getMipSolver().mipdata_->debugSolution.checkCut(
-        indsCheck_.data(), valsCheck_.data(), indsCheck_.size(), tmprhs_);
+        indsCheck_.data(), valsCheck_.data(), indsCheck_.size(),
+        static_cast<double>(checkRow.rhs));
   }
 #endif
 
   bool intsPositive = true;
-  if (!transLp.transform(vals_, transformUpper, transformSolval, inds_, rhs_,
-                         intsPositive))
+  if (!transLp.transform(Row{inds_, vals_, rhs_}, cut, intsPositive))
     return false;
 
-  const HighsInt numVars = inds_.size();
-  cut.rhs = rhs_;
-  cut.vars.resize(numVars);
-  for (HighsInt i = 0; i != numVars; ++i) {
-    cut.vars[i].col = inds_[i];
-    cut.vars[i].val = vals_[i];
-    cut.vars[i].upper = transformUpper[i];
-    cut.vars[i].solval = transformSolval[i];
-    cut.vars[i].flippedSolval = transformUpper[i] - transformSolval[i];
-    cut.vars[i].complemented = false;
-    cut.vars[i].integral = false;
-  }
   bool hasUnboundedInts = false;
   bool hasGeneralInts = false;
   bool hasContinuous = false;
