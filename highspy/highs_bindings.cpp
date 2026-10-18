@@ -983,7 +983,8 @@ std::string highs_locatePythonPackage(const std::string module_name) {
     return "";
   }
 
-  const std::string origin = nb::cast<std::string>(nb::str(find_spec.attr("origin")));
+  const nb::object origin_obj = find_spec.attr("origin");
+  const std::string origin = nb::cast<std::string>(nb::str(origin_obj));
   return get_parent_directory(origin);
 }
 
