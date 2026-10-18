@@ -32,6 +32,8 @@ class HighsCutGeneration {
  private:
   // data of a variable in the base inequality
   struct CutVariable {
+    HighsInt col;
+    double val;
     double upper;
     // solution value in the current complementation
     double solval;
@@ -55,6 +57,8 @@ class HighsCutGeneration {
   const double feastol;
   const double epsilon;
 
+  // values and indices of the cut after the base inequality was transformed
+  // back; before, they are stored in cutVars
   double* vals;
   HighsInt* inds;
   HighsCDouble rhs;
@@ -66,8 +70,6 @@ class HighsCutGeneration {
   std::vector<HighsInt> integerinds;
   std::vector<double> deltas;
 
-  std::vector<double> tmpVals;
-  std::vector<HighsInt> tmpInds;
   std::vector<CutVariable> tmpCutVars;
 
   bool determineCover(bool lpSol = true);
@@ -81,8 +83,6 @@ class HighsCutGeneration {
   bool cmirCutGenerationHeuristic(double minEfficacy,
                                   bool onlyInitialCMIRScale = false);
 
-  double scale(double val);
-
   bool postprocessCut(const HighsDomain& globaldom);
 
   bool preprocessBaseInequality(bool& hasUnboundedInts, bool& hasGeneralInts,
@@ -92,13 +92,15 @@ class HighsCutGeneration {
 
   void removeComplementation();
 
+  void storeCutVars(std::vector<HighsInt>& cutInds,
+                    std::vector<double>& cutVals);
+
   template <typename T>
   void updateViolationAndNorm(const CutVariable& var, T aj,
                               HighsCDouble& violation,
                               HighsCDouble& norm) const;
 
-  bool tryGenerateCut(std::vector<HighsInt>& inds, std::vector<double>& vals,
-                      bool hasUnboundedInts, bool hasGeneralInts,
+  bool tryGenerateCut(bool hasUnboundedInts, bool hasGeneralInts,
                       bool hasContinuous, double minEfficacy,
                       bool onlyInitialCMIRScale = false,
                       bool allowRejectCut = true, bool lpSol = true);
