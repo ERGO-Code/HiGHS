@@ -3,6 +3,7 @@
 #include "SpecialLps.h"
 #include "catch.hpp"
 #include "mip/HighsCliqueTable.h"
+#include "mip/HighsConflictPool.h"
 #include "mip/HighsImplications.h"
 #include "mip/HighsMipSolver.h"
 #include "mip/HighsMipSolverData.h"
@@ -2471,4 +2472,25 @@ TEST_CASE("issue-3389-binding-row", "[highs_test_mip_solver]") {
              std::fabs(objective - (2 - 0.5 * tol)) < 1e-8));
   }
   highs.resetGlobalScheduler(true);
+}
+
+TEST_CASE("conflict-pool-sync-empty-conflict", "[highs_test_mip_solver]") {
+  // an empty conflict, which can be derived when a proof is violated by the
+  // global bounds alone, is stored at the end of the conflict entries and
+  // used to be accessed out of range when synchronising the conflict pools of
+  // the parallel mip solver
+  HighsConflictPool workerPool(10, 100);
+  HighsConflictPool globalPool(10, 100);
+  HighsDomainChange domchg{1.0, 0, HighsBoundType::kLower};
+  workerPool.addConflictFromOtherPool(&domchg, 1);
+  workerPool.addConflictFromOtherPool(nullptr, 0);
+  REQUIRE(workerPool.getNumConflicts() == 2);
+
+  workerPool.syncConflictPool(globalPool);
+  REQUIRE(workerPool.getNumConflicts() == 0);
+  REQUIRE(globalPool.getNumConflicts() == 2);
+
+  const auto& ranges = globalPool.getConflictRanges();
+  REQUIRE(ranges[0].second - ranges[0].first == 1);
+  REQUIRE(ranges[1].second - ranges[1].first == 0);
 }
