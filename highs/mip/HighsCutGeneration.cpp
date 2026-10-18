@@ -925,8 +925,7 @@ bool HighsCutGeneration::preprocessBaseInequality(bool& hasUnboundedInts,
     // complemented so that their solution value is closest to zero and then
     // will be relaxed if their value is positive or their maximal contribution
     // is below feasibility tolerance.
-    var.integral =
-        lpRelaxation.isColIntegral(var.col) && std::abs(var.val) > 10 * feastol;
+    var.integral = var.integral && std::abs(var.val) > 10 * feastol;
 
     if (!var.integral) {
       // complement non-integer variable (cmir separation heuristic complements
@@ -1159,7 +1158,7 @@ bool HighsCutGeneration::generateConflict(const HighsDomain& localdomain,
     var.col = col;
     var.val = proofvals[i];
     var.upper = globaldom.col_upper_[col] - globaldom.col_lower_[col];
-    var.integral = false;
+    var.integral = lpRelaxation.isColIntegral(col);
 
     var.solval =
         var.val < 0

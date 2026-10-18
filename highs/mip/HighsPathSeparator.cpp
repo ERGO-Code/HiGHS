@@ -446,7 +446,7 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
               inds.push_back(index);
               solval.push_back(var.solval);
               upper.push_back(var.upper);
-              isIntegral.push_back(lpRelaxation.isColIntegral(index));
+              isIntegral.push_back(var.integral);
               if (isIntegral.back()) delta = std::max(std::abs(var.val), delta);
               *pos = inds.size();
             } else {

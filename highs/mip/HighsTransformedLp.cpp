@@ -475,11 +475,10 @@ bool HighsTransformedLp::transform(const Row& row,
 
     var.flippedSolval = var.upper - var.solval;
     var.complemented = false;
-    var.integral = false;
+    var.integral = lprelaxation.isColIntegral(col);
 
     // check if all integer-constrained variables have positive coefficients
-    if (lprelaxation.isColIntegral(col))
-      integersPositive = integersPositive && var.val > 0;
+    if (var.integral) integersPositive = integersPositive && var.val > 0;
   }
 
   transformedRow.rhs = static_cast<double>(tmpRhs);
@@ -617,74 +616,4 @@ bool HighsTransformedLp::untransform(Row& row, bool integral) {
   vectorsum.clear();
 
   return true;
-}
-
-void HighsTransformedLp::Row::scale(double factor) {
-  rhs *= factor;
-  for (double& val : vals) val *= factor;
-}
-
-void HighsTransformedLp::Row::removeZeros() {
-  // replace zeros by the last element to keep the removal cheap
-  for (HighsInt i = static_cast<HighsInt>(vals.size()) - 1; i >= 0; --i) {
-    if (vals[i] == 0.0) {
-      inds[i] = inds.back();
-      vals[i] = vals.back();
-      inds.pop_back();
-      vals.pop_back();
-    }
-  }
-}
-
-HighsCDouble HighsTransformedLp::Row::violation(
-    const std::vector<double>& sol) const {
-  HighsCDouble viol = -rhs;
-  for (HighsInt i = 0; i != static_cast<HighsInt>(inds.size()); ++i)
-    viol += static_cast<HighsCDouble>(sol[inds[i]]) * vals[i];
-  return viol;
-}
-
-void HighsTransformedLp::TransformedRow::scale(double factor) {
-  rhs *= factor;
-  for (TransformedVar& var : vars) var.val *= factor;
-}
-
-void HighsTransformedLp::TransformedRow::flipComplementation(
-    TransformedVar& var) {
-  // only variables with finite upper bounds can be complemented
-  assert(var.upper != kHighsInf);
-
-  // flip complementation
-  var.complemented = !var.complemented;
-  std::swap(var.solval, var.flippedSolval);
-  rhs -= static_cast<HighsCDouble>(var.upper) * var.val;
-  var.val = -var.val;
-}
-
-void HighsTransformedLp::TransformedRow::removeComplementation() {
-  // remove the complementation
-  for (TransformedVar& var : vars) {
-    if (var.complemented) flipComplementation(var);
-  }
-}
-
-void HighsTransformedLp::TransformedRow::load(const Row& row) {
-  const HighsInt numVars = row.inds.size();
-  vars.resize(numVars);
-  for (HighsInt i = 0; i != numVars; ++i) {
-    vars[i].col = row.inds[i];
-    vars[i].val = row.vals[i];
-  }
-  rhs = row.rhs;
-}
-
-void HighsTransformedLp::TransformedRow::store(Row& row) const {
-  const HighsInt numVars = vars.size();
-  row.inds.resize(numVars);
-  row.vals.resize(numVars);
-  for (HighsInt i = 0; i != numVars; ++i) {
-    row.inds[i] = vars[i].col;
-    row.vals[i] = vars[i].val;
-  }
-  row.rhs = rhs;
 }

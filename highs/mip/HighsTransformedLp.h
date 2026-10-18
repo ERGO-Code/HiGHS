@@ -14,6 +14,8 @@
 #ifndef MIP_HIGHS_TRANSFORMED_LP_H_
 #define MIP_HIGHS_TRANSFORMED_LP_H_
 
+#include <cassert>
+#include <utility>
 #include <vector>
 
 #include "lp_data/HConst.h"
@@ -35,13 +37,31 @@ class HighsTransformedLp {
     HighsCDouble rhs;
 
     // scales the right hand side and all coefficients
-    void scale(double factor);
+    void scale(double factor) {
+      rhs *= factor;
+      for (double& val : vals) val *= factor;
+    }
 
     // removes zero coefficients
-    void removeZeros();
+    void removeZeros() {
+      // replace zeros by the last element to keep the removal cheap
+      for (HighsInt i = static_cast<HighsInt>(vals.size()) - 1; i >= 0; --i) {
+        if (vals[i] == 0.0) {
+          inds[i] = inds.back();
+          vals[i] = vals.back();
+          inds.pop_back();
+          vals.pop_back();
+        }
+      }
+    }
 
     // returns the violation of the row by the given solution
-    HighsCDouble violation(const std::vector<double>& sol) const;
+    HighsCDouble violation(const std::vector<double>& sol) const {
+      HighsCDouble viol = -rhs;
+      for (HighsInt i = 0; i != static_cast<HighsInt>(inds.size()); ++i)
+        viol += static_cast<HighsCDouble>(sol[inds[i]]) * vals[i];
+      return viol;
+    }
   };
 
   // variable of a row in the transformed space
@@ -55,6 +75,8 @@ class HighsTransformedLp {
     // solution values restores them exactly when flipping back
     double flippedSolval;
     bool complemented;
+    // whether the variable is integral; cut generation relaxes integral
+    // variables with small coefficients
     bool integral;
   };
 
@@ -64,19 +86,52 @@ class HighsTransformedLp {
     HighsCDouble rhs;
 
     // scales the right hand side and all coefficients
-    void scale(double factor);
+    void scale(double factor) {
+      rhs *= factor;
+      for (TransformedVar& var : vars) var.val *= factor;
+    }
 
     // flips the complementation of the given variable of this row
-    void flipComplementation(TransformedVar& var);
+    void flipComplementation(TransformedVar& var) {
+      // only variables with finite upper bounds can be complemented
+      assert(var.upper != kHighsInf);
+
+      // flip complementation
+      var.complemented = !var.complemented;
+      std::swap(var.solval, var.flippedSolval);
+      rhs -= static_cast<HighsCDouble>(var.upper) * var.val;
+      var.val = -var.val;
+    }
 
     // removes the complementation of all variables
-    void removeComplementation();
+    void removeComplementation() {
+      for (TransformedVar& var : vars) {
+        if (var.complemented) flipComplementation(var);
+      }
+    }
 
     // copies the indices, values, and right hand side of the given row
-    void load(const Row& row);
+    void load(const Row& row) {
+      const HighsInt numVars = row.inds.size();
+      vars.resize(numVars);
+      for (HighsInt i = 0; i != numVars; ++i) {
+        vars[i].col = row.inds[i];
+        vars[i].val = row.vals[i];
+      }
+      rhs = row.rhs;
+    }
 
     // copies the indices, values, and right hand side to the given row
-    void store(Row& row) const;
+    void store(Row& row) const {
+      const HighsInt numVars = vars.size();
+      row.inds.resize(numVars);
+      row.vals.resize(numVars);
+      for (HighsInt i = 0; i != numVars; ++i) {
+        row.inds[i] = vars[i].col;
+        row.vals[i] = vars[i].val;
+      }
+      row.rhs = rhs;
+    }
   };
 
  private:
