@@ -30,7 +30,7 @@ bool HighsCutGeneration::determineCover(bool lpSol) {
   cover.reserve(numVars);
 
   for (HighsInt j = 0; j != numVars; ++j) {
-    const CutVariable& var = cut.vars[j];
+    const TransformedVar& var = cut.vars[j];
     if (!var.integral) continue;
 
     if (lpSol && var.solval <= feastol) continue;
@@ -51,7 +51,7 @@ bool HighsCutGeneration::determineCover(bool lpSol) {
                 cover.begin();
 
     for (HighsInt i = 0; i != coversize; ++i) {
-      const CutVariable& var = cut.vars[cover[i]];
+      const TransformedVar& var = cut.vars[cover[i]];
 
       assert(var.flippedSolval <= feastol);
 
@@ -120,7 +120,7 @@ bool HighsCutGeneration::determineCover(bool lpSol) {
     double lambda = static_cast<double>(coverweight - cut.rhs);
     if (lambda > minlambda) break;
 
-    const CutVariable& var = cut.vars[cover[coversize]];
+    const TransformedVar& var = cut.vars[cover[coversize]];
     coverweight += static_cast<HighsCDouble>(var.upper) * var.val;
   }
   if (coversize == 0) return false;
@@ -207,7 +207,7 @@ void HighsCutGeneration::separateLiftedKnapsackCover() {
   cut.rhs = coversize - 1;
 
   for (HighsInt i = 0; i != numVars; ++i) {
-    CutVariable& var = cut.vars[i];
+    TransformedVar& var = cut.vars[i];
     if (var.val == 0.0) continue;
     if (coverflag[i] == -1) {
       var.val = 1;
@@ -273,7 +273,7 @@ bool HighsCutGeneration::separateLiftedMixedBinaryCover() {
   integralCoefficients = false;
   integralSupport = true;
   for (HighsInt i = 0; i != numVars; ++i) {
-    CutVariable& var = cut.vars[i];
+    TransformedVar& var = cut.vars[i];
     if (!var.integral) {
       if (var.val < 0)
         integralSupport = false;
@@ -507,7 +507,7 @@ bool HighsCutGeneration::separateLiftedMixedIntegerCover() {
   integralSupport = true;
   integralCoefficients = false;
   for (HighsInt i = 0; i != numVars; ++i) {
-    CutVariable& var = cut.vars[i];
+    TransformedVar& var = cut.vars[i];
     if (var.val == 0.0) continue;
     if (!var.integral) {
       if (var.val < 0.0)
@@ -556,7 +556,7 @@ bool HighsCutGeneration::cmirCutGenerationHeuristic(double minEfficacy,
   constexpr double f0max = 0.995;
 
   for (HighsInt i = 0; i != numVars; ++i) {
-    CutVariable& var = cut.vars[i];
+    TransformedVar& var = cut.vars[i];
     if (var.integral) {
       integerinds.push_back(i);
 
@@ -680,7 +680,7 @@ bool HighsCutGeneration::cmirCutGenerationHeuristic(double minEfficacy,
 
   // try to flip complementation of integers to increase efficacy
   for (HighsInt k : integerinds) {
-    CutVariable& var = cut.vars[k];
+    TransformedVar& var = cut.vars[k];
     if (var.upper == kHighsInf) continue;
     if (var.solval <= feastol) continue;
 
@@ -702,7 +702,7 @@ bool HighsCutGeneration::cmirCutGenerationHeuristic(double minEfficacy,
   cut.rhs = downrhs * bestdelta;
   integralSupport = true;
   integralCoefficients = false;
-  for (CutVariable& var : cut.vars) {
+  for (TransformedVar& var : cut.vars) {
     if (var.val == 0.0) continue;
     if (!var.integral) {
       if (var.val > 0.0)
@@ -723,7 +723,7 @@ bool HighsCutGeneration::cmirCutGenerationHeuristic(double minEfficacy,
   {
     HighsCDouble checkviol = -cut.rhs;
     HighsCDouble checknorm = 0.0;
-    for (const CutVariable& var : cut.vars) {
+    for (const TransformedVar& var : cut.vars) {
       if (var.val == 0.0) continue;
       updateViolationAndNorm(var, var.val, checkviol, checknorm);
     }
@@ -752,11 +752,11 @@ static double computeScale(double val) {
   return std::ldexp(1.0, expshift);
 }
 
-bool HighsCutGeneration::postprocessCut(Cut& origCut,
+bool HighsCutGeneration::postprocessCut(Row& row,
                                         const HighsDomain& globaldom) {
-  std::vector<HighsInt>& inds = origCut.inds;
-  std::vector<double>& vals = origCut.vals;
-  HighsCDouble& rhs = origCut.rhs;
+  std::vector<HighsInt>& inds = row.inds;
+  std::vector<double>& vals = row.vals;
+  HighsCDouble& rhs = row.rhs;
 
   // right hand sides slightly below zero are likely due to numerical errors and
   // can cause numerical troubles with scaling, so set them to zero
@@ -765,7 +765,7 @@ bool HighsCutGeneration::postprocessCut(Cut& origCut,
   if (integralSupport && integralCoefficients) {
     // if the cut is known to be integral no postprocessing is needed and we
     // simply remove zero coefficients
-    origCut.removeZeros();
+    row.removeZeros();
     return true;
   }
 
@@ -805,7 +805,7 @@ bool HighsCutGeneration::postprocessCut(Cut& origCut,
   }
 
   // remove zeros in place
-  origCut.removeZeros();
+  row.removeZeros();
 
   if (vals.empty()) return false;
 
@@ -874,12 +874,12 @@ bool HighsCutGeneration::postprocessCut(Cut& origCut,
       for (double val : vals)
         minAbsValue = std::min(std::abs(val), minAbsValue);
 
-      origCut.scale(computeScale(minAbsValue - epsilon));
+      row.scale(computeScale(minAbsValue - epsilon));
     }
   } else {
     // the support is not integral, scale cut to have the largest coefficient
     // around 1.0
-    origCut.scale(computeScale(maxAbsValue - epsilon));
+    row.scale(computeScale(maxAbsValue - epsilon));
   }
 
   return true;
@@ -905,13 +905,13 @@ bool HighsCutGeneration::preprocessBaseInequality(bool& hasUnboundedInts,
   const HighsInt numVars = cut.vars.size();
   HighsCDouble maxact = -feastol;
   double maxAbsVal = 0;
-  for (const CutVariable& var : cut.vars)
+  for (const TransformedVar& var : cut.vars)
     maxAbsVal = std::max(std::abs(var.val), maxAbsVal);
 
   initialScale = computeScale(maxAbsVal);
   cut.scale(initialScale);
 
-  for (CutVariable& var : cut.vars) {
+  for (TransformedVar& var : cut.vars) {
     // we do not want to have integral variables with small coefficients as this
     // may lead to numerical instabilities during cut generation
     // Therefore we relax integral variables with small coefficients to
@@ -962,7 +962,7 @@ bool HighsCutGeneration::preprocessBaseInequality(bool& hasUnboundedInts,
     std::vector<HighsInt> cancelNzs;
 
     for (HighsInt i = 0; i != numVars; ++i) {
-      const CutVariable& var = cut.vars[i];
+      const TransformedVar& var = cut.vars[i];
       double cancelSlack = var.val > 0 ? var.solval : var.flippedSolval;
       if (cancelSlack <= feastol) cancelNzs.push_back(i);
     }
@@ -976,7 +976,7 @@ bool HighsCutGeneration::preprocessBaseInequality(bool& hasUnboundedInts,
                         });
 
     for (HighsInt i = 0; i < numCancel; ++i) {
-      CutVariable& var = cut.vars[cancelNzs[i]];
+      TransformedVar& var = cut.vars[cancelNzs[i]];
 
       if (var.val < 0) {
         cut.rhs -= static_cast<HighsCDouble>(var.upper) * var.val;
@@ -1056,14 +1056,14 @@ bool HighsCutGeneration::generateCut(HighsTransformedLp& transLp,
     if (!preprocessBaseInequality(hasUnboundedInts, hasGeneralInts,
                                   hasContinuous))
       return false;
-    Cut origCut{indsCheck_, valsCheck_, 0.0};
-    cut.store(origCut);
+    Row row{indsCheck_, valsCheck_, 0.0};
+    cut.store(row);
     // printf("after preprocessing of base inequality:\n");
     checkNumerics(valsCheck_.data(), valsCheck_.size(),
-                  static_cast<double>(origCut.rhs));
+                  static_cast<double>(row.rhs));
 
-    tmprhs_ = (double)origCut.rhs;
-    if (!transLp.untransform(valsCheck_, indsCheck_, tmprhs_)) return false;
+    if (!transLp.untransform(row)) return false;
+    tmprhs_ = (double)row.rhs;
 
     // printf("after untransform of base inequality:\n");
     checkNumerics(valsCheck_.data(), valsCheck_.size(), tmprhs_);
@@ -1106,7 +1106,7 @@ bool HighsCutGeneration::generateCut(HighsTransformedLp& transLp,
   // that the cut values are transformed to positive coefficients first, which
   // we do below.
   if (!hasUnboundedInts && !intsPositive) {
-    for (CutVariable& var : cut.vars) {
+    for (TransformedVar& var : cut.vars) {
       if (var.val > 0 || !var.integral) continue;
 
       cut.flipComplementation(var);
@@ -1122,28 +1122,26 @@ bool HighsCutGeneration::generateCut(HighsTransformedLp& transLp,
   cut.removeComplementation();
 
   // store the cut in the given vectors and remove zeros
-  Cut origCut{inds_, vals_, 0.0};
-  cut.store(origCut);
-  origCut.removeZeros();
+  Row row{inds_, vals_, 0.0};
+  cut.store(row);
+  row.removeZeros();
 
   // transform the cut back into the original space, i.e. remove the bound
   // substitution and replace implicit slack variables
-  rhs_ = (double)origCut.rhs;
-  if (!transLp.untransform(vals_, inds_, rhs_)) return false;
-  origCut.rhs = rhs_;
+  if (!transLp.untransform(row)) return false;
 
   lpRelaxation.getMipSolver().mipdata_->debugSolution.checkCut(
-      inds_.data(), vals_.data(), inds_.size(), rhs_);
+      inds_.data(), vals_.data(), inds_.size(), static_cast<double>(row.rhs));
   // apply cut postprocessing including scaling and removal of small
   // coefficients
-  if (!postprocessCut(origCut, transLp.getGlobaldom())) return false;
-  rhs_ = (double)origCut.rhs;
+  if (!postprocessCut(row, transLp.getGlobaldom())) return false;
+  rhs_ = (double)row.rhs;
 
   lpRelaxation.getMipSolver().mipdata_->debugSolution.checkCut(
       inds_.data(), vals_.data(), inds_.size(), rhs_);
 
   // finally determine the violation of the cut in the original space
-  if (origCut.violation(lpRelaxation.getSolution().col_value) <= 10 * feastol)
+  if (row.violation(lpRelaxation.getSolution().col_value) <= 10 * feastol)
     return false;
 
   transLp.getGlobaldom().tightenCoefficients(inds_.data(), vals_.data(),
@@ -1176,7 +1174,7 @@ bool HighsCutGeneration::generateConflict(const HighsDomain& localdomain,
   HighsCDouble activity = 0.0;
   for (HighsInt i = 0; i != numVars; ++i) {
     HighsInt col = proofinds[i];
-    CutVariable& var = cut.vars[i];
+    TransformedVar& var = cut.vars[i];
 
     var.col = col;
     var.val = proofvals[i];
@@ -1205,7 +1203,7 @@ bool HighsCutGeneration::generateConflict(const HighsDomain& localdomain,
 
   if (activity > cut.rhs) {
     double solScale = static_cast<double>(cut.rhs / activity);
-    for (CutVariable& var : cut.vars) {
+    for (TransformedVar& var : cut.vars) {
       var.solval *= solScale;
       var.flippedSolval = var.upper - var.solval;
     }
@@ -1225,7 +1223,7 @@ bool HighsCutGeneration::generateConflict(const HighsDomain& localdomain,
     return false;
 
   // remove the complementation
-  for (CutVariable& var : cut.vars) {
+  for (TransformedVar& var : cut.vars) {
     if (var.complemented) {
       cut.rhs -=
           static_cast<HighsCDouble>(globaldom.col_upper_[var.col]) * var.val;
@@ -1236,14 +1234,14 @@ bool HighsCutGeneration::generateConflict(const HighsDomain& localdomain,
   }
 
   // store the cut in the given vectors
-  Cut origCut{proofinds, proofvals, 0.0};
-  cut.store(origCut);
+  Row row{proofinds, proofvals, 0.0};
+  cut.store(row);
 
   // apply cut postprocessing including scaling and removal of small
   // coefficients
-  if (!postprocessCut(origCut, globaldom)) return false;
+  if (!postprocessCut(row, globaldom)) return false;
 
-  proofrhs = (double)origCut.rhs;
+  proofrhs = (double)row.rhs;
 
   bool cutintegral = integralSupport && integralCoefficients;
 
@@ -1260,105 +1258,45 @@ bool HighsCutGeneration::generateConflict(const HighsDomain& localdomain,
 }
 
 bool HighsCutGeneration::finalizeAndAddCut(const HighsDomain& globaldom,
-                                           std::vector<HighsInt>& inds_,
-                                           std::vector<double>& vals_,
-                                           double& rhs_) {
-  Cut origCut{inds_, vals_, rhs_};
-
+                                           Row& row) {
   // remove zeros in place and check whether the support is integral
-  origCut.removeZeros();
+  row.removeZeros();
   integralSupport = true;
   integralCoefficients = false;
-  for (HighsInt col : inds_) integralSupport &= lpRelaxation.isColIntegral(col);
+  for (HighsInt col : row.inds)
+    integralSupport &= lpRelaxation.isColIntegral(col);
 
   lpRelaxation.getMipSolver().mipdata_->debugSolution.checkCut(
-      inds_.data(), vals_.data(), inds_.size(), rhs_);
+      row.inds.data(), row.vals.data(), row.inds.size(),
+      static_cast<double>(row.rhs));
   // apply cut postprocessing including scaling and removal of small
   // coefficients
-  if (!postprocessCut(origCut, globaldom)) return false;
-  rhs_ = (double)origCut.rhs;
+  if (!postprocessCut(row, globaldom)) return false;
+  double rhs = static_cast<double>(row.rhs);
 
   lpRelaxation.getMipSolver().mipdata_->debugSolution.checkCut(
-      inds_.data(), vals_.data(), inds_.size(), rhs_);
+      row.inds.data(), row.vals.data(), row.inds.size(), rhs);
 
   // finally determine the violation of the cut in the original space
-  if (origCut.violation(lpRelaxation.getSolution().col_value) <= 10 * feastol)
+  if (row.violation(lpRelaxation.getSolution().col_value) <= 10 * feastol)
     return false;
 
-  globaldom.tightenCoefficients(inds_.data(), vals_.data(), inds_.size(), rhs_);
+  globaldom.tightenCoefficients(row.inds.data(), row.vals.data(),
+                                row.inds.size(), rhs);
 
   // if the cut is violated by a small factor above the feasibility
   // tolerance, add it to the cutpool
-  HighsInt cutindex = cutpool.addCut(lpRelaxation.getMipSolver(), inds_.data(),
-                                     vals_.data(), inds_.size(), rhs_,
-                                     integralSupport && integralCoefficients);
+  HighsInt cutindex = cutpool.addCut(
+      lpRelaxation.getMipSolver(), row.inds.data(), row.vals.data(),
+      row.inds.size(), rhs, integralSupport && integralCoefficients);
 
   // only return true if cut was accepted by the cutpool, i.e. not a duplicate
   // of a cut already in the pool
   return cutindex != -1;
 }
 
-void HighsCutGeneration::TransformedCut::scale(double factor) {
-  rhs *= factor;
-  for (CutVariable& var : vars) var.val *= factor;
-}
-
-void HighsCutGeneration::TransformedCut::flipComplementation(CutVariable& var) {
-  // only variables with finite upper bounds can be complemented
-  assert(var.upper != kHighsInf);
-
-  // flip complementation
-  var.complemented = !var.complemented;
-  std::swap(var.solval, var.flippedSolval);
-  rhs -= static_cast<HighsCDouble>(var.upper) * var.val;
-  var.val = -var.val;
-}
-
-void HighsCutGeneration::TransformedCut::removeComplementation() {
-  // remove the complementation
-  for (CutVariable& var : vars) {
-    if (var.complemented) flipComplementation(var);
-  }
-}
-
-void HighsCutGeneration::Cut::scale(double factor) {
-  rhs *= factor;
-  for (double& val : vals) val *= factor;
-}
-
-void HighsCutGeneration::Cut::removeZeros() {
-  // replace zeros by the last element to keep the removal cheap
-  for (HighsInt i = static_cast<HighsInt>(vals.size()) - 1; i >= 0; --i) {
-    if (vals[i] == 0.0) {
-      inds[i] = inds.back();
-      vals[i] = vals.back();
-      inds.pop_back();
-      vals.pop_back();
-    }
-  }
-}
-
-HighsCDouble HighsCutGeneration::Cut::violation(
-    const std::vector<double>& sol) const {
-  HighsCDouble viol = -rhs;
-  for (HighsInt i = 0; i != static_cast<HighsInt>(inds.size()); ++i)
-    viol += static_cast<HighsCDouble>(sol[inds[i]]) * vals[i];
-  return viol;
-}
-
-void HighsCutGeneration::TransformedCut::store(Cut& origCut) const {
-  const HighsInt numVars = vars.size();
-  origCut.inds.resize(numVars);
-  origCut.vals.resize(numVars);
-  for (HighsInt i = 0; i != numVars; ++i) {
-    origCut.inds[i] = vars[i].col;
-    origCut.vals[i] = vars[i].val;
-  }
-  origCut.rhs = rhs;
-}
-
 template <typename T>
-void HighsCutGeneration::updateViolationAndNorm(const CutVariable& var, T aj,
+void HighsCutGeneration::updateViolationAndNorm(const TransformedVar& var, T aj,
                                                 HighsCDouble& violation,
                                                 HighsCDouble& norm) const {
   // update violation
@@ -1417,7 +1355,7 @@ bool HighsCutGeneration::tryGenerateCut(bool hasUnboundedInts,
     // compute violation and squared norm
     HighsCDouble violation = -cut.rhs;
     HighsCDouble sqrnorm = 0.0;
-    for (const CutVariable& var : cut.vars)
+    for (const TransformedVar& var : cut.vars)
       updateViolationAndNorm(var, var.val, violation, sqrnorm);
 
     // compute efficacy (distance cut off)

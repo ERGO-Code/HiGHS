@@ -488,10 +488,11 @@ bool HighsTransformedLp::transform(std::vector<double>& vals,
   return true;
 }
 
-bool HighsTransformedLp::untransform(std::vector<double>& vals,
-                                     std::vector<HighsInt>& inds, double& rhs,
-                                     bool integral) {
-  HighsCDouble tmpRhs = rhs;
+bool HighsTransformedLp::untransform(Row& row, bool integral) {
+  std::vector<double>& vals = row.vals;
+  std::vector<HighsInt>& inds = row.inds;
+  // start from the right hand side in double precision
+  HighsCDouble tmpRhs = static_cast<double>(row.rhs);
   const HighsMipSolver& mip = lprelaxation.getMipSolver();
   const HighsInt slackOffset = mip.numCol();
 
@@ -519,13 +520,13 @@ bool HighsTransformedLp::untransform(std::vector<double>& vals,
           tmpRhs += vals[i] * globaldom_.col_lower_[col];
           vectorsum.add(col, vals[i]);
         } else {
-          HighsInt row = col - slackOffset;
-          tmpRhs += vals[i] * lprelaxation.slackLower(row, globaldom_);
+          HighsInt slackRow = col - slackOffset;
+          tmpRhs += vals[i] * lprelaxation.slackLower(slackRow, globaldom_);
 
           HighsInt rowlen;
           const HighsInt* rowinds;
           const double* rowvals;
-          lprelaxation.getRow(row, rowlen, rowinds, rowvals);
+          lprelaxation.getRow(slackRow, rowlen, rowinds, rowvals);
 
           for (HighsInt j = 0; j != rowlen; ++j)
             vectorsum.add(rowinds[j], vals[i] * rowvals[j]);
@@ -537,14 +538,14 @@ bool HighsTransformedLp::untransform(std::vector<double>& vals,
           tmpRhs -= vals[i] * globaldom_.col_upper_[col];
           vectorsum.add(col, -vals[i]);
         } else {
-          HighsInt row = col - slackOffset;
-          tmpRhs -= vals[i] * lprelaxation.slackUpper(row, globaldom_);
+          HighsInt slackRow = col - slackOffset;
+          tmpRhs -= vals[i] * lprelaxation.slackUpper(slackRow, globaldom_);
           vals[i] = -vals[i];
 
           HighsInt rowlen;
           const HighsInt* rowinds;
           const double* rowvals;
-          lprelaxation.getRow(row, rowlen, rowinds, rowvals);
+          lprelaxation.getRow(slackRow, rowlen, rowinds, rowvals);
 
           for (HighsInt j = 0; j != rowlen; ++j)
             vectorsum.add(rowinds[j], vals[i] * rowvals[j]);
@@ -570,7 +571,7 @@ bool HighsTransformedLp::untransform(std::vector<double>& vals,
     };
 
     vectorsum.cleanup(IsZero);
-    rhs = std::round(double(tmpRhs));
+    row.rhs = std::round(double(tmpRhs));
   } else {
     bool abort = false;
     auto IsZero = [&](HighsInt col, double val) {
@@ -600,7 +601,7 @@ bool HighsTransformedLp::untransform(std::vector<double>& vals,
       vectorsum.clear();
       return false;
     }
-    rhs = double(tmpRhs);
+    row.rhs = double(tmpRhs);
   }
 
   inds = vectorsum.getNonzeros();
@@ -615,4 +616,64 @@ bool HighsTransformedLp::untransform(std::vector<double>& vals,
   vectorsum.clear();
 
   return true;
+}
+
+void HighsTransformedLp::Row::scale(double factor) {
+  rhs *= factor;
+  for (double& val : vals) val *= factor;
+}
+
+void HighsTransformedLp::Row::removeZeros() {
+  // replace zeros by the last element to keep the removal cheap
+  for (HighsInt i = static_cast<HighsInt>(vals.size()) - 1; i >= 0; --i) {
+    if (vals[i] == 0.0) {
+      inds[i] = inds.back();
+      vals[i] = vals.back();
+      inds.pop_back();
+      vals.pop_back();
+    }
+  }
+}
+
+HighsCDouble HighsTransformedLp::Row::violation(
+    const std::vector<double>& sol) const {
+  HighsCDouble viol = -rhs;
+  for (HighsInt i = 0; i != static_cast<HighsInt>(inds.size()); ++i)
+    viol += static_cast<HighsCDouble>(sol[inds[i]]) * vals[i];
+  return viol;
+}
+
+void HighsTransformedLp::TransformedRow::scale(double factor) {
+  rhs *= factor;
+  for (TransformedVar& var : vars) var.val *= factor;
+}
+
+void HighsTransformedLp::TransformedRow::flipComplementation(
+    TransformedVar& var) {
+  // only variables with finite upper bounds can be complemented
+  assert(var.upper != kHighsInf);
+
+  // flip complementation
+  var.complemented = !var.complemented;
+  std::swap(var.solval, var.flippedSolval);
+  rhs -= static_cast<HighsCDouble>(var.upper) * var.val;
+  var.val = -var.val;
+}
+
+void HighsTransformedLp::TransformedRow::removeComplementation() {
+  // remove the complementation
+  for (TransformedVar& var : vars) {
+    if (var.complemented) flipComplementation(var);
+  }
+}
+
+void HighsTransformedLp::TransformedRow::store(Row& row) const {
+  const HighsInt numVars = vars.size();
+  row.inds.resize(numVars);
+  row.vals.resize(numVars);
+  for (HighsInt i = 0; i != numVars; ++i) {
+    row.inds[i] = vars[i].col;
+    row.vals[i] = vars[i].val;
+  }
+  row.rhs = rhs;
 }

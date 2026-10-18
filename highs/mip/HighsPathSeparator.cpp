@@ -531,9 +531,10 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
                 cutVals.resize(numInds);
                 inds.resize(numInds);
 
-                if (transLp.untransform(cutVals, inds, rhs))
-                  success |= cutGen.finalizeAndAddCut(transLp.getGlobaldom(),
-                                                      inds, cutVals, rhs);
+                HighsTransformedLp::Row cutRow{inds, cutVals, rhs};
+                if (transLp.untransform(cutRow))
+                  success |=
+                      cutGen.finalizeAndAddCut(transLp.getGlobaldom(), cutRow);
 
                 // printf("cut is violated for k = %d\n", k);
                 break;

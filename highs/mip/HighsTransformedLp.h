@@ -27,6 +27,55 @@ class HighsLpRelaxation;
 /// Helper class to compute single-row relaxations from the current LP
 /// relaxation by substituting bounds and aggregating rows
 class HighsTransformedLp {
+ public:
+  // sparse row; refers to the vectors of the caller
+  struct Row {
+    std::vector<HighsInt>& inds;
+    std::vector<double>& vals;
+    HighsCDouble rhs;
+
+    // scales the right hand side and all coefficients
+    void scale(double factor);
+
+    // removes zero coefficients
+    void removeZeros();
+
+    // returns the violation of the row by the given solution
+    HighsCDouble violation(const std::vector<double>& sol) const;
+  };
+
+  // variable of a row in the transformed space
+  struct TransformedVar {
+    HighsInt col;
+    double val;
+    double upper;
+    // solution value in the current complementation
+    double solval;
+    // solution value after flipping the complementation; swapping both
+    // solution values restores them exactly when flipping back
+    double flippedSolval;
+    bool complemented;
+    bool integral;
+  };
+
+  // row in the transformed space
+  struct TransformedRow {
+    std::vector<TransformedVar> vars;
+    HighsCDouble rhs;
+
+    // scales the right hand side and all coefficients
+    void scale(double factor);
+
+    // flips the complementation of the given variable of this row
+    void flipComplementation(TransformedVar& var);
+
+    // removes the complementation of all variables
+    void removeComplementation();
+
+    // copies the indices, values, and right hand side to the given row
+    void store(Row& row) const;
+  };
+
  private:
   const HighsLpRelaxation& lprelaxation;
   const HighsDomain& globaldom_;
@@ -60,8 +109,8 @@ class HighsTransformedLp {
                  double& rhs, bool& integralPositive, bool preferVbds = false,
                  bool enforceSameBds = false);
 
-  bool untransform(std::vector<double>& vals, std::vector<HighsInt>& inds,
-                   double& rhs, bool integral = false);
+  // transforms the given row back into the original space
+  bool untransform(Row& row, bool integral = false);
 
   const HighsDomain& getGlobaldom() const { return globaldom_; }
 
